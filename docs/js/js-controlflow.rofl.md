@@ -319,9 +319,9 @@ In the code:
 <a id="always_throws"></a>F always throws if F [throws at the top](#top_throw), unless F [has a return](#has_return).
 
 <a id="throwing_call"></a>C is a throwing call if all of:
-  - C [is a call site](js-callgraph.rofl.md#call_site) in some file;
+  - F [always throws](#always_throws);
   - C [resolves to](js-callgraph.rofl.md#resolves) F;
-  - F [always throws](#always_throws).
+  - C [is a call site](js-callgraph.rofl.md#call_site) in some file.
 
 > AN ACCESSOR IS A CALL WEARING A READ'S SYNTAX: `o.p` on a getter transfers
 > control; what the getter returns is a different question, not answered here.
@@ -380,9 +380,10 @@ Declared as facts:
 <a id="pattern_source"></a>The pattern source of a node P is a node Init if the `id` of a [declarator](#noun-declarator) D is P and the `init` of D is Init.
 
 <a id="pattern_accessor"></a>An [object pattern](#noun-object_pattern) destructures through the accessor M if all of:
-  - [the pattern source](#pattern_source) of it [points to](js-dataflow.rofl.md#may_be_node) a node Obj;
-  - it [takes the key](js-dataflow.rofl.md#pattern_takes) Key;
-  - [the accessor](#accessor_of) of Obj at Key is M.
+  - [the accessor](#accessor_of) of a node Obj at Key is M;
+  - a node Init [points to](js-dataflow.rofl.md#may_be_node) Obj;
+  - [the pattern source](#pattern_source) of it is Init;
+  - it [takes the key](js-dataflow.rofl.md#pattern_takes) Key.
 
 A node destructures through the accessor M if all of:
   - a node D [holds a rest](js-dataflow.rofl.md#rest_in_pattern) it in some file;
@@ -392,9 +393,10 @@ A node destructures through the accessor M if all of:
   - unless P [takes the key](js-dataflow.rofl.md#pattern_takes) Key.
 
 A [spread](#noun-spread) destructures through the accessor M if all of:
-  - it [is among the](#ast_child) `properties` of an [object literal](#noun-object_literal) O;
-  - the `argument` of it [points to](js-dataflow.rofl.md#may_be_node) a node Obj;
-  - [the accessor](#accessor_of) of Obj at Key is M.
+  - [the accessor](#accessor_of) of a node Obj at Key is M;
+  - a node X [points to](js-dataflow.rofl.md#may_be_node) Obj;
+  - the `argument` of it is X;
+  - it [is among the](#ast_child) `properties` of an [object literal](#noun-object_literal) O.
 
 > `spread_element` is one kind doing two things: in `properties` it copies
 > keys, in `elements`/`arguments` it exhausts an iterator — keyed by FIELD.

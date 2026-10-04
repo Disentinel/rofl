@@ -127,7 +127,7 @@ const M: Mutant[] = [
   { expect: 'prose_vacuous', world: 'agg_prose', edits: censusRows(/^prose_site\("[^"]+"\)\./gm).map((r): Edit => ({ file: PROSE, replace: [r, ''] })) },
   // the retire column (agg_prose): a marker that stands, a kept site that lost its reason, a site no pattern describes, a census with no site
   { expect: 'retire_stands', world: 'agg_prose', edits: [add('retire_marker(count, "scripts/lint.ts").', PROSE)] },
-  { expect: 'retire_stands', world: 'agg_prose', edits: [{ file: PROSE, replace: ['retire_kept(min_max_strat, "rules/js-dataflow.rofl").', ''] }] },
+  { expect: 'retire_stands', world: 'agg_prose', edits: [{ file: PROSE, replace: ['retire_kept(tag_counting, "runtime/semirings.ts").', ''] }] },
   { expect: 'retire_unsaid', world: 'agg_prose', edits: [{ file: PROSE_CHECK, replace: ['N is count(P : retire_marker(K, P), not retire_kept(K, P))', 'N is count(P : retire_kind(K), retire_marker(K, P), not retire_kept(K, P))'] }, { file: PROSE_CHECK, replace: ['retire_standing(K, N)   :- retire_kind(K), N is', 'retire_standing(K, N)   :- N is'] }] },
   { expect: 'retire_unmarked', world: 'agg_prose', edits: [{ file: PROSE, replace: ['retire_pattern("examples/wtf/wtf.rofl").', ''] }] },
   { expect: 'retire_vacuous', world: 'agg_prose', edits: censusRows(/^retire_site\([a-z_]+, "[^"]+"\)\./gm).map((r): Edit => ({ file: PROSE, replace: [r, ''] })) },

@@ -1,0 +1,13 @@
+-- examples/checks/agg-datastrat-below-check.rofl — agg_datastrat_below: a count over a relation whose rule faulted below the component is a hole, and so is every count that reads it.
+dz_holed(B) :- hole[$kernel]($cell(Rule, _, _, $cons(B, $nil)), support_withdrawn), concludes[$kernel](Rule, tot).
+dz_want(b1). dz_want(a).
+dz_missing(B) :- dz_want(B), not dz_holed(B).
+dz_extra(B) :- dz_holed(B), not dz_want(B).
+dz_valued(B) :- dz_want(B), tot(B, _).
+alarm(dz_missing).
+alarm(dz_extra).
+alarm(dz_valued).
+-- expect-no-row: tot[main](
+-- expect-no-row: under[main](b1,c9)
+-- expect-no-row: under[main](a,c3)
+-- expect-row: under[main](a,b1) tick drv support=1

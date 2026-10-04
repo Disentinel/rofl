@@ -1,5 +1,7 @@
 # SLOP — Spreadsheet Ledger Over Provenance
 
+**Count reading:** ambiguity — a count above 1 means the sheet produces a number more than one way, a defect.
+
 ROFL's canonical metaphor is "a ledger in a spreadsheet". SLOP stops it
 being a metaphor, because **a spreadsheet already IS a fixpoint engine — just
 a bad one.**

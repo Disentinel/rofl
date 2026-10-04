@@ -1,5 +1,7 @@
 # IFFY — the amendment, before it is enacted
 
+**Count reading:** domain — derivations, which multiply through every rule below the conclusion and are not supports.
+
 There is a rule set in force and a corpus of past decisions taken under it.
 Somebody proposes an amendment. **Which of those decisions come out
 differently, and why each one?**

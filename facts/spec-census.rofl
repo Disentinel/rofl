@@ -22,6 +22,8 @@ check[checks]("rust/rofl/tests/cool.rs", "a_volume_this_engine_did_not_write_is_
 check[checks]("rust/rofl/tests/cool.rs", "an_unknown_volume_cools_nothing", test).
 check[checks]("rust/rofl/tests/cool.rs", "the_trail_cools_and_comes_back_whole", test).
 check[checks]("rust/rofl/tests/cool.rs", "a_trail_this_engine_did_not_write_is_refused", test).
+check[checks]("rust/rofl/tests/datastrat_scale.rs", "a_chain_of_sums_is_fired_once_per_sum", test).
+check[checks]("rust/rofl/tests/datastrat_scale.rs", "a_layer_that_fires_an_instance_again_spends_the_budget", test).
 check[checks]("rust/rofl/tests/explain.rs", "why_walks_the_derivation_to_its_axioms", test).
 check[checks]("rust/rofl/tests/explain.rs", "a_negated_premise_renders_as_finite_failure_with_its_demonstration", test).
 check[checks]("rust/rofl/tests/explain.rs", "a_builtin_premise_keeps_its_own_spelling", test).
@@ -332,17 +334,26 @@ check[checks]("facts/goldens.rofl", "agg_count_wfs", world).
 check[checks]("facts/goldens.rofl", "agg_count_why", world).
 check[checks]("facts/goldens.rofl", "agg_count_witness", world).
 check[checks]("facts/goldens.rofl", "agg_critpath_demo", world).
+check[checks]("facts/goldens.rofl", "agg_datastrat_below", world).
+check[checks]("facts/goldens.rofl", "agg_datastrat_below_sum", world).
 check[checks]("facts/goldens.rofl", "agg_datastrat_budget", world).
+check[checks]("facts/goldens.rofl", "agg_datastrat_chain", world).
 check[checks]("facts/goldens.rofl", "agg_datastrat_cycle", world).
+check[checks]("facts/goldens.rofl", "agg_datastrat_elems", world).
+check[checks]("facts/goldens.rofl", "agg_datastrat_elems_gated", world).
 check[checks]("facts/goldens.rofl", "agg_datastrat_eval", world).
+check[checks]("facts/goldens.rofl", "agg_datastrat_groups", world).
 check[checks]("facts/goldens.rofl", "agg_datastrat_holes", world).
 check[checks]("facts/goldens.rofl", "agg_datastrat_keys", world).
+check[checks]("facts/goldens.rofl", "agg_datastrat_mark", world).
 check[checks]("facts/goldens.rofl", "agg_datastrat_neg", world).
 check[checks]("facts/goldens.rofl", "agg_datastrat_retract", world).
 check[checks]("facts/goldens.rofl", "agg_datastrat_tick", world).
 check[checks]("facts/goldens.rofl", "agg_datastrat_tree", world).
 check[checks]("facts/goldens.rofl", "agg_datastrat_two", world).
 check[checks]("facts/goldens.rofl", "agg_datastrat_why", world).
+check[checks]("facts/goldens.rofl", "agg_datastrat_wide", world).
+check[checks]("facts/goldens.rofl", "agg_datastrat_wide_int", world).
 check[checks]("facts/goldens.rofl", "agg_empty_budget", world).
 check[checks]("facts/goldens.rofl", "agg_empty_eval", world).
 check[checks]("facts/goldens.rofl", "agg_empty_holes", world).
@@ -574,7 +585,6 @@ check[checks]("facts/goldens.rofl", "agg_widen_wfs", world).
 check[checks]("facts/goldens.rofl", "agg_widen_why", world).
 check[checks]("facts/goldens.rofl", "agg_widen_witness", world).
 check[checks]("facts/goldens.rofl", "args_are_terms", world).
-check[checks]("facts/goldens.rofl", "asks", world).
 check[checks]("facts/goldens.rofl", "async_refused", world).
 check[checks]("facts/goldens.rofl", "budget_wall", world).
 check[checks]("facts/goldens.rofl", "destructor_hole", world).
@@ -592,7 +602,7 @@ check[checks]("facts/goldens.rofl", "readiness_atlas", world).
 check[checks]("facts/goldens.rofl", "readiness_rofl", world).
 check[checks]("facts/goldens.rofl", "refactoring_queue", world).
 check[checks]("facts/goldens.rofl", "refused", world).
-check[checks]("facts/goldens.rofl", "sealed_provenance", world).
+check[checks]("facts/goldens.rofl", "sealed_witness", world).
 check[checks]("facts/goldens.rofl", "sensors_t3", world).
 check[checks]("facts/goldens.rofl", "set_spelling", world).
 check[checks]("facts/goldens.rofl", "spec_coverage", world).
@@ -612,6 +622,7 @@ check[checks](".github/workflows/ci.yml", "install dependencies (the scanner nee
 check[checks](".github/workflows/ci.yml", "goldens (bun)", ci).
 test_file[checks]("rust/rofl/tests/agg_worlds.rs").
 test_file[checks]("rust/rofl/tests/cool.rs").
+test_file[checks]("rust/rofl/tests/datastrat_scale.rs").
 test_file[checks]("rust/rofl/tests/explain.rs").
 test_file[checks]("rust/rofl/tests/incremental.rs").
 test_file[checks]("rust/rofl/tests/join_scale.rs").

@@ -31,7 +31,7 @@ Reads:
 - from js-callgraph, in the code: [callee_of](js-callgraph.rofl.md#callee_of), [calls](js-callgraph.rofl.md#calls), [fn_node](js-callgraph.rofl.md#fn_node), [nearest_fn](js-callgraph.rofl.md#nearest_fn), [resolves](js-callgraph.rofl.md#resolves), [unresolved_call](js-callgraph.rofl.md#unresolved_call)
 - from js-controlflow, in the code: [caught_here](js-controlflow.rofl.md#caught_here), [in_try_block](js-controlflow.rofl.md#in_try_block), [may_throw](js-controlflow.rofl.md#may_throw), [pattern_accessor](js-controlflow.rofl.md#pattern_accessor), [pattern_next](js-controlflow.rofl.md#pattern_next), [try_catches](js-controlflow.rofl.md#try_catches)
 - from js-dataflow, in the code: [assigns](js-dataflow.rofl.md#assigns), [corpus_file](js-dataflow.rofl.md#corpus_file), [ident_in](js-dataflow.rofl.md#ident_in), [module_source](js-dataflow.rofl.md#module_source)
-- from js-dataflow: [may_be_lit](js-dataflow.rofl.md#may_be_lit), [may_be_node](js-dataflow.rofl.md#may_be_node), [member_node_v](js-dataflow.rofl.md#member_node_v), [member_value](js-dataflow.rofl.md#member_value), [nearest_v](js-dataflow.rofl.md#nearest_v), [plain_assign](js-dataflow.rofl.md#plain_assign), [prototype_of](js-dataflow.rofl.md#prototype_of), [selects](js-dataflow.rofl.md#selects), [super_of](js-dataflow.rofl.md#super_of)
+- from js-dataflow: [may_be_lit](js-dataflow.rofl.md#may_be_lit), [may_be_node](js-dataflow.rofl.md#may_be_node), [member_node_v](js-dataflow.rofl.md#member_node_v), [member_obj](js-dataflow.rofl.md#member_obj), [member_value](js-dataflow.rofl.md#member_value), [nearest_v](js-dataflow.rofl.md#nearest_v), [plain_assign](js-dataflow.rofl.md#plain_assign), [prototype_of](js-dataflow.rofl.md#prototype_of), [selects](js-dataflow.rofl.md#selects), [super_of](js-dataflow.rofl.md#super_of)
 - from js-dataflow, in the main: [builtin_prototype](js-dataflow.rofl.md#builtin_prototype)
 - from js-model, in the code: [ast_node](js-model.rofl.md#ast_node)
 - from js-modules, in the code: [module_target](js-modules.rofl.md#module_target), [require_site](js-modules.rofl.md#require_site), [site_file](js-modules.rofl.md#site_file), [site_source](js-modules.rofl.md#site_source)
@@ -64,6 +64,7 @@ Phrases this file defines in one step, each by the sentence it stands for:
 
 - <a id="eff_has_join"></a>An effect has a join with an effect B if [the join](#eff_join) of it and B is some effect.
 - <a id="eff_has_meet"></a>An effect has a meet with an effect B if [the meet](#eff_meet) of it and B is some effect.
+- <a id="eff_obj_traced"></a>M has a traced object if [`member_obj`](js-dataflow.rofl.md#member_obj)(M, something, something).
 - <a id="eff_assign"></a>An [assignment](#noun-assignment) is a write.
 - <a id="eff_member_target"></a>A [member access](js-dataflow.rofl.md#member_node_v) is a written member if some assignment [writes to](#eff_assign_target) it.
 - <a id="eff_update_arg"></a>An [update expression](#noun-update_expression) updates a node X if the `argument` of it is X.
@@ -249,13 +250,11 @@ Declared as facts:
 > unknown is what the function DOES). `eff_member_both` is the never-both half
 > of that partition; the never-neither half is a sum in the test.
 
-<a id="eff_obj_traced"></a>A [member access](js-dataflow.rofl.md#member_node_v) has a traced object if the `object` of it [points to](js-dataflow.rofl.md#may_be_node) some node.
-
 <a id="eff_heap_of"></a>M touches the heap N either:
 
 1. if all of:
-   - M is a [member access](js-dataflow.rofl.md#member_node_v);
    - M [has a traced object](#eff_obj_traced);
+   - M is a [member access](js-dataflow.rofl.md#member_node_v);
    - N is `local`;
 2. if all of:
    - M is a [member access](js-dataflow.rofl.md#member_node_v);
@@ -284,7 +283,7 @@ A node
 
 <a id="eff_read_site"></a>A [member access](js-dataflow.rofl.md#member_node_v) is a read member unless it [is a written member](#eff_member_target).
 
-A node has the effect `read` at a host H if it [is a read member](#eff_read_site) and it [touches the heap](#eff_heap_of) H.
+A node has the effect `read` at a host H if it [touches the heap](#eff_heap_of) H and it [is a read member](#eff_read_site).
 
 In the audit:
 
@@ -564,15 +563,15 @@ A node
 
 - <a id="eff_conv_object"></a>coerces the object X if it [coerces](#eff_coerced) X and X [points to](js-dataflow.rofl.md#may_be_node) some node.
 - <a id="eff_conv_call"></a>coerces through a node M if all of:
-  - it [coerces](#eff_coerced) a node X;
-  - X [points to](js-dataflow.rofl.md#may_be_node) a node O;
   - Key [is a conversion key](#eff_conv_key);
-  - [the member](js-dataflow.rofl.md#member_value) Key of O holds M.
+  - [the member](js-dataflow.rofl.md#member_value) Key of a node O holds M;
+  - a node X [points to](js-dataflow.rofl.md#may_be_node) O;
+  - it [coerces](#eff_coerced) X.
 - <a id="eff_conv_overridden"></a>coerces with an override X if all of:
-  - it [coerces](#eff_coerced) X;
-  - X [points to](js-dataflow.rofl.md#may_be_node) a node O;
   - Key [is a conversion key](#eff_conv_key);
-  - [the member](js-dataflow.rofl.md#member_value) Key of O holds some node.
+  - [the member](js-dataflow.rofl.md#member_value) Key of a node O holds some node;
+  - X [points to](js-dataflow.rofl.md#may_be_node) O;
+  - it [coerces](#eff_coerced) X.
 - <a id="eff_conv_default"></a>coerces by default a node X if it [coerces the object](#eff_conv_object) X, unless it [coerces with an override](#eff_conv_overridden) X.
 - <a id="eff_conv_primitive"></a>coerces the primitive X if all of:
   - it [coerces](#eff_coerced) X;

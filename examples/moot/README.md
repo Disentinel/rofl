@@ -1,5 +1,7 @@
 # MOOT — proving which feature flags are dead
 
+**Count reading:** robustness — many independent routes enable a feature, so losing one changes nothing.
+
 Every large codebase has hundreds of feature flags and nobody can prove which
 ones are dead. They get deleted by feel — by creation date, by "the experiment
 finished surely" — and every so often somebody deletes a live one and takes

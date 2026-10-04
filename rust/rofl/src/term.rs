@@ -583,7 +583,10 @@ impl Heap {
                 b.clear();
             }
             TermK::Str(s) => json_string(self.name(s), out),
-            TermK::Atom(a) => out.push_str(self.name(a)),
+            TermK::Atom(a) => {
+                let n = self.name(a);
+                out.push_str(if n == DS_ANY && brk!("ds_any_printed_raw" => false; true) { "_" } else { n })
+            }
             TermK::Func(i) => {
                 let (s, f) = self.node(i);
                 out.push_str(self.name(f.name));
@@ -605,6 +608,10 @@ impl Heap {
         s
     }
 }
+
+/// What stands in the key of a data-stratified correlation for a group no rule bound: an atom no source can write,
+/// spelled `_` wherever a term is printed (datastrat.rs).
+pub const DS_ANY: &str = "\u{1}any";
 
 fn itoa(v: i64) -> String {
     v.to_string()

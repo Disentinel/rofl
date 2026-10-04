@@ -6,7 +6,7 @@
 // counting concludes a derivation `p@count(K..., $firing(Rule, Vars), N)`
 // and the engine's rule `p@count` sums them per key.
 
-import { type Term, type Lit, type BodyElem, type Clause, mka, mki, mkv, mkf, varsOf, elemVars, annotateAggs } from './unify.ts';
+import { type Term, type Lit, type BodyElem, type Clause, mka, mki, mkv, mkf, varsOf, elemVars, annotateAggs, litsOf } from './unify.ts';
 import { type TagAlg, tagFromName, tagOrder, tagOne, tagTimesName } from './cell.ts';
 import { type FactStore, factKey } from './store.ts';
 import { V, KERNEL_PERSP, type DRule } from './reflect.ts';
@@ -76,8 +76,6 @@ export function tagAlgOf(t: Tags, l: Lit): TagAlg | null {
   return e && e[0] === l.args.length ? e[1] : null;
 }
 
-const litsDeep = (b: BodyElem): Lit[] => (b.t === 'pos' || b.t === 'neg' ? [b.lit] : b.t === 'agg' ? b.body.flatMap(litsDeep) : []);
-
 export interface Lowered { rules: DRule[]; changed: Set<string>; refused: [string, string][] }
 
 export function lowerTags(tags: Tags, rules: DRule[]): Lowered {
@@ -85,7 +83,7 @@ export function lowerTags(tags: Tags, rules: DRule[]): Lowered {
   if (tags.byRel.size === 0) { out.rules = rules; return out; }
   const counted: string[] = [];
   for (const r0 of rules) {
-    const lits = [r0.clause.head, ...r0.clause.body.flatMap(litsDeep)];
+    const lits = [r0.clause.head, ...r0.clause.body.flatMap(litsOf)];
     if (lits.some((l) => { const e = tags.byRel.get(l.rel); return e !== undefined && e[0] !== l.args.length; })) {
       out.refused.push([r0.id, 'tag_arity']);
       out.rules.push(r0);

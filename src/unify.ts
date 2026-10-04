@@ -214,10 +214,14 @@ export function canonTerm(t: Term): string {
     case 'v': return '?' + t.name;
     case 'i': return String(t.v);
     case 's': return JSON.stringify(t.v);
-    case 'a': return t.name;
+    case 'a': return t.name === DS_ANY_NAME ? '_' : t.name;
     case 'f': return t.name + '(' + t.args.map(canonTerm).join(',') + ')';
   }
 }
+
+/** What stands in the key of a data-stratified correlation for a group no rule bound: an atom no source can write,
+ *  spelled `_` wherever a term is printed (`aggeval.ts`). */
+export const DS_ANY_NAME = '\u0001any';
 
 /** Rename the variables of a term list to positional placeholders, numbered
  *  by first appearance across the whole list. Ground terms come back

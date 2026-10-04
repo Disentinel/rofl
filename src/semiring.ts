@@ -31,9 +31,31 @@
 //                       rounds of Kleene iteration; v_n counts derivations of
 //                       height at most n.
 //
-// `disciplineHeld` in the result reports whether the declared discipline
-// actually held on this data. A BOUNDED instance that fails to stabilise is a
-// FALSE DECLARATION, and the fold says so rather than hanging.
+// THREE OUTCOMES, NOT TWO. The fold reports rather than hanging, and what it
+// reports depends on what the instance gave it to check against:
+//
+//   converged           the chain stabilised (or a BOUNDED_UNFOLDING instance
+//                       ran its declared depth): the declaration held here.
+//   exhausted           the round budget ran out before the fold stabilised.
+//                       That is a fact about the METHOD, not about the
+//                       instance: a convergent, correctly declared instance
+//                       whose carrier is tall enough also runs out of a flat
+//                       cap. The declaration is NOT refuted;
+//                       `disciplineHeld` is null (undetermined) and the caller
+//                       is told to raise the budget or declare a height.
+//   refuted             only possible for a BOUNDED instance that declares a
+//                       `height`. Over a monotone operator on a carrier of
+//                       height h, each round that does not stabilise raises at
+//                       least one of the n nodes by at least one step, so the
+//                       chain stabilises within h * n rounds, and one more
+//                       round to observe it. The fold sizes its cap to that
+//                       bound (heightBound below), so reaching it without
+//                       stabilising IS a proof the declaration (monotone, of
+//                       height h) is false: `disciplineHeld` is false. A
+//                       smaller caller `maxRounds` only ever yields exhausted.
+//
+// Without a declared height the module has no bound to refute against, so a
+// BOUNDED instance can be exhausted but never refuted.
 //
 // v1 simplifications, all deliberate, all visible in the result:
 //   * Cycle closure uses star(one) as the loop factor. That is exact when one
@@ -118,7 +140,6 @@ import { opWitness, type AggOp } from './cell.ts';
 export const BOUNDED = 0;
 export const CLOSED = 1;
 export const BOUNDED_UNFOLDING = 2;
-export type Discipline = typeof BOUNDED | typeof CLOSED | typeof BOUNDED_UNFOLDING;
 
 interface Ops<T> {
   zero: T;                    // additive identity — not derivable
@@ -132,13 +153,18 @@ interface Ops<T> {
  *  `star` on a CLOSED instance and `depth` on a BOUNDED_UNFOLDING one: a
  *  declaration the instance cannot honour will not type-check. */
 export type Semiring<T> =
-  | (Ops<T> & { discipline: typeof BOUNDED; star?(a: T): T })
+  | (Ops<T> & { discipline: typeof BOUNDED; star?(a: T): T;
+      /** Declared height of the carrier: the length of its longest strictly
+       *  ascending chain. When given, the round cap is derived from it. */
+      height?: number })
   | (Ops<T> & { discipline: typeof CLOSED; star(a: T): T })
   | (Ops<T> & { discipline: typeof BOUNDED_UNFOLDING; depth: number; star?(a: T): T });
 
 export interface FoldOptions<T> {
   /** Round cap. The fold reports rather than looping. A BOUNDED_UNFOLDING
-   *  instance runs to its own `depth`, or to this, whichever is smaller. */
+   *  instance runs to its own `depth`, or to this, whichever is smaller. A
+   *  BOUNDED instance that declares a `height` is capped at the derived bound
+   *  unless this says otherwise; otherwise the default is 1000. */
   maxRounds?: number;
   /** Annotation of a base fact. Default `one` — an axiom costs nothing. */
   base?: (key: string) => T;
@@ -150,11 +176,24 @@ export interface FoldResult<T> {
   value: Map<string, T>;    // every fact key in the store, in sorted order
   rounds: number;
   converged: boolean;       // the value chain stabilised under `eq`
-  disciplineHeld: boolean;  // the declared discipline actually held here
+  /** The budget ran out before the fold stabilised and the declaration is not
+   *  refuted: an exhausted method, not a false instance. */
+  exhausted: boolean;
+  /** true: the declared discipline held here. false: REFUTED (a declared
+   *  height was run to its proven bound without stabilising). null: not
+   *  determined, because the budget was exhausted. */
+  disciplineHeld: boolean | null;
   cyclic: number;           // facts on a cycle of the live support graph
 }
 
 const DEFAULT_MAX_ROUNDS = 1000;
+
+/** Rounds a monotone operator of declared height h needs over n nodes: at most
+ *  h * n rounds that change something (each raises a node by a step, and a node
+ *  has at most h steps), plus one that observes the fixed point. */
+export function heightBound(height: number, nodes: number): number {
+  return height * nodes + 1;
+}
 
 /** Fold a semiring over the recorded support:
  *    v_0(f)     = base(f) if f is base, else zero
@@ -205,7 +244,9 @@ export function evaluateSemiring<T>(
   const onCycle = cyclicKeys(nodes, edges);
   const closeCycles = sr.discipline === CLOSED;
   const loop = closeCycles ? sr.star(sr.one) : sr.one;
-  const maxRounds = opts.maxRounds ?? DEFAULT_MAX_ROUNDS;
+  const declared = sr.discipline === BOUNDED && sr.height !== undefined
+    ? heightBound(sr.height, nodes.length) : undefined;
+  const maxRounds = opts.maxRounds ?? declared ?? DEFAULT_MAX_ROUNDS;
   const cap = sr.discipline === BOUNDED_UNFOLDING ? Math.min(maxRounds, sr.depth) : maxRounds;
 
   let cur = seed;
@@ -248,10 +289,12 @@ export function evaluateSemiring<T>(
     cur = next;
     if (!changed) { converged = true; break; }
   }
-  const disciplineHeld = sr.discipline === BOUNDED_UNFOLDING
-    ? (converged || rounds >= sr.depth)
-    : converged;
-  return { value: cur, rounds, converged, disciplineHeld, cyclic: keys.filter((k) => onCycle.has(k)).length };
+  const complete = converged || (sr.discipline === BOUNDED_UNFOLDING && rounds >= sr.depth);
+  // refuted only when the proven bound was run in full
+  const refuted = !complete && declared !== undefined && rounds >= declared;
+  const exhausted = !complete && !refuted;
+  const disciplineHeld = complete ? true : refuted ? false : null;
+  return { value: cur, rounds, converged, exhausted, disciplineHeld, cyclic: keys.filter((k) => onCycle.has(k)).length };
 }
 
 /** ⊗ over premises, stopping at `zero`: this branch is dead. */

@@ -1,0 +1,10 @@
+-- examples/checks/agg-datastrat-wide_int.rofl — the same with integer ids: the order of the layers does not depend on how a key is written (a group no rule
+-- bound is `_`, whatever it sorts as), so both engines seal the groups in one order.
+
+edb(reports).
+reports(2, 1). reports(3, 1). reports(4, 2). reports(5, 4).
+under(B, E) :- reports(E, B).
+under(B, E) :- reports(M, B), team(M, N, start), N >= 1, reports(E, M).
+team(B, N, X) :- N is count(E : under(B, E)), flag(X).
+flag(start).
+flag(late) :- team(1, N, start), N >= 3.

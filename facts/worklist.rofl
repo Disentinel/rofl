@@ -3645,26 +3645,84 @@ work(w_explain_debug_stack,
 work_state(w_explain_debug_stack, done).
 
 work(w_agg_group_is_a_cell,
-  "EACH GROUP OF A GROUPED AGGREGATE IS A CELL OF ITS OWN (f_a_grouped_aggregate_is_one_cell_for_the_data_walk): seal_cells seals a rule's group variables together, so data-level stratification orders cells only at the grain of the rule and a count over a relation that reads other groups' counts is refused as a cycle (the finding's two-rule world over parent(a,b), parent(b,c)). Seal per group (the group bound in the inner solve) and key the reach memo by group, both engines, byte parity. ACCEPTANCE: that world is accepted and answers what a fresh evaluation by hand gives, a true cycle at the group grain is still refused with the cycle named; the tree and slop worlds and every golden unchanged; a proof world and planted breaks (a group sealed with its neighbours turns it red); one semantic review.").
-work_state(w_agg_group_is_a_cell, open).
+  "DONE 2026-10-03, both engines, byte parity. EACH GROUP OF A GROUPED AGGREGATE IS A CELL OF ITS OWN FOR THE DATA WALK (f_a_grouped_aggregate_is_one_cell_for_the_data_walk): the correlation of a data-stratified element is its shared values bound before it and then each group variable the rule binds where it is read, `_` for one it does not, so `team(M, N)` with M bound by a closed relation is the correlation of group M alone and the rule's own reading is the rest. The walk (datastrat.rs ds_walk, ds_bind) names a node for each, every correlation it met is released (not only the owners' own), a layer fires a grouped key as the instances that extend it (fire_keys: the group bound in the firing, so the inner solve and the seal are that group's), seal_cells leaves a group a narrower correlation sealed to it, and ds_verify holds a recomputed group against the cell wherever it was sealed. The finding's two-rule world is accepted (nothing has a group, so nothing is derived); a rule over a hierarchy whose team counts another team's is ordered and gives the hand-derived counts (agg_datastrat_groups: team, and tally with two group variables where M alone is bound); a true cycle between groups is refused naming it (agg-datastrat-cycle-9: count@num(a) -> near(a,_) -> num(b,_) -> count@num(b) -> ...); every golden unchanged but the worlds the ledger added. Planted faults ds_group_whole, ds_group_resealed, ds_verify_own_cells, ds_ground_unreleased and their ts_ twins.").
+work_state(w_agg_group_is_a_cell, done).
 work_spawned(w_agg_group_is_a_cell, f_a_grouped_aggregate_is_one_cell_for_the_data_walk).
 
 work(w_agg_layer_fires_the_new,
-  "A STRATIFIED LAYER FIRES ONLY THE INSTANCES THAT ARE NEW (f_a_stratified_layer_fires_its_rules_whole): each layer of a data-stratified component fires the rules owning its correlations whole (fire_all), d layers by c correlations costs d x c firings (a chain of 300 sums 0.26 s, 2000 15 s). Key a per-rule memory by the elements of an instance (a rule with a count and a sum releases them independently) and fire the instances whose correlations are released this layer, both engines. ACCEPTANCE: a proof world counts the firings of a chain of N sums and they are N, not N x N/2 (census of firings, byte parity between engines), a chain of 2000 sums under one second in release, every golden and why/whynot/excise/retraction output unchanged, a planted break (fire_all back) turns the count red.").
-work_state(w_agg_layer_fires_the_new, open).
+  "DONE 2026-10-03, both engines, byte parity. A STRATIFIED LAYER FIRES ONLY THE INSTANCES THAT ARE NEW TO IT (f_a_stratified_layer_fires_its_rules_whole): run_data_level fires each correlation a layer releases as the rule's instances that extend its key (fire_keys, the body solved from the correlation's shared values and groups), where it fired the rules that own the layer whole (fire_all); a rule with a count and a sum releases them independently, each by its own correlation, and an instance two of them release together is fired by the first alone (ds_gate holds the earlier elements the layer released while a later one is fired). The firings are counted by the budget: a firing a layer makes that concludes nothing new is a step (ds_charge, in conclude), which is none when the layer fires only what is new and the square of the chain when it fires whole. A chain of 2000 sums: 5.7 s before, 0.18 s after, the dump byte for byte the same; 300: 0.15 s to 0.06 s (the load included). agg_datastrat_chain (60 sums, a step budget of 310 where the chain needs 295 and a whole firing of its layers about 2 000) and rust/rofl/tests/datastrat_scale.rs (steps linear in the chain, 300 sums inside six steps a sum, 2000 under a second); every golden unchanged but the worlds the ledger added; the rules are still fired whole once after the last layer (ds_done) and ds_verify still solves each cell again. Planted faults ds_layer_fires_whole and ds_layer_refires (the budget world, whose wall falls a step sooner) and their ts_ twins.").
+work_state(w_agg_layer_fires_the_new, done).
 work_spawned(w_agg_layer_fires_the_new, f_a_stratified_layer_fires_its_rules_whole).
 
 work(w_store_compact_wits_keeps_order,
   "COMPACTING THE WITNESS ARENA KEEPS THE ORDER OF A FACT'S FIRINGS (f_compact_wits_reverses_a_firing_list): rust/rofl/src/store.rs compact_wits rebuilds each list reversed, so the first firing a walk meets changes at a compaction. Rebuild in order. ACCEPTANCE: a store unit test that forces a compaction (wits above 2 x wits_live + 1024) over facts with several firings and asserts the same witnesses_of order and canonical_state before and after, red against the reversed rebuild (a planted break); goldens unchanged.").
-work_state(w_store_compact_wits_keeps_order, open).
+work_state(w_store_compact_wits_keeps_order, done).
 work_spawned(w_store_compact_wits_keeps_order, f_compact_wits_reverses_a_firing_list).
 
 work(w_docs_check_covers_render_js,
   "docs/js IS GENERATED AND NO GATE SEES IT STALE (second finding of f_a_max_over_base_data_costs_the_self_shard): a rule or phrase edit leaves docs/js out of date with every gate green. Make `npm run docs -- --check` run render:js into a scratch directory and fail on any difference from docs/js (or an equivalent diff). ACCEPTANCE: docs -- --check is green on the tree and red after a one-word edit of a phrase in facts/js-phrases.rofl with docs/js not regenerated; the command list in README/CLAUDE.md regenerates.").
-work_state(w_docs_check_covers_render_js, open).
+work_state(w_docs_check_covers_render_js, done).
 work_spawned(w_docs_check_covers_render_js, f_a_max_over_base_data_costs_the_self_shard).
 
 work(w_semiring_names_the_reading,
   "THE SEMIRING INSTANCE DOCUMENTATION STATES THAT A COUNT HAS NO READING OF ITS OWN (f_counting_reads_oppositely_by_domain): add to src/semiring.ts's header (or docs/aggregates.md's semiring tag section) the five readings (robustness, ambiguity, launderability, fragility, and the reading of the instance's own domain) and the rule that the interpretation belongs to the instance. ACCEPTANCE: the five are named in one place that every counting instance's README links to or repeats, and every examples/*/README.md that folds a count names which reading it takes (grep-checkable).").
-work_state(w_semiring_names_the_reading, open).
+work_state(w_semiring_names_the_reading, done).
 work_spawned(w_semiring_names_the_reading, f_counting_reads_oppositely_by_domain).
+
+work(w_labeled_unknowns,
+  "AN UNKNOWN WITH A NAME AND A CONDITION (level 2 of f_a_member_whose_group_is_not_known_reads_as_every_group, decided by the owner 2026-10-04). Today an unknown value is anonymous: each place it reaches gets its own shrug, so the shrugs lose that they are ONE unknown (a member whose group is unknown joins exactly one group, yet every group it could change and the group it could make are independent `maybe`s, and the total over all groups, which is known exactly, is a shrug too) and lose what it is known NOT to be (the group it could make is none of the sealed ones, yet `ph_wc(?, ?)` matches g1 and `not ph_wc(g1, 2)` is a shrug). Model it as a LABELED NULL with a CONDITION (conditional tables, Imielinski-Lipski): an unknown carries a label (the missing fact it came from) and a constraint (an excluded set, an equality to another label); a row that depends on it carries the condition (`count(g2) = 1 + [v = g2]`, the new group's row exists only if v is not in {g1, g2}); a question is answered as what holds under every admissible value (certain answers), a shrug only where the completions disagree, and the shrug's meta names the label and the condition. Also separate the two uncertainties now glued in one hole: the fact exists and a value in it is unknown, and the fact may not exist at all. ACCEPTANCE: in both engines with byte parity: the precise_holes world answers `not ph_wc(g1, 2)` no and the sum over all groups exactly; a label shared by two cells is shown as one in why; the written form of a labeled unknown and its condition in the answer model (shrug meta) decided and documented; proof worlds with hand-derived certain answers, planted breaks; no answer that today holds or fails changes, only shrugs become answers. Scope beyond aggregates: an unknown in a join key or a key of any kind. Bounded per construct; the size of the condition set is the open question (one label is linear, many labels can be exponential: decide the cap and what a capped answer says).").
+work_state(w_labeled_unknowns, open).
+
+-- ===========================================================================
+-- THE COMPRESSION PROGRAMME, recorded 2026-10-04 with the owner as OPEN AND VERY IMPORTANT work:
+-- hypotheses and experiments for collapsing and pruning the world, from
+-- f_half_the_world_is_provenance_and_a_fifth_is_the_ancestor_closure. FIRST: re-measure after engine-fast lands.
+-- ===========================================================================
+
+work(w_compression_programme,
+  "VERY IMPORTANT (owner, 2026-10-04): make the world small enough that a real repository evaluates with bounded growth, by collapsing what is a closure, pruning what nobody asks, and not materialising bookkeeping nobody reads; soundly (every answer of the unpruned world is still given, or is a shrug with a reason), undoably (derived by rules, so retraction/excise restore it), measured before and after ON THE RUST ENGINE (release) on self, mcp, cli_exits and a grafema package; a TS timing decides nothing (f_rust_is_the_engine_ts_is_the_reference). Hub of the w_cmp_* items; supersedes the plan text of w_dataflow_pruning, which it carries out. Premises and the first measurements: f_half_the_world_is_provenance_and_a_fifth_is_the_ancestor_closure.").
+work_state(w_compression_programme, open).
+work_needs(w_compression_programme, w_cmp_remeasure_after_engine_fast).
+
+work(w_cmp_remeasure_after_engine_fast,
+  "EXPERIMENT 0, first: take the fact and work distribution again (per relation, per rule) after engine-fast is merged, on the RUST engine, release build (with and without sealed(witness)), same three corpora plus a grafema package; the 2026-10-04 table was taken on the TS engine and is indicative only; record the table beside the 2026-10-04 one. Every hypothesis below is re-ranked by it.").
+work_state(w_cmp_remeasure_after_engine_fast, open).
+
+work(w_cmp_provenance_on_demand,
+  "HYPOTHESIS 1 (largest lever, ~44% of facts): derived_by rows need not be materialised for every derived fact; they are needed only where a rule reads derived_by (or asserted_by) or a why/excise asks. EXPERIMENT: materialise derived_by lazily (a demand relation over the stored witnesses, or only for the relations some rule reads it of) and measure facts, time and memory; ACCEPTANCE: every world that reads derived_by answers the same, why/whynot/excise byte-identical, whycheck 0 differences, both engines; decide with sealed(witness) how a world declares it needs no provenance at all.").
+work_state(w_cmp_provenance_on_demand, open).
+work_needs(w_cmp_provenance_on_demand, w_cmp_remeasure_after_engine_fast).
+
+work(w_cmp_ancestor_closure,
+  "HYPOTHESIS 2 (~20% of facts): ast_within (node x every ancestor) need not be stored as pairs: a pre-order numbering gives each node an interval [enter, exit] and `P is an ancestor of D` becomes one comparison, or the closure is walked on demand (engine-fast's BFS/closure kernel). EXPERIMENT: after engine-fast, measure what remains of ast_within; if still materialised, try the interval encoding as derived facts over the scan; ACCEPTANCE: every reader of ast_within answers the same, both engines, facts and time before/after.").
+work_state(w_cmp_ancestor_closure, open).
+work_needs(w_cmp_ancestor_closure, w_cmp_remeasure_after_engine_fast).
+
+work(w_cmp_costly_rules,
+  "HYPOTHESIS 3: single rules spend more than they conclude: callback_param (14% of all join work on cli_exits for 230 conclusions), param_hidden (8% on self for 10), caught_here (7-12%). EXPERIMENT: per rule, find the product it builds (body order, a missing bound key, a pairwise `not closer` that is a min), fix by order, demand or an aggregate; ACCEPTANCE: identical facts, work before/after per rule.").
+work_state(w_cmp_costly_rules, open).
+work_needs(w_cmp_costly_rules, w_cmp_remeasure_after_engine_fast).
+
+work(w_cmp_flow_node_merge,
+  "HYPOTHESIS 4 (small, ~44% of flow nodes, <1% of facts today): merge flow nodes the code guarantees equivalent (copy cycles; unseeded nodes whose predecessors all collapse to one: a binder or argument copied to each use), DERIVED by rules (a representative relation), values computed for representatives only, why expanding the merged edges back; heap reads/writes stay junctions, observed nodes are never merged. ACCEPTANCE: identical answers, why unchanged in content, facts/time before/after; only worth doing if experiment 0 shows the flow grown on a real repository.").
+work_state(w_cmp_flow_node_merge, open).
+work_needs(w_cmp_flow_node_merge, w_cmp_remeasure_after_engine_fast).
+
+work(w_cmp_store_load_forwarding,
+  "HYPOTHESIS 5: a store/load pair through a heap cell becomes copy edges where the written object is known (one edge per object it may write into, a single edge under must-alias), so member flows compress like plain copies; an unknown object stays a junction. EXPERIMENT: measure how many member_value cells have a single known object, then derive the forwarded edges and compare answers and size.").
+work_state(w_cmp_store_load_forwarding, open).
+work_needs(w_cmp_store_load_forwarding, w_cmp_remeasure_after_engine_fast).
+
+work(w_cmp_runtime_assumptions,
+  "HYPOTHESIS 6: runtime assumptions prune dead branches (conditional constant propagation): `runtime_env(NODE_ENV, production)` and the like as base facts in their own book; a branch dead under them contributes no edges; excising the assumption brings them back by retraction; whynot names the assumption a missing flow was bought with; an unknown assumption keeps both branches (w_labeled_unknowns). EXPERIMENT: one real corpus with environment checks, size and answers with and without the assumption, and the excise round trip identical to a fresh evaluation.").
+work_state(w_cmp_runtime_assumptions, open).
+work_needs(w_cmp_runtime_assumptions, w_cmp_remeasure_after_engine_fast).
+
+work(w_cmp_demand_cones,
+  "HYPOTHESIS 7: most of the world is never asked: 97% of may_be_lit content is read only as `has a value`, 90-96% of may_be_node by nothing outside the flow book. EXPERIMENT: in the asks mode (magic sets), measure the cone of the notebooks' real questions against the full world; then a NEW ask on a hot world: the cone grows by incremental addition (pending on engine-fast), and a value-level sharing needs no unpacking while a structural merge may split; prove that growing one cone never changes an answer of another (the cones are closed for their demanded atoms).").
+work_state(w_cmp_demand_cones, open).
+work_needs(w_cmp_demand_cones, w_cmp_remeasure_after_engine_fast).
+
+work(w_cmp_model_aggregates,
+  "HYPOTHESIS 8: relations of the JS model that are aggregates in disguise read and cost better as aggregates: nearest_fn (`not closer` over every enclosing pair) as a min of depth, the effects (eff_here) as a lattice, the audit verdicts as a max over their strength, coverage audits as counts; and a census of the model's ~200 `not` for those that are a min/max/count. Value sets as a union lattice are NOT among them (refuted: sets are size 1). ACCEPTANCE per rewrite: identical answers, work before/after; with the owner, since the rules are his.").
+work_state(w_cmp_model_aggregates, open).

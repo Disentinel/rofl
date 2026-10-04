@@ -4394,15 +4394,16 @@ export const BREAKS: Break[] = [
  },
  {
   "id": "ts_lattice_why_one_member",
-  "what": "TypeScript why of a lattice fact prints its canonical member alone",
+  "what": "TypeScript why of a lattice fact or a member of a front prints its first member alone",
   "edits": [
    [
     "src/aggeval.ts",
-    "improved on since'}]`));\n    const limit = indent === 0 ? o.members : 1;",
-    "improved on since'}]`));\n    const limit = indent === 0 ? 1 : 1;"
+    "n = members.length, limit = indent === 0 ? o.members : 1;",
+    "n = members.length, limit = 1;"
    ]
   ],
   "expect": {
+   "agg_sub_why": "asy_text_missing",
    "agg_lattice_why": "why_text_missing",
    "agg_tag_why": "tgy_text_missing",
    "agg_critpath_demo": "cpc_unnamed"
@@ -4518,20 +4519,6 @@ export const BREAKS: Break[] = [
   ],
   "expect": {
    "agg_tagc_why": "tcy_text_missing"
-  }
- },
- {
-  "id": "ts_dominance_why_one_member",
-  "what": "TypeScript why of a member of a front prints its first member alone",
-  "edits": [
-   [
-    "src/aggeval.ts",
-    "${n === 1 ? '' : 's'}; ${place}]`));\n    const limit = indent === 0 ? o.members : 1;",
-    "${n === 1 ? '' : 's'}; ${place}]`));\n    const limit = indent === 0 ? 1 : 1;"
-   ]
-  ],
-  "expect": {
-   "agg_sub_why": "asy_text_missing"
   }
  },
  {
@@ -5348,6 +5335,85 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "ds_group_whole",
+  "what": "a group the rule binds is read as the whole correlation: a group that reads another group of its own relation is a cycle",
+  "expect": {
+   "agg_datastrat_groups": "the world does not evaluate",
+   "agg_datastrat_cycle": "refused, but not for"
+  }
+ },
+ {
+  "id": "ds_group_resealed",
+  "what": "the whole correlation of a grouped element seals again the groups a narrower one sealed",
+  "expect": {
+   "agg_datastrat_groups": "sealed twice"
+  }
+ },
+ {
+  "id": "ds_ground_unreleased",
+  "what": "a group the rule binds is never released on its own: only the whole correlation is",
+  "expect": {
+   "agg_datastrat_groups": "changed after it sealed"
+  }
+ },
+ {
+  "id": "ds_layer_fires_whole",
+  "what": "a layer of a stratified component fires every instance of the rules that own its correlations, not only the instances new to it",
+  "expect": {
+   "agg_datastrat_chain": "the state holds the row hole"
+  }
+ },
+ {
+  "id": "ds_layer_refires",
+  "what": "a layer fires an instance again for each of its elements a layer releases, not once for the first",
+  "expect": {
+   "agg_datastrat_budget": "the state lacks the row value"
+  }
+ },
+ {
+  "id": "ds_wide_unlisted",
+  "what": "the whole correlation of a grouped element drops the groups a narrower one sealed instead of listing their cells",
+  "expect": {
+   "agg_datastrat_wide": "changed after it sealed"
+  }
+ },
+ {
+  "id": "ds_hold_grouped",
+  "what": "an element a layer released is held while a later one is fired even where the later one is grouped, and the instance is read by neither",
+  "expect": {
+   "agg_datastrat_elems": "changed after it sealed"
+  }
+ },
+ {
+  "id": "ds_any_writable",
+  "what": "the mark of a group no rule bound is an atom the source can write",
+  "expect": {
+   "agg_datastrat_wide": "the world does not evaluate"
+  }
+ },
+ {
+  "id": "ds_layer_unfired",
+  "what": "a layer fires nothing, so the final firing of the component makes every conclusion",
+  "expect": {
+   "agg_datastrat_eval": "missed an instance"
+  }
+ },
+ {
+  "id": "ds_any_printed_raw",
+  "what": "the mark of a group no rule bound is printed as the byte it is, in a hole or a shrug that names the correlation",
+  "expect": {
+   "agg_datastrat_mark": "the state lacks the row hole"
+  }
+ },
+ {
+  "id": "ds_spread_uncarried",
+  "what": "an unknown a fault below the component carried is not carried through the component's own rules before its layers seal",
+  "expect": {
+   "agg_datastrat_below": "dz_missing",
+   "agg_datastrat_below_sum": "dz_missing"
+  }
+ },
+ {
   "id": "retract_thr_cells_kept",
   "what": "the thresholds of a rule read again whole stay known to the evaluation: a quorum cell that is gone is found where it was",
   "expect": {
@@ -5439,7 +5505,7 @@ export const BREAKS: Break[] = [
   "edits": [
    [
     "src/aggeval.ts",
-    "    if (this.plainPending.length === 0 && this.plainUndecided.length === 0 && this.latUndecided.length === 0) return;\n    this.closePlainRules(comp.round + 1);",
+    "    if (this.plainPending.length === 0 && this.plainUndecided.length === 0 && this.latUndecided.length === 0 && this.latSpread.size === 0) return;\n    this.closePlainRules(comp.round + 1);",
     "    if (true as boolean) return;\n    this.closePlainRules(comp.round + 1);"
    ]
   ],
@@ -5531,6 +5597,162 @@ export const BREAKS: Break[] = [
   ],
   "expect": {
    "agg_datastrat_keys": "the world does not evaluate"
+  }
+ },
+ {
+  "id": "ts_ds_group_whole",
+  "what": "the TypeScript walk reads a group the rule binds as the whole correlation",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "        for (const i of plan.group) {\n          const t = resolve(mkv(b.shared![i]), s);\n          corr.push(isGround(t) ? t : DS_ANY);",
+    "        for (const i of plan.group) {\n          const t = resolve(mkv(b.shared![i]), s);\n          corr.push(DS_ANY);"
+   ]
+  ],
+  "expect": {
+   "agg_datastrat_groups": "the world does not evaluate",
+   "agg_datastrat_cycle": "refused, but not for"
+  }
+ },
+ {
+  "id": "ts_ds_group_resealed",
+  "what": "the TypeScript whole correlation of a grouped element seals again the groups a narrower one sealed",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "if (keep && plan.group.length > 0 && this.dsElems.has(`${rid}|${a.at}`)) {\n      for (let j",
+    "if (keep && plan.group.length > 0 && this.dsElems.has(`${rid}|${a.at}`) && false) {\n      for (let j"
+   ]
+  ],
+  "expect": {
+   "agg_datastrat_groups": "sealed twice"
+  }
+ },
+ {
+  "id": "ts_ds_ground_unreleased",
+  "what": "the TypeScript walk releases no group the rule binds on its own",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "      if (nd.k !== 'a') continue;\n      const d = depth[compOf[i]];",
+    "      if (nd.k !== 'a' || nd.corr.slice(nd.corr.length - (this.aggPlans.get(`${nd.rid}|${nd.at}`)?.group.length ?? 0)).some((t) => t !== DS_ANY)) continue;\n      const d = depth[compOf[i]];"
+   ]
+  ],
+  "expect": {
+   "agg_datastrat_groups": "changed after it sealed"
+  }
+ },
+ {
+  "id": "ts_ds_layer_fires_whole",
+  "what": "the TypeScript layer fires every instance of the rules that own its correlations",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "      this.fireKeys(layer);",
+    "      this.dsCharge = true;\n      try { this.fireAll(owners); } finally { this.dsCharge = false; }"
+   ]
+  ],
+  "expect": {
+   "agg_datastrat_chain": "the state holds the row hole"
+  }
+ },
+ {
+  "id": "ts_ds_layer_refires",
+  "what": "the TypeScript layer fires an instance again for each of its elements a layer releases",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "    if (this.dsFiring !== null && this.dsLayer.has(mk)) {",
+    "    if (this.dsFiring !== null && this.dsLayer.has(mk) && false) {"
+   ]
+  ],
+  "expect": {
+   "agg_datastrat_budget": "the state lacks the row value"
+  }
+ },
+ {
+  "id": "ts_ds_wide_unlisted",
+  "what": "the TypeScript whole correlation drops the groups a narrower one sealed",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "    ids.push(...reuse);\n",
+    "    if (reuse.length < 0) ids.push(...reuse);\n"
+   ]
+  ],
+  "expect": {
+   "agg_datastrat_wide": "changed after it sealed"
+  }
+ },
+ {
+  "id": "ts_ds_hold_grouped",
+  "what": "the TypeScript layer holds an earlier element while a grouped one is fired",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "this.dsFiring = whole ? [k.rid, k.at] : null;",
+    "this.dsFiring = [k.rid, k.at];"
+   ]
+  ],
+  "expect": {
+   "agg_datastrat_elems": "changed after it sealed"
+  }
+ },
+ {
+  "id": "ts_ds_any_writable",
+  "what": "the TypeScript mark of a group no rule bound is an atom the source can write",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "const DS_ANY = mka(DS_ANY_NAME);",
+    "const DS_ANY = mka('$ds_any');"
+   ]
+  ],
+  "expect": {
+   "agg_datastrat_wide": "the world does not evaluate"
+  }
+ },
+ {
+  "id": "ts_ds_layer_unfired",
+  "what": "the TypeScript layer fires nothing",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "    if (keys.length === 0) return;\n    const owners: ERule[] = [];",
+    "    if (keys.length >= 0) return;\n    const owners: ERule[] = [];"
+   ]
+  ],
+  "expect": {
+   "agg_datastrat_eval": "missed an instance"
+  }
+ },
+ {
+  "id": "ts_ds_any_printed_raw",
+  "what": "the TypeScript printing of a term writes the mark of a group no rule bound as the byte it is",
+  "edits": [
+   [
+    "src/unify.ts",
+    "    case 'a': return t.name === DS_ANY_NAME ? '_' : t.name;",
+    "    case 'a': return t.name;"
+   ]
+  ],
+  "expect": {
+   "agg_datastrat_mark": "the state lacks the row hole"
+  }
+ },
+ {
+  "id": "ts_ds_spread_uncarried",
+  "what": "the TypeScript engine does not carry what a fault below the component left unknown through its rules before the layers seal",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "this.latUndecided.length === 0 && this.latSpread.size === 0) return;",
+    "this.latUndecided.length === 0 && true) return;"
+   ]
+  ],
+  "expect": {
+   "agg_datastrat_below": "dz_missing",
+   "agg_datastrat_below_sum": "dz_missing"
   }
  },
  {
@@ -5757,7 +5979,10 @@ export function sitesIn(file: string, text: string): Site[] {
   const out: Site[] = [];
   const skip = (i: number): number => {
     const c = text[i];
-    if (c === '"') { for (i++; text[i] !== '"'; i++) if (text[i] === '\\') i++; return i; }
+    // a raw string reads no escape: r"…", r#"…"#, its end the quote and as many #
+    const raw = c === 'r' && !/[A-Za-z0-9_]/.test(text[i - 1] ?? '') ? /^r(#*)"/.exec(text.slice(i, i + 8)) : null;
+    if (raw) { const end = text.indexOf(`"${raw[1]}`, i + raw[0].length); return end < 0 ? text.length : end + raw[1].length; }
+    if (c === '"') { for (i++; i < text.length && text[i] !== '"'; i++) if (text[i] === '\\') i++; return i; }
     if (c === '/' && text[i + 1] === '/') { while (i < text.length && text[i] !== '\n') i++; return i; }
     if (c === "'" && text[i + 2] === "'") return i + 2;
     if (c === "'" && text[i + 1] === '\\' && text[i + 3] === "'") return i + 3;

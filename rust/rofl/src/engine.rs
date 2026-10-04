@@ -29,6 +29,11 @@ const DEFAULT_SPACE: i64 = 500_000;
 const POLICY_BUDGET: i64 = 20_000_000;
 /// the most descending passes narrowing makes after a widening
 const NARROW_PASSES: usize = 4;
+/// What stands in a correlation's key for a group variable nothing bound (datastrat.rs).
+
+fn ds_any_name() -> &'static str {
+    brk!("ds_any_writable" => "$ds_any"; DS_ANY)
+}
 
 #[derive(Debug)]
 pub enum Halt {
@@ -629,6 +634,14 @@ pub struct Eval {
     ds_elems: HashSet<(Sym, u32)>,
     ds_released: HashSet<datastrat::AggKey>,
     ds_done: HashSet<(Sym, u32)>,
+    /// A firing a layer of a data-stratified component makes again, that concludes nothing new, is a step (`fire_keys`).
+    ds_charge: bool,
+    /// The final firing of a data-stratified component concludes nothing the layers did not (`run_data_level`).
+    ds_check: bool,
+    /// The correlations a layer released, and the element `fire_keys` is firing: an instance two of them release
+    /// is fired by the first alone (`ds_gate`).
+    ds_layer: HashSet<datastrat::AggKey>,
+    ds_firing: Option<(Sym, u32)>,
     /// The lattice relations, from `lattice_decl`: arity and operation; an
     /// idempotent tag's too, as the order lattice it is.
     lattices: HashMap<Sym, (usize, AggOp)>,
@@ -1100,6 +1113,10 @@ impl Eval {
             ds_elems: HashSet::new(),
             ds_released: HashSet::new(),
             ds_done: HashSet::new(),
+            ds_charge: false,
+            ds_check: false,
+            ds_layer: HashSet::new(),
+            ds_firing: None,
             lattices: HashMap::new(),
             lattice_rows: Vec::new(),
             decl_refused: Vec::new(),
@@ -3624,9 +3641,19 @@ impl Eval {
                 return if is_base { self.fire_closure(ci) } else { Ok(Front::default()) };
             }
         }
+        self.fire_rule_from(r, Subst::new(), front_at)
+    }
+
+    /// `r` fired over the instances that extend `s0`.
+    fn fire_rule_from(
+        &mut self,
+        r: &Rc<ERule>,
+        s0: Subst,
+        front_at: Option<(usize, &FxSet<FactId>)>,
+    ) -> Result<Front, Halt> {
         let outer = self.cur_rule.replace(r.id);
         let was_firing = std::mem::replace(&mut self.firing, true);
-        let sols = self.solve_body(&r.plan, Subst::new(), 0, front_at, Some(r.id));
+        let sols = self.solve_body(&r.plan, s0, 0, front_at, Some(r.id));
         self.firing = was_firing;
         self.cur_rule = outer;
         let sols = sols?;
@@ -3898,6 +3925,13 @@ impl Eval {
             )
         };
         if new_firing {
+            if self.ds_check {
+                return Err(Halt::Bug(format!(
+                    "the layers of a component stratified by its data missed an instance of rule {}: it concludes {} again, new",
+                    self.h.name(r.id),
+                    self.h.name(head.rel)
+                )));
+            }
             self.bump_steps()?;
             self.charge_row(Some(r.id), true)?;
             if !self.no_provenance {
@@ -3915,6 +3949,8 @@ impl Eval {
                     out.note(self.v.derived_by, dbid);
                 }
             }
+        } else if self.ds_charge {
+            self.bump_steps()?;
         }
         if is_new {
             out.note(head.rel, id);
@@ -4239,6 +4275,15 @@ impl Eval {
                 return Err(Halt::Bug(format!("a correlation variable of {} is not bound", self.h.name(rid))));
             }
             corr.push(t);
+        }
+        // A GROUP IS A CORRELATION OF ITS OWN in a component stratified by its data: a group variable `s` binds
+        // is part of the key, one it does not is `ds_any` (datastrat.rs, `ds_bind`)
+        if !plan.group.is_empty() && self.ds_elems.contains(&(rid, a.at)) {
+            let any = Term::atom(self.h.intern(ds_any_name()));
+            for i in &plan.group {
+                let t = resolve(&mut self.h, Term::var(a.shared[*i]), s);
+                corr.push(if self.h.is_ground(t) { t } else { any });
+            }
         }
         Ok((plan, corr))
     }
@@ -4955,6 +5000,27 @@ impl Eval {
         }
         fresh.sort_by(|x, y| cmp_js(&tuple_text(&self.h, x), &tuple_text(&self.h, y)));
         groups.extend(fresh.into_iter().map(|g| (g, Vec::new())));
+        // a group a narrower correlation of the element sealed already is its cell, listed here and not sealed again (`ds_bind`)
+        let mut reuse: Vec<CellId> = Vec::new();
+        if keep && !plan.group.is_empty() && self.ds_elems.contains(&(rid, a.at)) && brk!("ds_group_resealed" => false; true) {
+            let owner = CellOwner::Body { rule: rid, at: a.at };
+            let mut key: Vec<Term> = vec![Term::int(0); a.shared.len()];
+            for (n, i) in plan.corr.iter().enumerate() {
+                key[*i] = corr[n];
+            }
+            groups.retain(|(g, _)| {
+                for (n, i) in plan.group.iter().enumerate() {
+                    key[*i] = g[n];
+                }
+                match self.store.find_cell(owner, &key, self.store.tick) {
+                    Some(c) => {
+                        reuse.push(c);
+                        false
+                    }
+                    None => true,
+                }
+            });
+        }
         let withdrawn = self.h.intern("support_withdrawn");
         let mut reached: HashMap<usize, Vec<Unknown>> = HashMap::new();
         let index = PossIndex::of(&reach);
@@ -5230,6 +5296,9 @@ impl Eval {
             let gs: Vec<(Box<[Term]>, CellId, Result<Sorted, Sym>)> =
                 sorts.into_iter().zip(ids.iter()).map(|((g, x), c)| (g, *c, x)).collect();
             self.hol_shared.insert(k, HolShared::Groups(gs.into()));
+        }
+        if brk!("ds_wide_unlisted" => false; true) {
+            ids.extend(reuse);
         }
         self.keyed_cells(ids)
     }

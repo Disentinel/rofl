@@ -1,0 +1,72 @@
+-- examples/checks/agg-datastrat-chain.rofl — A CHAIN OF 60 SUMS, each over the one
+-- before: c1 = SUM(c0), c2 = SUM(c1, c0), a component as relations (val reads val
+-- through its own sum) and a chain as data, 60 layers deep with one correlation in each.
+-- A layer fires only the instances that are new to it, so the chain is 60 firings and
+-- not 1830 (f_a_stratified_layer_fires_its_rules_whole): the budget of its check is
+-- a few times the first and far below the second.
+--
+--   c0 = 1, c(k) = SUM(c(k-1), c0) = k  (c1 sums the one cell c0 names twice)
+edb(seed). edb(sum_head). edb(in_range).
+seed(c0, 1).
+val(C, V) :- seed(C, V).
+val(N, V) :- sum_head(N, I), V is sum(X ; C : in_range(I, C), val(C, X)).
+sum_head(c1, r1). in_range(r1, c0). in_range(r1, c0).
+sum_head(c2, r2). in_range(r2, c1). in_range(r2, c0).
+sum_head(c3, r3). in_range(r3, c2). in_range(r3, c0).
+sum_head(c4, r4). in_range(r4, c3). in_range(r4, c0).
+sum_head(c5, r5). in_range(r5, c4). in_range(r5, c0).
+sum_head(c6, r6). in_range(r6, c5). in_range(r6, c0).
+sum_head(c7, r7). in_range(r7, c6). in_range(r7, c0).
+sum_head(c8, r8). in_range(r8, c7). in_range(r8, c0).
+sum_head(c9, r9). in_range(r9, c8). in_range(r9, c0).
+sum_head(c10, r10). in_range(r10, c9). in_range(r10, c0).
+sum_head(c11, r11). in_range(r11, c10). in_range(r11, c0).
+sum_head(c12, r12). in_range(r12, c11). in_range(r12, c0).
+sum_head(c13, r13). in_range(r13, c12). in_range(r13, c0).
+sum_head(c14, r14). in_range(r14, c13). in_range(r14, c0).
+sum_head(c15, r15). in_range(r15, c14). in_range(r15, c0).
+sum_head(c16, r16). in_range(r16, c15). in_range(r16, c0).
+sum_head(c17, r17). in_range(r17, c16). in_range(r17, c0).
+sum_head(c18, r18). in_range(r18, c17). in_range(r18, c0).
+sum_head(c19, r19). in_range(r19, c18). in_range(r19, c0).
+sum_head(c20, r20). in_range(r20, c19). in_range(r20, c0).
+sum_head(c21, r21). in_range(r21, c20). in_range(r21, c0).
+sum_head(c22, r22). in_range(r22, c21). in_range(r22, c0).
+sum_head(c23, r23). in_range(r23, c22). in_range(r23, c0).
+sum_head(c24, r24). in_range(r24, c23). in_range(r24, c0).
+sum_head(c25, r25). in_range(r25, c24). in_range(r25, c0).
+sum_head(c26, r26). in_range(r26, c25). in_range(r26, c0).
+sum_head(c27, r27). in_range(r27, c26). in_range(r27, c0).
+sum_head(c28, r28). in_range(r28, c27). in_range(r28, c0).
+sum_head(c29, r29). in_range(r29, c28). in_range(r29, c0).
+sum_head(c30, r30). in_range(r30, c29). in_range(r30, c0).
+sum_head(c31, r31). in_range(r31, c30). in_range(r31, c0).
+sum_head(c32, r32). in_range(r32, c31). in_range(r32, c0).
+sum_head(c33, r33). in_range(r33, c32). in_range(r33, c0).
+sum_head(c34, r34). in_range(r34, c33). in_range(r34, c0).
+sum_head(c35, r35). in_range(r35, c34). in_range(r35, c0).
+sum_head(c36, r36). in_range(r36, c35). in_range(r36, c0).
+sum_head(c37, r37). in_range(r37, c36). in_range(r37, c0).
+sum_head(c38, r38). in_range(r38, c37). in_range(r38, c0).
+sum_head(c39, r39). in_range(r39, c38). in_range(r39, c0).
+sum_head(c40, r40). in_range(r40, c39). in_range(r40, c0).
+sum_head(c41, r41). in_range(r41, c40). in_range(r41, c0).
+sum_head(c42, r42). in_range(r42, c41). in_range(r42, c0).
+sum_head(c43, r43). in_range(r43, c42). in_range(r43, c0).
+sum_head(c44, r44). in_range(r44, c43). in_range(r44, c0).
+sum_head(c45, r45). in_range(r45, c44). in_range(r45, c0).
+sum_head(c46, r46). in_range(r46, c45). in_range(r46, c0).
+sum_head(c47, r47). in_range(r47, c46). in_range(r47, c0).
+sum_head(c48, r48). in_range(r48, c47). in_range(r48, c0).
+sum_head(c49, r49). in_range(r49, c48). in_range(r49, c0).
+sum_head(c50, r50). in_range(r50, c49). in_range(r50, c0).
+sum_head(c51, r51). in_range(r51, c50). in_range(r51, c0).
+sum_head(c52, r52). in_range(r52, c51). in_range(r52, c0).
+sum_head(c53, r53). in_range(r53, c52). in_range(r53, c0).
+sum_head(c54, r54). in_range(r54, c53). in_range(r54, c0).
+sum_head(c55, r55). in_range(r55, c54). in_range(r55, c0).
+sum_head(c56, r56). in_range(r56, c55). in_range(r56, c0).
+sum_head(c57, r57). in_range(r57, c56). in_range(r57, c0).
+sum_head(c58, r58). in_range(r58, c57). in_range(r58, c0).
+sum_head(c59, r59). in_range(r59, c58). in_range(r59, c0).
+sum_head(c60, r60). in_range(r60, c59). in_range(r60, c0).

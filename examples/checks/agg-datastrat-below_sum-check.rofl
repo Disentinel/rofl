@@ -1,0 +1,12 @@
+-- examples/checks/agg-datastrat-below_sum-check.rofl — agg_datastrat_below_sum: a sum with a member unknown is a hole, and a sum over a hole is a hole; the sum whose members are known stands.
+dz_holed(B) :- hole[$kernel]($cell(Rule, _, _, $cons(B, $nil)), support_withdrawn), concludes[$kernel](Rule, tot).
+dz_want(b1). dz_want(a).
+dz_missing(B) :- dz_want(B), not dz_holed(B).
+dz_extra(B) :- dz_holed(B), not dz_want(B).
+dz_valued(B) :- dz_want(B), tot(B, _).
+alarm(dz_missing).
+alarm(dz_extra).
+alarm(dz_valued).
+-- expect-row: tot[main](c1,5) tick drv support=1
+-- expect-no-row: tot[main](b1,
+-- expect-no-row: tot[main](a,

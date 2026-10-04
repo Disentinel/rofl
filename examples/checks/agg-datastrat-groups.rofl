@@ -1,0 +1,32 @@
+-- examples/checks/agg-datastrat-groups.rofl — A GROUP IS A CELL OF ITS OWN: a
+-- grouped aggregate (its group variable bound by nothing before it) over a
+-- relation that reads another group of its own relation. As relations it is a
+-- cycle and, with every group one correlation, a cycle in the data too; each
+-- group sealed by itself, in the order the data gives, it is a tree
+-- (docs/aggregates.md, "Data-level stratification, as built").
+--
+--           a
+--          / \
+--        b1   b2        team: a 4, b1 2, c1 1 (the groups with a member)
+--       /  \
+--     c1    c2          a counts what a big team of its own (b1) counts, and b2 has none
+--     |
+--     d1
+--
+-- team(B, N): B has N under it, its direct reports and those of each direct report whose team is two or more.
+-- tally(B, K, N): the same by role K, two group variables, and a team read by M alone leaves K to the whole.
+edb(reports). edb(role).
+reports(b1, a). reports(b2, a). reports(c1, b1). reports(c2, b1). reports(d1, c1).
+role(b1, eng). role(b2, ops). role(c1, eng). role(c2, ops). role(d1, eng).
+team(B, N) :- N is count(E : under(B, E)).
+under(B, E) :- reports(E, B).
+under(B, E) :- reports(M, B), team(M, N), N >= 2, reports(E, M).
+tally(B, K, N) :- N is count(E : kind(B, K, E)).
+kind(B, K, E) :- reports(E, B), role(E, K).
+kind(B, K, E) :- reports(M, B), tally(M, _, N), N >= 1, reports(E, M), role(E, K).
+-- the world the finding named: a group counts its kids, a kid is a group with none, and the least fixpoint
+-- has no group at all, for a count of nothing is no group (a group is one with a member)
+edb(parent).
+parent(a, b). parent(b, c).
+sz(T, N) :- N is count(K : kid(T, K)).
+kid(P, K) :- sz(K, 0), parent(P, K).

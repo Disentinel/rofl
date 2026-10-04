@@ -1322,10 +1322,6 @@ impl Store {
         out
     }
 
-    pub fn perspectives_of(&self, h: &Heap, rel: Sym) -> Vec<Sym> {
-        self.persps_sorted(h, rel)
-    }
-
     pub fn rel_count(&self, rel: Sym) -> usize {
         self.idx
             .get(&rel)
@@ -1753,6 +1749,7 @@ impl Store {
         for id in 0..self.wit_head.len() {
             let mut c = self.wit_head[id];
             let mut new_head = EMPTY;
+            let mut tail = EMPTY;
             while c != EMPTY {
                 let n = self.wits[c as usize];
                 let at = prems.len() as u32;
@@ -1761,10 +1758,16 @@ impl Store {
                 prems.extend_from_slice(ps);
                 wits.push(WitNode {
                     prems_at: at,
-                    next: new_head,
+                    next: EMPTY,
                     ..n
                 });
-                new_head = wits.len() as u32 - 1;
+                let nid = wits.len() as u32 - 1;
+                if tail == EMPTY {
+                    new_head = nid;
+                } else {
+                    wits[tail as usize].next = nid;
+                }
+                tail = nid;
                 c = n.next;
             }
             heads.push(new_head);
@@ -3673,14 +3676,6 @@ pub fn resolved_lit_key(
     out.push(')');
 }
 
-/// Is this term a non-variable atom? Used where the kernel asks `k === 'a'`.
-pub fn atom_name(t: Term) -> Option<Sym> {
-    match t.kind() {
-        TermK::Atom(s) => Some(s),
-        _ => None,
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -3692,6 +3687,35 @@ mod tests {
         let m = h.intern("main");
         let a = h.atom("a");
         (h, Store::new(), p, m, a)
+    }
+
+    /// A COMPACTION KEEPS THE ORDER OF A FACT'S FIRINGS (f_compact_wits_reverses_a_firing_list).
+    #[test]
+    fn compacting_the_witness_arena_keeps_firing_order() {
+        let (mut h, mut s, p, m, a) = world();
+        let b = h.atom("b");
+        s.add(&h, p, m, &[a], 0);
+        s.add(&h, p, m, &[b], 0);
+        let kept = s.find(p, m, &[a]).unwrap();
+        let junk = s.find(p, m, &[b]).unwrap();
+        for i in 0..6 {
+            let rule = h.intern(&format!("k{i}"));
+            s.support(kept, Witness { rule, tick: 0, prems: vec![PremRef::Fact(junk)] });
+        }
+        for i in 0..2000 {
+            let rule = h.intern(&format!("g{i}"));
+            s.support(junk, Witness { rule, tick: 0, prems: vec![PremRef::Fact(kept)] });
+        }
+        s.retire(junk);
+        assert!(s.wits.len() > 2 * s.wits_live + 1024, "the arena must be due for compaction");
+        let order = s.supports_of(&h, kept);
+        assert_eq!(order.len(), 6);
+        let state = s.canonical_state(&h);
+        let before = s.wits.len();
+        s.compact_wits();
+        assert!(s.wits.len() < before, "the compaction must have run");
+        assert_eq!(s.supports_of(&h, kept), order);
+        assert_eq!(s.canonical_state(&h), state);
     }
 
     /// WHAT THE CANONICAL MERGE COSTS AS A GROUP GETS BIG, printed rather than

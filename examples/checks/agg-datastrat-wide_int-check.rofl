@@ -1,0 +1,11 @@
+-- examples/checks/agg-datastrat-wide_int-check.rofl — agg_datastrat_wide_int: the team rows of agg-datastrat-wide_int.rofl are the hand-derived ones, and no other.
+dx_want(1, 3, start).
+dx_want(1, 3, late).
+dx_want(2, 2, start).
+dx_want(2, 2, late).
+dx_want(4, 1, start).
+dx_want(4, 1, late).
+dx_wrong(B, N, X) :- dx_want(B, N, X), not team(B, N, X).
+dx_extra(B, N, X) :- team(B, N, X), not dx_want(B, N, X).
+alarm(dx_wrong).
+alarm(dx_extra).

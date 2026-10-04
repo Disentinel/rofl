@@ -162,7 +162,6 @@ workaround_site(sum, "examples/spat/spat.rofl").
 workaround_site(sum, "examples/spat/spat.ts").
 workaround_site(sum, "examples/aka/aka.rofl").
 workaround_site(sum, "examples/blam/demo.ts").
-workaround_site(min_max_strat, "rules/js-dataflow.rofl").
 workaround_site(min_max_strat, "examples/wtf/wtf.rofl").
 workaround_site(threshold, "examples/moot/moot.rofl").
 workaround_site(threshold, "examples/goof/goof.rofl").
@@ -185,7 +184,6 @@ workaround_marker("examples/spat/spat.rofl", "work_after|work_gap|work_next|work
 workaround_marker("examples/spat/spat.ts", "function merge|tropicalSemiring|OFFSET|plain arithmetic").
 workaround_marker("examples/aka/aka.rofl", "inv_no|a sum is a scan").
 workaround_marker("examples/blam/demo.ts", "costOf|host-side sum|money arithmetic").
-workaround_marker("rules/js-dataflow.rofl", "seq_later").
 workaround_marker("examples/moot/moot.rofl", "ok_from|on_here|req_at|req_count").
 workaround_marker("examples/goof/goof.rofl", "holds_from|need_count").
 workaround_marker("examples/rip/demo.ts", "tropicalSemiring|unitFiringCost").
@@ -196,7 +194,6 @@ workaround_marker("examples/huh/demo.ts", "Ranking is presentation|sort[(][(]a, 
 
 -- a site that stays, with the reason (a kernel limit, or a library that is not
 -- the workaround); the cell closes with it recorded
-workaround_kept(min_max_strat, "rules/js-dataflow.rofl", "f_a_max_over_base_data_costs_the_self_shard: max(J : ast_child(...)) stratifies and every JS answer is byte-identical, but the model phase of the self notebook grows by about 11 s of a 120 s wall shard at 98 s").
 workaround_kept(tag_idempotent, "runtime/semirings.ts", "the shared library of the host folds over a support (provenance, trust, chaos, viterbi, and the discipline of a diverging fold); a kernel tag computes the value in the engine, it does not replace the fold's reading of the support").
 workaround_kept(tag_counting, "runtime/semirings.ts", "the same library: counting here is a fold with a declared discipline (infinite on a cycle, depth-bounded), which the stratified kernel tag refuses by design").
 
@@ -1077,7 +1074,7 @@ work_needs(w_agg_incremental_ready, w_agg_tags).
 work_needs(w_agg_incremental_ready, w_agg_holistic).
 work_needs(w_agg_incremental_ready, w_agg_subsumption).
 
-work(w_agg_retire_workarounds, "delete what the kinds replace, and the prose that explains the workaround; the sites are `workaround_site` rows, the prose `contradiction_site` rows, what stood in for an aggregate at each a `workaround_marker`; RETIRED: scripts/lint.ts, wtf, spat (rules and host), aka, blam, huh, moot, goof, rip; KEPT with a reason (`workaround_kept`): rules/js-dataflow.rofl seq_later (identical answers, +11 s on a 98 s shard, f_a_max_over_base_data_costs_the_self_shard), runtime/semirings.ts (the shared host fold over a support, which a kernel tag does not replace), and examples/slop, kept until w_agg_data_strat retired it (f_an_aggregate_is_refused_by_relation_and_not_by_data); done only with a work_proof world, agg_prose, red while a marker stands that is not kept").
+work(w_agg_retire_workarounds, "delete what the kinds replace, and the prose that explains the workaround; the sites are `workaround_site` rows, the prose `contradiction_site` rows, what stood in for an aggregate at each a `workaround_marker`; RETIRED: scripts/lint.ts, wtf, spat (rules and host), aka, blam, huh, moot, goof, rip; rules/js-dataflow.rofl seq_later RETIRED 2026-10-04 by the owner's decision (re-measured on a quiet machine after engine-fast: identical answers and time, f_a_max_over_base_data_costs_the_self_shard); KEPT with a reason (`workaround_kept`): runtime/semirings.ts (the shared host fold over a support, which a kernel tag does not replace), and examples/slop, kept until w_agg_data_strat retired it (f_an_aggregate_is_refused_by_relation_and_not_by_data); done only with a work_proof world, agg_prose, red while a marker stands that is not kept").
 work_state(w_agg_retire_workarounds, done).
 work_proof(w_agg_retire_workarounds, "agg_prose").
 work_sweeps(w_agg_retire_workarounds, retire).
@@ -1180,6 +1177,9 @@ work_proof(w_agg_data_strat, "agg_datastrat_why").
 work_proof(w_agg_data_strat, "agg_datastrat_tick").
 work_proof(w_agg_data_strat, "agg_datastrat_budget").
 work_proof(w_agg_data_strat, "agg_datastrat_retract").
+work_proof(w_agg_data_strat, "agg_datastrat_below").
+work_proof(w_agg_data_strat, "agg_datastrat_below_sum").
+work_proof(w_agg_data_strat, "agg_datastrat_mark").
 work(w_agg_retract_fallback_tail, "the retraction's named fallbacks (f_a_retraction_is_a_fresh_evaluation_or_it_is_evaluated_again): a threshold that reads what changed, a staged (@next) or demanded rule, a supported cell a reset rule also owns, a reset rule that concludes what a changed cell concludes, and an aggregate component stratified by its data each get a delta that is a fresh evaluation without the fact, or stay evaluated again with the reason recorded; done only with the work_proof worlds").
 work_state(w_agg_retract_fallback_tail, done).
 work_proof(w_agg_retract_fallback_tail, "agg_datastrat_retract").
@@ -1188,6 +1188,17 @@ work_proof(w_agg_retract_fallback_tail, "agg_incr_owner").
 work_proof(w_agg_retract_fallback_tail, "agg_incr_twice").
 work_proof(w_agg_retract_fallback_tail, "agg_incr_staged").
 work_proof(w_agg_retract_fallback_tail, "agg_incr_demand").
+work(w_agg_group_is_a_cell, "each group of a grouped aggregate is a cell of its own for the data walk (f_a_grouped_aggregate_is_one_cell_for_the_data_walk): a group reading another group of its own relation is ordered, not refused as a cycle, and a true cycle between groups is still refused, naming it; both engines, byte parity; done only with the work_proof worlds").
+work_state(w_agg_group_is_a_cell, done).
+work_proof(w_agg_group_is_a_cell, "agg_datastrat_groups").
+work_proof(w_agg_group_is_a_cell, "agg_datastrat_cycle").
+work_proof(w_agg_group_is_a_cell, "agg_datastrat_wide").
+work_proof(w_agg_group_is_a_cell, "agg_datastrat_wide_int").
+work(w_agg_layer_fires_the_new, "a layer of a data-stratified component fires only the instances that are new to it (f_a_stratified_layer_fires_its_rules_whole): the rule over each correlation the layer releases, not every instance of the rule; a chain of n sums fires n times, a chain of 2000 runs in under a second, both engines, byte parity; done only with the work_proof worlds").
+work_state(w_agg_layer_fires_the_new, done).
+work_proof(w_agg_layer_fires_the_new, "agg_datastrat_chain").
+work_proof(w_agg_layer_fires_the_new, "agg_datastrat_elems").
+work_proof(w_agg_layer_fires_the_new, "agg_datastrat_elems_gated").
 work(w_agg_member_keeps_its_derivations, "a deduplicated member keeps every derivation (f_a_deduplicated_member_keeps_one_derivation): a count, sum, holistic or threshold member holds the premises of every derivation of its projection value, the text-least first, in both engines; the state prints them, a retraction (and so an excise) keeps a member another derivation supports, and `why all` shows them; done only with the work_proof worlds").
 work_state(w_agg_member_keeps_its_derivations, done).
 work_proof(w_agg_member_keeps_its_derivations, "agg_member_derivs_state").

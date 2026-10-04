@@ -109,11 +109,14 @@ the **carrier** rather than by the data. Measured on the cyclic fixture in
 
 where boolean, tropical and viterbi take 10 rounds on that same fixture
 whatever happens. This is the first instance for which the fold's default round
-cap is not a neutral safety net: at ceiling 4000 the default reports
-`converged: false, disciplineHeld: false` at 1000 rounds, and the same instance
-given room converges at 2002. A convergent, correctly-declared instance
-reported exactly like a divergent one. `test/semiring.test.ts` asserts both
-halves so the limit cannot be discovered the hard way.
+cap is not a neutral safety net: at ceiling 4000 a flat cap of 1000 rounds runs
+out on this fixture (it converges at 4004). The fold used to call that a false
+declaration, a convergent instance reported like a divergent one. Now the
+instance declares `height: ceiling + 1`, the fold sizes its cap from it
+(`height * nodes + 1`), and ceiling 4000 converges; with the height withheld
+the same run reports `exhausted: true, disciplineHeld: null`, the budget spent
+and the declaration not refuted. `test/semiring-budget.test.ts` asserts both
+halves.
 
 ## The domain
 
@@ -331,14 +334,17 @@ divergence beside it is untested:
   and the citation ring is a pump:
 
     converged        false
-    discipline held  false
+    exhausted        true   (the budget ran out; the declaration is not refuted)
+    discipline held  undetermined
     stopped at       40 rounds (the caller's cap, not a fixpoint)
     highest value    38 at 40 rounds, 78 at 80
                      — measured twice, so "still climbing" is not a guess
 ```
 
-The fold reports a false declaration rather than hanging, which is what
-`src/semiring.ts` promises for a `BOUNDED` instance that does not stabilise.
+The fold reports the budget exhausted rather than hanging, which is what
+`src/semiring.ts` promises for a `BOUNDED` instance that does not stabilise
+within its rounds. Exhausted is not a verdict on the declaration: the uncapped
+carrier declares no height, so there is no bound to refute it against.
 "Still climbing" is measured at two round counts rather than asserted from one,
 because a single value stopped at a cap is consistent with both a slow
 convergence and a divergence, and only the second measurement tells them apart.

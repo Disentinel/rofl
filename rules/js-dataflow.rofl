@@ -998,24 +998,18 @@ may_be_node[flow](S, SD) :- ast_node[code](S, super, _, _),
                             super_of[flow](CD, SD).
 
 -- =========================================================================
--- 13. EXPRESSION FORMS. A sequence is its LAST element — a maximum, written as
--- the absence of a later one. `max(J : ast_child(...))` says it directly and
--- stratifies, but it costs the self notebook (the slowest shard) about 10 s
--- of model time, so the maximum stays written as an absence. A
+-- 13. EXPRESSION FORMS. A sequence is its LAST element: the maximum index of
+-- its expressions, over base data, so it stratifies below the flow. A
 -- conditional and a logical operator (`||`, `&&`, `??`) are both operands.
 -- `await` is transparent: `await v` is `v`, `await f()` is f's returns; a
 -- promise constructed and awaited later reaches the Promise class, which no
 -- corpus here declares. A plain assignment is its right-hand side; `+=` is a sum.
-seq_later[flow](E, I) :- ast_node[code](E, sequence_expression, _, _),
-                         ast_child[code](E, expressions, I, _),
-                         ast_child[code](E, expressions, J, _), I < J.
-
 may_be_node[flow](E, N) :- ast_node[code](E, sequence_expression, _, _),
-                           ast_child[code](E, expressions, I, X),
-                           not seq_later[flow](E, I), may_be_node[flow](X, N).
+                           I is max(J : ast_child[code](E, expressions, J, _)),
+                           ast_child[code](E, expressions, I, X), may_be_node[flow](X, N).
 may_be_lit[flow](E, V)  :- ast_node[code](E, sequence_expression, _, _),
-                           ast_child[code](E, expressions, I, X),
-                           not seq_later[flow](E, I), may_be_lit[flow](X, V).
+                           I is max(J : ast_child[code](E, expressions, J, _)),
+                           ast_child[code](E, expressions, I, X), may_be_lit[flow](X, V).
 
 may_be_node[flow](E, N) :- may_be_node[flow](X, N), ast_child[code](E, consequent, 0, X), ast_node[code](E, conditional_expression, _, _).
 may_be_node[flow](E, N) :- may_be_node[flow](X, N), ast_child[code](E, alternate, 0, X), ast_node[code](E, conditional_expression, _, _).

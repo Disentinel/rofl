@@ -2288,6 +2288,22 @@ idempotent tag as a lattice and a counting tag above what its rules read (as
 an aggregate reads), and the stock evaluator puts `p@count` between the two
 (`rank_counting`: every rank doubled, `p@count` one below its tag).
 
+**The host fold's round budget** (`src/semiring.ts`). The host fold of a
+`BOUNDED` instance has three outcomes, not two. `converged`: it stabilised.
+`exhausted`: the round budget (1000 by default) ran out first; that is a
+property of the method, not of the instance, so `disciplineHeld` is `null`
+(undetermined) and the declaration is not refuted. `disciplineHeld: false`
+means refuted, and only a declared height can refute: an instance may declare
+`height` (the length of its longest strictly ascending chain, `ceiling + 1`
+for the chaos carrier), and the fold then caps itself at `height * nodes + 1`
+rounds. That is enough for any monotone operator, because every round that
+changes something raises at least one node by at least one step, a node has
+at most `height` steps, and one round more observes the fixed point; so
+running the whole bound without settling is a proof that the declaration is
+false. A caller's smaller `maxRounds` only ever yields `exhausted`. Measured on
+the HECK codex (`test/semiring-budget.test.ts`): ceiling 4000 converges in 4004
+rounds with the height declared, and reports `exhausted` at 1000 without it.
+
 **One algebra per relation.** A relation tagged twice, in two semirings or at
 two arities, or tagged and declared a lattice, is refused; a tag read or
 written at another arity (`tag_arity`, and the lattice's `lattice_arity`); an
@@ -2387,6 +2403,29 @@ is refused, not computed. A counting tag's fault holes every key of it (the
 finding above). Viterbi rounds each product down; the log-scale reading of
 runtime/semirings.ts, exact and tropical with max, is not a tag. A tag cannot
 be asserted into; its input is weighed in by a rule.
+
+**What a count reads as.** The number is a number of derivations and nothing
+more; which way it points is domain knowledge, and it belongs to the instance
+that folds it, not to the counting semiring (`f_counting_reads_oppositely_by_domain`).
+The same count has been read five ways in this tree:
+
+| reading | many derivations mean | one means | zero means | examples |
+| --- | --- | --- | --- | --- |
+| robustness | the conclusion survives losing a support | one support is a single point of failure | not concluded | nope, oops, moot |
+| ambiguity | a defect: more than one way to get the answer | the answer is unambiguous | no answer | aka, slop |
+| launderability | many independent clean routes wash a dirty derivation | one route to confirm | nothing in the model can wash it | bleep |
+| fragility | the belief has spare routes | one way to happen is a single point of failure | no route at all | drip, rip, loot, spat |
+| the instance's own domain | whatever the example says it measures: coupling in blam, reserve in ditto, a share of worlds in sus, a magnitude in huh | stated by the example | stated by the example | blam, ditto, goof, huh, iffy, npc, sus, wtf, yak |
+
+A tool that ships a bare count invites the reader to take robustness where
+the domain means ambiguity. So every example that folds a count says which
+reading it takes, in its README, on a line of the form
+
+    **Count reading:** robustness | ambiguity | launderability | fragility | domain — one sentence.
+
+`npm run docs -- --check` fails for an example whose sources fold a count
+(`countingSemiring` or a `counting` tag, outside `examples/checks`) and whose
+README has no such line, or names a reading that is not one of the five.
 
 ## Subsumption, as built
 
@@ -2947,7 +2986,18 @@ reached, so the data can be read (`datastrat.rs`, `src/aggeval.ts` `dsGraph`):
 
 - A NODE is a pattern over a relation of the component (`val(n3, _)`, `_` where
   nothing bound a position), or a CORRELATION of one aggregate element, the cell it
-  seals: `(rule, at, the values of its shared variables bound before it)`.
+  seals: `(rule, at, the values of its shared variables bound before it, then each group
+  variable the rule binds there, `_` for one it does not)`. A grouped aggregate (a group
+  variable no premise binds before it) is a correlation for each group the walk
+  names and one for the rest: `team(a, N)` read by a premise (`team(M, N)` with M
+  bound by a closed relation) is the correlation of group a alone, and the rule's own
+  `_` is every group the walk did not name. A group is sealed by its own correlation,
+  the inner body solved with the group bound (`seal_cells`, `ds_bind`), and the `_`
+  seals the groups no narrower correlation sealed and lists the cells of the others (a group is one cell,
+  sealed once, and every correlation that covers it reads it). The `_` is a name no source can write, spelled `_`
+  wherever a term is printed (`Heap::canon_term`, `canonTerm`): a hole or a shrug that names a correlation, the
+  refusals, the order of the layers; a rule that reads such a row holds the mark and shows it as `_`, and the
+  harness refuses a control byte in any state (`agg_datastrat_mark`).
 - The EDGES of a pattern are what the premises of each rule that could conclude it
   read; those of a correlation, what its inner body reads. The premises are read a
   premise outside the component first (it binds what the patterns after it name), then
@@ -2964,8 +3014,10 @@ reached, so the data can be read (`datastrat.rs`, `src/aggeval.ts` `dsGraph`):
   and `E in S` with S known is decided, binding E to each element.
 - A LAYER is one more than the greatest layer among the correlations a correlation
   reaches without passing another, 0 for none. Each layer is released together
-  (`Eval::ds_released`), its rules fired whole, and the news propagated to a
-  fixpoint before the next is: the gate in `solve_body`'s aggregate arm lets a rule
+  (`Eval::ds_released`), the rule of each correlation fired over the instances that
+  read it and no others (`fire_keys`: the rule's body solved from the correlation's
+  shared values, and its groups where a rule binds them), and the news propagated to
+  a fixpoint before the next is: the gate in `solve_body`'s aggregate arm lets a rule
   read a correlation only once it is released, and the rules are live
   (`activate`) from the start, so what a sealed cell concludes reaches the next layer
   by the ordinary semi-naive propagation.
@@ -3007,7 +3059,9 @@ negates what is below fires with the round's other rules, before the layers, and
 again on the news the layers bring, like any rule.
 
 **Holes and shrugs.** Between layers, and before the first, the unknowns the plain
-rules and the cells holed so far left are carried through the component as if it
+rules and the cells holed so far left, and every unknown a fault below the component spread (`lat_spread`: the
+component's own rules are closed to the carry only here, so what they conclude from it is unknown before a cell
+seals, `agg_datastrat_below`), are carried through the component as if it
 were closed (`ds_carry`: `close_plain_rules` and `plain_flush` at the round after
 it), which can only leave more unknown, never less; so a correlation sealed after
 reads them through the carry the levels already do (`agg_possibles`), and a range with
@@ -3037,13 +3091,18 @@ it after the round, like any rule above it.
 **What it does not do.** The walk is exact where a closed relation keys the cells,
 which is every spreadsheet; a premise whose key a value of the component binds reads
 everything the relation could give. Components with a lattice, a subsumption, a
-threshold, a counting tag or a demand-backed relation in them are not taken. Each
-layer fires the rules that own its correlations whole, so a component d layers deep
-with c correlations costs d x c firings (`f_a_stratified_layer_fires_its_rules_whole`:
-300 sums in a chain 0.26 s, 2000 in 15 s). A cell
-sealed once per rule and correlation is the unit: a grouped aggregate (no
-correlation) is one cell for all its groups, so a group that reads another group of
-its own relation is a cycle at that grain. Proofs: `agg_datastrat_*` in
+threshold, a counting tag or a demand-backed relation in them are not taken. A layer
+fires the instances new to it, so a chain of n sums is n firings, and not n x n/2
+(`f_a_stratified_layer_fires_its_rules_whole`: 2000 sums in a chain took 5.7 s of whole
+firings and take 0.18 s; the instances of a rule with a count and a sum are released
+independently, each by its own correlation, and an instance two of them release together is fired by the first alone: only in a rule none of whose elements is grouped, for a grouped element is read under the group its own firing binds and under the whole by another's, so the instance is no one's to hold). The firings are counted by the
+budget: a firing a layer makes that concludes nothing new is a step (`ds_charge`), which is none here and
+the square of the chain for a layer that fires whole (`agg_datastrat_chain`). The rules of the component are fired
+whole once more after its last layer, which is the pass `ds_done` guards and a check of the layers: a firing
+that concludes anything new is an instance they missed, a Bug (`ds_check`), never a silent gap. The walk
+reads a negation of the component inside a grouped aggregate over a key the component binds as the whole
+(`count(E : under(B, E), not big(E))` with `big` over the counts is refused as a cycle, `count@team(_)`):
+sound, and a false cycle, as every key a premise of the component binds. Proofs: `agg_datastrat_*` in
 `facts/checks.rofl`, each planted fault in `scripts/agg_breaks.ts`
 (`ds_*`, and `ts_ds_*` for the TypeScript engine).
 
@@ -3147,7 +3206,7 @@ the TypeScript engine alone: `ts_max`, `ts_no_agg_edge`, `ts_no_empty_zero`,
 `ts_no_sealed_text`, `ts_empty_text`, `ts_thr_text_order`,
 `ts_lattice_why_one_member`, `ts_join_why_one_member`,
 `ts_widen_whynot_bare`, `ts_tag_label_lattice`, `ts_count_why_plain`,
-`ts_dominance_why_one_member`, `ts_whynot_hole_empty`,
+`ts_whynot_hole_empty`,
 `ts_withdrawn_cell_stale_src`, `ts_why_depth_cut`. `Rofl.strataPlan` of an
 aggregate program is the plan `AggEval` ran (`AggEval.strataPlan`: the
 peel's round, or the ranked stratum), held by `aggregateDoors`.
