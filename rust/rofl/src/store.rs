@@ -374,6 +374,7 @@ impl TupSeg {
         let s = self.cons[self.slot(args, hash)];
         (s != TUP_EMPTY).then_some(s)
     }
+    #[inline]
     fn slot(&self, args: &[Term], hash: u64) -> usize {
         let mask = self.cons.len() - 1;
         let mut i = (hash as usize) & mask;
@@ -446,10 +447,11 @@ pub struct Tuples {
 impl Tuples {
     #[inline(always)]
     fn seg(&self, t: TupId) -> (&TupSeg, TupId) {
-        if t < self.t0 {
-            (&self.base, t)
+        let j = t.wrapping_sub(self.t0);
+        if (j as usize) < self.top.len() {
+            (&self.top, j)
         } else {
-            (&self.top, t - self.t0)
+            (&self.base, t)
         }
     }
     #[inline(always)]
@@ -460,11 +462,6 @@ impl Tuples {
     #[inline]
     fn arity(&self, t: TupId) -> usize {
         self.args(t).len()
-    }
-    #[inline]
-    fn sortkey(&self, t: TupId) -> u64 {
-        let (s, i) = self.seg(t);
-        s.sks[i as usize]
     }
     #[inline]
     pub fn len(&self) -> usize {
@@ -571,12 +568,13 @@ impl<T: Clone> Col<T> {
 
 impl<T> Index<usize> for Col<T> {
     type Output = T;
+    /// The layer's own first, whose bounds check is then the only test an
+    /// unlayered store pays: below the mark the subtraction wraps and misses.
     #[inline(always)]
     fn index(&self, i: usize) -> &T {
-        if i < self.mark {
-            &self.base[i]
-        } else {
-            &self.own[i - self.mark]
+        match self.own.get(i.wrapping_sub(self.mark)) {
+            Some(x) => x,
+            None => &self.base[i],
         }
     }
 }
@@ -633,11 +631,12 @@ impl Facts {
     #[inline(always)]
     pub fn rec(&self, id: FactId) -> FactRec {
         let i = id as usize;
-        if i < self.recs.mark {
-            let r = self.recs.base[i];
-            FactRec { packed: r.tup() | (self.bflags[i] as u32) << 28, ..r }
-        } else {
-            self.recs.own[i - self.recs.mark]
+        match self.recs.own.get(i.wrapping_sub(self.recs.mark)) {
+            Some(r) => *r,
+            None => {
+                let r = self.recs.base[i];
+                FactRec { packed: r.tup() | (self.bflags[i] as u32) << 28, ..r }
+            }
         }
     }
     #[inline(always)]
@@ -690,11 +689,12 @@ impl Facts {
         if ta == tb {
             return Ordering::Equal;
         }
-        let (ka, kb) = (self.tups.sortkey(ta), self.tups.sortkey(tb));
+        let ((sa, ia), (sb, ib)) = (self.tups.seg(ta), self.tups.seg(tb));
+        let (ka, kb) = (sa.sks[ia as usize], sb.sks[ib as usize]);
         if ka != 0 && kb != 0 && ka != kb {
             return ka.cmp(&kb);
         }
-        cmp_args_rendered(h, self.tups.args(ta), self.tups.args(tb))
+        cmp_args_rendered(h, sa.args(ia), sb.args(ib))
     }
 }
 

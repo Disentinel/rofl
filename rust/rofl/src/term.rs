@@ -44,10 +44,11 @@ impl Interner {
     }
     #[inline]
     pub fn name(&self, id: Sym) -> &str {
-        if id < self.n0 {
-            self.base.name(id)
+        let j = id.wrapping_sub(self.n0);
+        if (j as usize) < self.top.len() {
+            self.top.name(j)
         } else {
-            self.top.name(id - self.n0)
+            self.base.name(id)
         }
     }
     pub fn len(&self) -> usize {
@@ -372,6 +373,7 @@ impl Funcs {
         (s != CONS_EMPTY).then_some(s)
     }
 
+    #[inline]
     fn slot(&self, name: Sym, args: &[Term], h: u64) -> usize {
         let mask = self.cons.len() - 1;
         let mut i = (h as usize) & mask;
@@ -474,21 +476,22 @@ impl Heap {
         let n = self.syms.intern(name);
         self.mkf(n, args)
     }
+    /// The layer's own first, as `Interner::name` and the store's columns.
     #[inline(always)]
-    pub fn fname(&self, idx: u32) -> Sym {
-        if idx < self.f0 {
-            self.base.funcs[idx as usize].name
-        } else {
-            self.top.funcs[(idx - self.f0) as usize].name
+    fn node(&self, idx: u32) -> (&Funcs, FuncNode) {
+        match self.top.funcs.get(idx.wrapping_sub(self.f0) as usize) {
+            Some(f) => (&self.top, *f),
+            None => (&self.base, self.base.funcs[idx as usize]),
         }
     }
     #[inline(always)]
+    pub fn fname(&self, idx: u32) -> Sym {
+        self.node(idx).1.name
+    }
+    #[inline(always)]
     pub fn fargs(&self, idx: u32) -> &[Term] {
-        if idx < self.f0 {
-            self.base.args_of(idx)
-        } else {
-            self.top.args_of(idx - self.f0)
-        }
+        let (s, f) = self.node(idx);
+        &s.args[f.start as usize..(f.start + f.len) as usize]
     }
     #[inline]
     pub fn name(&self, s: Sym) -> &str {
@@ -582,9 +585,10 @@ impl Heap {
             TermK::Str(s) => json_string(self.name(s), out),
             TermK::Atom(a) => out.push_str(self.name(a)),
             TermK::Func(i) => {
-                out.push_str(self.name(self.fname(i)));
+                let (s, f) = self.node(i);
+                out.push_str(self.name(f.name));
                 out.push('(');
-                for (k, a) in self.fargs(i).iter().enumerate() {
+                for (k, a) in s.args[f.start as usize..(f.start + f.len) as usize].iter().enumerate() {
                     if k > 0 {
                         out.push(',');
                     }
