@@ -162,6 +162,7 @@ impl Eval {
                 let t = std::time::Instant::now();
                 let (rows, d) = self.store.probe_stats(&self.h, l.rel, persp, &cpos, &cvals, &vpos);
                 self.delta_ns += t.elapsed().as_nanos() as u64;
+                self.delta_stats.insert(key, (size, rows, d));
                 (rows, d)
             }
         };
