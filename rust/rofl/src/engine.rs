@@ -3632,7 +3632,7 @@ impl Eval {
         &mut self,
         r: &Rc<ERule>,
         s0: Subst,
-        front_at: Option<(usize, &HashSet<FactId>)>,
+        front_at: Option<(usize, &FxSet<FactId>)>,
     ) -> Result<Front, Halt> {
         let outer = self.cur_rule.replace(r.id);
         let was_firing = std::mem::replace(&mut self.firing, true);
