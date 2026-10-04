@@ -1360,10 +1360,10 @@ impl Eval {
             self.join_of.insert(c, l);
         }
         self.register_lattices(&rules);
-        // the set of facts is the contract: where nothing withdraws, groups and
-        // candidates are in the engine's own order, rules are activated by
-        // component and a closure is walked
-        self.store.unordered = self.lattices.is_empty();
+        // under the seal the set of facts is the contract: where nothing
+        // withdraws, groups and candidates are then in the engine's own order
+        // and rules are activated by component; a closure is walked either way
+        self.store.unordered = self.no_witness && self.lattices.is_empty();
         self.diags.extend(diags);
         self.answer = self.safety_answer(&rules);
         if self.no_provenance && self.answer.reads_provenance {
@@ -3484,7 +3484,7 @@ impl Eval {
         if rules.is_empty() {
             return Ok(());
         }
-        if self.lattices.is_empty() && rules.len() > 1 {
+        if self.no_witness && self.lattices.is_empty() && rules.len() > 1 {
             for component in components(rules) {
                 self.activate_batch(&component)?;
             }
