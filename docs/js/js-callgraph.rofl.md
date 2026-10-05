@@ -32,9 +32,10 @@ Reads:
 - from js-model, in the audit: [verdict](js-model.rofl.md#verdict)
 - from js-model: [ast_node](js-model.rofl.md#ast_node)
 - from js-model, in the main: [shape_of](js-model.rofl.md#shape_of), [unknown_type](js-model.rofl.md#unknown_type)
-- from js-structure: [ast_name](js-structure.rofl.md#ast_name), [ast_within](js-structure.rofl.md#ast_within), [key_name](js-structure.rofl.md#key_name)
+- from js-structure: [ast_name](js-structure.rofl.md#ast_name), [key_name](js-structure.rofl.md#key_name)
 - from outside these files:
   - <a id="ast_file"></a>`ast_file`
+  - <a id="ast_within"></a>A node is within a node (`ast_within`)
 - from the scanner:
   - <a id="ast_attr"></a>The attribute of a node is a value (`ast_attr`)
   - <a id="ast_child"></a>A node is a child of a node (`ast_child`)
@@ -387,7 +388,7 @@ A [method](#noun-method) answers to a name N if all of:
 
 <a id="in_own_decorator"></a>A node F has its decorator at a node C either:
 
-1. if F [is decorated by](#decorates) a node D and C [is within](js-structure.rofl.md#ast_within) D;
+1. if F [is decorated by](#decorates) a node D and C [is within](#ast_within) D;
 2. if F [is decorated by](#decorates) C.
 
 <a id="dec_up"></a>`dec_up`(C, G) if all of:
@@ -771,7 +772,7 @@ In the audit:
 
 In the code:
 
-<a id="awaiting_fn"></a>A [function](#fn_node) awaits at a node X if X [performs the call](#performed_call) some function and X [is within](js-structure.rofl.md#ast_within) it.
+<a id="awaiting_fn"></a>A [function](#fn_node) awaits at a node X if X [performs the call](#performed_call) some function and X [is within](#ast_within) it.
 
 In the audit:
 

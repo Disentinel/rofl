@@ -1,0 +1,8 @@
+-- expect-refusal: tree dtr_in: node (c) has two parents in the book main: (a) and (b)
+-- a retraction that breaks the promise (it lifts the block on a second parent) is refused, and the world it leaves is asked again: it refuses again, it never answers
+edb(dtr_src).
+edb(dtr_blocked).
+tree dtr_in(P, C) closure dtr_within.
+dtr_src(a, c). dtr_src(b, c).
+dtr_blocked(b, c).
+dtr_in(P, C) :- dtr_src(P, C), not dtr_blocked(P, C).

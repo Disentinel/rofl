@@ -1,0 +1,35 @@
+-- examples/checks/ds-tree-plan.rofl — ds_tree_plan: A CLOSURE ANSWERED FROM ITS TREE IS NEVER PUT FIRST UNBOUND.
+-- A chain of 120 nodes has 7140 pairs in its closure, more than the space wall of the world (3000 rows). Each reader
+-- below names the closure BEFORE the premise that binds one of its ends, so the written order enumerates every
+-- pair and meets the wall; the delta-first plan starts from the bound premise and asks the tree for the rows of
+-- one end (the estimate of an unbound closure is every row, of a bound end the shape of the tree). Rust only: the
+-- TypeScript engine solves in written order and meets the wall (f_a_join_plan_is_never_observed).
+edb(dtl_pick).
+edb(dtl_mark).
+tree dtl_in(P, C) closure dtl_within.
+dtl_in(n0, n1). dtl_in(n1, n2). dtl_in(n2, n3). dtl_in(n3, n4). dtl_in(n4, n5). dtl_in(n5, n6).
+dtl_in(n6, n7). dtl_in(n7, n8). dtl_in(n8, n9). dtl_in(n9, n10). dtl_in(n10, n11). dtl_in(n11, n12).
+dtl_in(n12, n13). dtl_in(n13, n14). dtl_in(n14, n15). dtl_in(n15, n16). dtl_in(n16, n17). dtl_in(n17, n18).
+dtl_in(n18, n19). dtl_in(n19, n20). dtl_in(n20, n21). dtl_in(n21, n22). dtl_in(n22, n23). dtl_in(n23, n24).
+dtl_in(n24, n25). dtl_in(n25, n26). dtl_in(n26, n27). dtl_in(n27, n28). dtl_in(n28, n29). dtl_in(n29, n30).
+dtl_in(n30, n31). dtl_in(n31, n32). dtl_in(n32, n33). dtl_in(n33, n34). dtl_in(n34, n35). dtl_in(n35, n36).
+dtl_in(n36, n37). dtl_in(n37, n38). dtl_in(n38, n39). dtl_in(n39, n40). dtl_in(n40, n41). dtl_in(n41, n42).
+dtl_in(n42, n43). dtl_in(n43, n44). dtl_in(n44, n45). dtl_in(n45, n46). dtl_in(n46, n47). dtl_in(n47, n48).
+dtl_in(n48, n49). dtl_in(n49, n50). dtl_in(n50, n51). dtl_in(n51, n52). dtl_in(n52, n53). dtl_in(n53, n54).
+dtl_in(n54, n55). dtl_in(n55, n56). dtl_in(n56, n57). dtl_in(n57, n58). dtl_in(n58, n59). dtl_in(n59, n60).
+dtl_in(n60, n61). dtl_in(n61, n62). dtl_in(n62, n63). dtl_in(n63, n64). dtl_in(n64, n65). dtl_in(n65, n66).
+dtl_in(n66, n67). dtl_in(n67, n68). dtl_in(n68, n69). dtl_in(n69, n70). dtl_in(n70, n71). dtl_in(n71, n72).
+dtl_in(n72, n73). dtl_in(n73, n74). dtl_in(n74, n75). dtl_in(n75, n76). dtl_in(n76, n77). dtl_in(n77, n78).
+dtl_in(n78, n79). dtl_in(n79, n80). dtl_in(n80, n81). dtl_in(n81, n82). dtl_in(n82, n83). dtl_in(n83, n84).
+dtl_in(n84, n85). dtl_in(n85, n86). dtl_in(n86, n87). dtl_in(n87, n88). dtl_in(n88, n89). dtl_in(n89, n90).
+dtl_in(n90, n91). dtl_in(n91, n92). dtl_in(n92, n93). dtl_in(n93, n94). dtl_in(n94, n95). dtl_in(n95, n96).
+dtl_in(n96, n97). dtl_in(n97, n98). dtl_in(n98, n99). dtl_in(n99, n100). dtl_in(n100, n101).
+dtl_in(n101, n102). dtl_in(n102, n103). dtl_in(n103, n104). dtl_in(n104, n105). dtl_in(n105, n106).
+dtl_in(n106, n107). dtl_in(n107, n108). dtl_in(n108, n109). dtl_in(n109, n110). dtl_in(n110, n111).
+dtl_in(n111, n112). dtl_in(n112, n113). dtl_in(n113, n114). dtl_in(n114, n115). dtl_in(n115, n116).
+dtl_in(n116, n117). dtl_in(n117, n118). dtl_in(n118, n119).
+dtl_pick(n100). dtl_pick(n110). dtl_pick(n3).
+dtl_mark(n119). dtl_mark(n50).
+dtl_hit(A, D) :- dtl_within(A, D), dtl_pick(A).
+dtl_up(A, D)  :- dtl_within(A, D), dtl_mark(D).
+dtl_pair(A, D) :- dtl_within(A, D), dtl_pick(A), dtl_mark(D).

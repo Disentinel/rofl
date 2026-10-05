@@ -1,0 +1,12 @@
+-- examples/checks/asks-explained.rofl — AN explain_request NAMES A RELATION THE CONE MUST HOLD.
+-- ae_x is asked; the request is for the proof of ae_y(1), a relation no asked relation reads. The request
+-- asks ae_y, so it is in the cone and its explanation is that of the world without asks.
+asks(ae_x).
+edb(ae_src).
+ae_src(1).
+ae_x(X) :- ae_src(X).
+ae_y(X) :- ae_src(X).
+ae_z(X) :- ae_src(X).
+explain_request(why, ae_y(1)).
+-- expect-row: ae_y[main](1)
+-- expect-no-row: ae_z[main](1)

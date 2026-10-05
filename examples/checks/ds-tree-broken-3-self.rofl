@@ -1,0 +1,5 @@
+-- expect-refusal: tree dtb_in: node (q) is its own ancestor in the book main: through (q)
+-- an edge from a node to itself is a cycle of one
+edb(dtb_in).
+tree dtb_in(P, C).
+dtb_in(r, a). dtb_in(q, q).

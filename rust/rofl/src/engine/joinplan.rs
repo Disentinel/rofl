@@ -111,9 +111,10 @@ impl Eval {
             return None;
         }
         let key = (r.id, at.unwrap_or(usize::MAX));
+        self.vrefresh();
         let fresh = match self.delta_plans.get(&key) {
             Some(Slot::No) => return None,
-            Some(Slot::Plan(p)) => p.watch.iter().all(|&(rel, persp, then)| !stale(self.store.rel_len_est(rel, persp), then)),
+            Some(Slot::Plan(p)) => p.watch.iter().all(|&(rel, persp, then)| !stale(self.len_est(rel, persp), then)),
             None => false,
         };
         if !fresh {
@@ -134,6 +135,14 @@ impl Eval {
             Some(p.clone())
         } else {
             None
+        }
+    }
+
+    /// Rows a premise's relation holds, for the planner: a closure answered from its tree holds its pairs.
+    fn len_est(&self, rel: Sym, persp: Option<Sym>) -> usize {
+        match self.vclosure_for(rel) {
+            Some(ci) => self.vlen(ci),
+            None => self.store.rel_len_est(rel, persp),
         }
     }
 
@@ -168,6 +177,12 @@ impl Eval {
                 vpos.push(j);
             }
         }
+        // A CLOSURE ANSWERED FROM ITS TREE has no rows to count: its matches for a bound end are read off the tree's shape,
+        // and with neither end bound it costs every row, which no plan starts from.
+        if let Some(ci) = self.vclosure_for(l.rel) {
+            let (rows, fan) = self.vstat(ci, &cpos, &vpos);
+            return Stat { rows, fan };
+        }
         // A DECLARED FUNCTION (`function p(K, to V).`, a promise checked after every evaluation) answers at
         // most one row for a bound key: a premise whose key is bound, by a constant or a variable, is one
         // match per binding and needs no pass over its rows to say so. Per book, so only a premise that
@@ -186,7 +201,7 @@ impl Eval {
         }
         key.push(u64::MAX);
         key.extend(vpos.iter().map(|&p| p as u64));
-        let size = self.store.rel_len_est(l.rel, persp);
+        let size = self.len_est(l.rel, persp);
         let (rows, distinct) = match self.delta_stats.get(&key) {
             Some(&(then, rows, d)) if !stale(size, then) => (rows, d),
             _ => {
@@ -217,7 +232,7 @@ impl Eval {
             if let BodyElem::Pos(l) | BodyElem::Neg(l) = b {
                 let persp = l.persp.as_atom();
                 if !watch.iter().any(|w| w.0 == l.rel && w.1 == persp) {
-                    watch.push((l.rel, persp, self.store.rel_len_est(l.rel, persp)));
+                    watch.push((l.rel, persp, self.len_est(l.rel, persp)));
                 }
             }
         }
@@ -226,7 +241,7 @@ impl Eval {
             Some(_) => return None,
             None => None,
         };
-        let size_i = news.map_or(1, |l| self.store.rel_len_est(l.rel, l.persp.as_atom())).max(1) as f64;
+        let size_i = news.map_or(1, |l| self.len_est(l.rel, l.persp.as_atom())).max(1) as f64;
 
         // the written order, the news at i
         let (mut bound, mut pre, mut cur, mut fan_i, mut tail) = (Vec::new(), 0.0f64, 1.0f64, 1.0f64, 0.0f64);

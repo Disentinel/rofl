@@ -139,7 +139,10 @@ alternating fixpoint and what `unknown` means).
 of eslint, and the four defects the run found that reading did not),
 `normalisation-and-profiling.md`, `volumes-and-residency.md` (how a corpus
 stays cold), `working-with-ledgers.md`, `test-maintenance-cost.md`,
-`failure-modes.md` (the process failures, catalogued and priced).
+`failure-modes.md` (the process failures, catalogued and priced),
+`optimising-a-world.md` (a cookbook: how to measure a world on Rust release, the
+seal, the costly rule shapes and their rewrites, aggregates, declared structures,
+demand; each recipe with its measured gain and its finding).
 
 **The process as its own subject** — three documents that turn the question
 *where does a claim about this work live* into something checkable.
@@ -155,7 +158,9 @@ them, which negation decides), `port-surface.md` (what the Rust engine has to
 expose), `performance-invariants.md` (what this kernel costs and what the field
 costs), `data-structures.md` (declared structures: a promise the system checks
 and a licence for the engine to store a relation as a tree, an alias, a key,
-a span), `modelling-a-language.md` (the JS model as a research programme), `aggregates.md`
+a span), `demand-cones.md` (answering a question in the part of the world it
+reaches: the `asks` cone, when it is the whole world, what it saves, what growing it needs),
+`modelling-a-language.md` (the JS model as a research programme), `aggregates.md`
 (every aggregate class as one cell engine with two syntaxes, and the matrix
 that holds the work to it).
 

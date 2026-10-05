@@ -8,11 +8,12 @@
 
 ast_in[code](P, C)     :- ast_child[code](P, _, _, C).
 
--- nodes by depth rows, a few thousand on the fixtures. A 100k-node tree at
--- depth 30 is about 3M rows, the point where an ancestor query should walk
--- `ast_in` rather than materialise the closure.
-ast_within[code](P, C) :- ast_in[code](P, C).
-ast_within[code](P, D) :- ast_within[code](P, X), ast_in[code](X, D).
+-- THE EDGES ARE A FOREST (one parent for each node, no cycle), and `ast_within`
+-- is their transitive closure, strict: the declaration promises the one and
+-- defines the other (docs/data-structures.md). The TypeScript engine derives the
+-- closure by the two rules it stands for; the Rust engine answers it from the
+-- tree and stores none of its rows where no witness is kept.
+tree ast_in(P, C) closure ast_within.
 
 function ast_name(N, to V).
 ast_name[code](N, V)   :- ast_attr[code](N, name, V).

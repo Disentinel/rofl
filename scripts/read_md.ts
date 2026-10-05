@@ -711,6 +711,11 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
       decls.push(`function ${m[1]}(${[...ks, ...vs.map((v) => `to ${v}`)].join(', ')}).`);
       return true;
     }
+    m = TREE_DECL.exec(text);
+    if (m) {
+      decls.push(`tree ${m[1]}(P, C)${m[2] ? ` closure ${m[2]}` : ''}.`);
+      return true;
+    }
     m = TAG_DECL.exec(text);
     if (m) {
       const ks = keyList(m[2]);
@@ -1038,9 +1043,10 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
   // an aggregate whole (`aggj`, rofl-render's JSON of it), compared whole by `canon`
   for (const m of facts.matchAll(/^aggj\((r\d+), (\d+), (".*")\)\.$/gm)) srcClauses.get(m[1])!.body.push({ rel: '$agg', neg: false, args: [], agg: fromAggJ(JSON.parse(JSON.parse(m[3])) as AggJ) });
   // a lattice or tag declaration (`decl`, `decl_widen`): its head, the operation of its last argument
-  const declOf = new Map<string, { kind: string; op: string; widen?: string }>();
+  const declOf = new Map<string, { kind: string; op: string; widen?: string; closure?: string }>();
   for (const m of facts.matchAll(/^decl\((r\d+), (lattice|tag|structure), (\w+)\)\.$/gm)) declOf.set(m[1], { kind: m[2], op: m[3] });
   for (const m of facts.matchAll(/^decl_widen\((r\d+), (\d+)\)\.$/gm)) declOf.get(m[1])!.widen = m[2];
+  for (const m of facts.matchAll(/^decl_closure\((r\d+), (\w+)\)\.$/gm)) declOf.get(m[1])!.closure = m[2];
   // a dominance rule's dominating fact (`dom`, after the body)
   for (const m of facts.matchAll(/^dom\((r\d+), (\d+), (\$?\w+)\)\.$/gm)) srcClauses.get(m[1])!.dom = { rel: m[3], neg: false, args: argsOf(m[1], Number(m[2])) };
   const OWN = new Set(['phrase', 'kind_noun', 'sig', 'edb']);
@@ -1086,15 +1092,15 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
     return `${kind} ${rel}(${[...as.slice(0, -1), `${op} ${as[as.length - 1]}`].join(',')})${widen ? ` widen ${widen}` : ''}`;
   };
   // a declared structure: its kind and the role of each argument ('function_key_to'), the variables renamed as above
-  const structText = (rel: string, args: string[], op: string): string => {
+  const structText = (rel: string, args: string[], op: string, closure?: string): string => {
     const [kind, ...roles] = op.split('_'); const names = new Map<string, string>();
     const v = (x: string) => /^[A-Z]/.test(x) ? (names.get(x) ?? (names.set(x, `V${names.size}`), names.get(x)!)) : x;
-    return `${kind} ${rel}(${args.map((a, i) => (roles[i] === 'key' ? '' : `${roles[i]} `) + v(a)).join(',')})`;
+    return `${kind} ${rel}(${args.map((a, i) => (roles[i] === 'key' ? '' : `${roles[i]} `) + v(a)).join(',')})${closure ? ` closure ${closure}` : ''}`;
   };
-  const srcDecls = [...srcClauses.entries()].filter(([r]) => declOf.has(r)).map(([r, c]) => { const d = declOf.get(r)!; return d.kind === 'structure' ? structText(c.head, c.args, d.op) : declText(d.kind, c.head, c.args, d.op, d.widen); });
+  const srcDecls = [...srcClauses.entries()].filter(([r]) => declOf.has(r)).map(([r, c]) => { const d = declOf.get(r)!; return d.kind === 'structure' ? structText(c.head, c.args, d.op, d.closure) : declText(d.kind, c.head, c.args, d.op, d.widen); });
   const readDecls = decls.map((d) => {
-    const st = /^function (\$?\w+)\((.*)\)\.$/.exec(d);
-    if (st) { const as = st[2].split(', '); return structText(st[1], as.map((a) => a.replace(/^to /, '')), ['function', ...as.map((a) => (a.startsWith('to ') ? 'to' : 'key'))].join('_')); }
+    const st = /^(function|tree) (\$?\w+)\((.*?)\)(?: closure (\w+))?\.$/.exec(d);
+    if (st) { const as = st[3].split(', '); return structText(st[2], as.map((a) => a.replace(/^to /, '')), [st[1], ...as.map((a) => (a.startsWith('to ') ? 'to' : 'key'))].join('_'), st[4]); }
     const m = /^(lattice|tag) (\$?\w+)(?:\[[^\]]*\])?\((.*)\)(?: widen (\d+))?\.$/.exec(d);
     if (!m) return d;
     const as = m[3].split(', '), last = as[as.length - 1].split(' '), val = last.pop()!;
@@ -1536,11 +1542,12 @@ export const sentenceSpans = (md: string): [number, number][] => {
 };
 
 /** A tag declaration (docs/aggregates.md, "The sentence form, as built"): `Each \`cost\` fact of A and C carries a tropical tag T.` */
+const TREE_DECL = /^Each child of `(\w+)` has one parent and no node is its own ancestor(?:, and `(\w+)` holds of each node and every ancestor of it)?\.$/;
 const TAG_DECL = /^Each `(\w+)` fact(?: of (.+?))? carries an? (tropical|viterbi|trust|counting) tag (_|[A-Z][A-Za-z0-9_]*)\.$/;
 
-/** A line of a sentence cell that asks in English: a question, or a promise that opens with a quantifier; a tag declaration opens with `Each`
- *  and declares, it does not ask. */
-export const english = (l: string): boolean => /^[A-Za-z].*\?$/.test(l) || /^(?:No|Nothing|Nobody|None|Every|Each|There (?:is|are) no)\s/.test(l) && !TAG_DECL.test(l);
+/** A line of a sentence cell that asks in English: a question, or a promise that opens with a quantifier; a tag declaration and a tree's open with `Each`
+ *  and declare, they do not ask. */
+export const english = (l: string): boolean => /^[A-Za-z].*\?$/.test(l) || /^(?:No|Nothing|Nobody|None|Every|Each|There (?:is|are) no)\s/.test(l) && !TAG_DECL.test(l) && !TREE_DECL.test(l);
 
 /** A line of the prose that asks as a cell's prefixed line does, `never X is late`: the word in lower case, first on its line, and a blank, a name
  *  in backticks or a string after it, so a sentence of prose that happens to start with the word (`why this matters…`) is never one. */

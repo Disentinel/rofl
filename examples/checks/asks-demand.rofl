@@ -1,0 +1,12 @@
+-- examples/checks/asks-demand.rofl — A RELATION ANSWERED ON DEMAND IS WHAT SOME RULE CALLED.
+-- dd_u has a variable no premise binds, so a fact is made of it for each call. dd_u is asked and no asked
+-- relation reads it: its rows are the calls of dd_h, a rule outside any cone it makes. The world without asks
+-- holds dd_u(3, 3); a cone that kept dd_h out would hold none, so asking a relation answered on demand keeps
+-- every rule.
+asks(dd_u).
+edb(dd_q).
+dd_q(3).
+dd_u(X, Y) :- dd_q(X).
+dd_h(X) :- dd_q(X), dd_u(X, X).
+-- expect-row: dd_u[main](3,3)
+-- expect-row: dd_h[main](3)

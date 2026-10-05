@@ -1,0 +1,4 @@
+-- expect-refusal: is also concluded by a rule
+-- nothing else concludes a closure: not a rule written before the declaration
+dts_c(P, C) :- dts_e(P, C).
+tree dts_t(P, C) closure dts_c.

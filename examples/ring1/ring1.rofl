@@ -484,22 +484,28 @@ clause_at(I, D, $order(Kind, Ds, $lit(R, $bare, A, $now)), $nil) :-
   nexttok(E, C), p(C, rpar), nexttok(C, D), p(D, dot).
 
 -- A DECLARED STRUCTURE (docs/data-structures.md):
---   structdecl := 'function' ident '(' [ role ] term [ ',' [ role ] term ]* ')' '.'
---   role       := 'to'
--- `function` is a word as `lattice` is: it declares only when a second name
--- follows it, so `function(x).` is still a fact. The tree holds the role of
--- each argument in a list beside the head, `key` where none is written.
-struct_kind(function).
-struct_role(to).
-strarg(I, J, R, T) :- identtok(I, K), tok_name(I, K, R), struct_role(R), nexttok(K, S), term(S, J, T).
-strarg(I, J, key, T) :- term(I, J, T).
-strargs(I, J, $cons(R, $nil), $cons(T, $nil)) :- strarg(I, J, R, T).
-strargs(I, J, $cons(R, Rs), $cons(T, As)) :- strarg(I, J0, R, T), nexttok(J0, K), p(K, comma),
-                                            nexttok(K, I2), strargs(I2, J, Rs, As).
+--   structdecl := ('function' | 'tree') ident '(' [ role ] term [ ',' [ role ] term ]* ')' [ 'closure' ident ] '.'
+--   role       := 'to'            (of a function; a tree has none)
+-- `function` and `tree` are words as `lattice` is: one declares only when a
+-- second name follows, so `function(x).` is still a fact. The tree holds the
+-- role of each argument in a list beside the head, `key` where none is written,
+-- and a tree's `closure` wraps the whole.
+struct_kind(function). struct_kind(tree).
+struct_role(function, to).
+strarg(Kd, I, J, R, T) :- identtok(I, K), tok_name(I, K, R), struct_role(Kd, R), nexttok(K, S), term(S, J, T).
+strarg(Kd, I, J, key, T) :- struct_kind(Kd), term(I, J, T).
+strargs(Kd, I, J, $cons(R, $nil), $cons(T, $nil)) :- strarg(Kd, I, J, R, T).
+strargs(Kd, I, J, $cons(R, Rs), $cons(T, As)) :- strarg(Kd, I, J0, R, T), nexttok(J0, K), p(K, comma),
+                                                nexttok(K, I2), strargs(Kd, I2, J, Rs, As).
 clause_at(I, D, $structure(Kind, Rs, $lit(R, $bare, A, $now)), $nil) :-
   identtok(I, I2), tok_name(I, I2, Kind), struct_kind(Kind), nexttok(I2, K), identtok(K, K2), not keyword(K),
-  tok_name(K, K2, R), nexttok(K2, L), p(L, lpar), nexttok(L, S), strargs(S, E, Rs, A),
+  tok_name(K, K2, R), nexttok(K2, L), p(L, lpar), nexttok(L, S), strargs(Kind, S, E, Rs, A),
   nexttok(E, C), p(C, rpar), nexttok(C, D), p(D, dot).
+clause_at(I, D, $closure(Cl, $structure(Kind, Rs, $lit(R, $bare, A, $now))), $nil) :-
+  identtok(I, I2), tok_name(I, I2, Kind), struct_kind(Kind), nexttok(I2, K), identtok(K, K2), not keyword(K),
+  tok_name(K, K2, R), nexttok(K2, L), p(L, lpar), nexttok(L, S), strargs(Kind, S, E, Rs, A),
+  nexttok(E, C), p(C, rpar), nexttok(C, W), identtok(W, W2), tok_name(W, W2, closure),
+  nexttok(W2, X), identtok(X, X2), not keyword(X), tok_name(X, X2, Cl), nexttok(X2, D), p(D, dot).
 
 -- A DOMINANCE RULE (docs/aggregates.md, "Subsumption, as built"):
 --   domrule := lit '<=' lit ':-' body '.'

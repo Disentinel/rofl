@@ -332,6 +332,15 @@ fn main() {
         for c in &l.eval.closures {
             eprintln!("closure\t{}\t{}\t{}", l.eval.h.name(c.rel), l.eval.h.name(c.edge), if c.edge_fwd { "fwd" } else { "rev" });
         }
+        for (rel, on) in l.eval.vclosure_info() {
+            eprintln!("vclosure\t{rel}\t{}", if on { "tree" } else { "rows" });
+        }
+        for r in &l.eval.vclosure_reason {
+            eprintln!("vclosure_off\t{r}");
+        }
+        eprintln!("vclosure_builds\t{}", l.eval.vbuilds);
+        eprintln!("vclosure_rows_read\t{}", l.eval.vrows_read);
+        eprintln!("virtual_rows\t{}", l.eval.store.virtual_rows());
         eprintln!("closure_rows\t{}", l.eval.closure_rows);
         eprintln!("closure_runs\t{}", l.eval.closure_runs);
         eprintln!("rounds\t{}", l.eval.rounds.len());

@@ -1,0 +1,5 @@
+-- expect-refusal: tree dtb_in: node (c) has two parents in the book main: (a) and (b)
+-- two asserted edges into one child: the refusal names the relation, the book, the child and both parents
+edb(dtb_in).
+tree dtb_in(P, C).
+dtb_in(a, c). dtb_in(b, c). dtb_in(c, d).

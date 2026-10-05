@@ -92,6 +92,132 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "asks_negation_cut",
+  "what": "the cone of an asked relation does not follow a negated premise: the relation it negates is never derived",
+  "expect": {
+   "asks_cone": "ak_blocked"
+  }
+ },
+ {
+  "id": "asks_aggregate_cut",
+  "what": "the cone of an asked relation does not follow the premises inside an aggregate: the relation it counts is never derived",
+  "expect": {
+   "asks_cone": "ak_member"
+  }
+ },
+ {
+  "id": "asks_derived_by_plain",
+  "what": "a rule in the cone that reads derived_by of a named relation is taken for a reader of none: the relation is outside the cone and its rows are never written",
+  "expect": {
+   "asks_reads_provenance": "ap_a"
+  }
+ },
+ {
+  "id": "asks_derived_by_unnamed",
+  "what": "a rule in the cone that reads derived_by with its fact unbound keeps only the cone: the rows of every other relation are missing",
+  "expect": {
+   "asks_reads_everything": "au_b"
+  }
+ },
+ {
+  "id": "asks_blind_reflection",
+  "what": "a rule in the cone that reads the kernel's aggregate cells keeps only the cone: the cells of every other aggregate are missing",
+  "expect": {
+   "asks_reads_cells": "ab_size"
+  }
+ },
+ {
+  "id": "asks_explain_unasked",
+  "what": "a relation an explain_request names is outside the cone unless some asked relation reads it: its explanation is that of a world that never derived it",
+  "expect": {
+   "asks_explained": "ae_y"
+  }
+ },
+ {
+  "id": "asks_dominance_reads",
+  "what": "the relations a subsumptive relation's dominance bodies read are outside the cone: nothing dominates, and every value of the front is kept",
+  "expect": {
+   "asks_dominance": "ad_best"
+  }
+ },
+ {
+  "id": "asks_blind_asked",
+  "what": "a relation the kernel writes from every rule's evaluation, asked by name, is answered from the cone: the aggregate cells of every other rule are missing",
+  "expect": {
+   "asks_asked_cells": "ab2_size"
+  }
+ },
+ {
+  "id": "asks_demand_asked",
+  "what": "a relation answered on demand, asked by name, is answered from the cone: the facts made for the calls of every other rule are missing",
+  "expect": {
+   "asks_demand": "dd_u"
+  }
+ },
+ {
+  "id": "asks_retract_unread",
+  "what": "an ask retracted from an evaluated world leaves the cone it named: the rules it activated still run and their rows stand",
+  "expect": {
+   "asks_retracted": "rr_b"
+  }
+ },
+ {
+  "id": "ts_asks_derived_by_unnamed",
+  "what": "the TypeScript engine keeps only the cone for a rule that reads derived_by with its fact unbound",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "            else return whole(r, V.derived_by);",
+    "            else void whole;"
+   ]
+  ],
+  "expect": {
+   "asks_reads_everything": "au_b"
+  }
+ },
+ {
+  "id": "ts_asks_blind_reflection",
+  "what": "the TypeScript engine keeps only the cone for a rule that reads the kernel's aggregate cells",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "          } else if (blind.has(l.rel) || l.rel === V.hole) return whole(r, l.rel);",
+    "          }"
+   ]
+  ],
+  "expect": {
+   "asks_reads_cells": "ab_size"
+  }
+ },
+ {
+  "id": "ts_asks_explain_unasked",
+  "what": "the TypeScript engine leaves a relation an explain_request names outside the cone",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "if (f.args.length === 2 && (f.args[1].k === 'a' || f.args[1].k === 'f')) cone.add(f.args[1].name);",
+    "if (false) cone.add(f.args[1].name);"
+   ]
+  ],
+  "expect": {
+   "asks_explained": "ae_y"
+  }
+ },
+ {
+  "id": "ts_asks_dominance_reads",
+  "what": "the TypeScript engine leaves the relations a dominance body reads outside the cone",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "      for (const [rel, sub] of this.subs) if (cone.has(rel)) for (const x of sub.reads) cone.add(x);",
+    "      for (const [rel, sub] of this.subs) if (false) for (const x of sub.reads) cone.add(x);"
+   ]
+  ],
+  "expect": {
+   "asks_dominance": "ad_best"
+  }
+ },
+ {
   "id": "delta_first_off",
   "what": "a firing is solved in written order, never from its news: the join before the news premise is held in full",
   "expect": {
@@ -7070,6 +7196,400 @@ export const BREAKS: Break[] = [
    "structures_proof": "alias copy_miss"
   }
  },
+ {
+  "id": "tree_unread",
+  "what": "the Rust parser reads no declared tree: `tree p(P, C).` is a clause it refuses",
+  "expect": {
+   "ds_tree_syntax": "does not evaluate",
+   "ds_tree_holds": "does not evaluate"
+  }
+ },
+ {
+  "id": "tree_closure_dropped",
+  "what": "the Rust parser reads a tree's `closure` and keeps none: the closure is no relation",
+  "expect": {
+   "ds_tree_syntax": "was to be refused",
+   "ds_tree_holds": "dstc_lost"
+  }
+ },
+ {
+  "id": "tree_closure_row_unwritten",
+  "what": "the `structure_closure` row of a declaration is not written, so no engine knows the tree's closure",
+  "expect": {
+   "ds_tree_syntax": "dtxs_closure_missing",
+   "ds_tree_phrase": "decl_lost"
+  }
+ },
+ {
+  "id": "tree_arity_unchecked",
+  "what": "a tree of one argument is admitted",
+  "expect": {
+   "ds_tree_syntax": "was to be refused"
+  }
+ },
+ {
+  "id": "tree_closure_head_open",
+  "what": "a rule or a fact may conclude the closure of a declared tree",
+  "expect": {
+   "ds_tree_syntax": "was to be refused"
+  }
+ },
+ {
+  "id": "tree_lowering_base_only",
+  "what": "a closure lowers to its base rule alone: the closure is the edges",
+  "expect": {
+   "ds_tree_holds": "dstc_lost",
+   "ds_tree_syntax": "dtxs_rules_wrong"
+  }
+ },
+ {
+  "id": "tree_check_off",
+  "what": "no declared tree is judged after an evaluation",
+  "expect": {
+   "ds_tree_holds": "was to be refused",
+   "ds_tree_tick": "was to be refused",
+   "ds_tree_retract": "was to be refused",
+   "ds_tree_wall": "was to be refused"
+  }
+ },
+ {
+  "id": "tree_parents_unjudged",
+  "what": "a child with two parents is no break of the promise",
+  "expect": {
+   "ds_tree_holds": "was to be refused"
+  }
+ },
+ {
+  "id": "tree_cycle_unchecked",
+  "what": "a cycle is no break of the promise",
+  "expect": {
+   "ds_tree_holds": "was to be refused"
+  }
+ },
+ {
+  "id": "tree_book_ignored",
+  "what": "a declared tree is judged over every book at once: a child with a parent in each of two books is broken",
+  "expect": {
+   "ds_tree_holds": "does not evaluate"
+  }
+ },
+ {
+  "id": "tree_tick_unchecked",
+  "what": "a declared tree is judged at tick 0 and never after",
+  "expect": {
+   "ds_tree_tick": "was to be refused"
+  }
+ },
+ {
+  "id": "vclosure_nonstrict",
+  "what": "the tree answers a node as its own ancestor",
+  "expect": {
+   "ds_tree_sealed": "dstc_diff"
+  }
+ },
+ {
+  "id": "vclosure_descendants_short",
+  "what": "the range of the descendants of a node stops one short",
+  "expect": {
+   "ds_tree_sealed": "dstc_diff",
+   "ds_tree_plan": "dtlc_lost"
+  }
+ },
+ {
+  "id": "vclosure_ancestors_short",
+  "what": "the parent chain of a node stops one short of the root",
+  "expect": {
+   "ds_tree_sealed": "dstc_diff"
+  }
+ },
+ {
+  "id": "vclosure_stale_forest",
+  "what": "the forest is built once and not again when the edges change",
+  "expect": {
+   "ds_tree_sealed": "dstc_"
+  }
+ },
+ {
+  "id": "vclosure_reader_stale",
+  "what": "a rule that reads the closure is not fired again when news of the edges reaches it",
+  "expect": {
+   "ds_tree_sealed": "dstc_"
+  }
+ },
+ {
+  "id": "vclosure_book_merged",
+  "what": "a premise that names a book is answered from the forests of every book",
+  "expect": {
+   "ds_tree_sealed": "dstc_diff"
+  }
+ },
+ {
+  "id": "vclosure_premise_untagged",
+  "what": "a premise answered from the tree is the negation of a symbol, not the row it is: the member of a cell and the premise of a firing name no fact",
+  "expect": {
+   "ds_tree_explain": "dte_missing",
+   "ds_tree_sealed": "answered from its tree the state differs"
+  }
+ },
+ {
+  "id": "vclosure_why_absent",
+  "what": "a row answered from the tree is no fact to `why`: it does not hold, where `ask` says it does",
+  "expect": {
+   "ds_tree_explain": "explain_refused"
+  }
+ },
+ {
+  "id": "vclosure_derive_always_step",
+  "what": "the derivation of a row rebuilt from the tree is always the second rule, the edge to the ancestor too",
+  "expect": {
+   "ds_tree_explain": "dte_missing"
+  }
+ },
+ {
+  "id": "vclosure_row_written_twice",
+  "what": "a row of the closure cited twice is written out in full twice, not referred to",
+  "expect": {
+   "ds_tree_explain": "dte_extra"
+  }
+ },
+ {
+  "id": "vclosure_demand_unread",
+  "what": "the relations answered on demand are not known when a declared closure is read for whether it may be answered from its tree",
+  "expect": {
+   "ds_tree_demand_edge": "dtd_lost"
+  }
+ },
+ {
+  "id": "vclosure_restore_unengaged",
+  "what": "a snapshot is opened without reading which closures are answered from their trees: asked before any evaluation, the closure has no rows",
+  "expect": {
+   "ds_tree_sealed": "a snapshot opened and not evaluated holds another state",
+   "ds_tree_explain": "a snapshot opened and not evaluated holds another state"
+  }
+ },
+ {
+  "id": "demand_closed_atom_book",
+  "what": "a rule whose head book is a variable is not read from the store as a closed relation is: the closure written with a book variable over edges that read a demand relation is unfolded at its calls and meets its own",
+  "expect": {
+   "ds_tree_demand_book": "fired before ddb_w",
+   "ds_tree_demand_book_sealed": "fired before ddb_w"
+  }
+ },
+ {
+  "id": "ts_demand_closed_atom_book",
+  "what": "the TypeScript evaluator does not read a relation whose head book is a variable from the store as a closed relation",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "const ok = rs.every((r) => r.clause.head.args.length === n);",
+    "const ok = rs.every((r) => r.clause.head.args.length === n && r.clause.head.persp.k === 'a');"
+   ]
+  ],
+  "expect": {
+   "ds_tree_demand_book": "fired before ddb_w",
+   "ds_tree_demand_book_sealed": "fired before ddb_w"
+  }
+ },
+ {
+  "id": "demand_closed_book_unbound",
+  "what": "a premise at a ground book does not bind the book variable of the rule's head",
+  "expect": {
+   "ds_tree_demand_book": "fired before ddb_w",
+   "ds_tree_demand_book_sealed": "fired before ddb_w"
+  }
+ },
+ {
+  "id": "ts_demand_closed_book_unbound",
+  "what": "the TypeScript evaluator's premise at a ground book does not bind the book variable of the rule's head",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "if (g === undefined || (g.length === b.lit.args.length + 1 && g[b.lit.args.length])) varsOf(b.lit.persp, bound);",
+    "if (g === undefined) varsOf(b.lit.persp, bound);"
+   ]
+  ],
+  "expect": {
+   "ds_tree_demand_book": "fired before ddb_w",
+   "ds_tree_demand_book_sealed": "fired before ddb_w"
+  }
+ },
+ {
+  "id": "vclosure_rows_cost",
+  "what": "a row answered from the tree costs a row against the space wall, as a stored one does: the world that declares it is answered where the stored closure meets its wall is cut too",
+  "expect": {
+   "ds_tree_plan": "declares closure_unwalled"
+  }
+ },
+ {
+  "id": "vclosure_neg_inverted",
+  "what": "a negation of the closure holds where a row does",
+  "expect": {
+   "ds_tree_sealed": "dstc_diff"
+  }
+ },
+ {
+  "id": "vclosure_unbound_cheap",
+  "what": "the planner counts an unbound closure as one row, so a plan may start from it",
+  "expect": {
+   "ds_tree_plan": "the state holds the row"
+  }
+ },
+ {
+  "id": "vclosure_rows_unpublished",
+  "what": "the canonical state lists no row of a closure answered from its tree",
+  "expect": {
+   "ds_tree_sealed": "the state lacks the row"
+  }
+ },
+ {
+  "id": "vclosure_with_witness",
+  "what": "a closure is answered from its tree where witnesses are kept, which cite no row of it",
+  "expect": {
+   "ds_tree_holds": "dstp_unmade"
+  }
+ },
+ {
+  "id": "closure_one_book",
+  "what": "the closure kernel walks the first book its edges have and no other",
+  "expect": {
+   "ds_tree_holds": "dstc_"
+  }
+ },
+ {
+  "id": "phrase_tree_closure_lost",
+  "what": "rofl-render writes a tree without its closure: the sentence of the promise alone",
+  "expect": {
+   "ds_tree_phrase": "decl_lost"
+  }
+ },
+ {
+  "id": "ring1_tree_unread",
+  "what": "ring 1 reads no tree with a closure",
+  "edits": [
+   [
+    "examples/ring1/ring1.rofl",
+    "clause_at(I, D, $closure(Cl, $structure(Kind, Rs, $lit(R, $bare, A, $now))), $nil) :-\n  identtok(I, I2), tok_name(I, I2, Kind), struct_kind(Kind), nexttok(I2, K), identtok(K, K2), not keyword(K),\n  tok_name(K, K2, R), nexttok(K2, L), p(L, lpar), nexttok(L, S), strargs(Kind, S, E, Rs, A),\n  nexttok(E, C), p(C, rpar), nexttok(C, W), identtok(W, W2), tok_name(W, W2, closure),\n  nexttok(W2, X), identtok(X, X2), not keyword(X), tok_name(X, X2, Cl), nexttok(X2, D), p(D, dot).\n",
+    ""
+   ]
+  ],
+  "expect": {
+   "ds_tree_syntax": "ring1_missing"
+  }
+ },
+ {
+  "id": "ts_tree_unread",
+  "what": "the TypeScript parser reads no declared tree",
+  "edits": [
+   [
+    "src/parser.ts",
+    "new Map([['function', ['to']], ['tree', []]])",
+    "new Map([['function', ['to']]])"
+   ]
+  ],
+  "expect": {
+   "ds_tree_syntax": "does not evaluate"
+  }
+ },
+ {
+  "id": "ts_tree_check_off",
+  "what": "the TypeScript engine judges no declared tree after an evaluation",
+  "edits": [
+   [
+    "src/api.ts",
+    "checkFunctions(this.store); checkTrees(this.store);",
+    "checkFunctions(this.store);"
+   ]
+  ],
+  "expect": {
+   "ds_tree_holds": "was to be refused",
+   "ds_tree_tick": "was to be refused"
+  }
+ },
+ {
+  "id": "ts_tree_parents_unread",
+  "what": "the TypeScript engine's promise of a declared tree compares no second parent",
+  "edits": [
+   [
+    "src/structure.ts",
+    ".filter(([, ps]) => ps.size > 1)",
+    ".filter(([, ps]) => ps.size > 99)"
+   ]
+  ],
+  "expect": {
+   "ds_tree_holds": "was to be refused"
+  }
+ },
+ {
+  "id": "ts_tree_cycle_unread",
+  "what": "the TypeScript engine's promise of a declared tree looks for no cycle",
+  "edits": [
+   [
+    "src/structure.ts",
+    "if (cycles.length === 0) continue;",
+    "if (cycles.length >= 0) continue;"
+   ]
+  ],
+  "expect": {
+   "ds_tree_holds": "was to be refused"
+  }
+ },
+ {
+  "id": "ts_tree_lowering_lost",
+  "what": "the TypeScript lowering of a closure is the base rule alone",
+  "edits": [
+   [
+    "src/structure.ts",
+    ", `${cl}[B](P, D) :- ${cl}[B](P, X), ${rel}[B](X, D).`]",
+    "]"
+   ]
+  ],
+  "expect": {
+   "ds_tree_holds": "dstc_lost",
+   "ds_tree_syntax": "dtxs_rules_wrong"
+  }
+ },
+ {
+  "id": "ts_tree_closure_head_open",
+  "what": "the TypeScript door lets a rule or a fact conclude the closure of a declared tree",
+  "edits": [
+   [
+    "src/api.ts",
+    "const badClosure = lowered ? null : checkClosureHead(c0, declaredClosures(this.store));",
+    "const badClosure = null;"
+   ]
+  ],
+  "expect": {
+   "ds_tree_syntax": "was to be refused"
+  }
+ },
+ {
+  "id": "ts_tree_arity_unchecked",
+  "what": "the TypeScript door admits a tree of one argument",
+  "edits": [
+   [
+    "src/structure.ts",
+    "if (s.kind === 'tree' && c.head.args.length !== 2) return",
+    "if (false && s.kind === 'tree' && c.head.args.length !== 2) return"
+   ]
+  ],
+  "expect": {
+   "ds_tree_syntax": "was to be refused"
+  }
+ },
+ {
+  "id": "ts_tree_closure_row_unwritten",
+  "what": "the TypeScript door writes no `structure_closure` row",
+  "edits": [
+   [
+    "src/structure.ts",
+    "if (s.closure !== undefined) rows.push([V.structure_closure,",
+    "if (false) rows.push([V.structure_closure,"
+   ]
+  ],
+  "expect": {
+   "ds_tree_syntax": "was to be refused"
+  }
+ },
 ];
 
 /** A proof that is no world: the report `rofl-load --propose-structures` prints over a fixture (rust/rofl/src/structures.rs),
@@ -7589,8 +8109,8 @@ if (isMain) {
 
   if (!legacy) {
     const tb = Date.now();
-    sh('cd rust && cargo build --profile breaks --features breaks -p rofl --bin rofl-load --bin rofl-render');
-    console.log(`built rust/target/breaks/rofl-load and rofl-render in ${((Date.now() - tb) / 1000).toFixed(1)} s`);
+    sh('cd rust && cargo build --profile breaks --features breaks -p rofl --bin rofl-load --bin rofl-render --bin rofl-serve');
+    console.log(`built rust/target/breaks/rofl-load, rofl-render and rofl-serve in ${((Date.now() - tb) / 1000).toFixed(1)} s`);
     const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'agg-breaks-'));
     try {
       const plants = chosen.map((b) => {
@@ -7639,7 +8159,7 @@ if (isMain) {
     }
   } else {
     const profile = process.env.ROFL_PROFILE || 'release';
-    const build = (): void => { sh(`cd rust && cargo build --profile ${profile} -p rofl --bin rofl-load --bin rofl-render`); };
+    const build = (): void => { sh(`cd rust && cargo build --profile ${profile} -p rofl --bin rofl-load --bin rofl-render --bin rofl-serve`); };
     for (const b of chosen) {
       const saved = new Map<string, string>();
       const kernel = (b.edits ?? []).some(([f]) => KERNEL.includes(f));

@@ -167,6 +167,9 @@ pub enum PremRef {
     /// Its members and what it sealed live in the cell record, so a witness
     /// keeps one premise per body element and this stays eight bytes.
     Cell(CellId),
+    /// A row of a closure answered from its tree (engine/vclosure.rs): no fact holds it, so the premise is the canonical key
+    /// of the row, interned as a negation's is; `VRow(0)` is the unspelled form a match returns and a firing's record spells.
+    VRow(Sym),
 }
 
 // ------------------------------------------------------------------ cells
@@ -718,6 +721,14 @@ pub fn fnv64(text: &str) -> String {
     format!("{x:016x}")
 }
 
+/// A RELATION THE ENGINE ANSWERS FROM A STRUCTURE and stores no row of: the closure of a declared tree
+/// (engine/vclosure.rs). The canonical state lists its rows, generated here from the forest of each book.
+#[derive(Clone)]
+pub struct VirtualRel {
+    pub rel: Sym,
+    pub forests: Vec<(Sym, Rc<crate::forest::Forest>)>,
+}
+
 #[derive(Default)]
 #[derive(Clone)]
 pub struct Store {
@@ -732,6 +743,8 @@ pub struct Store {
     /// when it prepares a program (`Eval::prepare`): what `canonical_state`
     /// prints their algebra and every firing of their facts from.
     pub lat_regs: Vec<LatReg>,
+    /// The relations answered from a structure, with the structure, as the last evaluation left them.
+    pub virtuals: Vec<VirtualRel>,
     /// The rules whose cells are a counting tag's (the engine's sum over the
     /// derivations `p@count`): their cells carry the `tag` flag.
     pub tag_rules: HashSet<Sym>,
@@ -1641,6 +1654,7 @@ impl Store {
     /// provenance row they were recorded with stays too. `row_of` reads a
     /// record as that row; without it no row stands.
     pub fn clear_derived(&mut self, row_of: Option<RowOf<'_>>) {
+        self.virtuals.clear();
         let drop: Vec<FactId> = (0..self.facts.len() as FactId)
             .filter(|&i| {
                 let r = &self.facts.rec(i);
@@ -1712,6 +1726,8 @@ impl Store {
         keep_frozen: Option<KeepFrozen<'_>>,
     ) {
         self.eval_holes.clear();
+        // the rows a structure answers are derived rows of the tick that ends
+        self.virtuals.clear();
         // a superseded lattice value's history ends with its tick
         for id in 0..self.facts.len() as FactId {
             if self.facts.rec(id).dead() {
@@ -2164,7 +2180,7 @@ impl Store {
                     hgt = hgt.max(match p {
                         PremRef::Fact(g) => memo.get(g).copied().unwrap_or(u32::MAX - 1),
                         PremRef::Cell(x) => self.cells.recs[*x as usize].height,
-                        PremRef::Neg(_) | PremRef::Bi(_) => 0,
+                        PremRef::Neg(_) | PremRef::Bi(_) | PremRef::VRow(_) => 0,
                     });
                 }
                 let mut sig = String::new();
@@ -2203,7 +2219,7 @@ impl Store {
                     a.max(match p {
                         PremRef::Fact(g) => memo.get(g).copied().unwrap_or(u32::MAX - 1),
                         PremRef::Cell(x) => self.cells.recs[*x as usize].height,
-                        PremRef::Neg(_) | PremRef::Bi(_) => 0,
+                        PremRef::Neg(_) | PremRef::Bi(_) | PremRef::VRow(_) => 0,
                     })
                 });
                 let mut sig = String::new();
@@ -2256,6 +2272,10 @@ impl Store {
                     out.push_str("cell:");
                     self.write_cell_key(h, *c, out);
                 }
+                PremRef::VRow(s) => {
+                    out.push_str("fact:");
+                    out.push_str(h.name(*s));
+                }
             }
         }
     }
@@ -2266,6 +2286,7 @@ impl Store {
             PremRef::Fact(f) => format!("fact:{}", self.key(h, f)),
             PremRef::Neg(s) => format!("neg:{}", h.name(s)),
             PremRef::Bi(s) => format!("bi:{}", h.name(s)),
+            PremRef::VRow(s) => format!("fact:{}", h.name(s)),
             PremRef::Cell(c) => {
                 let mut o = String::from("cell:");
                 self.write_cell_key(h, c, &mut o);
@@ -2293,6 +2314,26 @@ impl Store {
         cmp_js(&pre(ra), &pre(rb))
     }
 
+    /// Rows the relations answered from a structure hold, none of them stored.
+    pub fn virtual_rows(&self) -> usize {
+        self.virtuals.iter().flat_map(|v| v.forests.iter()).map(|(_, f)| f.pairs as usize).sum()
+    }
+
+    /// The keys of those rows.
+    pub fn virtual_keys(&self, h: &Heap) -> Vec<String> {
+        let mut out = Vec::with_capacity(self.virtual_rows());
+        for v in &self.virtuals {
+            for (book, f) in &v.forests {
+                f.each_pair(|a, d| {
+                    let mut k = String::new();
+                    write_fact_key(h, v.rel, *book, &[a, d], &mut k);
+                    out.push(k);
+                });
+            }
+        }
+        out
+    }
+
     pub fn key(&self, h: &Heap, id: FactId) -> String {
         let mut s = String::new();
         self.write_key(h, id, &mut s);
@@ -2304,17 +2345,34 @@ impl Store {
     /// `canonicalState` (src/store.ts:718). Everything an observer can
     /// distinguish, and the contract this port is measured against.
     pub fn canonical_state(&self, h: &Heap) -> String {
-        let mut keyed: Vec<(String, FactId)> = Vec::with_capacity(self.n_live);
+        let mut keyed: Vec<(String, Option<FactId>)> = Vec::with_capacity(self.n_live + self.virtual_rows());
         for id in 0..self.facts.len() as FactId {
             if self.alive(id) {
-                keyed.push((self.key(h, id), id));
+                keyed.push((self.key(h, id), Some(id)));
+            }
+        }
+        // THE ROWS OF A RELATION ANSWERED FROM A STRUCTURE, generated: each is a derived fact of its tick, as the
+        // rules it stands for would have made it, in a world that keeps no witness
+        for v in &self.virtuals {
+            for (book, f) in &v.forests {
+                f.each_pair(|a, d| {
+                    let mut k = String::new();
+                    write_fact_key(h, v.rel, *book, &[a, d], &mut k);
+                    keyed.push((k, None));
+                });
             }
         }
         keyed.sort_by(|a, b| cmp_js(&a.0, &b.0));
-        let mut out = String::with_capacity(self.n_live * 96);
+        let mut out = String::with_capacity((self.n_live + self.virtual_rows()) * 96);
         out.push_str("tick ");
         out.push_str(&self.tick.to_string());
         for (k, id) in &keyed {
+            let Some(id) = id else {
+                out.push('\n');
+                out.push_str(k);
+                out.push_str(" tick drv support=0");
+                continue;
+            };
             let r = &self.facts.rec(*id);
             out.push('\n');
             out.push_str(k);
@@ -2910,7 +2968,7 @@ impl Store {
                             }
                         },
                         PremRef::Cell(x) => best = best.max(self.cells.recs[*x as usize].height),
-                        PremRef::Neg(_) | PremRef::Bi(_) => {}
+                        PremRef::Neg(_) | PremRef::Bi(_) | PremRef::VRow(_) => {}
                     }
                 }
                 firings.push(Firing { head: f, open, best });
@@ -3023,7 +3081,7 @@ impl Store {
                             None
                         }
                     },
-                    PremRef::Neg(_) | PremRef::Bi(_) => None,
+                    PremRef::Neg(_) | PremRef::Bi(_) | PremRef::VRow(_) => None,
                 };
                 if let Some(d) = dep {
                     open_n += 1;
@@ -3151,7 +3209,7 @@ impl Store {
                         None => known = false,
                     },
                     PremRef::Cell(x) => h = h.max(self.cells.recs[*x as usize].height),
-                    PremRef::Neg(_) | PremRef::Bi(_) => {}
+                    PremRef::Neg(_) | PremRef::Bi(_) | PremRef::VRow(_) => {}
                 }
             }
             if known && h + 1 == hg {

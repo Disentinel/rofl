@@ -190,6 +190,9 @@ impl Eval {
 
     /// A world a delta is worked out for, and a fact it is worked out for.
     fn delta_gate(&self, f: FactId) -> Result<(), &'static str> {
+        if self.vclosure_active() {
+            return Err("a closure is answered from its tree, which a retraction builds again");
+        }
         if self.well_founded {
             return Err("the world is evaluated well-founded");
         }

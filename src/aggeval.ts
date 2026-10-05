@@ -1091,13 +1091,8 @@ export class AggEval {
       }
       kept.push(this.classify(r));
     }
-    // `asks(Rel)`: only the rules whose heads reach an asked relation are activated, backwards through every premise; no asks means everything
-    const cone = new Set<string>();
-    for (const f of this.store.relAll(IFACE.asks)) if (f.args.length === ARITY.asks && f.args[0].k === 'a') cone.add(f.args[0].name);
-    if (cone.size) {
-      for (let n = -1; n !== cone.size;) { n = cone.size; for (const r of kept) if (cone.has(r.clause.head.rel)) for (const l of r.clause.body.flatMap(litsOf)) cone.add(l.rel); }
-      kept.splice(0, kept.length, ...kept.filter((r) => cone.has(r.clause.head.rel)));
-    }
+    const cone = this.asksCone(kept);
+    if (cone) kept.splice(0, kept.length, ...kept.filter((r) => cone.has(r.clause.head.rel)));
     this.nextRules = new Set(kept.filter((r) => r.clause.head.temporal === 'next').map((r) => r.id));
     this.carried.clear();
     const carried = [...new Set(kept.filter((r) => r.clause.head.temporal === 'next' && this.isLatticeLit(r.clause.head.rel, r.clause.head.args.length))
@@ -1154,13 +1149,14 @@ export class AggEval {
   /** THE DEMAND RELATIONS WHOSE ANSWERS ARE ALL GROUND, and whose rules all fire bottom-up: a call to one, at any depth,
    *  reads the store. A position is ground when every variable of each rule's head there is bound by a positive
    *  premise at a ground position (any of a relation not answered on demand), or by `is` or `=` from ground ones; assumed
-   *  of all and withdrawn where a rule falls short. */
+   *  of all and withdrawn where a rule falls short. THE BOOK IS A POSITION TOO: a head's book that is a variable is ground when
+   *  a premise at a ground book binds it (`w[B](P, C) :- e[B](P, C).`), as the head's book that is an atom is. */
   private demandClosedRels(): Set<string> {
     const ground = new Map<string, boolean[]>();
     for (const [rel, rs] of this.demandRels) {
       const n = rs[0].clause.head.args.length;
-      const ok = rs.every((r) => r.clause.head.args.length === n && r.clause.head.persp.k === 'a');
-      ground.set(rel, new Array<boolean>(n).fill(ok));
+      const ok = rs.every((r) => r.clause.head.args.length === n);
+      ground.set(rel, new Array<boolean>(n + 1).fill(ok));
     }
     for (let changed = true; changed;) {
       changed = false;
@@ -1174,8 +1170,8 @@ export class AggEval {
             for (const b of r.clause.body) {
               if (b.t === 'pos') {
                 const g = ground.get(b.lit.rel);
-                b.lit.args.forEach((a, i) => { if (g === undefined || (g.length === b.lit.args.length && g[i])) varsOf(a, bound); });
-                if (g === undefined) varsOf(b.lit.persp, bound);
+                b.lit.args.forEach((a, i) => { if (g === undefined || (g.length === b.lit.args.length + 1 && g[i])) varsOf(a, bound); });
+                if (g === undefined || (g.length === b.lit.args.length + 1 && g[b.lit.args.length])) varsOf(b.lit.persp, bound);
               } else if (b.t === 'bi' && (b.op === 'is' || b.op === '=')) {
                 for (const [from, to] of b.op === 'is' ? [[b.r, b.l]] : [[b.r, b.l], [b.l, b.r]]) {
                   if ([...varsOf(from)].every((v) => bound.has(v))) varsOf(to, bound);
@@ -1183,7 +1179,7 @@ export class AggEval {
               }
             }
           }
-          r.clause.head.args.forEach((a, j) => {
+          [...r.clause.head.args, r.clause.head.persp].forEach((a, j) => {
             if (gr[j] && ![...varsOf(a)].every((v) => bound.has(v))) { gr[j] = false; changed = true; }
           });
         }
@@ -1221,6 +1217,46 @@ export class AggEval {
     const clause: Clause = { head: lit(l), body: [{ t: 'pos', lit: lit(name) }] };
     return { id: name, canon: name, safe: true, hasNeg: false, hasAgg: false, hasThr: false, thrRels: [], latticeOuter: [],
       latClose: l, posRels: [name], hasDemandPrem: false, demandStrict: false, triggerRels: [], plan: [...clause.body], clause };
+  }
+
+  /** THE RELATION CONE OF `asks(Rel)`: only the rules whose heads reach an asked relation are activated, backwards through every premise
+   *  (positive, negated, inside an aggregate) and through what a subsumptive relation's dominance bodies read; no asks means every rule. The cone is
+   *  closed under what a rule can see of other relations without naming them as a premise, or an answer in it would differ from the whole world's:
+   *  a relation an `explain_request` names is asked; a rule that reads `derived_by` of a named relation reads that relation; a rule that reads the
+   *  rows of `derived_by` with its fact unbound, or the cells, members, lattice members or dominations the kernel writes, sees every relation's, and
+   *  the cone is the whole world (said in the diagnostics). */
+  private asksCone(kept: ERule[]): Set<string> | undefined {
+    const cone = new Set<string>();
+    for (const f of this.store.relAll(IFACE.asks)) if (f.args.length === ARITY.asks && f.args[0].k === 'a') cone.add(f.args[0].name);
+    if (!cone.size) return undefined;
+    for (const f of this.store.relPersp('explain_request', MAIN)) if (f.args.length === 2 && (f.args[1].k === 'a' || f.args[1].k === 'f')) cone.add(f.args[1].name);
+    const blind = new Set<string>([V.agg_cell, V.agg_member, V.agg_member_prem, V.agg_sealed, V.lattice_member, V.lattice_member_prem, V.dominated_by, 'shrug', IFACE.unknown, IFACE.stratum, IFACE.unstratified, V.edb]);
+    const whole = (r: ERule, rel: string) => {
+      this.diags.push(`asks: rule ${r.id} reads '${rel}' without naming a relation, which shows every relation's rows, so every rule is kept`);
+      return undefined;
+    };
+    for (const rel of cone) {
+      if (blind.has(rel) || rel === V.derived_by || this.answer.demandRels.includes(rel)) {
+        this.diags.push(`asks: '${rel}' is asked, and what it holds is what every rule asked of it or showed of every relation, so every rule is kept`);
+        return undefined;
+      }
+    }
+    for (let n = -1; n !== cone.size;) {
+      n = cone.size;
+      for (const r of kept) {
+        if (!cone.has(r.clause.head.rel)) continue;
+        for (const l of r.clause.body.flatMap(litsOf)) {
+          cone.add(l.rel);
+          if (l.rel === V.derived_by) {
+            const t = l.args[0];
+            if (t?.k === 'f' && t.name === '$fact' && t.args[0]?.k === 'a') cone.add(t.args[0].name);
+            else return whole(r, V.derived_by);
+          } else if (blind.has(l.rel) || l.rel === V.hole) return whole(r, l.rel);
+        }
+      }
+      for (const [rel, sub] of this.subs) if (cone.has(rel)) for (const x of sub.reads) cone.add(x);
+    }
+    return cone;
   }
 
   private classify(r: DRule): ERule {

@@ -1,0 +1,21 @@
+-- examples/checks/ds-tree-demand-book.rofl — the ds_tree_demand_book world: a closure, declared and written by hand with a book variable, over edges that read a relation answered on demand (`u(X, Y) :- qq(X).` leaves Y open). The closure holds in every book the edges have and what reads it (`r`, a count, a negation) holds what the constant-book closure written by hand for each book holds: in both engines, with provenance kept and sealed.
+edb(ddb_qq).
+edb(ddb_bs).
+ddb_qq(a). ddb_qq(b). ddb_qq(c). ddb_qq(p). ddb_qq(q).
+ddb_bs[main](a, b). ddb_bs[main](b, c). ddb_bs[main](c, d).
+ddb_bs[other](p, q). ddb_bs[other](q, z).
+ddb_u(X, Y) :- ddb_qq(X).
+ddb_e[B](P, C) :- ddb_bs[B](P, C), ddb_u(P, P).
+tree ddb_e(P, C) closure ddb_w.
+ddb_wv[B](P, C) :- ddb_e[B](P, C).
+ddb_wv[B](P, D) :- ddb_wv[B](P, X), ddb_e[B](X, D).
+ddb_wm(P, C) :- ddb_e[main](P, C).
+ddb_wm(P, D) :- ddb_wm(P, X), ddb_e[main](X, D).
+ddb_wo(P, C) :- ddb_e[other](P, C).
+ddb_wo(P, D) :- ddb_wo(P, X), ddb_e[other](X, D).
+ddb_r(D) :- ddb_w(a, D).
+ddb_ro(D) :- ddb_w[other](p, D).
+ddb_cnt(N) :- N is count(D : ddb_w(a, D)).
+ddb_cnto(N) :- N is count(D : ddb_w[other](p, D)).
+ddb_none(D) :- ddb_qq(D), not ddb_w(a, D).
+ddb_up(A) :- ddb_w(A, d).

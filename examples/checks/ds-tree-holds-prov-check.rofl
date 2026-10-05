@@ -1,0 +1,5 @@
+-- examples/checks/ds-tree-holds-prov-check.rofl — ds_tree_holds, which keeps its witnesses: the closure of the tree is
+-- derived as any rows are, so each of the two rules it lowers to has made a row of it (`derived_by`). A closure answered from
+-- its tree where witnesses are kept would have no row to cite and no firing to say.
+dstp_unmade(R) :- concludes(R, dst_within), not derived_by[$kernel](_, R, _).
+alarm(dstp_unmade).

@@ -1,0 +1,4 @@
+-- expect-refusal: is declared a structure twice
+-- a closure belongs to one tree
+tree dts_a(P, C) closure dts_c.
+tree dts_b(P, C) closure dts_c.

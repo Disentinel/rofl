@@ -56,6 +56,10 @@ export function written(text: string): string[] {
       if (!out.includes('edb(sentence_structure).')) out.push('edb(sentence_structure).', 'edb(sentence_role).');
       out.push(`sentence_structure(${c.head.rel}, ${c.head.args.length}, ${c.structure.kind}).`);
       c.structure.roles.forEach((r, i) => { if (r) out.push(`sentence_role(${c.head.rel}, ${i + 1}, ${r}).`); });
+      if (c.structure.closure !== undefined) {
+        if (!out.includes('edb(sentence_closure).')) out.push('edb(sentence_closure).');
+        out.push(`sentence_closure(${c.head.rel}, ${c.structure.closure}).`);
+      }
       rels.add(c.head.rel);
       continue;
     }
@@ -88,8 +92,8 @@ export function said(md: string): string[] {
       });
       continue;
     }
-    const d = /^`(\w+)`(?: in the `\$?\w+`)? (?:keeps|is ordered|has one) |^Each `(\w+)` fact|^A fact that \[[^\]]*\]\(#(\w+)\)/.exec(p.trim());
-    if (d) out.push(`sentence_of(${d[1] ?? d[2] ?? d[3]}, "${plain(p)}").`);
+    const d = /^`(\w+)`(?: in the `\$?\w+`)? (?:keeps|is ordered|has one) |^Each `(\w+)` fact|^Each child of `(\w+)` has one parent|^A fact that \[[^\]]*\]\(#(\w+)\)/.exec(p.trim());
+    if (d) out.push(`sentence_of(${d[1] ?? d[2] ?? d[3] ?? d[4]}, "${plain(p)}").`);
   }
   return out;
 }

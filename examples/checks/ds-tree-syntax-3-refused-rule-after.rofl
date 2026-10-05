@@ -1,0 +1,4 @@
+-- expect-refusal: is the closure of the tree dts_t and has no other conclusion
+-- nor a rule written after it
+tree dts_t(P, C) closure dts_c.
+dts_c(P, C) :- dts_e(P, C).

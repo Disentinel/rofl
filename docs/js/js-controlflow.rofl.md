@@ -20,7 +20,9 @@ Reads:
 - from js-dataflow: [export_local](js-dataflow.rofl.md#export_local), [pattern_takes](js-dataflow.rofl.md#pattern_takes), [private_binds](js-dataflow.rofl.md#private_binds), [rest_in_pattern](js-dataflow.rofl.md#rest_in_pattern)
 - from js-dataflow, in the flow: [catch_of](js-dataflow.rofl.md#catch_of), [catch_param](js-dataflow.rofl.md#catch_param), [may_be_lit](js-dataflow.rofl.md#may_be_lit), [may_be_node](js-dataflow.rofl.md#may_be_node), [member_node_v](js-dataflow.rofl.md#member_node_v), [member_value](js-dataflow.rofl.md#member_value), [nearest_v](js-dataflow.rofl.md#nearest_v), [returns](js-dataflow.rofl.md#returns), [selects](js-dataflow.rofl.md#selects), [try_block](js-dataflow.rofl.md#try_block)
 - from js-model: [ast_node](js-model.rofl.md#ast_node)
-- from js-structure: [ast_in](js-structure.rofl.md#ast_in), [ast_within](js-structure.rofl.md#ast_within)
+- from js-structure: [ast_in](js-structure.rofl.md#ast_in)
+- from outside these files:
+  - <a id="ast_within"></a>A node is within a node (`ast_within`)
 - from the scanner:
   - <a id="ast_attr"></a>The attribute of a node is a value (`ast_attr`)
   - <a id="ast_child"></a>A node is a child of a node (`ast_child`)
@@ -53,7 +55,7 @@ What this file calls a node, and what each word stands for:
 Phrases this file defines in one step, each by the sentence it stands for:
 
 - <a id="label_escaped"></a>LS is escaped if some node [targets the label](#label_target) LS.
-- <a id="has_return"></a>A [function](js-callgraph.rofl.md#fn_node) has a return if a [return](#noun-return) R [is within](js-structure.rofl.md#ast_within) it.
+- <a id="has_return"></a>A [function](js-callgraph.rofl.md#fn_node) has a return if a [return](#noun-return) R [is within](#ast_within) it.
 - <a id="hidden_call_fires"></a>A node fires a hidden call if it [fires the hidden call](#hidden_call_user) some node.
 - <a id="hidden_call_sourced"></a>A node has a sourced hidden call if [the hidden call source](#hidden_call_src) of it is some node.
 - <a id="try_of"></a>A [try](#noun-try) lies in F if F [is nearest to](js-dataflow.rofl.md#nearest_v) it.
@@ -114,7 +116,7 @@ A node
   - the `value` of it is V.
 - guards the arm V if it [has the field initialiser](#field_init) V.
 - <a id="guarded"></a>is guarded if some node [guards the arm](#guard_arm) it.
-- is guarded if some node [guards the arm](#guard_arm) X and it [is within](js-structure.rofl.md#ast_within) X.
+- is guarded if some node [guards the arm](#guard_arm) X and it [is within](#ast_within) X.
 
 ## 2. STATEMENT ORDER. After a return/throw/break/continue the rest of the list
 
@@ -149,8 +151,8 @@ A node
   - a kind K [transfers by](#transfer_mechanism) `suspend`;
   - a node X [is of kind](js-model.rofl.md#ast_node) K;
   - a node G [is nearest to](js-dataflow.rofl.md#nearest_v) X;
-  - X [is within](js-structure.rofl.md#ast_within) a node S;
-  - S [is within](js-structure.rofl.md#ast_within) G;
+  - X [is within](#ast_within) a node S;
+  - S [is within](#ast_within) G;
   - S is the I-th of the F of it;
   - F [is a statement sequence field](#stmt_seq_field).
 - <a id="after_suspend"></a>follows a suspension if all of:
@@ -185,11 +187,11 @@ A node
 - <a id="label_target"></a>targets the label LS if all of:
   - it [refers to the label](#label_ref) N;
   - [the label name](#label_name) of LS is N;
-  - it [is within](js-structure.rofl.md#ast_within) LS.
+  - it [is within](#ast_within) LS.
 - <a id="abrupt_at"></a>is abrupt at a field F from an index I if all of:
   - a node X [targets the label](#label_target) LS;
-  - X [is within](js-structure.rofl.md#ast_within) a node S;
-  - S [is within](js-structure.rofl.md#ast_within) LS;
+  - X [is within](#ast_within) a node S;
+  - S [is within](#ast_within) LS;
   - S is the I-th of the F of it;
   - F [is a statement sequence field](#stmt_seq_field).
 
@@ -288,15 +290,15 @@ A node
 
 - <a id="completion_outer"></a>carries the completion of a node S if all of:
   - S [completes abruptly](#completes_abruptly);
-  - S [is within](js-structure.rofl.md#ast_within) it;
+  - S [is within](#ast_within) it;
   - it [is of kind](js-model.rofl.md#ast_node) K but is not a [function](js-callgraph.rofl.md#fn_node);
   - it [is among the](#ast_child) F of some node;
   - F [is a statement sequence field](#stmt_seq_field);
   - unless K [has a known completion](#completion_known).
 - <a id="completion_fn_between"></a>is cut by a function from a node S if all of:
   - it [carries the completion](#completion_outer) of S;
-  - S [is within](js-structure.rofl.md#ast_within) a [function](js-callgraph.rofl.md#fn_node) G;
-  - G [is within](js-structure.rofl.md#ast_within) it.
+  - S [is within](#ast_within) a [function](js-callgraph.rofl.md#fn_node) G;
+  - G [is within](#ast_within) it.
 
 In the audit:
 
@@ -544,7 +546,7 @@ In the audit:
 
 In the code:
 
-<a id="in_try_block"></a>A [try](#noun-try) tries a node N if the `block` of it is a node B and N [is within](js-structure.rofl.md#ast_within) B.
+<a id="in_try_block"></a>A [try](#noun-try) tries a node N if the `block` of it is a node B and N [is within](#ast_within) B.
 
 > A try discharges through its `handler`; a finalizer alone catches nothing —
 > `finalizer`'s absence from this table is the statement. Repaired 2026-09-11
@@ -613,7 +615,7 @@ In the flow:
   - [the catch](js-dataflow.rofl.md#catch_of) of T is H;
   - [the param](js-dataflow.rofl.md#catch_param) of H is it;
   - [the block](js-dataflow.rofl.md#try_block) of T is a node B;
-  - a node C [is within](js-structure.rofl.md#ast_within) B;
+  - a node C [is within](#ast_within) B;
   - C [resolves to](js-callgraph.rofl.md#resolves) G;
   - G [throws out](#thrown_by) V.
 
@@ -625,15 +627,15 @@ In the flow:
 
 In the code:
 
-<a id="try_stops"></a>A node is stopped by a [try](#noun-try) T if it [is a throwing call](#throwing_call) and it [is within](js-structure.rofl.md#ast_within) T.
+<a id="try_stops"></a>A node is stopped by a [try](#noun-try) T if it [is a throwing call](#throwing_call) and it [is within](#ast_within) T.
 
-C is stopped by a node S if C [is stopped by](#try_stops) a node T and T [is within](js-structure.rofl.md#ast_within) S.
+C is stopped by a node S if C [is stopped by](#try_stops) a node T and T [is within](#ast_within) S.
 
 A node is abrupt at a field F from an index I if all of:
   - a node C [is a throwing call](#throwing_call);
   - a node G [is nearest to](js-dataflow.rofl.md#nearest_v) C;
-  - C [is within](js-structure.rofl.md#ast_within) a node S;
-  - S [is within](js-structure.rofl.md#ast_within) G;
+  - C [is within](#ast_within) a node S;
+  - S [is within](#ast_within) G;
   - S is the I-th of the F of it;
   - F [is a statement sequence field](#stmt_seq_field);
   - unless C [is stopped by](#try_stops) S.
@@ -644,9 +646,9 @@ A node is abrupt at a field F from an index I if all of:
 A node
 
 - is guarded if it [follows an abrupt completion](#after_abrupt).
-- is guarded if a node S [follows an abrupt completion](#after_abrupt) and it [is within](js-structure.rofl.md#ast_within) S.
+- is guarded if a node S [follows an abrupt completion](#after_abrupt) and it [is within](#ast_within) S.
 - is guarded if it [follows a suspension](#after_suspend).
-- is guarded if a node S [follows a suspension](#after_suspend) and it [is within](js-structure.rofl.md#ast_within) S.
+- is guarded if a node S [follows a suspension](#after_suspend) and it [is within](#ast_within) S.
 
 > A function every one of whose sites is guarded may never be entered.
 > `may_not_run` is LOCAL, one level; the transitive question is reachability.
@@ -672,7 +674,7 @@ A node
 
 1. if all of:
    - F is a [function](js-callgraph.rofl.md#fn_node);
-   - F [is within](js-structure.rofl.md#ast_within) an [export declaration](#noun-export_declaration) E;
+   - F [is within](#ast_within) an [export declaration](#noun-export_declaration) E;
    - unless F [is inside a function](#in_fn);
 2. if all of:
    - a node L [is exported locally as](js-dataflow.rofl.md#export_local) some name from some file;
@@ -837,7 +839,7 @@ In the code:
 N is guarded either:
 
 1. if N is a [short circuit](#noun-short_circuit);
-2. if N [is within](js-structure.rofl.md#ast_within) a [short circuit](#noun-short_circuit) P.
+2. if N [is within](#ast_within) a [short circuit](#noun-short_circuit) P.
 
 Declared as facts:
 

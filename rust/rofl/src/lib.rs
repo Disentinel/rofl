@@ -24,6 +24,7 @@ pub mod cell;
 pub mod corpus;
 pub mod dense;
 pub mod engine;
+pub mod forest;
 /// The kernel's own program and its hash, as the build baked them.
 pub mod kernel;
 pub mod reflect;
@@ -71,7 +72,8 @@ pub fn load(json: &str, budget: i64) -> Result<Loaded, String> {
     let r = seed::restore(&mut h, &v, json)?;
     let mut store = r.store;
     bootstrap_kernel(&mut h, &v, &mut store);
-    let eval = Eval::new(h, store, budget, Mode::Rounds, false);
+    let mut eval = Eval::new(h, store, budget, Mode::Rounds, false);
+    eval.vclosure_restore();
     Ok(Loaded {
         eval,
         dangling: r.dangling,

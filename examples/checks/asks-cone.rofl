@@ -1,0 +1,26 @@
+-- examples/checks/asks-cone.rofl — THE CONE FOLLOWS EVERY KIND OF READ (w_cmp_demand_cones).
+-- ak_open is asked and reads ak_blocked only under `not`; ak_size is asked and reads ak_member only
+-- inside its count. Both relations are in the cone, so both are derived whole and the answers of the
+-- asked relations are those of the world without asks. ak_twin and ak_far read nothing an asked
+-- relation reads and conclude nothing.
+asks(ak_open).
+asks(ak_size).
+edb(ak_node).
+edb(ak_mark).
+edb(ak_item).
+ak_node(1). ak_node(2). ak_node(3).
+ak_mark(2).
+ak_item(a, 1). ak_item(a, 2). ak_item(b, 3).
+ak_blocked(X) :- ak_mark(X).
+ak_open(X) :- ak_node(X), not ak_blocked(X).
+ak_member(G, K) :- ak_item(G, K).
+ak_size(G, N) :- ak_item(G, _), N is count(K : ak_member(G, K)).
+ak_twin(X) :- ak_node(X).
+ak_far(X) :- ak_twin(X), not ak_mark(X).
+-- expect-row: ak_open[main](1)
+-- expect-no-row: ak_open[main](2)
+-- expect-row: ak_blocked[main](2)
+-- expect-row: ak_member[main](a,1)
+-- expect-row: ak_size[main](a,2)
+-- expect-no-row: ak_twin[main](1)
+-- expect-no-row: ak_far[main](1)

@@ -166,6 +166,7 @@ impl Session {
     pub fn assert(&mut self, src: &str) -> Result<usize, String> {
         let cs = rofl_parse::parse(&mut self.eval.h, src)?;
         let mut n = 0;
+        let mut asked = false;
         for c in &cs {
             if !c.body.is_empty() || c.lattice.is_some() {
                 return Err(format!("assert takes facts, not rules or declarations: {}", rofl_parse::show(&self.eval.h, c)));
@@ -181,10 +182,15 @@ impl Session {
             }
             if self.eval.store.add(&self.eval.h, rel, persp, &args, F_BASE) {
                 n += 1;
+                asked |= rel == self.eval.v.asks;
             }
         }
         if n > 0 {
             self.eval.store.dirty = true;
+        }
+        // the rules a world runs are read at prepare: a new ask is only an ask once they are read again
+        if asked {
+            self.eval.reprepare();
         }
         Ok(n)
     }
@@ -799,10 +805,13 @@ impl Session {
             let (rows, keys): (Vec<Vec<String>>, Vec<String>) = got.into_iter().map(|(_, r, k)| (r, k)).unzip();
             (rows, keys, n, false)
         } else {
-            let cand = self
-                .eval
-                .store
-                .arg_matches(&self.eval.h, rel, persp_opt, args.len(), &pos, &vals);
+            // A RELATION ANSWERED FROM A STRUCTURE (the closure of a declared tree) has no rows to find: its rows are read off the tree
+            let virt = self.eval.vclosure_query(rel, persp_opt, &args);
+            let cand = if virt.is_some() {
+                Some(Vec::new())
+            } else {
+                self.eval.store.arg_matches(&self.eval.h, rel, persp_opt, args.len(), &pos, &vals)
+            };
             let probed = cand.is_some();
             let ids = match cand {
                 Some(v) => v,
@@ -811,7 +820,7 @@ impl Session {
                     None => self.eval.store.rel_all(&self.eval.h, rel),
                 },
             };
-            let scanned = ids.len();
+            let scanned = ids.len() + virt.as_ref().map_or(0, |v| v.len());
 
             // `arg_matches` promises a SUPERSET in no order (src/store.ts:477), so
             // every candidate is re-checked here. Skipping this is how a query
@@ -841,6 +850,24 @@ impl Session {
                 let r = self.eval.store.rec(id);
                 let mut k = String::new();
                 write_fact_key(&self.eval.h, r.rel, r.persp, fa, &mut k);
+                rows.push(row);
+                keys.push(k);
+            }
+            for (book, a, d) in virt.unwrap_or_default() {
+                let fa = [a, d];
+                if pos.iter().zip(&vals).any(|(&i, v)| fa[i] != *v) || same.iter().any(|&(x, y)| fa[x] != fa[y]) {
+                    continue;
+                }
+                let row: Vec<String> = col
+                    .iter()
+                    .map(|&i| {
+                        let mut s = String::new();
+                        self.eval.h.canon_term(fa[i], &mut s);
+                        s
+                    })
+                    .collect();
+                let mut k = String::new();
+                write_fact_key(&self.eval.h, rel, book, &fa, &mut k);
                 rows.push(row);
                 keys.push(k);
             }
@@ -984,8 +1011,12 @@ impl Session {
                 doomed.push(f);
             }
         }
+        let asks = self.eval.store.rec(id).rel == self.eval.v.asks;
         self.eval.store.remove_many(&doomed);
         self.eval.store.dirty = true;
+        if brk!("asks_retract_unread" => false; asks) {
+            self.eval.reprepare();
+        }
         Ok(())
     }
 
@@ -999,6 +1030,10 @@ impl Session {
         let Some(id) = id else { return Err(format!("no such fact: {key}")) };
         if !self.eval.store.rec(id).base() {
             return Err(format!("{key} is derived; retract its supports instead"));
+        }
+        if self.eval.store.rec(id).rel == self.eval.v.asks {
+            self.retract(query)?;
+            return Ok(Retraction::Full("asks names the rules the world runs"));
         }
         self.settle()?;
         let mut doomed = vec![id];
@@ -1068,6 +1103,7 @@ impl Session {
             }
             out.insert(self.eval.store.key(&self.eval.h, id));
         }
+        out.extend(self.eval.store.virtual_keys(&self.eval.h));
         out
     }
 
