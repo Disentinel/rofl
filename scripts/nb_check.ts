@@ -5,6 +5,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import * as vm from 'node:vm';
 import type { NbLine } from '../notebook/kernel.ts';
+import { Vocabulary } from '../src/say.ts';
 import { check, cli, fake, good, has, is, linked, mutate, NB, planted, put, report, REVIEW, ROOT, smallJs, spinning, spy, tmp, verdict, withCell, withNatural, type Out } from './nb_lib.ts';
 
 const t0 = performance.now();
@@ -246,6 +247,11 @@ test('W2 the proof under a chain counts its side conditions instead of writing t
 })(), () => sidesJson);
 test('W3 --all prints each why whole, the proof as it was before the chain, and no chain', ['sidesAll', 'sidesJson'], () => is(sidesAll, 0) && !has(sidesAll, "the value's steps")
   && whys(sidesJson).every((l) => sidesAll.stdout!.includes(`: ${l.text}\n${l.why!.split('\n').map((x) => `    ${x}`).join('\n')}\n`)), () => sidesAll);
+test('W4 a phrase that names an argument the fact has not is passed over, not a crash of the proof (sig(assigned) counts from 1)', [], () => {
+  const v = new Vocabulary(); v.addText(['facts/phrases.rofl', 'facts/js-phrases.rofl'].map((f) => readFileSync(path.join(ROOT, f), 'utf8')).join('\n'));
+  const rule = 'rule r1: param_assigned[flow](?F,?Name)@now :- assign_param[flow](?A,?F)@now, assigned[code](?A,?_$0,?Name,?_$1,?_$2)@now';
+  try { return v.sayAll(rule).includes('assigned[code](?A,?_$0,?Name,?_$1,?_$2)'); } catch { return false; }
+});
 test('E2 a relation a read world derives answers in the sentence the notebook gives it', ['spat'], () => is(spat, 1) && has(spat, 'never Ch is alone on D at S  ->  FAILS · 4') && has(spat, '- `kit` is alone on `thu` at 1060'), () => spat);
 test('E3 an excise in the notebook moves the lines the same as the notebook over a world without the fact', ['ex', 'wo'], () => (() => {
   const lines = (o: Out) => JSON.parse(o.stdout ?? '').cells.flatMap((c: { lines: NbLine[] }) => c.lines) as NbLine[];

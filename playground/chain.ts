@@ -34,22 +34,62 @@ const NODE = /^n[0-9a-f]{8,16}_\d+$/;
 const unq = (s: string) => s.startsWith('"') ? JSON.parse(s) as string : s;
 
 /** What a step of the value layer stands for, by what its rule joined: the first premise relation named here. */
-const ROLE: [string, (a: string[]) => string][] = [
+const ROLE: [string, (a: string[], label: (t?: string) => string) => string][] = [
   ['literal_kind', () => 'the literal'],
+  ['interpolated', () => 'a template'],
   ['node_value_kind', () => 'the value'],
   ['ext_member', () => 'read from outside the code'],
+  ['ext_call', () => 'made outside the code'],
+  ['external_import', () => 'imported from outside the code'],
+  ['external_destructured', () => 'imported from outside the code'],
+  ['external_value', () => 'from outside the code'],
+  ['free_global', () => 'a global'],
+  ['es_instance', () => 'a built-in object'],
+  ['caught_value', () => 'caught'],
+  ['callback_param', () => "the callback's parameter"],
+  ['param_default', () => "the parameter's default"],
   ['param_of', (a) => `the parameter ${unq(a[2])}`],
-  ['binder', (a) => `reads ${unq(a[1])}`],
-  ['module_target', (a) => `imported from ${unq(a[1])}`],
-  ['imports_name', () => 'imported'],
+  ['rest_binds', () => 'the rest'],
+  ['for_of_use', () => 'an element of the loop'],
+  ['iter_elem', () => 'an element'],
+  ['elem_at', () => 'an element'],
   ['destructures', () => 'destructured'],
   ['destructures_at', () => 'destructured'],
   ['assigned', () => 'assigned'],
+  ['assign_binder', () => 'assigned'],
+  ['assign_param', () => 'assigned'],
+  ['plain_assign', () => 'assigned'],
+  ['assign_reaches_unscoped', () => 'assigned'],
+  ['module_target', (a) => `imported from ${unq(a[1])}`],
+  ['imports_name', () => 'imported'],
+  ['imports_default', () => 'imported'],
+  ['imports_ns', () => 'imported'],
+  ['require_site', () => 'required'],
+  ['cjs_exports', () => 'module.exports'],
+  ['cjs_module_exports', () => 'module.exports'],
+  ['module_object', () => 'the module'],
+  ['binder', (a) => `reads ${unq(a[1])}`],
+  ['ident_in', (a) => `reads ${unq(a[1])}`],
+  ['sx_ret_param', (a, label) => `returned by ${label(a[0])}, its argument ${a[1]}`],
   ['ret_plain', () => 'returned'],
   ['ret_param', () => 'returned'],
+  ['ret_node_any', () => 'returned'],
+  ['next_send', () => 'sent to next()'],
+  ['this_host', () => 'this'],
+  ['class_receiver', () => 'this'],
+  ['super_of', () => 'super'],
+  ['class_field_this', () => 'a field'],
+  ['class_method_of', () => 'a method'],
+  ['obj_method_of', () => 'a method'],
+  ['class_member_static', () => 'a member'],
+  ['class_member_proto', () => 'a member'],
   ['member_value', () => 'a member'],
-  ['array_elem', () => 'an element'],
+  ['member_plain', () => 'a member'],
+  ['member_at', () => 'a member'],
+  ['class_named', () => 'the class'],
+  ['decorated_by', () => 'decorated'],
   ['value_transparent', () => 'passed through'],
+  ['resolves', (a, label) => `the call of ${label(a[1])}`],
 ];
 
 /** The chain of a value answer, from where the value is written to the answer, one line per step: where, the code, what
@@ -84,7 +124,7 @@ export function chainOf(raw: string, nodes: Record<string, Node>, say: (key: str
       const call = kid(k, 'resolves');
       at = call ? argsOf(call)[0] : at;
       what = `argument ${a[1]} of ${label(a[0])}`;
-    } else if (/^sx_ret/.test(rel)) what = `returned by ${label(a[0])}`;
+    } else if (/^sx_ret/.test(rel)) what = 'returned';
     else if (/^sx_export_/.test(rel)) {
       at = kids.map(argsOf).find((x) => node(x[0]))?.[0];
       code = unq(a[1]);
@@ -92,7 +132,7 @@ export function chainOf(raw: string, nodes: Record<string, Node>, say: (key: str
     } else if (/^sx_/.test(rel)) what = 'handed on';
     else if (VALUE.test(rel)) {
       const role = ROLE.find(([r]) => kids.some((x) => relOf(x) === r));
-      what = role ? role[1](argsOf(kids.find((x) => relOf(x) === role[0])!)) : 'flows';
+      what = role ? role[1](argsOf(kids.find((x) => relOf(x) === role[0])!), label) : 'flows';
     } else what = said(k, at);
     // a step of the same node as the one above it says nothing new; a [surface] step is a hop of its own
     const sx = /^sx_/.test(rel);
