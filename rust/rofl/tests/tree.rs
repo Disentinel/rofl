@@ -198,3 +198,27 @@ t_root(r).";
     assert!(s.eval.vclosure_info().iter().all(|(_, on)| !*on));
     assert!(!s.eval.vclosure_reason.is_empty());
 }
+
+#[test]
+fn a_retraction_where_no_witness_is_kept_evaluates_again() {
+    // `sealed(provenance)` writes a hole that sends every retraction to a full evaluation; a world given the flags directly (the
+    // harness's `--no-provenance`) does not, and its closure rows have no witness to say what a retraction took with it
+    let (text, edges) = forest(9, 30);
+    let gone = edges[3].clone();
+    let build = |edges: &[String]| {
+        let mut s = world(&program(true, false, &text, edges));
+        s.eval.no_provenance = true;
+        s.eval.no_witness = true;
+        s.evaluate().unwrap();
+        s
+    };
+    let mut s = build(&edges);
+    assert!(s.eval.vclosure_info().iter().all(|(_, on)| *on), "{:?}", s.eval.vclosure_reason);
+    let r = s.retract_delta(gone.trim_end_matches('.')).unwrap();
+    assert!(matches!(r, rofl::session::Retraction::Full(_)), "a delta was worked out for a closure answered from its tree");
+    if s.eval.store.dirty {
+        s.evaluate().unwrap();
+    }
+    let rest: Vec<String> = edges.iter().filter(|e| **e != gone).cloned().collect();
+    assert_eq!(rows(&s), rows(&build(&rest)));
+}

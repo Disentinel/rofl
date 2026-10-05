@@ -108,9 +108,9 @@ impl Eval {
     /// WHICH CLOSURES THIS EVALUATION ANSWERS FROM THEIR TREES: those the program allows (no witness kept, no lattice,
     /// no assumption, nothing the closure's edges are concluded from), with the forests forgotten.
     pub(super) fn vclosure_engage(&mut self) {
-        let mode = self.no_witness && self.lattices.is_empty() && self.assume.is_none() && !self.well_founded && !self.naive && self.tags.count_rel.is_empty();
+        let mode = brk!("vclosure_with_witness" => true; self.no_witness) && self.lattices.is_empty() && self.assume.is_none() && !self.well_founded && !self.naive && self.tags.count_rel.is_empty();
         for ci in 0..self.vclosures.len() {
-            let on = mode && !self.vclosure_blocked.contains(&ci) && !brk!("vclosure_off" => true; false);
+            let on = mode && !self.vclosure_blocked.contains(&ci);
             let c = &mut self.vclosures[ci];
             c.active = on;
             c.forests = Rc::from(Vec::new());
@@ -142,7 +142,7 @@ impl Eval {
     fn vforests(&mut self, ci: usize) -> Rc<[(Sym, Rc<Forest>)]> {
         let edge = self.vclosures[ci].edge;
         let n = self.store.rel_len_est(edge, None);
-        if self.vclosures[ci].built != Some(n) {
+        if self.vclosures[ci].built != Some(n) && !(self.vclosures[ci].built.is_some() && brk!("vclosure_stale_forest" => true; false)) {
             let mut books: FxMap<Sym, Vec<(Term, Term)>> = FxMap::default();
             self.store.each_row(edge, |persp, id| {
                 if let [p, c] = self.store.args(id) {
@@ -177,7 +177,7 @@ impl Eval {
         let forests = self.vforests(ci);
         let mut out = Vec::new();
         for (b, f) in forests.iter() {
-            if book.is_some_and(|p| p != *b) {
+            if book.is_some_and(|p| p != *b) && !brk!("vclosure_book_merged" => true; false) {
                 continue;
             }
             match (a, d) {
@@ -270,7 +270,7 @@ impl Eval {
             (true, true) => (if konst(0) && konst(1) { 1.0 } else { rows }, 1.0),
             (false, true) => (if konst(1) { rows / deep } else { rows }, (rows / deep).max(1.0)),
             (true, false) => (if konst(0) { rows / internal } else { rows }, (rows / internal).max(1.0)),
-            (false, false) => (rows, rows),
+            (false, false) => brk!("vclosure_unbound_cheap" => (1.0, 1.0); (rows, rows)),
         }
     }
 
@@ -289,7 +289,7 @@ impl Eval {
             let forests = self.vforests(ci);
             rows.push(crate::store::VirtualRel { rel: self.vclosures[ci].rel, forests: forests.iter().map(|(b, f)| (*b, f.clone())).collect() });
         }
-        self.store.virtuals = rows;
+        self.store.virtuals = if brk!("vclosure_rows_unpublished" => true; false) { Vec::new() } else { rows };
     }
 
     /// A rule that reads a closure is fired whole when news of the closure's edges reaches it, unless it has already fired since they last changed.

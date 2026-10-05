@@ -2624,7 +2624,12 @@ impl Eval {
         if (self.functions.is_empty() && self.trees.is_empty()) || brk!("function_tick_unchecked" => self.store.tick > 0; false) {
             return Ok(());
         }
-        crate::structure::check_functions(&self.h, &self.store, &self.functions).and_then(|_| crate::structure::check_trees(&self.h, &self.store, &self.trees)).map_err(|m| {
+        crate::structure::check_functions(&self.h, &self.store, &self.functions).and_then(|_| {
+            if brk!("tree_check_off" => true; false) || brk!("tree_tick_unchecked" => self.store.tick > 0; false) {
+                return Ok(());
+            }
+            crate::structure::check_trees(&self.h, &self.store, &self.trees)
+        }).map_err(|m| {
             self.promise_broken = Some(m.clone());
             Halt::Strat(m, String::new())
         })
@@ -4047,6 +4052,7 @@ impl Eval {
             }
         });
         books.sort_by(|a, b| cmp_js(self.h.name(*a), self.h.name(*b)));
+        brk!("closure_one_book" => books.truncate(1); ());
         let mut out = Front::default();
         for b in books {
             if is_kernel_ledger(&self.h, b) {
@@ -10367,7 +10373,8 @@ impl Eval {
             return Ok(true);
         }
         if let Some(ci) = self.vclosure_for(l.rel) {
-            return Ok(!self.vexists(ci, l, s));
+            let found = self.vexists(ci, l, s);
+            return Ok(brk!("vclosure_neg_inverted" => found; !found));
         }
         let persp_t = walk(&self.h, l.persp, s);
         let persp = persp_t.as_atom();

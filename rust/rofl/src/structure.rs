@@ -53,7 +53,7 @@ pub fn check_decl(h: &Heap, v: &Vocab, c: &Clause, declared: &HashSet<Sym>, conc
             return Err(format!("{what}: the values a key determines come last, after the key: function {}(N, to V)", h.name(rel)));
         }
     }
-    if kind == "tree" && c.head.args.len() != 2 {
+    if kind == "tree" && c.head.args.len() != 2 && !brk!("tree_arity_unchecked" => true; false) {
         return Err(format!("{what}: a tree has two arguments, the parent and the child: tree {}(P, C)", h.name(rel)));
     }
     if brk!("function_twice_admitted" => false; declared.contains(&rel)) {
@@ -83,7 +83,7 @@ pub fn check_decl(h: &Heap, v: &Vocab, c: &Clause, declared: &HashSet<Sym>, conc
 /// THE CLOSURE OF A TREE IS THE DECLARATION'S, and nothing else concludes it
 /// (`checkClosureHead`, src/structure.ts): the refusal of a clause that does.
 pub fn check_closure_head(h: &Heap, c: &crate::reflect::Clause, closures: &HashMap<Sym, Sym>) -> Option<String> {
-    let tree = closures.get(&c.head.rel)?;
+    let tree = closures.get(&c.head.rel).filter(|_| !brk!("tree_closure_head_open" => true; false))?;
     Some(format!(
         "{} rejected: '{}' is the closure of the tree {} and has no other conclusion: {}",
         if c.body.is_empty() { "fact" } else { "rule" },
@@ -110,7 +110,9 @@ pub fn concluded_by_rules(h: &Heap, v: &Vocab, store: &mut Store) -> HashSet<Sym
 pub fn lower_closure(h: &Heap, c: &Clause) -> Vec<String> {
     let st = c.structure.as_ref().expect("a structure");
     let (rel, cl) = (h.name(c.head.rel), h.name(st.closure.expect("a closure")));
-    vec![format!("{cl}[B](P, C) :- {rel}[B](P, C)."), format!("{cl}[B](P, D) :- {cl}[B](P, X), {rel}[B](X, D).")]
+    let base = format!("{cl}[B](P, C) :- {rel}[B](P, C).");
+    let step = format!("{cl}[B](P, D) :- {cl}[B](P, X), {rel}[B](X, D).");
+    if brk!("tree_lowering_base_only" => true; false) { vec![base] } else { vec![base, step] }
 }
 
 /// The closure each declared tree stands for, by the closure's name.
@@ -266,7 +268,7 @@ pub fn check_trees(h: &Heap, store: &Store, ts: &[Tree]) -> Result<(), String> {
         let mut books: FxMap<Sym, Vec<(Term, Term)>> = FxMap::default();
         store.each_row(t.rel, |persp, id| {
             if let [p, c] = store.args(id) {
-                books.entry(persp).or_default().push((*p, *c));
+                books.entry(brk!("tree_book_ignored" => 0; persp)).or_default().push((*p, *c));
             }
         });
         let mut books: Vec<(Sym, Vec<(Term, Term)>)> = books.into_iter().collect();
@@ -277,7 +279,7 @@ pub fn check_trees(h: &Heap, store: &Store, ts: &[Tree]) -> Result<(), String> {
                 parents.entry(c.bits()).or_insert_with(|| (*c, Vec::new())).1.push(*p);
             }
             let canon = |t: Term| h.canon(t);
-            let mut two: Vec<(String, &Vec<Term>)> = parents.values().filter(|(_, ps)| ps.len() > 1).map(|(c, ps)| (canon(*c), ps)).collect();
+            let mut two: Vec<(String, &Vec<Term>)> = parents.values().filter(|(_, ps)| ps.len() > brk!("tree_parents_unjudged" => 99; 1)).map(|(c, ps)| (canon(*c), ps)).collect();
             if !two.is_empty() {
                 two.sort_by(|a, b| cmp_js(&a.0, &b.0));
                 let mut ps: Vec<String> = two[0].1.iter().map(|p| canon(*p)).collect();
@@ -315,7 +317,7 @@ pub fn check_trees(h: &Heap, store: &Store, ts: &[Tree]) -> Result<(), String> {
                     }
                 }
             }
-            if cycles.is_empty() {
+            if cycles.is_empty() || brk!("tree_cycle_unchecked" => true; false) {
                 continue;
             }
             let least = |cy: &Vec<u64>| cy.iter().map(|x| text[x].clone()).min_by(|a, b| cmp_js(a, b)).unwrap();

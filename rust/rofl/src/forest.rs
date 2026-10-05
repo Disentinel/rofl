@@ -128,7 +128,7 @@ impl Forest {
         match (self.at(a), self.at(d)) {
             (Some(a), Some(d)) => {
                 let (pa, pd) = (self.pre[a as usize], self.pre[d as usize]);
-                pa < pd && pd < self.end[a as usize]
+                brk!("vclosure_nonstrict" => pa <= pd; pa < pd) && pd < self.end[a as usize]
             }
             _ => false,
         }
@@ -137,7 +137,7 @@ impl Forest {
     /// The strict ancestors of `d`, nearest first.
     pub fn ancestors(&self, d: Term, out: &mut Vec<Term>) {
         let Some(mut v) = self.at(d) else { return };
-        for _ in 0..self.depth[v as usize] {
+        for _ in 0..self.depth[v as usize].saturating_sub(brk!("vclosure_ancestors_short" => 1; 0)) {
             v = self.parent[v as usize];
             out.push(self.nodes[v as usize]);
         }
@@ -146,8 +146,8 @@ impl Forest {
     /// The strict descendants of `a`, in pre-order: one range.
     pub fn descendants(&self, a: Term, out: &mut Vec<Term>) {
         let Some(v) = self.at(a) else { return };
-        let (lo, hi) = (self.pre[v as usize] + 1, self.end[v as usize]);
-        out.extend(self.order[lo as usize..hi as usize].iter().map(|x| self.nodes[*x as usize]));
+        let (lo, hi) = (self.pre[v as usize] + brk!("vclosure_nonstrict" => 0; 1), self.end[v as usize] - brk!("vclosure_descendants_short" => 1; 0));
+        out.extend(self.order[lo as usize..hi.max(lo) as usize].iter().map(|x| self.nodes[*x as usize]));
     }
 
     /// Every pair, ancestor first: the ancestors of each node.

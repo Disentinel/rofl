@@ -942,7 +942,7 @@ impl<'a> Parser<'a> {
                 return Err(format!("{what}: `closure` names the relation that holds each node and every ancestor of it"));
             }
             let s = self.bump().ok_or("structure: end of input")?;
-            closure = Some(self.sym(&s));
+            closure = brk!("tree_closure_dropped" => None; Some(self.sym(&s)));
         }
         if !self.eat_punct("dot") {
             return Err(format!("{what}: the declaration has no closing dot"));
@@ -986,7 +986,7 @@ impl<'a> Parser<'a> {
             return self.order_decl();
         }
         for (kind, words) in STRUCTURE_KINDS {
-            if brk!("function_unread" => false; self.is_word(0, kind)) && matches!(self.peek_at(1), Some(s) if s.tok == Tok::Word && self.word_kind(s) == WordKind::Ident) {
+            if brk!("function_unread" => false; self.is_word(0, kind)) && !(*kind == "tree" && brk!("tree_unread" => true; false)) && matches!(self.peek_at(1), Some(s) if s.tok == Tok::Word && self.word_kind(s) == WordKind::Ident) {
                 return self.structure_decl(words);
             }
         }

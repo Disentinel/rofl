@@ -1178,7 +1178,7 @@ pub fn load_program(e: &mut Eval, text: &str, who: Option<&str>) -> Loaded {
         let kp = e.v.kernel_persp;
         let row = [Term::atom(c.head.rel), Term::int(brk!("function_arity_short" => c.head.args.len() as i64 - 1; c.head.args.len() as i64)), Term::atom(st.kind)];
         e.store.add(&e.h, e.v.structure_decl, kp, &row, F_BASE);
-        if let Some(cl) = st.closure {
+        if let Some(cl) = st.closure.filter(|_| !brk!("tree_closure_row_unwritten" => true; false)) {
             e.store.add(&e.h, e.v.structure_closure, kp, &[Term::atom(c.head.rel), Term::atom(cl)], F_BASE);
         }
         for (i, r) in st.roles.iter().enumerate() {

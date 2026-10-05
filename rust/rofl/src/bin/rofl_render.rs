@@ -771,7 +771,7 @@ impl<'a> R<'a> {
         let rel = match c.head.book { Book::Bare => h.name(c.head.rel).to_string(), b => format!("{}` in the `{}", h.name(c.head.rel), self.book_name(b)) };
         if let Some(st) = &c.structure {
             if h.name(st.kind) == "tree" {
-                let closed = st.closure.map_or(String::new(), |cl| format!(", and `{}` holds of each node and every ancestor of it", h.name(cl)));
+                let closed = st.closure.filter(|_| !brk!("phrase_tree_closure_lost" => true; false)).map_or(String::new(), |cl| format!(", and `{}` holds of each node and every ancestor of it", h.name(cl)));
                 return format!("Each child of `{rel}` has one parent and no node is its own ancestor{closed}.\n\n");
             }
             let m = st.roles.iter().filter(|r| r.is_some()).count();

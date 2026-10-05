@@ -59,6 +59,8 @@ dstc_lost(ffb) :- not dst_ffb(other, o1, o3).
 dstc_lost(neg) :- not dst_neg(a2, c1).
 dstc_lost(cnt) :- not dst_cnt(r2, 3).
 dstc_lost(up) :- not dst_up(c1, r1).
+dstc_lost(late) :- not dst_bf(r1, f1).
+dstc_lost(late) :- not dst_within[code](a1, f1).
 dstc_lost(both) :- not dst_both(r1, c1).
 dstc_lost(feed2) :- not dst_feed2(e1).
 dstc_lost(rec) :- not dst_rec(c1, c1).
@@ -72,11 +74,16 @@ dstc_strict(x) :- dst_within[other](N, N).
 dstc_strict(x) :- dst_within[code](o1, _).
 dstc_strict(x) :- dst_within[other](r1, _).
 alarm(dstc_strict).
--- counts: 38 rows of the closure in the code book, 3 in the other
+-- the rows are in the state the engine prints, listed when the engine stores none of them
+-- expect-row: dst_within[code](r1,c1) tick drv
+-- expect-row: dst_within[code](r1,f1) tick drv
+-- expect-row: dst_within[other](o1,a2) tick drv
+-- expect-no-row: dst_within[code](c1,c1)
+-- counts: 41 rows of the closure in the code book, 6 in the other
 dstc_code(N) :- N is count(A, D : dst_within[code](A, D)).
 dstc_other(N) :- N is count(A, D : dst_within[other](A, D)).
-dstc_rows_wrong() :- dstc_code(N), N != 38.
-dstc_rows_wrong() :- dstc_other(N), N != 3.
+dstc_rows_wrong() :- dstc_code(N), N != 41.
+dstc_rows_wrong() :- dstc_other(N), N != 6.
 dstc_rows_wrong() :- not dstc_code(_).
 dstc_rows_wrong() :- not dstc_other(_).
 alarm(dstc_rows_wrong).

@@ -3118,6 +3118,7 @@ check_opt("ds_tree_syntax", together, 1).
 check_world("ds_tree_holds").
 check_file("ds_tree_holds", "examples/checks/ds-tree-holds.rofl").
 check_file("ds_tree_holds", "examples/checks/ds-tree-holds-check.rofl").
+check_file("ds_tree_holds", "examples/checks/ds-tree-holds-prov-check.rofl").
 check_file("ds_tree_holds", "examples/checks/ds-tree-broken-1-parents.rofl").
 check_file("ds_tree_holds", "examples/checks/ds-tree-broken-2-cycle.rofl").
 check_file("ds_tree_holds", "examples/checks/ds-tree-broken-3-self.rofl").
@@ -3170,3 +3171,29 @@ check_file("ds_tree_phrase", "examples/checks/ds-tree-phrase.rofl.md").
 check_file("ds_tree_phrase", "examples/checks/ds-tree-phrase-check.rofl").
 check_opt("ds_tree_phrase", together, 1).
 check_opt("ds_tree_phrase", sentences, 1).
+
+-- A CLOSURE ANSWERED FROM ITS TREE IS NEVER PUT FIRST UNBOUND (docs/data-structures.md "Tree, as built"): a chain whose closure
+-- is larger than the world's space wall, read by rules that name the closure before the premise that binds an end of it.
+-- The written order meets the wall; the delta-first plan, which reads the tree's shape, does not. The TypeScript engine
+-- solves in written order, so the world is Rust's alone.
+check_world("ds_tree_plan").
+check_file("ds_tree_plan", "examples/checks/ds-tree-sealed.rofl").
+check_file("ds_tree_plan", "examples/checks/ds-tree-plan.rofl").
+check_file("ds_tree_plan", "examples/checks/ds-tree-plan-check.rofl").
+check_opt("ds_tree_plan", together, 1).
+check_opt("ds_tree_plan", one_engine, rust).
+check_opt("ds_tree_plan", space, 3000).
+check_opt("ds_tree_plan", delta_first, 1).
+
+check_world("ds_tree_retract_edge").
+check_file("ds_tree_retract_edge", "examples/checks/ds-tree-retract-3-edge.rofl").
+check_file("ds_tree_retract_edge", "examples/checks/ds-tree-retract-3-edge-check.rofl").
+check_opt("ds_tree_retract_edge", together, 1).
+check_opt("ds_tree_retract_edge", retract, "dtg_in(b, c)").
+
+check_world("ds_tree_retract_edge_sealed").
+check_file("ds_tree_retract_edge_sealed", "examples/checks/ds-tree-sealed.rofl").
+check_file("ds_tree_retract_edge_sealed", "examples/checks/ds-tree-retract-3-edge.rofl").
+check_file("ds_tree_retract_edge_sealed", "examples/checks/ds-tree-retract-3-edge-check.rofl").
+check_opt("ds_tree_retract_edge_sealed", together, 1).
+check_opt("ds_tree_retract_edge_sealed", retract, "dtg_in(b, c)").
