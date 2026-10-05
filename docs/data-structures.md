@@ -350,10 +350,10 @@ its two smallest parents and the cycle through the smallest node, by canonical t
 both engines name the same ones; a child with two parents is refused before a cycle is
 looked for. The edges are judged as they stand, asserted or concluded.
 
-**What the Rust engine answers, and when.** The closure is answered from the tree only
-where no witness is kept (`sealed(provenance)`, or the harness's `--no-provenance`): a
-witness names the facts a conclusion rests on, and a row that is not stored is no fact.
-Then no rule of the closure fires and no row of it is stored; the forest of each book
+**What the Rust engine answers, and when.** The closure is answered from the tree whether
+witnesses are kept or not (the owner's decision, f_the_owner_settles_walls_promises_and_incremental
+point 4; until then only under `sealed(provenance)`). No rule of the closure fires and no
+row of it is stored, nor a witness or a `derived_by` row for one; the forest of each book
 (`forest.rs`: arrays indexed by node, a parent and the engine's own pre-order numbering)
 answers each premise that reads it: both ends bound is interval containment, the
 descendant bound is the parent chain, the ancestor bound is one pre-order range, neither
@@ -361,15 +361,18 @@ bound is the ancestors of every node (what a reader that wants every pair asks f
 costs every row, as the stored rows would). A negation asks the same. The forest is
 built whole from the edge relation's rows and again when that relation has more rows than
 when it was built (a rebuild of the touched book, the note's first choice for
-maintenance: an edge added or retracted is a rebuild, and a retraction in such a world is
-a full evaluation, `retract_delta` refusing a closure answered from its tree). A rule that
+maintenance: an edge added or retracted is a rebuild). A retraction whose fact reaches the
+edges through the rules is a full evaluation (`retract_delta` refuses it: the forest is built
+again and what reads it read again whole); one that does not reach them leaves every forest
+as it is and is the delta it is in any world (`ds_tree_retract_other`). A rule that
 reads the closure is fired whole when news of the edges reaches it and it has not fired
 since they last changed, since the closure has no news of its own (the case: the edges a
 negation concludes, a level above the rule's first firing; `vclosure_reader_stale`). A
 broken forest never loops and is never read: the first parent stands, a node no root
 reaches has no place, and the world is refused after the evaluation by the promise.
-Where a witness is kept, and where the closure's edges are concluded from it, or it is
-answered on demand, or the world has a lattice or an assumption, the closure is rows:
+Where the closure's edges are concluded from it, or it is answered on demand, or the
+world has a lattice or an assumption, or (witnesses kept) a rule reads the closure's
+`derived_by` rows, which it would need while the world evaluates (`ds_tree_prov_read`), the closure is rows:
 the closure kernel (`fire_closure`) walks each book (the kernel reads the lowered rules'
 variable book); `vclosure_reason` says which.
 
@@ -382,10 +385,24 @@ name it first; written order meets the wall, the plan does not; and with the est
 an unbound closure at one row, `vclosure_unbound_cheap`, the world is cut).
 
 **What the state says.** The canonical state lists the closure's rows, generated on
-output from the forests (`tick drv support=0`, as a sealed derived row prints), so the
-census counts them and the goldens keep their meaning; the count of stored facts
-(`fact_count`, rofl-eval's `facts`) does not. The rows are those of the tick evaluated:
-a tick that ends takes them as it takes any derived row.
+output from the forests (`tick drv support=0` sealed, as a sealed derived row prints;
+`support=1` where witnesses are kept, with the row's `wit` line: its rule, the tick
+evaluated and its premises), so the census counts them and the goldens keep their meaning;
+the count of stored facts (`fact_count`, rofl-eval's `facts`) does not. The rows are those
+of the tick evaluated: a tick that ends takes them as it takes any derived row.
+
+**Provenance on demand, where witnesses are kept.** A row's `derived_by` row is written
+from the tree when something observes the rows, as a noted firing's is
+(`settle_provenance`: the state, a question about `derived_by`, a fork, a snapshot, a tick's
+boundary, which freezes them as it freezes every fired fact's), and taken out again when the
+forests have changed since; a world nobody observes holds none (rofl-eval `--unsettled`).
+
+**Heights, where witnesses are kept.** A row's one firing is 1 + the higher of the row of
+the parent and the edge into the descendant, so down the chain from the ancestor each row
+is 1 + the higher of the row above and its edge (`Store::vrow_height`, over the edges'
+own heights). The heights a cell's members keep, the order they are written in and the
+witness a height picks among a fact's firings are the stored world's (`ds_tree_explain_kept`:
+a fact with a firing through the closure and one through a chain of rules).
 
 **What an explanation says.** A premise that matched a row of the closure names the row
 (`PremRef::VRow`, the canonical key of the fact, spelled where a firing records its
@@ -393,12 +410,18 @@ premises), so a cell's member keeps `[fact:w[main](a,b)]` in the state and in a 
 `why` of a row, as a premise or asked, rebuilds its firing from the tree: the lowered
 first rule over the edge when the parent is the ancestor, else the second over the row of
 the parent and the edge of the parent to the child (a forest gives a row one firing), a
-row written once and referred to after. `excise` lists the closure's rows with the rest.
+row written once and referred to after. A row a staged conclusion (or a cell carried
+across a boundary) read in a past tick is named by its frozen `derived_by` rows, `<= rule
+@tick T [past tick]`, as a stored row is, never by the row the present tick holds under
+its key (`ds_tree_tick_staged`). `excise` lists the closure's rows with the rest. A tuple
+an unknown could reach is no shrug where the tree holds it (`unknown_holds` asks the
+forest: `ds_tree_unknown_edge`, an edge whose child is a labeled unknown).
 All of it is what the world with the closure STORED says (`ROFL_NO_VCLOSURE=1`), byte for
-byte: whycheck asks every why, why all, whynot and excise and the canonical state of the
-sealed worlds of both, and the goldens hold their states to each other. A snapshot of
-such a world is opened with its closures engaged (`Eval::vclosure_restore`) and the same
-state. **A wall is the one difference, and it is declared.** A row answered from the tree
+byte: whycheck asks every why, why all, whynot and excise and the canonical state of
+every world that declares a tree's closure, sealed or not, of both (and the witnessed ones
+of the TypeScript reference besides), and the goldens hold their states to each other. A
+snapshot of such a world is opened with its closures engaged (`Eval::vclosure_restore`,
+which reads the rows its witnesses and members cite, for their heights) and the same state. **A wall is the one difference, and it is declared.** A row answered from the tree
 costs no space and no step, so a world whose wall the stored closure meets is cut with
 the rows and not without (`ds_tree_plan`, which says so with
 `check_opt(W, closure_unwalled, 1)`); a world that meets the wall stored and does not say
@@ -412,10 +435,17 @@ model asks, in two books, with a child whose parents are in two books, with edge
 arrive in rounds and edges a negation concludes), `ds_tree_tick[_sealed]`,
 `ds_tree_retract[_sealed]`, `ds_tree_retract_edge[_sealed]`, `ds_tree_wall`, `ds_tree_plan`,
 `ds_tree_explain` (the explanations, by hand), `ds_tree_demand_edge` and
-`ds_tree_demand_book[_sealed]` (edges that read a demand relation);
+`ds_tree_demand_book[_sealed]` (edges that read a demand relation); where witnesses are
+kept, `ds_tree_explain_kept` (why, why all, heights and the witness a height picks, by
+hand, both engines), `ds_tree_prov_read` (a rule reads the closure's `derived_by`: rows),
+`ds_tree_retract_other[_sealed]` (a retraction that leaves the forest is a delta),
+`ds_tree_tick_staged[_sealed]` (a past tick's row, by hand) and
+`ds_tree_unknown_edge[_sealed]` (a labeled unknown edge);
 eight refused forests; `rust/rofl/tests/tree.rs` (forty random forests, the closure
 answered from the tree against the rules, every pattern asked, a retraction against a
-fresh world); 32 planted faults (`scripts/agg_breaks.ts`).
+fresh world; twelve keeping witnesses, each row's support, witness, `derived_by` row and
+the cells over them against the rules'); 32 planted faults, and 8 more for the witnessed
+world (`scripts/agg_breaks.ts`).
 
 **Measured** (Rust release, `rofl-eval --bytes --budget 4000000000 --space 40000000
 --delta-first`, three runs, median; the seeds regenerated for the scanner's 16-hex node
@@ -442,6 +472,32 @@ is the same in every relation of the model, `ast_within` by hash; what differs i
 reflection of the two lowered rules and the structure rows (17 relations, none of them
 facts of the world). Over one seed the sealed state (the closure from the tree) equals the state with the kernel's rows relation by relation and row by row on all four corpora (the provenance's relations aside; only `shrug`, a row the seal writes, differs). A reader asks the tree for 48% of the closure's rows (matches, not
 distinct rows: 248,461 of 513,629 on self, 445,682 of 888,133 on util).
+
+**Measured where witnesses are kept** (the default mode; Rust release, `rofl-eval --bytes
+--budget 4000000000 --space 40000000`, three runs, median, seeds regenerated 2026-10-05;
+before is fe3bdfc, which stored the closure there). "Observed" is the canonical state as
+rofl-eval prints it, which settles provenance, so the closure's `derived_by` rows are
+written before `facts` is counted; "unobserved" is `--unsettled`, where no `derived_by`
+row of a firing nothing reads is written.
+
+| world | facts stored, before | after | eval ms, before | after | RSS MB, before | after |
+| --- | --- | --- | --- | --- | --- | --- |
+| self, observed | 2,341,825 | 1,828,196 (-21.9%) | 9,542 | 6,779 (-29%) | 1,374 | 1,351 |
+| self, unobserved | 1,315,112 | 801,483 (-39.1%) | 9,329 | 7,063 (-24%) | 930 | 889 |
+| mcp, observed | 1,736,392 | 1,401,812 (-19.3%) | 7,948 | 6,157 (-23%) | 1,050 | 1,058 |
+| mcp, unobserved | 979,687 | 645,107 (-34.2%) | 7,940 | 6,106 (-23%) | 716 | 691 |
+| cli_exits, observed | 2,644,147 | 2,108,464 (-20.3%) | 13,233 | 11,306 (-15%) | 1,558 | 1,528 |
+| cli_exits, unobserved | 1,484,828 | 949,145 (-36.1%) | 14,316 | 10,493 (-27%) | 1,043 | 1,007 |
+| util, observed | 4,302,742 | 3,414,609 (-20.6%) | 19,101 | 13,949 (-27%) | 2,652 | 2,592 |
+| util, unobserved | 2,446,458 | 1,558,325 (-36.3%) | 19,271 | 13,572 (-30%) | 1,741 | 1,686 |
+
+The facts that go are the closure's rows to the row (513,629, 334,580, 535,683, 888,133);
+observed, their `derived_by` rows are written as before, so the closure's provenance is
+what observing costs. The evaluation is a quarter shorter in both. The resident set is the
+peak of the run, which is the printing of the canonical state (half a gigabyte of text on
+self, the closure's rows and witnesses generated into it), so it falls 2-5% only; it is not
+a measure of what the world holds. Over each of the four seeds the canonical state (2.5 to
+6.1 million lines) is the stored world's byte for byte.
 
 ## What serves the readers of the tree
 
@@ -506,13 +562,9 @@ premises under the same questions and is not counted.
   alternative kept the rules and let the engine propose `closure` (detection)
   while still evaluating them: no model edit, but the licence would rest on a
   recognition, which is the thing the design refuses.
-- **The closure where witnesses are kept.** Stored, today. Answering it from the
-  tree there needs a row to exist when a conclusion cites it (a witness names
-  facts), so the rows a conclusion cites would be stored when cited, with their
-  one derivation, the others generated on output with their witness and
-  `derived_by` line, and `why` would build a row on demand. Sealed, a reader's
-  matches are under half the closure's rows, so the gain is under half the closure
-  and its provenance rows. Bounded; not built; the owner says whether it is wanted.
+- **The closure where witnesses are kept.** Decided and built: answered from the tree
+  ("What the Rust engine answers"), a citation being the row's key rather than a stored
+  row.
 - **`ordered` as a word** clashes with `pareto` and `lex`, "declared order".
 - **A promise per book or per relation**: built per book (a cell per book);
   `ast_in[code]` and a copy of it in another book then each need a promise.

@@ -7,7 +7,8 @@ edb(dto_pick).
 edb(dto_off).
 tree dto_in(P, C) closure dto_w.
 dto_in(a, b). dto_in(b, c). dto_in(c, d). dto_in(a, x). dto_in(x, y).
-dto_pick(b). dto_pick(c). dto_pick(d). dto_pick(y).
+dto_pick(b). dto_pick(d). dto_pick(y).
+dto_pick(c).
 dto_off(a, c).
 dto_hit(X) :- dto_pick(X), dto_w(a, X).
 dto_cnt(N) :- N is count(X : dto_pick(X), dto_w(a, X)).
