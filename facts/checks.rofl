@@ -3168,6 +3168,12 @@ check_opt("ds_tree_explain", explain, 1).
 -- TypeScript, which keeps its witnesses, prints their heights and orders by them; the oracle is the same world with the rows stored.
 check_opt("ds_tree_explain", one_engine, rust).
 
+-- A TREE WHOSE EDGES ARE ANSWERED ON DEMAND has its closure as rows: which relations are answered on demand is read after the program is
+-- prepared (the engine read it before, and answered the closure from a forest of the edges it stored, none).
+check_world("ds_tree_demand_edge").
+check_file("ds_tree_demand_edge", "examples/checks/ds-tree-demand-edge.rofl").
+check_opt("ds_tree_demand_edge", together, 1).
+
 check_world("ds_tree_tick").
 check_file("ds_tree_tick", "examples/checks/ds-tree-tick-1-holds.rofl").
 check_file("ds_tree_tick", "examples/checks/ds-tree-tick-2-broken.rofl").

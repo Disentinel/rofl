@@ -1685,13 +1685,13 @@ impl Eval {
         self.closures = find_closures(&self.rules, &refused);
         self.closure_of = self.closures.iter().enumerate().flat_map(|(i, c)| [(c.base, (i, true)), (c.step, (i, false))]).collect();
         self.rule_at = self.rules.iter().enumerate().map(|(i, r)| (r.id, i)).collect();
-        self.vclosure_setup();
         self.widen_rec = self.widen_back_edges();
         self.widen_th = self.widen_thresholds();
         self.demand_rels = demand
             .into_iter()
             .map(|(rel, is)| (rel, is.into_iter().map(|i| self.rules[i].clone()).collect()))
             .collect();
+        self.vclosure_setup();
         self.demand_closed = self.demand_closed_rels();
         self.demand_cyclic = self.demand_cyclic_rels();
     }

@@ -66,7 +66,7 @@ impl Eval {
                 why = format!("{} rules conclude it, not the two the declaration lowers to", lowered.len());
             } else if closure_rels.contains(&edge) {
                 why = "its edges are another closure".to_string();
-            } else if self.demand_rels.iter().any(|(r, _)| *r == rel || *r == edge) {
+            } else if !brk!("vclosure_demand_unread" => true; false) && self.demand_rels.iter().any(|(r, _)| *r == rel || *r == edge) {
                 why = "it is answered on demand".to_string();
             } else {
                 let mut reach: HashSet<Sym> = HashSet::from([rel]);

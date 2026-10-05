@@ -7090,6 +7090,13 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "vclosure_demand_unread",
+  "what": "the relations answered on demand are not known when a declared closure is read for whether it may be answered from its tree",
+  "expect": {
+   "ds_tree_demand_edge": "dtd_lost"
+  }
+ },
+ {
   "id": "vclosure_neg_inverted",
   "what": "a negation of the closure holds where a row does",
   "expect": {
