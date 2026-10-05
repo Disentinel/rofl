@@ -41,7 +41,10 @@ const verbose = argv.includes('--verbose');
 if (brk && brk !== 'naive' && brk !== 'nosurface') { console.error('--break naive | nosurface'); process.exit(64); }
 
 const read = (f: string): string => brk === 'naive' && (f.startsWith('rules/') || f === QUESTION)
-  ? execFileSync('git', ['show', `${NAIVE_BASE}:${f}`], { cwd: ROOT, encoding: 'utf8' })
+  ? (() => {
+    try { return execFileSync('git', ['show', `${NAIVE_BASE}:${f}`], { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }); }
+    catch { console.error(`--break naive reads ${f} at ${NAIVE_BASE}, which this checkout's history does not hold`); process.exit(2); }
+  })()
   : fs.readFileSync(path.join(ROOT, f), 'utf8');
 const model = [...MODEL_FILES, QUESTION].filter((f) => brk !== 'naive' || f !== 'rules/js-surface.rofl');
 
@@ -220,12 +223,12 @@ for (const engine of engines) {
       bad++;
       lines.push(`  the surfaces together differ from the whole world's: ${sm.length} missing (${byRel(sm)}), ${si.length} invented (${byRel(si)})`);
     }
-    console.log(`${engine} ${dir}: ${order.length} volumes, ${rounds} passes, surface ${union.size} facts, ${bad ? `RED, ${bad} checks differ` : 'every volume equals the whole world'}; the answers: ${answers} in the whole world, ${answersMissing.length} missing${answersMissing.length ? ` (${byRel(answersMissing)})` : ''} and ${answersInvented.length} invented${answersInvented.length ? ` (${byRel(answersInvented)})` : ''} in the volumes`);
-    for (const l of lines) console.log(l);
+    console.log(`${brk ? `PLANTED BREAK ${brk} (must be red) ` : ''}${engine} ${dir}: ${order.length} volumes, ${rounds} passes, surface ${union.size} facts, ${bad ? `RED, ${bad} checks differ` : 'every volume equals the whole world'}; the answers: ${answers} in the whole world, ${answersMissing.length} missing${answersMissing.length ? ` (${byRel(answersMissing)})` : ''} and ${answersInvented.length} invented${answersInvented.length ? ` (${byRel(answersInvented)})` : ''} in the volumes`);
+    if (!brk || verbose) for (const l of lines) console.log(l);
     if (bad) red++;
   }
   await stop();
-  console.log(`${engine}: ${evals} volume evaluations, ${Math.round(performance.now() - t0)} ms`);
+  console.log(`${brk ? `PLANTED BREAK ${brk} ` : ''}${engine}: ${evals} volume evaluations, ${Math.round(performance.now() - t0)} ms`);
 }
 if (brk) {
   console.log(red ? `the planted break (${brk}) is red, as it must be` : `the planted break (${brk}) stayed GREEN: the gate sees nothing`);
