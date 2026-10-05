@@ -10341,9 +10341,11 @@ impl Eval {
         let call = drs.as_ref().filter(|_| keyed).map(|_| self.anon_lit_key(l, s));
         let again = call.as_ref().and_then(|k| self.demand_calls.iter().position(|c| c.key == *k));
         let mut seen_keys: HashSet<String> = HashSet::new();
-        for (_, r) in out.iter() {
-            if let PremRef::Fact(f) = r {
-                seen_keys.insert(self.store.key(&self.h, *f));
+        if drs.is_some() {
+            for (_, r) in out.iter() {
+                if let PremRef::Fact(f) = r {
+                    seen_keys.insert(self.store.key(&self.h, *f));
+                }
             }
         }
         if let Some(j) = again.filter(|_| !closed && brk!("demand_cycle_unfolds" => false; true)) {
