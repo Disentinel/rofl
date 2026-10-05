@@ -846,6 +846,12 @@ impl Eval {
             self.drop_done();
         }
         self.staged.retain(|_, f| !unstage.contains(&f.rule));
+        // a staged rule that aggregates what changed stages again over cells sealed again
+        let staged_cells: HashSet<Sym> = staged.iter().filter(|r| unstage.contains(&r.id) && (r.has_agg || r.has_thr)).map(|r| r.id).collect();
+        if brk!("add_staged_cells_kept" => false; !staged_cells.is_empty()) {
+            d.stacked_cells += self.reset_cells(&staged_cells);
+            self.support_ix = None;
+        }
         for l in &lats {
             self.lat_closed.remove(l);
         }

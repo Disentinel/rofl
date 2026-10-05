@@ -67,7 +67,7 @@ fn program(r: &mut Rng) -> Vec<String> {
         for k in 0..(1 + r.below(2)) {
             let (a, b) = (r.pick(&pos).clone(), r.pick(&pos).clone());
             let s = r.pick(&strict).clone();
-            let t = if k == 0 { r.below(12) } else { 1 + r.below(11) };
+            let t = if k == 0 { r.below(14) } else { 1 + r.below(13) };
             let rule = match t {
                 0 => format!("p{i}(X, Y) :- e(X, Y)."),
                 1 => format!("p{i}(X, Z) :- {a}(X, Y), {b}(Y, Z)."),
@@ -80,6 +80,8 @@ fn program(r: &mut Rng) -> Vec<String> {
                 8 => format!("p{i}(X, Y) :- {a}(X, Y), X != Y."),
                 9 => format!("p{i}(X, X) :- n(X), at_least(2, Y : {s}(X, Y))."),
                 10 => format!("p{i}(X, Y)@next :- {a}(X, Y)."),
+                12 => format!("p{i}(X, N)@next :- n(X), N is count(Y : {s}(X, Y))."),
+                13 => format!("p{i}(X, X)@next :- n(X), at_least(2, Y : {s}(X, Y))."),
                 _ => format!("p{i}(X, M) :- n(X), M is max(V : w(X, V), {s}(X, _))."),
             };
             rules.push(rule);
@@ -599,6 +601,28 @@ fn a_fact_sealed_again_is_not_taken_out_for_what_it_cited_before() {
 fn a_closure_that_gains_a_fact_of_its_own_relation_is_walked_again() {
     let program = "edb(e).\ne(a, b). e(b, c).\np(X, Y) :- e(X, Y).\np(X, Z) :- p(X, Y), e(Y, Z).\n";
     one_addition(program, Op::Assert("p(x, a).".into()));
+}
+
+/// Found by review: a rule staged `@next` that aggregates what grew stages again over a cell sealed again.
+#[test]
+fn a_staged_aggregate_is_sealed_again_before_it_stages() {
+    let program = "edb(e).\ne(a, b).\nc(N)@next :- N is count(X : e(X, _)).\n";
+    one_addition(program, Op::Assert("e(b, a).".into()));
+}
+
+/// Found by review: a fact asserted where it was derived lowers the height of what rests on it, a cell's included.
+#[test]
+fn a_fact_asserted_where_it_was_derived_lowers_what_rests_on_it() {
+    let program = "edb(e).\ne(a, b). e(b, c).\nt(X, Y) :- e(X, Y).\nt(X, Z) :- t(X, Y), e(Y, Z).\nc(X, N) :- t(X, _), N is count(Y : t(X, Y)).\n";
+    one_addition(program, Op::Assert("t(a, c).".into()));
+    one_addition(program, Op::Load("t(a, c).".into()));
+}
+
+/// Found by review: a threshold sealed again takes its members as an evaluation takes them, not the oldest.
+#[test]
+fn a_threshold_sealed_again_takes_the_members_a_fresh_evaluation_takes() {
+    let program = "edb(e). edb(n).\nn(c). e(c, d). e(c, e).\np1(X, Y) :- e(X, Y).\np2(X, X) :- n(X), at_least(2, Y : p1(X, Y)).\n";
+    one_addition(program, Op::Assert("e(c, a).".into()));
 }
 
 fn fact_demand(r: &mut Rng) -> String {
