@@ -152,7 +152,18 @@ fact-level cone; not a rule rewrite (the rewritten rules would show `magic_` pre
 and not built. Its refusals are the list of "when the cone is the whole world" above plus negation,
 aggregates and lattices **inside** a component, where the walk degrades to the relation cone.
 
-## What the cone needs from incremental addition (the AFK decision, not built here)
+## Growing a cone, as built (incremental addition)
+
+An ask asserted into an evaluated world is an addition (`Session::assert_delta`, rofl-serve's
+`assert`; docs/aggregates.md, "Incremental addition, as built"): the program is prepared again,
+the rules the cone adds fire over the store as it stands, and nothing derived is cleared. The
+world is the one asked everything from the start, byte for byte (`rust/rofl/tests/addition.rs`
+`an_ask_added_grows_the_cone_over_the_retained_store`). Measured on mcp, `asks(unresolved_call)`
+then `asks(may_not_run)`, 34 rules added: 1.55 s against 3.01 s for the world asked both from
+the start; most of it is the preparation again. The section below is the measurement and the
+plan the work was built from.
+
+## What the cone needed from incremental addition (measured before it was built)
 
 Measured, Rust, `rofl-serve`, the full world opened, `asks` asserted, evaluated, then one more ask
 asserted:

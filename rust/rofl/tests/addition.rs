@@ -358,6 +358,12 @@ fn differential(seed: u64, head: &str, rules: Vec<String>, gen: fn(&mut Rng) -> 
             Ok(n) => st.explained += n,
             Err(e) => panic!("seed {seed} step {step}: the explanations differ after {:?}\n  {e}", log.iter().rev().take(4).collect::<Vec<_>>()),
         }
+        // what a base fact holds up, asked of the world the additions made and of the fresh one
+        if let Some(q) = asserted.iter().nth(step % asserted.len().max(1)) {
+            let (a, b) = (s.excise(q), f.excise(q));
+            assert_eq!(a, b, "seed {seed} step {step}: excise {q}");
+            st.explained += 1;
+        }
         was = now;
     }
     // a snapshot of the world the additions made opens as that world
@@ -732,6 +738,21 @@ fn corpus_additions_are_a_fresh_evaluation() {
             s
         })
     };
+    if let Ok(asks) = std::env::var("ADD_ASKS") {
+        let (first, then) = asks.split_once(',').expect("ADD_ASKS=first,then");
+        let (mut s, t_world) = world(&[&facts, &format!("asks({first}).")]);
+        let steps0 = s.eval.steps;
+        let ((_, a), t_delta) = timed(|| {
+            let a = s.assert_delta(&format!("asks({then}).")).unwrap();
+            s.eval.ensure().unwrap();
+            a
+        });
+        let (mut f, t_fresh) = world(&[&facts, &format!("asks({first}).\nasks({then}).")]);
+        let same = s.eval.canonical_state() == f.eval.canonical_state();
+        eprintln!("asks({first}) then asks({then}): first cone {t_world:.2}s ({steps0} steps), delta {t_delta:.2}s, fresh {t_fresh:.2}s ({} steps), x{:.1}; same={same}; {a:?}", f.eval.steps, t_fresh / t_delta.max(1e-6));
+        assert!(same);
+        return;
+    }
     if let Ok(cell) = std::env::var("ADD_CELL") {
         let md = std::fs::read_to_string(&cell).unwrap();
         let mut rules = String::new();
