@@ -1,0 +1,113 @@
+-- examples/vscode/side-effects.rofl — THE NEXT VERSION'S QUESTION (w_next_version_cutoff), over the JS model
+-- (notebook/front.ts MODEL_FILES): which value reaches the first argument of each call that starts a process,
+-- changes the file system, listens on a port, makes a request or speaks on an electron IPC channel, made through
+-- an external package directly or through a function of the corpus that hands its parameter on.
+--
+--   side_effect_value(Site, Family, Value)  Value may reach the argument at Site: a literal, or the node of a value
+--                                           (a process.env read, an external call such as path.join, an object)
+--   side_effect_site(Site, Family)          every site, with a value or without
+--   side_effect_env(Value, Key)             the value is `process.env.Key`
+--   side_effect_count(Family, Sites, Valued)
+--
+-- The fixture world is vscode_side_effects (facts/checks.rofl) over examples/vscode/mini; the notebook
+-- examples/vscode/side-effects.rofl.md asks it with the reasons. The run over vscode is in the work item.
+
+-- 1. THE HOST'S GLOBALS ARE EXTERNAL VALUES TOO. `process` and `fetch` come from no module, so the model gives them
+-- no identity; named like a module, a read off `process` and a call of `fetch` are external values of their own.
+se_host_global("process").
+se_host_global("fetch").
+external_value[flow](G, G) :- se_host_global(G).
+may_be_node[flow](E, G)    :- se_host_global(G), free_global[code](E, G, _).
+
+-- 2. WHAT AN EXTERNAL VALUE IS CALLED. The module object and the namespaces inside it (`fs.promises`, `x.default`);
+-- a function is a member of one, a name imported or destructured from the module, or the module itself (`*`).
+se_ns_key("promises").
+se_ns_key("default").
+se_ns(S, S) :- external_value[flow](S, S).
+se_ns(M, S) :- se_member_of(M, Y, K), se_ns(Y, S), se_ns_key(K).
+se_ns(Sp, S) :- se_api(Sp, S, K), se_ns_key(K).
+
+se_member_of(M, Y, K) :- member_node_v[flow](M), ast_child[code](M, object, 0, O), may_be_node[flow](O, Y),
+                         external_value[flow](Y, _), selects[flow](M, K).
+
+se_api(S, S, "*")  :- external_value[flow](S, S).
+se_api(M, S, N)    :- se_member_of(M, Y, N), se_ns(Y, S).
+se_api(Sp, S, N)   :- external_import[code](Sp, _, S, _), ast_child[code](Sp, imported, 0, I), ast_name[code](I, N).
+se_api(P, S, N)    :- external_destructured[code](D, P, _, _), external_value[flow](P, S),
+                      destr_prop[code](D, P, K, _, _), key_name[code](K, N).
+
+-- A receiver: the API value itself (`ipcMain`), or what calling it made (`net.createServer()`, `express()`).
+se_recv(Y, S, R) :- se_api(Y, S, R).
+se_recv(C, S, R) :- se_called(C, X), se_api(X, S, R).
+se_called(C, X)  :- call_like_v(K), ast_node[code](C, K, _, _), ast_child[code](C, callee, 0, G), may_be_node[flow](G, X),
+                    external_value[flow](X, _).
+
+-- 3. THE FAMILIES. A function family is its modules times its names; a method family adds the receiver.
+se_fn(F, S, N) :- se_module(F, S), se_name(F, N).
+se_method(F, S, R, N) :- se_recv_module(F, S), se_receiver(F, R), se_method_name(F, N).
+
+se_module(process, M) :- se_cp_module(M).
+se_cp_module("child_process").  se_cp_module("node:child_process").
+se_name(process, N) :- se_cp_name(N).
+se_cp_name("spawn").  se_cp_name("spawnSync").  se_cp_name("exec").  se_cp_name("execSync").
+se_cp_name("execFile").  se_cp_name("execFileSync").  se_cp_name("fork").
+se_module(process, "cross-spawn").  se_name(process, "*").
+se_module(process, "execa").  se_name(process, "execa").
+
+se_module(fs_mutation, "fs").  se_module(fs_mutation, "node:fs").  se_module(fs_mutation, "fs/promises").
+se_module(fs_mutation, "node:fs/promises").  se_module(fs_mutation, "original-fs").  se_module(fs_mutation, "graceful-fs").
+se_module(fs_mutation, "fs-extra").
+se_name(fs_mutation, "writeFile").  se_name(fs_mutation, "writeFileSync").  se_name(fs_mutation, "appendFile").
+se_name(fs_mutation, "appendFileSync").  se_name(fs_mutation, "createWriteStream").  se_name(fs_mutation, "copyFile").
+se_name(fs_mutation, "copyFileSync").  se_name(fs_mutation, "cp").  se_name(fs_mutation, "cpSync").
+se_name(fs_mutation, "rename").  se_name(fs_mutation, "renameSync").  se_name(fs_mutation, "unlink").
+se_name(fs_mutation, "unlinkSync").  se_name(fs_mutation, "rm").  se_name(fs_mutation, "rmSync").
+se_name(fs_mutation, "rmdir").  se_name(fs_mutation, "rmdirSync").  se_name(fs_mutation, "mkdir").
+se_name(fs_mutation, "mkdirSync").  se_name(fs_mutation, "mkdtemp").  se_name(fs_mutation, "mkdtempSync").
+se_name(fs_mutation, "symlink").  se_name(fs_mutation, "symlinkSync").  se_name(fs_mutation, "truncate").
+se_name(fs_mutation, "truncateSync").  se_name(fs_mutation, "chmod").  se_name(fs_mutation, "chmodSync").
+se_name(fs_mutation, "outputFile").  se_name(fs_mutation, "writeJson").  se_name(fs_mutation, "remove").
+se_name(fs_mutation, "ensureDir").  se_name(fs_mutation, "copy").  se_name(fs_mutation, "move").
+
+se_module(request, "http").  se_module(request, "https").  se_module(request, "node:http").  se_module(request, "node:https").
+se_module(request, "undici").  se_module(request, "node-fetch").  se_module(request, "axios").  se_module(request, "got").
+se_module(request, "request-light").  se_module(request, "fetch").
+se_name(request, "request").  se_name(request, "get").  se_name(request, "fetch").  se_name(request, "post").
+se_name(request, "put").  se_name(request, "xhr").  se_name(request, "*").
+se_recv_module(request, "electron").  se_receiver(request, "net").  se_method_name(request, "request").
+se_method_name(request, "fetch").
+
+se_recv_module(listen, "net").  se_recv_module(listen, "node:net").  se_recv_module(listen, "http").
+se_recv_module(listen, "node:http").  se_recv_module(listen, "https").  se_recv_module(listen, "node:https").
+se_recv_module(listen, "http2").  se_recv_module(listen, "express").
+se_receiver(listen, "createServer").  se_receiver(listen, "createSecureServer").  se_receiver(listen, "Server").
+se_receiver(listen, "*").
+se_method_name(listen, "listen").
+
+se_recv_module(ipc, "electron").
+se_receiver(ipc, "ipcMain").  se_receiver(ipc, "ipcRenderer").
+se_method_name(ipc, "on").  se_method_name(ipc, "once").  se_method_name(ipc, "handle").  se_method_name(ipc, "handleOnce").
+se_method_name(ipc, "send").  se_method_name(ipc, "sendSync").  se_method_name(ipc, "invoke").
+se_method_name(ipc, "postMessage").
+
+-- 4. THE SITES. `se_site(Site, Family, I)`: argument I of Site is the one asked about. A direct site is a call of
+-- an external function of a family (argument 0); a WRAPPER site is a call of a corpus function whose parameter I
+-- is read as the asked argument of another site, so `writeAtomic(p)` is a site when its body is `fs.writeFileSync(p)`.
+se_site(C, F, 0) :- se_called(C, X), se_api(X, S, N), se_fn(F, S, N).
+se_site(C, F, 0) :- call_like_v(K), ast_node[code](C, K, _, _), ast_child[code](C, callee, 0, M),
+                    member_node_v[flow](M), selects[flow](M, N), se_method(F, S, R, N),
+                    ast_child[code](M, object, 0, O), may_be_node[flow](O, Y), se_recv(Y, S, R).
+
+se_param(Fn, I, F) :- se_site(S, F, J), arg_at[flow](S, J, A), param_use[flow](Fn, Name, A), param_of[flow](Fn, I, Name).
+se_site(W, F, I)   :- resolves[code](W, Fn), se_param(Fn, I, F).
+
+-- 5. THE ANSWER.
+side_effect_site(S, F) :- se_site(S, F, _).
+side_effect_value(S, F, V) :- se_site(S, F, I), arg_at[flow](S, I, A), may_be_lit[flow](A, V).
+side_effect_value(S, F, V) :- se_site(S, F, I), arg_at[flow](S, I, A), may_be_node[flow](A, V).
+side_effect_env(V, Key) :- se_member_of(V, E, Key), se_member_of(E, "process", "env").
+
+se_family(F) :- side_effect_site(_, F).
+se_valued(S, F) :- side_effect_value(S, F, _).
+side_effect_count(F, Sites, Valued) :- se_family(F), Sites is count(S : side_effect_site(S, F)),
+                                       Valued is count(V : se_valued(V, F)).

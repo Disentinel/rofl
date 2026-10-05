@@ -293,6 +293,8 @@ check[checks]("facts/goldens.rofl", "visual_spat-week", world).
 check[checks]("facts/goldens.rofl", "visual_suite-chart", world).
 check[checks]("facts/goldens.rofl", "visual_wardley", world).
 check[checks]("facts/goldens.rofl", "voting", world).
+check[checks]("facts/goldens.rofl", "vscode", world).
+check[checks]("facts/goldens.rofl", "vscode_side-effects", world).
 check[checks]("facts/goldens.rofl", "wtf", world).
 check[checks]("facts/goldens.rofl", "rules_agg", world).
 check[checks]("facts/goldens.rofl", "rules_cleanliness", world).
@@ -760,6 +762,7 @@ check[checks]("facts/goldens.rofl", "strata_boot_canon", world).
 check[checks]("facts/goldens.rofl", "strata_unranked_negation", world).
 check[checks]("facts/goldens.rofl", "sub_history_beside_lattice", world).
 check[checks]("facts/goldens.rofl", "unstratifiable", world).
+check[checks]("facts/goldens.rofl", "vscode_side_effects", world).
 check[checks]("facts/goldens.rofl", "wfs_unknown_negated", world).
 check[checks]("facts/goldens.rofl", "why_base", world).
 check[checks]("facts/goldens.rofl", "why_forest", world).

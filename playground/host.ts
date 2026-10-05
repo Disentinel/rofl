@@ -78,6 +78,25 @@ function labelNodes(facts: string[], nodes: Record<string, Node>): void {
   for (const id of Object.keys(nodes)) { const l = lab(id); nodes[id].label = l.length > 40 ? l.slice(0, 39) + '…' : l; }
 }
 
+/** The facts of the code: the scanner's of each file, and the host's of the paths and of every string a file holds. */
+export function codeFacts(files: Record<string, string>, data: string[] = []): { facts: string[]; nodes: Record<string, Node>; parseErrors: Record<string, string>; host: string[] } {
+  const nodes: Record<string, Node> = {};
+  const parseErrors: Record<string, string> = {};
+  const facts: string[] = [], strings = new Set<string>();
+  for (const [path, src] of Object.entries(files)) {
+    for (const fact of scan(src, { file: path }).facts) {
+      facts.push(fact);
+      const m = /^ast_node\[code\]\((\w+), (\w+), "([^"]*)", (\d+)\)/.exec(fact);
+      if (m) nodes[m[1]] = { kind: m[2], file: m[3], line: Number(m[4]), label: '' };
+      const e = /^ast_parse_error\[code\]\("[^"]*", "(.*)"\)\.$/.exec(fact);
+      if (e) parseErrors[path] = e[1];
+      const v = /^ast_attr\[code\]\(\w+, value, (".*")\)\.$/.exec(fact);
+      if (v) strings.add(unquote(v[1]));
+    }
+  }
+  return { facts, nodes, parseErrors, host: hostFacts([...Object.keys(files), ...data], strings) };
+}
+
 /** What the host tells the module graph and a scanner cannot: the files and directories there are, and each string cut the way a specifier is read. */
 function hostFacts(paths: string[], strings: Set<string>): string[] {
   // quoted the way the scanner quotes: ROFL has five escapes, and JSON's `\u0000` for a control character refuses the whole batch
@@ -170,6 +189,7 @@ function proofs(model: Store, cells: Store, heads: Set<string>, kernel: Set<stri
     ghosts: new Map([...model.ghosts, ...cells.ghosts]), dead: new Map([...model.dead, ...cells.dead]), cells: new Map([...model.cells, ...cells.cells]), keepDead: true,
     firingList: (key: string) => byKey(key, (s) => s.firingList(key)), firings: new Map([...model.firings, ...cells.firings]),
     witnessOf: (key: string) => byKey(key, (s) => s.witnessOf(key)),
+    firingsRanked: (key: string, memo?: Map<string, number>) => byKey(key, (s) => s.firingsRanked(key, memo)),
     witnessesOf: (key: string) => byKey(key, (s) => s.witnessesOf(key)),
     supportCount: (key: string) => byKey(key, (s) => s.supportCount(key)),
     relAll: (rel: string) => rows(rel, (s) => s.relAll(rel))!,
@@ -631,22 +651,9 @@ export class Host {
   private code(files: Record<string, string>, data: string[]): Scanned {
     const key = JSON.stringify([files, data]);
     if (this.scanned?.key === key) return this.scanned;
-    const nodes: Record<string, Node> = {};
-    const parseErrors: Record<string, string> = {};
-    const facts: string[] = [], strings = new Set<string>();
-    for (const [path, src] of Object.entries(files)) {
-      for (const fact of scan(src, { file: path }).facts) {
-        facts.push(fact);
-        const m = /^ast_node\[code\]\((\w+), (\w+), "([^"]*)", (\d+)\)/.exec(fact);
-        if (m) nodes[m[1]] = { kind: m[2], file: m[3], line: Number(m[4]), label: '' };
-        const e = /^ast_parse_error\[code\]\("[^"]*", "(.*)"\)\.$/.exec(fact);
-        if (e) parseErrors[path] = e[1];
-        const v = /^ast_attr\[code\]\(\w+, value, (".*")\)\.$/.exec(fact);
-        if (v) strings.add(unquote(v[1]));
-      }
-    }
+    const { facts, nodes, parseErrors, host } = codeFacts(files, data);
     labelNodes(facts, nodes);
-    const all = [...facts, ...hostFacts([...Object.keys(files), ...data], strings)];
+    const all = [...facts, ...host];
     this.base = null;
     return this.scanned = { key, facts, nodes, parseErrors, text: all.join('\n'), rels: new Set(all.map(relOf)) };
   }

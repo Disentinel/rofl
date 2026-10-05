@@ -3493,3 +3493,34 @@ check_world("sub_history_beside_lattice").
 check_file("sub_history_beside_lattice", "examples/checks/sub-history-beside-lattice.rofl").
 check_opt("sub_history_beside_lattice", together, 1).
 check_opt("sub_history_beside_lattice", explain, 1).
+
+-- w_next_version_cutoff: the side-effect question (examples/vscode/side-effects.rofl) over the JS model and a hand-made
+-- mini corpus with a wrapper module, a cross-file constant, literals and an env read; every answer named in the check
+check_world("vscode_side_effects").
+check_file("vscode_side_effects", "facts/js-kinds.rofl").
+check_file("vscode_side_effects", "facts/js-callgraph.rofl").
+check_file("vscode_side_effects", "facts/js-dataflow.rofl").
+check_file("vscode_side_effects", "facts/js-modules.rofl").
+check_file("vscode_side_effects", "facts/js-shapes.rofl").
+check_file("vscode_side_effects", "facts/js-statements.rofl").
+check_file("vscode_side_effects", "facts/js-controlflow.rofl").
+check_file("vscode_side_effects", "facts/js-effects.rofl").
+check_file("vscode_side_effects", "facts/js-globals.rofl").
+check_file("vscode_side_effects", "facts/js-host.rofl").
+check_file("vscode_side_effects", "facts/js-host-surface.rofl").
+check_file("vscode_side_effects", "facts/js-lib-surface.rofl").
+check_file("vscode_side_effects", "facts/js-attrs.rofl").
+check_file("vscode_side_effects", "rules/js-structure.rofl").
+check_file("vscode_side_effects", "rules/js-dataflow.rofl").
+check_file("vscode_side_effects", "rules/js-model.rofl").
+check_file("vscode_side_effects", "rules/js-callgraph.rofl").
+check_file("vscode_side_effects", "rules/js-controlflow.rofl").
+check_file("vscode_side_effects", "rules/js-effects.rofl").
+check_file("vscode_side_effects", "rules/js-globals.rofl").
+check_file("vscode_side_effects", "rules/js-host.rofl").
+check_file("vscode_side_effects", "rules/js-ambient.rofl").
+check_file("vscode_side_effects", "rules/js-attrs.rofl").
+check_file("vscode_side_effects", "rules/js-modules.rofl").
+check_file("vscode_side_effects", "examples/checks/vscode-mini-facts.rofl").
+check_file("vscode_side_effects", "examples/vscode/side-effects.rofl").
+check_file("vscode_side_effects", "examples/checks/vscode-side-effects-check.rofl").
