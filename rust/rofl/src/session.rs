@@ -182,8 +182,8 @@ impl Session {
     /// means without saying so.
     pub fn assert(&mut self, src: &str) -> Result<usize, String> {
         let facts = self.parse_facts(src)?;
-        let (n, asked, _) = self.put_facts(&facts);
-        if n > 0 {
+        let (n, asked, ids) = self.put_facts(&facts);
+        if !ids.is_empty() {
             self.eval.store.dirty = true;
         }
         // the rules a world runs are read at prepare: a new ask is only an ask once they are read again
@@ -214,17 +214,20 @@ impl Session {
         Ok(out)
     }
 
-    /// The facts in, as base: how many were new, whether one is an ask, and the new ones.
+    /// The facts in, as base: how many were new, whether one is an ask, and the facts the world now holds otherwise
+    /// than before: the new ones and those that were derived and are base now (their height is a base fact's).
     fn put_facts(&mut self, facts: &[(Sym, Sym, Vec<Term>)]) -> (usize, bool, Vec<FactId>) {
-        let (mut asked, mut ids) = (false, Vec::new());
+        let (mut asked, mut n) = (false, 0);
+        self.eval.store.arrivals = Some(Vec::new());
         for (rel, persp, args) in facts {
-            let (id, new) = self.eval.store.put(&self.eval.h, *rel, *persp, args, F_BASE);
+            let (_, new) = self.eval.store.put(&self.eval.h, *rel, *persp, args, F_BASE);
             if new {
-                ids.push(id);
+                n += 1;
                 asked |= *rel == self.eval.v.asks || (*rel == self.eval.v.explain_request && self.eval.cone.is_some());
             }
         }
-        (ids.len(), asked, ids)
+        let ids = self.eval.store.arrivals.take().unwrap_or_default();
+        (n, asked, ids)
     }
 
     /// `assert`, bringing an evaluated world to the state a fresh evaluation of it with the facts would hold, without
@@ -239,7 +242,7 @@ impl Session {
         }
         let mark = self.eval.prep_mark();
         let (n, asked, ids) = self.put_facts(&facts);
-        if n == 0 {
+        if ids.is_empty() {
             return Ok((0, Addition::Delta(crate::engine::AddDelta::default())));
         }
         let (mut rules, mut called) = (Vec::new(), Vec::new());

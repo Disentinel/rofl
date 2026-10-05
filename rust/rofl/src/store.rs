@@ -1231,6 +1231,10 @@ impl Store {
                 let old = self.facts.rec(id).flags();
                 if flags & F_BASE != 0 && old & F_BASE == 0 {
                     self.facts.set_flags(id, brk!("promoted_tick_scope_kept" => old | F_BASE; (old & !F_TICK) | flags));
+                    // its height is a base fact's now, and what rests on it may lie lower: an addition to note
+                    if let Some(a) = self.arrivals.as_mut().filter(|_| brk!("add_promoted_unnoted" => false; true)) {
+                        a.push(id);
+                    }
                 }
                 return (id, false);
             }

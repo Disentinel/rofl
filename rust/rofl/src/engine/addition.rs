@@ -6,36 +6,37 @@
 //!
 //! WHAT CHANGES. The relations of the added facts and the heads of the added
 //! rules GROW; so does, through every rule that reads one of them, its head
-//! (`grow`). A rule that reads a growing relation only positively, plainly, is
-//! MONOTONE in it: it fires semi-naively from the news (the added facts are the
-//! first front; an added plain rule fires whole once, over the store as it
-//! stands, and its conclusions are news). A rule that reads a growing relation
-//! under a negation or inside an aggregate (a count, a min, a threshold), or an
-//! added rule that negates or aggregates at all, may WITHDRAW what it
-//! concluded: it is RESET as the retraction path resets a rule (every fact of
-//! its head goes, its cells go) and fires again in a full evaluation's order,
-//! level by level. What rests on what a reset withdraws (`dirty`) goes with
-//! it, through each other (`consumer_facts`), and every rule that reads a dirty
-//! relation, or concludes into one, fires again whole over what stands: the
-//! retract-then-rederive of DRed, where the rederivation is the rule fired
-//! again. A rule staged `@next` from what changed stages again (`restage`); one
-//! that negates or aggregates it loses what it staged first.
+//! (`grow`). A fact asserted where it was derived is an addition too: it is
+//! base now, its height a base fact's, and what rests on it may lie lower.
+//!
+//! LEVEL BY LEVEL (`fine_levels`, DRed over the levels of the stratified
+//! program): the news of every level below fires each level semi-naively, an
+//! added rule that is plain or negates fires whole at its level; a rule that
+//! reads what grew only under a negation keeps its facts and loses the firings
+//! a new fact blocks, a fact that lost one goes whole with what rests on it and
+//! is derived again from what holds, a fact gone for good makes a negation over
+//! it hold; a rule that aggregates what grew (or a threshold, a moved round, a
+//! negation that cannot be bound) is sealed again whole at its level and its
+//! readers fed its change. AFTER THE REST, through the retraction path's
+//! machinery: an order lattice the change reaches, what calls made to a relation
+//! answered on demand, and what negates or aggregates those (`dirty`, `again`).
+//! A rule staged `@next` from what changed stages again (`restage`), over cells
+//! sealed again where it aggregates.
 //!
 //! THE STATE IS A SET OF FACTS AND, PER FACT, THE SET OF ITS FIRINGS, and the
 //! witness printed is the least by height and signature (`Store::witness_of`),
-//! so the order the delta fires in is not observable: the rules fired again in
-//! a full evaluation's order are those whose firing order a cell, a negation or
-//! a stage could observe.
+//! so the order the delta fires in is not observable, except where a cell keeps
+//! its members by height and canonical order, which a seal again takes as an
+//! evaluation takes them.
 //!
-//! WHAT IT REFUSES, every reason in a fixed order (`addition_refusals`), and
-//! the world is then evaluated again from its facts: a world a delta is not
-//! worked out for (not evaluated, cut by a wall, a later tick, well-founded,
-//! holding a hole or reading a shrug), a fact that was derived before it was
-//! asserted, a relation answered on demand, a rule that reads the ledgers, a
-//! lattice, tag or subsumptive relation the change reaches, a component
-//! stratified by its data, a closure answered from its tree whose edges the
-//! change reaches, a rule late or unsafe, and for added rules a program whose
-//! preparation moves more than the rules it runs (`prep_moves`).
+//! WHAT IT REFUSES, every reason in a fixed order (`addition_refusals`,
+//! `add_worked_out`, `prep_moves`), and the world is then evaluated again from
+//! its facts: not evaluated, cut by a wall, a later tick, well-founded, a hole or
+//! a shrug reader, a lattice beside a relation answered on demand, a ledger
+//! reader, a component stratified by its data, a join, widening, counting tag or
+//! dominance reached, a staged fact two firings reach, a world that keeps no
+//! witness beyond the monotone part, and for added rules a program whose
+//! preparation moves more than the rules it runs.
 use super::*;
 
 /// What an addition did.
