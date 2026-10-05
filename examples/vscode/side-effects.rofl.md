@@ -10,6 +10,7 @@ code:
   - mini/node/pfs.ts
   - mini/node/server.ts
   - mini/node/main.ts
+  - mini/node/paths.ts
 ---
 
 # Which value reaches a side effect
@@ -50,4 +51,15 @@ why side_effect_value(n6ce3b3e159e9764b_114, ipc, "vscode:hello")
 ```datalog
 why side_effect_value(nd100d8f9c1968a85_25, fs_mutation, "/tmp/settings.json")
 why side_effect_value(n34efd0fd49e79fa1_34, listen, 8080)
+```
+
+> A path built from parts (`paths.ts`, rules/js-concat.rofl): a `path.join`, a template, a `dirname` and a `+=` in a
+> loop. Where every part is literal the value is its TEXT, a term the host renders (`join(join("/opt/app", "out"),
+> "settings.json")` is `/opt/app/out/settings.json`); where a part is unknown it is a FORM, the part kept as
+> `ref(P)`; the loop unfolds three levels and the rest is the `+=` itself, `node(X)`. `part_value` lists what each
+> part of a composed value may be.
+
+```datalog
+? side_effect_form(S, F, T)
+? part_value[flow](ndbdc6130c943fdee_70, I, V)
 ```

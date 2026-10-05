@@ -341,6 +341,7 @@ check[checks]("facts/goldens.rofl", "rules_inquiry_terminology", world).
 check[checks]("facts/goldens.rofl", "rules_js-ambient", world).
 check[checks]("facts/goldens.rofl", "rules_js-attrs", world).
 check[checks]("facts/goldens.rofl", "rules_js-callgraph", world).
+check[checks]("facts/goldens.rofl", "rules_js-concat", world).
 check[checks]("facts/goldens.rofl", "rules_js-controlflow", world).
 check[checks]("facts/goldens.rofl", "rules_js-dataflow", world).
 check[checks]("facts/goldens.rofl", "rules_js-effects", world).
@@ -701,6 +702,7 @@ check[checks]("facts/goldens.rofl", "ast_within_readers", world).
 check[checks]("facts/goldens.rofl", "async_refused", world).
 check[checks]("facts/goldens.rofl", "budget_wall", world).
 check[checks]("facts/goldens.rofl", "closure_base_fact", world).
+check[checks]("facts/goldens.rofl", "concat_value", world).
 check[checks]("facts/goldens.rofl", "cost_shapes_model", world).
 check[checks]("facts/goldens.rofl", "demand_asked_hole", world).
 check[checks]("facts/goldens.rofl", "demand_chain", world).

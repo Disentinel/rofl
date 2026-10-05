@@ -40,7 +40,7 @@ if (orders.some((o) => o !== 'forward' && o !== 'reverse')) { console.error('--o
 const verbose = argv.includes('--verbose');
 if (brk && brk !== 'naive' && brk !== 'nosurface') { console.error('--break naive | nosurface'); process.exit(64); }
 
-const read = (f: string): string => brk === 'naive' && (f.startsWith('rules/') || f === QUESTION)
+const read = (f: string): string => brk === 'naive' && (f.startsWith('rules/') && f !== 'rules/js-concat.rofl' || f === QUESTION)
   ? (() => {
     try { return execFileSync('git', ['show', `${NAIVE_BASE}:${f}`], { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }); }
     catch { console.error(`--break naive reads ${f} at ${NAIVE_BASE}, which this checkout's history does not hold`); process.exit(2); }

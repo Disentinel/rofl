@@ -20,6 +20,11 @@
 --   a throw caught elsewhere         errors.ts fail() throws, guard.ts catches it: caught_value, no catch_from_host
 --   a callee placed by its callers   lib.ts helper() is called unguarded only from app.ts: reached, not may_not_run;
 --                                    the arrow in cb.ts is called only inside each.ts's loop: may_not_run
+--   a path built in another file     locations.ts n3ea02c0aa5d7188d, writer.ts ndc27e34f71d5ff1f: LOGS, an
+--                                    exported template; cacheFile(name), a returned path.join; withExt(base), a `+` whose
+--                                    part is writer.ts's template; LOGS + '/all.log' in writer.ts over the imported template.
+--                                    Each answers with its node and its text (rules/js-concat.rofl), and mini/node/paths.ts
+--                                    with the texts and nodes of examples/checks/vscode-side-effects-check.rofl
 --   no value                         lib.ts Registry.open: `new Registry()` of an imported class does not resolve (the
 --                                    model's `new` reads a class of the same file); main.ts remove(this.storage.dir)
 vsp_want(n1684850c959c2a12_29, fs_mutation, "/etc/x").
@@ -51,14 +56,34 @@ vsp_want(nd100d8f9c1968a85_45, fs_mutation, "/tmp/cache").
 vsp_want(nd31751746bbd649e_28, fs_mutation, "/var/log/app").
 vsp_want(nd31751746bbd649e_58, fs_mutation, "fast").
 vsp_want(nd31751746bbd649e_58, fs_mutation, "slow").
+vsp_want(ndbdc6130c943fdee_129,fs_mutation,"/opt/app").
+vsp_want(ndbdc6130c943fdee_129,fs_mutation,ndbdc6130c943fdee_123).
+vsp_want(ndbdc6130c943fdee_141,request,ndbdc6130c943fdee_145).
+vsp_want(ndbdc6130c943fdee_141,request,url("https://update.code.visualstudio.com","/api/update")).
+vsp_want(ndbdc6130c943fdee_44,fs_mutation,join(join("/opt/app","out"),"settings.json")).
+vsp_want(ndbdc6130c943fdee_44,fs_mutation,ndbdc6130c943fdee_48).
+vsp_want(ndbdc6130c943fdee_66,fs_mutation,cat(cat(cat("/opt/app","/logs/"),"main"),".log")).
+vsp_want(ndbdc6130c943fdee_66,fs_mutation,cat(cat(cat("/opt/app","/logs/"),"shared"),".log")).
+vsp_want(ndbdc6130c943fdee_66,fs_mutation,ndbdc6130c943fdee_70).
+vsp_want(ndbdc6130c943fdee_84,fs_mutation,ndbdc6130c943fdee_88).
+vsp_want(ndbdc6130c943fdee_95,fs_mutation,"/opt/app/tmp").
+vsp_want(ndbdc6130c943fdee_95,fs_mutation,ndbdc6130c943fdee_99).
+vsp_want(ndc27e34f71d5ff1f_19,fs_mutation,cat("/srv/app","/logs")).
+vsp_want(ndc27e34f71d5ff1f_19,fs_mutation,n3ea02c0aa5d7188d_16).
+vsp_want(ndc27e34f71d5ff1f_25,fs_mutation,join(join("/srv/app","cache"),"index.json")).
+vsp_want(ndc27e34f71d5ff1f_25,fs_mutation,n3ea02c0aa5d7188d_30).
+vsp_want(ndc27e34f71d5ff1f_34,fs_mutation,cat(cat(cat("/srv/app","/logs"),"/today"),".json")).
+vsp_want(ndc27e34f71d5ff1f_34,fs_mutation,n3ea02c0aa5d7188d_47).
+vsp_want(ndc27e34f71d5ff1f_46,fs_mutation,cat(cat("/srv/app","/logs"),"/all.log")).
+vsp_want(ndc27e34f71d5ff1f_46,fs_mutation,ndc27e34f71d5ff1f_50).
 vsp_want_site(n2cab440d5303505d_32, fs_mutation).
 vsp_want_site(n6ce3b3e159e9764b_90, fs_mutation).
 vsp_want_site(S, F) :- vsp_want(S, F, _).
-vsp_want_count(fs_mutation, 20, 18).
+vsp_want_count(fs_mutation, 29, 27).
 vsp_want_count(listen, 3, 3).
 vsp_want_count(process, 2, 2).
 vsp_want_count(ipc, 1, 1).
-vsp_want_count(request, 1, 1).
+vsp_want_count(request, 2, 2).
 vsp_want_not_run(n4eee02055dfecceb_18).
 vsp_want_caught(n1757fbf66a95b84a_25, n02a978cc9a4fd53e_13).
 

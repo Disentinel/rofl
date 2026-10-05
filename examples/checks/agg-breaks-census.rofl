@@ -2081,6 +2081,34 @@ brk("retract_seed_rules_unfired"). brk_kind("retract_seed_rules_unfired", switch
 brk_expects("retract_seed_rules_unfired", "incremental_two_aggs").
 brk("add_trees_dropped"). brk_kind("add_trees_dropped", switch).
 brk_expects("add_trees_dropped", "addition_tree").
+brk("concat_deep"). brk_kind("concat_deep", file).
+brk_expects("concat_deep", "concat_value").
+brk("concat_cap_wide"). brk_kind("concat_cap_wide", file).
+brk_expects("concat_cap_wide", "concat_value").
+brk("concat_numeric_plus"). brk_kind("concat_numeric_plus", file).
+brk_expects("concat_numeric_plus", "concat_value").
+brk("concat_any_plus"). brk_kind("concat_any_plus", file).
+brk_expects("concat_any_plus", "concat_value").
+brk("concat_no_template"). brk_kind("concat_no_template", file).
+brk_expects("concat_no_template", "concat_value").
+brk("concat_no_plus_assign"). brk_kind("concat_no_plus_assign", file).
+brk_expects("concat_no_plus_assign", "concat_value").
+brk("concat_no_join_row"). brk_kind("concat_no_join_row", file).
+brk_expects("concat_no_join_row", "concat_value").
+brk("concat_partial_args"). brk_kind("concat_partial_args", file).
+brk_expects("concat_partial_args", "concat_value").
+brk("concat_cut_doubled"). brk_kind("concat_cut_doubled", file).
+brk_expects("concat_cut_doubled", "concat_value").
+brk("concat_unknown_part_dropped"). brk_kind("concat_unknown_part_dropped", file).
+brk_expects("concat_unknown_part_dropped", "concat_value").
+brk("concat_url_order"). brk_kind("concat_url_order", file).
+brk_expects("concat_url_order", "concat_value").
+brk("concat_depth_shallow"). brk_kind("concat_depth_shallow", file).
+brk_expects("concat_depth_shallow", "concat_value").
+brk("concat_summary_leaks"). brk_kind("concat_summary_leaks", file).
+brk_expects("concat_summary_leaks", "concat_value").
+brk("concat_untextable_part"). brk_kind("concat_untextable_part", file).
+brk_expects("concat_untextable_part", "concat_value").
 
 switch_site("add_base_firings_kept", "rust/rofl/src/engine/addition.rs").
 switch_site("add_closure_unpaired", "rust/rofl/src/engine/addition.rs").

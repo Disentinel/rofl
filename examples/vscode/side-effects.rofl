@@ -7,6 +7,9 @@
 --                                           (a process.env read, an external call such as path.join, an object)
 --   side_effect_site(Site, Family)          every site, with a value or without
 --   side_effect_env(Value, Key)             the value is `process.env.Key`
+--   side_effect_form(Site, Family, Form)    a string built from parts may reach the argument, of that form, some part
+--                                           unknown (rules/js-concat.rofl: `ref(P)`, `node(X)`); its concrete texts,
+--                                           every part literal, are values; `part_value(V, I, PV)` lists the parts
 --   side_effect_count(Family, Sites, Valued)
 --
 -- The fixture world is vscode_side_effects (facts/checks.rofl) over examples/vscode/mini; the notebook
@@ -108,7 +111,18 @@ imports(surface, main).
 -- 5. THE ANSWER.
 side_effect_site(S, F) :- se_site(S, F, _).
 side_effect_value(S, F, V) :- se_site(S, F, I), arg_at[flow](S, I, A), may_be_lit[flow](A, V).
-side_effect_value(S, F, V) :- se_site(S, F, I), arg_at[flow](S, I, A), may_be_node[flow](A, V).
+side_effect_value(S, F, V) :- se_site(S, F, I), arg_at[flow](S, I, A), may_be_node[flow](A, V), not summarized[flow](V).
+side_effect_value(S, F, T) :- se_site(S, F, I), arg_at[flow](S, I, A), may_be_node[flow](A, C), not summarized[flow](C),
+                              may_be_text[flow](C, T).
+side_effect_form(S, F, T)  :- se_site(S, F, I), arg_at[flow](S, I, A), may_be_node[flow](A, C), not summarized[flow](C),
+                              may_be_form[flow](C, T).
+
+-- vscode's own path module is node's path, ported (rules/js-concat.rofl `ambient_module`): a call of it answers as
+-- the join it is, and the strings its body builds are not answers of their own.
+ambient_module("src/vs/base/common/path.ts", "node:path").
+
+-- Only a value that reaches a site is unfolded into texts.
+concat_wanted[surface](C) :- se_site(S, _, I), arg_at[flow](S, I, A), may_be_node[flow](A, C), composed[flow](C).
 side_effect_env(V, Key) :- se_member_of(V, E, Key), se_member_of(E, "process", "env").
 
 se_family(F) :- side_effect_site(_, F).

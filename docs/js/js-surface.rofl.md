@@ -34,10 +34,11 @@ Reads:
 
 - from js-ambient, in the flow: [amb_exn_carrier](js-ambient.rofl.md#amb_exn_carrier)
 - from js-callgraph, in the code: [class_ctor](js-callgraph.rofl.md#class_ctor), [fn_name](js-callgraph.rofl.md#fn_name), [fn_node](js-callgraph.rofl.md#fn_node), [resolves](js-callgraph.rofl.md#resolves)
+- from js-concat, in the flow: [may_be_lit](js-concat.rofl.md#may_be_lit), [may_be_node](js-concat.rofl.md#may_be_node)
 - from js-controlflow, in the code: [always_throws](js-controlflow.rofl.md#always_throws), [guarded](js-controlflow.rofl.md#guarded), [in_fn](js-controlflow.rofl.md#in_fn), [may_throw](js-controlflow.rofl.md#may_throw), [reachable](js-controlflow.rofl.md#reachable)
 - from js-controlflow, in the flow: [accessor_of](js-controlflow.rofl.md#accessor_of), [thrown_by](js-controlflow.rofl.md#thrown_by)
 - from js-dataflow, in the code: [assigned](js-dataflow.rofl.md#assigned), [corpus_file](js-dataflow.rofl.md#corpus_file), [exports_default](js-dataflow.rofl.md#exports_default), [exports_name](js-dataflow.rofl.md#exports_name), [exports_value](js-dataflow.rofl.md#exports_value), [sees_binder](js-dataflow.rofl.md#sees_binder)
-- from js-dataflow, in the flow: [arg_at](js-dataflow.rofl.md#arg_at), [array_elem](js-dataflow.rofl.md#array_elem), [assign_param](js-dataflow.rofl.md#assign_param), [cjs_exports](js-dataflow.rofl.md#cjs_exports), [class_member_proto](js-dataflow.rofl.md#class_member_proto), [class_member_static](js-dataflow.rofl.md#class_member_static), [ctor_of](js-dataflow.rofl.md#ctor_of), [external_value](js-dataflow.rofl.md#external_value), [kind_proto](js-dataflow.rofl.md#kind_proto), [may_be_lit](js-dataflow.rofl.md#may_be_lit), [may_be_node](js-dataflow.rofl.md#may_be_node), [member_plain](js-dataflow.rofl.md#member_plain), [member_value](js-dataflow.rofl.md#member_value), [module_object](js-dataflow.rofl.md#module_object), [nearest_v](js-dataflow.rofl.md#nearest_v), [next_send](js-dataflow.rofl.md#next_send), [param_of](js-dataflow.rofl.md#param_of), [param_use](js-dataflow.rofl.md#param_use), [returns](js-dataflow.rofl.md#returns), [yields](js-dataflow.rofl.md#yields)
+- from js-dataflow, in the flow: [arg_at](js-dataflow.rofl.md#arg_at), [array_elem](js-dataflow.rofl.md#array_elem), [assign_param](js-dataflow.rofl.md#assign_param), [cjs_exports](js-dataflow.rofl.md#cjs_exports), [class_member_proto](js-dataflow.rofl.md#class_member_proto), [class_member_static](js-dataflow.rofl.md#class_member_static), [ctor_of](js-dataflow.rofl.md#ctor_of), [external_value](js-dataflow.rofl.md#external_value), [kind_proto](js-dataflow.rofl.md#kind_proto), [member_plain](js-dataflow.rofl.md#member_plain), [member_value](js-dataflow.rofl.md#member_value), [module_object](js-dataflow.rofl.md#module_object), [nearest_v](js-dataflow.rofl.md#nearest_v), [next_send](js-dataflow.rofl.md#next_send), [param_of](js-dataflow.rofl.md#param_of), [param_use](js-dataflow.rofl.md#param_use), [returns](js-dataflow.rofl.md#returns), [yields](js-dataflow.rofl.md#yields)
 - from js-dataflow, in the main: [call_like_v](js-dataflow.rofl.md#call_like_v)
 - from js-effects, in the code: [eff_calls](js-effects.rofl.md#eff_calls), [eff_reaches](js-effects.rofl.md#eff_reaches)
 - from js-effects, in the flow: [class_construct_eff](js-effects.rofl.md#class_construct_eff), [eff_latent](js-effects.rofl.md#eff_latent), [eff_module](js-effects.rofl.md#eff_module), [effect_of](js-effects.rofl.md#effect_of), [effect_of_module](js-effects.rofl.md#effect_of_module)
@@ -98,7 +99,7 @@ Phrases this file defines in one step, each by the sentence it stands for:
 
 `sx_esc`(M) either:
 
-1. if [`sx_esc`](#sx_esc)(N) and a node N [points to](js-dataflow.rofl.md#may_be_node) a node M;
+1. if [`sx_esc`](#sx_esc)(N) and a node N [points to](js-concat.rofl.md#may_be_node) a node M;
 2. if [`sx_esc`](#sx_esc)(O) and [the member](js-dataflow.rofl.md#member_value) some key of a node O holds a node M;
 3. if [`sx_esc`](#sx_esc)(X) and [`array_elem`](js-dataflow.rofl.md#array_elem)(X, something, M);
 4. if [`sx_esc`](#sx_esc)(G) and G [throws out](js-controlflow.rofl.md#thrown_by) a node M;
@@ -106,9 +107,9 @@ Phrases this file defines in one step, each by the sentence it stands for:
 
 > ---------------------------------------------------------------- an escaping node's facts, and their mirrors
 
-<a id="sx_node"></a>`sx_node`(N, M) if [`sx_esc`](#sx_esc)(N) and a node N [points to](js-dataflow.rofl.md#may_be_node) a node M.
+<a id="sx_node"></a>`sx_node`(N, M) if [`sx_esc`](#sx_esc)(N) and a node N [points to](js-concat.rofl.md#may_be_node) a node M.
 
-<a id="sx_lit"></a>`sx_lit`(N, V) if [`sx_esc`](#sx_esc)(N) and a node N [may be the literal](js-dataflow.rofl.md#may_be_lit) V.
+<a id="sx_lit"></a>`sx_lit`(N, V) if [`sx_esc`](#sx_esc)(N) and a node N [may be the literal](js-concat.rofl.md#may_be_lit) V.
 
 <a id="sx_member"></a>`sx_member`(O, K, V) if [`sx_esc`](#sx_esc)(O) and [the member](js-dataflow.rofl.md#member_value) K of a node O holds a node V.
 
@@ -204,7 +205,7 @@ In the surface:
 
 <a id="sx_export_val"></a>`sx_export_val`(File, Name, X) if [`exports_value`](js-dataflow.rofl.md#exports_value)(X, Name, File).
 
-<a id="sx_export_lit"></a>`sx_export_lit`(File, Name, V) if [`exports_value`](js-dataflow.rofl.md#exports_value)(X, Name, File) and a node X [may be the literal](js-dataflow.rofl.md#may_be_lit) V.
+<a id="sx_export_lit"></a>`sx_export_lit`(File, Name, V) if [`exports_value`](js-dataflow.rofl.md#exports_value)(X, Name, File) and a node X [may be the literal](js-concat.rofl.md#may_be_lit) V.
 
 <a id="sx_default"></a>`sx_default`(File, F) if a node F [is the default export of](js-dataflow.rofl.md#exports_default) File.
 
@@ -221,12 +222,12 @@ In the surface:
 <a id="sx_arg_lit"></a>`sx_arg_lit`(F, I, V) if all of:
   - C [resolves to](js-callgraph.rofl.md#resolves) F;
   - C [passes](js-dataflow.rofl.md#arg_at) a node X at an index I;
-  - X [may be the literal](js-dataflow.rofl.md#may_be_lit) V.
+  - X [may be the literal](js-concat.rofl.md#may_be_lit) V.
 
 <a id="sx_arg_node"></a>`sx_arg_node`(F, I, N) if all of:
   - C [resolves to](js-callgraph.rofl.md#resolves) F;
   - C [passes](js-dataflow.rofl.md#arg_at) a node X at an index I;
-  - X [points to](js-dataflow.rofl.md#may_be_node) a node N.
+  - X [points to](js-concat.rofl.md#may_be_node) a node N.
 
 <a id="sx_called"></a>`sx_called`(F) if some call [resolves to](js-callgraph.rofl.md#resolves) F.
 
@@ -247,10 +248,10 @@ In the surface:
 
 <a id="sx_cb"></a>`sx_cb`(F, Spec) if all of:
   - a node X [comes out of](js-dataflow.rofl.md#external_value) a module Spec;
-  - a node G [points to](js-dataflow.rofl.md#may_be_node) X;
+  - a node G [points to](js-concat.rofl.md#may_be_node) X;
   - the `callee` of an [invocation](#noun-invocation) C is G;
   - a node Y [is among the](#ast_child) `arguments` of C;
-  - Y [points to](js-dataflow.rofl.md#may_be_node) a node F;
+  - Y [points to](js-concat.rofl.md#may_be_node) a node F;
   - [`fn_value`](#fn_value)(F).
 
 In the flow:
@@ -273,13 +274,13 @@ In the flow:
 
 In the surface:
 
-<a id="sx_ret_node"></a>`sx_ret_node`(F, N) if [`ret_plain`](#ret_plain)(F, E) and a node E [points to](js-dataflow.rofl.md#may_be_node) a node N.
+<a id="sx_ret_node"></a>`sx_ret_node`(F, N) if [`ret_plain`](#ret_plain)(F, E) and a node E [points to](js-concat.rofl.md#may_be_node) a node N.
 
-<a id="sx_ret_lit"></a>`sx_ret_lit`(F, V) if [`ret_plain`](#ret_plain)(F, E) and a node E [may be the literal](js-dataflow.rofl.md#may_be_lit) V.
+<a id="sx_ret_lit"></a>`sx_ret_lit`(F, V) if [`ret_plain`](#ret_plain)(F, E) and a node E [may be the literal](js-concat.rofl.md#may_be_lit) V.
 
-<a id="sx_ret_pnode"></a>`sx_ret_pnode`(F, N) if [`ret_param`](#ret_param)(F, something, E) and a node E [points to](js-dataflow.rofl.md#may_be_node) a node N.
+<a id="sx_ret_pnode"></a>`sx_ret_pnode`(F, N) if [`ret_param`](#ret_param)(F, something, E) and a node E [points to](js-concat.rofl.md#may_be_node) a node N.
 
-<a id="sx_ret_plit"></a>`sx_ret_plit`(F, V) if [`ret_param`](#ret_param)(F, something, E) and a node E [may be the literal](js-dataflow.rofl.md#may_be_lit) V.
+<a id="sx_ret_plit"></a>`sx_ret_plit`(F, V) if [`ret_param`](#ret_param)(F, something, E) and a node E [may be the literal](js-concat.rofl.md#may_be_lit) V.
 
 <a id="sx_ret_param"></a>`sx_ret_param`(F, I) if [`ret_param`](#ret_param)(F, I, something).
 

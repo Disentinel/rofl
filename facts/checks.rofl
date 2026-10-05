@@ -3137,6 +3137,7 @@ check_file("surface_model", "rules/js-host.rofl").
 check_file("surface_model", "rules/js-ambient.rofl").
 check_file("surface_model", "rules/js-attrs.rofl").
 check_file("surface_model", "rules/js-modules.rofl").
+check_file("surface_model", "rules/js-concat.rofl").
 check_file("surface_model", "rules/js-surface.rofl").
 check_file("surface_model", "examples/checks/surface-model.rofl").
 -- ONE ENGINE for the same reason as cost_shapes_model: the reflection of the model nests `$var` deep.
@@ -3567,10 +3568,43 @@ check_file("vscode_side_effects", "rules/js-host.rofl").
 check_file("vscode_side_effects", "rules/js-ambient.rofl").
 check_file("vscode_side_effects", "rules/js-attrs.rofl").
 check_file("vscode_side_effects", "rules/js-modules.rofl").
+check_file("vscode_side_effects", "rules/js-concat.rofl").
 check_file("vscode_side_effects", "rules/js-surface.rofl").
 check_file("vscode_side_effects", "examples/checks/vscode-mini-facts.rofl").
 check_file("vscode_side_effects", "examples/vscode/side-effects.rofl").
 check_file("vscode_side_effects", "examples/checks/vscode-side-effects-check.rofl").
+
+-- w_concat_value: a string built from parts (rules/js-concat.rofl), every entry point over examples/concat/src/entry.ts,
+-- the cap and the widening; every text, form and cut literal named in the check
+check_world("concat_value").
+check_file("concat_value", "facts/js-kinds.rofl").
+check_file("concat_value", "facts/js-callgraph.rofl").
+check_file("concat_value", "facts/js-dataflow.rofl").
+check_file("concat_value", "facts/js-modules.rofl").
+check_file("concat_value", "facts/js-shapes.rofl").
+check_file("concat_value", "facts/js-statements.rofl").
+check_file("concat_value", "facts/js-controlflow.rofl").
+check_file("concat_value", "facts/js-effects.rofl").
+check_file("concat_value", "facts/js-globals.rofl").
+check_file("concat_value", "facts/js-host.rofl").
+check_file("concat_value", "facts/js-host-surface.rofl").
+check_file("concat_value", "facts/js-lib-surface.rofl").
+check_file("concat_value", "facts/js-attrs.rofl").
+check_file("concat_value", "rules/js-structure.rofl").
+check_file("concat_value", "rules/js-dataflow.rofl").
+check_file("concat_value", "rules/js-model.rofl").
+check_file("concat_value", "rules/js-callgraph.rofl").
+check_file("concat_value", "rules/js-controlflow.rofl").
+check_file("concat_value", "rules/js-effects.rofl").
+check_file("concat_value", "rules/js-globals.rofl").
+check_file("concat_value", "rules/js-host.rofl").
+check_file("concat_value", "rules/js-ambient.rofl").
+check_file("concat_value", "rules/js-attrs.rofl").
+check_file("concat_value", "rules/js-modules.rofl").
+check_file("concat_value", "rules/js-concat.rofl").
+check_file("concat_value", "rules/js-surface.rofl").
+check_file("concat_value", "examples/checks/concat-facts.rofl").
+check_file("concat_value", "examples/checks/concat-check.rofl").
 
 -- w_next_version_cutoff, the surface split (docs/surface-split.md): the same question over mini + 10 hand-made files that
 -- cross files every way the model knows, every file resident through rules/js-surface.rofl; each file ALONE with the
@@ -3600,6 +3634,7 @@ check_file("vscode_surface_split", "rules/js-host.rofl").
 check_file("vscode_surface_split", "rules/js-ambient.rofl").
 check_file("vscode_surface_split", "rules/js-attrs.rofl").
 check_file("vscode_surface_split", "rules/js-modules.rofl").
+check_file("vscode_surface_split", "rules/js-concat.rofl").
 check_file("vscode_surface_split", "rules/js-surface.rofl").
 check_file("vscode_surface_split", "examples/checks/vscode-split-facts.rofl").
 check_file("vscode_surface_split", "examples/vscode/side-effects.rofl").

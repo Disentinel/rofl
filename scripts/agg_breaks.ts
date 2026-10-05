@@ -8332,6 +8332,202 @@ export const BREAKS: Break[] = [
    "addition_tree": "answered another way"
   }
  },
+ {
+  "id": "concat_deep",
+  "what": "the loop unfolds twelve levels, not three: its texts grow with the bound, and only the bound stops them",
+  "edits": [
+   [
+    "rules/js-concat.rofl",
+    "concat_depth(3).",
+    "concat_depth(12)."
+   ]
+  ],
+  "expect": {
+   "concat_value": "ct_extra_text"
+  }
+ },
+ {
+  "id": "concat_cap_wide",
+  "what": "the cap at 32 choices: a node with 32 texts keeps them",
+  "edits": [
+   [
+    "rules/js-concat.rofl",
+    "concat_cap(16).",
+    "concat_cap(32)."
+   ]
+  ],
+  "expect": {
+   "concat_value": "ct_extra_text"
+  }
+ },
+ {
+  "id": "concat_numeric_plus",
+  "what": "a `+` of two numbers inside a string-capable `+` is read as a concatenation",
+  "edits": [
+   [
+    "rules/js-concat.rofl",
+    "shape_needs(plus, yes).",
+    "shape_needs(plus, yes).  shape_needs(plus, no)."
+   ]
+  ],
+  "expect": {
+   "concat_value": "ct_extra_text"
+  }
+ },
+ {
+  "id": "concat_any_plus",
+  "what": "every `+` composes, a sum of two numbers too",
+  "edits": [
+   [
+    "rules/js-concat.rofl",
+    "composed[flow](C) :- plus_operand[code](C, X), may_be_lit[flow](X, V), str_value[flow](V).",
+    "composed[flow](C) :- plus_operand[code](C, X), may_be_lit[flow](X, _)."
+   ]
+  ],
+  "expect": {
+   "concat_value": "ct_sum_composed"
+  }
+ },
+ {
+  "id": "concat_no_template",
+  "what": "an interpolated template composes nothing",
+  "edits": [
+   [
+    "rules/js-concat.rofl",
+    "composed[flow](T) :- interpolated[code](T), ast_node[code](T, template_literal, _, _), not tagged_quasi[code](T).",
+    ""
+   ]
+  ],
+  "expect": {
+   "concat_value": "ct_missing_composed"
+  }
+ },
+ {
+  "id": "concat_no_plus_assign",
+  "what": "`x += v` is not read as a concatenation",
+  "edits": [
+   [
+    "rules/js-concat.rofl",
+    "ast_attr[code](A, operator, \"+=\"),\n                            ast_child[code](A, left, 0, L), ast_child[code](A, right, 0, R).",
+    "ast_attr[code](A, operator, \"-=\"),\n                            ast_child[code](A, left, 0, L), ast_child[code](A, right, 0, R)."
+   ]
+  ],
+  "expect": {
+   "concat_value": "ct_missing_composed"
+  }
+ },
+ {
+  "id": "concat_no_join_row",
+  "what": "the table loses path.join",
+  "edits": [
+   [
+    "rules/js-concat.rofl",
+    "ambient_value(\"node:path\", \"join\",      concat,      path_sep).\n",
+    ""
+   ]
+  ],
+  "expect": {
+   "concat_value": "ct_missing_composed"
+  }
+ },
+ {
+  "id": "concat_partial_args",
+  "what": "a library call composes the arguments it sees past a spread, a partial text",
+  "edits": [
+   [
+    "rules/js-concat.rofl",
+    "whole_args[flow](C) :- vlib_op[flow](C, _, _), not spread_arg[code](C, _).",
+    "whole_args[flow](C) :- vlib_op[flow](C, _, _)."
+   ]
+  ],
+  "expect": {
+   "concat_value": "ct_extra_text"
+  }
+ },
+ {
+  "id": "concat_cut_doubled",
+  "what": "dirname cuts before a doubled separator, where node keeps both",
+  "edits": [
+   [
+    "rules/js-concat.rofl",
+    "B is str_char(V, Q), B != \"/\",",
+    "B is str_char(V, Q),"
+   ]
+  ],
+  "expect": {
+   "concat_value": "ct_extra_cut"
+  }
+ },
+ {
+  "id": "concat_unknown_part_dropped",
+  "what": "a part with no value has no piece, so its node has no form",
+  "edits": [
+   [
+    "rules/js-concat.rofl",
+    "basic_piece[flow](C, I, ref(P), open, no)  :- parts[flow](C, I, P), not plain_valued[flow](P).\n",
+    ""
+   ]
+  ],
+  "expect": {
+   "concat_value": "ct_missing_form"
+  }
+ },
+ {
+  "id": "concat_url_order",
+  "what": "new URL(rel, base) composed relative first",
+  "edits": [
+   [
+    "rules/js-concat.rofl",
+    "parts[flow](C, 0, B) :- vlib_op[flow](C, url, _), arg_at[flow](C, 0, _), arg_at[flow](C, 1, B).\nparts[flow](C, 1, A) :- vlib_op[flow](C, url, _), arg_at[flow](C, 1, _), arg_at[flow](C, 0, A).",
+    "parts[flow](C, 1, B) :- vlib_op[flow](C, url, _), arg_at[flow](C, 0, _), arg_at[flow](C, 1, B).\nparts[flow](C, 0, A) :- vlib_op[flow](C, url, _), arg_at[flow](C, 1, _), arg_at[flow](C, 0, A)."
+   ]
+  ],
+  "expect": {
+   "concat_value": "ct_missing_text"
+  }
+ },
+ {
+  "id": "concat_depth_shallow",
+  "what": "the loop unfolds one level less",
+  "edits": [
+   [
+    "rules/js-concat.rofl",
+    "concat_depth(3).",
+    "concat_depth(2)."
+   ]
+  ],
+  "expect": {
+   "concat_value": "ct_missing_text"
+  }
+ },
+ {
+  "id": "concat_summary_leaks",
+  "what": "a part reads the strings a summarized module's body builds beside the summary of the call",
+  "edits": [
+   [
+    "rules/js-concat.rofl",
+    "comp_of[flow](C, I, D) :- parts[flow](C, I, P), may_be_node[flow](P, D), textable[flow](D), not summarized[flow](D).",
+    "comp_of[flow](C, I, D) :- parts[flow](C, I, P), may_be_node[flow](P, D), textable[flow](D)."
+   ]
+  ],
+  "expect": {
+   "concat_value": "ct_missing_text"
+  }
+ },
+ {
+  "id": "concat_untextable_part",
+  "what": "a composed part that can have no text is unfolded, and its parent has none either",
+  "edits": [
+   [
+    "rules/js-concat.rofl",
+    "comp_of[flow](C, I, D) :- parts[flow](C, I, P), may_be_node[flow](P, D), textable[flow](D), not summarized[flow](D).",
+    "comp_of[flow](C, I, D) :- parts[flow](C, I, P), may_be_node[flow](P, D), composed[flow](D), not summarized[flow](D)."
+   ]
+  ],
+  "expect": {
+   "concat_value": "ct_missing_form"
+  }
+ },
 ];
 
 /** A proof that is no world: the report `rofl-load --propose-structures` prints over a fixture (rust/rofl/src/structures.rs),
