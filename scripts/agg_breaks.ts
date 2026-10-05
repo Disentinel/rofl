@@ -4018,6 +4018,35 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "question_spends_world",
+  "what": "a question's unfolding spends the world's steps and rows, and leaves them spent",
+  "expect": {
+   "demand_question_budget": "the state lacks the row explained[$explain](whynot,qb_p(9,9),3",
+   "demand_query_ask": "a question spent the world's budget"
+  }
+ },
+ {
+  "id": "ts_question_spends_world",
+  "what": "the TypeScript engine runs a question on the world's steps and leaves them spent",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "try { return f(); } finally { [this.steps, this.rows, this.budget, this.wallSpent] = saved; }",
+    "this.steps = saved[0]; this.rows = saved[1]; return f();"
+   ]
+  ],
+  "expect": {
+   "demand_question_budget": "the state lacks the row explained[$explain](whynot,qb_p(9,9),3"
+  }
+ },
+ {
+  "id": "ask_wall_errors",
+  "what": "an ask that meets a wall answering is an error, not a hole named for the question and a partial answer",
+  "expect": {
+   "demand_query_ask": "a wall met answering is no error"
+  }
+ },
+ {
   "id": "demand_naive_passes",
   "what": "every pass of a linear recursion reads every answer so far",
   "expect": {

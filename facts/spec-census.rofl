@@ -41,6 +41,8 @@ check[checks]("rust/rofl/tests/demand_fixpoint.rs", "a_chain_read_from_every_nod
 check[checks]("rust/rofl/tests/demand_fixpoint.rs", "a_complete_call_is_unfolded_once_across_passes", test).
 check[checks]("rust/rofl/tests/demand_query.rs", "an_ask_unfolds_a_relation_answered_on_demand", test).
 check[checks]("rust/rofl/tests/demand_query.rs", "a_why_asks_as_whynot_does_and_neither_leaves_a_fact", test).
+check[checks]("rust/rofl/tests/demand_query.rs", "a_question_spends_its_own_budget", test).
+check[checks]("rust/rofl/tests/demand_query.rs", "an_ask_that_meets_a_wall_is_partial", test).
 check[checks]("rust/rofl/tests/demand_scale.rs", "a_recursion_through_a_closed_demand_relation_is_linear", test).
 check[checks]("rust/rofl/tests/explain.rs", "why_walks_the_derivation_to_its_axioms", test).
 check[checks]("rust/rofl/tests/explain.rs", "a_negated_premise_renders_as_finite_failure_with_its_demonstration", test).
@@ -675,6 +677,7 @@ check[checks]("facts/goldens.rofl", "demand_neg_round", world).
 check[checks]("facts/goldens.rofl", "demand_neg_round_closed", world).
 check[checks]("facts/goldens.rofl", "demand_pos_hole", world).
 check[checks]("facts/goldens.rofl", "demand_query", world).
+check[checks]("facts/goldens.rofl", "demand_question_budget", world).
 check[checks]("facts/goldens.rofl", "demand_recursion", world).
 check[checks]("facts/goldens.rofl", "demand_shrug_read", world).
 check[checks]("facts/goldens.rofl", "destructor_hole", world).

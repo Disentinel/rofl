@@ -46,3 +46,46 @@ fn a_why_asks_as_whynot_does_and_neither_leaves_a_fact() {
     assert!(s.why("dq_o(4, 9)").unwrap_or_else(|e| e).starts_with("dq_o[main](4,9): no answer, a shrug"));
     assert_eq!(s.eval.store.canonical_state(&s.eval.h), before, "a question left a fact behind");
 }
+
+fn small(budget: i64, src: &str) -> Session {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let mut s = Session::fresh(budget);
+    s.load(&std::fs::read_to_string(root.join("boot.rofl")).unwrap(), None).expect("boot");
+    s.load(src, None).unwrap_or_else(|d| panic!("{d:?}"));
+    s.evaluate().unwrap_or_else(|e| panic!("{e:?}"));
+    s
+}
+
+/// A QUESTION RUNS UNDER ITS OWN BUDGET (f_a_question_spent_the_world_budget): sixty asks, thirty whynots and
+/// thirty whys of a relation answered on demand under a session budget of 200 all answer as the first did, and
+/// the world's steps are as the evaluation left them.
+#[test]
+fn a_question_spends_its_own_budget() {
+    let mut s = small(200, "edb(t_s). t_s(0). t_s(1). t_s(2). t_s(3).\nt_o(X, Y) :- t_s(X), X > 0.\nt_p(X, Y) :- t_o(X, Y), t_s(X).\nt_r(X) :- t_s(X), t_p(X, 7).\n");
+    let steps = s.eval.steps;
+    let first = s.ask("t_p(X, Y)").expect("the first ask").rows;
+    for i in 0..60 {
+        let a = s.ask("t_p(X, Y)").unwrap_or_else(|e| panic!("ask {i}: {e}: a question spent the world's budget"));
+        assert_eq!(a.rows, first, "ask {i}: a question spent the world's budget");
+    }
+    let bounds = rofl::engine::WhynotBounds::default();
+    let whynot = s.whynot("t_r(9)", &bounds).unwrap().1;
+    for i in 0..30 {
+        assert_eq!(s.whynot("t_r(9)", &bounds).unwrap().1, whynot, "whynot {i}: a question spent the world's budget");
+        assert!(s.why("t_p(1, 7)").is_ok(), "why {i}: a question spent the world's budget");
+    }
+    assert_eq!(s.eval.steps, steps, "a question left its steps in the world's");
+}
+
+/// A WALL MET ANSWERING is a hole named for the question and a partial answer, as the reference's `query` writes
+/// it, not an error.
+#[test]
+fn an_ask_that_meets_a_wall_is_partial() {
+    let mut s = small(4000, "edb(t_s). t_s(0).\nt_u(X, Y) :- t_s(X).\nt_d(X, Z) :- t_u(X, X).\nt_d(Y, Z) :- t_d(X, Z), Y is X + 1.\n");
+    let a = s.ask("t_d(X, Y)").expect("a wall met answering is no error");
+    assert!(a.partial && a.rows.is_empty());
+    let a = s.ask("t_d(X, Y)").expect("a wall met answering is no error");
+    assert!(a.partial);
+    let state = s.eval.store.canonical_state(&s.eval.h);
+    assert!(state.contains("hole[$kernel]($q(2),budget_exhausted)"), "no hole names the second question");
+}

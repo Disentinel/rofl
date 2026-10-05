@@ -54,6 +54,9 @@ pub struct Session {
     /// harness has warned rather than failed on these since the corpus was
     /// first green — but a caller handed a snapshot should be able to see it.
     pub dangling: usize,
+    /// The questions asked so far: a hole a question writes is `$q(N)`, the
+    /// reference's `qn` (src/api.ts `query`).
+    pub asks: i64,
 }
 
 /// What [`Session::retract_delta`] did: the cells brought to their new state,
@@ -128,7 +131,7 @@ impl Session {
     /// packs — and meant to happen once per process. Fork it after that.
     pub fn open(seed_json: &str, budget: i64) -> Result<Session, String> {
         let l = crate::load(seed_json, budget)?;
-        Ok(Session { eval: l.eval, dangling: l.dangling })
+        Ok(Session { eval: l.eval, dangling: l.dangling, asks: 0 })
     }
 
     /// AN EMPTY WORLD with the kernel's bootstrap tables and nothing else —
@@ -140,7 +143,7 @@ impl Session {
         let v = Vocab::new(&mut h);
         let mut store = Store::new();
         bootstrap_kernel(&mut h, &v, &mut store);
-        Session { eval: Eval::new(h, store, budget, Mode::Rounds, false), dangling: 0 }
+        Session { eval: Eval::new(h, store, budget, Mode::Rounds, false), dangling: 0, asks: 0 }
     }
 
     /// A world of one's own, as a LAYER over this one. The first fork freezes
@@ -152,7 +155,7 @@ impl Session {
         self.eval.settle_provenance();
         self.eval.h.freeze();
         self.eval.store.freeze(&self.eval.h);
-        Session { eval: self.eval.fork(), dangling: self.dangling }
+        Session { eval: self.eval.fork(), dangling: self.dangling, asks: self.asks }
     }
 
     /// Add base facts, written as ROFL. What they add is not visible to a
@@ -725,6 +728,7 @@ impl Session {
     /// constrains, as it does in a body.
     pub fn ask(&mut self, query: &str) -> Result<Answer, String> {
         let t0 = std::time::Instant::now();
+        self.asks += 1;
         if let Some(m) = &self.eval.promise_broken {
             return Err(m.clone());
         }
@@ -775,7 +779,18 @@ impl Session {
         let mut partial = self.eval.store.partial_eval;
         let (rows, keys, scanned, probed) = if self.eval.answers_open(rel) && brk!("ask_store_only" => false; true) {
             let el = self.one_lit(query)?;
-            let (sols, unnamed) = self.eval.answer_on_demand(&el).map_err(|h| describe(&h))?;
+            // A WALL MET ANSWERING is a hole named for the question, and the answer is partial
+            let (sols, unnamed) = match self.eval.answer_on_demand(&el) {
+                Ok(got) => got,
+                Err(Halt::Budget(..)) if brk!("ask_wall_errors" => false; true) => {
+                    let q = self.eval.h.intern("$q");
+                    let id = self.eval.h.mkf(q, &[Term::int(self.asks)]);
+                    let reason = Term::atom(self.eval.v.budget_reason);
+                    self.eval.store.put(&self.eval.h, self.eval.v.hole, self.eval.v.kernel_persp, &[id, reason], crate::store::F_BASE | crate::store::F_FROZEN);
+                    (Vec::new(), true)
+                }
+                Err(h) => return Err(describe(&h)),
+            };
             partial |= unnamed;
             let mut named: Vec<usize> = (0..vars.len()).collect();
             named.sort_by(|a, b| crate::term::cmp_js(&vars[*a], &vars[*b]));

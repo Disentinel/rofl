@@ -376,6 +376,14 @@ check_opt("demand_fixpoint_space", space, 205).
 check_world("demand_done").
 check_file("demand_done", "examples/checks/demand-done.rofl").
 
+-- a question runs under its own budget, counted from nothing, and leaves the world's steps as it found them
+-- (f_a_question_spent_the_world_budget)
+check_world("demand_question_budget").
+check_file("demand_question_budget", "examples/checks/demand-question-budget.rofl").
+check_opt("demand_question_budget", together, 1).
+check_opt("demand_question_budget", explain, 1).
+check_opt("demand_question_budget", budget, 200).
+
 -- a question to a relation unfolded at a call unfolds it in both engines, and leaves the world as it found it
 -- (f_a_question_stored_what_it_unfolded, f_ask_read_the_store_where_query_unfolded)
 check_world("demand_query").

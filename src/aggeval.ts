@@ -941,6 +941,16 @@ export class AggEval {
   private asked: Unknown[] = [];
 
   /** `f` answering a question, with what its unfoldings read that a hole left unknown. */
+  /** A QUESTION RUNS UNDER ITS OWN BUDGET, counted from nothing: steps and rows, the budget and the wall it may meet put back as the world had
+   *  them after (rust/rofl `Eval::questioned`, where the session's budget is the question's). */
+  questioned<T>(budget: number, f: () => T): T {
+    const saved: [number, number, number, [string, number, number] | null] = [this.steps, this.rows, this.budget, this.wallSpent];
+    this.steps = 0;
+    this.rows = 0;
+    this.budget = budget;
+    try { return f(); } finally { [this.steps, this.rows, this.budget, this.wallSpent] = saved; }
+  }
+
   answering<T>(f: () => T): [T, Unknown[], Unknown[]] {
     const was = this.asking, saved = this.renameCounter;
     this.asking = true;

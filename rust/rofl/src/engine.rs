@@ -13418,7 +13418,7 @@ impl Eval {
         let asking = std::mem::replace(&mut self.asking, true);
         self.asked.clear();
         self.demand_trail.clear();
-        let got = self.match_premise(lit, &Subst::default(), 0, None);
+        let got = self.questioned(|e| e.match_premise(lit, &Subst::default(), 0, None));
         self.asking = asking;
         self.rename_counter = saved;
         let asked = std::mem::take(&mut self.asked);
@@ -13467,9 +13467,22 @@ impl Eval {
     /// the evaluation renamed, and the engine's own counter is put back.
     pub fn why_text_with(&mut self, lit: &Lit, o: &WhyOpts, shown: Option<&str>) -> Result<String, String> {
         let saved = std::mem::replace(&mut self.rename_counter, 0);
-        let r = self.why_at(lit, o, shown);
+        let r = self.questioned(|e| e.why_at(lit, o, shown));
         self.rename_counter = saved;
         r
+    }
+
+    /// A QUESTION RUNS UNDER ITS OWN BUDGET: the session's, counted from nothing,
+    /// steps and rows and the wall it may meet put back as the world had them after.
+    fn questioned<T>(&mut self, f: impl FnOnce(&mut Self) -> T) -> T {
+        if brk!("question_spends_world" => true; false) {
+            return f(self);
+        }
+        let saved = (std::mem::replace(&mut self.steps, 0), std::mem::replace(&mut self.rows, 0), self.wall_spent.get());
+        let t = f(self);
+        (self.steps, self.rows) = (saved.0, saved.1);
+        self.wall_spent.set(saved.2);
+        t
     }
 
     /// A `why` is of a ground literal: its book, when it is one, and the
@@ -14488,7 +14501,7 @@ impl Eval {
     pub fn whynot_text(&mut self, lit: &Lit, b: &WhynotBounds, shown: Option<&str>) -> Result<(bool, String), Halt> {
         let saved = std::mem::replace(&mut self.rename_counter, 0);
         let asking = std::mem::replace(&mut self.asking, true);
-        let r = self.whynot_at(lit, b, shown);
+        let r = self.questioned(|e| e.whynot_at(lit, b, shown));
         self.asking = asking;
         self.asked.clear();
         self.demand_trail.clear();

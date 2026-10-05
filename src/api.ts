@@ -861,7 +861,7 @@ export class Rofl {
     let asked = false;
     let trail: Unknown[] = [];
     try {
-      const [got, us, heads] = ev.answering(() => ev.matchPremise(lit, new Map(), 0, null) as unknown[]);
+      const [got, us, heads] = ev.questioned(budget, () => ev.answering(() => ev.matchPremise(lit, new Map(), 0, null) as unknown[]));
       asked = us.length > 0;
       trail = heads;
       ms = got.map((m) => (Array.isArray(m) ? { s: m[0] as Subst } : m as { s: Subst }));
@@ -968,7 +968,7 @@ export class Rofl {
     }
     const ev = this.standing(budget);
     ev.dag = !opts.tree;
-    try { return { ok: true, text: ev.whyText(lit, opts.all ? Infinity : undefined, typeof text === 'string' ? text : undefined) }; } catch (e) { return { ok: false, text: (e as Error).message }; } finally { ev.dag = true; }
+    try { return { ok: true, text: ev.questioned(budget, () => ev.whyText(lit, opts.all ? Infinity : undefined, typeof text === 'string' ? text : undefined)) }; } catch (e) { return { ok: false, text: (e as Error).message }; } finally { ev.dag = true; }
   }
 
   whynot(text: Ask, opts: WhynotOpts = {}): { holds: boolean; text: string } {
@@ -989,8 +989,8 @@ export class Rofl {
     // program's is a refusal.
     ev.dag = !opts.tree;
     try {
-      const [holds, t] = ev.whynotText(lit, { maxDepth: opts.depth ?? DEFAULT_WHYNOT_DEPTH, maxNodes: opts.nodes ?? DEFAULT_WHYNOT_NODES },
-        typeof text === 'string' ? text.trim() : undefined);
+      const [holds, t] = ev.questioned(budget, () => ev.whynotText(lit, { maxDepth: opts.depth ?? DEFAULT_WHYNOT_DEPTH, maxNodes: opts.nodes ?? DEFAULT_WHYNOT_NODES },
+        typeof text === 'string' ? text.trim() : undefined));
       return { holds, text: t };
     } catch (e) {
       if (e instanceof Wall || !ev.plain) return { holds: false, text: describeHalt(e) };
@@ -1082,9 +1082,9 @@ export class Rofl {
         const lit: Lit = { rel: atom.name, persp: mka(MAIN), perspExplicit: false, args: atom.k === 'f' ? atom.args : [], temporal: 'now' };
         const k = kind.k === 'a' ? kind.name : '';
         try {
-          if (k === 'why') text = ev.whyText(lit);
-          else if (k === 'why_all') text = ev.whyText(lit, Infinity);
-          else if (k === 'whynot') text = ev.whynotText(lit, { maxDepth: 3, maxNodes: 64 })[1];
+          if (k === 'why') text = ev.questioned(budget, () => ev.whyText(lit));
+          else if (k === 'why_all') text = ev.questioned(budget, () => ev.whyText(lit, Infinity));
+          else if (k === 'whynot') text = ev.questioned(budget, () => ev.whynotText(lit, { maxDepth: 3, maxNodes: 64 }))[1];
           else { text = 'the kinds of explanation are why, why_all and whynot'; ok = false; }
         } catch (e) { text = k === 'whynot' ? describeHalt(e) : (e as Error).message; ok = false; }
       }
