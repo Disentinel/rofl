@@ -9,7 +9,7 @@ import { getHeapStatistics } from 'node:v8';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { Kernel, nearest, unresolvedSaid, VERDICT, type NbLine, type NbResult } from './kernel.ts';
+import { Kernel, nearest, short, unresolvedSaid, VERDICT, type NbLine, type NbResult } from './kernel.ts';
 import { builtin, cellsOf, codeNames, libFiles, NOT_BUILTIN, parseFront, translated, type NbCell } from './front.ts';
 import { worldOf, type Inputs } from './world.ts';
 import { concernsOf, homeOf, translatorVocab } from '../playground/host.ts';
@@ -95,8 +95,9 @@ export function runFile(file: string, kernel = new Kernel({ wall }), text = read
 
 export { SAID, said, VERDICT } from './kernel.ts';
 
-/** `format`: the backend a picture is written in, `dot` for a graph or `vega-lite` for a table; the kind's first (notebook/draw.ts FORMATS) otherwise. */
-export function print(file: string, r: NbResult, only?: number, shown = SHOWN, format?: string): string {
+/** `format`: the backend a picture is written in, `dot` for a graph or `vega-lite` for a table; the kind's first (notebook/draw.ts FORMATS) otherwise.
+ *  `full`: a why prints its whole proof, as the engine wrote it, and not the chain and the brief proof; with every answer (--all), so by default. */
+export function print(file: string, r: NbResult, only?: number, shown = SHOWN, format?: string, full = shown === Infinity): string {
   const out: string[] = [];
   for (const e of r.errors) out.push(`${file}: error: ${e}`);
   if (r.unresolved) out.push(`${file}: note: ${unresolvedSaid(r.unresolved)}, so a never holds only as far as the model sees:`, ...r.unresolved.map((u) => `  ${u}`));
@@ -112,7 +113,9 @@ export function print(file: string, r: NbResult, only?: number, shown = SHOWN, f
       for (const a of l.answers.slice(0, shown)) out.push(l.kind === 'excise' ? `    ${a.sentence}` : `    - ${a.sentence}`);
       if (l.total > shown && !l.view) out.push(`    ... ${l.total - shown} more${shown < l.answers.length ? ' (--all prints them)' : ''}`);
       if (l.unsure?.total) { out.push(`    out of sight (${l.unsure.text}):`); for (const a of l.unsure.answers) out.push(`    - ${a.sentence}`); }
-      if (l.why) out.push(...l.why.split('\n').map((x) => `    ${x}`));
+      const why = !full && l.brief !== undefined ? short(l.chain ?? [], l.brief) : l.why;
+      if (why) out.push(...why.split('\n').map((x) => `    ${x}`));
+      if (why !== l.why) out.push(`    (the whole proof: --all)`);
       if (l.view) {
         for (const n of l.view.notes) out.push(`    note: ${n}`);
         const block = (v: View) => { const b = backendOf(v, format), t = b.write(v); return b.fence ? ['```' + b.fence, t, '```'] : [t]; };
@@ -302,7 +305,7 @@ Exit  0  every never holds, every cell read
       3  holds as far as the model sees, or stopped at its limit
 
 --json  JSON, fifty answers a line    --cell N  only cell N
---all   every answer                 --timing  times on stderr
+--all   nothing abridged              --timing  times on stderr
 Then: examples/notebook/review.rofl.md, examples/notebook/self.rofl.md.`;
 
 const HELP_ENV = `ROFL_NB_LIMIT=120        seconds a run evaluates before it stops and answers what it found (exit 3)

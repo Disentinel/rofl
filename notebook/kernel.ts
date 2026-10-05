@@ -4,11 +4,15 @@ import { Host, concernsOf, translatorVocab, type Line, type Node, type Row } fro
 import { cellsOf, libFiles, parseFront, translated, type CellKind, type Front } from './front.ts';
 import { asCell, assemble, type Inputs } from './world.ts';
 import { counted, type View } from './draw.ts';
+import { folded } from '../playground/chain.ts';
 
 export type Verdict = 'answers' | 'holds' | 'blind' | 'fails' | 'explained' | 'unasked' | 'unknown';
 export type Answer = { sentence: string; literal: string; at: string[] };
 export type NbLine = { line: number; kind: Line['kind']; text: string; verdict: Verdict; total: number; answers: Answer[];
   unsure?: { text: string; total: number; answers: Answer[] }; note?: string; why?: string; whyRaw?: string; unasked?: string; view?: View;
+  /** a `why`'s short form, what a reader sees first: `chain`, the steps of the value it explains (playground/chain.ts), and `brief`, the proof with
+   *  node ids as the code and its place and the premises proved by finite failure counted; `why` is the whole proof */
+  chain?: string[]; brief?: string;
   /** a line in English: the asking line it reads as; `headline`, the yes, no or count it answers with */
   readAs?: string; headline?: string;
   /** the run was cut short: its count is at least `total`, and a never that found nothing, or a no, is `unknown` */
@@ -32,8 +36,13 @@ export class Kernel {
    *  `wall`: a run's stop, made as the run starts; a run it stops answers what it found and its status is `cut`. */
   constructor(opts: { whole?: boolean; all?: boolean; wall?: () => () => boolean } = {}) { this.whole = !!opts.whole; if (opts.all) this.host.rows = Infinity; this.wall = opts.wall; }
 
-  /** The proof of a ground literal over the last run, as a person reads it: what a picture's mark asks. */
-  why(literal: string): string { return legible(this.host.why(literal)); }
+  /** The proof of a ground literal over the last run, as a person reads it: what a picture's mark asks. Short, as `brief` (above it the
+   *  value's chain), or `full`, the whole proof. */
+  why(literal: string, full = false): string {
+    const y = this.host.whyOf(literal), text = legible(y.text);
+    return full || !y.chain.length ? text : short(y.chain, brief(text, this.nodes));
+  }
+  private nodes: Record<string, Node> = {};
 
   run(path: string, text: string, input: Inputs): NbResult {
     const front = parseFront(text);
@@ -50,6 +59,7 @@ export class Kernel {
     const cells = cellsOf(text);
     const runs = cells.filter((c) => c.kind !== 'natural');
     const out = this.host.run(input.code, runs.map(asCell), input.data, this.wall?.());
+    this.nodes = out.nodes;
     for (const [f, e] of Object.entries(out.parseErrors)) errors.push(`${f}: not parsed: ${e}`);
     if (out.error) errors.push(out.error);
     const lost = out.unresolved.length ? `${unresolvedSaid(out.unresolved)}: ${out.unresolved.slice(0, 5).join(', ')}${out.unresolved.length > 5 ? ', …' : ''}` : undefined;
@@ -72,7 +82,7 @@ export class Kernel {
       const lineOf = (t: string) => { let k = ls.findIndex((l, j) => !seen.has(j) && l.trim() === t); if (k < 0) k = Math.max(0, ls.findIndex((l) => l.trim() === t)); seen.add(k); return c.line + k; };
       const at = o.at && ((ms: string[]) => ms.map((m) => m in o.at! ? c.line + o.at![m] : null));
       return { index: c.index, kind: c.kind, line: c.line, ...(at && { at: { errors: at(o.errors), notes: at(o.notes) } }), errors: c.kind === 'datalog' ? o.errors.map((e) => e.replace(/^line (\d+)/, (_, n) => `line ${c.line + Number(n) - 1}`)) : o.errors.map(hint), notes: o.notes, lines: o.lines.map((l) => {
-        const line: NbLine = { line: lineOf(l.text), kind: l.kind, text: l.text, verdict: l.unasked ? 'unasked' : verdict(l), total: l.total, answers: answers(l.rows), note: l.note && labelled(l.note, out.nodes), why: l.why && legible(l.why), whyRaw: l.why, unasked: l.unasked, ...(l.view && { view: l.view }),
+        const line: NbLine = { line: lineOf(l.text), kind: l.kind, text: l.text, verdict: l.unasked ? 'unasked' : verdict(l), total: l.total, answers: answers(l.rows), note: l.note && labelled(l.note, out.nodes), why: l.why && legible(l.why), whyRaw: l.why, ...(l.chain?.length && l.why && { chain: l.chain, brief: brief(legible(l.why), out.nodes) }), unasked: l.unasked, ...(l.view && { view: l.view }),
           ...(l.english && { readAs: l.english.line + (l.english.note ? ` (${l.english.note})` : ''), ...(l.english.headline && { headline: l.english.headline }) }) };
         if (lost && line.verdict === 'holds') { line.verdict = 'blind'; line.note = lost; }
         if (out.partial) { line.cut = true; if (line.verdict === 'holds' || line.verdict === 'blind' || line.headline === 'no' || line.headline === 'none') line.verdict = 'unknown'; }
@@ -171,6 +181,11 @@ export function legible(text: string): string {
     return `${pad}nothing says ${above ?? 'so'}, and no rule concludes it`;
   })).join('\n');
 }
+
+/** A proof as a reader first sees it: node ids as the code and its place, the premises proved by finite failure counted. */
+const brief = (text: string, nodes: Record<string, Node>) => labelled(folded(text), nodes);
+/** The chain of a value, if the proof has one, and the brief proof under it: what `why` shows unless the whole proof is asked for. */
+export const short = (chain: string[], brief: string) => [`the value's steps, from where it is written:`, ...chain.map((c) => `  ${c}`), 'the proof:', brief].join('\n');
 
 /** A node in a sentence as the code writes it, with where it is. */
 const labelled = (s: string, nodes: Record<string, Node>) => s.replace(/`?(n[0-9a-f]{8,16}_\d+)`?/g, (m, id) => nodes[id] ? `[${nodes[id].label} at ${nodes[id].file}:${nodes[id].line}]` : m);
