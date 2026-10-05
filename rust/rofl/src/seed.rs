@@ -64,6 +64,7 @@ fn read_prems(
                 }
             },
             Some("neg") => prems.push(PremRef::Neg(h.intern(p["key"].as_str().unwrap_or("")))),
+            Some("vrow") => prems.push(PremRef::VRow(h.intern(p["key"].as_str().unwrap_or("")))),
             _ => prems.push(PremRef::Bi(h.intern(p["desc"].as_str().unwrap_or("")))),
         }
     }
@@ -601,6 +602,7 @@ fn prems_json(h: &Heap, s: &Store, prems: &[PremRef]) -> Vec<Value> {
             PremRef::Fact(f) => json!({ "t": "fact", "key": s.key(h, *f) }),
             PremRef::Neg(k) => json!({ "t": "neg", "key": h.name(*k) }),
             PremRef::Bi(d) => json!({ "t": "bi", "desc": h.name(*d) }),
+            PremRef::VRow(k) => json!({ "t": "vrow", "key": h.name(*k) }),
             PremRef::Cell(c) => {
                 let mut k = String::new();
                 s.write_cell_key(h, *c, &mut k);

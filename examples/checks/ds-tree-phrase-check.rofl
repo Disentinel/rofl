@@ -1,0 +1,48 @@
+-- examples/checks/ds-tree-phrase-check.rofl — ds_tree_phrase. A tree read from its
+-- sentence is the tree rofl declares: the same `structure_decl` and
+-- `structure_closure` rows for each relation and its written-as-rofl twin
+-- (`dtpr_`), the same rows concluded, the closure's rows included; and a round trip
+-- through the sentence form loses and gains no declaration (the relations and
+-- closures scripts/sentences.ts says were written).
+dtpc_rel(in, dtp_in, dtpr_in). dtpc_rel(edge, dtp_edge, dtpr_edge).
+dtpc_unlike(X) :- dtpc_rel(X, S, R), structure_decl[$kernel](S, N, K), not structure_decl[$kernel](R, N, K).
+dtpc_unlike(X) :- dtpc_rel(X, S, R), structure_decl[$kernel](R, N, K), not structure_decl[$kernel](S, N, K).
+dtpc_unlike(X) :- dtpc_rel(X, S, _), not structure_decl[$kernel](S, 2, tree).
+alarm(dtpc_unlike).
+dtpc_closure(S, C) :- structure_closure[$kernel](S, C).
+dtpc_closure_lost() :- not structure_closure[$kernel](dtp_edge, dtp_reach).
+dtpc_closure_lost() :- not structure_closure[$kernel](dtpr_edge, dtpr_reach).
+dtpc_closure_extra(S) :- structure_closure[$kernel](S, _), S != dtp_edge, S != dtpr_edge.
+alarm(dtpc_closure_lost).
+alarm(dtpc_closure_extra).
+dtpc_rows(in, P, C) :- dtp_in(P, C), not dtpr_in(P, C).
+dtpc_rows(in, P, C) :- dtpr_in(P, C), not dtp_in(P, C).
+dtpc_rows(reach, P, C) :- dtp_reach(P, C), not dtpr_reach(P, C).
+dtpc_rows(reach, P, C) :- dtpr_reach(P, C), not dtp_reach(P, C).
+dtpc_rows(lost, x, x) :- not dtp_in(n1, n4).
+dtpc_rows(lost, x, x) :- not dtp_reach(n1, n3).
+dtpc_rows(lost, x, x) :- not dtp_reach(n1, n2).
+alarm(dtpc_rows).
+-- the round trip (check_opt(W, sentences, 1), docs/aggregates.md "The sentence form, as built")
+sentence_lost[audit](R)     :- sentence_want(R), not rule_known(R).
+sentence_gained[audit](R)   :- concludes(R, Rel), sentence_rel(Rel), not sentence_want(R).
+decl_lost[audit](Rel)       :- sentence_structure(Rel, N, Kind), not structure_decl[$kernel](Rel, N, Kind).
+decl_lost[audit](Rel)       :- sentence_closure(Rel, C), not structure_closure[$kernel](Rel, C).
+decl_gained[audit](Rel)     :- structure_decl[$kernel](Rel, N, Kind), sentence_rel(Rel), not sentence_structure(Rel, N, Kind).
+decl_gained[audit](Rel)     :- structure_closure[$kernel](Rel, C), sentence_rel(Rel), not sentence_closure(Rel, C).
+went_round()                :- sentence_structure(_, _, _).
+nothing_went_round()        :- not went_round().
+alarm(sentence_lost).
+alarm(sentence_gained).
+alarm(decl_lost).
+alarm(decl_gained).
+alarm(nothing_went_round).
+sentence_inexact[audit](W, M, N) :- sentence_exact(W, M, N), M != N.
+alarm(sentence_inexact).
+-- and the tree is WRITTEN in its own words, a rule rofl-render wrote back as rofl would read back too
+edb(sentence_word).
+sentence_word(dtp_in, "has one parent and no node is its own ancestor").
+sentence_word(dtp_edge, "holds of each node and every ancestor of it").
+sentence_says(Rel, T)          :- sentence_word(Rel, T), sentence_of(Rel, S), N is str_segs(S, T), N > 1.
+sentence_unsaid[audit](Rel, T) :- sentence_word(Rel, T), not sentence_says(Rel, T).
+alarm(sentence_unsaid).

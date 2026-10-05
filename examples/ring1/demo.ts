@@ -225,7 +225,7 @@ function bodyElem(t: J, wild: Map<number, number>): BodyElem {
 }
 
 /** A DECLARATION is a clause whose head is wrapped by what it declares: `$lattice(Op, Lit)`, `$widen(N, $lattice(..))`,
- *  `$tag(Alg, Lit)`, `$order(Kind, Dirs, Lit)`, `$structure(Kind, Roles, Lit)` (a role `key` where none is written), and
+ *  `$tag(Alg, Lit)`, `$order(Kind, Dirs, Lit)`, `$structure(Kind, Roles, Lit)` (a role `key` where none is written; a tree's `closure` wraps it, `$closure(Name, $structure(..))`), and
  *  `$dominance(Lit, Lit)` with its body. The host builds the clause src/parser.ts builds for the same text. */
 function declaration(t: J, bodyT: J, wild: Map<number, number>): Clause | null {
   const name = (x: J): string => (x as { name: string }).name;
@@ -240,6 +240,11 @@ function declaration(t: J, bodyT: J, wild: Map<number, number>): Clause | null {
   if ((a = fn(t, '$order'))) return { head: lit(a[2], wild), body: [], lattice: name(a[0]), ord: unlistK(a[1]).map(name) };
   if ((a = fn(t, '$structure'))) {
     return { head: lit(a[2], wild), body: [], structure: { kind: name(a[0]), roles: unlistK(a[1]).map((r) => (name(r) === 'key' ? '' : name(r))) } };
+  }
+  if ((a = fn(t, '$closure'))) {
+    const inner = fn(a[1], '$structure');
+    if (!inner) throw new Unsupported('closure of a non-structure');
+    return { head: lit(inner[2], wild), body: [], structure: { kind: name(inner[0]), roles: unlistK(inner[1]).map((r) => (name(r) === 'key' ? '' : name(r))), closure: name(a[0]) } };
   }
   if ((a = fn(t, '$dominance'))) return { head: lit(a[0], wild), body: unlistK(bodyT).map((b) => bodyElem(b, wild)), dominator: lit(a[1], wild) };
   return null;

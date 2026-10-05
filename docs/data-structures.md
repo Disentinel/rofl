@@ -1,9 +1,10 @@
 # Declared data structures
 
 Designed 2026-10-04 with the owner (`f_a_structure_is_declared_and_does_not_change_the_meaning`),
-work item `w_data_structures`. Step 1 of the order, `function`, is built (see
-"Function, as built"); the other structures are not, and this is the note the
-three parsers, the TS check and the Rust engine are built from.
+work item `w_data_structures`. Steps 1 and 2 of the order, `function` and `tree`
+with `closure`, are built (see "Function, as built" and "Tree, as built"); the
+other structures are not, and this is the note the three parsers, the TS check
+and the Rust engine are built from.
 
 ## The rule
 
@@ -48,7 +49,7 @@ variable they mark, as `min` and `max` do in `pareto p(K, min C, max T).`
 
 | Structure | Declaration | Sentence |
 | --- | --- | --- |
-| tree | `tree ast_in(P, C).` `tree ast_in(P, C) closure ast_within.` | `` Each child of `ast_in` has one parent and no node is its own ancestor. `` `` `ast_within` holds of each node and every ancestor of it. `` |
+| tree | `tree ast_in(P, C).` `tree ast_in(P, C) closure ast_within.` | `` Each child of `ast_in` has one parent and no node is its own ancestor. `` and, with the closure, `` ... ancestor, and `ast_within` holds of each node and every ancestor of it. `` |
 | alias | `alias in_fn(N, F) is nearest_v(N, F).` `alias ast_in(P, C) is ast_child(P, _, _, C).` | `` `in_fn` is `nearest_v`. `` `` `ast_in` is `ast_child` without its field and position. `` |
 | function | `function ast_name(N, to Name).` | `` `ast_name` has one Name for each N. `` |
 | span | `span src_range(N, from S, to E).` `span src_range(N, from S, to E) laminar.` | `` Each `src_range` of N runs from S to E. `` and `` ... and any two are nested or apart. `` |
@@ -244,7 +245,9 @@ it.
 2. **`tree` with `closure`.** The largest saving (a fifth of every world,
    a third of a sealed one) and the readers are known (below), so it is the
    one to measure the whole design on. Needs delta-first (the first-load
-   problem) and after it the engine's read paths are stable.
+   problem) and after it the engine's read paths are stable. **Built
+   2026-10-05** where no witness is kept (see "Tree, as built"); where witnesses
+   are kept the closure is rows.
 3. **`alias`.** Mostly storage names and permuted indexes (~9%); independent
    of the tree, but it touches the same read paths, so after it.
 4. **`ordered`, then `sequence`.** A sorted index first (small), then
@@ -306,6 +309,140 @@ index lookup, and a second structure for it would store what the index holds.
 Facts, `why` and `whynot` are the same with and without the declaration
 (`tests/structure.rs`, the twin relations of `ds_function_holds`).
 
+## Tree, as built
+
+`tree ast_in(P, C).` and `tree ast_in(P, C) closure ast_within.` in all three readers
+(`src/parser.ts`, `rust/rofl/src/rofl_parse.rs`, `examples/ring1/ring1.rofl`, whose
+tree wraps a closure as `$closure(Name, $structure(..))`) and as the sentences
+`` Each child of `ast_in` has one parent and no node is its own ancestor. `` and, with a
+closure, `` ... , and `ast_within` holds of each node and every ancestor of it. ``
+(`scripts/read_md.ts`, rofl-render; a line that opens with `Each` is no question to
+the notebook, `english()` leaves these two alone as it leaves a tag's). A tree has
+no role word; its first argument is the parent and its second the child. The door
+refuses, with the same words in both engines: what a function's door refuses; a tree
+of other than two arguments; a `closure` on anything but a tree; a closure that is its
+tree's relation, a kernel relation, already a structure, or already concluded by a rule
+or a fact; and afterwards, at the clause, any rule or fact that concludes the closure
+(`'ast_within' is the closure of the tree ast_in and has no other conclusion`).
+
+Reflection, timeless in the kernel's book: `structure_decl(Rel, 2, tree)` and, with a
+closure, `structure_closure(Rel, Closure)` (a new reserved name: every golden's census
+moves by one). The model's two closure rules are not written by the author any more:
+**`closure` lowers, at load, to the two rules the author would have written**,
+
+    ast_within[B](P, C) :- ast_in[B](P, C).
+    ast_within[B](P, D) :- ast_within[B](P, X), ast_in[B](X, D).
+
+with a variable book, so the closure holds in every book the edges have (the note's
+choice: a declaration names the relation, not a book). The rules are in the program as
+any rules are: reflected (so `flow` gains the book variable's row and the model's
+rule rows are the lowered text, which is what `rules_js-structure` and
+`cost_shapes_model` moved by), numbered by content (the TypeScript and the Rust engine
+name them alike), and printed by `why` as any rule is. TypeScript evaluates them.
+
+**The promise** (`checkTrees`, `check_trees`), judged where a function's is (after every
+evaluation, tick, wall and retraction; a refused world stays refused): per book, one
+parent for each child, then no cycle. `program rejected: tree ast_in: node (c) has two
+parents in the book main: (a) and (b)`, with `; 1 more child breaks it too`; or `node (a) is
+its own ancestor in the book main: through (a), (c), (b)`, each node the parent of the one
+before it, from the smallest node of the cycle, with `; 1 more cycle`. The smallest child,
+its two smallest parents and the cycle through the smallest node, by canonical text, so
+both engines name the same ones; a child with two parents is refused before a cycle is
+looked for. The edges are judged as they stand, asserted or concluded.
+
+**What the Rust engine answers, and when.** The closure is answered from the tree only
+where no witness is kept (`sealed(provenance)`, or the harness's `--no-provenance`): a
+witness names the facts a conclusion rests on, and a row that is not stored is no fact.
+Then no rule of the closure fires and no row of it is stored; the forest of each book
+(`forest.rs`: arrays indexed by node, a parent and the engine's own pre-order numbering)
+answers each premise that reads it: both ends bound is interval containment, the
+descendant bound is the parent chain, the ancestor bound is one pre-order range, neither
+bound is the ancestors of every node (what a reader that wants every pair asks for, and
+costs every row, as the stored rows would). A negation asks the same. The forest is
+built whole from the edge relation's rows and again when that relation has more rows than
+when it was built (a rebuild of the touched book, the note's first choice for
+maintenance: an edge added or retracted is a rebuild, and a retraction in such a world is
+a full evaluation, `retract_delta` refusing a closure answered from its tree). A rule that
+reads the closure is fired whole when news of the edges reaches it and it has not fired
+since they last changed, since the closure has no news of its own (the case: the edges a
+negation concludes, a level above the rule's first firing; `vclosure_reader_stale`). A
+broken forest never loops and is never read: the first parent stands, a node no root
+reaches has no place, and the world is refused after the evaluation by the promise.
+Where a witness is kept, and where the closure's edges are concluded from it, or it is
+answered on demand, or the world has a lattice or an assumption, the closure is rows:
+the closure kernel (`fire_closure`) walks each book (the kernel reads the lowered rules'
+variable book); `vclosure_reason` says which.
+
+**The planner.** The estimate of a premise over the closure is read off the forest, not
+counted: both ends bound is one match; the descendant bound is the mean depth; the
+ancestor bound the mean subtree; neither bound costs every row, so a plan never starts
+from it, and a rule that names the closure first is solved from the premise that binds an
+end (`ds_tree_plan`: a closure larger than the world's space wall, read by rules that
+name it first; written order meets the wall, the plan does not; and with the estimate of
+an unbound closure at one row, `vclosure_unbound_cheap`, the world is cut).
+
+**What the state says.** The canonical state lists the closure's rows, generated on
+output from the forests (`tick drv support=0`, as a sealed derived row prints), so the
+census counts them and the goldens keep their meaning; the count of stored facts
+(`fact_count`, rofl-eval's `facts`) does not. The rows are those of the tick evaluated:
+a tick that ends takes them as it takes any derived row.
+
+**What an explanation says.** A premise that matched a row of the closure names the row
+(`PremRef::VRow`, the canonical key of the fact, spelled where a firing records its
+premises), so a cell's member keeps `[fact:w[main](a,b)]` in the state and in a snapshot, and
+`why` of a row, as a premise or asked, rebuilds its firing from the tree: the lowered
+first rule over the edge when the parent is the ancestor, else the second over the row of
+the parent and the edge of the parent to the child (a forest gives a row one firing), a
+row written once and referred to after. `excise` lists the closure's rows with the rest.
+All of it is what the world with the closure STORED says (`ROFL_NO_VCLOSURE=1`), byte for
+byte: whycheck asks every why, why all, whynot and excise and the canonical state of the
+sealed worlds of both, and the goldens hold their states to each other. A snapshot of
+such a world is opened with its closures engaged (`Eval::vclosure_restore`) and the same
+state. **A wall is the one difference, and it is declared.** A row answered from the tree
+costs no space and no step, so a world whose wall the stored closure meets is cut with
+the rows and not without (`ds_tree_plan`, which says so with
+`check_opt(W, closure_unwalled, 1)`); a world that meets the wall stored and does not say
+so is red, and one that says so and meets none (f_a_join_plan_is_never_observed, the same
+principle: a hole is a shrug, and completing it refines it; an owner question).
+
+**Proof.** `ds_tree_syntax`, `ds_tree_phrase`, `ds_tree_holds` and `ds_tree_sealed` (the
+same files, with and without the seal: the closure answered from the tree, by the kernel
+and by TypeScript's rules, against a hand-written twin, in each pattern a reader of the
+model asks, in two books, with a child whose parents are in two books, with edges that
+arrive in rounds and edges a negation concludes), `ds_tree_tick[_sealed]`,
+`ds_tree_retract[_sealed]`, `ds_tree_retract_edge[_sealed]`, `ds_tree_wall`, `ds_tree_plan`,
+`ds_tree_explain` (the explanations, by hand), `ds_tree_demand_edge` and
+`ds_tree_demand_book[_sealed]` (edges that read a demand relation);
+eight refused forests; `rust/rofl/tests/tree.rs` (forty random forests, the closure
+answered from the tree against the rules, every pattern asked, a retraction against a
+fresh world); 32 planted faults (`scripts/agg_breaks.ts`).
+
+**Measured** (Rust release, `rofl-eval --bytes --budget 4000000000 --space 40000000
+--delta-first`, three runs, median; the seeds regenerated for the scanner's 16-hex node
+ids; before is the engine and the model of 3f37887, after this tree's).
+
+| world | facts stored, before | after | closure rows not stored | eval ms, before | after | RSS MB, before | after |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| self, sealed | 1,315,105 | 801,480 (-39.1%) | 513,629 | 3,255 | 2,753 | 509 | 476 |
+| mcp, sealed | 979,700 | 645,112 (-34.2%) | 334,580 | 2,412 | 1,961 | 414 | 378 |
+| cli_exits, sealed | 1,484,841 | 949,150 (-36.1%) | 535,683 | 3,651 | 2,925 | 576 | 534 |
+| util, sealed | 2,446,459 | 1,558,330 (-36.3%) | 888,133 | 6,334 | 5,154 | 984 | 928 |
+| self | 2,341,818 | 2,341,825 | 0 | 10,695 | 10,646 | 1,390 | 1,390 |
+| mcp | 1,736,397 | 1,736,392 | 0 | 7,224 | 7,525 | 1,062 | 1,056 |
+| cli_exits | 2,644,152 | 2,644,147 | 0 | 11,520 | 12,010 | 1,565 | 1,552 |
+| util | 4,302,735 | 4,302,742 | 0 | 19,656 | 20,024 | 2,671 | 2,673 |
+
+Sealed, the facts the closure took are gone to the row (before less after is the closure
+less the reflection of the two rules, four rows), and the evaluation is a fifth shorter
+(the closure is not walked into rows, and what reads it asks the tree). The resident set
+falls less (6-9%) since it holds the seed's snapshot, which is loaded before anything
+is evaluated. Not sealed, the closure is rows as it was: the spread of three runs
+(about 5%) covers the difference. The canonical state of util, sealed, before and after,
+is the same in every relation of the model, `ast_within` by hash; what differs is the
+reflection of the two lowered rules and the structure rows (17 relations, none of them
+facts of the world). Over one seed the sealed state (the closure from the tree) equals the state with the kernel's rows relation by relation and row by row on all four corpora (the provenance's relations aside; only `shrug`, a row the seal writes, differs). A reader asks the tree for 48% of the closure's rows (matches, not
+distinct rows: 248,461 of 513,629 on self, 445,682 of 888,133 on util).
+
 ## What serves the readers of the tree
 
 `facts/ast-within-readers.rofl` classifies every premise of `rules/js-*.rofl`
@@ -364,11 +501,18 @@ premises under the same questions and is not counted.
 
 ## Open questions
 
-- **Closure by declaration or by recognition.** This note lowers `closure` to
-  the two rules and deletes them from the model. The alternative keeps the
-  rules and lets the engine propose `closure` (detection) while still
-  evaluating them: no model edit, but the licence then rests on a
-  recognition, which is the thing the design refuses. Decision needed.
+- **Closure by declaration or by recognition.** Taken, by declaration: `closure`
+  lowers to the two rules and the model's are deleted ("Tree, as built"). The
+  alternative kept the rules and let the engine propose `closure` (detection)
+  while still evaluating them: no model edit, but the licence would rest on a
+  recognition, which is the thing the design refuses.
+- **The closure where witnesses are kept.** Stored, today. Answering it from the
+  tree there needs a row to exist when a conclusion cites it (a witness names
+  facts), so the rows a conclusion cites would be stored when cited, with their
+  one derivation, the others generated on output with their witness and
+  `derived_by` line, and `why` would build a row on demand. Sealed, a reader's
+  matches are under half the closure's rows, so the gain is under half the closure
+  and its provenance rows. Bounded; not built; the owner says whether it is wanted.
 - **`ordered` as a word** clashes with `pareto` and `lex`, "declared order".
 - **A promise per book or per relation**: built per book (a cell per book);
   `ast_in[code]` and a copy of it in another book then each need a promise.

@@ -907,14 +907,28 @@ export class AggEval {
   private batchAt = 0;
   private liveFront: string[] = [];
   private demandHeads: Lit[] = [];
-  /** The calls answered on demand being unfolded, as variant keys: a call met again inside its own unfolding would unfold forever. */
-  private demandCalls: string[] = [];
   /** The relations answered on demand whose every answer is ground and whose every rule fires bottom-up (`demandClosedRels`). */
   private demandClosed = new Set<string>();
-  /** Solutions below a call answered on demand that an unknown left undecided: each call up holes its head under them, as for a fault. */
-  private demandUnknown = 0;
-  /** The head `demandUnknown` last left unknown: what the call above it rests on. */
-  private demandLast: Unknown | null = null;
+  /** The relations answered on demand that may call themselves through others not closed: their calls being unfolded are kept as variant keys. */
+  private demandCyclic = new Set<string>();
+  /** The calls of `demandCyclic` relations being unfolded, as variant keys. */
+  private demandCalls: string[] = [];
+  /** The rules being unfolded at each depth, beside `demandHeads`. */
+  private demandRuleIds: string[] = [];
+  /** The heads of calls answered on demand that an unknown below left undecided, in the order met: each call up holes its head under those of the relation it called, as for a fault. */
+  private demandTrail: Unknown[] = [];
+  /** A question is being answered (whynot, query): below a call, what a hole left unknown is read as unknown, as in a firing, and noted in `asked`. */
+  private asking = false;
+  /** What a question's unfolding read that a hole left unknown. */
+  private asked: Unknown[] = [];
+
+  /** `f` answering a question, with what its unfoldings read that a hole left unknown. */
+  answering<T>(f: () => T): [T, Unknown[]] {
+    const was = this.asking;
+    this.asking = true;
+    this.asked = [];
+    try { return [f(), this.asked]; } finally { this.asking = was; this.asked = []; this.demandTrail = []; }
+  }
   private assume: Assumption | null = null;
   private bootstrap: boolean;
   answer: RuleAnswer = emptyAnswer();
@@ -1108,18 +1122,20 @@ export class AggEval {
     this.widenTh = this.widenThresholds();
     this.demandRels = demand.map(([rel, is]) => [rel, is.map((i) => this.rules[i])]);
     this.demandClosed = this.demandClosedRels();
+    this.demandCyclic = this.demandCyclicRels();
   }
 
-  /** THE DEMAND RELATIONS WHOSE ANSWERS ARE ALL GROUND, and whose rules all fire bottom-up: a call met again inside its own
-   *  unfolding reads the store. A position is ground when every variable of each rule's head there is bound by a positive
+  /** THE DEMAND RELATIONS WHOSE ANSWERS ARE ALL GROUND, and whose rules all fire bottom-up: a call to one, at any depth,
+   *  reads the store. A position is ground when every variable of each rule's head there is bound by a positive
    *  premise at a ground position (any of a relation not answered on demand), or by `is` or `=` from ground ones; assumed
-   *  of all and withdrawn where a rule falls short. */
+   *  of all and withdrawn where a rule falls short. THE BOOK IS A POSITION TOO: a head's book that is a variable is ground when
+   *  a premise at a ground book binds it (`w[B](P, C) :- e[B](P, C).`), as the head's book that is an atom is. */
   private demandClosedRels(): Set<string> {
     const ground = new Map<string, boolean[]>();
     for (const [rel, rs] of this.demandRels) {
       const n = rs[0].clause.head.args.length;
-      const ok = rs.every((r) => r.clause.head.args.length === n && r.clause.head.persp.k === 'a');
-      ground.set(rel, new Array<boolean>(n).fill(ok));
+      const ok = rs.every((r) => r.clause.head.args.length === n);
+      ground.set(rel, new Array<boolean>(n + 1).fill(ok));
     }
     for (let changed = true; changed;) {
       changed = false;
@@ -1133,8 +1149,8 @@ export class AggEval {
             for (const b of r.clause.body) {
               if (b.t === 'pos') {
                 const g = ground.get(b.lit.rel);
-                b.lit.args.forEach((a, i) => { if (g === undefined || (g.length === b.lit.args.length && g[i])) varsOf(a, bound); });
-                if (g === undefined) varsOf(b.lit.persp, bound);
+                b.lit.args.forEach((a, i) => { if (g === undefined || (g.length === b.lit.args.length + 1 && g[i])) varsOf(a, bound); });
+                if (g === undefined || (g.length === b.lit.args.length + 1 && g[b.lit.args.length])) varsOf(b.lit.persp, bound);
               } else if (b.t === 'bi' && (b.op === 'is' || b.op === '=')) {
                 for (const [from, to] of b.op === 'is' ? [[b.r, b.l]] : [[b.r, b.l], [b.l, b.r]]) {
                   if ([...varsOf(from)].every((v) => bound.has(v))) varsOf(to, bound);
@@ -1142,13 +1158,31 @@ export class AggEval {
               }
             }
           }
-          r.clause.head.args.forEach((a, j) => {
+          [...r.clause.head.args, r.clause.head.persp].forEach((a, j) => {
             if (gr[j] && ![...varsOf(a)].every((v) => bound.has(v))) { gr[j] = false; changed = true; }
           });
         }
       }
     }
     return new Set(this.demandRels.filter(([rel, rs]) => rs.every((r) => r.safe) && ground.get(rel)!.every((g) => g)).map(([rel]) => rel));
+  }
+
+  /** The demand relations not closed that reach themselves through calls to demand relations not closed (a closed one is read from the store). */
+  private demandCyclicRels(): Set<string> {
+    const unfolded = (rel: string) => this.demandRels.some(([r]) => r === rel) && !this.demandClosed.has(rel);
+    const calls = new Map<string, string[]>();
+    for (const [rel, rs] of this.demandRels) {
+      if (unfolded(rel)) calls.set(rel, rs.flatMap((r) => r.clause.body.flatMap((b) => litsOf(b)).map((l) => l.rel)).filter(unfolded));
+    }
+    const out = new Set<string>();
+    for (const [start, first] of calls) {
+      const seen = new Set<string>(), todo = [...first];
+      for (let r = todo.pop(); r !== undefined; r = todo.pop()) {
+        if (r === start) { out.add(start); break; }
+        if (!seen.has(r)) { seen.add(r); todo.push(...(calls.get(r) ?? [])); }
+      }
+    }
+    return out;
   }
 
   /** THE CARRY OF A LATTICE ACROSS A TICK: `L(K..., V) :- L@next(K..., V).` */
@@ -2261,6 +2295,9 @@ export class AggEval {
           meta = mkf('earlier', [mki(t - 1)]);
         } else if (target.k === 'f' && target.name === '$below') meta = mka('below');
         else meta = roots(node);
+      } else if (reason === 'budget' && cause === 'demand_cycle') {
+        // the unfolding stopped where the call came round, not at a wall
+        meta = mka(cause);
       } else if (reason === 'budget' && cause === 'regions_capped') {
         meta = mkf('spent', [mka('regions'), mki(this.regionsCapped.get(canonTerm(target)) ?? 0), mki(LABEL_REGIONS)]);
       } else if (reason === 'budget') {
@@ -2817,25 +2854,25 @@ export class AggEval {
           }
           if (b.t === 'pos') {
             const only = frontAt !== null && frontAt[0] === i ? frontAt[1] : null;
-            const faults = this.faultCount, unknowns = this.demandUnknown;
+            const faults = this.faultCount, unknowns = this.demandTrail.length;
             const found = this.matchPremise(b.lit, a.s, depth, only);
-            this.demandBelow(depth, a.s, faults, unknowns);
+            this.demandBelow(depth, b.lit, a.s, faults, unknowns);
             for (const [s2, r] of found) next.push({ s: s2, prems: [...a.prems, r] });
           } else if (b.t === 'neg') {
-            const faults = this.faultCount, unknowns = this.demandUnknown;
+            const faults = this.faultCount, unknowns = this.demandTrail.length;
             const holds = this.negHolds(b.lit, a.s, depth);
-            const below = this.faultCount > faults || this.demandUnknown > unknowns;
-            if (below && depth > 0 && this.firing) { this.demandBelow(depth, a.s, faults, unknowns); continue; }
+            const below = this.faultCount > faults || this.demandTrail.length > unknowns;
+            if (below && depth > 0 && (this.firing || this.asking)) { this.demandBelow(depth, b.lit, a.s, faults, unknowns); continue; }
             if (holds && this.strictNeg && this.latSpread.size > 0 && this.readUnknown(b.lit, a.s, true) !== null) continue;
             // UNFOLDED AT A CALL, a negation what a hole left unknown could decide leaves the call's head under it unknown, as a fault would
-            if (holds && depth > 0 && this.firing && this.demandHeads.length > 0 && this.latSpread.size > 0) {
+            if (holds && depth > 0 && (this.firing || this.asking) && this.demandHeads.length > 0 && this.latSpread.size > 0) {
               const u = this.readUnknown(b.lit, a.s, true);
-              if (u !== null) { this.demandUnknownAt(depth, a.s, u); continue; }
+              if (u !== null) { this.demandUnknownRead(depth, a.s, u); continue; }
             }
             if (holds) {
               if (depth === 0 && this.firing && ruleId !== null && below) {
                 const u = this.litUnknown(b.lit, a.s);
-                if (this.faultCount === faults && this.demandLast !== null) this.unkEdges.push([nUnk(u), nUnk(this.demandLast)]);
+                if (this.faultCount === faults) for (const f of this.demandCalled(b.lit.rel, unknowns)) this.unkEdges.push([nUnk(u), nUnk(f)]);
                 else this.faultEdge(u);
                 this.latPlain.add(u.id);
                 this.latUndecided.push([ruleId, i, a.s, [u]]);
@@ -4978,6 +5015,25 @@ export class AggEval {
         }
       }
     }
+    // A RULE ANSWERED ON DEMAND fires at no level: an unknown reaches its head through a positive premise as through a
+    // bottom-up rule's, and its readers from there (a negation in it reads holes at each call)
+    if (only === null) {
+      for (const [drel, rs] of this.demandRels) {
+        if (this.demandClosed.has(drel)) continue;
+        for (const r of rs) {
+          for (let i = 0; i < r.plan.length; i++) {
+            const b = r.plan[i];
+            if (b.t !== 'pos' || b.lit.rel !== rel) continue;
+            const s0 = this.unknownBinds(b.lit, u, new Map());
+            if (s0 === null) continue;
+            for (const s of this.poisonSolve(r, i, s0)) {
+              const v = this.reachedConclusion(r, s, plain);
+              if (v !== null) out.push([v, r.id, u]);
+            }
+          }
+        }
+      }
+    }
     return out;
   }
 
@@ -5421,21 +5477,71 @@ export class AggEval {
   }
 
   /** A fault (`faults`) or an unknown (`unknowns`) met below a premise answered on demand leaves the call above it unknown under `s`. */
-  private demandBelow(depth: number, s: Subst, faults: number, unknowns: number): void {
-    if (this.faultCount > faults) this.demandFault(depth, s);
-    else if (this.demandUnknown > unknowns) this.demandUnknownAt(depth, s, this.demandLast);
+  private demandBelow(depth: number, l: Lit, s: Subst, faults: number, unknowns: number): void {
+    if (this.faultCount > faults) { this.demandFault(depth, s); return; }
+    if (this.demandTrail.length === unknowns) return;
+    let bound = false;
+    for (const u of this.demandCalled(l.rel, unknowns)) {
+      const s2 = this.unknownBinds(l, u, s);
+      if (s2 === null) continue;
+      this.demandUnknownAt(depth, this.knownPart(l, s, s2), [u]);
+      bound = true;
+    }
+    if (!bound) this.demandUnknownAt(depth, s, this.demandTrail.slice(unknowns));
+  }
+
+  /** The heads of calls to `rel` left unknown past `unknowns` on the trail, each once; every one past it when none is of `rel`. */
+  private demandCalled(rel: string, unknowns: number): Unknown[] {
+    const past = this.demandTrail.slice(unknowns);
+    const once = (us: Unknown[]): Unknown[] => { const seen = new Set<string>(); return us.filter((u) => !seen.has(u.id) && !!seen.add(u.id)); };
+    const mine = once(past.filter((u) => uRelOf(u) === rel));
+    return mine.length > 0 ? mine : once(past);
+  }
+
+  /** `s` and what `s2` binds of `l`'s variables to a known ground value. */
+  private knownPart(l: Lit, s: Subst, s2: Subst): Subst {
+    const vs = new Set<string>();
+    for (const a of l.args) varsOf(a, vs);
+    const out: Subst = new Map(s);
+    for (const v of vs) {
+      if (isGround(resolve(mkv(v), out))) continue;
+      const t = resolve(mkv(v), s2);
+      if (isGround(t) && !holdsUnknown(t)) out.set(v, t);
+    }
+    return out;
+  }
+
+  /** A CALL MET AGAIN INSIDE ITS OWN UNFOLDING, `l` under `s`, is not unfolded: its answers past those found are unknown (a hole on the rule it was met in, `demand_cycle`), and the call above rests on them. */
+  private demandCycle(l: Lit, s: Subst): void {
+    if (!(this.firing || this.asking)) return;
+    const rid = this.demandRuleIds[this.demandRuleIds.length - 1];
+    if (rid === undefined) return;
+    const u = this.litUnknown(l, s);
+    if (this.firing) {
+      this.arithHole(rid, 'demand_cycle');
+      this.unkEdges.push([nUnk(u), nHole(this.ruleMarker(rid))]);
+      this.plainPending.push([u, true]);
+    } else if (!this.asked.some((x) => x.id === u.id)) this.asked.push(u);
+    this.demandTrail.push(u);
+  }
+
+  /** `u`, a hole left unknown, read below a call: in a firing the call's head is unknown; answering a question, `u` is noted. */
+  private demandUnknownRead(depth: number, s: Subst, u: Unknown): void {
+    if (!this.firing && !this.asked.some((x) => x.id === u.id)) this.asked.push(u);
+    this.demandUnknownAt(depth, s, [u]);
   }
 
   /** AN UNKNOWN BELOW A CALL ANSWERED ON DEMAND, in a firing: the call's head under `s` is unknown, reached from `from`, and so is each call up. */
-  private demandUnknownAt(depth: number, s: Subst, from: Unknown | null): void {
-    if (depth === 0 || !this.firing) return;
+  private demandUnknownAt(depth: number, s: Subst, from: Unknown[]): void {
+    if (depth === 0 || !(this.firing || this.asking)) return;
     const head = this.demandHeads[this.demandHeads.length - 1];
     if (head === undefined) return;
     const u = this.litUnknown(head, s);
-    if (from !== null) this.unkEdges.push([nUnk(u), nUnk(from)]);
-    this.plainPending.push([u, true]);
-    this.demandLast = u;
-    this.demandUnknown++;
+    if (this.firing) {
+      for (const f of from) this.unkEdges.push([nUnk(u), nUnk(f)]);
+      this.plainPending.push([u, true]);
+    }
+    this.demandTrail.push(u);
   }
 
   /** The cells the body aggregate at element `i` holed under `s`. */
@@ -6335,9 +6441,12 @@ export class AggEval {
       if (!seen.has(fr.key)) { seen.add(fr.key); keys.push(fr.key); out.push([s3, { t: 'fact', key: fr.key }]); }
     }
     const drs = this.demandRels.find(([r]) => r === l.rel);
-    // A CALL MET AGAIN INSIDE ITS OWN UNFOLDING would unfold forever; of a relation whose answers are all in the store it reads only those
-    const call = drs !== undefined && this.demandClosed.has(l.rel) ? this.anonLitKey(l, s) : null;
-    if (drs !== undefined && !(call !== null && this.demandCalls.includes(call))) {
+    // A CLOSED RELATION'S ANSWERS ARE ALL IN THE STORE at its fixpoint (its rules fire bottom-up and its news refires every reader): read, not unfolded
+    // A CALL MET AGAIN INSIDE ITS OWN UNFOLDING would unfold without end: its answers past those found are unknown, and so is the call it was met in
+    const call = drs !== undefined && this.demandCyclic.has(l.rel) ? this.anonLitKey(l, s) : null;
+    const again = call !== null && this.demandCalls.includes(call);
+    if (again) this.demandCycle(l, s);
+    if (drs !== undefined && !this.demandClosed.has(l.rel) && !again) {
       if (call !== null) this.demandCalls.push(call);
       try {
         for (const dr of drs[1]) {
@@ -6370,8 +6479,9 @@ export class AggEval {
     const s3 = unifyAll(head.args, call.args, s2);
     if (s3 === null) return [];
     this.demandHeads.push(head);
+    this.demandRuleIds.push(r.id);
     let sols: Sol[];
-    try { sols = this.solveBody(rn.body, s3, depth + 1, null, r.id); } finally { this.demandHeads.pop(); }
+    try { sols = this.solveBody(rn.body, s3, depth + 1, null, r.id); } finally { this.demandRuleIds.pop(); this.demandHeads.pop(); }
     const out: [Subst, PremRef][] = [];
     for (const sol of sols) {
       const persp = walk(head.persp, sol.s);
@@ -7253,9 +7363,10 @@ export class AggEval {
 
   /** `whynot`: the demonstration that a literal fails; `[holds, text]`. Renames from zero, as `whyText`. */
   whynotText(lit: Lit, b: { maxDepth: number; maxNodes: number }, shown?: string): [boolean, string] {
-    const saved = this.renameCounter;
+    const saved = this.renameCounter, asking = this.asking;
     this.renameCounter = 0;
-    try { return this.whynotAt(lit, b, shown); } finally { this.renameCounter = saved; }
+    this.asking = true;
+    try { return this.whynotAt(lit, b, shown); } finally { this.renameCounter = saved; this.asking = asking; this.asked = []; this.demandTrail = []; }
   }
 
   private whynotAt(lit: Lit, b: { maxDepth: number; maxNodes: number }, shown?: string): [boolean, string] {
@@ -7263,15 +7374,18 @@ export class AggEval {
     if (!this.dag) ctx.done.set = () => ctx.done;
     const s: Subst = new Map();
     const k = this.resolvedLitKey(lit, s);
+    this.asked = [];
     if (this.matchPremise(lit, s, 0, null).length > 0) return [true, `${this.plain ? shown ?? k : k} holds; nothing to demonstrate`];
     const lines = [`whynot ${k}:`];
+    const asked = this.asked;
+    this.asked = [];
     if (this.plain) {
       // the plain explainer knows no lattice, counting or unknown tuple
       const sh = this.shrugsOf(lit);
       if (sh.length > 0) {
         lines[0] = `whynot ${k}: no answer, a shrug`;
         for (const [f] of sh) lines.push(this.shrugWhy(f));
-      }
+      } else this.askedLines(k, asked, lines);
       ctx.path.add(this.cycleKey(lit));
       lines.push(...this.explainTree(lit, ctx));
       return [false, lines.join('\n')];
@@ -7285,11 +7399,20 @@ export class AggEval {
     if (sh.length > 0) {
       lines[0] = `whynot ${k}: no answer, a shrug`;
       for (const [f] of sh) lines.push(this.shrugWhy(f));
-    }
+    } else this.askedLines(k, asked, lines);
     if (path !== null) { lines.push(...path); return [false, lines.join('\n')]; }
     ctx.path.add(this.cycleKey(lit));
     for (const l of this.explainTree(lit, ctx)) lines.push(l);
     return [false, lines.join('\n')];
+  }
+
+  /** A LITERAL WHOSE UNFOLDING READ WHAT A HOLE LEFT UNKNOWN, and no shrug row names it: no answer, and each unknown it read with its path. */
+  private askedLines(k: string, asked: Unknown[], lines: string[]): void {
+    if (asked.length === 0) return;
+    lines[0] = `whynot ${k}: no answer, a shrug`;
+    const shown: [string, Unknown][] = asked.map((u) => [this.unknownShown(u), u]);
+    shown.sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0));
+    for (const [text, u] of shown) lines.push(`  it reads ${text}, which is not known`, ...this.unknownPath(u));
   }
 
   private whynotLattice(lit: Lit): string[] | null {
@@ -7573,12 +7696,16 @@ export class AggEval {
     const put = (key: string, v: Lit | null) => { if (!out.has(key)) out.set(key, v); };
     const b = body[k];
     if (b.t === 'pos') {
+      const unknowns = this.demandTrail.length;
       const mm = this.matchPremise(b.lit, s, 0, null);
-      if (mm.length === 0) put(this.resolvedLitKey(b.lit, s), this.instantiate(b.lit, s));
+      if (mm.length === 0 && this.demandTrail.length > unknowns) put(`${this.resolvedLitKey(b.lit, s)} -- not known: it reads what a hole left unknown`, null);
+      else if (mm.length === 0) put(this.resolvedLitKey(b.lit, s), this.instantiate(b.lit, s));
       else for (const [s2] of mm.slice(0, 16)) this.exploreBody(body, k + 1, s2, out, nodes, rule);
     } else if (b.t === 'neg') {
+      const unknowns = this.demandTrail.length;
       const mm = this.matchPremise(b.lit, s, 0, null);
-      if (mm.length > 0) {
+      if (mm.length === 0 && (this.demandTrail.length > unknowns || this.latSpread.size > 0 && this.readUnknown(b.lit, s, true) !== null)) put(`not ${this.resolvedLitKey(b.lit, s)} -- not known: it reads what a hole left unknown`, null);
+      else if (mm.length > 0) {
         const [s2, r] = mm[0];
         const wit = r.t === 'fact' ? r.key : this.resolvedLitKey(b.lit, s2);
         put(`not ${this.resolvedLitKey(b.lit, s)} -- blocked: ${wit} holds`, null);

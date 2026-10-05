@@ -1,0 +1,3 @@
+-- expect-refusal: a declaration's arguments are variables
+-- a node is a variable, never a constant
+tree dts_const(a, C).

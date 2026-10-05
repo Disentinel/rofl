@@ -1,0 +1,8 @@
+-- expect-refusal: tree dtw_in: node (k) has two parents in the book main: (a) and (b)
+-- a budget wall judges the promise like any other end of an evaluation: a world the wall cut that breaks a declared tree is refused, not answered as partial
+edb(dtw_e).
+tree dtw_in(P, C) closure dtw_within.
+dtw_in(a, k). dtw_in(b, k).
+dtw_e(0, 1). dtw_e(1, 2). dtw_e(2, 3). dtw_e(3, 4). dtw_e(4, 5). dtw_e(5, 6). dtw_e(6, 7). dtw_e(7, 8). dtw_e(8, 9).
+dtw_r(X, Y) :- dtw_e(X, Y).
+dtw_r(X, Z) :- dtw_r(X, Y), dtw_e(Y, Z).

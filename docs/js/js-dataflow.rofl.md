@@ -27,9 +27,10 @@ Reads:
 - from js-controlflow: [caught_value](js-controlflow.rofl.md#caught_value)
 - from js-model, in the code: [ast_node](js-model.rofl.md#ast_node)
 - from js-modules, in the code: [import_site](js-modules.rofl.md#import_site), [module_target](js-modules.rofl.md#module_target), [reexport_offers](js-modules.rofl.md#reexport_offers), [require_site](js-modules.rofl.md#require_site), [site_shape](js-modules.rofl.md#site_shape), [site_source](js-modules.rofl.md#site_source)
-- from js-structure, in the code: [ast_in](js-structure.rofl.md#ast_in), [ast_name](js-structure.rofl.md#ast_name), [ast_value](js-structure.rofl.md#ast_value), [ast_within](js-structure.rofl.md#ast_within), [key_name](js-structure.rofl.md#key_name)
+- from js-structure, in the code: [ast_in](js-structure.rofl.md#ast_in), [ast_name](js-structure.rofl.md#ast_name), [ast_value](js-structure.rofl.md#ast_value), [key_name](js-structure.rofl.md#key_name)
 - from outside these files, in the code:
   - <a id="ast_file"></a>`ast_file`
+  - <a id="ast_within"></a>A node is within a node (`ast_within`)
 - from the scanner, in the code:
   - <a id="ast_attr"></a>The attribute of a node is a value (`ast_attr`)
   - <a id="ast_child"></a>A node is a child of a node (`ast_child`)
@@ -239,7 +240,7 @@ D is scoped in File if D [declares without a value](#bare_binder) some name in F
    - D [introduces](#binds_name) Name in File;
    - E [reads](#ident_in) Name in File;
    - [the region](#binder_region) of D is a node R;
-   - E [is within](js-structure.rofl.md#ast_within) R;
+   - E [is within](#ast_within) R;
    - unless E [is hidden from](#hidden_at) D;
 2. if all of:
    - D [is at the top](#binder_at_top);
@@ -280,7 +281,7 @@ Declared as facts:
   - a node P [is under](js-structure.rofl.md#ast_in) a node P2;
   - unless P is a [scope](#scope_node).
 
-<a id="encloses_s"></a>A [scope](#scope_node) encloses a node D if D [is scoped](#scoped_binder) in some file and D [is within](js-structure.rofl.md#ast_within) it.
+<a id="encloses_s"></a>A [scope](#scope_node) encloses a node D if D [is scoped](#scoped_binder) in some file and D [is within](#ast_within) it.
 
 <a id="closer_s"></a>R is outranked for D if R [encloses](#encloses_s) D, S [is the nearest scope of](#nearest_s) D, and R differs from S.
 
@@ -308,7 +309,7 @@ Declared as facts:
    - [the region](#binder_region) of Outer is a node RO;
    - [the region](#binder_region) of Inner is a node RI;
    - RO differs from RI;
-   - RI [is within](js-structure.rofl.md#ast_within) RO;
+   - RI [is within](#ast_within) RO;
 2. if all of:
    - Outer [introduces](#binds_name) Name in File;
    - Inner [introduces](#binds_name) Name in File;
@@ -324,13 +325,13 @@ Declared as facts:
    - Outer [introduces](#binds_name) Name in some file;
    - [the region](#binder_region) of Outer is a node RO;
    - F [takes](#param_of) Name at some index;
-   - F [is within](js-structure.rofl.md#ast_within) RO;
+   - F [is within](#ast_within) RO;
 2. if all of:
    - Outer [introduces](#binds_name) Name in File;
    - Outer [is at the top](#binder_at_top);
    - F [takes](#param_of) Name at some index;
    - [`ast_file`](#ast_file)(Root, File);
-   - F [is within](js-structure.rofl.md#ast_within) a node Root.
+   - F [is within](#ast_within) a node Root.
 
 > The inner binder's whole REGION is the extent of the hiding, including the
 > lines above its declaration — the temporal dead zone stated as scope.
@@ -341,11 +342,11 @@ Declared as facts:
 1. if all of:
    - Outer [is shadowed by](#shadowed_by) Inner on Name;
    - [the region](#binder_region) of Inner is a node RI;
-   - E [is within](js-structure.rofl.md#ast_within) RI;
+   - E [is within](#ast_within) RI;
    - E [reads](#ident_in) Name in some file;
 2. if all of:
    - Outer [is shadowed by the function](#shadowed_by_param) F on Name;
-   - E [is within](js-structure.rofl.md#ast_within) F;
+   - E [is within](#ast_within) F;
    - E [reads](#ident_in) Name in some file.
 
 > The TDZ, the one place the LINE matters: a read of a `let`/`const` name
@@ -360,7 +361,7 @@ A node
   - [the region](#binder_region) of D is a node R;
   - D [introduces](#binds_name) Name in File;
   - it [reads](#ident_in) Name in File;
-  - it [is within](js-structure.rofl.md#ast_within) R;
+  - it [is within](#ast_within) R;
   - D [is at line](js-model.rofl.md#ast_node) LD;
   - it [is at line](js-model.rofl.md#ast_node) LE;
   - LE < LD.
@@ -368,7 +369,7 @@ A node
   - it [is a dead zone candidate of](#tdz_cand) D;
   - [the region](#binder_region) of D is a node R;
   - a node G [is nearest to](#nearest_v) it;
-  - G [is within](js-structure.rofl.md#ast_within) R.
+  - G [is within](#ast_within) R.
 - <a id="tdz_at"></a>is in the dead zone of D if it [is a dead zone candidate of](#tdz_cand) D, unless it [is deferred for](#tdz_deferred) D.
 - is hidden from D if it [is in the dead zone of](#tdz_at) D.
 
@@ -740,23 +741,23 @@ A [function](js-callgraph.rofl.md#fn_node) takes Name at an index I if a node P 
 1. if all of:
    - [the region](#binder_region) of D is a node R;
    - D [introduces](#binds_name) Name in some file;
-   - R [is within](js-structure.rofl.md#ast_within) F;
+   - R [is within](#ast_within) F;
    - F [takes](#param_of) Name at some index;
-   - U [is within](js-structure.rofl.md#ast_within) R;
+   - U [is within](#ast_within) R;
    - U [reads](#ident) Name;
 2. if all of:
    - a node G [takes](#param_of) Name at some index;
-   - G [is within](js-structure.rofl.md#ast_within) F;
+   - G [is within](#ast_within) F;
    - F is a [function](js-callgraph.rofl.md#fn_node);
    - F [takes](#param_of) Name at some index;
-   - U [is within](js-structure.rofl.md#ast_within) G;
+   - U [is within](#ast_within) G;
    - U [reads](#ident) Name.
 
 A node
 
 - <a id="param_use"></a>uses Name at a node U if all of:
   - it [takes](#param_of) Name at some index;
-  - U [is within](js-structure.rofl.md#ast_within) it;
+  - U [is within](#ast_within) it;
   - U [reads](#ident) Name;
   - unless it [hides](#param_hidden) Name at U.
 - may be the literal V if all of:
@@ -932,11 +933,11 @@ A [property](#noun-property) may be the literal V if a node X [may be the litera
 
 A node
 
-- <a id="this_over"></a>is over a [this](#noun-this) T if T [is within](js-structure.rofl.md#ast_within) it and it [binds this](#this_binder).
+- <a id="this_over"></a>is over a [this](#noun-this) T if T [is within](#ast_within) it and it [binds this](#this_binder).
 - <a id="this_nearer"></a>is outdone for T if all of:
   - it [is over](#this_over) T;
   - a node G [is over](#this_over) T;
-  - G [is within](js-structure.rofl.md#ast_within) it;
+  - G [is within](#ast_within) it;
   - it differs from G.
 - <a id="this_host"></a>hosts T if it [is over](#this_over) T, unless it [is outdone for](#this_nearer) T.
 
@@ -1011,14 +1012,14 @@ A node
 - <a id="private_inner"></a>has an inner class inside CD if all of:
   - it [refers privately to](#private_ref) Name;
   - CD [has the private member](#private_member) Name at some node;
-  - it [is within](js-structure.rofl.md#ast_within) CD;
+  - it [is within](#ast_within) CD;
   - a class CD2 [has the private member](#private_member) Name at some node;
-  - CD2 [is within](js-structure.rofl.md#ast_within) CD;
-  - it [is within](js-structure.rofl.md#ast_within) CD2.
+  - CD2 [is within](#ast_within) CD;
+  - it [is within](#ast_within) CD2.
 - <a id="private_binds"></a>binds privately to a node M if all of:
   - it [refers privately to](#private_ref) Name;
   - a class CD [has the private member](#private_member) Name at M;
-  - it [is within](js-structure.rofl.md#ast_within) CD;
+  - it [is within](#ast_within) CD;
   - unless it [has an inner class inside](#private_inner) CD.
 
 In the flow:
@@ -1456,7 +1457,7 @@ A node E points to a node CD either:
    - unless CD [has its own constructor](#has_own_ctor).
 
 A [super](#noun-super) points to a node SD if all of:
-  - it [is within](js-structure.rofl.md#ast_within) a node M;
+  - it [is within](#ast_within) a node M;
   - a class CD [has the method](#class_method_of) M;
   - [the super](#super_of) of CD is SD.
 
@@ -1550,7 +1551,7 @@ Y points to a node X either:
 <a id="for_of_use"></a>A node loops with Name at a node U if all of:
   - it [loops over](#for_of_name) Name;
   - the `body` of it is a node B;
-  - U [is within](js-structure.rofl.md#ast_within) B;
+  - U [is within](#ast_within) B;
   - U [reads](#ident) Name.
 
 <a id="iter_elem"></a>A node X has an element E either:
@@ -1610,7 +1611,7 @@ A node
 > one row that is an audit.
 
 <a id="thrown_in"></a>T throws a node V if all of:
-  - a [throw](#noun-throw) Th [is within](js-structure.rofl.md#ast_within) a node B;
+  - a [throw](#noun-throw) Th [is within](#ast_within) a node B;
   - [the block](#try_block) of T is B;
   - the `argument` of Th is V.
 
@@ -1624,7 +1625,7 @@ A node
 
 <a id="call_in_try"></a>T calls if all of:
   - [the block](#try_block) of T is a node B;
-  - a node C [is within](js-structure.rofl.md#ast_within) B;
+  - a node C [is within](#ast_within) B;
   - C [is a call site](js-callgraph.rofl.md#call_site) in some file.
 
 A node

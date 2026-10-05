@@ -1,0 +1,89 @@
+-- examples/checks/ds-tree-holds-check.rofl — ds_tree_holds and ds_tree_sealed. A
+-- declaration changes no fact: the closure of the declared tree and every
+-- reader of it hold exactly the rows of their undeclared twins (`_u`), in each
+-- book, and the rows are the ones the edges make. A check that compared two
+-- empty relations would pass whatever the engine did, so each reader is also
+-- named by a row it must hold and a count it must have.
+dstc_diff(bb, A, B, x) :- dst_bb(A, B), not dst_bb_u(A, B).
+dstc_diff(bb, A, B, x) :- dst_bb_u(A, B), not dst_bb(A, B).
+dstc_diff(bf, A, B, x) :- dst_bf(A, B), not dst_bf_u(A, B).
+dstc_diff(bf, A, B, x) :- dst_bf_u(A, B), not dst_bf(A, B).
+dstc_diff(fb, A, B, x) :- dst_fb(A, B), not dst_fb_u(A, B).
+dstc_diff(fb, A, B, x) :- dst_fb_u(A, B), not dst_fb(A, B).
+dstc_diff(ff, A, B, x) :- dst_ff(A, B), not dst_ff_u(A, B).
+dstc_diff(ff, A, B, x) :- dst_ff_u(A, B), not dst_ff(A, B).
+dstc_diff(ffb, A, B, C) :- dst_ffb(A, B, C), not dst_ffb_u(A, B, C).
+dstc_diff(ffb, A, B, C) :- dst_ffb_u(A, B, C), not dst_ffb(A, B, C).
+dstc_diff(neg, A, B, x) :- dst_neg(A, B), not dst_neg_u(A, B).
+dstc_diff(neg, A, B, x) :- dst_neg_u(A, B), not dst_neg(A, B).
+dstc_diff(cnt, A, B, x) :- dst_cnt(A, B), not dst_cnt_u(A, B).
+dstc_diff(cnt, A, B, x) :- dst_cnt_u(A, B), not dst_cnt(A, B).
+dstc_diff(up, A, B, x) :- dst_up(A, B), not dst_up_u(A, B).
+dstc_diff(up, A, B, x) :- dst_up_u(A, B), not dst_up(A, B).
+dstc_diff(both, A, B, x) :- dst_both(A, B), not dst_both_u(A, B).
+dstc_diff(both, A, B, x) :- dst_both_u(A, B), not dst_both(A, B).
+dstc_diff(feed, A, x, x) :- dst_feed(A), not dst_feed_u(A).
+dstc_diff(feed, A, x, x) :- dst_feed_u(A), not dst_feed(A).
+dstc_diff(feed2, A, x, x) :- dst_feed2(A), not dst_feed2_u(A).
+dstc_diff(feed2, A, x, x) :- dst_feed2_u(A), not dst_feed2(A).
+dstc_diff(rec, A, B, x) :- dst_rec(A, B), not dst_rec_u(A, B).
+dstc_diff(rec, A, B, x) :- dst_rec_u(A, B), not dst_rec(A, B).
+dstc_diff(deep, A, x, x) :- dst_deep(A), not dst_deep_u(A).
+dstc_diff(deep, A, x, x) :- dst_deep_u(A), not dst_deep(A).
+dstc_diff(lone, A, x, x) :- dst_lone(A), not dst_lone_u(A).
+dstc_diff(lone, A, x, x) :- dst_lone_u(A), not dst_lone(A).
+dstc_diff(other, A, B, x) :- dst_other(A, B), not dst_other_u(A, B).
+dstc_diff(other, A, B, x) :- dst_other_u(A, B), not dst_other(A, B).
+dstc_diff(cross, A, B, x) :- dst_cross(A, B), not dst_cross_u(A, B).
+dstc_diff(cross, A, B, x) :- dst_cross_u(A, B), not dst_cross(A, B).
+dstc_diff(within_code, A, B, x) :- dst_within[code](A, B), not dst_within_u[code](A, B).
+dstc_diff(in_code, A, B, x) :- dst_in[code](A, B), not dst_in_u[code](A, B).
+dstc_diff(within_code, A, B, x) :- dst_within_u[code](A, B), not dst_within[code](A, B).
+dstc_diff(in_code, A, B, x) :- dst_in_u[code](A, B), not dst_in[code](A, B).
+dstc_diff(within_other, A, B, x) :- dst_within[other](A, B), not dst_within_u[other](A, B).
+dstc_diff(in_other, A, B, x) :- dst_in[other](A, B), not dst_in_u[other](A, B).
+dstc_diff(within_other, A, B, x) :- dst_within_u[other](A, B), not dst_within[other](A, B).
+dstc_diff(in_other, A, B, x) :- dst_in_u[other](A, B), not dst_in[other](A, B).
+alarm(dstc_diff).
+-- the rows each must hold
+dstc_lost(within) :- not dst_within[code](r1, c1).
+dstc_lost(within) :- not dst_within[code](r1, e1).
+dstc_lost(within) :- not dst_within[code](r1, c5).
+dstc_lost(within) :- not dst_within[code](r2, x3).
+dstc_lost(within) :- not dst_within[other](o1, o3).
+dstc_lost(bb) :- not dst_bb(r1, c1).
+dstc_lost(bf) :- not dst_bf(r1, e1).
+dstc_lost(fb) :- not dst_fb(c1, a1).
+dstc_lost(ff) :- not dst_ff(a2, c3).
+dstc_lost(ffb) :- not dst_ffb(other, o1, o3).
+dstc_lost(neg) :- not dst_neg(a2, c1).
+dstc_lost(cnt) :- not dst_cnt(r2, 3).
+dstc_lost(up) :- not dst_up(c1, r1).
+dstc_lost(late) :- not dst_bf(r1, f1).
+dstc_lost(late) :- not dst_within[code](a1, f1).
+dstc_lost(both) :- not dst_both(r1, c1).
+dstc_lost(feed2) :- not dst_feed2(e1).
+dstc_lost(rec) :- not dst_rec(c1, c1).
+dstc_lost(deep) :- not dst_deep(c1).
+dstc_lost(lone) :- not dst_lone(r3).
+dstc_lost(other) :- not dst_other(o1, o3).
+alarm(dstc_lost).
+-- a node is no ancestor of itself, and the other book holds none of this book's rows
+dstc_strict(x) :- dst_within[code](N, N).
+dstc_strict(x) :- dst_within[other](N, N).
+dstc_strict(x) :- dst_within[code](o1, _).
+dstc_strict(x) :- dst_within[other](r1, _).
+alarm(dstc_strict).
+-- the rows are in the state the engine prints, listed when the engine stores none of them
+-- expect-row: dst_within[code](r1,c1) tick drv
+-- expect-row: dst_within[code](r1,f1) tick drv
+-- expect-row: dst_within[other](o1,a2) tick drv
+-- expect-no-row: dst_within[code](c1,c1)
+-- counts: 41 rows of the closure in the code book, 6 in the other
+dstc_code(N) :- N is count(A, D : dst_within[code](A, D)).
+dstc_other(N) :- N is count(A, D : dst_within[other](A, D)).
+dstc_rows_wrong() :- dstc_code(N), N != 41.
+dstc_rows_wrong() :- dstc_other(N), N != 6.
+dstc_rows_wrong() :- not dstc_code(_).
+dstc_rows_wrong() :- not dstc_other(_).
+alarm(dstc_rows_wrong).

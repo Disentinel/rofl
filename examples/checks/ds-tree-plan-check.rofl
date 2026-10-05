@@ -1,0 +1,21 @@
+-- examples/checks/ds-tree-plan-check.rofl — ds_tree_plan. The readers concluded what the chain says and the wall cut nothing:
+-- a plan that put the closure first would have met the space wall and left a hole.
+dtlc_lost(hit)  :- not dtl_hit(n3, n119).
+dtlc_lost(hit)  :- not dtl_hit(n100, n101).
+dtlc_lost(hit)  :- not dtl_hit(n110, n119).
+dtlc_lost(up)   :- not dtl_up(n0, n119).
+dtlc_lost(up)   :- not dtl_up(n49, n50).
+dtlc_lost(pair) :- not dtl_pair(n3, n50).
+dtlc_lost(pair) :- not dtl_pair(n100, n119).
+alarm(dtlc_lost).
+dtlc_hits(N) :- N is count(A, D : dtl_hit(A, D)).
+dtlc_hits_wrong() :- dtlc_hits(N), N != 144.
+dtlc_hits_wrong() :- not dtlc_hits(_).
+dtlc_ups(N) :- N is count(A, D : dtl_up(A, D)).
+dtlc_ups_wrong() :- dtlc_ups(N), N != 169.
+dtlc_ups_wrong() :- not dtlc_ups(_).
+alarm(dtlc_hits_wrong).
+alarm(dtlc_ups_wrong).
+-- the wall cut nothing: a hole it left is a row of the state, which no rule can read before it is written
+-- expect-no-row: hole[$kernel]($adhoc,space_exhausted)
+-- expect-no-row: hole[$kernel]($rule(

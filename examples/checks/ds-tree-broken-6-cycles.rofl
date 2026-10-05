@@ -1,0 +1,5 @@
+-- expect-refusal: tree dtb_in: node (a) is its own ancestor in the book main: through (a), (b); 1 more cycle
+-- two cycles: the one through the smallest node is named, the other counted
+edb(dtb_in).
+tree dtb_in(P, C).
+dtb_in(a, b). dtb_in(b, a). dtb_in(c, d). dtb_in(d, c).

@@ -45,7 +45,7 @@ export const ORDER_KINDS = new Set(['pareto', 'lex']);
 /** The declared data structures (docs/data-structures.md) and the role words
  *  each one marks its arguments with: words where a role stands, names
  *  elsewhere. `function` marks the values a key determines with `to`. */
-export const STRUCTURE_ROLES: ReadonlyMap<string, readonly string[]> = new Map([['function', ['to']]]);
+export const STRUCTURE_ROLES: ReadonlyMap<string, readonly string[]> = new Map([['function', ['to']], ['tree', []]]);
 
 class P {
   toks: Tok[];
@@ -446,8 +446,8 @@ class P {
     return { head: { rel, persp: mka('main'), perspExplicit: false, args, temporal: 'now' }, body: [], lattice: kind, ord };
   }
 
-  /**   structdecl := kind ident '(' [ role ] term [ ',' [ role ] term ]* ')' '.'
-   *    kind       := 'function'
+  /**   structdecl := kind ident '(' [ role ] term [ ',' [ role ] term ]* ')' [ 'closure' ident ] '.'
+   *    kind       := 'function' | 'tree'
    *    role       := 'to'
    *  Words, not keywords: one declares only when a second name follows. An
    *  argument without a role is part of the key. */
@@ -470,9 +470,15 @@ class P {
     }
     if (this.peek().t !== ')') this.err(`${what}: \`(\` is not closed`);
     this.next();
+    let closure: string | undefined;
+    if (this.peek().t === 'ident' && this.peek().v === 'closure') {
+      this.next();
+      if (this.peek().t !== 'ident') this.err(`${what}: \`closure\` names the relation that holds each node and every ancestor of it`);
+      closure = this.next().v;
+    }
     if (this.peek().t !== '.') this.noDot(`${what}: the declaration`);
     this.next();
-    return { head: { rel, persp: mka('main'), perspExplicit: false, args, temporal: 'now' }, body: [], structure: { kind, roles } };
+    return { head: { rel, persp: mka('main'), perspExplicit: false, args, temporal: 'now' }, body: [], structure: closure === undefined ? { kind, roles } : { kind, roles, closure } };
   }
 
   clause(): Clause {

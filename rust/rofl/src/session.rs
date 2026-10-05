@@ -766,10 +766,12 @@ impl Session {
             }
         }
 
-        let cand = self
+        // A RELATION ANSWERED FROM A STRUCTURE (the closure of a declared tree) has no rows to find: its rows are read off the tree
+        let virt = self.eval.vclosure_query(rel, persp_opt, &args);
+        let cand = if virt.is_some() { Some(Vec::new()) } else { self
             .eval
             .store
-            .arg_matches(&self.eval.h, rel, persp_opt, args.len(), &pos, &vals);
+            .arg_matches(&self.eval.h, rel, persp_opt, args.len(), &pos, &vals) };
         let probed = cand.is_some();
         let ids = match cand {
             Some(v) => v,
@@ -778,7 +780,7 @@ impl Session {
                 None => self.eval.store.rel_all(&self.eval.h, rel),
             },
         };
-        let scanned = ids.len();
+        let scanned = ids.len() + virt.as_ref().map_or(0, |v| v.len());
 
         // `arg_matches` promises a SUPERSET in no order (src/store.ts:477), so
         // every candidate is re-checked here. Skipping this is how a query
@@ -808,6 +810,17 @@ impl Session {
             let r = self.eval.store.rec(id);
             let mut k = String::new();
             write_fact_key(&self.eval.h, r.rel, r.persp, fa, &mut k);
+            rows.push(row);
+            keys.push(k);
+        }
+        for (book, a, d) in virt.unwrap_or_default() {
+            let fa = [a, d];
+            if pos.iter().zip(&vals).any(|(&i, v)| fa[i] != *v) || same.iter().any(|&(x, y)| fa[x] != fa[y]) {
+                continue;
+            }
+            let row: Vec<String> = col.iter().map(|&i| { let mut s = String::new(); self.eval.h.canon_term(fa[i], &mut s); s }).collect();
+            let mut k = String::new();
+            write_fact_key(&self.eval.h, rel, book, &fa, &mut k);
             rows.push(row);
             keys.push(k);
         }
@@ -1041,6 +1054,7 @@ impl Session {
             }
             out.insert(self.eval.store.key(&self.eval.h, id));
         }
+        out.extend(self.eval.store.virtual_keys(&self.eval.h));
         out
     }
 

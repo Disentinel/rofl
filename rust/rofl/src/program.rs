@@ -1019,11 +1019,30 @@ pub fn load_program(e: &mut Eval, text: &str, who: Option<&str>) -> Loaded {
     let mut ords: Vec<(Sym, Sym, Vec<Sym>, usize)> = Vec::new();
     let mut structs: Vec<&rofl_parse::Clause> = Vec::new();
     let mut declared = crate::structure::declared(&e.h, &e.v, &mut e.store);
+    // the closures of declared trees, and what a batch concludes before a declaration reads it
+    let mut closure_of = crate::structure::closures(&e.h, &e.v, &mut e.store);
+    let (mut batch_rules, mut batch_facts): (std::collections::HashSet<Sym>, std::collections::HashSet<Sym>) = Default::default();
+    let mut lowered: Vec<String> = Vec::new();
     for pc in &clauses {
-        if pc.structure.is_some() {
-            match crate::structure::check_decl(&e.h, &e.v, pc, &declared) {
+        if let Some(st) = &pc.structure {
+            let stored = if st.closure.is_some() { crate::structure::concluded_by_rules(&e.h, &e.v, &mut e.store) } else { Default::default() };
+            let concluded = |cl: Sym| -> Option<String> {
+                if stored.contains(&cl) || batch_rules.contains(&cl) {
+                    Some("a rule".to_string())
+                } else if batch_facts.contains(&cl) || e.store.rel_count(cl) > 0 {
+                    Some("a fact".to_string())
+                } else {
+                    None
+                }
+            };
+            match crate::structure::check_decl(&e.h, &e.v, pc, &declared, &concluded) {
                 Ok(()) => {
                     declared.insert(pc.head.rel);
+                    if let Some(cl) = st.closure {
+                        declared.insert(cl);
+                        closure_of.insert(cl, pc.head.rel);
+                        lowered.extend(crate::structure::lower_closure(&e.h, pc));
+                    }
                     structs.push(pc);
                 }
                 Err(d) => diags.push(d),
@@ -1063,7 +1082,14 @@ pub fn load_program(e: &mut Eval, text: &str, who: Option<&str>) -> Loaded {
             continue;
         }
         match to_clause(&mut e.h, &e.v, pc) {
-            Ok(c) => cs.push(c),
+            Ok(c) => {
+                if let Some(d) = crate::structure::check_closure_head(&e.h, &c, &closure_of) {
+                    diags.push(d);
+                    continue;
+                }
+                if c.body.is_empty() { batch_facts.insert(c.head.rel); } else { batch_rules.insert(c.head.rel); }
+                cs.push(c);
+            }
             Err(d) => diags.push(d),
         }
     }
@@ -1076,10 +1102,19 @@ pub fn load_program(e: &mut Eval, text: &str, who: Option<&str>) -> Loaded {
             Err(d) => diags.push(d),
         }
     }
+    // THE RULES A CLOSURE LOWERS TO are the declaration's, trusted as the kernel's own writing is
+    let mut low: Vec<Clause> = Vec::with_capacity(lowered.len());
+    for t in &lowered {
+        let pcs = rofl_parse::parse(&mut e.h, t).expect("a lowered closure reads");
+        match to_clause(&mut e.h, &e.v, &pcs[0]).and_then(|c| check_clause(&e.h, &e.v, &c, None, true)) {
+            Ok(r) => low.push(r),
+            Err(d) => diags.push(d),
+        }
+    }
     if !diags.is_empty() {
         return Loaded { ok: false, diagnostics: diags, admitted: 0 };
     }
-    for c in &ready {
+    for c in ready.iter().chain(low.iter()) {
         admit_clause(e, c, who_owned.as_deref());
     }
     // THE DECLARATION IS ONE KERNEL ROW, timeless like the semantics
@@ -1143,6 +1178,9 @@ pub fn load_program(e: &mut Eval, text: &str, who: Option<&str>) -> Loaded {
         let kp = e.v.kernel_persp;
         let row = [Term::atom(c.head.rel), Term::int(brk!("function_arity_short" => c.head.args.len() as i64 - 1; c.head.args.len() as i64)), Term::atom(st.kind)];
         e.store.add(&e.h, e.v.structure_decl, kp, &row, F_BASE);
+        if let Some(cl) = st.closure.filter(|_| !brk!("tree_closure_row_unwritten" => true; false)) {
+            e.store.add(&e.h, e.v.structure_closure, kp, &[Term::atom(c.head.rel), Term::atom(cl)], F_BASE);
+        }
         for (i, r) in st.roles.iter().enumerate() {
             if let Some(r) = r.filter(|_| !brk!("function_roles_unread" => true; false)) {
                 e.store.add(&e.h, e.v.structure_role, kp, &[Term::atom(c.head.rel), Term::int(i as i64 + 1), Term::atom(r)], F_BASE);
@@ -1150,5 +1188,5 @@ pub fn load_program(e: &mut Eval, text: &str, who: Option<&str>) -> Loaded {
         }
         e.store.dirty = true;
     }
-    Loaded { ok: true, diagnostics: Vec::new(), admitted: ready.len() + decls.len() + tags.len() + doms.len() + structs.len() }
+    Loaded { ok: true, diagnostics: Vec::new(), admitted: ready.len() + low.len() + decls.len() + tags.len() + doms.len() + structs.len() }
 }

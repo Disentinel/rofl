@@ -9,7 +9,7 @@
 -- TypeScript string literal and becomes a world two engines can be held to.
 
 -- OPTIONS (check_opt(World, Option, Value)), all read by scripts/goldens.ts: ticks, budget, space, retain,
--- retract, evaluator, explain, sentences, together, and one_engine. `one_engine, ts` checks a world on the
+-- retract, evaluator, explain, sentences, together, delta_first, closure_unwalled and one_engine. `one_engine, ts` checks a world on the
 -- TypeScript engine alone (a host contract the two answer differently); `one_engine, rust` checks it on
 -- the Rust engine alone: the TypeScript engine is never run on it, its golden is the Rust golden, and
 -- whycheck asks its questions of rofl-serve and rofl-load only and holds them to each other. It may name a
@@ -322,6 +322,26 @@ check_file("demand_shrug_read", "examples/checks/demand-shrug-read.rofl").
 -- a negation unfolded at a call reads the holes (f_a_negation_unfolded_at_a_call_ignored_the_holes)
 check_world("demand_neg_hole").
 check_file("demand_neg_hole", "examples/checks/demand-neg-hole.rofl").
+
+-- a positive premise unfolded at a call reads the holes (f_a_premise_unfolded_at_a_call_read_a_shrugged_cell_as_absent)
+check_world("demand_pos_hole").
+check_file("demand_pos_hole", "examples/checks/demand-pos-hole.rofl").
+
+-- an answer outside a firing reads the holes below a call; a call left unknown rests on every unknown below it
+-- (f_an_answer_unfolded_at_a_call_read_a_hole_as_absence, f_a_call_left_unknown_kept_one_cause)
+check_world("demand_asked_hole").
+check_file("demand_asked_hole", "examples/checks/demand-asked-hole.rofl").
+check_opt("demand_asked_hole", together, 1).
+check_opt("demand_asked_hole", explain, 1).
+
+-- a closed relation answered on demand reads the store at any depth (f_a_closed_recursion_on_a_bound_argument_met_the_depth_wall)
+check_world("demand_chain").
+check_file("demand_chain", "examples/checks/demand-chain.rofl").
+
+-- a call with an open answer met again inside its own unfolding is a shrug, not a cut world
+-- (f_an_open_recursion_through_demand_cut_the_world)
+check_world("demand_cycle").
+check_file("demand_cycle", "examples/checks/demand-cycle.rofl").
 
 -- a recursion through relations answered on demand reaches its fixpoint
 -- (f_a_recursion_through_demand_unfolded_without_end)
@@ -3087,6 +3107,151 @@ check_file("ds_function_phrase", "examples/checks/ds-function-phrase-check.rofl"
 check_opt("ds_function_phrase", together, 1).
 check_opt("ds_function_phrase", sentences, 1).
 
+-- w_data_structures, step 2, `tree` (docs/data-structures.md "Tree, as built"): `tree ast_in(P, C) closure ast_within.` promises a
+-- forest (one parent for each child, no cycle, in each book) and is the definition of the closure, which the Rust engine answers
+-- from the tree where no witness is kept. The same files run twice, once keeping witnesses and once sealed (where the
+-- closure is not stored). The promise is judged after every evaluation, tick and retraction, as `function`'s is.
+check_world("ds_tree_syntax").
+check_file("ds_tree_syntax", "examples/ring1/charclass.rofl").
+check_file("ds_tree_syntax", "examples/ring1/ring1.rofl").
+check_file("ds_tree_syntax", "examples/checks/ds-tree-syntax-1-forms.rofl").
+check_file("ds_tree_syntax", "examples/checks/ds-tree-syntax-2-expect.rofl").
+check_file("ds_tree_syntax", "examples/checks/ds-tree-syntax-3-refused-arity.rofl").
+check_file("ds_tree_syntax", "examples/checks/ds-tree-syntax-3-refused-bare.rofl").
+check_file("ds_tree_syntax", "examples/checks/ds-tree-syntax-3-refused-book.rofl").
+check_file("ds_tree_syntax", "examples/checks/ds-tree-syntax-3-refused-closure-twice.rofl").
+check_file("ds_tree_syntax", "examples/checks/ds-tree-syntax-3-refused-concluded-fact.rofl").
+check_file("ds_tree_syntax", "examples/checks/ds-tree-syntax-3-refused-concluded-rule.rofl").
+check_file("ds_tree_syntax", "examples/checks/ds-tree-syntax-3-refused-const.rofl").
+check_file("ds_tree_syntax", "examples/checks/ds-tree-syntax-3-refused-dot.rofl").
+check_file("ds_tree_syntax", "examples/checks/ds-tree-syntax-3-refused-fact-after.rofl").
+check_file("ds_tree_syntax", "examples/checks/ds-tree-syntax-3-refused-function.rofl").
+check_file("ds_tree_syntax", "examples/checks/ds-tree-syntax-3-refused-kernel-tree.rofl").
+check_file("ds_tree_syntax", "examples/checks/ds-tree-syntax-3-refused-kernel.rofl").
+check_file("ds_tree_syntax", "examples/checks/ds-tree-syntax-3-refused-open.rofl").
+check_file("ds_tree_syntax", "examples/checks/ds-tree-syntax-3-refused-repeat.rofl").
+check_file("ds_tree_syntax", "examples/checks/ds-tree-syntax-3-refused-rule-after.rofl").
+check_file("ds_tree_syntax", "examples/checks/ds-tree-syntax-3-refused-self.rofl").
+check_file("ds_tree_syntax", "examples/checks/ds-tree-syntax-3-refused-twice.rofl").
+check_opt("ds_tree_syntax", together, 1).
+
+check_world("ds_tree_holds").
+check_file("ds_tree_holds", "examples/checks/ds-tree-holds.rofl").
+check_file("ds_tree_holds", "examples/checks/ds-tree-holds-check.rofl").
+check_file("ds_tree_holds", "examples/checks/ds-tree-holds-prov-check.rofl").
+check_file("ds_tree_holds", "examples/checks/ds-tree-broken-1-parents.rofl").
+check_file("ds_tree_holds", "examples/checks/ds-tree-broken-2-cycle.rofl").
+check_file("ds_tree_holds", "examples/checks/ds-tree-broken-3-self.rofl").
+check_file("ds_tree_holds", "examples/checks/ds-tree-broken-4-book.rofl").
+check_file("ds_tree_holds", "examples/checks/ds-tree-broken-5-derived.rofl").
+check_file("ds_tree_holds", "examples/checks/ds-tree-broken-6-cycles.rofl").
+check_file("ds_tree_holds", "examples/checks/ds-tree-broken-7-both.rofl").
+check_file("ds_tree_holds", "examples/checks/ds-tree-broken-8-closure.rofl").
+check_opt("ds_tree_holds", together, 1).
+
+check_world("ds_tree_sealed").
+check_file("ds_tree_sealed", "examples/checks/ds-tree-sealed.rofl").
+check_file("ds_tree_sealed", "examples/checks/ds-tree-holds.rofl").
+check_file("ds_tree_sealed", "examples/checks/ds-tree-holds-check.rofl").
+check_opt("ds_tree_sealed", together, 1).
+
+-- THE CLOSURE ANSWERED FROM THE TREE IS EXPLAINED AS THE STORED CLOSURE IS: `why` of a row, of a fact that reads one and `why all` of an
+-- aggregate over it, through the explain bridge, derived by hand; the canonical state holds the members' premises as facts
+-- (scripts/goldens.ts holds the state of a sealed world with a closure to the state of the same world with the rows stored, and
+-- scripts/whycheck.ts every why, whynot and excise to it).
+check_world("ds_tree_explain").
+check_file("ds_tree_explain", "examples/checks/ds-tree-explain.rofl").
+check_file("ds_tree_explain", "examples/checks/ds-tree-explain-check.rofl").
+check_opt("ds_tree_explain", together, 1).
+check_opt("ds_tree_explain", explain, 1).
+-- Rust's alone: a cell under `sealed(provenance)` keeps no derivation heights, so its members print `h=1` and in key order where
+-- TypeScript, which keeps its witnesses, prints their heights and orders by them; the oracle is the same world with the rows stored.
+check_opt("ds_tree_explain", one_engine, rust).
+
+-- A TREE WHOSE EDGES ARE ANSWERED ON DEMAND has its closure as rows: which relations are answered on demand is read after the program is
+-- prepared (the engine read it before, and answered the closure from a forest of the edges it stored, none).
+check_world("ds_tree_demand_edge").
+check_file("ds_tree_demand_edge", "examples/checks/ds-tree-demand-edge.rofl").
+check_opt("ds_tree_demand_edge", together, 1).
+
+-- A CLOSURE WITH A BOOK VARIABLE OVER EDGES THAT READ A DEMAND RELATION holds what the closure written for each book holds. Such rules
+-- (the declaration lowers to them) were not read from the store as a closed relation is, because a head book that is a variable was
+-- taken for an answer that is not ground; unfolded at a call they met their own call again, and what read them (a count, a negation,
+-- a rule) was a shrug or, in Rust, a defect. A book that is a variable is ground where a premise at a ground book binds it.
+check_world("ds_tree_demand_book").
+check_file("ds_tree_demand_book", "examples/checks/ds-tree-demand-book.rofl").
+check_file("ds_tree_demand_book", "examples/checks/ds-tree-demand-book-check.rofl").
+check_opt("ds_tree_demand_book", together, 1).
+
+check_world("ds_tree_demand_book_sealed").
+check_file("ds_tree_demand_book_sealed", "examples/checks/ds-tree-sealed.rofl").
+check_file("ds_tree_demand_book_sealed", "examples/checks/ds-tree-demand-book.rofl").
+check_file("ds_tree_demand_book_sealed", "examples/checks/ds-tree-demand-book-check.rofl").
+check_opt("ds_tree_demand_book_sealed", together, 1).
+
+check_world("ds_tree_tick").
+check_file("ds_tree_tick", "examples/checks/ds-tree-tick-1-holds.rofl").
+check_file("ds_tree_tick", "examples/checks/ds-tree-tick-2-broken.rofl").
+check_opt("ds_tree_tick", together, 1).
+check_opt("ds_tree_tick", ticks, 3).
+check_opt("ds_tree_tick", explain, 1).
+
+check_world("ds_tree_tick_sealed").
+check_file("ds_tree_tick_sealed", "examples/checks/ds-tree-sealed.rofl").
+check_file("ds_tree_tick_sealed", "examples/checks/ds-tree-tick-1-holds.rofl").
+check_opt("ds_tree_tick_sealed", together, 1).
+check_opt("ds_tree_tick_sealed", ticks, 3).
+check_opt("ds_tree_tick_sealed", explain, 1).
+
+check_world("ds_tree_retract").
+check_file("ds_tree_retract", "examples/checks/ds-tree-retract-1-holds.rofl").
+check_file("ds_tree_retract", "examples/checks/ds-tree-retract-2-broken.rofl").
+check_opt("ds_tree_retract", together, 1).
+check_opt("ds_tree_retract", retract, "dtr_blocked(b, c)").
+
+check_world("ds_tree_retract_sealed").
+check_file("ds_tree_retract_sealed", "examples/checks/ds-tree-sealed.rofl").
+check_file("ds_tree_retract_sealed", "examples/checks/ds-tree-retract-1-holds.rofl").
+check_opt("ds_tree_retract_sealed", together, 1).
+check_opt("ds_tree_retract_sealed", retract, "dtr_blocked(b, c)").
+
+check_world("ds_tree_wall").
+check_file("ds_tree_wall", "examples/checks/ds-tree-wall.rofl").
+check_opt("ds_tree_wall", together, 1).
+check_opt("ds_tree_wall", budget, 60).
+
+check_world("ds_tree_phrase").
+check_file("ds_tree_phrase", "examples/checks/ds-tree-phrase.rofl.md").
+check_file("ds_tree_phrase", "examples/checks/ds-tree-phrase-check.rofl").
+check_opt("ds_tree_phrase", together, 1).
+check_opt("ds_tree_phrase", sentences, 1).
+
+-- A CLOSURE ANSWERED FROM ITS TREE IS NEVER PUT FIRST UNBOUND (docs/data-structures.md "Tree, as built"): a chain whose closure
+-- is larger than the world's space wall, read by rules that name the closure before the premise that binds an end of it.
+-- The written order meets the wall; the delta-first plan, which reads the tree's shape, does not. The TypeScript engine
+-- solves in written order, so the world is Rust's alone.
+check_world("ds_tree_plan").
+check_file("ds_tree_plan", "examples/checks/ds-tree-sealed.rofl").
+check_file("ds_tree_plan", "examples/checks/ds-tree-plan.rofl").
+check_file("ds_tree_plan", "examples/checks/ds-tree-plan-check.rofl").
+check_opt("ds_tree_plan", together, 1).
+check_opt("ds_tree_plan", one_engine, rust).
+check_opt("ds_tree_plan", space, 3000).
+check_opt("ds_tree_plan", delta_first, 1).
+check_opt("ds_tree_plan", closure_unwalled, 1).
+
+check_world("ds_tree_retract_edge").
+check_file("ds_tree_retract_edge", "examples/checks/ds-tree-retract-3-edge.rofl").
+check_file("ds_tree_retract_edge", "examples/checks/ds-tree-retract-3-edge-check.rofl").
+check_opt("ds_tree_retract_edge", together, 1).
+check_opt("ds_tree_retract_edge", retract, "dtg_in(b, c)").
+
+check_world("ds_tree_retract_edge_sealed").
+check_file("ds_tree_retract_edge_sealed", "examples/checks/ds-tree-sealed.rofl").
+check_file("ds_tree_retract_edge_sealed", "examples/checks/ds-tree-retract-3-edge.rofl").
+check_file("ds_tree_retract_edge_sealed", "examples/checks/ds-tree-retract-3-edge-check.rofl").
+check_opt("ds_tree_retract_edge_sealed", together, 1).
+check_opt("ds_tree_retract_edge_sealed", retract, "dtg_in(b, c)").
 -- PROVENANCE ON DEMAND (w_cmp_provenance_on_demand): the Rust engine notes a firing and writes its
 -- derived_by row when something asks, where no rule reads derived_by of the relation. The state, why,
 -- excise, retract and the frozen rows of a past tick are those of an engine that writes every row, and

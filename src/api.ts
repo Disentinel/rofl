@@ -19,7 +19,7 @@ import { SHRUG, shrugsOf, shrugLine, shrugAtom, shown } from './shrug.ts';
 import { AggEval, DEFAULT_SPACE, Rejected, Wall, checkAggregatesDoor, checkSetPatternsDoor, checkOrderableAgg,
   checkNextInBody, checkLatticeDecl, checkDominance, lowerOrder } from './aggeval.ts';
 import { encodeDominance } from './reflect.ts';
-import { checkStructureDecl, structureRows, declaredStructures, checkFunctions } from './structure.ts';
+import { checkStructureDecl, structureRows, declaredStructures, checkFunctions, checkTrees, checkClosureHead, declaredClosures, concludedBy, lowerClosure } from './structure.ts';
 
 export interface LoadResult { ok: boolean; diagnostics: string[]; }
 export interface QueryRow { text: string; bindings: Record<string, string>; }
@@ -496,7 +496,7 @@ export class Rofl {
     return null;
   }
 
-  private addClause(c0: Clause, who?: string, trusted = false): string | null {
+  private addClause(c0: Clause, who?: string, trusted = false, lowered = false): string | null {
     // BEFORE any check, because the checks and the diagnostics must speak
     // about the clause that will actually be stored: a bare `concludes(...)`
     // resolves to the kernel's book here, and `checkKernelBook` then refuses
@@ -510,6 +510,8 @@ export class Rofl {
     if (c0.structure) return this.addStructure(c0);
     if (c0.lattice) return this.addDecl(c0);
     if (c0.dominator) return this.addDominance(c0, who);
+    const badClosure = lowered ? null : checkClosureHead(c0, declaredClosures(this.store));
+    if (badClosure) return badClosure;
     const badBook = this.checkKernelBook(c0);
     if (badBook) return badBook;
     const c = annotateAggs(resolveClauseBooks(canonClauseSets(c0)));
@@ -666,9 +668,16 @@ export class Rofl {
   /** A STRUCTURE DECLARATION IS ITS KERNEL ROWS, timeless: a promise about the
    *  relation's data (src/structure.ts), changing no fact. */
   private addStructure(c: Clause): string | null {
-    const bad = checkStructureDecl(c, (rel) => ARITY[rel], declaredStructures(this.store));
+    const bad = checkStructureDecl(c, (rel) => ARITY[rel], declaredStructures(this.store), (rel) => concludedBy(this.store, rel));
     if (bad) return bad;
     for (const [rel, args] of structureRows(c)) this.store.add(rel, KERNEL_PERSP, args, { scope: 'timeless', base: true });
+    // a closure is the rules it lowers to (src/structure.ts `lowerClosure`), read as any rules are
+    if (c.structure!.closure !== undefined) {
+      for (const t of lowerClosure(c)) {
+        const bad2 = this.addClause(parseProgram(t)[0], undefined, true, true);
+        if (bad2) return bad2;
+      }
+    }
     this.store.dirty = true;
     return null;
   }
@@ -761,7 +770,7 @@ export class Rofl {
       this.store.noteEval(budget, ev.steps, true);
       partial = true;
     }
-    try { checkFunctions(this.store); } catch (e) {
+    try { checkFunctions(this.store); checkTrees(this.store); } catch (e) {
       this.store.dirty = true; // a broken world is never settled: every later question refuses until it is fixed
       throw e;
     }
@@ -837,8 +846,11 @@ export class Rofl {
     const ev = this.standing(budget);
     const vars = [...varsOf(lit.persp, varsOf(mkf('$t', lit.args)))].sort();
     let ms: { s: Subst }[] = [];
+    // below a call, what a hole left unknown is no answer
+    let asked = false;
     try {
-      const got = ev.matchPremise(lit, new Map(), 0, null) as unknown[];
+      const [got, us] = ev.answering(() => ev.matchPremise(lit, new Map(), 0, null) as unknown[]);
+      asked = us.length > 0;
       ms = got.map((m) => (Array.isArray(m) ? { s: m[0] as Subst } : m as { s: Subst }));
     } catch (e) {
       if (e instanceof Wall) {
@@ -917,6 +929,8 @@ export class Rofl {
         break;
       }
     }
+    // an answer left unknown that no shrug row names: the rows may be short of it
+    if (asked && shrugs.size === 0) partial = true;
     return { rows: [...rows.keys()].sort().map((k) => rows.get(k)!), partial, unpopulatable,
              ...(shrugs.size > 0 ? { shrugs: [...shrugs.keys()].sort().map((k) => shrugs.get(k)!) } : {}) };
   }

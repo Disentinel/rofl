@@ -1,0 +1,9 @@
+-- examples/checks/ds-tree-demand-edge.rofl — the ds_tree_demand_edge world: the edge relation of a declared tree is answered on demand (a head variable its body does not bind), and the world keeps no witness. The closure is then rows, not the tree's answer: the engine reads which relations are answered on demand AFTER the program is prepared, and read before, it answered the closure from a forest of no stored edge.
+sealed(provenance).
+tree dtd_e(P, C) closure dtd_w.
+dtd_q(a). dtd_q(b).
+dtd_bs(a, b). dtd_bs(b, c).
+dtd_e(X, Y) :- dtd_q(X).
+dtd_r(D) :- dtd_w(a, D), dtd_bs(a, D).
+alarm(dtd_lost).
+dtd_lost(r) :- not dtd_r(b).

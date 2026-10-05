@@ -1029,10 +1029,30 @@ brk("demand_neg_unholed"). brk_kind("demand_neg_unholed", switch).
 brk_expects("demand_neg_unholed", "demand_neg_hole").
 brk("ts_demand_neg_unholed"). brk_kind("ts_demand_neg_unholed", ts).
 brk_expects("ts_demand_neg_unholed", "demand_neg_hole").
+brk("asked_unholed"). brk_kind("asked_unholed", switch).
+brk_expects("asked_unholed", "demand_asked_hole").
+brk("ts_asked_unholed"). brk_kind("ts_asked_unholed", ts).
+brk_expects("ts_asked_unholed", "demand_asked_hole").
+brk("demand_trail_last"). brk_kind("demand_trail_last", switch).
+brk_expects("demand_trail_last", "demand_asked_hole").
+brk("ts_demand_trail_last"). brk_kind("ts_demand_trail_last", ts).
+brk_expects("ts_demand_trail_last", "demand_asked_hole").
+brk("demand_poison_skipped"). brk_kind("demand_poison_skipped", switch).
+brk_expects("demand_poison_skipped", "demand_pos_hole").
+brk("ts_demand_poison_skipped"). brk_kind("ts_demand_poison_skipped", ts).
+brk_expects("ts_demand_poison_skipped", "demand_pos_hole").
 brk("demand_recursion_unfolds"). brk_kind("demand_recursion_unfolds", switch).
 brk_expects("demand_recursion_unfolds", "demand_recursion").
 brk("ts_demand_recursion_unfolds"). brk_kind("ts_demand_recursion_unfolds", ts).
 brk_expects("ts_demand_recursion_unfolds", "demand_recursion").
+brk("demand_closed_unfolds"). brk_kind("demand_closed_unfolds", switch).
+brk_expects("demand_closed_unfolds", "demand_chain").
+brk("ts_demand_closed_unfolds"). brk_kind("ts_demand_closed_unfolds", ts).
+brk_expects("ts_demand_closed_unfolds", "demand_chain").
+brk("demand_cycle_unfolds"). brk_kind("demand_cycle_unfolds", switch).
+brk_expects("demand_cycle_unfolds", "demand_cycle").
+brk("ts_demand_cycle_unfolds"). brk_kind("ts_demand_cycle_unfolds", ts).
+brk_expects("ts_demand_cycle_unfolds", "demand_cycle").
 brk("wfs_admits_subsumption"). brk_kind("wfs_admits_subsumption", switch).
 brk_expects("wfs_admits_subsumption", "agg_sub_wfs").
 brk_expects("wfs_admits_subsumption", "agg_sub_ts").
@@ -1762,6 +1782,108 @@ brk("structures_tree_two_parents_ignored"). brk_kind("structures_tree_two_parent
 brk_expects("structures_tree_two_parents_ignored", "structures_proof").
 brk("structures_alias_subset_accepted"). brk_kind("structures_alias_subset_accepted", switch).
 brk_expects("structures_alias_subset_accepted", "structures_proof").
+brk("tree_unread"). brk_kind("tree_unread", switch).
+brk_expects("tree_unread", "ds_tree_syntax").
+brk_expects("tree_unread", "ds_tree_holds").
+brk("tree_closure_dropped"). brk_kind("tree_closure_dropped", switch).
+brk_expects("tree_closure_dropped", "ds_tree_syntax").
+brk_expects("tree_closure_dropped", "ds_tree_holds").
+brk("tree_closure_row_unwritten"). brk_kind("tree_closure_row_unwritten", switch).
+brk_expects("tree_closure_row_unwritten", "ds_tree_syntax").
+brk_expects("tree_closure_row_unwritten", "ds_tree_phrase").
+brk("tree_arity_unchecked"). brk_kind("tree_arity_unchecked", switch).
+brk_expects("tree_arity_unchecked", "ds_tree_syntax").
+brk("tree_closure_head_open"). brk_kind("tree_closure_head_open", switch).
+brk_expects("tree_closure_head_open", "ds_tree_syntax").
+brk("tree_lowering_base_only"). brk_kind("tree_lowering_base_only", switch).
+brk_expects("tree_lowering_base_only", "ds_tree_holds").
+brk_expects("tree_lowering_base_only", "ds_tree_syntax").
+brk("tree_check_off"). brk_kind("tree_check_off", switch).
+brk_expects("tree_check_off", "ds_tree_holds").
+brk_expects("tree_check_off", "ds_tree_tick").
+brk_expects("tree_check_off", "ds_tree_retract").
+brk_expects("tree_check_off", "ds_tree_wall").
+brk("tree_parents_unjudged"). brk_kind("tree_parents_unjudged", switch).
+brk_expects("tree_parents_unjudged", "ds_tree_holds").
+brk("tree_cycle_unchecked"). brk_kind("tree_cycle_unchecked", switch).
+brk_expects("tree_cycle_unchecked", "ds_tree_holds").
+brk("tree_book_ignored"). brk_kind("tree_book_ignored", switch).
+brk_expects("tree_book_ignored", "ds_tree_holds").
+brk("tree_tick_unchecked"). brk_kind("tree_tick_unchecked", switch).
+brk_expects("tree_tick_unchecked", "ds_tree_tick").
+brk("vclosure_nonstrict"). brk_kind("vclosure_nonstrict", switch).
+brk_expects("vclosure_nonstrict", "ds_tree_sealed").
+brk("vclosure_descendants_short"). brk_kind("vclosure_descendants_short", switch).
+brk_expects("vclosure_descendants_short", "ds_tree_sealed").
+brk_expects("vclosure_descendants_short", "ds_tree_plan").
+brk("vclosure_ancestors_short"). brk_kind("vclosure_ancestors_short", switch).
+brk_expects("vclosure_ancestors_short", "ds_tree_sealed").
+brk("vclosure_stale_forest"). brk_kind("vclosure_stale_forest", switch).
+brk_expects("vclosure_stale_forest", "ds_tree_sealed").
+brk("vclosure_reader_stale"). brk_kind("vclosure_reader_stale", switch).
+brk_expects("vclosure_reader_stale", "ds_tree_sealed").
+brk("vclosure_book_merged"). brk_kind("vclosure_book_merged", switch).
+brk_expects("vclosure_book_merged", "ds_tree_sealed").
+brk("vclosure_premise_untagged"). brk_kind("vclosure_premise_untagged", switch).
+brk_expects("vclosure_premise_untagged", "ds_tree_explain").
+brk_expects("vclosure_premise_untagged", "ds_tree_sealed").
+brk("vclosure_why_absent"). brk_kind("vclosure_why_absent", switch).
+brk_expects("vclosure_why_absent", "ds_tree_explain").
+brk("vclosure_derive_always_step"). brk_kind("vclosure_derive_always_step", switch).
+brk_expects("vclosure_derive_always_step", "ds_tree_explain").
+brk("vclosure_row_written_twice"). brk_kind("vclosure_row_written_twice", switch).
+brk_expects("vclosure_row_written_twice", "ds_tree_explain").
+brk("vclosure_demand_unread"). brk_kind("vclosure_demand_unread", switch).
+brk_expects("vclosure_demand_unread", "ds_tree_demand_edge").
+brk("vclosure_restore_unengaged"). brk_kind("vclosure_restore_unengaged", switch).
+brk_expects("vclosure_restore_unengaged", "ds_tree_sealed").
+brk_expects("vclosure_restore_unengaged", "ds_tree_explain").
+brk("demand_closed_atom_book"). brk_kind("demand_closed_atom_book", switch).
+brk_expects("demand_closed_atom_book", "ds_tree_demand_book").
+brk_expects("demand_closed_atom_book", "ds_tree_demand_book_sealed").
+brk("ts_demand_closed_atom_book"). brk_kind("ts_demand_closed_atom_book", ts).
+brk_expects("ts_demand_closed_atom_book", "ds_tree_demand_book").
+brk_expects("ts_demand_closed_atom_book", "ds_tree_demand_book_sealed").
+brk("demand_closed_book_unbound"). brk_kind("demand_closed_book_unbound", switch).
+brk_expects("demand_closed_book_unbound", "ds_tree_demand_book").
+brk_expects("demand_closed_book_unbound", "ds_tree_demand_book_sealed").
+brk("ts_demand_closed_book_unbound"). brk_kind("ts_demand_closed_book_unbound", ts).
+brk_expects("ts_demand_closed_book_unbound", "ds_tree_demand_book").
+brk_expects("ts_demand_closed_book_unbound", "ds_tree_demand_book_sealed").
+brk("vclosure_rows_cost"). brk_kind("vclosure_rows_cost", switch).
+brk_expects("vclosure_rows_cost", "ds_tree_plan").
+brk("vclosure_neg_inverted"). brk_kind("vclosure_neg_inverted", switch).
+brk_expects("vclosure_neg_inverted", "ds_tree_sealed").
+brk("vclosure_unbound_cheap"). brk_kind("vclosure_unbound_cheap", switch).
+brk_expects("vclosure_unbound_cheap", "ds_tree_plan").
+brk("vclosure_rows_unpublished"). brk_kind("vclosure_rows_unpublished", switch).
+brk_expects("vclosure_rows_unpublished", "ds_tree_sealed").
+brk("vclosure_with_witness"). brk_kind("vclosure_with_witness", switch).
+brk_expects("vclosure_with_witness", "ds_tree_holds").
+brk("closure_one_book"). brk_kind("closure_one_book", switch).
+brk_expects("closure_one_book", "ds_tree_holds").
+brk("phrase_tree_closure_lost"). brk_kind("phrase_tree_closure_lost", switch).
+brk_expects("phrase_tree_closure_lost", "ds_tree_phrase").
+brk("ring1_tree_unread"). brk_kind("ring1_tree_unread", file).
+brk_expects("ring1_tree_unread", "ds_tree_syntax").
+brk("ts_tree_unread"). brk_kind("ts_tree_unread", ts).
+brk_expects("ts_tree_unread", "ds_tree_syntax").
+brk("ts_tree_check_off"). brk_kind("ts_tree_check_off", ts).
+brk_expects("ts_tree_check_off", "ds_tree_holds").
+brk_expects("ts_tree_check_off", "ds_tree_tick").
+brk("ts_tree_parents_unread"). brk_kind("ts_tree_parents_unread", ts).
+brk_expects("ts_tree_parents_unread", "ds_tree_holds").
+brk("ts_tree_cycle_unread"). brk_kind("ts_tree_cycle_unread", ts).
+brk_expects("ts_tree_cycle_unread", "ds_tree_holds").
+brk("ts_tree_lowering_lost"). brk_kind("ts_tree_lowering_lost", ts).
+brk_expects("ts_tree_lowering_lost", "ds_tree_holds").
+brk_expects("ts_tree_lowering_lost", "ds_tree_syntax").
+brk("ts_tree_closure_head_open"). brk_kind("ts_tree_closure_head_open", ts).
+brk_expects("ts_tree_closure_head_open", "ds_tree_syntax").
+brk("ts_tree_arity_unchecked"). brk_kind("ts_tree_arity_unchecked", ts).
+brk_expects("ts_tree_arity_unchecked", "ds_tree_syntax").
+brk("ts_tree_closure_row_unwritten"). brk_kind("ts_tree_closure_row_unwritten", ts).
+brk_expects("ts_tree_closure_row_unwritten", "ds_tree_syntax").
 
 switch_site("agg_reach_alias_first", "rust/rofl/src/engine.rs").
 switch_site("agg_reach_bound_any", "rust/rofl/src/engine.rs").
@@ -1783,6 +1905,7 @@ switch_site("alg_flags_off", "rust/rofl/src/cell.rs").
 switch_site("and_tie_last", "rust/rofl/src/cell.rs").
 switch_site("args_are_expressions", "rust/rofl/src/rofl_parse.rs").
 switch_site("arith_wraps", "rust/rofl/src/engine.rs").
+switch_site("asked_unholed", "rust/rofl/src/engine.rs").
 switch_site("asks_aggregate_cut", "rust/rofl/src/engine.rs").
 switch_site("asks_blind_asked", "rust/rofl/src/engine.rs").
 switch_site("asks_blind_reflection", "rust/rofl/src/engine.rs").
@@ -1811,6 +1934,7 @@ switch_site("cell_untimed", "rust/rofl/src/engine.rs").
 switch_site("cell_untimed", "rust/rofl/src/store.rs").
 switch_site("cell_why_present", "rust/rofl/src/engine.rs").
 switch_site("cited_past_canonical_only", "rust/rofl/src/engine.rs").
+switch_site("closure_one_book", "rust/rofl/src/engine.rs").
 switch_site("count_carrier_open", "rust/rofl/src/cell.rs").
 switch_site("count_demand_admitted", "rust/rofl/src/engine.rs").
 switch_site("count_firing_premises_only", "rust/rofl/src/tag.rs").
@@ -1829,11 +1953,17 @@ switch_site("delta_first_overrun_holes", "rust/rofl/src/engine.rs").
 switch_site("delta_first_persp", "rust/rofl/src/engine/joinplan.rs").
 switch_site("delta_first_spread", "rust/rofl/src/engine/joinplan.rs").
 switch_site("delta_first_walls", "rust/rofl/src/engine/joinplan.rs").
+switch_site("demand_closed_atom_book", "rust/rofl/src/engine.rs").
+switch_site("demand_closed_book_unbound", "rust/rofl/src/engine.rs").
+switch_site("demand_closed_unfolds", "rust/rofl/src/engine.rs").
+switch_site("demand_cycle_unfolds", "rust/rofl/src/engine.rs").
 switch_site("demand_fault_unspread", "rust/rofl/src/engine.rs").
 switch_site("demand_neg_unholed", "rust/rofl/src/engine.rs").
+switch_site("demand_poison_skipped", "rust/rofl/src/engine.rs").
 switch_site("demand_recursion_unfolds", "rust/rofl/src/engine.rs").
 switch_site("demand_strict_mono", "rust/rofl/src/engine.rs").
 switch_site("demand_strict_refire", "rust/rofl/src/engine/delta.rs").
+switch_site("demand_trail_last", "rust/rofl/src/engine.rs").
 switch_site("descent_closes_other", "rust/rofl/src/engine.rs").
 switch_site("descent_fatal", "rust/rofl/src/engine.rs").
 switch_site("descent_wall", "rust/rofl/src/engine.rs").
@@ -2052,6 +2182,7 @@ switch_site("phrase_sugar_unseen", "rust/rofl/src/bin/rofl_render.rs").
 switch_site("phrase_sum_as_median", "rust/rofl/src/bin/rofl_render.rs").
 switch_site("phrase_tag_alg_lost", "rust/rofl/src/bin/rofl_render.rs").
 switch_site("phrase_threshold_as_atmost", "rust/rofl/src/bin/rofl_render.rs").
+switch_site("phrase_tree_closure_lost", "rust/rofl/src/bin/rofl_render.rs").
 switch_site("phrase_widen_off_by_one", "rust/rofl/src/bin/rofl_render.rs").
 switch_site("plain_alive_unknown", "rust/rofl/src/engine.rs").
 switch_site("plain_cell_hole_unspread", "rust/rofl/src/engine.rs").
@@ -2188,6 +2319,17 @@ switch_site("thr_peel_cells", "rust/rofl/src/engine.rs").
 switch_site("thr_reflect_agg", "rust/rofl/src/reflect.rs").
 switch_site("thr_text_order", "rust/rofl/src/cell.rs").
 switch_site("thr_whynot_reached", "rust/rofl/src/engine.rs").
+switch_site("tree_arity_unchecked", "rust/rofl/src/structure.rs").
+switch_site("tree_book_ignored", "rust/rofl/src/structure.rs").
+switch_site("tree_check_off", "rust/rofl/src/engine.rs").
+switch_site("tree_closure_dropped", "rust/rofl/src/rofl_parse.rs").
+switch_site("tree_closure_head_open", "rust/rofl/src/structure.rs").
+switch_site("tree_closure_row_unwritten", "rust/rofl/src/program.rs").
+switch_site("tree_cycle_unchecked", "rust/rofl/src/structure.rs").
+switch_site("tree_lowering_base_only", "rust/rofl/src/structure.rs").
+switch_site("tree_parents_unjudged", "rust/rofl/src/structure.rs").
+switch_site("tree_tick_unchecked", "rust/rofl/src/engine.rs").
+switch_site("tree_unread", "rust/rofl/src/rofl_parse.rs").
 switch_site("tropical_max", "rust/rofl/src/cell.rs").
 switch_site("trunc5", "rust/rofl/src/engine.rs").
 switch_site("trust_max", "rust/rofl/src/cell.rs").
@@ -2195,6 +2337,23 @@ switch_site("unclosed", "rust/rofl/src/rofl_parse.rs").
 switch_site("union_left", "rust/rofl/src/cell.rs").
 switch_site("unknown_scan", "rust/rofl/src/engine.rs").
 switch_site("unranked_negation_runs", "rust/rofl/src/engine.rs").
+switch_site("vclosure_ancestors_short", "rust/rofl/src/forest.rs").
+switch_site("vclosure_book_merged", "rust/rofl/src/engine/vclosure.rs").
+switch_site("vclosure_demand_unread", "rust/rofl/src/engine/vclosure.rs").
+switch_site("vclosure_derive_always_step", "rust/rofl/src/engine/vclosure.rs").
+switch_site("vclosure_descendants_short", "rust/rofl/src/forest.rs").
+switch_site("vclosure_neg_inverted", "rust/rofl/src/engine.rs").
+switch_site("vclosure_nonstrict", "rust/rofl/src/forest.rs").
+switch_site("vclosure_premise_untagged", "rust/rofl/src/engine/vclosure.rs").
+switch_site("vclosure_reader_stale", "rust/rofl/src/engine.rs").
+switch_site("vclosure_restore_unengaged", "rust/rofl/src/engine/vclosure.rs").
+switch_site("vclosure_row_written_twice", "rust/rofl/src/engine/vclosure.rs").
+switch_site("vclosure_rows_cost", "rust/rofl/src/engine/vclosure.rs").
+switch_site("vclosure_rows_unpublished", "rust/rofl/src/engine/vclosure.rs").
+switch_site("vclosure_stale_forest", "rust/rofl/src/engine/vclosure.rs").
+switch_site("vclosure_unbound_cheap", "rust/rofl/src/engine/vclosure.rs").
+switch_site("vclosure_why_absent", "rust/rofl/src/engine/vclosure.rs").
+switch_site("vclosure_with_witness", "rust/rofl/src/engine/vclosure.rs").
 switch_site("viterbi_rounds_up", "rust/rofl/src/cell.rs").
 switch_site("wfs_admits_body_aggregate", "rust/rofl/src/engine.rs").
 switch_site("wfs_admits_lattice", "rust/rofl/src/engine.rs").

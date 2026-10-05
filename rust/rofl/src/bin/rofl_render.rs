@@ -770,6 +770,10 @@ impl<'a> R<'a> {
         let v = c.head.args.last().map(|t| name(*t)).unwrap_or_default();
         let rel = match c.head.book { Book::Bare => h.name(c.head.rel).to_string(), b => format!("{}` in the `{}", h.name(c.head.rel), self.book_name(b)) };
         if let Some(st) = &c.structure {
+            if h.name(st.kind) == "tree" {
+                let closed = st.closure.filter(|_| !brk!("phrase_tree_closure_lost" => true; false)).map_or(String::new(), |cl| format!(", and `{}` holds of each node and every ancestor of it", h.name(cl)));
+                return format!("Each child of `{rel}` has one parent and no node is its own ancestor{closed}.\n\n");
+            }
             let m = st.roles.iter().filter(|r| r.is_some()).count();
             let list = |ts: &[Term]| { let v: Vec<String> = ts.iter().map(|t| name(*t)).collect(); match v.len() { 1 => v[0].clone(), k => format!("{} and {}", v[..k - 1].join(", "), v[k - 1]) } };
             let each = if n == m || brk!("phrase_function_key_lost" => true; false) { String::new() } else { format!(" for each {}", list(&c.head.args[..n - m])) };
@@ -1867,7 +1871,10 @@ fn dump_facts(h: &Heap, docs: &[FileDoc]) {
                         let _ = writeln!(out, "decl(r{n}, {}, {}).", if c.tag { "tag" } else { "lattice" }, h.name(op));
                         if let Some(w) = c.widen { let _ = writeln!(out, "decl_widen(r{n}, {w})."); }
                     }
-                    if let Some(st) = &c.structure { let _ = writeln!(out, "decl(r{n}, structure, {}).", std::iter::once(h.name(st.kind)).chain(st.roles.iter().map(|r| r.map_or("key", |r| h.name(r)))).collect::<Vec<_>>().join("_")); }
+                    if let Some(st) = &c.structure {
+                        let _ = writeln!(out, "decl(r{n}, structure, {}).", std::iter::once(h.name(st.kind)).chain(st.roles.iter().map(|r| r.map_or("key", |r| h.name(r)))).collect::<Vec<_>>().join("_"));
+                        if let Some(cl) = st.closure { let _ = writeln!(out, "decl_closure(r{n}, {}).", h.name(cl)); }
+                    }
                     let _ = writeln!(out, "nargs(r{n}, 0, {}).", c.head.args.len());
                     let e = arity.entry(h.name(c.head.rel).to_string()).or_insert(0);
                     *e = (*e).max(c.head.args.len());

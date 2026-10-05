@@ -81,6 +81,9 @@ fits($order(K, Ds, L), horder(K, Ds2, L2)) :- pairs($order(K, Ds, L), horder(K, 
 pairs(Rs, Rs2) :- pairs($structure(K, Rs, L), hstructure(K2, Rs2, L2)).
 pairs(L, L2)   :- pairs($structure(K, Rs, L), hstructure(K2, Rs2, L2)).
 fits($structure(K, Rs, L), hstructure(K, Rs2, L2)) :- pairs($structure(K, Rs, L), hstructure(K, Rs2, L2)).
+pairs(C, C2)   :- pairs($closure(C, S), hclosure(C2, S2)).
+pairs(S, S2)   :- pairs($closure(C, S), hclosure(C2, S2)).
+fits($closure(C, S), hclosure(C, S2)) :- pairs($closure(C, S), hclosure(C, S2)).
 pairs(H, H2) :- pairs($dominance(H, G), hdominance(H2, G2)).
 pairs(G, G2) :- pairs($dominance(H, G), hdominance(H2, G2)).
 fits($dominance(H, G), hdominance(H2, G2)) :- pairs($dominance(H, G), hdominance(H2, G2)).

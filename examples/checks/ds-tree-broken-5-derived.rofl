@@ -1,0 +1,6 @@
+-- expect-refusal: tree dtb_in: node (k1) has two parents in the book main: (x) and (y); 1 more child breaks it too
+-- the edges a rule concludes are judged as the asserted ones are: the smallest child, its two smallest parents, the others counted
+edb(dtb_src).
+tree dtb_in(P, C).
+dtb_src(a, k2). dtb_src(b, k2). dtb_src(x, k1). dtb_src(y, k1).
+dtb_in(P, C) :- dtb_src(P, C).

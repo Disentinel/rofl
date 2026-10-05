@@ -445,8 +445,8 @@ export type BodyElem =
  *  `dist(A, C, D)` with no body and `lattice` the operation `min`; a tag's
  *  semiring is in `lattice` with `tag` set), or a dominance rule (`dominator`). */
 export interface Clause { head: Lit; body: BodyElem[]; lattice?: string; widen?: number; tag?: boolean; dominator?: Lit; ord?: string[];
-  /** A declared data structure (docs/data-structures.md): its kind and, per head argument, the role word ('' for a key position). */
-  structure?: { kind: string; roles: string[] }; }
+  /** A declared data structure (docs/data-structures.md): its kind, per head argument the role word ('' for a key position), and for a tree the relation it is the closure of. */
+  structure?: { kind: string; roles: string[]; closure?: string }; }
 
 /** The variables of a body element, in the order they are written: a
  *  literal's arguments then its book, a builtin's two sides, an aggregate's

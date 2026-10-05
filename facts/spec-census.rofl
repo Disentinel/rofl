@@ -171,6 +171,13 @@ check[checks]("rust/rofl/tests/threshold.rs", "a_member_founded_by_its_other_der
 check[checks]("rust/rofl/tests/threshold.rs", "a_deep_recursive_quorum_costs_steps_linear_in_its_depth", test).
 check[checks]("rust/rofl/tests/tick_scale.rs", "a_cell_cited_by_many_firings_is_walked_once_at_the_boundary", test).
 check[checks]("rust/rofl/tests/tick_scale.rs", "why_of_a_carried_cell_reads_the_past_rows_once", test).
+check[checks]("rust/rofl/tests/tree.rs", "a_closure_answered_from_its_tree_concludes_what_its_rules_conclude", test).
+check[checks]("rust/rofl/tests/tree.rs", "a_closure_that_keeps_witnesses_is_stored_and_agrees", test).
+check[checks]("rust/rofl/tests/tree.rs", "a_retraction_leaves_the_world_a_fresh_evaluation_holds", test).
+check[checks]("rust/rofl/tests/tree.rs", "every_pattern_a_question_can_ask_is_answered_from_the_tree", test).
+check[checks]("rust/rofl/tests/tree.rs", "an_edge_relation_the_closure_is_concluded_from_keeps_its_rows", test).
+check[checks]("rust/rofl/tests/tree.rs", "a_retraction_where_no_witness_is_kept_evaluates_again", test).
+check[checks]("rust/rofl/tests/tree.rs", "a_snapshot_opened_and_not_evaluated_answers_the_closure_from_its_tree", test).
 check[checks]("rust/rofl/tests/why_bins.rs", "serve_answers_in_the_sessions_own_text", test).
 check[checks]("rust/rofl/tests/why_bins.rs", "load_prints_the_answers_in_flag_order_instead_of_the_state", test).
 check[checks]("rust/rofl/tests/why_bins.rs", "load_keeps_the_state_without_a_question_and_with_state", test).
@@ -643,9 +650,13 @@ check[checks]("facts/goldens.rofl", "ast_within_readers", world).
 check[checks]("facts/goldens.rofl", "async_refused", world).
 check[checks]("facts/goldens.rofl", "budget_wall", world).
 check[checks]("facts/goldens.rofl", "cost_shapes_model", world).
+check[checks]("facts/goldens.rofl", "demand_asked_hole", world).
+check[checks]("facts/goldens.rofl", "demand_chain", world).
+check[checks]("facts/goldens.rofl", "demand_cycle", world).
 check[checks]("facts/goldens.rofl", "demand_neg_hole", world).
 check[checks]("facts/goldens.rofl", "demand_neg_retract", world).
 check[checks]("facts/goldens.rofl", "demand_neg_round", world).
+check[checks]("facts/goldens.rofl", "demand_pos_hole", world).
 check[checks]("facts/goldens.rofl", "demand_recursion", world).
 check[checks]("facts/goldens.rofl", "demand_shrug_read", world).
 check[checks]("facts/goldens.rofl", "destructor_hole", world).
@@ -655,6 +666,22 @@ check[checks]("facts/goldens.rofl", "ds_function_retract", world).
 check[checks]("facts/goldens.rofl", "ds_function_syntax", world).
 check[checks]("facts/goldens.rofl", "ds_function_tick", world).
 check[checks]("facts/goldens.rofl", "ds_function_wall", world).
+check[checks]("facts/goldens.rofl", "ds_tree_demand_book", world).
+check[checks]("facts/goldens.rofl", "ds_tree_demand_book_sealed", world).
+check[checks]("facts/goldens.rofl", "ds_tree_demand_edge", world).
+check[checks]("facts/goldens.rofl", "ds_tree_explain", world).
+check[checks]("facts/goldens.rofl", "ds_tree_holds", world).
+check[checks]("facts/goldens.rofl", "ds_tree_phrase", world).
+check[checks]("facts/goldens.rofl", "ds_tree_plan", world).
+check[checks]("facts/goldens.rofl", "ds_tree_retract", world).
+check[checks]("facts/goldens.rofl", "ds_tree_retract_edge", world).
+check[checks]("facts/goldens.rofl", "ds_tree_retract_edge_sealed", world).
+check[checks]("facts/goldens.rofl", "ds_tree_retract_sealed", world).
+check[checks]("facts/goldens.rofl", "ds_tree_sealed", world).
+check[checks]("facts/goldens.rofl", "ds_tree_syntax", world).
+check[checks]("facts/goldens.rofl", "ds_tree_tick", world).
+check[checks]("facts/goldens.rofl", "ds_tree_tick_sealed", world).
+check[checks]("facts/goldens.rofl", "ds_tree_wall", world).
 check[checks]("facts/goldens.rofl", "holes_negation", world).
 check[checks]("facts/goldens.rofl", "holes_negation_scale", world).
 check[checks]("facts/goldens.rofl", "holes_negation_ticks", world).
@@ -717,6 +744,7 @@ test_file[checks]("rust/rofl/tests/sub_scale.rs").
 test_file[checks]("rust/rofl/tests/tag_scale.rs").
 test_file[checks]("rust/rofl/tests/threshold.rs").
 test_file[checks]("rust/rofl/tests/tick_scale.rs").
+test_file[checks]("rust/rofl/tests/tree.rs").
 test_file[checks]("rust/rofl/tests/why_bins.rs").
 citation_ok[checks](d_veto_belongs_inside).
 citation_ok[checks](l_budget_counts_firings).
