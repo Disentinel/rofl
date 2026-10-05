@@ -211,6 +211,14 @@ export class ScanSet {
  *  red on an honest tree, which CLAUDE.md records as the state in which a gate
  *  gets switched off. */
 export const PARSER_PLUGINS = ['typescript', 'decorators', 'decoratorAutoAccessors'] as const;
+/** The second try, for a file the first refuses: TypeScript's experimental decorators, which put a decorator on a
+ *  parameter (`constructor(@IFileService private readonly files: IFileService)`, the dependency injection of vscode:
+ *  893 of its 5,210 files). Babel refuses `decorators` and `decorators-legacy` together, so a file is parsed under
+ *  the second only when the first refuses it, and every file that parses today keeps its facts. */
+export const LEGACY_PLUGINS = ['typescript', 'decorators-legacy', 'decoratorAutoAccessors'] as const;
+
+const parseModule = (src: string, file: string, plugins: readonly string[]) =>
+  parse(src, { sourceType: 'module', plugins: (/\.[jt]sx$/.test(file) ? [...plugins, 'jsx'] : [...plugins]) as never });
 
 export function scan(src: string, opts: ScanOpts = {}): AstFacts {
   const file = opts.file ?? '<anonymous>';
@@ -256,7 +264,9 @@ export function scan(src: string, opts: ScanOpts = {}): AstFacts {
     // would sit in `feature_unreachable[audit]` for ever. See
     // `w_plugin_gated_kinds` in facts/worklist.rofl.
     // JSX only where the file says so: in a .ts file `<T>x` is a type assertion, and jsx would read it as an element
-    ast = parse(src, { sourceType: 'module', plugins: /\.[jt]sx$/.test(file) ? [...PARSER_PLUGINS, 'jsx'] : [...PARSER_PLUGINS] });
+    try { ast = parseModule(src, file, PARSER_PLUGINS); } catch (e) {
+      try { ast = parseModule(src, file, LEGACY_PLUGINS); } catch { throw e; }
+    }
   } catch (e) {
     const msg = (e as Error).message.slice(0, 120);
     return {
