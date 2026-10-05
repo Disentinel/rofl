@@ -56,6 +56,8 @@ check[checks]("rust/rofl/tests/demand_fixpoint.rs", "a_chain_iterated_once_is_li
 check[checks]("rust/rofl/tests/demand_fixpoint.rs", "a_chain_read_from_every_node_is_bounded", test).
 check[checks]("rust/rofl/tests/demand_fixpoint.rs", "a_complete_call_is_unfolded_once_across_passes", test).
 check[checks]("rust/rofl/tests/demand_fixpoint.rs", "a_ring_of_open_answers_holds_only_what_it_keeps", test).
+check[checks]("rust/rofl/tests/demand_fixpoint.rs", "a_strongly_connected_ring_iterates_together", test).
+check[checks]("rust/rofl/tests/demand_fixpoint.rs", "six_hundred_calls_deep_meet_the_depth_wall_with_stack_to_spare", test).
 check[checks]("rust/rofl/tests/demand_query.rs", "an_ask_unfolds_a_relation_answered_on_demand", test).
 check[checks]("rust/rofl/tests/demand_query.rs", "a_why_asks_as_whynot_does_and_neither_leaves_a_fact", test).
 check[checks]("rust/rofl/tests/demand_query.rs", "a_question_spends_its_own_budget", test).
@@ -309,6 +311,8 @@ check[checks]("facts/goldens.rofl", "visual_spat-week", world).
 check[checks]("facts/goldens.rofl", "visual_suite-chart", world).
 check[checks]("facts/goldens.rofl", "visual_wardley", world).
 check[checks]("facts/goldens.rofl", "voting", world).
+check[checks]("facts/goldens.rofl", "vscode", world).
+check[checks]("facts/goldens.rofl", "vscode_side-effects", world).
 check[checks]("facts/goldens.rofl", "wtf", world).
 check[checks]("facts/goldens.rofl", "rules_agg", world).
 check[checks]("facts/goldens.rofl", "rules_cleanliness", world).
@@ -695,6 +699,7 @@ check[checks]("facts/goldens.rofl", "demand_chain", world).
 check[checks]("facts/goldens.rofl", "demand_cycle", world).
 check[checks]("facts/goldens.rofl", "demand_cycle_cut", world).
 check[checks]("facts/goldens.rofl", "demand_cycle_fixpoint", world).
+check[checks]("facts/goldens.rofl", "demand_depth_wall", world).
 check[checks]("facts/goldens.rofl", "demand_done", world).
 check[checks]("facts/goldens.rofl", "demand_fixpoint_nonlinear", world).
 check[checks]("facts/goldens.rofl", "demand_fixpoint_rows", world).
@@ -711,6 +716,9 @@ check[checks]("facts/goldens.rofl", "demand_pos_hole", world).
 check[checks]("facts/goldens.rofl", "demand_query", world).
 check[checks]("facts/goldens.rofl", "demand_question_budget", world).
 check[checks]("facts/goldens.rofl", "demand_recursion", world).
+check[checks]("facts/goldens.rofl", "demand_scc", world).
+check[checks]("facts/goldens.rofl", "demand_scc_rows", world).
+check[checks]("facts/goldens.rofl", "demand_scc_unknown", world).
 check[checks]("facts/goldens.rofl", "demand_shrug_read", world).
 check[checks]("facts/goldens.rofl", "destructor_hole", world).
 check[checks]("facts/goldens.rofl", "ds_function_holds", world).
@@ -776,7 +784,9 @@ check[checks]("facts/goldens.rofl", "strata_boot_alone", world).
 check[checks]("facts/goldens.rofl", "strata_boot_canon", world).
 check[checks]("facts/goldens.rofl", "strata_unranked_negation", world).
 check[checks]("facts/goldens.rofl", "sub_history_beside_lattice", world).
+check[checks]("facts/goldens.rofl", "unify_occurs", world).
 check[checks]("facts/goldens.rofl", "unstratifiable", world).
+check[checks]("facts/goldens.rofl", "vscode_side_effects", world).
 check[checks]("facts/goldens.rofl", "wfs_unknown_negated", world).
 check[checks]("facts/goldens.rofl", "why_base", world).
 check[checks]("facts/goldens.rofl", "why_forest", world).

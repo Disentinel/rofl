@@ -1,0 +1,100 @@
+-- examples/checks/demand-scc.rofl — demand_scc: A STRONGLY CONNECTED SET OF OPEN
+-- CALLS ITERATES TOGETHER (f_a_cycle_of_open_calls_iterated_call_by_call). The calls
+-- met while the lowest one is open are kept when they end, read and not unfolded
+-- again, and the set's passes unfold each of them once, reading only what the set
+-- found since the pass before; they complete together, tabled, when no pass grows.
+-- Each section answers on demand (W left open) beside a copy that binds W and is
+-- stored; an alarm fires where the two differ.
+
+-- sa_: two relations calling each other round a ring of six. z is a second way from
+-- n1 to n3 (sa_f): the call from z finds sa_q(n3, _, _) kept and reads it, and is no
+-- more complete than the set it read (sa_q(n3) has not found n3 yet when sa_p(z)
+-- reads it). The calls from z and n2 are asked again by readers of their own, and
+-- answered from the set's tables.
+edb(sa_e). edb(sa_f). edb(sa_t). edb(sa_dom).
+sa_dom(c0). sa_dom(c1).
+sa_e(n0, n1). sa_e(n1, n2). sa_e(n2, n3). sa_e(n3, n4). sa_e(n4, n5). sa_e(n5, n0).
+sa_e(n1, z). sa_f(z, n3).
+sa_t(n1, t1). sa_t(n3, t3). sa_t(n5, t5).
+sa_p(X, Y, W) :- sa_e(X, Y).
+sa_p(X, Z, W) :- sa_e(X, Y), sa_q(Y, Z, W).
+sa_p(X, Z, W) :- sa_f(X, Y), sa_q(Y, V, W), sa_t(V, Z).
+sa_q(X, Z, W) :- sa_e(X, Y), sa_p(Y, Z, W).
+sa_r(Y, W) :- sa_p(n0, Y, W), sa_dom(W).
+sa_rz(Y, W) :- sa_p(z, Y, W), sa_dom(W).
+sa_rq(Y, W) :- sa_q(n2, Y, W), sa_dom(W).
+
+sa_cp(X, Y, W) :- sa_e(X, Y), sa_dom(W).
+sa_cp(X, Z, W) :- sa_e(X, Y), sa_cq(Y, Z, W).
+sa_cp(X, Z, W) :- sa_f(X, Y), sa_cq(Y, V, W), sa_t(V, Z).
+sa_cq(X, Z, W) :- sa_e(X, Y), sa_cp(Y, Z, W).
+sa_cr(Y, W) :- sa_cp(n0, Y, W), sa_dom(W).
+sa_crz(Y, W) :- sa_cp(z, Y, W), sa_dom(W).
+sa_crq(Y, W) :- sa_cq(n2, Y, W), sa_dom(W).
+
+sa_missed(Y, W) :- sa_cr(Y, W), not sa_r(Y, W).
+sa_missed(Y, W) :- sa_crz(Y, W), not sa_rz(Y, W).
+sa_missed(Y, W) :- sa_crq(Y, W), not sa_rq(Y, W).
+sa_wrong(Y, W) :- sa_r(Y, W), not sa_cr(Y, W).
+sa_wrong(Y, W) :- sa_rz(Y, W), not sa_crz(Y, W).
+sa_wrong(Y, W) :- sa_rq(Y, W), not sa_crq(Y, W).
+alarm(sa_missed).
+alarm(sa_wrong).
+
+-- sb_: an unknown met only in a pass after the first. The call from n3 reads the
+-- call from n0 at once, which has found only n1 then (sb_k(n1, 3)); the next pass
+-- reads n2 too, and sb_k(n2, _) is unknown (sb_v(n2, oops)). The unknown reaches the
+-- calls that read n3's only when they unfold it, so the set falls back to unfolding
+-- them one by one: sb_r is unknown where the copy's sb_cr is.
+edb(sb_e). edb(sb_dom). edb(sb_g). edb(sb_v).
+sb_dom(c0). sb_dom(c1).
+sb_e(n0, n1). sb_e(n1, n2). sb_e(n2, n3). sb_e(n3, n0).
+sb_g(n3).
+sb_v(n0, 1). sb_v(n1, 2). sb_v(n2, 3). sb_v(n3, oops).
+sb_p(X, Y, W) :- sb_e(X, Y).
+sb_p(X, Z, W) :- sb_e(X, Y), sb_p(Y, Z, W).
+sb_p(X, Z, W) :- sb_g(X), sb_e(X, Y), sb_p(Y, K, W), sb_v(K, V), Z is V + 1.
+sb_r(Y, W) :- sb_p(n0, Y, W), sb_dom(W).
+
+sb_cp(X, Y, W) :- sb_e(X, Y), sb_dom(W).
+sb_cp(X, Z, W) :- sb_e(X, Y), sb_cp(Y, Z, W).
+sb_cp(X, Z, W) :- sb_g(X), sb_e(X, Y), sb_cp(Y, K, W), sb_v(K, V), Z is V + 1.
+sb_cr(Y, W) :- sb_cp(n0, Y, W), sb_dom(W).
+
+sb_missed(Y, W) :- sb_cr(Y, W), not sb_r(Y, W).
+sb_wrong(Y, W) :- sb_r(Y, W), not sb_cr(Y, W).
+alarm(sb_missed).
+alarm(sb_wrong).
+
+-- sc_: three relations, one rule reading the set twice (no pass reads only what is
+-- new), read only under negations, so no positive reader stores an answer first.
+edb(sc_e). edb(sc_m). edb(sc_node). edb(sc_dom).
+sc_dom(c0). sc_dom(c1).
+sc_node(n0). sc_node(n1). sc_node(n2). sc_node(n3). sc_node(n4). sc_node(n5).
+sc_e(n0, n1). sc_e(n1, n2). sc_e(n2, n3). sc_e(n3, n4). sc_e(n4, n0). sc_e(n5, n5).
+sc_m(n0). sc_m(n2). sc_m(n3). sc_m(n4).
+sc_p(X, Y, W) :- sc_e(X, Y).
+sc_p(X, Z, W) :- sc_q(X, Y, W), sc_s(Y, Z, W).
+sc_q(X, Z, W) :- sc_e(X, Y), sc_s(Y, Z, W).
+sc_s(X, Z, W) :- sc_p(X, Z, W), sc_m(X).
+sc_n(X) :- sc_node(X), not sc_p(n0, X, c0).
+sc_ns(X) :- sc_node(X), not sc_s(n2, X, c1).
+
+sc_cp(X, Y, W) :- sc_e(X, Y), sc_dom(W).
+sc_cp(X, Z, W) :- sc_cq(X, Y, W), sc_cs(Y, Z, W).
+sc_cq(X, Z, W) :- sc_e(X, Y), sc_cs(Y, Z, W).
+sc_cs(X, Z, W) :- sc_cp(X, Z, W), sc_m(X).
+sc_cn(X) :- sc_node(X), not sc_cp(n0, X, c0).
+sc_cns(X) :- sc_node(X), not sc_cs(n2, X, c1).
+
+sc_missed(X) :- sc_cn(X), not sc_n(X).
+sc_missed(X) :- sc_cns(X), not sc_ns(X).
+sc_wrong(X) :- sc_n(X), not sc_cn(X).
+sc_wrong(X) :- sc_ns(X), not sc_cns(X).
+alarm(sc_missed).
+alarm(sc_wrong).
+
+-- expect-row: sa_rz[main](t3,c1) tick drv support=1
+-- expect-row: sa_rq[main](z,c0) tick drv support=1
+-- expect-row: shrug[$kernel](sb_r($unknown_value,$unknown_value),inherited,from($cons($rule(
+-- expect-row: sc_ns[main](n1) tick drv support=1

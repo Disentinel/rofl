@@ -60,7 +60,7 @@ pub enum Halt {
 /// found so far (the call's arguments under each, its variables renamed
 /// canonically, and what proves it), whether a call met again read them, and
 /// the first answer a call met again in this pass reads (`demand_linear`).
-#[derive(Clone)]
+#[derive(Clone, Default)]
 struct DemandCall {
     key: String,
     neg: usize,
@@ -68,7 +68,14 @@ struct DemandCall {
     keys: HashSet<String>,
     read: bool,
     from: usize,
+    /// How many answers it had when this pass began, and the fewest a read of it
+    /// in this pass saw: in a pass of its set, the next pass's `from` is the
+    /// fewest seen, every read having read those before (`began` if none read it).
+    began: usize,
+    seen: usize,
     linear: bool,
+    /// The members of `demand_scc` kept since it was made start here.
+    scc_from: usize,
     /// The lowest call below it whose answers it read: none, its own place.
     low: usize,
     /// Every record of an unknown, and the store, as they stood when it was
@@ -77,6 +84,42 @@ struct DemandCall {
     /// The rows its open answers hold, given back when it ends, or when the
     /// table that keeps them goes.
     rows: i64,
+}
+
+impl DemandCall {
+    /// The first answer a read in the next pass of its set reads.
+    fn window(&self) -> usize {
+        brk!("scc_window_late" => self.answers.len(); if self.seen == usize::MAX { self.began } else { self.seen })
+    }
+}
+
+/// The state of a call's unfolding (`Eval::unfold`): whether it was pushed, its place
+/// on the stack and where the calls kept under it start, the call resolved, the pass,
+/// whether it iterates its set, reads every answer in the next pass, goes one by one,
+/// and the records of an unknown when this pass of its set began.
+struct Unfolding {
+    pushed: bool,
+    p: usize,
+    scc_from: usize,
+    lr: Option<Lit>,
+    pass: usize,
+    scc: bool,
+    full: bool,
+    old: bool,
+    marks: Vec<u64>,
+}
+
+/// A CALL OF A STRONGLY CONNECTED SET whose lowest call is still open, kept
+/// when it ended: its call (the answers so far), the call itself with its
+/// arguments resolved, its rules and depth, to be unfolded again in each pass
+/// of the set, and every record of an unknown as it stood when it ended.
+#[derive(Clone)]
+struct SccMember {
+    call: DemandCall,
+    lit: Lit,
+    rules: Vec<Rc<ERule>>,
+    depth: usize,
+    at: Vec<u64>,
 }
 
 /// THE ANSWERS OF A CALL UNFOLDED TO ITS END, read by a call it covers while
@@ -1009,6 +1052,16 @@ pub struct Eval {
     /// answers so far: a call met again reads them, and the first one unfolds
     /// again until they stop growing (`DemandCall`).
     demand_calls: Vec<DemandCall>,
+    /// THE CALLS OF AN OPEN STRONGLY CONNECTED SET, kept when they end with their
+    /// answers in the order they ended (`SccMember`), `demand_scc_at` finding
+    /// one by key: read, not unfolded again, until the set completes together.
+    demand_scc: Vec<Option<SccMember>>,
+    demand_scc_at: HashMap<String, usize>,
+    /// How many calls on the stack iterate one by one: under one, no call is
+    /// kept for its set nor read from it.
+    demand_old: usize,
+    /// How many calls of cyclic relations were unfolded from nothing: a probe.
+    pub demand_unfolded: u64,
     /// The facts a question's unfolding made, taken out when it is answered.
     asked_made: Vec<FactId>,
     /// How many negations are being decided: a call met again under one more
@@ -1422,6 +1475,10 @@ impl Eval {
             demand_done_at: (0, 0),
             demand_done_rows: 0,
             demand_calls: Vec::new(),
+            demand_scc: Vec::new(),
+            demand_scc_at: HashMap::new(),
+            demand_old: 0,
+            demand_unfolded: 0,
             neg_level: 0,
             asked_made: Vec::new(),
             demand_rule_ids: Vec::new(),
@@ -4855,67 +4912,7 @@ impl Eval {
                             }
                         }
                         BodyElem::Neg(l) => {
-                            let (faults, unknowns, asked) = (self.fault_count, self.demand_trail.len(), self.asked.len());
-                            self.neg_level += 1;
-                            let holds = self.neg_holds(l, &a.s, depth);
-                            self.neg_level -= 1;
-                            let holds = holds?;
-                            let below = self.fault_count > faults || self.demand_trail.len() > unknowns;
-                            // a match found decides the negation whatever the unknowns beside it
-                            if !holds && brk!("demand_neg_failed_unknown" => false; true) {
-                                self.demand_trail.truncate(unknowns);
-                                self.fault_count = faults;
-                                self.asked.truncate(asked);
-                                continue;
-                            }
-                            if below && depth > 0 && (self.firing || brk!("asked_unholed" => false; self.asking)) {
-                                // below a call: the solution is not known, nor the head it would give
-                                self.demand_below(depth, l, &a.s, faults, unknowns);
-                                continue;
-                            }
-                            if holds && self.strict_neg && !self.lat_spread.is_empty() && self.read_unknown(l, &a.s, true).is_some() {
-                                continue;
-                            }
-                            // UNFOLDED AT A CALL, a negation what a hole left unknown could
-                            // decide leaves the call's head under it unknown, as a fault would;
-                            // outside a firing too (a body solved again at the flush), where no
-                            // head is marked but the answer is no answer, and is not stored
-                            let unfired = !self.firing && !self.asking && brk!("unfired_neg_decides" => false; true);
-                            if holds && depth > 0 && (self.firing || brk!("asked_unholed" => false; self.asking) || unfired) && !self.demand_heads.is_empty() && !self.lat_spread.is_empty() {
-                                if let Some(u) = brk!("demand_neg_unholed" => None; self.read_unknown(l, &a.s, true)) {
-                                    self.demand_unknown_read(depth, &a.s, u);
-                                    continue;
-                                }
-                            }
-                            if holds {
-                                // nothing matched; but what a fault below the negation's own
-                                // call left out could have, or what a hole left unknown
-                                if depth == 0 && self.firing && rule_id.is_some() && below && brk!("plain_neg_decides" => false; true) {
-                                    let u = self.lit_unknown(l, &a.s);
-                                    if self.fault_count == faults {
-                                        for f in self.demand_called(l.rel, unknowns) {
-                                            self.unk_edges.push((Node::Unk(u.clone()), Node::Unk(f)));
-                                        }
-                                    } else {
-                                        self.fault_edge(&u);
-                                    }
-                                    self.lat_plain.insert(u.clone());
-                                    self.lat_undecided.push((rule_id.unwrap(), i, a.s.clone(), Rc::from([u])));
-                                    continue;
-                                }
-                                let read = self.undecided_read(depth, rule_id, |e| brk!("lattice_neg_decides" => None; e.read_unknown(l, &a.s, brk!("plain_neg_decides" => false; true))));
-                                self.carry_check(0)?;
-                                if let Some(Some(u)) = read {
-                                    self.lat_undecided.push((rule_id.unwrap(), i, a.s.clone(), Rc::from([u])));
-                                    continue;
-                                }
-                                let mut prems = a.prems.clone();
-                                prems.push(PremRef::Neg(0));
-                                next.push(Sol {
-                                    s: a.s.clone(),
-                                    prems,
-                                });
-                            }
+                            self.solve_neg(l, a, i, depth, rule_id, &mut next)?;
                         }
                         BodyElem::Bi { op, l, r } => {
                             let faults = self.fault_count;
@@ -4937,66 +4934,7 @@ impl Eval {
                             }
                         }
                         BodyElem::Agg(ag) => {
-                            let rid = rule_id.ok_or_else(|| Halt::Bug("an aggregate solved outside a rule".into()))?;
-                            let sols = if ag.op == AggOp::AtLeast {
-                                if depth == 0 && self.firing && !self.lat_spread.is_empty() && brk!("shrug_thr_neg_decides" => false; true) {
-                                    for (sg, u) in self.thr_uncertain(rid, ag, &a.s)? {
-                                        self.lat_undecided.push((rid, i, sg, Rc::from([u])));
-                                    }
-                                    self.strict_neg = true;
-                                    let r = self.thr_premise(rid, ag, &a.s, depth);
-                                    self.strict_neg = false;
-                                    r?
-                                } else {
-                                    self.thr_premise(rid, ag, &a.s, depth)?
-                                }
-                            } else {
-                                // what the aggregate leaves undecided is decided once per
-                                // correlation, at the firing that first reads it
-                                // (`ReachMemo`), and read by every firing after
-                                let (_, corr) = self.agg_corr(rid, ag, &a.s)?;
-                                let mk = (rid, ag.at, corr.into_boxed_slice());
-                                // a correlation of a component stratified by data is read
-                                // once the layer before it has sealed (`datastrat.rs`)
-                                if !self.ds_elems.is_empty() && self.ds_elems.contains(&(rid, ag.at)) && !self.ds_gate(&mk)? {
-                                    continue;
-                                }
-                                let reads = self.undecided_read(depth, rule_id, |_| ()).is_some();
-                                let memo = if reads { brk!("agg_reach_unmemo" => None; self.reach_memo.get(&mk).cloned()) } else { None };
-                                let ps: Vec<Possible> = match &memo {
-                                    None if reads => brk!("lattice_agg_decides" => Vec::new(); self.agg_possibles(rid, ag, &a.s)?),
-                                    _ => Vec::new(),
-                                };
-                                let sealing = !self.agg_memo.contains_key(&mk);
-                                if sealing {
-                                    self.agg_reach = memo.as_ref().map_or_else(|| ps.clone(), |m| m.ps.to_vec());
-                                }
-                                let sols = self.agg_premise(rid, ag, &a.s, depth, true);
-                                self.agg_reach.clear();
-                                let sols = sols?;
-                                if reads {
-                                    let m = match memo {
-                                        Some(m) => brk!("agg_reach_first_only" => None; Some(m)),
-                                        None => {
-                                            let m = Rc::new(self.reach_memo_of(rid, ag, &a.s, &mk, ps, sealing)?);
-                                            self.reach_memo.insert(mk, m.clone());
-                                            Some(m)
-                                        }
-                                    };
-                                    if let Some(m) = m {
-                                        self.agg_reach_undecided(rid, ag, &a.s, i, &m);
-                                    }
-                                }
-                                if depth == 0 && self.firing {
-                                    brk!("plain_cell_hole_unspread" => (); self.plain_agg_holes(rid, ag, &a.s, i)?);
-                                }
-                                sols
-                            };
-                            for (s2, pr) in sols {
-                                let mut prems = a.prems.clone();
-                                prems.push(pr);
-                                next.push(Sol { s: s2, prems });
-                            }
+                            self.solve_agg(ag, a, i, depth, rule_id, &mut next)?;
                         }
                     }
                 }
@@ -5025,6 +4963,141 @@ impl Eval {
             out.push(Sol { s: a.s, prems });
         }
         Ok(out)
+    }
+
+    /// A negation of a rule body solved under `a` (`solve_body`), its match, if any,
+    /// pushed onto `next`. Apart and not inlined, so the frame each call answered on
+    /// demand holds through the calls below it stays small.
+    #[inline(never)]
+    fn solve_neg(&mut self, l: &Lit, a: &Sol, i: usize, depth: usize, rule_id: Option<Sym>, next: &mut Vec<Sol>) -> Result<(), Halt> {
+        let (faults, unknowns, asked) = (self.fault_count, self.demand_trail.len(), self.asked.len());
+        self.neg_level += 1;
+        let holds = self.neg_holds(l, &a.s, depth);
+        self.neg_level -= 1;
+        let holds = holds?;
+        let below = self.fault_count > faults || self.demand_trail.len() > unknowns;
+        // a match found decides the negation whatever the unknowns beside it
+        if !holds && brk!("demand_neg_failed_unknown" => false; true) {
+            self.demand_trail.truncate(unknowns);
+            self.fault_count = faults;
+            self.asked.truncate(asked);
+            return Ok(());
+        }
+        if below && depth > 0 && (self.firing || brk!("asked_unholed" => false; self.asking)) {
+            // below a call: the solution is not known, nor the head it would give
+            self.demand_below(depth, l, &a.s, faults, unknowns);
+            return Ok(());
+        }
+        if holds && self.strict_neg && !self.lat_spread.is_empty() && self.read_unknown(l, &a.s, true).is_some() {
+            return Ok(());
+        }
+        // UNFOLDED AT A CALL, a negation what a hole left unknown could
+        // decide leaves the call's head under it unknown, as a fault would;
+        // outside a firing too (a body solved again at the flush), where no
+        // head is marked but the answer is no answer, and is not stored
+        let unfired = !self.firing && !self.asking && brk!("unfired_neg_decides" => false; true);
+        if holds && depth > 0 && (self.firing || brk!("asked_unholed" => false; self.asking) || unfired) && !self.demand_heads.is_empty() && !self.lat_spread.is_empty() {
+            if let Some(u) = brk!("demand_neg_unholed" => None; self.read_unknown(l, &a.s, true)) {
+                self.demand_unknown_read(depth, &a.s, u);
+                return Ok(());
+            }
+        }
+        if holds {
+            // nothing matched; but what a fault below the negation's own
+            // call left out could have, or what a hole left unknown
+            if depth == 0 && self.firing && rule_id.is_some() && below && brk!("plain_neg_decides" => false; true) {
+                let u = self.lit_unknown(l, &a.s);
+                if self.fault_count == faults {
+                    for f in self.demand_called(l.rel, unknowns) {
+                        self.unk_edges.push((Node::Unk(u.clone()), Node::Unk(f)));
+                    }
+                } else {
+                    self.fault_edge(&u);
+                }
+                self.lat_plain.insert(u.clone());
+                self.lat_undecided.push((rule_id.unwrap(), i, a.s.clone(), Rc::from([u])));
+                return Ok(());
+            }
+            let read = self.undecided_read(depth, rule_id, |e| brk!("lattice_neg_decides" => None; e.read_unknown(l, &a.s, brk!("plain_neg_decides" => false; true))));
+            self.carry_check(0)?;
+            if let Some(Some(u)) = read {
+                self.lat_undecided.push((rule_id.unwrap(), i, a.s.clone(), Rc::from([u])));
+                return Ok(());
+            }
+            let mut prems = a.prems.clone();
+            prems.push(PremRef::Neg(0));
+            next.push(Sol {
+                s: a.s.clone(),
+                prems,
+            });
+        }
+        Ok(())
+    }
+
+    /// An aggregate of a rule body solved under `a` (`solve_body`), its matches pushed onto `next`.
+    #[inline(never)]
+    fn solve_agg(&mut self, ag: &Agg, a: &Sol, i: usize, depth: usize, rule_id: Option<Sym>, next: &mut Vec<Sol>) -> Result<(), Halt> {
+        let rid = rule_id.ok_or_else(|| Halt::Bug("an aggregate solved outside a rule".into()))?;
+        let sols = if ag.op == AggOp::AtLeast {
+            if depth == 0 && self.firing && !self.lat_spread.is_empty() && brk!("shrug_thr_neg_decides" => false; true) {
+                for (sg, u) in self.thr_uncertain(rid, ag, &a.s)? {
+                    self.lat_undecided.push((rid, i, sg, Rc::from([u])));
+                }
+                self.strict_neg = true;
+                let r = self.thr_premise(rid, ag, &a.s, depth);
+                self.strict_neg = false;
+                r?
+            } else {
+                self.thr_premise(rid, ag, &a.s, depth)?
+            }
+        } else {
+            // what the aggregate leaves undecided is decided once per
+            // correlation, at the firing that first reads it
+            // (`ReachMemo`), and read by every firing after
+            let (_, corr) = self.agg_corr(rid, ag, &a.s)?;
+            let mk = (rid, ag.at, corr.into_boxed_slice());
+            // a correlation of a component stratified by data is read
+            // once the layer before it has sealed (`datastrat.rs`)
+            if !self.ds_elems.is_empty() && self.ds_elems.contains(&(rid, ag.at)) && !self.ds_gate(&mk)? {
+                return Ok(());
+            }
+            let reads = self.undecided_read(depth, rule_id, |_| ()).is_some();
+            let memo = if reads { brk!("agg_reach_unmemo" => None; self.reach_memo.get(&mk).cloned()) } else { None };
+            let ps: Vec<Possible> = match &memo {
+                None if reads => brk!("lattice_agg_decides" => Vec::new(); self.agg_possibles(rid, ag, &a.s)?),
+                _ => Vec::new(),
+            };
+            let sealing = !self.agg_memo.contains_key(&mk);
+            if sealing {
+                self.agg_reach = memo.as_ref().map_or_else(|| ps.clone(), |m| m.ps.to_vec());
+            }
+            let sols = self.agg_premise(rid, ag, &a.s, depth, true);
+            self.agg_reach.clear();
+            let sols = sols?;
+            if reads {
+                let m = match memo {
+                    Some(m) => brk!("agg_reach_first_only" => None; Some(m)),
+                    None => {
+                        let m = Rc::new(self.reach_memo_of(rid, ag, &a.s, &mk, ps, sealing)?);
+                        self.reach_memo.insert(mk, m.clone());
+                        Some(m)
+                    }
+                };
+                if let Some(m) = m {
+                    self.agg_reach_undecided(rid, ag, &a.s, i, &m);
+                }
+            }
+            if depth == 0 && self.firing {
+                brk!("plain_cell_hole_unspread" => (); self.plain_agg_holes(rid, ag, &a.s, i)?);
+            }
+            sols
+        };
+        for (s2, pr) in sols {
+            let mut prems = a.prems.clone();
+            prems.push(pr);
+            next.push(Sol { s: s2, prems });
+        }
+        Ok(())
     }
 
     fn record_prem(&mut self, b: &BodyElem, r: PremRef, s: &Subst) -> PremRef {
@@ -10789,6 +10862,134 @@ impl Eval {
         self.demand_done.clear();
     }
 
+    /// A complete call's answers kept by its key, its rows held by the table.
+    fn table_call(&mut self, key: String, answers: Vec<(Vec<Term>, PremRef)>, rows: i64) {
+        if self.demand_done_at != (self.store.version, self.store.tick) {
+            self.drop_done();
+            self.demand_done_at = (self.store.version, self.store.tick);
+        }
+        self.demand_done_rows += rows;
+        if let Some(old) = self.demand_done.insert(key, DoneTable { answers, by: HashMap::new(), rows }) {
+            self.demand_done_rows -= old.rows;
+            self.give_rows(old.rows);
+        }
+    }
+
+    /// The kept call of an open set this key names, if it may be read: not under a
+    /// call iterating one by one, nor once an unknown was recorded since it ended,
+    /// nor under a negation opened inside its set (unfolded, it would meet the cut).
+    fn scc_member(&self, key: &str) -> Option<usize> {
+        if self.demand_old > 0 {
+            return None;
+        }
+        let i = *self.demand_scc_at.get(key)?;
+        let m = self.demand_scc[i].as_ref()?;
+        (m.at == self.unknown_marks() && self.neg_level <= self.demand_calls[m.call.low].neg).then_some(i)
+    }
+
+    /// WHETHER A CALL THAT READ THE OPEN CALL AT `low` IS KEPT FOR ITS SET: not under a
+    /// call iterating one by one, and only while no unknown was recorded since
+    /// that call was made (the set would fall back to one by one, its passes lost).
+    fn scc_keeps(&self, low: usize, now: &[u64]) -> bool {
+        self.demand_old == 0 && (self.demand_calls[low].marks == now || brk!("scc_unit_gone" => true; false))
+    }
+
+    /// A call of an open set kept, in place of one kept before under its key.
+    fn scc_keep(&mut self, call: DemandCall, lit: Lit, rules: Vec<Rc<ERule>>, depth: usize, at: Vec<u64>) {
+        if let Some(i) = self.demand_scc_at.remove(&call.key) {
+            if let Some(m) = self.demand_scc[i].take() {
+                self.give_rows(m.call.rows);
+            }
+        }
+        self.demand_scc_at.insert(call.key.clone(), self.demand_scc.len());
+        self.demand_scc.push(Some(SccMember { call, lit, rules, depth, at }));
+    }
+
+    /// The calls kept since `from` dropped, and the rows their open answers held given back.
+    fn scc_drop(&mut self, from: usize) {
+        let gone: Vec<SccMember> = self.demand_scc.drain(from..).flatten().collect();
+        for m in gone {
+            self.demand_scc_at.remove(&m.call.key);
+            self.give_rows(brk!("demand_rows_kept" => 0; m.call.rows));
+        }
+    }
+
+    /// An answer of `lr` (`l` resolved under `s`) under `ms`, as `l` under `s` matches it.
+    fn rebind(&mut self, l: &Lit, lr: &Lit, ms: &Subst, s: &Subst) -> Option<Subst> {
+        let p = resolve(&mut self.h, lr.persp, ms);
+        let args: Vec<Term> = lr.args.iter().map(|a| resolve(&mut self.h, *a, ms)).collect();
+        let s2 = unify(&self.h, l.persp, p, s)?;
+        unify_all(&self.h, &l.args, &args, &s2)
+    }
+
+    /// `l` with its perspective and arguments as `s` resolves them.
+    fn resolved_lit(&mut self, l: &Lit, s: &Subst) -> Lit {
+        let args = l.args.iter().map(|a| resolve(&mut self.h, *a, s)).collect();
+        Lit { rel: l.rel, persp: walk(&self.h, l.persp, s), persp_explicit: l.persp_explicit, args, temporal: l.temporal }
+    }
+
+    /// An answer of the call on top of the stack, `l` under `ms`, kept if it is
+    /// new: under canonical variables, a row if open. Whether it was.
+    fn keep_answer(&mut self, l: &Lit, ms: &Subst, mref: PremRef, dk: &str, rid: Sym) -> Result<bool, Halt> {
+        // an open answer is the same answer again under other variables
+        let tk = if matches!(mref, PremRef::Fact(_)) { dk.to_string() } else { self.anon_lit_key(l, ms) };
+        if self.demand_calls.last().unwrap().keys.contains(&tk) {
+            return Ok(false);
+        }
+        let args: Vec<Term> = l.args.iter().map(|a| resolve(&mut self.h, *a, ms)).collect();
+        // kept under canonical variables: a name renamed at each read never grows
+        let args = brk!("demand_answer_names_grow" => args; canon_vars(&mut self.h, &args));
+        let c = self.demand_calls.last_mut().unwrap();
+        c.keys.insert(tk);
+        c.answers.push((args, mref));
+        // an open answer kept is a row: no stored fact counts it
+        if !matches!(mref, PremRef::Fact(_)) && brk!("demand_open_answer_free" => false; true) {
+            c.rows += 1;
+            self.charge_row(Some(rid), true)?;
+        }
+        Ok(true)
+    }
+
+    /// A KEPT CALL OF THE SET UNFOLDED AGAIN at `at` on the stack, its rules
+    /// reading what the set found since the pass before began. Whether it grew.
+    fn solve_unit(&mut self, i: usize, at: usize) -> Result<bool, Halt> {
+        let m = self.demand_scc[i].as_mut().unwrap();
+        let call = std::mem::take(&mut m.call);
+        let (lit, rules, depth) = (m.lit.clone(), m.rules.clone(), m.depth);
+        let low = call.low;
+        let kept = self.demand_scc.len();
+        self.demand_calls.push(call);
+        let r = (|| -> Result<bool, Halt> {
+            let mut grew = false;
+            for dr in &rules {
+                for (ms, mref) in self.solve_demand_rule(dr, &lit, &Vec::new(), depth)? {
+                    let dk = match mref {
+                        PremRef::Fact(f) => self.store.key(&self.h, f),
+                        _ => String::new(),
+                    };
+                    if self.keep_answer(&lit, &ms, mref, &dk, dr.id)? {
+                        grew = true;
+                    }
+                }
+            }
+            Ok(grew)
+        })();
+        let call = self.demand_calls.pop().unwrap();
+        // what was kept above it while it unfolded belongs to its set
+        let to = call.low.min(low);
+        let kept = kept.min(self.demand_scc.len());
+        for m in self.demand_scc[kept..].iter_mut().flatten() {
+            if m.call.low >= at {
+                m.call.low = to;
+            }
+        }
+        match self.demand_scc.get_mut(i).and_then(|m| m.as_mut()) {
+            Some(m) => m.call = call,
+            None => self.give_rows(call.rows),
+        }
+        r
+    }
+
     /// Rows given back by what held them, a table's or an ended call's.
     fn give_rows(&mut self, n: i64) {
         self.rows -= n;
@@ -10915,11 +11116,14 @@ impl Eval {
         let cut = again.is_some_and(|j| (self.neg_level > self.demand_calls[j].neg && brk!("demand_neg_cycle_read" => false; true)) || brk!("demand_cycle_cut" => true; false));
         // the first call took the stored answers among its own: one met again reads them there
         let reread = again.is_some() && !cut && brk!("demand_again_rereads_store" => false; true);
+        // A CALL OF AN OPEN STRONGLY CONNECTED SET, kept when it ended, reads its
+        // answers so far: the set's passes unfold it again, not each call of it
+        let member = if met.is_none() && !closed { call.as_deref().and_then(|k| self.scc_member(k)) } else { None };
         // A CALL A COMPLETE ONE COVERS reads its answers: they were all found over this store, in a firing
         // (a question notes the unknowns it reads, which a firing leaves to the holes it writes)
-        let tabled = call.is_some() && met.is_none() && only.is_none() && self.firing && !self.asking && self.assume.is_none() && self.demand_tabled.contains(&l.rel) && brk!("demand_done_off" => false; true);
+        let tabled = call.is_some() && met.is_none() && member.is_none() && only.is_none() && self.firing && !self.asking && self.assume.is_none() && self.demand_tabled.contains(&l.rel) && brk!("demand_done_off" => false; true);
         let served = if tabled { self.done_answers(l, s) } else { None };
-        let mut out = if reread || served.is_some() { Vec::new() } else { self.store_answers(l, s, only) };
+        let out = if reread || member.is_some() || served.is_some() { Vec::new() } else { self.store_answers(l, s, only) };
         let mut open: Vec<(Subst, PremRef, String)> = Vec::new();
         let mut seen_keys: HashSet<String> = HashSet::new();
         if drs.is_some() {
@@ -10937,111 +11141,46 @@ impl Eval {
             if cut {
                 self.demand_cycle(l, s);
             } else {
-                self.demand_calls[j].read = true;
-                let c = &self.demand_calls[j];
+                let c = &mut self.demand_calls[j];
+                c.read = true;
+                c.seen = c.seen.min(c.answers.len());
                 let from = if c.linear { c.from } else { 0 };
                 let answers = c.answers[from..].to_vec();
                 self.read_answers(l, s, answers, &mut seen_keys, &mut open)?;
             }
         }
-        let drs = drs.filter(|_| served.is_none());
+        if let Some(i) = member {
+            let low = self.demand_scc[i].as_ref().unwrap().call.low;
+            // every call above the set's open call read answers that may still grow
+            for c in self.demand_calls[low + 1..].iter_mut() {
+                c.low = c.low.min(brk!("scc_member_reads_free" => c.low; low));
+            }
+            let c = &mut self.demand_scc[i].as_mut().unwrap().call;
+            c.read = true;
+            c.seen = c.seen.min(c.answers.len());
+            let from = if c.linear { c.from } else { 0 };
+            let answers = c.answers[from..].to_vec();
+            self.read_answers(l, s, answers, &mut seen_keys, &mut open)?;
+        }
+        let drs = drs.filter(|_| served.is_none() && member.is_none());
         if let Some(answers) = served {
             self.read_answers(l, s, answers, &mut seen_keys, &mut open)?;
         }
         let drs = drs.filter(|_| met.is_none() || brk!("demand_cycle_unfolds" => !closed; false));
         if let Some(drs) = drs {
-            let pushed = call.is_some();
-            if let Some(key) = call {
-                let linear = self.demand_linear.contains(&l.rel) && brk!("demand_naive_passes" => false; true);
-                let low = self.demand_calls.len();
-                let marks = self.unknown_marks();
-                let mut c = DemandCall { key, neg: self.neg_level, answers: Vec::new(), keys: HashSet::new(), read: false, from: 0, linear, low, marks, rows: 0 };
-                let stored = if only.is_some() { self.store_answers(l, s, None) } else { out.clone() };
-                for (_, r) in stored.iter() {
-                    if let PremRef::Fact(f) = r {
-                        c.keys.insert(self.store.key(&self.h, *f));
-                        c.answers.push((self.store.args(*f).to_vec(), *r));
-                    }
-                }
-                self.demand_calls.push(c);
-            }
-            let unfolded = (|| -> Result<(), Halt> {
-                let mut pass = 0;
-                loop {
-                    pass += 1;
-                    let mut grew = false;
-                    let began = self.demand_calls.last().map_or(0, |c| c.answers.len());
-                    for dr in &drs {
-                        for (ms, mref) in self.solve_demand_rule(dr, l, s, depth)? {
-                            let dk = match mref {
-                                PremRef::Fact(f) => self.store.key(&self.h, f),
-                                _ => self.resolved_lit_key(l, &ms),
-                            };
-                            let mut new = true;
-                            if pushed {
-                                // an open answer is the same answer again under other variables
-                                let tk = if matches!(mref, PremRef::Fact(_)) { dk.clone() } else { self.anon_lit_key(l, &ms) };
-                                new = !self.demand_calls.last().unwrap().keys.contains(&tk);
-                                if new {
-                                    let args: Vec<Term> = l.args.iter().map(|a| resolve(&mut self.h, *a, &ms)).collect();
-                                    // kept under canonical variables: a name renamed at each read never grows
-                                    let args = brk!("demand_answer_names_grow" => args; canon_vars(&mut self.h, &args));
-                                    let c = self.demand_calls.last_mut().unwrap();
-                                    c.keys.insert(tk);
-                                    c.answers.push((args, mref));
-                                    grew = true;
-                                    // an open answer kept is a row: no stored fact counts it
-                                    if !matches!(mref, PremRef::Fact(_)) && brk!("demand_open_answer_free" => false; true) {
-                                        self.demand_calls.last_mut().unwrap().rows += 1;
-                                        self.charge_row(Some(dr.id), true)?;
-                                    }
-                                }
-                            }
-                            if (new || pass == 1) && seen_keys.insert(dk.clone()) {
-                                open.push((ms, mref, dk));
-                            }
-                        }
-                    }
-                    let c = self.demand_calls.last_mut().filter(|_| pushed);
-                    match c {
-                        Some(c) if c.read && grew && brk!("demand_fixpoint_once" => false; true) => {
-                            c.read = false;
-                            c.from = brk!("demand_window_late" => c.answers.len(); began);
-                        }
-                        _ => break,
-                    }
-                }
-                Ok(())
-            })();
-            if pushed {
-                let c = self.demand_calls.pop().unwrap();
-                // UNFOLDED TO ITS END: it read no call below it, met no unknown, and the store stood
-                let now = self.unknown_marks();
-                let quiet = c.marks == now;
-                if unfolded.is_ok() && tabled && c.low >= self.demand_calls.len() && quiet {
-                    if self.demand_done_at != (self.store.version, self.store.tick) {
-                        self.drop_done();
-                        self.demand_done_at = (self.store.version, self.store.tick);
-                    }
-                    // the table keeps its open answers, and holds their rows while it stands
-                    self.demand_done_rows += c.rows;
-                    if let Some(old) = self.demand_done.insert(c.key, DoneTable { answers: c.answers, by: HashMap::new(), rows: c.rows }) {
-                        self.demand_done_rows -= old.rows;
-                        self.give_rows(old.rows);
-                    }
-                } else {
-                    // AN ENDED CALL'S OPEN ANSWERS ARE DROPPED, and the rows they held with them
-                    self.give_rows(brk!("demand_rows_kept" => 0; c.rows));
-                }
-            }
-            unfolded?;
+            self.unfold(l, s, depth, only, drs, call, tabled, &out, &mut seen_keys, &mut open)?;
         }
+        Ok(self.in_key_order(out, open))
+    }
+
+    /// The matches in the total sort that makes candidate order unobservable (`seen`
+    /// admits at most one match per key, so no two share a sort key).
+    #[inline(never)]
+    fn in_key_order(&mut self, mut out: Vec<(Subst, PremRef)>, open: Vec<(Subst, PremRef, String)>) -> Vec<(Subst, PremRef)> {
         if self.store.unordered && self.firing {
             out.extend(open.into_iter().map(|(s, r, _)| (s, r)));
-            return Ok(out);
+            return out;
         }
-        // The total sort that makes candidate order unobservable. `seen` above
-        // admits at most one match per key, so no two entries share a sort key.
         let mut keyed: Vec<(String, Subst, PremRef)> = out
             .into_iter()
             .map(|(s, r)| {
@@ -11056,7 +11195,240 @@ impl Eval {
             keyed.push((k, s, r));
         }
         keyed.sort_by(|a, b| cmp_js(&a.0, &b.0));
-        Ok(keyed.into_iter().map(|(_, s, r)| (s, r)).collect())
+        keyed.into_iter().map(|(_, s, r)| (s, r)).collect()
+    }
+
+    /// A CALL UNFOLDED: its rules solved, pass after pass while what they read grows,
+    /// then the call popped. Every frame here is held through each call below it, so
+    /// the work is in helpers that are not inlined: 512 calls deep must fit a 2 MB
+    /// thread (rvsc ch600).
+    #[inline(never)]
+    #[allow(clippy::too_many_arguments)]
+    fn unfold(&mut self, l: &Lit, s: &Subst, depth: usize, only: Option<&FxSet<FactId>>, drs: Vec<Rc<ERule>>, call: Option<String>, tabled: bool, out: &[(Subst, PremRef)], seen_keys: &mut HashSet<String>, open: &mut Vec<(Subst, PremRef, String)>) -> Result<(), Halt> {
+        let mut u = self.open_unfold(l, s, only, call, out);
+        let r = self.unfold_passes(&mut u, l, s, depth, &drs, seen_keys, open);
+        self.close_unfold(u, r.is_ok(), tabled, drs, depth);
+        r
+    }
+
+    #[inline(never)]
+    #[allow(clippy::too_many_arguments)]
+    fn unfold_passes(&mut self, u: &mut Unfolding, l: &Lit, s: &Subst, depth: usize, drs: &[Rc<ERule>], seen_keys: &mut HashSet<String>, open: &mut Vec<(Subst, PremRef, String)>) -> Result<(), Halt> {
+        loop {
+            u.pass += 1;
+            let mut grew = self.pass_begin(u)?;
+            for dr in drs {
+                let sols = match &u.lr {
+                    Some(lr) => self.solve_demand_rule(dr, lr, &Vec::new(), depth)?,
+                    None => self.solve_demand_rule(dr, l, s, depth)?,
+                };
+                if self.take_answers(u, l, s, sols, dr.id, seen_keys, open)? {
+                    grew = true;
+                }
+            }
+            if !u.pushed || !self.pass_end(u, grew) {
+                return Ok(());
+            }
+        }
+    }
+
+    /// The call pushed with the stored answers among its own, and the state of its
+    /// unfolding. A KEPT CALL IS SOLVED AS ITS ARGUMENTS RESOLVE, and each answer
+    /// matched back to the caller (`lr`): no solution carries the bindings of every
+    /// call around it.
+    #[inline(never)]
+    fn open_unfold(&mut self, l: &Lit, s: &Subst, only: Option<&FxSet<FactId>>, call: Option<String>, out: &[(Subst, PremRef)]) -> Unfolding {
+        let p = self.demand_calls.len();
+        let scc_from = self.demand_scc.len();
+        let mut u = Unfolding { pushed: call.is_some(), p, scc_from, lr: None, pass: 0, scc: false, full: false, old: false, marks: Vec::new() };
+        let Some(key) = call else { return u };
+        let linear = self.demand_linear.contains(&l.rel) && brk!("demand_naive_passes" => false; true);
+        let marks = self.unknown_marks();
+        let mut c = DemandCall { key, neg: self.neg_level, linear, low: p, marks, scc_from, seen: usize::MAX, ..Default::default() };
+        let stored = if only.is_some() { self.store_answers(l, s, None) } else { out.to_vec() };
+        for (_, r) in stored.iter() {
+            if let PremRef::Fact(f) = r {
+                c.keys.insert(self.store.key(&self.h, *f));
+                c.answers.push((self.store.args(*f).to_vec(), *r));
+            }
+        }
+        c.began = c.answers.len();
+        self.demand_calls.push(c);
+        self.demand_unfolded += 1;
+        u.lr = Some(self.resolved_lit(l, s));
+        u
+    }
+
+    /// A pass begun: the windows moved, and in a pass of its set (`scc`) each call kept
+    /// unfolded again, the deepest first, reading what the set found since the pass
+    /// before began. Whether one grew. `full`: the set it read was dropped, so this
+    /// pass reads every answer.
+    #[inline(never)]
+    fn pass_begin(&mut self, u: &mut Unfolding) -> Result<bool, Halt> {
+        if !u.pushed {
+            return Ok(false);
+        }
+        if u.pass > 1 {
+            let c = self.demand_calls.last_mut().unwrap();
+            c.read = false;
+            c.from = if u.full { 0 } else if u.scc { c.window() } else { brk!("demand_window_late" => c.answers.len(); c.began) };
+            c.began = c.answers.len();
+            c.seen = usize::MAX;
+            u.full = false;
+        }
+        u.marks = if u.scc { self.unknown_marks() } else { Vec::new() };
+        if !u.scc {
+            return Ok(false);
+        }
+        let units: Vec<usize> = (u.scc_from..self.demand_scc.len()).filter(|i| self.demand_scc[*i].is_some()).collect();
+        for &i in &units {
+            let c = &mut self.demand_scc[i].as_mut().unwrap().call;
+            c.read = false;
+            c.from = c.window();
+            c.began = c.answers.len();
+            c.seen = usize::MAX;
+        }
+        let mut grew = false;
+        for i in units {
+            // a call kept again in this pass took the place of this one
+            if self.demand_scc[i].is_none() && brk!("scc_unit_gone" => false; true) {
+                continue;
+            }
+            if self.solve_unit(i, u.p + 1)? {
+                grew = true;
+            }
+        }
+        Ok(grew)
+    }
+
+    /// The answers a rule gave, each matched back to the caller, kept for the call if
+    /// it has one, and a match if new or found in the first pass. Whether the call's
+    /// answers grew.
+    #[inline(never)]
+    #[allow(clippy::too_many_arguments)]
+    fn take_answers(&mut self, u: &Unfolding, l: &Lit, s: &Subst, sols: Vec<(Subst, PremRef)>, rid: Sym, seen_keys: &mut HashSet<String>, open: &mut Vec<(Subst, PremRef, String)>) -> Result<bool, Halt> {
+        let mut grew = false;
+        for (ms, mref) in sols {
+            let ms = match &u.lr {
+                Some(lr) => match self.rebind(l, lr, &ms, s) {
+                    Some(ms) => ms,
+                    None => continue,
+                },
+                None => ms,
+            };
+            let dk = match mref {
+                PremRef::Fact(f) => self.store.key(&self.h, f),
+                _ => self.resolved_lit_key(l, &ms),
+            };
+            let new = !u.pushed || self.keep_answer(l, &ms, mref, &dk, rid)?;
+            grew |= u.pushed && new;
+            if (new || u.pass == 1) && seen_keys.insert(dk.clone()) {
+                open.push((ms, mref, dk));
+            }
+        }
+        Ok(grew)
+    }
+
+    /// A pass ended: whether another follows. In a pass of its set, while one grew;
+    /// after the first, it iterates its set (the calls kept under it, none read since
+    /// an unknown), leaves itself to a lower call's set, or goes ONE BY ONE as before
+    /// (`old`); one by one, while it was read and grew. Falling back, what the set
+    /// kept is dropped and the next pass reads every answer.
+    #[inline(never)]
+    fn pass_end(&mut self, u: &mut Unfolding, grew: bool) -> bool {
+        let now = self.unknown_marks();
+        let c = self.demand_calls.last().unwrap();
+        let (low, read, quiet) = (c.low, c.read, c.marks == now);
+        let p = u.p;
+        let units = self.demand_scc[u.scc_from..].iter().any(|m| m.is_some());
+        let fall_back = if u.scc {
+            if low < p {
+                // a call new in this pass read below it: its set is a lower call's
+                if quiet {
+                    return false;
+                }
+                true
+            } else if now != u.marks {
+                // an unknown met in a pass reaches the calls that read it only unfolded
+                true
+            } else {
+                return grew && brk!("demand_fixpoint_once" => false; true);
+            }
+        } else if u.pass == 1 && !u.old {
+            if low < p && quiet && self.scc_keeps(low, &now) && brk!("scc_off" => false; true) {
+                // the lower call's set unfolds it again in its passes
+                return false;
+            }
+            if low == p && units && self.demand_old == 0 && self.demand_scc[u.scc_from..].iter().flatten().all(|m| m.at == now) && brk!("scc_off" => false; true) {
+                u.scc = true;
+                return true;
+            }
+            u.old = true;
+            self.demand_old += 1;
+            // what it kept is dropped; read and grown, it goes on as before, its next
+            // pass reading every answer found since this one began
+            if units {
+                self.scc_drop(u.scc_from);
+            }
+            false
+        } else {
+            false
+        };
+        if fall_back {
+            self.scc_drop(u.scc_from);
+            if !u.old {
+                u.old = true;
+                self.demand_old += 1;
+            }
+            u.scc = false;
+            u.full = true;
+            return true;
+        }
+        read && grew && brk!("demand_fixpoint_once" => false; true)
+    }
+
+    /// The call popped: kept for a lower call's set, tabled with its set, or dropped
+    /// with its set and the rows they held.
+    #[inline(never)]
+    fn close_unfold(&mut self, u: Unfolding, ok: bool, tabled: bool, drs: Vec<Rc<ERule>>, depth: usize) {
+        if u.old {
+            self.demand_old -= 1;
+        }
+        if !u.pushed {
+            return;
+        }
+        let (p, scc_from) = (u.p, u.scc_from);
+        let mut c = self.demand_calls.pop().unwrap();
+        let now = self.unknown_marks();
+        let quiet = c.marks == now;
+        if ok && c.low < p && quiet && self.scc_keeps(c.low, &now) && brk!("scc_off" => false; true) {
+            // A CALL OF A LOWER CALL'S SET is kept with its answers, and so are those kept under it
+            for m in self.demand_scc[scc_from..].iter_mut().flatten() {
+                if m.call.low >= p {
+                    m.call.low = c.low;
+                }
+            }
+            // the call that made it read every answer it found
+            c.seen = c.seen.min(c.answers.len());
+            self.scc_keep(c, u.lr.unwrap(), drs, depth, now);
+        } else if ok && tabled && c.low >= p && quiet {
+            // UNFOLDED TO ITS END: it read no call below it, met no unknown, and the store stood;
+            // the calls of its set are complete with it
+            self.table_call(c.key, c.answers, c.rows);
+            let units: Vec<SccMember> = self.demand_scc.drain(scc_from..).flatten().collect();
+            for m in units {
+                self.demand_scc_at.remove(&m.call.key);
+                if self.demand_tabled.contains(&m.lit.rel) {
+                    self.table_call(m.call.key, m.call.answers, m.call.rows);
+                } else {
+                    self.give_rows(m.call.rows);
+                }
+            }
+        } else {
+            // AN ENDED CALL'S OPEN ANSWERS ARE DROPPED, and the rows they held with them, its set's too
+            self.give_rows(brk!("demand_rows_kept" => 0; c.rows));
+            self.scc_drop(scc_from);
+        }
     }
 
     /// Top-down unfolding of a moded rule at a call site.

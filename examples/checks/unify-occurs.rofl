@@ -1,0 +1,26 @@
+-- examples/checks/unify-occurs.rofl — unify_occurs: A VARIABLE IS NOT BOUND TO A TERM
+-- HOLDING IT. The call uo_p(X, Y, Y, a) meets the head uo_p(X, Y, g(Y), W): Y = g(Y)
+-- has no finite solution. Without the occurs check both engines bound it, and the
+-- cyclic binding sent resolve down without end: a stack overflow in Rust, "Maximum
+-- call stack size exceeded" in TypeScript (17 of 1000 seeds of the review's gen2
+-- fuzzer of 13a742e, the base too). The copy binds W and is stored.
+edb(uo_e). edb(uo_n). edb(uo_dom).
+uo_e(b, a). uo_e(c, a). uo_e(d, d).
+uo_n(a). uo_n(b). uo_n(c). uo_n(d).
+uo_dom(a). uo_dom(b). uo_dom(c).
+uo_p(X, X, X, W) :- uo_e(X, Y).
+uo_p(X, Y, g(Y), W) :- uo_n(X), uo_p(Y, U, c, W), uo_e(Y, Z).
+uo_p(Y, X, X, W) :- uo_e(X, Y), uo_p(X, Y, X, W).
+uo_r(X, Y) :- uo_p(X, Y, Y, a), uo_n(X), uo_n(Y).
+
+uo_cp(X, X, X, W) :- uo_e(X, Y), uo_dom(W).
+uo_cp(X, Y, g(Y), W) :- uo_n(X), uo_cp(Y, U, c, W), uo_e(Y, Z).
+uo_cp(Y, X, X, W) :- uo_e(X, Y), uo_cp(X, Y, X, W).
+uo_cr(X, Y) :- uo_cp(X, Y, Y, a), uo_n(X), uo_n(Y).
+
+uo_missed(X, Y) :- uo_cr(X, Y), not uo_r(X, Y).
+uo_wrong(X, Y) :- uo_r(X, Y), not uo_cr(X, Y).
+alarm(uo_missed).
+alarm(uo_wrong).
+
+-- expect-row: uo_r[main](b,b) tick drv support=1

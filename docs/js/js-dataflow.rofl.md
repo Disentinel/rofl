@@ -1142,6 +1142,41 @@ A node points to a node F if all of:
   - F [is exported as](#exports_name) Name from Target;
   - it [reads](#ident_in) Local in File.
 
+> `export const X = init`: the name offers what the initialiser may be, a node through `exports_name` and a
+> literal through `exports_value`, which also carries `export { x }` and the re-exports, so a constant written
+> in one file reaches a use in another (vscode's channel names and ports, w_next_version_cutoff).
+
+In the code:
+
+<a id="export_var"></a>`export_var`(Init, Name, File) if all of:
+  - a [named export](#noun-named_export) E is in file File;
+  - the `declaration` of E is a node V;
+  - a node D [is among the](#ast_child) `declarations` of V;
+  - D [binds](#binder) Name to a node Init in File.
+
+A node is exported as Name from File if [`export_var`](#export_var)(Init, Name, File) and a node Init [points to](#may_be_node) it.
+
+<a id="exports_value"></a>`exports_value`(Init, Name, File) either:
+
+1. if [`export_var`](#export_var)(Init, Name, File);
+2. if Init [is exported locally as](#export_local) Name from File;
+3. if all of:
+   - an [export-all](#noun-export-all) E is in file File;
+   - E [means the file](js-modules.rofl.md#module_target) Target;
+   - [`exports_value`](#exports_value)(Init, Name, Target);
+4. if File [reexports](js-modules.rofl.md#reexport_offers) Int of a file T as Name and [`exports_value`](#exports_value)(Init, Int, T).
+
+In the flow:
+
+A node may be the literal V if all of:
+  - Local [imports](#imports_name) Name at a site D in File;
+  - D [means the file](js-modules.rofl.md#module_target) Target;
+  - [`exports_value`](#exports_value)(X, Name, Target);
+  - a node X [may be the literal](#may_be_lit) V;
+  - it [reads](#ident_in) Local in File.
+
+The member Name of a node P holds a node X if P [is the module object of](#module_object) Target and [`exports_value`](#exports_value)(X, Name, Target).
+
 > A namespace import binds the module object. A default import binds the one
 > unnamed export, whose syntactic name is NOT the importer's name.
 

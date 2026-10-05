@@ -322,7 +322,9 @@ impl Eval {
         let (ta, td) = (resolve(&mut self.h, l.args[0], s), resolve(&mut self.h, l.args[1], s));
         let a = self.h.is_ground(ta).then_some(ta);
         let d = self.h.is_ground(td).then_some(td);
-        let mut out = Vec::new();
+        // the rows in the order a stored closure's are read: by key, unless a firing's order is unobservable
+        let sorted = !(self.store.unordered && self.firing);
+        let mut out: Vec<(String, Subst, PremRef)> = Vec::new();
         for (book, x, y) in self.vrows(ci, persp, a, d) {
             if persp.is_none() && is_kernel_ledger(&self.h, book) {
                 continue;
@@ -333,10 +335,17 @@ impl Eval {
             };
             let Some(s2) = s2 else { continue };
             if let Some(s3) = unify_all(&self.h, &l.args, &[x, y], &s2) {
-                out.push((s3, brk!("vclosure_premise_untagged" => PremRef::Neg(0); PremRef::VRow(0))));
+                let mut key = String::new();
+                if sorted {
+                    write_fact_key(&self.h, self.vclosures[ci].rel, book, &[x, y], &mut key);
+                }
+                out.push((key, s3, brk!("vclosure_premise_untagged" => PremRef::Neg(0); PremRef::VRow(0))));
             }
         }
-        out
+        if sorted {
+            out.sort_by(|p, q| cmp_js(&p.0, &q.0));
+        }
+        out.into_iter().map(|(_, s, p)| (s, p)).collect()
     }
 
     /// Does a row of the closure hold the ends given: the answer to a negation.
