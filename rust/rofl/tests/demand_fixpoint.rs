@@ -165,3 +165,30 @@ fn a_strongly_connected_ring_iterates_together() {
         assert!(secs < 3.0, "a ring of {n} read from one node took {secs:.2} s: the calls of the set were unfolded again in every pass");
     }
 }
+
+/// SIX HUNDRED CALLS DEEP, EACH OF ANOTHER KEY, END AT THE DEPTH WALL on a thread of
+/// three quarters of the 2 MiB a test thread has (the review of 13a742e: a call
+/// answered on demand held more of the stack). Optimised builds only: a debug frame
+/// says nothing of the release one.
+#[test]
+fn six_hundred_calls_deep_meet_the_depth_wall_with_stack_to_spare() {
+    if cfg!(debug_assertions) {
+        return;
+    }
+    let mut src = String::from("edb(t_e).\n");
+    for i in 0..600 {
+        src.push_str(&format!("t_e(n{i}, n{}).\n", i + 1));
+    }
+    src.push_str("t_c(X, Y, W) :- t_e(X, Y).\nt_c(X, Z, W) :- t_e(X, Y), t_c(Y, Z, W).\nt_r(Z) :- t_c(n0, Z, a).\n");
+    let st = std::thread::Builder::new()
+        .stack_size(3 << 19)
+        .spawn(move || {
+            let mut s = session(200_000_000, &src);
+            run(&mut s);
+            state(&s)
+        })
+        .unwrap()
+        .join()
+        .expect("the stack ran out before the depth wall");
+    assert!(st.contains("spent(depth,513,512)"), "six hundred calls deep did not end at the depth wall");
+}

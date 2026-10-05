@@ -1140,6 +1140,14 @@ brk("scc_member_reads_free"). brk_kind("scc_member_reads_free", switch).
 brk_expects("scc_member_reads_free", "demand_scc").
 brk("ts_scc_member_reads_free"). brk_kind("ts_scc_member_reads_free", ts).
 brk_expects("ts_scc_member_reads_free", "demand_scc").
+brk("scc_unit_gone"). brk_kind("scc_unit_gone", switch).
+brk_expects("scc_unit_gone", "demand_scc_unknown").
+brk("ts_scc_unit_gone"). brk_kind("ts_scc_unit_gone", ts).
+brk_expects("ts_scc_unit_gone", "demand_scc_unknown").
+brk("unify_no_occurs_check"). brk_kind("unify_no_occurs_check", switch).
+brk_expects("unify_no_occurs_check", "unify_occurs").
+brk("ts_unify_no_occurs_check"). brk_kind("ts_unify_no_occurs_check", ts).
+brk_expects("ts_unify_no_occurs_check", "unify_occurs").
 brk("scc_off"). brk_kind("scc_off", switch).
 brk_expects("scc_off", "demand_fixpoint").
 brk("demand_rows_kept"). brk_kind("demand_rows_kept", switch).
@@ -2428,6 +2436,7 @@ switch_site("retract_thr_unclosed", "rust/rofl/src/engine/delta.rs").
 switch_site("roots_of_cycle_off", "rust/rofl/src/engine.rs").
 switch_site("scc_member_reads_free", "rust/rofl/src/engine.rs").
 switch_site("scc_off", "rust/rofl/src/engine.rs").
+switch_site("scc_unit_gone", "rust/rofl/src/engine.rs").
 switch_site("scc_window_late", "rust/rofl/src/engine.rs").
 switch_site("set_literal_as_written", "rust/rofl/src/cell.rs").
 switch_site("set_pattern_admitted", "rust/rofl/src/engine.rs").
@@ -2518,6 +2527,7 @@ switch_site("trunc5", "rust/rofl/src/engine.rs").
 switch_site("trust_max", "rust/rofl/src/cell.rs").
 switch_site("unclosed", "rust/rofl/src/rofl_parse.rs").
 switch_site("unfired_neg_decides", "rust/rofl/src/engine.rs").
+switch_site("unify_no_occurs_check", "rust/rofl/src/term.rs").
 switch_site("union_left", "rust/rofl/src/cell.rs").
 switch_site("unknown_scan", "rust/rofl/src/engine.rs").
 switch_site("unranked_negation_runs", "rust/rofl/src/engine.rs").

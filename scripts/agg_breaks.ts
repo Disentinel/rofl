@@ -3778,8 +3778,8 @@ export const BREAKS: Break[] = [
   "edits": [
    [
     "src/aggeval.ts",
-    "if (u !== null) { this.demandUnknownRead(depth, a.s, u); continue; }",
-    "if (u === undefined) continue;"
+    "if (u !== null) { this.demandUnknownRead(depth, a.s, u); return; }",
+    "if (u === undefined) return;"
    ]
   ],
   "expect": {
@@ -3862,8 +3862,8 @@ export const BREAKS: Break[] = [
   "edits": [
    [
     "src/aggeval.ts",
-    "if (drs !== undefined && !this.demandClosed.has(l.rel) && j < 0 && member < 0 && served === null) {",
-    "if (drs !== undefined && j < 0 && member < 0 && served === null) {"
+    "if (drs !== undefined && !this.demandClosed.has(l.rel) && j < 0 && member < 0 && served === null) this.unfold(",
+    "if (drs !== undefined && j < 0 && member < 0 && served === null) this.unfold("
    ]
   ],
   "expect": {
@@ -3888,8 +3888,8 @@ export const BREAKS: Break[] = [
    ],
    [
     "src/aggeval.ts",
-    "if (drs !== undefined && !this.demandClosed.has(l.rel) && j < 0 && member < 0 && served === null) {",
-    "if (drs !== undefined && j < 0 && member < 0 && served === null) {"
+    "if (drs !== undefined && !this.demandClosed.has(l.rel) && j < 0 && member < 0 && served === null) this.unfold(",
+    "if (drs !== undefined && j < 0 && member < 0 && served === null) this.unfold("
    ]
   ],
   "expect": {
@@ -3916,7 +3916,7 @@ export const BREAKS: Break[] = [
   "edits": [
    [
     "src/aggeval.ts",
-    "if (!holds) { this.demandTrail.length = unknowns; this.asked.length = asked; this.faultCount = faults; continue; }",
+    "if (!holds) { this.demandTrail.length = unknowns; this.asked.length = asked; this.faultCount = faults; return; }",
     ""
    ]
   ],
@@ -3981,13 +3981,13 @@ export const BREAKS: Break[] = [
   "edits": [
    [
     "src/aggeval.ts",
-    "if (!(c.read && grew)) break;",
-    "break;"
+    "return c.read && grew;",
+    "return false;"
    ],
    [
     "src/aggeval.ts",
-    "else if (grew) continue;",
-    "else if (false) continue;"
+    "else return grew;",
+    "else return false;"
    ]
   ],
   "expect": {
@@ -4007,8 +4007,8 @@ export const BREAKS: Break[] = [
   "edits": [
    [
     "src/aggeval.ts",
-    "c.from = full ? 0 : scc ? sccWindow(c) : c.began;",
-    "c.from = full ? 0 : scc ? sccWindow(c) : c.answers.length;"
+    "c.from = u.full ? 0 : u.scc ? sccWindow(c) : c.began;",
+    "c.from = u.full ? 0 : u.scc ? sccWindow(c) : c.answers.length;"
    ]
   ],
   "expect": {
@@ -4241,6 +4241,58 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "scc_unit_gone",
+  "what": "a set is guessed after an unknown under its lowest call, and a pass unfolds a listed call whose place a call kept again in the pass took",
+  "expect": {
+   "demand_scc_unknown": "does not evaluate"
+  }
+ },
+ {
+  "id": "ts_scc_unit_gone",
+  "what": "the TypeScript engine guesses a set after an unknown and unfolds a listed call whose place was taken",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "for (const i of units) if (this.demandScc[i] !== null && this.solveUnit(i, u.p + 1)) grew = true;",
+    "for (const i of units) if (this.solveUnit(i, u.p + 1)) grew = true;"
+   ],
+   [
+    "src/aggeval.ts",
+    "return this.demandOld === 0 && sameMarks(this.demandCalls[low].marks, now);",
+    "return this.demandOld === 0;"
+   ]
+  ],
+  "expect": {
+   "demand_scc_unknown": "does not evaluate"
+  }
+ },
+ {
+  "id": "unify_no_occurs_check",
+  "what": "unification binds a variable to a term holding it, and resolve follows the cycle without end",
+  "expect": {
+   "unify_occurs": "does not evaluate"
+  }
+ },
+ {
+  "id": "ts_unify_no_occurs_check",
+  "what": "the TypeScript engine binds a variable to a term holding it",
+  "edits": [
+   [
+    "src/unify.ts",
+    "if (b.k === 'f' && occurs(a.name, b, s)) return false;",
+    ""
+   ],
+   [
+    "src/unify.ts",
+    "if (a.k === 'f' && occurs(b.name, a, s)) return false;",
+    ""
+   ]
+  ],
+  "expect": {
+   "unify_occurs": "does not evaluate"
+  }
+ },
+ {
   "id": "scc_off",
   "what": "no strongly connected set is iterated together: its calls are unfolded again in every pass of the lowest",
   "expect": {
@@ -4260,8 +4312,8 @@ export const BREAKS: Break[] = [
   "edits": [
    [
     "src/aggeval.ts",
-    "this.rows -= c.rows; this.sccDrop(sccFrom);",
-    "this.sccDrop(sccFrom);"
+    "this.rows -= c.rows; this.sccDrop(u.sccFrom);",
+    "this.sccDrop(u.sccFrom);"
    ],
    [
     "src/aggeval.ts",
@@ -5899,8 +5951,8 @@ export const BREAKS: Break[] = [
   "edits": [
    [
     "src/aggeval.ts",
-    "                this.aggReachUndecided(rid, b, a.s, i, m);",
-    "                if (memo === undefined) this.aggReachUndecided(rid, b, a.s, i, m);"
+    "        this.aggReachUndecided(rid, b, a.s, i, m);",
+    "        if (memo === undefined) this.aggReachUndecided(rid, b, a.s, i, m);"
    ]
   ],
   "expect": {
