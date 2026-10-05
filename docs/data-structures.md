@@ -423,7 +423,7 @@ is evaluated. Not sealed, the closure is rows as it was: the spread of three run
 (about 5%) covers the difference. The canonical state of util, sealed, before and after,
 is the same in every relation of the model, `ast_within` by hash; what differs is the
 reflection of the two lowered rules and the structure rows (17 relations, none of them
-facts of the world). A reader asks the tree for 48% of the closure's rows (matches, not
+facts of the world). Over one seed the sealed state (the closure from the tree) equals the state with the kernel's rows relation by relation and row by row on all four corpora (the provenance's relations aside; only `shrug`, a row the seal writes, differs). A reader asks the tree for 48% of the closure's rows (matches, not
 distinct rows: 248,461 of 513,629 on self, 445,682 of 888,133 on util).
 
 ## What serves the readers of the tree
