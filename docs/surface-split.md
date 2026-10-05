@@ -159,3 +159,25 @@ The wall moves from memory to ingest scheduling.
 5. **Scanner.** Host string facts into the volume (276 k out of core); node ids already carry the file.
 6. **Precision**, separately: `param i -> return` and `param i -> argument j of a call` summaries beyond the direct
    form (the parameter as a symbolic value), which also cuts the why of an answer to one helper volume.
+
+## 6. Built: the book and the gate (items 1 and 2)
+
+`rules/js-surface.rofl` is the `[surface]` book; the finding is
+`f_the_surface_book_mirrors_what_escapes_and_every_file_alone_equals_the_whole_world`.
+
+- **Three shapes.** Exports keyed by the module's path (`sx_export_node`, `sx_export_val`, `sx_export_lit`,
+  `sx_default`, `sx_cjs`, `sx_module`, `sx_eff_module`, `sx_effect_module`). Subscriptions keyed by the callee and
+  published by the caller (`sx_arg_lit`, `sx_arg_node`, `sx_called`, `sx_reached`, `sx_reach`, `sx_entry`, `sx_next`,
+  `sx_cb`, `sx_mwrite`; the question's `sx_param_sink`). Escaping nodes: `sx_esc` is every node a channel hands over
+  and what it holds, and for each the facts the model reads about it are published and **mirrored** back into their
+  relation (`may_be_node(N, M) :- sx_node(N, M)`), so the rules that read another file's node stay as they were.
+- **49 rules rewritten** (js-dataflow 21, js-callgraph 14, js-controlflow 9, js-effects 4, the question's wrapper).
+  With every file resident the public facts are the model's; the one change is precision: `sx_ret_param` gives a call
+  of a function returning its own parameter that call's argument.
+- **A function read as a value is asked in `[flow]`** (`fn_value`, `fn_label`, `fn_nested`): mirroring into
+  `fn_node`, which `nearest_v` negates, made the program unstratifiable.
+- **The gate.** World `vscode_surface_split` (both engines) holds the answers with every file resident;
+  `scripts/surface_split.ts` (`npm run test:split`) evaluates each of the 14 files alone with the others' surface to
+  a fixpoint, forward and reverse, and every fact of every file equals the whole world's: 420 surface facts, 93
+  evaluations. The planted break (the model before the book, no surface) loses 84 of 184 answers and invents 16.
+- **The lint** reads a mirrored relation as the channel; it is green with 8 excuses, each with its reason.
