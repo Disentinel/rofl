@@ -2037,6 +2037,34 @@ brk("ts_tree_arity_unchecked"). brk_kind("ts_tree_arity_unchecked", ts).
 brk_expects("ts_tree_arity_unchecked", "ds_tree_syntax").
 brk("ts_tree_closure_row_unwritten"). brk_kind("ts_tree_closure_row_unwritten", ts).
 brk_expects("ts_tree_closure_row_unwritten", "ds_tree_syntax").
+brk("concat_unbounded"). brk_kind("concat_unbounded", file).
+brk_expects("concat_unbounded", "concat_value").
+brk("concat_cap_wide"). brk_kind("concat_cap_wide", file).
+brk_expects("concat_cap_wide", "concat_value").
+brk("concat_numeric_plus"). brk_kind("concat_numeric_plus", file).
+brk_expects("concat_numeric_plus", "concat_value").
+brk("concat_any_plus"). brk_kind("concat_any_plus", file).
+brk_expects("concat_any_plus", "concat_value").
+brk("concat_no_template"). brk_kind("concat_no_template", file).
+brk_expects("concat_no_template", "concat_value").
+brk("concat_no_plus_assign"). brk_kind("concat_no_plus_assign", file).
+brk_expects("concat_no_plus_assign", "concat_value").
+brk("concat_no_join_row"). brk_kind("concat_no_join_row", file).
+brk_expects("concat_no_join_row", "concat_value").
+brk("concat_partial_args"). brk_kind("concat_partial_args", file).
+brk_expects("concat_partial_args", "concat_value").
+brk("concat_cut_doubled"). brk_kind("concat_cut_doubled", file).
+brk_expects("concat_cut_doubled", "concat_value").
+brk("concat_unknown_part_dropped"). brk_kind("concat_unknown_part_dropped", file).
+brk_expects("concat_unknown_part_dropped", "concat_value").
+brk("concat_url_order"). brk_kind("concat_url_order", file).
+brk_expects("concat_url_order", "concat_value").
+brk("concat_depth_shallow"). brk_kind("concat_depth_shallow", file).
+brk_expects("concat_depth_shallow", "concat_value").
+brk("concat_summary_leaks"). brk_kind("concat_summary_leaks", file).
+brk_expects("concat_summary_leaks", "concat_value").
+brk("concat_untextable_part"). brk_kind("concat_untextable_part", file).
+brk_expects("concat_untextable_part", "concat_value").
 
 switch_site("agg_reach_alias_first", "rust/rofl/src/engine.rs").
 switch_site("agg_reach_bound_any", "rust/rofl/src/engine.rs").
