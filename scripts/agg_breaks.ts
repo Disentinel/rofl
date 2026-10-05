@@ -92,6 +92,132 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "asks_negation_cut",
+  "what": "the cone of an asked relation does not follow a negated premise: the relation it negates is never derived",
+  "expect": {
+   "asks_cone": "ak_blocked"
+  }
+ },
+ {
+  "id": "asks_aggregate_cut",
+  "what": "the cone of an asked relation does not follow the premises inside an aggregate: the relation it counts is never derived",
+  "expect": {
+   "asks_cone": "ak_member"
+  }
+ },
+ {
+  "id": "asks_derived_by_plain",
+  "what": "a rule in the cone that reads derived_by of a named relation is taken for a reader of none: the relation is outside the cone and its rows are never written",
+  "expect": {
+   "asks_reads_provenance": "ap_a"
+  }
+ },
+ {
+  "id": "asks_derived_by_unnamed",
+  "what": "a rule in the cone that reads derived_by with its fact unbound keeps only the cone: the rows of every other relation are missing",
+  "expect": {
+   "asks_reads_everything": "au_b"
+  }
+ },
+ {
+  "id": "asks_blind_reflection",
+  "what": "a rule in the cone that reads the kernel's aggregate cells keeps only the cone: the cells of every other aggregate are missing",
+  "expect": {
+   "asks_reads_cells": "ab_size"
+  }
+ },
+ {
+  "id": "asks_explain_unasked",
+  "what": "a relation an explain_request names is outside the cone unless some asked relation reads it: its explanation is that of a world that never derived it",
+  "expect": {
+   "asks_explained": "ae_y"
+  }
+ },
+ {
+  "id": "asks_dominance_reads",
+  "what": "the relations a subsumptive relation's dominance bodies read are outside the cone: nothing dominates, and every value of the front is kept",
+  "expect": {
+   "asks_dominance": "ad_best"
+  }
+ },
+ {
+  "id": "asks_blind_asked",
+  "what": "a relation the kernel writes from every rule's evaluation, asked by name, is answered from the cone: the aggregate cells of every other rule are missing",
+  "expect": {
+   "asks_asked_cells": "ab2_size"
+  }
+ },
+ {
+  "id": "asks_demand_asked",
+  "what": "a relation answered on demand, asked by name, is answered from the cone: the facts made for the calls of every other rule are missing",
+  "expect": {
+   "asks_demand": "dd_u"
+  }
+ },
+ {
+  "id": "asks_retract_unread",
+  "what": "an ask retracted from an evaluated world leaves the cone it named: the rules it activated still run and their rows stand",
+  "expect": {
+   "asks_retracted": "rr_b"
+  }
+ },
+ {
+  "id": "ts_asks_derived_by_unnamed",
+  "what": "the TypeScript engine keeps only the cone for a rule that reads derived_by with its fact unbound",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "            else return whole(r, V.derived_by);",
+    "            else void whole;"
+   ]
+  ],
+  "expect": {
+   "asks_reads_everything": "au_b"
+  }
+ },
+ {
+  "id": "ts_asks_blind_reflection",
+  "what": "the TypeScript engine keeps only the cone for a rule that reads the kernel's aggregate cells",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "          } else if (blind.has(l.rel) || l.rel === V.hole) return whole(r, l.rel);",
+    "          }"
+   ]
+  ],
+  "expect": {
+   "asks_reads_cells": "ab_size"
+  }
+ },
+ {
+  "id": "ts_asks_explain_unasked",
+  "what": "the TypeScript engine leaves a relation an explain_request names outside the cone",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "if (f.args.length === 2 && (f.args[1].k === 'a' || f.args[1].k === 'f')) cone.add(f.args[1].name);",
+    "if (false) cone.add(f.args[1].name);"
+   ]
+  ],
+  "expect": {
+   "asks_explained": "ae_y"
+  }
+ },
+ {
+  "id": "ts_asks_dominance_reads",
+  "what": "the TypeScript engine leaves the relations a dominance body reads outside the cone",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "      for (const [rel, sub] of this.subs) if (cone.has(rel)) for (const x of sub.reads) cone.add(x);",
+    "      for (const [rel, sub] of this.subs) if (false) for (const x of sub.reads) cone.add(x);"
+   ]
+  ],
+  "expect": {
+   "asks_dominance": "ad_best"
+  }
+ },
+ {
   "id": "delta_first_off",
   "what": "a firing is solved in written order, never from its news: the join before the news premise is held in full",
   "expect": {

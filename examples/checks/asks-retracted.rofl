@@ -1,0 +1,16 @@
+-- examples/checks/asks-retracted.rofl — AN ASK TAKEN BACK. Two relations are asked; the world retracts
+-- asks(rr_b) after it evaluates (the check's retract option), and the rules it runs are those of the world
+-- that never asked rr_b: rr_b and what only it reads are derived no more. The retraction is judged against that
+-- world evaluated fresh, in both engines.
+asks(rr_a).
+asks(rr_b).
+edb(rr_src).
+rr_src(1). rr_src(2).
+rr_a(X) :- rr_src(X).
+rr_m(X) :- rr_src(X), X > 1.
+rr_b(X) :- rr_m(X).
+rr_c(X) :- rr_src(X).
+-- expect-row: rr_a[main](1)
+-- expect-no-row: rr_b[main](2)
+-- expect-no-row: rr_m[main](2)
+-- expect-no-row: rr_c[main](1)

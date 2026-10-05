@@ -3289,3 +3289,43 @@ check_file("prov_lazy_reader", "examples/checks/prov-lazy-reader.rofl").
 check_opt("prov_lazy_reader", together, 1).
 check_opt("prov_lazy_reader", explain, 1).
 check_opt("prov_lazy_reader", retract, "pr_src(2)").
+
+-- THE CONE OF asks(Rel) (w_cmp_demand_cones): what a rule reads without a premise that names it. Each world holds its
+-- expect-rows to the world it would be without asks (rust/rofl/tests/asks_cone.rs runs the two and compares).
+check_world("asks_cone").
+check_file("asks_cone", "examples/checks/asks-cone.rofl").
+check_opt("asks_cone", together, 1).
+
+check_world("asks_reads_provenance").
+check_file("asks_reads_provenance", "examples/checks/asks-reads-provenance.rofl").
+check_opt("asks_reads_provenance", together, 1).
+
+check_world("asks_reads_everything").
+check_file("asks_reads_everything", "examples/checks/asks-reads-everything.rofl").
+check_opt("asks_reads_everything", together, 1).
+
+check_world("asks_reads_cells").
+check_file("asks_reads_cells", "examples/checks/asks-reads-cells.rofl").
+check_opt("asks_reads_cells", together, 1).
+
+check_world("asks_explained").
+check_file("asks_explained", "examples/checks/asks-explained.rofl").
+check_opt("asks_explained", together, 1).
+check_opt("asks_explained", explain, 1).
+
+check_world("asks_dominance").
+check_file("asks_dominance", "examples/checks/asks-dominance.rofl").
+check_opt("asks_dominance", together, 1).
+
+check_world("asks_retracted").
+check_file("asks_retracted", "examples/checks/asks-retracted.rofl").
+check_opt("asks_retracted", together, 1).
+check_opt("asks_retracted", retract, "asks(rr_b)").
+
+check_world("asks_demand").
+check_file("asks_demand", "examples/checks/asks-demand.rofl").
+check_opt("asks_demand", together, 1).
+
+check_world("asks_asked_cells").
+check_file("asks_asked_cells", "examples/checks/asks-asked-cells.rofl").
+check_opt("asks_asked_cells", together, 1).

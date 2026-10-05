@@ -1,0 +1,12 @@
+-- examples/checks/asks-reads-everything.rofl — A RULE IN THE CONE SEES EVERY RELATION'S ROWS.
+-- au_any is asked and reads derived_by with its fact unbound: the rows of every relation's firings are
+-- its premise, so the cone is the whole world and au_b is derived although nothing names it. The kernel's
+-- cells, members, lattice members and dominations are read the same way (asks-reads-cells.rofl).
+asks(au_any).
+edb(au_src).
+au_src(1). au_src(2).
+au_a(X) :- au_src(X).
+au_b(X) :- au_src(X).
+au_any(R) :- derived_by[$kernel](_, R, _).
+-- expect-row: au_a[main](1)
+-- expect-row: au_b[main](1)

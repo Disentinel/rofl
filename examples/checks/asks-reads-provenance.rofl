@@ -1,0 +1,11 @@
+-- examples/checks/asks-reads-provenance.rofl — A RULE IN THE CONE READS derived_by OF A RELATION NO PREMISE NAMES.
+-- ap_fired is asked and reads the rows of derived_by of ap_a, written as `$fact(ap_a, ..)`: ap_a is in the
+-- cone, and so are the rows of its firings. ap_b, which nothing in the cone reads, concludes nothing.
+asks(ap_fired).
+edb(ap_src).
+ap_src(1). ap_src(2).
+ap_a(X) :- ap_src(X).
+ap_b(X) :- ap_src(X).
+ap_fired(R) :- derived_by[$kernel]($fact(ap_a, main, _), R, _).
+-- expect-row: ap_a[main](1)
+-- expect-no-row: ap_b[main](1)

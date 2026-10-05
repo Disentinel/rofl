@@ -155,7 +155,9 @@ them, which negation decides), `port-surface.md` (what the Rust engine has to
 expose), `performance-invariants.md` (what this kernel costs and what the field
 costs), `data-structures.md` (declared structures: a promise the system checks
 and a licence for the engine to store a relation as a tree, an alias, a key,
-a span), `modelling-a-language.md` (the JS model as a research programme), `aggregates.md`
+a span), `demand-cones.md` (answering a question in the part of the world it
+reaches: the `asks` cone, when it is the whole world, what it saves, what growing it needs),
+`modelling-a-language.md` (the JS model as a research programme), `aggregates.md`
 (every aggregate class as one cell engine with two syntaxes, and the matrix
 that holds the work to it).
 

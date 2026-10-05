@@ -1,0 +1,9 @@
+-- examples/checks/asks-reads-cells.rofl — A RULE IN THE CONE READS THE KERNEL'S AGGREGATE CELLS.
+-- ab_cells is asked and reads agg_cell, the cell of every aggregate in the world, ab_size's among them,
+-- though no premise of the cone names ab_size: the cone is the whole world and ab_size is derived.
+asks(ab_cells).
+edb(ab_item).
+ab_item(a, 1). ab_item(a, 2). ab_item(b, 3).
+ab_size(G, N) :- ab_item(G, _), N is count(K : ab_item(G, K)).
+ab_cells(C) :- agg_cell[$kernel](C, _, _).
+-- expect-row: ab_size[main](a,2)

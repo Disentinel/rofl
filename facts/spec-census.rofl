@@ -16,6 +16,15 @@ check[checks]("rust/rofl/tests/agg_worlds.rs", "an_ended_tick_keeps_only_the_cel
 check[checks]("rust/rofl/tests/agg_worlds.rs", "a_damaged_cell_in_a_snapshot_is_refused", test).
 check[checks]("rust/rofl/tests/agg_worlds.rs", "the_world_below_is_built_under_the_run_s_walls", test).
 check[checks]("rust/rofl/tests/agg_worlds.rs", "rofl_serve_opens_a_snapshot_under_the_walls_it_is_given", test).
+check[checks]("rust/rofl/tests/asks_cone.rs", "every_world_answers_an_asked_relation_as_it_does_without_asks", test).
+check[checks]("rust/rofl/tests/asks_cone.rs", "a_negation_and_an_aggregate_are_in_the_cone", test).
+check[checks]("rust/rofl/tests/asks_cone.rs", "a_reader_of_derived_by_of_a_named_relation_holds_that_relation", test).
+check[checks]("rust/rofl/tests/asks_cone.rs", "a_reader_that_names_no_relation_keeps_every_rule", test).
+check[checks]("rust/rofl/tests/asks_cone.rs", "a_relation_answered_on_demand_or_written_by_the_kernel_keeps_every_rule_when_asked", test).
+check[checks]("rust/rofl/tests/asks_cone.rs", "an_explain_request_asks_the_relation_it_names", test).
+check[checks]("rust/rofl/tests/asks_cone.rs", "a_dominance_body_is_read_by_the_relation_it_orders", test).
+check[checks]("rust/rofl/tests/asks_cone.rs", "an_ask_asserted_or_retracted_on_an_evaluated_world_takes_effect", test).
+check[checks]("rust/rofl/tests/asks_cone.rs", "growing_one_cone_never_changes_the_answers_of_another", test).
 check[checks]("rust/rofl/tests/cool.rs", "a_cooled_volume_reheats_to_the_same_world", test).
 check[checks]("rust/rofl/tests/cool.rs", "a_cooled_file_leaves_the_frontier_only_once_it_is_recorded", test).
 check[checks]("rust/rofl/tests/cool.rs", "a_volume_this_engine_did_not_write_is_refused", test).
@@ -628,6 +637,15 @@ check[checks]("facts/goldens.rofl", "agg_widen_why", world).
 check[checks]("facts/goldens.rofl", "agg_widen_witness", world).
 check[checks]("facts/goldens.rofl", "args_are_terms", world).
 check[checks]("facts/goldens.rofl", "asks", world).
+check[checks]("facts/goldens.rofl", "asks_asked_cells", world).
+check[checks]("facts/goldens.rofl", "asks_cone", world).
+check[checks]("facts/goldens.rofl", "asks_demand", world).
+check[checks]("facts/goldens.rofl", "asks_dominance", world).
+check[checks]("facts/goldens.rofl", "asks_explained", world).
+check[checks]("facts/goldens.rofl", "asks_reads_cells", world).
+check[checks]("facts/goldens.rofl", "asks_reads_everything", world).
+check[checks]("facts/goldens.rofl", "asks_reads_provenance", world).
+check[checks]("facts/goldens.rofl", "asks_retracted", world).
 check[checks]("facts/goldens.rofl", "ast_within_readers", world).
 check[checks]("facts/goldens.rofl", "async_refused", world).
 check[checks]("facts/goldens.rofl", "budget_wall", world).
@@ -709,6 +727,7 @@ check[checks](".github/workflows/ci.yml", "goldens (node)", ci).
 check[checks](".github/workflows/ci.yml", "install dependencies (the scanner needs @babel/parser)", ci).
 check[checks](".github/workflows/ci.yml", "goldens (bun)", ci).
 test_file[checks]("rust/rofl/tests/agg_worlds.rs").
+test_file[checks]("rust/rofl/tests/asks_cone.rs").
 test_file[checks]("rust/rofl/tests/cool.rs").
 test_file[checks]("rust/rofl/tests/datastrat_scale.rs").
 test_file[checks]("rust/rofl/tests/explain.rs").
