@@ -450,7 +450,7 @@ fn state(s: &mut Session) -> String {
     if s.eval.store.dirty {
         s.evaluate().expect("evaluates");
     }
-    let mut out = s.eval.store.canonical_state(&s.eval.h);
+    let mut out = s.eval.canonical_state();
     out.push_str("\nstaged\n");
     out.push_str(&s.eval.staged_text());
     out

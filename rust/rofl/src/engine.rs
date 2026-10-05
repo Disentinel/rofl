@@ -23,6 +23,7 @@ mod datastrat;
 mod delta;
 mod labeled;
 mod joinplan;
+mod prov;
 pub use delta::Delta;
 
 const MAX_DEPTH: usize = 512;
@@ -983,6 +984,14 @@ pub struct Eval {
     bootstrap: bool,
     answer: RuleAnswer,
     pub no_provenance: bool,
+    /// A provenanced world no rule reads `derived_by` of writes its rows when
+    /// something asks (prov.rs): firings noted, and whether to note them.
+    pending_prov: Vec<(FactId, Sym, u32)>,
+    pub lazy_prov: bool,
+    /// The relations a rule reads `derived_by` of, whose rows are written as they fire.
+    prov_eager: HashSet<Sym>,
+    /// Write every row as the firing happens, as the reference does (a measurement's baseline).
+    pub eager_prov: bool,
     /// `sealed(provenance)`: no witnesses either, where nothing withdraws. A
     /// firing on a fact already there is then no news, and a step is a new fact.
     pub no_witness: bool,
@@ -1331,6 +1340,10 @@ impl Eval {
             bootstrap,
             answer: RuleAnswer::default(),
             no_provenance: false,
+            pending_prov: Vec::new(),
+            lazy_prov: false,
+            prov_eager: HashSet::new(),
+            eager_prov: false,
             no_witness: false,
             retain_ticks: None,
             kernel_claimed: false,
@@ -1404,6 +1417,7 @@ impl Eval {
     }
 
     fn prepare(&mut self) {
+        self.settle_provenance();
         self.well_founded = well_founded_declared(&mut self.h, &self.v, &mut self.store);
         self.no_provenance = sealed_bodies(&mut self.h, &self.v, &mut self.store)
             .contains(&self.v.sealed_provenance);
@@ -1485,6 +1499,14 @@ impl Eval {
         self.store.unordered = self.no_witness && self.lattices.is_empty();
         self.diags.extend(diags);
         self.answer = self.safety_answer(&rules);
+        self.prov_eager = HashSet::new();
+        self.lazy_prov = !self.no_provenance && !self.eager_prov;
+        if self.lazy_prov && self.answer.reads_provenance {
+            match self.provenance_readers(&rules) {
+                Some(rels) => self.prov_eager = rels,
+                None => self.lazy_prov = false,
+            }
+        }
         if self.no_provenance && self.answer.reads_provenance {
             self.diags.push(format!(
                 "provenance is sealed; rules reading '{}' will match nothing",
@@ -3382,6 +3404,7 @@ impl Eval {
     }
 
     fn clear_derived(&mut self) {
+        self.pending_prov.clear();
         let (h, v) = (&self.h, &self.v);
         self.store.clear_derived(Some(&|r: &FactRec, a: &[Term]| provenance_row(h, v, r, a)));
     }
@@ -3522,6 +3545,7 @@ impl Eval {
                 partial: true,
             });
         }
+        brk!("prov_tick_unsettled" => (); self.settle_provenance());
         let staged = self.staged_sorted();
         // a tuple staged for certain is no unknown of the next tick, whatever else reached it
         let certain: HashSet<(Sym, Sym, &[Term])> = staged.iter().map(|(_, f)| (f.rel, f.persp, &f.args[..])).collect();
@@ -4078,11 +4102,15 @@ impl Eval {
                     if self.store.support(id, Witness { rule, tick, prems }) {
                         self.bump_steps()?;
                         self.charge_row(Some(rule), true)?;
-                        let ft = fact_term(&mut self.h, &self.v, c.rel, c.persp, &args);
-                        let db_args = [ft, Term::atom(rule), Term::int(tick as i64)];
-                        let (dbid, dbnew) = self.store.put(&self.h, self.v.derived_by, self.v.kernel_persp, &db_args, 0);
-                        if dbnew {
-                            out.note(self.v.derived_by, dbid);
+                        if self.defers(c.rel) {
+                            self.defer_derived_by(id, rule);
+                        } else {
+                            let ft = fact_term(&mut self.h, &self.v, c.rel, c.persp, &args);
+                            let db_args = [ft, Term::atom(rule), Term::int(tick as i64)];
+                            let (dbid, dbnew) = self.store.put(&self.h, self.v.derived_by, self.v.kernel_persp, &db_args, 0);
+                            if dbnew {
+                                out.note(self.v.derived_by, dbid);
+                            }
                         }
                     }
                 }
@@ -4240,7 +4268,9 @@ impl Eval {
             }
             self.bump_steps()?;
             self.charge_row(Some(r.id), true)?;
-            if !self.no_provenance {
+            if self.defers(head.rel) {
+                self.defer_derived_by(id, r.id);
+            } else if !self.no_provenance {
                 let ft = fact_term(&mut self.h, &self.v, head.rel, persp, &args);
                 let rid = Term::atom(r.id);
                 let db_args = [ft, rid, Term::int(tick as i64)];
@@ -6107,6 +6137,9 @@ impl Eval {
     fn note_derived_by(&mut self, id: FactId, rule: Sym, out: &mut Front) {
         if self.no_provenance {
             return;
+        }
+        if self.defers(self.store.rec(id).rel) {
+            return self.defer_derived_by(id, rule);
         }
         let rec = self.store.rec(id);
         let args = self.store.args(id).to_vec();
@@ -10199,7 +10232,9 @@ impl Eval {
                 );
                 if new_firing {
                     self.charge_row(Some(r.id), true)?;
-                    if !self.no_provenance {
+                    if self.defers(call.rel) {
+                        self.defer_derived_by(id, r.id);
+                    } else if !self.no_provenance {
                         let ft = fact_term(&mut self.h, &self.v, call.rel, p, &args);
                         let rid = Term::atom(r.id);
                         let db_args = [ft, rid, Term::int(tick as i64)];
@@ -12257,7 +12292,7 @@ mod tests {
             .collect();
         ts.sort_unstable();
         ts.dedup();
-        (l.eval.store.canonical_state(&l.eval.h), rows.len(), ts)
+        (l.eval.canonical_state(), rows.len(), ts)
     }
 
     /// SAFETY.ROFL SCHEDULES ITSELF BY A TABLE, and the table must be its own

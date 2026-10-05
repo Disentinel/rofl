@@ -94,14 +94,14 @@ fn evaluate_matches_the_corpus() {
             assert!(!o.partial, "{n}: partial at budget {BUDGET}");
             assert!(o.peak_rows <= o.space, "{n}: peak {} over space {}", o.peak_rows, o.space);
         }
-        let got = s.eval.store.canonical_state(&s.eval.h);
+        let got = s.eval.canonical_state();
         assert_eq!(got.trim_end(), want.trim_end(), "{n}: session state differs from the corpus");
         // AND AGAIN: an evaluated world evaluated once more is the same world.
         // A firing left behind by the cleared layer made its re-derivation
         // "not new", and the `derived_by` row it came with never came back.
         if ticks_of(n) == 0 {
             s.evaluate().unwrap_or_else(|e| panic!("{n}: {}", rofl::describe(&e)));
-            let again = s.eval.store.canonical_state(&s.eval.h);
+            let again = s.eval.canonical_state();
             assert_eq!(again.trim_end(), want.trim_end(), "{n}: a second evaluation moved the world");
         }
         checked += 1;
@@ -123,22 +123,22 @@ fn a_fork_is_the_same_world_and_then_its_own() {
             continue;
         }
         assert_eq!(
-            a.eval.store.canonical_state(&a.eval.h),
-            b.eval.store.canonical_state(&b.eval.h),
+            a.eval.canonical_state(),
+            b.eval.canonical_state(),
             "{n}: two forks of one core evaluated differently"
         );
-        let before = a.eval.store.canonical_state(&a.eval.h);
+        let before = a.eval.canonical_state();
         // A relation no seed can contain, so its arrival is unambiguous.
         let added = b.assert("$fork_probe_9c1(marker).").expect("assert");
         assert_eq!(added, 1, "{n}: the probe was already there");
         assert!(settle(&mut b, n).is_ok(), "{n}: fork would not re-settle");
         assert_eq!(
-            a.eval.store.canonical_state(&a.eval.h),
+            a.eval.canonical_state(),
             before,
             "{n}: asserting into one fork changed another"
         );
         assert!(
-            b.eval.store.canonical_state(&b.eval.h).contains("$fork_probe_9c1"),
+            b.eval.canonical_state().contains("$fork_probe_9c1"),
             "{n}: the assert did not land"
         );
         same += 1;
@@ -157,6 +157,7 @@ fn ask_agrees_with_the_stores_own_census() {
         if settle(&mut s, n).is_err() {
             continue;
         }
+        s.eval.settle_provenance();
         // The census: (relation, book, arity) -> live facts, straight off the
         // store, without going near the query path.
         let mut census: BTreeMap<(String, String, usize), usize> = BTreeMap::new();

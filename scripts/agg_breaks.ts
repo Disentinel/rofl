@@ -56,6 +56,42 @@ const ROOT = path.resolve(import.meta.dirname, '..');
 type Break = { id: string; what: string; edits?: [string, string, string][]; expect: Record<string, string> };
 export const BREAKS: Break[] = [
  {
+  "id": "prov_state_unsettled",
+  "what": "the canonical state of a lazily provenanced world is read without writing the derived_by rows of the firings noted since",
+  "expect": {
+   "prov_lazy_reader": "the state lacks the row derived_by[$kernel]($fact(pr_b",
+   "prov_lazy_retract": "the state lacks the row derived_by[$kernel]($fact(pl_reach"
+  }
+ },
+ {
+  "id": "prov_settle_keeps_dead",
+  "what": "a note written as a derived_by row whether or not its fact is alive and a firing of that rule still stands",
+  "expect": {
+   "prov_lazy_lattice": "the state holds the row derived_by[$kernel]($fact(pv_d"
+  }
+ },
+ {
+  "id": "prov_tick_unsettled",
+  "what": "a tick boundary freezes the rows written so far and not the firings noted in the tick it ends",
+  "expect": {
+   "prov_lazy": "the state lacks the row derived_by[$kernel]($fact(pl_hit"
+  }
+ },
+ {
+  "id": "prov_reader_deferred",
+  "what": "the rows of a relation a rule reads derived_by of are noted like any other and not written as it fires",
+  "expect": {
+   "prov_lazy_reader": "the state lacks the row pr_fired"
+  }
+ },
+ {
+  "id": "prov_variable_reader_lazy",
+  "what": "a rule that reads derived_by of a fact it does not name a relation of is taken for a reader of none: every row waits",
+  "expect": {
+   "provenance_relational": "the state lacks the row fired_into[main](d)"
+  }
+ },
+ {
   "id": "delta_first_off",
   "what": "a firing is solved in written order, never from its news: the join before the news premise is held in full",
   "expect": {

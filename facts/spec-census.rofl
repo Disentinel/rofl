@@ -122,6 +122,14 @@ check[checks]("rust/rofl/tests/program.rs", "a_loaded_program_ticks_the_way_the_
 check[checks]("rust/rofl/tests/program.rs", "the_door_refuses_what_the_kernel_refuses", test).
 check[checks]("rust/rofl/tests/program.rs", "a_refused_load_is_atomic_and_complete", test).
 check[checks]("rust/rofl/tests/program.rs", "a_second_load_runs_the_rules_the_first_one_did_not_have", test).
+check[checks]("rust/rofl/tests/prov_lazy.rs", "a_world_nothing_reads_derived_by_of_is_lazy_and_its_state_is_the_eager_one", test).
+check[checks]("rust/rofl/tests/prov_lazy.rs", "why_and_excise_do_not_need_the_rows_and_answer_alike", test).
+check[checks]("rust/rofl/tests/prov_lazy.rs", "a_query_for_derived_by_writes_the_rows_and_a_retraction_after_it_still_agrees", test).
+check[checks]("rust/rofl/tests/prov_lazy.rs", "ticks_freeze_the_rows_of_the_tick_they_end", test).
+check[checks]("rust/rofl/tests/prov_lazy.rs", "a_reader_of_one_relation_gets_its_rows_as_they_fire_and_the_rest_wait", test).
+check[checks]("rust/rofl/tests/prov_lazy.rs", "a_reader_whose_fact_is_a_variable_keeps_every_row_as_it_fires", test).
+check[checks]("rust/rofl/tests/prov_lazy.rs", "a_sealed_world_notes_nothing", test).
+check[checks]("rust/rofl/tests/prov_lazy.rs", "why_of_a_derived_by_row_and_a_fork_see_the_rows", test).
 check[checks]("rust/rofl/tests/ring1_agg.rs", "ring1_reads_every_aggregate_and_lattice_declaration_the_parser_reads_and_as_the_same_tree", test).
 check[checks]("rust/rofl/tests/ring1_agg.rs", "what_the_parser_refuses_ring1_does_not_cover", test).
 check[checks]("rust/rofl/tests/session.rs", "evaluate_matches_the_corpus", test).
@@ -638,6 +646,11 @@ check[checks]("facts/goldens.rofl", "keyword_atom", world).
 check[checks]("facts/goldens.rofl", "not_as_a_name", world).
 check[checks]("facts/goldens.rofl", "operators", world).
 check[checks]("facts/goldens.rofl", "premise_arity", world).
+check[checks]("facts/goldens.rofl", "prov_lazy", world).
+check[checks]("facts/goldens.rofl", "prov_lazy_lattice", world).
+check[checks]("facts/goldens.rofl", "prov_lazy_reader", world).
+check[checks]("facts/goldens.rofl", "prov_lazy_retain", world).
+check[checks]("facts/goldens.rofl", "prov_lazy_retract", world).
 check[checks]("facts/goldens.rofl", "provenance_relational", world).
 check[checks]("facts/goldens.rofl", "readiness_atlas", world).
 check[checks]("facts/goldens.rofl", "readiness_rofl", world).
@@ -676,6 +689,7 @@ test_file[checks]("rust/rofl/tests/incremental.rs").
 test_file[checks]("rust/rofl/tests/join_scale.rs").
 test_file[checks]("rust/rofl/tests/lattice_scale.rs").
 test_file[checks]("rust/rofl/tests/program.rs").
+test_file[checks]("rust/rofl/tests/prov_lazy.rs").
 test_file[checks]("rust/rofl/tests/ring1_agg.rs").
 test_file[checks]("rust/rofl/tests/session.rs").
 test_file[checks]("rust/rofl/tests/structure.rs").

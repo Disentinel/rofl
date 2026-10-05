@@ -8,6 +8,17 @@ edb(brk_expects).
 edb(switch_site).
 edb(proof_world).
 
+brk("prov_state_unsettled"). brk_kind("prov_state_unsettled", switch).
+brk_expects("prov_state_unsettled", "prov_lazy_reader").
+brk_expects("prov_state_unsettled", "prov_lazy_retract").
+brk("prov_settle_keeps_dead"). brk_kind("prov_settle_keeps_dead", switch).
+brk_expects("prov_settle_keeps_dead", "prov_lazy_lattice").
+brk("prov_tick_unsettled"). brk_kind("prov_tick_unsettled", switch).
+brk_expects("prov_tick_unsettled", "prov_lazy").
+brk("prov_reader_deferred"). brk_kind("prov_reader_deferred", switch).
+brk_expects("prov_reader_deferred", "prov_lazy_reader").
+brk("prov_variable_reader_lazy"). brk_kind("prov_variable_reader_lazy", switch).
+brk_expects("prov_variable_reader_lazy", "provenance_relational").
 brk("delta_first_off"). brk_kind("delta_first_off", switch).
 brk_expects("delta_first_off", "agg_join_delta_first").
 brk("delta_first_spread"). brk_kind("delta_first_spread", switch).
@@ -2014,6 +2025,11 @@ switch_site("plain_reader_unclosed", "rust/rofl/src/engine.rs").
 switch_site("plain_rule_hole_unspread", "rust/rofl/src/engine.rs").
 switch_site("plain_staged_why_present", "rust/rofl/src/engine.rs").
 switch_site("plain_unknown_settles", "rust/rofl/src/engine.rs").
+switch_site("prov_reader_deferred", "rust/rofl/src/engine/prov.rs").
+switch_site("prov_settle_keeps_dead", "rust/rofl/src/engine/prov.rs").
+switch_site("prov_state_unsettled", "rust/rofl/src/engine/prov.rs").
+switch_site("prov_tick_unsettled", "rust/rofl/src/engine.rs").
+switch_site("prov_variable_reader_lazy", "rust/rofl/src/engine/prov.rs").
 switch_site("quantile_domain", "rust/rofl/src/cell.rs").
 switch_site("quantile_floor", "rust/rofl/src/cell.rs").
 switch_site("rank_compound_key", "rust/rofl/src/cell.rs").

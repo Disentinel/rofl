@@ -165,7 +165,7 @@ fn alarms(s: &mut Session) -> Vec<String> {
 }
 
 fn state(s: &Session) -> String {
-    s.eval.store.canonical_state(&s.eval.h)
+    s.eval.fork().canonical_state()
 }
 
 /// One world loaded together, held to every property the test names: what is
