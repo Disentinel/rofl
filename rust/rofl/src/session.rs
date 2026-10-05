@@ -802,10 +802,11 @@ impl Session {
             // A WALL MET ANSWERING is a hole named for the question, and the answer is partial
             let (sols, unnamed) = match self.eval.answer_on_demand(&el) {
                 Ok(got) => got,
-                Err(Halt::Budget(..)) if brk!("ask_wall_errors" => false; true) => {
+                Err(Halt::Budget(wall, _)) if brk!("ask_wall_errors" => false; true) => {
                     let q = self.eval.h.intern("$q");
                     let id = self.eval.h.mkf(q, &[Term::int(self.asks)]);
-                    let reason = Term::atom(self.eval.v.budget_reason);
+                    // the hole says which wall fell: steps or rows
+                    let reason = Term::atom(brk!("ask_wall_unnamed" => self.eval.v.budget_reason; self.eval.h.intern(wall)));
                     self.eval.store.put(&self.eval.h, self.eval.v.hole, self.eval.v.kernel_persp, &[id, reason], crate::store::F_BASE | crate::store::F_FROZEN);
                     (Vec::new(), true)
                 }

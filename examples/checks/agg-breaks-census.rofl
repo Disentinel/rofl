@@ -1141,6 +1141,10 @@ brk("demand_table_rows_kept"). brk_kind("demand_table_rows_kept", switch).
 brk_expects("demand_table_rows_kept", "demand_fixpoint_space").
 brk("ts_demand_table_rows_kept"). brk_kind("ts_demand_table_rows_kept", ts).
 brk_expects("ts_demand_table_rows_kept", "demand_fixpoint_space").
+brk("question_writes_holes"). brk_kind("question_writes_holes", switch).
+brk_expects("question_writes_holes", "demand_query_ask").
+brk("ask_wall_unnamed"). brk_kind("ask_wall_unnamed", switch).
+brk_expects("ask_wall_unnamed", "demand_query_ask").
 brk("demand_naive_passes"). brk_kind("demand_naive_passes", switch).
 brk_expects("demand_naive_passes", "demand_fixpoint").
 brk("demand_again_rereads_store"). brk_kind("demand_again_rereads_store", switch).
@@ -2015,6 +2019,7 @@ switch_site("ask_dedup_scan", "rust/rofl/src/session.rs").
 switch_site("ask_sealed_answers", "rust/rofl/src/session.rs").
 switch_site("ask_store_only", "rust/rofl/src/session.rs").
 switch_site("ask_wall_errors", "rust/rofl/src/session.rs").
+switch_site("ask_wall_unnamed", "rust/rofl/src/session.rs").
 switch_site("asked_answers_kept", "rust/rofl/src/engine.rs").
 switch_site("asked_partial_unnamed", "rust/rofl/src/engine.rs").
 switch_site("asked_unholed", "rust/rofl/src/engine.rs").
@@ -2336,6 +2341,7 @@ switch_site("prov_variable_reader_lazy", "rust/rofl/src/engine/prov.rs").
 switch_site("quantile_domain", "rust/rofl/src/cell.rs").
 switch_site("quantile_floor", "rust/rofl/src/cell.rs").
 switch_site("question_spends_world", "rust/rofl/src/engine.rs").
+switch_site("question_writes_holes", "rust/rofl/src/engine.rs").
 switch_site("rank_compound_key", "rust/rofl/src/cell.rs").
 switch_site("rank_dir_ignored", "rust/rofl/src/cell.rs").
 switch_site("rank_door_key_compound", "rust/rofl/src/program.rs").

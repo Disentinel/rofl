@@ -6534,6 +6534,8 @@ export class AggEval {
   /** A hole row of this evaluation (`Store.evalHoles`); true if it was new. */
   private evalHole(args: Term[]): boolean { return this.evalHolePut(args)[0]; }
   private evalHolePut(args: Term[]): [boolean, string] {
+    // A QUESTION LEAVES THE WORLD AS IT FOUND IT: a wall or a fault it meets is its own, named by its hole (rust/rofl `eval_hole`)
+    if (this.asking && !this.firing) return [false, ''];
     const r = this.put(V.hole, KERNEL_PERSP, args, F_BASE_FROZEN);
     if (r[0]) this.store.evalHoles.push(r[1]);
     return r;
@@ -7037,6 +7039,7 @@ export class AggEval {
   }
 
   private arithHole(ruleId: string, reason: string): void {
+    if (this.asking && !this.firing) return;
     const marker = this.ruleMarker(ruleId);
     if (this.holeMet(marker, reason)) this.chargeHoleRow();
     const [isNew, id] = this.evalHolePut([marker, mka(reason)]);

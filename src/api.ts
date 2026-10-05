@@ -871,7 +871,8 @@ export class Rofl {
       ms = got.map((m) => (Array.isArray(m) ? { s: m[0] as Subst } : m as { s: Subst }));
     } catch (e) {
       if (e instanceof Wall) {
-        this.store.add(V.hole, KERNEL_PERSP, [holeId, mka(BUDGET_REASON)], { scope: 'timeless', base: true, frozen: true });
+        // the hole says which wall fell: steps or rows
+        this.store.add(V.hole, KERNEL_PERSP, [holeId, mka(e.reason)], { scope: 'timeless', base: true, frozen: true });
         partial = true;
       } else throw e;
     }

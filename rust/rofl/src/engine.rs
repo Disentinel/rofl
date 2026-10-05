@@ -10500,6 +10500,9 @@ impl Eval {
 
     /// A hole row of this evaluation; true if it was new.
     fn eval_hole(&mut self, args: &[Term]) -> bool {
+        if self.asking && !self.firing && brk!("question_writes_holes" => false; true) {
+            return false;
+        }
         let (id, new) = self.store.put(&self.h, self.v.hole, self.v.kernel_persp, args, F_BASE | F_FROZEN);
         if !new {
             return false;
@@ -11493,6 +11496,10 @@ impl Eval {
     }
 
     fn arith_hole(&mut self, rule_id: Sym, reason: Sym) {
+        // A QUESTION LEAVES THE WORLD AS IT FOUND IT: a wall or a fault it meets is its own, named by its hole
+        if self.asking && !self.firing && brk!("question_writes_holes" => false; true) {
+            return;
+        }
         let marker = self.rule_marker(rule_id);
         if self.hole_met(marker, reason) {
             self.charge_hole_row();

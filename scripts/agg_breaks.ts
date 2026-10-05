@@ -4237,6 +4237,20 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "question_writes_holes",
+  "what": "a question that meets a wall writes the hole of the rule it met it in into the world, beside its own",
+  "expect": {
+   "demand_query_ask": "a question left a hole of its wall in the world"
+  }
+ },
+ {
+  "id": "ask_wall_unnamed",
+  "what": "the hole of an ask that ran out of rows says the steps ran out",
+  "expect": {
+   "demand_query_ask": "a question left a hole of its wall in the world"
+  }
+ },
+ {
   "id": "demand_naive_passes",
   "what": "every pass of a linear recursion reads every answer so far",
   "expect": {
