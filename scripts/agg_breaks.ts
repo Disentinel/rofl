@@ -8203,14 +8203,14 @@ export const BREAKS: Break[] = [
   "id": "add_closure_unpaired",
   "what": "a closure one of whose rules is added is not fired whole with both: the step alone fires nothing",
   "expect": {
-   "addition_random": "the delta state is not a fresh evaluation's"
+   "addition_closure": "the addition to"
   }
  },
  {
   "id": "promoted_tick_scope_kept",
   "what": "a base fact asserted over a derived one keeps the derived record's tick scope",
   "expect": {
-   "addition_random": "the delta state is not a fresh evaluation's"
+   "addition_promoted": "the addition to"
   }
  },
  {
@@ -8566,6 +8566,7 @@ const TESTS: Record<string, string> = {
   addition_demand: 'addition a_world_with_a_relation_answered_on_demand',
   addition_random: 'addition random_programs_take_additions',
   addition_base: 'addition a_base_fact_beside_a_reset_rule',
+  addition_closure: 'addition a_step_added_to_a_closure_base',
   addition_tree: 'addition an_edge_and_a_reader_added_to_a_declared_tree',
   addition_lattice: 'addition a_lattice_world_is_a_fresh_evaluation',
   addition_negation: 'addition random_negation_programs',

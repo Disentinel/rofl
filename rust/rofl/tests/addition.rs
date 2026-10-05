@@ -543,6 +543,11 @@ fn a_base_fact_beside_a_reset_rule_keeps_only_the_firings_that_hold() {
     let program = "edb(e). edb(n).\nn(a). n(b). q(a).\nq(X) :- n(X), not e(X, X).\nq(X) :- n(X), e(b, X).\nr(X) :- q(X).\n";
     let d = one_addition(program, Op::Assert("e(a, a). e(b, a).".into()));
     assert!(d.negated > 0 && d.stacked_rules == 0, "{d:?}");
+    // a relation derived again after the rest (it reads a lattice that improves, under a negation): the base fact
+    // keeps no firing of a rule that no longer holds, though everything the firing cited is alive
+    let program = "edb(e3). edb(n).\nlattice d(A, B, min W).\ne3(a, b, 5). n(a). q(a).\nd(A, B, W) :- e3(A, B, W).\nd(A, C, W) :- d(A, B, W1), e3(B, C, W2), W is W1 + W2.\nfar2(A) :- d(A, _, W), W < 4.\nq(A) :- n(A), not far2(A).\n";
+    let d = one_addition(program, Op::Assert("e3(a, b, 2).".into()));
+    assert!(d.stacked_rules > 0 && d.withdrawn > 0, "{d:?}");
 }
 
 /// Programs of joins, recursion and negation only: every negation the fine path keeps, its withdrawals and what they
@@ -620,6 +625,15 @@ fn a_fact_sealed_again_is_not_taken_out_for_what_it_cited_before() {
 fn a_closure_that_gains_a_fact_of_its_own_relation_is_walked_again() {
     let program = "edb(e).\ne(a, b). e(b, c).\np(X, Y) :- e(X, Y).\np(X, Z) :- p(X, Y), e(Y, Z).\n";
     one_addition(program, Op::Assert("p(x, a).".into()));
+}
+
+/// A rule added to a closure that has its other rule: the two fire whole together, as the step alone fires nothing.
+#[test]
+fn a_step_added_to_a_closure_base_walks_the_closure_whole() {
+    let program = "edb(e).\ne(a, b). e(b, c). e(c, d).\np(X, Y) :- e(X, Y).\n";
+    one_addition(program, Op::Load("p(X, Z) :- p(X, Y), e(Y, Z).".into()));
+    let program = "edb(e).\ne(a, b). e(b, c). e(c, d).\np(X, Z) :- p(X, Y), e(Y, Z).\n";
+    one_addition(program, Op::Load("p(X, Y) :- e(X, Y).".into()));
 }
 
 /// Found by review: a rule staged `@next` that aggregates what grew stages again over a cell sealed again.

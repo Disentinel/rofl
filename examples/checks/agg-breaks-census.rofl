@@ -2044,9 +2044,9 @@ brk_expects("retract_thr_outer_plain", "incremental_thr_outer").
 brk("add_demand_kept"). brk_kind("add_demand_kept", switch).
 brk_expects("add_demand_kept", "addition_demand").
 brk("add_closure_unpaired"). brk_kind("add_closure_unpaired", switch).
-brk_expects("add_closure_unpaired", "addition_random").
+brk_expects("add_closure_unpaired", "addition_closure").
 brk("promoted_tick_scope_kept"). brk_kind("promoted_tick_scope_kept", switch).
-brk_expects("promoted_tick_scope_kept", "addition_random").
+brk_expects("promoted_tick_scope_kept", "addition_promoted").
 brk("add_base_firings_kept"). brk_kind("add_base_firings_kept", switch).
 brk_expects("add_base_firings_kept", "addition_base").
 brk("refire_lattice_unclosed"). brk_kind("refire_lattice_unclosed", switch).
