@@ -3516,7 +3516,7 @@ export const BREAKS: Break[] = [
   "id": "asked_unholed",
   "what": "a question's negation unfolded at a call reads what a hole left unknown as absent",
   "expect": {
-   "demand_asked_hole": "lacks the row explained[$explain](whynot,da_r(c),1,"
+   "demand_asked_hole": "lacks the row explained[$explain](whynot,da_q(c,z),1,"
   }
  },
  {
@@ -3530,7 +3530,7 @@ export const BREAKS: Break[] = [
    ]
   ],
   "expect": {
-   "demand_asked_hole": "lacks the row explained[$explain](whynot,da_r(c),1,"
+   "demand_asked_hole": "lacks the row explained[$explain](whynot,da_q(c,z),1,"
   }
  },
  {
