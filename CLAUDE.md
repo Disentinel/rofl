@@ -45,7 +45,7 @@ engine is not a performance engine and its timings decide nothing. New engine
 work (speed, scale, incremental maintenance, compression) is built in Rust
 first; the TS engine stays the parity reference that `npm test` and whycheck
 compare against, **up to a bounded scale** — some Rust capabilities (keeping no
-witness under `sealed(witness)`, the closure kernel, incremental deltas) are not
+witness under `sealed(provenance)`, the closure kernel, incremental deltas) are not
 mirrored in TS and are not to be attempted there: a world that exercises one is
 checked on Rust only, and TS is not asked to run worlds large enough to be slow
 (f_rust_is_the_engine_ts_is_the_reference).
