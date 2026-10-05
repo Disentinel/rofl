@@ -462,7 +462,7 @@ struct Stats {
     asserts: usize,
     retracts: usize,
     delta: usize,
-    full: BTreeSet<&'static str>,
+    full: BTreeSet<String>,
     full_n: usize,
     explained: usize,
     sum: Delta,
@@ -910,6 +910,19 @@ fn a_fact_a_question_made_goes_with_any_retraction() {
     }
     let mut f = fresh(&program, &facts(&["a(1)", "a(5)", "b(5)"]), &BTreeSet::new());
     assert_eq!(state(&mut s), state(&mut f));
+}
+
+#[test]
+fn a_refused_delta_says_every_reason() {
+    let program = "edb(q). edb(r).\nq(X) :- r(X).\nled(F) :- asserted_by[$kernel](F, _, _).\n";
+    let facts = ["q(1)", "r(2)"].iter().map(|x| x.to_string()).collect::<BTreeSet<String>>();
+    let mut s = fresh(program, &facts, &BTreeSet::new());
+    match s.retract_delta("q(1)").unwrap() {
+        Retraction::Full(why) => {
+            assert!(why.contains("concluded by a rule too") && why.contains("reads the ledger"), "{why}");
+        }
+        other => panic!("{other:?}"),
+    }
 }
 
 #[test]

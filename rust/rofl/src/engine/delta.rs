@@ -188,33 +188,35 @@ impl Eval {
         v
     }
 
-    /// A world a delta is worked out for, and a fact it is worked out for.
-    fn delta_gate(&self, f: FactId) -> Result<(), &'static str> {
+    /// WHY A DELTA IS NOT WORKED OUT for this world and this fact: every reason that holds, in a fixed order, none
+    /// hiding another (empty where it is).
+    fn delta_refusals(&self, f: FactId) -> Vec<&'static str> {
+        let mut out = Vec::new();
         if self.vedges_reached(self.store.rec(f).rel) {
-            return Err("the fact reaches the edges of a closure answered from its tree, which a retraction builds again");
+            out.push("the fact reaches the edges of a closure answered from its tree, which a retraction builds again");
         }
         if self.well_founded {
-            return Err("the world is evaluated well-founded");
+            out.push("the world is evaluated well-founded");
         }
         if self.store.dirty {
-            return Err("the world is not evaluated");
+            out.push("the world is not evaluated");
         }
         if self.store.partial_eval {
-            return Err("a wall cut the evaluation");
+            out.push("a wall cut the evaluation");
         }
         if self.store.tick != 0 {
-            return Err("a later tick");
+            out.push("a later tick");
         }
         if !self.shrug_readers.is_empty() || self.store.rel_count(self.v.hole) > 0 {
-            return Err("the world holds a hole or reads a shrug");
+            out.push("the world holds a hole or reads a shrug");
         }
         let rec = self.store.rec(f);
         if !rec.base() {
-            return Err("not a base fact");
+            out.push("not a base fact");
         }
         let rel = rec.rel;
         if self.demand_rels.iter().any(|(r, _)| *r == rel) {
-            return Err("read on demand");
+            out.push("read on demand");
         }
         let ledgers = [
             self.v.asserted_by,
@@ -229,20 +231,20 @@ impl Eval {
             self.v.lattice_member_prem,
             self.v.dominated_by,
         ];
-        let mut why: Option<&'static str> = None;
+        let (mut concluded, mut ledger) = (false, false);
         for r in &self.rules {
-            if r.clause.head.rel == rel {
-                why = Some("the relation is concluded by a rule too");
-            }
+            concluded |= r.clause.head.rel == rel;
             for b in &r.clause.body {
-                walk(b, false, &mut |l, _, _| {
-                    if ledgers.contains(&l.rel) {
-                        why = Some("a rule reads the ledger of cells, provenance or assertions");
-                    }
-                });
+                walk(b, false, &mut |l, _, _| ledger |= ledgers.contains(&l.rel));
             }
         }
-        why.map_or(Ok(()), Err)
+        if concluded {
+            out.push("the relation is concluded by a rule too");
+        }
+        if ledger {
+            out.push("a rule reads the ledger of cells, provenance or assertions");
+        }
+        out
     }
 
     /// The rule of a cell, its aggregate, its plan: what a cell can be
@@ -574,9 +576,16 @@ impl Eval {
     /// state a fresh evaluation would hold. `Err(reason)` leaves the store
     /// either untouched or removed-from and dirty: the caller removes the
     /// facts if they are still there, and the next `ensure` evaluates.
-    pub fn retract_delta(&mut self, doomed: &[FactId]) -> Result<Delta, &'static str> {
+    pub fn retract_delta(&mut self, doomed: &[FactId]) -> Result<Delta, String> {
+        let why = self.delta_refusals(doomed[0]);
+        if !why.is_empty() {
+            return Err(why.join("; "));
+        }
+        self.retract_worked_out(doomed).map_err(String::from)
+    }
+
+    fn retract_worked_out(&mut self, doomed: &[FactId]) -> Result<Delta, &'static str> {
         let f = doomed[0];
-        self.delta_gate(f)?;
         // THE DERIVATIONS OF A COUNTING TAG that rest on the fact: each is a
         // member of the tag's sum, and goes where the fact does
         let citing = self.derivations_citing(f);

@@ -61,7 +61,7 @@ pub struct Session {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Retraction {
     Delta(crate::engine::Delta),
-    Full(&'static str),
+    Full(String),
 }
 
 /// What [`Session::evaluate`] answers. Measurement 4: the answer AND the margin.
@@ -992,7 +992,7 @@ impl Session {
         let rel = self.eval.store.rec(id).rel;
         if rel == self.eval.v.asks || (rel == self.eval.v.explain_request && self.eval.cone.is_some()) {
             self.retract(query)?;
-            return Ok(Retraction::Full("asks names the rules the world runs"));
+            return Ok(Retraction::Full("asks names the rules the world runs".to_string()));
         }
         self.settle()?;
         let mut doomed = vec![id];
