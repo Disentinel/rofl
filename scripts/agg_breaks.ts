@@ -3847,8 +3847,8 @@ export const BREAKS: Break[] = [
   "edits": [
    [
     "src/aggeval.ts",
-    "if (this.negLevel > c.neg) this.demandCycle(l, s);",
-    "if (this.negLevel >= c.neg) this.demandCycle(l, s);"
+    "const cut = j >= 0 && this.negLevel > this.demandCalls[j].neg;",
+    "const cut = j >= 0 && this.negLevel >= this.demandCalls[j].neg;"
    ]
   ],
   "expect": {
@@ -3875,6 +3875,113 @@ export const BREAKS: Break[] = [
   ],
   "expect": {
    "demand_cycle_fixpoint": "dv_wrong"
+  }
+ },
+ {
+  "id": "demand_window_late",
+  "what": "a pass of a linear recursion reads only the answers found after the pass before ended, not those found since it began",
+  "expect": {
+   "demand_cycle_fixpoint": "dv_wrong"
+  }
+ },
+ {
+  "id": "ts_demand_window_late",
+  "what": "the TypeScript engine reads in a pass of a linear recursion only the answers found after the pass before ended",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "c.from = began;",
+    "c.from = c.answers.length;"
+   ]
+  ],
+  "expect": {
+   "demand_cycle_fixpoint": "dv_wrong"
+  }
+ },
+ {
+  "id": "demand_nonlinear_window",
+  "what": "a recursion whose rule reads the cycle twice reads in a pass only the answers the pass before found",
+  "expect": {
+   "demand_fixpoint_nonlinear": "the state lacks the row dn_all[main](5)"
+  }
+ },
+ {
+  "id": "ts_demand_nonlinear_window",
+  "what": "the TypeScript engine takes a recursion whose rule reads the cycle twice for a linear one",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "if (n > 1) twice.push(rel);",
+    "if (n > 99) twice.push(rel);"
+   ]
+  ],
+  "expect": {
+   "demand_fixpoint_nonlinear": "the state lacks the row dn_all[main](5)"
+  }
+ },
+ {
+  "id": "demand_naive_passes",
+  "what": "every pass of a linear recursion reads every answer so far",
+  "expect": {
+   "demand_fixpoint": "every pass read every answer"
+  }
+ },
+ {
+  "id": "demand_again_rereads_store",
+  "what": "a call met again inside its own unfolding reads the store again beside the answers the first call took from it",
+  "expect": {
+   "demand_fixpoint": "a call met again read the store again"
+  }
+ },
+ {
+  "id": "demand_answer_names_grow",
+  "what": "an answer kept for a call met again keeps the variables it was found under, renamed again at each read",
+  "expect": {
+   "demand_fixpoint": "a name renamed at each read grows"
+  }
+ },
+ {
+  "id": "demand_reread_free",
+  "what": "an answer a call met again reads costs no step",
+  "expect": {
+   "demand_fixpoint_steps": "the state lacks the row shrug[$kernel]($adhoc,budget,spent(steps",
+   "demand_fixpoint": "answers read for nothing"
+  }
+ },
+ {
+  "id": "ts_demand_reread_free",
+  "what": "the TypeScript engine reads an answer for a call met again for no step",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "meets the wall\n          this.bumpSteps();",
+    "meets the wall"
+   ]
+  ],
+  "expect": {
+   "demand_fixpoint_steps": "the state lacks the row shrug[$kernel]($adhoc,budget,spent(steps"
+  }
+ },
+ {
+  "id": "demand_open_answer_free",
+  "what": "an open answer kept for a call met again is no row",
+  "expect": {
+   "demand_fixpoint_space": "the state lacks the row shrug[$kernel]($adhoc,budget,spent(rows",
+   "demand_fixpoint": "its open answers were not counted as rows"
+  }
+ },
+ {
+  "id": "ts_demand_open_answer_free",
+  "what": "the TypeScript engine counts no row for an open answer kept for a call met again",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "if (mref.t !== 'fact') this.chargeRow(dr.id, true);",
+    "if (false) this.chargeRow(dr.id, true);"
+   ]
+  ],
+  "expect": {
+   "demand_fixpoint_space": "the state lacks the row shrug[$kernel]($adhoc,budget,spent(rows"
   }
  },
  {
@@ -7368,52 +7475,6 @@ export const BREAKS: Break[] = [
   }
  },
  {
-  "id": "demand_closed_atom_book",
-  "what": "a rule whose head book is a variable is not read from the store as a closed relation is: the closure written with a book variable over edges that read a demand relation is unfolded at its calls and meets its own",
-  "expect": {
-   "ds_tree_demand_book": "fired before ddb_w",
-   "ds_tree_demand_book_sealed": "fired before ddb_w"
-  }
- },
- {
-  "id": "ts_demand_closed_atom_book",
-  "what": "the TypeScript evaluator does not read a relation whose head book is a variable from the store as a closed relation",
-  "edits": [
-   [
-    "src/aggeval.ts",
-    "const ok = rs.every((r) => r.clause.head.args.length === n);",
-    "const ok = rs.every((r) => r.clause.head.args.length === n && r.clause.head.persp.k === 'a');"
-   ]
-  ],
-  "expect": {
-   "ds_tree_demand_book": "fired before ddb_w",
-   "ds_tree_demand_book_sealed": "fired before ddb_w"
-  }
- },
- {
-  "id": "demand_closed_book_unbound",
-  "what": "a premise at a ground book does not bind the book variable of the rule's head",
-  "expect": {
-   "ds_tree_demand_book": "fired before ddb_w",
-   "ds_tree_demand_book_sealed": "fired before ddb_w"
-  }
- },
- {
-  "id": "ts_demand_closed_book_unbound",
-  "what": "the TypeScript evaluator's premise at a ground book does not bind the book variable of the rule's head",
-  "edits": [
-   [
-    "src/aggeval.ts",
-    "if (g === undefined || (g.length === b.lit.args.length + 1 && g[b.lit.args.length])) varsOf(b.lit.persp, bound);",
-    "if (g === undefined) varsOf(b.lit.persp, bound);"
-   ]
-  ],
-  "expect": {
-   "ds_tree_demand_book": "fired before ddb_w",
-   "ds_tree_demand_book_sealed": "fired before ddb_w"
-  }
- },
- {
   "id": "vclosure_rows_cost",
   "what": "a row answered from the tree costs a row against the space wall, as a stored one does: the world that declares it is answered where the stored closure meets its wall is cut too",
   "expect": {
@@ -7621,6 +7682,7 @@ function proofReports(b: Break, bin: string, control: boolean): Verdict {
 const TESTS: Record<string, string> = {
   demand_scale: 'demand_scale',
   demand_query_ask: 'demand_query',
+  demand_fixpoint: 'demand_fixpoint',
 };
 
 function proofTests(b: Break, profile: string, control: boolean): Verdict {

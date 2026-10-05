@@ -55,8 +55,9 @@ pub enum Halt {
 
 /// A call answered on demand being unfolded, of a relation that may call
 /// itself: its variant key, the negations open when it was made, the answers
-/// found so far (the call's arguments under each, and what proves it), and
-/// whether a call met again read them.
+/// found so far (the call's arguments under each, its variables renamed
+/// canonically, and what proves it), whether a call met again read them, and
+/// the first answer a call met again in this pass reads (`demand_linear`).
 #[derive(Clone)]
 struct DemandCall {
     key: String,
@@ -64,6 +65,8 @@ struct DemandCall {
     answers: Vec<(Vec<Term>, PremRef)>,
     keys: HashSet<String>,
     read: bool,
+    from: usize,
+    linear: bool,
 }
 
 pub struct ERule {
@@ -973,6 +976,9 @@ pub struct Eval {
     /// The relations answered on demand that may call themselves through
     /// others not closed: their calls being unfolded are kept as variant keys.
     demand_cyclic: HashSet<Sym>,
+    /// The `demand_cyclic` relations whose cycle no rule reads twice, or under a
+    /// negation or an aggregate (`demand_linear_rels`).
+    demand_linear: HashSet<Sym>,
     /// The calls of `demand_cyclic` relations being unfolded, each with its
     /// answers so far: a call met again reads them, and the first one unfolds
     /// again until they stop growing (`DemandCall`).
@@ -1384,6 +1390,7 @@ impl Eval {
             fault_count: 0,
             demand_trail: Vec::new(),
             demand_cyclic: HashSet::new(),
+            demand_linear: HashSet::new(),
             demand_calls: Vec::new(),
             neg_level: 0,
             asked_made: Vec::new(),
@@ -1801,6 +1808,7 @@ impl Eval {
             .collect();
         self.vclosure_setup();
         self.demand_cyclic = self.demand_cyclic_rels();
+        self.demand_linear = self.demand_linear_rels();
     }
 
     /// The demand relations not closed that reach themselves through calls to
@@ -1830,6 +1838,46 @@ impl Eval {
         out
     }
 
+    /// THE CYCLIC DEMAND RELATIONS WHOSE RECURSION IS LINEAR: no rule of their cycle
+    /// reads the cycle twice, or under a negation or an aggregate. A derivation of
+    /// one reads the answers of a call met again once, so a pass after the first
+    /// reads only the answers found since the pass before began: one reading only
+    /// older answers was found then. Any other call reads every answer so far.
+    fn demand_linear_rels(&self) -> HashSet<Sym> {
+        let calls: HashMap<Sym, HashSet<Sym>> = self
+            .demand_rels
+            .iter()
+            .filter(|(rel, _)| self.demand_cyclic.contains(rel))
+            .map(|(rel, rs)| (*rel, rs.iter().flat_map(|r| r.clause.body.iter().flat_map(|b| b.lits_deep()).map(|l| l.rel)).filter(|r| self.demand_cyclic.contains(r)).collect()))
+            .collect();
+        let reach = |from: Sym| -> HashSet<Sym> {
+            let mut seen: HashSet<Sym> = HashSet::new();
+            let mut todo: Vec<Sym> = calls.get(&from).into_iter().flatten().copied().collect();
+            while let Some(r) = todo.pop() {
+                if seen.insert(r) {
+                    todo.extend(calls.get(&r).into_iter().flatten().copied());
+                }
+            }
+            seen
+        };
+        let reaches: HashMap<Sym, HashSet<Sym>> = calls.keys().map(|r| (*r, reach(*r))).collect();
+        let same = |a: Sym, b: Sym| reaches.get(&a).is_some_and(|x| x.contains(&b)) && reaches.get(&b).is_some_and(|x| x.contains(&a));
+        let mut twice: Vec<Sym> = Vec::new();
+        for (rel, rs) in self.demand_rels.iter().filter(|(rel, _)| calls.contains_key(rel)) {
+            for r in rs {
+                let mut n = 0;
+                for b in &r.clause.body {
+                    let k = b.lits_deep().iter().filter(|l| same(l.rel, *rel)).count();
+                    n += if k > 0 && !matches!(b, BodyElem::Pos(_)) { 2 } else { k };
+                }
+                if n > 1 {
+                    twice.push(*rel);
+                }
+            }
+        }
+        calls.keys().copied().filter(|r| !twice.iter().any(|t| same(*r, *t)) || brk!("demand_nonlinear_window" => true; false)).collect()
+    }
+
     /// THE DEMAND RELATIONS WHOSE ANSWERS ARE ALL GROUND, and whose rules all
     /// fire bottom-up: every answer one has is in the store once its rules
     /// settle, so a call to one, at any depth, reads the store instead of
@@ -1844,7 +1892,7 @@ impl Eval {
         let mut ground: HashMap<Sym, Vec<bool>> = HashMap::new();
         for (rel, rs) in &self.demand_rels {
             let n = rs[0].clause.head.args.len();
-            let ok = rs.iter().all(|r| r.clause.head.args.len() == n && (r.clause.head.persp.is_atom() || brk!("demand_closed_atom_book" => false; true)));
+            let ok = rs.iter().all(|r| r.clause.head.args.len() == n);
             ground.insert(*rel, vec![ok; n + 1]);
         }
         loop {
@@ -1866,7 +1914,7 @@ impl Eval {
                                             self.h.vars_of(*a, &mut bound);
                                         }
                                     }
-                                    if g.is_none_or(|g| g.len() == l.args.len() + 1 && g[l.args.len()] && brk!("demand_closed_book_unbound" => false; true)) {
+                                    if g.is_none_or(|g| g.len() == l.args.len() + 1 && g[l.args.len()]) {
                                         self.h.vars_of(l.persp, &mut bound);
                                     }
                                 }
@@ -10444,20 +10492,8 @@ impl Eval {
             .arg_matches(&self.h, l.rel, persp, l.args.len(), &pos, &vals)
     }
 
-    /// Matches for one positive premise: store facts plus demand unfolding.
-    fn match_premise(
-        &mut self,
-        l: &Lit,
-        s: &Subst,
-        depth: usize,
-        only: Option<&FxSet<FactId>>,
-    ) -> Result<Vec<(Subst, PremRef)>, Halt> {
-        if l.temporal == Temporal::Init && self.store.tick != 0 {
-            return Ok(Vec::new());
-        }
-        if let Some(ci) = self.vclosure_for(l.rel) {
-            return Ok(self.vmatch(ci, l, s));
-        }
+    /// The stored facts that match a premise, `only` among them when given.
+    fn store_answers(&mut self, l: &Lit, s: &Subst, only: Option<&FxSet<FactId>>) -> Vec<(Subst, PremRef)> {
         let persp_t = walk(&self.h, l.persp, s);
         let persp = persp_t.as_atom();
         let cands: Vec<FactId> = match only {
@@ -10508,12 +10544,28 @@ impl Eval {
                 out.push((s3, PremRef::Fact(f)));
             }
         }
+        out
+    }
+
+    /// Matches for one positive premise: store facts plus demand unfolding.
+    fn match_premise(
+        &mut self,
+        l: &Lit,
+        s: &Subst,
+        depth: usize,
+        only: Option<&FxSet<FactId>>,
+    ) -> Result<Vec<(Subst, PremRef)>, Halt> {
+        if l.temporal == Temporal::Init && self.store.tick != 0 {
+            return Ok(Vec::new());
+        }
+        if let Some(ci) = self.vclosure_for(l.rel) {
+            return Ok(self.vmatch(ci, l, s));
+        }
         let drs: Option<Vec<Rc<ERule>>> = self
             .demand_rels
             .iter()
             .find(|(r, _)| *r == l.rel)
             .map(|(_, rs)| rs.clone());
-        let mut open: Vec<(Subst, PremRef, String)> = Vec::new();
         // A CLOSED RELATION'S ANSWERS ARE ALL IN THE STORE at its fixpoint (its
         // rules fire bottom-up and its news refires every reader): read, not unfolded
         let closed = self.demand_closed.contains(&l.rel);
@@ -10525,7 +10577,13 @@ impl Eval {
         // nothing: they are unknown past those found, and so is the call above.
         let keyed = if closed { brk!("demand_closed_unfolds" => true; false) } else { self.demand_cyclic.contains(&l.rel) };
         let call = drs.as_ref().filter(|_| keyed).map(|_| self.anon_lit_key(l, s));
-        let again = call.as_ref().and_then(|k| self.demand_calls.iter().position(|c| c.key == *k));
+        let met = call.as_ref().and_then(|k| self.demand_calls.iter().position(|c| c.key == *k));
+        let again = met.filter(|_| !closed && brk!("demand_cycle_unfolds" => false; true));
+        let cut = again.is_some_and(|j| self.neg_level > self.demand_calls[j].neg || brk!("demand_cycle_cut" => true; false));
+        // the first call took the stored answers among its own: one met again reads them there
+        let reread = again.is_some() && !cut && brk!("demand_again_rereads_store" => false; true);
+        let mut out = if reread { Vec::new() } else { self.store_answers(l, s, only) };
+        let mut open: Vec<(Subst, PremRef, String)> = Vec::new();
         let mut seen_keys: HashSet<String> = HashSet::new();
         if drs.is_some() {
             for (_, r) in out.iter() {
@@ -10534,13 +10592,17 @@ impl Eval {
                 }
             }
         }
-        if let Some(j) = again.filter(|_| !closed && brk!("demand_cycle_unfolds" => false; true)) {
-            if self.neg_level > self.demand_calls[j].neg || brk!("demand_cycle_cut" => true; false) {
+        if let Some(j) = again {
+            if cut {
                 self.demand_cycle(l, s);
             } else {
                 self.demand_calls[j].read = true;
-                let answers = self.demand_calls[j].answers.clone();
+                let c = &self.demand_calls[j];
+                let from = if c.linear { c.from } else { 0 };
+                let answers = c.answers[from..].to_vec();
                 for (args, mref) in answers {
+                    // every answer read is a step: a fixpoint that never stops growing meets the wall
+                    brk!("demand_reread_free" => (); self.bump_steps()?);
                     let n = self.rename_counter;
                     self.rename_counter += 1;
                     let args: Vec<Term> = args.iter().map(|a| rename_term(&mut self.h, *a, n)).collect();
@@ -10555,17 +10617,27 @@ impl Eval {
                 }
             }
         }
-        let drs = drs.filter(|_| again.is_none() || brk!("demand_cycle_unfolds" => !closed; false));
+        let drs = drs.filter(|_| met.is_none() || brk!("demand_cycle_unfolds" => !closed; false));
         if let Some(drs) = drs {
             let pushed = call.is_some();
             if let Some(key) = call {
-                self.demand_calls.push(DemandCall { key, neg: self.neg_level, answers: Vec::new(), keys: HashSet::new(), read: false });
+                let linear = self.demand_linear.contains(&l.rel) && brk!("demand_naive_passes" => false; true);
+                let mut c = DemandCall { key, neg: self.neg_level, answers: Vec::new(), keys: HashSet::new(), read: false, from: 0, linear };
+                let stored = if only.is_some() { self.store_answers(l, s, None) } else { out.clone() };
+                for (_, r) in stored.iter() {
+                    if let PremRef::Fact(f) = r {
+                        c.keys.insert(self.store.key(&self.h, *f));
+                        c.answers.push((self.store.args(*f).to_vec(), *r));
+                    }
+                }
+                self.demand_calls.push(c);
             }
             let unfolded = (|| -> Result<(), Halt> {
                 let mut pass = 0;
                 loop {
                     pass += 1;
                     let mut grew = false;
+                    let began = self.demand_calls.last().map_or(0, |c| c.answers.len());
                     for dr in &drs {
                         for (ms, mref) in self.solve_demand_rule(dr, l, s, depth)? {
                             let dk = match mref {
@@ -10579,10 +10651,16 @@ impl Eval {
                                 new = !self.demand_calls.last().unwrap().keys.contains(&tk);
                                 if new {
                                     let args: Vec<Term> = l.args.iter().map(|a| resolve(&mut self.h, *a, &ms)).collect();
+                                    // kept under canonical variables: a name renamed at each read never grows
+                                    let args = brk!("demand_answer_names_grow" => args; canon_vars(&mut self.h, &args));
                                     let c = self.demand_calls.last_mut().unwrap();
                                     c.keys.insert(tk);
                                     c.answers.push((args, mref));
                                     grew = true;
+                                    // an open answer kept is a row: no stored fact counts it
+                                    if !matches!(mref, PremRef::Fact(_)) && brk!("demand_open_answer_free" => false; true) {
+                                        self.charge_row(Some(dr.id), true)?;
+                                    }
                                 }
                             }
                             if (new || pass == 1) && seen_keys.insert(dk.clone()) {
@@ -10592,7 +10670,10 @@ impl Eval {
                     }
                     let c = self.demand_calls.last_mut().filter(|_| pushed);
                     match c {
-                        Some(c) if c.read && grew && brk!("demand_fixpoint_once" => false; true) => c.read = false,
+                        Some(c) if c.read && grew && brk!("demand_fixpoint_once" => false; true) => {
+                            c.read = false;
+                            c.from = brk!("demand_window_late" => c.answers.len(); began);
+                        }
                         _ => break,
                     }
                 }

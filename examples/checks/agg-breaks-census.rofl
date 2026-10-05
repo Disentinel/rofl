@@ -1069,6 +1069,30 @@ brk("demand_fixpoint_once"). brk_kind("demand_fixpoint_once", switch).
 brk_expects("demand_fixpoint_once", "demand_cycle_fixpoint").
 brk("ts_demand_fixpoint_once"). brk_kind("ts_demand_fixpoint_once", ts).
 brk_expects("ts_demand_fixpoint_once", "demand_cycle_fixpoint").
+brk("demand_window_late"). brk_kind("demand_window_late", switch).
+brk_expects("demand_window_late", "demand_cycle_fixpoint").
+brk("ts_demand_window_late"). brk_kind("ts_demand_window_late", ts).
+brk_expects("ts_demand_window_late", "demand_cycle_fixpoint").
+brk("demand_nonlinear_window"). brk_kind("demand_nonlinear_window", switch).
+brk_expects("demand_nonlinear_window", "demand_fixpoint_nonlinear").
+brk("ts_demand_nonlinear_window"). brk_kind("ts_demand_nonlinear_window", ts).
+brk_expects("ts_demand_nonlinear_window", "demand_fixpoint_nonlinear").
+brk("demand_naive_passes"). brk_kind("demand_naive_passes", switch).
+brk_expects("demand_naive_passes", "demand_fixpoint").
+brk("demand_again_rereads_store"). brk_kind("demand_again_rereads_store", switch).
+brk_expects("demand_again_rereads_store", "demand_fixpoint").
+brk("demand_answer_names_grow"). brk_kind("demand_answer_names_grow", switch).
+brk_expects("demand_answer_names_grow", "demand_fixpoint").
+brk("demand_reread_free"). brk_kind("demand_reread_free", switch).
+brk_expects("demand_reread_free", "demand_fixpoint_steps").
+brk_expects("demand_reread_free", "demand_fixpoint").
+brk("ts_demand_reread_free"). brk_kind("ts_demand_reread_free", ts).
+brk_expects("ts_demand_reread_free", "demand_fixpoint_steps").
+brk("demand_open_answer_free"). brk_kind("demand_open_answer_free", switch).
+brk_expects("demand_open_answer_free", "demand_fixpoint_space").
+brk_expects("demand_open_answer_free", "demand_fixpoint").
+brk("ts_demand_open_answer_free"). brk_kind("ts_demand_open_answer_free", ts).
+brk_expects("ts_demand_open_answer_free", "demand_fixpoint_space").
 brk("asked_answers_kept"). brk_kind("asked_answers_kept", switch).
 brk_expects("asked_answers_kept", "demand_query_ask").
 brk("why_unasked"). brk_kind("why_unasked", switch).
@@ -1870,18 +1894,6 @@ brk_expects("vclosure_demand_unread", "ds_tree_demand_edge").
 brk("vclosure_restore_unengaged"). brk_kind("vclosure_restore_unengaged", switch).
 brk_expects("vclosure_restore_unengaged", "ds_tree_sealed").
 brk_expects("vclosure_restore_unengaged", "ds_tree_explain").
-brk("demand_closed_atom_book"). brk_kind("demand_closed_atom_book", switch).
-brk_expects("demand_closed_atom_book", "ds_tree_demand_book").
-brk_expects("demand_closed_atom_book", "ds_tree_demand_book_sealed").
-brk("ts_demand_closed_atom_book"). brk_kind("ts_demand_closed_atom_book", ts).
-brk_expects("ts_demand_closed_atom_book", "ds_tree_demand_book").
-brk_expects("ts_demand_closed_atom_book", "ds_tree_demand_book_sealed").
-brk("demand_closed_book_unbound"). brk_kind("demand_closed_book_unbound", switch).
-brk_expects("demand_closed_book_unbound", "ds_tree_demand_book").
-brk_expects("demand_closed_book_unbound", "ds_tree_demand_book_sealed").
-brk("ts_demand_closed_book_unbound"). brk_kind("ts_demand_closed_book_unbound", ts).
-brk_expects("ts_demand_closed_book_unbound", "ds_tree_demand_book").
-brk_expects("ts_demand_closed_book_unbound", "ds_tree_demand_book_sealed").
 brk("vclosure_rows_cost"). brk_kind("vclosure_rows_cost", switch).
 brk_expects("vclosure_rows_cost", "ds_tree_plan").
 brk("vclosure_neg_inverted"). brk_kind("vclosure_neg_inverted", switch).
@@ -1988,8 +2000,8 @@ switch_site("delta_first_overrun_holes", "rust/rofl/src/engine.rs").
 switch_site("delta_first_persp", "rust/rofl/src/engine/joinplan.rs").
 switch_site("delta_first_spread", "rust/rofl/src/engine/joinplan.rs").
 switch_site("delta_first_walls", "rust/rofl/src/engine/joinplan.rs").
-switch_site("demand_closed_atom_book", "rust/rofl/src/engine.rs").
-switch_site("demand_closed_book_unbound", "rust/rofl/src/engine.rs").
+switch_site("demand_again_rereads_store", "rust/rofl/src/engine.rs").
+switch_site("demand_answer_names_grow", "rust/rofl/src/engine.rs").
 switch_site("demand_closed_news_unread", "rust/rofl/src/engine.rs").
 switch_site("demand_closed_refires", "rust/rofl/src/engine.rs").
 switch_site("demand_closed_unfolds", "rust/rofl/src/engine.rs").
@@ -1997,13 +2009,18 @@ switch_site("demand_cycle_cut", "rust/rofl/src/engine.rs").
 switch_site("demand_cycle_unfolds", "rust/rofl/src/engine.rs").
 switch_site("demand_fault_unspread", "rust/rofl/src/engine.rs").
 switch_site("demand_fixpoint_once", "rust/rofl/src/engine.rs").
+switch_site("demand_naive_passes", "rust/rofl/src/engine.rs").
 switch_site("demand_neg_failed_unknown", "rust/rofl/src/engine.rs").
 switch_site("demand_neg_unholed", "rust/rofl/src/engine.rs").
+switch_site("demand_nonlinear_window", "rust/rofl/src/engine.rs").
+switch_site("demand_open_answer_free", "rust/rofl/src/engine.rs").
 switch_site("demand_poison_skipped", "rust/rofl/src/engine.rs").
 switch_site("demand_recursion_unfolds", "rust/rofl/src/engine.rs").
+switch_site("demand_reread_free", "rust/rofl/src/engine.rs").
 switch_site("demand_strict_mono", "rust/rofl/src/engine.rs").
 switch_site("demand_strict_refire", "rust/rofl/src/engine/delta.rs").
 switch_site("demand_trail_last", "rust/rofl/src/engine.rs").
+switch_site("demand_window_late", "rust/rofl/src/engine.rs").
 switch_site("descent_closes_other", "rust/rofl/src/engine.rs").
 switch_site("descent_fatal", "rust/rofl/src/engine.rs").
 switch_site("descent_wall", "rust/rofl/src/engine.rs").

@@ -357,6 +357,20 @@ check_file("demand_cycle", "examples/checks/demand-cycle.rofl").
 check_world("demand_cycle_fixpoint").
 check_file("demand_cycle_fixpoint", "examples/checks/demand-cycle-fixpoint.rofl").
 
+-- a pass of a linear recursion reads the answers found since the pass before; one that reads the cycle twice
+-- reads them all; every answer read is a step and every open answer kept a row
+-- (f_a_cycle_fixpoint_ran_away_unbounded_and_recomputed_every_pass)
+check_world("demand_fixpoint_nonlinear").
+check_file("demand_fixpoint_nonlinear", "examples/checks/demand-fixpoint-nonlinear.rofl").
+check_world("demand_fixpoint_steps").
+check_file("demand_fixpoint_steps", "examples/checks/demand-fixpoint-steps.rofl").
+check_opt("demand_fixpoint_steps", together, 1).
+check_opt("demand_fixpoint_steps", budget, 700).
+check_world("demand_fixpoint_space").
+check_file("demand_fixpoint_space", "examples/checks/demand-fixpoint-space.rofl").
+check_opt("demand_fixpoint_space", together, 1).
+check_opt("demand_fixpoint_space", space, 220).
+
 -- a question to a relation unfolded at a call unfolds it in both engines, and leaves the world as it found it
 -- (f_a_question_stored_what_it_unfolded, f_ask_read_the_store_where_query_unfolded)
 check_world("demand_query").

@@ -911,10 +911,12 @@ export class AggEval {
   private demandClosed = new Set<string>();
   /** The relations answered on demand that may call themselves through others not closed: their calls being unfolded are kept as variant keys. */
   private demandCyclic = new Set<string>();
-  /** The calls of `demandCyclic` relations being unfolded, as variant keys. */
-  /** The calls of `demandCyclic` relations being unfolded, each with its answers so far: a call met again reads them, and the first one
-   *  unfolds again until they stop growing. `neg` is how many negations were being decided when it was made. */
-  private demandCalls: { key: string; neg: number; answers: [Term[], PremRef][]; keys: Set<string>; read: boolean }[] = [];
+  /** The `demandCyclic` relations whose cycle no rule reads twice, or under a negation or an aggregate (`demandLinearRels`). */
+  private demandLinear = new Set<string>();
+  /** The calls of `demandCyclic` relations being unfolded, each with its answers so far (its variables renamed canonically): a call met
+   *  again reads them, and the first one unfolds again until they stop growing. `neg` is how many negations were being decided when it was
+   *  made; `from` the first answer a call met again in this pass reads (`demandLinear`). */
+  private demandCalls: { key: string; neg: number; answers: [Term[], PremRef][]; keys: Set<string>; read: boolean; from: number; linear: boolean }[] = [];
   /** The facts a question's unfolding made, taken out when it is answered. */
   private askedMade: string[] = [];
   /** How many negations are being decided: a call met again under one more than when it was first made cannot read answers that may still grow. */
@@ -1142,6 +1144,7 @@ export class AggEval {
     this.demandRels = demand.map(([rel, is]) => [rel, is.map((i) => this.rules[i])]);
     this.demandClosed = this.demandClosedRels();
     this.demandCyclic = this.demandCyclicRels();
+    this.demandLinear = this.demandLinearRels();
     // a closed relation is read from the store: its readers fire on its news like any relation's
     for (const r of kept) r.hasDemandPrem = r.posRels.some((x) => demandNames.includes(x) && !this.demandClosed.has(x));
   }
@@ -1204,6 +1207,36 @@ export class AggEval {
       }
     }
     return out;
+  }
+
+  /** THE CYCLIC DEMAND RELATIONS WHOSE RECURSION IS LINEAR: no rule of their cycle reads the cycle twice, or under a negation or an aggregate.
+   *  A derivation of one reads the answers of a call met again once, so a pass after the first reads only the answers found since the pass
+   *  before began: one reading only older answers was found then. Any other call reads every answer so far. */
+  private demandLinearRels(): Set<string> {
+    const calls = new Map<string, Set<string>>();
+    for (const [rel, rs] of this.demandRels) {
+      if (this.demandCyclic.has(rel)) calls.set(rel, new Set(rs.flatMap((r) => r.clause.body.flatMap((b) => litsOf(b)).map((l) => l.rel)).filter((r) => this.demandCyclic.has(r))));
+    }
+    const reaches = new Map<string, Set<string>>();
+    for (const from of calls.keys()) {
+      const seen = new Set<string>(), todo = [...calls.get(from)!];
+      for (let r = todo.pop(); r !== undefined; r = todo.pop()) if (!seen.has(r)) { seen.add(r); todo.push(...(calls.get(r) ?? [])); }
+      reaches.set(from, seen);
+    }
+    const same = (a: string, b: string) => (reaches.get(a)?.has(b) ?? false) && (reaches.get(b)?.has(a) ?? false);
+    const twice: string[] = [];
+    for (const [rel, rs] of this.demandRels) {
+      if (!calls.has(rel)) continue;
+      for (const r of rs) {
+        let n = 0;
+        for (const b of r.clause.body) {
+          const k = litsOf(b).filter((l) => same(l.rel, rel)).length;
+          n += k > 0 && b.t !== 'pos' ? 2 : k;
+        }
+        if (n > 1) twice.push(rel);
+      }
+    }
+    return new Set([...calls.keys()].filter((r) => !twice.some((t) => same(r, t))));
   }
 
   /** THE CARRY OF A LATTICE ACROSS A TICK: `L(K..., V) :- L@next(K..., V).` */
@@ -6437,6 +6470,83 @@ export class AggEval {
   /** Matches for one positive premise: store facts plus demand unfolding. */
   matchPremise(l: Lit, s: Subst, depth: number, only: Set<string> | null): [Subst, PremRef][] {
     if (l.temporal === 'init' && this.store.tick !== 0) return [];
+    const drs = this.demandRels.find(([r]) => r === l.rel);
+    // A CLOSED RELATION'S ANSWERS ARE ALL IN THE STORE at its fixpoint (its rules fire bottom-up and its news refires every reader): read, not unfolded
+    // A CALL MET AGAIN INSIDE ITS OWN UNFOLDING would unfold without end. It reads the answers found so far, and the first call unfolds again
+    // until they stop growing: the least fixpoint of a positive recursion. Met under a negation opened inside the cycle, answers that may still
+    // grow decide nothing: they are unknown past those found, and so is the call above.
+    const call = drs !== undefined && this.demandCyclic.has(l.rel) ? this.anonLitKey(l, s) : null;
+    const j = call === null ? -1 : this.demandCalls.findIndex((c) => c.key === call);
+    const cut = j >= 0 && this.negLevel > this.demandCalls[j].neg;
+    // the first call took the stored answers among its own: one met again reads them there
+    const out = j >= 0 && !cut ? [] : this.storeAnswers(l, s, only);
+    const keys: string[] = out.map(([, r]) => (r as { key: string }).key);
+    const seen = new Set<string>(keys);
+    if (j >= 0) {
+      const c = this.demandCalls[j];
+      if (cut) this.demandCycle(l, s);
+      else {
+        c.read = true;
+        for (const [args, mref] of c.answers.slice(c.linear ? c.from : 0)) {
+          // every answer read is a step: a fixpoint that never stops growing meets the wall
+          this.bumpSteps();
+          const n = this.renameCounter++;
+          const ms = unifyAll(l.args, args.map((a) => renameTerm(a, n)), s);
+          if (ms === null) continue;
+          const dk = mref.t === 'fact' ? mref.key : this.resolvedLitKey(l, ms);
+          if (!seen.has(dk)) { seen.add(dk); keys.push(dk); out.push([ms, mref]); }
+        }
+      }
+    }
+    if (drs !== undefined && !this.demandClosed.has(l.rel) && j < 0) {
+      if (call !== null) {
+        const c = { key: call, neg: this.negLevel, answers: [] as [Term[], PremRef][], keys: new Set<string>(), read: false, from: 0, linear: this.demandLinear.has(l.rel) };
+        for (const [, r] of only === null ? out : this.storeAnswers(l, s, null)) {
+          const f = this.store.get((r as { key: string }).key)!;
+          c.keys.add(f.key);
+          c.answers.push([f.args, r]);
+        }
+        this.demandCalls.push(c);
+      }
+      try {
+        for (let pass = 1; ; pass++) {
+          let grew = false;
+          const began = call !== null ? this.demandCalls[this.demandCalls.length - 1].answers.length : 0;
+          for (const dr of drs[1]) {
+            for (const [ms, mref] of this.solveDemandRule(dr, l, s, depth)) {
+              const dk = mref.t === 'fact' ? mref.key : this.resolvedLitKey(l, ms);
+              let fresh = true;
+              if (call !== null) {
+                // an open answer is the same answer again under other variables
+                const c = this.demandCalls[this.demandCalls.length - 1];
+                const tk = mref.t === 'fact' ? dk : this.anonLitKey(l, ms);
+                fresh = !c.keys.has(tk);
+                if (fresh) {
+                  // kept under canonical variables: a name renamed at each read never grows
+                  c.keys.add(tk); c.answers.push([canonVars(l.args.map((a) => resolve(a, ms))), mref]); grew = true;
+                  // an open answer kept is a row: no stored fact counts it
+                  if (mref.t !== 'fact') this.chargeRow(dr.id, true);
+                }
+              }
+              if ((fresh || pass === 1) && !seen.has(dk)) { seen.add(dk); keys.push(dk); out.push([ms, mref]); }
+            }
+          }
+          const c = call !== null ? this.demandCalls[this.demandCalls.length - 1] : null;
+          if (c === null || !c.read || !grew) break;
+          c.read = false;
+          c.from = began;
+        }
+      } finally { if (call !== null) this.demandCalls.pop(); }
+    }
+    // the answers in key order, which is the one a canonical witness is picked in: a store that holds them so is not sorted again
+    let ordered = true;
+    for (let i = 1; i < keys.length; i++) if (keys[i - 1] > keys[i]) { ordered = false; break; }
+    if (ordered) return out;
+    return keys.map((_, i) => i).sort((a, b) => (keys[a] < keys[b] ? -1 : keys[a] > keys[b] ? 1 : 0)).map((i) => out[i]);
+  }
+
+  /** The stored facts that match a premise, `only` among them when given. */
+  private storeAnswers(l: Lit, s: Subst, only: Set<string> | null): [Subst, PremRef][] {
     const perspT = walk(l.persp, s);
     const persp = perspT.k === 'a' ? perspT.name : null;
     let cands: FactRec[];
@@ -6454,7 +6564,6 @@ export class AggEval {
       cands = this.indexProbe(l, s, persp) ?? this.scanRel(l.rel, persp);
     }
     const out: [Subst, PremRef][] = [];
-    const keys: string[] = [];
     const seen = new Set<string>();
     for (const fr of cands) {
       if (persp === null && isKernelLedger(fr.persp)) continue;
@@ -6462,59 +6571,9 @@ export class AggEval {
       if (s2 === null) continue;
       const s3 = unifyAll(l.args, fr.args, s2);
       if (s3 === null) continue;
-      if (!seen.has(fr.key)) { seen.add(fr.key); keys.push(fr.key); out.push([s3, { t: 'fact', key: fr.key }]); }
+      if (!seen.has(fr.key)) { seen.add(fr.key); out.push([s3, { t: 'fact', key: fr.key }]); }
     }
-    const drs = this.demandRels.find(([r]) => r === l.rel);
-    // A CLOSED RELATION'S ANSWERS ARE ALL IN THE STORE at its fixpoint (its rules fire bottom-up and its news refires every reader): read, not unfolded
-    // A CALL MET AGAIN INSIDE ITS OWN UNFOLDING would unfold without end. It reads the answers found so far, and the first call unfolds again
-    // until they stop growing: the least fixpoint of a positive recursion. Met under a negation opened inside the cycle, answers that may still
-    // grow decide nothing: they are unknown past those found, and so is the call above.
-    const call = drs !== undefined && this.demandCyclic.has(l.rel) ? this.anonLitKey(l, s) : null;
-    const j = call === null ? -1 : this.demandCalls.findIndex((c) => c.key === call);
-    if (j >= 0) {
-      const c = this.demandCalls[j];
-      if (this.negLevel > c.neg) this.demandCycle(l, s);
-      else {
-        c.read = true;
-        for (const [args, mref] of [...c.answers]) {
-          const n = this.renameCounter++;
-          const ms = unifyAll(l.args, args.map((a) => renameTerm(a, n)), s);
-          if (ms === null) continue;
-          const dk = mref.t === 'fact' ? mref.key : this.resolvedLitKey(l, ms);
-          if (!seen.has(dk)) { seen.add(dk); keys.push(dk); out.push([ms, mref]); }
-        }
-      }
-    }
-    if (drs !== undefined && !this.demandClosed.has(l.rel) && j < 0) {
-      if (call !== null) this.demandCalls.push({ key: call, neg: this.negLevel, answers: [], keys: new Set(), read: false });
-      try {
-        for (let pass = 1; ; pass++) {
-          let grew = false;
-          for (const dr of drs[1]) {
-            for (const [ms, mref] of this.solveDemandRule(dr, l, s, depth)) {
-              const dk = mref.t === 'fact' ? mref.key : this.resolvedLitKey(l, ms);
-              let fresh = true;
-              if (call !== null) {
-                // an open answer is the same answer again under other variables
-                const c = this.demandCalls[this.demandCalls.length - 1];
-                const tk = mref.t === 'fact' ? dk : this.anonLitKey(l, ms);
-                fresh = !c.keys.has(tk);
-                if (fresh) { c.keys.add(tk); c.answers.push([l.args.map((a) => resolve(a, ms)), mref]); grew = true; }
-              }
-              if ((fresh || pass === 1) && !seen.has(dk)) { seen.add(dk); keys.push(dk); out.push([ms, mref]); }
-            }
-          }
-          const c = call !== null ? this.demandCalls[this.demandCalls.length - 1] : null;
-          if (c === null || !c.read || !grew) break;
-          c.read = false;
-        }
-      } finally { if (call !== null) this.demandCalls.pop(); }
-    }
-    // the answers in key order, which is the one a canonical witness is picked in: a store that holds them so is not sorted again
-    let ordered = true;
-    for (let i = 1; i < keys.length; i++) if (keys[i - 1] > keys[i]) { ordered = false; break; }
-    if (ordered) return out;
-    return keys.map((_, i) => i).sort((a, b) => (keys[a] < keys[b] ? -1 : keys[a] > keys[b] ? 1 : 0)).map((i) => out[i]);
+    return out;
   }
 
   /** Top-down unfolding of a moded rule at a call site. */

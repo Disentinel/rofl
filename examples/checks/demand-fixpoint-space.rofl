@@ -1,0 +1,16 @@
+-- examples/checks/demand-fixpoint-space.rofl — demand_fixpoint_space: AN OPEN ANSWER
+-- KEPT FOR A CALL MET AGAIN IS A ROW, as a stored fact is, so a fixpoint whose
+-- answers are never stored still meets the space wall
+-- (f_a_cycle_fixpoint_ran_away_unbounded_and_recomputed_every_pass).
+--
+-- The open recursion of demand_fixpoint_nonlinear under 220 rows (check_opt):
+-- counted, its answers need 234; not counted, 199 would do.
+edb(dm_seed). edb(dm_add).
+dm_seed(1).
+dm_add(1, 1, 2). dm_add(1, 2, 3). dm_add(2, 2, 4). dm_add(1, 4, 5). dm_add(2, 3, 5).
+dm_b(X, W) :- dm_seed(X).
+dm_p(X, W) :- dm_b(X, W).
+dm_p(X, W) :- dm_p(Y, W), dm_p(Z, W), dm_add(Y, Z, X).
+dm_all(X) :- dm_p(X, W).
+
+-- expect-row: shrug[$kernel]($adhoc,budget,spent(rows,234,220)) tick base support=0
