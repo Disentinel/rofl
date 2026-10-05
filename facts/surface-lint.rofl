@@ -1,0 +1,234 @@
+-- facts/surface-lint.rofl — THE REGISTER OF THE SURFACE LINT: the columns that name another file, and
+-- the cross-file joins the JS model still keeps. Rules: examples/surface/surface.rofl. Design:
+-- docs/surface-split.md, item 3.
+--
+-- The seeds. A column that holds a node or a path of ANOTHER file by construction: module resolution
+-- (a site and the file it names) and the call edge (a site and the callee's node). Everything else that
+-- is foreign-capable is derived from these through the rules' own heads.
+xl_seed(module_target, 2).
+xl_seed(resolved_import, 2).
+xl_seed(ts_resolved, 2).
+xl_seed(resolves, 2).
+xl_seed(calls, 2).
+
+-- THE BASELINE, 2026-10-05, over rules/js-*.rofl before the [surface] book: every cross-file join the
+-- model makes today, one row per (head, premise). The one reason is `awaiting_rewrite`: the join goes
+-- when its rule reads the other file through [surface] (docs/surface-split.md, work item 1), and the
+-- row goes with it: the lint is red on a row whose finding is gone (xl_ok_stale), so a rewritten rule
+-- cannot leave its excuse behind. A row for a rule that will stay is rewritten with its own reason.
+-- The text names what the premise is read through: Source.Col is the foreign-capable column.
+
+xl_ok(abrupt_at, ast_within, "awaiting_rewrite: read through throwing_call.1").
+xl_ok(abrupt_at, nearest_v, "awaiting_rewrite: read through throwing_call.1").
+xl_ok(accessor_of, ast_attr, "awaiting_rewrite: read through member_value.3").
+xl_ok(accessor_read, ast_child, "awaiting_rewrite: read through may_be_node.1, selects.1").
+xl_ok(accessor_read, member_node_v, "awaiting_rewrite: read through selects.1").
+xl_ok(amb_exn_carrier, eff_discharged_at, "awaiting_rewrite: read through resolves.1").
+xl_ok(amb_exn_carrier, nearest_v, "awaiting_rewrite: read through amb_exn_source.1, resolves.1").
+xl_ok(amb_global_member, ast_child, "awaiting_rewrite: read through selects.1").
+xl_ok(amb_proto_recv, ast_child, "awaiting_rewrite: read through prototype_of.1").
+xl_ok(ambient_off_surface, amb_operation_word, "awaiting_rewrite: read through concrete_effect.3").
+xl_ok(ambient_off_surface, lib_member, "awaiting_rewrite: read through concrete_effect.3").
+xl_ok(ambient_off_surface, lib_static, "awaiting_rewrite: read through concrete_effect.3").
+xl_ok(arg_at, ast_child, "awaiting_rewrite: read through elem_at.1").
+xl_ok(await_value_known, await_arg, "awaiting_rewrite: read through may_be_node.1").
+xl_ok(awaited_then, await_arg, "awaiting_rewrite: read through may_be_node.1").
+xl_ok(awaited_then, fn_node, "awaiting_rewrite: read through may_be_node.2").
+xl_ok(awaiting_fn, ast_within, "awaiting_rewrite: read through performed_call.1").
+xl_ok(callback_param, ast_child, "awaiting_rewrite: read through may_be_node.1, may_be_node.2").
+xl_ok(callback_param, external_value, "awaiting_rewrite: read through may_be_node.2").
+xl_ok(callback_param, fn_node, "awaiting_rewrite: read through may_be_node.2").
+xl_ok(callback_site, ast_child, "awaiting_rewrite: read through prototype_of.1, selects.1").
+xl_ok(callback_site, callee_of, "awaiting_rewrite: read through selects.1").
+xl_ok(callerless_call, fn_name, "awaiting_rewrite: read through performed_call.2").
+xl_ok(calls, fn_node, "awaiting_rewrite: read through may_be_node.2").
+xl_ok(calls, for_of_iterates, "awaiting_rewrite: read through nearest_fn.2").
+xl_ok(calls, pattern_accessor, "awaiting_rewrite: read through nearest_fn.2, top_call.1").
+xl_ok(calls, pattern_next, "awaiting_rewrite: read through nearest_fn.2").
+xl_ok(calls, returns, "awaiting_rewrite: read through for_of_iterates.2, may_be_node.1").
+xl_ok(calls_back, arg_at, "awaiting_rewrite: read through callback_site.1").
+xl_ok(calls_back, fn_node, "awaiting_rewrite: read through may_be_node.2").
+xl_ok(calls_back, host_calls_back, "awaiting_rewrite: read through callback_site.3").
+xl_ok(calls_in, ast_file, "awaiting_rewrite: read through calls.1").
+xl_ok(calls_in, ast_node, "awaiting_rewrite: read through calls.1").
+xl_ok(calls_in, fn_name, "awaiting_rewrite: read through calls.1, calls.2").
+xl_ok(calls_named, ast_file, "awaiting_rewrite: read through calls.1").
+xl_ok(calls_named, fn_name, "awaiting_rewrite: read through calls.1, calls.2").
+xl_ok(caught_value, ast_within, "awaiting_rewrite: read through resolves.1").
+xl_ok(cjs_exports, ast_child, "awaiting_rewrite: read through may_be_node.1").
+xl_ok(class_construct_eff, eff_discharged_at, "awaiting_rewrite: read through eff_latent.2, resolves.1").
+xl_ok(class_construct_eff, eff_runs_in, "awaiting_rewrite: read through eff_here.1, resolves.1").
+xl_ok(class_define_eff, eff_discharged_at, "awaiting_rewrite: read through eff_latent.2, resolves.1").
+xl_ok(class_define_eff, eff_runs_in, "awaiting_rewrite: read through eff_here.1, resolves.1").
+xl_ok(class_member_proto, ast_attr, "awaiting_rewrite: read through decorated_member.3, member_value.3").
+xl_ok(class_member_static, ast_attr, "awaiting_rewrite: read through decorated_member.3, member_value.3").
+xl_ok(concrete_async_smuggled, eff_suspension_word, "awaiting_rewrite: read through ambient_effect.2").
+xl_ok(concrete_leq, eff_leq, "awaiting_rewrite: read through concrete_denotes.3").
+xl_ok(dec_up, in_own_decorator, "awaiting_rewrite: read through dec_up.1, site.1").
+xl_ok(dec_up, nearest_v, "awaiting_rewrite: read through site.1").
+xl_ok(decorated_by, decorates, "awaiting_rewrite: read through may_be_node.1").
+xl_ok(decorated_member, ast_child, "awaiting_rewrite: read through decorated_by.1").
+xl_ok(decorated_member, ast_node, "awaiting_rewrite: read through decorated_by.1").
+xl_ok(decorated_member, class_method_of, "awaiting_rewrite: read through decorated_by.1").
+xl_ok(delegates, ast_child, "awaiting_rewrite: read through resolves.1").
+xl_ok(eff_calls, fn_node, "awaiting_rewrite: read through resolves.2").
+xl_ok(eff_conv_call, eff_coerced, "awaiting_rewrite: read through may_be_node.1").
+xl_ok(eff_conv_call, eff_conv_key, "awaiting_rewrite: read through member_value.2").
+xl_ok(eff_conv_object, eff_coerced, "awaiting_rewrite: read through may_be_node.1").
+xl_ok(eff_conv_overridden, eff_coerced, "awaiting_rewrite: read through may_be_node.1").
+xl_ok(eff_conv_overridden, eff_conv_key, "awaiting_rewrite: read through member_value.2").
+xl_ok(eff_conv_primitive, eff_coerced, "awaiting_rewrite: read through may_be_lit.1").
+xl_ok(eff_edge_unclosed, fn_node, "awaiting_rewrite: read through calls.1").
+xl_ok(eff_gap, eff_row, "awaiting_rewrite: read through eff_lh.1, eff_lh.2").
+xl_ok(eff_here, ast_node, "awaiting_rewrite: read through may_be_node.1").
+xl_ok(eff_here, class_construct_eff, "awaiting_rewrite: read through may_be_node.2").
+xl_ok(eff_here, nearest_fn, "awaiting_rewrite: read through eff_reaches.2").
+xl_ok(eff_import_invented, eff_evaluates_at, "awaiting_rewrite: read through eff_here.1").
+xl_ok(eff_join_short, eff_catch_here, "awaiting_rewrite: read through nearest_fn.2, resolves.1").
+xl_ok(eff_join_short, effect_of, "awaiting_rewrite: read through resolves.2").
+xl_ok(eff_latent, eff_discharged_at, "awaiting_rewrite: read through eff_latent.2, nearest_fn.2, resolves.1").
+xl_ok(eff_latent, in_own_decorator, "awaiting_rewrite: read through eff_conv_call.1, eff_here.1").
+xl_ok(eff_latent, nearest_v, "awaiting_rewrite: read through eff_conv_call.1, eff_here.1").
+xl_ok(eff_mod_join_short, effect_of_module, "awaiting_rewrite: read through eff_evaluates_at.2").
+xl_ok(eff_module, ast_node, "awaiting_rewrite: read through eff_here.1, resolves.1").
+xl_ok(eff_module, in_fn, "awaiting_rewrite: read through eff_here.1, resolves.1").
+xl_ok(eff_operation, callee_of, "awaiting_rewrite: read through selects.1").
+xl_ok(eff_purer_callee, effect_of, "awaiting_rewrite: read through resolves.2").
+xl_ok(eff_surface, ast_child, "awaiting_rewrite: read through prototype_of.1").
+xl_ok(eff_swallowed, eff_catch_here, "awaiting_rewrite: read through nearest_fn.2, resolves.1").
+xl_ok(elem_at, ast_child, "awaiting_rewrite: read through may_be_node.2").
+xl_ok(elem_at, ast_node, "awaiting_rewrite: read through may_be_node.2").
+xl_ok(es_instance_unattributed, ast_child, "awaiting_rewrite: read through may_be_node.1, selects.1").
+xl_ok(es_instance_unattributed, callee_of, "awaiting_rewrite: read through selects.1").
+xl_ok(es_instance_unattributed, es_instance, "awaiting_rewrite: read through may_be_node.2").
+xl_ok(es_static, ast_child, "awaiting_rewrite: read through selects.1").
+xl_ok(es_static, lib_static, "awaiting_rewrite: read through selects.2").
+xl_ok(es_static_call, callee_of, "awaiting_rewrite: read through es_static.1").
+xl_ok(es_static_key, lib_static_shape, "awaiting_rewrite: read through es_static.3").
+xl_ok(es_static_unattributed, ast_child, "awaiting_rewrite: read through selects.1").
+xl_ok(es_static_unattributed, lib_static, "awaiting_rewrite: read through selects.2").
+xl_ok(es_static_unsupported, reaches, "awaiting_rewrite: read through es_static.4").
+xl_ok(exported_fn, export_local, "awaiting_rewrite: read through may_be_node.1").
+xl_ok(exported_fn, fn_node, "awaiting_rewrite: read through may_be_node.2").
+xl_ok(exported_fn, in_fn, "awaiting_rewrite: read through may_be_node.2").
+xl_ok(exports_name, export_local, "awaiting_rewrite: read through may_be_node.1").
+xl_ok(exports_name, export_var, "awaiting_rewrite: read through may_be_node.1").
+xl_ok(exports_name, exports_default, "awaiting_rewrite: read through reexport_offers.3").
+xl_ok(exports_name, module_object, "awaiting_rewrite: read through module_target.2").
+xl_ok(exports_name, reexport_offers, "awaiting_rewrite: read through exports_name.2").
+xl_ok(exports_value, reexport_offers, "awaiting_rewrite: read through exports_value.2").
+xl_ok(ext_call, ast_child, "awaiting_rewrite: read through may_be_node.1").
+xl_ok(ext_call, external_value, "awaiting_rewrite: read through may_be_node.2").
+xl_ok(ext_member, ast_child, "awaiting_rewrite: read through may_be_node.1").
+xl_ok(ext_member, external_value, "awaiting_rewrite: read through may_be_node.2").
+xl_ok(external_value, ast_child, "awaiting_rewrite: read through may_be_node.1").
+xl_ok(external_value, external_value, "awaiting_rewrite: read through may_be_node.2").
+xl_ok(for_of_iterates, ast_child, "awaiting_rewrite: read through may_be_node.1").
+xl_ok(for_of_iterates, fn_node, "awaiting_rewrite: read through member_value.3").
+xl_ok(frontier_at, transfer_site, "awaiting_rewrite: read through nearest_fn.2, top_call.1").
+xl_ok(frontier_at, unresolved_call, "awaiting_rewrite: read through nearest_fn.2, top_call.1").
+xl_ok(has_entry, ast_node, "awaiting_rewrite: read through entry_point.1").
+xl_ok(hidden_call_builtin, hidden_call_src, "awaiting_rewrite: read through may_be_node.1").
+xl_ok(hidden_call_primitive, hidden_call_src, "awaiting_rewrite: read through may_be_lit.1").
+xl_ok(hidden_call_traced, hidden_call_src, "awaiting_rewrite: read through may_be_node.1").
+xl_ok(host_call_absent, host_member_absent, "awaiting_rewrite: read through host_module_call.3").
+xl_ok(host_call_absent_at, ast_node, "awaiting_rewrite: read through host_call_absent.2").
+xl_ok(host_call_deprecated, host_member_deprecated, "awaiting_rewrite: read through host_module_call.3").
+xl_ok(host_call_effect, host_member_effect, "awaiting_rewrite: read through host_module_call.3").
+xl_ok(host_call_remedy, host_member_replaced_by, "awaiting_rewrite: read through host_call_deprecated.3").
+xl_ok(host_effect_at, ast_node, "awaiting_rewrite: read through host_call_effect.1").
+xl_ok(host_lost, runtime_version, "awaiting_rewrite: read through host_call_absent.1").
+xl_ok(host_member_call, ast_child, "awaiting_rewrite: read through selects.1").
+xl_ok(host_member_call, callee_of, "awaiting_rewrite: read through selects.1").
+xl_ok(host_module_call, ast_child, "awaiting_rewrite: read through selects.1").
+xl_ok(host_module_call, callee_of, "awaiting_rewrite: read through selects.1").
+xl_ok(host_site_at, ast_node, "awaiting_rewrite: read through host_site.1").
+xl_ok(iter_elem, yields, "awaiting_rewrite: read through resolves.2").
+xl_ok(may_be_lit, arg_at, "awaiting_rewrite: read through resolves.1").
+xl_ok(may_be_lit, assign_reaches_unscoped, "awaiting_rewrite: read through may_be_lit.1").
+xl_ok(may_be_lit, assigned, "awaiting_rewrite: read through may_be_lit.1").
+xl_ok(may_be_lit, ast_child, "awaiting_rewrite: read through may_be_lit.1").
+xl_ok(may_be_lit, binder, "awaiting_rewrite: read through may_be_lit.1").
+xl_ok(may_be_lit, for_of_src, "awaiting_rewrite: read through iter_elem.1").
+xl_ok(may_be_lit, imports_name, "awaiting_rewrite: read through exports_value.2").
+xl_ok(may_be_lit, param_of, "awaiting_rewrite: read through resolves.2").
+xl_ok(may_be_lit, param_use, "awaiting_rewrite: read through resolves.2").
+xl_ok(may_be_lit, returns, "awaiting_rewrite: read through may_be_lit.1, resolves.2").
+xl_ok(may_be_node, arg_at, "awaiting_rewrite: read through resolves.1").
+xl_ok(may_be_node, assign_reaches_unscoped, "awaiting_rewrite: read through may_be_node.1").
+xl_ok(may_be_node, assigned, "awaiting_rewrite: read through may_be_node.1").
+xl_ok(may_be_node, ast_child, "awaiting_rewrite: read through elem_at.1, may_be_node.1, resolves.1").
+xl_ok(may_be_node, binder, "awaiting_rewrite: read through may_be_node.1").
+xl_ok(may_be_node, cjs_exports, "awaiting_rewrite: read through module_target.2").
+xl_ok(may_be_node, class_named, "awaiting_rewrite: read through decorated_by.1").
+xl_ok(may_be_node, class_receiver, "awaiting_rewrite: read through member_at.2").
+xl_ok(may_be_node, destructures, "awaiting_rewrite: read through member_value.2").
+xl_ok(may_be_node, destructures_at, "awaiting_rewrite: read through elem_at.2").
+xl_ok(may_be_node, exports_default, "awaiting_rewrite: read through module_target.2").
+xl_ok(may_be_node, external_value, "awaiting_rewrite: read through may_be_node.2").
+xl_ok(may_be_node, for_of_src, "awaiting_rewrite: read through iter_elem.1").
+xl_ok(may_be_node, imports_name, "awaiting_rewrite: read through exports_name.2").
+xl_ok(may_be_node, module_object, "awaiting_rewrite: read through module_target.2").
+xl_ok(may_be_node, nearest_v, "awaiting_rewrite: read through next_send.1").
+xl_ok(may_be_node, next_send, "awaiting_rewrite: read through may_be_node.1").
+xl_ok(may_be_node, param_default, "awaiting_rewrite: read through may_be_node.1").
+xl_ok(may_be_node, param_of, "awaiting_rewrite: read through resolves.2").
+xl_ok(may_be_node, param_use, "awaiting_rewrite: read through callback_param.2, resolves.2").
+xl_ok(may_be_node, returns, "awaiting_rewrite: read through may_be_node.1, resolves.2").
+xl_ok(may_throw, caught_here, "awaiting_rewrite: read through resolves.1").
+xl_ok(may_throw, nearest_v, "awaiting_rewrite: read through resolves.1").
+xl_ok(member_at, member_obj, "awaiting_rewrite: read through selects.1").
+xl_ok(member_obj, ast_child, "awaiting_rewrite: read through may_be_node.1").
+xl_ok(member_plain, ast_node, "awaiting_rewrite: read through member_value.1").
+xl_ok(member_plain, external_value, "awaiting_rewrite: read through member_value.1").
+xl_ok(member_plain, module_object, "awaiting_rewrite: read through member_value.1").
+xl_ok(member_plain, rest_in_pattern, "awaiting_rewrite: read through member_value.1").
+xl_ok(member_value, ast_child, "awaiting_rewrite: read through may_be_node.1, selects.1").
+xl_ok(member_value, module_object, "awaiting_rewrite: read through exports_name.3, exports_value.3").
+xl_ok(member_value, own_key, "awaiting_rewrite: read through member_value.2").
+xl_ok(member_value, pattern_takes, "awaiting_rewrite: read through member_value.2").
+xl_ok(member_value, spread_of, "awaiting_rewrite: read through may_be_node.1").
+xl_ok(member_value, super_of, "awaiting_rewrite: read through member_value.1").
+xl_ok(nearest_fn, in_own_decorator, "awaiting_rewrite: read through dec_up.1, site.1").
+xl_ok(nearest_fn, nearest_v, "awaiting_rewrite: read through site.1").
+xl_ok(next_send, ast_child, "awaiting_rewrite: read through selects.1").
+xl_ok(next_send, bound_to_call, "awaiting_rewrite: read through resolves.1").
+xl_ok(next_send, callee_of, "awaiting_rewrite: read through selects.1").
+xl_ok(next_send, delegates, "awaiting_rewrite: read through next_send.1").
+xl_ok(passes_function, ast_name, "awaiting_rewrite: read through arg_at.3, may_be_node.1").
+xl_ok(passes_function, fn_node, "awaiting_rewrite: read through may_be_node.2").
+xl_ok(pattern_accessor, ast_child, "awaiting_rewrite: read through may_be_node.1").
+xl_ok(pattern_accessor, pattern_source, "awaiting_rewrite: read through may_be_node.1").
+xl_ok(pattern_accessor, pattern_takes, "awaiting_rewrite: read through accessor_of.2").
+xl_ok(pattern_iterates, ast_child, "awaiting_rewrite: read through may_be_node.1").
+xl_ok(pattern_iterates, fn_node, "awaiting_rewrite: read through member_value.3").
+xl_ok(pattern_iterates, pattern_source, "awaiting_rewrite: read through may_be_node.1").
+xl_ok(pattern_next, fn_node, "awaiting_rewrite: read through may_be_node.2").
+xl_ok(pattern_next, returns, "awaiting_rewrite: read through may_be_node.1, pattern_iterates.2").
+xl_ok(performed_as_edge, awaiting_fn, "awaiting_rewrite: read through calls.1").
+xl_ok(prototype_of, ast_node, "awaiting_rewrite: read through may_be_node.2").
+xl_ok(prototype_of, es_instance, "awaiting_rewrite: read through may_be_node.2").
+xl_ok(reachable, guarded, "awaiting_rewrite: read through resolves.1").
+xl_ok(reachable, in_fn, "awaiting_rewrite: read through resolves.1").
+xl_ok(reachable, nearest_v, "awaiting_rewrite: read through reachable.1, resolves.1").
+xl_ok(reached_unguarded, guarded, "awaiting_rewrite: read through resolves.1").
+xl_ok(resolved_call, call_site, "awaiting_rewrite: read through resolved_site.1").
+xl_ok(resolved_shape, shape, "awaiting_rewrite: read through resolves.1").
+xl_ok(resolves, ast_child, "awaiting_rewrite: read through may_be_node.1").
+xl_ok(resolves, ast_node, "awaiting_rewrite: read through may_be_node.1").
+xl_ok(resolves, callee_of, "awaiting_rewrite: read through may_be_node.1").
+xl_ok(resolves, class_ctor, "awaiting_rewrite: read through may_be_node.2").
+xl_ok(resolves, ctor_of, "awaiting_rewrite: read through may_be_node.2").
+xl_ok(resolves, fn_node, "awaiting_rewrite: read through may_be_node.2").
+xl_ok(resolves, transfer_site, "awaiting_rewrite: read through may_be_node.1").
+xl_ok(selects, computed_key, "awaiting_rewrite: read through may_be_lit.1").
+xl_ok(stdlib_member, ast_child, "awaiting_rewrite: read through prototype_of.1, selects.1").
+xl_ok(stdlib_member, callee_of, "awaiting_rewrite: read through selects.1").
+xl_ok(throwing_call, always_throws, "awaiting_rewrite: read through accessor_read.2, resolves.2").
+xl_ok(throwing_call, call_site, "awaiting_rewrite: read through resolves.1").
+xl_ok(thrown_by, caught_here, "awaiting_rewrite: read through resolves.1").
+xl_ok(thrown_by, nearest_v, "awaiting_rewrite: read through resolves.1").
+xl_ok(top_call, ast_node, "awaiting_rewrite: read through site.1").
+xl_ok(try_stops, ast_within, "awaiting_rewrite: read through throwing_call.1").
+xl_ok(unrecorded_coverage, shape_of, "awaiting_rewrite: read through resolved_shape.1").
+xl_ok(unrecorded_coverage, verdict, "awaiting_rewrite: read through resolved_shape.1").

@@ -1,0 +1,36 @@
+-- examples/surface/fixture.rofl — planted rules for the surface lint, and beside each bad one the
+-- rule that is not. Nothing runs: the rules are read about. The expectations are in check.rofl.
+-- fx_edge(C, F) is the planted call edge: its second column is another file's node.
+
+-- BAD: the callee's own facts read through the call edge
+fx_bad_join(C, N) :- fx_edge[data](C, F), fx_param[data](F, N).
+-- GOOD: the same, through the surface; the callee publishes, the caller subscribes
+fx_pub[surface](F, N)    :- fx_param[data](F, N).
+fx_good_join(C, N)       :- fx_edge[data](C, F), fx_pub[surface](F, N).
+
+-- BAD, transitive: fx_via carries the foreign node on to a reader
+fx_via(C, F)             :- fx_edge[data](C, F).
+fx_bad_trans(C, N)       :- fx_via(C, F), fx_name[data](F, N).
+-- BAD, a negation reads the foreign side too
+fx_bad_neg(C)            :- fx_edge[data](C, F), not fx_seen[data](F).
+-- BAD, an excused one (the register of check.rofl keeps it)
+fx_kept(C, N)            :- fx_edge[data](C, F), fx_param[data](F, N).
+
+-- GOOD: file-local only; a foreign key that only goes to the head; a surface key joined to a local
+-- premise (the subscriber); a head column the foreign node does not reach
+fx_local(C, N)           :- fx_a[data](C, X), fx_b[data](X, N).
+fx_pass(C, F)            :- fx_edge[data](C, F), fx_a[data](C, _).
+fx_sub(U)                :- fx_pub[surface](F, N), fx_param[data](F, U).
+fx_ctrl(C, N)            :- fx_edge[data](C, F), fx_pub[surface](F, N).
+fx_notfc(C, N)           :- fx_ctrl(C, N), fx_name[data](N, _).
+
+-- VOLATILE: a negation over a surface relation, the head that reads it, and the controls
+fx_vol(F)                :- fx_pub[surface](F, _), not fx_pub2[surface](F).
+fx_vol2(F)               :- fx_vol(F), fx_a[data](F, _).
+fx_notvol(F)             :- fx_a[data](F, _), not fx_seen[data](F).
+fx_pos(F)                :- fx_pub[surface](F, _), fx_a[data](F, _).
+
+-- a surface that hands over another file's node (seeded in check.rofl): its node read by a local premise
+fx_pubn[surface](K, N)   :- fx_param[data](K, N).
+fx_bad_surf(K)           :- fx_pubn[surface](K, N), fx_name[data](N, _).
+fx_ok_surf(K, N)         :- fx_pubn[surface](K, N), fx_a[data](K, _).

@@ -1,0 +1,77 @@
+-- examples/surface/surface.rofl — THE SURFACE LINT, as rules over the reflection of the rules.
+--
+-- docs/surface-split.md, item 3. A file is a volume; what it offers the others is the `[surface]`
+-- book. A rule that joins a row of one file with a row of another must read the other side ONLY
+-- through `[surface]`, or the volume cannot be evaluated alone and a starved volume announces
+-- instead of going quiet. Two checks, no list of rules by hand:
+--
+--   (a) CROSS-FILE JOIN. A relation COLUMN is FOREIGN-CAPABLE when its value can be a node or a path
+--       of another file. Computed from the model's own rules:
+--         seed       xl_seed(Rel, Col): the edges that name another file by construction, declared
+--                    once in facts/surface-lint.rofl (module resolution, the call edge)
+--         propagate  a variable at a foreign-capable column of a premise that is not `[surface]` is
+--                    a FOREIGN VARIABLE of the rule, and so is a variable held ONLY by a premise that
+--                    joins one (its rows are the other file's, nothing else in the body binds it);
+--                    a head column holding either is foreign-capable. A `[surface]` column the register seeds counts as a seed too:
+--                    a surface that hands over another file's node
+--       The propagation is by column and positive premises only, so a rule that reads `resolves(C, F)`
+--       and concludes `p(C, X)` does not make `p`'s first column foreign. It over-approximates a column
+--       by its variable (an index read beside a foreign key makes the column foreign): it flags more. A premise of a
+--       non-`[surface]` book that shares a foreign variable at a column that is NOT foreign-capable
+--       is a FILE-LOCAL premise read through the foreign key: that is `xl_finding(Head, Premise,
+--       Source, SourceCol)`: the rule concludes Head, reads Premise at the key that Source's column
+--       SourceCol hands it. `[surface]` premises are the channel: a variable they bind is the key of
+--       the fact's own file and is never foreign, and a rule concluding into `[surface]` is a
+--       publication whose head does not spread foreign-capability.
+--   (b) VOLATILE. A negation over a `[surface]` relation answers "no surface says so yet": its head
+--       changes as surfaces arrive. `volatile_direct(Head, Rel)` names it; `volatile_head(Head)` is
+--       the head and every head that reads it (positively or negated), the set a driver does not
+--       cool before the surface is quiescent.
+--
+-- A finding is excused by `xl_ok(Head, Premise, Why)`; `xl_alarm` is a finding with no excuse and
+-- `xl_ok_stale` an excuse with no finding.
+
+edb(xl_seed).   -- xl_seed(Rel, Col): a column that names another file by construction
+edb(xl_ok).     -- xl_ok(Head, Premise, Why): a cross-file join someone decided to keep, with the reason
+
+-- ---------------------------------------------------------------- reflection --
+xl_lit(R, K, pos, Rel, B, As) :- premise_lit(R, K, L), L = $lit(Rel, B, As, _).
+xl_lit(R, K, neg, Rel, B, As) :- premise_lit(R, K, $not(L)), L = $lit(Rel, B, As, _).
+xl_tail(R, K, 1, As) :- xl_lit(R, K, _, _, _, As).
+xl_tail(R, K, J, T)  :- xl_tail(R, K, I, $cons(_, T)), J is I + 1.
+xl_slot(R, K, J, A)  :- xl_tail(R, K, J, $cons(A, _)).
+xl_meta(V)           :- xl_slot(_, _, _, $var(V)), V = $var(_).
+xl_var(R, K, J, V)   :- xl_slot(R, K, J, $var(V)), not xl_meta(V).
+xl_var(R, K, J, V)   :- xl_slot(R, K, J, A), A = $var(B), B = $var(V).
+
+xl_head_tail(R, 1, As) :- conclusion_lit(R, 1, $lit(_, _, As, _)).
+xl_head_tail(R, J, T)  :- xl_head_tail(R, I, $cons(_, T)), J is I + 1.
+xl_hvar(R, J, V)       :- xl_head_tail(R, J, $cons($var(V), _)), not xl_meta(V).
+
+-- ------------------------------------------------- (a) foreign-capable columns --
+xl_fc(Rel, Col) :- xl_seed(Rel, Col).
+-- a foreign variable: at a foreign-capable column of a premise outside `[surface]`, or at a column the
+-- register seeds in `[surface]` (a surface that hands over another file's node)
+xl_fvar(R, K, V, Rel, Col) :- xl_lit(R, K, pos, Rel, B, _), B != surface, xl_fc(Rel, Col), xl_var(R, K, Col, V).
+xl_fvar(R, K, V, Rel, Col) :- xl_lit(R, K, pos, Rel, surface, _), xl_seed(Rel, Col), xl_var(R, K, Col, V).
+
+-- a premise outside `[surface]` that shares a foreign variable at a column, and the column
+xl_join(R, K, J, Prem, Src, SrcCol) :- xl_fvar(R, K0, V, Src, SrcCol), xl_lit(R, K, _, Prem, B, _), B != surface,
+                                       K != K0, xl_var(R, K, J, V).
+-- the rows such a premise selects are the other file's: a variable only it holds is foreign to the head too
+xl_multi(R, V) :- xl_var(R, K1, _, V), xl_var(R, K2, _, V), K1 != K2.
+xl_hforeign(R, V) :- xl_fvar(R, _, V, _, _).
+xl_hforeign(R, V) :- xl_join(R, K, _, _, _, _), xl_lit(R, K, pos, _, _, _), xl_var(R, K, _, V), not xl_multi(R, V).
+xl_fc(H, J) :- xl_hforeign(R, V), conclusion_lit(R, 1, $lit(H, HB, _, _)), HB != surface, xl_hvar(R, J, V).
+
+xl_finding(H, Prem, Src, SrcCol) :- xl_join(R, _, J, Prem, Src, SrcCol), concludes(R, H), not xl_fc(Prem, J).
+
+xl_excused(H, Prem)   :- xl_ok(H, Prem, _).
+xl_alarm(H, Prem)     :- xl_finding(H, Prem, _, _), not xl_excused(H, Prem).
+xl_ok_stale(H, Prem)  :- xl_ok(H, Prem, _), not xl_finding(H, Prem, _, _).
+
+-- ------------------------------------------------------------- (b) volatility --
+volatile_direct(H, Rel) :- xl_lit(R, _, neg, Rel, surface, _), concludes(R, H).
+volatile_head(H)        :- volatile_direct(H, _).
+volatile_head(H)        :- concludes(R, H), premise_pos(R, V), volatile_head(V).
+volatile_head(H)        :- concludes(R, H), premise_neg(R, V), volatile_head(V).

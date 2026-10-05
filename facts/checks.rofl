@@ -3121,6 +3121,25 @@ check_file("cost_shapes_model", "examples/checks/cost-shapes-model.rofl").
 -- The planted world (examples/shapes) is held on both.
 check_opt("cost_shapes_model", one_engine, rust).
 
+-- docs/surface-split.md item 3: the surface lint over the JS model (examples/surface/surface.rofl)
+check_world("surface_model").
+check_file("surface_model", "examples/surface/surface.rofl").
+check_file("surface_model", "facts/surface-lint.rofl").
+check_file("surface_model", "rules/js-structure.rofl").
+check_file("surface_model", "rules/js-dataflow.rofl").
+check_file("surface_model", "rules/js-model.rofl").
+check_file("surface_model", "rules/js-callgraph.rofl").
+check_file("surface_model", "rules/js-controlflow.rofl").
+check_file("surface_model", "rules/js-effects.rofl").
+check_file("surface_model", "rules/js-globals.rofl").
+check_file("surface_model", "rules/js-host.rofl").
+check_file("surface_model", "rules/js-ambient.rofl").
+check_file("surface_model", "rules/js-attrs.rofl").
+check_file("surface_model", "rules/js-modules.rofl").
+check_file("surface_model", "examples/checks/surface-model.rofl").
+-- ONE ENGINE for the same reason as cost_shapes_model: the reflection of the model nests `$var` deep.
+check_opt("surface_model", one_engine, rust).
+
 -- w_data_structures: who reads ast_within / ast_in and what each asks of the tree
 check_world("ast_within_readers").
 check_file("ast_within_readers", "facts/ast-within-readers.rofl").

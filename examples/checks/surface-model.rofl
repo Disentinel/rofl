@@ -1,0 +1,7 @@
+-- examples/checks/surface-model.rofl — THE SURFACE LINT OVER THE JS MODEL.
+-- examples/surface/surface.rofl over the reflection of the rules of the model, with the register
+-- facts/surface-lint.rofl. Green means every cross-file join is either absent or excused with its
+-- reason; a rule that reads another file outside [surface] turns the world red (`xl_alarm`), and so
+-- does an excuse whose join has gone (`xl_ok_stale`). `volatile_head` is the set a driver reads.
+alarm(xl_alarm).
+alarm(xl_ok_stale).
