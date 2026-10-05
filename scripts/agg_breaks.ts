@@ -6958,7 +6958,7 @@ export const BREAKS: Break[] = [
   "edits": [
    [
     "examples/ring1/ring1.rofl",
-    "clause_at(I, D, $structure(Kind, Rs, $lit(R, $bare, A, $now)), $nil) :-\n  identtok(I, I2), tok_name(I, I2, Kind), struct_kind(Kind), nexttok(I2, K), identtok(K, K2), not keyword(K),\n  tok_name(K, K2, R), nexttok(K2, L), p(L, lpar), nexttok(L, S), strargs(S, E, Rs, A),\n  nexttok(E, C), p(C, rpar), nexttok(C, D), p(D, dot).\n",
+    "clause_at(I, D, $structure(Kind, Rs, $lit(R, $bare, A, $now)), $nil) :-\n  identtok(I, I2), tok_name(I, I2, Kind), struct_kind(Kind), nexttok(I2, K), identtok(K, K2), not keyword(K),\n  tok_name(K, K2, R), nexttok(K2, L), p(L, lpar), nexttok(L, S), strargs(Kind, S, E, Rs, A),\n  nexttok(E, C), p(C, rpar), nexttok(C, D), p(D, dot).\n",
     ""
    ]
   ],
@@ -6986,8 +6986,8 @@ export const BREAKS: Break[] = [
   "edits": [
    [
     "src/api.ts",
-    "    try { checkFunctions(this.store); } catch (e) {\n      this.store.dirty = true; // a broken world is never settled: every later question refuses until it is fixed\n      throw e;\n    }\n    this.lastSteps = ev.steps;",
-    "    this.lastSteps = ev.steps;"
+    "    try { checkFunctions(this.store); checkTrees(this.store); } catch (e) {",
+    "    try { checkTrees(this.store); } catch (e) {"
    ]
   ],
   "expect": {
