@@ -134,6 +134,12 @@ impl Forest {
         }
     }
 
+    /// The parent of `d`, the root having none.
+    pub fn parent_of(&self, d: Term) -> Option<Term> {
+        let v = self.at(d)?;
+        Some(self.nodes[*self.parent.get(v as usize).filter(|p| **p != NONE)? as usize])
+    }
+
     /// The strict ancestors of `d`, nearest first.
     pub fn ancestors(&self, d: Term, out: &mut Vec<Term>) {
         let Some(mut v) = self.at(d) else { return };

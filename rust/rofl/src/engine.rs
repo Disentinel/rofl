@@ -624,6 +624,9 @@ pub struct Eval {
     vreaders: HashMap<Sym, Vec<usize>>,
     vreader_seen: HashMap<(Sym, usize), usize>,
     vclosure_blocked: HashSet<usize>,
+    /// The rows of a closure answered from its tree that a premise cited, by the key the premise carries.
+    vrow_of: HashMap<Sym, (usize, Sym, Term, Term)>,
+    vrow_done: HashSet<Sym>,
     /// Why a declared closure is not answered from its tree, as the program stands.
     pub vclosure_reason: Vec<String>,
     /// Forests built, and rows read from them, by this engine.
@@ -1219,6 +1222,8 @@ impl Eval {
             vreaders: HashMap::new(),
             vreader_seen: HashMap::new(),
             vclosure_blocked: HashSet::new(),
+            vrow_of: HashMap::new(),
+            vrow_done: HashSet::new(),
             vclosure_reason: Vec::new(),
             vbuilds: 0,
             vrows_read: 0,
@@ -4674,6 +4679,7 @@ impl Eval {
                 PremRef::Neg(self.h.intern(&k))
             }
             BodyElem::Pos(l) => match r {
+                PremRef::VRow(_) => self.vrow_ref(l, s),
                 PremRef::Bi(_) => {
                     let k = format!("open {}", self.anon_lit_key(l, s));
                     PremRef::Bi(self.h.intern(&k))
@@ -5926,7 +5932,7 @@ impl Eval {
             match p {
                 PremRef::Fact(f) => hgt = hgt.max(self.height_memo[f]),
                 PremRef::Cell(c) => hgt = hgt.max(self.store.cell(*c).height),
-                PremRef::Neg(_) | PremRef::Bi(_) => {}
+                PremRef::Neg(_) | PremRef::Bi(_) | PremRef::VRow(_) => {}
             }
         }
         Ok(hgt + 1)
@@ -6502,7 +6508,7 @@ impl Eval {
                     let high = prems.iter().any(|p| match p {
                         PremRef::Fact(q) => memo.get(q).is_none_or(|h| *h >= hc),
                         PremRef::Cell(x) => self.store.cell(*x).height >= hc,
-                        PremRef::Neg(_) | PremRef::Bi(_) => false,
+                        PremRef::Neg(_) | PremRef::Bi(_) | PremRef::VRow(_) => false,
                     });
                     if brk!("join_self_firing_kept" => false; high) {
                         self.store.remove_firing(c, rule, &prems);
@@ -9350,7 +9356,7 @@ impl Eval {
             match p {
                 PremRef::Fact(f) => h = h.max(self.height_memo.get(f).copied().unwrap_or(0)),
                 PremRef::Cell(c) => h = h.max(self.store.cell(*c).height),
-                PremRef::Neg(_) | PremRef::Bi(_) => {}
+                PremRef::Neg(_) | PremRef::Bi(_) | PremRef::VRow(_) => {}
             }
         }
         h + 1
@@ -10236,6 +10242,13 @@ impl Eval {
                 self.h.mkf(self.v.s_bi, &[t])
             }
             PremRef::Cell(c) => self.store.cell_key_term(&mut self.h, c),
+            PremRef::VRow(k) => match self.vrow_of.get(&k).copied() {
+                Some((ci, book, a, d)) => {
+                    let rel = self.vclosures[ci].rel;
+                    fact_term(&mut self.h, &self.v, rel, book, &[a, d])
+                }
+                None => Term::str(k),
+            },
         }
     }
 
@@ -12971,25 +12984,32 @@ impl Eval {
         let p = self.why_ground(lit)?;
         let mut key = String::new();
         write_fact_key(&self.h, lit.rel, p, &lit.args, &mut key);
-        let Some(id) = self.store.get(lit.rel, p, &lit.args) else {
-            let sh = self.shrugs_of(lit);
-            if !sh.is_empty() {
-                // a shrug is the answer to the aggregate evaluator, and the
-                // reason the plain one gives for not answering
-                let text = sh.into_iter().map(|(f, _)| self.shrug_why(f)).collect::<Vec<_>>().join("\n");
-                return if self.plain { Err(text) } else { Ok(text) };
+        let found = self.store.get(lit.rel, p, &lit.args);
+        let held = if found.is_none() { self.vrow_held(lit.rel, p, &lit.args) } else { None };
+        let start = match (found, held) {
+            (Some(id), _) => WhyTask::Fact(id, 0),
+            (None, Some(k)) => WhyTask::Prem(PremRef::VRow(k), 0),
+            (None, None) => {
+                let sh = self.shrugs_of(lit);
+                if !sh.is_empty() {
+                    // a shrug is the answer to the aggregate evaluator, and the
+                    // reason the plain one gives for not answering
+                    let text = sh.into_iter().map(|(f, _)| self.shrug_why(f)).collect::<Vec<_>>().join("\n");
+                    return if self.plain { Err(text) } else { Ok(text) };
+                }
+                let asked = if self.plain { shown.unwrap_or(&key) } else { &key };
+                return Err(format!("{key} does not hold; try: whynot {asked}"));
             }
-            let asked = if self.plain { shown.unwrap_or(&key) } else { &key };
-            return Err(format!("{key} does not hold; try: whynot {asked}"));
         };
         let o = WhyOpts { members: o.members, query: key };
         self.past_rows = None;
         self.why_scans = 0;
         self.why_done.clear();
+        self.vrow_done.clear();
         self.why_heights.clear();
         self.why_heads.clear();
         self.why_unk = if self.plain { self.unknown_ctx() } else { None };
-        let out = self.render_tree(id, &o);
+        let out = self.render_tree(start, &o);
         self.past_rows = None;
         // A `why` on an undefined atom answers with the tree AND the set the
         // tree walked: the circular dependency that left it undefined, named.
@@ -13037,10 +13057,10 @@ impl Eval {
     /// store holds renders without a frame per level, and each line is
     /// written once. Every step pushes, in order, the lines and the premises
     /// it would have written and recursed into; they run in that order.
-    fn render_tree(&mut self, id: FactId, o: &WhyOpts) -> String {
+    fn render_tree(&mut self, first: WhyTask, o: &WhyOpts) -> String {
         let mut seen = HashSet::new();
         let mut lines: Vec<String> = Vec::new();
-        let mut todo = vec![WhyTask::Fact(id, 0)];
+        let mut todo = vec![first];
         let mut next: Vec<WhyTask> = Vec::new();
         while let Some(t) = todo.pop() {
             match t {
@@ -13584,6 +13604,7 @@ impl Eval {
                 }
             }
             PremRef::Bi(d) => next.line(format!("{}{} [builtin]", "  ".repeat(indent), self.h.name(d))),
+            PremRef::VRow(k) => self.render_vrow(k, indent, next),
             // AN AGGREGATE PREMISE IS ITS CELL: what it folded, what it
             // sealed, and its members, each explained in turn. A digest of
             // `WHY_MEMBERS` by default; `why all` prints every one.
@@ -14398,6 +14419,7 @@ impl Eval {
                         PremRef::Fact(f) => Some(self.store.key(&self.h, *f)),
                         PremRef::Bi(d) => Some(self.h.name(*d).to_string()),
                         PremRef::Neg(k) => Some(format!("not {}", self.h.name(*k))),
+                        PremRef::VRow(k) => Some(self.h.name(*k).to_string()),
                         PremRef::Cell(_) => None,
                     })
                     .collect();

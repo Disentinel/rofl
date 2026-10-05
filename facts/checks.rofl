@@ -9,7 +9,7 @@
 -- TypeScript string literal and becomes a world two engines can be held to.
 
 -- OPTIONS (check_opt(World, Option, Value)), all read by scripts/goldens.ts: ticks, budget, space, retain,
--- retract, evaluator, explain, sentences, together, and one_engine. `one_engine, ts` checks a world on the
+-- retract, evaluator, explain, sentences, together, delta_first, closure_unwalled and one_engine. `one_engine, ts` checks a world on the
 -- TypeScript engine alone (a host contract the two answer differently); `one_engine, rust` checks it on
 -- the Rust engine alone: the TypeScript engine is never run on it, its golden is the Rust golden, and
 -- whycheck asks its questions of rofl-serve and rofl-load only and holds them to each other. It may name a
@@ -3155,6 +3155,19 @@ check_file("ds_tree_sealed", "examples/checks/ds-tree-holds.rofl").
 check_file("ds_tree_sealed", "examples/checks/ds-tree-holds-check.rofl").
 check_opt("ds_tree_sealed", together, 1).
 
+-- THE CLOSURE ANSWERED FROM THE TREE IS EXPLAINED AS THE STORED CLOSURE IS: `why` of a row, of a fact that reads one and `why all` of an
+-- aggregate over it, through the explain bridge, derived by hand; the canonical state holds the members' premises as facts
+-- (scripts/goldens.ts holds the state of a sealed world with a closure to the state of the same world with the rows stored, and
+-- scripts/whycheck.ts every why, whynot and excise to it).
+check_world("ds_tree_explain").
+check_file("ds_tree_explain", "examples/checks/ds-tree-explain.rofl").
+check_file("ds_tree_explain", "examples/checks/ds-tree-explain-check.rofl").
+check_opt("ds_tree_explain", together, 1).
+check_opt("ds_tree_explain", explain, 1).
+-- Rust's alone: a cell under `sealed(provenance)` keeps no derivation heights, so its members print `h=1` and in key order where
+-- TypeScript, which keeps its witnesses, prints their heights and orders by them; the oracle is the same world with the rows stored.
+check_opt("ds_tree_explain", one_engine, rust).
+
 check_world("ds_tree_tick").
 check_file("ds_tree_tick", "examples/checks/ds-tree-tick-1-holds.rofl").
 check_file("ds_tree_tick", "examples/checks/ds-tree-tick-2-broken.rofl").
@@ -3204,6 +3217,7 @@ check_opt("ds_tree_plan", together, 1).
 check_opt("ds_tree_plan", one_engine, rust).
 check_opt("ds_tree_plan", space, 3000).
 check_opt("ds_tree_plan", delta_first, 1).
+check_opt("ds_tree_plan", closure_unwalled, 1).
 
 check_world("ds_tree_retract_edge").
 check_file("ds_tree_retract_edge", "examples/checks/ds-tree-retract-3-edge.rofl").

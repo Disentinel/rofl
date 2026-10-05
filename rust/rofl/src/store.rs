@@ -167,6 +167,9 @@ pub enum PremRef {
     /// Its members and what it sealed live in the cell record, so a witness
     /// keeps one premise per body element and this stays eight bytes.
     Cell(CellId),
+    /// A row of a closure answered from its tree (engine/vclosure.rs): no fact holds it, so the premise is the canonical key
+    /// of the row, interned as a negation's is; `VRow(0)` is the unspelled form a match returns and a firing's record spells.
+    VRow(Sym),
 }
 
 // ------------------------------------------------------------------ cells
@@ -2177,7 +2180,7 @@ impl Store {
                     hgt = hgt.max(match p {
                         PremRef::Fact(g) => memo.get(g).copied().unwrap_or(u32::MAX - 1),
                         PremRef::Cell(x) => self.cells.recs[*x as usize].height,
-                        PremRef::Neg(_) | PremRef::Bi(_) => 0,
+                        PremRef::Neg(_) | PremRef::Bi(_) | PremRef::VRow(_) => 0,
                     });
                 }
                 let mut sig = String::new();
@@ -2216,7 +2219,7 @@ impl Store {
                     a.max(match p {
                         PremRef::Fact(g) => memo.get(g).copied().unwrap_or(u32::MAX - 1),
                         PremRef::Cell(x) => self.cells.recs[*x as usize].height,
-                        PremRef::Neg(_) | PremRef::Bi(_) => 0,
+                        PremRef::Neg(_) | PremRef::Bi(_) | PremRef::VRow(_) => 0,
                     })
                 });
                 let mut sig = String::new();
@@ -2269,6 +2272,10 @@ impl Store {
                     out.push_str("cell:");
                     self.write_cell_key(h, *c, out);
                 }
+                PremRef::VRow(s) => {
+                    out.push_str("fact:");
+                    out.push_str(h.name(*s));
+                }
             }
         }
     }
@@ -2279,6 +2286,7 @@ impl Store {
             PremRef::Fact(f) => format!("fact:{}", self.key(h, f)),
             PremRef::Neg(s) => format!("neg:{}", h.name(s)),
             PremRef::Bi(s) => format!("bi:{}", h.name(s)),
+            PremRef::VRow(s) => format!("fact:{}", h.name(s)),
             PremRef::Cell(c) => {
                 let mut o = String::from("cell:");
                 self.write_cell_key(h, c, &mut o);
@@ -2309,6 +2317,21 @@ impl Store {
     /// Rows the relations answered from a structure hold, none of them stored.
     pub fn virtual_rows(&self) -> usize {
         self.virtuals.iter().flat_map(|v| v.forests.iter()).map(|(_, f)| f.pairs as usize).sum()
+    }
+
+    /// The keys of those rows.
+    pub fn virtual_keys(&self, h: &Heap) -> Vec<String> {
+        let mut out = Vec::with_capacity(self.virtual_rows());
+        for v in &self.virtuals {
+            for (book, f) in &v.forests {
+                f.each_pair(|a, d| {
+                    let mut k = String::new();
+                    write_fact_key(h, v.rel, *book, &[a, d], &mut k);
+                    out.push(k);
+                });
+            }
+        }
+        out
     }
 
     pub fn key(&self, h: &Heap, id: FactId) -> String {
@@ -2945,7 +2968,7 @@ impl Store {
                             }
                         },
                         PremRef::Cell(x) => best = best.max(self.cells.recs[*x as usize].height),
-                        PremRef::Neg(_) | PremRef::Bi(_) => {}
+                        PremRef::Neg(_) | PremRef::Bi(_) | PremRef::VRow(_) => {}
                     }
                 }
                 firings.push(Firing { head: f, open, best });
@@ -3058,7 +3081,7 @@ impl Store {
                             None
                         }
                     },
-                    PremRef::Neg(_) | PremRef::Bi(_) => None,
+                    PremRef::Neg(_) | PremRef::Bi(_) | PremRef::VRow(_) => None,
                 };
                 if let Some(d) = dep {
                     open_n += 1;
@@ -3186,7 +3209,7 @@ impl Store {
                         None => known = false,
                     },
                     PremRef::Cell(x) => h = h.max(self.cells.recs[*x as usize].height),
-                    PremRef::Neg(_) | PremRef::Bi(_) => {}
+                    PremRef::Neg(_) | PremRef::Bi(_) | PremRef::VRow(_) => {}
                 }
             }
             if known && h + 1 == hg {

@@ -1040,6 +1040,7 @@ impl Session {
             }
             out.insert(self.eval.store.key(&self.eval.h, id));
         }
+        out.extend(self.eval.store.virtual_keys(&self.eval.h));
         out
     }
 

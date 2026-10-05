@@ -30,6 +30,9 @@ use crate::forest::Forest;
 pub struct VClosure {
     pub rel: Sym,
     pub edge: Sym,
+    /// The two lowered rules: the edge is a row, and a row and an edge are the next.
+    base_rule: Sym,
+    step_rule: Sym,
     pub active: bool,
     forests: Rc<[(Sym, Rc<Forest>)]>,
     built: Option<usize>,
@@ -47,6 +50,7 @@ impl Eval {
         self.vreaders.clear();
         self.vreader_seen.clear();
         self.vclosure_reason.clear();
+        self.vrow_of.clear();
         let decl = crate::structure::closures(&self.h, &self.v, &mut self.store);
         if decl.is_empty() {
             return;
@@ -97,7 +101,12 @@ impl Eval {
             for r in readers {
                 self.vreaders.entry(r).or_default().push(ci);
             }
-            self.vclosures.push(VClosure { rel, edge, active: false, forests: Rc::from(Vec::new()), built: None, pairs: 0, deep: 0, internal: 0 });
+            let rule_ids = match lowered.as_slice() {
+                [a, b] if self.rules.iter().any(|r| r.id == *a && r.clause.body.len() == 1) => (*a, *b),
+                [a, b] => (*b, *a),
+                _ => (rel, rel),
+            };
+            self.vclosures.push(VClosure { rel, edge, base_rule: rule_ids.0, step_rule: rule_ids.1, active: false, forests: Rc::from(Vec::new()), built: None, pairs: 0, deep: 0, internal: 0 });
             if !why.is_empty() {
                 self.vclosures[ci].built = Some(usize::MAX);
                 self.vclosure_blocked.insert(ci);
@@ -108,7 +117,7 @@ impl Eval {
     /// WHICH CLOSURES THIS EVALUATION ANSWERS FROM THEIR TREES: those the program allows (no witness kept, no lattice,
     /// no assumption, nothing the closure's edges are concluded from), with the forests forgotten.
     pub(super) fn vclosure_engage(&mut self) {
-        let mode = brk!("vclosure_with_witness" => true; self.no_witness) && self.lattices.is_empty() && self.assume.is_none() && !self.well_founded && !self.naive && self.tags.count_rel.is_empty();
+        let mode = brk!("vclosure_with_witness" => true; self.no_witness) && self.lattices.is_empty() && self.assume.is_none() && !self.well_founded && !self.naive && self.tags.count_rel.is_empty() && std::env::var_os("ROFL_NO_VCLOSURE").is_none();
         for ci in 0..self.vclosures.len() {
             let on = mode && !self.vclosure_blocked.contains(&ci);
             let c = &mut self.vclosures[ci];
@@ -118,6 +127,7 @@ impl Eval {
             c.pairs = 0;
         }
         self.vreader_seen.clear();
+        self.vrow_of.clear();
         self.vany = self.vclosures.iter().any(|c| c.active);
     }
 
@@ -238,7 +248,7 @@ impl Eval {
             };
             let Some(s2) = s2 else { continue };
             if let Some(s3) = unify_all(&self.h, &l.args, &[x, y], &s2) {
-                out.push((s3, PremRef::Neg(0)));
+                out.push((s3, brk!("vclosure_premise_untagged" => PremRef::Neg(0); PremRef::VRow(0))));
             }
         }
         out
@@ -321,6 +331,65 @@ impl Eval {
                 let rows = self.store.rel_len_est(self.vclosures[ci].edge, None);
                 self.vreader_seen.insert((r.id, ci), rows);
             }
+        }
+    }
+}
+
+impl Eval {
+    /// The premise of a match of a closure answered from its tree, spelled as the key of the row it is: what a firing records
+    /// where it keeps its premises, and what a cell keeps of a member.
+    pub(super) fn vrow_ref(&mut self, l: &Lit, s: &Subst) -> PremRef {
+        let (Some(book), Some(&ci)) = (walk(&self.h, l.persp, s).as_atom(), self.vclosure_of.get(&l.rel)) else { return PremRef::VRow(0) };
+        let (a, d) = (resolve(&mut self.h, l.args[0], s), resolve(&mut self.h, l.args[1], s));
+        PremRef::VRow(self.vrow_key(ci, book, a, d))
+    }
+
+    fn vrow_key(&mut self, ci: usize, book: Sym, a: Term, d: Term) -> Sym {
+        let mut key = String::new();
+        write_fact_key(&self.h, self.vclosures[ci].rel, book, &[a, d], &mut key);
+        let k = self.h.intern(&key);
+        self.vrow_of.entry(k).or_insert((ci, book, a, d));
+        k
+    }
+
+    /// The key of the row a question names, when the relation is a closure answered from its tree and the row holds.
+    pub(super) fn vrow_held(&mut self, rel: Sym, book: Sym, args: &[Term]) -> Option<Sym> {
+        let ci = self.vclosure_for(rel).filter(|_| !brk!("vclosure_why_absent" => true; false))?;
+        let [a, d] = args else { return None };
+        if self.vrows(ci, Some(book), Some(*a), Some(*d)).is_empty() {
+            return None;
+        }
+        Some(self.vrow_key(ci, book, *a, *d))
+    }
+
+    /// WHAT THE LOWERED RULES FIRE FOR A ROW, rebuilt from the tree: the edge from the parent of the descendant is the
+    /// row when the parent is the ancestor (the first rule), and else the row of the parent with that edge (the second).
+    /// A forest gives a row one parent, so one firing.
+    fn vderive(&mut self, k: Sym) -> Option<(Sym, Vec<PremRef>)> {
+        let (ci, book, a, d) = *self.vrow_of.get(&k)?;
+        let forests = self.vforests(ci);
+        let parent = forests.iter().find(|(b, _)| *b == book)?.1.parent_of(d)?;
+        let edge = self.store.get(self.vclosures[ci].edge, book, &[parent, d])?;
+        if brk!("vclosure_derive_always_step" => false; parent == a) {
+            return Some((self.vclosures[ci].base_rule, vec![PremRef::Fact(edge)]));
+        }
+        let up = self.vrow_key(ci, book, a, parent);
+        Some((self.vclosures[ci].step_rule, vec![PremRef::VRow(up), PremRef::Fact(edge)]))
+    }
+
+    /// A row answered from the tree, as `why` writes a fact: its firing, and below it the premises, a row written out once
+    /// and referred to after.
+    pub(super) fn render_vrow(&mut self, k: Sym, indent: usize, next: &mut Vec<WhyTask>) {
+        let (key, pad) = (self.h.name(k).to_string(), "  ".repeat(indent));
+        if !self.vrow_done.insert(k) && !brk!("vclosure_row_written_twice" => true; false) {
+            return next.line(format!("{pad}{key} [above]"));
+        }
+        match self.vderive(k) {
+            Some((rule, prems)) => {
+                next.line(format!("{pad}{key}  <= {} @tick {}", self.h.name(rule), self.store.tick));
+                next.extend(prems.into_iter().map(|p| WhyTask::Prem(p, indent + 1)));
+            }
+            None => next.line(format!("{pad}{key} [past tick]")),
         }
     }
 }

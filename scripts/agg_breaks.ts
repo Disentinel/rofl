@@ -7061,6 +7061,35 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "vclosure_premise_untagged",
+  "what": "a premise answered from the tree is the negation of a symbol, not the row it is: the member of a cell and the premise of a firing name no fact",
+  "expect": {
+   "ds_tree_explain": "dte_missing",
+   "ds_tree_sealed": "answered from its tree the state differs"
+  }
+ },
+ {
+  "id": "vclosure_why_absent",
+  "what": "a row answered from the tree is no fact to `why`: it does not hold, where `ask` says it does",
+  "expect": {
+   "ds_tree_explain": "explain_refused"
+  }
+ },
+ {
+  "id": "vclosure_derive_always_step",
+  "what": "the derivation of a row rebuilt from the tree is always the second rule, the edge to the ancestor too",
+  "expect": {
+   "ds_tree_explain": "dte_missing"
+  }
+ },
+ {
+  "id": "vclosure_row_written_twice",
+  "what": "a row of the closure cited twice is written out in full twice, not referred to",
+  "expect": {
+   "ds_tree_explain": "dte_extra"
+  }
+ },
+ {
   "id": "vclosure_neg_inverted",
   "what": "a negation of the closure holds where a row does",
   "expect": {

@@ -38,7 +38,7 @@ import * as path from 'node:path';
 import * as readline from 'node:readline';
 
 const ROOT = path.join(path.dirname(new URL(import.meta.url).pathname), '..');
-export const DEFAULT_BIN = path.join(ROOT, 'rust/target/release/rofl-serve');
+export const DEFAULT_BIN = path.join(ROOT, 'rust/target', process.env.ROFL_PROFILE || 'release', 'rofl-serve');
 
 export interface Evaluated {
   /** A wall was hit and a `hole` in the store names the unfinished part. NOT

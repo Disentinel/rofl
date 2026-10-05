@@ -1796,6 +1796,15 @@ brk("vclosure_reader_stale"). brk_kind("vclosure_reader_stale", switch).
 brk_expects("vclosure_reader_stale", "ds_tree_sealed").
 brk("vclosure_book_merged"). brk_kind("vclosure_book_merged", switch).
 brk_expects("vclosure_book_merged", "ds_tree_sealed").
+brk("vclosure_premise_untagged"). brk_kind("vclosure_premise_untagged", switch).
+brk_expects("vclosure_premise_untagged", "ds_tree_explain").
+brk_expects("vclosure_premise_untagged", "ds_tree_sealed").
+brk("vclosure_why_absent"). brk_kind("vclosure_why_absent", switch).
+brk_expects("vclosure_why_absent", "ds_tree_explain").
+brk("vclosure_derive_always_step"). brk_kind("vclosure_derive_always_step", switch).
+brk_expects("vclosure_derive_always_step", "ds_tree_explain").
+brk("vclosure_row_written_twice"). brk_kind("vclosure_row_written_twice", switch).
+brk_expects("vclosure_row_written_twice", "ds_tree_explain").
 brk("vclosure_neg_inverted"). brk_kind("vclosure_neg_inverted", switch).
 brk_expects("vclosure_neg_inverted", "ds_tree_sealed").
 brk("vclosure_unbound_cheap"). brk_kind("vclosure_unbound_cheap", switch).
@@ -2271,13 +2280,17 @@ switch_site("unknown_scan", "rust/rofl/src/engine.rs").
 switch_site("unranked_negation_runs", "rust/rofl/src/engine.rs").
 switch_site("vclosure_ancestors_short", "rust/rofl/src/forest.rs").
 switch_site("vclosure_book_merged", "rust/rofl/src/engine/vclosure.rs").
+switch_site("vclosure_derive_always_step", "rust/rofl/src/engine/vclosure.rs").
 switch_site("vclosure_descendants_short", "rust/rofl/src/forest.rs").
 switch_site("vclosure_neg_inverted", "rust/rofl/src/engine.rs").
 switch_site("vclosure_nonstrict", "rust/rofl/src/forest.rs").
+switch_site("vclosure_premise_untagged", "rust/rofl/src/engine/vclosure.rs").
 switch_site("vclosure_reader_stale", "rust/rofl/src/engine.rs").
+switch_site("vclosure_row_written_twice", "rust/rofl/src/engine/vclosure.rs").
 switch_site("vclosure_rows_unpublished", "rust/rofl/src/engine/vclosure.rs").
 switch_site("vclosure_stale_forest", "rust/rofl/src/engine/vclosure.rs").
 switch_site("vclosure_unbound_cheap", "rust/rofl/src/engine/vclosure.rs").
+switch_site("vclosure_why_absent", "rust/rofl/src/engine/vclosure.rs").
 switch_site("vclosure_with_witness", "rust/rofl/src/engine/vclosure.rs").
 switch_site("viterbi_rounds_up", "rust/rofl/src/cell.rs").
 switch_site("wfs_admits_body_aggregate", "rust/rofl/src/engine.rs").

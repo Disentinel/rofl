@@ -1,0 +1,6 @@
+-- examples/checks/ds-tree-explain.rofl — the ds_tree_explain world keeps no witness (`sealed(provenance)`), so the Rust engine answers the closure `dte_w` of the declared tree from the tree and stores none of its rows; its why, why all and the premises an aggregate cell keeps for its members are those of the world that stores the rows.
+tree dte_e(P, C) closure dte_w.
+sealed(provenance).
+dte_e(a, b). dte_e(b, c). dte_e(c, d). dte_e(a, x).
+dte_top(D) :- dte_w(a, D).
+dte_cnt(N) :- N is count(D : dte_w(a, D)).
