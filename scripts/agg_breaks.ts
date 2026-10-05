@@ -3659,6 +3659,13 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "demand_closed_refires",
+  "what": "a rule reading a closed relation answered on demand fires over the whole store at every round, not on its news",
+  "expect": {
+   "demand_scale": "index probes for a 4000-step chain"
+  }
+ },
+ {
   "id": "demand_cycle_unfolds",
   "what": "a call to a relation answered on demand with an open answer, met again inside its own unfolding, unfolds again, to the depth wall",
   "expect": {
@@ -6959,6 +6966,32 @@ function proofReports(b: Break, bin: string, control: boolean): Verdict {
   return { lines, bad };
 }
 
+/** A proof that is no world and no report: a cargo test of rust/rofl/tests (a guard on a counter or the clock, which no
+ *  canonical state shows), passing with no fault and failing, with the sign in its output, with one planted. */
+const TESTS: Record<string, string> = {
+  demand_scale: 'demand_scale',
+};
+
+function proofTests(b: Break, profile: string, control: boolean): Verdict {
+  const lines: string[] = [], bad: string[] = [];
+  for (const [name, sign] of Object.entries(b.expect)) {
+    const t = TESTS[name];
+    if (!t) continue;
+    const feat = control ? '--features breaks ' : '';
+    const run = (id: string): [boolean, string] => {
+      try {
+        return [true, execSync(`cd rust && cargo test --profile ${profile} ${feat}-p rofl --test ${t} 2>&1`, { cwd: ROOT, encoding: 'utf8', env: { ...process.env, ROFL_BREAK: id } })];
+      } catch (e) { return [false, String((e as { stdout?: string }).stdout ?? e)]; }
+    };
+    if (control && !run('')[0]) { bad.push(`control, no break planted: cargo test ${t} fails`); continue; }
+    const [ok, text] = run(control ? b.id : '');
+    const killed = !ok && text.includes(sign);
+    lines.push(`${killed ? 'KILLED  ' : 'SURVIVED'} ${b.id.padEnd(20)} ${name.padEnd(22)} ${sign}`);
+    if (!killed) bad.push(`${b.id}: cargo test ${t} ${ok ? 'passed' : `failed without ${sign}`}`);
+  }
+  return { lines, bad };
+}
+
 // ------------------------------------------------------------ the switches
 
 const SRC = 'rust/rofl/src';
@@ -7373,7 +7406,7 @@ if (isMain) {
   let all = declared();
   if ([...expected].some((n) => !all.some((w) => w.name === n)) || sel?.files.length) all = worlds();
   const bad: string[] = [];
-  for (const n of expected) if (!all.some((w) => w.name === n) && !REPORTS[n]) bad.push(`a break expects ${n}, which is no world`);
+  for (const n of expected) if (!all.some((w) => w.name === n) && !REPORTS[n] && !TESTS[n]) bad.push(`a break expects ${n}, which is no world`);
 
   let chosen = BREAKS;
   const why: string[] = [];
@@ -7466,6 +7499,7 @@ if (isMain) {
         const p = plants[i];
         if (p instanceof Error) { out.push({ lines: [], bad: [`${b.id}: ${p.message}`] }); return; }
         if (Object.keys(b.expect).some((n) => REPORTS[n])) out.push(proofReports(b, path.join(ROOT, 'rust/target/breaks/rofl-load'), true));
+        if (Object.keys(b.expect).some((n) => TESTS[n])) out.push(proofTests(b, 'breaks', true));
         const vs = wsOf(b).map((w) => res.get(`${b.id}/${w.name}`) as Verdict);
         out.push({ lines: vs.flatMap((v) => v.lines), bad: vs.flatMap((v) => v.bad) });
       });
@@ -7495,6 +7529,7 @@ if (isMain) {
         build();
         out.push(await runBreak(b, wsOf(b), { env: {}, subs: [] }));
         if (Object.keys(b.expect).some((n) => REPORTS[n])) out.push(proofReports(b, path.join(ROOT, `rust/target/${profile}/rofl-load`), false));
+        if (Object.keys(b.expect).some((n) => TESTS[n])) out.push(proofTests(b, profile, false));
       } catch (e) {
         out.push({ lines: [], bad: [`${b.id}: ${(e as Error).message.split('\n')[0]}`] });
       } finally {

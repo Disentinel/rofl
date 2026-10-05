@@ -1638,6 +1638,16 @@ impl Eval {
             }
         }
         self.rules = kept.into_iter().map(Rc::new).collect();
+        self.demand_rels = demand.iter().map(|(rel, is)| (*rel, is.iter().map(|&i| self.rules[i].clone()).collect())).collect();
+        self.demand_closed = self.demand_closed_rels();
+        self.demand_rels.clear();
+        // a closed relation is read from the store: its readers fire on its news like any relation's
+        if brk!("demand_closed_refires" => false; true) {
+            for r in self.rules.iter_mut() {
+                let r = Rc::get_mut(r).expect("a rule shared before the demand grouping");
+                r.has_demand_prem = r.pos_rels.iter().any(|x| demand_names.contains(x) && !self.demand_closed.contains(x));
+            }
+        }
         let refused: HashSet<Sym> = self.lattices.keys().copied().chain(demand.iter().map(|(r, _)| *r)).collect();
         self.closures = find_closures(&self.rules, &refused);
         self.closure_of = self.closures.iter().enumerate().flat_map(|(i, c)| [(c.base, (i, true)), (c.step, (i, false))]).collect();
@@ -1648,7 +1658,6 @@ impl Eval {
             .into_iter()
             .map(|(rel, is)| (rel, is.into_iter().map(|i| self.rules[i].clone()).collect()))
             .collect();
-        self.demand_closed = self.demand_closed_rels();
         self.demand_cyclic = self.demand_cyclic_rels();
     }
 

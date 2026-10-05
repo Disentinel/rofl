@@ -1128,6 +1128,8 @@ export class AggEval {
     this.demandRels = demand.map(([rel, is]) => [rel, is.map((i) => this.rules[i])]);
     this.demandClosed = this.demandClosedRels();
     this.demandCyclic = this.demandCyclicRels();
+    // a closed relation is read from the store: its readers fire on its news like any relation's
+    for (const r of kept) r.hasDemandPrem = r.posRels.some((x) => demandNames.includes(x) && !this.demandClosed.has(x));
   }
 
   /** THE DEMAND RELATIONS WHOSE ANSWERS ARE ALL GROUND, and whose rules all fire bottom-up: a call to one, at any depth,
