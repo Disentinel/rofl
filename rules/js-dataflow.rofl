@@ -771,6 +771,25 @@ may_be_node[flow](E, F) :- imports_name[code](Local, Name, D, File),
                            exports_name[code](F, Name, Target),
                            ident_in[code](E, Local, File).
 
+-- `export const X = init`: the name offers what the initialiser may be, a node through `exports_name` and a
+-- literal through `exports_value`, which also carries `export { x }` and the re-exports, so a constant written
+-- in one file reaches a use in another (vscode's channel names and ports, w_next_version_cutoff).
+export_var[code](Init, Name, File) :- ast_node[code](E, export_named_declaration, File, _),
+                                      ast_child[code](E, declaration, 0, V), ast_child[code](V, declarations, _, D),
+                                      binder[code](D, Name, Init, File).
+exports_name[code](F, Name, File) :- export_var[code](Init, Name, File), may_be_node[flow](Init, F).
+
+exports_value[code](Init, Name, File) :- export_var[code](Init, Name, File).
+exports_value[code](L, Ext, File) :- export_local[code](L, Ext, File).
+exports_value[code](X, Name, File) :- ast_node[code](E, export_all_declaration, File, _),
+                                      module_target[code](E, Target), exports_value[code](X, Name, Target).
+exports_value[code](X, Ext, File) :- reexport_offers[code](File, Ext, T, Int), exports_value[code](X, Int, T).
+
+may_be_lit[flow](E, V) :- imports_name[code](Local, Name, D, File), module_target[code](D, Target),
+                          exports_value[code](X, Name, Target), may_be_lit[flow](X, V),
+                          ident_in[code](E, Local, File).
+member_value[flow](P, Name, X) :- module_object[flow](P, Target), exports_value[code](X, Name, Target).
+
 -- A namespace import binds the module object. A default import binds the one
 -- unnamed export, whose syntactic name is NOT the importer's name.
 imports_ns[code](Local, D, File) :-

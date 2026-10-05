@@ -1,0 +1,43 @@
+-- examples/checks/vscode-side-effects-check.rofl — vscode_side_effects: the question of examples/vscode/side-effects.rofl
+-- over examples/vscode/mini (facts in vscode-mini-facts.rofl), every answer named. Red if one is missing or one more
+-- appears. The nodes: mini/node/pfs.ts n d100d8f9c1968a85, server.ts n34efd0fd49e79fa1, main.ts n6ce3b3e159e9764b.
+--   a wrapper module       pfs.ts writeAtomic and remove hand their parameter to fs (_25, _45), so main.ts's calls
+--                          of them (_81, _86, _90) are sites with the values of their own arguments
+--   a cross-file value     DEFAULT_PORT and HELLO_CHANNEL come from mini/common/channels.ts
+--   a literal              spawn's `editor`, execFile's 'git', fetch's url
+--   an env read            process.env.VSCODE_PORT (_54) reaches server.listen (_34) through listenOn (_52)
+--   no value               remove(this.storage.dir) (_90): the storage is injected, nothing in the code builds it
+vse_want(nd100d8f9c1968a85_25, fs_mutation, "/tmp/settings.json").
+vse_want(nd100d8f9c1968a85_45, fs_mutation, "/tmp/cache").
+vse_want(n6ce3b3e159e9764b_81, fs_mutation, "/tmp/settings.json").
+vse_want(n6ce3b3e159e9764b_86, fs_mutation, "/tmp/cache").
+vse_want(n34efd0fd49e79fa1_34, listen, 8080).
+vse_want(n34efd0fd49e79fa1_34, listen, n34efd0fd49e79fa1_54).
+vse_want(n34efd0fd49e79fa1_48, listen, 8080).
+vse_want(n34efd0fd49e79fa1_52, listen, n34efd0fd49e79fa1_54).
+vse_want(n6ce3b3e159e9764b_102, process, "code").
+vse_want(n6ce3b3e159e9764b_108, process, "git").
+vse_want(n6ce3b3e159e9764b_114, ipc, "vscode:hello").
+vse_want(n6ce3b3e159e9764b_122, request, "https://update.code.visualstudio.com/api/update").
+vse_want_site(n6ce3b3e159e9764b_90, fs_mutation).
+vse_want_site(S, F) :- vse_want(S, F, _).
+vse_want_count(fs_mutation, 5, 4).
+vse_want_count(listen, 3, 3).
+vse_want_count(process, 2, 2).
+vse_want_count(ipc, 1, 1).
+vse_want_count(request, 1, 1).
+
+vse_missing(S, F, V)  :- vse_want(S, F, V), not side_effect_value(S, F, V).
+vse_extra(S, F, V)    :- side_effect_value(S, F, V), not vse_want(S, F, V).
+vse_missing_site(S, F) :- vse_want_site(S, F), not side_effect_site(S, F).
+vse_extra_site(S, F)  :- side_effect_site(S, F), not vse_want_site(S, F).
+vse_count_wrong(F)    :- side_effect_count(F, N, V), not vse_want_count(F, N, V).
+vse_count_missing(F)  :- vse_want_count(F, N, V), not side_effect_count(F, N, V).
+vse_env_missing()     :- not side_effect_env(n34efd0fd49e79fa1_54, "VSCODE_PORT").
+alarm(vse_missing).
+alarm(vse_extra).
+alarm(vse_missing_site).
+alarm(vse_extra_site).
+alarm(vse_count_wrong).
+alarm(vse_count_missing).
+alarm(vse_env_missing).
