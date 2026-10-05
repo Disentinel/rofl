@@ -3737,6 +3737,9 @@ impl Eval {
             firings.extend(self.store.firings(id).into_iter().map(|(r, t, p)| (rel, r, t, p)));
         }
         let mut read: HashSet<(FactId, u32)> = HashSet::new();
+        // a row of a closure answered from its tree, read in a past tick, is named by its key
+        let mut vread: HashSet<(Sym, u32)> = HashSet::new();
+        let vrows = !brk!("cited_past_vrow_skipped" => true; false);
         let mut walked: HashSet<CellId> = HashSet::new();
         self.past_walks = 0;
         for (rel, rule, t, prems) in firings {
@@ -3748,14 +3751,23 @@ impl Eval {
                         for m in self.store.cell_members(c) {
                             self.past_walks += 1;
                             for q in self.store.member_derivs(m).take(brk!("cited_past_canonical_only" => 1; usize::MAX)).flatten() {
-                                if let PremRef::Fact(f) = q {
-                                    read.insert((*f, tick));
+                                match q {
+                                    PremRef::Fact(f) => {
+                                        read.insert((*f, tick));
+                                    }
+                                    PremRef::VRow(k) if vrows => {
+                                        vread.insert((*k, tick));
+                                    }
+                                    _ => {}
                                 }
                             }
                         }
                     }
                     PremRef::Fact(f) if staged => {
                         read.insert((f, t.saturating_sub(1)));
+                    }
+                    PremRef::VRow(k) if staged && vrows => {
+                        vread.insert((k, t.saturating_sub(1)));
                     }
                     _ => {}
                 }
@@ -3766,6 +3778,12 @@ impl Eval {
             let r = self.store.rec(f);
             let args = self.store.args(f).to_vec();
             out.insert((fact_term(&mut self.h, &self.v, r.rel, r.persp, &args), t as i64));
+        }
+        for (k, t) in vread {
+            if let Some((ci, book, a, d)) = self.vrow_entry(k) {
+                let rel = self.vclosures[ci].rel;
+                out.insert((fact_term(&mut self.h, &self.v, rel, book, &[a, d]), t as i64));
+            }
         }
         out
     }

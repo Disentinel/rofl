@@ -3241,6 +3241,17 @@ check_opt("ds_tree_tick_staged", together, 1).
 check_opt("ds_tree_tick_staged", ticks, 1).
 check_opt("ds_tree_tick_staged", explain, 1).
 
+-- THE SAME, KEEPING NO PAST TICK (`--retain 0`): the frozen derived_by rows of the closure rows a staged conclusion or a carried
+-- cell read are kept whatever their age, as a stored row's are, since `why` names the past row by them.
+check_world("ds_tree_tick_staged_retain").
+check_file("ds_tree_tick_staged_retain", "examples/checks/ds-tree-tick-3-staged.rofl").
+check_file("ds_tree_tick_staged_retain", "examples/checks/ds-tree-tick-3-staged-request.rofl").
+check_file("ds_tree_tick_staged_retain", "examples/checks/ds-tree-tick-3-staged-check.rofl").
+check_opt("ds_tree_tick_staged_retain", together, 1).
+check_opt("ds_tree_tick_staged_retain", ticks, 1).
+check_opt("ds_tree_tick_staged_retain", retain, 0).
+check_opt("ds_tree_tick_staged_retain", explain, 1).
+
 check_world("ds_tree_tick_staged_sealed").
 check_file("ds_tree_tick_staged_sealed", "examples/checks/ds-tree-sealed.rofl").
 check_file("ds_tree_tick_staged_sealed", "examples/checks/ds-tree-tick-3-staged.rofl").

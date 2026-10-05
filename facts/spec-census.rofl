@@ -695,6 +695,7 @@ check[checks]("facts/goldens.rofl", "ds_tree_syntax", world).
 check[checks]("facts/goldens.rofl", "ds_tree_tick", world).
 check[checks]("facts/goldens.rofl", "ds_tree_tick_sealed", world).
 check[checks]("facts/goldens.rofl", "ds_tree_tick_staged", world).
+check[checks]("facts/goldens.rofl", "ds_tree_tick_staged_retain", world).
 check[checks]("facts/goldens.rofl", "ds_tree_tick_staged_sealed", world).
 check[checks]("facts/goldens.rofl", "ds_tree_unknown_edge", world).
 check[checks]("facts/goldens.rofl", "ds_tree_unknown_edge_sealed", world).

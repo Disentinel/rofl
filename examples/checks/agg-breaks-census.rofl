@@ -1894,6 +1894,8 @@ brk("vclosure_height_zero"). brk_kind("vclosure_height_zero", switch).
 brk_expects("vclosure_height_zero", "ds_tree_explain_kept").
 brk("vclosure_past_row_present"). brk_kind("vclosure_past_row_present", switch).
 brk_expects("vclosure_past_row_present", "ds_tree_tick_staged").
+brk("cited_past_vrow_skipped"). brk_kind("cited_past_vrow_skipped", switch).
+brk_expects("cited_past_vrow_skipped", "ds_tree_tick_staged_retain").
 brk("vclosure_unknown_row_absent"). brk_kind("vclosure_unknown_row_absent", switch).
 brk_expects("vclosure_unknown_row_absent", "ds_tree_unknown_edge").
 brk("vclosure_retract_edge_delta"). brk_kind("vclosure_retract_edge_delta", switch).
@@ -1979,6 +1981,7 @@ switch_site("cell_untimed", "rust/rofl/src/engine.rs").
 switch_site("cell_untimed", "rust/rofl/src/store.rs").
 switch_site("cell_why_present", "rust/rofl/src/engine.rs").
 switch_site("cited_past_canonical_only", "rust/rofl/src/engine.rs").
+switch_site("cited_past_vrow_skipped", "rust/rofl/src/engine.rs").
 switch_site("closure_one_book", "rust/rofl/src/engine.rs").
 switch_site("count_carrier_open", "rust/rofl/src/cell.rs").
 switch_site("count_demand_admitted", "rust/rofl/src/engine.rs").

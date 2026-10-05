@@ -7468,6 +7468,13 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "cited_past_vrow_skipped",
+  "what": "under --retain 0 the frozen derived_by rows of the closure rows a staged conclusion or a carried cell read in a past tick are pruned, the rows being answered from a tree",
+  "expect": {
+   "ds_tree_tick_staged_retain": "the state differs"
+  }
+ },
+ {
   "id": "vclosure_unknown_row_absent",
   "what": "a row of a closure answered from its tree is taken for a row that does not hold where an unknown could reach it, and made a shrug",
   "expect": {
