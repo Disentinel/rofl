@@ -110,7 +110,8 @@ const ASKED: Record<string, Q[]> = {
   demand_asked_hole: ['da_r(c)', 'da_nr(c)', 'da_q(c,z)', 'da_q(b,z)', 'da_d(k,z)', 'da_ng(b)'].map((q): Q => ({ op: 'whynot', query: q })),
   demand_cycle: ['dy_r(4)', 'dy_n(3)', 'dy_d(9,5)', 'dy_d(4,9)'].flatMap((q): Q[] => [{ op: 'whynot', query: q }, { op: 'why', query: q }]),
   demand_chain: ['dc_r(700)', 'dc_missed(700)'].map((q): Q => ({ op: 'whynot', query: q })),
-  demand_neg_decided: ['dz_o(0,1)', 'dz_nro(0)', 'dz_nro(4)', 'dz_ro(4)'].flatMap((q): Q[] => [{ op: 'whynot', query: q }, { op: 'why', query: q }]),
+  demand_cycle_fixpoint: ['dw_r(3)', 'dw_n(4)', 'dw_d(3,9)', 'dv_n(0)', 'dv_n(4)', 'dv_d(0,5)'].flatMap((q): Q[] => [{ op: 'whynot', query: q }, { op: 'why', query: q }]),
+  demand_neg_decided: ['dz_o(0,1)', 'dz_nro(0)', 'dz_nro(2)', 'dz_ro(2)'].flatMap((q): Q[] => [{ op: 'whynot', query: q }, { op: 'why', query: q }]),
 };
 
 function questions(r: Rofl, budget: number | undefined, first: boolean, excise = true): Q[] {

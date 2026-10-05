@@ -28,3 +28,4 @@ alarm(dy_wrong).
 -- expect-row: dy_r[main](4) tick drv support=1
 -- expect-row: dy_r2[main](4) tick drv support=1
 -- expect-no-row: dy_n[main](3)
+-- expect-no-row: shrug[$kernel]($rule

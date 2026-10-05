@@ -3624,8 +3624,8 @@ export const BREAKS: Break[] = [
   "edits": [
    [
     "src/aggeval.ts",
-    "if (drs !== undefined && !this.demandClosed.has(l.rel) && !again) {",
-    "if (drs !== undefined && !again) {"
+    "if (drs !== undefined && !this.demandClosed.has(l.rel) && j < 0) {",
+    "if (drs !== undefined && j < 0) {"
    ]
   ],
   "expect": {
@@ -3650,8 +3650,8 @@ export const BREAKS: Break[] = [
    ],
    [
     "src/aggeval.ts",
-    "if (drs !== undefined && !this.demandClosed.has(l.rel) && !again) {",
-    "if (drs !== undefined && !again) {"
+    "if (drs !== undefined && !this.demandClosed.has(l.rel) && j < 0) {",
+    "if (drs !== undefined && j < 0) {"
    ]
   ],
   "expect": {
@@ -3708,6 +3708,50 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "demand_cycle_cut",
+  "what": "a call answered on demand met again inside its own unfolding is cut, its answers past those found unknown, instead of read and iterated to the fixpoint",
+  "expect": {
+   "demand_cycle_fixpoint": "holds the row shrug[$kernel](dw_",
+   "demand_cycle": "holds the row shrug[$kernel]($rule"
+  }
+ },
+ {
+  "id": "ts_demand_cycle_cut",
+  "what": "the TypeScript engine cuts a call answered on demand met again inside its own unfolding instead of iterating it to the fixpoint",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "if (this.negLevel > c.neg) this.demandCycle(l, s);",
+    "if (this.negLevel >= c.neg) this.demandCycle(l, s);"
+   ]
+  ],
+  "expect": {
+   "demand_cycle_fixpoint": "holds the row shrug[$kernel](dw_",
+   "demand_cycle": "holds the row shrug[$kernel]($rule"
+  }
+ },
+ {
+  "id": "demand_fixpoint_once",
+  "what": "the first call of a recursion answered on demand stops after one pass though a call met again read answers that grew",
+  "expect": {
+   "demand_cycle_fixpoint": "dv_wrong"
+  }
+ },
+ {
+  "id": "ts_demand_fixpoint_once",
+  "what": "the TypeScript engine stops the first call of a recursion answered on demand after one pass",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "if (c === null || !c.read || !grew) break;",
+    "break;"
+   ]
+  ],
+  "expect": {
+   "demand_cycle_fixpoint": "dv_wrong"
+  }
+ },
+ {
   "id": "demand_cycle_unfolds",
   "what": "a call to a relation answered on demand with an open answer, met again inside its own unfolding, unfolds again, to the depth wall",
   "expect": {
@@ -3720,8 +3764,8 @@ export const BREAKS: Break[] = [
   "edits": [
    [
     "src/aggeval.ts",
-    "const again = call !== null && this.demandCalls.includes(call);",
-    "const again = false;"
+    "const j = call === null ? -1 : this.demandCalls.findIndex((c) => c.key === call);",
+    "const j = -1;"
    ]
   ],
   "expect": {

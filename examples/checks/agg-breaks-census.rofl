@@ -1031,6 +1031,16 @@ brk("demand_closed_news_unread"). brk_kind("demand_closed_news_unread", switch).
 brk_expects("demand_closed_news_unread", "demand_chain").
 brk("ts_demand_closed_news_unread"). brk_kind("ts_demand_closed_news_unread", ts).
 brk_expects("ts_demand_closed_news_unread", "demand_chain").
+brk("demand_cycle_cut"). brk_kind("demand_cycle_cut", switch).
+brk_expects("demand_cycle_cut", "demand_cycle_fixpoint").
+brk_expects("demand_cycle_cut", "demand_cycle").
+brk("ts_demand_cycle_cut"). brk_kind("ts_demand_cycle_cut", ts).
+brk_expects("ts_demand_cycle_cut", "demand_cycle_fixpoint").
+brk_expects("ts_demand_cycle_cut", "demand_cycle").
+brk("demand_fixpoint_once"). brk_kind("demand_fixpoint_once", switch).
+brk_expects("demand_fixpoint_once", "demand_cycle_fixpoint").
+brk("ts_demand_fixpoint_once"). brk_kind("ts_demand_fixpoint_once", ts).
+brk_expects("ts_demand_fixpoint_once", "demand_cycle_fixpoint").
 brk("demand_cycle_unfolds"). brk_kind("demand_cycle_unfolds", switch).
 brk_expects("demand_cycle_unfolds", "demand_cycle").
 brk("ts_demand_cycle_unfolds"). brk_kind("ts_demand_cycle_unfolds", ts).
@@ -1827,8 +1837,10 @@ switch_site("delta_first_walls", "rust/rofl/src/engine/joinplan.rs").
 switch_site("demand_closed_news_unread", "rust/rofl/src/engine.rs").
 switch_site("demand_closed_refires", "rust/rofl/src/engine.rs").
 switch_site("demand_closed_unfolds", "rust/rofl/src/engine.rs").
+switch_site("demand_cycle_cut", "rust/rofl/src/engine.rs").
 switch_site("demand_cycle_unfolds", "rust/rofl/src/engine.rs").
 switch_site("demand_fault_unspread", "rust/rofl/src/engine.rs").
+switch_site("demand_fixpoint_once", "rust/rofl/src/engine.rs").
 switch_site("demand_neg_failed_unknown", "rust/rofl/src/engine.rs").
 switch_site("demand_neg_unholed", "rust/rofl/src/engine.rs").
 switch_site("demand_poison_skipped", "rust/rofl/src/engine.rs").

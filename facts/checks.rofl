@@ -352,6 +352,11 @@ check_file("demand_chain", "examples/checks/demand-chain.rofl").
 check_world("demand_cycle").
 check_file("demand_cycle", "examples/checks/demand-cycle.rofl").
 
+-- a call met again inside its own unfolding reads the answers found so far, and the first call unfolds
+-- again until they stop growing (f_a_cycle_cut_shrugged_what_a_fixpoint_decides)
+check_world("demand_cycle_fixpoint").
+check_file("demand_cycle_fixpoint", "examples/checks/demand-cycle-fixpoint.rofl").
+
 -- a recursion through relations answered on demand reaches its fixpoint
 -- (f_a_recursion_through_demand_unfolded_without_end)
 check_world("demand_recursion").

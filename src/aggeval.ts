@@ -912,7 +912,11 @@ export class AggEval {
   /** The relations answered on demand that may call themselves through others not closed: their calls being unfolded are kept as variant keys. */
   private demandCyclic = new Set<string>();
   /** The calls of `demandCyclic` relations being unfolded, as variant keys. */
-  private demandCalls: string[] = [];
+  /** The calls of `demandCyclic` relations being unfolded, each with its answers so far: a call met again reads them, and the first one
+   *  unfolds again until they stop growing. `neg` is how many negations were being decided when it was made. */
+  private demandCalls: { key: string; neg: number; answers: [Term[], PremRef][]; keys: Set<string>; read: boolean }[] = [];
+  /** How many negations are being decided: a call met again under one more than when it was first made cannot read answers that may still grow. */
+  private negLevel = 0;
   /** The rules being unfolded at each depth, beside `demandHeads`. */
   private demandRuleIds: string[] = [];
   /** The heads of calls answered on demand that an unknown below left undecided, in the order met: each call up holes its head under those of the relation it called, as for a fault. */
@@ -2826,7 +2830,9 @@ export class AggEval {
             for (const [s2, r] of found) next.push({ s: s2, prems: [...a.prems, r] });
           } else if (b.t === 'neg') {
             const faults = this.faultCount, unknowns = this.demandTrail.length, asked = this.asked.length;
-            const holds = this.negHolds(b.lit, a.s, depth);
+            this.negLevel++;
+            let holds: boolean;
+            try { holds = this.negHolds(b.lit, a.s, depth); } finally { this.negLevel--; }
             const below = this.faultCount > faults || this.demandTrail.length > unknowns;
             // a match found decides the negation whatever the unknowns beside it
             if (!holds) { this.demandTrail.length = unknowns; this.asked.length = asked; this.faultCount = faults; continue; }
@@ -6410,18 +6416,47 @@ export class AggEval {
     }
     const drs = this.demandRels.find(([r]) => r === l.rel);
     // A CLOSED RELATION'S ANSWERS ARE ALL IN THE STORE at its fixpoint (its rules fire bottom-up and its news refires every reader): read, not unfolded
-    // A CALL MET AGAIN INSIDE ITS OWN UNFOLDING would unfold without end: its answers past those found are unknown, and so is the call it was met in
+    // A CALL MET AGAIN INSIDE ITS OWN UNFOLDING would unfold without end. It reads the answers found so far, and the first call unfolds again
+    // until they stop growing: the least fixpoint of a positive recursion. Met under a negation opened inside the cycle, answers that may still
+    // grow decide nothing: they are unknown past those found, and so is the call above.
     const call = drs !== undefined && this.demandCyclic.has(l.rel) ? this.anonLitKey(l, s) : null;
-    const again = call !== null && this.demandCalls.includes(call);
-    if (again) this.demandCycle(l, s);
-    if (drs !== undefined && !this.demandClosed.has(l.rel) && !again) {
-      if (call !== null) this.demandCalls.push(call);
+    const j = call === null ? -1 : this.demandCalls.findIndex((c) => c.key === call);
+    if (j >= 0) {
+      const c = this.demandCalls[j];
+      if (this.negLevel > c.neg) this.demandCycle(l, s);
+      else {
+        c.read = true;
+        for (const [args, mref] of [...c.answers]) {
+          const n = this.renameCounter++;
+          const ms = unifyAll(l.args, args.map((a) => renameTerm(a, n)), s);
+          if (ms === null) continue;
+          const dk = mref.t === 'fact' ? mref.key : this.resolvedLitKey(l, ms);
+          if (!seen.has(dk)) { seen.add(dk); keys.push(dk); out.push([ms, mref]); }
+        }
+      }
+    }
+    if (drs !== undefined && !this.demandClosed.has(l.rel) && j < 0) {
+      if (call !== null) this.demandCalls.push({ key: call, neg: this.negLevel, answers: [], keys: new Set(), read: false });
       try {
-        for (const dr of drs[1]) {
-          for (const [ms, mref] of this.solveDemandRule(dr, l, s, depth)) {
-            const dk = mref.t === 'fact' ? mref.key : this.resolvedLitKey(l, ms);
-            if (!seen.has(dk)) { seen.add(dk); keys.push(dk); out.push([ms, mref]); }
+        for (let pass = 1; ; pass++) {
+          let grew = false;
+          for (const dr of drs[1]) {
+            for (const [ms, mref] of this.solveDemandRule(dr, l, s, depth)) {
+              const dk = mref.t === 'fact' ? mref.key : this.resolvedLitKey(l, ms);
+              let fresh = true;
+              if (call !== null) {
+                // an open answer is the same answer again under other variables
+                const c = this.demandCalls[this.demandCalls.length - 1];
+                const tk = mref.t === 'fact' ? dk : this.anonLitKey(l, ms);
+                fresh = !c.keys.has(tk);
+                if (fresh) { c.keys.add(tk); c.answers.push([l.args.map((a) => resolve(a, ms)), mref]); grew = true; }
+              }
+              if ((fresh || pass === 1) && !seen.has(dk)) { seen.add(dk); keys.push(dk); out.push([ms, mref]); }
+            }
           }
+          const c = call !== null ? this.demandCalls[this.demandCalls.length - 1] : null;
+          if (c === null || !c.read || !grew) break;
+          c.read = false;
         }
       } finally { if (call !== null) this.demandCalls.pop(); }
     }
