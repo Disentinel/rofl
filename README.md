@@ -139,7 +139,10 @@ alternating fixpoint and what `unknown` means).
 of eslint, and the four defects the run found that reading did not),
 `normalisation-and-profiling.md`, `volumes-and-residency.md` (how a corpus
 stays cold), `working-with-ledgers.md`, `test-maintenance-cost.md`,
-`failure-modes.md` (the process failures, catalogued and priced).
+`failure-modes.md` (the process failures, catalogued and priced),
+`optimising-a-world.md` (a cookbook: how to measure a world on Rust release, the
+seal, the costly rule shapes and their rewrites, aggregates, declared structures,
+demand; each recipe with its measured gain and its finding).
 
 **The process as its own subject** — three documents that turn the question
 *where does a claim about this work live* into something checkable.
