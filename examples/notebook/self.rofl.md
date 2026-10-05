@@ -237,7 +237,8 @@ the kernel reaches Spec from File either:
 > this tree's directories into another (`f_a_call_across_directories_is_not_resolved`,
 > repaired by notebook-xdir); it is kept because it is the stronger claim.
 > What it cannot see is every module the kernel imports and nobody scanned:
-> the engine, the reader, the scanner, the proof folder.
+> the engine, the reader, the scanner, the proof folder and the value's
+> steps above a proof (`playground/fold.ts`, `chain.ts`).
 
 ```rofl
 `kernel_file` lists:

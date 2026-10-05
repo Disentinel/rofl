@@ -41,3 +41,13 @@ other_channel(S, V) :- side_effect_value(S, ipc, V), V != "vscode:hello".
 never other_channel(S, V)
 why side_effect_value(n6ce3b3e159e9764b_114, ipc, "vscode:hello")
 ```
+
+> Why a value reaches a site: first the steps the value took, one line each, where the value changes file said so;
+> then the proof, with the conditions that hold because nothing says otherwise counted, not written
+> (`npm run nb -- examples/vscode/side-effects.rofl.md --all` writes every proof whole). The path a wrapper hands on
+> crosses from the caller's file into `pfs.ts`; the port crosses twice, as an export and as an argument.
+
+```datalog
+why side_effect_value(nd100d8f9c1968a85_25, fs_mutation, "/tmp/settings.json")
+why side_effect_value(n34efd0fd49e79fa1_34, listen, 8080)
+```

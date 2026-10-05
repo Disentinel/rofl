@@ -4,6 +4,7 @@ import { Rofl } from '../src/api.ts';
 import { parseLiteral, parseProgram } from '../src/parser.ts';
 import { KERNEL_BOOK, RESERVED, ruleIdOf } from '../src/reflect.ts';
 import { fold, keyOf, type Step } from './fold.ts';
+import { chainOf } from './chain.ts';
 import { proofView, type Proven } from '../notebook/draw-proof.ts';
 import { collect, diff, scoped, status, KINDS, VIEW_RELS, unquote as termText, type DrawKind, type View, type World } from '../notebook/draw.ts';
 import { Vocabulary } from '../src/say.ts';
@@ -21,6 +22,8 @@ export { readBook, homeOf, booksOf, type Cell } from '../notebook/book.ts';
 
 export type Row = { sentence: string; literal: string };
 export type Line = { kind: Kind; text: string; lit: string; rows: Row[]; total: number; ok: boolean; note?: string; why?: string; proof?: Step | string;
+  /** a `why` of a value: the steps the value took, playground/chain.ts */
+  chain?: string[];
   /** what the invariant above could not see: its `unsure` line's answers */
   unsure?: { text: string; lit: string; rows: Row[]; total: number };
   /** why the line's answer means nothing: it rests on a relation whose rules a cell meant to write and the reader left out */
@@ -561,7 +564,7 @@ export class Host {
             outs[i].errors.push(`${a.text}: ${b.say([...new Set(q.rows.map((r) => r.bindings[b.v]).filter(Boolean).map((x) => x.startsWith('"') ? unquote(x) : x))])}`); continue;
           }
           try {
-            if (a.kind === 'why') { const y = w.why(a.lit); outs[i].lines.push({ unasked: unread[i], kind: 'why', text: a.text, lit: a.lit, rows: [], total: 0, ok: y.ok, why: plain(vocab.sayAll(y.text)), proof: y.ok ? this.explain(a.lit) : undefined, note: nameless(a.lit, a.text), english }); continue; }
+            if (a.kind === 'why') { const y = w.why(a.lit); outs[i].lines.push({ unasked: unread[i], kind: 'why', text: a.text, lit: a.lit, rows: [], total: 0, ok: y.ok, why: plain(vocab.sayAll(y.text)), chain: y.ok ? chainOf(y.text, nodes, (k) => plain(vocab.say(k) ?? k)) : undefined, proof: y.ok ? this.explain(a.lit) : undefined, note: nameless(a.lit, a.text), english }); continue; }
             if (a.kind === 'whynot') { const y = w.whynot(a.lit); outs[i].lines.push({ unasked: unread[i], kind: 'whynot', text: a.text, lit: a.lit, rows: [], total: 0, ok: !y.holds, why: plain(vocab.sayAll(y.text)), note: nameless(a.lit, a.text), english }); continue; }
           } catch (e) { outs[i].errors.push(`${a.text}: ${(e as Error).message}`); continue; }
           if (conjunction(a.lit)) { outs[i].errors.push(`${a.text}: a question is one literal; write a rule that joins these and ask its head`); continue; }
@@ -679,9 +682,13 @@ export class Host {
   }
 
   /** `why` over the last run, without running again. */
-  why(literal: string): string {
-    if (!this.last) return 'run the book first';
-    return plain(this.vocab.sayAll(this.last.why(this.reown(literal)).text));
+  why(literal: string): string { return this.whyOf(literal).text; }
+
+  /** `why` over the last run, and the chain of the value it explains. */
+  whyOf(literal: string): { text: string; chain: string[] } {
+    if (!this.last) return { text: 'run the book first', chain: [] };
+    const y = this.last.why(this.reown(literal));
+    return { text: plain(this.vocab.sayAll(y.text)), chain: y.ok ? chainOf(y.text, this.scanned?.nodes ?? {}, (k) => plain(this.vocab.say(k) ?? k)) : [] };
   }
 }
 

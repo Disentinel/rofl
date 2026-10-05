@@ -1,6 +1,6 @@
 // The workbench's notebook without a page: its cells as a `.rofl.md`, run by the notebook kernel over the files published with the page, what each
 // cell said as HTML, and a natural cell translated by whatever model the page reaches. The page (workbench/page.ts) and its check load this alone.
-import { Kernel, SIGN, VERDICT, type NbCellOut, type NbLine, type NbResult } from '../notebook/kernel.ts';
+import { Kernel, short, SIGN, VERDICT, type NbCellOut, type NbLine, type NbResult } from '../notebook/kernel.ts';
 import { builtin, cellsOf, libFiles, parseFront, translated, SHIPPED } from '../notebook/front.ts';
 import { assemble, worldOf, type Inputs } from '../notebook/world.ts';
 import { homeOf, translatorVocab } from '../playground/host.ts';
@@ -179,7 +179,8 @@ export function line(l: NbLine, views: View[]): string {
   let h = fold ? `<div class="ask"><details class="fold-line" data-line="${esc(l.text)}"${l.verdict === 'fails' ? ' open' : ''}><summary class="q">${q}</summary>${answers}</details>`
     : `<div class="ask"><div class="q">${q}</div>${answers}`;
   if (l.unsure?.total) h += `<div class="unsure-head">out of sight (${rich(l.unsure.text)}):</div>${rows(l.unsure.answers, l.unsure.total)}`;
-  if (l.why) h += `<pre class="why-tree">${esc(l.why)}</pre>`;
+  if (l.why) h += l.brief === undefined ? `<pre class="why-tree">${esc(l.why)}</pre>`
+    : `<pre class="why-tree">${esc(short(l.chain ?? [], l.brief))}</pre><details class="fold"><summary>the whole proof</summary><pre class="why-tree">${esc(l.why)}</pre></details>`;
   if (l.view) { views.push(l.view); h += `<div class="pic" data-view="${views.length - 1}"></div>`; }
   return h + '</div>';
 }
