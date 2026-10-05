@@ -1027,6 +1027,10 @@ brk("demand_neg_failed_unknown"). brk_kind("demand_neg_failed_unknown", switch).
 brk_expects("demand_neg_failed_unknown", "demand_neg_decided").
 brk("ts_demand_neg_failed_unknown"). brk_kind("ts_demand_neg_failed_unknown", ts).
 brk_expects("ts_demand_neg_failed_unknown", "demand_neg_decided").
+brk("demand_closed_news_unread"). brk_kind("demand_closed_news_unread", switch).
+brk_expects("demand_closed_news_unread", "demand_chain").
+brk("ts_demand_closed_news_unread"). brk_kind("ts_demand_closed_news_unread", ts).
+brk_expects("ts_demand_closed_news_unread", "demand_chain").
 brk("demand_cycle_unfolds"). brk_kind("demand_cycle_unfolds", switch).
 brk_expects("demand_cycle_unfolds", "demand_cycle").
 brk("ts_demand_cycle_unfolds"). brk_kind("ts_demand_cycle_unfolds", ts).
@@ -1503,6 +1507,8 @@ brk("retract_stacked_one_level"). brk_kind("retract_stacked_one_level", switch).
 brk_expects("retract_stacked_one_level", "agg_incr_stacked").
 brk("retract_consumers_kept"). brk_kind("retract_consumers_kept", switch).
 brk_expects("retract_consumers_kept", "agg_incr_readers").
+brk_expects("retract_consumers_kept", "demand_neg_retract").
+brk_expects("retract_consumers_kept", "demand_neg_retract_closed").
 brk("stale_holes_kept"). brk_kind("stale_holes_kept", switch).
 brk_expects("stale_holes_kept", "agg_incr_stale").
 brk("ds_seal_early"). brk_kind("ds_seal_early", switch).
@@ -1818,6 +1824,7 @@ switch_site("delta_first_overrun_holes", "rust/rofl/src/engine.rs").
 switch_site("delta_first_persp", "rust/rofl/src/engine/joinplan.rs").
 switch_site("delta_first_spread", "rust/rofl/src/engine/joinplan.rs").
 switch_site("delta_first_walls", "rust/rofl/src/engine/joinplan.rs").
+switch_site("demand_closed_news_unread", "rust/rofl/src/engine.rs").
 switch_site("demand_closed_refires", "rust/rofl/src/engine.rs").
 switch_site("demand_closed_unfolds", "rust/rofl/src/engine.rs").
 switch_site("demand_cycle_unfolds", "rust/rofl/src/engine.rs").

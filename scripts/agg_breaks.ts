@@ -3687,6 +3687,27 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "demand_closed_news_unread",
+  "what": "a rule reading a closed relation answered on demand is not fired again by that relation's news",
+  "expect": {
+   "demand_chain": "lacks the row dc_r[main](700)"
+  }
+ },
+ {
+  "id": "ts_demand_closed_news_unread",
+  "what": "the TypeScript engine does not fire a rule reading a closed relation answered on demand again on that relation's news",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "for (const r of kept) r.hasDemandPrem = r.posRels.some((x) => demandNames.includes(x) && !this.demandClosed.has(x));",
+    "for (const r of kept) { r.hasDemandPrem = r.posRels.some((x) => demandNames.includes(x) && !this.demandClosed.has(x)); r.triggerRels = r.triggerRels.filter((x) => !this.demandClosed.has(x)); }"
+   ]
+  ],
+  "expect": {
+   "demand_chain": "lacks the row dc_r[main](700)"
+  }
+ },
+ {
   "id": "demand_cycle_unfolds",
   "what": "a call to a relation answered on demand with an open answer, met again inside its own unfolding, unfolds again, to the depth wall",
   "expect": {
@@ -5819,7 +5840,9 @@ export const BREAKS: Break[] = [
   "id": "retract_consumers_kept",
   "what": "the facts of plain rules that rested on a replaced cell or a retracted lattice value stay beside the ones derived again",
   "expect": {
-   "agg_incr_readers": "holds the row ir_"
+   "agg_incr_readers": "holds the row ir_",
+   "demand_neg_retract": "holds the row dt_h[main](1,1)",
+   "demand_neg_retract_closed": "holds the row dtc_h[main](1)"
   }
  },
  {

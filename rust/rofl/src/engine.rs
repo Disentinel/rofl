@@ -1646,6 +1646,7 @@ impl Eval {
             for r in self.rules.iter_mut() {
                 let r = Rc::get_mut(r).expect("a rule shared before the demand grouping");
                 r.has_demand_prem = r.pos_rels.iter().any(|x| demand_names.contains(x) && !self.demand_closed.contains(x));
+                brk!("demand_closed_news_unread" => r.trigger_rels.retain(|x| !self.demand_closed.contains(x)); ());
             }
         }
         let refused: HashSet<Sym> = self.lattices.keys().copied().chain(demand.iter().map(|(r, _)| *r)).collect();

@@ -314,6 +314,15 @@ check_file("demand_neg_retract", "examples/checks/demand-neg-retract.rofl").
 check_opt("demand_neg_retract", together, 1).
 check_opt("demand_neg_retract", retract, "dt_z(1)").
 
+-- the two above in their closed form: the relation's answers ground, read from the store
+-- (f_the_closed_forms_of_the_negation_worlds_are_kept)
+check_world("demand_neg_round_closed").
+check_file("demand_neg_round_closed", "examples/checks/demand-neg-round-closed.rofl").
+check_world("demand_neg_retract_closed").
+check_file("demand_neg_retract_closed", "examples/checks/demand-neg-retract-closed.rofl").
+check_opt("demand_neg_retract_closed", together, 1).
+check_opt("demand_neg_retract_closed", retract, "dtc_z(1)").
+
 -- a shrug read through a relation answered on demand waits for the shrugs
 -- (f_a_shrug_read_through_demand_fired_before_the_shrugs)
 check_world("demand_shrug_read").
