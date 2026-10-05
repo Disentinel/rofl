@@ -81,6 +81,25 @@ function commands(): string {
   return shown.map((s) => `    ${label(s).padEnd(w)}${note.get(s)}`).join('\n');
 }
 
+/** The knobs an agent may use: the SET is facts/commands.rofl, and a token that no source file of
+ *  the tree contains fails the render instead of sitting in CLAUDE.md as advice. The inventory of
+ *  every knob, with the verdicts, is docs/knobs.md. */
+function knobs(): string {
+  const r = pack('facts/commands.rofl');
+  const unq = (v: unknown): string => JSON.parse(String(v)) as string;
+  const note = new Map(r.query('knob_note(N, T, X)').rows.map((x) => [unq(x.bindings['N']), [unq(x.bindings['T']), unq(x.bindings['X'])]] as [string, string[]]));
+  const shown = r.query('knob_shown(N, O)').rows
+    .map((x) => [Number(String(x.bindings['O'])), unq(x.bindings['N'])] as [number, string]).sort((a, b) => a[0] - b[0]).map(([, n]) => n);
+  const undescribed = shown.filter((k) => !note.has(k));
+  if (undescribed.length) throw new Error(`no knob_note for: ${undescribed.join(', ')}`);
+  const walk = (d: string): string[] => fs.readdirSync(path.join(ROOT, d), { withFileTypes: true }).flatMap((e) =>
+    e.isDirectory() ? (e.name === 'node_modules' || e.name === 'target' ? [] : walk(`${d}/${e.name}`)) : /\.(ts|rs|json)$/.test(e.name) ? [`${d}/${e.name}`] : []);
+  const code = ['rust/rofl/src', 'scripts', 'notebook', 'runtime', 'vscode'].flatMap(walk).concat('package.json').map(read).join('\n');
+  const gone = shown.filter((k) => !code.includes(k));
+  if (gone.length) throw new Error(`facts/commands.rofl shows knobs no source file has: ${gone.join(', ')}`);
+  return ['| knob | tool | use |', '|---|---|---|', ...shown.map((k) => `| \`${k}\` | ${note.get(k)![0]} | ${note.get(k)![1].replace(/\|/g, '\\|')} |`)].join('\n');
+}
+
 /** THE HOST FOLD OF THE TAG DEMO (docs/aggregates.md, "Tags, as built"): the
  *  demo's plain rules run in the TypeScript engine, and src/semiring.ts's
  *  fold annotates their support in each semiring, every edge its weight;
@@ -121,6 +140,7 @@ function tagHostFold(): string {
 const BLOCKS: Block[] = [
   { file: 'README.md', name: 'deviations', source: 'facts/deviations.rofl', render: deviations },
   { file: 'CLAUDE.md', name: 'commands', source: 'package.json + facts/commands.rofl', render: commands },
+  { file: 'CLAUDE.md', name: 'knobs', source: 'facts/commands.rofl, inventory in docs/knobs.md', render: knobs },
   { file: 'examples/checks/agg-tag-demo-host.rofl', name: 'host_fold', source: 'agg-tag-demo-plain.rofl folded by src/semiring.ts', render: tagHostFold, comment: '-- ' },
 ];
 

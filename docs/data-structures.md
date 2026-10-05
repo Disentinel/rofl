@@ -232,8 +232,7 @@ it.
    touches no read path of the engine, so it can land before
    `w_cmp_delta_first`, and it settles by measurement that the promises hold
    on the four corpora before anything stores them. **Built 2026-10-04**
-   (`rust/rofl/src/structures.rs`; `rofl-load` and `rofl-eval
-   --propose-structures`, `npm run structures`): on self, mcp, cli_exits and
+   (`rust/rofl/src/structures.rs`; `rofl-load --propose-structures`, `npm run structures`): on self, mcp, cli_exits and
    util it proposes `tree ast_in(P, C) closure ast_within.` (the closure is
    exact), the ast_in and in_fn aliases, and 169 functions that hold on all
    four (`f_the_engine_proposes_a_forest_a_closure_and_aliases_on_all_four_corpora`).
@@ -351,7 +350,7 @@ both engines name the same ones; a child with two parents is refused before a cy
 looked for. The edges are judged as they stand, asserted or concluded.
 
 **What the Rust engine answers, and when.** The closure is answered from the tree only
-where no witness is kept (`sealed(provenance)`, or the harness's `--no-provenance`): a
+where no witness is kept (`sealed(provenance)`): a
 witness names the facts a conclusion rests on, and a row that is not stored is no fact.
 Then no rule of the closure fires and no row of it is stored; the forest of each book
 (`forest.rs`: arrays indexed by node, a parent and the engine's own pre-order numbering)

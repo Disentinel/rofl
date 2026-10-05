@@ -161,11 +161,6 @@ fn main() {
         }
     }
     for d in &s.eval.diags { eprintln!("diag: {d}"); }
-    if std::env::var("ROFL_VSTATS").is_ok() {
-        for (rel, on) in s.eval.vclosure_info() { eprintln!("vclosure {rel}: {}", if on { "answered from its tree" } else { "rows" }); }
-        for r in &s.eval.vclosure_reason { eprintln!("vclosure off: {r}"); }
-        eprintln!("vclosure builds {} rows read {} virtual rows {}", s.eval.vbuilds, s.eval.vrows_read, s.eval.store.virtual_rows());
-    }
     if let Some(f) = save {
         std::fs::write(&f, s.save()).unwrap_or_else(|e| { eprintln!("{f}: {e}"); std::process::exit(1) });
     }

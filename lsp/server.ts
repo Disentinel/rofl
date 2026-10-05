@@ -12,7 +12,7 @@ import { Vocabulary } from '../src/say.ts';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const LIB = new Set([...MODEL_FILES, ...PHRASE_FILES, 'facts/kernel-phrases.rofl', 'facts/ring1-phrases.rofl']);
-const WAIT = Number(process.env.ROFL_LSP_DEBOUNCE ?? 250), LARGEST = 16 << 20;
+const WAIT = 250, LARGEST = 16 << 20;
 
 const open = new Map<string, string>(), known = new Map<string, Known>(), due = new Map<string, NodeJS.Timeout>();
 const kept = new Map<string, { stamp: string; k: Known }>();

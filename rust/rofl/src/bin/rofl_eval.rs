@@ -33,7 +33,7 @@ unsafe impl GlobalAlloc for Counting {
 static A: Counting = Counting;
 
 const USAGE: &str =
-    "usage: rofl-eval [--bytes] [--derivations] [--no-provenance] [--eager-provenance] [--unsettled] [--budget N] [--space N] [--ticks N] [--propose-structures [--structures-min-rows N]] [SEED.json]";
+    "usage: rofl-eval [--bytes] [--derivations] [--budget N] [--space N] [--ticks N] [SEED.json]";
 
 /// WHY THIS REFUSES RATHER THAN IGNORES. The catch-all arm below used to be
 /// `a => path = Some(a)`, so `--ticks 3` set the path to "--ticks", then to
@@ -72,16 +72,6 @@ struct Args {
     /// second engine owes and the strict one is kept beside it, because a
     /// contract is loosened by measuring what the loosening costs.
     derivations: bool,
-    /// No `derived_by` rows and no witnesses: the facts alone.
-    no_provenance: bool,
-    /// Write every `derived_by` row as its firing happens, as before provenance was on demand.
-    eager_provenance: bool,
-    /// Print the state as the world holds it, the `derived_by` rows nothing asked for not yet
-    /// written: a measurement of the evaluation, NOT the canonical state.
-    unsettled: bool,
-    /// The detection report (docs/data-structures.md) in place of the state, over relations of at least `min_rows` rows.
-    propose: bool,
-    min_rows: usize,
 }
 
 fn parse_args(args: &[String]) -> Result<Args, String> {
@@ -92,11 +82,6 @@ fn parse_args(args: &[String]) -> Result<Args, String> {
         ticks: 0,
         want_bytes: false,
         derivations: false,
-        no_provenance: false,
-        eager_provenance: false,
-        unsettled: false,
-        propose: false,
-        min_rows: 2,
     };
     let mut i = 0;
     // A flag's value is fetched through this, so a trailing `--ticks` with
@@ -129,14 +114,6 @@ fn parse_args(args: &[String]) -> Result<Args, String> {
             }
             "--bytes" => a.want_bytes = true,
             "--derivations" => a.derivations = true,
-            "--no-provenance" => a.no_provenance = true,
-            "--eager-provenance" => a.eager_provenance = true,
-            "--unsettled" => a.unsettled = true,
-            "--propose-structures" => a.propose = true,
-            "--structures-min-rows" => {
-                let v = value(args, &mut i, "--structures-min-rows")?;
-                a.min_rows = v.parse().map_err(|_| format!("--structures-min-rows: not an integer: {v}"))?;
-            }
             "--help" | "-h" => return Err(USAGE.to_string()),
             f if f.starts_with('-') && f != "-" => {
                 return Err(format!("unknown flag: {f}"));
@@ -162,11 +139,6 @@ fn main() {
         ticks,
         want_bytes,
         derivations,
-        no_provenance,
-        eager_provenance,
-        unsettled,
-        propose,
-        min_rows,
     } = match parse_args(&argv) {
         Ok(a) => a,
         Err(e) => {
@@ -194,16 +166,6 @@ fn main() {
     // with the default; the field is public and this is the one caller that has
     // a reason to move it, so the library signature stays as it is.
     l.eval.space = space;
-    if eager_provenance {
-        l.eval.eager_prov = true;
-        l.eval.lazy_prov = false;
-    }
-    // the harness's spelling of `sealed(provenance)`: no derived_by, no
-    // witnesses, and a step is a new fact rather than a firing
-    if no_provenance {
-        l.eval.seal_provenance();
-        eprintln!("provenance off: no derived_by, no witnesses, a step is a new fact");
-    }
     let t_load = t0.elapsed();
     if l.dangling > 0 {
         eprintln!("warning: {} dangling witness reference(s)", l.dangling);
@@ -231,15 +193,7 @@ fn main() {
     }
     drop(src);
     let live = LIVE.load(Ordering::Relaxed);
-    if propose {
-        l.eval.settle_provenance();
-        print!("{}", rofl::structures::propose(&l.eval.store, &l.eval.h, &rofl::structures::Options { min_rows }).render(min_rows));
-        return;
-    }
-    let cs = if unsettled {
-        eprintln!("unsettled: {} firings' derived_by rows not written; this is not the canonical state", l.eval.unsettled_provenance());
-        l.eval.store.canonical_state(&l.eval.h)
-    } else if derivations {
+    let cs = if derivations {
         l.eval.settle_provenance();
         l.eval.store.derivations(&l.eval.h)
     } else {
@@ -306,14 +260,6 @@ fn main() {
         for (rid, ns) in by.iter().take(20) {
             let head = l.eval.rules.iter().find(|r| r.id == *rid).map(|r| l.eval.h.name(r.clause.head.rel).to_string()).unwrap_or_else(|| "?".to_string());
             eprintln!("rule_ms\t{}\t{}\t{:.1}", l.eval.h.name(*rid), head, *ns as f64 / 1e6);
-        }
-        if std::env::var("ROFL_PROF_ALL").is_ok() {
-            let n = |m: &std::collections::HashMap<rofl::term::Sym, u64>, id| m.get(&id).copied().unwrap_or(0);
-            for r in l.eval.rules.iter() {
-                let id = r.id;
-                eprintln!("prof\t{}\t{}\t{:.3}\t{}\t{}\t{}\t{}\t{}", l.eval.h.name(id), l.eval.h.name(r.clause.head.rel), n(&l.eval.ns_by_rule, id) as f64 / 1e6,
-                    n(&l.eval.argm_by_rule, id), n(&l.eval.sols_by_rule, id), n(&l.eval.new_by_rule, id), n(&l.eval.fires_by_rule, id), n(&l.eval.delta_by_rule, id));
-            }
         }
         let (sum, mx): (u64, u64) = l.eval.rounds.iter().fold((0, 0), |(s, m), (a, b)| (s + a, m + b));
         let bound = |k: u64| l.eval.rounds.iter().map(|(s, m)| (*m).max(s / k)).sum::<u64>() as f64 / 1e6;
