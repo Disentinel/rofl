@@ -1,0 +1,8 @@
+-- examples/checks/asks-asked-cells.rofl — ASKING THE KERNEL'S CELLS ASKS EVERY AGGREGATE.
+-- agg_cell holds a cell for each aggregate of the world. Asked by name, with no rule reading it, it is a
+-- question about every rule that aggregates, ab2_size's among them: every rule is kept.
+asks(agg_cell).
+edb(ab2_item).
+ab2_item(a, 1). ab2_item(a, 2). ab2_item(b, 3).
+ab2_size(G, N) :- ab2_item(G, _), N is count(K : ab2_item(G, K)).
+-- expect-row: ab2_size[main](a,2)

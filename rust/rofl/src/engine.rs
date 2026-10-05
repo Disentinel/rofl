@@ -704,6 +704,8 @@ pub struct Eval {
     /// The rules that conclude `@next`: a cell one seals is reflected in the
     /// tick its conclusion arrives in, not the one it is sealed in.
     next_rules: HashSet<Sym>,
+    /// The relations `asks` reaches, when it prunes (`asks_cone`); `None` evaluates every rule.
+    pub cone: Option<HashSet<Sym>>,
     /// A lattice cell's current fact, by `(rel, persp, key)`.
     lat_cur: HashMap<LatKey, FactId>,
     /// THE SUBSUMPTIVE RELATIONS, and each cell's antichain: its standing
@@ -1227,6 +1229,7 @@ impl Eval {
             tag_refused: Vec::new(),
             carried: HashMap::new(),
             next_rules: HashSet::new(),
+            cone: None,
             lat_cur: HashMap::new(),
             subs: HashMap::new(),
             dom_rels: HashSet::new(),
@@ -1416,6 +1419,99 @@ impl Eval {
             .collect();
     }
 
+    /// THE RELATION CONE OF `asks(Rel)`: only the rules whose heads reach an asked relation are activated,
+    /// backwards through every premise (positive, negated, inside an aggregate) and through what a
+    /// subsumptive relation's dominance bodies read; no asks means every rule. The cone is closed under
+    /// what a rule can SEE of other relations without naming them as a premise, or an answer in it would
+    /// differ from the whole world's: a relation an `explain_request` names is asked; a rule that reads
+    /// `derived_by` of a named relation reads that relation; a rule that reads the rows of `derived_by`
+    /// with its fact unbound, or the cells, members, lattice members or dominations the kernel writes,
+    /// sees every relation's, and the cone is the whole world (said in the diagnostics).
+    fn asks_cone(&mut self, kept: &[ERule]) -> Option<HashSet<Sym>> {
+        let mut cone: HashSet<Sym> = HashSet::new();
+        for f in self.store.rel_all(&self.h, self.v.asks) {
+            let a = self.store.args(f);
+            if a.len() == 1 {
+                if let Some(rel) = a[0].as_atom() {
+                    cone.insert(rel);
+                }
+            }
+        }
+        if cone.is_empty() {
+            return None;
+        }
+        let (req, main) = (self.v.explain_request, self.v.main);
+        for f in self.store.rel_persp(&self.h, req, main) {
+            let a = self.store.args(f);
+            if a.len() == 2 && brk!("asks_explain_unasked" => false; true) {
+                match a[1].kind() {
+                    TermK::Atom(rel) => {
+                        cone.insert(rel);
+                    }
+                    TermK::Func(i) => {
+                        cone.insert(self.h.fname(i));
+                    }
+                    _ => {}
+                }
+            }
+        }
+        let v = &self.v;
+        let blind = [v.agg_cell, v.agg_member, v.agg_member_prem, v.agg_sealed, v.lattice_member, v.lattice_member_prem, v.dominated_by, v.shrug, v.unknown, v.stratum, v.unstratified, v.edb];
+        let asked_blind = brk!("asks_blind_asked" => &[][..]; &blind[..]);
+        let asked_calls = brk!("asks_demand_asked" => &[][..]; &self.answer.demand_rels[..]);
+        let hit = asked_blind.iter().chain([&v.derived_by]).chain(asked_calls).find(|r| cone.contains(*r)).copied();
+        if let Some(rel) = hit {
+            self.diags.push(format!("asks: '{}' is asked, and what it holds is what every rule asked of it or showed of every relation, so every rule is kept", self.h.name(rel)));
+            return None;
+        }
+        loop {
+            let n = cone.len();
+            for r in kept {
+                if !cone.contains(&r.clause.head.rel) {
+                    continue;
+                }
+                let reads = r.clause.body.iter().filter(|b| {
+                    brk!("asks_negation_cut" => !matches!(b, BodyElem::Neg(_)); true) && brk!("asks_aggregate_cut" => !matches!(b, BodyElem::Agg(_)); true)
+                });
+                for l in reads.flat_map(|b| b.lits_deep()) {
+                    cone.insert(l.rel);
+                    if l.rel == self.v.derived_by && brk!("asks_derived_by_plain" => false; true) {
+                        let named = match l.args.first().map(|t| t.kind()) {
+                            Some(TermK::Func(i)) if self.h.fname(i) == self.v.s_fact => self.h.fargs(i).first().and_then(|t| t.as_atom()),
+                            _ => None,
+                        };
+                        match named {
+                            Some(rel) => {
+                                cone.insert(rel);
+                            }
+                            None if brk!("asks_derived_by_unnamed" => false; true) => return self.whole_world(r.id, self.v.derived_by),
+                            None => {}
+                        }
+                    } else if (blind.contains(&l.rel) || l.rel == self.v.hole) && brk!("asks_blind_reflection" => false; true) {
+                        return self.whole_world(r.id, l.rel);
+                    }
+                }
+            }
+            for (rel, sub) in &self.subs {
+                if brk!("asks_dominance_reads" => false; cone.contains(rel)) {
+                    cone.extend(sub.reads.iter().copied());
+                }
+            }
+            if cone.len() == n {
+                return Some(cone);
+            }
+        }
+    }
+
+    fn whole_world(&mut self, rule: Sym, rel: Sym) -> Option<HashSet<Sym>> {
+        self.diags.push(format!(
+            "asks: rule {} reads '{}' without naming a relation, which shows every relation's rows, so every rule is kept",
+            self.h.name(rule),
+            self.h.name(rel)
+        ));
+        None
+    }
+
     fn prepare(&mut self) {
         self.settle_provenance();
         self.well_founded = well_founded_declared(&mut self.h, &self.v, &mut self.store);
@@ -1524,29 +1620,8 @@ impl Eval {
             }
             kept.push(self.classify(r));
         }
-        // `asks(Rel)`: only the rules whose heads reach an asked relation are
-        // activated, backwards through every premise; no asks means everything
-        let mut cone: HashSet<Sym> = HashSet::new();
-        for f in self.store.rel_all(&self.h, self.v.asks) {
-            let a = self.store.args(f);
-            if a.len() == 1 {
-                if let Some(rel) = a[0].as_atom() {
-                    cone.insert(rel);
-                }
-            }
-        }
-        if !cone.is_empty() {
-            loop {
-                let n = cone.len();
-                for r in &kept {
-                    if cone.contains(&r.clause.head.rel) {
-                        cone.extend(r.clause.body.iter().flat_map(|b| b.lits_deep()).map(|l| l.rel));
-                    }
-                }
-                if cone.len() == n {
-                    break;
-                }
-            }
+        self.cone = self.asks_cone(&kept);
+        if let Some(cone) = &self.cone {
             kept.retain(|r| cone.contains(&r.clause.head.rel));
         }
         self.next_rules = kept.iter().filter(|r| r.clause.head.temporal == Temporal::Next).map(|r| r.id).collect();
@@ -3362,6 +3437,11 @@ impl Eval {
             return Ok(self.store.partial_eval);
         }
         Ok(self.run()?.partial)
+    }
+
+    /// The relations answered on demand: a fact for each call, so a row is what some rule asked of it.
+    pub fn demand_relations(&self) -> HashSet<Sym> {
+        self.answer.demand_rels.iter().copied().collect()
     }
 
     /// Whether a relation of the program is answered on demand, a fact made for each call.

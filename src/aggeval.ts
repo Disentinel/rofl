@@ -1058,13 +1058,8 @@ export class AggEval {
       }
       kept.push(this.classify(r));
     }
-    // `asks(Rel)`: only the rules whose heads reach an asked relation are activated, backwards through every premise; no asks means everything
-    const cone = new Set<string>();
-    for (const f of this.store.relAll(IFACE.asks)) if (f.args.length === ARITY.asks && f.args[0].k === 'a') cone.add(f.args[0].name);
-    if (cone.size) {
-      for (let n = -1; n !== cone.size;) { n = cone.size; for (const r of kept) if (cone.has(r.clause.head.rel)) for (const l of r.clause.body.flatMap(litsOf)) cone.add(l.rel); }
-      kept.splice(0, kept.length, ...kept.filter((r) => cone.has(r.clause.head.rel)));
-    }
+    const cone = this.asksCone(kept);
+    if (cone) kept.splice(0, kept.length, ...kept.filter((r) => cone.has(r.clause.head.rel)));
     this.nextRules = new Set(kept.filter((r) => r.clause.head.temporal === 'next').map((r) => r.id));
     this.carried.clear();
     const carried = [...new Set(kept.filter((r) => r.clause.head.temporal === 'next' && this.isLatticeLit(r.clause.head.rel, r.clause.head.args.length))
@@ -1167,6 +1162,46 @@ export class AggEval {
     const clause: Clause = { head: lit(l), body: [{ t: 'pos', lit: lit(name) }] };
     return { id: name, canon: name, safe: true, hasNeg: false, hasAgg: false, hasThr: false, thrRels: [], latticeOuter: [],
       latClose: l, posRels: [name], hasDemandPrem: false, demandStrict: false, triggerRels: [], plan: [...clause.body], clause };
+  }
+
+  /** THE RELATION CONE OF `asks(Rel)`: only the rules whose heads reach an asked relation are activated, backwards through every premise
+   *  (positive, negated, inside an aggregate) and through what a subsumptive relation's dominance bodies read; no asks means every rule. The cone is
+   *  closed under what a rule can see of other relations without naming them as a premise, or an answer in it would differ from the whole world's:
+   *  a relation an `explain_request` names is asked; a rule that reads `derived_by` of a named relation reads that relation; a rule that reads the
+   *  rows of `derived_by` with its fact unbound, or the cells, members, lattice members or dominations the kernel writes, sees every relation's, and
+   *  the cone is the whole world (said in the diagnostics). */
+  private asksCone(kept: ERule[]): Set<string> | undefined {
+    const cone = new Set<string>();
+    for (const f of this.store.relAll(IFACE.asks)) if (f.args.length === ARITY.asks && f.args[0].k === 'a') cone.add(f.args[0].name);
+    if (!cone.size) return undefined;
+    for (const f of this.store.relPersp('explain_request', MAIN)) if (f.args.length === 2 && (f.args[1].k === 'a' || f.args[1].k === 'f')) cone.add(f.args[1].name);
+    const blind = new Set<string>([V.agg_cell, V.agg_member, V.agg_member_prem, V.agg_sealed, V.lattice_member, V.lattice_member_prem, V.dominated_by, 'shrug', IFACE.unknown, IFACE.stratum, IFACE.unstratified, V.edb]);
+    const whole = (r: ERule, rel: string) => {
+      this.diags.push(`asks: rule ${r.id} reads '${rel}' without naming a relation, which shows every relation's rows, so every rule is kept`);
+      return undefined;
+    };
+    for (const rel of cone) {
+      if (blind.has(rel) || rel === V.derived_by || this.answer.demandRels.includes(rel)) {
+        this.diags.push(`asks: '${rel}' is asked, and what it holds is what every rule asked of it or showed of every relation, so every rule is kept`);
+        return undefined;
+      }
+    }
+    for (let n = -1; n !== cone.size;) {
+      n = cone.size;
+      for (const r of kept) {
+        if (!cone.has(r.clause.head.rel)) continue;
+        for (const l of r.clause.body.flatMap(litsOf)) {
+          cone.add(l.rel);
+          if (l.rel === V.derived_by) {
+            const t = l.args[0];
+            if (t?.k === 'f' && t.name === '$fact' && t.args[0]?.k === 'a') cone.add(t.args[0].name);
+            else return whole(r, V.derived_by);
+          } else if (blind.has(l.rel) || l.rel === V.hole) return whole(r, l.rel);
+        }
+      }
+      for (const [rel, sub] of this.subs) if (cone.has(rel)) for (const x of sub.reads) cone.add(x);
+    }
+    return cone;
   }
 
   private classify(r: DRule): ERule {

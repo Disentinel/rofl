@@ -1,0 +1,16 @@
+-- examples/checks/asks-dominance.rofl — A DOMINANCE BODY READS WHAT THE ASKED RELATION'S RULES DO NOT.
+-- ad_best is asked and reads ad_d, a subsumptive relation: its values keep only what no other dominates,
+-- and what dominates is read from ad_better, which no rule of the cone reads. ad_better is in the cone
+-- by the dominance, so a route is dominated as in the world without asks (ad_d(a,c,5) is not kept).
+asks(ad_best).
+edb(ad_e).
+edb(ad_num).
+ad_e(a, b, 1). ad_e(b, c, 2). ad_e(a, c, 5).
+ad_num(1). ad_num(2). ad_num(3). ad_num(4). ad_num(5). ad_num(6).
+ad_d(X, Y, D) :- ad_e(X, Y, D).
+ad_d(X, Z, D) :- ad_d(X, Y, D1), ad_e(Y, Z, W), D is D1 + W.
+ad_d(X, Y, D1) <= ad_d(X, Y, D2) :- ad_better(D1, D2).
+ad_better(A, B) :- ad_num(A), ad_num(B), B < A.
+ad_best(X, Y, D) :- ad_d(X, Y, D).
+-- expect-row: ad_best[main](a,c,3)
+-- expect-no-row: ad_best[main](a,c,5)

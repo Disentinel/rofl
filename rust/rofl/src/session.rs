@@ -162,6 +162,7 @@ impl Session {
     pub fn assert(&mut self, src: &str) -> Result<usize, String> {
         let cs = rofl_parse::parse(&mut self.eval.h, src)?;
         let mut n = 0;
+        let mut asked = false;
         for c in &cs {
             if !c.body.is_empty() || c.lattice.is_some() {
                 return Err(format!("assert takes facts, not rules or declarations: {}", rofl_parse::show(&self.eval.h, c)));
@@ -177,10 +178,15 @@ impl Session {
             }
             if self.eval.store.add(&self.eval.h, rel, persp, &args, F_BASE) {
                 n += 1;
+                asked |= rel == self.eval.v.asks;
             }
         }
         if n > 0 {
             self.eval.store.dirty = true;
+        }
+        // the rules a world runs are read at prepare: a new ask is only an ask once they are read again
+        if asked {
+            self.eval.reprepare();
         }
         Ok(n)
     }
@@ -943,8 +949,12 @@ impl Session {
                 doomed.push(f);
             }
         }
+        let asks = self.eval.store.rec(id).rel == self.eval.v.asks;
         self.eval.store.remove_many(&doomed);
         self.eval.store.dirty = true;
+        if brk!("asks_retract_unread" => false; asks) {
+            self.eval.reprepare();
+        }
         Ok(())
     }
 
@@ -958,6 +968,10 @@ impl Session {
         let Some(id) = id else { return Err(format!("no such fact: {key}")) };
         if !self.eval.store.rec(id).base() {
             return Err(format!("{key} is derived; retract its supports instead"));
+        }
+        if self.eval.store.rec(id).rel == self.eval.v.asks {
+            self.retract(query)?;
+            return Ok(Retraction::Full("asks names the rules the world runs"));
         }
         self.settle()?;
         let mut doomed = vec![id];
