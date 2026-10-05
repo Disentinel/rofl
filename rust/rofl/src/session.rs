@@ -527,6 +527,98 @@ impl Session {
         Ok(Cooled { facts: write.len(), bytes: text.len(), path: out.to_string() })
     }
 
+    /// COOL A VOLUME BY BOOK (docs/surface-split.md, the driver): `cool`, of the facts of `books` only. The volume's
+    /// base facts of those books are written, every fact of those books naming the prefix is dropped, and so is the
+    /// kernel's account of each (the `$fact` a trail row reifies is of one of those books); the facts of the other
+    /// books stay, a `[surface]` the volume published or read among them. Like `cool`, the store is left dirty: a
+    /// kept fact concluded from what left is a conclusion without its support until `reheat` brings the volume back
+    /// and the next evaluation answers, so a caller that keeps a book makes its facts base where they must outlive it.
+    pub fn cool_books(&mut self, prefix: &str, books: &[String], out: &str) -> Result<Cooled, String> {
+        if books.is_empty() {
+            return Err("cool by book needs at least one book".into());
+        }
+        let want: std::collections::HashSet<Sym> = books.iter().map(|b| self.eval.h.intern(b)).collect();
+        self.eval.settle_provenance();
+        let mut text = self.header(prefix);
+        let (mut n, mut drop) = (0, Vec::new());
+        for id in self.eval.store.all_facts() {
+            let args = self.eval.store.args(id).to_vec();
+            if !args.iter().any(|a| self.mentions(*a, prefix)) {
+                continue;
+            }
+            let r = self.eval.store.rec(id);
+            let kernel = is_kernel_ledger(&self.eval.h, r.persp);
+            let book = if kernel { args.iter().find_map(|a| self.reified_book(*a)) } else { Some(r.persp) };
+            if !book.is_some_and(|b| want.contains(&b)) {
+                continue;
+            }
+            if r.base() && !kernel {
+                write_fact_key(&self.eval.h, r.rel, r.persp, &args, &mut text);
+                text.push_str(".\n");
+                n += 1;
+            }
+            drop.push(id);
+        }
+        std::fs::write(out, &text).map_err(|e| format!("{out}: {e}"))?;
+        self.eval.store.remove_many(&drop);
+        self.eval.store.dirty = true;
+        Ok(Cooled { facts: n, bytes: text.len(), path: out.to_string() })
+    }
+
+    /// The book of the fact a kernel row reifies, `$fact(Rel, Book, Args)`.
+    fn reified_book(&self, t: Term) -> Option<Sym> {
+        let TermK::Func(i) = t.kind() else { return None };
+        if self.eval.h.fname(i) != self.eval.v.s_fact {
+            return None;
+        }
+        match self.eval.h.fargs(i).get(1)?.kind() {
+            TermK::Atom(b) => Some(b),
+            _ => None,
+        }
+    }
+
+    /// WHAT A VOLUME'S WORLD HOLDS OF ITS OWN, for a driver (docs/surface-split.md): over the facts this world wrote
+    /// above the base it was forked from, the keys of those in `books` or of a relation in `rels`, sorted, and every
+    /// atom and string their arguments name (nested too), outside the kernel's ledgers and not beginning with
+    /// `prefix`: the names a volume can subscribe by.
+    pub fn layer_view(&mut self, prefix: &str, books: &[String], rels: &[String]) -> (Vec<String>, Vec<String>) {
+        let bs: std::collections::HashSet<Sym> = books.iter().map(|b| self.eval.h.intern(b)).collect();
+        let rs: std::collections::HashSet<Sym> = rels.iter().map(|r| self.eval.h.intern(r)).collect();
+        let mut facts = Vec::new();
+        let mut seen: std::collections::HashSet<Term> = std::collections::HashSet::new();
+        let mut names = Vec::new();
+        for id in self.eval.store.layer_mark()..self.eval.store.len_ids() {
+            if !self.eval.store.alive(id) {
+                continue;
+            }
+            let r = self.eval.store.rec(id);
+            if is_kernel_ledger(&self.eval.h, r.persp) {
+                continue;
+            }
+            let args = self.eval.store.args(id).to_vec();
+            if bs.contains(&r.persp) || rs.contains(&r.rel) {
+                facts.push(self.eval.store.key(&self.eval.h, id));
+            }
+            let mut stack = args;
+            while let Some(t) = stack.pop() {
+                match t.kind() {
+                    TermK::Atom(a) | TermK::Str(a) => {
+                        if (matches!(t.kind(), TermK::Str(_)) || !self.eval.h.name(a).starts_with(prefix)) && seen.insert(t) {
+                            let mut k = String::new();
+                            self.eval.h.canon_term(t, &mut k);
+                            names.push(k);
+                        }
+                    }
+                    TermK::Func(i) => stack.extend(self.eval.h.fargs(i).iter().copied()),
+                    _ => {}
+                }
+            }
+        }
+        facts.sort_by(|a, b| crate::term::cmp_js(a, b));
+        names.sort();
+        (facts, names)
+    }
+
     /// COOL THE ASSERTION TRAIL: the `why was this here` layer, parked.
     ///
     /// `asserted_by` is two-thirds of what a load writes and half of what a
@@ -628,7 +720,7 @@ impl Session {
                  translating it needs the meaning that has been lost."
             )]);
         }
-        self.load(&text, None)
+        self.load_delta(&text, None).map(|(n, _)| n)
     }
 
     /// Every live BASE fact IN A PROGRAM'S OWN BOOK carrying an atom whose name
