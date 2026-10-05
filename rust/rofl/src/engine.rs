@@ -4839,8 +4839,11 @@ impl Eval {
                                 continue;
                             }
                             // UNFOLDED AT A CALL, a negation what a hole left unknown could
-                            // decide leaves the call's head under it unknown, as a fault would
-                            if holds && depth > 0 && (self.firing || brk!("asked_unholed" => false; self.asking)) && !self.demand_heads.is_empty() && !self.lat_spread.is_empty() {
+                            // decide leaves the call's head under it unknown, as a fault would;
+                            // outside a firing too (a body solved again at the flush), where no
+                            // head is marked but the answer is no answer, and is not stored
+                            let unfired = !self.firing && !self.asking && brk!("unfired_neg_decides" => false; true);
+                            if holds && depth > 0 && (self.firing || brk!("asked_unholed" => false; self.asking) || unfired) && !self.demand_heads.is_empty() && !self.lat_spread.is_empty() {
                                 if let Some(u) = brk!("demand_neg_unholed" => None; self.read_unknown(l, &a.s, true)) {
                                     self.demand_unknown_read(depth, &a.s, u);
                                     continue;

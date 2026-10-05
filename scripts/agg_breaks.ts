@@ -3799,8 +3799,8 @@ export const BREAKS: Break[] = [
   "edits": [
    [
     "src/aggeval.ts",
-    "if (holds && depth > 0 && (this.firing || this.asking) && this.demandHeads.length > 0",
-    "if (holds && depth > 0 && this.firing && this.demandHeads.length > 0"
+    "if (holds && depth > 0 && this.demandHeads.length > 0 && this.latSpread.size > 0) {",
+    "if (holds && depth > 0 && !this.asking && this.demandHeads.length > 0 && this.latSpread.size > 0) {"
    ]
   ],
   "expect": {
@@ -4044,8 +4044,8 @@ export const BREAKS: Break[] = [
   "edits": [
    [
     "src/aggeval.ts",
-    "if (this.demandDoneAt[0] !== this.store.version || this.demandDoneAt[1] !== this.store.tick) { this.demandDone.clear(); return null; }",
-    "if (false) { this.demandDone.clear(); return null; }"
+    "if (this.demandDoneAt[0] !== this.store.version || this.demandDoneAt[1] !== this.store.tick) { this.dropDone(); return null; }",
+    "if (false) { this.dropDone(); return null; }"
    ]
   ],
   "expect": {
@@ -4255,6 +4255,27 @@ export const BREAKS: Break[] = [
   "what": "a question's peak of rows is left as the world's",
   "expect": {
    "demand_query_ask": "a question left its peak of rows in the world's"
+  }
+ },
+ {
+  "id": "unfired_neg_decides",
+  "what": "outside a firing, a negation over a hole unfolded at a call decides the call's answer, which is stored",
+  "expect": {
+   "demand_neg_flush": "the state holds the row dl_d[main](c,5)"
+  }
+ },
+ {
+  "id": "ts_unfired_neg_decides",
+  "what": "the TypeScript engine decides, outside a firing, a negation over a hole unfolded at a call",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "if (holds && depth > 0 && this.demandHeads.length > 0 && this.latSpread.size > 0) {",
+    "if (holds && depth > 0 && (this.firing || this.asking) && this.demandHeads.length > 0 && this.latSpread.size > 0) {"
+   ]
+  ],
+  "expect": {
+   "demand_neg_flush": "the state holds the row dl_d[main](c,5)"
   }
  },
  {

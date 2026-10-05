@@ -683,6 +683,7 @@ check[checks]("facts/goldens.rofl", "demand_fixpoint_rows", world).
 check[checks]("facts/goldens.rofl", "demand_fixpoint_space", world).
 check[checks]("facts/goldens.rofl", "demand_fixpoint_steps", world).
 check[checks]("facts/goldens.rofl", "demand_neg_decided", world).
+check[checks]("facts/goldens.rofl", "demand_neg_flush", world).
 check[checks]("facts/goldens.rofl", "demand_neg_hole", world).
 check[checks]("facts/goldens.rofl", "demand_neg_retract", world).
 check[checks]("facts/goldens.rofl", "demand_neg_retract_closed", world).

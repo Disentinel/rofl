@@ -394,6 +394,11 @@ check_opt("demand_question_budget", together, 1).
 check_opt("demand_question_budget", explain, 1).
 check_opt("demand_question_budget", budget, 200).
 
+-- a negation over a hole unfolded at a call leaves the answer unknown outside a firing too, as the copy by rules
+-- alone does (f_a_negated_call_into_a_hole_stored_its_answer)
+check_world("demand_neg_flush").
+check_file("demand_neg_flush", "examples/checks/demand-neg-flush.rofl").
+
 -- a question to a relation unfolded at a call unfolds it in both engines, and leaves the world as it found it
 -- (f_a_question_stored_what_it_unfolded, f_ask_read_the_store_where_query_unfolded)
 check_world("demand_query").

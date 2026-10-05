@@ -3044,8 +3044,9 @@ export class AggEval {
             if (!holds) { this.demandTrail.length = unknowns; this.asked.length = asked; this.faultCount = faults; continue; }
             if (below && depth > 0 && (this.firing || this.asking)) { this.demandBelow(depth, b.lit, a.s, faults, unknowns); continue; }
             if (holds && this.strictNeg && this.latSpread.size > 0 && this.readUnknown(b.lit, a.s, true) !== null) continue;
-            // UNFOLDED AT A CALL, a negation what a hole left unknown could decide leaves the call's head under it unknown, as a fault would
-            if (holds && depth > 0 && (this.firing || this.asking) && this.demandHeads.length > 0 && this.latSpread.size > 0) {
+            // UNFOLDED AT A CALL, a negation what a hole left unknown could decide leaves the call's head under it unknown, as a fault would;
+            // outside a firing too (a body solved again at the flush), where no head is marked but the answer is no answer, and is not stored
+            if (holds && depth > 0 && this.demandHeads.length > 0 && this.latSpread.size > 0) {
               const u = this.readUnknown(b.lit, a.s, true);
               if (u !== null) { this.demandUnknownRead(depth, a.s, u); continue; }
             }

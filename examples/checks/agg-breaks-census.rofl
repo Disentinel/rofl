@@ -1147,6 +1147,10 @@ brk("ask_wall_unnamed"). brk_kind("ask_wall_unnamed", switch).
 brk_expects("ask_wall_unnamed", "demand_query_ask").
 brk("question_peak_kept"). brk_kind("question_peak_kept", switch).
 brk_expects("question_peak_kept", "demand_query_ask").
+brk("unfired_neg_decides"). brk_kind("unfired_neg_decides", switch).
+brk_expects("unfired_neg_decides", "demand_neg_flush").
+brk("ts_unfired_neg_decides"). brk_kind("ts_unfired_neg_decides", ts).
+brk_expects("ts_unfired_neg_decides", "demand_neg_flush").
 brk("demand_naive_passes"). brk_kind("demand_naive_passes", switch).
 brk_expects("demand_naive_passes", "demand_fixpoint").
 brk("demand_again_rereads_store"). brk_kind("demand_again_rereads_store", switch).
@@ -2479,6 +2483,7 @@ switch_site("tropical_max", "rust/rofl/src/cell.rs").
 switch_site("trunc5", "rust/rofl/src/engine.rs").
 switch_site("trust_max", "rust/rofl/src/cell.rs").
 switch_site("unclosed", "rust/rofl/src/rofl_parse.rs").
+switch_site("unfired_neg_decides", "rust/rofl/src/engine.rs").
 switch_site("union_left", "rust/rofl/src/cell.rs").
 switch_site("unknown_scan", "rust/rofl/src/engine.rs").
 switch_site("unranked_negation_runs", "rust/rofl/src/engine.rs").
