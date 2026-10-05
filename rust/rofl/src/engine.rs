@@ -3080,8 +3080,7 @@ impl Eval {
                         _ => roots(self, &node),
                     }
                 }
-                // the unfolding stopped where the call came round, not at a wall
-                "budget" if cname == "demand_cycle" => self.h.atom(&cname),
+                "cut" => self.h.atom(&cname),
                 "budget" if cname == "regions_capped" => {
                     let n = self.regions_capped.get(&target).copied().unwrap_or(0);
                     let (f, k) = (self.h.intern("spent"), self.h.atom("regions"));

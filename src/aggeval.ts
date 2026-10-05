@@ -2265,8 +2265,7 @@ export class AggEval {
           meta = mkf('earlier', [mki(t - 1)]);
         } else if (target.k === 'f' && target.name === '$below') meta = mka('below');
         else meta = roots(node);
-      } else if (reason === 'budget' && cause === 'demand_cycle') {
-        // the unfolding stopped where the call came round, not at a wall
+      } else if (reason === 'cut') {
         meta = mka(cause);
       } else if (reason === 'budget' && cause === 'regions_capped') {
         meta = mkf('spent', [mka('regions'), mki(this.regionsCapped.get(canonTerm(target)) ?? 0), mki(LABEL_REGIONS)]);
