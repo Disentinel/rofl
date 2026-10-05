@@ -184,9 +184,6 @@ impl Eval {
             c.forests = Rc::from(forests);
             c.built = Some(n);
             self.vbuilds += 1;
-            if brk!("vclosure_rows_cost" => true; false) {
-                self.rows += self.vclosures[ci].pairs as i64;
-            }
         }
         self.vclosures[ci].forests.clone()
     }

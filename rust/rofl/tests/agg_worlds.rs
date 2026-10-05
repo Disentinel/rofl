@@ -52,7 +52,6 @@ struct World {
     sentences: bool,
     /// `check_opt(W, retract, F)`: base facts retracted after the evaluation, by the cell path
     retract: Vec<String>,
-    delta_first: bool,
 }
 
 /// The worlds loaded together, read from the registry by this engine.
@@ -64,7 +63,7 @@ fn registry() -> Vec<World> {
     let rows = |s: &mut Session, q: &str| s.ask(q).unwrap().rows;
     let mut out: Vec<World> = Vec::new();
     for r in rows(&mut s, "check_opt(N, together, 1)") {
-        out.push(World { name: unquote(&r[0]), files: Vec::new(), strata: false, explain: false, ticks: 0, budget: None, space: None, retain: None, sentences: false, retract: Vec::new(), delta_first: false });
+        out.push(World { name: unquote(&r[0]), files: Vec::new(), strata: false, explain: false, ticks: 0, budget: None, space: None, retain: None, sentences: false, retract: Vec::new() });
     }
     for w in out.iter_mut() {
         let n = &w.name;
@@ -77,7 +76,6 @@ fn registry() -> Vec<World> {
         w.retain = rows(&mut s, &format!("check_opt(\"{n}\", retain, T)")).first().map(|r| r[0].parse().unwrap());
         w.sentences = !rows(&mut s, &format!("check_opt(\"{n}\", sentences, 1)")).is_empty();
         w.retract = rows(&mut s, &format!("check_opt(\"{n}\", retract, F)")).iter().map(|r| unquote(&r[0])).collect();
-        w.delta_first = !rows(&mut s, &format!("check_opt(\"{n}\", delta_first, 1)")).is_empty();
     }
     out.sort_by(|a, b| a.name.cmp(&b.name));
     out
@@ -177,8 +175,6 @@ fn check_world(w: &World) -> Vec<String> {
     if let Some(n) = w.space {
         s.eval.space = n;
     }
-    s.eval.walls_set = walled;
-    s.eval.delta_first_under_walls = w.delta_first;
     s.eval.retain_ticks = w.retain;
     for f in &w.files {
         let base = f.file_name().unwrap().to_string_lossy().into_owned();

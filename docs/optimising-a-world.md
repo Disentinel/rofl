@@ -29,8 +29,7 @@ stdout and, with `--bytes`, a profile on stderr.
 | flag | what it is for |
 |---|---|
 | `--bytes` | `facts`, `eval_ms`, `peak_rows`, `steps`, `absorb_ms`, bytes per table, and two top-20 tables: `argm_rule` (index probes per rule, **deterministic**) and `rule_ms` (time per rule, noisy). `ROFL_PROF_ALL=1` adds one `prof` line per rule: ms, probes, solutions, new conclusions, firings, delta-first firings. |
-| `--budget N --space N` | the walls. A wall given by the caller keeps every firing in **written order**; to measure with the planner under walls add `--delta-first` (`f_a_join_plan_is_never_observed`). The corpus runs use `--budget 4000000000 --space 40000000 --delta-first`. |
-| `--delta-first` | opt the run into the delta-first plans although walls were given |
+| `--budget N --space N` | the walls. The plans are on under them too, so a wall's cut moves as the engine improves (`f_the_owner_settles_walls_promises_and_incremental`). The corpus runs use `--budget 4000000000 --space 40000000`. |
 | `--unsettled` | print the world as it stands, the `derived_by` rows nothing asked for not yet written. A measurement of the evaluation; **not** the canonical state (it says so on stderr) |
 | `--eager-provenance` | the baseline of provenance on demand: every `derived_by` row written as its firing happens |
 | `--no-provenance` | the seal (`Eval::seal_provenance`), the same as declaring `sealed(provenance)` (`f_no_provenance_flag_is_not_the_seal`; before 2026-10-04 the flag was 1.5-2.1x slower than the declaration, so older numbers taken with it understate the seal) |
@@ -118,7 +117,7 @@ Costs to know before sealing:
 and four siblings, `rust/rofl/tests/prov_lazy.rs`). Where no rule reads
 `derived_by`, a firing is noted as (fact, rule, tick), twelve bytes, and the row
 is written when something observes it: the canonical state, a `derived_by` query,
-save, the tick boundary. Rofl-eval, 3 runs, medians, `--delta-first`,
+save, the tick boundary. Rofl-eval, 3 runs, medians,
 default mode, base 91afde2, **`--unsettled`**:
 
 | corpus | eval s eager -> lazy (sealed) | peak RSS MB eager -> lazy (sealed) | facts held eager -> lazy |
@@ -177,16 +176,17 @@ what is left. After the review fixes, on top of the shape rewrites of 3.4-3.12:
 sealed -24..-32%, default -11..-23% (`f_a_join_plan_is_never_observed`).
 
 **Carve-outs, said here and not silently** (`f_a_join_plan_is_never_observed`,
-worlds `agg_join_delta_first` and its `_hole`, `_persp`, `_steps`, `_space`,
-`_walled` siblings):
+worlds `agg_join_delta_first` and its `_hole`, `_persp`, `_steps`, `_space`
+siblings):
 
-- a wall the caller sets (`--budget`, `--space`, rofl-serve `budget`/`space`)
-  keeps written order unless the run opts in (`--delta-first`, `deltaFirst`,
-  `check_opt(W, delta_first, 1)`): where a wall cuts must not depend on the planner;
+- a wall's cut is the engine's and moves with it: an engine that does more for the
+  same budget is the expected effect (owner, 2026-10-05); a world whose meaning is the
+  stop by budget lowers its budget. A plan that outgrows the space is solved again in
+  written order (`Halt::Overrun`), which also does more for the same budget;
 - builtins, lattice worlds, aggregates, thresholds, demand rules and closure
   rules stay in written order; no firing is planned while an unknown spreads;
-- under the **default** space wall (500 000 rows) a plan can finish what written
-  order shrugs at (`space_exhausted`): a shrug refines, never contradicts;
+- under any space wall a plan can finish what written order shrugs at
+  (`space_exhausted`): a shrug refines, never contradicts;
 - the estimate is average-based, a skewed key undercounts; with the overrun
   fallback that costs time, not soundness.
 
@@ -217,8 +217,7 @@ Written-order gains: s2 `passes_function` -69% sealed / -62% default (179 -> 55
 ms); s3 `for_of_iterates` -99% (176 -> 1 ms). After delta-first: s2 probes
 7 904 k -> 7 910 k sealed (the head's own up), s3 4-14 ms -> 0-2 ms, 0.1% of rule
 time: **both dropped**, the planner already took the rule from 176 ms to 4-14.
-Run the rewrite only on a world that runs in written order (walls without
-`--delta-first`, aggregates, lattices).
+Run the rewrite only on a world that runs in written order (aggregates, lattices).
 
 ### 3.4 Materialised closure
 
@@ -553,7 +552,7 @@ faults). Where no witness is kept (`sealed(provenance)`, `--no-provenance`, no l
 tag count, assumption or demand) the closure has **no rows**: every premise that reads
 it is answered from the forest by interval containment, the parent chain or one pre-order
 range, and the planner never starts from an unbound closure premise. Rust release,
-`--bytes --budget 4000000000 --space 40000000 --delta-first`, 3 runs, median:
+`--bytes --budget 4000000000 --space 40000000`, 3 runs, median:
 
 | sealed | facts stored | eval ms | RSS MB |
 |---|---|---|---|
@@ -569,10 +568,8 @@ reads at most half of the closure's rows, so the gain would be under half the cl
 and its provenance rows. A retraction in a tree-answered world is a full evaluation;
 the forest is rebuilt whole when the edge relation grows. A closure over edges answered
 on demand stays rows. **A row answered from the tree costs no space and no step**, so a
-world a stored closure would cut at a wall completes sealed; `ds_tree_plan` is the one
-world that relies on it and says so with `check_opt(W, closure_unwalled, 1)`
-(`f_a_join_plan_is_never_observed`, second carve-out; owner question open: charge the
-tree's rows against the wall or keep them free).
+world a stored closure would cut at a wall completes sealed (owner, 2026-10-05: a wall's
+cut moves as the engine improves; the rows of a tree are free).
 
 What serves the readers: 56 premises in 48 rules read `ast_within` or `ast_in`; four
 operations (interval ancestry, parent chain, pre-order range, child list) serve all
@@ -607,8 +604,7 @@ reach(X, Z) :- reach(X, Y), edge(Y, Z).   -- far, color, twins conclude nothing
 **Symptom.** A notebook or a served world asks a handful of relations and pays for the
 whole model: `rule_ms` is spread over rules no asked relation reads.
 
-**Measured** (Rust release, `rofl-eval --bytes --budget 4e9 --space 4e7 --delta-first
---unsettled`, medians of two interleaved runs, load 5-8; the cone of a notebook's own
+**Measured** (Rust release, `rofl-eval --bytes --budget 4e9 --space 4e7 --unsettled`, medians of two interleaved runs, load 5-8; the cone of a notebook's own
 questions, the note `demand-cones.md`, `f_a_notebook_cone_is_a_third_of_the_rules_and_four_fifths_of_the_facts_and_its_answers_need_a_fifth_of_a_percent`):
 
 | corpus | rules run | facts held | eval s default (sealed) | RSS MB default |

@@ -398,12 +398,11 @@ All of it is what the world with the closure STORED says (`ROFL_NO_VCLOSURE=1`),
 byte: whycheck asks every why, why all, whynot and excise and the canonical state of the
 sealed worlds of both, and the goldens hold their states to each other. A snapshot of
 such a world is opened with its closures engaged (`Eval::vclosure_restore`) and the same
-state. **A wall is the one difference, and it is declared.** A row answered from the tree
+state. **A wall is the one difference, and it is not held**: a row answered from the tree
 costs no space and no step, so a world whose wall the stored closure meets is cut with
-the rows and not without (`ds_tree_plan`, which says so with
-`check_opt(W, closure_unwalled, 1)`); a world that meets the wall stored and does not say
-so is red, and one that says so and meets none (f_a_join_plan_is_never_observed, the same
-principle: a hole is a shrug, and completing it refines it; an owner question).
+the rows and not without, and is compared no further (a wall's cut moves as the engine
+improves, f_the_owner_settles_walls_promises_and_incremental; a hole is a shrug, and
+completing it refines it).
 
 **Proof.** `ds_tree_syntax`, `ds_tree_phrase`, `ds_tree_holds` and `ds_tree_sealed` (the
 same files, with and without the seal: the closure answered from the tree, by the kernel
@@ -417,8 +416,7 @@ eight refused forests; `rust/rofl/tests/tree.rs` (forty random forests, the clos
 answered from the tree against the rules, every pattern asked, a retraction against a
 fresh world); 32 planted faults (`scripts/agg_breaks.ts`).
 
-**Measured** (Rust release, `rofl-eval --bytes --budget 4000000000 --space 40000000
---delta-first`, three runs, median; the seeds regenerated for the scanner's 16-hex node
+**Measured** (Rust release, `rofl-eval --bytes --budget 4000000000 --space 40000000`, three runs, median; the seeds regenerated for the scanner's 16-hex node
 ids; before is the engine and the model of 3f37887, after this tree's).
 
 | world | facts stored, before | after | closure rows not stored | eval ms, before | after | RSS MB, before | after |

@@ -33,7 +33,7 @@ unsafe impl GlobalAlloc for Counting {
 static A: Counting = Counting;
 
 const USAGE: &str =
-    "usage: rofl-eval [--bytes] [--derivations] [--no-provenance] [--eager-provenance] [--unsettled] [--budget N] [--space N] [--delta-first] [--ticks N] [--propose-structures [--structures-min-rows N]] [SEED.json]";
+    "usage: rofl-eval [--bytes] [--derivations] [--no-provenance] [--eager-provenance] [--unsettled] [--budget N] [--space N] [--ticks N] [--propose-structures [--structures-min-rows N]] [SEED.json]";
 
 /// WHY THIS REFUSES RATHER THAN IGNORES. The catch-all arm below used to be
 /// `a => path = Some(a)`, so `--ticks 3` set the path to "--ticks", then to
@@ -79,10 +79,6 @@ struct Args {
     /// Print the state as the world holds it, the `derived_by` rows nothing asked for not yet
     /// written: a measurement of the evaluation, NOT the canonical state.
     unsettled: bool,
-    /// `--budget` or `--space` given: firings in written order, unless
-    /// `--delta-first` (`Eval::walls_set`).
-    walls: bool,
-    delta_first: bool,
     /// The detection report (docs/data-structures.md) in place of the state, over relations of at least `min_rows` rows.
     propose: bool,
     min_rows: usize,
@@ -99,8 +95,6 @@ fn parse_args(args: &[String]) -> Result<Args, String> {
         no_provenance: false,
         eager_provenance: false,
         unsettled: false,
-        walls: false,
-        delta_first: false,
         propose: false,
         min_rows: 2,
     };
@@ -120,14 +114,12 @@ fn parse_args(args: &[String]) -> Result<Args, String> {
                 a.budget = v
                     .parse()
                     .map_err(|_| format!("--budget: not an integer: {v}"))?;
-                a.walls = true;
             }
             "--space" => {
                 let v = value(args, &mut i, "--space")?;
                 a.space = v
                     .parse()
                     .map_err(|_| format!("--space: not an integer: {v}"))?;
-                a.walls = true;
             }
             "--ticks" => {
                 let v = value(args, &mut i, "--ticks")?;
@@ -140,7 +132,6 @@ fn parse_args(args: &[String]) -> Result<Args, String> {
             "--no-provenance" => a.no_provenance = true,
             "--eager-provenance" => a.eager_provenance = true,
             "--unsettled" => a.unsettled = true,
-            "--delta-first" => a.delta_first = true,
             "--propose-structures" => a.propose = true,
             "--structures-min-rows" => {
                 let v = value(args, &mut i, "--structures-min-rows")?;
@@ -174,8 +165,6 @@ fn main() {
         no_provenance,
         eager_provenance,
         unsettled,
-        walls,
-        delta_first,
         propose,
         min_rows,
     } = match parse_args(&argv) {
@@ -209,7 +198,6 @@ fn main() {
         l.eval.eager_prov = true;
         l.eval.lazy_prov = false;
     }
-    (l.eval.walls_set, l.eval.delta_first_under_walls) = (walls, delta_first);
     // the harness's spelling of `sealed(provenance)`: no derived_by, no
     // witnesses, and a step is a new fact rather than a firing
     if no_provenance {

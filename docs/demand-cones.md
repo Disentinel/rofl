@@ -75,8 +75,7 @@ Corpora as in `f_half_the_world_is_provenance_and_a_fifth_is_the_ancestor_closur
 cli_exits, util), world assembled from the notebook, plus the cells' rules; the asks are the
 relations of every asking line of the notebook (`never`, `unsure`, `?`, `why`) and the two the host
 asks after the run (`hole`, `unresolved_relative`). util has no cells: it is asked with the union
-of the three notebooks' questions. `rofl-eval --bytes --budget 4e9 --space 4e7 --delta-first
---unsettled` (the evaluation, no `derived_by` row written for what nothing reads), medians of two
+of the three notebooks' questions. `rofl-eval --bytes --budget 4e9 --space 4e7 --unsettled` (the evaluation, no `derived_by` row written for what nothing reads), medians of two
 interleaved runs, load 5-8 on a shared machine.
 
 These numbers were taken before the review of 2026-10-05: an ask for `hole` now keeps every rule, so
