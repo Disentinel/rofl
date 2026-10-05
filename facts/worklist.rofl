@@ -3836,3 +3836,13 @@ work_needs(w_knobs_trim_decided, w_incremental_addition).
 work(w_next_version_cutoff,
   "THE NEXT VERSION'S CUTOFF (the owner, 2026-10-05): a real, widely used JS/TS codebase of ~4,000 source files (reference: microsoft/vscode) and ONE question of the form 'which value reaches each call of a side effect made through an external package' (e.g. listening on a network port): an answer list of 500-800 items, each with an understandable provenance (why), on the Rust engine within a stated time and memory. What it needs together: the asks cone (done), fact-level demand (w_cmp_demand_patterns), volumes resident only where the question's cone reaches, incremental addition (w_incremental_addition) for the next question, declared structures (tree done; function, alias), a Rust scanner only if parsing becomes the wall. First: pick the corpus and question (research under /home/dev/corpora), then measure today's curve on it (full sealed world vs the question's cone at growing file counts) to find the wall.").
 work_state(w_next_version_cutoff, open).
+work_needs(w_next_version_cutoff, w_incremental_addition).
+
+work(w_cutoff_agent_usability,
+  "ACCEPTANCE OF THE NEXT VERSION (the owner, 2026-10-05: the new version must be usable productively by an agent): a fresh agent with no context of the building sessions gets the vscode corpus (subset S, /home/dev/corpora/REPORT.md) and the side-effect question, and only what ships: the docs, the agent table in CLAUDE.md, one entry point (the CLI or the notebook), the question's recipe. It must produce the 500-800 answers with an understandable why per answer by itself. Every stumble (an unclear flag, a refusal text that does not say what to do, an unreadable provenance, a superfluous step, a wall it cannot interpret) becomes a fix before the release. Run it at least twice (after fixes) and record the transcript summary as a finding.").
+work_state(w_cutoff_agent_usability, open).
+work_needs(w_cutoff_agent_usability, w_next_version_cutoff).
+
+-- ECONOMY MODE (the owner, 2026-10-05, the weekly limit near): until the cutoff ships, start only what the cutoff needs
+-- (the in-flight incremental addition, the SCC fix, the vscode curve, then what the curve shows, then w_cutoff_agent_usability).
+-- Deferred until after the release: w_knobs_trim_decided, w_one_binary, w_delta_edb_leftover, w_full_eval_indicator, w_delta_full_reasons.
