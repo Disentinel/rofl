@@ -198,6 +198,15 @@ fingerprint, which is the other side of the crossover: a relation is recomputed
 entirely or not at all, and the meta layer's `reach` is the case where "not at
 all" is nearly always right because it is immune to data. `incremental ≡
 scratch` is therefore no longer trivially true and is held by a test.
+**Amended 2026-10-05:** that position is now the TypeScript host's only. The
+Rust engine propagates deltas both ways (retraction, and since this date
+addition of facts and rules: `LIMITS.md`, `docs/aggregates.md`), DRed level by level
+over the stratified program, every change held byte for
+byte to a fresh evaluation, and a change it is not worked out for evaluated
+again with the reason named. Measured on the corpus seeds (Rust release, one
+file held out and added): 1.2 s against 4.6 s for 37 facts, 4.8 s against 5.9
+s for 6.6% of the corpus (f_an_evaluated_world_takes_facts_and_rules_by_delta):
+the crossover of this invariant is visible already.
 
 **I6 — Nobody spills to disk; the field OOMs instead.** Soufflé, RecStep, DDlog
 and the GPU engines all report out-of-memory rather than degrading. BigDatalog
@@ -433,7 +442,7 @@ restore()`. Commit `3cff6f4` replaced it with a **structural** copy that walks
 the fact map directly (`src/store.ts:779`). A figure taken through the
 serialising path is not a figure about this one.
 
-Re-measured with a bare-store control in the same run (`npm run forkclone`), on
+Re-measured with a bare-store control in the same run (`npm run forkclone`, a script since deleted), on
 an 8-vCPU Apple M4 Pro (Virtual) at load average 8.9, on stores that carry
 derived facts, witnesses and firings:
 
@@ -454,7 +463,7 @@ estimate.
 again. The MEMORY argument is untouched — a structural clone is still a full
 copy in RAM and bytes per fact is still the ceiling — which is where the
 previously settled reading already said it belonged. And a stage split of a real
-fork branch (`npm run forkstages`) says how much a free fork could be worth at
+fork branch (`npm run forkstages`, since deleted) says how much a free fork could be worth at
 all: of an 88 ms branch, `Rofl.fromSnapshot` is 17%, one `store.clone()` is 1%,
 and the fixpoint is 80%. A free fork moves that branch to about 75 ms.
 **Item 3 should be re-ranked below the memory tiers.**

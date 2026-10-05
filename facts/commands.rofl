@@ -87,6 +87,9 @@ command_note("whycheck", "`-- [world ...]`   `why`, `why all`, `whynot`, `excise
 command_shown("structures", 21).
 command_note("structures", "`-- [--min-rows N] <files>`   the detection report: over boot.rofl and the files, read-only, which `function`, `tree ... closure` and `alias` declarations of docs/data-structures.md the data of a world would take, with the rows each saves and the near misses with their facts; `-- --check` runs the proof fixture against its committed report; needs `cargo build --release` in rust/").
 
+command_shown("test:split", 22).
+command_note("test:split", "the surface-split parity gate (docs/surface-split.md): each file of examples/vscode/mini and split alone with the others' [surface] facts must equal the whole world fact for fact, forward and reverse, Rust then TypeScript; run it after touching a rule of rules/js-*.rofl that reads across files, and `scripts/surface_split.ts --break naive` (or `nosurface`) must be red").
+
 -- ====================================================================
 -- THE KNOBS AN AGENT MAY USE. Only the KEEP knobs of docs/knobs.md that a working session needs;
 -- the rest (oracles of the check harness, measurement leftovers, the second spelling of a flag)

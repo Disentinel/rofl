@@ -541,13 +541,16 @@ tree edge(P, C) closure within.
 
 Promise: a forest, per book (`node (c) has two parents in the book main: (a) and
 (b)`, or `node (a) is its own ancestor ...`). Built, by declaration, not by
-recognition (`f_a_tree_is_declared_with_its_closure_and_the_closure_is_answered_from_the_tree_where_no_witness_is_kept`;
-worlds `ds_tree_holds`, `ds_tree_sealed`, `ds_tree_plan` and siblings, 32 planted
-faults). Where no witness is kept (`sealed(provenance)`, no lattice,
-tag count, assumption or demand) the closure has **no rows**: every premise that reads
-it is answered from the forest by interval containment, the parent chain or one pre-order
-range, and the planner never starts from an unbound closure premise. Rust release,
-`--bytes --budget 4000000000 --space 40000000`, 3 runs, median:
+recognition (`f_a_tree_is_declared_with_its_closure_and_the_closure_is_answered_from_the_tree_where_no_witness_is_kept`,
+`f_the_witnessed_world_answers_a_declared_closure_from_its_tree`; worlds `ds_tree_holds`,
+`ds_tree_sealed`, `ds_tree_plan`, `ds_tree_explain_kept` and siblings, with their planted faults).
+Sealed or not, the closure has **no rows** unless the world has a lattice, a counting tag,
+an assumption or well-founded semantics, its edges are answered on demand or concluded from
+it, or (witnesses kept) a rule reads its `derived_by` rows: every premise that reads it is
+answered from the forest by interval containment, the parent chain or one pre-order range,
+and the planner never starts from an unbound closure premise. Where witnesses are kept a
+row's one firing, its height and its `why` are built from the parent chain on demand.
+Rust release, `--bytes --budget 4000000000 --space 40000000`, 3 runs, median:
 
 | sealed | facts stored | eval ms | RSS MB |
 |---|---|---|---|
@@ -556,12 +559,17 @@ range, and the planner never starts from an unbound closure premise. Rust releas
 | cli_exits | 1 484 841 -> 949 150 (-36.1%) | 3 651 -> 2 925 | 576 -> 534 |
 | util | 2 446 459 -> 1 558 330 (-36.3%) | 6 334 -> 5 154 | 984 -> 928 |
 
-**Caveats.** Default mode (witnesses kept) still **stores** the closure (facts equal
-within 7, time within the spread): a witness names facts and a row not stored is no
-fact. Answering it from the tree there is bounded and not built; sealed `rofl-eval`
-reads at most half of the closure's rows, so the gain would be under half the closure
-and its provenance rows. A retraction in a tree-answered world is a full evaluation;
-the forest is rebuilt whole when the edge relation grows. A closure over edges answered
+Default mode (witnesses kept), same flags, seeds regenerated 2026-10-05, before fe3bdfc
+(which stored the closure there): facts stored self 2 341 825 -> 1 828 196 (-21.9%), util
+4 302 742 -> 3 414 609 (-20.6%) with the state printed, which writes the closure's
+`derived_by` rows; the evaluation 15-30% shorter; the canonical state byte for byte the
+stored world's on all four corpora (`docs/data-structures.md`, "Measured where witnesses
+are kept").
+
+**Caveats.** A retraction whose fact reaches the edges through the rules is a full
+evaluation (the reason says so); one that does not is a delta as in any world. An addition
+that reaches the edges keeps what was derived and builds the forest again. The forest is
+rebuilt whole when the edge relation grows. A closure over edges answered
 on demand stays rows. **A row answered from the tree costs no space and no step**, so a
 world a stored closure would cut at a wall completes sealed (owner, 2026-10-05: a wall's
 cut moves as the engine improves; the rows of a tree are free).
@@ -616,8 +624,7 @@ first rows' `why` (8 + 16 + 11 + 35 questions; 200, 199, 290, 300 cone relations
 row for row). One question at a time: a question over a base relation is 1-3 rules (mcp
 `nb__advertises`: 3 rules, 15 209 steps, 0.05 s against 934 997 for the whole world); one
 that reaches a call is 370-458 of 1219-1252 rules (538 491 steps, 3.8 s on mcp): **the
-resolution core is the price of a call.** These two findings and the doc are on the
-demand-cones commit `ffb49e1` and are not in this tree yet.
+resolution core is the price of a call.**
 
 **When the cone is the whole world** (it says so in the engine's diagnostics,
 `asks: ...`; held by the cargo test `asks_cone`, 489 asks over 1679 relations, none
@@ -680,15 +687,20 @@ The first fix measured at +1.5% user CPU on mcp sealed, inside the spread (self 
 s, mcp 6.52 -> 6.83 s wall, `f_a_recursion_through_demand_unfolded_without_end`); the later
 read-the-store-at-every-depth form was proved on worlds and not timed.
 
-**Open: unfolded per call, and a cycle shrugs.** A recursive demand relation with an *open*
+**Open: unfolded per call, to a fixpoint.** A recursive demand relation with an *open*
 answer position (`d(X, _) :- u(X, X). d(Y, Z) :- d(X, Z), e(X, Y).`) is unfolded at each
-call; a call met again inside its own unfolding is not unfolded: its answers past those
-found are unknown, a hole on the rule it was met in with the cause `demand_cycle`
-(`shrug($rule(R), budget, demand_cycle)`), and only the answers that rest on the cut are
-shrugged (world `demand_cycle`, `f_an_open_recursion_through_demand_cut_the_world`). Sound,
-not precise: the shrugs are wide where the cut call is open. A cut cannot tell false from
-not unfolded. Tabling with subsumption would be precise and is a design of its own.
-**Rewrite an open recursive demand relation to bind its answer position, or expect shrugs.**
+call; a call met again inside its own unfolding reads the answers found so far, and the
+first call unfolds again until no pass grows them: the least fixpoint, the answers of the
+non-demand copy (`f_a_cycle_cut_shrugged_what_a_fixpoint_decides`, world
+`demand_cycle_fixpoint`). A call unfolded to its end is tabled by its variant key where its
+rules read no kernel relation or book, and the
+calls of one strongly connected set iterate together (`f_a_cycle_of_open_calls_iterated_call_by_call`:
+ringo400 12.9 s -> 1.3 s, the state byte-identical). The cut stays only where answers that
+may still grow would decide a negation (a call met again under a negation opened inside the
+cycle): a shrug with the reason `cut`, which a program the stratifier accepts does not meet
+and a stratum table supplied to `--strata` can (world `demand_cycle_cut`). An open answer
+still costs an unfolding per call where a closed one reads the store: **bind the answer
+position where you can.**
 
 Other demand facts: the descent is bounded by the wall `MAX_DEPTH = 512` (about 13 KiB a
 level in a debug build, so a test that walks toward the wall needs a 32 MiB thread,
@@ -708,7 +720,8 @@ it is one of a fixed list: the world was not evaluated or was cut by a wall, a l
 well-founded semantics, a hole or a shrug reader, a ledger reader, a data-stratified
 component, a join, widening, counting tag or dominance that the change reaches, a staged
 fact two firings reach, a sealed world beyond the monotone part, or a program whose
-preparation moves (a declaration, a lattice, a closure answered from its tree). The cheap
+preparation moves (a declaration, a lattice, a closure answered from its tree), or a lattice beside a relation answered on
+demand. The cheap
 additions are those whose change stays monotone or reaches negations: what an aggregate
 reads is sealed again at its level, and that costs the aggregate's rule.
 
@@ -753,8 +766,9 @@ Each is an anti-pattern with the finding that found it.
   `w(F) :- derived_by(F, _, _).` loaded beside boot.rofl diverges and the budget does not
   stop it (`f_a_rule_that_reads_provenance_with_a_free_variable_never_terminates`, recorded
   2026-09-06; no later note in the ledger).
-- **Rely on a plan finishing what a wall cuts, or on a tree's free rows**: both are
-  carve-outs, one declared world each (3.0, section 5).
+- **Rely on where a wall cuts.** A wall's cut moves as the engine improves: a plan does
+  more for the same budget, and a row answered from a tree costs no space and no step
+  (3.0, section 5). A world whose meaning is the stop by budget lowers its budget.
 - **Declare a structure because the data happens to satisfy it.** The engine proposes
   coincidences (`spec_imported`, `spec_local`) as readily as copies; only the author
   knows whether every future fact keeps the promise.

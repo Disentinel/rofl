@@ -3440,7 +3440,7 @@ The next engine maintains a world by deltas, and aggregates must not need a
 format change for it. `w_agg_incremental_ready` owns the column and closes it
 in every row; each line says where it stands, and the retraction path is
 built, so that what the format promises is used and held to a fresh
-evaluation. Decisions in `f_a_retraction_updates_the_cells_it_supports`,
+evaluation; so is the addition path ("Incremental addition, as built"). Decisions in `f_a_retraction_updates_the_cells_it_supports`,
 `f_a_lattice_contribution_is_named_by_its_firing`,
 `f_a_retraction_is_a_fresh_evaluation_or_it_is_evaluated_again` and
 `f_a_delta_has_no_promise_over_a_history_the_schedule_wrote`.
@@ -3549,9 +3549,9 @@ holds, without evaluating the world again:
 | at_least | the group asked again over the facts; where it still reaches N the cell is reached and closed as a Quorum is, the first N members by height and projection, and reflected; below N it has no cell | `thr_reach`, `close_thresholds_below` |
 | an order lattice, an idempotent tag | the CONE: the lattice facts whose firings cite the fact, those whose firings cite them, and so on, are taken out with their firings and provenance (a cycle supports itself, so a fact is not kept for a firing inside the cone); the rules into the cone's relations are fired again over what stands, which is how the evaluation concluded them, and the relations close again: a key holds the best value its rules reach and every firing of that value over final facts | `activate`, `close_lattices_below` |
 | a subsumptive relation | the cone by KEY: the front of a key one of whose values rests on the fact, and every key a value was given to from the fact, are taken out whole and derived again, since what each value dominated is decided against every value the key was given | the same, with the state a key keeps of its values (`sub_seen`, `sub_memo`, `sub_by`, `sub_prems`) forgotten with it |
-| what read a cell, or a lattice | the firings that cited the old cell record go, the facts they concluded with their last firing, and the rule is solved with the cell's key bound against the new record; the facts of PLAIN RULES that rested on a replaced cell's conclusion or on the cone, through each other and around a cycle, are taken out whatever else they have, and the rules fired again once the cells are replaced and the lattices closed | `solve_body`, `conclude`, `consumer_facts`, `activate` |
+| what read a cell, or a lattice | the firings that cited the old cell record go, and the facts a changed cell's reader concluded go whole, whatever other firings they hold (round a recursion they would hold each other up), every rule of their relations firing again; the rule is solved with the cell's key bound against the new record; the facts of PLAIN RULES that rested on a replaced cell's conclusion or on the cone, through each other and around a cycle, are taken out whatever else they have, and the rules fired again once the cells are replaced and the lattices closed | `solve_body`, `conclude`, `consumer_facts`, `activate` |
 | a rule that NEGATES or AGGREGATES what changed (a cell's conclusion, the cone, or the retracted fact itself, read outside an aggregate) | a retraction can make a `not` newly true and a count gain a member, which no subtraction does, so the rule is read again WHOLE: every fact of its head relation goes (with whatever rests on them), its cells go with their reflection, and it is fired again with the rules that conclude the same relation, in a full evaluation's order, the plain ones at once and the others level by level (`round_of`), each over what the levels below concluded; the back-index is dropped and rebuilt at the next retraction. The reader's own algebra is not used: a sum over a changed cell could subtract what went, but not add the member a new conclusion makes | `reset_facts`, `reset_cells`, `refire`, `rule_level` |
-| a THRESHOLD that reads what changed (a cell's conclusion, what a plain rule concluded from the fact, another threshold) | it is such a rule, and its quorums are not subtracted from: its facts go, its cells go with the state the evaluation keeps of a threshold (`thr_cells`, `thr_open`, `thr_acc`), and it fires again with the plain rules at once (the full evaluation fires it there), the quorums it reaches closing as the evaluation closes them, before each level and at the end | `reset_cells`, `refire`, `close_thresholds_below` |
+| a THRESHOLD that reads what changed (a cell's conclusion, what a plain rule concluded from the fact, another threshold, or the fact itself as an outer premise) | it is such a rule, and its quorums are not subtracted from: its facts go, its cells go with the state the evaluation keeps of a threshold (`thr_cells`, `thr_open`, `thr_acc`), and it fires again with the plain rules at once (the full evaluation fires it there), the quorums it reaches closing as the evaluation closes them, before each level and at the end | `reset_cells`, `refire`, `close_thresholds_below` |
 | a rule READ AGAIN WHOLE that owns a cell the fact supports (it reads the relation outside its aggregate too), or that concludes what a changed cell's rule concludes | the cell is not subtracted from, for a cell subtracted first is one a fresh evaluation does not hold (the group it counts has no row left to ask); the rule's cells go with the rule's facts and it fires again. A rule that merely shares a head with a changed cell needs nothing more: the facts of the relation go, the cell is replaced and both rules fire again | `retract_delta` (`cells` without the rules read again whole) |
 | a rule that concludes `@next` from what changed (a cell's conclusion, the fact, a negation the retraction makes true) | the staged fact is a row of the next tick and no fact of this one, kept with the premises of the firing that staged it: those whose firing cites a fact or a cell that is gone are taken out, and every rule staging into their relations (or reading what changed) fires again over the world as it now stands, a staged aggregate with its cells sealed again. **A staged fact is kept with its FIRST firing, which is the schedule's**, so a fact two firings reach is answered Full | `restage`, `staged_watch` |
 | a relation ANSWERED ON DEMAND (a rule no premise range-restricts, unfolded at each call) | a fact is made for every call, whether or not the rest of the rule holds, and no firing cites it, so which facts a fresh evaluation holds is the calls its rules still make: every fact of those relations goes (and what rests on them), every rule that reads one fires again, and the calls are made over the world as it stands. This is the least fixpoint of the calls, which is the same in any schedule while no lattice can leave a call made at a value it has since passed. A fact a question made (`why`, `whynot`) is no fact of the evaluation, and goes with the first retraction | `calls_on_demand`, `consumer_rules` (`demand`) |
@@ -3602,7 +3602,7 @@ by evaluating again) and state the rows that must hold after, so both engines'
 hash is the same state. The registry lists retractions in text order, and a
 retraction that is evaluated again evaluates the world whole, so the ones that
 are evaluated again sort first in a world that proves a delta. And
-thirty planted faults (`retract_*`, `retract_stacked_*`, `firing_id_tickless`, `fir_superseded_live`,
+forty planted faults (`retract_*`, `retract_stacked_*`, `firing_id_tickless`, `fir_superseded_live`,
 `tag_flags_off`, `widening_flag_off`, `member_id_position`, `alg_flags_off`,
 `stale_holes_kept`, ...) turn them red.
 
@@ -3673,7 +3673,12 @@ holds, byte for byte, without clearing what it derived
 - **After the rest:** an order lattice the change reaches (derived again whole,
   as the retraction derives its cone), what calls made to a relation answered
   on demand (only where the change reaches the relation or a rule that calls
-  it), and every rule that negates or aggregates those.
+  it), and every rule that negates or aggregates those. A rule staged `@next`
+  from what changed stages again (`restage`), over cells sealed again where it
+  aggregates.
+- **A base fact asserted where it was derived** is an addition: it is base now,
+  with the tick scope and height a load gives it, and what rests on it may lie
+  lower.
 - **Rules.** The rules a program adds are prepared again with the world's; a
   declared tree keeps its forests and the keys its firings cite; the rounds of
   the program are peeled again. An ask grows the cone: the rules it adds fire
@@ -3682,7 +3687,7 @@ holds, byte for byte, without clearing what it derived
 **What is evaluated again, every reason said** (`Addition::Full`, rofl-serve's
 `full`): a world not evaluated, cut by a wall, at a later tick, well-founded,
 holding a hole or reading a shrug (the hole a seal of provenance writes is not
-one); a rule that reads the ledger of cells or provenance; a component
+one); a lattice beside a relation answered on demand; a rule that reads the ledger of cells or provenance; a component
 stratified by its data; a join, a widening, a counting tag or a dominance the
 change reaches; a staged fact that two firings reach; in a world that keeps no
 witness (`sealed(provenance)`), anything beyond the monotone part, for what a
@@ -3696,6 +3701,17 @@ all`, `whynot`, `excise` and a snapshot included; lattice, tree, demand, asks,
 sealed and negation sweeps), `scripts/addcheck.ts` (every world `npm test`
 loads file by file, split in two and the second half added, held to
 `rofl-load`'s fresh state), planted breaks `add_*` in `scripts/agg_breaks.ts`.
+
+**Aggregates, the two ways.** Retraction uses a cell's algebra: an
+invertible cell (count, sum, a counting tag) subtracts the members whose
+derivations all cite the fact, anything else is sealed again with its key
+bound, and a rule that negates or aggregates what changed is read again whole.
+Addition does not use the algebra: a rule that aggregates what grew is sealed
+again whole at its level, whatever its operator, and its readers are kept and
+fed the change; a join, a widening, a counting tag or a dominance the change
+reaches is evaluated again. On the corpus most of what an addition still pays
+is that seal (the flow model's two aggregates, `may_be_node` and `may_be_lit`)
+and the rules no delta plan starts from (`w_add_delta_cost`).
 
 ## Where it lands in the engine
 
@@ -3784,7 +3800,7 @@ f_a_planted_fault_is_a_switch_in_one_build).
   every switch has a site and every site a break, that every edit is found
   once, that `src/kernel-dense.ts` is current, and that every world, run with
   nothing switched on, equals its golden and raises nothing. About 30 s for
-  all of them, most of it one world `lattice_keep_dominated` runs to its
+  all of them, most of it the break `lattice_keep_dominated`, whose world runs to its
   budget. `--legacy` plants each fault in the source and rebuilds, as before;
   29 breaks were run both ways over every agg world and agreed byte for byte.
 - **A new fault** is a `brk!` site plus an entry with no `edits` in

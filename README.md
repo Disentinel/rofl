@@ -116,11 +116,13 @@ points; the whole list is in `package.json`.
 | `boot.rofl` | the semantics as DATA — what a rule is, the rules that validate rules, the audits | loaded by every store |
 | `policy.rofl` `safety.rofl` | **the kernel's own two programs**, carried as data rather than as code — see *The kernel's own programs* | gated by test/kernel-policy-program.test.ts (gate removed 2026-09-11) |
 | `scanners/` | code and cost turned into facts: the JS/TS source scanner, the JS *model*, the Python AST scanner (`py_ast.py`, its model in `rules/py-model.rofl`, grown for the question in `examples/jodit/`), and the self-measuring scanners this repository argues with | `scan` `evalcost` `parsecost` `ruleshape` `perminv` |
-| `rules/` | the inquiry kernel, the decision packs, the JS model's rule packs (`js-*.rofl`), and the rule packs that used to live in `boot.rofl` | `report` `findings` |
+| `rules/` | the inquiry kernel, the decision packs, the JS model's rule packs (`js-*.rofl`: since 1.1 `js-surface.rofl`, the `[surface]` book a file shows the others, docs/surface-split.md, and `js-concat.rofl`, a string built from parts as a node with parts and its text as a term), the aggregates programme (`agg.rofl`), and the rule packs that used to live in `boot.rofl` | `report` `findings` `test:split` |
+| `shrug.rofl` | the closed vocabulary of a shrug, the third answer: every cause and reason an engine may write in `shrug(Target, Reason, Meta)` (docs/aggregates.md) | compiled into `src/kernel-dense.ts` by `build:dense` |
 | `runtime/` | the report renderer, the admission gate, the scheduler, the tick loop, the port client | `report` `pair` |
 | `adapters/` | the storage port: a `FactStore` behind an interface, with a SQLite adapter, gated by a byte-identical `canonicalState()` against the in-memory reference | `boundary` |
-| `rust/` | **the Rust engine** — the port this branch is instrumental to (`docs/the-target.md`), plus its benchmark crates | `cargo test` under `rust/` |
-| `examples/` `facts/` `docs/` | runnable demos, the ledgers and goldens, the design decisions | `test` |
+| `rust/` | **the Rust engine, and the reference for performance** (CLAUDE.md, *Rust is the engine*): `rofl-load`, `rofl-eval`, `rofl-serve`, `rofl-render` under `rust/rofl/src/bin/`; the engine's new parts since 1.0.5 are `engine/` (`delta.rs` plans fired from their news, `addition.rs` facts and rules added to an evaluated world, `prov.rs` provenance written when asked, `vclosure.rs` a declared closure answered from its tree, `labeled.rs`, `datastrat.rs`, `joinplan.rs`), `cell.rs`/`tag.rs`/`shrug.rs` (aggregates), `structure.rs`/`structures.rs`/`forest.rs` (declared structures and their detection report) | `cargo test` under `rust/` |
+| `scripts/` | the harnesses: `goldens.ts` (`test`, `bless`), `whycheck.ts`, `agg_mutants.ts` and `agg_breaks.ts` (`test:agg`, `test:agg:breaks`), `surface_split.ts` (`test:split`), `structures.ts`, `render_docs.ts` (`docs`), `pool.ts` (the `ROFL_JOBS` pool); `vscode_corpus.ts` and `vscode_curve.ts` build the vscode subset and measure the side-effect question over it; `js_lab/` is the rule-rewriting lab of docs/optimising-a-world.md | `test` `whycheck` `structures` |
+| `examples/` `facts/` `docs/` | runnable demos, the ledgers and goldens, the design decisions. New since 1.0.5: `examples/checks/` holds the small proof worlds of the engine (aggregates, demand, asks, trees, addition), `examples/vscode/` the side-effect question over a vscode subset (`side-effects.rofl`, its notebook, `mini/` and `split/` corpora), `examples/surface/` the surface lint, `examples/concat/` path values, `examples/shapes/` the costly-shape finder; `facts/commands.rofl` is the source of CLAUDE.md's commands and knobs, `facts/surface-lint.rofl` and `facts/cost-shapes.rofl` the registers of the surface lint and the costly shapes | `test` |
 | `visual/` | the view vocabularies a notebook draws with (graph, time, table); a cell's `draw K` shows them, `notebook/draw.ts` writes them as mermaid, DOT, Argdown, Markdown, Vega-Lite (docs/renderers.md, examples in `examples/visual/`) | `nb` `playground` |
 
 ### Documents
@@ -162,31 +164,40 @@ a span), `demand-cones.md` (answering a question in the part of the world it
 reaches: the `asks` cone, when it is the whole world, what it saves, what growing it needs),
 `modelling-a-language.md` (the JS model as a research programme), `aggregates.md`
 (every aggregate class as one cell engine with two syntaxes, and the matrix
-that holds the work to it).
+that holds the work to it), `surface-split.md` (a file as a volume
+with a resident `[surface]` book of what escapes it: the crossing measured on
+vscode, the book `rules/js-surface.rofl`, the parity world and the lint that hold
+it, and the driver), `knobs.md` (every flag and `ROFL_*` variable of the tree with
+its verdict: the few an agent uses are CLAUDE.md's table, the rest are oracles of
+a check harness or leftovers).
 
 **The plan** — `roadmap.md` (what the next version commits to, each item naming
+the finding that holds its evidence). `sentence-form.md` closes one question of the plan: the
+Markdown sentence form as a source after 1.1, what the round trip established,
+what the form is now, and what is open. `releases/1.1.md` is what changed since
+1.0.5, what an agent must do differently, the known gaps and what is next.
+
+**The programme** — `formal-reasoning-landscape.md` (ROFL among the formal
+reasoning systems, and why the projection is ROFL-centric by construction).
+The plan itself is the ledger.
+
+**The other entry points** — what a user meets besides the language:
+
 - **Writing a world as Markdown** — `md-world.md` (ROFL 1.05): the sentence form as a source, `X.rofl.md` (executable Markdown; a plain `.md` is a document), how to write one, what the reader reports; `examples/review.rofl.md` is one, and `npm run repl -- examples/review.rofl.md` asks it in its own sentences.
 - **The JS playground** — `playground/`, built by `npm run playground` into `playground/dist`: JavaScript on one side, a notebook over it on the other, the engine, the scanner, the reader and part of the JS model running in the browser. The code may be several files importing each other. A formal cell is written in sentences, as a `.rofl.md` is, and a rofl cell in plain Datalog; `? S` lists, `never S` is an invariant, `unsure S` under it says what it could not see, `why S` explains; a natural cell is translated by Claude when the page runs as an artifact.
 - **The notebook** — `notebook/`: a notebook is a `.rofl.md` world whose fenced ```` ```rofl ```` (sentences), ```` ```datalog ```` (plain ROFL) and ```` ```natural ```` (plain language) blocks are its cells; `model: js`, `code:` and `reads:` in the front matter name the model, the code and the worlds it stands on. `npm run nb -- F.rofl.md [--json] [--cell N] [--all]` runs it and prints the answers with the file:line of each code node (twelve a line in the text, fifty in the JSON, every one with `--all`), exit 0 / 1 (a never fails) / 2 (something not read) / 3 (every never holds, some only as far as the model sees); `npm run nb -- translate F.rofl.md` writes a rofl cell under each natural one with the model `npm run nb -- models` names (VS Code's own language model in the editor; `notebook/model.ts` runs each command-line harness with no tools), only after it read, and saves each as it lands; `npm run nb -- vocab [F.rofl.md] [word]` lists the sentences a cell can use (the JS model's, or that notebook's), those with the word, and a sentence that is not read names the three nearest. The kernel (`notebook/kernel.ts`) does no I/O; the command line is a printer over it. The goldens load every notebook under `examples/<dir>/` as a world, read in its model's words but without the model. `examples/notebook/self.rofl.md` is the notebook's own acceptance, `npm run test:nb` and `npm run test:nb:product` (the kept kernel, the harnesses, what a user meets first) the behavioural half.
 - **The notebook kept alive for the command line** — `notebook/serve.ts`: `npm run nb` keeps its kernel between runs. The first run starts a background process that holds the evaluated code model; later runs send it the notebook over a unix socket and print exactly what an in-process run prints, with the same exit codes. Every run re-reads the notebook, the code files and the read worlds, so an edit is always seen. The daemon exits after 60 idle minutes (`ROFL_NB_IDLE` seconds), a new one starts when the engine's source changes, and a dead or refusing daemon leaves the run to the process itself. Nothing to set up; `ROFL_NB_DAEMON=0` turns it off. Over the Grafema MCP package (40 files) a cell edit is about 9 s through it against about 64 s in a fresh process; `npm run test:nb` pins its answers against a fresh process.
 - **The notebook in VS Code** — `vscode/`: `npm run vscode -- <dir>` opens a window with the extension loaded (VS Code 1.132 or later: it runs the TypeScript unbuilt; the packaged VSIX built by `npm run dist` ships plain JS and needs only 1.101, per `dist/INSTALL.md`); any `.rofl.md` opens as a notebook, prose as Markdown cells, the front matter and the fenced blocks as code cells, and the file is written back byte for byte. Run All goes through the same `runFile` as the command line, in a worker that keeps the model loaded; each code node in an answer links to its line, a failing never is an error in the Problems panel on its line and on the code lines it names, and *Translate natural cells* inserts the translation as an unsaved edit. `npm run test:vscode` (the round trip, the smoke run in the installed VS Code and one planted defect) and `npm run test:vscode:mutants` (three more; `-- --break NAME` runs one by name) are its tests; `cd vscode && npm ci` once for them.
 - **The NPC yard, live** — `playground/npc.html`, built with the playground: `examples/npc` run one tick at a time in the browser, each agent's knowledge, intents, options and chosen act on the page, `why` and `whynot` on any of them at any kept tick, the rule the agents propose from their holes, taken and applied to the past, and the loop the declared tie order walks the yard into, noticed, explained from `tie[audit]` and broken by three rules taken at run time; the night ends at the model's own horizon. The yard's core is `examples/npc/sim.ts`, which `demo.ts` also runs; its sentences are `examples/npc/phrases.rofl`.
-- **The JS model, rendered** — `docs/js/`, sixteen rule files as Markdown with a link on every use, by `npm run render:js` (needs `cargo build --release` in `rust/`); phrases in `facts/js-phrases.rofl`. `npm run view -- docs/js` makes one HTML page of them to open in a browser, with the reader's own Markdown parser (`scripts/md_blocks.ts`). `npm run read` reads a rendered file back into rules (the reading itself is `readMd` in `scripts/read_md.ts`, a function with no file access, which the playground runs in a browser); `npm run untyped` (rules/untyped.rofl.md, a world authored as Markdown with no `.rofl` twin, read into rules by `npm run read`) lists the one-letter variables nothing in their rule types.
+- **The JS model, rendered** — `docs/js/`, the JS model's rule files (eighteen since 1.1: `js-surface` and `js-concat` joined) as Markdown with a link on every use, by `npm run render:js` (needs `cargo build --release` in `rust/`); phrases in `facts/js-phrases.rofl`. `npm run view -- docs/js` makes one HTML page of them to open in a browser, with the reader's own Markdown parser (`scripts/md_blocks.ts`). `npm run read` reads a rendered file back into rules (the reading itself is `readMd` in `scripts/read_md.ts`, a function with no file access, which the playground runs in a browser); `npm run untyped` (rules/untyped.rofl.md, a world authored as Markdown with no `.rofl` twin, read into rules by `npm run read`) lists the one-letter variables nothing in their rule types.
 - **The rings, in their own words** — `docs/rings/`: the kernel's four programs of rules (`boot.rofl`, `safety.rofl`, `policy.rofl`, `rules/strata.rofl`) and the front end written in ROFL (`examples/ring1/ring1.rofl`, `charclass.rofl`) and its host's contract (`examples/ring1/host.rofl`, checked by `npm run conform`) rendered as sentences by `npm run render:rings`, phrases in `facts/kernel-phrases.rofl` and `facts/ring1-phrases.rofl`; each reads back into its source clause for clause. `docs/rings/README.md` says what is there and what is not.
-the finding that holds its evidence). `sentence-form.md` closes one question of the plan: the
-Markdown sentence form as a source after 1.1, what the round trip established,
-what the form is now, and what is open.
-
-**The programme** — `formal-reasoning-landscape.md` (ROFL among the formal
-reasoning systems, and why the projection is ROFL-centric by construction).
-The plan itself is the ledger.
 
 ## How to run
 
 ```sh
-# tests (either runner)
-npm test                      # node --test (Node ≥ 22.6, type stripping)
-npm run test:bun              # bun test
+# the loop: every world, both engines, against facts/goldens.rofl (CLAUDE.md)
+npm test                      # Node ≥ 22.6, type stripping; needs `cargo build --release` in rust/
+npm run test:bun              # the same under bun
 
 # the kernel grep test (also part of the test suite and CI)
 npm run grepcheck
@@ -215,8 +226,12 @@ the rest are run by hand.
 
 | command | what it refuses |
 |---|---|
-| `npm test` | the suite — 1 508 top-level tests over 137 files by the census `npm run speccheck` takes, 19 m 43 s of wall measured 2026-09-09 |
+| `npm test` | a world whose hash or per-relation census moved against `facts/goldens.rofl`, on either engine (it prints how many worlds and how long; `npm run test:engine`, `test:library`, `test:mutants` run the `node --test` suites) |
 | `npm run grepcheck` | a relation name in `src/` outside the kernel vocabulary below |
+| `npm run whycheck` | a `why`, `why all`, `whynot` or `excise` of the Rust binaries that differs by a byte from `src/api.ts`, over every world `npm test` loads |
+| `npm run test:agg:breaks` | a planted fault of the engine (`--features breaks`) that no world turns red |
+| `npm run test:split` | a file of the surface-split corpus that, alone with the others' `[surface]`, differs from the whole world by a fact (both engines, both orders) |
+| `npm run structures -- --check` | a detection report of declared structures that moved against its committed proof fixture |
 | `npm run textcheck` | a byte in the tree that a human or `grep` cannot read |
 | `npm run speccheck` | a duty in `START.md` that nothing in the tree discharges |
 | `npm run measurecheck` | a number quoted without the run that produced it |

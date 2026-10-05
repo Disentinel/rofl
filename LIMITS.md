@@ -17,13 +17,20 @@ the rest are v0 implementation boundaries.
   is no DRed, no counting, and none of the 4–22× memory the field pays for
   those. `excise` is likewise a clean re-evaluation on the subtracted EDB plus
   a diff — sound under multiple support by construction.
-  ONE NARROW EXCEPTION, since 2026-10-02 (docs/aggregates.md, "Ready for
-  the incremental engine, as built"): `Session::retract_delta` updates the
-  aggregate cells a retracted base fact supported, by subtraction or by deriving
-  the cell again, and the facts the cell's rule concluded from them, in a world
-  and for a fact it names as ones it is worked out for; any other is evaluated
-  again as before. It is held equal to a fresh evaluation byte for byte
-  (rust/rofl/tests/incremental.rs); `excise` is unchanged.
+  **Amended 2026-10-05: true of the TypeScript host only.** The Rust engine
+  maintains an evaluated world by delta both ways (docs/aggregates.md, "The
+  retraction path" and "Incremental addition, as built"; the owner's decision
+  `f_the_owner_settles_walls_promises_and_incremental`, point 3).
+  `Session::retract_delta` (rofl-load `--retract`, rofl-serve `retract`) takes
+  a base fact out; `Session::assert_delta` and `Session::load_delta`
+  (rofl-serve's `assert` and `load` on an evaluated session) add facts and
+  rules, DRed level by level over the stratified program. Aggregate cells are
+  subtracted or sealed again, negations withdraw the firings they block, and a
+  world or a change a delta is not worked out for is evaluated again with the
+  reason named. Each path is held equal to a fresh evaluation byte for byte
+  (rust/rofl/tests/incremental.rs, rust/rofl/tests/addition.rs,
+  scripts/addcheck.ts). `excise` is unchanged: a fresh evaluation of a
+  scratch copy plus a diff.
 - **The derived layer is reused per relation, under an exact fingerprint.**
   What an evaluation *skips* is a relation whose dependency cone — the rules
   its conclusions pass through and the asserted facts those rules read — is

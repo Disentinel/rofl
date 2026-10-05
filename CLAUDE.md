@@ -29,6 +29,7 @@ in `docs/`. Everything ever learned here is in `facts/findings.rofl`.
     npm run nb               -- <file.rofl.md> [--json] [--cell N] [--all]   run a notebook (`--all`: every answer, and every why's proof whole instead of the value's steps and the proof with its side conditions counted, docs/md-world.md); runs go to a kept kernel started on first use, so a cell edit costs the cells; `ROFL_NB_DAEMON=0` runs in-process; `-- vocab [word]` lists the sentences a cell can use
     npm run whycheck         `-- [world ...]`   `why`, `why all`, `whynot`, `excise` from rofl-serve and rofl-load against src/api.ts, byte for byte and refusals included, over every world `npm test` loads, aggregate worlds too, pooled over ROFL_JOBS processes; needs `cargo build --release` in rust/
     npm run structures       `-- [--min-rows N] <files>`   the detection report: over boot.rofl and the files, read-only, which `function`, `tree ... closure` and `alias` declarations of docs/data-structures.md the data of a world would take, with the rows each saves and the near misses with their facts; `-- --check` runs the proof fixture against its committed report; needs `cargo build --release` in rust/
+    npm run test:split       the surface-split parity gate (docs/surface-split.md): each file of examples/vscode/mini and split alone with the others' [surface] facts must equal the whole world fact for fact, forward and reverse, Rust then TypeScript; run it after touching a rule of rules/js-*.rofl that reads across files, and `scripts/surface_split.ts --break naive` (or `nosurface`) must be red
 
 <!-- END commands -->
 
@@ -72,6 +73,35 @@ witness under `sealed(provenance)`, the closure kernel, incremental deltas) are 
 mirrored in TS and are not to be attempted there: a world that exercises one is
 checked on Rust only, and TS is not asked to run worlds large enough to be slow
 (f_rust_is_the_engine_ts_is_the_reference).
+
+## The owner's principles that bind an agent
+
+Decided by the owner; each is a finding, read it before arguing with it.
+
+- **Walls may move.** An engine that does more for the same budget is the
+  expected effect of a better planner. Never build machinery to keep a wall's
+  old cut; where a world's meaning is the stop by budget, lower its budget, and
+  where the engines then stop in different places, mark it Rust-only
+  (`check_opt(W, one_engine, rust)`)
+  (f_the_owner_settles_walls_promises_and_incremental, point 1).
+- **A promise refuses when broken.** A declared structure (`function`,
+  `tree ... closure`, `alias`, docs/data-structures.md) holds until the
+  evaluation meets a place that breaks it; then the world is refused, loudly.
+  A refused world means the declaration is false: fix the declaration or the
+  data, never add machinery to judge values the engine cannot know (point 2).
+- **General over subsets.** Build the general mechanism (incremental addition
+  of facts AND rules, not a rules-only subset for one consumer); a special case
+  is a debt the next consumer pays (point 3).
+- **Fewer knobs.** Above. A measurement switch is an oracle of a harness, not
+  an agent's knob.
+- **A question names its cone.** Bulk analysis declares `sealed(provenance)`
+  (the set of facts is the contract); explanation keeps witnesses and writes
+  `derived_by` when something asks. A world that asks `asks(R)` runs only the
+  rules R needs, and a question outside the cone is refused, not answered
+  wrong (docs/demand-cones.md).
+
+What changed for an agent in 1.1, and the known gaps, are in
+docs/releases/1.1.md.
 
 ## Testing has a hard limit
 

@@ -114,6 +114,9 @@ scanned a relation.
   wall, and `assert` only marks the store dirty, so what it adds is first judged
   by the next WHOLE evaluation. A guard would have been a check against a state
   the surface cannot reach; the absence of a verb is the stronger statement.
+  (Since 2026-10-05 `assert_delta` and `load_delta` bring an evaluated world
+  to the next fixpoint by delta instead, `docs/aggregates.md`, "Incremental
+  addition, as built": between evaluations still, never inside one.)
 - **`Answer` carries `scanned` and `probed`, and the gate holds them to
   something.** `scanned` is the candidate superset the store handed back —
   the number that separates 5.5 ms from 12 469 ms — and `probed` says whether an
@@ -180,7 +183,9 @@ the code; the code is held to the syntax.
 
 `open(packs)` above still means `open(seed)`. Parsing a `.rofl` file into
 CLAUSES the engine will run is a different bridge from parsing it into an AST,
-and it is not built.
+and it was not built when this was written. It is now: `Session::load` reads
+`.rofl` text (`rofl_parse.rs`); `rofl-load`, and rofl-serve's `fresh` then
+`load`, take packs as source with no seed.
 
 ## What must be said to anyone handed this
 

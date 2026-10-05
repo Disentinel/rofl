@@ -173,7 +173,12 @@ retract; the readers of it are given the retraction deltas **enumerated from
 the structure before the edge goes**: the pairs (ancestors of P and P) x
 (subtree of C and C). Their own retractions then go the existing way.
 
-**incremental.** An added edge enumerates the same two sets after it lands. A
+As built, a retraction that reaches a tree's edges is a full evaluation instead (see
+"Tree, as built"); this paragraph is the design.
+
+**incremental.** An added edge enumerates the same two sets after it lands. (As built,
+an addition that reaches the edges builds the forest again and keeps what was derived,
+`Session::load_delta`; docs/aggregates.md, "Incremental addition, as built".) A
 fact that breaks a promise is refused at the tick it arrives, naming the
 place, and the previous state stays. The cost to avoid is the first load: all
 edges arrive at once, so the delta of `ast_within` is the whole closure again
@@ -247,8 +252,8 @@ tree) is read by no proposal or near miss.
    a third of a sealed one) and the readers are known (below), so it is the
    one to measure the whole design on. Needs delta-first (the first-load
    problem) and after it the engine's read paths are stable. **Built
-   2026-10-05** where no witness is kept (see "Tree, as built"); where witnesses
-   are kept the closure is rows.
+   2026-10-05**, first where no witness is kept and then, the same day, where
+   witnesses are kept too (see "Tree, as built").
 3. **`alias`.** Mostly storage names and permuted indexes (~9%); independent
    of the tree, but it touches the same read paths, so after it.
 4. **`ordered`, then `sequence`.** A sorted index first (small), then
@@ -276,7 +281,7 @@ relation); a second declaration of one relation.
 Reflection, timeless in the kernel's book beside `lattice_decl`:
 `structure_decl(Rel, Arity, function)` and a `structure_role(Rel, Pos, to)` for
 each marked argument (Pos from 1; a key position has no row). `structure_closure`
-is not built (no `closure` yet).
+came with the tree (below).
 
 **The check** (`checkFunctions`, `check_functions`): after every evaluation, at
 every tick (every evaluation is one) and after a retraction by `retract_delta`,
@@ -372,7 +377,8 @@ negation concludes, a level above the rule's first firing; `vclosure_reader_stal
 broken forest never loops and is never read: the first parent stands, a node no root
 reaches has no place, and the world is refused after the evaluation by the promise.
 Where the closure's edges are concluded from it, or it is answered on demand, or the
-world has a lattice or an assumption, or (witnesses kept) a rule reads the closure's
+world has a lattice, an assumption, a counting tag or well-founded semantics, or
+(witnesses kept) a rule reads the closure's
 `derived_by` rows, which it would need while the world evaluates (`ds_tree_prov_read`), the closure is rows:
 the closure kernel (`fire_closure`) walks each book (the kernel reads the lowered rules'
 variable book); `vclosure_reason` says which.
@@ -465,8 +471,9 @@ Sealed, the facts the closure took are gone to the row (before less after is the
 less the reflection of the two rules, four rows), and the evaluation is a fifth shorter
 (the closure is not walked into rows, and what reads it asks the tree). The resident set
 falls less (6-9%) since it holds the seed's snapshot, which is loaded before anything
-is evaluated. Not sealed, the closure is rows as it was: the spread of three runs
-(about 5%) covers the difference. The canonical state of util, sealed, before and after,
+is evaluated. Not sealed, the closure was still rows at that commit: the spread of three
+runs (about 5%) covers the difference (the witnessed world answers it from the tree since;
+measured below). The canonical state of util, sealed, before and after,
 is the same in every relation of the model, `ast_within` by hash; what differs is the
 reflection of the two lowered rules and the structure rows (17 relations, none of them
 facts of the world). Over one seed the sealed state (the closure from the tree) equals the state with the kernel's rows relation by relation and row by row on all four corpora (the provenance's relations aside; only `shrug`, a row the seal writes, differs). A reader asks the tree for 48% of the closure's rows (matches, not

@@ -67,10 +67,41 @@ by the widening):
   the threshold and the idempotent tags do; the counting, invertible and
   holistic kinds do not.
 
-`npm run lint` still counts at the query boundary (rules project, the counting
-semiring is folded over the recorded support). That is one of the host-side
-workarounds the kinds replace, owned by `w_agg_retire_workarounds` and gone with
-it (f_atoms_have_no_order_so_rules_cannot_count_past_three).
+`npm run lint` used to count at the query boundary (rules projected, the
+counting semiring folded over the recorded support). That was one of the
+host-side workarounds the kinds replace; `w_agg_retire_workarounds` retired it,
+and the lint counts in its rules now (`count` in `examples/linter/linter.rofl`)
+(f_atoms_have_no_order_so_rules_cannot_count_past_three).
+
+### Also built for 1.1
+
+Not commitments of this page when it was written; built since, each with its
+finding, and listed so that this page does not read as the whole release
+(`w_release_1_1` in `facts/worklist.rofl` is the release's own list):
+
+- **Incremental addition**: facts and rules enter an evaluated Rust world by
+  delta, beside the retraction deltas, each held byte for byte to a fresh
+  evaluation (f_an_evaluated_world_takes_facts_and_rules_by_delta;
+  `docs/aggregates.md`, "Incremental addition, as built").
+- **The readable why**: a why of a value says first the steps the value took,
+  one line each, above a proof whose side conditions are counted; `npm run nb
+  -- --all` prints every answer and every proof whole
+  (f_every_why_line_of_a_notebook_failed; `docs/md-world.md`).
+- **The `[surface]` book**: `rules/js-surface.rofl`, the cross-file rules
+  rewritten to read another file only through it, the gate world
+  `vscode_surface_split` (`npm run test:split`) and the surface lint
+  (f_the_surface_book_mirrors_what_escapes_and_every_file_alone_equals_the_whole_world,
+  f_the_surface_lint_is_a_foreign_capable_column_read_by_a_local_premise;
+  `docs/surface-split.md`). The driver that cools volumes is not built yet.
+- **Path values**: a string built from parts is a node with parts, its text a
+  term (`rules/js-concat.rofl`;
+  f_a_string_built_from_parts_is_a_node_with_parts_and_its_text_is_a_term).
+- **The owner's decisions on walls and promises**
+  (f_the_owner_settles_walls_promises_and_incremental): a wall's cut may move
+  as the engine improves, so `--delta-first`, the written-order re-solve and
+  the `closure_unwalled` opt-in are removed (join plans are always on); a
+  declared structure's promise holds until the evaluation meets a place that
+  breaks it, and then the world is refused.
 
 ### The sentence form
 

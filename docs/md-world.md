@@ -170,12 +170,14 @@ not the one above it begins `across files:`. A step through a [surface]
 relation (`sx_*`) is written as the hop it stands for. Under the steps is the
 proof, with node ids written as the code and its place, and the premises that
 hold because nothing says otherwise (`not ... (nothing says so)`) counted on
-one line per step, `+ N side conditions hold`. `--all` prints every proof
-whole, line for line as before, without the steps; `--json` has the three:
+one line per step, `+ N side conditions hold`, and a last line says
+`(the whole proof: --all)`. `--all` prints every answer of a line (by default
+the first 12) and every proof whole, line for line as before, without the
+steps; `--json` has the three:
 `chain`, `brief` and `why` (playground/chain.ts reads the engine's text, so
 both engines give one chain). A `why` of no value prints its proof whole.
 
-    examples/vscode/side-effects.rofl.md:51: why side_effect_value(nd100d8f9c1968a85_25, fs_mutation, "/tmp/settings.json")
+    examples/vscode/side-effects.rofl.md:52: why side_effect_value(nd100d8f9c1968a85_25, fs_mutation, "/tmp/settings.json")
       the value's steps, from where it is written:
         mini/node/main.ts:14  "/tmp/settings.json"  the literal
         mini/node/main.ts:14  writeAtomic()         argument 0 of function writeAtomic() at mini/node/pfs.ts:4

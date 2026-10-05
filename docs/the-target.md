@@ -61,8 +61,8 @@ Four to five times denser and about twice as fast at every size measured.
 **The 128 column is UNJUDGED and says so.** `canonicalState` returns one string
 and V8 caps a string near 512 MB, so above roughly 3M facts the reference throws
 `RangeError: Invalid string length` and no heap flag moves it. The seed was
-built with `scanners/js_seed.ts --no-oracle`, which writes
-`128.unjudged.seed.json` and skips the round-trip, because a round-trip whose
+built with `scanners/js_seed.ts --no-oracle` (the script since deleted, c6f0f0f), which wrote
+`128.unjudged.seed.json` and skipped the round-trip, because a round-trip whose
 comparison cannot be computed is not a check. The port's fact count is
 5 677 298 against the reference's 5 676 864 — the same constant 434 that holds
 at every judged size — so the two agree as far as anything here can still see,

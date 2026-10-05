@@ -7,6 +7,10 @@ that joins two files reads only `[surface]`; the question's answers come from su
 measures how wide it is, builds it by hand on a 14-file corpus, and says what it costs. Numbers: the finding
 `f_the_surface_split_is_a_book_of_about_sixty_rules_and_the_wall_is_ingest_order_not_memory`.
 
+Status: sections 1-4 are the scouting as it was written (its relation names, such as `sx_export_fn`, are the
+prototype's). Of the work in section 5, items 1-3 are built (section 6); item 4, the driver, is being finished
+and is not in the tree yet; items 5 and 6 are open.
+
 ## What was run
 
 - **Census**, vscode subset S, 500 files, the witnessed cone (15.8 M facts held, 4.5 GB state text). The 1000-file
@@ -142,17 +146,18 @@ The wall moves from memory to ingest scheduling.
 
 ## 5. Work (each about one workflow unless noted)
 
-1. **Rules.** Rewrite about 45 rules in js-dataflow (:464-467, :473-474, :723-731, :765, :768, :784-791, :803-806,
+1. **Rules.** DONE (section 6: 49 rules rewritten, the book is `rules/js-surface.rofl`). Rewrite about 45 rules in js-dataflow (:464-467, :473-474, :723-731, :765, :768, :784-791, :803-806,
    :819, :841), js-callgraph (:295-341), js-controlflow (:189, :377-386, :412-446), js-effects (12), js-ambient (:260)
    and the question's wrapper; the new rules file `js-surface` (about 60 rules with the escape tables, `calls`, `eff_*`).
-2. **Parity gate.** A world `vscode_surface_split` over the 14-file corpus: every file alone + core + others' surface
+2. **Parity gate.** DONE (section 6: world `vscode_surface_split`, `npm run test:split`). A world `vscode_surface_split` over the 14-file corpus: every file alone + core + others' surface
    equals the whole world, 0 missing and 0 invented (the volume_locality gate with a surface), plus the naive cut as the
    planted defect that must go red. The harness of this note is its seed.
-3. **Lint** `scanners/rule_shape.ts`: a rule that reads a foreign-capable relation (the table above, derived from the
+3. **Lint.** DONE, as rules over the rule reflection rather than in `scanners/rule_shape.ts` (section 6). A rule that
+   reads a foreign-capable relation (the table above, derived from the
    crossing census, not listed by hand) in one premise and a file-local one (`fn_node`, `ast_child`, `param_of`,
-   `returns`) on its foreign column is refused unless its other side is `[surface]`; a negation over `[surface]`
-   marks the head volatile.
-4. **Driver, Rust.** Cool by (volume, book) in rofl-serve and the ingest loop (the surface survives, `[code]`/`[flow]`
+   `returns`) on its foreign column is an alarm unless its other side is `[surface]` or it is excused; a negation over
+   `[surface]` marks the head volatile.
+4. **Driver, Rust.** NOT BUILT YET: being finished in its own branch. Cool by (volume, book) in rofl-serve and the ingest loop (the surface survives, `[code]`/`[flow]`
    go); the ingest as a surface fixpoint with dirty tracking by KEY (volume subscribes to the surface facts keyed on
    the files and functions it names); a volume lift for a `why` that expands a `[surface]` axiom by the origin prefix.
    Unknown, needs a measurement first: `fork()` of a world holding 1 M surface facts.
@@ -160,7 +165,7 @@ The wall moves from memory to ingest scheduling.
 6. **Precision**, separately: `param i -> return` and `param i -> argument j of a call` summaries beyond the direct
    form (the parameter as a symbolic value), which also cuts the why of an answer to one helper volume.
 
-## 6. Built: the book and the gate (items 1 and 2)
+## 6. Built: the book, the gate and the lint (items 1-3)
 
 `rules/js-surface.rofl` is the `[surface]` book; the finding is
 `f_the_surface_book_mirrors_what_escapes_and_every_file_alone_equals_the_whole_world`.
@@ -180,4 +185,13 @@ The wall moves from memory to ingest scheduling.
   `scripts/surface_split.ts` (`npm run test:split`) evaluates each of the 14 files alone with the others' surface to
   a fixpoint, forward and reverse, and every fact of every file equals the whole world's: 420 surface facts, 93
   evaluations. The planted break (the model before the book, no surface) loses 84 of 184 answers and invents 16.
-- **The lint** reads a mirrored relation as the channel; it is green with 8 excuses, each with its reason.
+- **The lint** (item 3; `f_the_surface_lint_is_a_foreign_capable_column_read_by_a_local_premise`) is rules over the
+  rule reflection, `examples/surface/surface.rofl`, seeded by `xl_seed(Rel, Col)` and excused by `xl_ok` in
+  `facts/surface-lint.rofl`. Foreign-capability is a column, propagated through the rules' own heads from the seeds;
+  `xl_finding` is a file-local premise read at a foreign key, `xl_alarm` one with no excuse, `xl_ok_stale` an excuse
+  with no finding; `volatile_direct` and `volatile_head` are the heads a driver must not cool before the surface is
+  quiescent (in the model one head, the js-effects rule over `not sx_eff_module`). It reads a mirrored relation as the channel; over the
+  model (world `surface_model`, Rust only) it is green with 8 excuses, each with its reason; world `surface` is the
+  planted fixture (both engines).
+- **Not built:** item 4, the driver (cooling by volume and book, the ingest as a surface fixpoint subscribed by key,
+  a volume lifted for a `why`). `npm run test:split` evaluates each volume in a fork, not through a driver.

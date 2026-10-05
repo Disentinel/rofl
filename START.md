@@ -153,9 +153,12 @@ Incremental maintenance (DRed/counting beyond support counters), @async effects 
 > subsumption under declared orders, and the answer model's shrug). Optimization
 > passes exist (`facts/deviations.rofl`, `r_optimizations_exist`) and so does
 > syntax sugar (`docs/sentence-form.md`; the sentence phrases of the aggregates).
-> Incremental maintenance, the `@async` executor, multi-fact abduction and
-> persistence beyond store serialization were each retired by their own
-> `LIMITS.md` line. Still out: GPU anything.
+> The `@async` executor, multi-fact abduction and persistence beyond store
+> serialization were each retired by their own `LIMITS.md` line. **Incremental
+> maintenance is built** in the Rust engine (amended 2026-10-05): facts and
+> rules added to an evaluated world and base facts retracted from it by delta,
+> each held to a fresh evaluation (`LIMITS.md`, `docs/aggregates.md`); the
+> TypeScript host still evaluates again. Still out: GPU anything.
 
 ---
 
