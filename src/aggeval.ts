@@ -925,13 +925,19 @@ export class AggEval {
     key: string; neg: number; answers: [Term[], PremRef][]; keys: Set<string>; read: boolean; from: number; linear: boolean;
     /** the lowest call below it whose answers it read (none: its own place), and the faults, trail, unknowns asked and store it was made over */
     low: number; marks: number[];
+    /** the rows its open answers hold, given back when it ends, or when the table that keeps them goes */
+    rows: number;
   }[] = [];
   /** The `demandCyclic` relations whose calls are tabled once complete: no rule they unfold reads a kernel relation or book (`demandTabledRels`). */
   private demandTabled = new Set<string>();
   /** THE COMPLETE CALLS, by variant key, read by a call each covers while the store stands as `demandDoneAt` says: indexed lazily by each
    *  position a covered call binds, an answer open there beside every value. */
-  private demandDone = new Map<string, { answers: [Term[], PremRef][]; by: Map<number, { exact: Map<string, number[]>; open: number[] }> }>();
+  private demandDone = new Map<string, { answers: [Term[], PremRef][]; by: Map<number, { exact: Map<string, number[]>; open: number[] }>; rows: number }>();
   private demandDoneAt: [number, number] = [0, 0];
+  /** The rows the tables hold. */
+  private demandDoneRows = 0;
+  /** The tables dropped, and the rows they held given back (rust/rofl `drop_done`). */
+  private dropDone(): void { this.rows -= this.demandDoneRows; this.demandDoneRows = 0; this.demandDone.clear(); }
   /** The facts a question's unfolding made, taken out when it is answered. */
   private askedMade: string[] = [];
   /** How many negations are being decided: a call met again under one more than when it was first made cannot read answers that may still grow. */
@@ -1177,7 +1183,7 @@ export class AggEval {
     this.demandCyclic = this.demandCyclicRels();
     this.demandLinear = this.demandLinearRels();
     this.demandTabled = this.demandTabledRels();
-    this.demandDone.clear();
+    this.dropDone();
     // a closed relation is read from the store: its readers fire on its news like any relation's
     for (const r of kept) r.hasDemandPrem = r.posRels.some((x) => demandNames.includes(x) && !this.demandClosed.has(x));
   }
@@ -1682,6 +1688,8 @@ export class AggEval {
     this.steps = 0;
     this.rows = 0;
     this.peakRows = 0;
+    this.demandDone.clear();
+    this.demandDoneRows = 0;
     this.carryWall = [this.budget, this.space];
     this.carrySteps = 0; this.carryRows = 0; this.carryBroken = false;
     let partial = false;
@@ -6580,7 +6588,7 @@ export class AggEval {
    *  open there. */
   private doneAnswers(l: Lit, s: Subst): [Term[], PremRef][] | null {
     if (this.demandDone.size === 0) return null;
-    if (this.demandDoneAt[0] !== this.store.version || this.demandDoneAt[1] !== this.store.tick) { this.demandDone.clear(); return null; }
+    if (this.demandDoneAt[0] !== this.store.version || this.demandDoneAt[1] !== this.store.tick) { this.dropDone(); return null; }
     const p = walk(l.persp, s);
     const args = l.args.map((a) => resolve(a, s));
     const ground = args.map((_, i) => i).filter((i) => isGround(args[i]));
@@ -6700,7 +6708,7 @@ export class AggEval {
       if (call !== null) {
         const c = {
           key: call, neg: this.negLevel, answers: [] as [Term[], PremRef][], keys: new Set<string>(), read: false, from: 0, linear: this.demandLinear.has(l.rel),
-          low: this.demandCalls.length, marks: this.unknownMarks(),
+          low: this.demandCalls.length, marks: this.unknownMarks(), rows: 0,
         };
         for (const [, r] of only === null ? out : this.storeAnswers(l, s, null)) {
           const f = this.store.get((r as { key: string }).key)!;
@@ -6709,6 +6717,7 @@ export class AggEval {
         }
         this.demandCalls.push(c);
       }
+      let kept = false;
       try {
         for (let pass = 1; ; pass++) {
           let grew = false;
@@ -6726,7 +6735,7 @@ export class AggEval {
                   // kept under canonical variables: a name renamed at each read never grows
                   c.keys.add(tk); c.answers.push([canonVars(l.args.map((a) => resolve(a, ms))), mref]); grew = true;
                   // an open answer kept is a row: no stored fact counts it
-                  if (mref.t !== 'fact') this.chargeRow(dr.id, true);
+                  if (mref.t !== 'fact') { c.rows++; this.chargeRow(dr.id, true); }
                 }
               }
               if ((fresh || pass === 1) && !seen.has(dk)) { seen.add(dk); keys.push(dk); out.push([ms, mref]); }
@@ -6742,11 +6751,19 @@ export class AggEval {
         if (c !== null && tabled && c.low >= this.demandCalls.length - 1) {
           const now = this.unknownMarks();
           if (c.marks.every((m, i) => m === now[i])) {
-            if (this.demandDoneAt[0] !== this.store.version || this.demandDoneAt[1] !== this.store.tick) { this.demandDone.clear(); this.demandDoneAt = [this.store.version, this.store.tick]; }
-            this.demandDone.set(c.key, { answers: c.answers, by: new Map() });
+            if (this.demandDoneAt[0] !== this.store.version || this.demandDoneAt[1] !== this.store.tick) { this.dropDone(); this.demandDoneAt = [this.store.version, this.store.tick]; }
+            // the table keeps its open answers, and holds their rows while it stands
+            this.demandDoneRows += c.rows;
+            const old = this.demandDone.get(c.key);
+            if (old !== undefined) { this.rows -= old.rows; this.demandDoneRows -= old.rows; }
+            this.demandDone.set(c.key, { answers: c.answers, by: new Map(), rows: c.rows });
+            kept = true;
           }
         }
-      } finally { if (call !== null) this.demandCalls.pop(); }
+      } finally {
+        // AN ENDED CALL'S OPEN ANSWERS ARE DROPPED, and the rows they held with them
+        if (call !== null) { const c = this.demandCalls.pop()!; if (!kept) this.rows -= c.rows; }
+      }
     }
     // the answers in key order, which is the one a canonical witness is picked in: a store that holds them so is not sorted again
     let ordered = true;
@@ -7057,6 +7074,8 @@ export class AggEval {
     this.refixUnknowns();
     this.forgetCells();
     this.rows = 0;
+    this.demandDone.clear();
+    this.demandDoneRows = 0;
     this.active = [];
     this.staged.clear();
     this.stagedAlts.clear();

@@ -375,7 +375,11 @@ check_opt("demand_fixpoint_steps", budget, 400).
 check_world("demand_fixpoint_space").
 check_file("demand_fixpoint_space", "examples/checks/demand-fixpoint-space.rofl").
 check_opt("demand_fixpoint_space", together, 1).
-check_opt("demand_fixpoint_space", space, 205).
+check_opt("demand_fixpoint_space", space, 202).
+check_world("demand_fixpoint_rows").
+check_file("demand_fixpoint_rows", "examples/checks/demand-fixpoint-rows.rofl").
+check_opt("demand_fixpoint_rows", together, 1).
+check_opt("demand_fixpoint_rows", space, 4000).
 
 -- a call unfolded to its end is tabled, and a call it covers reads it while the store stands, if it read no
 -- growing call below it and met no unknown (f_a_cycle_fixpoint_ran_away_unbounded_and_recomputed_every_pass)

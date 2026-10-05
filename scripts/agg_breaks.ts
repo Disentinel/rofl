@@ -4194,6 +4194,49 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "demand_rows_kept",
+  "what": "a call that ends keeps counting the rows of the open answers it dropped against the space wall",
+  "expect": {
+   "demand_fixpoint_rows": "the state lacks the row dk_r[main](n39,n1)",
+   "demand_fixpoint": "the space wall fell on rows no call held any more"
+  }
+ },
+ {
+  "id": "ts_demand_rows_kept",
+  "what": "the TypeScript engine keeps counting the rows of the open answers an ended call dropped",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "if (call !== null) { const c = this.demandCalls.pop()!; if (!kept) this.rows -= c.rows; }",
+    "if (call !== null) this.demandCalls.pop();"
+   ]
+  ],
+  "expect": {
+   "demand_fixpoint_rows": "the state lacks the row dk_r[main](n39,n1)"
+  }
+ },
+ {
+  "id": "demand_table_rows_kept",
+  "what": "the tables dropped keep counting the rows of their open answers",
+  "expect": {
+   "demand_fixpoint_space": "the state lacks the row shrug[$kernel]($adhoc,budget,spent(rows,204,202))"
+  }
+ },
+ {
+  "id": "ts_demand_table_rows_kept",
+  "what": "the TypeScript engine's dropped tables keep counting the rows of their open answers",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "private dropDone(): void { this.rows -= this.demandDoneRows; this.demandDoneRows = 0;",
+    "private dropDone(): void { this.demandDoneRows = 0;"
+   ]
+  ],
+  "expect": {
+   "demand_fixpoint_space": "the state lacks the row shrug[$kernel]($adhoc,budget,spent(rows,204,202))"
+  }
+ },
+ {
   "id": "demand_naive_passes",
   "what": "every pass of a linear recursion reads every answer so far",
   "expect": {
@@ -4250,8 +4293,8 @@ export const BREAKS: Break[] = [
   "edits": [
    [
     "src/aggeval.ts",
-    "if (mref.t !== 'fact') this.chargeRow(dr.id, true);",
-    "if (false) this.chargeRow(dr.id, true);"
+    "if (mref.t !== 'fact') { c.rows++; this.chargeRow(dr.id, true); }",
+    "if (false) { c.rows++; this.chargeRow(dr.id, true); }"
    ]
   ],
   "expect": {

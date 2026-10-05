@@ -120,3 +120,21 @@ fn a_complete_call_is_unfolded_once_across_passes() {
     assert_eq!(s.ask("t_r(X)").unwrap().rows.len(), n + 1);
     assert!(ev.steps <= 40 * n as i64, "{} steps: a complete call was unfolded again in every pass of the call around it", ev.steps);
 }
+
+/// THE ROWS AN OPEN ANSWER HOLDS ARE GIVEN BACK when its call ends or its table goes
+/// (f_the_space_wall_counted_open_answers_already_dropped): a ring of 200 read from one node under
+/// 100 000 rows walled with no answer, where the stored copy keeps 80 000 rows and finishes.
+#[test]
+fn a_ring_of_open_answers_holds_only_what_it_keeps() {
+    let n = 200usize;
+    let mut src = String::from("edb(t_e). edb(t_dom).\nt_dom(n0). t_dom(n1).\n");
+    for i in 0..n {
+        src.push_str(&format!("t_e(n{i}, n{}).\n", (i + 1) % n));
+    }
+    src.push_str("t_p(X, Y, W) :- t_e(X, Y).\nt_p(X, Z, W) :- t_e(X, Y), t_p(Y, Z, W).\nt_r(Y, W) :- t_p(n0, Y, W), t_dom(W).\n");
+    let mut s = session(200_000_000, &src);
+    s.eval.space = 100_000;
+    let (ev, _) = run(&mut s);
+    assert!(!ev.partial, "the space wall fell on rows no call held any more");
+    assert_eq!(s.ask("t_r(Y, W)").unwrap().rows.len(), 2 * n);
+}

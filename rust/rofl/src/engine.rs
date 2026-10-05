@@ -72,6 +72,9 @@ struct DemandCall {
     /// Every record of an unknown, and the store, as they stood when it was
     /// made (`unknown_marks`): a call that left them as they were is complete.
     marks: Vec<u64>,
+    /// The rows its open answers hold, given back when it ends, or when the
+    /// table that keeps them goes.
+    rows: i64,
 }
 
 /// THE ANSWERS OF A CALL UNFOLDED TO ITS END, read by a call it covers while
@@ -81,6 +84,7 @@ struct DemandCall {
 struct DoneTable {
     answers: Vec<(Vec<Term>, PremRef)>,
     by: HashMap<usize, (HashMap<Term, Vec<usize>>, Vec<usize>)>,
+    rows: i64,
 }
 
 pub struct ERule {
@@ -996,6 +1000,8 @@ pub struct Eval {
     /// The complete calls, by variant key, and the store they stand for.
     demand_done: HashMap<String, DoneTable>,
     demand_done_at: (u64, u32),
+    /// The rows the tables hold (`DemandCall::rows`).
+    demand_done_rows: i64,
     /// The calls of `demand_cyclic` relations being unfolded, each with its
     /// answers so far: a call met again reads them, and the first one unfolds
     /// again until they stop growing (`DemandCall`).
@@ -1410,6 +1416,7 @@ impl Eval {
             demand_tabled: HashSet::new(),
             demand_done: HashMap::new(),
             demand_done_at: (0, 0),
+            demand_done_rows: 0,
             demand_calls: Vec::new(),
             neg_level: 0,
             asked_made: Vec::new(),
@@ -1926,7 +1933,7 @@ impl Eval {
         self.demand_cyclic = self.demand_cyclic_rels();
         self.demand_linear = self.demand_linear_rels();
         self.demand_tabled = self.demand_tabled_rels();
-        self.demand_done.clear();
+        self.drop_done();
     }
 
     /// The demand relations not closed that reach themselves through calls to
@@ -2672,6 +2679,8 @@ impl Eval {
         self.steps = 0;
         self.rows = 0;
         self.peak_rows = 0;
+        self.demand_done.clear();
+        self.demand_done_rows = 0;
         self.carry_wall = (self.budget, self.space);
         (self.carry_steps, self.carry_rows, self.carry_broken) = (0, 0, false);
         let mut partial = false;
@@ -10657,7 +10666,7 @@ impl Eval {
             return None;
         }
         if self.demand_done_at != (self.store.version, self.store.tick) && brk!("demand_done_stale" => false; true) {
-            self.demand_done.clear();
+            self.drop_done();
             return None;
         }
         let p = walk(&self.h, l.persp, s);
@@ -10726,6 +10735,18 @@ impl Eval {
             return Some(out);
         }
         None
+    }
+
+    /// The tables dropped, and the rows they held given back.
+    fn drop_done(&mut self) {
+        let held = std::mem::take(&mut self.demand_done_rows);
+        self.give_rows(brk!("demand_table_rows_kept" => 0; held));
+        self.demand_done.clear();
+    }
+
+    /// Rows given back by what held them, a table's or an ended call's.
+    fn give_rows(&mut self, n: i64) {
+        self.rows -= n;
     }
 
     /// Every record an unknown leaves (a fault, the trail, an unknown asked, the
@@ -10889,7 +10910,7 @@ impl Eval {
                 let linear = self.demand_linear.contains(&l.rel) && brk!("demand_naive_passes" => false; true);
                 let low = self.demand_calls.len();
                 let marks = self.unknown_marks();
-                let mut c = DemandCall { key, neg: self.neg_level, answers: Vec::new(), keys: HashSet::new(), read: false, from: 0, linear, low, marks };
+                let mut c = DemandCall { key, neg: self.neg_level, answers: Vec::new(), keys: HashSet::new(), read: false, from: 0, linear, low, marks, rows: 0 };
                 let stored = if only.is_some() { self.store_answers(l, s, None) } else { out.clone() };
                 for (_, r) in stored.iter() {
                     if let PremRef::Fact(f) = r {
@@ -10926,6 +10947,7 @@ impl Eval {
                                     grew = true;
                                     // an open answer kept is a row: no stored fact counts it
                                     if !matches!(mref, PremRef::Fact(_)) && brk!("demand_open_answer_free" => false; true) {
+                                        self.demand_calls.last_mut().unwrap().rows += 1;
                                         self.charge_row(Some(dr.id), true)?;
                                     }
                                 }
@@ -10953,10 +10975,18 @@ impl Eval {
                 let quiet = c.marks == now;
                 if unfolded.is_ok() && tabled && c.low >= self.demand_calls.len() && quiet {
                     if self.demand_done_at != (self.store.version, self.store.tick) {
-                        self.demand_done.clear();
+                        self.drop_done();
                         self.demand_done_at = (self.store.version, self.store.tick);
                     }
-                    self.demand_done.insert(c.key, DoneTable { answers: c.answers, by: HashMap::new() });
+                    // the table keeps its open answers, and holds their rows while it stands
+                    self.demand_done_rows += c.rows;
+                    if let Some(old) = self.demand_done.insert(c.key, DoneTable { answers: c.answers, by: HashMap::new(), rows: c.rows }) {
+                        self.demand_done_rows -= old.rows;
+                        self.give_rows(old.rows);
+                    }
+                } else {
+                    // AN ENDED CALL'S OPEN ANSWERS ARE DROPPED, and the rows they held with them
+                    self.give_rows(brk!("demand_rows_kept" => 0; c.rows));
                 }
             }
             unfolded?;
@@ -11521,6 +11551,8 @@ impl Eval {
         self.refix_unknowns();
         self.forget_cells();
         self.rows = 0;
+        self.demand_done.clear();
+        self.demand_done_rows = 0;
         self.active.clear();
         self.staged.clear();
         self.staged_alts.clear();

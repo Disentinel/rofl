@@ -41,6 +41,7 @@ check[checks]("rust/rofl/tests/demand_fixpoint.rs", "an_unbounded_nonlinear_fixp
 check[checks]("rust/rofl/tests/demand_fixpoint.rs", "a_chain_iterated_once_is_linear", test).
 check[checks]("rust/rofl/tests/demand_fixpoint.rs", "a_chain_read_from_every_node_is_bounded", test).
 check[checks]("rust/rofl/tests/demand_fixpoint.rs", "a_complete_call_is_unfolded_once_across_passes", test).
+check[checks]("rust/rofl/tests/demand_fixpoint.rs", "a_ring_of_open_answers_holds_only_what_it_keeps", test).
 check[checks]("rust/rofl/tests/demand_query.rs", "an_ask_unfolds_a_relation_answered_on_demand", test).
 check[checks]("rust/rofl/tests/demand_query.rs", "a_why_asks_as_whynot_does_and_neither_leaves_a_fact", test).
 check[checks]("rust/rofl/tests/demand_query.rs", "a_question_spends_its_own_budget", test).
@@ -676,6 +677,7 @@ check[checks]("facts/goldens.rofl", "demand_cycle_cut", world).
 check[checks]("facts/goldens.rofl", "demand_cycle_fixpoint", world).
 check[checks]("facts/goldens.rofl", "demand_done", world).
 check[checks]("facts/goldens.rofl", "demand_fixpoint_nonlinear", world).
+check[checks]("facts/goldens.rofl", "demand_fixpoint_rows", world).
 check[checks]("facts/goldens.rofl", "demand_fixpoint_space", world).
 check[checks]("facts/goldens.rofl", "demand_fixpoint_steps", world).
 check[checks]("facts/goldens.rofl", "demand_neg_decided", world).
