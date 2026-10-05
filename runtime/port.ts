@@ -110,8 +110,10 @@ export class RoflSession {
       .then((r) => r.admitted as number);
   }
 
-  /** Base facts, written as ROFL. Returns how many were NEW. What they add is
-   *  first judged by the next WHOLE evaluation, never mid-round. */
+  /** Base facts, written as ROFL. Returns how many were NEW. Into an evaluated
+   *  world they are added by delta (the engine's `full` says when the world is
+   *  evaluated again instead); otherwise the next WHOLE evaluation judges them,
+   *  never mid-round. `load` adds facts and rules the same way. */
   assert(rofl: string): Promise<number> {
     return this.port.send({ op: 'assert', session: this.id, rofl }).then((r) => r.added as number);
   }

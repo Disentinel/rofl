@@ -238,26 +238,25 @@ impl Session {
             return Ok((n, Addition::Full("the world is not evaluated".into())));
         }
         let mark = self.eval.prep_mark();
-        let promoted0 = self.eval.store.promotions;
         let (n, asked, ids) = self.put_facts(&facts);
-        let promoted = self.eval.store.promotions != promoted0;
-        if n == 0 && !promoted {
+        if n == 0 {
             return Ok((0, Addition::Delta(crate::engine::AddDelta::default())));
         }
-        let mut rules = Vec::new();
+        let (mut rules, mut called) = (Vec::new(), Vec::new());
         if asked {
             if !self.eval.reprepare_keeping_trees() {
                 self.eval.store.dirty = true;
                 return Ok((n, Addition::Full(TREES_MOVED.into())));
             }
-            let (added, moves) = self.eval.prep_moves(&mark);
+            let (added, was_called, moves) = self.eval.prep_moves(&mark);
             if !moves.is_empty() {
                 self.eval.store.dirty = true;
                 return Ok((n, Addition::Full(moves.join("; "))));
             }
             rules = added;
+            called = was_called;
         }
-        Ok((n, self.added(&ids, &rules, promoted)))
+        Ok((n, self.added(&ids, &rules, &called)))
     }
 
     /// `load`, bringing an evaluated world to the state a fresh evaluation of the whole program would hold: the
@@ -269,7 +268,6 @@ impl Session {
             return Ok((n, Addition::Full("the world is not evaluated".into())));
         }
         let mark = self.eval.prep_mark();
-        let promoted0 = self.eval.store.promotions;
         self.eval.store.arrivals = Some(Vec::new());
         let r = crate::program::load_program(&mut self.eval, src, who);
         let mut ids = self.eval.store.arrivals.take().unwrap_or_default();
@@ -282,20 +280,19 @@ impl Session {
             return Ok((r.admitted, Addition::Full(TREES_MOVED.into())));
         }
         ids.retain(|i| self.eval.store.alive(*i));
-        let promoted = self.eval.store.promotions != promoted0;
-        let (rules, moves) = self.eval.prep_moves(&mark);
+        let (rules, called, moves) = self.eval.prep_moves(&mark);
         if !moves.is_empty() {
             self.eval.store.dirty = true;
             return Ok((r.admitted, Addition::Full(moves.join("; "))));
         }
-        if ids.is_empty() && rules.is_empty() && !promoted {
+        if ids.is_empty() && rules.is_empty() {
             return Ok((r.admitted, Addition::Delta(crate::engine::AddDelta::default())));
         }
-        Ok((r.admitted, self.added(&ids, &rules, promoted)))
+        Ok((r.admitted, self.added(&ids, &rules, &called)))
     }
 
-    fn added(&mut self, ids: &[FactId], rules: &[Sym], promoted: bool) -> Addition {
-        match self.eval.add_delta(ids, rules, promoted) {
+    fn added(&mut self, ids: &[FactId], rules: &[Sym], called: &[Sym]) -> Addition {
+        match self.eval.add_delta(ids, rules, called) {
             Ok(d) => {
                 if self.eval.check_promises().is_err() {
                     self.eval.store.dirty = true;

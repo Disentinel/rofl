@@ -755,8 +755,6 @@ pub struct Store {
     pub unordered: bool,
     pub tick: u32,
     pub dirty: bool,
-    /// Derived facts a base one was put over: such a fact keeps the derived record's scope (`Session::load_delta`).
-    pub promotions: u64,
     /// Where set, every fact `put` makes new (or brings back) is noted (`Session::load_delta`).
     pub arrivals: Option<Vec<FactId>>,
     pub partial_eval: bool,
@@ -1228,9 +1226,11 @@ impl Store {
     pub fn put(&mut self, h: &Heap, rel: Sym, persp: Sym, args: &[Term], flags: u8) -> (FactId, bool) {
         let id = match self.find_rec(rel, persp, args) {
             Some(id) if self.alive(id) => {
-                if flags & F_BASE != 0 && !self.facts.rec(id).base() {
-                    self.promotions += 1;
-                    self.facts.add_flags(id, F_BASE);
+                // a base fact put over a derived one is the fact a load would have made, scoped as it is: a
+                // derived fact's tick scope is the derivation's
+                let old = self.facts.rec(id).flags();
+                if flags & F_BASE != 0 && old & F_BASE == 0 {
+                    self.facts.set_flags(id, brk!("promoted_tick_scope_kept" => old | F_BASE; (old & !F_TICK) | flags));
                 }
                 return (id, false);
             }

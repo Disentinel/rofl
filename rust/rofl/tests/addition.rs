@@ -89,9 +89,11 @@ fn program(r: &mut Rng) -> Vec<String> {
 }
 
 fn fact(r: &mut Rng) -> String {
-    match r.below(5) {
+    match r.below(6) {
         0 | 1 => format!("e({}, {})", r.pick(&ATOMS), r.pick(&ATOMS)),
         2 => format!("n({})", r.pick(&ATOMS)),
+        // a base fact of a relation rules conclude too
+        3 if r.below(3) == 0 => format!("p{}({}, {})", 1 + r.below(3), r.pick(&ATOMS), r.pick(&ATOMS)),
         _ => format!("w({}, {})", r.pick(&ATOMS), 1 + r.below(5)),
     }
 }
@@ -330,6 +332,8 @@ fn differential(seed: u64, head: &str, rules: Vec<String>, gen: fn(&mut Rng) -> 
                 std::fs::write(format!("{dir}/delta.state"), &got).unwrap();
                 std::fs::write(format!("{dir}/fresh.state"), &want).unwrap();
                 std::fs::write(format!("{dir}/ops.log"), log.join("\n")).unwrap();
+                let world: String = ops.iter().map(|o| match o { Op::Load(t) => format!("-- load\n{t}\n"), Op::Assert(t) => format!("-- assert\n{t}\n"), Op::Retract(q) => format!("-- retract {q}\n") }).collect();
+                std::fs::write(format!("{dir}/ops.rofl"), world).unwrap();
             }
             let (g, w): (Vec<&str>, Vec<&str>) = (got.lines().collect(), want.lines().collect());
             let at = g.iter().zip(w.iter()).position(|(a, b)| a != b).unwrap_or(g.len().min(w.len()));
@@ -349,6 +353,16 @@ fn differential(seed: u64, head: &str, rules: Vec<String>, gen: fn(&mut Rng) -> 
             Err(e) => panic!("seed {seed} step {step}: the explanations differ after {:?}\n  {e}", log.iter().rev().take(4).collect::<Vec<_>>()),
         }
         was = now;
+    }
+    // a snapshot of the world the additions made opens as that world
+    // (what is staged for the next tick is the evaluation's, not the store's: a snapshot carries the store)
+    let want = s.eval.canonical_state();
+    let mut back = Session::open(&s.save(), BUDGET).unwrap_or_else(|e| panic!("seed {seed}: the snapshot does not open: {e}"));
+    let got = back.eval.canonical_state();
+    if got != want {
+        let (g, w): (Vec<&str>, Vec<&str>) = (got.lines().collect(), want.lines().collect());
+        let at = g.iter().zip(w.iter()).position(|(a, b)| a != b).unwrap_or(g.len().min(w.len()));
+        panic!("seed {seed}: the snapshot of the world the additions made opens as another, line {at}\n  opened: {}\n  world:  {}", g.get(at).unwrap_or(&"<end>"), w.get(at).unwrap_or(&"<end>"));
     }
     st
 }
@@ -437,6 +451,26 @@ fn a_declared_tree_is_a_fresh_evaluation_after_every_addition() {
     assert!(all.additions > 50, "{all:?}");
 }
 
+/// The closure is answered from the forest before and after an edge and a reader are added by delta: the forest is
+/// built again from the edges, the derived facts stay.
+#[test]
+fn an_edge_and_a_reader_added_to_a_declared_tree_keep_the_closure_answered_from_the_forest() {
+    let head = "tree t_in(P, C) closure t_within.\nedb(t_pick).\nt_in(n1, n2). t_in(n2, n4). t_in(n1, n3). t_pick(n1). t_pick(n2).\nt_bf(A, D) :- t_pick(A), t_within(A, D).\nt_neg(A) :- t_pick(A), not t_within(n1, A).\n";
+    let mut s = Session::fresh(BUDGET);
+    s.load(&boot(), None).unwrap();
+    s.load(head, None).unwrap();
+    s.evaluate().unwrap();
+    assert!(s.eval.vclosure_info().iter().all(|(_, on)| *on), "{:?}", s.eval.vclosure_info());
+    let mut ops = vec![Op::Load(head.into())];
+    for (op, text) in [("assert", "t_in(n4, n5)."), ("load", "t_cnt(A, N) :- t_pick(A), N is count(D : t_within(A, D))."), ("assert", "t_in(n0, n1). t_pick(n0).")] {
+        let a = if op == "assert" { s.assert_delta(text).unwrap().1 } else { s.load_delta(text, None).unwrap().1 };
+        assert!(matches!(a, Addition::Delta(_)), "{text}: {a:?}");
+        assert!(s.eval.vclosure_info().iter().all(|(_, on)| *on), "{text}: {:?}", s.eval.vclosure_info());
+        ops.push(if op == "assert" { Op::Assert(text.into()) } else { Op::Load(text.into()) });
+        assert_eq!(state(&mut s), state(&mut replay(&ops).unwrap()), "{text}");
+    }
+}
+
 fn fact_demand(r: &mut Rng) -> String {
     match r.below(3) {
         0 => format!("dq_e({}, {})", r.below(6), r.below(6)),
@@ -491,5 +525,135 @@ fn an_ask_added_grows_the_cone_over_the_retained_store() {
         assert!(matches!(a, Addition::Delta(_)), "{a:?}");
         let mut f = replay(&[ops[0].clone(), ops[1].clone(), Op::Assert("e(d, e).".into())]).unwrap();
         assert_eq!(state(&mut s), state(&mut f), "e(d, e) after asks({then})");
+    }
+}
+
+/// The volume of a scanned fact: the first node id it names, `n<hash of the file>_<counter>`, up to the underscore.
+fn volume_of(line: &str) -> Option<&str> {
+    let i = line.find("(n")? + 1;
+    let rest = &line[i..];
+    let end = rest.find('_')?;
+    let id = &rest[..end];
+    (id.len() > 8 && id[1..].bytes().all(|b| b.is_ascii_hexdigit())).then_some(id)
+}
+
+fn timed<T>(f: impl FnOnce() -> T) -> (T, f64) {
+    let t = std::time::Instant::now();
+    let r = f();
+    (r, t.elapsed().as_secs_f64())
+}
+
+/// THE CORPORA, on the release build: `ADD_CORPUS=<dir>/<name>` names `<name>.model.rofl` (boot and the model's rules)
+/// and `<name>.facts.rofl` (the scanned code). Each file chosen (`ADD_FILES`, indexes into the files in the order
+/// they are scanned, default the first) is held out: the world of the rest is evaluated, the file's facts are
+/// asserted by delta, and the state is compared with a fresh evaluation of the whole, each timed. `ADD_CELL=<file.rofl.md>`
+/// adds the rules of the notebook's `datalog` cells to the evaluated world instead.
+#[test]
+#[ignore]
+fn corpus_additions_are_a_fresh_evaluation() {
+    let Ok(base) = std::env::var("ADD_CORPUS") else { return };
+    let model = std::fs::read_to_string(format!("{base}.model.rofl")).unwrap();
+    let facts = std::fs::read_to_string(format!("{base}.facts.rofl")).unwrap();
+    let mut order: Vec<&str> = Vec::new();
+    let mut by: BTreeMap<&str, String> = BTreeMap::new();
+    let mut loose = String::new();
+    // a fact whose string holds a line break spans lines
+    let mut stmts: Vec<String> = Vec::new();
+    let mut cur = String::new();
+    let (mut quoted, mut escaped) = (false, false);
+    for l in facts.lines() {
+        cur.push_str(l);
+        for c in l.chars() {
+            match (escaped, c) {
+                (true, _) => escaped = false,
+                (false, '\\') => escaped = true,
+                (false, '"') => quoted = !quoted,
+                _ => {}
+            }
+        }
+        if !quoted && l.ends_with('.') {
+            stmts.push(std::mem::take(&mut cur));
+        } else {
+            cur.push('\n');
+        }
+    }
+    for l in stmts.iter().map(|s| s.as_str()) {
+        match volume_of(l) {
+            Some(v) => {
+                if !by.contains_key(v) {
+                    order.push(v);
+                }
+                let t = by.entry(v).or_default();
+                t.push_str(l);
+                t.push('\n');
+            }
+            None => {
+                loose.push_str(l);
+                loose.push('\n');
+            }
+        }
+    }
+    let world = |text: &[&str]| -> (Session, f64) {
+        timed(|| {
+            let mut s = Session::fresh(4_000_000_000);
+            s.eval.space = 40_000_000;
+            s.load(&model, None).expect("the model loads");
+            for t in text {
+                if let Err(e) = s.assert(t) {
+                    let n: usize = e.split(':').next().and_then(|x| x.trim_start_matches("line ").parse().ok()).unwrap_or(1);
+                    panic!("the facts assert: {e}\n{}", t.lines().skip(n.saturating_sub(3)).take(5).collect::<Vec<_>>().join("\n"));
+                }
+            }
+            s.evaluate().expect("evaluates");
+            s
+        })
+    };
+    if let Ok(cell) = std::env::var("ADD_CELL") {
+        let md = std::fs::read_to_string(&cell).unwrap();
+        let mut rules = String::new();
+        let mut inside = false;
+        for l in md.lines() {
+            if l.starts_with("```") {
+                inside = l == "```datalog";
+                continue;
+            }
+            if inside && l.contains(":-") {
+                rules.push_str(l);
+                rules.push('\n');
+            }
+        }
+        let (mut s, t_world) = world(&[&facts]);
+        let ((_, a), t_delta) = timed(|| { let a = s.load_delta(&rules, None).unwrap(); s.eval.ensure().unwrap(); a });
+        let (mut f, t_fresh) = timed(|| {
+            let mut f = Session::fresh(4_000_000_000);
+            f.eval.space = 40_000_000;
+            f.load(&model, None).unwrap();
+            f.assert(&facts).unwrap();
+            f.load(&rules, None).unwrap();
+            f.evaluate().unwrap();
+            f
+        });
+        let same = s.eval.canonical_state() == f.eval.canonical_state();
+        eprintln!("cell {cell}: {} rules; world {t_world:.2}s, delta {t_delta:.2}s, fresh {t_fresh:.2}s, x{:.1}; same={same}; {a:?}", rules.lines().count(), t_fresh / t_delta.max(1e-6));
+        assert!(same);
+        return;
+    }
+    let picks: Vec<usize> = std::env::var("ADD_FILES").map(|v| v.split(',').map(|x| x.parse().unwrap()).collect()).unwrap_or_else(|_| vec![0]);
+    for i in picks {
+        let held = order[i % order.len()];
+        let rest: String = order.iter().filter(|v| **v != held).map(|v| by[v].as_str()).collect::<String>() + &loose;
+        let file = &by[held];
+        let (mut s, t_world) = world(&[&rest]);
+        let ((_, a), t_delta) = timed(|| { let a = s.assert_delta(file).unwrap(); s.eval.ensure().unwrap(); a });
+        let (mut f, t_fresh) = world(&[&rest, file]);
+        let same = s.eval.canonical_state() == f.eval.canonical_state();
+        eprintln!(
+            "file {held} ({} facts of {}): world of the rest {t_world:.2}s, delta {t_delta:.2}s, fresh {t_fresh:.2}s, x{:.1}; {} facts; same={same}; {a:?}",
+            file.lines().count(),
+            facts.lines().count(),
+            t_fresh / t_delta.max(1e-6),
+            s.eval.store.fact_count()
+        );
+        assert!(same);
     }
 }

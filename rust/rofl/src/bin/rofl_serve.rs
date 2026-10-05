@@ -33,7 +33,9 @@
 //!     `open` and `fresh` also take the walls a snapshot does not carry:
 //!     `space` (rows), `retainTicks` and `mode` ("rounds" or "strata")
 //!   {"op":"fork","session":1}                -> {"ok":true,"session":2}
-//!   {"op":"assert","session":2,"rofl":"p(a)."}
+//!   {"op":"assert","session":2,"rofl":"p(a)."}     -> {"added":n,"full":null|"why"}: into an evaluated
+//!                                                        world by delta (Session::assert_delta), else evaluated again
+//!   {"op":"load","session":2,"path":"pack.rofl"}      -> {"admitted":n,"full":null|"why"}: the same for facts and rules
 //!   {"op":"evaluate","session":2}
 //!   {"op":"ask","session":2,"query":"p(X)"}
 //!   {"op":"why","session":2,"query":"p(a)"}            -> {"text":...}
@@ -53,6 +55,15 @@ use std::collections::HashMap;
 use std::io::{BufRead, Write};
 
 const DEFAULT_BUDGET: i64 = 200_000_000;
+
+/// An addition worked out as a delta answers `full: null`; one evaluated again (or left to the next evaluation of a
+/// world not yet evaluated) says why.
+fn full(a: rofl::session::Addition) -> Option<String> {
+    match a {
+        rofl::session::Addition::Delta(_) => None,
+        rofl::session::Addition::Full(why) => Some(why),
+    }
+}
 
 struct Server {
     sessions: HashMap<u64, Session>,
@@ -133,8 +144,8 @@ impl Server {
                     (None, None) => return Err("load needs `path` or `rofl`".into()),
                 };
                 let who = r.get("who").and_then(|v| v.as_str()).map(|s| s.to_string());
-                match self.get(r)?.load(&text, who.as_deref()) {
-                    Ok(n) => Ok(json!({ "admitted": n })),
+                match self.get(r)?.load_delta(&text, who.as_deref()) {
+                    Ok((n, a)) => Ok(json!({ "admitted": n, "full": full(a) })),
                     Err(d) => Err(d.join("\n")),
                 }
             }
@@ -184,8 +195,8 @@ impl Server {
             }
             "assert" => {
                 let text = r.get("rofl").and_then(|v| v.as_str()).ok_or("assert needs `rofl`")?.to_string();
-                let n = self.get(r)?.assert(&text)?;
-                Ok(json!({ "added": n }))
+                let (n, a) = self.get(r)?.assert_delta(&text)?;
+                Ok(json!({ "added": n, "full": full(a) }))
             }
             // A wall is a FACT, not an error (measurement 4): `partial` comes
             // back true with a `hole` in the store naming the unfinished part,

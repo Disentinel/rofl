@@ -61,7 +61,7 @@ pub struct AddDelta {
 
 /// What preparation decided that an added rule may move (`prep_mark`, `prep_moves`).
 pub struct PrepMark {
-    rules: HashMap<Sym, String>,
+    rules: HashMap<Sym, (String, bool)>,
     lattices: Vec<Sym>,
     subs: Vec<Sym>,
     demand: Vec<Sym>,
@@ -100,7 +100,7 @@ impl Eval {
     /// What preparation decided, beside the rules, that an added rule could move.
     pub fn prep_mark(&self) -> PrepMark {
         PrepMark {
-            rules: self.rules.iter().map(|r| (r.id, r.canon.clone())).collect(),
+            rules: self.rules.iter().map(|r| (r.id, (r.canon.clone(), r.safe))).collect(),
             lattices: sorted(self.lattices.keys().copied().collect()),
             subs: sorted(self.subs.keys().copied().collect()),
             demand: sorted(self.demand_rels.iter().map(|(r, _)| *r).collect()),
@@ -112,12 +112,13 @@ impl Eval {
         }
     }
 
-    /// WHAT A NEW PROGRAM MOVES BEYOND THE RULES IT ADDS: every reason the addition is not worked out as a delta, and
-    /// the rules that are new (an old rule changed or gone is a reason).
-    pub fn prep_moves(&self, was: &PrepMark) -> (Vec<Sym>, Vec<&'static str>) {
+    /// WHAT A NEW PROGRAM MOVES BEYOND THE RULES IT ADDS: the rules to fire whole (those added, and those now
+    /// answered on demand or no longer), the relations whose facts a call made (answered on demand before or now),
+    /// and every reason the addition is not worked out as a delta (an old rule changed or gone is one).
+    pub fn prep_moves(&self, was: &PrepMark) -> (Vec<Sym>, Vec<Sym>, Vec<&'static str>) {
         let now = self.prep_mark();
         let mut out = Vec::new();
-        if was.rules.iter().any(|(id, canon)| now.rules.get(id) != Some(canon)) {
+        if was.rules.iter().any(|(id, (canon, _))| now.rules.get(id).map(|x| &x.0) != Some(canon)) {
             out.push("a rule of the world changed or left it");
         }
         if was.decl != now.decl {
@@ -126,18 +127,21 @@ impl Eval {
         if was.lattices != now.lattices || was.subs != now.subs || was.carried != now.carried {
             out.push("a lattice, tag or dominance declaration changed");
         }
-        if was.demand != now.demand {
-            out.push("the relations answered on demand changed");
-        }
         if was.late != now.late || was.shrugs != now.shrugs {
             out.push("the rules fired late or after the shrugs changed");
         }
         if was.cone.is_some() != now.cone.is_some() {
             out.push("the world started or stopped running a cone of asks");
         }
-        let mut added: Vec<Sym> = self.rules.iter().filter(|r| !was.rules.contains_key(&r.id)).map(|r| r.id).collect();
+        let demand_moved: HashSet<Sym> = was.demand.iter().chain(&now.demand).copied().filter(|r| was.demand.contains(r) != now.demand.contains(r)).collect();
+        let fresh = |r: &ERule| match was.rules.get(&r.id) {
+            None => true,
+            Some((_, safe)) => *safe != r.safe || brk!("add_demand_moved_kept" => false; demand_moved.contains(&r.clause.head.rel)),
+        };
+        let mut added: Vec<Sym> = self.rules.iter().filter(|r| fresh(r)).map(|r| r.id).collect();
         added.sort_by(|a, b| cmp_js(self.h.name(*a), self.h.name(*b)));
-        (added, out)
+        let called = if demand_moved.is_empty() { Vec::new() } else { sorted(was.demand.iter().chain(&now.demand).copied().collect()) };
+        (added, called, out)
     }
 
     /// THE ROUNDS AGAIN, for a program with added rules: the levels the added rules fire at, and the relations whose
@@ -160,7 +164,7 @@ impl Eval {
     }
 
     /// WHY AN ADDITION IS NOT WORKED OUT for this world: every reason that holds, in a fixed order (empty where it is).
-    fn addition_refusals(&self, grown: &HashSet<Sym>, promoted: bool) -> Vec<&'static str> {
+    fn addition_refusals(&self) -> Vec<&'static str> {
         let mut out = Vec::new();
         if self.well_founded {
             out.push("the world is evaluated well-founded");
@@ -177,14 +181,10 @@ impl Eval {
         if !self.shrug_readers.is_empty() || self.store.rel_count(self.v.hole) > 0 {
             out.push("the world holds a hole or reads a shrug");
         }
-        if promoted {
-            out.push("a fact asserted was derived before");
-        }
         if !self.demand_rels.is_empty() && !self.lattices.is_empty() {
             out.push("a world with a lattice holds a relation answered on demand");
         }
         let ledgers = [
-            self.v.asserted_by,
             self.v.agg_cell,
             self.v.agg_member,
             self.v.agg_member_prem,
@@ -207,19 +207,18 @@ impl Eval {
     }
 
     /// Add to an evaluated world the base facts `added` (already in the store) and the rules `new_rules` (already
-    /// prepared), and bring it to the state a fresh evaluation would hold. `promoted`: a fact asserted was derived
-    /// before. `Err(reason)` leaves the store dirty or untouched; the caller evaluates again.
-    pub fn add_delta(&mut self, added: &[FactId], new_rules: &[Sym], promoted: bool) -> Result<AddDelta, String> {
+    /// prepared), and bring it to the state a fresh evaluation would hold. `Err(reason)` leaves the store dirty or untouched; the caller evaluates again.
+    pub fn add_delta(&mut self, added: &[FactId], new_rules: &[Sym], called: &[Sym]) -> Result<AddDelta, String> {
         let mut from: HashSet<Sym> = added.iter().map(|f| self.store.rec(*f).rel).collect();
         let fresh: HashSet<Sym> = new_rules.iter().copied().collect();
         from.extend(self.rules.iter().filter(|r| fresh.contains(&r.id) && r.clause.head.temporal != Temporal::Next).map(|r| r.clause.head.rel));
         let grown = self.grow(&from, &fresh);
-        let why = self.addition_refusals(&grown, promoted);
+        let why = self.addition_refusals();
         if !why.is_empty() {
             return Err(why.join("; "));
         }
         let moved = if new_rules.is_empty() { HashSet::new() } else { self.rerank()? };
-        self.add_worked_out(added, &fresh, &grown, &moved).map_err(String::from)
+        self.add_worked_out(added, &fresh, &grown, &moved, called).map_err(String::from)
     }
 
     /// The relations that may grow: those added to, and the heads of every rule that reads one, through each other.
@@ -238,11 +237,13 @@ impl Eval {
         }
     }
 
-    fn add_worked_out(&mut self, added: &[FactId], fresh: &HashSet<Sym>, grown: &HashSet<Sym>, moved: &HashSet<Sym>) -> Result<AddDelta, &'static str> {
+    fn add_worked_out(&mut self, added: &[FactId], fresh: &HashSet<Sym>, grown: &HashSet<Sym>, moved: &HashSet<Sym>, called: &[Sym]) -> Result<AddDelta, &'static str> {
         let stratified = |r: &ERule| r.has_neg || r.has_agg || r.has_thr || !r.lattice_outer.is_empty() || r.demand_strict;
         // A RELATION ANSWERED ON DEMAND makes a fact for every call, which no firing cites: every such fact goes and
         // every rule that reads one fires again, so the calls are made again over what stands (as a retraction does)
         let demanded: HashSet<Sym> = self.demand_rels.iter().map(|(r, _)| *r).collect();
+        // a relation answered on demand before and not now (or the reverse) holds what calls made: it goes too
+        let call_rels: HashSet<Sym> = called.iter().copied().chain(demanded.iter().copied()).collect();
         let called = |r: &ERule| !r.safe && demanded.contains(&r.clause.head.rel);
         // AN ORDER LATTICE THE CHANGE REACHES is derived again whole, as the retraction path derives its cone again:
         // an improved value withdraws what read the old one, and the history of a schedule is no delta's
@@ -295,35 +296,39 @@ impl Eval {
         // WHAT A RESET MAY WITHDRAW, and what rests on it, through each other
         let mut dirty: HashSet<Sym> = self.rules.iter().filter(|r| reset.contains(&r.id)).map(|r| r.clause.head.rel).collect();
         if brk!("add_demand_kept" => false; true) {
-            dirty.extend(demanded.iter().copied());
+            dirty.extend(call_rels.iter().copied());
         }
+        // a closure is walked whole from its base rule and its step fires nothing: a closure the change reaches is
+        // walked again, after what it reads, and so is what reads it
         loop {
+            loop {
+                let n = dirty.len();
+                for r in &self.rules {
+                    if r.clause.head.temporal != Temporal::Next && reads(r, &dirty).0 {
+                        dirty.insert(r.clause.head.rel);
+                    }
+                }
+                if dirty.len() == n {
+                    break;
+                }
+            }
             let n = dirty.len();
-            for r in &self.rules {
-                if r.clause.head.temporal != Temporal::Next && reads(r, &dirty).0 {
-                    dirty.insert(r.clause.head.rel);
+            for c in &self.closures {
+                let hit = |id: Sym| reset.contains(&id) || mono.iter().chain(&new_plain).any(|r| r.id == id);
+                if brk!("add_closure_unpaired" => false; hit(c.base) || hit(c.step)) {
+                    dirty.insert(c.rel);
                 }
             }
             if dirty.len() == n {
                 break;
             }
         }
-        // a closure is walked whole from its base rule, its step fires nothing: the two fire again together
-        let mut paired: HashSet<Sym> = HashSet::new();
-        for c in &self.closures {
-            let hit = |id: Sym| reset.contains(&id) || dirty.contains(&c.rel) || mono.iter().chain(&new_plain).any(|r| r.id == id);
-            if hit(c.base) || hit(c.step) {
-                paired.extend([c.base, c.step]);
-            }
-        }
         let again: Vec<Rc<ERule>> = self
             .rules
             .iter()
-            .filter(|r| r.clause.head.temporal != Temporal::Next && !called(r) && (reset.contains(&r.id) || dirty.contains(&r.clause.head.rel) || paired.contains(&r.id)))
+            .filter(|r| r.clause.head.temporal != Temporal::Next && !called(r) && (reset.contains(&r.id) || dirty.contains(&r.clause.head.rel)))
             .cloned()
             .collect();
-        mono.retain(|r| !paired.contains(&r.id));
-        new_plain.retain(|r| !paired.contains(&r.id));
         mono.retain(|r| !dirty.contains(&r.clause.head.rel));
         new_plain.retain(|r| !dirty.contains(&r.clause.head.rel));
         let changed: HashSet<Sym> = grown.union(&dirty).copied().collect();
@@ -360,17 +365,24 @@ impl Eval {
         let mut forced: Vec<FactId> = Vec::new();
         let mut gone: HashSet<Sym> = self.rules.iter().filter(|r| reset.contains(&r.id)).map(|r| r.clause.head.rel).collect();
         if brk!("add_demand_kept" => false; true) {
-            gone.extend(demanded.iter().copied());
+            gone.extend(call_rels.iter().copied());
         }
         for rel in gone {
             for id in self.store.rel_all(&self.h, rel) {
-                if self.store.rec(id).base() {
-                    return Err("a rule that negates or aggregates what changed concludes a base fact");
+                if !self.store.rec(id).base() {
+                    forced.push(id);
                 }
-                forced.push(id);
             }
         }
         forced.sort_unstable();
+        // a base fact of a relation that changed stays, and its firings are made again by the rules fired again
+        let mut based: Vec<FactId> = Vec::new();
+        for rel in &dirty {
+            based.extend(self.store.rel_all(&self.h, *rel).into_iter().filter(|id| self.store.rec(*id).base() && self.store.support_count(*id) > 0));
+        }
+        if brk!("add_base_firings_kept" => false; !based.is_empty()) {
+            self.withdraw_firings(&based, |_, _| true);
+        }
         let consumers = if forced.is_empty() { Vec::new() } else { self.consumer_facts(&[], &forced, &dirty, &HashSet::new(), &reset)? };
         let mut d = AddDelta {
             facts: added.len(),
@@ -392,7 +404,7 @@ impl Eval {
             self.support_ix = None;
         }
         self.height_memo.clear();
-        if !demanded.is_empty() {
+        if !call_rels.is_empty() {
             self.drop_done();
         }
         self.staged.retain(|_, f| !unstage.contains(&f.rule));
@@ -441,7 +453,7 @@ impl Eval {
             Ok(()) => Ok(d),
             Err(_) => {
                 self.store.dirty = true;
-                Err("the addition would write a hole, keep a lattice's history or meet a wall; the world is evaluated again")
+                Err("the addition would write a hole, keep a lattice's history or meet a wall, and the world is evaluated again")
             }
         }
     }
