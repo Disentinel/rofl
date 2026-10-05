@@ -1,0 +1,17 @@
+-- examples/checks/ds-tree-demand-book-check.rofl — ds_tree_demand_book: the declared closure, the closure written by hand with a book variable and
+-- the closure written by hand for each book, each over edges that read a relation answered on demand, hold the same rows, and what reads the
+-- declared closure holds what the data say: from a to a chain of three, and from p to two in the book `other`.
+alarm(ddb_diff).
+alarm(ddb_lost).
+ddb_diff(w) :- ddb_wm(A, D), not ddb_w(A, D).
+ddb_diff(w) :- ddb_w(A, D), not ddb_wm(A, D).
+ddb_diff(o) :- ddb_wo(A, D), not ddb_w[other](A, D).
+ddb_diff(o) :- ddb_w[other](A, D), not ddb_wo(A, D).
+ddb_diff(v) :- ddb_wv[B](A, D), not ddb_w[B](A, D).
+ddb_diff(v) :- ddb_w[B](A, D), not ddb_wv[B](A, D).
+ddb_lost(r) :- not ddb_r(d).
+ddb_lost(cnt) :- not ddb_cnt(3).
+ddb_lost(cnto) :- not ddb_cnto(2).
+ddb_lost(ro) :- not ddb_ro(z).
+ddb_lost(none) :- not ddb_none(p).
+ddb_lost(up) :- not ddb_up(a).

@@ -648,6 +648,8 @@ check[checks]("facts/goldens.rofl", "ds_function_retract", world).
 check[checks]("facts/goldens.rofl", "ds_function_syntax", world).
 check[checks]("facts/goldens.rofl", "ds_function_tick", world).
 check[checks]("facts/goldens.rofl", "ds_function_wall", world).
+check[checks]("facts/goldens.rofl", "ds_tree_demand_book", world).
+check[checks]("facts/goldens.rofl", "ds_tree_demand_book_sealed", world).
 check[checks]("facts/goldens.rofl", "ds_tree_demand_edge", world).
 check[checks]("facts/goldens.rofl", "ds_tree_explain", world).
 check[checks]("facts/goldens.rofl", "ds_tree_holds", world).

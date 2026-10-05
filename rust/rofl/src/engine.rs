@@ -1737,8 +1737,8 @@ impl Eval {
         let mut ground: HashMap<Sym, Vec<bool>> = HashMap::new();
         for (rel, rs) in &self.demand_rels {
             let n = rs[0].clause.head.args.len();
-            let ok = rs.iter().all(|r| r.clause.head.args.len() == n && r.clause.head.persp.is_atom());
-            ground.insert(*rel, vec![ok; n]);
+            let ok = rs.iter().all(|r| r.clause.head.args.len() == n && (r.clause.head.persp.is_atom() || brk!("demand_closed_atom_book" => false; true)));
+            ground.insert(*rel, vec![ok; n + 1]);
         }
         loop {
             let mut changed = false;
@@ -1755,11 +1755,11 @@ impl Eval {
                                 BodyElem::Pos(l) => {
                                     let g = ground.get(&l.rel);
                                     for (i, a) in l.args.iter().enumerate() {
-                                        if g.is_none_or(|g| g.len() == l.args.len() && g[i]) {
+                                        if g.is_none_or(|g| g.len() == l.args.len() + 1 && g[i]) {
                                             self.h.vars_of(*a, &mut bound);
                                         }
                                     }
-                                    if g.is_none() {
+                                    if g.is_none_or(|g| g.len() == l.args.len() + 1 && g[l.args.len()] && brk!("demand_closed_book_unbound" => false; true)) {
                                         self.h.vars_of(l.persp, &mut bound);
                                     }
                                 }
@@ -1783,7 +1783,7 @@ impl Eval {
                             break;
                         }
                     }
-                    for (j, a) in r.clause.head.args.iter().enumerate() {
+                    for (j, a) in r.clause.head.args.iter().chain([&r.clause.head.persp]).enumerate() {
                         let mut vs = Vec::new();
                         self.h.vars_of(*a, &mut vs);
                         if ground[rel][j] && !vs.iter().all(|v| bound.contains(v)) {

@@ -7105,6 +7105,52 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "demand_closed_atom_book",
+  "what": "a rule whose head book is a variable is not read from the store as a closed relation is: the closure written with a book variable over edges that read a demand relation is unfolded at its calls and meets its own",
+  "expect": {
+   "ds_tree_demand_book": "fired before ddb_w",
+   "ds_tree_demand_book_sealed": "fired before ddb_w"
+  }
+ },
+ {
+  "id": "ts_demand_closed_atom_book",
+  "what": "the TypeScript evaluator does not read a relation whose head book is a variable from the store as a closed relation",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "const ok = rs.every((r) => r.clause.head.args.length === n);",
+    "const ok = rs.every((r) => r.clause.head.args.length === n && r.clause.head.persp.k === 'a');"
+   ]
+  ],
+  "expect": {
+   "ds_tree_demand_book": "fired before ddb_w",
+   "ds_tree_demand_book_sealed": "fired before ddb_w"
+  }
+ },
+ {
+  "id": "demand_closed_book_unbound",
+  "what": "a premise at a ground book does not bind the book variable of the rule's head",
+  "expect": {
+   "ds_tree_demand_book": "fired before ddb_w",
+   "ds_tree_demand_book_sealed": "fired before ddb_w"
+  }
+ },
+ {
+  "id": "ts_demand_closed_book_unbound",
+  "what": "the TypeScript evaluator's premise at a ground book does not bind the book variable of the rule's head",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "if (g === undefined || (g.length === b.lit.args.length + 1 && g[b.lit.args.length])) varsOf(b.lit.persp, bound);",
+    "if (g === undefined) varsOf(b.lit.persp, bound);"
+   ]
+  ],
+  "expect": {
+   "ds_tree_demand_book": "fired before ddb_w",
+   "ds_tree_demand_book_sealed": "fired before ddb_w"
+  }
+ },
+ {
   "id": "vclosure_neg_inverted",
   "what": "a negation of the closure holds where a row does",
   "expect": {

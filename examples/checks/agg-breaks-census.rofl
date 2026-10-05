@@ -1810,6 +1810,18 @@ brk_expects("vclosure_demand_unread", "ds_tree_demand_edge").
 brk("vclosure_restore_unengaged"). brk_kind("vclosure_restore_unengaged", switch).
 brk_expects("vclosure_restore_unengaged", "ds_tree_sealed").
 brk_expects("vclosure_restore_unengaged", "ds_tree_explain").
+brk("demand_closed_atom_book"). brk_kind("demand_closed_atom_book", switch).
+brk_expects("demand_closed_atom_book", "ds_tree_demand_book").
+brk_expects("demand_closed_atom_book", "ds_tree_demand_book_sealed").
+brk("ts_demand_closed_atom_book"). brk_kind("ts_demand_closed_atom_book", ts).
+brk_expects("ts_demand_closed_atom_book", "ds_tree_demand_book").
+brk_expects("ts_demand_closed_atom_book", "ds_tree_demand_book_sealed").
+brk("demand_closed_book_unbound"). brk_kind("demand_closed_book_unbound", switch).
+brk_expects("demand_closed_book_unbound", "ds_tree_demand_book").
+brk_expects("demand_closed_book_unbound", "ds_tree_demand_book_sealed").
+brk("ts_demand_closed_book_unbound"). brk_kind("ts_demand_closed_book_unbound", ts).
+brk_expects("ts_demand_closed_book_unbound", "ds_tree_demand_book").
+brk_expects("ts_demand_closed_book_unbound", "ds_tree_demand_book_sealed").
 brk("vclosure_neg_inverted"). brk_kind("vclosure_neg_inverted", switch).
 brk_expects("vclosure_neg_inverted", "ds_tree_sealed").
 brk("vclosure_unbound_cheap"). brk_kind("vclosure_unbound_cheap", switch).
@@ -1901,6 +1913,8 @@ switch_site("delta_first_overrun_holes", "rust/rofl/src/engine.rs").
 switch_site("delta_first_persp", "rust/rofl/src/engine/joinplan.rs").
 switch_site("delta_first_spread", "rust/rofl/src/engine/joinplan.rs").
 switch_site("delta_first_walls", "rust/rofl/src/engine/joinplan.rs").
+switch_site("demand_closed_atom_book", "rust/rofl/src/engine.rs").
+switch_site("demand_closed_book_unbound", "rust/rofl/src/engine.rs").
 switch_site("demand_closed_unfolds", "rust/rofl/src/engine.rs").
 switch_site("demand_cycle_unfolds", "rust/rofl/src/engine.rs").
 switch_site("demand_fault_unspread", "rust/rofl/src/engine.rs").

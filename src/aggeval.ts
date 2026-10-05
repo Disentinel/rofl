@@ -1133,13 +1133,14 @@ export class AggEval {
   /** THE DEMAND RELATIONS WHOSE ANSWERS ARE ALL GROUND, and whose rules all fire bottom-up: a call to one, at any depth,
    *  reads the store. A position is ground when every variable of each rule's head there is bound by a positive
    *  premise at a ground position (any of a relation not answered on demand), or by `is` or `=` from ground ones; assumed
-   *  of all and withdrawn where a rule falls short. */
+   *  of all and withdrawn where a rule falls short. THE BOOK IS A POSITION TOO: a head's book that is a variable is ground when
+   *  a premise at a ground book binds it (`w[B](P, C) :- e[B](P, C).`), as the head's book that is an atom is. */
   private demandClosedRels(): Set<string> {
     const ground = new Map<string, boolean[]>();
     for (const [rel, rs] of this.demandRels) {
       const n = rs[0].clause.head.args.length;
-      const ok = rs.every((r) => r.clause.head.args.length === n && r.clause.head.persp.k === 'a');
-      ground.set(rel, new Array<boolean>(n).fill(ok));
+      const ok = rs.every((r) => r.clause.head.args.length === n);
+      ground.set(rel, new Array<boolean>(n + 1).fill(ok));
     }
     for (let changed = true; changed;) {
       changed = false;
@@ -1153,8 +1154,8 @@ export class AggEval {
             for (const b of r.clause.body) {
               if (b.t === 'pos') {
                 const g = ground.get(b.lit.rel);
-                b.lit.args.forEach((a, i) => { if (g === undefined || (g.length === b.lit.args.length && g[i])) varsOf(a, bound); });
-                if (g === undefined) varsOf(b.lit.persp, bound);
+                b.lit.args.forEach((a, i) => { if (g === undefined || (g.length === b.lit.args.length + 1 && g[i])) varsOf(a, bound); });
+                if (g === undefined || (g.length === b.lit.args.length + 1 && g[b.lit.args.length])) varsOf(b.lit.persp, bound);
               } else if (b.t === 'bi' && (b.op === 'is' || b.op === '=')) {
                 for (const [from, to] of b.op === 'is' ? [[b.r, b.l]] : [[b.r, b.l], [b.l, b.r]]) {
                   if ([...varsOf(from)].every((v) => bound.has(v))) varsOf(to, bound);
@@ -1162,7 +1163,7 @@ export class AggEval {
               }
             }
           }
-          r.clause.head.args.forEach((a, j) => {
+          [...r.clause.head.args, r.clause.head.persp].forEach((a, j) => {
             if (gr[j] && ![...varsOf(a)].every((v) => bound.has(v))) { gr[j] = false; changed = true; }
           });
         }

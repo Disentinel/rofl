@@ -3174,6 +3174,21 @@ check_world("ds_tree_demand_edge").
 check_file("ds_tree_demand_edge", "examples/checks/ds-tree-demand-edge.rofl").
 check_opt("ds_tree_demand_edge", together, 1).
 
+-- A CLOSURE WITH A BOOK VARIABLE OVER EDGES THAT READ A DEMAND RELATION holds what the closure written for each book holds. Such rules
+-- (the declaration lowers to them) were not read from the store as a closed relation is, because a head book that is a variable was
+-- taken for an answer that is not ground; unfolded at a call they met their own call again, and what read them (a count, a negation,
+-- a rule) was a shrug or, in Rust, a defect. A book that is a variable is ground where a premise at a ground book binds it.
+check_world("ds_tree_demand_book").
+check_file("ds_tree_demand_book", "examples/checks/ds-tree-demand-book.rofl").
+check_file("ds_tree_demand_book", "examples/checks/ds-tree-demand-book-check.rofl").
+check_opt("ds_tree_demand_book", together, 1).
+
+check_world("ds_tree_demand_book_sealed").
+check_file("ds_tree_demand_book_sealed", "examples/checks/ds-tree-sealed.rofl").
+check_file("ds_tree_demand_book_sealed", "examples/checks/ds-tree-demand-book.rofl").
+check_file("ds_tree_demand_book_sealed", "examples/checks/ds-tree-demand-book-check.rofl").
+check_opt("ds_tree_demand_book_sealed", together, 1).
+
 check_world("ds_tree_tick").
 check_file("ds_tree_tick", "examples/checks/ds-tree-tick-1-holds.rofl").
 check_file("ds_tree_tick", "examples/checks/ds-tree-tick-2-broken.rofl").
