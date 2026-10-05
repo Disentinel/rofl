@@ -3115,11 +3115,32 @@ check_file("cost_shapes_model", "rules/js-host.rofl").
 check_file("cost_shapes_model", "rules/js-ambient.rofl").
 check_file("cost_shapes_model", "rules/js-attrs.rofl").
 check_file("cost_shapes_model", "rules/js-modules.rofl").
+check_file("cost_shapes_model", "rules/js-surface.rofl").
 check_file("cost_shapes_model", "examples/checks/cost-shapes-model.rofl").
 -- ONE ENGINE: the reflection of the model nests `$var` three deep (js-attrs reads rules about rules); the
 -- TypeScript engine answers `str_segs` on those with a hole and a different cs_conn, the Rust engine does not.
 -- The planted world (examples/shapes) is held on both.
 check_opt("cost_shapes_model", one_engine, rust).
+
+-- docs/surface-split.md item 3: the surface lint over the JS model (examples/surface/surface.rofl)
+check_world("surface_model").
+check_file("surface_model", "examples/surface/surface.rofl").
+check_file("surface_model", "facts/surface-lint.rofl").
+check_file("surface_model", "rules/js-structure.rofl").
+check_file("surface_model", "rules/js-dataflow.rofl").
+check_file("surface_model", "rules/js-model.rofl").
+check_file("surface_model", "rules/js-callgraph.rofl").
+check_file("surface_model", "rules/js-controlflow.rofl").
+check_file("surface_model", "rules/js-effects.rofl").
+check_file("surface_model", "rules/js-globals.rofl").
+check_file("surface_model", "rules/js-host.rofl").
+check_file("surface_model", "rules/js-ambient.rofl").
+check_file("surface_model", "rules/js-attrs.rofl").
+check_file("surface_model", "rules/js-modules.rofl").
+check_file("surface_model", "rules/js-surface.rofl").
+check_file("surface_model", "examples/checks/surface-model.rofl").
+-- ONE ENGINE for the same reason as cost_shapes_model: the reflection of the model nests `$var` deep.
+check_opt("surface_model", one_engine, rust).
 
 -- w_data_structures: who reads ast_within / ast_in and what each asks of the tree
 check_world("ast_within_readers").
@@ -3546,6 +3567,40 @@ check_file("vscode_side_effects", "rules/js-host.rofl").
 check_file("vscode_side_effects", "rules/js-ambient.rofl").
 check_file("vscode_side_effects", "rules/js-attrs.rofl").
 check_file("vscode_side_effects", "rules/js-modules.rofl").
+check_file("vscode_side_effects", "rules/js-surface.rofl").
 check_file("vscode_side_effects", "examples/checks/vscode-mini-facts.rofl").
 check_file("vscode_side_effects", "examples/vscode/side-effects.rofl").
 check_file("vscode_side_effects", "examples/checks/vscode-side-effects-check.rofl").
+
+-- w_next_version_cutoff, the surface split (docs/surface-split.md): the same question over mini + 10 hand-made files that
+-- cross files every way the model knows, every file resident through rules/js-surface.rofl; each file ALONE with the
+-- others' [surface] gives the same facts: scripts/surface_split.ts, npm run test:split
+check_world("vscode_surface_split").
+check_file("vscode_surface_split", "facts/js-kinds.rofl").
+check_file("vscode_surface_split", "facts/js-callgraph.rofl").
+check_file("vscode_surface_split", "facts/js-dataflow.rofl").
+check_file("vscode_surface_split", "facts/js-modules.rofl").
+check_file("vscode_surface_split", "facts/js-shapes.rofl").
+check_file("vscode_surface_split", "facts/js-statements.rofl").
+check_file("vscode_surface_split", "facts/js-controlflow.rofl").
+check_file("vscode_surface_split", "facts/js-effects.rofl").
+check_file("vscode_surface_split", "facts/js-globals.rofl").
+check_file("vscode_surface_split", "facts/js-host.rofl").
+check_file("vscode_surface_split", "facts/js-host-surface.rofl").
+check_file("vscode_surface_split", "facts/js-lib-surface.rofl").
+check_file("vscode_surface_split", "facts/js-attrs.rofl").
+check_file("vscode_surface_split", "rules/js-structure.rofl").
+check_file("vscode_surface_split", "rules/js-dataflow.rofl").
+check_file("vscode_surface_split", "rules/js-model.rofl").
+check_file("vscode_surface_split", "rules/js-callgraph.rofl").
+check_file("vscode_surface_split", "rules/js-controlflow.rofl").
+check_file("vscode_surface_split", "rules/js-effects.rofl").
+check_file("vscode_surface_split", "rules/js-globals.rofl").
+check_file("vscode_surface_split", "rules/js-host.rofl").
+check_file("vscode_surface_split", "rules/js-ambient.rofl").
+check_file("vscode_surface_split", "rules/js-attrs.rofl").
+check_file("vscode_surface_split", "rules/js-modules.rofl").
+check_file("vscode_surface_split", "rules/js-surface.rofl").
+check_file("vscode_surface_split", "examples/checks/vscode-split-facts.rofl").
+check_file("vscode_surface_split", "examples/vscode/side-effects.rofl").
+check_file("vscode_surface_split", "examples/checks/vscode-surface-split-check.rofl").

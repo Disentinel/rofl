@@ -1,0 +1,63 @@
+-- facts/surface-lint.rofl — THE REGISTER OF THE SURFACE LINT: the columns that name another file, and
+-- the cross-file joins the JS model still keeps. Rules: examples/surface/surface.rofl. Design:
+-- docs/surface-split.md, item 3.
+--
+-- The seeds. A column that holds a node or a path of ANOTHER file by construction: module resolution
+-- (a site and the file it names) and the call edge (a site and the callee's node). Everything else that
+-- is foreign-capable is derived from these through the rules' own heads.
+xl_seed(module_target, 2).
+xl_seed(resolved_import, 2).
+xl_seed(ts_resolved, 2).
+xl_seed(resolves, 2).
+xl_seed(calls, 2).
+
+-- The [surface] columns that hand over a node of ANOTHER file than the row's key (rules/js-surface.rofl): what a
+-- module offers, a return's, an argument's, a thrown or a sent value, the value of an escaping node and of its
+-- members, a function's callees. A key column is the key's own file and is not seeded: a mirror puts the rows of a
+-- foreign key back into their relation, which is what makes a mirrored relation readable at a foreign key.
+xl_seed(sx_export_node, 3).
+xl_seed(sx_export_val, 3).
+xl_seed(sx_default, 2).
+xl_seed(sx_cjs, 2).
+xl_seed(sx_module, 2).
+xl_seed(sx_ret_node, 2).
+xl_seed(sx_ret_pnode, 2).
+xl_seed(sx_arg_node, 3).
+xl_seed(sx_next, 2).
+xl_seed(sx_thrown, 2).
+xl_seed(sx_node, 2).
+xl_seed(sx_member, 3).
+xl_seed(sx_mplain, 3).
+xl_seed(sx_mstatic, 3).
+xl_seed(sx_mproto, 3).
+xl_seed(sx_eff_calls, 2).
+xl_seed(sx_elem, 3).
+xl_seed(sx_yields, 2).
+xl_seed(sx_ctor, 2).
+xl_seed(sx_ctor_of, 2).
+xl_seed(sx_accessor, 3).
+xl_seed(sx_eff_reaches, 2).
+
+-- THE REGISTER, after the rewrite (rules/js-surface.rofl; the baseline of 2026-10-05 had 214 rows `awaiting_rewrite`,
+-- all gone with their joins). What stays is read at a foreign-capable column the rule only MATCHES: the row the
+-- premise needs is in the volume of the file it names, and scripts/surface_split.ts checks that it is there.
+
+-- A member's own attribute. `member_value`'s third column is foreign only for a value another file WROTE onto the
+-- object (`sx_mwrite`), and a written value is an expression: it has no `static` and no `get`/`set` kind, so the
+-- attribute these read is the declaring file's own method or field.
+xl_ok(accessor_of, ast_attr, "a member's own attribute: a value written from another file carries no kind").
+xl_ok(class_member_proto, ast_attr, "a member's own attribute: a value written from another file carries no static flag").
+xl_ok(class_member_static, ast_attr, "a member's own attribute: a value written from another file carries no static flag").
+
+-- The key is matched, not read: `nearest_fn(F, C)` is the enclosing function of the volume's own site C, and the
+-- rule only asks whether another file's callee G reaches back to it (`eff_reaches(G, F)`, mirrored for G).
+xl_ok(eff_here, nearest_fn, "the site's own enclosing function, matched against the mirrored eff_reaches of the callee").
+
+-- A generator's own volume: `next_send(G, V)` reaches G's file through the mirror of `sx_next`, and these read G's
+-- own yields and delegations there; a volume holding another file's G reads no row and owes none.
+xl_ok(may_be_node, nearest_v, "the generator's own yields, in its volume: next_send(G, _) arrives there through sx_next").
+xl_ok(next_send, delegates, "the generator's own delegation, in its volume: next_send(G, _) arrives there through sx_next").
+
+-- The arm for the volume's own argument; another file's array element spread into the call is named by `sx_name`.
+xl_ok(passes_function, ast_name, "the volume's own argument; the arm beside it reads sx_name for another file's element").
+xl_ok(sx_name, ast_name, "the publication: the array's own volume names its element; another volume holds no name of it").

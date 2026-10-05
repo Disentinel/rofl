@@ -1,0 +1,55 @@
+-- examples/surface/check.rofl — THE SURFACE LINT, HELD ON A PLANTED FILE.
+-- surface.rofl reads the reflection of fixture.rofl. The seed is planted, the register holds one
+-- real excuse and one stale: so the three ways a finding stands are all here. A finding not planted
+-- is an alarm of this world, and so is a planted one missed, a control that is hit, and a verdict
+-- (alarm, stale, volatile) that is not the one expected.
+xl_seed(fx_edge, 2).
+xl_seed(fx_pubn, 2).
+xl_seed(fx_pubm, 2).
+
+xl_ok(fx_kept, fx_param, "planted: a join someone decided to keep").
+xl_ok(fx_gone, fx_param, "planted: an excuse whose rule is gone").
+
+exp_find(fx_bad_join, fx_param).
+exp_find(fx_bad_trans, fx_name).
+exp_find(fx_bad_neg, fx_seen).
+exp_find(fx_kept, fx_param).
+exp_find(fx_bad_surf, fx_name).
+exp_alarm(fx_bad_join, fx_param).
+exp_alarm(fx_bad_trans, fx_name).
+exp_alarm(fx_bad_neg, fx_seen).
+exp_alarm(fx_bad_surf, fx_name).
+exp_stale(fx_gone, fx_param).
+exp_vol(fx_vol).
+exp_vol(fx_vol2).
+exp_direct(fx_vol).
+exp_fc(fx_edge, 2).
+exp_fc(fx_via, 2).
+exp_fc(fx_pass, 2).
+exp_fc(fx_ok_surf, 2).
+exp_fc(fx_pubn, 2).
+exp_fc(fx_bad_join, 2).
+exp_fc(fx_bad_trans, 2).
+exp_fc(fx_kept, 2).
+exp_fc(fx_mirrored, 2).
+exp_fc(fx_mirror, 2).
+exp_fc(fx_pubm, 2).
+control(fx_good_join). control(fx_local). control(fx_pass). control(fx_sub). control(fx_ctrl). control(fx_notfc). control(fx_ok_surf). control(fx_mirrored).
+vcontrol(fx_notvol). vcontrol(fx_pos). vcontrol(fx_pub). vcontrol(fx_good_join).
+
+lx_find_missed(H, P)   :- exp_find(H, P), not xl_finding(H, P, _, _).
+lx_find_extra(H, P)    :- xl_finding(H, P, _, _), not exp_find(H, P).
+lx_control_hit(H)      :- control(H), xl_finding(H, _, _, _).
+lx_alarm_missed(H, P)  :- exp_alarm(H, P), not xl_alarm(H, P).
+lx_alarm_extra(H, P)   :- xl_alarm(H, P), not exp_alarm(H, P).
+lx_stale_missed(H, P)  :- exp_stale(H, P), not xl_ok_stale(H, P).
+lx_stale_extra(H, P)   :- xl_ok_stale(H, P), not exp_stale(H, P).
+lx_vol_missed(H)       :- exp_vol(H), not volatile_head(H).
+lx_vol_extra(H)        :- volatile_head(H), not exp_vol(H).
+lx_vcontrol_hit(H)     :- vcontrol(H), volatile_head(H).
+lx_direct_extra(H)     :- volatile_direct(H, _), not exp_direct(H).
+lx_fc_missed(R, C)     :- exp_fc(R, C), not xl_fc(R, C).
+lx_fc_extra(R, C)      :- xl_fc(R, C), not exp_fc(R, C).
+alarm(lx_find_missed). alarm(lx_find_extra). alarm(lx_control_hit). alarm(lx_alarm_missed).
+alarm(lx_alarm_extra). alarm(lx_stale_missed). alarm(lx_stale_extra). alarm(lx_vol_missed).
+alarm(lx_vol_extra). alarm(lx_vcontrol_hit). alarm(lx_direct_extra). alarm(lx_fc_missed). alarm(lx_fc_extra).

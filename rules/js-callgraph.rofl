@@ -303,11 +303,11 @@ resolves[code](C, M) :- ast_node[code](N, super, _, _), callee_of[code](C, N),
 -- call, and `may_be_node` carries what a call returns, so one arm covers both.
 resolves[code](X, F) :- transfer_site[code](X, tagged_template_expression),
                         ast_child[code](X, tag, 0, T),
-                        may_be_node[flow](T, F), fn_node[code](F).
+                        may_be_node[flow](T, F), fn_value[flow](F).
 
 resolves[code](X, F) :- transfer_site[code](X, decorator),
                         ast_child[code](X, expression, 0, E),
-                        may_be_node[flow](E, F), fn_node[code](F).
+                        may_be_node[flow](E, F), fn_value[flow](F).
 
 -- `for (x of E)` calls `E[Symbol.iterator]()` and then `next()`. Only the first
 -- hop is a `resolves`: `ambiguous_call[audit]` reads two answers at one site
@@ -317,18 +317,18 @@ resolves[code](X, F) :- transfer_site[code](X, decorator),
 for_of_iterates[code](X, M) :- transfer_site[code](X, for_of_statement),
                                ast_child[code](X, right, 0, R),
                                may_be_node[flow](R, Obj),
-                               member_value[flow](Obj, "iterator", M), fn_node[code](M).
+                               member_value[flow](Obj, "iterator", M), fn_value[flow](M).
 resolves[code](X, M) :- for_of_iterates[code](X, M).
 
 calls[code](Caller, Next) :- for_of_iterates[code](X, M), nearest_fn[code](Caller, X),
-                             returns[flow](M, E), may_be_node[flow](E, IterObj),
+                             ret_node_any[flow](M, IterObj),
                              member_value[flow](IterObj, "next", V),
-                             may_be_node[flow](V, Next), fn_node[code](Next).
+                             may_be_node[flow](V, Next), fn_value[flow](Next).
 
 -- THE GENERAL RULE: whatever the callee expression may BE, if it is a function
 -- the site calls it. Covers `(f)()`, `f as T ()`, `f!()`, `(a, f)()`,
 -- `c ? f : g ()` and the next wrapper somebody adds, with no rule here.
-resolves[code](C, F) :- may_be_node[flow](N, F), fn_node[code](F), callee_of[code](C, N).
+resolves[code](C, F) :- may_be_node[flow](N, F), fn_value[flow](F), callee_of[code](C, N).
 
 ambiguous_call[audit](C, F, G) :- resolves[code](C, F), resolves[code](C, G), F != G.
 
@@ -340,16 +340,19 @@ ambiguous_call[audit](C, F, G) :- resolves[code](C, F), resolves[code](C, G), F 
 calls[code](Caller, Callee) :- resolves[code](C, Callee), nearest_fn[code](Caller, C).
 calls[code](R, Callee)      :- resolves[code](C, Callee), top_call[code](C, R).
 
-calls_named[code](A, B)   :- calls[code](X, Y), fn_name[code](X, A), fn_name[code](Y, B).
-calls_named[code](top, B) :- calls[code](R, Y), ast_file[code](R, _), fn_name[code](Y, B).
+calls_named[code](A, B)   :- calls[code](X, Y), fn_name[code](X, A), fn_label[flow](Y, B).
+calls_named[code](top, B) :- calls[code](R, Y), ast_file[code](R, _), fn_label[flow](Y, B).
 
 calls_in[code](File, A, B)   :- calls[code](X, Y), ast_node[code](X, _, File, _),
-                                fn_name[code](X, A), fn_name[code](Y, B).
+                                fn_name[code](X, A), fn_label[flow](Y, B).
 calls_in[code](File, top, B) :- calls[code](R, Y), ast_file[code](R, File),
-                                fn_name[code](Y, B).
+                                fn_label[flow](Y, B).
 
-passes_function[code](C, I, F, Name) :- arg_at[flow](C, I, A), may_be_node[flow](A, F), fn_node[code](F),
+passes_function[code](C, I, F, Name) :- arg_at[flow](C, I, A), may_be_node[flow](A, F), fn_value[flow](F),
                                         ast_name[code](A, Name).
+-- an element of another file's array spread into the call is named by its own file
+passes_function[code](C, I, F, Name) :- arg_at[flow](C, I, A), may_be_node[flow](A, F), fn_value[flow](F),
+                                        sx_name[surface](A, Name).
 
 -- A function handed over and CALLED, by facts/js-host.rofl's `host_calls_back`.
 -- Not a `resolves` edge: rules/js-dataflow.rofl binds a resolved call's
@@ -360,10 +363,10 @@ callback_site[code](C, P, Key)        :- builtin_prototype(P), prototype_of[flow
 callback_site[code](C, Origin, Key)   :- host_site[code](C, _, Origin, Key).
 callback_site[code](C, thenable, Key) :- unresolved_call[code](C, _), callee_of[code](C, N), selects[flow](N, Key).
 calls_back[code](C, F, When) :- callback_site[code](C, O, Key), host_calls_back(O, Key, I, When),
-                                arg_at[flow](C, I, A), may_be_node[flow](A, F), fn_node[code](F).
+                                arg_at[flow](C, I, A), may_be_node[flow](A, F), fn_value[flow](F).
 calls_back[code](C, F, When) :- callback_site[code](C, O, Key), host_calls_back(O, Key, last, When),
                                 arg_at[flow](C, I, A), J is I + 1, not arg_at[flow](C, J, _),
-                                may_be_node[flow](A, F), fn_node[code](F).
+                                may_be_node[flow](A, F), fn_value[flow](F).
 
 -- a row for a prototype member the library does not have is a misspelling
 callback_key_unknown[audit](P, Key) :- host_calls_back(P, Key, _, _), builtin_prototype(P),
@@ -476,10 +479,10 @@ await_arg[code](A, X) :- ast_node[code](A, await_expression, _, _),
 
 awaited_then[code](A, F) :- await_arg[code](A, X), may_be_node[flow](X, O),
                             member_value[flow](O, "then", V),
-                            may_be_node[flow](V, F), fn_node[code](F).
+                            may_be_node[flow](V, F), fn_value[flow](F).
 
 performed_call[code](A, F) :- awaited_then[code](A, F).
-callerless_call[audit](Name) :- performed_call[code](_, F), fn_name[code](F, Name).
+callerless_call[audit](Name) :- performed_call[code](_, F), fn_label[flow](F, Name).
 
 -- Three-way split of every await: value known and no `then` (the language
 -- performs NO call — a positive statement, and the one arm here that can be
@@ -502,3 +505,4 @@ performed_as_edge[audit](Fn, F) :- performed_call[code](A, F),
 -- The call graph reads the value layer; declared by the reader.
 imports(code, flow).
 imports(audit, flow).
+imports(code, surface).
