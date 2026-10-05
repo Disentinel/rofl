@@ -237,8 +237,12 @@ fn check_world(w: &World) -> Vec<String> {
     // must hold and must not, and a world that asks for a wall says so
     // with the world's hole; one whose wall is a ceiling says the hole is
     // not there, and is an ordinary world.
-    let cut = !s.ask("hole(M, space_exhausted)").unwrap().rows.is_empty();
     let st = state(&s);
+    // a world with asks refuses a question outside its cone; its state still lists its holes
+    let cut = match s.ask("hole(M, space_exhausted)") {
+        Ok(a) => !a.rows.is_empty(),
+        Err(_) => st.contains("space_exhausted)"),
+    };
     for f in &w.files {
         for l in read(f).lines() {
             let (want, prefix) = match (l.strip_prefix("-- expect-row: "), l.strip_prefix("-- expect-no-row: ")) {
