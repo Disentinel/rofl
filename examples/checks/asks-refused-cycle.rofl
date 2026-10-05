@@ -1,0 +1,10 @@
+-- expect-refusal: settled nothing while
+-- examples/checks/asks-refused-cycle.rofl — A RECURSION THROUGH A NEGATION, OUTSIDE THE CONE.
+-- rc_a is asked and reads only rc_src; rc_p and rc_q negate each other, which no stratified world orders. The rounds
+-- of the whole program stall on them, so their rules run in every cone and the world is refused.
+asks(rc_a).
+edb(rc_src).
+rc_src(1).
+rc_a(X) :- rc_src(X).
+rc_p(X) :- rc_src(X), not rc_q(X).
+rc_q(X) :- rc_src(X), not rc_p(X).

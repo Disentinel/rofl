@@ -333,3 +333,182 @@ fn growing_one_cone_never_changes_the_answers_of_another() {
     assert!(failures.is_empty(), "{} cones moved:\n{}", failures.len(), failures.join("\n"));
     assert!(pairs > 50, "the sweep reached too few worlds: {pairs}");
 }
+
+/// The walls each world of facts/checks.rofl asks for: `(budget, space)`.
+fn walls_of() -> BTreeMap<String, (Option<i64>, Option<i64>)> {
+    let mut m: BTreeMap<String, (Option<i64>, Option<i64>)> = BTreeMap::new();
+    for l in read("facts/checks.rofl").lines() {
+        let Some(rest) = l.strip_prefix("check_opt(\"") else { continue };
+        let Some((w, rest)) = rest.split_once("\", ") else { continue };
+        let parts: Vec<&str> = rest.trim_end_matches(").").split(", ").collect();
+        let Some(Ok(n)) = parts.get(1).map(|p| p.parse::<i64>()) else { continue };
+        match parts[0] {
+            "budget" => m.entry(w.to_string()).or_default().0 = Some(n),
+            "space" => m.entry(w.to_string()).or_default().1 = Some(n),
+            _ => {}
+        }
+    }
+    m
+}
+
+/// Every world of facts/checks.rofl, walled ones included.
+fn all_worlds() -> BTreeMap<String, Vec<String>> {
+    let mut m: BTreeMap<String, Vec<String>> = BTreeMap::new();
+    for l in read("facts/checks.rofl").lines() {
+        let Some(rest) = l.strip_prefix("check_file(\"") else { continue };
+        let Some((w, rest)) = rest.split_once("\", \"") else { continue };
+        let Some((f, _)) = rest.split_once("\")") else { continue };
+        if f.ends_with(".rofl") {
+            m.entry(w.to_string()).or_default().push(f.to_string());
+        }
+    }
+    m
+}
+
+/// A world under its walls; a refusal is the first line it says.
+fn run_walled(src: &str, (budget, space): (Option<i64>, Option<i64>)) -> Result<Run, String> {
+    let mut s = Session::fresh(budget.unwrap_or(BUDGET));
+    s.eval.walls_set = budget.is_some() || space.is_some();
+    if let Some(sp) = space {
+        s.eval.space = sp;
+    }
+    let first = |e: String| e.lines().next().unwrap_or("").to_string();
+    s.load(src, None).map_err(|e| format!("load: {}", first(e.join("; "))))?;
+    s.evaluate().map_err(|e| first(format!("{e:?}")))?;
+    s.explain_requests().map_err(first)?;
+    s.evaluate().map_err(|e| first(format!("{e:?}")))?;
+    let state = s.eval.canonical_state();
+    Ok(Run { s, state })
+}
+
+/// The relations a world's rules conclude, as their heads spell them.
+fn heads(src: &str) -> BTreeSet<String> {
+    src.lines()
+        .filter_map(|l| l.split_once(":-").map(|(h, _)| name_of(h.trim()).to_string()))
+        .filter(|n| n.starts_with(|c: char| c.is_ascii_lowercase()) && n.chars().all(|c| c.is_ascii_alphanumeric() || c == '_'))
+        .collect()
+}
+
+/// A ground literal for a row of the state in the main book: `rel(args)`.
+fn literal(row: &str) -> Option<String> {
+    let fact = row.split(" tick ").next()?.split(" timeless ").next()?;
+    let (rel, rest) = fact.split_once("[main](")?;
+    Some(format!("{rel}({rest}"))
+}
+
+/// THE SWEEP, EVERY DERIVED RELATION ASKED (up to ASKS_SWEEP_N per world, 12 by default), walled worlds included under their
+/// walls: a world refused without asks is refused with any ask, and with the same words; a world answered without asks is
+/// answered with each, the rows of every relation in the cone equal, and, where neither run met its wall, `why` and `whynot`
+/// of its first rows equal and no hole the whole world lacks; a question about a relation outside the cone is refused, never
+/// answered. ASKS_SHARD=i/n runs every n-th world from the i-th.
+#[test]
+fn every_derived_relation_asked_answers_as_the_whole_world_or_refuses() {
+    let n: usize = std::env::var("ASKS_SWEEP_N").ok().and_then(|v| v.parse().ok()).unwrap_or(12);
+    let shard: (usize, usize) = std::env::var("ASKS_SHARD")
+        .ok()
+        .and_then(|v| {
+            let (a, b) = v.split_once('/')?;
+            Some((a.parse().ok()?, b.parse().ok()?))
+        })
+        .unwrap_or((0, 1));
+    let walls = walls_of();
+    let (mut asks, mut refusals, mut outside) = (0, 0, 0);
+    let mut failures: Vec<String> = Vec::new();
+    let bounds = rofl::engine::WhynotBounds::default();
+    for (i, (w, files)) in all_worlds().into_iter().enumerate() {
+        if i % shard.1 != shard.0 {
+            continue;
+        }
+        let wall = walls.get(&w).cloned().unwrap_or((None, None));
+        let src = without_asks(&text(&files));
+        let t0 = Instant::now();
+        let full = run_walled(&src, wall);
+        if t0.elapsed().as_millis() > 250 {
+            continue;
+        }
+        let mut full = match full {
+            Ok(f) => f,
+            Err(e) if e.starts_with("load: ") => continue,
+            Err(e) => {
+                for h in heads(&src).iter().take(n) {
+                    asks += 1;
+                    refusals += 1;
+                    match run_walled(&format!("{src}\nasks({h}).\n"), wall) {
+                        Ok(_) => failures.push(format!("{w}: refused without asks ({e}), answered with asks({h})")),
+                        Err(a) if a != e => failures.push(format!("{w}: refused without asks ({e}), with asks({h}) for another reason ({a})")),
+                        Err(_) => {}
+                    }
+                }
+                continue;
+            }
+        };
+        let full_cut = cut(&full.state);
+        let ds = derived(&full.state);
+        for rel in ds.iter().take(n) {
+            asks += 1;
+            let mut asked = match run_walled(&format!("{src}\nasks({rel}).\n"), wall) {
+                Ok(a) => a,
+                Err(e) => {
+                    failures.push(format!("{w}: asks({rel}) refuses what the world answers: {e}"));
+                    continue;
+                }
+            };
+            let exact = !full_cut && !cut(&asked.state);
+            let Some(cone) = cone_names(&asked) else {
+                if exact && unasked(&full.state) != unasked(&asked.state) {
+                    failures.push(format!("{w}: asks({rel}) kept every rule and moved the state: {}", moved(&unasked(&full.state), &unasked(&asked.state))));
+                }
+                continue;
+            };
+            if !exact {
+                continue;
+            }
+            let calls = call_driven(&asked);
+            if let Some(c) = cone.iter().find(|c| *c != "cell" && !calls.contains(*c) && cone_rows(&full.state, c, &cone) != cone_rows(&asked.state, c, &cone)) {
+                failures.push(format!("{w}: asks({rel}): relation {c} of the cone moved"));
+                continue;
+            }
+            let hf = rows(&full.state, "hole");
+            if let Some(h) = rows(&asked.state, "hole").difference(&hf).next() {
+                failures.push(format!("{w}: asks({rel}): a hole the whole world does not have: {h}"));
+            }
+            for q in rows(&full.state, rel).into_iter().filter(|l| l.contains(" drv ")).take(2).filter_map(literal) {
+                if full.s.why(&q) != asked.s.why(&q) {
+                    failures.push(format!("{w}: asks({rel}): why {q} reads differently"));
+                }
+                if full.s.whynot(&q, &bounds) != asked.s.whynot(&q, &bounds) {
+                    failures.push(format!("{w}: asks({rel}): whynot {q} reads differently"));
+                }
+            }
+            let gone = ds.iter().find(|d| !cone.contains(*d) && asked.s.eval.pruned.iter().any(|p| asked.s.eval.h.name(*p) == d.as_str()));
+            if let Some(q) = gone.and_then(|d| rows(&full.state, d).into_iter().filter(|l| l.contains(" drv ")).filter_map(literal).find(|q| !q.contains('$'))) {
+                outside += 1;
+                let said = |r: Result<String, String>| r.err().is_some_and(|e| e.contains("is outside the asked cone"));
+                if !said(asked.s.why(&q)) || !said(asked.s.whynot(&q, &bounds).map(|x| x.1)) || !said(asked.s.ask(&q).map(|_| String::new())) {
+                    failures.push(format!("{w}: asks({rel}): {q} is outside the cone and a question about it was answered"));
+                }
+            }
+        }
+    }
+    eprintln!("asks sweep, every relation: {asks} asks, {refusals} of a refused world, {outside} questions outside the cone");
+    assert!(failures.is_empty(), "{} asks answer unlike the whole world:\n{}", failures.len(), failures.join("\n"));
+    assert!(asks > 1000 || shard.1 > 1 || n < 12, "the sweep reached too few asks: {asks}");
+}
+
+#[test]
+fn an_explain_request_asserted_on_a_cone_world_is_answered() {
+    let src = "edb(ex_src). ex_src(1). ex_x(X) :- ex_src(X). ex_y(X) :- ex_src(X).\n";
+    let answered = |asks: &str| {
+        let mut s = Session::fresh(BUDGET);
+        s.load(&format!("{src}{asks}"), None).unwrap();
+        s.evaluate().unwrap();
+        s.assert("explain_request(why, ex_y(1)).").unwrap();
+        s.evaluate().unwrap();
+        s.explain_requests().unwrap();
+        s.evaluate().unwrap();
+        let st = s.eval.canonical_state();
+        rows(&st, "explained").into_iter().map(String::from).collect::<Vec<_>>()
+    };
+    let (cone, whole) = (answered("asks(ex_x).\n"), answered(""));
+    assert!(!whole.is_empty() && cone == whole, "cone {cone:?}, whole {whole:?}");
+}

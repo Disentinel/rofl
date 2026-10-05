@@ -27,25 +27,47 @@ A cone answers like the whole world only if no rule in it can see a relation it 
 
 - a rule in the cone reads, or an ask names, a relation the kernel writes from every rule's
   evaluation: `agg_cell`, `agg_member`, `agg_member_prem`, `agg_sealed`, `lattice_member`,
-  `lattice_member_prem`, `dominated_by`, `shrug`, `unknown`, `stratum`, `unstratified`, `edb`;
-  a rule reading `hole` (an ask for `hole` itself lists the holes of the rules that ran, which is
-  what a host wants of it and is not a question about relations);
+  `lattice_member_prem`, `dominated_by`, `shrug`, `unknown`, `stratum`, `unstratified`, `edb`,
+  `hole`. An ask for `hole` is a question about every rule's holes (decided conservatively,
+  `f_hole_asked_and_an_ask_a_rule_concludes_keep_every_rule`; the holes of the rules a cone runs
+  are in the store without it). With several asked, the diagnostic names the least by name;
 - a rule reads `derived_by` of a fact whose relation it does not write (a variable): every
   relation's rows. Written as `$fact(Rel, ..)` it reads Rel, which joins the cone;
 - an asked relation is answered on demand (a variable no premise binds): a row is a call some rule
-  made, so the rows are those of every caller.
+  made, so the rows are those of every caller;
+- a rule concludes `asks`: what a world asks is read before its rules run;
+- the stock evaluator (`--strata`), which orders every rule by its stratum table.
 
 And the cone grows by what it reads without a premise: a relation an `explain_request` names is
-asked; the relations a dominance body reads belong to the cone of the relation it orders.
+asked, whether the request is a fact or a rule's head; the relations a dominance body reads belong
+to the cone of the relation it orders. Two kinds of rule run in every cone, with their premises:
+
+- one concluding what the kernel reads of every evaluation (`kernel_heads`): `unknown`, read behind
+  every negation, `shrug`, `explain_request`, and under well_founded `stratum`;
+- one that can make the whole world refuse (`refusal_heads`), so a cone never answers a refused
+  world: a declared function's or tree's relation, a reader of `unknown` or `shrug`, a rule into a
+  tag or reading or concluding a subsumptive relation, a demand-backed head with an aggregate or a
+  lattice read, under well_founded every aggregate and demand-backed rule, and every relation a
+  stall of the whole program's rounds leaves unsettled.
+
+A question about a relation the cone left out, or about one the kernel writes of every rule, is
+refused in both engines with the same words (ask, why, why all, whynot, an explain request), and so
+is an excise under a cone that left rules out (`Eval::outside_cone`).
 
 Held by `rust/rofl/tests/asks_cone.rs`: every world of `facts/checks.rofl` that does not ask for a
 wall is run without asks and with `asks(R)` for its first and last derived relation; the rows of
 every relation in the cone, their supports and ticks, and `why` of the first rows of R are equal
 (489 asks, 1679 relations, none differs; a budget- or space-cut world and the `cell` lines are left
-out, the reason in the test). The sweep found the kernel's readers (`shrug`, `unknown`, holes, cells)
-and the relations answered on demand; the explain request, the dominance body and `derived_by` were
-found by reading, and are held by their worlds. Nine worlds `asks_*` (both engines) and fourteen
-planted faults hold the edges.
+out, the reason in the test). A second sweep asks every derived relation (12 per world), walled
+worlds under their walls: a refused world is refused with each of its heads asked, for the same
+reason; rows, `why`, `whynot` and holes are the whole world's where neither run met its wall; and a
+question about a pruned relation is refused (2 352 asks, 312 of a refused world, 904 questions
+outside a cone, none differs; `ASKS_SHARD=i/n` splits it). The sweeps found the kernel's readers
+(`shrug`, `unknown`, holes, cells), the relations answered on demand and the refused worlds; the
+explain request, the dominance body and `derived_by` were found by reading, the kernel's heads, a
+rule-made request and a question outside the cone by the review of 2026-10-05. Sixteen worlds
+`asks_*` (both engines) and twenty-four planted faults hold the edges; whycheck holds the refusals
+of questions and the diagnostics of both engines to each other.
 
 ## Measured
 
@@ -56,6 +78,11 @@ asks after the run (`hole`, `unresolved_relative`). util has no cells: it is ask
 of the three notebooks' questions. `rofl-eval --bytes --budget 4e9 --space 4e7 --delta-first
 --unsettled` (the evaluation, no `derived_by` row written for what nothing reads), medians of two
 interleaved runs, load 5-8 on a shared machine.
+
+These numbers were taken before the review of 2026-10-05: an ask for `hole` now keeps every rule, so
+the cones below are those of the notebooks' questions without it, and a cone now also holds the
+rules of every declared function and tree (`binder`, `ast_in`, ...) and of what the kernel reads;
+the corpora were not measured again (unverified how much the cones grew).
 
 | corpus | mode | rules run | facts held | eval s | RSS MB |
 |---|---|---|---|---|---|

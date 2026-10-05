@@ -105,6 +105,9 @@ const own = new Map(OWN.map((o) => [o.w.name, o]));
 /** Questions a corpus world is asked besides the usual ones: a call answered on demand whose unfolding reads what a
  *  hole left unknown, which a question once read as absence (f_an_answer_unfolded_at_a_call_read_a_hole_as_absence). */
 const ASKED: Record<string, Q[]> = {
+  // a question outside the cone of asks, and one of what the kernel writes of every rule, is refused in the same words
+  asks_outside: [...['ot_b(1)', 'ot_a(1,1)', 'unknown(ot_b(1))'].flatMap((q): Q[] => [{ op: 'whynot', query: q }, { op: 'why', query: q }]),
+    { op: 'excise', query: 'ot_src(1)' }],
   demand_neg_hole: ['dh_r(c)', 'dh_nr(c)', 'dh_h(c,c)', 'dh_r1(c)'].flatMap((q): Q[] => [{ op: 'whynot', query: q }, { op: 'why', query: q }]),
   demand_pos_hole: ['dp_nr(k)', 'dp_r(k)', 'dp_d(k,k)', 'dp_q2(k)'].map((q): Q => ({ op: 'whynot', query: q })),
   demand_asked_hole: ['da_r(c)', 'da_nr(c)', 'da_q(c,z)', 'da_q(b,z)', 'da_d(k,z)', 'da_ng(b)'].map((q): Q => ({ op: 'whynot', query: q })),
@@ -372,6 +375,15 @@ function stateOf(w: World, env: Record<string, string>): string {
   return p.status === 0 ? p.stdout : `rofl-load exited ${p.status}: ${p.stderr.trim().split('\n')[0]}`;
 }
 
+/** WHAT `asks` SAYS OF A WORLD, in both engines' words: each diagnostic about the cone, rofl-load's against the reference's. */
+function asksSaid(r: Rofl, w: World): string | null {
+  if (!w.files.some((f) => f.endsWith('.rofl') && /^asks\(/m.test(fs.readFileSync(f, 'utf8')))) return null;
+  const p = spawnSync(LOAD, [...loadOpts(w), '--state', BOOT, ...w.files], { encoding: 'utf8', maxBuffer: 1024 * 1024 * 1024 });
+  const rust = [...new Set(p.stderr.split('\n').filter((l) => l.startsWith('diag: asks: ')).map((l) => l.slice(6)))].sort();
+  const ts = [...new Set(r.diagnostics.filter((d) => d.startsWith('asks: ')))].sort();
+  return rust.join('\n') === ts.join('\n') ? null : `asks says ${JSON.stringify(ts)} in the reference and ${JSON.stringify(rust)} in rofl-load`;
+}
+
 async function check(ws: World[], firstName: string): Promise<Report> {
   const port = await RoflPort.start();
   const rep: Report = { asked: 0, bad: [], loadOnly: [], walled: [] };
@@ -440,6 +452,8 @@ async function check(ws: World[], firstName: string): Promise<Report> {
       } else rep.loadOnly.push(w.name);
       const { texts, exits, problems } = cli(w, qs, want);
       for (const p of problems) rep.bad.push(`${w.name} load: ${p}`);
+      const said = asksSaid(r, w);
+      if (said) rep.bad.push(`${w.name}: ${said}`);
       qs.forEach((q, i) => {
         const at = `${w.name} load ${q.op} ${JSON.stringify(q.query)}${q.depth !== undefined ? ` depth=${q.depth} nodes=${q.nodes}` : ''}`;
         // a run that exited badly is reported once, above; any other missing answer is a fault of its own

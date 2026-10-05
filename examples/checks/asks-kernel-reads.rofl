@@ -1,0 +1,16 @@
+-- examples/checks/asks-kernel-reads.rofl — A RULE CONCLUDING WHAT THE KERNEL READS RUNS IN EVERY CONE.
+-- kr_q is asked and negates kr_k. No premise of the cone names the rule that says kr_k(b) is unknown, but the
+-- kernel reads unknown behind every negation: the rule runs, kr_k(b) is a shrug, not a finite failure, and the
+-- shrug row and the explanation of kr_q(b) are the whole world's.
+asks(kr_q).
+edb(kr_src). edb(kr_mark).
+kr_src(a). kr_src(b). kr_mark(b).
+kr_k(a).
+unknown(kr_k(X)) :- kr_mark(X).
+kr_q(X) :- kr_src(X), not kr_k(X).
+kr_far(X) :- kr_src(X).
+explain_request(why, kr_q(b)).
+-- expect-row: unknown[main](kr_k(b))
+-- expect-row: shrug[$kernel](kr_k(b),given,concluded)
+-- expect-row: explained[$explain](why,kr_q(b),4,"    whynot kr_k[main](b): no answer, a shrug")
+-- expect-no-row: kr_far[main](a)

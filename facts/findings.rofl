@@ -10622,3 +10622,63 @@ finding_note(f_a_recursion_through_demand_unfolded_without_end,
 
 finding_note(f_a_negation_unfolded_at_a_call_ignored_the_holes,
   "OF ITS TWO ITEMS NOT DONE: the positive premise below a call is settled by the carry of a hole through demand rules (f_a_premise_unfolded_at_a_call_read_a_shrugged_cell_as_absent); the same reading in a question by f_an_answer_unfolded_at_a_call_read_a_hole_as_absence; an aggregate below a call stays refused (demand_head), as before.").
+
+finding(f_a_rule_concluding_what_the_kernel_reads_runs_in_every_cone, defect).
+recorded(f_a_rule_concluding_what_the_kernel_reads_runs_in_every_cone, "2026-10-05").
+demands(f_a_rule_concluding_what_the_kernel_reads_runs_in_every_cone, code).
+addressed_by(f_a_rule_concluding_what_the_kernel_reads_runs_in_every_cone, "rust/rofl/src/engine.rs").
+addressed_by(f_a_rule_concluding_what_the_kernel_reads_runs_in_every_cone, "src/aggeval.ts").
+addressed_by(f_a_rule_concluding_what_the_kernel_reads_runs_in_every_cone, "examples/checks/asks-kernel-reads.rofl").
+finding_note(f_a_rule_concluding_what_the_kernel_reads_runs_in_every_cone,
+  "FOUND 2026-10-05 by the review of the asks cone (f_the_relation_cone_is_sound_where_a_rule_reads_what_no_premise_names), both engines: the cone closed backwards from the asked relations through premises, so a rule whose HEAD the kernel reads of every evaluation was pruned unless its relation was asked. `unknown(lu_k(X)) :- lu_mark(X).` beside `lu_q(X) :- lu_src(X), not lu_k(X). asks(lu_q).`: the kernel reads unknown behind the negation, so without the rule `why lu_q(b)` said [finite failure] where the whole world says lu_k(b) is undefined, and the shrug row was gone. NOW (`Eval::kernel_heads`, `kernelHeads`) a rule concluding unknown, shrug or explain_request, and under well_founded stratum (the strata the alternating fixpoint reads), runs in every cone with its premises; the stock evaluator, which orders every rule by its stratum table, keeps every rule under asks (said in the diagnostics). Held by examples/checks/asks-kernel-reads.rofl (both engines; planted asks_kernel_heads_cut, ts_asks_kernel_heads_cut).").
+
+finding(f_a_rule_made_explain_request_asks_what_it_names, defect).
+recorded(f_a_rule_made_explain_request_asks_what_it_names, "2026-10-05").
+demands(f_a_rule_made_explain_request_asks_what_it_names, code).
+addressed_by(f_a_rule_made_explain_request_asks_what_it_names, "rust/rofl/src/engine.rs").
+addressed_by(f_a_rule_made_explain_request_asks_what_it_names, "rust/rofl/src/session.rs").
+addressed_by(f_a_rule_made_explain_request_asks_what_it_names, "src/aggeval.ts").
+addressed_by(f_a_rule_made_explain_request_asks_what_it_names, "examples/checks/asks-explain-rule.rofl").
+finding_note(f_a_rule_made_explain_request_asks_what_it_names,
+  "FOUND 2026-10-05 by the review of the asks cone, both engines: the cone asked the relations of the STORED explain_request facts only, and the rule making one was pruned (`asks(ex_x). ex_y(X) :- ex_src(X). explain_request(why, ex_y(X)) :- ex_x(X).`). NOW the rule runs in every cone (explain_request is a kernel head, f_a_rule_concluding_what_the_kernel_reads_runs_in_every_cone), the relation its head names joins the cone, and a head naming no relation (a variable) keeps every rule. A request answered for a relation outside the cone is refused, never answered from the cone (`explained` row 0). Session::assert and retract of an explain_request on a cone world prepare the rules again, as for asks (rust/rofl/tests/asks_cone.rs an_explain_request_asserted_on_a_cone_world_is_answered). A PLAIN world hid the defect from rofl-load: it is prepared again to answer its requests, and found the request the first evaluation made; the proof world has a count outside the cone so that it is answered after one evaluation. Held by examples/checks/asks-explain-rule.rofl (planted asks_explain_rule_unasked, ts_asks_explain_rule_unasked).").
+
+finding(f_a_cone_never_answers_a_world_that_is_refused, defect).
+recorded(f_a_cone_never_answers_a_world_that_is_refused, "2026-10-05").
+demands(f_a_cone_never_answers_a_world_that_is_refused, code).
+addressed_by(f_a_cone_never_answers_a_world_that_is_refused, "rust/rofl/src/engine.rs").
+addressed_by(f_a_cone_never_answers_a_world_that_is_refused, "src/aggeval.ts").
+addressed_by(f_a_cone_never_answers_a_world_that_is_refused, "examples/checks/asks-refused.rofl").
+finding_note(f_a_cone_never_answers_a_world_that_is_refused,
+  "FOUND 2026-10-05 by the review of the asks cone, both engines: a world the whole program refuses was answered under asks with no diagnostic when the refusing rules were outside the cone. The review's sweep found it in a broken function promise and in ten worlds of facts/checks.rofl: counts, sums and thresholds under well_founded, a counting tag in its own recursion, a reader of unknown or shrug, an aggregate through its own conclusion in the data, a threshold round that settles nothing. THE RULE NOW (`Eval::refusal_heads`, `refusalHeads`): the heads of the rules that can make the whole world refuse join every cone, with their premises, so the same check refuses with the same words: a declared function's or tree's relation; a rule reading unknown or shrug (the cone is then the whole world); a rule into a tag, or reading or concluding a subsumptive relation; one concluding a relation answered on demand with an aggregate or a lattice read; under well_founded every aggregate rule and every demand-backed one; and every relation a stall of the whole program's rounds (peel_rounds over every rule, before the data stratification) leaves unsettled. A static check over every rule was not enough: the promises and the data stratification are judged over rows. Held by examples/checks/asks-refused*.rofl (a promise, a count under well_founded, a recursion through a negation, each refused with its asks; planted asks_refusals_cut, ts_asks_refusals_cut) and by the sweep (rust/rofl/tests/asks_cone.rs every_derived_relation_asked_answers_as_the_whole_world_or_refuses: a world refused without asks is refused with each of its heads asked, for the same reason). NOT COVERED: a Bug halt (a kernel defect, not a refusal of the program), which the review saw once (agg_label_cap, 'the hole cause regions_capped is not declared in shrug.rofl', a world loaded without its shrug declarations).").
+
+finding(f_a_question_outside_the_cone_is_refused, defect).
+recorded(f_a_question_outside_the_cone_is_refused, "2026-10-05").
+demands(f_a_question_outside_the_cone_is_refused, code).
+addressed_by(f_a_question_outside_the_cone_is_refused, "rust/rofl/src/engine.rs").
+addressed_by(f_a_question_outside_the_cone_is_refused, "rust/rofl/src/session.rs").
+addressed_by(f_a_question_outside_the_cone_is_refused, "src/aggeval.ts").
+addressed_by(f_a_question_outside_the_cone_is_refused, "src/api.ts").
+addressed_by(f_a_question_outside_the_cone_is_refused, "scripts/whycheck.ts").
+addressed_by(f_a_question_outside_the_cone_is_refused, "examples/checks/asks-outside.rofl").
+finding_note(f_a_question_outside_the_cone_is_refused,
+  "FOUND 2026-10-05 by the review of the asks cone, both engines: a question about a relation whose rules the cone left out was answered from the cone: with asks(rt_a), `whynot rt_b(1)` said no rule concludes rt_b, and rofl-serve `ask rt_b(X)` returned no rows, both false of the world. NOW (`Eval::outside_cone`, `outsideCone`) ask/query, why, why all, whynot and an explain request about a relation the cone pruned, or about one the kernel writes of every rule's evaluation (the cells and members, lattice members, dominations, shrug, unknown, hole, derived_by), are refused in the same words in both engines: \"'R' is outside the asked cone: the world runs only the rules its asks reach, so what it holds of 'R' is not the whole world's; add asks(R) or drop the asks\". excise under a cone that left rules out is refused too: its counterfactual is the cone's, and what the fact supports through the pruned rules is missing from the diff. No planted fault: a question is a host verb and no world's state holds its answer (an explain request names a relation the cone then holds). Held by rust/rofl/tests/asks_cone.rs (the sweep asks why, whynot and ask of a pruned relation in every world it prunes: 904 questions) and by whycheck on examples/checks/asks-outside.rofl (ASKED: why and whynot of a pruned relation, of one in the cone and of unknown, and an excise; rofl-serve and rofl-load against src/api.ts, refusals included).").
+
+finding(f_the_cone_names_the_first_kernel_relation_asked_in_name_order, defect).
+recorded(f_the_cone_names_the_first_kernel_relation_asked_in_name_order, "2026-10-05").
+demands(f_the_cone_names_the_first_kernel_relation_asked_in_name_order, code).
+addressed_by(f_the_cone_names_the_first_kernel_relation_asked_in_name_order, "rust/rofl/src/engine.rs").
+addressed_by(f_the_cone_names_the_first_kernel_relation_asked_in_name_order, "src/aggeval.ts").
+addressed_by(f_the_cone_names_the_first_kernel_relation_asked_in_name_order, "scripts/whycheck.ts").
+addressed_by(f_the_cone_names_the_first_kernel_relation_asked_in_name_order, "examples/checks/asks-asked-twice.rofl").
+finding_note(f_the_cone_names_the_first_kernel_relation_asked_in_name_order,
+  "FOUND 2026-10-05 by the review of the asks cone: with two kernel relations asked (asks(derived_by). asks(unknown).) the diagnostic that every rule is kept named the first of a fixed list in Rust and the first in the cone's iteration order in TypeScript. NOW both name the least by name (cmp_js / cmpStr). whycheck compares the asks diagnostics of every world that asks (rofl-load's stderr against the reference's diagnostics), so a difference in their words is red; examples/checks/asks-asked-twice.rofl is the world. No planted fault: a diagnostic is in no world's state.").
+
+finding(f_hole_asked_and_an_ask_a_rule_concludes_keep_every_rule, decision).
+recorded(f_hole_asked_and_an_ask_a_rule_concludes_keep_every_rule, "2026-10-05").
+demands(f_hole_asked_and_an_ask_a_rule_concludes_keep_every_rule, decision).
+addressed_by(f_hole_asked_and_an_ask_a_rule_concludes_keep_every_rule, "rust/rofl/src/engine.rs").
+addressed_by(f_hole_asked_and_an_ask_a_rule_concludes_keep_every_rule, "src/aggeval.ts").
+addressed_by(f_hole_asked_and_an_ask_a_rule_concludes_keep_every_rule, "examples/checks/asks-hole.rofl").
+addressed_by(f_hole_asked_and_an_ask_a_rule_concludes_keep_every_rule, "examples/checks/asks-derived.rofl").
+finding_note(f_hole_asked_and_an_ask_a_rule_concludes_keep_every_rule,
+  "DECIDED CONSERVATIVELY 2026-10-05 by the review of the asks cone, the owner question stays open: (1) asks(hole) alone answered no hole while the whole world had one, silently, the cone of hole being no rule. NOW hole asked is a question about every rule's holes and keeps every rule (said in the diagnostics), as the kernel's other relations do; the holes of the rules a cone runs are in the store whether or not hole is asked, so a host that wants them needs no ask, and nothing in the tree asks hole (the 2026-10-05 measurement of the notebooks' cones added hole by hand; under this reading those cones would be the whole world, and the measurement stands for the cones without it). If the owner prefers 'hole lists the holes of the cone', that is a diagnostic beside the cone, not a change of what runs. (2) A derived ask (`asks(ad_b) :- ...` beside a stored ask) was silently ignored: what a world asks is read before its rules run. NOW a rule concluding asks keeps every rule (said), which answers what it asks among the rest; honouring it as an ask would need the cone of the rule's own premises evaluated first. Held by examples/checks/asks-hole.rofl and asks-derived.rofl (both engines; planted asks_hole_asked, asks_derived_ignored and their ts_ twins).").

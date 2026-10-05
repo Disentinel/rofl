@@ -735,6 +735,8 @@ pub struct Eval {
     next_rules: HashSet<Sym>,
     /// The relations `asks` reaches, when it prunes (`asks_cone`); `None` evaluates every rule.
     pub cone: Option<HashSet<Sym>>,
+    /// The relations whose rules the cone left out: a question about one is refused (`outside_cone`).
+    pub pruned: HashSet<Sym>,
     /// A lattice cell's current fact, by `(rel, persp, key)`.
     lat_cur: HashMap<LatKey, FactId>,
     /// THE SUBSUMPTIVE RELATIONS, and each cell's antichain: its standing
@@ -1279,6 +1281,7 @@ impl Eval {
             carried: HashMap::new(),
             next_rules: HashSet::new(),
             cone: None,
+            pruned: HashSet::new(),
             lat_cur: HashMap::new(),
             subs: HashMap::new(),
             dom_rels: HashSet::new(),
@@ -1475,10 +1478,13 @@ impl Eval {
     /// backwards through every premise (positive, negated, inside an aggregate) and through what a
     /// subsumptive relation's dominance bodies read; no asks means every rule. The cone is closed under
     /// what a rule can SEE of other relations without naming them as a premise, or an answer in it would
-    /// differ from the whole world's: a relation an `explain_request` names is asked; a rule that reads
-    /// `derived_by` of a named relation reads that relation; a rule that reads the rows of `derived_by`
-    /// with its fact unbound, or the cells, members, lattice members or dominations the kernel writes,
-    /// sees every relation's, and the cone is the whole world (said in the diagnostics).
+    /// differ from the whole world's: a relation an `explain_request` names is asked, and so is the rule
+    /// that makes one; a rule that reads `derived_by` of a named relation reads that relation; a rule that
+    /// reads the rows of `derived_by` with its fact unbound, or the cells, members, lattice members or
+    /// dominations the kernel writes, sees every relation's, and the cone is the whole world (said in the
+    /// diagnostics). Two kinds of rule run whatever is asked: one concluding a relation the kernel reads of
+    /// every evaluation (`kernel_heads`), and one that can make the whole world refuse (`refusal_heads`):
+    /// a cone never answers a world that is refused.
     fn asks_cone(&mut self, kept: &[ERule]) -> Option<HashSet<Sym>> {
         let mut cone: HashSet<Sym> = HashSet::new();
         for f in self.store.rel_all(&self.h, self.v.asks) {
@@ -1490,6 +1496,14 @@ impl Eval {
             }
         }
         if cone.is_empty() {
+            return None;
+        }
+        if let Some(r) = kept.iter().find(|r| r.clause.head.rel == self.v.asks).filter(|_| brk!("asks_derived_ignored" => false; true)) {
+            self.diags.push(format!("asks: rule {} concludes asks, and what a world asks is read before its rules run, so every rule is kept", self.h.name(r.id)));
+            return None;
+        }
+        if self.mode == Mode::Strata {
+            self.diags.push("asks: the stock evaluator orders every rule by its stratum table, so every rule is kept".to_string());
             return None;
         }
         let (req, main) = (self.v.explain_request, self.v.main);
@@ -1511,16 +1525,32 @@ impl Eval {
         let blind = [v.agg_cell, v.agg_member, v.agg_member_prem, v.agg_sealed, v.lattice_member, v.lattice_member_prem, v.dominated_by, v.shrug, v.unknown, v.stratum, v.unstratified, v.edb];
         let asked_blind = brk!("asks_blind_asked" => &[][..]; &blind[..]);
         let asked_calls = brk!("asks_demand_asked" => &[][..]; &self.answer.demand_rels[..]);
-        let hit = asked_blind.iter().chain([&v.derived_by]).chain(asked_calls).find(|r| cone.contains(*r)).copied();
-        if let Some(rel) = hit {
-            self.diags.push(format!("asks: '{}' is asked, and what it holds is what every rule asked of it or showed of every relation, so every rule is kept", self.h.name(rel)));
+        let asked_hole = brk!("asks_hole_asked" => None; Some(&v.hole));
+        let mut hits: Vec<Sym> = asked_blind.iter().chain([&v.derived_by]).chain(asked_hole).chain(asked_calls).filter(|r| cone.contains(*r)).copied().collect();
+        hits.sort_by(|a, b| cmp_js(self.h.name(*a), self.h.name(*b)));
+        if let Some(rel) = hits.first() {
+            self.diags.push(format!("asks: '{}' is asked, and what it holds is what every rule asked of it or showed of every relation, so every rule is kept", self.h.name(*rel)));
             return None;
         }
+        let kernel = self.kernel_heads();
+        cone.extend(self.refusal_heads(kept));
         loop {
             let n = cone.len();
             for r in kept {
-                if !cone.contains(&r.clause.head.rel) {
+                let head = r.clause.head.rel;
+                if !cone.contains(&head) && !kernel.contains(&head) {
                     continue;
+                }
+                if head == self.v.explain_request && brk!("asks_explain_rule_unasked" => false; true) {
+                    match r.clause.head.args.get(1).map(|t| t.kind()) {
+                        Some(TermK::Atom(rel)) => {
+                            cone.insert(rel);
+                        }
+                        Some(TermK::Func(i)) => {
+                            cone.insert(self.h.fname(i));
+                        }
+                        _ => return self.whole_world(r.id, self.v.explain_request),
+                    }
                 }
                 let reads = r.clause.body.iter().filter(|b| {
                     brk!("asks_negation_cut" => !matches!(b, BodyElem::Neg(_)); true) && brk!("asks_aggregate_cut" => !matches!(b, BodyElem::Agg(_)); true)
@@ -1553,6 +1583,72 @@ impl Eval {
                 return Some(cone);
             }
         }
+    }
+
+    /// THE RELATIONS THE KERNEL READS OF EVERY EVALUATION, whatever is asked: `unknown` behind every negation, `shrug`,
+    /// the explain requests, and the strata of a well-founded world. A rule concluding one runs in every cone.
+    fn kernel_heads(&self) -> Vec<Sym> {
+        if brk!("asks_kernel_heads_cut" => true; false) {
+            return Vec::new();
+        }
+        let v = &self.v;
+        let mut out = vec![v.unknown, v.shrug, v.explain_request];
+        if self.well_founded {
+            out.push(v.stratum);
+        }
+        out
+    }
+
+    /// THE RULES THAT CAN MAKE THE WHOLE WORLD REFUSE, whose heads join every cone: a declared function's or
+    /// tree's relation (its promise is judged over its rows); a rule reading `unknown` or `shrug` (refused when
+    /// they arrive after it read them); a rule into a tag, or reading or concluding a subsumptive relation
+    /// (refused when not monotone in the dominance); one concluding a relation answered on demand with an
+    /// aggregate or a lattice read; under well_founded every aggregate and demand-backed rule; and every
+    /// relation a stall of the whole program's rounds leaves unsettled (a recursion through a negation or an
+    /// aggregate, refused or stratified only by its data).
+    fn refusal_heads(&self, kept: &[ERule]) -> Vec<Sym> {
+        if brk!("asks_refusals_cut" => true; false) {
+            return Vec::new();
+        }
+        let v = &self.v;
+        let mut out: Vec<Sym> = self.functions.iter().map(|f| f.rel).chain(self.trees.iter().map(|t| t.rel)).collect();
+        let demand = &self.answer.demand_rels;
+        for r in kept {
+            let head = r.clause.head.rel;
+            let lits: Vec<&Lit> = r.clause.body.iter().flat_map(|b| b.lits_deep()).collect();
+            let has_agg = r.clause.body.iter().any(|b| matches!(b, BodyElem::Agg(_)));
+            let refusable = lits.iter().any(|l| l.rel == v.unknown || l.rel == v.shrug || self.subs.contains_key(&l.rel))
+                || self.subs.contains_key(&head)
+                || self.tags.by_rel.contains_key(&head)
+                || (demand.contains(&head) && (has_agg || lits.iter().any(|l| self.lattices.contains_key(&l.rel))))
+                || (self.well_founded && (has_agg || demand.contains(&head)));
+            if refusable {
+                out.push(head);
+            }
+        }
+        if self.mode == Mode::Rounds {
+            let lats: Vec<Sym> = self.lattices.keys().copied().collect();
+            let dom_edges: Vec<(Sym, Sym)> = self.subs.iter().flat_map(|(p, x)| x.reads.iter().map(move |b| (*p, *b))).collect();
+            let peel = peel_rounds(kept, v, &lats, &dom_edges, &HashSet::new());
+            if peel.stalled {
+                let heads: HashSet<Sym> = kept.iter().map(|r| r.clause.head.rel).collect();
+                out.extend(peel.stuck.iter().copied().filter(|s| heads.contains(s)));
+            }
+        }
+        out
+    }
+
+    /// THE REFUSAL OF A QUESTION THE CONE CANNOT ANSWER: a relation whose rules it left out, or one the kernel writes
+    /// of every rule's evaluation, holds in a world with asks only what the cone's rules made of it.
+    pub fn outside_cone(&self, rel: Sym) -> Option<String> {
+        self.cone.as_ref()?;
+        let v = &self.v;
+        let kernel = [v.agg_cell, v.agg_member, v.agg_member_prem, v.agg_sealed, v.lattice_member, v.lattice_member_prem, v.dominated_by, v.shrug, v.unknown, v.hole, v.derived_by];
+        if !self.pruned.contains(&rel) && !kernel.contains(&rel) {
+            return None;
+        }
+        let n = self.h.name(rel);
+        Some(format!("'{n}' is outside the asked cone: the world runs only the rules its asks reach, so what it holds of '{n}' is not the whole world's; add asks({n}) or drop the asks"))
     }
 
     fn whole_world(&mut self, rule: Sym, rel: Sym) -> Option<HashSet<Sym>> {
@@ -1674,8 +1770,12 @@ impl Eval {
             kept.push(self.classify(r));
         }
         self.cone = self.asks_cone(&kept);
+        self.pruned.clear();
         if let Some(cone) = &self.cone {
-            kept.retain(|r| cone.contains(&r.clause.head.rel));
+            let kernel = self.kernel_heads();
+            let (runs, out): (Vec<ERule>, Vec<ERule>) = kept.into_iter().partition(|r| cone.contains(&r.clause.head.rel) || kernel.contains(&r.clause.head.rel));
+            self.pruned = out.iter().map(|r| r.clause.head.rel).collect();
+            kept = runs;
         }
         self.next_rules = kept.iter().filter(|r| r.clause.head.temporal == Temporal::Next).map(|r| r.id).collect();
         self.carried.clear();
@@ -11983,7 +12083,7 @@ pub struct Peel {
 ///
 /// `demote` holds `(head, inner)` pairs whose aggregate edge is positive
 /// instead: a component a data-level stratification takes (`data_demotable`).
-pub fn peel_rounds(rules: &[Rc<ERule>], v: &Vocab, lattices: &[Sym], dom_edges: &[(Sym, Sym)], demote: &HashSet<(Sym, Sym)>) -> Peel {
+pub fn peel_rounds<R: std::borrow::Borrow<ERule>>(rules: &[R], v: &Vocab, lattices: &[Sym], dom_edges: &[(Sym, Sym)], demote: &HashSet<(Sym, Sym)>) -> Peel {
     let mut pos: HashMap<Sym, HashSet<Sym>> = HashMap::new();
     let mut neg: HashMap<Sym, HashSet<Sym>> = HashMap::new();
     let mut heads: HashSet<Sym> = HashSet::new();
@@ -11992,6 +12092,7 @@ pub fn peel_rounds(rules: &[Rc<ERule>], v: &Vocab, lattices: &[Sym], dom_edges: 
     let mut demoted: Vec<(Sym, u32)> = Vec::new();
     let reflected = [v.agg_cell, v.agg_member, v.agg_member_prem, v.agg_sealed, v.hole];
     for r in rules {
+        let r: &ERule = std::borrow::Borrow::borrow(r);
         if r.clause.head.temporal == Temporal::Next {
             continue;
         }
