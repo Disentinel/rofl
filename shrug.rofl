@@ -32,6 +32,8 @@
 --   widened     within(V): the value a cell declared `widen N` closed on once
 --               the widening was forced, an enclosure of its least value;
 --               the target is the lattice cell
+--   cut         the cause, an atom: demand_cycle; the target is the rule the
+--               call came round in
 --   inherited   from(Roots): the root shrugs' targets it depends on, sorted;
 --               earlier(T) when the root is in tick T, before this one;
 --               below when it is in the world below, fed to this one
@@ -47,6 +49,7 @@ shrug_reason(federation, "the answer lives in a volume or book that is not loade
 shrug_reason(widened, "a declared widening enclosed the value: the least value lies within it, and is not known").
 shrug_reason(inherited, "the answer reads another answer that is a shrug").
 shrug_reason(given, "a book states that it is not known").
+shrug_reason(cut, "a recursion answered on demand was cut where its answers could not be computed to their end").
 
 shrug_cause(budget_exhausted, budget, "the step budget ran out").
 shrug_cause(space_exhausted, budget, "the row budget ran out").
@@ -65,7 +68,7 @@ shrug_cause(tag_off_carrier, fault, "a semiring tag outside its carrier: viterbi
 shrug_cause(unbounded_members, fault, "the members of an interval with an infinite end were enumerated").
 shrug_cause(widening_forced, widened, "a lattice cell improved past its declared widening and was widened").
 shrug_cause(regions_capped, budget, "the values a labeled unknown could be told apart by passed the cap, so the group was not decided by them").
-shrug_cause(demand_cycle, budget, "a call answered on demand came round again inside its own unfolding, and was not unfolded again").
+shrug_cause(demand_cycle, cut, "a call answered on demand came round again inside its own unfolding, under a negation opened inside it, so its answers so far decide nothing").
 shrug_cause(improving_cycle, divergence, "a lattice value came back through its own improvement").
 shrug_cause(dominance_cycle, conflict, "a subsumptive value dominates itself, or two dominate each other, so the dominance is no order and the front is not decided").
 shrug_cause(dominance_intransitive, conflict, "a subsumptive value is dominated by one that no member of the front dominates, or dominates a member, so the dominance is not transitive and the front is not decided").

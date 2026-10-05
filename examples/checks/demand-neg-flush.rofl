@@ -1,0 +1,31 @@
+-- examples/checks/demand-neg-flush.rofl — demand_neg_flush: A NEGATION OVER A HOLE,
+-- UNFOLDED AT A CALL, LEAVES THE CALL'S ANSWER UNKNOWN wherever the call is unfolded,
+-- in a firing or outside one (f_a_negated_call_into_a_hole_stored_its_answer).
+--
+-- dl_x(c, _) is a hole (oops + 1). dl_u leaves Y open, so dl_d is answered on
+-- demand; dl_none's `not dl_d(X, 5)` is decided again at the flush, outside a
+-- firing, where dl_d(c, 5) was unfolded past `not dl_x(c, _)` and stored as a
+-- fact, and dl_some(c) held through it beside the shrug of dl_d(c, _). The copy
+-- answered by rules alone (dm_) stores neither; both now shrug the same three.
+edb(dl_k). edb(dl_node). edb(dm_dom).
+dl_k(a, 1). dl_k(b, 3). dl_k(c, oops).
+dl_node(a). dl_node(b). dl_node(c).
+dl_u(X, Y) :- dl_node(X).
+dl_x(C, Y) :- dl_k(C, K), Y is K + 1.
+dl_d(X, Z) :- dl_u(X, X), not dl_x(X, _).
+dl_some(X) :- dl_d(X, W).
+dl_none(X) :- dl_node(X), dl_some(X), not dl_d(X, 5).
+
+dm_dom(a). dm_dom(b). dm_dom(c). dm_dom(5).
+dm_u(X, Y) :- dl_node(X), dm_dom(Y).
+dm_d(X, Z) :- dm_u(X, X), not dl_x(X, _).
+dm_some(X) :- dm_d(X, W).
+dm_none(X) :- dl_node(X), dm_some(X), not dm_d(X, 5).
+
+dl_wrong(X) :- dl_some(X), not dm_some(X).
+dl_wrong(X) :- dl_d(X, 5), not dm_d(X, 5).
+alarm(dl_wrong).
+
+-- expect-no-row: dl_d[main](c,5)
+-- expect-no-row: dl_some[main](c)
+-- expect-row: shrug[$kernel](dl_some(c),inherited,from($cons($rule(r35c435a4),$nil))) tick base support=0

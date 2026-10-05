@@ -17,7 +17,7 @@ import {
 } from './reflect.ts';
 import { SHRUG, shrugsOf, shrugLine, shrugAtom, shown } from './shrug.ts';
 import { AggEval, DEFAULT_SPACE, Rejected, Wall, checkAggregatesDoor, checkSetPatternsDoor, checkOrderableAgg,
-  checkNextInBody, checkLatticeDecl, checkDominance, lowerOrder } from './aggeval.ts';
+  checkNextInBody, checkLatticeDecl, checkDominance, lowerOrder, type Unknown } from './aggeval.ts';
 import { encodeDominance } from './reflect.ts';
 import { checkStructureDecl, structureRows, declaredStructures, checkFunctions, checkTrees, checkClosureHead, declaredClosures, concludedBy, lowerClosure } from './structure.ts';
 
@@ -131,6 +131,16 @@ function aggConstructs(c: Clause): boolean {
   return c.body.some((b) => b.t === 'agg' || (b.t === 'bi' && (b.op === 'in' || b.op === 'subset' || (b.op === 'is' && b.r.k === 'f' && ivs.has(b.r.name)))));
 }
 
+/** Some answer of `lit` a question left unknown that no shrug row names (`query`). */
+function unknownAnswersUnnamed(store: FactStore, lit: Lit, asked: boolean, trail: Unknown[]): boolean {
+  const uv = (t: Term): boolean => t.k === 'a' && t.name === '$unknown_value';
+  const heads = trail.flatMap((u) => (u.k === 'tuple' && u.rel === lit.rel && u.args.length === lit.args.length
+    && u.args.every((a, i) => !isGround(lit.args[i]) || uv(a) || canonTerm(a) === canonTerm(lit.args[i])) ? [u.args] : []));
+  const rows: Term[][] = [];
+  for (const { row } of shrugsOf(store, lit)) { const t = row.args[0]; if (t.k === 'f' && t.name === lit.rel) rows.push(t.args); }
+  if (heads.length === 0) return asked && rows.length === 0;
+  return heads.some((h) => !rows.some((r) => r.length === h.length && r.every((t, i) => uv(t) || canonTerm(t) === canonTerm(h[i]))));
+}
 /** `excise` under a cone that left rules out: what the fact supports through those rules is not in the world (rust/rofl `EXCISE_UNDER_ASKS`). */
 export const EXCISE_UNDER_ASKS = 'excise is not answered under asks: the rules the cone leaves out would lose what the fact supports too; drop the asks';
 
@@ -853,13 +863,16 @@ export class Rofl {
     let ms: { s: Subst }[] = [];
     // below a call, what a hole left unknown is no answer
     let asked = false;
+    let trail: Unknown[] = [];
     try {
-      const [got, us] = ev.answering(() => ev.matchPremise(lit, new Map(), 0, null) as unknown[]);
+      const [got, us, heads] = ev.questioned(budget, () => ev.answering(() => ev.matchPremise(lit, new Map(), 0, null) as unknown[]));
       asked = us.length > 0;
+      trail = heads;
       ms = got.map((m) => (Array.isArray(m) ? { s: m[0] as Subst } : m as { s: Subst }));
     } catch (e) {
       if (e instanceof Wall) {
-        this.store.add(V.hole, KERNEL_PERSP, [holeId, mka(BUDGET_REASON)], { scope: 'timeless', base: true, frozen: true });
+        // the hole says which wall fell: steps or rows
+        this.store.add(V.hole, KERNEL_PERSP, [holeId, mka(e.reason)], { scope: 'timeless', base: true, frozen: true });
         partial = true;
       } else throw e;
     }
@@ -934,8 +947,10 @@ export class Rofl {
         break;
       }
     }
-    // an answer left unknown that no shrug row names: the rows may be short of it
-    if (asked && shrugs.size === 0) partial = true;
+    // AN ANSWER LEFT UNKNOWN THAT NO SHRUG ROW NAMES: the rows may be short of it. The answers left unknown are the heads of the
+    // call the question made that the trail holds (or, with none, any unknown read); a shrug names one when it has its known
+    // values and leaves unknown at most what it leaves unknown (rust/rofl `Eval::unknown_answers_unnamed`)
+    if (unknownAnswersUnnamed(this.store, lit, asked, trail)) partial = true;
     return { rows: [...rows.keys()].sort().map((k) => rows.get(k)!), partial, unpopulatable,
              ...(shrugs.size > 0 ? { shrugs: [...shrugs.keys()].sort().map((k) => shrugs.get(k)!) } : {}) };
   }
@@ -960,7 +975,7 @@ export class Rofl {
     const outside = ev.outsideCone(lit.rel);
     if (outside !== undefined) return { ok: false, text: outside };
     ev.dag = !opts.tree;
-    try { return { ok: true, text: ev.whyText(lit, opts.all ? Infinity : undefined, typeof text === 'string' ? text : undefined) }; } catch (e) { return { ok: false, text: (e as Error).message }; } finally { ev.dag = true; }
+    try { return { ok: true, text: ev.questioned(budget, () => ev.whyText(lit, opts.all ? Infinity : undefined, typeof text === 'string' ? text : undefined)) }; } catch (e) { return { ok: false, text: (e as Error).message }; } finally { ev.dag = true; }
   }
 
   whynot(text: Ask, opts: WhynotOpts = {}): { holds: boolean; text: string } {
@@ -983,8 +998,8 @@ export class Rofl {
     // program's is a refusal.
     ev.dag = !opts.tree;
     try {
-      const [holds, t] = ev.whynotText(lit, { maxDepth: opts.depth ?? DEFAULT_WHYNOT_DEPTH, maxNodes: opts.nodes ?? DEFAULT_WHYNOT_NODES },
-        typeof text === 'string' ? text.trim() : undefined);
+      const [holds, t] = ev.questioned(budget, () => ev.whynotText(lit, { maxDepth: opts.depth ?? DEFAULT_WHYNOT_DEPTH, maxNodes: opts.nodes ?? DEFAULT_WHYNOT_NODES },
+        typeof text === 'string' ? text.trim() : undefined));
       return { holds, text: t };
     } catch (e) {
       if (e instanceof Wall || !ev.plain) return { holds: false, text: describeHalt(e) };
@@ -1079,9 +1094,9 @@ export class Rofl {
         const k = kind.k === 'a' ? kind.name : '';
         const outside = ev.outsideCone(lit.rel);
         if (outside !== undefined) { text = outside; ok = false; } else try {
-          if (k === 'why') text = ev.whyText(lit);
-          else if (k === 'why_all') text = ev.whyText(lit, Infinity);
-          else if (k === 'whynot') text = ev.whynotText(lit, { maxDepth: 3, maxNodes: 64 })[1];
+          if (k === 'why') text = ev.questioned(budget, () => ev.whyText(lit));
+          else if (k === 'why_all') text = ev.questioned(budget, () => ev.whyText(lit, Infinity));
+          else if (k === 'whynot') text = ev.questioned(budget, () => ev.whynotText(lit, { maxDepth: 3, maxNodes: 64 }))[1];
           else { text = 'the kinds of explanation are why, why_all and whynot'; ok = false; }
         } catch (e) { text = k === 'whynot' ? describeHalt(e) : (e as Error).message; ok = false; }
       }

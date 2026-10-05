@@ -3799,8 +3799,8 @@ export const BREAKS: Break[] = [
   "edits": [
    [
     "src/aggeval.ts",
-    "if (holds && depth > 0 && (this.firing || this.asking) && this.demandHeads.length > 0",
-    "if (holds && depth > 0 && this.firing && this.demandHeads.length > 0"
+    "if (holds && depth > 0 && this.demandHeads.length > 0 && this.latSpread.size > 0) {",
+    "if (holds && depth > 0 && !this.asking && this.demandHeads.length > 0 && this.latSpread.size > 0) {"
    ]
   ],
   "expect": {
@@ -3862,8 +3862,8 @@ export const BREAKS: Break[] = [
   "edits": [
    [
     "src/aggeval.ts",
-    "if (drs !== undefined && !this.demandClosed.has(l.rel) && !again) {",
-    "if (drs !== undefined && !again) {"
+    "if (drs !== undefined && !this.demandClosed.has(l.rel) && j < 0 && served === null) {",
+    "if (drs !== undefined && j < 0 && served === null) {"
    ]
   ],
   "expect": {
@@ -3888,12 +3888,501 @@ export const BREAKS: Break[] = [
    ],
    [
     "src/aggeval.ts",
-    "if (drs !== undefined && !this.demandClosed.has(l.rel) && !again) {",
-    "if (drs !== undefined && !again) {"
+    "if (drs !== undefined && !this.demandClosed.has(l.rel) && j < 0 && served === null) {",
+    "if (drs !== undefined && j < 0 && served === null) {"
    ]
   ],
   "expect": {
    "demand_chain": "lacks the row dc_r[main](700)"
+  }
+ },
+ {
+  "id": "demand_closed_refires",
+  "what": "a rule reading a closed relation answered on demand fires over the whole store at every round, not on its news",
+  "expect": {
+   "demand_scale": "index probes for a 4000-step chain"
+  }
+ },
+ {
+  "id": "demand_neg_failed_unknown",
+  "what": "a negation unfolded at a call that a match decides leaves the call unknown when its unfolding met an unknown beside the match",
+  "expect": {
+   "demand_neg_decided": "lacks the row dz_nro[main](0)"
+  }
+ },
+ {
+  "id": "ts_demand_neg_failed_unknown",
+  "what": "the TypeScript engine leaves a call unknown over a negation a match decides when its unfolding met an unknown beside the match",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "if (!holds) { this.demandTrail.length = unknowns; this.asked.length = asked; this.faultCount = faults; continue; }",
+    ""
+   ]
+  ],
+  "expect": {
+   "demand_neg_decided": "lacks the row dz_nro[main](0)"
+  }
+ },
+ {
+  "id": "demand_closed_news_unread",
+  "what": "a rule reading a closed relation answered on demand is not fired again by that relation's news",
+  "expect": {
+   "demand_chain": "lacks the row dc_r[main](700)"
+  }
+ },
+ {
+  "id": "ts_demand_closed_news_unread",
+  "what": "the TypeScript engine does not fire a rule reading a closed relation answered on demand again on that relation's news",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "for (const r of kept) r.hasDemandPrem = r.posRels.some((x) => demandNames.includes(x) && !this.demandClosed.has(x));",
+    "for (const r of kept) { r.hasDemandPrem = r.posRels.some((x) => demandNames.includes(x) && !this.demandClosed.has(x)); r.triggerRels = r.triggerRels.filter((x) => !this.demandClosed.has(x)); }"
+   ]
+  ],
+  "expect": {
+   "demand_chain": "lacks the row dc_r[main](700)"
+  }
+ },
+ {
+  "id": "demand_cycle_cut",
+  "what": "a call answered on demand met again inside its own unfolding is cut, its answers past those found unknown, instead of read and iterated to the fixpoint",
+  "expect": {
+   "demand_cycle_fixpoint": "holds the row shrug[$kernel](dw_",
+   "demand_cycle": "holds the row shrug[$kernel]($rule"
+  }
+ },
+ {
+  "id": "ts_demand_cycle_cut",
+  "what": "the TypeScript engine cuts a call answered on demand met again inside its own unfolding instead of iterating it to the fixpoint",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "const cut = j >= 0 && this.negLevel > this.demandCalls[j].neg;",
+    "const cut = j >= 0 && this.negLevel >= this.demandCalls[j].neg;"
+   ]
+  ],
+  "expect": {
+   "demand_cycle_fixpoint": "holds the row shrug[$kernel](dw_",
+   "demand_cycle": "holds the row shrug[$kernel]($rule"
+  }
+ },
+ {
+  "id": "demand_fixpoint_once",
+  "what": "the first call of a recursion answered on demand stops after one pass though a call met again read answers that grew",
+  "expect": {
+   "demand_cycle_fixpoint": "dv_wrong"
+  }
+ },
+ {
+  "id": "ts_demand_fixpoint_once",
+  "what": "the TypeScript engine stops the first call of a recursion answered on demand after one pass",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "if (c === null || !c.read || !grew) break;",
+    "break;"
+   ]
+  ],
+  "expect": {
+   "demand_cycle_fixpoint": "dv_wrong"
+  }
+ },
+ {
+  "id": "demand_window_late",
+  "what": "a pass of a linear recursion reads only the answers found after the pass before ended, not those found since it began",
+  "expect": {
+   "demand_cycle_fixpoint": "dv_wrong"
+  }
+ },
+ {
+  "id": "ts_demand_window_late",
+  "what": "the TypeScript engine reads in a pass of a linear recursion only the answers found after the pass before ended",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "c.from = began;",
+    "c.from = c.answers.length;"
+   ]
+  ],
+  "expect": {
+   "demand_cycle_fixpoint": "dv_wrong"
+  }
+ },
+ {
+  "id": "demand_nonlinear_window",
+  "what": "a recursion whose rule reads the cycle twice reads in a pass only the answers the pass before found",
+  "expect": {
+   "demand_fixpoint_nonlinear": "the state lacks the row dn_all[main](5)"
+  }
+ },
+ {
+  "id": "ts_demand_nonlinear_window",
+  "what": "the TypeScript engine takes a recursion whose rule reads the cycle twice for a linear one",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "if (n > 1) twice.push(rel);",
+    "if (n > 99) twice.push(rel);"
+   ]
+  ],
+  "expect": {
+   "demand_fixpoint_nonlinear": "the state lacks the row dn_all[main](5)"
+  }
+ },
+ {
+  "id": "demand_done_stale",
+  "what": "a complete call's table answers a call it covers after the store moved",
+  "expect": {
+   "demand_done": "the state lacks the row de_all[main](3)"
+  }
+ },
+ {
+  "id": "ts_demand_done_stale",
+  "what": "the TypeScript engine reads a complete call's table after the store moved",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "if (this.demandDoneAt[0] !== this.store.version || this.demandDoneAt[1] !== this.store.tick) { this.dropDone(); return null; }",
+    "if (false) { this.dropDone(); return null; }"
+   ]
+  ],
+  "expect": {
+   "demand_done": "the state lacks the row de_all[main](3)"
+  }
+ },
+ {
+  "id": "demand_done_reads_outer",
+  "what": "a call that read the answers of a call below it, still growing, is tabled as complete",
+  "expect": {
+   "demand_done": "the state lacks the row df_all[main](3)"
+  }
+ },
+ {
+  "id": "ts_demand_done_reads_outer",
+  "what": "the TypeScript engine tables a call that read the growing answers of a call below it",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "for (const c of this.demandCalls.slice(j + 1)) c.low = Math.min(c.low, j);",
+    "for (const c of this.demandCalls.slice(j + 1)) c.low = Math.min(c.low, c.low);"
+   ]
+  ],
+  "expect": {
+   "demand_done": "the state lacks the row df_all[main](3)"
+  }
+ },
+ {
+  "id": "demand_done_open_dropped",
+  "what": "a call covered by a complete call's table reads only the answers with its value at the places it binds, not those open there",
+  "expect": {
+   "demand_done": "the state lacks the row dh_five[main](2)"
+  }
+ },
+ {
+  "id": "ts_demand_done_open_dropped",
+  "what": "the TypeScript engine reads from a covering table only the answers with the call's value where it binds",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "return [b.exact.get(canonTerm(args[i])) ?? [], b.open];",
+    "return [b.exact.get(canonTerm(args[i])) ?? [], []];"
+   ]
+  ],
+  "expect": {
+   "demand_done": "the state lacks the row dh_five[main](2)"
+  }
+ },
+ {
+  "id": "demand_done_grounds_open",
+  "what": "an open answer of a covering table that the call grounds is read as the open answer, not as the stored fact its own unfolding names",
+  "expect": {
+   "demand_cycle_fixpoint": "the state lacks the row dw_r7[main](3) tick drv support=1"
+  }
+ },
+ {
+  "id": "ts_demand_done_grounds_open",
+  "what": "the TypeScript engine reads an open answer a call grounds from a covering table as the open answer",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "if (r.t === 'fact') { out.push([a, r]); continue; }",
+    "if (true) { out.push([a, r]); continue; }"
+   ]
+  ],
+  "expect": {
+   "demand_cycle_fixpoint": "the state lacks the row dw_r7[main](3) tick drv support=1"
+  }
+ },
+ {
+  "id": "demand_put_moves_tables",
+  "what": "an answer unfolded at a call and stored moves the store's version, so every table goes stale in every pass of the call around it",
+  "expect": {
+   "demand_fixpoint": "unfolded again in every pass"
+  }
+ },
+ {
+  "id": "demand_done_off",
+  "what": "no complete call is tabled: a call it covers unfolds again",
+  "expect": {
+   "demand_fixpoint": "a complete call was unfolded again"
+  }
+ },
+ {
+  "id": "question_spends_world",
+  "what": "a question's unfolding spends the world's steps and rows, and leaves them spent",
+  "expect": {
+   "demand_question_budget": "the state lacks the row explained[$explain](whynot,qb_p(9,9),3",
+   "demand_query_ask": "a question spent the world's budget"
+  }
+ },
+ {
+  "id": "ts_question_spends_world",
+  "what": "the TypeScript engine runs a question on the world's steps and leaves them spent",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "try { return f(); } finally { [this.steps, this.rows, this.peakRows, this.budget, this.wallSpent] = saved; }",
+    "this.steps = saved[0]; this.rows = saved[1]; return f();"
+   ]
+  ],
+  "expect": {
+   "demand_question_budget": "the state lacks the row explained[$explain](whynot,qb_p(9,9),3"
+  }
+ },
+ {
+  "id": "ask_wall_errors",
+  "what": "an ask that meets a wall answering is an error, not a hole named for the question and a partial answer",
+  "expect": {
+   "demand_query_ask": "a wall met answering is no error"
+  }
+ },
+ {
+  "id": "ask_dedup_scan",
+  "what": "an ask tells its answers apart by scanning those found so far",
+  "expect": {
+   "demand_query_ask": "its answers were told apart by a scan"
+  }
+ },
+ {
+  "id": "demand_neg_cycle_read",
+  "what": "a call met again under a negation opened inside its own unfolding reads the answers so far, which may still grow, instead of being cut",
+  "expect": {
+   "demand_cycle_cut": "holds the row dc_r[main]("
+  }
+ },
+ {
+  "id": "ts_demand_neg_cycle_read",
+  "what": "the TypeScript engine reads the growing answers of a call met again under a negation opened inside it",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "const cut = j >= 0 && this.negLevel > this.demandCalls[j].neg;",
+    "const cut = false;"
+   ]
+  ],
+  "expect": {
+   "demand_cycle_cut": "holds the row dc_r[main]("
+  }
+ },
+ {
+  "id": "ask_sealed_answers",
+  "what": "an ask of a sealed body answers it, where the reference refuses with a hole and a partial answer",
+  "expect": {
+   "demand_query_ask": "an ask answered a sealed body"
+  }
+ },
+ {
+  "id": "demand_rows_kept",
+  "what": "a call that ends keeps counting the rows of the open answers it dropped against the space wall",
+  "expect": {
+   "demand_fixpoint_rows": "the state lacks the row dk_r[main](n39,n1)",
+   "demand_fixpoint": "the space wall fell on rows no call held any more"
+  }
+ },
+ {
+  "id": "ts_demand_rows_kept",
+  "what": "the TypeScript engine keeps counting the rows of the open answers an ended call dropped",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "if (call !== null) { const c = this.demandCalls.pop()!; if (!kept) this.rows -= c.rows; }",
+    "if (call !== null) this.demandCalls.pop();"
+   ]
+  ],
+  "expect": {
+   "demand_fixpoint_rows": "the state lacks the row dk_r[main](n39,n1)"
+  }
+ },
+ {
+  "id": "demand_table_rows_kept",
+  "what": "the tables dropped keep counting the rows of their open answers",
+  "expect": {
+   "demand_fixpoint_space": "the state lacks the row shrug[$kernel]($adhoc,budget,spent(rows,204,202))"
+  }
+ },
+ {
+  "id": "ts_demand_table_rows_kept",
+  "what": "the TypeScript engine's dropped tables keep counting the rows of their open answers",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "private dropDone(): void { this.rows -= this.demandDoneRows; this.demandDoneRows = 0;",
+    "private dropDone(): void { this.demandDoneRows = 0;"
+   ]
+  ],
+  "expect": {
+   "demand_fixpoint_space": "the state lacks the row shrug[$kernel]($adhoc,budget,spent(rows,204,202))"
+  }
+ },
+ {
+  "id": "question_writes_holes",
+  "what": "a question that meets a wall writes the hole of the rule it met it in into the world, beside its own",
+  "expect": {
+   "demand_query_ask": "a question left a hole of its wall in the world"
+  }
+ },
+ {
+  "id": "ask_wall_unnamed",
+  "what": "the hole of an ask that ran out of rows says the steps ran out",
+  "expect": {
+   "demand_query_ask": "a question left a hole of its wall in the world"
+  }
+ },
+ {
+  "id": "question_peak_kept",
+  "what": "a question's peak of rows is left as the world's",
+  "expect": {
+   "demand_query_ask": "a question left its peak of rows in the world's"
+  }
+ },
+ {
+  "id": "unfired_neg_decides",
+  "what": "outside a firing, a negation over a hole unfolded at a call decides the call's answer, which is stored",
+  "expect": {
+   "demand_neg_flush": "the state holds the row dl_d[main](c,5)"
+  }
+ },
+ {
+  "id": "ts_unfired_neg_decides",
+  "what": "the TypeScript engine decides, outside a firing, a negation over a hole unfolded at a call",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "if (holds && depth > 0 && this.demandHeads.length > 0 && this.latSpread.size > 0) {",
+    "if (holds && depth > 0 && (this.firing || this.asking) && this.demandHeads.length > 0 && this.latSpread.size > 0) {"
+   ]
+  ],
+  "expect": {
+   "demand_neg_flush": "the state holds the row dl_d[main](c,5)"
+  }
+ },
+ {
+  "id": "demand_naive_passes",
+  "what": "every pass of a linear recursion reads every answer so far",
+  "expect": {
+   "demand_fixpoint": "every pass read every answer"
+  }
+ },
+ {
+  "id": "demand_again_rereads_store",
+  "what": "a call met again inside its own unfolding reads the store again beside the answers the first call took from it",
+  "expect": {
+   "demand_fixpoint": "a call met again read the store again"
+  }
+ },
+ {
+  "id": "demand_answer_names_grow",
+  "what": "an answer kept for a call met again keeps the variables it was found under, renamed again at each read",
+  "expect": {
+   "demand_fixpoint": "a name renamed at each read grows"
+  }
+ },
+ {
+  "id": "demand_reread_free",
+  "what": "an answer a call met again reads costs no step",
+  "expect": {
+   "demand_fixpoint_steps": "the state lacks the row shrug[$kernel]($adhoc,budget,spent(steps",
+   "demand_fixpoint": "answers read for nothing"
+  }
+ },
+ {
+  "id": "ts_demand_reread_free",
+  "what": "the TypeScript engine reads an answer for a call met again for no step",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "meets the wall\n      this.bumpSteps();",
+    "meets the wall"
+   ]
+  ],
+  "expect": {
+   "demand_fixpoint_steps": "the state lacks the row shrug[$kernel]($adhoc,budget,spent(steps"
+  }
+ },
+ {
+  "id": "demand_open_answer_free",
+  "what": "an open answer kept for a call met again is no row",
+  "expect": {
+   "demand_fixpoint_space": "the state lacks the row shrug[$kernel]($adhoc,budget,spent(rows",
+   "demand_fixpoint": "its open answers were not counted as rows"
+  }
+ },
+ {
+  "id": "ts_demand_open_answer_free",
+  "what": "the TypeScript engine counts no row for an open answer kept for a call met again",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "if (mref.t !== 'fact') { c.rows++; this.chargeRow(dr.id, true); }",
+    "if (false) { c.rows++; this.chargeRow(dr.id, true); }"
+   ]
+  ],
+  "expect": {
+   "demand_fixpoint_space": "the state lacks the row shrug[$kernel]($adhoc,budget,spent(rows"
+  }
+ },
+ {
+  "id": "asked_answers_kept",
+  "what": "a question's unfolding stores the answers it finds, and they stay in the world after it is answered",
+  "expect": {
+   "demand_query_ask": "the why after a whynot is another"
+  }
+ },
+ {
+  "id": "why_unasked",
+  "what": "why of a literal of a relation unfolded at a call reads the store only, and says it does not hold where whynot says it holds",
+  "expect": {
+   "demand_query": "lacks the row explained[$explain](why,dq_o(6,9),1,"
+  }
+ },
+ {
+  "id": "ts_why_unasked",
+  "what": "the TypeScript engine's why of a literal of a relation unfolded at a call reads the store only",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "if (!this.answersOpen(lit.rel)) return null;",
+    "if (true) return null;"
+   ]
+  ],
+  "expect": {
+   "demand_query": "lacks the row explained[$explain](why,dq_o(6,9),1,"
+  }
+ },
+ {
+  "id": "ask_store_only",
+  "what": "rust ask reads the store only for a relation unfolded at a call, where the reference's query unfolds it",
+  "expect": {
+   "demand_query_ask": "dq_o(6, 9) holds and is in no store"
+  }
+ },
+ {
+  "id": "asked_partial_unnamed",
+  "what": "rust ask is partial only when no shrug row answers the question, not when an answer it left unknown is named by none",
+  "expect": {
+   "demand_query_ask": "the row names dq_o(4, 1), not dq_o(4, _)"
   }
  },
  {
@@ -3909,8 +4398,8 @@ export const BREAKS: Break[] = [
   "edits": [
    [
     "src/aggeval.ts",
-    "const again = call !== null && this.demandCalls.includes(call);",
-    "const again = false;"
+    "const j = call === null ? -1 : this.demandCalls.findIndex((c) => c.key === call);",
+    "const j = -1;"
    ]
   ],
   "expect": {
@@ -6029,7 +6518,9 @@ export const BREAKS: Break[] = [
   "id": "retract_consumers_kept",
   "what": "the facts of plain rules that rested on a replaced cell or a retracted lattice value stay beside the ones derived again",
   "expect": {
-   "agg_incr_readers": "holds the row ir_"
+   "agg_incr_readers": "holds the row ir_",
+   "demand_neg_retract": "holds the row dt_h[main](1,1)",
+   "demand_neg_retract_closed": "holds the row dtc_h[main](1)"
   }
  },
  {
@@ -7350,52 +7841,6 @@ export const BREAKS: Break[] = [
   }
  },
  {
-  "id": "demand_closed_atom_book",
-  "what": "a rule whose head book is a variable is not read from the store as a closed relation is: the closure written with a book variable over edges that read a demand relation is unfolded at its calls and meets its own",
-  "expect": {
-   "ds_tree_demand_book": "fired before ddb_w",
-   "ds_tree_demand_book_sealed": "fired before ddb_w"
-  }
- },
- {
-  "id": "ts_demand_closed_atom_book",
-  "what": "the TypeScript evaluator does not read a relation whose head book is a variable from the store as a closed relation",
-  "edits": [
-   [
-    "src/aggeval.ts",
-    "const ok = rs.every((r) => r.clause.head.args.length === n);",
-    "const ok = rs.every((r) => r.clause.head.args.length === n && r.clause.head.persp.k === 'a');"
-   ]
-  ],
-  "expect": {
-   "ds_tree_demand_book": "fired before ddb_w",
-   "ds_tree_demand_book_sealed": "fired before ddb_w"
-  }
- },
- {
-  "id": "demand_closed_book_unbound",
-  "what": "a premise at a ground book does not bind the book variable of the rule's head",
-  "expect": {
-   "ds_tree_demand_book": "fired before ddb_w",
-   "ds_tree_demand_book_sealed": "fired before ddb_w"
-  }
- },
- {
-  "id": "ts_demand_closed_book_unbound",
-  "what": "the TypeScript evaluator's premise at a ground book does not bind the book variable of the rule's head",
-  "edits": [
-   [
-    "src/aggeval.ts",
-    "if (g === undefined || (g.length === b.lit.args.length + 1 && g[b.lit.args.length])) varsOf(b.lit.persp, bound);",
-    "if (g === undefined) varsOf(b.lit.persp, bound);"
-   ]
-  ],
-  "expect": {
-   "ds_tree_demand_book": "fired before ddb_w",
-   "ds_tree_demand_book_sealed": "fired before ddb_w"
-  }
- },
- {
   "id": "vclosure_neg_inverted",
   "what": "a negation of the closure holds where a row does",
   "expect": {
@@ -7645,6 +8090,34 @@ function proofReports(b: Break, bin: string, control: boolean): Verdict {
     const killed = moved.some((l) => l.includes(sign));
     lines.push(`${killed ? 'KILLED  ' : 'SURVIVED'} ${b.id.padEnd(20)} ${name.padEnd(22)} ${sign}`);
     if (!killed) bad.push(`${b.id}: ${name} did not move a line holding ${sign} (${moved.slice(0, 2).join(' | ') || 'nothing'})`);
+  }
+  return { lines, bad };
+}
+
+/** A proof that is no world and no report: a cargo test of rust/rofl/tests (a guard on a counter or the clock, which no
+ *  canonical state shows), passing with no fault and failing, with the sign in its output, with one planted. */
+const TESTS: Record<string, string> = {
+  demand_scale: 'demand_scale',
+  demand_query_ask: 'demand_query',
+  demand_fixpoint: 'demand_fixpoint',
+};
+
+function proofTests(b: Break, profile: string, control: boolean): Verdict {
+  const lines: string[] = [], bad: string[] = [];
+  for (const [name, sign] of Object.entries(b.expect)) {
+    const t = TESTS[name];
+    if (!t) continue;
+    const feat = control ? '--features breaks ' : '';
+    const run = (id: string): [boolean, string] => {
+      try {
+        return [true, execSync(`cd rust && cargo test --profile ${profile} ${feat}-p rofl --test ${t} 2>&1`, { cwd: ROOT, encoding: 'utf8', env: { ...process.env, ROFL_BREAK: id } })];
+      } catch (e) { return [false, String((e as { stdout?: string }).stdout ?? e)]; }
+    };
+    if (control && !run('')[0]) { bad.push(`control, no break planted: cargo test ${t} fails`); continue; }
+    const [ok, text] = run(control ? b.id : '');
+    const killed = !ok && text.includes(sign);
+    lines.push(`${killed ? 'KILLED  ' : 'SURVIVED'} ${b.id.padEnd(20)} ${name.padEnd(22)} ${sign}`);
+    if (!killed) bad.push(`${b.id}: cargo test ${t} ${ok ? 'passed' : `failed without ${sign}`}`);
   }
   return { lines, bad };
 }
@@ -8063,7 +8536,7 @@ if (isMain) {
   let all = declared();
   if ([...expected].some((n) => !all.some((w) => w.name === n)) || sel?.files.length) all = worlds();
   const bad: string[] = [];
-  for (const n of expected) if (!all.some((w) => w.name === n) && !REPORTS[n]) bad.push(`a break expects ${n}, which is no world`);
+  for (const n of expected) if (!all.some((w) => w.name === n) && !REPORTS[n] && !TESTS[n]) bad.push(`a break expects ${n}, which is no world`);
 
   let chosen = BREAKS;
   const why: string[] = [];
@@ -8156,6 +8629,7 @@ if (isMain) {
         const p = plants[i];
         if (p instanceof Error) { out.push({ lines: [], bad: [`${b.id}: ${p.message}`] }); return; }
         if (Object.keys(b.expect).some((n) => REPORTS[n])) out.push(proofReports(b, path.join(ROOT, 'rust/target/breaks/rofl-load'), true));
+        if (Object.keys(b.expect).some((n) => TESTS[n])) out.push(proofTests(b, 'breaks', true));
         const vs = wsOf(b).map((w) => res.get(`${b.id}/${w.name}`) as Verdict);
         out.push({ lines: vs.flatMap((v) => v.lines), bad: vs.flatMap((v) => v.bad) });
       });
@@ -8185,6 +8659,7 @@ if (isMain) {
         build();
         out.push(await runBreak(b, wsOf(b), { env: {}, subs: [] }));
         if (Object.keys(b.expect).some((n) => REPORTS[n])) out.push(proofReports(b, path.join(ROOT, `rust/target/${profile}/rofl-load`), false));
+        if (Object.keys(b.expect).some((n) => TESTS[n])) out.push(proofTests(b, profile, false));
       } catch (e) {
         out.push({ lines: [], bad: [`${b.id}: ${(e as Error).message.split('\n')[0]}`] });
       } finally {

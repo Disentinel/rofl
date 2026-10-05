@@ -1,0 +1,22 @@
+-- examples/checks/demand-cycle-cut.rofl — demand_cycle_cut: A CALL MET AGAIN UNDER A
+-- NEGATION OPENED INSIDE ITS OWN UNFOLDING IS CUT, and the cut is a shrug of its own
+-- reason, `cut` (f_a_cut_cycle_was_filed_as_a_wall,
+-- f_the_cut_was_said_unreachable_and_a_stratum_table_reaches_it).
+--
+-- The stock evaluator (check_opt evaluator strata) takes the program's stratum
+-- table, so the negative cycle the aggregate evaluator's stratifier refuses is
+-- loaded. dc_w is win over a cycle of four moves: dc_u leaves Z open, so dc_w is
+-- answered on demand, and `not dc_w(Y, Z)` calls it again under the negation it
+-- opened. No answer of it is decided, nor any dc_r: the cut says so.
+edb(dc_mv). edb(dc_s). edb(dc_q).
+dc_q(0).
+dc_mv(1, 2). dc_mv(2, 3). dc_mv(3, 4). dc_mv(4, 1).
+dc_s(1). dc_s(2). dc_s(3). dc_s(4).
+dc_u(X, Y) :- dc_q(X).
+dc_w(X, Z) :- dc_mv(X, Y), dc_u(0, Z), not dc_w(Y, Z).
+dc_r(X) :- dc_s(X), dc_w(X, 5).
+stratum(dc_w, 1). stratum(dc_r, 2). stratum(dc_u, 0).
+
+-- expect-no-row: dc_r[main](
+-- expect-row: shrug[$kernel]($rule(rb5f18bfc),cut,demand_cycle) tick base support=0
+-- expect-row: shrug[$kernel](dc_r(1),inherited,from($cons($rule(rb5f18bfc),$nil))) tick base support=0

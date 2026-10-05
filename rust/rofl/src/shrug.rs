@@ -77,6 +77,13 @@ mod tests {
         }
     }
 
+    /// A cut cycle is no wall: it has a reason of its own
+    /// (f_a_cycle_cut_shrugged_what_a_fixpoint_decides).
+    #[test]
+    fn a_cut_cycle_is_no_budget() {
+        assert_eq!(reason_of("demand_cycle"), Some("cut"));
+    }
+
     #[test]
     fn every_cause_names_a_declared_reason() {
         let v = vocab();

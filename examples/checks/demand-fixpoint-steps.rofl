@@ -1,0 +1,21 @@
+-- examples/checks/demand-fixpoint-steps.rofl — demand_fixpoint_steps: EVERY ANSWER A
+-- CALL MET AGAIN READS IS A STEP, so a fixpoint that never stops growing meets the
+-- step wall instead of running on unpaid (f_a_cycle_fixpoint_ran_away_unbounded_and_recomputed_every_pass).
+--
+-- The chain of demand_cycle_fixpoint under a budget of 400 steps (check_opt):
+-- its unfoldings fit in it and its reads do not. Read for nothing, the same world
+-- needs 324 steps and finishes; read as steps it needs 451, and the wall falls.
+edb(dz_q). edb(dz_e). edb(dz_s).
+dz_q(0).
+dz_e(0, 1). dz_e(1, 2). dz_e(2, 3). dz_e(5, 6).
+dz_s(0). dz_s(1). dz_s(2). dz_s(3). dz_s(4). dz_s(5). dz_s(6).
+dz_u(X, Y) :- dz_q(X).
+dz_d(X, Z) :- dz_u(X, X).
+dz_d(Y, Z) :- dz_d(X, Z), dz_e(X, Y).
+dz_r(X)  :- dz_s(X), dz_d(X, 5).
+dz_n(X)  :- dz_s(X), not dz_d(X, 5).
+dz_r7(X) :- dz_s(X), dz_d(X, 7).
+dz_n7(X) :- dz_s(X), not dz_d(X, 7).
+dz_rr(X) :- dz_s(X), dz_d(X, X).
+
+-- expect-row: shrug[$kernel]($adhoc,budget,spent(steps,401,400)) tick base support=0

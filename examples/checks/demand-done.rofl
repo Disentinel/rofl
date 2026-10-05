@@ -1,0 +1,66 @@
+-- examples/checks/demand-done.rofl — demand_done: A CALL UNFOLDED TO ITS END IS
+-- TABLED, and a call it covers reads its answers instead of unfolding again, but
+-- only while the store stands as it was, only when it read no call below it whose
+-- answers could still grow, and only when it met no unknown
+-- (f_a_cycle_fixpoint_ran_away_unbounded_and_recomputed_every_pass).
+--
+-- Every reader below leaves an argument open, so no answer is stored and each
+-- round asks the same call again: what one round misses, the next does not mend.
+--
+-- de_: the edge de_e(2, 3) is concluded from de_all(2), which reads the call
+-- de_d(X, W): the round after reads the same call over a store with one more
+-- edge, and a table kept past the change would never reach 3.
+edb(de_q). edb(de_e0).
+de_q(0).
+de_e0(0, 1). de_e0(1, 2).
+de_u(X, Y) :- de_q(X).
+de_e(X, Y) :- de_e0(X, Y).
+de_e(2, 3) :- de_all(2).
+de_d(X, Z) :- de_u(X, X).
+de_d(Y, Z) :- de_d(X, Z), de_e(X, Y).
+de_all(X) :- de_d(X, W).
+
+-- df_: df_p(X, W), unfolded inside the first call df_q(X, W), reads that call's
+-- answers while they still grow: its own are not complete, and a table of them
+-- would stop the fixpoint of df_q at the first step.
+edb(df_q0). edb(df_e).
+df_q0(0).
+df_e(0, 1). df_e(1, 2). df_e(2, 3).
+df_b(X, W) :- df_q0(X).
+df_p(X, W) :- df_b(X, W).
+df_p(Y, W) :- df_q(X, W), df_e(X, Y).
+df_q(X, W) :- df_p(X, W).
+df_all(X) :- df_q(X, W).
+
+-- dg_: dg_k(c, oops) faults the sum in the first rule of dg_d, under the call
+-- dg_d(X, W) every reader's call unfolds: dg_some(c) is a shrug, and so is
+-- dg_none(c), whose call dg_d(c, 5) meets the same fault. A table of the first
+-- call would answer the second without it; the fault writes a hole, which moves
+-- the store, and a call that met an unknown is not tabled.
+edb(dg_k). edb(dg_node). edb(dg_e).
+dg_k(a, 1). dg_k(b, 3). dg_k(c, oops).
+dg_node(a). dg_node(b). dg_node(c).
+dg_e(a, b).
+dg_u(X, Y) :- dg_node(X).
+dg_d(X, Z) :- dg_u(X, X), dg_k(X, K), J is K + 1.
+dg_d(Y, Z) :- dg_d(X, Z), dg_e(X, Y).
+dg_some(X) :- dg_d(X, W).
+dg_none(X) :- dg_node(X), not dg_d(X, 5).
+
+-- dh_: the answers of dh_d(X, Y, W) stay open in Y and W; dh_d(X, 5, V), in the
+-- same body after the call with every argument free, is covered by its table and
+-- reads the answers open at the place it binds beside those with its value there.
+edb(dh_q). edb(dh_e).
+dh_q(0).
+dh_e(0, 1). dh_e(1, 2).
+dh_u(X, Y, W) :- dh_q(X).
+dh_d(X, Y, W) :- dh_u(X, Y, W).
+dh_d(X2, Y, W) :- dh_d(X, Y, W), dh_e(X, X2).
+dh_all(X) :- dh_d(X, Y, W).
+dh_five(X) :- dh_d(X, Y, W), dh_d(X, 5, V).
+
+-- expect-row: de_all[main](3) tick drv support=1
+-- expect-row: df_all[main](3) tick drv support=1
+-- expect-row: dh_five[main](2) tick drv support=1
+-- expect-no-row: dg_none[main](c)
+-- expect-row: shrug[$kernel](dg_none(c),inherited,from($cons($rule(r7f29316b),$nil))) tick base support=0

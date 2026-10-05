@@ -445,8 +445,15 @@ export interface FactStore {
   allWitnesses(): Map<string, Witness>;
 }
 
+/** The last `Store.version` given out: no two states of any store share one. */
+let VERSION = 0;
+
 export class Store implements FactStore {
   tick = 0;
+  /** A number no other state of any store has had: it moves whenever a fact comes or goes, save a provenance row coming and where the engine
+   *  puts an answer it unfolded at a call. A table of answers found while it stood answers again while it stands (`AggEval.demandDone`). */
+  version = 0;
+  bump(): void { this.version = ++VERSION; }
   facts = new Map<string, FactRec>();
   firings = new Map<string, Map<string, Witness>>(); // fact key -> firing signature -> witness
   tickLog: string[] = [];
@@ -527,6 +534,8 @@ export class Store implements FactStore {
     // a superseded lattice value's history ends when its key comes back
     if (this.ghosts.size > 0 && this.ghosts.delete(key)) this.firings.delete(key);
     this.facts.set(key, { key, rel, persp, args, scope: opts.scope, base: opts.base, frozen: opts.frozen ?? false });
+    // a provenance row is written when a world settles it, sooner or later; no answer reads it
+    if (!persp.startsWith('$') || rel !== 'derived_by') this.bump();
     let byP = this.idx.get(rel);
     if (!byP) { byP = new Map(); this.idx.set(rel, byP); }
     let run = byP.get(persp);
@@ -548,6 +557,7 @@ export class Store implements FactStore {
     if (this.keepDead) this.dead.set(key, rec);
     this.facts.delete(key);
     this.firings.delete(key);
+    this.bump();
     const run = this.idx.get(rec.rel)?.get(rec.persp);
     if (run) {
       const arr = absorb(run);
@@ -635,6 +645,7 @@ export class Store implements FactStore {
       if (this.keepDead) this.dead.set(key, rec);
       this.facts.delete(key);
       this.firings.delete(key);
+      this.bump();
       gone.add(key);
       let ps = touched.get(rec.rel);
       if (!ps) { ps = new Set(); touched.set(rec.rel, ps); }
@@ -1207,6 +1218,7 @@ export class Store implements FactStore {
   clone(): Store {
     const s = new Store();
     s.tick = this.tick;
+    s.version = this.version;
     s.tickLog = [...this.tickLog];
     s.latRegs = this.latRegs;
     s.tagRules = this.tagRules;
