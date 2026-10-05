@@ -145,6 +145,7 @@ impl Session {
     /// copies no fact, tuple, name or functor: it appends above the base's
     /// ids, and nothing it does is visible to the core or to a sibling.
     pub fn fork(&mut self) -> Session {
+        self.eval.settle_provenance();
         self.eval.h.freeze();
         self.eval.store.freeze(&self.eval.h);
         Session { eval: self.eval.fork(), dangling: self.dangling }
@@ -534,6 +535,7 @@ impl Session {
     /// So: `write` is the program's own facts, `drop` is everything about the
     /// volume including the kernel's account of it.
     pub fn volume(&mut self, prefix: &str) -> (Vec<FactId>, Vec<FactId>) {
+        self.eval.settle_provenance();
         let mut write = Vec::new();
         let mut drop = Vec::new();
         for id in self.eval.store.all_facts() {
@@ -586,6 +588,7 @@ impl Session {
         let t0 = std::time::Instant::now();
         let mut ns_match = 0u128;
         let mut ns_render = 0u128;
+        self.eval.settle_provenance();
         let mut texts: Vec<String> = vols.iter().map(|(p, _)| self.header(p)).collect();
         let mut counts = vec![0usize; vols.len()];
         let mut drop: Vec<FactId> = Vec::new();
@@ -722,6 +725,9 @@ impl Session {
         }
         let lit = &cs[0].head;
         let (rel, persp, args) = self.lit_terms(lit)?;
+        if rel == self.eval.v.derived_by {
+            self.eval.settle_provenance();
+        }
         let persp_opt = match lit.book {
             Book::Bare => None,
             _ => Some(persp),
@@ -881,7 +887,8 @@ impl Session {
     /// ONE FIELD GOES OUT EMPTY AND IT IS NOT A ROUNDING ERROR: `evals`, the
     /// per-tick record of what the standing evaluation was allowed and what it
     /// spent. This store does not keep it; `crate::seed` says why it matters.
-    pub fn save(&self) -> String {
+    pub fn save(&mut self) -> String {
+        self.eval.settle_provenance();
         crate::seed::snapshot(&self.eval.h, &self.eval.store)
     }
 
@@ -915,6 +922,9 @@ impl Session {
     /// `Rofl.factKeys` (src/api.ts:1220), in canonical order. `rel` narrows.
     pub fn fact_keys(&mut self, rel: Option<&str>) -> Vec<String> {
         let want = rel.map(|r| self.eval.h.intern(r));
+        if want.is_none_or(|w| w == self.eval.v.derived_by) {
+            self.eval.settle_provenance();
+        }
         let mut out = Vec::new();
         for id in self.eval.store.live_ids() {
             if want.is_some_and(|w| self.eval.store.rec(id).rel != w) {
@@ -1060,6 +1070,7 @@ impl Session {
         let lit = self.one_lit(query)?;
         self.ground_lit(&lit)?;
         self.settle()?;
+        self.settle_if_provenance(&lit);
         self.eval.why_text(&lit, Some(query))
     }
 
@@ -1069,6 +1080,7 @@ impl Session {
         let lit = self.one_lit(query)?;
         self.ground_lit(&lit)?;
         self.settle()?;
+        self.settle_if_provenance(&lit);
         self.eval.why_text_with(&lit, &WhyOpts { members: usize::MAX, query: String::new() }, Some(query))
     }
 
@@ -1168,6 +1180,7 @@ impl Session {
     pub fn whynot(&mut self, query: &str, b: &WhynotBounds) -> Result<(bool, String), String> {
         self.settle()?;
         let lit = self.one_lit(query)?;
+        self.settle_if_provenance(&lit);
         match self.eval.whynot_text(&lit, b, Some(query.trim())) {
             Ok(r) => Ok(r),
             Err(h @ Halt::Budget(..)) => Ok((false, describe(&h))),
@@ -1193,6 +1206,14 @@ impl Session {
     /// One literal, parsed and lowered. `ask` open-codes the same first three
     /// lines because it goes on to read the columns; these two want the
     /// evaluator's `Lit` and nothing else.
+    /// A question about a `derived_by` row reads the rows, so the deferred
+    /// ones are written first, as `ask` does.
+    fn settle_if_provenance(&mut self, lit: &reflect::Lit) {
+        if lit.rel == self.eval.v.derived_by {
+            self.eval.settle_provenance();
+        }
+    }
+
     fn one_lit(&mut self, query: &str) -> Result<reflect::Lit, String> {
         self.eval.parse_lit(query)
     }

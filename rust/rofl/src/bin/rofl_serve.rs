@@ -285,7 +285,7 @@ impl Server {
             "state" => {
                 let path = r.get("path").and_then(|v| v.as_str()).map(|s| s.to_string());
                 let s = self.get(r)?;
-                let cs = s.eval.store.canonical_state(&s.eval.h);
+                let cs = s.eval.canonical_state();
                 match path {
                     Some(p) => {
                         std::fs::write(&p, &cs).map_err(|e| format!("{p}: {e}"))?;
@@ -296,6 +296,7 @@ impl Server {
             }
             "facts" => {
                 let s = self.get(r)?;
+                s.eval.settle_provenance();
                 Ok(json!({ "facts": s.eval.store.fact_count(), "tick": s.eval.store.tick }))
             }
             "close" => {

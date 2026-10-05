@@ -339,6 +339,7 @@ pub struct Vocab {
     pub s_rule_hole: Sym,
     pub budget_reason: Sym,
     pub space_reason: Sym,
+    pub demand_cycle: Sym,
     pub arith_type_reason: Sym,
     pub arith_zero_reason: Sym,
     // FOUR REASONS THE PORT COLLAPSED INTO ONE. `hole_reason_of` had two arms
@@ -621,6 +622,7 @@ impl Vocab {
             s_rule_hole: i("$rule"),
             budget_reason: i("budget_exhausted"),
             space_reason: i("space_exhausted"),
+            demand_cycle: i("demand_cycle"),
             arith_type_reason: i("arith_type_error"),
             arith_zero_reason: i("arith_zero_divisor"),
             str_type_reason: i("str_type_error"),

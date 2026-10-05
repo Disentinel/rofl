@@ -32,3 +32,4 @@ d(X) :- c(X).
 fired_rule(R)   :- derived_by[$kernel](_, R, _), rule[$kernel](R).
 fired_into(Rel) :- derived_by[$kernel](_, R, _), concludes[$kernel](R, Rel).
 fired_at(R, T)  :- derived_by[$kernel](_, R, T).
+-- expect-row: fired_into[main](d)

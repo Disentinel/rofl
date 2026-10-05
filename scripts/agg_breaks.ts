@@ -56,6 +56,42 @@ const ROOT = path.resolve(import.meta.dirname, '..');
 type Break = { id: string; what: string; edits?: [string, string, string][]; expect: Record<string, string> };
 export const BREAKS: Break[] = [
  {
+  "id": "prov_state_unsettled",
+  "what": "the canonical state of a lazily provenanced world is read without writing the derived_by rows of the firings noted since",
+  "expect": {
+   "prov_lazy_reader": "the state lacks the row derived_by[$kernel]($fact(pr_b",
+   "prov_lazy_retract": "the state lacks the row derived_by[$kernel]($fact(pl_reach"
+  }
+ },
+ {
+  "id": "prov_settle_keeps_dead",
+  "what": "a note written as a derived_by row whether or not its fact is alive and a firing of that rule still stands",
+  "expect": {
+   "prov_lazy_lattice": "the state holds the row derived_by[$kernel]($fact(pv_d"
+  }
+ },
+ {
+  "id": "prov_tick_unsettled",
+  "what": "a tick boundary freezes the rows written so far and not the firings noted in the tick it ends",
+  "expect": {
+   "prov_lazy": "the state lacks the row derived_by[$kernel]($fact(pl_hit"
+  }
+ },
+ {
+  "id": "prov_reader_deferred",
+  "what": "the rows of a relation a rule reads derived_by of are noted like any other and not written as it fires",
+  "expect": {
+   "prov_lazy_reader": "the state lacks the row pr_fired"
+  }
+ },
+ {
+  "id": "prov_variable_reader_lazy",
+  "what": "a rule that reads derived_by of a fact it does not name a relation of is taken for a reader of none: every row waits",
+  "expect": {
+   "provenance_relational": "the state lacks the row fired_into[main](d)"
+  }
+ },
+ {
   "id": "delta_first_off",
   "what": "a firing is solved in written order, never from its news: the join before the news premise is held in full",
   "expect": {
@@ -3504,7 +3540,7 @@ export const BREAKS: Break[] = [
   "edits": [
    [
     "src/aggeval.ts",
-    "if (u !== null) { this.demandUnknownAt(depth, a.s, u); continue; }",
+    "if (u !== null) { this.demandUnknownRead(depth, a.s, u); continue; }",
     "if (u === undefined) continue;"
    ]
   ],
@@ -3513,24 +3549,134 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "asked_unholed",
+  "what": "a question's negation unfolded at a call reads what a hole left unknown as absent",
+  "expect": {
+   "demand_asked_hole": "lacks the row explained[$explain](whynot,da_q(c,z),1,"
+  }
+ },
+ {
+  "id": "ts_asked_unholed",
+  "what": "the TypeScript engine reads what a hole left unknown as absent in a question's negation unfolded at a call",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "if (holds && depth > 0 && (this.firing || this.asking) && this.demandHeads.length > 0",
+    "if (holds && depth > 0 && this.firing && this.demandHeads.length > 0"
+   ]
+  ],
+  "expect": {
+   "demand_asked_hole": "lacks the row explained[$explain](whynot,da_q(c,z),1,"
+  }
+ },
+ {
+  "id": "demand_trail_last",
+  "what": "a call left unknown by several unknowns below it rests on the last one only",
+  "expect": {
+   "demand_asked_hole": "lacks the row shrug[$kernel](da_ng(b)"
+  }
+ },
+ {
+  "id": "ts_demand_trail_last",
+  "what": "the TypeScript engine rests a call left unknown on the last unknown below it only",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "const past = this.demandTrail.slice(unknowns);",
+    "const past = this.demandTrail.slice(-1);"
+   ]
+  ],
+  "expect": {
+   "demand_asked_hole": "lacks the row shrug[$kernel](da_ng(b)"
+  }
+ },
+ {
+  "id": "demand_poison_skipped",
+  "what": "a hole is not carried through a rule answered on demand to its readers",
+  "expect": {
+   "demand_pos_hole": "lacks the row shrug[$kernel](dp_q2(k)"
+  }
+ },
+ {
+  "id": "ts_demand_poison_skipped",
+  "what": "the TypeScript engine does not carry a hole through a rule answered on demand to its readers",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "for (const [drel, rs] of this.demandRels) {",
+    "for (const [drel, rs] of [] as [string, ERule[]][]) {"
+   ]
+  ],
+  "expect": {
+   "demand_pos_hole": "lacks the row shrug[$kernel](dp_q2(k)"
+  }
+ },
+ {
   "id": "demand_recursion_unfolds",
-  "what": "a call met again inside its own unfolding unfolds again, to the depth wall",
+  "what": "a call to a closed relation answered on demand unfolds its rules, without end",
   "expect": {
    "demand_recursion": "lacks the row dr_r[main](6)"
   }
  },
  {
   "id": "ts_demand_recursion_unfolds",
-  "what": "the TypeScript engine unfolds a call met again inside its own unfolding, to the depth wall",
+  "what": "the TypeScript engine unfolds a call to a closed relation answered on demand, without end",
   "edits": [
    [
     "src/aggeval.ts",
-    "!(call !== null && this.demandCalls.includes(call))",
-    "true"
+    "if (drs !== undefined && !this.demandClosed.has(l.rel) && !again) {",
+    "if (drs !== undefined && !again) {"
    ]
   ],
   "expect": {
    "demand_recursion": "lacks the row dr_r[main](6)"
+  }
+ },
+ {
+  "id": "demand_closed_unfolds",
+  "what": "a call to a closed relation answered on demand unfolds its rules, stopping only on a call met again, to the depth wall",
+  "expect": {
+   "demand_chain": "lacks the row dc_r[main](700)"
+  }
+ },
+ {
+  "id": "ts_demand_closed_unfolds",
+  "what": "the TypeScript engine unfolds a call to a closed relation answered on demand, stopping only on a call met again",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "this.demandCyclic.has(l.rel) ? this.anonLitKey(l, s) : null",
+    "(this.demandCyclic.has(l.rel) || this.demandClosed.has(l.rel)) ? this.anonLitKey(l, s) : null"
+   ],
+   [
+    "src/aggeval.ts",
+    "if (drs !== undefined && !this.demandClosed.has(l.rel) && !again) {",
+    "if (drs !== undefined && !again) {"
+   ]
+  ],
+  "expect": {
+   "demand_chain": "lacks the row dc_r[main](700)"
+  }
+ },
+ {
+  "id": "demand_cycle_unfolds",
+  "what": "a call to a relation answered on demand with an open answer, met again inside its own unfolding, unfolds again, to the depth wall",
+  "expect": {
+   "demand_cycle": "lacks the row dy_r[main](4)"
+  }
+ },
+ {
+  "id": "ts_demand_cycle_unfolds",
+  "what": "the TypeScript engine unfolds again a call to a relation answered on demand met inside its own unfolding",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "const again = call !== null && this.demandCalls.includes(call);",
+    "const again = false;"
+   ]
+  ],
+  "expect": {
+   "demand_cycle": "lacks the row dy_r[main](4)"
   }
  },
  {

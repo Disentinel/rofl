@@ -71,7 +71,7 @@ mod tests {
             "str_index_error", "str_empty_separator", "atom_unwritable", "arith_overflow", "agg_overflow",
             "agg_type_error", "agg_open_member", "improving_cycle", "support_withdrawn", "fault_left_out",
             "left_out_below", "cooled_to_disk", "unbounded_members", "widening_forced", "tag_off_carrier",
-            "dominance_cycle", "dominance_intransitive",
+            "dominance_cycle", "dominance_intransitive", "demand_cycle",
         ] {
             assert!(reason_of(c).is_some(), "shrug.rofl does not declare the cause {c}");
         }
