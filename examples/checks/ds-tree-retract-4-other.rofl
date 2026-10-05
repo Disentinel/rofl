@@ -1,0 +1,16 @@
+-- examples/checks/ds-tree-retract-4-other.rofl — ds_tree_retract_other[_sealed]: a base fact that does not reach the edges of the
+-- declared tree is retracted (`dto_pick(c)`, check_opt retract). The forest does not change, so the Rust engine works the
+-- retraction out as a delta over the readers, the counts and the negation, which read the closure from the tree, and the world
+-- left is the world evaluated without the fact (the golden, a fresh evaluation in TypeScript, and the same world with the closure
+-- stored). An edge retracted is a full evaluation (ds_tree_retract_edge).
+edb(dto_pick).
+edb(dto_off).
+tree dto_in(P, C) closure dto_w.
+dto_in(a, b). dto_in(b, c). dto_in(c, d). dto_in(a, x). dto_in(x, y).
+dto_pick(b). dto_pick(c). dto_pick(d). dto_pick(y).
+dto_off(a, c).
+dto_hit(X) :- dto_pick(X), dto_w(a, X).
+dto_cnt(N) :- N is count(X : dto_pick(X), dto_w(a, X)).
+dto_under(A, N) :- dto_w(A, _), N is count(X : dto_pick(X), dto_w(A, X)).
+dto_free(X) :- dto_pick(X), not dto_w(b, X).
+dto_open(X) :- dto_hit(X), not dto_off(a, X).

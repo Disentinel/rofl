@@ -525,19 +525,19 @@ function answerTSTogether(w0: World, Engine: typeof Rofl): Answer {
   return { hash: digest(full), facts: r.store.allFactKeys().length, census: census(full), dropped, alarms: raised(alarmRels(state), state), problems };
 }
 
-/** A WORLD THAT SEALS PROVENANCE AND DECLARES A TREE'S CLOSURE is answered by the Rust engine from the tree, which stores none of
- *  the closure's rows. A hash that differs from the golden's there is accepted when the census matches (a witness is not
- *  recorded), and a census cannot see a member's premise or the spelling of a row; so its state must be the state of the same
- *  world with the closure stored (ROFL_NO_VCLOSURE), byte for byte, and a difference is a problem of its own.
+/** A WORLD THAT DECLARES A TREE'S CLOSURE is answered by the Rust engine from the tree, which stores none of the closure's rows,
+ *  sealed or not (where witnesses are kept, each row's witness and `derived_by` row are generated from the tree). A sealed
+ *  world's hash that differs from the golden's is accepted when the census matches (a witness is not recorded), and a census
+ *  cannot see a member's premise or the spelling of a row; so the state of every such world must be the state of the same world
+ *  with the closure stored (ROFL_NO_VCLOSURE), byte for byte, and a difference is a problem of its own.
  *
  *  ONE DIFFERENCE IS THE ENGINE'S AND MUST BE DECLARED: a row answered from the tree costs no space and no step, so a world whose wall
  *  the stored closure meets is cut with the rows and not without. Such a world says so (`check_opt(W, closure_unwalled, 1)`), and is
  *  compared no further; a world that meets the wall stored and does not say so is red, and one that says so and meets none. */
 export const WALL_HOLE = /^hole\[\$kernel\]\(.*,(budget|space)_exhausted\) /m;
-export const treeSealed = (files: string[]): boolean => {
-  const text = files.filter((f) => f.endsWith('.rofl') && fs.existsSync(f)).map((f) => fs.readFileSync(f, 'utf8')).join('\n');
-  return /^sealed\(provenance\)\./m.test(text) && /^tree \w+\(.*\) closure \w+\./m.test(text);
-};
+const filesText = (files: string[]): string => files.filter((f) => f.endsWith('.rofl') && fs.existsSync(f)).map((f) => fs.readFileSync(f, 'utf8')).join('\n');
+export const treeDeclared = (files: string[]): boolean => /^tree \w+\(.*\) closure \w+\./m.test(filesText(files));
+export const treeSealed = (files: string[]): boolean => treeDeclared(files) && /^sealed\(provenance\)\./m.test(filesText(files));
 /** What the state with the closure stored says against the state answered from the tree: null where they agree or the world declares the wall. */
 export function closureVerdict(w: World, tree: string, stored: string): string | null {
   const cut = WALL_HOLE.test(stored) && !WALL_HOLE.test(tree);
@@ -549,7 +549,7 @@ export function closureVerdict(w: World, tree: string, stored: string): string |
   return `answered from its tree the state differs from the world with the closure stored, line ${i + 1}: ${JSON.stringify(a[i])} against ${JSON.stringify(b[i])}`;
 }
 function storedClosureProblems(w: World, keep: string[], args: string[], state: string): string[] {
-  if (!treeSealed(keep)) return [];
+  if (!treeDeclared(keep)) return [];
   const p = spawnSync(RUST, args, { encoding: 'utf8', maxBuffer: 512 * 1024 * 1024, env: { ...process.env, ROFL_NO_VCLOSURE: '1' } });
   if (p.status !== 0) return [`the world with its closure stored does not evaluate (${p.status})`];
   const v = closureVerdict(w, state, p.stdout);

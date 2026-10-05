@@ -1,5 +1,5 @@
--- examples/checks/ds-tree-holds-prov-check.rofl — ds_tree_holds, which keeps its witnesses: the closure of the tree is
--- derived as any rows are, so each of the two rules it lowers to has made a row of it (`derived_by`). A closure answered from
--- its tree where witnesses are kept would have no row to cite and no firing to say.
+-- examples/checks/ds-tree-holds-prov-check.rofl — ds_tree_prov_read, which keeps its witnesses and has a rule that reads the
+-- `derived_by` rows of the closure: such rows are needed while the world evaluates, so the closure is rows (the Rust engine does
+-- not answer it from the tree here) and each of the two rules it lowers to has made a row of it.
 dstp_unmade(R) :- concludes(R, dst_within), not derived_by[$kernel](_, R, _).
 alarm(dstp_unmade).

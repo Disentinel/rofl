@@ -1,0 +1,8 @@
+-- examples/checks/ds-tree-tick-3-staged-request.rofl — the questions ds_tree_tick_staged[_sealed] asks in the tick its staged
+-- conclusions arrive in, carried across the boundary.
+edb(explain_request).
+edb(explained).
+explain_request(why, dts_x(c)).
+explain_request(why_all, dts_y(c)).
+explain_request(why_all, dts_n(2)).
+explain_request(K, A)@next :- explain_request(K, A).

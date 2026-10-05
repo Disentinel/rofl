@@ -3109,8 +3109,9 @@ check_opt("ds_function_phrase", sentences, 1).
 
 -- w_data_structures, step 2, `tree` (docs/data-structures.md "Tree, as built"): `tree ast_in(P, C) closure ast_within.` promises a
 -- forest (one parent for each child, no cycle, in each book) and is the definition of the closure, which the Rust engine answers
--- from the tree where no witness is kept. The same files run twice, once keeping witnesses and once sealed (where the
--- closure is not stored). The promise is judged after every evaluation, tick and retraction, as `function`'s is.
+-- from the tree, storing none of its rows, whether witnesses are kept or not (kept, each row's witness, height and `derived_by` row
+-- are generated from the tree). The same files run twice, once keeping witnesses and once sealed. The promise is judged after
+-- every evaluation, tick and retraction, as `function`'s is.
 check_world("ds_tree_syntax").
 check_file("ds_tree_syntax", "examples/ring1/charclass.rofl").
 check_file("ds_tree_syntax", "examples/ring1/ring1.rofl").
@@ -3138,7 +3139,6 @@ check_opt("ds_tree_syntax", together, 1).
 check_world("ds_tree_holds").
 check_file("ds_tree_holds", "examples/checks/ds-tree-holds.rofl").
 check_file("ds_tree_holds", "examples/checks/ds-tree-holds-check.rofl").
-check_file("ds_tree_holds", "examples/checks/ds-tree-holds-prov-check.rofl").
 check_file("ds_tree_holds", "examples/checks/ds-tree-broken-1-parents.rofl").
 check_file("ds_tree_holds", "examples/checks/ds-tree-broken-2-cycle.rofl").
 check_file("ds_tree_holds", "examples/checks/ds-tree-broken-3-self.rofl").
@@ -3155,11 +3155,20 @@ check_file("ds_tree_sealed", "examples/checks/ds-tree-holds.rofl").
 check_file("ds_tree_sealed", "examples/checks/ds-tree-holds-check.rofl").
 check_opt("ds_tree_sealed", together, 1).
 
+-- A RULE THAT READS THE CLOSURE'S `derived_by` ROWS, where witnesses are kept, needs them as rows while the world evaluates: the
+-- closure is then rows, as the stored closure is, and each lowered rule has made one of them.
+check_world("ds_tree_prov_read").
+check_file("ds_tree_prov_read", "examples/checks/ds-tree-holds.rofl").
+check_file("ds_tree_prov_read", "examples/checks/ds-tree-holds-check.rofl").
+check_file("ds_tree_prov_read", "examples/checks/ds-tree-holds-prov-check.rofl").
+check_opt("ds_tree_prov_read", together, 1).
+
 -- THE CLOSURE ANSWERED FROM THE TREE IS EXPLAINED AS THE STORED CLOSURE IS: `why` of a row, of a fact that reads one and `why all` of an
 -- aggregate over it, through the explain bridge, derived by hand; the canonical state holds the members' premises as facts
 -- (scripts/goldens.ts holds the state of a sealed world with a closure to the state of the same world with the rows stored, and
 -- scripts/whycheck.ts every why, whynot and excise to it).
 check_world("ds_tree_explain").
+check_file("ds_tree_explain", "examples/checks/ds-tree-sealed.rofl").
 check_file("ds_tree_explain", "examples/checks/ds-tree-explain.rofl").
 check_file("ds_tree_explain", "examples/checks/ds-tree-explain-check.rofl").
 check_opt("ds_tree_explain", together, 1).
@@ -3167,6 +3176,15 @@ check_opt("ds_tree_explain", explain, 1).
 -- Rust's alone: a cell under `sealed(provenance)` keeps no derivation heights, so its members print `h=1` and in key order where
 -- TypeScript, which keeps its witnesses, prints their heights and orders by them; the oracle is the same world with the rows stored.
 check_opt("ds_tree_explain", one_engine, rust).
+
+-- THE SAME WORLD KEEPING ITS WITNESSES, both engines: no row of the closure is stored in Rust, and its why, why all, the heights of a
+-- count's members and the witness a height decides (a fact with a firing through the closure and one through a chain) are what
+-- TypeScript's rows and the world with the closure stored say.
+check_world("ds_tree_explain_kept").
+check_file("ds_tree_explain_kept", "examples/checks/ds-tree-explain.rofl").
+check_file("ds_tree_explain_kept", "examples/checks/ds-tree-explain-kept-check.rofl").
+check_opt("ds_tree_explain_kept", together, 1).
+check_opt("ds_tree_explain_kept", explain, 1).
 
 -- A TREE WHOSE EDGES ARE ANSWERED ON DEMAND has its closure as rows: which relations are answered on demand is read after the program is
 -- prepared (the engine read it before, and answered the closure from a forest of the edges it stored, none).
@@ -3202,6 +3220,36 @@ check_file("ds_tree_tick_sealed", "examples/checks/ds-tree-tick-1-holds.rofl").
 check_opt("ds_tree_tick_sealed", together, 1).
 check_opt("ds_tree_tick_sealed", ticks, 3).
 check_opt("ds_tree_tick_sealed", explain, 1).
+
+-- WHAT A STAGED CONCLUSION READ OF THE CLOSURE IN A PAST TICK is explained by the row of that tick, named by its frozen derived_by
+-- rows (written at the boundary from the tree where witnesses are kept), never by the row the present tick holds under its key.
+-- AN EDGE THAT IS A LABELED UNKNOWN makes shrugs of the rows through it, and of none the tree holds.
+check_world("ds_tree_unknown_edge").
+check_file("ds_tree_unknown_edge", "examples/checks/ds-tree-unknown-edge.rofl").
+check_opt("ds_tree_unknown_edge", together, 1).
+
+check_world("ds_tree_unknown_edge_sealed").
+check_file("ds_tree_unknown_edge_sealed", "examples/checks/ds-tree-sealed.rofl").
+check_file("ds_tree_unknown_edge_sealed", "examples/checks/ds-tree-unknown-edge.rofl").
+check_opt("ds_tree_unknown_edge_sealed", together, 1).
+
+check_world("ds_tree_tick_staged").
+check_file("ds_tree_tick_staged", "examples/checks/ds-tree-tick-3-staged.rofl").
+check_file("ds_tree_tick_staged", "examples/checks/ds-tree-tick-3-staged-request.rofl").
+check_file("ds_tree_tick_staged", "examples/checks/ds-tree-tick-3-staged-check.rofl").
+check_opt("ds_tree_tick_staged", together, 1).
+check_opt("ds_tree_tick_staged", ticks, 1).
+check_opt("ds_tree_tick_staged", explain, 1).
+
+check_world("ds_tree_tick_staged_sealed").
+check_file("ds_tree_tick_staged_sealed", "examples/checks/ds-tree-sealed.rofl").
+check_file("ds_tree_tick_staged_sealed", "examples/checks/ds-tree-tick-3-staged.rofl").
+check_file("ds_tree_tick_staged_sealed", "examples/checks/ds-tree-tick-3-staged-request.rofl").
+check_opt("ds_tree_tick_staged_sealed", together, 1).
+check_opt("ds_tree_tick_staged_sealed", ticks, 1).
+check_opt("ds_tree_tick_staged_sealed", explain, 1).
+-- Rust's alone, as ds_tree_explain: a sealed cell keeps no heights where TypeScript prints them.
+check_opt("ds_tree_tick_staged_sealed", one_engine, rust).
 
 check_world("ds_tree_retract").
 check_file("ds_tree_retract", "examples/checks/ds-tree-retract-1-holds.rofl").
@@ -3252,6 +3300,21 @@ check_file("ds_tree_retract_edge_sealed", "examples/checks/ds-tree-retract-3-edg
 check_file("ds_tree_retract_edge_sealed", "examples/checks/ds-tree-retract-3-edge-check.rofl").
 check_opt("ds_tree_retract_edge_sealed", together, 1).
 check_opt("ds_tree_retract_edge_sealed", retract, "dtg_in(b, c)").
+
+-- A RETRACTION THAT DOES NOT REACH THE EDGES of a closure answered from its tree leaves the forest as it is, and is a delta over what
+-- reads the closure (rofl-load says `retract ...: Delta`); one that reaches them is a full evaluation.
+check_world("ds_tree_retract_other").
+check_file("ds_tree_retract_other", "examples/checks/ds-tree-retract-4-other.rofl").
+check_file("ds_tree_retract_other", "examples/checks/ds-tree-retract-4-other-check.rofl").
+check_opt("ds_tree_retract_other", together, 1).
+check_opt("ds_tree_retract_other", retract, "dto_pick(c)").
+
+check_world("ds_tree_retract_other_sealed").
+check_file("ds_tree_retract_other_sealed", "examples/checks/ds-tree-sealed.rofl").
+check_file("ds_tree_retract_other_sealed", "examples/checks/ds-tree-retract-4-other.rofl").
+check_file("ds_tree_retract_other_sealed", "examples/checks/ds-tree-retract-4-other-check.rofl").
+check_opt("ds_tree_retract_other_sealed", together, 1).
+check_opt("ds_tree_retract_other_sealed", retract, "dto_pick(c)").
 -- PROVENANCE ON DEMAND (w_cmp_provenance_on_demand): the Rust engine notes a firing and writes its
 -- derived_by row when something asks, where no rule reads derived_by of the relation. The state, why,
 -- excise, retract and the frozen rows of a past tick are those of an engine that writes every row, and

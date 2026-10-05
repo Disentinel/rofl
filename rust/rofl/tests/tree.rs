@@ -129,15 +129,23 @@ fn a_closure_answered_from_its_tree_concludes_what_its_rules_conclude() {
     }
 }
 
+/// what a world that keeps witnesses says of the user's relations: each row with its support, its witness, its `derived_by`
+/// rows, and the cells and members over them, heights included
+fn said(s: &mut Session) -> String {
+    let st = s.eval.canonical_state();
+    let keep = |l: &&str| l.starts_with("t_") || l.starts_with("wit t_") || l.starts_with("derived_by[$kernel]($fact(t_") || l.starts_with("cell ") || l.starts_with("mem ");
+    st.lines().filter(keep).collect::<Vec<_>>().join("\n")
+}
+
 #[test]
-fn a_closure_that_keeps_witnesses_is_stored_and_agrees() {
-    for seed in 0..10u64 {
+fn a_closure_that_keeps_witnesses_is_answered_from_its_tree_and_says_what_its_rules_say() {
+    for seed in 0..12u64 {
         let (text, edges) = forest(seed * 104729 + 3, 20 + seed * 5);
-        let rules = evaluated(&program(false, false, &text, &edges));
-        let tree = evaluated(&program(true, false, &text, &edges));
-        assert!(tree.eval.vclosure_info().iter().all(|(_, on)| !*on), "a witness is kept: the closure is rows");
-        assert_eq!(tree.eval.store.virtual_rows(), 0);
-        assert_eq!(rows(&rules), rows(&tree), "seed {seed}: the stored closure differs from the rules'");
+        let mut rules = evaluated(&program(false, false, &text, &edges));
+        let mut tree = evaluated(&program(true, false, &text, &edges));
+        assert!(tree.eval.vclosure_info().iter().all(|(_, on)| *on), "seed {seed}: a witness is kept and the closure is not answered from its tree");
+        assert!(tree.eval.store.virtual_rows() > 0);
+        assert_eq!(said(&mut rules), said(&mut tree), "seed {seed}: the closure from the tree says another thing than its rules");
     }
 }
 

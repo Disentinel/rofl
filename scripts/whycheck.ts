@@ -37,7 +37,7 @@ import { Rofl } from '../src/api.ts';
 import { storeHasAggregates } from '../src/aggeval.ts';
 import { canonTerm } from '../src/unify.ts';
 import { RoflPort, type Walls } from '../runtime/port.ts';
-import { worlds, placed, togetherWorld, expectedRefusal, treeSealed, closureVerdict, type World } from './goldens.ts';
+import { worlds, placed, togetherWorld, expectedRefusal, treeSealed, treeDeclared, closureVerdict, type World } from './goldens.ts';
 import { belowFiles } from './agg_select.ts';
 import { dagProblem } from './why_dag.ts';
 import { derivationHeights, type DerivationSource } from '../src/store.ts';
@@ -368,6 +368,24 @@ type Report = { asked: number; bad: string[]; loadOnly: string[]; walled: string
  *  keeps provenance): every why, why all, whynot and excise, and the canonical state, must be the stored world's byte for byte,
  *  and rofl-serve must say what rofl-load says. The same files without the seal are asked against the reference. */
 const fromTree = (w: World): boolean => treeSealed(placed(w).files);
+const declared = (w: World): boolean => treeDeclared(placed(w).files);
+
+/** EVERY WORLD THAT DECLARES A TREE'S CLOSURE, sealed or keeping its witnesses, is held to the same world with the closure stored
+ *  (ROFL_NO_VCLOSURE): its canonical state, and each question (twelve derived facts spread over the store, why, why all and whynot
+ *  of each and of a fact that does not hold, and the excise of the edges of each declared tree), byte for byte. A world that keeps
+ *  its witnesses is asked against the reference besides. */
+function storedOracle(rep: Report, kept: World, qs: Q[], texts: (string | undefined)[]): void {
+  const a = stateOf(kept, {}), b = stateOf(kept, { ROFL_NO_VCLOSURE: '1' });
+  const v = closureVerdict(kept, a, b);
+  if (v !== null) { rep.bad.push(`${kept.name}: ${v}`); return; }
+  if (kept.closureUnwalled) { rep.walled.push(kept.name); return; }
+  const stored = cli(kept, qs, qs.map(() => ({ ok: true, text: '' })), { ROFL_NO_VCLOSURE: '1' });
+  for (const pr of stored.problems) rep.bad.push(`${kept.name} stored load: ${pr}`);
+  qs.forEach((q, i) => {
+    if (texts[i] !== undefined && stored.texts[i] !== undefined && texts[i] !== stored.texts[i])
+      rep.bad.push(`${kept.name} from the tree vs stored ${q.op} ${JSON.stringify(q.query)}: ${firstDiff(stored.texts[i]!, texts[i]!)}`);
+  });
+}
 
 /** The canonical state rofl-load prints for the world, with the closure answered from its tree or stored. */
 function stateOf(w: World, env: Record<string, string>): string {
@@ -394,7 +412,7 @@ async function check(ws: World[], firstName: string): Promise<Report> {
         // the reference is not run on a Rust-only world; rofl-serve and rofl-load must still agree
         const w = placed(w0);
         const kept = { ...w, files: w.files.filter((f) => !expectedRefusal(f) && unreadOf(f).length === 0) };
-        const qs = rustQuestions(kept, fromTree(w0));
+        const qs = rustQuestions(kept, declared(w0));
         const got = servable(kept) ? await served(port, kept, qs) : null;
         if (!got) rep.loadOnly.push(kept.name);
         const { texts, problems } = cli(kept, qs, qs.map(() => ({ ok: true, text: '' })));
@@ -402,21 +420,7 @@ async function check(ws: World[], firstName: string): Promise<Report> {
         qs.forEach((q, i) => {
           if (got && texts[i] !== undefined && texts[i] !== got[i].text) rep.bad.push(`${kept.name} serve vs load ${q.op} ${JSON.stringify(q.query)}: ${firstDiff(got[i].text, texts[i]!)}`);
         });
-        if (fromTree(w0)) {
-          // the states decide whether the stored world is comparable: it is not where it meets a wall the tree does not
-          const a = stateOf(kept, {}), b = stateOf(kept, { ROFL_NO_VCLOSURE: '1' });
-          const v = closureVerdict(kept, a, b);
-          if (v !== null) rep.bad.push(`${kept.name}: ${v}`);
-          else if (kept.closureUnwalled) rep.walled.push(kept.name);
-          else {
-            const stored = cli(kept, qs, qs.map(() => ({ ok: true, text: '' })), { ROFL_NO_VCLOSURE: '1' });
-            for (const pr of stored.problems) rep.bad.push(`${kept.name} stored load: ${pr}`);
-            qs.forEach((q, i) => {
-              if (texts[i] !== undefined && stored.texts[i] !== undefined && texts[i] !== stored.texts[i])
-                rep.bad.push(`${kept.name} from the tree vs stored ${q.op} ${JSON.stringify(q.query)}: ${firstDiff(stored.texts[i]!, texts[i]!)}`);
-            });
-          }
-        }
+        if (declared(w0)) storedOracle(rep, kept, qs, texts);
         rep.asked += qs.length;
         continue;
       }
@@ -468,6 +472,13 @@ async function check(ws: World[], firstName: string): Promise<Report> {
         if ((code === 4) !== refused) rep.bad.push(`${w.name} load exit ${code}${g.startsWith('parse#') ? ` (${JSON.stringify(qs[Number(g.slice(6))].query)} alone)` : g ? ` (bounds ${g})` : ''}, and the reference ${refused ? 'refused a question' : 'refused none'}`);
       }
       rep.asked += qs.length;
+      if (declared(w0)) {
+        // the reference stores the closure; the same world on Rust with it stored is asked the questions of a tree besides
+        const kept = { ...w, files: w.files.filter((f) => !expectedRefusal(f) && unreadOf(f).length === 0) };
+        const tq = rustQuestions(kept, true);
+        storedOracle(rep, kept, tq, cli(kept, tq, tq.map(() => ({ ok: true, text: '' }))).texts);
+        rep.asked += tq.length;
+      }
     }
   } finally { await port.stop(); }
   return rep;

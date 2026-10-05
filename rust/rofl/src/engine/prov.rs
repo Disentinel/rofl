@@ -55,6 +55,7 @@ impl Eval {
     /// Write the rows of the firings noted since the last call. Idempotent;
     /// the world is then as the eager one is, and stays lazy for what fires after.
     pub fn settle_provenance(&mut self) {
+        self.vsettle();
         if self.pending_prov.is_empty() {
             return;
         }

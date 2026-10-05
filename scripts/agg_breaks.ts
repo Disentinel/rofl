@@ -7431,10 +7431,61 @@ export const BREAKS: Break[] = [
   }
  },
  {
-  "id": "vclosure_with_witness",
-  "what": "a closure is answered from its tree where witnesses are kept, which cite no row of it",
+  "id": "vclosure_prov_read_ignored",
+  "what": "a closure is answered from its tree where witnesses are kept and a rule reads its derived_by rows, which are then not there while the world evaluates",
   "expect": {
-   "ds_tree_holds": "dstp_unmade"
+   "ds_tree_prov_read": "dstp_unmade"
+  }
+ },
+ {
+  "id": "vclosure_wit_unwritten",
+  "what": "where witnesses are kept, the canonical state writes no witness for a row of a closure answered from its tree",
+  "expect": {
+   "ds_tree_holds": "the state differs",
+   "ds_tree_explain_kept": "the state differs"
+  }
+ },
+ {
+  "id": "vclosure_prov_unsettled",
+  "what": "where witnesses are kept, the derived_by rows of a closure answered from its tree are never written when observed",
+  "expect": {
+   "ds_tree_holds": "the state differs",
+   "ds_tree_explain_kept": "the state differs"
+  }
+ },
+ {
+  "id": "vclosure_height_zero",
+  "what": "a row of a closure answered from its tree weighs nothing, where witnesses are kept: a member's height and the witness a height picks are wrong",
+  "expect": {
+   "ds_tree_explain_kept": "dtk_missing"
+  }
+ },
+ {
+  "id": "vclosure_past_row_present",
+  "what": "a row of a closure answered from its tree that a staged conclusion read in a past tick is explained by the row of the present tick",
+  "expect": {
+   "ds_tree_tick_staged": "the state differs"
+  }
+ },
+ {
+  "id": "vclosure_unknown_row_absent",
+  "what": "a row of a closure answered from its tree is taken for a row that does not hold where an unknown could reach it, and made a shrug",
+  "expect": {
+   "ds_tree_unknown_edge": "lknown_shrug"
+  }
+ },
+ {
+  "id": "vclosure_retract_edge_delta",
+  "what": "a retraction that reaches the edges of a closure answered from its tree is worked out as a delta, which does not build the forest again for what reads it",
+  "expect": {
+   "ds_tree_retract_edge": "dtg"
+  }
+ },
+ {
+  "id": "vclosure_restore_keys_unread",
+  "what": "a snapshot opened does not read the rows its witnesses cite, so their heights are 0 and a witness a height picks is another",
+  "expect": {
+   "ds_tree_explain_kept": "a snapshot opened and not evaluated holds another state"
   }
  },
  {

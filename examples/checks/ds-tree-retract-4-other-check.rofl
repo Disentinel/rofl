@@ -1,0 +1,12 @@
+-- examples/checks/ds-tree-retract-4-other-check.rofl — what ds_tree_retract_other holds once dto_pick(c) is retracted: c is no
+-- hit, no member of a count and nothing free; the rest stands.
+dto_want_hit(b). dto_want_hit(d). dto_want_hit(y).
+dto_want_free(b). dto_want_free(y).
+dto_lost(X) :- dto_want_hit(X), not dto_hit(X).
+dto_lost(cnt) :- not dto_cnt(3).
+dto_lost(under) :- not dto_under(b, 1).
+dto_lost(X) :- dto_want_free(X), not dto_free(X).
+dto_kept(X) :- dto_hit(X), not dto_want_hit(X).
+dto_kept(X) :- dto_free(X), not dto_want_free(X).
+alarm(dto_lost).
+alarm(dto_kept).

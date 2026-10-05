@@ -1882,8 +1882,24 @@ brk("vclosure_unbound_cheap"). brk_kind("vclosure_unbound_cheap", switch).
 brk_expects("vclosure_unbound_cheap", "ds_tree_plan").
 brk("vclosure_rows_unpublished"). brk_kind("vclosure_rows_unpublished", switch).
 brk_expects("vclosure_rows_unpublished", "ds_tree_sealed").
-brk("vclosure_with_witness"). brk_kind("vclosure_with_witness", switch).
-brk_expects("vclosure_with_witness", "ds_tree_holds").
+brk("vclosure_prov_read_ignored"). brk_kind("vclosure_prov_read_ignored", switch).
+brk_expects("vclosure_prov_read_ignored", "ds_tree_prov_read").
+brk("vclosure_wit_unwritten"). brk_kind("vclosure_wit_unwritten", switch).
+brk_expects("vclosure_wit_unwritten", "ds_tree_holds").
+brk_expects("vclosure_wit_unwritten", "ds_tree_explain_kept").
+brk("vclosure_prov_unsettled"). brk_kind("vclosure_prov_unsettled", switch).
+brk_expects("vclosure_prov_unsettled", "ds_tree_holds").
+brk_expects("vclosure_prov_unsettled", "ds_tree_explain_kept").
+brk("vclosure_height_zero"). brk_kind("vclosure_height_zero", switch).
+brk_expects("vclosure_height_zero", "ds_tree_explain_kept").
+brk("vclosure_past_row_present"). brk_kind("vclosure_past_row_present", switch).
+brk_expects("vclosure_past_row_present", "ds_tree_tick_staged").
+brk("vclosure_unknown_row_absent"). brk_kind("vclosure_unknown_row_absent", switch).
+brk_expects("vclosure_unknown_row_absent", "ds_tree_unknown_edge").
+brk("vclosure_retract_edge_delta"). brk_kind("vclosure_retract_edge_delta", switch).
+brk_expects("vclosure_retract_edge_delta", "ds_tree_retract_edge").
+brk("vclosure_restore_keys_unread"). brk_kind("vclosure_restore_keys_unread", switch).
+brk_expects("vclosure_restore_keys_unread", "ds_tree_explain_kept").
 brk("closure_one_book"). brk_kind("closure_one_book", switch).
 brk_expects("closure_one_book", "ds_tree_holds").
 brk("phrase_tree_closure_lost"). brk_kind("phrase_tree_closure_lost", switch).
@@ -2372,18 +2388,25 @@ switch_site("vclosure_book_merged", "rust/rofl/src/engine/vclosure.rs").
 switch_site("vclosure_demand_unread", "rust/rofl/src/engine/vclosure.rs").
 switch_site("vclosure_derive_always_step", "rust/rofl/src/engine/vclosure.rs").
 switch_site("vclosure_descendants_short", "rust/rofl/src/forest.rs").
+switch_site("vclosure_height_zero", "rust/rofl/src/store.rs").
 switch_site("vclosure_neg_inverted", "rust/rofl/src/engine.rs").
 switch_site("vclosure_nonstrict", "rust/rofl/src/forest.rs").
+switch_site("vclosure_past_row_present", "rust/rofl/src/engine.rs").
 switch_site("vclosure_premise_untagged", "rust/rofl/src/engine/vclosure.rs").
+switch_site("vclosure_prov_read_ignored", "rust/rofl/src/engine/vclosure.rs").
+switch_site("vclosure_prov_unsettled", "rust/rofl/src/engine/vclosure.rs").
 switch_site("vclosure_reader_stale", "rust/rofl/src/engine.rs").
+switch_site("vclosure_restore_keys_unread", "rust/rofl/src/engine/vclosure.rs").
 switch_site("vclosure_restore_unengaged", "rust/rofl/src/engine/vclosure.rs").
+switch_site("vclosure_retract_edge_delta", "rust/rofl/src/engine/vclosure.rs").
 switch_site("vclosure_row_written_twice", "rust/rofl/src/engine/vclosure.rs").
 switch_site("vclosure_rows_cost", "rust/rofl/src/engine/vclosure.rs").
 switch_site("vclosure_rows_unpublished", "rust/rofl/src/engine/vclosure.rs").
 switch_site("vclosure_stale_forest", "rust/rofl/src/engine/vclosure.rs").
 switch_site("vclosure_unbound_cheap", "rust/rofl/src/engine/vclosure.rs").
+switch_site("vclosure_unknown_row_absent", "rust/rofl/src/engine/vclosure.rs").
 switch_site("vclosure_why_absent", "rust/rofl/src/engine/vclosure.rs").
-switch_site("vclosure_with_witness", "rust/rofl/src/engine/vclosure.rs").
+switch_site("vclosure_wit_unwritten", "rust/rofl/src/store.rs").
 switch_site("viterbi_rounds_up", "rust/rofl/src/cell.rs").
 switch_site("wfs_admits_body_aggregate", "rust/rofl/src/engine.rs").
 switch_site("wfs_admits_lattice", "rust/rofl/src/engine.rs").

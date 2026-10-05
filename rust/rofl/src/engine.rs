@@ -625,7 +625,8 @@ pub struct Eval {
     vreader_seen: HashMap<(Sym, usize), usize>,
     vclosure_blocked: HashSet<usize>,
     /// The rows of a closure answered from its tree that a premise cited, by the key the premise carries.
-    vrow_of: HashMap<Sym, (usize, Sym, Term, Term)>,
+    vprov_ids: Vec<FactId>,
+    vprov_stamp: Option<(u32, u64)>,
     vrow_done: HashSet<Sym>,
     /// Why a declared closure is not answered from its tree, as the program stands.
     pub vclosure_reason: Vec<String>,
@@ -1226,7 +1227,8 @@ impl Eval {
             vreaders: HashMap::new(),
             vreader_seen: HashMap::new(),
             vclosure_blocked: HashSet::new(),
-            vrow_of: HashMap::new(),
+            vprov_ids: Vec::new(),
+            vprov_stamp: None,
             vrow_done: HashSet::new(),
             vclosure_reason: Vec::new(),
             vbuilds: 0,
@@ -2534,7 +2536,7 @@ impl Eval {
 
     fn run_pass(&mut self) -> Result<Outcome, Halt> {
         self.clear_derived();
-        self.store.virtuals.clear();
+        self.store.vlisted = false;
         self.vclosure_engage();
         self.shrug_reset();
         self.active.clear();
@@ -6112,7 +6114,8 @@ impl Eval {
             match p {
                 PremRef::Fact(f) => hgt = hgt.max(self.height_memo[f]),
                 PremRef::Cell(c) => hgt = hgt.max(self.store.cell(*c).height),
-                PremRef::Neg(_) | PremRef::Bi(_) | PremRef::VRow(_) => {}
+                PremRef::VRow(k) => hgt = hgt.max(self.store.vrow_height(*k, &mut self.height_memo)),
+                PremRef::Neg(_) | PremRef::Bi(_) => {}
             }
         }
         Ok(hgt + 1)
@@ -7926,7 +7929,7 @@ impl Eval {
 
     /// Does the tuple `u` names hold for certain, as a fact that stands?
     fn unknown_holds(&self, u: &Unknown) -> bool {
-        matches!(u, Unknown::Tuple(rel, persp, args) if self.store.get(*rel, *persp, args).is_some_and(|f| self.store.alive(f)))
+        matches!(u, Unknown::Tuple(rel, persp, args) if self.store.get(*rel, *persp, args).is_some_and(|f| self.store.alive(f)) || self.vrow_holds(*rel, *persp, args))
     }
 
     /// The level a relation is complete after: the round (or stratum) its
@@ -13725,7 +13728,16 @@ impl Eval {
     /// `derived_by` rows, which `retain_ticks` keeps while a live cell cites
     /// it) and not explained further: a tick's firings go with the tick.
     fn render_past(&mut self, pr: PremRef, t: u32, indent: usize, o: &WhyOpts, next: &mut Vec<WhyTask>) {
-        let PremRef::Fact(f) = pr else {
+        // a row of a closure answered from its tree, read at T: named by its frozen `derived_by` rows as a stored row is
+        let vrow = match pr {
+            PremRef::VRow(k) if !brk!("vclosure_past_row_present" => true; false) => self.vrow_entry(k).map(|(ci, b, a, d)| (self.vclosures[ci].rel, b, vec![a, d])),
+            _ => None,
+        };
+        let row = match pr {
+            PremRef::Fact(f) => Some((self.store.rec(f).rel, self.store.rec(f).persp, self.store.args(f).to_vec())),
+            _ => vrow,
+        };
+        let Some((rel, persp, args)) = row else {
             // A NEGATED PREMISE of a staged firing held in the tick it was
             // read: the arrival tick's store (an undefined row, a whynot) says
             // nothing about it, so it is the bare claim, no demonstration.
@@ -13738,10 +13750,8 @@ impl Eval {
             return self.render_prem(pr, indent, o, next);
         };
         let mut key = String::new();
-        let r = self.store.rec(f);
-        let args = self.store.args(f).to_vec();
-        write_fact_key(&self.h, r.rel, r.persp, &args, &mut key);
-        let ft = fact_term(&mut self.h, &self.v, r.rel, r.persp, &args);
+        write_fact_key(&self.h, rel, persp, &args, &mut key);
+        let ft = fact_term(&mut self.h, &self.v, rel, persp, &args);
         if self.past_rows.is_none() {
             let mut by: HashMap<(Term, i64), Vec<Sym>> = HashMap::new();
             for d in self.store.rel_all(&self.h, self.v.derived_by) {
