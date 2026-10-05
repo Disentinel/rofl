@@ -1166,3 +1166,30 @@ fn a_negation_inside_an_aggregate_is_read_again_whole() {
     assert!(all.full.is_empty(), "{:?}", all.full);
     assert!(all.sum.stacked_rules > 20 && all.sum.stacked_cells > 20, "{all:?}");
 }
+
+/// One retraction from a world built from `facts`, held to the world built without it.
+fn one_retraction(program: &str, facts: &[&str], gone: &str) -> Retraction {
+    let loaded: BTreeSet<String> = facts.iter().map(|f| f.to_string()).collect();
+    let mut s = fresh(program, &loaded, &BTreeSet::new());
+    let how = s.retract_delta(gone).unwrap();
+    let rest: BTreeSet<String> = loaded.iter().filter(|f| f.as_str() != gone).cloned().collect();
+    assert_eq!(state(&mut s), state(&mut fresh(program, &rest, &BTreeSet::new())), "retract {gone} ({how:?})");
+    how
+}
+
+/// Found by tests/addition.rs: a threshold's reader concluded a fact that a rule of its own relation also concludes from
+/// itself, round a cycle; the firing that cited the threshold went and the cycle held the fact up.
+#[test]
+fn a_fact_a_changed_cell_concluded_goes_whole_and_its_cycle_with_it() {
+    let program = "edb(e). edb(n).\np6(X, X) :- n(X), at_least(2, Y : e(X, Y)).\np6(X, Z) :- p6(X, Y), e(Y, Z).\n";
+    let how = one_retraction(program, &["n(b)", "e(b, a)", "e(b, c)", "e(a, c)", "e(c, b)"], "e(b, c)");
+    assert!(matches!(how, Retraction::Delta(_)), "{how:?}");
+}
+
+/// Found by tests/addition.rs: a threshold whose OUTER premise went kept its cell, as a plain reader keeps none.
+#[test]
+fn a_threshold_whose_outer_premise_goes_is_sealed_again() {
+    let program = "edb(e). edb(n).\np3(X, X) :- n(X), at_least(2, Y : e(X, Y)).\n";
+    let how = one_retraction(program, &["n(a)", "e(a, a)", "e(a, c)", "e(c, a)"], "n(a)");
+    assert!(matches!(how, Retraction::Delta(_)), "{how:?}");
+}

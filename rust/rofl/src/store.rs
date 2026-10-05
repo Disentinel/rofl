@@ -755,6 +755,10 @@ pub struct Store {
     pub unordered: bool,
     pub tick: u32,
     pub dirty: bool,
+    /// Derived facts a base one was put over: such a fact keeps the derived record's scope (`Session::load_delta`).
+    pub promotions: u64,
+    /// Where set, every fact `put` makes new (or brings back) is noted (`Session::load_delta`).
+    pub arrivals: Option<Vec<FactId>>,
     pub partial_eval: bool,
     pub tick_log: Vec<String>,
     /// THE RELATIONS WHOSE FACTS ARE LATTICE CELLS, registered by the engine
@@ -1225,6 +1229,7 @@ impl Store {
         let id = match self.find_rec(rel, persp, args) {
             Some(id) if self.alive(id) => {
                 if flags & F_BASE != 0 && !self.facts.rec(id).base() {
+                    self.promotions += 1;
                     self.facts.add_flags(id, F_BASE);
                 }
                 return (id, false);
@@ -1249,6 +1254,9 @@ impl Store {
             }
         };
         self.n_live += 1;
+        if let Some(a) = self.arrivals.as_mut() {
+            a.push(id);
+        }
         // a provenance row is written when a world settles it, sooner or later; no answer reads it
         if !h.name(persp).starts_with('$') || h.name(rel) != "derived_by" {
             self.bump();

@@ -20,11 +20,13 @@ use crate::store::{
 use crate::term::*;
 
 mod datastrat;
+mod addition;
 mod delta;
 mod labeled;
 mod joinplan;
 mod vclosure;
 mod prov;
+pub use addition::{AddDelta, PrepMark};
 pub use delta::Delta;
 
 const MAX_DEPTH: usize = 512;

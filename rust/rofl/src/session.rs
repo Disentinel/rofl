@@ -67,6 +67,17 @@ pub enum Retraction {
     Full(String),
 }
 
+/// What [`Session::assert_delta`] and [`Session::load_delta`] did: the world brought to its new state, or why it
+/// is evaluated again instead.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Addition {
+    Delta(crate::engine::AddDelta),
+    Full(String),
+}
+
+/// Why an addition of rules is evaluated again when a declared tree's closure is declared, dropped or answered another way.
+const TREES_MOVED: &str = "a closure answered from its tree is declared, dropped or answered another way";
+
 /// What [`Session::evaluate`] answers. Measurement 4: the answer AND the margin.
 pub struct Evaluated {
     /// A wall was hit and a `hole` names the unfinished part in the store.
@@ -170,9 +181,21 @@ impl Session {
     /// packs — accepting one here would let a caller change what the world
     /// means without saying so.
     pub fn assert(&mut self, src: &str) -> Result<usize, String> {
+        let facts = self.parse_facts(src)?;
+        let (n, asked, _) = self.put_facts(&facts);
+        if n > 0 {
+            self.eval.store.dirty = true;
+        }
+        // the rules a world runs are read at prepare: a new ask is only an ask once they are read again
+        if asked {
+            self.eval.reprepare();
+        }
+        Ok(n)
+    }
+
+    fn parse_facts(&mut self, src: &str) -> Result<Vec<(Sym, Sym, Vec<Term>)>, String> {
         let cs = rofl_parse::parse(&mut self.eval.h, src)?;
-        let mut n = 0;
-        let mut asked = false;
+        let mut out = Vec::with_capacity(cs.len());
         for c in &cs {
             if !c.body.is_empty() || c.lattice.is_some() {
                 return Err(format!("assert takes facts, not rules or declarations: {}", rofl_parse::show(&self.eval.h, c)));
@@ -186,19 +209,105 @@ impl Session {
                     return Err(format!("a base fact may not carry a variable: {}", rofl_parse::show(&self.eval.h, c)));
                 }
             }
-            if self.eval.store.add(&self.eval.h, rel, persp, &args, F_BASE) {
-                n += 1;
-                asked |= rel == self.eval.v.asks || (rel == self.eval.v.explain_request && self.eval.cone.is_some());
+            out.push((rel, persp, args));
+        }
+        Ok(out)
+    }
+
+    /// The facts in, as base: how many were new, whether one is an ask, and the new ones.
+    fn put_facts(&mut self, facts: &[(Sym, Sym, Vec<Term>)]) -> (usize, bool, Vec<FactId>) {
+        let (mut asked, mut ids) = (false, Vec::new());
+        for (rel, persp, args) in facts {
+            let (id, new) = self.eval.store.put(&self.eval.h, *rel, *persp, args, F_BASE);
+            if new {
+                ids.push(id);
+                asked |= *rel == self.eval.v.asks || (*rel == self.eval.v.explain_request && self.eval.cone.is_some());
             }
         }
-        if n > 0 {
-            self.eval.store.dirty = true;
+        (ids.len(), asked, ids)
+    }
+
+    /// `assert`, bringing an evaluated world to the state a fresh evaluation of it with the facts would hold, without
+    /// clearing what it derived (`Eval::add_delta`). A world not evaluated takes the facts as `assert` does, and an
+    /// addition the path is not worked out for leaves the world dirty: `Full` says why, the next evaluation answers.
+    /// An ask is a new program (the cone of the rules it runs grows), added as `load_delta` adds rules.
+    pub fn assert_delta(&mut self, src: &str) -> Result<(usize, Addition), String> {
+        let facts = self.parse_facts(src)?;
+        if self.eval.store.dirty {
+            let n = self.assert(src)?;
+            return Ok((n, Addition::Full("the world is not evaluated".into())));
         }
-        // the rules a world runs are read at prepare: a new ask is only an ask once they are read again
+        let mark = self.eval.prep_mark();
+        let promoted0 = self.eval.store.promotions;
+        let (n, asked, ids) = self.put_facts(&facts);
+        let promoted = self.eval.store.promotions != promoted0;
+        if n == 0 && !promoted {
+            return Ok((0, Addition::Delta(crate::engine::AddDelta::default())));
+        }
+        let mut rules = Vec::new();
         if asked {
-            self.eval.reprepare();
+            if !self.eval.reprepare_keeping_trees() {
+                self.eval.store.dirty = true;
+                return Ok((n, Addition::Full(TREES_MOVED.into())));
+            }
+            let (added, moves) = self.eval.prep_moves(&mark);
+            if !moves.is_empty() {
+                self.eval.store.dirty = true;
+                return Ok((n, Addition::Full(moves.join("; "))));
+            }
+            rules = added;
         }
-        Ok(n)
+        Ok((n, self.added(&ids, &rules, promoted)))
+    }
+
+    /// `load`, bringing an evaluated world to the state a fresh evaluation of the whole program would hold: the
+    /// facts it adds and the rules it adds fire over what the world holds (`Eval::add_delta`). A world not evaluated
+    /// loads as `load` does; a program the path is not worked out for leaves the world dirty and `Full` says why.
+    pub fn load_delta(&mut self, src: &str, who: Option<&str>) -> Result<(usize, Addition), Vec<String>> {
+        if self.eval.store.dirty {
+            let n = self.load(src, who)?;
+            return Ok((n, Addition::Full("the world is not evaluated".into())));
+        }
+        let mark = self.eval.prep_mark();
+        let promoted0 = self.eval.store.promotions;
+        self.eval.store.arrivals = Some(Vec::new());
+        let r = crate::program::load_program(&mut self.eval, src, who);
+        let mut ids = self.eval.store.arrivals.take().unwrap_or_default();
+        if !r.ok {
+            return Err(r.diagnostics);
+        }
+        self.eval.store.dirty = false;
+        if !self.eval.reprepare_keeping_trees() {
+            self.eval.store.dirty = true;
+            return Ok((r.admitted, Addition::Full(TREES_MOVED.into())));
+        }
+        ids.retain(|i| self.eval.store.alive(*i));
+        let promoted = self.eval.store.promotions != promoted0;
+        let (rules, moves) = self.eval.prep_moves(&mark);
+        if !moves.is_empty() {
+            self.eval.store.dirty = true;
+            return Ok((r.admitted, Addition::Full(moves.join("; "))));
+        }
+        if ids.is_empty() && rules.is_empty() && !promoted {
+            return Ok((r.admitted, Addition::Delta(crate::engine::AddDelta::default())));
+        }
+        Ok((r.admitted, self.added(&ids, &rules, promoted)))
+    }
+
+    fn added(&mut self, ids: &[FactId], rules: &[Sym], promoted: bool) -> Addition {
+        match self.eval.add_delta(ids, rules, promoted) {
+            Ok(d) => {
+                if self.eval.check_promises().is_err() {
+                    self.eval.store.dirty = true;
+                    return Addition::Full("a declared promise is broken; the evaluation refuses the world".into());
+                }
+                Addition::Delta(d)
+            }
+            Err(why) => {
+                self.eval.store.dirty = true;
+                Addition::Full(why)
+            }
+        }
     }
 
     /// LOAD A ROFL PROGRAM — the verb that stops this being an accelerator.
