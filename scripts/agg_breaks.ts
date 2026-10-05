@@ -7165,6 +7165,13 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "structures_declared_ignored",
+  "what": "the detection report does not read the declarations, so a tree the program declares is proposed again and said to have no closure",
+  "expect": {
+   "structures_proof": "dedge"
+  }
+ },
+ {
   "id": "structures_function_conflict_ignored",
   "what": "the detection report takes a key with one conflicting value for a function",
   "expect": {

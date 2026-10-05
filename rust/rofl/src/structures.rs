@@ -46,6 +46,8 @@ pub struct Proposal {
 }
 
 pub struct Report {
+    /// The trees the program already declares, as found in the data: no proposal.
+    pub declared: Vec<Proposal>,
     pub relations: usize,
     pub facts: usize,
     pub bytes_per_fact: f64,
@@ -109,12 +111,35 @@ fn kernel_relations() -> BTreeSet<String> {
 
 pub fn propose(store: &Store, h: &Heap, o: &Options) -> Report {
     let kernel = kernel_relations();
+    // the trees the program already declares, each with its closure: reported as declared, never proposed
+    let mut declared: BTreeMap<String, Option<String>> = BTreeMap::new();
+    let mut closure_of: BTreeMap<String, String> = BTreeMap::new();
+    for id in store.all_facts() {
+        let r = store.rec(id);
+        let a = store.args(id);
+        match (h.name(r.rel), a) {
+            ("structure_decl", [t, _, k]) if k.as_atom().is_some_and(|k| h.name(k) == "tree") => {
+                declared.entry(h.canon(*t)).or_default();
+            }
+            ("structure_closure", [t, c]) => {
+                closure_of.insert(h.canon(*t), h.canon(*c));
+            }
+            _ => {}
+        }
+    }
+    for (t, c) in closure_of {
+        declared.insert(t, Some(c));
+    }
+    let declared = if brk!("structures_declared_ignored" => true; false) { BTreeMap::new() } else { declared };
+    // a declared closure is the declaration's, stored or answered from its tree: no proposal and no near miss reads it
+    let closures: BTreeSet<String> = declared.values().flatten().cloned().collect();
+
     let mut groups: FxMap<(Sym, Sym, usize), Vec<FactId>> = FxMap::default();
     let mut facts = 0;
     for id in store.all_facts() {
         let r = store.rec(id);
         facts += 1;
-        if h.name(r.persp).starts_with('$') || kernel.contains(h.name(r.rel)) {
+        if h.name(r.persp).starts_with('$') || kernel.contains(h.name(r.rel)) || closures.contains(h.name(r.rel)) {
             continue;
         }
         groups.entry((r.rel, r.persp, store.arity(id))).or_default().push(id);
@@ -144,7 +169,8 @@ pub fn propose(store: &Store, h: &Heap, o: &Options) -> Report {
 
     let mut proposals = Vec::new();
     let mut near = Vec::new();
-    let trees = trees(&rels, h, &mut proposals, &mut near);
+    let mut found = Vec::new();
+    let trees = trees(&rels, h, &declared, &mut found, &mut proposals, &mut near);
     let closures: BTreeSet<usize> = proposals.iter().filter_map(|p| p.saved.map(|s| s.0)).collect();
     let aliased = aliases(&rels, store, h, &closures, &mut proposals, &mut near);
     functions(&rels, h, &trees, &aliased, &mut proposals, &mut near);
@@ -163,7 +189,7 @@ pub fn propose(store: &Store, h: &Heap, o: &Options) -> Report {
             }
         }
     }
-    Report { relations: rels.len(), facts, bytes_per_fact, proposals, near, saved_rows, saved_firings }
+    Report { declared: found, relations: rels.len(), facts, bytes_per_fact, proposals, near, saved_rows, saved_firings }
 }
 
 impl Report {
@@ -172,8 +198,8 @@ impl Report {
             "structures: {} relations of at least {} rows scanned over {} live facts, about {} per fact (store tables over live facts)\n",
             self.relations, min_rows, self.facts, size(self.bytes_per_fact)
         );
-        for p in &self.proposals {
-            out.push_str(&format!("\npropose {}\n", p.decl));
+        for (verb, p) in self.declared.iter().map(|p| ("declared", p)).chain(self.proposals.iter().map(|p| ("propose", p))) {
+            out.push_str(&format!("\n{verb} {}\n", p.decl));
             for n in &p.notes {
                 out.push_str(&format!("        {n}\n"));
             }
@@ -480,7 +506,7 @@ fn shared_nodes(r: &Rel) -> bool {
     shared > 0 && shared * 4 >= r.dc[0].min(r.dc[1])
 }
 
-fn trees(rels: &[Rel], h: &Heap, out: &mut Vec<Proposal>, near: &mut Vec<String>) -> Vec<TreeFd> {
+fn trees(rels: &[Rel], h: &Heap, declared: &BTreeMap<String, Option<String>>, found: &mut Vec<Proposal>, out: &mut Vec<Proposal>, near: &mut Vec<String>) -> Vec<TreeFd> {
     let mut fds = Vec::new();
     let mut by_len: BTreeMap<usize, Vec<usize>> = BTreeMap::new();
     for (i, r) in rels.iter().enumerate() {
@@ -539,6 +565,14 @@ fn trees(rels: &[Rel], h: &Heap, out: &mut Vec<Proposal>, near: &mut Vec<String>
         )];
         if both {
             notes.push("a forest the other way round too (each node has at most one child as well): the orientation is the author's".into());
+        }
+        if let Some(c) = declared.get(&t.name) {
+            let decl = match c {
+                Some(c) => format!("tree {}(P, C) closure {c}.", t.name),
+                None => format!("tree {}(P, C).", t.name),
+            };
+            found.push(Proposal { kind: "tree", decl, notes, saved: None });
+            continue;
         }
         // a relation that is exactly the strict closure of this forest
         let mut found: Option<(usize, usize)> = None;

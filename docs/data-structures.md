@@ -224,7 +224,9 @@ rules that it would serve (from the reader census, as
 `facts/ast-within-readers.rofl` does by hand for the tree) and the worlds over
 which it held, since a promise that holds on four corpora is evidence and on
 one is a coincidence. The author pastes the line; from then the check guards
-it.
+it. A tree the program already declares is reported as `declared tree ...` with what
+the data measure, never proposed again, and its closure (stored or answered from the
+tree) is read by no proposal or near miss.
 
 ## Order
 

@@ -32,3 +32,9 @@ holder(P) :- owns(P, _).
 
 -- NEAR MISS: a permuted copy missing the row (p4, i4).
 copy_miss(I, P) :- owns(P, I), I != i4.
+
+-- A TREE ALREADY DECLARED, with its closure: reported as declared, neither proposed nor said to have no closure, and its closure
+-- (answered from the tree, or stored) read by no proposal or near miss.
+tree dedge(P, C) closure dbelow.
+dedge(q1, q2). dedge(q1, q3). dedge(q2, q4).
+
