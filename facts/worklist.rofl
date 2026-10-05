@@ -3797,3 +3797,28 @@ work(w_knobs_trim,
   "THE REMAINING KNOB REMOVALS (f_the_knob_audit_proposes_removals, docs/knobs.md; owner 2026-10-05: fewer flags so agents are not confused). Each is bounded and mirrors a removal already done in the audit commit. (1) ROFL_NO_DELTA_FIRST and the engine field delta_first with the written-order plan path, in engine.rs and engine/joinplan.rs, after the sessions editing engine.rs are merged; re-measure nothing, delta-first is the plan. (2) ROFL_COOL_PHASES in session.rs and its forward in runtime/port.ts. (3) one spelling each for the model and the root of npm run nb: ROFL_NB_HARNESS against --model, ROFL_NB_ROOT against --root. (4) the rofl-serve options without a caller: ask keys, ops facts, cool, cool_trail, reheat_trail, an inline seed on open, with docs/port-surface.md and runtime/port.ts. (5) the eight binaries without a consumer, with Cargo.toml, facts/depends.rofl and ledger_facts.rofl (regenerate the golden). (6) the fate of rofl-eval, run_corpus.sh and bytes_table.sh, and of eager_prov and unsettled_provenance if the tool goes. (7) test:agg:breaks --legacy. Each removal updates docs/knobs.md (verdict done) and, where it was in the CLAUDE.md block, facts/commands.rofl.").
 work_state(w_knobs_trim, open).
 work_spawned(w_knobs_trim, f_the_knob_audit_proposes_removals).
+
+-- ===========================================================================
+-- DELTAS AND DEMAND, queued 2026-10-05 by the owner from the main session's list.
+-- ===========================================================================
+
+work(w_delta_edb_leftover,
+  "A retraction of the last base fact of a relation leaves its edb(R) (and authority) row, which a fresh evaluation without that fact never writes (found by the tree fuzzer: 9 of 400 retract-vs-fresh differences, the stored closure shows the same). Make a delta retraction drop what a fresh world would not have; proof world + planted break.").
+work_state(w_delta_edb_leftover, open).
+
+work(w_demand_scc_fixpoint,
+  "A cycle of open demand calls iterates call by call: the nested calls of one cycle all read the outermost call's growing answers, so none can be tabled and each pass unfolds them all again (ringo400: 800 answers in 10.1 s against the stored copy's fraction of a second; f_the_space_wall_counted_open_answers_already_dropped). Iterate the whole cycle together (SCC-level tabling: one fixpoint for the cycle's calls, semi-naive within it), identical answers to the non-demand copy; measure ringo400, sc800, the random cyclic fuzzer (rvd2/gen.py) on Rust release.").
+work_state(w_demand_scc_fixpoint, open).
+
+work(w_delta_full_reasons,
+  "The engineering reasons a delta (retraction today, addition next) falls back to a full evaluation, each to be made a delta (the owner, 2026-10-05): (1) a fact that reaches the edges of a closure answered from its tree (incremental forest update, not a whole rebuild); (2) the world holds a hole or a rule reads shrug (unknowns maintained by deltas); (3) a relation read on demand (support for answers not stored); (4) a relation concluded by a rule too (base and derived support counted together); (5) a change of asks / explain_request (a change of the rule set: rule addition and removal as deltas). Not in scope, by their nature: a wall that cut the evaluation, a past tick, well-founded semantics, a rule reading the ledger, an unevaluated world. Each item: delta equal to a fresh evaluation on a randomized differential test, the fallback rate measured before and after.").
+work_state(w_delta_full_reasons, open).
+work_needs(w_delta_full_reasons, w_incremental_addition).
+
+work(w_full_eval_indicator,
+  "A full re-evaluation where a delta was asked is visible today only to the caller (rofl-load stderr `evaluated again, <reasons>`, a rofl-serve field). Write it into the world too (a kernel fact naming the request and every reason, e.g. evaluated_again(Request, Reason)) so a notebook and rules can see it, and count the fallback rate in the differential tests; both engines' text identical.").
+work_state(w_full_eval_indicator, open).
+
+work(w_incremental_addition,
+  "GENERAL INCREMENTAL ADDITION (the owner, 2026-10-05, f_the_owner_settles_walls_promises_and_incremental point 3; settles the AFK / incremental-addition question): an evaluated Rust world takes new base facts and new rules without clearing derived facts and reaches the state of a fresh evaluation, byte for byte; non-monotone readers by retract-then-rederive, a full evaluation only with every reason named. In progress (agent, 2026-10-05).").
+work_state(w_incremental_addition, open).
