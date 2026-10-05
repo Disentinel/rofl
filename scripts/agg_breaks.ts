@@ -8291,6 +8291,41 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "add_staged_cells_kept",
+  "what": "a rule staged `@next` that aggregates what grew stages again over the cells it sealed before",
+  "expect": {
+   "addition_staged_agg": "the addition to"
+  }
+ },
+ {
+  "id": "add_promoted_unnoted",
+  "what": "a fact asserted where it was derived is no addition, and what rests on it keeps the derived fact's height",
+  "expect": {
+   "addition_promoted": "the addition to"
+  }
+ },
+ {
+  "id": "add_threshold_closed_early",
+  "what": "a threshold sealed again at its level closes at once, before the level makes the rest of its members",
+  "expect": {
+   "addition_threshold": "the addition to"
+  }
+ },
+ {
+  "id": "retract_staged_thr_plain",
+  "what": "a threshold staged `@next` whose outer premise is retracted is read again as a plain reader, its cell kept",
+  "expect": {
+   "incremental_staged_thr": "retract n(a)"
+  }
+ },
+ {
+  "id": "retract_seed_rules_unfired",
+  "what": "a fact a changed cell's reader concluded goes whole and only the changed cell's rule makes it again, not another of its relation",
+  "expect": {
+   "incremental_two_aggs": "retract w(e, 3)"
+  }
+ },
+ {
   "id": "add_trees_dropped",
   "what": "the rules read again over an evaluated world drop the forests and keys of a declared tree's closure",
   "expect": {
@@ -8341,6 +8376,11 @@ const TESTS: Record<string, string> = {
   addition_sealed: 'addition random_sealed_programs',
   addition_reads_agg: 'addition what_reads_an_aggregate_sealed_again',
   addition_stale: 'addition a_fact_sealed_again_is_not_taken_out',
+  addition_staged_agg: 'addition a_staged_aggregate_is_sealed_again',
+  addition_promoted: 'addition a_fact_asserted_where_it_was_derived',
+  addition_threshold: 'addition a_threshold_sealed_again_takes',
+  incremental_staged_thr: 'incremental a_staged_threshold_whose_outer_premise',
+  incremental_two_aggs: 'incremental a_fact_two_aggregates_conclude',
 };
 
 function proofTests(b: Break, profile: string, control: boolean): Verdict {
