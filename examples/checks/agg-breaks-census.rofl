@@ -47,6 +47,30 @@ brk("ts_asks_explain_unasked"). brk_kind("ts_asks_explain_unasked", ts).
 brk_expects("ts_asks_explain_unasked", "asks_explained").
 brk("ts_asks_dominance_reads"). brk_kind("ts_asks_dominance_reads", ts).
 brk_expects("ts_asks_dominance_reads", "asks_dominance").
+brk("asks_kernel_heads_cut"). brk_kind("asks_kernel_heads_cut", switch).
+brk_expects("asks_kernel_heads_cut", "asks_kernel_reads").
+brk("asks_explain_rule_unasked"). brk_kind("asks_explain_rule_unasked", switch).
+brk_expects("asks_explain_rule_unasked", "asks_explain_rule").
+brk("asks_refusals_cut"). brk_kind("asks_refusals_cut", switch).
+brk_expects("asks_refusals_cut", "asks_refused").
+brk("asks_hole_asked"). brk_kind("asks_hole_asked", switch).
+brk_expects("asks_hole_asked", "asks_hole").
+brk("asks_derived_ignored"). brk_kind("asks_derived_ignored", switch).
+brk_expects("asks_derived_ignored", "asks_derived").
+brk("ts_asks_kernel_heads_cut"). brk_kind("ts_asks_kernel_heads_cut", ts).
+brk_expects("ts_asks_kernel_heads_cut", "asks_kernel_reads").
+brk("ts_asks_explain_rule_unasked"). brk_kind("ts_asks_explain_rule_unasked", ts).
+brk_expects("ts_asks_explain_rule_unasked", "asks_explain_rule").
+brk("ts_asks_refusals_cut"). brk_kind("ts_asks_refusals_cut", ts).
+brk_expects("ts_asks_refusals_cut", "asks_refused").
+brk("ts_asks_hole_asked"). brk_kind("ts_asks_hole_asked", ts).
+brk_expects("ts_asks_hole_asked", "asks_hole").
+brk("ts_asks_derived_ignored"). brk_kind("ts_asks_derived_ignored", ts).
+brk_expects("ts_asks_derived_ignored", "asks_derived").
+brk("stale_kept_drained"). brk_kind("stale_kept_drained", switch).
+brk_expects("stale_kept_drained", "sub_history_beside_lattice").
+brk("ts_stale_kept_drained"). brk_kind("ts_stale_kept_drained", ts).
+brk_expects("ts_stale_kept_drained", "sub_history_beside_lattice").
 brk("delta_first_off"). brk_kind("delta_first_off", switch).
 brk_expects("delta_first_off", "agg_join_delta_first").
 brk("delta_first_spread"). brk_kind("delta_first_spread", switch).
@@ -1912,9 +1936,14 @@ switch_site("asks_blind_reflection", "rust/rofl/src/engine.rs").
 switch_site("asks_demand_asked", "rust/rofl/src/engine.rs").
 switch_site("asks_derived_by_plain", "rust/rofl/src/engine.rs").
 switch_site("asks_derived_by_unnamed", "rust/rofl/src/engine.rs").
+switch_site("asks_derived_ignored", "rust/rofl/src/engine.rs").
 switch_site("asks_dominance_reads", "rust/rofl/src/engine.rs").
+switch_site("asks_explain_rule_unasked", "rust/rofl/src/engine.rs").
 switch_site("asks_explain_unasked", "rust/rofl/src/engine.rs").
+switch_site("asks_hole_asked", "rust/rofl/src/engine.rs").
+switch_site("asks_kernel_heads_cut", "rust/rofl/src/engine.rs").
 switch_site("asks_negation_cut", "rust/rofl/src/engine.rs").
+switch_site("asks_refusals_cut", "rust/rofl/src/engine.rs").
 switch_site("asks_retract_unread", "rust/rofl/src/session.rs").
 switch_site("below_drops_concluded_input", "rust/rofl/src/session.rs").
 switch_site("below_drops_shrugs", "rust/rofl/src/session.rs").
@@ -2286,6 +2315,7 @@ switch_site("space_uncut_world", "rust/rofl/src/engine.rs").
 switch_site("staged_keeps_withdrawn", "rust/rofl/src/engine.rs").
 switch_site("staged_neg_arrival", "rust/rofl/src/engine.rs").
 switch_site("stale_holes_kept", "rust/rofl/src/engine.rs").
+switch_site("stale_kept_drained", "rust/rofl/src/engine.rs").
 switch_site("strata_untabled", "rust/rofl/src/engine.rs").
 switch_site("structures_alias_subset_accepted", "rust/rofl/src/structures.rs").
 switch_site("structures_function_conflict_ignored", "rust/rofl/src/structures.rs").

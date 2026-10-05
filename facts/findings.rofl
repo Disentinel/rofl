@@ -10673,6 +10673,15 @@ addressed_by(f_the_cone_names_the_first_kernel_relation_asked_in_name_order, "ex
 finding_note(f_the_cone_names_the_first_kernel_relation_asked_in_name_order,
   "FOUND 2026-10-05 by the review of the asks cone: with two kernel relations asked (asks(derived_by). asks(unknown).) the diagnostic that every rule is kept named the first of a fixed list in Rust and the first in the cone's iteration order in TypeScript. NOW both name the least by name (cmp_js / cmpStr). whycheck compares the asks diagnostics of every world that asks (rofl-load's stderr against the reference's diagnostics), so a difference in their words is red; examples/checks/asks-asked-twice.rofl is the world. No planted fault: a diagnostic is in no world's state.").
 
+finding(f_a_dominated_value_lost_its_history_when_another_lattice_closed_first, defect).
+recorded(f_a_dominated_value_lost_its_history_when_another_lattice_closed_first, "2026-10-05").
+demands(f_a_dominated_value_lost_its_history_when_another_lattice_closed_first, code).
+addressed_by(f_a_dominated_value_lost_its_history_when_another_lattice_closed_first, "rust/rofl/src/engine.rs").
+addressed_by(f_a_dominated_value_lost_its_history_when_another_lattice_closed_first, "src/aggeval.ts").
+addressed_by(f_a_dominated_value_lost_its_history_when_another_lattice_closed_first, "examples/checks/sub-history-beside-lattice.rofl").
+finding_note(f_a_dominated_value_lost_its_history_when_another_lattice_closed_first,
+  "FOUND 2026-10-05 by the review of the asks cone (the cone exposed it: agg_sub_why's why of as_sat differed in 14 questions), both engines, an older defect with or without asks: a recursive subsumptive relation beside ANY other lattice declaration (`lattice as_vm(K, min V).`, no rule needed) printed a dominated value of its why as '0 members'. ROOT CAUSE: `settle_stale` (settleStale), called when a set of lattices closes, drained every fact that read a value since improved on, decided the ones with another firing, and forgot the rest; the superseded values those kept facts reached survived only for that close. The other lattice closed at an earlier level, so when the subsumptive relation closed nothing read its dominated values and their firings (the history why walks) were dropped. NOW a kept stale fact stays to be decided at every later close. Held by examples/checks/sub-history-beside-lattice.rofl (both engines; planted stale_kept_drained, ts_stale_kept_drained).").
+
 finding(f_hole_asked_and_an_ask_a_rule_concludes_keep_every_rule, decision).
 recorded(f_hole_asked_and_an_ask_a_rule_concludes_keep_every_rule, "2026-10-05").
 demands(f_hole_asked_and_an_ask_a_rule_concludes_keep_every_rule, decision).

@@ -3364,3 +3364,9 @@ check_opt("asks_hole", together, 1).
 check_world("asks_derived").
 check_file("asks_derived", "examples/checks/asks-derived.rofl").
 check_opt("asks_derived", together, 1).
+
+-- a dominated value's history, when a lattice no rule concludes closes at an earlier level (found by the cone's review)
+check_world("sub_history_beside_lattice").
+check_file("sub_history_beside_lattice", "examples/checks/sub-history-beside-lattice.rofl").
+check_opt("sub_history_beside_lattice", together, 1).
+check_opt("sub_history_beside_lattice", explain, 1).

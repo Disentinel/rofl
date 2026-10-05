@@ -9514,6 +9514,12 @@ impl Eval {
                 stack.extend(self.store.fact_premises(g));
             }
         }
+        // A FACT THAT READ A VALUE SINCE IMPROVED ON AND HAS NO OTHER FIRING keeps that value's history for every
+        // lattice closing after this one too: drained here, it read nothing when its own lattice closed, and the
+        // history its why walks was dropped (f_a_dominated_value_lost_its_history_when_another_lattice_closed_first)
+        if brk!("stale_kept_drained" => false; true) {
+            self.lat_stale.extend(keep.iter().copied());
+        }
         for f in sup {
             if reach.contains(&f) || !due.contains(&self.store.rec(f).rel) {
                 self.lat_superseded.insert(f);

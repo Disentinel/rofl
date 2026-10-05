@@ -5839,6 +5839,8 @@ export class AggEval {
       const g = stack.pop()!;
       if (sup.has(g) && !reach.has(g)) { reach.add(g); stack.push(...this.factPremises(g)); }
     }
+    // a stale fact kept keeps the history it read for every lattice closing after this one (rust/rofl `settle_stale`)
+    for (const f of keep) this.latStale.add(f);
     for (const f of sup) {
       if (reach.has(f) || !due.includes(this.rec(f).rel)) this.latSuperseded.add(f);
       else this.store.dropFirings(f);

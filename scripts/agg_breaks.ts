@@ -323,6 +323,27 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "stale_kept_drained",
+  "what": "a fact that read a value since improved on is decided and forgotten when the first lattice closes: a subsumptive relation closing later drops the history its why walks",
+  "expect": {
+   "sub_history_beside_lattice": "the state lacks the row wit sh_sat[main](p,1)"
+  }
+ },
+ {
+  "id": "ts_stale_kept_drained",
+  "what": "the TypeScript engine forgets the stale facts it kept when the first lattice closes",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "    for (const f of keep) this.latStale.add(f);",
+    "    void keep;"
+   ]
+  ],
+  "expect": {
+   "sub_history_beside_lattice": "the state lacks the row wit sh_sat[main](p,1)"
+  }
+ },
+ {
   "id": "delta_first_off",
   "what": "a firing is solved in written order, never from its news: the join before the news premise is held in full",
   "expect": {
