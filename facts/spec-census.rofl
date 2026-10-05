@@ -24,6 +24,9 @@ check[checks]("rust/rofl/tests/cool.rs", "the_trail_cools_and_comes_back_whole",
 check[checks]("rust/rofl/tests/cool.rs", "a_trail_this_engine_did_not_write_is_refused", test).
 check[checks]("rust/rofl/tests/datastrat_scale.rs", "a_chain_of_sums_is_fired_once_per_sum", test).
 check[checks]("rust/rofl/tests/datastrat_scale.rs", "a_layer_that_fires_an_instance_again_spends_the_budget", test).
+check[checks]("rust/rofl/tests/demand_query.rs", "an_ask_unfolds_a_relation_answered_on_demand", test).
+check[checks]("rust/rofl/tests/demand_query.rs", "a_why_asks_as_whynot_does_and_neither_leaves_a_fact", test).
+check[checks]("rust/rofl/tests/demand_scale.rs", "a_recursion_through_a_closed_demand_relation_is_linear", test).
 check[checks]("rust/rofl/tests/explain.rs", "why_walks_the_derivation_to_its_axioms", test).
 check[checks]("rust/rofl/tests/explain.rs", "a_negated_premise_renders_as_finite_failure_with_its_demonstration", test).
 check[checks]("rust/rofl/tests/explain.rs", "a_builtin_premise_keeps_its_own_spelling", test).
@@ -628,10 +631,15 @@ check[checks]("facts/goldens.rofl", "cost_shapes_model", world).
 check[checks]("facts/goldens.rofl", "demand_asked_hole", world).
 check[checks]("facts/goldens.rofl", "demand_chain", world).
 check[checks]("facts/goldens.rofl", "demand_cycle", world).
+check[checks]("facts/goldens.rofl", "demand_cycle_fixpoint", world).
+check[checks]("facts/goldens.rofl", "demand_neg_decided", world).
 check[checks]("facts/goldens.rofl", "demand_neg_hole", world).
 check[checks]("facts/goldens.rofl", "demand_neg_retract", world).
+check[checks]("facts/goldens.rofl", "demand_neg_retract_closed", world).
 check[checks]("facts/goldens.rofl", "demand_neg_round", world).
+check[checks]("facts/goldens.rofl", "demand_neg_round_closed", world).
 check[checks]("facts/goldens.rofl", "demand_pos_hole", world).
+check[checks]("facts/goldens.rofl", "demand_query", world).
 check[checks]("facts/goldens.rofl", "demand_recursion", world).
 check[checks]("facts/goldens.rofl", "demand_shrug_read", world).
 check[checks]("facts/goldens.rofl", "destructor_hole", world).
@@ -688,6 +696,8 @@ check[checks](".github/workflows/ci.yml", "goldens (bun)", ci).
 test_file[checks]("rust/rofl/tests/agg_worlds.rs").
 test_file[checks]("rust/rofl/tests/cool.rs").
 test_file[checks]("rust/rofl/tests/datastrat_scale.rs").
+test_file[checks]("rust/rofl/tests/demand_query.rs").
+test_file[checks]("rust/rofl/tests/demand_scale.rs").
 test_file[checks]("rust/rofl/tests/explain.rs").
 test_file[checks]("rust/rofl/tests/incremental.rs").
 test_file[checks]("rust/rofl/tests/join_scale.rs").
