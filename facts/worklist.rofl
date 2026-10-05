@@ -3412,7 +3412,8 @@ work_spawned(w_effect_reads_only_what_resolves, f_a_gate_that_reads_what_the_pro
 
 work(w_concat_value,
   "One abstract value SEQUENCE OF PARTS with many entry points: parts(E, I, P) plus joined(E, Kind), Kind in raw | path_sep | url_resolve. Entry points: template literal (quasis and expressions are already in the facts as value_cooked and indexed children; may_be_lit refuses the interpolated case on purpose because the kernel builds no strings), binary +, and library members through an authored table ambient_value(Surface, Member, concat, Kind) with surface_origin as provenance - path.join, String.prototype.concat, Array.prototype.join, new URL. Language forms are rules; library semantics is a table, exactly as ambient_effect is the one authored part of the effect column. The Kind column is not decoration: path.join normalises .. and new URL replaces the base on an absolute path, so a matcher that reads only raw would join a request to a service it never reaches. Where every part is literal, may_be_lit follows from parts by one rule.").
-work_state(w_concat_value, open).
+work_state(w_concat_value, done).
+work_spawned(w_concat_value, f_a_string_built_from_parts_is_a_node_with_parts_and_its_text_is_a_term).
 
 work(w_url_pack,
   "A URL library that knows nothing about JavaScript: a path as a sequence of segments (the kernel cuts strings with str_pre, str_seg, str_segs, str_sub, str_char and never builds one, so a URL in the model is segments, not text), prefix composition for app.use(prefix, router), and a matcher over patterns with :param and * that consumes parts(E, I, P) - a literal part is cut into segments, a dyn part covers exactly one segment between literal slashes. The unknown-prefix case (`${base}/users` with base untraced) is a DECISION written as a row, not a default: match every service (over-report, the safe direction for a may-set) or none. Testable in a world of one pack with no corpus.").

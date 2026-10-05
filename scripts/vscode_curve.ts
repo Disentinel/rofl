@@ -27,7 +27,7 @@ const t0 = performance.now();
 for (const f of MODEL_FILES) await s.loadFile(path.join(ROOT, f));
 for (const c of chunks.filter((c) => c <= n)) await s.loadFile(path.join(dir, `facts-${c}.rofl`));
 await s.loadFile(path.join(ROOT, 'examples/vscode/side-effects.rofl'));
-const asked = ['side_effect_value', 'side_effect_site', 'side_effect_count', 'side_effect_env'];
+const asked = ['side_effect_value', 'side_effect_site', 'side_effect_count', 'side_effect_env', 'side_effect_form'];
 await s.load([...(mode !== 'witnessed' ? ['sealed(provenance).'] : []), ...(mode !== 'full' ? asked.map((r) => `asks(${r}).`) : [])].join('\n'));
 const loadMs = performance.now() - t0, loadRss = status('VmRSS'), loadPeak = status('VmHWM');
 fs.writeFileSync(`/proc/${pid}/clear_refs`, '5');   // the peak of the evaluation, not of reading the text
@@ -40,6 +40,7 @@ const out = {
   files: n, mode, space, budget, loadMs: Math.round(loadMs), loadRssMb: Math.round(loadRss), loadPeakMb: Math.round(loadPeak),
   evalMs: Math.round(evalMs), peakRssMb: Math.round(peakRss), partial: ev.partial, steps: ev.steps, peakRows: ev.peakRows,
   values: await count('side_effect_value(S, F, V)'), sites: await count('side_effect_site(S, F)'), counts,
+  forms: await count('side_effect_form(S, F, T)'),
   facts: (await s.factCount()).facts,
 };
 console.log(JSON.stringify(out));
@@ -63,6 +64,7 @@ if (answers) {
   const lines: string[] = [];
   for (const [site, fam, v] of (await s.ask('side_effect_value(S, F, V)')).rows) lines.push(`${fam}\t${await where(site)}\t${await where(v)}`);
   for (const [site, fam] of (await s.ask('side_effect_site(S, F)')).rows) lines.push(`${fam}\t${await where(site)}\tSITE`);
+  for (const [site, fam, t] of (await s.ask('side_effect_form(S, F, T)')).rows) lines.push(`${fam}\t${await where(site)}\tFORM ${t}`);
   fs.writeFileSync(answers, lines.sort().join('\n') + '\n');
 }
 const k = Number(opt('--why') ?? 0);
