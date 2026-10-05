@@ -40,7 +40,7 @@ golden_state("notebook_cjs", "c44da24c4dbd5d5b", 768).
 golden_state("notebook_cli_exits", "bc3a567af5f1d579", 906).
 golden_state("notebook_decorated", "9180c1059ca1c6f3", 839).
 golden_state("notebook_external", "7124535c4063ddd5", 847).
-golden_state("notebook_ledger", "a158303a5dd6ba5b", 25629).
+golden_state("notebook_ledger", "d676341736896c3e", 25629).
 golden_state("notebook_mcp", "00bb819c939c48e9", 1248).
 golden_state("notebook_review", "2674d8c778161bd6", 819).
 golden_state("notebook_scoped", "f38c229afb46a423", 750).
@@ -113,7 +113,7 @@ golden_state("rules_depends", "d05c3ab1cb54811f", 8846).
 golden_state("rules_engine-split", "3eb29f3b3469919a", 865).
 golden_state("rules_eval-cost", "926ae5293965f29e", 5861).
 golden_state("rules_features", "2b7bfe4490659e32", 1056).
-golden_state("rules_findings", "afdd55c2502f2a6a", 21841).
+golden_state("rules_findings", "952913fc829c392c", 21841).
 golden_state("rules_floor-census", "1bc224291fe547e1", 2162).
 golden_state("rules_ingest", "f009d3a203cc72b9", 965).
 golden_state("rules_inquiry_epistemic", "1f270b34251e07ab", 994).
@@ -160,7 +160,7 @@ golden_state("rules_untyped", "58722dc3d17835c2", 1032).
 golden_state("rules_worklist", "789a37a9f3e27048", 4755).
 golden_state("rules_worlds", "11316227b3cf0025", 1386).
 golden_state("boot_only", "f4c6c2be7a0dffcd", 661).
-golden_state("agg_breaks_census", "dae343b8bbbd99dc", 11700).
+golden_state("agg_breaks_census", "0f4a698c318f5894", 11700).
 golden_state("agg_carry_budget", "b77b1928c2c233db", 764).
 golden_state("agg_carry_plain_budget", "6dec11c45d3562ef", 766).
 golden_state("agg_carry_plain_budget_ts", "733352a523a5fc29", 766).
@@ -346,7 +346,7 @@ golden_state("agg_narrow_why", "848086f25921cd06", 1578).
 golden_state("agg_precise_holes", "23ea01ac7c61290a", 2701).
 golden_state("agg_precise_oracle", "25123bfaf704f221", 319091).
 golden_state("agg_precise_scale", "9662ffc9ce409dc4", 3169).
-golden_state("agg_proofs", "a6bfb7b54638c792", 33041).
+golden_state("agg_proofs", "9981541ac0b3b09d", 33041).
 golden_state("agg_prose", "cf8a2b52b97913e0", 1151).
 golden_state("agg_quorum_demo", "85692a8a7b76c43c", 3431).
 golden_state("agg_rank_tuple_eval", "42af7358166e088f", 1747).

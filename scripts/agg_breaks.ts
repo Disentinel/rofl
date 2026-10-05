@@ -8179,17 +8179,17 @@ export const BREAKS: Break[] = [
   }
  },
  {
-  "id": "concat_unbounded",
-  "what": "a composed part is unfolded at its own level, not one below: a loop's texts grow without end",
+  "id": "concat_deep",
+  "what": "the loop unfolds twelve levels, not three: its texts grow with the bound, and only the bound stops them",
   "edits": [
    [
     "rules/js-concat.rofl",
-    "E is D - 1,\n                                    text_at[flow](X, E, T, Ex0)",
-    "E is D,\n                                    text_at[flow](X, E, T, Ex0)"
+    "concat_depth(3).",
+    "concat_depth(12)."
    ]
   ],
   "expect": {
-   "concat_value": "cut by the budget"
+   "concat_value": "ct_extra_text"
   }
  },
  {

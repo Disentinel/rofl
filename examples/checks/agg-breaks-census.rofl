@@ -2037,8 +2037,8 @@ brk("ts_tree_arity_unchecked"). brk_kind("ts_tree_arity_unchecked", ts).
 brk_expects("ts_tree_arity_unchecked", "ds_tree_syntax").
 brk("ts_tree_closure_row_unwritten"). brk_kind("ts_tree_closure_row_unwritten", ts).
 brk_expects("ts_tree_closure_row_unwritten", "ds_tree_syntax").
-brk("concat_unbounded"). brk_kind("concat_unbounded", file).
-brk_expects("concat_unbounded", "concat_value").
+brk("concat_deep"). brk_kind("concat_deep", file).
+brk_expects("concat_deep", "concat_value").
 brk("concat_cap_wide"). brk_kind("concat_cap_wide", file).
 brk_expects("concat_cap_wide", "concat_value").
 brk("concat_numeric_plus"). brk_kind("concat_numeric_plus", file).
