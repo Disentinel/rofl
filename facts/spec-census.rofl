@@ -625,9 +625,13 @@ check[checks]("facts/goldens.rofl", "ast_within_readers", world).
 check[checks]("facts/goldens.rofl", "async_refused", world).
 check[checks]("facts/goldens.rofl", "budget_wall", world).
 check[checks]("facts/goldens.rofl", "cost_shapes_model", world).
+check[checks]("facts/goldens.rofl", "demand_asked_hole", world).
+check[checks]("facts/goldens.rofl", "demand_chain", world).
+check[checks]("facts/goldens.rofl", "demand_cycle", world).
 check[checks]("facts/goldens.rofl", "demand_neg_hole", world).
 check[checks]("facts/goldens.rofl", "demand_neg_retract", world).
 check[checks]("facts/goldens.rofl", "demand_neg_round", world).
+check[checks]("facts/goldens.rofl", "demand_pos_hole", world).
 check[checks]("facts/goldens.rofl", "demand_recursion", world).
 check[checks]("facts/goldens.rofl", "demand_shrug_read", world).
 check[checks]("facts/goldens.rofl", "destructor_hole", world).

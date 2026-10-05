@@ -1001,10 +1001,30 @@ brk("demand_neg_unholed"). brk_kind("demand_neg_unholed", switch).
 brk_expects("demand_neg_unholed", "demand_neg_hole").
 brk("ts_demand_neg_unholed"). brk_kind("ts_demand_neg_unholed", ts).
 brk_expects("ts_demand_neg_unholed", "demand_neg_hole").
+brk("asked_unholed"). brk_kind("asked_unholed", switch).
+brk_expects("asked_unholed", "demand_asked_hole").
+brk("ts_asked_unholed"). brk_kind("ts_asked_unholed", ts).
+brk_expects("ts_asked_unholed", "demand_asked_hole").
+brk("demand_trail_last"). brk_kind("demand_trail_last", switch).
+brk_expects("demand_trail_last", "demand_asked_hole").
+brk("ts_demand_trail_last"). brk_kind("ts_demand_trail_last", ts).
+brk_expects("ts_demand_trail_last", "demand_asked_hole").
+brk("demand_poison_skipped"). brk_kind("demand_poison_skipped", switch).
+brk_expects("demand_poison_skipped", "demand_pos_hole").
+brk("ts_demand_poison_skipped"). brk_kind("ts_demand_poison_skipped", ts).
+brk_expects("ts_demand_poison_skipped", "demand_pos_hole").
 brk("demand_recursion_unfolds"). brk_kind("demand_recursion_unfolds", switch).
 brk_expects("demand_recursion_unfolds", "demand_recursion").
 brk("ts_demand_recursion_unfolds"). brk_kind("ts_demand_recursion_unfolds", ts).
 brk_expects("ts_demand_recursion_unfolds", "demand_recursion").
+brk("demand_closed_unfolds"). brk_kind("demand_closed_unfolds", switch).
+brk_expects("demand_closed_unfolds", "demand_chain").
+brk("ts_demand_closed_unfolds"). brk_kind("ts_demand_closed_unfolds", ts).
+brk_expects("ts_demand_closed_unfolds", "demand_chain").
+brk("demand_cycle_unfolds"). brk_kind("demand_cycle_unfolds", switch).
+brk_expects("demand_cycle_unfolds", "demand_cycle").
+brk("ts_demand_cycle_unfolds"). brk_kind("ts_demand_cycle_unfolds", ts).
+brk_expects("ts_demand_cycle_unfolds", "demand_cycle").
 brk("wfs_admits_subsumption"). brk_kind("wfs_admits_subsumption", switch).
 brk_expects("wfs_admits_subsumption", "agg_sub_wfs").
 brk_expects("wfs_admits_subsumption", "agg_sub_ts").
@@ -1755,6 +1775,7 @@ switch_site("alg_flags_off", "rust/rofl/src/cell.rs").
 switch_site("and_tie_last", "rust/rofl/src/cell.rs").
 switch_site("args_are_expressions", "rust/rofl/src/rofl_parse.rs").
 switch_site("arith_wraps", "rust/rofl/src/engine.rs").
+switch_site("asked_unholed", "rust/rofl/src/engine.rs").
 switch_site("below_drops_concluded_input", "rust/rofl/src/session.rs").
 switch_site("below_drops_shrugs", "rust/rofl/src/session.rs").
 switch_site("below_drops_unknown", "rust/rofl/src/session.rs").
@@ -1791,11 +1812,15 @@ switch_site("delta_first_overrun_holes", "rust/rofl/src/engine.rs").
 switch_site("delta_first_persp", "rust/rofl/src/engine/joinplan.rs").
 switch_site("delta_first_spread", "rust/rofl/src/engine/joinplan.rs").
 switch_site("delta_first_walls", "rust/rofl/src/engine/joinplan.rs").
+switch_site("demand_closed_unfolds", "rust/rofl/src/engine.rs").
+switch_site("demand_cycle_unfolds", "rust/rofl/src/engine.rs").
 switch_site("demand_fault_unspread", "rust/rofl/src/engine.rs").
 switch_site("demand_neg_unholed", "rust/rofl/src/engine.rs").
+switch_site("demand_poison_skipped", "rust/rofl/src/engine.rs").
 switch_site("demand_recursion_unfolds", "rust/rofl/src/engine.rs").
 switch_site("demand_strict_mono", "rust/rofl/src/engine.rs").
 switch_site("demand_strict_refire", "rust/rofl/src/engine/delta.rs").
+switch_site("demand_trail_last", "rust/rofl/src/engine.rs").
 switch_site("descent_closes_other", "rust/rofl/src/engine.rs").
 switch_site("descent_fatal", "rust/rofl/src/engine.rs").
 switch_site("descent_wall", "rust/rofl/src/engine.rs").

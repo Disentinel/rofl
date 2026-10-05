@@ -323,6 +323,26 @@ check_file("demand_shrug_read", "examples/checks/demand-shrug-read.rofl").
 check_world("demand_neg_hole").
 check_file("demand_neg_hole", "examples/checks/demand-neg-hole.rofl").
 
+-- a positive premise unfolded at a call reads the holes (f_a_premise_unfolded_at_a_call_read_a_shrugged_cell_as_absent)
+check_world("demand_pos_hole").
+check_file("demand_pos_hole", "examples/checks/demand-pos-hole.rofl").
+
+-- an answer outside a firing reads the holes below a call; a call left unknown rests on every unknown below it
+-- (f_an_answer_unfolded_at_a_call_read_a_hole_as_absence, f_a_call_left_unknown_kept_one_cause)
+check_world("demand_asked_hole").
+check_file("demand_asked_hole", "examples/checks/demand-asked-hole.rofl").
+check_opt("demand_asked_hole", together, 1).
+check_opt("demand_asked_hole", explain, 1).
+
+-- a closed relation answered on demand reads the store at any depth (f_a_closed_recursion_on_a_bound_argument_met_the_depth_wall)
+check_world("demand_chain").
+check_file("demand_chain", "examples/checks/demand-chain.rofl").
+
+-- a call with an open answer met again inside its own unfolding is a shrug, not a cut world
+-- (f_an_open_recursion_through_demand_cut_the_world)
+check_world("demand_cycle").
+check_file("demand_cycle", "examples/checks/demand-cycle.rofl").
+
 -- a recursion through relations answered on demand reaches its fixpoint
 -- (f_a_recursion_through_demand_unfolded_without_end)
 check_world("demand_recursion").

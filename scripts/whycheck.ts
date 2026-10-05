@@ -28,6 +28,7 @@
 // TWO WORLDS ARE WHYCHECK'S OWN (scripts/whycheck-worlds/): a demand that
 // unfolds without end, met by `whynot` and not by the evaluation, through
 // each of the reference's explainers — no corpus world reaches that wall.
+// A few corpus worlds are asked named questions besides (ASKED).
 //
 // THE WORLDS ARE SPLIT OVER ROFL_JOBS PROCESSES (default: the cores, at most
 // 8), each with its own rofl-serve, as `npm test` pools its worlds.
@@ -100,6 +101,16 @@ const OWN: { w: World; qs: Q[]; excise: boolean }[] = [['demand-wall', true], ['
   excise: excise as boolean,
 }));
 const own = new Map(OWN.map((o) => [o.w.name, o]));
+
+/** Questions a corpus world is asked besides the usual ones: a call answered on demand whose unfolding reads what a
+ *  hole left unknown, which a question once read as absence (f_an_answer_unfolded_at_a_call_read_a_hole_as_absence). */
+const ASKED: Record<string, Q[]> = {
+  demand_neg_hole: ['dh_r(c)', 'dh_nr(c)', 'dh_h(c,c)', 'dh_r1(c)'].flatMap((q): Q[] => [{ op: 'whynot', query: q }, { op: 'why', query: q }]),
+  demand_pos_hole: ['dp_nr(k)', 'dp_r(k)', 'dp_d(k,k)', 'dp_q2(k)'].map((q): Q => ({ op: 'whynot', query: q })),
+  demand_asked_hole: ['da_r(c)', 'da_nr(c)', 'da_q(c,z)', 'da_q(b,z)', 'da_d(k,z)', 'da_ng(b)'].map((q): Q => ({ op: 'whynot', query: q })),
+  demand_cycle: ['dy_r(4)', 'dy_n(3)', 'dy_d(9,5)', 'dy_d(4,9)'].flatMap((q): Q[] => [{ op: 'whynot', query: q }, { op: 'why', query: q }]),
+  demand_chain: ['dc_r(700)', 'dc_missed(700)'].map((q): Q => ({ op: 'whynot', query: q })),
+};
 
 function questions(r: Rofl, budget: number | undefined, first: boolean, excise = true): Q[] {
   const all = r.store.allFacts().filter((f) => askable(f.key));
@@ -363,7 +374,7 @@ async function check(ws: World[], firstName: string): Promise<Report> {
       // (an excise evaluates its counterfactual world under it)
       const budget = w.budget ?? 200_000_000;
       const o = own.get(w.name);
-      const qs = [...questions(r, budget, w.name === firstName, o?.excise ?? true), ...(o?.qs ?? [])];
+      const qs = [...questions(r, budget, w.name === firstName, o?.excise ?? true), ...(o?.qs ?? []), ...(ASKED[w.name] ?? [])];
       const want = qs.map((q) => expected(r, q, budget));
       if (w.retract?.length) {
         const f = withoutRetracted(w);
