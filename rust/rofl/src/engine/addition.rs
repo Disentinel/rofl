@@ -347,6 +347,58 @@ impl Eval {
         Some(s)
     }
 
+    /// THE ROUNDS OF A LEVEL, over the news of every level below and then over what each round made, semi-naively. A
+    /// rule whose news reaches a premise its plans cannot start from (solved in written order, such a premise is
+    /// reached after the join of all those before it, for each news row) leaves the rounds: it fires whole once they
+    /// are done, and the rounds go on over what that made, until nothing is new.
+    fn level_rounds(&mut self, rules: &[Rc<ERule>], mut front: Front) -> Result<(), Halt> {
+        let outer = std::mem::take(&mut self.live_front);
+        let active = std::mem::replace(&mut self.active, rules.to_vec());
+        let mut whole: Vec<Rc<ERule>> = Vec::new();
+        let r = (|| -> Result<(), Halt> {
+            loop {
+                while !front.keys.is_empty() {
+                    self.live_front = front.by_rel.keys().copied().collect();
+                    self.cur_front = Front::default();
+                    self.thr_round += 1;
+                    self.thr_fresh.clear();
+                    for r in rules {
+                        if whole.iter().any(|w| w.id == r.id) {
+                            continue;
+                        }
+                        let at: Vec<(usize, usize)> = r.plan.iter().enumerate().filter_map(|(i, b)| match b {
+                            BodyElem::Pos(l) => front.by_rel.get(&l.rel).map(|k| (i, k.len())),
+                            _ => None,
+                        }).collect();
+                        if at.iter().any(|&(i, n)| i > 0 && self.delta_pick(r, Some(i), n).is_none()) {
+                            whole.push(r.clone());
+                            continue;
+                        }
+                        let t = std::time::Instant::now();
+                        self.fire_in_round(r, &front)?;
+                        *self.ns_by_rule.entry(r.id).or_insert(0) += t.elapsed().as_nanos() as u64;
+                    }
+                    front = std::mem::take(&mut self.cur_front);
+                }
+                if whole.is_empty() {
+                    return Ok(());
+                }
+                for r in whole.clone() {
+                    let t = std::time::Instant::now();
+                    let f = self.fire_rule(&r, None)?;
+                    *self.ns_by_rule.entry(r.id).or_insert(0) += t.elapsed().as_nanos() as u64;
+                    merge_front(&mut front, f);
+                }
+                if front.keys.is_empty() {
+                    return Ok(());
+                }
+            }
+        })();
+        self.live_front = outer;
+        self.active = active;
+        r
+    }
+
     /// DRed's overdeletion: each of `seeds` (which lost a firing, and may have gone with it) goes whole, and so does
     /// every fact with a firing that cites one gone, through each other; a base fact stays and loses its firings, to
     /// be given them again.
@@ -527,7 +579,7 @@ impl Eval {
                     }
                 }
                 merge_front(&mut front, out);
-                self.propagate(front)?;
+                self.level_rounds(&rules, front)?;
                 // a threshold reached at this level closes once what it reads is closed, as an evaluation closes it
                 self.close_thresholds_below(lv.saturating_add(1), true)
             })();
