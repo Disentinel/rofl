@@ -1,0 +1,17 @@
+-- examples/checks/asks-explain-rule.rofl — A RULE THAT MAKES AN explain_request RUNS, AND ASKS WHAT IT NAMES.
+-- er_x is asked; a rule asks for the proof of er_y for every er_x, and er_y is a relation no asked relation reads.
+-- The rule runs whatever is asked, and the relation its request names joins the cone: the request is answered as in
+-- the world without asks. The count outside the cone makes the world an aggregate one, whose requests are answered
+-- after one evaluation (a plain world is prepared again for them, and would find the request made the first time).
+asks(er_x).
+edb(er_src).
+er_src(1).
+er_x(X) :- er_src(X).
+er_y(X) :- er_src(X).
+er_z(X) :- er_src(X).
+explain_request(why, er_y(X)) :- er_x(X).
+er_n(N) :- N is count(X : er_src(X)).
+-- expect-row: explain_request[main](why,er_y(1))
+-- expect-row: er_y[main](1)
+-- expect-row: explained[$explain](why,er_y(1),1,"er_y[main](1)
+-- expect-no-row: er_z[main](1)

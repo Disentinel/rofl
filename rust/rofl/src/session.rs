@@ -88,6 +88,9 @@ pub const VOLUME_MAGIC: &str = "rofl-volume";
 /// volume can stop being readable.
 pub const VOLUME_FORMAT: u32 = 1;
 
+/// `excise` under a cone that left rules out: what the fact supports through those rules is not in the world.
+pub const EXCISE_UNDER_ASKS: &str = "excise is not answered under asks: the rules the cone leaves out would lose what the fact supports too; drop the asks";
+
 /// What `cool` did. `facts` is what left memory; `bytes` is what reached the
 /// disk, and the two are reported separately because a caller sizing a volume
 /// store needs the second and a caller watching pressure needs the first.
@@ -178,7 +181,7 @@ impl Session {
             }
             if self.eval.store.add(&self.eval.h, rel, persp, &args, F_BASE) {
                 n += 1;
-                asked |= rel == self.eval.v.asks;
+                asked |= rel == self.eval.v.asks || (rel == self.eval.v.explain_request && self.eval.cone.is_some());
             }
         }
         if n > 0 {
@@ -731,6 +734,9 @@ impl Session {
         }
         let lit = &cs[0].head;
         let (rel, persp, args) = self.lit_terms(lit)?;
+        if let Some(m) = self.eval.outside_cone(rel) {
+            return Err(m);
+        }
         if rel == self.eval.v.derived_by {
             self.eval.settle_provenance();
         }
@@ -962,7 +968,8 @@ impl Session {
                 doomed.push(f);
             }
         }
-        let asks = self.eval.store.rec(id).rel == self.eval.v.asks;
+        let rel = self.eval.store.rec(id).rel;
+        let asks = rel == self.eval.v.asks || (rel == self.eval.v.explain_request && self.eval.cone.is_some());
         self.eval.store.remove_many(&doomed);
         self.eval.store.dirty = true;
         if brk!("asks_retract_unread" => false; asks) {
@@ -982,7 +989,8 @@ impl Session {
         if !self.eval.store.rec(id).base() {
             return Err(format!("{key} is derived; retract its supports instead"));
         }
-        if self.eval.store.rec(id).rel == self.eval.v.asks {
+        let rel = self.eval.store.rec(id).rel;
+        if rel == self.eval.v.asks || (rel == self.eval.v.explain_request && self.eval.cone.is_some()) {
             self.retract(query)?;
             return Ok(Retraction::Full("asks names the rules the world runs"));
         }
@@ -1026,6 +1034,9 @@ impl Session {
             return Err(format!("{key} is not a base fact"));
         }
         self.settle()?;
+        if self.eval.cone.is_some() && !self.eval.pruned.is_empty() {
+            return Err(EXCISE_UNDER_ASKS.to_string());
+        }
         let before = self.visible();
         let mut scratch = self.fork();
         scratch.retract(query)?;
@@ -1085,6 +1096,7 @@ impl Session {
         let lit = self.one_lit(query)?;
         self.ground_lit(&lit)?;
         self.settle()?;
+        self.cone_holds(&lit)?;
         self.settle_if_provenance(&lit);
         self.eval.why_text(&lit, Some(query))
     }
@@ -1095,6 +1107,7 @@ impl Session {
         let lit = self.one_lit(query)?;
         self.ground_lit(&lit)?;
         self.settle()?;
+        self.cone_holds(&lit)?;
         self.settle_if_provenance(&lit);
         self.eval.why_text_with(&lit, &WhyOpts { members: usize::MAX, query: String::new() }, Some(query))
     }
@@ -1153,7 +1166,7 @@ impl Session {
                 }),
                 _ => Err("an explain request names an atom: rel(args...)".to_string()),
             };
-            let text = lit.and_then(|l| match kind.as_atom() {
+            let text = lit.and_then(|l| self.eval.outside_cone(l.rel).map_or(Ok(l), Err)).and_then(|l| match kind.as_atom() {
                 Some(k) if k == why => self.eval.why_text(&l, None),
                 Some(k) if k == why_all => brk!("why_all_digest" => self.eval.why_text(&l, None);
                     self.eval.why_text_with(&l, &WhyOpts { members: usize::MAX, query: String::new() }, None)),
@@ -1195,6 +1208,7 @@ impl Session {
     pub fn whynot(&mut self, query: &str, b: &WhynotBounds) -> Result<(bool, String), String> {
         self.settle()?;
         let lit = self.one_lit(query)?;
+        self.cone_holds(&lit)?;
         self.settle_if_provenance(&lit);
         match self.eval.whynot_text(&lit, b, Some(query.trim())) {
             Ok(r) => Ok(r),
@@ -1227,6 +1241,11 @@ impl Session {
         if lit.rel == self.eval.v.derived_by {
             self.eval.settle_provenance();
         }
+    }
+
+    /// A question about a relation the cone of `asks` left out is refused, never answered from what the cone holds.
+    fn cone_holds(&self, lit: &reflect::Lit) -> Result<(), String> {
+        self.eval.outside_cone(lit.rel).map_or(Ok(()), Err)
     }
 
     fn one_lit(&mut self, query: &str) -> Result<reflect::Lit, String> {

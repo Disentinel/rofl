@@ -218,6 +218,132 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "asks_kernel_heads_cut",
+  "what": "a rule concluding unknown runs only when its relation is asked: the negation the kernel reads it behind is a finite failure",
+  "expect": {
+   "asks_kernel_reads": "the state lacks the row unknown[main](kr_k(b))"
+  }
+ },
+ {
+  "id": "asks_explain_rule_unasked",
+  "what": "a rule that makes an explain_request runs only when explain_request is asked: the request is never made",
+  "expect": {
+   "asks_explain_rule": "the state lacks the row explained[$explain](why,er_y(1),1,\"er_y[main](1)"
+  }
+ },
+ {
+  "id": "asks_refusals_cut",
+  "what": "the cone keeps none of the rules that make the whole world refuse: a world refused without asks is answered with them",
+  "expect": {
+   "asks_refused": "was to be refused"
+  }
+ },
+ {
+  "id": "asks_hole_asked",
+  "what": "hole asked is read as a relation of the cone: no rule runs for it and the hole of a rule outside the cone is never met",
+  "expect": {
+   "asks_hole": "the state lacks the row ho_bad[main](10)"
+  }
+ },
+ {
+  "id": "asks_derived_ignored",
+  "what": "an ask a rule concludes is ignored beside a stored one: the relation it asks is left outside the cone",
+  "expect": {
+   "asks_derived": "the state lacks the row dv_b[main](1)"
+  }
+ },
+ {
+  "id": "ts_asks_kernel_heads_cut",
+  "what": "the TypeScript engine runs a rule concluding unknown only when its relation is asked",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "    return [IFACE.unknown, 'shrug', 'explain_request', ...(this.wellFounded ? [IFACE.stratum] : [])];",
+    "    return [];"
+   ]
+  ],
+  "expect": {
+   "asks_kernel_reads": "the state lacks the row unknown[main](kr_k(b))"
+  }
+ },
+ {
+  "id": "ts_asks_explain_rule_unasked",
+  "what": "the TypeScript engine leaves the relation a rule-made explain_request names outside the cone",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "        if (head === 'explain_request') {",
+    "        if (false) {"
+   ]
+  ],
+  "expect": {
+   "asks_explain_rule": "the state lacks the row explained[$explain](why,er_y(1),1,\"er_y[main](1)"
+  }
+ },
+ {
+  "id": "ts_asks_refusals_cut",
+  "what": "the TypeScript engine keeps none of the rules that make the whole world refuse",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "    for (const rel of this.refusalHeads(kept)) cone.add(rel);",
+    "    void this.refusalHeads;"
+   ]
+  ],
+  "expect": {
+   "asks_refused": "was to be refused"
+  }
+ },
+ {
+  "id": "ts_asks_hole_asked",
+  "what": "the TypeScript engine reads hole asked as a relation of the cone",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "rel === V.derived_by || rel === V.hole || this.answer.demandRels.includes(rel)",
+    "rel === V.derived_by || this.answer.demandRels.includes(rel)"
+   ]
+  ],
+  "expect": {
+   "asks_hole": "the state lacks the row ho_bad[main](10)"
+  }
+ },
+ {
+  "id": "ts_asks_derived_ignored",
+  "what": "the TypeScript engine ignores an ask a rule concludes beside a stored one",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "    if (derived) {",
+    "    if (derived && false) {"
+   ]
+  ],
+  "expect": {
+   "asks_derived": "the state lacks the row dv_b[main](1)"
+  }
+ },
+ {
+  "id": "stale_kept_drained",
+  "what": "a fact that read a value since improved on is decided and forgotten when the first lattice closes: a subsumptive relation closing later drops the history its why walks",
+  "expect": {
+   "sub_history_beside_lattice": "the state lacks the row wit sh_sat[main](p,1)"
+  }
+ },
+ {
+  "id": "ts_stale_kept_drained",
+  "what": "the TypeScript engine forgets the stale facts it kept when the first lattice closes",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "    for (const f of keep) this.latStale.add(f);",
+    "    void keep;"
+   ]
+  ],
+  "expect": {
+   "sub_history_beside_lattice": "the state lacks the row wit sh_sat[main](p,1)"
+  }
+ },
+ {
   "id": "delta_first_off",
   "what": "a firing is solved in written order, never from its news: the join before the news premise is held in full",
   "expect": {

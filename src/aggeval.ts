@@ -45,6 +45,7 @@ import {
 } from './reflect.ts';
 import { reasonOf, reasonText, causeText, shown } from './shrug.ts';
 import { tarjan } from './scc.ts';
+import { readFunctions, readTrees } from './structure.ts';
 import { policyStore, planReuse, noReuse, reusedRec, digest53, type ReusePlan } from './reuse.ts';
 import { SAFETY_DENSE } from './kernel-dense.ts';
 
@@ -754,6 +755,10 @@ export class AggEval {
   latticeImprovements = 0;
   holeId: Term = HOLE_ID_DEFAULT;
   demandRels: [string, ERule[]][] = [];
+  /** The relations `asks` reaches, when it prunes (`asksCone`); undefined evaluates every rule. */
+  cone: Set<string> | undefined = undefined;
+  /** The relations whose rules the cone left out: a question about one is refused (`outsideCone`). */
+  pruned = new Set<string>();
   private active: ERule[] = [];
   staged = new Map<string, StagedFact>();
   private stagedAlts = new Map<string, [string, PremRef[]][]>();
@@ -1073,7 +1078,13 @@ export class AggEval {
       kept.push(this.classify(r));
     }
     const cone = this.asksCone(kept);
-    if (cone) kept.splice(0, kept.length, ...kept.filter((r) => cone.has(r.clause.head.rel)));
+    this.cone = cone;
+    this.pruned = new Set();
+    if (cone) {
+      const kernel = this.kernelHeads(), runs = (r: ERule) => cone.has(r.clause.head.rel) || kernel.includes(r.clause.head.rel);
+      this.pruned = new Set(kept.filter((r) => !runs(r)).map((r) => r.clause.head.rel));
+      kept.splice(0, kept.length, ...kept.filter(runs));
+    }
     this.nextRules = new Set(kept.filter((r) => r.clause.head.temporal === 'next').map((r) => r.id));
     this.carried.clear();
     const carried = [...new Set(kept.filter((r) => r.clause.head.temporal === 'next' && this.isLatticeLit(r.clause.head.rel, r.clause.head.args.length))
@@ -1201,29 +1212,47 @@ export class AggEval {
   /** THE RELATION CONE OF `asks(Rel)`: only the rules whose heads reach an asked relation are activated, backwards through every premise
    *  (positive, negated, inside an aggregate) and through what a subsumptive relation's dominance bodies read; no asks means every rule. The cone is
    *  closed under what a rule can see of other relations without naming them as a premise, or an answer in it would differ from the whole world's:
-   *  a relation an `explain_request` names is asked; a rule that reads `derived_by` of a named relation reads that relation; a rule that reads the
-   *  rows of `derived_by` with its fact unbound, or the cells, members, lattice members or dominations the kernel writes, sees every relation's, and
-   *  the cone is the whole world (said in the diagnostics). */
+   *  a relation an `explain_request` names is asked, and so is the rule that makes one; a rule that reads `derived_by` of a named relation reads
+   *  that relation; a rule that reads the rows of `derived_by` with its fact unbound, or the cells, members, lattice members or dominations the
+   *  kernel writes, sees every relation's, and the cone is the whole world (said in the diagnostics). Two kinds of rule run whatever is asked: one
+   *  concluding a relation the kernel reads of every evaluation (`kernelHeads`), and one that can make the whole world refuse (`refusalHeads`):
+   *  a cone never answers a world that is refused (rust/rofl `Eval::asks_cone`). */
   private asksCone(kept: ERule[]): Set<string> | undefined {
     const cone = new Set<string>();
     for (const f of this.store.relAll(IFACE.asks)) if (f.args.length === ARITY.asks && f.args[0].k === 'a') cone.add(f.args[0].name);
     if (!cone.size) return undefined;
+    const derived = kept.find((r) => r.clause.head.rel === IFACE.asks);
+    if (derived) {
+      this.diags.push(`asks: rule ${derived.id} concludes asks, and what a world asks is read before its rules run, so every rule is kept`);
+      return undefined;
+    }
+    if (this.mode === 'strata') {
+      this.diags.push('asks: the stock evaluator orders every rule by its stratum table, so every rule is kept');
+      return undefined;
+    }
     for (const f of this.store.relPersp('explain_request', MAIN)) if (f.args.length === 2 && (f.args[1].k === 'a' || f.args[1].k === 'f')) cone.add(f.args[1].name);
     const blind = new Set<string>([V.agg_cell, V.agg_member, V.agg_member_prem, V.agg_sealed, V.lattice_member, V.lattice_member_prem, V.dominated_by, 'shrug', IFACE.unknown, IFACE.stratum, IFACE.unstratified, V.edb]);
     const whole = (r: ERule, rel: string) => {
       this.diags.push(`asks: rule ${r.id} reads '${rel}' without naming a relation, which shows every relation's rows, so every rule is kept`);
       return undefined;
     };
-    for (const rel of cone) {
-      if (blind.has(rel) || rel === V.derived_by || this.answer.demandRels.includes(rel)) {
-        this.diags.push(`asks: '${rel}' is asked, and what it holds is what every rule asked of it or showed of every relation, so every rule is kept`);
-        return undefined;
-      }
+    const hits = [...cone].filter((rel) => blind.has(rel) || rel === V.derived_by || rel === V.hole || this.answer.demandRels.includes(rel)).sort(cmpStr);
+    if (hits.length) {
+      this.diags.push(`asks: '${hits[0]}' is asked, and what it holds is what every rule asked of it or showed of every relation, so every rule is kept`);
+      return undefined;
     }
+    const kernel = this.kernelHeads();
+    for (const rel of this.refusalHeads(kept)) cone.add(rel);
     for (let n = -1; n !== cone.size;) {
       n = cone.size;
       for (const r of kept) {
-        if (!cone.has(r.clause.head.rel)) continue;
+        const head = r.clause.head.rel;
+        if (!cone.has(head) && !kernel.includes(head)) continue;
+        if (head === 'explain_request') {
+          const t = r.clause.head.args[1];
+          if (t?.k === 'a' || t?.k === 'f') cone.add(t.name);
+          else return whole(r, 'explain_request');
+        }
         for (const l of r.clause.body.flatMap(litsOf)) {
           cone.add(l.rel);
           if (l.rel === V.derived_by) {
@@ -1236,6 +1265,47 @@ export class AggEval {
       for (const [rel, sub] of this.subs) if (cone.has(rel)) for (const x of sub.reads) cone.add(x);
     }
     return cone;
+  }
+
+  /** THE RELATIONS THE KERNEL READS OF EVERY EVALUATION, whatever is asked: `unknown` behind every negation, `shrug`, the explain requests, and
+   *  the strata of a well-founded world. A rule concluding one runs in every cone. */
+  private kernelHeads(): string[] {
+    return [IFACE.unknown, 'shrug', 'explain_request', ...(this.wellFounded ? [IFACE.stratum] : [])];
+  }
+
+  /** THE RULES THAT CAN MAKE THE WHOLE WORLD REFUSE, whose heads join every cone (rust/rofl `Eval::refusal_heads`): a declared function's or
+   *  tree's relation; a rule reading `unknown` or `shrug`; a rule into a tag, or reading or concluding a subsumptive relation; one concluding a
+   *  relation answered on demand with an aggregate or a lattice read; under well_founded every aggregate and demand-backed rule; and every
+   *  relation a stall of the whole program's rounds leaves unsettled. */
+  private refusalHeads(kept: ERule[]): string[] {
+    const out: string[] = [...readFunctions(this.store).map((f) => f.rel), ...readTrees(this.store).map((t) => t.rel)];
+    const demand = this.answer.demandRels;
+    for (const r of kept) {
+      const head = r.clause.head.rel;
+      const lits = r.clause.body.flatMap(litsOf);
+      const hasAgg = r.clause.body.some((b) => b.t === 'agg');
+      if (lits.some((l) => l.rel === IFACE.unknown || l.rel === 'shrug' || this.subs.has(l.rel)) || this.subs.has(head) || this.tags.byRel.has(head)
+        || (demand.includes(head) && (hasAgg || lits.some((l) => this.lattices.has(l.rel))))
+        || (this.wellFounded && (hasAgg || demand.includes(head)))) out.push(head);
+    }
+    if (this.mode === 'rounds') {
+      const domEdges: [string, string][] = [...this.subs].flatMap(([p, x]) => x.reads.map((b): [string, string] => [p, b]));
+      const peel = peelRounds(kept, [...this.lattices.keys()], domEdges);
+      if (peel.stalled) {
+        const heads = new Set(kept.map((r) => r.clause.head.rel));
+        out.push(...peel.stuck.filter((s) => heads.has(s)));
+      }
+    }
+    return out;
+  }
+
+  /** THE REFUSAL OF A QUESTION THE CONE CANNOT ANSWER: a relation whose rules it left out, or one the kernel writes of every rule's
+   *  evaluation, holds in a world with asks only what the cone's rules made of it (rust/rofl `Eval::outside_cone`). */
+  outsideCone(rel: string): string | undefined {
+    if (this.cone === undefined) return undefined;
+    const kernel = [V.agg_cell, V.agg_member, V.agg_member_prem, V.agg_sealed, V.lattice_member, V.lattice_member_prem, V.dominated_by, 'shrug', IFACE.unknown, V.hole, V.derived_by];
+    if (!this.pruned.has(rel) && !kernel.includes(rel)) return undefined;
+    return `'${rel}' is outside the asked cone: the world runs only the rules its asks reach, so what it holds of '${rel}' is not the whole world's; add asks(${rel}) or drop the asks`;
   }
 
   private classify(r: DRule): ERule {
@@ -5769,6 +5839,8 @@ export class AggEval {
       const g = stack.pop()!;
       if (sup.has(g) && !reach.has(g)) { reach.add(g); stack.push(...this.factPremises(g)); }
     }
+    // a stale fact kept keeps the history it read for every lattice closing after this one (rust/rofl `settle_stale`)
+    for (const f of keep) this.latStale.add(f);
     for (const f of sup) {
       if (reach.has(f) || !due.includes(this.rec(f).rel)) this.latSuperseded.add(f);
       else this.store.dropFirings(f);

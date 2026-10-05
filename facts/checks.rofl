@@ -3329,3 +3329,44 @@ check_opt("asks_demand", together, 1).
 check_world("asks_asked_cells").
 check_file("asks_asked_cells", "examples/checks/asks-asked-cells.rofl").
 check_opt("asks_asked_cells", together, 1).
+
+-- the review of the cone (2026-10-05): what the kernel reads of every rule, a rule-made request, a refused world, a
+-- question outside the cone, two kernel relations asked, hole asked, a derived ask
+check_world("asks_kernel_reads").
+check_file("asks_kernel_reads", "examples/checks/asks-kernel-reads.rofl").
+check_opt("asks_kernel_reads", together, 1).
+check_opt("asks_kernel_reads", explain, 1).
+
+check_world("asks_explain_rule").
+check_file("asks_explain_rule", "examples/checks/asks-explain-rule.rofl").
+check_opt("asks_explain_rule", together, 1).
+check_opt("asks_explain_rule", explain, 1).
+
+check_world("asks_refused").
+check_file("asks_refused", "examples/checks/asks-refused.rofl").
+check_file("asks_refused", "examples/checks/asks-refused-promise.rofl").
+check_file("asks_refused", "examples/checks/asks-refused-wfs.rofl").
+check_file("asks_refused", "examples/checks/asks-refused-cycle.rofl").
+check_opt("asks_refused", together, 1).
+
+check_world("asks_outside").
+check_file("asks_outside", "examples/checks/asks-outside.rofl").
+check_opt("asks_outside", together, 1).
+
+check_world("asks_asked_twice").
+check_file("asks_asked_twice", "examples/checks/asks-asked-twice.rofl").
+check_opt("asks_asked_twice", together, 1).
+
+check_world("asks_hole").
+check_file("asks_hole", "examples/checks/asks-hole.rofl").
+check_opt("asks_hole", together, 1).
+
+check_world("asks_derived").
+check_file("asks_derived", "examples/checks/asks-derived.rofl").
+check_opt("asks_derived", together, 1).
+
+-- a dominated value's history, when a lattice no rule concludes closes at an earlier level (found by the cone's review)
+check_world("sub_history_beside_lattice").
+check_file("sub_history_beside_lattice", "examples/checks/sub-history-beside-lattice.rofl").
+check_opt("sub_history_beside_lattice", together, 1).
+check_opt("sub_history_beside_lattice", explain, 1).
