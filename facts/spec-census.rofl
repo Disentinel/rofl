@@ -665,6 +665,7 @@ check[checks]("facts/goldens.rofl", "cost_shapes_model", world).
 check[checks]("facts/goldens.rofl", "demand_asked_hole", world).
 check[checks]("facts/goldens.rofl", "demand_chain", world).
 check[checks]("facts/goldens.rofl", "demand_cycle", world).
+check[checks]("facts/goldens.rofl", "demand_cycle_cut", world).
 check[checks]("facts/goldens.rofl", "demand_cycle_fixpoint", world).
 check[checks]("facts/goldens.rofl", "demand_done", world).
 check[checks]("facts/goldens.rofl", "demand_fixpoint_nonlinear", world).

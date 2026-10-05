@@ -1106,6 +1106,10 @@ brk("ask_wall_errors"). brk_kind("ask_wall_errors", switch).
 brk_expects("ask_wall_errors", "demand_query_ask").
 brk("ask_dedup_scan"). brk_kind("ask_dedup_scan", switch).
 brk_expects("ask_dedup_scan", "demand_query_ask").
+brk("demand_neg_cycle_read"). brk_kind("demand_neg_cycle_read", switch).
+brk_expects("demand_neg_cycle_read", "demand_cycle_cut").
+brk("ts_demand_neg_cycle_read"). brk_kind("ts_demand_neg_cycle_read", ts).
+brk_expects("ts_demand_neg_cycle_read", "demand_cycle_cut").
 brk("demand_naive_passes"). brk_kind("demand_naive_passes", switch).
 brk_expects("demand_naive_passes", "demand_fixpoint").
 brk("demand_again_rereads_store"). brk_kind("demand_again_rereads_store", switch).
@@ -2046,6 +2050,7 @@ switch_site("demand_done_stale", "rust/rofl/src/engine.rs").
 switch_site("demand_fault_unspread", "rust/rofl/src/engine.rs").
 switch_site("demand_fixpoint_once", "rust/rofl/src/engine.rs").
 switch_site("demand_naive_passes", "rust/rofl/src/engine.rs").
+switch_site("demand_neg_cycle_read", "rust/rofl/src/engine.rs").
 switch_site("demand_neg_failed_unknown", "rust/rofl/src/engine.rs").
 switch_site("demand_neg_unholed", "rust/rofl/src/engine.rs").
 switch_site("demand_nonlinear_window", "rust/rofl/src/engine.rs").

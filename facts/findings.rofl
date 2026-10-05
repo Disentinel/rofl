@@ -10789,3 +10789,13 @@ addressed_by(f_an_ask_told_its_answers_apart_by_a_scan, "rust/rofl/src/session.r
 addressed_by(f_an_ask_told_its_answers_apart_by_a_scan, "rust/rofl/tests/demand_query.rs").
 finding_note(f_an_ask_told_its_answers_apart_by_a_scan,
   "FOUND BY REVIEW of demand-polish. Session::ask of a relation unfolded at a call dropped an answer already given by scanning every answer found so far (`got.iter().any(|g| g.0 == text)`), quadratic in the answers. A set now: rofl-serve, ask t_p(X, Y) of 20 000 open answers, 0.90 s before, 0.10 s after (release). src/api.ts keys its rows by a Map already. HELD BY cargo test demand_query an_ask_with_many_answers_is_linear (40 000 answers under 1 s in an optimised build; the scan took 4.3 s) and the planted fault ask_dedup_scan.").
+
+finding(f_the_cut_was_said_unreachable_and_a_stratum_table_reaches_it, defect).
+recorded(f_the_cut_was_said_unreachable_and_a_stratum_table_reaches_it, "2026-10-05").
+demands(f_the_cut_was_said_unreachable_and_a_stratum_table_reaches_it, doc).
+addressed_by(f_the_cut_was_said_unreachable_and_a_stratum_table_reaches_it, "examples/checks/demand-cycle-cut.rofl").
+addressed_by(f_the_cut_was_said_unreachable_and_a_stratum_table_reaches_it, "facts/findings.rofl").
+finding_note(f_the_cut_was_said_unreachable_and_a_stratum_table_reaches_it,
+  "FOUND BY REVIEW of demand-polish. f_a_cut_cycle_was_filed_as_a_wall said that since the fixpoint no world both engines accept meets the cut, the stratifier refusing the negative cycle it needs, so only a cargo test held the reason `cut`. FALSE: the stock evaluator (--strata, `check_opt(W, evaluator, strata)`) takes a stratum table the program supplies and loads the cycle the aggregate evaluator's stratifier refuses. Win over a cycle of four moves, answered on demand (`dc_w(X, Z) :- dc_mv(X, Y), dc_u(0, Z), not dc_w(Y, Z).`, dc_u leaving Z open), meets itself under the negation it opened, and both engines write the honest shrug `shrug[$kernel]($rule(..),cut,demand_cycle)` and leave every dc_r inherited-unknown: an undecidable game, not a wall. World demand_cycle_cut keeps it (both engines, the stock evaluator); planted faults demand_neg_cycle_read / ts_demand_neg_cycle_read (the call read its growing answers instead of cut) decide dc_r(1) and dc_r(3), caught. The claim in f_a_cut_cycle_was_filed_as_a_wall stands corrected by this note; its reason text is now held by a world as well as shrug.rs a_cut_cycle_is_no_budget.").
+finding_note(f_a_cut_cycle_was_filed_as_a_wall,
+  "CORRECTED (f_the_cut_was_said_unreachable_and_a_stratum_table_reaches_it): a world both engines accept does meet the cut, under the stock evaluator with a stratum table the program supplies; demand_cycle_cut carries the row with the reason `cut`.").

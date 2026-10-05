@@ -10747,7 +10747,7 @@ impl Eval {
         let call = drs.as_ref().filter(|_| keyed).map(|_| self.anon_lit_key(l, s));
         let met = call.as_ref().and_then(|k| self.demand_calls.iter().position(|c| c.key == *k));
         let again = met.filter(|_| !closed && brk!("demand_cycle_unfolds" => false; true));
-        let cut = again.is_some_and(|j| self.neg_level > self.demand_calls[j].neg || brk!("demand_cycle_cut" => true; false));
+        let cut = again.is_some_and(|j| (self.neg_level > self.demand_calls[j].neg && brk!("demand_neg_cycle_read" => false; true)) || brk!("demand_cycle_cut" => true; false));
         // the first call took the stored answers among its own: one met again reads them there
         let reread = again.is_some() && !cut && brk!("demand_again_rereads_store" => false; true);
         // A CALL A COMPLETE ONE COVERS reads its answers: they were all found over this store, in a firing

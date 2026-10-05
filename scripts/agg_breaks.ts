@@ -4054,6 +4054,27 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "demand_neg_cycle_read",
+  "what": "a call met again under a negation opened inside its own unfolding reads the answers so far, which may still grow, instead of being cut",
+  "expect": {
+   "demand_cycle_cut": "holds the row dc_r[main]("
+  }
+ },
+ {
+  "id": "ts_demand_neg_cycle_read",
+  "what": "the TypeScript engine reads the growing answers of a call met again under a negation opened inside it",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "const cut = j >= 0 && this.negLevel > this.demandCalls[j].neg;",
+    "const cut = false;"
+   ]
+  ],
+  "expect": {
+   "demand_cycle_cut": "holds the row dc_r[main]("
+  }
+ },
+ {
   "id": "demand_naive_passes",
   "what": "every pass of a linear recursion reads every answer so far",
   "expect": {
