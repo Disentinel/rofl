@@ -292,7 +292,7 @@ test('U6 a code file that did not parse is named on the verdict line', ['out'], 
 // `--shards N` each part's checks, that they hold every check once, and that a part dropping one is seen to
 const arg = (flag: string) => { const i = process.argv.indexOf(flag); return i >= 0 ? process.argv[i + 1] : undefined; };
 const order = Object.keys(RUNS);
-const home = (t: Test, n: number) => Math.min(...t.needs.map((r) => order.indexOf(r))) % n;
+const home = (t: Test, n: number) => (t.needs.length ? Math.min(...t.needs.map((r) => order.indexOf(r))) : 0) % n;
 const parts = (n: number, at = home) => Array.from({ length: n }, (_, i) => TESTS.filter((t) => at(t, n) === i));
 const whole = (ps: Test[][]) => ps.flat().length === TESTS.length && new Set(ps.flat()).size === TESTS.length;
 const shards = Number(arg('--shards') ?? 0), shard = arg('--shard'), only = arg('--only');
