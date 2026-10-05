@@ -1,4 +1,4 @@
-structures: 11 relations of at least 2 rows scanned over 269 live facts, about 142 B per fact (store tables over live facts)
+structures: 11 relations of at least 2 rows scanned over 273 live facts, about 140 B per fact (store tables over live facts)
 
 propose function grade(A, B, to C).
         grade: 7 rows, 7 distinct A,B; at most one C for each

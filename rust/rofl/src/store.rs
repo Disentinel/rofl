@@ -1363,6 +1363,19 @@ impl Store {
         (rows, seen.len().clamp(1, rows.max(1)))
     }
 
+    /// Every live row of `rel`, with its book, in no order: a scan that sorts
+    /// nothing and allocates nothing (`structure::check_functions`).
+    pub fn each_row(&self, rel: Sym, mut f: impl FnMut(Sym, FactId)) {
+        let Some(groups) = self.idx.get(&rel) else { return };
+        for (p, r) in groups {
+            for &k in r.canon.iter().chain(r.arrived.iter()) {
+                if self.facts.alive(k) {
+                    f(*p, k);
+                }
+            }
+        }
+    }
+
     pub fn rel_count(&self, rel: Sym) -> usize {
         self.idx
             .get(&rel)

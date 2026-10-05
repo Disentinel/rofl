@@ -140,7 +140,7 @@ const NOT_OURS = (rel: string, home: Record<string, string>) => `${rel} is the k
 const plain = (s: string) => s.replace(/\bnb__/g, '');
 /** What a notebook writes without introducing a relation: the kernel's tables a program writes by hand (reflect.ts KERNEL_BOOK), and phrases. */
 const WRITTEN = new Set([...[...RESERVED].filter((r) => !KERNEL_BOOK.has(r)), 'phrase', 'sig', 'fun_phrase']);
-const NODE = /\bn[0-9a-f]{8}_\d+\b/g;
+const NODE = /\bn[0-9a-f]{16}_\d+\b/g;
 type Concerns = { rules: Record<string, string>; rels: Record<string, string> };
 type Scanned = { key: string; facts: string[]; nodes: Record<string, Node>; parseErrors: Record<string, string>; text: string; rels: Set<string> };
 

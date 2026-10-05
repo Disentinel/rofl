@@ -943,3 +943,12 @@ Under `sealed(provenance)` the Rust engine keeps no witness either, where
 nothing withdraws, and a budget step is then a new fact rather than a firing:
 the same program reaches a budget at a different place with the seal and
 without it, which is accepted because the seal is the program's own word.
+
+In a provenanced world the Rust engine keeps the witness of every firing (what
+`why` renders) and writes the `derived_by` rows of the firings no rule reads
+only when something asks: the canonical state, a query for `derived_by`, a
+tick boundary. The state it answers is the state of an engine that writes every
+row; a world that evaluates and is not read for them holds 44% fewer facts.
+A rule that reads `derived_by` of a named relation keeps that relation's rows as
+they fire. `sealed(provenance)` remains the declaration that no row and no
+witness is wanted (f_derived_by_is_written_when_asked).

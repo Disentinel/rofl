@@ -116,8 +116,8 @@ fn load_prints_the_answers_in_flag_order_instead_of_the_state() {
 
 #[test]
 fn load_keeps_the_state_without_a_question_and_with_state() {
-    let s = world();
-    let state = s.eval.store.canonical_state(&s.eval.h);
+    let mut s = world();
+    let state = s.eval.canonical_state();
     assert_eq!(load(&["--budget", "1000000"]), (state.clone(), 0));
     let (out, _) = load(&["--budget", "1000000", "--state", "--why", "calls(a, b)"]);
     assert_eq!(out, format!("{state}calls[main](a,b) [axiom]\n\n"));

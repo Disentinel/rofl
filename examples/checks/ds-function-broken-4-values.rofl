@@ -1,0 +1,5 @@
+-- expect-refusal: function dsr_pair: key (k, "s") has two values in the book main: (1, 2) and (1, 3)
+-- two values and a key of two: the values are broken together (one of them equal is not enough to hold), and a string is written quoted
+edb(dsr_pair).
+function dsr_pair(K, J, to A, to B).
+dsr_pair(k, "s", 1, 2). dsr_pair(k, "s", 1, 3). dsr_pair(k, "t", 1, 2). dsr_pair(k, "t", 1, 2).

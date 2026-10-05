@@ -1,0 +1,7 @@
+-- a function whose second value is held back by a block: the world holds, and lifting the block (retracting it) breaks nothing because no second value stands behind it
+edb(dsr_src).
+edb(dsr_blocked).
+function dsr_p(K, to V).
+dsr_src(a, 1).
+dsr_blocked(a, 2).
+dsr_p(K, V) :- dsr_src(K, V), not dsr_blocked(K, V).

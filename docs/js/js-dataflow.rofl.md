@@ -191,6 +191,8 @@ Declared as facts:
 > names too (`binds_name`) but evaluate to a MEMBER of the init, so they are
 > not `binder` rows; `scoped_binder` is the union every scope rule ranges over.
 
+`binder` has one Name, Init and File for each D.
+
 In the code:
 
 <a id="binder"></a>A [declarator](#noun-declarator) binds Name to a node Init in File if all of:
@@ -1319,35 +1321,33 @@ A node
 > Calling, constructing or reading a member off an external value gives
 > another one. A callee that is also a corpus function keeps both rows. The
 > external value leads each body: it is the small relation, and the site is
-> found from it rather than the other way round. Each hop is ONE round of the
-> fixpoint, so both heads carry the whole body instead of one reading the
-> other: every round re-scans every member node, and an intermediate relation
-> made a chain of calls cost three rounds a call (46 rounds became 70). Measured
-> again on the Rust engine with a helper per hop: the pair itself fell 510 to 322
-> ms but the extra round re-fires callback_param, and the model's probes ROSE
-> 2.5 %; it waits for an engine that fires a delta first.
+> found from it rather than the other way round. The call and the member hop
+> each find their site ONCE, in `ext_call` and `ext_member`, and both heads
+> read it. Written as one body per head the pair re-scanned every member node
+> twice a round; the helper costs a round a hop (rounds +2 %) and, since the
+> engine fires a rule from its news (w_cmp_delta_first), nothing re-fires on it:
+> the model's probes fell 1.2 % sealed / 0.8 % default, the heads' time 7-12 %.
+> Under the engine that fired in written order they ROSE 2.5 %.
 
-An [invocation](#noun-invocation)
-
-- comes out of a module Spec if all of:
+<a id="ext_call"></a>An [invocation](#noun-invocation) is an external call of a module Spec if all of:
   - a node X [comes out of](#external_value) Spec;
   - a node F [points to](#may_be_node) X;
   - the `callee` of it is F.
-- points to it if all of:
-  - a node X [comes out of](#external_value) some module;
-  - a node F [points to](#may_be_node) X;
-  - the `callee` of it is F.
 
-A [member access](#member_node_v)
+A node
 
-- comes out of a module Spec if all of:
+- comes out of a module Spec if it [is an external call of](#ext_call) Spec.
+- points to it if it [is an external call of](#ext_call) some module.
+
+<a id="ext_member"></a>A [member access](#member_node_v) is an external member of a module Spec if all of:
   - a node X [comes out of](#external_value) Spec;
   - a node O [points to](#may_be_node) X;
   - the `object` of it is O.
-- points to it if all of:
-  - a node X [comes out of](#external_value) some module;
-  - a node O [points to](#may_be_node) X;
-  - the `object` of it is O.
+
+A node
+
+- comes out of a module Spec if it [is an external member of](#ext_member) Spec.
+- points to it if it [is an external member of](#ext_member) some module.
 
 > The corpus writes members onto an external value (`app.handler = f`) and
 > reads them back like any plain object's.

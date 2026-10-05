@@ -52,6 +52,13 @@ export function written(text: string): string[] {
       rels.add(c.head.rel);
       continue;
     }
+    if (c.structure) {
+      if (!out.includes('edb(sentence_structure).')) out.push('edb(sentence_structure).', 'edb(sentence_role).');
+      out.push(`sentence_structure(${c.head.rel}, ${c.head.args.length}, ${c.structure.kind}).`);
+      c.structure.roles.forEach((r, i) => { if (r) out.push(`sentence_role(${c.head.rel}, ${i + 1}, ${r}).`); });
+      rels.add(c.head.rel);
+      continue;
+    }
     if (c.body.length === 0) continue;
     out.push(`sentence_want(${ruleIdOf(canonClauseSets(canonNames(c)))}).`);
     rels.add(c.head.rel);
@@ -81,7 +88,7 @@ export function said(md: string): string[] {
       });
       continue;
     }
-    const d = /^`(\w+)`(?: in the `\$?\w+`)? (?:keeps|is ordered) |^Each `(\w+)` fact|^A fact that \[[^\]]*\]\(#(\w+)\)/.exec(p.trim());
+    const d = /^`(\w+)`(?: in the `\$?\w+`)? (?:keeps|is ordered|has one) |^Each `(\w+)` fact|^A fact that \[[^\]]*\]\(#(\w+)\)/.exec(p.trim());
     if (d) out.push(`sentence_of(${d[1] ?? d[2] ?? d[3]}, "${plain(p)}").`);
   }
   return out;

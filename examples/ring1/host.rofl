@@ -65,6 +65,26 @@ pairs(A, A2) :- pairs($builtin(Op, A), hbi(Op, A2)).
 fits($builtin(Op, A), hbi(Op, A2)) :- pairs($builtin(Op, A), hbi(Op, A2)).
 fits($var(S), hvar(S)) :- pairs($var(S), hvar(S)).
 
+-- A DECLARATION is the head wrapped by what it declares; the wrapper, the word
+-- it names and the literal inside it are each checked, and the body is the
+-- clause's own (a dominance rule has one, the others none).
+pairs(L, L2) :- pairs($lattice(Op, L), hlattice(Op2, L2)).
+fits($lattice(Op, L), hlattice(Op, L2)) :- pairs($lattice(Op, L), hlattice(Op, L2)).
+pairs(N, N2) :- pairs($widen(N, X), hwiden(N2, Y)).
+pairs(X, Y)  :- pairs($widen(N, X), hwiden(N2, Y)).
+fits($widen(N, X), hwiden(N2, Y)) :- pairs($widen(N, X), hwiden(N2, Y)).
+pairs(L, L2) :- pairs($tag(A, L), htag(A2, L2)).
+fits($tag(A, L), htag(A, L2)) :- pairs($tag(A, L), htag(A, L2)).
+pairs(Ds, Ds2) :- pairs($order(K, Ds, L), horder(K2, Ds2, L2)).
+pairs(L, L2)   :- pairs($order(K, Ds, L), horder(K2, Ds2, L2)).
+fits($order(K, Ds, L), horder(K, Ds2, L2)) :- pairs($order(K, Ds, L), horder(K, Ds2, L2)).
+pairs(Rs, Rs2) :- pairs($structure(K, Rs, L), hstructure(K2, Rs2, L2)).
+pairs(L, L2)   :- pairs($structure(K, Rs, L), hstructure(K2, Rs2, L2)).
+fits($structure(K, Rs, L), hstructure(K, Rs2, L2)) :- pairs($structure(K, Rs, L), hstructure(K, Rs2, L2)).
+pairs(H, H2) :- pairs($dominance(H, G), hdominance(H2, G2)).
+pairs(G, G2) :- pairs($dominance(H, G), hdominance(H2, G2)).
+fits($dominance(H, G), hdominance(H2, G2)) :- pairs($dominance(H, G), hdominance(H2, G2)).
+
 -- ------------------------------------------------------------- the six leaves
 -- A COMPOUND: a functor named by the atom the grammar read.
 pairs(A, A2) :- pairs(comp(N, A), hfun(F, A2)).

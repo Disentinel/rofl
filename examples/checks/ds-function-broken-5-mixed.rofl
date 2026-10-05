@@ -1,0 +1,7 @@
+-- expect-refusal: function dsr_mix: key (a) has two values in the book main: (1) and (2)
+-- a base fact and a conclusion of a rule break it together: the check reads what is asserted and what is derived alike
+edb(dsr_src).
+dsr_src(a, 2).
+function dsr_mix(K, to V).
+dsr_mix(a, 1).
+dsr_mix(K, V) :- dsr_src(K, V).

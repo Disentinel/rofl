@@ -36,7 +36,7 @@
 // than the total.
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { scan, idPrefix } from '../scanners/js_ast.ts';
+import { ScanSet, idPrefix } from '../scanners/js_ast.ts';
 import { RoflPort, type RoflSession } from './port.ts';
 
 export interface IngestOpts {
@@ -87,6 +87,7 @@ export async function ingest(s: RoflSession, o: IngestOpts): Promise<TickReport[
   await s.evaluate();
 
   const log: TickReport[] = [];
+  const scans = new ScanSet();
   let tick = 0;
   for (;;) {
     // 1. THE FRONTIER IS A QUERY. Nothing here remembers what it did last
@@ -100,7 +101,7 @@ export async function ingest(s: RoflSession, o: IngestOpts): Promise<TickReport[
     let parsed = 0;
     for (const rel of batch) {
       try {
-        facts.push(scan(fs.readFileSync(path.join(o.root, rel), 'utf8'), { file: rel }).facts.join('\n'));
+        facts.push(scans.scan(fs.readFileSync(path.join(o.root, rel), 'utf8'), { file: rel }).facts.join('\n'));
         parsed += 1;
       } catch (e) {
         // A FILE THAT WILL NOT PARSE IS RECORDED, NOT RETRIED. Left alone it

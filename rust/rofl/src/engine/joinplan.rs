@@ -168,6 +168,17 @@ impl Eval {
                 vpos.push(j);
             }
         }
+        // A DECLARED FUNCTION (`function p(K, to V).`, a promise checked after every evaluation) answers at
+        // most one row for a bound key: a premise whose key is bound, by a constant or a variable, is one
+        // match per binding and needs no pass over its rows to say so. Per book, so only a premise that
+        // names its book.
+        if let (Some(fk), Some(_)) = (self.function_keys.get(&l.rel), persp) {
+            if !vpos.is_empty() && fk.iter().all(|k| cpos.contains(k) || vpos.contains(k)) {
+                self.promise_stats += 1;
+                let size = self.store.rel_len_est(l.rel, persp);
+                return Stat { rows: size as f64, fan: if size == 0 { 0.0 } else { 1.0 } };
+            }
+        }
         let mut key: Vec<u64> = vec![l.rel as u64, persp.map_or(u64::MAX, |p| p as u64)];
         for (&p, v) in cpos.iter().zip(&cvals) {
             key.push(p as u64);

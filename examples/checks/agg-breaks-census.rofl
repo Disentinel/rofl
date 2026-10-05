@@ -8,6 +8,17 @@ edb(brk_expects).
 edb(switch_site).
 edb(proof_world).
 
+brk("prov_state_unsettled"). brk_kind("prov_state_unsettled", switch).
+brk_expects("prov_state_unsettled", "prov_lazy_reader").
+brk_expects("prov_state_unsettled", "prov_lazy_retract").
+brk("prov_settle_keeps_dead"). brk_kind("prov_settle_keeps_dead", switch).
+brk_expects("prov_settle_keeps_dead", "prov_lazy_lattice").
+brk("prov_tick_unsettled"). brk_kind("prov_tick_unsettled", switch).
+brk_expects("prov_tick_unsettled", "prov_lazy").
+brk("prov_reader_deferred"). brk_kind("prov_reader_deferred", switch).
+brk_expects("prov_reader_deferred", "prov_lazy_reader").
+brk("prov_variable_reader_lazy"). brk_kind("prov_variable_reader_lazy", switch).
+brk_expects("prov_variable_reader_lazy", "provenance_relational").
 brk("delta_first_off"). brk_kind("delta_first_off", switch).
 brk_expects("delta_first_off", "agg_join_delta_first").
 brk("delta_first_spread"). brk_kind("delta_first_spread", switch).
@@ -1693,6 +1704,50 @@ brk("ts_label_ex_elsewhere_ignored"). brk_kind("ts_label_ex_elsewhere_ignored", 
 brk_expects("ts_label_ex_elsewhere_ignored", "agg_label_sound").
 brk("ts_label_fault_anywhere"). brk_kind("ts_label_fault_anywhere", ts).
 brk_expects("ts_label_fault_anywhere", "agg_label_sound").
+brk("function_unread"). brk_kind("function_unread", switch).
+brk_expects("function_unread", "ds_function_syntax").
+brk_expects("function_unread", "ds_function_holds").
+brk("function_value_unread"). brk_kind("function_value_unread", switch).
+brk_expects("function_value_unread", "ds_function_holds").
+brk_expects("function_value_unread", "ds_function_tick").
+brk("function_check_off"). brk_kind("function_check_off", switch).
+brk_expects("function_check_off", "ds_function_holds").
+brk_expects("function_check_off", "ds_function_tick").
+brk("function_book_ignored"). brk_kind("function_book_ignored", switch).
+brk_expects("function_book_ignored", "ds_function_holds").
+brk("function_tick_unchecked"). brk_kind("function_tick_unchecked", switch).
+brk_expects("function_tick_unchecked", "ds_function_tick").
+brk("function_dirty_cleared_first"). brk_kind("function_dirty_cleared_first", switch).
+brk_expects("function_dirty_cleared_first", "ds_function_holds").
+brk("function_retract_clean"). brk_kind("function_retract_clean", switch).
+brk_expects("function_retract_clean", "ds_function_retract").
+brk("ts_function_dirty_cleared"). brk_kind("ts_function_dirty_cleared", ts).
+brk_expects("ts_function_dirty_cleared", "ds_function_holds").
+brk_expects("ts_function_dirty_cleared", "ds_function_tick").
+brk_expects("ts_function_dirty_cleared", "ds_function_retract").
+brk("function_twice_admitted"). brk_kind("function_twice_admitted", switch).
+brk_expects("function_twice_admitted", "ds_function_syntax").
+brk("function_roles_unread"). brk_kind("function_roles_unread", switch).
+brk_expects("function_roles_unread", "ds_function_syntax").
+brk_expects("function_roles_unread", "ds_function_holds").
+brk("function_arity_short"). brk_kind("function_arity_short", switch).
+brk_expects("function_arity_short", "ds_function_syntax").
+brk("phrase_function_key_lost"). brk_kind("phrase_function_key_lost", switch).
+brk_expects("phrase_function_key_lost", "ds_function_phrase").
+brk("ring1_function_unread"). brk_kind("ring1_function_unread", file).
+brk_expects("ring1_function_unread", "ds_function_syntax").
+brk("ts_function_unread"). brk_kind("ts_function_unread", ts).
+brk_expects("ts_function_unread", "ds_function_syntax").
+brk("ts_function_check_off"). brk_kind("ts_function_check_off", ts).
+brk_expects("ts_function_check_off", "ds_function_holds").
+brk_expects("ts_function_check_off", "ds_function_tick").
+brk("ts_function_value_unread"). brk_kind("ts_function_value_unread", ts).
+brk_expects("ts_function_value_unread", "ds_function_holds").
+brk("ts_function_twice_admitted"). brk_kind("ts_function_twice_admitted", ts).
+brk_expects("ts_function_twice_admitted", "ds_function_syntax").
+brk("ts_function_roles_unread"). brk_kind("ts_function_roles_unread", ts).
+brk_expects("ts_function_roles_unread", "ds_function_syntax").
+brk_expects("ts_function_roles_unread", "ds_function_holds").
 brk("structures_function_conflict_ignored"). brk_kind("structures_function_conflict_ignored", switch).
 brk_expects("structures_function_conflict_ignored", "structures_proof").
 brk("structures_tree_two_parents_ignored"). brk_kind("structures_tree_two_parents_ignored", switch).
@@ -1829,6 +1884,16 @@ switch_site("facts_dom_unwritten", "rust/rofl/src/bin/rofl_render.rs").
 switch_site("fir_superseded_live", "rust/rofl/src/store.rs").
 switch_site("firing_id_tickless", "rust/rofl/src/store.rs").
 switch_site("first_rep", "rust/rofl/src/engine.rs").
+switch_site("function_arity_short", "rust/rofl/src/program.rs").
+switch_site("function_book_ignored", "rust/rofl/src/structure.rs").
+switch_site("function_check_off", "rust/rofl/src/structure.rs").
+switch_site("function_dirty_cleared_first", "rust/rofl/src/engine.rs").
+switch_site("function_retract_clean", "rust/rofl/src/session.rs").
+switch_site("function_roles_unread", "rust/rofl/src/program.rs").
+switch_site("function_tick_unchecked", "rust/rofl/src/engine.rs").
+switch_site("function_twice_admitted", "rust/rofl/src/structure.rs").
+switch_site("function_unread", "rust/rofl/src/rofl_parse.rs").
+switch_site("function_value_unread", "rust/rofl/src/structure.rs").
 switch_site("height_min", "rust/rofl/src/store.rs").
 switch_site("hol_best_only", "rust/rofl/src/engine.rs").
 switch_site("hol_door_param", "rust/rofl/src/program.rs").
@@ -1963,6 +2028,7 @@ switch_site("phrase_count_tuple_first", "rust/rofl/src/bin/rofl_render.rs").
 switch_site("phrase_decl_twinned", "rust/rofl/src/bin/rofl_render.rs").
 switch_site("phrase_dom_reintroduced", "rust/rofl/src/bin/rofl_render.rs").
 switch_site("phrase_every_rows_unchecked", "rust/rofl/src/bin/rofl_render.rs").
+switch_site("phrase_function_key_lost", "rust/rofl/src/bin/rofl_render.rs").
 switch_site("phrase_inner_unread", "rust/rofl/src/bin/rofl_render.rs").
 switch_site("phrase_lattice_op_lost", "rust/rofl/src/bin/rofl_render.rs").
 switch_site("phrase_max_as_min", "rust/rofl/src/bin/rofl_render.rs").
@@ -1984,6 +2050,11 @@ switch_site("plain_reader_unclosed", "rust/rofl/src/engine.rs").
 switch_site("plain_rule_hole_unspread", "rust/rofl/src/engine.rs").
 switch_site("plain_staged_why_present", "rust/rofl/src/engine.rs").
 switch_site("plain_unknown_settles", "rust/rofl/src/engine.rs").
+switch_site("prov_reader_deferred", "rust/rofl/src/engine/prov.rs").
+switch_site("prov_settle_keeps_dead", "rust/rofl/src/engine/prov.rs").
+switch_site("prov_state_unsettled", "rust/rofl/src/engine/prov.rs").
+switch_site("prov_tick_unsettled", "rust/rofl/src/engine.rs").
+switch_site("prov_variable_reader_lazy", "rust/rofl/src/engine/prov.rs").
 switch_site("quantile_domain", "rust/rofl/src/cell.rs").
 switch_site("quantile_floor", "rust/rofl/src/cell.rs").
 switch_site("rank_compound_key", "rust/rofl/src/cell.rs").

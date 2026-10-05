@@ -451,7 +451,13 @@ function together(w: World, Engine: typeof Rofl) {
         for (let i = 0; i < w.ticks; i++) r.tickAdvance({ budget });
         if (explain) { r.evaluate(budget); r.explainRequests({ budget }); r.evaluate(budget); }
       }
-    } catch (e) { return { cls: 'eval', msg: (e as Error).message }; }
+    } catch (e) {
+      const msg = (e as Error).message;
+      // a world refused for a broken promise is asked again, as rofl-load asks it: it refuses again, never answers
+      if (!/has two values in the book/.test(msg)) return { cls: 'eval', msg };
+      try { r.evaluate(budget); } catch (e2) { return { cls: 'eval', msg: (e2 as Error).message }; }
+      return { cls: 'eval', msg: 'a broken world was answered after its refusal' };
+    }
     return null;
   };
   return { fresh, feed, run };

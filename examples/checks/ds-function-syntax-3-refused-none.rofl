@@ -1,0 +1,3 @@
+-- expect-refusal: a function names the value its key determines
+-- a function with no `to` marks no value
+function dss_none(A, B).

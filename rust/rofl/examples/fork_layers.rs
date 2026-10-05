@@ -89,7 +89,7 @@ fn main() {
     for (way, layer) in [("clone", false), ("layer", true)] {
         let at = live();
         let t = Instant::now();
-        let held: Vec<Session> = vols
+        let mut held: Vec<Session> = vols
             .iter()
             .map(|v| {
                 let f = if layer { cl.fork() } else { Session { eval: cc.eval.fork(), dangling: cc.dangling } };
@@ -100,7 +100,7 @@ fn main() {
         let bytes = live() - at;
         let facts: usize = held.iter().map(|s| s.eval.store.fact_count()).sum();
         println!("(b) {way} x{} ms={ms:.1} live_bytes={bytes} facts={facts}", held.len());
-        states.push(held.iter().map(|s| s.eval.store.canonical_state(&s.eval.h)).collect::<Vec<_>>());
+        states.push(held.iter_mut().map(|s| s.eval.canonical_state()).collect::<Vec<_>>());
     }
     let same = states[0].iter().zip(&states[1]).filter(|(a, b)| a == b).count();
     println!("(b) canonical states identical: {same} of {}", vols.len());

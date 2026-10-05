@@ -97,11 +97,22 @@ fn fresh_walled(strata: bool, budget: i64) -> Session {
 }
 
 /// A file offered alone, as the harness offers it: `Err` carries the refusal.
-fn alone(f: &Path, strata: bool) -> Result<(), String> {
-    let mut s = fresh(strata);
+/// A fixture offered alone, under its world's ticks and retractions as
+/// `rofl-load` runs it: a promise broken only at a tick or by a retraction is
+/// refused there.
+fn alone(f: &Path, w: &World) -> Result<(), String> {
+    let mut s = fresh(w.strata);
     s.load(&read(f), None).map_err(|d| d.join("; "))?;
     feed(&mut s, &below(std::slice::from_ref(&f.to_path_buf())))?;
-    s.evaluate().map(|_| ()).map_err(|e| rofl::describe(&e))
+    let ticks = |s: &mut rofl::session::Session| (0..w.ticks).try_for_each(|_| s.tick().map(|_| ())).map_err(|e| rofl::describe(&e));
+    if w.ticks > 0 && w.retract.is_empty() {
+        return ticks(&mut s);
+    }
+    s.evaluate().map_err(|e| rofl::describe(&e))?;
+    for r in &w.retract {
+        s.retract_delta(r).map_err(|e| e.to_string())?;
+    }
+    if w.ticks > 0 { ticks(&mut s) } else { Ok(()) }
 }
 
 /// The world below the files, named by their `-- below: <path>` lines.
@@ -154,7 +165,7 @@ fn alarms(s: &mut Session) -> Vec<String> {
 }
 
 fn state(s: &Session) -> String {
-    s.eval.store.canonical_state(&s.eval.h)
+    s.eval.fork().canonical_state()
 }
 
 /// One world loaded together, held to every property the test names: what is
@@ -176,7 +187,7 @@ fn check_world(w: &World) -> Vec<String> {
             s.load(&read(f), None).unwrap_or_else(|d| panic!("{}: {base}: {}", w.name, d.join("; ")));
             continue;
         };
-        match alone(f, w.strata) {
+        match alone(f, w) {
             Ok(()) => bad.push(format!("{}: {base} was to be refused ({want}) and loaded", w.name)),
             Err(e) if e.contains(&want) => {}
             Err(e) => bad.push(format!("{}: {base} refused ({e}); expected {want:?}", w.name)),

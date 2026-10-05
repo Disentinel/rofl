@@ -73,6 +73,10 @@ fn r1_clause(h: &Heap, c: &Clause) -> (String, String) {
     let head = match (c.lattice, &c.ord) {
         (Some(kind), Some(dirs)) => format!("$order({},{},{})", h.name(kind), list(dirs.iter().map(|d| h.name(*d).to_string()).collect()), r1_lit(h, &c.head)),
         (Some(op), None) => format!("$lattice({},{})", h.name(op), r1_lit(h, &c.head)),
+        _ if c.structure.is_some() => {
+            let st = c.structure.as_ref().unwrap();
+            format!("$structure({},{},{})", h.name(st.kind), list(st.roles.iter().map(|r| r.map_or("key", |r| h.name(r)).to_string()).collect()), r1_lit(h, &c.head))
+        }
         _ => r1_lit(h, &c.head),
     };
     (head, list(c.body.iter().map(|e| r1_elem(h, e)).collect()))
@@ -111,6 +115,8 @@ fn ring1_reads_every_aggregate_and_lattice_declaration_the_parser_reads_and_as_t
         "lattice(x). lattice p(min, max X).",
         "pareto route(A, B, min C, min T).\nlex q(max W). pareto r(min, max X, min Y).",
         "lex(x). pareto(y, min). lex p(K, min V).",
+        "function ast_name(N, to Name).\nfunction e(A, B, to C, to D). function best(to W).",
+        "function(x). function f(to, to X). p(to, X) :- function(X, to).",
     ];
     for src in cases {
         let mut h = Heap::default();
@@ -142,6 +148,9 @@ fn what_the_parser_refuses_ring1_does_not_cover() {
         "pareto r(A, min C",
         "pareto r(A, min C, T).",
         "lex r[b](A, min C).",
+        "function d[b](A, to D).",
+        "function d(A, to D",
+        "function d(A, to D)",
     ] {
         let mut h = Heap::default();
         assert!(parse(&mut h, src).is_err(), "{src}: the parser read it");

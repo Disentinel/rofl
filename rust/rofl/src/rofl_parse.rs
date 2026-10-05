@@ -124,6 +124,21 @@ pub fn src_term(h: &Heap, t: Term, out: &mut String) {
 /// A lattice declaration as source text: `lattice dist(A, C, min D)`, or a
 /// tag's, `tag cost(A, C, tropical T)`.
 pub fn decl_text(h: &Heap, c: &Clause) -> String {
+    if let Some(st) = &c.structure {
+        let mut o = format!("{} {}(", h.name(st.kind), h.name(c.head.rel));
+        for (k, t) in c.head.args.iter().enumerate() {
+            if k > 0 {
+                o.push_str(", ");
+            }
+            if let Some(r) = st.roles[k] {
+                o.push_str(h.name(r));
+                o.push(' ');
+            }
+            src_term(h, *t, &mut o);
+        }
+        o.push(')');
+        return o;
+    }
     if let (Some(kind), Some(dirs)) = (c.lattice, &c.ord) {
         let n = c.head.args.len();
         let mut o = format!("{} {}(", h.name(kind), h.name(c.head.rel));
@@ -245,6 +260,15 @@ fn word_ops() -> &'static [&'static str] {
     brk!("word_ops_is_only" => &WORD_OPS[..1]; WORD_OPS)
 }
 
+/// The kinds of declared data structure (docs/data-structures.md) with the
+/// role words each marks its arguments by: words, names elsewhere.
+pub const STRUCTURE_KINDS: &[(&str, &[&str])] = &[("function", &["to"])];
+
+/// A declared data structure: its kind and, per head argument, the role word
+/// that marks it (`None` for a key position).
+#[derive(Clone, Debug, PartialEq)]
+pub struct Structure { pub kind: Sym, pub roles: Vec<Option<Sym>> }
+
 /// A clause, or a lattice declaration: `lattice dist(A, C, min D).` is the
 /// head `dist(A, C, D)` with no body and `lattice` the operation `min`;
 /// `lattice p(K, hull I) widen 3.` declares a widening forced after three
@@ -252,7 +276,7 @@ fn word_ops() -> &'static [&'static str] {
 /// shape with `lattice` the kind (`pareto` or `lex`) and `ord` the direction
 /// of each of the last arguments.
 #[derive(Clone, Debug, PartialEq)]
-pub struct Clause { pub head: Lit, pub body: Vec<Elem>, pub lattice: Option<Sym>, pub widen: Option<i64>, pub tag: bool, pub dom: Option<Lit>, pub ord: Option<Vec<Sym>> }
+pub struct Clause { pub head: Lit, pub body: Vec<Elem>, pub lattice: Option<Sym>, pub widen: Option<i64>, pub tag: bool, pub dom: Option<Lit>, pub ord: Option<Vec<Sym>>, pub structure: Option<Structure> }
 
 pub struct Parser<'a> {
     src: &'a [char],
@@ -787,7 +811,7 @@ impl<'a> Parser<'a> {
         if !self.eat_punct("dot") {
             return Err(format!("lattice {}: the declaration has no closing dot", self.h.name(rel)));
         }
-        Ok(Clause { head: Lit { rel, book, args, tense: Tense::Now }, body: Vec::new(), lattice: Some(op), widen, tag: false, dom: None, ord: None })
+        Ok(Clause { head: Lit { rel, book, args, tense: Tense::Now }, body: Vec::new(), lattice: Some(op), widen, tag: false, dom: None, ord: None, structure: None })
     }
 
     /// `tagdecl := 'tag' ident '(' [ term ',' ]* tagalg term ')' '.'`
@@ -827,7 +851,7 @@ impl<'a> Parser<'a> {
         if !self.eat_punct("dot") {
             return Err(format!("tag {}: the declaration has no closing dot", self.h.name(rel)));
         }
-        Ok(Clause { head: Lit { rel, book, args, tense: Tense::Now }, body: Vec::new(), lattice: Some(alg), widen: None, tag: true, dom: None, ord: None })
+        Ok(Clause { head: Lit { rel, book, args, tense: Tense::Now }, body: Vec::new(), lattice: Some(alg), widen: None, tag: true, dom: None, ord: None, structure: None })
     }
 
     /// `orderdecl := ('pareto' | 'lex') ident '(' [ term ',' ]* dir term [ ',' dir term ]* ')' '.'`
@@ -873,7 +897,43 @@ impl<'a> Parser<'a> {
         if !self.eat_punct("dot") {
             return Err(format!("{what}: the declaration has no closing dot"));
         }
-        Ok(Clause { head: Lit { rel, book, args, tense: Tense::Now }, body: Vec::new(), lattice: Some(kind), widen: None, tag: false, dom: None, ord: Some(dirs) })
+        Ok(Clause { head: Lit { rel, book, args, tense: Tense::Now }, body: Vec::new(), lattice: Some(kind), widen: None, tag: false, dom: None, ord: Some(dirs), structure: None })
+    }
+
+    /// `structdecl := 'function' ident '(' [ role ] term [ ',' [ role ] term ]* ')' '.'`
+    /// `role       := 'to'`
+    ///
+    /// `clause_at(I, D, $structure(Kind, Roles, $lit(R, $bare, A, $now)), $nil) :-
+    ///     identtok(I, I2), tok_name(I, I2, Kind), struct_kind(Kind), ... strargs(S, E, Roles, A), ... p(D, dot).`
+    /// Words, not keywords, as `lattice` is: one declares only when a second
+    /// name follows it, so `function(x).` is still a fact. An argument without
+    /// a role is part of the key.
+    fn structure_decl(&mut self, words: &'static [&'static str]) -> P<Clause> {
+        let kind = { let s = self.bump().ok_or("structure: end of input")?; self.sym(&s) };
+        let (rel, book) = self.relbook()?;
+        let what = format!("{} {}", self.h.name(kind), self.h.name(rel));
+        if book != Book::Bare {
+            return Err(format!("{what}: a declaration names the relation, not a book"));
+        }
+        if !self.eat_punct("lpar") {
+            return Err(format!("{what}: expected '('"));
+        }
+        let is_role = |p: &Self| words.iter().any(|w| p.is_word(0, w)) && !p.is_punct(1, "comma") && !p.is_punct(1, "rpar") && !p.is_punct(1, "lpar");
+        let (mut args, mut roles) = (Vec::new(), Vec::new());
+        loop {
+            roles.push(if is_role(self) { let s = self.bump().ok_or("structure: end of input")?; Some(self.sym(&s)) } else { None });
+            args.push(self.term()?);
+            if !self.eat_punct("comma") {
+                break;
+            }
+        }
+        if !self.eat_punct("rpar") {
+            return Err(format!("{what}: `(` is not closed"));
+        }
+        if !self.eat_punct("dot") {
+            return Err(format!("{what}: the declaration has no closing dot"));
+        }
+        Ok(Clause { head: Lit { rel, book, args, tense: Tense::Now }, body: Vec::new(), lattice: None, widen: None, tag: false, dom: None, ord: None, structure: Some(Structure { kind, roles }) })
     }
 
     /// `domrule := lit '<=' lit ':-' body '.'` (docs/aggregates.md,
@@ -895,7 +955,7 @@ impl<'a> Parser<'a> {
         if !self.eat_punct("dot") {
             return Err(format!("dominance {what}: the rule has no closing dot"));
         }
-        Ok(Clause { head, body, lattice: None, widen: None, tag: false, dom: Some(dom), ord: None })
+        Ok(Clause { head, body, lattice: None, widen: None, tag: false, dom: Some(dom), ord: None, structure: None })
     }
 
     /// `clause_at(I, D, L, nil) :- lit(I, C, L), p(D, dot).`
@@ -911,6 +971,11 @@ impl<'a> Parser<'a> {
         if brk!("order_unread" => false; (self.is_word(0, "pareto") || self.is_word(0, "lex")) && matches!(self.peek_at(1), Some(s) if s.tok == Tok::Word && self.word_kind(s) == WordKind::Ident)) {
             return self.order_decl();
         }
+        for (kind, words) in STRUCTURE_KINDS {
+            if brk!("function_unread" => false; self.is_word(0, kind)) && matches!(self.peek_at(1), Some(s) if s.tok == Tok::Word && self.word_kind(s) == WordKind::Ident) {
+                return self.structure_decl(words);
+            }
+        }
         let head = self.lit()?;
         if brk!("dominance_unread" => false; matches!(self.peek(), Some(s) if s.tok == Tok::Op("le"))) {
             return self.dominance(head);
@@ -923,7 +988,7 @@ impl<'a> Parser<'a> {
         if !self.eat_punct("dot") {
             return Err(format!("clause: `{}` has no closing dot", self.h.name(head.rel)));
         }
-        Ok(Clause { head, body, lattice: None, widen: None, tag: false, dom: None, ord: None })
+        Ok(Clause { head, body, lattice: None, widen: None, tag: false, dom: None, ord: None, structure: None })
     }
 }
 
@@ -987,6 +1052,10 @@ pub fn show_elem(h: &Heap, e: &Elem) -> String {
     }
 }
 pub fn show(h: &Heap, c: &Clause) -> String {
+    if let Some(st) = &c.structure {
+        let roles = st.roles.iter().map(|r| r.map_or("key", |r| h.name(r))).collect::<Vec<_>>().join(" ");
+        return format!("(structure {} [{}] {})", h.name(st.kind), roles, show_lit(h, &c.head));
+    }
     if let (Some(kind), Some(dirs)) = (c.lattice, &c.ord) {
         let dirs = dirs.iter().map(|d| h.name(*d)).collect::<Vec<_>>().join(" ");
         return format!("(order {} [{}] {})", h.name(kind), dirs, show_lit(h, &c.head));
@@ -1038,6 +1107,11 @@ mod tests {
             ("lattice best(max W).", "(lattice max (lit best main [v:W] now))"),
             ("lattice r(X, or B). lattice(x).", "(lattice or (lit r main [v:X v:B] now))\n(clause (lit lattice main [a:x] now))"),
             ("lattice p(min, max X).", "(lattice max (lit p main [a:min v:X] now))"),
+            // a declared function, and `function` and `to` as names elsewhere
+            ("function ast_name(N, to Name).", "(structure function [key to] (lit ast_name main [v:N v:Name] now))"),
+            ("function best(to W). function e(A, B, to C, to D).", "(structure function [to] (lit best main [v:W] now))\n(structure function [key key to to] (lit e main [v:A v:B v:C v:D] now))"),
+            ("function(x). p(to, X) :- function(X, to).", "(clause (lit function main [a:x] now))\n(clause (lit p main [a:to v:X] now) (lit function main [v:X a:to] now))"),
+            ("function f(to, to X).", "(structure function [key to] (lit f main [a:to v:X] now))"),
             // a dominance rule, and `<=` still a comparison in a body
             ("p(A, X) <= p(A, Y) :- Y < X, not q(Y).",
              "(dominance (lit p main [v:A v:X] now) (lit p main [v:A v:Y] now) (bi < v:Y v:X) (not (lit q main [v:Y] now)))"),
@@ -1079,6 +1153,10 @@ mod tests {
             ("lattice d(A, min D", "is not closed"),
             ("lattice d(A, min D)", "no closing dot"),
             ("lattice d[b](A, min D).", "not a book"),
+            ("function d[b](A, to D).", "not a book"),
+            ("function d A.", "expected '('"),
+            ("function d(A, to D", "is not closed"),
+            ("function d(A, to D)", "no closing dot"),
             ("lattice d A.", "expected '('"),
             ("t() :- at_least(W : v(W)).", "expected ',' after the threshold"),
             ("t() :- at_least(: v(W)).", "needs its threshold"),

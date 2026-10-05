@@ -19,6 +19,7 @@ import { SHRUG, shrugsOf, shrugLine, shrugAtom, shown } from './shrug.ts';
 import { AggEval, DEFAULT_SPACE, Rejected, Wall, checkAggregatesDoor, checkSetPatternsDoor, checkOrderableAgg,
   checkNextInBody, checkLatticeDecl, checkDominance, lowerOrder } from './aggeval.ts';
 import { encodeDominance } from './reflect.ts';
+import { checkStructureDecl, structureRows, declaredStructures, checkFunctions } from './structure.ts';
 
 export interface LoadResult { ok: boolean; diagnostics: string[]; }
 export interface QueryRow { text: string; bindings: Record<string, string>; }
@@ -506,6 +507,7 @@ export class Rofl {
     // refusing the resolver's own work rather than the author's.
     // A DECLARATION or A DOMINANCE RULE is its rows (docs/aggregates.md)
     if (c0.ord) return this.addOrder(c0, who);
+    if (c0.structure) return this.addStructure(c0);
     if (c0.lattice) return this.addDecl(c0);
     if (c0.dominator) return this.addDominance(c0, who);
     const badBook = this.checkKernelBook(c0);
@@ -661,6 +663,16 @@ export class Rofl {
     return null;
   }
 
+  /** A STRUCTURE DECLARATION IS ITS KERNEL ROWS, timeless: a promise about the
+   *  relation's data (src/structure.ts), changing no fact. */
+  private addStructure(c: Clause): string | null {
+    const bad = checkStructureDecl(c, (rel) => ARITY[rel], declaredStructures(this.store));
+    if (bad) return bad;
+    for (const [rel, args] of structureRows(c)) this.store.add(rel, KERNEL_PERSP, args, { scope: 'timeless', base: true });
+    this.store.dirty = true;
+    return null;
+  }
+
   /** A DOMINANCE RULE IS ITS REFLECTION (docs/aggregates.md, "Subsumption,
    *  as built"): rows in the kernel's book, its body a rule body's. */
   private addOrder(c: Clause, who?: string): string | null {
@@ -748,6 +760,10 @@ export class Rofl {
       if (!(e instanceof Wall)) throw e;
       this.store.noteEval(budget, ev.steps, true);
       partial = true;
+    }
+    try { checkFunctions(this.store); } catch (e) {
+      this.store.dirty = true; // a broken world is never settled: every later question refuses until it is fixed
+      throw e;
     }
     this.lastSteps = ev.steps;
     this.lastPeakRows = ev.peakRows;

@@ -704,6 +704,13 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
       decls.push(`${kind} ${m[1]}(${[...ks, ...vs.map((v) => `${v![1] === 'least' ? 'min' : 'max'} ${v![2]}`)].join(', ')}).`);
       return true;
     }
+    m = new RegExp(`^\`(\\w+)\` has one (.+?)(?: for each (.+?))?\\.$`).exec(text);
+    if (m) {
+      const ks = keyList(m[3]), vs = keyList(m[2]);
+      if (!ks || !vs || vs.length === 0) { unparsed.push(`DECLARATION ${text}`); return true; }
+      decls.push(`function ${m[1]}(${[...ks, ...vs.map((v) => `to ${v}`)].join(', ')}).`);
+      return true;
+    }
     m = TAG_DECL.exec(text);
     if (m) {
       const ks = keyList(m[2]);
@@ -1032,7 +1039,7 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
   for (const m of facts.matchAll(/^aggj\((r\d+), (\d+), (".*")\)\.$/gm)) srcClauses.get(m[1])!.body.push({ rel: '$agg', neg: false, args: [], agg: fromAggJ(JSON.parse(JSON.parse(m[3])) as AggJ) });
   // a lattice or tag declaration (`decl`, `decl_widen`): its head, the operation of its last argument
   const declOf = new Map<string, { kind: string; op: string; widen?: string }>();
-  for (const m of facts.matchAll(/^decl\((r\d+), (lattice|tag), (\w+)\)\.$/gm)) declOf.set(m[1], { kind: m[2], op: m[3] });
+  for (const m of facts.matchAll(/^decl\((r\d+), (lattice|tag|structure), (\w+)\)\.$/gm)) declOf.set(m[1], { kind: m[2], op: m[3] });
   for (const m of facts.matchAll(/^decl_widen\((r\d+), (\d+)\)\.$/gm)) declOf.get(m[1])!.widen = m[2];
   // a dominance rule's dominating fact (`dom`, after the body)
   for (const m of facts.matchAll(/^dom\((r\d+), (\d+), (\$?\w+)\)\.$/gm)) srcClauses.get(m[1])!.dom = { rel: m[3], neg: false, args: argsOf(m[1], Number(m[2])) };
@@ -1078,8 +1085,16 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
     const as = args.map(v);
     return `${kind} ${rel}(${[...as.slice(0, -1), `${op} ${as[as.length - 1]}`].join(',')})${widen ? ` widen ${widen}` : ''}`;
   };
-  const srcDecls = [...srcClauses.entries()].filter(([r]) => declOf.has(r)).map(([r, c]) => { const d = declOf.get(r)!; return declText(d.kind, c.head, c.args, d.op, d.widen); });
+  // a declared structure: its kind and the role of each argument ('function_key_to'), the variables renamed as above
+  const structText = (rel: string, args: string[], op: string): string => {
+    const [kind, ...roles] = op.split('_'); const names = new Map<string, string>();
+    const v = (x: string) => /^[A-Z]/.test(x) ? (names.get(x) ?? (names.set(x, `V${names.size}`), names.get(x)!)) : x;
+    return `${kind} ${rel}(${args.map((a, i) => (roles[i] === 'key' ? '' : `${roles[i]} `) + v(a)).join(',')})`;
+  };
+  const srcDecls = [...srcClauses.entries()].filter(([r]) => declOf.has(r)).map(([r, c]) => { const d = declOf.get(r)!; return d.kind === 'structure' ? structText(c.head, c.args, d.op) : declText(d.kind, c.head, c.args, d.op, d.widen); });
   const readDecls = decls.map((d) => {
+    const st = /^function (\$?\w+)\((.*)\)\.$/.exec(d);
+    if (st) { const as = st[2].split(', '); return structText(st[1], as.map((a) => a.replace(/^to /, '')), ['function', ...as.map((a) => (a.startsWith('to ') ? 'to' : 'key'))].join('_')); }
     const m = /^(lattice|tag) (\$?\w+)(?:\[[^\]]*\])?\((.*)\)(?: widen (\d+))?\.$/.exec(d);
     if (!m) return d;
     const as = m[3].split(', '), last = as[as.length - 1].split(' '), val = last.pop()!;

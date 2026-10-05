@@ -3,22 +3,22 @@
 | file | clauses | heads | phrased | positional | absorbed guards | links | either | tables | not defined here | refused |
 |---|---|---|---|---|---|---|---|---|---|---|
 | [phrases](phrases.rofl.md) | 10 | 1 | 0 | 0 | 0 | 0 | 0 | 1 | 0 | 0 |
-| [js-phrases](js-phrases.rofl.md) | 1029 | 3 | 0 | 0 | 0 | 0 | 0 | 32 | 0 | 0 |
+| [js-phrases](js-phrases.rofl.md) | 1031 | 3 | 0 | 0 | 0 | 0 | 0 | 32 | 0 | 0 |
 | [js-ambient](js-ambient.rofl.md) | 69 | 42 | 39 | 0 | 1 | 90 | 5 | 1 | 13 | 0 |
 | [js-attrs](js-attrs.rofl.md) | 51 | 39 | 37 | 2 | 0 | 105 | 4 | 0 | 6 | 0 |
 | [js-callgraph](js-callgraph.rofl.md) | 219 | 93 | 83 | 1 | 44 | 241 | 23 | 4 | 6 | 0 |
 | [js-controlflow](js-controlflow.rofl.md) | 231 | 88 | 74 | 1 | 46 | 229 | 16 | 5 | 2 | 0 |
-| [js-dataflow](js-dataflow.rofl.md) | 354 | 149 | 127 | 8 | 138 | 538 | 29 | 2 | 3 | 0 |
-| [js-effects](js-effects.rofl.md) | 210 | 126 | 116 | 2 | 22 | 305 | 20 | 2 | 7 | 0 |
+| [js-dataflow](js-dataflow.rofl.md) | 357 | 151 | 129 | 8 | 135 | 538 | 29 | 2 | 3 | 0 |
+| [js-effects](js-effects.rofl.md) | 209 | 126 | 116 | 2 | 22 | 305 | 19 | 2 | 7 | 0 |
 | [js-env-api](js-env-api.rofl.md) | 5 | 5 | 5 | 0 | 0 | 6 | 0 | 0 | 4 | 0 |
 | [js-env](js-env.rofl.md) | 45 | 34 | 33 | 0 | 0 | 48 | 5 | 1 | 17 | 0 |
 | [js-globals](js-globals.rofl.md) | 41 | 23 | 19 | 1 | 2 | 48 | 1 | 2 | 6 | 0 |
 | [js-host](js-host.rofl.md) | 66 | 48 | 47 | 0 | 1 | 75 | 9 | 1 | 18 | 0 |
-| [js-model](js-model.rofl.md) | 117 | 56 | 49 | 2 | 0 | 139 | 13 | 3 | 2 | 0 |
+| [js-model](js-model.rofl.md) | 119 | 56 | 49 | 2 | 0 | 139 | 13 | 3 | 2 | 0 |
 | [js-modules](js-modules.rofl.md) | 174 | 105 | 102 | 0 | 24 | 237 | 24 | 1 | 2 | 0 |
 | [js-pack-home](js-pack-home.rofl.md) | 11 | 9 | 8 | 0 | 0 | 12 | 1 | 0 | 2 | 0 |
 | [js-resolve](js-resolve.rofl.md) | 58 | 36 | 35 | 0 | 0 | 79 | 8 | 0 | 0 | 0 |
-| [js-structure](js-structure.rofl.md) | 11 | 8 | 8 | 0 | 4 | 11 | 3 | 0 | 2 | 0 |
+| [js-structure](js-structure.rofl.md) | 13 | 8 | 8 | 0 | 4 | 11 | 3 | 0 | 2 | 0 |
 | [js-vocabulary](js-vocabulary.rofl.md) | 12 | 10 | 10 | 0 | 0 | 17 | 2 | 0 | 2 | 0 |
 
 17 heads without a phrase across these files.
@@ -414,6 +414,8 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `exported_fn` | `is_exported` |
 | `exports_default` | `is_the_default_export_of` |
 | `exports_name` | `is_exported_as` |
+| `ext_call` | `is_an_external_call_of` |
+| `ext_member` | `is_an_external_member_of` |
 | `external_destructured` | `destructures_from_outside` |
 | `external_import` | `imports_from_outside` |
 | `external_module` | `is_an_external_module` |

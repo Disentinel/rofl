@@ -28,7 +28,7 @@ Reads:
   - <a id="eff_origin"></a>An origin O is an origin (`eff_origin`)
 - from js-ambient: [eff_here](js-ambient.rofl.md#eff_here), [eff_operation](js-ambient.rofl.md#eff_operation), [eff_surface](js-ambient.rofl.md#eff_surface)
 - from js-ambient, in the main: [ambient_binding](js-ambient.rofl.md#ambient_binding), [ambient_effect](js-ambient.rofl.md#ambient_effect), [surface_origin](js-ambient.rofl.md#surface_origin)
-- from js-callgraph, in the code: [callee_of](js-callgraph.rofl.md#callee_of), [calls](js-callgraph.rofl.md#calls), [fn_node](js-callgraph.rofl.md#fn_node), [nearest_fn](js-callgraph.rofl.md#nearest_fn), [resolves](js-callgraph.rofl.md#resolves), [unresolved_call](js-callgraph.rofl.md#unresolved_call)
+- from js-callgraph, in the code: [callee_of](js-callgraph.rofl.md#callee_of), [calls](js-callgraph.rofl.md#calls), [fn_node](js-callgraph.rofl.md#fn_node), [in_own_decorator](js-callgraph.rofl.md#in_own_decorator), [nearest_fn](js-callgraph.rofl.md#nearest_fn), [resolves](js-callgraph.rofl.md#resolves), [unresolved_call](js-callgraph.rofl.md#unresolved_call)
 - from js-controlflow, in the code: [caught_here](js-controlflow.rofl.md#caught_here), [in_fn](js-controlflow.rofl.md#in_fn), [in_try_block](js-controlflow.rofl.md#in_try_block), [may_throw](js-controlflow.rofl.md#may_throw), [pattern_accessor](js-controlflow.rofl.md#pattern_accessor), [pattern_next](js-controlflow.rofl.md#pattern_next), [try_catches](js-controlflow.rofl.md#try_catches)
 - from js-dataflow, in the code: [assigns](js-dataflow.rofl.md#assigns), [corpus_file](js-dataflow.rofl.md#corpus_file), [ident_in](js-dataflow.rofl.md#ident_in), [module_source](js-dataflow.rofl.md#module_source)
 - from js-dataflow: [may_be_lit](js-dataflow.rofl.md#may_be_lit), [may_be_node](js-dataflow.rofl.md#may_be_node), [member_node_v](js-dataflow.rofl.md#member_node_v), [member_obj](js-dataflow.rofl.md#member_obj), [member_value](js-dataflow.rofl.md#member_value), [nearest_v](js-dataflow.rofl.md#nearest_v), [plain_assign](js-dataflow.rofl.md#plain_assign), [prototype_of](js-dataflow.rofl.md#prototype_of), [selects](js-dataflow.rofl.md#selects), [super_of](js-dataflow.rofl.md#super_of)
@@ -204,7 +204,10 @@ A [throw](#noun-throw) has the effect `exn` at `none` unless it [is caught in pl
 > DIV: loops, and RECURSION — a call whose callee reaches its own caller may
 > not terminate for the same reason `while (true)` may not, and nothing in the
 > tree shows it. `eff_calls` leads with `resolves` (binds both ends) so
-> `nearest_v` is probed, not enumerated.
+> `nearest_fn` is probed, not enumerated. Every reader of a CALL here asks
+> `nearest_fn`, the call graph's own caller, and not `nearest_v`: a decorator
+> sits inside the method it decorates and runs when the class is defined, so
+> `@mark() m() {}` is a call of the function around the class, never of `m`.
 
 `eff_loop_kind` includes `while_statement`, `do_while_statement`, `for_statement`, `for_in_statement`, `for_of_statement`.
 
@@ -214,7 +217,7 @@ In the code:
 
 A node
 
-- <a id="eff_calls"></a>has a call to a [function](js-callgraph.rofl.md#fn_node) G if a node C [resolves to](js-callgraph.rofl.md#resolves) G and it [is nearest to](js-dataflow.rofl.md#nearest_v) C.
+- <a id="eff_calls"></a>has a call to a [function](js-callgraph.rofl.md#fn_node) G if a node C [resolves to](js-callgraph.rofl.md#resolves) G and it [is the nearest function of](js-callgraph.rofl.md#nearest_fn) C.
 - <a id="eff_reaches"></a>reaches by calling a node G if it [has a call to](#eff_calls) G.
 - reaches by calling a node H if it [reaches by calling](#eff_reaches) a node G and G [has a call to](#eff_calls) H.
 
@@ -222,7 +225,7 @@ In the flow:
 
 A node has the effect `div` at `none` if all of:
   - it [resolves to](js-callgraph.rofl.md#resolves) a node G;
-  - a node F [is nearest to](js-dataflow.rofl.md#nearest_v) it;
+  - a node F [is the nearest function of](js-callgraph.rofl.md#nearest_fn) it;
   - G [reaches by calling](#eff_reaches) F.
 
 Declared as facts:
@@ -344,9 +347,14 @@ A node has the effect `read` at `local` if all of:
 > arm two its callees, minus what a handler discharges PER LABEL. Writing the
 > discharge as `not eff_catch_here(C)` on the whole arm — correct for
 > `may_throw`, which carries one label — would make a try around a call
-> swallow the callee's WRITES too.
+> swallow the callee's WRITES too. The same reading keeps what a method's
+> decorator does out of the method's own row (`not in_own_decorator`): it is
+> the class's, through `eff_define_part`.
 
-<a id="eff_latent"></a>F has the latent effect L at a host H if a node N [has the effect](js-ambient.rofl.md#eff_here) L at H and F [is nearest to](js-dataflow.rofl.md#nearest_v) N.
+<a id="eff_latent"></a>F has the latent effect L at a host H if all of:
+  - a node N [has the effect](js-ambient.rofl.md#eff_here) L at H;
+  - F [is nearest to](js-dataflow.rofl.md#nearest_v) N;
+  - unless F [has its decorator at](js-callgraph.rofl.md#in_own_decorator) N.
 
 `eff_discharges` lists:
 
@@ -363,7 +371,7 @@ In the flow:
 F has the latent effect L at a host H if all of:
   - G [has the latent effect](#eff_latent) L at H;
   - a node C [resolves to](js-callgraph.rofl.md#resolves) G;
-  - F [is nearest to](js-dataflow.rofl.md#nearest_v) C;
+  - F [is the nearest function of](js-callgraph.rofl.md#nearest_fn) C;
   - unless C [discharges here](#eff_discharged_at) L.
 
 In the audit:
@@ -389,7 +397,7 @@ Declared as facts:
   - C [resolves to](js-callgraph.rofl.md#resolves) G;
   - G [has the latent effect](#eff_latent) L at H;
   - L differs from `exn`;
-  - it [is nearest to](js-dataflow.rofl.md#nearest_v) C;
+  - it [is the nearest function of](js-callgraph.rofl.md#nearest_fn) C;
   - unless it [has the latent effect](#eff_latent) L at H.
 
 ## 4. Naming a function's effect — the least landmark above its row
@@ -432,7 +440,7 @@ In the audit:
 
 <a id="eff_join_short"></a>F is short of the join J with G if all of:
   - a node C [resolves to](js-callgraph.rofl.md#resolves) G;
-  - F [is nearest to](js-dataflow.rofl.md#nearest_v) C;
+  - F [is the nearest function of](js-callgraph.rofl.md#nearest_fn) C;
   - [the effect](#effect_of) of F is an effect NF;
   - [the effect](#effect_of) of G is an effect NG;
   - [the join](#eff_join) of NF and NG is J;
@@ -443,7 +451,7 @@ In the flow:
 
 <a id="eff_purer_callee"></a>A node calls a purer callee G from F if all of:
   - it [resolves to](js-callgraph.rofl.md#resolves) G;
-  - F [is nearest to](js-dataflow.rofl.md#nearest_v) it;
+  - F [is the nearest function of](js-callgraph.rofl.md#nearest_fn) it;
   - [the effect](#effect_of) of F is an effect NF;
   - [the effect](#effect_of) of G [is strictly below](#eff_lt) NF.
 
@@ -595,7 +603,8 @@ Declared as facts:
 F has the latent effect L at a host H if all of:
   - a node N [coerces through](#eff_conv_call) a node M;
   - M [has the latent effect](#eff_latent) L at H;
-  - F [is nearest to](js-dataflow.rofl.md#nearest_v) N.
+  - F [is nearest to](js-dataflow.rofl.md#nearest_v) N;
+  - unless F [has its decorator at](js-callgraph.rofl.md#in_own_decorator) N.
 
 > Totality: every coerced operand is primitive, object or untraced. And the
 > operator table must not name a node that is neither binary nor unary —
@@ -745,10 +754,7 @@ In the flow:
 1. if N [destructures through the accessor](js-controlflow.rofl.md#pattern_accessor) M;
 2. if N [iterates with the next](js-controlflow.rofl.md#pattern_next) M.
 
-<a id="eff_edge_closed"></a>A node F closes the edge to G either:
-
-1. if a node C [resolves to](js-callgraph.rofl.md#resolves) G and F [is the nearest function of](js-callgraph.rofl.md#nearest_fn) C;
-2. if a node C [resolves to](js-callgraph.rofl.md#resolves) G and F [is nearest to](js-dataflow.rofl.md#nearest_v) C.
+<a id="eff_edge_closed"></a>A node closes the edge to G if a node C [resolves to](js-callgraph.rofl.md#resolves) G and it [is the nearest function of](js-callgraph.rofl.md#nearest_fn) C.
 
 <a id="eff_edge_unclosed"></a>A [function](js-callgraph.rofl.md#fn_node) leaves open the edge to G for an effect label L at a host H if all of:
   - it [calls](js-callgraph.rofl.md#calls) G;

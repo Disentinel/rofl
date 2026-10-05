@@ -1,0 +1,20 @@
+-- examples/checks/ds-function-syntax-1-forms.rofl — every form of a declared
+-- function the grammar reads (docs/data-structures.md): a key of two, of one
+-- and of none; one value and two; a wildcard in the key; and `function` and
+-- `to` still names where no second name follows them. Read by both engines
+-- and by ring 1, whose rows must agree.
+edb(dsx_e).
+dsx_e(a, b, c, d).
+function dsx_two(A, B, to C).
+dsx_two(A, B, C) :- dsx_e(A, B, C, _).
+function dsx_one(A, to B).
+dsx_one(A, B) :- dsx_e(A, B, _, _).
+function dsx_none(to A).
+dsx_none(A) :- dsx_e(A, _, _, _).
+function dsx_pair(A, to B, to C).
+dsx_pair(A, B, C) :- dsx_e(A, B, C, _).
+function dsx_wild(A, _, to C).
+dsx_wild(A, B, C) :- dsx_e(A, B, C, _).
+function(dsx_name). to(dsx_name, function).
+dsx_seen(X) :- function(X).
+dsx_seen(F) :- to(_, F).

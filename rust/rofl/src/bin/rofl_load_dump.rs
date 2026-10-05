@@ -41,6 +41,17 @@ fn number<T: std::str::FromStr>(flag: &str, v: String, takes: &str) -> T {
     v.parse::<T>().unwrap_or_else(|_| { eprintln!("{flag} takes {takes}, not {v:?}"); std::process::exit(1) })
 }
 
+/// A refusal ends the run, and a world refused for a broken promise is asked again first: it must refuse again,
+/// never answer (`function` is judged until the world is fixed).
+fn refuse(s: &mut rofl::session::Session, msg: String) -> ! {
+    if msg.contains("has two values in the book") && s.eval.ensure().is_ok() {
+        eprintln!("a broken world was answered after its refusal");
+        std::process::exit(3);
+    }
+    eprintln!("{msg}");
+    std::process::exit(3);
+}
+
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let mut ticks = 0u32;
@@ -128,20 +139,20 @@ fn main() {
         if let Err(e) = s.feed_below(&mut b) { eprintln!("below: {e}"); std::process::exit(3); }
     }
     if ticks == 0 || !retracts.is_empty() {
-        if let Err(e) = s.evaluate() { eprintln!("{}", rofl::describe(&e)); std::process::exit(3); }
+        if let Err(e) = s.evaluate() { refuse(&mut s, rofl::describe(&e)); }
         for f in &retracts {
             match s.retract_delta(f) {
                 Ok(rofl::session::Retraction::Delta(d)) => eprintln!("retract {f}: {d:?}"),
                 Ok(rofl::session::Retraction::Full(why)) => eprintln!("retract {f}: evaluated again, {why}"),
-                Err(e) => { eprintln!("retract {f}: {e}"); std::process::exit(3); }
+                Err(e) => { refuse(&mut s, format!("retract {f}: {e}")); }
             }
             if s.eval.store.dirty {
-                if let Err(e) = s.evaluate() { eprintln!("{}", rofl::describe(&e)); std::process::exit(3); }
+                if let Err(e) = s.evaluate() { refuse(&mut s, rofl::describe(&e)); }
             }
         }
         if explain && ticks == 0 {
             if let Err(e) = s.explain_requests() { eprintln!("explain: {e}"); std::process::exit(3); }
-            if let Err(e) = s.evaluate() { eprintln!("{}", rofl::describe(&e)); std::process::exit(3); }
+            if let Err(e) = s.evaluate() { refuse(&mut s, rofl::describe(&e)); }
         }
     }
     if ticks > 0 {
@@ -151,9 +162,9 @@ fn main() {
         // after the last boundary the tick entered is evaluated, answered and
         // evaluated again, so a world asks about what a tick carried in
         if explain {
-            if let Err(e) = s.evaluate() { eprintln!("{}", rofl::describe(&e)); std::process::exit(3); }
+            if let Err(e) = s.evaluate() { refuse(&mut s, rofl::describe(&e)); }
             if let Err(e) = s.explain_requests() { eprintln!("explain: {e}"); std::process::exit(3); }
-            if let Err(e) = s.evaluate() { eprintln!("{}", rofl::describe(&e)); std::process::exit(3); }
+            if let Err(e) = s.evaluate() { refuse(&mut s, rofl::describe(&e)); }
         }
     }
     for d in &s.eval.diags { eprintln!("diag: {d}"); }
@@ -161,12 +172,13 @@ fn main() {
         std::fs::write(&f, s.save()).unwrap_or_else(|e| { eprintln!("{f}: {e}"); std::process::exit(1) });
     }
     if propose {
+        s.eval.settle_provenance();
         // read-only: the report replaces the dump, as a question does
         print!("{}", rofl::structures::propose(&s.eval.store, &s.eval.h, &rofl::structures::Options { min_rows }).render(min_rows));
         return;
     }
     if qs.is_empty() || state {
-        print!("{}", s.eval.store.canonical_state(&s.eval.h));
+        print!("{}", s.eval.canonical_state());
     }
     let mut refused = false;
     for q in &qs {

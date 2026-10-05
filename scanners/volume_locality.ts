@@ -39,7 +39,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { createHash } from 'node:crypto';
 import { Rofl } from '../src/api.ts';
-import { scan } from './js_ast.ts';
+import { scan, ScanSet } from './js_ast.ts';
 
 const REPO = fs.realpathSync(new URL('..', import.meta.url).pathname);
 const read = (p: string): string => fs.readFileSync(path.join(REPO, p), 'utf8');
@@ -54,7 +54,7 @@ export function packs(): string {
   return named.filter((p) => fs.existsSync(path.join(REPO, p))).map(read).join('\n');
 }
 
-const PREF = /\bn([0-9a-f]{8})_\d+/g;
+const PREF = /\bn([0-9a-f]{16})_\d+/g;
 const BUDGET = 4_000_000_000;
 
 /** Facts naming exactly one file, grouped by that file's id prefix. */
@@ -99,7 +99,8 @@ export function compare(corpus: string, files: string[], drop = '', space = 40_0
   const all = new Rofl({ space });
   all.load(P, { budget: BUDGET });
   const label = (f: string): string => (f.endsWith('.txt') ? f.slice(0, -4) : f);
-  for (const f of files) all.assert(scan(fs.readFileSync(path.join(corpus, f), 'utf8'), { file: label(f) }).facts.join('\n'));
+  const set = new ScanSet();
+  for (const f of files) all.assert(set.scan(fs.readFileSync(path.join(corpus, f), 'utf8'), { file: label(f) }).facts.join('\n'));
   all.evaluate(BUDGET);
   const together = ownFacts(all.store.canonicalState());
 

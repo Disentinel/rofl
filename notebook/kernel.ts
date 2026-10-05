@@ -53,7 +53,7 @@ export class Kernel {
     for (const [f, e] of Object.entries(out.parseErrors)) errors.push(`${f}: not parsed: ${e}`);
     if (out.error) errors.push(out.error);
     const lost = out.unresolved.length ? `${unresolvedSaid(out.unresolved)}: ${out.unresolved.slice(0, 5).join(', ')}${out.unresolved.length > 5 ? ', …' : ''}` : undefined;
-    const at = (literal: string) => [...literal.matchAll(/n[0-9a-f]{8}_\d+/g)].flatMap((m) => out.nodes[m[0]] ? [`${out.nodes[m[0]].file}:${out.nodes[m[0]].line}`] : []);
+    const at = (literal: string) => [...literal.matchAll(/n[0-9a-f]{8,16}_\d+/g)].flatMap((m) => out.nodes[m[0]] ? [`${out.nodes[m[0]].file}:${out.nodes[m[0]].line}`] : []);
     const answers = (rows: Row[]) => rows.map((r) => ({ sentence: labelled(r.sentence, out.nodes), literal: r.literal, at: at(r.literal) }));
     const hint = (e: string) => {
       const m = /^not read(?: \(list item\))?: (?!the table |under "|a list item |\d+ list items )((?:(?!names go in backticks|is not a name).)*)$|^(?:\?|never|unsure|why|whynot) (.*): no sentence reads this question$/.exec(e);
@@ -173,4 +173,4 @@ export function legible(text: string): string {
 }
 
 /** A node in a sentence as the code writes it, with where it is. */
-const labelled = (s: string, nodes: Record<string, Node>) => s.replace(/`?(n[0-9a-f]{8}_\d+)`?/g, (m, id) => nodes[id] ? `[${nodes[id].label} at ${nodes[id].file}:${nodes[id].line}]` : m);
+const labelled = (s: string, nodes: Record<string, Node>) => s.replace(/`?(n[0-9a-f]{8,16}_\d+)`?/g, (m, id) => nodes[id] ? `[${nodes[id].label} at ${nodes[id].file}:${nodes[id].line}]` : m);
