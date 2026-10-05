@@ -708,6 +708,17 @@ fn touches(h: &Heap, t: Term, s: &Subst) -> bool {
     }
 }
 
+/// Whether `v` occurs in `t` under `s`.
+fn occurs(h: &Heap, v: Sym, t: Term, s: &Subst) -> bool {
+    match walk(h, t, s).kind() {
+        TermK::Var(w) => w == v,
+        TermK::Func(i) => h.fargs(i).iter().any(|a| occurs(h, v, *a, s)),
+        _ => false,
+    }
+}
+
+/// With the occurs check: a variable is not bound to a term holding it (X = g(X)
+/// has no finite solution, and a cyclic binding sent `resolve` down without end).
 pub fn unify_into(h: &Heap, a: Term, b: Term, s: &mut Subst) -> bool {
     let a = walk(h, a, s);
     let b = walk(h, b, s);
@@ -717,10 +728,16 @@ pub fn unify_into(h: &Heap, a: Term, b: Term, s: &mut Subst) -> bool {
                 return true;
             }
         }
+        if b.is_func() && occurs(h, va, b, s) && brk!("unify_no_occurs_check" => false; true) {
+            return false;
+        }
         s.push((va, b));
         return true;
     }
     if let TermK::Var(vb) = b.kind() {
+        if a.is_func() && occurs(h, vb, a, s) && brk!("unify_no_occurs_check" => false; true) {
+            return false;
+        }
         s.push((vb, a));
         return true;
     }

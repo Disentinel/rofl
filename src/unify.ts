@@ -101,7 +101,8 @@ export function resolve(t: Term, s: Subst): Term {
   return t;
 }
 
-/** Syntactic unification. No occurs-check (documented v0 omission).
+/** Syntactic unification, with the occurs check: a variable is not bound to a term holding it (X = g(X) has no finite solution, and a cyclic
+ *  binding sent `resolve` down without end).
  *  Returns an extended copy of the substitution, or null. */
 export function unify(a: Term, b: Term, s: Subst): Subst | null {
   const out = new Map(s);
@@ -109,15 +110,27 @@ export function unify(a: Term, b: Term, s: Subst): Subst | null {
   return null;
 }
 
+/** Whether the variable `v` occurs in `t` under `s`. */
+function occurs(v: string, t: Term, s: Subst): boolean {
+  t = walk(t, s);
+  if (t.k === 'v') return t.name === v;
+  return t.k === 'f' && t.args.some((a) => occurs(v, a, s));
+}
+
 function unifyInto(a: Term, b: Term, s: Subst): boolean {
   a = walk(a, s);
   b = walk(b, s);
   if (a.k === 'v') {
     if (b.k === 'v' && b.name === a.name) return true;
+    if (b.k === 'f' && occurs(a.name, b, s)) return false;
     s.set(a.name, b);
     return true;
   }
-  if (b.k === 'v') { s.set(b.name, a); return true; }
+  if (b.k === 'v') {
+    if (a.k === 'f' && occurs(b.name, a, s)) return false;
+    s.set(b.name, a);
+    return true;
+  }
   if (a.k === 'i' && b.k === 'i') return a.v === b.v;
   if (a.k === 's' && b.k === 's') return a.v === b.v;
   if (a.k === 'a' && b.k === 'a') return a.name === b.name;
