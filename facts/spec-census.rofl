@@ -261,6 +261,7 @@ check[checks]("facts/goldens.rofl", "start_app", world).
 check[checks]("facts/goldens.rofl", "start_pets", world).
 check[checks]("facts/goldens.rofl", "start_shop", world).
 check[checks]("facts/goldens.rofl", "start_whatif", world).
+check[checks]("facts/goldens.rofl", "surface", world).
 check[checks]("facts/goldens.rofl", "sus", world).
 check[checks]("facts/goldens.rofl", "tm", world).
 check[checks]("facts/goldens.rofl", "tm_diverge", world).
@@ -767,6 +768,7 @@ check[checks]("facts/goldens.rofl", "strata_boot_alone", world).
 check[checks]("facts/goldens.rofl", "strata_boot_canon", world).
 check[checks]("facts/goldens.rofl", "strata_unranked_negation", world).
 check[checks]("facts/goldens.rofl", "sub_history_beside_lattice", world).
+check[checks]("facts/goldens.rofl", "surface_model", world).
 check[checks]("facts/goldens.rofl", "unify_occurs", world).
 check[checks]("facts/goldens.rofl", "unstratifiable", world).
 check[checks]("facts/goldens.rofl", "vscode_side_effects", world).

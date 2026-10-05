@@ -564,7 +564,7 @@ golden_state("refused", "8fc17f482876f7ef", 661).
 golden_state("sealed_provenance", "07ac0f81d4c501d8", 679).
 golden_state("sensors_t3", "6f8ba26864dbb4a3", 1015).
 golden_state("set_spelling", "1f5e72d34d2a08d3", 805).
-golden_state("spec_coverage", "44260a0914090e26", 4615).
+golden_state("spec_coverage", "907dd52ca8875765", 4619).
 golden_state("staged_neg_why", "30f8c759c0c75cdf", 996).
 golden_state("staged_neg_why_agg", "614ab0f6a05509dd", 1020).
 golden_state("staged_neg_why_nocarry", "cd48493312df4492", 1020).
@@ -28612,10 +28612,10 @@ golden_rel("spec_coverage", "accepted_shortcut[coverage]", 1).
 golden_rel("spec_coverage", "alarm[main]", 1).
 golden_rel("spec_coverage", "amends[map]", 17).
 golden_rel("spec_coverage", "artifact_present[checks]", 3).
-golden_rel("spec_coverage", "asserted_by[$kernel]", 1194).
+golden_rel("spec_coverage", "asserted_by[$kernel]", 1196).
 golden_rel("spec_coverage", "authority[main]", 35).
 golden_rel("spec_coverage", "boot_rank[main]", 10).
-golden_rel("spec_coverage", "check[checks]", 775).
+golden_rel("spec_coverage", "check[checks]", 777).
 golden_rel("spec_coverage", "check_stands[coverage]", 16).
 golden_rel("spec_coverage", "citation_ok[checks]", 136).
 golden_rel("spec_coverage", "cited_check[map]", 16).
