@@ -3567,3 +3567,36 @@ check_file("vscode_side_effects", "rules/js-surface.rofl").
 check_file("vscode_side_effects", "examples/checks/vscode-mini-facts.rofl").
 check_file("vscode_side_effects", "examples/vscode/side-effects.rofl").
 check_file("vscode_side_effects", "examples/checks/vscode-side-effects-check.rofl").
+
+-- w_next_version_cutoff, the surface split (docs/surface-split.md): the same question over mini + 10 hand-made files that
+-- cross files every way the model knows, every file resident through rules/js-surface.rofl; each file ALONE with the
+-- others' [surface] gives the same facts: scripts/surface_split.ts, npm run test:split
+check_world("vscode_surface_split").
+check_file("vscode_surface_split", "facts/js-kinds.rofl").
+check_file("vscode_surface_split", "facts/js-callgraph.rofl").
+check_file("vscode_surface_split", "facts/js-dataflow.rofl").
+check_file("vscode_surface_split", "facts/js-modules.rofl").
+check_file("vscode_surface_split", "facts/js-shapes.rofl").
+check_file("vscode_surface_split", "facts/js-statements.rofl").
+check_file("vscode_surface_split", "facts/js-controlflow.rofl").
+check_file("vscode_surface_split", "facts/js-effects.rofl").
+check_file("vscode_surface_split", "facts/js-globals.rofl").
+check_file("vscode_surface_split", "facts/js-host.rofl").
+check_file("vscode_surface_split", "facts/js-host-surface.rofl").
+check_file("vscode_surface_split", "facts/js-lib-surface.rofl").
+check_file("vscode_surface_split", "facts/js-attrs.rofl").
+check_file("vscode_surface_split", "rules/js-structure.rofl").
+check_file("vscode_surface_split", "rules/js-dataflow.rofl").
+check_file("vscode_surface_split", "rules/js-model.rofl").
+check_file("vscode_surface_split", "rules/js-callgraph.rofl").
+check_file("vscode_surface_split", "rules/js-controlflow.rofl").
+check_file("vscode_surface_split", "rules/js-effects.rofl").
+check_file("vscode_surface_split", "rules/js-globals.rofl").
+check_file("vscode_surface_split", "rules/js-host.rofl").
+check_file("vscode_surface_split", "rules/js-ambient.rofl").
+check_file("vscode_surface_split", "rules/js-attrs.rofl").
+check_file("vscode_surface_split", "rules/js-modules.rofl").
+check_file("vscode_surface_split", "rules/js-surface.rofl").
+check_file("vscode_surface_split", "examples/checks/vscode-split-facts.rofl").
+check_file("vscode_surface_split", "examples/vscode/side-effects.rofl").
+check_file("vscode_surface_split", "examples/checks/vscode-surface-split-check.rofl").
