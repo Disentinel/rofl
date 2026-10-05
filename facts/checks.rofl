@@ -314,6 +314,15 @@ check_file("demand_neg_retract", "examples/checks/demand-neg-retract.rofl").
 check_opt("demand_neg_retract", together, 1).
 check_opt("demand_neg_retract", retract, "dt_z(1)").
 
+-- the two above in their closed form: the relation's answers ground, read from the store
+-- (f_the_closed_forms_of_the_negation_worlds_are_kept)
+check_world("demand_neg_round_closed").
+check_file("demand_neg_round_closed", "examples/checks/demand-neg-round-closed.rofl").
+check_world("demand_neg_retract_closed").
+check_file("demand_neg_retract_closed", "examples/checks/demand-neg-retract-closed.rofl").
+check_opt("demand_neg_retract_closed", together, 1).
+check_opt("demand_neg_retract_closed", retract, "dtc_z(1)").
+
 -- a shrug read through a relation answered on demand waits for the shrugs
 -- (f_a_shrug_read_through_demand_fired_before_the_shrugs)
 check_world("demand_shrug_read").
@@ -343,10 +352,71 @@ check_file("demand_chain", "examples/checks/demand-chain.rofl").
 check_world("demand_cycle").
 check_file("demand_cycle", "examples/checks/demand-cycle.rofl").
 
+-- a call met again under a negation opened inside its own unfolding is cut, a shrug of the reason cut: reached
+-- under the stock evaluator, which takes the program's stratum table (f_the_cut_was_said_unreachable_and_a_stratum_table_reaches_it)
+check_world("demand_cycle_cut").
+check_file("demand_cycle_cut", "examples/checks/demand-cycle-cut.rofl").
+check_opt("demand_cycle_cut", evaluator, strata).
+
+-- a call met again inside its own unfolding reads the answers found so far, and the first call unfolds
+-- again until they stop growing (f_a_cycle_cut_shrugged_what_a_fixpoint_decides)
+check_world("demand_cycle_fixpoint").
+check_file("demand_cycle_fixpoint", "examples/checks/demand-cycle-fixpoint.rofl").
+
+-- a pass of a linear recursion reads the answers found since the pass before; one that reads the cycle twice
+-- reads them all; every answer read is a step and every open answer kept a row
+-- (f_a_cycle_fixpoint_ran_away_unbounded_and_recomputed_every_pass)
+check_world("demand_fixpoint_nonlinear").
+check_file("demand_fixpoint_nonlinear", "examples/checks/demand-fixpoint-nonlinear.rofl").
+check_world("demand_fixpoint_steps").
+check_file("demand_fixpoint_steps", "examples/checks/demand-fixpoint-steps.rofl").
+check_opt("demand_fixpoint_steps", together, 1).
+check_opt("demand_fixpoint_steps", budget, 400).
+check_world("demand_fixpoint_space").
+check_file("demand_fixpoint_space", "examples/checks/demand-fixpoint-space.rofl").
+check_opt("demand_fixpoint_space", together, 1).
+check_opt("demand_fixpoint_space", space, 202).
+check_world("demand_fixpoint_rows").
+check_file("demand_fixpoint_rows", "examples/checks/demand-fixpoint-rows.rofl").
+check_opt("demand_fixpoint_rows", together, 1).
+check_opt("demand_fixpoint_rows", space, 4000).
+
+-- a call unfolded to its end is tabled, and a call it covers reads it while the store stands, if it read no
+-- growing call below it and met no unknown (f_a_cycle_fixpoint_ran_away_unbounded_and_recomputed_every_pass)
+check_world("demand_done").
+check_file("demand_done", "examples/checks/demand-done.rofl").
+
+-- a question runs under its own budget, counted from nothing, and leaves the world's steps as it found them
+-- (f_a_question_spent_the_world_budget)
+check_world("demand_question_budget").
+check_file("demand_question_budget", "examples/checks/demand-question-budget.rofl").
+check_opt("demand_question_budget", together, 1).
+check_opt("demand_question_budget", explain, 1).
+check_opt("demand_question_budget", budget, 200).
+
+-- a negation over a hole unfolded at a call leaves the answer unknown outside a firing too, as the copy by rules
+-- alone does (f_a_negated_call_into_a_hole_stored_its_answer)
+check_world("demand_neg_flush").
+check_file("demand_neg_flush", "examples/checks/demand-neg-flush.rofl").
+
+-- a question to a relation unfolded at a call unfolds it in both engines, and leaves the world as it found it
+-- (f_a_question_stored_what_it_unfolded, f_ask_read_the_store_where_query_unfolded)
+check_world("demand_query").
+check_file("demand_query", "examples/checks/demand-query.rofl").
+check_opt("demand_query", together, 1).
+check_opt("demand_query", explain, 1).
+
 -- a recursion through relations answered on demand reaches its fixpoint
 -- (f_a_recursion_through_demand_unfolded_without_end)
 check_world("demand_recursion").
 check_file("demand_recursion", "examples/checks/demand-recursion.rofl").
+
+-- a negation unfolded at a call that a match decides is decided, whatever unknown is beside it
+-- (f_a_decided_negation_below_a_call_shrugged)
+check_world("demand_neg_decided").
+check_file("demand_neg_decided", "examples/checks/demand-neg-decided.rofl").
+check_opt("demand_neg_decided", together, 1).
+check_opt("demand_neg_decided", explain, 1).
 
 check_world("agg_count_safety").
 check_file("agg_count_safety", "examples/checks/agg-count-safety-1-ok.rofl").

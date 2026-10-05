@@ -1,0 +1,36 @@
+-- examples/checks/demand-query.rofl — demand_query: A QUESTION TO A RELATION
+-- UNFOLDED AT A CALL is answered by unfolding it, the same set in both engines,
+-- and leaves the world as it found it (f_a_question_stored_what_it_unfolded,
+-- f_ask_read_the_store_where_query_unfolded).
+--
+-- dq_o leaves Y free and reads dq_c negated, so it is answered on demand and
+-- not closed: dq_o(6, 9) holds (6 is no dq_c) and is in no store; dq_o(4, Y) is
+-- not known for any Y (dq_c(4) rests on the fault at dq_k(3, oops)), and the
+-- only shrug row names dq_o(4, 1), the call dq_r makes. A whynot of dq_o(6, 9)
+-- unfolded it and STORED it, so the why asked after it found a fact the why
+-- asked before had refused; a why now asks it as whynot does, and both leave
+-- the state as it was. rust ask (rofl-serve) read the store only and missed
+-- dq_o(6, 9) that the reference's query finds; scripts/whycheck.ts asks both.
+edb(dq_q). edb(dq_e). edb(dq_s). edb(dq_k).
+dq_q(0).
+dq_e(0, 1). dq_e(1, 2). dq_e(2, 3). dq_e(3, 4). dq_e(4, 5).
+dq_k(1, 1). dq_k(2, 1). dq_k(3, oops). dq_k(4, 1). dq_k(5, 1).
+dq_s(0). dq_s(1). dq_s(2). dq_s(3). dq_s(4). dq_s(5). dq_s(6).
+dq_u(X, Y) :- dq_q(X).
+dq_h(X) :- dq_u(X, X).
+dq_c(X) :- dq_h(X).
+dq_c(Y) :- dq_e(X, Y), dq_c(X), dq_k(Y, K), Z is K + 1, Z > 0.
+dq_o(X, Y) :- dq_s(X), not dq_c(X).
+dq_r(X) :- dq_s(X), dq_o(X, 1).
+dq_nr(X) :- dq_s(X), not dq_o(X, 1).
+
+explain_request(whynot, dq_o(6, 9)).
+explain_request(why, dq_o(6, 9)).
+explain_request(whynot, dq_o(4, 9)).
+explain_request(why, dq_o(4, 9)).
+
+-- expect-row: dq_r[main](6) tick drv support=1
+-- expect-no-row: dq_o[main](6,9)
+-- expect-row: explained[$explain](why,dq_o(6,9),1,"dq_o[main](6,9)  <=
+-- expect-row: explained[$explain](why,dq_o(4,9),1,"dq_o[main](4,9): no answer, a shrug") tick base support=0
+-- expect-row: explained[$explain](whynot,dq_o(4,9),1,"whynot dq_o[main](4,9): no answer, a shrug") tick base support=0

@@ -1401,6 +1401,7 @@ vocabulary with their text, `shrug.rofl`, compiled into `src/kernel-dense.ts`
 | conflict | `parties(Ps)`, the values in conflict in canonical order | a subsumptive cell whose dominance is no strict partial order over its values (`dominance_cycle`, `dominance_intransitive`; "Subsumption, as built") |
 | federation | `at(Address)` | a cold volume (`cooled_to_disk`), a sealed relation |
 | widened | `within(V)`, the value the cell closed on, an enclosure of its least value | a cell of a relation declared `widen N` that was widened (`widening_forced`; "Widening, as built") |
+| cut | the cause: `demand_cycle` | a call answered on demand met again inside its own unfolding under a negation opened inside it, on the rule it came round in ("a call met again", f_a_cycle_cut_shrugged_what_a_fixpoint_decides) |
 | inherited | `from(Roots)`, `earlier(T)`, `below` | what reads a shrug; `support_withdrawn`, `fault_left_out`, `left_out_below` |
 
 Each hole cause is a `shrug_cause(Cause, Reason, Text)` fact; a cause the

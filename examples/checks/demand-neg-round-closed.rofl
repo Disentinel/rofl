@@ -1,0 +1,35 @@
+-- examples/checks/demand-neg-round-closed.rofl — demand_neg_round_closed: A DEMAND PREMISE THAT
+-- UNFOLDS A NEGATION waits for the round of what the negation reads
+-- (f_a_demand_premise_unfolds_a_negation_before_its_round). The CLOSED form
+-- (every answer of dnc_h ground, read from the store), kept beside the open one
+-- demand_neg_round (f_the_closed_forms_of_the_negation_worlds_are_kept).
+--
+-- dnc_u is not range-restricted (Y is free), so safety.rofl answers it on
+-- demand, and so dnc_h, which reads it, and dnc_d, which reads dnc_h. dnc_r and
+-- dnc_r2 are monotone rules over them; unfolded in phase A, dnc_h's
+-- `not dnc_g(X)` read dnc_g before its round and concluded dnc_h(1), dnc_h(2),
+-- dnc_r(1), dnc_r(2), which no stratified reading has: every b is a g.
+-- dnc_h(3) holds by the other arm, through the demand, and must still be found.
+edb(dnc_z). edb(dnc_q).
+dnc_b(1). dnc_b(2). dnc_b(3).
+dnc_q(3).
+dnc_g(X)    :- dnc_b(X), not dnc_z(X).
+dnc_u(X, Y) :- dnc_q(X).
+dnc_h(X)    :- dnc_b(X), not dnc_g(X).
+dnc_h(X)    :- dnc_u(X, X).
+dnc_d(X)    :- dnc_h(X).
+dnc_r(X)    :- dnc_b(X), dnc_h(X).
+dnc_r2(X)   :- dnc_b(X), dnc_d(X).
+
+dnc_wrong(X)  :- dnc_r(X), not dnc_q(X).
+dnc_wrong(X)  :- dnc_r2(X), not dnc_q(X).
+dnc_wrong(X)  :- dnc_h(X), not dnc_q(X).
+dnc_missed(X) :- dnc_q(X), not dnc_r(X).
+dnc_missed(X) :- dnc_q(X), not dnc_r2(X).
+alarm(dnc_wrong).
+alarm(dnc_missed).
+
+-- expect-row: dnc_r[main](3) tick drv support=1
+-- expect-row: dnc_r2[main](3) tick drv support=1
+-- expect-no-row: dnc_h[main](1)
+-- expect-no-row: dnc_r[main](1)

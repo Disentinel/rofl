@@ -1,0 +1,21 @@
+-- examples/checks/demand-fixpoint-nonlinear.rofl — demand_fixpoint_nonlinear: A PASS
+-- OF A LINEAR RECURSION READS ONLY THE ANSWERS FOUND SINCE THE PASS BEFORE BEGAN; a
+-- rule that reads the cycle twice reads every answer so far
+-- (f_a_cycle_fixpoint_ran_away_unbounded_and_recomputed_every_pass).
+--
+-- dn_p leaves W free, so it is answered on demand and not closed, and its answers
+-- to dn_p(X, W) stay open: none is stored, and each round asks again. Its second
+-- rule reads dn_p twice under the same call. 5 is 1 + 4 and 2 + 3: an old answer
+-- beside one found in the pass before, which a pass that read only the new ones
+-- on both sides never pairs.
+edb(dn_seed). edb(dn_add).
+dn_seed(1).
+dn_add(1, 1, 2). dn_add(1, 2, 3). dn_add(2, 2, 4). dn_add(1, 4, 5). dn_add(2, 3, 5).
+dn_b(X, W) :- dn_seed(X).
+dn_p(X, W) :- dn_b(X, W).
+dn_p(X, W) :- dn_p(Y, W), dn_p(Z, W), dn_add(Y, Z, X).
+dn_all(X) :- dn_p(X, W).
+
+-- expect-row: dn_all[main](4) tick drv support=1
+-- expect-row: dn_all[main](5) tick drv support=1
+-- expect-no-row: shrug[$kernel](

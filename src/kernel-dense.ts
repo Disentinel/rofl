@@ -403,6 +403,7 @@ shrug_reason(federation, s("the answer lives in a volume or book that is not loa
 shrug_reason(widened, s("a declared widening enclosed the value: the least value lies within it, and is not known")).
 shrug_reason(inherited, s("the answer reads another answer that is a shrug")).
 shrug_reason(given, s("a book states that it is not known")).
+shrug_reason(cut, s("a recursion answered on demand was cut where its answers could not be computed to their end")).
 shrug_cause(budget_exhausted, budget, s("the step budget ran out")).
 shrug_cause(space_exhausted, budget, s("the row budget ran out")).
 shrug_cause(arith_overflow, fault, s("arithmetic left the integer range of plus or minus 2^60")).
@@ -420,7 +421,7 @@ shrug_cause(tag_off_carrier, fault, s("a semiring tag outside its carrier: viter
 shrug_cause(unbounded_members, fault, s("the members of an interval with an infinite end were enumerated")).
 shrug_cause(widening_forced, widened, s("a lattice cell improved past its declared widening and was widened")).
 shrug_cause(regions_capped, budget, s("the values a labeled unknown could be told apart by passed the cap, so the group was not decided by them")).
-shrug_cause(demand_cycle, budget, s("a call answered on demand came round again inside its own unfolding, and was not unfolded again")).
+shrug_cause(demand_cycle, cut, s("a call answered on demand came round again inside its own unfolding, under a negation opened inside it, so its answers so far decide nothing")).
 shrug_cause(improving_cycle, divergence, s("a lattice value came back through its own improvement")).
 shrug_cause(dominance_cycle, conflict, s("a subsumptive value dominates itself, or two dominate each other, so the dominance is no order and the front is not decided")).
 shrug_cause(dominance_intransitive, conflict, s("a subsumptive value is dominated by one that no member of the front dominates, or dominates a member, so the dominance is not transitive and the front is not decided")).

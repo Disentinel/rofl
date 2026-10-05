@@ -1,0 +1,57 @@
+-- examples/checks/demand-cycle-fixpoint.rofl — demand_cycle_fixpoint: A CALL MET
+-- AGAIN INSIDE ITS OWN UNFOLDING reads the answers found so far, and the first
+-- call unfolds again until they stop growing: the least fixpoint, not a shrug
+-- (f_a_cycle_cut_shrugged_what_a_fixpoint_decides).
+--
+-- dw_d leaves Z free, so it is answered on demand and not closed. Called as
+-- dw_d(X, 5), its second rule calls dw_d(X', 5) again. The cut made every answer
+-- past those found unknown: dw_d(1..3, 5) were never found, so dw_r(1..3) and the
+-- negations dw_n(4..6), dw_n7(4..6) shrugged where the same rules over a stored
+-- relation decide all of them. Each pass finds one more step of the chain; the
+-- first call stops when a pass adds nothing.
+edb(dw_q). edb(dw_e). edb(dw_s).
+dw_q(0).
+dw_e(0, 1). dw_e(1, 2). dw_e(2, 3). dw_e(5, 6).
+dw_s(0). dw_s(1). dw_s(2). dw_s(3). dw_s(4). dw_s(5). dw_s(6).
+dw_u(X, Y) :- dw_q(X).
+dw_d(X, Z) :- dw_u(X, X).
+dw_d(Y, Z) :- dw_d(X, Z), dw_e(X, Y).
+dw_r(X)  :- dw_s(X), dw_d(X, 5).
+dw_n(X)  :- dw_s(X), not dw_d(X, 5).
+dw_r7(X) :- dw_s(X), dw_d(X, 7).
+dw_n7(X) :- dw_s(X), not dw_d(X, 7).
+dw_rr(X) :- dw_s(X), dw_d(X, X).
+
+dw_reach(0). dw_reach(1). dw_reach(2). dw_reach(3).
+dw_missed(X) :- dw_reach(X), not dw_r(X).
+dw_missed(X) :- dw_s(X), not dw_reach(X), not dw_n(X).
+dw_wrong(X)  :- dw_r(X), not dw_reach(X).
+alarm(dw_missed).
+alarm(dw_wrong).
+
+-- read only under a negation, so no positive reader stores its answers first:
+-- a first call that stopped after one pass would decide dv_n(0) and dv_n(1)
+-- from answers still growing (the chain runs down, so the calls asked first are
+-- the farthest from its start and find nothing stored by an earlier one)
+edb(dv_q). edb(dv_e). edb(dv_s).
+dv_q(3).
+dv_e(3, 2). dv_e(2, 1). dv_e(1, 0).
+dv_s(0). dv_s(1). dv_s(2). dv_s(3). dv_s(4).
+dv_u(X, Y) :- dv_q(X).
+dv_d(X, Z) :- dv_u(X, X).
+dv_d(Y, Z) :- dv_d(X, Z), dv_e(X, Y).
+dv_n(X) :- dv_s(X), not dv_d(X, 5).
+dv_wrong(X) :- dv_n(X), dv_s(X), X < 4.
+dv_missed(X) :- dv_s(X), X > 3, not dv_n(X).
+alarm(dv_wrong).
+alarm(dv_missed).
+
+-- expect-row: dw_r[main](3) tick drv support=1
+-- expect-row: dw_r7[main](3) tick drv support=1
+-- expect-row: dw_rr[main](3) tick drv support=1
+-- expect-row: dw_n[main](4) tick drv support=1
+-- expect-row: dw_n[main](6) tick drv support=1
+-- expect-row: dw_n7[main](6) tick drv support=1
+-- expect-no-row: shrug[$kernel](dw_
+-- expect-no-row: shrug[$kernel](dv_
+-- expect-no-row: shrug[$kernel]($rule
