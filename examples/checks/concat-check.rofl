@@ -1,0 +1,93 @@
+-- examples/checks/concat-check.rofl — concat_value (w_concat_value): every entry point of rules/js-concat.rofl over
+-- examples/concat/src/entry.ts (facts in concat-facts.rofl), each value named by the exported name it is bound to.
+-- Red if a text, a form or a cut literal is missing or one more appears.
+ct_bound(Name, C) :- binder[code](_, Name, Init, "src/entry.ts"), may_be_node[flow](Init, C), composed[flow](C),
+                     not summarized[flow](C).
+ct_bound(grown, A) :- ast_node[code](A, assignment_expression, "src/entry.ts", 14), composed[flow](A).
+ct_bound(unknown, T) :- ast_node[code](T, template_literal, "src/entry.ts", 25), composed[flow](T).
+
+-- src/mypath.ts stands for node's path, as vscode's own path module does in examples/vscode/side-effects.rofl
+ambient_module("src/mypath.ts", "node:path").
+
+ct_text(Name, T) :- ct_bound(Name, C), may_be_text[flow](C, T).
+ct_form(Name, T) :- ct_bound(Name, C), may_be_form[flow](C, T).
+ct_cut(Name, V)  :- binder[code](_, Name, Init, "src/entry.ts"), path_cut[flow](Init, V).
+ct_composed(Name) :- ct_bound(Name, _).
+
+-- THE ANSWERS. `sum` (1 + 2) is no string and composes nothing; `overCap` has 32 choices and no text; `atCap` has
+-- exactly 16; `looped` (s = s + 'x' in a loop) and `grown` (+= read flow-insensitively) unfold three levels, then the
+-- rest is the node itself, so the evaluation stops; `unknown`'s parameter has no caller and stays a reference;
+-- `either` (1 or 'z', plus 2) is a string only where w is one, never "12"; `doubled` (dirname of '//x', which node
+-- answers "//") and `spread` (a join whose arguments a spread hides) have no text and no literal; `wrapped` reads
+-- lib.join of src/mypath.ts as the join it stands for, not as the `+` of its body; `emptyJoin` holds a join of an
+-- empty array, which has no text, as a node; `branched` (forked = forked + v, v 'x' or 'y', in a loop) is over the cap
+-- from its third level, so it has no text and the loop it widens is the one a break unfolds without end.
+ct_want_composed("template").  ct_want_composed("plus").  ct_want_composed("mixed").  ct_want_composed(grown).
+ct_want_composed("joined").  ct_want_composed("resolved").  ct_want_composed("normal").  ct_want_composed("cut").
+ct_want_composed("base").  ct_want_composed("nested").  ct_want_composed("method").  ct_want_composed("elems").
+ct_want_composed("commas").  ct_want_composed("address").  ct_want_composed(unknown).  ct_want_composed("atCap").
+ct_want_composed("overCap").  ct_want_composed("looped").  ct_want_composed("either").  ct_want_composed("doubled").
+ct_want_composed("spread").  ct_want_composed("wrapped").  ct_want_composed("emptyJoin").  ct_want_composed("branched").
+
+ct_missing_text(N, T) :- ct_want_text(N, T), not ct_text(N, T).
+ct_extra_text(N, T)   :- ct_text(N, T), not ct_want_text(N, T).
+ct_missing_form(N, T) :- ct_want_form(N, T), not ct_form(N, T).
+ct_extra_form(N, T)   :- ct_form(N, T), not ct_want_form(N, T).
+ct_missing_cut(N, V)  :- ct_want_cut(N, V), not ct_cut(N, V).
+ct_extra_cut(N, V)    :- ct_cut(N, V), not ct_want_cut(N, V).
+ct_missing_composed(N) :- ct_want_composed(N), not ct_composed(N).
+ct_extra_composed(N)   :- ct_composed(N), not ct_want_composed(N).
+ct_sum_composed()      :- binder[code](_, "sum", Init, "src/entry.ts"), composed[flow](Init).
+alarm(ct_missing_text).
+alarm(ct_extra_text).
+alarm(ct_missing_form).
+alarm(ct_extra_form).
+alarm(ct_missing_cut).
+alarm(ct_extra_cut).
+alarm(ct_missing_composed).
+alarm(ct_extra_composed).
+alarm(ct_sum_composed).
+
+ct_want_cut("base","z").
+ct_want_cut("cut","/x/y").
+ct_want_form("emptyJoin",cat(node(nf85e80d35f2c16b6_305),"/z")).
+ct_want_form("looped",cat(cat(cat(cat(node(nf85e80d35f2c16b6_233),"x"),"x"),"x"),"x")).
+ct_want_form(grown,cat(cat(cat(cat(node(nf85e80d35f2c16b6_71),"/c"),"/c"),"/c"),"/c")).
+ct_want_form(unknown,cat(ref(nf85e80d35f2c16b6_185),"/x")).
+ct_want_text("address",url("https://h","/api")).
+ct_want_text("atCap",cat(cat(cat("x","x"),"x"),"x")).
+ct_want_text("atCap",cat(cat(cat("x","x"),"x"),"y")).
+ct_want_text("atCap",cat(cat(cat("x","x"),"y"),"x")).
+ct_want_text("atCap",cat(cat(cat("x","x"),"y"),"y")).
+ct_want_text("atCap",cat(cat(cat("x","y"),"x"),"x")).
+ct_want_text("atCap",cat(cat(cat("x","y"),"x"),"y")).
+ct_want_text("atCap",cat(cat(cat("x","y"),"y"),"x")).
+ct_want_text("atCap",cat(cat(cat("x","y"),"y"),"y")).
+ct_want_text("atCap",cat(cat(cat("y","x"),"x"),"x")).
+ct_want_text("atCap",cat(cat(cat("y","x"),"x"),"y")).
+ct_want_text("atCap",cat(cat(cat("y","x"),"y"),"x")).
+ct_want_text("atCap",cat(cat(cat("y","x"),"y"),"y")).
+ct_want_text("atCap",cat(cat(cat("y","y"),"x"),"x")).
+ct_want_text("atCap",cat(cat(cat("y","y"),"x"),"y")).
+ct_want_text("atCap",cat(cat(cat("y","y"),"y"),"x")).
+ct_want_text("atCap",cat(cat(cat("y","y"),"y"),"y")).
+ct_want_text("commas",cat(cat("j",","),"k")).
+ct_want_text("either",cat("z",2)).
+ct_want_text("elems",cat(cat("/srv","/"),"i")).
+ct_want_text("joined",join(join("/srv","d"),"e")).
+ct_want_text("looped","x").
+ct_want_text("looped",cat("x","x")).
+ct_want_text("looped",cat(cat("x","x"),"x")).
+ct_want_text("looped",cat(cat(cat("x","x"),"x"),"x")).
+ct_want_text("method",cat(cat("a","/srv"),"h")).
+ct_want_text("mixed",cat(7,"x")).
+ct_want_text("nested",dirname(join("/srv","g"))).
+ct_want_text("normal",join("/a/../b")).
+ct_want_text("plus",cat("/srv","/b")).
+ct_want_text("resolved",resolve("/srv","f")).
+ct_want_text("template",cat("/srv","/a")).
+ct_want_text("wrapped",cat(join("/srv","m"),"!")).
+ct_want_text(grown,cat("/srv","/c")).
+ct_want_text(grown,cat(cat("/srv","/c"),"/c")).
+ct_want_text(grown,cat(cat(cat("/srv","/c"),"/c"),"/c")).
+ct_want_text(grown,cat(cat(cat(cat("/srv","/c"),"/c"),"/c"),"/c")).

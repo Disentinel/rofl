@@ -24,6 +24,7 @@ default: flow
 Reads:
 
 - from js-callgraph, in the code: [call_site](js-callgraph.rofl.md#call_site), [callee_of](js-callgraph.rofl.md#callee_of), [decorates](js-callgraph.rofl.md#decorates), [fn_node](js-callgraph.rofl.md#fn_node), [resolves](js-callgraph.rofl.md#resolves)
+- from js-concat: [may_be_lit](js-concat.rofl.md#may_be_lit), [may_be_node](js-concat.rofl.md#may_be_node), [member_value](js-concat.rofl.md#member_value)
 - from js-controlflow: [caught_value](js-controlflow.rofl.md#caught_value)
 - from js-model, in the code: [ast_node](js-model.rofl.md#ast_node)
 - from js-modules, in the code: [import_site](js-modules.rofl.md#import_site), [module_target](js-modules.rofl.md#module_target), [reexport_offers](js-modules.rofl.md#reexport_offers), [require_site](js-modules.rofl.md#require_site), [site_shape](js-modules.rofl.md#site_shape), [site_source](js-modules.rofl.md#site_source)
@@ -157,7 +158,7 @@ A name X
 
 In the flow:
 
-<a id="may_be_lit"></a>A [literal](#noun-literal) may be the literal V if it [is written as](js-structure.rofl.md#ast_value) V.
+A [literal](#noun-literal) may be the literal V if it [is written as](js-structure.rofl.md#ast_value) V.
 
 Declared as facts:
 
@@ -180,7 +181,7 @@ A [template](#noun-template) may be the literal V if all of:
 > `may_be_node(E, E)` names the SITE: a literal in a loop makes a new object
 > each time round.
 
-<a id="may_be_node"></a>A [value site](#noun-value_site) points to it.
+A [value site](#noun-value_site) points to it.
 
 Declared as facts:
 
@@ -378,12 +379,12 @@ In the flow:
 A node
 
 - may be the literal V if all of:
-  - a node Init [may be the literal](#may_be_lit) V;
+  - a node Init [may be the literal](js-concat.rofl.md#may_be_lit) V;
   - D [binds](#binder) Name to Init in File;
   - it [reads](#ident_in) Name in File;
   - it [sees](#sees_binder) D.
 - points to a node N if all of:
-  - a node Init [points to](#may_be_node) N;
+  - a node Init [points to](js-concat.rofl.md#may_be_node) N;
   - D [binds](#binder) Name to Init in File;
   - it [reads](#ident_in) Name in File;
   - it [sees](#sees_binder) D.
@@ -451,24 +452,24 @@ A node
 - may be the literal V if all of:
   - X [is written into](#assign_binder) D;
   - [`assigned`](#assigned)(X, something, Name, Src, File);
-  - a node Src [may be the literal](#may_be_lit) V;
+  - a node Src [may be the literal](js-concat.rofl.md#may_be_lit) V;
   - it [reads](#ident_in) Name in File;
   - it [sees](#sees_binder) D.
 - points to a node N if all of:
   - X [is written into](#assign_binder) D;
   - [`assigned`](#assigned)(X, something, Name, Src, File);
-  - a node Src [points to](#may_be_node) N;
+  - a node Src [points to](js-concat.rofl.md#may_be_node) N;
   - it [reads](#ident_in) Name in File;
   - it [sees](#sees_binder) D.
 - may be the literal V if all of:
   - X [is written into a parameter of](#assign_param) F;
   - [`assigned`](#assigned)(X, something, Name, Src, something);
-  - a node Src [may be the literal](#may_be_lit) V;
+  - a node Src [may be the literal](js-concat.rofl.md#may_be_lit) V;
   - F [uses](#param_use) Name at it.
 - points to a node N if all of:
   - X [is written into a parameter of](#assign_param) F;
   - [`assigned`](#assigned)(X, something, Name, Src, something);
-  - a node Src [points to](#may_be_node) N;
+  - a node Src [points to](js-concat.rofl.md#may_be_node) N;
   - F [uses](#param_use) Name at it.
 
 > WHERE SCOPE CANNOT BE DECIDED the over-approximation stays, and is a row.
@@ -501,16 +502,16 @@ A node
   - [`assigned`](#assigned)(X, something, Name, Src, File);
   - it [reads](#ident_in) Name in File;
   - unless it [is claimed by a binder or parameter](#bound_read).
-- may be the literal V if it [may hold by name alone](#assign_reaches_unscoped) what node a Src Src and Src [may be the literal](#may_be_lit) V.
-- points to a node N if it [may hold by name alone](#assign_reaches_unscoped) what node a Src Src and Src [points to](#may_be_node) N.
+- may be the literal V if it [may hold by name alone](#assign_reaches_unscoped) what node a Src Src and Src [may be the literal](js-concat.rofl.md#may_be_lit) V.
+- points to a node N if it [may hold by name alone](#assign_reaches_unscoped) what node a Src Src and Src [points to](js-concat.rofl.md#may_be_node) N.
 
 > A parenthesis, a TS cast and a non-null assertion change nothing about the
 > value; the call graph lists them as shapes and this layer does not.
 
 A [wrapper](#noun-wrapper)
 
-- may be the literal V if the `expression` of it [may be the literal](#may_be_lit) V.
-- points to a node N if the `expression` of it [points to](#may_be_node) N.
+- may be the literal V if the `expression` of it [may be the literal](js-concat.rofl.md#may_be_lit) V.
+- points to a node N if the `expression` of it [points to](js-concat.rofl.md#may_be_node) N.
 
 Declared as facts:
 
@@ -543,7 +544,7 @@ Declared as facts:
 
 1. if a kind K [has prototype](#kind_prototype) P and E [is of kind](js-model.rofl.md#ast_node) K;
 2. if all of:
-   - E [points to](#may_be_node) a node N;
+   - E [points to](js-concat.rofl.md#may_be_node) a node N;
    - N [is of kind](js-model.rofl.md#ast_node) K;
    - K [has prototype](#kind_prototype) P.
 
@@ -579,9 +580,9 @@ In the flow:
 
 A node points to a node N if all of:
   - a node D [destructures](#destructures) Local from Key in File;
-  - the `init` of D [points to](#may_be_node) a node Obj;
-  - [the member](#member_value) Key of Obj holds a node V;
-  - V [points to](#may_be_node) N;
+  - the `init` of D [points to](js-concat.rofl.md#may_be_node) a node Obj;
+  - [the member](js-concat.rofl.md#member_value) Key of Obj holds a node V;
+  - V [points to](js-concat.rofl.md#may_be_node) N;
   - it [reads](#ident_in) Local in File;
   - it [sees](#sees_binder) D.
 
@@ -597,12 +598,12 @@ D is scoped in File if D [destructures](#destructures_at) some name at some inde
 
 In the flow:
 
-<a id="elem_at"></a>The element I of a node X is a node E if X [points to](#may_be_node) an [array literal](#noun-array_literal) Y and E is the I-th of the `elements` of Y.
+<a id="elem_at"></a>The element I of a node X is a node E if X [points to](js-concat.rofl.md#may_be_node) an [array literal](#noun-array_literal) Y and E is the I-th of the `elements` of Y.
 
 A node points to a node N if all of:
   - a node D [destructures](#destructures_at) Local at Index in File;
   - the `init` of D is a node Init;
-  - [the element](#elem_at) Index of Init [points to](#may_be_node) N;
+  - [the element](#elem_at) Index of Init [points to](js-concat.rofl.md#may_be_node) N;
   - it [reads](#ident_in) Local in File;
   - it [sees](#sees_binder) D.
 
@@ -619,7 +620,7 @@ A [function](js-callgraph.rofl.md#fn_node)
 
 A node points to a node N if all of:
   - F [defaults](#param_default) Name to a node Init;
-  - Init [points to](#may_be_node) N;
+  - Init [points to](js-concat.rofl.md#may_be_node) N;
   - F [uses](#param_use) Name at it.
 
 > An object rest binds a FRESH object with no node of its own, so the
@@ -643,14 +644,14 @@ D is scoped in File if D [binds](#rest_binds) some name through the rest some no
 
 In the flow:
 
-<a id="member_value"></a>The member Key of a node R holds a node V if all of:
+The member Key of a node R holds a node V if all of:
   - a node D [holds a rest](#rest_in_pattern) R in some file;
   - the `id` of D is a node P;
-  - the `init` of D [points to](#may_be_node) a node Obj;
-  - [the member](#member_value) Key of Obj holds V;
+  - the `init` of D [points to](js-concat.rofl.md#may_be_node) a node Obj;
+  - [the member](js-concat.rofl.md#member_value) Key of Obj holds V;
   - unless P [takes the key](#pattern_takes) Key.
 
-<a id="member_plain"></a>The plain member Key of a node R is a node V if some declarator [holds a rest](#rest_in_pattern) R in some file and [the member](#member_value) Key of R holds V.
+<a id="member_plain"></a>The plain member Key of a node R is a node V if some declarator [holds a rest](#rest_in_pattern) R in some file and [the member](js-concat.rofl.md#member_value) Key of R holds V.
 
 A node points to a node R if all of:
   - D [binds](#rest_binds) Local through the rest R in File;
@@ -668,13 +669,13 @@ In the flow:
 
 The member Key of a node O holds a node V if all of:
   - [`spread_of`](#spread_of)(O, X);
-  - a node X [points to](#may_be_node) a node Src;
-  - [the member](#member_value) Key of Src holds V.
+  - a node X [points to](js-concat.rofl.md#may_be_node) a node Src;
+  - [the member](js-concat.rofl.md#member_value) Key of Src holds V.
 
 <a id="valued"></a>A node E is valued either:
 
-1. if E [may be the literal](#may_be_lit) some text;
-2. if E [points to](#may_be_node) some node.
+1. if E [may be the literal](js-concat.rofl.md#may_be_lit) some text;
+2. if E [points to](js-concat.rofl.md#may_be_node) some node.
 
 ## 7. Across a call
 
@@ -763,13 +764,13 @@ A node
 - may be the literal V if all of:
   - C [resolves to](js-callgraph.rofl.md#resolves) F;
   - C [passes](#arg_at) a node X at an index I;
-  - X [may be the literal](#may_be_lit) V;
+  - X [may be the literal](js-concat.rofl.md#may_be_lit) V;
   - F [takes](#param_of) Name at I;
   - F [uses](#param_use) Name at it.
 - points to a node N if all of:
   - C [resolves to](js-callgraph.rofl.md#resolves) F;
   - C [passes](#arg_at) a node X at an index I;
-  - X [points to](#may_be_node) N;
+  - X [points to](js-concat.rofl.md#may_be_node) N;
   - F [takes](#param_of) Name at I;
   - F [uses](#param_use) Name at it.
 
@@ -782,11 +783,11 @@ A node
 - may be the literal V if all of:
   - it [resolves to](js-callgraph.rofl.md#resolves) F;
   - F [returns](#returns) a node E;
-  - E [may be the literal](#may_be_lit) V.
+  - E [may be the literal](js-concat.rofl.md#may_be_lit) V.
 - points to a node N if all of:
   - it [resolves to](js-callgraph.rofl.md#resolves) F;
   - F [returns](#returns) a node E;
-  - E [points to](#may_be_node) N.
+  - E [points to](js-concat.rofl.md#may_be_node) N.
 
 ## 8. Reading a property off a value
 
@@ -819,7 +820,7 @@ The member Key of O holds a node V either:
 > over. `plain_assign` is load-bearing: `+=` evaluates to a sum.
 
 The member Key of a node O holds a node V if all of:
-  - a node Obj [points to](#may_be_node) O;
+  - a node Obj [points to](js-concat.rofl.md#may_be_node) O;
   - the `object` of a node L is Obj;
   - L [selects](#selects) Key;
   - the `left` of a node X is L;
@@ -843,7 +844,7 @@ The member Key of a node O holds a node V if all of:
 
 The member Key of a node CD holds a node V if all of:
   - [the super](#super_of) of CD is a class SD;
-  - [the member](#member_value) Key of SD holds V;
+  - [the member](js-concat.rofl.md#member_value) Key of SD holds V;
   - unless CD [owns the key](#own_key) Key.
 
 > The key an expression selects. Static and computed collapse here:
@@ -861,7 +862,7 @@ In the code:
 
 In the flow:
 
-N selects Key if a node P [may be the literal](#may_be_lit) Key and [`computed_key`](#computed_key)(N, P).
+N selects Key if a node P [may be the literal](js-concat.rofl.md#may_be_lit) Key and [`computed_key`](#computed_key)(N, P).
 
 Declared as facts:
 
@@ -873,12 +874,12 @@ Declared as facts:
 > literal's members carry no `static`, so they get `member_plain`; so does a
 > module namespace.
 
-<a id="class_member_static"></a><a id="class_member_proto"></a>The static/instance member Key of a class CD is a node M if [the member](#member_value) Key of CD holds M and [the attribute](#ast_attr) `static` of M is `true`/`false`.
+<a id="class_member_static"></a><a id="class_member_proto"></a>The static/instance member Key of a class CD is a node M if [the member](js-concat.rofl.md#member_value) Key of CD holds M and [the attribute](#ast_attr) `static` of M is `true`/`false`.
 
 The plain member Key of O is a node V either:
 
-1. if O is an [object literal](#noun-object_literal) and [the member](#member_value) Key of O holds V;
-2. if O [is the module object of](#module_object) some file and [the member](#member_value) Key of O holds V.
+1. if O is an [object literal](#noun-object_literal) and [the member](js-concat.rofl.md#member_value) Key of O holds V;
+2. if O [is the module object of](#module_object) some file and [the member](js-concat.rofl.md#member_value) Key of O holds V.
 
 > Which role the receiver is in, syntactically: a bare name that IS a class
 > name denotes the class object; anything else reaching a class node is an
@@ -886,7 +887,7 @@ The plain member Key of O is a node V either:
 
 <a id="class_receiver"></a>A node denotes a class if some class [is named](#class_named) Name in File and it [reads](#ident_in) Name in File.
 
-<a id="member_obj"></a>`member_obj`(a [member access](#member_node_v) N, O, Obj) if a node O [points to](#may_be_node) a node Obj and the `object` of N is O.
+<a id="member_obj"></a>`member_obj`(a [member access](#member_node_v) N, O, Obj) if a node O [points to](js-concat.rofl.md#may_be_node) a node Obj and the `object` of N is O.
 
 <a id="member_at"></a>`member_at`(N, O, Obj, Key) if [`member_obj`](#member_obj)(N, O, Obj) and N [selects](#selects) Key.
 
@@ -895,17 +896,17 @@ A node N points to a node V2 either:
 1. if all of:
    - [`member_at`](#member_at)(N, O, Obj, Key);
    - a node O [denotes a class](#class_receiver);
-   - [the static member](#class_member_static) Key of a class Obj [points to](#may_be_node) V2;
+   - [the static member](#class_member_static) Key of a class Obj [points to](js-concat.rofl.md#may_be_node) V2;
 2. if all of:
    - [`member_at`](#member_at)(N, O, Obj, Key);
-   - [the instance member](#class_member_proto) Key of a class Obj [points to](#may_be_node) V2;
+   - [the instance member](#class_member_proto) Key of a class Obj [points to](js-concat.rofl.md#may_be_node) V2;
    - unless a node O [denotes a class](#class_receiver);
-3. if [`member_at`](#member_at)(N, something, Obj, Key) and [the plain member](#member_plain) Key of a node Obj [points to](#may_be_node) V2.
+3. if [`member_at`](#member_at)(N, something, Obj, Key) and [the plain member](#member_plain) Key of a node Obj [points to](js-concat.rofl.md#may_be_node) V2.
 
 A node may be the literal L if all of:
   - [`member_at`](#member_at)(it, something, Obj, Key);
-  - [the member](#member_value) Key of a node Obj holds a node V;
-  - V [may be the literal](#may_be_lit) L.
+  - [the member](js-concat.rofl.md#member_value) Key of a node Obj holds a node V;
+  - V [may be the literal](js-concat.rofl.md#may_be_lit) L.
 
 > A method is a value; a declared function is reached by its name with no
 > declarator.
@@ -919,11 +920,11 @@ M points to a node Y either:
    - the `id` of Y [is named](js-structure.rofl.md#ast_name) Name;
    - M [reads](#ident_in) Name in File;
 3. if all of:
-   - a node X [points to](#may_be_node) Y;
+   - a node X [points to](js-concat.rofl.md#may_be_node) Y;
    - the `value` of M is X;
    - M is a [property](#noun-property).
 
-A [property](#noun-property) may be the literal V if a node X [may be the literal](#may_be_lit) V and the `value` of it is X.
+A [property](#noun-property) may be the literal V if a node X [may be the literal](js-concat.rofl.md#may_be_lit) V and the `value` of it is X.
 
 ## 9. `this` — bound by the nearest enclosing function that is NOT an arrow (an
 
@@ -1029,8 +1030,8 @@ A [private method](#noun-private_method) points to it.
 A node
 
 - points to a [private method](#noun-private_method) M if it [binds privately to](#private_binds) M.
-- points to a node V2 if it [binds privately to](#private_binds) a [private field](#noun-private_field) M and the `value` of M [points to](#may_be_node) V2.
-- may be the literal L if it [binds privately to](#private_binds) a [private field](#noun-private_field) M and the `value` of M [may be the literal](#may_be_lit) L.
+- points to a node V2 if it [binds privately to](#private_binds) a [private field](#noun-private_field) M and the `value` of M [points to](js-concat.rofl.md#may_be_node) V2.
+- may be the literal L if it [binds privately to](#private_binds) a [private field](#noun-private_field) M and the `value` of M [may be the literal](js-concat.rofl.md#may_be_lit) L.
 
 A class has the method M if all of:
   - it [is object like](#obj_like);
@@ -1117,7 +1118,7 @@ A node
   - the `exported` of Sp [is named](js-structure.rofl.md#ast_name) Ext;
   - E neither [re exports](#reexport_decl) nor [exports types only](#export_list_erased);
   - unless Sp [is a type only specifier](#export_item_erased).
-- is exported as Ext from File if a node L [is exported locally as](#export_local) Ext from File and L [points to](#may_be_node) it.
+- is exported as Ext from File if a node L [is exported locally as](#export_local) Ext from File and L [points to](js-concat.rofl.md#may_be_node) it.
 
 > `export * as ns from` exports the other module's OBJECT — its `program` node —
 > so `ns.f()` is an ordinary member lookup.
@@ -1154,7 +1155,7 @@ In the code:
   - a node D [is among the](#ast_child) `declarations` of V;
   - D [binds](#binder) Name to a node Init in File.
 
-A node is exported as Name from File if [`export_var`](#export_var)(Init, Name, File) and a node Init [points to](#may_be_node) it.
+A node is exported as Name from File if [`export_var`](#export_var)(Init, Name, File) and a node Init [points to](js-concat.rofl.md#may_be_node) it.
 
 <a id="exports_value"></a>`exports_value`(Init, Name, File) either:
 
@@ -1172,7 +1173,7 @@ A node may be the literal V if all of:
   - Local [imports](#imports_name) Name at a site D in File;
   - D [means the file](js-modules.rofl.md#module_target) Target;
   - [`exports_value`](#exports_value)(X, Name, Target);
-  - a node X [may be the literal](#may_be_lit) V;
+  - a node X [may be the literal](js-concat.rofl.md#may_be_lit) V;
   - it [reads](#ident_in) Local in File.
 
 The member Name of a node P holds a node X if P [is the module object of](#module_object) Target and [`exports_value`](#exports_value)(X, Name, Target).
@@ -1237,7 +1238,7 @@ In the flow:
    - a node L [is module exports in](#cjs_module_exports) File;
    - the `left` of a node X is L;
    - X [is plain](#plain_assign);
-   - the `right` of X [points to](#may_be_node) P.
+   - the `right` of X [points to](js-concat.rofl.md#may_be_node) P.
 
 A node M points to a node V either:
 
@@ -1367,7 +1368,7 @@ A node
 
 <a id="ext_call"></a>An [invocation](#noun-invocation) is an external call of a module Spec if all of:
   - a node X [comes out of](#external_value) Spec;
-  - a node F [points to](#may_be_node) X;
+  - a node F [points to](js-concat.rofl.md#may_be_node) X;
   - the `callee` of it is F.
 
 A node
@@ -1377,7 +1378,7 @@ A node
 
 <a id="ext_member"></a>A [member access](#member_node_v) is an external member of a module Spec if all of:
   - a node X [comes out of](#external_value) Spec;
-  - a node O [points to](#may_be_node) X;
+  - a node O [points to](js-concat.rofl.md#may_be_node) X;
   - the `object` of it is O.
 
 A node
@@ -1388,7 +1389,7 @@ A node
 > The corpus writes members onto an external value (`app.handler = f`) and
 > reads them back like any plain object's.
 
-The plain member Key of a node X is a node V if X [comes out of](#external_value) some module and [the member](#member_value) Key of X holds V.
+The plain member Key of a node X is a node V if X [comes out of](#external_value) some module and [the member](js-concat.rofl.md#member_value) Key of X holds V.
 
 > A pattern off an external value: each name is a member of it, the rest is
 > another object of the same origin.
@@ -1403,17 +1404,17 @@ A node
 
 - comes out of a module Spec if all of:
   - a node D [destructures from outside](#external_destructured) at it some name in some file;
-  - the `init` of D [points to](#may_be_node) a node X;
+  - the `init` of D [points to](js-concat.rofl.md#may_be_node) a node X;
   - X [comes out of](#external_value) Spec.
 - points to a node Prop if all of:
   - a node D [destructures from outside](#external_destructured) at Prop Local in File;
-  - the `init` of D [points to](#may_be_node) a node X;
+  - the `init` of D [points to](js-concat.rofl.md#may_be_node) a node X;
   - X [comes out of](#external_value) some module;
   - it [reads](#ident_in) Local in File;
   - it [sees](#sees_binder) D.
 - comes out of a module Spec if all of:
   - a node D [holds a rest](#rest_in_pattern) it in some file;
-  - the `init` of D [points to](#may_be_node) a node X;
+  - the `init` of D [points to](js-concat.rofl.md#may_be_node) a node X;
   - X [comes out of](#external_value) Spec.
 
 > A function handed to an external call as an argument is called back with
@@ -1422,10 +1423,10 @@ A node
 
 <a id="callback_param"></a>An [identifier](#noun-identifier) is called back with in a [function](js-callgraph.rofl.md#fn_node) F from a module Spec if all of:
   - a node X [comes out of](#external_value) Spec;
-  - a node G [points to](#may_be_node) X;
+  - a node G [points to](js-concat.rofl.md#may_be_node) X;
   - the `callee` of an [invocation](#noun-invocation) C is G;
   - a node Y [is among the](#ast_child) `arguments` of C;
-  - Y [points to](#may_be_node) F;
+  - Y [points to](js-concat.rofl.md#may_be_node) F;
   - it [is among the](#ast_child) `params` of F.
 
 A node
@@ -1509,26 +1510,26 @@ A [sequence](#noun-sequence)
 - points to a node N if all of:
   - an index I is the greatest J such that (some node is the J-th of the `expressions` of it);
   - a node X is the I-th of the `expressions` of it;
-  - X [points to](#may_be_node) N.
+  - X [points to](js-concat.rofl.md#may_be_node) N.
 - may be the literal V if all of:
   - an index I is the greatest J such that (some node is the J-th of the `expressions` of it);
   - a node X is the I-th of the `expressions` of it;
-  - X [may be the literal](#may_be_lit) V.
+  - X [may be the literal](js-concat.rofl.md#may_be_lit) V.
 
 E points to a node N if all of:
-  - a node X [points to](#may_be_node) N;
+  - a node X [points to](js-concat.rofl.md#may_be_node) N;
   - the `consequent` or `alternate` of E is X;
   - E is a [conditional](#noun-conditional).
 
 E may be the literal V if all of:
-  - a node X [may be the literal](#may_be_lit) V;
+  - a node X [may be the literal](js-concat.rofl.md#may_be_lit) V;
   - the `consequent` or `alternate` of E is X;
   - E is a [conditional](#noun-conditional).
 
 An [await](#noun-await)
 
-- points to a node N if a node X [points to](#may_be_node) N and the `argument` of it is X.
-- may be the literal V if a node X [may be the literal](#may_be_lit) V and the `argument` of it is X.
+- points to a node N if a node X [points to](js-concat.rofl.md#may_be_node) N and the `argument` of it is X.
+- may be the literal V if a node X [may be the literal](js-concat.rofl.md#may_be_lit) V and the `argument` of it is X.
 
 ## 14. GENERATORS. What a generator YIELDS is not what it returns: `for-of`
 
@@ -1566,13 +1567,13 @@ Y points to a node X either:
    - G [is nearest to](#nearest_v) Y;
    - Y is a [yield](#noun-yield);
    - [the attribute](#ast_attr) `delegate` of Y is `false`;
-   - V [points to](#may_be_node) X;
+   - V [points to](js-concat.rofl.md#may_be_node) X;
 2. if all of:
    - Y is a [yield](#noun-yield);
    - [the attribute](#ast_attr) `delegate` of Y is `true`;
    - the `argument` of Y [resolves to](js-callgraph.rofl.md#resolves) Inner;
    - Inner [returns](#returns) a node E;
-   - E [points to](#may_be_node) X.
+   - E [points to](js-concat.rofl.md#may_be_node) X.
 
 > FOR-OF: the loop variable takes the elements. An array is a VALUE (through
 > `may_be_node`); a generator is a CALL, read at the site, because its returns
@@ -1600,28 +1601,31 @@ A node
   - S [loops with](#for_of_use) some name at it;
   - S [iterates](#for_of_src) a node X;
   - X [has an element](#iter_elem) E;
-  - E [points to](#may_be_node) N.
+  - E [points to](js-concat.rofl.md#may_be_node) N.
 - may be the literal V if all of:
   - S [loops with](#for_of_use) some name at it;
   - S [iterates](#for_of_src) a node X;
   - X [has an element](#iter_elem) E;
-  - E [may be the literal](#may_be_lit) V.
+  - E [may be the literal](js-concat.rofl.md#may_be_lit) V.
 
 E points to a node N if all of:
-  - a node X [points to](#may_be_node) N;
+  - a node X [points to](js-concat.rofl.md#may_be_node) N;
   - the `left` or `right` of E is X;
   - E is a [logical](#noun-logical).
 
 E may be the literal V if all of:
-  - a node X [may be the literal](#may_be_lit) V;
+  - a node X [may be the literal](js-concat.rofl.md#may_be_lit) V;
   - the `left` or `right` of E is X;
   - E is a [logical](#noun-logical).
 
 A node
 
-- points to a node N if a node X [points to](#may_be_node) N, the `right` of it is X, and it [is plain](#plain_assign).
+- points to a node N if all of:
+  - a node X [points to](js-concat.rofl.md#may_be_node) N;
+  - the `right` of it is X;
+  - it [is plain](#plain_assign).
 - may be the literal V if all of:
-  - a node X [may be the literal](#may_be_lit) V;
+  - a node X [may be the literal](js-concat.rofl.md#may_be_lit) V;
   - the `right` of it is X;
   - it [is plain](#plain_assign).
 
@@ -1696,7 +1700,7 @@ In the flow:
 
 A node
 
-- <a id="decorated_by"></a>is replaced by its decorator with a node N if it [is decorated by](js-callgraph.rofl.md#decorates) a node D and D [points to](#may_be_node) N.
+- <a id="decorated_by"></a>is replaced by its decorator with a node N if it [is decorated by](js-callgraph.rofl.md#decorates) a node D and D [points to](js-concat.rofl.md#may_be_node) N.
 - points to a node N if all of:
   - a node CD [is replaced by its decorator with](#decorated_by) N;
   - CD [is named](#class_named) Name in File;

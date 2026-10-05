@@ -30,8 +30,9 @@ Reads:
   - <a id="lib_global_prototype"></a>A name Name has the prototype P (`lib_global_prototype`)
   - <a id="lib_static"></a>A name Name has the static Key since a release Rel (`lib_static`)
 - from js-callgraph: [callee_of](js-callgraph.rofl.md#callee_of), [fn_file](js-callgraph.rofl.md#fn_file), [fn_node](js-callgraph.rofl.md#fn_node), [transfer_site](js-callgraph.rofl.md#transfer_site), [unresolved_call](js-callgraph.rofl.md#unresolved_call)
+- from js-concat, in the flow: [may_be_node](js-concat.rofl.md#may_be_node)
 - from js-dataflow: [ident_in](js-dataflow.rofl.md#ident_in)
-- from js-dataflow, in the flow: [may_be_node](js-dataflow.rofl.md#may_be_node), [selects](js-dataflow.rofl.md#selects)
+- from js-dataflow, in the flow: [selects](js-dataflow.rofl.md#selects)
 - from js-env, in the audit: [reaches](js-env.rofl.md#reaches)
 - from js-model: [ast_node](js-model.rofl.md#ast_node)
 - from js-structure: [ast_name](js-structure.rofl.md#ast_name)
@@ -253,7 +254,7 @@ In the flow:
   - Form [is constructible](#constructible_form).
 
 The prototype of a node E is P if all of:
-  - E [points to](js-dataflow.rofl.md#may_be_node) a node X;
+  - E [points to](js-concat.rofl.md#may_be_node) a node X;
   - X [is an instance](#es_instance) of Name from some release;
   - Name [has the prototype](#lib_global_prototype) P.
 
@@ -273,7 +274,7 @@ In the audit:
 <a id="es_instance_unattributed"></a>C calls an unattributed instance member Key of Name if all of:
   - C [is unresolved](js-callgraph.rofl.md#unresolved_call) with some shape;
   - [the callee](js-callgraph.rofl.md#callee_of) of C is a node N;
-  - the `object` of N [points to](js-dataflow.rofl.md#may_be_node) a node X;
+  - the `object` of N [points to](js-concat.rofl.md#may_be_node) a node X;
   - X [is an instance](#es_instance) of Name from some release;
   - N [selects](js-dataflow.rofl.md#selects) Key;
   - unless Name [has the prototype](#lib_global_prototype) some prototype.

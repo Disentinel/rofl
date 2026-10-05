@@ -43,6 +43,7 @@ world_omits(w_ledger, "facts/js-resolve.rofl").
 world_omits(w_ledger, "facts/js-shapes.rofl").
 world_omits(w_ledger, "facts/js-statements.rofl").
 world_omits(w_ledger, "rules/js-attrs.rofl").
+world_omits(w_ledger, "rules/js-concat.rofl").
 world_omits(w_ledger, "rules/js-callgraph.rofl").
 world_omits(w_ledger, "rules/js-controlflow.rofl").
 world_omits(w_ledger, "rules/js-dataflow.rofl").
@@ -130,6 +131,7 @@ world_omits(w_queue, "facts/js-attrs.rofl").
 world_omits(w_queue, "facts/js-env.rofl").
 world_omits(w_queue, "facts/js-lib-surface.rofl").
 world_omits(w_queue, "rules/js-attrs.rofl").
+world_omits(w_queue, "rules/js-concat.rofl").
 world_omits(w_queue, "rules/js-callgraph.rofl").
 world_omits(w_queue, "rules/js-controlflow.rofl").
 world_omits(w_queue, "rules/js-dataflow.rofl").
@@ -223,6 +225,7 @@ world_omits(w_js_corpus, "facts/js-env.rofl").
 world_omits(w_js_corpus, "facts/js-lib-surface.rofl").
 world_omits(w_js_corpus, "facts/js-resolve.rofl").
 world_omits(w_js_corpus, "rules/js-attrs.rofl").
+world_omits(w_js_corpus, "rules/js-concat.rofl").
 world_omits(w_js_corpus, "rules/js-env-api.rofl").
 world_omits(w_js_corpus, "rules/js-env.rofl").
 world_omits(w_js_corpus, "rules/js-modules.rofl").
@@ -317,6 +320,7 @@ world_omits(w_js_effects, "facts/js-lib-surface.rofl").
 world_omits(w_js_effects, "facts/js-resolve.rofl").
 world_omits(w_js_effects, "facts/js-cost.rofl").
 world_omits(w_js_effects, "rules/js-attrs.rofl").
+world_omits(w_js_effects, "rules/js-concat.rofl").
 world_omits(w_js_effects, "rules/js-env-api.rofl").
 world_omits(w_js_effects, "rules/js-env.rofl").
 world_omits(w_js_effects, "rules/js-modules.rofl").
@@ -427,6 +431,7 @@ world_omits(w_js_ambient, "facts/worklist.rofl").
 -- each their own instrument over their own subject; nothing here reads them
 world_omits(w_js_ambient, "facts/js-attrs.rofl").
 world_omits(w_js_ambient, "rules/js-attrs.rofl").
+world_omits(w_js_ambient, "rules/js-concat.rofl").
 world_omits(w_js_ambient, "facts/js-resolve.rofl").
 world_omits(w_js_ambient, "rules/js-resolve.rofl").
 world_omits(w_js_ambient, "facts/js-cost.rofl").

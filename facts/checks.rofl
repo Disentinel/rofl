@@ -3561,6 +3561,39 @@ check_file("vscode_side_effects", "rules/js-host.rofl").
 check_file("vscode_side_effects", "rules/js-ambient.rofl").
 check_file("vscode_side_effects", "rules/js-attrs.rofl").
 check_file("vscode_side_effects", "rules/js-modules.rofl").
+check_file("vscode_side_effects", "rules/js-concat.rofl").
 check_file("vscode_side_effects", "examples/checks/vscode-mini-facts.rofl").
 check_file("vscode_side_effects", "examples/vscode/side-effects.rofl").
 check_file("vscode_side_effects", "examples/checks/vscode-side-effects-check.rofl").
+
+-- w_concat_value: a string built from parts (rules/js-concat.rofl), every entry point over examples/concat/src/entry.ts,
+-- the cap and the widening; every text, form and cut literal named in the check
+check_world("concat_value").
+check_file("concat_value", "facts/js-kinds.rofl").
+check_file("concat_value", "facts/js-callgraph.rofl").
+check_file("concat_value", "facts/js-dataflow.rofl").
+check_file("concat_value", "facts/js-modules.rofl").
+check_file("concat_value", "facts/js-shapes.rofl").
+check_file("concat_value", "facts/js-statements.rofl").
+check_file("concat_value", "facts/js-controlflow.rofl").
+check_file("concat_value", "facts/js-effects.rofl").
+check_file("concat_value", "facts/js-globals.rofl").
+check_file("concat_value", "facts/js-host.rofl").
+check_file("concat_value", "facts/js-host-surface.rofl").
+check_file("concat_value", "facts/js-lib-surface.rofl").
+check_file("concat_value", "facts/js-attrs.rofl").
+check_file("concat_value", "rules/js-structure.rofl").
+check_file("concat_value", "rules/js-dataflow.rofl").
+check_file("concat_value", "rules/js-model.rofl").
+check_file("concat_value", "rules/js-callgraph.rofl").
+check_file("concat_value", "rules/js-controlflow.rofl").
+check_file("concat_value", "rules/js-effects.rofl").
+check_file("concat_value", "rules/js-globals.rofl").
+check_file("concat_value", "rules/js-host.rofl").
+check_file("concat_value", "rules/js-ambient.rofl").
+check_file("concat_value", "rules/js-attrs.rofl").
+check_file("concat_value", "rules/js-modules.rofl").
+check_file("concat_value", "rules/js-concat.rofl").
+check_file("concat_value", "examples/checks/concat-facts.rofl").
+check_file("concat_value", "examples/checks/concat-check.rofl").
+
