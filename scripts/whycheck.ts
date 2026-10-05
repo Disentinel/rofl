@@ -51,7 +51,7 @@ const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..')
 const BOOT = path.join(ROOT, 'boot.rofl');
 const LOAD = path.join(ROOT, 'rust/target/release/rofl-load');
 
-type Op = 'why' | 'whyall' | 'whynot' | 'excise';
+type Op = 'why' | 'whyall' | 'whynot' | 'excise' | 'ask';
 type Q = { op: Op; query: string; depth?: number; nodes?: number };
 /** An answer: refused or not, its text, and for a whynot whether the
  *  literal holds (the protocol's `holds`; rofl-load prints text alone). */
@@ -110,7 +110,14 @@ const ASKED: Record<string, Q[]> = {
   demand_asked_hole: ['da_r(c)', 'da_nr(c)', 'da_q(c,z)', 'da_q(b,z)', 'da_d(k,z)', 'da_ng(b)'].map((q): Q => ({ op: 'whynot', query: q })),
   demand_cycle: ['dy_r(4)', 'dy_n(3)', 'dy_d(9,5)', 'dy_d(4,9)'].flatMap((q): Q[] => [{ op: 'whynot', query: q }, { op: 'why', query: q }]),
   demand_chain: ['dc_r(700)', 'dc_missed(700)'].map((q): Q => ({ op: 'whynot', query: q })),
-  demand_cycle_fixpoint: ['dw_r(3)', 'dw_n(4)', 'dw_d(3,9)', 'dv_n(0)', 'dv_n(4)', 'dv_d(0,5)'].flatMap((q): Q[] => [{ op: 'whynot', query: q }, { op: 'why', query: q }]),
+  demand_cycle_fixpoint: [
+    ...['dw_r(3)', 'dw_n(4)', 'dw_d(3,9)', 'dv_n(0)', 'dv_n(4)', 'dv_d(0,5)'].flatMap((q): Q[] => [{ op: 'whynot', query: q }, { op: 'why', query: q }]),
+    ...['dw_d(X,5)', 'dw_d(3,Y)', 'dw_d(X,X)', 'dv_d(X,5)'].map((q): Q => ({ op: 'ask', query: q })),
+  ],
+  demand_query: [
+    ...['dq_o(6,9)', 'dq_o(4,9)', 'dq_o(4,1)', 'dq_c(4)'].flatMap((q): Q[] => [{ op: 'whynot', query: q }, { op: 'why', query: q }]),
+    ...['dq_o(X,9)', 'dq_o(6,Y)', 'dq_o(4,Y)', 'dq_o(4,9)', 'dq_o(4,1)', 'dq_o(X,Y)', 'dq_r(X)', 'dq_c(X)'].map((q): Q => ({ op: 'ask', query: q })),
+  ],
   demand_neg_decided: ['dz_o(0,1)', 'dz_nro(0)', 'dz_nro(2)', 'dz_ro(2)'].flatMap((q): Q[] => [{ op: 'whynot', query: q }, { op: 'why', query: q }]),
 };
 
@@ -197,6 +204,16 @@ function rustQuestions(w: World): Q[] {
   return qs;
 }
 
+/** AN ASK, as one text both engines can be held to: the rows as `V = x` (variables in name order) and the shrugs with their
+ *  lines, each sorted, then whether the rows may be short of an answer. rofl-serve's `ask` against src/api.ts `query`
+ *  (f_ask_read_the_store_where_query_unfolded); rofl-load has no ask, so it is asked over the protocol alone. */
+const askText = (rows: string[], shrugs: string[], partial: boolean): string =>
+  [...[...rows].sort().map((r) => `row ${r}`), ...[...shrugs].sort().map((x) => `shrug ${x}`), `partial ${partial}`].join('\n');
+const bound = (vars: string[], row: string[]): string => {
+  const at = vars.map((_, i) => i).sort((a, b) => (vars[a] < vars[b] ? -1 : vars[a] > vars[b] ? 1 : 0));
+  return vars.length === 0 ? 'true' : at.map((i) => `${vars[i]} = ${row[i]}`).join(', ');
+};
+
 const exciseText = (removed: string[], added: string[]): string => {
   const out = [...removed.map((k) => `- ${k}`), ...added.map((k) => `+ ${k}`)];
   return out.length ? out.join('\n') : '(no change)';
@@ -213,6 +230,11 @@ function expected(r: Rofl, q: Q, budget?: number): A {
       const cyc = a0.ok && q.op === 'why' ? cycleProblem(r, a0.text) : null;
       const a = cyc === null ? a0 : { ...a0, text: `CYCLE: ${cyc}\n${a0.text}` };
       return dag(a, () => r.why(q.query, { budget, all: q.op === 'whyall', tree: true }).text);
+    }
+    if (q.op === 'ask') {
+      const a = r.query(q.query, { budget });
+      if (a.error !== undefined) return { ok: false, text: a.error };
+      return { ok: true, text: askText(a.rows.map((x) => x.text), (a.shrugs ?? []).map((x) => `${x.text} :: ${x.line}`), a.partial) };
     }
     if (q.op === 'whynot') {
       // the aggregate evaluator's whynot hands back the parser's refusal as its text
@@ -295,6 +317,10 @@ async function served(port: RoflPort, w: World, qs: Q[]): Promise<A[]> {
       try {
         if (q.op === 'why' || q.op === 'whyall') out.push({ ok: true, text: await s.why(q.query, q.op === 'whyall' ? { all: true } : {}) });
         else if (q.op === 'whynot') { const x = await s.whynot(q.query, { depth: q.depth, nodes: q.nodes }); out.push({ ok: true, text: x.text, holds: x.holds }); }
+        else if (q.op === 'ask') {
+          const x = await s.ask(q.query) as unknown as { vars: string[]; rows: string[][]; partial?: boolean; shrugs?: { row: string[]; line: string }[] };
+          out.push({ ok: true, text: askText(x.rows.map((r) => bound(x.vars, r)), (x.shrugs ?? []).map((h) => `${bound(x.vars, h.row)} :: ${h.line}`), x.partial ?? false) });
+        }
         else { const x = await s.excise(q.query); out.push({ ok: true, text: exciseText(x.removed, x.added) }); }
       } catch (e) { out.push({ ok: false, text: q.op === 'excise' ? `error: ${(e as Error).message}` : (e as Error).message }); }
     }
@@ -319,7 +345,7 @@ function cli(w: World, qs: Q[], want: A[]): { texts: (string | undefined)[]; exi
   const texts: (string | undefined)[] = new Array(qs.length).fill(undefined);
   const exits = new Map<string, number>(), problems: string[] = [];
   const groups = new Map<string, number[]>();
-  qs.forEach((_, i) => { const g = groupOf(qs, want, i); groups.set(g, [...(groups.get(g) ?? []), i]); });
+  qs.forEach((q, i) => { if (q.op === 'ask') return; const g = groupOf(qs, want, i); groups.set(g, [...(groups.get(g) ?? []), i]); });
   const opts = [...(w.ticks ? ['--ticks', String(w.ticks)] : []), ...(w.budget ? ['--budget', String(w.budget)] : []),
     ...(w.space ? ['--space', String(w.space)] : []), ...(w.strata ? ['--strata'] : []), ...(w.deltaFirst ? ['--delta-first'] : []),
     ...(w.retain !== undefined ? ['--retain', String(w.retain)] : []), ...(w.retract ?? []).flatMap((f) => ['--retract', f]), ...(w.explain ? ['--explain'] : []),
@@ -398,10 +424,19 @@ async function check(ws: World[], firstName: string): Promise<Report> {
       if (servable(w)) {
         const got = await served(port, w, qs);
         qs.forEach((q, i) => { const d = same(q, want[i], got[i]); if (d) rep.bad.push(`${w.name} serve ${q.op} ${JSON.stringify(q.query)}${q.depth !== undefined ? ` depth=${q.depth} nodes=${q.nodes}` : ''}: ${d}`); });
-      } else rep.loadOnly.push(w.name);
+      } else {
+        rep.loadOnly.push(w.name);
+        // an ask reads no explained row and no world below's: it goes over the protocol whatever the world is
+        const ai = qs.flatMap((q, i) => (q.op === 'ask' ? [i] : []));
+        if (ai.length > 0 && belowFiles(w.files).length === 0) {
+          const got = await served(port, w, ai.map((i) => qs[i]));
+          ai.forEach((i, j) => { const d = same(qs[i], want[i], got[j]); if (d) rep.bad.push(`${w.name} serve ask ${JSON.stringify(qs[i].query)}: ${d}`); });
+        }
+      }
       const { texts, exits, problems } = cli(w, qs, want);
       for (const p of problems) rep.bad.push(`${w.name} load: ${p}`);
       qs.forEach((q, i) => {
+        if (q.op === 'ask') return;
         const at = `${w.name} load ${q.op} ${JSON.stringify(q.query)}${q.depth !== undefined ? ` depth=${q.depth} nodes=${q.nodes}` : ''}`;
         // a run that exited badly is reported once, above; any other missing answer is a fault of its own
         if (texts[i] === undefined) { if (exits.has(groupOf(qs, want, i))) rep.bad.push(`${at}: no answer`); return; }

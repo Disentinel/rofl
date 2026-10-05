@@ -915,6 +915,8 @@ export class AggEval {
   /** The calls of `demandCyclic` relations being unfolded, each with its answers so far: a call met again reads them, and the first one
    *  unfolds again until they stop growing. `neg` is how many negations were being decided when it was made. */
   private demandCalls: { key: string; neg: number; answers: [Term[], PremRef][]; keys: Set<string>; read: boolean }[] = [];
+  /** The facts a question's unfolding made, taken out when it is answered. */
+  private askedMade: string[] = [];
   /** How many negations are being decided: a call met again under one more than when it was first made cannot read answers that may still grow. */
   private negLevel = 0;
   /** The rules being unfolded at each depth, beside `demandHeads`. */
@@ -927,12 +929,25 @@ export class AggEval {
   private asked: Unknown[] = [];
 
   /** `f` answering a question, with what its unfoldings read that a hole left unknown. */
-  answering<T>(f: () => T): [T, Unknown[]] {
-    const was = this.asking;
+  answering<T>(f: () => T): [T, Unknown[], Unknown[]] {
+    const was = this.asking, saved = this.renameCounter;
     this.asking = true;
+    this.renameCounter = 0;
     this.asked = [];
-    try { return [f(), this.asked]; } finally { this.asking = was; this.asked = []; this.demandTrail = []; }
+    this.demandTrail = [];
+    try { const t = f(); return [t, this.asked, this.demandTrail]; } finally {
+      this.asking = was; this.renameCounter = saved; this.asked = []; this.demandTrail = []; this.forgetAsked();
+    }
   }
+
+  /** The facts a question made, out of the store. */
+  private forgetAsked(): void {
+    for (const k of this.askedMade) this.store.remove(k);
+    this.askedMade = [];
+  }
+
+  /** Whether `rel` is answered on demand and unfolded at a call: its answers are not all in the store. */
+  answersOpen(rel: string): boolean { return this.demandRels.some(([r]) => r === rel) && !this.demandClosed.has(rel); }
   private assume: Assumption | null = null;
   private bootstrap: boolean;
   answer: RuleAnswer = emptyAnswer();
@@ -6489,6 +6504,13 @@ export class AggEval {
       const persp = walk(head.persp, sol.s);
       const args = head.args.map((a) => resolve(a, sol.s));
       if (persp.k === 'a' && args.every(isGround)) {
+        // A QUESTION LEAVES THE WORLD AS IT FOUND IT: what it finds is held for the question (a why renders it) and taken out after
+        if (this.asking && !this.firing) {
+          const [isNew, id] = this.put(call.rel, persp.name, args, F_TICK);
+          if (isNew) { this.support(id, { ruleId: r.id, tick: this.store.tick, prems: sol.prems }); this.askedMade.push(id); }
+          out.push([sol.s, { t: 'fact', key: id }]);
+          continue;
+        }
         const [isNew, id] = this.put(call.rel, persp.name, args, F_TICK);
         const tick = this.store.tick;
         if (this.support(id, { ruleId: r.id, tick, prems: sol.prems })) {
@@ -6922,8 +6944,35 @@ export class AggEval {
         if (this.plain) throw new Error(text);
         return text;
       }
-      throw new Error(`${key} does not hold; try: whynot ${this.plain ? shown ?? key : key}`);
+      // AN ANSWER UNFOLDED AT A CALL is not stored: it is asked as whynot asks it, explained from what the question found, and taken out again
+      const asked = this.whyAsked(lit, key);
+      if (asked !== null) {
+        if (this.plain) throw new Error(asked);
+        return asked;
+      }
+      if (!this.alive(key)) throw new Error(`${key} does not hold; try: whynot ${this.plain ? shown ?? key : key}`);
     }
+    try { return this.whyRendered(lit, key, members); } finally { this.forgetAsked(); }
+  }
+
+  /** `why` of a literal of a relation unfolded at a call, not in the store: the question leaves the fact it made for the tree, or,
+   *  where it found none and read what a hole left unknown, the shrug's text. */
+  private whyAsked(lit: Lit, key: string): string | null {
+    if (!this.answersOpen(lit.rel)) return null;
+    const asking = this.asking;
+    this.asking = true;
+    this.asked = [];
+    let asked: Unknown[];
+    try { this.matchPremise(lit, new Map(), 0, null); asked = this.asked; } catch (e) { this.forgetAsked(); throw e; } finally { this.asking = asking; this.asked = []; this.demandTrail = []; }
+    if (this.alive(key)) return null;
+    const lines = [''];
+    try { this.askedLines(key, asked, lines); } finally { this.forgetAsked(); }
+    if (lines.length === 1) return null;
+    lines[0] = `${key}: no answer, a shrug`;
+    return lines.join('\n');
+  }
+
+  private whyRendered(lit: Lit, key: string, members: number): string {
     this.pastRows = null;
     this.whyScans = 0;
     this.whyDone = this.dag ? new Set<string>() : { has: () => false, add: () => null, clear: () => undefined };
@@ -7368,7 +7417,7 @@ export class AggEval {
     const saved = this.renameCounter, asking = this.asking;
     this.renameCounter = 0;
     this.asking = true;
-    try { return this.whynotAt(lit, b, shown); } finally { this.renameCounter = saved; this.asking = asking; this.asked = []; this.demandTrail = []; }
+    try { return this.whynotAt(lit, b, shown); } finally { this.renameCounter = saved; this.asking = asking; this.asked = []; this.demandTrail = []; this.forgetAsked(); }
   }
 
   private whynotAt(lit: Lit, b: { maxDepth: number; maxNodes: number }, shown?: string): [boolean, string] {

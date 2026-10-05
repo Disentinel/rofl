@@ -117,6 +117,10 @@ pub struct Answer {
     /// the bindings each names, `_` where it does not know, in `vars` order,
     /// and its line (`Eval::shrug_line`).
     pub shrugs: Vec<(Vec<String>, String)>,
+    /// The rows may be short of an answer: the evaluation was cut, or an
+    /// answer unfolded at a call was left unknown and no shrug row names it
+    /// (src/api.ts `query`).
+    pub partial: bool,
 }
 
 impl Session {
@@ -760,51 +764,88 @@ impl Session {
             }
         }
 
-        let cand = self
-            .eval
-            .store
-            .arg_matches(&self.eval.h, rel, persp_opt, args.len(), &pos, &vals);
-        let probed = cand.is_some();
-        let ids = match cand {
-            Some(v) => v,
-            None => match persp_opt {
-                Some(p) => self.eval.store.rel_persp(&self.eval.h, rel, p),
-                None => self.eval.store.rel_all(&self.eval.h, rel),
-            },
-        };
-        let scanned = ids.len();
+        // A RELATION UNFOLDED AT A CALL is answered as the reference's `query` answers it: its rules
+        // unfolded under the question, which leaves the world as it was (`Eval::answer_on_demand`)
+        let mut partial = self.eval.store.partial_eval;
+        let (rows, keys, scanned, probed) = if self.eval.answers_open(rel) && brk!("ask_store_only" => false; true) {
+            let el = self.one_lit(query)?;
+            let (sols, unnamed) = self.eval.answer_on_demand(&el).map_err(|h| describe(&h))?;
+            partial |= unnamed;
+            let mut named: Vec<usize> = (0..vars.len()).collect();
+            named.sort_by(|a, b| crate::term::cmp_js(&vars[*a], &vars[*b]));
+            let mut got: Vec<(String, Vec<String>, String)> = Vec::new();
+            for sol in &sols {
+                let row: Vec<String> = vars
+                    .iter()
+                    .map(|v| {
+                        let vt = self.eval.h.var(v);
+                        let t = crate::term::resolve(&mut self.eval.h, vt, sol);
+                        let mut o = String::new();
+                        self.eval.h.canon_term(t, &mut o);
+                        o
+                    })
+                    .collect();
+                let text = if vars.is_empty() { "true".to_string() } else { named.iter().map(|&i| format!("{} = {}", vars[i], row[i])).collect::<Vec<_>>().join(", ") };
+                if got.iter().any(|g| g.0 == text) {
+                    continue;
+                }
+                let fa: Vec<Term> = args.iter().map(|a| crate::term::resolve(&mut self.eval.h, *a, sol)).collect();
+                let mut k = String::new();
+                write_fact_key(&self.eval.h, rel, persp, &fa, &mut k);
+                got.push((text, row, k));
+            }
+            got.sort_by(|a, b| crate::term::cmp_js(&a.0, &b.0));
+            let n = got.len();
+            let (rows, keys): (Vec<Vec<String>>, Vec<String>) = got.into_iter().map(|(_, r, k)| (r, k)).unzip();
+            (rows, keys, n, false)
+        } else {
+            let cand = self
+                .eval
+                .store
+                .arg_matches(&self.eval.h, rel, persp_opt, args.len(), &pos, &vals);
+            let probed = cand.is_some();
+            let ids = match cand {
+                Some(v) => v,
+                None => match persp_opt {
+                    Some(p) => self.eval.store.rel_persp(&self.eval.h, rel, p),
+                    None => self.eval.store.rel_all(&self.eval.h, rel),
+                },
+            };
+            let scanned = ids.len();
 
-        // `arg_matches` promises a SUPERSET in no order (src/store.ts:477), so
-        // every candidate is re-checked here. Skipping this is how a query
-        // engine reports rows its index merely suggested.
-        let mut rows = Vec::new();
-        let mut keys = Vec::new();
-        for id in ids {
-            if !self.eval.store.alive(id) {
-                continue;
+            // `arg_matches` promises a SUPERSET in no order (src/store.ts:477), so
+            // every candidate is re-checked here. Skipping this is how a query
+            // engine reports rows its index merely suggested.
+            let mut rows = Vec::new();
+            let mut keys = Vec::new();
+            for id in ids {
+                if !self.eval.store.alive(id) {
+                    continue;
+                }
+                let fa = self.eval.store.args(id);
+                if fa.len() != args.len() {
+                    continue;
+                }
+                if pos.iter().zip(&vals).any(|(&i, v)| fa[i] != *v) {
+                    continue;
+                }
+                if same.iter().any(|&(a, b)| fa[a] != fa[b]) {
+                    continue;
+                }
+                let mut row = Vec::with_capacity(col.len());
+                for &i in &col {
+                    let mut s = String::new();
+                    self.eval.h.canon_term(fa[i], &mut s);
+                    row.push(s);
+                }
+                let r = self.eval.store.rec(id);
+                let mut k = String::new();
+                write_fact_key(&self.eval.h, r.rel, r.persp, fa, &mut k);
+                rows.push(row);
+                keys.push(k);
             }
-            let fa = self.eval.store.args(id);
-            if fa.len() != args.len() {
-                continue;
-            }
-            if pos.iter().zip(&vals).any(|(&i, v)| fa[i] != *v) {
-                continue;
-            }
-            if same.iter().any(|&(a, b)| fa[a] != fa[b]) {
-                continue;
-            }
-            let mut row = Vec::with_capacity(col.len());
-            for &i in &col {
-                let mut s = String::new();
-                self.eval.h.canon_term(fa[i], &mut s);
-                row.push(s);
-            }
-            let r = self.eval.store.rec(id);
-            let mut k = String::new();
-            write_fact_key(&self.eval.h, r.rel, r.persp, fa, &mut k);
-            rows.push(row);
-            keys.push(k);
-        }
+            (rows, keys, scanned, probed)
+        };
 
         let lit = self.one_lit(query)?;
         let mut shrugs: Vec<(Vec<String>, String)> = Vec::new();
@@ -858,7 +899,7 @@ impl Session {
                 }
             }
         }
-        Ok(Answer { vars, rows, keys, scanned, probed, micros: t0.elapsed().as_micros(), shrugs })
+        Ok(Answer { vars, rows, keys, scanned, probed, micros: t0.elapsed().as_micros(), shrugs, partial })
     }
 
     /// A parsed literal, in this world's vocabulary.

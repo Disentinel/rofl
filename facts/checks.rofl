@@ -357,6 +357,13 @@ check_file("demand_cycle", "examples/checks/demand-cycle.rofl").
 check_world("demand_cycle_fixpoint").
 check_file("demand_cycle_fixpoint", "examples/checks/demand-cycle-fixpoint.rofl").
 
+-- a question to a relation unfolded at a call unfolds it in both engines, and leaves the world as it found it
+-- (f_a_question_stored_what_it_unfolded, f_ask_read_the_store_where_query_unfolded)
+check_world("demand_query").
+check_file("demand_query", "examples/checks/demand-query.rofl").
+check_opt("demand_query", together, 1).
+check_opt("demand_query", explain, 1).
+
 -- a recursion through relations answered on demand reaches its fixpoint
 -- (f_a_recursion_through_demand_unfolded_without_end)
 check_world("demand_recursion").

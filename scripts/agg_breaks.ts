@@ -3752,6 +3752,48 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "asked_answers_kept",
+  "what": "a question's unfolding stores the answers it finds, and they stay in the world after it is answered",
+  "expect": {
+   "demand_query_ask": "the why after a whynot is another"
+  }
+ },
+ {
+  "id": "why_unasked",
+  "what": "why of a literal of a relation unfolded at a call reads the store only, and says it does not hold where whynot says it holds",
+  "expect": {
+   "demand_query": "lacks the row explained[$explain](why,dq_o(6,9),1,"
+  }
+ },
+ {
+  "id": "ts_why_unasked",
+  "what": "the TypeScript engine's why of a literal of a relation unfolded at a call reads the store only",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "if (!this.answersOpen(lit.rel)) return null;",
+    "if (true) return null;"
+   ]
+  ],
+  "expect": {
+   "demand_query": "lacks the row explained[$explain](why,dq_o(6,9),1,"
+  }
+ },
+ {
+  "id": "ask_store_only",
+  "what": "rust ask reads the store only for a relation unfolded at a call, where the reference's query unfolds it",
+  "expect": {
+   "demand_query_ask": "dq_o(6, 9) holds and is in no store"
+  }
+ },
+ {
+  "id": "asked_partial_unnamed",
+  "what": "rust ask is partial only when no shrug row answers the question, not when an answer it left unknown is named by none",
+  "expect": {
+   "demand_query_ask": "the row names dq_o(4, 1), not dq_o(4, _)"
+  }
+ },
+ {
   "id": "demand_cycle_unfolds",
   "what": "a call to a relation answered on demand with an open answer, met again inside its own unfolding, unfolds again, to the depth wall",
   "expect": {
@@ -7058,6 +7100,7 @@ function proofReports(b: Break, bin: string, control: boolean): Verdict {
  *  canonical state shows), passing with no fault and failing, with the sign in its output, with one planted. */
 const TESTS: Record<string, string> = {
   demand_scale: 'demand_scale',
+  demand_query_ask: 'demand_query',
 };
 
 function proofTests(b: Break, profile: string, control: boolean): Verdict {

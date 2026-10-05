@@ -946,6 +946,8 @@ pub struct Eval {
     /// answers so far: a call met again reads them, and the first one unfolds
     /// again until they stop growing (`DemandCall`).
     demand_calls: Vec<DemandCall>,
+    /// The facts a question's unfolding made, taken out when it is answered.
+    asked_made: Vec<FactId>,
     /// How many negations are being decided: a call met again under one more
     /// than when it was first made cannot read answers that may still grow.
     neg_level: usize,
@@ -1339,6 +1341,7 @@ impl Eval {
             demand_cyclic: HashSet::new(),
             demand_calls: Vec::new(),
             neg_level: 0,
+            asked_made: Vec::new(),
             demand_rule_ids: Vec::new(),
             asking: false,
             asked: Vec::new(),
@@ -10476,6 +10479,18 @@ impl Eval {
                 .collect();
             if persp.is_atom() && args.iter().all(|a| self.h.is_ground(*a)) {
                 let p = persp.as_atom().unwrap();
+                // A QUESTION LEAVES THE WORLD AS IT FOUND IT: what it finds is held for
+                // the question (a why renders it) and taken out after (`forget_asked`)
+                if self.asking && !self.firing && brk!("asked_answers_kept" => false; true) {
+                    let (id, is_new) = self.store.put(&self.h, call.rel, p, &args, F_TICK);
+                    if is_new {
+                        let tick = self.store.tick;
+                        self.store.support(id, Witness { rule: r.id, tick, prems: sol.prems.clone() });
+                        self.asked_made.push(id);
+                    }
+                    out.push((sol.s, PremRef::Fact(id)));
+                    continue;
+                }
                 let (id, is_new) = self.store.put(&self.h, call.rel, p, &args, F_TICK);
                 let tick = self.store.tick;
                 let new_firing = self.store.support(
@@ -12928,6 +12943,65 @@ impl Eval {
         self.why_text_with(lit, &WhyOpts::default(), shown)
     }
 
+    /// The facts a question made, out of the store.
+    fn forget_asked(&mut self) {
+        let ids = std::mem::take(&mut self.asked_made);
+        self.store.remove_many(&ids);
+    }
+
+    /// Whether `rel` is answered on demand and unfolded at a call: its answers are not all in the store.
+    pub fn answers_open(&self, rel: Sym) -> bool {
+        self.demand_rels.iter().any(|(r, _)| *r == rel) && !self.demand_closed.contains(&rel)
+    }
+
+    /// A QUESTION TO A RELATION UNFOLDED AT A CALL (`Session::ask`, the reference's `query`): its
+    /// answers, and whether some answer of it is left unknown that no shrug row names. The world
+    /// is left as it was found.
+    pub fn answer_on_demand(&mut self, lit: &Lit) -> Result<(Vec<Subst>, bool), Halt> {
+        let saved = std::mem::replace(&mut self.rename_counter, 0);
+        let asking = std::mem::replace(&mut self.asking, true);
+        self.asked.clear();
+        self.demand_trail.clear();
+        let got = self.match_premise(lit, &Subst::default(), 0, None);
+        self.asking = asking;
+        self.rename_counter = saved;
+        let asked = std::mem::take(&mut self.asked);
+        let trail = std::mem::take(&mut self.demand_trail);
+        self.forget_asked();
+        let sols: Vec<Subst> = got?.into_iter().map(|(s, _)| s).collect();
+        let partial = brk!("asked_partial_unnamed" => !asked.is_empty() && self.shrugs_of(lit).is_empty(); self.unknown_answers_unnamed(lit, &asked, &trail));
+        Ok((sols, partial))
+    }
+
+    /// Some answer of `lit` a question left unknown (a head of its call on the trail, or, with none,
+    /// an unknown read) that no shrug row names: a shrug names it when it has its known values and
+    /// leaves unknown at most what it leaves unknown.
+    fn unknown_answers_unnamed(&mut self, lit: &Lit, asked: &[Unknown], trail: &[Unknown]) -> bool {
+        let uv = self.unknown_value;
+        let ground: Vec<Option<Term>> = lit.args.iter().map(|a| Some(*a).filter(|a| self.h.is_ground(*a))).collect();
+        let heads: Vec<&[Term]> = trail
+            .iter()
+            .filter_map(|u| match u {
+                Unknown::Tuple(r, _, args) if *r == lit.rel && args.len() == lit.args.len() => Some(&args[..]),
+                _ => None,
+            })
+            .filter(|args| args.iter().zip(&ground).all(|(a, g)| g.is_none_or(|g| *a == g || *a == uv)))
+            .collect();
+        let rows: Vec<Vec<Term>> = self
+            .shrugs_of(lit)
+            .into_iter()
+            .filter_map(|(f, _)| match self.store.args(f)[0].kind() {
+                TermK::Func(i) if self.h.fname(i) == lit.rel => Some(self.h.fargs(i).to_vec()),
+                _ => None,
+            })
+            .collect();
+        if heads.is_empty() {
+            return !asked.is_empty() && rows.is_empty();
+        }
+        let names = |row: &[Term], head: &[Term]| row.len() == head.len() && row.iter().zip(head).all(|(r, h)| *r == uv || r == h);
+        heads.iter().any(|h| !rows.iter().any(|r| names(r, h)))
+    }
+
     /// `why`, with the number of an aggregate's members it prints: a digest of
     /// `WHY_MEMBERS` by default, and every one of them for `why all`.
     ///
@@ -12957,17 +13031,68 @@ impl Eval {
         let p = self.why_ground(lit)?;
         let mut key = String::new();
         write_fact_key(&self.h, lit.rel, p, &lit.args, &mut key);
-        let Some(id) = self.store.get(lit.rel, p, &lit.args) else {
-            let sh = self.shrugs_of(lit);
-            if !sh.is_empty() {
-                // a shrug is the answer to the aggregate evaluator, and the
-                // reason the plain one gives for not answering
-                let text = sh.into_iter().map(|(f, _)| self.shrug_why(f)).collect::<Vec<_>>().join("\n");
-                return if self.plain { Err(text) } else { Ok(text) };
+        let id = match self.store.get(lit.rel, p, &lit.args) {
+            Some(id) => id,
+            None => {
+                let sh = self.shrugs_of(lit);
+                if !sh.is_empty() {
+                    // a shrug is the answer to the aggregate evaluator, and the
+                    // reason the plain one gives for not answering
+                    let text = sh.into_iter().map(|(f, _)| self.shrug_why(f)).collect::<Vec<_>>().join("\n");
+                    return if self.plain { Err(text) } else { Ok(text) };
+                }
+                // AN ANSWER UNFOLDED AT A CALL is not stored: it is asked as whynot asks it,
+                // explained from what the question found, and taken out again
+                match self.why_asked(lit, p, &key) {
+                    Ok(Some(id)) => id,
+                    Ok(None) => {
+                        let asked = if self.plain { shown.unwrap_or(&key) } else { &key };
+                        return Err(format!("{key} does not hold; try: whynot {asked}"));
+                    }
+                    Err(Ok(text)) => return if self.plain { Err(text) } else { Ok(text) },
+                    Err(Err(e)) => return Err(e),
+                }
             }
-            let asked = if self.plain { shown.unwrap_or(&key) } else { &key };
-            return Err(format!("{key} does not hold; try: whynot {asked}"));
         };
+        let r = self.why_rendered(lit, id, o, key);
+        self.forget_asked();
+        r
+    }
+
+    /// `why` of a literal of a relation unfolded at a call, not in the store: the fact the question
+    /// made, or, where it found none and read what a hole left unknown, the shrug's text (`Err(Ok)`),
+    /// or the wall it met (`Err(Err)`).
+    fn why_asked(&mut self, lit: &Lit, p: Sym, key: &str) -> Result<Option<FactId>, Result<String, String>> {
+        if !self.answers_open(lit.rel) || brk!("why_unasked" => true; false) {
+            return Ok(None);
+        }
+        let asking = std::mem::replace(&mut self.asking, true);
+        self.asked.clear();
+        let got = self.match_premise(lit, &Subst::default(), 0, None);
+        self.asking = asking;
+        let asked = std::mem::take(&mut self.asked);
+        self.demand_trail.clear();
+        if let Err(h) = got {
+            self.forget_asked();
+            return Err(Err(match h {
+                Halt::Budget(r, _) => r.to_string(),
+                h => format!("{h:?}"),
+            }));
+        }
+        if let Some(id) = self.store.get(lit.rel, p, &lit.args) {
+            return Ok(Some(id));
+        }
+        let mut lines = vec![String::new()];
+        let shown = self.asked_lines(key, asked, &mut lines);
+        self.forget_asked();
+        if shown.is_err() || lines.len() == 1 {
+            return Ok(None);
+        }
+        lines[0] = format!("{key}: no answer, a shrug");
+        Err(Ok(lines.join("\n")))
+    }
+
+    fn why_rendered(&mut self, lit: &Lit, id: FactId, o: &WhyOpts, key: String) -> Result<String, String> {
         let o = WhyOpts { members: o.members, query: key };
         self.past_rows = None;
         self.why_scans = 0;
@@ -13906,6 +14031,7 @@ impl Eval {
         self.asking = asking;
         self.asked.clear();
         self.demand_trail.clear();
+        self.forget_asked();
         self.rename_counter = saved;
         r
     }

@@ -17,7 +17,7 @@ import {
 } from './reflect.ts';
 import { SHRUG, shrugsOf, shrugLine, shrugAtom, shown } from './shrug.ts';
 import { AggEval, DEFAULT_SPACE, Rejected, Wall, checkAggregatesDoor, checkSetPatternsDoor, checkOrderableAgg,
-  checkNextInBody, checkLatticeDecl, checkDominance, lowerOrder } from './aggeval.ts';
+  checkNextInBody, checkLatticeDecl, checkDominance, lowerOrder, type Unknown } from './aggeval.ts';
 import { encodeDominance } from './reflect.ts';
 import { checkStructureDecl, structureRows, declaredStructures, checkFunctions } from './structure.ts';
 
@@ -129,6 +129,17 @@ function describeHalt(e: unknown): string {
 function aggConstructs(c: Clause): boolean {
   const ivs = new Set(['ivadd', 'ivsub', 'ivmul', 'ivmeet']);
   return c.body.some((b) => b.t === 'agg' || (b.t === 'bi' && (b.op === 'in' || b.op === 'subset' || (b.op === 'is' && b.r.k === 'f' && ivs.has(b.r.name)))));
+}
+
+/** Some answer of `lit` a question left unknown that no shrug row names (`query`). */
+function unknownAnswersUnnamed(store: FactStore, lit: Lit, asked: boolean, trail: Unknown[]): boolean {
+  const uv = (t: Term): boolean => t.k === 'a' && t.name === '$unknown_value';
+  const heads = trail.flatMap((u) => (u.k === 'tuple' && u.rel === lit.rel && u.args.length === lit.args.length
+    && u.args.every((a, i) => !isGround(lit.args[i]) || uv(a) || canonTerm(a) === canonTerm(lit.args[i])) ? [u.args] : []));
+  const rows: Term[][] = [];
+  for (const { row } of shrugsOf(store, lit)) { const t = row.args[0]; if (t.k === 'f' && t.name === lit.rel) rows.push(t.args); }
+  if (heads.length === 0) return asked && rows.length === 0;
+  return heads.some((h) => !rows.some((r) => r.length === h.length && r.every((t, i) => uv(t) || canonTerm(t) === canonTerm(h[i]))));
 }
 
 export class Rofl {
@@ -839,9 +850,11 @@ export class Rofl {
     let ms: { s: Subst }[] = [];
     // below a call, what a hole left unknown is no answer
     let asked = false;
+    let trail: Unknown[] = [];
     try {
-      const [got, us] = ev.answering(() => ev.matchPremise(lit, new Map(), 0, null) as unknown[]);
+      const [got, us, heads] = ev.answering(() => ev.matchPremise(lit, new Map(), 0, null) as unknown[]);
       asked = us.length > 0;
+      trail = heads;
       ms = got.map((m) => (Array.isArray(m) ? { s: m[0] as Subst } : m as { s: Subst }));
     } catch (e) {
       if (e instanceof Wall) {
@@ -920,8 +933,10 @@ export class Rofl {
         break;
       }
     }
-    // an answer left unknown that no shrug row names: the rows may be short of it
-    if (asked && shrugs.size === 0) partial = true;
+    // AN ANSWER LEFT UNKNOWN THAT NO SHRUG ROW NAMES: the rows may be short of it. The answers left unknown are the heads of the
+    // call the question made that the trail holds (or, with none, any unknown read); a shrug names one when it has its known
+    // values and leaves unknown at most what it leaves unknown (rust/rofl `Eval::unknown_answers_unnamed`)
+    if (unknownAnswersUnnamed(this.store, lit, asked, trail)) partial = true;
     return { rows: [...rows.keys()].sort().map((k) => rows.get(k)!), partial, unpopulatable,
              ...(shrugs.size > 0 ? { shrugs: [...shrugs.keys()].sort().map((k) => shrugs.get(k)!) } : {}) };
   }

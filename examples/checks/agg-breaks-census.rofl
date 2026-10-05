@@ -1041,6 +1041,16 @@ brk("demand_fixpoint_once"). brk_kind("demand_fixpoint_once", switch).
 brk_expects("demand_fixpoint_once", "demand_cycle_fixpoint").
 brk("ts_demand_fixpoint_once"). brk_kind("ts_demand_fixpoint_once", ts).
 brk_expects("ts_demand_fixpoint_once", "demand_cycle_fixpoint").
+brk("asked_answers_kept"). brk_kind("asked_answers_kept", switch).
+brk_expects("asked_answers_kept", "demand_query_ask").
+brk("why_unasked"). brk_kind("why_unasked", switch).
+brk_expects("why_unasked", "demand_query").
+brk("ts_why_unasked"). brk_kind("ts_why_unasked", ts).
+brk_expects("ts_why_unasked", "demand_query").
+brk("ask_store_only"). brk_kind("ask_store_only", switch).
+brk_expects("ask_store_only", "demand_query_ask").
+brk("asked_partial_unnamed"). brk_kind("asked_partial_unnamed", switch).
+brk_expects("asked_partial_unnamed", "demand_query_ask").
 brk("demand_cycle_unfolds"). brk_kind("demand_cycle_unfolds", switch).
 brk_expects("demand_cycle_unfolds", "demand_cycle").
 brk("ts_demand_cycle_unfolds"). brk_kind("ts_demand_cycle_unfolds", ts).
@@ -1797,6 +1807,9 @@ switch_site("alg_flags_off", "rust/rofl/src/cell.rs").
 switch_site("and_tie_last", "rust/rofl/src/cell.rs").
 switch_site("args_are_expressions", "rust/rofl/src/rofl_parse.rs").
 switch_site("arith_wraps", "rust/rofl/src/engine.rs").
+switch_site("ask_store_only", "rust/rofl/src/session.rs").
+switch_site("asked_answers_kept", "rust/rofl/src/engine.rs").
+switch_site("asked_partial_unnamed", "rust/rofl/src/engine.rs").
 switch_site("asked_unholed", "rust/rofl/src/engine.rs").
 switch_site("below_drops_concluded_input", "rust/rofl/src/session.rs").
 switch_site("below_drops_shrugs", "rust/rofl/src/session.rs").
@@ -2225,6 +2238,7 @@ switch_site("why_dag_cell_off", "rust/rofl/src/engine.rs").
 switch_site("why_dag_off", "rust/rofl/src/engine.rs").
 switch_site("why_depth_cut", "rust/rofl/src/engine.rs").
 switch_site("why_hint_missing", "rust/rofl/src/engine.rs").
+switch_site("why_unasked", "rust/rofl/src/engine.rs").
 switch_site("whynot_dag_off", "rust/rofl/src/engine.rs").
 switch_site("whynot_hole_empty", "rust/rofl/src/engine.rs").
 switch_site("whynot_unranked_empty", "rust/rofl/src/engine.rs").

@@ -232,7 +232,7 @@ impl Server {
                 };
                 Ok(json!({
                     "vars": a.vars, "rows": a.rows, "keys": keys,
-                    "scanned": a.scanned, "probed": a.probed, "micros": a.micros,
+                    "scanned": a.scanned, "probed": a.probed, "micros": a.micros, "partial": a.partial,
                     "shrugs": a.shrugs.iter().map(|(row, line)| json!({ "row": row, "line": line })).collect::<Vec<_>>(),
                 }))
             }
