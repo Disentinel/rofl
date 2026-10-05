@@ -1193,3 +1193,18 @@ fn a_threshold_whose_outer_premise_goes_is_sealed_again() {
     let how = one_retraction(program, &["n(a)", "e(a, a)", "e(a, c)", "e(c, a)"], "n(a)");
     assert!(matches!(how, Retraction::Delta(_)), "{how:?}");
 }
+
+/// Found by tests/addition.rs (review seed 122): two aggregates conclude the same fact; the cell of one is changed by
+/// the retraction, and the fact goes with it whole, to be made again by the other.
+#[test]
+fn a_fact_two_aggregates_conclude_is_made_again_by_the_one_left() {
+    let program = "edb(e). edb(n). edb(w).\np1(X, M) :- n(X), M is max(V : w(X, V), e(X, _)).\np1(X, S) :- n(X), S is sum(V ; Y : e(X, Y), w(Y, V)).\np2(X, N) :- n(X), N is count(Y : p1(X, Y)).\n";
+    one_retraction(program, &["n(a)", "e(a, e)", "w(a, 1)", "w(a, 3)", "w(e, 3)"], "w(e, 3)");
+}
+
+/// Found by tests/addition.rs: a threshold staged `@next` whose outer premise goes keeps no cell.
+#[test]
+fn a_staged_threshold_whose_outer_premise_goes_is_sealed_again() {
+    let program = "edb(e). edb(n).\np2(X, X)@next :- n(X), at_least(2, Y : e(X, Y)).\n";
+    one_retraction(program, &["n(a)", "e(a, d)", "e(a, e)"], "n(a)");
+}

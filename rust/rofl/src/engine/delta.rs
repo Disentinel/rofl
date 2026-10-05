@@ -353,8 +353,9 @@ impl Eval {
                     if !staging {
                         return Err("a rule staged in a world with a lattice reads what rests on the fact");
                     }
-                    // it concludes no fact of this tick: what it staged is read again at the end
-                    if brk!("retract_stacked_plain" => false; inner || r.has_agg) {
+                    // it concludes no fact of this tick: what it staged is read again at the end (a threshold's cells too)
+                    let thr = brk!("retract_staged_thr_plain" => false; r.has_thr);
+                    if brk!("retract_stacked_plain" => false; inner || r.has_agg || thr) {
                         reset.insert(r.id);
                     }
                     staged.push(r.clone());
@@ -666,7 +667,7 @@ impl Eval {
                 comps.push(c);
             }
         };
-        let Readers { rels: crels, rules: crules, reset, staged: mut restage, .. } = rd;
+        let Readers { rels: crels, rules: mut crules, reset, staged: mut restage, .. } = rd;
         // A RULE READ AGAIN WHOLE THAT OWNS A CELL THE FACT SUPPORTS has no use for the subtraction: its cells are
         // sealed again with the rule, and a cell subtracted from first would be one a fresh evaluation does not
         // hold. (A rule read again whole that concludes what a changed cell's rule concludes needs nothing more:
@@ -714,7 +715,15 @@ impl Eval {
         let consumers = if crules.is_empty() {
             Vec::new()
         } else {
+            // (and every rule of their relations fires again: one that still holds such a fact, an aggregate of another
+            // rule beside the changed cell's, makes it again)
+            let rels: HashSet<Sym> = seeds[1..].iter().map(|g| self.store.rec(*g).rel).collect();
             brk!("retract_cell_reader_kept" => (); forced.extend(seeds.drain(1..)));
+            for r in self.rules.iter().filter(|r| rels.contains(&r.clause.head.rel) && r.clause.head.temporal != Temporal::Next && r.safe) {
+                if brk!("retract_seed_rules_unfired" => false; !crules.iter().any(|x| x.id == r.id)) {
+                    crules.push(r.clone());
+                }
+            }
             self.consumer_facts(&seeds, &forced, &crels, &HashSet::new(), &reset)?
         };
         self.store.remove_many(doomed);
