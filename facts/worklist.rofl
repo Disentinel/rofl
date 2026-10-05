@@ -3795,7 +3795,7 @@ work_needs(w_cmp_shape_rewrites_after_delta_first, w_cmp_delta_first).
 
 work(w_knobs_trim,
   "THE REMAINING KNOB REMOVALS (f_the_knob_audit_proposes_removals, docs/knobs.md; owner 2026-10-05: fewer flags so agents are not confused). Each is bounded and mirrors a removal already done in the audit commit. (1) ROFL_NO_DELTA_FIRST and the engine field delta_first with the written-order plan path, in engine.rs and engine/joinplan.rs, after the sessions editing engine.rs are merged; re-measure nothing, delta-first is the plan. (2) ROFL_COOL_PHASES in session.rs and its forward in runtime/port.ts. (3) one spelling each for the model and the root of npm run nb: ROFL_NB_HARNESS against --model, ROFL_NB_ROOT against --root. (4) the rofl-serve options without a caller: ask keys, ops facts, cool, cool_trail, reheat_trail, an inline seed on open, with docs/port-surface.md and runtime/port.ts. (5) the eight binaries without a consumer, with Cargo.toml, facts/depends.rofl and ledger_facts.rofl (regenerate the golden). (6) the fate of rofl-eval, run_corpus.sh and bytes_table.sh, and of eager_prov and unsettled_provenance if the tool goes. (7) test:agg:breaks --legacy. Each removal updates docs/knobs.md (verdict done) and, where it was in the CLAUDE.md block, facts/commands.rofl.").
-work_state(w_knobs_trim, open).
+work_state(w_knobs_trim, done).
 work_spawned(w_knobs_trim, f_the_knob_audit_proposes_removals).
 
 -- ===========================================================================
@@ -3822,3 +3822,13 @@ work_state(w_full_eval_indicator, open).
 work(w_incremental_addition,
   "GENERAL INCREMENTAL ADDITION (the owner, 2026-10-05, f_the_owner_settles_walls_promises_and_incremental point 3; settles the AFK / incremental-addition question): an evaluated Rust world takes new base facts and new rules without clearing derived facts and reaches the state of a fresh evaluation, byte for byte; non-monotone readers by retract-then-rederive, a full evaluation only with every reason named. In progress (agent, 2026-10-05).").
 work_state(w_incremental_addition, open).
+
+work(w_one_binary,
+  "ONE BINARY (the owner, 2026-10-05): rofl-load, rofl-serve, rofl-render and rofl-eval become one `rofl` with subcommands (`rofl load`, `rofl serve`, `rofl render`); rofl-eval's seed evaluation becomes `rofl load --seed` with the per-phase timing; the eight binaries with no consumer (ring1-lex, ring1-preds, ring1-tokens, rofl-lex, rofl-parse, rofl-parse-bench, rofl-session-bench, rofl-load-bench) are deleted. Update npm scripts, runtime/port.ts, the package exports, facts/commands.rofl and CLAUDE.md (generated), docs/knobs.md, Cargo.toml, facts/depends.rofl, the ledger notebook facts.").
+work_state(w_one_binary, open).
+work_needs(w_one_binary, w_incremental_addition).
+
+work(w_knobs_trim_decided,
+  "THE OWNER'S DECISIONS on f_the_knob_audit_proposes_removals (2026-10-05): remove ROFL_NO_DELTA_FIRST with the written-order plan path in engine.rs; remove ROFL_COOL_PHASES; keep the flags --model and --root and remove ROFL_NB_HARNESS and ROFL_NB_ROOT; remove test:agg:breaks --legacy; the rofl-serve protocol keeps only what hosts use (cool_many and the session verbs the notebook and whycheck send) — cool, cool_trail, reheat_trail, facts, the inline seed on open and ask.keys go, and the Rust tests that used them (tests/cool.rs, tests/program.rs, tests/agg_worlds.rs) call Session directly so the cooling/reheating byte-for-byte gate stays. Supersedes w_knobs_trim.").
+work_state(w_knobs_trim_decided, open).
+work_needs(w_knobs_trim_decided, w_incremental_addition).
