@@ -1925,7 +1925,7 @@ impl Eval {
         }
         let refused: HashSet<Sym> = self.lattices.keys().copied().chain(demand.iter().map(|(r, _)| *r)).collect();
         self.closures = find_closures(&self.rules, &refused);
-        self.closure_of = self.closures.iter().enumerate().flat_map(|(i, c)| [(c.base, (i, true)), (c.step, (i, false))]).collect();
+        self.closures_engage();
         self.rule_at = self.rules.iter().enumerate().map(|(i, r)| (r.id, i)).collect();
         self.widen_rec = self.widen_back_edges();
         self.widen_th = self.widen_thresholds();
@@ -2675,6 +2675,7 @@ impl Eval {
         self.clear_derived();
         self.store.vlisted = false;
         self.vclosure_engage();
+        self.closures_engage();
         self.shrug_reset();
         self.active.clear();
         self.staged.clear();
@@ -4450,6 +4451,21 @@ impl Eval {
             self.conclude(r, sol, &mut out)?;
         }
         Ok(out)
+    }
+
+    /// THE CLOSURES WALKED WHOLE: those whose relation holds no base fact. The walk starts from the edges, so a base
+    /// fact of the relation, which the step rule extends, is the rules' to fire (the two are fired as written).
+    pub(super) fn closures_engage(&mut self) {
+        let mut on: Vec<(usize, &Closure)> = Vec::new();
+        for (i, c) in self.closures.iter().enumerate() {
+            let mut based = false;
+            self.store.each_row(c.rel, |_, id| based |= self.store.rec(id).base());
+            let based = brk!("closure_base_walked" => false; based);
+            if !based {
+                on.push((i, c));
+            }
+        }
+        self.closure_of = on.into_iter().flat_map(|(i, c)| [(c.base, (i, true)), (c.step, (i, false))]).collect();
     }
 
     /// Every path through E, as rows of R: a breadth-first walk from each node

@@ -8068,6 +8068,125 @@ export const BREAKS: Break[] = [
    "ds_tree_syntax": "was to be refused"
   }
  },
+ {
+  "id": "retract_cell_reader_kept",
+  "what": "a fact a changed cell's reader concluded loses only the firing that cited the old record, and a cycle through its own relation holds it up",
+  "expect": {
+   "incremental_cell_cycle": "retract e(b, c)"
+  }
+ },
+ {
+  "id": "retract_thr_outer_plain",
+  "what": "a threshold whose outer premise is retracted is read again as a plain reader, its cell kept",
+  "expect": {
+   "incremental_thr_outer": "retract n(a)"
+  }
+ },
+ {
+  "id": "add_demand_kept",
+  "what": "an addition keeps the facts calls made to a relation answered on demand, and fires again none of the rules that call it",
+  "expect": {
+   "addition_demand": "the delta state is not a fresh evaluation's"
+  }
+ },
+ {
+  "id": "add_closure_unpaired",
+  "what": "a closure one of whose rules is added is not fired whole with both: the step alone fires nothing",
+  "expect": {
+   "addition_random": "the delta state is not a fresh evaluation's"
+  }
+ },
+ {
+  "id": "promoted_tick_scope_kept",
+  "what": "a base fact asserted over a derived one keeps the derived record's tick scope",
+  "expect": {
+   "addition_random": "the delta state is not a fresh evaluation's"
+  }
+ },
+ {
+  "id": "add_base_firings_kept",
+  "what": "a base fact of a relation a reset rule concludes keeps the firings it had, those that no longer hold too",
+  "expect": {
+   "addition_base": "the addition to"
+  }
+ },
+ {
+  "id": "refire_lattice_unclosed",
+  "what": "an order lattice fired again by a delta is not closed at its level, and the addition evaluates the world again",
+  "expect": {
+   "addition_lattice": "every addition to the lattice is a delta"
+  }
+ },
+ {
+  "id": "add_negation_reset",
+  "what": "a rule that reads what grew under a negation is reset whole, not kept with the firings a new fact blocks withdrawn",
+  "expect": {
+   "addition_negation": "the fine path is exercised"
+  }
+ },
+ {
+  "id": "add_fresh_negation_reset",
+  "what": "an added rule that negates is reset as a rule that read what changed, not fired whole at its level",
+  "expect": {
+   "addition_negation": "no rule of joins, recursion and negation is reset"
+  }
+ },
+ {
+  "id": "add_lost_unseeded",
+  "what": "a fact that went with the firing a new fact blocks takes nothing that rested on it with it",
+  "expect": {
+   "addition_negation": "the delta state is not a fresh evaluation's"
+  }
+ },
+ {
+  "id": "add_stale_citer_followed",
+  "what": "a fact sealed again whole is taken out for a fact its old firing cited and its new firings do not",
+  "expect": {
+   "addition_stale": "the addition to"
+  }
+ },
+ {
+  "id": "add_reset_after",
+  "what": "a reset rule is derived again after the rest, and every rule that reads its relation fired again whole, not kept at its level",
+  "expect": {
+   "addition_reads_agg": "AddDelta"
+  }
+ },
+ {
+  "id": "add_dirty_negation_kept",
+  "what": "a rule that negates what is derived again after the rest keeps the facts the negation no longer allows",
+  "expect": {
+   "addition_lattice": "the delta state is not a fresh evaluation's"
+  }
+ },
+ {
+  "id": "add_demand_unreached_dropped",
+  "what": "the facts calls made to a relation answered on demand stay even where the change reaches the relation or its callers",
+  "expect": {
+   "addition_demand": "the delta state is not a fresh evaluation's"
+  }
+ },
+ {
+  "id": "add_seal_hole_refused",
+  "what": "the hole a seal of provenance writes refuses every addition to a sealed world",
+  "expect": {
+   "addition_sealed": "the monotone part of an addition to a sealed world is a delta"
+  }
+ },
+ {
+  "id": "closure_base_walked",
+  "what": "a closure whose relation holds a base fact is walked whole from the edges, and the base fact extends nothing",
+  "expect": {
+   "closure_base_fact": "lacks the row cb_p[main](x,b)"
+  }
+ },
+ {
+  "id": "add_trees_dropped",
+  "what": "the rules read again over an evaluated world drop the forests and keys of a declared tree's closure",
+  "expect": {
+   "addition_tree": "answered another way"
+  }
+ },
 ];
 
 /** A proof that is no world: the report `rofl-load --propose-structures` prints over a fixture (rust/rofl/src/structures.rs),
@@ -8100,6 +8219,18 @@ const TESTS: Record<string, string> = {
   demand_scale: 'demand_scale',
   demand_query_ask: 'demand_query',
   demand_fixpoint: 'demand_fixpoint',
+  // a name of a test after the file runs that test alone
+  incremental_cell_cycle: 'incremental a_fact_a_changed_cell_concluded_goes_whole',
+  incremental_thr_outer: 'incremental a_threshold_whose_outer_premise_goes',
+  addition_demand: 'addition a_world_with_a_relation_answered_on_demand',
+  addition_random: 'addition random_programs_take_additions',
+  addition_base: 'addition a_base_fact_beside_a_reset_rule',
+  addition_tree: 'addition an_edge_and_a_reader_added_to_a_declared_tree',
+  addition_lattice: 'addition a_lattice_world_is_a_fresh_evaluation',
+  addition_negation: 'addition random_negation_programs',
+  addition_sealed: 'addition random_sealed_programs',
+  addition_reads_agg: 'addition what_reads_an_aggregate_sealed_again',
+  addition_stale: 'addition a_fact_sealed_again_is_not_taken_out',
 };
 
 function proofTests(b: Break, profile: string, control: boolean): Verdict {

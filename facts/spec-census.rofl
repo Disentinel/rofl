@@ -7,6 +7,20 @@
 --
 -- @who census
 
+check[checks]("rust/rofl/tests/addition.rs", "random_programs_take_additions_as_a_fresh_evaluation_does", test).
+check[checks]("rust/rofl/tests/addition.rs", "a_lattice_world_is_a_fresh_evaluation_after_every_addition", test).
+check[checks]("rust/rofl/tests/addition.rs", "a_declared_tree_is_a_fresh_evaluation_after_every_addition", test).
+check[checks]("rust/rofl/tests/addition.rs", "an_edge_and_a_reader_added_to_a_declared_tree_keep_the_closure_answered_from_the_forest", test).
+check[checks]("rust/rofl/tests/addition.rs", "an_added_rule_that_moves_a_round_seals_the_cells_over_it_again", test).
+check[checks]("rust/rofl/tests/addition.rs", "a_base_fact_beside_a_reset_rule_keeps_only_the_firings_that_hold", test).
+check[checks]("rust/rofl/tests/addition.rs", "random_sealed_programs_take_additions_as_a_fresh_evaluation_does", test).
+check[checks]("rust/rofl/tests/addition.rs", "random_negation_programs_keep_what_a_negation_still_allows", test).
+check[checks]("rust/rofl/tests/addition.rs", "what_reads_an_aggregate_sealed_again_is_kept_and_fed_its_change", test).
+check[checks]("rust/rofl/tests/addition.rs", "a_fact_sealed_again_is_not_taken_out_for_what_it_cited_before", test).
+check[checks]("rust/rofl/tests/addition.rs", "a_closure_that_gains_a_fact_of_its_own_relation_is_walked_again", test).
+check[checks]("rust/rofl/tests/addition.rs", "a_world_with_a_relation_answered_on_demand_is_a_fresh_evaluation_after_every_addition", test).
+check[checks]("rust/rofl/tests/addition.rs", "an_ask_added_grows_the_cone_over_the_retained_store", test).
+check[checks]("rust/rofl/tests/addition.rs", "corpus_additions_are_a_fresh_evaluation", test).
 check[checks]("rust/rofl/tests/agg_worlds.rs", "every_world_loaded_together_holds_its_properties_and_its_state", test).
 check[checks]("rust/rofl/tests/agg_worlds.rs", "a_budget_cut_never_reads_as_an_empty_group", test).
 check[checks]("rust/rofl/tests/agg_worlds.rs", "a_budget_cut_never_seals_a_partial_group", test).
@@ -129,6 +143,8 @@ check[checks]("rust/rofl/tests/incremental.rs", "cells_lattices_and_tags_in_one_
 check[checks]("rust/rofl/tests/incremental.rs", "a_fact_a_rule_reads_outside_its_aggregate_resets_the_rule", test).
 check[checks]("rust/rofl/tests/incremental.rs", "a_member_with_several_derivations_keeps_each_until_it_is_retracted", test).
 check[checks]("rust/rofl/tests/incremental.rs", "a_negation_inside_an_aggregate_is_read_again_whole", test).
+check[checks]("rust/rofl/tests/incremental.rs", "a_fact_a_changed_cell_concluded_goes_whole_and_its_cycle_with_it", test).
+check[checks]("rust/rofl/tests/incremental.rs", "a_threshold_whose_outer_premise_goes_is_sealed_again", test).
 check[checks]("rust/rofl/tests/join_scale.rs", "union_components_are_a_searchs_components", test).
 check[checks]("rust/rofl/tests/join_scale.rs", "live_variables_are_the_iterative_solvers", test).
 check[checks]("rust/rofl/tests/join_scale.rs", "a_hull_and_a_bitset_are_the_fold_over_what_reaches", test).
@@ -672,6 +688,7 @@ check[checks]("facts/goldens.rofl", "asks_retracted", world).
 check[checks]("facts/goldens.rofl", "ast_within_readers", world).
 check[checks]("facts/goldens.rofl", "async_refused", world).
 check[checks]("facts/goldens.rofl", "budget_wall", world).
+check[checks]("facts/goldens.rofl", "closure_base_fact", world).
 check[checks]("facts/goldens.rofl", "cost_shapes_model", world).
 check[checks]("facts/goldens.rofl", "demand_asked_hole", world).
 check[checks]("facts/goldens.rofl", "demand_chain", world).
@@ -772,6 +789,7 @@ check[checks](".github/workflows/ci.yml", "typecheck", ci).
 check[checks](".github/workflows/ci.yml", "goldens (node)", ci).
 check[checks](".github/workflows/ci.yml", "install dependencies (the scanner needs @babel/parser)", ci).
 check[checks](".github/workflows/ci.yml", "goldens (bun)", ci).
+test_file[checks]("rust/rofl/tests/addition.rs").
 test_file[checks]("rust/rofl/tests/agg_worlds.rs").
 test_file[checks]("rust/rofl/tests/asks_cone.rs").
 test_file[checks]("rust/rofl/tests/cool.rs").

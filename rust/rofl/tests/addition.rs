@@ -197,6 +197,9 @@ impl Stats {
                 s.withdrawn += d.withdrawn;
                 s.refired += d.refired;
                 s.restaged += d.restaged;
+                s.negated += d.negated;
+                s.overdeleted += d.overdeleted;
+                s.rederived += d.rederived;
             }
             Addition::Full(why) => {
                 for w in why.split("; ") {
@@ -223,6 +226,9 @@ impl Stats {
         s.withdrawn += d.withdrawn;
         s.refired += d.refired;
         s.restaged += d.restaged;
+        s.negated += d.negated;
+        s.overdeleted += d.overdeleted;
+        s.rederived += d.rederived;
     }
 }
 
@@ -409,7 +415,11 @@ fn sweep(name: &str, head: &str, rules: &[&str], gen: fn(&mut Rng) -> String, se
 }
 
 fn fact_edge(r: &mut Rng) -> String {
-    format!("e3({}, {}, {})", r.pick(&ATOMS), r.pick(&ATOMS), 1 + r.below(6))
+    match r.below(8) {
+        // a base fact of a relation that reads the lattice from outside
+        0 => format!("near({}, {})", r.pick(&ATOMS), r.pick(&ATOMS)),
+        _ => format!("e3({}, {}, {})", r.pick(&ATOMS), r.pick(&ATOMS), 1 + r.below(6)),
+    }
 }
 
 /// An order lattice and a reader of it: what the lattice improves withdraws what read the old value.
@@ -421,9 +431,10 @@ fn a_lattice_world_is_a_fresh_evaluation_after_every_addition() {
         "near(A, B) :- d(A, B, W), W < 4.",
         "hop(A, B) :- e3(A, B, _).",
         "hop2(A, C) :- hop(A, B), hop(B, C).",
+        "far(A, B) :- hop(A, B), not near(A, B).",
     ];
     let all = sweep("lattice", "edb(e3).\nlattice d(A, B, min W).", &rules, fact_edge, 1..=12, 10);
-    assert!(all.additions > 50, "{all:?}");
+    assert!(all.additions > 50 && all.full.is_empty(), "every addition to the lattice is a delta: {all:?}");
 }
 
 fn fact_tree(r: &mut Rng) -> String {
@@ -469,6 +480,119 @@ fn an_edge_and_a_reader_added_to_a_declared_tree_keep_the_closure_answered_from_
         ops.push(if op == "assert" { Op::Assert(text.into()) } else { Op::Load(text.into()) });
         assert_eq!(state(&mut s), state(&mut replay(&ops).unwrap()), "{text}");
     }
+}
+
+/// One addition to a world, a delta and the fresh world's state.
+fn one_addition(program: &str, op: Op) -> AddDelta {
+    let mut s = Session::fresh(BUDGET);
+    s.load(&boot(), None).unwrap();
+    s.load(program, None).unwrap();
+    s.evaluate().unwrap();
+    let a = match &op {
+        Op::Assert(t) => s.assert_delta(t).unwrap().1,
+        Op::Load(t) => s.load_delta(t, None).unwrap().1,
+        Op::Retract(_) => unreachable!(),
+    };
+    let Addition::Delta(d) = a else { panic!("not a delta: {a:?}") };
+    assert_eq!(state(&mut s), state(&mut replay(&[Op::Load(program.into()), op]).unwrap()), "the addition to {program}");
+    d
+}
+
+/// A rule that moves a relation's round: a cell sealed over it names the round in its seals, and is sealed again.
+#[test]
+fn an_added_rule_that_moves_a_round_seals_the_cells_over_it_again() {
+    let program = "edb(e). edb(n).\ne(a). e(b). n(a). n(c).\nb(X) :- e(X).\na(X) :- e(X).\nc(N) :- N is count(X : a(X)).\n";
+    let d = one_addition(program, Op::Load("a(X) :- n(X), not b(X).".into()));
+    assert!(d.stacked_cells > 0, "{d:?}");
+}
+
+/// A base fact of a relation a reset rule concludes stays, and the firings it had are made again from what holds.
+#[test]
+fn a_base_fact_beside_a_reset_rule_keeps_only_the_firings_that_hold() {
+    let program = "edb(e). edb(n).\nn(a). n(b). q(a).\nq(X) :- n(X), N is count(Y : e(X, Y)), N < 1.\nr(X) :- q(X).\n";
+    let d = one_addition(program, Op::Assert("e(a, a).".into()));
+    assert!(d.stacked_rules > 0, "{d:?}");
+    // and under a negation the fine path withdraws its firing and makes again those that hold
+    let program = "edb(e). edb(n).\nn(a). n(b). q(a).\nq(X) :- n(X), not e(X, X).\nq(X) :- n(X), e(b, X).\nr(X) :- q(X).\n";
+    let d = one_addition(program, Op::Assert("e(a, a). e(b, a).".into()));
+    assert!(d.negated > 0 && d.stacked_rules == 0, "{d:?}");
+}
+
+/// Programs of joins, recursion and negation only: every negation the fine path keeps, its withdrawals and what they
+/// take with them through recursion derived again.
+fn program_neg(r: &mut Rng) -> Vec<String> {
+    let n = 3 + r.below(4) as usize;
+    let mut rules = Vec::new();
+    for i in 1..=n {
+        let pos: Vec<String> = std::iter::once("e".to_string()).chain((1..=i).map(|j| format!("p{j}"))).collect();
+        let strict: Vec<String> = std::iter::once("e".to_string()).chain((1..i).map(|j| format!("p{j}"))).collect();
+        for k in 0..(1 + r.below(3)) {
+            let (a, b) = (r.pick(&pos).clone(), r.pick(&pos).clone());
+            let s = r.pick(&strict).clone();
+            rules.push(match if k == 0 { r.below(4) } else { r.below(6) } {
+                0 => format!("p{i}(X, Y) :- e(X, Y), not {s}(Y, X)."),
+                1 => format!("p{i}(X, X) :- n(X), not {s}(X, _)."),
+                2 => format!("p{i}(X, Y) :- {a}(X, Y), not {s}(X, Y)."),
+                3 => format!("p{i}(X, Z) :- {a}(X, Y), {b}(Y, Z), not {s}(Z, X)."),
+                4 => format!("p{i}(X, Z) :- p{i}(X, Y), e(Y, Z)."),
+                _ => format!("p{i}(X, Z) :- {a}(X, Y), {b}(Y, Z)."),
+            });
+        }
+    }
+    rules
+}
+
+/// The same programs in a world that keeps no witness (`sealed(provenance)`): no firing names what a fact rests on.
+#[test]
+fn random_sealed_programs_take_additions_as_a_fresh_evaluation_does() {
+    let mut all = Stats::default();
+    let only: Option<u64> = std::env::var("ADD_SEEDS").ok().map(|v| v.parse().unwrap());
+    for seed in (1..=30u64).filter(|s| only.is_none_or(|o| o == *s)) {
+        let mut r = Rng(seed * 104_729 + 7);
+        let rules = if seed % 2 == 0 { program(&mut r) } else { program_neg(&mut r) };
+        all.add(differential(seed * 7919 + 9, &format!("{EDB}\nsealed(provenance)."), rules, fact, 10));
+    }
+    report("sealed", &all);
+    assert!(all.delta > 30, "the monotone part of an addition to a sealed world is a delta: {all:?}");
+}
+
+#[test]
+fn random_negation_programs_keep_what_a_negation_still_allows() {
+    let mut all = Stats::default();
+    let only: Option<u64> = std::env::var("ADD_SEEDS").ok().map(|v| v.parse().unwrap());
+    for seed in (1..=40u64).filter(|s| only.is_none_or(|o| o == *s)) {
+        let mut r = Rng(seed * 15_485_863 + 11);
+        let rules = program_neg(&mut r);
+        all.add(differential(seed * 7919 + 5, EDB, rules, fact, 12));
+    }
+    report("negation", &all);
+    assert!(all.sum.negated > 100 && all.sum.overdeleted > 20 && all.sum.rederived > 0, "the fine path is exercised: {all:?}");
+    assert!(all.sum.stacked_rules == 0 && all.sum.refired == 0, "no rule of joins, recursion and negation is reset: {all:?}");
+}
+
+/// An aggregate the change reaches is sealed again at its level, and what reads it, plainly or under a negation, is
+/// kept and fed what the new seal changed, not fired again whole.
+#[test]
+fn what_reads_an_aggregate_sealed_again_is_kept_and_fed_its_change() {
+    let program = "edb(e). edb(n).\nn(a). n(b). e(a, b). e(b, a). e(b, b).\nc(X, N) :- n(X), N is count(Y : e(X, Y)).\nbig(X) :- c(X, N), N > 1.\nsmall(X) :- n(X), not big(X).\n";
+    let d = one_addition(program, Op::Assert("e(a, a).".into()));
+    assert!(d.stacked_rules == 1 && d.refired == 0 && d.negated == 1, "{d:?}");
+}
+
+/// A relation sealed again whole whose own recursion cited a fact that does not come back: a fact that does come back
+/// cites what holds now, and is not taken out for what it cited before.
+#[test]
+fn a_fact_sealed_again_is_not_taken_out_for_what_it_cited_before() {
+    let program = "edb(e). edb(n).\nn(a). n(b). e(a, b).\nc(X) :- n(X), N is count(Y : e(X, Y)), N < 2.\nc(X) :- c(Y), e(X, Y).\n";
+    let d = one_addition(program, Op::Assert("e(b, x). e(b, y).".into()));
+    assert!(d.stacked_rules == 1, "{d:?}");
+}
+
+/// A closure walked whole that gains a fact of its own relation: the step reads the news, the base walks.
+#[test]
+fn a_closure_that_gains_a_fact_of_its_own_relation_is_walked_again() {
+    let program = "edb(e).\ne(a, b). e(b, c).\np(X, Y) :- e(X, Y).\np(X, Z) :- p(X, Y), e(Y, Z).\n";
+    one_addition(program, Op::Assert("p(x, a).".into()));
 }
 
 fn fact_demand(r: &mut Rng) -> String {

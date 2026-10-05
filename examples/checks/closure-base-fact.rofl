@@ -1,0 +1,11 @@
+-- examples/checks/closure-base-fact.rofl — closure_base_fact: A CLOSURE WHOSE RELATION HOLDS A BASE FACT. The two rules have
+-- the closure shape, so the Rust engine walks them whole from the edges; the walk started from the edges only, and the base
+-- fact cb_p(x, a), which the step rule extends over cb_e(a, b) and cb_e(b, c), concluded nothing (found by tests/addition.rs).
+-- A closure whose relation holds a base fact is fired as written (`Eval::closures_engage`), and both engines hold the rows.
+-- expect-row: cb_p[main](x,b)
+-- expect-row: cb_p[main](x,c)
+edb(cb_e).
+cb_e(a, b). cb_e(b, c).
+cb_p(X, Y) :- cb_e(X, Y).
+cb_p(X, Z) :- cb_p(X, Y), cb_e(Y, Z).
+cb_p(x, a).

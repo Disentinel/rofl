@@ -2020,7 +2020,53 @@ brk("ts_tree_arity_unchecked"). brk_kind("ts_tree_arity_unchecked", ts).
 brk_expects("ts_tree_arity_unchecked", "ds_tree_syntax").
 brk("ts_tree_closure_row_unwritten"). brk_kind("ts_tree_closure_row_unwritten", ts).
 brk_expects("ts_tree_closure_row_unwritten", "ds_tree_syntax").
+brk("retract_cell_reader_kept"). brk_kind("retract_cell_reader_kept", switch).
+brk_expects("retract_cell_reader_kept", "incremental_cell_cycle").
+brk("retract_thr_outer_plain"). brk_kind("retract_thr_outer_plain", switch).
+brk_expects("retract_thr_outer_plain", "incremental_thr_outer").
+brk("add_demand_kept"). brk_kind("add_demand_kept", switch).
+brk_expects("add_demand_kept", "addition_demand").
+brk("add_closure_unpaired"). brk_kind("add_closure_unpaired", switch).
+brk_expects("add_closure_unpaired", "addition_random").
+brk("promoted_tick_scope_kept"). brk_kind("promoted_tick_scope_kept", switch).
+brk_expects("promoted_tick_scope_kept", "addition_random").
+brk("add_base_firings_kept"). brk_kind("add_base_firings_kept", switch).
+brk_expects("add_base_firings_kept", "addition_base").
+brk("refire_lattice_unclosed"). brk_kind("refire_lattice_unclosed", switch).
+brk_expects("refire_lattice_unclosed", "addition_lattice").
+brk("add_negation_reset"). brk_kind("add_negation_reset", switch).
+brk_expects("add_negation_reset", "addition_negation").
+brk("add_fresh_negation_reset"). brk_kind("add_fresh_negation_reset", switch).
+brk_expects("add_fresh_negation_reset", "addition_negation").
+brk("add_lost_unseeded"). brk_kind("add_lost_unseeded", switch).
+brk_expects("add_lost_unseeded", "addition_negation").
+brk("add_stale_citer_followed"). brk_kind("add_stale_citer_followed", switch).
+brk_expects("add_stale_citer_followed", "addition_stale").
+brk("add_reset_after"). brk_kind("add_reset_after", switch).
+brk_expects("add_reset_after", "addition_reads_agg").
+brk("add_dirty_negation_kept"). brk_kind("add_dirty_negation_kept", switch).
+brk_expects("add_dirty_negation_kept", "addition_lattice").
+brk("add_demand_unreached_dropped"). brk_kind("add_demand_unreached_dropped", switch).
+brk_expects("add_demand_unreached_dropped", "addition_demand").
+brk("add_seal_hole_refused"). brk_kind("add_seal_hole_refused", switch).
+brk_expects("add_seal_hole_refused", "addition_sealed").
+brk("closure_base_walked"). brk_kind("closure_base_walked", switch).
+brk_expects("closure_base_walked", "closure_base_fact").
+brk("add_trees_dropped"). brk_kind("add_trees_dropped", switch).
+brk_expects("add_trees_dropped", "addition_tree").
 
+switch_site("add_base_firings_kept", "rust/rofl/src/engine/addition.rs").
+switch_site("add_closure_unpaired", "rust/rofl/src/engine/addition.rs").
+switch_site("add_demand_kept", "rust/rofl/src/engine/addition.rs").
+switch_site("add_demand_unreached_dropped", "rust/rofl/src/engine/addition.rs").
+switch_site("add_dirty_negation_kept", "rust/rofl/src/engine/addition.rs").
+switch_site("add_fresh_negation_reset", "rust/rofl/src/engine/addition.rs").
+switch_site("add_lost_unseeded", "rust/rofl/src/engine/addition.rs").
+switch_site("add_negation_reset", "rust/rofl/src/engine/addition.rs").
+switch_site("add_reset_after", "rust/rofl/src/engine/addition.rs").
+switch_site("add_seal_hole_refused", "rust/rofl/src/engine/addition.rs").
+switch_site("add_stale_citer_followed", "rust/rofl/src/engine/addition.rs").
+switch_site("add_trees_dropped", "rust/rofl/src/engine/vclosure.rs").
 switch_site("agg_reach_alias_first", "rust/rofl/src/engine.rs").
 switch_site("agg_reach_bound_any", "rust/rofl/src/engine.rs").
 switch_site("agg_reach_dedup_any", "rust/rofl/src/engine.rs").
@@ -2083,6 +2129,7 @@ switch_site("cell_untimed", "rust/rofl/src/store.rs").
 switch_site("cell_why_present", "rust/rofl/src/engine.rs").
 switch_site("cited_past_canonical_only", "rust/rofl/src/engine.rs").
 switch_site("cited_past_vrow_skipped", "rust/rofl/src/engine.rs").
+switch_site("closure_base_walked", "rust/rofl/src/engine.rs").
 switch_site("closure_one_book", "rust/rofl/src/engine.rs").
 switch_site("count_carrier_open", "rust/rofl/src/cell.rs").
 switch_site("count_demand_admitted", "rust/rofl/src/engine.rs").
@@ -2360,6 +2407,7 @@ switch_site("plain_reader_unclosed", "rust/rofl/src/engine.rs").
 switch_site("plain_rule_hole_unspread", "rust/rofl/src/engine.rs").
 switch_site("plain_staged_why_present", "rust/rofl/src/engine.rs").
 switch_site("plain_unknown_settles", "rust/rofl/src/engine.rs").
+switch_site("promoted_tick_scope_kept", "rust/rofl/src/store.rs").
 switch_site("prov_reader_deferred", "rust/rofl/src/engine/prov.rs").
 switch_site("prov_settle_keeps_dead", "rust/rofl/src/engine/prov.rs").
 switch_site("prov_state_unsettled", "rust/rofl/src/engine/prov.rs").
@@ -2382,6 +2430,7 @@ switch_site("rank_reach_blind", "rust/rofl/src/engine.rs").
 switch_site("rank_share_coarse", "rust/rofl/src/engine.rs").
 switch_site("rank_tuple_insertion", "rust/rofl/src/cell.rs").
 switch_site("refire_fault_unexcused", "rust/rofl/src/engine.rs").
+switch_site("refire_lattice_unclosed", "rust/rofl/src/engine/delta.rs").
 switch_site("refl_neg", "rust/rofl/src/reflect.rs").
 switch_site("restage_dead_kept", "rust/rofl/src/engine/delta.rs").
 switch_site("restage_first_wins", "rust/rofl/src/engine.rs").
@@ -2389,6 +2438,7 @@ switch_site("restaged_keeps_old_firing", "rust/rofl/src/engine.rs").
 switch_site("retain_prunes_cited", "rust/rofl/src/engine.rs").
 switch_site("retract_alt_member_dropped", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_alts_unindexed", "rust/rofl/src/engine/delta.rs").
+switch_site("retract_cell_reader_kept", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_chain_gate_off", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_consumers_kept", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_deep_neg_unread", "rust/rofl/src/engine/delta.rs").
@@ -2415,6 +2465,7 @@ switch_site("retract_swept_cell_subtracted", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_tag_derivations_kept", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_thr_cells_kept", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_thr_no_close", "rust/rofl/src/engine/delta.rs").
+switch_site("retract_thr_outer_plain", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_thr_unclosed", "rust/rofl/src/engine/delta.rs").
 switch_site("roots_of_cycle_off", "rust/rofl/src/engine.rs").
 switch_site("set_literal_as_written", "rust/rofl/src/cell.rs").

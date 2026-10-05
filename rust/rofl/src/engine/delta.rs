@@ -354,7 +354,7 @@ impl Eval {
                         return Err("a rule staged in a world with a lattice reads what rests on the fact");
                     }
                     // it concludes no fact of this tick: what it staged is read again at the end
-                    if brk!("retract_stacked_plain" => false; inner || r.has_agg || brk!("retract_thr_outer_plain" => false; r.has_thr)) {
+                    if brk!("retract_stacked_plain" => false; inner || r.has_agg) {
                         reset.insert(r.id);
                     }
                     staged.push(r.clone());
@@ -364,7 +364,9 @@ impl Eval {
                 if self.lattices.contains_key(&head) || self.tags.count_of.contains_key(&head) || self.v.is_reserved(head) {
                     return Err("a lattice, a tag or a ledger is concluded from what rests on the fact");
                 }
-                if brk!("retract_stacked_plain" => false; inner || r.has_agg || brk!("retract_thr_outer_plain" => false; r.has_thr)) {
+                // a threshold whose outer premise changed holds cells a plain reader would keep
+                let thr = brk!("retract_thr_outer_plain" => false; r.has_thr);
+                if brk!("retract_stacked_plain" => false; inner || r.has_agg || thr) {
                     reset.insert(r.id);
                 }
                 rules.push(r.clone());
@@ -470,6 +472,7 @@ impl Eval {
             self.activate(&mono)?;
             for (lv, rs) in levels {
                 brk!("retract_thr_unclosed" => (); self.close_thresholds_below(lv, true)?);
+                // an order lattice fired again closes at its level, as an evaluation closes it
                 brk!("refire_lattice_unclosed" => (); self.close_lattices_below(lv)?);
                 let (ds, rs): (Vec<Rc<ERule>>, Vec<Rc<ERule>>) = rs.into_iter().partition(|r| self.ds_owner(r));
                 self.activate(&rs)?;
@@ -478,7 +481,7 @@ impl Eval {
             brk!("refire_lattice_unclosed" => (); self.close_lattices_below(i64::MAX)?);
             while !rules.is_empty() && !self.thr_open.is_empty() {
                 brk!("retract_thr_unclosed" => break; self.close_thresholds_below(i64::MAX, true)?);
-                brk!("refire_lattice_unclosed" => (); self.close_lattices_below(i64::MAX)?);
+                self.close_lattices_below(i64::MAX)?;
             }
             Ok(())
         })();
@@ -489,7 +492,7 @@ impl Eval {
     }
 
     /// Premise -> the live derived facts with a firing that cites it.
-    fn citer_map(&self) -> HashMap<FactId, Vec<FactId>> {
+    pub(super) fn citer_map(&self) -> HashMap<FactId, Vec<FactId>> {
         let mut cm: HashMap<FactId, Vec<FactId>> = HashMap::new();
         for x in self.store.firing_keys() {
             if !self.store.alive(x) {
