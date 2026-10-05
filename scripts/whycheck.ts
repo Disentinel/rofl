@@ -37,7 +37,7 @@ import { Rofl } from '../src/api.ts';
 import { storeHasAggregates } from '../src/aggeval.ts';
 import { canonTerm } from '../src/unify.ts';
 import { RoflPort, type Walls } from '../runtime/port.ts';
-import { worlds, placed, togetherWorld, expectedRefusal, treeSealed, treeDeclared, closureVerdict, type World } from './goldens.ts';
+import { worlds, placed, togetherWorld, expectedRefusal, treeSealed, treeDeclared, filesText, closureVerdict, type World } from './goldens.ts';
 import { belowFiles } from './agg_select.ts';
 import { dagProblem } from './why_dag.ts';
 import { derivationHeights, type DerivationSource } from '../src/store.ts';
@@ -200,7 +200,7 @@ function rustQuestions(w: World, rich = false): Q[] {
   if (base.length) qs.push({ op: 'excise', query: base[Math.floor(base.length / 2)] });
   if (rich) {
     // the edges of each declared tree: taking one out takes rows of the closure with it
-    const text = w.files.filter((f) => f.endsWith('.rofl') && fs.existsSync(f)).map((f) => fs.readFileSync(f, 'utf8')).join('\n');
+    const text = filesText(w.files);
     const edges = [...text.matchAll(/^tree (\w+)\(/gm)].map((m) => m[1]);
     const mine = base.filter((k) => edges.some((e) => k.startsWith(`${e}(`) || k.startsWith(`${e}[`)));
     for (const k of new Set([base[0], base[base.length - 1], mine[0], mine[Math.floor(mine.length / 2)], mine[mine.length - 1]].filter(Boolean))) qs.push({ op: 'excise', query: k });

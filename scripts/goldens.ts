@@ -45,7 +45,7 @@ import * as path from 'node:path';
 import { createHash } from 'node:crypto';
 import { execFileSync, spawn, spawnSync } from 'node:child_process';
 import { worldFiles, prefetchMd } from './md_world.ts';
-import { materialize, unreadOf } from './sentences.ts';
+import { materialize, readWorldMd, unreadOf } from './sentences.ts';
 import { runPool, jobs, type Task } from './pool.ts';
 import { parseSelector, select, NotAWorld, belowFiles } from './agg_select.ts';
 
@@ -535,7 +535,9 @@ function answerTSTogether(w0: World, Engine: typeof Rofl): Answer {
  *  the stored closure meets is cut with the rows and not without. Such a world says so (`check_opt(W, closure_unwalled, 1)`), and is
  *  compared no further; a world that meets the wall stored and does not say so is red, and one that says so and meets none. */
 export const WALL_HOLE = /^hole\[\$kernel\]\(.*,(budget|space)_exhausted\) /m;
-const filesText = (files: string[]): string => files.filter((f) => f.endsWith('.rofl') && fs.existsSync(f)).map((f) => fs.readFileSync(f, 'utf8')).join('\n');
+/** The rules of the files, a notebook (`.rofl.md`) read through the md reader: what a world declares, whichever form it is written in. */
+export const filesText = (files: string[]): string => files.filter((f) => fs.existsSync(f)).map((f) =>
+  f.endsWith('.rofl.md') ? fs.readFileSync(readWorldMd(f).rofl, 'utf8') : f.endsWith('.rofl') ? fs.readFileSync(f, 'utf8') : '').join('\n');
 export const treeDeclared = (files: string[]): boolean => /^tree \w+\(.*\) closure \w+\./m.test(filesText(files));
 export const treeSealed = (files: string[]): boolean => treeDeclared(files) && /^sealed\(provenance\)\./m.test(filesText(files));
 /** What the state with the closure stored says against the state answered from the tree: null where they agree or the world declares the wall. */
