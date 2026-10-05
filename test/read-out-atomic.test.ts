@@ -9,7 +9,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 
 const ROOT = new URL('..', import.meta.url).pathname;
-const READ = process.env.ROFL_READ_SCRIPT || path.join(ROOT, 'scripts/read.ts');
+const READ = path.join(ROOT, 'scripts/read.ts');
 const MD = path.join(ROOT, 'visual/graph.rofl.md');
 
 test('a file the reader writes is never seen partial while other readers rewrite it', async () => {

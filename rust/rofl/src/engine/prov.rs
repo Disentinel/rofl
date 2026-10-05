@@ -74,17 +74,6 @@ impl Eval {
         }
     }
 
-    /// The harness's spelling of `sealed(provenance)` (`rofl-eval --no-provenance`), set after
-    /// load: what `prepare` makes of the declaration, the engine's own order of groups and
-    /// candidates and activation by component among it (f_no_provenance_flag_is_not_the_seal).
-    pub fn seal_provenance(&mut self) {
-        self.no_provenance = true;
-        self.no_witness = true;
-        self.lazy_prov = false;
-        self.pending_prov.clear();
-        self.store.unordered = self.lattices.is_empty();
-    }
-
     /// `canonicalState`: every row a reader can distinguish, the `derived_by`
     /// rows of the firings noted and not yet written among them, so the state of
     /// a lazy world is the state of the eager one.

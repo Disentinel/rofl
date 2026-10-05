@@ -37,7 +37,7 @@ import { Rofl } from '../src/api.ts';
 import { storeHasAggregates } from '../src/aggeval.ts';
 import { canonTerm } from '../src/unify.ts';
 import { RoflPort, type Walls } from '../runtime/port.ts';
-import { worlds, placed, togetherWorld, expectedRefusal, treeSealed, treeDeclared, filesText, closureVerdict, type World } from './goldens.ts';
+import { worlds, placed, togetherWorld, expectedRefusal, treeSealed, treeDeclared, filesText, closureVerdict, storedIsCut, type World } from './goldens.ts';
 import { belowFiles } from './agg_select.ts';
 import { dagProblem } from './why_dag.ts';
 import { derivationHeights, type DerivationSource } from '../src/store.ts';
@@ -180,7 +180,7 @@ function questions(r: Rofl, budget: number | undefined, first: boolean, excise =
  *  derived facts spread over the store, each asked why and whynot, the same with its last argument changed, one base
  *  fact excised. There is no oracle, so the answers are compared rofl-serve against rofl-load only. */
 function rustQuestions(w: World, rich = false): Q[] {
-  const p = spawnSync(LOAD, [...(w.budget ? ['--budget', String(w.budget)] : []), ...(w.deltaFirst ? ['--delta-first'] : []), ...(w.ticks ? ['--ticks', String(w.ticks)] : []), BOOT, ...w.files],
+  const p = spawnSync(LOAD, [...(w.budget ? ['--budget', String(w.budget)] : []), ...(w.ticks ? ['--ticks', String(w.ticks)] : []), BOOT, ...w.files],
     { encoding: 'utf8', maxBuffer: 512 * 1024 * 1024 });
   const keys = (kind: string): string[] => p.stdout.split('\n').flatMap((l) => {
     const m = /^([a-z]\w*)(?:\[(\w+)\])?(\(.*\)) (?:timeless|tick) (\w+) support=\d+$/.exec(l);
@@ -288,7 +288,7 @@ function withoutRetracted(w: World): { r: Rofl; w: World } | string {
 const parseRefusal = (a: A): boolean => !a.ok && /^(error: )?line \d+: /.test(a.text);
 
 const walls = (w: World): Walls => ({ ...(w.space ? { space: w.space } : {}), ...(w.retain !== undefined ? { retainTicks: w.retain } : {}),
-  ...(w.strata ? { mode: 'strata' as const } : {}), ...(w.deltaFirst ? { deltaFirst: true } : {}) });
+  ...(w.strata ? { mode: 'strata' as const } : {}) });
 
 /** The protocol cannot feed a world below or answer explain requests; such a
  *  world is asked of rofl-load alone. */
@@ -325,7 +325,7 @@ const groupOf = (qs: Q[], want: A[], i: number): string => (parseRefusal(want[i]
 
 /** The flags that make rofl-load build the world as `npm test` does. */
 const loadOpts = (w: World): string[] => [...(w.ticks ? ['--ticks', String(w.ticks)] : []), ...(w.budget ? ['--budget', String(w.budget)] : []),
-  ...(w.space ? ['--space', String(w.space)] : []), ...(w.strata ? ['--strata'] : []), ...(w.deltaFirst ? ['--delta-first'] : []),
+  ...(w.space ? ['--space', String(w.space)] : []), ...(w.strata ? ['--strata'] : []),
   ...(w.retain !== undefined ? ['--retain', String(w.retain)] : []), ...(w.retract ?? []).flatMap((f) => ['--retract', f]), ...(w.explain ? ['--explain'] : []),
   ...belowFiles(w.files).flatMap((f) => ['--below', f])];
 
@@ -376,9 +376,9 @@ const declared = (w: World): boolean => treeDeclared(placed(w).files);
  *  its witnesses is asked against the reference besides. */
 function storedOracle(rep: Report, kept: World, qs: Q[], texts: (string | undefined)[]): void {
   const a = stateOf(kept, {}), b = stateOf(kept, { ROFL_NO_VCLOSURE: '1' });
-  const v = closureVerdict(kept, a, b);
+  const v = closureVerdict(a, b);
   if (v !== null) { rep.bad.push(`${kept.name}: ${v}`); return; }
-  if (kept.closureUnwalled) { rep.walled.push(kept.name); return; }
+  if (storedIsCut(a, b)) { rep.walled.push(kept.name); return; }
   const stored = cli(kept, qs, qs.map(() => ({ ok: true, text: '' })), { ROFL_NO_VCLOSURE: '1' });
   for (const pr of stored.problems) rep.bad.push(`${kept.name} stored load: ${pr}`);
   qs.forEach((q, i) => {
@@ -520,6 +520,6 @@ console.log(`\n${n} questions over ${asked.length} worlds, each to rofl-serve an
   + `, ${((Date.now() - t0) / 1000).toFixed(1)} s over ${jobs} processes`
   + `\nasked of rofl-load alone (a world below, or explain requests): ${loadOnly.length}`
   + `\nasked of Rust only, serve against load (no reference run): ${rustOnly.length} ${rustOnly.join(' ') || 'none'}`
-  + `\nnot held to the world with its closure stored (it meets a wall stored that the tree does not, declared closure_unwalled): ${walled.join(' ') || 'none'}`
+  + `\nnot held to the world with its closure stored (it meets a wall stored that the tree does not): ${walled.join(' ') || 'none'}`
   + `\nnot asked (one engine, TypeScript): ${all.filter((w) => w.oneEngine === 'ts').map((w) => w.name).join(' ') || 'none'}`);
 process.exit(bad.length === 0 ? 0 : 1);

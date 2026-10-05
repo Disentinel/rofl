@@ -1,16 +1,11 @@
--- examples/checks/agg-join-delta-first-steps.rofl — A STEPS WALL CUTS WHERE THE WRITTEN ORDER CUTS.
+-- examples/checks/agg-join-delta-first-steps.rofl — A STEPS WALL STOPS A PLANNED FIRING.
 --
--- p(Q, Y) :- h(X, Z), l(X, Y), trig(Y, Z, Q) over 40 + 40 + 10 rows. Under a budget that runs
--- out inside the firing, which conclusions came before the cut depends on the order the
--- solutions are concluded in. Two worlds read this file under the same budget: one in
--- written order, as every firing is under a wall a caller set (agg_breaks
--- `delta_first_walls`), one opted into the plans (check_opt delta_first), where a firing
--- whose conclusions could reach the wall is solved again in written order (agg_breaks
--- `delta_first_cut_unchecked`). Both cut where the TypeScript engine cuts.
+-- p(Q, Y) :- h(X, Z), l(X, Y), trig(Y, Z, Q) over 40 + 40 + 10 rows, under a budget of 75 that
+-- runs out inside the firing: the world holes budget_exhausted and holds the conclusions that came
+-- before the cut. Which they are is the engine's (the plan concludes in its own order, and the cut
+-- moves as the engine improves), so the world is Rust's alone.
+-- expect-row: hole[$kernel]($adhoc,budget_exhausted)
 -- expect-row: p[main](q,y1) tick
--- expect-row: p[main](q,y6) tick
--- expect-no-row: p[main](q,y2) tick
--- expect-no-row: p[main](q,y5) tick
 edb(h). edb(l). edb(trig).
 p(Q, Y) :- h(X, Z), l(X, Y), trig(Y, Z, Q).
 h(c, z1). l(c, y1).

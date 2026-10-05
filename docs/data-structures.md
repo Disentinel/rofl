@@ -234,8 +234,7 @@ tree) is read by no proposal or near miss.
    touches no read path of the engine, so it can land before
    `w_cmp_delta_first`, and it settles by measurement that the promises hold
    on the four corpora before anything stores them. **Built 2026-10-04**
-   (`rust/rofl/src/structures.rs`; `rofl-load` and `rofl-eval
-   --propose-structures`, `npm run structures`): on self, mcp, cli_exits and
+   (`rust/rofl/src/structures.rs`; `rofl-load --propose-structures`, `npm run structures`): on self, mcp, cli_exits and
    util it proposes `tree ast_in(P, C) closure ast_within.` (the closure is
    exact), the ast_in and in_fn aliases, and 169 functions that hold on all
    four (`f_the_engine_proposes_a_forest_a_closure_and_aliases_on_all_four_corpora`).
@@ -397,7 +396,7 @@ of the tick evaluated: a tick that ends takes them as it takes any derived row.
 from the tree when something observes the rows, as a noted firing's is
 (`settle_provenance`: the state, a question about `derived_by`, a fork, a snapshot, a tick's
 boundary, which freezes them as it freezes every fired fact's), and taken out again when the
-forests have changed since; a world nobody observes holds none (rofl-eval `--unsettled`).
+forests have changed since; a world nobody observes holds none.
 
 **Heights, where witnesses are kept.** A row's one firing is 1 + the higher of the row of
 the parent and the edge into the descendant, so down the chain from the ancestor each row
@@ -423,12 +422,11 @@ byte: whycheck asks every why, why all, whynot and excise and the canonical stat
 every world that declares a tree's closure, sealed or not, of both (and the witnessed ones
 of the TypeScript reference besides), and the goldens hold their states to each other. A
 snapshot of such a world is opened with its closures engaged (`Eval::vclosure_restore`,
-which reads the rows its witnesses and members cite, for their heights) and the same state. **A wall is the one difference, and it is declared.** A row answered from the tree
+which reads the rows its witnesses and members cite, for their heights) and the same state. **A wall is the one difference, and it is not held**: a row answered from the tree
 costs no space and no step, so a world whose wall the stored closure meets is cut with
-the rows and not without (`ds_tree_plan`, which says so with
-`check_opt(W, closure_unwalled, 1)`); a world that meets the wall stored and does not say
-so is red, and one that says so and meets none (f_a_join_plan_is_never_observed, the same
-principle: a hole is a shrug, and completing it refines it; an owner question).
+the rows and not without, and is compared no further (a wall's cut moves as the engine
+improves, f_the_owner_settles_walls_promises_and_incremental; a hole is a shrug, and
+completing it refines it).
 
 **Proof.** `ds_tree_syntax`, `ds_tree_phrase`, `ds_tree_holds` and `ds_tree_sealed` (the
 same files, with and without the seal: the closure answered from the tree, by the kernel
@@ -449,8 +447,7 @@ fresh world; twelve keeping witnesses, each row's support, witness, `derived_by`
 the cells over them against the rules'); 32 planted faults, and 8 more for the witnessed
 world (`scripts/agg_breaks.ts`).
 
-**Measured** (Rust release, `rofl-eval --bytes --budget 4000000000 --space 40000000
---delta-first`, three runs, median; the seeds regenerated for the scanner's 16-hex node
+**Measured** (Rust release, `rofl-eval --bytes --budget 4000000000 --space 40000000`, three runs, median; the seeds regenerated for the scanner's 16-hex node
 ids; before is the engine and the model of 3f37887, after this tree's).
 
 | world | facts stored, before | after | closure rows not stored | eval ms, before | after | RSS MB, before | after |
@@ -479,7 +476,7 @@ distinct rows: 248,461 of 513,629 on self, 445,682 of 888,133 on util).
 --budget 4000000000 --space 40000000`, three runs, median, seeds regenerated 2026-10-05;
 before is fe3bdfc, which stored the closure there). "Observed" is the canonical state as
 rofl-eval prints it, which settles provenance, so the closure's `derived_by` rows are
-written before `facts` is counted; "unobserved" is `--unsettled`, where no `derived_by`
+written before `facts` is counted; "unobserved" is `--unsettled` (a flag of rofl-eval since removed, docs/knobs.md), where no `derived_by`
 row of a firing nothing reads is written.
 
 | world | facts stored, before | after | eval ms, before | after | RSS MB, before | after |

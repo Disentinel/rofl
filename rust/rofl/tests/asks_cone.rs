@@ -368,7 +368,6 @@ fn all_worlds() -> BTreeMap<String, Vec<String>> {
 /// A world under its walls; a refusal is the first line it says.
 fn run_walled(src: &str, (budget, space): (Option<i64>, Option<i64>)) -> Result<Run, String> {
     let mut s = Session::fresh(budget.unwrap_or(BUDGET));
-    s.eval.walls_set = budget.is_some() || space.is_some();
     if let Some(sp) = space {
         s.eval.space = sp;
     }

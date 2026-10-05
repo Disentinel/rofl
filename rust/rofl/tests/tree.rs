@@ -209,8 +209,7 @@ t_root(r).";
 
 #[test]
 fn a_retraction_where_no_witness_is_kept_evaluates_again() {
-    // `sealed(provenance)` writes a hole that sends every retraction to a full evaluation; a world given the flags directly (the
-    // harness's `--no-provenance`) does not, and its closure rows have no witness to say what a retraction took with it
+    // `sealed(provenance)` writes a hole that sends every retraction to a full evaluation; a world given the flags directly (`no_provenance` and `no_witness` set by hand) does not, and its closure rows have no witness to say what a retraction took with it
     let (text, edges) = forest(9, 30);
     let gone = edges[3].clone();
     let build = |edges: &[String]| {

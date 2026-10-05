@@ -89,6 +89,7 @@ check[checks]("rust/rofl/tests/incremental.rs", "a_component_stratified_by_its_d
 check[checks]("rust/rofl/tests/incremental.rs", "two_components_and_what_reads_them_are_run_again_where_they_changed", test).
 check[checks]("rust/rofl/tests/incremental.rs", "a_rule_answered_on_demand_and_its_callers_are_made_again", test).
 check[checks]("rust/rofl/tests/incremental.rs", "a_fact_a_question_made_goes_with_any_retraction", test).
+check[checks]("rust/rofl/tests/incremental.rs", "a_refused_delta_says_every_reason", test).
 check[checks]("rust/rofl/tests/incremental.rs", "a_fact_a_question_made_beside_a_lattice_is_evaluated_again", test).
 check[checks]("rust/rofl/tests/incremental.rs", "a_cell_read_again_beside_its_own_retraction_is_read_again_whole", test).
 check[checks]("rust/rofl/tests/incremental.rs", "a_rule_read_again_whole_that_concludes_what_a_changed_cell_concludes_is_the_same", test).
@@ -450,10 +451,7 @@ check[checks]("facts/goldens.rofl", "agg_join_delta_first", world).
 check[checks]("facts/goldens.rofl", "agg_join_delta_first_hole", world).
 check[checks]("facts/goldens.rofl", "agg_join_delta_first_persp", world).
 check[checks]("facts/goldens.rofl", "agg_join_delta_first_space", world).
-check[checks]("facts/goldens.rofl", "agg_join_delta_first_space_planned", world).
 check[checks]("facts/goldens.rofl", "agg_join_delta_first_steps", world).
-check[checks]("facts/goldens.rofl", "agg_join_delta_first_steps_planned", world).
-check[checks]("facts/goldens.rofl", "agg_join_delta_first_walled", world).
 check[checks]("facts/goldens.rofl", "agg_join_eval", world).
 check[checks]("facts/goldens.rofl", "agg_join_holes", world).
 check[checks]("facts/goldens.rofl", "agg_join_phrase", world).

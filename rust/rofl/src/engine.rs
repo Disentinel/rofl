@@ -599,11 +599,6 @@ pub struct Eval {
     /// the premise statistics their estimates read. `ROFL_NO_DELTA_FIRST` keeps
     /// every firing in written order.
     delta_first: bool,
-    /// A caller set a steps or space wall (`--budget`, `--space`): where a
-    /// wall cuts must not depend on the plan, so firings stay in written
-    /// order unless `delta_first_under_walls` opts in.
-    pub walls_set: bool,
-    pub delta_first_under_walls: bool,
     plan_trial: bool,
     pub delta_ns: u64,
     delta_plans: HashMap<(Sym, usize), joinplan::Slot>,
@@ -1212,8 +1207,6 @@ impl Eval {
             delta_by_rule: HashMap::new(),
             delta_ns: 0,
             delta_first: std::env::var_os("ROFL_NO_DELTA_FIRST").is_none(),
-            walls_set: false,
-            delta_first_under_walls: false,
             plan_trial: false,
             delta_plans: HashMap::new(),
             delta_stats: HashMap::new(),

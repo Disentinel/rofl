@@ -45,14 +45,9 @@
 //! perspective is a variable stays where that variable is bound, or not, as
 //! written: unbound, it does not range over the kernel's books.
 //!
-//! WALLS. Under a budget or space a caller set (`Eval::walls_set`) every
-//! firing is in written order, unless the caller opts in
-//! (`delta_first_under_walls`, rofl-load `--delta-first`): where a wall cuts is
-//! not the planner's. Under the default walls a plan that outgrows the space,
-//! or a firing whose conclusions could reach a wall, is solved again in
-//! written order (`fire_planned`), so a plan never cuts where the written
-//! order does not; it can finish a firing whose written join would have
-//! outgrown the default space.
+//! WALLS. A wall's cut moves with the engine: a plan does more for the same
+//! budget. A plan that outgrows the space is solved again in written order
+//! (`fire_planned`, `Halt::Overrun`), which also does more for the same budget.
 //!
 //! The premises of a solution are put back in written order before it is
 //! concluded, so a witness is the one the written order would have built.
@@ -106,7 +101,6 @@ impl Eval {
         if !self.delta_first
             || brk!("delta_first_off" => true; false)
             || brk!("delta_first_spread" => false; !self.lat_spread.is_empty())
-            || brk!("delta_first_walls" => false; self.walls_set && !self.delta_first_under_walls)
         {
             return None;
         }
@@ -371,11 +365,8 @@ impl Eval {
     /// from, or over the whole store when there are none. The premises of
     /// each solution are put back in written order before it is concluded.
     ///
-    /// A WALL FALLS WHERE THE WRITTEN ORDER PUTS IT. A plan that outgrows the
-    /// space (the estimate undercounts a skewed key), or a firing whose
-    /// conclusions could reach the steps or space wall (each concludes at
-    /// most one step and one row, and the set is the written order's), is
-    /// solved again in written order, which cuts where it always did.
+    /// A plan that outgrows the space (the estimate undercounts a skewed key)
+    /// is solved again in written order.
     pub(super) fn fire_planned(&mut self, r: &Rc<ERule>, p: &DeltaPlan, keys: Option<&FxSet<FactId>>) -> Result<Front, Halt> {
         let written = |e: &mut Eval, peak: i64| {
             e.peak_rows = peak;
@@ -396,9 +387,6 @@ impl Eval {
             s => s?,
         };
         let n = sols.len() as i64;
-        if brk!("delta_first_cut_unchecked" => false; self.steps + n > self.budget || self.rows + n > self.space) {
-            return written(self, peak);
-        }
         *self.fires_by_rule.entry(r.id).or_insert(0) += 1;
         *self.delta_by_rule.entry(r.id).or_insert(0) += 1;
         *self.sols_by_rule.entry(r.id).or_insert(0) += n as u64;

@@ -31,8 +31,7 @@
 //!
 //!   {"op":"open","seedPath":"x.seed.json"}   -> {"ok":true,"session":1,...}
 //!     `open` and `fresh` also take the walls a snapshot does not carry:
-//!     `space` (rows), `retainTicks`, `mode` ("rounds" or "strata"), and
-//!     `deltaFirst` (join plans under a `budget` or `space`, `Eval::walls_set`)
+//!     `space` (rows), `retainTicks` and `mode` ("rounds" or "strata")
 //!   {"op":"fork","session":1}                -> {"ok":true,"session":2}
 //!   {"op":"assert","session":2,"rofl":"p(a)."}
 //!   {"op":"evaluate","session":2}
@@ -76,14 +75,7 @@ impl Server {
     /// THE WALLS A SNAPSHOT DOES NOT CARRY (f_a_snapshot_carries_the_world_not_its_walls):
     /// a world saved under a row limit above the default comes back holed
     /// unless its opener gives the limit again.
-    ///
-    /// A request that gives a `budget` or a `space` has its firings solved in
-    /// written order (where a wall cuts is not the planner's), unless it says
-    /// `deltaFirst: true`.
     fn walls(r: &Value, s: &mut Session) -> Result<(), String> {
-        let given = |k: &str| r.get(k).is_some_and(|v| !v.is_null());
-        s.eval.walls_set = given("budget") || given("space");
-        s.eval.delta_first_under_walls = r.get("deltaFirst").and_then(|v| v.as_bool()).unwrap_or(false);
         if let Some(v) = r.get("space").filter(|v| !v.is_null()) {
             s.eval.space = v.as_i64().filter(|n| *n > 0).ok_or("`space` is a positive number of rows")?;
         }

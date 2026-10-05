@@ -70,9 +70,8 @@ export interface Answer {
 export interface Ticked { advanced: boolean; quiescent: boolean; partial: boolean }
 
 /** One world. Obtained from `open` or, far more cheaply, from `fork`. */
-/** The walls a snapshot does not carry: the row limit, the ticks of provenance kept, the evaluator, and join plans
- *  under a budget or a row limit (`deltaFirst`; without it a wall keeps every firing in written order). */
-export type Walls = { space?: number; retainTicks?: number; mode?: 'rounds' | 'strata'; deltaFirst?: boolean };
+/** The walls a snapshot does not carry: the row limit, the ticks of provenance kept, and the evaluator. */
+export type Walls = { space?: number; retainTicks?: number; mode?: 'rounds' | 'strata' };
 
 export class RoflSession {
   readonly port: RoflPort;
@@ -276,7 +275,7 @@ export class RoflPort {
     this.child.stderr.on('data', (b: Buffer) => {
       const t = b.toString();
       this.err += t;
-      if (process.env.ROFL_PORT_TRACE || process.env.ROFL_COOL_PHASES) process.stderr.write(t);
+      if (process.env.ROFL_COOL_PHASES) process.stderr.write(t);
     });
     this.child.on('error', (e) => this.fail(`rofl-serve would not start (${e.message})`));
     this.child.on('exit', (code, sig) => this.fail(`rofl-serve exited (code ${code}, signal ${sig})`));
@@ -331,7 +330,6 @@ export class RoflPort {
       return;
     }
     this.waiting.delete(id);
-    if (process.env.ROFL_PORT_TRACE) process.stderr.write(`<- ${id} ${line.length}B\n`);
     if (v.ok === true) w.ok(v);
     else w.no(new Error(String(v.error ?? 'unknown engine error')));
   }
@@ -342,9 +340,6 @@ export class RoflPort {
     return new Promise((ok, no) => {
       this.waiting.set(id, { ok, no });
       const line = `${JSON.stringify({ ...req, id })}\n`;
-      if (process.env.ROFL_PORT_TRACE) {
-        process.stderr.write(`-> ${id} ${String(req.op)} ${line.length}B\n`);
-      }
       // A WRITE THAT FAILS MUST NOT BE SILENT EITHER. `write` reports an error
       // through the callback, and without it a broken pipe leaves the caller
       // waiting on an answer to a request that never left.

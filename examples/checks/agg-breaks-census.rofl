@@ -77,12 +77,8 @@ brk("delta_first_spread"). brk_kind("delta_first_spread", switch).
 brk_expects("delta_first_spread", "agg_join_delta_first_hole").
 brk("delta_first_persp"). brk_kind("delta_first_persp", switch).
 brk_expects("delta_first_persp", "agg_join_delta_first_persp").
-brk("delta_first_walls"). brk_kind("delta_first_walls", switch).
-brk_expects("delta_first_walls", "agg_join_delta_first_walled").
-brk("delta_first_cut_unchecked"). brk_kind("delta_first_cut_unchecked", switch).
-brk_expects("delta_first_cut_unchecked", "agg_join_delta_first_steps_planned").
 brk("delta_first_overrun_holes"). brk_kind("delta_first_overrun_holes", switch).
-brk_expects("delta_first_overrun_holes", "agg_join_delta_first_space_planned").
+brk_expects("delta_first_overrun_holes", "agg_join_delta_first_space").
 brk("mono"). brk_kind("mono", switch).
 brk_expects("mono", "agg_cell_eval").
 brk_expects("mono", "agg_life_demo").
@@ -1876,8 +1872,6 @@ brk_expects("demand_closed_book_unbound", "ds_tree_demand_book_sealed").
 brk("ts_demand_closed_book_unbound"). brk_kind("ts_demand_closed_book_unbound", ts).
 brk_expects("ts_demand_closed_book_unbound", "ds_tree_demand_book").
 brk_expects("ts_demand_closed_book_unbound", "ds_tree_demand_book_sealed").
-brk("vclosure_rows_cost"). brk_kind("vclosure_rows_cost", switch).
-brk_expects("vclosure_rows_cost", "ds_tree_plan").
 brk("vclosure_neg_inverted"). brk_kind("vclosure_neg_inverted", switch).
 brk_expects("vclosure_neg_inverted", "ds_tree_sealed").
 brk("vclosure_unbound_cheap"). brk_kind("vclosure_unbound_cheap", switch).
@@ -1997,12 +1991,10 @@ switch_site("counting_recursion_admitted", "rust/rofl/src/engine.rs").
 switch_site("cut_carry_unrenewed", "rust/rofl/src/engine.rs").
 switch_site("cut_fallback_off", "rust/rofl/src/engine.rs").
 switch_site("decl_row_skipped", "rust/rofl/src/engine.rs").
-switch_site("delta_first_cut_unchecked", "rust/rofl/src/engine/joinplan.rs").
 switch_site("delta_first_off", "rust/rofl/src/engine/joinplan.rs").
 switch_site("delta_first_overrun_holes", "rust/rofl/src/engine.rs").
 switch_site("delta_first_persp", "rust/rofl/src/engine/joinplan.rs").
 switch_site("delta_first_spread", "rust/rofl/src/engine/joinplan.rs").
-switch_site("delta_first_walls", "rust/rofl/src/engine/joinplan.rs").
 switch_site("demand_closed_atom_book", "rust/rofl/src/engine.rs").
 switch_site("demand_closed_book_unbound", "rust/rofl/src/engine.rs").
 switch_site("demand_closed_unfolds", "rust/rofl/src/engine.rs").
@@ -2406,7 +2398,6 @@ switch_site("vclosure_restore_keys_unread", "rust/rofl/src/engine/vclosure.rs").
 switch_site("vclosure_restore_unengaged", "rust/rofl/src/engine/vclosure.rs").
 switch_site("vclosure_retract_edge_delta", "rust/rofl/src/engine/vclosure.rs").
 switch_site("vclosure_row_written_twice", "rust/rofl/src/engine/vclosure.rs").
-switch_site("vclosure_rows_cost", "rust/rofl/src/engine/vclosure.rs").
 switch_site("vclosure_rows_unpublished", "rust/rofl/src/engine/vclosure.rs").
 switch_site("vclosure_stale_forest", "rust/rofl/src/engine/vclosure.rs").
 switch_site("vclosure_unbound_cheap", "rust/rofl/src/engine/vclosure.rs").
