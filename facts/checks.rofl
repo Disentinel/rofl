@@ -386,6 +386,15 @@ check_opt("demand_fixpoint_rows", space, 4000).
 check_world("demand_done").
 check_file("demand_done", "examples/checks/demand-done.rofl").
 
+-- the calls met while the lowest open call of a cycle is open iterate together and complete together, tabled;
+-- an unknown met in a pass falls back to unfolding them one by one (f_a_cycle_of_open_calls_iterated_call_by_call)
+check_world("demand_scc").
+check_file("demand_scc", "examples/checks/demand-scc.rofl").
+check_world("demand_scc_rows").
+check_file("demand_scc_rows", "examples/checks/demand-scc-rows.rofl").
+check_opt("demand_scc_rows", together, 1).
+check_opt("demand_scc_rows", space, 400).
+
 -- a question runs under its own budget, counted from nothing, and leaves the world's steps as it found them
 -- (f_a_question_spent_the_world_budget)
 check_world("demand_question_budget").

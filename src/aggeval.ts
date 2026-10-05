@@ -148,6 +148,23 @@ function mergeFront(into: Front, from: Front): void {
 }
 
 interface Sol { s: Subst; prems: PremRef[] }
+/** A call answered on demand being unfolded, of a relation that may call itself (rust/rofl `DemandCall`): its variant key, how many negations
+ *  were being decided when it was made, its answers so far (its variables renamed canonically) and their keys, whether a call met again read
+ *  them; `from` the first answer a call met again in this pass reads (`demandLinear`); `began` how many it had when this pass began, `seen` the
+ *  fewest a read of it in this pass saw (in a pass of its set, the next pass's `from`, `began` if none read it); `sccFrom` where the members of
+ *  `demandScc` kept since it was made start; `low` the lowest call below it whose answers it read (none: its own place), `marks` the faults,
+ *  trail, unknowns asked and store it was made over; `rows` the rows its open answers hold, given back when it ends, or when the table that
+ *  keeps them goes. */
+type DemandCall = {
+  key: string; neg: number; answers: [Term[], PremRef][]; keys: Set<string>; read: boolean; from: number; began: number; seen: number;
+  linear: boolean; sccFrom: number; low: number; marks: number[]; rows: number;
+};
+/** A CALL OF A STRONGLY CONNECTED SET whose lowest call is still open, kept when it ended: its call, the call itself with its arguments resolved,
+ *  its rules and depth, to be unfolded again in each pass of the set, and every record of an unknown as it stood when it ended. */
+type SccMember = { call: DemandCall; lit: Lit; rules: ERule[]; depth: number; at: number[] };
+const sameMarks = (a: number[], b: number[]): boolean => a.length === b.length && a.every((m, i) => m === b[i]);
+/** The first answer a read in the next pass of its set reads. */
+const sccWindow = (c: DemandCall): number => (c.seen === Infinity ? c.began : c.seen);
 
 /** A lattice cell: relation, book, key (the head prefix). `id` names it. */
 export interface LatKey { rel: string; persp: string; key: Term[]; id: string }
@@ -921,13 +938,13 @@ export class AggEval {
   /** The calls of `demandCyclic` relations being unfolded, each with its answers so far (its variables renamed canonically): a call met
    *  again reads them, and the first one unfolds again until they stop growing. `neg` is how many negations were being decided when it was
    *  made; `from` the first answer a call met again in this pass reads (`demandLinear`). */
-  private demandCalls: {
-    key: string; neg: number; answers: [Term[], PremRef][]; keys: Set<string>; read: boolean; from: number; linear: boolean;
-    /** the lowest call below it whose answers it read (none: its own place), and the faults, trail, unknowns asked and store it was made over */
-    low: number; marks: number[];
-    /** the rows its open answers hold, given back when it ends, or when the table that keeps them goes */
-    rows: number;
-  }[] = [];
+  private demandCalls: DemandCall[] = [];
+  /** THE CALLS OF AN OPEN STRONGLY CONNECTED SET, kept when they end with their answers in the order they ended, `demandSccAt` finding one by
+   *  key: read, not unfolded again, until the set completes together. */
+  private demandScc: (SccMember | null)[] = [];
+  private demandSccAt = new Map<string, number>();
+  /** How many calls on the stack iterate one by one: under one, no call is kept for its set nor read from it. */
+  private demandOld = 0;
   /** The `demandCyclic` relations whose calls are tabled once complete: no rule they unfold reads a kernel relation or book (`demandTabledRels`). */
   private demandTabled = new Set<string>();
   /** THE COMPLETE CALLS, by variant key, read by a call each covers while the store stands as `demandDoneAt` says: indexed lazily by each
@@ -6644,6 +6661,101 @@ export class AggEval {
     return null;
   }
 
+  /** A complete call's answers kept by its key, its rows held by the table. */
+  private tableCall(key: string, answers: [Term[], PremRef][], rows: number): void {
+    if (this.demandDoneAt[0] !== this.store.version || this.demandDoneAt[1] !== this.store.tick) { this.dropDone(); this.demandDoneAt = [this.store.version, this.store.tick]; }
+    this.demandDoneRows += rows;
+    const old = this.demandDone.get(key);
+    if (old !== undefined) { this.rows -= old.rows; this.demandDoneRows -= old.rows; }
+    this.demandDone.set(key, { answers, by: new Map(), rows });
+  }
+
+  /** The kept call of an open set this key names, if it may be read: not under a call iterating one by one, nor once an unknown was recorded
+   *  since it ended, nor under a negation opened inside its set (unfolded, it would meet the cut). */
+  private sccMember(key: string): number {
+    if (this.demandOld > 0) return -1;
+    const i = this.demandSccAt.get(key);
+    const m = i === undefined ? null : this.demandScc[i];
+    if (m === null || m === undefined) return -1;
+    return sameMarks(m.at, this.unknownMarks()) && this.negLevel <= this.demandCalls[m.call.low].neg ? i! : -1;
+  }
+
+  /** A call of an open set kept, in place of one kept before under its key. */
+  private sccKeep(m: SccMember): void {
+    const i = this.demandSccAt.get(m.call.key);
+    if (i !== undefined) {
+      const was = this.demandScc[i];
+      if (was !== null) this.rows -= was.call.rows;
+      this.demandScc[i] = null;
+    }
+    this.demandSccAt.set(m.call.key, this.demandScc.length);
+    this.demandScc.push(m);
+  }
+
+  /** The calls kept since `from` dropped, and the rows their open answers held given back. */
+  private sccDrop(from: number): void {
+    for (const m of this.demandScc.splice(from)) {
+      if (m === null) continue;
+      this.demandSccAt.delete(m.call.key); this.rows -= m.call.rows;
+    }
+  }
+
+  /** `l` with its perspective and arguments as `s` resolves them. */
+  private resolvedLit(l: Lit, s: Subst): Lit {
+    return { ...l, persp: walk(l.persp, s), args: l.args.map((a) => resolve(a, s)) };
+  }
+
+  /** An answer of `lr` (`l` resolved under `s`) under `ms`, as `l` under `s` matches it. */
+  private rebind(l: Lit, lr: Lit, ms: Subst, s: Subst): Subst | null {
+    const s2 = unify(l.persp, resolve(lr.persp, ms), s);
+    return s2 === null ? null : unifyAll(l.args, lr.args.map((a) => resolve(a, ms)), s2);
+  }
+
+  /** An answer of the call on top of the stack, `l` under `ms`, kept if it is new: under canonical variables, a row if open. Whether it was. */
+  private keepAnswer(l: Lit, ms: Subst, mref: PremRef, dk: string, rid: string): boolean {
+    const c = this.demandCalls[this.demandCalls.length - 1];
+    // an open answer is the same answer again under other variables
+    const tk = mref.t === 'fact' ? dk : this.anonLitKey(l, ms);
+    if (c.keys.has(tk)) return false;
+    // kept under canonical variables: a name renamed at each read never grows
+    c.keys.add(tk);
+    c.answers.push([canonVars(l.args.map((a) => resolve(a, ms))), mref]);
+    // an open answer kept is a row: no stored fact counts it
+    if (mref.t !== 'fact') { c.rows++; this.chargeRow(rid, true); }
+    return true;
+  }
+
+  /** A KEPT CALL OF THE SET UNFOLDED AGAIN at `at` on the stack, its rules reading what the set found since the pass before began. Whether it
+   *  grew. */
+  private solveUnit(i: number, at: number): boolean {
+    const m = this.demandScc[i]!;
+    const call = m.call;
+    m.call = { ...call, answers: [], keys: new Set(), rows: 0 };
+    const low = call.low;
+    const kept = this.demandScc.length;
+    this.demandCalls.push(call);
+    try {
+      let grew = false;
+      for (const dr of m.rules) {
+        for (const [ms, mref] of this.solveDemandRule(dr, m.lit, new Map(), m.depth)) {
+          if (this.keepAnswer(m.lit, ms, mref, mref.t === 'fact' ? mref.key : '', dr.id)) grew = true;
+        }
+      }
+      return grew;
+    } finally {
+      this.demandCalls.pop();
+      // what was kept above it while it unfolded belongs to its set
+      const to = Math.min(call.low, low);
+      for (let k = Math.min(kept, this.demandScc.length); k < this.demandScc.length; k++) {
+        const n = this.demandScc[k];
+        if (n !== null && n.call.low >= at) n.call.low = to;
+      }
+      const slot = this.demandScc[i];
+      if (slot !== null && slot !== undefined) slot.call = call;
+      else this.rows -= call.rows;
+    }
+  }
+
   /** Every record an unknown leaves (a fault, the trail, an unknown asked, the heads and edges and cells left undecided), then the store's
    *  version and tick. */
   private unknownMarks(): number[] {
@@ -6688,12 +6800,14 @@ export class AggEval {
     const call = drs !== undefined && this.demandCyclic.has(l.rel) ? this.anonLitKey(l, s) : null;
     const j = call === null ? -1 : this.demandCalls.findIndex((c) => c.key === call);
     const cut = j >= 0 && this.negLevel > this.demandCalls[j].neg;
+    // A CALL OF AN OPEN STRONGLY CONNECTED SET, kept when it ended, reads its answers so far: the set's passes unfold it again, not each call of it
+    const member = call !== null && j < 0 ? this.sccMember(call) : -1;
     // A CALL A COMPLETE ONE COVERS reads its answers: they were all found over this store, in a firing
     // (a question notes the unknowns it reads, which a firing leaves to the holes it writes)
-    const tabled = call !== null && j < 0 && only === null && this.firing && !this.asking && this.assume === null && this.demandTabled.has(l.rel);
+    const tabled = call !== null && j < 0 && member < 0 && only === null && this.firing && !this.asking && this.assume === null && this.demandTabled.has(l.rel);
     const served = tabled ? this.doneAnswers(l, s) : null;
     // the first call took the stored answers among its own: one met again reads them there
-    const out = (j >= 0 && !cut) || served !== null ? [] : this.storeAnswers(l, s, only);
+    const out = (j >= 0 && !cut) || member >= 0 || served !== null ? [] : this.storeAnswers(l, s, only);
     const keys: string[] = out.map(([, r]) => (r as { key: string }).key);
     const seen = new Set<string>(keys);
     if (j >= 0) {
@@ -6703,69 +6817,135 @@ export class AggEval {
       if (cut) this.demandCycle(l, s);
       else {
         c.read = true;
+        c.seen = Math.min(c.seen, c.answers.length);
         this.readAnswers(l, s, c.answers.slice(c.linear ? c.from : 0), seen, keys, out);
       }
     }
+    if (member >= 0) {
+      const c = this.demandScc[member]!.call;
+      // every call above the set's open call read answers that may still grow
+      for (const d of this.demandCalls.slice(c.low + 1)) d.low = Math.min(d.low, c.low);
+      c.read = true;
+      c.seen = Math.min(c.seen, c.answers.length);
+      this.readAnswers(l, s, c.answers.slice(c.linear ? c.from : 0), seen, keys, out);
+    }
     if (served !== null) this.readAnswers(l, s, served, seen, keys, out);
-    if (drs !== undefined && !this.demandClosed.has(l.rel) && j < 0 && served === null) {
+    if (drs !== undefined && !this.demandClosed.has(l.rel) && j < 0 && member < 0 && served === null) {
+      const p = this.demandCalls.length;
+      const sccFrom = this.demandScc.length;
       if (call !== null) {
-        const c = {
-          key: call, neg: this.negLevel, answers: [] as [Term[], PremRef][], keys: new Set<string>(), read: false, from: 0, linear: this.demandLinear.has(l.rel),
-          low: this.demandCalls.length, marks: this.unknownMarks(), rows: 0,
+        const c: DemandCall = {
+          key: call, neg: this.negLevel, answers: [], keys: new Set<string>(), read: false, from: 0, began: 0, seen: Infinity,
+          linear: this.demandLinear.has(l.rel), sccFrom, low: p, marks: this.unknownMarks(), rows: 0,
         };
         for (const [, r] of only === null ? out : this.storeAnswers(l, s, null)) {
           const f = this.store.get((r as { key: string }).key)!;
           c.keys.add(f.key);
           c.answers.push([f.args, r]);
         }
+        c.began = c.answers.length;
         this.demandCalls.push(c);
       }
-      let kept = false;
+      // A KEPT CALL IS SOLVED AS ITS ARGUMENTS RESOLVE, and each answer matched back to the caller: no solution carries the bindings of every
+      // call around it
+      const lr = call !== null ? this.resolvedLit(l, s) : null;
+      let old = false, ok = false;
       try {
+        // iterating its set: the calls kept since it was made, then its own rules; `full`: the next pass reads every answer (the set it read
+        // was dropped)
+        let scc = false, full = false;
         for (let pass = 1; ; pass++) {
           let grew = false;
-          const began = call !== null ? this.demandCalls[this.demandCalls.length - 1].answers.length : 0;
+          if (pass > 1) {
+            const c = this.demandCalls[this.demandCalls.length - 1];
+            c.read = false;
+            c.from = full ? 0 : scc ? sccWindow(c) : c.began;
+            c.began = c.answers.length;
+            c.seen = Infinity;
+            full = false;
+          }
+          const marks = scc ? this.unknownMarks() : [];
+          if (scc) {
+            // ONE PASS OF THE SET: each call kept unfolded again, the deepest first, reading what the set found since the pass before began
+            const units: number[] = [];
+            for (let i = sccFrom; i < this.demandScc.length; i++) if (this.demandScc[i] !== null) units.push(i);
+            for (const i of units) {
+              const c = this.demandScc[i]!.call;
+              c.read = false; c.from = sccWindow(c); c.began = c.answers.length; c.seen = Infinity;
+            }
+            for (const i of units) if (this.solveUnit(i, p + 1)) grew = true;
+          }
           for (const dr of drs[1]) {
-            for (const [ms, mref] of this.solveDemandRule(dr, l, s, depth)) {
+            for (const [ms0, mref] of lr !== null ? this.solveDemandRule(dr, lr, new Map(), depth) : this.solveDemandRule(dr, l, s, depth)) {
+              const ms = lr !== null ? this.rebind(l, lr, ms0, s) : ms0;
+              if (ms === null) continue;
               const dk = mref.t === 'fact' ? mref.key : this.resolvedLitKey(l, ms);
-              let fresh = true;
-              if (call !== null) {
-                // an open answer is the same answer again under other variables
-                const c = this.demandCalls[this.demandCalls.length - 1];
-                const tk = mref.t === 'fact' ? dk : this.anonLitKey(l, ms);
-                fresh = !c.keys.has(tk);
-                if (fresh) {
-                  // kept under canonical variables: a name renamed at each read never grows
-                  c.keys.add(tk); c.answers.push([canonVars(l.args.map((a) => resolve(a, ms))), mref]); grew = true;
-                  // an open answer kept is a row: no stored fact counts it
-                  if (mref.t !== 'fact') { c.rows++; this.chargeRow(dr.id, true); }
-                }
-              }
+              const fresh = call === null || this.keepAnswer(l, ms, mref, dk, dr.id);
+              if (call !== null && fresh) grew = true;
               if ((fresh || pass === 1) && !seen.has(dk)) { seen.add(dk); keys.push(dk); out.push([ms, mref]); }
             }
           }
-          const c = call !== null ? this.demandCalls[this.demandCalls.length - 1] : null;
-          if (c === null || !c.read || !grew) break;
-          c.read = false;
-          c.from = began;
-        }
-        // UNFOLDED TO ITS END: it read no call below it, met no unknown, and the store stood
-        const c = call !== null ? this.demandCalls[this.demandCalls.length - 1] : null;
-        if (c !== null && tabled && c.low >= this.demandCalls.length - 1) {
+          if (call === null) break;
           const now = this.unknownMarks();
-          if (c.marks.every((m, i) => m === now[i])) {
-            if (this.demandDoneAt[0] !== this.store.version || this.demandDoneAt[1] !== this.store.tick) { this.dropDone(); this.demandDoneAt = [this.store.version, this.store.tick]; }
-            // the table keeps its open answers, and holds their rows while it stands
-            this.demandDoneRows += c.rows;
-            const old = this.demandDone.get(c.key);
-            if (old !== undefined) { this.rows -= old.rows; this.demandDoneRows -= old.rows; }
-            this.demandDone.set(c.key, { answers: c.answers, by: new Map(), rows: c.rows });
-            kept = true;
+          const c = this.demandCalls[this.demandCalls.length - 1];
+          const quiet = sameMarks(c.marks, now);
+          const units = this.demandScc.slice(sccFrom).some((m) => m !== null);
+          let fallBack: boolean;
+          if (scc) {
+            if (c.low < p) {
+              // a call new in this pass read below it: its set is a lower call's
+              if (quiet) break;
+              fallBack = true;
+            } else if (!sameMarks(now, marks)) fallBack = true; // an unknown met in a pass reaches the calls that read it only unfolded
+            else if (grew) continue;
+            else break;
+          } else if (pass === 1 && !old) {
+            // the lower call's set unfolds it again in its passes
+            if (c.low < p && quiet && this.demandOld === 0) break;
+            if (c.low === p && units && this.demandOld === 0 && this.demandScc.slice(sccFrom).every((m) => m === null || sameMarks(m.at, now))) {
+              scc = true;
+              continue;
+            }
+            old = true;
+            this.demandOld++;
+            fallBack = units;
+          } else fallBack = false;
+          if (fallBack) {
+            // ONE BY ONE, as before: what the set kept is dropped and every answer read again
+            this.sccDrop(sccFrom);
+            if (!old) { old = true; this.demandOld++; }
+            scc = false;
+            full = true;
+            continue;
+          }
+          if (!(c.read && grew)) break;
+        }
+        ok = true;
+      } finally {
+        if (old) this.demandOld--;
+        if (call !== null) {
+          const c = this.demandCalls.pop()!;
+          const now = this.unknownMarks();
+          const quiet = sameMarks(c.marks, now);
+          if (ok && c.low < p && quiet && this.demandOld === 0) {
+            // A CALL OF A LOWER CALL'S SET is kept with its answers, and so are those kept under it; the call that made it read every answer
+            for (let i = sccFrom; i < this.demandScc.length; i++) { const m = this.demandScc[i]; if (m !== null && m.call.low >= p) m.call.low = c.low; }
+            c.seen = Math.min(c.seen, c.answers.length);
+            this.sccKeep({ call: c, lit: lr!, rules: drs[1], depth, at: now });
+          } else if (ok && tabled && c.low >= p && quiet) {
+            // UNFOLDED TO ITS END: it read no call below it, met no unknown, and the store stood; the calls of its set are complete with it
+            this.tableCall(c.key, c.answers, c.rows);
+            for (const m of this.demandScc.splice(sccFrom)) {
+              if (m === null) continue;
+              this.demandSccAt.delete(m.call.key);
+              if (this.demandTabled.has(m.lit.rel)) this.tableCall(m.call.key, m.call.answers, m.call.rows);
+              else this.rows -= m.call.rows;
+            }
+          } else {
+            // AN ENDED CALL'S OPEN ANSWERS ARE DROPPED, and the rows they held with them, its set's too
+            this.rows -= c.rows; this.sccDrop(sccFrom);
           }
         }
-      } finally {
-        // AN ENDED CALL'S OPEN ANSWERS ARE DROPPED, and the rows they held with them
-        if (call !== null) { const c = this.demandCalls.pop()!; if (!kept) this.rows -= c.rows; }
       }
     }
     // the answers in key order, which is the one a canonical witness is picked in: a store that holds them so is not sorted again

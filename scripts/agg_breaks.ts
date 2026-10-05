@@ -3862,8 +3862,8 @@ export const BREAKS: Break[] = [
   "edits": [
    [
     "src/aggeval.ts",
-    "if (drs !== undefined && !this.demandClosed.has(l.rel) && j < 0 && served === null) {",
-    "if (drs !== undefined && j < 0 && served === null) {"
+    "if (drs !== undefined && !this.demandClosed.has(l.rel) && j < 0 && member < 0 && served === null) {",
+    "if (drs !== undefined && j < 0 && member < 0 && served === null) {"
    ]
   ],
   "expect": {
@@ -3888,8 +3888,8 @@ export const BREAKS: Break[] = [
    ],
    [
     "src/aggeval.ts",
-    "if (drs !== undefined && !this.demandClosed.has(l.rel) && j < 0 && served === null) {",
-    "if (drs !== undefined && j < 0 && served === null) {"
+    "if (drs !== undefined && !this.demandClosed.has(l.rel) && j < 0 && member < 0 && served === null) {",
+    "if (drs !== undefined && j < 0 && member < 0 && served === null) {"
    ]
   ],
   "expect": {
@@ -3981,8 +3981,13 @@ export const BREAKS: Break[] = [
   "edits": [
    [
     "src/aggeval.ts",
-    "if (c === null || !c.read || !grew) break;",
+    "if (!(c.read && grew)) break;",
     "break;"
+   ],
+   [
+    "src/aggeval.ts",
+    "else if (grew) continue;",
+    "else if (false) continue;"
    ]
   ],
   "expect": {
@@ -4002,8 +4007,8 @@ export const BREAKS: Break[] = [
   "edits": [
    [
     "src/aggeval.ts",
-    "c.from = began;",
-    "c.from = c.answers.length;"
+    "c.from = full ? 0 : scc ? sccWindow(c) : c.began;",
+    "c.from = full ? 0 : scc ? sccWindow(c) : c.answers.length;"
    ]
   ],
   "expect": {
@@ -4194,25 +4199,78 @@ export const BREAKS: Break[] = [
   }
  },
  {
-  "id": "demand_rows_kept",
-  "what": "a call that ends keeps counting the rows of the open answers it dropped against the space wall",
+  "id": "scc_window_late",
+  "what": "a pass of a strongly connected set reads only the answers found after the pass before ended",
   "expect": {
-   "demand_fixpoint_rows": "the state lacks the row dk_r[main](n39,n1)",
-   "demand_fixpoint": "the space wall fell on rows no call held any more"
+   "demand_scc": "sa_missed"
+  }
+ },
+ {
+  "id": "ts_scc_window_late",
+  "what": "the TypeScript engine reads in a pass of a strongly connected set only the answers found after the pass before ended",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "const sccWindow = (c: DemandCall): number => (c.seen === Infinity ? c.began : c.seen);",
+    "const sccWindow = (c: DemandCall): number => c.answers.length;"
+   ]
+  ],
+  "expect": {
+   "demand_scc": "sa_missed"
+  }
+ },
+ {
+  "id": "scc_member_reads_free",
+  "what": "a call that read a kept call of an open set is complete as if it had read nothing still growing",
+  "expect": {
+   "demand_scc": "sa_missed"
+  }
+ },
+ {
+  "id": "ts_scc_member_reads_free",
+  "what": "the TypeScript engine completes a call that read a kept call of an open set",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "for (const d of this.demandCalls.slice(c.low + 1)) d.low = Math.min(d.low, c.low);",
+    "for (const d of this.demandCalls.slice(c.low + 1)) d.low = Math.min(d.low, d.low);"
+   ]
+  ],
+  "expect": {
+   "demand_scc": "sa_missed"
+  }
+ },
+ {
+  "id": "scc_off",
+  "what": "no strongly connected set is iterated together: its calls are unfolded again in every pass of the lowest",
+  "expect": {
+   "demand_fixpoint": "calls unfolded for a ring of 400"
+  }
+ },
+ {
+  "id": "demand_rows_kept",
+  "what": "a call that ends, or a strongly connected set dropped, keeps counting the rows of the open answers it dropped against the space wall",
+  "expect": {
+   "demand_scc_rows": "the state lacks the row dq_r9[main](n8,c1)"
   }
  },
  {
   "id": "ts_demand_rows_kept",
-  "what": "the TypeScript engine keeps counting the rows of the open answers an ended call dropped",
+  "what": "the TypeScript engine keeps counting the rows of the open answers an ended call or a dropped set held",
   "edits": [
    [
     "src/aggeval.ts",
-    "if (call !== null) { const c = this.demandCalls.pop()!; if (!kept) this.rows -= c.rows; }",
-    "if (call !== null) this.demandCalls.pop();"
+    "this.rows -= c.rows; this.sccDrop(sccFrom);",
+    "this.sccDrop(sccFrom);"
+   ],
+   [
+    "src/aggeval.ts",
+    "this.demandSccAt.delete(m.call.key); this.rows -= m.call.rows;",
+    "this.demandSccAt.delete(m.call.key);"
    ]
   ],
   "expect": {
-   "demand_fixpoint_rows": "the state lacks the row dk_r[main](n39,n1)"
+   "demand_scc_rows": "the state lacks the row dq_r9[main](n8,c1)"
   }
  },
  {
@@ -4335,8 +4393,8 @@ export const BREAKS: Break[] = [
   "edits": [
    [
     "src/aggeval.ts",
-    "if (mref.t !== 'fact') { c.rows++; this.chargeRow(dr.id, true); }",
-    "if (false) { c.rows++; this.chargeRow(dr.id, true); }"
+    "if (mref.t !== 'fact') { c.rows++; this.chargeRow(rid, true); }",
+    "if (false) { c.rows++; this.chargeRow(rid, true); }"
    ]
   ],
   "expect": {

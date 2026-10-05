@@ -138,3 +138,30 @@ fn a_ring_of_open_answers_holds_only_what_it_keeps() {
     assert!(!ev.partial, "the space wall fell on rows no call held any more");
     assert_eq!(s.ask("t_r(Y, W)").unwrap().rows.len(), 2 * n);
 }
+
+/// A STRONGLY CONNECTED SET OF OPEN CALLS ITERATES TOGETHER (f_a_cycle_of_open_calls_iterated_call_by_call):
+/// round a ring of 400 read from one node, every call from a node reads the outermost call's growing
+/// answers. Unfolded again call by call in each pass of the outermost it took 10.1 s; the set's
+/// passes unfold each call once, reading only what the set found since the pass before.
+#[test]
+fn a_strongly_connected_ring_iterates_together() {
+    let n = 400usize;
+    let mut src = String::from("edb(t_e). edb(t_dom).\nt_dom(n0). t_dom(n1).\n");
+    for i in 0..n {
+        src.push_str(&format!("t_e(n{i}, n{}).\n", (i + 1) % n));
+    }
+    src.push_str("t_p(X, Y, W) :- t_e(X, Y).\nt_p(X, Z, W) :- t_e(X, Y), t_p(Y, Z, W).\nt_r(Y, W) :- t_p(n0, Y, W), t_dom(W).\n");
+    let mut s = session(200_000_000, &src);
+    let names = s.eval.h.syms.bytes();
+    let (ev, secs) = run(&mut s);
+    let grown = s.eval.h.syms.bytes() - names;
+    let unfolded = s.eval.demand_unfolded;
+    eprintln!("ring of {n}: {} steps, {grown} bytes of names, {unfolded} calls unfolded, {secs:.2} s", ev.steps);
+    assert!(!ev.partial, "the evaluation was cut");
+    assert_eq!(s.ask("t_r(Y, W)").unwrap().rows.len(), 2 * n);
+    assert!(ev.steps <= 2 * (n * n) as i64, "{} steps for a ring of {n}", ev.steps);
+    assert!(unfolded <= n as u64 + 10, "{unfolded} calls unfolded for a ring of {n}: the calls of the set were unfolded again in every pass");
+    if !cfg!(debug_assertions) {
+        assert!(secs < 3.0, "a ring of {n} read from one node took {secs:.2} s: the calls of the set were unfolded again in every pass");
+    }
+}
