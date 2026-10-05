@@ -616,6 +616,8 @@ pub struct Eval {
     /// The closures of declared trees answered from their trees, not stored (engine/vclosure.rs): by relation, the
     /// lowered rules they stand for, the rules that read them, and the edge rows each reader last fired over.
     vclosures: Vec<vclosure::VClosure>,
+    /// Some closure is answered from its tree in this evaluation: the one test the hot paths make.
+    vany: bool,
     vclosure_of: HashMap<Sym, usize>,
     vskip: HashMap<Sym, usize>,
     vreaders: HashMap<Sym, Vec<usize>>,
@@ -1195,6 +1197,7 @@ impl Eval {
             function_keys: HashMap::new(),
             trees: Vec::new(),
             vclosures: Vec::new(),
+            vany: false,
             vclosure_of: HashMap::new(),
             vskip: HashMap::new(),
             vreaders: HashMap::new(),
@@ -3932,13 +3935,15 @@ impl Eval {
                     merge_front(&mut self.cur_front, f);
                     return Ok(());
                 }
-                if !self.vskip.is_empty() && self.vskip.get(&r.id).is_some_and(|&ci| self.vclosures[ci].active) {
-                    return Ok(());
-                }
-                // a closure answered from its tree has no news of its own: news of its edges fires a reader whole
-                if !self.vreaders.is_empty() && !brk!("vclosure_reader_stale" => true; false) && self.vreader_due(r, cur) {
-                    let f = self.fire_rule(r, None)?;
-                    merge_front(&mut self.cur_front, f);
+                if self.vany {
+                    if self.vskip.get(&r.id).is_some_and(|&ci| self.vclosures[ci].active) {
+                        return Ok(());
+                    }
+                    // a closure answered from its tree has no news of its own: news of its edges fires a reader whole
+                    if !brk!("vclosure_reader_stale" => true; false) && self.vreader_due(r, cur) {
+                        let f = self.fire_rule(r, None)?;
+                        merge_front(&mut self.cur_front, f);
+                    }
                 }
                 if !r
                     .trigger_rels
@@ -3985,11 +3990,13 @@ impl Eval {
         front_at: Option<(usize, &FxSet<FactId>)>,
     ) -> Result<Front, Halt> {
         // the rules a declared closure lowers to are not fired where the closure is answered from its tree
-        if !self.vskip.is_empty() && self.vskip.get(&r.id).is_some_and(|&ci| self.vclosures[ci].active) {
-            return Ok(Front::default());
-        }
-        if front_at.is_none() && !self.vreaders.is_empty() {
-            self.vreader_fired(r);
+        if self.vany {
+            if self.vskip.get(&r.id).is_some_and(|&ci| self.vclosures[ci].active) {
+                return Ok(Front::default());
+            }
+            if front_at.is_none() {
+                self.vreader_fired(r);
+            }
         }
         if self.lattices.is_empty() {
             if let Some(&(ci, is_base)) = self.closure_of.get(&r.id) {

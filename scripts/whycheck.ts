@@ -335,13 +335,21 @@ function firstDiff(a: string, b: string): string {
 
 type Report = { asked: number; bad: string[]; loadOnly: string[] };
 
+/** A world that keeps no witness and declares a tree with a closure: the Rust engine answers the closure from the tree and
+ *  stores none of its rows, so a derivation through it is asked of rofl-serve and rofl-load alone, as a Rust-only world's is
+ *  (TypeScript derives the rows by rules and has the witnesses). The same files without the seal are asked against the reference. */
+const fromTree = (w: World): boolean => {
+  const text = placed(w).files.filter((f) => f.endsWith('.rofl') && fs.existsSync(f)).map((f) => fs.readFileSync(f, 'utf8')).join('\n');
+  return /^sealed\(provenance\)\./m.test(text) && /^tree \w+\(.*\) closure \w+\./m.test(text);
+};
+
 async function check(ws: World[], firstName: string): Promise<Report> {
   const port = await RoflPort.start();
   const rep: Report = { asked: 0, bad: [], loadOnly: [] };
   try {
     for (const w0 of ws) {
       if (process.env.WHYCHECK_TRACE) process.stderr.write(`whycheck: ${w0.name}\n`);
-      if (w0.oneEngine === 'rust') {
+      if (w0.oneEngine === 'rust' || fromTree(w0)) {
         // the reference is not run on a Rust-only world; rofl-serve and rofl-load must still agree
         const w = placed(w0);
         const kept = { ...w, files: w.files.filter((f) => !expectedRefusal(f) && unreadOf(f).length === 0) };
@@ -433,7 +441,7 @@ const reps = await Promise.all(Array.from({ length: jobs }, (_, i) => new Promis
   });
   c.on('error', no);
 })));
-const rustOnly = asked.filter((w) => w.oneEngine === 'rust').map((w) => w.name);
+const rustOnly = asked.filter((w) => w.oneEngine === 'rust' || fromTree(w)).map((w) => w.name);
 const bad = reps.flatMap((r) => r.bad);
 const n = reps.reduce((s, r) => s + r.asked, 0);
 const loadOnly = reps.flatMap((r) => r.loadOnly).sort();

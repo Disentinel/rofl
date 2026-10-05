@@ -118,6 +118,7 @@ impl Eval {
             c.pairs = 0;
         }
         self.vreader_seen.clear();
+        self.vany = self.vclosures.iter().any(|c| c.active);
     }
 
     /// The declared closures and whether each is answered from its tree.
@@ -126,12 +127,12 @@ impl Eval {
     }
 
     pub(super) fn vclosure_active(&self) -> bool {
-        self.vclosures.iter().any(|c| c.active)
+        self.vany
     }
 
     /// The closure answered from a tree for this relation, if it is.
     pub(super) fn vclosure_for(&self, rel: Sym) -> Option<usize> {
-        if self.vclosures.is_empty() {
+        if !self.vany {
             return None;
         }
         self.vclosure_of.get(&rel).copied().filter(|&ci| self.vclosures[ci].active)
@@ -165,6 +166,9 @@ impl Eval {
 
     /// The forests of every active closure, built as the edges stand: the planner's estimates read them.
     pub(super) fn vrefresh(&mut self) {
+        if !self.vany {
+            return;
+        }
         for ci in 0..self.vclosures.len() {
             if self.vclosures[ci].active {
                 self.vforests(ci);

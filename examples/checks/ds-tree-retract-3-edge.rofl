@@ -2,7 +2,10 @@
 -- evaluation without the edge holds (a world answering the closure from its tree cannot say what a retraction left from
 -- the witnesses of the rows, since it keeps none: it builds the tree again and reads again)
 tree dtg_in(P, C) closure dtg_within.
-dtg_in(a, b). dtg_in(b, c). dtg_in(c, d). dtg_in(x, y).
+dtg_in(a, b).
+dtg_in(b, c).
+dtg_in(c, d).
+dtg_in(x, y).
 dtg_hit(X) :- dtg_within(a, X).
 dtg_pair(X, Y) :- dtg_within(X, Y), dtg_in(Y, _).
 dtg_cnt(N) :- N is count(X, Y : dtg_within(X, Y)).
