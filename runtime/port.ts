@@ -187,9 +187,15 @@ export class RoflSession {
   }
 
   /** A cooled volume back, refused when this engine did not write it; into an evaluated world by delta. */
-  async reheat(path: string): Promise<number> {
+  async reheat(path: string): Promise<{ admitted: number; evaluated: boolean }> {
     const r = await this.port.send({ op: 'reheat', session: this.id, path });
-    return r.admitted as number;
+    return { admitted: r.admitted as number, evaluated: r.evaluated as boolean };
+  }
+
+  /** `assert`, saying whether the world was brought up to date by delta (`full` null) or left for an evaluation. */
+  async add(rofl: string): Promise<{ added: number; full: string | null }> {
+    const r = await this.port.send({ op: 'assert', session: this.id, rofl });
+    return { added: r.added as number, full: r.full as string | null };
   }
 
   /** What this world wrote above the base it was forked from: the facts of `books` and of `rels`, and the atoms and

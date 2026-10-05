@@ -195,8 +195,10 @@ impl Server {
             // A cooled volume back, refused if this engine did not write it; into an evaluated world by delta.
             "reheat" => {
                 let p = r.get("path").and_then(|v| v.as_str()).ok_or("reheat needs `path`")?.to_string();
-                let n = self.get(r)?.reheat(&p).map_err(|d| d.join("\n"))?;
-                Ok(json!({ "admitted": n }))
+                let s = self.get(r)?;
+                let n = s.reheat(&p).map_err(|d| d.join("\n"))?;
+                // evaluated by delta, or left for the next evaluation (a cooled world, a program the path refuses)
+                Ok(json!({ "admitted": n, "evaluated": !s.eval.store.dirty }))
             }
             // What a volume's world wrote above its base: the facts of `books` and `rels`, and the names it can
             // subscribe by (`Session::layer_view`).
