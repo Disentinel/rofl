@@ -98,7 +98,25 @@ fn a_chain_read_from_every_node_is_bounded() {
     assert_eq!(s.ask("t_n(X)").unwrap().rows.len(), 0);
     let grown = s.eval.h.syms.bytes() - names;
     assert!(grown < 64 << 20, "{grown} bytes of names interned for {n} nodes");
+    assert!(ev.steps <= 40 * n as i64, "{} steps for a {n}-node chain read from every node: a complete call was unfolded again", ev.steps);
     if !cfg!(debug_assertions) {
-        assert!(secs < 6.0, "a {n}-node chain read from every node took {secs:.2} s");
+        assert!(secs < 1.0, "a {n}-node chain read from every node took {secs:.2} s");
     }
+}
+
+#[test]
+fn a_complete_call_is_unfolded_once_across_passes() {
+    let n = 300usize;
+    let mut src = String::from("edb(t_q). edb(t_e). edb(t_g0).\nt_q(0).\n");
+    for i in 0..n {
+        src.push_str(&format!("t_e({i}, {}). t_g0({i}, {}).\n", i + 1, i + 1));
+    }
+    // every pass of t_d(X, 5) calls t_g(0, V), whose own fixpoint is complete after the first
+    src.push_str("t_u(X, Y) :- t_q(X).\nt_gb(X, W) :- t_q(X).\nt_g(X, W) :- t_gb(X, W).\nt_g(Y, W) :- t_g(X, W), t_g0(X, Y).\n");
+    src.push_str("t_d(X, Z) :- t_u(X, X).\nt_d(Y, Z) :- t_d(X, Z), t_g(0, V), t_e(X, Y).\nt_r(X) :- t_d(X, 5).\n");
+    let mut s = session(200_000_000, &src);
+    let (ev, _) = run(&mut s);
+    assert!(!ev.partial, "the evaluation was cut");
+    assert_eq!(s.ask("t_r(X)").unwrap().rows.len(), n + 1);
+    assert!(ev.steps <= 40 * n as i64, "{} steps: a complete call was unfolded again in every pass of the call around it", ev.steps);
 }

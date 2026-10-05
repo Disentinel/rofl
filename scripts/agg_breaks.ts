@@ -3750,8 +3750,8 @@ export const BREAKS: Break[] = [
   "edits": [
    [
     "src/aggeval.ts",
-    "if (drs !== undefined && !this.demandClosed.has(l.rel) && j < 0) {",
-    "if (drs !== undefined && j < 0) {"
+    "if (drs !== undefined && !this.demandClosed.has(l.rel) && j < 0 && served === null) {",
+    "if (drs !== undefined && j < 0 && served === null) {"
    ]
   ],
   "expect": {
@@ -3776,8 +3776,8 @@ export const BREAKS: Break[] = [
    ],
    [
     "src/aggeval.ts",
-    "if (drs !== undefined && !this.demandClosed.has(l.rel) && j < 0) {",
-    "if (drs !== undefined && j < 0) {"
+    "if (drs !== undefined && !this.demandClosed.has(l.rel) && j < 0 && served === null) {",
+    "if (drs !== undefined && j < 0 && served === null) {"
    ]
   ],
   "expect": {
@@ -3920,6 +3920,104 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "demand_done_stale",
+  "what": "a complete call's table answers a call it covers after the store moved",
+  "expect": {
+   "demand_done": "the state lacks the row de_all[main](3)"
+  }
+ },
+ {
+  "id": "ts_demand_done_stale",
+  "what": "the TypeScript engine reads a complete call's table after the store moved",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "if (this.demandDoneAt[0] !== this.store.version || this.demandDoneAt[1] !== this.store.tick) { this.demandDone.clear(); return null; }",
+    "if (false) { this.demandDone.clear(); return null; }"
+   ]
+  ],
+  "expect": {
+   "demand_done": "the state lacks the row de_all[main](3)"
+  }
+ },
+ {
+  "id": "demand_done_reads_outer",
+  "what": "a call that read the answers of a call below it, still growing, is tabled as complete",
+  "expect": {
+   "demand_done": "the state lacks the row df_all[main](3)"
+  }
+ },
+ {
+  "id": "ts_demand_done_reads_outer",
+  "what": "the TypeScript engine tables a call that read the growing answers of a call below it",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "for (const c of this.demandCalls.slice(j + 1)) c.low = Math.min(c.low, j);",
+    "for (const c of this.demandCalls.slice(j + 1)) c.low = Math.min(c.low, c.low);"
+   ]
+  ],
+  "expect": {
+   "demand_done": "the state lacks the row df_all[main](3)"
+  }
+ },
+ {
+  "id": "demand_done_open_dropped",
+  "what": "a call covered by a complete call's table reads only the answers with its value at the places it binds, not those open there",
+  "expect": {
+   "demand_done": "the state lacks the row dh_five[main](2)"
+  }
+ },
+ {
+  "id": "ts_demand_done_open_dropped",
+  "what": "the TypeScript engine reads from a covering table only the answers with the call's value where it binds",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "return [b.exact.get(canonTerm(args[i])) ?? [], b.open];",
+    "return [b.exact.get(canonTerm(args[i])) ?? [], []];"
+   ]
+  ],
+  "expect": {
+   "demand_done": "the state lacks the row dh_five[main](2)"
+  }
+ },
+ {
+  "id": "demand_done_grounds_open",
+  "what": "an open answer of a covering table that the call grounds is read as the open answer, not as the stored fact its own unfolding names",
+  "expect": {
+   "demand_cycle_fixpoint": "the state lacks the row dw_r7[main](3) tick drv support=1"
+  }
+ },
+ {
+  "id": "ts_demand_done_grounds_open",
+  "what": "the TypeScript engine reads an open answer a call grounds from a covering table as the open answer",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "if (r.t === 'fact') { out.push([a, r]); continue; }",
+    "if (true) { out.push([a, r]); continue; }"
+   ]
+  ],
+  "expect": {
+   "demand_cycle_fixpoint": "the state lacks the row dw_r7[main](3) tick drv support=1"
+  }
+ },
+ {
+  "id": "demand_put_moves_tables",
+  "what": "an answer unfolded at a call and stored moves the store's version, so every table goes stale in every pass of the call around it",
+  "expect": {
+   "demand_fixpoint": "unfolded again in every pass"
+  }
+ },
+ {
+  "id": "demand_done_off",
+  "what": "no complete call is tabled: a call it covers unfolds again",
+  "expect": {
+   "demand_fixpoint": "a complete call was unfolded again"
+  }
+ },
+ {
   "id": "demand_naive_passes",
   "what": "every pass of a linear recursion reads every answer so far",
   "expect": {
@@ -3954,7 +4052,7 @@ export const BREAKS: Break[] = [
   "edits": [
    [
     "src/aggeval.ts",
-    "meets the wall\n          this.bumpSteps();",
+    "meets the wall\n      this.bumpSteps();",
     "meets the wall"
    ]
   ],

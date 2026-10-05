@@ -916,7 +916,17 @@ export class AggEval {
   /** The calls of `demandCyclic` relations being unfolded, each with its answers so far (its variables renamed canonically): a call met
    *  again reads them, and the first one unfolds again until they stop growing. `neg` is how many negations were being decided when it was
    *  made; `from` the first answer a call met again in this pass reads (`demandLinear`). */
-  private demandCalls: { key: string; neg: number; answers: [Term[], PremRef][]; keys: Set<string>; read: boolean; from: number; linear: boolean }[] = [];
+  private demandCalls: {
+    key: string; neg: number; answers: [Term[], PremRef][]; keys: Set<string>; read: boolean; from: number; linear: boolean;
+    /** the lowest call below it whose answers it read (none: its own place), and the faults, trail, unknowns asked and store it was made over */
+    low: number; marks: number[];
+  }[] = [];
+  /** The `demandCyclic` relations whose calls are tabled once complete: no rule they unfold reads a kernel relation or book (`demandTabledRels`). */
+  private demandTabled = new Set<string>();
+  /** THE COMPLETE CALLS, by variant key, read by a call each covers while the store stands as `demandDoneAt` says: indexed lazily by each
+   *  position a covered call binds, an answer open there beside every value. */
+  private demandDone = new Map<string, { answers: [Term[], PremRef][]; by: Map<number, { exact: Map<string, number[]>; open: number[] }> }>();
+  private demandDoneAt: [number, number] = [0, 0];
   /** The facts a question's unfolding made, taken out when it is answered. */
   private askedMade: string[] = [];
   /** How many negations are being decided: a call met again under one more than when it was first made cannot read answers that may still grow. */
@@ -1145,6 +1155,8 @@ export class AggEval {
     this.demandClosed = this.demandClosedRels();
     this.demandCyclic = this.demandCyclicRels();
     this.demandLinear = this.demandLinearRels();
+    this.demandTabled = this.demandTabledRels();
+    this.demandDone.clear();
     // a closed relation is read from the store: its readers fire on its news like any relation's
     for (const r of kept) r.hasDemandPrem = r.posRels.some((x) => demandNames.includes(x) && !this.demandClosed.has(x));
   }
@@ -1237,6 +1249,29 @@ export class AggEval {
       }
     }
     return new Set([...calls.keys()].filter((r) => !twice.some((t) => same(r, t))));
+  }
+
+  /** THE CYCLIC DEMAND RELATIONS A COMPLETE CALL OF WHICH IS TABLED: every rule they unfold, at any depth, reads relations whose rows only a
+   *  store change moves. A kernel relation or book moves while a call unfolds (a hole, a provenance row), so a call that reads one is unfolded
+   *  each time. */
+  private demandTabledRels(): Set<string> {
+    const unfolded = (rel: string) => this.demandRels.some(([r]) => r === rel) && !this.demandClosed.has(rel);
+    const out = new Set<string>();
+    for (const start of this.demandCyclic) {
+      const seen = new Set<string>([start]), todo = [start];
+      let ok = true;
+      for (let r = todo.pop(); r !== undefined; r = todo.pop()) {
+        for (const [x, rs] of this.demandRels) {
+          if (x !== r) continue;
+          for (const rule of rs) for (const l of rule.clause.body.flatMap((b) => litsOf(b))) {
+            if (RESERVED.has(l.rel) || (l.persp.k === 'a' && isKernelLedger(l.persp.name))) ok = false;
+            if (unfolded(l.rel) && !seen.has(l.rel)) { seen.add(l.rel); todo.push(l.rel); }
+          }
+        }
+      }
+      if (ok) out.add(start);
+    }
+    return out;
   }
 
   /** THE CARRY OF A LATTICE ACROSS A TICK: `L(K..., V) :- L@next(K..., V).` */
@@ -6450,8 +6485,90 @@ export class AggEval {
   }
 
   anonLitKey(l: Lit, s: Subst): string {
-    const cv = canonVars([walk(l.persp, s), ...l.args.map((a) => resolve(a, s))]);
-    return `${l.rel}[${canonTerm(cv[0])}](${cv.slice(1).map(canonTerm).join(',')})`;
+    return this.anonKey(l.rel, walk(l.persp, s), l.args.map((a) => resolve(a, s)));
+  }
+
+  private anonKey(rel: string, p: Term, args: Term[]): string {
+    const cv = canonVars([p, ...args]);
+    return `${rel}[${canonTerm(cv[0])}](${cv.slice(1).map(canonTerm).join(',')})`;
+  }
+
+  /** A COMPLETE CALL THAT COVERS THIS ONE, while the store stands as it did: the call itself, or one that leaves open some of the arguments this
+   *  one binds (each tried in turn, the first found read), and the answers of it this call can match: those with its values there, and those
+   *  open there. */
+  private doneAnswers(l: Lit, s: Subst): [Term[], PremRef][] | null {
+    if (this.demandDone.size === 0) return null;
+    if (this.demandDoneAt[0] !== this.store.version || this.demandDoneAt[1] !== this.store.tick) { this.demandDone.clear(); return null; }
+    const p = walk(l.persp, s);
+    const args = l.args.map((a) => resolve(a, s));
+    const ground = args.map((_, i) => i).filter((i) => isGround(args[i]));
+    const masks: number[] = [];
+    if (ground.length <= 4) for (let m = 0; m < 1 << ground.length; m++) masks.push(m);
+    else masks.push(0, (1 << ground.length) - 1);
+    for (const mask of masks) {
+      const at = ground.filter((_, k) => (mask >> k) & 1);
+      const gen = [...args];
+      at.forEach((i, k) => { gen[i] = mkv(`$g${k}`); });
+      const t = this.demandDone.get(this.anonKey(l.rel, p, gen));
+      if (t === undefined) continue;
+      if (at.length === 0) return [...t.answers];
+      for (const i of at) {
+        if (t.by.has(i)) continue;
+        const exact = new Map<string, number[]>(), open: number[] = [];
+        t.answers.forEach(([a], n) => {
+          if (!isGround(a[i])) { open.push(n); return; }
+          const k = canonTerm(a[i]);
+          let e = exact.get(k);
+          if (!e) { e = []; exact.set(k, e); }
+          e.push(n);
+        });
+        t.by.set(i, { exact, open });
+      }
+      const side = (i: number): [number[], number[]] => { const b = t.by.get(i)!; return [b.exact.get(canonTerm(args[i])) ?? [], b.open]; };
+      let first = at[0];
+      for (const i of at) { const [e, o] = side(i), [fe, fo] = side(first); if (e.length + o.length < fe.length + fo.length) first = i; }
+      const [e, o] = side(first);
+      // an answer it can match has its value, or is open, at every place it binds
+      const picks = [...e, ...o].sort((a, b) => a - b)
+        .filter((n) => at.every((i) => { const v = t.answers[n][0][i]; return !isGround(v) || canonTerm(v) === canonTerm(args[i]); }))
+        .map((n) => t.answers[n]);
+      // AN OPEN ANSWER THIS CALL GROUNDS is the stored fact its own unfolding names, or it unfolds
+      if (p.k !== 'a') return null;
+      const out: [Term[], PremRef][] = [];
+      for (const [a, r] of picks) {
+        if (r.t === 'fact') { out.push([a, r]); continue; }
+        const n = this.renameCounter++;
+        const ms = unifyAll(l.args, a.map((x) => renameTerm(x, n)), s);
+        if (ms === null) continue;
+        const inst = l.args.map((x) => resolve(x, ms));
+        if (!inst.every(isGround)) { out.push([a, r]); continue; }
+        const key = factKey(l.rel, p.name, inst);
+        if (!this.store.has(key)) return null;
+        out.push([inst, { t: 'fact', key }]);
+      }
+      return out;
+    }
+    return null;
+  }
+
+  /** Every record an unknown leaves (a fault, the trail, an unknown asked, the heads and edges and cells left undecided), then the store's
+   *  version and tick. */
+  private unknownMarks(): number[] {
+    return [this.faultCount, this.demandTrail.length, this.asked.length, this.plainPending.length, this.unkEdges.length, this.plainUndecided.length,
+      this.latUndecided.length, this.latPlain.size, this.store.version, this.store.tick];
+  }
+
+  /** Answers kept for a call, read by `l` under `s`: each a step, renamed apart and matched, the new ones added to the matches. */
+  private readAnswers(l: Lit, s: Subst, answers: [Term[], PremRef][], seen: Set<string>, keys: string[], out: [Subst, PremRef][]): void {
+    for (const [args, mref] of answers) {
+      // every answer read is a step: a fixpoint that never stops growing meets the wall
+      this.bumpSteps();
+      const n = this.renameCounter++;
+      const ms = unifyAll(l.args, args.map((a) => renameTerm(a, n)), s);
+      if (ms === null) continue;
+      const dk = mref.t === 'fact' ? mref.key : this.resolvedLitKey(l, ms);
+      if (!seen.has(dk)) { seen.add(dk); keys.push(dk); out.push([ms, mref]); }
+    }
   }
 
   /** The facts of a premise's relation that agree with what is ground in it, when the store indexes it. */
@@ -6478,29 +6595,31 @@ export class AggEval {
     const call = drs !== undefined && this.demandCyclic.has(l.rel) ? this.anonLitKey(l, s) : null;
     const j = call === null ? -1 : this.demandCalls.findIndex((c) => c.key === call);
     const cut = j >= 0 && this.negLevel > this.demandCalls[j].neg;
+    // A CALL A COMPLETE ONE COVERS reads its answers: they were all found over this store, in a firing
+    // (a question notes the unknowns it reads, which a firing leaves to the holes it writes)
+    const tabled = call !== null && j < 0 && only === null && this.firing && !this.asking && this.assume === null && this.demandTabled.has(l.rel);
+    const served = tabled ? this.doneAnswers(l, s) : null;
     // the first call took the stored answers among its own: one met again reads them there
-    const out = j >= 0 && !cut ? [] : this.storeAnswers(l, s, only);
+    const out = (j >= 0 && !cut) || served !== null ? [] : this.storeAnswers(l, s, only);
     const keys: string[] = out.map(([, r]) => (r as { key: string }).key);
     const seen = new Set<string>(keys);
     if (j >= 0) {
+      // every call above the one met again read answers that may still grow
+      for (const c of this.demandCalls.slice(j + 1)) c.low = Math.min(c.low, j);
       const c = this.demandCalls[j];
       if (cut) this.demandCycle(l, s);
       else {
         c.read = true;
-        for (const [args, mref] of c.answers.slice(c.linear ? c.from : 0)) {
-          // every answer read is a step: a fixpoint that never stops growing meets the wall
-          this.bumpSteps();
-          const n = this.renameCounter++;
-          const ms = unifyAll(l.args, args.map((a) => renameTerm(a, n)), s);
-          if (ms === null) continue;
-          const dk = mref.t === 'fact' ? mref.key : this.resolvedLitKey(l, ms);
-          if (!seen.has(dk)) { seen.add(dk); keys.push(dk); out.push([ms, mref]); }
-        }
+        this.readAnswers(l, s, c.answers.slice(c.linear ? c.from : 0), seen, keys, out);
       }
     }
-    if (drs !== undefined && !this.demandClosed.has(l.rel) && j < 0) {
+    if (served !== null) this.readAnswers(l, s, served, seen, keys, out);
+    if (drs !== undefined && !this.demandClosed.has(l.rel) && j < 0 && served === null) {
       if (call !== null) {
-        const c = { key: call, neg: this.negLevel, answers: [] as [Term[], PremRef][], keys: new Set<string>(), read: false, from: 0, linear: this.demandLinear.has(l.rel) };
+        const c = {
+          key: call, neg: this.negLevel, answers: [] as [Term[], PremRef][], keys: new Set<string>(), read: false, from: 0, linear: this.demandLinear.has(l.rel),
+          low: this.demandCalls.length, marks: this.unknownMarks(),
+        };
         for (const [, r] of only === null ? out : this.storeAnswers(l, s, null)) {
           const f = this.store.get((r as { key: string }).key)!;
           c.keys.add(f.key);
@@ -6535,6 +6654,15 @@ export class AggEval {
           if (c === null || !c.read || !grew) break;
           c.read = false;
           c.from = began;
+        }
+        // UNFOLDED TO ITS END: it read no call below it, met no unknown, and the store stood
+        const c = call !== null ? this.demandCalls[this.demandCalls.length - 1] : null;
+        if (c !== null && tabled && c.low >= this.demandCalls.length - 1) {
+          const now = this.unknownMarks();
+          if (c.marks.every((m, i) => m === now[i])) {
+            if (this.demandDoneAt[0] !== this.store.version || this.demandDoneAt[1] !== this.store.tick) { this.demandDone.clear(); this.demandDoneAt = [this.store.version, this.store.tick]; }
+            this.demandDone.set(c.key, { answers: c.answers, by: new Map() });
+          }
         }
       } finally { if (call !== null) this.demandCalls.pop(); }
     }
@@ -6601,12 +6729,17 @@ export class AggEval {
       if (persp.k === 'a' && args.every(isGround)) {
         // A QUESTION LEAVES THE WORLD AS IT FOUND IT: what it finds is held for the question (a why renders it) and taken out after
         if (this.asking && !this.firing) {
+          const version = this.store.version;
           const [isNew, id] = this.put(call.rel, persp.name, args, F_TICK);
+          this.store.version = version;
           if (isNew) { this.support(id, { ruleId: r.id, tick: this.store.tick, prems: sol.prems }); this.askedMade.push(id); }
           out.push([sol.s, { t: 'fact', key: id }]);
           continue;
         }
+        // an answer unfolded at a call is one a complete call already holds: no table goes stale
+        const version = this.store.version;
         const [isNew, id] = this.put(call.rel, persp.name, args, F_TICK);
+        this.store.version = version;
         const tick = this.store.tick;
         if (this.support(id, { ruleId: r.id, tick, prems: sol.prems })) {
           this.chargeRow(r.id, true);

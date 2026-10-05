@@ -67,6 +67,20 @@ struct DemandCall {
     read: bool,
     from: usize,
     linear: bool,
+    /// The lowest call below it whose answers it read: none, its own place.
+    low: usize,
+    /// Every record of an unknown, and the store, as they stood when it was
+    /// made (`unknown_marks`): a call that left them as they were is complete.
+    marks: Vec<u64>,
+}
+
+/// THE ANSWERS OF A CALL UNFOLDED TO ITS END, read by a call it covers while
+/// the store stands as it was: indexed lazily by each position a covered call
+/// binds, an answer open there beside every value.
+#[derive(Clone)]
+struct DoneTable {
+    answers: Vec<(Vec<Term>, PremRef)>,
+    by: HashMap<usize, (HashMap<Term, Vec<usize>>, Vec<usize>)>,
 }
 
 pub struct ERule {
@@ -979,6 +993,12 @@ pub struct Eval {
     /// The `demand_cyclic` relations whose cycle no rule reads twice, or under a
     /// negation or an aggregate (`demand_linear_rels`).
     demand_linear: HashSet<Sym>,
+    /// The `demand_cyclic` relations whose calls are tabled once complete: no
+    /// rule they unfold reads a kernel relation or book (`demand_tabled_rels`).
+    demand_tabled: HashSet<Sym>,
+    /// The complete calls, by variant key, and the store they stand for.
+    demand_done: HashMap<String, DoneTable>,
+    demand_done_at: (u64, u32),
     /// The calls of `demand_cyclic` relations being unfolded, each with its
     /// answers so far: a call met again reads them, and the first one unfolds
     /// again until they stop growing (`DemandCall`).
@@ -1391,6 +1411,9 @@ impl Eval {
             demand_trail: Vec::new(),
             demand_cyclic: HashSet::new(),
             demand_linear: HashSet::new(),
+            demand_tabled: HashSet::new(),
+            demand_done: HashMap::new(),
+            demand_done_at: (0, 0),
             demand_calls: Vec::new(),
             neg_level: 0,
             asked_made: Vec::new(),
@@ -1809,6 +1832,8 @@ impl Eval {
         self.vclosure_setup();
         self.demand_cyclic = self.demand_cyclic_rels();
         self.demand_linear = self.demand_linear_rels();
+        self.demand_tabled = self.demand_tabled_rels();
+        self.demand_done.clear();
     }
 
     /// The demand relations not closed that reach themselves through calls to
@@ -1876,6 +1901,36 @@ impl Eval {
             }
         }
         calls.keys().copied().filter(|r| !twice.iter().any(|t| same(*r, *t)) || brk!("demand_nonlinear_window" => true; false)).collect()
+    }
+
+    /// THE CYCLIC DEMAND RELATIONS A COMPLETE CALL OF WHICH IS TABLED: every
+    /// rule they unfold, at any depth, reads relations whose rows only a store
+    /// change moves. A kernel relation or book moves while a call unfolds (a
+    /// hole, a provenance row), so a call that reads one is unfolded each time.
+    fn demand_tabled_rels(&self) -> HashSet<Sym> {
+        let unfolded = |rel: &Sym| self.demand_rels.iter().any(|(r, _)| r == rel) && !self.demand_closed.contains(rel);
+        let mut out = HashSet::new();
+        for start in &self.demand_cyclic {
+            let mut seen: HashSet<Sym> = HashSet::from([*start]);
+            let mut todo = vec![*start];
+            let mut ok = true;
+            while let Some(r) = todo.pop() {
+                for rule in self.demand_rels.iter().filter(|(x, _)| *x == r).flat_map(|(_, rs)| rs.iter()) {
+                    for l in rule.clause.body.iter().flat_map(|b| b.lits_deep()) {
+                        if self.v.is_reserved(l.rel) || l.persp.as_atom().is_some_and(|p| is_kernel_ledger(&self.h, p)) {
+                            ok = false;
+                        }
+                        if unfolded(&l.rel) && seen.insert(l.rel) {
+                            todo.push(l.rel);
+                        }
+                    }
+                }
+            }
+            if ok {
+                out.insert(*start);
+            }
+        }
+        out
     }
 
     /// THE DEMAND RELATIONS WHOSE ANSWERS ARE ALL GROUND, and whose rules all
@@ -10441,14 +10496,16 @@ impl Eval {
 
     fn anon_lit_key(&mut self, l: &Lit, s: &Subst) -> String {
         let p = walk(&self.h, l.persp, s);
+        let args: Vec<Term> = l.args.iter().map(|a| resolve(&mut self.h, *a, s)).collect();
+        self.anon_key(l.rel, p, &args)
+    }
+
+    fn anon_key(&mut self, rel: Sym, p: Term, args: &[Term]) -> String {
         let mut ts = vec![p];
-        for a in &l.args {
-            let r = resolve(&mut self.h, *a, s);
-            ts.push(r);
-        }
+        ts.extend_from_slice(args);
         let cv = canon_vars(&mut self.h, &ts);
         let mut out = String::new();
-        out.push_str(self.h.name(l.rel));
+        out.push_str(self.h.name(rel));
         out.push('[');
         self.h.canon_term(cv[0], &mut out);
         out.push_str("](");
@@ -10490,6 +10547,117 @@ impl Eval {
         }
         self.store
             .arg_matches(&self.h, l.rel, persp, l.args.len(), &pos, &vals)
+    }
+
+    /// A COMPLETE CALL THAT COVERS THIS ONE, while the store stands as it did: the
+    /// call itself, or one that leaves open some of the arguments this one binds
+    /// (each tried in turn, the first found read), and the answers of it this
+    /// call can match: those with its values there, and those open there.
+    fn done_answers(&mut self, l: &Lit, s: &Subst) -> Option<Vec<(Vec<Term>, PremRef)>> {
+        if self.demand_done.is_empty() {
+            return None;
+        }
+        if self.demand_done_at != (self.store.version, self.store.tick) && brk!("demand_done_stale" => false; true) {
+            self.demand_done.clear();
+            return None;
+        }
+        let p = walk(&self.h, l.persp, s);
+        let args: Vec<Term> = l.args.iter().map(|a| resolve(&mut self.h, *a, s)).collect();
+        let ground: Vec<usize> = (0..args.len()).filter(|&i| self.h.is_ground(args[i])).collect();
+        let masks: Vec<u32> = if ground.len() <= 4 { (0..1u32 << ground.len()).collect() } else { vec![0, (1u32 << ground.len()) - 1] };
+        for mask in masks {
+            let at: Vec<usize> = ground.iter().enumerate().filter(|(k, _)| mask >> k & 1 == 1).map(|(_, i)| *i).collect();
+            let mut gen = args.clone();
+            for (k, i) in at.iter().enumerate() {
+                gen[*i] = self.h.var(&format!("$g{k}"));
+            }
+            let key = self.anon_key(l.rel, p, &gen);
+            let Some(t) = self.demand_done.get_mut(&key) else { continue };
+            if at.is_empty() {
+                return Some(t.answers.clone());
+            }
+            for i in &at {
+                if !t.by.contains_key(i) {
+                    let mut exact: HashMap<Term, Vec<usize>> = HashMap::new();
+                    let mut open = Vec::new();
+                    for (n, (a, _)) in t.answers.iter().enumerate() {
+                        if self.h.is_ground(a[*i]) {
+                            exact.entry(a[*i]).or_default().push(n);
+                        } else {
+                            open.push(n);
+                        }
+                    }
+                    t.by.insert(*i, (exact, open));
+                }
+            }
+            let side = |i: usize| -> (&[usize], &[usize]) {
+                let (exact, open) = &t.by[&i];
+                let open: &[usize] = brk!("demand_done_open_dropped" => &[]; open);
+                (exact.get(&args[i]).map_or(&[][..], |v| &v[..]), open)
+            };
+            let first = *at.iter().min_by_key(|i| { let (e, o) = side(**i); e.len() + o.len() }).unwrap();
+            let (e, o) = side(first);
+            let mut picks: Vec<usize> = e.iter().chain(o.iter()).copied().collect();
+            picks.sort_unstable();
+            // an answer it can match has its value, or is open, at every place it binds
+            picks.retain(|n| at.iter().all(|i| { let v = t.answers[*n].0[*i]; v == args[*i] || (!self.h.is_ground(v) && brk!("demand_done_open_dropped" => false; true)) }));
+            let picks: Vec<(Vec<Term>, PremRef)> = picks.into_iter().map(|n| t.answers[n].clone()).collect();
+            // AN OPEN ANSWER THIS CALL GROUNDS is the stored fact its own unfolding names, or it unfolds
+            let Some(book) = p.as_atom() else { return None };
+            let mut out = Vec::with_capacity(picks.len());
+            for (a, r) in picks {
+                if matches!(r, PremRef::Fact(_)) || brk!("demand_done_grounds_open" => true; false) {
+                    out.push((a, r));
+                    continue;
+                }
+                let n = self.rename_counter;
+                self.rename_counter += 1;
+                let renamed: Vec<Term> = a.iter().map(|x| rename_term(&mut self.h, *x, n)).collect();
+                let Some(ms) = unify_all(&self.h, &l.args, &renamed, s) else { continue };
+                let inst: Vec<Term> = l.args.iter().map(|x| resolve(&mut self.h, *x, &ms)).collect();
+                if !inst.iter().all(|x| self.h.is_ground(*x)) {
+                    out.push((a, r));
+                    continue;
+                }
+                match self.store.get(l.rel, book, &inst) {
+                    Some(id) => out.push((inst, PremRef::Fact(id))),
+                    None => return None,
+                }
+            }
+            return Some(out);
+        }
+        None
+    }
+
+    /// Every record an unknown leaves (a fault, the trail, an unknown asked, the
+    /// heads and edges and cells left undecided), then the store's version and tick.
+    fn unknown_marks(&self) -> Vec<u64> {
+        let n = [self.demand_trail.len(), self.asked.len(), self.plain_pending.len(), self.unk_edges.len(), self.plain_undecided.len(), self.lat_undecided.len(), self.lat_plain.len()];
+        let mut m = vec![self.fault_count as u64];
+        m.extend(n.iter().map(|x| *x as u64));
+        m.extend([self.store.version, self.store.tick as u64]);
+        m
+    }
+
+    /// Answers kept for a call, read by `l` under `s`: each a step, renamed apart
+    /// and matched, the new ones added to `open`.
+    fn read_answers(&mut self, l: &Lit, s: &Subst, answers: Vec<(Vec<Term>, PremRef)>, seen_keys: &mut HashSet<String>, open: &mut Vec<(Subst, PremRef, String)>) -> Result<(), Halt> {
+        for (args, mref) in answers {
+            // every answer read is a step: a fixpoint that never stops growing meets the wall
+            brk!("demand_reread_free" => (); self.bump_steps()?);
+            let n = self.rename_counter;
+            self.rename_counter += 1;
+            let args: Vec<Term> = args.iter().map(|a| rename_term(&mut self.h, *a, n)).collect();
+            let Some(ms) = unify_all(&self.h, &l.args, &args, s) else { continue };
+            let dk = match mref {
+                PremRef::Fact(f) => self.store.key(&self.h, f),
+                _ => self.resolved_lit_key(l, &ms),
+            };
+            if seen_keys.insert(dk.clone()) {
+                open.push((ms, mref, dk));
+            }
+        }
+        Ok(())
     }
 
     /// The stored facts that match a premise, `only` among them when given.
@@ -10582,7 +10750,11 @@ impl Eval {
         let cut = again.is_some_and(|j| self.neg_level > self.demand_calls[j].neg || brk!("demand_cycle_cut" => true; false));
         // the first call took the stored answers among its own: one met again reads them there
         let reread = again.is_some() && !cut && brk!("demand_again_rereads_store" => false; true);
-        let mut out = if reread { Vec::new() } else { self.store_answers(l, s, only) };
+        // A CALL A COMPLETE ONE COVERS reads its answers: they were all found over this store, in a firing
+        // (a question notes the unknowns it reads, which a firing leaves to the holes it writes)
+        let tabled = call.is_some() && met.is_none() && only.is_none() && self.firing && !self.asking && self.assume.is_none() && self.demand_tabled.contains(&l.rel) && brk!("demand_done_off" => false; true);
+        let served = if tabled { self.done_answers(l, s) } else { None };
+        let mut out = if reread || served.is_some() { Vec::new() } else { self.store_answers(l, s, only) };
         let mut open: Vec<(Subst, PremRef, String)> = Vec::new();
         let mut seen_keys: HashSet<String> = HashSet::new();
         if drs.is_some() {
@@ -10593,6 +10765,10 @@ impl Eval {
             }
         }
         if let Some(j) = again {
+            // every call above the one met again read answers that may still grow
+            for c in self.demand_calls[j + 1..].iter_mut() {
+                c.low = c.low.min(brk!("demand_done_reads_outer" => c.low; j));
+            }
             if cut {
                 self.demand_cycle(l, s);
             } else {
@@ -10600,29 +10776,21 @@ impl Eval {
                 let c = &self.demand_calls[j];
                 let from = if c.linear { c.from } else { 0 };
                 let answers = c.answers[from..].to_vec();
-                for (args, mref) in answers {
-                    // every answer read is a step: a fixpoint that never stops growing meets the wall
-                    brk!("demand_reread_free" => (); self.bump_steps()?);
-                    let n = self.rename_counter;
-                    self.rename_counter += 1;
-                    let args: Vec<Term> = args.iter().map(|a| rename_term(&mut self.h, *a, n)).collect();
-                    let Some(ms) = unify_all(&self.h, &l.args, &args, s) else { continue };
-                    let dk = match mref {
-                        PremRef::Fact(f) => self.store.key(&self.h, f),
-                        _ => self.resolved_lit_key(l, &ms),
-                    };
-                    if seen_keys.insert(dk.clone()) {
-                        open.push((ms, mref, dk));
-                    }
-                }
+                self.read_answers(l, s, answers, &mut seen_keys, &mut open)?;
             }
+        }
+        let drs = drs.filter(|_| served.is_none());
+        if let Some(answers) = served {
+            self.read_answers(l, s, answers, &mut seen_keys, &mut open)?;
         }
         let drs = drs.filter(|_| met.is_none() || brk!("demand_cycle_unfolds" => !closed; false));
         if let Some(drs) = drs {
             let pushed = call.is_some();
             if let Some(key) = call {
                 let linear = self.demand_linear.contains(&l.rel) && brk!("demand_naive_passes" => false; true);
-                let mut c = DemandCall { key, neg: self.neg_level, answers: Vec::new(), keys: HashSet::new(), read: false, from: 0, linear };
+                let low = self.demand_calls.len();
+                let marks = self.unknown_marks();
+                let mut c = DemandCall { key, neg: self.neg_level, answers: Vec::new(), keys: HashSet::new(), read: false, from: 0, linear, low, marks };
                 let stored = if only.is_some() { self.store_answers(l, s, None) } else { out.clone() };
                 for (_, r) in stored.iter() {
                     if let PremRef::Fact(f) = r {
@@ -10680,7 +10848,17 @@ impl Eval {
                 Ok(())
             })();
             if pushed {
-                self.demand_calls.pop();
+                let c = self.demand_calls.pop().unwrap();
+                // UNFOLDED TO ITS END: it read no call below it, met no unknown, and the store stood
+                let now = self.unknown_marks();
+                let quiet = c.marks == now;
+                if unfolded.is_ok() && tabled && c.low >= self.demand_calls.len() && quiet {
+                    if self.demand_done_at != (self.store.version, self.store.tick) {
+                        self.demand_done.clear();
+                        self.demand_done_at = (self.store.version, self.store.tick);
+                    }
+                    self.demand_done.insert(c.key, DoneTable { answers: c.answers, by: HashMap::new() });
+                }
             }
             unfolded?;
         }
@@ -10751,7 +10929,9 @@ impl Eval {
                 // A QUESTION LEAVES THE WORLD AS IT FOUND IT: what it finds is held for
                 // the question (a why renders it) and taken out after (`forget_asked`)
                 if self.asking && !self.firing && brk!("asked_answers_kept" => false; true) {
+                    let version = self.store.version;
                     let (id, is_new) = self.store.put(&self.h, call.rel, p, &args, F_TICK);
+                    self.store.version = version;
                     if is_new {
                         let tick = self.store.tick;
                         self.store.support(id, Witness { rule: r.id, tick, prems: sol.prems.clone() });
@@ -10760,7 +10940,10 @@ impl Eval {
                     out.push((sol.s, PremRef::Fact(id)));
                     continue;
                 }
+                // an answer unfolded at a call is one a complete call already holds: no table goes stale
+                let version = self.store.version;
                 let (id, is_new) = self.store.put(&self.h, call.rel, p, &args, F_TICK);
+                self.store.version = brk!("demand_put_moves_tables" => self.store.version; version);
                 let tick = self.store.tick;
                 let new_firing = self.store.support(
                     id,

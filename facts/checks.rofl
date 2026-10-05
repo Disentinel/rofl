@@ -365,11 +365,16 @@ check_file("demand_fixpoint_nonlinear", "examples/checks/demand-fixpoint-nonline
 check_world("demand_fixpoint_steps").
 check_file("demand_fixpoint_steps", "examples/checks/demand-fixpoint-steps.rofl").
 check_opt("demand_fixpoint_steps", together, 1).
-check_opt("demand_fixpoint_steps", budget, 700).
+check_opt("demand_fixpoint_steps", budget, 400).
 check_world("demand_fixpoint_space").
 check_file("demand_fixpoint_space", "examples/checks/demand-fixpoint-space.rofl").
 check_opt("demand_fixpoint_space", together, 1).
-check_opt("demand_fixpoint_space", space, 220).
+check_opt("demand_fixpoint_space", space, 205).
+
+-- a call unfolded to its end is tabled, and a call it covers reads it while the store stands, if it read no
+-- growing call below it and met no unknown (f_a_cycle_fixpoint_ran_away_unbounded_and_recomputed_every_pass)
+check_world("demand_done").
+check_file("demand_done", "examples/checks/demand-done.rofl").
 
 -- a question to a relation unfolded at a call unfolds it in both engines, and leaves the world as it found it
 -- (f_a_question_stored_what_it_unfolded, f_ask_read_the_store_where_query_unfolded)

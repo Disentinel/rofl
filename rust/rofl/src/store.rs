@@ -842,6 +842,11 @@ pub struct Store {
     fired: Fired,
     wits_live: usize,
     n_live: usize,
+    /// A number no other state of any store has had: it moves whenever a fact
+    /// comes or goes (`bump`), save a provenance row coming and where the engine
+    /// puts an answer it unfolded at a call. A table of answers found while it
+    /// stood answers again while it stands (`Eval::demand_done`).
+    pub version: u64,
     /// Shared with the base until this layer seals or drops a cell.
     cells: Rc<Cells>,
     /// Runs holding a record `retire` marked dead and did not yet drop.
@@ -1220,6 +1225,10 @@ impl Store {
             }
         };
         self.n_live += 1;
+        // a provenance row is written when a world settles it, sooner or later; no answer reads it
+        if !h.name(persp).starts_with('$') || h.name(rel) != "derived_by" {
+            self.bump();
+        }
         let ground = args.iter().all(|a| h.is_ground(*a));
         let run = self.run_mut(rel, persp);
         run.arrived.push(id);
@@ -1575,6 +1584,7 @@ impl Store {
         }
         self.facts.add_flags(id, F_DEAD);
         self.n_live -= 1;
+        self.bump();
         if self.wit_head[id as usize] != EMPTY {
             let mut c = self.wit_head[id as usize];
             while c != EMPTY {
@@ -1598,9 +1608,15 @@ impl Store {
         }
         self.facts.add_flags(id, F_DEAD);
         self.n_live -= 1;
+        self.bump();
         if !self.unswept.contains(&(r.rel, r.persp)) {
             self.unswept.push((r.rel, r.persp));
         }
+    }
+
+    pub fn bump(&mut self) {
+        static VERSION: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+        self.version = VERSION.fetch_add(1, std::sync::atomic::Ordering::Relaxed) + 1;
     }
 
     /// Drop every firing of a record, live or dead.
