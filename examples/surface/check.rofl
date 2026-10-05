@@ -5,6 +5,7 @@
 -- (alarm, stale, volatile) that is not the one expected.
 xl_seed(fx_edge, 2).
 xl_seed(fx_pubn, 2).
+xl_seed(fx_pubm, 2).
 
 xl_ok(fx_kept, fx_param, "planted: a join someone decided to keep").
 xl_ok(fx_gone, fx_param, "planted: an excuse whose rule is gone").
@@ -30,7 +31,10 @@ exp_fc(fx_pubn, 2).
 exp_fc(fx_bad_join, 2).
 exp_fc(fx_bad_trans, 2).
 exp_fc(fx_kept, 2).
-control(fx_good_join). control(fx_local). control(fx_pass). control(fx_sub). control(fx_ctrl). control(fx_notfc). control(fx_ok_surf).
+exp_fc(fx_mirrored, 2).
+exp_fc(fx_mirror, 2).
+exp_fc(fx_pubm, 2).
+control(fx_good_join). control(fx_local). control(fx_pass). control(fx_sub). control(fx_ctrl). control(fx_notfc). control(fx_ok_surf). control(fx_mirrored).
 vcontrol(fx_notvol). vcontrol(fx_pos). vcontrol(fx_pub). vcontrol(fx_good_join).
 
 lx_find_missed(H, P)   :- exp_find(H, P), not xl_finding(H, P, _, _).

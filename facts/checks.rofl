@@ -3115,6 +3115,7 @@ check_file("cost_shapes_model", "rules/js-host.rofl").
 check_file("cost_shapes_model", "rules/js-ambient.rofl").
 check_file("cost_shapes_model", "rules/js-attrs.rofl").
 check_file("cost_shapes_model", "rules/js-modules.rofl").
+check_file("cost_shapes_model", "rules/js-surface.rofl").
 check_file("cost_shapes_model", "examples/checks/cost-shapes-model.rofl").
 -- ONE ENGINE: the reflection of the model nests `$var` three deep (js-attrs reads rules about rules); the
 -- TypeScript engine answers `str_segs` on those with a hole and a different cs_conn, the Rust engine does not.
@@ -3136,6 +3137,7 @@ check_file("surface_model", "rules/js-host.rofl").
 check_file("surface_model", "rules/js-ambient.rofl").
 check_file("surface_model", "rules/js-attrs.rofl").
 check_file("surface_model", "rules/js-modules.rofl").
+check_file("surface_model", "rules/js-surface.rofl").
 check_file("surface_model", "examples/checks/surface-model.rofl").
 -- ONE ENGINE for the same reason as cost_shapes_model: the reflection of the model nests `$var` deep.
 check_opt("surface_model", one_engine, rust).
@@ -3561,6 +3563,7 @@ check_file("vscode_side_effects", "rules/js-host.rofl").
 check_file("vscode_side_effects", "rules/js-ambient.rofl").
 check_file("vscode_side_effects", "rules/js-attrs.rofl").
 check_file("vscode_side_effects", "rules/js-modules.rofl").
+check_file("vscode_side_effects", "rules/js-surface.rofl").
 check_file("vscode_side_effects", "examples/checks/vscode-mini-facts.rofl").
 check_file("vscode_side_effects", "examples/vscode/side-effects.rofl").
 check_file("vscode_side_effects", "examples/checks/vscode-side-effects-check.rofl").

@@ -50,7 +50,7 @@ export function packs(): string {
     'facts/js-kinds.rofl', 'facts/js-callgraph.rofl', 'facts/js-dataflow.rofl', 'facts/js-modules.rofl',
     'facts/js-shapes.rofl', 'facts/js-statements.rofl', 'facts/js-controlflow.rofl',
     'rules/js-structure.rofl', 'rules/js-dataflow.rofl', 'rules/js-model.rofl',
-    'rules/js-callgraph.rofl', 'rules/js-controlflow.rofl'];
+    'rules/js-callgraph.rofl', 'rules/js-controlflow.rofl', 'rules/js-surface.rofl'];
   return named.filter((p) => fs.existsSync(path.join(REPO, p))).map(read).join('\n');
 }
 

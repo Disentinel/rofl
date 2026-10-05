@@ -34,3 +34,7 @@ fx_pos(F)                :- fx_pub[surface](F, _), fx_a[data](F, _).
 fx_pubn[surface](K, N)   :- fx_param[data](K, N).
 fx_bad_surf(K)           :- fx_pubn[surface](K, N), fx_name[data](N, _).
 fx_ok_surf(K, N)         :- fx_pubn[surface](K, N), fx_a[data](K, _).
+
+-- GOOD: a MIRRORED relation (one arm is a surface premise) read at a foreign key: its rows of that key are put back
+fx_mirror[data](F, N)    :- fx_pubm[surface](F, N).
+fx_mirrored(C, N)        :- fx_edge[data](C, F), fx_mirror[data](F, N).

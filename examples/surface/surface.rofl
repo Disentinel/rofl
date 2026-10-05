@@ -20,7 +20,8 @@
 --       non-`[surface]` book that shares a foreign variable at a column that is NOT foreign-capable
 --       is a FILE-LOCAL premise read through the foreign key: that is `xl_finding(Head, Premise,
 --       Source, SourceCol)`: the rule concludes Head, reads Premise at the key that Source's column
---       SourceCol hands it. `[surface]` premises are the channel: a variable they bind is the key of
+--       SourceCol hands it, unless Premise is MIRRORED (an arm of it is one [surface] premise: the rows of a foreign
+--       key are put back into the relation in the volume). `[surface]` premises are the channel: a variable they bind is the key of
 --       the fact's own file and is never foreign, and a rule concluding into `[surface]` is a
 --       publication whose head does not spread foreign-capability.
 --   (b) VOLATILE. A negation over a `[surface]` relation answers "no surface says so yet": its head
@@ -58,13 +59,22 @@ xl_fvar(R, K, V, Rel, Col) :- xl_lit(R, K, pos, Rel, surface, _), xl_seed(Rel, C
 -- a premise outside `[surface]` that shares a foreign variable at a column, and the column
 xl_join(R, K, J, Prem, Src, SrcCol) :- xl_fvar(R, K0, V, Src, SrcCol), xl_lit(R, K, _, Prem, B, _), B != surface,
                                        K != K0, xl_var(R, K, J, V).
--- the rows such a premise selects are the other file's: a variable only it holds is foreign to the head too
+-- the rows such a premise selects are the other file's: a variable only it holds is foreign to the head too. A
+-- mirrored premise's node columns are seeded where they hand over a node; its other columns are a key's own
+-- (a member's name, a label) and do not spread
 xl_multi(R, V) :- xl_var(R, K1, _, V), xl_var(R, K2, _, V), K1 != K2.
 xl_hforeign(R, V) :- xl_fvar(R, _, V, _, _).
-xl_hforeign(R, V) :- xl_join(R, K, _, _, _, _), xl_lit(R, K, pos, _, _, _), xl_var(R, K, _, V), not xl_multi(R, V).
+xl_hforeign(R, V) :- xl_join(R, K, _, P, _, _), xl_lit(R, K, pos, _, _, _), xl_var(R, K, _, V), not xl_multi(R, V),
+                     not xl_mirrored(P).
 xl_fc(H, J) :- xl_hforeign(R, V), conclusion_lit(R, 1, $lit(H, HB, _, _)), HB != surface, xl_hvar(R, J, V).
 
-xl_finding(H, Prem, Src, SrcCol) :- xl_join(R, _, J, Prem, Src, SrcCol), concludes(R, H), not xl_fc(Prem, J).
+-- A MIRRORED relation has an arm that is one [surface] premise (rules/js-surface.rofl puts an escaping node's facts
+-- back into their relation): its rows of another file's key are in the volume, so reading it there is the channel.
+xl_mirrored(Rel) :- conclusion_lit(R, 1, $lit(Rel, B, _, _)), B != surface,
+                    has_premise(R, 1), not has_premise(R, 2), xl_lit(R, 1, pos, _, surface, _).
+
+xl_finding(H, Prem, Src, SrcCol) :- xl_join(R, _, J, Prem, Src, SrcCol), concludes(R, H), not xl_fc(Prem, J),
+                                    not xl_mirrored(Prem).
 
 xl_excused(H, Prem)   :- xl_ok(H, Prem, _).
 xl_alarm(H, Prem)     :- xl_finding(H, Prem, _, _), not xl_excused(H, Prem).

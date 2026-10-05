@@ -31,8 +31,6 @@ shape_ok(eff_plain_key, project_then_negate, "one_row_per_key: 2 ms sealed / 4 d
 shape_ok(export_binding_missing, project_then_negate, "one_row_per_key: 1 ms").
 shape_ok(export_internal_homeless, project_then_negate, "one_row_per_key: 1 ms").
 shape_ok(host_effect_undeclared, project_then_negate, "one_row_per_key: 0 ms").
-shape_ok(may_not_be_reached, project_then_negate, "one_row_per_key: 3 ms sealed / 6 default").
-shape_ok(may_not_run, project_then_negate, "one_row_per_key: 4 ms sealed / 6 default").
 shape_ok(mechanism_unanswered, project_then_negate, "one_row_per_key: 0 ms").
 shape_ok(shape_without_verdict, project_then_negate, "one_row_per_key: 0 ms sealed / 1 default").
 
@@ -59,6 +57,7 @@ shape_ok(calls, twin_bodies, "alias_of_a_derived: eff_edge_closed reads the same
 shape_ok(eff_edge_closed, twin_bodies, "alias_of_a_derived: the flow book's copy of calls (the arm that reads nearest_fn), 5 ms sealed / 13 default").
 shape_ok(class_ctor, twin_bodies, "alias_of_a_derived: own_ctor is the flow book's name for it, 0 ms").
 shape_ok(own_ctor, twin_bodies, "alias_of_a_derived: class_ctor is the code book's name for it, 1 ms").
+shape_ok(fn_value, twin_bodies, "alias_of_a_derived: the flow book's name for fn_node, the one a function of another file reaches through rules/js-surface.rofl; one row per function, not timed").
 shape_ok(eff_subject, twin_bodies, "alias_of_a_derived: scope_node has more arms than the fn_node one, 2 ms sealed / 13 default").
 shape_ok(scope_node, twin_bodies, "alias_of_a_derived: eff_subject is its fn_node arm in the flow book, 10 ms sealed / 57 default (all arms)").
 shape_ok(for_of_src, twin_bodies, "alias_of_a_derived: hidden_call_src is the code book's copy, 3 ms sealed / 8 default").

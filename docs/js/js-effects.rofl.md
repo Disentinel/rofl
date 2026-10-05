@@ -1,6 +1,6 @@
 ---
 world: js-effects
-books: audit, code, flow, main
+books: audit, code, flow, main, surface
 default: flow
 ---
 
@@ -36,6 +36,8 @@ Reads:
 - from js-model, in the code: [ast_node](js-model.rofl.md#ast_node)
 - from js-modules, in the code: [module_target](js-modules.rofl.md#module_target), [require_site](js-modules.rofl.md#require_site), [site_file](js-modules.rofl.md#site_file), [site_source](js-modules.rofl.md#site_source)
 - from js-structure, in the code: [ast_in](js-structure.rofl.md#ast_in), [ast_name](js-structure.rofl.md#ast_name), [ast_value](js-structure.rofl.md#ast_value)
+- from js-surface: [fn_value](js-surface.rofl.md#fn_value)
+- from js-surface, in the surface: [sx_eff_module](js-surface.rofl.md#sx_eff_module), [sx_effect_module](js-surface.rofl.md#sx_effect_module)
 - from the scanner, in the code:
   - <a id="ast_attr"></a>The attribute of a node is a value (`ast_attr`)
   - <a id="ast_child"></a>A node is a child of a node (`ast_child`)
@@ -217,7 +219,10 @@ In the code:
 
 A node
 
-- <a id="eff_calls"></a>has a call to a [function](js-callgraph.rofl.md#fn_node) G if a node C [resolves to](js-callgraph.rofl.md#resolves) G and it [is the nearest function of](js-callgraph.rofl.md#nearest_fn) C.
+- <a id="eff_calls"></a>has a call to G if all of:
+  - a node C [resolves to](js-callgraph.rofl.md#resolves) G;
+  - it [is the nearest function of](js-callgraph.rofl.md#nearest_fn) C;
+  - [`fn_value`](js-surface.rofl.md#fn_value)(G).
 - <a id="eff_reaches"></a>reaches by calling a node G if it [has a call to](#eff_calls) G.
 - reaches by calling a node H if it [reaches by calling](#eff_reaches) a node G and G [has a call to](#eff_calls) H.
 
@@ -693,14 +698,14 @@ In the flow:
    - G [has the latent effect](#eff_latent) L at H;
    - unless C [is inside a function](js-controlflow.rofl.md#in_fn).
 
-A node has the effect L at a host H if it [evaluates](#eff_evaluates_at) T and T [has the module effect](#eff_module) L at H.
+A node has the effect L at a host H if it [evaluates](#eff_evaluates_at) T and [`sx_eff_module`](js-surface.rofl.md#sx_eff_module)(T, L, H).
 
 In the audit:
 
 <a id="eff_import_invented"></a>A node invents the effect L at a host H if all of:
   - it [evaluates](#eff_evaluates_at) T;
   - it [has the effect](js-ambient.rofl.md#eff_here) L at H;
-  - unless T [has the module effect](#eff_module) L at H.
+  - unless [`sx_eff_module`](js-surface.rofl.md#sx_eff_module)(T, L, H).
 
 > The same Moore closure as section 4, over a file.
 
@@ -730,7 +735,7 @@ A file F
   - a node I [evaluates](#eff_evaluates_at) T;
   - I [is in file](js-model.rofl.md#ast_node) F;
   - [the module effect](#effect_of_module) of F is an effect NF;
-  - [the module effect](#effect_of_module) of T is an effect NT;
+  - [`sx_effect_module`](js-surface.rofl.md#sx_effect_module)(T, NT);
   - [the join](#eff_join) of NF and NT is J;
   - J differs from NF.
 
@@ -987,4 +992,6 @@ In the flow:
 | `flow` | `main` |
 | `audit` | `code` |
 | `audit` | `flow` |
+| `flow` | `surface` |
+| `audit` | `surface` |
 
