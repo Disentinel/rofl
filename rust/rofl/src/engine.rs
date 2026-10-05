@@ -13612,15 +13612,16 @@ impl Eval {
     }
 
     /// A QUESTION RUNS UNDER ITS OWN BUDGET: the session's, counted from nothing,
-    /// steps and rows and the wall it may meet put back as the world had them after.
+    /// steps, rows and their peak and the wall it may meet put back as the world had them after.
     fn questioned<T>(&mut self, f: impl FnOnce(&mut Self) -> T) -> T {
         if brk!("question_spends_world" => true; false) {
             return f(self);
         }
-        let saved = (std::mem::replace(&mut self.steps, 0), std::mem::replace(&mut self.rows, 0), self.wall_spent.get());
+        let saved = (std::mem::replace(&mut self.steps, 0), std::mem::replace(&mut self.rows, 0), self.peak_rows, self.wall_spent.get());
         let t = f(self);
         (self.steps, self.rows) = (saved.0, saved.1);
-        self.wall_spent.set(saved.2);
+        self.peak_rows = brk!("question_peak_kept" => self.peak_rows; saved.2);
+        self.wall_spent.set(saved.3);
         t
     }
 

@@ -1145,6 +1145,8 @@ brk("question_writes_holes"). brk_kind("question_writes_holes", switch).
 brk_expects("question_writes_holes", "demand_query_ask").
 brk("ask_wall_unnamed"). brk_kind("ask_wall_unnamed", switch).
 brk_expects("ask_wall_unnamed", "demand_query_ask").
+brk("question_peak_kept"). brk_kind("question_peak_kept", switch).
+brk_expects("question_peak_kept", "demand_query_ask").
 brk("demand_naive_passes"). brk_kind("demand_naive_passes", switch).
 brk_expects("demand_naive_passes", "demand_fixpoint").
 brk("demand_again_rereads_store"). brk_kind("demand_again_rereads_store", switch).
@@ -2340,6 +2342,7 @@ switch_site("prov_tick_unsettled", "rust/rofl/src/engine.rs").
 switch_site("prov_variable_reader_lazy", "rust/rofl/src/engine/prov.rs").
 switch_site("quantile_domain", "rust/rofl/src/cell.rs").
 switch_site("quantile_floor", "rust/rofl/src/cell.rs").
+switch_site("question_peak_kept", "rust/rofl/src/engine.rs").
 switch_site("question_spends_world", "rust/rofl/src/engine.rs").
 switch_site("question_writes_holes", "rust/rofl/src/engine.rs").
 switch_site("rank_compound_key", "rust/rofl/src/cell.rs").

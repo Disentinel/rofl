@@ -4143,7 +4143,7 @@ export const BREAKS: Break[] = [
   "edits": [
    [
     "src/aggeval.ts",
-    "try { return f(); } finally { [this.steps, this.rows, this.budget, this.wallSpent] = saved; }",
+    "try { return f(); } finally { [this.steps, this.rows, this.peakRows, this.budget, this.wallSpent] = saved; }",
     "this.steps = saved[0]; this.rows = saved[1]; return f();"
    ]
   ],
@@ -4248,6 +4248,13 @@ export const BREAKS: Break[] = [
   "what": "the hole of an ask that ran out of rows says the steps ran out",
   "expect": {
    "demand_query_ask": "a question left a hole of its wall in the world"
+  }
+ },
+ {
+  "id": "question_peak_kept",
+  "what": "a question's peak of rows is left as the world's",
+  "expect": {
+   "demand_query_ask": "a question left its peak of rows in the world's"
   }
  },
  {

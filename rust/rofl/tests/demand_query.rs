@@ -139,3 +139,21 @@ fn a_question_that_runs_out_of_rows_writes_only_its_own_hole() {
     let new: Vec<String> = s.eval.store.canonical_state(&s.eval.h).lines().filter(|l| !before.contains(*l)).map(String::from).collect();
     assert_eq!(new, vec!["hole[$kernel]($q(1),space_exhausted) timeless base frozen support=0".to_string()], "a question left a hole of its wall in the world");
 }
+
+/// A QUESTION'S ROWS ARE ITS OWN, their peak too (f_a_question_spent_the_world_budget): the world's peak is as
+/// it was before an ask that held more rows.
+#[test]
+fn a_question_leaves_the_world_its_peak() {
+    let mut src = String::from("edb(t_e).\n");
+    for i in 0..60 {
+        src.push_str(&format!("t_e(n{i}, n{}).\n", (i + 1) % 60));
+    }
+    src.push_str("t_p(X, Y, W) :- t_e(X, Y).\nt_p(X, Z, W) :- t_p(X, Y, W), t_e(Y, Z).\nt_q(X, W) :- t_e(X, n0).\n");
+    let mut s = small(50_000_000, &src);
+    // the world's mark set low, so the question's rows would pass it
+    s.eval.peak_rows = 1;
+    let peak = s.eval.peak_rows;
+    let a = s.ask("t_p(n0, Y, W)").unwrap();
+    assert_eq!(a.rows.len(), 60);
+    assert_eq!(s.eval.peak_rows, peak, "a question left its peak of rows in the world's");
+}
