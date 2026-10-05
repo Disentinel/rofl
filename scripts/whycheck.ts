@@ -119,6 +119,8 @@ const ASKED: Record<string, Q[]> = {
     ...['dq_o(X,9)', 'dq_o(6,Y)', 'dq_o(4,Y)', 'dq_o(4,9)', 'dq_o(4,1)', 'dq_o(X,Y)', 'dq_r(X)', 'dq_c(X)'].map((q): Q => ({ op: 'ask', query: q })),
   ],
   demand_neg_decided: ['dz_o(0,1)', 'dz_nro(0)', 'dz_nro(2)', 'dz_ro(2)'].flatMap((q): Q[] => [{ op: 'whynot', query: q }, { op: 'why', query: q }]),
+  // asking a sealed body refuses, a hole and a partial answer (f_an_ask_answered_a_sealed_body)
+  sealed_provenance: ['derived_by(F,R,T)', 'derived_by(F,R,0)'].map((q): Q => ({ op: 'ask', query: q })),
 };
 
 function questions(r: Rofl, budget: number | undefined, first: boolean, excise = true): Q[] {

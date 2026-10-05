@@ -1110,6 +1110,8 @@ brk("demand_neg_cycle_read"). brk_kind("demand_neg_cycle_read", switch).
 brk_expects("demand_neg_cycle_read", "demand_cycle_cut").
 brk("ts_demand_neg_cycle_read"). brk_kind("ts_demand_neg_cycle_read", ts).
 brk_expects("ts_demand_neg_cycle_read", "demand_cycle_cut").
+brk("ask_sealed_answers"). brk_kind("ask_sealed_answers", switch).
+brk_expects("ask_sealed_answers", "demand_query_ask").
 brk("demand_naive_passes"). brk_kind("demand_naive_passes", switch).
 brk_expects("demand_naive_passes", "demand_fixpoint").
 brk("demand_again_rereads_store"). brk_kind("demand_again_rereads_store", switch).
@@ -1983,6 +1985,7 @@ switch_site("and_tie_last", "rust/rofl/src/cell.rs").
 switch_site("args_are_expressions", "rust/rofl/src/rofl_parse.rs").
 switch_site("arith_wraps", "rust/rofl/src/engine.rs").
 switch_site("ask_dedup_scan", "rust/rofl/src/session.rs").
+switch_site("ask_sealed_answers", "rust/rofl/src/session.rs").
 switch_site("ask_store_only", "rust/rofl/src/session.rs").
 switch_site("ask_wall_errors", "rust/rofl/src/session.rs").
 switch_site("asked_answers_kept", "rust/rofl/src/engine.rs").

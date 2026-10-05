@@ -4075,6 +4075,13 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "ask_sealed_answers",
+  "what": "an ask of a sealed body answers it, where the reference refuses with a hole and a partial answer",
+  "expect": {
+   "demand_query_ask": "an ask answered a sealed body"
+  }
+ },
+ {
   "id": "demand_naive_passes",
   "what": "every pass of a linear recursion reads every answer so far",
   "expect": {

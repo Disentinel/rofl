@@ -739,6 +739,20 @@ impl Session {
         }
         let lit = &cs[0].head;
         let (rel, persp, args) = self.lit_terms(lit)?;
+        // ASKING A SEALED BODY REFUSES, as src/api.ts `query` does: a hole named for the question, and a partial answer
+        if crate::program::sealed_rels(&mut self.eval).contains(&rel) && brk!("ask_sealed_answers" => false; true) {
+            let q = self.eval.h.intern("$q");
+            let id = self.eval.h.mkf(q, &[Term::int(self.asks)]);
+            let reason = Term::atom(self.eval.h.intern("reflection_sealed"));
+            self.eval.store.put(&self.eval.h, self.eval.v.hole, self.eval.v.kernel_persp, &[id, reason], F_BASE | crate::store::F_FROZEN);
+            let vars = args.iter().filter_map(|a| match a.kind() { TermK::Var(v) => Some(v), _ => None }).map(|v| self.eval.h.name(v).to_string()).fold(Vec::new(), |mut vs: Vec<String>, n| {
+                if !vs.contains(&n) {
+                    vs.push(n);
+                }
+                vs
+            });
+            return Ok(Answer { vars, rows: Vec::new(), keys: Vec::new(), scanned: 0, probed: false, micros: t0.elapsed().as_micros(), shrugs: Vec::new(), partial: true });
+        }
         if rel == self.eval.v.derived_by {
             self.eval.settle_provenance();
         }

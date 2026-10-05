@@ -923,7 +923,7 @@ fn is_sealed_body(v: &Vocab, b: Sym) -> bool {
     b == v.sealed_provenance || b == v.sealed_rules || b == v.sealed_assertions
 }
 
-fn sealed_rels(e: &mut Eval) -> Vec<Sym> {
+pub(crate) fn sealed_rels(e: &mut Eval) -> Vec<Sym> {
     let bodies = sealed_bodies(&mut e.h, &e.v, &mut e.store);
     let mut out = Vec::new();
     for b in bodies {

@@ -109,3 +109,15 @@ fn an_ask_with_many_answers_is_linear() {
         assert!(secs < 1.0, "an ask of {n} open answers took {secs:.2} s: its answers were told apart by a scan");
     }
 }
+
+/// ASKING A SEALED BODY REFUSES (f_an_ask_answered_a_sealed_body), as src/api.ts `query` does: no rows, a
+/// partial answer, and a hole named for the question.
+#[test]
+fn an_ask_of_a_sealed_body_refuses() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let mut s = small(50_000_000, &std::fs::read_to_string(root.join("examples/checks/sealed-provenance.rofl")).unwrap());
+    let a = s.ask("derived_by(F, R, T)").unwrap();
+    assert!(a.rows.is_empty() && a.partial, "an ask answered a sealed body");
+    let state = s.eval.store.canonical_state(&s.eval.h);
+    assert!(state.contains("hole[$kernel]($q(1),reflection_sealed)"), "no hole names the refused question");
+}

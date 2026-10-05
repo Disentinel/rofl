@@ -44,6 +44,7 @@ check[checks]("rust/rofl/tests/demand_query.rs", "a_why_asks_as_whynot_does_and_
 check[checks]("rust/rofl/tests/demand_query.rs", "a_question_spends_its_own_budget", test).
 check[checks]("rust/rofl/tests/demand_query.rs", "an_ask_that_meets_a_wall_is_partial", test).
 check[checks]("rust/rofl/tests/demand_query.rs", "an_ask_with_many_answers_is_linear", test).
+check[checks]("rust/rofl/tests/demand_query.rs", "an_ask_of_a_sealed_body_refuses", test).
 check[checks]("rust/rofl/tests/demand_scale.rs", "a_recursion_through_a_closed_demand_relation_is_linear", test).
 check[checks]("rust/rofl/tests/explain.rs", "why_walks_the_derivation_to_its_axioms", test).
 check[checks]("rust/rofl/tests/explain.rs", "a_negated_premise_renders_as_finite_failure_with_its_demonstration", test).
