@@ -89,3 +89,23 @@ fn an_ask_that_meets_a_wall_is_partial() {
     let state = s.eval.store.canonical_state(&s.eval.h);
     assert!(state.contains("hole[$kernel]($q(2),budget_exhausted)"), "no hole names the second question");
 }
+
+/// AN ASK'S ANSWERS ARE TOLD APART BY A SET, not by a scan of those found so far: 40 000 open answers took
+/// quadratic time to dedup. The clock is the guard, in an optimised build only.
+#[test]
+fn an_ask_with_many_answers_is_linear() {
+    let n = 40_000;
+    let mut src = String::from("edb(t_s).\n");
+    for i in 0..n {
+        src.push_str(&format!("t_s({i}).\n"));
+    }
+    src.push_str("t_o(X, Y) :- t_s(X).\nt_p(X, Y) :- t_o(X, Y).\nt_k(X) :- t_s(X), X < 3, t_p(X, 7).\n");
+    let mut s = small(200_000_000, &src);
+    let t = std::time::Instant::now();
+    let a = s.ask("t_p(X, Y)").unwrap();
+    let secs = t.elapsed().as_secs_f64();
+    assert_eq!(a.rows.len(), n + 3);
+    if !cfg!(debug_assertions) {
+        assert!(secs < 1.0, "an ask of {n} open answers took {secs:.2} s: its answers were told apart by a scan");
+    }
+}

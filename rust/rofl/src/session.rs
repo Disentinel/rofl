@@ -795,6 +795,7 @@ impl Session {
             let mut named: Vec<usize> = (0..vars.len()).collect();
             named.sort_by(|a, b| crate::term::cmp_js(&vars[*a], &vars[*b]));
             let mut got: Vec<(String, Vec<String>, String)> = Vec::new();
+            let mut texts: std::collections::HashSet<String> = std::collections::HashSet::new();
             for sol in &sols {
                 let row: Vec<String> = vars
                     .iter()
@@ -807,7 +808,8 @@ impl Session {
                     })
                     .collect();
                 let text = if vars.is_empty() { "true".to_string() } else { named.iter().map(|&i| format!("{} = {}", vars[i], row[i])).collect::<Vec<_>>().join(", ") };
-                if got.iter().any(|g| g.0 == text) {
+                let seen = brk!("ask_dedup_scan" => got.iter().any(|g| g.0 == text); !texts.insert(text.clone()));
+                if seen {
                     continue;
                 }
                 let fa: Vec<Term> = args.iter().map(|a| crate::term::resolve(&mut self.eval.h, *a, sol)).collect();

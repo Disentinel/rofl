@@ -4047,6 +4047,13 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "ask_dedup_scan",
+  "what": "an ask tells its answers apart by scanning those found so far",
+  "expect": {
+   "demand_query_ask": "its answers were told apart by a scan"
+  }
+ },
+ {
   "id": "demand_naive_passes",
   "what": "every pass of a linear recursion reads every answer so far",
   "expect": {
