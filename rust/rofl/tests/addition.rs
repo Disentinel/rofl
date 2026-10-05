@@ -60,6 +60,10 @@ enum Op {
 /// positively any base relation or pJ with J <= I, and under a negation or an aggregate only those with J < I.
 fn program(r: &mut Rng) -> Vec<String> {
     let n = 3 + r.below(4) as usize;
+    program_of(r, n)
+}
+
+fn program_of(r: &mut Rng, n: usize) -> Vec<String> {
     let mut rules = Vec::new();
     for i in 1..=n {
         let pos: Vec<String> = std::iter::once("e".to_string()).chain((1..=i).map(|j| format!("p{j}"))).collect();
@@ -411,6 +415,21 @@ fn random_programs_take_additions_as_a_fresh_evaluation_does() {
     assert!(all.delta * 2 > all.additions, "most additions are deltas: {all:?}");
 }
 
+/// LARGER PROGRAMS, more steps (ignored: run in slices, `ADD_SEEDS=a-b`, default 1-180).
+#[test]
+#[ignore]
+fn random_large_programs_take_additions_as_a_fresh_evaluation_does() {
+    let mut all = Stats::default();
+    let (a, b) = std::env::var("ADD_SEEDS").ok().and_then(|v| v.split_once('-').map(|(a, b)| (a.parse().unwrap(), b.parse().unwrap()))).unwrap_or((1u64, 180u64));
+    for seed in a..=b {
+        let mut r = Rng(seed * 1_299_709 + 13);
+        let n = 5 + r.below(5) as usize;
+        let rules = program_of(&mut r, n);
+        all.add(differential(seed * 7919 + 17, EDB, rules, fact, 20));
+    }
+    report("large", &all);
+}
+
 fn sweep(name: &str, head: &str, rules: &[&str], gen: fn(&mut Rng) -> String, seeds: std::ops::RangeInclusive<u64>, steps: usize) -> Stats {
     let mut all = Stats::default();
     let only: Option<u64> = std::env::var("ADD_SEEDS").ok().map(|v| v.parse().unwrap());
@@ -623,6 +642,10 @@ fn a_fact_asserted_where_it_was_derived_lowers_what_rests_on_it() {
 fn a_threshold_sealed_again_takes_the_members_a_fresh_evaluation_takes() {
     let program = "edb(e). edb(n).\nn(c). e(c, d). e(c, e).\np1(X, Y) :- e(X, Y).\np2(X, X) :- n(X), at_least(2, Y : p1(X, Y)).\n";
     one_addition(program, Op::Assert("e(c, a).".into()));
+    // a rule that gives a member a lower height: the quorum is the lowest first
+    let program = "edb(e). edb(n). edb(q).\nn(c). e(c, d). e(c, e). q(c, a).\np0(X, Y) :- q(X, Y).\np1(X, Y) :- p0(X, Y).\np1(X, Y) :- e(X, Y).\np2(X, X) :- n(X), at_least(2, Y : p1(X, Y)).\n";
+    one_addition(program, Op::Load("p1(X, Y) :- q(X, Y).".into()));
+    one_addition(program, Op::Assert("e(c, b). p1(c, a).".into()));
 }
 
 fn fact_demand(r: &mut Rng) -> String {

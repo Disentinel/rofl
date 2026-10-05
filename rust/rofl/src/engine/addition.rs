@@ -520,7 +520,17 @@ impl Eval {
                 let ids: HashSet<Sym> = here.iter().map(|r| r.id).collect();
                 d.stacked_cells += self.reset_cells(&ids);
                 self.store.arrivals = Some(Vec::new());
-                let r = self.refire(&into, &[]);
+                // fired whole over what holds; a threshold reached stays open, and closes with the level (after its
+                // rounds), on every member the level makes, as an evaluation closes it
+                let r = if brk!("add_threshold_closed_early" => true; false) {
+                    self.refire(&into, &[])
+                } else {
+                    let saved = std::mem::take(&mut self.active);
+                    let (strat, plain): (Vec<Rc<ERule>>, Vec<Rc<ERule>>) = into.iter().cloned().partition(|r| r.has_neg || r.has_agg || !r.lattice_outer.is_empty() || r.demand_strict);
+                    let r = self.activate(&plain).and_then(|_| self.activate(&strat));
+                    self.active = saved;
+                    r
+                };
                 let came = self.store.arrivals.take().unwrap_or_default();
                 r?;
                 for id in came {
