@@ -3808,7 +3808,7 @@ work_state(w_delta_edb_leftover, open).
 
 work(w_demand_scc_fixpoint,
   "A cycle of open demand calls iterates call by call: the nested calls of one cycle all read the outermost call's growing answers, so none can be tabled and each pass unfolds them all again (ringo400: 800 answers in 10.1 s against the stored copy's fraction of a second; f_the_space_wall_counted_open_answers_already_dropped). Iterate the whole cycle together (SCC-level tabling: one fixpoint for the cycle's calls, semi-naive within it), identical answers to the non-demand copy; measure ringo400, sc800, the random cyclic fuzzer (rvd2/gen.py) on Rust release.").
-work_state(w_demand_scc_fixpoint, open).
+work_state(w_demand_scc_fixpoint, done).
 
 work(w_delta_full_reasons,
   "The engineering reasons a delta (retraction today, addition next) falls back to a full evaluation, each to be made a delta (the owner, 2026-10-05): (1) a fact that reaches the edges of a closure answered from its tree (incremental forest update, not a whole rebuild); (2) the world holds a hole or a rule reads shrug (unknowns maintained by deltas); (3) a relation read on demand (support for answers not stored); (4) a relation concluded by a rule too (base and derived support counted together); (5) a change of asks / explain_request (a change of the rule set: rule addition and removal as deltas). Not in scope, by their nature: a wall that cut the evaluation, a past tick, well-founded semantics, a rule reading the ledger, an unevaluated world. Each item: delta equal to a fresh evaluation on a randomized differential test, the fallback rate measured before and after.").
