@@ -1822,6 +1822,8 @@ brk_expects("demand_closed_book_unbound", "ds_tree_demand_book_sealed").
 brk("ts_demand_closed_book_unbound"). brk_kind("ts_demand_closed_book_unbound", ts).
 brk_expects("ts_demand_closed_book_unbound", "ds_tree_demand_book").
 brk_expects("ts_demand_closed_book_unbound", "ds_tree_demand_book_sealed").
+brk("vclosure_rows_cost"). brk_kind("vclosure_rows_cost", switch).
+brk_expects("vclosure_rows_cost", "ds_tree_plan").
 brk("vclosure_neg_inverted"). brk_kind("vclosure_neg_inverted", switch).
 brk_expects("vclosure_neg_inverted", "ds_tree_sealed").
 brk("vclosure_unbound_cheap"). brk_kind("vclosure_unbound_cheap", switch).
@@ -2308,6 +2310,7 @@ switch_site("vclosure_premise_untagged", "rust/rofl/src/engine/vclosure.rs").
 switch_site("vclosure_reader_stale", "rust/rofl/src/engine.rs").
 switch_site("vclosure_restore_unengaged", "rust/rofl/src/engine/vclosure.rs").
 switch_site("vclosure_row_written_twice", "rust/rofl/src/engine/vclosure.rs").
+switch_site("vclosure_rows_cost", "rust/rofl/src/engine.rs").
 switch_site("vclosure_rows_unpublished", "rust/rofl/src/engine/vclosure.rs").
 switch_site("vclosure_stale_forest", "rust/rofl/src/engine/vclosure.rs").
 switch_site("vclosure_unbound_cheap", "rust/rofl/src/engine/vclosure.rs").

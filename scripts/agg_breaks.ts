@@ -7151,6 +7151,13 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "vclosure_rows_cost",
+  "what": "a row answered from the tree costs a row against the space wall, as a stored one does: the world that declares it is answered where the stored closure meets its wall is cut too",
+  "expect": {
+   "ds_tree_plan": "declares closure_unwalled"
+  }
+ },
+ {
   "id": "vclosure_neg_inverted",
   "what": "a negation of the closure holds where a row does",
   "expect": {

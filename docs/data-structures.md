@@ -385,17 +385,34 @@ an unbound closure at one row, `vclosure_unbound_cheap`, the world is cut).
 output from the forests (`tick drv support=0`, as a sealed derived row prints), so the
 census counts them and the goldens keep their meaning; the count of stored facts
 (`fact_count`, rofl-eval's `facts`) does not. The rows are those of the tick evaluated:
-a tick that ends takes them as it takes any derived row. `why`, `whynot` and `excise` are
-not asked of a sealed world, so no derivation is rebuilt from the tree: the closure that
-keeps witnesses is stored and its derivations are the rules' (whycheck over every
-`rules_js-*` world and `ds_tree_*` world: 0 differ).
+a tick that ends takes them as it takes any derived row.
+
+**What an explanation says.** A premise that matched a row of the closure names the row
+(`PremRef::VRow`, the canonical key of the fact, spelled where a firing records its
+premises), so a cell's member keeps `[fact:w[main](a,b)]` in the state and in a snapshot, and
+`why` of a row, as a premise or asked, rebuilds its firing from the tree: the lowered
+first rule over the edge when the parent is the ancestor, else the second over the row of
+the parent and the edge of the parent to the child (a forest gives a row one firing), a
+row written once and referred to after. `excise` lists the closure's rows with the rest.
+All of it is what the world with the closure STORED says (`ROFL_NO_VCLOSURE=1`), byte for
+byte: whycheck asks every why, why all, whynot and excise and the canonical state of the
+sealed worlds of both, and the goldens hold their states to each other. A snapshot of
+such a world is opened with its closures engaged (`Eval::vclosure_restore`) and the same
+state. **A wall is the one difference, and it is declared.** A row answered from the tree
+costs no space and no step, so a world whose wall the stored closure meets is cut with
+the rows and not without (`ds_tree_plan`, which says so with
+`check_opt(W, closure_unwalled, 1)`); a world that meets the wall stored and does not say
+so is red, and one that says so and meets none (f_a_join_plan_is_never_observed, the same
+principle: a hole is a shrug, and completing it refines it; an owner question).
 
 **Proof.** `ds_tree_syntax`, `ds_tree_phrase`, `ds_tree_holds` and `ds_tree_sealed` (the
 same files, with and without the seal: the closure answered from the tree, by the kernel
 and by TypeScript's rules, against a hand-written twin, in each pattern a reader of the
 model asks, in two books, with a child whose parents are in two books, with edges that
 arrive in rounds and edges a negation concludes), `ds_tree_tick[_sealed]`,
-`ds_tree_retract[_sealed]`, `ds_tree_retract_edge[_sealed]`, `ds_tree_wall`, `ds_tree_plan`;
+`ds_tree_retract[_sealed]`, `ds_tree_retract_edge[_sealed]`, `ds_tree_wall`, `ds_tree_plan`,
+`ds_tree_explain` (the explanations, by hand), `ds_tree_demand_edge` and
+`ds_tree_demand_book[_sealed]` (edges that read a demand relation);
 eight refused forests; `rust/rofl/tests/tree.rs` (forty random forests, the closure
 answered from the tree against the rules, every pattern asked, a retraction against a
 fresh world); 32 planted faults (`scripts/agg_breaks.ts`).
