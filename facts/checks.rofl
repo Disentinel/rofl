@@ -348,6 +348,13 @@ check_file("demand_cycle", "examples/checks/demand-cycle.rofl").
 check_world("demand_recursion").
 check_file("demand_recursion", "examples/checks/demand-recursion.rofl").
 
+-- a negation unfolded at a call that a match decides is decided, whatever unknown is beside it
+-- (f_a_decided_negation_below_a_call_shrugged)
+check_world("demand_neg_decided").
+check_file("demand_neg_decided", "examples/checks/demand-neg-decided.rofl").
+check_opt("demand_neg_decided", together, 1).
+check_opt("demand_neg_decided", explain, 1).
+
 check_world("agg_count_safety").
 check_file("agg_count_safety", "examples/checks/agg-count-safety-1-ok.rofl").
 check_file("agg_count_safety", "examples/checks/agg-count-safety-2-refused-key.rofl").

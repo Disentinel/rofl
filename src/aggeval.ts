@@ -2825,9 +2825,11 @@ export class AggEval {
             this.demandBelow(depth, b.lit, a.s, faults, unknowns);
             for (const [s2, r] of found) next.push({ s: s2, prems: [...a.prems, r] });
           } else if (b.t === 'neg') {
-            const faults = this.faultCount, unknowns = this.demandTrail.length;
+            const faults = this.faultCount, unknowns = this.demandTrail.length, asked = this.asked.length;
             const holds = this.negHolds(b.lit, a.s, depth);
             const below = this.faultCount > faults || this.demandTrail.length > unknowns;
+            // a match found decides the negation whatever the unknowns beside it
+            if (!holds) { this.demandTrail.length = unknowns; this.asked.length = asked; this.faultCount = faults; continue; }
             if (below && depth > 0 && (this.firing || this.asking)) { this.demandBelow(depth, b.lit, a.s, faults, unknowns); continue; }
             if (holds && this.strictNeg && this.latSpread.size > 0 && this.readUnknown(b.lit, a.s, true) !== null) continue;
             // UNFOLDED AT A CALL, a negation what a hole left unknown could decide leaves the call's head under it unknown, as a fault would

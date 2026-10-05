@@ -3666,6 +3666,27 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "demand_neg_failed_unknown",
+  "what": "a negation unfolded at a call that a match decides leaves the call unknown when its unfolding met an unknown beside the match",
+  "expect": {
+   "demand_neg_decided": "lacks the row dz_nro[main](0)"
+  }
+ },
+ {
+  "id": "ts_demand_neg_failed_unknown",
+  "what": "the TypeScript engine leaves a call unknown over a negation a match decides when its unfolding met an unknown beside the match",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "if (!holds) { this.demandTrail.length = unknowns; this.asked.length = asked; this.faultCount = faults; continue; }",
+    ""
+   ]
+  ],
+  "expect": {
+   "demand_neg_decided": "lacks the row dz_nro[main](0)"
+  }
+ },
+ {
   "id": "demand_cycle_unfolds",
   "what": "a call to a relation answered on demand with an open answer, met again inside its own unfolding, unfolds again, to the depth wall",
   "expect": {

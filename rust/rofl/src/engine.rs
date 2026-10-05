@@ -4415,9 +4415,16 @@ impl Eval {
                             }
                         }
                         BodyElem::Neg(l) => {
-                            let (faults, unknowns) = (self.fault_count, self.demand_trail.len());
+                            let (faults, unknowns, asked) = (self.fault_count, self.demand_trail.len(), self.asked.len());
                             let holds = self.neg_holds(l, &a.s, depth)?;
                             let below = self.fault_count > faults || self.demand_trail.len() > unknowns;
+                            // a match found decides the negation whatever the unknowns beside it
+                            if !holds && brk!("demand_neg_failed_unknown" => false; true) {
+                                self.demand_trail.truncate(unknowns);
+                                self.fault_count = faults;
+                                self.asked.truncate(asked);
+                                continue;
+                            }
                             if below && depth > 0 && (self.firing || brk!("asked_unholed" => false; self.asking)) {
                                 // below a call: the solution is not known, nor the head it would give
                                 self.demand_below(depth, l, &a.s, faults, unknowns);
