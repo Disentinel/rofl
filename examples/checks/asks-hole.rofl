@@ -1,0 +1,13 @@
+-- examples/checks/asks-hole.rofl — hole ASKED IS EVERY RULE'S HOLES (the conservative reading, decided 2026-10-05).
+-- ho_ok and hole are asked. A cone would list only the holes of the rules that ran, and ho_bad's division by zero is
+-- in no premise of ho_ok's: asked, hole is a question about every rule, so every rule is kept (said in the
+-- diagnostics) and ho_bad's hole is the whole world's. The holes of the rules a cone runs are in the store whether
+-- or not hole is asked.
+asks(ho_ok).
+asks(hole).
+edb(ho_src).
+ho_src(1). ho_src(0).
+ho_ok(X) :- ho_src(X).
+ho_bad(Y) :- ho_src(X), Y is 10 / X.
+-- expect-row: ho_bad[main](10)
+-- expect-row: hole[$kernel]($rule(

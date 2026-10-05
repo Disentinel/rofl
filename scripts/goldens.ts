@@ -90,11 +90,6 @@ export interface World {
   /** a budget no world needs, which a planted fault that runs away is cut by sooner (scripts/agg_breaks.ts); a cut it makes is still a problem */
   name: string; files: string[]; ticks?: number; budget?: number; cap?: number; space?: number;
   oneEngine?: 'ts' | 'rust'; strata?: boolean; explain?: boolean; retain?: number;
-  /** join plans under the world's budget or space (rofl-load `--delta-first`): a wall otherwise keeps every firing in written order */
-  deltaFirst?: boolean;
-  /** the world is answered from a declared tree's closure where the same world with the closure STORED meets its wall: a row answered
-   *  from the tree costs no space and no step (f_a_tree_is_declared_with_its_closure_and_the_closure_is_answered_from_the_tree_where_no_witness_is_kept) */
-  closureUnwalled?: boolean;
   /** base facts retracted one by one after the evaluation (rofl-load `--retract`: the Rust engine updates the cells they
    *  supported, the TypeScript engine evaluates again); both must hold the state a world without them holds */
   retract?: string[];
@@ -182,7 +177,7 @@ export function declared(text?: string): World[] {
   // EVERY OPTION IS ONE THIS HARNESS READS. `one_engine` was read as the
   // literal `1` and meant "TypeScript only", so any other value was silently
   // ignored and the world ran on both engines (f_one_engine_meant_ts_only).
-  const KNOWN = new Set(['ticks', 'budget', 'space', 'one_engine', 'evaluator', 'explain', 'retain', 'sentences', 'together', 'retract', 'delta_first', 'closure_unwalled']);
+  const KNOWN = new Set(['ticks', 'budget', 'space', 'one_engine', 'evaluator', 'explain', 'retain', 'sentences', 'together', 'retract']);
   for (const [n, k] of col(r, 'check_opt(N, K, V)', 'N', 'K')) {
     if (!KNOWN.has(k)) throw new Error(`check_opt("${n}", ${k}, _): no such option; the options are ${[...KNOWN].join(', ')}`);
     // a world the tree is walked to may be declared one-engine, the one option that needs no files (see worlds())
@@ -199,14 +194,6 @@ export function declared(text?: string): World[] {
   for (const [n, e] of col(r, 'check_opt(N, explain, E)', 'N', 'E')) {
     if (e !== '1') throw new Error(`check_opt("${n}", explain, ${e}): explain takes 1`);
     out.get(n)!.explain = true;
-  }
-  for (const [n, e] of col(r, 'check_opt(N, delta_first, E)', 'N', 'E')) {
-    if (e !== '1') throw new Error(`check_opt("${n}", delta_first, ${e}): delta_first takes 1`);
-    out.get(n)!.deltaFirst = true;
-  }
-  for (const [n, e] of col(r, 'check_opt(N, closure_unwalled, E)', 'N', 'E')) {
-    if (e !== '1') throw new Error(`check_opt("${n}", closure_unwalled, ${e}): closure_unwalled takes 1`);
-    out.get(n)!.closureUnwalled = true;
   }
   for (const [n, e] of col(r, 'check_opt(N, together, E)', 'N', 'E')) {
     if (e !== '1') throw new Error(`check_opt("${n}", together, ${e}): together takes 1`);
@@ -530,20 +517,17 @@ function answerTSTogether(w0: World, Engine: typeof Rofl): Answer {
  *  recorded), and a census cannot see a member's premise or the spelling of a row; so its state must be the state of the same
  *  world with the closure stored (ROFL_NO_VCLOSURE), byte for byte, and a difference is a problem of its own.
  *
- *  ONE DIFFERENCE IS THE ENGINE'S AND MUST BE DECLARED: a row answered from the tree costs no space and no step, so a world whose wall
- *  the stored closure meets is cut with the rows and not without. Such a world says so (`check_opt(W, closure_unwalled, 1)`), and is
- *  compared no further; a world that meets the wall stored and does not say so is red, and one that says so and meets none. */
+ *  A wall's cut moves with the engine (f_the_owner_settles_walls_promises_and_incremental): a row answered from the tree costs no
+ *  space and no step, so a world whose wall the stored closure meets and the tree does not is not compared further. */
 export const WALL_HOLE = /^hole\[\$kernel\]\(.*,(budget|space)_exhausted\) /m;
 export const treeSealed = (files: string[]): boolean => {
   const text = files.filter((f) => f.endsWith('.rofl') && fs.existsSync(f)).map((f) => fs.readFileSync(f, 'utf8')).join('\n');
   return /^sealed\(provenance\)\./m.test(text) && /^tree \w+\(.*\) closure \w+\./m.test(text);
 };
-/** What the state with the closure stored says against the state answered from the tree: null where they agree or the world declares the wall. */
-export function closureVerdict(w: World, tree: string, stored: string): string | null {
-  const cut = WALL_HOLE.test(stored) && !WALL_HOLE.test(tree);
-  if (w.closureUnwalled) return cut ? null : 'declares closure_unwalled, and the world with its closure stored meets no wall the tree does not';
-  if (cut) return 'the world with its closure stored meets its wall and answered from its tree it does not: a row of the tree costs no space and no step; declare check_opt(W, closure_unwalled, 1)';
-  if (tree === stored) return null;
+/** What the state with the closure stored says against the state answered from the tree: null where they agree or the stored one is cut by a wall. */
+export const storedIsCut = (tree: string, stored: string): boolean => WALL_HOLE.test(stored) && !WALL_HOLE.test(tree);
+export function closureVerdict(tree: string, stored: string): string | null {
+  if (storedIsCut(tree, stored) || tree === stored) return null;
   const a = tree.split('\n'), b = stored.split('\n');
   const i = a.findIndex((l, k) => l !== b[k]);
   return `answered from its tree the state differs from the world with the closure stored, line ${i + 1}: ${JSON.stringify(a[i])} against ${JSON.stringify(b[i])}`;
@@ -552,7 +536,7 @@ function storedClosureProblems(w: World, keep: string[], args: string[], state: 
   if (!treeSealed(keep)) return [];
   const p = spawnSync(RUST, args, { encoding: 'utf8', maxBuffer: 512 * 1024 * 1024, env: { ...process.env, ROFL_NO_VCLOSURE: '1' } });
   if (p.status !== 0) return [`the world with its closure stored does not evaluate (${p.status})`];
-  const v = closureVerdict(w, state, p.stdout);
+  const v = closureVerdict(state, p.stdout);
   return [...(v === null ? [] : [v]), ...snapshotProblems(args, state)];
 }
 
@@ -615,7 +599,7 @@ export function answerRust(w0: World): Answer | null {
     if (want && !p.stderr.includes(want)) problems.push(`${base} refused, but not for '${want}': ${p.stderr.trim().split('\n')[0]}`);
   }
   const args = [boot, ...(w.ticks ? ['--ticks', String(w.ticks)] : []),
-    ...(w.budget ?? w.cap ? ['--budget', String(w.budget ?? w.cap)] : []), ...(w.strata ? ['--strata'] : []), ...(w.deltaFirst ? ['--delta-first'] : []), ...keep];
+    ...(w.budget ?? w.cap ? ['--budget', String(w.budget ?? w.cap)] : []), ...(w.strata ? ['--strata'] : []), ...keep];
   const state = run(args);
   const full = diags.sort().join('\n') + (diags.length ? '\n' : '') + state;
   return { hash: digest(full), facts: 0, census: census(full), dropped: [], alarms: raised(alarmRels(state), state),
@@ -635,7 +619,7 @@ export function answerRust(w0: World): Answer | null {
 function answerRustOnly(w: World): Answer {
   const boot = bootPath();
   const opts = [...(w.ticks ? ['--ticks', String(w.ticks)] : []), ...(w.budget ?? w.cap ? ['--budget', String(w.budget ?? w.cap)] : []),
-    ...(w.space ? ['--space', String(w.space)] : []), ...(w.strata ? ['--strata'] : []), ...(w.deltaFirst ? ['--delta-first'] : []),
+    ...(w.space ? ['--space', String(w.space)] : []), ...(w.strata ? ['--strata'] : []),
     ...(w.retain !== undefined ? ['--retain', String(w.retain)] : []), ...(w.retract ?? []).flatMap((f) => ['--retract', f])];
   const diags: string[] = [], keep: string[] = [], dropped: string[] = [], problems: string[] = [];
   for (const f of w.files) {

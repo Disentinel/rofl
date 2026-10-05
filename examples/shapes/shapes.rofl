@@ -2,7 +2,7 @@
 --
 -- f_costly_rules_are_shapes measured that the time of the JS model is spent in a
 -- dozen ways of WRITING a rule, each with a rewrite that was measured. This file
--- states six of them as queries over what a load writes about the rules
+-- states seven of them as queries over what a load writes about the rules
 -- (`premise_lit`, `conclusion_lit`, `concludes`, `premise_pos`, `premise_neg`,
 -- `uses_builtin`), so a new rule that is written the costly way is a row, with
 -- the shape's name and the reason it costs, before anyone profiles it.

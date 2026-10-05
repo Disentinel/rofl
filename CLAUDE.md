@@ -32,6 +32,29 @@ in `docs/`. Everything ever learned here is in `facts/findings.rofl`.
 
 <!-- END commands -->
 
+Knobs: **fewer is the rule** (owner, 2026-10-05). These are the only ones to use;
+every other flag and `ROFL_*` variable is an oracle of a check harness or a
+leftover, inventoried with its verdict in docs/knobs.md. Add none without
+removing one.
+
+<!-- BEGIN knobs: generated from facts/commands.rofl, inventory in docs/knobs.md -->
+
+| knob | tool | use |
+|---|---|---|
+| `ROFL_JOBS` | env | worker processes of the pooled runs (`npm test`, `whycheck`); by default the cores less two. Set 3 on a shared machine |
+| `ROFL_PROFILE` | env | the cargo profile whose binaries the scripts run: `release` (default) or `fast`. `breaks` belongs to the fault harness, never set it by hand |
+| `--ticks` | rofl-load | `--ticks N --budget N --space N [--strata] [--retain N]`: the ticks to run and the walls; then the state is printed |
+| `--why` | rofl-load | `--why L`, `--why-all L`, `--whynot L [--depth N --nodes N]`, `--excise F`: the explanation verbs, in the order given, answered in the reference's text; `--state` puts the dump back before them. Exit 4: a refused question |
+| `--retract` | rofl-load | `--retract L`, repeated: take a base fact out after the first evaluation and print the state it leaves |
+| `--propose-structures` | rofl-load | the read-only detection report instead of the state; `--structures-min-rows N`; `npm run structures` wraps it |
+| `--bytes` | rofl-eval | `--bytes [--budget N] [--space N] [--ticks N] SEED.json`: the state, and on stderr facts, time, peak rows, bytes per table and the costliest rules. Release build only; `--derivations` prints the derivations instead of the state |
+| `--out` | rofl-render | `--out DIR FILE... [--tables PACK...]` writes the sentence form of the files; `--facts` prints their facts for a script to read |
+| `ROFL_NB_LIMIT` | env | seconds a notebook run evaluates before it stops and answers what it found (exit 3); `ROFL_NB_MEMORY=<GB>` bounds the heap likewise |
+| `ROFL_NB_DAEMON` | env | `0` runs a notebook in the calling process instead of the kept kernel |
+| `ROFL_NO_BROWSER` | env | `1` lets `test:workbench` go without Chrome; without it a missing Chrome is a red |
+
+<!-- END knobs -->
+
 `npm test` loads every `.rofl` world in the tree with both engines and compares
 a hash and a per-relation census against `facts/goldens.rofl`. A red names the
 relation that moved and by how much. Blessing is a decision and shows up as a
@@ -45,7 +68,7 @@ engine is not a performance engine and its timings decide nothing. New engine
 work (speed, scale, incremental maintenance, compression) is built in Rust
 first; the TS engine stays the parity reference that `npm test` and whycheck
 compare against, **up to a bounded scale** — some Rust capabilities (keeping no
-witness under `sealed(witness)`, the closure kernel, incremental deltas) are not
+witness under `sealed(provenance)`, the closure kernel, incremental deltas) are not
 mirrored in TS and are not to be attempted there: a world that exercises one is
 checked on Rust only, and TS is not asked to run worlds large enough to be slow
 (f_rust_is_the_engine_ts_is_the_reference).

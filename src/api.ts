@@ -141,6 +141,8 @@ function unknownAnswersUnnamed(store: FactStore, lit: Lit, asked: boolean, trail
   if (heads.length === 0) return asked && rows.length === 0;
   return heads.some((h) => !rows.some((r) => r.length === h.length && r.every((t, i) => uv(t) || canonTerm(t) === canonTerm(h[i]))));
 }
+/** `excise` under a cone that left rules out: what the fact supports through those rules is not in the world (rust/rofl `EXCISE_UNDER_ASKS`). */
+export const EXCISE_UNDER_ASKS = 'excise is not answered under asks: the rules the cone leaves out would lose what the fact supports too; drop the asks';
 
 export class Rofl {
   // The default implementation, and the reference one: mode `memory`.
@@ -855,6 +857,8 @@ export class Rofl {
       throw e;
     }
     const ev = this.standing(budget);
+    const outside = ev.outsideCone(lit.rel);
+    if (outside !== undefined) return { rows: [], partial: false, error: outside };
     const vars = [...varsOf(lit.persp, varsOf(mkf('$t', lit.args)))].sort();
     let ms: { s: Subst }[] = [];
     // below a call, what a hole left unknown is no answer
@@ -967,6 +971,8 @@ export class Rofl {
       throw e;
     }
     const ev = this.standing(budget);
+    const outside = ev.outsideCone(lit.rel);
+    if (outside !== undefined) return { ok: false, text: outside };
     ev.dag = !opts.tree;
     try { return { ok: true, text: ev.questioned(budget, () => ev.whyText(lit, opts.all ? Infinity : undefined, typeof text === 'string' ? text : undefined)) }; } catch (e) { return { ok: false, text: (e as Error).message }; } finally { ev.dag = true; }
   }
@@ -984,6 +990,8 @@ export class Rofl {
       if (ev.plain) throw e;
       return { holds: false, text: (e as Error).message };
     }
+    const outside = ev.outsideCone(lit.rel);
+    if (outside !== undefined) throw new Error(outside);
     // A WALL MET WHILE DEMONSTRATING IS THE ANSWER: a demand that unfolds without end has no demonstration, and the wall
     // that stopped it is named (rust/rofl `Session::whynot`). Any other halt is the aggregate evaluator's to answer; a plain
     // program's is a refusal.
@@ -1013,6 +1021,8 @@ export class Rofl {
       if (e instanceof Rejected) return { ok: false, removed: [], added: [], error: e.message };
       throw e;
     }
+    const ev = this.standing(budget);
+    if (ev.cone !== undefined && ev.pruned.size > 0) return { ok: false, removed: [], added: [], error: EXCISE_UNDER_ASKS };
     const scratch = this.fork();
     scratch.store.remove(key);
     const ft = factTerm(lit.rel, lit.persp.name, lit.args);
@@ -1081,7 +1091,8 @@ export class Rofl {
       else {
         const lit: Lit = { rel: atom.name, persp: mka(MAIN), perspExplicit: false, args: atom.k === 'f' ? atom.args : [], temporal: 'now' };
         const k = kind.k === 'a' ? kind.name : '';
-        try {
+        const outside = ev.outsideCone(lit.rel);
+        if (outside !== undefined) { text = outside; ok = false; } else try {
           if (k === 'why') text = ev.questioned(budget, () => ev.whyText(lit));
           else if (k === 'why_all') text = ev.questioned(budget, () => ev.whyText(lit, Infinity));
           else if (k === 'whynot') text = ev.questioned(budget, () => ev.whynotText(lit, { maxDepth: 3, maxNodes: 64 }))[1];

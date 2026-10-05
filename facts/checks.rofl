@@ -9,7 +9,7 @@
 -- TypeScript string literal and becomes a world two engines can be held to.
 
 -- OPTIONS (check_opt(World, Option, Value)), all read by scripts/goldens.ts: ticks, budget, space, retain,
--- retract, evaluator, explain, sentences, together, delta_first, closure_unwalled and one_engine. `one_engine, ts` checks a world on the
+-- retract, evaluator, explain, sentences, together and one_engine. `one_engine, ts` checks a world on the
 -- TypeScript engine alone (a host contract the two answer differently); `one_engine, rust` checks it on
 -- the Rust engine alone: the TypeScript engine is never run on it, its golden is the Rust golden, and
 -- whycheck asks its questions of rofl-serve and rofl-load only and holds them to each other. It may name a
@@ -2983,17 +2983,10 @@ check_file("agg_join_delta_first", "examples/checks/agg-join-delta-first.rofl").
 check_file("agg_join_delta_first", "examples/checks/agg-join-delta-first-check.rofl").
 check_opt("agg_join_delta_first", together, 1).
 check_opt("agg_join_delta_first", space, 250).
--- the world asks for its plans under its wall: a budget or space otherwise keeps every firing in written order
-check_opt("agg_join_delta_first", delta_first, 1).
--- THE PLAN IS NEVER OBSERVED (the review of w_cmp_delta_first): each world below is answered by both engines,
--- the Rust engine with its plans on, and holds the written order's state. A hole a negation meets while an
--- unknown spreads; a perspective variable read unbound; a steps wall and a space wall, each in written order
--- (a wall a caller set) and opted into the plans (a firing that could cross the wall is solved again as written).
-check_world("agg_join_delta_first_walled").
-check_file("agg_join_delta_first_walled", "examples/checks/agg-join-delta-first.rofl").
-check_file("agg_join_delta_first_walled", "examples/checks/agg-join-delta-first-walled.rofl").
-check_opt("agg_join_delta_first_walled", together, 1).
-check_opt("agg_join_delta_first_walled", space, 250).
+-- THE PLAN IS NEVER OBSERVED (the review of w_cmp_delta_first): each world below but the steps one is answered by both
+-- engines, the Rust engine with its plans on, and holds the written order's state. A hole a negation meets while an
+-- unknown spreads; a perspective variable read unbound; a space wall a plan outgrows (the overrun is solved again as
+-- written); and a steps wall, which the plan cuts where it cuts (Rust's alone).
 check_world("agg_join_delta_first_hole").
 check_file("agg_join_delta_first_hole", "examples/checks/agg-join-delta-first-hole.rofl").
 check_world("agg_join_delta_first_persp").
@@ -3001,29 +2994,17 @@ check_file("agg_join_delta_first_persp", "examples/checks/agg-join-delta-first-p
 check_world("agg_join_delta_first_steps").
 check_file("agg_join_delta_first_steps", "examples/checks/agg-join-delta-first-steps.rofl").
 check_opt("agg_join_delta_first_steps", together, 1).
+check_opt("agg_join_delta_first_steps", one_engine, rust).
 check_opt("agg_join_delta_first_steps", budget, 75).
-check_world("agg_join_delta_first_steps_planned").
-check_file("agg_join_delta_first_steps_planned", "examples/checks/agg-join-delta-first-steps.rofl").
-check_opt("agg_join_delta_first_steps_planned", together, 1).
-check_opt("agg_join_delta_first_steps_planned", budget, 75).
-check_opt("agg_join_delta_first_steps_planned", delta_first, 1).
 check_world("agg_join_delta_first_space").
 check_file("agg_join_delta_first_space", "examples/checks/agg-join-delta-first-space.rofl").
 check_opt("agg_join_delta_first_space", together, 1).
 check_opt("agg_join_delta_first_space", space, 700).
-check_world("agg_join_delta_first_space_planned").
-check_file("agg_join_delta_first_space_planned", "examples/checks/agg-join-delta-first-space.rofl").
-check_opt("agg_join_delta_first_space_planned", together, 1).
-check_opt("agg_join_delta_first_space_planned", space, 700).
-check_opt("agg_join_delta_first_space_planned", delta_first, 1).
 proves_work("agg_join_delta_first", w_cmp_delta_first).
-proves_work("agg_join_delta_first_walled", w_cmp_delta_first).
 proves_work("agg_join_delta_first_hole", w_cmp_delta_first).
 proves_work("agg_join_delta_first_persp", w_cmp_delta_first).
 proves_work("agg_join_delta_first_steps", w_cmp_delta_first).
-proves_work("agg_join_delta_first_steps_planned", w_cmp_delta_first).
 proves_work("agg_join_delta_first_space", w_cmp_delta_first).
-proves_work("agg_join_delta_first_space_planned", w_cmp_delta_first).
 check_opt("agg_join_delta_first", one_engine, rust).
 -- sealed(provenance), the one knob: the set of facts is the contract; the Rust engine keeps no derived_by and no
 -- witness, and both engines conclude the same rows over a closure with a cycle and a diamond
@@ -3289,8 +3270,8 @@ check_opt("ds_tree_phrase", sentences, 1).
 
 -- A CLOSURE ANSWERED FROM ITS TREE IS NEVER PUT FIRST UNBOUND (docs/data-structures.md "Tree, as built"): a chain whose closure
 -- is larger than the world's space wall, read by rules that name the closure before the premise that binds an end of it.
--- The written order meets the wall; the delta-first plan, which reads the tree's shape, does not. The TypeScript engine
--- solves in written order, so the world is Rust's alone.
+-- The delta-first plan, which reads the tree's shape, does not meet the wall; the TypeScript engine solves in written
+-- order and does, so the world is Rust's alone.
 check_world("ds_tree_plan").
 check_file("ds_tree_plan", "examples/checks/ds-tree-sealed.rofl").
 check_file("ds_tree_plan", "examples/checks/ds-tree-plan.rofl").
@@ -3298,8 +3279,6 @@ check_file("ds_tree_plan", "examples/checks/ds-tree-plan-check.rofl").
 check_opt("ds_tree_plan", together, 1).
 check_opt("ds_tree_plan", one_engine, rust).
 check_opt("ds_tree_plan", space, 3000).
-check_opt("ds_tree_plan", delta_first, 1).
-check_opt("ds_tree_plan", closure_unwalled, 1).
 
 check_world("ds_tree_retract_edge").
 check_file("ds_tree_retract_edge", "examples/checks/ds-tree-retract-3-edge.rofl").
@@ -3390,3 +3369,44 @@ check_opt("asks_demand", together, 1).
 check_world("asks_asked_cells").
 check_file("asks_asked_cells", "examples/checks/asks-asked-cells.rofl").
 check_opt("asks_asked_cells", together, 1).
+
+-- the review of the cone (2026-10-05): what the kernel reads of every rule, a rule-made request, a refused world, a
+-- question outside the cone, two kernel relations asked, hole asked, a derived ask
+check_world("asks_kernel_reads").
+check_file("asks_kernel_reads", "examples/checks/asks-kernel-reads.rofl").
+check_opt("asks_kernel_reads", together, 1).
+check_opt("asks_kernel_reads", explain, 1).
+
+check_world("asks_explain_rule").
+check_file("asks_explain_rule", "examples/checks/asks-explain-rule.rofl").
+check_opt("asks_explain_rule", together, 1).
+check_opt("asks_explain_rule", explain, 1).
+
+check_world("asks_refused").
+check_file("asks_refused", "examples/checks/asks-refused.rofl").
+check_file("asks_refused", "examples/checks/asks-refused-promise.rofl").
+check_file("asks_refused", "examples/checks/asks-refused-wfs.rofl").
+check_file("asks_refused", "examples/checks/asks-refused-cycle.rofl").
+check_opt("asks_refused", together, 1).
+
+check_world("asks_outside").
+check_file("asks_outside", "examples/checks/asks-outside.rofl").
+check_opt("asks_outside", together, 1).
+
+check_world("asks_asked_twice").
+check_file("asks_asked_twice", "examples/checks/asks-asked-twice.rofl").
+check_opt("asks_asked_twice", together, 1).
+
+check_world("asks_hole").
+check_file("asks_hole", "examples/checks/asks-hole.rofl").
+check_opt("asks_hole", together, 1).
+
+check_world("asks_derived").
+check_file("asks_derived", "examples/checks/asks-derived.rofl").
+check_opt("asks_derived", together, 1).
+
+-- a dominated value's history, when a lattice no rule concludes closes at an earlier level (found by the cone's review)
+check_world("sub_history_beside_lattice").
+check_file("sub_history_beside_lattice", "examples/checks/sub-history-beside-lattice.rofl").
+check_opt("sub_history_beside_lattice", together, 1).
+check_opt("sub_history_beside_lattice", explain, 1).

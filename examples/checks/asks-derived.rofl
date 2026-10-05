@@ -1,0 +1,12 @@
+-- examples/checks/asks-derived.rofl — AN ask CONCLUDED BY A RULE KEEPS EVERY RULE.
+-- dv_a is asked as a fact and dv_b by a rule. What a world asks is read before its rules run, so a derived ask cannot
+-- choose them: a rule concluding asks keeps every rule (said in the diagnostics), and dv_b is answered, where a cone
+-- of dv_a alone would leave it out.
+asks(dv_a).
+edb(dv_src).
+dv_src(1).
+asks(dv_b) :- dv_src(1).
+dv_a(X) :- dv_src(X).
+dv_b(X) :- dv_src(X).
+-- expect-row: dv_b[main](1)
+-- expect-row: asks[main](dv_b)

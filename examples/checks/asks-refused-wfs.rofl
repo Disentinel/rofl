@@ -1,0 +1,12 @@
+-- expect-refusal: count is not evaluated under well_founded semantics
+-- examples/checks/asks-refused-wfs.rofl — A COUNT UNDER well_founded, OUTSIDE THE CONE.
+-- rw_win is asked; the count that makes the well-founded world refused reads it and is read by nothing asked. Under
+-- well_founded every aggregate runs in every cone, so the world is refused with its asks as without.
+semantics(well_founded).
+asks(rw_win).
+edb(rw_move). edb(rw_player).
+rw_move(a, b). rw_move(b, a). rw_move(b, c).
+rw_win(X) :- rw_move(X, Y), not rw_win(Y).
+rw_player(p1). rw_player(p2).
+rw_owns(p1, c).
+rw_n(P, N) :- rw_player(P), N is count(X : rw_owns(P, X), rw_win(X)).

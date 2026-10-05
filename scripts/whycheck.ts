@@ -37,7 +37,7 @@ import { Rofl } from '../src/api.ts';
 import { storeHasAggregates } from '../src/aggeval.ts';
 import { canonTerm } from '../src/unify.ts';
 import { RoflPort, type Walls } from '../runtime/port.ts';
-import { worlds, placed, togetherWorld, expectedRefusal, treeSealed, closureVerdict, type World } from './goldens.ts';
+import { worlds, placed, togetherWorld, expectedRefusal, treeSealed, closureVerdict, storedIsCut, type World } from './goldens.ts';
 import { belowFiles } from './agg_select.ts';
 import { dagProblem } from './why_dag.ts';
 import { derivationHeights, type DerivationSource } from '../src/store.ts';
@@ -105,6 +105,9 @@ const own = new Map(OWN.map((o) => [o.w.name, o]));
 /** Questions a corpus world is asked besides the usual ones: a call answered on demand whose unfolding reads what a
  *  hole left unknown, which a question once read as absence (f_an_answer_unfolded_at_a_call_read_a_hole_as_absence). */
 const ASKED: Record<string, Q[]> = {
+  // a question outside the cone of asks, and one of what the kernel writes of every rule, is refused in the same words
+  asks_outside: [...['ot_b(1)', 'ot_a(1,1)', 'unknown(ot_b(1))'].flatMap((q): Q[] => [{ op: 'whynot', query: q }, { op: 'why', query: q }]),
+    { op: 'excise', query: 'ot_src(1)' }],
   demand_neg_hole: ['dh_r(c)', 'dh_nr(c)', 'dh_h(c,c)', 'dh_r1(c)'].flatMap((q): Q[] => [{ op: 'whynot', query: q }, { op: 'why', query: q }]),
   demand_pos_hole: ['dp_nr(k)', 'dp_r(k)', 'dp_d(k,k)', 'dp_q2(k)'].map((q): Q => ({ op: 'whynot', query: q })),
   demand_asked_hole: ['da_r(c)', 'da_nr(c)', 'da_q(c,z)', 'da_q(b,z)', 'da_d(k,z)', 'da_ng(b)'].map((q): Q => ({ op: 'whynot', query: q })),
@@ -188,7 +191,7 @@ function questions(r: Rofl, budget: number | undefined, first: boolean, excise =
  *  derived facts spread over the store, each asked why and whynot, the same with its last argument changed, one base
  *  fact excised. There is no oracle, so the answers are compared rofl-serve against rofl-load only. */
 function rustQuestions(w: World, rich = false): Q[] {
-  const p = spawnSync(LOAD, [...(w.budget ? ['--budget', String(w.budget)] : []), ...(w.deltaFirst ? ['--delta-first'] : []), ...(w.ticks ? ['--ticks', String(w.ticks)] : []), BOOT, ...w.files],
+  const p = spawnSync(LOAD, [...(w.budget ? ['--budget', String(w.budget)] : []), ...(w.ticks ? ['--ticks', String(w.ticks)] : []), BOOT, ...w.files],
     { encoding: 'utf8', maxBuffer: 512 * 1024 * 1024 });
   const keys = (kind: string): string[] => p.stdout.split('\n').flatMap((l) => {
     const m = /^([a-z]\w*)(?:\[(\w+)\])?(\(.*\)) (?:timeless|tick) (\w+) support=\d+$/.exec(l);
@@ -311,7 +314,7 @@ function withoutRetracted(w: World): { r: Rofl; w: World } | string {
 const parseRefusal = (a: A): boolean => !a.ok && /^(error: )?line \d+: /.test(a.text);
 
 const walls = (w: World): Walls => ({ ...(w.space ? { space: w.space } : {}), ...(w.retain !== undefined ? { retainTicks: w.retain } : {}),
-  ...(w.strata ? { mode: 'strata' as const } : {}), ...(w.deltaFirst ? { deltaFirst: true } : {}) });
+  ...(w.strata ? { mode: 'strata' as const } : {}) });
 
 /** The protocol cannot feed a world below or answer explain requests; such a
  *  world is asked of rofl-load alone. */
@@ -352,7 +355,7 @@ const groupOf = (qs: Q[], want: A[], i: number): string => (parseRefusal(want[i]
 
 /** The flags that make rofl-load build the world as `npm test` does. */
 const loadOpts = (w: World): string[] => [...(w.ticks ? ['--ticks', String(w.ticks)] : []), ...(w.budget ? ['--budget', String(w.budget)] : []),
-  ...(w.space ? ['--space', String(w.space)] : []), ...(w.strata ? ['--strata'] : []), ...(w.deltaFirst ? ['--delta-first'] : []),
+  ...(w.space ? ['--space', String(w.space)] : []), ...(w.strata ? ['--strata'] : []),
   ...(w.retain !== undefined ? ['--retain', String(w.retain)] : []), ...(w.retract ?? []).flatMap((f) => ['--retract', f]), ...(w.explain ? ['--explain'] : []),
   ...belowFiles(w.files).flatMap((f) => ['--below', f])];
 
@@ -402,6 +405,15 @@ function stateOf(w: World, env: Record<string, string>): string {
   return p.status === 0 ? p.stdout : `rofl-load exited ${p.status}: ${p.stderr.trim().split('\n')[0]}`;
 }
 
+/** WHAT `asks` SAYS OF A WORLD, in both engines' words: each diagnostic about the cone, rofl-load's against the reference's. */
+function asksSaid(r: Rofl, w: World): string | null {
+  if (!w.files.some((f) => f.endsWith('.rofl') && /^asks\(/m.test(fs.readFileSync(f, 'utf8')))) return null;
+  const p = spawnSync(LOAD, [...loadOpts(w), '--state', BOOT, ...w.files], { encoding: 'utf8', maxBuffer: 1024 * 1024 * 1024 });
+  const rust = [...new Set(p.stderr.split('\n').filter((l) => l.startsWith('diag: asks: ')).map((l) => l.slice(6)))].sort();
+  const ts = [...new Set(r.diagnostics.filter((d) => d.startsWith('asks: ')))].sort();
+  return rust.join('\n') === ts.join('\n') ? null : `asks says ${JSON.stringify(ts)} in the reference and ${JSON.stringify(rust)} in rofl-load`;
+}
+
 async function check(ws: World[], firstName: string): Promise<Report> {
   const port = await RoflPort.start();
   const rep: Report = { asked: 0, bad: [], loadOnly: [], walled: [] };
@@ -423,9 +435,9 @@ async function check(ws: World[], firstName: string): Promise<Report> {
         if (fromTree(w0)) {
           // the states decide whether the stored world is comparable: it is not where it meets a wall the tree does not
           const a = stateOf(kept, {}), b = stateOf(kept, { ROFL_NO_VCLOSURE: '1' });
-          const v = closureVerdict(kept, a, b);
+          const v = closureVerdict(a, b);
           if (v !== null) rep.bad.push(`${kept.name}: ${v}`);
-          else if (kept.closureUnwalled) rep.walled.push(kept.name);
+          else if (storedIsCut(a, b)) rep.walled.push(kept.name);
           else {
             const stored = cli(kept, qs, qs.map(() => ({ ok: true, text: '' })), { ROFL_NO_VCLOSURE: '1' });
             for (const pr of stored.problems) rep.bad.push(`${kept.name} stored load: ${pr}`);
@@ -478,6 +490,8 @@ async function check(ws: World[], firstName: string): Promise<Report> {
       }
       const { texts, exits, problems } = cli(w, qs, want);
       for (const p of problems) rep.bad.push(`${w.name} load: ${p}`);
+      const said = asksSaid(r, w);
+      if (said) rep.bad.push(`${w.name}: ${said}`);
       qs.forEach((q, i) => {
         if (q.op === 'ask') return;
         const at = `${w.name} load ${q.op} ${JSON.stringify(q.query)}${q.depth !== undefined ? ` depth=${q.depth} nodes=${q.nodes}` : ''}`;
@@ -534,6 +548,6 @@ console.log(`\n${n} questions over ${asked.length} worlds, each to rofl-serve an
   + `, ${((Date.now() - t0) / 1000).toFixed(1)} s over ${jobs} processes`
   + `\nasked of rofl-load alone (a world below, or explain requests): ${loadOnly.length}`
   + `\nasked of Rust only, serve against load (no reference run): ${rustOnly.length} ${rustOnly.join(' ') || 'none'}`
-  + `\nnot held to the world with its closure stored (it meets a wall stored that the tree does not, declared closure_unwalled): ${walled.join(' ') || 'none'}`
+  + `\nnot held to the world with its closure stored (it meets a wall stored that the tree does not): ${walled.join(' ') || 'none'}`
   + `\nnot asked (one engine, TypeScript): ${all.filter((w) => w.oneEngine === 'ts').map((w) => w.name).join(' ') || 'none'}`);
 process.exit(bad.length === 0 ? 0 : 1);

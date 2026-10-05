@@ -77,7 +77,7 @@
     "floorcensus": "node --experimental-strip-types scanners/floor_census.ts",
     "keycoupling": "node --experimental-strip-types scanners/key_coupling.ts",
     "layering": "node --experimental-strip-types scanners/layering_report.ts",
-    "loop": "ROFL_TESTS=loop NODE_OPTIONS=--expose-gc node --experimental-strip-types --test --test-concurrency=$(node -p \"require('os').availableParallelism()\") --test-reporter=spec $(node --experimental-strip-types scanners/side_files.ts engine)",
+    "loop": "NODE_OPTIONS=--expose-gc node --experimental-strip-types --test --test-concurrency=$(node -p \"require('os').availableParallelism()\") --test-reporter=spec $(node --experimental-strip-types scanners/side_files.ts engine)",
     "measurecheck": "node --experimental-strip-types scripts/measurement_check.ts",
     "necessity": "node --experimental-strip-types scanners/necessity.ts",
     "noparser": "node --experimental-strip-types scripts/parser_optional.ts",

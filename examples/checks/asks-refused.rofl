@@ -1,0 +1,10 @@
+-- examples/checks/asks-refused.rofl — A CONE NEVER ANSWERS A WORLD THAT IS REFUSED.
+-- Each asks-refused-*.rofl beside this file asks a relation whose cone reads nothing that refuses, in a world whose
+-- other rules make the whole program refused: a function's promise broken, a count under well_founded, a recursion
+-- through a negation. Each is refused with its asks as without them. This world, the control, answers its ask.
+asks(ra_a).
+edb(ra_src).
+ra_src(1).
+ra_a(X) :- ra_src(X).
+ra_b(X) :- ra_src(X), not ra_a(X).
+-- expect-row: ra_a[main](1)

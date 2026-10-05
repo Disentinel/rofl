@@ -2,11 +2,9 @@
 --
 -- hit(A, C) :- a(A, B), b(B, C), c(C). The planner estimates b(B, k) at 18 rows a binding
 -- (950 rows over 51 values of C) where 900 hold C = k: the plan from the news of c(k) holds
--- 900 rows, the written order a handful, and nothing is concluded. Two worlds read this file
--- under a space of 700 rows: one in written order, as every firing is under a wall a caller
--- set (agg_breaks `delta_first_walls`), one opted into the plans, where a plan that outgrows
--- the space is solved again in written order (agg_breaks `delta_first_overrun_holes`). Both
--- complete, as the TypeScript engine does.
+-- 900 rows, the written order a handful, and nothing is concluded. Under a space of 700 rows the
+-- plan that outgrows it is solved again in written order (Halt::Overrun; agg_breaks
+-- `delta_first_overrun_holes`), and the world completes, as the TypeScript engine does.
 -- expect-no-row: hole[$kernel]($rule(
 -- expect-no-row: hit[main](
 edb(a). edb(b). edb(seed).
