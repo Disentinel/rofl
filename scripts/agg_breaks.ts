@@ -7097,6 +7097,14 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "vclosure_restore_unengaged",
+  "what": "a snapshot is opened without reading which closures are answered from their trees: asked before any evaluation, the closure has no rows",
+  "expect": {
+   "ds_tree_sealed": "a snapshot opened and not evaluated holds another state",
+   "ds_tree_explain": "a snapshot opened and not evaluated holds another state"
+  }
+ },
+ {
   "id": "vclosure_neg_inverted",
   "what": "a negation of the closure holds where a row does",
   "expect": {
@@ -7758,8 +7766,8 @@ if (isMain) {
 
   if (!legacy) {
     const tb = Date.now();
-    sh('cd rust && cargo build --profile breaks --features breaks -p rofl --bin rofl-load --bin rofl-render');
-    console.log(`built rust/target/breaks/rofl-load and rofl-render in ${((Date.now() - tb) / 1000).toFixed(1)} s`);
+    sh('cd rust && cargo build --profile breaks --features breaks -p rofl --bin rofl-load --bin rofl-render --bin rofl-serve');
+    console.log(`built rust/target/breaks/rofl-load, rofl-render and rofl-serve in ${((Date.now() - tb) / 1000).toFixed(1)} s`);
     const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'agg-breaks-'));
     try {
       const plants = chosen.map((b) => {
@@ -7807,7 +7815,7 @@ if (isMain) {
     }
   } else {
     const profile = process.env.ROFL_PROFILE || 'release';
-    const build = (): void => { sh(`cd rust && cargo build --profile ${profile} -p rofl --bin rofl-load --bin rofl-render`); };
+    const build = (): void => { sh(`cd rust && cargo build --profile ${profile} -p rofl --bin rofl-load --bin rofl-render --bin rofl-serve`); };
     for (const b of chosen) {
       const saved = new Map<string, string>();
       const kernel = (b.edits ?? []).some(([f]) => KERNEL.includes(f));

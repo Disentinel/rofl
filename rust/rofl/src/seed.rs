@@ -64,6 +64,7 @@ fn read_prems(
                 }
             },
             Some("neg") => prems.push(PremRef::Neg(h.intern(p["key"].as_str().unwrap_or("")))),
+            Some("vrow") => prems.push(PremRef::VRow(h.intern(p["key"].as_str().unwrap_or("")))),
             _ => prems.push(PremRef::Bi(h.intern(p["desc"].as_str().unwrap_or("")))),
         }
     }

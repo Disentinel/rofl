@@ -10242,7 +10242,7 @@ impl Eval {
                 self.h.mkf(self.v.s_bi, &[t])
             }
             PremRef::Cell(c) => self.store.cell_key_term(&mut self.h, c),
-            PremRef::VRow(k) => match self.vrow_of.get(&k).copied() {
+            PremRef::VRow(k) => match self.vrow_entry(k) {
                 Some((ci, book, a, d)) => {
                     let rel = self.vclosures[ci].rel;
                     fact_term(&mut self.h, &self.v, rel, book, &[a, d])

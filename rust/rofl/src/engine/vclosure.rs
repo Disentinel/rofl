@@ -131,6 +131,20 @@ impl Eval {
         self.vany = self.vclosures.iter().any(|c| c.active);
     }
 
+    /// A WORLD OPENED FROM A SNAPSHOT is asked before anything evaluates it, and the closure's rows were never stored: the
+    /// program is read and the closures that may be answered from their trees are engaged, the forests built from the edges
+    /// the snapshot holds when first asked.
+    pub fn vclosure_restore(&mut self) {
+        if crate::structure::closures(&self.h, &self.v, &mut self.store).is_empty() {
+            return;
+        }
+        self.prepare();
+        if !brk!("vclosure_restore_unengaged" => true; false) {
+            self.vclosure_engage();
+            self.vpublish();
+        }
+    }
+
     /// The declared closures and whether each is answered from its tree.
     pub fn vclosure_info(&self) -> Vec<(String, bool)> {
         self.vclosures.iter().map(|c| (self.h.name(c.rel).to_string(), c.active)).collect()
@@ -344,6 +358,18 @@ impl Eval {
         PremRef::VRow(self.vrow_key(ci, book, a, d))
     }
 
+    /// The row a premise's key names: as it was cited in this engine, or read back from the key where the premise came from a snapshot.
+    pub(super) fn vrow_entry(&mut self, k: Sym) -> Option<(usize, Sym, Term, Term)> {
+        if let Some(e) = self.vrow_of.get(&k) {
+            return Some(*e);
+        }
+        let lit = self.parse_lit(&self.h.name(k).to_string()).ok()?;
+        let (book, ci) = (walk(&self.h, lit.persp, &Subst::default()).as_atom()?, *self.vclosure_of.get(&lit.rel)?);
+        let [a, d] = lit.args[..] else { return None };
+        self.vrow_of.insert(k, (ci, book, a, d));
+        Some((ci, book, a, d))
+    }
+
     fn vrow_key(&mut self, ci: usize, book: Sym, a: Term, d: Term) -> Sym {
         let mut key = String::new();
         write_fact_key(&self.h, self.vclosures[ci].rel, book, &[a, d], &mut key);
@@ -366,7 +392,7 @@ impl Eval {
     /// row when the parent is the ancestor (the first rule), and else the row of the parent with that edge (the second).
     /// A forest gives a row one parent, so one firing.
     fn vderive(&mut self, k: Sym) -> Option<(Sym, Vec<PremRef>)> {
-        let (ci, book, a, d) = *self.vrow_of.get(&k)?;
+        let (ci, book, a, d) = self.vrow_entry(k)?;
         let forests = self.vforests(ci);
         let parent = forests.iter().find(|(b, _)| *b == book)?.1.parent_of(d)?;
         let edge = self.store.get(self.vclosures[ci].edge, book, &[parent, d])?;

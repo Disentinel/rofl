@@ -1807,6 +1807,9 @@ brk("vclosure_row_written_twice"). brk_kind("vclosure_row_written_twice", switch
 brk_expects("vclosure_row_written_twice", "ds_tree_explain").
 brk("vclosure_demand_unread"). brk_kind("vclosure_demand_unread", switch).
 brk_expects("vclosure_demand_unread", "ds_tree_demand_edge").
+brk("vclosure_restore_unengaged"). brk_kind("vclosure_restore_unengaged", switch).
+brk_expects("vclosure_restore_unengaged", "ds_tree_sealed").
+brk_expects("vclosure_restore_unengaged", "ds_tree_explain").
 brk("vclosure_neg_inverted"). brk_kind("vclosure_neg_inverted", switch).
 brk_expects("vclosure_neg_inverted", "ds_tree_sealed").
 brk("vclosure_unbound_cheap"). brk_kind("vclosure_unbound_cheap", switch).
@@ -2289,6 +2292,7 @@ switch_site("vclosure_neg_inverted", "rust/rofl/src/engine.rs").
 switch_site("vclosure_nonstrict", "rust/rofl/src/forest.rs").
 switch_site("vclosure_premise_untagged", "rust/rofl/src/engine/vclosure.rs").
 switch_site("vclosure_reader_stale", "rust/rofl/src/engine.rs").
+switch_site("vclosure_restore_unengaged", "rust/rofl/src/engine/vclosure.rs").
 switch_site("vclosure_row_written_twice", "rust/rofl/src/engine/vclosure.rs").
 switch_site("vclosure_rows_unpublished", "rust/rofl/src/engine/vclosure.rs").
 switch_site("vclosure_stale_forest", "rust/rofl/src/engine/vclosure.rs").

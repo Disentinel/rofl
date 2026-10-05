@@ -222,3 +222,22 @@ fn a_retraction_where_no_witness_is_kept_evaluates_again() {
     let rest: Vec<String> = edges.iter().filter(|e| **e != gone).cloned().collect();
     assert_eq!(rows(&s), rows(&build(&rest)));
 }
+
+#[test]
+fn a_snapshot_opened_and_not_evaluated_answers_the_closure_from_its_tree() {
+    // the closure's rows were never stored: a snapshot that did not carry the closure answered `ask` with nothing
+    for seed in 0..6u64 {
+        let (text, edges) = forest(seed, 24);
+        let mut s = evaluated(&program(true, true, &text, &edges));
+        assert!(s.eval.vclosure_info().iter().all(|(_, on)| *on), "{:?}", s.eval.vclosure_reason);
+        let mut open = Session::open(&s.save(), BUDGET).unwrap();
+        for q in ["t_within[code](A, D)", "t_within[other](A, D)", "t_cnt(A, N)", "t_ff(A, D)"] {
+            let (mut a, mut b) = (s.ask(q).unwrap().rows, open.ask(q).unwrap().rows);
+            a.sort();
+            b.sort();
+            assert_eq!(a, b, "seed {seed}: {q}");
+        }
+        assert!(!open.ask("t_within[code](A, D)").unwrap().rows.is_empty());
+        assert_eq!(open.eval.store.canonical_state(&open.eval.h), s.eval.store.canonical_state(&s.eval.h), "seed {seed}");
+    }
+}

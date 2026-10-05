@@ -553,7 +553,27 @@ function storedClosureProblems(w: World, keep: string[], args: string[], state: 
   const p = spawnSync(RUST, args, { encoding: 'utf8', maxBuffer: 512 * 1024 * 1024, env: { ...process.env, ROFL_NO_VCLOSURE: '1' } });
   if (p.status !== 0) return [`the world with its closure stored does not evaluate (${p.status})`];
   const v = closureVerdict(w, state, p.stdout);
-  return v === null ? [] : [v];
+  return [...(v === null ? [] : [v]), ...snapshotProblems(args, state)];
+}
+
+/** A SNAPSHOT OF THAT WORLD, OPENED AND NOT EVALUATED, holds what the world held: the closure's rows were never stored, so a
+ *  snapshot that did not carry the closure (or whose reopened engine did not read it off its tree) answered `ask` with nothing
+ *  and listed none of the rows, though the readers held. rofl-serve opens what rofl-load --save wrote; its state is the world's. */
+function snapshotProblems(args: string[], state: string): string[] {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rofl-closure-snap-'));
+  try {
+    const snap = path.join(dir, 'world.seed.json');
+    const saved = spawnSync(RUST, [...args, '--save', snap], { encoding: 'utf8', maxBuffer: 512 * 1024 * 1024 });
+    if (saved.status !== 0) return [`the world does not save a snapshot (${saved.status})`];
+    const serve = spawnSync(path.join(path.dirname(RUST), 'rofl-serve'), [], { encoding: 'utf8', maxBuffer: 1024 * 1024 * 1024,
+      input: `${JSON.stringify({ op: 'open', seedPath: snap })}\n${JSON.stringify({ op: 'state', session: 1 })}\n` });
+    const reopened = (JSON.parse((serve.stdout ?? '').split('\n')[1] || '{}') as { state?: string }).state;
+    if (reopened === undefined) return ['a snapshot of the world is not opened by rofl-serve'];
+    if (reopened === state.replace(/\n$/, '')) return [];
+    const a = reopened.split('\n'), b = state.replace(/\n$/, '').split('\n');
+    const i = a.findIndex((l, k) => l !== b[k]);
+    return [`a snapshot opened and not evaluated holds another state than the world, line ${i + 1}: ${JSON.stringify(a[i])} against ${JSON.stringify(b[i])}`];
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 }
 
 export function answerRust(w0: World): Answer | null {
