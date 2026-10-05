@@ -353,8 +353,9 @@ impl Eval {
                     if !staging {
                         return Err("a rule staged in a world with a lattice reads what rests on the fact");
                     }
-                    // it concludes no fact of this tick: what it staged is read again at the end
-                    if brk!("retract_stacked_plain" => false; inner || r.has_agg) {
+                    // it concludes no fact of this tick: what it staged is read again at the end (a threshold's cells too)
+                    let thr = brk!("retract_staged_thr_plain" => false; r.has_thr);
+                    if brk!("retract_stacked_plain" => false; inner || r.has_agg || thr) {
                         reset.insert(r.id);
                     }
                     staged.push(r.clone());
@@ -364,7 +365,9 @@ impl Eval {
                 if self.lattices.contains_key(&head) || self.tags.count_of.contains_key(&head) || self.v.is_reserved(head) {
                     return Err("a lattice, a tag or a ledger is concluded from what rests on the fact");
                 }
-                if brk!("retract_stacked_plain" => false; inner || r.has_agg) {
+                // a threshold whose outer premise changed holds cells a plain reader would keep
+                let thr = brk!("retract_thr_outer_plain" => false; r.has_thr);
+                if brk!("retract_stacked_plain" => false; inner || r.has_agg || thr) {
                     reset.insert(r.id);
                 }
                 rules.push(r.clone());
@@ -415,7 +418,7 @@ impl Eval {
     }
 
     /// The cells of the rules read again whole, gone with their reflection.
-    fn reset_cells(&mut self, reset: &HashSet<Sym>) -> usize {
+    pub(super) fn reset_cells(&mut self, reset: &HashSet<Sym>) -> usize {
         if brk!("retract_stacked_cells_kept" => true; false) {
             return 0;
         }
@@ -451,7 +454,7 @@ impl Eval {
     /// THE RULES THAT READ WHAT CHANGED, FIRED AGAIN AS A FULL EVALUATION FIRES
     /// THEM: those that neither negate nor aggregate at once, the others by
     /// level, each level over what the levels below concluded.
-    fn refire(&mut self, rules: &[Rc<ERule>], comps: &[Rc<DsComp>]) -> Result<(), Halt> {
+    pub(super) fn refire(&mut self, rules: &[Rc<ERule>], comps: &[Rc<DsComp>]) -> Result<(), Halt> {
         let (strat, mono): (Vec<Rc<ERule>>, Vec<Rc<ERule>>) = rules.iter().cloned().partition(|r| r.has_neg || r.has_agg || !r.lattice_outer.is_empty() || brk!("demand_strict_refire" => false; r.demand_strict));
         let mut levels: std::collections::BTreeMap<i64, Vec<Rc<ERule>>> = std::collections::BTreeMap::new();
         for r in strat {
@@ -470,12 +473,16 @@ impl Eval {
             self.activate(&mono)?;
             for (lv, rs) in levels {
                 brk!("retract_thr_unclosed" => (); self.close_thresholds_below(lv, true)?);
+                // an order lattice fired again closes at its level, as an evaluation closes it
+                brk!("refire_lattice_unclosed" => (); self.close_lattices_below(lv)?);
                 let (ds, rs): (Vec<Rc<ERule>>, Vec<Rc<ERule>>) = rs.into_iter().partition(|r| self.ds_owner(r));
                 self.activate(&rs)?;
                 self.run_data_comps(comps, lv, &ds)?;
             }
+            brk!("refire_lattice_unclosed" => (); self.close_lattices_below(i64::MAX)?);
             while !rules.is_empty() && !self.thr_open.is_empty() {
                 brk!("retract_thr_unclosed" => break; self.close_thresholds_below(i64::MAX, true)?);
+                self.close_lattices_below(i64::MAX)?;
             }
             Ok(())
         })();
@@ -486,7 +493,7 @@ impl Eval {
     }
 
     /// Premise -> the live derived facts with a firing that cites it.
-    fn citer_map(&self) -> HashMap<FactId, Vec<FactId>> {
+    pub(super) fn citer_map(&self) -> HashMap<FactId, Vec<FactId>> {
         let mut cm: HashMap<FactId, Vec<FactId>> = HashMap::new();
         for x in self.store.firing_keys() {
             if !self.store.alive(x) {
@@ -510,7 +517,7 @@ impl Eval {
     /// of them (a cycle supports itself, so a fact is not kept for a firing
     /// inside the closure), none of them base or cited by a cell, all of a
     /// relation `consumer_rules` found. `stop` are facts already taken out.
-    fn consumer_facts(&mut self, seeds: &[FactId], forced: &[FactId], rels: &HashSet<Sym>, stop: &HashSet<FactId>, reset: &HashSet<Sym>) -> Result<Vec<FactId>, &'static str> {
+    pub(super) fn consumer_facts(&mut self, seeds: &[FactId], forced: &[FactId], rels: &HashSet<Sym>, stop: &HashSet<FactId>, reset: &HashSet<Sym>) -> Result<Vec<FactId>, &'static str> {
         let cm = self.citer_map();
         let mut inside: HashSet<FactId> = stop.clone();
         inside.extend(seeds.iter().copied());
@@ -660,7 +667,7 @@ impl Eval {
                 comps.push(c);
             }
         };
-        let Readers { rels: crels, rules: crules, reset, staged: mut restage, .. } = rd;
+        let Readers { rels: crels, rules: mut crules, reset, staged: mut restage, .. } = rd;
         // A RULE READ AGAIN WHOLE THAT OWNS A CELL THE FACT SUPPORTS has no use for the subtraction: its cells are
         // sealed again with the rule, and a cell subtracted from first would be one a fresh evaluation does not
         // hold. (A rule read again whole that concludes what a changed cell's rule concludes needs nothing more:
@@ -703,7 +710,22 @@ impl Eval {
                 }
             }
         }
-        let consumers = if crules.is_empty() { Vec::new() } else { self.consumer_facts(&seeds, &forced, &crels, &HashSet::new(), &reset)? };
+        // a fact a changed cell's reader concluded goes whole, not only its firing that cited the old record: a firing
+        // through a reader of its own relation may be all that is left of it, and that support is a cycle
+        let consumers = if crules.is_empty() {
+            Vec::new()
+        } else {
+            // (and every rule of their relations fires again: one that still holds such a fact, an aggregate of another
+            // rule beside the changed cell's, makes it again)
+            let rels: HashSet<Sym> = seeds[1..].iter().map(|g| self.store.rec(*g).rel).collect();
+            brk!("retract_cell_reader_kept" => (); forced.extend(seeds.drain(1..)));
+            for r in self.rules.iter().filter(|r| rels.contains(&r.clause.head.rel) && r.clause.head.temporal != Temporal::Next && r.safe) {
+                if brk!("retract_seed_rules_unfired" => false; !crules.iter().any(|x| x.id == r.id)) {
+                    crules.push(r.clone());
+                }
+            }
+            self.consumer_facts(&seeds, &forced, &crels, &HashSet::new(), &reset)?
+        };
         self.store.remove_many(doomed);
         if let Some(ix) = self.support_ix.as_mut() {
             ix.remove(&f);
@@ -767,7 +789,7 @@ impl Eval {
     /// the world as it now stands. A staged fact is kept with its FIRST firing, which is the schedule's, so a
     /// fact a second firing reaches (`staged_watch`) is the one case a delta cannot promise: it is answered
     /// `true` and the world is evaluated again.
-    fn restage(&mut self, affected: &[Rc<ERule>], d: &mut Delta) -> Result<bool, Halt> {
+    pub(super) fn restage(&mut self, affected: &[Rc<ERule>], d: &mut Delta) -> Result<bool, Halt> {
         if affected.is_empty() {
             return Ok(false);
         }
@@ -1224,7 +1246,7 @@ impl Eval {
     /// The firings of `ids` that `cited` holds for, removed; a fact that lost
     /// its last firing goes unless it is base, and its provenance rows with it
     /// (every row of a rule none of whose firings is left). The facts gone.
-    fn withdraw_firings(&mut self, ids: &[FactId], cited: impl Fn(Sym, &[PremRef]) -> bool) -> Vec<FactId> {
+    pub(super) fn withdraw_firings(&mut self, ids: &[FactId], cited: impl Fn(Sym, &[PremRef]) -> bool) -> Vec<FactId> {
         let mut retire: Vec<FactId> = Vec::new();
         let mut rows: Vec<[Term; 3]> = Vec::new();
         for &id in ids {

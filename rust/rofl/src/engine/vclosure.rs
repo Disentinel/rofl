@@ -127,6 +127,33 @@ impl Eval {
         }
     }
 
+    /// THE RULES READ AGAIN OVER AN EVALUATED WORLD (an addition, `Session::load_delta`): the program's closures are
+    /// read again, and where they are the same closures, answered the same way, the forests the evaluation built and
+    /// the keys its firings cite are kept, so what was derived over them stands. False where a closure is declared,
+    /// dropped or answered another way: the world is evaluated again.
+    pub fn reprepare_keeping_trees(&mut self) -> bool {
+        let kept = (self.vclosures.clone(), self.store.virtuals.clone(), self.store.vrow_of.clone(), self.vany, self.store.vlisted, self.store.vwit, self.vreader_seen.clone());
+        self.reprepare();
+        if kept.0.is_empty() && self.vclosures.is_empty() {
+            return true;
+        }
+        let blocked = |c: &VClosure| c.built == Some(usize::MAX);
+        let same = kept.0.len() == self.vclosures.len() && kept.0.iter().zip(&self.vclosures).all(|(a, b)| a.rel == b.rel && a.edge == b.edge && a.prov_read == b.prov_read && blocked(a) == blocked(b));
+        if !same || brk!("add_trees_dropped" => true; false) {
+            return false;
+        }
+        self.vclosures = kept.0;
+        for (ci, v) in kept.1.into_iter().enumerate() {
+            self.store.virtuals[ci].forests = v.forests;
+        }
+        self.store.vrow_of = kept.2;
+        self.vany = kept.3;
+        self.store.vlisted = kept.4;
+        self.store.vwit = kept.5;
+        self.vreader_seen = kept.6;
+        true
+    }
+
     /// The relations whose `derived_by` rows a rule reads (`$fact(Rel, ..)`), None where one reads every relation's.
     fn provenance_read(&self) -> Option<HashSet<Sym>> {
         let mut out = HashSet::new();

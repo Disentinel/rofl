@@ -3644,6 +3644,59 @@ cell a rule read again whole also owns, a rule read again whole that concludes
 what a changed cell concludes, what is staged `@next`, what a relation
 answered on demand made, and a component stratified by its data.
 
+## Incremental addition, as built
+
+The counterpart of the retraction path, on the Rust engine only
+(`f_an_evaluated_world_takes_facts_and_rules_by_delta`; the owner's point 3 of
+`f_the_owner_settles_walls_promises_and_incremental`). `Session::assert_delta`
+and `Session::load_delta` (and rofl-serve's `assert` and `load` on an evaluated
+session) bring a world to the state a fresh evaluation of the whole program
+holds, byte for byte, without clearing what it derived
+(`rust/rofl/src/engine/addition.rs`). TypeScript evaluates again.
+
+- **What grows.** The relations of the added facts, the heads of the added
+  rules, and through every rule that reads one, its head.
+- **Level by level** (DRed over the levels of the stratified program): the
+  news of every level below fires each level semi-naively; an added plain rule,
+  or one that negates, fires whole at its level. A rule whose news reaches a
+  premise no delta plan starts from leaves the rounds and fires whole once.
+- **A negation over what grew keeps its facts.** The firings a new fact now
+  blocks are withdrawn (the fact bound to the negated premise, the premises
+  over what grew dropped, the rest solved: what the old firing was); a fact
+  that lost a firing goes whole, with what rests on it, through each other;
+  each is derived again at its level from what holds (its rules solved with it
+  bound to their head); a fact gone for good makes a negation over it hold.
+- **An aggregate, a threshold, a moved round** (an added rule that moves the
+  round of a relation a cell seals over), or a negation the fine path cannot
+  bind (a variable only it names, inside a compound or twice): the rule is
+  sealed again whole at its level, and what reads it is kept and fed its change.
+- **After the rest:** an order lattice the change reaches (derived again whole,
+  as the retraction derives its cone), what calls made to a relation answered
+  on demand (only where the change reaches the relation or a rule that calls
+  it), and every rule that negates or aggregates those.
+- **Rules.** The rules a program adds are prepared again with the world's; a
+  declared tree keeps its forests and the keys its firings cite; the rounds of
+  the program are peeled again. An ask grows the cone: the rules it adds fire
+  over the store (`w_cmp_cone_rules_added`).
+
+**What is evaluated again, every reason said** (`Addition::Full`, rofl-serve's
+`full`): a world not evaluated, cut by a wall, at a later tick, well-founded,
+holding a hole or reading a shrug (the hole a seal of provenance writes is not
+one); a rule that reads the ledger of cells or provenance; a component
+stratified by its data; a join, a widening, a counting tag or a dominance the
+change reaches; a staged fact that two firings reach; in a world that keeps no
+witness (`sealed(provenance)`), anything beyond the monotone part, for what a
+negation or an aggregate withdraws is found through the firings; and a program
+whose preparation moves more than the rules it adds (a declaration, a lattice,
+a closure answered from its tree, the rules fired late).
+
+Proof: `rust/rofl/tests/addition.rs` (random programs split into rules and
+facts added later, each step byte for byte against a fresh evaluation, `why
+all`, `whynot`, `excise` and a snapshot included; lattice, tree, demand, asks,
+sealed and negation sweeps), `scripts/addcheck.ts` (every world `npm test`
+loads file by file, split in two and the second half added, held to
+`rofl-load`'s fresh state), planted breaks `add_*` in `scripts/agg_breaks.ts`.
+
 ## Where it lands in the engine
 
 - **Parse and reflect.** `rofl_parse.rs` (`Elem::Agg`, `AggSrc`), `src/parser.ts`

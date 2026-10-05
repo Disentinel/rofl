@@ -755,6 +755,8 @@ pub struct Store {
     pub unordered: bool,
     pub tick: u32,
     pub dirty: bool,
+    /// Where set, every fact `put` makes new (or brings back) is noted (`Session::load_delta`).
+    pub arrivals: Option<Vec<FactId>>,
     pub partial_eval: bool,
     pub tick_log: Vec<String>,
     /// THE RELATIONS WHOSE FACTS ARE LATTICE CELLS, registered by the engine
@@ -1224,8 +1226,15 @@ impl Store {
     pub fn put(&mut self, h: &Heap, rel: Sym, persp: Sym, args: &[Term], flags: u8) -> (FactId, bool) {
         let id = match self.find_rec(rel, persp, args) {
             Some(id) if self.alive(id) => {
-                if flags & F_BASE != 0 && !self.facts.rec(id).base() {
-                    self.facts.add_flags(id, F_BASE);
+                // a base fact put over a derived one is the fact a load would have made, scoped as it is: a
+                // derived fact's tick scope is the derivation's
+                let old = self.facts.rec(id).flags();
+                if flags & F_BASE != 0 && old & F_BASE == 0 {
+                    self.facts.set_flags(id, brk!("promoted_tick_scope_kept" => old | F_BASE; (old & !F_TICK) | flags));
+                    // its height is a base fact's now, and what rests on it may lie lower: an addition to note
+                    if let Some(a) = self.arrivals.as_mut().filter(|_| brk!("add_promoted_unnoted" => false; true)) {
+                        a.push(id);
+                    }
                 }
                 return (id, false);
             }
@@ -1249,6 +1258,9 @@ impl Store {
             }
         };
         self.n_live += 1;
+        if let Some(a) = self.arrivals.as_mut() {
+            a.push(id);
+        }
         // a provenance row is written when a world settles it, sooner or later; no answer reads it
         if !h.name(persp).starts_with('$') || h.name(rel) != "derived_by" {
             self.bump();

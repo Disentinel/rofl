@@ -3326,6 +3326,10 @@ check_file("ds_tree_unknown_edge_sealed", "examples/checks/ds-tree-sealed.rofl")
 check_file("ds_tree_unknown_edge_sealed", "examples/checks/ds-tree-unknown-edge.rofl").
 check_opt("ds_tree_unknown_edge_sealed", together, 1).
 
+-- A CLOSURE WHOSE RELATION HOLDS A BASE FACT is fired as written: the walk from the edges never extended the base fact.
+check_world("closure_base_fact").
+check_file("closure_base_fact", "examples/checks/closure-base-fact.rofl").
+
 check_world("ds_tree_tick_staged").
 check_file("ds_tree_tick_staged", "examples/checks/ds-tree-tick-3-staged.rofl").
 check_file("ds_tree_tick_staged", "examples/checks/ds-tree-tick-3-staged-request.rofl").

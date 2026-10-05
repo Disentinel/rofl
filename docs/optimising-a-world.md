@@ -628,11 +628,14 @@ name (write `$fact(Rel, ..)` and Rel joins the cone instead); an asked relation 
 answered on demand. A cone grows by `explain_request`s and by the relations a dominance
 body reads. `hole` asked by name lists the holes of the rules that ran.
 
-**Growing a cone costs the whole new cone today** (evaluation clears every derived fact):
-mcp 15 209 steps for the first ask then 538 491 for the second against 538 491 from
-scratch; cli_exits 838 128 then 838 446, a delta of 318 steps (0.04%), 5.4 s against 6.1.
-What it needs is rule addition over a retained store (`w_cmp_cone_rules_added`, open,
-the owner's decision). Ask everything a session will ask at the start.
+**Growing a cone is an addition** (`w_cmp_cone_rules_added`, section 7): an ask asserted into
+an evaluated world (`Session::assert_delta`, rofl-serve's `assert`) prepares the program again
+and fires the rules the cone adds over the store, nothing derived cleared. Before, evaluation
+cleared every derived fact: mcp 15 209 steps for the first ask then 538 491 for the second
+against 538 491 from scratch; cli_exits 838 128 then 838 446, 5.4 s against 6.1. Measured
+2026-10-05 on mcp, `asks(unresolved_call)` then `asks(may_not_run)` (34 rules added): 1.55 s
+against 3.01 s for the world asked both from the start, the state byte-identical; most of
+the 1.55 s is the preparation of the program again, which a fresh world pays too.
 
 ### The fact level: what is not built
 
@@ -692,7 +695,33 @@ level in a debug build, so a test that walks toward the wall needs a 32 MiB thre
 `f_a_debug_frame_of_the_demand_descent_is_thirteen_kib`); a declared closure over edges answered on
 demand stays rows (section 5).
 
-## 7. What not to do
+## 7. Adding to an evaluated world
+
+A world that grows (a file scanned, a notebook cell's rules, an ask, a pack) is added to, not
+evaluated again: `Session::assert_delta` and `Session::load_delta`, and rofl-serve's `assert`
+and `load` on an evaluated session (docs/aggregates.md, "Incremental addition, as built").
+The answer's `full` is null where the addition was a delta and says every reason where the
+world was evaluated again instead; a world not yet evaluated takes the text as before.
+
+**Recipe.** Evaluate the world once; add to it after; read `full`. When it names a reason,
+it is one of a fixed list: the world was not evaluated or was cut by a wall, a later tick,
+well-founded semantics, a hole or a shrug reader, a ledger reader, a data-stratified
+component, a join, widening, counting tag or dominance that the change reaches, a staged
+fact two firings reach, a sealed world beyond the monotone part, or a program whose
+preparation moves (a declaration, a lattice, a closure answered from its tree). The cheap
+additions are those whose change stays monotone or reaches negations: what an aggregate
+reads is sealed again at its level, and that costs the aggregate's rule.
+
+**Measured** (Rust release, the four-corpus seeds' model and facts, one file held out,
+evaluated, then added; `cargo test --release --test addition -- --ignored corpus`; the state
+byte-identical to the fresh world each time): mcp, 37 facts: 1.2 s against 4.6 s (x3.9);
+811 facts: 2.7 s against 4.7 s (x1.7); self, 8 829 facts (6.6% of the corpus): 4.8 s against
+5.9 s; cli_exits, 8 007 facts: 5.9 s against 7.4 s; self's notebook rules (7) added to self:
+2.7 s against 6.2 s. Where the rest goes: the two aggregates of the flow model (`may_be_node`,
+`may_be_lit`) sealed again whole, the rules whose news reaches a premise no delta plan starts
+from fired whole once per level, and the program prepared again for rules.
+
+## 8. What not to do
 
 Each is an anti-pattern with the finding that found it.
 
