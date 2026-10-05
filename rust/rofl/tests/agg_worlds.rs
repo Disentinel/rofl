@@ -109,8 +109,12 @@ fn alone(f: &Path, w: &World) -> Result<(), String> {
         return ticks(&mut s);
     }
     s.evaluate().map_err(|e| rofl::describe(&e))?;
+    // as `rofl-load --retract` runs it: a retraction the cell path refuses is a full evaluation, which may refuse the world
     for r in &w.retract {
         s.retract_delta(r).map_err(|e| e.to_string())?;
+        if s.eval.store.dirty {
+            s.evaluate().map_err(|e| rofl::describe(&e))?;
+        }
     }
     if w.ticks > 0 { ticks(&mut s) } else { Ok(()) }
 }
