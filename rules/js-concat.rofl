@@ -77,7 +77,7 @@ may_be_node[flow](E, A) :- composed[flow](A), plus_assign[code](A, L, Name, File
                            ident_in[code](E, Name, File), sees_binder[code](E, D).
 may_be_node[flow](U, A) :- composed[flow](A), plus_assign[code](A, L, Name, _),
                            param_use[flow](F, Name, L), param_use[flow](F, Name, U).
-member_value[flow](O, Key, A) :- composed[flow](A), ast_attr[code](A, operator, "+="),
+sx_mwrite[surface](O, Key, A) :- composed[flow](A), ast_attr[code](A, operator, "+="),
                                  ast_child[code](A, left, 0, L), ast_child[code](L, object, 0, Obj),
                                  may_be_node[flow](Obj, O), selects[flow](L, Key).
 
@@ -143,7 +143,7 @@ proto_call[flow](C, O, K) :- ambient_value(P, K, _, _), builtin_prototype(P), se
                              ast_node[code](C, T, _, _), call_like_v(T).
 vlib_call[flow](C, string, K) :- ambient_value(string, K, _, _), proto_call[flow](C, O, K), str_recv[flow](O).
 vlib_call[flow](C, array, K)  :- ambient_value(array, K, _, _), proto_call[flow](C, O, K),
-                                may_be_node[flow](O, A), ast_node[code](A, array_expression, _, _).
+                                may_be_node[flow](O, A), kind_proto[flow](A, array).
 
 vlib_op[flow](C, Op, Kind) :- vlib_call[flow](C, S, K), ambient_value(S, K, Op, Kind).
 composed[flow](C) :- vlib_op[flow](C, _, _).
@@ -216,15 +216,14 @@ parts[flow](C, 0, B) :- vlib_op[flow](C, url, _), arg_at[flow](C, 0, _), arg_at[
 parts[flow](C, 1, A) :- vlib_op[flow](C, url, _), arg_at[flow](C, 1, _), arg_at[flow](C, 0, A).
 
 -- An array's elements, when the receiver may be exactly one array written in
--- place with no hole and no spread; the separator between, "," by default.
+-- place; the separator between, "," by default. A hole leaves a gap, so no
+-- text; a spread is a part nothing gives a value, so a form.
 join_recv[flow](C, A) :- vlib_op[flow](C, elements, _), ast_child[code](C, callee, 0, M),
-                         ast_child[code](M, object, 0, O), may_be_node[flow](O, A),
-                         ast_node[code](A, array_expression, _, _).
+                         ast_child[code](M, object, 0, O), may_be_node[flow](O, A), kind_proto[flow](A, array).
 join_arrays[flow](C, N) :- vlib_op[flow](C, elements, _), N is count(A : join_recv[flow](C, A)).
-odd_element[code](A) :- ast_child[code](A, elements, _, E), ast_node[code](E, spread_element, _, _).
-join_array[flow](C, A) :- join_arrays[flow](C, 1), join_recv[flow](C, A), not odd_element[code](A).
-parts[flow](C, I, E) :- join_array[flow](C, A), ast_child[code](A, elements, K, E), I is 2 * K.
-join_sep[flow](C, I) :- join_array[flow](C, A), ast_child[code](A, elements, K, _), K > 0, I is 2 * K - 1.
+join_array[flow](C, A) :- join_arrays[flow](C, 1), join_recv[flow](C, A).
+parts[flow](C, I, E) :- join_array[flow](C, A), array_elem[flow](A, K, E), I is 2 * K.
+join_sep[flow](C, I) :- join_array[flow](C, A), array_elem[flow](A, K, _), K > 0, I is 2 * K - 1.
 parts[flow](C, I, S) :- join_sep[flow](C, I), arg_at[flow](C, 0, S).
 part_lit[flow](C, I, ",") :- join_sep[flow](C, I), not ast_child[code](C, arguments, 0, _).
 
@@ -289,15 +288,16 @@ piece[flow](C, I, D, T, Ex, yes) :- concat_level(D), D > 0, comp1[flow](C, I, X)
 
 -- WHICH NODES GET TEXTS. Unfolding costs (a fifth of the side-effect question on
 -- vscode's first 500 files when every composed node is unfolded), so a question
--- names the composed values it reads in `concat_wanted` and only those, with
--- the composed values their parts may be, are unfolded; a world that names
--- none unfolds every one. `concat_want` is the table form, empty here.
+-- names the composed values it reads in `concat_wanted[surface]`, and only
+-- those, with the composed values their parts may be, are unfolded. The want is
+-- asked through the surface: the value, or a part of it, may be another
+-- file's, and that file unfolds it. `concat_want` is the table form, empty
+-- here; a world that wants every one says
+-- `concat_wanted[surface](C) :- composed[flow](C).`
 edb(concat_want).
-concat_wanted[flow](C) :- concat_want(C).
-any_wanted[flow](yes) :- concat_wanted[flow](_).
-text_scope[flow](C) :- concat_wanted[flow](C), composed[flow](C).
-text_scope[flow](C) :- composed[flow](C), not any_wanted[flow](yes).
-text_scope[flow](X) :- text_scope[flow](C), comp_of[flow](C, _, X).
+concat_wanted[surface](C) :- concat_want(C).
+concat_wanted[surface](X) :- text_scope[flow](C), comp_of[flow](C, _, X).
+text_scope[flow](C)       :- concat_wanted[surface](C).
 
 -- THE CAP, as an upper bound on the choices computed level by level: a
 -- product over the slots that stops at the cap, so a node over it has no row.
@@ -337,14 +337,17 @@ seq[flow](C, D, I, basename(T0, T), Ex, S) :- seq[flow](C, D, J, T0, Ex0, S0), c
                                               ex_and(Ex0, Ex1, Ex), s_or(S0, S1, S).
 
 text_at[flow](C, D, T, Ex) :- last_slot[flow](C, L), L > 0, seq[flow](C, D, L, T, Ex, S), cshape[flow](C, Sh),
-                              shape_needs(Sh, S).
+                              shape_needs(Sh, S), not cut_lit(Sh, Ex).
 text_at[flow](C, D, T, Ex) :- last_slot[flow](C, 0), seq[flow](C, D, 0, T, Ex, _), cshape[flow](C, raw).
 text_at[flow](C, D, join(T), Ex)     :- last_slot[flow](C, 0), seq[flow](C, D, 0, T, Ex, _), cshape[flow](C, join).
 text_at[flow](C, D, resolve(T), Ex)  :- last_slot[flow](C, 0), seq[flow](C, D, 0, T, Ex, _), cshape[flow](C, resolve).
 text_at[flow](C, D, url(T), Ex)      :- last_slot[flow](C, 0), seq[flow](C, D, 0, T, Ex, _), cshape[flow](C, url).
-text_at[flow](C, D, dirname(T), Ex)  :- last_slot[flow](C, 0), seq[flow](C, D, 0, T, Ex, _), cshape[flow](C, dirname).
-text_at[flow](C, D, basename(T), Ex) :- last_slot[flow](C, 0), seq[flow](C, D, 0, T, Ex, _), cshape[flow](C, basename).
+text_at[flow](C, D, dirname(T), Ex)  :- last_slot[flow](C, 0), seq[flow](C, D, 0, T, Ex, _), cshape[flow](C, dirname), Ex != lit.
+text_at[flow](C, D, basename(T), Ex) :- last_slot[flow](C, 0), seq[flow](C, D, 0, T, Ex, _), cshape[flow](C, basename), Ex != lit.
 
+-- a basename of literals alone is cut into a real string above
+edb(cut_lit).
+cut_lit(basename, lit).
 edb(cat_shape).
 cat_shape(raw).
 cat_shape(plus).
@@ -365,10 +368,37 @@ s_or(yes, yes, yes).  s_or(yes, no, yes).  s_or(no, yes, yes).  s_or(no, no, no)
 edb(sub_ex).
 sub_ex(lit, exact).  sub_ex(exact, exact).  sub_ex(open, open).
 
--- THE ANSWER. A path's dirname or basename of literals alone is `may_be_lit`
--- already, a real string.
-cut_shape[flow](C) :- cshape[flow](C, dirname).
-cut_shape[flow](C) :- cshape[flow](C, basename).
+-- THE ANSWER. A path's dirname or basename of literals alone has no text: it is
+-- `may_be_lit` already, a real string.
 may_be_text[flow](C, T) :- concat_depth(D), text_at[flow](C, D, T, exact).
-may_be_text[flow](C, T) :- concat_depth(D), text_at[flow](C, D, T, lit), not cut_shape[flow](C).
+may_be_text[flow](C, T) :- concat_depth(D), text_at[flow](C, D, T, lit).
 may_be_form[flow](C, T) :- concat_depth(D), text_at[flow](C, D, T, open).
+
+-- =========================================================================
+-- 6. ACROSS FILES (rules/js-surface.rofl). A composed value that leaves its file
+-- takes what a reader of it needs: that it is composed, whether it can have a
+-- text, whether a library module's body built it, its choices and texts at
+-- every level. A volume that unfolds another file's value asks that file for its
+-- texts (`concat_wanted`, keyed by the node, section 5). A string value that leaves a file says
+-- it is a string, for a `+` that reads it elsewhere.
+sx_composed[surface](C)         :- sx_esc[surface](C), composed[flow](C).
+sx_textable[surface](C)         :- sx_esc[surface](C), textable[flow](C).
+sx_summarized[surface](C)       :- sx_esc[surface](C), summarized[flow](C).
+sx_choices[surface](C, D, K)    :- sx_esc[surface](C), choices[flow](C, D, K).
+sx_text_at[surface](C, D, T, E) :- sx_esc[surface](C), text_at[flow](C, D, T, E).
+sx_vlib_fn[surface](X, S, K)    :- sx_esc[surface](X), vlib_fn[flow](X, S, K).
+sx_vlib_ns[surface](Y, S)       :- sx_esc[surface](Y), vlib_ns[flow](Y, S).
+sx_str[surface](V) :- sx_lit[surface](_, V), str_value[flow](V).
+sx_str[surface](V) :- sx_export_lit[surface](_, _, V), str_value[flow](V).
+sx_str[surface](V) :- sx_arg_lit[surface](_, _, V), str_value[flow](V).
+sx_str[surface](V) :- sx_ret_lit[surface](_, V), str_value[flow](V).
+sx_str[surface](V) :- sx_ret_plit[surface](_, V), str_value[flow](V).
+
+composed[flow](C)         :- sx_composed[surface](C).
+textable[flow](C)         :- sx_textable[surface](C).
+summarized[flow](C)       :- sx_summarized[surface](C).
+choices[flow](C, D, K)    :- sx_choices[surface](C, D, K).
+text_at[flow](C, D, T, E) :- sx_text_at[surface](C, D, T, E).
+vlib_fn[flow](X, S, K)    :- sx_vlib_fn[surface](X, S, K).
+vlib_ns[flow](Y, S)       :- sx_vlib_ns[surface](Y, S).
+str_value[flow](V)        :- sx_str[surface](V).

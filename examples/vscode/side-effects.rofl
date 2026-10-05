@@ -102,7 +102,11 @@ se_site(C, F, 0) :- call_like_v(K), ast_node[code](C, K, _, _), ast_child[code](
                     ast_child[code](M, object, 0, O), may_be_node[flow](O, Y), se_recv(Y, S, R).
 
 se_param(Fn, I, F) :- se_site(S, F, J), arg_at[flow](S, J, A), param_use[flow](Fn, Name, A), param_of[flow](Fn, I, Name).
-se_site(W, F, I)   :- resolves[code](W, Fn), se_param(Fn, I, F).
+se_site(W, F, I)   :- resolves[code](W, Fn), sx_param_sink[surface](Fn, I, F).
+-- the wrapper is the callee's: it publishes which parameter it hands on (rules/js-surface.rofl)
+sx_param_sink[surface](Fn, I, F) :- se_param(Fn, I, F).
+imports(main, surface).
+imports(surface, main).
 
 -- 5. THE ANSWER.
 side_effect_site(S, F) :- se_site(S, F, _).
@@ -118,7 +122,7 @@ side_effect_form(S, F, T)  :- se_site(S, F, I), arg_at[flow](S, I, A), may_be_no
 ambient_module("src/vs/base/common/path.ts", "node:path").
 
 -- Only a value that reaches a site is unfolded into texts.
-concat_wanted[flow](C) :- se_site(S, _, I), arg_at[flow](S, I, A), may_be_node[flow](A, C), composed[flow](C).
+concat_wanted[surface](C) :- se_site(S, _, I), arg_at[flow](S, I, A), may_be_node[flow](A, C), composed[flow](C).
 side_effect_env(V, Key) :- se_member_of(V, E, Key), se_member_of(E, "process", "env").
 
 se_family(F) :- side_effect_site(_, F).

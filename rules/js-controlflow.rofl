@@ -251,10 +251,10 @@ spread_iterated[code](S) :- ast_node[code](S, spread_element, _, _),
 
 pattern_iterates[code](P, M) :- ast_node[code](P, array_pattern, _, _),
                                 pattern_source[code](P, Init), may_be_node[flow](Init, Obj),
-                                member_value[flow](Obj, "iterator", M), fn_node[code](M).
+                                member_value[flow](Obj, "iterator", M), fn_value[flow](M).
 pattern_iterates[code](S, M) :- spread_iterated[code](S),
                                 ast_child[code](S, argument, 0, A), may_be_node[flow](A, Obj),
-                                member_value[flow](Obj, "iterator", M), fn_node[code](M).
+                                member_value[flow](Obj, "iterator", M), fn_value[flow](M).
 
 -- The two sides reach the call graph differently. An iterable position has one
 -- `[Symbol.iterator]` per receiver, so two answers are two candidate receivers
@@ -272,9 +272,9 @@ calls[code](R, M)      :- pattern_accessor[code](N, M), top_call[code](N, R).
 site[code](N)          :- pattern_iterates[code](N, _).
 resolves[code](N, M)   :- pattern_iterates[code](N, M).
 pattern_next[code](X, Next) :- pattern_iterates[code](X, M),
-                               returns[flow](M, E), may_be_node[flow](E, IterObj),
+                               ret_node_any[flow](M, IterObj),
                                member_value[flow](IterObj, "next", V),
-                               may_be_node[flow](V, Next), fn_node[code](Next).
+                               may_be_node[flow](V, Next), fn_value[flow](Next).
 calls[code](Caller, Next) :- pattern_next[code](X, Next), nearest_fn[code](Caller, X).
 
 -- =========================================================================
@@ -409,8 +409,10 @@ guarded[code](N) :- after_suspend[code](S), ast_within[code](S, N).
 -- A function every one of whose sites is guarded may never be entered.
 -- `may_not_run` is LOCAL, one level; the transitive question is reachability.
 guarded_call[code](C)      :- call_site[code](C, _), guarded[code](C).
-reached_unguarded[code](F) :- resolves[code](C, F), not guarded[code](C).
-may_not_run[code](F)       :- resolves[code](_, F), not reached_unguarded[code](F).
+-- Both are the CALLEE's and their support is the callers': each caller publishes the call
+-- (rules/js-surface.rofl `sx_called`, `sx_reached`), and the callee's volume reads them.
+reached_unguarded[code](F) :- sx_reached[surface](F).
+may_not_run[code](F)       :- sx_called[surface](F), not reached_unguarded[code](F).
 
 -- =========================================================================
 -- 7. TRANSITIVE REACHABILITY needs an ENTRY POINT: without one the question is
@@ -432,18 +434,19 @@ in_fn[code](N)   :- nearest_v[flow](_, N).
 exported_fn[code](F) :- fn_node[code](F), not in_fn[code](F), ast_within[code](E, F),
                         ast_node[code](E, K, _, _), export_kind(K).
 
-exported_fn[code](F) :- export_local[code](L, _, _), may_be_node[flow](L, F),
-                        fn_node[code](F), not in_fn[code](F).
+-- `export { f }` may hand on a function of another file: the exporting file publishes it, the function's file reads it
+sx_entry[surface](F) :- export_local[code](L, _, _), may_be_node[flow](L, F),
+                        fn_value[flow](F), not fn_nested[flow](F).
+exported_fn[code](F) :- sx_entry[surface](F).
 
 entry_point[code](F) :- exported_fn[code](F).
 
--- ...and a top-level call runs on import, with no enclosing function.
+-- ...and a top-level call runs on import, with no enclosing function. A top-level call and a call from reachable
+-- code are published for the callee (`sx_reach`, rules/js-surface.rofl).
 reachable[code](F) :- entry_point[code](F).
-reachable[code](F) :- resolves[code](C, F), not guarded[code](C), not in_fn[code](C).
-reachable[code](F) :- reachable[code](G), nearest_v[flow](G, C), resolves[code](C, F),
-                      not guarded[code](C).
+reachable[code](F) :- sx_reach[surface](F).
 
-may_not_be_reached[code](F) :- resolves[code](_, F), not reachable[code](F).
+may_not_be_reached[code](F) :- sx_called[surface](F), not reachable[code](F).
 
 -- the typo hole again: a misspelling shrinks the entry surface and reports
 -- live functions as maybe-dead, the dangerous direction
@@ -568,3 +571,8 @@ guard_arm_unseen[audit](K, F)  :- guard_kind(K, F), ast_node[code](_, K, _, _),
 
 -- a guarded site at a coordinate, for the report and the runtime comparison
 guarded_at[code](File, Line) :- guarded_call[code](C), ast_node[code](C, _, File, Line).
+
+-- the callee-keyed verdicts read the callers through rules/js-surface.rofl
+imports(code, surface).
+imports(surface, code).
+imports(surface, flow).

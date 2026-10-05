@@ -1,0 +1,149 @@
+-- rules/js-surface.rofl — THE [surface] BOOK: what a file offers the others, and the only way a rule reads another file.
+--
+-- A file is a volume (docs/surface-split.md). Its [code] and [flow] facts are concluded from its own facts plus this
+-- book; a rule that joins facts of two files reads the other side through a `sx_*` relation here and nothing else, so a
+-- volume evaluated alone with the others' [surface] concludes what the whole world concludes about it
+-- (scripts/surface_split.ts is the gate). Three shapes of crossing, three shapes of surface:
+--
+--   EXPORTS   keyed by the file path: what a module offers under a name (`sx_export_node`, `sx_export_val`,
+--             `sx_export_lit`), its default, its `module.exports`, its module object, its top-level effect.
+--   SUBSCRIPTIONS   keyed by the CALLEE, published by the CALLER: what a call hands a function (an argument's values,
+--             a callback's origin, being called at all, unguarded, from reachable code). The callee's volume reads them;
+--             the caller never reads the callee's parameters.
+--   ESCAPING NODES  keyed by a node that LEFT its file: a function's return summary, and for every escaping node the
+--             facts about it the model reads (`sx_node`, `sx_lit`, `sx_member`, `sx_fn` ...), each mirrored back into
+--             its relation. What leaves takes its contents with it: the values, members and elements of an escaping
+--             node escape too. A volume that learns something of an escaping node (a member written onto an imported
+--             object) publishes it as the owner does.
+--
+-- With every file resident each `sx_*` relation is a projection of facts that already hold and each mirror restates
+-- one, so the public facts are the model's (f_..._surface_book). The one exception is precision: a call of a function
+-- whose return is its own parameter takes that call's argument (`sx_ret_param`), not every caller's.
+
+-- ---------------------------------------------------------------- what escapes
+sx_esc[surface](N) :- sx_export_node[surface](_, _, N).
+sx_esc[surface](N) :- sx_default[surface](_, N).
+sx_esc[surface](N) :- sx_cjs[surface](_, N).
+sx_esc[surface](N) :- sx_module[surface](_, N).
+sx_esc[surface](N) :- sx_arg_node[surface](_, _, N).
+sx_esc[surface](N) :- sx_ret_node[surface](_, N).
+sx_esc[surface](N) :- sx_ret_pnode[surface](_, N).
+sx_esc[surface](N) :- sx_next[surface](_, N).
+sx_esc[surface](F) :- sx_cb[surface](F, _).
+-- ... and what an escaping node holds
+sx_esc[surface](M) :- sx_esc[surface](N), may_be_node[flow](N, M).
+sx_esc[surface](V) :- sx_esc[surface](O), member_value[flow](O, _, V).
+sx_esc[surface](E) :- sx_esc[surface](A), array_elem[flow](A, _, E).
+sx_esc[surface](V) :- sx_esc[surface](G), thrown_by[flow](G, V).
+sx_esc[surface](E) :- sx_esc[surface](G), yields[flow](G, E).
+
+-- ---------------------------------------------------------------- an escaping node's facts, and their mirrors
+sx_node[surface](N, M)       :- sx_esc[surface](N), may_be_node[flow](N, M).
+sx_lit[surface](N, V)        :- sx_esc[surface](N), may_be_lit[flow](N, V).
+sx_member[surface](O, K, V)  :- sx_esc[surface](O), member_value[flow](O, K, V).
+sx_mplain[surface](O, K, V)  :- sx_esc[surface](O), member_plain[flow](O, K, V).
+sx_mstatic[surface](O, K, V) :- sx_esc[surface](O), class_member_static[flow](O, K, V).
+sx_mproto[surface](O, K, V)  :- sx_esc[surface](O), class_member_proto[flow](O, K, V).
+sx_accessor[surface](O, K, M) :- sx_esc[surface](O), accessor_of[flow](O, K, M).
+sx_elem[surface](A, I, E)    :- sx_esc[surface](A), array_elem[flow](A, I, E).
+sx_name[surface](E, Name)    :- sx_elem[surface](_, _, E), ast_name[code](E, Name).
+sx_proto[surface](N, P)      :- sx_esc[surface](N), kind_proto[flow](N, P).
+sx_ext[surface](N, S)        :- sx_esc[surface](N), external_value[flow](N, S).
+sx_es[surface](N, G, R)      :- sx_esc[surface](N), es_instance[flow](N, G, R).
+sx_fn[surface](F)            :- sx_esc[surface](F), fn_node[code](F).
+sx_fn_name[surface](F, A)    :- sx_esc[surface](F), fn_name[code](F, A).
+sx_nested[surface](F)        :- sx_esc[surface](F), fn_nested[flow](F).
+sx_ctor[surface](C, M)       :- sx_esc[surface](C), class_ctor[code](C, M).
+sx_ctor_of[surface](C, M)    :- sx_esc[surface](C), ctor_of[flow](C, M).
+sx_class_eff[surface](C, L, H) :- sx_esc[surface](C), class_construct_eff[flow](C, L, H).
+sx_always[surface](F)        :- sx_esc[surface](F), always_throws[code](F).
+sx_may_throw[surface](F)     :- sx_esc[surface](F), may_throw[code](F).
+sx_thrown[surface](F, V)     :- sx_esc[surface](F), thrown_by[flow](F, V).
+sx_yields[surface](F, E)     :- sx_esc[surface](F), yields[flow](F, E).
+sx_eff_latent[surface](F, L, H) :- sx_esc[surface](F), eff_latent[flow](F, L, H).
+sx_effect_of[surface](F, N)  :- sx_esc[surface](F), effect_of[flow](F, N).
+sx_eff_calls[surface](F, G)  :- sx_esc[surface](F), eff_calls[code](F, G).
+sx_eff_reaches[surface](F, G) :- sx_esc[surface](F), eff_reaches[code](F, G).
+sx_exn_carrier[surface](F)   :- sx_esc[surface](F), amb_exn_carrier[flow](F).
+
+may_be_node[flow](N, M)       :- sx_node[surface](N, M).
+may_be_lit[flow](N, V)        :- sx_lit[surface](N, V).
+member_value[flow](O, K, V)   :- sx_member[surface](O, K, V).
+member_plain[flow](O, K, V)   :- sx_mplain[surface](O, K, V).
+class_member_static[flow](O, K, V) :- sx_mstatic[surface](O, K, V).
+class_member_proto[flow](O, K, V)  :- sx_mproto[surface](O, K, V).
+accessor_of[flow](O, K, M)    :- sx_accessor[surface](O, K, M).
+array_elem[flow](A, I, E)     :- sx_elem[surface](A, I, E).
+kind_proto[flow](N, P)        :- sx_proto[surface](N, P).
+external_value[flow](N, S)    :- sx_ext[surface](N, S).
+es_instance[flow](N, G, R)    :- sx_es[surface](N, G, R).
+-- `fn_node`, `fn_name` and `in_fn` are syntax and are negated below the flow, so a function read as a VALUE, which may be
+-- another file's, is asked in [flow]: `fn_value`, `fn_label`, `fn_nested`.
+fn_value[flow](F)             :- fn_node[code](F).
+fn_value[flow](F)             :- sx_fn[surface](F).
+fn_label[flow](F, A)          :- fn_name[code](F, A).
+fn_label[flow](F, A)          :- sx_fn_name[surface](F, A).
+fn_nested[flow](F)            :- fn_node[code](F), in_fn[code](F).
+fn_nested[flow](F)            :- sx_nested[surface](F).
+class_ctor[code](C, M)        :- sx_ctor[surface](C, M).
+ctor_of[flow](C, M)           :- sx_ctor_of[surface](C, M).
+class_construct_eff[flow](C, L, H) :- sx_class_eff[surface](C, L, H).
+always_throws[code](F)        :- sx_always[surface](F).
+may_throw[code](F)            :- sx_may_throw[surface](F).
+thrown_by[flow](F, V)         :- sx_thrown[surface](F, V).
+yields[flow](F, E)            :- sx_yields[surface](F, E).
+eff_latent[flow](F, L, H)     :- sx_eff_latent[surface](F, L, H).
+effect_of[flow](F, N)         :- sx_effect_of[surface](F, N).
+eff_calls[code](F, G)         :- sx_eff_calls[surface](F, G).
+eff_reaches[code](F, G)       :- sx_eff_reaches[surface](F, G).
+amb_exn_carrier[flow](F)      :- sx_exn_carrier[surface](F).
+
+-- ---------------------------------------------------------------- exports, by the module's path
+sx_export_node[surface](File, Name, F) :- exports_name[code](F, Name, File).
+sx_export_val[surface](File, Name, X)  :- exports_value[code](X, Name, File).
+sx_export_lit[surface](File, Name, V)  :- exports_value[code](X, Name, File), may_be_lit[flow](X, V).
+sx_default[surface](File, F)           :- exports_default[code](F, File).
+sx_cjs[surface](File, V)               :- cjs_exports[flow](File, V).
+sx_module[surface](File, P)            :- corpus_file[code](File), module_object[flow](P, File).
+sx_eff_module[surface](File, L, H)     :- eff_module[flow](File, L, H).
+sx_effect_module[surface](File, N)     :- effect_of_module[flow](File, N).
+
+-- ---------------------------------------------------------------- what a call hands its callee
+sx_arg_lit[surface](F, I, V)  :- resolves[code](C, F), arg_at[flow](C, I, A), may_be_lit[flow](A, V).
+sx_arg_node[surface](F, I, N) :- resolves[code](C, F), arg_at[flow](C, I, A), may_be_node[flow](A, N).
+sx_called[surface](F)         :- resolves[code](_, F).
+sx_reached[surface](F)        :- resolves[code](C, F), not guarded[code](C).
+sx_reach[surface](F)          :- resolves[code](C, F), not guarded[code](C), not in_fn[code](C).
+sx_reach[surface](F)          :- reachable[code](G), nearest_v[flow](G, C), resolves[code](C, F), not guarded[code](C).
+sx_next[surface](G, V)        :- next_send[flow](G, V).
+-- a function handed to an external call is called back by code the corpus cannot see
+sx_cb[surface](F, Spec)       :- external_value[flow](X, Spec), may_be_node[flow](G, X),
+                                 ast_child[code](C, callee, 0, G), ast_node[code](C, K, _, _), call_like_v(K),
+                                 ast_child[code](C, arguments, _, A), may_be_node[flow](A, F), fn_value[flow](F).
+
+next_send[flow](G, V) :- sx_next[surface](G, V).
+
+-- ---------------------------------------------------------------- what a call gets back
+-- A return that is the function's own parameter, read as nothing else: a plain identifier parameter, never assigned,
+-- not redeclared where it is read. Its value at a call is that call's argument; the other returns are the summary.
+param_assigned[flow](F, Name) :- assign_param[flow](A, F), assigned[code](A, _, Name, _, _).
+ret_param[flow](F, I, E) :- returns[flow](F, E), param_use[flow](F, Name, E), param_of[flow](F, I, Name),
+                            ast_child[code](F, params, I, P), ast_node[code](P, identifier, _, _),
+                            not param_assigned[flow](F, Name), not sees_binder[code](E, _).
+ret_plain[flow](F, E) :- returns[flow](F, E), not ret_param[flow](F, _, E).
+
+sx_ret_node[surface](F, N)  :- ret_plain[flow](F, E), may_be_node[flow](E, N).
+sx_ret_lit[surface](F, V)   :- ret_plain[flow](F, E), may_be_lit[flow](E, V).
+sx_ret_pnode[surface](F, N) :- ret_param[flow](F, _, E), may_be_node[flow](E, N).
+sx_ret_plit[surface](F, V)  :- ret_param[flow](F, _, E), may_be_lit[flow](E, V).
+sx_ret_param[surface](F, I) :- ret_param[flow](F, I, _).
+
+-- every value the function's returns may be, whoever called it: the iterator protocol and `yield*` read this
+ret_node_any[flow](F, N) :- sx_ret_node[surface](F, N).
+ret_node_any[flow](F, N) :- sx_ret_pnode[surface](F, N).
+
+imports(surface, code).
+imports(surface, flow).
+imports(code, surface).
+imports(flow, surface).
+imports(audit, surface).

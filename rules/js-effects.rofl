@@ -98,7 +98,7 @@ eff_loop_kind(for_of_statement).
 
 eff_here[flow](N, div, none) :- eff_loop_kind(K), ast_node[code](N, K, _, _).
 
-eff_calls[code](F, G)   :- resolves[code](C, G), nearest_fn[code](F, C), fn_node[code](G).
+eff_calls[code](F, G)   :- resolves[code](C, G), nearest_fn[code](F, C), fn_value[flow](G).
 eff_reaches[code](F, G) :- eff_calls[code](F, G).
 eff_reaches[code](F, H) :- eff_reaches[code](F, G), eff_calls[code](G, H).
 
@@ -395,10 +395,10 @@ eff_module[flow](F, L, H) :- eff_here[flow](N, L, H), not in_fn[code](N),
 eff_module[flow](F, L, H) :- resolves[code](C, G), not in_fn[code](C),
                              ast_node[code](C, _, F, _), eff_latent[flow](G, L, H).
 
-eff_here[flow](I, L, H) :- eff_evaluates_at[code](I, T), eff_module[flow](T, L, H).
+eff_here[flow](I, L, H) :- eff_evaluates_at[code](I, T), sx_eff_module[surface](T, L, H).
 
 eff_import_invented[audit](I, L, H) :- eff_evaluates_at[code](I, T), eff_here[flow](I, L, H),
-                                       not eff_module[flow](T, L, H).
+                                       not sx_eff_module[surface](T, L, H).
 
 -- The same Moore closure as section 4, over a file.
 eff_mod_subject[flow](F)        :- corpus_file[code](F).
@@ -411,7 +411,7 @@ eff_mod_unnamed[audit](F)         :- eff_mod_subject[flow](F), not effect_of_mod
 eff_mod_two_names[audit](F, A, B) :- effect_of_module[flow](F, A), effect_of_module[flow](F, B), A != B.
 
 eff_mod_join_short[audit](F, T, J) :- eff_evaluates_at[code](I, T), ast_node[code](I, _, F, _),
-                                      effect_of_module[flow](F, NF), effect_of_module[flow](T, NT),
+                                      effect_of_module[flow](F, NF), sx_effect_module[surface](T, NT),
                                       eff_join(NF, NT, J), J != NF.
 
 -- =========================================================================
@@ -595,3 +595,5 @@ imports(flow, code).
 imports(flow, main).
 imports(audit, code).
 imports(audit, flow).
+imports(flow, surface).
+imports(audit, surface).

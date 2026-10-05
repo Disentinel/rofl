@@ -6,11 +6,11 @@
 | [js-phrases](js-phrases.rofl.md) | 1031 | 3 | 0 | 0 | 0 | 0 | 0 | 32 | 0 | 0 |
 | [js-ambient](js-ambient.rofl.md) | 69 | 42 | 39 | 0 | 1 | 90 | 5 | 1 | 13 | 0 |
 | [js-attrs](js-attrs.rofl.md) | 51 | 39 | 37 | 2 | 0 | 105 | 4 | 0 | 6 | 0 |
-| [js-callgraph](js-callgraph.rofl.md) | 219 | 93 | 83 | 1 | 44 | 239 | 23 | 4 | 7 | 0 |
-| [js-concat](js-concat.rofl.md) | 192 | 65 | 3 | 52 | 21 | 308 | 24 | 6 | 2 | 0 |
-| [js-controlflow](js-controlflow.rofl.md) | 231 | 88 | 74 | 1 | 46 | 209 | 16 | 5 | 3 | 0 |
-| [js-dataflow](js-dataflow.rofl.md) | 365 | 153 | 129 | 10 | 137 | 530 | 30 | 2 | 4 | 0 |
-| [js-effects](js-effects.rofl.md) | 209 | 126 | 116 | 2 | 22 | 305 | 19 | 2 | 7 | 0 |
+| [js-callgraph](js-callgraph.rofl.md) | 221 | 93 | 83 | 1 | 35 | 251 | 23 | 4 | 7 | 0 |
+| [js-concat](js-concat.rofl.md) | 209 | 71 | 2 | 58 | 18 | 336 | 24 | 7 | 2 | 0 |
+| [js-controlflow](js-controlflow.rofl.md) | 234 | 90 | 74 | 2 | 42 | 206 | 15 | 6 | 3 | 0 |
+| [js-dataflow](js-dataflow.rofl.md) | 374 | 156 | 129 | 13 | 134 | 530 | 30 | 2 | 4 | 0 |
+| [js-effects](js-effects.rofl.md) | 211 | 126 | 116 | 2 | 21 | 306 | 19 | 2 | 7 | 0 |
 | [js-env-api](js-env-api.rofl.md) | 5 | 5 | 5 | 0 | 0 | 6 | 0 | 0 | 4 | 0 |
 | [js-env](js-env.rofl.md) | 45 | 34 | 33 | 0 | 0 | 47 | 5 | 1 | 18 | 0 |
 | [js-globals](js-globals.rofl.md) | 41 | 23 | 19 | 1 | 2 | 46 | 1 | 2 | 7 | 0 |
@@ -20,9 +20,10 @@
 | [js-pack-home](js-pack-home.rofl.md) | 11 | 9 | 8 | 0 | 0 | 12 | 1 | 0 | 2 | 0 |
 | [js-resolve](js-resolve.rofl.md) | 58 | 36 | 35 | 0 | 0 | 79 | 8 | 0 | 0 | 0 |
 | [js-structure](js-structure.rofl.md) | 12 | 7 | 7 | 0 | 4 | 8 | 2 | 0 | 2 | 0 |
+| [js-surface](js-surface.rofl.md) | 102 | 80 | 22 | 57 | 6 | 152 | 7 | 1 | 1 | 0 |
 | [js-vocabulary](js-vocabulary.rofl.md) | 12 | 10 | 10 | 0 | 0 | 17 | 2 | 0 | 2 | 0 |
 
-71 heads without a phrase across these files.
+135 heads without a phrase across these files.
 
 ## Proposed renames
 

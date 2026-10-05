@@ -303,9 +303,9 @@ kind_prototype(arrow_function_expression, function).
 kind_prototype(reg_exp_literal,           regexp).
 kind_prototype(big_int_literal,           bigint).
 
-prototype_of[flow](E, P) :- kind_prototype(K, P), ast_node[code](E, K, _, _).
-prototype_of[flow](E, P) :- may_be_node[flow](E, N), ast_node[code](N, K, _, _),
-                            kind_prototype(K, P).
+kind_proto[flow](E, P)   :- kind_prototype(K, P), ast_node[code](E, K, _, _).
+prototype_of[flow](E, P) :- kind_proto[flow](E, P).
+prototype_of[flow](E, P) :- may_be_node[flow](E, N), kind_proto[flow](N, P).
 
 edb(builtin_prototype).
 builtin_prototype(array).
@@ -343,8 +343,8 @@ destructures_at[code](D, Local, Index, File) :- ast_node[code](D, variable_decla
                                                 ast_name[code](L, Local).
 scoped_binder[code](D, File) :- destructures_at[code](D, _, _, File).
 
-elem_at[flow](X, I, E) :- may_be_node[flow](X, A), ast_node[code](A, array_expression, _, _),
-                          ast_child[code](A, elements, I, E).
+array_elem[flow](A, I, E) :- ast_node[code](A, array_expression, _, _), ast_child[code](A, elements, I, E).
+elem_at[flow](X, I, E)    :- may_be_node[flow](X, A), array_elem[flow](A, I, E).
 
 may_be_node[flow](E, N) :- destructures_at[code](D, Local, Index, File),
                            ast_child[code](D, init, 0, Init), elem_at[flow](Init, Index, V),
@@ -461,17 +461,19 @@ param_use[flow](F, Name, U) :- param_of[flow](F, _, Name),
                                ident[code](U, Name),
                                not param_hidden[flow](F, Name, U).
 
-may_be_lit[flow](U, V)  :- resolves[code](C, F), arg_at[flow](C, I, A), may_be_lit[flow](A, V),
-                           param_of[flow](F, I, Name), param_use[flow](F, Name, U).
-may_be_node[flow](U, N) :- resolves[code](C, F), arg_at[flow](C, I, A), may_be_node[flow](A, N),
-                           param_of[flow](F, I, Name), param_use[flow](F, Name, U).
+-- The caller publishes what it hands the callee (rules/js-surface.rofl), the callee reads it.
+may_be_lit[flow](U, V)  :- sx_arg_lit[surface](F, I, V), param_of[flow](F, I, Name), param_use[flow](F, Name, U).
+may_be_node[flow](U, N) :- sx_arg_node[surface](F, I, N), param_of[flow](F, I, Name), param_use[flow](F, Name, U).
 
--- A call may be whatever the function it resolves to returns.
+-- A call may be whatever the function it resolves to returns: its return summary, and where a return is the
+-- function's own parameter, THIS call's argument (`sx_ret_param`, rules/js-surface.rofl).
 returns[flow](F, E) :- ast_node[code](R, return_statement, _, _), nearest_v[flow](F, R),
                        ast_child[code](R, argument, 0, E).
 
-may_be_lit[flow](C, V)  :- resolves[code](C, F), returns[flow](F, E), may_be_lit[flow](E, V).
-may_be_node[flow](C, N) :- resolves[code](C, F), returns[flow](F, E), may_be_node[flow](E, N).
+may_be_lit[flow](C, V)  :- resolves[code](C, F), sx_ret_lit[surface](F, V).
+may_be_node[flow](C, N) :- resolves[code](C, F), sx_ret_node[surface](F, N).
+may_be_lit[flow](C, V)  :- resolves[code](C, F), sx_ret_param[surface](F, I), arg_at[flow](C, I, A), may_be_lit[flow](A, V).
+may_be_node[flow](C, N) :- resolves[code](C, F), sx_ret_param[surface](F, I), arg_at[flow](C, I, A), may_be_node[flow](A, N).
 
 -- =========================================================================
 -- 8. READING A PROPERTY OFF A VALUE
@@ -498,11 +500,13 @@ member_value[flow](CD, Key, M) :- obj_like[flow](CD), ast_child[code](CD, body, 
                                   ast_child[code](M, key, 0, K), key_name[code](K, Key).
 
 -- A member written is a member read, flow-insensitively — `assigns` one step
--- over. `plain_assign` is load-bearing: `+=` evaluates to a sum.
-member_value[flow](O, Key, V) :- may_be_node[flow](Obj, O), ast_child[code](L, object, 0, Obj),
+-- over. `plain_assign` is load-bearing: `+=` evaluates to a sum. The object may be
+-- another file's: the write is published for it (rules/js-surface.rofl) and read back.
+sx_mwrite[surface](O, Key, V) :- may_be_node[flow](Obj, O), ast_child[code](L, object, 0, Obj),
                                  selects[flow](L, Key),
                                  ast_child[code](A, left, 0, L), plain_assign[flow](A),
                                  ast_child[code](A, right, 0, V).
+member_value[flow](O, Key, V) :- sx_mwrite[surface](O, Key, V).
 
 -- Inheritance walks `super_of`, and `not own_key` makes it a LOOKUP rather
 -- than a union: a subclass declaring `hold` answers with its own. `own_key`
@@ -722,13 +726,13 @@ exports_name[code](F, Name, File) :- ast_node[code](E, export_named_declaration,
 -- kind guard is not redundant with `module_source`, which holds of imports too.
 exports_name[code](F, Name, File) :- ast_node[code](E, export_all_declaration, File, _),
                                      module_target[code](E, Target),
-                                     exports_name[code](F, Name, Target).
+                                     sx_export_node[surface](Target, Name, F).
 
 -- `export { a as b } from './m'` offers m's `a`, or m's default when `a` is `default`.
 exports_name[code](F, Ext, File) :- reexport_offers[code](File, Ext, T, Int),
-                                    exports_name[code](F, Int, T).
+                                    sx_export_node[surface](T, Int, F).
 exports_name[code](F, Ext, File) :- reexport_offers[code](File, Ext, T, "default"),
-                                    exports_default[code](F, T).
+                                    sx_default[surface](T, F).
 
 -- `export { a as b }`: the `local` child is an identifier of this file and
 -- resolves through `may_be_node`; under a declaration WITH a `source` it names
@@ -764,11 +768,11 @@ export_ns_name[code](Name, E, File) :-
 
 exports_name[code](P, Name, File) :- export_ns_name[code](Name, E, File),
                                      module_target[code](E, Target),
-                                     module_object[flow](P, Target).
+                                     sx_module[surface](Target, P).
 
 may_be_node[flow](E, F) :- imports_name[code](Local, Name, D, File),
                            module_target[code](D, Target),
-                           exports_name[code](F, Name, Target),
+                           sx_export_node[surface](Target, Name, F),
                            ident_in[code](E, Local, File).
 
 -- `export const X = init`: the name offers what the initialiser may be, a node through `exports_name` and a
@@ -782,11 +786,11 @@ exports_name[code](F, Name, File) :- export_var[code](Init, Name, File), may_be_
 exports_value[code](Init, Name, File) :- export_var[code](Init, Name, File).
 exports_value[code](L, Ext, File) :- export_local[code](L, Ext, File).
 exports_value[code](X, Name, File) :- ast_node[code](E, export_all_declaration, File, _),
-                                      module_target[code](E, Target), exports_value[code](X, Name, Target).
-exports_value[code](X, Ext, File) :- reexport_offers[code](File, Ext, T, Int), exports_value[code](X, Int, T).
+                                      module_target[code](E, Target), sx_export_val[surface](Target, Name, X).
+exports_value[code](X, Ext, File) :- reexport_offers[code](File, Ext, T, Int), sx_export_val[surface](T, Int, X).
 
 may_be_lit[flow](E, V) :- imports_name[code](Local, Name, D, File), module_target[code](D, Target),
-                          exports_value[code](X, Name, Target), may_be_lit[flow](X, V),
+                          sx_export_lit[surface](Target, Name, V),
                           ident_in[code](E, Local, File).
 member_value[flow](P, Name, X) :- module_object[flow](P, Target), exports_value[code](X, Name, Target).
 
@@ -801,7 +805,7 @@ imports_ns[code](Local, D, File) :-
 module_object[flow](P, File) :- ast_node[code](P, program, File, _).
 
 may_be_node[flow](E, P) :- imports_ns[code](Local, D, File), module_target[code](D, Target),
-                           module_object[flow](P, Target), ident_in[code](E, Local, File).
+                           sx_module[surface](Target, P), ident_in[code](E, Local, File).
 member_value[flow](P, Name, F) :- module_object[flow](P, Target),
                                   exports_name[code](F, Name, Target).
 
@@ -817,7 +821,7 @@ exports_default[code](F, File) :- ast_node[code](E, export_default_declaration, 
 
 may_be_node[flow](E, F) :- imports_default[code](Local, D, File),
                            module_target[code](D, Target),
-                           exports_default[code](F, Target),
+                           sx_default[surface](Target, F),
                            ident_in[code](E, Local, File).
 
 -- CommonJS. `require(S)` is what the target's `module.exports` may be: first
@@ -838,7 +842,7 @@ cjs_exports[flow](File, V) :- cjs_module_exports[code](L, File), ast_child[code]
 may_be_node[flow](M, V) :- cjs_module_exports[code](M, File), cjs_exports[flow](File, V).
 may_be_node[flow](E, P) :- ident_in[code](E, "exports", File), not cjs_key[code](E),
                            module_object[flow](P, File).
-may_be_node[flow](C, V) :- require_site[code](C), module_target[code](C, T), cjs_exports[flow](T, V).
+may_be_node[flow](C, V) :- require_site[code](C), module_target[code](C, T), sx_cjs[surface](T, V).
 
 -- The frontier: a module this corpus does not contain, one row per module.
 import_outside_corpus[audit](Src, File) :- module_source[code](N, Src, File),
@@ -961,11 +965,7 @@ external_value[flow](R, Spec)    :- rest_in_pattern[code](D, R, _),
 -- A function handed to an external call as an argument is called back with
 -- values the corpus does not build: each plain parameter is an external value
 -- of the callee's origin, read wherever the parameter is.
-callback_param[flow](P, F, Spec) :- external_value[flow](X, Spec), may_be_node[flow](G, X),
-                                    ast_child[code](C, callee, 0, G),
-                                    ast_node[code](C, K, _, _), call_like_v(K),
-                                    ast_child[code](C, arguments, _, A), may_be_node[flow](A, F),
-                                    fn_node[code](F), ast_child[code](F, params, _, P),
+callback_param[flow](P, F, Spec) :- sx_cb[surface](F, Spec), ast_child[code](F, params, _, P),
                                     ast_node[code](P, identifier, _, _).
 external_value[flow](P, Spec) :- callback_param[flow](P, _, Spec).
 may_be_node[flow](U, P)       :- callback_param[flow](P, F, _), ast_name[code](P, Name),
@@ -1074,7 +1074,7 @@ may_be_node[flow](Y, X) :- next_send[flow](G, V), nearest_v[flow](G, Y),
 may_be_node[flow](Y, X) :- ast_node[code](Y, yield_expression, _, _),
                            ast_attr[code](Y, delegate, true),
                            ast_child[code](Y, argument, 0, A), resolves[code](A, Inner),
-                           returns[flow](Inner, E), may_be_node[flow](E, X).
+                           ret_node_any[flow](Inner, X).
 
 -- FOR-OF: the loop variable takes the elements. An array is a VALUE (through
 -- `may_be_node`); a generator is a CALL, read at the site, because its returns
@@ -1113,6 +1113,10 @@ may_be_lit[flow](E, V)  :- may_be_lit[flow](X, V), ast_child[code](E, right, 0, 
 imports(flow, code).
 imports(flow, main).
 imports(flow, $kernel).
+imports(flow, surface).
+imports(code, surface).
+imports(surface, flow).
+imports(surface, code).
 
 -- =========================================================================
 -- 15. THE EXCEPTION PATH. A catch parameter may be what the guarded BLOCK

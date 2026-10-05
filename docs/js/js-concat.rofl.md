@@ -1,6 +1,6 @@
 ---
 world: js-concat
-books: audit, code, flow, main
+books: audit, code, flow, main, surface
 default: flow
 ---
 
@@ -50,12 +50,13 @@ Reads:
 
 - from js-ambient, in the main: [surface_origin](js-ambient.rofl.md#surface_origin)
 - from js-dataflow, in the code: [binds_name](js-dataflow.rofl.md#binds_name), [destr_prop](js-dataflow.rofl.md#destr_prop), [external_import](js-dataflow.rofl.md#external_import), [ident_in](js-dataflow.rofl.md#ident_in), [interpolated](js-dataflow.rofl.md#interpolated), [sees_binder](js-dataflow.rofl.md#sees_binder), [spread_arg](js-dataflow.rofl.md#spread_arg)
-- from js-dataflow: [arg_at](js-dataflow.rofl.md#arg_at), [external_value](js-dataflow.rofl.md#external_value), [member_node_v](js-dataflow.rofl.md#member_node_v), [param_use](js-dataflow.rofl.md#param_use), [prototype_of](js-dataflow.rofl.md#prototype_of), [selects](js-dataflow.rofl.md#selects)
+- from js-dataflow: [arg_at](js-dataflow.rofl.md#arg_at), [array_elem](js-dataflow.rofl.md#array_elem), [external_value](js-dataflow.rofl.md#external_value), [kind_proto](js-dataflow.rofl.md#kind_proto), [member_node_v](js-dataflow.rofl.md#member_node_v), [param_use](js-dataflow.rofl.md#param_use), [prototype_of](js-dataflow.rofl.md#prototype_of), [selects](js-dataflow.rofl.md#selects)
 - from js-dataflow, in the main: [builtin_prototype](js-dataflow.rofl.md#builtin_prototype), [call_like_v](js-dataflow.rofl.md#call_like_v)
 - from js-globals, in the code: [free_global](js-globals.rofl.md#free_global)
 - from js-model, in the code: [ast_node](js-model.rofl.md#ast_node)
 - from js-modules, in the code: [builtin_canonical](js-modules.rofl.md#builtin_canonical)
 - from js-structure, in the code: [ast_name](js-structure.rofl.md#ast_name), [ast_value](js-structure.rofl.md#ast_value), [key_name](js-structure.rofl.md#key_name)
+- from js-surface, in the surface: [sx_arg_lit](js-surface.rofl.md#sx_arg_lit), [sx_esc](js-surface.rofl.md#sx_esc), [sx_export_lit](js-surface.rofl.md#sx_export_lit), [sx_lit](js-surface.rofl.md#sx_lit), [sx_ret_lit](js-surface.rofl.md#sx_ret_lit), [sx_ret_plit](js-surface.rofl.md#sx_ret_plit)
 - from the scanner, in the code:
   - <a id="ast_attr"></a>The attribute of a node is a value (`ast_attr`)
   - <a id="ast_child"></a>A node is a child of a node (`ast_child`)
@@ -66,14 +67,12 @@ What this file calls a node, and what each word stands for:
 
 | word | stands for |
 |---|---|
-| <a id="noun-array_literal"></a>an array literal | a node of kind `array_expression` |
 | <a id="noun-assignment"></a>an assignment | a node of kind `assignment_expression` |
 | <a id="noun-binary_expression"></a>a binary expression | a node of kind `binary_expression` |
 | <a id="noun-function_declaration"></a>a function declaration | a node of kind `function_declaration` |
 | <a id="noun-invocation"></a>an invocation | a node of a kind in [`call_like_v`](js-dataflow.rofl.md#call_like_v) |
 | <a id="noun-new"></a>a new | a node of kind `new_expression` |
 | <a id="noun-object_method"></a>an object method | a node of kind `object_method` |
-| <a id="noun-spread"></a>a spread | a node of kind `spread_element` |
 | <a id="noun-string_literal"></a>a string literal | a node of kind `string_literal` |
 | <a id="noun-tagged_template"></a>a tagged template | a node of kind `tagged_template_expression` |
 | <a id="noun-template"></a>a template | a node of kind `template_literal` |
@@ -171,11 +170,13 @@ A node E points to a node X either:
    - F [uses](js-dataflow.rofl.md#param_use) Name at a node L;
    - F [uses](js-dataflow.rofl.md#param_use) Name at E.
 
-<a id="member_value"></a>The member Key of a node O holds a node X if all of:
+In the surface:
+
+<a id="sx_mwrite"></a>`sx_mwrite`(O, Key, X) if all of:
   - [`composed`](#composed)(X);
-  - [the attribute](#ast_attr) `operator` of X is "+=";
+  - [the attribute](#ast_attr) `operator` of a node X is "+=";
   - the `left` of X is a node L;
-  - the `object` of L [points to](#may_be_node) O;
+  - the `object` of L [points to](#may_be_node) a node O;
   - L [selects](js-dataflow.rofl.md#selects) Key.
 
 ## 3. THE LIBRARY, AS A TABLE. `ambient_value(Surface, Member, Op, Kind)`: a
@@ -311,7 +312,8 @@ In the flow:
 2. if all of:
    - [`ambient_value`](#ambient_value)(`array`, K, something, something);
    - [`proto_call`](#proto_call)(C, O, K);
-   - a node O [points to](#may_be_node) an [array literal](#noun-array_literal) X;
+   - a node O [points to](#may_be_node) a node X;
+   - [`kind_proto`](js-dataflow.rofl.md#kind_proto)(X, `array`);
    - N is `array`.
 
 <a id="vlib_op"></a>`vlib_op`(C, Op, Kind) if [`vlib_call`](#vlib_call)(C, S, K) and [`ambient_value`](#ambient_value)(S, K, Op, Kind).
@@ -501,34 +503,27 @@ Declared as facts:
    - I is 1.
 
 > An array's elements, when the receiver may be exactly one array written in
-> place with no hole and no spread; the separator between, "," by default.
+> place; the separator between, "," by default. A hole leaves a gap, so no
+> text; a spread is a part nothing gives a value, so a form.
 
-<a id="join_recv"></a>`join_recv`(C, an [array literal](#noun-array_literal) X) if all of:
+<a id="join_recv"></a>`join_recv`(C, X) if all of:
   - [`vlib_op`](#vlib_op)(C, `elements`, something);
   - the `callee` of a node C is a node M;
-  - the `object` of M [points to](#may_be_node) X.
+  - the `object` of M [points to](#may_be_node) a node X;
+  - [`kind_proto`](js-dataflow.rofl.md#kind_proto)(X, `array`).
 
 <a id="join_arrays"></a>`join_arrays`(C, N) if [`vlib_op`](#vlib_op)(C, `elements`, something) and N is the number of X such that ([`join_recv`](#join_recv)(C, X)).
 
-In the code:
-
-<a id="odd_element"></a>`odd_element`(X) if a [spread](#noun-spread) E [is among the](#ast_child) `elements` of a node X.
-
-In the flow:
-
-<a id="join_array"></a>`join_array`(C, X) if all of:
-  - [`join_arrays`](#join_arrays)(C, 1);
-  - [`join_recv`](#join_recv)(C, X);
-  - unless [`odd_element`](#odd_element)(X).
+<a id="join_array"></a>`join_array`(C, X) if [`join_arrays`](#join_arrays)(C, 1) and [`join_recv`](#join_recv)(C, X).
 
 `parts`(C, I, E) if all of:
   - [`join_array`](#join_array)(C, X);
-  - a node E is the K-th of the `elements` of a node X;
+  - [`array_elem`](js-dataflow.rofl.md#array_elem)(X, K, E);
   - I is 2 * K.
 
 <a id="join_sep"></a>`join_sep`(C, I) if all of:
   - [`join_array`](#join_array)(C, X);
-  - some node is the K-th of the `elements` of a node X;
+  - [`array_elem`](js-dataflow.rofl.md#array_elem)(X, K, something);
   - K > 0;
   - I is 2 * K - 1.
 
@@ -677,19 +672,22 @@ Declared as facts:
 
 > WHICH NODES GET TEXTS. Unfolding costs (a fifth of the side-effect question on
 > vscode's first 500 files when every composed node is unfolded), so a question
-> names the composed values it reads in `concat_wanted` and only those, with
-> the composed values their parts may be, are unfolded; a world that names
-> none unfolds every one. `concat_want` is the table form, empty here.
+> names the composed values it reads in `concat_wanted[surface]`, and only
+> those, with the composed values their parts may be, are unfolded. The want is
+> asked through the surface: the value, or a part of it, may be another
+> file's, and that file unfolds it. `concat_want` is the table form, empty
+> here; a world that wants every one says
+> `concat_wanted[surface](C) :- composed[flow](C).`
+
+In the surface:
 
 <a id="concat_wanted"></a>`concat_wanted`(C) if [`concat_want`](#concat_want)(C).
 
-<a id="any_wanted"></a>`any_wanted`(`yes`) if [`concat_wanted`](#concat_wanted)(something).
+`concat_wanted`(X) if [`text_scope`](#text_scope)(C) and [`comp_of`](#comp_of)(C, something, X).
 
-<a id="text_scope"></a>`text_scope`(C) if [`concat_wanted`](#concat_wanted)(C) and [`composed`](#composed)(C).
+In the flow:
 
-`text_scope`(C) if [`composed`](#composed)(C), unless [`any_wanted`](#any_wanted)(`yes`).
-
-`text_scope`(X) if [`text_scope`](#text_scope)(C) and [`comp_of`](#comp_of)(C, something, X).
+<a id="text_scope"></a>`text_scope`(C) if [`concat_wanted`](#concat_wanted)(C).
 
 Declared as facts:
 
@@ -809,7 +807,8 @@ Declared as facts:
   - L > 0;
   - [`seq`](#seq)(C, D, L, T, Ex, S);
   - [`cshape`](#cshape)(C, Sh);
-  - [`shape_needs`](#shape_needs)(Sh, S).
+  - [`shape_needs`](#shape_needs)(Sh, S);
+  - unless [`cut_lit`](#cut_lit)(Sh, Ex).
 
 `text_at`(C, D, T, Ex) if all of:
   - [`last_slot`](#last_slot)(C, 0);
@@ -834,12 +833,22 @@ Declared as facts:
 `text_at`(C, D, dirname(T), Ex) if all of:
   - [`last_slot`](#last_slot)(C, 0);
   - [`seq`](#seq)(C, D, 0, T, Ex, something);
-  - [`cshape`](#cshape)(C, `dirname`).
+  - [`cshape`](#cshape)(C, `dirname`);
+  - Ex differs from `lit`.
 
 `text_at`(C, D, basename(T), Ex) if all of:
   - [`last_slot`](#last_slot)(C, 0);
   - [`seq`](#seq)(C, D, 0, T, Ex, something);
-  - [`cshape`](#cshape)(C, `basename`).
+  - [`cshape`](#cshape)(C, `basename`);
+  - Ex differs from `lit`.
+
+> a basename of literals alone is cut into a real string above
+
+`cut_lit` lists:
+
+| arg 1 | arg 2 |
+|---|---|
+| `basename` | `lit` |
 
 `cat_shape` includes `raw`, `plus`.
 
@@ -892,24 +901,67 @@ Declared as facts:
 
 Declared as facts:
 
+- <a id="cut_lit"></a>`cut_lit` — rows in this file
 - <a id="cat_shape"></a>`cat_shape` — rows in this file
 - <a id="shape_needs"></a>`shape_needs` — rows in this file
 - <a id="ex_and"></a>`ex_and` — rows in this file
 - <a id="s_or"></a>`s_or` — rows in this file
 - <a id="sub_ex"></a>`sub_ex` — rows in this file
 
-> THE ANSWER. A path's dirname or basename of literals alone is `may_be_lit`
-> already, a real string.
+> THE ANSWER. A path's dirname or basename of literals alone has no text: it is
+> `may_be_lit` already, a real string.
 
-<a id="cut_shape"></a>`cut_shape`(C) if [`cshape`](#cshape)(C, `dirname` or `basename`).
-
-<a id="may_be_text"></a>`may_be_text`(C, T) either:
-
-1. if [`concat_depth`](#concat_depth)(D) and [`text_at`](#text_at)(C, D, T, `exact`);
-2. if all of:
-   - [`concat_depth`](#concat_depth)(D);
-   - [`text_at`](#text_at)(C, D, T, `lit`);
-   - unless [`cut_shape`](#cut_shape)(C).
+<a id="may_be_text"></a>`may_be_text`(C, T) if [`concat_depth`](#concat_depth)(D) and [`text_at`](#text_at)(C, D, T, `exact` or `lit`).
 
 <a id="may_be_form"></a>`may_be_form`(C, T) if [`concat_depth`](#concat_depth)(D) and [`text_at`](#text_at)(C, D, T, `open`).
+
+## 6. ACROSS FILES (rules/js-surface.rofl). A composed value that leaves its file
+
+> takes what a reader of it needs: that it is composed, whether it can have a
+> text, whether a library module's body built it, its choices and texts at
+> every level. A volume that unfolds another file's value asks that file for its
+> texts (`concat_wanted`, keyed by the node, section 5). A string value that leaves a file says
+> it is a string, for a `+` that reads it elsewhere.
+
+In the surface:
+
+<a id="sx_composed"></a>`sx_composed`(C) if [`sx_esc`](js-surface.rofl.md#sx_esc)(C) and [`composed`](#composed)(C).
+
+<a id="sx_textable"></a>`sx_textable`(C) if [`sx_esc`](js-surface.rofl.md#sx_esc)(C) and [`textable`](#textable)(C).
+
+<a id="sx_summarized"></a>`sx_summarized`(C) if [`sx_esc`](js-surface.rofl.md#sx_esc)(C) and [`summarized`](#summarized)(C).
+
+<a id="sx_choices"></a>`sx_choices`(C, D, K) if [`sx_esc`](js-surface.rofl.md#sx_esc)(C) and [`choices`](#choices)(C, D, K).
+
+<a id="sx_text_at"></a>`sx_text_at`(C, D, T, E) if [`sx_esc`](js-surface.rofl.md#sx_esc)(C) and [`text_at`](#text_at)(C, D, T, E).
+
+<a id="sx_vlib_fn"></a>`sx_vlib_fn`(X, S, K) if [`sx_esc`](js-surface.rofl.md#sx_esc)(X) and [`vlib_fn`](#vlib_fn)(X, S, K).
+
+<a id="sx_vlib_ns"></a>`sx_vlib_ns`(Y, S) if [`sx_esc`](js-surface.rofl.md#sx_esc)(Y) and [`vlib_ns`](#vlib_ns)(Y, S).
+
+<a id="sx_str"></a>`sx_str`(V) either:
+
+1. if [`sx_lit`](js-surface.rofl.md#sx_lit)(something, V) and [`str_value`](#str_value)(V);
+2. if [`sx_export_lit`](js-surface.rofl.md#sx_export_lit)(something, something, V) and [`str_value`](#str_value)(V);
+3. if [`sx_arg_lit`](js-surface.rofl.md#sx_arg_lit)(something, something, V) and [`str_value`](#str_value)(V);
+4. if [`sx_ret_lit`](js-surface.rofl.md#sx_ret_lit)(something, V) and [`str_value`](#str_value)(V);
+5. if [`sx_ret_plit`](js-surface.rofl.md#sx_ret_plit)(something, V) and [`str_value`](#str_value)(V).
+
+In the flow:
+
+`composed`(C) if [`sx_composed`](#sx_composed)(C).
+
+`textable`(C) if [`sx_textable`](#sx_textable)(C).
+
+`summarized`(C) if [`sx_summarized`](#sx_summarized)(C).
+
+`choices`(C, D, K) if [`sx_choices`](#sx_choices)(C, D, K).
+
+`text_at`(C, D, T, E) if [`sx_text_at`](#sx_text_at)(C, D, T, E).
+
+`vlib_fn`(X, S, K) if [`sx_vlib_fn`](#sx_vlib_fn)(X, S, K).
+
+`vlib_ns`(Y, S) if [`sx_vlib_ns`](#sx_vlib_ns)(Y, S).
+
+`str_value`(V) if [`sx_str`](#sx_str)(V).
 

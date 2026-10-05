@@ -8,6 +8,7 @@ ct_bound(unknown, T) :- ast_node[code](T, template_literal, "src/entry.ts", 25),
 
 -- src/mypath.ts stands for node's path, as vscode's own path module does in examples/vscode/side-effects.rofl
 ambient_module("src/mypath.ts", "node:path").
+concat_wanted[surface](C) :- composed[flow](C).
 
 ct_text(Name, T) :- ct_bound(Name, C), may_be_text[flow](C, T).
 ct_form(Name, T) :- ct_bound(Name, C), may_be_form[flow](C, T).

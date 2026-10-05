@@ -51,6 +51,7 @@ world_omits(w_ledger, "rules/js-env-api.rofl").
 world_omits(w_ledger, "rules/js-env.rofl").
 world_omits(w_ledger, "rules/js-model.rofl").
 world_omits(w_ledger, "rules/js-modules.rofl").
+world_omits(w_ledger, "rules/js-surface.rofl").
 world_omits(w_ledger, "rules/js-resolve.rofl").
 world_omits(w_ledger, "rules/js-structure.rofl").
 world_omits(w_ledger, "rules/js-vocabulary.rofl").
@@ -138,6 +139,7 @@ world_omits(w_queue, "rules/js-dataflow.rofl").
 world_omits(w_queue, "rules/js-env-api.rofl").
 world_omits(w_queue, "rules/js-env.rofl").
 world_omits(w_queue, "rules/js-modules.rofl").
+world_omits(w_queue, "rules/js-surface.rofl").
 world_omits(w_queue, "rules/js-resolve.rofl").
 world_omits(w_queue, "rules/js-structure.rofl").
 world_omits(w_queue, "rules/js-vocabulary.rofl").
@@ -229,6 +231,7 @@ world_omits(w_js_corpus, "rules/js-concat.rofl").
 world_omits(w_js_corpus, "rules/js-env-api.rofl").
 world_omits(w_js_corpus, "rules/js-env.rofl").
 world_omits(w_js_corpus, "rules/js-modules.rofl").
+world_pack(w_js_corpus, "rules/js-surface.rofl").
 world_omits(w_js_corpus, "rules/js-resolve.rofl").
 world_omits(w_js_corpus, "rules/js-vocabulary.rofl").
 -- ...and its twin, added 2026-09-09 by w_vocabulary_home in a branch
@@ -324,6 +327,7 @@ world_omits(w_js_effects, "rules/js-concat.rofl").
 world_omits(w_js_effects, "rules/js-env-api.rofl").
 world_omits(w_js_effects, "rules/js-env.rofl").
 world_omits(w_js_effects, "rules/js-modules.rofl").
+world_pack(w_js_effects, "rules/js-surface.rofl").
 world_omits(w_js_effects, "rules/js-resolve.rofl").
 world_omits(w_js_effects, "rules/js-vocabulary.rofl").
 world_omits(w_js_effects, "rules/js-pack-home.rofl").
@@ -396,6 +400,7 @@ world_pack(w_js_ambient, "rules/js-model.rofl").
 world_pack(w_js_ambient, "rules/js-callgraph.rofl").
 world_pack(w_js_ambient, "rules/js-controlflow.rofl").
 world_pack(w_js_ambient, "rules/js-modules.rofl").
+world_pack(w_js_ambient, "rules/js-surface.rofl").
 world_pack(w_js_ambient, "rules/js-env.rofl").
 world_pack(w_js_ambient, "rules/js-env-api.rofl").
 world_pack(w_js_ambient, "rules/js-globals.rofl").

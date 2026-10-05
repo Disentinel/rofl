@@ -332,6 +332,7 @@ check[checks]("facts/goldens.rofl", "rules_js-modules", world).
 check[checks]("facts/goldens.rofl", "rules_js-pack-home", world).
 check[checks]("facts/goldens.rofl", "rules_js-resolve", world).
 check[checks]("facts/goldens.rofl", "rules_js-structure", world).
+check[checks]("facts/goldens.rofl", "rules_js-surface", world).
 check[checks]("facts/goldens.rofl", "rules_js-vocabulary", world).
 check[checks]("facts/goldens.rofl", "rules_kernel-policy", world).
 check[checks]("facts/goldens.rofl", "rules_layering", world).
@@ -774,6 +775,7 @@ check[checks]("facts/goldens.rofl", "surface_model", world).
 check[checks]("facts/goldens.rofl", "unify_occurs", world).
 check[checks]("facts/goldens.rofl", "unstratifiable", world).
 check[checks]("facts/goldens.rofl", "vscode_side_effects", world).
+check[checks]("facts/goldens.rofl", "vscode_surface_split", world).
 check[checks]("facts/goldens.rofl", "wfs_unknown_negated", world).
 check[checks]("facts/goldens.rofl", "why_base", world).
 check[checks]("facts/goldens.rofl", "why_forest", world).
