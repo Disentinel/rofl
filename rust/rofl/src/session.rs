@@ -112,6 +112,8 @@ pub struct Cooled {
     pub facts: usize,
     pub bytes: usize,
     pub path: String,
+    /// by book, the base facts a by-book cool wrote (empty for the others)
+    pub books: Vec<(String, usize)>,
 }
 
 pub struct Answer {
@@ -524,7 +526,7 @@ impl Session {
         std::fs::write(out, &text).map_err(|e| format!("{out}: {e}"))?;
         self.eval.store.remove_many(&drop);
         self.eval.store.dirty = true;
-        Ok(Cooled { facts: write.len(), bytes: text.len(), path: out.to_string() })
+        Ok(Cooled { facts: write.len(), bytes: text.len(), path: out.to_string(), books: Vec::new() })
     }
 
     /// COOL A VOLUME BY BOOK (docs/surface-split.md, the driver): `cool`, of the facts of `books` only. The volume's
@@ -533,14 +535,19 @@ impl Session {
     /// books stay, a `[surface]` the volume published or read among them. Like `cool`, the store is left dirty: a
     /// kept fact concluded from what left is a conclusion without its support until `reheat` brings the volume back
     /// and the next evaluation answers, so a caller that keeps a book makes its facts base where they must outlive it.
-    pub fn cool_books(&mut self, prefix: &str, books: &[String], out: &str) -> Result<Cooled, String> {
+    ///
+    /// A base fact of the volume in a book neither cooled nor in `keep` (`surface` is always kept) would be lost by a
+    /// volume that is closed after, or left behind by one that is not: the cool is REFUSED, before anything moves.
+    pub fn cool_books(&mut self, prefix: &str, books: &[String], keep: &[String], out: &str) -> Result<Cooled, String> {
         if books.is_empty() {
             return Err("cool by book needs at least one book".into());
         }
         let want: std::collections::HashSet<Sym> = books.iter().map(|b| self.eval.h.intern(b)).collect();
+        let mut kept: std::collections::HashSet<Sym> = keep.iter().map(|b| self.eval.h.intern(b)).collect();
+        kept.insert(self.eval.h.intern("surface"));
         self.eval.settle_provenance();
         let mut text = self.header(prefix);
-        let (mut n, mut drop) = (0, Vec::new());
+        let (mut n, mut drop, mut by_book) = (0, Vec::new(), std::collections::BTreeMap::<String, usize>::new());
         for id in self.eval.store.all_facts() {
             let args = self.eval.store.args(id).to_vec();
             if !args.iter().any(|a| self.mentions(*a, prefix)) {
@@ -549,6 +556,10 @@ impl Session {
             let r = self.eval.store.rec(id);
             let kernel = is_kernel_ledger(&self.eval.h, r.persp);
             let book = if kernel { args.iter().find_map(|a| self.reified_book(*a)) } else { Some(r.persp) };
+            if r.base() && !kernel && !want.contains(&r.persp) && !kept.contains(&r.persp) {
+                return Err(format!("cool by book: the volume holds a base fact in [{}], a book neither cooled nor kept: {}",
+                    self.eval.h.name(r.persp), self.eval.store.key(&self.eval.h, id)));
+            }
             if !book.is_some_and(|b| want.contains(&b)) {
                 continue;
             }
@@ -556,13 +567,14 @@ impl Session {
                 write_fact_key(&self.eval.h, r.rel, r.persp, &args, &mut text);
                 text.push_str(".\n");
                 n += 1;
+                *by_book.entry(self.eval.h.name(r.persp).to_string()).or_default() += 1;
             }
             drop.push(id);
         }
         std::fs::write(out, &text).map_err(|e| format!("{out}: {e}"))?;
         self.eval.store.remove_many(&drop);
         self.eval.store.dirty = true;
-        Ok(Cooled { facts: n, bytes: text.len(), path: out.to_string() })
+        Ok(Cooled { facts: n, bytes: text.len(), path: out.to_string(), books: by_book.into_iter().collect() })
     }
 
     /// The book of the fact a kernel row reifies, `$fact(Rel, Book, Args)`.
@@ -581,7 +593,18 @@ impl Session {
     /// above the base it was forked from, the keys of those in `books` or of a relation in `rels`, sorted, and every
     /// atom and string their arguments name (nested too), outside the kernel's ledgers and not beginning with
     /// `prefix`: the names a volume can subscribe by.
-    pub fn layer_view(&mut self, prefix: &str, books: &[String], rels: &[String]) -> (Vec<String>, Vec<String>) {
+    pub fn layer_view(&mut self, prefix: &str, books: &[String], rels: &[String]) -> Result<(Vec<String>, Vec<String>), String> {
+        // a world not evaluated, or cut by a wall, holds less than its program concludes: a view of it would be taken
+        // for the volume's
+        if prefix.is_empty() {
+            return Err("view needs a prefix: with none every name is excluded".into());
+        }
+        if self.eval.store.dirty {
+            return Err("view: the world is not evaluated".into());
+        }
+        if self.eval.store.partial_eval {
+            return Err("view: the world is partial, a wall cut its evaluation".into());
+        }
         let bs: std::collections::HashSet<Sym> = books.iter().map(|b| self.eval.h.intern(b)).collect();
         let rs: std::collections::HashSet<Sym> = rels.iter().map(|r| self.eval.h.intern(r)).collect();
         let mut facts = Vec::new();
@@ -616,7 +639,7 @@ impl Session {
         }
         facts.sort_by(|a, b| crate::term::cmp_js(a, b));
         names.sort();
-        (facts, names)
+        Ok((facts, names))
     }
 
     /// COOL THE ASSERTION TRAIL: the `why was this here` layer, parked.
@@ -654,7 +677,7 @@ impl Session {
         std::fs::write(out, &text).map_err(|e| format!("{out}: {e}"))?;
         self.eval.store.remove_many(&ids);
         self.eval.store.dirty = true;
-        Ok(Cooled { facts: ids.len(), bytes: text.len(), path: out.to_string() })
+        Ok(Cooled { facts: ids.len(), bytes: text.len(), path: out.to_string(), books: Vec::new() })
     }
 
     /// REHEAT THE TRAIL, PAST THE DOOR, and the signature is what earns that.
@@ -833,7 +856,7 @@ impl Session {
         let mut out = Vec::with_capacity(vols.len());
         for (i, (_, path)) in vols.iter().enumerate() {
             std::fs::write(path, &texts[i]).map_err(|e| format!("{path}: {e}"))?;
-            out.push(Cooled { facts: counts[i], bytes: texts[i].len(), path: path.clone() });
+            out.push(Cooled { facts: counts[i], bytes: texts[i].len(), path: path.clone(), books: Vec::new() });
         }
         let t_write = t1.elapsed().as_millis();
         let t2 = std::time::Instant::now();

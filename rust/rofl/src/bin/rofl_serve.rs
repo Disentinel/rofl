@@ -171,10 +171,14 @@ impl Server {
                 let out = r.get("path").and_then(|v| v.as_str()).ok_or("cool needs `path`")?.to_string();
                 // by book: only the facts of `books` go, a `[surface]` kept beside them stays
                 let c = match strings(r, "books")? {
-                    Some(bs) => self.get(r)?.cool_books(&prefix, &bs, &out)?,
+                    Some(bs) => {
+                        let keep = strings(r, "keep")?.unwrap_or_default();
+                        self.get(r)?.cool_books(&prefix, &bs, &keep, &out)?
+                    }
                     None => self.get(r)?.cool(&prefix, &out)?,
                 };
-                Ok(json!({ "facts": c.facts, "bytes": c.bytes, "path": c.path }))
+                let books: serde_json::Map<String, Value> = c.books.iter().map(|(b, n)| (b.clone(), json!(n))).collect();
+                Ok(json!({ "facts": c.facts, "bytes": c.bytes, "path": c.path, "books": books }))
             }
             // Many volumes in ONE pass over the world. Cooling them one at a
             // time is a walk per volume over a world that is still shrinking.
@@ -203,10 +207,10 @@ impl Server {
             // What a volume's world wrote above its base: the facts of `books` and `rels`, and the names it can
             // subscribe by (`Session::layer_view`).
             "view" => {
-                let prefix = r.get("prefix").and_then(|v| v.as_str()).unwrap_or("").to_string();
+                let prefix = r.get("prefix").and_then(|v| v.as_str()).ok_or("view needs `prefix`")?.to_string();
                 let books = strings(r, "books")?.unwrap_or_default();
                 let rels = strings(r, "rels")?.unwrap_or_default();
-                let (facts, names) = self.get(r)?.layer_view(&prefix, &books, &rels);
+                let (facts, names) = self.get(r)?.layer_view(&prefix, &books, &rels)?;
                 Ok(json!({ "facts": facts, "names": names }))
             }
             // The assertion trail, parked and fetched back. See

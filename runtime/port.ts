@@ -40,6 +40,10 @@ import * as readline from 'node:readline';
 const ROOT = path.join(path.dirname(new URL(import.meta.url).pathname), '..');
 export const DEFAULT_BIN = path.join(ROOT, 'rust/target', process.env.ROFL_PROFILE || 'release', 'rofl-serve');
 
+/** The engine's own `ok: false` reply: a request it understood and refused. Anything else a call rejects with (a dead
+ *  engine, an unreadable answer) is a failure of the protocol, not an answer. */
+export class EngineRefusal extends Error {}
+
 export interface Evaluated {
   /** A wall was hit and a `hole` in the store names the unfinished part. NOT
    *  an error: the answer stands and the margin is reported beside it. */
@@ -65,6 +69,8 @@ export interface Answer {
   /** True when an index served the ask, false when the relation was walked. */
   probed: boolean;
   micros: number;
+  /** The world was cut by a wall, or the question is sealed: the rows are not the whole answer. */
+  partial: boolean;
 }
 
 export interface Ticked { advanced: boolean; quiescent: boolean; partial: boolean }
@@ -180,10 +186,13 @@ export class RoflSession {
    *  The caller records the act — `cooled[code](File, Path)` so the file stays
    *  INDEXED rather than returning to the frontier, and `hole($cold(File),
    *  cooled_to_disk)` so a question about the cold volume refuses instead of
-   *  answering empty. */
-  async cool(prefix: string, path: string, books?: string[]): Promise<{ facts: number; bytes: number; path: string }> {
-    const r = await this.port.send({ op: 'cool', session: this.id, prefix, path, books });
-    return { facts: r.facts as number, bytes: r.bytes as number, path: r.path as string };
+   *  answering empty.
+   *
+   *  With `books` only the facts of those books go; `[surface]` and the books of `keep` stay, and a base fact of the
+   *  volume in any other book refuses the cool, before anything moves. `books` of the result: what was written, by book. */
+  async cool(prefix: string, path: string, books?: string[], keep?: string[]): Promise<{ facts: number; bytes: number; path: string; books: Record<string, number> }> {
+    const r = await this.port.send({ op: 'cool', session: this.id, prefix, path, books, keep });
+    return { facts: r.facts as number, bytes: r.bytes as number, path: r.path as string, books: (r.books ?? {}) as Record<string, number> };
   }
 
   /** A cooled volume back, refused when this engine did not write it; into an evaluated world by delta. */
@@ -352,7 +361,7 @@ export class RoflPort {
     }
     this.waiting.delete(id);
     if (v.ok === true) w.ok(v);
-    else w.no(new Error(String(v.error ?? 'unknown engine error')));
+    else w.no(new EngineRefusal(String(v.error ?? 'unknown engine error')));
   }
 
   send(req: Record<string, unknown>): Promise<Record<string, unknown>> {

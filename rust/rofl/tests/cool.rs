@@ -208,7 +208,7 @@ fn a_volume_cooled_by_book_keeps_its_surface_and_reheats_to_the_same_world() {
     assert_eq!(n(&mut s, "callee_of[flow](C, N)"), 2);
 
     let out = tmp("cool_books_a.rofl");
-    let c = s.cool_books("na1b2c3d4_", &["code".into(), "flow".into()], out.to_str().unwrap()).expect("cool by book");
+    let c = s.cool_books("na1b2c3d4_", &["code".into(), "flow".into()], &[], out.to_str().unwrap()).expect("cool by book");
     assert_eq!(c.facts, 6, "the volume's base [code] facts are what is written");
     let text = std::fs::read_to_string(&out).unwrap();
     assert!(!text.contains("[surface]") && !text.contains("[flow]"), "only the base facts of the books leave: {text}");
@@ -232,11 +232,40 @@ fn a_volume_cooled_by_book_keeps_its_surface_and_reheats_to_the_same_world() {
     assert_eq!(s.eval.canonical_state(), before, "a volume cooled by book did not come back the way it left");
 
     // cooled and reheated with no evaluation between: the same
-    s.cool_books("na1b2c3d4_", &["code".into(), "flow".into()], out.to_str().unwrap()).expect("cool");
+    s.cool_books("na1b2c3d4_", &["code".into(), "flow".into()], &[], out.to_str().unwrap()).expect("cool");
     s.reheat(out.to_str().unwrap()).expect("reheat");
     s.evaluate().expect("evaluate");
     assert_eq!(s.eval.canonical_state(), before);
-    assert!(s.cool_books("na1b2c3d4_", &[], out.to_str().unwrap()).is_err(), "cooling no book is a mistake, said");
+    assert!(s.cool_books("na1b2c3d4_", &[], &[], out.to_str().unwrap()).is_err(), "cooling no book is a mistake, said");
+    std::fs::remove_file(&out).ok();
+}
+
+/// A base fact of the volume in a book that is neither cooled nor kept would be forgotten by the volume that is closed
+/// after (a hot volume and a cold one would differ): the cool is refused, before anything moves, naming the fact.
+#[test]
+fn a_volume_holding_a_base_fact_in_an_uncooled_book_is_refused_before_anything_moves() {
+    let mut s = world();
+    s.load(BOOKS, None).expect("books refused");
+    s.load("ast_attr[extra](na1b2c3d4_2, probe, \"x\").", None).expect("fact refused");
+    s.evaluate().expect("evaluate");
+    let before = s.eval.canonical_state();
+    let out = tmp("cool_books_extra.rofl");
+    std::fs::remove_file(&out).ok();
+    let both: Vec<String> = vec!["code".into(), "flow".into()];
+    let e = s.cool_books("na1b2c3d4_", &both, &[], out.to_str().unwrap()).err().expect("a base fact in [extra] was forgotten");
+    assert!(e.contains("[extra]") && e.contains("probe"), "{e}");
+    assert!(!out.exists(), "a refused cool wrote a file");
+    assert_eq!(s.eval.canonical_state(), before, "a refused cool moved the world");
+    let all: Vec<String> = vec!["code".into(), "flow".into(), "extra".into()];
+    let c = s.cool_books("na1b2c3d4_", &all, &[], out.to_str().unwrap()).expect("cool with the book");
+    assert_eq!(c.books, vec![("code".to_string(), 6), ("extra".to_string(), 1)]);
+    assert!(std::fs::read_to_string(&out).unwrap().contains("[extra]"), "the fact did not leave with the volume");
+    s.reheat(out.to_str().unwrap()).expect("reheat");
+    s.evaluate().expect("evaluate");
+    assert_eq!(s.eval.canonical_state(), before);
+    // a book kept on purpose is no refusal, and stays
+    s.cool_books("na1b2c3d4_", &both, &["extra".to_string()], out.to_str().unwrap()).expect("kept");
+    assert_eq!(s.ask("ast_attr[extra](na1b2c3d4_2, probe, V)").unwrap().rows.len(), 1);
     std::fs::remove_file(&out).ok();
 }
 
