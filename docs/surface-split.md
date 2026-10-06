@@ -203,10 +203,11 @@ The wall moves from memory to ingest scheduling.
   fork of it holding the file's facts and the `[surface]` facts it subscribes to, added by delta
   (`Session::assert_delta`, `load_delta`). After its evaluation it publishes the `[surface]` facts it concluded and
   not read, and is COOLED: `cool` by book (`Session::cool_books`, rofl-serve `cool` with `books`) writes its base
-  facts to a signed volume file and drops its `[code]`/`[flow]`/`[main]`, the surface staying where it was published.
+  facts to a signed volume file and drops every book of the program but `[surface]` (the list is read from the program's
+  reflection), the surface staying where it was published.
   The `hot` most recent worlds stay, and a later evaluation of one adds by delta; a cooled one is reheated (by delta
   into a fork of the evaluated core). tests/cool.rs holds the by-book round trip byte for byte.
-- **Subscription by key.** A surface fact's key is its first argument: a module path, a callee, an escaping node. A
+- **Subscription by key.** A surface fact's key is its first argument: a module path, a callee, an escaping node (and the argument a rule joins on, where a rule reads the relation through a later one). A
   volume reads the facts of the keys it owns (its node prefix) and of the names its world holds (`view`: the atoms and
   strings of what it wrote above the core), and since a fact read is mirrored, the names that fact holds too. It is
   evaluated again only when a fact of a key it subscribed to moved. A subscription never shrinks.
@@ -214,7 +215,7 @@ The wall moves from memory to ingest scheduling.
   negations (or aggregates) over relations `[surface]` reaches on a path from `[surface]` to it. A surface relation of
   phase k is published only when the phases below are quiescent, so within a phase publications only grow (a least
   fixpoint; a withdrawal is counted and the gate is red on one) and every negation over the surface reads a complete
-  one. The JS model has 4 phases. The answers are read after the last phase only, each from the volume's last
+  one. The number of phases is read from the program, not written down. The answers are read after the last phase only, each from the volume's last
   evaluation, which saw every fact of every key it reads.
 - **The resident world**: a second fork of the core holding every publication as a base fact (asserted by delta as it
   arrives) and, after the fixpoint, the answers. `side_effect_value` and `side_effect_count` are asked there.
@@ -260,3 +261,30 @@ The wall moves from memory to ingest scheduling.
   the volume kept hot through its round (or a dependency order) so re-evaluations go by delta; and cooling by book
   that keeps the resident world evaluated (the volume's facts retracted by delta) so a why costs the lift, not a
   re-evaluation.
+
+### 7.1 Hardened after a review of the driver
+
+- **Never from a partial or unevaluated world.** The driver throws on a partial evaluation of the core, a volume or the
+  resident world (`evaluate`'s `partial`, and an `ask` of the resident world before the answers and before each why).
+  rofl-serve `view` refuses a world not evaluated or partial, and needs a non-empty `prefix`.
+- **A cooled volume forgets nothing.** Cooling is by every book of the program but `[surface]`, the list read from the
+  reflection (`main` always); the why lift cools the same list, less `main`, where the resident world keeps its answers.
+  rofl-serve `cool` with `books` REFUSES, before anything moves, a base fact of the volume in a book neither cooled nor
+  kept (`keep`), and says what it wrote by book: a volume holding base facts in `[main]` is refused (they could not be
+  told from the answers), as one holding a `[surface]` base fact. tests/cool.rs; the gate's `probe[audit]` fact in a
+  volume, and the planted `books` break (cooling code, flow, main only), which the refusal turns red.
+- **Subscription keys are checked.** At start the program's reflection is read (`reflect`): every premise over a
+  `[surface]` relation must join on an argument (a variable occurring again in the rule); a premise with none is refused,
+  naming the rule. Where the joined argument is not the first (8 rules of the JS model read `sx_*` by a later argument,
+  `sx_esc(N) :- sx_cjs(_, N)`) the fact is also keyed by that argument, so the volume of N finds it. A first argument that is an
+  integer or a compound is refused; at a later joined argument it is counted (`stats.unkeyed`) and keyed by nobody, since no
+  world names an integer: `sx_str(V) :- sx_export_lit(_, _, V), str_value(V)` of js-concat reads the exported values by V, and
+  an integer V (8080) is such a fact. That is a known gap the parity gate stands in for, not a proof. `keyOf` skips strings, so a parenthesis in a quoted argument no longer miscounts.
+  Necessary, not sufficient: that the joined key is one the volume names is what the parity gate shows.
+- **Phases.** A literal whose book is a variable (the closure of a `tree`) is read in every book its relation holds; a
+  book that is neither refused, where it used to drop the edge. The phases are checked as a property of the
+  reflection (no premise reads a higher phase; a negation or aggregate over the surface reads a strictly lower one; every
+  phase is held by a premise), not as a count. test/split-driver.test.ts.
+- **A why** is turned into text only for the engine's refusal (`EngineRefusal`); a failed protocol or a refused
+  reheat throws. vscode_curve `split` refuses a base fact naming two files, as the hand loop does.
+- **Readers.** `\u` takes exactly four hex digits in both parsers, and the dense readers read the main readers' escapes.

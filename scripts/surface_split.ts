@@ -197,7 +197,7 @@ async function driven(seq: string[], W: Read, whole: World, held: Map<string, bo
   const lines: string[] = [];
   let bad = 0;
   const st = d.stats;
-  lines.push(`  driver: ${st.evaluations} evaluations (${st.first} first, ${st.incremental} by delta in a hot world, ${st.reheated} reheated), rounds ${st.rounds.join('+')} over ${st.maxPhase + 1} phases, ${st.published} published, ${st.inputs} subscribed inputs, ${st.cooled} cooled (${st.coldBytes} bytes), ${ms} ms`);
+  lines.push(`  driver: ${st.evaluations} evaluations (${st.first} first, ${st.incremental} by delta in a hot world, ${st.reheated} reheated), rounds ${st.rounds.join('+')} over ${st.maxPhase + 1} phases, ${st.published} published, ${st.inputs} subscribed inputs, ${st.unkeyed} values keyed by nobody, ${st.cooled} cooled (${st.coldBytes} bytes), ${ms} ms`);
   if (st.withdrawn) { bad++; lines.push(`  ${st.withdrawn} publications withdrawn inside a phase: the surface did not grow monotonically`); }
   const isAnswer = (f: string) => /^side_effect_(value|site|env)(\[main\])?\(/.test(f);
   const want = new Set([...all(W)].filter(isAnswer));

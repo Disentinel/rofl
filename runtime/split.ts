@@ -82,7 +82,9 @@ export interface Driven {
   surface: Map<string, Pub>;
   phases: Map<string, number>;
   stats: { evaluations: number; incremental: number; reheated: number; first: number; rounds: number[]; maxPhase: number;
-    published: number; inputs: number; inputsMax: number; inputsByRel: Record<string, number>; cooled: number; coldBytes: number; withdrawn: number };
+    published: number; inputs: number; inputsMax: number; inputsByRel: Record<string, number>; cooled: number; coldBytes: number; withdrawn: number;
+    /** values at a joined later argument that no world can name (an integer, a compound): published, keyed by no volume */
+    unkeyed: number };
   answers(): Promise<string[]>;
   /** the why of a fact in the resident world, the volumes on its chain lifted and cooled again */
   why(query: string): Promise<{ text: string; lifted: string[] }>;
@@ -105,9 +107,10 @@ export function argsOf(fact: string): string[] {
 }
 /** A volume subscribes by a node id, a string or an atom, the names a world holds; a key of any other shape (an
  *  integer, a compound) could never be named, so the fact is refused rather than published to nobody. */
+const NAMEABLE = /^(?:n[0-9a-f]{16}_\d+|"(?:[^"\\]|\\.)*"|[a-z_]\w*)$/;
 export function keyOf(fact: string, at = 0): string {
   const key = argsOf(fact)[at] ?? '';
-  if (!/^(?:n[0-9a-f]{16}_\d+|"(?:[^"\\]|\\.)*"|[a-z_]\w*)$/.test(key)) {
+  if (!NAMEABLE.test(key)) {
     throw new Error(`a [surface] fact is keyed by a node, a string or an atom, so that a volume can subscribe to it; this one by its argument ${at + 1}, ${key.slice(0, 80)}: ${fact.slice(0, 200)}`);
   }
   return key;
@@ -348,7 +351,7 @@ export async function drive(o: DriveOpts): Promise<Driven> {
   const byKey = new Map<string, Set<string>>();
   const subs = new Map<string, Set<string>>();
   const stats = { evaluations: 0, incremental: 0, reheated: 0, first: 0, rounds: [] as number[], maxPhase, published: 0,
-    inputs: 0, inputsMax: 0, inputsByRel: {} as Record<string, number>, cooled: 0, coldBytes: 0, withdrawn: 0 };
+    inputs: 0, inputsMax: 0, inputsByRel: {} as Record<string, number>, cooled: 0, coldBytes: 0, withdrawn: 0, unkeyed: 0 };
   let phase = 0;
   const visible = (f: string) => phaseOf(relOf(f)) <= phase;
   const hot: string[] = [];
@@ -447,7 +450,10 @@ export async function drive(o: DriveOpts): Promise<Driven> {
       let s = surface.get(f);
       if (!s) {
         const rel = relOf(f);
-        s = { keys: [...new Set([0, ...keyPos.get(rel) ?? []])].map((at) => keyOf(f, at)), rel, pubs: new Set() };
+        // the first argument is the key and must be nameable; a later one a rule joins on is a key where its value can be
+        // named, and an integer or a compound there is counted (`unkeyed`): no volume's world names it, so it reads it by no key
+        const later = (keyPos.get(rel) ?? []).map((at) => argsOf(f)[at]).filter((k) => NAMEABLE.test(k) || (stats.unkeyed++, false));
+        s = { keys: [...new Set([keyOf(f), ...later])], rel, pubs: new Set() };
         surface.set(f, s);
         for (const k of s.keys) {
           if (!byKey.has(k)) byKey.set(k, new Set());
