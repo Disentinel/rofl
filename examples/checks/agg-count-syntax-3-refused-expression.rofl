@@ -1,0 +1,3 @@
+-- expect-refusal: not expressions
+-- a counted term is a term, not an expression
+sxr_expression(N) :- N is count(B + 1 : sxc_b(B, _)).

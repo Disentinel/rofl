@@ -1,0 +1,12 @@
+-- expect-refusal: not monotone in the value
+-- examples/checks/agg-cell-safety-4-refused-join.rofl — a join on the value: the edge must weigh what the cell holds now.
+edb(acsr_e).
+edb(acsr_n).
+edb(acsr_s).
+acsr_e(a, b, 2).
+acsr_e(b, a, 3).
+acsr_n(a, b).
+acsr_s(a, false).
+lattice acsr_join(A, C, min D).
+acsr_join(A, C, D) :- acsr_e(A, C, D).
+acsr_join(A, C, D) :- acsr_join(A, B, D), acsr_e(B, C, D).

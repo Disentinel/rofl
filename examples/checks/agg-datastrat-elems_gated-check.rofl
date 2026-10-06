@@ -1,0 +1,11 @@
+-- examples/checks/agg-datastrat-elems_gated-check.rofl — agg_datastrat_elems_gated: the both rows of agg-datastrat-elems_gated.rofl are the hand-derived ones, and no other.
+dx_want(a, 12, a, 2).
+dx_want(a, 12, b1, 1).
+dx_want(a, 12, c1, 1).
+dx_want(c1, 1, a, 2).
+dx_want(c1, 1, b1, 1).
+dx_want(c1, 1, c1, 1).
+dx_wrong(T, S, B, N) :- dx_want(T, S, B, N), not both(T, S, B, N).
+dx_extra(T, S, B, N) :- both(T, S, B, N), not dx_want(T, S, B, N).
+alarm(dx_wrong).
+alarm(dx_extra).

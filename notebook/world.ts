@@ -1,5 +1,6 @@
 // A notebook as a world: what the reader reads in it and the model and worlds it stands on. The goldens load this, the kernel runs over it.
 import { readBook, homeOf, type Cell } from './book.ts';
+import type { ReadOptions } from '../scripts/read_md.ts';
 import { cellsOf, libFiles, parseFront, type NbCell } from './front.ts';
 
 /** The texts a run needs: `lib` by their path from the root of the tree (libFiles), `reads` and `code` by their name in the notebook; `data`, the files a
@@ -9,8 +10,8 @@ export type Inputs = { lib: Record<string, string>; reads: Record<string, string
 export const asCell = (c: NbCell): Cell => ({ id: `c${c.index}`, text: c.text, form: c.kind === 'datalog' ? 'rofl' : 'md', prose: c.kind === 'prose' });
 
 /** A world written as Markdown, read the way a notebook's cells are: its prose, then its rofl and datalog cells; the lines that ask are not part of it. */
-export function worldOf(text: string, phrases: string, home: Record<string, string>): { rofl: string; phrases: string[]; reports: string[]; traced: string[] } {
-  const b = readBook(cellsOf(text).filter((c) => c.kind !== 'natural').map(asCell), phrases, home);
+export function worldOf(text: string, phrases: string, home: Record<string, string>, opts: Pick<ReadOptions, 'canonVars'> = {}): { rofl: string; phrases: string[]; reports: string[]; traced: string[] } {
+  const b = readBook(cellsOf(text).filter((c) => c.kind !== 'natural').map(asCell), phrases, home, false, opts);
   return { rofl: b.parts.map((p, i) => b.read[i]?.rofl ?? p.clauses).join('\n'), phrases: b.learned, reports: b.read.flatMap((r) => r ? [r.report] : []), traced: b.read.flatMap((r) => r?.traced ?? []) };
 }
 

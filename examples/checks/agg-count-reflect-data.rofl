@@ -1,0 +1,14 @@
+-- examples/checks/agg-count-reflect-data.rofl — count aggregates for
+-- agg_count_reflect: one reads a book of its own, one negates inside and
+-- compares inside, one reads the kernel's `concludes` bare.
+edb(acr_item).
+edb(acr_bad).
+edb(acr_key).
+acr_key(k1).
+acr_key(k2).
+acr_item[ledger](k1, 1).
+acr_item[ledger](k1, 2).
+acr_item[ledger](k2, 5).
+acr_bad(2).
+acr_good(K, N)   :- acr_key(K), N is count(X : acr_item[ledger](K, X), not acr_bad(X), X > 0).
+acr_rules(Rel, N) :- acr_key(Rel), N is count(R : concludes(R, Rel)).

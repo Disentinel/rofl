@@ -1,0 +1,11 @@
+-- expect-refusal: in the data the cell reads itself: count@c(a) -> flag(x) -> c(a,_) -> count@c(a)
+-- examples/checks/agg-datastrat-cycle-8-refused-negated-body.rofl — the same
+-- rules as agg-datastrat-neg.rofl over data in which key a names its own item: c(a)
+-- needs flag(x), which needs c(a). A cycle through a negation inside the aggregate
+-- is a cycle in the data, and refused naming it.
+edb(key). edb(item). edb(flagme).
+key(a).
+item(a, x).
+flagme(a, x).
+c(K, N) :- key(K), N is count(X : item(K, X), not flag(X)).
+flag(X) :- c(K, N), N > 0, flagme(K, X).

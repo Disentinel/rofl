@@ -1,0 +1,68 @@
+-- examples/checks/agg-label-sound-data.rofl — WHAT A LABELED UNKNOWN MUST NOT
+-- DECIDE (docs/aggregates.md, "Labeled unknowns, as built"): four answers a
+-- brute-force completion oracle found held where some completion of the
+-- unknown contradicts them, each repaired in both engines.
+--
+-- ls_w(?, k7) is a member whose group is one value not known (an overflow in
+-- the last thing the body asks), beside g1 (k9) and g2 (k1); ls_v(?, k8) is
+-- another, of its own label.
+edb(ls_big).
+edb(ls_w0).
+edb(ls_dom).
+edb(ls_d2).
+edb(ls_m0).
+ls_big(1152921504606846975).
+ls_w0(g1, k9). ls_w0(g2, k1).
+ls_dom(g1). ls_dom(g2). ls_dom(g3).
+ls_d2(a). ls_d2(b).
+ls_m0(g1, a, 5). ls_m0(g2, b, 3). ls_m0(g2, c, 4).
+
+ls_w(G, X) :- ls_w0(G, X).
+ls_w(G, k7) :- ls_big(B), G is B + 1.
+ls_v(G, X) :- ls_w0(G, X).
+ls_v(H, k8) :- ls_big(B), H is B + 2.
+
+-- A. A known member's projection is a value the label may be: the two are one
+-- member there. ls_w2c is 2 where the label is g1 or g2, 3 elsewhere; ls_qc 1
+-- or 2; ls_tany, two firings and two labels, 2, 3 or 4.
+ls_w2(G) :- ls_w(G, _).
+ls_w2c(N) :- N is count(G : ls_w2(G)).
+ls_q(X) :- ls_w(X, k7).
+ls_q(g1).
+ls_qc(N) :- N is count(X : ls_q(X)).
+ls_t(G, X) :- ls_w0(G, X).
+ls_t(G, k7) :- ls_d2(X), ls_big(B), G is B + 1.
+ls_tany(N) :- N is count(G : ls_t(G, _)).
+
+-- B. A join on a labeled value holds only where the label is the value it
+-- meets: 1 where the label is g1, g2 or g3, 0 elsewhere, whichever premise
+-- comes first; two labels meet where they are equal.
+ls_j(G) :- ls_w(G, k7), ls_dom(G).
+ls_jc(N) :- N is count(G : ls_j(G)).
+ls_jr(G) :- ls_dom(G), ls_w(G, k7).
+ls_jrc(N) :- N is count(G : ls_jr(G)).
+ls_jb(N) :- N is count(G : ls_w(G, k7), ls_dom(G)).
+ls_e(G) :- ls_w(G, k7), ls_v(G, k8).
+ls_ec(N) :- N is count(G : ls_e(G)).
+ls_ee(N) :- N is count(G : ls_w(G, k7), ls_v(G, k8)).
+
+-- C. A label's exclusion counts wherever it stands: ls_sv(?, 2) is a group of
+-- its own only where the label is neither g1 nor g2, so the least total is 7, 5
+-- or 2; and a join on that label meets it only there (ls_yc 0 or 1).
+ls_m(G, X, V) :- ls_m0(G, X, V).
+ls_m(G, d, 2) :- ls_big(B), G is B + 1.
+ls_sv(G, S) :- S is sum(V ; X : ls_m(G, X, V)).
+ls_minsv(T) :- T is min(S : ls_sv(_, S)).
+ls_y(G) :- ls_m(G, d, 2), ls_sv(G, 2).
+ls_yc(N) :- N is count(G : ls_y(G)).
+
+-- D. A fault before the last `is` leaves a tuple that may not exist: the
+-- comparison over the unknown could fail. ls_ftot is 2 or 3.
+ls_f(G, X) :- ls_w0(G, X).
+ls_f(G, k7) :- ls_big(B), B + 1 > 0, G is 5.
+ls_fc(G, N) :- N is count(X : ls_f(G, X)).
+ls_ftot(S) :- S is sum(N ; G : ls_fc(G, N)).
+
+-- what stays decided: the total over all groups is 3 whatever the label is
+ls_wc(G, N) :- N is count(X : ls_w(G, X)).
+ls_tot(S) :- S is sum(N ; G : ls_wc(G, N)).

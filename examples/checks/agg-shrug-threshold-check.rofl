@@ -1,0 +1,73 @@
+-- examples/checks/agg-shrug-threshold-check.rofl — agg_threshold_shrug: a
+-- threshold under every completion of what holes left out. Reached by the
+-- members that hold for certain, it holds; short even with every member that
+-- could hold, it is decided short (unentailed, and `not` of it holds); between
+-- the two, a shrug. A member a negation cannot decide is not certain. A
+-- member whose value is not known could be any number of members. A group
+-- with no member under any completion, correlated or not, is decided short,
+-- and so is what a recursive threshold builds on one. A group left open
+-- rests on every member not certain, whichever unknown reached it last: a
+-- member a hole left out beside one a negation could not decide, and two
+-- unknowns the threshold's own negation reads.
+edb(st_item).
+edb(st_edge).
+edb(st_big).
+st_item(a). st_item(b). st_item(c). st_item(d).
+st_big(1152921504606846975).
+st_bad(c) :- st_big(B), Z is B + 1, Z > 0.
+st_has(a, 1).
+st_has(d, 1).
+st_has(c, 1) :- st_big(B), Z is B + 1, Z > 0.
+st_any(Y) :- st_big(B), Y is B + 1.
+st_ok3() :- at_least(3, X : st_item(X), not st_bad(X)).
+st_ok4() :- at_least(4, X : st_item(X), not st_bad(X)).
+st_many2() :- at_least(2, X : st_has(X, _)).
+st_many3() :- at_least(3, X : st_has(X, _)).
+st_many4() :- at_least(4, X : st_has(X, _)).
+st_many_any() :- at_least(2, Y : st_any(Y)).
+st_nmany4() :- not st_many4().
+st_nmany3() :- not st_many3().
+st_edge(a, d). st_edge(b, c).
+st_za() :- at_least(1, X : st_edge(a, X), st_bad(X)).
+st_zz() :- at_least(1, X : st_edge(z, X), st_bad(X)).
+st_zc(Y) :- st_item(Y), at_least(1, X : st_edge(Y, X), st_bad(X)).
+st_nza() :- not st_za().
+st_act(X) :- st_bad(X).
+st_act(X) :- st_item(X), at_least(1, Y : st_edge(X, Y), st_act(Y)).
+st_nact(X) :- st_item(X), not st_act(X).
+st_mem(a).
+st_mem(b) :- st_big(B), Z is B + 3, Z > 0.
+st_off(d) :- st_big(B), Z is B + 4, Z > 0.
+st_mem(d) :- st_item(d), not st_off(d).
+st_mix2() :- at_least(2, X : st_item(X), st_mem(X)).
+st_mix3() :- at_least(3, X : st_item(X), st_mem(X)).
+st_no(b) :- st_big(B), Z is B + 5, Z > 0.
+st_no(d) :- st_big(B), Z is B + 6, Z > 0.
+st_both() :- at_least(3, X : st_item(X), not st_no(X)).
+-- expect-row: shrug[$kernel](st_mix2,inherited,from($cons($rule(r14d688e5),$cons($rule(r68485520),$nil))))
+-- expect-row: shrug[$kernel](st_mix3,inherited,from($cons($rule(r14d688e5),$cons($rule(r68485520),$nil))))
+-- expect-row: shrug[$kernel](st_both,inherited,from($cons($rule(r4652c90b),$cons($rule(r46aa4222),$nil))))
+-- expect-row: st_ok3[main]()
+-- expect-row: st_many2[main]()
+-- expect-row: st_nmany4[main]()
+-- expect-row: shrug[$kernel](st_ok4,inherited,from($cons($rule(r0e67f0ef),$nil)))
+-- expect-row: shrug[$kernel](st_many3,inherited,from($cons($rule(r71acca7b),$nil)))
+-- expect-row: shrug[$kernel](st_many_any,inherited,from($cons($rule(r611864eb),$nil)))
+-- expect-row: shrug[$kernel](st_nmany3,inherited,from($cons($rule(r71acca7b),$nil)))
+-- expect-no-row: st_ok4[main]()
+-- expect-no-row: st_many3[main]()
+-- expect-no-row: st_many4[main]()
+-- expect-no-row: shrug[$kernel](st_many4
+-- expect-no-row: st_nmany3[main]()
+-- expect-no-row: st_many_any[main]()
+-- expect-row: st_nza[main]()
+-- expect-row: st_nact[main](a)
+-- expect-row: st_nact[main](d)
+-- expect-row: shrug[$kernel](st_zc(b),inherited
+-- expect-row: shrug[$kernel](st_act(b),inherited
+-- expect-no-row: shrug[$kernel](st_za,
+-- expect-no-row: shrug[$kernel](st_zz,
+-- expect-no-row: shrug[$kernel](st_zc(a),
+-- expect-no-row: shrug[$kernel](st_act(a),
+-- expect-no-row: st_za[main]()
+-- expect-no-row: st_zc[main](a)

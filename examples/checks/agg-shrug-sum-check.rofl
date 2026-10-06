@@ -1,0 +1,20 @@
+-- examples/checks/agg-shrug-sum-check.rofl — agg_sum_shrug over
+-- agg-shrug-agg-data.rofl: a sum over a member a hole left out, or whose inner
+-- body reads `unknown(A)` of one, is a shrug inherited from the fault; a sum
+-- the unknown cannot reach is decided; a comparison of a shrug is a shrug.
+sas_t(G, S) :- sa_g(G), S is sum(Y ; K : sa_x(G, K, Y)).
+sas_settled(S) :- S is sum(V ; X : sa_pos(X), not unknown(sa_w(X)), V = 1).
+sas_known(S) :- S is sum(V ; X : sa_pos(X), sa_w(X), X != c, V = 2).
+sas_big(G) :- sas_t(G, S), S > 4.
+-- expect-row: sas_t[main](p,5)
+-- expect-row: sas_t[main](s,0)
+-- expect-row: shrug[$kernel](sas_t(q,$unknown_value),inherited,from($cons($rule(r1f3a2f99),$nil)))
+-- expect-row: shrug[$kernel](sas_t(r,$unknown_value),inherited,from($cons($rule(r1f3a2f99),$nil)))
+-- expect-no-row: sas_t[main](q,
+-- expect-no-row: sas_t[main](r,
+-- expect-row: shrug[$kernel](sas_settled($unknown_value),inherited,from($cons($rule(rcc5ce487),$nil)))
+-- expect-no-row: sas_settled[main](
+-- expect-row: sas_known[main](2)
+-- expect-row: sas_big[main](p)
+-- expect-row: shrug[$kernel](sas_big(q),inherited,from($cons($rule(r1f3a2f99),$nil)))
+-- expect-no-row: sas_big[main](q)

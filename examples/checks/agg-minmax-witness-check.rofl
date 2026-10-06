@@ -1,0 +1,43 @@
+-- examples/checks/agg-minmax-witness-check.rofl — agg_minmax_witness: an
+-- extreme is a Best, for each of min, max, or and and. Its members are
+-- exactly the derivations that reach the final value: every one of them (a
+-- tie in each operation: g1's two 3s, g1's two 9s, g1's two trues, g2's two
+-- falses), and no member whose value is another. Each cites a real fact of
+-- the relation it reads; the cell sealed that relation.
+amw_op(am_min, am_d).
+amw_op(am_max, am_d).
+amw_op(am_or, am_flag).
+amw_op(am_and, am_flag).
+amw_in(Rel, G, V, S)   :- amw_op(Rel, am_d), am_d(G, V, S).
+amw_in(Rel, G, V, S)   :- amw_op(Rel, am_flag), am_flag(G, V, S).
+amw_cell(C, G, Rel)    :- amw_op(Rel, _), concludes[$kernel](R, Rel), agg_cell[$kernel](C, _, _),
+                          C = $cell(R, _, _, $cons(G, $nil)).
+amw_has(C, V, S)       :- amw_cell(C, G, Rel), amw_op(Rel, Src), agg_member_prem[$kernel](C, _, P),
+                          P = $fact(Src, main, $cons(G, $cons(V, $cons(S, $nil)))), amw_in(Rel, G, V, S).
+am_tie_missing(Rel, G, S) :- amw_cell(C, G, Rel), agg_cell[$kernel](C, V, _), amw_in(Rel, G, V, S), not amw_has(C, V, S).
+am_nontie_member(C, I) :- amw_cell(C, _, _), agg_cell[$kernel](C, V, _),
+                          agg_member[$kernel](C, I, $cons(W, $nil), _), W != V.
+am_foreign_prem(C, I)  :- amw_cell(C, G, Rel), agg_member_prem[$kernel](C, I, P), not amw_real(C, P).
+amw_real(C, P)         :- amw_cell(C, G, Rel), amw_op(Rel, Src), agg_member_prem[$kernel](C, _, P),
+                          P = $fact(Src, main, $cons(G, $cons(V, $cons(S, $nil)))), amw_in(Rel, G, V, S).
+amw_sealed(C)          :- amw_cell(C, _, Rel), amw_op(Rel, Src), agg_sealed[$kernel](C, Src, _).
+seal_missing(C)        :- amw_cell(C, _, _), not amw_sealed(C).
+seal_foreign(C, R)     :- amw_cell(C, _, Rel), amw_op(Rel, Src), agg_sealed[$kernel](C, R, _), R != Src.
+-- an empty group is sealed and holds no member
+amw_empty(C)           :- concludes[$kernel](R, am_min), agg_sealed[$kernel](C, _, _), C = $cell(R, _, _, $cons(g3, $nil)).
+empty_unsealed()       :- not amw_empty(_).
+empty_member(C)        :- amw_empty(C), agg_member[$kernel](C, _, _, _).
+amw_group(Rel, G)      :- amw_cell(_, G, Rel).
+cell_absent(Rel, G)    :- amw_in(Rel, G, _, _), G != gt, not amw_group(Rel, G).
+-- every operation has a tied cell, or the tie checks above are vacuous for it
+amw_tied(Rel)          :- amw_cell(C, _, Rel), agg_member[$kernel](C, 2, _, _).
+amw_vacuous(Rel)       :- amw_op(Rel, _), not amw_tied(Rel).
+alarm(am_tie_missing).
+alarm(am_nontie_member).
+alarm(am_foreign_prem).
+alarm(seal_missing).
+alarm(seal_foreign).
+alarm(empty_unsealed).
+alarm(empty_member).
+alarm(cell_absent).
+alarm(amw_vacuous).

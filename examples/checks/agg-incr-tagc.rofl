@@ -1,0 +1,122 @@
+-- examples/checks/agg-incr-tagc.rofl — agg_incr_tagc: the COUNTING TAG under
+-- RETRACTION (docs/aggregates.md, "Ready for the incremental engine"). A
+-- counting tag is invertible: each rule concludes a derivation,
+-- `p@count(K..., $firing(Rule, Vars), N)`, a fact whose firing is the member of
+-- the tag cell's sum; the cell records `alg=invertible,tag use=subtract`, and
+-- the derivations are the firings the `lat p@count` lines print by id. A
+-- retraction takes the derivations that cited the fact out with it and the
+-- cell SUBTRACTS them: nothing is derived again.
+--
+--   ic_e(b, c)      the walk through b to c and the edge itself lose a derivation each
+--   ic_w(a, b, 2)   a to b counted 2 + 3, and is now 3
+--   ic_e(a, c)      a to c lost its direct edge, and its walk through b stays
+edb(ic_e). edb(ic_w).
+ic_e(a, b).
+ic_e(b, c).
+ic_e(a, c).
+ic_e(c, d).
+ic_e(b, d).
+ic_w(a, b, 2).
+ic_w(a, b, 3).
+ic_w(b, c, 1).
+tag ic_walks(A, C, counting N).
+ic_walks(A, C, N) :- ic_e(A, C).
+ic_walks(A, C, N) :- ic_e(A, B), ic_e(B, C).
+tag ic_wt(A, B, counting N).
+ic_wt(A, B, W) :- ic_w(A, B, W).
+tag ic_tot(counting N).
+ic_tot(N) :- ic_e(_, _).
+
+-- the state after the retractions, row by row
+-- expect-row: ic_e[main](a,b) tick base support=0
+-- expect-row: ic_e[main](b,d) tick base support=0
+-- expect-row: ic_e[main](c,d) tick base support=0
+-- expect-row: ic_tot@count[main]($firing(r1bfa4edc,a,b),1) tick drv support=1
+-- expect-row: ic_tot@count[main]($firing(r1bfa4edc,b,d),1) tick drv support=1
+-- expect-row: ic_tot@count[main]($firing(r1bfa4edc,c,d),1) tick drv support=1
+-- expect-row: ic_tot[main](3) tick drv support=1
+-- expect-row: ic_w[main](a,b,3) tick base support=0
+-- expect-row: ic_w[main](b,c,1) tick base support=0
+-- expect-row: ic_walks@count[main](a,b,$firing(r28dd725a,a,b),1) tick drv support=1
+-- expect-row: ic_walks@count[main](a,d,$firing(rb624715c,a,b,d),1) tick drv support=1
+-- expect-row: ic_walks@count[main](b,d,$firing(r28dd725a,b,d),1) tick drv support=1
+-- expect-row: ic_walks@count[main](c,d,$firing(r28dd725a,c,d),1) tick drv support=1
+-- expect-row: ic_walks[main](a,b,1) tick drv support=1
+-- expect-row: ic_walks[main](a,d,1) tick drv support=1
+-- expect-row: ic_walks[main](b,d,1) tick drv support=1
+-- expect-row: ic_walks[main](c,d,1) tick drv support=1
+-- expect-row: ic_wt@count[main](a,b,$firing(rc54d0afc,a,b,3),3) tick drv support=1
+-- expect-row: ic_wt@count[main](b,c,$firing(rc54d0afc,b,c,1),1) tick drv support=1
+-- expect-row: ic_wt[main](a,b,3) tick drv support=1
+-- expect-row: ic_wt[main](b,c,1) tick drv support=1
+-- expect-row: cell $cell(ic_tot@count,1,0,$cons(main,$nil)) sum = 3 h=2 tick=0 sealed=[ic_tot@count@1] alg=invertible,tag use=subtract
+-- expect-row: mem $cell(ic_tot@count,1,0,$cons(main,$nil)) #1 id=d56fec21fca62593 (1,$firing(r1bfa4edc,a,b)) h=2 [fact:ic_tot@count[main]($firing(r1bfa4edc,a,b),1)]
+-- expect-row: mem $cell(ic_tot@count,1,0,$cons(main,$nil)) #2 id=1dfa5015d35ed380 (1,$firing(r1bfa4edc,b,d)) h=2 [fact:ic_tot@count[main]($firing(r1bfa4edc,b,d),1)]
+-- expect-row: mem $cell(ic_tot@count,1,0,$cons(main,$nil)) #3 id=ff94c8fc6442216f (1,$firing(r1bfa4edc,c,d)) h=2 [fact:ic_tot@count[main]($firing(r1bfa4edc,c,d),1)]
+-- expect-row: cell $cell(ic_walks@count,1,0,$cons(a,$cons(b,$cons(main,$nil)))) sum = 1 h=2 tick=0 sealed=[ic_walks@count@1] alg=invertible,tag use=subtract
+-- expect-row: mem $cell(ic_walks@count,1,0,$cons(a,$cons(b,$cons(main,$nil)))) #1 id=a0e82c39ad35706a (1,$firing(r28dd725a,a,b)) h=2 [fact:ic_walks@count[main](a,b,$firing(r28dd725a,a,b),1)]
+-- expect-row: cell $cell(ic_walks@count,1,0,$cons(a,$cons(d,$cons(main,$nil)))) sum = 1 h=2 tick=0 sealed=[ic_walks@count@1] alg=invertible,tag use=subtract
+-- expect-row: mem $cell(ic_walks@count,1,0,$cons(a,$cons(d,$cons(main,$nil)))) #1 id=af5b69206df3bedb (1,$firing(rb624715c,a,b,d)) h=2 [fact:ic_walks@count[main](a,d,$firing(rb624715c,a,b,d),1)]
+-- expect-row: cell $cell(ic_walks@count,1,0,$cons(b,$cons(d,$cons(main,$nil)))) sum = 1 h=2 tick=0 sealed=[ic_walks@count@1] alg=invertible,tag use=subtract
+-- expect-row: mem $cell(ic_walks@count,1,0,$cons(b,$cons(d,$cons(main,$nil)))) #1 id=c38456571a113a86 (1,$firing(r28dd725a,b,d)) h=2 [fact:ic_walks@count[main](b,d,$firing(r28dd725a,b,d),1)]
+-- expect-row: cell $cell(ic_walks@count,1,0,$cons(c,$cons(d,$cons(main,$nil)))) sum = 1 h=2 tick=0 sealed=[ic_walks@count@1] alg=invertible,tag use=subtract
+-- expect-row: mem $cell(ic_walks@count,1,0,$cons(c,$cons(d,$cons(main,$nil)))) #1 id=98b9e8d232689f52 (1,$firing(r28dd725a,c,d)) h=2 [fact:ic_walks@count[main](c,d,$firing(r28dd725a,c,d),1)]
+-- expect-row: cell $cell(ic_wt@count,1,0,$cons(a,$cons(b,$cons(main,$nil)))) sum = 3 h=2 tick=0 sealed=[ic_wt@count@1] alg=invertible,tag use=subtract
+-- expect-row: mem $cell(ic_wt@count,1,0,$cons(a,$cons(b,$cons(main,$nil)))) #1 id=3f6ddf59b308aa85 (3,$firing(rc54d0afc,a,b,3)) h=2 [fact:ic_wt@count[main](a,b,$firing(rc54d0afc,a,b,3),3)]
+-- expect-row: cell $cell(ic_wt@count,1,0,$cons(b,$cons(c,$cons(main,$nil)))) sum = 1 h=2 tick=0 sealed=[ic_wt@count@1] alg=invertible,tag use=subtract
+-- expect-row: mem $cell(ic_wt@count,1,0,$cons(b,$cons(c,$cons(main,$nil)))) #1 id=84f4a96160ca4ff9 (1,$firing(rc54d0afc,b,c,1)) h=2 [fact:ic_wt@count[main](b,c,$firing(rc54d0afc,b,c,1),1)]
+-- expect-row: lat ic_tot@count tag:counting alg=invertible,tag use=subtract
+-- expect-row: lat ic_walks@count tag:counting alg=invertible,tag use=subtract
+-- expect-row: lat ic_wt@count tag:counting alg=invertible,tag use=subtract
+-- expect-row: fir ic_tot@count[main]($firing(r1bfa4edc,a,b),1) id=2d98aaabd7e24d56 r1bfa4edc@0 [fact:ic_e[main](a,b)] live
+-- expect-row: fir ic_tot@count[main]($firing(r1bfa4edc,b,d),1) id=f010dc93c2fcf98f r1bfa4edc@0 [fact:ic_e[main](b,d)] live
+-- expect-row: fir ic_tot@count[main]($firing(r1bfa4edc,c,d),1) id=8f32169c187a03aa r1bfa4edc@0 [fact:ic_e[main](c,d)] live
+-- expect-row: fir ic_walks@count[main](a,b,$firing(r28dd725a,a,b),1) id=74b01a9bd335a299 r28dd725a@0 [fact:ic_e[main](a,b)] live
+-- expect-row: fir ic_walks@count[main](a,d,$firing(rb624715c,a,b,d),1) id=d1ceba290e64d4e7 rb624715c@0 [fact:ic_e[main](a,b); fact:ic_e[main](b,d)] live
+-- expect-row: fir ic_walks@count[main](b,d,$firing(r28dd725a,b,d),1) id=0a5be8b65efe4e60 r28dd725a@0 [fact:ic_e[main](b,d)] live
+-- expect-row: fir ic_walks@count[main](c,d,$firing(r28dd725a,c,d),1) id=99a446ad9250061d r28dd725a@0 [fact:ic_e[main](c,d)] live
+-- expect-row: fir ic_wt@count[main](a,b,$firing(rc54d0afc,a,b,3),3) id=bafef7e72217b144 rc54d0afc@0 [bi:3 is $counting(1,3); fact:ic_w[main](a,b,3)] live
+-- expect-row: fir ic_wt@count[main](b,c,$firing(rc54d0afc,b,c,1),1) id=d6e88c807bb3c9b0 rc54d0afc@0 [bi:1 is $counting(1,1); fact:ic_w[main](b,c,1)] live
+-- and nothing of what they supported before
+-- expect-no-row: ic_e[main](a,c) tick base support=0
+-- expect-no-row: ic_e[main](b,c) tick base support=0
+-- expect-no-row: ic_tot@count[main]($firing(r1bfa4edc,a,c),1) tick drv support=1
+-- expect-no-row: ic_tot@count[main]($firing(r1bfa4edc,b,c),1) tick drv support=1
+-- expect-no-row: ic_tot[main](5) tick drv support=1
+-- expect-no-row: ic_w[main](a,b,2) tick base support=0
+-- expect-no-row: ic_walks@count[main](a,c,$firing(r28dd725a,a,c),1) tick drv support=1
+-- expect-no-row: ic_walks@count[main](a,c,$firing(rb624715c,a,b,c),1) tick drv support=1
+-- expect-no-row: ic_walks@count[main](a,d,$firing(rb624715c,a,c,d),1) tick drv support=1
+-- expect-no-row: ic_walks@count[main](b,c,$firing(r28dd725a,b,c),1) tick drv support=1
+-- expect-no-row: ic_walks@count[main](b,d,$firing(rb624715c,b,c,d),1) tick drv support=1
+-- expect-no-row: ic_walks[main](a,c,2) tick drv support=1
+-- expect-no-row: ic_walks[main](a,d,2) tick drv support=1
+-- expect-no-row: ic_walks[main](b,c,1) tick drv support=1
+-- expect-no-row: ic_walks[main](b,d,2) tick drv support=1
+-- expect-no-row: ic_wt@count[main](a,b,$firing(rc54d0afc,a,b,2),2) tick drv support=1
+-- expect-no-row: ic_wt[main](a,b,5) tick drv support=1
+-- expect-no-row: cell $cell(ic_tot@count,1,0,$cons(main,$nil)) sum = 5 h=2 tick=0 sealed=[ic_tot@count@1] alg=invertible,tag use=subtract
+-- expect-no-row: mem $cell(ic_tot@count,1,0,$cons(main,$nil)) #2 id=cc96eb21f795d274 (1,$firing(r1bfa4edc,a,c)) h=2 [fact:ic_tot@count[main]($firing(r1bfa4edc,a,c),1)]
+-- expect-no-row: mem $cell(ic_tot@count,1,0,$cons(main,$nil)) #3 id=f2a42f15bad1326d (1,$firing(r1bfa4edc,b,c)) h=2 [fact:ic_tot@count[main]($firing(r1bfa4edc,b,c),1)]
+-- expect-no-row: mem $cell(ic_tot@count,1,0,$cons(main,$nil)) #4 id=1dfa5015d35ed380 (1,$firing(r1bfa4edc,b,d)) h=2 [fact:ic_tot@count[main]($firing(r1bfa4edc,b,d),1)]
+-- expect-no-row: mem $cell(ic_tot@count,1,0,$cons(main,$nil)) #5 id=ff94c8fc6442216f (1,$firing(r1bfa4edc,c,d)) h=2 [fact:ic_tot@count[main]($firing(r1bfa4edc,c,d),1)]
+-- expect-no-row: cell $cell(ic_walks@count,1,0,$cons(a,$cons(c,$cons(main,$nil)))) sum = 2 h=2 tick=0 sealed=[ic_walks@count@1] alg=invertible,tag use=subtract
+-- expect-no-row: mem $cell(ic_walks@count,1,0,$cons(a,$cons(c,$cons(main,$nil)))) #1 id=6e0a05c73c1ffec6 (1,$firing(r28dd725a,a,c)) h=2 [fact:ic_walks@count[main](a,c,$firing(r28dd725a,a,c),1)]
+-- expect-no-row: mem $cell(ic_walks@count,1,0,$cons(a,$cons(c,$cons(main,$nil)))) #2 id=0d14bb2a5c101427 (1,$firing(rb624715c,a,b,c)) h=2 [fact:ic_walks@count[main](a,c,$firing(rb624715c,a,b,c),1)]
+-- expect-no-row: cell $cell(ic_walks@count,1,0,$cons(a,$cons(d,$cons(main,$nil)))) sum = 2 h=2 tick=0 sealed=[ic_walks@count@1] alg=invertible,tag use=subtract
+-- expect-no-row: mem $cell(ic_walks@count,1,0,$cons(a,$cons(d,$cons(main,$nil)))) #2 id=a3697f2ddbce812c (1,$firing(rb624715c,a,c,d)) h=2 [fact:ic_walks@count[main](a,d,$firing(rb624715c,a,c,d),1)]
+-- expect-no-row: cell $cell(ic_walks@count,1,0,$cons(b,$cons(c,$cons(main,$nil)))) sum = 1 h=2 tick=0 sealed=[ic_walks@count@1] alg=invertible,tag use=subtract
+-- expect-no-row: mem $cell(ic_walks@count,1,0,$cons(b,$cons(c,$cons(main,$nil)))) #1 id=1929584b9845457e (1,$firing(r28dd725a,b,c)) h=2 [fact:ic_walks@count[main](b,c,$firing(r28dd725a,b,c),1)]
+-- expect-no-row: cell $cell(ic_walks@count,1,0,$cons(b,$cons(d,$cons(main,$nil)))) sum = 2 h=2 tick=0 sealed=[ic_walks@count@1] alg=invertible,tag use=subtract
+-- expect-no-row: mem $cell(ic_walks@count,1,0,$cons(b,$cons(d,$cons(main,$nil)))) #2 id=2bf9f36d280d3b78 (1,$firing(rb624715c,b,c,d)) h=2 [fact:ic_walks@count[main](b,d,$firing(rb624715c,b,c,d),1)]
+-- expect-no-row: cell $cell(ic_wt@count,1,0,$cons(a,$cons(b,$cons(main,$nil)))) sum = 5 h=2 tick=0 sealed=[ic_wt@count@1] alg=invertible,tag use=subtract
+-- expect-no-row: mem $cell(ic_wt@count,1,0,$cons(a,$cons(b,$cons(main,$nil)))) #1 id=a600c167145e8115 (2,$firing(rc54d0afc,a,b,2)) h=2 [fact:ic_wt@count[main](a,b,$firing(rc54d0afc,a,b,2),2)]
+-- expect-no-row: mem $cell(ic_wt@count,1,0,$cons(a,$cons(b,$cons(main,$nil)))) #2 id=3f6ddf59b308aa85 (3,$firing(rc54d0afc,a,b,3)) h=2 [fact:ic_wt@count[main](a,b,$firing(rc54d0afc,a,b,3),3)]
+-- expect-no-row: fir ic_tot@count[main]($firing(r1bfa4edc,a,c),1) id=2d9586abd7dfda53 r1bfa4edc@0 [fact:ic_e[main](a,c)] live
+-- expect-no-row: fir ic_tot@count[main]($firing(r1bfa4edc,b,c),1) id=f00d3493c2f9a640 r1bfa4edc@0 [fact:ic_e[main](b,c)] live
+-- expect-no-row: fir ic_walks@count[main](a,c,$firing(r28dd725a,a,c),1) id=74b3be9bd338ef1c r28dd725a@0 [fact:ic_e[main](a,c)] live
+-- expect-no-row: fir ic_walks@count[main](a,c,$firing(rb624715c,a,b,c),1) id=d1cb12290e618198 rb624715c@0 [fact:ic_e[main](a,b); fact:ic_e[main](b,c)] live
+-- expect-no-row: fir ic_walks@count[main](a,d,$firing(rb624715c,a,c,d),1) id=6636e7d401edc1c3 rb624715c@0 [fact:ic_e[main](a,c); fact:ic_e[main](c,d)] live
+-- expect-no-row: fir ic_walks@count[main](b,c,$firing(r28dd725a,b,c),1) id=0a5f10b65f00c82f r28dd725a@0 [fact:ic_e[main](b,c)] live
+-- expect-no-row: fir ic_walks@count[main](b,d,$firing(rb624715c,b,c,d),1) id=1de00b292fcbe8fc rb624715c@0 [fact:ic_e[main](b,c); fact:ic_e[main](c,d)] live
+-- expect-no-row: fir ic_wt@count[main](a,b,$firing(rc54d0afc,a,b,2),2) id=b1e32d1b3a52eb73 rc54d0afc@0 [bi:2 is $counting(1,2); fact:ic_w[main](a,b,2)] live

@@ -1,0 +1,4 @@
+-- expect-refusal: exactly one value
+-- examples/checks/agg-holistic-safety-4-refused-median-two.rofl — a median
+-- takes the median of one value per member, not two.
+ahs_medtwo(G, M) :- ahs_group(G), M is median(V, K ; K : ahs_line(G, K, V)).

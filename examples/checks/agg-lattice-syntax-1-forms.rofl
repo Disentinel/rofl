@@ -1,0 +1,20 @@
+-- examples/checks/agg-lattice-syntax-1-forms.rofl — every form of a lattice
+-- declaration the grammar reads: each of the four operations, a key of two,
+-- of one and of none, a wildcard in the key; and `lattice`, `min` and `or`
+-- still ordinary names where no declaration can stand. Read and refused by
+-- the TypeScript engine, whose rule ids must be the Rust store's.
+edb(sxl_e).
+sxl_e(a, b, 3).
+lattice sxl_min(A, C, min D).
+lattice sxl_max(A, max D).
+lattice sxl_or(A, or F).
+lattice sxl_and(A, _, and F).
+lattice sxl_one(min D).
+sxl_min(A, C, D) :- sxl_e(A, C, D).
+sxl_max(A, D)    :- sxl_e(A, _, D).
+sxl_or(A, true)  :- sxl_e(A, _, _).
+sxl_and(A, C, false) :- sxl_e(A, C, _).
+sxl_one(D)       :- sxl_e(_, _, D).
+-- the words are names elsewhere: a relation called lattice, an atom min
+lattice(min).
+sxl_word(X) :- lattice(X), X = min.

@@ -1,0 +1,25 @@
+-- examples/checks/agg-sub-budget.rofl — agg_sub_budget: the budget cuts a
+-- world whose values improve round a negative cycle without end (asb_d, a
+-- dominance on a total order, the min lattice's divergence): the relation
+-- is a hole, `budget_exhausted`, and each cell some value of which came back
+-- through an earlier value of its own is withdrawn, `improving_cycle`. A
+-- front the wall did not reach (asb_f, over a positive cycle, which settled
+-- before it) keeps its values with no hole.
+-- expect-row: hole[$kernel]($adhoc,budget_exhausted)
+-- expect-row: hole[$kernel]($lattice(asb_d),budget_exhausted)
+-- expect-row: hole[$kernel]($lattice(asb_d,main,0,$cons(a,$cons(b,$nil))),improving_cycle)
+-- expect-no-row: hole[$kernel]($lattice(asb_f
+-- expect-row: asb_f[main](p,q,1,5)
+-- expect-row: asb_f[main](p,p,2,6)
+-- expect-no-row: asb_d[main](a,b,
+edb(asb_e).
+asb_e(a, b, 1). asb_e(b, a, -2).
+asb_d(A, B, D) :- asb_e(A, B, D).
+asb_d(A, C, D) :- asb_d(A, B, D0), asb_e(B, C, W), D is D0 + W.
+asb_d(A, B, X) <= asb_d(A, B, Y) :- Y < X.
+edb(asb_g).
+asb_g(p, q, 1, 5). asb_g(q, p, 1, 1).
+asb_f(A, B, C, T) :- asb_g(A, B, C, T).
+asb_f(A, C, C1, T1) :- asb_f(A, B, C0, T0), asb_g(B, C, C2, T2), C1 is C0 + C2, T1 is T0 + T2.
+asb_f(A, B, C1, T1) <= asb_f(A, B, C2, T2) :- C2 <= C1, T2 <= T1, C2 < C1.
+asb_f(A, B, C1, T1) <= asb_f(A, B, C2, T2) :- C2 <= C1, T2 <= T1, T2 < T1.

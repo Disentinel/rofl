@@ -372,12 +372,31 @@ A kind K
 > Both exclusion lists are guarded against a misspelling. `ast_node` is edb
 > here because this file loads in worlds with no corpus at all.
 
+Declared as facts:
+
+- <a id="ast_node"></a>`ast_node` — rows from the scanner
+
+> THE SCANNER'S ROWS ARE FUNCTIONS (docs/data-structures.md), and the scanner keeps the promise (scanners/js_ast.ts
+> `emit`): a node has a fresh id (`prefix + ++n`), so one kind, file and line; an own property is written once,
+> under a key of its own (`field`, or `field_member` for a record of scalars). A fact that breaks it is refused
+> with its key and both values, never silently believed; the planner reads a bound id as one match.
+
+`ast_node` has one Kind, File and Line for each N.
+
+`ast_attr` has one V for each N and K.
+
 `lang_of_corpus` includes `js`.
+
+In the code:
+
+<a id="kind_seen"></a>`kind_seen`(K) if some node [is of kind](#ast_node) K.
+
+In the audit:
 
 A kind K
 
 - <a id="vocabulary_gap"></a>is a vocabulary gap in a language Lang if all of:
-  - some node [is of kind](#ast_node) K;
+  - [`kind_seen`](#kind_seen)(K);
   - Lang [is the corpus language](#lang_of_corpus);
   - K neither [is not a construct](#not_a_construct) nor [is deferred to the frame](#frame_deferred) because some reason;
   - unless Lang [has the node kind](#node_kind) K.
@@ -389,7 +408,6 @@ A kind K
 
 Declared as facts:
 
-- <a id="ast_node"></a>`ast_node` — rows from the scanner
 - <a id="lang_of_corpus"></a>A language L is the corpus language — rows in this file
 - <a id="not_a_construct"></a>A kind K is not a construct — rows from facts/js-kinds.rofl
 - <a id="frame_deferred"></a>A kind K is deferred to the frame because a reason R — no rows: declared so a rule may read it
@@ -402,7 +420,7 @@ Declared as facts:
 > constant that guarded nothing. A `kind_absent_ok` row belongs in the pack
 > that declares its kind.
 
-<a id="corpus_scanned"></a>`corpus_scanned`() if some node [is of kind](#ast_node) some kind.
+<a id="corpus_scanned"></a>`corpus_scanned`() if [`kind_seen`](#kind_seen)(something).
 
 <a id="scanned"></a>A language has a scanned corpus if it [is the corpus language](#lang_of_corpus) and [`corpus_scanned`](#corpus_scanned)().
 

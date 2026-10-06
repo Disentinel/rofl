@@ -1,0 +1,13 @@
+-- examples/checks/ds-tree-retract-3-edge-check.rofl — after `dtg_in(b, c)` is retracted, a stands over b alone, and nothing that
+-- stood on the edge stands.
+dtgc_stale(X)  :- dtg_hit(X), X != b.
+dtgc_stale(X)  :- dtg_pair(X, Y), X != a, X != c.
+dtgc_stale(N)  :- dtg_cnt(N), N != 3.
+dtgc_lost()    :- not dtg_hit(b).
+dtgc_lost()    :- not dtg_within(c, d).
+dtgc_lost()    :- not dtg_within(x, y).
+alarm(dtgc_stale).
+alarm(dtgc_lost).
+-- expect-no-row: dtg_hit[main](c)
+-- expect-no-row: dtg_within[main](a,c)
+-- expect-row: dtg_within[main](a,b) tick drv

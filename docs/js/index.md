@@ -2,26 +2,28 @@
 
 | file | clauses | heads | phrased | positional | absorbed guards | links | either | tables | not defined here | refused |
 |---|---|---|---|---|---|---|---|---|---|---|
-| [phrases](phrases.rofl.md) | 8 | 1 | 0 | 0 | 0 | 0 | 0 | 1 | 0 | 0 |
-| [js-phrases](js-phrases.rofl.md) | 1009 | 3 | 0 | 0 | 0 | 0 | 0 | 32 | 0 | 0 |
+| [phrases](phrases.rofl.md) | 10 | 1 | 0 | 0 | 0 | 0 | 0 | 1 | 0 | 0 |
+| [js-phrases](js-phrases.rofl.md) | 1031 | 3 | 0 | 0 | 0 | 0 | 0 | 32 | 0 | 0 |
 | [js-ambient](js-ambient.rofl.md) | 69 | 42 | 39 | 0 | 1 | 90 | 5 | 1 | 13 | 0 |
-| [js-attrs](js-attrs.rofl.md) | 49 | 37 | 37 | 0 | 0 | 101 | 4 | 0 | 6 | 0 |
-| [js-callgraph](js-callgraph.rofl.md) | 218 | 94 | 85 | 0 | 45 | 237 | 22 | 4 | 6 | 0 |
-| [js-controlflow](js-controlflow.rofl.md) | 229 | 87 | 74 | 0 | 46 | 227 | 15 | 5 | 2 | 0 |
-| [js-dataflow](js-dataflow.rofl.md) | 287 | 121 | 109 | 0 | 127 | 417 | 24 | 2 | 3 | 0 |
-| [js-effects](js-effects.rofl.md) | 207 | 125 | 117 | 0 | 23 | 299 | 19 | 2 | 7 | 0 |
+| [js-attrs](js-attrs.rofl.md) | 51 | 39 | 37 | 2 | 0 | 105 | 4 | 0 | 6 | 0 |
+| [js-callgraph](js-callgraph.rofl.md) | 221 | 93 | 83 | 1 | 35 | 251 | 23 | 4 | 7 | 0 |
+| [js-concat](js-concat.rofl.md) | 209 | 71 | 2 | 58 | 18 | 336 | 24 | 7 | 2 | 0 |
+| [js-controlflow](js-controlflow.rofl.md) | 234 | 90 | 74 | 2 | 42 | 206 | 15 | 6 | 3 | 0 |
+| [js-dataflow](js-dataflow.rofl.md) | 374 | 156 | 129 | 13 | 134 | 530 | 30 | 2 | 4 | 0 |
+| [js-effects](js-effects.rofl.md) | 211 | 126 | 116 | 2 | 21 | 306 | 19 | 2 | 7 | 0 |
 | [js-env-api](js-env-api.rofl.md) | 5 | 5 | 5 | 0 | 0 | 6 | 0 | 0 | 4 | 0 |
-| [js-env](js-env.rofl.md) | 45 | 34 | 33 | 0 | 0 | 48 | 5 | 1 | 17 | 0 |
-| [js-globals](js-globals.rofl.md) | 40 | 22 | 19 | 0 | 2 | 47 | 1 | 2 | 6 | 0 |
+| [js-env](js-env.rofl.md) | 45 | 34 | 33 | 0 | 0 | 47 | 5 | 1 | 18 | 0 |
+| [js-globals](js-globals.rofl.md) | 41 | 23 | 19 | 1 | 2 | 46 | 1 | 2 | 7 | 0 |
 | [js-host](js-host.rofl.md) | 66 | 48 | 47 | 0 | 1 | 75 | 9 | 1 | 18 | 0 |
-| [js-model](js-model.rofl.md) | 116 | 55 | 49 | 1 | 0 | 138 | 13 | 3 | 2 | 0 |
-| [js-modules](js-modules.rofl.md) | 165 | 102 | 99 | 0 | 22 | 221 | 23 | 1 | 2 | 0 |
+| [js-model](js-model.rofl.md) | 119 | 56 | 49 | 2 | 0 | 139 | 13 | 3 | 2 | 0 |
+| [js-modules](js-modules.rofl.md) | 174 | 105 | 102 | 0 | 24 | 237 | 24 | 1 | 2 | 0 |
 | [js-pack-home](js-pack-home.rofl.md) | 11 | 9 | 8 | 0 | 0 | 12 | 1 | 0 | 2 | 0 |
 | [js-resolve](js-resolve.rofl.md) | 58 | 36 | 35 | 0 | 0 | 79 | 8 | 0 | 0 | 0 |
-| [js-structure](js-structure.rofl.md) | 11 | 8 | 8 | 0 | 4 | 11 | 3 | 0 | 2 | 0 |
+| [js-structure](js-structure.rofl.md) | 12 | 7 | 7 | 0 | 4 | 8 | 2 | 0 | 2 | 0 |
+| [js-surface](js-surface.rofl.md) | 102 | 80 | 22 | 57 | 6 | 152 | 7 | 1 | 1 | 0 |
 | [js-vocabulary](js-vocabulary.rofl.md) | 12 | 10 | 10 | 0 | 0 | 17 | 2 | 0 | 2 | 0 |
 
-1 heads without a phrase across these files.
+135 heads without a phrase across these files.
 
 ## Proposed renames
 
@@ -73,6 +75,13 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `arg_at` | `passes` |
 | `arrival` | `arrives` |
 | `arrived_by` | `has_received` |
+| `assign_binder` | `is_written_into` |
+| `assign_dead` | `is_written_in_the_dead_zone` |
+| `assign_decided` | `has_a_decided_target` |
+| `assign_param` | `is_written_into_a_parameter_of` |
+| `assign_reaches_unscoped` | `may_hold_by_name_alone` |
+| `assign_unscoped` | `has_no_decided_target` |
+| `assigned` | `is_written_by` |
 | `assigns` | `is_assigned` |
 | `attr_blind_guard` | `is_a_blind_guard` |
 | `attr_deferred_read` | `is_deferred_yet_read` |
@@ -115,6 +124,7 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `axis_earns` | `earns_its_place` |
 | `bad_reason` | `the_bad_reason` |
 | `bad_reason` | `the_bad_reason` |
+| `bare_binder` | `declares_without_a_value` |
 | `bare_builtin_unlisted` | `is_not_listed_bare` |
 | `bare_listed` | `is_listed_bare` |
 | `base_pack` | `is_the_base_pack` |
@@ -124,6 +134,7 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `binding` | `binds_the_name` |
 | `binds_name` | `introduces` |
 | `body_lit` | `is_a_body_literal` |
+| `bound_read` | `is_claimed_by_a_binder_or_parameter` |
 | `bound_to_call` | `is_bound_to_the_call` |
 | `builtin_canonical` | `the_canonical_builtin` |
 | `builtin_prototype` | `is_a_builtin_prototype` |
@@ -134,6 +145,7 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `call_site` | `is_a_call_site` |
 | `call_site_kind` | `the_call_kind` |
 | `callback_key_unknown` | `names_an_unknown_callback_member` |
+| `callback_param` | `is_called_back_with` |
 | `callback_site` | `is_a_callback_site` |
 | `callee_kind` | `the_callee_kind` |
 | `callee_obj` | `the_receiver` |
@@ -161,6 +173,8 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `child_lit_fvar` | `reads_a_variable_field` |
 | `child_lit_svar` | `reads_the_child_of_a_variable` |
 | `child_needs` | `needs_at` |
+| `cjs_exports` | `exports_by_commonjs` |
+| `cjs_module_exports` | `is_module_exports_in` |
 | `claim` | `is_claimed` |
 | `claim` | `is_claimed` |
 | `claim_kind` | `is_a_ledger` |
@@ -174,7 +188,6 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `class_method_of` | `has_the_method` |
 | `class_named` | `is_named` |
 | `class_receiver` | `denotes_a_class` |
-| `closer` | `is_outranked_at` |
 | `closer_s` | `is_outranked_for` |
 | `coarse_of` | `has_a_shaped_cell` |
 | `coarser_claim` | `has_a_coarser_claim` |
@@ -279,7 +292,6 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `eff_hidden_call` | `hides_the_call` |
 | `eff_import_invented` | `invents_the_effect` |
 | `eff_import_outside` | `imports_outside_the_corpus` |
-| `eff_in_fn` | `lies_inside_a_function` |
 | `eff_join` | `the_join` |
 | `eff_join_short` | `is_short_of_the_join` |
 | `eff_label` | `is_a_label` |
@@ -347,7 +359,6 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `effects_claimed` | `claims_its_effects` |
 | `elem_at` | `the_element` |
 | `enclosed` | `is_enclosed` |
-| `encloses` | `encloses_the_site` |
 | `encloses_s` | `encloses` |
 | `entry_point` | `is_an_entry_point` |
 | `env_declared` | `is_declared` |
@@ -405,6 +416,13 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `exported_fn` | `is_exported` |
 | `exports_default` | `is_the_default_export_of` |
 | `exports_name` | `is_exported_as` |
+| `ext_call` | `is_an_external_call_of` |
+| `ext_member` | `is_an_external_member_of` |
+| `external_destructured` | `destructures_from_outside` |
+| `external_import` | `imports_from_outside` |
+| `external_module` | `is_an_external_module` |
+| `external_site` | `is_an_external_site` |
+| `external_value` | `comes_out_of` |
 | `feature` | `is_a_feature` |
 | `feature_undeclared` | `is_an_undeclared_feature` |
 | `feature_unexercised` | `is_unexercised` |
@@ -452,7 +470,9 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `has_entry` | `has_an_entry_point` |
 | `has_explicit_shape` | `has_an_explicit_shape` |
 | `has_feature` | `has_the_feature` |
+| `has_init` | `has_an_initialiser` |
 | `has_internal_home` | `has_an_internal_home` |
+| `has_module_target` | `names_a_file_of_the_code` |
 | `has_own_ctor` | `has_its_own_constructor` |
 | `has_rank` | `has_a_rank` |
 | `has_reexport_spec` | `has_a_reexport_specifier` |
@@ -706,6 +726,7 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `refined_reason` | `the_refined_reason` |
 | `refined_verdict` | `the_refined_verdict` |
 | `release` | `is_a_release` |
+| `require_site` | `is_a_require_site` |
 | `resolve_agreement` | `is_resolved_alike` |
 | `resolve_answer` | `is_answered_with` |
 | `resolve_divergence` | `is_resolved_differently` |
@@ -754,7 +775,6 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `scoped_binder` | `is_scoped` |
 | `sees_binder` | `sees` |
 | `self_referential_module` | `is_self_referential` |
-| `seq_later` | `has_a_later_expression_than` |
 | `shadowed_by` | `is_shadowed_by` |
 | `shadowed_by_param` | `is_shadowed_by_the_function` |
 | `shape` | `has_the_shape` |
@@ -839,6 +859,7 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `try_stops` | `is_stopped_by` |
 | `ts_ext` | `is_written_for` |
 | `ts_resolved` | `names_under_typescript` |
+| `type_import` | `imports_types_only` |
 | `unaccounted` | `is_unaccounted` |
 | `unaccounted_site` | `is_an_unaccounted_site` |
 | `uncompared` | `is_uncompared` |
@@ -852,6 +873,7 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `unrecorded_coverage` | `is_covered_unrecorded` |
 | `unresolved_call` | `is_unresolved` |
 | `unresolved_import` | `is_unresolved_with_shape` |
+| `unresolved_relative` | `leaves_unresolved` |
 | `unresolved_shape` | `has_residue` |
 | `unscannable` | `is_unscannable` |
 | `unscannable_seen` | `is_unscannable_yet_seen` |

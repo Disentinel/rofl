@@ -1,0 +1,74 @@
+-- examples/checks/vscode-side-effects-check.rofl — vscode_side_effects: the question of examples/vscode/side-effects.rofl
+-- over examples/vscode/mini (facts in vscode-mini-facts.rofl), every answer named. Red if one is missing or one more
+-- appears. The nodes: mini/node/pfs.ts n d100d8f9c1968a85, server.ts n34efd0fd49e79fa1, main.ts n6ce3b3e159e9764b.
+--   a wrapper module       pfs.ts writeAtomic and remove hand their parameter to fs (_25, _45), so main.ts's calls
+--                          of them (_81, _86, _90) are sites with the values of their own arguments
+--   a cross-file value     DEFAULT_PORT and HELLO_CHANNEL come from mini/common/channels.ts
+--   a literal              spawn's `editor`, execFile's 'git', fetch's url
+--   an env read            process.env.VSCODE_PORT (_54) reaches server.listen (_34) through listenOn (_52)
+--   no value               remove(this.storage.dir) (_90): the storage is injected, nothing in the code builds it
+--   a string built from parts (rules/js-concat.rofl), mini/node/paths.ts ndbdc6130c943fdee:
+--     path.join(appRoot, 'out', name) (_44)   the join's text, every part literal, beside its node
+--     `${appRoot}/logs/${kind}.log` (_66)      one text per caller's kind
+--     join(dirname(__dirname), 'cache') (_84)  a form: __dirname has no value and stays a reference
+--     dirname('/opt/app/tmp/old') (_95)        cut from the literal, a real string
+--     target += '/' + segment in a loop (_129) the initial literal, the += node and five forms, the loop unfolded three
+--                                              levels and the rest the node itself
+--     new URL('/api/update', updateBase) (_141) the URL's text, base then relative
+vse_want(nd100d8f9c1968a85_25, fs_mutation, "/tmp/settings.json").
+vse_want(nd100d8f9c1968a85_45, fs_mutation, "/tmp/cache").
+vse_want(n6ce3b3e159e9764b_81, fs_mutation, "/tmp/settings.json").
+vse_want(n6ce3b3e159e9764b_86, fs_mutation, "/tmp/cache").
+vse_want(n34efd0fd49e79fa1_34, listen, 8080).
+vse_want(n34efd0fd49e79fa1_34, listen, n34efd0fd49e79fa1_54).
+vse_want(n34efd0fd49e79fa1_48, listen, 8080).
+vse_want(n34efd0fd49e79fa1_52, listen, n34efd0fd49e79fa1_54).
+vse_want(n6ce3b3e159e9764b_102, process, "code").
+vse_want(n6ce3b3e159e9764b_108, process, "git").
+vse_want(n6ce3b3e159e9764b_114, ipc, "vscode:hello").
+vse_want(n6ce3b3e159e9764b_122, request, "https://update.code.visualstudio.com/api/update").
+vse_want(ndbdc6130c943fdee_44, fs_mutation, ndbdc6130c943fdee_48).
+vse_want(ndbdc6130c943fdee_44, fs_mutation, join(join("/opt/app", "out"), "settings.json")).
+vse_want(ndbdc6130c943fdee_66, fs_mutation, ndbdc6130c943fdee_70).
+vse_want(ndbdc6130c943fdee_66, fs_mutation, cat(cat(cat("/opt/app", "/logs/"), "main"), ".log")).
+vse_want(ndbdc6130c943fdee_66, fs_mutation, cat(cat(cat("/opt/app", "/logs/"), "shared"), ".log")).
+vse_want(ndbdc6130c943fdee_84, fs_mutation, ndbdc6130c943fdee_88).
+vse_want(ndbdc6130c943fdee_95, fs_mutation, ndbdc6130c943fdee_99).
+vse_want(ndbdc6130c943fdee_95, fs_mutation, "/opt/app/tmp").
+vse_want(ndbdc6130c943fdee_129, fs_mutation, "/opt/app").
+vse_want(ndbdc6130c943fdee_129, fs_mutation, ndbdc6130c943fdee_123).
+vse_want(ndbdc6130c943fdee_141, request, ndbdc6130c943fdee_145).
+vse_want(ndbdc6130c943fdee_141, request, url("https://update.code.visualstudio.com", "/api/update")).
+vse_want_site(n6ce3b3e159e9764b_90, fs_mutation).
+vse_want_form(ndbdc6130c943fdee_84, fs_mutation, join(dirname(ref(ndbdc6130c943fdee_92)), "cache")).
+vse_want_form(ndbdc6130c943fdee_129, fs_mutation, cat("/opt/app", cat("/", ref(ndbdc6130c943fdee_127)))).
+vse_want_forms(ndbdc6130c943fdee_84, 1).
+vse_want_forms(ndbdc6130c943fdee_129, 5).
+vse_want_site(S, F) :- vse_want(S, F, _).
+vse_want_count(fs_mutation, 10, 9).
+vse_want_count(listen, 3, 3).
+vse_want_count(process, 2, 2).
+vse_want_count(ipc, 1, 1).
+vse_want_count(request, 2, 2).
+
+vse_missing(S, F, V)  :- vse_want(S, F, V), not side_effect_value(S, F, V).
+vse_extra(S, F, V)    :- side_effect_value(S, F, V), not vse_want(S, F, V).
+vse_missing_site(S, F) :- vse_want_site(S, F), not side_effect_site(S, F).
+vse_extra_site(S, F)  :- side_effect_site(S, F), not vse_want_site(S, F).
+vse_count_wrong(F)    :- side_effect_count(F, N, V), not vse_want_count(F, N, V).
+vse_count_missing(F)  :- vse_want_count(F, N, V), not side_effect_count(F, N, V).
+vse_env_missing()     :- not side_effect_env(n34efd0fd49e79fa1_54, "VSCODE_PORT").
+vse_form_missing(S, F, T) :- vse_want_form(S, F, T), not side_effect_form(S, F, T).
+vse_form_site(S)      :- side_effect_form(S, _, _).
+vse_forms_wrong(S)    :- vse_form_site(S), N is count(T : side_effect_form(S, _, T)), not vse_want_forms(S, N).
+vse_forms_missing(S)  :- vse_want_forms(S, _), not vse_form_site(S).
+alarm(vse_missing).
+alarm(vse_extra).
+alarm(vse_missing_site).
+alarm(vse_extra_site).
+alarm(vse_count_wrong).
+alarm(vse_count_missing).
+alarm(vse_env_missing).
+alarm(vse_form_missing).
+alarm(vse_forms_wrong).
+alarm(vse_forms_missing).

@@ -1,0 +1,10 @@
+-- examples/checks/holes-negation-unknown-positive.rofl — a POSITIVE reader of
+-- `unknown` over what a hole left out is a shrug too, in both engines
+-- (docs/aggregates.md, "Shrugs, as built"): hup_maybe(c) is no answer, not
+-- absent, where hup_win(c) may hold.
+edb(hup_big).
+edb(hup_pos).
+hup_big(1152921504606846975).
+hup_pos(c).
+hup_win(c) :- hup_big(B), Z is B * 2, Z > 0.
+hup_maybe(X) :- hup_pos(X), unknown(hup_win(X)).

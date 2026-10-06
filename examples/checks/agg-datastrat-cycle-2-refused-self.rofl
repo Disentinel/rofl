@@ -1,0 +1,11 @@
+-- expect-refusal: in the data the cell reads itself: sum@val(r1) -> value(b1,_) -> val(n1,_) -> sum@val(r1)
+-- examples/checks/agg-datastrat-cycle-2-refused-self.rofl — a cell that adds
+-- itself: b1 = SUM(a1, b1).
+edb(input). edb(formula). edb(ref). edb(plus). edb(sum_head). edb(in_range).
+input(a1, 2).
+formula(b1, n1). sum_head(n1, r1). in_range(r1, a1). in_range(r1, b1).
+value(C, V) :- input(C, V).
+value(C, V) :- formula(C, N), val(N, V).
+val(N, V) :- ref(N, C), value(C, V).
+val(N, V) :- plus(N, A, B), val(A, X), val(B, Y), V is X + Y.
+val(N, V) :- sum_head(N, I), V is sum(X ; C : in_range(I, C), value(C, X)).

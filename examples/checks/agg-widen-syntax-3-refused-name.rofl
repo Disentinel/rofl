@@ -1,0 +1,3 @@
+-- expect-refusal: `widen` is followed by the number of improvements
+-- the number is an integer literal, not a name
+lattice sxwr_name(A, hull I) widen n.

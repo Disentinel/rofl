@@ -1,0 +1,22 @@
+-- examples/checks/agg-shrug-minmax-check.rofl — agg_minmax_shrug over
+-- agg-shrug-agg-data.rofl: a min or a max over a member a hole left out is a
+-- shrug inherited from the fault (the value a hole does not carry could be
+-- below or above any known one), and so is one whose inner body reads
+-- `unknown(A)` of one; a min the unknown cannot reach is decided.
+sam_lo(G, M) :- sa_g(G), M is min(Y : sa_x(G, _, Y)).
+sam_hi(G, M) :- sa_g(G), M is max(Y : sa_x(G, _, Y)).
+sam_settled(M) :- M is min(V : sa_pos(X), not unknown(sa_w(X)), sa_x(p, _, V)).
+sam_known(M) :- M is max(V : sa_x(p, _, V), sa_w(a)).
+sam_none(G) :- sa_g(G), not sam_lo(G, 2).
+-- expect-row: sam_lo[main](p,2)
+-- expect-row: sam_hi[main](p,3)
+-- expect-row: shrug[$kernel](sam_lo(q,$unknown_value),inherited,from($cons($rule(r1f3a2f99),$nil)))
+-- expect-row: shrug[$kernel](sam_hi(r,$unknown_value),inherited,from($cons($rule(r1f3a2f99),$nil)))
+-- expect-no-row: sam_lo[main](q,
+-- expect-no-row: sam_hi[main](r,
+-- expect-row: shrug[$kernel](sam_settled($unknown_value),inherited,from($cons($rule(rcc5ce487),$nil)))
+-- expect-no-row: sam_settled[main](
+-- expect-row: sam_known[main](3)
+-- expect-row: sam_none[main](s)
+-- expect-no-row: sam_none[main](p)
+-- expect-row: shrug[$kernel](sam_none(q),inherited,from($cons($rule(r1f3a2f99),$nil)))

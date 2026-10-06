@@ -1,0 +1,3 @@
+-- expect-refusal: needs at least one term
+-- a semicolon with no key after it
+sxhr_empty_key(M) :- M is median(V ; : sxh_l(_, _, V, _)).

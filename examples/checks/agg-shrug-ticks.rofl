@@ -1,0 +1,21 @@
+-- examples/checks/agg-shrug-ticks.rofl — agg_cell_shrug_ticks, in both
+-- engines: a shrug crosses a tick as the next tick's own. At tick 0 q's value
+-- is no number, so stk_y(q, _) is not staged; at tick 1 it is a shrug
+-- inherited from the boundary's `$next` hole, whose root is in tick 0
+-- (`earlier(0)`), and so is what a negation over it reaches. The rows are
+-- data: each tick's are read and carried to the next, where the state holds
+-- them as facts.
+edb(stk_v).
+edb(stk_key).
+stk_v(q, oops). stk_v(r, 1).
+stk_key(q). stk_key(r). stk_key(s).
+stk_key(K)@next :- stk_key(K).
+stk_y(K, Y)@next :- stk_v(K, X), Y is X + 1.
+stk_absent(K) :- stk_key(K), not stk_y(K, _).
+stk_was(A, R, M)@next :- shrug(A, R, M).
+-- what tick 1 held as shrugs, read at tick 2
+-- expect-row: stk_was[main]($next(stk_y,main,1,$cons(q,$cons($unknown_value,$nil))),inherited,earlier(0))
+-- expect-row: stk_was[main](stk_y(q,$unknown_value),inherited,from($cons($next(stk_y,main,1,$cons(q,$cons($unknown_value,$nil))),$nil)))
+-- expect-row: stk_was[main](stk_absent(q),inherited,from($cons($next(stk_y,main,1,$cons(q,$cons($unknown_value,$nil))),$nil)))
+-- expect-no-row: stk_was[main](stk_absent(s)
+-- expect-no-row: stk_was[main](stk_absent(r)

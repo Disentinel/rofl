@@ -252,18 +252,10 @@
   <pre class="tight">whynot live[main](f_new_checkout):
   rule r2978f2d9: live[main](?F)@now :- ordered[main](?F,?C,?_$0)@now, usable[main](?C)@now
     failed premise: usable[main](c_new_checkout_1)
-      rule r1f24f2b8: usable[main](?C)@now :- clause_known[main](?C)@now, not dead_clause[main](?C)@now, ok_from[main](?C,1)@now
-        failed premise: ok_from[main](c_new_checkout_1,1)
-          rule re44c5a95: ok_from[main](?C,?K)@now :- req_at[main](?C,?K,?G)@now, live[main](?G)@now, ?K1 is +(?K,1), ok_from[main](?C,?K1)@now
-            failed premise: live[main](f_payments_v2)
-              rule r2978f2d9: live[main](?F)@now :- ordered[main](?F,?C,?_$0)@now, usable[main](?C)@now
-                failed premise: usable[main](c_payments_v2_1)
-                  rule r1f24f2b8: usable[main](?C)@now :- clause_known[main](?C)@now, not dead_clause[main](?C)@now, ok_from[main](?C,1)@now
-                    failed premise: not dead_clause[main](c_payments_v2_1) -- blocked: dead_clause[main](c_payments_v2_1) holds
-          rule r81b00576: ok_from[main](?C,?N1)@now :- req_count[main](?C,?N)@now, ?N1 is +(?N,1)
-            failed premise: 1 is +(1,1) [builtin fails]
+      rule r3f91a21e: usable[main](?C)@now :- clause_known[main](?C)@now, not dead_clause[main](?C)@now, premises[main](?C,?N)@now, at_least(?N, ?G : requires[main](?C,?G)@now, live[main](?G)@now)
+        failed premise: at_least(1, ?G#1 : requires[main](c_new_checkout_1,?G#1), live[main](?G#1)) reached 0 of 1 [threshold]
     failed premise: usable[main](c_new_checkout_2)
-      rule r1f24f2b8: usable[main](?C)@now :- clause_known[main](?C)@now, not dead_clause[main](?C)@now, ok_from[main](?C,1)@now
+      rule r3f91a21e: usable[main](?C)@now :- clause_known[main](?C)@now, not dead_clause[main](?C)@now, premises[main](?C,?N)@now, at_least(?N, ?G : requires[main](?C,?G)@now, live[main](?G)@now)
         failed premise: not dead_clause[main](c_new_checkout_2) -- blocked: dead_clause[main](c_new_checkout_2) holds</pre>
 
   <p class="kid">Read it from the bottom: the second rule asks for the channel to be
@@ -363,7 +355,7 @@
     input a caller supplies per query is a context, and in a world where nobody asked
     about a context there is none.</p>
 
-  <pre class="tight">  43 rules of moot.rofl encoded as clauses over 84 dimensions
+  <pre class="tight">  42 rules of moot.rofl encoded as clauses over 83 dimensions
 
   unreachable relations: ctx ctx_dim_ok
   rules that can never fire in this store: 1

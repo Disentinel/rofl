@@ -149,7 +149,7 @@ const qs = (s: string): string => '"' + s.replace(/\\/g, '\\\\').replace(/"/g, '
 function strFacts(s: string): string[] {
   if (s.length === 0) return [];
   const segs = s.split('/');
-  const out = [`str_char0[code](${qs(s)}, ${qs(s[0] as string)}).`, `str_segs[code](${qs(s)}, ${segs.length}).`];
+  const out = [`str_char0[code](${qs(s)}, ${qs(String.fromCodePoint(s.codePointAt(0)!))}).`, `str_segs[code](${qs(s)}, ${segs.length}).`];
   segs.forEach((g, i) => out.push(`str_seg[code](${qs(s)}, ${i}, ${qs(g)}).`));
   const c = s.indexOf(':');
   if (c > 0) out.push(`str_scheme[code](${qs(s)}, ${qs(s.slice(0, c))}).`);

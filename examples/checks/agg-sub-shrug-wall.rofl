@@ -1,0 +1,14 @@
+-- examples/checks/agg-sub-shrug-wall.rofl — agg_sub_shrug_wall, over
+-- agg-sub-budget.rofl cut at 400 steps: the wall's shrugs on a subsumptive
+-- relation are a lattice's. The relation the wall left open is a shrug
+-- `budget` with what was spent; each cell withdrawn on an improving cycle a
+-- shrug `divergence` naming the cells of its own cycle, and no other's (a
+-- to a and a to b improve through each other, b to a and b to b likewise);
+-- what such a cell leaves out is a shrug inherited from the cells it rests
+-- on. The front the wall did not reach is no shrug.
+-- expect-row: shrug[$kernel]($lattice(asb_d),budget,spent(steps,401,400))
+-- expect-row: shrug[$kernel]($lattice(asb_d,main,0,$cons(a,$cons(b,$nil))),divergence,cycle($cons($lattice(asb_d,main,0,$cons(a,$cons(a,$nil))),$cons($lattice(asb_d,main,0,$cons(a,$cons(b,$nil))),$nil))))
+-- expect-row: shrug[$kernel]($lattice(asb_d,main,0,$cons(b,$cons(b,$nil))),divergence,cycle($cons($lattice(asb_d,main,0,$cons(b,$cons(a,$nil))),$cons($lattice(asb_d,main,0,$cons(b,$cons(b,$nil))),$nil))))
+-- expect-row: shrug[$kernel](asb_d(a,b,$unknown_value),inherited,from($cons($lattice(asb_d,main,0,$cons(a,$cons(a,$nil))),$cons($lattice(asb_d,main,0,$cons(a,$cons(b,$nil))),$nil))))
+-- expect-no-row: shrug[$kernel]($lattice(asb_f
+-- expect-no-row: shrug[$kernel](asb_f(

@@ -1,0 +1,79 @@
+-- examples/checks/agg-incr-minmax.rofl — agg_incr_minmax: min, max, or and
+-- and cells under RETRACTION. An idempotent cell has no inverse and keeps
+-- only the members that reach its value, so the Rust engine derives the one
+-- cell again from the facts; the state must be a world's that never had the
+-- retracted facts.
+--
+--   am_v(a, 3, k1)      one of two tied members of a's min leaves: the min stays 3
+--   am_v(b, 9, k3)      b's max member leaves: the max falls to 4
+--   am_flag(a, true)    a's `or` flips to false
+--   am_flag(c, false)   c's only flag: no cell value is left (`none`)
+edb(am_v).
+edb(am_flag).
+edb(am_grp).
+am_grp(a).
+am_grp(b).
+am_grp(c).
+am_v(a, 3, k1).
+am_v(a, 3, k2).
+am_v(a, 8, k4).
+am_v(b, 9, k3).
+am_v(b, 4, k5).
+am_flag(a, true).
+am_flag(a, false).
+am_flag(b, true).
+am_flag(c, false).
+
+am_lo(G, M)  :- am_grp(G), M is min(V : am_v(G, V, _)).
+am_hi(G, M)  :- am_grp(G), M is max(V : am_v(G, V, _)).
+am_any(G, B) :- am_grp(G), B is or(X : am_flag(G, X)).
+am_all(G, B) :- am_grp(G), B is and(X : am_flag(G, X)).
+
+-- the state after the retractions, row by row
+-- expect-row: am_all[main](a,false) tick drv support=1
+-- expect-row: am_all[main](b,true) tick drv support=1
+-- expect-row: am_any[main](a,false) tick drv support=1
+-- expect-row: am_any[main](b,true) tick drv support=1
+-- expect-row: am_hi[main](a,8) tick drv support=1
+-- expect-row: am_hi[main](b,4) tick drv support=1
+-- expect-row: am_lo[main](a,3) tick drv support=1
+-- expect-row: am_lo[main](b,4) tick drv support=1
+-- expect-row: cell $cell(r5d0a6d5e,2,0,$cons(a,$nil)) min = 3 h=1 tick=0 sealed=[am_v@0] alg=idempotent,lattice use=rederive
+-- expect-row: mem $cell(r5d0a6d5e,2,0,$cons(a,$nil)) #1 id=5b1727624953fdfc (3) h=1 [fact:am_v[main](a,3,k2)]
+-- expect-row: cell $cell(r5d0a6d5e,2,0,$cons(b,$nil)) min = 4 h=1 tick=0 sealed=[am_v@0] alg=idempotent,lattice use=rederive
+-- expect-row: mem $cell(r5d0a6d5e,2,0,$cons(b,$nil)) #1 id=0d0bdd8ab75e891e (4) h=1 [fact:am_v[main](b,4,k5)]
+-- expect-row: cell $cell(r5d0a6d5e,2,0,$cons(c,$nil)) min = none h=0 tick=0 sealed=[am_v@0] alg=idempotent,lattice use=rederive
+-- expect-row: cell $cell(r939a4bb3,2,0,$cons(a,$nil)) and = false h=1 tick=0 sealed=[am_flag@0] alg=idempotent,lattice use=rederive
+-- expect-row: mem $cell(r939a4bb3,2,0,$cons(a,$nil)) #1 id=29d05b59177a4aee (false) h=1 [fact:am_flag[main](a,false)]
+-- expect-row: cell $cell(r939a4bb3,2,0,$cons(b,$nil)) and = true h=1 tick=0 sealed=[am_flag@0] alg=idempotent,lattice use=rederive
+-- expect-row: mem $cell(r939a4bb3,2,0,$cons(b,$nil)) #1 id=02b8a37ed3d841c5 (true) h=1 [fact:am_flag[main](b,true)]
+-- expect-row: cell $cell(r939a4bb3,2,0,$cons(c,$nil)) and = none h=0 tick=0 sealed=[am_flag@0] alg=idempotent,lattice use=rederive
+-- expect-row: cell $cell(rac0f3bf2,2,0,$cons(a,$nil)) or = false h=1 tick=0 sealed=[am_flag@0] alg=idempotent,lattice use=rederive
+-- expect-row: mem $cell(rac0f3bf2,2,0,$cons(a,$nil)) #1 id=1f0387ce133d695e (false) h=1 [fact:am_flag[main](a,false)]
+-- expect-row: cell $cell(rac0f3bf2,2,0,$cons(b,$nil)) or = true h=1 tick=0 sealed=[am_flag@0] alg=idempotent,lattice use=rederive
+-- expect-row: mem $cell(rac0f3bf2,2,0,$cons(b,$nil)) #1 id=9c0977b952b47095 (true) h=1 [fact:am_flag[main](b,true)]
+-- expect-row: cell $cell(rac0f3bf2,2,0,$cons(c,$nil)) or = none h=0 tick=0 sealed=[am_flag@0] alg=idempotent,lattice use=rederive
+-- expect-row: cell $cell(rbe1246fe,2,0,$cons(a,$nil)) max = 8 h=1 tick=0 sealed=[am_v@0] alg=idempotent,lattice use=rederive
+-- expect-row: mem $cell(rbe1246fe,2,0,$cons(a,$nil)) #1 id=3183c6581610d374 (8) h=1 [fact:am_v[main](a,8,k4)]
+-- expect-row: cell $cell(rbe1246fe,2,0,$cons(b,$nil)) max = 4 h=1 tick=0 sealed=[am_v@0] alg=idempotent,lattice use=rederive
+-- expect-row: mem $cell(rbe1246fe,2,0,$cons(b,$nil)) #1 id=0bfdec56ad926331 (4) h=1 [fact:am_v[main](b,4,k5)]
+-- expect-row: cell $cell(rbe1246fe,2,0,$cons(c,$nil)) max = none h=0 tick=0 sealed=[am_v@0] alg=idempotent,lattice use=rederive
+-- and nothing of what they supported before
+-- expect-no-row: am_all[main](c,false) tick drv support=1
+-- expect-no-row: am_any[main](a,true) tick drv support=1
+-- expect-no-row: am_any[main](c,false) tick drv support=1
+-- expect-no-row: am_hi[main](b,9) tick drv support=1
+-- expect-no-row: mem $cell(r5d0a6d5e,2,0,$cons(a,$nil)) #1 id=5b0d0762494b7317 (3) h=1 [fact:am_v[main](a,3,k1)]
+-- expect-no-row: mem $cell(r5d0a6d5e,2,0,$cons(a,$nil)) #2 id=5b1727624953fdfc (3) h=1 [fact:am_v[main](a,3,k2)]
+-- expect-no-row: cell $cell(r939a4bb3,2,0,$cons(c,$nil)) and = false h=1 tick=0 sealed=[am_flag@0] alg=idempotent,lattice use=rederive
+-- expect-no-row: mem $cell(r939a4bb3,2,0,$cons(c,$nil)) #1 id=77813d8880663012 (false) h=1 [fact:am_flag[main](c,false)]
+-- expect-no-row: cell $cell(rac0f3bf2,2,0,$cons(a,$nil)) or = true h=1 tick=0 sealed=[am_flag@0] alg=idempotent,lattice use=rederive
+-- expect-no-row: mem $cell(rac0f3bf2,2,0,$cons(a,$nil)) #1 id=9d85f8802a4c3b53 (true) h=1 [fact:am_flag[main](a,true)]
+-- expect-no-row: cell $cell(rac0f3bf2,2,0,$cons(c,$nil)) or = false h=1 tick=0 sealed=[am_flag@0] alg=idempotent,lattice use=rederive
+-- expect-no-row: mem $cell(rac0f3bf2,2,0,$cons(c,$nil)) #1 id=9562ea1dc49204c2 (false) h=1 [fact:am_flag[main](c,false)]
+-- expect-no-row: cell $cell(rbe1246fe,2,0,$cons(b,$nil)) max = 9 h=1 tick=0 sealed=[am_v@0] alg=idempotent,lattice use=rederive
+-- expect-no-row: mem $cell(rbe1246fe,2,0,$cons(b,$nil)) #1 id=efe5542c9f87d614 (9) h=1 [fact:am_v[main](b,9,k3)]
+-- expect-no-row: am_v[main](a,3,k1)
+-- expect-no-row: am_v[main](b,9,k3)
+-- expect-no-row: am_flag[main](a,true)
+-- expect-no-row: am_flag[main](c,false)

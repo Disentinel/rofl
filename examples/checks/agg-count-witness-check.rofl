@@ -1,0 +1,52 @@
+-- examples/checks/agg-count-witness-check.rofl — agg_count_witness: a count
+-- cell is a Group. Its members are exactly the distinct ballots of the
+-- candidate (a ballot through two channels is one member), each cites a real
+-- `ac_cast` fact holding that ballot, and the cell sealed exactly `ac_cast`.
+acw_cell(C, Cand) :- concludes[$kernel](R, ac_votes), agg_sealed[$kernel](C, _, _),
+                     C = $cell(R, _, _, $cons(Cand, $nil)).
+acw_member(C, B)  :- acw_cell(C, _), agg_member[$kernel](C, _, $cons(B, $nil), _).
+acw_should(C, B)  :- acw_cell(C, Cand), ac_cast(B, Cand, _).
+member_missing(C, B) :- acw_should(C, B), not acw_member(C, B).
+member_extra(C, B)   :- acw_member(C, B), not acw_should(C, B).
+-- one member per ballot, never two
+member_twice(C, B)   :- agg_member[$kernel](C, I, $cons(B, $nil), _), agg_member[$kernel](C, J, $cons(B, $nil), _),
+                        acw_cell(C, _), I != J.
+-- every member premise is the `ac_cast` fact of that ballot and candidate
+acw_prem_ok(C, I)  :- acw_cell(C, Cand), agg_member[$kernel](C, I, $cons(B, $nil), _),
+                      agg_member_prem[$kernel](C, I, P),
+                      P = $fact(ac_cast, main, $cons(B, $cons(Cand, $cons(H, $nil)))), ac_cast(B, Cand, H).
+prem_mismatch(C, I) :- acw_cell(C, _), agg_member[$kernel](C, I, _, _), not acw_prem_ok(C, I).
+prem_foreign(C, I)  :- acw_cell(C, _), agg_member_prem[$kernel](C, I, P), not acw_is_cast(P).
+acw_is_cast(P)      :- agg_member_prem[$kernel](_, _, P), P = $fact(ac_cast, main, _).
+-- sealed: exactly the relation it read
+acw_sealed_cast(C)  :- acw_cell(C, _), agg_sealed[$kernel](C, ac_cast, _).
+seal_missing(C)     :- acw_cell(C, _), not acw_sealed_cast(C).
+seal_foreign(C, R)  :- acw_cell(C, _), agg_sealed[$kernel](C, R, _), R != ac_cast.
+-- and there is something to check: one cell per candidate
+acw_cand(Cand)      :- acw_cell(_, Cand).
+cell_absent(Cand)   :- ac_candidate(Cand), not acw_cand(Cand).
+alarm(member_missing).
+alarm(member_extra).
+alarm(member_twice).
+alarm(prem_mismatch).
+alarm(prem_foreign).
+alarm(seal_missing).
+alarm(seal_foreign).
+alarm(cell_absent).
+
+-- THE REPRESENTATIVE IS THE LEAST SIGNATURE. Ballot 1 below is one member
+-- with two derivations. Solved in written order the one through acw_z(1, m,
+-- k2) comes first; its signature — the premise keys, sorted — is the larger,
+-- because acw_a(k2) sorts after acw_a(k1). The member must cite the other.
+edb(acw_z).
+edb(acw_a).
+acw_z(1, m, k2).
+acw_z(1, n, k1).
+acw_a(k1).
+acw_a(k2).
+acw_rep(N)        :- N is count(B : acw_z(B, _, Y), acw_a(Y)).
+acw_rep_prem(P)   :- concludes[$kernel](R, acw_rep), agg_member_prem[$kernel]($cell(R, _, _, $nil), 1, P).
+rep_not_least()   :- acw_rep_prem($fact(acw_a, main, $cons(k2, $nil))).
+rep_missing()     :- not acw_rep_prem($fact(acw_a, main, $cons(k1, $nil))).
+alarm(rep_not_least).
+alarm(rep_missing).

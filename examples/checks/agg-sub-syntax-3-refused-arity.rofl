@@ -1,0 +1,3 @@
+-- expect-refusal: its two facts are written at two arities
+-- the two facts are of one relation at one arity
+sxsr_arity(A, X) <= sxsr_arity(A, Y, Z) :- Y < X.

@@ -160,6 +160,32 @@ In a notebook (`npm run nb`), `why` and `whynot` print without the engine's
 bookkeeping (`--json` keeps it as `whyRaw`), and `excise F` in a cell takes
 the fact F out of the world every line was asked over and lists the lines
 whose answers move, before and after, leaving their own answers as they are.
+
+A `why` of a value (`side_effect_value(S, F, V)`, `E may be the literal V`,
+any answer whose last argument a premise relates to something) prints first
+the steps the value took, origin first, one line each: the file and line, the
+code, and what the step is (the literal, reads `x`, the parameter `p`,
+argument 0 of `f()`, exported, imported from a file); a line whose file is
+not the one above it begins `across files:`. A step through a [surface]
+relation (`sx_*`) is written as the hop it stands for. Under the steps is the
+proof, with node ids written as the code and its place, and the premises that
+hold because nothing says otherwise (`not ... (nothing says so)`) counted on
+one line per step, `+ N side conditions hold`, and a last line says
+`(the whole proof: --all)`. `--all` prints every answer of a line (by default
+the first 12) and every proof whole, line for line as before, without the
+steps; `--json` has the three:
+`chain`, `brief` and `why` (playground/chain.ts reads the engine's text, so
+both engines give one chain). A `why` of no value prints its proof whole.
+
+    examples/vscode/side-effects.rofl.md:52: why side_effect_value(nd100d8f9c1968a85_25, fs_mutation, "/tmp/settings.json")
+      the value's steps, from where it is written:
+        mini/node/main.ts:14  "/tmp/settings.json"  the literal
+        mini/node/main.ts:14  writeAtomic()         argument 0 of function writeAtomic() at mini/node/pfs.ts:4
+        mini/node/pfs.ts:5    path                  across files: the parameter path
+        mini/node/pfs.ts:5    fs.writeFileSync()    argument 0 at the answer
+      the proof:
+      side_effect_value([fs.writeFileSync() at mini/node/pfs.ts:5],fs_mutation,"/tmp/settings.json"), because
+      ...
 A cell whose rule concludes one of the model's own sentences must say
 `extends <relation>`. `code:` and `reads:` paths are relative to the
 notebook, absolute, or from `~`. A code file the scanner could not parse is

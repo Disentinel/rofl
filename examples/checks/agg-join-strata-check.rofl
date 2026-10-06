@@ -1,0 +1,31 @@
+-- examples/checks/agg-join-strata-check.rofl — agg_join_strata: a join
+-- lattice recurses, because its operation is idempotent, which is the
+-- algebra flag the recursion gate reads (safety.rofl, `lattice_refused(P,
+-- not_idempotent)`). The values that exist only through a cycle are here:
+-- d's component reaches a and b through c, a range and a bitset go round a
+-- cycle, and y and z are live into b2 only round the loop. A count of a
+-- join's own cells and a negation of one, each inside its recursion
+-- (agg-join-strata-2-refused-count.rofl, -3-refused-neg.rofl), are refused,
+-- so their rules never reach this world.
+ajsc_want(aj_comp, d, set(a, b, c, d)).
+ajsc_want(aj_range, h1, iv(-2, 7)).
+ajsc_want(aj_bits, h1, 21).
+ajsc_want(aj_live_in, b2, set(x, y, z)).
+ajsc_have(aj_comp, K, V)    :- aj_comp(K, V).
+ajsc_have(aj_range, K, V)   :- aj_range(K, V).
+ajsc_have(aj_bits, K, V)    :- aj_bits(K, V).
+ajsc_have(aj_live_in, K, V) :- aj_live_in(K, V).
+ajsc_missing(Rel, K, V)     :- ajsc_want(Rel, K, V), not ajsc_have(Rel, K, V).
+-- the recursion is a positive edge of its own relation, not an aggregate's
+ajsc_self(Rel)      :- concludes[$kernel](R, Rel), premise_pos[$kernel](R, Rel), lattice_decl[$kernel](Rel, _, _).
+ajsc_not_recursive(aj_comp)  :- not ajsc_self(aj_comp).
+ajsc_not_recursive(aj_range) :- not ajsc_self(aj_range).
+ajsc_not_recursive(aj_bits)  :- not ajsc_self(aj_bits).
+ajsc_as_aggregate(Rel) :- concludes[$kernel](R, Rel), premise_agg[$kernel](R, Rel), lattice_decl[$kernel](Rel, _, _).
+ajsc_accepted(Rel)  :- concludes[$kernel](_, Rel), ajsc_refused(Rel).
+ajsc_refused(ajsr_s).
+ajsc_refused(ajsr_t).
+alarm(ajsc_missing).
+alarm(ajsc_not_recursive).
+alarm(ajsc_as_aggregate).
+alarm(ajsc_accepted).

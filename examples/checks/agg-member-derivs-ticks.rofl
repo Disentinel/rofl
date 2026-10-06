@@ -1,0 +1,34 @@
+-- examples/checks/agg-member-derivs-ticks.rofl — agg_member_derivs_ticks, run
+-- two ticks deep with `rofl-load --explain` and retain_ticks 0: A MEMBER'S
+-- OTHER DERIVATIONS KEEP THE PROVENANCE OF THEIR PAST-TICK PREMISES.
+-- mt_n(1) is staged @next at tick 0 and read at tick 1 through the cell
+-- tick 0 sealed. Its one member, 2, has two derivations, through mt_lv(a)
+-- and through mt_lv(c); both facts are derived at tick 0 by one rule, and the
+-- derived_by row of a past-tick fact is kept only while a live cell cites it.
+-- The cell cites mt_lv(a) in its canonical derivation and mt_lv(c) in the
+-- other one only: `why all` must name both with the rule, `[past tick]`, not
+-- the bare `mt_lv[main](c) [past tick]` of a row that was pruned.
+edb(mt_chan). edb(mt_src).
+mt_chan(2, a). mt_chan(2, c).
+mt_src(a). mt_src(c).
+mt_lv(C) :- mt_src(C).
+mt_n(N)@next :- N is count(K : mt_chan(K, C), mt_lv(C)).
+
+edb(explain_request).
+edb(explained).
+explain_request(why_all, mt_n(1)).
+mty_line(L) :- explained[$explain](why_all, mt_n(1), _, L).
+mty_has(T) :- mty_line(L), mty_text(T), N is str_segs(L, T), N > 1.
+mty_text("#1.2 (2) [another derivation]").
+mty_text("mt_lv[main](a)  <= ").
+mty_text("mt_lv[main](c)  <= ").
+mty_text("@tick 0 [past tick]").
+mty_text_missing(T) :- mty_text(T), not mty_has(T).
+mty_bare(L) :- mty_line(L), N is str_segs(L, "mt_lv[main](c) [past tick]"), N > 1.
+mty_explain_refused() :- explained[$explain](why_all, mt_n(1), 0, _).
+alarm(mty_text_missing).
+alarm(mty_bare).
+alarm(mty_explain_refused).
+mty_text(T)@next :- mty_text(T).
+explain_request(K, A)@next :- explain_request(K, A).
+alarm(R)@next :- alarm(R).

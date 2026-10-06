@@ -28,6 +28,8 @@
 
 import { Rofl } from '../src/api.ts';
 import { derivations } from './derivations.ts';
+import { provenanceRow } from '../src/reflect.ts';
+import { fnv1a } from '../src/unify.ts';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
@@ -38,6 +40,44 @@ for (let i = 0; i < argv.length; i++) if (argv[i] === '--out') out = argv[++i];
 
 const boot = fs.readFileSync(path.join(ROOT, 'boot.rofl'), 'utf8');
 
+// WHAT THE CORPUS WAS MADE FROM, written beside it as STAMP so a reader can
+// refuse a corpus that no longer matches the tree (rust/rofl/src/corpus.rs):
+// every file read, every directory walked for worlds, every pairing file
+// looked for and not found, and the TypeScript the kernel is.
+const rel = (p: string) => path.relative(ROOT, p).split(path.sep).join('/');
+const dirs = new Map<string, string>();
+const absent = new Set<string>();
+function walked(dir: string, suffix: string): void { dirs.set(rel(dir), suffix); }
+function listing(dir: string, suffix: string): string {
+  return fs.readdirSync(path.join(ROOT, dir)).sort()
+    .filter((e) => e.endsWith(suffix) || fs.statSync(path.join(ROOT, dir, e)).isDirectory())
+    .map((e) => fs.statSync(path.join(ROOT, dir, e)).isDirectory() ? e + '/' : e).join('\n');
+}
+/** The generator and every repository file it imports, transitively. */
+function codeInputs(): string[] {
+  const seen = new Set<string>();
+  const todo = [path.join(ROOT, 'scripts/port_corpus.ts')];
+  while (todo.length > 0) {
+    const f = todo.pop()!;
+    if (seen.has(f)) continue;
+    seen.add(f);
+    for (const m of fs.readFileSync(f, 'utf8').matchAll(/(?:from|import)\s+'(\.{1,2}\/[^']+\.ts)'/g)) {
+      todo.push(path.resolve(path.dirname(f), m[1]));
+    }
+  }
+  return [...seen].map(rel);
+}
+function stamp(files: string[]): string {
+  const lines = ['-- what this corpus was generated from; rust/rofl/src/corpus.rs refuses it when any line no longer holds'];
+  for (const f of [...new Set(files)].sort()) {
+    const t = fs.readFileSync(path.join(ROOT, f), 'utf8');
+    lines.push(`file\t${fnv1a(t)}\t${t.length}\t${f}`);
+  }
+  for (const [d, suffix] of [...dirs].sort()) lines.push(`dir\t${fnv1a(listing(d, suffix))}\t${suffix}\t${d}`);
+  for (const a of [...absent].sort()) lines.push(`absent\t${a}`);
+  return lines.join('\n') + '\n';
+}
+
 /** Every world this repository can build from `.rofl` text alone: a single
  *  file under examples/, a directory of them loaded together, or a rule pack
  *  beside the facts of the same name. A demo whose world is assembled in
@@ -46,9 +86,16 @@ const boot = fs.readFileSync(path.join(ROOT, 'boot.rofl'), 'utf8');
 function worlds(): [string, string[]][] {
   const out: [string, string[]][] = [];
   const ex = path.join(ROOT, 'examples');
+  walked(ex, '.rofl');
   for (const e of fs.readdirSync(ex).sort()) {
     const p = path.join(ex, e);
+    // `examples/checks/` is one file per declared world and never a world
+    // itself (scripts/goldens.ts `worlds`): loaded together its members answer
+    // about their union, which is nobody's question, and every load of it
+    // evaluates all that came before (f_the_port_corpus_loaded_every_check_as_one_world)
+    if (e === 'checks') continue;
     if (fs.statSync(p).isDirectory()) {
+      walked(p, '.rofl');
       const files = fs.readdirSync(p).sort().filter((x) => x.endsWith('.rofl')).map((x) => path.join(p, x));
       if (files.length > 0) out.push([e, files]);
     } else if (e.endsWith('.rofl')) out.push([e.replace(/\.rofl$/, ''), [p]]);
@@ -69,6 +116,7 @@ function worlds(): [string, string[]][] {
   for (const r of glob('rules')) {
     const name = 'rules_' + path.relative(path.join(ROOT, 'rules'), r).replace(/\.rofl$/, '').replace(/[/]/g, '_');
     const facts = path.join(ROOT, 'facts', path.basename(r));
+    if (!fs.existsSync(facts)) absent.add(rel(facts));
     out.push([name, fs.existsSync(facts) ? [facts, r] : [r]]);
   }
 
@@ -81,9 +129,11 @@ function worlds(): [string, string[]][] {
 function glob(dir: string): string[] {
   const base = path.join(ROOT, dir);
   const out: string[] = [];
+  walked(base, '.rofl');
   for (const e of fs.readdirSync(base).sort()) {
     const p = path.join(base, e);
     if (fs.statSync(p).isDirectory()) {
+      walked(p, '.rofl');
       for (const f of fs.readdirSync(p).sort()) if (f.endsWith('.rofl')) out.push(path.join(p, f));
     } else if (e.endsWith('.rofl')) out.push(p);
   }
@@ -97,8 +147,11 @@ const index: string[] = [];
 const TICKS = 3;
 let ok = 0, skipped = 0, ticked = 0;
 const provless: string[] = [];
-for (const [name, files] of worlds()) {
+const all = worlds();
+const droppedRows: string[] = [];
+for (const [name, files] of all) {
   let seed: string, want: string, deriv: string, facts: number, partial: boolean;
+  const dropped: string[] = [];
   try {
     // A FILE THAT IS NOT A PROGRAM DROPS ITSELF, NOT THE WORLD. `examples/
     // ring1/l1.dense.rofl` is a dense ENCODING of l1.rofl's rules, checked for
@@ -107,11 +160,11 @@ for (const [name, files] of worlds()) {
     // `ring1` was absent from the corpus, taking with it the only user of
     // `str_char`, `str_sub` and `atom_of` among the examples. One file that is
     // data cost seven destructors their only conformance case.
-    const dropped: string[] = [];
     const direct = new Rofl(); direct.load(boot);
     for (const f of files) {
       const res = direct.load(fs.readFileSync(f, 'utf8'));
-      if (!res.ok) dropped.push(path.basename(f));
+      if (res.ok) continue;
+      dropped.push(path.basename(f));
     }
     if (files.length > 0 && dropped.length === files.length) {
       throw new Error(`no file loaded: ${dropped.join(', ')}`);
@@ -122,7 +175,7 @@ for (const [name, files] of worlds()) {
 
     const seedR = new Rofl(); seedR.load(boot);
     for (const f of files) if (!dropped.includes(path.basename(f))) seedR.load(fs.readFileSync(f, 'utf8'));
-    seedR.store.clearDerived();
+    seedR.store.clearDerived(undefined, provenanceRow);
     const baseKeys = new Set(seedR.store.allFactKeys());
     seed = seedR.store.snapshot();
 
@@ -171,6 +224,7 @@ for (const [name, files] of worlds()) {
   // that spills to disk can be held to.
   fs.writeFileSync(path.join(out, `${name}.derivations.txt`), deriv + '\n');
   index.push(`${name}\t${facts}\t${seed.length}\t${want.length}\t${partial ? 'partial' : 'complete'}\t0`);
+  for (const d of dropped) droppedRows.push(`${name}\t${d}\trefused`);
   ok++;
 
   // THE TICKED TWIN. Only for a world with a `@next` rule of its own: every
@@ -191,6 +245,10 @@ for (const [name, files] of worlds()) {
       ran++;
       if (res.quiescent) break;          // a settled world ticks no further
     }
+    // THE TICK ENTERED IS EVALUATED before it is read: a boundary installs the
+    // staged facts and derives nothing, so a state read there is a tick that
+    // never ran (f_a_ticked_case_is_read_before_its_tick_is_evaluated).
+    t.evaluate();
     const tWant = t.store.canonicalState();
 
     // The same admission test the plain case gets: the REFERENCE must
@@ -198,6 +256,7 @@ for (const [name, files] of worlds()) {
     // held to.
     const check = Rofl.fromSnapshot(seed);
     for (let i = 0; i < ran; i++) check.tickAdvance();
+    check.evaluate();
     if (check.store.canonicalState() !== tWant) throw new Error('ticked reference does not round-trip');
 
     const tname = `${name}.t${ran}`;
@@ -212,6 +271,11 @@ for (const [name, files] of worlds()) {
 }
 fs.writeFileSync(path.join(out, 'INDEX.tsv'),
   '-- name\tfacts\tseed_bytes\texpected_bytes\tevaluation\tticks\n' + index.join('\n') + '\n');
+// THE FILES A WORLD WAS BUILT WITHOUT, because this host refused them: a
+// reader building the world from text must refuse the same ones.
+fs.writeFileSync(path.join(out, 'DROPPED.tsv'), '-- name\tfile\twhy (refused: the kernel refused it)\n' + droppedRows.join('\n') + (droppedRows.length ? '\n' : ''));
+fs.writeFileSync(path.join(out, 'STAMP'),
+  stamp(['boot.rofl', ...all.flatMap(([, fs_]) => fs_.map(rel)), ...codeInputs()]));
 // A DERIVED FACT THAT CANNOT SAY WHY IT HOLDS is the one provenance failure
 // worth a line here. Reported by name so it cannot be a case that quietly is
 // not there.

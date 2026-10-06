@@ -1,0 +1,31 @@
+-- examples/checks/agg-reflect-check.rofl — agg_cell_reflect: a cell as the
+-- kernel reflects it. Walking each aggregate's `$agg` body gives exactly the
+-- relations `premise_agg` names, both directions; each cell sealed exactly
+-- those relations; and a cell has a value exactly when the row that used it
+-- holds that value, joined through `derived_by`. The snapshot round trip is
+-- rust/rofl/tests/agg_worlds.rs.
+acf_rule(R)       :- premise_lit[$kernel](R, _, $agg(_, _, _, _, _)).
+acf_tail(R, T)    :- premise_lit[$kernel](R, _, $agg(_, _, _, _, T)).
+acf_tail(R, T)    :- acf_tail(R, $cons(_, T)).
+acf_reads(R, Rel) :- acf_tail(R, $cons($lit(Rel, _, _, _), _)).
+acf_reads(R, Rel) :- acf_tail(R, $cons($not($lit(Rel, _, _, _)), _)).
+refl_missing(R, Rel) :- acf_reads(R, Rel), not premise_agg[$kernel](R, Rel).
+refl_extra(R, Rel)   :- acf_rule(R), premise_agg[$kernel](R, Rel), not acf_reads(R, Rel).
+acf_cell(C, R)       :- agg_cell[$kernel](C, _, _), C = $cell(R, _, _, _).
+sealed_missing(C, Rel) :- acf_cell(C, R), premise_agg[$kernel](R, Rel), not acf_sealed(C, Rel).
+acf_sealed(C, Rel)     :- agg_sealed[$kernel](C, Rel, _).
+sealed_extra(C, Rel)   :- agg_sealed[$kernel](C, Rel, _), C = $cell(R, _, _, _), not premise_agg[$kernel](R, Rel).
+-- the consumers here conclude one argument, the value, and group by nothing
+acf_row(R, V)          :- acf_rule(R), derived_by[$kernel]($fact(_, main, $cons(V, $nil)), R, _).
+acf_valued(R, V)       :- agg_cell[$kernel]($cell(R, _, _, $nil), V, _).
+cell_without_row(R, V) :- acf_valued(R, V), not acf_row(R, V).
+row_without_cell(R, V) :- acf_row(R, V), not acf_valued(R, V).
+acf_neg_seen()         :- acf_tail(_, $cons($not(_), _)).
+acf_vacuous(negation)  :- not acf_neg_seen().
+alarm(refl_missing).
+alarm(refl_extra).
+alarm(sealed_missing).
+alarm(sealed_extra).
+alarm(cell_without_row).
+alarm(row_without_cell).
+alarm(acf_vacuous).

@@ -1,21 +1,31 @@
 // api.ts — load, assert, retract, ?, why, whynot, excise, ticks, snapshots.
 
-import { type Term, mka, mkv, mkf, mki, canonTerm, resolve, walk, isGround, varsOf, type Subst } from './unify.ts';
+import { type Term, mka, mkf, mki, mks, canonTerm, resolve, isGround, varsOf, type Subst, annotateAggs,
+  canonClauseSets, canonLitSets, clauseOpenSet, openSet, setPatternReason, litsOf } from './unify.ts';
 import { parseProgram, parseLiteral } from './parser.ts';
 import type { Clause, Lit } from './unify.ts';
 const KERNEL_CLAIM = '$kernel_authority';
-import { Store, factKey, type FactRec, type FactStore } from './store.ts';
+/** How many rows a store holds with the kernel's bootstrap tables and nothing else: the only store a kernel claim may enter. */
+let bootRows: number | undefined;
+const bootstrapRows = (): number => bootRows ??= (() => { const s = new Store(); bootstrapKernel(s); return s.factCount(); })();
+import { Store, factKey, type FactStore } from './store.ts';
 import {
   V, RESERVED, IFACE, MAIN, ANON_WHO, KERNEL_WHO, ARITY, encodeRule, bootstrapKernel, registerPersp,
-  factMetaFacts, factTerm, canonClause, BUDGET_REASON, unAtomTerm,
+  factMetaFacts, factTerm, canonClause, BUDGET_REASON,
   KERNEL_PERSP, resolveBook, resolveClauseBooks, isKernelLedger,
-  SEALED_BODY, SEALED_HOLE, SEALED_REASON, sealedBodies, sealedRels,
+  SEALED_BODY, SEALED_HOLE, SEALED_REASON, sealedBodies, sealedRels, list as listT,
 } from './reflect.ts';
-import { Evaluation, StratificationError, BudgetExhausted, planBody, DEFAULT_SPACE, type StagedFact, sigOf } from './engine.ts';
-import { RoundEvaluation } from './rounds.ts';
+import { SHRUG, shrugsOf, shrugLine, shrugAtom, shown } from './shrug.ts';
+import { AggEval, DEFAULT_SPACE, Rejected, Wall, checkAggregatesDoor, checkSetPatternsDoor, checkOrderableAgg,
+  checkNextInBody, checkLatticeDecl, checkDominance, lowerOrder, type Unknown } from './aggeval.ts';
+import { encodeDominance } from './reflect.ts';
+import { checkStructureDecl, structureRows, declaredStructures, checkFunctions, checkTrees, checkClosureHead, declaredClosures, concludedBy, lowerClosure } from './structure.ts';
 
 export interface LoadResult { ok: boolean; diagnostics: string[]; }
 export interface QueryRow { text: string; bindings: Record<string, string>; }
+/** An answer that is a shrug (docs/aggregates.md, "Shrugs, as built"): the
+ *  bindings it names, `_` where it does not know, its reason, and its line. */
+export interface ShrugAnswer { text: string; bindings: Record<string, string>; reason: string; line: string; }
 
 /** `unpopulatable` separates the two empty answers a query used to give with
  *  one voice: NO ROWS (the relation exists and nothing satisfies the literal)
@@ -28,7 +38,7 @@ export interface QueryRow { text: string; bindings: Record<string, string>; }
  *
  *  It is a field rather than an error because an empty world is a legitimate
  *  thing to ask about — a caller decides whether unpopulatable is a defect. */
-export interface QueryResult { rows: QueryRow[]; partial: boolean; error?: string; unpopulatable?: boolean; }
+export interface QueryResult { rows: QueryRow[]; partial: boolean; error?: string; unpopulatable?: boolean; shrugs?: ShrugAnswer[]; }
 
 /** What an evaluation spent, beside whether it finished. `peakRows` is the most
  *  rows held at once and `space` is the wall — so a caller can see it coming
@@ -39,10 +49,9 @@ export interface QueryResult { rows: QueryRow[]; partial: boolean; error?: strin
  *  control-flow world 0.614 — so a caller reading this wall as a fact count is
  *  wrong by a factor that happens to be safe, which is how it went unnoticed.
  *
- *  NAMED `EvalReport` AND NOT `EvalOutcome`, because `src/engine.ts` already
- *  exports an `EvalOutcome` of a different shape. Two interfaces of one name in
- *  one kernel is a collision the merge of 2026-09-09 caught and the branch that
- *  introduced it did not. */
+ *  NAMED `EvalReport` AND NOT `EvalOutcome`, because the evaluator has
+ *  its own `Outcome`. Two interfaces of one name in one kernel is a collision
+ *  the merge of 2026-09-09 caught and the branch that introduced it did not. */
 export interface EvalReport { partial: boolean; peakRows: number; space: number; }
 
 /** whynot's demonstration bounds. `depth` counts levels of literal
@@ -50,7 +59,7 @@ export interface EvalReport { partial: boolean; peakRows: number; space: number;
  *  stop), 2 also explains each of those premises, and so on. `nodes` caps
  *  how many literals the whole tree may explain. Both are hard stops and
  *  both announce themselves in the output when they fire. */
-export interface WhynotOpts { budget?: number; depth?: number; nodes?: number; }
+export interface WhynotOpts { budget?: number; depth?: number; nodes?: number; /** write the tree, not the DAG (scripts/why_dag.ts) */ tree?: boolean; }
 
 const DEFAULT_BUDGET = 100_000;
 /** How large a relation `query` will enumerate to learn its arity. Small
@@ -59,22 +68,6 @@ const DEFAULT_BUDGET = 100_000;
 const ARITY_SCAN_MAX = 64;
 const DEFAULT_WHYNOT_DEPTH = 6;
 const DEFAULT_WHYNOT_NODES = 64;
-
-/** State threaded through one whynot tree. `path` is the cycle guard: the
- *  literals currently being explained above this point. */
-interface WhynotCtx {
-  maxDepth: number;
-  maxNodes: number;
-  nodes: number;
-  path: Set<string>;
-}
-
-/** What a `why` walk needs to tell an absence apart from an undefined atom.
- *  `index` maps an atom's fact key to the `unknown` row standing for it;
- *  `hit` collects the atoms the walk actually went through, which IS the
- *  unfounded set the answer rests on. Null wherever the store holds no
- *  `unknown` rows, which is every two-valued program. */
-interface UnknownCtx { index: Map<string, string>; hit: Set<string>; }
 
 /** Everything a `Rofl` is built with. */
 export interface EvalOpts {
@@ -93,7 +86,7 @@ export interface EvalOpts {
    *  patience, asked per call. A space is what the machine can hold, which is
    *  a property of the session and not of the question.
    *
-   *  IT WAS UNREACHABLE UNTIL NOW. `Evaluation` has read `opts.space` since it
+   *  IT WAS UNREACHABLE UNTIL NOW. The evaluator has read `space` since it
    *  was written, and nothing ever put it there — so the wall was a hard
    *  500 000 for every caller, and the advice the kernel gives about it could
    *  not be acted on in either direction. Measured on the JS model over a real
@@ -103,70 +96,6 @@ export interface EvalOpts {
    *  and `test/rule-shape.test.ts` names the rules that can produce one. */
 
   space?: number;
-}
-
-/** REFUSED AT THE DOOR: a negation whose meaning depends on where it stands.
- *
- *  `not p(X, K)` says `X has no p at all` with K unbound and `X has no p with
- *  THIS K` with K bound, and until `planBody` existed the reading was decided
- *  by the comma. Planning fixes the reading for every rule that has one; this
- *  refuses the rules that have neither, rather than picking one for the author.
- *
- *  ONLY A STUCK NEGATION IS REFUSED. A builtin that can never be ground is
- *  stuck too and keeps its long-standing verdict — unsafe, and unfolded on
- *  demand — because that case was already checked and already announced, and
- *  widening a refusal is not this change's business.
- *
- *  MEASURED BEFORE IT WAS WRITTEN, over 1965 rules in 71 .rofl files: 0 are
- *  refused by this. 46 negations leave a variable unbound and every one of
- *  them is confined to its own literal, which is a wildcard by another name
- *  and reads existentially by construction; 9 more are bound by a builtin,
- *  which the plan waits for. So the door costs nothing today and exists for
- *  the rule nobody has written yet. */
-function checkOrderable(c: Clause): string | null {
-  const { stuck, stuckVars, headGround } = planBody(c);
-  if (!stuck || stuck.t !== 'neg') return null;
-  // ONLY A RULE THAT WOULD OTHERWISE PASS SILENTLY. A rule whose head is not
-  // range-restricted is already unsafe, already reported by the audit that
-  // computes range restriction in ROFL, and already unfolded top-down where
-  // the goal binds. Refusing it here would add nothing and would take away the
-  // one thing that check needs: a program that violates it and loads, so the
-  // audit has something to find. That is not hypothetical — test/head-vars
-  // loads `negonly(Q) :- not tag(Q).` on purpose, and the first version of
-  // this door refused it and took the oracle down with it.
-  if (!headGround) return null;
-  const vars = stuckVars.map((v) => v.startsWith('_$') ? '_' : v).join(', ');
-  return `rule ${canonClause(c)}: no premise binds ${vars} before `
-    + `'not ${stuck.lit.rel}/${stuck.lit.args.length}', so what the negation asks `
-    + `would depend on where it is written -- unbound it asks whether ANY such fact exists, `
-    + `bound it asks about that one. Bind ${vars} in a positive premise, or write `
-    + `'_' if the existential reading is what is meant.`;
-}
-
-/** Do two key lists name the same SET of facts?
- *
- *  FOUND BY BREAKING SOMETHING ELSE, 2026-09-07, and the shape is worth more
- *  than the line. Quiescence used to compare a SORTED array of the tick's base
- *  facts against an UNSORTED array of the staged next-tick facts, element by
- *  element. It was correct only because two other places happen to sort on the
- *  way out (`src/rounds.ts` and `Evaluation.run`), so the comparison was
- *  reading an order that neither of its own operands promises.
- *
- *  MEASURED by reversing one of those sorts: `examples/tm.rofl`, the 3-state
- *  busy beaver that halts in 13 ticks, stops being detected as quiescent, runs
- *  to its 100-tick cap and grows 1391 -> 3509 facts. A program that terminated
- *  stops terminating, with no error and no hole -- and that is exactly what a
- *  concurrent stager would produce, which is how the order-dependence census
- *  (`scanners/order_census.ts`) walked into it.
- *
- *  So: sort both, or neither. An equality that is only true under an ordering
- *  its callers do not guarantee is a coincidence wearing a comparison. */
-export function sameKeySet(a: readonly string[], b: readonly string[]): boolean {
-  if (a.length !== b.length) return false;
-  const x = [...a].sort();
-  const y = [...b].sort();
-  for (let i = 0; i < x.length; i++) if (x[i] !== y[i]) return false;
-  return true;
 }
 
 /** WHAT A QUESTION MAY ARRIVE AS. Text, or the literal itself.
@@ -183,13 +112,45 @@ export function sameKeySet(a: readonly string[], b: readonly string[]): boolean 
  *  src/dense.ts) or by hand, because a literal is DATA. */
 export type Ask = string | Lit;
 
+/** The ids of the rules a store reflects. */
+function storeRuleIds(store: FactStore): string[] {
+  return store.relAll(V.rule).flatMap((f) => (f.args[0]?.k === 'a' ? [f.args[0].name] : []));
+}
+
+/** A halt of the aggregate evaluator as a sentence (rust/rofl `describe`). */
+function describeHalt(e: unknown): string {
+  if (e instanceof Wall) return `wall: ${e.reason}`;
+  if (e instanceof Rejected) return e.message;
+  return `defect: ${(e as Error).message}`;
+}
+
+/** Does a clause write an aggregate, a join read or an interval function
+ *  (docs/aggregates.md): then the door that knows them judges it. */
+function aggConstructs(c: Clause): boolean {
+  const ivs = new Set(['ivadd', 'ivsub', 'ivmul', 'ivmeet']);
+  return c.body.some((b) => b.t === 'agg' || (b.t === 'bi' && (b.op === 'in' || b.op === 'subset' || (b.op === 'is' && b.r.k === 'f' && ivs.has(b.r.name)))));
+}
+
+/** Some answer of `lit` a question left unknown that no shrug row names (`query`). */
+function unknownAnswersUnnamed(store: FactStore, lit: Lit, asked: boolean, trail: Unknown[]): boolean {
+  const uv = (t: Term): boolean => t.k === 'a' && t.name === '$unknown_value';
+  const heads = trail.flatMap((u) => (u.k === 'tuple' && u.rel === lit.rel && u.args.length === lit.args.length
+    && u.args.every((a, i) => !isGround(lit.args[i]) || uv(a) || canonTerm(a) === canonTerm(lit.args[i])) ? [u.args] : []));
+  const rows: Term[][] = [];
+  for (const { row } of shrugsOf(store, lit)) { const t = row.args[0]; if (t.k === 'f' && t.name === lit.rel) rows.push(t.args); }
+  if (heads.length === 0) return asked && rows.length === 0;
+  return heads.some((h) => !rows.some((r) => r.length === h.length && r.every((t, i) => uv(t) || canonTerm(t) === canonTerm(h[i]))));
+}
+/** `excise` under a cone that left rules out: what the fact supports through those rules is not in the world (rust/rofl `EXCISE_UNDER_ASKS`). */
+export const EXCISE_UNDER_ASKS = 'excise is not answered under asks: the rules the cone leaves out would lose what the fact supports too; drop the asks';
+
 export class Rofl {
   // The default implementation, and the reference one: mode `memory`.
-  // The declared type stays concrete because `Evaluation` is declared over
-  // `Store` and twenty example programs construct one from `r.store`; what
+  // The declared type stays concrete because `AggEval` is declared over
+  // `Store` and the example programs construct one from `r.store`; what
   // makes the port real here is that NO line in this file reaches past the
   // `FactStore` surface any more, so retyping this field is a one-word
-  // change once src/engine.ts:73 and :94 take the interface.
+  // change once `AggEval` takes the interface.
   store: Store;
   naive: boolean;
   /** Reuse a derived relation across evaluations when nothing it is a
@@ -223,7 +184,6 @@ export class Rofl {
   private loadn = 0;
   /** Whether some load has already claimed the kernel ring. One per store. */
   private kernelClaimed = false;
-  private lastStaged: StagedFact[] = [];
   private lastSteps = 0;
   // THE NEAREST HARD CEILING, READABLE WITHOUT HITTING IT. `space` is a wall
   // counted in ROWS, and until now the only way to learn how close a world
@@ -236,11 +196,6 @@ export class Rofl {
   // configured `space` rather than the one the evaluation actually ran with
   // would answer a question about the settings and not about the run.
   private lastSpace = 0;
-  /** Whether the loaded program reads provenance in a rule body, as the last
-   *  evaluation read the rules. Starts pessimistic: until an evaluation has
-   *  actually looked, "it might" is the only honest answer, and it is the one
-   *  that keeps everything. */
-  private readsProvenance = true;
 
   constructor(opts: EvalOpts = {}) {
     this.naive = opts.naive ?? false;
@@ -294,13 +249,18 @@ export class Rofl {
   /** A question as a literal, however it arrived. `resolveBook` is idempotent,
    *  so a literal that already names its book keeps it. */
   private asked(q: Ask): Lit {
-    return resolveBook(typeof q === 'string' ? parseLiteral(q) : q);
+    const l = canonLitSets(typeof q === 'string' ? parseLiteral(q) : q);
+    const open = l.args.map(openSet).find((t) => t);
+    if (open) throw new Error(setPatternReason(canonTerm(open)));
+    return resolveBook(l);
   }
 
   // -------------------------------------------------------------------------
   // loading & asserting (rules become reflection facts through this one path)
 
-  load(text: string, opts: { who?: string; budget?: number } = {}): LoadResult {
+  /** `defer` writes the clauses and leaves the evaluation to the caller, as
+   *  rofl-load loads every file of a world before it evaluates once. */
+  load(text: string, opts: { who?: string; budget?: number; defer?: boolean } = {}): LoadResult {
     this.loadn++;
     const holeId = mkf('$load', [mki(this.loadn)]);
     let clauses: Clause[];
@@ -329,21 +289,28 @@ export class Rofl {
     // The caller's claim is checked HERE, before the file's own claim can
     // replace it: `checkWho` refuses a `$` name from outside, and the kernel's
     // directive is not from outside — it is in the text being read.
-    if (clauses.length > 0) {
+    if (clauses.length > 0 && !clauses[0].lattice && !clauses[0].dominator) {
       const bad = this.checkWho(opts.who, clauses[0]);
       if (bad) return { ok: false, diagnostics: [bad] };
     }
     let who = opts.who;
     if (clauses.length > 0 && clauses[0].head.rel === KERNEL_CLAIM
-        && clauses[0].body.length === 0) {
+        && clauses[0].body.length === 0 && !clauses[0].lattice && !clauses[0].dominator) {
       if (this.kernelClaimed) {
         return { ok: false, diagnostics: [
           `'${KERNEL_CLAIM}' is already claimed: only the first load of a store may be the kernel's`] };
       }
+      // the door is the store's, not this object's: a store restored from a
+      // snapshot, forked, or written by an earlier load holds more than the
+      // bootstrap tables, and the claim is too late for it
+      if (this.store.factCount() > bootstrapRows()) {
+        return { ok: false, diagnostics: [
+          `'${KERNEL_CLAIM}' comes too late: this store holds more than the bootstrap tables, and only the first load of a store may be the kernel's`] };
+      }
       this.kernelClaimed = true;
       who = KERNEL_WHO;
       clauses = clauses.slice(1);
-    } else if (clauses.some((c) => c.head.rel === KERNEL_CLAIM)) {
+    } else if (clauses.some((c) => c.head.rel === KERNEL_CLAIM && !c.lattice && !c.dominator)) {
       return { ok: false, diagnostics: [
         `'${KERNEL_CLAIM}' must be the FIRST clause of the FIRST load, or it is not a claim at all`] };
     }
@@ -357,10 +324,11 @@ export class Rofl {
       this.store = backup;
       return { ok: false, diagnostics: diags };
     }
+    if (opts.defer) return { ok: true, diagnostics: [] };
     try {
       this.ensure(opts.budget ?? DEFAULT_BUDGET, holeId);
     } catch (e) {
-      if (e instanceof StratificationError) {
+      if (e instanceof Rejected) {
         this.store = backup;
         return { ok: false, diagnostics: [e.message, e.demo] };
       }
@@ -502,7 +470,7 @@ export class Rofl {
    *  the 23 names that happen to be inert today because of where their reader
    *  looks, and it covers readers not yet written. It is not a substitute for
    *  the guards in `decodeRules` — `Rofl.fromSnapshot` never comes through
-   *  here — and `readStrata` in src/engine.ts is still unguarded at its own
+   *  here — and `readStrata` in src/aggeval.ts is still unguarded at its own
    *  end, so a hand-edited snapshot carrying `stratum/1` can still reach it.
    *  That residue is named rather than papered over. */
   private checkArity(c: Clause): string | null {
@@ -531,13 +499,17 @@ export class Rofl {
     // nothing for ever.
     for (const b of c.body) {
       if (b.t === 'bi') continue;
+      if (b.t === 'agg') {
+        for (const l of litsOf(b)) { const badInner = at(l, ' inside an aggregate'); if (badInner) return badInner; }
+        continue;
+      }
       const badPrem = at(b.lit, ` in a ${b.t === 'neg' ? 'negated ' : ''}premise`);
       if (badPrem) return badPrem;
     }
     return null;
   }
 
-  private addClause(c0: Clause, who?: string, trusted = false): string | null {
+  private addClause(c0: Clause, who?: string, trusted = false, lowered = false): string | null {
     // BEFORE any check, because the checks and the diagnostics must speak
     // about the clause that will actually be stored: a bare `concludes(...)`
     // resolves to the kernel's book here, and `checkKernelBook` then refuses
@@ -546,15 +518,30 @@ export class Rofl {
     // The `$` ledger check reads the clause AS WRITTEN — `resolveClauseBooks`
     // puts `$kernel` on a bare `concludes(...)`, and refusing that would be
     // refusing the resolver's own work rather than the author's.
+    // A DECLARATION or A DOMINANCE RULE is its rows (docs/aggregates.md)
+    if (c0.ord) return this.addOrder(c0, who);
+    if (c0.structure) return this.addStructure(c0);
+    if (c0.lattice) return this.addDecl(c0);
+    if (c0.dominator) return this.addDominance(c0, who);
+    const badClosure = lowered ? null : checkClosureHead(c0, declaredClosures(this.store));
+    if (badClosure) return badClosure;
     const badBook = this.checkKernelBook(c0);
     if (badBook) return badBook;
-    const c = resolveClauseBooks(c0);
+    const c = annotateAggs(resolveClauseBooks(canonClauseSets(c0)));
+    const agg = aggConstructs(c) || c.head.args.some((a) => openSet(a) !== null);
     const badWho = trusted ? null : this.checkWho(who, c);
     if (badWho) return badWho;
     const badArity = this.checkArity(c);
     if (badArity) return badArity;
-    const badOrder = checkOrderable(c);
-    if (badOrder) return badOrder;
+    if (agg) {
+      const bad = checkNextInBody(c) ?? checkAggregatesDoor(c) ?? checkSetPatternsDoor(c) ?? (c.body.length > 0 ? checkOrderableAgg(c) : null);
+      if (bad) return bad;
+    } else {
+      const open = clauseOpenSet(c);
+      if (open) return `rule ${canonClause(c)}: ${setPatternReason(canonTerm(open))}`;
+      const badOrder = c.body.length > 0 ? checkOrderableAgg(c) : null;
+      if (badOrder) return badOrder;
+    }
     if (c.body.length === 0) {
       const h = c.head;
       if (h.persp.k !== 'a') return `fact ${canonClause(c)}: perspective must be an atom`;
@@ -658,9 +645,7 @@ export class Rofl {
     }
     if (c.head.persp.k === 'a') registerPersp(this.store, c.head.persp.name, who ?? ANON_WHO);
     for (const b of c.body) {
-      if ((b.t === 'pos' || b.t === 'neg') && b.lit.persp.k === 'a') {
-        registerPersp(this.store, b.lit.persp.name, who ?? ANON_WHO);
-      }
+      for (const l of litsOf(b)) if (l.persp.k === 'a') registerPersp(this.store, l.persp.name, who ?? ANON_WHO);
     }
     const enc = encodeRule(c);
     // A SEALED BODY IS WITHHELD HERE AND NOWHERE ELSE. `encodeRule` still
@@ -673,6 +658,75 @@ export class Rofl {
     for (const f of enc.facts) {
       if (drop.has(f.rel)) continue;
       this.store.add(f.rel, KERNEL_PERSP, f.args, { scope: 'timeless', base: true });
+    }
+    this.store.dirty = true;
+    return null;
+  }
+
+  /** A LATTICE OR TAG DECLARATION IS ONE KERNEL ROW, timeless like the
+   *  semantics declaration: `lattice_decl(Rel, Arity, Op)` and, for a
+   *  declared widening, `lattice_widen(Rel, N)`; `tag_decl(Rel, Arity, Alg)`. */
+  private addDecl(c: Clause): string | null {
+    const bad = checkLatticeDecl(c, (rel) => ARITY[rel]);
+    if (bad) return bad;
+    const row = [mka(c.head.rel), mki(c.head.args.length), mka(c.lattice!)];
+    this.store.add(c.tag ? V.tag_decl : V.lattice_decl, KERNEL_PERSP, row, { scope: 'timeless', base: true });
+    if (!c.tag && c.widen !== undefined) {
+      this.store.add(V.lattice_widen, KERNEL_PERSP, [mka(c.head.rel), mki(c.widen)], { scope: 'timeless', base: true });
+    }
+    this.store.dirty = true;
+    return null;
+  }
+
+  /** A STRUCTURE DECLARATION IS ITS KERNEL ROWS, timeless: a promise about the
+   *  relation's data (src/structure.ts), changing no fact. */
+  private addStructure(c: Clause): string | null {
+    const bad = checkStructureDecl(c, (rel) => ARITY[rel], declaredStructures(this.store), (rel) => concludedBy(this.store, rel));
+    if (bad) return bad;
+    for (const [rel, args] of structureRows(c)) this.store.add(rel, KERNEL_PERSP, args, { scope: 'timeless', base: true });
+    // a closure is the rules it lowers to (src/structure.ts `lowerClosure`), read as any rules are
+    if (c.structure!.closure !== undefined) {
+      for (const t of lowerClosure(c)) {
+        const bad2 = this.addClause(parseProgram(t)[0], undefined, true, true);
+        if (bad2) return bad2;
+      }
+    }
+    this.store.dirty = true;
+    return null;
+  }
+
+  /** A DOMINANCE RULE IS ITS REFLECTION (docs/aggregates.md, "Subsumption,
+   *  as built"): rows in the kernel's book, its body a rule body's. */
+  private addOrder(c: Clause, who?: string): string | null {
+    const texts = lowerOrder(c, (rel) => ARITY[rel]);
+    if (typeof texts === 'string') return texts;
+    const ids: string[] = [];
+    for (const t of texts) {
+      const bad = this.addDominance(parseProgram(t)[0], who);
+      if (bad) return bad;
+      ids.push(this.lastDominance);
+    }
+    c.ord!.forEach((d, i) => {
+      this.store.add(V.order_comp, KERNEL_PERSP, [mka(c.head.rel), mka(c.lattice!), mki(i + 1), mka(d), mka(ids[i])], { scope: 'timeless', base: true });
+    });
+    this.store.dirty = true;
+    return null;
+  }
+
+  private lastDominance = '';
+
+  private addDominance(c0: Clause, who?: string): string | null {
+    const d = checkDominance(c0, (rel) => ARITY[rel]);
+    if (typeof d === 'string') return d;
+    const probe: Clause = resolveClauseBooks({ head: d.lo, body: d.body });
+    const bad = this.checkKernelBook(probe) ?? this.checkWho(who, probe) ?? this.checkArity(probe);
+    if (bad) return bad;
+    for (const b of d.body) for (const l of litsOf(b)) if (l.persp.k === 'a') registerPersp(this.store, l.persp.name, who ?? ANON_WHO);
+    const drop = sealedRels(sealedBodies(this.store));
+    const enc = encodeDominance(d.lo, d.hi, d.body, d.k);
+    this.lastDominance = enc.id;
+    for (const f of enc.facts) {
+      if (!drop.has(f.rel)) this.store.add(f.rel, KERNEL_PERSP, f.args, { scope: 'timeless', base: true });
     }
     this.store.dirty = true;
     return null;
@@ -703,48 +757,49 @@ export class Rofl {
   // -------------------------------------------------------------------------
   // evaluation
 
-  /** The evaluator this `Rofl` runs, per `evaluator`. ONE place, because
-   *  `load`, `evaluate`, `query`, `why`, `tickAdvance` and `run` all funnel
-   *  through `ensure`/`prepared` and must not be able to disagree about it. */
-  private newEval(budget: number, holeId: Term): Evaluation {
-    const opts = { budget, naive: this.naive, reuse: this.reuse, holeId, space: this.space, stop: this.stop };
-    return this.evaluator === 'strata'
-      ? new Evaluation(this.store, opts)
-      : new RoundEvaluation(this.store, opts);
+  /** THE EVALUATOR (src/aggeval.ts), kept past its run: the tick boundary, `why` and `whynot` read what it met. */
+  private agg: AggEval | null = null;
+
+  /** The one place an evaluator is made, because `load`, `evaluate`, `query`, `why`, `tickAdvance` and `run` all funnel
+   *  through `ensure`/`standing` and must not be able to disagree about it. */
+  private aggEval(budget: number, holeId: Term): AggEval {
+    const ev = new AggEval(this.store, budget, this.evaluator);
+    ev.holeId = holeId;
+    ev.space = this.space ?? DEFAULT_SPACE;
+    ev.retainTicks = this.retainTicks;
+    ev.naive = this.naive;
+    ev.reuse = this.reuse;
+    ev.stop = this.stop;
+    this.agg = ev;
+    return ev;
+  }
+
+  /** Evaluate the world now, whether or not it is dirty. */
+  private evaluateNow(budget: number, holeId: Term): EvalReport {
+    const ev = this.aggEval(budget, holeId);
+    let partial: boolean;
+    try { partial = ev.run().partial; } catch (e) {
+      if (!(e instanceof Wall)) throw e;
+      this.store.noteEval(budget, ev.steps, true);
+      partial = true;
+    }
+    try { checkFunctions(this.store); checkTrees(this.store); } catch (e) {
+      this.store.dirty = true; // a broken world is never settled: every later question refuses until it is fixed
+      throw e;
+    }
+    this.lastSteps = ev.steps;
+    this.lastPeakRows = ev.peakRows;
+    this.lastSpace = ev.space;
+    this.diagnostics.push(...ev.diags);
+    return { partial, peakRows: ev.peakRows, space: ev.space };
   }
 
   private ensure(budget: number, holeId: Term): EvalReport {
     if (!this.store.dirty) {
       return { partial: this.store.partialEval, peakRows: this.lastPeakRows, space: this.lastSpace };
     }
-    const ev = this.newEval(budget, holeId);
-    const out = ev.run();
-    this.lastStaged = out.staged;
-    this.lastSteps = ev.steps;
-    this.lastPeakRows = ev.peakRows;
-    // Read off the rules this evaluation actually ran, not the ones a caller
-    // believes are loaded. A rule can only arrive through a path that marks
-    // the store dirty, so an evaluation skipped above cannot have stale it.
-    this.readsProvenance = ev.readsProvenance();
-    // What this tick's standing fixpoint was allowed and what it spent. Held
-    // by tick, so a replay of tick 5 gets tick 5's budget rather than the
-    // budget of whatever ran last.
-    this.store.noteEval(budget, ev.steps, out.partial);
-    this.diagnostics.push(...out.diags);
-    // HOW CLOSE IT CAME, reported WITHOUT a failure. `peakRows` is the
-    // high-water mark of rows held at once and `space` is the wall it is
-    // measured against; until 2026-09-09 neither left the Evaluation, so the
-    // only way to learn the distance to the nearest hard ceiling in this system
-    // was to cross it and read `space_exhausted` off a hole. That is the defect
-    // CLAUDE.md names twice over — a gate whose criterion is borrowed from
-    // whichever tool produced the first red, and a capability nothing exercises
-    // — and it cost a real diagnosis: two mutants of a cost gate stopped
-    // fitting, and the distance had to be recovered by wrapping this method
-    // from a test. The information existed and breaking something was the only
-    // way to read it.
-    this.lastPeakRows = ev.peakRows;
-    this.lastSpace = ev.space;
-    return { partial: out.partial, peakRows: ev.peakRows, space: ev.space };
+    this.agg = null;
+    return this.evaluateNow(budget, holeId);
   }
 
   /** Evaluate now (mainly for tests); throws on unstratifiable programs.
@@ -766,8 +821,9 @@ export class Rofl {
    *  program derives, so it needs no evaluation and cannot depend on the order
    *  loads happened to arrive in. */
 
-  private prepared(budget: number): Evaluation {
-    return this.newEval(budget, mka('$adhoc'));
+  /** The evaluator standing over this store: the one that ran, or a fresh one over a world evaluated before. */
+  private standing(budget: number): AggEval {
+    return this.agg ?? this.aggEval(budget, mka('$adhoc'));
   }
 
   // -------------------------------------------------------------------------
@@ -797,17 +853,26 @@ export class Rofl {
     try {
       partial = this.ensure(budget, holeId).partial;
     } catch (e) {
-      if (e instanceof StratificationError) return { rows: [], partial: false, error: e.message + '\n' + e.demo };
+      if (e instanceof Rejected) return { rows: [], partial: false, error: e.message + '\n' + e.demo };
       throw e;
     }
-    const ev = this.prepared(budget);
+    const ev = this.standing(budget);
+    const outside = ev.outsideCone(lit.rel);
+    if (outside !== undefined) return { rows: [], partial: false, error: outside };
     const vars = [...varsOf(lit.persp, varsOf(mkf('$t', lit.args)))].sort();
     let ms: { s: Subst }[] = [];
+    // below a call, what a hole left unknown is no answer
+    let asked = false;
+    let trail: Unknown[] = [];
     try {
-      ms = ev.matchPremise(lit, new Map(), 0, null);
+      const [got, us, heads] = ev.questioned(budget, () => ev.answering(() => ev.matchPremise(lit, new Map(), 0, null) as unknown[]));
+      asked = us.length > 0;
+      trail = heads;
+      ms = got.map((m) => (Array.isArray(m) ? { s: m[0] as Subst } : m as { s: Subst }));
     } catch (e) {
-      if (e instanceof BudgetExhausted) {
-        this.store.add(V.hole, KERNEL_PERSP, [holeId, mka(BUDGET_REASON)], { scope: 'timeless', base: true, frozen: true });
+      if (e instanceof Wall) {
+        // the hole says which wall fell: steps or rows
+        this.store.add(V.hole, KERNEL_PERSP, [holeId, mka(e.reason)], { scope: 'timeless', base: true, frozen: true });
         partial = true;
       } else throw e;
     }
@@ -859,7 +924,35 @@ export class Rofl {
       const rtext = vars.length === 0 ? 'true' : vars.map((v) => `${v} = ${bindings[v]}`).join(', ');
       if (!rows.has(rtext)) rows.set(rtext, { text: rtext, bindings });
     }
-    return { rows: [...rows.keys()].sort().map((k) => rows.get(k)!), partial, unpopulatable };
+    const shrugs = new Map<string, ShrugAnswer>();
+    for (const { row, s } of shrugsOf(this.store, lit)) {
+      const bindings: Record<string, string> = {};
+      for (const v of vars) {
+        const t = resolve({ k: 'v', name: v }, s);
+        bindings[v] = t.k === 'v' ? '_' : /\$(unk|by)\(/.test(canonTerm(t)) ? shown(t) : canonTerm(t).replace(/\$unknown_value/g, '_');
+      }
+      const rtext = vars.length === 0 ? 'true' : vars.map((v) => `${v} = ${bindings[v]}`).join(', ');
+      const reason = row.args[1].k === 'a' ? row.args[1].name : canonTerm(row.args[1]);
+      // one per reading and reason, the least line where several say it (`query`, rust/rofl/src/session.rs)
+      const line = shrugLine(row), prev = shrugs.get(rtext + '\u0000' + reason);
+      if (prev === undefined || line < prev.line) shrugs.set(rtext + '\u0000' + reason, { text: rtext, bindings, reason, line });
+    }
+    // A WALL CUT THE WORLD: every answer that does not hold is no answer
+    if (this.store.partialEval) {
+      for (const row of this.store.relPersp(SHRUG, KERNEL_PERSP)) {
+        if (row.args[1].k !== 'a' || row.args[1].name !== 'budget' || shrugAtom(row.args[0]) !== null) continue;
+        const bindings: Record<string, string> = Object.fromEntries(vars.map((v) => [v, '_']));
+        const rtext = vars.length === 0 ? 'true' : vars.map((v) => `${v} = _`).join(', ');
+        shrugs.set(rtext + '\u0000budget', { text: rtext, bindings, reason: 'budget', line: shrugLine(row) });
+        break;
+      }
+    }
+    // AN ANSWER LEFT UNKNOWN THAT NO SHRUG ROW NAMES: the rows may be short of it. The answers left unknown are the heads of the
+    // call the question made that the trail holds (or, with none, any unknown read); a shrug names one when it has its known
+    // values and leaves unknown at most what it leaves unknown (rust/rofl `Eval::unknown_answers_unnamed`)
+    if (unknownAnswersUnnamed(this.store, lit, asked, trail)) partial = true;
+    return { rows: [...rows.keys()].sort().map((k) => rows.get(k)!), partial, unpopulatable,
+             ...(shrugs.size > 0 ? { shrugs: [...shrugs.keys()].sort().map((k) => shrugs.get(k)!) } : {}) };
   }
 
   holds(text: Ask): boolean {
@@ -869,236 +962,49 @@ export class Rofl {
   // -------------------------------------------------------------------------
   // why / whynot / excise
 
-  why(text: Ask, opts: { budget?: number } = {}): { ok: boolean; text: string } {
+  why(text: Ask, opts: { budget?: number; all?: boolean; tree?: boolean } = {}): { ok: boolean; text: string } {
     const budget = opts.budget ?? DEFAULT_BUDGET;
     let lit: Lit;
     try { lit = this.asked(text); } catch (e) { return { ok: false, text: (e as Error).message }; }
     if (lit.persp.k !== 'a' || !lit.args.every(isGround)) return { ok: false, text: 'why needs a ground literal' };
     try { this.ensure(budget, mka('$adhoc')); } catch (e) {
-      if (e instanceof StratificationError) return { ok: false, text: e.message + '\n' + e.demo };
+      if (e instanceof Rejected) return { ok: false, text: e.message + '\n' + e.demo };
       throw e;
     }
-    const key = factKey(lit.rel, lit.persp.name, lit.args);
-    if (!this.store.has(key)) {
-      return { ok: false, text: `${key} does not hold; try: whynot ${text}` };
-    }
-    const ev = this.prepared(budget);
-    const unk = this.unknownCtx();
-    const tree = this.renderWhy(ev, key, 0, new Set(), true, unk);
-    // A `why` on an undefined atom answers with the tree AND with the set the
-    // tree walked: the circular dependency that left it undefined, named. An
-    // absence explains nothing; this explains itself.
-    if (unk && lit.rel === IFACE.unknown && unk.hit.size > 0) {
-      return { ok: true, text: tree + '\nunfounded set: ' + [...unk.hit].sort().join(', ') };
-    }
-    return { ok: true, text: tree };
-  }
-
-  /** The `unknown` rows the store holds, keyed by the atom each stands for.
-   *  Reversible because the row's argument is the atom as a term and its
-   *  perspective is the atom's own. */
-  private unknownCtx(): UnknownCtx | null {
-    const rows = this.store.relAll(IFACE.unknown);
-    if (rows.length === 0) return null;
-    const index = new Map<string, string>();
-    for (const f of rows) {
-      if (f.args.length !== 1) continue;
-      const at = unAtomTerm(f.args[0]);
-      if (at) index.set(factKey(at.rel, f.persp, at.args), f.key);
-    }
-    return { index, hit: new Set() };
-  }
-
-  private renderWhy(ev: Evaluation, key: string, indent: number, visited: Set<string>,
-                    expandNeg: boolean, unk: UnknownCtx | null = null): string {
-    const pad = '  '.repeat(indent);
-    if (visited.has(key)) return pad + key + ' [cycle]';
-    visited.add(key);
-    const rec = this.store.get(key);
-    const w = this.store.witnessOf(key);
-    let out: string;
-    if (!w) {
-      out = pad + key + (rec ? ' [axiom]' : ' [past tick]');
-    } else {
-      const lines = [pad + key + `  <= ${w.ruleId} @tick ${w.tick}`];
-      if (unk && rec && rec.rel === IFACE.unknown && rec.args.length === 1) {
-        const at = unAtomTerm(rec.args[0]);
-        if (at) unk.hit.add(factKey(at.rel, rec.persp, at.args));
-      }
-      for (const p of w.prems) {
-        if (p.t === 'fact') lines.push(this.renderWhy(ev, p.key, indent + 1, visited, expandNeg, unk));
-        else if (p.t === 'neg') {
-          // An undefined premise is not a finite failure, and the difference is
-          // the whole point of the third value: `not p` where p is undefined
-          // did not FAIL, it never settled. Recurse into p's own row instead of
-          // demonstrating a failure that did not happen.
-          const und = unk?.index.get(p.key);
-          if (und !== undefined) {
-            lines.push('  '.repeat(indent + 1) + 'not ' + p.key + ' [undefined]');
-            lines.push(this.renderWhy(ev, und, indent + 2, visited, expandNeg, unk));
-            continue;
-          }
-          lines.push('  '.repeat(indent + 1) + 'not ' + p.key + ' [finite failure]');
-          if (expandNeg && !p.key.includes('?')) {
-            try {
-              // the finite-failure demo `why` inlines is the single-step form
-              const sub = this.whynotStruct(p.key, ev,
-                { maxDepth: 1, maxNodes: DEFAULT_WHYNOT_NODES, nodes: 0, path: new Set() });
-              lines.push(sub.text.split('\n').map((l) => '  '.repeat(indent + 2) + l).join('\n'));
-            } catch { /* demo elided */ }
-          }
-        } else lines.push('  '.repeat(indent + 1) + p.desc + ' [builtin]');
-      }
-      out = lines.join('\n');
-    }
-    visited.delete(key);
-    return out;
+    const ev = this.standing(budget);
+    const outside = ev.outsideCone(lit.rel);
+    if (outside !== undefined) return { ok: false, text: outside };
+    ev.dag = !opts.tree;
+    try { return { ok: true, text: ev.questioned(budget, () => ev.whyText(lit, opts.all ? Infinity : undefined, typeof text === 'string' ? text : undefined)) }; } catch (e) { return { ok: false, text: (e as Error).message }; } finally { ev.dag = true; }
   }
 
   whynot(text: Ask, opts: WhynotOpts = {}): { holds: boolean; text: string } {
     const budget = opts.budget ?? DEFAULT_BUDGET;
     try { this.ensure(budget, mka('$adhoc')); } catch (e) {
-      if (e instanceof StratificationError) return { holds: false, text: e.message + '\n' + e.demo };
+      if (e instanceof Rejected) return { holds: false, text: e.message + '\n' + e.demo };
       throw e;
     }
-    const ev = this.prepared(budget);
-    const r = this.whynotStruct(text, ev, {
-      maxDepth: Math.max(1, opts.depth ?? DEFAULT_WHYNOT_DEPTH),
-      maxNodes: Math.max(1, opts.nodes ?? DEFAULT_WHYNOT_NODES),
-      nodes: 0,
-      path: new Set(),
-    });
-    return { holds: r.holds, text: r.text };
-  }
-
-  private whynotStruct(text: Ask, ev: Evaluation, ctx: WhynotCtx): { holds: boolean; text: string } {
-    const lit = this.asked(text);
-    const ms = ev.matchPremise(lit, new Map(), 0, null);
-    if (ms.length > 0) {
-      const shown = typeof text === 'string' ? text.trim() : ev.resolvedLitKey(lit, new Map());
-      return { holds: true, text: `${shown} holds; nothing to demonstrate` };
+    const ev = this.standing(budget);
+    // a question that does not parse is the aggregate evaluator's to answer in words, and a plain program's to refuse
+    let lit: Lit;
+    try { lit = this.asked(text); } catch (e) {
+      if (ev.plain) throw e;
+      return { holds: false, text: (e as Error).message };
     }
-    const lines: string[] = [`whynot ${ev.resolvedLitKey(lit, new Map())}:`];
-    ctx.path.add(this.cycleKey(lit));
-    lines.push(...this.explainFailure(ev, lit, 1, ctx));
-    return { holds: false, text: lines.join('\n') };
-  }
-
-  /** One node of the demonstration: for each rule that could conclude `lit`,
-   *  the failing premise instances, each recursively explained in turn.
-   *  Level 1 renders at the indent whynot has always used; every level below
-   *  adds two — the failed premise line, then that premise's own rules. */
-  private explainFailure(ev: Evaluation, lit: Lit, level: number, ctx: WhynotCtx): string[] {
-    ctx.nodes++;
-    const pad = '  '.repeat(2 * level - 1);
-    const lines: string[] = [];
-    const rules = ev.rules.filter((r) => r.clause.head.rel === lit.rel);
-    if (rules.length === 0) {
-      lines.push(`${pad}no rule concludes '${lit.rel}' and no matching base fact exists`);
-      return lines;
-    }
-    for (const r of rules) {
-      const rn = (ev as any).renameClause(r.clause) as Clause;
-      let s: Subst | null = new Map();
-      s = ev.evalBuiltin({ op: '=', l: rn.head.persp, r: lit.persp }, s);
-      for (let i = 0; s && i < Math.min(rn.head.args.length, lit.args.length); i++) {
-        s = ev.evalBuiltin({ op: '=', l: rn.head.args[i], r: lit.args[i] }, s);
-      }
-      if (!s || rn.head.args.length !== lit.args.length) {
-        lines.push(`${pad}rule ${r.id}: head does not unify`);
-        continue;
-      }
-      const failures = this.failingPremises(ev, rn, s);
-      lines.push(`${pad}rule ${r.id}: ${r.canon}`);
-      const fs = [...failures.keys()].sort().slice(0, 12);
-      if (fs.length === 0) lines.push(`${pad}  (no failing premise found within exploration bounds)`);
-      for (const f of fs) {
-        lines.push(`${pad}  failed premise: ${f}`);
-        const sub = failures.get(f);
-        if (sub) lines.push(...this.explainDeeper(ev, sub, level + 1, ctx));
-      }
-    }
-    return lines;
-  }
-
-  /** Recurse into one failing premise instance. Everything that makes the
-   *  recursion terminate lives here: the cycle path, the depth cap, the node
-   *  cap. Each of them says so in the output rather than truncating quietly. */
-  private explainDeeper(ev: Evaluation, lit: Lit, level: number, ctx: WhynotCtx): string[] {
-    const pad = '  '.repeat(2 * level - 1);
-    if (level > ctx.maxDepth) {
-      // maxDepth 1 is the single-step form: nothing below the named premises
-      // was promised, so there is nothing there to report as cut off.
-      return ctx.maxDepth > 1 ? [`${pad}[depth limit ${ctx.maxDepth} reached]`] : [];
-    }
-    if (ctx.nodes >= ctx.maxNodes) return [`${pad}[node limit ${ctx.maxNodes} reached]`];
-    const ck = this.cycleKey(lit);
-    if (ctx.path.has(ck)) return [`${pad}${ev.resolvedLitKey(lit, new Map())} [cycle]`];
-    ctx.path.add(ck);
+    const outside = ev.outsideCone(lit.rel);
+    if (outside !== undefined) throw new Error(outside);
+    // A WALL MET WHILE DEMONSTRATING IS THE ANSWER: a demand that unfolds without end has no demonstration, and the wall
+    // that stopped it is named (rust/rofl `Session::whynot`). Any other halt is the aggregate evaluator's to answer; a plain
+    // program's is a refusal.
+    ev.dag = !opts.tree;
     try {
-      return this.explainFailure(ev, lit, level, ctx);
-    } finally {
-      ctx.path.delete(ck);
-    }
-  }
-
-  /** Single-step failure analysis of one rule body under a head substitution:
-   *  which premise instances fail, keyed by the text that renders them, with
-   *  the literal to recurse into for a positive premise (null for a builtin,
-   *  a blocked negation, or an exhausted budget — those are already bottom). */
-  private failingPremises(ev: Evaluation, rn: Clause, s0: Subst): Map<string, Lit | null> {
-    const failures = new Map<string, Lit | null>();
-    const note = (k: string, sub: Lit | null) => { if (!failures.has(k)) failures.set(k, sub); };
-    let nodes = 0;
-    // THE SAME ORDER THE EVALUATOR SOLVES IN, and the two disagreed about
-    // exactly this. `whynot` is top-down, so the goal has already bound the
-    // head's arguments and its negation was read with them bound while the
-    // bottom-up run read the same negation with them free — which is how the
-    // one instrument that explains absence came to answer `no failing premise
-    // found` about a fact the evaluator had refused to derive.
-    const body = planBody(rn).plan;
-    const explore = (k: number, s: Subst): void => {
-      if (nodes++ > 2000) return;
-      if (k >= body.length) return; // a derivation branch survives (demand)
-      const b = body[k];
-      if (b.t === 'pos') {
-        const mm = ev.matchPremise(b.lit, s, 0, null);
-        if (mm.length === 0) note(ev.resolvedLitKey(b.lit, s), instantiate(b.lit, s));
-        else for (const m of mm.slice(0, 16)) explore(k + 1, m.s);
-      } else if (b.t === 'neg') {
-        const mm = ev.matchPremise(b.lit, s, 0, null);
-        if (mm.length > 0) {
-          const witness = mm[0].ref.t === 'fact' ? mm[0].ref.key : ev.resolvedLitKey(b.lit, mm[0].s);
-          note(`not ${ev.resolvedLitKey(b.lit, s)} -- blocked: ${witness} holds`, null);
-        } else explore(k + 1, s);
-      } else {
-        const s2 = ev.evalBuiltin(b, s);
-        if (!s2) note(`${canonTerm(resolve(b.l, s))} ${b.op} ${canonTerm(resolve(b.r, s))} [builtin fails]`, null);
-        else explore(k + 1, s2);
-      }
-    };
-    try { explore(0, s0); } catch (e) {
-      if (e instanceof BudgetExhausted) note('[demonstration truncated: budget]', null);
-      else throw e;
-    }
-    return failures;
-  }
-
-  /** Cycle key for a premise instance: the literal with its variables
-   *  renumbered by first appearance, so two instances that differ only in the
-   *  evaluator's renaming suffix compare equal and a loop is recognised. */
-  private cycleKey(lit: Lit): string {
-    const seen = new Map<string, string>();
-    const rn = (t: Term): Term => {
-      if (t.k === 'v') {
-        let n = seen.get(t.name);
-        if (n === undefined) { n = '$' + seen.size; seen.set(t.name, n); }
-        return mkv(n);
-      }
-      if (t.k === 'f') return mkf(t.name, t.args.map(rn));
-      return t;
-    };
-    return `${lit.rel}[${canonTerm(rn(lit.persp))}](${lit.args.map((a) => canonTerm(rn(a))).join(',')})@${lit.temporal}`;
+      const [holds, t] = ev.questioned(budget, () => ev.whynotText(lit, { maxDepth: opts.depth ?? DEFAULT_WHYNOT_DEPTH, maxNodes: opts.nodes ?? DEFAULT_WHYNOT_NODES },
+        typeof text === 'string' ? text.trim() : undefined));
+      return { holds, text: t };
+    } catch (e) {
+      if (e instanceof Wall || !ev.plain) return { holds: false, text: describeHalt(e) };
+      throw e;
+    } finally { ev.dag = true; }
   }
 
   /** excise: clean re-evaluation on EDB \ {fact}; the diff IS the blast radius. */
@@ -1113,9 +1019,11 @@ export class Rofl {
     const rec = this.store.get(key);
     if (!rec || !rec.base) return { ok: false, removed: [], added: [], error: `${key} is not a base fact` };
     try { this.ensure(budget, mka('$adhoc')); } catch (e) {
-      if (e instanceof StratificationError) return { ok: false, removed: [], added: [], error: e.message };
+      if (e instanceof Rejected) return { ok: false, removed: [], added: [], error: e.message };
       throw e;
     }
+    const ev = this.standing(budget);
+    if (ev.cone !== undefined && ev.pruned.size > 0) return { ok: false, removed: [], added: [], error: EXCISE_UNDER_ASKS };
     const scratch = this.fork();
     scratch.store.remove(key);
     const ft = factTerm(lit.rel, lit.persp.name, lit.args);
@@ -1126,7 +1034,7 @@ export class Rofl {
     }
     scratch.store.dirty = true;
     try { scratch.ensure(budget, mka('$adhoc')); } catch (e) {
-      if (e instanceof StratificationError) return { ok: false, removed: [], added: [], error: e.message };
+      if (e instanceof Rejected) return { ok: false, removed: [], added: [], error: e.message };
       throw e;
     }
     const visible = (s: FactStore) => new Set(
@@ -1143,53 +1051,6 @@ export class Rofl {
   // -------------------------------------------------------------------------
   // time
 
-  /** The predicate `advanceTick` prunes the frozen layer with, or `undefined`
-   *  when nothing is to be dropped — which is the default and is what the
-   *  kernel did before this existed.
-   *
-   *  WHY THERE IS A POLICY AT ALL. `advanceTick` freezes provenance so a
-   *  finished tick keeps the record of which rule concluded what, and that is
-   *  ~2000 facts per tick in `examples/npc` — the domain's own output is a
-   *  rounding error beside it, and every fold walks the whole store. Measured
-   *  from both sides there: ten agents, eight ticks, 571 ms/tick keeping it
-   *  against 322 ms/tick pruning it. A host that runs for a day therefore
-   *  degrades without bound, and the kernel offered it no way to say so.
-   *
-   *  WHY IT IS OFF UNLESS ASKED. Frozen provenance is reconstructable in
-   *  principle — determinism plus dated assertions make a replayed tick the
-   *  same state, not an approximation (docs/time-and-continuity.md) — but the
-   *  replay machinery does not exist yet, so dropping it by default would
-   *  remove an answer nobody can currently recover.
-   *
-   *  TWO GATES, AND BOTH MUST OPEN. `retainTicks` unset keeps everything. And
-   *  a program whose rules READ `derived_by` keeps everything regardless of
-   *  the setting: it can observe its own completed-tick provenance from
-   *  inside, so pruning would change a derivable fact rather than evict a
-   *  cache. `examples/loot` §5 is that program — four rules joining
-   *  provenance with a manifest to answer which book is behind a belief. The
-   *  predicate deciding it is the evaluator's own (`Evaluation.readsProvenance`),
-   *  the same one that turns derived-relation reuse off, so retention and
-   *  reuse cannot come to different conclusions about the same program.
-   *
-   *  WHAT THE NUMBER MEANS, and where the clock is when it is read.
-   *  `advanceTick` freezes BEFORE it increments, so the tick being ended is
-   *  `store.tick` at this call, and keeping the last `n` COMPLETED ticks is
-   *  `T >= tick + 1 - n`: n = 0 keeps none of them, n = 1 keeps the tick just
-   *  ended, n = 3 keeps it and the two before it. The tick being entered
-   *  writes its own records after this boundary and is never a candidate, so
-   *  the current tick's provenance is always present — n counts history, not
-   *  the present. */
-  private frozenRetention(): ((rec: FactRec) => boolean) | undefined {
-    const n = this.retainTicks;
-    if (n === undefined || this.readsProvenance) return undefined;
-    const oldest = this.store.tick + 1 - n;
-    return (rec: FactRec) => {
-      if (rec.rel !== V.derived_by) return true;
-      const t = rec.args[2];
-      return t.k !== 'i' || t.v >= oldest;
-    };
-  }
-
   /** Run the current tick to fixpoint, then advance if not quiescent.
    *  onFixpoint (the tick-boundary hook) observes the tick at fixpoint,
    *  before the world advances. */
@@ -1200,30 +1061,85 @@ export class Rofl {
     const { partial } = this.ensure(budget, holeId);
     if (partial) return { advanced: false, quiescent: false, partial: true };
     opts.onFixpoint?.(this);
-    const staged = this.lastStaged;
-    const curBase = this.store.allFacts()
-      .filter((f) => f.scope === 'tick' && f.base).map((f) => f.key);
-    const stagedKeys = staged.map((f) => f.key);
-    // Quiescence is a question about two SETS -- does the next tick hold
-    // exactly what this one holds -- and it is answered by `sameKeySet`
-    // rather than inline, so neither side may borrow an order the other
-    // happens to arrive in. `stagedKeys` is left in arrival order because
-    // `tickLog` below records it and `canonicalState` reads that.
-    if (sameKeySet(curBase, stagedKeys)) {
-      return { advanced: false, quiescent: true, partial: false };
+    return this.standing(budget).tickAdvance();
+  }
+
+  /** THE EXPLAIN BRIDGE (rust/rofl `Session::explain_requests`): each
+   *  `explain_request(Kind, Atom)` answered, in key order, as
+   *  `explained[$explain](Kind, Atom, I, "line")`, one row per line from
+   *  I = 1, or one row at I = 0 carrying the refusal. The caller evaluates
+   *  again so rules can read them. Returns how many requests were answered. */
+  explainRequests(opts: { budget?: number } = {}): number {
+    const budget = opts.budget ?? DEFAULT_BUDGET;
+    // the explanations read what the evaluation met (the unknowns a hole
+    // reached and why): a plain program is evaluated again here to have it
+    let ev = this.agg;
+    if (ev === null || ev.plain) {
+      ev = new AggEval(this.store, budget, this.evaluator);
+      ev.forceAgg = true;
+      ev.reprepare();
+      ev.space = this.space ?? DEFAULT_SPACE;
+      ev.reuse = false;
+      try { ev.run(); } catch (e) { if (!(e instanceof Wall)) throw e; }
     }
-    this.store.advanceTick(staged.map(({ rel, persp, args }) => ({ rel, persp, args })),
-                           this.frozenRetention());
-    const t = this.store.tick;
-    this.store.tickLog.push(`tick ${t}: ${stagedKeys.join(' ') || '(empty)'}`);
-    for (const f of staged) {
-      const sig = f.ruleId + '|' + f.prems.map(sigOf).join('|');
-      this.store.support(f.key, sig, { ruleId: f.ruleId, tick: t, prems: f.prems });
-      this.store.add(V.derived_by, KERNEL_PERSP, [factTerm(f.rel, f.persp, f.args), mka(f.ruleId), mki(t)],
-        { scope: 'timeless', base: false, frozen: true });
+    const asks = this.store.relPersp('explain_request', MAIN).filter((f) => f.args.length === 2).sort((a, b) => (a.key < b.key ? -1 : a.key > b.key ? 1 : 0));
+    const rows: [Term, Term, number, string][] = [];
+    for (const f of asks) {
+      const [kind, atom] = f.args;
+      let text: string;
+      let ok = true;
+      if (atom.k !== 'a' && atom.k !== 'f') { text = 'an explain request names an atom: rel(args...)'; ok = false; }
+      else {
+        const lit: Lit = { rel: atom.name, persp: mka(MAIN), perspExplicit: false, args: atom.k === 'f' ? atom.args : [], temporal: 'now' };
+        const k = kind.k === 'a' ? kind.name : '';
+        const outside = ev.outsideCone(lit.rel);
+        if (outside !== undefined) { text = outside; ok = false; } else try {
+          if (k === 'why') text = ev.questioned(budget, () => ev.whyText(lit));
+          else if (k === 'why_all') text = ev.questioned(budget, () => ev.whyText(lit, Infinity));
+          else if (k === 'whynot') text = ev.questioned(budget, () => ev.whynotText(lit, { maxDepth: 3, maxNodes: 64 }))[1];
+          else { text = 'the kinds of explanation are why, why_all and whynot'; ok = false; }
+        } catch (e) { text = k === 'whynot' ? describeHalt(e) : (e as Error).message; ok = false; }
+      }
+      if (ok) text.split('\n').forEach((line, i) => rows.push([kind, atom, i + 1, line]));
+      else rows.push([kind, atom, 0, text]);
     }
-    this.lastStaged = [];
-    return { advanced: true, quiescent: false, partial: false };
+    for (const [kind, atom, i, line] of rows) this.store.add('explained', '$explain', [kind, atom, mki(i), mks(line)], { scope: 'tick', base: true });
+    this.store.dirty = true;
+    return asks.length;
+  }
+
+  /** THE COMPOSITION FROM BELOW (rust/rofl `Session::feed_below`): what the
+   *  world `below` concludes, fed here as base facts asserted by `below`, and
+   *  what it has no answer for as `hole($below(Rel, Book, Args), left_out_below)`. */
+  feedBelow(below: Rofl): number {
+    if (below.store.dirty) throw new Error('the world below is not evaluated');
+    const mine = new Set(storeRuleIds(this.store));
+    const bev = new AggEval(below.store, DEFAULT_BUDGET, below.evaluator === 'strata' ? 'strata' : 'rounds');
+    const fed = new Set(bev.rules.filter((r) => !mine.has(r.id)).map((r) => r.clause.head.rel)
+      .filter((r) => r !== IFACE.semantics && r !== IFACE.sealed && r !== IFACE.stratum));
+    fed.add(IFACE.unknown);
+    const keys = below.store.allFacts().filter((r) => fed.has(r.rel) && !isKernelLedger(r.persp)).map((r) => r.key)
+      .sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+    const open: [string, string | null, Term[]][] = [];
+    if (below.store.partialEval) for (const r of [...fed].sort()) open.push([r, null, []]);
+    for (const row of below.store.relAll(SHRUG)) {
+      const t = row.args[0];
+      let persp = MAIN, at = t;
+      if (t.k === 'f' && t.name === 'in' && t.args.length === 2) { if (t.args[0].k !== 'a') continue; persp = t.args[0].name; at = t.args[1]; }
+      if (at.k === 'a') { if (fed.has(at.name) && !at.name.startsWith('$')) open.push([at.name, persp, []]); }
+      else if (at.k === 'f' && at.name === 'every') { if (at.args[0]?.k === 'a' && fed.has(at.args[0].name)) open.push([at.args[0].name, null, []]); }
+      else if (at.k === 'f') { if (fed.has(at.name) && !at.name.startsWith('$')) open.push([at.name, persp, at.args]); }
+    }
+    const res = this.load(keys.map((k) => `${k}.\n`).join(''), { who: 'below' });
+    if (!res.ok) throw new Error(`what the world below concludes does not load here: ${res.diagnostics.join('; ')}`);
+    const any = mka('$any');
+    for (const [rel, persp, args] of open) {
+      const p = persp === null ? any : mka(persp);
+      this.store.add(V.hole, KERNEL_PERSP, [mkf('$below', [mka(rel), p, persp === null ? any : listT(args)]), mka('left_out_below')],
+        { scope: 'timeless', base: true, frozen: true });
+    }
+    this.store.dirty = true;
+    return keys.length;
   }
 
   /** Advance ticks until quiescence, budget exhaustion, or maxTicks. */
@@ -1254,13 +1170,9 @@ export class Rofl {
   }
 
   strataPlan(): { rule: string; rel: string; level: number | null }[] {
-    return this.prepared(DEFAULT_BUDGET).strataPlan();
+    this.ensure(DEFAULT_BUDGET, mka('$adhoc'));
+    if (!this.agg?.planned) this.evaluateNow(DEFAULT_BUDGET, mka('$adhoc'));
+    return this.agg!.strataPlan();
   }
 }
 
-/** A premise literal with the current bindings applied — what whynot hands
- *  to the next level down. Free variables survive as variables: the failure
- *  there is existential ("no instance at all"), not about one instance. */
-function instantiate(lit: Lit, s: Subst): Lit {
-  return { ...lit, persp: walk(lit.persp, s), args: lit.args.map((a) => resolve(a, s)) };
-}

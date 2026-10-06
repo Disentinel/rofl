@@ -1,0 +1,5 @@
+-- expect-refusal: it is declared a lattice too: a relation has one algebra
+-- a relation tagged tropical and declared a min lattice has two algebras,
+-- though both keep the least value
+tag tsr_lat(A, tropical T).
+lattice tsr_lat(A, min T).

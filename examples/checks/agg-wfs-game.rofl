@@ -1,0 +1,14 @@
+-- examples/checks/agg-wfs-game.rofl — THE WELL-FOUNDED WORLD BELOW every
+-- agg_<kind>_wfs world (docs/aggregates.md, "Well-founded worlds and ticks,
+-- as built"). A position wins if some move reaches a position that does not
+-- win. c and h win; d, g and i lose (no move, or every move reaches a win);
+-- a, b, e and f are drawn: each wins only if the other does not, and the
+-- alternating fixpoint leaves them `unknown(wg_win(X))`. Declared as the
+-- world agg_wfs_game too, so both engines agree on what is fed.
+semantics(well_founded).
+edb(wg_move).
+wg_move(a, b). wg_move(b, a).
+wg_move(b, c). wg_move(c, d).
+wg_move(e, f). wg_move(f, e).
+wg_move(g, h). wg_move(h, i).
+wg_win(X) :- wg_move(X, Y), not wg_win(Y).

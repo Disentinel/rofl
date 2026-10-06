@@ -1,0 +1,45 @@
+-- examples/checks/agg-tag-data.rofl — THE IDEMPOTENT TAGS (docs/aggregates.md,
+-- "Tags, as built"), shared by the agg_tag_* worlds. Each tag cell is keyed by
+-- the whole head, its tag the last argument, and the rules leave the tag to
+-- the engine: a firing's tag is its weight (the head's tag, where the body
+-- binds it) ⊗ the tags of the body's premises of the same semiring.
+--
+-- tg_cost: cheapest paths, tropical (min, +), over a graph with a cycle
+-- a -> b -> c -> a, a zero-weight self-loop at d, a tie (e -> f direct, and
+-- e -> g -> f, both 2), and h, which reaches only itself at no cost (a rule
+-- with no tagged premise and no weight: the tag is `one`, 0).
+edb(tg_e).
+edb(tg_home).
+tg_e(a, b, 3). tg_e(b, c, 4). tg_e(a, c, 9). tg_e(c, a, 1). tg_e(c, d, 2). tg_e(b, d, 6).
+tg_e(d, d, 0). tg_e(e, f, 2). tg_e(e, g, 1). tg_e(g, f, 1).
+tg_home(h).
+tag tg_step(A, B, tropical W).
+tg_step(A, B, W) :- tg_e(A, B, W).
+tag tg_cost(A, B, tropical T).
+tg_cost(A, B, T) :- tg_step(A, B, _).
+tg_cost(A, C, T) :- tg_cost(A, B, _), tg_step(B, C, _).
+tg_cost(A, A, T) :- tg_home(A).
+-- read as a value, from outside the recursion, any way at all
+tg_cheap(A, B)   :- tg_cost(A, B, T), T <= 5.
+-- and inside it, monotonely: a walk may go on only from a prefix cheaper
+-- than 6 (T0 < 6 stays true as T0 improves)
+tag tg_short(A, B, tropical T).
+tg_short(A, B, T) :- tg_step(A, B, _).
+tg_short(A, C, T) :- tg_short(A, B, T0), T0 < 6, tg_step(B, C, _).
+--
+-- tg_pr: the most probable path, viterbi (max, times) over probabilities in
+-- millionths, ⊗ rounding down; nonlinear (two tagged premises). x -> y -> z
+-- multiplies two millionths and rounds to 0: the fact holds, its tag 0.
+edb(tg_p).
+tg_p(a, b, 500000). tg_p(b, c, 800000). tg_p(a, c, 300000). tg_p(c, a, 900000).
+tg_p(x, y, 1). tg_p(y, z, 1).
+tag tg_pr(A, B, viterbi P).
+tg_pr(A, B, W) :- tg_p(A, B, W).
+tg_pr(A, C, T) :- tg_pr(A, B, _), tg_pr(B, C, _).
+--
+-- tg_tr: the most trusted path, trust (max, min): a chain is as trusted as
+-- its weakest link. The recursive rule's head binds its tag from a plain
+-- premise: the weight W, ⊗ the tag of tg_tr(A, B, _).
+tag tg_tr(A, B, trust T).
+tg_tr(A, B, W) :- tg_p(A, B, W).
+tg_tr(A, C, W) :- tg_tr(A, B, _), tg_p(B, C, W).

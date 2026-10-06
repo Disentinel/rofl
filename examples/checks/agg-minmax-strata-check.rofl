@@ -1,0 +1,16 @@
+-- examples/checks/agg-minmax-strata-check.rofl — agg_minmax_strata: min in a
+-- rule body is stratified, whatever its algebra permits as a lattice
+-- declaration. The extremes rank above what they read and match the oracle
+-- although their input closes two negations deep, and a min over its own
+-- conclusion (agg-minmax-strata-2-refused-recursive.rofl) is refused.
+ams_higher(Rel, N) :- stratum(Rel, N), stratum(Rel, M), M > N.
+ams_top(Rel, N)    :- stratum(Rel, N), not ams_higher(Rel, N).
+ams_inverted(A, B) :- ams_top(am_min, A), ams_top(am_d, B), A <= B.
+ams_inverted(A, B) :- ams_top(am_or, A), ams_top(am_flag, B), A <= B.
+ams_known(Rel)     :- ams_top(Rel, _).
+ams_unranked(am_min) :- not ams_known(am_min).
+ams_unranked(am_d)   :- not ams_known(am_d).
+amr_accepted()     :- concludes[$kernel](_, amr_p).
+alarm(ams_inverted).
+alarm(ams_unranked).
+alarm(amr_accepted).

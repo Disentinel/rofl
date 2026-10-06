@@ -1,0 +1,43 @@
+-- examples/checks/demand-pos-hole.rofl — demand_pos_hole: A HOLE IS CARRIED
+-- THROUGH A RULE ANSWERED ON DEMAND to its readers, as through one that fires
+-- bottom-up (f_a_premise_unfolded_at_a_call_read_a_shrugged_cell_as_absent).
+--
+-- dp_d leaves Y free, so it is answered on demand and fires at no level.
+-- dp_pe(c, k, heavy) faults the min lattice dp_p, so dp_p(a, k) is a hole and
+-- dp_p(a, f) withdrawn: dp_pv(k, _), dp_pv(f, _) are shrugs, and so are
+-- dp_d(k, _), dp_d(f, _) and every reader of them. The carry of a hole walked the
+-- rules that fire, so it stopped at dp_d: dp_nr(k) and dp_nr(f) were stored as
+-- facts, dp_r(k), dp_r(f) neither held nor were shrugs. dp_q is the same with a
+-- plain hole (oops + 1); dp_q2 only reads it, and nothing negates dp_q2.
+edb(dp_pe). edb(dp_node). edb(dp_k).
+dp_pe(a, c, 1). dp_pe(c, k, heavy). dp_pe(k, f, 1). dp_pe(a, f, 10).
+dp_node(c). dp_node(k). dp_node(f).
+lattice dp_p(A, C, min D).
+dp_p(A, C, D) :- dp_pe(A, C, D).
+dp_p(A, C, D) :- dp_p(A, B, D1), dp_pe(B, C, W), D is D1 + W.
+dp_pv(C, D) :- dp_p(a, C, D).
+dp_d(C, Y)  :- dp_node(C), dp_pv(C, D), D < 20.
+dp_r(C)     :- dp_node(C), dp_d(C, C).
+dp_nr(C)    :- dp_node(C), not dp_d(C, C).
+
+dp_k(c, 1). dp_k(k, oops).
+dp_kv(C, D) :- dp_k(C, K), D is K + 1.
+dp_q(C, Y)  :- dp_node(C), dp_kv(C, D).
+dp_nq(C)    :- dp_node(C), not dp_q(C, C).
+dp_q2(C)    :- dp_node(C), dp_q(C, C).
+
+dp_cut(k). dp_cut(f).
+dp_wrong(C)  :- dp_nr(C), dp_cut(C).
+dp_wrong(C)  :- dp_r(C), dp_cut(C).
+dp_wrong(k)  :- dp_nq(k).
+dp_missed(c) :- not dp_r(c).
+dp_missed(f) :- not dp_nq(f).
+alarm(dp_wrong).
+alarm(dp_missed).
+
+-- expect-row: dp_r[main](c) tick drv support=1
+-- expect-row: dp_nq[main](f) tick drv support=1
+-- expect-no-row: dp_nr[main](k)
+-- expect-no-row: dp_nr[main](f)
+-- expect-no-row: dp_nq[main](k)
+-- expect-row: shrug[$kernel](dp_q2(k),inherited,from($cons($rule(r1eaacba7),$nil))) tick base support=0

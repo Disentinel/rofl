@@ -1,0 +1,34 @@
+-- examples/checks/agg-lattice-carry-cut.rofl — agg_lattice_carry_cut: the
+-- budget falls INSIDE a carry. cb_y(g, _) is unknown (1 + oops is no
+-- number); carried silently to cb_yq(g) and on to 27000 conclusions of
+-- cb_big not known, it would reach the min cb_lo reads, which the whole
+-- evaluation therefore holes `support_withdrawn`. The carry is charged and
+-- the wall falls in it, before it reached cb_lo: what it would have reached
+-- is not known, so no lattice is closed as settled at the cut, and cb_lo is
+-- holed with the wall's reason, its value a bound, never final
+-- (f_the_carry_of_unknowns_ran_past_the_walls). The cut then carries a
+-- fault of its own (cf_lo's rule, 1 + oops), against walls renewed for it:
+-- charged against the ones the evaluation spent, it would fall at once and
+-- hole every lattice whole.
+-- expect-row: hole[$kernel]($adhoc,budget_exhausted)
+-- expect-row: hole[$kernel]($lattice(cb_lo),budget_exhausted)
+-- expect-row: cb_lo[main](g,5)
+-- expect-row: hole[$kernel]($lattice(cf_lo),budget_exhausted)
+edb(cb_v).
+edb(cb_n).
+edb(cb_d).
+edb(cf_v).
+cb_v(g, q, oops). cb_v(g, r, 1).
+cb_d(g, 5).
+cb_n(a0). cb_n(a1). cb_n(a2). cb_n(a3). cb_n(a4). cb_n(a5). cb_n(a6). cb_n(a7). cb_n(a8). cb_n(a9).
+cb_n(a10). cb_n(a11). cb_n(a12). cb_n(a13). cb_n(a14). cb_n(a15). cb_n(a16). cb_n(a17). cb_n(a18). cb_n(a19).
+cb_n(a20). cb_n(a21). cb_n(a22). cb_n(a23). cb_n(a24). cb_n(a25). cb_n(a26). cb_n(a27). cb_n(a28). cb_n(a29).
+cb_y(G, Y) :- cb_v(G, _, X), Y is X + 1.
+cb_yq(G) :- cb_y(G, Y), Y > 100.
+cb_big(A, B, C, G) :- cb_yq(G), cb_n(A), cb_n(B), cb_n(C).
+lattice cb_lo(G, min D).
+cb_lo(G, D) :- cb_d(G, D).
+cb_lo(G, 1) :- cb_big(a0, a0, a0, G).
+lattice cf_lo(G, min Y).
+cf_v(g, oops). cf_v(g, 1).
+cf_lo(G, Y) :- cf_v(G, X), Y is X + 1.

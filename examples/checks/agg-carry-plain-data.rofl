@@ -1,0 +1,15 @@
+-- examples/checks/agg-carry-plain-data.rofl — WHAT A HOLE LEAVES OUT IS CARRIED AT
+-- A COST (agg_carry_plain_budget, agg_carry_plain_budget_ts). cw_x(b, _) is unknown
+-- (1 + oops is no number), and so, silently, is every cw_big(A, B, C, _)
+-- it reaches: 27000 conclusions not known, from four facts. Carrying them is
+-- work like any other, charged against the walls the evaluation started
+-- with, so a small budget cuts the carry and says so with the world's hole
+-- (f_the_carry_of_unknowns_ran_past_the_walls).
+edb(cw_v).
+edb(cw_n).
+cw_v(b, oops).
+cw_n(a0). cw_n(a1). cw_n(a2). cw_n(a3). cw_n(a4). cw_n(a5). cw_n(a6). cw_n(a7). cw_n(a8). cw_n(a9).
+cw_n(a10). cw_n(a11). cw_n(a12). cw_n(a13). cw_n(a14). cw_n(a15). cw_n(a16). cw_n(a17). cw_n(a18). cw_n(a19).
+cw_n(a20). cw_n(a21). cw_n(a22). cw_n(a23). cw_n(a24). cw_n(a25). cw_n(a26). cw_n(a27). cw_n(a28). cw_n(a29).
+cw_x(K, Y) :- cw_v(K, X), Y is X + 1.
+cw_big(A, B, C, Y) :- cw_x(_, Y), cw_n(A), cw_n(B), cw_n(C).

@@ -1,0 +1,4 @@
+-- expect-refusal: quantile and rank take two terms before their body
+-- examples/checks/agg-holistic-safety-5-refused-quantile-one.rofl — a
+-- quantile with no percent.
+ahs_qone(G, Q) :- ahs_group(G), Q is quantile(V ; K : ahs_line(G, K, V)).

@@ -1,0 +1,7 @@
+-- expect-refusal: is not monotone in the value
+-- an equality on a join's value inside its recursion holds of one value and
+-- not of the larger ones it grows into
+edb(ajsr_e). ajsr_e(a, b). ajsr_e(b, a).
+lattice ajsr_eq(X, union S).
+ajsr_eq(X, set(X)) :- ajsr_e(X, _).
+ajsr_eq(X, S)      :- ajsr_e(X, Y), ajsr_eq(Y, S), S = set(a, b).

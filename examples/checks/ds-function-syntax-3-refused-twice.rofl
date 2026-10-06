@@ -1,0 +1,4 @@
+-- expect-refusal: is declared a structure twice
+-- a relation has one declaration, even the same one again
+function dss_twice(K, to V).
+function dss_twice(K, to V).

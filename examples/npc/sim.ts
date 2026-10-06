@@ -136,7 +136,7 @@ export interface Fold {
   option: Map<string, LogProb>;   // option fact key -> best-derivation value
   rounds: number;
   converged: boolean;
-  disciplineHeld: boolean;
+  disciplineHeld: boolean | null;
   cyclic: number;
 }
 

@@ -44,6 +44,7 @@ What this file calls a node, and what each word stands for:
 
 | word | stands for |
 |---|---|
+| <a id="noun-call_expression"></a>a call expression | a node of kind `call_expression` |
 | <a id="noun-default_export"></a>a default export | a node of kind `export_default_declaration` |
 | <a id="noun-default_import"></a>a default import | a node of kind `import_default_specifier` |
 | <a id="noun-dynamic_import"></a>a dynamic import | a node of kind `import_expression` |
@@ -76,6 +77,7 @@ Phrases this file defines in one step, each by the sentence it stands for:
 - <a id="spec_type_only"></a>A node is a type only import specifier if [the attribute](#ast_attr) `import_kind` of it is "type".
 - <a id="has_value_binding"></a>A site binds a value if it [binds a value](#value_binding) at some node.
 - <a id="has_reexport_spec"></a>A node has a reexport specifier if it [has the reexport specifier](#reexport_spec) some node.
+- <a id="has_module_target"></a>A site names a file of the code if it [means the file](#module_target) some file.
 - <a id="has_site_kind"></a>A site has a site kind if [the site kind](#site_kind) of it is some kind.
 - <a id="has_verdict"></a>A shape has a verdict if [`shape_verdict`](js-callgraph.rofl.md#shape_verdict)(it, something) in the main.
 - <a id="self_referential_module"></a>A file F is self referential if F [has the module meta](#module_meta) some node.
@@ -100,7 +102,7 @@ Declared as facts:
 - A kind K is unknown in a layer L of a language Lang because a reason R — rows from facts/js-callgraph.rofl
 - A kind K is unknown with a shape S in a layer Lay of a language Lang because a reason R — rows from facts/js-callgraph.rofl
 
-## 1. THE PLACES A MODULE SPECIFIER OCCURS — four kinds. A re-export is a site
+## 1. THE PLACES A MODULE SPECIFIER OCCURS — five kinds. A re-export is a site
 
 > because it has a `source`, not because of its kind: `export { a as b }` and
 > `export { a as b } from './d'` are one kind. `import_site` keeps its meaning
@@ -120,24 +122,39 @@ Declared as facts:
    - N is `reexport_named`;
 2. if E is an [export-all](#noun-export-all), the `source` of E is some node, and N is `reexport_all`.
 
+> `require('./p')` is CommonJS's import: an ordinary call whose callee is the
+> name `require` and whose first argument is the specifier. Scope-blind, as the
+> call graph is: a local `require` would count too. `require.resolve(s)` names
+> a file and loads nothing, and is not a site.
+
+<a id="require_site"></a>A [call expression](#noun-call_expression) is a require site if all of:
+  - an [identifier](#noun-identifier) N [is named](js-structure.rofl.md#ast_name) "require";
+  - the `callee` of it is N;
+  - the `arguments` of it is some node.
+
 <a id="module_site"></a>A node N is a module site of a form K either:
 
 1. if N [is an import site](#import_site) of K;
-2. if N [is a reexport site](#reexport_site) of K.
+2. if N [is a reexport site](#reexport_site) of K;
+3. if N [is a require site](#require_site) and K is `require_call`.
 
 <a id="site_kind"></a>The site kind of I is N either:
 
 1. if I is an [import](#noun-import) and N is `import_declaration`;
 2. if I is a [dynamic import](#noun-dynamic_import) and N is `import_expression`;
 3. if I [is a reexport site](#reexport_site) of `reexport_named` and N is `export_named_declaration`;
-4. if I [is a reexport site](#reexport_site) of `reexport_all` and N is `export_all_declaration`.
+4. if I [is a reexport site](#reexport_site) of `reexport_all` and N is `export_all_declaration`;
+5. if I [is a require site](#require_site) and N is `call_expression`.
 
 A site
 
 - <a id="site_file"></a>sits in a file F if it [is a module site](#module_site) of some form and it [is in file](js-model.rofl.md#ast_node) F.
 - <a id="site_line"></a>sits at line L if it [is a module site](#module_site) of some form and it [is at line](js-model.rofl.md#ast_node) L.
 
-<a id="site_source_node"></a>The source node of a site I is a node Src if I [is a module site](#module_site) of some form and the `source` of I is Src.
+<a id="site_source_node"></a>The source node of a site I is a node Src either:
+
+1. if I [is a module site](#module_site) of some form and the `source` of I is Src;
+2. if I [is a require site](#require_site) and the `arguments` of I is Src.
 
 <a id="site_source"></a>The source text of a site I is S if [the source node](#site_source_node) of I is a [string literal](#noun-string_literal) Src and Src [is written as](js-structure.rofl.md#ast_value) S.
 
@@ -197,12 +214,23 @@ A site
   - [`str_seg`](#str_seg)(S, K, "..");
   - [`fs_parent`](#fs_parent)(D, P);
   - K1 is K + 1.
+
+> the empty segment of `../` stays where it is, so a directory's index answers
+
+A site
+
+- walks at a step K1 to a directory D if all of:
+  - it [walks](#walk) at a step K to D;
+  - [the source text](#site_source) of it is S;
+  - [`str_seg`](#str_seg)(S, K, "");
+  - K1 is K + 1.
 - walks at a step K1 to a directory C if all of:
   - it [walks](#walk) at a step K to a directory D;
   - [the source text](#site_source) of it is S;
   - [`str_seg`](#str_seg)(S, K, Seg);
   - Seg differs from ".";
   - Seg differs from "..";
+  - Seg differs from "";
   - [`fs_dir_in`](#fs_dir_in)(D, Seg, C);
   - K1 is K + 1.
 - <a id="resolved_import"></a>resolves to the file T if all of:
@@ -250,7 +278,7 @@ A node I is resolved either:
 | "mjs" | "mts" |
 | "cjs" | "cts" |
 
-<a id="probe_ext"></a>`probe_ext` includes "ts", "tsx", "js", "jsx", "mjs", "cjs".
+<a id="probe_ext"></a>`probe_ext` includes "ts", "tsx", "js", "jsx", "mjs", "cjs", "json".
 
 <a id="index_file"></a>`index_file` includes "index.ts", "index.tsx", "index.js", "index.jsx".
 
@@ -453,6 +481,10 @@ A site
 2. if all of:
    - a node I [is an import site](#import_site) of `dynamic_import`;
    - I [means the file](#module_target) T;
+   - I [sits in](#site_file) F;
+3. if all of:
+   - a node I [is a require site](#require_site);
+   - I [means the file](#module_target) T;
    - I [sits in](#site_file) F.
 
 <a id="evaluates"></a>A file F evaluates the module T either:
@@ -555,6 +587,17 @@ In the code:
 
 1. if [the site shape](#site_shape) of I is Sh, unless I [is resolved](js-callgraph.rofl.md#resolved_site);
 2. if I [has a computed source](#site_source_computed) and Sh is `computed`.
+
+> what a run over this corpus cannot see: a relative specifier — static,
+> dynamic, re-exported or required — that names no file the corpus holds. A
+> `never` over the rest holds only as far as these; a package name is not one.
+
+<a id="unresolved_relative"></a>A file F leaves unresolved S at a line L if all of:
+  - [the site shape](#site_shape) of a site I is `relative`;
+  - [the source text](#site_source) of I is S;
+  - I [sits in](#site_file) F;
+  - I [sits at line](#site_line) L;
+  - unless I [names a file of the code](#has_module_target).
 
 In the audit:
 

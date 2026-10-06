@@ -1,0 +1,20 @@
+-- examples/checks/agg-minmax-syntax-1-forms.rofl — every form of min, max,
+-- or and and the grammar reads: correlated and grouped, a book, a wildcard,
+-- a builtin and a negation inside, and the four words as ordinary names
+-- elsewhere. Read and refused by the TypeScript engine, whose rule ids must
+-- be the Rust store's.
+edb(sxm_d).
+edb(sxm_g).
+sxm_d(g, 3, true).
+sxm_d(g, 8, false).
+sxm_d[ledger](g, 1, true).
+sxm_g(g).
+sxm_min(M)      :- M is min(V : sxm_d(_, V, _)).
+sxm_max(G, M)   :- sxm_g(G), M is max(V : sxm_d(G, V, _)).
+sxm_or(G, B)    :- B is or(F : sxm_d(G, _, F)).
+sxm_and(B)      :- B is and(F : sxm_d[ledger](_, _, F)).
+sxm_bi(M)       :- M is min(V : sxm_d(_, V, _), V > 2).
+sxm_neg(G, M)   :- sxm_g(G), M is max(V : sxm_d(G, V, F), not sxm_g(F)).
+-- the operations are words, not keywords: a relation and an atom named min
+min(or).
+sxm_word(X)     :- min(X), X = or.

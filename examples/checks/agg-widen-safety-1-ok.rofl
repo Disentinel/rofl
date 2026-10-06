@@ -1,0 +1,27 @@
+-- examples/checks/agg-widen-safety-1-ok.rofl — what safety.rofl lets a rule
+-- do with a hull's value inside its recursion once a widening bounds it: an
+-- interval function of the value, ivadd, ivsub either way round, ivmul by an
+-- integer, ivmeet, into a head of a hull, on a cycle that passes a relation
+-- declared `widen N` (the loop head), though the other hulls on it (the
+-- body, and the points computed from it) declare none; a membership of a
+-- widened value, as of any join's. And outside the recursion, and over plain
+-- data, an interval function anywhere.
+edb(aws_g).
+aws_g(entry, iv(0, 0)).
+lattice aws_pt(P, hull I).
+lattice aws_head(P, hull I) widen 1.
+aws_pt(P, I)        :- aws_g(P, I).
+aws_head(h, I)      :- aws_pt(entry, I).
+aws_pt(body, J)     :- aws_head(h, I), J is ivmeet(I, iv(ninf, 4)).
+lattice aws_derived(P, hull I).
+aws_derived(neg, J)   :- aws_pt(body, I), J is ivsub(0, I).
+aws_derived(twice, J) :- aws_pt(body, I), J is ivmul(I, 2).
+aws_head(h, J)      :- aws_pt(body, I), J is ivadd(I, 1).
+aws_head(h, J)      :- aws_derived(neg, I), J is ivsub(I, 1).
+aws_seen(h, E)      :- aws_head(h, I), aws_small(E), E in I.
+edb(aws_small).
+aws_small(-1). aws_small(0). aws_small(1).
+-- outside: any function, of a value that is final
+lattice aws_out(P, hull I).
+aws_out(P, J)       :- aws_pt(P, I), J is ivadd(I, iv(ninf, 0)).
+aws_plain(J)        :- aws_g(_, I), J is ivmul(I, 7).

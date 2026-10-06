@@ -1,0 +1,6 @@
+-- examples/checks/agg-minmax-eval-check.rofl — agg_minmax_eval: min, max, or
+-- and and evaluated in the Rust engine against agg-minmax-oracle.rofl, and
+-- one value per group.
+ame_two(Rel, G) :- am_min(G, A), am_min(G, B), A != B, Rel = am_min.
+ame_two(Rel, G) :- am_or(G, A), am_or(G, B), A != B, Rel = am_or.
+alarm(ame_two).

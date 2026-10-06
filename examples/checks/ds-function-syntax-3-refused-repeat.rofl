@@ -1,0 +1,3 @@
+-- expect-refusal: 'K' is written twice
+-- each argument of a declaration is a variable of its own
+function dss_rep(K, to K).

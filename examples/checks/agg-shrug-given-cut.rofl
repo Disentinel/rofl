@@ -1,0 +1,17 @@
+-- examples/checks/agg-shrug-given-cut.rofl — agg_cell_shrug_given_cut: a
+-- wall that falls after the rules reading shrug fired (check_opt budget
+-- 2500; the join over what they read is what runs out). A walled
+-- evaluation's rows are not final and its hole says so: it is cut short and
+-- answers what it reached, the wall's own shrug among its rows. It was once
+-- refused, `shrug is read of $adhoc, which a rule that reads shrug leaves
+-- without an answer`, because the wall's row had arrived after a reader of
+-- every shrug fired; the plain evaluator here, the aggregate one in
+-- agg-shrug-given-cut-count.rofl.
+-- expect-row: hole[$kernel]($adhoc,budget_exhausted)
+-- expect-row: shrug[$kernel]($adhoc,budget,spent(steps,
+-- expect-row: shrug[$kernel](in(sgx_b,sgx_k(0)),given,concluded)
+sgx_n(0).
+sgx_n(Y) :- sgx_n(X), X < 60, Y is X + 1.
+unknown[sgx_b](sgx_k(X)) :- sgx_n(X).
+sgx_any(T, R) :- shrug(T, R, _).
+sgx_two(T, U) :- sgx_any(T, _), sgx_any(U, _).

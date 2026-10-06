@@ -1,0 +1,39 @@
+-- examples/checks/agg-tag-witness-check.rofl — agg_tag_witness: an idempotent
+-- tag's witness is the Best of the order lattice it is: the firings that
+-- reach its value, the best derivations, canonical by height, each read as
+-- `lattice_member` and `lattice_member_prem`. tg_cost(e, f, 2) has two, the
+-- direct step (height 2) and the walk through g (height 3), in that order;
+-- tg_cost(d, d, 0) one, its step: the firing round its own zero-weight loop
+-- cites the fact itself, self-support, and is no member; tg_cost(a, c, 7)
+-- one, through b, and the direct 9 is none, since a worse firing never
+-- reaches the value; tg_pr(x, z, 0) one, of two premises, each a tag of the
+-- same semiring. A member's height is one more than its highest premise's.
+tgw_member(F, I, H)  :- lattice_member[$kernel](F, I, H, _).
+tgw_prem(F, I, P)    :- lattice_member_prem[$kernel](F, I, P).
+tgw_want(cost(e, f), 1, 2). tgw_want(cost(e, f), 2, 3).
+tgw_want(cost(d, d), 1, 2).
+tgw_want(cost(a, c), 1, 3).
+tgw_want(pr(x, z), 1, 2).
+tgw_fact(cost(e, f), $fact(tg_cost, main, $cons(e, $cons(f, $cons(2, $nil))))).
+tgw_fact(cost(d, d), $fact(tg_cost, main, $cons(d, $cons(d, $cons(0, $nil))))).
+tgw_fact(cost(a, c), $fact(tg_cost, main, $cons(a, $cons(c, $cons(7, $nil))))).
+tgw_fact(pr(x, z), $fact(tg_pr, main, $cons(x, $cons(z, $cons(0, $nil))))).
+tgw_got(K, I, H)     :- tgw_fact(K, F), tgw_member(F, I, H).
+tgw_missing(K, I, H) :- tgw_want(K, I, H), not tgw_got(K, I, H).
+tgw_extra(K, I, H)   :- tgw_got(K, I, H), not tgw_want(K, I, H).
+-- what the members rest on: facts at their final values
+tgw_pwant(cost(e, f), 1, $fact(tg_step, main, $cons(e, $cons(f, $cons(2, $nil))))).
+tgw_pwant(cost(e, f), 2, $fact(tg_cost, main, $cons(e, $cons(g, $cons(1, $nil))))).
+tgw_pwant(cost(e, f), 2, $fact(tg_step, main, $cons(g, $cons(f, $cons(1, $nil))))).
+tgw_pwant(cost(d, d), 1, $fact(tg_step, main, $cons(d, $cons(d, $cons(0, $nil))))).
+tgw_pwant(cost(a, c), 1, $fact(tg_cost, main, $cons(a, $cons(b, $cons(3, $nil))))).
+tgw_pwant(cost(a, c), 1, $fact(tg_step, main, $cons(b, $cons(c, $cons(4, $nil))))).
+tgw_pwant(pr(x, z), 1, $fact(tg_pr, main, $cons(x, $cons(y, $cons(1, $nil))))).
+tgw_pwant(pr(x, z), 1, $fact(tg_pr, main, $cons(y, $cons(z, $cons(1, $nil))))).
+tgw_pgot(K, I, P)    :- tgw_fact(K, F), tgw_prem(F, I, P), P = $fact(_, _, _).
+tgw_pmissing(K, I, P) :- tgw_pwant(K, I, P), not tgw_pgot(K, I, P).
+tgw_pextra(K, I, P)  :- tgw_pgot(K, I, P), not tgw_pwant(K, I, P).
+alarm(tgw_missing).
+alarm(tgw_extra).
+alarm(tgw_pmissing).
+alarm(tgw_pextra).

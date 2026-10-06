@@ -1,0 +1,30 @@
+-- examples/checks/agg-incr-owner.rofl — agg_incr_owner: A RULE READ AGAIN WHOLE
+-- THAT OWNS A CELL THE FACT SUPPORTS, or concludes what such a rule concludes.
+-- A rule that reads the retracted relation outside its aggregate as well as
+-- inside it is read again whole (its facts and cells gone, the rule fired again),
+-- so its own cell is not subtracted from; and a rule read again whole that
+-- concludes what another rule's cell concludes takes that rule with it, since
+-- the facts it concluded went with the first rule's facts. The state must be the
+-- one of a world without the fact, ow_cnt(b, 0) with its two derivations.
+--
+--   ow_sale(3, b, 5)   b has no sale left: ow_twice(b, 1) goes, ow_cnt(b, 0) is concluded twice (a count of nothing, and the negation)
+--   ow_sale(1, a, 3)   a's count goes from 2 to 1, a's twice from 2 to 1
+edb(ow_sale). edb(ow_grp).
+ow_grp(a). ow_grp(b). ow_grp(c).
+ow_sale(1, a, 3).
+ow_sale(2, a, 4).
+ow_sale(3, b, 5).
+ow_twice(G, N) :- ow_sale(_, G, _), N is count(K : ow_sale(K, G, _)).
+ow_cnt(G, N) :- ow_grp(G), N is count(K : ow_sale(K, G, _)).
+ow_cnt(G, 0) :- ow_grp(G), not ow_sale(_, G, _).
+
+-- the state after the retractions, row by row
+-- expect-row: ow_twice[main](a,1) tick drv support=1
+-- expect-row: ow_cnt[main](a,1) tick drv support=1
+-- expect-row: ow_cnt[main](b,0) tick drv support=2
+-- expect-row: ow_cnt[main](c,0) tick drv support=2
+-- and nothing of what they supported before
+-- expect-no-row: ow_twice[main](a,2)
+-- expect-no-row: ow_twice[main](b,
+-- expect-no-row: ow_cnt[main](a,2)
+-- expect-no-row: ow_cnt[main](b,1)

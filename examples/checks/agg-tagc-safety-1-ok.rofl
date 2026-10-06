@@ -1,0 +1,11 @@
+-- examples/checks/agg-tagc-safety-1-ok.rofl — rules a counting tag accepts: a
+-- negation of a closed relation, a weight bound from a plain premise, a
+-- constant weight, and a tag read as a value by a plain rule above it.
+edb(tcf_d).
+edb(tcf_off).
+tcf_d(a, b, 2). tcf_d(a, c, 1). tcf_d(b, c, 1).
+tcf_off(c).
+tag tcf_n(A, counting N).
+tcf_n(A, W) :- tcf_d(A, B, W), not tcf_off(B).
+tcf_n(A, 3) :- tcf_d(_, A, _).
+tcf_big(A)  :- tcf_n(A, N), N >= 3.

@@ -1,0 +1,28 @@
+-- examples/checks/agg-threshold-safety-check.rofl — agg_threshold_safety.
+-- Every form of agg-threshold-safety-1-ok.rofl evaluates to its answer; each
+-- refused fixture beside it is refused alone, with its reason (the harness
+-- holds the text), and none of their conclusions reaches the world.
+atso_want(lit, c1).
+atso_want(corr, c1).
+atso_want(group, c1).
+atso_want(group, c2).
+atso_want(hub, yes).
+atso_got(lit, C)   :- atso_lit(C).
+atso_got(corr, C)  :- atso_corr(C).
+atso_got(group, C) :- atso_group(C).
+atso_got(hub, yes) :- atso_hub().
+safe_wrong(K, X) :- atso_want(K, X), not atso_got(K, X).
+safe_wrong(K, X) :- atso_got(K, X), not atso_want(K, X).
+alarm(safe_wrong).
+atso_bad(atsr_unbound).
+atso_bad(atsr_atom).
+atso_bad(atsr_late).
+atso_bad(atsr_member).
+atso_bad(atsr_unsafe).
+atso_bad(atsr_lattice).
+atso_bad(atsr_live).
+atso_bad(atsr_head).
+atso_bad(atsr_inside).
+atso_bad(atsr_demand).
+bad_accepted(R) :- atso_bad(R), concludes[$kernel](_, R).
+alarm(bad_accepted).

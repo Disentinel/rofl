@@ -1,0 +1,44 @@
+-- examples/checks/agg-join-syntax-2-expect.rofl — agg_join_syntax. The
+-- declaration row each join form of agg-join-syntax-1-forms.rofl reads as,
+-- both directions; each join read a builtin of its own, `in` and `subset`,
+-- in the reflection; the words still names; ring 1 (examples/ring1) reading
+-- two declarations and both reads from `src` as the same trees, nothing
+-- stray and nothing uncovered; and no refused form reaching the world.
+sxj_want(sxj_set, 3, union).
+sxj_want(sxj_hull, 2, hull).
+sxj_want(sxj_bits, 1, bitor).
+sxj_mine(sxj_set).
+sxj_mine(sxj_hull).
+sxj_mine(sxj_bits).
+sxj_mine(sxjr_body).
+sxj_mine(sxjr_neg).
+sxj_mine(sxjr_bare).
+sxj_decl(R, N, Op)  :- lattice_decl[$kernel](R, N, Op), sxj_mine(R).
+sxj_missing(R)      :- sxj_want(R, N, Op), not sxj_decl(R, N, Op).
+sxj_extra(R)        :- sxj_decl(R, N, Op), not sxj_want(R, N, Op).
+-- the reads are builtins, reflected as themselves
+sxj_read(Op)        :- premise_lit[$kernel](_, _, $builtin(Op, _)), sxj_op(Op).
+sxj_op("in").
+sxj_op("subset").
+sxj_unread(Op)      :- sxj_op(Op), not sxj_read(Op).
+sxj_lost()          :- not sxj_word(in).
+alarm(sxj_missing).
+alarm(sxj_extra).
+alarm(sxj_unread).
+alarm(sxj_lost).
+
+src("lattice reach(X, union S).\nlattice r(hull I).\nq(E) :- reach(x, S), E in S, set(a) subset S.").
+r1j_want($lattice(union, $lit(reach, $bare, $cons($var("X"), $cons($var("S"), $nil)), $now)), $nil).
+r1j_want($lattice(hull, $lit(r, $bare, $cons($var("I"), $nil), $now)), $nil).
+r1j_want($lit(q, $bare, $cons($var("E"), $nil), $now),
+         $cons($lit(reach, $bare, $cons(x, $cons($var("S"), $nil)), $now),
+         $cons($builtin("in", $cons($var("E"), $cons($var("S"), $nil))),
+         $cons($builtin("subset", $cons(comp(set, $cons(a, $nil)), $cons($var("S"), $nil))), $nil)))).
+r1j_parsed(H, B)   :- parsed(_, _, H, B).
+ring1_missing(H)   :- r1j_want(H, B), not r1j_parsed(H, B).
+ring1_extra(H)     :- r1j_parsed(H, B), not r1j_want(H, B).
+alarm(ring1_missing).
+alarm(ring1_extra).
+alarm(stray).
+alarm(uncovered).
+alarm(stuck_at).

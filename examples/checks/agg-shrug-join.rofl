@@ -1,0 +1,52 @@
+-- examples/checks/agg-shrug-join.rofl — agg_join_shrug: a join cell whose
+-- contribution a fault kept from being computed is a shrug with the fault's
+-- reason, and a cell that reads it is a shrug inherited from it: its value
+-- not known, not the join of the rest (an element a hole does not carry
+-- could be any element). A member of such a cell, and a negation over one,
+-- are shrugs inherited from the same root; a join whose rule reads
+-- `unknown(A)` of what a hole left out is one too. A membership of what is
+-- no set is its rule's fault, `set_type_error`. A cell no hole reaches keeps
+-- its value, and a reader of it its answers.
+edb(sj_e).
+edb(sj_w).
+edb(sj_pos).
+edb(sj_tag).
+edb(sj_big).
+sj_e(a, b). sj_e(b, c). sj_e(x, y).
+sj_w(a, 1). sj_w(b, 1152921504606846975). sj_w(c, 2). sj_w(x, 5). sj_w(y, 6).
+sj_pos(a). sj_pos(b). sj_pos(c).
+sj_tag(q, oops).
+sj_big(1152921504606846975).
+lattice sj_s(N, union S).
+sj_s(N, set(K)) :- sj_w(N, V), K is V + 1.
+sj_s(N, S)      :- sj_e(N, M), sj_s(M, S).
+sj_has(N, K)    :- sj_s(N, S), K in S.
+sj_lacks(N)     :- sj_pos(N), not sj_has(N, 2).
+sj_in(E)        :- sj_tag(_, T), E in T.
+sj_flag(a).
+sj_flag(c)      :- sj_big(B), Z is B + 1, Z > 0.
+lattice sj_u(X, union S).
+sj_u(X, set(X)) :- sj_pos(X), not unknown(sj_flag(X)).
+-- expect-row: shrug[$kernel]($lattice(sj_s,main,0,$cons(b,$nil)),fault,arith_overflow)
+-- expect-row: shrug[$kernel]($lattice(sj_s,main,0,$cons(a,$nil)),inherited,from($cons($lattice(sj_s,main,0,$cons(b,$nil)),$nil)))
+-- expect-row: shrug[$kernel](sj_s(a,$unknown_value),inherited,from($cons($lattice(sj_s,main,0,$cons(b,$nil)),$nil)))
+-- expect-row: shrug[$kernel](sj_has(a,$unknown_value),inherited,from($cons($lattice(sj_s,main,0,$cons(b,$nil)),$nil)))
+-- expect-row: shrug[$kernel](sj_lacks(a),inherited,from($cons($lattice(sj_s,main,0,$cons(b,$nil)),$nil)))
+-- expect-row: shrug[$kernel](sj_lacks(b),inherited,from($cons($lattice(sj_s,main,0,$cons(b,$nil)),$nil)))
+-- expect-row: shrug[$kernel]($lattice(sj_u,main,0,$cons(c,$nil)),inherited,from($cons($rule(
+-- expect-row: shrug[$kernel](sj_u(c,$unknown_value),inherited,from($cons($rule(
+-- expect-no-row: sj_s[main](a,
+-- expect-no-row: sj_s[main](b,
+-- expect-no-row: sj_lacks[main](a)
+-- expect-no-row: sj_u[main](c,
+-- expect-no-row: shrug[$kernel](sj_s(x,
+-- expect-no-row: shrug[$kernel](sj_lacks(x)
+-- expect-row: sj_s[main](c,set(3))
+-- expect-row: sj_s[main](x,set(6,7))
+-- expect-row: sj_lacks[main](c)
+-- expect-row: sj_u[main](a,set(a))
+-- expect-row: sj_u[main](b,set(b))
+sj_in_rule(R)   :- concludes[$kernel](R, sj_in).
+sj_typed()      :- sj_in_rule(R), shrug[$kernel]($rule(R), fault, set_type_error).
+sj_untyped()    :- not sj_typed().
+alarm(sj_untyped).

@@ -1,0 +1,7 @@
+-- expect-refusal: is not monotone in that order
+-- a value compared the wrong way: a cost above a bound stays true as the cost grows, not as it improves
+edb(aosr_e).
+aosr_e(a, b, 2, 9).
+pareto aosr_cmp(A, B, min C, min T).
+aosr_cmp(A, B, C, T) :- aosr_e(A, B, C, T).
+aosr_cmp(A, C, C1, T1) :- aosr_cmp(A, B, C0, T0), aosr_e(B, C, C2, T2), C0 > 5, C1 is C0 + C2, T1 is T0 + T2.

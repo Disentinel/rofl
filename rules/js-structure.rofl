@@ -8,12 +8,14 @@
 
 ast_in[code](P, C)     :- ast_child[code](P, _, _, C).
 
--- nodes by depth rows, a few thousand on the fixtures. A 100k-node tree at
--- depth 30 is about 3M rows, the point where an ancestor query should walk
--- `ast_in` rather than materialise the closure.
-ast_within[code](P, C) :- ast_in[code](P, C).
-ast_within[code](P, D) :- ast_within[code](P, X), ast_in[code](X, D).
+-- THE EDGES ARE A FOREST (one parent for each node, no cycle), and `ast_within`
+-- is their transitive closure, strict: the declaration promises the one and
+-- defines the other (docs/data-structures.md). The TypeScript engine derives the
+-- closure by the two rules it stands for; the Rust engine answers it from the
+-- tree and stores none of its rows where no witness is kept.
+tree ast_in(P, C) closure ast_within.
 
+function ast_name(N, to V).
 ast_name[code](N, V)   :- ast_attr[code](N, name, V).
 
 -- THE NAME A KEY STANDS FOR, wherever a key appears, written once. A computed
@@ -34,6 +36,7 @@ key_name[code](K, N)   :- ast_child[code](_, key, 0, K),
                           ast_node[code](K, member_expression, _, _),
                           ast_child[code](K, object, 0, O), ast_name[code](O, "Symbol"),
                           ast_child[code](K, property, 0, P), ast_name[code](P, N).
+function ast_value(N, to V).
 ast_value[code](N, V)  :- ast_attr[code](N, value, V).
 
 -- ONE KIND, TWO CONSTRUCTS, AND THE DISCRIMINATOR IS A CHILD. `new.target` and

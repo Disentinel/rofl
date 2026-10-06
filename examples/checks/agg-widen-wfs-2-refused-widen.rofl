@@ -1,0 +1,10 @@
+-- expect-refusal: lattice wwr_depth is not evaluated under well_founded semantics
+-- examples/checks/agg-widen-wfs-2-refused-widen.rofl — a widened hull inside
+-- a well-founded world is refused: its cell would grow under an assumption.
+semantics(well_founded).
+edb(wwr_move).
+wwr_move(a, b). wwr_move(b, a). wwr_move(b, c).
+wwr_win(X) :- wwr_move(X, Y), not wwr_win(Y).
+lattice wwr_depth(X, hull I) widen 1.
+wwr_depth(X, iv(0, 0)) :- wwr_win(X).
+wwr_depth(Y, J)        :- wwr_depth(X, I), wwr_move(X, Y), J is ivadd(I, 1).

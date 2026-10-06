@@ -1,0 +1,34 @@
+-- examples/checks/agg-minmax-holes-check.rofl — agg_minmax_holes: a min or
+-- max over a value that is no number is a hole, `agg_type_error`; over a
+-- member not known, `support_withdrawn`, never the best of the survivors; an
+-- empty group has no row, for certain; a negation above each is undecided
+-- (agg-holes-data.rofl).
+ahm_min(G, M) :- ah_g(G), M is min(V : ah_v(G, _, V)).
+ahm_max(G, M) :- ah_g(G), M is max(Y : ah_x(G, _, Y)).
+ahm_has(G)    :- ahm_max(G, _).
+ahm_none(G)   :- ah_g(G), not ahm_has(G).
+ahm_low(G)    :- ahm_min(G, M), M < 4.
+ahm_high(G)   :- ah_g(G), not ahm_low(G).
+ahm_bad(min_b)   :- ahm_min(b, _).
+ahm_bad(min_d)   :- ahm_min(d, _).
+-- expect-row: ahm_min[main](a,3)
+-- expect-row: ahm_min[main](big,1152921504606846975)
+ahm_bad(max_b)   :- ahm_max(b, _).
+ahm_bad(max_d)   :- ahm_max(d, _).
+ahm_bad(max_big) :- ahm_max(big, _).
+ahm_bad(max_c)   :- ahm_max(c, _).
+-- expect-row: ahm_max[main](a,5)
+ahm_bad(none_b)  :- ahm_none(b).
+ahm_bad(none_d)  :- ahm_none(d).
+ahm_bad(none_big) :- ahm_none(big).
+-- expect-row: ahm_none[main](c)
+ahm_bad(high_b)  :- ahm_high(b).
+ahm_bad(high_d)  :- ahm_high(d).
+-- expect-row: ahm_high[main](c)
+alarm(ahm_bad).
+ahm_holed(G, Why) :- ahm_low(_), hole[$kernel]($cell(R, _, _, $cons(G, $nil)), Why), concludes[$kernel](R, Rel), ahm_rel(Rel).
+ahm_rel(ahm_min). ahm_rel(ahm_max).
+ahm_unholed(b)   :- ahm_low(_), not ahm_holed(b, agg_type_error).
+ahm_unholed(x_b) :- ahm_low(_), not ahm_holed(b, support_withdrawn).
+ahm_unholed(x_big) :- ahm_low(_), not ahm_holed(big, support_withdrawn).
+alarm(ahm_unholed).

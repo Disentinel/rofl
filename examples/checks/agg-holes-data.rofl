@@ -1,0 +1,26 @@
+-- examples/checks/agg-holes-data.rofl — THE HOLES DATASET, shared by the
+-- agg_<kind>_holes worlds (docs/aggregates.md, "Holes, as built"). A value
+-- outside the term range, a value of the wrong type and a builtin that fails
+-- for an error each write a hole and never a value: not a wrapped number, not
+-- the value of the members that survived, not an empty group's 0. And what a
+-- hole leaves unknown stays unknown to what reads it: a negation above it is
+-- undecided, never a definite answer.
+--
+-- Groups: a is clean; b has a member whose value is no number, so the member
+-- is not known (1 + oops fails); big has two members whose sum leaves the
+-- range and one whose successor does; d has only the member that is not
+-- known, so whether its group is empty is not known either; c has no member
+-- at all, and is empty for certain.
+edb(ah_g).
+edb(ah_v).
+edb(ah_top).
+ah_g(a). ah_g(b). ah_g(big). ah_g(c). ah_g(d).
+ah_v(a, 1, 3). ah_v(a, 2, 4).
+ah_v(b, 1, 5). ah_v(b, 2, oops).
+ah_v(big, 1, 1152921504606846975). ah_v(big, 2, 1152921504606846975).
+ah_v(d, 1, oops).
+-- the largest term, 2^60-1
+ah_top(1152921504606846975).
+-- a member's value one up: b's second and d's only one are not known, and
+-- big's, one past the largest term, has no term
+ah_x(G, K, Y) :- ah_v(G, K, X), Y is X + 1.

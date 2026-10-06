@@ -1,0 +1,8 @@
+edb(wf_a). edb(wf_b).
+wf_a(1). wf_b(1).
+wf_p(X) :- wf_a(X).
+wf_q(X) :- wf_b(X).
+wf_m(X) :- wf_p(X).
+wf_t(X) :- wf_m(X).
+wf_t(X) :- wf_p(X), wf_q(X).
+wf_t(X) :- wf_q(X).

@@ -1,0 +1,4 @@
+-- examples/checks/agg-carry-plain-budget.rofl — agg_carry_plain_budget: the carry of
+-- agg-carry-plain-data.rofl's unknowns is cut by the budget, and the world's hole
+-- says so (f_the_carry_of_unknowns_ran_past_the_walls).
+-- expect-row: hole[$kernel]($adhoc,budget_exhausted)

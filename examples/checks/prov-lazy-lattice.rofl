@@ -1,0 +1,13 @@
+-- examples/checks/prov-lazy-lattice.rofl — A CELL THAT IMPROVES RETIRES THE ROW OF ITS OLD VALUE.
+-- The path x to z is first 5 by the long edge, then 2 by the way through y: the value 5 is
+-- superseded, its fact is no answer, and the derived_by row it would have had is not in the
+-- state. A lazily provenanced world notes the firing of 5 and must not write it when asked.
+lattice pv_d(A, C, min D).
+edb(pv_e).
+pv_e(x, y, 1).
+pv_e(y, z, 1).
+pv_e(x, z, 5).
+pv_d(A, C, D) :- pv_e(A, C, D).
+pv_d(A, C, D) :- pv_d(A, B, D1), pv_e(B, C, W), D is D1 + W.
+-- expect-row: derived_by[$kernel]($fact(pv_d,main,$cons(x,$cons(z,$cons(2,$nil)))),
+-- expect-no-row: derived_by[$kernel]($fact(pv_d,main,$cons(x,$cons(z,$cons(5,$nil)))),

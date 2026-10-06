@@ -1,0 +1,49 @@
+-- examples/checks/agg-minmax-syntax-2-expect.rofl — agg_minmax_syntax. The
+-- `$agg` tree each form of agg-minmax-syntax-1-forms.rofl reflects to, both
+-- directions, and the words still names elsewhere; ring 1 reading a min and
+-- an or from `src`; and no refused form reaching the world.
+sxm_want(sxm_min, $agg(min, $var("M"), $cons($var("V"), $nil), $nil,
+  $cons($lit(sxm_d, main, $cons($var("_$0"), $cons($var("V"), $cons($var("_$1"), $nil))), $now), $nil))).
+sxm_want(sxm_max, $agg(max, $var("M"), $cons($var("V"), $nil), $nil,
+  $cons($lit(sxm_d, main, $cons($var("G"), $cons($var("V"), $cons($var("_$0"), $nil))), $now), $nil))).
+sxm_want(sxm_or, $agg(or, $var("B"), $cons($var("F"), $nil), $nil,
+  $cons($lit(sxm_d, main, $cons($var("G"), $cons($var("_$0"), $cons($var("F"), $nil))), $now), $nil))).
+sxm_want(sxm_and, $agg(and, $var("B"), $cons($var("F"), $nil), $nil,
+  $cons($lit(sxm_d, ledger, $cons($var("_$0"), $cons($var("_$1"), $cons($var("F"), $nil))), $now), $nil))).
+sxm_want(sxm_bi, $agg(min, $var("M"), $cons($var("V"), $nil), $nil,
+  $cons($lit(sxm_d, main, $cons($var("_$0"), $cons($var("V"), $cons($var("_$1"), $nil))), $now),
+  $cons($builtin(">", $cons($var("V"), $cons(2, $nil))), $nil)))).
+sxm_want(sxm_neg, $agg(max, $var("M"), $cons($var("V"), $nil), $nil,
+  $cons($lit(sxm_d, main, $cons($var("G"), $cons($var("V"), $cons($var("F"), $nil))), $now),
+  $cons($not($lit(sxm_g, main, $cons($var("F"), $nil), $now)), $nil)))).
+sxm_mine(H)        :- sxm_want(H, _).
+sxm_has(H, T)      :- sxm_mine(H), concludes[$kernel](R, H), premise_lit[$kernel](R, _, T), T = $agg(_, _, _, _, _).
+tree_missing(H, T) :- sxm_want(H, T), not sxm_has(H, T).
+tree_extra(H, T)   :- sxm_has(H, T), not sxm_want(H, T).
+word_lost()        :- not sxm_word(or).
+alarm(tree_missing).
+alarm(tree_extra).
+alarm(word_lost).
+
+src("m(G, M) :- g(G), M is min(V : d(G, V)).\no(B) :- B is or(F : f(F), not g(F)).").
+r1m_want($lit(m, $bare, $cons($var("G"), $cons($var("M"), $nil)), $now),
+  $cons($lit(g, $bare, $cons($var("G"), $nil), $now),
+  $cons($agg(min, $var("M"), $cons($var("V"), $nil), $nil,
+    $cons($lit(d, $bare, $cons($var("G"), $cons($var("V"), $nil)), $now), $nil)), $nil))).
+r1m_want($lit(o, $bare, $cons($var("B"), $nil), $now),
+  $cons($agg(or, $var("B"), $cons($var("F"), $nil), $nil,
+    $cons($lit(f, $bare, $cons($var("F"), $nil), $now),
+    $cons($not($lit(g, $bare, $cons($var("F"), $nil), $now)), $nil))), $nil)).
+r1m_parsed(H, B)  :- parsed(_, _, H, B).
+ring1_missing(H)  :- r1m_want(H, B), not r1m_parsed(H, B).
+ring1_extra(H)    :- r1m_parsed(H, B), not r1m_want(H, B).
+alarm(ring1_missing).
+alarm(ring1_extra).
+alarm(stray).
+alarm(uncovered).
+alarm(stuck_at).
+
+sxm_bad(sxmr_empty).
+sxm_bad(sxmr_expression).
+bad_accepted(R) :- sxm_bad(R), concludes[$kernel](_, R).
+alarm(bad_accepted).

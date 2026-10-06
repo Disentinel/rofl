@@ -1,0 +1,84 @@
+-- examples/checks/agg-incr-readers.rofl — agg_incr_readers: WHAT READS A CELL OR A
+-- LATTICE under RETRACTION. A plain rule that reads what an aggregate concluded
+-- or a lattice holds has facts that rest on the old record, through each other
+-- and around a cycle (ir_walk). They are taken out with it, whatever else they
+-- have, and the rules are fired again over what stands once the cell is replaced
+-- and the lattice closed, so the state must be the one of a world without the
+-- fact.
+--
+--   ir_e(a, b, 1)       the near pairs through b are gone, and the walks over them
+--   ir_sale(1, a, 10)   the total of a is 5, not big, and flagged no more
+edb(ir_sale). edb(ir_e).
+ir_sale(1, a, 10).
+ir_sale(2, a, 5).
+ir_sale(3, b, 2).
+ir_sale(4, c, 9).
+ir_e(a, b, 1).
+ir_e(b, c, 2).
+ir_e(a, c, 5).
+ir_e(c, d, 1).
+ir_total(G, S) :- S is sum(V ; K : ir_sale(K, G, V)).
+ir_big(G) :- ir_total(G, S), S > 5.
+ir_flag(G) :- ir_big(G).
+lattice ir_d(A, B, min W).
+ir_d(A, B, W) :- ir_e(A, B, W).
+ir_d(A, C, W) :- ir_d(A, B, W1), ir_e(B, C, W2), W is W1 + W2.
+ir_near(A, B) :- ir_d(A, B, W), W < 4.
+ir_walk(A, C) :- ir_near(A, C).
+ir_walk(A, C) :- ir_walk(A, B), ir_near(B, C).
+
+-- the state after the retractions, row by row
+-- expect-row: ir_big[main](c) tick drv support=1
+-- expect-row: ir_d[main](a,c,5) tick drv support=1
+-- expect-row: ir_d[main](a,d,6) tick drv support=1
+-- expect-row: ir_d[main](b,c,2) tick drv support=1
+-- expect-row: ir_d[main](b,d,3) tick drv support=1
+-- expect-row: ir_d[main](c,d,1) tick drv support=1
+-- expect-row: ir_e[main](a,c,5) tick base support=0
+-- expect-row: ir_e[main](b,c,2) tick base support=0
+-- expect-row: ir_e[main](c,d,1) tick base support=0
+-- expect-row: ir_flag[main](c) tick drv support=1
+-- expect-row: ir_near[main](b,c) tick drv support=1
+-- expect-row: ir_near[main](b,d) tick drv support=1
+-- expect-row: ir_near[main](c,d) tick drv support=1
+-- expect-row: ir_sale[main](2,a,5) tick base support=0
+-- expect-row: ir_sale[main](3,b,2) tick base support=0
+-- expect-row: ir_sale[main](4,c,9) tick base support=0
+-- expect-row: ir_total[main](a,5) tick drv support=1
+-- expect-row: ir_total[main](b,2) tick drv support=1
+-- expect-row: ir_total[main](c,9) tick drv support=1
+-- expect-row: ir_walk[main](b,c) tick drv support=1
+-- expect-row: ir_walk[main](b,d) tick drv support=2
+-- expect-row: ir_walk[main](c,d) tick drv support=1
+-- expect-row: cell $cell(rc9177c58,1,0,$cons(a,$nil)) sum = 5 h=1 tick=0 sealed=[ir_sale@0] alg=invertible use=subtract
+-- expect-row: mem $cell(rc9177c58,1,0,$cons(a,$nil)) #1 id=5268f824eef831ee (5,2) h=1 [fact:ir_sale[main](2,a,5)]
+-- expect-row: cell $cell(rc9177c58,1,0,$cons(b,$nil)) sum = 2 h=1 tick=0 sealed=[ir_sale@0] alg=invertible use=subtract
+-- expect-row: mem $cell(rc9177c58,1,0,$cons(b,$nil)) #1 id=cb386110eca686f5 (2,3) h=1 [fact:ir_sale[main](3,b,2)]
+-- expect-row: cell $cell(rc9177c58,1,0,$cons(c,$nil)) sum = 9 h=1 tick=0 sealed=[ir_sale@0] alg=invertible use=subtract
+-- expect-row: mem $cell(rc9177c58,1,0,$cons(c,$nil)) #1 id=3d1db6e05fbbcffa (9,4) h=1 [fact:ir_sale[main](4,c,9)]
+-- expect-row: lat ir_d min alg=idempotent,lattice use=rederive
+-- expect-row: fir ir_d[main](a,c,5) id=6880cdae21dfd590 rafd6ef3d@0 [fact:ir_e[main](a,c,5)] live
+-- expect-row: fir ir_d[main](a,d,6) id=eadc3c1cd99be38b r9d939f25@0 [bi:6 is +(5,1); fact:ir_d[main](a,c,5); fact:ir_e[main](c,d,1)] live
+-- expect-row: fir ir_d[main](b,c,2) id=5009cde09e4ee004 rafd6ef3d@0 [fact:ir_e[main](b,c,2)] live
+-- expect-row: fir ir_d[main](b,d,3) id=f260a50b9a91194f r9d939f25@0 [bi:3 is +(2,1); fact:ir_d[main](b,c,2); fact:ir_e[main](c,d,1)] live
+-- expect-row: fir ir_d[main](c,d,1) id=cdd8aad4d675e56d rafd6ef3d@0 [fact:ir_e[main](c,d,1)] live
+-- and nothing of what they supported before
+-- expect-no-row: ir_big[main](a) tick drv support=1
+-- expect-no-row: ir_d[main](a,b,1) tick drv support=1
+-- expect-no-row: ir_d[main](a,c,3) tick drv support=1
+-- expect-no-row: ir_d[main](a,d,4) tick drv support=1
+-- expect-no-row: ir_e[main](a,b,1) tick base support=0
+-- expect-no-row: ir_flag[main](a) tick drv support=1
+-- expect-no-row: ir_near[main](a,b) tick drv support=1
+-- expect-no-row: ir_near[main](a,c) tick drv support=1
+-- expect-no-row: ir_sale[main](1,a,10) tick base support=0
+-- expect-no-row: ir_total[main](a,15) tick drv support=1
+-- expect-no-row: ir_walk[main](a,b) tick drv support=1
+-- expect-no-row: ir_walk[main](a,c) tick drv support=2
+-- expect-no-row: ir_walk[main](a,d) tick drv support=2
+-- expect-no-row: cell $cell(rc9177c58,1,0,$cons(a,$nil)) sum = 15 h=1 tick=0 sealed=[ir_sale@0] alg=invertible use=subtract
+-- expect-no-row: mem $cell(rc9177c58,1,0,$cons(a,$nil)) #1 id=50c99c021b4a32d7 (10,1) h=1 [fact:ir_sale[main](1,a,10)]
+-- expect-no-row: mem $cell(rc9177c58,1,0,$cons(a,$nil)) #2 id=5268f824eef831ee (5,2) h=1 [fact:ir_sale[main](2,a,5)]
+-- expect-no-row: fir ir_d[main](a,b,1) id=d8d25fb6ee374f71 rafd6ef3d@0 [fact:ir_e[main](a,b,1)] live
+-- expect-no-row: fir ir_d[main](a,c,3) id=376c8da8616685ff r9d939f25@0 [bi:3 is +(1,2); fact:ir_d[main](a,b,1); fact:ir_e[main](b,c,2)] live
+-- expect-no-row: fir ir_d[main](a,d,4) id=77d791932b036c91 r9d939f25@0 [bi:4 is +(3,1); fact:ir_d[main](a,c,3); fact:ir_e[main](c,d,1)] live

@@ -9,7 +9,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { Rofl } from '../../src/api.ts';
-import { Evaluation } from '../../src/engine.ts';
+import { AggEval } from '../../src/aggeval.ts';
 import { evaluateSemiring } from '../../src/semiring.ts';
 import {
   countingSemiring, tropicalSemiring, unitFiringCost, provenanceSemiring,
@@ -546,9 +546,9 @@ function main(): void {
     'undefined_premise[audit](R, Rel)']) {
     console.log(`  ? ${audit.padEnd(34)} -> ${r3.query(audit).rows.length} rows`);
   }
-  const ev = new Evaluation(r3.store);
+  const ev = new AggEval(r3.store, 0, 'rounds');
   console.log(`  rules not range-restricted: ${ev.rules.filter((x) => !x.safe).length}`);
-  console.log(`  relations evaluated top-down: ${ev.demandRels.size}`);
+  console.log(`  relations evaluated top-down: ${ev.demandRels.length}`);
   console.log(`  facts in the store: ${r3.factKeys().length}`);
   console.log(`  ledgers: ${list(col(r3, 'perspective(P)', 'P').filter((p) => p !== 'main'))}`);
 

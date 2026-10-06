@@ -1,0 +1,26 @@
+-- examples/checks/agg-join-syntax-1-forms.rofl — every form of a join
+-- declaration the grammar reads: each of the three joins, a key of two, of
+-- one and of none; the join reads `E in S` and `A subset S`, with a
+-- variable, a constant and a functor on the left; and `union`, `hull`,
+-- `bitor`, `in` and `subset` still ordinary names where no declaration and
+-- no operator can stand. Read and refused by the TypeScript engine, whose
+-- rule ids must be the Rust store's.
+edb(sxj_e).
+sxj_e(a, b, 3).
+lattice sxj_set(A, C, union S).
+lattice sxj_hull(A, hull I).
+lattice sxj_bits(bitor B).
+sxj_set(A, C, set(C)) :- sxj_e(A, C, _).
+sxj_hull(A, iv(W, W)) :- sxj_e(A, _, W).
+sxj_bits(W)           :- sxj_e(_, _, W).
+sxj_in(A, E)          :- sxj_set(A, _, S), E in S.
+sxj_sub(A)            :- sxj_set(A, _, S), set(b) subset S.
+sxj_has(A)            :- sxj_hull(A, I), 3 in I, iv(3, 3) subset I.
+sxj_bit(K)            :- sxj_bits(B), K in B, f(K) in set(f(0), f(1)).
+-- the words are names elsewhere
+union(in).
+hull(subset).
+bitor(union).
+in(hull).
+subset(bitor).
+sxj_word(X) :- union(X), in(Y), Y = hull, X = in.

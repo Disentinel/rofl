@@ -1,0 +1,11 @@
+-- examples/checks/strata-unranked-negation-1-ok.rofl — under the stock
+-- evaluator with no table, an unranked negation over relations that are
+-- complete before the final pass stays accepted: base data, and a plain rule
+-- over base data. uc_c holds for 2 only.
+edb(uc_b).
+edb(uc_d).
+uc_b(1).
+uc_b(2).
+uc_d(1).
+uc_e(X) :- uc_d(X).
+uc_c(X) :- uc_b(X), not uc_e(X).

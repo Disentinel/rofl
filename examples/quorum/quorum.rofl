@@ -1,0 +1,65 @@
+-- examples/quorum/quorum.rofl — three quorums, one device.
+--
+-- `at_least(N, X : body)` holds when N distinct values of X satisfy the body.
+-- It is monotone (more facts never take a quorum away), so unlike a count it
+-- may sit inside its own recursion, and the projection is what is counted:
+-- count the origins and two voices from one origin are one.
+--
+--   1. BELIEF. A claim is believed when two believed nodes from two
+--      different origins back it. A circle of nodes backing each other
+--      believes nothing, because a belief must be founded before it counts.
+--   2. PROOF. A step concludes when every premise it needs is established:
+--      a quorum of as many as there are premises. This is the walk of
+--      examples/moot (req_at, req_count) and examples/goof (needs,
+--      need_count) written in two lines, with the walk beside it so that the
+--      two can be seen to agree on the same steps.
+--   3. RAFT. An entry is counted when the current term wrote it and a
+--      majority of servers hold it, the majority being half the cluster, plus
+--      one, counted below. A leader that reports an entry committed which
+--      this does not support is the one fault a log must never show:
+--      `unsafe_commit`, and in a running system `alarm(unsafe_commit).`
+edb(vetted).
+edb(claim).
+edb(backs).
+edb(speaks_for).
+edb(axiom).
+edb(step).
+edb(needs_at).
+edb(need_count).
+edb(cluster).
+edb(member).
+edb(term).
+edb(entry).
+edb(match).
+edb(reported).
+edb(drill).
+
+-- 1. BELIEF
+believed(X) :- vetted(X).
+believed(X) :- claim(X), at_least(2, O : backs(S, X), believed(S), speaks_for(S, O)).
+
+-- 2. PROOF. needs(S, Q) is the premises without their places in a list, and
+-- the number of them is counted, not written.
+needs(S, Q)    :- needs_at(S, _, Q).
+premises(S, N) :- step(S, _), N is count(Q : needs(S, Q)).
+proved(P) :- axiom(P).
+proved(P) :- step(S, P), premises(S, N), at_least(N, Q : needs(S, Q), proved(Q)).
+
+-- the walk by index: walk(S, K) is "premises K to the last all hold"
+walk(S, K1) :- need_count(S, N), K1 is N + 1.
+walk(S, K)  :- needs_at(S, K, Q), walked(Q), K1 is K + 1, walk(S, K1).
+walked(P)   :- axiom(P).
+walked(P)   :- step(S, P), walk(S, 1).
+
+-- 3. RAFT
+size(C, N)      :- cluster(C), N is count(S : member(C, S)).
+majority(C, Q)  :- size(C, N), Q is N / 2 + 1.
+holds(C, S, I)  :- match(C, S, M), entry(C, I, _), I <= M.
+on_majority(C, I) :- entry(C, I, _), majority(C, Q), at_least(Q, S : holds(C, S, I)).
+counted(C, I)   :- entry(C, I, T), term(C, T), on_majority(C, I).
+committed(C, I) :- counted(C, J), entry(C, I, _), I <= J.
+
+-- a reported commit the logs do not support: held by no majority at all, or
+-- by a majority but only of an entry no entry of the current term has made safe
+unsafe_commit(C, J, no_majority) :- reported(C, J), not on_majority(C, J).
+unsafe_commit(C, J, old_term)    :- reported(C, J), on_majority(C, J), not committed(C, J).

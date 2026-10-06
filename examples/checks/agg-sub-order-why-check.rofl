@@ -1,0 +1,66 @@
+-- examples/checks/agg-sub-order-why-check.rofl — agg_sub_order_why, run with
+-- `rofl-load --explain`. `why` and `whynot` of a declared order read as they
+-- do of the dominance rules it lowers to: `why` of a member names its
+-- relation's algebra, its members and its place in the front, and every
+-- value given to the cell that it dominates, with the lowered rule; `whynot`
+-- of a value given and dominated names the member that dominates it and the
+-- rule written out (a pareto rule's comparisons, a lex rule's equalities and
+-- its one strict comparison); of a value no rule gives, the member that would
+-- dominate it, or, where none would, that it would join the front.
+edb(explain_request).
+edb(explained).
+explain_request(why, ao_route(a, c, 3, 3)).
+explain_request(why, ao_lc(a, c, 2, 10)).
+explain_request(why, ao_dl(a, t, 1)).
+explain_request(why, ao_cap(s, t, 4, 6)).
+explain_request(whynot, ao_route(a, c, 7, 7)).
+explain_request(whynot, ao_route(a, c, 6, 6)).
+explain_request(whynot, ao_route(a, c, 1, 1)).
+explain_request(whynot, ao_lc(a, c, 3, 3)).
+explain_request(whynot, ao_lc(a, c, 1, 1)).
+explain_request(whynot, ao_cap(s, t, 2, 2)).
+explain_request(whynot, ao_l3(k, 2, 7, 4)).
+explain_request(whynot, ao_route(z, z, 1, 1)).
+aoy_holds(K, A, T) :- explained[$explain](K, A, _, L), aoy_want(K, A, T), N is str_segs(L, T), N > 1.
+aoy_want(why, ao_route(a, c, 3, 3), "ao_route[main](a,c,3,3) [subsumption: 1 member; 2 of 3 in the front of its cell]").
+aoy_want(why, ao_route(a, c, 3, 3), "ao_e[main](a,c,3,3) [axiom]").
+aoy_want(why, ao_route(a, c, 3, 3), "dominates ao_route[main](a,c,11,3) by r").
+aoy_want(why, ao_route(a, c, 3, 3), "dominates ao_route[main](a,c,7,7) by r").
+aoy_want(why, ao_route(a, c, 3, 3), "dominates ao_route[main](a,c,9,5) by r").
+aoy_want(why, ao_lc(a, c, 2, 10), "ao_lc[main](a,c,2,10) [subsumption: 1 member; 1 of 1 in the front of its cell]").
+aoy_want(why, ao_lc(a, c, 2, 10), "dominates ao_lc[main](a,c,5,1) by r").
+aoy_want(why, ao_lc(a, c, 2, 10), "dominates ao_lc[main](a,c,6,14) by r").
+aoy_want(why, ao_dl(a, t, 1), "ao_dl[main](a,t,1) [subsumption: 2 members; 1 of 1 in the front of its cell]").
+aoy_want(why, ao_dl(a, t, 1), "#1 h=1 <= r").
+aoy_want(why, ao_dl(a, t, 1), "#2 h=3 <= r").
+aoy_want(why, ao_dl(a, t, 1), "dominates ao_dl[main](a,t,7) by r").
+aoy_want(why, ao_cap(s, t, 4, 6), "ao_cap[main](s,t,4,6) [subsumption: 1 member; 2 of 2 in the front of its cell]").
+aoy_want(why, ao_cap(s, t, 4, 6), "ao_cap[main](s,m,9,5) [subsumption: 1 member; 2 of 2 in the front of its cell]").
+aoy_want(why, ao_cap(s, t, 4, 6), "4 is min(9,4) [builtin]").
+aoy_want(whynot, ao_route(a, c, 7, 7), "ao_route[main](a,c) is a subsumption cell; its front is ao_route[main](a,c,2,10), ao_route[main](a,c,3,3), ao_route[main](a,c,5,1)").
+aoy_want(whynot, ao_route(a, c, 7, 7), "ao_route[main](a,c,7,7) was given, and is dominated by ao_route[main](a,c,3,3): r").
+aoy_want(whynot, ao_route(a, c, 7, 7), "<= ao_route[main](?A,?B,?C_,?T_)@now :- ?C_ < ?C, ?T_ <= ?T)").
+aoy_want(whynot, ao_route(a, c, 6, 6), "no rule gives ao_route[main](a,c,6,6), and it would be dominated by ao_route[main](a,c,3,3)").
+aoy_want(whynot, ao_route(a, c, 1, 1), "ao_route[main](a,c,1,1) would join the front, and no rule gives it: 9 values given at the key").
+aoy_want(whynot, ao_route(a, c, 1, 1), "3, 3 <= r").
+aoy_want(whynot, ao_route(a, c, 1, 1), ": ao_e[main](a,c,3,3)").
+aoy_want(whynot, ao_lc(a, c, 3, 3), "ao_lc[main](a,c,3,3) was given, and is dominated by ao_lc[main](a,c,2,10): r").
+aoy_want(whynot, ao_lc(a, c, 3, 3), "<= ao_lc[main](?A,?B,?C_,?T_)@now :- ?C_ < ?C)").
+aoy_want(whynot, ao_lc(a, c, 1, 1), "ao_lc[main](a,c,1,1) would join the front, and no rule gives it: 5 values given at the key").
+aoy_want(whynot, ao_cap(s, t, 2, 2), "ao_cap[main](s,t,2,2) was given, and is dominated by ao_cap[main](s,t,3,2): r").
+aoy_want(whynot, ao_cap(s, t, 2, 2), ":- ?W_ > ?W, ?P_ <= ?P)").
+aoy_want(whynot, ao_l3(k, 2, 7, 4), "ao_l3[main](k,2,7,4) was given, and is dominated by ao_l3[main](k,5,1,4): r").
+aoy_want(whynot, ao_l3(k, 2, 7, 4), ":- ?A_ > ?A)").
+aoy_want(whynot, ao_route(z, z, 1, 1), "failed premise").
+aoy_text_missing(K, A, T) :- aoy_want(K, A, T), not aoy_holds(K, A, T).
+alarm(aoy_text_missing).
+-- a front's why names no value it does not dominate
+aoy_wrong(K, A) :- explained[$explain](K, A, _, L), aoy_never(K, A, T), N is str_segs(L, T), N > 1.
+aoy_never(why, ao_route(a, c, 3, 3), "dominates ao_route[main](a,c,6,14)").
+aoy_never(why, ao_route(a, c, 3, 3), "dominates ao_route[main](a,c,8,12)").
+aoy_never(why, ao_lc(a, c, 2, 10), "dominates ao_lc[main](a,c,2,10)").
+aoy_never(whynot, ao_route(z, z, 1, 1), "subsumption cell").
+aoy_never(whynot, ao_lc(a, c, 3, 3), "would join the front").
+alarm(aoy_wrong).
+aoy_explain_refused(K, A) :- explained[$explain](K, A, 0, _).
+alarm(aoy_explain_refused).

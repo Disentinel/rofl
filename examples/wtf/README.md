@@ -1,5 +1,7 @@
 # WTF — What The Fixpoint
 
+**Count reading:** domain — how many orders give one answer; it is not a count of derivations.
+
 Magic: the Gathering's layer system (Comprehensive Rules 613), as rules.
 
 The domain needs no argument. Continuous effects are applied in **seven
@@ -259,35 +261,25 @@ test asserts it, so none of these is a hidden assumption:
 
 ## Where the kernel fought back
 
-Three places, and the first is the one worth reading.
+Three places.
 
 **1. `max` over a transitive closure — 613.8b's scheduler.** The rule says a
 dependent effect "waits to apply until just after all of those effects have
-been applied", which is a greedy topological sort keyed on timestamp. v0 has
-no aggregation, and the natural encoding —
-
-```
-eta(E, X) :- edep(E, B), eta(B, Y), X is Y + 1.
-eta(E, T) :- cand(E, T), not lower(E, T).
-```
-
-— puts a negation *inside* a recursion and `unstratified/1` rejects it, which
-is correct: that program has no least fixpoint to compute. The way through is
-to split it. Compute the dependency closure `anc4` **positively** first, then
-take the maximum over the finished set with a single negation on top:
+been applied", which is a greedy topological sort keyed on timestamp. It is
+written as a key, not a loop: compute the dependency closure `anc4`
+**positively** first, then take the maximum over the finished set with a
+`max` aggregate, which sits one stratum above the closure it reads:
 
 ```
 cts4(E, T)  :- lay4(E), eff_ts(E, T).
 cts4(E, T)  :- anc4(E, B), eff_ts(B, T).
-low4(E, T)  :- cts4(E, T), cts4(E, T2), T2 > T.
-eta4(E, T)  :- cts4(E, T), not low4(E, T).
+eta4(E, T)  :- lay4(E), T is max(T2 : cts4(E, T2)).
 ```
 
 `eta4` is the largest timestamp among an effect and its dependency ancestors,
 and sorting by `(eta4, timestamp)` reproduces the greedy walk exactly — the
 oracle checks that claim on all 41 orders the sweep produces, and it holds.
-The kernel did not make this expressible for free; it made the *unsound*
-version inexpressible, which is a different and better thing.
+The kernel's tree shows the member timestamps the `max` ranged over.
 
 **2. Sequential application inside one layer is not expressible at all.**
 Datalog stratification is per-relation, so a step-indexed state
@@ -581,78 +573,77 @@ why the order was what it was -- the kernel's own tree
 ------------------------------------------------------
 
 bef4[main](e_bloodmoon,e_urborg)  <= r9fd50b1e @tick 0
-  eta4[main](e_bloodmoon,700)  <= r2dc7df56 @tick 0
-    cts4[main](e_bloodmoon,700)  <= r43ec379f @tick 0
-      lay4[main](e_bloodmoon)  <= r7cbd7325 @tick 0
-        eff_layer[main](e_bloodmoon,40) [axiom]
-      eff_ts[main](e_bloodmoon,700) [axiom]
-    not low4[main](e_bloodmoon,700) [finite failure]
-      whynot low4[main](e_bloodmoon,700):
-        rule rc6128089: low4[main](?E,?T)@now :- cts4[main](?E,?T)@now, cts4[main](?E,?T2)@now, ?T2 > ?T
-          failed premise: 700 > 700 [builtin fails]
-  eta4[main](e_urborg,700)  <= r2dc7df56 @tick 0
-    cts4[main](e_urborg,700)  <= r1039a971 @tick 0
-      anc4[main](e_urborg,e_bloodmoon)  <= r187536c0 @tick 0
-        edep4[main](e_urborg,e_bloodmoon)  <= r9373230f @tick 0
-          depends4[main](e_urborg,e_bloodmoon)  <= rd61ff2e6 @tick 0
-            dep_reason[main](e_urborg,e_bloodmoon,existence)  <= r4c9976a1 @tick 0
-              lay4[main](e_urborg)  <= r7cbd7325 @tick 0
-                eff_layer[main](e_urborg,40) [axiom]
-              eff_src[main](e_urborg,urborg) [axiom]
-              kills_ability[main](e_bloodmoon,urborg)  <= r9180e2cd @tick 0
-                lay4[main](e_bloodmoon)  <= r7cbd7325 @tick 0
-                  eff_layer[main](e_bloodmoon,40) [axiom]
-                eff_live[main](e_bloodmoon)  <= r45199372 @tick 0
-                  eff_src[main](e_bloodmoon,blood_moon) [axiom]
-                  on_bf[main](blood_moon) [axiom]
-                does[main](e_bloodmoon,set_land_type(mountain)) [axiom]
-                hits4[main](e_bloodmoon,urborg)  <= rd701c078 @tick 0
-                  lay4[main](e_bloodmoon)  <= r7cbd7325 @tick 0
-                    eff_layer[main](e_bloodmoon,40) [axiom]
-                  eff_live[main](e_bloodmoon)  <= r45199372 @tick 0
-                    eff_src[main](e_bloodmoon,blood_moon) [axiom]
-                    on_bf[main](blood_moon) [axiom]
-                  sel[main](e_bloodmoon,nonbasic_lands) [axiom]
-                  ty3[main](urborg,land)  <= r8d3ece90 @tick 0
-                    ty1[main](urborg,land)  <= r487f3bc4 @tick 0
-                      on_bf[main](urborg) [axiom]
-                      printed_type[main](urborg,land) [axiom]
-                      not copied[main](urborg) [finite failure]
-                        whynot copied[main](urborg):
-                          rule ra6f1ad6f: copied[main](?O)@now :- copy_src[main](?O,?_$1)@now
-                            failed premise: copy_src[main](urborg,?_$1#1)
-                  not ty3[main](urborg,basic) [finite failure]
-                    whynot ty3[main](urborg,basic):
-                      rule r8d3ece90: ty3[main](?O,?T)@now :- ty1[main](?O,?T)@now
-                        failed premise: ty1[main](urborg,basic)
-              e_urborg != e_bloodmoon [builtin]
-              cda_ok[main](e_urborg,e_bloodmoon)  <= r283146ce @tick 0
-                eff[main](e_urborg) [axiom]
-                eff[main](e_bloodmoon) [axiom]
-                not cda[main](e_urborg) [finite failure]
-                  whynot cda[main](e_urborg):
-                    no rule concludes 'cda' and no matching base fact exists
-                not cda[main](e_bloodmoon) [finite failure]
-                  whynot cda[main](e_bloodmoon):
-                    no rule concludes 'cda' and no matching base fact exists
-          not loop4[main](e_urborg,e_bloodmoon) [finite failure]
-            whynot loop4[main](e_urborg,e_bloodmoon):
-              rule r52f3533f: loop4[main](?A,?B)@now :- reach4[main](?A,?B)@now, reach4[main](?B,?A)@now
-                failed premise: reach4[main](e_bloodmoon,e_urborg)
-      eff_ts[main](e_bloodmoon,700) [axiom]
-    not low4[main](e_urborg,700) [finite failure]
-      whynot low4[main](e_urborg,700):
-        rule rc6128089: low4[main](?E,?T)@now :- cts4[main](?E,?T)@now, cts4[main](?E,?T2)@now, ?T2 > ?T
-          failed premise: 300 > 700 [builtin fails]
-          failed premise: 700 > 700 [builtin fails]
+  eta4[main](e_bloodmoon,700)  <= r5f1e4c95 @tick 0
+    lay4[main](e_bloodmoon)  <= r7cbd7325 @tick 0
+      eff_layer[main](e_bloodmoon,40) [axiom]
+    max(?T2 : cts4[main](e_bloodmoon,?T2)) = 700 [aggregate: 1 member, sealed cts4@7]
+      #1 (700) h=3
+        cts4[main](e_bloodmoon,700)  <= r43ec379f @tick 0
+          lay4[main](e_bloodmoon)  <= r7cbd7325 @tick 0
+            eff_layer[main](e_bloodmoon,40) [axiom]
+          eff_ts[main](e_bloodmoon,700) [axiom]
+  eta4[main](e_urborg,700)  <= r5f1e4c95 @tick 0
+    lay4[main](e_urborg)  <= r7cbd7325 @tick 0
+      eff_layer[main](e_urborg,40) [axiom]
+    max(?T2 : cts4[main](e_urborg,?T2)) = 700 [aggregate: 1 member, sealed cts4@7]
+      #1 (700) h=10
+        cts4[main](e_urborg,700)  <= r1039a971 @tick 0
+          anc4[main](e_urborg,e_bloodmoon)  <= r187536c0 @tick 0
+            edep4[main](e_urborg,e_bloodmoon)  <= r9373230f @tick 0
+              depends4[main](e_urborg,e_bloodmoon)  <= r79ff4b6f @tick 0
+                dep_reason[main](e_urborg,e_bloodmoon,existence)  <= r4c9976a1 @tick 0
+                  lay4[main](e_urborg)  <= r7cbd7325 @tick 0
+                    eff_layer[main](e_urborg,40) [axiom]
+                  eff_src[main](e_urborg,urborg) [axiom]
+                  kills_ability[main](e_bloodmoon,urborg)  <= rbf54e0f2 @tick 0
+                    lay4[main](e_bloodmoon)  <= r7cbd7325 @tick 0
+                      eff_layer[main](e_bloodmoon,40) [axiom]
+                    eff_live[main](e_bloodmoon)  <= r45199372 @tick 0
+                      eff_src[main](e_bloodmoon,blood_moon) [axiom]
+                      on_bf[main](blood_moon) [axiom]
+                    does[main](e_bloodmoon,set_land_type(mountain)) [axiom]
+                    hits4[main](e_bloodmoon,urborg)  <= rd701c078 @tick 0
+                      lay4[main](e_bloodmoon)  <= r7cbd7325 @tick 0
+                        eff_layer[main](e_bloodmoon,40) [axiom]
+                      eff_live[main](e_bloodmoon)  <= r45199372 @tick 0
+                        eff_src[main](e_bloodmoon,blood_moon) [axiom]
+                        on_bf[main](blood_moon) [axiom]
+                      sel[main](e_bloodmoon,nonbasic_lands) [axiom]
+                      ty3[main](urborg,land)  <= r8d3ece90 @tick 0
+                        ty1[main](urborg,land)  <= r487f3bc4 @tick 0
+                          on_bf[main](urborg) [axiom]
+                          printed_type[main](urborg,land) [axiom]
+                          not copied[main](urborg) [finite failure]
+                            whynot copied[main](urborg):
+                              rule r031254e6: copied[main](?O)@now :- copy_src[main](?O,?_$0)@now
+                                failed premise: copy_src[main](urborg,?_$0#0)
+                      not ty3[main](urborg,basic) [finite failure]
+                        whynot ty3[main](urborg,basic):
+                          rule r8d3ece90: ty3[main](?O,?T)@now :- ty1[main](?O,?T)@now
+                            failed premise: ty1[main](urborg,basic)
+                  e_urborg != e_bloodmoon [builtin]
+                  cda_ok[main](e_urborg,e_bloodmoon)  <= r283146ce @tick 0
+                    eff[main](e_urborg) [axiom]
+                    eff[main](e_bloodmoon) [axiom]
+                    not cda[main](e_urborg) [finite failure]
+                      whynot cda[main](e_urborg):
+                        no rule concludes 'cda' and no matching base fact exists
+                    not cda[main](e_bloodmoon) [finite failure]
+                      whynot cda[main](e_bloodmoon):
+                        no rule concludes 'cda' and no matching base fact exists
+              not loop4[main](e_urborg,e_bloodmoon) [finite failure]
+                whynot loop4[main](e_urborg,e_bloodmoon):
+                  rule r52f3533f: loop4[main](?A,?B)@now :- reach4[main](?A,?B)@now, reach4[main](?B,?A)@now
+                    failed premise: reach4[main](e_bloodmoon,e_urborg)
+          eff_ts[main](e_bloodmoon,700) [axiom]
   anc4[main](e_urborg,e_bloodmoon)  <= r187536c0 @tick 0
     edep4[main](e_urborg,e_bloodmoon)  <= r9373230f @tick 0
-      depends4[main](e_urborg,e_bloodmoon)  <= rd61ff2e6 @tick 0
+      depends4[main](e_urborg,e_bloodmoon)  <= r79ff4b6f @tick 0
         dep_reason[main](e_urborg,e_bloodmoon,existence)  <= r4c9976a1 @tick 0
           lay4[main](e_urborg)  <= r7cbd7325 @tick 0
             eff_layer[main](e_urborg,40) [axiom]
           eff_src[main](e_urborg,urborg) [axiom]
-          kills_ability[main](e_bloodmoon,urborg)  <= r9180e2cd @tick 0
+          kills_ability[main](e_bloodmoon,urborg)  <= rbf54e0f2 @tick 0
             lay4[main](e_bloodmoon)  <= r7cbd7325 @tick 0
               eff_layer[main](e_bloodmoon,40) [axiom]
             eff_live[main](e_bloodmoon)  <= r45199372 @tick 0
@@ -672,8 +663,8 @@ bef4[main](e_bloodmoon,e_urborg)  <= r9fd50b1e @tick 0
                   printed_type[main](urborg,land) [axiom]
                   not copied[main](urborg) [finite failure]
                     whynot copied[main](urborg):
-                      rule ra6f1ad6f: copied[main](?O)@now :- copy_src[main](?O,?_$1)@now
-                        failed premise: copy_src[main](urborg,?_$1#5)
+                      rule r031254e6: copied[main](?O)@now :- copy_src[main](?O,?_$0)@now
+                        failed premise: copy_src[main](urborg,?_$0#3)
               not ty3[main](urborg,basic) [finite failure]
                 whynot ty3[main](urborg,basic):
                   rule r8d3ece90: ty3[main](?O,?T)@now :- ty1[main](?O,?T)@now
@@ -801,8 +792,8 @@ whynot mod73[main](grizzly,e_honor,1,1):
 5. which permanents jointly determine that 3/3
 ==============================================
 
-  discipline held: true   facts on a support cycle: 184
-  minimal source sets: 1, the smallest with 24 base facts.
+  discipline held: true   facts on a support cycle: 2
+  minimal source sets: 1, the smallest with 15 base facts.
   the ones that name a permanent or an effect:
     does[main](e_evolution,text_change(elf,bear))
     eff_free[main](e_evolution)
@@ -818,12 +809,6 @@ whynot mod73[main](grizzly,e_honor,1,1):
     printed_type[main](grizzly,bear)
     printed_type[main](grizzly,creature)
     sel[main](e_evolution,only(archdruid))
-
-  and 9 bookkeeping facts (eord/nmod). Those are honest: v0 has no
-  aggregation, so layer 7c's sum is a fold that walks every slot of a
-  declared enumeration, and a slot it walked past really is part of the
-  derivation. The size of a provenance term is a property of how the
-  question had to be asked, not only of the answer.
 
 6. counting: how many application orders give the same answer
 =============================================================

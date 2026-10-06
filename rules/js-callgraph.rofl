@@ -16,8 +16,8 @@ edb(call_kind).
 call_kind(call_expression).
 call_kind(optional_call_expression).
 
-call_site[code](C, File)      :- ast_node[code](C, K, File, _), call_kind(K).
-call_site_kind[code](C, K)    :- ast_node[code](C, K, _, _), call_kind(K).
+call_site[code](C, File)      :- call_kind(K), ast_node[code](C, K, File, _).
+call_site_kind[code](C, K)    :- call_kind(K), ast_node[code](C, K, _, _).
 call_line[code](C, Line)      :- call_site[code](C, _), ast_node[code](C, _, _, Line).
 
 callee_of[code](C, N)         :- call_site[code](C, _), ast_child[code](C, callee, 0, N).
@@ -31,7 +31,7 @@ transfer_kind(new_expression).
 transfer_kind(tagged_template_expression).
 transfer_kind(for_of_statement).
 transfer_kind(decorator).
-transfer_site[code](X, K) :- ast_node[code](X, K, _, _), transfer_kind(K).
+transfer_site[code](X, K) :- transfer_kind(K), ast_node[code](X, K, _, _).
 
 site[code](X) :- call_site[code](X, _).
 site[code](X) :- transfer_site[code](X, _).
@@ -186,7 +186,7 @@ fn_kind(object_method).
 fn_kind(class_method).
 fn_kind(class_private_method).
 
-fn_node[code](F)     :- ast_node[code](F, K, _, _), fn_kind(K).
+fn_node[code](F)     :- fn_kind(K), ast_node[code](F, K, _, _).
 fn_file[code](F, File) :- fn_node[code](F), ast_node[code](F, _, File, _).
 
 -- A function's name is whatever binds it — several arms, and a node may hold
@@ -216,10 +216,10 @@ fn_name[code](F, N) :- key_name[code](K, N), ast_child[code](P, key, 0, K),
                        ast_child[code](P, value, 0, F), fn_node[code](F).
 fn_name[code](F, N) :- ast_node[code](F, class_method, _, _),
                        ast_attr[code](F, kind, "constructor"),
-                       ast_child[code](CD, body, 0, B), ast_child[code](B, body, _, F),
+                       ast_child[code](B, body, _, F), ast_child[code](CD, body, 0, B),
                        ast_child[code](CD, id, 0, I), ast_name[code](I, N).
-fn_name[code](F, N) :- fn_node[code](F), class_field_kind(K), ast_node[code](P, K, _, _),
-                       ast_child[code](P, value, 0, F),
+fn_name[code](F, N) :- class_field_kind(K), ast_node[code](P, K, _, _),
+                       ast_child[code](P, value, 0, F), fn_node[code](F),
                        ast_child[code](P, key, 0, KN), key_name[code](KN, N).
 
 -- A class expression with no `id` takes its binding's name — the language's own
@@ -232,17 +232,19 @@ anon_class[code](CD)   :- ast_node[code](CD, class_expression, _, _),
                           not class_has_id[code](CD).
 fn_name[code](F, N) :- ast_node[code](F, class_method, _, _),
                        ast_attr[code](F, kind, "constructor"),
-                       ast_child[code](CD, body, 0, B), ast_child[code](B, body, _, F),
+                       ast_child[code](B, body, _, F), ast_child[code](CD, body, 0, B),
                        anon_class[code](CD),
-                       ast_node[code](D, variable_declarator, _, _),
                        ast_child[code](D, init, 0, CD),
+                       ast_node[code](D, variable_declarator, _, _),
                        ast_child[code](D, id, 0, I), ast_name[code](I, N).
 
 -- A decorator is INSIDE the thing it decorates and does not run there:
 -- `@decoFactory('m') marked() {}` puts the call in `marked`'s subtree and
 -- evaluates it at class definition. Two arms because the decorator node is
--- itself a site and `ast_within` is irreflexive. `F != G` in `closer` is
--- carried so the rule does not silently depend on that irreflexivity.
+-- itself a site and `ast_within` is irreflexive. `nearest_fn` is `nearest_v`,
+-- which is already the nearest function of every node, with the functions that
+-- hold the site in their own decorator stepped over (`dec_up`): the pairwise
+-- `F != G` nearest-of-all it replaces joined every encloser with every other.
 -- `top_call` reads `site` and not `call_site`: a transfer site at module top
 -- level reaches `calls` only through here. (`top_site` was its twin, written
 -- for transfer sites while `top_call` still read `call_site`; the 2026-09-08
@@ -251,13 +253,12 @@ decorates[code](Owner, D)     :- ast_child[code](Owner, decorators, _, D),
                                  ast_node[code](D, decorator, _, _).
 in_own_decorator[code](F, C)  :- decorates[code](F, D), ast_within[code](D, C).
 in_own_decorator[code](F, D)  :- decorates[code](F, D).
-encloses[code](F, C)   :- fn_node[code](F), ast_within[code](F, C), site[code](C),
-                          not in_own_decorator[code](F, C).
-closer[code](F, C)     :- encloses[code](F, C), encloses[code](G, C),
-                          ast_within[code](F, G), F != G.
-nearest_fn[code](F, C) :- encloses[code](F, C), not closer[code](F, C).
+dec_up[code](C, G)     :- in_own_decorator[code](G, C), site[code](C), nearest_v[flow](G, C).
+dec_up[code](C, H)     :- dec_up[code](C, G), nearest_v[flow](H, G), in_own_decorator[code](H, C).
+nearest_fn[code](F, C) :- site[code](C), nearest_v[flow](F, C), not in_own_decorator[code](F, C).
+nearest_fn[code](F, C) :- dec_up[code](C, G), nearest_v[flow](F, G), not in_own_decorator[code](F, C).
 
-enclosed[code](C)      :- encloses[code](_, C).
+enclosed[code](C)      :- nearest_fn[code](_, C).
 top_call[code](C, R)   :- site[code](C), ast_node[code](C, _, File, _),
                           ast_file[code](R, File), not enclosed[code](C).
 
@@ -294,7 +295,7 @@ class_ctor[code](CD, M) :- class_method_of[flow](CD, M),
 resolves[code](X, M) :- transfer_site[code](X, new_expression),
                         may_be_node[flow](X, CD), class_ctor[code](CD, M).
 
-resolves[code](C, M) :- callee_of[code](C, N), ast_node[code](N, super, _, _),
+resolves[code](C, M) :- ast_node[code](N, super, _, _), callee_of[code](C, N),
                         may_be_node[flow](N, SD), ctor_of[flow](SD, M).
 
 -- A tag is a callee in every sense but the grammar's (the field is `tag`, not
@@ -302,11 +303,11 @@ resolves[code](C, M) :- callee_of[code](C, N), ast_node[code](N, super, _, _),
 -- call, and `may_be_node` carries what a call returns, so one arm covers both.
 resolves[code](X, F) :- transfer_site[code](X, tagged_template_expression),
                         ast_child[code](X, tag, 0, T),
-                        may_be_node[flow](T, F), fn_node[code](F).
+                        may_be_node[flow](T, F), fn_value[flow](F).
 
 resolves[code](X, F) :- transfer_site[code](X, decorator),
                         ast_child[code](X, expression, 0, E),
-                        may_be_node[flow](E, F), fn_node[code](F).
+                        may_be_node[flow](E, F), fn_value[flow](F).
 
 -- `for (x of E)` calls `E[Symbol.iterator]()` and then `next()`. Only the first
 -- hop is a `resolves`: `ambiguous_call[audit]` reads two answers at one site
@@ -316,18 +317,18 @@ resolves[code](X, F) :- transfer_site[code](X, decorator),
 for_of_iterates[code](X, M) :- transfer_site[code](X, for_of_statement),
                                ast_child[code](X, right, 0, R),
                                may_be_node[flow](R, Obj),
-                               member_value[flow](Obj, "iterator", M), fn_node[code](M).
+                               member_value[flow](Obj, "iterator", M), fn_value[flow](M).
 resolves[code](X, M) :- for_of_iterates[code](X, M).
 
 calls[code](Caller, Next) :- for_of_iterates[code](X, M), nearest_fn[code](Caller, X),
-                             returns[flow](M, E), may_be_node[flow](E, IterObj),
+                             ret_node_any[flow](M, IterObj),
                              member_value[flow](IterObj, "next", V),
-                             may_be_node[flow](V, Next), fn_node[code](Next).
+                             may_be_node[flow](V, Next), fn_value[flow](Next).
 
 -- THE GENERAL RULE: whatever the callee expression may BE, if it is a function
 -- the site calls it. Covers `(f)()`, `f as T ()`, `f!()`, `(a, f)()`,
 -- `c ? f : g ()` and the next wrapper somebody adds, with no rule here.
-resolves[code](C, F) :- callee_of[code](C, N), may_be_node[flow](N, F), fn_node[code](F).
+resolves[code](C, F) :- may_be_node[flow](N, F), fn_value[flow](F), callee_of[code](C, N).
 
 ambiguous_call[audit](C, F, G) :- resolves[code](C, F), resolves[code](C, G), F != G.
 
@@ -339,30 +340,33 @@ ambiguous_call[audit](C, F, G) :- resolves[code](C, F), resolves[code](C, G), F 
 calls[code](Caller, Callee) :- resolves[code](C, Callee), nearest_fn[code](Caller, C).
 calls[code](R, Callee)      :- resolves[code](C, Callee), top_call[code](C, R).
 
-calls_named[code](A, B)   :- calls[code](X, Y), fn_name[code](X, A), fn_name[code](Y, B).
-calls_named[code](top, B) :- calls[code](R, Y), ast_file[code](R, _), fn_name[code](Y, B).
+calls_named[code](A, B)   :- calls[code](X, Y), fn_name[code](X, A), fn_label[flow](Y, B).
+calls_named[code](top, B) :- calls[code](R, Y), ast_file[code](R, _), fn_label[flow](Y, B).
 
 calls_in[code](File, A, B)   :- calls[code](X, Y), ast_node[code](X, _, File, _),
-                                fn_name[code](X, A), fn_name[code](Y, B).
+                                fn_name[code](X, A), fn_label[flow](Y, B).
 calls_in[code](File, top, B) :- calls[code](R, Y), ast_file[code](R, File),
-                                fn_name[code](Y, B).
+                                fn_label[flow](Y, B).
 
-passes_function[code](C, I, F, Name) :- arg_at[flow](C, I, A), ast_name[code](A, Name),
-                                        may_be_node[flow](A, F), fn_node[code](F).
+passes_function[code](C, I, F, Name) :- arg_at[flow](C, I, A), may_be_node[flow](A, F), fn_value[flow](F),
+                                        ast_name[code](A, Name).
+-- an element of another file's array spread into the call is named by its own file
+passes_function[code](C, I, F, Name) :- arg_at[flow](C, I, A), may_be_node[flow](A, F), fn_value[flow](F),
+                                        sx_name[surface](A, Name).
 
 -- A function handed over and CALLED, by facts/js-host.rofl's `host_calls_back`.
 -- Not a `resolves` edge: rules/js-dataflow.rofl binds a resolved call's
 -- arguments to the callee's parameters and its return to the call's value, and
 -- a callback gets neither (`map` passes elements and returns an array).
-callback_site[code](C, P, Key)        :- callee_of[code](C, N), ast_child[code](N, object, 0, O),
-                                         prototype_of[flow](O, P), builtin_prototype(P), selects[flow](N, Key).
+callback_site[code](C, P, Key)        :- builtin_prototype(P), prototype_of[flow](O, P), ast_child[code](N, object, 0, O),
+                                         callee_of[code](C, N), selects[flow](N, Key).
 callback_site[code](C, Origin, Key)   :- host_site[code](C, _, Origin, Key).
 callback_site[code](C, thenable, Key) :- unresolved_call[code](C, _), callee_of[code](C, N), selects[flow](N, Key).
 calls_back[code](C, F, When) :- callback_site[code](C, O, Key), host_calls_back(O, Key, I, When),
-                                arg_at[flow](C, I, A), may_be_node[flow](A, F), fn_node[code](F).
+                                arg_at[flow](C, I, A), may_be_node[flow](A, F), fn_value[flow](F).
 calls_back[code](C, F, When) :- callback_site[code](C, O, Key), host_calls_back(O, Key, last, When),
                                 arg_at[flow](C, I, A), J is I + 1, not arg_at[flow](C, J, _),
-                                may_be_node[flow](A, F), fn_node[code](F).
+                                may_be_node[flow](A, F), fn_value[flow](F).
 
 -- a row for a prototype member the library does not have is a misspelling
 callback_key_unknown[audit](P, Key) :- host_calls_back(P, Key, _, _), builtin_prototype(P),
@@ -475,10 +479,10 @@ await_arg[code](A, X) :- ast_node[code](A, await_expression, _, _),
 
 awaited_then[code](A, F) :- await_arg[code](A, X), may_be_node[flow](X, O),
                             member_value[flow](O, "then", V),
-                            may_be_node[flow](V, F), fn_node[code](F).
+                            may_be_node[flow](V, F), fn_value[flow](F).
 
 performed_call[code](A, F) :- awaited_then[code](A, F).
-callerless_call[audit](Name) :- performed_call[code](_, F), fn_name[code](F, Name).
+callerless_call[audit](Name) :- performed_call[code](_, F), fn_label[flow](F, Name).
 
 -- Three-way split of every await: value known and no `then` (the language
 -- performs NO call — a positive statement, and the one arm here that can be
@@ -490,10 +494,10 @@ await_no_call[code](A)        :- await_value_known[code](A), not awaited_then[co
 await_value_unknown[audit](A) :- await_arg[code](A, _), not await_value_known[code](A).
 
 -- The gate: a performed call must never become an ordinary edge. It cannot use
--- `nearest_fn`, because `encloses` demands `site(C)` and an await is not a site
+-- `nearest_fn`, because it demands `site(C)` and an await is not a site
 -- — written that way it was permanently silent.
-awaiting_fn[code](Fn, A) :- performed_call[code](A, _), fn_node[code](Fn),
-                            ast_within[code](Fn, A).
+awaiting_fn[code](Fn, A) :- performed_call[code](A, _), ast_within[code](Fn, A),
+                            fn_node[code](Fn).
 performed_as_edge[audit](Fn, F) :- performed_call[code](A, F),
                                    awaiting_fn[code](Fn, A),
                                    calls[code](Fn, F).
@@ -501,3 +505,4 @@ performed_as_edge[audit](Fn, F) :- performed_call[code](A, F),
 -- The call graph reads the value layer; declared by the reader.
 imports(code, flow).
 imports(audit, flow).
+imports(code, surface).

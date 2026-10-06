@@ -1,0 +1,27 @@
+-- examples/checks/agg-lattice-strata-check.rofl — agg_lattice_strata: an
+-- order lattice recurses, because its operation is idempotent, which is the
+-- algebra flag the recursion gate reads (safety.rofl, `lattice_refused(P,
+-- not_idempotent)`). The values that exist only through a cycle are here; a
+-- sum and a count declared as lattices through their own recursion
+-- (agg-lattice-strata-2-refused-sum.rofl, -3-refused-count.rofl) are refused,
+-- so their rules never reach this world.
+alsc_want(al_dist, a, a, 7).
+alsc_want(al_dist, b, b, 7).
+alsc_want(al_dist, b, e, 7).
+alsc_want(al_wide, t, t, 4).
+alsc_want(al_wide, u, u, 4).
+alsc_have(al_dist, A, C, D) :- al_dist(A, C, D).
+alsc_have(al_wide, A, C, W) :- al_wide(A, C, W).
+alsc_missing(Rel, A, C, V)  :- alsc_want(Rel, A, C, V), not alsc_have(Rel, A, C, V).
+-- the recursion is a positive edge of its own relation, not an aggregate's
+alsc_self(Rel)      :- concludes[$kernel](R, Rel), premise_pos[$kernel](R, Rel), lattice_decl[$kernel](Rel, _, _).
+alsc_not_recursive(al_dist) :- not alsc_self(al_dist).
+alsc_not_recursive(al_wide) :- not alsc_self(al_wide).
+alsc_as_aggregate(Rel) :- concludes[$kernel](R, Rel), premise_agg[$kernel](R, Rel), lattice_decl[$kernel](Rel, _, _).
+alsc_accepted(Rel)  :- concludes[$kernel](_, Rel), alsc_refused(Rel).
+alsc_refused(alsr_sum).
+alsc_refused(alsr_count).
+alarm(alsc_missing).
+alarm(alsc_not_recursive).
+alarm(alsc_as_aggregate).
+alarm(alsc_accepted).

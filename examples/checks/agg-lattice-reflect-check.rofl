@@ -1,0 +1,35 @@
+-- examples/checks/agg-lattice-reflect-check.rofl — agg_lattice_reflect: a
+-- declaration is rules as data. Each declaration of agg-lattice-data.rofl is
+-- exactly one `lattice_decl[$kernel](Rel, Arity, Op)` row, both directions;
+-- its arity is the width every rule concluding the relation writes, walked
+-- off the rule's own `conclusion_lit`; the recursion is an ordinary positive
+-- premise of the rule (`premise_pos`), never an aggregate's (`premise_agg`),
+-- so the rule keeps its id. The TypeScript engine's rule ids for these rules
+-- are held to the Rust store's by scripts/goldens.ts, and tests/agg_worlds.rs
+-- saves and reopens this world and requires the same world back.
+alr_want(al_dist, 3, min).
+alr_want(al_wide, 3, max).
+alr_want(al_finish, 2, max).
+alr_want(al_taint, 2, or).
+alr_want(al_all, 2, and).
+alr_want(al_hd, 3, min).
+alr_want(al_hop, 3, min).
+alr_row(R, N, Op)   :- lattice_decl[$kernel](R, N, Op).
+alr_missing(R)      :- alr_want(R, N, Op), not alr_row(R, N, Op).
+alr_extra(R)        :- alr_row(R, N, Op), not alr_want(R, N, Op).
+alr_tail(Q, T, 0)   :- lattice_decl[$kernel](Rel, _, _), concludes[$kernel](Q, Rel),
+                       conclusion_lit[$kernel](Q, _, $lit(Rel, _, T, _)).
+alr_tail(Q, T, N)   :- alr_tail(Q, $cons(_, T), M), N is M + 1.
+alr_width(Q, N)     :- alr_tail(Q, $nil, N).
+alr_arity_wrong(Q)  :- concludes[$kernel](Q, Rel), lattice_decl[$kernel](Rel, N, _), alr_width(Q, M), M != N.
+alr_unwalked(Q)     :- concludes[$kernel](Q, Rel), lattice_decl[$kernel](Rel, _, _), not alr_width_any(Q).
+alr_width_any(Q)    :- alr_width(Q, _).
+alr_recursive(Rel)  :- concludes[$kernel](Q, Rel), premise_pos[$kernel](Q, Rel), alr_want(Rel, _, _).
+alr_not_positive(Rel) :- alr_want(Rel, _, _), Rel != al_finish, not alr_recursive(Rel).
+alr_as_aggregate(Q) :- concludes[$kernel](Q, Rel), premise_agg[$kernel](Q, Rel), alr_want(Rel, _, _).
+alarm(alr_missing).
+alarm(alr_extra).
+alarm(alr_arity_wrong).
+alarm(alr_unwalked).
+alarm(alr_not_positive).
+alarm(alr_as_aggregate).

@@ -1,0 +1,17 @@
+-- examples/checks/agg-phrase-empty-check.rofl — agg_empty_phrase: a group bound before its count or
+-- sum reads 0 for c3, which no ballot names; a count that binds its group gives c3 no row. Both from
+-- sentences and from rofl, after a round trip that must keep the order that decides it.
+pe_want(c1, 2). pe_want(c2, 1). pe_want(c3, 0).
+pe_wrong(C) :- pe_want(C, N), not pes_bound(C, N).
+pe_wrong(C) :- pe_want(C, N), not per_bound(C, N).
+pe_wrong(C) :- pe_want(C, N), not pes_weight(C, N).
+pe_wrong(C) :- pe_want(C, N), not per_weight(C, N).
+pe_wrong(C) :- pe_want(C, N), N > 0, not pes_grouped(C, N).
+pe_wrong(C) :- pe_want(C, N), N > 0, not per_grouped(C, N).
+pe_wrong(c3) :- pes_grouped(c3, _).
+pe_wrong(c3) :- per_grouped(c3, _).
+alarm(pe_wrong).
+-- written in its own words (agg-phrase-check.rofl)
+sentence_word(per_bound, "is the number of B such that").
+sentence_word(per_weight, "is the sum of 1 over B such that").
+sentence_word(per_grouped, "is the number of B such that").

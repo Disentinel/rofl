@@ -461,7 +461,9 @@ function main(): void {
   say();
   say(`    retainTicks: 2 at tick ${keep2.r.store.tick} answers about ticks ${live2.join(', ')} — `
     + 'the current one and the two before it.');
-  say(`    retainTicks: 0 answers about tick ${live0.join(', ')} and nothing else.`);
+  say(`    retainTicks: 0 answers about tick ${live0.join(', ')} and nothing else: of tick ${live0[0]}, only the`);
+  say(`    ${wKeep0[live0[0]].rows} of ${wBase[live0[0]].rows} rows the firings it staged into tick ${live0[live0.length - 1]} read, which is what`);
+  say('    `why` needs to explain those firings as of the tick they read it in.');
   const now = keep2.r.store.tick;
   say('    THE ANSWER BREAKS AT n: "which rule concluded this, and when" is answerable');
   say(`    for T >= now - n, and for no earlier T. At n = 2 and now = ${now} that is T >= ${now - 2};`);
@@ -471,7 +473,8 @@ function main(): void {
     wBase.slice(0, TICKS).every((x) => x.rows > 0));
   check('retainTicks: 2 keeps exactly the current tick and the two before it',
     live2.join(',') === [now - 2, now - 1, now].join(','));
-  check('retainTicks: 0 keeps exactly the current tick', live0.join(',') === String(now));
+  check('retainTicks: 0 keeps the current tick, and of the one before only what the firings it staged read',
+    live0.join(',') === [now - 1, now].join(',') && wKeep0[now - 1].rows < wBase[now - 1].rows);
   say();
 
   // -------------------------------------------------------------------------

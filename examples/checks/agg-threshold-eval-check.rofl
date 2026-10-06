@@ -1,0 +1,87 @@
+-- examples/checks/agg-threshold-eval-check.rofl — agg_threshold_eval: the
+-- Rust engine evaluates the threshold, over closed input and inside its own
+-- recursion, and stops at N — each N its own: a group reached at one N is
+-- no answer at another, and one N that is no integer holes its own cell only.
+--
+-- Over closed input it is held to a count of the same members (a stratified
+-- count, the oracle), both ways; inside the recursion to the old spelling of
+-- examples/goof, both ways, and to the answer written out.
+ate_votes(C, N)  :- at_claim(C), N is count(W : at_vouch(W, C, _)).
+ate_clean_n(C, N) :- at_claim(C), N is count(W : at_vouch(W, C, M), not at_revoked(W), M != phone).
+oracle_short(trusted, C) :- at_trusted(C), ate_votes(C, N), N < 2.
+oracle_missed(trusted, C) :- ate_votes(C, N), N >= 2, not at_trusted(C).
+oracle_short(clean, C)   :- at_clean(C), ate_clean_n(C, N), N < 2.
+oracle_missed(clean, C)  :- ate_clean_n(C, N), N >= 2, not at_clean(C).
+oracle_missed(seen, C)   :- ate_votes(C, N), N >= 1, not at_seen(C).
+oracle_short(seen, C)    :- at_seen(C), not at_claim(C).
+alarm(oracle_short).
+alarm(oracle_missed).
+-- the two spellings of "every premise holds" agree
+spellings_differ(P) :- at_thm(P), not at_thm_old(P).
+spellings_differ(P) :- at_thm_old(P), not at_thm(P).
+alarm(spellings_differ).
+-- and the answers, written out: c2's one witness on two channels is one
+-- member; s4 needs nothing and s5 rests on it; z, u and q are not believed
+ate_want(trusted, c1).
+ate_want(trusted, c3).
+ate_want(clean, c1).
+ate_want(seen, c1).
+ate_want(seen, c2).
+ate_want(seen, c3).
+ate_want(thm, p1).
+ate_want(thm, p2).
+ate_want(thm, q1).
+ate_want(thm, q2).
+ate_want(thm, q4).
+ate_want(thm, q5).
+ate_want(believed, a).
+ate_want(believed, b).
+ate_want(believed, zz).
+ate_want(believed, x).
+ate_want(believed, y).
+ate_want(believed, t).
+ate_want(believed, m).
+ate_want(believed, v).
+ate_want(believed, k).
+ate_want(meets, m(g1, 1)).
+ate_want(reach, m(g1, 1)).
+ate_want(ok, m(s2, 2)).
+ate_want(ok, m(s3, 1)).
+ate_want(mixed, m(s1, 2)).
+ate_want(b7, x7).
+ate_want(b7, y7).
+ate_got(trusted, C)  :- at_trusted(C).
+ate_got(clean, C)    :- at_clean(C).
+ate_got(seen, C)     :- at_seen(C).
+ate_got(thm, P)      :- at_thm(P).
+ate_got(believed, X) :- at_believed(X).
+ate_got(meets, m(G, N)) :- at_meets(G, N).
+ate_got(reach, m(G, N)) :- at_reach(G, N).
+ate_got(ok, m(S, N))    :- at_ok(S, N).
+ate_got(mixed, m(S, N)) :- at_mixed(S, N).
+ate_got(b7, X)          :- at_b7(X).
+ate_wrong(K, X) :- ate_want(K, X), not ate_got(K, X).
+ate_wrong(K, X) :- ate_got(K, X), not ate_want(K, X).
+alarm(ate_wrong).
+-- a threshold that is not an integer: a hole on the step's cell, no row
+ate_holed(S) :- hole[$kernel]($cell(R, _, _, $cons(S, $cons(many, $nil))), agg_type_error), concludes[$kernel](R, at_bad).
+threshold_not_holed(s1) :- not ate_holed(s1).
+threshold_read(S) :- at_bad(S).
+alarm(threshold_not_holed).
+alarm(threshold_read).
+-- beside an N that is: the hole is that N's cell, the value the other's, and
+-- no cell is both
+ate_mixed_holed() :- hole[$kernel]($cell(R, _, _, $cons(s1, $cons(many, $nil))), agg_type_error), concludes[$kernel](R, at_mixed).
+threshold_not_holed(mixed) :- not ate_mixed_holed().
+cell_both(C) :- hole[$kernel](C, _), agg_cell[$kernel](C, _, _).
+alarm(cell_both).
+-- one cell per group reached, at its N, never one for a group short of N
+ate_cell(R, K) :- agg_cell[$kernel]($cell(R, _, _, K), true, _).
+ate_trusted_cell(C) :- concludes[$kernel](R, at_trusted), ate_cell(R, $cons(C, $cons(2, $nil))).
+ate_meets_cell(N) :- concludes[$kernel](R, at_meets), ate_cell(R, $cons(g1, $cons(N, $nil))).
+cell_short(n(N)) :- ate_meets_cell(N), not at_meets(g1, N).
+cell_missing(n(N)) :- at_meets(g1, N), not ate_meets_cell(N).
+cell_short(C) :- ate_trusted_cell(C), not at_trusted(C).
+cell_missing(C) :- at_trusted(C), not ate_trusted_cell(C).
+alarm(cell_short).
+alarm(cell_missing).

@@ -1,0 +1,49 @@
+-- examples/checks/agg-minmax-data.rofl — THE MIN, MAX, OR AND AND DATASET,
+-- shared by the agg_minmax_* worlds (facts/checks.rofl, docs/aggregates.md).
+--
+-- g1's minimum 3 is reached by two facts, so min's Best witness holds both
+-- and not 5 or 9; so is its maximum 9, its `or` (true, twice) and g2's `and`
+-- (false, twice): every operation has a tie its Best must keep whole. A
+-- smaller value comes from an untrusted source, judged two negations deep. g3 has no value, so no row; gt's value is not a
+-- number and its flag not a boolean, so no row and a hole.
+edb(am_group).
+edb(am_raw).
+edb(am_fraw).
+edb(am_src).
+edb(am_trusted).
+am_group(g1).
+am_group(g2).
+am_group(g3).
+am_group(gt).
+am_raw(g1, 3, a).
+am_raw(g1, 3, b).
+am_raw(g1, 5, a).
+am_raw(g1, 9, a).
+am_raw(g1, 9, b).
+am_raw(g1, 1, c).
+am_raw(g2, -2, a).
+am_raw(g2, 4, b).
+am_raw(gt, apple, a).
+am_fraw(g1, true, a).
+am_fraw(g1, true, b).
+am_fraw(g1, false, b).
+am_fraw(g2, false, a).
+am_fraw(g2, false, b).
+am_fraw(g2, true, c).
+am_fraw(gt, maybe, a).
+am_src(a).
+am_src(b).
+am_src(c).
+am_trusted(a).
+am_trusted(b).
+
+am_void(S)       :- am_src(S), not am_trusted(S).
+am_ok(S)         :- am_src(S), not am_void(S).
+am_d(G, V, S)    :- am_raw(G, V, S), am_ok(S).
+am_flag(G, F, S) :- am_fraw(G, F, S), am_ok(S).
+
+am_min(G, M) :- am_group(G), M is min(V : am_d(G, V, _)).
+am_max(G, M) :- am_group(G), M is max(V : am_d(G, V, _)).
+am_lo(G, M)  :- M is min(V : am_d(G, V, _)).
+am_or(G, B)  :- am_group(G), B is or(F : am_flag(G, F, _)).
+am_and(G, B) :- am_group(G), B is and(F : am_flag(G, F, _)).

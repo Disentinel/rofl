@@ -1,0 +1,34 @@
+-- examples/checks/agg-widen-safety-check.rofl — agg_widen_safety: the rules
+-- of agg-widen-safety-1-ok.rofl are accepted and evaluate: the loop head
+-- widened within (-inf,inf) — [0,0], then its body's [1,1] and the negated
+-- body's [-1,-1] take both ends past it — so every point that reads it a
+-- shrug inherited from it, and entry exactly [0,0]; every
+-- agg-widen-safety-N-refused-*.rofl is refused, each for the reason its first
+-- line names (the harness holds the text), so none of their rules reaches
+-- this world: an interval function on a cycle no widening bounds (a hull
+-- through itself, and through two hulls neither declaring one), a widening
+-- declared for another lattice than a hull, two widenings of one relation,
+-- an interval function's value carried into a plain relation, one computed
+-- from an order lattice's value, ivmul by the value, and one between two
+-- cells of one hull that declares no widening (a cycle of that relation,
+-- judged as every safety rule judges, over relations).
+awsf_accepted(Rel)  :- concludes[$kernel](_, Rel), awsf_refused(Rel).
+awsf_refused(awsr_self).
+awsf_refused(awsr_pair).
+awsf_refused(awsr_mate).
+awsf_refused(awsr_union).
+awsf_refused(awsr_min).
+awsf_refused(awsr_two).
+awsf_refused(awsr_plainv).
+awsf_refused(awsr_order).
+awsf_refused(awsr_mul).
+awsf_refused(awsr_keys).
+awsf_unwidened()    :- not shrug[$kernel]($lattice(aws_head, main, 0, $cons(h, $nil)), widened, within(iv(ninf, inf))).
+awsf_lost()         :- not aws_pt(entry, iv(0, 0)).
+awsf_lost()         :- not aws_plain(iv(0, 0)).
+alarm(awsf_accepted).
+alarm(awsf_unwidened).
+alarm(awsf_lost).
+-- expect-row: aws_out[main](entry,iv(ninf,0))
+-- expect-row: shrug[$kernel](aws_derived(twice,$unknown_value),inherited,
+-- expect-no-row: aws_pt[main](body,

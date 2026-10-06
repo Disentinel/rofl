@@ -1,0 +1,9 @@
+-- examples/checks/agg-sub-ts-1-data.rofl — agg_sub_ts, a world both engines
+-- answer: plain facts both load, and beside them a fixture each engine
+-- refuses for a reason naming the subsumptive relation: the TypeScript
+-- engine and the Rust
+-- engine refuses one under well-founded semantics. The fixture does not
+-- reach the world, so the two states are one.
+edb(sts_e).
+sts_e(a, 1).
+sts_seen(A) :- sts_e(A, _).

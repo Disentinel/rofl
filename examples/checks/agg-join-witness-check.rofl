@@ -1,0 +1,86 @@
+-- examples/checks/agg-join-witness-check.rofl — agg_join_witness: a join
+-- fact's witness is a Cover, read as `lattice_member[$kernel](Fact, 1,
+-- Height, Rule)`, its one derivation, and `lattice_member_prem[$kernel](Fact,
+-- 1, Prem)`, each Prem a contribution `$fact(L@join, Book, [Key, C])`. It
+-- joins to the value (every element, bit or end of the value is in some
+-- member), every member is below the value, and it is irredundant (every
+-- member counts something no other member does); it is the canonical one:
+-- the contributions taken lowest first, so aj_pick(k) is covered by its
+-- singletons and not by the pair above them, and the one contribution of a
+-- lone node or an empty bitset is its cover.
+ajw_f(comp, K, V, $fact(aj_comp, main, $cons(K, $cons(V, $nil))))         :- aj_comp(K, V).
+ajw_f(live_in, K, V, $fact(aj_live_in, main, $cons(K, $cons(V, $nil))))   :- aj_live_in(K, V).
+ajw_f(live_out, K, V, $fact(aj_live_out, main, $cons(K, $cons(V, $nil)))) :- aj_live_out(K, V).
+ajw_f(near, K, V, $fact(aj_near, main, $cons(K, $cons(V, $nil))))         :- aj_near(K, V).
+ajw_f(pick, K, V, $fact(aj_pick, main, $cons(K, $cons(V, $nil))))         :- aj_pick(K, V).
+ajw_f(bits, K, V, $fact(aj_bits, main, $cons(K, $cons(V, $nil))))         :- aj_bits(K, V).
+ajw_f(range, K, V, $fact(aj_range, main, $cons(K, $cons(V, $nil))))       :- aj_range(K, V).
+ajw_m(Kind, K, V, C) :- ajw_f(Kind, K, V, F), lattice_member_prem[$kernel](F, 1, $fact(_, main, $cons(K, $cons(C, $nil)))).
+
+-- one derivation, and it has members
+ajw_bare(Kind, K)   :- ajw_f(Kind, K, _, F), not lattice_member[$kernel](F, 1, _, _).
+ajw_second(Kind, K) :- ajw_f(Kind, K, _, F), lattice_member[$kernel](F, 2, _, _).
+ajw_empty(Kind, K)  :- ajw_f(Kind, K, _, _), not ajw_some(Kind, K).
+ajw_some(Kind, K)   :- ajw_m(Kind, K, _, _).
+alarm(ajw_bare).
+alarm(ajw_second).
+alarm(ajw_empty).
+
+-- sets and bitsets: `E in C` reads a set's elements and a bitset's bits alike
+ajw_elems(comp).
+ajw_elems(live_in).
+ajw_elems(live_out).
+ajw_elems(near).
+ajw_elems(pick).
+ajw_elems(bits).
+ajw_has(Kind, K, E)          :- ajw_m(Kind, K, _, C), E in C.
+ajw_uncovered(Kind, K, E)    :- ajw_elems(Kind), ajw_f(Kind, K, V, _), E in V, not ajw_has(Kind, K, E).
+ajw_below(Kind, K, C)        :- ajw_m(Kind, K, V, C), C subset V.
+ajw_above(Kind, K, C)        :- ajw_elems(Kind), ajw_m(Kind, K, _, C), not ajw_below(Kind, K, C).
+ajw_other_has(Kind, K, C, E) :- ajw_m(Kind, K, _, C), ajw_m(Kind, K, _, D), D != C, E in D.
+ajw_unique(Kind, K, C)       :- ajw_elems(Kind), ajw_m(Kind, K, _, C), E in C, not ajw_other_has(Kind, K, C, E).
+ajw_redundant(Kind, K, C)    :- ajw_elems(Kind), ajw_m(Kind, K, V, C), V != 0, not ajw_unique(Kind, K, C).
+-- intervals: some member reaches each end, each is inside, and each reaches
+-- an end no other member does
+ajw_end(K, C, low)           :- ajw_m(range, K, iv(L, _), C), C = iv(L, _).
+ajw_end(K, C, high)          :- ajw_m(range, K, iv(_, H), C), C = iv(_, H).
+ajw_reached(K, E)            :- ajw_end(K, _, E).
+ajw_uncovered(range, K, E)   :- ajw_f(range, K, _, _), ajw_side(E), not ajw_reached(K, E).
+ajw_side(low).
+ajw_side(high).
+ajw_above(range, K, C)       :- ajw_m(range, K, _, C), not ajw_below(range, K, C).
+ajw_iv_other(K, C, E)        :- ajw_end(K, C, E), ajw_end(K, D, E), D != C.
+ajw_iv_unique(K, C)          :- ajw_end(K, C, E), not ajw_iv_other(K, C, E).
+ajw_redundant(range, K, C)   :- ajw_m(range, K, _, C), not ajw_iv_unique(K, C).
+alarm(ajw_uncovered).
+alarm(ajw_above).
+alarm(ajw_redundant).
+
+-- the canonical Cover, where the contributions leave no choice or the
+-- heights decide it
+ajw_want(comp, lone, set(lone)).
+ajw_want(comp, s, set(s)).
+ajw_want(live_in, b4, set(x)).
+ajw_want(live_in, b4, set(z)).
+ajw_want(near, m3, set(m1)).
+ajw_want(near, m3, set(m2)).
+ajw_want(pick, k, set(x)).
+ajw_want(pick, k, set(y)).
+ajw_want(pick, k, set(z)).
+ajw_want(range, h5, iv(4, 4)).
+ajw_want(range, h4, iv(10, 10)).
+ajw_want(bits, h5, 0).
+ajw_want(bits, h4, 2).
+ajw_n_want(comp, lone, 1).
+ajw_n_want(comp, s, 1).
+ajw_n_want(live_in, b4, 2).
+ajw_n_want(near, m3, 2).
+ajw_n_want(pick, k, 3).
+ajw_n_want(range, h5, 1).
+ajw_n_want(range, h4, 2).
+ajw_n_want(bits, h5, 1).
+ajw_n(Kind, K, N)          :- N is count(C : ajw_m(Kind, K, _, C)).
+ajw_missing(Kind, K, C)    :- ajw_want(Kind, K, C), not ajw_m(Kind, K, _, C).
+ajw_wrong_count(Kind, K, N) :- ajw_n_want(Kind, K, W), ajw_n(Kind, K, N), N != W.
+alarm(ajw_missing).
+alarm(ajw_wrong_count).

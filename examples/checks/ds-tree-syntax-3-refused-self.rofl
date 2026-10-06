@@ -1,0 +1,3 @@
+-- expect-refusal: a tree's closure is another relation than its edges
+-- the closure is a relation of its own
+tree dts_self(P, C) closure dts_self.

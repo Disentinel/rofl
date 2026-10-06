@@ -114,6 +114,9 @@ scanned a relation.
   wall, and `assert` only marks the store dirty, so what it adds is first judged
   by the next WHOLE evaluation. A guard would have been a check against a state
   the surface cannot reach; the absence of a verb is the stronger statement.
+  (Since 2026-10-05 `assert_delta` and `load_delta` bring an evaluated world
+  to the next fixpoint by delta instead, `docs/aggregates.md`, "Incremental
+  addition, as built": between evaluations still, never inside one.)
 - **`Answer` carries `scanned` and `probed`, and the gate holds them to
   something.** `scanned` is the candidate superset the store handed back —
   the number that separates 5.5 ms from 12 469 ms — and `probed` says whether an
@@ -180,7 +183,9 @@ the code; the code is held to the syntax.
 
 `open(packs)` above still means `open(seed)`. Parsing a `.rofl` file into
 CLAUSES the engine will run is a different bridge from parsing it into an AST,
-and it is not built.
+and it was not built when this was written. It is now: `Session::load` reads
+`.rofl` text (`rofl_parse.rs`); `rofl-load`, and rofl-serve's `fresh` then
+`load`, take packs as source with no seed.
 
 ## What must be said to anyone handed this
 
@@ -304,3 +309,103 @@ refusals in it is COMPLETE is a decision rather than a measurement, and
 `examples/rofl-release/` records both polarities so that it reads as contested
 instead of being settled by whoever wrote the last line.
 
+### Which support `why` shows, and `why all`
+
+A fact with several firings keeps every one (`Store::firings`, `Store.firings`), and the sealed state
+prints one of them, the witness. Decided 2026-10-04 (f_why_can_cite_a_witness_that_rests_on_itself,
+f_the_witness_forest_is_stored_and_only_why_renders_one_tree), the same in both engines:
+
+- **The witness is the firing of least derivation height**, ties broken by the signature (the rule id and
+  the premise keys, as text). A firing's height is 1 + its highest premise; a base fact or one with no firing
+  is 0, a cell its own height, a negation or a builtin 0, and a fact's height is its lowest firing's
+  (`Store::heights`, `derivationHeights` in src/store.ts). It is a function of the firings and of nothing
+  that ran first, so a snapshot, a retraction and a fresh evaluation pick the same one. A circular firing is
+  always higher than a direct one, so the proof `why` prints has no `[cycle]` where an acyclic derivation
+  exists, and is the shortest. The sealed state's `wit` lines are this firing too, and so is every `why`
+  of a plain fact.
+- **`why` says how many other firings the asked fact has**, one line at the end of its block:
+  `[2 more derivations: why all wh_reach[main](c,c)]` (the form of an aggregate's `[n more members: why all
+  ...]`). Only the asked fact; a fact further down shows its witness alone.
+- **`why all` writes every firing of the asked fact**, each under its own line after the shortest,
+  `#2 <= rule @tick T [another derivation]`, in order of height and then signature. A premise already
+  written is `[above]`, by the rules of scripts/why_dag.ts. The circular firing is shown for what it is:
+  its premise on the fact itself is `[cycle]`. Below the asked fact each fact is its witness, so the
+  forest is one level wide and an `[above]` reference means the same in every branch of it.
+
+- **A base fact whose firing rests on the fact itself is shown as its assertion**, `K [axiom]`, with its
+  firings behind the hint and `why all` (`#2` and on); one whose firing is acyclic (a fact that arrives
+  through a staged firing is asserted too) is explained by that firing, as before.
+
+The gate over the corpus is scripts/whycheck.ts: no `[cycle]` of a plain `why` names a fact that has a height,
+that is, an acyclic derivation. The proof worlds are `why_height` (a fact with a circular firing whose
+signature is the least, and a direct one) and `why_forest` (three firings sharing subtrees) and `why_base` (an asserted fact derived from itself), with the text of
+`why` and `why all` derived by hand; the planted faults are `witness_by_signature`, `why_all_one_tree`, `why_hint_missing` and
+`why_base_circle`, each with a TypeScript twin.
+
+### Explanation reaches the binaries
+
+`Session` could explain and no binary asked it to, so a proof still needed the
+TypeScript engine. Since 2026-10-01:
+
+- `rofl-serve`: `{"op":"why","session":S,"query":L,"all"?:true}` → `{text}`
+  (`all` is `why all`: every member of every cell; a value that is not a
+  boolean is refused);
+  `{"op":"whynot",...,"depth"?:N,"nodes"?:N}` → `{holds, text}`; `{"op":"excise",...}`
+  → `{removed, added}`. A `why` of a fact that does not hold, and any refused
+  question, are `ok:false` with the reference's text as the `error`.
+  `RoflSession.why/whynot/excise` in `runtime/port.ts`.
+- `rofl-load --why L --why-all L --whynot L --excise F` (each repeatable):
+  answers in flag order, each followed by an empty line, instead of the state;
+  `--state` keeps the state, printed first. `--depth N --nodes N` bound every
+  `--whynot` of the run. A refusal is printed as the answer and the exit code
+  is 4. A numeric flag (`--ticks`, `--budget`, `--space`, `--retain`,
+  `--depth`, `--nodes`) whose value does not parse as what it takes exits 1
+  naming the flag.
+
+**The bounds** are the reference's: absent is 6 and 64, below 1 is 1
+(`Math.max(1, ...)` in src/api.ts, `WhynotBounds::clamped`). A bound that is
+not an integer is refused — the protocol's `"3"`, `2.5` or `true`, the CLI's
+`2.5` (exit 1) — where the reference would take a float and print it; the
+default is never put in its place silently. JSON has one number type, as JS
+does, so the protocol's `3.0` and `1e3` are the integers 3 and 1000, and a
+whole number past i64 saturates.
+
+**A wall met while demonstrating is a `whynot`'s answer**, `holds: false`
+with the text `wall: budget_exhausted` (or `space_exhausted`): a demand that
+unfolds without end has no demonstration, and the wall that stopped it is the
+one there is. Both of the reference's whynots answer so (the plain one since
+2026-10-02; before, its evaluator's `budget exhausted` escaped as a throw).
+
+**A malformed question is refused by both engines, in each parser's own
+words.** `line 1: expected a term, got 'eof'` from src/parser.ts is
+`term: not the start of one` here; the goldens hold a refused file to the same
+contract. Every refusal that is not the parser's — `why needs a ground
+literal`, `excise needs a ground fact`, `... is not a base fact`, `... does not
+hold; try: whynot ...` — is the reference's text. An integer past ±2^60 or a
+character outside the alphabet is a parse refusal in both, never an answer
+about a neighbouring fact; at most one closing dot is read (`p(a)..` is
+refused, `p(a) -- note` is answered).
+
+**THE REFERENCE EXPLAINS A PLAIN PROGRAM ITS OWN WAY and this engine follows it**
+(`Eval::plain`, `AggEval.plain` in src/aggeval.ts, `storeHasAggregates` read off
+the same reflected rows). A program with no aggregate construct is evaluated and
+explained as a plain one: the planner holds a cross-product
+premise until something binds it, a refusal echoes the question as written
+(padding and all — `whynot`'s `holds` line is the one that trims it), a
+live fact with no firing is `[axiom]`, a negation over an undefined atom is
+`[undefined]` and walked, a `why` of an undefined atom names its `unfounded
+set:`, and a negation's single-step demonstration is written when its firing is
+reached. Any other program is explained as an aggregate one, and so is every explain
+request in every world (the reference evaluates a plain program again by the
+aggregate evaluator to answer them, and so does `Session::explain_requests`).
+In both, every question renames from zero, so an answer does not depend on what
+was asked before it.
+
+The gate is `npm run whycheck`: questions drawn from every world `npm test`
+loads, aggregate worlds included (the deepest derivation, a spread of derived
+facts, cells and their `why all`, shrug targets, the same with the last
+argument changed, undefined atoms, small and out-of-range bounds, two excises,
+and a malformed set), put to BOTH binaries and compared with `src/api.ts`,
+refusals included. `rust/rofl/tests/why_bins.rs` holds the binaries'
+contracts and `rust/rofl/tests/explain.rs` the engine's, each fix with a test
+that fails without it.

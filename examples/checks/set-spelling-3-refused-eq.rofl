@@ -1,0 +1,5 @@
+-- expect-refusal: is a set written with a variable
+-- `=` against a set with a variable compares the spellings: set(Y, b) = set(a, b)
+-- would hold and set(b, Y) = set(a, b) would not
+ss_held(set(a, b)).
+ss_eq(Y) :- ss_held(S), S = set(b, Y).

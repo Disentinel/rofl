@@ -1,0 +1,44 @@
+-- examples/voting/voting.rofl — three ways to count one election, and who
+-- could have changed the outcome.
+--
+-- A ballot is one fact: ballot(Election, Voter, First, Second, Third, Fourth).
+-- Candidates and elections are listed from outside, so a candidate nobody
+-- ranked first is counted at 0 and is a row, not a missing one.
+edb(election).
+edb(cand).
+edb(ncand).
+election(e1). election(e2).
+cand(a). cand(b). cand(c). cand(d).
+ncand(4).
+
+rank(E, V, C, 1) :- ballot(E, V, C, _, _, _).
+rank(E, V, C, 2) :- ballot(E, V, _, C, _, _).
+rank(E, V, C, 3) :- ballot(E, V, _, _, C, _).
+rank(E, V, C, 4) :- ballot(E, V, _, _, _, C).
+voter(E, V) :- ballot(E, V, _, _, _, _).
+
+-- PLURALITY: first places. A tie is every candidate that holds the best count.
+votes(E, C, N)       :- election(E), cand(C), N is count(V : rank(E, V, C, 1)).
+best(E, M)           :- election(E), M is max(N : votes(E, _, N)).
+plurality(E, C)      :- votes(E, C, N), best(E, N).
+
+-- BORDA: a place is worth the candidates below it. The sum is keyed by the
+-- voter, so a hundred voters giving the same points are a hundred.
+points(E, C, S)      :- election(E), cand(C), ncand(K), S is sum(P ; V : rank(E, V, C, R), P is K - R).
+best_points(E, M)    :- election(E), M is max(S : points(E, _, S)).
+borda(E, C)          :- points(E, C, S), best_points(E, S).
+
+-- CONDORCET: the pairwise counts, and the candidate nobody beats
+prefers(E, V, X, Y)  :- rank(E, V, X, P), rank(E, V, Y, Q), P < Q.
+pair(E, X, Y, N)     :- election(E), cand(X), cand(Y), X != Y, N is count(V : prefers(E, V, X, Y)).
+beats(E, X, Y)       :- pair(E, X, Y, N), pair(E, Y, X, M), N > M.
+not_unbeaten(E, X)   :- election(E), cand(X), cand(Y), X != Y, not beats(E, X, Y).
+condorcet(E, X)      :- election(E), cand(X), not not_unbeaten(E, X).
+
+-- PIVOTAL: the plurality count again with one voter's first place left out,
+-- for every voter. A voter is pivotal when that moves the set of winners.
+votes_without(E, W, C, N) :- voter(E, W), cand(C), N is count(V : rank(E, V, C, 1), V != W).
+best_without(E, W, M)     :- voter(E, W), M is max(N : votes_without(E, W, _, N)).
+plurality_without(E, W, C) :- votes_without(E, W, C, N), best_without(E, W, N).
+pivotal(E, W) :- voter(E, W), plurality(E, C), not plurality_without(E, W, C).
+pivotal(E, W) :- plurality_without(E, W, C), not plurality(E, C).

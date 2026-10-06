@@ -1,0 +1,8 @@
+-- examples/checks/agg-minmax-budget.rofl — agg_minmax_budget: the budget cuts the
+-- evaluation of agg-budget-data.rofl while ab_r is still being derived, and
+-- the least weight out of a node, or the greatest into it, over it is no answer: the cut is a hole on the world and the
+-- aggregate has no row at all.
+-- expect-row: hole[$kernel]($adhoc,budget_exhausted)
+-- expect-no-row: abb_m[main](
+abb_m(C, M) :- ab_node(C), M is max(W : ab_r(_, C, W)).
+abb_m(C, M) :- ab_node(C), M is min(W : ab_r(C, _, W)).

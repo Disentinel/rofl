@@ -1,0 +1,28 @@
+-- examples/checks/agg-datastrat-two.rofl — TWO COMPONENTS IN ONE ROUND, the
+-- one that reads the other named to be run first by its name (aval before zval).
+-- Two sheets: z is the sheet of agg-datastrat-sheet.rofl in small, a is a sheet
+-- whose first cell copies z's last and whose sums add cells of its own and that
+-- one. As relations a reads z with no strict edge, so the two rank in ONE round;
+-- as data a's sums are read only once z's cells are sealed (docs/aggregates.md,
+-- "Data-level stratification, as built").
+--
+--   z1 = 2, z2 = 3 typed in;  y1 = SUM(z1, z2) = 5;  y2 = SUM(y1, z2) = 8
+--   a1 = y2 (a copy of the other sheet's)  = 8
+--   a2 = SUM(a1, z1)                       = 10
+--   a3 = SUM(a2, a1)                       = 18
+edb(zinput). edb(zformula). edb(zsum_head). edb(zin_range).
+edb(aformula). edb(asum_head). edb(ain_range). edb(acopy).
+zinput(z1, 2). zinput(z2, 3).
+zformula(y1, zn1). zsum_head(zn1, zr1). zin_range(zr1, z1). zin_range(zr1, z2).
+zformula(y2, zn2). zsum_head(zn2, zr2). zin_range(zr2, y1). zin_range(zr2, z2).
+zvalue(C, V) :- zinput(C, V).
+zvalue(C, V) :- zformula(C, N), zval(N, V).
+zval(N, V) :- zsum_head(N, I), V is sum(X ; C : zin_range(I, C), zvalue(C, X)).
+
+aformula(a1, an1). acopy(an1, y2).
+aformula(a2, an2). asum_head(an2, ar2). ain_range(ar2, a1). ain_range(ar2, z1).
+aformula(a3, an3). asum_head(an3, ar3). ain_range(ar3, a2). ain_range(ar3, a1).
+avalue(C, V) :- zvalue(C, V).
+avalue(C, V) :- aformula(C, N), aval(N, V).
+aval(N, V) :- acopy(N, C), zvalue(C, V).
+aval(N, V) :- asum_head(N, I), V is sum(X ; C : ain_range(I, C), avalue(C, X)).

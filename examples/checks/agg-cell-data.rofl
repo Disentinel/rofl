@@ -1,0 +1,52 @@
+-- examples/checks/agg-cell-data.rofl — ONE DATASET, ALL SIX OPERATIONS, for
+-- the cell substrate (agg_cell_eval, agg_cell_why). What every aggregate
+-- reads is a transitive closure, derived over several semi-naive rounds, so
+-- a cell sealed before its input is closed holds a partial value. Root 1
+-- reaches seven nodes, root 10 one, root 9 none.
+edb(acl_edge).
+edb(acl_root).
+edb(acl_weight).
+edb(acl_flag).
+edb(acl_tag0).
+edb(acl_untagged).
+acl_edge(1, 2).
+acl_edge(2, 3).
+acl_edge(3, 4).
+acl_edge(4, 5).
+acl_edge(2, 6).
+acl_edge(6, 7).
+acl_edge(7, 8).
+acl_edge(10, 11).
+acl_root(1).
+acl_root(9).
+acl_root(10).
+acl_weight(2, 4).
+acl_weight(3, -1).
+acl_weight(4, 9).
+acl_weight(5, 2).
+acl_weight(6, 4).
+acl_weight(7, 0).
+acl_weight(8, 3).
+acl_weight(11, 6).
+acl_flag(2, false).
+acl_flag(3, true).
+acl_flag(11, false).
+
+acl_reach(X, Y) :- acl_edge(X, Y).
+acl_reach(X, Z) :- acl_reach(X, Y), acl_edge(Y, Z).
+
+acl_n(X, N)   :- acl_root(X), N is count(Y : acl_reach(X, Y)).
+acl_s(X, S)   :- acl_root(X), S is sum(W ; Y : acl_reach(X, Y), acl_weight(Y, W)).
+acl_lo(X, M)  :- acl_root(X), M is min(W : acl_reach(X, Y), acl_weight(Y, W)).
+acl_hi(X, M)  :- acl_root(X), M is max(W : acl_reach(X, Y), acl_weight(Y, W)).
+acl_any(X, B) :- acl_root(X), B is or(F : acl_reach(X, Y), acl_flag(Y, F)).
+acl_all(X, B) :- acl_root(X), B is and(F : acl_reach(X, Y), acl_flag(Y, F)).
+
+-- A CONSUMER THAT ASKS ONE CELL TWICE: root 1 carries two tags, so the rule
+-- fires twice for it and its aggregate must be sealed once.
+acl_tag0(1, 1).
+acl_tag0(1, 2).
+acl_tag0(1, 3).
+acl_untagged(3).
+acl_tag(X, T)      :- acl_tag0(X, T), not acl_untagged(T).
+acl_twice(X, T, N) :- acl_tag(X, T), N is count(Y : acl_reach(X, Y)).

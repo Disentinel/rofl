@@ -31,7 +31,15 @@ jobs:
         run: |
           npm ci
           npx tsc -p tsconfig.json
+      # THE GOLDENS RUN THE RUST ENGINE. `npm test` and goldens.ts spawn
+      # rust/target/release binaries; CI built none, so bun died on ENOENT.
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with: { workspaces: rust }
+      - run: cd rust && cargo build --release
       - name: goldens (node)
+        # the pool's default is the cores less two: one worker on a small runner
+        env: { ROFL_JOBS: 4 }
         run: npm test
 
   bun:
@@ -48,5 +56,11 @@ jobs:
           bun-version: latest
       - name: install dependencies (the scanner needs @babel/parser)
         run: bun install
+      # THE GOLDENS RUN THE RUST ENGINE. `npm test` and goldens.ts spawn
+      # rust/target/release binaries; CI built none, so bun died on ENOENT.
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with: { workspaces: rust }
+      - run: cd rust && cargo build --release
       - name: goldens (bun)
         run: bun run scripts/goldens.ts

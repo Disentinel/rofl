@@ -1,0 +1,3 @@
+-- expect-refusal: is not closed
+-- a declaration closes its parenthesis
+pareto soxr_open(A, min C.

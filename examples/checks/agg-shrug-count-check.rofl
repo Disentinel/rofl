@@ -1,0 +1,29 @@
+-- examples/checks/agg-shrug-count-check.rofl — agg_count_shrug over
+-- agg-shrug-agg-data.rofl: a count over a member a hole left out is a shrug
+-- inherited from the fault, not a count of the rest; so is a count whose
+-- inner body reads `unknown(A)` of what a hole left out, positively or under
+-- not; a count the unknown cannot reach under any completion (its member is
+-- excluded by the rest of the inner body) is decided; and a negation of a
+-- shrug is a shrug.
+sac_n(G, N) :- sa_g(G), N is count(K : sa_x(G, K, _)).
+sac_settled(N) :- N is count(X : sa_pos(X), not unknown(sa_w(X))).
+sac_open(N) :- N is count(X : sa_pos(X), unknown(sa_w(X))).
+sac_known(N) :- N is count(X : sa_pos(X), sa_w(X), X != c).
+sac_empty(G) :- sa_g(G), not sac_n(G, 2).
+-- expect-row: sac_n[main](p,2)
+-- expect-row: sac_n[main](s,0)
+-- expect-row: shrug[$kernel](sac_n(q,$unknown_value),inherited,from($cons($rule(r1f3a2f99),$nil)))
+-- expect-row: shrug[$kernel](sac_n(r,$unknown_value),inherited,from($cons($rule(r1f3a2f99),$nil)))
+-- expect-no-row: sac_n[main](q,
+-- expect-no-row: sac_n[main](r,
+-- expect-row: shrug[$kernel](sac_settled($unknown_value),inherited,from($cons($rule(rcc5ce487),$nil)))
+-- expect-row: shrug[$kernel](sac_open($unknown_value),inherited,from($cons($rule(rcc5ce487),$nil)))
+-- expect-no-row: sac_settled[main](
+-- expect-no-row: sac_open[main](
+-- expect-row: sac_known[main](1)
+-- expect-no-row: shrug[$kernel](sac_known(
+-- expect-row: sac_empty[main](s)
+-- expect-no-row: sac_empty[main](p)
+-- expect-row: shrug[$kernel](sac_empty(q),inherited,from($cons($rule(r1f3a2f99),$nil)))
+-- expect-no-row: sac_empty[main](q)
+-- expect-row: shrug[$kernel]($cell(rb7b7e655,2,0,$cons(q,$nil)),inherited,from($cons($rule(r1f3a2f99),$nil)))

@@ -30,11 +30,14 @@ Reads:
   - <a id="lib_global_prototype"></a>A name Name has the prototype P (`lib_global_prototype`)
   - <a id="lib_static"></a>A name Name has the static Key since a release Rel (`lib_static`)
 - from js-callgraph: [callee_of](js-callgraph.rofl.md#callee_of), [fn_file](js-callgraph.rofl.md#fn_file), [fn_node](js-callgraph.rofl.md#fn_node), [transfer_site](js-callgraph.rofl.md#transfer_site), [unresolved_call](js-callgraph.rofl.md#unresolved_call)
+- from js-concat, in the flow: [may_be_node](js-concat.rofl.md#may_be_node)
 - from js-dataflow: [ident_in](js-dataflow.rofl.md#ident_in)
-- from js-dataflow, in the flow: [may_be_node](js-dataflow.rofl.md#may_be_node), [selects](js-dataflow.rofl.md#selects)
+- from js-dataflow, in the flow: [selects](js-dataflow.rofl.md#selects)
 - from js-env, in the audit: [reaches](js-env.rofl.md#reaches)
 - from js-model: [ast_node](js-model.rofl.md#ast_node)
-- from js-structure: [ast_name](js-structure.rofl.md#ast_name), [ast_within](js-structure.rofl.md#ast_within)
+- from js-structure: [ast_name](js-structure.rofl.md#ast_name)
+- from outside these files:
+  - <a id="ast_within"></a>A node is within a node (`ast_within`)
 - from outside these files, in the main:
   - <a id="lib_static_shape"></a>`lib_static_shape`
 - from the scanner:
@@ -115,11 +118,14 @@ Declared as facts:
 > the names a pattern introduces, keys and defaults included: widening
 > `declares_name` narrows the globals, the safe direction again
 
-Name is declared in File if all of:
+<a id="pattern_root"></a>`pattern_root`(I, File) if all of:
   - a kind K [declares at](#declaring_position) a field Field;
   - a node D [is of kind](js-model.rofl.md#ast_node) K in file File;
-  - the Field of D is a node I;
-  - a node X [is within](js-structure.rofl.md#ast_within) I;
+  - the Field of D is a node I.
+
+Name is declared in File if all of:
+  - [`pattern_root`](#pattern_root)(I, File);
+  - a node X [is within](#ast_within) a node I;
   - X [is named](js-structure.rofl.md#ast_name) Name.
 
 > a parameter is a position, not a declaration kind
@@ -133,7 +139,7 @@ Name is declared in File either:
 2. if all of:
    - a [function](js-callgraph.rofl.md#fn_node) F [is defined in](js-callgraph.rofl.md#fn_file) File;
    - a node P [is among the](#ast_child) `params` of F;
-   - a node X [is within](js-structure.rofl.md#ast_within) P;
+   - a node X [is within](#ast_within) P;
    - X [is named](js-structure.rofl.md#ast_name) Name.
 
 ## 3. A GLOBAL AS A FACT, not a spelling — the relation the effect layer joins
@@ -248,7 +254,7 @@ In the flow:
   - Form [is constructible](#constructible_form).
 
 The prototype of a node E is P if all of:
-  - E [points to](js-dataflow.rofl.md#may_be_node) a node X;
+  - E [points to](js-concat.rofl.md#may_be_node) a node X;
   - X [is an instance](#es_instance) of Name from some release;
   - Name [has the prototype](#lib_global_prototype) P.
 
@@ -268,7 +274,7 @@ In the audit:
 <a id="es_instance_unattributed"></a>C calls an unattributed instance member Key of Name if all of:
   - C [is unresolved](js-callgraph.rofl.md#unresolved_call) with some shape;
   - [the callee](js-callgraph.rofl.md#callee_of) of C is a node N;
-  - the `object` of N [points to](js-dataflow.rofl.md#may_be_node) a node X;
+  - the `object` of N [points to](js-concat.rofl.md#may_be_node) a node X;
   - X [is an instance](#es_instance) of Name from some release;
   - N [selects](js-dataflow.rofl.md#selects) Key;
   - unless Name [has the prototype](#lib_global_prototype) some prototype.

@@ -1,0 +1,7 @@
+-- expect-refusal: no value of its carrier can match
+-- an inverted interval in a hull's value slot, under a negation: the
+-- negation would hold of every cell, silently
+edb(ajsr_v). ajsr_v(k, 3).
+lattice ajsr_iv(X, hull I).
+ajsr_iv(X, iv(V, V)) :- ajsr_v(X, V).
+ajsr_never(X) :- ajsr_v(X, _), not ajsr_iv(X, iv(3, 1)).

@@ -1,0 +1,8 @@
+-- expect-refusal: in the data the cell reads itself: count@num(a) -> near(a,_) -> num(b,_) -> count@num(b) -> near(b,_) -> num(a,_) -> count@num(a)
+-- examples/checks/agg-datastrat-cycle-9-refused-group.rofl — two groups that
+-- count through each other: a's count reads b's and b's reads a's. Each group is a
+-- cell of its own, and the cycle between the two is refused and named, group by group.
+edb(ring). edb(seed).
+ring(a, b). ring(b, a). seed(s).
+num(B, N) :- N is count(E : near(B, E)).
+near(B, E) :- ring(B, M), num(M, _), seed(E).

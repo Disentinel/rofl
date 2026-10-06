@@ -1,0 +1,6 @@
+-- expect-refusal: reads a closed relation
+-- examples/checks/agg-holistic-strata-2-refused-rank.rofl — a rank among
+-- the values of the rule's own conclusion: refused.
+ahr_rseed(a, 1).
+ahr_rseed(b, 3).
+ahr_rank(X, R) :- ahr_rseed(X, S), R is rank(S, V : ahr_rank(_, V)).

@@ -1,0 +1,10 @@
+-- examples/checks/agg-datastrat-keys-check.rofl — agg_datastrat_keys: a has two
+-- children, slot 2 lists b and c (sizes 1 and 1), so tot(a) is 2; b has none, and
+-- slot 0 lists nothing: 0. tin takes every slot of 0..2: 0 for slots 0 and 1, 2 for
+-- slot 2. A leaf is 1 more than its tot and than its tin at slot 0, which is its size.
+-- expect-row: size[main](a,3) tick drv support=1
+-- expect-row: tot[main](a,2) tick drv support=1
+-- expect-row: tot[main](b,0) tick drv support=1
+-- expect-row: tin[main](a,0,0) tick drv support=1
+-- expect-row: tin[main](a,2,2) tick drv support=1
+-- expect-row: size[main](b,1) tick drv support=3

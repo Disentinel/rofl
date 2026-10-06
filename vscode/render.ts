@@ -37,7 +37,10 @@ export function render(r: Run, run = ''): { head: Shown; cells: Shown[] } {
     // a question's answers fold whole under its line and count; a failing never's rows are the point and stay open
     if (l.answers.length) out.push(l.kind === 'answers' ? `<details><summary>${l.cut ? 'at least ' : ''}${l.total} ${l.total === 1 ? 'answer' : 'answers'}</summary>\n\n${list(l.answers, l.total, Infinity, asks)}\n\n</details>` : list(l.answers, l.total, FOLD, asks));
     if (l.unsure?.total) out.push(`**warning**, out of sight (${link(l.unsure.text)}):\n\n` + list(l.unsure.answers, l.unsure.total, FOLD, asks));
-    if (l.why) out.push(`<details><summary>proof</summary>\n\n\`\`\`\n${l.why}\n\`\`\`\n\n</details>`);
+    // a value's chain shows; the proof with its side conditions counted folds under it, and the whole proof under that
+    if (l.chain?.length) out.push(`\`\`\`\n${l.chain.join('\n')}\n\`\`\``);
+    if (l.why) out.push(l.brief === undefined ? `<details><summary>proof</summary>\n\n\`\`\`\n${l.why}\n\`\`\`\n\n</details>`
+      : `<details><summary>proof</summary>\n\n\`\`\`\n${l.brief}\n\`\`\`\n\n<details><summary>the whole proof</summary>\n\n\`\`\`\n${l.why}\n\`\`\`\n\n</details>\n\n</details>`);
     return out.join('\n\n');
   };
   const cell = (c: NbCellOut): Shown => ({

@@ -1,0 +1,7 @@
+-- expect-refusal: tag tgt_n (counting)
+-- a counting tag, refused by both engines as the tropical one is
+semantics(well_founded).
+edb(tgt_g).
+tgt_g(a).
+tag tgt_n(A, counting N).
+tgt_n(A, 1) :- tgt_g(A).

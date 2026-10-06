@@ -1,0 +1,32 @@
+-- examples/checks/agg-widen-why-check.rofl — agg_widen_why, run with
+-- `rofl-load --explain`. `why` of a widened cell's value is no derivation:
+-- the cell is a shrug, and why says so, `widened`, with the enclosure, the
+-- declared N and each widening; `why` of a point that read it names that
+-- cell as its root, and the widening under it. `whynot` of the least value
+-- (aw_loop's [0,10], which the widening skipped) says the cell has no value,
+-- a hole `widening_forced`, and why; of a point that read it, the path back
+-- to it; of a value above a cell never widened, that it would widen it and
+-- no contribution reaches it.
+edb(explain_request).
+edb(explained).
+explain_request(why, aw_loop(head, iv(0, 10))).
+explain_request(why, aw_at(body, iv(0, 9))).
+explain_request(whynot, aw_loop(head, iv(0, 10))).
+explain_request(whynot, aw_at(exit, iv(10, 10))).
+explain_request(whynot, aw_short(head, iv(0, 4))).
+awy_holds(K, A, T) :- explained[$explain](K, A, _, L), awy_want(K, A, T), N is str_segs(L, T), N > 1.
+awy_want(why, aw_loop(head, iv(0, 10)), "is a shrug: inherited").
+awy_want(why, aw_loop(head, iv(0, 10)), "root $lattice(aw_loop, main, 0, [head]) is a shrug: widened, a declared widening enclosed the value: the least value lies within it, and is not known; within(iv(0, 10))").
+awy_want(why, aw_loop(head, iv(0, 10)), "iv(0, 2) joined with iv(1, 3) is iv(0, 3), widened to iv(0, 9)").
+awy_want(why, aw_at(body, iv(0, 9)), "aw_at(body, _) is a shrug: inherited, the answer reads another answer that is a shrug; from([$lattice(aw_loop, main, 0, [head])])").
+awy_want(why, aw_at(body, iv(0, 9)), "[widened: after 2 improvements").
+awy_want(whynot, aw_loop(head, iv(0, 10)), "aw_loop[main](head) has no value: hole(widening_forced) [lattice hull]").
+awy_want(whynot, aw_loop(head, iv(0, 10)), "the least value lies within iv(0, 10), which is an over-approximation of it").
+awy_want(whynot, aw_loop(head, iv(0, 10)), "iv(0, 2) joined with iv(1, 3) is iv(0, 3), widened to iv(0, 9)").
+awy_want(whynot, aw_at(exit, iv(10, 10)), "aw_at[main](exit) has no value: hole(support_withdrawn) [lattice hull]").
+awy_want(whynot, aw_at(exit, iv(10, 10)), "from aw_loop[main](head), which has no value: hole(widening_forced)").
+awy_want(whynot, aw_short(head, iv(0, 4)), "iv(0,4) would widen it, and no contribution reaches it").
+awy_text_missing(K, A, T) :- awy_want(K, A, T), not awy_holds(K, A, T).
+awy_refused(K, A) :- explained[$explain](K, A, 0, _).
+alarm(awy_text_missing).
+alarm(awy_refused).

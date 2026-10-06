@@ -1,0 +1,43 @@
+-- examples/checks/agg-count-ticks-check.rofl — agg_count_ticks, over
+-- agg-ticks-data.rofl two ticks deep with retain_ticks 0: count.
+-- A value staged @next at tick 0 is base at tick 1, beside the value the same
+-- aggregate has at tick 1; `why` of it names tick 0's cell, and each member
+-- as the fact of tick 0 with the rule that derived it then, whose derived_by
+-- row retain_ticks keeps because the carried cell cites it.
+explain_request(why, tk_n(3)).
+tcn_line(L) :- explained[$explain](why, tk_n(3), _, L).
+tcn_has(T)  :- tcn_line(L), tcn_text(T), N is str_segs(L, T), N > 1.
+tcn_past(M) :- tcn_line(L), tcn_member(M, T), N is str_segs(L, T), N > 1, P is str_segs(L, "@tick 0 [past tick]"), P > 1.
+tcn_text_missing(T)    :- tcn_text(T), not tcn_has(T).
+tcn_member_not_past(M) :- tcn_member(M, _), not tcn_past(M).
+tcn_explain_refused()  :- explained[$explain](why, tk_n(3), 0, _).
+tcn_cells(T, V) :- agg_cell[$kernel]($cell(R, _, T, _), V, _), concludes[$kernel](R, tk_n).
+tcn_cell_missing(T, V) :- tcn_cell(T, V), not tcn_cells(T, V).
+-- the cell the same rule seals at tick 1 is data at tick 2, where its
+-- conclusion arrives, and not here
+tcn_early(V)          :- tcn_cells(1, V).
+alarm(tcn_wrong).
+alarm(tcn_text_missing).
+alarm(tcn_member_not_past).
+alarm(tcn_explain_refused).
+alarm(tcn_cell_missing).
+alarm(tcn_early).
+tcn_text(T)@next      :- tcn_text(T).
+tcn_member(M, T)@next :- tcn_member(M, T).
+tcn_cell(T, V)@next   :- tcn_cell(T, V).
+tcn_wrong(carried) :- not tk_n(3).
+tcn_wrong(present) :- not tk_n_now(2).
+tcn_wrong(stale)   :- tk_n(2).
+tcn_text("count(?K : tk_w[main](?K,?_$0)) = 3 [aggregate: 3 members").
+tcn_member(a, "tk_w[main](a,3)  <= r"). tcn_member(b, "tk_w[main](b,5)  <= r"). tcn_member(c, "tk_w[main](c,5)  <= r").
+tcn_cell(0, 3).
+-- What a hole at tick 0 left unstaged is unknown at tick 1
+-- (agg-ticks-holes.rofl): a cell that could read it is a hole, with no row.
+tcn_h(N)  :- N is count(K : th_y(K, _)).
+tcn_hs(N) :- N is count(K : th_s(K, _)).
+tcn_hole_read(y, N) :- tcn_h(N).
+tcn_hole_read(s, N) :- tcn_hs(N).
+tcn_unholed(y) :- not th_holed(tcn_h).
+tcn_unholed(s) :- not th_holed(tcn_hs).
+alarm(tcn_hole_read).
+alarm(tcn_unholed).

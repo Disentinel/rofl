@@ -1,0 +1,13 @@
+-- examples/checks/agg-datastrat-neg.rofl — A NEGATION INSIDE THE AGGREGATE'S BODY
+-- reads the component as a premise does: the count of a key's items that are not
+-- flagged waits for the flags, and a flag is raised by another key's count.
+--   key a has item x, key b has item y; b's flag-raiser names x.
+--   c(b) = 1 (y is not flagged), so x is flagged, so c(a) = 0.
+-- A count that read `not flag(X)` as holding would seal c(a) at 1 before the
+-- flag existed (a wrong number, and a member gone after the seal).
+edb(key). edb(item). edb(flagme).
+key(a). key(b).
+item(a, x). item(b, y).
+flagme(b, x).
+c(K, N) :- key(K), N is count(X : item(K, X), not flag(X)).
+flag(X) :- c(K, N), N > 0, flagme(K, X).

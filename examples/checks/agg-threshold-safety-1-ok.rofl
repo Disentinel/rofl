@@ -1,0 +1,25 @@
+-- examples/checks/agg-threshold-safety-1-ok.rofl — what agg_threshold_safety
+-- accepts: N a literal, N bound before the threshold (a correlation), the
+-- group bound by the threshold alone, and a threshold over what rests on a
+-- lattice that is closed before it is read (a rule reads the lattice from
+-- outside its recursion, and the threshold counts that rule's conclusions).
+edb(atso_v).
+edb(atso_need).
+edb(atso_e).
+atso_v(w1, c1).
+atso_v(w2, c1).
+atso_v(w1, c2).
+atso_need(c1, 2).
+atso_need(c2, 2).
+atso_lit(C)   :- atso_need(C, _), at_least(2, W : atso_v(W, C)).
+atso_corr(C)  :- atso_need(C, N), at_least(N, W : atso_v(W, C)).
+atso_group(C) :- at_least(1, W : atso_v(W, C)).
+atso_e(a, b, 1).
+atso_e(b, c, 1).
+atso_e(a, c, 5).
+atso_e(c, d, 9).
+lattice atso_d(A, C, min D).
+atso_d(A, C, D) :- atso_e(A, C, D).
+atso_d(A, C, D) :- atso_d(A, B, D1), atso_e(B, C, W), D is D1 + W.
+atso_near(C)  :- atso_d(a, C, D), D < 3.
+atso_hub()    :- at_least(2, C : atso_near(C)).

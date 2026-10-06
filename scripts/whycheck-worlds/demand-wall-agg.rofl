@@ -1,0 +1,14 @@
+-- demand-wall.rofl with an aggregate, so the reference explains it with
+-- src/aggeval.ts rather than src/api.ts: the same wall, through the other
+-- explainer (scripts/whycheck.ts). That evaluator does ask `up(1)` and
+-- leaves a depth shrug, which the reference's load writes under `$load(N)`
+-- and rofl-load under `$adhoc` (one evaluation at the end: the `budget_wall`
+-- contract difference) — so this world is asked no excise, whose diff would
+-- carry that attribution and nothing about explanation.
+edb(k).
+up(X) :- Y is X + 1, up(Y).
+q(a).
+q(b).
+r(X) :- q(X), not k(X), up(1), k(X).
+s(X) :- q(X).
+nq(N) :- N is count(X : s(X)).

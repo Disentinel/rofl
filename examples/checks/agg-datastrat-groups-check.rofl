@@ -1,0 +1,18 @@
+-- examples/checks/agg-datastrat-groups-check.rofl — agg_datastrat_groups: the
+-- counts of agg-datastrat-groups.rofl are the org's, by hand, and a group with
+-- no member has none.
+dg_team(a, 4). dg_team(b1, 2). dg_team(c1, 1).
+dg_tally(a, eng, 2). dg_tally(a, ops, 2). dg_tally(b1, eng, 2). dg_tally(b1, ops, 1). dg_tally(c1, eng, 1).
+dg_wrong(team, B) :- dg_team(B, N), not team(B, N).
+dg_wrong(tally, B) :- dg_tally(B, K, N), not tally(B, K, N).
+dg_extra(team, B) :- team(B, N), not dg_team(B, N).
+dg_extra(tally, B) :- tally(B, K, N), not dg_tally(B, K, N).
+alarm(dg_wrong).
+alarm(dg_extra).
+-- each group is a cell of its own, so a why of a count goes down into the counts of the groups below
+-- expect-row: team[main](a,4) tick drv support=1
+-- expect-row: tally[main](b1,ops,1) tick drv support=1
+-- expect-no-row: team[main](b2,
+-- expect-no-row: team[main](c2,
+-- expect-no-row: sz[main](
+-- expect-no-row: kid[main](

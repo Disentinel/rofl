@@ -1,0 +1,4 @@
+-- expect-refusal: sum needs its projection key
+-- examples/checks/agg-sum-safety-2-refused-nokey.rofl — without its key a
+-- sum would read two equal contributions as one.
+ass_nokey(G, S) :- ass_group(G), S is sum(V : ass_line(G, _, V)).

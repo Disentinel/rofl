@@ -1,0 +1,189 @@
+-- examples/checks/agg-label-oracle.rofl — THE COMPLETIONS ORACLE for
+-- agg-label-data.rofl (docs/aggregates.md, "Labeled unknowns"). What its
+-- unknown left out is enumerated: the group of the member (g1, g2, g3, or gx,
+-- a group no fact names), and for lu whether the member exists at all (its rule
+-- asks more after the overflow). Each aggregate is recomputed in each
+-- completion over what is certain there, and the engine is held to them:
+--
+--   a row the engine holds holds with that value in every completion;
+--   a question every completion answers one way is decided, never a shrug (the
+--     precision this item is for: `not lwc(g3, 2)`, the total over all groups);
+--   a question the completions disagree on is a shrug, never a row, and no
+--     literal that fails in every completion is one.
+alarm(lo_bad).
+alarm(lo_agreed_missing).
+alarm(lo_shrug_wrong).
+alarm(lo_split_decided).
+edb(lo_v).
+edb(lo_v5).
+edb(lo_x).
+lo_v(g1). lo_v(g2). lo_v(g3). lo_v(gx).
+lo_v5(g1). lo_v5(g2). lo_v5(g3). lo_v5(g5). lo_v5(gx).
+lo_x(yes). lo_x(no).
+
+-- the members in each completion
+lo_w(V, G, X) :- lo_v(V), lw0(G, X).
+lo_w(V, V, k7) :- lo_v(V).
+lo_vv(V, G, X) :- lo_v(V), lw0(G, X).
+lo_vv(V, V, k9) :- lo_v(V).
+-- lu: the member exists only where its comparison holds, here in half of them
+lo_u(V, E, G, X) :- lo_v(V), lo_x(E), lw0(G, X).
+lo_u(V, yes, V, k7) :- lo_v(V).
+
+lo_q(V, G, X) :- lo_v5(V), lq0(G, X).
+lo_q(V, V, k9) :- lo_v5(V).
+lo_qc(V, G, N) :- N is count(X : lo_q(V, G, X)).
+lo_qn(V, G) :- lo_v5(V), lg(G), not lo_qc(V, G, 1).
+lo_comps5(N) :- N is count(V : lo_v5(V)).
+lo_n_qn(G, N) :- lg(G), N is count(V : lo_qn(V, G)).
+lo_bad(lqn, G) :- lqn(G), lo_comps5(N), lo_n_qn(G, M), M != N.
+lo_agreed_missing(lqn, G) :- lo_comps5(N), lo_n_qn(G, N), not lqn(G).
+lo_shrug_wrong(lqn, G) :- shrug(lqn(G), _, _), lo_n_qn(G, 0).
+lo_shrug_wrong(lqn, G) :- shrug(lqn(G), _, _), lo_comps5(N), lo_n_qn(G, N).
+lo_split_decided(lqn, G) :- lo_comps5(N), lo_n_qn(G, M), M > 0, M < N, lqn(G).
+lo_split_missing(lqn, G) :- lo_comps5(N), lo_n_qn(G, M), M > 0, M < N, not shrug(lqn(G), _, _).
+lo_c(V, G, N) :- N is count(X : lo_w(V, G, X)).
+lo_vc(V, G, N) :- N is count(X : lo_vv(V, G, X)).
+lo_uc(V, E, G, N) :- N is count(X : lo_u(V, E, G, X)).
+
+lo_tot(V, S) :- lo_v(V), S is sum(N ; G : lo_c(V, G, N)).
+lo_vtot(V, S) :- lo_v(V), S is sum(N ; G : lo_vc(V, G, N)).
+lo_utot(V, E, S) :- lo_v(V), lo_x(E), S is sum(N ; G : lo_uc(V, E, G, N)).
+lo_cnt(V, S) :- lo_v(V), S is count(G : lo_c(V, G, _)).
+lo_no(V, G) :- lo_v(V), lg3(G), not lo_c(V, G, 2).
+lo_one(V, G) :- lo_v(V), lg3(G), lo_c(V, G, 2).
+lo_three(V, G) :- lo_v(V), lg3(G), lo_c(V, G, 3).
+
+-- how many completions answer a question each way
+lo_comps(N) :- N is count(V : lo_v(V)).
+lo_vals_tot(S) :- lo_tot(_, S).
+lo_vals_vtot(S) :- lo_vtot(_, S).
+lo_vals_utot(S) :- lo_utot(_, _, S).
+lo_vals_cnt(S) :- lo_cnt(_, S).
+lo_n_tot(N) :- N is count(S : lo_vals_tot(S)).
+lo_n_vtot(N) :- N is count(S : lo_vals_vtot(S)).
+lo_n_utot(N) :- N is count(S : lo_vals_utot(S)).
+lo_n_cnt(N) :- N is count(S : lo_vals_cnt(S)).
+lo_n_no(G, N) :- lg3(G), N is count(V : lo_no(V, G)).
+lo_n_one(G, N) :- lg3(G), N is count(V : lo_one(V, G)).
+lo_n_three(G, N) :- lg3(G), N is count(V : lo_three(V, G)).
+
+-- what the engine says of each: a row, or a shrug
+lo_sh_tot() :- shrug(ltot(_), _, _).
+lo_sh_vtot() :- shrug(lvtot(_), _, _).
+lo_sh_utot() :- shrug(lutot(_), _, _).
+lo_sh_cnt() :- shrug(lcnt(_), _, _).
+lo_has_tot() :- ltot(_).
+lo_has_vtot() :- lvtot(_).
+lo_has_utot() :- lutot(_).
+lo_has_cnt() :- lcnt(_).
+
+-- a value held is every completion's
+lo_bad(ltot, S) :- ltot(S), lo_tot(_, T), S != T.
+lo_bad(lvtot, S) :- lvtot(S), lo_vtot(_, T), S != T.
+lo_bad(lutot, S) :- lutot(S), lo_utot(_, _, T), S != T.
+lo_bad(lcnt, S) :- lcnt(S), lo_cnt(_, T), S != T.
+lo_bad(lno, G) :- lno(G), lo_comps(N), lo_n_no(G, M), M != N.
+lo_bad(lone, G) :- lone(G), lo_comps(N), lo_n_one(G, M), M != N.
+-- one value in every completion is a row
+lo_agreed_missing(ltot, none) :- lo_n_tot(1), not lo_has_tot().
+lo_agreed_missing(lvtot, none) :- lo_n_vtot(1), not lo_has_vtot().
+lo_agreed_missing(lutot, none) :- lo_n_utot(1), not lo_has_utot().
+lo_agreed_missing(lcnt, none) :- lo_n_cnt(1), not lo_has_cnt().
+lo_agreed_missing(lno, G) :- lo_comps(N), lo_n_no(G, N), not lno(G).
+lo_agreed_missing(lone, G) :- lo_comps(N), lo_n_one(G, N), not lone(G).
+-- two values or more is a shrug and no row
+lo_split_decided(ltot, none) :- lo_has_tot(), lo_n_tot(N), N > 1.
+lo_split_decided(lvtot, none) :- lo_has_vtot(), lo_n_vtot(N), N > 1.
+lo_split_decided(lutot, none) :- lo_has_utot(), lo_n_utot(N), N > 1.
+lo_split_decided(lcnt, none) :- lo_has_cnt(), lo_n_cnt(N), N > 1.
+lo_shrug_wrong(ltot, none) :- lo_sh_tot(), lo_n_tot(1).
+lo_shrug_wrong(lvtot, none) :- lo_sh_vtot(), lo_n_vtot(1).
+lo_shrug_wrong(lutot, none) :- lo_sh_utot(), lo_n_utot(1).
+lo_shrug_wrong(lcnt, none) :- lo_sh_cnt(), lo_n_cnt(1).
+-- a question no completion answers yes is no shrug, and one every completion answers yes is no shrug
+lo_shrug_wrong(lno, G) :- shrug(lno(G), _, _), lo_n_no(G, 0).
+lo_shrug_wrong(lno, G) :- shrug(lno(G), _, _), lo_comps(N), lo_n_no(G, N).
+lo_shrug_wrong(lone, G) :- shrug(lone(G), _, _), lo_n_one(G, 0).
+lo_shrug_wrong(lone, G) :- shrug(lone(G), _, _), lo_comps(N), lo_n_one(G, N).
+-- a count no completion gives is no row and no shrug
+lo_bad(lthree, G) :- lthree(G).
+lo_shrug_wrong(lthree, G) :- shrug(lthree(G), _, _), lo_n_three(G, 0).
+-- a question the completions split on is a shrug
+lo_split_decided(lno, G) :- lo_comps(N), lo_n_no(G, M), M > 0, M < N, lno(G).
+lo_split_decided(lone, G) :- lo_comps(N), lo_n_one(G, M), M > 0, M < N, lone(G).
+lo_split_missing(lno, G) :- lo_comps(N), lo_n_no(G, M), M > 0, M < N, not shrug(lno(G), _, _).
+lo_split_missing(lone, G) :- lo_comps(N), lo_n_one(G, M), M > 0, M < N, not shrug(lone(G), _, _).
+alarm(lo_split_missing).
+-- the oracle has the answers it was written for: the hand-derived ones
+-- expect-row: lo_n_tot[main](1)
+-- expect-row: lo_n_vtot[main](2)
+-- expect-row: lo_n_cnt[main](2)
+-- expect-row: lo_n_no[main](g1,3)
+-- expect-row: lo_n_no[main](g3,4)
+-- expect-row: lo_n_one[main](g1,1)
+-- expect-row: lo_n_one[main](g3,0)
+-- expect-row: lo_n_three[main](g1,0)
+-- expect-row: lo_n_three[main](g2,0)
+-- expect-row: lo_n_qn[main](g5,5)
+-- expect-row: lo_n_qn[main](g1,0)
+-- expect-row: lo_n_qn[main](g3,4)
+-- expect-row: lo_vals_utot[main](2)
+-- expect-row: lo_vals_utot[main](3)
+
+-- THE ORDER KINDS over all groups (lm, lk, lf of agg-label-data.rofl), one question to a completion
+edb(lo_q).
+lo_q(lminall). lo_q(lmaxall). lo_q(lkminall). lo_q(lkmaxall). lo_q(lfany). lo_q(lfall).
+lo_lm(V, G, W) :- lo_v(V), lm0(G, _, W).
+lo_lm(V, V, 4) :- lo_v(V).
+lo_lk(V, G, W) :- lo_v(V), lm0(G, _, W).
+lo_lk(V, V, 2) :- lo_v(V).
+lo_lf(V, G, W) :- lo_v(V), lf0(G, _, W).
+lo_lf(V, V, true) :- lo_v(V).
+lo_lmn(V, G, M) :- M is min(W : lo_lm(V, G, W)).
+lo_lmx(V, G, M) :- M is max(W : lo_lm(V, G, W)).
+lo_lkn(V, G, M) :- M is min(W : lo_lk(V, G, W)).
+lo_lkx(V, G, M) :- M is max(W : lo_lk(V, G, W)).
+lo_lfo(V, G, M) :- M is or(W : lo_lf(V, G, W)).
+lo_a(lminall, V, M) :- lo_v(V), M is min(W : lo_lmn(V, _, W)).
+lo_a(lmaxall, V, M) :- lo_v(V), M is max(W : lo_lmx(V, _, W)).
+lo_a(lkminall, V, M) :- lo_v(V), M is min(W : lo_lkn(V, _, W)).
+lo_a(lkmaxall, V, M) :- lo_v(V), M is max(W : lo_lkx(V, _, W)).
+lo_a(lfany, V, M) :- lo_v(V), M is or(W : lo_lfo(V, _, W)).
+lo_a(lfall, V, M) :- lo_v(V), M is and(W : lo_lfo(V, _, W)).
+lo_ans(Q, M) :- lo_a(Q, _, M).
+lo_nans(Q, N) :- lo_q(Q), N is count(M : lo_ans(Q, M)).
+lo_eng(lminall, M) :- lminall(M).
+lo_eng(lmaxall, M) :- lmaxall(M).
+lo_eng(lkminall, M) :- lkminall(M).
+lo_eng(lkmaxall, M) :- lkmaxall(M).
+lo_eng(lfany, M) :- lfany(M).
+lo_eng(lfall, M) :- lfall(M).
+lo_has(Q) :- lo_eng(Q, _).
+lo_sh(lminall) :- shrug(lminall(_), _, _).
+lo_sh(lmaxall) :- shrug(lmaxall(_), _, _).
+lo_sh(lkminall) :- shrug(lkminall(_), _, _).
+lo_sh(lkmaxall) :- shrug(lkmaxall(_), _, _).
+lo_sh(lfany) :- shrug(lfany(_), _, _).
+lo_sh(lfall) :- shrug(lfall(_), _, _).
+lo_bad(Q, M) :- lo_eng(Q, M), lo_a(Q, _, X), M != X.
+lo_agreed_missing(Q, none) :- lo_nans(Q, 1), not lo_has(Q).
+lo_split_decided(Q, none) :- lo_has(Q), lo_nans(Q, N), N > 1.
+lo_shrug_wrong(Q, none) :- lo_sh(Q), lo_nans(Q, 1).
+lo_split_missing(Q, none) :- lo_nans(Q, N), N > 1, not lo_sh(Q).
+-- expect-row: lo_nans[main](lminall,1)
+-- expect-row: lo_nans[main](lmaxall,1)
+-- expect-row: lo_nans[main](lkminall,1)
+-- expect-row: lo_nans[main](lkmaxall,1)
+-- expect-row: lo_nans[main](lfany,1)
+-- expect-row: lo_nans[main](lfall,2)
+
+-- lzg: the members of a group read through lw(g2, X) and lw(G, _), per completion: g1 and g2 count 1, and 2 where
+-- the unknown is g2's; g3 is a group only where the unknown is g3's, and counts 1 there
+lo_zg(V, G, S) :- lo_v(V), S is count(X : lo_w(V, g2, X), lo_w(V, G, _)).
+lo_zgn(G, S, M) :- lo_zg(_, G, S), M is count(V : lo_zg(V, G, S)).
+lo_bad(lzg, G) :- lzg(G, S), lo_comps(N), lo_zgn(G, S, M), M != N.
+-- expect-row: lo_zgn[main](g1,1,3)
+-- expect-row: lo_zgn[main](g1,2,1)
+-- expect-row: lo_zgn[main](g3,1,1)
+-- expect-no-row: lzg[main](

@@ -1,0 +1,53 @@
+-- examples/checks/demand-asked-hole.rofl — demand_asked_hole: AN ANSWER OUTSIDE A
+-- FIRING reads what a hole left unknown below a call as the firing does
+-- (f_an_answer_unfolded_at_a_call_read_a_hole_as_absence), and a call left
+-- unknown by two holes rests on both (f_a_call_left_unknown_kept_one_cause).
+--
+-- da_u leaves Y free, so da_h, da_h1, da_g and da_d are answered on demand.
+-- da_x(c, _) is a hole (oops + 1), so da_h(c, c), da_r(c), da_r1(c) and da_nr(c)
+-- are shrugs in the state. A whynot unfolds the calls the firing did; it read
+-- the hole as absence and answered `da_r(c) holds; nothing to demonstrate` and,
+-- for da_nr(c), `blocked: da_r1(c) holds`, against the stored shrugs. da_d(k, z)
+-- reads da_pv(k, _), a shrug, below its call: not known, and why. No rule reads
+-- da_q, so no row and no shrug of it is stored: whynot da_q(c, z) is not known
+-- for the hole it reads, which it named and walks back to the fault.
+--
+-- da_x(d, _) is a hole of da_x's other rule (oops * 2). `not da_g(_, C, _)`
+-- calls da_g (W free, so on demand) with its first argument free, and da_g calls
+-- da_h(Z, Z) with Z free (of b, c, d, which da_kd keeps): both holes leave that
+-- call unknown, and da_ng(b) rests on both rules. Only the last unknown under a
+-- call was carried, so its shrug named one.
+edb(da_k). edb(da_j). edb(da_node). edb(da_v). edb(da_kd).
+da_k(b, 3). da_k(c, oops). da_j(d, oops).
+da_node(b). da_node(c). da_node(d). da_node(e).
+da_x(C, Y) :- da_k(C, K), Y is K + 1.
+da_x(C, Y) :- da_j(C, K), Y is K * 2.
+da_u(X, Y) :- da_node(X).
+da_h(C, Y) :- da_u(C, Y), not da_x(C, _).
+da_r(C)    :- da_node(C), da_h(C, C).
+da_h1(C)   :- da_u(C, C), not da_x(C, _).
+da_r1(C)   :- da_node(C), da_h1(C).
+da_nr(C)   :- da_node(C), not da_r1(C).
+da_kd(b). da_kd(c). da_kd(d).
+da_g(Z, Y, W) :- da_u(Y, Y), da_h(Z, Z), da_kd(Z).
+da_ng(C)   :- da_node(C), not da_g(_, C, _).
+da_q(C, Y) :- da_node(C), not da_x(C, _).
+
+da_v(b, 1). da_v(k, oops).
+da_pv(C, D) :- da_v(C, V), D is V + 1.
+da_d(C, Y)  :- da_node(C), da_pv(C, D).
+da_node(k).
+da_rd(C)    :- da_node(C), da_d(C, C).
+
+explain_request(whynot, da_r(c)).
+explain_request(whynot, da_nr(c)).
+explain_request(whynot, da_rd(k)).
+explain_request(whynot, da_d(k, z)).
+explain_request(whynot, da_r(e)).
+explain_request(whynot, da_q(c, z)).
+explain_request(whynot, da_q(b, z)).
+
+-- expect-row: explained[$explain](whynot,da_r(c),1,"whynot da_r[main](c): no answer, a shrug") tick base support=0
+-- expect-row: explained[$explain](whynot,da_q(c,z),1,"whynot da_q[main](c,z): no answer, a shrug") tick base support=0
+-- expect-row: explained[$explain](whynot,da_r(e),1,"da_r[main](e) holds; nothing to demonstrate") tick base support=0
+-- expect-row: shrug[$kernel](da_ng(b),inherited,from($cons($rule(r2b20a90a),$cons($rule(r9ab5a351),$nil)))) tick base support=0

@@ -1,0 +1,21 @@
+-- examples/checks/agg-phrase-join-check.rofl — agg_join_phrase: each join read from its sentence
+-- and from rofl: a reaches b and c and b reaches c, read as members of the union; a spans the hull [1, 5]
+-- and so [1, 5] is a subset of it; the bits are 1 or 5.
+pj_via(a, b). pj_via(a, c). pj_via(b, c).
+pj_wrong(X, E) :- pj_via(X, E), not pjs_via(X, E).
+pj_wrong(X, E) :- pj_via(X, E), not pjr_via(X, E).
+pj_wrong(X, E) :- pjs_via(X, E), not pj_via(X, E).
+pj_wrong(X, E) :- pjr_via(X, E), not pj_via(X, E).
+pj_wrong(a, wide) :- not pjs_wide(a).
+pj_wrong(a, wide) :- not pjr_wide(a).
+pj_wrong(b, wide) :- pjs_wide(b).
+pj_wrong(b, wide) :- pjr_wide(b).
+pj_wrong(bits, bits) :- not pjs_bits(5).
+pj_wrong(bits, bits) :- not pjr_bits(5).
+alarm(pj_wrong).
+-- written in its own words (agg-phrase-check.rofl)
+sentence_word(pjr_reach, "keeps the union S for each X").
+sentence_word(pjr_span, "keeps the hull I for each X").
+sentence_word(pjr_bits, "keeps the bitwise or B").
+sentence_word(pjr_via, "is a member of S").
+sentence_word(pjr_wide, "is a subset of I").

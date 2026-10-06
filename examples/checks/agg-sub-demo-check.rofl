@@ -1,0 +1,54 @@
+-- examples/checks/agg-sub-demo-check.rofl — agg_sub_demo, THE PARETO
+-- FRONT OF ITINERARIES (docs/aggregates.md, "Subsumption, as built"). A
+-- trip between two airports is dominated by one no dearer and no longer and
+-- better in one: two dominance rules, and the recursion over the flights,
+-- which include a positive cycle (nyc and bos), keeps at each pair only the
+-- trips nothing it found dominates. Two oracles hold it: the fronts from
+-- London, enumerated here by hand, and every front, computed a second way
+-- with no subsumption at all — every itinerary of at most four flights
+-- enumerated by plain rules, and its front taken by stratified negation
+-- over them (every longer itinerary goes round the cycle and is dominated).
+edb(asd_flight).
+asd_flight(lon, nyc, 1200, 6). asd_flight(lon, nyc, 900, 8).
+asd_flight(lon, dub, 100, 1). asd_flight(dub, nyc, 600, 7).
+asd_flight(lon, rey, 250, 3). asd_flight(rey, nyc, 300, 6).
+asd_flight(lon, par, 80, 1).  asd_flight(par, nyc, 700, 8).
+asd_flight(par, dub, 90, 2).  asd_flight(rey, dub, 50, 2).
+asd_flight(nyc, bos, 100, 1). asd_flight(bos, nyc, 100, 1).
+asd_trip(A, B, P, H)   :- asd_flight(A, B, P, H).
+asd_trip(A, C, P, H)   :- asd_trip(A, B, P0, H0), asd_flight(B, C, P1, H1), P is P0 + P1, H is H0 + H1.
+asd_trip(A, B, P1, H1) <= asd_trip(A, B, P2, H2) :- P2 <= P1, H2 <= H1, P2 < P1.
+asd_trip(A, B, P1, H1) <= asd_trip(A, B, P2, H2) :- P2 <= P1, H2 <= H1, H2 < H1.
+-- BY HAND: London to New York is 1200 for 6 hours direct, 700 for 8 through
+-- Dublin, 550 for 9 through Reykjavik; the 900 direct flight (dearer than
+-- Dublin's, no faster), Paris (780, 9), Paris and Dublin (770, 10), and
+-- Reykjavik and Dublin (900, 12) are dominated. To Boston, the same three
+-- and the hop from New York.
+asdh_want(lon, nyc, 1200, 6). asdh_want(lon, nyc, 700, 8). asdh_want(lon, nyc, 550, 9).
+asdh_want(lon, bos, 1300, 7). asdh_want(lon, bos, 800, 9). asdh_want(lon, bos, 650, 10).
+asdh_want(lon, dub, 100, 1). asdh_want(lon, rey, 250, 3). asdh_want(lon, par, 80, 1).
+asdh_have(A, B, P, H) :- asd_trip(A, B, P, H), A = lon.
+asdh_missing(A, B, P, H) :- asdh_want(A, B, P, H), not asdh_have(A, B, P, H).
+asdh_extra(A, B, P, H)   :- asdh_have(A, B, P, H), not asdh_want(A, B, P, H).
+alarm(asdh_missing).
+-- and no trip is a shrug, which an alarm `not answer` would pass in silence
+asd_shrug(T, R) :- shrug[$kernel](T, R, _).
+alarm(asd_shrug).
+alarm(asdh_extra).
+-- THE BRUTE FORCE: every itinerary of one to four flights, and its front
+edb(asdb_hops).
+asdb_hops(1). asdb_hops(2). asdb_hops(3). asdb_hops(4).
+asdb_path(A, B, P, H, 1) :- asd_flight(A, B, P, H).
+asdb_path(A, C, P, H, N) :- asdb_path(A, B, P0, H0, M), asd_flight(B, C, P1, H1), N is M + 1, asdb_hops(N),
+                            P is P0 + P1, H is H0 + H1.
+asdb_beaten(A, B, P, H) :- asdb_path(A, B, P, H, _), asdb_path(A, B, P2, H2, _), P2 <= P, H2 <= H, P2 < P.
+asdb_beaten(A, B, P, H) :- asdb_path(A, B, P, H, _), asdb_path(A, B, P2, H2, _), P2 <= P, H2 <= H, H2 < H.
+asdb_front(A, B, P, H)  :- asdb_path(A, B, P, H, _), not asdb_beaten(A, B, P, H).
+asdb_missing(A, B, P, H) :- asdb_front(A, B, P, H), not asd_trip(A, B, P, H).
+asdb_extra(A, B, P, H)   :- asd_trip(A, B, P, H), not asdb_front(A, B, P, H).
+alarm(asdb_missing).
+alarm(asdb_extra).
+-- and the oracle is no empty agreement: it has fronts of three
+asdb_three(A, B) :- asdb_front(A, B, P1, _), asdb_front(A, B, P2, _), asdb_front(A, B, P3, _), P1 < P2, P2 < P3.
+asdb_thin() :- not asdb_three(lon, nyc).
+alarm(asdb_thin).

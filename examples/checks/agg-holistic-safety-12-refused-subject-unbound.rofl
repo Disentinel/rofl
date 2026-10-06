@@ -1,0 +1,4 @@
+-- expect-refusal: rank's subject is an integer or a variable bound before it
+-- examples/checks/agg-holistic-safety-12-refused-subject-unbound.rofl — a
+-- subject nothing binds before the rank.
+ahs_rfree(G, S, R) :- ahs_group(G), R is rank(S, W : ahs_line(G, _, W), ahs_line(G, _, S)).

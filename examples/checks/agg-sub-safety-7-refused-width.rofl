@@ -1,0 +1,7 @@
+-- expect-refusal: arity other than
+-- a rule writes a subsumptive relation at the width its dominance compares
+edb(assr_we).
+assr_we(a, 1).
+assr_wid(A, V) :- assr_we(A, V).
+assr_wid(A, V, V) :- assr_we(A, V).
+assr_wid(A, X) <= assr_wid(A, Y) :- Y < X.

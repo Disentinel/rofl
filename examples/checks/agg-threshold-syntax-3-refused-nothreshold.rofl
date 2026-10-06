@@ -1,0 +1,3 @@
+-- expect-refusal: needs its threshold
+-- nothing before the colon
+sxtr_nothreshold(C) :- at_least(: sxt_v(W, C)).

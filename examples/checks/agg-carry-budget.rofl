@@ -1,0 +1,5 @@
+-- examples/checks/agg-carry-budget.rofl — agg_carry_budget: the carry around
+-- agg-carry-data.rofl's holed sum is cut by the budget, and the world's hole
+-- says so, beside the sum's own hole (f_the_carry_of_unknowns_ran_past_the_walls).
+-- expect-row: hole[$kernel]($adhoc,budget_exhausted)
+-- expect-row: hole[$kernel]($cell(

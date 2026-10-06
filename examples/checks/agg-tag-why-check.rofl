@@ -1,0 +1,31 @@
+-- examples/checks/agg-tag-why-check.rofl — agg_tag_why, run with
+-- `rofl-load --explain`. `why` of an idempotent tag's fact names the tag and
+-- its semiring and shows the best derivations, the digest of its members,
+-- each with its height and rule, and the ⊗ the engine ran for it, step by
+-- step (`2 is $tropical(1,1)`, and the product of two millionths rounded down
+-- to 0). `whynot` of a better value says the cell holds another and that no
+-- contribution reaches it, listing what the rules contribute at the key; of
+-- a worse one, that the semiring keeps the best.
+edb(explain_request).
+edb(explained).
+explain_request(why, tg_cost(e, f, 2)).
+explain_request(why, tg_pr(x, z, 0)).
+explain_request(why, tg_tr(a, c, 500000)).
+explain_request(whynot, tg_cost(a, d, 5)).
+explain_request(whynot, tg_cost(a, d, 12)).
+tgy_holds(K, A, T) :- explained[$explain](K, A, _, L), tgy_want(K, A, T), N is str_segs(L, T), N > 1.
+tgy_want(why, tg_cost(e, f, 2), "tg_cost[main](e,f,2) [tag tropical: 2 members]").
+tgy_want(why, tg_cost(e, f, 2), "#1 h=2 <= ").
+tgy_want(why, tg_cost(e, f, 2), "#2 h=3 <= ").
+tgy_want(why, tg_cost(e, f, 2), "2 is $tropical(1,1) [builtin]").
+tgy_want(why, tg_pr(x, z, 0), "tg_pr[main](x,z,0) [tag viterbi: 1 member]").
+tgy_want(why, tg_pr(x, z, 0), "0 is $viterbi(1,1) [builtin]").
+tgy_want(why, tg_tr(a, c, 500000), "tg_tr[main](a,c,500000) [tag trust: 1 member]").
+tgy_want(why, tg_tr(a, c, 500000), "500000 is $trust(800000,500000) [builtin]").
+tgy_want(whynot, tg_cost(a, d, 5), "tg_cost[main](a,d) is a tag cell (tropical) holding 9 [tag]").
+tgy_want(whynot, tg_cost(a, d, 5), "5 would improve it, and no contribution reaches 5: 3 contributions, the best 9").
+tgy_want(whynot, tg_cost(a, d, 12), "12 is not its value: tropical keeps the best contribution, 9").
+tgy_text_missing(K, A, T) :- tgy_want(K, A, T), not tgy_holds(K, A, T).
+tgy_refused(K, A) :- explained[$explain](K, A, 0, _).
+alarm(tgy_text_missing).
+alarm(tgy_refused).

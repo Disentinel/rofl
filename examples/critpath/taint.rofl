@@ -1,0 +1,21 @@
+-- examples/critpath/taint.rofl — the cheapest chain of exploits to a crown jewel.
+--
+-- Hosts and the cost, in attacker-days, of moving from one to the next. The
+-- graph has cycles (a web tier and the API call each other, the CI box and a
+-- workstation trust each other), so the plain rule `reach(S, N, C)` has no
+-- last answer: a path may go round as often as it likes and every lap is a
+-- longer path and one more row. Declaring `exploit` a lattice keeps the
+-- cheapest chain per source and host, and `why` prints that chain.
+--
+-- A crown jewel is exposed when an attacker reaches it inside the budget.
+edb(source).
+edb(edge).
+edb(crown).
+edb(budget).
+
+lattice exploit(S, N, min C).
+
+exploit(S, S, 0) :- source(S).
+exploit(S, N, C) :- exploit(S, M, C0), edge(M, N, W), C is C0 + W.
+
+exposed(S, N, C) :- exploit(S, N, C), crown(N), budget(B), C <= B.

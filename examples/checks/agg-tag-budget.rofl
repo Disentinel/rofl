@@ -1,0 +1,35 @@
+-- examples/checks/agg-tag-budget.rofl — agg_tag_budget, under a budget of 600
+-- steps: a tropical tag over a negative cycle (tbd_c: x to y 1, y to x -2)
+-- never settles, since every lap is cheaper. At the wall it is a hole on its
+-- relation, `budget_exhausted`, its values bounds none of which is final;
+-- each cell a value of which came back through its own is withdrawn as an
+-- `improving_cycle`; a tag that reads it (tbd_r) is holed with it; and a
+-- count over a tag never runs. A tag the wall did not reach (tbd_s, over a
+-- DAG, reading nothing of the cycle) settled long before and keeps its
+-- values, exact, with no hole.
+-- expect-row: hole[$kernel]($adhoc,budget_exhausted)
+-- expect-row: hole[$kernel]($lattice(tbd_c),budget_exhausted)
+-- expect-row: hole[$kernel]($lattice(tbd_c,main,0,$cons(x,$cons(x,$nil))),improving_cycle)
+-- expect-row: hole[$kernel]($lattice(tbd_r),budget_exhausted)
+-- expect-no-row: hole[$kernel]($lattice(tbd_s
+-- expect-row: tbd_s[main](a,c,3)
+-- expect-row: tbd_s[main](a,d,4)
+-- expect-no-row: tbd_s[main](a,c,5)
+-- expect-no-row: tbd_n[main](
+edb(tbd_se).
+edb(tbd_ce).
+tbd_se(a, b, 1). tbd_se(b, c, 2). tbd_se(a, c, 5). tbd_se(c, d, 1). tbd_se(b, d, 3).
+tbd_ce(x, y, 1). tbd_ce(y, x, -2). tbd_ce(y, z, 4).
+tag tbd_ss(A, C, tropical W).
+tbd_ss(A, C, W) :- tbd_se(A, C, W).
+tag tbd_s(A, C, tropical T).
+tbd_s(A, C, T)  :- tbd_ss(A, C, _).
+tbd_s(A, C, T)  :- tbd_s(A, B, _), tbd_ss(B, C, _).
+tag tbd_cs(A, C, tropical W).
+tbd_cs(A, C, W) :- tbd_ce(A, C, W).
+tag tbd_c(A, C, tropical T).
+tbd_c(A, C, T)  :- tbd_cs(A, C, _).
+tbd_c(A, C, T)  :- tbd_c(A, B, _), tbd_cs(B, C, _).
+tag tbd_r(A, tropical T).
+tbd_r(A, T)     :- tbd_c(A, _, _).
+tbd_n(N)        :- N is count(C : tbd_s(a, C, _)).

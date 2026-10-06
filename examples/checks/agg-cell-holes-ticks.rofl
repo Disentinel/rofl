@@ -1,0 +1,8 @@
+-- examples/checks/agg-cell-holes-ticks.rofl — agg_cell_holes_ticks: what a
+-- hole kept from being staged is unknown at the next tick, and the negation
+-- over it there undecided, a fault below a call answered on demand included
+-- (holes-negation-ticks.rofl, run by both engines; its alarms are read here
+-- off the Rust state). The boundary's holes:
+-- expect-row: hole[$kernel]($next(ht_y,main,1,$cons(q,$cons($unknown_value,$nil))),fault_left_out)
+-- expect-row: hole[$kernel]($next(ht_w,main,1,$cons(q,$nil)),fault_left_out)
+edb(ahtk_marker).

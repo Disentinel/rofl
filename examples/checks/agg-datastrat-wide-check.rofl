@@ -1,0 +1,15 @@
+-- examples/checks/agg-datastrat-wide-check.rofl — agg_datastrat_wide: the team rows of agg-datastrat-wide.rofl are the hand-derived ones, and no other.
+dx_want(a, 4, start).
+dx_want(a, 4, late).
+dx_want(b1, 2, start).
+dx_want(b1, 2, late).
+dx_want(b2, 2, start).
+dx_want(b2, 2, late).
+dx_want(c1, 1, start).
+dx_want(c1, 1, late).
+dx_want($ds_any, 1, start).
+dx_want($ds_any, 1, late).
+dx_wrong(B, N, X) :- dx_want(B, N, X), not team(B, N, X).
+dx_extra(B, N, X) :- team(B, N, X), not dx_want(B, N, X).
+alarm(dx_wrong).
+alarm(dx_extra).

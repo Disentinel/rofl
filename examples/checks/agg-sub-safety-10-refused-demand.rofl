@@ -1,0 +1,6 @@
+-- expect-refusal: a rule concluding it is not range-restricted
+-- a front unfolded at a call site would be answered while it still moves
+edb(assr_de).
+assr_de(a).
+assr_dem(A, V) :- assr_de(A), V > 0.
+assr_dem(A, X) <= assr_dem(A, Y) :- Y < X.

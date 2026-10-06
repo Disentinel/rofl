@@ -1,0 +1,35 @@
+-- examples/checks/agg-incr-widen.rofl — agg_incr_widen: a WIDENED join cell under
+-- RETRACTION (docs/aggregates.md, "Ready for the incremental engine"). A widening
+-- jumps an unstable end to infinity once the cell has changed 3 times, so what
+-- it holds depends on the number and the order of the steps it took: a delta
+-- cannot promise it holds what a world without the fact holds, and the
+-- strategy is `full` (`alg=idempotent,lattice,widening use=full`). The world
+-- is evaluated again, and must be the state of a world without the fact.
+--
+--   iw_step(h, 1)   h no longer climbs: its cell stays the interval it started with
+edb(iw_start). edb(iw_step).
+iw_start(h, 0).
+iw_start(g, 5).
+iw_step(h, 1).
+iw_step(g, 0).
+lattice iw_o(P, hull I) widen 3.
+iw_o(P, iv(V, V)) :- iw_start(P, V).
+iw_o(P, J) :- iw_o(P, I), iw_step(P, S), J is ivadd(I, S).
+
+-- the state after the retractions, row by row
+-- expect-row: iw_o@join[main](g,iv(5,5)) tick drv support=1
+-- expect-row: iw_o@join[main](h,iv(0,0)) tick drv support=1
+-- expect-row: iw_o[main](g,iv(5,5)) tick drv support=1
+-- expect-row: iw_o[main](h,iv(0,0)) tick drv support=1
+-- expect-row: iw_start[main](g,5) tick base support=0
+-- expect-row: iw_start[main](h,0) tick base support=0
+-- expect-row: iw_step[main](g,0) tick base support=0
+-- expect-row: lat iw_o hull alg=idempotent,lattice,widening use=full
+-- expect-row: lat iw_o@join hull alg=idempotent,lattice,widening use=full
+-- expect-row: fir iw_o@join[main](g,iv(5,5)) id=d0129573f04c9923 r27105a38@0 [fact:iw_start[main](g,5)] live
+-- expect-row: fir iw_o@join[main](h,iv(0,0)) id=65b36fe002f231ed r27105a38@0 [fact:iw_start[main](h,0)] live
+-- expect-row: fir iw_o[main](g,iv(5,5)) id=d5a76b76f065bbd0 iw_o@join@0 [fact:iw_o@join[main](g,iv(5,5))] live
+-- expect-row: fir iw_o[main](h,iv(0,0)) id=d1b46092fa108d43 iw_o@join@0 [fact:iw_o@join[main](h,iv(0,0))] live
+-- and nothing of what they supported before
+-- expect-no-row: hole[$kernel]($lattice(iw_o,main,0,$cons(h,$nil)),widening_forced) timeless base frozen support=0
+-- expect-no-row: iw_step[main](h,1) tick base support=0

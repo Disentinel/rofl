@@ -1,0 +1,8 @@
+-- expect-refusal: tag tcsr_c (counting) is inside its own recursion
+-- a counting tag through a plain relation that reads it
+edb(tcsr_h).
+tcsr_h(a, b).
+tag tcsr_c(A, B, counting N).
+tcsr_c(A, B, N) :- tcsr_h(A, B).
+tcsr_c(A, C, N) :- tcsr_link(A, B), tcsr_h(B, C).
+tcsr_link(A, B) :- tcsr_c(A, B, _).

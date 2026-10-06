@@ -1,0 +1,16 @@
+-- examples/checks/agg-datastrat-below.rofl — A FAULT BELOW THE COMPONENT reaches the aggregate of a component stratified by its data. inv(c2, _)
+-- faults in a stratum below (10 / 0), so under(b1, c9), which rests on it, is unknown, and inv(c9, _) is known: b1's
+-- count is 1 or 2, a hole and not the 1 it would be without the member, and a, which counts b1 and whose
+-- under(a, c3) rests on the hole of b1, is a hole as well. The unknown the component itself carries is read by the
+-- aggregate the layers seal, which sees it only once the component's rules are closed to the carry (`ds_carry`).
+--
+--   tot(b1) 1 or 2, tot(a) 1 or 2: holes (support_withdrawn); under(b1, c9), under(a, c3): unknown
+
+edb(reports). edb(w).
+reports(b1, a). reports(c3, b1).
+w(c2, 0). w(c3, 1). w(b1, 1). w(c9, 1).
+inv(E, X) :- w(E, V), X is 10 / V.
+under(B, E) :- reports(E, B).
+under(B, E) :- reports(M, B), tot(M, _), reports(E, M).
+under(b1, c9) :- inv(c2, _).
+tot(B, N) :- N is count(E : under(B, E), inv(E, _)).

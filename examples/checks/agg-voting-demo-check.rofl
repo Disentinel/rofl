@@ -1,0 +1,129 @@
+-- examples/checks/agg-voting-demo-check.rofl — agg_voting_demo, THREE WAYS TO
+-- COUNT AN ELECTION AND WHO COULD HAVE MOVED IT (examples/voting/README.md).
+-- The rules are examples/voting/voting.rofl over voting-ballots.rofl. Election
+-- e1: three blocs, 8 voting a>c>b>d (v10 to v17), 7 b>c>a>d (v1 to v7) and 6
+-- c>b>a>d (v8, v9, v18 to v21); d is first for nobody. Plurality says a,
+-- Borda and Condorcet say c. Election e2 is the cycle a>b>c, b>c>a, c>a>b
+-- with d last: every method but Condorcet returns the set {a, b, c}, and
+-- Condorcet returns nobody.
+--
+-- BY HAND, e1: first places a 8, b 7, c 6, d 0. Borda gives 3, 2, 1, 0 for a
+-- place: a 8*3 + 7*1 + 6*1 = 37, b 8*1 + 7*3 + 6*2 = 41, c 8*2 + 7*2 + 6*3 =
+-- 48, d 0 (21 ballots of 0 each). Against each other c beats a 21 to 0, b
+-- 14 (c over b) to 7, and d 21 to 0, so c is unbeaten. Without a v10 to v17
+-- ballot a has 7 and ties b: the winners are the set {a, b}; without a b or
+-- c ballot a still wins, so those voters are not pivotal. In e2 every voter
+-- is pivotal (a three-way tie loses a member).
+--
+-- The oracle below is computed from the ballots by a script of its own, not
+-- by these rules. A candidate nobody ranked first is a row at 0, not a gap.
+vc_votes(e1, a, 8).
+vc_votes(e1, b, 7).
+vc_votes(e1, c, 6).
+vc_votes(e1, d, 0).
+vc_points(e1, a, 37).
+vc_points(e1, b, 41).
+vc_points(e1, c, 48).
+vc_points(e1, d, 0).
+vc_pair(e1, a, b, 8).
+vc_pair(e1, a, c, 8).
+vc_pair(e1, a, d, 21).
+vc_pair(e1, b, a, 13).
+vc_pair(e1, b, c, 7).
+vc_pair(e1, b, d, 21).
+vc_pair(e1, c, a, 13).
+vc_pair(e1, c, b, 14).
+vc_pair(e1, c, d, 21).
+vc_pair(e1, d, a, 0).
+vc_pair(e1, d, b, 0).
+vc_pair(e1, d, c, 0).
+vc_plurality(e1, a).
+vc_borda(e1, c).
+vc_condorcet(e1, c).
+vc_votes(e2, a, 1).
+vc_votes(e2, b, 1).
+vc_votes(e2, c, 1).
+vc_votes(e2, d, 0).
+vc_points(e2, a, 6).
+vc_points(e2, b, 6).
+vc_points(e2, c, 6).
+vc_points(e2, d, 0).
+vc_pair(e2, a, b, 2).
+vc_pair(e2, a, c, 1).
+vc_pair(e2, a, d, 3).
+vc_pair(e2, b, a, 1).
+vc_pair(e2, b, c, 2).
+vc_pair(e2, b, d, 3).
+vc_pair(e2, c, a, 2).
+vc_pair(e2, c, b, 1).
+vc_pair(e2, c, d, 3).
+vc_pair(e2, d, a, 0).
+vc_pair(e2, d, b, 0).
+vc_pair(e2, d, c, 0).
+vc_plurality(e2, a).
+vc_plurality(e2, b).
+vc_plurality(e2, c).
+vc_borda(e2, a).
+vc_borda(e2, b).
+vc_borda(e2, c).
+vc_pivotal(e1, v10).
+vc_pivotal(e1, v11).
+vc_pivotal(e1, v12).
+vc_pivotal(e1, v13).
+vc_pivotal(e1, v14).
+vc_pivotal(e1, v15).
+vc_pivotal(e1, v16).
+vc_pivotal(e1, v17).
+vc_pivotal(e2, w1).
+vc_pivotal(e2, w2).
+vc_pivotal(e2, w3).
+vc_miss(votes, E, C)    :- vc_votes(E, C, N), not votes(E, C, N).
+vc_miss(points, E, C)   :- vc_points(E, C, N), not points(E, C, N).
+vc_miss(pair, E, X)     :- vc_pair(E, X, Y, N), not pair(E, X, Y, N).
+vc_miss(plurality, E, C) :- vc_plurality(E, C), not plurality(E, C).
+vc_miss(borda, E, C)    :- vc_borda(E, C), not borda(E, C).
+vc_miss(condorcet, E, C) :- vc_condorcet(E, C), not condorcet(E, C).
+vc_miss(pivotal, E, V)  :- vc_pivotal(E, V), not pivotal(E, V).
+vc_extra(votes, E, C)   :- votes(E, C, N), not vc_votes(E, C, N).
+vc_extra(points, E, C)  :- points(E, C, N), not vc_points(E, C, N).
+vc_extra(pair, E, X)    :- pair(E, X, Y, N), not vc_pair(E, X, Y, N).
+vc_extra(plurality, E, C) :- plurality(E, C), not vc_plurality(E, C).
+vc_extra(borda, E, C)   :- borda(E, C), not vc_borda(E, C).
+vc_extra(condorcet, E, C) :- condorcet(E, C), not vc_condorcet(E, C).
+vc_extra(pivotal, E, V) :- pivotal(E, V), not vc_pivotal(E, V).
+alarm(vc_miss).
+alarm(vc_extra).
+-- one count per candidate, however many ties
+vc_two(E, C) :- votes(E, C, N), votes(E, C, M), N != M.
+vc_two(E, C) :- points(E, C, N), points(E, C, M), N != M.
+alarm(vc_two).
+-- the three methods disagree in e1, which is why there are three, and e2 has
+-- a tie that is a set, not a pick, and no Condorcet winner
+vc_shape(methods_disagree) :- plurality(e1, a), borda(e1, c), condorcet(e1, c), not plurality(e1, c), not borda(e1, a).
+vc_shape(tie_is_a_set)     :- plurality(e2, a), plurality(e2, b), plurality(e2, c), not plurality(e2, d).
+vc_shape(no_condorcet)     :- election(e2), not condorcet(e2, a), not condorcet(e2, b), not condorcet(e2, c), not condorcet(e2, d).
+vc_shape(zero_is_a_row)    :- votes(e1, d, 0), votes(e2, d, 0).
+vc_shape(duplicates_kept)  :- points(e1, a, 37), points(e1, b, 41).
+vc_shape(v17_pivotal)      :- pivotal(e1, v17).
+vc_shape(v1_is_not)        :- voter(e1, v1), not pivotal(e1, v1).
+vc_shape_want(methods_disagree). vc_shape_want(tie_is_a_set). vc_shape_want(no_condorcet).
+vc_shape_want(zero_is_a_row). vc_shape_want(duplicates_kept). vc_shape_want(v17_pivotal). vc_shape_want(v1_is_not).
+vc_shape_missing(W) :- vc_shape_want(W), not vc_shape(W).
+alarm(vc_shape_missing).
+-- the proof rows: `why` of the winner names the voters who made the count
+explain_request(why_all, plurality(e1, a)).
+vc_line(L) :- explained[$explain](why_all, plurality(e1, a), _, L).
+vc_named(V) :- vc_line(L), vc_voter(V, T), N is str_segs(L, T), N > 1.
+vc_voter(v10, "rank[main](e1,v10,a,1)"). vc_voter(v11, "rank[main](e1,v11,a,1)").
+vc_voter(v12, "rank[main](e1,v12,a,1)"). vc_voter(v13, "rank[main](e1,v13,a,1)").
+vc_voter(v14, "rank[main](e1,v14,a,1)"). vc_voter(v15, "rank[main](e1,v15,a,1)").
+vc_voter(v16, "rank[main](e1,v16,a,1)"). vc_voter(v17, "rank[main](e1,v17,a,1)").
+vc_unnamed(V) :- vc_voter(V, _), not vc_named(V).
+vc_stranger(V) :- vc_line(L), vc_other(V, T), N is str_segs(L, T), N > 1.
+vc_other(v1, "(e1,v1,"). vc_other(v8, "(e1,v8,"). vc_other(v21, "(e1,v21,").
+vc_empty_proof(rows) :- not vc_line(_).
+alarm(vc_unnamed).
+alarm(vc_stranger).
+alarm(vc_empty_proof).
+vc_shrug(T, R) :- shrug[$kernel](T, R, _).
+alarm(vc_shrug).

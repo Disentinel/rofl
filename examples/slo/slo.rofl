@@ -1,0 +1,55 @@
+-- examples/slo/slo.rofl — multi-window, multi-burn-rate SLO alerting, as rules.
+--
+-- An error budget is the share of requests a service may fail; the burn rate
+-- is how many times faster than that the service is failing now. A page fires
+-- when the burn is over its factor in BOTH a long window (the trouble is
+-- real) and a short one (it is still going on). The windows and the factors
+-- are data, so a ticket tier is two more rows. No float is used: a burn is
+-- compared by cross-multiplication, in per-mille of weighted requests.
+--
+-- Weighted, because a failed write costs more than a failed read. The sums
+-- are keyed by the request, so two requests of the same weight are both
+-- counted.
+edb(svc).
+edb(eval_at).
+edb(slo).
+edb(burn_window).
+edb(burn_factor).
+edb(lat_window).
+edb(lat_slo).
+
+svc(api). svc(pay). svc(search).
+eval_at(14). eval_at(24).
+
+-- the contracts a service answers to, in failures allowed per thousand
+-- requests; the budget it is paged on is the strictest of them
+slo(api, gold, 10).    slo(api, base, 50).
+slo(pay, gold, 10).    slo(pay, base, 50).
+slo(search, gold, 10). slo(search, base, 50).
+
+-- tier, window, length in minutes; and the burn each tier pages on
+burn_window(page, long, 12).   burn_window(page, short, 2).
+burn_window(ticket, long, 24). burn_window(ticket, short, 6).
+burn_factor(page, 14).
+burn_factor(ticket, 2).
+
+-- p99 over the page's long window, against a service's latency objective
+lat_window(12).
+lat_slo(api, 800). lat_slo(pay, 800). lat_slo(search, 800).
+
+slo_budget(S, B) :- svc(S), B is min(P : slo(S, _, P)).
+
+bad_w(S, Now, Len, B) :- eval_at(Now), svc(S), burn_window(_, _, Len), Lo is Now - Len,
+                         B is sum(W ; R : req(R, S, T, W), failed(R), T > Lo, T <= Now).
+all_w(S, Now, Len, A) :- eval_at(Now), svc(S), burn_window(_, _, Len), Lo is Now - Len,
+                         A is sum(W ; R : req(R, S, T, W), T > Lo, T <= Now).
+
+burning(Tier, Kind, S, Now) :- burn_window(Tier, Kind, Len), burn_factor(Tier, F), slo_budget(S, Budget),
+                               bad_w(S, Now, Len, B), all_w(S, Now, Len, A), A > 0,
+                               Seen is B * 1000, Limit is F * Budget * A, Seen >= Limit.
+
+alert(Tier, S, Now) :- burning(Tier, long, S, Now), burning(Tier, short, S, Now).
+
+p99(S, Now, P) :- eval_at(Now), svc(S), lat_window(Len), Lo is Now - Len,
+                  P is quantile(99, Ms ; R : req(R, S, T, _), lat(R, Ms), T > Lo, T <= Now).
+slow(S, Now) :- p99(S, Now, P), lat_slo(S, Max), P > Max.

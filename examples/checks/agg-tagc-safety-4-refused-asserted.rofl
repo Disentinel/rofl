@@ -1,0 +1,4 @@
+-- expect-refusal: is asserted, but tcr_as is tagged (counting)
+-- a count holds what its rules derive, each derivation weighed by a rule
+tag tcr_as(A, counting N).
+tcr_as(a, 2).

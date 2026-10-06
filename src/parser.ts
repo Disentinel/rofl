@@ -8,7 +8,7 @@
 // — no body of the grammar runs. What the kernel itself needs out of reading
 // is the LEXIS, and that is `tokens.ts`.
 
-import { type Term, type Lit, type BodyElem, type Clause, type Temporal, mkv, mki, mks, mka, mkf } from './unify.ts';
+import { type Term, type Lit, type BodyElem, type Clause, type Temporal, type Int, mkv, mki, mks, mka, mkf, normInt } from './unify.ts';
 
 // The clause structures live in `unify.ts` with the terms they are built out
 // of; they are re-exported here because a parser is where a caller expects to
@@ -28,6 +28,25 @@ export { ParseError, UnwritableString, tokenize, escapeString } from './tokens.t
  *  reported that nobody uses it. */
 export const CMP_OPS = new Set(['=', '!=', '<', '<=', '>', '>=']);
 
+/** The nine aggregate operations. WORDS, NOT KEYWORDS: `count` is an aggregate
+ *  only after `is`, followed by `(`, with a `:` at the top level before the
+ *  matching `)`; everywhere else it is an ordinary name. */
+export const AGG_OPS = new Set(['count', 'sum', 'min', 'max', 'or', 'and', 'median', 'quantile', 'rank']);
+/** What a lattice declaration may name: the aggregate words, which the door
+ *  judges, and the joins, which only a declaration names. */
+export const LATTICE_OPS = new Set([...AGG_OPS, 'union', 'hull', 'bitor']);
+/** The semirings a tag declaration may name (docs/aggregates.md, "Tags, as
+ *  built"): words, names everywhere else. */
+export const TAG_ALGS = new Set(['tropical', 'viterbi', 'trust', 'counting']);
+/** The kinds of declared order (docs/aggregates.md, "Declared orders, as
+ *  built") and the directions of the values they compare: words, names
+ *  elsewhere. */
+export const ORDER_KINDS = new Set(['pareto', 'lex']);
+/** The declared data structures (docs/data-structures.md) and the role words
+ *  each one marks its arguments with: words where a role stands, names
+ *  elsewhere. `function` marks the values a key determines with `to`. */
+export const STRUCTURE_ROLES: ReadonlyMap<string, readonly string[]> = new Map([['function', ['to']], ['tree', []]]);
+
 class P {
   toks: Tok[];
   pos = 0;
@@ -42,6 +61,11 @@ class P {
   err(msg: string): never {
     throw new ParseError(`line ${this.peek().line}: ${msg}`);
   }
+  /** A statement that ends without its dot, and the token found there, so an editor marks that token (lsp/know.ts). */
+  noDot(what: string): never {
+    const t = this.peek();
+    return this.err(`${what} has no closing dot: got '${t.v || t.t}'`);
+  }
 
   // --- terms ------------------------------------------------------------
   private freshCounter = 0;
@@ -53,11 +77,11 @@ class P {
       if (t.v === '_') return mkv(`_$${this.freshCounter++}`);
       return mkv(t.v);
     }
-    if (t.t === 'int') { this.next(); return mki(parseInt(t.v, 10)); }
+    if (t.t === 'int') { this.next(); return mki(this.intLiteral(t.v, false)); }
     if (t.t === '-' && this.toks[this.pos + 1].t === 'int') {
       this.next();
       const v = this.next();
-      return mki(-parseInt(v.v, 10));
+      return mki(-this.intLiteral(v.v, true));
     }
     if (t.t === 'str') { this.next(); return mks(t.v); }
     if (t.t === 'ident') {
@@ -65,12 +89,22 @@ class P {
       if (this.peek().t === '(') {
         this.next();
         const args = this.termList();
-        this.expect(')');
+        if (this.peek().t !== ')') this.err(`\`${t.v}(\` is not closed: expected ')', got '${this.peek().v || this.peek().t}'`);
+        this.next();
         return mkf(t.v, args);
       }
       return mka(t.v);
     }
     this.err(`expected a term, got '${t.v || t.t}'`);
+  }
+
+  /** The term range is [-2^60, 2^60), the same refusal as rust/rofl's
+   *  `int_literal`: past it the Rust engine read ZERO where this one read a
+   *  float, so the two engines answered differently about one literal. */
+  intLiteral(digits: string, negated: boolean): Int {
+    const v = BigInt(digits), limit = 1n << 60n;
+    if (v > limit || (v === limit && !negated)) this.err(`integer literal out of range (\u00b12^60): ${negated ? '-' : ''}${digits}`);
+    return normInt(v);
   }
 
   termList(): Term[] {
@@ -111,7 +145,8 @@ class P {
 
   // --- literals ---------------------------------------------------------
   literal(): Lit {
-    const rel = this.expect('ident').v;
+    if (this.peek().t !== 'ident') this.err(`not a relation name: '${this.peek().v || this.peek().t}'`);
+    const rel = this.next().v;
     // A KEYWORD IS NOT A RELATION NAME. `not` was accepted here and `not(1).`
     // loaded as a fact about a relation called `not`, while the Rust engine
     // refused it at `relbook` — one of three spellings the two hosts disagreed
@@ -175,6 +210,9 @@ class P {
       this.next();
       return { t: 'neg', lit: this.literal() };
     }
+    // `not X in S`: a negation takes a literal, and a variable is no relation name
+    if (t.t === 'ident' && t.v === 'not' && this.toks[this.pos + 1].t === 'var') { this.next(); this.err(`not a relation name: '${this.peek().v}'`); }
+    if (t.t === 'ident' && t.v === 'at_least' && this.isColonCall()) return this.threshold();
     // A relational literal starts ident + '[' (perspective form is unambiguous).
     if (t.t === 'ident' && this.toks[this.pos + 1].t === '[') {
       return { t: 'pos', lit: this.literal() };
@@ -210,8 +248,17 @@ class P {
       const r = this.expr();
       return { t: 'bi', op: nxt.t, l: e, r };
     }
-    if (nxt.t === 'ident' && nxt.v === 'is') {
+    // THE JOIN READS `E in S` and `A subset S` (docs/aggregates.md, "The join
+    // lattice, as built"): words where an operator stands, names elsewhere.
+    if (nxt.t === 'ident' && (nxt.v === 'in' || nxt.v === 'subset')) {
       this.next();
+      const r = this.expr();
+      return { t: 'bi', op: nxt.v, l: e, r };
+    }
+    if (nxt.t === 'ident' && nxt.v === 'is') {
+      const isAt = this.pos;
+      this.next();
+      if (this.isAggCall()) return this.agg(save, saveFresh, isAt);
       const r = this.expr();
       return { t: 'bi', op: 'is', l: e, r };
     }
@@ -224,14 +271,251 @@ class P {
     this.err(`expected a literal or builtin`);
   }
 
-  clause(): Clause {
-    this.freshCounter = 0; // wildcard names are clause-local => content-addressed
-    const head = this.literal();
-    if (this.peek().t === '.') { this.next(); return { head, body: [] }; }
-    this.expect(':-');
+  /** `op(` with a `:` at depth one before the matching `)`. */
+  isAggCall(): boolean {
+    const t = this.peek();
+    return t.t === 'ident' && AGG_OPS.has(t.v) && this.isColonCall();
+  }
+
+  /** `word(` with a `:` at depth one before the matching `)`. */
+  isColonCall(): boolean {
+    if (this.toks[this.pos + 1].t !== '(') return false;
+    let depth = 0;
+    for (let i = this.pos + 1; i < this.toks.length; i++) {
+      const k = this.toks[i].t;
+      if (k === '(' || k === '[') depth++;
+      else if (k === ')' || k === ']') { depth--; if (depth === 0) return false; }
+      else if (k === ':' && depth === 1) return true;
+      else if (k === '.' || k === 'eof') return false;
+    }
+    return false;
+  }
+
+  /**   aggelem  := term 'is' aggop '(' termlist [ ';' termlist ] ':' body ')'
+   *  The result is re-read from where the builtin's left side began: it must
+   *  be ONE term that ends exactly at `is`, so `N+1 is count(...)` is refused. */
+  agg(start: number, fresh: number, isAt: number): BodyElem {
+    const after = this.pos;
+    this.pos = start;
+    this.freshCounter = fresh;
+    const res = this.term();
+    if (this.pos !== isAt) this.err(`an aggregate's result is a variable or a constant, not an expression`);
+    this.pos = after;
+    const op = this.next().v;
+    this.expect('(');
+    const vals = this.aggTerms();
+    let keys: Term[] = [];
+    if (this.peek().t === ';') { this.next(); keys = this.aggTerms(); }
+    if (this.peek().t !== ':') this.err(`expected ':' before the aggregate's body, got '${this.peek().v || this.peek().t}'`);
+    this.next();
     const body: BodyElem[] = [this.bodyElem()];
     while (this.peek().t === ',') { this.next(); body.push(this.bodyElem()); }
-    this.expect('.');
+    if (this.peek().t !== ')') this.err(`\`${op}(\` is not closed`);
+    this.next();
+    return { t: 'agg', op, res, vals, keys, body };
+  }
+
+  /**   thrselem := 'at_least' '(' term ',' termlist ':' body ')'
+   *  The threshold N is read, never bound: an integer or a variable bound
+   *  before it. The counted terms are the key, so there is no `;`. */
+  threshold(): BodyElem {
+    const op = this.next().v;
+    this.expect('(');
+    if (this.peek().t === ':' || this.peek().t === ',') this.err(`at_least(N, X : body) needs its threshold N`);
+    const res = this.term();
+    const n = this.peek().t;
+    if (n === '+' || n === '-' || n === '*' || n === '/' || (n === 'ident' && this.peek().v === 'mod')) {
+      this.err(`at_least: the threshold is a term, not an expression: bind N is ... before it`);
+    }
+    if (this.peek().t !== ',') this.err(`at_least(N, X : body): expected ',' after the threshold`);
+    this.next();
+    const vals = this.aggTerms();
+    if (this.peek().t === ';') this.err(`at_least takes no key: the counted terms are the key, at_least(N, K1, K2 : body)`);
+    if (this.peek().t !== ':') this.err(`at_least: expected ':' before its body, got '${this.peek().v || this.peek().t}'`);
+    this.next();
+    const body: BodyElem[] = [this.bodyElem()];
+    while (this.peek().t === ',') { this.next(); body.push(this.bodyElem()); }
+    if (this.peek().t !== ')') this.err(`at_least: \`at_least(\` is not closed`);
+    this.next();
+    return { t: 'agg', op, res, vals, keys: [], body };
+  }
+
+  aggTerms(): Term[] {
+    if (this.peek().t === ':' || this.peek().t === ';') this.err(`an aggregate needs at least one term before '${this.peek().t}'`);
+    const out = this.termList();
+    const n = this.peek().t;
+    if (n === '+' || n === '-' || n === '*' || n === '/' || (n === 'ident' && this.peek().v === 'mod')) {
+      this.err(`an aggregate's terms are not expressions: bind W is ... inside its body`);
+    }
+    return out;
+  }
+
+  /**   latdecl  := 'lattice' ident '(' [ term ',' ]* aggop term ')' [ 'widen' int ] '.'
+   *  A word, not a keyword: it declares only when a second name follows. */
+  latticeDecl(): Clause {
+    this.next();
+    const rel = this.expect('ident').v;
+    if (rel === 'not') this.err(`'not' is negation, not a relation name`);
+    if (this.peek().t === '[') this.err(`lattice ${rel}: a declaration names the relation, not a book`);
+    if (this.peek().t !== '(') this.err(`lattice ${rel}: expected '('`);
+    this.next();
+    const args: Term[] = [];
+    let op = '';
+    for (;;) {
+      const t = this.peek(), n = this.toks[this.pos + 1].t;
+      if (t.t === 'ident' && LATTICE_OPS.has(t.v) && n !== ',' && n !== ')' && n !== '(') { this.next(); op = t.v; break; }
+      args.push(this.term());
+      if (this.peek().t !== ',') this.err(`lattice ${rel}: the last argument is the value, written with its operation: min D, max D, or B, and B, union S, hull I, bitor B`);
+      this.next();
+    }
+    args.push(this.term());
+    if (this.peek().t !== ')') this.err(`lattice ${rel}: \`(\` is not closed`);
+    this.next();
+    // `widen N`: a word, then the number of improvements before a cell is widened
+    let widen: number | undefined;
+    if (this.peek().t === 'ident' && this.peek().v === 'widen') {
+      this.next();
+      const n = this.peek();
+      if (n.t !== 'int') this.err(`lattice ${rel}: \`widen\` is followed by the number of improvements a cell makes before it is widened, an integer of at least 0`);
+      this.next();
+      widen = Number(this.intLiteral(n.v, false));
+    }
+    if (this.peek().t !== '.') this.noDot(`lattice ${rel}: the declaration`);
+    this.next();
+    const decl: Clause = { head: { rel, persp: mka('main'), perspExplicit: false, args, temporal: 'now' }, body: [], lattice: op };
+    if (widen !== undefined) decl.widen = widen;
+    return decl;
+  }
+
+  /**   tagdecl  := 'tag' ident '(' [ term ',' ]* tagalg term ')' '.'
+   *  A word, not a keyword: it declares only when a second name follows. */
+  tagDecl(): Clause {
+    this.next();
+    const rel = this.expect('ident').v;
+    if (rel === 'not') this.err(`'not' is negation, not a relation name`);
+    if (this.peek().t === '[') this.err(`tag ${rel}: a declaration names the relation, not a book`);
+    if (this.peek().t !== '(') this.err(`tag ${rel}: expected '('`);
+    this.next();
+    const args: Term[] = [];
+    let alg = '';
+    for (;;) {
+      const t = this.peek(), n = this.toks[this.pos + 1].t;
+      if (t.t === 'ident' && TAG_ALGS.has(t.v) && n !== ',' && n !== ')' && n !== '(') { this.next(); alg = t.v; break; }
+      args.push(this.term());
+      if (this.peek().t !== ',') this.err(`tag ${rel}: the last argument is the tag, written with its semiring: tropical T, viterbi P, trust T, counting N`);
+      this.next();
+    }
+    args.push(this.term());
+    if (this.peek().t !== ')') this.err(`tag ${rel}: \`(\` is not closed`);
+    this.next();
+    if (this.peek().t !== '.') this.noDot(`tag ${rel}: the declaration`);
+    this.next();
+    return { head: { rel, persp: mka('main'), perspExplicit: false, args, temporal: 'now' }, body: [], lattice: alg, tag: true };
+  }
+
+  /**   orderdecl := ('pareto' | 'lex') ident '(' [ term ',' ]* dir term [ ',' dir term ]* ')' '.'
+   *    dir       := 'min' | 'max'
+   *  Words, not keywords: one declares only when a second name follows. */
+  orderDecl(): Clause {
+    const kind = this.next().v;
+    const rel = this.expect('ident').v;
+    const what = `${kind} ${rel}`;
+    if (rel === 'not') this.err(`'not' is negation, not a relation name`);
+    if (this.peek().t === '[') this.err(`${what}: a declaration names the relation, not a book`);
+    if (this.peek().t !== '(') this.err(`${what}: expected '('`);
+    this.next();
+    const isDir = () => { const t = this.peek(), n = this.toks[this.pos + 1].t; return t.t === 'ident' && (t.v === 'min' || t.v === 'max') && n !== ',' && n !== ')' && n !== '('; };
+    const args: Term[] = [];
+    while (!isDir()) {
+      args.push(this.term());
+      if (this.peek().t !== ',') this.err(`${what}: the last arguments are the values the order compares, each written with its direction: min C, max T`);
+      this.next();
+    }
+    const ord: string[] = [];
+    for (;;) {
+      if (!isDir()) this.err(`${what}: every value after the key is written with its direction, min or max, then its variable`);
+      ord.push(this.next().v);
+      args.push(this.term());
+      if (this.peek().t !== ',') break;
+      this.next();
+    }
+    if (this.peek().t !== ')') this.err(`${what}: \`(\` is not closed`);
+    this.next();
+    if (this.peek().t !== '.') this.noDot(`${what}: the declaration`);
+    this.next();
+    return { head: { rel, persp: mka('main'), perspExplicit: false, args, temporal: 'now' }, body: [], lattice: kind, ord };
+  }
+
+  /**   structdecl := kind ident '(' [ role ] term [ ',' [ role ] term ]* ')' [ 'closure' ident ] '.'
+   *    kind       := 'function' | 'tree'
+   *    role       := 'to'
+   *  Words, not keywords: one declares only when a second name follows. An
+   *  argument without a role is part of the key. */
+  structureDecl(): Clause {
+    const kind = this.next().v;
+    const rel = this.expect('ident').v;
+    const what = `${kind} ${rel}`;
+    const words = STRUCTURE_ROLES.get(kind)!;
+    if (rel === 'not') this.err(`'not' is negation, not a relation name`);
+    if (this.peek().t === '[') this.err(`${what}: a declaration names the relation, not a book`);
+    if (this.peek().t !== '(') this.err(`${what}: expected '('`);
+    this.next();
+    const isRole = () => { const t = this.peek(), n = this.toks[this.pos + 1].t; return t.t === 'ident' && words.includes(t.v) && n !== ',' && n !== ')' && n !== '('; };
+    const args: Term[] = [], roles: string[] = [];
+    for (;;) {
+      roles.push(isRole() ? this.next().v : '');
+      args.push(this.term());
+      if (this.peek().t !== ',') break;
+      this.next();
+    }
+    if (this.peek().t !== ')') this.err(`${what}: \`(\` is not closed`);
+    this.next();
+    let closure: string | undefined;
+    if (this.peek().t === 'ident' && this.peek().v === 'closure') {
+      this.next();
+      if (this.peek().t !== 'ident') this.err(`${what}: \`closure\` names the relation that holds each node and every ancestor of it`);
+      closure = this.next().v;
+    }
+    if (this.peek().t !== '.') this.noDot(`${what}: the declaration`);
+    this.next();
+    return { head: { rel, persp: mka('main'), perspExplicit: false, args, temporal: 'now' }, body: [], structure: closure === undefined ? { kind, roles } : { kind, roles, closure } };
+  }
+
+  clause(): Clause {
+    this.freshCounter = 0; // wildcard names are clause-local => content-addressed
+    if (this.peek().t === 'ident' && this.peek().v === 'lattice' && this.toks[this.pos + 1].t === 'ident') {
+      return this.latticeDecl();
+    }
+    if (this.peek().t === 'ident' && this.peek().v === 'tag' && this.toks[this.pos + 1].t === 'ident') {
+      return this.tagDecl();
+    }
+    if (this.peek().t === 'ident' && ORDER_KINDS.has(this.peek().v) && this.toks[this.pos + 1].t === 'ident') {
+      return this.orderDecl();
+    }
+    if (this.peek().t === 'ident' && STRUCTURE_ROLES.has(this.peek().v) && this.toks[this.pos + 1].t === 'ident') {
+      return this.structureDecl();
+    }
+    const head = this.literal();
+    // `domrule := lit '<=' lit ':-' body '.'` (docs/aggregates.md,
+    // "Subsumption, as built"): read, and refused with the aggregates
+    if (this.peek().t === '<=') {
+      this.next();
+      const dominator = this.literal();
+      if (this.peek().t !== ':-') this.err(`dominance ${head.rel}: \`<=\` is followed by the dominating fact and \`:-\` the condition under which it dominates`);
+      this.next();
+      const body: BodyElem[] = [this.bodyElem()];
+      while (this.peek().t === ',') { this.next(); body.push(this.bodyElem()); }
+      if (this.peek().t !== '.') this.noDot(`dominance ${head.rel}: the rule`);
+      this.next();
+      return { head, body, dominator };
+    }
+    if (this.peek().t === '.') { this.next(); return { head, body: [] }; }
+    if (this.peek().t !== ':-') this.noDot(`\`${head.rel}\``);
+    this.next();
+    const body: BodyElem[] = [this.bodyElem()];
+    while (this.peek().t === ',') { this.next(); body.push(this.bodyElem()); }
+    if (this.peek().t !== '.') this.noDot(`\`${head.rel}\``);
+    this.next();
     for (const b of body) {
       if ((b.t === 'pos' || b.t === 'neg') && b.lit.temporal === 'next') {
         this.err(`'@next' is not allowed in rule bodies`);

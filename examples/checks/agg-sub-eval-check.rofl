@@ -1,0 +1,83 @@
+-- examples/checks/agg-sub-eval-check.rofl — agg_sub_eval: every cell of
+-- agg-sub-data.rofl holds exactly the antichain enumerated here by hand,
+-- both directions: the Pareto fronts of the routes over a cycle; the
+-- fronts of a partial order over names with no join, decided over a closure
+-- closed first and a negation; one front with no key; one cell per book.
+-- On a total order a dominance is the lattice of its order, fact for fact,
+-- value reached only through its history included (min and max). What a
+-- dominated value concluded inside the recursion is withdrawn; a read from
+-- outside it sees the closed front only.
+asv_want(route, a, a, 3, 11). asv_want(route, a, a, 4, 4). asv_want(route, a, a, 6, 2).
+asv_want(route, a, b, 1, 5).
+asv_want(route, a, c, 2, 10). asv_want(route, a, c, 3, 3). asv_want(route, a, c, 5, 1).
+asv_want(route, b, a, 2, 6). asv_want(route, b, b, 3, 11). asv_want(route, b, c, 1, 5).
+asv_want(route, c, a, 1, 1). asv_want(route, c, b, 2, 6).
+asv_want(route, c, c, 3, 11). asv_want(route, c, c, 4, 4). asv_want(route, c, c, 6, 2).
+asv_have(route, A, B, C, T) :- as_route(A, B, C, T).
+asv_want(fastest, a, a, 2, 2). asv_want(fastest, a, b, 5, 5). asv_want(fastest, a, c, 1, 1).
+asv_want(fastest, b, a, 6, 6). asv_want(fastest, b, b, 11, 11). asv_want(fastest, b, c, 5, 5).
+asv_want(fastest, c, a, 1, 1). asv_want(fastest, c, b, 6, 6). asv_want(fastest, c, c, 2, 2).
+asv_have(fastest, A, B, T, T) :- as_fastest(A, B, T).
+asv_want(pick, k1, glass, x, x). asv_want(pick, k1, silver, x, x).
+asv_want(pick, k2, glass, x, x). asv_want(pick, k2, gold, x, x). asv_want(pick, k2, ruby, x, x).
+asv_want(pick, k3, tin, x, x).
+asv_have(pick, K, V, x, x) :- as_pick(K, V).
+asv_want(best, i1, 3, 9, x). asv_want(best, i5, 3, 9, x). asv_want(best, i2, 5, 5, x). asv_want(best, i3, 9, 3, x).
+asv_have(best, I, C, T, x) :- as_best(I, C, T).
+asv_want(bk, w1, k, 1, x). asv_want(bk, w2, k, 5, x).
+asv_have(bk, w1, K, V, x) :- as_bk[w1](K, V).
+asv_have(bk, w2, K, V, x) :- as_bk[w2](K, V).
+asv_want(p, a, b, 0, x). asv_want(p, a, c, 1, x). asv_want(p, a, x, 0, x). asv_want(p, a, y, 0, x).
+asv_want(p, b, c, 1, x). asv_want(p, x, b, 0, x). asv_want(p, x, c, 1, x). asv_want(p, x, y, 0, x).
+asv_want(p, y, b, 0, x). asv_want(p, y, c, 1, x).
+asv_have(p, A, B, D, x) :- as_p(A, B, D).
+asv_missing(R, A, B, C, T) :- asv_want(R, A, B, C, T), not asv_have(R, A, B, C, T).
+-- no answer here is a shrug: an alarm `not answer` is silent over one, so
+-- a cell the evaluation could not decide is an alarm of its own
+asv_shrug(T, R) :- shrug[$kernel](T, R, _).
+alarm(asv_shrug).
+asv_extra(R, A, B, C, T)   :- asv_have(R, A, B, C, T), not asv_want(R, A, B, C, T).
+alarm(asv_missing).
+alarm(asv_extra).
+-- the copy inside the recursion holds the front's values and no other
+asv_copy_extra(A, B, D)  :- as_q(A, B, D), not as_p(A, B, D).
+asv_copy_missing(A, B, D) :- as_p(A, B, D), not as_q(A, B, D).
+alarm(asv_copy_extra).
+alarm(asv_copy_missing).
+-- no front holds two values one of which dominates the other
+asv_dominated(A, B, C1, T1) :- as_route(A, B, C1, T1), as_route(A, B, C2, T2), C2 <= C1, T2 <= T1, C2 < C1.
+asv_dominated(A, B, C1, T1) :- as_route(A, B, C1, T1), as_route(A, B, C2, T2), C2 <= C1, T2 <= T1, T2 < T1.
+alarm(asv_dominated).
+-- the total orders: subsumption and the lattice, fact for fact
+asv_unlike(d, X, Y, D) :- as_d(X, Y, D), not as_m(X, Y, D).
+asv_unlike(m, X, Y, D) :- as_m(X, Y, D), not as_d(X, Y, D).
+asv_unlike(sat, A, A, W) :- as_sat(A, W), not as_satm(A, W).
+asv_unlike(satm, A, A, W) :- as_satm(A, W), not as_sat(A, W).
+asv_unlike(wide, X, Y, C) :- as_wide(X, Y, C), not as_widem(X, Y, C).
+asv_unlike(widem, X, Y, C) :- as_widem(X, Y, C), not as_wide(X, Y, C).
+alarm(asv_unlike).
+asv_want_d(s, t, 3). asv_want_d(s, a, 2). asv_want_d(a, a, 0). asv_want_d(a, a2, 0). asv_want_d(p, p, 0).
+asv_d_missing(X, Y, D) :- asv_want_d(X, Y, D), X != p, not as_d(X, Y, D).
+asv_d_missing(X, X, D) :- asv_want_d(X, X, D), X = p, not as_sat(X, D).
+alarm(asv_d_missing).
+-- an improvement that flows back through a plain relation: the min
+-- lattice's facts, fact for fact, and the ones enumerated here
+asv_unlike(ud, X, x, D) :- as_ud(X, D), not as_um(X, D).
+asv_unlike(um, X, x, D) :- as_um(X, D), not as_ud(X, D).
+asv_unlike(ua, X, x, x) :- as_ua(X), not as_uma(X).
+asv_unlike(uma, X, x, x) :- as_uma(X), not as_ua(X).
+asv_unlike(uc, X, C, T) :- as_uc(X, C, T), not as_ud(X, C).
+asv_unlike(uc, X, C, T) :- as_uc(X, C, T), C != T.
+asv_unlike(uca, X, x, x) :- as_uca(X), not as_ua(X).
+asv_unlike(v, K, V, x) :- as_v(K, V), not as_vm(K, V).
+asv_unlike(vm, K, V, x) :- as_vm(K, V), not as_v(K, V).
+asv_unlike(vq, K, x, x) :- as_vq(K), not as_vmq(K).
+asv_unlike(vmq, K, x, x) :- as_vmq(K), not as_vq(K).
+asv_want_u(s, 0). asv_want_u(x, 1). asv_want_u(y, 0).
+asv_u_missing(X, D) :- asv_want_u(X, D), not as_ud(X, D).
+asv_u_missing(X, D) :- asv_want_u(X, D), not as_uc(X, D, D).
+asv_u_missing(X, D) :- asv_want_u(X, D), not as_ua(X).
+asv_u_missing(a, 0) :- not as_v(a, 0).
+asv_u_extra(X, D)   :- as_ud(X, D), not asv_want_u(X, D).
+alarm(asv_u_missing).
+alarm(asv_u_extra).

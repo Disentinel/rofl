@@ -1,0 +1,6 @@
+-- examples/checks/wfs-unknown-negated-check.rofl — wfs_unknown_negated: the
+-- program of wfs-unknown-negated.rofl is refused; loaded, it concludes that
+-- x, a draw, is decided.
+edb(wn_decided).
+wn_bad(X) :- wn_decided(X), X = x.
+alarm(wn_bad).

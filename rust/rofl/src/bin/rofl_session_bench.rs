@@ -29,7 +29,7 @@ fn main() {
     let src = std::fs::read_to_string(&path).unwrap_or_else(|e| { eprintln!("{path}: {e}"); std::process::exit(1) });
 
     let mut sum = 0usize;
-    let core = Session::open(&src, 200_000_000).unwrap_or_else(|e| { eprintln!("{e}"); std::process::exit(1) });
+    let mut core = Session::open(&src, 200_000_000).unwrap_or_else(|e| { eprintln!("{e}"); std::process::exit(1) });
     sum += core.fork().eval.store.fact_count();
 
     let mut o = Vec::with_capacity(iters);

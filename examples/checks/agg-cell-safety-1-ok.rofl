@@ -1,0 +1,55 @@
+-- examples/checks/agg-cell-safety-1-ok.rofl — every way of reading a lattice
+-- inside its recursion that safety.rofl accepts as monotone in the value,
+-- each with its answer: + and a comparison that stays true (acs_lo), min
+-- turned into max and back by E - V across two mutually recursive lattices
+-- (acs_ng), two reads of the same lattice in one body (acs_lo2), max(V, E)
+-- into a min (acs_mx: the least worst edge), a comparison the other way
+-- round and min(V, E) into a max (acs_wd), `B = true` and the constant
+-- `true` for or (acs_on), `B = false` and the constant `false` for and
+-- (acs_off).
+edb(acs_e).
+edb(acs_n).
+edb(acs_start).
+acs_e(a, b, 2).
+acs_e(b, c, 3).
+acs_e(c, a, 1).
+acs_e(a, c, 9).
+acs_n(a, b).
+acs_n(b, c).
+acs_n(c, b).
+acs_n(d, a).
+acs_start(a, true).
+acs_start(b, false).
+acs_start(d, false).
+
+lattice acs_lo(A, C, min D).
+acs_lo(A, C, D) :- acs_e(A, C, D).
+acs_lo(A, C, D) :- acs_lo(A, B, D1), acs_e(B, C, W), D1 < 100, D is D1 + W.
+
+lattice acs_ng(A, C, max N).
+lattice acs_lb(A, C, min D).
+acs_lb(A, C, D) :- acs_e(A, C, D).
+acs_ng(A, C, N) :- acs_lb(A, C, D), N is 0 - D.
+acs_lb(A, C, D) :- acs_ng(A, B, N), acs_e(B, C, W), D is W - N.
+
+lattice acs_lo2(A, C, min D).
+acs_lo2(A, C, D) :- acs_e(A, C, D).
+acs_lo2(A, C, D) :- acs_lo2(A, B, D1), acs_lo2(B, C, D2), D is D1 + D2.
+
+lattice acs_mx(A, C, min K).
+acs_mx(A, C, K) :- acs_e(A, C, K).
+acs_mx(A, C, K) :- acs_mx(A, B, K1), acs_e(B, C, W), K is max(K1, W).
+
+lattice acs_wd(A, C, max W).
+acs_wd(A, C, W) :- acs_e(A, C, W).
+acs_wd(A, C, W) :- acs_wd(A, B, W1), acs_e(B, C, W2), 0 < W1, W is min(W1, W2).
+
+lattice acs_on(X, or B).
+acs_on(X, B) :- acs_start(X, B).
+acs_on(Y, B) :- acs_on(X, B), acs_n(X, Y), B = true.
+acs_on(Y, true) :- acs_on(X, true), acs_n(Y, X).
+
+lattice acs_off(X, and B).
+acs_off(X, B) :- acs_start(X, B).
+acs_off(Y, B) :- acs_on(X, _), acs_off(X, B), acs_n(X, Y), false = B.
+acs_off(Y, false) :- acs_off(X, false), acs_n(Y, X).

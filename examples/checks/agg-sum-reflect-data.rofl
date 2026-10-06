@@ -1,0 +1,14 @@
+-- examples/checks/agg-sum-reflect-data.rofl — sum aggregates for
+-- agg_sum_reflect: one reads a book of its own and negates and compares
+-- inside, one reads the kernel's `concludes` bare.
+edb(asf_item).
+edb(asf_bad).
+edb(asf_key).
+asf_key(k1).
+asf_key(k2).
+asf_item[ledger](k1, 1, 4).
+asf_item[ledger](k1, 2, 6).
+asf_item[ledger](k2, 3, 5).
+asf_bad(2).
+asf_good(K, S)    :- asf_key(K), S is sum(V ; I : asf_item[ledger](K, I, V), not asf_bad(I), V > 0).
+asf_rules(Rel, S) :- asf_key(Rel), S is sum(W ; R : concludes(R, Rel), W = 1).

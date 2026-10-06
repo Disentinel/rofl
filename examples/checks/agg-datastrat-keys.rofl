@@ -1,0 +1,24 @@
+-- examples/checks/agg-datastrat-keys.rofl — A KEY THE WALK MUST BIND from closed
+-- relations only, before the correlation of an aggregate over the component: by
+-- an aggregate (how many children T has) and by a builtin over a closed
+-- interval (`K in R`).
+--   size(T) = 1 + the sizes of T's children (a tree, as agg-datastrat-tree.rofl);
+--   tot(T, S) adds the sizes of the nodes slotmem(K, _) lists, K being the
+--   number of T's children, the correlation of the sum;
+--   tin(T, K, S) the same, K taken from the interval 0..2 by `in`;
+--   a leaf's size is also 1 + its tot and 1 + its tin at slot 0, which makes tot
+--   and tin one component with size, a cycle as relations and none in the data.
+-- With the aggregate not evaluated and `in` not decided, the correlation is
+-- unkeyed and the program refused with a message that is not true: nothing but
+-- closed relations names it.
+edb(node). edb(child). edb(slotmem). edb(span). edb(leaf).
+leaf(b). leaf(c).
+node(a). node(b). node(c).
+child(a, b). child(a, c).
+slotmem(2, b). slotmem(2, c).
+span(iv(0, 2)).
+size(T, N) :- node(T), S is sum(V ; C : child(T, C), size(C, V)), N is S + 1.
+tot(T, S) :- node(T), K is count(C : child(T, C)), S is sum(V ; D : slotmem(K, D), size(D, V)).
+tin(T, K, S) :- node(T), span(R), K in R, S is sum(V ; D : slotmem(K, D), size(D, V)).
+size(T, N) :- leaf(T), tot(T, S), N is S + 1.
+size(T, N) :- leaf(T), tin(T, 0, S), N is S + 1.

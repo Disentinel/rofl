@@ -1,0 +1,18 @@
+-- examples/checks/prov-lazy.rofl — PROVENANCE ON DEMAND, THE WORLD NO RULE READS derived_by OF.
+-- The Rust engine fires these rules and notes each firing (fact, rule, tick) instead of writing
+-- its derived_by row; the rows are written when the state, a query for derived_by or a tick
+-- boundary asks. The canonical state, `why`, `excise`, `retract` and the frozen rows of a past
+-- tick must be those of an engine that writes every row as it fires (the TypeScript one does).
+-- A diamond (a to d by two paths) gives a fact two firings of one rule; hit is read through a
+-- closure; and the staged hit crosses the tick boundary as a fact of the next tick.
+edb(pl_edge).
+edb(pl_mark).
+pl_edge(a, b). pl_edge(b, c). pl_edge(c, d). pl_edge(a, x).
+pl_edge(x, d).
+pl_mark(d).
+pl_reach(X, Y) :- pl_edge(X, Y).
+pl_reach(X, Z) :- pl_reach(X, Y), pl_edge(Y, Z).
+pl_hit(X) :- pl_reach(X, Y), pl_mark(Y).
+pl_seen(X)@next :- pl_hit(X).
+pl_dead_end(X) :- pl_edge(_, X), not pl_has_out(X).
+pl_has_out(X) :- pl_edge(X, _).

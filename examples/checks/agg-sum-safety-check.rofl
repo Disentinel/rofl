@@ -1,0 +1,24 @@
+-- examples/checks/agg-sum-safety-check.rofl — agg_sum_safety. Every group
+-- with a line has its sum, which it can only have because safety.rofl counts
+-- the aggregate as binding G and S; a group with none has no row; and
+-- neither refused program reached the world.
+-- the input, here rather than beside the rule, so a refused rule leaves
+-- it behind for the checks to read
+edb(ass_line).
+edb(ass_group).
+ass_line(g1, 1, 4).
+ass_line(g1, 2, 4).
+ass_line(g2, 1, 7).
+ass_group(g1).
+ass_group(g2).
+ass_group(g3).
+ass_has(G)              :- ass_by(G, _).
+expected_row_missing(G) :- ass_line(G, _, _), not ass_has(G).
+ass_member(G)           :- ass_line(G, _, _).
+empty_group_row(G)      :- ass_by(G, _), not ass_member(G).
+nokey_accepted()        :- concludes[$kernel](_, ass_nokey).
+twovals_accepted()      :- concludes[$kernel](_, ass_twovals).
+alarm(expected_row_missing).
+alarm(empty_group_row).
+alarm(nokey_accepted).
+alarm(twovals_accepted).

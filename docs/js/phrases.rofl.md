@@ -27,3 +27,12 @@ Declared as facts:
 
 - <a id="fun_phrase"></a>`fun_phrase` — rows in this file
 
+> The answer model's third value is the language's own, read and written in every
+> file: `shrug[$kernel](p(a, _), R, _)` reads as `p(a, _) has no answer for the
+> reason R with some meta` (docs/aggregates.md, "Shrugs, as built" and "The
+> sentence form, as built"). No comma: a comma ends a condition.
+
+Declared as facts:
+
+- <a id="phrase"></a>`phrase` — rows in this file
+

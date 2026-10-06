@@ -1,5 +1,7 @@
 # SLOP — Spreadsheet Ledger Over Provenance
 
+**Count reading:** ambiguity — a count above 1 means the sheet produces a number more than one way, a defect.
+
 ROFL's canonical metaphor is "a ledger in a spreadsheet". SLOP stops it
 being a metaphor, because **a spreadsheet already IS a fixpoint engine — just
 a bad one.**
@@ -145,8 +147,10 @@ kernel's, not this directory's:
 
 `huh` is a **projection** of the kernel's tree onto cells — a why tree goes
 through the inside of a formula, and a spreadsheet user thinks in cells.
-Section 3 of the transcript prints the unprojected tree for the same chain so
-the projection can be checked rather than believed.
+Section 3 of the transcript prints the unprojected tree for the same cell so
+the projection can be checked rather than believed. A SUM in that tree is a
+kernel cell: the projection goes on into the cells it added, listed in the order of the
+sheet where the cell lists them by height.
 
 ## Money, the carrier, and what "to the cent" means
 
@@ -388,14 +392,28 @@ val(N, V) :- num(N, V).                                  -- a constant inside a 
 val(N, V) :- ref(N, C), value(C, V).
 val(N, V) :- plus(N, A, B), val(A, X), val(B, Y), V is X + Y.
 val(N, V) :- pick(N, C, T, _), val(C, X), X != 0, val(T, V).      -- IF, true branch
-val(N, V) :- sum_head(N, I), total(I, V).                          -- SUM over a chain
+val(N, V) :- sum_head(N, I), K is count(C : in_range(I, C)),       -- SUM over a range,
+             K is count(D : in_range(I, D), addend(D, _)),         -- once every cell of it
+             V is sum(X ; E : in_range(I, E), addend(E, X)).       -- has a value
 val(N, V) :- find(N, K, T, Col), val(K, Key), tkey(T, Row, Key),
              tcell(T, Row, Col, C), value(C, V).                   -- VLOOKUP, exact match
 ```
 
-`SUM` is a chain and not an aggregate because v0 has no aggregation
-(`LIMITS.md`): the host lays a range out as `sum_item(I, Cell, Next)` and the
-fold is two rules. `VLOOKUP` reaches the **cell**, not a value, which is what
+`SUM` is the kernel's `sum`, and `val`, `value` and `addend` are one recursive
+component, cyclic in the rules though acyclic in the data: a cell's value is a
+sum of cells' values. The kernel stratifies such a component by its DATA, not by
+its relations (docs/aggregates.md, "Data-level stratification, as built"): a
+cell's sum is sealed once every cell it adds is, in the order of the sheet's
+depth, and only a cell that adds itself, however far round, is refused, naming the
+cycle. The host used to lay each range out as a chain, `sum_item(I, Cell, Next)`,
+and the fold was two rules because the kernel refused the aggregate; it says now
+`in_range(I, Cell)` and nothing else, and `itotal` (the interval sum, two sums in one
+rule) and `feeds` read the same facts. The count against the count is what the chain
+did without being asked: a range with a cell that has no value (a formula SLOP will not
+compute, or one starved on such a cell) has no total, where a bare `sum` would add
+the cells that happen to have one and be a wrong number
+(`f_a_sum_over_the_cells_that_have_a_value_is_a_wrong_number`). A text cell in a range
+contributes zero, as it does in Excel. `VLOOKUP` reaches the **cell**, not a value, which is what
 makes the tree walk on into the rate table.
 
 ## What this does NOT do
@@ -571,41 +589,41 @@ Neither is visible in a spreadsheet. Both are facts about the file here.
 
 == 3. the same tree, unprojected: the kernel's own why =====================
 `huh` above is a PROJECTION onto cells. The kernel's tree goes through the
-inside of the formula, and this is it for one cell of the chain, so the
+inside of the formula, and this is it for one cell of the model, so the
 projection can be checked rather than believed.
 
 $ why value("Cost of capital worksheet!I6", 5140000)
 value[main]("Cost of capital worksheet!I6",5140000)  <= r003c807a @tick 0
-  formula[main]("Cost of capital worksheet!I6",142) [axiom]
-  val[main](142,5140000)  <= rb23bd527 @tick 0
-    pick[main](142,143,146,147) [axiom]
-    val[main](143,0)  <= r1bfe61c3 @tick 0
-      cmp[main](143,eq,144,145) [axiom]
-      val[main](144,50000000000)  <= ref8068b9 @tick 0
-        ref[main](144,"Cost of capital worksheet!H6") [axiom]
+  formula[main]("Cost of capital worksheet!I6",130) [axiom]
+  val[main](130,5140000)  <= r182251aa @tick 0
+    pick[main](130,131,134,135) [axiom]
+    val[main](131,0)  <= r1bfe61c3 @tick 0
+      cmp[main](131,eq,132,133) [axiom]
+      val[main](132,50000000000)  <= ref8068b9 @tick 0
+        ref[main](132,"Cost of capital worksheet!H6") [axiom]
         value[main]("Cost of capital worksheet!H6",50000000000)  <= r83b3dd99 @tick 0
           input[main]("Cost of capital worksheet!H6",50000000000) [axiom]
-      val[main](145,0)  <= ra98fc67f @tick 0
-        num[main](145,0) [axiom]
+      val[main](133,0)  <= ra98fc67f @tick 0
+        num[main](133,0) [axiom]
       50000000000 != 0 [builtin]
-    val[main](147,5140000)  <= rfd6bd9ae @tick 0
-      find[main](147,148,"Country equity risk premiums!A5:D196",4) [axiom]
-      val[main](148,"China")  <= ref8068b9 @tick 0
-        ref[main](148,"Cost of capital worksheet!G6") [axiom]
+    val[main](135,5140000)  <= rfd6bd9ae @tick 0
+      find[main](135,136,"Country equity risk premiums!A5:D196",4) [axiom]
+      val[main](136,"China")  <= ref8068b9 @tick 0
+        ref[main](136,"Cost of capital worksheet!G6") [axiom]
         value[main]("Cost of capital worksheet!G6","China")  <= re0fa3873 @tick 0
           label[main]("Cost of capital worksheet!G6","China") [axiom]
       tkey[main]("Country equity risk premiums!A5:D196",42,"China") [axiom]
       tcell[main]("Country equity risk premiums!A5:D196",42,4,"Country equity risk premiums!D42") [axiom]
       value[main]("Country equity risk premiums!D42",5140000)  <= r003c807a @tick 0
-        formula[main]("Country equity risk premiums!D42",425) [axiom]
-        val[main](425,5140000)  <= rfb988c49 @tick 0
-          plus[main](425,426,427) [axiom]
-          val[main](426,4230000)  <= ref8068b9 @tick 0
-            ref[main](426,"Country equity risk premiums!B1") [axiom]
+        formula[main]("Country equity risk premiums!D42",401) [axiom]
+        val[main](401,5140000)  <= rfb988c49 @tick 0
+          plus[main](401,402,403) [axiom]
+          val[main](402,4230000)  <= ref8068b9 @tick 0
+            ref[main](402,"Country equity risk premiums!B1") [axiom]
             value[main]("Country equity risk premiums!B1",4230000)  <= r83b3dd99 @tick 0
               input[main]("Country equity risk premiums!B1",4230000) [axiom]
-          val[main](427,910000)  <= ref8068b9 @tick 0
-            ref[main](427,"Country equity risk premiums!E42") [axiom]
+          val[main](403,910000)  <= ref8068b9 @tick 0
+            ref[main](403,"Country equity risk premiums!E42") [axiom]
             value[main]("Country equity risk premiums!E42",910000)  <= r83b3dd99 @tick 0
               input[main]("Country equity risk premiums!E42",910000) [axiom]
           5140000 is +(4230000,910000) [builtin]

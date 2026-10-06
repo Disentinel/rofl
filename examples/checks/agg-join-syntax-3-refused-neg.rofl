@@ -1,0 +1,5 @@
+-- expect-refusal: not a relation name
+-- `not` negates a literal; a membership is a builtin, not a literal
+edb(sxjr_p).
+sxjr_p(a, set(a)).
+sxjr_neg(X) :- sxjr_p(X, S), not X in S.

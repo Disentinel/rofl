@@ -1,0 +1,12 @@
+-- expect-refusal: un_p negates un_q, and neither is ranked by stratum/2
+-- examples/checks/strata-unranked-negation-3-refused.rofl — under the stock
+-- evaluator with no stratum table, a negation of a relation another unranked
+-- rule derives. Both rules share the final pass, so p fires beside q(1) or
+-- before it, by their canonical order and not by the meaning: the program
+-- answered p(1) beside q(1), exit 0, and is refused.
+edb(un_b).
+un_b(1).
+un_b(2).
+un_r(2) :- un_b(2).
+un_q(1) :- un_b(1), not un_r(1).
+un_p(X) :- un_b(X), not un_q(X).

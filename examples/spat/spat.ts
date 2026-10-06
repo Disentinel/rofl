@@ -22,19 +22,18 @@
 //   --week-of <week>   evaluate as of a different dated week
 //
 // BRUTE FORCE COMPUTES, ROFL EXPLAINS. The only computation here is
-// enumeration: merging adjacent slots into intervals, adding minutes up
-// (the kernel has no aggregation, on purpose), and walking a candidate grid
-// for `place`. Every judgement — who is covered, who is on call, what has
-// slack, what has a backup, which constraint took the last person away and
-// who owns it — is a query, a `whynot`, an `excise`, or a semiring folded
-// over the support the kernel recorded.
+// enumeration: walking a candidate grid for `place`. Intervals, totals and
+// minima are aggregates in spat.rofl. Every judgement — who is covered, who
+// is on call, what has slack, what has a backup, which constraint took the
+// last person away and who owns it — is a query, a `whynot`, an `excise`, or
+// a semiring folded over the support the kernel recorded.
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { Rofl } from '../../src/api.ts';
 import { evaluateSemiring } from '../../src/semiring.ts';
 import {
-  countingSemiring, tropicalSemiring, provenanceSemiring, provenanceOf,
+  countingSemiring, provenanceSemiring, provenanceOf,
   renderCount, type Count, type Polynomial,
 } from '../../runtime/semirings.ts';
 
@@ -155,33 +154,20 @@ export const dayOrder = (r: Rofl): Map<string, number> =>
   new Map(table(r, 'day', 'D, N').map((b) => [b.D, Number(b.N)]));
 export const gridOf = (r: Rofl): number => Number(table(r, 'grid', 'G')[0]?.G ?? 20);
 
-/** Slot times -> merged [from, to) intervals. The kernel has no aggregation;
- *  this is the host doing arithmetic over what the rules decided. */
-export function merge(slots: number[], grid: number): [number, number][] {
-  const xs = [...new Set(slots)].sort((a, b) => a - b);
-  const out: [number, number][] = [];
-  for (const s of xs) {
-    const last = out[out.length - 1];
-    if (last && last[1] === s) last[1] = s + grid;
-    else out.push([s, s + grid]);
-  }
-  return out;
-}
+/** The maximal runs of adjacent slots `window/5` derived, as [from, to). */
+export const windows = (r: Rofl, kind: string, who?: string): { who: string; day: string; from: number; to: number }[] =>
+  table(r, 'window', 'K, W, D, F, T').filter((x) => x.K === kind && (who === undefined || x.W === who))
+    .map((x) => ({ who: x.W, day: x.D, from: Number(x.F), to: Number(x.T) }));
 export const mins = (n: number): string =>
   n >= 60 ? `${Math.floor(n / 60)}ч ${n % 60 ? `${n % 60}м` : ''}`.trim() : `${n}м`;
 
 // ---------------------------------------------------------------------------
 // semiring folds, cached per store
 
-interface Folds { count: Map<string, Count>; prov: Map<string, Polynomial>; tight: Map<string, number>; }
+interface Folds { count: Map<string, Count>; prov: Map<string, Polynomial>; }
 const FOLDS = new WeakMap<object, Folds>();
 const NAMED_SOURCE =
   /^(usual|usual_on|moved|skipped|added|lift|present_window|absent|absent_on|awake|constraint|person|car|driver|travel|with|kind)\[main\]\(/;
-/** Weight offset: slack may be negative and tropical's discipline is stated
- *  for non-negative weights, so every chain is charged M + OFFSET and the
- *  offset is taken back off the answer. */
-const OFFSET = 10_000;
-
 export function folds(r: Rofl): Folds {
   const hit = FOLDS.get(r.store);
   if (hit) return hit;
@@ -189,22 +175,7 @@ export function folds(r: Rofl): Folds {
   const prov = evaluateSemiring(r.store, provenanceSemiring, {
     base: (k) => (NAMED_SOURCE.test(k) ? provenanceOf(k) : [[]]),
   }).value;
-  // tropical, charging each chain its own slack: the value of day_tight(P,D)
-  // is then the MINIMUM slack of that person's day.
-  const tropical = evaluateSemiring(r.store, tropicalSemiring, {
-    base: () => 0,
-    weight: (key, w) => {
-      if (!key.startsWith('day_tight[main](')) return 0;
-      const p = w.prems.find((x) => x.t === 'fact' && x.key.startsWith('slack[main]('));
-      const m = p && p.t === 'fact' ? p.key.match(/,(-?\d+)\)$/) : null;
-      return m ? Number(m[1]) + OFFSET : OFFSET;
-    },
-  }).value;
-  const tight = new Map<string, number>();
-  for (const [k, v] of tropical) {
-    if (k.startsWith('day_tight[main](') && v !== Infinity) tight.set(k, v - OFFSET);
-  }
-  const out = { count, prov, tight };
+  const out = { count, prov };
   FOLDS.set(r.store, out);
   return out;
 }
@@ -309,13 +280,7 @@ export const blocks = (r: Rofl): Block[] =>
 
 export interface Hole { child: string; day: string; from: number; to: number; }
 export function holes(r: Rofl): Hole[] {
-  const g = gridOf(r);
-  const by = index(table(r, 'uncovered', 'Ch, D, S'), (x) => `${x.Ch}|${x.D}`);
-  const out: Hole[] = [];
-  for (const [k, xs] of by) {
-    const [child, day] = k.split('|');
-    for (const [from, to] of merge(xs.map((x) => Number(x.S)), g)) out.push({ child, day, from, to });
-  }
+  const out: Hole[] = windows(r, 'uncovered').map((w) => ({ child: w.who, day: w.day, from: w.from, to: w.to }));
   const ord = dayOrder(r);
   return out.sort((a, b) => ord.get(a.day)! - ord.get(b.day)! || a.from - b.from
     || (a.child < b.child ? -1 : 1));
@@ -430,31 +395,19 @@ export function backup(r: Rofl): Duty[] {
 }
 
 // ---------------------------------------------------------------------------
-// hours: the engine says which minutes, the host adds them up
-//
-// The kernel has NO aggregation — START.md section 8 puts it out of scope —
-// so every total below is plain arithmetic here, over intervals the rules
-// derived. What the rules decide is which minutes COUNT, and that is where
-// the content is: an hour of work while you are the only person a child can
-// turn to is not an hour of work.
+// hours: the totals are `sum` and `count` in spat.rofl; this only reads them
 
 export interface Hours {
   who: string; day: string; nominal: number; effective: number; shared: number;
 }
 export function hours(r: Rofl): Hours[] {
-  const g = gridOf(r);
-  const nom = index(table(r, 'work_slot', 'P, D, S'), (x) => `${x.P}|${x.D}`);
-  const eff = index(table(r, 'eff_work', 'P, D, S'), (x) => `${x.P}|${x.D}`);
-  const sh = index(table(r, 'shared_work', 'P, D, S'), (x) => `${x.P}|${x.D}`);
+  const col = (rel: string) => new Map(table(r, rel, 'P, D, M').map((x) => [`${x.P}|${x.D}`, Number(x.M)]));
+  const eff = col('effective_min');
+  const sh = col('shared_min');
   const ord = dayOrder(r);
-  return [...nom.keys()].map((k) => {
+  return [...col('nominal_min')].map(([k, nominal]) => {
     const [who, day] = k.split('|');
-    return {
-      who, day,
-      nominal: nom.get(k)!.length * g,
-      effective: (eff.get(k) ?? []).length * g,
-      shared: (sh.get(k) ?? []).length * g,
-    };
+    return { who, day, nominal, effective: eff.get(k) ?? 0, shared: sh.get(k) ?? 0 };
   }).sort((a, b) => (a.who < b.who ? -1 : a.who > b.who ? 1 : 0)
     || ord.get(a.day)! - ord.get(b.day)!);
 }
@@ -464,21 +417,11 @@ export function hours(r: Rofl): Hours[] {
 
 export interface FreeWin { day: string; from: number; to: number; }
 export function freeTime(r: Rofl, who: string): { free: FreeWin[]; raw: FreeWin[]; onCall: FreeWin[] } {
-  const g = gridOf(r);
-  const pick = (rel: string, vars: string): FreeWin[] => {
-    const by = index(table(r, rel, vars).filter((x) => x.P === who), (x) => x.D);
-    const out: FreeWin[] = [];
-    for (const [day, xs] of by) {
-      for (const [from, to] of merge(xs.map((x) => Number(x.S)), g)) out.push({ day, from, to });
-    }
-    const ord = dayOrder(r);
-    return out.sort((a, b) => ord.get(a.day)! - ord.get(b.day)! || a.from - b.from);
-  };
-  return {
-    free: pick('free_slot', 'P, D, S'),
-    raw: pick('raw_gap', 'P, D, S'),
-    onCall: pick('on_call', 'P, D, S'),
-  };
+  const ord = dayOrder(r);
+  const pick = (kind: string): FreeWin[] =>
+    windows(r, kind, who).map(({ day, from, to }) => ({ day, from, to }))
+      .sort((a, b) => ord.get(a.day)! - ord.get(b.day)! || a.from - b.from);
+  return { free: pick('free'), raw: pick('raw'), onCall: pick('on_call') };
 }
 
 // ---------------------------------------------------------------------------
@@ -656,16 +599,11 @@ export function renderChains(r: Rofl): string {
       + ` ${ru(c.a).padEnd(18)} → ${ru(c.b).padEnd(18)} ${String(c.m).padStart(4)} мин`);
   }
   if (cs.length > 12) out.push(`  ... ${cs.length - 12} more, all with room to spare.`);
-  const f = folds(r);
-  const tight = [...f.tight.entries()]
-    .map(([k, v]) => {
-      const m = k.match(/^day_tight\[main\]\(([^,]+),([^)]+)\)$/)!;
-      return { who: m[1], day: m[2], m: v };
-    })
+  const tight = table(r, 'day_tight', 'P, D, M')
+    .map((x) => ({ who: x.P, day: x.D, m: Number(x.M) }))
     .sort((a, b) => a.m - b.m);
   if (tight.length > 0) {
-    out.push('\n  tightest handover of each day (tropical semiring: a minimum the');
-    out.push('  kernel has no aggregation to compute, folded over the same support):');
+    out.push('\n  tightest handover of each day (the min aggregate over the slack rows):');
     for (const t of tight.slice(0, 6)) {
       out.push(`    ${ru(t.day).padEnd(3)} ${ru(t.who).padEnd(8)} ${String(t.m).padStart(4)} мин`);
     }
@@ -941,9 +879,9 @@ async function main(argv: string[]): Promise<void> {
     const by = index(hs, (h) => h.who);
     for (const [who, xs] of by) {
       console.log(`  ${ru(who)}`);
-      let n = 0; let e = 0; let sh = 0;
+      const tot = table(r, 'work_week', 'P, N, E, H').find((x) => x.P === who)!;
+      const [n, e, sh] = [Number(tot.N), Number(tot.E), Number(tot.H)];
       for (const h of xs.sort((a, b) => ord.get(a.day)! - ord.get(b.day)!)) {
-        n += h.nominal; e += h.effective; sh += h.shared;
         console.log(`    ${ru(h.day).padEnd(3)} ${mins(h.nominal).padStart(8)} номинально`
           + ` · ${mins(h.effective).padStart(8)} эффективно`
           + ` · ${mins(h.nominal - h.shared).padStart(8)} без ребёнка рядом`);
@@ -956,8 +894,6 @@ async function main(argv: string[]): Promise<void> {
     console.log('  ребёнок дома и его надо держать в поле зрения, даже если второй');
     console.log('  взрослый тоже дома. Первое — то, что ломается; второе — то, что');
     console.log('  в исходном расписании подписано «реально часа 3-4».\n');
-    console.log('  The kernel has no aggregation (START.md section 8): the rules decide');
-    console.log('  which minutes count, these totals are plain arithmetic in spat.ts.');
   } else if (cmd === 'free') {
     const who = rest[0];
     const { free, raw, onCall } = freeTime(r, who);
@@ -974,10 +910,11 @@ async function main(argv: string[]): Promise<void> {
       console.log(`  ${ru(day).padEnd(3)} свободно: ${f.join(', ') || '—'}`);
       if (oc.length > 0) console.log(`      на связи (не свободно): ${oc.join(', ')}`);
     }
-    const span = (xs: FreeWin[]) => xs.reduce((n, x) => n + (x.to - x.from), 0);
-    console.log(`\n  сырые промежутки: ${mins(span(raw))} за неделю`);
-    console.log(`  из них свободно:  ${mins(span(free))}`);
-    console.log(`  разница:          ${mins(span(raw) - span(free))} — это и есть ответ.`);
+    const total = (kind: string) =>
+      Number(table(r, 'win_total', 'K, W, M').find((x) => x.K === kind && x.W === who)?.M ?? 0);
+    console.log(`\n  сырые промежутки: ${mins(total('raw'))} за неделю`);
+    console.log(`  из них свободно:  ${mins(total('free'))}`);
+    console.log(`  разница:          ${mins(total('raw') - total('free'))} — это и есть ответ.`);
   } else if (cmd === 'place') {
     const act = rest[0];
     const dur = parseTime(rest[1] ?? '60');
@@ -1000,8 +937,8 @@ async function main(argv: string[]): Promise<void> {
     } else {
       const by = index(ok, (x) => x.day);
       for (const day of [...by.keys()].sort((a, b) => ord.get(a)! - ord.get(b)!)) {
-        const xs = by.get(day)!.map((x) => x.at).sort((a, b) => a - b);
-        const wins = merge(xs, g).map(([f, t]) => `${hhmm(f)}–${hhmm(t - g + dur)}`);
+        const wins = windows(w, 'place', act).filter((x) => x.day === day)
+          .sort((a, b) => a.from - b.from).map((x) => `${hhmm(x.from)}–${hhmm(x.to - g + dur)}`);
         const best = by.get(day)!.reduce((a, b) => (b.buffer > a.buffer ? b : a));
         console.log(`  ${ru(day).padEnd(3)} ${wins.join(', ')}`);
         console.log(`      лучше всего ${hhmm(best.at)}: оставляет `

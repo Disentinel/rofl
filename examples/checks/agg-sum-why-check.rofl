@@ -1,0 +1,38 @@
+-- examples/checks/agg-sum-why-check.rofl — agg_sum_why, run with
+-- `rofl-load --explain`: `why` of a sum names what it sealed and lists its
+-- members, a digest of five with the rest counted; `why_all` lists all six;
+-- `whynot` of a wrong sum says what the sum is, and of a sum with no value
+-- says which hole it is: gbig's overflow, gmix's multiplication. A hole is
+-- not an empty group, and its members are not missing facts.
+edb(explain_request).
+edb(explained).
+explain_request(why, as_sums(g1, 18)).
+explain_request(why_all, as_sums(g1, 18)).
+explain_request(whynot, as_sums(g1, 99)).
+explain_request(whynot, as_sums(gbig, 7)).
+explain_request(whynot, as_tripled(gmix, 7)).
+asy_holds(K, T)  :- explained[$explain](K, as_sums(g1, _), _, L), asy_want(K, T), N is str_segs(L, T), N > 1.
+asy_want(why, "sealed as_line@").
+asy_want(why, "[aggregate: 6 members").
+asy_want(why, "#5 (").
+asy_want(why, "[1 more members: why all as_sums[main](g1,18)]").
+asy_want(why_all, "#6 (").
+asy_want(whynot, "= 18, not 99 [aggregate]").
+asy_never(why, "#6 (").
+asy_never(why_all, "more members").
+why_text_missing(K, T) :- asy_want(K, T), not asy_holds(K, T).
+why_text_leaked(K, T)  :- asy_never(K, T), explained[$explain](K, as_sums(g1, _), _, L), N is str_segs(L, T), N > 1.
+explain_refused(K, A)  :- explained[$explain](K, A, 0, _).
+alarm(why_text_missing).
+alarm(why_text_leaked).
+alarm(explain_refused).
+asy_hole(as_sums(gbig, 7), "has no value: hole(agg_overflow) [aggregate]").
+asy_hole(as_tripled(gmix, 7), "has no value: hole(arith_overflow) [aggregate]").
+asy_hole_said(A, T)      :- asy_hole(A, T), explained[$explain](whynot, A, _, L), N is str_segs(L, T), N > 1.
+hole_text_missing(A, T)  :- asy_hole(A, T), not asy_hole_said(A, T).
+hole_read_as(A, T)       :- asy_hole(A, _), asy_hole_never(T), explained[$explain](whynot, A, _, L), N is str_segs(L, T), N > 1.
+asy_hole_never("empty group").
+asy_hole_never("no rule concludes").
+asy_hole_never("no matching base fact").
+alarm(hole_text_missing).
+alarm(hole_read_as).

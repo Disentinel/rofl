@@ -1,0 +1,30 @@
+-- examples/checks/agg-join-ticks-data.rofl — A JOIN ACROSS TICKS, for
+-- agg_join_ticks (docs/aggregates.md, "The join lattice, as built").
+-- `tj_reach(A, S)@next` stages a contribution: at tick 1 it is a base fact
+-- of tj_reach@next, a relation no program can write, and the cell joins it
+-- with the contributions of tick 1's own rules. Tick 1 loses b's edge and
+-- gains x -> z, so b reaches c and d only by what tick 0 carried, and x's
+-- cell joins the set(y) carried with the z tick 1 contributes: set(y, z),
+-- a value neither contributed.
+edb(tj_e).
+tj_e(a, b). tj_e(b, c). tj_e(c, d). tj_e(x, y).
+tj_e(A, B)@next :- tj_e(A, B), A != b.
+tj_e(x, z)@next :- tj_e(x, y).
+lattice tj_reach(A, union S).
+tj_reach(A, set(B)) :- tj_e(A, B).
+tj_reach(A, S)      :- tj_e(A, B), tj_reach(B, S).
+tj_reach(A, S)@next :- tj_reach(A, S).
+-- A HOLE ACROSS THE BOUNDARY. heavy is no number: tj_h's cell q is a hole at
+-- tick 0 and p's, which reads it, withdrawn; the staging rule is holed for
+-- both. At tick 1 they are unknown, not absent: holes there too, and a
+-- count of tj_h's cells is no number of the cells that were staged.
+edb(tj_hv).
+edb(tj_hl).
+tj_hv(p, 1). tj_hv(q, heavy). tj_hv(r, 3).
+tj_hl(p, q). tj_hl(q, r).
+lattice tj_h(N, union S).
+tj_h(N, set(K)) :- tj_hv(N, V), K is V + 1.
+tj_h(N, S)      :- tj_hl(N, M), tj_h(M, S).
+tj_h(N, S)@next :- tj_h(N, S).
+explain_request(K, A)@next :- explain_request(K, A).
+alarm(R)@next :- alarm(R).

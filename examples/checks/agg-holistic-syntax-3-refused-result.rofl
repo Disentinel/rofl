@@ -1,0 +1,3 @@
+-- expect-refusal: a variable or a constant
+-- the result is one term, not an expression
+sxhr_result(M) :- M + 1 is median(V ; K : sxh_l(_, K, V, _)).

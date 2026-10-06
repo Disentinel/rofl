@@ -47,10 +47,22 @@ fn tokens(src: &str) -> Result<Vec<Tok>, DenseError> {
             while j < b.len() && b[j] != '"' {
                 if b[j] == '\\' {
                     let e = b.get(j + 1).copied().unwrap_or(' ');
+                    if e == 'u' {
+                        let hex: String = b.get(j + 2..j + 6).map(|h| h.iter().collect()).unwrap_or_default();
+                        let c = u32::from_str_radix(&hex, 16).ok()
+                            .filter(|n| hex.len() == 4 && hex.chars().all(|c| c.is_ascii_hexdigit()) && *n < 0x20)
+                            .and_then(char::from_u32)
+                            .ok_or_else(|| DenseError(format!("line {line}: unknown escape")))?;
+                        s.push(c);
+                        j += 6;
+                        continue;
+                    }
                     let r = match e {
                         'n' => '\n',
                         't' => '\t',
                         'r' => '\r',
+                        'b' => '\u{8}',
+                        'f' => '\u{c}',
                         '\\' => '\\',
                         '"' => '"',
                         _ => return Err(DenseError(format!("line {line}: unknown escape"))),
@@ -316,4 +328,23 @@ pub fn dense_clauses(h: &mut Heap, src: &str) -> Result<Vec<Clause>, DenseError>
         }
     }
     Ok(out)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn text(src: &str) -> Result<String, DenseError> {
+        let mut h = Heap::default();
+        let rows = dense_facts(&mut h, src)?;
+        Ok(rows.iter().map(|r| format!("{}:{}", r.rel, r.args.len())).collect::<Vec<_>>().join(" "))
+    }
+
+    #[test]
+    fn the_strings_read_the_escapes_of_the_main_reader_and_refuse_the_rest() {
+        assert_eq!(text(r#"p("\b\f\u001f\n")."#).unwrap(), "p:1");
+        for bad in [r#"p("\u+01f")."#, r#"p("\u0041")."#, r#"p("\u01f")."#, r#"p("\x")."#] {
+            assert!(text(bad).is_err(), "{bad} was read");
+        }
+    }
 }

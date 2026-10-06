@@ -1,0 +1,132 @@
+-- examples/checks/agg-lattice-history-data.rofl — THE ORDER LATTICE, WHERE
+-- HOW A VALUE WAS REACHED MATTERS, shared by agg_lattice_eval, _witness and
+-- _why beside agg-lattice-data.rofl (docs/aggregates.md, "The order lattice,
+-- as built").
+--
+-- alx_d1, alx_d2, alx_d4, alx_sat, alx_d6 with alx_ok: values reached only
+-- through the cell's own earlier values — a consumer that is no lattice on
+-- the way (alx_flag), a threshold (D1 < 2 concludes 0), a decrement that
+-- saturates at 0, a max that saturates at 3 over a cycle, an or over a
+-- cycle through a min. At the end each such value's only derivations over
+-- final values are cycles; it is well-founded through the values it had.
+-- alx_z: two graphs alike but for one node's name (v, a); their witnesses
+-- must be alike too. alx_sl, alx_t: a zero-weight self-loop that ties a min,
+-- and a self-loop under an or. alx_o1, alx_o2: one rule written in two
+-- orders, a weight that is not a number on a reachable edge (q to r) and on
+-- none (m to n). alx_h: a fault on a cell (b) that arrives early in graph
+-- pa and late in graph pb, and one on a cell (c) that read it. alx_od: an
+-- overflow on a value (a to b through the heavy edge) since improved on.
+edb(alx_e1).
+edb(alx_e4).
+edb(alx_e5).
+edb(alx_e6).
+edb(alx_ze).
+edb(alx_src).
+edb(alx_sle).
+edb(alx_seed).
+edb(alx_link).
+edb(alx_s).
+edb(alx_oe).
+edb(alx_he).
+edb(alx_hw).
+edb(alx_ov).
+alx_e1(a, b, 1).
+alx_e4(a, b, 5).
+alx_e5(a, b, 1).
+alx_e5(b, a, 1).
+alx_e6(a, b, 1).
+alx_e6(b, c, 2).
+alx_e6(c, a, 3).
+alx_ze(gv, s, t, 0).
+alx_ze(gv, s, v, 0).
+alx_ze(gv, t, u, 0).
+alx_ze(gv, v, u, 0).
+alx_ze(gv, u, t, 0).
+alx_ze(ga, s, t, 0).
+alx_ze(ga, s, a, 0).
+alx_ze(ga, t, u, 0).
+alx_ze(ga, a, u, 0).
+alx_ze(ga, u, t, 0).
+alx_src(sl, a).
+alx_sle(a, b, 1).
+alx_sle(b, b, 0).
+alx_seed(x, true).
+alx_link(x, y).
+alx_link(y, y).
+alx_s(a, b, 1).
+alx_s(x, y, 1).
+alx_s(p, q, 1).
+alx_oe(y, z, 2).
+alx_oe(q, r, heavy).
+alx_oe(m, n, heavy).
+alx_src(pa, a).
+alx_src(pb, a).
+alx_he(pa, a, b, 5).
+alx_he(pa, a, c, 7).
+alx_hw(pa, b, c, oops).
+alx_hw(pa, a, b, oops).
+alx_he(pb, a, b, 5).
+alx_he(pb, a, c, 7).
+alx_hw(pb, b, c, oops).
+alx_he(pb, a, z1, 1).
+alx_he(pb, z1, z2, 1).
+alx_he(pb, z2, z3, 1).
+alx_hw(pb, z3, b, oops).
+alx_ov(a, b, 1152921504606846900).
+alx_ov(a, x, 1).
+alx_ov(x, b, 1).
+alx_ov(b, c, 576460752303423488).
+
+lattice alx_d1(A, C, min D).
+alx_d1(A, C, D) :- alx_e1(A, C, D).
+alx_flag(C) :- alx_d1(_, C, D), D < 2.
+alx_d1(a, C, 0) :- alx_flag(C).
+
+lattice alx_d2(A, C, min D).
+alx_d2(A, C, D) :- alx_e1(A, C, D).
+alx_d2(A, C, D) :- alx_d2(A, C, D1), D1 < 2, D is 0.
+
+lattice alx_d4(A, C, min D).
+alx_d4(A, C, D) :- alx_e4(A, C, D).
+alx_d4(A, C, D) :- alx_d4(A, C, D1), X is D1 - 1, D is max(X, 0).
+
+lattice alx_sat(A, max W).
+alx_sat(A, W) :- alx_e5(A, _, W).
+alx_sat(B, W) :- alx_sat(A, W1), alx_e5(A, B, _), X is W1 + 1, W is min(X, 3).
+
+lattice alx_d6(A, C, min D).
+alx_d6(A, C, D) :- alx_e6(A, C, D).
+lattice alx_ok(X, or B).
+alx_ok(X, false) :- alx_e6(X, _, _).
+alx_ok(C, B) :- alx_ok(A, B), alx_e6(A, C, _).
+alx_d6(A, C, 0) :- alx_ok(A, true), alx_e6(A, C, _).
+alx_ok(C, true) :- alx_d6(_, C, D), D < 2.
+
+lattice alx_z(G, A, C, min D).
+alx_z(G, A, C, D) :- alx_ze(G, A, C, D).
+alx_z(G, A, C, D) :- alx_z(G, A, B, D1), alx_ze(G, B, C, W), D is D1 + W.
+
+lattice alx_sl(X, min D).
+alx_sl(X, 0) :- alx_src(sl, X).
+alx_sl(Y, D) :- alx_sl(X, D1), alx_sle(X, Y, W), D is D1 + W.
+
+lattice alx_t(X, or B).
+alx_t(X, B) :- alx_seed(X, B).
+alx_t(Y, B) :- alx_t(X, B), alx_link(X, Y).
+
+lattice alx_o1(A, C, min D).
+alx_o1(A, C, D) :- alx_s(A, C, D).
+alx_o1(A, C, D) :- alx_o1(A, B, D1), alx_oe(B, C, W), Y is W + 1, D is D1 + Y.
+
+lattice alx_o2(A, C, min D).
+alx_o2(A, C, D) :- alx_s(A, C, D).
+alx_o2(A, C, D) :- alx_oe(B, C, W), Y is W + 1, alx_o2(A, B, D1), D is D1 + Y.
+
+lattice alx_h(G, X, min D).
+alx_h(G, X, 0) :- alx_src(G, X), G != sl.
+alx_h(G, Y, D) :- alx_h(G, X, D1), alx_he(G, X, Y, W), D is D1 + W.
+alx_h(G, Y, D) :- alx_h(G, X, D1), alx_hw(G, X, Y, W), D is D1 + W.
+
+lattice alx_od(A, C, min D).
+alx_od(A, C, D) :- alx_ov(A, C, D).
+alx_od(A, C, D) :- alx_od(A, B, D1), alx_ov(B, C, W), D is D1 + W.

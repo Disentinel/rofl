@@ -1,0 +1,87 @@
+-- examples/checks/agg-incr-sum.rofl — agg_incr_sum: count and sum cells under
+-- RETRACTION (docs/aggregates.md, "Ready for the incremental engine").
+--
+-- Three facts are retracted after the evaluation (`check_opt(.., retract, ..)`
+-- in facts/checks.rofl): the Rust engine updates the cells they supported, a
+-- sum and a count by SUBTRACTION, and the TypeScript engine evaluates again.
+-- Both must hold the state of a world that never had them, so the rows below
+-- are that state, stated by hand: the new totals, a member that stays under
+-- another derivation, a group that is gone, a count that is 0.
+--
+--   ai_sale(1, a, 10)  the first member of two cells leaves: a's total 15 -> 5, count 2 -> 1
+--   ai_chan(3, x)      sale 3 is still counted through ai_chan(3, y): its member
+--                      stays and rests on the other derivation
+--   ai_sale(5, c, 2)   c's only member: its group is gone (no ai_total of c) and
+--                      its counts are 0, the empty group of a bound key
+--
+-- A member's id is a function of what the member is (the cell's key and its
+-- projection) and never of its place in the cell: the survivor of a's sum
+-- keeps the id it had at #2 (af2586456ac89042 before), at #1 now, and b's two
+-- equal sales stay two members under the ids they had.
+edb(ai_sale).
+edb(ai_chan).
+edb(ai_grp).
+ai_grp(a).
+ai_grp(b).
+ai_grp(c).
+ai_sale(1, a, 10).
+ai_sale(2, a, 5).
+ai_sale(3, b, 7).
+ai_sale(4, b, 7).
+ai_sale(5, c, 2).
+ai_chan(1, x).
+ai_chan(2, x).
+ai_chan(3, x).
+ai_chan(3, y).
+
+ai_total(G, S) :- S is sum(V ; K : ai_sale(K, G, V)).
+ai_n(G, N)     :- ai_grp(G), N is count(K : ai_sale(K, G, _)).
+ai_via(G, N)   :- ai_grp(G), N is count(K : ai_sale(K, G, _), ai_chan(K, _)).
+
+-- the state after the three retractions, row by row
+-- expect-row: ai_n[main](a,1) tick drv support=1
+-- expect-row: ai_n[main](b,2) tick drv support=1
+-- expect-row: ai_n[main](c,0) tick drv support=1
+-- expect-row: ai_total[main](a,5) tick drv support=1
+-- expect-row: ai_total[main](b,14) tick drv support=1
+-- expect-row: ai_via[main](a,1) tick drv support=1
+-- expect-row: ai_via[main](b,1) tick drv support=1
+-- expect-row: ai_via[main](c,0) tick drv support=1
+-- expect-row: cell $cell(r40fe549b,2,0,$cons(a,$nil)) count = 1 h=1 tick=0 sealed=[ai_sale@0] alg=invertible use=subtract
+-- expect-row: mem $cell(r40fe549b,2,0,$cons(a,$nil)) #1 id=42743f78b8359aee (2) h=1 [fact:ai_sale[main](2,a,5)]
+-- expect-row: cell $cell(r40fe549b,2,0,$cons(b,$nil)) count = 2 h=1 tick=0 sealed=[ai_sale@0] alg=invertible use=subtract
+-- expect-row: mem $cell(r40fe549b,2,0,$cons(b,$nil)) #1 id=7baf554169b2dd22 (3) h=1 [fact:ai_sale[main](3,b,7)]
+-- expect-row: mem $cell(r40fe549b,2,0,$cons(b,$nil)) #2 id=7ba5354169aa523d (4) h=1 [fact:ai_sale[main](4,b,7)]
+-- expect-row: cell $cell(r40fe549b,2,0,$cons(c,$nil)) count = 0 h=0 tick=0 sealed=[ai_sale@0] alg=invertible use=subtract
+-- expect-row: cell $cell(r77e892da,1,0,$cons(a,$nil)) sum = 5 h=1 tick=0 sealed=[ai_sale@0] alg=invertible use=subtract
+-- expect-row: mem $cell(r77e892da,1,0,$cons(a,$nil)) #1 id=af2586456ac89042 (5,2) h=1 [fact:ai_sale[main](2,a,5)]
+-- expect-row: cell $cell(r77e892da,1,0,$cons(b,$nil)) sum = 14 h=1 tick=0 sealed=[ai_sale@0] alg=invertible use=subtract
+-- expect-row: mem $cell(r77e892da,1,0,$cons(b,$nil)) #1 id=1746302d82503e18 (7,3) h=1 [fact:ai_sale[main](3,b,7)]
+-- expect-row: mem $cell(r77e892da,1,0,$cons(b,$nil)) #2 id=1749d82d82539167 (7,4) h=1 [fact:ai_sale[main](4,b,7)]
+-- expect-row: cell $cell(r9f34c003,2,0,$cons(a,$nil)) count = 1 h=1 tick=0 sealed=[ai_sale@0, ai_chan@0] alg=invertible use=subtract
+-- expect-row: mem $cell(r9f34c003,2,0,$cons(a,$nil)) #1 id=edaaf9f5958a698b (2) h=1 [fact:ai_chan[main](2,x); fact:ai_sale[main](2,a,5)]
+-- expect-row: cell $cell(r9f34c003,2,0,$cons(b,$nil)) count = 1 h=1 tick=0 sealed=[ai_sale@0, ai_chan@0] alg=invertible use=subtract
+-- expect-row: mem $cell(r9f34c003,2,0,$cons(b,$nil)) #1 id=df3b542e1e691c07 (3) h=1 [fact:ai_chan[main](3,y); fact:ai_sale[main](3,b,7)]
+-- expect-row: cell $cell(r9f34c003,2,0,$cons(c,$nil)) count = 0 h=0 tick=0 sealed=[ai_sale@0, ai_chan@0] alg=invertible use=subtract
+-- and nothing of what they supported before
+-- expect-no-row: ai_n[main](a,2) tick drv support=1
+-- expect-no-row: ai_n[main](c,1) tick drv support=1
+-- expect-no-row: ai_total[main](a,15) tick drv support=1
+-- expect-no-row: ai_total[main](c,2) tick drv support=1
+-- expect-no-row: ai_via[main](a,2) tick drv support=1
+-- expect-no-row: cell $cell(r40fe549b,2,0,$cons(a,$nil)) count = 2 h=1 tick=0 sealed=[ai_sale@0] alg=invertible use=subtract
+-- expect-no-row: mem $cell(r40fe549b,2,0,$cons(a,$nil)) #1 id=4277a778b838817d (1) h=1 [fact:ai_sale[main](1,a,10)]
+-- expect-no-row: mem $cell(r40fe549b,2,0,$cons(a,$nil)) #2 id=42743f78b8359aee (2) h=1 [fact:ai_sale[main](2,a,5)]
+-- expect-no-row: cell $cell(r40fe549b,2,0,$cons(c,$nil)) count = 1 h=1 tick=0 sealed=[ai_sale@0] alg=invertible use=subtract
+-- expect-no-row: mem $cell(r40fe549b,2,0,$cons(c,$nil)) #1 id=8a95ff08e13957d7 (5) h=1 [fact:ai_sale[main](5,c,2)]
+-- expect-no-row: cell $cell(r77e892da,1,0,$cons(a,$nil)) sum = 15 h=1 tick=0 sealed=[ai_sale@0] alg=invertible use=subtract
+-- expect-no-row: mem $cell(r77e892da,1,0,$cons(a,$nil)) #1 id=d66ef1c02cba5e4b (10,1) h=1 [fact:ai_sale[main](1,a,10)]
+-- expect-no-row: mem $cell(r77e892da,1,0,$cons(a,$nil)) #2 id=af2586456ac89042 (5,2) h=1 [fact:ai_sale[main](2,a,5)]
+-- expect-no-row: cell $cell(r77e892da,1,0,$cons(c,$nil)) sum = 2 h=1 tick=0 sealed=[ai_sale@0] alg=invertible use=subtract
+-- expect-no-row: mem $cell(r77e892da,1,0,$cons(c,$nil)) #1 id=8977917197664948 (2,5) h=1 [fact:ai_sale[main](5,c,2)]
+-- expect-no-row: cell $cell(r9f34c003,2,0,$cons(a,$nil)) count = 2 h=1 tick=0 sealed=[ai_sale@0, ai_chan@0] alg=invertible use=subtract
+-- expect-no-row: mem $cell(r9f34c003,2,0,$cons(a,$nil)) #1 id=edb519f59592f470 (1) h=1 [fact:ai_chan[main](1,x); fact:ai_sale[main](1,a,10)]
+-- expect-no-row: mem $cell(r9f34c003,2,0,$cons(a,$nil)) #2 id=edaaf9f5958a698b (2) h=1 [fact:ai_chan[main](2,x); fact:ai_sale[main](2,a,5)]
+-- expect-no-row: mem $cell(r9f34c003,2,0,$cons(b,$nil)) #1 id=df3b542e1e691c07 (3) h=1 [fact:ai_chan[main](3,x); fact:ai_sale[main](3,b,7)]
+-- expect-no-row: ai_sale[main](1,a,10)
+-- expect-no-row: ai_chan[main](3,x)

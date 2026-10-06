@@ -1,0 +1,10 @@
+-- expect-refusal: tag tgfr_n (counting) is not evaluated under well_founded semantics
+-- examples/checks/agg-tag-wfs-3-refused-counting.rofl — a counting tag inside
+-- a well-founded world is refused: its sum would count derivations that may
+-- not hold.
+semantics(well_founded).
+edb(tgfr_m).
+tgfr_m(a, b). tgfr_m(b, a).
+tgfr_w(X) :- tgfr_m(X, Y), not tgfr_w(Y).
+tag tgfr_n(X, counting N).
+tgfr_n(X, 1) :- tgfr_m(X, Y), tgfr_w(Y).

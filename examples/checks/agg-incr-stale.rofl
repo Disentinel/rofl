@@ -1,0 +1,25 @@
+-- examples/checks/agg-incr-stale.rofl — agg_incr_stale: A HOLE THE RETRACTED FACT
+-- MADE IS GONE WITH IT. A sum over a member that is no number is a hole
+-- (`agg_type_error`), a base, frozen row the cleaning of derived facts keeps;
+-- evaluating again after the fact is retracted must not keep it: the state is
+-- the one of a world without the fact, and what rests on a world with a hole
+-- (every later retraction is evaluated again) is not left standing.
+--
+--   ast_u(2, x)   the only member that is not a number: the sum is 4 and there is no hole
+edb(ast_u).
+ast_u(1, 4).
+ast_u(2, x).
+ast_s(S) :- S is sum(X ; K : ast_u(K, X)).
+
+-- the state after the retractions, row by row
+-- expect-row: ast_s[main](4) tick drv support=1
+-- expect-row: ast_u[main](1,4) tick base support=0
+-- expect-row: cell $cell(rccff93f7,1,0,$nil) sum = 4 h=1 tick=0 sealed=[ast_u@0] alg=invertible use=subtract
+-- expect-row: mem $cell(rccff93f7,1,0,$nil) #1 id=ab38bdbdff90426f (4,1) h=1 [fact:ast_u[main](1,4)]
+-- and nothing of what they supported before
+-- expect-no-row: ast_u[main](2,x) tick base support=0
+-- expect-no-row: hole[$kernel]($cell(rccff93f7,1,0,$nil),agg_type_error) timeless base frozen support=0
+-- expect-no-row: shrug[$kernel]($cell(rccff93f7,1,0,$nil),fault,agg_type_error) tick base support=0
+-- expect-no-row: shrug[$kernel](ast_s($unknown_value),inherited,from($cons($cell(rccff93f7,1,0,$nil),$nil))) tick base support=0
+-- expect-no-row: cell $cell(rccff93f7,1,0,$nil) sum = hole(agg_type_error) h=1 tick=0 sealed=[ast_u@0] alg=invertible use=subtract
+-- expect-no-row: mem $cell(rccff93f7,1,0,$nil) #2 id=11c033882c12a298 (x,2) h=1 [fact:ast_u[main](2,x)]

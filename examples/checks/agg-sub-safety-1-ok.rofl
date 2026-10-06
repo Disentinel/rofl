@@ -1,0 +1,19 @@
+-- examples/checks/agg-sub-safety-1-ok.rofl — what a subsumptive relation
+-- admits: its values used any way inside its recursion (arithmetic, a
+-- comparison, a copy into a relation that is no cell, whose copies of a
+-- dominated value are withdrawn), a key of any width, a wildcard, a body
+-- that reads a relation, negates one and binds by `is`; and from outside its
+-- recursion a negation of it and a count of its front, strict edges.
+edb(assk_e).
+assk_e(a, b, 4). assk_e(a, b, 2). assk_e(b, c, 1). assk_e(c, a, 5).
+assk_p(A, B, D) :- assk_e(A, B, D).
+assk_p(A, C, D) :- assk_near(A, B, D0), assk_e(B, C, W), D0 < 9, D is D0 + W.
+assk_near(A, B, D) :- assk_p(A, B, D).
+assk_p(A, B, X) <= assk_p(A, B, Y) :- Z is Y + 0, Z < X, not assk_never(Z).
+edb(assk_never).
+assk_far(A, B) :- assk_e(A, B, _), not assk_p(A, B, 1).
+assk_n(N) :- N is count(A, B, D : assk_p(A, B, D)).
+assk_one(V) :- assk_e(_, _, V).
+assk_one(V1) <= assk_one(V2) :- V2 < V1.
+assk_wild(K, V, W) :- assk_e(K, W, V).
+assk_wild(K, V1, _) <= assk_wild(K, V2, _) :- V2 < V1.

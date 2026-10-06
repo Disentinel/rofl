@@ -3,7 +3,7 @@
 
 export type Term =
   | { k: 'v'; name: string }                    // variable
-  | { k: 'i'; v: number }                       // integer
+  | { k: 'i'; v: Int }                          // integer
   | { k: 's'; v: string }                       // string
   | { k: 'a'; name: string }                    // atom
   | { k: 'f'; name: string; args: Term[] };     // functor(term, ...)
@@ -54,7 +54,15 @@ const ATOM_CAP = 8192;
 const atomCache = new Map<string, Term>();
 
 export const mkv = (name: string): Term => ({ k: 'v', name });
-export const mki = (v: number): Term => ({ k: 'i', v });
+/** An integer of the term range [-2^60, 2^60), exact: a number where one is
+ *  exact (within ±(2^53-1)), a bigint past that, so each value has one
+ *  spelling and `===` compares values. */
+export type Int = number | bigint;
+const SAFE = BigInt(Number.MAX_SAFE_INTEGER);
+export const TERM_MIN = -(1n << 60n);
+export const TERM_MAX = (1n << 60n) - 1n;
+export const normInt = (v: Int): Int => (typeof v === 'bigint' && v >= -SAFE && v <= SAFE ? Number(v) : v);
+export const mki = (v: Int): Term => ({ k: 'i', v: normInt(v) });
 export const mks = (v: string): Term => ({ k: 's', v });
 export const mka = (name: string): Term => {
   const hit = atomCache.get(name);
@@ -93,7 +101,8 @@ export function resolve(t: Term, s: Subst): Term {
   return t;
 }
 
-/** Syntactic unification. No occurs-check (documented v0 omission).
+/** Syntactic unification, with the occurs check: a variable is not bound to a term holding it (X = g(X) has no finite solution, and a cyclic
+ *  binding sent `resolve` down without end).
  *  Returns an extended copy of the substitution, or null. */
 export function unify(a: Term, b: Term, s: Subst): Subst | null {
   const out = new Map(s);
@@ -101,15 +110,27 @@ export function unify(a: Term, b: Term, s: Subst): Subst | null {
   return null;
 }
 
+/** Whether the variable `v` occurs in `t` under `s`. */
+function occurs(v: string, t: Term, s: Subst): boolean {
+  t = walk(t, s);
+  if (t.k === 'v') return t.name === v;
+  return t.k === 'f' && t.args.some((a) => occurs(v, a, s));
+}
+
 function unifyInto(a: Term, b: Term, s: Subst): boolean {
   a = walk(a, s);
   b = walk(b, s);
   if (a.k === 'v') {
     if (b.k === 'v' && b.name === a.name) return true;
+    if (b.k === 'f' && occurs(a.name, b, s)) return false;
     s.set(a.name, b);
     return true;
   }
-  if (b.k === 'v') { s.set(b.name, a); return true; }
+  if (b.k === 'v') {
+    if (a.k === 'f' && occurs(b.name, a, s)) return false;
+    s.set(b.name, a);
+    return true;
+  }
   if (a.k === 'i' && b.k === 'i') return a.v === b.v;
   if (a.k === 's' && b.k === 's') return a.v === b.v;
   if (a.k === 'a' && b.k === 'a') return a.name === b.name;
@@ -165,6 +186,102 @@ export function varsOf(t: Term, into: Set<string> = new Set()): Set<string> {
   return into;
 }
 
+// THE UNKNOWN VALUE (docs/aggregates.md, "Shrugs, as built"): a position of a
+// tuple a hole left out that is not known, one term for every evaluator.
+
+export const UNKNOWN_VALUE: Term = { k: 'a', name: '$unknown_value' };
+
+export function holdsUnknown(t: Term): boolean {
+  return (t.k === 'a' && t.name === '$unknown_value') || (t.k === 'f' && (t.name === '$unk' || t.name === '$by' || t.args.some(holdsUnknown)));
+}
+
+// A LABELED UNKNOWN (docs/aggregates.md, "Labeled unknowns"): `$unk(L, Ex, Sure)`, one occurrence of the unknown
+// value L, known not to be any of the list `Ex`, `Sure` 1 when the tuple that holds it exists in every completion;
+// `$by(L, D, Cases, Sure)`, a value that is `D` and `V` where L is `C` for `c(C, V)` in `Cases`.
+
+export const isLabeled = (t: Term): boolean => t.k === 'f' && (t.name === '$unk' || t.name === '$by');
+
+export const mkList = (xs: Term[]): Term => xs.reduceRight((tl, h) => mkf('$cons', [h, tl]), mka('$nil'));
+export function unList(t: Term): Term[] {
+  const out: Term[] = [];
+  for (; t.k === 'f' && t.name === '$cons'; t = t.args[1]) out.push(t.args[0]);
+  return out;
+}
+
+export function unkParts(t: Term): { label: Term; ex: Term[]; sure: boolean } | null {
+  return t.k === 'f' && t.name === '$unk' ? { label: t.args[0], ex: unList(t.args[1]), sure: t.args[2].k === 'i' && Number(t.args[2].v) === 1 } : null;
+}
+
+export function byParts(t: Term): { label: Term; dflt: Term; cases: [Term, Term][]; sure: boolean } | null {
+  if (t.k !== 'f' || t.name !== '$by') return null;
+  const cases = unList(t.args[2]).filter((c) => c.k === 'f').map((c) => [(c as { args: Term[] }).args[0], (c as { args: Term[] }).args[1]] as [Term, Term]);
+  return { label: t.args[0], dflt: t.args[1], cases, sure: t.args[3].k === 'i' && Number(t.args[3].v) === 1 };
+}
+
+const MARK = '$unsure';
+/** The solution passed an undecided step, so what it gives may not exist. */
+export const unsure = (s: Subst): Subst => (s.has(MARK) ? s : new Map(s).set(MARK, mki(1)));
+export const isUnsure = (s: Subst): boolean => s.has(MARK);
+
+/** The values a `$by` can have, the leaves of its table; `null` for what is no table. */
+export function byValues(t: Term): Term[] | null {
+  const b = byParts(t);
+  if (b === null) return null;
+  const out = new Map<string, Term>();
+  for (const v of [...b.cases.map(([, x]) => x), b.dflt]) for (const x of byValues(v) ?? [v]) out.set(canonTerm(x), x);
+  return [...out.values()];
+}
+
+export function mkUnk(label: Term, ex: Term[], sure: boolean): Term {
+  const seen = new Set<string>();
+  const xs = ex.map((x) => [`(${canonTerm(x)})`, x] as [string, Term]).sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0)).filter(([k]) => !seen.has(k) && !!seen.add(k)).map(([, x]) => x);
+  return mkf('$unk', [label, mkList(xs), mki(sure ? 1 : 0)]);
+}
+
+/** Every unbound variable of `ts` stands for an unknown value. */
+export function bindUnknown(ts: Term[], s: Subst): Subst | null {
+  const vs = new Set<string>();
+  for (const t of ts) varsOf(resolve(t, s), vs);
+  let s2: Subst | null = s;
+  for (const v of vs) { s2 = unify({ k: 'v', name: v }, UNKNOWN_VALUE, s2); if (s2 === null) return null; }
+  return s2;
+}
+
+/** A literal's argument `a` against an unknown's `t`: where `t` holds the
+ *  unknown value, whatever `a` has there stands for it; a structure around it
+ *  must be `a`'s too. */
+/** Whether `a` is the unknown `t` is, in every completion: the same label, and every value `t` is known not to be `a`
+ *  is known not to be too (`same_label`, Rust). */
+export function sameLabel(a: Term, t: Term): boolean {
+  const pa = unkParts(a), pt = unkParts(t);
+  return pa !== null && pt !== null && canonTerm(pa.label) === canonTerm(pt.label) && pt.ex.every((e) => pa.ex.some((x) => canonTerm(x) === canonTerm(e)));
+}
+
+export function unifyUnknown(a: Term, t: Term, s: Subst): Subst | null {
+  if (t.k === 'a' && t.name === '$unknown_value') return bindUnknown([a], s);
+  if (isLabeled(t)) {
+    const ra = resolve(a, s);
+    const p = unkParts(t);
+    if (p !== null && isGround(ra) && !holdsUnknown(ra) && p.ex.some((x) => canonTerm(x) === canonTerm(ra))) return null;
+    // a value that depends on a label is one of the values it has, and no other
+    if (isGround(ra) && !holdsUnknown(ra)) { const vs = byValues(t); if (vs !== null && !vs.some((x) => canonTerm(x) === canonTerm(ra))) return null; }
+    if (ra.k === 'v') return unify(ra, t, s);
+    // a value, or another unknown, against this one: it is that value, or it is that unknown, in the completions the
+    // tuple that reads it exists in, and in no other (unless it is this very one)
+    const same = canonTerm(ra) === canonTerm(t) || sameLabel(ra, t);
+    return bindUnknown([ra], same ? s : unsure(s));
+  }
+  if (!holdsUnknown(t)) return unify(a, t, s);
+  const ra = resolve(a, s);
+  if (ra.k === 'v') return unify(ra, t, s);
+  if (ra.k === 'f' && t.k === 'f' && ra.name === t.name && ra.args.length === t.args.length) {
+    let s2: Subst | null = s;
+    for (let i = 0; s2 && i < ra.args.length; i++) s2 = unifyUnknown(ra.args[i], t.args[i], s2);
+    return s2;
+  }
+  return null;
+}
+
 /** Canonical serialization of a term. Total, injective on distinct terms.
  *  Lexicographic order of these strings is the kernel's canonical order. */
 export function canonTerm(t: Term): string {
@@ -172,10 +289,14 @@ export function canonTerm(t: Term): string {
     case 'v': return '?' + t.name;
     case 'i': return String(t.v);
     case 's': return JSON.stringify(t.v);
-    case 'a': return t.name;
+    case 'a': return t.name === DS_ANY_NAME ? '_' : t.name;
     case 'f': return t.name + '(' + t.args.map(canonTerm).join(',') + ')';
   }
 }
+
+/** What stands in the key of a data-stratified correlation for a group no rule bound: an atom no source can write,
+ *  spelled `_` wherever a term is printed (`aggeval.ts`). */
+export const DS_ANY_NAME = '\u0001any';
 
 /** Rename the variables of a term list to positional placeholders, numbered
  *  by first appearance across the whole list. Ground terms come back
@@ -208,6 +329,8 @@ export function canonVars(ts: Term[]): Term[] {
 export const ARITH_UNBOUND = 0;
 export const ARITH_TYPE = 1;
 export const ARITH_ZERO = 2;
+/** A result outside the term range: no value, never a wrapped or rounded one. */
+export const ARITH_OVERFLOW = 7;
 
 /** Failure sink. The caller owns one and passes it in when it intends to act
  *  on the reason; `evalArith` writes it ONLY on failure, so the successful
@@ -217,10 +340,11 @@ export const ARITH_ZERO = 2;
 export interface ArithFail { code: number }
 
 /** Evaluate an arithmetic expression term to an integer, or null if it
- *  contains unbound variables / non-arithmetic leaves. Operators: + - * / mod.
+ *  contains unbound variables / non-arithmetic leaves. Operators: + - * / mod,
+ *  and min(A, B), max(A, B) (the lattice's monotone steps, docs/aggregates.md).
  *  Division truncates toward zero. With `fail`, a null return also says which
  *  of the three reasons it was. */
-export function evalArith(t: Term, s: Subst, fail?: ArithFail): number | null {
+export function evalArith(t: Term, s: Subst, fail?: ArithFail): Int | null {
   t = walk(t, s);
   if (t.k === 'i') return t.v;
   if (t.k === 'f' && t.args.length === 2) {
@@ -228,23 +352,28 @@ export function evalArith(t: Term, s: Subst, fail?: ArithFail): number | null {
     if (l === null) return null;
     const r = evalArith(t.args[1], s, fail);
     if (r === null) return null;
-    switch (t.name) {
-      case '+': return l + r;
-      case '-': return l - r;
-      case '*': return l * r;
-      case '/': if (r !== 0) return Math.trunc(l / r); break;
-      case 'mod': if (r !== 0) return l - r * Math.trunc(l / r); break;
-      default: if (fail) fail.code = ARITH_TYPE; return null;
+    if (!ARITH_OPS.has(t.name)) { if (fail) fail.code = ARITH_TYPE; return null; }
+    if ((t.name === '/' || t.name === 'mod') && (r === 0 || r === 0n)) { if (fail) fail.code = ARITH_ZERO; return null; }
+    // EXACT, AND WITHIN THE TERM RANGE, as the Rust engine computes it: a
+    // double is exact to 2^53 only, so a result that might pass it is
+    // computed again as a bigint, and one past 2^60 has no value
+    // (f_arithmetic_wraps_past_the_term_range).
+    if (typeof l === 'number' && typeof r === 'number') {
+      const v = t.name === '+' ? l + r : t.name === '-' ? l - r : t.name === '*' ? l * r
+        : t.name === 'min' ? Math.min(l, r) : t.name === 'max' ? Math.max(l, r) : null;
+      if (v !== null && Number.isSafeInteger(v)) return v;
     }
-    // only the two zero-divisor breaks reach here
-    if (fail) fail.code = ARITH_ZERO;
-    return null;
+    const a = BigInt(l), b = BigInt(r);
+    const v = t.name === '+' ? a + b : t.name === '-' ? a - b : t.name === '*' ? a * b
+      : t.name === '/' ? a / b : t.name === 'mod' ? a - b * (a / b) : t.name === 'min' ? (a < b ? a : b) : (a > b ? a : b);
+    if (v < TERM_MIN || v > TERM_MAX) { if (fail) fail.code = ARITH_OVERFLOW; return null; }
+    return normInt(v);
   }
   if (fail) fail.code = t.k === 'v' ? ARITH_UNBOUND : ARITH_TYPE;
   return null;
 }
 
-export const ARITH_OPS = new Set(['+', '-', '*', '/', 'mod']);
+export const ARITH_OPS = new Set(['+', '-', '*', '/', 'mod', 'min', 'max']);
 
 /** FNV-1a 32-bit hash, hex encoded. Used for content-addressed rule ids. */
 export function fnv1a(str: string): string {
@@ -260,11 +389,22 @@ export function fnv1a(str: string): string {
 export function termToJson(t: Term): unknown {
   switch (t.k) {
     case 'v': return { k: 'v', name: t.name };
-    case 'i': return { k: 'i', v: t.v };
+    case 'i': return { k: 'i', v: t.v };   // a bigint is written as its digits (`intJson`)
     case 's': return { k: 's', v: t.v };
     case 'a': return { k: 'a', name: t.name };
     case 'f': return { k: 'f', name: t.name, args: t.args.map(termToJson) };
   }
+}
+
+/** JSON with a bigint written as the number it is, and read back exactly. */
+export function toJson(x: unknown): string {
+  return JSON.stringify(x, (_k, v) => (typeof v === 'bigint' ? '\u0000' + v.toString() : v))
+    .replace(/"\\u0000(-?\d+)"/g, '$1');
+}
+
+export function fromJson(text: string): any {
+  return JSON.parse(text, ((_k: string, v: unknown, ctx?: { source?: string }) =>
+    (typeof v === 'number' && !Number.isSafeInteger(v) && ctx?.source && /^-?\d+$/.test(ctx.source) ? BigInt(ctx.source) : v)) as never);
 }
 
 export function termFromJson(j: any): Term {
@@ -305,6 +445,145 @@ export interface Lit {
 export type BodyElem =
   | { t: 'pos'; lit: Lit }
   | { t: 'neg'; lit: Lit }
-  | { t: 'bi'; op: string; l: Term; r: Term };
+  | { t: 'bi'; op: string; l: Term; r: Term }
+  // A BODY AGGREGATE, `Res is op(Vals ; Keys : Body)` (docs/aggregates.md).
+  // The threshold `at_least(N, Vals : Body)` is one too, with N as `res`.
+  // `at` (its premise position, from 1) and `shared` (the variables of the
+  // element other than the result that also occur elsewhere in the clause,
+  // in the order they occur in it) are derived by `annotateAggs` and are no
+  // part of the canonical spelling.
+  | { t: 'agg'; op: string; res: Term; vals: Term[]; keys: Term[]; body: BodyElem[]; at?: number; shared?: string[] };
 
-export interface Clause { head: Lit; body: BodyElem[]; }
+/** A body element that is not an aggregate: what the scanners of rules without one read. */
+export type PlainElem = Exclude<BodyElem, { t: 'agg' }>;
+
+/** A clause, a lattice declaration (`lattice dist(A, C, min D).` is the head
+ *  `dist(A, C, D)` with no body and `lattice` the operation `min`; a tag's
+ *  semiring is in `lattice` with `tag` set), or a dominance rule (`dominator`). */
+export interface Clause { head: Lit; body: BodyElem[]; lattice?: string; widen?: number; tag?: boolean; dominator?: Lit; ord?: string[];
+  /** A declared data structure (docs/data-structures.md): its kind, per head argument the role word ('' for a key position), and for a tree the relation it is the closure of. */
+  structure?: { kind: string; roles: string[]; closure?: string }; }
+
+/** The variables of a body element, in the order they are written: a
+ *  literal's arguments then its book, a builtin's two sides, an aggregate's
+ *  result then its values, keys and inner body. */
+export function elemVars(b: BodyElem, into: Set<string> = new Set()): Set<string> {
+  if (b.t === 'pos' || b.t === 'neg') { for (const a of b.lit.args) varsOf(a, into); varsOf(b.lit.persp, into); }
+  else if (b.t === 'bi') { varsOf(b.l, into); varsOf(b.r, into); }
+  else { varsOf(b.res, into); aggInnerVars(b, into); }
+  return into;
+}
+
+/** The variables inside an aggregate: values, keys and inner body. */
+export function aggInnerVars(a: BodyElem & { t: 'agg' }, into: Set<string> = new Set()): Set<string> {
+  for (const t of a.vals) varsOf(t, into);
+  for (const t of a.keys) varsOf(t, into);
+  for (const b of a.body) elemVars(b, into);
+  return into;
+}
+
+/** Fill every aggregate's `at` and `shared` from its clause (rust/rofl
+ *  `annotate_aggs`). Called wherever a clause is made; returns a new clause
+ *  when there is an aggregate, the same one otherwise. */
+export function annotateAggs(c: Clause): Clause {
+  if (!c.body.some((b) => b.t === 'agg')) return c;
+  const body = c.body.map((b, k) => {
+    if (b.t !== 'agg') return b;
+    const elsewhere = new Set<string>();
+    for (const t of c.head.args) varsOf(t, elsewhere);
+    varsOf(c.head.persp, elsewhere);
+    c.body.forEach((x, j) => { if (j !== k) elemVars(x, elsewhere); });
+    const res = b.op === 'at_least' ? new Set<string>() : varsOf(b.res);
+    const shared: string[] = [];
+    for (const v of aggInnerVars(b)) if (elsewhere.has(v) && !res.has(v) && !shared.includes(v)) shared.push(v);
+    return { ...b, at: k + 1, shared };
+  });
+  return { ...c, body };
+}
+
+/** Every literal a body element reads, an aggregate's inner ones included. */
+export function litsOf(b: BodyElem): Lit[] {
+  if (b.t === 'pos' || b.t === 'neg') return [b.lit];
+  if (b.t === 'agg') return b.body.flatMap(litsOf);
+  return [];
+}
+
+/** Every term a body element writes: a literal's arguments, a builtin's two
+ *  sides, an aggregate's result, values, keys and inner terms. */
+export function termsOf(b: BodyElem): Term[] {
+  if (b.t === 'pos' || b.t === 'neg') return b.lit.args;
+  if (b.t === 'bi') return [b.l, b.r];
+  return [b.res, ...b.vals, ...b.keys, ...b.body.flatMap(termsOf)];
+}
+
+// ---------------------------------------------------------------------------
+// A SET HAS ONE SPELLING (docs/aggregates.md, "The join lattice, as built"):
+// `set(E, ...)` is the union carrier's value, its elements in the kernel's
+// order (the order of their canonical text) with no repeat, so every ground
+// set a program writes is read as that value, inner sets first, wherever it
+// stands. The Rust engine does the same (`canon_set_literals`,
+// rust/rofl/src/cell.rs), so a set held in a plain relation is one fact in
+// both engines.
+
+function hasSet(t: Term): boolean {
+  return t.k === 'f' && (t.name === 'set' || t.args.some(hasSet));
+}
+
+/** A term with every ground set in it written as its canonical value. */
+export function canonSets(t: Term): Term {
+  if (!hasSet(t) || t.k !== 'f') return t;
+  const args = t.args.map(canonSets);
+  if (t.name === 'set' && args.every(isGround)) {
+    const keyed = args.map((a) => [canonTerm(a), a] as const).sort((x, y) => (x[0] < y[0] ? -1 : x[0] > y[0] ? 1 : 0));
+    return mkf('set', keyed.filter((x, i) => i === 0 || x[0] !== keyed[i - 1][0]).map((x) => x[1]));
+  }
+  return mkf(t.name, args);
+}
+
+/** A literal with its sets canonical. */
+export function canonLitSets(l: Lit): Lit {
+  return l.args.some(hasSet) ? { ...l, args: l.args.map(canonSets) } : l;
+}
+
+/** A clause with its sets canonical. */
+export function canonClauseSets(c: Clause): Clause {
+  const body = (b: BodyElem): BodyElem => {
+    if (b.t === 'pos' || b.t === 'neg') return { ...b, lit: canonLitSets(b.lit) };
+    if (b.t === 'bi') return { ...b, l: canonSets(b.l), r: canonSets(b.r) };
+    return { ...b, res: canonSets(b.res), vals: b.vals.map(canonSets), keys: b.keys.map(canonSets), body: b.body.map(body) };
+  };
+  return { ...c, head: canonLitSets(c.head), body: c.body.map(body) };
+}
+
+/** The first set in `t` written with a variable and more than one element:
+ *  its canonical spelling depends on the bindings, so as a pattern or a
+ *  stored term it would hold only in the order it is written. The TypeScript
+ *  engine has no join to build one and no `in` or `subset` to read one, so
+ *  one is refused wherever it stands. */
+export function openSet(t: Term): Term | null {
+  if (t.k !== 'f') return null;
+  if (t.name === 'set' && t.args.length > 1 && !isGround(t)) return t;
+  for (const a of t.args) {
+    const o = openSet(a);
+    if (o) return o;
+  }
+  return null;
+}
+
+/** The first open set a clause writes, anywhere. */
+export function clauseOpenSet(c: Clause): Term | null {
+  for (const t of [...c.head.args, ...c.body.flatMap(termsOf)]) {
+    const o = openSet(t);
+    if (o) return o;
+  }
+  return null;
+}
+
+/** Why a set with a variable is refused, in both engines' words
+ *  (`set_pattern_reason`, rust/rofl/src/program.rs). */
+export function setPatternReason(set: string): string {
+  return `${set} is a set written with a variable, so which spelling it has depends on what the variable is bound to, `
+    + 'and it would match or be stored only in the order it is written: a set with a variable stands only as a join '
+    + "lattice's value in a head, as either side of `subset` and as the right of `in`; elsewhere name the set with a "
+    + 'variable and read its members with `in`';
+}

@@ -1,0 +1,7 @@
+-- expect-refusal: one algebra
+-- a declared order that is a lattice too: a relation has one algebra
+edb(aosr_e).
+aosr_e(a, b, 2, 9).
+pareto aosr_algebra(A, B, min C, min T).
+lattice aosr_algebra(A, B, C, min T).
+aosr_algebra(A, B, C, T) :- aosr_e(A, B, C, T).

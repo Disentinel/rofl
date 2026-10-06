@@ -1,0 +1,172 @@
+-- examples/checks/agg-precise-holes-check.rofl — agg_precise_holes over
+-- agg-precise-data.rofl (docs/aggregates.md, "Precise holes, as built"): what
+-- a hole left out holes exactly the groups of a body aggregate or the keys of
+-- a counting tag whose value it could change, each on its own cell, never
+-- the aggregate whole. A group it cannot change is sealed with its value and
+-- read as decided, by a negation too; a group only it could make is a cell
+-- of its own with no member known; a possible whose group is not known holes
+-- the correlation beside the groups sealed, which stand where it cannot
+-- change them.
+ph_rel(R, Rel) :- concludes[$kernel](R, Rel).
+ph_holed(Rel, G) :- ph_rel(R, Rel), hole[$kernel]($cell(R, _, _, $cons(G, $nil)), support_withdrawn).
+ph_holed(Rel, gh(G, H)) :- ph_rel(R, Rel), hole[$kernel]($cell(R, _, _, $cons(G, $cons(H, $nil))), support_withdrawn).
+ph_holed(Rel, whole) :- ph_rel(R, Rel), hole[$kernel]($cell(R, _, _, $nil), support_withdrawn).
+-- the tag's cells are keyed by the head and its book: the only keys of two
+-- whose second is main
+ph_holed(ph_t, A) :- ph_tw(A, _), hole[$kernel]($cell(_, _, _, $cons(A, $cons(main, $nil))), support_withdrawn).
+edb(ph_want).
+ph_want(ph_cnt, g1). ph_want(ph_cnt, g3). ph_want(ph_cnt, g5). ph_want(ph_cnt, g7).
+ph_want(ph_sum, g1). ph_want(ph_sum, g2). ph_want(ph_sum, g3). ph_want(ph_sum, g7).
+ph_want(ph_min, g3). ph_want(ph_min, g5). ph_want(ph_min, g7).
+ph_want(ph_max, g1). ph_want(ph_max, g2). ph_want(ph_max, g3). ph_want(ph_max, g7).
+ph_want(ph_med, g3). ph_want(ph_med, g5). ph_want(ph_med, g7).
+ph_want(ph_q90, g1). ph_want(ph_q90, g2). ph_want(ph_q90, g3). ph_want(ph_q90, g7).
+ph_want(ph_rk4, g5).
+ph_want(ph_neg2, g1). ph_want(ph_neg2, g3). ph_want(ph_neg2, g5). ph_want(ph_neg2, g7).
+ph_want(ph_neg, g1). ph_want(ph_neg, g3). ph_want(ph_neg, g4). ph_want(ph_neg, g5). ph_want(ph_neg, g7).
+ph_want(ph_pair, gh(g1, h2)).
+ph_want(ph_wc, g2).
+ph_want(ph_cq, g1). ph_want(ph_cq, g3). ph_want(ph_cq, g5). ph_want(ph_cq, g7).
+ph_want(ph_sq, g1). ph_want(ph_sq, g2). ph_want(ph_sq, g3).
+ph_want(ph_t, b).
+ph_want(ph_two, g1). ph_want(ph_two, g3). ph_want(ph_two, g5). ph_want(ph_two, g7).
+ph_want(ph_ecnt, e1). ph_want(ph_ecnt, e3). ph_want(ph_ecnt, e4).
+ph_want(ph_esum, e4).
+ph_want(ph_acnt, a1). ph_want(ph_acnt, a2).
+ph_want(ph_amin, a2).
+ph_hole_missing(Rel, G) :- ph_want(Rel, G), not ph_holed(Rel, G).
+ph_hole_extra(Rel, G) :- ph_holed(Rel, G), ph_rel(_, Rel), not ph_want(Rel, G).
+ph_hole_extra(ph_t, A) :- ph_holed(ph_t, A), not ph_want(ph_t, A).
+alarm(ph_hole_missing).
+alarm(ph_hole_extra).
+-- expect-row: ph_holed[main](ph_cnt,g1)
+-- expect-row: ph_holed[main](ph_cnt,g3)
+-- expect-row: ph_holed[main](ph_neg,g4)
+-- expect-row: ph_holed[main](ph_pair,gh(g1,h2))
+-- expect-row: ph_holed[main](ph_t,b)
+-- expect-no-row: ph_hole_extra[main](
+-- expect-no-row: ph_hole_missing[main](
+-- the groups the unknowns cannot change hold, and a negation above them is
+-- decided: never undecided for a hole in another group
+ph_ncnt(G) :- ph_g(G), not ph_cnt(G, 1).
+ph_nsum(G) :- ph_g(G), not ph_sum(G, 8).
+ph_nt(A)   :- ph_tw(A, _), not ph_t(A, 2).
+ph_nsz(G)  :- ph_g(G), not ph_sum(G, 0).
+-- expect-row: ph_cnt[main](g2,1)
+-- expect-row: ph_cnt[main](g4,2)
+-- expect-row: ph_sum[main](g4,8)
+-- expect-row: ph_sum[main](g5,4)
+-- expect-row: ph_min[main](g1,3)
+-- expect-row: ph_max[main](g5,4)
+-- expect-row: ph_med[main](g1,3)
+-- expect-row: ph_q90[main](g4,6)
+-- expect-row: ph_rk5[main](g2,1)
+-- expect-row: ph_neg[main](g2,1)
+-- expect-row: ph_neg2[main](g4,1)
+-- expect-row: ph_pair[main](g1,h1,1)
+-- expect-row: ph_wc[main](g1,1)
+-- expect-row: ph_cq[main](g6,0)
+-- expect-row: ph_sq[main](g6,0)
+-- expect-row: ph_sq[main](g7,0)
+-- expect-row: ph_t[main](a,1)
+-- expect-row: ph_ncnt[main](g4)
+-- expect-row: ph_ncnt[main](g6)
+-- expect-row: ph_nsum[main](g5)
+-- expect-row: ph_nt[main](a)
+-- expect-row: ph_nsz[main](g4)
+-- every firing of the aggregate is undecided where the group is, not the first
+-- expect-row: ph_two[main](2,g2,1)
+-- expect-row: shrug[$kernel](ph_two(1,g1,$unknown_value),inherited,
+-- expect-row: shrug[$kernel](ph_two(2,g1,$unknown_value),inherited,
+-- and no value, nor a negation decided, where they can
+-- expect-no-row: ph_cnt[main](g1,
+-- expect-no-row: ph_cnt[main](g3,
+-- expect-no-row: ph_sum[main](g2,
+-- expect-no-row: ph_max[main](g1,
+-- expect-no-row: ph_neg[main](g4,
+-- expect-no-row: ph_pair[main](g1,h2,
+-- expect-no-row: ph_wc[main](g2,
+-- expect-no-row: ph_t[main](b,
+-- expect-no-row: ph_ncnt[main](g1)
+-- expect-no-row: ph_ncnt[main](g3)
+-- expect-no-row: ph_nsum[main](g2)
+-- expect-no-row: ph_nt[main](b)
+-- a group only a member weighing 0 could make: a sum of it is 0 in one
+-- completion and none in another, so neither it nor a negation of it is
+-- decided (a correlated sum, 0 with the group empty, is: ph_sq(g7, 0))
+-- expect-no-row: ph_sum[main](g7,
+-- expect-no-row: ph_nsz[main](g7)
+-- expect-row: shrug[$kernel](ph_nsz(g7),inherited,
+
+-- A FAULT EVERY COMPLETION KEEPS stays the group's own. A known member no
+-- fold reads (e1, e2: oops) is agg_type_error whatever a possible adds, and a
+-- known total out of range at both ends of what the possibles could add
+-- (e3) is agg_overflow: a hole of that fault, never withdrawn, the shrug
+-- blaming the fault. A count reads no value, so e1's changes; an overflow a
+-- possible could mend (e4: -5 brings it back) is withdrawn.
+edb(ph_e0).
+ph_e0(e1, a, oops). ph_e0(e2, a, oops).
+ph_e0(e3, a, 1152921504606846975). ph_e0(e3, c, 1152921504606846975).
+ph_e0(e4, a, 1152921504606846975). ph_e0(e4, c, 1).
+ph_e(G, K, V) :- ph_e0(G, K, V).
+ph_e(e1, b, 3) :- ph_big(B), Z is B + 1, Z > 0.
+ph_e(e3, b, 3) :- ph_big(B), Z is B + 1, Z > 0.
+ph_e(e4, b, -5) :- ph_big(B), Z is B + 1, Z > 0.
+ph_ecnt(G, N) :- N is count(K : ph_e(G, K, _)).
+ph_esum(G, S) :- S is sum(V ; K : ph_e(G, K, V)).
+ph_emax(G, M) :- M is max(V : ph_e(G, _, V)).
+ph_emed(G, M) :- M is median(V ; K : ph_e(G, K, V)).
+ph_fault(Rel, G, Why) :- ph_rel(R, Rel), shrug[$kernel]($cell(R, _, _, $cons(G, $nil)), fault, Why).
+edb(ph_fwant).
+ph_fwant(ph_esum, e1, agg_type_error). ph_fwant(ph_esum, e2, agg_type_error).
+ph_fwant(ph_emax, e1, agg_type_error). ph_fwant(ph_emax, e2, agg_type_error).
+ph_fwant(ph_emed, e1, agg_type_error). ph_fwant(ph_emed, e2, agg_type_error).
+ph_fwant(ph_esum, e3, agg_overflow).
+ph_fault_missing(Rel, G, Why) :- ph_fwant(Rel, G, Why), not ph_fault(Rel, G, Why).
+alarm(ph_fault_missing).
+-- expect-row: ph_fault[main](ph_esum,e1,agg_type_error)
+-- expect-row: ph_fault[main](ph_esum,e3,agg_overflow)
+-- expect-no-row: ph_fault_missing[main](
+-- expect-row: ph_emax[main](e3,1152921504606846975)
+-- expect-row: ph_emed[main](e4,1)
+
+-- A PROJECTION TWO UNKNOWNS COULD ADD rests on both: a1's count moves if
+-- either ph_a(a1, y, 1) or ph_a(a1, y, 2) holds, and names both, whatever
+-- order they were found in. A GROUP'S ROOTS ARE WHAT MOVES IT, at its cell
+-- and at every firing that reads it: a2's min moves with y:1 and not with
+-- z:9, so neither the cell nor the conclusion names z's rule; its count
+-- moves with either.
+edb(ph_a0).
+ph_a0(a1, x, 0). ph_a0(a2, x, 5).
+ph_a(G, X, V) :- ph_a0(G, X, V).
+ph_a(a1, y, 1) :- ph_big(B), Z is B + 1, Z > 0.
+ph_a(a1, y, 2) :- ph_big(B), Z is B + 2, Z > 0.
+ph_a(a2, y, 1) :- ph_big(B), Z is B + 3, Z > 0.
+ph_a(a2, z, 9) :- ph_big(B), Z is B + 4, Z > 0.
+ph_acnt(G, N) :- N is count(X : ph_a(G, X, _)).
+ph_amin(G, M) :- M is min(V : ph_a(G, _, V)).
+-- expect-row: ph_amin[main](a1,0)
+
+-- expect-row: shrug[$kernel]($cell(rbdc450df,1,0,$cons(a1,$nil)),inherited,from($cons($rule(r287c6bae),$cons($rule(rf2b2332c),$nil))))
+-- expect-row: shrug[$kernel](ph_acnt(a1,$unknown_value),inherited,from($cons($rule(r287c6bae),$cons($rule(rf2b2332c),$nil))))
+-- expect-row: shrug[$kernel]($cell(ra3d480df,1,0,$cons(a2,$nil)),inherited,from($cons($rule(ra42dda61),$nil)))
+-- expect-row: shrug[$kernel](ph_amin(a2,$unknown_value),inherited,from($cons($rule(ra42dda61),$nil)))
+-- expect-row: shrug[$kernel](ph_acnt(a2,$unknown_value),inherited,from($cons($rule(r786c83b7),$cons($rule(ra42dda61),$nil))))
+
+-- the group a possible could make when its group is not known is none of the groups sealed: a
+-- labeled unknown known not to be g1 or g2, with a count of one, so a negation over the groups
+-- that count 2 is decided for every group but g2 (docs/aggregates.md, "Labeled unknowns")
+edb(ph_hh).
+ph_hh(h1). ph_hh(h2). ph_hh(h3).
+ph_nwc(G) :- ph_g(G), not ph_wc(G, 2).
+ph_nh(H) :- ph_hh(H), not ph_pair(g1, H, 2).
+-- expect-row: ph_nwc[main](g1)
+-- expect-no-row: ph_nwc[main](g2)
+-- expect-row: ph_nwc[main](g3)
+-- expect-row: ph_nwc[main](g4)
+-- expect-row: ph_nwc[main](g5)
+-- expect-row: ph_nwc[main](g6)
+-- expect-row: ph_nwc[main](g7)
+-- expect-row: ph_nh[main](h1)
+-- expect-no-row: ph_nh[main](h2)
+-- expect-row: ph_nh[main](h3)

@@ -1,0 +1,93 @@
+-- examples/checks/agg-narrow-eval-check.rofl — agg_narrow_eval: every widened
+-- cell of agg-narrow-data.rofl closes within exactly the enclosure derived
+-- here by hand, and no enclosure lies inside the least value
+-- (docs/aggregates.md, "Widening, as built"). The widening settles each cell
+-- on a post-fixpoint x; a descending pass evaluates the rules once more with
+-- every widened cell held at x and taking no contribution, and an end the
+-- widening raised comes down to the join of what the rules then contribute,
+-- never below it; passes repeat until nothing moves, at most four.
+--
+--   an_loop, N = 7: widened to [0,inf), no written bound reaching it. From
+--     there body is the meet with (-inf,6], [0,6]; plus one [1,7], joined
+--     with the entry [0,0]: [0,7], the least value. A second pass gives it
+--     again, so it stops.
+--   an_arith, bound N * 2 = 14: body [0,14], [1,15], [0,15].
+--   an_two: x as an_loop with bound 4, [0,5]. y starts at [0,0] and grows
+--     while it stays inside x, plus one. The first pass holds x at [0,inf),
+--     so y gives itself: [0,inf), no move. The second holds x at [0,5]: y
+--     meets it, [0,5], plus one, [1,6], joined [0,6]. So x moves in the
+--     first pass and y in the second.
+--   an_chain: the same, a cell of y1 to y5 inside the one before. A pass
+--     moves one cell further down the chain, and four are made: x [0,5],
+--     y1 [0,6], y2 [0,7], y3 [0,8] come down, y4 and y5 stay widened,
+--     [0,inf), though their least values are [0,9] and [0,10].
+--   an_thr: a widening that lands on a threshold. 10 is written by the exit,
+--     so the third improvement, [0,3], goes to [0,10]. From [0,10] the meet
+--     with (-inf,2] is [0,2], plus one [1,3], joined [0,3]: the threshold
+--     comes down too.
+--   an_noop: a loop with no bound contributes [1,inf) from [0,inf): joined
+--     with [0,0] it is [0,inf) again, and nothing comes down.
+--   an_fault: its rule over `E in I` faults on [0,inf), so it contributes
+--     nothing from the widened value and the join of what is left is [0,0];
+--     the cell is left as the widening closed it. Narrowed to [0,0] it would
+--     lie below its least value [0,inf).
+-- A narrowed cell is still a hole and a shrug: no value is held, what read it
+-- is a shrug inherited, and the enclosure is the shrug's meta.
+edb(ann_closes).
+ann_closes(an_loop, head, iv(0, 7)).
+ann_closes(an_arith, head, iv(0, 15)).
+ann_closes(an_two, x, iv(0, 5)).
+ann_closes(an_two, y, iv(0, 6)).
+ann_closes(an_chain, x, iv(0, 5)).
+ann_closes(an_chain, y1, iv(0, 6)).
+ann_closes(an_chain, y2, iv(0, 7)).
+ann_closes(an_chain, y3, iv(0, 8)).
+ann_closes(an_chain, y4, iv(0, inf)).
+ann_closes(an_chain, y5, iv(0, inf)).
+ann_closes(an_thr, head, iv(0, 3)).
+ann_closes(an_noop, head, iv(0, inf)).
+ann_closes(an_fault, head, iv(0, inf)).
+edb(ann_least).
+ann_least(an_loop, head, 0, 7).
+ann_least(an_arith, head, 0, 15).
+ann_least(an_two, x, 0, 5).
+ann_least(an_two, y, 0, 6).
+ann_least(an_chain, x, 0, 5).
+ann_least(an_chain, y1, 0, 6).
+ann_least(an_chain, y2, 0, 7).
+ann_least(an_chain, y3, 0, 8).
+ann_least(an_chain, y4, 0, 9).
+ann_least(an_chain, y5, 0, 10).
+ann_least(an_thr, head, 0, 3).
+ann_least(an_noop, head, 0, inf).
+ann_least(an_fault, head, 0, inf).
+ann_mark(R, K, V)      :- shrug[$kernel]($lattice(R, main, 0, $cons(K, $nil)), widened, within(V)).
+ann_hole(R, K)         :- hole[$kernel]($lattice(R, main, 0, $cons(K, $nil)), widening_forced).
+ann_wrong(R, K, V)     :- ann_closes(R, K, V), not ann_mark(R, K, V).
+ann_extra(R, K, V)     :- ann_mark(R, K, V), not ann_closes(R, K, V).
+ann_unheld(R, K)       :- ann_closes(R, K, _), not ann_hole(R, K).
+-- an enclosure that does not hold the least value is unsound
+ann_below(R, K)        :- ann_least(R, K, L, _), ann_mark(R, K, iv(Lo, _)), Lo != ninf, Lo > L.
+ann_below(R, K)        :- ann_least(R, K, _, H), ann_mark(R, K, iv(_, Hi)), H != inf, Hi != inf, Hi < H.
+ann_below(R, K)        :- ann_least(R, K, _, inf), ann_mark(R, K, iv(_, Hi)), Hi != inf.
+ann_inh(R, K, RR, KR)  :- shrug[$kernel]($lattice(R, main, 0, $cons(K, $nil)), inherited,
+                                         from($cons($lattice(RR, main, 0, $cons(KR, $nil)), $nil))).
+ann_not_inherited(R, K) :- ann_reads(R, K, RR, KR), not ann_inh(R, K, RR, KR).
+edb(ann_reads).
+ann_reads(an_at, body, an_loop, head).
+ann_reads(an_at, exit, an_loop, head).
+ann_reads(an_aat, body, an_arith, head).
+alarm(ann_wrong).
+alarm(ann_extra).
+alarm(ann_unheld).
+alarm(ann_below).
+alarm(ann_not_inherited).
+-- expect-row: shrug[$kernel]($lattice(an_loop,main,0,$cons(head,$nil)),widened,within(iv(0,7)))
+-- expect-row: shrug[$kernel]($lattice(an_chain,main,0,$cons(y3,$nil)),widened,within(iv(0,8)))
+-- expect-row: shrug[$kernel]($lattice(an_chain,main,0,$cons(y4,$nil)),widened,within(iv(0,inf)))
+-- expect-row: shrug[$kernel]($lattice(an_thr,main,0,$cons(head,$nil)),widened,within(iv(0,3)))
+-- expect-row: shrug[$kernel]($lattice(an_fault,main,0,$cons(head,$nil)),widened,within(iv(0,inf)))
+-- expect-row: an_at[main](entry,iv(0,0))
+-- expect-no-row: an_loop[main](head,
+-- expect-no-row: an_arith[main](head,
+-- expect-no-row: an_chain[main](x,

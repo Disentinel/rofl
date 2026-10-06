@@ -1,0 +1,7 @@
+-- expect-refusal: subsumption assr_ar: its dominance rules compare its facts at two arities
+-- one relation, one arity
+edb(assr_ae).
+assr_ae(a, 1).
+assr_ar(A, V) :- assr_ae(A, V).
+assr_ar(A, X) <= assr_ar(A, Y) :- Y < X.
+assr_ar(A, B, X) <= assr_ar(A, B, Y) :- Y < X.

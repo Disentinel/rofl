@@ -1,0 +1,34 @@
+-- examples/checks/agg-widen-reflect-check.rofl — agg_widen_reflect: a
+-- declared widening is rules as data. Each `widen N` of agg-widen-data.rofl
+-- is exactly one `lattice_widen[$kernel](Rel, N)` row, both directions,
+-- beside its hull's `lattice_decl`; the relation is the kernel's, reserved
+-- like `lattice_decl`, so no program writes one. An interval function is a
+-- term on the right of `is`, reflected as written, its operands as terms
+-- (`iv(ninf, 9)` with its infinite end an atom). The TypeScript engine's
+-- rule ids for these rules are held to the Rust store's by scripts/goldens.ts.
+awr_want(aw_loop, 2).
+awr_want(aw_up, 0).
+awr_want(aw_walk, 1).
+awr_want(aw_dbl, 3).
+awr_want(aw_tight, 2).
+awr_want(aw_short, 5).
+awr_row(R, N)       :- lattice_widen[$kernel](R, N).
+awr_missing(R)      :- awr_want(R, N), not awr_row(R, N).
+awr_extra(R)        :- awr_row(R, N), not awr_want(R, N).
+awr_not_hull(R)     :- awr_row(R, _), not lattice_decl[$kernel](R, 2, hull).
+awr_plain()         :- lattice_decl[$kernel](aw_at, 2, hull), awr_row(aw_at, _).
+awr_unreserved()    :- not reserved(lattice_widen).
+-- the functions, reflected as the terms they are
+awr_fn(ivadd($var("I"), 1)).
+awr_fn(ivmeet($var("I"), iv(ninf, 9))).
+awr_fn(ivmeet($var("I"), iv(10, inf))).
+awr_fn(ivsub($var("I"), 1)).
+awr_fn(ivmul($var("K"), 2)).
+awr_is(T)           :- premise_lit[$kernel](_, _, $builtin("is", $cons(_, $cons(T, $nil)))).
+awr_fn_lost(T)      :- awr_fn(T), not awr_is(T).
+alarm(awr_missing).
+alarm(awr_extra).
+alarm(awr_not_hull).
+alarm(awr_plain).
+alarm(awr_unreserved).
+alarm(awr_fn_lost).

@@ -1,0 +1,36 @@
+-- examples/checks/agg-incr-latticehole.rofl — agg_incr_latticehole: A RETRACTION
+-- UNDER A LATTICE THAT MAKES A HOLE. h to i is 1 by the light edge, and the heavy
+-- edge that would overflow the sum on the way to j is an earlier value of the
+-- cell, improved on: a fault on it says nothing about the cell. Retracted, the
+-- light edge leaves the heavy one the value, and h to j is a hole (`arith_overflow`)
+-- with no value. A delta writes no hole, so the world is evaluated again, and
+-- must be the state of a world without the fact.
+--
+--   ih_bg(h, i, 1)   the heavy edge is all that is left: h to j overflows
+edb(ih_bg).
+ih_bg(h, i, 1).
+ih_bg(h, i, 1152921504606846975).
+ih_bg(i, j, 5).
+lattice ih_far(A, C, min D).
+ih_far(A, C, D) :- ih_bg(A, C, D).
+ih_far(A, C, D) :- ih_far(A, B, D1), ih_bg(B, C, W), D is D1 + W.
+
+-- the state after the retractions, row by row
+-- expect-row: hole[$kernel]($lattice(ih_far,main,0,$cons(h,$cons(j,$nil))),arith_overflow) timeless base frozen support=0
+-- expect-row: hole[$kernel]($rule(r5374fb45),arith_overflow) timeless base frozen support=0
+-- expect-row: ih_bg[main](h,i,1152921504606846975) tick base support=0
+-- expect-row: ih_bg[main](i,j,5) tick base support=0
+-- expect-row: ih_far[main](h,i,1152921504606846975) tick drv support=1
+-- expect-row: ih_far[main](i,j,5) tick drv support=1
+-- expect-row: shrug[$kernel]($lattice(ih_far,main,0,$cons(h,$cons(j,$nil))),fault,arith_overflow) tick base support=0
+-- expect-row: shrug[$kernel]($rule(r5374fb45),fault,arith_overflow) tick base support=0
+-- expect-row: shrug[$kernel](ih_far(h,j,$unknown_value),inherited,from($cons($lattice(ih_far,main,0,$cons(h,$cons(j,$nil))),$nil))) tick base support=0
+-- expect-row: lat ih_far min alg=idempotent,lattice use=rederive
+-- expect-row: fir ih_far[main](h,i,1152921504606846975) id=a9c05351f4571337 r684ea8dc@0 [fact:ih_bg[main](h,i,1152921504606846975)] live
+-- expect-row: fir ih_far[main](i,j,5) id=942a6c942c32131f r684ea8dc@0 [fact:ih_bg[main](i,j,5)] live
+-- and nothing of what they supported before
+-- expect-no-row: ih_bg[main](h,i,1) tick base support=0
+-- expect-no-row: ih_far[main](h,i,1) tick drv support=1
+-- expect-no-row: ih_far[main](h,j,6) tick drv support=1
+-- expect-no-row: fir ih_far[main](h,i,1) id=de3b4668a5d16e0d r684ea8dc@0 [fact:ih_bg[main](h,i,1)] live
+-- expect-no-row: fir ih_far[main](h,j,6) id=9c32d2745d5a206c r5374fb45@0 [bi:6 is +(1,5); fact:ih_bg[main](i,j,5); fact:ih_far[main](h,i,1)] live

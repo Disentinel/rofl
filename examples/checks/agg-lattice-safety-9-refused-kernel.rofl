@@ -1,0 +1,5 @@
+-- expect-refusal: is a kernel relation and cannot be a lattice
+-- examples/checks/agg-lattice-safety-9-refused-kernel.rofl — a kernel relation is the kernel's to write.
+edb(alsf_e).
+alsf_e(a, b, 2).
+lattice hole(A, min D).

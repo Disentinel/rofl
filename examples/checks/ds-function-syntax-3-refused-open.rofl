@@ -1,0 +1,3 @@
+-- expect-refusal: is not closed
+-- a declaration closes its parenthesis
+function dss_open(K, to V.

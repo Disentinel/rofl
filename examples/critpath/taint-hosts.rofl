@@ -1,0 +1,28 @@
+-- examples/critpath/taint-hosts.rofl — THE NETWORK, written by hand from README.md.
+-- edge(From, To, Cost): an attacker on From reaches To for Cost days.
+-- Two starting points: the open internet and a contractor with a VPN account.
+-- The crown jewels are the database, the admin console and the backup.
+source(internet).
+source(contractor).
+crown(db).
+crown(admin).
+crown(backup).
+budget(12).
+
+edge(internet, web, 5).
+edge(internet, phish, 3).
+edge(phish, jump, 4).
+edge(phish, ci, 6).
+edge(ci, phish, 1).
+edge(ci, admin, 2).
+edge(web, api, 2).
+edge(api, web, 1).
+edge(api, db, 6).
+edge(web, jump, 7).
+edge(jump, api, 1).
+edge(jump, admin, 5).
+edge(admin, db, 1).
+edge(db, backup, 2).
+edge(backup, admin, 3).
+edge(contractor, jump, 2).
+edge(contractor, ci, 3).

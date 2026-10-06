@@ -1,0 +1,107 @@
+-- examples/checks/agg-lattice-eval-check.rofl — agg_lattice_eval: every
+-- lattice of agg-lattice-data.rofl holds exactly the facts enumerated here by
+-- hand, one per key, in both directions: a missing value, a value that is not
+-- the best, and a second value for one key each raise an alarm. The cell a
+-- non-number reached is a hole with no row, and the cell that rested on it
+-- alone is withdrawn and a hole too.
+ale_dist(a, a, 7).
+ale_dist(a, b, 1).
+ale_dist(a, c, 3).
+ale_dist(a, d, 3).
+ale_dist(a, e, 8).
+ale_dist(b, a, 6).
+ale_dist(b, b, 7).
+ale_dist(b, c, 2).
+ale_dist(b, d, 2).
+ale_dist(b, e, 7).
+ale_dist(c, a, 4).
+ale_dist(c, b, 5).
+ale_dist(c, c, 0).
+ale_dist(c, d, 0).
+ale_dist(c, e, 5).
+ale_dist(d, a, 4).
+ale_dist(d, b, 5).
+ale_dist(d, c, 0).
+ale_dist(d, d, 0).
+ale_dist(d, e, 5).
+ale_dist(z, z, 1).
+ale_wide(s, s, 4).
+ale_wide(s, t, 4).
+ale_wide(s, u, 4).
+ale_wide(s, v, 2).
+ale_wide(t, s, 7).
+ale_wide(t, t, 4).
+ale_wide(t, u, 7).
+ale_wide(t, v, 2).
+ale_wide(u, s, 8).
+ale_wide(u, t, 4).
+ale_wide(u, u, 4).
+ale_wide(u, v, 2).
+ale_finish(p1, 3).
+ale_finish(p2, 2).
+ale_finish(p3, 7).
+ale_finish(p4, 8).
+ale_finish(p5, 7).
+ale_taint(x1, true).
+ale_taint(x2, true).
+ale_taint(x3, true).
+ale_taint(x4, false).
+ale_taint(x5, false).
+ale_all(x1, true).
+ale_all(x2, false).
+ale_all(x3, false).
+ale_all(x4, false).
+ale_all(x5, false).
+ale_hd(h2, h3, 1).
+ale_hop(a, b, 9).
+ale_hop(a, c, 1).
+ale_hop(a, d, 0).
+ale_hop(a, x, 9).
+ale_hop(b, c, 1).
+ale_hop(b, d, 0).
+ale_hop(b, x, 9).
+ale_hop(c, d, 0).
+ale_hop(x, c, 1).
+ale_hop(x, d, 0).
+
+al_missing(dist, A, C, D)  :- ale_dist(A, C, D), not al_dist(A, C, D).
+al_extra(dist, A, C, D)    :- al_dist(A, C, D), not ale_dist(A, C, D).
+al_missing(wide, A, C, W)  :- ale_wide(A, C, W), not al_wide(A, C, W).
+al_extra(wide, A, C, W)    :- al_wide(A, C, W), not ale_wide(A, C, W).
+al_missing(finish, T, T, F) :- ale_finish(T, F), not al_finish(T, F).
+al_extra(finish, T, T, F)  :- al_finish(T, F), not ale_finish(T, F).
+al_missing(taint, X, X, B) :- ale_taint(X, B), not al_taint(X, B).
+al_extra(taint, X, X, B)   :- al_taint(X, B), not ale_taint(X, B).
+al_missing(all, X, X, B)   :- ale_all(X, B), not al_all(X, B).
+al_extra(all, X, X, B)     :- al_all(X, B), not ale_all(X, B).
+al_missing(hd, A, C, D)    :- ale_hd(A, C, D), not al_hd(A, C, D).
+al_extra(hd, A, C, D)      :- al_hd(A, C, D), not ale_hd(A, C, D).
+-- one fact per key, whatever the number of paths
+al_missing(hop, A, C, W)   :- ale_hop(A, C, W), not al_hop(A, C, W).
+al_extra(hop, A, C, W)     :- al_hop(A, C, W), not ale_hop(A, C, W).
+al_two(A, C)               :- al_dist(A, C, D), al_dist(A, C, E), D != E.
+al_two(A, C)               :- al_hop(A, C, D), al_hop(A, C, E), D != E.
+al_two(A, C)               :- al_wide(A, C, D), al_wide(A, C, E), D != E.
+al_two(T, T)               :- al_finish(T, D), al_finish(T, E), D != E.
+alarm(al_missing).
+alarm(al_extra).
+alarm(al_two).
+
+-- the holes: a weight that is not a number, and what rested on it alone
+alh_marked(h1, h2, agg_type_error)   :- hole[$kernel]($lattice(al_hd, main, _, $cons(h1, $cons(h2, $nil))), agg_type_error).
+alh_marked(h1, h3, support_withdrawn) :- hole[$kernel]($lattice(al_hd, main, _, $cons(h1, $cons(h3, $nil))), support_withdrawn).
+alh_want(h1, h2, agg_type_error).
+alh_want(h1, h3, support_withdrawn).
+al_hole_missing(A, C, R) :- alh_want(A, C, R), not alh_marked(A, C, R).
+alarm(al_hole_missing).
+
+-- the dataset still holds what makes the checks above bite
+alv_tie()        :- al_edge(a, c, 3), al_edge(a, b, 1), al_edge(b, c, 2).
+alv_zero()       :- al_edge(c, d, 0), al_edge(d, c, 0).
+alv_improved()   :- al_edge(b, e, W), ale_dist(b, e, D), W > D.
+alv_tied_max()   :- ale_finish(p3, F3), ale_finish(p5, F5), F3 = F5.
+al_vacuous(tie)      :- not alv_tie().
+al_vacuous(zero)     :- not alv_zero().
+al_vacuous(improved) :- not alv_improved().
+al_vacuous(tied_max) :- not alv_tied_max().
+alarm(al_vacuous).

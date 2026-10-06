@@ -1,0 +1,3 @@
+-- expect-refusal: the values a key determines come last
+-- the values follow the key, so the sentence form can say which is which
+function dss_first(to V, K).

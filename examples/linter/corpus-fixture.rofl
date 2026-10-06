@@ -1,0 +1,46 @@
+-- examples/linter/corpus-fixture.rofl — rules written to sit exactly on the linter's thresholds,
+-- read with corpus-dataflow.rofl by the linter world. Nothing here runs: it is a file to be
+-- read about. The expected findings are in examples/checks/agg-linter-demo-check.rofl.
+--   fx_four   4 bodies, and fx_p & fx_q read together by 4 rules       one under the table and the pair line
+--   fx_five   5 bodies, and fx_r & fx_s read together by 5 rules       exactly on both
+--   fx_six    a body of 6 premises, fx_seven one of 7                  one under the long line, and on it
+--   fx_one    one body reading fx_ghost, which no rule concludes       a relation with no body is no row
+--   fx_route  5 bodies each through its own derived relation (several routes), fx_route4 the same with 4
+--   fx_twin   two bodies reading the same relation with other constants
+--   fx_m1, fx_m2  one body each, equal but for the head (a mirror)
+fx_four(X) :- fx_p(X), fx_q(X), fx_u1(X).
+fx_four(X) :- fx_p(X), fx_q(X), fx_u2(X).
+fx_four(X) :- fx_p(X), fx_q(X), fx_u3(X).
+fx_four(X) :- fx_p(X), fx_q(X), fx_u4(X).
+
+fx_five(X) :- fx_r(X), fx_s(X), fx_t1(X).
+fx_five(X) :- fx_r(X), fx_s(X), fx_t2(X).
+fx_five(X) :- fx_r(X), fx_s(X), fx_t3(X).
+fx_five(X) :- fx_r(X), fx_s(X), fx_t4(X).
+fx_five(X) :- fx_r(X), fx_s(X), fx_t5(X).
+
+fx_six(X)   :- fx_k1(X), fx_k2(X), fx_k3(X), fx_k4(X), fx_k5(X), fx_k6(X).
+fx_seven(X) :- fx_l1(X), fx_l2(X), fx_l3(X), fx_l4(X), fx_l5(X), fx_l6(X), fx_l7(X).
+
+fx_one(X) :- fx_p(X), fx_ghost(X).
+
+fx_d1(X) :- fx_e(X, 1).
+fx_d2(X) :- fx_e(X, 2).
+fx_d3(X) :- fx_e(X, 3).
+fx_d4(X) :- fx_e(X, 4).
+fx_d5(X) :- fx_e(X, 5).
+fx_route(X)  :- fx_d1(X).
+fx_route(X)  :- fx_d2(X).
+fx_route(X)  :- fx_d3(X).
+fx_route(X)  :- fx_d4(X).
+fx_route(X)  :- fx_d5(X).
+fx_route4(X) :- fx_d1(X).
+fx_route4(X) :- fx_d2(X).
+fx_route4(X) :- fx_d3(X).
+fx_route4(X) :- fx_d4(X).
+
+fx_twin(X) :- fx_w(X, 1).
+fx_twin(X) :- fx_w(X, 2).
+
+fx_m1(X) :- fx_d1(X), fx_b(X).
+fx_m2(X) :- fx_d1(X), fx_b(X).

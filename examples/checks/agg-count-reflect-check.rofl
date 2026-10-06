@@ -1,0 +1,41 @@
+-- examples/checks/agg-count-reflect-check.rofl — agg_count_reflect: a count
+-- is reflected exactly. Walking each aggregate's `$agg` body list gives
+-- the relations `premise_agg` names, in both directions; no relation read
+-- inside becomes a `premise_pos` (it would be a trigger and a positive
+-- dependency edge); the books read inside are in `reads_from`; a builtin
+-- inside is in `uses_builtin` and the operation itself is not; a bare
+-- kernel relation inside resolves to [$kernel]. The rule ids are held to the
+-- TypeScript engine's by scripts/goldens.ts.
+arc_rule(R, Op)  :- premise_lit[$kernel](R, _, $agg(Op, _, _, _, _)), concludes[$kernel](R, H), arc_mine(H).
+arc_mine(acr_good).
+arc_mine(acr_rules).
+arc_tail(R, T)   :- arc_rule(R, _), premise_lit[$kernel](R, _, $agg(_, _, _, _, T)).
+arc_tail(R, T)   :- arc_tail(R, $cons(_, T)).
+arc_reads(R, Rel, P) :- arc_tail(R, $cons($lit(Rel, P, _, _), _)).
+arc_reads(R, Rel, P) :- arc_tail(R, $cons($not($lit(Rel, P, _, _)), _)).
+arc_op_inside(R, Op) :- arc_tail(R, $cons($builtin(Op, _), _)).
+refl_missing(R, Rel) :- arc_reads(R, Rel, _), not premise_agg[$kernel](R, Rel).
+refl_extra(R, Rel)   :- arc_rule(R, _), premise_agg[$kernel](R, Rel), not arc_reads(R, Rel, _).
+inner_pos(R, Rel)    :- arc_reads(R, Rel, _), premise_pos[$kernel](R, Rel).
+reads_missing(R, P)  :- arc_reads(R, _, P), not reads_from[$kernel](R, P).
+builtin_missing(R, Op) :- arc_op_inside(R, Op), not uses_builtin[$kernel](R, Op).
+op_as_builtin(R)       :- arc_rule(R, _), uses_builtin[$kernel](R, Op), arc_opname(Op).
+book_unresolved(R)     :- arc_reads(R, concludes, main).
+arc_kernel_read(R)     :- arc_reads(R, concludes, $kernel).
+arc_vacuous(kernel)    :- not arc_any_kernel().
+arc_any_kernel()       :- arc_kernel_read(_).
+arc_vacuous(negation)  :- not arc_any_neg().
+arc_any_neg()          :- arc_tail(_, $cons($not(_), _)).
+arc_vacuous(book)      :- not arc_any_book().
+arc_any_book()         :- arc_reads(_, _, ledger).
+arc_vacuous(rules)     :- not arc_two().
+arc_two()              :- arc_rule(A, _), arc_rule(B, _), A != B.
+alarm(refl_missing).
+alarm(refl_extra).
+alarm(inner_pos).
+alarm(reads_missing).
+alarm(builtin_missing).
+alarm(op_as_builtin).
+alarm(book_unresolved).
+alarm(arc_vacuous).
+arc_opname("count").

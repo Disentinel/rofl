@@ -26,7 +26,7 @@ the setting exists and the proof that it works.
 
 | run | reaches | holes | wall clock |
 |---|---|---|---|
-| default wall, 500 000 rows | 28 160 of 111 360 | `space_exhausted` on the recursive rule, plus the load's own | 1327 ms |
+| default wall, 500 000 rows | 28 160 of 111 360 | `space_exhausted` on the recursive rule, and on the load | 1327 ms |
 | `new Rofl({ space: 2_000_000 })` | **111 360 of 111 360** | none | 4713 ms |
 
 Two things the table is worth reading twice for.
@@ -35,10 +35,13 @@ Two things the table is worth reading twice for.
 run stops *inside* the answer and says where. A wall that returned nothing would
 be indistinguishable from a program that concluded nothing.
 
-**One refusal, two holes.** The load reports a `budget_exhausted` of its own
-because the space refusal propagates out through it. Raise the space and both
-disappear — so the second hole was the first one's shadow, and a caller who read
-only the top line would have raised the wrong thing.
+**One refusal, two holes, one reason.** The load reports a hole of its own,
+`hole($load(N), space_exhausted)`, because the space refusal propagates out
+through it: the rule's hole says where the rows were held, the load's that the
+world is cut. Raise the space and both disappear. Until 2026-09-29 the load's
+hole said `budget_exhausted`, the other wall's reason, and a caller who read
+only that line would have raised the wrong thing
+(f_the_space_wall_cut_the_world_without_saying_so).
 
 ## Why this is not the cross product the other gate catches
 

@@ -1,0 +1,41 @@
+-- examples/checks/agg-sum-reflect-check.rofl — agg_sum_reflect: a sum
+-- is reflected exactly. Walking each aggregate's `$agg` body list gives
+-- the relations `premise_agg` names, in both directions; no relation read
+-- inside becomes a `premise_pos` (it would be a trigger and a positive
+-- dependency edge); the books read inside are in `reads_from`; a builtin
+-- inside is in `uses_builtin` and the operation itself is not; a bare
+-- kernel relation inside resolves to [$kernel]. The rule ids are held to the
+-- TypeScript engine's by scripts/goldens.ts.
+asrf_rule(R, Op)  :- premise_lit[$kernel](R, _, $agg(Op, _, _, _, _)), concludes[$kernel](R, H), asrf_mine(H).
+asrf_mine(asf_good).
+asrf_mine(asf_rules).
+asrf_tail(R, T)   :- asrf_rule(R, _), premise_lit[$kernel](R, _, $agg(_, _, _, _, T)).
+asrf_tail(R, T)   :- asrf_tail(R, $cons(_, T)).
+asrf_reads(R, Rel, P) :- asrf_tail(R, $cons($lit(Rel, P, _, _), _)).
+asrf_reads(R, Rel, P) :- asrf_tail(R, $cons($not($lit(Rel, P, _, _)), _)).
+asrf_op_inside(R, Op) :- asrf_tail(R, $cons($builtin(Op, _), _)).
+refl_missing(R, Rel) :- asrf_reads(R, Rel, _), not premise_agg[$kernel](R, Rel).
+refl_extra(R, Rel)   :- asrf_rule(R, _), premise_agg[$kernel](R, Rel), not asrf_reads(R, Rel, _).
+inner_pos(R, Rel)    :- asrf_reads(R, Rel, _), premise_pos[$kernel](R, Rel).
+reads_missing(R, P)  :- asrf_reads(R, _, P), not reads_from[$kernel](R, P).
+builtin_missing(R, Op) :- asrf_op_inside(R, Op), not uses_builtin[$kernel](R, Op).
+op_as_builtin(R)       :- asrf_rule(R, _), uses_builtin[$kernel](R, Op), asrf_opname(Op).
+book_unresolved(R)     :- asrf_reads(R, concludes, main).
+asrf_kernel_read(R)     :- asrf_reads(R, concludes, $kernel).
+asrf_vacuous(kernel)    :- not asrf_any_kernel().
+asrf_any_kernel()       :- asrf_kernel_read(_).
+asrf_vacuous(negation)  :- not asrf_any_neg().
+asrf_any_neg()          :- asrf_tail(_, $cons($not(_), _)).
+asrf_vacuous(book)      :- not asrf_any_book().
+asrf_any_book()         :- asrf_reads(_, _, ledger).
+asrf_vacuous(rules)     :- not asrf_two().
+asrf_two()              :- asrf_rule(A, _), asrf_rule(B, _), A != B.
+alarm(refl_missing).
+alarm(refl_extra).
+alarm(inner_pos).
+alarm(reads_missing).
+alarm(builtin_missing).
+alarm(op_as_builtin).
+alarm(book_unresolved).
+alarm(asrf_vacuous).
+asrf_opname("sum").

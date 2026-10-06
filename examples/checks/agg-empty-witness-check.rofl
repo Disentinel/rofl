@@ -1,0 +1,27 @@
+-- examples/checks/agg-empty-witness-check.rofl — agg_empty_witness: a zero
+-- is a cell sealed with no member. It has its `agg_sealed` row, no
+-- `agg_member`, and the consumer row that used it; a count cell that is not
+-- zero has its members; an empty min is sealed and has no value.
+aew_zero(C, Cand)      :- concludes[$kernel](R, ae_votes), agg_cell[$kernel](C, 0, _),
+                          C = $cell(R, _, _, $cons(Cand, $nil)).
+ae_zero_has_member(C)  :- aew_zero(C, _), agg_member[$kernel](C, _, _, _).
+aew_sealed(C)          :- aew_zero(C, _), agg_sealed[$kernel](C, ae_ballot, _).
+ae_zero_unsealed(C)    :- aew_zero(C, _), not aew_sealed(C).
+aew_used(C)            :- aew_zero(C, Cand), C = $cell(R, _, _, _),
+                          derived_by[$kernel]($fact(ae_votes, main, $cons(Cand, $cons(0, $nil))), R, _).
+ae_zero_unused(C)      :- aew_zero(C, _), not aew_used(C).
+aew_count(C)           :- concludes[$kernel](R, ae_votes), agg_cell[$kernel](C, N, _), N > 0, C = $cell(R, _, _, _).
+aew_has_member(C)      :- agg_member[$kernel](C, _, _, _).
+ae_count_memberless(C) :- aew_count(C), not aew_has_member(C).
+aew_min_empty(C)       :- concludes[$kernel](R, ae_best), agg_sealed[$kernel](C, _, _), C = $cell(R, _, _, $cons(c4, $nil)).
+ae_min_empty_unsealed() :- not aew_min_empty(_).
+ae_min_empty_valued(C)  :- aew_min_empty(C), agg_cell[$kernel](C, _, _).
+aew_zero_seen()        :- aew_zero(_, _).
+ae_vacuous(zero)       :- not aew_zero_seen().
+alarm(ae_zero_has_member).
+alarm(ae_zero_unsealed).
+alarm(ae_zero_unused).
+alarm(ae_count_memberless).
+alarm(ae_min_empty_unsealed).
+alarm(ae_min_empty_valued).
+alarm(ae_vacuous).

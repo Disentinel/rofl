@@ -1,0 +1,32 @@
+-- examples/checks/demand-neg-retract-closed.rofl — demand_neg_retract_closed: the retraction half of
+-- f_a_demand_premise_unfolds_a_negation_before_its_round. After `--retract
+-- dtc_z(1)`, dtc_g(1) holds, so dtc_h(1) and what reads it are gone. The rules the
+-- retraction fires again over a demand premise that unfolds `not dtc_g(X)` fire
+-- at their level; fired first, before dtc_g is derived again, they kept dtc_h,
+-- dtc_r and dtc_r2 of 1 and 2. The CLOSED form (dtc_h's answers ground, read
+-- from the store), kept beside the open one demand_neg_retract
+-- (f_the_closed_forms_of_the_negation_worlds_are_kept).
+edb(dtc_z). edb(dtc_b). edb(dtc_q). edb(dtc_c).
+dtc_b(1). dtc_b(2). dtc_b(3). dtc_q(3).
+dtc_z(1).
+dtc_c(1). dtc_c(2). dtc_c(3).
+dtc_g(X)    :- dtc_c(X), not dtc_z(X).
+dtc_u(X, Y) :- dtc_q(X).
+dtc_h(X)    :- dtc_b(X), not dtc_g(X).
+dtc_h(X)    :- dtc_u(X, X).
+dtc_d(X)    :- dtc_h(X).
+dtc_r(X)    :- dtc_b(X), dtc_h(X).
+dtc_r2(X)   :- dtc_b(X), dtc_d(X).
+dtc_nr(X)   :- dtc_b(X), not dtc_r2(X).
+
+dtc_wrong(X)  :- dtc_r(X), dtc_g(X), not dtc_q(X).
+dtc_wrong(X)  :- dtc_r2(X), dtc_g(X), not dtc_q(X).
+dtc_wrong(X)  :- dtc_h(X), dtc_g(X), not dtc_q(X).
+dtc_missed(X) :- dtc_q(X), not dtc_r2(X).
+dtc_missed(X) :- dtc_b(X), dtc_g(X), not dtc_q(X), not dtc_nr(X).
+alarm(dtc_wrong).
+alarm(dtc_missed).
+
+-- expect-no-row: dtc_h[main](1)
+-- expect-no-row: dtc_r2[main](2)
+-- expect-row: dtc_nr[main](1) tick drv support=1

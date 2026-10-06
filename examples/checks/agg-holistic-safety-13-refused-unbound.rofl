@@ -1,0 +1,4 @@
+-- expect-refusal: does not bind every term
+-- examples/checks/agg-holistic-safety-13-refused-unbound.rofl — the median's
+-- value is bound by nothing in its body.
+ahs_unbound(G, M) :- ahs_group(G), M is median(X ; K : ahs_line(G, K, _)).

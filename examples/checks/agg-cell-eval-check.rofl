@@ -1,0 +1,55 @@
+-- examples/checks/agg-cell-eval-check.rofl — agg_cell_eval: the one cell
+-- engine folds all six operations right over one input that closes in
+-- several rounds, each checked against a fold written without an aggregate,
+-- and a cell has one value.
+aclo_m(X, Y)       :- acl_root(X), acl_reach(X, Y).
+aclo_lt(X, A, B)   :- aclo_m(X, A), aclo_m(X, B), A < B.
+aclo_btw(X, A, B)  :- aclo_lt(X, A, M), aclo_lt(X, M, B).
+aclo_next(X, A, B) :- aclo_lt(X, A, B), not aclo_btw(X, A, B).
+aclo_hasprev(X, B) :- aclo_next(X, _, B).
+aclo_hasnext(X, A) :- aclo_next(X, A, _).
+-- the chain carries the rank and the running sum together
+aclo_w(X, Y, W)    :- aclo_m(X, Y), acl_weight(Y, W).
+aclo_w(X, Y, 0)    :- aclo_m(X, Y), not acl_weighted(Y).
+acl_weighted(Y)    :- acl_weight(Y, _).
+aclo_pos(X, A, 1, W)  :- aclo_m(X, A), not aclo_hasprev(X, A), aclo_w(X, A, W).
+aclo_pos(X, B, K, S)  :- aclo_pos(X, A, J, S1), aclo_next(X, A, B), K is J + 1, aclo_w(X, B, W), S is S1 + W.
+aclo_n(X, K)       :- aclo_pos(X, A, K, _), not aclo_hasnext(X, A).
+aclo_s(X, S)       :- aclo_pos(X, A, _, S), not aclo_hasnext(X, A).
+aclo_some(X)       :- aclo_m(X, _).
+aclo_n(X, 0)       :- acl_root(X), not aclo_some(X).
+aclo_s(X, 0)       :- acl_root(X), not aclo_some(X).
+aclo_wv(X, W)      :- aclo_m(X, Y), acl_weight(Y, W).
+aclo_below(X, W)   :- aclo_wv(X, W), aclo_wv(X, V), V < W.
+aclo_above(X, W)   :- aclo_wv(X, W), aclo_wv(X, V), V > W.
+aclo_lo(X, W)      :- aclo_wv(X, W), not aclo_below(X, W).
+aclo_hi(X, W)      :- aclo_wv(X, W), not aclo_above(X, W).
+aclo_t(X)          :- aclo_m(X, Y), acl_flag(Y, true).
+aclo_f(X)          :- aclo_m(X, Y), acl_flag(Y, false).
+aclo_or(X, true)   :- aclo_t(X).
+aclo_or(X, false)  :- aclo_f(X), not aclo_t(X).
+aclo_and(X, false) :- aclo_f(X).
+aclo_and(X, true)  :- aclo_t(X), not aclo_f(X).
+
+acl_wrong(n, X)   :- acl_n(X, V), not aclo_n(X, V).
+acl_wrong(s, X)   :- acl_s(X, V), not aclo_s(X, V).
+acl_wrong(lo, X)  :- acl_lo(X, V), not aclo_lo(X, V).
+acl_wrong(hi, X)  :- acl_hi(X, V), not aclo_hi(X, V).
+acl_wrong(any, X) :- acl_any(X, V), not aclo_or(X, V).
+acl_wrong(all, X) :- acl_all(X, V), not aclo_and(X, V).
+acl_wrong(twice, X) :- acl_twice(X, _, V), not aclo_n(X, V).
+acl_missing(n, X)   :- aclo_n(X, V), not acl_n(X, V).
+acl_missing(s, X)   :- aclo_s(X, V), not acl_s(X, V).
+acl_missing(lo, X)  :- aclo_lo(X, V), not acl_lo(X, V).
+acl_missing(hi, X)  :- aclo_hi(X, V), not acl_hi(X, V).
+acl_missing(any, X) :- aclo_or(X, V), not acl_any(X, V).
+acl_missing(all, X) :- aclo_and(X, V), not acl_all(X, V).
+cell_two_values(C)  :- agg_cell[$kernel](C, A, _), agg_cell[$kernel](C, B, _), A != B.
+alarm(acl_wrong).
+alarm(acl_missing).
+alarm(cell_two_values).
+-- the closure takes more than one round to reach what the counts read
+aclo_deep()        :- acl_reach(X, Z), not acl_edge(X, Z), acl_reach(Z, _).
+aclo_vacuous(deep)  :- not aclo_deep().
+aclo_vacuous(empty) :- not aclo_n(_, 0).
+alarm(aclo_vacuous).

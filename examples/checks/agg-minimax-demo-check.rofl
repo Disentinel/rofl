@@ -1,0 +1,201 @@
+-- examples/checks/agg-minimax-demo-check.rofl — agg_minimax_demo, TIC-TAC-TOE
+-- BY MINIMAX (examples/minimax/README.md). The rules are
+-- examples/minimax/minimax.rofl; the world has no data file, the game is the
+-- rules.
+--
+-- BY HAND: the game is a draw, and every opening is a draw (nine rows at 0
+-- in v1). After a corner, O must answer in the centre: a reply on an edge or
+-- on a corner loses (7 of the 8 replies are 1 for X, the centre is 0). With X
+-- on the first row's two left cells and O in the centre and O to move, one
+-- move keeps the draw, the block at the third cell, and the other five
+-- lose. With X on a corner and the centre and O on an edge and the far corner,
+-- X to move, two moves win (cells 4 and 7) and three do not. 5 478 boards are real; the last ply has 78 of them, 62 won by X, 16
+-- drawn and none won by O (O has only four marks).
+--
+-- The oracle is a script of its own, a memoised minimax over tuples in Python
+-- that shares nothing with these rules: per ply how many boards are real and
+-- how many are worth -1, 0 and 1, and the value of every board of plies 1
+-- and 2. mm_ply(Ply, Boards, OWins, Draws, XWins).
+mm_ply(0, 1, 0, 1, 0).
+mm_ply(1, 9, 0, 9, 0).
+mm_ply(2, 72, 0, 24, 48).
+mm_ply(3, 252, 50, 138, 64).
+mm_ply(4, 756, 36, 136, 584).
+mm_ply(5, 1260, 540, 264, 456).
+mm_ply(6, 1520, 264, 200, 1056).
+mm_ply(7, 1140, 416, 200, 524).
+mm_ply(8, 390, 168, 80, 142).
+mm_ply(9, 78, 0, 16, 62).
+mm_game(0).
+mm_val(1, b(e,e,e,e,e,e,e,e,x), 0).
+mm_val(1, b(e,e,e,e,e,e,e,x,e), 0).
+mm_val(1, b(e,e,e,e,e,e,x,e,e), 0).
+mm_val(1, b(e,e,e,e,e,x,e,e,e), 0).
+mm_val(1, b(e,e,e,e,x,e,e,e,e), 0).
+mm_val(1, b(e,e,e,x,e,e,e,e,e), 0).
+mm_val(1, b(e,e,x,e,e,e,e,e,e), 0).
+mm_val(1, b(e,x,e,e,e,e,e,e,e), 0).
+mm_val(1, b(x,e,e,e,e,e,e,e,e), 0).
+mm_val(2, b(e,e,e,e,e,e,e,o,x), 1).
+mm_val(2, b(e,e,e,e,e,e,e,x,o), 0).
+mm_val(2, b(e,e,e,e,e,e,o,e,x), 1).
+mm_val(2, b(e,e,e,e,e,e,o,x,e), 0).
+mm_val(2, b(e,e,e,e,e,e,x,e,o), 1).
+mm_val(2, b(e,e,e,e,e,e,x,o,e), 1).
+mm_val(2, b(e,e,e,e,e,o,e,e,x), 1).
+mm_val(2, b(e,e,e,e,e,o,e,x,e), 1).
+mm_val(2, b(e,e,e,e,e,o,x,e,e), 1).
+mm_val(2, b(e,e,e,e,e,x,e,e,o), 0).
+mm_val(2, b(e,e,e,e,e,x,e,o,e), 1).
+mm_val(2, b(e,e,e,e,e,x,o,e,e), 1).
+mm_val(2, b(e,e,e,e,o,e,e,e,x), 0).
+mm_val(2, b(e,e,e,e,o,e,e,x,e), 0).
+mm_val(2, b(e,e,e,e,o,e,x,e,e), 0).
+mm_val(2, b(e,e,e,e,o,x,e,e,e), 0).
+mm_val(2, b(e,e,e,e,x,e,e,e,o), 0).
+mm_val(2, b(e,e,e,e,x,e,e,o,e), 1).
+mm_val(2, b(e,e,e,e,x,e,o,e,e), 0).
+mm_val(2, b(e,e,e,e,x,o,e,e,e), 1).
+mm_val(2, b(e,e,e,o,e,e,e,e,x), 1).
+mm_val(2, b(e,e,e,o,e,e,e,x,e), 1).
+mm_val(2, b(e,e,e,o,e,e,x,e,e), 1).
+mm_val(2, b(e,e,e,o,e,x,e,e,e), 0).
+mm_val(2, b(e,e,e,o,x,e,e,e,e), 1).
+mm_val(2, b(e,e,e,x,e,e,e,e,o), 1).
+mm_val(2, b(e,e,e,x,e,e,e,o,e), 1).
+mm_val(2, b(e,e,e,x,e,e,o,e,e), 0).
+mm_val(2, b(e,e,e,x,e,o,e,e,e), 0).
+mm_val(2, b(e,e,e,x,o,e,e,e,e), 0).
+mm_val(2, b(e,e,o,e,e,e,e,e,x), 1).
+mm_val(2, b(e,e,o,e,e,e,e,x,e), 1).
+mm_val(2, b(e,e,o,e,e,e,x,e,e), 1).
+mm_val(2, b(e,e,o,e,e,x,e,e,e), 0).
+mm_val(2, b(e,e,o,e,x,e,e,e,e), 0).
+mm_val(2, b(e,e,o,x,e,e,e,e,e), 1).
+mm_val(2, b(e,e,x,e,e,e,e,e,o), 1).
+mm_val(2, b(e,e,x,e,e,e,e,o,e), 1).
+mm_val(2, b(e,e,x,e,e,e,o,e,e), 1).
+mm_val(2, b(e,e,x,e,e,o,e,e,e), 1).
+mm_val(2, b(e,e,x,e,o,e,e,e,e), 0).
+mm_val(2, b(e,e,x,o,e,e,e,e,e), 1).
+mm_val(2, b(e,o,e,e,e,e,e,e,x), 1).
+mm_val(2, b(e,o,e,e,e,e,e,x,e), 0).
+mm_val(2, b(e,o,e,e,e,e,x,e,e), 1).
+mm_val(2, b(e,o,e,e,e,x,e,e,e), 1).
+mm_val(2, b(e,o,e,e,x,e,e,e,e), 1).
+mm_val(2, b(e,o,e,x,e,e,e,e,e), 1).
+mm_val(2, b(e,o,x,e,e,e,e,e,e), 1).
+mm_val(2, b(e,x,e,e,e,e,e,e,o), 1).
+mm_val(2, b(e,x,e,e,e,e,e,o,e), 0).
+mm_val(2, b(e,x,e,e,e,e,o,e,e), 1).
+mm_val(2, b(e,x,e,e,e,o,e,e,e), 1).
+mm_val(2, b(e,x,e,e,o,e,e,e,e), 0).
+mm_val(2, b(e,x,e,o,e,e,e,e,e), 1).
+mm_val(2, b(e,x,o,e,e,e,e,e,e), 0).
+mm_val(2, b(o,e,e,e,e,e,e,e,x), 1).
+mm_val(2, b(o,e,e,e,e,e,e,x,e), 1).
+mm_val(2, b(o,e,e,e,e,e,x,e,e), 1).
+mm_val(2, b(o,e,e,e,e,x,e,e,e), 1).
+mm_val(2, b(o,e,e,e,x,e,e,e,e), 0).
+mm_val(2, b(o,e,e,x,e,e,e,e,e), 0).
+mm_val(2, b(o,e,x,e,e,e,e,e,e), 1).
+mm_val(2, b(o,x,e,e,e,e,e,e,e), 0).
+mm_val(2, b(x,e,e,e,e,e,e,e,o), 1).
+mm_val(2, b(x,e,e,e,e,e,e,o,e), 1).
+mm_val(2, b(x,e,e,e,e,e,o,e,e), 1).
+mm_val(2, b(x,e,e,e,e,o,e,e,e), 1).
+mm_val(2, b(x,e,e,e,o,e,e,e,e), 0).
+mm_val(2, b(x,e,e,o,e,e,e,e,e), 1).
+mm_val(2, b(x,e,o,e,e,e,e,e,e), 1).
+mm_val(2, b(x,o,e,e,e,e,e,e,e), 1).
+mm_h(P, -1, L) :- mm_ply(P, _, L, _, _).
+mm_h(P, 0, D)  :- mm_ply(P, _, _, D, _).
+mm_h(P, 1, W)  :- mm_ply(P, _, _, _, W).
+mm_n(P, T)     :- mm_ply(P, T, _, _, _).
+mmc_hv(-1). mmc_hv(0). mmc_hv(1).
+mmc_h(0, V, N) :- mmc_hv(V), N is count(B : v0(B, V)).
+mmc_h(1, V, N) :- mmc_hv(V), N is count(B : v1(B, V)).
+mmc_h(2, V, N) :- mmc_hv(V), N is count(B : v2(B, V)).
+mmc_h(3, V, N) :- mmc_hv(V), N is count(B : v3(B, V)).
+mmc_h(4, V, N) :- mmc_hv(V), N is count(B : v4(B, V)).
+mmc_h(5, V, N) :- mmc_hv(V), N is count(B : v5(B, V)).
+mmc_h(6, V, N) :- mmc_hv(V), N is count(B : v6(B, V)).
+mmc_h(7, V, N) :- mmc_hv(V), N is count(B : v7(B, V)).
+mmc_h(8, V, N) :- mmc_hv(V), N is count(B : v8(B, V)).
+mmc_h(9, V, N) :- mmc_hv(V), N is count(B : v9(B, V)).
+mmc_n(P, N) :- mm_n(P, _), N is count(B : real(P, B)).
+mmc_miss(hist, P)   :- mm_h(P, V, N), not mmc_h(P, V, N).
+mmc_extra(hist, P)  :- mmc_h(P, V, N), not mm_h(P, V, N).
+mmc_miss(boards, P) :- mm_n(P, N), not mmc_n(P, N).
+mmc_extra(boards, P) :- mmc_n(P, N), not mm_n(P, N).
+mmc_miss(game, V)   :- mm_game(V), not game(V).
+mmc_extra(game, V)  :- game(V), not mm_game(V).
+mmc_miss(v1, B)     :- mm_val(1, B, V), not v1(B, V).
+mmc_miss(v2, B)     :- mm_val(2, B, V), not v2(B, V).
+mmc_extra(v1, B)    :- v1(B, V), not mm_val(1, B, V).
+mmc_extra(v2, B)    :- v2(B, V), not mm_val(2, B, V).
+alarm(mmc_miss).
+alarm(mmc_extra).
+-- one value per board at every ply: the histogram would total more boards
+mmc_two(0, B) :- v0(B, V), v0(B, W), V != W.
+mmc_two(1, B) :- v1(B, V), v1(B, W), V != W.
+mmc_two(2, B) :- v2(B, V), v2(B, W), V != W.
+mmc_two(3, B) :- v3(B, V), v3(B, W), V != W.
+mmc_two(4, B) :- v4(B, V), v4(B, W), V != W.
+mmc_two(5, B) :- v5(B, V), v5(B, W), V != W.
+mmc_two(6, B) :- v6(B, V), v6(B, W), V != W.
+mmc_two(7, B) :- v7(B, V), v7(B, W), V != W.
+mmc_two(8, B) :- v8(B, V), v8(B, W), V != W.
+mmc_two(9, B) :- v9(B, V), v9(B, W), V != W.
+alarm(mmc_two).
+-- NEVER: X, who moves first, never loses with perfect play, and O never wins
+-- a board of the last ply
+mmc_never(x_loses)  :- game(-1).
+mmc_never(o_wins_9) :- v9(_, -1).
+alarm(mmc_never).
+-- the shape: the corner opening is answered by the centre alone, and every
+-- other reply is lost
+mmc_shape(centre_holds)  :- v2(b(x,e,e,e,o,e,e,e,e), 0).
+mmc_shape(edge_loses)    :- v2(b(x,o,e,e,e,e,e,e,e), 1).
+mmc_shape(corner_loses)  :- v2(b(x,e,e,e,e,e,e,e,o), 1).
+mmc_shape(block_holds)   :- v4(b(x,x,o,e,o,e,e,e,e), 0).
+mmc_shape(no_block_loses) :- v4(b(x,x,e,o,o,e,e,e,e), 1).
+mmc_shape(draw_is_a_row) :- v9(b(x,o,x,x,o,o,o,x,x), 0).
+mmc_shape_want(centre_holds). mmc_shape_want(edge_loses). mmc_shape_want(corner_loses).
+mmc_shape_want(block_holds). mmc_shape_want(no_block_loses). mmc_shape_want(draw_is_a_row).
+mmc_shape_missing(W) :- mmc_shape_want(W), not mmc_shape(W).
+alarm(mmc_shape_missing).
+
+-- THE PROOF ROWS. `why` of the forced position names the one move that keeps
+-- the draw, the block, and none of the five that lose; `why` of the position
+-- where X holds a corner and the centre and O an edge and the far corner names
+-- the two moves of X that win (cells 4 and 7) and not the three that let it go
+explain_request(why, v3(b(x,x,e,e,o,e,e,e,e), 0)).
+explain_request(why, v4(b(x,o,e,e,x,e,e,e,o), 1)).
+mmc_says(A, T) :- explained[$explain](why, A, _, L), mmc_want(A, T), N is str_segs(L, T), N > 1.
+mmc_want(v3(b(x,x,e,e,o,e,e,e,e), 0), "= 0 [aggregate: 1 member").
+mmc_want(v3(b(x,x,e,e,o,e,e,e,e), 0), "move[main](3,b(x,x,e,e,o,e,e,e,e),b(x,x,o,e,o,e,e,e,e))").
+mmc_want(v4(b(x,o,e,e,x,e,e,e,o), 1), "= 1 [aggregate: 2 members").
+mmc_want(v4(b(x,o,e,e,x,e,e,e,o), 1), "move[main](4,b(x,o,e,e,x,e,e,e,o),b(x,o,e,x,x,e,e,e,o))").
+mmc_want(v4(b(x,o,e,e,x,e,e,e,o), 1), "move[main](4,b(x,o,e,e,x,e,e,e,o),b(x,o,e,e,x,e,x,e,o))").
+mmc_unsaid(A, T) :- mmc_want(A, T), not mmc_says(A, T).
+alarm(mmc_unsaid).
+mmc_line(A, L) :- explained[$explain](why, A, _, L).
+mmc_loses(T) :- mmc_line(_, L), mmc_bad(T), N is str_segs(L, T), N > 1.
+mmc_bad("move[main](3,b(x,x,e,e,o,e,e,e,e),b(x,x,e,o,o,e,e,e,e))").
+mmc_bad("move[main](3,b(x,x,e,e,o,e,e,e,e),b(x,x,e,e,o,o,e,e,e))").
+mmc_bad("move[main](3,b(x,x,e,e,o,e,e,e,e),b(x,x,e,e,o,e,o,e,e))").
+mmc_bad("move[main](3,b(x,x,e,e,o,e,e,e,e),b(x,x,e,e,o,e,e,o,e))").
+mmc_bad("move[main](3,b(x,x,e,e,o,e,e,e,e),b(x,x,e,e,o,e,e,e,o))").
+mmc_bad("move[main](4,b(x,o,e,e,x,e,e,e,o),b(x,o,o,e,x,e,e,e,o))").
+mmc_bad("move[main](4,b(x,o,e,e,x,e,e,e,o),b(x,o,e,e,x,x,e,e,o))").
+mmc_bad("move[main](4,b(x,o,e,e,x,e,e,e,o),b(x,o,e,e,x,e,e,x,o))").
+alarm(mmc_loses).
+-- and the refusal of a better value is an answer: X cannot force a win
+explain_request(whynot, v0(b(e,e,e,e,e,e,e,e,e), 1)).
+mmc_no_win(L) :- explained[$explain](whynot, v0(b(e,e,e,e,e,e,e,e,e), 1), _, L), N is str_segs(L, "= 0, not 1 [aggregate]"), N > 1.
+mmc_no_win_missing(whynot) :- not mmc_no_win(_).
+alarm(mmc_no_win_missing).
+-- no answer of this world is a shrug, which `not` would pass in silence
+mmc_shrug(T, R) :- shrug[$kernel](T, R, _).
+alarm(mmc_shrug).

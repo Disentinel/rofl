@@ -1,0 +1,8 @@
+-- examples/checks/agg-count-strata-untabled-check.rofl —
+-- agg_count_strata_untabled: under the stock evaluator, with no stratum
+-- table loaded, both programs whose aggregate the table would have to order
+-- are refused, so neither reaches this world.
+acu_accepted()  :- concludes[$kernel](_, acu_all).
+acur_accepted() :- concludes[$kernel](_, acur_p).
+alarm(acu_accepted).
+alarm(acur_accepted).

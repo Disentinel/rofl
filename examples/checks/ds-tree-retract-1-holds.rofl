@@ -1,0 +1,10 @@
+-- a tree whose edge is held back by a block: lifting the block (retracting it) adds the edge and, with it, the closure rows it makes,
+-- and the world is the one a fresh evaluation without the block holds
+edb(dtr_src).
+edb(dtr_blocked).
+tree dtr_in(P, C) closure dtr_within.
+dtr_src(a, b). dtr_src(b, c). dtr_src(c, d).
+dtr_blocked(b, c).
+dtr_in(P, C) :- dtr_src(P, C), not dtr_blocked(P, C).
+dtr_hit(X) :- dtr_within(a, X).
+dtr_pair(X, Y) :- dtr_within(X, Y), dtr_src(Y, _).

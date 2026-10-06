@@ -1,0 +1,32 @@
+-- examples/checks/ds-tree-tick-3-staged-check.rofl — ds_tree_tick_staged (witnesses kept), ticked once: dts_x(c) and the count
+-- dts_n(2) were concluded at tick 0 from rows of the closure, so their rows are of tick 0, `<= rule @tick 0 [past tick]` from the
+-- frozen derived_by rows the boundary wrote (no row of the closure is stored), while dts_y(c), concluded at tick 1, reads the rows of
+-- tick 1 and explains them from the tree. The members weigh what tick 0's rows weighed (the edges are derived: h=3 and 4).
+dts_line(why,dts_x(c),1,"dts_x[main](c)  <= r50ef4197 @tick 1").
+dts_line(why,dts_x(c),2,"  dts_w[main](a,c)  <= r6237656d @tick 0 [past tick]").
+dts_line(why_all,dts_n(2),1,"dts_n[main](2)  <= r4a4c3f99 @tick 1").
+dts_line(why_all,dts_n(2),2,"  count(?D : dts_w[main](a,?D)) = 2 [aggregate: 2 members, sealed dts_w@1]").
+dts_line(why_all,dts_n(2),3,"    #1 (b) h=3").
+dts_line(why_all,dts_n(2),4,"      dts_w[main](a,b)  <= r4beb43fc @tick 0 [past tick]").
+dts_line(why_all,dts_n(2),5,"    #2 (c) h=4").
+dts_line(why_all,dts_n(2),6,"      dts_w[main](a,c)  <= r6237656d @tick 0 [past tick]").
+dts_line(why_all,dts_y(c),1,"dts_y[main](c)  <= rbd8a0b08 @tick 1").
+dts_line(why_all,dts_y(c),10,"      dts_e0[main](b,c)  <= r00d60199 @tick 1").
+dts_line(why_all,dts_y(c),11,"        dts_e0[main](b,c) [past tick]").
+dts_line(why_all,dts_y(c),2,"  dts_x[main](c)  <= r50ef4197 @tick 1").
+dts_line(why_all,dts_y(c),3,"    dts_w[main](a,c)  <= r6237656d @tick 0 [past tick]").
+dts_line(why_all,dts_y(c),4,"  dts_w[main](a,c)  <= r6237656d @tick 1").
+dts_line(why_all,dts_y(c),5,"    dts_w[main](a,b)  <= r4beb43fc @tick 1").
+dts_line(why_all,dts_y(c),6,"      dts_e[main](a,b)  <= rf6dda73c @tick 1").
+dts_line(why_all,dts_y(c),7,"        dts_e0[main](a,b)  <= r00d60199 @tick 1").
+dts_line(why_all,dts_y(c),8,"          dts_e0[main](a,b) [past tick]").
+dts_line(why_all,dts_y(c),9,"    dts_e[main](b,c)  <= rf6dda73c @tick 1").
+dts_line(K, A, I, T)@next :- dts_line(K, A, I, T).
+dts_has(K, A, I, T) :- explained[$explain](K, A, I, T).
+dts_known(K, A, I) :- dts_line(K, A, I, _).
+dts_missing(K, A, I) :- dts_line(K, A, I, T), not dts_has(K, A, I, T).
+dts_extra(K, A, I) :- dts_has(K, A, I, _), not dts_known(K, A, I).
+dts_refused(K, A) :- explained[$explain](K, A, 0, _).
+alarm(dts_missing).
+alarm(dts_extra).
+alarm(dts_refused).

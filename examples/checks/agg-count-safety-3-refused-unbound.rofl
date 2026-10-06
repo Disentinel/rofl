@@ -1,0 +1,4 @@
+-- expect-refusal: does not bind every term
+-- examples/checks/agg-count-safety-3-refused-unbound.rofl — X is counted and
+-- nothing in the aggregate's body binds it.
+acs_unbound(C, N) :- acs_c(C), N is count(X : acs_b(B, C)).

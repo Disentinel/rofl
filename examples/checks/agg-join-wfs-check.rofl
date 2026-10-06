@@ -1,0 +1,22 @@
+-- examples/checks/agg-join-wfs-check.rofl — agg_join_wfs: a join lattice
+-- over what a well-founded world concluded, fed from below: the set of
+-- drawn positions a position can move to in any number of moves, a union
+-- over a cycle; inside a well-founded world a join is refused
+-- (agg-join-wfs-2-refused-join.rofl), since a cell grown under an
+-- assumption holds elements no model may have.
+edb(wjt_move).
+wjt_move(a, b). wjt_move(b, a). wjt_move(b, c). wjt_move(c, d).
+wjt_move(e, f). wjt_move(f, e). wjt_move(g, h). wjt_move(h, i).
+lattice wjt_draws(X, union S).
+wjt_draws(X, set(Y)) :- wjt_move(X, Y), unknown(wg_win(Y)).
+wjt_draws(X, S)      :- wjt_move(X, Y), wjt_draws(Y, S).
+wjt_want(a, set(a, b)). wjt_want(b, set(a, b)). wjt_want(e, set(e, f)). wjt_want(f, set(e, f)).
+wjt_wrong(X, S) :- wjt_want(X, S), not wjt_draws(X, S).
+wjt_wrong(X, S) :- wjt_draws(X, S), not wjt_want(X, S).
+alarm(wjt_wrong).
+-- the answers as rows the state must hold: an alarm `not answer` is silent
+-- when the answer is a shrug (f_a_missing_row_check_goes_quiet_over_a_hole)
+-- expect-row: wjt_draws[main](a,set(a,b))
+-- expect-row: wjt_draws[main](f,set(e,f))
+-- expect-no-row: wjt_draws[main](g,set(h))
+-- below: examples/checks/agg-wfs-game.rofl

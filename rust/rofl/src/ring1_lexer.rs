@@ -4,7 +4,7 @@
 // test/ring1-lexgen.test.ts asserts position-for-position agreement.
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub enum Kind { At, Backslash, Bang, Colon, Comma, Dash, Digit, Dollar, Dot, Eq, Gt, Lbrack, Lower, Lpar, Lt, Nl, Plus, Quote, Rbrack, Rpar, Slash, Space, Star, Upper, Other }
+pub enum Kind { At, Backslash, Bang, Colon, Comma, Dash, Digit, Dollar, Dot, Eq, Gt, Lbrack, Lower, Lpar, Lt, Nl, Plus, Quote, Rbrack, Rpar, Semi, Slash, Space, Star, Upper, Other }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum State { Cmt, Code, Esc, Str }
@@ -32,6 +32,7 @@ pub fn kind_of(c: char) -> Kind {
         '"' => Kind::Quote,
         ']' => Kind::Rbrack,
         ')' => Kind::Rpar,
+        ';' => Kind::Semi,
         '/' => Kind::Slash,
         '\t' | '\r' | ' ' => Kind::Space,
         '*' => Kind::Star,

@@ -1,0 +1,48 @@
+-- examples/checks/agg-sub-safety-check.rofl — agg_sub_safety: the reads of
+-- agg-sub-safety-1-ok.rofl are accepted and evaluate to the values
+-- enumerated here; every agg-sub-safety-N-refused-*.rofl is refused, each
+-- for the reason its first line names, so none of their rules reaches this
+-- world: two dominance rules of one relation at two keys or two arities, a
+-- relation that is subsumptive and a lattice or a tag too, an asserted fact
+-- in one, a rule writing one at another arity, a reader of provenance beside
+-- one, a threshold counting one, one concluded by a rule that is not
+-- range-restricted, a dominance body that reads its own relation, folds an
+-- aggregate or uses a variable nothing binds, a malformed row, and two
+-- consumers that are not monotone in the dominance: one that read a
+-- dominated value, one whose conclusion rested only on what a dominated
+-- value concluded. The engine checks that last on the facts it made.
+assf_want(p, a, b, 2). assf_want(p, a, c, 3). assf_want(p, b, c, 1). assf_want(p, b, a, 6).
+assf_want(p, c, a, 5). assf_want(p, c, b, 7). assf_want(p, a, a, 8). assf_want(p, b, b, 8).
+assf_want(p, c, c, 8).
+assf_have(p, A, B, D) :- assk_p(A, B, D).
+assf_want(near, A, B, D) :- assf_want(p, A, B, D).
+assf_have(near, A, B, D) :- assk_near(A, B, D).
+assf_want(one, x, x, 1).
+assf_have(one, x, x, V) :- assk_one(V).
+assf_want(wild, a, 2, x). assf_want(wild, b, 1, x). assf_want(wild, c, 5, x).
+assf_have(wild, K, V, x) :- assk_wild(K, V, _).
+assf_want(count, x, x, 9).
+assf_have(count, x, x, N) :- assk_n(N).
+assf_missing(R, A, B, D) :- assf_want(R, A, B, D), not assf_have(R, A, B, D).
+assf_extra(R, A, B, D)   :- assf_have(R, A, B, D), not assf_want(R, A, B, D).
+alarm(assf_missing).
+alarm(assf_extra).
+assf_far_wrong() :- not assk_far(a, b).
+alarm(assf_far_wrong).
+assf_accepted(Rel) :- concludes[$kernel](_, Rel), assf_refused(Rel).
+assf_accepted(Rel) :- dominance[$kernel](_, Rel, _, _), assf_refused(Rel).
+assf_refused(assr_key).
+assf_refused(assr_ar).
+assf_refused(assr_lat).
+assf_refused(assr_tag).
+assf_refused(assr_asr).
+assf_refused(assr_wid).
+assf_refused(assr_prov).
+assf_refused(assr_thr).
+assf_refused(assr_dem).
+assf_refused(assr_self).
+assf_refused(assr_agg).
+assf_refused(assr_free).
+assf_refused(assr_mono).
+assf_refused(assr_rest).
+alarm(assf_accepted).

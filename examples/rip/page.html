@@ -425,10 +425,10 @@ unfounded set: risky[main](w(ship,0,1,1,1,0,2),call), risky[main](w(ship,1,1,1,1
     is the exact sequence of unlucky events that breaks it, so you can try it yourself. The
     program has that already, because it kept track of how it reached every situation. The
     shortest way to make a customer pay twice:</p>
-  <p class="eng">The tropical fold priced every derivation of <code>reached/1</code>. Walking
-    down and choosing at each step the firing whose cost <em>is</em> that number reads the argmin
-    back out of the support the engine recorded &mdash; not a search, and not a story told about
-    the answer afterwards.</p>
+  <p class="eng"><code>dist</code> in <code>trace.rofl</code> is a lattice, <code>lattice dist(S, min D)</code>:
+    one row per state, the fewest moves that reach it. <code>leg</code> keeps the moves on a
+    shortest play, and walking back along it reads the script out of the engine &mdash; not a
+    search, and not a story told about the answer afterwards.</p>
 
   <pre>    step  where                        the workflow   the provider
        1  w(reserve,0,0,0,0,0,2)       call           fail

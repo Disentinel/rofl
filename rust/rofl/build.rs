@@ -5,40 +5,26 @@
 // that can drift silently — the defect this repository has paid for twice —
 // so the template literal is extracted at build time instead. Touching
 // kernel-dense.ts rebuilds this crate.
+//
+// THE TREE IS THE ONE CARGO IS BUILDING, read from the environment cargo
+// gives this script when it RUNS. `env!("CARGO_MANIFEST_DIR")` is the tree the
+// script was COMPILED in, and a copy of the tree that brought its target/
+// along kept reading the original's kernel-dense.ts, and cargo kept watching
+// the original's for changes: a fault planted in the copy's safety.rofl never
+// reached its binary, and read as a survivor.
 use std::path::PathBuf;
 
-fn extract(src: &str, name: &str) -> String {
-    let needle = format!("export const {name} = `");
-    let at = src
-        .find(&needle)
-        .unwrap_or_else(|| panic!("{name} not found in kernel-dense.ts"));
-    let rest = &src[at + needle.len()..];
-    let end = rest.find('`').expect("unterminated template literal");
-    rest[..end].to_string()
-}
-
-/// FNV-1a, so a volume can name the kernel it was written under without this
-/// build script gaining a dependency. Not a cryptographic claim — the threat
-/// is a stale artefact silently meaning something else, not a forged one.
-fn fnv1a(s: &str) -> u64 {
-    let mut h: u64 = 0xcbf2_9ce4_8422_2325;
-    for b in s.as_bytes() {
-        h ^= *b as u64;
-        h = h.wrapping_mul(0x1000_0000_01b3);
-    }
-    h
-}
+include!("src/kernel_text.rs");
 
 fn main() {
-    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../..")
-        .canonicalize()
-        .expect("repo root");
+    let manifest = std::env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR");
+    let root = PathBuf::from(manifest).join("../..").canonicalize().expect("repo root");
     let dense = root.join("src/kernel-dense.ts");
-    println!("cargo:rerun-if-changed={}", dense.display());
+    // relative, so cargo resolves it against the package it is building: an
+    // absolute path is checked in the tree that first ran this script
+    println!("cargo:rerun-if-changed=../../src/kernel-dense.ts");
+    println!("cargo:rerun-if-changed=src/kernel_text.rs");
     let src = std::fs::read_to_string(&dense).expect("read src/kernel-dense.ts");
-    let out = PathBuf::from(std::env::var("OUT_DIR").unwrap());
-    std::fs::write(out.join("policy.dense"), extract(&src, "POLICY_DENSE")).unwrap();
     let policy = extract(&src, "POLICY_DENSE");
     let safety = extract(&src, "SAFETY_DENSE");
     // WHAT A COOLED VOLUME IS SIGNED WITH, and why it is these two programs.
@@ -50,7 +36,8 @@ fn main() {
     // one policy and reheated under another is the staleness class this
     // repository has already paid for once today — an artefact that still
     // parses and no longer means what it meant.
-    println!("cargo:rustc-env=ROFL_KERNEL_HASH={:016x}", fnv1a(&format!("{policy}{safety}")));
-    std::fs::write(out.join("policy.dense"), &policy).unwrap();
+    println!("cargo:rustc-env=ROFL_KERNEL_HASH={}", kernel_hash(&policy, &safety));
+    let out = PathBuf::from(std::env::var("OUT_DIR").unwrap());
     std::fs::write(out.join("safety.dense"), &safety).unwrap();
+    std::fs::write(out.join("shrug.dense"), extract(&src, "SHRUG_DENSE")).unwrap();
 }

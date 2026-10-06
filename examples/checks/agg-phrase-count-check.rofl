@@ -1,0 +1,16 @@
+-- examples/checks/agg-phrase-count-check.rofl — agg_count_phrase: the count read from its sentence and
+-- from rofl, each after a round trip, answers as the count does: c3 is bound before the count, so its empty
+-- group reads 0.
+pc_want(c1, 2). pc_want(c2, 1). pc_want(c3, 0).
+pc_wrong(C)  :- pc_want(C, N), not pcs_votes(C, N).
+pc_wrong(C)  :- pcs_votes(C, N), not pc_want(C, N).
+pc_wrong(C)  :- pc_want(C, N), not pcr_votes(C, N).
+pc_wrong(C)  :- pcr_votes(C, N), not pc_want(C, N).
+pc_pairs_wrong() :- not pcs_pairs(3).
+pc_pairs_wrong() :- not pcr_pairs(3).
+alarm(pc_wrong).
+alarm(pc_pairs_wrong).
+-- written in its own words (agg-phrase-check.rofl)
+sentence_word(pcr_votes, "is the number of B such that").
+sentence_word(pcr_pairs, "is the number of (B, C) such that").
+sentence_word(pcs_votes, "is the number of B such that").

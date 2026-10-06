@@ -1,0 +1,48 @@
+-- examples/checks/agg-threshold-ticks-check.rofl — agg_threshold_ticks, over
+-- agg-ticks-data.rofl two ticks deep with retain_ticks 0: at_least, whose quorum stays reached in the tick it was reached in.
+-- A value staged @next at tick 0 is base at tick 1, beside the value the same
+-- aggregate has at tick 1; `why` of it names tick 0's cell, and each member
+-- as the fact of tick 0 with the rule that derived it then, whose derived_by
+-- row retain_ticks keeps because the carried cell cites it.
+explain_request(why, tk_ok(a)).
+tth_line(L) :- explained[$explain](why, tk_ok(a), _, L).
+tth_has(T)  :- tth_line(L), tth_text(T), N is str_segs(L, T), N > 1.
+tth_past(M) :- tth_line(L), tth_member(M, T), N is str_segs(L, T), N > 1, P is str_segs(L, "@tick 0 [past tick]"), P > 1.
+tth_text_missing(T)    :- tth_text(T), not tth_has(T).
+tth_member_not_past(M) :- tth_member(M, _), not tth_past(M).
+tth_explain_refused()  :- explained[$explain](why, tk_ok(a), 0, _).
+tth_cells(T, V) :- agg_cell[$kernel]($cell(R, _, T, _), V, _), concludes[$kernel](R, tk_ok).
+tth_cells(T, V) :- agg_cell[$kernel]($cell(R, _, T, _), V, _), concludes[$kernel](R, tth_pair).
+-- a quorum reached in both ticks (tk_w keeps a and b at tick 1), so tick 1
+-- seals a cell for a conclusion @next, which is data at tick 2 and not here
+tth_pair(K)@next :- tk_w(K, _), at_least(2, Y : tk_w(Y, _)).
+tth_wrong(pair) :- not tth_pair(a).
+tth_cell_missing(T, V) :- tth_cell(T, V), not tth_cells(T, V).
+-- the cell the same rule seals at tick 1 is data at tick 2, where its
+-- conclusion arrives, and not here
+tth_early(V)          :- tth_cells(1, V).
+alarm(tth_wrong).
+alarm(tth_text_missing).
+alarm(tth_member_not_past).
+alarm(tth_explain_refused).
+alarm(tth_cell_missing).
+alarm(tth_early).
+tth_text(T)@next      :- tth_text(T).
+tth_member(M, T)@next :- tth_member(M, T).
+tth_cell(T, V)@next   :- tth_cell(T, V).
+tth_wrong(carried) :- not tk_ok(a).
+tth_wrong(carried) :- not tk_ok(c).
+tth_wrong(present) :- tk_ok_now(_).
+tth_text("at_least(3, ?Y : tk_w[main](?Y,?_$1)) [quorum: the first 3 members]").
+tth_member(a, "tk_w[main](a,3)  <= r"). tth_member(b, "tk_w[main](b,5)  <= r"). tth_member(c, "tk_w[main](c,5)  <= r").
+tth_cell(0, true).
+-- What a hole at tick 0 left unstaged is unknown at tick 1
+-- (agg-ticks-holes.rofl): th_t(u) was reached from a lattice's hole, so a
+-- quorum one short of it is unknown, its rule holed and no row; the plain
+-- unknown th_y(q, _) passes a threshold silently, as within a tick.
+tth_h(K) :- th_key(K), at_least(3, Y : th_t(Y)).
+tth_hole_read(K) :- tth_h(K).
+tth_unholed() :- not tth_holed().
+tth_holed() :- hole[$kernel]($rule(R), support_withdrawn), concludes[$kernel](R, tth_h).
+alarm(tth_hole_read).
+alarm(tth_unholed).

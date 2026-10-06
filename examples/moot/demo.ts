@@ -10,8 +10,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { Rofl } from '../../src/api.ts';
-import { Evaluation } from '../../src/engine.ts';
-import { peelRounds } from '../../src/rounds.ts';
+import { schedule } from '../../src/aggeval.ts';
 import { evaluateSemiring } from '../../src/semiring.ts';
 import {
   countingSemiring, tropicalSemiring, unitFiringCost, renderCount,
@@ -344,11 +343,7 @@ export function configFacts(cfg: Config): string {
   for (const f of cfg.flags) out.push(`flag(${f}).`);
   for (const c of cfg.clauses) {
     out.push(`ordered(${c.flag}, ${c.id}, ${c.index}).`);
-    out.push(`req_count(${c.id}, ${c.needs.length}).`);
-    c.needs.forEach((g, i) => {
-      out.push(`requires(${c.id}, ${g}).`);
-      out.push(`req_at(${c.id}, ${i + 1}, ${g}).`);
-    });
+    for (const g of c.needs) out.push(`requires(${c.id}, ${g}).`);
     for (const l of c.conds) {
       out.push(`cond_of(${c.id}, ${l.id}).`);
       out.push(`cond(${l.id}, ${l.dim}, ${l.op}, ${l.k}).`);
@@ -432,9 +427,7 @@ export function verdicts(r: Rofl): Verdicts {
 //
 // The tree is the engine's. What this adds is the reading: which dimension of
 // which clause came out empty, which conditions did it, and which single
-// deletion would revive it. The search for the deletion is host arithmetic
-// over the engine's `cond_admits/2` facts — v0 has no aggregation (LIMITS.md)
-// — but every set it intersects was derived, not parsed.
+// deletion would revive it, which is `repair/3`.
 // ===========================================================================
 
 /** Per-condition admitted values, straight off the engine. */
@@ -474,8 +467,7 @@ export interface ClauseDiagnosis {
   blockedBy: string[];         // required flags that are not live
 }
 
-export function diagnose(r: Rofl, cfg: Config, sets: Map<string, Set<string>>,
-                         clause: Clause, liveFlags: Set<string>): ClauseDiagnosis {
+export function diagnose(r: Rofl, cfg: Config, clause: Clause, liveFlags: Set<string>): ClauseDiagnosis {
   const emptyDims: DeadDim[] = [];
   for (const b of rows(r, `empty(${clause.id}, D)`)) {
     const dim = b.D;
@@ -483,13 +475,8 @@ export function diagnose(r: Rofl, cfg: Config, sets: Map<string, Set<string>>,
     const pairRow = rows(r, `conflict(${clause.id}, ${dim}, L1, L2)`)[0];
     const pair: [Cond, Cond] | null = pairRow
       ? [cfg.cond.get(pairRow.L1)!, cfg.cond.get(pairRow.L2)!] : null;
-    const repairs = conds.filter((drop) => {
-      const rest = conds.filter((l) => l.id !== drop.id);
-      if (rest.length === 0) return true;
-      let acc = new Set(sets.get(rest[0].id) ?? []);
-      for (const l of rest.slice(1)) acc = new Set([...acc].filter((v) => sets.get(l.id)?.has(v)));
-      return acc.size > 0;
-    });
+    const fix = new Set(rows(r, `repair(${clause.id}, ${dim}, L)`).map((x) => x.L));
+    const repairs = conds.filter((l) => fix.has(l.id));
     emptyDims.push({ dim, conds, pair, repairs });
   }
   const blockedBy = clause.needs.filter((g) => !liveFlags.has(g));
@@ -573,7 +560,7 @@ export function routeCounts(r: Rofl): { count: Map<string, Count>; cyclic: numbe
 
 /** Firings on the cheapest derivation of `live(F)`. Under these rules a flag
  *  whose shortest enabling route passes through G gate flags costs exactly
- *  5G + 4 firings; the identity is checked, not assumed, and what it reports
+ *  5G + 5 firings; the identity is checked, not assumed, and what it reports
  *  is GATE DEPTH — how many other flags must be on first. */
 export function gateDepth(r: Rofl): Map<string, number> {
   const fold = evaluateSemiring(r.store, tropicalSemiring,
@@ -582,8 +569,8 @@ export function gateDepth(r: Rofl): Map<string, number> {
   for (const f of col(r, 'live(F)', 'F')) {
     const cost = fold.value.get(`live[main](${f})`);
     if (cost === undefined || cost === Infinity) continue;
-    if ((cost - 4) % 5 !== 0) throw new Error(`moot: cost ${cost} for ${f} is not 5G + 4`);
-    out.set(f, (cost - 4) / 5);
+    if ((cost - 5) % 5 !== 0) throw new Error(`moot: cost ${cost} for ${f} is not 5G + 5`);
+    out.set(f, (cost - 5) / 5);
   }
   return out;
 }
@@ -708,11 +695,7 @@ export function encodeProgram(r: Rofl, sources: string[]): SelfEncoding {
       const needs = [...new Set(d.clause.body.filter((b) => b.t === 'pos')
         .map((b) => (b as { lit: { rel: string } }).lit.rel))]
         .filter((x) => rels.has(x));
-      out.push(`req_count(${id}, ${needs.length}).`);
-      needs.forEach((g, k) => {
-        out.push(`requires(${id}, ${g}).`);
-        out.push(`req_at(${id}, ${k + 1}, ${g}).`);
-      });
+      for (const g of needs) out.push(`requires(${id}, ${g}).`);
       d.clause.body.forEach((b, k) => {
         const dim = dimOf.get(canonBodyElem(b))!;
         out.push(`cond_of(${id}, ${id}_${k + 1}).`);
@@ -722,7 +705,6 @@ export function encodeProgram(r: Rofl, sources: string[]): SelfEncoding {
     if (baseRels.has(rel)) {
       i++;
       out.push(`ordered(${rel}, base_${rel}, ${i}).`);
-      out.push(`req_count(base_${rel}, 0).`);
     }
   }
   return {
@@ -990,13 +972,13 @@ export function hygiene(r: Rofl, watch: string[]): Hygiene {
   // decoded rules instead. The round a relation settles in IS its level, and a
   // relation still standing when a round settles nothing IS unstratifiable —
   // the same two answers, now read from the schedule that was actually used.
-  const ev = new Evaluation(r.store, { budget: BUDGET });
-  const peel = peelRounds(ev.rules);
+  const rules = decodeRules(r.store).rules;
+  const peel = schedule(rules);
   const strata = peel.round;
   return {
-    rules: ev.rules.length,
-    allSafe: ev.rules.every((x) => x.safe),
-    demandRels: ev.demandRels.size,
+    rules: rules.length,
+    allSafe: rows(r, 'unsafe_rule(R)').length === 0,
+    demandRels: rows(r, 'demand_rel(R)').length,
     unstratified: peel.stuck,
     audits: {
       malformed: rows(r, 'malformed[audit](R)').length,
@@ -1083,7 +1065,7 @@ function main(): void {
   for (const f of v.unreachable) {
     const cs = CFG.byFlag.get(f)!;
     const why = cs.map((c) => {
-      const d = diagnose(r, CFG, sets, c, live);
+      const d = diagnose(r, CFG, c, live);
       if (d.emptyDims.length > 0) return `${d.emptyDims[0].dim} empty`;
       if (d.blockedBy.length > 0) return `needs ${flagName(d.blockedBy[0])}`;
       return '?';
@@ -1121,13 +1103,13 @@ function main(): void {
   say('read it as a sentence. new_checkout has two clauses and BOTH are dead, for');
   say('two different reasons, and the tree names both:');
   for (const c of CFG.byFlag.get(FOCUS)!) {
-    const d = diagnose(r, CFG, sets, c, live);
+    const d = diagnose(r, CFG, c, live);
     say();
     say(`  ${c.id}:  ${c.text}`);
     for (const g of d.blockedBy) {
       say(`    needs ${flagName(g)}, and ${flagName(g)} is itself unreachable —`);
       const gc = CFG.byFlag.get(g)![0];
-      const gd = diagnose(r, CFG, sets, gc, live);
+      const gd = diagnose(r, CFG, gc, live);
       const e = gd.emptyDims[0];
       say(`      ${gc.id}: ${gc.text}`);
       say(`      dimension '${e.dim}' is empty: `
@@ -1147,7 +1129,7 @@ function main(): void {
   const THREE = 'f_loyalty_banner';
   rule('3. the emptiness that no PAIR of conditions explains');
   const lb = CFG.byFlag.get(THREE)![0];
-  const lbd = diagnose(r, CFG, sets, lb, live);
+  const lbd = diagnose(r, CFG, lb, live);
   say(`  ${flagName(THREE)}:  ${lb.text}`);
   say();
   for (const l of lb.conds) say(`    "${l.text}" admits {${[...(sets.get(l.id) ?? [])].sort().join(', ')}}`);
@@ -1208,13 +1190,13 @@ function main(): void {
   const cyc = cyclicByRelation(r);
   say(`the fold reports cyclic: ${cyclic} facts on a cycle of the support graph, all of`);
   say(`them in ${[...cyc.keys()].sort().join(', ')} — boot.rofl's transitive closure over MOOT's own`);
-  say('mutually recursive relations (live -> usable -> ok_from -> live). NO flag fact');
+  say('mutually recursive relations (live -> usable -> live). NO flag fact');
   say('is on a cycle, because the requirement graph of this config is a DAG, which is');
   say('why every count above is a finite number rather than "infinitely many".');
   say(`  flag facts on a cycle: ${cyc.get('live') ?? 0}`);
   say();
   say('tropical (min-plus, 1 per firing) on the same graph gives GATE DEPTH: how');
-  say('many other flags must already be on. The identity cost = 5G + 4 is checked,');
+  say('many other flags must already be on. The identity cost = 5G + 5 is checked,');
   say('not assumed — gateDepth() throws if a cost is not of that form.');
   const byDepth = new Map<number, string[]>();
   for (const [f, d] of depth) {

@@ -1,0 +1,73 @@
+-- examples/checks/agg-cell-ticks-check.rofl — agg_cell_ticks, the substrate
+-- across ticks, over agg-ticks-data.rofl three ticks long (0, 1, 2) with
+-- retain_ticks 0 and agg-cell-ticks.rofl beside it (a cell is named with its
+-- tick). A fact staged at T holds at T+1 for what staged it at T and for
+-- nothing it was staged by before: its firings are the new tick's, so a cell
+-- is cited, and is data, in the tick after it was sealed and no longer.
+-- tk_n(3) is staged from tick 0's count, and at tick 1 again by the plain
+-- carry below: at tick 2 it cites tick 1's tk_n(3), not tick 0's cell, which
+-- went with its tick ...
+-- expect-no-row: cell $cell(rf5c64e22,1,0,$nil)
+-- ... as did the one nothing ever cited (tk_n_now's, of tick 0):
+-- expect-no-row: cell $cell(r1c549554,1,0,$nil)
+-- while tick 1's cell of the same rule, which tk_n(2) cites, is here:
+-- expect-row: cell $cell(rf5c64e22,1,1,$nil) count = 2 h=2 tick=1
+-- retain_ticks 0 keeps tick 1's derived_by row of a fact that cell's member
+-- is, because the cell cites it across the boundary ...
+-- expect-row: derived_by[$kernel]($fact(tk_w,main,$cons(a,$cons(3,$nil))),r3883b70d,1)
+-- ... and drops tick 0's, and tick 1's row of a fact nothing crossing a
+-- boundary cites:
+-- expect-no-row: derived_by[$kernel]($fact(tk_w,main,$cons(c,$cons(5,$nil))),r3883b70d,0)
+-- expect-no-row: derived_by[$kernel]($fact(tk_seen,main,$cons(a,$nil)),r15ccc0e7,1)
+tk_n(N)@next :- tk_n(N).
+explain_request(why_all, tk_n(2)).
+-- tick 1's count arrives under its own name, tick 0's is gone with the
+-- firing that cited it, and tick 2's is not data before tick 3
+ctk_cells(T, V) :- agg_cell[$kernel]($cell(R, _, T, _), V, _), concludes[$kernel](R, tk_n).
+ctk_wrong(tick0) :- ctk_cells(0, _).
+ctk_wrong(tick1) :- not ctk_cells(1, 2).
+ctk_wrong(early) :- ctk_cells(2, _).
+ctk_wrong(carried) :- not tk_n(3).
+ctk_wrong(arrived) :- not tk_n(2).
+-- tick 1's cell, read at tick 2: its members are the facts of tick 1
+ctk_line(L) :- explained[$explain](why_all, tk_n(2), _, L).
+ctk_past(M) :- ctk_line(L), ctk_member(M, T), N is str_segs(L, T), N > 1,
+               P is str_segs(L, "@tick 1 [past tick]"), P > 1.
+ctk_member_not_past(M) :- ctk_member(M, _), not ctk_past(M).
+ctk_member(a, "tk_w[main](a,3)  <= r3883b70d").
+ctk_member(b, "tk_w[main](b,5)  <= r3883b70d").
+ctk_member(M, T)@next :- ctk_member(M, T).
+alarm(ctk_wrong).
+alarm(ctk_member_not_past).
+-- THE SAME VALUE FROM ANOTHER GROUP. ctk_m is a at tick 0, b at tick 1 and c
+-- at tick 2, so ctk_c(1) is staged at tick 0 and again at tick 1, each time
+-- by a count of 1 over another member. At tick 2 it holds for tick 1's
+-- count, over b: `why` names that cell and b as of tick 1, and neither
+-- tick 0's cell nor a.
+ctk_m(a).
+ctk_m(b)@next :- ctk_m(a).
+ctk_m(c)@next :- ctk_m(b).
+ctk_c(N)@next :- N is count(X : ctk_m(X)).
+explain_request(why, ctk_c(1)).
+ctk_cline(L) :- explained[$explain](why, ctk_c(1), _, L).
+ctk_named(tick1_cell) :- ctk_cline(L), N is str_segs(L, "@tick 2"), N > 1.
+ctk_named(member_b)   :- ctk_cline(L), N is str_segs(L, "ctk_m[main](b)  <= r"), N > 1,
+                         P is str_segs(L, "@tick 1 [past tick]"), P > 1.
+ctk_restaged(unnamed, W) :- ctk_want(W), not ctk_named(W).
+ctk_restaged(stale, a)   :- ctk_cline(L), N is str_segs(L, "ctk_m[main](a)"), N > 1.
+ctk_restaged(cited, 0)   :- agg_cell[$kernel]($cell(R, _, 0, _), _, _), concludes[$kernel](R, ctk_c).
+ctk_want(tick1_cell). ctk_want(member_b).
+ctk_want(W)@next :- ctk_want(W).
+alarm(ctk_restaged).
+-- A PLAIN STAGED FIRING read the tick before its own. tk_n(3) holds at tick 2
+-- by the carry above, which read tk_n(3) at tick 1: `why` names that fact as
+-- of tick 1, with the rule that put it there, and never the store's tk_n(3)
+-- of tick 2, which is the fact itself (it printed `[cycle]`;
+-- f_a_plain_staged_firing_is_explained_in_the_tick_it_arrived_in).
+explain_request(why, tk_n(3)).
+ctk_carry(L) :- explained[$explain](why, tk_n(3), _, L).
+ctk_carry_past() :- ctk_carry(L), N is str_segs(L, "tk_n[main](3)  <= r"), N > 1,
+                    P is str_segs(L, "@tick 1 [past tick]"), P > 1.
+ctk_plain(cycle) :- ctk_carry(L), N is str_segs(L, "[cycle]"), N > 1.
+ctk_plain(present) :- ctk_carry(_), not ctk_carry_past().
+alarm(ctk_plain).

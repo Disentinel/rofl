@@ -1,0 +1,7 @@
+-- expect-refusal: is not monotone in that order
+-- a lex head whose first value is a min against a constant is not strict: a strictly better cost can conclude the same cost with a worse time
+edb(aosr_e).
+aosr_e(a, b, 2, 9).
+lex aosr_first(A, B, min C, min T).
+aosr_first(A, B, C, T) :- aosr_e(A, B, C, T).
+aosr_first(A, C, C1, T1) :- aosr_first(A, B, C0, T0), aosr_e(B, C, C2, T2), C1 is min(C0, 5), T1 is T0 + T2.

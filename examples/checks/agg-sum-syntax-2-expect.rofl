@@ -1,0 +1,50 @@
+-- examples/checks/agg-sum-syntax-2-expect.rofl — agg_sum_syntax. The `$agg`
+-- tree each form of agg-sum-syntax-1-forms.rofl reflects to, both
+-- directions; ring 1 reading two sums with keys from `src`; and no refused
+-- form reaching the world.
+sxs_want(sxs_one, $agg(sum, $var("S"), $cons($var("V"), $nil), $cons($var("K"), $nil),
+  $cons($lit(sxs_l, main, $cons($var("_$0"), $cons($var("K"), $cons($var("V"), $cons($var("_$1"), $nil)))), $now), $nil))).
+sxs_want(sxs_two, $agg(sum, $var("S"), $cons($var("V"), $nil), $cons($var("K"), $cons($var("T"), $nil)),
+  $cons($lit(sxs_l, main, $cons($var("_$0"), $cons($var("K"), $cons($var("V"), $cons($var("T"), $nil)))), $now), $nil))).
+sxs_want(sxs_corr, $agg(sum, $var("S"), $cons($var("V"), $nil), $cons($var("K"), $nil),
+  $cons($lit(sxs_l, main, $cons($var("G"), $cons($var("K"), $cons($var("V"), $cons($var("_$0"), $nil)))), $now), $nil))).
+sxs_want(sxs_group, $agg(sum, $var("S"), $cons($var("V"), $nil), $cons($var("K"), $nil),
+  $cons($lit(sxs_l, main, $cons($var("G"), $cons($var("K"), $cons($var("V"), $cons($var("_$0"), $nil)))), $now), $nil))).
+sxs_want(sxs_book, $agg(sum, $var("S"), $cons($var("V"), $nil), $cons($var("K"), $nil),
+  $cons($lit(sxs_l, ledger, $cons($var("_$0"), $cons($var("K"), $cons($var("V"), $cons($var("_$1"), $nil)))), $now), $nil))).
+sxs_want(sxs_bi, $agg(sum, $var("S"), $cons($var("V"), $nil), $cons($var("K"), $nil),
+  $cons($lit(sxs_l, main, $cons($var("_$0"), $cons($var("K"), $cons($var("V"), $cons($var("_$1"), $nil)))), $now),
+  $cons($builtin(">", $cons($var("V"), $cons(5, $nil))), $nil)))).
+sxs_want(sxs_neg, $agg(sum, $var("S"), $cons($var("V"), $nil), $cons($var("K"), $nil),
+  $cons($lit(sxs_l, main, $cons($var("G"), $cons($var("K"), $cons($var("V"), $cons($var("T"), $nil)))), $now),
+  $cons($not($lit(sxs_g, main, $cons($var("T"), $nil), $now)), $nil)))).
+sxs_mine(H)        :- sxs_want(H, _).
+sxs_has(H, T)      :- sxs_mine(H), concludes[$kernel](R, H), premise_lit[$kernel](R, _, T), T = $agg(_, _, _, _, _).
+tree_missing(H, T) :- sxs_want(H, T), not sxs_has(H, T).
+tree_extra(H, T)   :- sxs_has(H, T), not sxs_want(H, T).
+alarm(tree_missing).
+alarm(tree_extra).
+
+src("s(G, S) :- g(G), S is sum(V ; K : l(G, K, V)).\nt(S) :- S is sum(V ; K, J : m(K, J, V), V > 0).").
+r1s_want($lit(s, $bare, $cons($var("G"), $cons($var("S"), $nil)), $now),
+  $cons($lit(g, $bare, $cons($var("G"), $nil), $now),
+  $cons($agg(sum, $var("S"), $cons($var("V"), $nil), $cons($var("K"), $nil),
+    $cons($lit(l, $bare, $cons($var("G"), $cons($var("K"), $cons($var("V"), $nil))), $now), $nil)), $nil))).
+r1s_want($lit(t, $bare, $cons($var("S"), $nil), $now),
+  $cons($agg(sum, $var("S"), $cons($var("V"), $nil), $cons($var("K"), $cons($var("J"), $nil)),
+    $cons($lit(m, $bare, $cons($var("K"), $cons($var("J"), $cons($var("V"), $nil))), $now),
+    $cons($builtin(">", $cons($var("V"), $cons(int("0"), $nil))), $nil))), $nil)).
+r1s_parsed(H, B)  :- parsed(_, _, H, B).
+ring1_missing(H)  :- r1s_want(H, B), not r1s_parsed(H, B).
+ring1_extra(H)    :- r1s_parsed(H, B), not r1s_want(H, B).
+alarm(ring1_missing).
+alarm(ring1_extra).
+alarm(stray).
+alarm(uncovered).
+alarm(stuck_at).
+
+sxs_bad(sxsr_empty_key).
+sxs_bad(sxsr_key_expression).
+sxs_bad(sxsr_unclosed).
+bad_accepted(R) :- sxs_bad(R), concludes[$kernel](_, R).
+alarm(bad_accepted).

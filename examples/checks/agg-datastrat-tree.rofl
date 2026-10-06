@@ -1,0 +1,20 @@
+-- examples/checks/agg-datastrat-tree.rofl — THE SIZE OF A SUBTREE, a sum over
+-- the same relation it concludes: size reads size through its own sum. As
+-- relations that is a cycle, and as data it is a tree (a DAG here, e is the
+-- child of b and of c), whose depth is the order the sums are sealed in
+-- (docs/aggregates.md, "Data-level stratification, as built").
+--
+--          a
+--         / \
+--        b   c        size: a 9 (1 + 4 + 4), b 4, c 4, d 1, e 2, f 1, g 1
+--       / \ / \       a node counts once for each way it is reached
+--      d   e   g
+--          |
+--          f
+edb(node).
+edb(child).
+node(a). node(b). node(c). node(d). node(e). node(f). node(g).
+child(a, b). child(a, c). child(b, d). child(b, e). child(c, e). child(e, f). child(c, g).
+size(T, N) :- node(T), S is sum(V ; C : child(T, C), size(C, V)), N is S + 1.
+-- how many children have a size, a count of the same component: a leaf has 0, for T is bound from outside
+kids(T, K) :- node(T), K is count(C : child(T, C), size(C, _)).

@@ -1,0 +1,25 @@
+-- examples/checks/agg-phrase-lattice-check.rofl — agg_lattice_phrase: each declaration read from its
+-- sentence and from rofl keeps what its operation keeps: the least distance a to c is 2 by b, the
+-- greatest width 5, the disjunction per flag, and the conjunction of both flags false.
+pl_d(a, b, 1). pl_d(b, c, 1). pl_d(a, c, 2).
+pl_w(a, b, 1). pl_w(b, c, 1). pl_w(a, c, 5).
+pl_wrong(X, Y) :- pl_d(X, Y, D), not pols_dist(X, Y, D).
+pl_wrong(X, Y) :- pl_d(X, Y, D), not polr_dist(X, Y, D).
+pl_wrong(X, Y) :- pols_dist(X, Y, D), not pl_d(X, Y, D).
+pl_wrong(X, Y) :- polr_dist(X, Y, D), not pl_d(X, Y, D).
+pl_wrong(X, Y) :- pl_w(X, Y, W), not pols_wide(X, Y, W).
+pl_wrong(X, Y) :- pl_w(X, Y, W), not polr_wide(X, Y, W).
+pl_wrong(X, Y) :- pols_wide(X, Y, W), not pl_w(X, Y, W).
+pl_wrong(X, Y) :- polr_wide(X, Y, W), not pl_w(X, Y, W).
+pl_wrong(F, any) :- pv_flag(F, B), not pols_any(F, B).
+pl_wrong(F, any) :- pv_flag(F, B), not polr_any(F, B).
+pl_wrong(one, one) :- not pols_one(false).
+pl_wrong(one, one) :- not polr_one(false).
+pl_wrong(one, one) :- pols_one(true).
+pl_wrong(one, one) :- polr_one(true).
+alarm(pl_wrong).
+-- written in its own words (agg-phrase-check.rofl)
+sentence_word(polr_dist, "keeps the least D for each X and Y").
+sentence_word(polr_wide, "keeps the greatest W for each X and Y").
+sentence_word(polr_any, "keeps the disjunction B for each F").
+sentence_word(polr_one, "keeps the conjunction B.").

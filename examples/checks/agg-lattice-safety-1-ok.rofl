@@ -1,0 +1,15 @@
+-- examples/checks/agg-lattice-safety-1-ok.rofl — the shapes a declaration
+-- may take: a key of any width, none at all (one cell), a wildcard in the key,
+-- each operation; and a rule that writes one at its declared width.
+edb(alsk_e).
+alsk_e(a, b, 2).
+alsk_e(a, c, 5).
+alsk_e(b, c, 1).
+lattice alsk_one(min D).
+alsk_one(D) :- alsk_e(_, _, D).
+lattice alsk_out(A, _, max D).
+alsk_out(A, B, D) :- alsk_e(A, B, D).
+lattice alsk_any(A, or F).
+alsk_any(A, true) :- alsk_e(A, _, _).
+lattice alsk_all(A, and F).
+alsk_all(A, false) :- alsk_e(A, _, _).

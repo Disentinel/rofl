@@ -1,0 +1,8 @@
+-- examples/checks/agg-tag-ts-1-data.rofl — agg_tag_ts, a world both engines
+-- answer: plain facts both load, and beside them two fixtures each engine
+-- refuses, each for a reason naming the tag: both engines refuse a tag under
+-- well-founded semantics. Neither fixture reaches the world, so
+-- the two states are one.
+edb(tgt_e).
+tgt_e(a, b, 1).
+tgt_seen(A) :- tgt_e(A, _, _).

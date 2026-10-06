@@ -1,0 +1,80 @@
+-- examples/checks/agg-sub-order-witness-check.rofl — agg_sub_order_witness:
+-- the Antichain witness of a declared order. The cells of the declared
+-- relations of agg-sub-order-data.rofl behave as the cells of the dominance
+-- rules the declaration lowers to: each member of a front is explained by
+-- its members, over values that stand, and every value a cell was given and
+-- does not hold is named with the member of the front that dominates it, the
+-- first in canonical order, and the lowered rule that says so,
+-- `dominated_by[$kernel](Value, By, Rule)`: a pareto front's by the member no
+-- worse in every value, a lex cell's by the one better in the first value
+-- they differ in.
+aow_by(V, B, R) :- dominated_by[$kernel](V, B, R).
+aow_want(ao_route, $cons(a, $cons(c, $cons(6, $cons(14, $nil)))), $cons(a, $cons(c, $cons(2, $cons(10, $nil))))).
+aow_want(ao_route, $cons(a, $cons(c, $cons(8, $cons(12, $nil)))), $cons(a, $cons(c, $cons(2, $cons(10, $nil))))).
+aow_want(ao_route, $cons(a, $cons(c, $cons(7, $cons(7, $nil)))), $cons(a, $cons(c, $cons(3, $cons(3, $nil))))).
+aow_want(ao_route, $cons(a, $cons(c, $cons(9, $cons(5, $nil)))), $cons(a, $cons(c, $cons(3, $cons(3, $nil))))).
+aow_want(ao_route, $cons(a, $cons(c, $cons(11, $cons(3, $nil)))), $cons(a, $cons(c, $cons(3, $cons(3, $nil))))).
+aow_want(ao_route, $cons(a, $cons(b, $cons(5, $cons(9, $nil)))), $cons(a, $cons(b, $cons(1, $cons(5, $nil))))).
+aow_want(ao_route, $cons(c, $cons(a, $cons(5, $cons(5, $nil)))), $cons(c, $cons(a, $cons(1, $cons(1, $nil))))).
+aow_want(ao_best, $cons(6, $cons(6, $nil)), $cons(5, $cons(5, $nil))).
+aow_want(ao_lc, $cons(a, $cons(c, $cons(3, $cons(3, $nil)))), $cons(a, $cons(c, $cons(2, $cons(10, $nil))))).
+aow_want(ao_lc, $cons(a, $cons(c, $cons(5, $cons(1, $nil)))), $cons(a, $cons(c, $cons(2, $cons(10, $nil))))).
+aow_want(ao_l3, $cons(k, $cons(2, $cons(7, $cons(4, $nil)))), $cons(k, $cons(5, $cons(1, $cons(4, $nil))))).
+aow_want(ao_l3, $cons(k, $cons(5, $cons(1, $cons(1, $nil)))), $cons(k, $cons(5, $cons(1, $cons(4, $nil))))).
+aow_named(Rel, V, B) :- aow_by($fact(Rel, main, V), $fact(Rel, main, B), _).
+aow_missing(Rel, V, B) :- aow_want(Rel, V, B), not aow_named(Rel, V, B).
+aow_unwanted(Rel, V) :- aow_by($fact(Rel, main, V), _, _), aow_unwant(Rel, V).
+aow_unwant(ao_best, $cons(7, $cons(4, $nil))).
+alarm(aow_missing).
+alarm(aow_unwanted).
+-- in the book it was given in
+aow_book_wrong(V) :- aow_by($fact(ao_bk, P, V), $fact(ao_bk, Q, _), _), P != Q.
+aow_book_missing() :- not aow_by($fact(ao_bk, w1, $cons(k, $cons(3, $nil))), $fact(ao_bk, w1, $cons(k, $cons(1, $nil))), _).
+alarm(aow_book_wrong).
+alarm(aow_book_missing).
+-- the one that dominates stands, dominates (Pareto, recomputed here), and
+-- is of the same cell; what it dominates does not stand
+aow_by_route(A, B, C1, T1, C2, T2, R) :-
+  aow_by($fact(ao_route, main, $cons(A, $cons(B, $cons(C1, $cons(T1, $nil))))),
+         $fact(ao_route, main, $cons(A2, $cons(B2, $cons(C2, $cons(T2, $nil))))), R), A = A2, B = B2.
+aow_bad(fallen, A, B, C2, T2)  :- aow_by_route(A, B, _, _, C2, T2, _), not ao_route(A, B, C2, T2).
+aow_bad(stands, A, B, C1, T1)  :- aow_by_route(A, B, C1, T1, _, _, _), ao_route(A, B, C1, T1).
+aow_bad(not_worse, A, B, C1, T1) :- aow_by_route(A, B, C1, T1, C2, T2, _), C2 > C1.
+aow_bad(not_worse, A, B, C1, T1) :- aow_by_route(A, B, C1, T1, C2, T2, _), T2 > T1.
+aow_bad(equal, A, B, C1, T1)   :- aow_by_route(A, B, C1, T1, C2, T2, _), C1 = C2, T1 = T2.
+aow_rule_wrong(R) :- aow_by($fact(Rel, _, _), _, R), not dominance[$kernel](R, Rel, _, _).
+alarm(aow_bad).
+alarm(aow_rule_wrong).
+-- the rule that names a dominator is one the declaration lowered to
+aow_rule_alien(Rel) :- aow_by($fact(Rel, _, _), _, R), order_comp[$kernel](Rel, _, _, _, _), not order_comp[$kernel](Rel, _, _, _, R).
+alarm(aow_rule_alien).
+-- the lexicographic dominator is better in the first value they differ in
+aow_by_lc(A, B, C1, T1, C2, T2) :-
+  aow_by($fact(ao_lc, main, $cons(A, $cons(B, $cons(C1, $cons(T1, $nil))))),
+         $fact(ao_lc, main, $cons(A2, $cons(B2, $cons(C2, $cons(T2, $nil))))), _), A = A2, B = B2.
+aow_lex_bad(A, B, C1, T1) :- aow_by_lc(A, B, C1, T1, C2, _), C2 > C1.
+aow_lex_bad(A, B, C1, T1) :- aow_by_lc(A, B, C1, T1, C2, T2), C2 = C1, T2 >= T1.
+alarm(aow_lex_bad).
+-- every member of a front has members, numbered from 1; the routes' cite only
+-- routes that stand
+aow_f(route, A, B, $fact(ao_route, main, $cons(A, $cons(B, $cons(C, $cons(T, $nil)))))) :- ao_route(A, B, C, T).
+aow_f(lc, A, B, $fact(ao_lc, main, $cons(A, $cons(B, $cons(C, $cons(T, $nil)))))) :- ao_lc(A, B, C, T).
+aow_f(cap, A, B, $fact(ao_cap, main, $cons(A, $cons(B, $cons(W, $cons(P, $nil)))))) :- ao_cap(A, B, W, P).
+aow_bare(K, A, B) :- aow_f(K, A, B, F), not lattice_member[$kernel](F, 1, _, _).
+aow_stale(F, A, B, C, T) :- aow_f(route, _, _, F),
+  lattice_member_prem[$kernel](F, _, $fact(ao_route, main, $cons(A, $cons(B, $cons(C, $cons(T, $nil)))))),
+  not ao_route(A, B, C, T).
+alarm(aow_bare).
+alarm(aow_stale).
+-- on one value, the lattice's members: as many, as high, in one order
+aow_members(d, X, Y, D, I, H) :- lattice_member[$kernel]($fact(ao_dp, main, $cons(X, $cons(Y, $cons(D, $nil)))), I, H, _).
+aow_members(l, X, Y, D, I, H) :- lattice_member[$kernel]($fact(ao_dl, main, $cons(X, $cons(Y, $cons(D, $nil)))), I, H, _).
+aow_members(m, X, Y, D, I, H) :- lattice_member[$kernel]($fact(ao_dm, main, $cons(X, $cons(Y, $cons(D, $nil)))), I, H, _).
+aow_unlike(d, X, Y, D, I, H)  :- aow_members(d, X, Y, D, I, H), not aow_members(m, X, Y, D, I, H).
+aow_unlike(m, X, Y, D, I, H)  :- aow_members(m, X, Y, D, I, H), not aow_members(d, X, Y, D, I, H).
+aow_unlike(l, X, Y, D, I, H)  :- aow_members(l, X, Y, D, I, H), not aow_members(m, X, Y, D, I, H).
+aow_unlike(lm, X, Y, D, I, H) :- aow_members(m, X, Y, D, I, H), not aow_members(l, X, Y, D, I, H).
+alarm(aow_unlike).
+-- the tie at ao_dp(a, t, 1), directly and through a2 and back, is two members
+aow_tie_lost() :- not aow_members(d, a, t, 1, 2, _).
+alarm(aow_tie_lost).

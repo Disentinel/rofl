@@ -1,0 +1,18 @@
+-- examples/checks/agg-count-syntax-1-forms.rofl — every form of count the
+-- grammar reads: one term and two, correlated and grouped, a book, a
+-- wildcard, a builtin and a negation inside. The TypeScript engine reads
+-- this file and refuses it; its rule ids must be the Rust store's
+-- (scripts/goldens.ts).
+edb(sxc_b).
+edb(sxc_c).
+sxc_b(1, x).
+sxc_b(2, y).
+sxc_b[ledger](3, x).
+sxc_c(x).
+sxc_one(N)      :- N is count(B : sxc_b(B, _)).
+sxc_two(N)      :- N is count(B, C : sxc_b(B, C)).
+sxc_corr(C, N)  :- sxc_c(C), N is count(B : sxc_b(B, C)).
+sxc_group(C, N) :- N is count(B : sxc_b(B, C)).
+sxc_book(N)     :- N is count(B : sxc_b[ledger](B, _)).
+sxc_bi(N)       :- N is count(B : sxc_b(B, _), B > 1).
+sxc_neg(C, N)   :- sxc_c(C), N is count(B : sxc_b(B, C), not sxc_c(B)).

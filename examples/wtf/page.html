@@ -494,23 +494,20 @@ hr { border: 0; border-top: 1px solid var(--line); margin: 3rem 0; }
       <code>reach(pt7b, pt7c)</code> does not.</li>
   </ul>
 
-  <h3>The one place the kernel refused</h3>
+  <h3>The scheduler, as a key</h3>
   <p>
     613.8b's scheduler &mdash; "waits to apply until just after all of those
     effects have been applied" &mdash; is a greedy topological sort keyed on
-    timestamp, i.e. a <code>max</code> over a transitive closure. v0 has no
-    aggregation, and the natural encoding puts a negation inside a recursion,
-    which <code>unstratified/1</code> rejects. Correctly: that program has no
-    least fixpoint. The way through is to compute the closure positively
-    <em>first</em>, then take the maximum with a single negation on top:
+    timestamp. It is written as a key: compute the closure positively
+    <em>first</em>, then take a <code>max</code> aggregate over the finished
+    set, one stratum above it:
   </p>
   <pre>anc4(A, B)  :- edep4(A, B).
 anc4(A, B)  :- edep4(A, X), anc4(X, B).
 
 cts4(E, T)  :- lay4(E), eff_ts(E, T).
 cts4(E, T)  :- anc4(E, B), eff_ts(B, T).
-low4(E, T)  :- cts4(E, T), cts4(E, T2), T2 &gt; T.
-eta4(E, T)  :- cts4(E, T), not low4(E, T).</pre>
+eta4(E, T)  :- lay4(E), T is max(T2 : cts4(E, T2)).</pre>
   <p>
     <code>eta4</code> is the largest timestamp among an effect and its
     dependency ancestors; sorting by <code>(eta4, timestamp)</code> reproduces

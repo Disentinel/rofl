@@ -1,0 +1,8 @@
+-- expect-refusal: a threshold may count only
+-- a threshold counts only what no front can still withdraw: read the front
+-- through a rule of its own, above it
+edb(assr_he).
+assr_he(a, 1). assr_he(a, 2).
+assr_thr(A, V) :- assr_he(A, V).
+assr_thr(A, X) <= assr_thr(A, Y) :- Y < X.
+assr_two(A) :- assr_he(A, _), at_least(2, V : assr_thr(A, V)).

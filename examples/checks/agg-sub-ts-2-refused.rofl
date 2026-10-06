@@ -1,0 +1,8 @@
+-- expect-refusal: subsumption sts_w
+-- read by both engines and refused by both: by TypeScript as a dominance
+-- rule, by Rust as one under well-founded semantics
+semantics(well_founded).
+edb(sts_f).
+sts_f(a, 2). sts_f(a, 3).
+sts_w(A, V) :- sts_f(A, V).
+sts_w(A, X) <= sts_w(A, Y) :- Y < X.

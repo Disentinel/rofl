@@ -1,0 +1,4 @@
+-- expect-refusal: it is declared twice
+-- a count and a cost of one relation
+tag tcr_two(A, counting N).
+tag tcr_two(A, tropical N).

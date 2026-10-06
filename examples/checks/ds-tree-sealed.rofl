@@ -1,0 +1,2 @@
+-- examples/checks/ds-tree-sealed.rofl — the ds_tree_sealed world keeps no witness (`sealed(provenance)`), which is where the Rust engine answers a declared closure from its tree and stores none of its rows; the files of ds_tree_holds are its data.
+sealed(provenance).

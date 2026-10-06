@@ -1,0 +1,11 @@
+-- examples/checks/agg-sum-eval-check.rofl — agg_sum_eval: sum evaluated in
+-- the Rust engine against agg-sum-oracle.rofl, and one sum per group.
+ase_two(G)  :- as_sums(G, A), as_sums(G, B), A != B.
+ase_none(G) :- as_group(G), G != gbig, not ase_has(G).
+ase_has(G)  :- as_sums(G, _).
+alarm(ase_two).
+alarm(ase_none).
+-- a group the oracle totals is never a hole: read positively, since a holed
+-- sum is not known to be absent and `not as_sums(G, S)` is undecided over it
+ase_holed(G) :- ase_has(_), aso_total(G, _), hole[$kernel]($cell(R, _, _, $cons(G, $nil)), _), concludes[$kernel](R, as_sums).
+alarm(ase_holed).

@@ -1,0 +1,8 @@
+-- expect-refusal: tag tgt_w (tropical)
+-- read by both engines and refused by both: by TypeScript as a tag, by Rust
+-- as a tag under well-founded semantics
+semantics(well_founded).
+edb(tgt_f).
+tgt_f(a, b, 2).
+tag tgt_w(A, B, tropical T).
+tgt_w(A, B, W) :- tgt_f(A, B, W).

@@ -1,0 +1,20 @@
+-- examples/checks/agg-sugar-data.rofl — WHAT THE SUGAR WORLDS READ (docs/aggregates.md, "The sentence form, as
+-- built"): groups and the ages their members are listed at, and who voted. g1's ages average 35.5 and g2's
+-- -3.5, so rounding toward zero is told from rounding down; g3 has no member and g4 one; g5 lists a member at
+-- `oops`, whose age is not known; g6's two ages are the largest term, so their total has none; g7's one age is
+-- small enough to sum and too large to scale to millionths. Ranks: g1 ranks m1 twice, at 3 and at 1, and m2 at 5; g2
+-- ranks m3 at 3 and m4 at 5; no other group ranks anyone.
+edb(sg_group).
+edb(sg_raw).
+edb(sg_voted).
+edb(sg_rank).
+sg_group(g1). sg_group(g2). sg_group(g3). sg_group(g4). sg_group(g5). sg_group(g6). sg_group(g7).
+sg_raw(g1, m1, 30). sg_raw(g1, m2, 41).
+sg_raw(g2, m3, -7). sg_raw(g2, m4, 0).
+sg_raw(g4, m5, 50).
+sg_raw(g5, m6, 20). sg_raw(g5, m7, oops).
+sg_raw(g6, m8, 1152921504606846975). sg_raw(g6, m9, 1152921504606846975).
+sg_raw(g7, m10, 1152921504606847).
+sg_voted(m1). sg_voted(m2). sg_voted(m3). sg_voted(m6). sg_voted(m7). sg_voted(m10).
+sg_rank(g1, m1, 3). sg_rank(g1, m1, 1). sg_rank(g1, m2, 5).
+sg_rank(g2, m3, 3). sg_rank(g2, m4, 5).

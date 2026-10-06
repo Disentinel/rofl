@@ -1,0 +1,6 @@
+-- expect-refusal: settled nothing
+-- a negation inside a threshold is a strict edge: this one negates the
+-- threshold's own conclusion, which no stratification can order
+edb(atn_e).
+atn_e(a, b).
+atn_r(X) :- atn_e(X, _), at_least(1, Y : atn_e(X, Y), not atn_r(Y)).

@@ -1,0 +1,10 @@
+-- examples/checks/ds-tree-explain.rofl — the data of ds_tree_explain (sealed: `sealed(provenance)` in ds-tree-sealed.rofl) and ds_tree_explain_kept (witnesses kept): the Rust engine answers the closure `dte_w` of the declared tree from the tree and stores none of its rows in either; its why, why all, the premises an aggregate cell keeps for its members and, where witnesses are kept, each row's witness and height are those of the world that stores the rows. `dte_pick` has two firings, one through the closure and one through a chain of two rules: which is its witness is decided by the closure row's height (b by the closure, d by the chain, c a tie the signature breaks).
+tree dte_e(P, C) closure dte_w.
+dte_e(a, b). dte_e(b, c). dte_e(c, d). dte_e(a, x).
+dte_top(D) :- dte_w(a, D).
+dte_cnt(N) :- N is count(D : dte_w(a, D)).
+dte_c1(b). dte_c1(c). dte_c1(d).
+dte_c2(D) :- dte_c1(D).
+dte_c3(D) :- dte_c2(D).
+dte_pick(D) :- dte_w(a, D).
+dte_pick(D) :- dte_c3(D).

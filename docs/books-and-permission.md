@@ -130,7 +130,7 @@ Five kernel relations. boot.rofl neither concludes them nor declares them
 are in `KERNEL_BOOK`, so they land in `[$kernel]` and an unbracketed read of
 one is rewritten there — which is why `imports(audit, $kernel)` exists and is
 revocable on its own. No program can write them: `src/api.ts` refuses a clause
-that writes a `$` book, and `src/engine.ts` refuses to instantiate a
+that writes a `$` book, and `src/aggeval.ts` refuses to instantiate a
 perspective VARIABLE to one.
 
 | relation | what it supplies | read by |
@@ -358,7 +358,7 @@ book position.
 `f_carrying_the_import_graph_costs_six_relations_of_reuse` (insight).
 
 The three `@next` carry clauses make `imports`, `collects` and `exports`
-opaque to `src/engine.ts`'s reuse plan — *the head stages instead of
+opaque to the reuse plan (`src/reuse.ts`) — *the head stages instead of
 materialising* — and everything downstream goes with them.
 
 **LIVE, and the number in its title is stale by two.** Re-measured 2026-09-08

@@ -1,0 +1,20 @@
+-- examples/checks/demand-scc-rows.rofl — demand_scc_rows: A STRONGLY CONNECTED SET
+-- THAT IS NOT TABLED GIVES ITS ROWS BACK when it completes
+-- (f_a_cycle_of_open_calls_iterated_call_by_call). dq_p reads edb, a kernel relation,
+-- so its calls are never tabled: each reader's call unfolds the ring again, the set
+-- of its twelve calls holding their open answers until it completes, and drops them
+-- then. Under the space wall of check_opt the readers fit one after another; kept,
+-- the rows of every set would add up and wall.
+edb(dq_e). edb(dq_dom).
+dq_dom(c0). dq_dom(c1).
+dq_e(n0, n1). dq_e(n1, n2). dq_e(n2, n3). dq_e(n3, n4). dq_e(n4, n5). dq_e(n5, n6).
+dq_e(n6, n7). dq_e(n7, n8). dq_e(n8, n9). dq_e(n9, n10). dq_e(n10, n11). dq_e(n11, n0).
+dq_p(X, Y, W) :- dq_e(X, Y).
+dq_p(X, Z, W) :- dq_e(X, Y), edb(dq_e), dq_p(Y, Z, W).
+dq_r0(Y, W) :- dq_p(n0, Y, W), dq_dom(W).
+dq_r3(Y, W) :- dq_p(n3, Y, W), dq_dom(W).
+dq_r6(Y, W) :- dq_p(n6, Y, W), dq_dom(W).
+dq_r9(Y, W) :- dq_p(n9, Y, W), dq_dom(W).
+
+-- expect-row: dq_r9[main](n8,c1) tick drv support=1
+-- expect-no-row: shrug[$kernel](

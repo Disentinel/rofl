@@ -1,0 +1,95 @@
+-- examples/checks/agg-int-range.rofl — AN INTEGER IS EXACT OVER [-2^60, 2^60),
+-- AND PAST IT THERE IS NO VALUE, in both engines (docs/aggregates.md, "Int is
+-- ±2^60"; f_arithmetic_wraps_past_the_term_range). No aggregate: the
+-- TypeScript engine answers it too, so a range check or an exactness guard
+-- dropped from either engine's `is` turns it red. A result past the range
+-- holes its rule `arith_overflow` and concludes nothing; a result inside it
+-- is exact where a double is not (past 2^53); `/` truncates toward zero and
+-- `mod` takes the dividend's sign. agg-int-range-literal.rofl, a literal of 2^60,
+-- is refused whole.
+edb(ir_n).
+edb(ir_want).
+edb(ir_over).
+edb(ir_key).
+edb(ir_lit).
+ir_n(top, 1152921504606846975).
+ir_n(bot, -1152921504606846976).
+ir_n(bot1, -1152921504606846975).
+ir_n(half, 1073741824).
+ir_n(big53, 9007199254740993).
+ir_n(root, 94906267).
+ir_n(seven, 7).
+
+-- past the range, at both ends and through every operator
+ir_r(top_plus1, Y)    :- ir_n(top, X), Y is X + 1.
+ir_r(bot_minus1, Y)   :- ir_n(bot, X), Y is X - 1.
+ir_r(bot_div_m1, Y)   :- ir_n(bot, X), Y is X / -1.
+ir_r(bot_neg, Y)      :- ir_n(bot, X), Y is 0 - X.
+ir_r(bot_times_m1, Y) :- ir_n(bot, X), Y is X * -1.
+ir_r(half_sq, Y)      :- ir_n(half, X), Y is X * X.
+ir_r(top_twice, Y)    :- ir_n(top, X), Y is X + X - X.
+-- inside it: -2^60 is a value, and so is every exact result past 2^53
+ir_r(bot_again, Y)    :- ir_n(bot1, X), Y is X - 1.
+ir_r(half_sq_neg, Y)  :- ir_n(half, X), Y is X * (0 - X).
+ir_r(top_back, Y)     :- ir_n(top, X), Z is X - 5, Y is Z + 5.
+ir_r(bot_mod_m1, Y)   :- ir_n(bot, X), Y is X mod -1.
+ir_r(big53_plus2, Y)  :- ir_n(big53, X), Y is X + 2.
+ir_r(big53_x2, Y)     :- ir_n(big53, X), Y is X * 2.
+ir_r(root_sq, Y)      :- ir_n(root, X), Y is X * X.
+ir_r(top_div3, Y)     :- ir_n(top, X), Y is X / 3.
+-- the signs of `/` and `mod`
+ir_r(neg_div, Y)      :- ir_n(seven, X), Y is (0 - X) / 2.
+ir_r(neg_mod, Y)      :- ir_n(seven, X), Y is (0 - X) mod 2.
+ir_r(mod_neg, Y)      :- ir_n(seven, X), Y is X mod -2.
+
+ir_over(top_plus1). ir_over(bot_minus1). ir_over(bot_div_m1). ir_over(bot_neg).
+ir_over(bot_times_m1). ir_over(half_sq). ir_over(top_twice).
+ir_want(bot_again, -1152921504606846976).
+ir_want(half_sq_neg, -1152921504606846976).
+ir_want(top_back, 1152921504606846975).
+ir_want(bot_mod_m1, 0).
+ir_want(big53_plus2, 9007199254740995).
+ir_want(big53_x2, 18014398509481986).
+ir_want(root_sq, 9007199515875289).
+ir_want(top_div3, 384307168202282325).
+ir_want(neg_div, -3).
+ir_want(neg_mod, -1).
+ir_want(mod_neg, 1).
+
+-- a negation above an overflow is undecided; beside it, decided
+ir_key(top_plus1). ir_key(half_sq). ir_key(nope).
+ir_none(K) :- ir_key(K), not ir_r(K, _).
+-- a comparison with the top of the range
+ir_high(K) :- ir_r(K, Y), Y > 1152921504606846974.
+
+-- THE ALARMS. A value past the range, a wrong value, a literal past it that
+-- loaded. A value that should be there and is not, and a decided negation,
+-- are rows the state must hold: an alarm `not ir_r(K, V)` goes undecided and
+-- silent over the holes beside it (f_a_missing_row_check_goes_quiet_over_a_hole).
+ir_bad(wrapped, K)        :- ir_over(K), ir_r(K, _).
+ir_bad(wrong, K)          :- ir_want(K, V), ir_r(K, W), W != V.
+ir_bad(literal_loaded, V) :- ir_lit(V).
+ir_bad(overdecided, K)    :- ir_over(K), ir_none(K).
+alarm(ir_bad).
+-- expect-row: ir_r[main](bot_again,-1152921504606846976)
+-- expect-row: ir_r[main](half_sq_neg,-1152921504606846976)
+-- expect-row: ir_r[main](top_back,1152921504606846975)
+-- expect-row: ir_r[main](bot_mod_m1,0)
+-- expect-row: ir_r[main](big53_plus2,9007199254740995)
+-- expect-row: ir_r[main](big53_x2,18014398509481986)
+-- expect-row: ir_r[main](root_sq,9007199515875289)
+-- expect-row: ir_r[main](top_div3,384307168202282325)
+-- expect-row: ir_r[main](neg_div,-3)
+-- expect-row: ir_r[main](neg_mod,-1)
+-- expect-row: ir_r[main](mod_neg,1)
+-- expect-row: ir_none[main](nope)
+-- expect-row: ir_high[main](top_back)
+-- expect-no-row: ir_high[main](top_plus1)
+-- expect-row: hole[$kernel]($rule(r29d55065),arith_overflow)
+-- expect-row: hole[$kernel]($rule(r373dcad3),arith_overflow)
+-- expect-row: hole[$kernel]($rule(r3bce9637),arith_overflow)
+-- expect-row: hole[$kernel]($rule(r41e76bb1),arith_overflow)
+-- expect-row: hole[$kernel]($rule(r68247855),arith_overflow)
+-- expect-row: hole[$kernel]($rule(r7fad3d7d),arith_overflow)
+-- expect-row: hole[$kernel]($rule(ra9262047),arith_overflow)
+-- expect-row: hole[$kernel]($rule(r93543ade),support_withdrawn)

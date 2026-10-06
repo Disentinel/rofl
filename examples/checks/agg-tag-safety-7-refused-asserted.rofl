@@ -1,0 +1,4 @@
+-- expect-refusal: is asserted, but tsr_as is tagged (tropical)
+-- a tag holds what its rules conclude, its input weighed in by a rule
+tag tsr_as(A, tropical T).
+tsr_as(a, 3).

@@ -1,0 +1,11 @@
+-- examples/checks/agg-datastrat-budget-check.rofl — agg_datastrat_budget: the
+-- budget cuts the evaluation of agg-datastrat-sheet.rofl between two layers of
+-- its cells. A cell with a value has the sheet's value, never the total of the
+-- cells below it that had come out when the wall fell; the cut is a hole on the
+-- world, and the cells above the wall have no value at all.
+adb_wrong(C) :- value(C, V), not ads_expect(C, V).
+alarm(adb_wrong).
+-- expect-row: hole[$kernel]($adhoc,budget_exhausted)
+-- expect-row: value[main](b4,19) tick drv support=1
+-- expect-no-row: value[main](c1,
+-- expect-no-row: value[main](e1,

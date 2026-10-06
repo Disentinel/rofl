@@ -1,0 +1,17 @@
+-- examples/checks/agg-count-strata-check.rofl — agg_count_strata: count is
+-- stratified. With rules/strata.rofl beside it, the stratum of a counting
+-- relation is above what it counts; the counts match the oracle although
+-- what they read closes two negations deep; and a count through its own
+-- conclusion (agg-count-strata-2-refused-recursive.rofl) is refused, so
+-- its rules never reach this world.
+acs_higher(Rel, N)       :- stratum(Rel, N), stratum(Rel, M), M > N.
+acs_top(Rel, N)          :- stratum(Rel, N), not acs_higher(Rel, N).
+acs_inverted(A, B)       :- acs_top(ac_votes, A), acs_top(ac_cast, B), A <= B.
+acs_inverted(A, B)       :- acs_top(ac_by, A), acs_top(ac_cast, B), A <= B.
+acs_known(Rel)           :- acs_top(Rel, _).
+acs_unranked(ac_votes)   :- not acs_known(ac_votes).
+acs_unranked(ac_cast)    :- not acs_known(ac_cast).
+acr_accepted()           :- concludes[$kernel](_, acr_p).
+alarm(acs_inverted).
+alarm(acs_unranked).
+alarm(acr_accepted).

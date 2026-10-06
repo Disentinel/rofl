@@ -1,0 +1,18 @@
+-- examples/checks/agg-shrug-agg-data.rofl — WHAT THE KINDS READ, for the shrug
+-- column (docs/aggregates.md, "Shrugs, as built"): a group every member of
+-- which is known (p), one with a member a type error left out (q), one whose
+-- only member an overflow left out (r), and one empty for certain (s); and a
+-- tuple an overflow left out, c's, that `unknown(A)` reads as a shrug too.
+edb(sa_g).
+edb(sa_v).
+edb(sa_big).
+edb(sa_pos).
+sa_big(1152921504606846975).
+sa_g(p). sa_g(q). sa_g(r). sa_g(s).
+sa_v(p, a, 1). sa_v(p, b, 2).
+sa_v(q, a, 3). sa_v(q, b, oops).
+sa_v(r, a, 1152921504606846975).
+sa_x(G, K, Y) :- sa_v(G, K, X), Y is X + 1.
+sa_pos(a). sa_pos(b). sa_pos(c).
+sa_w(a).
+sa_w(c) :- sa_big(B), Z is B + 1, Z > 0.

@@ -1,0 +1,10 @@
+-- expect-refusal: is not monotone in that order
+-- a pareto head from a lex read's second value: a lexicographically better tuple is better in its first value alone, so its time may be worse, and would conclude a pareto value no better
+edb(aosr_e).
+aosr_e(a, b, 2, 9).
+lex aosr_lexq(A, B, min C, min T).
+pareto aosr_lexp(A, B, min C, min T).
+aosr_lexq(A, B, C, T) :- aosr_e(A, B, C, T).
+aosr_lexp(A, B, C, T) :- aosr_e(A, B, C, T).
+aosr_lexq(A, C, C1, T1) :- aosr_lexp(A, B, C0, T0), aosr_e(B, C, C2, T2), C1 is C0 + C2, T1 is T0 + T2.
+aosr_lexp(A, C, C1, T1) :- aosr_lexq(A, B, C0, T0), aosr_e(B, C, C2, T2), C1 is C0 + C2, T1 is T0 + T2.

@@ -1,0 +1,48 @@
+-- examples/checks/agg-minmax-ticks-check.rofl — agg_minmax_ticks, over
+-- agg-ticks-data.rofl two ticks deep with retain_ticks 0: max, min and or.
+-- A value staged @next at tick 0 is base at tick 1, beside the value the same
+-- aggregate has at tick 1; `why` of it names tick 0's cell, and each member
+-- as the fact of tick 0 with the rule that derived it then, whose derived_by
+-- row retain_ticks keeps because the carried cell cites it.
+explain_request(why, tk_x(5)).
+tmx_line(L) :- explained[$explain](why, tk_x(5), _, L).
+tmx_has(T)  :- tmx_line(L), tmx_text(T), N is str_segs(L, T), N > 1.
+tmx_past(M) :- tmx_line(L), tmx_member(M, T), N is str_segs(L, T), N > 1, P is str_segs(L, "@tick 0 [past tick]"), P > 1.
+tmx_text_missing(T)    :- tmx_text(T), not tmx_has(T).
+tmx_member_not_past(M) :- tmx_member(M, _), not tmx_past(M).
+tmx_explain_refused()  :- explained[$explain](why, tk_x(5), 0, _).
+tmx_cells(T, V) :- agg_cell[$kernel]($cell(R, _, T, _), V, _), concludes[$kernel](R, tk_x).
+tmx_cell_missing(T, V) :- tmx_cell(T, V), not tmx_cells(T, V).
+-- the cell the same rule seals at tick 1 is data at tick 2, where its
+-- conclusion arrives, and not here
+tmx_early(V)          :- tmx_cells(1, V).
+alarm(tmx_wrong).
+alarm(tmx_text_missing).
+alarm(tmx_member_not_past).
+alarm(tmx_explain_refused).
+alarm(tmx_cell_missing).
+alarm(tmx_early).
+tmx_text(T)@next      :- tmx_text(T).
+tmx_member(M, T)@next :- tmx_member(M, T).
+tmx_cell(T, V)@next   :- tmx_cell(T, V).
+tmx_wrong(max_carried) :- not tk_x(5).
+tmx_wrong(max_present) :- not tk_x_now(3).
+tmx_wrong(max_stale) :- tk_x(3).
+tmx_wrong(min_carried) :- not tk_lo(5).
+tmx_wrong(min_present) :- tk_lo_now(_).
+tmx_wrong(or_carried)  :- not tk_any(true).
+tmx_wrong(or_present)  :- not tk_any_now(false).
+tmx_wrong(or_stale) :- tk_any(false).
+tmx_text("max(?V : tk_w[main](?K,?V), ?K != b) = 5 [aggregate: 1 member").
+tmx_member(c, "tk_w[main](c,5)  <= r").
+tmx_cell(0, 5).
+-- What a hole at tick 0 left unstaged is unknown at tick 1
+-- (agg-ticks-holes.rofl): a cell that could read it is a hole, with no row.
+tmx_hlo(M) :- M is min(W : th_y(_, W)).
+tmx_hhi(M) :- M is max(W : th_y(_, W)).
+tmx_hole_read(min, M) :- tmx_hlo(M).
+tmx_hole_read(max, M) :- tmx_hhi(M).
+tmx_unholed(min) :- not th_holed(tmx_hlo).
+tmx_unholed(max) :- not th_holed(tmx_hhi).
+alarm(tmx_hole_read).
+alarm(tmx_unholed).

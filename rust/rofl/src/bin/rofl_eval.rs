@@ -171,16 +171,17 @@ fn main() {
         eprintln!("warning: {} dangling witness reference(s)", l.dangling);
     }
     let t1 = std::time::Instant::now();
-    // `--ticks N` IS N CALLS TO `tickAdvance` AND NOTHING ELSE, which is what
-    // the corpus generator does (scripts/port_corpus.ts): each call runs the
-    // standing tick to fixpoint through `ensure` and then advances if the tick
-    // is not quiescent, so no separate `evaluate()` belongs here. A quiescent
-    // or partial call is a no-op that still counts, exactly as the generator's
-    // replay counts it.
+    // `--ticks N` IS N CALLS TO `tickAdvance` AND THE TICK ENTERED EVALUATED,
+    // which is what the corpus generator does (scripts/port_corpus.ts): each
+    // call runs the standing tick to fixpoint through `ensure` and then
+    // advances if the tick is not quiescent, and the last tick is read once it
+    // has run (`ensure`: a quiescent one already has, and is not re-dated). A
+    // quiescent or partial call is a no-op that still counts, exactly as the
+    // generator's replay counts it.
     let out = if ticks == 0 {
         l.eval.run().map(|_| ())
     } else {
-        (0..ticks).try_for_each(|_| l.eval.tick_advance().map(|_| ()))
+        (0..ticks).try_for_each(|_| l.eval.tick_advance().map(|_| ())).and_then(|_| l.eval.ensure().map(|_| ()))
     };
     let t_eval = t1.elapsed();
     match out {
@@ -193,9 +194,10 @@ fn main() {
     drop(src);
     let live = LIVE.load(Ordering::Relaxed);
     let cs = if derivations {
+        l.eval.settle_provenance();
         l.eval.store.derivations(&l.eval.h)
     } else {
-        l.eval.store.canonical_state(&l.eval.h)
+        l.eval.canonical_state()
     };
     print!("{cs}");
     if want_bytes {
@@ -251,6 +253,37 @@ fn main() {
                 .unwrap_or_else(|| "?".to_string());
             eprintln!("argm_rule\t{}\t{}\t{}", l.eval.h.name(*rid), head, n);
         }
+        // THE SAME TABLE IN TIME, and what firing the rules of a round side by
+        // side could save: every round waits for its longest rule.
+        let mut by: Vec<(rofl::term::Sym, u64)> = l.eval.ns_by_rule.iter().map(|(k, v)| (*k, *v)).collect();
+        by.sort_by(|a, b| b.1.cmp(&a.1));
+        for (rid, ns) in by.iter().take(20) {
+            let head = l.eval.rules.iter().find(|r| r.id == *rid).map(|r| l.eval.h.name(r.clause.head.rel).to_string()).unwrap_or_else(|| "?".to_string());
+            eprintln!("rule_ms\t{}\t{}\t{:.1}", l.eval.h.name(*rid), head, *ns as f64 / 1e6);
+        }
+        let (sum, mx): (u64, u64) = l.eval.rounds.iter().fold((0, 0), |(s, m), (a, b)| (s + a, m + b));
+        let bound = |k: u64| l.eval.rounds.iter().map(|(s, m)| (*m).max(s / k)).sum::<u64>() as f64 / 1e6;
+        for c in &l.eval.closures {
+            eprintln!("closure\t{}\t{}\t{}", l.eval.h.name(c.rel), l.eval.h.name(c.edge), if c.edge_fwd { "fwd" } else { "rev" });
+        }
+        for (rel, on) in l.eval.vclosure_info() {
+            eprintln!("vclosure\t{rel}\t{}", if on { "tree" } else { "rows" });
+        }
+        for r in &l.eval.vclosure_reason {
+            eprintln!("vclosure_off\t{r}");
+        }
+        eprintln!("vclosure_builds\t{}", l.eval.vbuilds);
+        eprintln!("vclosure_rows_read\t{}", l.eval.vrows_read);
+        eprintln!("virtual_rows\t{}", l.eval.store.virtual_rows());
+        eprintln!("closure_rows\t{}", l.eval.closure_rows);
+        eprintln!("closure_runs\t{}", l.eval.closure_runs);
+        eprintln!("rounds\t{}", l.eval.rounds.len());
+        eprintln!("joinplan_stats_ms\t{:.1}", l.eval.delta_ns as f64 / 1e6);
+        eprintln!("rules_ms\t{:.1}", sum as f64 / 1e6);
+        eprintln!("longest_rule_per_round_ms\t{:.1}", mx as f64 / 1e6);
+        eprintln!("parallel_bound_2_ms\t{:.1}", bound(2));
+        eprintln!("parallel_bound_4_ms\t{:.1}", bound(4));
+        eprintln!("parallel_bound_inf_ms\t{:.1}", mx as f64 / 1e6);
     }
 }
 

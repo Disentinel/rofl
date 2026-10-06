@@ -1,0 +1,4 @@
+-- expect-refusal: it is declared a lattice too: a relation has one algebra
+-- counted and a max lattice at once
+tag tcr_lat(A, counting N).
+lattice tcr_lat(A, max N).

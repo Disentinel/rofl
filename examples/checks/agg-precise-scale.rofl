@@ -1,0 +1,24 @@
+-- examples/checks/agg-precise-scale.rofl — agg_precise_scale (docs/aggregates.md,
+-- "Precise holes, as built"): WHAT A BODY AGGREGATE LEAVES UNDECIDED IS
+-- DECIDED ONCE PER CORRELATION. 401 unknown members of one group, g0, and
+-- one grouped count read by 401 firings (one per sc_s), sealed once: the
+-- possibles and the groups they change are found at the first firing and
+-- read by the rest (`ReachMemo`), so the carry work is linear in the
+-- unknowns. Found again at every firing it is their product, 160 thousand
+-- steps, past this world's budget. g1, which no unknown reaches, is decided
+-- at every firing; g0 is a shrug at every firing.
+edb(sc_top).
+edb(sc_big).
+sc_top(400).
+sc_big(1152921504606846975).
+sc_s(0) :- sc_top(_).
+sc_s(M) :- sc_s(N), sc_top(T), N < T, M is N + 1.
+sc_m(g1, a, 1) :- sc_top(_).
+sc_m(g0, K, 1) :- sc_s(K), sc_big(B), Z is B + 1, Z > 0.
+sc_two(S, G, N) :- sc_s(S), N is count(X : sc_m(G, X, _)).
+-- expect-no-row: hole[$kernel]($adhoc,
+-- expect-row: sc_two[main](0,g1,1)
+-- expect-row: sc_two[main](400,g1,1)
+-- expect-no-row: sc_two[main](0,g0,
+-- expect-row: shrug[$kernel](sc_two(0,g0,$unknown_value),inherited,
+-- expect-row: shrug[$kernel](sc_two(400,g0,$unknown_value),inherited,

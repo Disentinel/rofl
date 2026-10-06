@@ -1,0 +1,17 @@
+-- below: examples/checks/agg-wfs-holed.rofl
+-- examples/checks/agg-cell-wfs-2-holed-below.rofl — a world below that holds a
+-- hole is fed with what it has no answer for (docs/aggregates.md, "Shrugs, as
+-- built"): wh_odds(z, _) divides by zero, and a and z's win is a draw; each
+-- crosses as `hole($below(...), left_out_below)`, which this world carries as
+-- what a hole left out, so a count over the draw is a shrug, never a count of
+-- the rest, and a negation of the division's result is one too.
+wch_n(N) :- N is count(X : wh_win(X)).
+edb(wch_k).
+wch_k(a). wch_k(z).
+wch_even(K) :- wch_k(K), not wh_odds(K, 5).
+-- expect-row: shrug[$kernel](wch_n($unknown_value),inherited,from($cons($below(wh_win,main,$cons(a,$nil)),$cons($below(wh_win,main,$cons(z,$nil)),$nil))))
+-- expect-no-row: wch_even[main](a)
+-- expect-row: shrug[$kernel](wch_even(z),inherited,from($cons($below(wh_odds,main,$cons(z,$cons($unk($lbl(wh_odds(z,$unknown_value),1,$cons(rdd3fe053,$nil)),$nil,0),$nil))),$nil)))
+-- expect-row: shrug[$kernel]($below(wh_odds,main,$cons(z,$cons($unk($lbl(wh_odds(z,$unknown_value),1,$cons(rdd3fe053,$nil)),$nil,0),$nil))),inherited,below)
+-- expect-no-row: wch_n[main](
+-- expect-no-row: wch_even[main](z)

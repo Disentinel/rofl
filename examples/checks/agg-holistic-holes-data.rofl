@@ -1,0 +1,49 @@
+-- examples/checks/agg-holistic-holes-data.rofl — WHAT A PLAIN HOLE LEAVES
+-- OUT, read by a holistic aggregate (agg_holistic_eval; docs/aggregates.md,
+-- "Holes and empty groups"; f_an_aggregate_read_what_a_plain_hole_left_out).
+-- The expected cells and rows are in agg-holistic-holes-check.rofl.
+--
+-- ahp_val is a member rule holed by a builtin's error (b's `oops`), so the
+-- group of ahp_val is [2, 6, 8, and one value not known]: its median is 6 or
+-- 8 and its rank of 6 is 2 or 3, neither known. ahp_top is a max holed for a
+-- value that is no integer (ahp_in's g2): g2's maximum is at least 10, so
+-- the median of [2, 3, >=10] is 3 under every reading — but only by luck of
+-- the numbers, and a hole says the group is not known either way. ahp_gval
+-- holes only group h1, so h2's median is known. ahp_seen(b) is concluded by
+-- a rule whose builtin fails on b, and also, a stratum higher, by another
+-- rule: it holds, so nothing reading it is unknown, and the count is exact.
+edb(ahp_raw).
+edb(ahp_in).
+edb(ahp_g).
+edb(ahp_graw).
+edb(ahp_skip).
+ahp_raw(a, 1).
+ahp_raw(b, oops).
+ahp_raw(c, 5).
+ahp_raw(d, 7).
+ahp_in(g1, a, 1).
+ahp_in(g1, b, 2).
+ahp_in(g2, a, 10).
+ahp_in(g2, b, oops).
+ahp_in(g3, a, 3).
+ahp_g(h1).
+ahp_g(h2).
+ahp_graw(h1, a, 4).
+ahp_graw(h1, b, nan).
+ahp_graw(h2, a, 4).
+ahp_graw(h2, b, 9).
+ahp_graw(h2, c, 1).
+ahp_skip(a).
+
+ahp_val(K, Y)       :- ahp_raw(K, X), Y is X + 1.
+ahp_val2(K, Y)      :- ahp_val(K, Y).
+ahp_med(M)          :- M is median(Y ; K : ahp_val2(K, Y)).
+ahp_q(Q)            :- Q is quantile(90, Y ; K : ahp_val(K, Y)).
+ahp_rank(R)         :- R is rank(6, Y : ahp_val(_, Y)).
+ahp_top(G, S)       :- ahp_in(G, _, _), S is max(X : ahp_in(G, _, X)).
+ahp_mid(M)          :- M is median(S ; G : ahp_top(G, S)).
+ahp_gval(G, K, Y)   :- ahp_graw(G, K, X), Y is X * 2.
+ahp_gmed(G, M)      :- ahp_g(G), M is median(Y ; K : ahp_gval(G, K, Y)).
+ahp_seen(K)         :- ahp_raw(K, X), X > 0.
+ahp_seen(K)         :- ahp_raw(K, _), not ahp_skip(K).
+ahp_cnt(N)          :- N is count(K : ahp_seen(K)).

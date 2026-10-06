@@ -160,7 +160,10 @@ function impure(text: string): string | null {
   const built = (t: Term) => t.k === 'f';
   for (const c of clauses) {
     for (const b of c.body) if (b.t === 'bi' && (!COMPARE.has(b.op) || built(b.l) || built(b.r))) return `not plain Datalog: \`${b.op}\` in a rule for ${c.head.rel}, where only a comparison of two values may stand`;
-    for (const l of [c.head, ...c.body.flatMap((b) => b.t === 'bi' ? [] : [b.lit])]) {
+    // an aggregate makes a value (a count, a sum) no file holds
+    if (c.body.some((b) => b.t === 'agg')) return `not plain Datalog: an aggregate in a rule for ${c.head.rel}, which makes a value no file holds`;
+    if (c.lattice || c.dominator) return `not plain Datalog: ${c.head.rel} keeps one value of many (a lattice, a tag or a dominance rule)`;
+    for (const l of [c.head, ...c.body.flatMap((b) => b.t === 'pos' || b.t === 'neg' ? [b.lit] : [])]) {
       if (l.args.some(built)) return `not plain Datalog: a term built of terms in ${l.rel}`;
       if (l.perspExplicit || l.temporal !== 'now') return `not plain Datalog: a perspective or a time in ${l.rel}`;
       if (ENGINE.has(l.rel) || l.rel.startsWith('$')) return `${l.rel} is the engine's own relation`;

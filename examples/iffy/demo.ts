@@ -10,7 +10,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { Rofl } from '../../src/api.ts';
-import { Evaluation } from '../../src/engine.ts';
+import { AggEval } from '../../src/aggeval.ts';
 import { evaluateSemiring } from '../../src/semiring.ts';
 import {
   countingSemiring, tropicalSemiring, renderCount, INFINITE, type Count,
@@ -303,7 +303,7 @@ export const AUDIT_QUERIES: [string, string][] = [
 export const STATUTE_AUDIT: [string, string] = ['double_limit', 'double_limit[audit](A, L1, L2)'];
 
 export function hygiene(r: Rofl, extra: [string, string][] = []): Hygiene {
-  const ev = new Evaluation(r.store, {});
+  const ev = new AggEval(r.store, 0, 'rounds');
   const audits: Record<string, number> = {};
   for (const [name, q] of [...AUDIT_QUERIES, ...extra]) audits[name] = r.query(q).rows.length;
   return {

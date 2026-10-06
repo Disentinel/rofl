@@ -1,0 +1,48 @@
+-- examples/checks/agg-incr-staged.rofl — agg_incr_staged: WHAT IS STAGED `@next`,
+-- under RETRACTION. A rule that concludes `@next` makes no fact of this tick: the
+-- fact it stages is a row of the next tick, kept with the premises of the firing
+-- that staged it. A retraction takes out the staged facts whose firing cited what
+-- is gone (the fact, a cell it supported, what a plain rule concluded from it)
+-- and fires again the rules that stage into those relations over the world as it
+-- now stands, so the tick that follows holds what a world without the fact would
+-- stage. The first firing of a staged fact is the schedule's: where two firings
+-- stay (sg_pick(a), from q(a, 2) and q(a, 1) once q(a, 0) is gone) the world is
+-- evaluated again, and says so.
+--
+--   sg_base0(a)       sg_pick(a) has two firings left, evaluated again, and the world is the one without it
+--   sg_sale(3, b, 9)  b has no sale left: sg_carry(b, 9), sg_seen(3, b, 9) and sg_top(b, 1) go, sg_fresh(b) is NEW
+--   sg_sale(1, a, 4)  a's total goes from 10 to 6, its count from 2 to 1: sg_carry and sg_top restaged
+edb(sg_sale). edb(sg_grp). edb(sg_base0). edb(sg_base). edb(sg_step).
+sg_grp(a). sg_grp(b).
+sg_sale(1, a, 4).
+sg_sale(2, a, 6).
+sg_sale(3, b, 9).
+sg_base0(a).
+sg_base(a).
+sg_step(a).
+sg_total(G, S) :- S is sum(V ; K : sg_sale(K, G, V)).
+sg_carry(G, S)@next :- sg_total(G, S).
+sg_seen(K, G, V)@next :- sg_sale(K, G, V).
+sg_top(G, N)@next :- sg_grp(G), N is count(K : sg_sale(K, G, _)).
+sg_fresh(G)@next :- sg_grp(G), not sg_sale(_, G, _).
+sg_q(G, 0) :- sg_base0(G).
+sg_q(G, 2) :- sg_base(G).
+sg_q(G, 1) :- sg_q(G, 2), sg_step(G).
+sg_pick(G)@next :- sg_q(G, _).
+
+-- the state after the retractions and one tick, row by row
+-- expect-row: sg_carry[main](a,6) tick base support=1
+-- expect-row: sg_fresh[main](b) tick base support=1
+-- expect-row: sg_pick[main](a) tick base support=1
+-- expect-row: sg_seen[main](2,a,6) tick base support=1
+-- expect-row: sg_top[main](a,1) tick base support=1
+-- expect-row: sg_top[main](b,0) tick base support=1
+-- expect-row: wit sg_pick[main](a) <- rfa48c709@1 [fact:sg_q[main](a,2)]
+-- expect-row: wit sg_carry[main](a,6) <- r3ca9354a@1 [fact:sg_total[main](a,6)]
+-- and nothing of what they staged before
+-- expect-no-row: sg_carry[main](a,10)
+-- expect-no-row: sg_carry[main](b,
+-- expect-no-row: sg_seen[main](1,a,4)
+-- expect-no-row: sg_seen[main](3,b,9)
+-- expect-no-row: sg_top[main](a,2)
+-- expect-no-row: sg_top[main](b,1)

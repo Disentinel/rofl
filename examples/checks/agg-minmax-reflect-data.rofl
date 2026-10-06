@@ -1,0 +1,17 @@
+-- examples/checks/agg-minmax-reflect-data.rofl — min, max, or and and for
+-- agg_minmax_reflect: a book of their own, a negation and a comparison
+-- inside, and the kernel's `concludes` read bare.
+edb(amf_item).
+edb(amf_bad).
+edb(amf_key).
+amf_key(k1).
+amf_key(k2).
+amf_item[ledger](k1, 1, 4, true).
+amf_item[ledger](k1, 2, 6, false).
+amf_item[ledger](k2, 3, 5, true).
+amf_bad(2).
+amf_low(K, M)    :- amf_key(K), M is min(V : amf_item[ledger](K, I, V, _), not amf_bad(I), V > 0).
+amf_high(K, M)   :- amf_key(K), M is max(V : amf_item[ledger](K, I, V, _), not amf_bad(I)).
+amf_any(K, B)    :- amf_key(K), B is or(F : amf_item[ledger](K, _, _, F)).
+amf_all(K, B)    :- amf_key(K), B is and(F : amf_item[ledger](K, _, _, F)).
+amf_rules(Rel, M) :- amf_key(Rel), M is max(W : concludes(R, Rel), W = 1).

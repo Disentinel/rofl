@@ -1,0 +1,114 @@
+-- examples/checks/agg-widen-eval-check.rofl — agg_widen_eval: every lattice
+-- of agg-widen-data.rofl, and every interval function, holds exactly what is
+-- enumerated here by hand, in both directions. The values, derived step by
+-- step (docs/aggregates.md, "Widening, as built"):
+--
+--   aw_loop head, widen 2: [0,0]; body [0,0] gives [1,1], joined [0,1] (1);
+--     [0,1] gives [1,2], [0,2] (2); [0,2] gives [1,3], [0,3], the third
+--     improvement, widened: its high end moved, to the next bound the
+--     recursion writes (its thresholds are 1, 9 and 10): [0,9]. Body is then
+--     the meet with (-inf,9], [0,9], which gives [1,10], joined [0,10]; the
+--     high end moves again, to the threshold 10, which is the join itself,
+--     so no widening: [0,10] settles. It is the least value, but nothing the
+--     engine knows proves that, so the cell is still a shrug, `widened`,
+--     within(iv(0,10)); body and exit read it and are shrugs inherited from
+--     it; entry, which reads nothing widened, is exactly [0,0].
+--   aw_up, widen 0: [0,0], then [1,1], joined [0,1], widened at once: [0,inf).
+--   aw_walk, widen 1: [0,0]; [1,1] joined [0,1] (1); [1,2] joined [0,2],
+--     widened: [0,inf); [-1,inf) joined [-1,inf), widened: (-inf,inf).
+--   aw_dbl, widen 3: [1,1], [1,2], [1,4], [1,8]; [2,16] joined [1,16] is the
+--     fourth, widened to the threshold 99: [1,99]; the meet with (-inf,99]
+--     doubled is [2,198], joined [1,198], widened again past every
+--     threshold: [1,inf). The descending pass then evaluates the rules from
+--     [1,inf): the meet with (-inf,99] is [1,99], doubled [2,198], joined
+--     with [1,1] it is [1,198], and the high end comes down to it: within
+--     [1,198], an enclosure of the least value [1,128].
+--   aw_tight, widen 2: [0,0], [0,1], [0,2]; [1,3] joined [0,3], the third,
+--     widened: [0,inf), though [0,3] would have settled. From [0,inf) the
+--     meet with (-inf,2] is [0,2], plus one [1,3], joined [0,3]: narrowed to
+--     within [0,3], its least value. aw_loop, aw_up and aw_walk come down to
+--     nothing: [0,10] gives [0,10], and a loop with no bound gives itself.
+--   aw_short, widen 5: [0,0], [0,1], [0,2], [0,3], and [1,3] within it:
+--     three improvements, none widened, so [0,3] holds, the least value.
+awe_holds(aw_at, entry, iv(0, 0)).
+awe_holds(aw_short, head, iv(0, 3)).
+awe_widened(aw_loop, head, iv(0, 10)).
+awe_widened(aw_up, head, iv(0, inf)).
+awe_widened(aw_walk, head, iv(ninf, inf)).
+awe_widened(aw_dbl, head, iv(1, 198)).
+awe_widened(aw_tight, head, iv(0, 3)).
+awe_inherited(aw_at, body, aw_loop, head).
+awe_inherited(aw_at, exit, aw_loop, head).
+awe_fn(add, iv(11, 22)).
+awe_fn(add_inf, iv(ninf, 7)).
+awe_fn(sub, iv(-19, -8)).
+awe_fn(sub_inf, iv(-2, inf)).
+awe_fn(mul, iv(-4, 12)).
+awe_fn(mul_neg, iv(ninf, 2)).
+awe_fn(mul_zero, iv(0, 0)).
+awe_fn(meet, iv(5, 9)).
+awe_fn(point, iv(7, 7)).
+
+awe_have(aw_at, K, V)    :- aw_at(K, V).
+awe_have(aw_loop, K, V)  :- aw_loop(K, V).
+awe_have(aw_up, K, V)    :- aw_up(K, V).
+awe_have(aw_walk, K, V)  :- aw_walk(K, V).
+awe_have(aw_dbl, K, V)   :- aw_dbl(K, V).
+awe_have(aw_tight, K, V) :- aw_tight(K, V).
+awe_have(aw_short, K, V) :- aw_short(K, V).
+awe_missing(R, K, V)     :- awe_holds(R, K, V), not awe_have(R, K, V).
+awe_extra(R, K, V)       :- awe_have(R, K, V), not awe_holds(R, K, V).
+-- a widened cell: its hole, its enclosure, and no value held
+awe_mark(R, K, V)        :- shrug[$kernel]($lattice(R, main, 0, $cons(K, $nil)), widened, within(V)).
+awe_hole(R, K)           :- hole[$kernel]($lattice(R, main, 0, $cons(K, $nil)), widening_forced).
+awe_unwidened(R, K, V)   :- awe_widened(R, K, V), not awe_mark(R, K, V).
+awe_unwidened(R, K, V)   :- awe_widened(R, K, V), not awe_hole(R, K).
+awe_overwidened(R, K, V) :- awe_mark(R, K, V), not awe_widened(R, K, V).
+awe_inh(R, K, RR, KR)    :- shrug[$kernel]($lattice(R, main, 0, $cons(K, $nil)), inherited,
+                                           from($cons($lattice(RR, main, 0, $cons(KR, $nil)), $nil))).
+awe_not_inherited(R, K)  :- awe_inherited(R, K, RR, KR), not awe_inh(R, K, RR, KR).
+awe_fn_wrong(F, V)       :- awe_fn(F, V), not aw_fn(F, V).
+awe_fn_wrong(F, V)       :- aw_fn(F, V), not awe_fn(F, V).
+-- ONLY AN IMPROVEMENT ALONG THE RECURSION COUNTS toward N: a contribution
+-- from below it is one of finitely many, joined and never counted. awe_flat
+-- has no recursion: [0,0], [1,1] and [2,2] improve it up to twice, none
+-- counts, and widen 0 leaves it exactly [0,2]. awe_mix reads itself through
+-- ivadd and a guard at 1: its points below, -3 to 0, improve it up to three
+-- times, uncounted; its recursion moves only the high end, 0 to 1, once,
+-- the first counted, and widen 1 widens only at the second. It is [-3,1].
+edb(awe_pt).
+awe_pt(-3). awe_pt(-2). awe_pt(-1). awe_pt(0).
+edb(awe_up).
+awe_up(0). awe_up(1). awe_up(2).
+lattice awe_flat(P, hull I) widen 0.
+awe_flat(head, iv(N, N)) :- awe_up(N).
+lattice awe_mix(P, hull I) widen 1.
+awe_mix(head, iv(N, N))  :- awe_pt(N).
+awe_mix(head, J)         :- awe_mix(head, I), K is ivadd(I, 1), J is ivmeet(K, iv(ninf, 1)).
+alarm(awe_missing).
+alarm(awe_extra).
+alarm(awe_unwidened).
+alarm(awe_overwidened).
+alarm(awe_not_inherited).
+alarm(awe_fn_wrong).
+-- the answers as rows the state must hold, and must not: an alarm `not
+-- answer` goes quiet over a shrug (f_a_missing_row_check_goes_quiet_over_a_hole)
+-- expect-row: aw_short[main](head,iv(0,3))
+-- expect-row: aw_at[main](entry,iv(0,0))
+-- expect-row: shrug[$kernel]($lattice(aw_loop,main,0,$cons(head,$nil)),widened,within(iv(0,10)))
+-- expect-row: shrug[$kernel]($lattice(aw_walk,main,0,$cons(head,$nil)),widened,within(iv(ninf,inf)))
+-- expect-row: shrug[$kernel]($lattice(aw_dbl,main,0,$cons(head,$nil)),widened,within(iv(1,198)))
+-- expect-row: shrug[$kernel]($lattice(aw_tight,main,0,$cons(head,$nil)),widened,within(iv(0,3)))
+-- expect-row: aw_fn[main](sub,iv(-19,-8))
+-- expect-no-row: aw_loop[main](head,
+-- expect-no-row: aw_at[main](body,
+-- expect-no-row: aw_at[main](exit,
+-- expect-no-row: aw_up[main](head,
+-- expect-no-row: aw_walk[main](head,
+-- expect-no-row: aw_dbl[main](head,
+-- expect-no-row: aw_tight[main](head,
+-- expect-no-row: aw_fn[main](empty,
+-- expect-row: awe_flat[main](head,iv(0,2))
+-- expect-row: awe_mix[main](head,iv(-3,1))
+-- expect-no-row: hole[$kernel]($lattice(awe_flat,
+-- expect-no-row: hole[$kernel]($lattice(awe_mix,

@@ -1,0 +1,4 @@
+-- expect-refusal: is declared a structure twice
+-- a relation has one declaration, even the same one again
+tree dts_twice(P, C).
+tree dts_twice(P, C).

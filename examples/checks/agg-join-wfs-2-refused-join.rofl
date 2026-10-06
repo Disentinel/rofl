@@ -1,0 +1,11 @@
+-- expect-refusal: lattice wjr_reach is not evaluated under well_founded semantics
+-- examples/checks/agg-join-wfs-2-refused-join.rofl — lattice wjr_reach
+-- inside a well-founded world is refused: its cell would grow under an
+-- assumption, over positions whose win is unknown.
+semantics(well_founded).
+edb(wjr_move).
+wjr_move(a, b). wjr_move(b, a). wjr_move(b, c).
+wjr_win(X) :- wjr_move(X, Y), not wjr_win(Y).
+lattice wjr_reach(X, union S).
+wjr_reach(X, set(X)) :- wjr_win(X).
+wjr_reach(X, S)      :- wjr_move(X, Y), wjr_reach(Y, S).

@@ -48,8 +48,18 @@ atom's own perspective, with the atom as an ordinary term rather than the
   argument would have made `why unknown(...)` untypeable — a third value nobody
   can interrogate is the refusal it was meant to replace.
 - **Rules can read it.** `dlq_candidate(S) :- state(S), unknown(win(S)).` is
-  the sentence the whole decision exists for. Reading rules get one pass over
-  the settled model, under the same assumption the last round ran under.
+  the sentence the whole decision exists for. The rules that read it are a
+  level above the alternation: it runs first without them, its undefined
+  atoms are fixed as `unknown` rows, and it runs again with them, so a
+  negation of `unknown` is judged where the rows exist and a rule reading an
+  atom's `unknown` gets a three-valued answer of its own. `unknown(A)` of an
+  atom that level itself leaves undefined is refused, since no row names it
+  before its reader. Beside a hole `unknown` names only what the alternation
+  left undefined, a paradox, and never what the hole left out: that is a
+  shrug, inherited from the fault, and `unknown(A)` of it is a shrug too,
+  under either semantics, in both engines and at whichever tick the hole
+  arrives (docs/aggregates.md, "Shrugs, as built"). The rules reading
+  `unknown` beside a hole were refused until then.
 - **It carries provenance.** The row keeps the firing that derived the atom
   under the generous assumption, with every premise that is itself undefined
   redirected to that premise's own row. Following them walks the unfounded set
@@ -77,8 +87,7 @@ It survives, untouched, on the evaluator that reads it — and the alternating
 fixpoint is an additional path rather than a replacement either way. When this
 was written the phase-ordered run WAS the default and read `stratum/2` out of
 the store; the default now peels its phase order off the decoded rules
-(`src/rounds.ts`), and `semantics(well_founded)` is delegated to the
-phase-ordered code unchanged, because an alternating fixpoint orders no phases
+(`src/aggeval.ts`), and `semantics(well_founded)` runs the alternation, because an alternating fixpoint orders no phases
 and so has nothing for rounds to replace. Both statements have the same
 content: this document's subject is the third value, and nothing here depends
 on where the schedule came from.

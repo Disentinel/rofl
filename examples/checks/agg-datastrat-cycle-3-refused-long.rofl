@@ -1,0 +1,13 @@
+-- expect-refusal: in the data the cell reads itself: sum@val(r1) -> value(b3,_) -> val(n3,_) -> sum@val(r3) -> value(b2,_) -> val(n2,_) -> val(n2x,_) -> value(b1,_) -> val(n1,_) -> sum@val(r1)
+-- examples/checks/agg-datastrat-cycle-3-refused-long.rofl — a cycle through
+-- a formula that is no sum: b1 = SUM(a1, b3), b2 = b1 + a1, b3 = SUM(b2).
+edb(input). edb(formula). edb(ref). edb(plus). edb(sum_head). edb(in_range).
+input(a1, 2).
+formula(b1, n1). sum_head(n1, r1). in_range(r1, a1). in_range(r1, b3).
+formula(b2, n2). plus(n2, n2x, n2y). ref(n2x, b1). ref(n2y, a1).
+formula(b3, n3). sum_head(n3, r3). in_range(r3, b2).
+value(C, V) :- input(C, V).
+value(C, V) :- formula(C, N), val(N, V).
+val(N, V) :- ref(N, C), value(C, V).
+val(N, V) :- plus(N, A, B), val(A, X), val(B, Y), V is X + Y.
+val(N, V) :- sum_head(N, I), V is sum(X ; C : in_range(I, C), value(C, X)).

@@ -1,0 +1,18 @@
+-- examples/checks/agg-shrug-strata.rofl — agg_cell_shrug_strata, the stock
+-- evaluator in both engines, over rules/strata.rofl: what reads `unknown` is
+-- lifted above every relation the table ranks, so `unknown(A)` of an A ranked
+-- above its reader (ss_deep, two negations up) is known to be a shrug when
+-- the reader fires; ranked by the table alone, ss_ok would fire first and
+-- decide c.
+edb(ss_pos).
+edb(ss_big).
+ss_pos(a). ss_pos(c).
+ss_big(1152921504606846975).
+ss_w(c) :- ss_big(B), Z is B + 1, Z > 0.
+ss_n1(X) :- ss_pos(X), not ss_w(X).
+ss_n2(X) :- ss_pos(X), not ss_n1(X).
+ss_deep(X) :- ss_pos(X), not ss_n2(X).
+ss_ok(X) :- ss_pos(X), not unknown(ss_deep(X)).
+-- expect-row: ss_ok[main](a)
+-- expect-no-row: ss_ok[main](c)
+-- expect-row: shrug[$kernel](ss_ok(c),inherited,

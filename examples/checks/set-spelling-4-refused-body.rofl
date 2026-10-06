@@ -1,0 +1,4 @@
+-- expect-refusal: is a set written with a variable
+-- a set pattern with a variable over a plain relation, inside another term
+ss_held(f(set(a, b))).
+ss_pat(Y) :- ss_held(f(set(Y, b))).

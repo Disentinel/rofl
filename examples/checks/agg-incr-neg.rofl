@@ -1,0 +1,33 @@
+-- examples/checks/agg-incr-neg.rofl — agg_incr_neg: a sale read under a
+-- negation. A retraction can ADD a conclusion through a negation, which no
+-- subtraction does, so a fact a negation reads is evaluated again: the state
+-- must be a world without the fact's, ag_quiet(b) included.
+--
+--   ag_sale(1, a, 10)   a's total 15 -> 5
+--   ag_sale(3, b, 7)    b has no sale left: ag_quiet(b) is NEW
+edb(ag_sale).
+edb(ag_g).
+ag_g(a).
+ag_g(b).
+ag_sale(1, a, 10).
+ag_sale(2, a, 5).
+ag_sale(3, b, 7).
+
+ag_total(G, S) :- S is sum(V ; K : ag_sale(K, G, V)).
+ag_quiet(G)    :- ag_g(G), not ag_sale(_, G, _).
+
+-- the state after the retractions, row by row
+-- expect-row: ag_quiet[main](b) tick drv support=1
+-- expect-row: ag_total[main](a,5) tick drv support=1
+-- expect-row: cell $cell(r6d70d762,1,0,$cons(a,$nil)) sum = 5 h=1 tick=0 sealed=[ag_sale@0] alg=invertible use=subtract
+-- expect-row: mem $cell(r6d70d762,1,0,$cons(a,$nil)) #1 id=0dce7fe09c7a8791 (5,2) h=1 [fact:ag_sale[main](2,a,5)]
+-- and nothing of what they supported before
+-- expect-no-row: ag_total[main](a,15) tick drv support=1
+-- expect-no-row: ag_total[main](b,7) tick drv support=1
+-- expect-no-row: cell $cell(r6d70d762,1,0,$cons(a,$nil)) sum = 15 h=1 tick=0 sealed=[ag_sale@0] alg=invertible use=subtract
+-- expect-no-row: mem $cell(r6d70d762,1,0,$cons(a,$nil)) #1 id=ff88e573b3b09f76 (10,1) h=1 [fact:ag_sale[main](1,a,10)]
+-- expect-no-row: mem $cell(r6d70d762,1,0,$cons(a,$nil)) #2 id=0dce7fe09c7a8791 (5,2) h=1 [fact:ag_sale[main](2,a,5)]
+-- expect-no-row: cell $cell(r6d70d762,1,0,$cons(b,$nil)) sum = 7 h=1 tick=0 sealed=[ag_sale@0] alg=invertible use=subtract
+-- expect-no-row: mem $cell(r6d70d762,1,0,$cons(b,$nil)) #1 id=81f4030c226f8e27 (7,3) h=1 [fact:ag_sale[main](3,b,7)]
+-- expect-no-row: ag_sale[main](1,a,10)
+-- expect-no-row: ag_sale[main](3,b,7)

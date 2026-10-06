@@ -20,7 +20,8 @@ export class ParseError extends Error {}
 
 export interface Tok { t: string; v: string; line: number; }
 
-const PUNCT = [':-', '<=', '>=', '!=', '--', '(', ')', '[', ']', ',', '.', '@', '{', '}', '=', '<', '>', '+', '-', '*', '/', '?'];
+// `:` and `;` are an aggregate's separators; `:-` still wins by longest match.
+const PUNCT = [':-', '<=', '>=', '!=', '--', '(', ')', '[', ']', ',', '.', '@', '{', '}', '=', '<', '>', '+', '-', '*', '/', '?', ':', ';'];
 
 /** THE ESCAPE TABLE, and the two decisions in it.
  *
@@ -37,11 +38,13 @@ const PUNCT = [':-', '<=', '>=', '!=', '--', '(', ')', '[', ']', ',', '.', '@', 
  *  AN UNKNOWN ESCAPE IS AN ERROR, not a silent backslash-drop. Dropping it is
  *  the silently-wrong class this repository exists to refuse, and refusing
  *  costs nothing today (the corpus contains none) while catching every typo
- *  from here on. The table stays small on purpose: no `\\xNN`, no `\\uNNNN`,
- *  and no `\\0` — a NUL in a value is not something this language needs and
- *  the text gate exists to keep NULs out. */
+ *  from here on. The table stays small on purpose: no `\\xNN`, no general
+ *  `\\uNNNN`, and no `\\0`. What it does read is what the renderer writes
+ *  (`JSON.stringify`, Rust `json_string`): `\\b`, `\\f`, and a control character
+ *  as `\\u0000`..`\\u001f`, or a fact rendered from a scanned string that held
+ *  one could not be read back (a cooled volume, a published [surface] fact). */
 const ESCAPES: ReadonlyMap<string, string> = new Map([
-  ['n', '\n'], ['t', '\t'], ['r', '\r'], ['\\', '\\'], ['"', '"'],
+  ['n', '\n'], ['t', '\t'], ['r', '\r'], ['\\', '\\'], ['"', '"'], ['b', '\b'], ['f', '\f'],
 ]);
 
 export function tokenize(src: string): Tok[] {
@@ -61,6 +64,8 @@ export function tokenize(src: string): Tok[] {
       while (j < n && src[j] !== '"') {
         if (src[j] === '\\') {
           const e = src[j + 1];
+          const u = e === 'u' && /^[0-9a-fA-F]{4}$/.test(src.slice(j + 2, j + 6)) ? parseInt(src.slice(j + 2, j + 6), 16) : -1;
+          if (u >= 0 && u < 0x20) { out += String.fromCharCode(u); j += 6; continue; }
           const r = e === undefined ? undefined : ESCAPES.get(e);
           if (r === undefined) {
             throw new ParseError(`line ${line}: unknown escape '\\${e ?? ''}' in a string; `

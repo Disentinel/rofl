@@ -1,0 +1,31 @@
+-- examples/checks/demand-cycle.rofl — demand_cycle: A CALL WITH AN OPEN ANSWER
+-- MET AGAIN INSIDE ITS OWN UNFOLDING is not unfolded again: what it would add is
+-- a shrug (demand_cycle), not the world (f_an_open_recursion_through_demand_cut_the_world).
+--
+-- dy_d leaves Z free in its first rule, so it is answered on demand and not
+-- closed. Called as dy_d(4, 5), its second rule calls dy_d(X, 5) with X free, and
+-- that one's second rule calls dy_d(X', 5) again: the same call, which unfolded
+-- again until the depth wall (512) cut the whole evaluation. dy_d(3, 5) and,
+-- through dy_e(3, 4), dy_d(4, 5) are found before the call comes round, so dy_r(3)
+-- and dy_r(4) hold; dy_d(3, 7) holds by the first rule, so dy_n(3) does not.
+edb(dy_q). edb(dy_e).
+dy_q(3).
+dy_e(3, 4). dy_e(4, 3).
+dy_u(X, Y) :- dy_q(X).
+dy_d(X, _) :- dy_u(X, X).
+dy_d(Y, Z) :- dy_d(X, Z), dy_e(X, Y).
+dy_r(X)    :- dy_d(X, 5).
+dy_r2(X)   :- dy_d(X, X).
+dy_n(X)    :- dy_q(X), not dy_d(X, 7).
+
+dy_node(3). dy_node(4).
+dy_missed(X) :- dy_node(X), not dy_r(X).
+dy_wrong(X)  :- dy_n(X).
+alarm(dy_missed).
+alarm(dy_wrong).
+
+-- expect-row: dy_r[main](3) tick drv support=1
+-- expect-row: dy_r[main](4) tick drv support=1
+-- expect-row: dy_r2[main](4) tick drv support=1
+-- expect-no-row: dy_n[main](3)
+-- expect-no-row: shrug[$kernel]($rule

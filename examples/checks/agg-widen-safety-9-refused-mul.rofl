@@ -1,0 +1,8 @@
+-- expect-refusal: is not monotone in the value
+-- ivmul multiplies an interval by an integer: the value as its multiplier
+-- is no interval step
+edb(awsr_s).
+awsr_s(a).
+lattice awsr_mul(X, hull I) widen 1.
+awsr_mul(X, iv(1, 1)) :- awsr_s(X).
+awsr_mul(X, J)        :- awsr_mul(X, I), J is ivmul(2, I).

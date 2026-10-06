@@ -5,11 +5,12 @@
 
 import {
   type Term, type Subst, type ArithFail, mka, mks, mkv, mkf, mki, canonTerm, fnv1a,
-  walk, evalArith, ARITH_UNBOUND, ARITH_TYPE, ARITH_ZERO,
+  walk, evalArith, ARITH_UNBOUND, ARITH_TYPE, ARITH_ZERO, ARITH_OVERFLOW,
 } from './unify.ts';
 import { tokenize } from './tokens.ts';
-import type { Clause, Lit, BodyElem, Temporal } from './unify.ts';
-import { type FactStore } from './store.ts';
+import { type Clause, type Lit, type BodyElem, type Temporal, litsOf, annotateAggs } from './unify.ts';
+import { opFromName } from './cell.ts';
+import { type FactStore, type FactRec, type Witness, factKey } from './store.ts';
 
 /** §2 kernel vocabulary: reserved, write-protected relations. */
 export const V = {
@@ -34,6 +35,48 @@ export const V = {
   premise_lit: 'premise_lit',
   conclusion_lit: 'conclusion_lit',
   conclusion_tense: 'conclusion_tense',
+  // AGGREGATES (docs/aggregates.md). `premise_agg(R, Rel)`: rule R's
+  // aggregate reads Rel, closed, as a negation reads. The other four are a
+  // sealed cell as facts:
+  // `agg_cell(Cell, Value, Height)`, `agg_member(Cell, I, Proj, Height)`,
+  // `agg_member_prem(Cell, I, Prem)` and `agg_sealed(Cell, Rel, Round)`.
+  premise_agg: 'premise_agg',
+  agg_cell: 'agg_cell',
+  agg_member: 'agg_member',
+  agg_member_prem: 'agg_member_prem',
+  agg_sealed: 'agg_sealed',
+  // LATTICES (docs/aggregates.md, "The order lattice, as built"):
+  // `lattice_decl(Rel, Arity, Op)` for
+  // `lattice rel(..., op V).`, and a lattice fact's members,
+  // `lattice_member(Fact, I, Height, Rule)`, `lattice_member_prem(Fact, I, Prem)`;
+  // `lattice_widen(Rel, N)` for a declared widening, `lattice rel(..., hull I) widen N.`
+  lattice_decl: 'lattice_decl',
+  lattice_widen: 'lattice_widen',
+  lattice_member: 'lattice_member',
+  lattice_member_prem: 'lattice_member_prem',
+  // SEMIRING TAGS (docs/aggregates.md, "Tags, as built"):
+  // `tag_decl(Rel, Arity, Alg)` for `tag rel(..., alg T).`
+  tag_decl: 'tag_decl',
+  // DECLARED ORDERS (docs/aggregates.md, "Declared orders, as built"):
+  // `order_comp(Rel, Kind, I, Dir, Rule)` for `pareto rel(K..., min C, ...).` and
+  // `lex rel(...)`: the I-th value, its direction (min or max), and the
+  // dominance rule that is strict in it.
+  order_comp: 'order_comp',
+  // DECLARED DATA STRUCTURES (docs/data-structures.md): `structure_decl(Rel, Arity, Kind)`
+  // for `function rel(N, to V).` and `structure_role(Rel, Pos, Role)` for each
+  // argument marked with a role word (Pos from 1); an unmarked argument is the key.
+  structure_decl: 'structure_decl',
+  structure_role: 'structure_role',
+  // `tree rel(P, C) closure c.`: `structure_closure(Rel, Closure)`, the relation the tree's closure is.
+  structure_closure: 'structure_closure',
+  // SUBSUMPTION (docs/aggregates.md, "Subsumption, as built"): a dominance
+  // rule `p(K..., V1...) <= p(K..., V2...) :- B.`
+  // is `dominance(R, Rel, Arity, KeyLen)` and its two facts
+  // `dominance_lit(R, 1|2, Lit)`, its body a rule body's rows; the front's
+  // witness names each value it dominates, `dominated_by(Value, By, Rule)`.
+  dominance: 'dominance',
+  dominance_lit: 'dominance_lit',
+  dominated_by: 'dominated_by',
 } as const;
 
 export const RESERVED: ReadonlySet<string> = new Set(Object.values(V));
@@ -52,23 +95,30 @@ export const RESERVED: ReadonlySet<string> = new Set(Object.values(V));
  *  load of every program here, which is a gate that gets switched off.
  *
  *  `derived_by` and `hole` are on the list by the same test, and they were the
- *  last two to arrive: they are written from src/engine.ts and src/rounds.ts,
+ *  last two to arrive: they are written from src/aggeval.ts and src/aggeval.ts,
  *  and until those files were free the provenance trail and the refusal record
  *  stayed in `[main]`, where `$anon` has standing and `derived_by(x, r_never,
  *  0).` was accepted with `forged[audit]` at 0. Same hole as the rest of the
  *  trail, one file away from the fix.
  *
- *  `edb` did NOT follow them out of src/engine.ts, and that is the line, not an
+ *  `edb` did NOT follow them out of src/aggeval.ts, and that is the line, not an
  *  oversight: `edb(unknown)` is written there by the kernel, and 233 `edb(...)`
  *  facts in the corpus are written by hand. A co-written table cannot be split
  *  across two books — boot.rofl's `undefined_premise[audit]` reads `not
  *  edb(Rel)` once and must see both — so it stays whole, in `[main]`, with the
  *  rest of the declaration table. */
 export const KERNEL_BOOK: ReadonlySet<string> = new Set<string>([
+  // the answer model's third value (docs/aggregates.md, "Shrugs, as built"),
+  // written by the kernel after every evaluation and by nothing else
+  'shrug',
   V.rule, V.has_premise, V.has_conclusion, V.premise_pos, V.premise_neg,
   V.premise_lit, V.conclusion_lit, V.conclusion_tense, V.concludes,
   V.reads_from, V.writes_to, V.uses_builtin, V.asserted_by,
   V.bridge_decl, V.derived_by, V.hole,
+  V.premise_agg, V.agg_cell, V.agg_member, V.agg_member_prem, V.agg_sealed,
+  V.lattice_decl, V.lattice_widen, V.lattice_member, V.lattice_member_prem, V.tag_decl, V.order_comp,
+  V.structure_decl, V.structure_role, V.structure_closure,
+  V.dominance, V.dominance_lit, V.dominated_by,
 ]);
 
 /** Is this perspective one of the kernel's own books?
@@ -76,7 +126,7 @@ export const KERNEL_BOOK: ReadonlySet<string> = new Set<string>([
  *  ONE definition, exported, because the test is a PREFIX and a prefix test
  *  copied into four files is four chances to write `=== '$kernel'` in one of
  *  them and reopen the ring for the next kernel ledger. src/api.ts refuses a
- *  clause that writes one, and src/engine.ts refuses to instantiate a
+ *  clause that writes one, and src/aggeval.ts refuses to instantiate a
  *  perspective VARIABLE to one — two different questions with one answer. */
 export function isKernelLedger(p: string): boolean {
   return p.startsWith('$');
@@ -123,6 +173,7 @@ export const IFACE = {
   // about it is no longer published. See SEALED_BODY below for what each names
   // and for the ablation that decided which rows may be in it.
   sealed: 'sealed',
+  asks: 'asks',
 } as const;
 
 /** The arity every kernel-read relation is READ AT. Not decoration: the
@@ -135,7 +186,7 @@ export const IFACE = {
  *  (reading 'k')` rather than refusing the program. `premise_lit/1` does it
  *  under EVERY configuration (`decodeRules` below, which tests `f.args[1].k`
  *  before anything has established there is an `args[1]`), and `stratum/1`
- *  does it under the `strata` evaluator (`readStrata` in src/engine.ts, same
+ *  does it under the `strata` evaluator (`readStrata` in src/aggeval.ts, same
  *  shape: `const [rel, n] = f.args` then `n.k`). The other 23 are inert at the
  *  wrong width, which is luck about where each reader happens to look, not a
  *  property anything enforces.
@@ -162,6 +213,11 @@ export const ARITY: Readonly<Record<string, number>> = {
   // read by `sealedBodies` below, which destructures `args[0]` — the same
   // crash gate every other row of this table is here for.
   sealed: 1,
+  asks: 1,
+  premise_agg: 2, agg_cell: 3, agg_member: 4, agg_member_prem: 3, agg_sealed: 3,
+  lattice_decl: 3, lattice_widen: 2, lattice_member: 4, lattice_member_prem: 3,
+  tag_decl: 3, order_comp: 5, structure_decl: 3, structure_role: 3, structure_closure: 2,
+  dominance: 4, dominance_lit: 3, dominated_by: 3,
 };
 
 /** The one value `semantics/1` is read for. Any other argument is a fact the
@@ -258,6 +314,7 @@ export const SPACE_REASON = 'space_exhausted';
  *  more than the silence this replaces. */
 export const ARITH_TYPE_REASON = 'arith_type_error';
 export const ARITH_ZERO_REASON = 'arith_zero_divisor';
+export const ARITH_OVERFLOW_REASON = 'arith_overflow';
 /** Hole id marker for a rule: `hole($rule(Id), Reason)`. The rule id is a key
  *  into the reflected program, so the offending expression stays recoverable
  *  (`premise_lit(Id, K, Lit)`) without the hole carrying it — and one hole per
@@ -306,7 +363,7 @@ export const SEALED_HOLE = '$sealed';
  *  every arithmetic premise un-ground, every rule using one unsafe, and the
  *  ring 1 parse exhaust its budget; `concludes`, `premise_pos`, `premise_neg`
  *  and `conclusion_tense` are copied into the kernel's own policy stores
- *  (src/engine.ts:628, :982). A floor cannot seal what the floor it runs on
+ *  (src/aggeval.ts:628, :982). A floor cannot seal what the floor it runs on
  *  reads.
  *
  *  `assertions` is the per-FACT half, which scales with the data rather than
@@ -322,7 +379,8 @@ export const SEALED_PROVENANCE = 'provenance';
 export const SEALED_BODY: ReadonlyMap<string, readonly string[]> = new Map([
   [SEALED_RULES, [V.has_conclusion, V.reads_from, V.writes_to, V.uses_builtin]],
   [SEALED_ASSERTIONS, [V.asserted_by]],
-  [SEALED_PROVENANCE, [V.derived_by]],
+  [SEALED_PROVENANCE, [V.derived_by, V.agg_cell, V.agg_member, V.agg_member_prem, V.agg_sealed,
+    V.lattice_member, V.lattice_member_prem, V.dominated_by]],
 ]);
 
 /** Which bodies this store's program has sealed. Read the way
@@ -352,7 +410,7 @@ export function sealedRels(bodies: ReadonlySet<string>): ReadonlySet<string> {
 }
 const EMPTY_RELS: ReadonlySet<string> = new Set<string>();
 
-export const BUILTIN_OPS = ['=', '!=', '<', '<=', '>', '>=', 'is'] as const;
+export const BUILTIN_OPS = ['=', '!=', '<', '<=', '>', '>=', 'is', 'in', 'subset'] as const;
 
 /** STRING DESTRUCTORS: taking a string apart, and why a kernel that refuses
  *  the other direction may have this one.
@@ -422,6 +480,7 @@ export const ATOM_NAME_REASON = 'atom_unwritable';
  *  hole emitter does not grow a branch per operation. */
 export function holeReasonOf(code: number): string {
   if (code === ARITH_ZERO) return ARITH_ZERO_REASON;
+  if (code === ARITH_OVERFLOW) return ARITH_OVERFLOW_REASON;
   if (code === STR_TYPE) return STR_TYPE_REASON;
   if (code === STR_INDEX) return STR_INDEX_REASON;
   if (code === STR_SEP) return STR_SEP_REASON;
@@ -450,7 +509,7 @@ function strOperand(t: Term, s: Subst, fail?: ArithFail): string | null {
 function intOperand(t: Term, s: Subst, fail?: ArithFail): number | null {
   const v = evalArith(t, s, fail);
   if (v === null && fail && fail.code === ARITH_TYPE) fail.code = STR_TYPE;
-  return v;
+  return v === null ? null : Number(v);
 }
 
 /** Evaluate a string-destructor call, or say it is not one.
@@ -642,10 +701,22 @@ export function unreifyLit(t: Term): Lit {
 export function reifyBodyElem(b: BodyElem): Term {
   if (b.t === 'pos') return reifyLit(b.lit);
   if (b.t === 'neg') return mkf('$not', [reifyLit(b.lit)]);
+  // `$agg(Op, Res, Vals, Keys, Body)`, each list a `$cons` list and the body
+  // the same encoding as a rule's (rust/rofl `reify_body_elem`)
+  if (b.t === 'agg') {
+    return mkf('$agg', [mka(b.op), reifyTerm(b.res), list(b.vals.map(reifyTerm)), list(b.keys.map(reifyTerm)),
+      list(b.body.map(reifyBodyElem))]);
+  }
   return mkf('$builtin', [mks(b.op), list([reifyTerm(b.l), reifyTerm(b.r)])]);
 }
 
 export function unreifyBodyElem(t: Term): BodyElem {
+  if (t.k === 'f' && t.name === '$agg' && t.args.length === 5) {
+    const [op, res, vals, keys, body] = t.args;
+    if (op.k !== 'a' || opFromName(op.name) === null) throw new Error('bad reified aggregate');
+    return { t: 'agg', op: op.name, res: unreifyTerm(res), vals: unlist(vals).map(unreifyTerm),
+      keys: unlist(keys).map(unreifyTerm), body: unlist(body).map(unreifyBodyElem) };
+  }
   if (t.k === 'f' && t.name === '$not') return { t: 'neg', lit: unreifyLit(t.args[0]) };
   if (t.k === 'f' && t.name === '$builtin') {
     const [op, args] = t.args;
@@ -659,6 +730,11 @@ export function unreifyBodyElem(t: Term): BodyElem {
 /** Ground fact as a term, for derived_by / in_perspective / asserted_by. */
 export function factTerm(rel: string, persp: string, args: Term[]): Term {
   return mkf('$fact', [mka(rel), mka(persp), list(args)]);
+}
+
+/** The key of the `derived_by` row a firing was recorded with (`conclude`). */
+export function provenanceRow(rec: FactRec, w: Witness): string {
+  return factKey(V.derived_by, KERNEL_PERSP, [factTerm(rec.rel, rec.persp, rec.args), mka(w.ruleId), mki(w.tick)]);
 }
 
 /** The relation a `factTerm` names, or null if the term is not one. Lets a
@@ -711,10 +787,19 @@ export function canonLit(l: Lit): string {
 export function canonBodyElem(b: BodyElem): string {
   if (b.t === 'pos') return canonLit(b.lit);
   if (b.t === 'neg') return 'not ' + canonLit(b.lit);
+  if (b.t === 'agg') {
+    const keys = b.keys.length ? ' ; ' + b.keys.map(canonTerm).join(',') : '';
+    const inner = `${b.vals.map(canonTerm).join(',')}${keys} : ${b.body.map(canonBodyElem).join(', ')})`;
+    if (b.op === 'at_least') return `at_least(${canonTerm(b.res)}, ${inner}`;
+    return `${canonTerm(b.res)} is ${b.op}(${inner}`;
+  }
   return `${canonTerm(b.l)} ${b.op} ${canonTerm(b.r)}`;
 }
 
 export function canonClause(c: Clause): string {
+  // a dominance rule (docs/aggregates.md, "Subsumption, as built") is
+  // spelled as the Rust engine spells it, `dominance_canon`, so ids agree
+  if (c.dominator) return canonLit(c.head) + ' <= ' + canonLit(c.dominator) + ' :- ' + c.body.map(canonBodyElem).join(', ');
   if (c.body.length === 0) return canonLit(c.head);
   return canonLit(c.head) + ' :- ' + c.body.map(canonBodyElem).join(', ');
 }
@@ -781,13 +866,22 @@ export function resolveBook(l: Lit): Lit {
  *  not copy for nothing and never mutates what it was handed. */
 export function resolveClauseBooks(c: Clause): Clause {
   let moved = resolveBook(c.head) !== c.head;
-  const body = c.body.map((b) => {
+  const elem = (b: BodyElem): BodyElem => {
+    if (b.t === 'agg') {
+      const body = b.body.map(elem);
+      return body.some((x, i) => x !== b.body[i]) ? { ...b, body } : b;
+    }
     if (b.t !== 'pos' && b.t !== 'neg') return b;
     const lit = resolveBook(b.lit);
     if (lit === b.lit) return b;
     moved = true;
     return { ...b, lit };
-  });
+  };
+  const body = c.body.map(elem);
+  if (c.dominator) {
+    const dominator = resolveBook(c.dominator);
+    return moved || dominator !== c.dominator ? { head: resolveBook(c.head), body, dominator } : c;
+  }
   return moved ? { head: resolveBook(c.head), body } : c;
 }
 
@@ -803,6 +897,22 @@ function perspAudit(p: Term): Term {
   if (p.k === 'a') return p;
   if (p.k === 'v') return mkf('$var', [mks(p.name)]);
   return mka(ANY_PERSP);
+}
+
+/** `uses_builtin` for a builtin, and for every builtin inside an aggregate;
+ *  not for the aggregate's own operation, which is no builtin. A destructor
+ *  rides on `is` and is reflected as itself too, from either side. */
+function builtinRows(rid: Term, b: BodyElem, facts: EncFact[]): void {
+  if (b.t === 'bi') {
+    facts.push({ rel: V.uses_builtin, args: [rid, mks(b.op)] });
+    if (b.op === 'is') {
+      for (const op of [...new Set([...strOpsIn(b.l), ...strOpsIn(b.r)])].sort()) {
+        facts.push({ rel: V.uses_builtin, args: [rid, mks(op)] });
+      }
+    }
+  } else if (b.t === 'agg') {
+    for (const x of b.body) builtinRows(rid, x, facts);
+  }
 }
 
 /** Reflection facts for one rule. All land in [main], timeless, base. */
@@ -842,23 +952,34 @@ export function encodeRule(c0: Clause): { id: string; facts: EncFact[] } {
     facts.push({ rel: V.premise_lit, args: [rid, { k: 'i', v: k }, reifyBodyElem(b)] });
     if (b.t === 'pos') facts.push({ rel: V.premise_pos, args: [rid, mka(b.lit.rel)] });
     if (b.t === 'neg') facts.push({ rel: V.premise_neg, args: [rid, mka(b.lit.rel)] });
-    if (b.t === 'pos' || b.t === 'neg') {
-      const pa = perspAudit(b.lit.persp);
-      readPersps.set(canonTerm(pa), pa);
-    }
-    if (b.t === 'bi') {
-      facts.push({ rel: V.uses_builtin, args: [rid, mks(b.op)] });
-      // A destructor rides on `is` and would otherwise be reflected as `is`
-      // and nothing more. Both sides are read: the operation is used wherever
-      // it is written, including the mode violation `str_len(S) is 3`, which
-      // fails silently like every backwards `is` here but must still be
-      // visible to an audit over `uses_builtin`.
-      if (b.op === 'is') {
-        for (const op of [...new Set([...strOpsIn(b.l), ...strOpsIn(b.r)])].sort()) {
-          facts.push({ rel: V.uses_builtin, args: [rid, mks(op)] });
-        }
+    if (b.t === 'agg' && b.op === 'at_least') {
+      // A THRESHOLD IS MONOTONE: its inner body is read as the rule would
+      // read it inlined, a positive premise `premise_pos`, a negation
+      // `premise_neg`
+      const seen = new Set<string>();
+      for (const x of b.body) {
+        if (x.t !== 'pos' && x.t !== 'neg') continue;
+        const sig = `${x.t}|${x.lit.rel}`;
+        if (seen.has(sig)) continue;
+        seen.add(sig);
+        facts.push({ rel: x.t === 'neg' ? V.premise_neg : V.premise_pos, args: [rid, mka(x.lit.rel)] });
+      }
+    } else if (b.t === 'agg') {
+      // AN AGGREGATE READS ITS INNER RELATIONS AS A NEGATION DOES: closed,
+      // from below, `premise_agg` and no `premise_pos` for any of them
+      const seen = new Set<string>();
+      for (const l of litsOf(b)) {
+        if (seen.has(l.rel)) continue;
+        seen.add(l.rel);
+        facts.push({ rel: V.premise_agg, args: [rid, mka(l.rel)] });
       }
     }
+    for (const l of litsOf(b)) {
+      const pa = perspAudit(l.persp);
+      const key = canonTerm(pa);
+      if (!readPersps.has(key)) readPersps.set(key, pa);
+    }
+    builtinRows(rid, b, facts);
   });
   // WHERE `bridge_decl` WENT. A row used to be pushed here for every rule
   // whose head named a perspective explicitly and whose body read another:
@@ -898,6 +1019,118 @@ export function encodeRule(c0: Clause): { id: string; facts: EncFact[] } {
 }
 
 // ---------------------------------------------------------------------------
+// A DOMINANCE RULE AS DATA (docs/aggregates.md, "Subsumption, as built"):
+// `p(K..., V1...) <= p(K..., V2...) :- Body.` is `dominance(R, Rel, Arity,
+// KeyLen)`, its two facts `dominance_lit(R, 1, Lo)` and `(R, 2, Hi)`, and its
+// body reflected as a rule body is, with `has_conclusion(R, 1)` and
+// `writes_to(R, Book)`. It concludes nothing, so it is no `rule`.
+
+export function dominanceCanon(lo: Lit, hi: Lit, body: BodyElem[]): string {
+  return canonLit(lo) + ' <= ' + canonLit(hi) + ' :- ' + body.map(canonBodyElem).join(', ');
+}
+
+export function encodeDominance(lo0: Lit, hi0: Lit, body0: BodyElem[], keylen: number): { id: string; facts: EncFact[] } {
+  const c = resolveClauseBooks({ head: lo0, body: body0, dominator: hi0 });
+  const lo = c.head, hi = c.dominator!, body = c.body;
+  const id = 'r' + fnv1a(dominanceCanon(lo, hi, body));
+  const rid = mka(id);
+  const facts: EncFact[] = [{ rel: V.dominance, args: [rid, mka(lo.rel), mki(lo.args.length), mki(keylen)] }];
+  [lo, hi].forEach((l, i) => facts.push({ rel: V.dominance_lit, args: [rid, mki(i + 1), reifyLit(l)] }));
+  facts.push({ rel: V.has_conclusion, args: [rid, mki(1)] });
+  facts.push({ rel: V.writes_to, args: [rid, perspAudit(lo.persp)] });
+  const readPersps = new Map<string, Term>();
+  body.forEach((b, i) => {
+    const k = mki(i + 1);
+    facts.push({ rel: V.has_premise, args: [rid, k] });
+    facts.push({ rel: V.premise_lit, args: [rid, k, reifyBodyElem(b)] });
+    if (b.t === 'pos') facts.push({ rel: V.premise_pos, args: [rid, mka(b.lit.rel)] });
+    if (b.t === 'neg') facts.push({ rel: V.premise_neg, args: [rid, mka(b.lit.rel)] });
+    for (const l of litsOf(b)) {
+      const pa = perspAudit(l.persp);
+      const key = canonTerm(pa);
+      if (!readPersps.has(key)) readPersps.set(key, pa);
+    }
+    builtinRows(rid, b, facts);
+  });
+  for (const [, pa] of [...readPersps.entries()].sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0))) {
+    facts.push({ rel: V.reads_from, args: [rid, pa] });
+  }
+  return { id, facts };
+}
+
+/** A dominance rule decoded: `lo` is dominated by `hi` where `body` holds. */
+export interface DomRule { id: string; rel: string; arity: number; keylen: number; lo: Lit; hi: Lit; body: BodyElem[]; canon: string }
+
+/** Every dominance rule the store reflects, in canonical order. A row of no
+ *  dominance rule's shape is refused with a sentence, never skipped. */
+export function decodeDominances(store: FactStore, refused: string[]): DomRule[] {
+  const lits = new Map<string, [Term | null, Term | null]>();
+  for (const f of store.relAll(V.dominance_lit)) {
+    const a = f.args;
+    if (a.length === 3 && a[0].k === 'a' && a[1].k === 'i' && (a[1].v === 1 || a[1].v === 2)) {
+      let e = lits.get(a[0].name);
+      if (!e) { e = [null, null]; lits.set(a[0].name, e); }
+      e[Number(a[1].v) - 1] = a[2];
+    }
+  }
+  const prems = new Map<string, [number, Term][]>();
+  for (const f of store.relAll(V.premise_lit)) {
+    const a = f.args;
+    if (a.length === 3 && a[0].k === 'a' && a[1].k === 'i') {
+      let e = prems.get(a[0].name);
+      if (!e) { e = []; prems.set(a[0].name, e); }
+      e.push([Number(a[1].v), a[2]]);
+    }
+  }
+  const out: DomRule[] = [];
+  for (const f of store.relAll(V.dominance)) {
+    const a = f.args;
+    const row = a.map(canonTerm).join(', ');
+    if (a.length !== 4 || a[0].k !== 'a' || a[1].k !== 'a' || a[2].k !== 'i' || a[3].k !== 'i') {
+      refused.push(`dominance(${row}): a dominance row names its rule, its relation, the arity and the key length`);
+      continue;
+    }
+    const id = a[0].name, rel = a[1].name, n = Number(a[2].v), k = Number(a[3].v);
+    if (n < 1 || k < 0 || k >= n) {
+      refused.push(`dominance(${row}): the key is shorter than the arity, and the arity at least 1`);
+      continue;
+    }
+    const ls = lits.get(id);
+    if (!ls || ls[0] === null || ls[1] === null) {
+      refused.push(`dominance(${row}): its two facts, dominance_lit(${id}, 1, _) and (${id}, 2, _), are not both reflected`);
+      continue;
+    }
+    let lo: Lit, hi: Lit;
+    try { lo = unreifyLit(ls[0]); hi = unreifyLit(ls[1]); } catch (e) {
+      refused.push(`dominance(${row}): undecodable reflection (${(e as Error).message})`);
+      continue;
+    }
+    if (lo.rel !== rel || hi.rel !== rel || lo.args.length !== n || hi.args.length !== n) {
+      refused.push(`dominance(${row}): its two facts are not of ${rel} at arity ${n}`);
+      continue;
+    }
+    const ps = (prems.get(id) ?? []).slice().sort((x, y) => x[0] - y[0]);
+    let body: BodyElem[] = [];
+    let bad = false;
+    for (const [, t] of ps) {
+      try { body.push(unreifyBodyElem(t)); } catch (e) {
+        refused.push(`dominance(${row}): undecodable reflection (${(e as Error).message})`);
+        body = []; bad = true; break;
+      }
+    }
+    if (bad) continue;
+    if (body.length === 0) {
+      refused.push(`dominance(${row}): a dominance rule has a body, the condition under which one fact dominates the other`);
+      continue;
+    }
+    out.push({ id, rel, arity: n, keylen: k, lo, hi, body, canon: dominanceCanon(lo, hi, body) });
+  }
+  out.sort((x, y) => (x.canon < y.canon ? -1 : x.canon > y.canon ? 1 : 0));
+  const seen = new Set<string>();
+  return out.filter((d) => { if (seen.has(d.id)) return false; seen.add(d.id); return true; });
+}
+
+// ---------------------------------------------------------------------------
 // decoding: store → executable rules (the evaluator's only rule source)
 
 export interface DRule { id: string; clause: Clause; canon: string; }
@@ -922,7 +1155,7 @@ export function decodeRules(store: FactStore): { rules: DRule[]; diagnostics: st
     const id = f.args[0].name;
     let arr = prems.get(id);
     if (!arr) { arr = []; prems.set(id, arr); }
-    arr.push({ k: f.args[1].v, t: f.args[2] });
+    arr.push({ k: f.args[1].v as number, t: f.args[2] });
   }
   const rules: DRule[] = [];
   for (const f of store.relAll(V.rule)) {
@@ -933,7 +1166,7 @@ export function decodeRules(store: FactStore): { rules: DRule[]; diagnostics: st
     try {
       const head = unreifyLit(headT);
       const body = (prems.get(id) ?? []).sort((a, b) => a.k - b.k).map((p) => unreifyBodyElem(p.t));
-      const clause: Clause = { head, body };
+      const clause: Clause = annotateAggs({ head, body });
       rules.push({ id, clause, canon: canonClause(clause) });
     } catch (e) {
       diagnostics.push(`rule ${id}: undecodable reflection (${(e as Error).message}); skipped`);
@@ -957,7 +1190,7 @@ export function bootstrapKernel(store: FactStore): void {
   const inMode = list([mka('in'), mka('in')]);
   const isMode = list([mka('out'), mka('in')]);
   for (const op of BUILTIN_OPS) {
-    const m = op === 'is' ? isMode : op === '=' ? anyMode : inMode;
+    const m = op === 'is' || op === 'in' ? isMode : op === '=' ? anyMode : inMode;
     store.add(V.mode, MAIN, [mks(op), m], { scope: 'timeless', base: true });
   }
   // Every destructor gets its own row, and the row is not decoration:
@@ -965,7 +1198,7 @@ export function bootstrapKernel(store: FactStore): void {
   // so an operation that arrives without one turns the kernel's own audit red.
   // `[out, in, ...]` states the truth about the form `Out is op(In, ...)` --
   // the inputs must already be bound where the premise stands, which is
-  // exactly what `classify` in src/engine.ts requires of the right-hand side
+  // exactly what `classify` in src/aggeval.ts requires of the right-hand side
   // of `is`, and the output is what the premise binds.
   for (const op of [...STR_ARITY.keys()].sort()) {
     const ins = Array.from({ length: STR_ARITY.get(op)! }, () => mka('in'));

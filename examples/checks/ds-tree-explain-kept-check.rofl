@@ -1,0 +1,61 @@
+-- examples/checks/ds-tree-explain-kept-check.rofl — ds_tree_explain_kept (witnesses kept), run with `rofl-load --explain`: the
+-- closure is answered from its tree and no row of it is stored, yet each row is explained, weighed and cited as the stored row is.
+--
+--   A row's height is its chain's: dte_w(a,b) 1, dte_w(a,c) 2, dte_w(a,d) 3, so the count's members are b and x h=2, c h=3, d h=4,
+--   in that order. dte_pick has two firings, through the closure and through dte_c3 (height 2): b is witnessed by the closure
+--   (2 < 3), d by the chain (4 > 3), and c is a tie (3 = 3) the signature breaks for the chain, the closure's firing shown second.
+edb(explain_request).
+edb(explained).
+explain_request(why, dte_pick(d)).
+explain_request(why, dte_pick(b)).
+explain_request(why, dte_w(a, d)).
+explain_request(why_all, dte_cnt(4)).
+explain_request(why_all, dte_pick(c)).
+dtk_line(why,dte_pick(b),1,"dte_pick[main](b)  <= rb7257351 @tick 0").
+dtk_line(why,dte_pick(b),2,"  dte_w[main](a,b)  <= r2e5ef8f8 @tick 0").
+dtk_line(why,dte_pick(b),3,"    dte_e[main](a,b) [axiom]").
+dtk_line(why,dte_pick(b),4,"  [1 more derivation: why all dte_pick[main](b)]").
+dtk_line(why,dte_pick(d),1,"dte_pick[main](d)  <= rb5a8a381 @tick 0").
+dtk_line(why,dte_pick(d),2,"  dte_c3[main](d)  <= r11dbacb9 @tick 0").
+dtk_line(why,dte_pick(d),3,"    dte_c2[main](d)  <= r4fedf417 @tick 0").
+dtk_line(why,dte_pick(d),4,"      dte_c1[main](d) [axiom]").
+dtk_line(why,dte_pick(d),5,"  [1 more derivation: why all dte_pick[main](d)]").
+dtk_line(why,dte_w(a,d),1,"dte_w[main](a,d)  <= rc803a173 @tick 0").
+dtk_line(why,dte_w(a,d),2,"  dte_w[main](a,c)  <= rc803a173 @tick 0").
+dtk_line(why,dte_w(a,d),3,"    dte_w[main](a,b)  <= r2e5ef8f8 @tick 0").
+dtk_line(why,dte_w(a,d),4,"      dte_e[main](a,b) [axiom]").
+dtk_line(why,dte_w(a,d),5,"    dte_e[main](b,c) [axiom]").
+dtk_line(why,dte_w(a,d),6,"  dte_e[main](c,d) [axiom]").
+dtk_line(why_all,dte_cnt(4),1,"dte_cnt[main](4)  <= ra12a6891 @tick 0").
+dtk_line(why_all,dte_cnt(4),10,"      dte_w[main](a,c)  <= rc803a173 @tick 0").
+dtk_line(why_all,dte_cnt(4),11,"        dte_w[main](a,b) [above]").
+dtk_line(why_all,dte_cnt(4),12,"        dte_e[main](b,c) [axiom]").
+dtk_line(why_all,dte_cnt(4),13,"    #4 (d) h=4").
+dtk_line(why_all,dte_cnt(4),14,"      dte_w[main](a,d)  <= rc803a173 @tick 0").
+dtk_line(why_all,dte_cnt(4),15,"        dte_w[main](a,c) [above]").
+dtk_line(why_all,dte_cnt(4),16,"        dte_e[main](c,d) [axiom]").
+dtk_line(why_all,dte_cnt(4),2,"  count(?D : dte_w[main](a,?D)) = 4 [aggregate: 4 members, sealed dte_w@1]").
+dtk_line(why_all,dte_cnt(4),3,"    #1 (b) h=2").
+dtk_line(why_all,dte_cnt(4),4,"      dte_w[main](a,b)  <= r2e5ef8f8 @tick 0").
+dtk_line(why_all,dte_cnt(4),5,"        dte_e[main](a,b) [axiom]").
+dtk_line(why_all,dte_cnt(4),6,"    #2 (x) h=2").
+dtk_line(why_all,dte_cnt(4),7,"      dte_w[main](a,x)  <= r2e5ef8f8 @tick 0").
+dtk_line(why_all,dte_cnt(4),8,"        dte_e[main](a,x) [axiom]").
+dtk_line(why_all,dte_cnt(4),9,"    #3 (c) h=3").
+dtk_line(why_all,dte_pick(c),1,"dte_pick[main](c)  <= rb5a8a381 @tick 0").
+dtk_line(why_all,dte_pick(c),2,"  dte_c3[main](c)  <= r11dbacb9 @tick 0").
+dtk_line(why_all,dte_pick(c),3,"    dte_c2[main](c)  <= r4fedf417 @tick 0").
+dtk_line(why_all,dte_pick(c),4,"      dte_c1[main](c) [axiom]").
+dtk_line(why_all,dte_pick(c),5,"  #2 <= rb7257351 @tick 0 [another derivation]").
+dtk_line(why_all,dte_pick(c),6,"    dte_w[main](a,c)  <= rc803a173 @tick 0").
+dtk_line(why_all,dte_pick(c),7,"      dte_w[main](a,b)  <= r2e5ef8f8 @tick 0").
+dtk_line(why_all,dte_pick(c),8,"        dte_e[main](a,b) [axiom]").
+dtk_line(why_all,dte_pick(c),9,"      dte_e[main](b,c) [axiom]").
+dtk_has(K, A, I, T) :- explained[$explain](K, A, I, T).
+dtk_known(K, A, I) :- dtk_line(K, A, I, _).
+dtk_missing(K, A, I) :- dtk_line(K, A, I, T), not dtk_has(K, A, I, T).
+dtk_extra(K, A, I) :- dtk_has(K, A, I, _), not dtk_known(K, A, I).
+dtk_refused(K, A) :- explained[$explain](K, A, 0, _).
+alarm(dtk_missing).
+alarm(dtk_extra).
+alarm(dtk_refused).

@@ -167,11 +167,41 @@ function scalarTerm(v: string | number | boolean | bigint): string {
   return Number.isSafeInteger(v) ? String(v) : q(String(v));
 }
 
-/** Per-file id prefix. Same construction as materialize.ts's `slug`: a sha256
- *  of the path, truncated. Leading `n` keeps the id a lower-case identifier
+/** Per-file id prefix: 16 hex digits (64 bits) of a sha256 of the path. Eight digits were 32 bits, a collision
+ *  between two files of a corpus about 1% likely at 10 000 files and 25% at 50 000, and two files that share a prefix
+ *  share node ids: their trees merge (and a world that declares `function ast_node` refuses them). 64 bits make it
+ *  about 7e-11 at 50 000, and `claim` refuses the one that happens. Leading `n` keeps the id a lower-case identifier
  *  whatever the hash starts with. */
 export const idPrefix = (file: string): string =>
-  'n' + crypto.createHash('sha256').update(file).digest('hex').slice(0, 8) + '_';
+  'n' + crypto.createHash('sha256').update(file).digest('hex').slice(0, 16) + '_';
+
+const owners = new Map<string, string>();
+
+/** One prefix, one file, in this process: a second label that hashes to a taken prefix is refused with both names. */
+export function claim(prefix: string, file: string): void {
+  const had = owners.get(prefix);
+  if (had !== undefined && had !== file) {
+    throw new Error(`scanner: the files "${had}" and "${file}" share the node id prefix ${prefix}; their nodes would merge. Scan one under another label.`);
+  }
+  owners.set(prefix, file);
+}
+
+/** The scans that go into ONE world. The same label scanned twice into a world gives it the same node ids twice (the
+ *  scans agree, or the world's `function ast_node` refuses them deep in the engine): a changed file is scanned again
+ *  only after its first scan's facts are retracted and `forget` is called. */
+export class ScanSet {
+  private labels = new Set<string>();
+  scan(src: string, opts: ScanOpts = {}): AstFacts {
+    const file = opts.file ?? '<anonymous>';
+    if (this.labels.has(file)) {
+      throw new Error(`scanner: "${file}" is scanned twice into one world; retract its first scan and forget it before scanning it again`);
+    }
+    const r = scan(src, opts);
+    this.labels.add(file);
+    return r;
+  }
+  forget(file: string): void { this.labels.delete(file); }
+}
 
 /** THE PARSER CONFIGURATION, EXPORTED because a test that re-parses the corpus
  *  must not carry a SECOND copy of it. Measured 2026-09-08: two assertions in
@@ -181,11 +211,20 @@ export const idPrefix = (file: string): string =>
  *  red on an honest tree, which CLAUDE.md records as the state in which a gate
  *  gets switched off. */
 export const PARSER_PLUGINS = ['typescript', 'decorators', 'decoratorAutoAccessors'] as const;
+/** The second try, for a file the first refuses: TypeScript's experimental decorators, which put a decorator on a
+ *  parameter (`constructor(@IFileService private readonly files: IFileService)`, the dependency injection of vscode:
+ *  893 of its 5,210 files). Babel refuses `decorators` and `decorators-legacy` together, so a file is parsed under
+ *  the second only when the first refuses it, and every file that parses today keeps its facts. */
+export const LEGACY_PLUGINS = ['typescript', 'decorators-legacy', 'decoratorAutoAccessors'] as const;
+
+const parseModule = (src: string, file: string, plugins: readonly string[]) =>
+  parse(src, { sourceType: 'module', plugins: (/\.[jt]sx$/.test(file) ? [...plugins, 'jsx'] : [...plugins]) as never });
 
 export function scan(src: string, opts: ScanOpts = {}): AstFacts {
   const file = opts.file ?? '<anonymous>';
   const persp = opts.persp ?? 'code';
   const prefix = idPrefix(file);
+  claim(prefix, file);
   lostSurrogates = 0;
 
   // A REFUSAL IS A FACT, NOT AN EXCEPTION — and the sibling scanner has said so
@@ -225,7 +264,9 @@ export function scan(src: string, opts: ScanOpts = {}): AstFacts {
     // would sit in `feature_unreachable[audit]` for ever. See
     // `w_plugin_gated_kinds` in facts/worklist.rofl.
     // JSX only where the file says so: in a .ts file `<T>x` is a type assertion, and jsx would read it as an element
-    ast = parse(src, { sourceType: 'module', plugins: /\.[jt]sx$/.test(file) ? [...PARSER_PLUGINS, 'jsx'] : [...PARSER_PLUGINS] });
+    try { ast = parseModule(src, file, PARSER_PLUGINS); } catch (e) {
+      try { ast = parseModule(src, file, LEGACY_PLUGINS); } catch { throw e; }
+    }
   } catch (e) {
     const msg = (e as Error).message.slice(0, 120);
     return {

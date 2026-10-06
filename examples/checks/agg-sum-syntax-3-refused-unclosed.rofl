@@ -1,0 +1,3 @@
+-- expect-refusal: is not closed
+-- the aggregate never closes
+sxsr_unclosed(S) :- S is sum(V ; K : sxs_l(_, K, V, _).

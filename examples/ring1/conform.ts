@@ -11,6 +11,7 @@
 //   rank     every wildcard is numbered one too high
 //   book     a literal with no book written says it was written
 //   refusal  a parse the host refused is passed on as empty
+//   decl     a declaration loses what it declares: a function's `to`, a lattice's operation
 import { Rofl } from '../../src/api.ts';
 import { canonTerm, type Term } from '../../src/unify.ts';
 import { escapeString, type Clause, type Lit, type BodyElem } from '../../src/parser.ts';
@@ -23,7 +24,7 @@ const BUDGET = 200_000_000;
 const argv = process.argv.slice(2);
 const bi = argv.indexOf('--break');
 const broken = bi >= 0 ? argv.splice(bi, 2)[1] : null;
-const BREAKS = ['sign', 'escape', 'rank', 'book', 'refusal'];
+const BREAKS = ['sign', 'escape', 'rank', 'book', 'refusal', 'decl'];
 const DUTIES = new Set(['refusal', 'split', 'escape']);   // host.rofl's verdicts that name a duty rather than a place in the tree
 if (broken && !BREAKS.includes(broken)) { console.error(`--break takes one of ${BREAKS.join(', ')}`); process.exit(2); }
 
@@ -33,6 +34,15 @@ s("a\\nb\\"c\\\\d").
 r(f(a, g(1, 2)), X) :- X is 2 + 3 * 4.
 w[audit](A) :- v[B](A), not u(A).
 t(A) @next :- s(A).
+lattice dist(A, C, min D).
+lattice hi(A, hull I) widen 3.
+tag cost(X, tropical C).
+pareto best(X, min C, max T).
+function ast_name(N, to V).
+function pair(to A, to B).
+tree ast_in(P, C).
+tree edge(P, C) closure reach.
+a(X) <= a(Y) :- Y < X.
 bad({a}).
 esc("\\q").
 -- a comment after the last clause
@@ -50,7 +60,21 @@ const enc = (t: Term): string =>
   : `hfun(${escapeString(t.name)}, ${list(t.args.map(enc))})`;
 const lit = (l: Lit) => `hlit(${atom(l.rel)}, ${enc(l.persp)}, ${list(l.args.map(enc))}, ${l.temporal}, ${l.perspExplicit ? 'yes' : 'no'})`;
 const elem = (b: BodyElem) => b.t === 'pos' ? lit(b.lit) : b.t === 'neg' ? `hnot(${lit(b.lit)})` : `hbi(${escapeString(b.op)}, ${list([enc(b.l), enc(b.r)])})`;
-const fact = (c: Clause) => `host_clause(${lit(c.head)}, ${list(c.body.map(elem))}).`;
+// A DECLARATION is the head wrapped by what it declares, as the grammar's tree wraps it (ring1.rofl `clause_at`)
+const names = (xs: string[]) => list(xs.map(atom));
+const structureOf = (c: Clause): string => {
+  const s = `hstructure(${atom(c.structure!.kind)}, ${names(c.structure!.roles.map((r) => r || 'key'))}, ${lit(c.head)})`;
+  return c.structure!.closure === undefined ? s : `hclosure(${atom(c.structure!.closure)}, ${s})`;
+};
+const headOf = (c: Clause): string =>
+  c.structure ? structureOf(c)
+  : c.ord ? `horder(${atom(c.lattice!)}, ${names(c.ord)}, ${lit(c.head)})`
+  : c.tag ? `htag(${atom(c.lattice!)}, ${lit(c.head)})`
+  : c.widen !== undefined ? `hwiden(${c.widen}, hlattice(${atom(c.lattice!)}, ${lit(c.head)}))`
+  : c.lattice !== undefined ? `hlattice(${atom(c.lattice)}, ${lit(c.head)})`
+  : c.dominator ? `hdominance(${lit(c.head)}, ${lit(c.dominator)})`
+  : lit(c.head);
+const fact = (c: Clause) => `host_clause(${headOf(c)}, ${list(c.body.map(elem))}).`;
 
 // ------------------------------------------------------ the broken duties
 const mapT = (t: Term, f: (t: Term) => Term): Term => f(t.k === 'f' ? { ...t, args: t.args.map((a) => mapT(a, f)) } : t);
@@ -62,7 +86,10 @@ function spoil(c: Clause): Clause {
     : x);
   const l = (x: Lit): Lit => ({ ...x, persp: term(x.persp), args: x.args.map(term), perspExplicit: broken === 'book' ? true : x.perspExplicit });
   const b = (x: BodyElem): BodyElem => x.t === 'bi' ? { ...x, l: term(x.l), r: term(x.r) } : { ...x, lit: l(x.lit) };
-  return { head: l(c.head), body: c.body.map(b) };
+  const d: Partial<Clause> = broken !== 'decl' ? {}
+    : c.structure ? { structure: { ...c.structure, roles: c.structure.roles.map(() => ''), ...(c.structure.closure === undefined ? {} : { closure: 'closed' }) } }
+    : c.lattice !== undefined && !c.tag && !c.ord ? { lattice: c.lattice === 'min' ? 'max' : 'min' } : {};
+  return { ...c, ...d, head: l(c.head), body: c.body.map(b), ...(c.dominator ? { dominator: l(c.dominator) } : {}) };
 }
 
 // ------------------------------------------------------------------ the run

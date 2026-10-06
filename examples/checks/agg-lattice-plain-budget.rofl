@@ -1,0 +1,8 @@
+-- examples/checks/agg-lattice-plain-budget.rofl — agg_lattice_plain_budget:
+-- the budget falls in the closure beside alp_lo (alp_rc) before what the
+-- hole left out was carried to it. alp_lo has no unfired rule and no news,
+-- yet it is not settled: what is still to be carried could lower its min, so
+-- it is holed with the wall's reason, its value a bound, never closed as
+-- final (f_a_wall_closed_a_lattice_a_plain_hole_had_not_reached).
+-- expect-row: hole[$kernel]($adhoc,budget_exhausted)
+-- expect-row: hole[$kernel]($lattice(alp_lo),budget_exhausted)

@@ -1,0 +1,315 @@
+-- facts/ast-within-readers.rofl — WHO READS THE ANCESTOR RELATION, AND WHAT THEY ASK OF THE TREE.
+--
+-- Every premise of rules/js-*.rofl that reads ast_within (the strict ancestor relation) or ast_in
+-- (parent/child), classified for w_data_structures (f_a_structure_is_declared_and_does_not_change_the_meaning):
+-- a declared `tree` is worth the operations it answers, so the readers decide which operations.
+-- Taken at 54a4be1 by reading each rule in written order; the frozen copy examples/linter/corpus-dataflow.rofl
+-- (rules/js-dataflow.rofl at 4f997a6) and the planted fixture examples/shapes/fixture.rofl are not counted.
+-- Read in a world by examples/checks/ast-within-readers-check.rofl.
+--
+--   reader(Site, File, Question, Pattern)   one premise; Site is Head_Line_N, N counting the
+--                                           ast_within/ast_in premises of that clause
+--   reader_head(Site, Head, Line)           the clause: its head relation, the line it starts on
+--   reader_reads(Site, Rel)                 ast_within or ast_in
+--   reader_note(Site, Text)                 what the premise means in the rule
+--
+-- Pattern is the arguments bound WHEN THE PREMISE IS REACHED in written order, ancestor (parent)
+-- first: bb both bound, bf ancestor bound and descendant free, fb descendant bound and ancestor free,
+-- ff neither.
+--
+-- Question, closed:
+--   is_ancestor            both ends bound: a test
+--   ancestors_of           descendant bound: the ancestors, a filter on them in later premises
+--   descendants_of         ancestor bound: the subtree, a filter on it in later premises
+--   scoped_ascent          ancestors of a node up to a boundary the next premise names (the path between)
+--   scoped_descent         the subtree stopping at a boundary (a function), as a recursive walk over ast_in
+--   nearest_with_property  the first ancestor with a property, as a recursive walk up over ast_in
+--   children_of            ast_in with the parent bound (the seed of a walk)
+--   parent_of              ast_in with the child bound (the seed of a walk)
+--   depth, subtree_count, other   asked by no reader (the census says so)
+
+edb(reader).
+edb(reader_head).
+edb(reader_reads).
+edb(reader_note).
+
+
+reader(in_own_decorator_254_1, "rules/js-callgraph.rofl", descendants_of, bf).
+reader_head(in_own_decorator_254_1, in_own_decorator, 254).
+reader_reads(in_own_decorator_254_1, ast_within).
+reader_note(in_own_decorator_254_1, "the nodes under a decorator").
+
+reader(awaiting_fn_496_1, "rules/js-callgraph.rofl", ancestors_of, fb).
+reader_head(awaiting_fn_496_1, awaiting_fn, 496).
+reader_reads(awaiting_fn_496_1, ast_within).
+reader_note(awaiting_fn_496_1, "every enclosing function of a call, fn_node filters").
+
+reader(guarded_46_1, "rules/js-controlflow.rofl", descendants_of, bf).
+reader_head(guarded_46_1, guarded, 46).
+reader_reads(guarded_46_1, ast_within).
+reader_note(guarded_46_1, "the subtree under a guard arm").
+
+reader(suspend_at_72_1, "rules/js-controlflow.rofl", scoped_ascent, fb).
+reader_head(suspend_at_72_1, suspend_at, 72).
+reader_reads(suspend_at_72_1, ast_within).
+reader_note(suspend_at_72_1, "ancestors of a suspend node, stopped below its nearest function (the next premise is the boundary)").
+
+reader(suspend_at_72_2, "rules/js-controlflow.rofl", is_ancestor, bb).
+reader_head(suspend_at_72_2, suspend_at, 72).
+reader_reads(suspend_at_72_2, ast_within).
+reader_note(suspend_at_72_2, "boundary test of the ascent above").
+
+reader(label_target_94_1, "rules/js-controlflow.rofl", is_ancestor, bb).
+reader_head(label_target_94_1, label_target, 94).
+reader_reads(label_target_94_1, ast_within).
+reader_note(label_target_94_1, "the label statement encloses the reference").
+
+reader(abrupt_at_97_1, "rules/js-controlflow.rofl", scoped_ascent, fb).
+reader_head(abrupt_at_97_1, abrupt_at, 97).
+reader_reads(abrupt_at_97_1, ast_within).
+reader_note(abrupt_at_97_1, "ancestors of a labelled jump, stopped below the label statement").
+
+reader(abrupt_at_97_2, "rules/js-controlflow.rofl", is_ancestor, bb).
+reader_head(abrupt_at_97_2, abrupt_at, 97).
+reader_reads(abrupt_at_97_2, ast_within).
+reader_note(abrupt_at_97_2, "boundary test of the ascent above").
+
+reader(completion_outer_166_1, "rules/js-controlflow.rofl", ancestors_of, fb).
+reader_head(completion_outer_166_1, completion_outer, 166).
+reader_reads(completion_outer_166_1, ast_within).
+reader_note(completion_outer_166_1, "every ancestor that is a statement in a sequence").
+
+reader(completion_fn_between_170_1, "rules/js-controlflow.rofl", ancestors_of, fb).
+reader_head(completion_fn_between_170_1, completion_fn_between, 170).
+reader_reads(completion_fn_between_170_1, ast_within).
+reader_note(completion_fn_between_170_1, "the functions above a node, fn_node filters").
+
+reader(completion_fn_between_170_2, "rules/js-controlflow.rofl", is_ancestor, bb).
+reader_head(completion_fn_between_170_2, completion_fn_between, 170).
+reader_reads(completion_fn_between_170_2, ast_within).
+reader_note(completion_fn_between_170_2, "is that function below the outer statement: exists-a-function-between").
+
+reader(has_return_182_1, "rules/js-controlflow.rofl", ancestors_of, fb).
+reader_head(has_return_182_1, has_return, 182).
+reader_reads(has_return_182_1, ast_within).
+reader_note(has_return_182_1, "every enclosing function of a return, fn_node filters").
+
+reader(in_try_block_353_1, "rules/js-controlflow.rofl", descendants_of, bf).
+reader_head(in_try_block_353_1, in_try_block, 353).
+reader_reads(in_try_block_353_1, ast_within).
+reader_note(in_try_block_353_1, "the subtree of a try block").
+
+reader(try_walk_366_1, "rules/js-controlflow.rofl", children_of, bf).
+reader_head(try_walk_366_1, try_walk, 366).
+reader_reads(try_walk_366_1, ast_in).
+reader_note(try_walk_366_1, "seed of the walk: the children of the try block").
+
+reader(try_walk_368_1, "rules/js-controlflow.rofl", scoped_descent, bf).
+reader_head(try_walk_368_1, try_walk, 368).
+reader_reads(try_walk_368_1, ast_in).
+reader_note(try_walk_368_1, "walk down, not entering a function").
+
+reader(caught_value_384_1, "rules/js-controlflow.rofl", descendants_of, bf).
+reader_head(caught_value_384_1, caught_value, 384).
+reader_reads(caught_value_384_1, ast_within).
+reader_note(caught_value_384_1, "the subtree of a try block, resolves filters").
+
+reader(try_stops_393_1, "rules/js-controlflow.rofl", ancestors_of, fb).
+reader_head(try_stops_393_1, try_stops, 393).
+reader_reads(try_stops_393_1, ast_within).
+reader_note(try_stops_393_1, "the try statements above a throwing call").
+
+reader(try_stops_395_1, "rules/js-controlflow.rofl", ancestors_of, fb).
+reader_head(try_stops_395_1, try_stops, 395).
+reader_reads(try_stops_395_1, ast_within).
+reader_note(try_stops_395_1, "every ancestor of a try statement").
+
+reader(abrupt_at_397_1, "rules/js-controlflow.rofl", scoped_ascent, fb).
+reader_head(abrupt_at_397_1, abrupt_at, 397).
+reader_reads(abrupt_at_397_1, ast_within).
+reader_note(abrupt_at_397_1, "ancestors of a throwing call, stopped below its nearest function").
+
+reader(abrupt_at_397_2, "rules/js-controlflow.rofl", is_ancestor, bb).
+reader_head(abrupt_at_397_2, abrupt_at, 397).
+reader_reads(abrupt_at_397_2, ast_within).
+reader_note(abrupt_at_397_2, "boundary test of the ascent above").
+
+reader(guarded_405_1, "rules/js-controlflow.rofl", descendants_of, bf).
+reader_head(guarded_405_1, guarded, 405).
+reader_reads(guarded_405_1, ast_within).
+reader_note(guarded_405_1, "the subtree after an abrupt statement").
+
+reader(guarded_407_1, "rules/js-controlflow.rofl", descendants_of, bf).
+reader_head(guarded_407_1, guarded, 407).
+reader_reads(guarded_407_1, ast_within).
+reader_note(guarded_407_1, "the subtree after a suspend statement").
+
+reader(exported_fn_432_1, "rules/js-controlflow.rofl", ancestors_of, fb).
+reader_head(exported_fn_432_1, exported_fn, 432).
+reader_reads(exported_fn_432_1, ast_within).
+reader_note(exported_fn_432_1, "exists an ancestor of an export kind").
+
+reader(guarded_559_1, "rules/js-controlflow.rofl", descendants_of, bf).
+reader_head(guarded_559_1, guarded, 559).
+reader_reads(guarded_559_1, ast_within).
+reader_note(guarded_559_1, "the subtree of a short-circuit node").
+
+reader(sees_binder_107_1, "rules/js-dataflow.rofl", is_ancestor, bb).
+reader_head(sees_binder_107_1, sees_binder, 107).
+reader_reads(sees_binder_107_1, ast_within).
+reader_note(sees_binder_107_1, "the binder region encloses the identifier").
+
+reader(up_s_138_1, "rules/js-dataflow.rofl", parent_of, fb).
+reader_head(up_s_138_1, up_s, 138).
+reader_reads(up_s_138_1, ast_in).
+reader_note(up_s_138_1, "seed of the walk up: the parent of a declarator").
+
+reader(up_s_139_1, "rules/js-dataflow.rofl", nearest_with_property, fb).
+reader_head(up_s_139_1, up_s, 139).
+reader_reads(up_s_139_1, ast_in).
+reader_note(up_s_139_1, "walk up until a scope node: the nearest scope").
+
+reader(encloses_s_141_1, "rules/js-dataflow.rofl", ancestors_of, fb).
+reader_head(encloses_s_141_1, encloses_s, 141).
+reader_reads(encloses_s_141_1, ast_within).
+reader_note(encloses_s_141_1, "the scope nodes above a declarator, scope_node filters").
+
+reader(shadowed_by_155_1, "rules/js-dataflow.rofl", is_ancestor, bb).
+reader_head(shadowed_by_155_1, shadowed_by, 155).
+reader_reads(shadowed_by_155_1, ast_within).
+reader_note(shadowed_by_155_1, "one binder region inside another").
+
+reader(shadowed_by_param_167_1, "rules/js-dataflow.rofl", is_ancestor, bb).
+reader_head(shadowed_by_param_167_1, shadowed_by_param, 167).
+reader_reads(shadowed_by_param_167_1, ast_within).
+reader_note(shadowed_by_param_167_1, "a binder region encloses a function").
+
+reader(shadowed_by_param_171_1, "rules/js-dataflow.rofl", is_ancestor, bb).
+reader_head(shadowed_by_param_171_1, shadowed_by_param, 171).
+reader_reads(shadowed_by_param_171_1, ast_within).
+reader_note(shadowed_by_param_171_1, "the file root encloses a function").
+
+reader(hidden_at_179_1, "rules/js-dataflow.rofl", descendants_of, bf).
+reader_head(hidden_at_179_1, hidden_at, 179).
+reader_reads(hidden_at_179_1, ast_within).
+reader_note(hidden_at_179_1, "the region of the inner binder, ident_in filters on the name").
+
+reader(hidden_at_182_1, "rules/js-dataflow.rofl", descendants_of, bf).
+reader_head(hidden_at_182_1, hidden_at, 182).
+reader_reads(hidden_at_182_1, ast_within).
+reader_note(hidden_at_182_1, "the subtree of a function whose parameter shadows").
+
+reader(tdz_cand_189_1, "rules/js-dataflow.rofl", is_ancestor, bb).
+reader_head(tdz_cand_189_1, tdz_cand, 189).
+reader_reads(tdz_cand_189_1, ast_within).
+reader_note(tdz_cand_189_1, "the binder region encloses the identifier").
+
+reader(tdz_deferred_194_1, "rules/js-dataflow.rofl", is_ancestor, bb).
+reader_head(tdz_deferred_194_1, tdz_deferred, 194).
+reader_reads(tdz_deferred_194_1, ast_within).
+reader_note(tdz_deferred_194_1, "the binder region encloses the identifier nearest function").
+
+reader(nearest_v_418_1, "rules/js-dataflow.rofl", children_of, bf).
+reader_head(nearest_v_418_1, nearest_v, 418).
+reader_reads(nearest_v_418_1, ast_in).
+reader_note(nearest_v_418_1, "seed: the children of a function").
+
+reader(nearest_v_419_1, "rules/js-dataflow.rofl", scoped_descent, bf).
+reader_head(nearest_v_419_1, nearest_v, 419).
+reader_reads(nearest_v_419_1, ast_in).
+reader_note(nearest_v_419_1, "walk down, not entering a function: this is the relation nearest_v").
+
+reader(param_hidden_451_1, "rules/js-dataflow.rofl", ancestors_of, fb).
+reader_head(param_hidden_451_1, param_hidden, 451).
+reader_reads(param_hidden_451_1, ast_within).
+reader_note(param_hidden_451_1, "the functions above a region whose parameter has the name").
+
+reader(param_hidden_451_2, "rules/js-dataflow.rofl", descendants_of, bf).
+reader_head(param_hidden_451_2, param_hidden, 451).
+reader_reads(param_hidden_451_2, ast_within).
+reader_note(param_hidden_451_2, "the identifiers under the region, ident filters on the name").
+
+reader(param_hidden_454_1, "rules/js-dataflow.rofl", ancestors_of, fb).
+reader_head(param_hidden_454_1, param_hidden, 454).
+reader_reads(param_hidden_454_1, ast_within).
+reader_note(param_hidden_454_1, "the functions above a function with the same parameter name").
+
+reader(param_hidden_454_2, "rules/js-dataflow.rofl", descendants_of, bf).
+reader_head(param_hidden_454_2, param_hidden, 454).
+reader_reads(param_hidden_454_2, ast_within).
+reader_note(param_hidden_454_2, "the identifiers under the outer function").
+
+reader(param_use_458_1, "rules/js-dataflow.rofl", descendants_of, bf).
+reader_head(param_use_458_1, param_use, 458).
+reader_reads(param_use_458_1, ast_within).
+reader_note(param_use_458_1, "the identifiers under a function, ident filters on the name").
+
+reader(this_over_588_1, "rules/js-dataflow.rofl", ancestors_of, fb).
+reader_head(this_over_588_1, this_over, 588).
+reader_reads(this_over_588_1, ast_within).
+reader_note(this_over_588_1, "every this-binder above a this expression").
+
+reader(this_nearer_590_1, "rules/js-dataflow.rofl", is_ancestor, bb).
+reader_head(this_nearer_590_1, this_nearer, 590).
+reader_reads(this_nearer_590_1, ast_within).
+reader_note(this_nearer_590_1, "pairwise not-closer: the nearest this-binder written as a comparison of two ancestors").
+
+reader(private_inner_656_1, "rules/js-dataflow.rofl", is_ancestor, bb).
+reader_head(private_inner_656_1, private_inner, 656).
+reader_reads(private_inner_656_1, ast_within).
+reader_note(private_inner_656_1, "a class declaring the private name encloses the reference").
+
+reader(private_inner_656_2, "rules/js-dataflow.rofl", is_ancestor, bb).
+reader_head(private_inner_656_2, private_inner, 656).
+reader_reads(private_inner_656_2, ast_within).
+reader_note(private_inner_656_2, "pairwise not-closer: one declaring class inside another").
+
+reader(private_inner_656_3, "rules/js-dataflow.rofl", is_ancestor, bb).
+reader_head(private_inner_656_3, private_inner, 656).
+reader_reads(private_inner_656_3, ast_within).
+reader_note(private_inner_656_3, "the inner declaring class encloses the reference").
+
+reader(private_binds_660_1, "rules/js-dataflow.rofl", is_ancestor, bb).
+reader_head(private_binds_660_1, private_binds, 660).
+reader_reads(private_binds_660_1, ast_within).
+reader_note(private_binds_660_1, "a class declaring the private name encloses the reference").
+
+reader(may_be_node_997_1, "rules/js-dataflow.rofl", ancestors_of, fb).
+reader_head(may_be_node_997_1, may_be_node, 997).
+reader_reads(may_be_node_997_1, ast_within).
+reader_note(may_be_node_997_1, "the methods above a super expression, class_method_of filters").
+
+reader(for_of_use_1069_1, "rules/js-dataflow.rofl", descendants_of, bf).
+reader_head(for_of_use_1069_1, for_of_use, 1069).
+reader_reads(for_of_use_1069_1, ast_within).
+reader_note(for_of_use_1069_1, "the identifiers under a for-of body, ident filters on the name").
+
+reader(thrown_in_1112_1, "rules/js-dataflow.rofl", ancestors_of, fb).
+reader_head(thrown_in_1112_1, thrown_in, 1112).
+reader_reads(thrown_in_1112_1, ast_within).
+reader_note(thrown_in_1112_1, "the try blocks above a throw, try_block filters").
+
+reader(call_in_try_1120_1, "rules/js-dataflow.rofl", descendants_of, bf).
+reader_head(call_in_try_1120_1, call_in_try, 1120).
+reader_reads(call_in_try_1120_1, ast_within).
+reader_note(call_in_try_1120_1, "the call sites under a try block").
+
+reader(eff_runs_in_502_1, "rules/js-effects.rofl", scoped_descent, bf).
+reader_head(eff_runs_in_502_1, eff_runs_in, 502).
+reader_reads(eff_runs_in_502_1, ast_in).
+reader_note(eff_runs_in_502_1, "what runs when a class part is reached: walk down, not entering a function").
+
+reader(within_attr_52_1, "rules/js-env.rofl", descendants_of, bf).
+reader_head(within_attr_52_1, within_attr, 52).
+reader_reads(within_attr_52_1, ast_within).
+reader_note(within_attr_52_1, "the subtree of a node carrying an attribute").
+
+reader(declares_name_61_1, "rules/js-globals.rofl", descendants_of, bf).
+reader_head(declares_name_61_1, declares_name, 61).
+reader_reads(declares_name_61_1, ast_within).
+reader_note(declares_name_61_1, "the names under a pattern root").
+
+reader(declares_name_66_1, "rules/js-globals.rofl", descendants_of, bf).
+reader_head(declares_name_66_1, declares_name, 66).
+reader_reads(declares_name_66_1, ast_within).
+reader_note(declares_name_66_1, "the names under a parameter").

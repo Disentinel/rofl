@@ -1,0 +1,32 @@
+-- examples/checks/agg-lattice-holes-check.rofl — agg_lattice_holes: a
+-- lattice value past the term range is a hole on its cell, `arith_overflow`,
+-- never a wrapped number, and so is every cell reached through it; a
+-- negation above a holed cell is undecided. s reaches m by one edge of the
+-- largest term, and t and w beyond m; the sum past m has no term. u is near,
+-- m is far, for certain.
+edb(ahl_e).
+edb(ahl_node).
+ahl_e(s, m, 1152921504606846975).
+ahl_e(m, t, 5).
+ahl_e(t, w, 1).
+ahl_e(s, u, 1).
+ahl_node(m). ahl_node(t). ahl_node(u). ahl_node(w).
+lattice ahl_d(A, C, min D).
+ahl_d(A, C, D) :- ahl_e(A, C, D).
+ahl_d(A, C, D) :- ahl_d(A, B, D1), ahl_e(B, C, W), D is D1 + W.
+ahl_near(C) :- ahl_d(s, C, D), D < 10.
+ahl_far(C)  :- ahl_node(C), not ahl_near(C).
+ahl_bad(t_value)  :- ahl_d(s, t, _).
+ahl_bad(w_value)  :- ahl_d(s, w, _).
+-- expect-row: ahl_d[main](s,m,1152921504606846975)
+-- expect-row: ahl_d[main](s,u,1)
+ahl_bad(far_t)    :- ahl_far(t).
+ahl_bad(far_w)    :- ahl_far(w).
+-- expect-row: ahl_far[main](m)
+ahl_bad(far_u)    :- ahl_far(u).
+alarm(ahl_bad).
+-- the cell's hole names the overflow, and what it reaches is withdrawn
+ahl_holed(C, Why) :- ahl_far(_), hole[$kernel]($lattice(ahl_d, main, _, $cons(s, $cons(C, $nil))), Why).
+ahl_unholed(t) :- ahl_far(_), not ahl_holed(t, arith_overflow).
+ahl_unholed(w) :- ahl_far(_), not ahl_holed(w, support_withdrawn).
+alarm(ahl_unholed).

@@ -1,0 +1,17 @@
+-- examples/checks/agg-tag-demo-data.rofl — THE DEMO'S STORE, plain facts both
+-- engines read (docs/aggregates.md, "Tags, as built"). Each semiring has its
+-- edges, each edge's weight in the semiring's carrier: tgd_w costs over a
+-- graph with two cycles (a -> b -> c -> a, c -> d -> c) and a tie;
+-- tgd_p probabilities in millionths over the same shape (d to e a third,
+-- so its products round); tgd_t trust levels
+-- 0..3 (runtime/semirings.ts's FORBIDDEN .. CLEAN); tgd_m multiplicities over
+-- a DAG, since counting is stratified.
+edb(tgd_w).
+edb(tgd_p).
+edb(tgd_t).
+edb(tgd_m).
+tgd_w(a, b, 2). tgd_w(b, c, 3). tgd_w(c, a, 1). tgd_w(a, c, 5). tgd_w(c, d, 4). tgd_w(d, c, 2). tgd_w(d, e, 1).
+tgd_p(a, b, 900000). tgd_p(b, c, 500000). tgd_p(c, a, 800000). tgd_p(a, c, 400000). tgd_p(c, d, 700000).
+tgd_p(d, c, 600000). tgd_p(d, e, 333333).
+tgd_t(a, b, 3). tgd_t(b, c, 1). tgd_t(c, a, 2). tgd_t(a, c, 2). tgd_t(c, d, 3). tgd_t(d, c, 0). tgd_t(d, e, 2).
+tgd_m(s, a, 2). tgd_m(s, b, 1). tgd_m(a, t, 3). tgd_m(b, t, 1). tgd_m(a, b, 1). tgd_m(t, u, 2).

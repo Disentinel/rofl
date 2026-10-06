@@ -1,0 +1,14 @@
+-- examples/checks/asks-outside.rofl — A QUESTION OUTSIDE THE CONE IS REFUSED, NEVER ANSWERED.
+-- ot_a is asked; ot_b's rule is in no premise of its cone and never runs. `whynot ot_b(1)` would say no rule concludes
+-- it, and `? ot_b(X)` would be empty: both false of the whole world. Every question about ot_b, and about what the
+-- kernel writes of every rule, is refused with the same words in both engines, and so is an excise, whose
+-- counterfactual is the cone's (scripts/whycheck.ts asks them; rust/rofl/tests/asks_cone.rs over every world).
+asks(ot_a).
+edb(ot_src). edb(ot_k).
+ot_src(1). ot_src(2). ot_k(1).
+ot_m(X) :- ot_src(X), not ot_n(X).
+ot_n(X) :- ot_k(X).
+ot_a(X, N) :- ot_src(X), N is count(Y : ot_m(Y)).
+ot_b(X) :- ot_src(X).
+-- expect-row: ot_a[main](1,1)
+-- expect-no-row: ot_b[main](1)

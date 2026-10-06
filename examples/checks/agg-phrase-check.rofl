@@ -1,0 +1,34 @@
+-- examples/checks/agg-phrase-check.rofl — WHAT A ROUND TRIP THROUGH THE SENTENCE FORM LOST OR GAINED
+-- (docs/aggregates.md, "The sentence form, as built"). A world with check_opt(W, sentences, 1) loads each of
+-- its files headed `-- through-sentences`, and each of its `.rofl.md` files once read, as rofl-render writes
+-- it and the reader reads it back; scripts/sentences.ts puts beside it what was written: the id of every rule
+-- (`sentence_want`, variables renamed in the order a clause writes them, as the reader renames what it reads
+-- back), every declaration, and the relations they are about. Nothing may be lost and nothing gained.
+sentence_lost[audit](R)     :- sentence_want(R), not rule_known(R), not dominance[$kernel](R, _, _, _).
+sentence_gained[audit](R)   :- concludes(R, Rel), sentence_rel(Rel), not sentence_want(R).
+sentence_gained[audit](R)   :- dominance[$kernel](R, Rel, _, _), sentence_rel(Rel), not sentence_want(R).
+decl_lost[audit](Rel)       :- sentence_lattice(Rel, N, Op), not lattice_decl[$kernel](Rel, N, Op).
+decl_lost[audit](Rel)       :- sentence_tag(Rel, N, Alg), not tag_decl[$kernel](Rel, N, Alg).
+decl_lost[audit](Rel)       :- sentence_widen(Rel, N), not lattice_widen[$kernel](Rel, N).
+decl_gained[audit](Rel)     :- lattice_decl[$kernel](Rel, N, Op), sentence_rel(Rel), not sentence_lattice(Rel, N, Op).
+decl_gained[audit](Rel)     :- tag_decl[$kernel](Rel, N, Alg), sentence_rel(Rel), not sentence_tag(Rel, N, Alg).
+decl_gained[audit](Rel)     :- lattice_widen[$kernel](Rel, N), sentence_rel(Rel), not sentence_widen(Rel, N).
+-- a round trip that read nothing proves nothing
+went_round()                :- sentence_want(_).
+nothing_went_round()        :- not went_round().
+alarm(sentence_lost).
+alarm(sentence_gained).
+alarm(decl_lost).
+alarm(decl_gained).
+alarm(nothing_went_round).
+-- and the reader, reading the sentences once more against the source, counts every rule, fact and declaration as
+-- come back exactly, an aggregate compared whole, not as its operator alone, and a dominance with its dominating
+-- fact (`sentence_exact(What, M, N)`, scripts/sentences.ts `through`)
+sentence_inexact[audit](W, M, N) :- sentence_exact(W, M, N), M != N.
+alarm(sentence_inexact).
+-- and each kind is WRITTEN in its own words: a rule rofl-render wrote back as rofl would read back as well, so each
+-- world names the words its relations' sentences must hold (`sentence_word`), and `sentence_of` is what was written
+edb(sentence_word).
+sentence_says(Rel, T)          :- sentence_word(Rel, T), sentence_of(Rel, S), N is str_segs(S, T), N > 1.
+sentence_unsaid[audit](Rel, T) :- sentence_word(Rel, T), not sentence_says(Rel, T).
+alarm(sentence_unsaid).

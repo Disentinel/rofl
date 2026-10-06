@@ -1,0 +1,23 @@
+-- examples/checks/agg-holistic-wfs-check.rofl — agg_holistic_wfs: median,
+-- quantile and rank over what a well-founded world concluded, fed from the
+-- world below, whose values sort -1 -1 -1 0 0 0 0 1 1; inside one, each is refused
+-- (agg-holistic-wfs-2-refused-*.rofl).
+whl_median(M)  :- M is median(V ; X : wv_value(X, V)).
+whl_q90(Q)     :- Q is quantile(90, V ; X : wv_value(X, V)).
+whl_rank(X, R) :- wv_value(X, V), R is rank(V, W : wv_value(_, W)).
+whl_want(median, 0). whl_want(q90, 1).
+whl_got(median, M) :- whl_median(M).
+whl_got(q90, Q)    :- whl_q90(Q).
+whl_wrong(K, V)    :- whl_want(K, V), not whl_got(K, V).
+-- a draw ranks above every loss: the rank is over the distinct values
+whl_rank_wrong(X, R) :- unknown(wg_win(X)), whl_rank(X, R), R != 2.
+whl_rank_wrong(X, R) :- wg_win(X), not unknown(wg_win(X)), whl_rank(X, R), R != 3.
+whl_ranked(X)        :- whl_rank(X, _).
+whl_unranked(X)      :- wv_pos(X), not whl_ranked(X).
+alarm(whl_wrong).
+alarm(whl_rank_wrong).
+alarm(whl_unranked).
+-- the answers as rows the state must hold: an alarm `not answer` is silent
+-- when the answer is a shrug (f_a_missing_row_check_goes_quiet_over_a_hole)
+-- expect-row: whl_got[main](median,0)
+-- expect-row: whl_got[main](q90,1)

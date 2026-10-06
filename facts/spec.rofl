@@ -111,7 +111,9 @@ duty[spec](s7_no_silent_overrun, prohibited, "START.md", "Silently completing a 
 duty[spec](s7_no_skipping_reject_path, prohibited, "START.md", "Skipping the stratification reject path").
 duty[spec](s7_no_pretend_async, prohibited, "START.md", "as implemented instead of explicitly rejected").
 
--- §8, out of scope.
+-- §8, out of scope. AMENDED 2026-10-02: aggregation, optimization passes and
+-- syntax sugar are built (docs/aggregates.md, `d_aggregates_in_the_kernel`
+-- below); START.md carries the same note.
 duty[spec](s8_out_of_scope, prohibited, "START.md", "aggregation, GPU anything, persistence layers, optimization passes, syntax sugar").
 
 -- ====================================================== LIMITS.md [limits] ===
@@ -150,7 +152,10 @@ duty[limits](l_frozen_never_collected, limit, "LIMITS.md", "Frozen provenance is
 duty[limits](l_undefined_is_a_dictionary, limit, "LIMITS.md", "a dictionary check, not a coverage check").
 duty[limits](l_undefined_silent_on_negation, limit, "LIMITS.md", "nothing about negated").
 duty[limits](l_undefined_silenced_by_one_fact, limit, "LIMITS.md", "one stray fact of the right name silences the audit").
+-- l_no_aggregation is AMENDED 2026-10-02 by d_aggregates_in_the_kernel
+-- (docs/aggregates.md): only its GPU clause holds, and that is l_no_gpu.
 duty[limits](l_no_aggregation, limit, "LIMITS.md", "No aggregation, no optimization passes, no syntax sugar, no GPU anything").
+duty[limits](l_no_gpu, limit, "LIMITS.md", "no GPU anything").
 
 -- DECIDED 2026-09-10, after the two library surfaces were compared for the
 -- first time: ten of the port's fourteen public methods have no counterpart
@@ -177,6 +182,7 @@ duty[readme](r_facts_into_reserved, guaranteed, "facts/deviations.rofl", "deviat
 duty[readme](r_edb_for_reserved, guaranteed, "facts/deviations.rofl", "deviation(r_edb_for_reserved,").
 duty[readme](r_unstratifiable_is_budgeted, guaranteed, "facts/deviations.rofl", "deviation(r_unstratifiable_is_budgeted,").
 duty[readme](r_rounds_replace_strata, guaranteed, "facts/deviations.rofl", "deviation(r_rounds_replace_strata,").
+duty[readme](r_aggregates_exist, guaranteed, "facts/deviations.rofl", "deviation(r_aggregates_exist,").
 
 -- ======================================================= boot.rofl [boot] ===
 -- The meta-kernel's own required results, stated in a comment block at the
@@ -222,6 +228,8 @@ duty[boot](b_stratifiable_by_loading, guaranteed, "boot.rofl", "answered by the 
 duty[decided](d_port_owes_why, guaranteed, "docs/port-surface.md", "`why` and `whynot` are REQUIRED of the port").
 cited_check[map](c_port_explains, "rust/rofl/tests/explain.rs", "why_walks_the_derivation_to_its_axioms").
 guards[map](c_port_explains, d_port_owes_why).
+cited_check[map](c_port_explains_bins, "rust/rofl/tests/why_bins.rs", "serve_answers_in_the_sessions_own_text").
+guards[map](c_port_explains_bins, d_port_owes_why).
 
 duty[decided](d_not_p_is_this_tick, guaranteed, "docs/time-and-continuity.md", "is not derivable in the CURRENT TICK").
 duty[decided](d_dep_graph_is_one_tick, guaranteed, "docs/time-and-continuity.md", "the dependency graph is about ONE tick").
@@ -232,6 +240,19 @@ duty[decided](d_retain_ticks, guaranteed, "docs/time-and-continuity.md", "keeps 
 duty[decided](d_retention_off_by_default, guaranteed, "docs/time-and-continuity.md", "It is off unless asked for").
 duty[decided](d_retention_conditional, guaranteed, "docs/time-and-continuity.md", "Retention is conditional on whether the program reads its own provenance").
 duty[decided](d_tick_records_budget, guaranteed, "docs/time-and-continuity.md", "a tick now records the budget it was evaluated with").
+
+-- ============================ docs/aggregates.md [decided] ==================
+-- Decided 2026-09-28 by the owner and built since, against START.md section 8
+-- and the LIMITS.md line that mirrored it. The amendment is `amends` below
+-- (not `qualifies`): unlike the optimization clause, nothing of the
+-- prohibition on aggregation is still owed, and the GPU clause that line also
+-- carried is kept alive as its own duty, `l_no_gpu`, so retiring the line
+-- retires no prohibition the owner still holds.
+duty[decided](d_aggregates_in_the_kernel, guaranteed, "docs/aggregates.md", "Decided 2026-09-28 by the owner (f_aggregation_is_one_cell_engine_with_two_syntaxes).").
+-- A rank over a tuple (f_a_rank_over_a_tuple_is_a_position_among_distinct_key_tuples): a lexicographic
+-- order of keys with a direction for each, in both engines, held by the world whose places are derived by
+-- hand and by the Rust loop over every aggregate world.
+duty[decided](d_rank_over_a_tuple, guaranteed, "docs/aggregates.md", "R is rank(S1, S2 ; K1, desc(K2) : body)").
 
 -- ==================== docs/performance-invariants.md [perf] ================
 -- Only the invariants that are about THIS kernel. I3, I5 and I6 in that
@@ -365,6 +386,11 @@ cited_check[map](c_w_provenance, "facts/goldens.rofl", "provenance_relational").
 guards[map](c_w_provenance, s_provenance_per_firing).
 guards[map](c_w_provenance, p_p1_one_witness_per_derivation).
 
+cited_check[map](c_rank_tuple_eval, "facts/goldens.rofl", "agg_rank_tuple_eval").
+cited_check[map](c_agg_worlds_loop, "rust/rofl/tests/agg_worlds.rs", "every_world_loaded_together_holds_its_properties_and_its_state").
+guards[map](c_rank_tuple_eval, d_rank_over_a_tuple).
+guards[map](c_agg_worlds_loop, d_rank_over_a_tuple).
+
 -- ---- accepted by name, because the observance is structural ---------------
 -- THE LAST OF THE ELEVEN, AND THE OWNER'S CALL RATHER THAN A MEASUREMENT.
 -- `Evaluator reading parsed clause objects` is the mechanical form of START.md's
@@ -469,7 +495,9 @@ qualifies[map](r_moded_relations, l_demand_premise_order).
 --                              IS store serialization, so the persistence that
 --                              was written is the permitted half, not a breach
 --   aggregation, GPU,
---   optimization, sugar     -> l_no_aggregation
+--   optimization, sugar     -> l_no_aggregation, AMENDED 2026-10-02 by
+--                              d_aggregates_in_the_kernel (docs/aggregates.md):
+--                              GPU is now l_no_gpu, the rest is built
 amends[map](l_no_incremental_maintenance, s8_out_of_scope).
 amends[map](l_no_async, s8_out_of_scope).
 
@@ -494,11 +522,25 @@ amends[map](l_no_aggregation, s8_out_of_scope).
 -- ...AND THE LINE THAT INHERITED THE COMPOUND NEVER CAUGHT UP. `l_no_aggregation`
 -- reads `No aggregation, no optimization passes, no syntax sugar, no GPU
 -- anything` and sits in the SAME FILE as eight sentences describing this
--- engine's optimizations in detail. Three quarters of it hold; the middle
--- clause is false of the tree. So it is QUALIFIED and not retired -- narrowing
--- is what the honest half deserves, and recording this as an amendment would
--- retire a prohibition on aggregation that nothing else in the tree carries.
+-- engine's optimizations in detail. Until 2026-10-02 three quarters of it held
+-- by the owner's own reading and the optimization clause did not, so it was
+-- QUALIFIED and not retired: recording an amendment would then have retired a
+-- prohibition on aggregation that nothing else in the tree carried (since
+-- amended, below; docs/aggregates.md).
 qualifies[map](r_optimizations_exist, l_no_aggregation).
+
+-- ...AND THEN AGGREGATION WAS BUILT (docs/aggregates.md), AMENDED 2026-10-02.
+-- Decided 2026-09-28 (f_aggregation_is_one_cell_engine_with_two_syntaxes): every
+-- aggregate class, one cell engine. The aggregation clause is now false, the
+-- sugar clause was already (docs/sentence-form.md), and the optimization clause
+-- is r_optimizations_exist's: only GPU holds, so the AMENDMENT is recorded here
+-- and the one clause that holds is carried forward as `l_no_gpu` -- a
+-- prohibition the owner kept ("GPU is still out") must not leave the list with
+-- the line that happened to carry it. `l_no_aggregation` is superseded, still
+-- cited, still in the model. `r_aggregates_exist` is the README register
+-- entry START.md asks for, and `d_aggregates_in_the_kernel` the decision.
+amends[map](d_aggregates_in_the_kernel, l_no_aggregation).
+amends[map](l_no_gpu, s8_out_of_scope).
 
 -- ---- the same obligation, written twice -----------------------------------
 -- Seven of the eight prohibited shortcuts in §7 are a §3 or §4 guarantee

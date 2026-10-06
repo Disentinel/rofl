@@ -1,0 +1,8 @@
+-- expect-refusal: the stock evaluator cannot seal its aggregate
+-- examples/checks/agg-count-strata-4-refused-untabled-recursive.rofl — a
+-- count of the rule's own conclusion, under the stock evaluator with no
+-- stratum table: the refusal the default evaluator gives it (see
+-- agg-count-strata-2-refused-recursive.rofl) holds here too.
+acur_q(1).
+acur_q(2).
+acur_p(X) :- acur_q(X), N is count(Y : acur_p(Y)), N < 5.

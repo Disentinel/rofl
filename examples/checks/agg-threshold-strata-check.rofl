@@ -1,0 +1,81 @@
+-- examples/checks/agg-threshold-strata-check.rofl — agg_threshold_strata. A
+-- threshold is monotone, so it reads its inner body as premises: a positive
+-- edge, which the recursion may run through (the belief and the theorems
+-- below are threshold recursions and come out whole), and a negation inside
+-- it as a strict edge (agg-threshold-strata-2-refused-negated.rofl, which
+-- negates the conclusion inside its own threshold, is refused). Its cells
+-- close with its conclusion, so what the kernel writes of them sits above
+-- it: a rule negating `agg_cell` is judged after every quorum it names is
+-- closed. rules/strata.rofl ranks the same edges for the stock evaluator,
+-- which this file is run under too (agg_threshold_strata_stock).
+-- a relation's rank is the highest `stratum` row the table derives for it
+ats_rel(H)     :- ats_pair(H, _).
+ats_rel(Q)     :- ats_pair(_, Q).
+ats_rel(agg_cell).
+ats_rank(H, M) :- ats_rel(H), M is max(N : stratum(H, N)).
+-- the table: a threshold's conclusion is no lower than what it reads, and
+-- the reflection is strictly above it
+table_low(H, Q)  :- ats_pair(H, Q), ats_rank(H, A), ats_rank(Q, B), A < B.
+ats_pair(at_trusted, at_vouch).
+ats_pair(at_thm, at_needs).
+ats_pair(at_thm, at_thm).
+ats_pair(at_believed, at_supports).
+ats_pair(ats_backed, ats_calm).
+table_cell_low(H) :- ats_pair(H, _), ats_rank(H, A), ats_rank(agg_cell, B), B <= A.
+table_unranked(H) :- ats_pair(H, _), not ats_ranked(H).
+ats_ranked(H)     :- ats_rank(H, _).
+alarm(table_low).
+alarm(table_cell_low).
+alarm(table_unranked).
+-- a negation of the cells, and of the conclusions, sees them closed
+ats_cell(Rel, K) :- agg_cell[$kernel]($cell(R, _, _, $cons(K, $cons(_, $nil))), true, _), concludes[$kernel](R, Rel).
+ats_no_cell(C)   :- at_claim(C), not ats_cell(at_trusted, C).
+ats_unbelieved(X) :- at_supports(X, _), not at_believed(X).
+cell_unseen(C)    :- ats_no_cell(C), at_trusted(C).
+-- the same four rounds up, above whatever the kernel's own aggregates read:
+-- a threshold over a relation above three negations, whose cells a negation
+-- must still see closed
+ats_gone(W)      :- at_revoked(W).
+ats_heard(W)     :- at_vouch(W, _, _), not ats_gone(W).
+ats_loud(W)      :- ats_heard(W), W = w9.
+ats_quiet(W)     :- ats_heard(W), not ats_loud(W).
+ats_shy(W)       :- ats_quiet(W), W = w8.
+ats_calm(W)      :- ats_quiet(W), not ats_shy(W).
+ats_backed(C)    :- at_claim(C), at_least(2, W : at_vouch(W, C, _), ats_calm(W)).
+ats_no_backed(C) :- at_claim(C), not ats_cell(ats_backed, C).
+cell_unseen(C)   :- ats_no_backed(C), ats_backed(C).
+ats_vacuous(backed) :- not ats_backed(c1).
+belief_unseen(X)  :- ats_unbelieved(X), at_believed(X).
+alarm(cell_unseen).
+alarm(belief_unseen).
+-- the recursions come out whole
+ats_want(believed, y).
+ats_want(believed, t).
+ats_want(believed, v).
+ats_want(thm, q2).
+ats_want(thm, q5).
+ats_got(believed, X) :- at_believed(X).
+ats_got(thm, P)      :- at_thm(P).
+recursion_short(K, X) :- ats_want(K, X), not ats_got(K, X).
+alarm(recursion_short).
+-- and there is something to check
+ats_vacuous(no_cell)     :- not ats_no_cell(c4).
+ats_vacuous(unbelieved)  :- not ats_unbelieved(q).
+alarm(ats_vacuous).
+-- each N its own, and a member at its least derivation, under either
+-- evaluator
+ats_n(m(G, N)) :- at_meets(G, N).
+ats_n(r(G, N)) :- at_reach(G, N).
+ats_n(o(S, N)) :- at_ok(S, N).
+ats_n(x(S, N)) :- at_mixed(S, N).
+ats_n(b(X))    :- at_b7(X).
+ats_n_want(m(g1, 1)).
+ats_n_want(r(g1, 1)).
+ats_n_want(o(s2, 2)).
+ats_n_want(o(s3, 1)).
+ats_n_want(x(s1, 2)).
+ats_n_want(b(x7)).
+ats_n_want(b(y7)).
+n_wrong(X) :- ats_n(X), not ats_n_want(X).
+n_wrong(X) :- ats_n_want(X), not ats_n(X).
+alarm(n_wrong).

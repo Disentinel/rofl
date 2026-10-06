@@ -1,0 +1,10 @@
+-- examples/checks/agg-lattice-strata-ranks.rofl — for the stock evaluator:
+-- the ranks rules/strata.rofl cannot give, because telling a read from
+-- outside a lattice's recursion from one inside it needs a negation that
+-- evaluator cannot order before it reads its table. The program ranks each
+-- outer reader of agg-cell-strata-check.rofl above what it reads.
+stratum(acst_far, 5).
+stratum(acst_reached, 5).
+stratum(acst_later, 5).
+stratum(acst_crit, 6).
+stratum(acst_crit_edge, 5).

@@ -1,0 +1,90 @@
+-- examples/checks/agg-label-check.rofl — agg_label_holes over
+-- agg-label-data.rofl (docs/aggregates.md, "Labeled unknowns"): the answers
+-- derived by hand, for every value the unknown group could be (g1, g2, g3, or
+-- a group no fact names).
+--
+--   lwc(g1) is 2 where the member is g1's and 1 elsewhere; g2 alike; any other
+--     group the member makes has 1 (so `not lwc(g3, 2)` holds in every
+--     completion, and `lwc(g1, 2)` in some, not all);
+--   the total over all groups is 3 whatever the group is: the member adds 1
+--     to the group it joins, or makes a group of 1 (lvtot: g1 holds k9 already,
+--     so 2 where the member is g1's and 3 elsewhere; lutot: the member may not
+--     exist, 2 or 3);
+--   the number of groups is 2 where the member joins g1 or g2, 3 where it makes one.
+alarm(lb_wrong).
+-- what holds
+-- expect-row: ltot[main](3)
+-- expect-row: lno[main](g3)
+-- what is a shrug, and no row
+-- expect-no-row: lno[main](g1)
+-- expect-no-row: lno[main](g2)
+-- expect-no-row: lone[main](g1)
+-- expect-no-row: lone[main](g2)
+-- expect-no-row: lone[main](g3)
+-- expect-no-row: lvtot[main](
+-- expect-no-row: lutot[main](
+-- expect-no-row: lcnt[main](
+lb_sh(R, G) :- lb_rel(R), lb_grp(G), lb_shrugs(R, G).
+lb_rel(lno). lb_rel(lone).
+lb_grp(g1). lb_grp(g2). lb_grp(g3).
+lb_shrugs(lno, G) :- shrug(lno(G), _, _).
+lb_shrugs(lone, G) :- shrug(lone(G), _, _).
+lb_whole(lvtot) :- shrug(lvtot(_), _, _).
+lb_whole(lutot) :- shrug(lutot(_), _, _).
+lb_whole(lcnt) :- shrug(lcnt(_), _, _).
+lb_whole(ltot) :- shrug(ltot(_), _, _).
+-- expect-row: lb_sh[main](lno,g1)
+-- expect-row: lb_sh[main](lno,g2)
+-- expect-no-row: lb_sh[main](lno,g3)
+-- expect-row: lb_sh[main](lone,g1)
+-- expect-row: lb_sh[main](lone,g2)
+-- g3 is decided no, and so is the join: no shrug
+-- expect-no-row: lb_sh[main](lone,g3)
+-- expect-row: lb_whole[main](lvtot)
+-- expect-row: lb_whole[main](lutot)
+-- expect-row: lb_whole[main](lcnt)
+-- the total is no shrug
+-- expect-no-row: lb_whole[main](ltot)
+-- the shrug of a group names the same unknown as the shrug of the total
+lb_lbl(G) :- shrug(lwc(G, _), _, _).
+-- expect-row: lb_lbl[main](g1)
+-- expect-row: lb_lbl[main](g2)
+
+-- a group no unknown moves: g5 counts 2 whatever the member's group, so it never counts 1 and
+-- `not lqc(g5, 1)` holds; g1 counts 1, so it does not; g2 and g3 are groups the member could make
+-- expect-row: lqn[main](g5)
+-- expect-no-row: lqn[main](g1)
+-- expect-no-row: lqn[main](g2)
+-- expect-no-row: lqn[main](g3)
+lb_qsh(G) :- shrug(lqn(G), _, _).
+-- expect-row: lb_qsh[main](g2)
+-- expect-row: lb_qsh[main](g3)
+-- expect-no-row: lb_qsh[main](g5)
+-- expect-no-row: lb_qsh[main](g1)
+
+-- a count no value of the unknown gives is no answer and no shrug: g1 and g2 count 1 or 2, g3 1
+-- expect-no-row: lthree[main](g1)
+-- expect-no-row: lthree[main](g2)
+-- expect-no-row: lthree[main](g3)
+lb_sh3(G) :- shrug(lthree(G), _, _).
+-- expect-no-row: lb_sh3[main](g1)
+-- expect-no-row: lb_sh3[main](g2)
+-- expect-no-row: lb_sh3[main](g3)
+
+-- the order kinds over all groups, by hand. lm: a member of 4 makes g1's least 4 or 5 and g2's greatest
+-- 3 or 4, and a group of 4; g2's 3 is the least whatever, g1's 5 the greatest. lk: a member of 2 is the
+-- least of the group it joins or makes, so 2 is the least over all groups. lf: g1 is true; g2 is false
+-- unless the member is g2's, so some group is true (decided) and every group is true only there.
+-- expect-row: lminall[main](3)
+-- expect-row: lmaxall[main](5)
+-- expect-row: lkminall[main](2)
+-- expect-row: lkmaxall[main](5)
+-- expect-row: lfany[main](true)
+-- expect-no-row: lfall[main](
+-- expect-no-row: lkn[main](g1,
+-- expect-no-row: lkn[main](g2,
+lb_ord(lfall) :- shrug(lfall(_), _, _).
+lb_ord(lkn(G)) :- shrug(lkn(G, _), _, _).
+-- expect-row: lb_ord[main](lfall)
+-- expect-row: lb_ord[main](lkn(g1))
+-- expect-row: lb_ord[main](lkn(g2))

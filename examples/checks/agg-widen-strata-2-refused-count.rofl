@@ -1,0 +1,8 @@
+-- expect-refusal: reads a closed relation
+-- a count reads a closed relation, and a widened hull closes only after its
+-- recursion: a count of its own cells inside that recursion is refused
+edb(awsr_p).
+awsr_p(a).
+lattice awsr_c(X, hull I) widen 1.
+awsr_c(X, iv(0, 0)) :- awsr_p(X).
+awsr_c(X, iv(0, N)) :- awsr_p(X), N is count(Y : awsr_c(Y, _)).

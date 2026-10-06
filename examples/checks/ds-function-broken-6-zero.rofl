@@ -1,0 +1,5 @@
+-- expect-refusal: function dsr_top: key () has two values in the book main: (a) and (b)
+-- a function of no key holds one value for the whole relation
+edb(dsr_top).
+function dsr_top(to W).
+dsr_top(a). dsr_top(b).

@@ -1,0 +1,13 @@
+-- expect-refusal: not monotone in the value
+-- examples/checks/agg-cell-safety-6-refused-plain.rofl — the value in a relation that is not a lattice, inside the recursion: every old value would stay.
+edb(acsr_e).
+edb(acsr_n).
+edb(acsr_s).
+acsr_e(a, b, 2).
+acsr_e(b, a, 3).
+acsr_n(a, b).
+acsr_s(a, false).
+lattice acsr_via(A, C, min D).
+acsr_via(A, C, D) :- acsr_e(A, C, D).
+acsr_plain(A, C, D) :- acsr_via(A, C, D).
+acsr_via(A, C, D) :- acsr_plain(A, B, D1), acsr_e(B, C, W), D is D1 + W.

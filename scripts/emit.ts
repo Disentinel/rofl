@@ -40,7 +40,8 @@ export function emitAll(root: string, lib: string, entries: string[], stubs: Rec
     if (src in stubs) { writeFileSync(`${lib}/${nameOf(src)}`, stubs[src]); continue; }
     const text = readFileSync(`${root}${src}`, 'utf8');
     emit(root, lib, src);
-    for (const [, spec] of text.matchAll(/^import (?!type )[^'\n]*from '(\.\.?\/[^']+\.ts)'/gm)) todo.push(new URL(spec, `file:///${src}`).pathname.slice(1));
+    // an import over several lines (`import {\n  a,\n} from './x.ts'`) is followed as one on a line is
+    for (const [, spec] of text.matchAll(/^import (?!type )[^;']*from '(\.\.?\/[^']+\.ts)'/gm)) todo.push(new URL(spec, `file:///${src}`).pathname.slice(1));
   }
   finish(lib);
   return [...done].sort();

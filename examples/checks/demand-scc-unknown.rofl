@@ -1,0 +1,27 @@
+-- examples/checks/demand-scc-unknown.rofl — demand_scc_unknown: AN UNKNOWN RECORDED
+-- PARTWAY THROUGH A PASS OF A SET (f_a_cycle_of_open_calls_iterated_call_by_call,
+-- the review of 13a742e). t_v(a, oops) faults inside the second rule of t_p in a
+-- pass of the set {t_p(a, ...), t_q(...)}; the calls kept before it are no longer
+-- read, and one unfolded again in their place must neither be kept over a call the
+-- pass still lists (both engines crashed on the emptied place) nor be kept at all:
+-- once an unknown is recorded under the lowest call, no set is guessed there. The
+-- copy binds W and is stored; an alarm fires where the two differ.
+edb(su_e). edb(su_m). edb(su_v). edb(su_g). edb(su_dom).
+su_dom(c0). su_dom(c1).
+su_e(a, b). su_e(b, a). su_m(a). su_v(a, oops). su_g(a).
+su_p(X, X, W) :- su_e(X, Y), su_m(Y).
+su_p(X, U, W) :- su_e(X, Y), su_q(U, Z, W), su_g(U), su_v(U, K), Q is K + 1.
+su_p(Y, Y, W) :- su_e(X, Y), su_q(Y, Y, W).
+su_q(Y, Y, W) :- su_e(X, Y), su_p(X, X, W).
+su_r(X, Y, W) :- su_p(X, Y, W), su_dom(W).
+
+su_cp(X, X, W) :- su_e(X, Y), su_m(Y), su_dom(W).
+su_cp(X, U, W) :- su_e(X, Y), su_cq(U, Z, W), su_g(U), su_v(U, K), Q is K + 1.
+su_cp(Y, Y, W) :- su_e(X, Y), su_cq(Y, Y, W).
+su_cq(Y, Y, W) :- su_e(X, Y), su_cp(X, X, W).
+su_cr(X, Y, W) :- su_cp(X, Y, W), su_dom(W).
+
+su_missed(X, Y, W) :- su_cr(X, Y, W), not su_r(X, Y, W).
+su_wrong(X, Y, W) :- su_r(X, Y, W), not su_cr(X, Y, W).
+alarm(su_missed).
+alarm(su_wrong).

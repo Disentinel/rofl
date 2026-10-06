@@ -1,0 +1,6 @@
+-- expect-refusal: no value of its carrier can match
+-- a union's value slot holding an atom could never hold: no silent false
+edb(ajsr_e). ajsr_e(k, a).
+lattice ajsr_off(X, union S).
+ajsr_off(X, set(Y)) :- ajsr_e(X, Y).
+ajsr_never(yes) :- ajsr_off(k, a).

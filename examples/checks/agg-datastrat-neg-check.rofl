@@ -1,0 +1,11 @@
+-- examples/checks/agg-datastrat-neg-check.rofl — agg_datastrat_neg: the counts
+-- are the ones the layers give, b first, then the flag, then a.
+dn_want(a, 0). dn_want(b, 1).
+dn_wrong(K) :- dn_want(K, N), not c(K, N).
+dn_extra(K) :- c(K, N), not dn_want(K, N).
+dn_flag_wrong() :- not flag(x).
+dn_flag_extra(X) :- flag(X), X != x.
+alarm(dn_wrong).
+alarm(dn_extra).
+alarm(dn_flag_wrong).
+alarm(dn_flag_extra).

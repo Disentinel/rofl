@@ -1,5 +1,7 @@
 # RIP — Rest In Peace
 
+**Count reading:** fragility — one way home is luck, not strategy.
+
 **Why tasks die in a dead letter queue, and which ones will be next.**
 
 A DLQ is a graveyard. Every system that talks to unreliable providers has one,
@@ -299,10 +301,12 @@ control for the word INFINITE.
 
 ## Best derivation: a reproducing trace, and it executes
 
-The tropical fold priced every derivation of `reached/1`. Walking down it and
-choosing at each step the firing whose cost *is* that number reads the argmin
-back out of the support the engine already recorded — not a search, and not a
-story told about the answer afterwards. What comes out is a script:
+`dist` in `trace.rofl` is a lattice, `lattice dist(S, min D)`: one row per
+state, the fewest moves that reach it. `leg` keeps the moves on a shortest play,
+and walking back from a state along `leg` reads the script out of the engine —
+not a search, and not a story told about the answer afterwards. (It is its own
+file because `rip.rofl` runs under `semantics(well_founded)`, where a lattice
+is refused.) What comes out is a script:
 
 ```
     step  where                        the workflow   the provider
@@ -859,9 +863,9 @@ RIP — Rest In Peace: why tasks die in a dead letter queue, and which are next.
 
 ── 8. best derivation: a reproducing trace, and it executes ──────────────
   The shortest way to reach w(fulfilled,0,0,0,2,1,0),
-  which is a fulfilled order that was charged twice. The tropical fold priced
-  every derivation of `reached/1`; this is the argmin read back out of the
-  support the engine already recorded, not a search this file ran.
+  which is a fulfilled order that was charged twice. `dist` is a lattice the
+  kernel closes (examples/rip/trace/trace.rofl), the fewest moves to every state;
+  this is the walk back along `leg`, the moves on a shortest play.
 
     step  where                        the workflow   the provider
        1  w(reserve,0,0,0,0,0,2)       call           fail

@@ -1,0 +1,9 @@
+-- expect-refusal: at_least is not evaluated under well_founded semantics
+-- examples/checks/agg-threshold-wfs-2-refused-at-least.rofl — at_least inside a well-founded
+-- world is refused: its cell would be sealed under an assumption, over
+-- positions whose win is unknown.
+semantics(well_founded).
+edb(wr_move).
+wr_move(a, b). wr_move(b, a). wr_move(b, c).
+wr_win(X) :- wr_move(X, Y), not wr_win(Y).
+wr_t(X) :- wr_move(X, _), at_least(2, Y : wr_move(Y, _), wr_win(Y)).

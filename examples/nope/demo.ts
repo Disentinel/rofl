@@ -9,7 +9,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { Rofl } from '../../src/api.ts';
-import { Evaluation } from '../../src/engine.ts';
+import { AggEval } from '../../src/aggeval.ts';
 import { evaluateSemiring } from '../../src/semiring.ts';
 import {
   countingSemiring, tropicalSemiring, unitFiringCost, provenanceSemiring,
@@ -359,9 +359,9 @@ function main(): void {
   // range-restricted would be evaluated top-down instead, silently -- this
   // check is what caught the resource-policy Deny rule leaving the acting
   // identity unbound while this model was being written.
-  const ev = new Evaluation(r.store);
+  const ev = new AggEval(r.store, 0, 'rounds');
   console.log(`  rules not range-restricted: ${ev.rules.filter((x) => !x.safe).length}`);
-  console.log(`  relations evaluated top-down: ${ev.demandRels.size}`);
+  console.log(`  relations evaluated top-down: ${ev.demandRels.length}`);
   console.log(`  facts in the store: ${r.factKeys().length}`);
 
   console.log(banner('2. Deny-overrides-Allow is not a priority rule; it is a stratum'));
@@ -380,7 +380,7 @@ function main(): void {
     console.log(`    stratum(${rel},`.padEnd(30) + `max ${Math.max(...ns)})   [all: ${ns.join(', ')}]`);
   }
   console.log('\n  the engine reads the max, and runs negation rules in that order:');
-  const plan = ev.strataPlan().filter((x) => shown.includes(x.rel));
+  const plan = r.strataPlan().filter((x) => shown.includes(x.rel));
   for (const p of [...plan].sort((a, b) => (a.level ?? 0) - (b.level ?? 0) || (a.rel < b.rel ? -1 : 1))) {
     console.log(`    level ${p.level}  ${p.rel.padEnd(10)}(${p.rule})`);
   }

@@ -1,0 +1,20 @@
+-- examples/checks/agg-count-holes-check.rofl — agg_count_holes: a count over
+-- a member not known is a hole, never the count of the members that survived,
+-- and a negation above it is undecided (agg-holes-data.rofl).
+ahc_n(G, N) :- ah_g(G), N is count(K : ah_x(G, K, _)).
+ahc_has(G)  :- ahc_n(G, _).
+ahc_none(G) :- ah_g(G), not ahc_has(G).
+ahc_bad(value_b)   :- ahc_n(b, _).
+ahc_bad(value_d)   :- ahc_n(d, _).
+ahc_bad(value_big) :- ahc_n(big, _).
+-- expect-row: ahc_n[main](a,2)
+-- expect-row: ahc_n[main](c,0)
+ahc_bad(none_b)    :- ahc_none(b).
+ahc_bad(none_d)    :- ahc_none(d).
+ahc_bad(none_big)  :- ahc_none(big).
+alarm(ahc_bad).
+-- each group not known is a hole on its cell, read above the count
+ahc_holed(G) :- ahc_has(_), hole[$kernel]($cell(R, _, _, $cons(G, $nil)), support_withdrawn), concludes[$kernel](R, ahc_n).
+ahc_unholed(G) :- ah_v(G, _, oops), ahc_has(_), not ahc_holed(G).
+ahc_unholed(big) :- ahc_has(_), not ahc_holed(big).
+alarm(ahc_unholed).

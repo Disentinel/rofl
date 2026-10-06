@@ -1,0 +1,11 @@
+-- expect-refusal: lattice wr_reach is not evaluated under well_founded semantics
+-- examples/checks/agg-lattice-wfs-2-refused-lattice.rofl — lattice wr_reach inside a well-founded
+-- world is refused: its cell would be sealed under an assumption, over
+-- positions whose win is unknown.
+semantics(well_founded).
+edb(wr_move).
+wr_move(a, b). wr_move(b, a). wr_move(b, c).
+wr_win(X) :- wr_move(X, Y), not wr_win(Y).
+lattice wr_reach(X, min D).
+wr_reach(X, 0) :- wr_win(X).
+wr_reach(X, D) :- wr_move(X, Y), wr_reach(Y, D1), D is D1 + 1.

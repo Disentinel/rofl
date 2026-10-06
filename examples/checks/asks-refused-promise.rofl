@@ -1,0 +1,11 @@
+-- expect-refusal: function rp_mix: key (a) has two values in the book main
+-- examples/checks/asks-refused-promise.rofl — A PROMISE BROKEN OUTSIDE THE CONE.
+-- rp_other is asked and reads only rp_src; the rule that breaks rp_mix's promise is in no premise of its cone. The
+-- promise is the whole world's, so the declared relation's rules run in every cone and the world is refused.
+asks(rp_other).
+edb(rp_src).
+rp_src(a, 2).
+function rp_mix(K, to V).
+rp_mix(a, 1).
+rp_mix(K, V) :- rp_src(K, V).
+rp_other(K) :- rp_src(K, _).

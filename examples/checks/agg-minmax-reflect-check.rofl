@@ -1,0 +1,47 @@
+-- examples/checks/agg-minmax-reflect-check.rofl — agg_minmax_reflect: an idempotent order
+-- is reflected exactly. Walking each aggregate's `$agg` body list gives
+-- the relations `premise_agg` names, in both directions; no relation read
+-- inside becomes a `premise_pos` (it would be a trigger and a positive
+-- dependency edge); the books read inside are in `reads_from`; a builtin
+-- inside is in `uses_builtin` and the operation itself is not; a bare
+-- kernel relation inside resolves to [$kernel]. The rule ids are held to the
+-- TypeScript engine's by scripts/goldens.ts.
+amf_rule(R, Op)  :- premise_lit[$kernel](R, _, $agg(Op, _, _, _, _)), concludes[$kernel](R, H), amf_mine(H).
+amf_mine(amf_low).
+amf_mine(amf_high).
+amf_mine(amf_any).
+amf_mine(amf_all).
+amf_mine(amf_rules).
+amf_tail(R, T)   :- amf_rule(R, _), premise_lit[$kernel](R, _, $agg(_, _, _, _, T)).
+amf_tail(R, T)   :- amf_tail(R, $cons(_, T)).
+amf_reads(R, Rel, P) :- amf_tail(R, $cons($lit(Rel, P, _, _), _)).
+amf_reads(R, Rel, P) :- amf_tail(R, $cons($not($lit(Rel, P, _, _)), _)).
+amf_op_inside(R, Op) :- amf_tail(R, $cons($builtin(Op, _), _)).
+refl_missing(R, Rel) :- amf_reads(R, Rel, _), not premise_agg[$kernel](R, Rel).
+refl_extra(R, Rel)   :- amf_rule(R, _), premise_agg[$kernel](R, Rel), not amf_reads(R, Rel, _).
+inner_pos(R, Rel)    :- amf_reads(R, Rel, _), premise_pos[$kernel](R, Rel).
+reads_missing(R, P)  :- amf_reads(R, _, P), not reads_from[$kernel](R, P).
+builtin_missing(R, Op) :- amf_op_inside(R, Op), not uses_builtin[$kernel](R, Op).
+op_as_builtin(R)       :- amf_rule(R, _), uses_builtin[$kernel](R, Op), amf_opname(Op).
+book_unresolved(R)     :- amf_reads(R, concludes, main).
+amf_kernel_read(R)     :- amf_reads(R, concludes, $kernel).
+amf_vacuous(kernel)    :- not amf_any_kernel().
+amf_any_kernel()       :- amf_kernel_read(_).
+amf_vacuous(negation)  :- not amf_any_neg().
+amf_any_neg()          :- amf_tail(_, $cons($not(_), _)).
+amf_vacuous(book)      :- not amf_any_book().
+amf_any_book()         :- amf_reads(_, _, ledger).
+amf_vacuous(rules)     :- not amf_two().
+amf_two()              :- amf_rule(A, _), amf_rule(B, _), A != B.
+alarm(refl_missing).
+alarm(refl_extra).
+alarm(inner_pos).
+alarm(reads_missing).
+alarm(builtin_missing).
+alarm(op_as_builtin).
+alarm(book_unresolved).
+alarm(amf_vacuous).
+amf_opname("min").
+amf_opname("max").
+amf_opname("or").
+amf_opname("and").

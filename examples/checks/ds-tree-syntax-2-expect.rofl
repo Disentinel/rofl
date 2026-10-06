@@ -1,0 +1,57 @@
+-- examples/checks/ds-tree-syntax-2-expect.rofl — ds_tree_syntax.
+-- What each form of ds-tree-syntax-1-forms.rofl reads as: one
+-- `structure_decl` row (relation, arity, tree) and, for a closure, one
+-- `structure_closure` row and the two rules it lowers to; `tree` and
+-- `closure` as plain names; every form evaluating as the rules say, a
+-- declaration changing no fact; and ring 1 (examples/ring1) reading a
+-- declaration from `src` as the same tree, nothing stray and nothing uncovered.
+dtxs_decl(dtx_plain). dtxs_decl(dtx_closed). dtxs_decl(dtx_wild).
+dtxs_missing(Rel) :- dtxs_decl(Rel), not structure_decl[$kernel](Rel, 2, tree).
+dtxs_extra(Rel)   :- structure_decl[$kernel](Rel, _, K), dtxs_decl(Rel), K != tree.
+dtxs_extra(Rel)   :- structure_decl[$kernel](Rel, N, _), dtxs_decl(Rel), N != 2.
+dtxs_extra(Rel)   :- structure_role[$kernel](Rel, _, _), dtxs_decl(Rel).
+alarm(dtxs_missing).
+alarm(dtxs_extra).
+-- the closure: one row for the tree that has one, none for the others, and the two rules it stands for
+dtxs_closure_missing() :- not structure_closure[$kernel](dtx_closed, dtx_all).
+dtxs_closure_extra(Rel) :- structure_closure[$kernel](Rel, _), Rel != dtx_closed.
+dtxs_closure_extra(Rel) :- structure_closure[$kernel](dtx_closed, Rel), Rel != dtx_all.
+dtxs_rules(N) :- N is count(R : concludes(R, dtx_all)).
+dtxs_rules_wrong() :- dtxs_rules(N), N != 2.
+dtxs_rules_wrong() :- not dtxs_rules(_).
+alarm(dtxs_closure_missing).
+alarm(dtxs_closure_extra).
+alarm(dtxs_rules_wrong).
+-- the two words are names where no second name follows them
+dtxs_name_lost() :- not dtx_seen(dtx_name).
+dtxs_name_lost() :- not dtx_seen(tree).
+alarm(dtxs_name_lost).
+-- and every form evaluates as its rule says, the closure as the transitive closure of the edges
+dtxs_lost(plain) :- not dtx_plain(a, b).
+dtxs_lost(closed) :- not dtx_closed(b, c).
+dtxs_lost(wild) :- not dtx_wild(a, d).
+dtxs_lost(all) :- not dtx_all(a, c).
+dtxs_lost(all) :- not dtx_all(a, b).
+dtxs_lost(all) :- not dtx_all(b, c).
+dtxs_lost(all) :- not dtx_all(a, d).
+alarm(dtxs_lost).
+dtxs_count(N) :- N is count(A, B : dtx_all(A, B)).
+dtxs_too_many() :- dtxs_count(N), N != 4.
+dtxs_too_many() :- not dtxs_count(_).
+alarm(dtxs_too_many).
+
+src("tree dtr_t(P, C).\ntree dtr_u(P, C) closure dtr_up. tree dtr_v(A, B) closure dtr_vc.").
+r1s_want($structure(tree, $cons(key, $cons(key, $nil)),
+                    $lit(dtr_t, $bare, $cons($var("P"), $cons($var("C"), $nil)), $now)), $nil).
+r1s_want($closure(dtr_up, $structure(tree, $cons(key, $cons(key, $nil)),
+                    $lit(dtr_u, $bare, $cons($var("P"), $cons($var("C"), $nil)), $now))), $nil).
+r1s_want($closure(dtr_vc, $structure(tree, $cons(key, $cons(key, $nil)),
+                    $lit(dtr_v, $bare, $cons($var("A"), $cons($var("B"), $nil)), $now))), $nil).
+r1s_parsed(H, B)   :- parsed(_, _, H, B).
+ring1_missing(H)   :- r1s_want(H, B), not r1s_parsed(H, B).
+ring1_extra(H)     :- r1s_parsed(H, B), not r1s_want(H, B).
+alarm(ring1_missing).
+alarm(ring1_extra).
+alarm(stray).
+alarm(uncovered).
+alarm(stuck_at).

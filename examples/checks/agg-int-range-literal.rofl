@@ -1,0 +1,3 @@
+-- examples/checks/agg-int-range-literal.rofl — a literal of 2^60 is past the term
+-- range and refused whole, in both engines; agg-int-range.rofl alarms if it loads.
+ir_lit(1152921504606846976).

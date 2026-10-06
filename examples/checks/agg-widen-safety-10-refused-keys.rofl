@@ -1,0 +1,10 @@
+-- expect-refusal: no relation on that cycle declares a widening
+-- a cycle over the relations: body and head are two cells of one hull, so an
+-- interval function from one to the other is that hull reading itself, and
+-- the widening goes on it
+edb(awsr_s).
+awsr_s(iv(0, 0)).
+lattice awsr_keys(P, hull I).
+awsr_keys(head, I) :- awsr_s(I).
+awsr_keys(body, J) :- awsr_keys(head, I), J is ivmeet(I, iv(ninf, 9)).
+awsr_keys(head, J) :- awsr_keys(body, I), J is ivadd(I, 1).

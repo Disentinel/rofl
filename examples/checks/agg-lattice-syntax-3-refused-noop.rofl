@@ -1,0 +1,3 @@
+-- expect-refusal: the last argument is the value
+-- a declaration without the operation that merges its value
+lattice sxlr_noop(A, C, D).

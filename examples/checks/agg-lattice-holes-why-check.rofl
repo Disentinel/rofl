@@ -1,0 +1,33 @@
+-- examples/checks/agg-lattice-holes-why-check.rofl — agg_lattice_why over
+-- agg-lattice-holes-data.rofl: `whynot` of a cell a hole reached names its
+-- hole and the path back to the fault, cell by cell and through a relation
+-- that is no lattice; and so does whynot of what a reader outside the
+-- recursion could not decide: a lattice above it, a negation, a count.
+explain_request(whynot, ahp(g5, a, f, 6)).
+explain_request(whynot, ahq(s, m, 0)).
+explain_request(whynot, ahr2(a, b, 1)).
+explain_request(whynot, ahs(s, n, 0)).
+ahyw_holds(K, A, T) :- explained[$explain](K, A, _, L), ahyw_want(K, A, T), N is str_segs(L, T), N > 1.
+ahyw_want(whynot, ahp(g5, a, f, 6), "ahp[main](g5,a,f) has no value: hole(support_withdrawn) [lattice min]").
+ahyw_want(whynot, ahp(g5, a, f, 6), " from ahp[main](g5,a,k), which has no value: hole(arith_type_error)").
+ahyw_want(whynot, ahq(s, m, 0), "ahq[main](s,m) has no value: hole(support_withdrawn) [lattice min]").
+ahyw_want(whynot, ahq(s, m, 0), " from ahq_near[main](m), which is not known to hold").
+ahyw_want(whynot, ahq(s, m, 0), " from ahq[main](a,m), which has no value: hole(agg_type_error)").
+ahyw_want(whynot, ahr2(a, b, 1), "ahr2[main](a,b) has no value: hole(support_withdrawn) [lattice min]").
+ahyw_want(whynot, ahr2(a, b, 1), " from every cell of ahr, hole(arith_type_error)").
+ahyw_want(whynot, ahs(s, n, 0), "ahs[main](s,n) has no value: hole(support_withdrawn) [lattice min]").
+ahyw_want(whynot, ahs(s, n, 0), " from ahs_near[main](n), which is not known to hold").
+ahyw_want(whynot, ahs(s, n, 0), " from ahs[main](a,n), which has no value: hole(agg_type_error)").
+explain_request(whynot, ahq3(m, 0)).
+explain_request(whynot, ahq_far(m)).
+explain_request(whynot, ahp_unreach(g0, a, k)).
+explain_request(whynot, ahp_n(g0, a, 1)).
+ahyw_want(whynot, ahq3(m, 0), "ahq3[main](m) has no value: hole(support_withdrawn) [lattice min]").
+ahyw_want(whynot, ahq3(m, 0), " from ahq[main](a,m), which has no value: hole(agg_type_error)").
+ahyw_want(whynot, ahq_far(m), "ahq_far[main](m) is not known to hold").
+ahyw_want(whynot, ahq_far(m), " from ahq_near[main](m), which is not known to hold").
+ahyw_want(whynot, ahp_unreach(g0, a, k), "ahp_unreach[main](g0,a,k) is not known to hold").
+ahyw_want(whynot, ahp_unreach(g0, a, k), " from ahp[main](g0,a,k), which has no value: hole(arith_type_error)").
+ahyw_want(whynot, ahp_n(g0, a, 1), "ahp_n[main](g0,a,_) is not known to hold").
+ahyw_text_missing(K, A, T) :- ahyw_want(K, A, T), not ahyw_holds(K, A, T).
+alarm(ahyw_text_missing).

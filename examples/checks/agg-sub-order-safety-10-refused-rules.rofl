@@ -1,0 +1,7 @@
+-- expect-refusal: has a declared order and dominance rules of its own
+-- a declaration is the relation's whole dominance: its rules add a dominance whose transitivity nobody decided
+edb(aosr_e).
+aosr_e(a, b, 2, 9).
+pareto aosr_rules(A, B, min C, min T).
+aosr_rules(A, B, C, T) :- aosr_e(A, B, C, T).
+aosr_rules(A, B, C1, T1) <= aosr_rules(A, B, C2, T2) :- C2 < C1.

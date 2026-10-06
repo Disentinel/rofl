@@ -1,0 +1,11 @@
+-- expect-refusal: is not monotone in the dominance of assr_mono
+-- assr_mono(a, z, 9) was concluded from assr_mono(a, b, 5) three steps
+-- before assr_mono(a, b, 0) dominated it, and the value that dominates it
+-- gives nothing as good: the rule is not monotone in the dominance, which
+-- the engine finds on the facts it made
+edb(assr_me).
+assr_me(a, b, 5). assr_me(a, x, 0). assr_me(x, y, 0). assr_me(y, b, 0).
+assr_mono(A, B, D) :- assr_me(A, B, D).
+assr_mono(A, C, D) :- assr_mono(A, B, D0), assr_me(B, C, W), D is D0 + W.
+assr_mono(A, z, 9) :- assr_mono(A, B, D), B != z, D > 3.
+assr_mono(A, B, X) <= assr_mono(A, B, Y) :- Y < X.

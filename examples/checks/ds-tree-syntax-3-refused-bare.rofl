@@ -1,0 +1,3 @@
+-- expect-refusal: `closure` names the relation
+-- closure takes a name
+tree dts_bare(P, C) closure .

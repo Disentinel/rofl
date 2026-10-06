@@ -1,0 +1,22 @@
+-- examples/checks/agg-breaks-census-check.rofl — agg_breaks_census: the
+-- planted faults of scripts/agg_breaks.ts against the engine source and the
+-- ledger, over agg-breaks-census.rofl (generated; `npm test` fails when it is
+-- stale). A break the loop turns on at run time is a `brk!` site in
+-- rust/rofl/src; a site no break names is a fault nobody runs; and a world
+-- the ledger closes a cell with must be one some fault turns red, or the
+-- cell is proved by a world that may be blind.
+has_site(B)  :- switch_site(B, _).
+expects(B)   :- brk_expects(B, _).
+broken(W)    :- brk_expects(_, W).
+
+switch_unplanted(B)      :- brk_kind(B, switch), not has_site(B).
+site_orphan(B, F)        :- switch_site(B, F), not brk(B).
+site_not_switch(B, F)    :- switch_site(B, F), brk_kind(B, K), K != switch.
+brk_expects_nothing(B)   :- brk(B), not expects(B).
+proof_world_unbroken(W)  :- proof_world(W), not broken(W).
+
+alarm(switch_unplanted).
+alarm(site_orphan).
+alarm(site_not_switch).
+alarm(brk_expects_nothing).
+alarm(proof_world_unbroken).

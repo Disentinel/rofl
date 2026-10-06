@@ -1,0 +1,7 @@
+-- expect-refusal: at an arity other than its declaration's
+-- the tag is the last argument of the whole head: a rule writing the
+-- relation without it writes no cell
+edb(tsr_g).
+tsr_g(a, b).
+tag tsr_ar(A, B, tropical T).
+tsr_ar(A, B) :- tsr_g(A, B).

@@ -1,0 +1,43 @@
+-- examples/checks/holes-negation-wfs.rofl — WHAT A HOLE LEAVES OUT, UNDER
+-- WELL-FOUNDED SEMANTICS, in both engines (docs/aggregates.md, "Holes, as
+-- built" and "Shrugs, as built"). x(c, _) is not known (1 + oops is no
+-- number): it may hold and is not certain to, so a negation that could match
+-- it is neither true nor false but a shrug inherited from the fault, and so
+-- is the negation above that; it is no paradox, and has no `unknown` row. b
+-- and e are decided. A negative cycle beside it keeps its own undefined
+-- atoms, as it always did, each a paradox.
+semantics(well_founded).
+edb(hw_d).
+edb(hw_k).
+edb(hw_node).
+hw_d(a, b, 2). hw_d(a, c, 1).
+hw_k(b, 3). hw_k(c, oops).
+hw_node(b). hw_node(c). hw_node(e).
+hw_x(C, Y) :- hw_d(a, C, D), hw_k(C, K), Y is D + K.
+hw_y(C) :- hw_x(C, _).
+hw_nx(C)  :- hw_node(C), not hw_x(C, _).
+hw_ny(C)  :- hw_node(C), not hw_y(C).
+hw_nnx(C) :- hw_node(C), not hw_nx(C).
+hw_win(X) :- hw_move(X, Y), not hw_win(Y).
+edb(hw_move).
+hw_move(p, q). hw_move(q, p).
+hw_bad(nx_c)  :- hw_nx(c).
+hw_bad(ny_c)  :- hw_ny(c).
+hw_bad(nnx_c) :- hw_nnx(c).
+hw_bad(nx_b)  :- hw_nx(b).
+hw_bad(nx_e)  :- hw_node(e), not hw_nx(e).
+hw_bad(nnx_b) :- hw_node(b), not hw_nnx(b).
+-- beside it, `not unknown(wu_win(c))` over what the hole left out is a shrug
+-- (holes-negation-wfs-unknown.rofl), and a positive reader of `unknown` names
+-- the draw and is a shrug for c (holes-negation-wfs-unknown-draw.rofl)
+hw_bad(wu_decided_c) :- wu_decided(c).
+hw_bad(wv_draw_c) :- wv_draw(c).
+alarm(hw_bad).
+-- expect-row: shrug[$kernel](hw_nx(c),inherited,from($cons($rule(r9192e02e),$nil)))
+-- expect-row: shrug[$kernel](hw_nnx(c),inherited,from($cons($rule(r9192e02e),$nil)))
+-- expect-row: shrug[$kernel](hw_win(p),paradox,cycle($cons(hw_win,$nil)))
+-- expect-no-row: unknown[main](hw_nx(c))
+-- expect-row: shrug[$kernel](wu_decided(c),inherited,
+-- expect-row: wu_decided[main](k)
+-- expect-row: wv_draw[main](x)
+-- expect-row: shrug[$kernel](wv_draw(c),inherited,

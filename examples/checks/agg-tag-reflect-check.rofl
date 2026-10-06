@@ -1,0 +1,41 @@
+-- examples/checks/agg-tag-reflect-check.rofl — agg_tag_reflect: a tag is rules
+-- as data. Each declaration of agg-tag-data.rofl and agg-tagc-data.rofl is
+-- exactly one `tag_decl[$kernel](Rel, Arity, Alg)` row, both directions, and
+-- no `lattice_decl`; the relation is the kernel's, reserved like
+-- `lattice_decl`, so no program writes one. A rule into a tag is reflected as
+-- it is written: its head the tag relation, its tag slot the variable left to
+-- the engine, and none of the ⊗ steps the engine runs (`X is $tropical(...)`)
+-- nor the relation a counting tag's derivations are held in; the TypeScript
+-- engine's rule ids for these rules are held to the Rust store's by
+-- scripts/goldens.ts.
+tgr_want(tg_step, 3, tropical). tgr_want(tg_cost, 3, tropical). tgr_want(tg_short, 3, tropical).
+tgr_want(tg_pr, 3, viterbi). tgr_want(tg_tr, 3, trust).
+tgr_want(tc_hop, 3, counting). tgr_want(tc_two, 3, counting). tgr_want(tc_any, 3, counting).
+tgr_want(tc_seen, 2, counting). tgr_want(tc_total, 1, counting).
+tgr_row(R, N, A)     :- tag_decl[$kernel](R, N, A).
+tgr_missing(R)       :- tgr_want(R, N, A), not tgr_row(R, N, A).
+tgr_extra(R)         :- tgr_row(R, N, A), not tgr_want(R, N, A).
+tgr_as_lattice(R)    :- tgr_row(R, _, _), lattice_decl[$kernel](R, _, _).
+tgr_unreserved()     :- not reserved(tag_decl).
+-- the rules as written: the ⊗ is the engine's, never reflected
+tgr_is(T)            :- premise_lit[$kernel](_, _, $builtin("is", $cons(_, $cons(T, $nil)))).
+tgr_times(T)         :- tgr_is(T), T = $tropical(_, _).
+tgr_times(T)         :- tgr_is(T), T = $viterbi(_, _).
+tgr_times(T)         :- tgr_is(T), T = $trust(_, _).
+tgr_times(T)         :- tgr_is(T), T = $counting(_, _).
+-- the rules of each tag, counted by what they conclude as written
+tgr_rules(R, N)      :- tgr_want(R, _, _), N is count(Q : concludes[$kernel](Q, R)).
+tgr_nrules(tg_step, 1). tgr_nrules(tg_cost, 3). tgr_nrules(tg_short, 2). tgr_nrules(tg_pr, 2). tgr_nrules(tg_tr, 2).
+tgr_nrules(tc_hop, 1). tgr_nrules(tc_two, 1). tgr_nrules(tc_any, 2). tgr_nrules(tc_seen, 1). tgr_nrules(tc_total, 1).
+tgr_rules_wrong(R, N) :- tgr_rules(R, N), not tgr_nrules(R, N).
+-- the head's tag slot as written: a variable the body does not bind
+tgr_head(tc_two, $lit(tc_two, main, $cons($var("A"), $cons($var("C"), $cons($var("N"), $nil))), $now)).
+tgr_head_lost(R)     :- tgr_head(R, H), not tgr_concl(H).
+tgr_concl(H)         :- conclusion_lit[$kernel](_, _, H).
+alarm(tgr_missing).
+alarm(tgr_extra).
+alarm(tgr_as_lattice).
+alarm(tgr_unreserved).
+alarm(tgr_times).
+alarm(tgr_rules_wrong).
+alarm(tgr_head_lost).

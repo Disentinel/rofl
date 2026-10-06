@@ -1,0 +1,46 @@
+-- examples/checks/agg-holistic-why-check.rofl — agg_holistic_why, run with
+-- `rofl-load --explain`: `why` of a median, a quantile and a rank names the
+-- aggregate with its percent or subject, what it sealed and its members, a
+-- digest of five with the rest counted; `why_all` lists all seven; `whynot`
+-- of a wrong median says what the median is; of a group with no value it
+-- says which way it has none: a hole (gbad's member that is no integer, a
+-- percent of 101), an empty group, or a subject that is none of the group's
+-- distinct values. A hole is not an empty group, and neither is a rank
+-- nobody holds.
+edb(explain_request).
+edb(explained).
+explain_request(why, ah_med(godd, 6)).
+explain_request(why_all, ah_med(godd, 6)).
+explain_request(why, ah_q(godd, 29, 4)).
+explain_request(why, ah_rank_of(godd, 12, 5)).
+explain_request(whynot, ah_med(godd, 99)).
+explain_request(whynot, ah_med(gbad, 1)).
+explain_request(whynot, ah_q(geven, 101, 1)).
+explain_request(whynot, ah_med(gempty, 1)).
+explain_request(whynot, ah_rank_of(godd, 5, 1)).
+ahy_said(K, A, T)  :- ahy_want(K, A, T), explained[$explain](K, A, _, L), N is str_segs(L, T), N > 1.
+ahy_want(why, ah_med(godd, 6), "median(?V ; ?K : ah_line[main](godd,?K,?V,?_$0)) = 6 [aggregate: 7 members, sealed ah_line@").
+ahy_want(why, ah_med(godd, 6), "#5 (").
+ahy_want(why, ah_med(godd, 6), "[2 more members: why all ah_med[main](godd,6)]").
+ahy_want(why_all, ah_med(godd, 6), "#7 (1,k4) h=4").
+ahy_want(why, ah_q(godd, 29, 4), "quantile(29,?V ; ?K : ah_line[main](godd,?K,?V,?_$0)) = 4 [aggregate: 7 members").
+ahy_want(why, ah_rank_of(godd, 12, 5), "rank(12,?W : ah_line[main](godd,?_$0,?W,?_$1)) = 5 [aggregate: 6 members").
+ahy_want(why, ah_rank_of(godd, 12, 5), "#1 (12) h=3").
+ahy_want(whynot, ah_med(godd, 99), "= 6, not 99 [aggregate]").
+ahy_want(whynot, ah_med(gbad, 1), "has no value: hole(agg_type_error) [aggregate]").
+ahy_want(whynot, ah_q(geven, 101, 1), "has no value: hole(agg_type_error) [aggregate]").
+ahy_want(whynot, ah_med(gempty, 1), "has no value: empty group [aggregate]").
+ahy_want(whynot, ah_rank_of(godd, 5, 1), "has no value: 5 is not one of its 6 distinct values [aggregate]").
+ahy_never(why, ah_med(godd, 6), "#6 (").
+ahy_never(why_all, ah_med(godd, 6), "more members").
+ahy_never(whynot, ah_med(gbad, 1), "empty group").
+ahy_never(whynot, ah_q(geven, 101, 1), "empty group").
+ahy_never(whynot, ah_rank_of(godd, 5, 1), "empty group").
+ahy_never(whynot, ah_rank_of(godd, 5, 1), "no matching base fact").
+ahy_never(whynot, ah_med(gbad, 1), "no matching base fact").
+why_text_missing(K, A, T) :- ahy_want(K, A, T), not ahy_said(K, A, T).
+why_text_leaked(K, A, T)  :- ahy_never(K, A, T), explained[$explain](K, A, _, L), N is str_segs(L, T), N > 1.
+explain_refused(K, A)     :- explained[$explain](K, A, 0, _).
+alarm(why_text_missing).
+alarm(why_text_leaked).
+alarm(explain_refused).

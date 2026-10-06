@@ -1,0 +1,5 @@
+-- expect-refusal: function dsr_one: key (a) has two values in the book main: (1) and (2)
+-- two asserted facts with one key and two values: the refusal names the relation, the book, the key and both values
+edb(dsr_one).
+function dsr_one(K, to V).
+dsr_one(a, 1). dsr_one(a, 2). dsr_one(b, 3).

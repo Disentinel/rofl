@@ -1,0 +1,109 @@
+-- examples/checks/agg-lattice-history-eval-check.rofl — agg_lattice_eval over
+-- agg-lattice-history-data.rofl: every lattice there holds exactly the facts
+-- enumerated here by hand, in both directions, whatever order its values
+-- were reached in and whatever order a rule's body is written in; the holes
+-- are exactly these, the same whether a fault arrived early or late; and a
+-- fault on a value since improved on leaves no hole at all.
+alxe(d1, a, b, 0).
+alxe(d2, a, b, 0).
+alxe(d4, a, b, 0).
+alxe(sat, a, a, 3).
+alxe(sat, b, b, 3).
+alxe(d6, a, b, 0).
+alxe(d6, b, c, 0).
+alxe(d6, c, a, 0).
+alxe(ok, a, a, true).
+alxe(ok, b, b, true).
+alxe(ok, c, c, true).
+alxe(flag, b, b, true).
+alxe(sl, a, a, 0).
+alxe(sl, b, b, 1).
+alxe(t, x, x, true).
+alxe(t, y, y, true).
+alxe(o, a, b, 1).
+alxe(o, x, y, 1).
+alxe(o, x, z, 4).
+alxe(o, p, q, 1).
+alxe(h, pa, a, 0).
+alxe(h, pb, a, 0).
+alxe(h, pb, z1, 1).
+alxe(h, pb, z2, 2).
+alxe(h, pb, z3, 3).
+alxe(od, a, b, 2).
+alxe(od, a, x, 1).
+alxe(od, x, b, 1).
+-- the heavy last edge's weight is read from the data, not written here: a
+-- number this large is not exact in the TypeScript host that reads this file
+alxe(od, b, c, W) :- alx_ov(b, c, W), W > 1000.
+alxe(od, x, c, V) :- alx_ov(b, c, W), W > 1000, V is W + 1.
+alxe(od, a, c, V) :- alx_ov(b, c, W), W > 1000, V is W + 2.
+alxh(d1, a, b, D)  :- alx_d1(a, b, D).
+alxh(d2, A, C, D)  :- alx_d2(A, C, D).
+alxh(d4, A, C, D)  :- alx_d4(A, C, D).
+alxh(sat, A, A, W) :- alx_sat(A, W).
+alxh(d6, A, C, D)  :- alx_d6(A, C, D).
+alxh(ok, X, X, B)  :- alx_ok(X, B).
+alxh(flag, X, X, true) :- alx_flag(X).
+alxh(sl, X, X, D)  :- alx_sl(X, D).
+alxh(t, X, X, B)   :- alx_t(X, B).
+alxh(h, G, X, D)   :- alx_h(G, X, D).
+alxh(od, A, C, D)  :- alx_od(A, C, D).
+-- one rule, two orders: the same facts, each the other's
+alxh(o, A, C, D)   :- alx_o1(A, C, D).
+alxh(o, A, C, D)   :- alx_o2(A, C, D).
+alx_order(A, C, D) :- alx_o1(A, C, D), not alx_o2(A, C, D).
+alx_order(A, C, D) :- alx_o2(A, C, D), not alx_o1(A, C, D).
+alx_missing(K, A, C, V) :- alxe(K, A, C, V), not alxh(K, A, C, V).
+alx_extra(K, A, C, V)   :- alxh(K, A, C, V), not alxe(K, A, C, V).
+alarm(alx_missing).
+alarm(alx_extra).
+alarm(alx_order).
+
+-- the holes, exactly: the edge that is not a number reached from p (and
+-- not the one from m, which nothing reaches), in either order; b and c in
+-- both graphs, c because the derivation that failed read b as it closed
+alxhw($lattice(alx_o1, main, 0, $cons(p, $cons(r, $nil))), arith_type_error).
+alxhw($lattice(alx_o2, main, 0, $cons(p, $cons(r, $nil))), arith_type_error).
+alxhw($lattice(alx_h, main, 0, $cons(pa, $cons(b, $nil))), arith_type_error).
+alxhw($lattice(alx_h, main, 0, $cons(pa, $cons(c, $nil))), arith_type_error).
+alxhw($lattice(alx_h, main, 0, $cons(pb, $cons(b, $nil))), arith_type_error).
+alxhw($lattice(alx_h, main, 0, $cons(pb, $cons(c, $nil))), arith_type_error).
+alxhh(M, R) :- hole[$kernel](M, R), M = $lattice(Rel, _, _, _), alx_rel(Rel).
+alxhh(M, R) :- hole[$kernel](M, R), M = $lattice(Rel), alx_rel(Rel).
+alx_rel(alx_o1).
+alx_rel(alx_o2).
+alx_rel(alx_h).
+alx_rel(alx_od).
+alx_rel(alx_d1).
+alx_rel(alx_d2).
+alx_rel(alx_d4).
+alx_rel(alx_sat).
+alx_rel(alx_d6).
+alx_rel(alx_ok).
+alx_rel(alx_sl).
+alx_rel(alx_t).
+alx_rel(alx_z).
+alx_hole_missing(M, R) :- alxhw(M, R), not alxhh(M, R).
+alx_hole_extra(M, R)   :- alxhh(M, R), not alxhw(M, R).
+alarm(alx_hole_missing).
+alarm(alx_hole_extra).
+-- an overflow only on a value since improved on is no hole of any kind
+alx_stale_fault(M) :- hole[$kernel](M, arith_overflow).
+alarm(alx_stale_fault).
+
+-- the dataset still holds what makes the checks above bite
+alxv(early)    :- alx_hw(pa, a, b, oops), alx_hw(pa, b, c, oops).
+alxv(late)     :- alx_hw(pb, z3, b, oops), alx_hw(pb, b, c, oops), alx_he(pb, z2, z3, _).
+alxv(reached)  :- alx_s(p, q, _), alx_oe(q, r, heavy).
+alxv(unreached) :- alx_oe(m, n, heavy), not alx_reaches_m().
+alx_reaches_m() :- alx_s(_, m, _).
+alxv(stale)    :- alx_ov(a, b, W), alxe(od, a, b, D), W > D.
+alxv(cycle)    :- alx_e5(a, b, _), alx_e5(b, a, _).
+alx_vacuous(K) :- alx_vk(K), not alxv(K).
+alx_vk(early).
+alx_vk(late).
+alx_vk(reached).
+alx_vk(unreached).
+alx_vk(stale).
+alx_vk(cycle).
+alarm(alx_vacuous).

@@ -1,0 +1,20 @@
+-- examples/checks/agg-lattice-cut-fallback.rofl — agg_lattice_cut_fallback:
+-- THE CUT'S OWN CARRY IS CHARGED TOO. cc_d is a min over a negative cycle
+-- (x -> y -> x), so the budget cuts it and names the cells on the improving
+-- cycle; carrying what they leave unknown through the recursion's rule, a
+-- product over three cc_n premises, is more work than the walls allow a
+-- second time. When the cut's carry runs out, every lattice not closed is
+-- holed whole, with no value: nothing it held is known to be a bound
+-- (f_the_carry_of_unknowns_ran_past_the_walls).
+-- expect-row: hole[$kernel]($adhoc,budget_exhausted)
+-- expect-row: hole[$kernel]($lattice(cc_d),budget_exhausted)
+-- expect-no-row: cc_d[main](
+edb(cc_e).
+edb(cc_n).
+cc_e(x, y, 1). cc_e(y, x, -2). cc_e(y, z, 4).
+cc_n(a0). cc_n(a1). cc_n(a2). cc_n(a3). cc_n(a4). cc_n(a5). cc_n(a6). cc_n(a7). cc_n(a8). cc_n(a9).
+cc_n(a10). cc_n(a11). cc_n(a12). cc_n(a13). cc_n(a14). cc_n(a15). cc_n(a16). cc_n(a17). cc_n(a18). cc_n(a19).
+cc_n(a20). cc_n(a21). cc_n(a22). cc_n(a23). cc_n(a24). cc_n(a25). cc_n(a26). cc_n(a27). cc_n(a28). cc_n(a29).
+lattice cc_d(A, C, min D).
+cc_d(A, C, D) :- cc_e(A, C, D).
+cc_d(A, C, D) :- cc_d(A, B, D1), cc_e(B, C, W), cc_n(P), cc_n(Q), cc_n(R), D is D1 + W.

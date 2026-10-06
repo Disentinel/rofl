@@ -1,0 +1,76 @@
+-- examples/checks/agg-rank-tuple-data.rofl — THE RANK-OVER-A-TUPLE DATASET,
+-- shared by the agg_rank_tuple_* worlds (facts/checks.rofl; docs/aggregates.md,
+-- "Rank over a tuple, as built"). The expected places are derived by hand in
+-- agg-rank-tuple-eval-check.rofl.
+--
+-- rank(S1, S2 ; K1, desc(K2) : body) is the position of the tuple (S1, S2)
+-- from 1 among the DISTINCT tuples (K1, K2) of the body, ordered by K1
+-- ascending, then K2 descending; asc(..) is the default. A key is an Int, an
+-- atom or a string: Int before atom before string, Ints by value, atoms and
+-- strings by their text. Two members with one tuple are one member.
+--
+-- ga: scores with ties, so the second key decides. gz: negatives and a zero.
+-- gm: keys of every kind in one position. gs: strings by their text, an atom
+-- and a string spelled alike, and two strings that one order has the other
+-- way about (U+FF5E is one UTF-16 unit above the surrogate pair of U+1F600).
+-- gd: two members of one tuple and a one-key tuple. gx: a key that is no
+-- Int, atom or string.
+edb(rk_score).
+edb(rk_mix).
+edb(rk_dup).
+edb(rk_bad).
+edb(rk_ask).
+edb(rk_group).
+rk_group(ga).
+rk_group(gz).
+rk_group(gm).
+rk_group(gs).
+rk_group(gd).
+rk_group(gx).
+rk_group(gnone).
+rk_score(ga, ann, 7).
+rk_score(ga, bob, 7).
+rk_score(ga, cy, 9).
+rk_score(ga, dee, 4).
+rk_score(ga, eve, 7).
+rk_score(gz, p, -3).
+rk_score(gz, q, 0).
+rk_score(gz, r, -3).
+rk_mix(gm, 1, "b").
+rk_mix(gm, 1, a).
+rk_mix(gm, 1, 2).
+rk_mix(gm, 2, 1).
+rk_mix(gm, 2, "a").
+rk_mix(gs, "b", 0).
+rk_mix(gs, "B", 0).
+rk_mix(gs, "ab", 0).
+rk_mix(gs, "", 0).
+rk_mix(gs, foo, 0).
+rk_mix(gs, "foo", 0).
+rk_mix(gs, "～", 0).
+rk_mix(gs, "😀", 0).
+rk_dup(gd, n1, 3).
+rk_dup(gd, n2, 3).
+rk_dup(gd, n3, 5).
+rk_bad(gx, n1, f(1)).
+rk_bad(gx, n2, 4).
+rk_ask(ga, 7, bob).
+rk_ask(ga, 7, zed).
+rk_ask(ga, 8, bob).
+rk_ask(gnone, 1, x).
+rk_ask(ga, f(1), bob).
+
+-- the rules every agg_rank_tuple_* world reads. rt_place: the place by score,
+-- the most first, then by name. rt_asc, rt_desc and rt_bare: the directions.
+-- rt_mixaa and rt_mixad: keys of every kind. rt_dup: one key. rt_ask: a
+-- subject asked for. rt_bad: a key that is no key.
+rt_place(G, N, R)    :- rk_score(G, N, S), R is rank(S, N ; desc(S2), N2 : rk_score(G, N2, S2)).
+rt_asc(G, N, R)      :- rk_score(G, N, S), R is rank(S, N ; asc(S2), N2 : rk_score(G, N2, S2)).
+rt_desc(G, N, R)     :- rk_score(G, N, S), R is rank(S, N ; desc(S2), desc(N2) : rk_score(G, N2, S2)).
+rt_bare(G, N, R)     :- rk_score(G, N, S), R is rank(S, N ; S2, N2 : rk_score(G, N2, S2)).
+rt_mixaa(G, A, B, R) :- rk_mix(G, A, B), R is rank(A, B ; A2, B2 : rk_mix(G, A2, B2)).
+rt_mixad(G, A, B, R) :- rk_mix(G, A, B), R is rank(A, B ; A2, desc(B2) : rk_mix(G, A2, B2)).
+rt_dup(G, N, R)      :- rk_dup(G, N, S), R is rank(S ; S2 : rk_dup(G, _, S2)).
+rt_ask(G, S, N, R)   :- rk_ask(G, S, N), R is rank(S, N ; desc(S2), N2 : rk_score(G, N2, S2)).
+rt_bad(G, R)         :- rk_group(G), R is rank(1, n1 ; desc(S2), N2 : rk_bad(G, N2, S2)).
+

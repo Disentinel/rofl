@@ -1,0 +1,3 @@
+-- expect-refusal: no closing dot
+-- a semicolon outside an aggregate separates nothing
+sxr_semicolon(a) ; sxr_semicolon(b).

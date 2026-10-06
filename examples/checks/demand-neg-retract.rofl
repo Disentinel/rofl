@@ -1,0 +1,31 @@
+-- examples/checks/demand-neg-retract.rofl — demand_neg_retract: the retraction half of
+-- f_a_demand_premise_unfolds_a_negation_before_its_round. After `--retract
+-- dt_z(1)`, dt_g(1) holds, so dt_h(1, 1) and what reads it are gone (dt_h keeps
+-- an open answer, so it is unfolded at each call; a closed one is read from the store). The rules the
+-- retraction fires again over a demand premise that unfolds `not dt_g(X)` fire
+-- at their level; fired first, before dt_g is derived again, they kept dt_h,
+-- dt_r and dt_r2 of 1 and 2.
+edb(dt_z). edb(dt_b). edb(dt_q). edb(dt_c).
+dt_b(1). dt_b(2). dt_b(3). dt_q(3).
+dt_z(1).
+dt_c(1). dt_c(2). dt_c(3).
+dt_g(X)    :- dt_c(X), not dt_z(X).
+dt_u(X, Y) :- dt_q(X).
+dt_h(X, Y) :- dt_b(X), not dt_g(X).
+dt_h(X, Y) :- dt_u(X, X).
+dt_d(X)    :- dt_h(X, X).
+dt_r(X)    :- dt_b(X), dt_h(X, X).
+dt_r2(X)   :- dt_b(X), dt_d(X).
+dt_nr(X)   :- dt_b(X), not dt_r2(X).
+
+dt_wrong(X)  :- dt_r(X), dt_g(X), not dt_q(X).
+dt_wrong(X)  :- dt_r2(X), dt_g(X), not dt_q(X).
+dt_wrong(X)  :- dt_b(X), dt_h(X, X), dt_g(X), not dt_q(X).
+dt_missed(X) :- dt_q(X), not dt_r2(X).
+dt_missed(X) :- dt_b(X), dt_g(X), not dt_q(X), not dt_nr(X).
+alarm(dt_wrong).
+alarm(dt_missed).
+
+-- expect-no-row: dt_h[main](1,1)
+-- expect-no-row: dt_r2[main](2)
+-- expect-row: dt_nr[main](1) tick drv support=1

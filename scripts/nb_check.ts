@@ -3,7 +3,9 @@
 import { chmodSync, existsSync, readdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
+import * as vm from 'node:vm';
 import type { NbLine } from '../notebook/kernel.ts';
+import { Vocabulary } from '../src/say.ts';
 import { check, cli, fake, good, has, is, linked, mutate, NB, planted, put, report, REVIEW, ROOT, smallJs, spinning, spy, tmp, verdict, withCell, withNatural, type Out } from './nb_lib.ts';
 
 const t0 = performance.now();
@@ -102,6 +104,8 @@ const partial = planted('tr-part', 'review.rofl.md', (t) => `${withNatural(t)}\n
 const none = planted('tr-none', 'review.rofl.md', (t) => t);
 const once = path.join(tmp, 'once.sh'), count = path.join(tmp, 'once.count');
 writeFileSync(once, `#!/bin/sh\ncat > /dev/null\necho x >> ${count}\n[ $(wc -l < ${count}) -gt 1 ] && exec sleep 30\ncat <<'EOF'\n\`\`\`rofl\nA module M is unowned if some change touches M, unless some team owns M.\n\nnever M is unowned\n\`\`\`\nEOF\n`); chmodSync(once, 0o755);
+const SIDES = path.join(ROOT, 'examples/vscode/side-effects.rofl.md');
+const whys = (o: Out) => (JSON.parse(o.stdout ?? '{}').cells ?? []).flatMap((c: { lines: NbLine[] }) => c.lines).filter((l: NbLine) => l.kind === 'why') as NbLine[];
 // every run a check reads, started only when a check chosen reads it; the three over the self notebook's size first, so that each is the first of a shard
 const RUNS: Record<string, () => Promise<Out>> = {
   self: () => cli([path.join(NB, 'self.rofl.md'), '--json'], { ROFL_NB_CLAUDE: spy }),
@@ -134,6 +138,22 @@ const RUNS: Record<string, () => Promise<Out>> = {
   xdirFails: () => cli([xdirRed]),
   cjs: () => cli([path.join(NB, 'cjs.rofl.md')]),
   cjsBlind: () => cli([cjsLost]),
+  external: () => cli([path.join(NB, 'external.rofl.md')]),
+  decorated: () => cli([path.join(NB, 'decorated.rofl.md')]),
+  scoped: () => cli([path.join(NB, 'scoped.rofl.md')]),
+  scopedV8: async (): Promise<Out> => {
+    const ran = await cli([path.join(NB, 'scoped.rofl.md'), '--json', '--all']);
+    const model: Record<string, Set<string>> = {};
+    for (const c of JSON.parse(ran.stdout ?? '{}').cells ?? []) for (const l of c.lines) for (const a of l.answers) {
+      const m = /^seen\("(\w+)", "\w+", (.+)\)$/.exec(a.literal);
+      if (m) (model[m[1]] ??= new Set()).add(m[2]);
+    }
+    const observed: string[] = [];
+    const record = (v: unknown, stack: string) => observed.push(`${/at (\w+) /.exec(stack.split('\n')[2])?.[1]}:${typeof v === 'string' ? JSON.stringify(v) : String(v)}`);
+    vm.runInNewContext(readFileSync(path.join(NB, 'scoped/assign.js'), 'utf8'), { __seen: record });
+    const missing = [...new Set(observed)].filter((o) => !model[o.slice(0, o.indexOf(':'))]?.has(o.slice(o.indexOf(':') + 1)));
+    return { code: 0, out: `V8 observed ${new Set(observed).size} values over ${Object.keys(model).length} functions the model answers for; missing from the model: ${JSON.stringify(missing)}`, stdout: '' };
+  },
   climb: () => cli([runaway], { ROFL_NB_LIMIT: '3' }),
   heavy: () => cli([runaway], { ROFL_NB_LIMIT: '100', ROFL_NB_MEMORY: '0.3' }),
   nmWorld: () => cli([misspelt]),
@@ -141,8 +161,11 @@ const RUNS: Record<string, () => Promise<Out>> = {
   three: () => cli([lines3]),
   part: () => cli(['translate', partial], { ROFL_NB_CLAUDE: once, ROFL_NB_MODEL_TIMEOUT: '3' }),
   nothing: () => cli(['translate', none]),
+  sides: () => cli([SIDES]),
+  sidesAll: () => cli([SIDES, '--all']),
+  sidesJson: () => cli([SIDES, '--json']),
 };
-let review!: Out, small!: Out, self!: Out, reviewJson!: Out, fails!: Out, notRead!: Out, rewrite!: Out, extended!: Out, collided!: Out, recurse!: Out, red!: Out, blind!: Out, unpop!: Out, early!: Out, nat!: Out, trOk!: Out, trBad!: Out, trGone!: Out, unparsedOut!: Out, fr!: Out, badRead!: Out, trSlow!: Out, spat!: Out, ex!: Out, wo!: Out, hol!: Out, xdir!: Out, xdirFails!: Out, cjs!: Out, cjsBlind!: Out, climb!: Out, heavy!: Out, nmWorld!: Out, out!: Out, three!: Out, part!: Out, nothing!: Out;
+let review!: Out, small!: Out, self!: Out, reviewJson!: Out, fails!: Out, notRead!: Out, rewrite!: Out, extended!: Out, collided!: Out, recurse!: Out, red!: Out, blind!: Out, unpop!: Out, early!: Out, nat!: Out, trOk!: Out, trBad!: Out, trGone!: Out, unparsedOut!: Out, fr!: Out, badRead!: Out, trSlow!: Out, spat!: Out, ex!: Out, wo!: Out, hol!: Out, xdir!: Out, xdirFails!: Out, cjs!: Out, cjsBlind!: Out, external!: Out, decorated!: Out, scoped!: Out, scopedV8!: Out, climb!: Out, heavy!: Out, nmWorld!: Out, out!: Out, three!: Out, part!: Out, nothing!: Out, sides!: Out, sidesAll!: Out, sidesJson!: Out;
 type Test = { name: string; needs: string[]; ok: () => boolean; o?: () => Out };
 const TESTS: Test[] = [];
 /** A check, by the runs it reads; it is judged once they are done. */
@@ -153,7 +176,7 @@ test('review: exit 0 and its answers', ['review'], () => is(review, 0) && has(re
 test('review: whynot answers', ['review'], () => has(review, 'it stops at: not `c2` is blocked by some team, and `c2` is blocked by `platform` does'), () => review);
 test('small: exit 0, an answer at its file:line', ['small'], () => is(small, 0) && has(small, '[load() at small.js:7] is unawaited') && has(small, 'never C recurses  ->  holds'), () => small);
 /** The rows a run could not see, and those outside the boundary I6 step 4 names: imports into the unscanned engine, reader, scanner and proof folder, and calls on keys pinned here. */
-const BOUNDARY = [/"(\.\.\/src\/|\.\.\/scripts\/|\.\.\/scanners\/|\.\/fold\.ts)/, /^unseen\(\w+, "(get|fork|assert)"\)$/];
+const BOUNDARY = [/"(\.\.\/src\/|\.\.\/scripts\/|\.\.\/scanners\/|\.\/fold\.ts|\.\/chain\.ts|\.\.\/playground\/chain\.ts)/, /^unseen\(\w+, "(get|fork|assert)"\)$/];
 const unseen = (o: Out) => { const r = JSON.parse(o.stdout ?? ''); return r.cells.flatMap((c: { lines: { unsure?: { answers: { literal: string; sentence: string }[] } }[] }) => c.lines.flatMap((l) => l.unsure?.answers ?? [])) as { literal: string; sentence: string }[]; };
 const outside = (o: Out) => { try { return unseen(o).filter((a) => !BOUNDARY.some((b) => b.test(a.literal))); } catch { return [{ literal: 'no JSON', sentence: o.out.slice(-300) }]; } };
 test('self: exit 3 (the gate): every never holds, some as far as it sees', ['self'], () => is(self, 3) && unseen(self).length > 0, () => self);
@@ -183,6 +206,10 @@ test('I1 an untranslated natural cell is named, not dropped', ['nat'], () => is(
 test('xdir: a call reaches across directories, through a barrel and a TypeScript `.js` specifier', ['xdir'], () => is(xdir, 0) && has(xdir, '? handler(F, N)  ->  3 answers') && has(xdir, 'never undispatched(N)  ->  holds') && has(xdir, 'calls [function keys() at xdir/lib/store.ts:3]'), () => xdir);
 test('  and a handler the barrel stops re-exporting is named', ['xdirFails'], () => is(xdirFails, 1) && has(xdirFails, 'never undispatched(N)  ->  FAILS · 1') && has(xdirFails, 'undispatched("handleList")'), () => xdirFails);
 test('cjs: calls and depends cross files through require, module.exports and exports.a', ['cjs'], () => is(cjs, 0) && has(cjs, 'never unreached(N)  ->  holds') && has(cjs, '"cjs/index.js" depends on "cjs/format.js"') && has(cjs, '"cjs/index.js" depends on "cjs/package.json"') && !has(cjs, 'not resolved'), () => cjs);
+test('external: a value from a module outside the corpus is one object, written through one file and read back through another', ['external'], () => is(external, 0) && has(external, 'read_back([http.get() at external/svc/bat/bat_wbm.js:10], 8080)') && has(external, 'never read_back(C, 9090)  ->  holds') && has(external, 'never resolved_external(F)  ->  holds') && has(external, 'never local_made_external(N)  ->  holds') && has(external, '"node:fs" is an external module'), () => external);
+test('decorated: what a decorator calls and does is the class\'s, never the decorated method\'s: no call edge, no effect row, no recursion through it', ['decorated'], () => is(decorated, 0) && has(decorated, 'never eff_calls_from("stock", "mark")  ->  holds') && has(decorated, 'never latent_of("stock", L, H)  ->  holds') && has(decorated, 'never decorator_div(C)  ->  holds') && has(decorated, 'root_calls("mark")'), () => decorated);
+test('scoped: an assignment reaches the readers of its own binding and what no binder owns is a queue', ['scoped'], () => is(scoped, 0) && has(scoped, 'never seen("sibOne", "v", 4)  ->  holds') && has(scoped, 'never seen("shadowing", "shared", 0)  ->  holds') && has(scoped, 'never seen("sum", "t", "b")  ->  holds') && has(scoped, 'seen("bare", "b", 8)') && has(scoped, '? assign_unscoped[flow](A)  ->  2 answers'), () => scoped);
+test('scoped: every value V8 observes at a read is in the model\'s may-set; the one miss is the concatenation `t += "b"`', ['scopedV8'], () => has(scopedV8, 'missing from the model: ["sum:\\"ab\\""]'), () => scopedV8);
 test('I3 a relative require that resolves to no file makes a holding never blind, exit 3, and the head names it', ['cjsBlind'], () => is(cjsBlind, 3) && has(cjsBlind, 'note: 1 relative import or require was not resolved') && /cjs\/cart\.js:\d+ "\.\/missing"/.test(cjsBlind.out) && has(cjsBlind, 'never unreached(N)  ->  holds as far as it sees · 1 relative import or require was not resolved'), () => cjsBlind);
 test('I1 every directive line of review is answered', ['reviewJson'], () => (() => { const r = JSON.parse(reviewJson.stdout ?? ''); const asked = (reviewText.match(/^(\?|never|why|whynot|unsure) /gm) ?? []).length; const said = r.cells.flatMap((c: { lines: { unsure?: unknown }[] }) => c.lines.flatMap((l) => l.unsure ? [l, l] : [l])).length; return asked === said && asked > 0; })(), () => reviewJson);
 test('I4 a run writes nothing into the file', ['review', 'self', 'nat'], () => before(REVIEW) === reviewText && before(path.join(NB, 'self.rofl.md')) === selfText && before(natural) === naturalText);
@@ -197,6 +224,34 @@ test('E1 a legible proof keeps every line and every fact of the engine\'s', ['re
   return raw.length > 3 && raw.length === nice.length && raw.every((x: string, k: number) => !/\[axiom\]$/.test(x) || nice[k].endsWith('(given)') && nice[k].includes(x.replace(/ \[axiom\]$/, '').trim()))
     && !/@tick|\?_\$|\?\d|#\d|\[main\]/.test(l?.why ?? '');
 })(), () => reviewJson);
+test('W1 a why of a value says first the steps the value took, one line each, where it changes file, and the whole proof is --all', ['sides'], () => is(sides, 0)
+  && has(sides, `why side_effect_value(nd100d8f9c1968a85_25, fs_mutation, "/tmp/settings.json")
+    the value's steps, from where it is written:
+      mini/node/main.ts:14  "/tmp/settings.json"  the literal
+      mini/node/main.ts:14  writeAtomic()         argument 0 of function writeAtomic() at mini/node/pfs.ts:4
+      mini/node/pfs.ts:5    path                  across files: the parameter path
+      mini/node/pfs.ts:5    fs.writeFileSync()    argument 0 at the answer
+    the proof:
+    side_effect_value([fs.writeFileSync() at mini/node/pfs.ts:5],fs_mutation,"/tmp/settings.json"), because`)
+  && has(sides, `      mini/common/channels.ts:2  8080             the literal
+      mini/common/channels.ts:2  DEFAULT_PORT     exported
+      mini/node/server.ts:11     DEFAULT_PORT     across files: imported from mini/common/channels.ts
+      mini/node/server.ts:11     listenOn()       argument 0 of function listenOn() at mini/node/server.ts:4
+      mini/node/server.ts:6      port             the parameter port
+      mini/node/server.ts:6      server.listen()  argument 0 at the answer`)
+  && (sides.stdout?.match(/\(the whole proof: --all\)/g) ?? []).length === 3, () => sides);
+test('W2 the proof under a chain counts its side conditions instead of writing them and names a node by its code and place', ['sidesJson'], () => (() => {
+  const ws = whys(sidesJson);
+  return ws.length === 3 && ws.every((l) => l.chain!.length >= 3 && l.brief!.split('\n').length < l.why!.split('\n').length && /side conditions? holds?/.test(l.brief!)
+    && !/\(nothing says so\)|n[0-9a-f]{8,16}_\d+/.test(l.brief!) && /\(nothing says so\)/.test(l.why!));
+})(), () => sidesJson);
+test('W3 --all prints each why whole, the proof as it was before the chain, and no chain', ['sidesAll', 'sidesJson'], () => is(sidesAll, 0) && !has(sidesAll, "the value's steps")
+  && whys(sidesJson).every((l) => sidesAll.stdout!.includes(`: ${l.text}\n${l.why!.split('\n').map((x) => `    ${x}`).join('\n')}\n`)), () => sidesAll);
+test('W4 a phrase that names an argument the fact has not is passed over, not a crash of the proof (sig(assigned) counts from 1)', [], () => {
+  const v = new Vocabulary(); v.addText(['facts/phrases.rofl', 'facts/js-phrases.rofl'].map((f) => readFileSync(path.join(ROOT, f), 'utf8')).join('\n'));
+  const rule = 'rule r1: param_assigned[flow](?F,?Name)@now :- assign_param[flow](?A,?F)@now, assigned[code](?A,?_$0,?Name,?_$1,?_$2)@now';
+  try { return v.sayAll(rule).includes('assigned[code](?A,?_$0,?Name,?_$1,?_$2)'); } catch { return false; }
+});
 test('E2 a relation a read world derives answers in the sentence the notebook gives it', ['spat'], () => is(spat, 1) && has(spat, 'never Ch is alone on D at S  ->  FAILS · 4') && has(spat, '- `kit` is alone on `thu` at 1060'), () => spat);
 test('E3 an excise in the notebook moves the lines the same as the notebook over a world without the fact', ['ex', 'wo'], () => (() => {
   const lines = (o: Out) => JSON.parse(o.stdout ?? '').cells.flatMap((c: { lines: NbLine[] }) => c.lines) as NbLine[];
@@ -237,7 +292,7 @@ test('U6 a code file that did not parse is named on the verdict line', ['out'], 
 // `--shards N` each part's checks, that they hold every check once, and that a part dropping one is seen to
 const arg = (flag: string) => { const i = process.argv.indexOf(flag); return i >= 0 ? process.argv[i + 1] : undefined; };
 const order = Object.keys(RUNS);
-const home = (t: Test, n: number) => Math.min(...t.needs.map((r) => order.indexOf(r))) % n;
+const home = (t: Test, n: number) => (t.needs.length ? Math.min(...t.needs.map((r) => order.indexOf(r))) : 0) % n;
 const parts = (n: number, at = home) => Array.from({ length: n }, (_, i) => TESTS.filter((t) => at(t, n) === i));
 const whole = (ps: Test[][]) => ps.flat().length === TESTS.length && new Set(ps.flat()).size === TESTS.length;
 const shards = Number(arg('--shards') ?? 0), shard = arg('--shard'), only = arg('--only');
@@ -256,7 +311,7 @@ if (shard) {
 }
 if (only) chosen = chosen.filter((t) => new RegExp(only).test(t.name));
 const got: Record<string, Out> = Object.fromEntries(await Promise.all([...new Set(chosen.flatMap((t) => t.needs))].map(async (r) => [r, await RUNS[r]()])));
-({ review, small, self, reviewJson, fails, notRead, rewrite, extended, collided, recurse, red, blind, unpop, early, nat, trOk, trBad, trGone, unparsedOut, fr, badRead, trSlow, spat, ex, wo, hol, xdir, xdirFails, cjs, cjsBlind, climb, heavy, nmWorld, out, three, part, nothing } = got);
+({ review, small, self, reviewJson, fails, notRead, rewrite, extended, collided, recurse, red, blind, unpop, early, nat, trOk, trBad, trGone, unparsedOut, fr, badRead, trSlow, spat, ex, wo, hol, xdir, xdirFails, cjs, cjsBlind, external, decorated, scoped, scopedV8, climb, heavy, nmWorld, out, three, part, nothing, sides, sidesAll, sidesJson } = got);
 for (const t of chosen) {
   let ok = false, o: Out | undefined;
   try { ok = t.ok(); o = t.o?.(); } catch (e) { o = { code: -1, out: `the check threw, a run it reads not named among its needs? ${(e as Error).stack}` }; }

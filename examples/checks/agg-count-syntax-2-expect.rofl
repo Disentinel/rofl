@@ -1,0 +1,57 @@
+-- examples/checks/agg-count-syntax-2-expect.rofl — agg_count_syntax. The
+-- `$agg` tree each form of agg-count-syntax-1-forms.rofl must reflect to,
+-- in both directions; the same grammar in ring 1 (examples/ring1) reading
+-- two of them from `src`, with nothing stray and nothing uncovered; and no
+-- refused form reaching the world.
+sxc_want(sxc_one, $agg(count, $var("N"), $cons($var("B"), $nil), $nil,
+  $cons($lit(sxc_b, main, $cons($var("B"), $cons($var("_$0"), $nil)), $now), $nil))).
+sxc_want(sxc_two, $agg(count, $var("N"), $cons($var("B"), $cons($var("C"), $nil)), $nil,
+  $cons($lit(sxc_b, main, $cons($var("B"), $cons($var("C"), $nil)), $now), $nil))).
+sxc_want(sxc_corr, $agg(count, $var("N"), $cons($var("B"), $nil), $nil,
+  $cons($lit(sxc_b, main, $cons($var("B"), $cons($var("C"), $nil)), $now), $nil))).
+sxc_want(sxc_group, $agg(count, $var("N"), $cons($var("B"), $nil), $nil,
+  $cons($lit(sxc_b, main, $cons($var("B"), $cons($var("C"), $nil)), $now), $nil))).
+sxc_want(sxc_book, $agg(count, $var("N"), $cons($var("B"), $nil), $nil,
+  $cons($lit(sxc_b, ledger, $cons($var("B"), $cons($var("_$0"), $nil)), $now), $nil))).
+sxc_want(sxc_bi, $agg(count, $var("N"), $cons($var("B"), $nil), $nil,
+  $cons($lit(sxc_b, main, $cons($var("B"), $cons($var("_$0"), $nil)), $now),
+  $cons($builtin(">", $cons($var("B"), $cons(1, $nil))), $nil)))).
+sxc_want(sxc_neg, $agg(count, $var("N"), $cons($var("B"), $nil), $nil,
+  $cons($lit(sxc_b, main, $cons($var("B"), $cons($var("C"), $nil)), $now),
+  $cons($not($lit(sxc_c, main, $cons($var("B"), $nil), $now)), $nil)))).
+sxc_mine(H)    :- sxc_want(H, _).
+sxc_has(H, T)  :- sxc_mine(H), concludes[$kernel](R, H), premise_lit[$kernel](R, _, T), T = $agg(_, _, _, _, _).
+tree_missing(H, T) :- sxc_want(H, T), not sxc_has(H, T).
+tree_extra(H, T)   :- sxc_has(H, T), not sxc_want(H, T).
+alarm(tree_missing).
+alarm(tree_extra).
+
+-- RING 1 reads the same grammar (examples/ring1/ring1.rofl, loaded before
+-- this file): the source below parses to these trees and to nothing else.
+src("v(C, N) :- c(C), N is count(B : b(B, C)).\nw(N) :- N is count(B, D : b(B, D), not x(D)).").
+r1c_want($lit(v, $bare, $cons($var("C"), $cons($var("N"), $nil)), $now),
+  $cons($lit(c, $bare, $cons($var("C"), $nil), $now),
+  $cons($agg(count, $var("N"), $cons($var("B"), $nil), $nil,
+    $cons($lit(b, $bare, $cons($var("B"), $cons($var("C"), $nil)), $now), $nil)), $nil))).
+r1c_want($lit(w, $bare, $cons($var("N"), $nil), $now),
+  $cons($agg(count, $var("N"), $cons($var("B"), $cons($var("D"), $nil)), $nil,
+    $cons($lit(b, $bare, $cons($var("B"), $cons($var("D"), $nil)), $now),
+    $cons($not($lit(x, $bare, $cons($var("D"), $nil), $now)), $nil))), $nil)).
+r1c_parsed(H, B)  :- parsed(_, _, H, B).
+ring1_missing(H)  :- r1c_want(H, B), not r1c_parsed(H, B).
+ring1_extra(H)    :- r1c_parsed(H, B), not r1c_want(H, B).
+alarm(ring1_missing).
+alarm(ring1_extra).
+alarm(stray).
+alarm(uncovered).
+alarm(stuck_at).
+
+-- the forms that must not parse
+sxc_bad(sxr_empty).
+sxc_bad(sxr_unclosed).
+sxc_bad(sxr_expression).
+sxc_bad(sxr_result).
+sxc_bad(sxr_semicolon).
+sxc_bad(sxr_nocolon).
+bad_accepted(R) :- sxc_bad(R), concludes[$kernel](_, R).
+alarm(bad_accepted).

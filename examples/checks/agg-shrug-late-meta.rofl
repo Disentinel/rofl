@@ -1,0 +1,11 @@
+-- expect-refusal: unknown is read under not or in an aggregate of
+-- examples/checks/agg-shrug-late-meta.rofl — `unknown(A)` of an A a rule that
+-- reads unknown left out arrives after the negation that could read it fired;
+-- refused, in both engines, and never answered as if it were no.
+edb(slm_pos).
+edb(slm_big).
+slm_pos(a). slm_pos(c).
+slm_big(1152921504606846975).
+slm_w(c) :- slm_big(B), Z is B + 1, Z > 0.
+slm_a(X) :- slm_pos(X), not unknown(slm_w(X)).
+slm_b(X) :- slm_pos(X), not unknown(slm_a(X)).

@@ -1,0 +1,27 @@
+-- examples/checks/agg-rederived-1-given.rofl — A FACT THAT IS GIVEN AND ALSO DERIVED SAYS SO AFTER EVERY EVALUATION.
+--
+-- `seen(a)` is asserted and a rule concludes it too. The firing is recorded
+-- with a `derived_by` row, and the two must stand or go together. Until
+-- 2026-09-28 clearing the derived layer dropped the row and kept the firing on
+-- the base fact, so the next evaluation found the firing "not new" and never
+-- wrote the row again. The facts/agg.rofl ledger is what first showed it:
+-- `ignored(...)` is asserted and re-derived from `claim(ignored, ...)`.
+--
+-- TWO FILES, NUMBERED, because the TypeScript host evaluates on every `load`
+-- and a world's files are loaded in sorted order: this one is evaluated alone
+-- first, and agg-rederived-2-read.rofl, loaded after it, makes the second
+-- evaluation and reads the rows it leaves. The other order checks nothing.
+--
+-- `seen(b)` is derived through `relayed`, which is derived too, so the old
+-- firing on it also cited a fact the clearing removed.
+
+edb(given).
+edb(seen).
+given(a).
+given(b).
+seen(a).
+seen(b).
+
+seen(X)    :- given(X), X = a.
+relayed(X) :- given(X), X = b.
+seen(X)    :- relayed(X).

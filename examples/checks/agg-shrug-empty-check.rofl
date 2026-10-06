@@ -1,0 +1,20 @@
+-- examples/checks/agg-shrug-empty-check.rofl — agg_empty_shrug over
+-- agg-shrug-agg-data.rofl: a group whose only member a hole left out is not
+-- empty for certain: its count and sum are shrugs, never 0; a group empty for
+-- certain (s) is 0; and `not` over the shrug is a shrug too.
+sae_n(G, N) :- sa_g(G), N is count(K : sa_x(G, K, _)).
+sae_s(G, S) :- sa_g(G), S is sum(Y ; K : sa_x(G, K, Y)).
+sae_zero(G) :- sae_n(G, 0).
+sae_some(G) :- sa_g(G), not sae_zero(G).
+-- expect-row: sae_n[main](s,0)
+-- expect-row: sae_s[main](s,0)
+-- expect-row: sae_zero[main](s)
+-- expect-row: shrug[$kernel](sae_n(r,$unknown_value),inherited,from($cons($rule(r1f3a2f99),$nil)))
+-- expect-row: shrug[$kernel](sae_s(r,$unknown_value),inherited,from($cons($rule(r1f3a2f99),$nil)))
+-- expect-row: shrug[$kernel](sae_zero(r),inherited,from($cons($rule(r1f3a2f99),$nil)))
+-- expect-row: shrug[$kernel](sae_some(r),inherited,from($cons($rule(r1f3a2f99),$nil)))
+-- expect-no-row: sae_n[main](r,0)
+-- expect-no-row: sae_s[main](r,0)
+-- expect-no-row: sae_zero[main](r)
+-- expect-no-row: sae_some[main](r)
+-- expect-row: sae_some[main](p)

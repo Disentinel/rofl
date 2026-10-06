@@ -1,0 +1,58 @@
+-- examples/checks/demand-fixpoint-rows.rofl — demand_fixpoint_rows: THE ROWS AN OPEN
+-- ANSWER HOLDS ARE GIVEN BACK when the call that kept it ends, or when the table
+-- that keeps it goes: the space wall counts what is held, not what was ever held
+-- (f_the_space_wall_counted_open_answers_already_dropped).
+--
+-- dk_p leaves W open, so it is answered on demand, and a call of it from n0 round a
+-- ring of forty unfolds a call from every node, each keeping its open answers.
+-- Under 4000 rows (check_opt) the evaluation holds at most 3362 at once and
+-- finishes; counting every answer any call ever kept, it needed 5741 and walled
+-- with no answer.
+edb(dk_e). edb(dk_dom).
+dk_dom(n0). dk_dom(n1).
+dk_e(n0, n1).
+dk_e(n1, n2).
+dk_e(n2, n3).
+dk_e(n3, n4).
+dk_e(n4, n5).
+dk_e(n5, n6).
+dk_e(n6, n7).
+dk_e(n7, n8).
+dk_e(n8, n9).
+dk_e(n9, n10).
+dk_e(n10, n11).
+dk_e(n11, n12).
+dk_e(n12, n13).
+dk_e(n13, n14).
+dk_e(n14, n15).
+dk_e(n15, n16).
+dk_e(n16, n17).
+dk_e(n17, n18).
+dk_e(n18, n19).
+dk_e(n19, n20).
+dk_e(n20, n21).
+dk_e(n21, n22).
+dk_e(n22, n23).
+dk_e(n23, n24).
+dk_e(n24, n25).
+dk_e(n25, n26).
+dk_e(n26, n27).
+dk_e(n27, n28).
+dk_e(n28, n29).
+dk_e(n29, n30).
+dk_e(n30, n31).
+dk_e(n31, n32).
+dk_e(n32, n33).
+dk_e(n33, n34).
+dk_e(n34, n35).
+dk_e(n35, n36).
+dk_e(n36, n37).
+dk_e(n37, n38).
+dk_e(n38, n39).
+dk_e(n39, n0).
+dk_p(X, Y, W) :- dk_e(X, Y).
+dk_p(X, Z, W) :- dk_e(X, Y), dk_p(Y, Z, W).
+dk_r(Y, W) :- dk_p(n0, Y, W), dk_dom(W).
+
+-- expect-row: dk_r[main](n39,n1) tick drv support=1
+-- expect-no-row: shrug[$kernel](

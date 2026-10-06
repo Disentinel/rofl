@@ -26,6 +26,9 @@
 -- +kernel-policy 64, +the ring 1 grammar 248. Agree on every one.
 rule_reads(A, B) :- concludes(R, A), premise_pos(R, B).
 rule_reads(A, B) :- concludes(R, A), premise_neg(R, B).
+-- an aggregate's inner relations; the host (TypeScript only) seeds
+-- `premise_agg` into this store once w_agg_ts lets that engine load one
+rule_reads(A, B) :- concludes(R, A), premise_agg(R, B).
 
 -- EVERY RELATION THE RULES MENTION, on either side. `planReuse` builds this as
 -- `rels` while it walks; here it falls out of what is already derived.

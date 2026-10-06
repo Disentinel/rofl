@@ -107,6 +107,8 @@ kind_noun(private_member_kind, "private member").
 kind_noun(this_binds_kind, "this-binder").
 kind_noun(block_scope_kind, "block scope").
 kind_noun(call_like_v, "invocation").
+kind_noun(assign_value_op, "value assignment operator").
+kind_noun(external_shape, "external shape").
 kind_noun(call_kind, "call").
 
 -- a kind noun that names a SET of kinds, not one kind: the guard is `ast_node(X, K, _, _), set(K)`
@@ -160,6 +162,25 @@ sig(tdz_cand, "is_a_dead_zone_candidate_of(node E, declarator D)").
 sig(tdz_deferred, "is_deferred_for(node E, declarator D)").
 sig(tdz_at, "is_in_the_dead_zone_of(node E, declarator D)").
 sig(assigns, "is_assigned(name Name, node Src, in file File)").
+sig(assigned, "is_written_by(assignment A, target T:2, name Name:3, value node Src:4, in file File:5)").
+sig(assign_binder, "is_written_into(assignment A, declarator D)").
+sig(assign_param, "is_written_into_a_parameter_of(assignment A, function F)").
+sig(assign_dead, "is_written_in_the_dead_zone(assignment A)").
+sig(assign_decided, "has_a_decided_target(assignment A)").
+sig(assign_unscoped, "has_no_decided_target(assignment A)").
+sig(assign_reaches_unscoped, "may_hold_by_name_alone(node E, what node Src holds)").
+sig(bound_read, "is_claimed_by_a_binder_or_parameter(node E)").
+sig(bare_binder, "declares_without_a_value(declarator D, name Name, in file File)").
+sig(has_init, "has_an_initialiser(declarator D)").
+sig(type_import, "imports_types_only(node X)").
+sig(external_site, "is_an_external_site(node I, of module Spec)").
+sig(external_module, "is_an_external_module(module Spec)").
+sig(external_value, "comes_out_of(node N, module Spec)").
+sig(external_import, "imports_from_outside(node Sp, name Local, from module Spec, in file File)").
+sig(external_destructured, "destructures_from_outside(declarator D, at node Prop, name Local, in file File)").
+sig(callback_param, "is_called_back_with(node P, in function F, from module Spec)").
+sig(ext_call, "is_an_external_call_of(invocation C, module Spec)").
+sig(ext_member, "is_an_external_member_of(member access M, module Spec)").
 sig(spread_arg, "has_a_spread(invocation C, at index I)").
 sig(after_spread, "is_past_a_spread(invocation C, at index I)").
 sig(arg_at, "passes(invocation C, node A:2, at index I:1)").
@@ -250,7 +271,6 @@ sig(delegates, "delegates_to(function Outer, function Inner)").
 sig(nearest_v, "is_nearest_to(function F, node R)").
 sig(returns, "returns(function F, node E)").
 sig(yields, "yields(function F, node E)").
-sig(seq_later, "has_a_later_expression_than(sequence E, index I)").
 sig(resolves, "resolves_to(call C, function F)").
 sig(decorates, "is_decorated_by(node Owner, node D)").
 sig(sees_binder, "sees(node E, declarator D)").
@@ -484,8 +504,6 @@ sig(ctor_method, "is_a_constructor(method F)").
 sig(class_has_id, "has_an_id(class expression CD)").
 sig(anon_class, "is_anonymous(class expression CD)").
 sig(in_own_decorator, "has_its_decorator_at(function F, node C)").
-sig(encloses, "encloses_the_site(function F, node C)").
-sig(closer, "is_outranked_at(function F, node C)").
 sig(nearest_fn, "is_the_nearest_function_of(function F, node C)").
 sig(enclosed, "is_enclosed(node C)").
 sig(top_call, "runs_at_the_top_of(node C, node R)").
@@ -705,7 +723,6 @@ sig(eff_value_spec, "has_a_value_specifier(node I)").
 sig(eff_erased, "is_erased(node I)").
 sig(eff_evaluates_at, "evaluates(node I, file T)").
 sig(eff_import_outside, "imports_outside_the_corpus(node I, text Src)").
-sig(eff_in_fn, "lies_inside_a_function(node N)").
 sig(eff_module, "has_the_module_effect(file F, effect label L, at host H)").
 sig(eff_import_invented, "invents_the_effect(node I, effect label L, at host H)").
 sig(eff_mod_subject, "is_a_module_subject(file F)").

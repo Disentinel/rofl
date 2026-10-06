@@ -1,0 +1,11 @@
+-- examples/checks/agg-shrug-join-wall.rofl — agg_join_shrug_wall over
+-- agg-join-budget.rofl, cut at 400 steps: the wall is a `budget` shrug with
+-- what it spent and its limit, on the evaluation and on the join it left
+-- open; the join's cell is no `divergence` (a join grows by what it is
+-- given: its value is a bound under the relation's shrug), and the join the
+-- wall did not reach is no shrug at all.
+-- expect-row: shrug[$kernel]($adhoc,budget,spent(steps,425,424))
+-- expect-row: shrug[$kernel]($lattice(ajb_grow),budget,spent(steps,425,424))
+-- expect-no-row: shrug[$kernel]($lattice(ajb_grow,main,0,$cons(a,$nil)),divergence
+-- expect-no-row: shrug[$kernel]($lattice(ajb_comp
+-- expect-no-row: shrug[$kernel](ajb_comp(

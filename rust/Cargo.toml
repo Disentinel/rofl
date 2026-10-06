@@ -7,3 +7,17 @@ opt-level = 3
 lto = "thin"
 codegen-units = 1
 debug = false
+
+# the development loop: release semantics (no overflow checks, no debug
+# assertions), without the thin LTO and single codegen unit that make a
+# one-line edit cost half a minute. `npm test` takes ROFL_PROFILE=fast.
+[profile.fast]
+inherits = "release"
+lto = false
+codegen-units = 256
+incremental = true
+
+# the binary scripts/agg_breaks.ts builds with `--features breaks`, kept in
+# its own directory so it never stands in for a fast or release build
+[profile.breaks]
+inherits = "fast"

@@ -1,0 +1,30 @@
+-- examples/checks/agg-lattice-budget.rofl — agg_lattice_budget: the budget
+-- cuts a world whose min over a negative cycle (albd) never settles. That
+-- lattice is a hole on its relation, `budget_exhausted`, its values bounds;
+-- a lattice that reads it (albr) is holed with it, and a count over a
+-- lattice never runs: the world's own hole says the cut. A lattice the wall
+-- did not reach (albs, a min over a DAG that reads nothing of the cycle)
+-- settled long before it and keeps its values with no hole
+-- (f_a_settled_lattice_was_holed_for_the_round_it_shared).
+-- expect-row: hole[$kernel]($adhoc,budget_exhausted)
+-- expect-row: hole[$kernel]($lattice(albd),budget_exhausted)
+-- expect-row: hole[$kernel]($lattice(albr),budget_exhausted)
+-- expect-no-row: hole[$kernel]($lattice(albs
+-- expect-row: albs[main](a,c,3)
+-- expect-row: albs[main](a,d,4)
+-- expect-row: albs[main](b,d,3)
+-- expect-no-row: albs[main](a,c,5)
+-- expect-no-row: albn[main](
+edb(albs_e).
+edb(albd_e).
+albs_e(a, b, 1). albs_e(b, c, 2). albs_e(a, c, 5). albs_e(c, d, 1). albs_e(b, d, 3).
+albd_e(x, y, 1). albd_e(y, x, -2). albd_e(y, z, 4).
+lattice albs(A, C, min D).
+albs(A, C, D) :- albs_e(A, C, D).
+albs(A, C, D) :- albs(A, B, D1), albs_e(B, C, W), D is D1 + W.
+lattice albd(A, C, min D).
+albd(A, C, D) :- albd_e(A, C, D).
+albd(A, C, D) :- albd(A, B, D1), albd_e(B, C, W), D is D1 + W.
+lattice albr(A, min D).
+albr(A, D) :- albd(A, _, D).
+albn(N) :- N is count(C : albs(a, C, _)).

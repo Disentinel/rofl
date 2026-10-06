@@ -1,0 +1,24 @@
+-- examples/checks/agg-widen-syntax-1-forms.rofl — every form of a declared
+-- widening the grammar reads: `widen N` after a hull's declaration, with a
+-- key of one and of none, N zero and more; the four interval functions on
+-- the right of `is`, each operand an interval, an integer or a variable, an
+-- interval's ends `ninf` and `inf`; and `widen`, `inf`, `ninf` and the
+-- functions' names still ordinary names where no declaration and no `is`
+-- reads them. Read and refused by the TypeScript engine, whose rule ids must
+-- be the Rust store's.
+edb(sxw_e).
+sxw_e(a, iv(0, 3)).
+lattice sxw_h(A, hull I) widen 3.
+lattice sxw_z(hull I) widen 0.
+sxw_h(A, I)     :- sxw_e(A, I).
+sxw_h(A, J)     :- sxw_h(A, I), J is ivadd(I, 1).
+sxw_h(A, J)     :- sxw_h(A, I), J is ivsub(iv(0, 10), I).
+sxw_h(A, J)     :- sxw_h(A, I), J is ivmul(I, -2).
+sxw_h(A, J)     :- sxw_h(A, I), J is ivmeet(I, iv(ninf, 9)).
+sxw_z(J)        :- sxw_e(_, I), J is ivmeet(I, iv(1, inf)).
+sxw_fn(add, J)  :- J is ivadd(iv(1, 2), 3).
+-- the words are names elsewhere
+widen(inf).
+ivadd(ninf).
+sxw_word(X)     :- widen(X), ivadd(Y), Y = ninf.
+sxw_iv(iv(ninf, inf)).

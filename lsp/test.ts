@@ -24,6 +24,8 @@ const REFUSED: Record<string, string> = {
   'examples/checks/refused.rofl': 'a world written to be refused: a syntax error',
   'examples/checks/unstratifiable.rofl': 'a world written to be refused: no stratification',
   'examples/ring1/l1.dense.rofl': 'ring 1 in the dense form, which the goldens record as refused',
+  'examples/checks/agg-int-range-literal.rofl': 'a world written to be refused: a literal of 2^60 (check_refuses in facts/checks.rofl)',
+  'guide/examples/typo.rofl.md': 'the guide\'s world written with a typo, to show what a sentence not read looks like',
   // renderings of the model the reader cannot read back as a world; no golden loads docs/
   'docs/js/js-attrs.rofl.md': 'the reader writes $var(?X)', 'docs/js/js-pack-home.rofl.md': 'the reader writes ?X', 'docs/js/js-vocabulary.rofl.md': 'the reader writes ?X',
   'docs/js/js-phrases.rofl.md': 'the reader writes a backtick', 'docs/rings/boot.rofl.md': 'the reader writes ?X', 'docs/rings/host.rofl.md': 'the reader writes ?X',
@@ -205,10 +207,15 @@ async function framing(server: string): Promise<string[]> {
 const swept = await sweeping; console.log(`swept in ${((performance.now() - t0) / 1000).toFixed(1)} s`); const talks = await conversations();
 const all = swept.flat();
 expect(all.length === files().length, `swept ${all.length} of ${files().length} files`);
+// a fixture written to be refused says so on its first lines, `-- expect-refusal: <text>` (`<!-- ... -->` in sentences), as the goldens read it;
+// the goldens and tests/agg_worlds.rs hold it to those words in its world
+const fixture = (f: string): string | undefined => /^(?:-- |<!-- )expect-refusal: (.+?)(?: -->)?[ \t]*$/m.exec(readFileSync(path.join(ROOT, f), 'utf8').split('\n').slice(0, 5).join('\n'))?.[1].trim();
 for (const s of all) {
+  expect(!s.warnings.length === !WARNED.includes(s.f), `${s.f}: warnings ${s.warnings.join(' · ') || 'none'}`);
+  // whether a fixture is refused, and in which words, is its world's to say: under the stock evaluator, beside the world below, which the file alone has not
+  if (fixture(s.f)) continue;
   if (REFUSED[s.f]) expect(s.errors.length > 0, `${s.f}: ${REFUSED[s.f]}, yet no error`);
   else expect(!s.errors.length, `${s.f}: ${s.errors.join(' · ')}`);
-  expect(!s.warnings.length === !WARNED.includes(s.f), `${s.f}: warnings ${s.warnings.join(' · ') || 'none'}`);
 }
 for (const f of Object.keys(REFUSED).filter((f) => ALL || !f.startsWith('docs/'))) expect(all.some((s) => s.f === f), `${f} is listed as refused and is not in the tree`);
 for (const t of talks) {
@@ -216,7 +223,7 @@ for (const t of talks) {
   else { expect(t.red.length > 0, `planted "${t.name}" stayed green`); console.log(`${t.red.length ? 'ok  ' : 'FAIL'} planted "${t.name}": red`); }
 }
 const slow = [...all].sort((a, b) => b.ms - a.ms).slice(0, 3).map((s) => `${s.f} ${s.ms} ms`).join(', ');
-console.log(`${all.length} files swept: ${all.filter((s) => s.errors.length).length} with errors, all listed as refused; ${all.filter((s) => s.warnings.length).length} with warnings; slowest ${slow}`);
+console.log(`${all.length} files swept: ${all.filter((s) => s.errors.length).length} with errors, all listed as refused or written to be; ${all.filter((s) => s.warnings.length).length} with warnings; slowest ${slow}`);
 for (const b of bad) console.log(`FAIL ${b}`);
 console.log(`${bad.length ? 'FAIL' : 'ok'}: npm run test:lsp, ${((performance.now() - t0) / 1000).toFixed(1)} s`);
 process.exit(bad.length ? 1 : 0);

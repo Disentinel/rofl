@@ -120,7 +120,7 @@ export class Vocabulary {
 
   private sentence(rel: string, args: string[]): string | null {
     const n = args.length;
-    const fits = (t: Tpl) => t.rel === rel && t.arity === n && t.parts.every((p) => p.t !== 'fix' || fixOk(p, args[p.i]));
+    const fits = (t: Tpl) => t.rel === rel && t.arity === n && t.parts.every((p) => p.t === 'text' || p.i < n && (p.t !== 'fix' || fixOk(p, args[p.i])));
     const fixes = (t: Tpl) => t.parts.filter((p) => p.t === 'fix').length;
     const t = this.templates.filter(fits).sort((a, b) => fixes(b) - fixes(a)).find(() => true);
     if (t) {

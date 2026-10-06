@@ -1,0 +1,6 @@
+-- expect-refusal: is not closed
+-- a join is a lattice's operation, named by a declaration: there is no body
+-- aggregate union
+edb(sxjr_p).
+sxjr_p(a).
+sxjr_body(S) :- S is union(X : sxjr_p(X)).

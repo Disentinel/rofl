@@ -85,7 +85,10 @@ eff_here[flow](T, exn, none) :- ast_node[code](T, throw_statement, _, _),
 -- DIV: loops, and RECURSION — a call whose callee reaches its own caller may
 -- not terminate for the same reason `while (true)` may not, and nothing in the
 -- tree shows it. `eff_calls` leads with `resolves` (binds both ends) so
--- `nearest_v` is probed, not enumerated.
+-- `nearest_fn` is probed, not enumerated. Every reader of a CALL here asks
+-- `nearest_fn`, the call graph's own caller, and not `nearest_v`: a decorator
+-- sits inside the method it decorates and runs when the class is defined, so
+-- `@mark() m() {}` is a call of the function around the class, never of `m`.
 edb(eff_loop_kind).
 eff_loop_kind(while_statement).
 eff_loop_kind(do_while_statement).
@@ -95,11 +98,11 @@ eff_loop_kind(for_of_statement).
 
 eff_here[flow](N, div, none) :- eff_loop_kind(K), ast_node[code](N, K, _, _).
 
-eff_calls[code](F, G)   :- resolves[code](C, G), nearest_v[flow](F, C), fn_node[code](G).
+eff_calls[code](F, G)   :- resolves[code](C, G), nearest_fn[code](F, C), fn_value[flow](G).
 eff_reaches[code](F, G) :- eff_calls[code](F, G).
 eff_reaches[code](F, H) :- eff_reaches[code](F, G), eff_calls[code](G, H).
 
-eff_here[flow](C, div, none) :- resolves[code](C, G), nearest_v[flow](F, C),
+eff_here[flow](C, div, none) :- resolves[code](C, G), nearest_fn[code](F, C),
                                 eff_reaches[code](G, F).
 
 -- ALLOC: a fresh mutable identity. `new_expression` is here although its cell
@@ -123,9 +126,8 @@ eff_here[flow](N, alloc, none) :- eff_alloc_kind(K), ast_node[code](N, K, _, _).
 -- an assignment target is a read (`console.log` really is `read<global>`; the
 -- unknown is what the function DOES). `eff_member_both` is the never-both half
 -- of that partition; the never-neither half is a sum in the test.
-eff_obj_traced[flow](M) :- member_node_v[flow](M), ast_child[code](M, object, 0, O),
-                           may_be_node[flow](O, _).
-eff_heap_of[flow](M, local)  :- member_node_v[flow](M), eff_obj_traced[flow](M).
+eff_obj_traced[flow](M) :- member_obj[flow](M, _, _).
+eff_heap_of[flow](M, local)  :- eff_obj_traced[flow](M), member_node_v[flow](M).
 eff_heap_of[flow](M, global) :- member_node_v[flow](M), not eff_obj_traced[flow](M).
 
 eff_assign[code](A)           :- ast_node[code](A, assignment_expression, _, _).
@@ -140,7 +142,7 @@ eff_here[flow](L, read, H)  :- eff_compound[code](A), ast_child[code](A, left, 0
 eff_here[flow](A, write, local) :- eff_assign_target[code](A, L), ast_name[code](L, _).
 
 eff_read_site[flow](M) :- member_node_v[flow](M), not eff_member_target[code](M).
-eff_here[flow](M, read, H) :- eff_read_site[flow](M), eff_heap_of[flow](M, H).
+eff_here[flow](M, read, H) :- eff_heap_of[flow](M, H), eff_read_site[flow](M).
 
 eff_member_both[audit](M) :- eff_read_site[flow](M), eff_member_target[code](M).
 
@@ -177,15 +179,18 @@ eff_label_unseen[flow](L, H) :- eff_label(L, H), not eff_label_seen[flow](L, H).
 -- arm two its callees, minus what a handler discharges PER LABEL. Writing the
 -- discharge as `not eff_catch_here(C)` on the whole arm — correct for
 -- `may_throw`, which carries one label — would make a try around a call
--- swallow the callee's WRITES too.
-eff_latent[flow](F, L, H) :- eff_here[flow](N, L, H), nearest_v[flow](F, N).
+-- swallow the callee's WRITES too. The same reading keeps what a method's
+-- decorator does out of the method's own row (`not in_own_decorator`): it is
+-- the class's, through `eff_define_part`.
+eff_latent[flow](F, L, H) :- eff_here[flow](N, L, H), nearest_v[flow](F, N),
+                             not in_own_decorator[code](F, N).
 
 edb(eff_discharges).
 eff_discharges(catch_clause, exn).
 eff_discharged_at[code](C, L) :- eff_catch_here[code](C), eff_discharges(catch_clause, L).
 
 eff_latent[flow](F, L, H) :- eff_latent[flow](G, L, H), resolves[code](C, G),
-                             nearest_v[flow](F, C), not eff_discharged_at[code](C, L).
+                             nearest_fn[code](F, C), not eff_discharged_at[code](C, L).
 
 eff_discharge_unknown[audit](M, L) :- eff_discharges(M, L), not eff_label(L, _).
 
@@ -199,7 +204,7 @@ may_throw_only[audit](F) :- may_throw[code](F), not eff_latent[flow](F, exn, non
 
 eff_swallowed[audit](F, C, L, H) :- eff_catch_here[code](C), resolves[code](C, G),
                                     eff_latent[flow](G, L, H), L != exn,
-                                    nearest_v[flow](F, C),
+                                    nearest_fn[code](F, C),
                                     not eff_latent[flow](F, L, H).
 
 -- =========================================================================
@@ -212,7 +217,10 @@ eff_swallowed[audit](F, C, L, H) :- eff_catch_here[code](C), resolves[code](C, G
 -- with its callee's must give the caller's own back. `eff_purer_callee`
 -- compares names, not rows, so it under-reports incomparable pairs.
 eff_subject[flow](F)        :- fn_node[code](F).
-eff_over[flow](F, N)        :- eff_name(N), eff_latent[flow](F, L, H), not eff_row(N, L, H).
+eff_lh[flow](L, H)          :- eff_latent[flow](_, L, H).
+eff_lh[flow](L, H)          :- eff_module[flow](_, L, H).
+eff_gap[flow](L, H, N)      :- eff_lh[flow](L, H), eff_name(N), not eff_row(N, L, H).
+eff_over[flow](F, N)        :- eff_latent[flow](F, L, H), eff_gap[flow](L, H, N).
 eff_bounded[flow](F, N)     :- eff_subject[flow](F), eff_name(N), not eff_over[flow](F, N).
 eff_bounded_low[flow](F, N) :- eff_bounded[flow](F, M), eff_lt(M, N).
 effect_of[flow](F, N)       :- eff_bounded[flow](F, N), not eff_bounded_low[flow](F, N).
@@ -220,12 +228,12 @@ effect_of[flow](F, N)       :- eff_bounded[flow](F, N), not eff_bounded_low[flow
 eff_unnamed[audit](F)       :- eff_subject[flow](F), not effect_of[flow](F, _).
 eff_two_names[audit](F, A, B) :- effect_of[flow](F, A), effect_of[flow](F, B), A != B.
 
-eff_join_short[audit](F, G, J) :- resolves[code](C, G), nearest_v[flow](F, C),
+eff_join_short[audit](F, G, J) :- resolves[code](C, G), nearest_fn[code](F, C),
                                   not eff_catch_here[code](C),
                                   effect_of[flow](F, NF), effect_of[flow](G, NG),
                                   eff_join(NF, NG, J), J != NF.
 
-eff_purer_callee[flow](C, F, G) :- resolves[code](C, G), nearest_v[flow](F, C),
+eff_purer_callee[flow](C, F, G) :- resolves[code](C, G), nearest_fn[code](F, C),
                                    effect_of[flow](F, NF), effect_of[flow](G, NG),
                                    eff_lt(NG, NF).
 
@@ -256,8 +264,8 @@ concrete_denotes[flow](S, Op, E) :- concrete_effect[flow](_, S, Op), ambient_eff
 eff_here[flow](C, L, H)          :- concrete_effect[flow](C, S, Op),
                                     ambient_effect(S, Op, E), eff_row(E, L, H).
 
-concrete_leq[flow](S1, O1, S2, O2) :- concrete_denotes[flow](S1, O1, E1),
-                                      concrete_denotes[flow](S2, O2, E2), eff_leq(E1, E2).
+concrete_leq[flow](S1, O1, S2, O2) :- eff_leq(E1, E2), concrete_denotes[flow](S1, O1, E1),
+                                      concrete_denotes[flow](S2, O2, E2).
 
 -- The residue, POSITIVE and not an audit: non-empty by design until the
 -- surface pack exists. The audits below are about a pack that is WRONG rather
@@ -321,10 +329,10 @@ eff_conv_key("valueOf").
 eff_conv_key("toString").
 
 eff_conv_object[flow](N, X)     :- eff_coerced[flow](N, X), may_be_node[flow](X, _).
-eff_conv_call[flow](N, M)       :- eff_coerced[flow](N, X), may_be_node[flow](X, O),
-                                   eff_conv_key(Key), member_value[flow](O, Key, M).
-eff_conv_overridden[flow](N, X) :- eff_coerced[flow](N, X), may_be_node[flow](X, O),
-                                   eff_conv_key(Key), member_value[flow](O, Key, _).
+eff_conv_call[flow](N, M)       :- eff_conv_key(Key), member_value[flow](O, Key, M), may_be_node[flow](X, O),
+                                   eff_coerced[flow](N, X).
+eff_conv_overridden[flow](N, X) :- eff_conv_key(Key), member_value[flow](O, Key, _), may_be_node[flow](X, O),
+                                   eff_coerced[flow](N, X).
 eff_conv_default[flow](N, X)    :- eff_conv_object[flow](N, X), not eff_conv_overridden[flow](N, X).
 eff_conv_primitive[flow](N, X)  :- eff_coerced[flow](N, X), may_be_lit[flow](X, _),
                                    not eff_conv_object[flow](N, X).
@@ -334,7 +342,7 @@ eff_conv_untraced[flow](N, X)   :- eff_coerced[flow](N, X), not may_be_lit[flow]
 -- A second arm of `eff_latent` rather than a row in `resolves`: the call-graph
 -- oracle is V8's stack frames, which know nothing about a conversion.
 eff_latent[flow](F, L, H) :- eff_conv_call[flow](N, M), eff_latent[flow](M, L, H),
-                             nearest_v[flow](F, N).
+                             nearest_v[flow](F, N), not in_own_decorator[code](F, N).
 
 -- Totality: every coerced operand is primitive, object or untraced. And the
 -- operator table must not name a node that is neither binary nor unary —
@@ -382,21 +390,19 @@ eff_import_outside[flow](I, Src) :- eff_mod_src[code](I, Src, _), not eff_erased
 -- answer (a cyclic group is evaluated once and every member sees the whole
 -- group's effect). No `load` label: the suspension of `import()` is CONTROL,
 -- as `await` is.
-eff_in_fn[flow](N) :- nearest_v[flow](_, N).
-
-eff_module[flow](F, L, H) :- eff_here[flow](N, L, H), not eff_in_fn[flow](N),
+eff_module[flow](F, L, H) :- eff_here[flow](N, L, H), not in_fn[code](N),
                              ast_node[code](N, _, F, _).
-eff_module[flow](F, L, H) :- resolves[code](C, G), not eff_in_fn[flow](C),
+eff_module[flow](F, L, H) :- resolves[code](C, G), not in_fn[code](C),
                              ast_node[code](C, _, F, _), eff_latent[flow](G, L, H).
 
-eff_here[flow](I, L, H) :- eff_evaluates_at[code](I, T), eff_module[flow](T, L, H).
+eff_here[flow](I, L, H) :- eff_evaluates_at[code](I, T), sx_eff_module[surface](T, L, H).
 
 eff_import_invented[audit](I, L, H) :- eff_evaluates_at[code](I, T), eff_here[flow](I, L, H),
-                                       not eff_module[flow](T, L, H).
+                                       not sx_eff_module[surface](T, L, H).
 
 -- The same Moore closure as section 4, over a file.
 eff_mod_subject[flow](F)        :- corpus_file[code](F).
-eff_mod_over[flow](F, N)        :- eff_name(N), eff_module[flow](F, L, H), not eff_row(N, L, H).
+eff_mod_over[flow](F, N)        :- eff_module[flow](F, L, H), eff_gap[flow](L, H, N).
 eff_mod_bounded[flow](F, N)     :- eff_mod_subject[flow](F), eff_name(N), not eff_mod_over[flow](F, N).
 eff_mod_bounded_low[flow](F, N) :- eff_mod_bounded[flow](F, M), eff_lt(M, N).
 effect_of_module[flow](F, N)    :- eff_mod_bounded[flow](F, N), not eff_mod_bounded_low[flow](F, N).
@@ -405,7 +411,7 @@ eff_mod_unnamed[audit](F)         :- eff_mod_subject[flow](F), not effect_of_mod
 eff_mod_two_names[audit](F, A, B) :- effect_of_module[flow](F, A), effect_of_module[flow](F, B), A != B.
 
 eff_mod_join_short[audit](F, T, J) :- eff_evaluates_at[code](I, T), ast_node[code](I, _, F, _),
-                                      effect_of_module[flow](F, NF), effect_of_module[flow](T, NT),
+                                      effect_of_module[flow](F, NF), sx_effect_module[surface](T, NT),
                                       eff_join(NF, NT, J), J != NF.
 
 -- =========================================================================
@@ -425,7 +431,6 @@ eff_hidden_call[flow](N, M) :- pattern_accessor[code](N, M).
 eff_hidden_call[flow](N, M) :- pattern_next[code](N, M).
 
 eff_edge_closed[flow](F, G) :- resolves[code](C, G), nearest_fn[code](F, C).
-eff_edge_closed[flow](F, G) :- resolves[code](C, G), nearest_v[flow](F, C).
 
 eff_edge_unclosed[flow](F, G, L, H) :- calls[code](F, G), fn_node[code](F),
                                        not eff_edge_closed[flow](F, G),
@@ -590,3 +595,5 @@ imports(flow, code).
 imports(flow, main).
 imports(audit, code).
 imports(audit, flow).
+imports(flow, surface).
+imports(audit, surface).

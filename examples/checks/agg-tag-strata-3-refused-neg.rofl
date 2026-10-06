@@ -1,0 +1,8 @@
+-- expect-refusal: negates a lattice relation inside
+-- a negation is no monotone read: a tag read under `not` inside its own
+-- recursion is refused, as every lattice's is
+edb(tgsr_f).
+tgsr_f(a, b, 1). tgsr_f(b, c, 1).
+tag tgsr_n(A, B, tropical T).
+tgsr_n(A, B, W) :- tgsr_f(A, B, W).
+tgsr_n(A, C, T) :- tgsr_n(A, B, _), tgsr_f(B, C, _), not tgsr_n(C, A, _).

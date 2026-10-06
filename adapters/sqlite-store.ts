@@ -28,7 +28,7 @@ import * as path from 'node:path';
 import * as fs from 'node:fs';
 import {
   type FactStore, type FactRec, type Witness, type PremRef, type Scope,
-  type EvalRecord, factKey,
+  type EvalRecord, factKey, rankFirings,
 } from '../src/store.ts';
 import { type Term, canonTerm, isGround, termToJson, termFromJson } from '../src/unify.ts';
 
@@ -460,7 +460,7 @@ export class SqliteStore implements FactStore {
     return r.n;
   }
 
-  clearDerived(keep?: (rec: FactRec) => boolean): void {
+  clearDerived(keep?: (rec: FactRec) => boolean, rowOf?: (rec: FactRec, w: Witness) => string): void {
     const rows = this.prep(
       'SELECT key, rel, persp, args, scope, base, frozen FROM f WHERE base = 0 AND frozen = 0 ORDER BY seq')
       .all() as unknown as Row[];
@@ -470,6 +470,26 @@ export class SqliteStore implements FactStore {
       drop.push(r.key);
     }
     this.removeMany(drop);
+    // This tick's firings on a fact that stays go unless their provenance row
+    // stays too: the reference store's rule (src/store.ts, `clearDerived`).
+    const firings = this.prep(
+      'SELECT fi.key AS fk, fi.sig AS sig, fi.ruleId AS ruleId, fi.tick AS tick, fi.prems AS prems,'
+      + ' f.key AS key, f.rel AS rel, f.persp AS persp, f.args AS args, f.scope AS scope,'
+      + ' f.base AS base, f.frozen AS frozen FROM fi JOIN f ON f.key = fi.key WHERE fi.tick = ?')
+      .all(this.tick) as unknown as (Row & { fk: string; sig: string; ruleId: string; tick: number; prems: string })[];
+    const dfi = this.prep('DELETE FROM fi WHERE key = ? AND sig = ?');
+    const touched = new Set<string>();
+    for (const x of firings) {
+      const rec = recOf(x);
+      if (keep && keep(rec)) continue;
+      const w: Witness = { ruleId: x.ruleId, tick: x.tick, prems: JSON.parse(x.prems) as PremRef[] };
+      if (rowOf && this.has(rowOf(rec, w))) continue;
+      dfi.run(x.fk, x.sig);
+      touched.add(x.fk);
+    }
+    const left = this.prep('SELECT 1 FROM fi WHERE key = ? LIMIT 1');
+    const dw = this.prep('DELETE FROM w WHERE key = ?');
+    for (const k of touched) if (left.get(k) === undefined) dw.run(k);
     this.partialEval = false;
     // The same flag the in-memory store sets here, and for the same reason:
     // `ensure` skips a clean store, so dropping the derived layer without
@@ -499,6 +519,9 @@ export class SqliteStore implements FactStore {
     return r.n;
   }
 
+  /** A fact store held in a database has no aggregate cells (the aggregate evaluator needs the in-memory `Store`), so a fold asked to open one is told so. */
+  cellOf(_key: string): never { throw new Error('semiring fold: this store cannot open a sealed cell'); }
+
   witnessesOf(key: string): Witness[] {
     const rows = this.prep('SELECT sig, ruleId, tick, prems FROM fi WHERE key = ?')
       .all(key) as unknown as { sig: string; ruleId: string; tick: number; prems: string }[];
@@ -507,27 +530,29 @@ export class SqliteStore implements FactStore {
       .map((r) => ({ ruleId: r.ruleId, tick: r.tick, prems: JSON.parse(r.prems) as PremRef[] }));
   }
 
-  /** The least signature among the fact's firings, which is what the reference
-   *  store answers since the canonical pick stopped being the first ARRIVAL.
-   *  Read off `fi` rather than `w`: `w` records arrival order, and arrival
-   *  order is precisely what must no longer decide this. */
-  witnessOf(key: string): Witness | undefined {
-    const r = this.prep('SELECT ruleId, tick, prems FROM fi WHERE key = ? ORDER BY sig LIMIT 1')
-      .get(key) as { ruleId: string; tick: number; prems: string } | undefined;
-    return r ? { ruleId: r.ruleId, tick: r.tick, prems: JSON.parse(r.prems) as PremRef[] } : undefined;
+  /** The firing of least derivation height, ties by signature: what the reference store answers (`rankFirings`). Read off `fi`
+   *  rather than `w`: `w` records arrival order, and arrival order is precisely what must not decide this. */
+  witnessOf(key: string, memo: Map<string, number> = new Map()): Witness | undefined {
+    return this.firingsRanked(key, memo)[0];
+  }
+
+  firingsRanked(key: string, memo: Map<string, number> = new Map()): Witness[] {
+    return rankFirings({
+      firings: (k) => (this.prep('SELECT sig, ruleId, tick, prems FROM fi WHERE key = ?').all(k) as unknown as { sig: string; ruleId: string; tick: number; prems: string }[])
+        .map((r): [string, Witness] => [r.sig, { ruleId: r.ruleId, tick: r.tick, prems: JSON.parse(r.prems) as PremRef[] }]),
+      base: (k) => this.get(k)?.base === true,
+      cellHeight: () => 0,
+    }, key, memo);
   }
 
   allWitnesses(): Map<string, Witness> {
-    // One row per key, the least signature, keys in arrival order -- `w` still
-    // carries that order and `fi` carries the choice, so the two are joined.
-    const rows = this.prep(
-      'SELECT f.key AS key, f.ruleId AS ruleId, f.tick AS tick, f.prems AS prems FROM fi f'
-      + ' JOIN (SELECT key, MIN(sig) AS sig FROM fi GROUP BY key) m'
-      + ' ON f.key = m.key AND f.sig = m.sig'
-      + ' JOIN w ON w.key = f.key ORDER BY w.seq')
-      .all() as unknown as { key: string; ruleId: string; tick: number; prems: string }[];
+    // One row per key, keys in arrival order -- `w` still carries that order and `fi` carries the choice.
     const out = new Map<string, Witness>();
-    for (const r of rows) out.set(r.key, { ruleId: r.ruleId, tick: r.tick, prems: JSON.parse(r.prems) as PremRef[] });
+    const memo = new Map<string, number>();
+    for (const r of this.prep('SELECT key FROM w ORDER BY seq').all() as unknown as { key: string }[]) {
+      const w = this.witnessOf(r.key, memo);
+      if (w !== undefined) out.set(r.key, w);
+    }
     return out;
   }
 

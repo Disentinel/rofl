@@ -1,0 +1,15 @@
+-- examples/checks/agg-lattice-plain-data.rofl — a lattice over what a plain
+-- hole left out, beside a closure a wall can cut (agg_lattice_plain_budget,
+-- agg_lattice_plain_space). alp_y(g, q, _) is unknown (1 + oops is no
+-- number), so the min alp_lo reads is not known: the whole evaluation holes
+-- its cell `support_withdrawn` and gives no value.
+edb(alp_v).
+edb(alp_e).
+alp_v(g, q, oops). alp_v(g, r, 1).
+alp_e(n0, n1). alp_e(n1, n2). alp_e(n2, n3). alp_e(n3, n4). alp_e(n4, n5).
+alp_e(n5, n6). alp_e(n6, n7). alp_e(n7, n8). alp_e(n8, n9).
+alp_y(G, K, Y) :- alp_v(G, K, X), Y is X + 1.
+lattice alp_lo(G, min Y).
+alp_lo(G, Y) :- alp_y(G, _, Y).
+alp_rc(X, Y) :- alp_e(X, Y).
+alp_rc(X, Z) :- alp_rc(X, Y), alp_e(Y, Z).

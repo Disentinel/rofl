@@ -1,0 +1,7 @@
+-- expect-refusal: is not monotone in that order
+-- a product of a value is no step the analysis knows to keep the direction
+edb(aosr_e).
+aosr_e(a, b, 2, 9).
+pareto aosr_times(A, B, min C, min T).
+aosr_times(A, B, C, T) :- aosr_e(A, B, C, T).
+aosr_times(A, C, C1, T1) :- aosr_times(A, B, C0, T0), aosr_e(B, C, C2, T2), C1 is C0 * C2, T1 is T0 + T2.

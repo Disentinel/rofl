@@ -4,14 +4,15 @@ import { Rofl } from '../src/api.ts';
 import { parseLiteral, parseProgram } from '../src/parser.ts';
 import { KERNEL_BOOK, RESERVED, ruleIdOf } from '../src/reflect.ts';
 import { fold, keyOf, type Step } from './fold.ts';
+import { chainOf } from './chain.ts';
 import { proofView, type Proven } from '../notebook/draw-proof.ts';
 import { collect, diff, scoped, status, KINDS, VIEW_RELS, unquote as termText, type DrawKind, type View, type World } from '../notebook/draw.ts';
 import { Vocabulary } from '../src/say.ts';
 import { scan } from '../scanners/js_ast.ts';
 import { readBook, homeOf, booksOf, OWN, type Ask, type Cell, type Kind } from '../notebook/book.ts';
 import { plural, type Question } from '../scripts/read_md.ts';
-import { varsOf, canonTerm, mka, type Clause, type Lit, type Term } from '../src/unify.ts';
-import type { FactRec, FactStore, Store } from '../src/store.ts';
+import { varsOf, canonTerm, mka, litsOf, termsOf, type Clause, type Lit, type Term } from '../src/unify.ts';
+import type { FactRec, Store } from '../src/store.ts';
 
 const BUDGET = 4_000_000_000;
 export const FILE = 'play.js';
@@ -21,6 +22,8 @@ export { readBook, homeOf, booksOf, type Cell } from '../notebook/book.ts';
 
 export type Row = { sentence: string; literal: string };
 export type Line = { kind: Kind; text: string; lit: string; rows: Row[]; total: number; ok: boolean; note?: string; why?: string; proof?: Step | string;
+  /** a `why` of a value: the steps the value took, playground/chain.ts */
+  chain?: string[];
   /** what the invariant above could not see: its `unsure` line's answers */
   unsure?: { text: string; lit: string; rows: Row[]; total: number };
   /** why the line's answer means nothing: it rests on a relation whose rules a cell meant to write and the reader left out */
@@ -78,6 +81,25 @@ function labelNodes(facts: string[], nodes: Record<string, Node>): void {
   for (const id of Object.keys(nodes)) { const l = lab(id); nodes[id].label = l.length > 40 ? l.slice(0, 39) + '…' : l; }
 }
 
+/** The facts of the code: the scanner's of each file, and the host's of the paths and of every string a file holds. */
+export function codeFacts(files: Record<string, string>, data: string[] = []): { facts: string[]; nodes: Record<string, Node>; parseErrors: Record<string, string>; host: string[] } {
+  const nodes: Record<string, Node> = {};
+  const parseErrors: Record<string, string> = {};
+  const facts: string[] = [], strings = new Set<string>();
+  for (const [path, src] of Object.entries(files)) {
+    for (const fact of scan(src, { file: path }).facts) {
+      facts.push(fact);
+      const m = /^ast_node\[code\]\((\w+), (\w+), "([^"]*)", (\d+)\)/.exec(fact);
+      if (m) nodes[m[1]] = { kind: m[2], file: m[3], line: Number(m[4]), label: '' };
+      const e = /^ast_parse_error\[code\]\("[^"]*", "(.*)"\)\.$/.exec(fact);
+      if (e) parseErrors[path] = e[1];
+      const v = /^ast_attr\[code\]\(\w+, value, (".*")\)\.$/.exec(fact);
+      if (v) strings.add(unquote(v[1]));
+    }
+  }
+  return { facts, nodes, parseErrors, host: hostFacts([...Object.keys(files), ...data], strings) };
+}
+
 /** What the host tells the module graph and a scanner cannot: the files and directories there are, and each string cut the way a specifier is read. */
 function hostFacts(paths: string[], strings: Set<string>): string[] {
   // quoted the way the scanner quotes: ROFL has five escapes, and JSON's `\u0000` for a control character refuses the whole batch
@@ -92,7 +114,7 @@ function hostFacts(paths: string[], strings: Set<string>): string[] {
   for (const s of strings) {
     if (!s || s.includes('\n')) continue;
     const segs = s.split('/');
-    out.push(`str_segs[code](${q(s)}, ${segs.length}).`, `str_char0[code](${q(s)}, ${q(s[0])}).`);
+    out.push(`str_segs[code](${q(s)}, ${segs.length}).`, `str_char0[code](${q(s)}, ${q(String.fromCodePoint(s.codePointAt(0)!))}).`);
     segs.forEach((g, k) => out.push(`str_seg[code](${q(s)}, ${k}, ${q(g)}).`));
     if (s.indexOf(':') > 0) out.push(`str_scheme[code](${q(s)}, ${q(s.slice(0, s.indexOf(':')))}).`);
   }
@@ -102,7 +124,7 @@ function hostFacts(paths: string[], strings: Set<string>): string[] {
 /** The head's variables that nothing in the body gives a value. */
 function loose(cl: Clause): string[] {
   const bound = new Set<string>();
-  for (const b of cl.body) if (b.t === 'bi') { varsOf(b.l, bound); varsOf(b.r, bound); } else if (b.t === 'pos') b.lit.args.forEach((a) => varsOf(a, bound));
+  for (const b of cl.body) if (b.t === 'bi') { varsOf(b.l, bound); varsOf(b.r, bound); } else if (b.t === 'pos') b.lit.args.forEach((a) => varsOf(a, bound)); else if (b.t === 'agg') termsOf(b).forEach((a) => varsOf(a, bound));
   return [...cl.head.args.reduce((s, a) => varsOf(a, s), new Set<string>())].filter((v) => !v.startsWith('_') && !bound.has(v));
 }
 
@@ -140,33 +162,37 @@ const NOT_OURS = (rel: string, home: Record<string, string>) => `${rel} is the k
 const plain = (s: string) => s.replace(/\bnb__/g, '');
 /** What a notebook writes without introducing a relation: the kernel's tables a program writes by hand (reflect.ts KERNEL_BOOK), and phrases. */
 const WRITTEN = new Set([...[...RESERVED].filter((r) => !KERNEL_BOOK.has(r)), 'phrase', 'sig', 'fun_phrase']);
-const NODE = /\bn[0-9a-f]{8}_\d+\b/g;
+const NODE = /\bn[0-9a-f]{16}_\d+\b/g;
 type Concerns = { rules: Record<string, string>; rels: Record<string, string> };
 type Scanned = { key: string; facts: string[]; nodes: Record<string, Node>; parseErrors: Record<string, string>; text: string; rels: Set<string> };
 
 /** Every relation the clauses conclude or read. */
 function relsOf(program: Clause[], into = new Set<string>()): Set<string> {
-  for (const cl of program) { into.add(cl.head.rel); for (const b of cl.body) if (b.t !== 'bi') into.add(b.lit.rel); }
+  for (const cl of program) { into.add(cl.head.rel); for (const b of cl.body) for (const l of litsOf(b)) into.add(l.rel); }
   return into;
 }
 
 /** The kept model and the cells' world read as one, for why, whynot and a proof: a relation the cells conclude from their world, the kernel's own
  *  from both, every other from the model, of which the cells' world holds only copies (and marks them extensional, which the model does not). */
-function proofs(model: FactStore, cells: FactStore, heads: Set<string>, kernel: Set<string>, copied: Set<string>): Rofl {
+function proofs(model: Store, cells: Store, heads: Set<string>, kernel: Set<string>, copied: Set<string>): Rofl {
   const one = (rel: string) => heads.has(rel) ? cells : model;
-  const both = (rel: string, read: (s: FactStore) => FactRec[] | null): FactRec[] | null => {
+  const both = (rel: string, read: (s: Store) => FactRec[] | null): FactRec[] | null => {
     const a = read(model), b = read(cells);
     if (!a || !b) return null;
     const seen = new Set(a.map((f) => f.key));
     return [...a, ...b.filter((f) => !seen.has(f.key) && !(f.rel === 'edb' && f.args[0].k === 'a' && copied.has(f.args[0].name)))];
   };
-  const rows = (rel: string, read: (s: FactStore) => FactRec[] | null) => kernel.has(rel) ? both(rel, read) : read(one(rel));
-  const byKey = <T>(key: string, read: (s: FactStore) => T): T => { const rel = relOf(key); return kernel.has(rel) ? (read(cells) ?? read(model)) : read(one(rel)); };
+  const rows = (rel: string, read: (s: Store) => FactRec[] | null) => kernel.has(rel) ? both(rel, read) : read(one(rel));
+  const byKey = <T>(key: string, read: (s: Store) => T): T => { const rel = relOf(key); return kernel.has(rel) ? (read(cells) ?? read(model)) : read(one(rel)); };
   const store = {
     tick: cells.tick, dirty: false, partialEval: model.partialEval || cells.partialEval,
     has: (key: string) => byKey(key, (s) => s.has(key) || undefined) ?? false,
     get: (key: string) => byKey(key, (s) => s.get(key)),
+    recAny: (key: string) => byKey(key, (s) => s.recAny(key)),
+    ghosts: new Map([...model.ghosts, ...cells.ghosts]), dead: new Map([...model.dead, ...cells.dead]), cells: new Map([...model.cells, ...cells.cells]), keepDead: true,
+    firingList: (key: string) => byKey(key, (s) => s.firingList(key)), firings: new Map([...model.firings, ...cells.firings]),
     witnessOf: (key: string) => byKey(key, (s) => s.witnessOf(key)),
+    firingsRanked: (key: string, memo?: Map<string, number>) => byKey(key, (s) => s.firingsRanked(key, memo)),
     witnessesOf: (key: string) => byKey(key, (s) => s.witnessesOf(key)),
     supportCount: (key: string) => byKey(key, (s) => s.supportCount(key)),
     relAll: (rel: string) => rows(rel, (s) => s.relAll(rel))!,
@@ -297,8 +323,8 @@ export class Host {
         // a clause the reader made is said on the line of the block it made it from, when every line of what it made is one clause
         const madeAt = (k: number) => r && program.length === r.roflAt.length ? r.roflAt[k] : undefined, said = (e: string, k: number) => { errors.push(e); const l = madeAt(k); if (l !== undefined && !(e in at)) at[e] = l; };
         // the kernel's relations and its boot's are read only where a cell names their book: unbooked, a word of the notebook would reach their rows
-        const foreign = program.flatMap((cl) => cl.body.flatMap((b) => b.t === 'bi' ? [] : [b.lit])).find((l) => this.foreign.has(l.rel) && !l.perspExplicit);
-        if (foreign) { said(`${NOT_OURS(foreign.rel, home)}: this cell is left out`, program.findIndex((cl) => cl.body.some((b) => b.t !== 'bi' && b.lit === foreign))); texts[i] = ''; refused.add(i); return { id: c.id, errors, notes, lines: [], rofl: r ? r.rofl : undefined, ...(Object.keys(at).length && { at }) }; }
+        const foreign = program.flatMap((cl) => cl.body.flatMap(litsOf)).find((l) => this.foreign.has(l.rel) && !l.perspExplicit);
+        if (foreign) { said(`${NOT_OURS(foreign.rel, home)}: this cell is left out`, program.findIndex((cl) => cl.body.some((b) => litsOf(b).includes(foreign)))); texts[i] = ''; refused.add(i); return { id: c.id, errors, notes, lines: [], rofl: r ? r.rofl : undefined, ...(Object.keys(at).length && { at }) }; }
         for (const [k, cl] of program.entries()) {
           if (!cl.body.length) continue;
           notebook.set(ruleIdOf(cl), `notebook: cell ${i + 1} · ${plain(cl.head.rel).replace(/_/g, ' ')}`);
@@ -370,11 +396,11 @@ export class Host {
         if (b.l.k === 'v' && ground(b.r)) eq.set(b.l.name, b.r); else if (b.r.k === 'v' && ground(b.l)) eq.set(b.r.name, b.l);
       }
       const put = (l: Lit): Lit => ({ ...l, args: l.args.map((t) => t.k === 'v' && eq.has(t.name) ? eq.get(t.name)! : t) });
-      return { pos: cl.body.flatMap((b) => b.t === 'pos' ? [put(b.lit)] : []), excepts: cl.body.some((b) => b.t === 'neg' || b.t === 'bi' && b.op === '!=') };
+      return { pos: cl.body.flatMap((b) => b.t === 'pos' ? [put(b.lit)] : []), excepts: cl.body.some((b) => b.t === 'neg' || b.t === 'agg' || b.t === 'bi' && b.op === '!=') };
     };
     const deps = new Map<string, Set<string>>(), rules = new Map<string, { rel: string; cell: number }>(), bodies = new Map<string, { pos: Lit[]; excepts: boolean }[]>();
     texts.forEach((x, i) => { if (x.trim()) try { for (const cl of parseProgram(x)) {
-      const d = deps.get(cl.head.rel) ?? deps.set(cl.head.rel, new Set()).get(cl.head.rel)!; for (const b of cl.body) if (b.t !== 'bi') d.add(b.lit.rel);
+      const d = deps.get(cl.head.rel) ?? deps.set(cl.head.rel, new Set()).get(cl.head.rel)!; for (const b of cl.body) for (const l of litsOf(b)) d.add(l.rel);
       if (cl.body.length) rules.set(ruleIdOf(cl), { rel: cl.head.rel, cell: i });
       if (cl.body.length) (bodies.get(cl.head.rel) ?? bodies.set(cl.head.rel, []).get(cl.head.rel)!).push(conditions(cl));
     } } catch { /* said by the load */ } });
@@ -538,7 +564,7 @@ export class Host {
             outs[i].errors.push(`${a.text}: ${b.say([...new Set(q.rows.map((r) => r.bindings[b.v]).filter(Boolean).map((x) => x.startsWith('"') ? unquote(x) : x))])}`); continue;
           }
           try {
-            if (a.kind === 'why') { const y = w.why(a.lit); outs[i].lines.push({ unasked: unread[i], kind: 'why', text: a.text, lit: a.lit, rows: [], total: 0, ok: y.ok, why: plain(vocab.sayAll(y.text)), proof: y.ok ? this.explain(a.lit) : undefined, note: nameless(a.lit, a.text), english }); continue; }
+            if (a.kind === 'why') { const y = w.why(a.lit); outs[i].lines.push({ unasked: unread[i], kind: 'why', text: a.text, lit: a.lit, rows: [], total: 0, ok: y.ok, why: plain(vocab.sayAll(y.text)), chain: y.ok ? chainOf(y.text, nodes, (k) => plain(vocab.say(k) ?? k)) : undefined, proof: y.ok ? this.explain(a.lit) : undefined, note: nameless(a.lit, a.text), english }); continue; }
             if (a.kind === 'whynot') { const y = w.whynot(a.lit); outs[i].lines.push({ unasked: unread[i], kind: 'whynot', text: a.text, lit: a.lit, rows: [], total: 0, ok: !y.holds, why: plain(vocab.sayAll(y.text)), note: nameless(a.lit, a.text), english }); continue; }
           } catch (e) { outs[i].errors.push(`${a.text}: ${(e as Error).message}`); continue; }
           if (conjunction(a.lit)) { outs[i].errors.push(`${a.text}: a question is one literal; write a rule that joins these and ask its head`); continue; }
@@ -628,22 +654,9 @@ export class Host {
   private code(files: Record<string, string>, data: string[]): Scanned {
     const key = JSON.stringify([files, data]);
     if (this.scanned?.key === key) return this.scanned;
-    const nodes: Record<string, Node> = {};
-    const parseErrors: Record<string, string> = {};
-    const facts: string[] = [], strings = new Set<string>();
-    for (const [path, src] of Object.entries(files)) {
-      for (const fact of scan(src, { file: path }).facts) {
-        facts.push(fact);
-        const m = /^ast_node\[code\]\((\w+), (\w+), "([^"]*)", (\d+)\)/.exec(fact);
-        if (m) nodes[m[1]] = { kind: m[2], file: m[3], line: Number(m[4]), label: '' };
-        const e = /^ast_parse_error\[code\]\("[^"]*", "(.*)"\)\.$/.exec(fact);
-        if (e) parseErrors[path] = e[1];
-        const v = /^ast_attr\[code\]\(\w+, value, (".*")\)\.$/.exec(fact);
-        if (v) strings.add(unquote(v[1]));
-      }
-    }
+    const { facts, nodes, parseErrors, host } = codeFacts(files, data);
     labelNodes(facts, nodes);
-    const all = [...facts, ...hostFacts([...Object.keys(files), ...data], strings)];
+    const all = [...facts, ...host];
     this.base = null;
     return this.scanned = { key, facts, nodes, parseErrors, text: all.join('\n'), rels: new Set(all.map(relOf)) };
   }
@@ -669,9 +682,13 @@ export class Host {
   }
 
   /** `why` over the last run, without running again. */
-  why(literal: string): string {
-    if (!this.last) return 'run the book first';
-    return plain(this.vocab.sayAll(this.last.why(this.reown(literal)).text));
+  why(literal: string): string { return this.whyOf(literal).text; }
+
+  /** `why` over the last run, and the chain of the value it explains. */
+  whyOf(literal: string): { text: string; chain: string[] } {
+    if (!this.last) return { text: 'run the book first', chain: [] };
+    const y = this.last.why(this.reown(literal));
+    return { text: plain(this.vocab.sayAll(y.text)), chain: y.ok ? chainOf(y.text, this.scanned?.nodes ?? {}, (k) => plain(this.vocab.say(k) ?? k)) : [] };
   }
 }
 

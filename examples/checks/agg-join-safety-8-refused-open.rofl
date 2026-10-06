@@ -1,0 +1,5 @@
+-- expect-refusal: not range-restricted
+-- a membership reads a set something bound: here nothing does
+edb(ajsr_e). ajsr_e(a, b). ajsr_e(b, a).
+lattice ajsr_open(X, union S).
+ajsr_open(X, set(E)) :- ajsr_e(X, _), E in S.

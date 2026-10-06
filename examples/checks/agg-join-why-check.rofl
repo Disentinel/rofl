@@ -1,0 +1,74 @@
+-- examples/checks/agg-join-why-check.rofl — agg_join_why, run with
+-- `rofl-load --explain`. `why` of a join fact names its lattice and its
+-- Cover, each contribution by its value and height, lowest first, each
+-- explained by the firing that contributed it: never by the self-loop that
+-- also contributes aj_comp(s)'s value, which rests on the cell itself; a
+-- value the cell passed through is marked an earlier value, the join of the
+-- value before it and a contribution. `whynot` of a value above the cell's
+-- says what the cell holds, that no contribution reaches it, and lists the
+-- contributions; of one below it, that the join is of every contribution;
+-- of a term outside the carrier, that it is no value; of a holed cell, the
+-- hole and not an exploration; of a key no rule reaches, the exploration,
+-- with no cell to name.
+-- THE SELF-LOOP IS READ FROM THE STATE, NOT FROM THE TEXT: a contribution is a fact `why` shows by its firing of least
+-- derivation height, which is never the one that rests on the cell, so a cover that kept the self-loop would print the same
+-- words. The fact holds one firing.
+-- expect-row: aj_comp@join[main](s,set(s)) tick drv support=1
+edb(explain_request).
+edb(explained).
+explain_request(why, aj_comp(s, set(s))).
+explain_request(why, aj_comp(a, set(a, b, c, d))).
+explain_request(why, aj_pick(k, set(x, y, z))).
+explain_request(why, aj_range(h4, iv(-2, 10))).
+explain_request(whynot, aj_comp(a, set(a, b, c, d, z))).
+explain_request(whynot, aj_comp(a, set(a, b))).
+explain_request(whynot, aj_comp(zz, set(zz))).
+explain_request(whynot, aj_bad(k, set(k))).
+explain_request(whynot, aj_range(h1, iv(-3, 7))).
+explain_request(whynot, aj_bits(h1, 5)).
+explain_request(whynot, aj_comp(a, oops)).
+-- a request names a value, however the set in it is written
+explain_request(why, aj_pair(k, set(b, a, b))).
+explain_request(whynot, aj_pair(k, set(b, a))).
+explain_request(whynot, aj_comp(a, set(b, a))).
+ajy_holds(K, A, T) :- explained[$explain](K, A, _, L), ajy_want(K, A, T), N is str_segs(L, T), N > 1.
+ajy_want(why, aj_comp(s, set(s)), "aj_comp[main](s,set(s)) [lattice union: a cover of 1 contribution]").
+ajy_want(why, aj_comp(s, set(s)), "#1 set(s) h=1").
+ajy_want(why, aj_comp(s, set(s)), "aj_node[main](s) [axiom]").
+ajy_want(why, aj_comp(a, set(a, b, c, d)), "[lattice union: a cover of 3 contributions]").
+ajy_want(why, aj_comp(a, set(a, b, c, d)), "#1 set(a) h=1").
+ajy_want(why, aj_comp(a, set(a, b, c, d)), "an earlier value, improved on since").
+ajy_want(why, aj_pick(k, set(x, y, z)), "aj_pick[main](k,set(x,y,z)) [lattice union: a cover of 3 contributions]").
+ajy_want(why, aj_pick(k, set(x, y, z)), "#1 set(x) h=1").
+ajy_want(why, aj_pick(k, set(x, y, z)), "#2 set(y) h=1").
+ajy_want(why, aj_pick(k, set(x, y, z)), "aj_pc[main](k,y) [axiom]").
+ajy_want(why, aj_pick(k, set(x, y, z)), "#3 set(z) h=6").
+ajy_want(why, aj_range(h4, iv(-2, 10)), "[lattice hull: a cover of 2 contributions]").
+ajy_want(why, aj_range(h4, iv(-2, 10)), "#1 iv(10,10) h=1").
+ajy_want(why, aj_range(h4, iv(-2, 10)), "aj_val[main](h4,10) [axiom]").
+ajy_want(whynot, aj_comp(a, set(a, b, c, d, z)), "aj_comp[main](a) is a lattice cell (union) holding set(a,b,c,d)").
+ajy_want(whynot, aj_comp(a, set(a, b, c, d, z)), "set(a,b,c,d,z) would widen it, and no contribution reaches it").
+ajy_want(whynot, aj_comp(a, set(a, b, c, d, z)), "set(a) <= ").
+ajy_want(whynot, aj_comp(a, set(a, b)), "set(a,b) is not its value: union joins every contribution, and they join to set(a,b,c,d)").
+ajy_want(whynot, aj_comp(zz, set(zz)), "failed premise").
+ajy_want(whynot, aj_bad(k, set(k)), "aj_bad[main](k) has no value: hole(agg_type_error) [lattice union]").
+ajy_want(whynot, aj_range(h1, iv(-3, 7)), "iv(-3,7) would widen it").
+ajy_want(whynot, aj_range(h1, iv(-3, 7)), "iv(3,3) <= ").
+ajy_want(whynot, aj_bits(h1, 5), "5 is not its value: bitor joins every contribution, and they join to 21").
+ajy_want(whynot, aj_comp(a, oops), "oops is no value of union: agg_type_error").
+ajy_want(why, aj_pair(k, set(b, a, b)), "aj_pair[main](k,set(a,b)) [lattice union: a cover of 1 contribution]").
+ajy_want(why, aj_pair(k, set(b, a, b)), "#1 set(a,b) h=1").
+ajy_want(whynot, aj_pair(k, set(b, a)), "aj_pair[main](k,set(a,b)) holds").
+ajy_want(whynot, aj_comp(a, set(b, a)), "set(a,b) is not its value: union joins every contribution, and they join to set(a,b,c,d)").
+ajy_text_missing(K, A, T) :- ajy_want(K, A, T), not ajy_holds(K, A, T).
+-- the self-loop at s is no derivation of its cover
+ajy_cycle(A)          :- explained[$explain](why, A, _, L), N is str_segs(L, "[cycle]"), N > 1.
+-- a key no rule reaches is no cell; a hole is not explored
+ajy_phantom_cell()    :- explained[$explain](whynot, aj_comp(zz, set(zz)), _, L), N is str_segs(L, "lattice cell"), N > 1.
+ajy_hole_explored()   :- explained[$explain](whynot, aj_bad(k, set(k)), _, L), N is str_segs(L, "failed premise"), N > 1.
+ajy_refused(K, A)     :- explained[$explain](K, A, 0, _).
+alarm(ajy_text_missing).
+alarm(ajy_cycle).
+alarm(ajy_phantom_cell).
+alarm(ajy_hole_explored).
+alarm(ajy_refused).

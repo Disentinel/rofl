@@ -12,8 +12,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { Rofl } from '../../src/api.ts';
-import { Evaluation } from '../../src/engine.ts';
-import { peelRounds } from '../../src/rounds.ts';
+import { AggEval, schedule } from '../../src/aggeval.ts';
 import { evaluateSemiring } from '../../src/semiring.ts';
 import { parseProgram } from '../../src/parser.ts';
 import { ruleIdOf, canonClause, KERNEL_BOOK } from '../../src/reflect.ts';
@@ -822,13 +821,13 @@ export function hygiene(r: Rofl, watch: string[]): Hygiene {
   // decoded rules instead. The round a relation settles in IS its level, and a
   // relation still standing when a round settles nothing IS unstratifiable —
   // the same two answers, now read from the schedule that was actually used.
-  const ev = new Evaluation(r.store, { budget: BUDGET });
-  const peel = peelRounds(ev.rules);
+  const ev = new AggEval(r.store, BUDGET, 'rounds');
+  const peel = schedule(ev.rules);
   const strata = peel.round;
   return {
     rules: ev.rules.length,
     allSafe: ev.rules.every((x) => x.safe),
-    demandRels: ev.demandRels.size,
+    demandRels: ev.demandRels.length,
     unstratified: peel.stuck,
     audits: {
       malformed: rows(r, 'malformed[audit](R)').length,
@@ -848,7 +847,7 @@ export function hygiene(r: Rofl, watch: string[]): Hygiene {
 export function firings(r: Rofl, budget: number = BUDGET): number {
   const scratch = Rofl.fromSnapshot(r.save());
   scratch.store.dirty = true;
-  const ev = new Evaluation(scratch.store, { budget });
+  const ev = new AggEval(scratch.store, budget, 'rounds');
   try { ev.run(); } catch { /* the count up to the wall is the answer */ }
   return ev.steps;
 }

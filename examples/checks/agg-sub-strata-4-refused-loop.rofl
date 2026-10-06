@@ -1,0 +1,8 @@
+-- expect-refusal: which depends on assr_l itself
+-- which of two values dominates is decided from relations closed below
+-- them: a dominance body reading what rests on its own relation is refused
+edb(assr_h).
+assr_h(a, 1). assr_h(a, 2).
+assr_l(K, V) :- assr_h(K, V).
+assr_top(K, V) :- assr_l(K, V).
+assr_l(K, V1) <= assr_l(K, V2) :- assr_top(K, V2), V2 < V1.

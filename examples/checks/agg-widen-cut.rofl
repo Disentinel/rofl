@@ -1,0 +1,26 @@
+-- examples/checks/agg-widen-cut.rofl — agg_widen_cut, under a budget (129
+-- steps, boot.rofl's included) that stops the recursion after its widening
+-- and before it settles. The window is narrow, 127 to 132 steps when this was
+-- written: a change to boot.rofl's cost moves it, and the world goes red
+-- (the cell holds a value, or its `widened` shrug appears) rather than
+-- passing vacuously. The walk
+-- `i = 0; loop { i = i + 1 or i = i - 1 }`, widen 1: [0,0], [0,1], then
+-- [0,2] widened to [0,inf); only the next step, [-1,inf), would widen the low
+-- end, and the wall comes first. [0,inf) is no enclosure of the least value,
+-- (-inf,inf): -1 is one step away. A widened value encloses the least value
+-- only once its recursion has settled on it, so a cell widened before a wall
+-- has no value to give: the wall is its reason, a budget hole of the cell,
+-- and no `widened` shrug says `within` anything.
+edb(awc_s).
+awc_s(a).
+lattice awc_p(P, hull I) widen 1.
+awc_p(head, iv(0, 0)) :- awc_s(a).
+awc_p(head, J)        :- awc_p(head, I), J is ivadd(I, 1).
+awc_p(head, J)        :- awc_p(head, I), J is ivsub(I, 1).
+-- expect-row: hole[$kernel]($adhoc,budget_exhausted)
+-- expect-row: hole[$kernel]($lattice(awc_p),budget_exhausted)
+-- expect-row: hole[$kernel]($lattice(awc_p,main,0,$cons(head,$nil)),budget_exhausted)
+-- expect-row: shrug[$kernel]($lattice(awc_p,main,0,$cons(head,$nil)),budget,spent(steps,
+-- expect-no-row: hole[$kernel]($lattice(awc_p,main,0,$cons(head,$nil)),widening_forced)
+-- expect-no-row: shrug[$kernel]($lattice(awc_p,main,0,$cons(head,$nil)),widened,
+-- expect-no-row: awc_p[main](head,

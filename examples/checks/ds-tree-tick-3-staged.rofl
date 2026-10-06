@@ -1,0 +1,12 @@
+-- examples/checks/ds-tree-tick-3-staged.rofl — ds_tree_tick_staged[_sealed], ticked once: a conclusion staged @next from a row of
+-- the declared closure, and a count over the closure staged @next, are explained in the tick they arrive in by the row of the tick
+-- they were read in, named by its frozen derived_by rows (kept) or bare (sealed) as a stored row is, and not by the row the present
+-- tick holds under the same key.
+edb(dts_e0).
+tree dts_e(P, C) closure dts_w.
+dts_e0(a, b). dts_e0(b, c).
+dts_e(P, C) :- dts_e0(P, C).
+dts_e0(P, C)@next :- dts_e0(P, C).
+dts_x(D)@next :- dts_w(a, D).
+dts_y(D) :- dts_x(D), dts_w(a, D).
+dts_n(N)@next :- N is count(D : dts_w(a, D)).

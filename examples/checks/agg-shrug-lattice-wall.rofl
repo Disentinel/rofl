@@ -1,0 +1,19 @@
+-- examples/checks/agg-shrug-lattice-wall.rofl — agg_lattice_shrug_wall over
+-- agg-lattice-wall-data.rofl, cut at 3000 steps: the wall is a `budget` shrug
+-- with what it spent and its limit, on the evaluation and on each lattice it
+-- left open; a cell that improved around a cycle is a `divergence`, its meta
+-- the cells of that cycle and of no other (awn's cycle from x and its cycle
+-- from y are two, each its own component of the first firings); a fold's type error a `fault`; and what they reach
+-- inherits them, the atoms with their value not known.
+-- expect-row: shrug[$kernel]($adhoc,budget,spent(steps,3001,3000))
+-- expect-row: shrug[$kernel]($lattice(awn),budget,spent(steps,3001,3000))
+-- expect-row: shrug[$kernel]($lattice(awn,main,0,$cons(x,$cons(y,$nil))),divergence,cycle($cons($lattice(awn,main,0,$cons(x,$cons(x,$nil))),$cons($lattice(awn,main,0,$cons(x,$cons(y,$nil))),$nil))))
+-- expect-row: shrug[$kernel]($lattice(awn,main,0,$cons(y,$cons(x,$nil))),divergence,cycle($cons($lattice(awn,main,0,$cons(y,$cons(x,$nil))),$cons($lattice(awn,main,0,$cons(y,$cons(y,$nil))),$nil))))
+-- expect-no-row: shrug[$kernel]($lattice(awn,main,0,$cons(x,$cons(y,$nil))),divergence,cycle($cons($lattice(awn,main,0,$cons(x,$cons(x,$nil))),$cons($lattice(awn,main,0,$cons(x,$cons(y,$nil))),$cons(
+-- expect-row: shrug[$kernel]($lattice(awp,main,0,$cons(a,$nil)),divergence,cycle($cons($lattice(awp,main,0,$cons(a,$nil)),$cons($lattice(awp,main,0,$cons(b,$nil)),$nil))))
+-- expect-row: shrug[$kernel]($lattice(awn,main,0,$cons(f,$cons(g,$nil))),fault,agg_type_error)
+-- expect-row: shrug[$kernel]($lattice(awn,main,0,$cons(f,$cons(h,$nil))),inherited,from($cons($lattice(awn,main,0,$cons(f,$cons(g,$nil))),$nil)))
+-- expect-row: shrug[$kernel](awn(x,z,$unknown_value),inherited,from($cons($lattice(awn,main,0,$cons(x,$cons(x,$nil))),$cons($lattice(awn,main,0,$cons(x,$cons(y,$nil))),$nil))))
+-- expect-row: shrug[$kernel](awp(a,$unknown_value),inherited,from($cons($lattice(awp,main,0,$cons(a,$nil)),$cons($lattice(awp,main,0,$cons(b,$nil)),$nil))))
+-- expect-no-row: shrug[$kernel](awn(s,u,
+-- expect-no-row: shrug[$kernel](awn(cs,cx,

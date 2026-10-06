@@ -1,0 +1,47 @@
+-- examples/checks/ds-function-phrase-check.rofl — ds_function_phrase. A
+-- function read from its sentence is the function rofl declares: the same
+-- `structure_decl` and `structure_role` rows for each relation and its
+-- written-as-rofl twin (`dspr_`), the same rows concluded; and a round
+-- trip through the sentence form loses and gains no declaration (the
+-- relations and roles scripts/sentences.ts says were written).
+dspc_rel(attr, dsp_attr, dspr_attr). dspc_rel(pair, dsp_pair, dspr_pair). dspc_rel(top, dsp_top, dspr_top).
+dspc_unlike(X) :- dspc_rel(X, S, R), structure_decl[$kernel](S, N, K), not structure_decl[$kernel](R, N, K).
+dspc_unlike(X) :- dspc_rel(X, S, R), structure_decl[$kernel](R, N, K), not structure_decl[$kernel](S, N, K).
+dspc_unlike(X) :- dspc_rel(X, S, R), structure_role[$kernel](S, P, Q), not structure_role[$kernel](R, P, Q).
+dspc_unlike(X) :- dspc_rel(X, S, R), structure_role[$kernel](R, P, Q), not structure_role[$kernel](S, P, Q).
+dspc_unlike(X) :- dspc_rel(X, S, _), not structure_decl[$kernel](S, _, _).
+alarm(dspc_unlike).
+dspc_rows(attr, N, K, V) :- dsp_attr(N, K, V), not dspr_attr(N, K, V).
+dspc_rows(attr, N, K, V) :- dspr_attr(N, K, V), not dsp_attr(N, K, V).
+dspc_rows(pair, K, A, B) :- dsp_pair(K, A, B), not dspr_pair(K, A, B).
+dspc_rows(pair, K, A, B) :- dspr_pair(K, A, B), not dsp_pair(K, A, B).
+dspc_rows(top, W, x, x) :- dsp_top(W), not dspr_top(W).
+dspc_rows(top, W, x, x) :- dspr_top(W), not dsp_top(W).
+dspc_rows(lost, x, x, x) :- not dsp_attr(n1, name, bar).
+dspc_rows(lost, x, x, x) :- not dsp_pair(k2, 3, 4).
+dspc_rows(lost, x, x, x) :- not dsp_top(n1).
+alarm(dspc_rows).
+-- the round trip (check_opt(W, sentences, 1), docs/aggregates.md "The sentence form, as built")
+sentence_lost[audit](R)     :- sentence_want(R), not rule_known(R).
+sentence_gained[audit](R)   :- concludes(R, Rel), sentence_rel(Rel), not sentence_want(R).
+decl_lost[audit](Rel)       :- sentence_structure(Rel, N, Kind), not structure_decl[$kernel](Rel, N, Kind).
+decl_lost[audit](Rel)       :- sentence_role(Rel, P, Role), not structure_role[$kernel](Rel, P, Role).
+decl_gained[audit](Rel)     :- structure_decl[$kernel](Rel, N, Kind), sentence_rel(Rel), not sentence_structure(Rel, N, Kind).
+decl_gained[audit](Rel)     :- structure_role[$kernel](Rel, P, Role), sentence_rel(Rel), not sentence_role(Rel, P, Role).
+went_round()                :- sentence_structure(_, _, _).
+nothing_went_round()        :- not went_round().
+alarm(sentence_lost).
+alarm(sentence_gained).
+alarm(decl_lost).
+alarm(decl_gained).
+alarm(nothing_went_round).
+sentence_inexact[audit](W, M, N) :- sentence_exact(W, M, N), M != N.
+alarm(sentence_inexact).
+-- and the function is WRITTEN in its own words, a rule rofl-render wrote back as rofl would read back too
+edb(sentence_word).
+sentence_word(dsp_attr, "has one V for each N and K").
+sentence_word(dsp_pair, "has one A and B for each K").
+sentence_word(dsp_top, "has one W").
+sentence_says(Rel, T)          :- sentence_word(Rel, T), sentence_of(Rel, S), N is str_segs(S, T), N > 1.
+sentence_unsaid[audit](Rel, T) :- sentence_word(Rel, T), not sentence_says(Rel, T).
+alarm(sentence_unsaid).

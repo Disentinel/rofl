@@ -1,0 +1,3 @@
+-- expect-refusal: has no closing dot
+-- a declaration ends with a dot
+lex soxr_dot(A, min C)

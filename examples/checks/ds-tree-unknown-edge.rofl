@@ -1,0 +1,18 @@
+-- examples/checks/ds-tree-unknown-edge.rofl — ds_tree_unknown_edge[_sealed]: an edge of the declared tree is a labeled unknown (its
+-- child overflows), so the rows of the closure through it, and what reads them, are shrugs: lw(a, ?), lw(b, ?) and lw(c, ?), and
+-- lw(c, b), lw(c, c) and lw(b, b) where the unknown could be b or c. A row the tree holds (lw(a, b), lw(a, c), lw(b, c)) is no shrug
+-- (the Rust engine answered it from the tree and stores no row of it, and once took it for a row that does not hold). The state is
+-- the stored closure's and TypeScript's.
+edb(lb).
+edb(le0).
+lb(1152921504606846975).
+le0(a, b). le0(b, c).
+tree le(P, C) closure lw.
+le(P, C) :- le0(P, C).
+le(c, G) :- lb(B), G is B + 1.
+lhit(D) :- lw(a, D).
+lcnt(N) :- N is count(D : lw(a, D)).
+lneg(X) :- le0(_, X), not lw(a, X).
+lcnt2(N) :- N is count(D : lhit(D)).
+lknown_shrug(A, D) :- shrug[$kernel](lw(A, D), _, _), lw(A, D).
+alarm(lknown_shrug).

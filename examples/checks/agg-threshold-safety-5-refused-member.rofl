@@ -1,0 +1,5 @@
+-- expect-refusal: does not bind every term it counts
+-- the body binds no W, so there is nothing to count
+edb(atsr_v).
+atsr_v(w1, c1).
+atsr_member(C) :- atsr_v(_, C), at_least(1, W : atsr_v(X, C), X != W).

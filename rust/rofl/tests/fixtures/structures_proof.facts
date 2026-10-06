@@ -1,0 +1,40 @@
+-- THE PROOF FIXTURE of the detection report (src/structures.rs): what it must
+-- propose and what it must only call a near miss. Expected output:
+-- structures_proof.report, checked by tests/structures.rs and, with a fault
+-- planted, by scripts/agg_breaks.ts.
+edb(edge). edb(link). edb(ring). edb(name_of). edb(tag_of). edb(grade). edb(owns).
+
+-- A FOREST and its strict closure.
+edge(r1, a). edge(r1, b). edge(a, c). edge(a, d). edge(r2, e). edge(e, f).
+below(X, Y) :- edge(X, Y).
+below(X, Z) :- below(X, Y), edge(Y, Z).
+
+-- NEAR MISS: a DAG, d1 has two parents.
+link(a1, b1). link(a1, c1). link(b1, d1). link(c1, d1).
+
+-- NEAR MISS: a cycle.
+ring(x1, x2). ring(x2, x3). ring(x3, x1). ring(y1, y2).
+
+-- A FUNCTION: one name per node.
+name_of(n1, "x"). name_of(n2, "y"). name_of(n3, "x").
+
+-- NEAR MISS: one key, k3, has two tags.
+tag_of(k1, t1). tag_of(k2, t1). tag_of(k3, t2). tag_of(k3, t3). tag_of(k4, t2).
+
+-- A FUNCTION OF TWO KEYS (student, course) -> mark; no smaller key does it.
+grade(s1, math, 5). grade(s1, art, 4). grade(s2, math, 5). grade(s2, art, 3). grade(s3, math, 4).
+grade(s4, math, 4). grade(s4, art, 4).
+
+-- ALIASES: a permuted copy and a projection.
+owns(p1, i1). owns(p1, i2). owns(p2, i1). owns(p3, i3). owns(p4, i4).
+held_by(I, P) :- owns(P, I).
+holder(P) :- owns(P, _).
+
+-- NEAR MISS: a permuted copy missing the row (p4, i4).
+copy_miss(I, P) :- owns(P, I), I != i4.
+
+-- A TREE ALREADY DECLARED, with its closure: reported as declared, neither proposed nor said to have no closure, and its closure
+-- (answered from the tree, or stored) read by no proposal or near miss.
+tree dedge(P, C) closure dbelow.
+dedge(q1, q2). dedge(q1, q3). dedge(q2, q4).
+

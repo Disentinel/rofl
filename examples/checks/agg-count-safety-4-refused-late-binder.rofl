@@ -1,0 +1,6 @@
+-- expect-refusal: after the aggregate
+-- examples/checks/agg-count-safety-4-refused-late-binder.rofl — C is shared
+-- with the aggregate and bound only by a premise written after it, so
+-- whether the count is asked per C or grouped by C would depend on where the
+-- premise is written. The load door refuses it.
+acs_late(C, N) :- N is count(B : acs_b(B, C)), acs_c(C).

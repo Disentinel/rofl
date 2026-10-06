@@ -1,0 +1,114 @@
+-- examples/checks/agg-lattice-holes-data.rofl — THE ORDER LATTICE, WHERE A
+-- HOLE REACHES, shared by agg_lattice_eval and agg_lattice_why
+-- (docs/aggregates.md, "The order lattice, as built", Holes).
+--
+-- ahp: one graph three times. The edge c to k is not a number, so the cell
+-- (c, k) and the cell (a, k) are holes, and (a, f), which a path through k
+-- could make smaller than the edge a to f, is unknown too — and so is
+-- (c, f). In g5 the cell (a, k) first holds 5 and in g100 it holds 100
+-- (a path to f through it better than the direct edge, and one worse): the
+-- holes are the same three times, whatever value the holed cell had
+-- reached (f_an_unknown_value_reaches_what_reads_it).
+-- ahq: an unknown cell read through a relation that is no lattice, inside
+-- the recursion: ahq_near(m) is not known, so ahq(s, m) is not either, and
+-- ahq_near's rule is holed; ahq_near(b) holds whatever m is.
+-- ahs: the same through a tuple that held (ahs_near(n), from the value 1
+-- the cell (a, n) reached) until the fault on that cell withdrew it.
+-- ahr, ahr2: a fault before the key is bound holes every cell of ahr, and
+-- every cell of ahr2, which reads it inside their one recursion.
+-- READERS OUTSIDE THE RECURSION, which fire once the lattice has closed,
+-- find what a hole left unknown unknown too:
+-- ahq3: a lattice reading ahq from outside; ahq3(m) is min(5, ahq(a, m),
+-- ahq(s, m)), both unknown, so it is a hole and never 5.
+-- ahd2: the same one lattice higher, with a cell whose one bad contribution
+-- holes it (ahd1(a, k)) under a worse value of ahd2's own (100).
+-- ahp_unreach: a negation of a holed cell is undecided, so no pair a path
+-- through k could join is concluded unreachable; the rest are.
+-- ahq_far: a negation of a tuple not known to hold (ahq_near(m)), and
+-- ahq_c2 to ahq_c4 negations of that in a row, each a stratum higher: m is
+-- undecided all the way up, z alternates.
+-- ahp_n: a count whose group could hold a holed cell is a hole; ahp_n of k
+-- and f count what is known.
+-- ahq_two: a threshold short of its quorum by a tuple not known to hold
+-- (ahq_lo(m), read from outside ahq).
+edb(ahp_e).
+edb(ahq_e).
+edb(ahs_e).
+edb(ahr_e).
+edb(ahr_w).
+edb(ahr_hop).
+edb(ahq_b).
+edb(ahd_e1).
+edb(ahd_e2).
+edb(ahp_node).
+ahp_e(g0, a, c, 1).
+ahp_e(g0, c, k, heavy).
+ahp_e(g0, k, f, 1).
+ahp_e(g0, a, f, 10).
+ahp_e(g5, a, c, 1).
+ahp_e(g5, c, k, heavy).
+ahp_e(g5, k, f, 1).
+ahp_e(g5, a, f, 10).
+ahp_e(g5, a, k, 5).
+ahp_e(g100, a, c, 1).
+ahp_e(g100, c, k, heavy).
+ahp_e(g100, k, f, 1).
+ahp_e(g100, a, f, 10).
+ahp_e(g100, a, k, 100).
+ahq_e(a, b, 1).
+ahq_e(a, m, oops).
+ahs_e(a, n, 1).
+ahs_e(a, n, oops).
+ahr_e(a, b, 1).
+ahr_e(b, c, 1).
+ahr_w(b, oops).
+ahr_hop(1, c).
+
+lattice ahp(G, A, C, min D).
+ahp(G, A, C, D) :- ahp_e(G, A, C, D).
+ahp(G, A, C, D) :- ahp(G, A, B, D1), ahp_e(G, B, C, W), D is D1 + W.
+
+lattice ahq(A, C, min D).
+ahq(A, C, D) :- ahq_e(A, C, D).
+ahq_near(C) :- ahq(_, C, D), D < 2.
+ahq(s, C, 0) :- ahq_near(C).
+
+lattice ahs(A, C, min D).
+ahs(A, C, D) :- ahs_e(A, C, D).
+ahs_near(C) :- ahs(_, C, D), D < 2.
+ahs(s, C, 0) :- ahs_near(C).
+
+lattice ahr(A, C, min D).
+lattice ahr2(A, C, min D).
+ahr(A, C, D) :- ahr_e(A, C, D).
+ahr(A, C, D) :- ahr2(A, B, D1), ahr_w(B, X), Y is X + 1, ahr_hop(Y, C), D is D1 + 1.
+ahr2(A, C, D) :- ahr(A, C, D).
+
+ahq_b(m, 5).
+ahq_b(z, 5).
+lattice ahq3(C, min D).
+ahq3(C, D) :- ahq_b(C, D).
+ahq3(C, D) :- ahq(_, C, D).
+
+ahd_e1(a, k, 1).
+ahd_e1(a, k, heavy).
+ahd_e2(a, k, 100).
+ahd_e2(a, j, 7).
+lattice ahd1(A, C, min D).
+ahd1(A, C, D) :- ahd_e1(A, C, D).
+lattice ahd2(A, C, min D).
+ahd2(A, C, D) :- ahd_e2(A, C, D).
+ahd2(A, C, D) :- ahd1(A, C, D).
+
+ahp_node(g0, a).
+ahp_node(g0, c).
+ahp_node(g0, k).
+ahp_node(g0, f).
+ahp_unreach(G, A, C) :- ahp_node(G, A), ahp_node(G, C), not ahp(G, A, C, _).
+ahq_far(C) :- ahq_b(C, _), not ahq_near(C).
+ahq_c2(C) :- ahq_b(C, _), not ahq_far(C).
+ahq_c3(C) :- ahq_b(C, _), not ahq_c2(C).
+ahq_c4(C) :- ahq_b(C, _), not ahq_c3(C).
+ahp_n(G, A, N) :- ahp_node(G, A), N is count(C : ahp(G, A, C, _)).
+ahq_lo(C) :- ahq(_, C, D), D < 2.
+ahq_two(C) :- ahq_b(C, _), at_least(2, X : ahq_lo(X)).

@@ -1,0 +1,8 @@
+-- expect-refusal: reads a closed relation
+-- a count reads a closed relation, and a tag closes only after its
+-- recursion: a count of its own cells inside that recursion is refused
+edb(tgsr_e).
+tgsr_e(a, b, 1).
+tag tgsr_c(A, B, tropical T).
+tgsr_c(A, B, W) :- tgsr_e(A, B, W).
+tgsr_c(A, B, T) :- tgsr_e(A, B, _), N is count(X : tgsr_c(X, _, _)), N > 0.

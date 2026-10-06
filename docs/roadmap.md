@@ -36,32 +36,72 @@ What 1.05 defers, on purpose:
 
 ## 1.1
 
-### Stratified `count`
+### Aggregates: done, and widened
 
-One aggregate, in a rule body, over a completed stratum:
+Planned on 2026-09-22 as one stratified `count` in a rule body. **Widened
+2026-09-28 by Vadim** (f_aggregation_is_one_cell_engine_with_two_syntaxes): every
+aggregate class, as one cell engine with two syntaxes, the Rust engine first and
+the TypeScript engine best-effort at small scale. The count it started from is
+now one row of a matrix. `docs/aggregates.md` is the account and
+`facts/agg.rofl` over `rules/agg.rofl` is the state: a cell per (kind,
+obligation) that closes only when a registered world proves it, so what is built
+and what is still open is read there ("The matrix") and not here.
 
-    probably_a_table(Rel) :- N is count(R : concludes(R, Rel)), N >= 5.
+Built, in the order of that document: the body aggregates `count`, `sum`, `min`,
+`max`, `or` and `and` with the empty group; lattice declarations (`lattice p(K,
+min V)`) that recurse; the threshold `at_least`; the holistic `median`,
+`quantile` and `rank`; join lattices; declared widening; semiring tags;
+subsumption under declared orders (pareto and lexicographic); holes that reach
+only the groups they could change; and the answer model's third value, the shrug.
 
-Decided up front, because these are the two things that cost the most to
-change later (f_count_is_a_kernel_change_and_the_witness_is_the_set):
+The two decisions fixed up front both held, in a general form
+(f_count_is_a_kernel_change_and_the_witness_is_the_set, dismissed as superseded
+by the widening):
 
-- **The witness is the set.** A derivation through `count` records every row
-  the count stood on, and `why` prints them. No new kind of witness is
-  invented for it; the existing record grows a variable-length premise.
-- **No monotone count inside recursion.** An aggregate premise is an edge of
-  the same kind as a negated one: the counted relation is complete before the
-  count is read, and the stratifier that already orders negation orders this.
+- **The witness is the set.** A cell's witness is its contributions, in six kinds
+  (Best, Cover, Widened, Group, Quorum and Antichain), and `why` prints the rows
+  a value stood on.
+- **No aggregate over what it is computing.** A body aggregate reads a relation
+  closed below it, as a negation does, and the stratifier orders it. What may
+  recurse is decided by the algebra of the kind: idempotent orders and joins,
+  the threshold and the idempotent tags do; the counting, invertible and
+  holistic kinds do not.
 
-What it touches: the TS evaluator, the Rust engine, the ring 1 grammar, the
-range-restriction fold in `safety.rofl` (the count's result is bound by the
-aggregate; its inner variables are local), the byte-for-byte port corpus, and
-the sentence form's phrase for it. Half of this is worse than none of it, so
-it lands whole or not at all.
+`npm run lint` used to count at the query boundary (rules projected, the
+counting semiring folded over the recorded support). That was one of the
+host-side workarounds the kinds replace; `w_agg_retire_workarounds` retired it,
+and the lint counts in its rules now (`count` in `examples/linter/linter.rofl`)
+(f_atoms_have_no_order_so_rules_cannot_count_past_three).
 
-Until it lands, `npm run lint` counts at the query boundary: rules project,
-the counting semiring is folded over the recorded support, and the number of
-derivations of a projected fact is the count. Genericity is kept because the
-fold never compares names (f_atoms_have_no_order_so_rules_cannot_count_past_three).
+### Also built for 1.1
+
+Not commitments of this page when it was written; built since, each with its
+finding, and listed so that this page does not read as the whole release
+(`w_release_1_1` in `facts/worklist.rofl` is the release's own list):
+
+- **Incremental addition**: facts and rules enter an evaluated Rust world by
+  delta, beside the retraction deltas, each held byte for byte to a fresh
+  evaluation (f_an_evaluated_world_takes_facts_and_rules_by_delta;
+  `docs/aggregates.md`, "Incremental addition, as built").
+- **The readable why**: a why of a value says first the steps the value took,
+  one line each, above a proof whose side conditions are counted; `npm run nb
+  -- --all` prints every answer and every proof whole
+  (f_every_why_line_of_a_notebook_failed; `docs/md-world.md`).
+- **The `[surface]` book**: `rules/js-surface.rofl`, the cross-file rules
+  rewritten to read another file only through it, the gate world
+  `vscode_surface_split` (`npm run test:split`) and the surface lint
+  (f_the_surface_book_mirrors_what_escapes_and_every_file_alone_equals_the_whole_world,
+  f_the_surface_lint_is_a_foreign_capable_column_read_by_a_local_premise;
+  `docs/surface-split.md`). The driver that cools volumes is not built yet.
+- **Path values**: a string built from parts is a node with parts, its text a
+  term (`rules/js-concat.rofl`;
+  f_a_string_built_from_parts_is_a_node_with_parts_and_its_text_is_a_term).
+- **The owner's decisions on walls and promises**
+  (f_the_owner_settles_walls_promises_and_incremental): a wall's cut may move
+  as the engine improves, so `--delta-first`, the written-order re-solve and
+  the `closure_unwalled` opt-in are removed (join plans are always on); a
+  declared structure's promise holds until the evaluation meets a place that
+  breaks it, and then the world is refused.
 
 ### The sentence form
 

@@ -1,0 +1,4 @@
+-- expect-refusal: exactly one value
+-- examples/checks/agg-minmax-safety-3-refused-two-values.rofl — a maximum
+-- of two values at once is no order at all.
+ams_twovals(G, M) :- ams_g(G), M is max(V, G : ams_d(G, V)).

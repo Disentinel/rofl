@@ -1,0 +1,11 @@
+-- examples/checks/ds-tree-tick-1-holds.rofl — ds_tree_tick: a tree judged, and its closure answered, at every tick. The
+-- edges carry themselves to the next tick and one more arrives at each, so the closure is larger at each tick and
+-- is read at each (the rows of the last are those of the whole chain).
+edb(dtt_chain).
+tree dtt_in(P, C) closure dtt_within.
+dtt_chain(a, b). dtt_chain(b, c). dtt_chain(c, d).
+dtt_in(r, a).
+dtt_in(P, C)@next :- dtt_in(P, C).
+dtt_chain(P, C)@next :- dtt_chain(P, C).
+dtt_in(P, C)@next :- dtt_in(Q, P), dtt_chain(P, C).
+dtt_deep(D) :- dtt_within(r, D), dtt_chain(_, D).

@@ -153,7 +153,7 @@ N3 A dismissed finding's reason is worth reading: no dismissal is closed with an
 > Not expressible over `facts/findings.rofl` alone: the sentence form's only
 > built-ins are `X is Y`, `X differs from Y`, `N > M`, `N is A + B` — no
 > length or substring primitive over a string or atom (checked in
-> `src/engine.ts`; nothing there is reachable from a ROFL program). `Reason`
+> `src/aggeval.ts`; nothing there is reachable from a ROFL program). `Reason`
 > is also written two different ways with no declared discriminator —
 > `dismissed(F, bun_is_ci_only)`, a bare atom, for 31 of 38 rows, and
 > `dismissed(F, "the cost gates were removed: ...")`, a quoted string, for

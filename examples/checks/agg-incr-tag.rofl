@@ -1,0 +1,121 @@
+-- examples/checks/agg-incr-tag.rofl — agg_incr_tag: the IDEMPOTENT SEMIRING TAGS
+-- under RETRACTION (docs/aggregates.md, "Ready for the incremental engine"). A
+-- tropical, a viterbi and a trust tag are the order lattices of their ⊕ (min,
+-- max, max): the cell is the fact, a contribution is a firing, and the relation
+-- records its algebra on its `lat` line, `tag:tropical alg=idempotent,lattice,tag
+-- use=rederive`. A retraction takes the cone of the fact out and fires the rules
+-- into it again, so the state must be the one of a world without the facts.
+--
+--   it_e(b, c, 4)       the cheapest way to c is the direct edge, 9; d moves with it
+--   it_p(a, b, 500000)  the only way from a to b is gone, and so is what went through it
+--   it_p(c, a, 900000)  and the way round the cycle
+edb(it_e). edb(it_p).
+it_e(a, b, 3).
+it_e(b, c, 4).
+it_e(a, c, 9).
+it_e(c, a, 1).
+it_e(c, d, 2).
+it_e(e, f, 2).
+it_p(a, b, 500000).
+it_p(b, c, 800000).
+it_p(a, c, 300000).
+it_p(c, a, 900000).
+tag it_cost(A, B, tropical T).
+it_cost(A, B, W) :- it_e(A, B, W).
+it_cost(A, C, W) :- it_cost(A, B, _), it_e(B, C, W).
+tag it_pr(A, B, viterbi P).
+it_pr(A, B, W) :- it_p(A, B, W).
+it_pr(A, C, W) :- it_pr(A, B, _), it_p(B, C, W).
+tag it_tr(A, B, trust T).
+it_tr(A, B, W) :- it_p(A, B, W).
+it_tr(A, C, W) :- it_tr(A, B, _), it_p(B, C, W).
+
+-- the state after the retractions, row by row
+-- expect-row: it_cost[main](a,a,10) tick drv support=1
+-- expect-row: it_cost[main](a,b,3) tick drv support=1
+-- expect-row: it_cost[main](a,c,9) tick drv support=1
+-- expect-row: it_cost[main](a,d,11) tick drv support=1
+-- expect-row: it_cost[main](c,a,1) tick drv support=1
+-- expect-row: it_cost[main](c,b,4) tick drv support=1
+-- expect-row: it_cost[main](c,c,10) tick drv support=1
+-- expect-row: it_cost[main](c,d,2) tick drv support=1
+-- expect-row: it_cost[main](e,f,2) tick drv support=1
+-- expect-row: it_e[main](a,b,3) tick base support=0
+-- expect-row: it_e[main](a,c,9) tick base support=0
+-- expect-row: it_e[main](c,a,1) tick base support=0
+-- expect-row: it_e[main](c,d,2) tick base support=0
+-- expect-row: it_e[main](e,f,2) tick base support=0
+-- expect-row: it_p[main](a,c,300000) tick base support=0
+-- expect-row: it_p[main](b,c,800000) tick base support=0
+-- expect-row: it_pr[main](a,c,300000) tick drv support=1
+-- expect-row: it_pr[main](b,c,800000) tick drv support=1
+-- expect-row: it_tr[main](a,c,300000) tick drv support=1
+-- expect-row: it_tr[main](b,c,800000) tick drv support=1
+-- expect-row: lat it_cost tag:tropical alg=idempotent,lattice,tag use=rederive
+-- expect-row: lat it_pr tag:viterbi alg=idempotent,lattice,tag use=rederive
+-- expect-row: lat it_tr tag:trust alg=idempotent,lattice,tag use=rederive
+-- expect-row: fir it_cost[main](a,a,10) id=f8bde08ef18092da r69bf7ff7@0 [bi:1 is $tropical(0,1); bi:10 is $tropical(1,9); fact:it_cost[main](a,c,9); fact:it_e[main](c,a,1)] live
+-- expect-row: fir it_cost[main](a,b,3) id=8633ae48495fb3da r0ca7113e@0 [bi:3 is $tropical(0,3); fact:it_e[main](a,b,3)] live
+-- expect-row: fir it_cost[main](a,c,9) id=80e2a28383732605 r0ca7113e@0 [bi:9 is $tropical(0,9); fact:it_e[main](a,c,9)] live
+-- expect-row: fir it_cost[main](a,d,11) id=849af3fe6ff8276c r69bf7ff7@0 [bi:11 is $tropical(2,9); bi:2 is $tropical(0,2); fact:it_cost[main](a,c,9); fact:it_e[main](c,d,2)] live
+-- expect-row: fir it_cost[main](c,a,1) id=2594eb0af2c280c5 r0ca7113e@0 [bi:1 is $tropical(0,1); fact:it_e[main](c,a,1)] live
+-- expect-row: fir it_cost[main](c,b,4) id=a346aed41bd92900 r69bf7ff7@0 [bi:3 is $tropical(0,3); bi:4 is $tropical(3,1); fact:it_cost[main](c,a,1); fact:it_e[main](a,b,3)] live
+-- expect-row: fir it_cost[main](c,c,10) id=703df72d85b48788 r69bf7ff7@0 [bi:10 is $tropical(9,1); bi:9 is $tropical(0,9); fact:it_cost[main](c,a,1); fact:it_e[main](a,c,9)] live
+-- expect-row: fir it_cost[main](c,d,2) id=5a9a95915bae8569 r0ca7113e@0 [bi:2 is $tropical(0,2); fact:it_e[main](c,d,2)] live
+-- expect-row: fir it_cost[main](e,f,2) id=2aa72ef606ff019d r0ca7113e@0 [bi:2 is $tropical(0,2); fact:it_e[main](e,f,2)] live
+-- expect-row: fir it_pr[main](a,c,300000) id=6dc1f91cd62fa70d r0832fa22@0 [bi:300000 is $viterbi(1000000,300000); fact:it_p[main](a,c,300000)] live
+-- expect-row: fir it_pr[main](b,c,800000) id=5d1264113e3b3797 r0832fa22@0 [bi:800000 is $viterbi(1000000,800000); fact:it_p[main](b,c,800000)] live
+-- expect-row: fir it_tr[main](a,c,300000) id=70bcdede2ae2d903 r91b03266@0 [bi:300000 is $trust(1000000,300000); fact:it_p[main](a,c,300000)] live
+-- expect-row: fir it_tr[main](b,c,800000) id=43f97989df00d715 r91b03266@0 [bi:800000 is $trust(1000000,800000); fact:it_p[main](b,c,800000)] live
+-- and nothing of what they supported before
+-- expect-no-row: it_cost[main](a,a,8) tick drv support=1
+-- expect-no-row: it_cost[main](a,c,7) tick drv support=1
+-- expect-no-row: it_cost[main](a,d,9) tick drv support=1
+-- expect-no-row: it_cost[main](b,a,5) tick drv support=1
+-- expect-no-row: it_cost[main](b,b,8) tick drv support=1
+-- expect-no-row: it_cost[main](b,c,4) tick drv support=1
+-- expect-no-row: it_cost[main](b,d,6) tick drv support=1
+-- expect-no-row: it_cost[main](c,c,8) tick drv support=1
+-- expect-no-row: it_e[main](b,c,4) tick base support=0
+-- expect-no-row: it_p[main](a,b,500000) tick base support=0
+-- expect-no-row: it_p[main](c,a,900000) tick base support=0
+-- expect-no-row: it_pr[main](a,a,360000) tick drv support=1
+-- expect-no-row: it_pr[main](a,b,500000) tick drv support=1
+-- expect-no-row: it_pr[main](a,c,400000) tick drv support=1
+-- expect-no-row: it_pr[main](b,a,720000) tick drv support=1
+-- expect-no-row: it_pr[main](b,b,360000) tick drv support=1
+-- expect-no-row: it_pr[main](c,a,900000) tick drv support=1
+-- expect-no-row: it_pr[main](c,b,450000) tick drv support=1
+-- expect-no-row: it_pr[main](c,c,360000) tick drv support=1
+-- expect-no-row: it_tr[main](a,a,500000) tick drv support=1
+-- expect-no-row: it_tr[main](a,b,500000) tick drv support=1
+-- expect-no-row: it_tr[main](a,c,500000) tick drv support=1
+-- expect-no-row: it_tr[main](b,a,800000) tick drv support=1
+-- expect-no-row: it_tr[main](b,b,500000) tick drv support=1
+-- expect-no-row: it_tr[main](c,a,900000) tick drv support=1
+-- expect-no-row: it_tr[main](c,b,500000) tick drv support=1
+-- expect-no-row: it_tr[main](c,c,500000) tick drv support=1
+-- expect-no-row: fir it_cost[main](a,a,8) id=ab87bb078d3a247d r69bf7ff7@0 [bi:1 is $tropical(0,1); bi:8 is $tropical(1,7); fact:it_cost[main](a,c,7); fact:it_e[main](c,a,1)] live
+-- expect-no-row: fir it_cost[main](a,c,7) id=1702e60f72a577b4 r69bf7ff7@0 [bi:4 is $tropical(0,4); bi:7 is $tropical(4,3); fact:it_cost[main](a,b,3); fact:it_e[main](b,c,4)] live
+-- expect-no-row: fir it_cost[main](a,d,9) id=126347776bede4dd r69bf7ff7@0 [bi:2 is $tropical(0,2); bi:9 is $tropical(2,7); fact:it_cost[main](a,c,7); fact:it_e[main](c,d,2)] live
+-- expect-no-row: fir it_cost[main](b,a,5) id=bdb738c16166b08d r69bf7ff7@0 [bi:1 is $tropical(0,1); bi:5 is $tropical(1,4); fact:it_cost[main](b,c,4); fact:it_e[main](c,a,1)] live
+-- expect-no-row: fir it_cost[main](b,b,8) id=07284ae81e7b5b4d r69bf7ff7@0 [bi:3 is $tropical(0,3); bi:8 is $tropical(3,5); fact:it_cost[main](b,a,5); fact:it_e[main](a,b,3)] live
+-- expect-no-row: fir it_cost[main](b,c,4) id=5a0bfd237c24a641 r0ca7113e@0 [bi:4 is $tropical(0,4); fact:it_e[main](b,c,4)] live
+-- expect-no-row: fir it_cost[main](b,d,6) id=f6a5402f62791b1f r69bf7ff7@0 [bi:2 is $tropical(0,2); bi:6 is $tropical(2,4); fact:it_cost[main](b,c,4); fact:it_e[main](c,d,2)] live
+-- expect-no-row: fir it_cost[main](c,c,8) id=592680f4e5dcc45b r69bf7ff7@0 [bi:4 is $tropical(0,4); bi:8 is $tropical(4,4); fact:it_cost[main](c,b,4); fact:it_e[main](b,c,4)] live
+-- expect-no-row: fir it_pr[main](a,a,360000) id=3a2cbee74cd0e711 r897e3c06@0 [bi:360000 is $viterbi(900000,400000); bi:900000 is $viterbi(1000000,900000); fact:it_p[main](c,a,900000); fact:it_pr[main](a,c,400000)] live
+-- expect-no-row: fir it_pr[main](a,b,500000) id=f0cef92a190e3d64 r0832fa22@0 [bi:500000 is $viterbi(1000000,500000); fact:it_p[main](a,b,500000)] live
+-- expect-no-row: fir it_pr[main](a,c,400000) id=0f67e90713a3f38c r897e3c06@0 [bi:400000 is $viterbi(800000,500000); bi:800000 is $viterbi(1000000,800000); fact:it_p[main](b,c,800000); fact:it_pr[main](a,b,500000)] live
+-- expect-no-row: fir it_pr[main](b,a,720000) id=4d3157e2943b3bf8 r897e3c06@0 [bi:720000 is $viterbi(900000,800000); bi:900000 is $viterbi(1000000,900000); fact:it_p[main](c,a,900000); fact:it_pr[main](b,c,800000)] live
+-- expect-no-row: fir it_pr[main](b,b,360000) id=ae30347be5738ff1 r897e3c06@0 [bi:360000 is $viterbi(500000,720000); bi:500000 is $viterbi(1000000,500000); fact:it_p[main](a,b,500000); fact:it_pr[main](b,a,720000)] live
+-- expect-no-row: fir it_pr[main](c,a,900000) id=d15175766d45e12b r0832fa22@0 [bi:900000 is $viterbi(1000000,900000); fact:it_p[main](c,a,900000)] live
+-- expect-no-row: fir it_pr[main](c,b,450000) id=ae7d9d190e819edc r897e3c06@0 [bi:450000 is $viterbi(500000,900000); bi:500000 is $viterbi(1000000,500000); fact:it_p[main](a,b,500000); fact:it_pr[main](c,a,900000)] live
+-- expect-no-row: fir it_pr[main](c,c,360000) id=da5ce339feb959c5 r897e3c06@0 [bi:360000 is $viterbi(800000,450000); bi:800000 is $viterbi(1000000,800000); fact:it_p[main](b,c,800000); fact:it_pr[main](c,b,450000)] live
+-- expect-no-row: fir it_tr[main](a,a,500000) id=a6eaedd1bee0633d r34803a66@0 [bi:500000 is $trust(900000,500000); bi:900000 is $trust(1000000,900000); fact:it_p[main](c,a,900000); fact:it_tr[main](a,c,500000)] live
+-- expect-no-row: fir it_tr[main](a,b,500000) id=b967f11ff628fc9e r91b03266@0 [bi:500000 is $trust(1000000,500000); fact:it_p[main](a,b,500000)] live
+-- expect-no-row: fir it_tr[main](a,c,500000) id=1a010f15ddcbc4fb r34803a66@0 [bi:500000 is $trust(800000,500000); bi:800000 is $trust(1000000,800000); fact:it_p[main](b,c,800000); fact:it_tr[main](a,b,500000)] live
+-- expect-no-row: fir it_tr[main](b,a,800000) id=e0e823f337ed7a17 r34803a66@0 [bi:800000 is $trust(900000,800000); bi:900000 is $trust(1000000,900000); fact:it_p[main](c,a,900000); fact:it_tr[main](b,c,800000)] live
+-- expect-no-row: fir it_tr[main](b,b,500000) id=92e1c8584cb7f91b r34803a66@0 [bi:500000 is $trust(1000000,500000); bi:500000 is $trust(500000,800000); fact:it_p[main](a,b,500000); fact:it_tr[main](b,a,800000)] live
+-- expect-no-row: fir it_tr[main](c,a,900000) id=9282de917a3a2b3d r91b03266@0 [bi:900000 is $trust(1000000,900000); fact:it_p[main](c,a,900000)] live
+-- expect-no-row: fir it_tr[main](c,b,500000) id=04666a36a0260892 r34803a66@0 [bi:500000 is $trust(1000000,500000); bi:500000 is $trust(500000,900000); fact:it_p[main](a,b,500000); fact:it_tr[main](c,a,900000)] live
+-- expect-no-row: fir it_tr[main](c,c,500000) id=9e7e8c93da7631b1 r34803a66@0 [bi:500000 is $trust(800000,500000); bi:800000 is $trust(1000000,800000); fact:it_p[main](b,c,800000); fact:it_tr[main](c,b,500000)] live

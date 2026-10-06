@@ -1,0 +1,127 @@
+-- examples/checks/agg-sub-data.rofl — SUBSUMPTION, the dataset of the
+-- agg_sub_* proof worlds (docs/aggregates.md, "Subsumption, as built"). A
+-- dominance rule `p(K..., V1...) <= p(K..., V2...) :- Body.` says the left
+-- fact is dominated by the right one wherever Body holds; p's cell at a key
+-- holds the antichain of the values it was given that none of them dominates.
+
+-- 1. A PARETO FRONT on (cost, time) over a graph with a cycle: a route is
+-- dominated by one no worse in both and better in one, two rules. Each front
+-- is enumerated by hand in agg-sub-eval-check.rofl.
+edb(as_e).
+as_e(a, b, 1, 5). as_e(b, c, 1, 5). as_e(a, c, 5, 1). as_e(c, a, 1, 1). as_e(a, c, 3, 3).
+as_route(A, B, C, T)   :- as_e(A, B, C, T).
+as_route(A, C, C1, T1) :- as_route(A, B, C0, T0), as_e(B, C, C2, T2), C1 is C0 + C2, T1 is T0 + T2.
+as_route(A, B, C1, T1) <= as_route(A, B, C2, T2) :- C2 <= C1, T2 <= T1, C2 < C1.
+as_route(A, B, C1, T1) <= as_route(A, B, C2, T2) :- C2 <= C1, T2 <= T1, T2 < T1.
+-- read from outside its recursion: a strict edge, fired once the front is closed
+as_fastest(A, B, T) :- as_route(A, B, _, T), not as_faster(A, B, T).
+as_faster(A, B, T)  :- as_route(A, B, _, T), as_route(A, B, _, T2), T2 < T.
+
+-- 2. ON A TOTAL ORDER, SUBSUMPTION IS THE MIN LATTICE: `D2 < D1` over the
+-- shortest paths of a graph with a positive cycle, a zero-weight cycle, a tie
+-- and a value improved on; a decrement floored at 0 around a ring, reached
+-- only through its own earlier values; and `D1 < D2`, the max, over widest
+-- paths.
+edb(as_w).
+as_w(s, a, 4). as_w(s, b, 1). as_w(b, a, 1). as_w(a, t, 1). as_w(b, t, 3).
+as_w(t, s, 2). as_w(a, a2, 0). as_w(a2, a, 0).
+as_d(X, Y, D)  :- as_w(X, Y, D).
+as_d(X, Z, D)  :- as_d(X, Y, D1), as_w(Y, Z, W), D is D1 + W.
+as_d(X, Y, D1) <= as_d(X, Y, D2) :- D2 < D1.
+lattice as_m(X, Y, min D).
+as_m(X, Y, D)  :- as_w(X, Y, D).
+as_m(X, Z, D)  :- as_m(X, Y, D1), as_w(Y, Z, W), D is D1 + W.
+edb(as_st).
+edb(as_ring).
+as_st(p, 5). as_ring(p, q). as_ring(q, p).
+as_sat(A, W) :- as_st(A, W).
+as_sat(B, W) :- as_sat(A, W1), as_ring(A, B), X is W1 - 1, W is max(X, 0).
+as_sat(A, X) <= as_sat(A, Y) :- Y < X.
+lattice as_satm(A, min W).
+as_satm(A, W) :- as_st(A, W).
+as_satm(B, W) :- as_satm(A, W1), as_ring(A, B), X is W1 - 1, W is max(X, 0).
+as_wide(X, Y, C)  :- as_w(X, Y, C).
+as_wide(X, Z, C)  :- as_wide(X, Y, C1), as_w(Y, Z, W), C is min(C1, W).
+as_wide(X, Y, C1) <= as_wide(X, Y, C2) :- C1 < C2.
+lattice as_widem(X, Y, max C).
+as_widem(X, Y, C) :- as_w(X, Y, C).
+as_widem(X, Z, C) :- as_widem(X, Y, C1), as_w(Y, Z, W), C is min(C1, W).
+
+-- 3. A PARTIAL ORDER OVER NAMES, WITH NO JOIN: a value is dominated by one
+-- it is preferred below, through a closure the rules derive, if the better
+-- one qualifies, which a negation decides at a stratum of its own; both are
+-- closed before any value is compared (a strict edge). gold and ruby have no
+-- join; neither have glass and silver. ruby does not qualify, so glass
+-- stands beside it.
+edb(as_better).
+edb(as_has).
+edb(as_banned).
+as_better(gold, silver). as_better(silver, bronze). as_better(ruby, glass).
+as_has(k1, bronze). as_has(k1, silver). as_has(k1, glass).
+as_has(k2, gold). as_has(k2, bronze). as_has(k2, ruby). as_has(k2, glass).
+as_has(k3, tin).
+as_banned(ruby).
+as_prefers(X, Y) :- as_better(X, Y).
+as_prefers(X, Z) :- as_better(X, Y), as_prefers(Y, Z).
+as_qual(V) :- as_has(_, V), not as_banned(V).
+as_pick(K, V) :- as_has(K, V).
+as_pick(K, V1) <= as_pick(K, V2) :- as_prefers(V2, V1), as_qual(V2).
+
+-- 4. NO KEY: one front over the whole relation, items by (cost, time); two
+-- items with one value are both on it.
+edb(as_item).
+as_item(i1, 3, 9). as_item(i2, 5, 5). as_item(i3, 9, 3). as_item(i4, 6, 6). as_item(i5, 3, 9).
+as_best(I, C, T) :- as_item(I, C, T).
+as_best(I, C1, T1) <= as_best(J, C2, T2) :- C2 <= C1, T2 <= T1, C2 < C1.
+as_best(I, C1, T1) <= as_best(J, C2, T2) :- C2 <= C1, T2 <= T1, T2 < T1.
+
+-- 5. A CELL PER BOOK: the same key in two books is two cells.
+edb(as_bkin).
+as_bkin(w1, k, 3). as_bkin(w1, k, 1). as_bkin(w2, k, 5).
+as_bk[B](K, V) :- as_bkin(B, K, V).
+as_bk(K, X) <= as_bk(K, Y) :- Y < X.
+
+-- 6. THE CONSEQUENCES OF A DOMINATED VALUE ARE WITHDRAWN: as_q copies
+-- as_p's value inside the recursion, so as_q(a, b, 5), concluded before
+-- as_p(a, b, 0) arrived three steps later, is no answer, and nor is what
+-- rested on it alone.
+edb(as_e2).
+as_e2(a, b, 5). as_e2(a, x, 0). as_e2(x, y, 0). as_e2(y, b, 0). as_e2(b, c, 1).
+as_p(A, B, D) :- as_e2(A, B, D).
+as_p(A, C, D) :- as_q(A, B, D0), as_e2(B, C, W), D is D0 + W.
+as_q(A, B, D) :- as_p(A, B, D).
+as_p(A, B, X) <= as_p(A, B, Y) :- Y < X.
+-- 7. AN IMPROVEMENT THAT FLOWS BACK THROUGH A PLAIN RELATION: as_ua(X) reads
+-- only that x has a value, so it is monotone in the dominance. as_ud(x, 5)
+-- concludes as_ua(x), which unlocks y at 0, which reaches x at 1 and
+-- dominates the 5; as_ua(x) is concluded again from the 1, and the 5 is its
+-- history, as a cell's own is. The min lattice gives the same facts, and so
+-- does the Pareto front over (cost, time), and the smallest such loop.
+edb(as_us). edb(as_ue). edb(as_uk).
+as_us(s). as_ue(s, x, 5). as_ue(y, x, 1). as_uk(x, y).
+as_ud(X, 0) :- as_us(X).
+as_ud(Y, D) :- as_ud(X, D0), as_ue(X, Y, W), D is D0 + W.
+as_ua(X) :- as_ud(X, _).
+as_ud(Y, 0) :- as_ua(X), as_uk(X, Y).
+as_ud(X, A) <= as_ud(X, B) :- B < A.
+lattice as_um(X, min D).
+as_um(X, 0) :- as_us(X).
+as_um(Y, D) :- as_um(X, D0), as_ue(X, Y, W), D is D0 + W.
+as_uma(X) :- as_um(X, _).
+as_um(Y, 0) :- as_uma(X), as_uk(X, Y).
+as_uc(X, 0, 0) :- as_us(X).
+as_uc(Y, C, T) :- as_uc(X, C0, T0), as_ue(X, Y, W), C is C0 + W, T is T0 + W.
+as_uca(X) :- as_uc(X, _, _).
+as_uc(Y, 0, 0) :- as_uca(X), as_uk(X, Y).
+as_uc(X, C1, T1) <= as_uc(X, C2, T2) :- C2 <= C1, T2 <= T1, C2 < C1.
+as_uc(X, C1, T1) <= as_uc(X, C2, T2) :- C2 <= C1, T2 <= T1, T2 < T1.
+edb(as_ve). edb(as_vf).
+as_ve(a, 5). as_vf(a, go).
+as_v(K, V) :- as_ve(K, V).
+as_vq(K) :- as_v(K, _).
+as_v(K, 0) :- as_vq(K), as_vf(K, _).
+as_v(K, X) <= as_v(K, Y) :- Y < X.
+lattice as_vm(K, min V).
+as_vm(K, V) :- as_ve(K, V).
+as_vmq(K) :- as_vm(K, _).
+as_vm(K, 0) :- as_vmq(K), as_vf(K, _).

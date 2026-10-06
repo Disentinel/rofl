@@ -1,0 +1,8 @@
+-- expect-refusal: is a set written with a variable
+-- a set pattern with a variable matches a set by the order its variables
+-- fall in: `set(Y, b)` would read set(a,b) and `set(b, Y)` the same set not
+-- at all, so neither is a pattern; read the value and its members with `in`
+edb(ajsr_e). ajsr_e(k, a). ajsr_e(k, b).
+lattice ajsr_pat(X, union S).
+ajsr_pat(X, set(Y)) :- ajsr_e(X, Y).
+ajsr_other(Y) :- ajsr_pat(k, set(b, Y)).

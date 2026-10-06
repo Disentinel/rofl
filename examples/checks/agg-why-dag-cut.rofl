@@ -1,0 +1,28 @@
+-- examples/checks/agg-why-dag-cut.rofl — agg_why_dag_cut, run with `rofl-load --explain` (whynot at depth 3).
+-- `k(x)` is first met at the depth limit (under a1, a2), where nothing of it is demonstrated, then demonstrated
+-- under the second rule of top (level 2) and again under y1 (level 3, so with less below it); y2's mention, at level 3
+-- like y1's, is `k[main](x) [above]` and stands for the y1 block: a reference stands for the block written at its own
+-- level that the depth cut does not end, never for the cut mention.
+edb(explain_request).
+edb(explained).
+edb(b).
+b(x).
+explain_request(whynot, top(x)).
+top(X) :- a1(X).
+top(X) :- k(X).
+top(X) :- y1(X).
+top(X) :- y2(X).
+a1(X) :- a2(X).
+a2(X) :- k(X).
+y1(X) :- k(X), b(X).
+y2(X) :- k(X), b(X).
+k(X) :- j(X).
+j(X) :- b(X), X = zz.
+dgk_holds(T) :- explained[$explain](whynot, top(x), _, L), dgk_want(T), N is str_segs(L, T), N > 1.
+dgk_want("[depth limit 3 reached]").
+dgk_want("failed premise: x = zz [builtin fails]").
+dgk_want("k[main](x) [above]").
+dgk_missing(T) :- dgk_want(T), not dgk_holds(T).
+dgk_refused() :- explained[$explain](_, _, 0, _).
+alarm(dgk_missing).
+alarm(dgk_refused).

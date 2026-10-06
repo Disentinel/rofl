@@ -1,0 +1,3 @@
+-- expect-refusal: a widening is declared for an interval hull only
+-- an order lattice that never settles is an improving cycle, not a widening
+lattice awsr_min(X, min D) widen 2.

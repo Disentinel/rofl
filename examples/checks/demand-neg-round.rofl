@@ -1,0 +1,35 @@
+-- examples/checks/demand-neg-round.rofl — demand_neg_round: A DEMAND PREMISE THAT
+-- UNFOLDS A NEGATION waits for the round of what the negation reads
+-- (f_a_demand_premise_unfolds_a_negation_before_its_round).
+--
+-- dn_u is not range-restricted (Y is free), so safety.rofl answers it on
+-- demand, and so dn_h, which reads it and leaves Y free too, and dn_d, which
+-- reads dn_h. dn_r and dn_r2 are monotone rules over them; unfolded in phase A,
+-- dn_h's `not dn_g(X)` read dn_g before its round and concluded dn_h(1, 1),
+-- dn_h(2, 2), dn_r(1), dn_r(2), which no stratified reading has: every b is a g.
+-- dn_h(3, 3) holds by the other arm, through the demand, and must still be found.
+-- dn_h keeps an open answer so that it is unfolded at each call: a closed one is
+-- read from the store (f_a_closed_recursion_on_a_bound_argument_met_the_depth_wall).
+edb(dn_z). edb(dn_q).
+dn_b(1). dn_b(2). dn_b(3).
+dn_q(3).
+dn_g(X)    :- dn_b(X), not dn_z(X).
+dn_u(X, Y) :- dn_q(X).
+dn_h(X, Y) :- dn_b(X), not dn_g(X).
+dn_h(X, Y) :- dn_u(X, X).
+dn_d(X)    :- dn_h(X, X).
+dn_r(X)    :- dn_b(X), dn_h(X, X).
+dn_r2(X)   :- dn_b(X), dn_d(X).
+
+dn_wrong(X)  :- dn_r(X), not dn_q(X).
+dn_wrong(X)  :- dn_r2(X), not dn_q(X).
+dn_wrong(X)  :- dn_b(X), dn_h(X, X), not dn_q(X).
+dn_missed(X) :- dn_q(X), not dn_r(X).
+dn_missed(X) :- dn_q(X), not dn_r2(X).
+alarm(dn_wrong).
+alarm(dn_missed).
+
+-- expect-row: dn_r[main](3) tick drv support=1
+-- expect-row: dn_r2[main](3) tick drv support=1
+-- expect-no-row: dn_h[main](1,1)
+-- expect-no-row: dn_r[main](1)

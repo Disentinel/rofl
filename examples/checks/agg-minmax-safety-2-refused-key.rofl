@@ -1,0 +1,4 @@
+-- expect-refusal: take no key
+-- examples/checks/agg-minmax-safety-2-refused-key.rofl — equal values merge
+-- in an idempotent order anyway, so a key on min means nothing.
+ams_keyed(G, M) :- ams_g(G), M is min(V ; V : ams_d(G, V)).

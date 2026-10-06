@@ -1,0 +1,12 @@
+-- expect-refusal: the stock evaluator cannot
+-- examples/checks/agg-lattice-strata-4-refused-unranked.rofl — under the stock
+-- evaluator a lattice its table does not rank, and a reader of it from
+-- outside its recursion, are refused: never run in a final pass over a cell
+-- still improving.
+edb(alsu_e).
+alsu_e(a, b, 1).
+alsu_e(b, a, 1).
+lattice alsu_d(A, C, min D).
+alsu_d(A, C, D) :- alsu_e(A, C, D).
+alsu_d(A, C, D) :- alsu_d(A, B, D1), alsu_e(B, C, W), D is D1 + W.
+alsu_far(A, C) :- alsu_d(A, C, D), D > 1.

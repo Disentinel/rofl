@@ -1,0 +1,29 @@
+-- examples/checks/agg-sum-witness-check.rofl — agg_sum_witness: a sum cell is
+-- a Group over (value, key). Its members are exactly the group's distinct
+-- (value, key) pairs, in both directions, a line read from two sources is one
+-- member, every member cites a real `as_line` fact with that value and key,
+-- and the cell sealed exactly `as_line`.
+asw_cell(C, G)      :- concludes[$kernel](R, as_sums), agg_sealed[$kernel](C, _, _),
+                       C = $cell(R, _, _, $cons(G, $nil)).
+asw_member(C, V, K) :- asw_cell(C, _), agg_member[$kernel](C, _, $cons(V, $cons(K, $nil)), _).
+asw_should(C, V, K) :- asw_cell(C, G), as_line(G, K, V, _).
+member_missing(C, V, K) :- asw_should(C, V, K), not asw_member(C, V, K).
+member_extra(C, V, K)   :- asw_member(C, V, K), not asw_should(C, V, K).
+member_twice(C, V, K)   :- asw_cell(C, _), agg_member[$kernel](C, I, $cons(V, $cons(K, $nil)), _),
+                           agg_member[$kernel](C, J, $cons(V, $cons(K, $nil)), _), I != J.
+asw_prem_ok(C, I)   :- asw_cell(C, G), agg_member[$kernel](C, I, $cons(V, $cons(K, $nil)), _),
+                       agg_member_prem[$kernel](C, I, P),
+                       P = $fact(as_line, main, $cons(G, $cons(K, $cons(V, $cons(S, $nil))))), as_line(G, K, V, S).
+prem_mismatch(C, I) :- asw_cell(C, _), agg_member[$kernel](C, I, _, _), not asw_prem_ok(C, I).
+asw_sealed_line(C)  :- asw_cell(C, _), agg_sealed[$kernel](C, as_line, _).
+seal_missing(C)     :- asw_cell(C, _), not asw_sealed_line(C).
+seal_foreign(C, R)  :- asw_cell(C, _), agg_sealed[$kernel](C, R, _), R != as_line.
+asw_group(G)        :- asw_cell(_, G).
+cell_absent(G)      :- as_group(G), not asw_group(G).
+alarm(member_missing).
+alarm(member_extra).
+alarm(member_twice).
+alarm(prem_mismatch).
+alarm(seal_missing).
+alarm(seal_foreign).
+alarm(cell_absent).

@@ -1,0 +1,32 @@
+-- examples/checks/agg-why-dag-cells.rofl — agg_why_dag_cells, run with `rofl-load --ticks 1 --explain`.
+-- Two cells can write one header: `sum(?S ; ?N : sc(?N,?S)) = 10` is the cell sealed in tick 0 (members n1, n2) under
+-- snap, and the cell sealed in tick 1 (members n2, n4) under c1. The header names neither tick nor rule, so the
+-- second cell's lines end `(cell 2)` and a reference to it too; the first is unmarked. Without the mark `c1(b)`'s
+-- `[above]` named whichever block came first.
+edb(explain_request).
+edb(explained).
+edb(dgc_want).
+edb(sc).
+edb(k).
+sc(n1, 5).
+sc(n2, 5).
+k(a).
+k(b).
+explain_request(why, top(10)).
+explain_request(K, A)@next :- explain_request(K, A).
+k(X)@next :- k(X).
+sc(n2, 5)@next :- sc(n2, 5).
+sc(n4, 5)@next :- sc(n1, 5).
+snap(X, T)@next :- k(X), T is sum(S ; N : sc(N, S)).
+c1(X, T) :- k(X), T is sum(S ; N : sc(N, S)).
+top(T) :- snap(a, T), c1(a, T), c1(b, T).
+dgc_holds(T) :- explained[$explain](why, top(10), _, L), dgc_want(T), N is str_segs(L, T), N > 1.
+dgc_want("= 10 [aggregate: 2 members, sealed sc@0]").
+dgc_want("= 10 [aggregate: 2 members, sealed sc@0] (cell 2)").
+dgc_want("= 10 [above] (cell 2)").
+dgc_want(T)@next :- dgc_want(T).
+dgc_missing(T) :- dgc_want(T), not dgc_holds(T).
+dgc_refused() :- explained[$explain](_, _, 0, _).
+alarm(dgc_missing).
+alarm(dgc_refused).
+alarm(R)@next :- alarm(R).

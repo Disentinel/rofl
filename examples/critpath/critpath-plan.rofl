@@ -1,0 +1,28 @@
+-- examples/critpath/critpath-plan.rofl — THE PLAN, written by hand from README.md.
+-- task(Name, Days). dep(Task, WaitsFor).
+task(spec, 3).
+task(design, 4).
+task(schema, 2).
+task(api, 6).
+task(ui, 8).
+task(auth, 4).
+task(integ, 3).
+task(docs, 2).
+task(tests, 4).
+task(perf, 3).
+task(release, 1).
+dep(design, spec).
+dep(schema, design).
+dep(api, schema).
+dep(api, design).
+dep(ui, design).
+dep(auth, spec).
+dep(integ, api).
+dep(integ, ui).
+dep(integ, auth).
+dep(docs, api).
+dep(tests, integ).
+dep(perf, integ).
+dep(release, tests).
+dep(release, perf).
+dep(release, docs).

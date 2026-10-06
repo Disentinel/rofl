@@ -1,0 +1,94 @@
+-- examples/checks/agg-cell-safety-check.rofl — agg_cell_safety: a consumer
+-- of a lattice inside its recursion must be monotone in the value
+-- (safety.rofl, `lat_misuse`). Every accepted form in
+-- agg-cell-safety-1-ok.rofl reaches exactly the values enumerated here; each
+-- refused file (-2 to -13) shows one way to be not monotone, or to put two
+-- algebras on one relation, and none of their relations reaches this world.
+acsc_want(acs_lo, a, a, 6).
+acsc_want(acs_lo, a, b, 2).
+acsc_want(acs_lo, a, c, 5).
+acsc_want(acs_lo, b, a, 4).
+acsc_want(acs_lo, b, b, 6).
+acsc_want(acs_lo, b, c, 3).
+acsc_want(acs_lo, c, a, 1).
+acsc_want(acs_lo, c, b, 3).
+acsc_want(acs_lo, c, c, 6).
+acsc_want(acs_lb, a, a, 6).
+acsc_want(acs_lb, a, b, 2).
+acsc_want(acs_lb, a, c, 5).
+acsc_want(acs_lb, b, a, 4).
+acsc_want(acs_lb, b, b, 6).
+acsc_want(acs_lb, b, c, 3).
+acsc_want(acs_lb, c, a, 1).
+acsc_want(acs_lb, c, b, 3).
+acsc_want(acs_lb, c, c, 6).
+acsc_want(acs_lo2, a, a, 6).
+acsc_want(acs_lo2, a, b, 2).
+acsc_want(acs_lo2, a, c, 5).
+acsc_want(acs_lo2, b, a, 4).
+acsc_want(acs_lo2, b, b, 6).
+acsc_want(acs_lo2, b, c, 3).
+acsc_want(acs_lo2, c, a, 1).
+acsc_want(acs_lo2, c, b, 3).
+acsc_want(acs_lo2, c, c, 6).
+acsc_want(acs_mx, a, a, 3).
+acsc_want(acs_mx, a, b, 2).
+acsc_want(acs_mx, a, c, 3).
+acsc_want(acs_mx, b, a, 3).
+acsc_want(acs_mx, b, b, 3).
+acsc_want(acs_mx, b, c, 3).
+acsc_want(acs_mx, c, a, 1).
+acsc_want(acs_mx, c, b, 2).
+acsc_want(acs_mx, c, c, 3).
+acsc_want(acs_wd, a, a, 1).
+acsc_want(acs_wd, a, b, 2).
+acsc_want(acs_wd, a, c, 9).
+acsc_want(acs_wd, b, a, 1).
+acsc_want(acs_wd, b, b, 1).
+acsc_want(acs_wd, b, c, 3).
+acsc_want(acs_wd, c, a, 1).
+acsc_want(acs_wd, c, b, 1).
+acsc_want(acs_wd, c, c, 1).
+acsc_want(acs_ng, a, a, -6).
+acsc_want(acs_ng, a, b, -2).
+acsc_want(acs_ng, a, c, -5).
+acsc_want(acs_ng, b, a, -4).
+acsc_want(acs_ng, b, b, -6).
+acsc_want(acs_ng, b, c, -3).
+acsc_want(acs_ng, c, a, -1).
+acsc_want(acs_ng, c, b, -3).
+acsc_want(acs_ng, c, c, -6).
+acsc_want(acs_on, a, a, true).
+acsc_want(acs_off, a, a, false).
+acsc_want(acs_on, b, b, true).
+acsc_want(acs_off, b, b, false).
+acsc_want(acs_on, c, c, true).
+acsc_want(acs_off, c, c, false).
+acsc_want(acs_on, d, d, true).
+acsc_want(acs_off, d, d, false).
+acsc_have(acs_lo, A, C, V)  :- acs_lo(A, C, V).
+acsc_have(acs_lb, A, C, V)  :- acs_lb(A, C, V).
+acsc_have(acs_lo2, A, C, V) :- acs_lo2(A, C, V).
+acsc_have(acs_mx, A, C, V)  :- acs_mx(A, C, V).
+acsc_have(acs_wd, A, C, V)  :- acs_wd(A, C, V).
+acsc_have(acs_ng, A, C, V)  :- acs_ng(A, C, V).
+acsc_have(acs_on, X, X, V)  :- acs_on(X, V).
+acsc_have(acs_off, X, X, V) :- acs_off(X, V).
+acsc_missing(R, A, C, V) :- acsc_want(R, A, C, V), not acsc_have(R, A, C, V).
+acsc_extra(R, A, C, V)   :- acsc_have(R, A, C, V), not acsc_want(R, A, C, V).
+alarm(acsc_missing).
+alarm(acsc_extra).
+acsc_refused(acsr_gt).
+acsc_refused(acsr_times).
+acsc_refused(acsr_join).
+acsc_refused(acsr_key).
+acsc_refused(acsr_plain).
+acsc_refused(acsr_way).
+acsc_refused(acsr_twice).
+acsc_refused(acsr_false).
+acsc_refused(acsr_sum).
+acsc_refused(acsr_eq).
+acsc_refused(acsr_alias).
+acsc_refused(acsr_unify).
+acsc_accepted(Rel) :- acsc_refused(Rel), concludes[$kernel](_, Rel).
+alarm(acsc_accepted).

@@ -48,9 +48,8 @@ edb(over).           -- over(Node, A, B).
 edb(negate).         -- negate(Node, A).
 edb(cmp).            -- cmp(Node, Op, A, B).        Op: eq ne lt le gt ge
 edb(pick).           -- pick(Node, C, T, E).        IF(C, T, E)
-edb(sum_head).       -- sum_head(Node, Item).       SUM over the chain at Item
-edb(sum_item).       -- sum_item(Item, Cell, Next).
-edb(sum_last).       -- sum_last(Item, Cell).
+edb(sum_head).       -- sum_head(Node, Range).      SUM over the cells of Range
+edb(in_range).       -- in_range(Range, Cell).      Cell is one of the cells of Range
 edb(find).           -- find(Node, KeyNode, Table, Col).   VLOOKUP, exact match
 edb(tkey).           -- tkey(Table, Row, Key).
 edb(tcell).          -- tcell(Table, Row, Col, Cell).
@@ -150,16 +149,26 @@ val(N, 0)         :- cmp(N, ge, A, B), val(A, X), val(B, Y), X <  Y.
 val(N, V) :- pick(N, C, T, _), val(C, X), X != 0, val(T, V).
 val(N, V) :- pick(N, C, _, E), val(C, 0), val(E, V).
 
--- SUM. v0 has no aggregation (LIMITS.md), so a range is a CHAIN the host
--- lays out and the fold is these two rules. A text cell inside a range
--- contributes zero, as it does in Excel.
-val(N, V)   :- sum_head(N, I), total(I, V).
-total(I, V) :- sum_last(I, C), addend(C, V).
-total(I, V) :- sum_item(I, C, J), addend(C, X), total(J, Y), V is X + Y.
+-- SUM is the kernel's `sum`. val, value and addend are one recursive component
+-- (a cell's value is a sum of cells' values) and cyclic as relations though a
+-- sheet's cells are acyclic: the kernel stratifies the component by its DATA, a
+-- cell's sum sealing once every cell it adds is sealed, and refuses only a
+-- sheet in which a cell is added into its own total, naming the cycle
+-- (docs/aggregates.md, "Data-level stratification, as built"). A text cell
+-- inside a range contributes zero, as it does in Excel; a formula that yields
+-- text is not a number, and its range has no total. Neither has a range with
+-- a cell that has no value at all (a formula SLOP will not compute, or one
+-- that starved on such a cell): a sum of the cells that happen to have a value
+-- is a wrong number, so the total waits for every cell, which is the count.
+val(N, V) :- sum_head(N, I), K is count(C : in_range(I, C)),
+             K is count(D : in_range(I, D), addend(D, _)),
+             V is sum(X ; E : in_range(I, E), addend(E, X)).
 
-addend(C, V) :- value(C, V), V >= 0.
-addend(C, V) :- value(C, V), V <  0.
+addend(C, V) :- value(C, V), input(C, _).
+addend(C, 0) :- value(C, _), empty(C).
 addend(C, 0) :- label(C, _).
+addend(C, V) :- value(C, V), formula(C, _), V >= 0.
+addend(C, V) :- value(C, V), formula(C, _), V <  0.
 
 -- VLOOKUP, exact match. The value comes from the LOOKED-UP CELL, so the why
 -- tree walks into the rate table and stops at whoever typed the rate in.
@@ -198,10 +207,7 @@ node_in(C, A) :- node_in(C, N), child(N, A).
 
 -- who reads whom, at the level a spreadsheet user thinks in
 feeds(D, C) :- node_in(C, N), ref(N, D).
-feeds(D, C) :- node_in(C, N), sum_head(N, I), chain(I, D).
-chain(I, D) :- sum_item(I, D, _).
-chain(I, D) :- sum_last(I, D).
-chain(I, D) :- sum_item(I, _, J), chain(J, D).
+feeds(D, C) :- node_in(C, N), sum_head(N, I), in_range(I, D).
 
 -- a manual entry that a computed cell depends on: the number in the MIDDLE
 -- of a model, which is the one nobody re-checks
@@ -347,13 +353,16 @@ iv(N, LT, HE) :- pick(N, C, T, E), iv(C, 0, 100000000), iv(T, LT, HT), iv(E, LE,
 iv(N, LE, HT) :- pick(N, C, T, E), iv(C, 0, 100000000), iv(T, LT, HT), iv(E, LE, HE), LT >  LE, HT >= HE.
 iv(N, LE, HE) :- pick(N, C, T, E), iv(C, 0, 100000000), iv(T, LT, HT), iv(E, LE, HE), LT >  LE, HT <  HE.
 
-iv(N, L, H)     :- sum_head(N, I), itotal(I, L, H).
-itotal(I, L, H) :- sum_last(I, C), iaddend(C, L, H).
-itotal(I, L, H) :- sum_item(I, C, J), iaddend(C, LC, HC), itotal(J, LJ, HJ),
-                   L is LC + LJ, H is HC + HJ.
-iaddend(C, L, H) :- ivalue(C, L, H), L >= 0.
-iaddend(C, L, H) :- ivalue(C, L, H), L <  0.
+iv(N, L, H) :- sum_head(N, I), K is count(C : in_range(I, C)),
+               K is count(D : in_range(I, D), iaddend(D, _, _)),
+               L is sum(X ; E : in_range(I, E), iaddend(E, X, _)),
+               H is sum(Y ; F : in_range(I, F), iaddend(F, _, Y)).
+iaddend(C, L, H) :- span(C, L, H).
+iaddend(C, L, H) :- input(C, V), not spanned(C), L is V - 1, H is V + 1.
 iaddend(C, 0, 0) :- label(C, _).
+iaddend(C, 0, 0) :- empty(C).
+iaddend(C, L, H) :- formula(C, N), iv(N, L, H), L >= 0.
+iaddend(C, L, H) :- formula(C, N), iv(N, L, H), L <  0.
 
 iv(N, L, H) :- find(N, K, T, Col), iv(K, Key, Key), tkey(T, Row, Key),
                tcell(T, Row, Col, C), ivalue(C, L, H).

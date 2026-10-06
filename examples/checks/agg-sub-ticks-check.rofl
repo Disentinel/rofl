@@ -1,0 +1,47 @@
+-- examples/checks/agg-sub-ticks-check.rofl — agg_sub_ticks, over
+-- agg-sub-ticks-data.rofl two ticks deep with retain_ticks 0: a value
+-- staged @next is given to its cell at tick 1 beside that tick's own, and
+-- dominated there like any; `why` of a value only the carry reaches names
+-- the carry and the value tick 0 staged, as the fact of tick 0; `whynot` of
+-- the carried value tick 1 dominated names what dominates it; a hole at tick
+-- 0 is a hole at tick 1.
+explain_request(why, ast_p(k, 1, 5)).
+explain_request(whynot, ast_p(k, 3, 3)).
+astk_wrong(carried, k)    :- not ast_p(k, 1, 5).
+astk_wrong(new, k)        :- not ast_p(k, 2, 2).
+astk_wrong(dominated, k)  :- ast_p(k, 3, 3).
+astk_wrong(dominated, k)  :- ast_p(k, 4, 4).
+astk_wrong(kept, m)       :- not ast_p(m, 2, 2).
+astk_wrong(front, K)      :- ast_p(K, C1, T1), ast_p(K, C2, T2), C2 <= C1, T2 <= T1, C2 < C1.
+astk_line(K, L)  :- explained[$explain](K, _, _, L).
+astk_has(K, T)   :- astk_line(K, L), astk_text(K, T), N is str_segs(L, T), N > 1.
+astk_text_missing(K, T) :- astk_text(K, T), not astk_has(K, T).
+astk_explain_refused(K) :- explained[$explain](K, _, 0, _).
+alarm(astk_wrong).
+alarm(astk_text_missing).
+alarm(astk_explain_refused).
+astk_text(why, "ast_p[main](k,1,5) [subsumption: 1 member; 1 of 2 in the front of its cell]").
+astk_text(why, "<= ast_p@next @tick 1").
+astk_text(why, "@tick 0 [past tick]").
+astk_text(whynot, "ast_p[main](k,3,3) was given, and is dominated by ast_p[main](k,2,2)").
+astk_text(K, T)@next :- astk_text(K, T).
+-- a hole at tick 0 reaches tick 1: the cell it left unstaged is a hole
+-- there, and so is what counts its facts
+astk_hn(N) :- N is count(V : ast_h(q, V)).
+astk_hole_read(count, N) :- astk_hn(N).
+astk_hole_read(q, V)     :- ast_h(q, V).
+astk_unholed() :- not hole[$kernel]($lattice(ast_h, main, 1, $cons(q, $nil)), support_withdrawn).
+alarm(astk_hole_read).
+alarm(astk_unholed).
+astk_hole_read(hs, q)  :- ast_hs(q).
+astk_unholed() :- not hole[$kernel]($next(ast_hs, main, 1, $cons(q, $nil)), support_withdrawn).
+astk_wrong(hs, p) :- not ast_hs(p).
+-- what a dominated value alone concluded, staged before it was withdrawn,
+-- is not at tick 1; what the front concluded is
+astk_wrong(staged_withdrawn, a) :- ast_ws(a, b, 5).
+astk_wrong(staged_withdrawn, a) :- ast_wbig(a, b).
+astk_wrong(staged_lost, a)      :- not ast_ws(a, b, 0).
+astk_wrong(staged_lost, x)      :- not ast_ws(x, b, 0).
+astk_wrong(staged_holed, R)     :- hole[$kernel]($next(R, main, 1, _), _), R != ast_hs, R != ast_h.
+-- expect-row: ast_h[main](p,1)
+-- expect-no-row: ast_h[main](p,2)

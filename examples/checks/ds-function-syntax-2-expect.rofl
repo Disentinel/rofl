@@ -1,0 +1,52 @@
+-- examples/checks/ds-function-syntax-2-expect.rofl — ds_function_syntax.
+-- What each form of ds-function-syntax-1-forms.rofl reads as: one
+-- `structure_decl` row (relation, arity, kind) and one `structure_role` row
+-- for each marked argument (its place, from 1, and its role word); no row for
+-- a key position; `function` and `to` as plain names; every form evaluating
+-- as the rules say, a declaration changing no fact; and ring 1 (examples/ring1)
+-- reading a declaration from `src` as the same tree, nothing stray and
+-- nothing uncovered.
+dsxs_decl(dsx_two, 3). dsxs_decl(dsx_one, 2). dsxs_decl(dsx_none, 1). dsxs_decl(dsx_pair, 3). dsxs_decl(dsx_wild, 3).
+dsxs_decl_row(Rel, N) :- structure_decl[$kernel](Rel, N, function), dsxs_decl(Rel, _).
+dsxs_missing(Rel) :- dsxs_decl(Rel, N), not dsxs_decl_row(Rel, N).
+dsxs_extra(Rel)   :- structure_decl[$kernel](Rel, N, _), dsxs_decl(Rel, _), not dsxs_decl_row(Rel, N).
+dsxs_extra(Rel)   :- structure_decl[$kernel](Rel, _, K), K != function.
+alarm(dsxs_missing).
+alarm(dsxs_extra).
+-- the roles: the places of the values, and none for the key
+dsxs_role(dsx_two, 3). dsxs_role(dsx_one, 2). dsxs_role(dsx_none, 1).
+dsxs_role(dsx_pair, 2). dsxs_role(dsx_pair, 3). dsxs_role(dsx_wild, 3).
+dsxs_mine(dsx_two). dsxs_mine(dsx_one). dsxs_mine(dsx_none). dsxs_mine(dsx_pair). dsxs_mine(dsx_wild).
+dsxs_role_row(Rel, P) :- structure_role[$kernel](Rel, P, to), dsxs_mine(Rel).
+dsxs_role_missing(Rel, P) :- dsxs_role(Rel, P), not dsxs_role_row(Rel, P).
+dsxs_role_extra(Rel, P)   :- dsxs_role_row(Rel, P), not dsxs_role(Rel, P).
+dsxs_role_other(Rel, P)   :- structure_role[$kernel](Rel, P, R), dsxs_mine(Rel), R != to.
+alarm(dsxs_role_missing).
+alarm(dsxs_role_extra).
+alarm(dsxs_role_other).
+-- the two words are names where no second name follows them
+dsxs_name_lost() :- not dsx_seen(dsx_name).
+dsxs_name_lost() :- not dsx_seen(function).
+alarm(dsxs_name_lost).
+-- and every form evaluates as its rule says
+dsxs_lost(two)  :- not dsx_two(a, b, c).
+dsxs_lost(one)  :- not dsx_one(a, b).
+dsxs_lost(none) :- not dsx_none(a).
+dsxs_lost(pair) :- not dsx_pair(a, b, c).
+dsxs_lost(wild) :- not dsx_wild(a, b, c).
+alarm(dsxs_lost).
+
+src("function dsr_t(N, to V).\nfunction dsr_u(K, J, to A, to B). function dsr_w(to W).").
+r1s_want($structure(function, $cons(key, $cons(to, $nil)),
+                    $lit(dsr_t, $bare, $cons($var("N"), $cons($var("V"), $nil)), $now)), $nil).
+r1s_want($structure(function, $cons(key, $cons(key, $cons(to, $cons(to, $nil)))),
+                    $lit(dsr_u, $bare, $cons($var("K"), $cons($var("J"), $cons($var("A"), $cons($var("B"), $nil)))), $now)), $nil).
+r1s_want($structure(function, $cons(to, $nil), $lit(dsr_w, $bare, $cons($var("W"), $nil), $now)), $nil).
+r1s_parsed(H, B)   :- parsed(_, _, H, B).
+ring1_missing(H)   :- r1s_want(H, B), not r1s_parsed(H, B).
+ring1_extra(H)     :- r1s_parsed(H, B), not r1s_want(H, B).
+alarm(ring1_missing).
+alarm(ring1_extra).
+alarm(stray).
+alarm(uncovered).
+alarm(stuck_at).

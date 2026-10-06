@@ -1,0 +1,23 @@
+-- examples/checks/agg-widen-wfs-check.rofl — agg_widen_wfs: a widened hull
+-- over what a well-founded world concluded, fed from below: how many moves
+-- deep a play can stay among drawn positions. a and b draw each other round
+-- a cycle, and e and f, so the depth has no bound: a plain join would never
+-- settle, and `widen 1` settles each at [0,inf), a shrug `widened` whose
+-- enclosure names it. Positions that win or lose are not drawn and have no
+-- depth. Inside a well-founded world a widened hull is refused
+-- (agg-widen-wfs-2-refused-widen.rofl), as every lattice is: a cell grown
+-- under an assumption holds values no model has.
+edb(wwt_start).
+edb(wwt_move).
+wwt_start(a). wwt_start(e).
+wwt_move(a, b). wwt_move(b, a). wwt_move(b, c). wwt_move(c, d).
+wwt_move(e, f). wwt_move(f, e). wwt_move(g, h). wwt_move(h, i).
+lattice wwt_depth(X, hull I) widen 1.
+wwt_depth(X, iv(0, 0)) :- wwt_start(X), unknown(wg_win(X)).
+wwt_depth(Y, J)        :- wwt_depth(X, I), wwt_move(X, Y), unknown(wg_win(Y)), J is ivadd(I, 1).
+-- expect-row: shrug[$kernel]($lattice(wwt_depth,main,0,$cons(a,$nil)),widened,within(iv(0,inf)))
+-- expect-row: shrug[$kernel]($lattice(wwt_depth,main,0,$cons(e,$nil)),widened,within(iv(0,inf)))
+-- expect-row: shrug[$kernel]($lattice(wwt_depth,main,0,$cons(b,$nil)),
+-- expect-no-row: wwt_depth[main](
+-- expect-no-row: shrug[$kernel]($lattice(wwt_depth,main,0,$cons(c,
+-- below: examples/checks/agg-wfs-game.rofl

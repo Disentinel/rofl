@@ -41,3 +41,6 @@ view.html
 # built by npm run playground
 playground/dist
 vscode/visual/out/
+
+# VS Code the extension tests download (@vscode/test-electron)
+.vscode-test

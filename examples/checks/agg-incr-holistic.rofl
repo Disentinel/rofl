@@ -1,0 +1,53 @@
+-- examples/checks/agg-incr-holistic.rofl — agg_incr_holistic: the cells of
+-- an order statistic and a threshold under RETRACTION. A median is a function
+-- of the whole group (its algebra says so: holistic, use=recompute) and a
+-- threshold's Quorum is the first N members, so neither has a delta yet; the
+-- world is evaluated again and must hold the state of a world without the
+-- facts, with the algebra recorded on the cells it holds.
+--
+--   ah_v(2, a, 9)   a's median 6 -> 4 (the lower median), its quantile 9 -> 6
+--   ah_v(4, b, 2)   b has no member left: no median, no quantile
+edb(ah_v).
+edb(ah_g).
+ah_g(a).
+ah_g(b).
+ah_v(1, a, 4).
+ah_v(2, a, 9).
+ah_v(3, a, 6).
+ah_v(4, b, 2).
+
+ah_med(G, M) :- ah_g(G), M is median(V ; K : ah_v(K, G, V)).
+ah_q(G, Q)   :- ah_g(G), Q is quantile(90, V ; K : ah_v(K, G, V)).
+ah_two(G)    :- ah_g(G), at_least(2, K : ah_v(K, G, _)).
+
+-- the state after the retractions, row by row
+-- expect-row: ah_med[main](a,4) tick drv support=1
+-- expect-row: ah_q[main](a,6) tick drv support=1
+-- expect-row: ah_two[main](a) tick drv support=1
+-- expect-row: cell $cell(r128ef71d,2,0,$cons(a,$cons(2,$nil))) at_least = true h=1 tick=0 sealed=[] alg=idempotent,lattice use=rederive
+-- expect-row: mem $cell(r128ef71d,2,0,$cons(a,$cons(2,$nil))) #1 id=bc9e9f0dae743732 (1) h=1 [fact:ah_v[main](1,a,4)]
+-- expect-row: mem $cell(r128ef71d,2,0,$cons(a,$cons(2,$nil))) #2 id=bca5bb0dae7a8574 (3) h=1 [fact:ah_v[main](3,a,6)]
+-- expect-row: cell $cell(r2fa8ca61,2,0,$cons(a,$nil)) median = 4 h=1 tick=0 sealed=[ah_v@0] alg=holistic use=recompute
+-- expect-row: mem $cell(r2fa8ca61,2,0,$cons(a,$nil)) #1 id=fd94db2598bf4dde (4,1) h=1 [fact:ah_v[main](1,a,4)]
+-- expect-row: mem $cell(r2fa8ca61,2,0,$cons(a,$nil)) #2 id=37589f37f4879e66 (6,3) h=1 [fact:ah_v[main](3,a,6)]
+-- expect-row: cell $cell(r2fa8ca61,2,0,$cons(b,$nil)) median = none h=0 tick=0 sealed=[ah_v@0] alg=holistic use=recompute
+-- expect-row: cell $cell(r98e865c2,2,0,$cons(a,$nil)) quantile = 6 h=1 tick=0 sealed=[ah_v@0] alg=holistic use=recompute
+-- expect-row: mem $cell(r98e865c2,2,0,$cons(a,$nil)) #1 id=dec46d0ac5dcd4ae (4,1) h=1 [fact:ah_v[main](1,a,4)]
+-- expect-row: mem $cell(r98e865c2,2,0,$cons(a,$nil)) #2 id=efdcf11be917e876 (6,3) h=1 [fact:ah_v[main](3,a,6)]
+-- expect-row: cell $cell(r98e865c2,2,0,$cons(b,$nil)) quantile = none h=0 tick=0 sealed=[ah_v@0] alg=holistic use=recompute
+-- and nothing of what they supported before
+-- expect-no-row: ah_med[main](a,6) tick drv support=1
+-- expect-no-row: ah_med[main](b,2) tick drv support=1
+-- expect-no-row: ah_q[main](a,9) tick drv support=1
+-- expect-no-row: ah_q[main](b,2) tick drv support=1
+-- expect-no-row: mem $cell(r128ef71d,2,0,$cons(a,$cons(2,$nil))) #2 id=bca2170dae7738f1 (2) h=1 [fact:ah_v[main](2,a,9)]
+-- expect-no-row: cell $cell(r2fa8ca61,2,0,$cons(a,$nil)) median = 6 h=1 tick=0 sealed=[ah_v@0] alg=holistic use=recompute
+-- expect-no-row: mem $cell(r2fa8ca61,2,0,$cons(a,$nil)) #3 id=61eff54f6e560af4 (9,2) h=1 [fact:ah_v[main](2,a,9)]
+-- expect-no-row: cell $cell(r2fa8ca61,2,0,$cons(b,$nil)) median = 2 h=1 tick=0 sealed=[ah_v@0] alg=holistic use=recompute
+-- expect-no-row: mem $cell(r2fa8ca61,2,0,$cons(b,$nil)) #1 id=c0b378cf3fe91758 (2,4) h=1 [fact:ah_v[main](4,b,2)]
+-- expect-no-row: cell $cell(r98e865c2,2,0,$cons(a,$nil)) quantile = 9 h=1 tick=0 sealed=[ah_v@0] alg=holistic use=recompute
+-- expect-no-row: mem $cell(r98e865c2,2,0,$cons(a,$nil)) #3 id=44d2c7349ce59304 (9,2) h=1 [fact:ah_v[main](2,a,9)]
+-- expect-no-row: cell $cell(r98e865c2,2,0,$cons(b,$nil)) quantile = 2 h=1 tick=0 sealed=[ah_v@0] alg=holistic use=recompute
+-- expect-no-row: mem $cell(r98e865c2,2,0,$cons(b,$nil)) #1 id=a23c8016549e1e28 (2,4) h=1 [fact:ah_v[main](4,b,2)]
+-- expect-no-row: ah_v[main](2,a,9)
+-- expect-no-row: ah_v[main](4,b,2)

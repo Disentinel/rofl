@@ -1,0 +1,13 @@
+-- A demand that unfolds without end (scripts/whycheck.ts): `up` is never
+-- materialized, and `up(1)` asks `up(2)` for ever. The evaluation never asks
+-- it — the planner holds the ground `up(1)` until `k(X)` binds, and `k` is
+-- empty — but `whynot r(a)` walks the body in order and does, so it meets
+-- the budget wall while demonstrating, and the answer is the wall,
+-- `holds: false` (docs/port-surface.md). Not a world `npm test` loads:
+-- whycheck asks it of both engines' explainers.
+edb(k).
+up(X) :- Y is X + 1, up(Y).
+q(a).
+q(b).
+r(X) :- q(X), not k(X), up(1), k(X).
+s(X) :- q(X).

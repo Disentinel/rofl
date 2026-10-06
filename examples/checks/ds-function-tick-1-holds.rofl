@@ -1,0 +1,12 @@
+-- examples/checks/ds-function-tick-1-holds.rofl — ds_function_tick: a
+-- function judged at every tick. A counter that moves on each tick holds one
+-- value for its key at each of them, and a table that carries itself to the
+-- next tick holds one value per key while nothing else arrives.
+edb(dst_c).
+function dst_c(K, to N).
+dst_c(k, 0).
+dst_c(k, N1)@next :- dst_c(k, N), N < 3, N1 is N + 1.
+edb(dst_t).
+function dst_t(K, to V).
+dst_t(a, 1). dst_t(b, 2).
+dst_t(K, V)@next :- dst_t(K, V).

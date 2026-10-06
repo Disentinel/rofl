@@ -1,0 +1,3 @@
+-- expect-refusal: is not closed
+-- no colon: not an aggregate, and not a term either
+sxr_nocolon(N) :- N is count(B ; sxc_b(B, _)).

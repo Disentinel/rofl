@@ -1,0 +1,7 @@
+-- expect-refusal: reads a closed relation
+-- examples/checks/agg-holistic-strata-2-refused-quantile.rofl — a quantile
+-- of the rule's own conclusion, through a relation between: refused.
+ahr_qseed(a, 1).
+ahr_qseed(b, 3).
+ahr_qmid(X, V) :- ahr_q(X, V).
+ahr_q(X, Q)    :- ahr_qseed(X, _), Q is quantile(90, V ; Y : ahr_qmid(Y, V)).

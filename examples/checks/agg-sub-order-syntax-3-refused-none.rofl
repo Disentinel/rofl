@@ -1,0 +1,3 @@
+-- expect-refusal: the last arguments are the values the order compares
+-- a declaration with no direction names no value to order
+pareto soxr_none(A, C).

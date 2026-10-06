@@ -1,0 +1,18 @@
+-- examples/checks/agg-phrase-sub-check.rofl — agg_sub_phrase: each dominance read from its sentence and from
+-- rofl keeps the front it orders: the route a to c costs 2 by b, the direct 5 dominated; the leg from a keeps
+-- (1, 2) and drops (5, 10), which it dominates in both.
+psb_dist(a, b, 1). psb_dist(b, c, 1). psb_dist(a, c, 2).
+psb_pair(a, 1, 2). psb_pair(b, 1, 2).
+psb_wrong(X, Y) :- psb_dist(X, Y, D), not psus_dist(X, Y, D).
+psb_wrong(X, Y) :- psb_dist(X, Y, D), not psur_dist(X, Y, D).
+psb_wrong(X, Y) :- psus_dist(X, Y, D), not psb_dist(X, Y, D).
+psb_wrong(X, Y) :- psur_dist(X, Y, D), not psb_dist(X, Y, D).
+psb_wrong(X, C) :- psb_pair(X, C, T), not psus_pair(X, C, T).
+psb_wrong(X, C) :- psb_pair(X, C, T), not psur_pair(X, C, T).
+psb_wrong(X, C) :- psus_pair(X, C, T), not psb_pair(X, C, T).
+psb_wrong(X, C) :- psur_pair(X, C, T), not psb_pair(X, C, T).
+alarm(psb_wrong).
+-- written in its own words (agg-phrase-check.rofl)
+sentence_word(psur_dist, "is dominated by one that").
+sentence_word(psur_pair, "is dominated by one that").
+sentence_word(psus_pair, "is dominated by one that").

@@ -1,0 +1,13 @@
+-- expect-refusal: un_s negates un_m, and neither is ranked by stratum/2
+-- examples/checks/strata-unranked-negation-4-refused-through-plain.rofl — the
+-- relation negated is derived by a plain rule, from what an unranked
+-- negation derives: it is complete only when the final pass is, so the
+-- negation of it has no order either.
+edb(un_b).
+edb(un_d).
+un_b(1).
+un_b(2).
+un_d(2).
+un_q(X) :- un_b(X), not un_d(X).
+un_m(X) :- un_q(X).
+un_s(X) :- un_b(X), not un_m(X).

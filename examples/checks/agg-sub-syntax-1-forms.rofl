@@ -1,0 +1,15 @@
+-- examples/checks/agg-sub-syntax-1-forms.rofl — every form of a dominance
+-- rule the grammar reads: a key of two, of one and of none; one value, two
+-- and three; a wildcard for a value; a body of builtins, of a literal, a
+-- negation, `is` and `=`; and `<=` still a comparison in a body. Read and
+-- refused by the TypeScript engine, whose rule ids must be the Rust store's.
+edb(sxs_e).
+sxs_e(a, b, 3, 1).
+sxs_two(A, B, C, T) :- sxs_e(A, B, C, T).
+sxs_two(A, B, C1, T1) <= sxs_two(A, B, C2, T2) :- C2 <= C1, T2 < T1.
+sxs_one(A, C) :- sxs_e(A, _, C, _).
+sxs_one(A, X) <= sxs_one(A, Y) :- Y < X.
+sxs_none(C, T, B) :- sxs_e(_, B, C, T).
+sxs_none(C1, T1, _) <= sxs_none(C2, T2, _) :- C2 < C1, T2 <= T1, sxs_e(_, _, C1, _), not sxs_skip(C2), W is C2 + T2, W < 9, C1 = C1.
+edb(sxs_skip).
+sxs_cmp(A) :- sxs_e(A, _, C, T), T <= C.

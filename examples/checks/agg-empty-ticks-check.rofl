@@ -1,0 +1,42 @@
+-- examples/checks/agg-empty-ticks-check.rofl — agg_empty_ticks, over
+-- agg-ticks-data.rofl two ticks deep with retain_ticks 0: the empty group: c2 has no ballot at tick 0 and one at tick 1, and the zero of tick 0 is what arrives.
+-- A value staged @next at tick 0 is base at tick 1, beside the value the same
+-- aggregate has at tick 1; `why` of it names tick 0's cell, and each member
+-- as the fact of tick 0 with the rule that derived it then, whose derived_by
+-- row retain_ticks keeps because the carried cell cites it.
+explain_request(why, tk_cnt(c2, 0)).
+tem_line(L) :- explained[$explain](why, tk_cnt(c2, 0), _, L).
+tem_has(T)  :- tem_line(L), tem_text(T), N is str_segs(L, T), N > 1.
+tem_past(M) :- tem_line(L), tem_member(M, T), N is str_segs(L, T), N > 1, P is str_segs(L, "@tick 0 [past tick]"), P > 1.
+tem_text_missing(T)    :- tem_text(T), not tem_has(T).
+tem_member_not_past(M) :- tem_member(M, _), not tem_past(M).
+tem_explain_refused()  :- explained[$explain](why, tk_cnt(c2, 0), 0, _).
+tem_cells(T, V) :- agg_cell[$kernel]($cell(R, _, T, _), V, _), concludes[$kernel](R, tk_cnt).
+tem_cell_missing(T, V) :- tem_cell(T, V), not tem_cells(T, V).
+-- the cell the same rule seals at tick 1 is data at tick 2, where its
+-- conclusion arrives, and not here
+tem_early(V)          :- tem_cells(1, V).
+alarm(tem_wrong).
+alarm(tem_text_missing).
+alarm(tem_member_not_past).
+alarm(tem_explain_refused).
+alarm(tem_cell_missing).
+alarm(tem_early).
+tem_text(T)@next      :- tem_text(T).
+tem_member(M, T)@next :- tem_member(M, T).
+tem_cell(T, V)@next   :- tem_cell(T, V).
+tem_wrong(carried) :- not tk_cnt(c2, 0).
+tem_wrong(present) :- not tk_cnt_now(c2, 1).
+tem_wrong(stale) :- tk_cnt(c2, 1).
+tem_text("count(?B : tk_ballot[main](?B,c2)) = 0 [aggregate: empty group, sealed tk_ballot@").
+tem_text("tk_cand[main](c2) [past tick]").
+tem_cell(0, 0).
+-- What a hole at tick 0 left unstaged is unknown at tick 1
+-- (agg-ticks-holes.rofl): a cell that could read it is a hole, with no row.
+-- q's group is unknown, not empty: no zero for it; r's is known
+tem_h(K, N) :- th_key(K), N is count(W : th_y(K, W)).
+tem_hole_read(K, N) :- tem_h(K, N), K = q.
+tem_unholed() :- not th_holed(tem_h).
+tem_wrong(known) :- not tem_h(r, 1).
+alarm(tem_hole_read).
+alarm(tem_unholed).

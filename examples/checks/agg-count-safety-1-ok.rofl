@@ -1,0 +1,5 @@
+-- examples/checks/agg-count-safety-1-ok.rofl — a count safety.rofl must
+-- accept: nothing but the aggregate binds C and N, so the rule is
+-- range-restricted only because an aggregate binds its group variables and
+-- its result.
+acs_by(C, N) :- N is count(B : acs_b(B, C)).

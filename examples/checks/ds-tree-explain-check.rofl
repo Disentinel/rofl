@@ -1,0 +1,46 @@
+-- examples/checks/ds-tree-explain-check.rofl — ds_tree_explain, run with `rofl-load --explain`: the derivations of a closure row, of a fact that reads one, and of an aggregate over the closure, as the world that stores the closure writes them.
+--
+--   dte_w(a,b) is the first rule over the edge dte_e(a,b); dte_w(a,c) is the second, over dte_w(a,b) and dte_e(b,c); dte_w(a,d) over
+--   dte_w(a,c) and dte_e(c,d). A row written once is referred to after. The count's members are the four rows dte_w(a, _).
+edb(explain_request).
+edb(explained).
+explain_request(why, dte_top(d)).
+explain_request(why, dte_w(a, d)).
+explain_request(why_all, dte_cnt(4)).
+dte_line(why, dte_top(d), 1, "dte_top[main](d)  <= rc7f3ffc5 @tick 0").
+dte_line(why, dte_top(d), 2, "  dte_w[main](a,d)  <= rc803a173 @tick 0").
+dte_line(why, dte_top(d), 3, "    dte_w[main](a,c)  <= rc803a173 @tick 0").
+dte_line(why, dte_top(d), 4, "      dte_w[main](a,b)  <= r2e5ef8f8 @tick 0").
+dte_line(why, dte_top(d), 5, "        dte_e[main](a,b) [axiom]").
+dte_line(why, dte_top(d), 6, "      dte_e[main](b,c) [axiom]").
+dte_line(why, dte_top(d), 7, "    dte_e[main](c,d) [axiom]").
+dte_line(why, dte_w(a,d), 1, "dte_w[main](a,d)  <= rc803a173 @tick 0").
+dte_line(why, dte_w(a,d), 2, "  dte_w[main](a,c)  <= rc803a173 @tick 0").
+dte_line(why, dte_w(a,d), 3, "    dte_w[main](a,b)  <= r2e5ef8f8 @tick 0").
+dte_line(why, dte_w(a,d), 4, "      dte_e[main](a,b) [axiom]").
+dte_line(why, dte_w(a,d), 5, "    dte_e[main](b,c) [axiom]").
+dte_line(why, dte_w(a,d), 6, "  dte_e[main](c,d) [axiom]").
+dte_line(why_all, dte_cnt(4), 1, "dte_cnt[main](4)  <= ra12a6891 @tick 0").
+dte_line(why_all, dte_cnt(4), 10, "    #3 (d) h=1").
+dte_line(why_all, dte_cnt(4), 11, "      dte_w[main](a,d)  <= rc803a173 @tick 0").
+dte_line(why_all, dte_cnt(4), 12, "        dte_w[main](a,c) [above]").
+dte_line(why_all, dte_cnt(4), 13, "        dte_e[main](c,d) [axiom]").
+dte_line(why_all, dte_cnt(4), 14, "    #4 (x) h=1").
+dte_line(why_all, dte_cnt(4), 15, "      dte_w[main](a,x)  <= r2e5ef8f8 @tick 0").
+dte_line(why_all, dte_cnt(4), 16, "        dte_e[main](a,x) [axiom]").
+dte_line(why_all, dte_cnt(4), 2, "  count(?D : dte_w[main](a,?D)) = 4 [aggregate: 4 members, sealed dte_w@1]").
+dte_line(why_all, dte_cnt(4), 3, "    #1 (b) h=1").
+dte_line(why_all, dte_cnt(4), 4, "      dte_w[main](a,b)  <= r2e5ef8f8 @tick 0").
+dte_line(why_all, dte_cnt(4), 5, "        dte_e[main](a,b) [axiom]").
+dte_line(why_all, dte_cnt(4), 6, "    #2 (c) h=1").
+dte_line(why_all, dte_cnt(4), 7, "      dte_w[main](a,c)  <= rc803a173 @tick 0").
+dte_line(why_all, dte_cnt(4), 8, "        dte_w[main](a,b) [above]").
+dte_line(why_all, dte_cnt(4), 9, "        dte_e[main](b,c) [axiom]").
+dte_has(K, A, I, T) :- explained[$explain](K, A, I, T).
+dte_known(K, A, I) :- dte_line(K, A, I, _).
+dte_missing(K, A, I) :- dte_line(K, A, I, T), not dte_has(K, A, I, T).
+dte_extra(K, A, I) :- dte_has(K, A, I, _), not dte_known(K, A, I).
+explain_refused(K, A) :- explained[$explain](K, A, 0, _).
+alarm(dte_missing).
+alarm(dte_extra).
+alarm(explain_refused).

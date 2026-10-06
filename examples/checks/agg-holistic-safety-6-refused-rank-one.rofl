@@ -1,0 +1,4 @@
+-- expect-refusal: quantile and rank take two terms before their body
+-- examples/checks/agg-holistic-safety-6-refused-rank-one.rofl — a rank with
+-- no subject.
+ahs_rone(G, R) :- ahs_group(G), R is rank(W : ahs_line(G, _, W)).

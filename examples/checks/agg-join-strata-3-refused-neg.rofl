@@ -1,0 +1,9 @@
+-- expect-refusal: negates a lattice relation inside
+-- a negation is no monotone read: a join read under `not` inside its own
+-- recursion is refused, as an order lattice's is
+edb(ajsr_e).
+ajsr_e(a, b).
+ajsr_e(b, a).
+lattice ajsr_t(X, union S).
+ajsr_t(X, set(X)) :- ajsr_e(X, _).
+ajsr_t(X, S)      :- ajsr_e(X, Y), ajsr_t(Y, S), not ajsr_t(X, set(Y)).

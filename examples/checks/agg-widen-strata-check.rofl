@@ -1,0 +1,33 @@
+-- examples/checks/agg-widen-strata-check.rofl — agg_widen_strata: a hull
+-- declared `widen N` recurses, as every join does (its operation is
+-- idempotent: the recursion gate's flag), and its widening is decided inside
+-- its recursion, which is where a value computed from its own value arises:
+-- aw_short's [0,3] exists only round its loop, and aw_loop's widening only
+-- round the loop through aw_at. The recursion is a positive edge of its own
+-- relation, never an aggregate's. A count of a widened relation's own cells
+-- and a negation of one, each inside its recursion
+-- (agg-widen-strata-2-refused-count.rofl, -3-refused-neg.rofl), are refused,
+-- so their rules never reach this world.
+awsc_want(aw_short, head, iv(0, 3)).
+awsc_missing(R, K, V)   :- awsc_want(R, K, V), not aw_short(K, V).
+awsc_unwidened(R)       :- awsc_loop(R), not shrug[$kernel]($lattice(R, main, 0, $cons(head, $nil)), widened, _).
+awsc_loop(aw_loop).
+awsc_loop(aw_up).
+awsc_loop(aw_walk).
+-- the recursion is a positive edge of its own relation, or through another
+awsc_self(Rel)          :- concludes[$kernel](R, Rel), premise_pos[$kernel](R, Rel), lattice_widen[$kernel](Rel, _).
+awsc_through(Rel)       :- concludes[$kernel](R, Rel), premise_pos[$kernel](R, aw_at), lattice_widen[$kernel](Rel, _),
+                           concludes[$kernel](Q, aw_at), premise_pos[$kernel](Q, Rel).
+awsc_not_recursive(aw_short) :- not awsc_self(aw_short).
+awsc_not_recursive(aw_up)    :- not awsc_self(aw_up).
+awsc_not_recursive(aw_loop)  :- not awsc_through(aw_loop).
+awsc_as_aggregate(Rel)  :- concludes[$kernel](R, Rel), premise_agg[$kernel](R, Rel), lattice_widen[$kernel](Rel, _).
+awsc_accepted(Rel)      :- concludes[$kernel](_, Rel), awsc_refused(Rel).
+awsc_refused(awsr_c).
+awsc_refused(awsr_n).
+alarm(awsc_missing).
+alarm(awsc_unwidened).
+alarm(awsc_not_recursive).
+alarm(awsc_as_aggregate).
+alarm(awsc_accepted).
+-- expect-row: aw_short[main](head,iv(0,3))

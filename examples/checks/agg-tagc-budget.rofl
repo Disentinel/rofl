@@ -1,0 +1,9 @@
+-- examples/checks/agg-tagc-budget.rofl — agg_tagc_budget: the budget cuts the
+-- evaluation of agg-budget-data.rofl while ab_r is still being derived, and
+-- a counting tag over it, the number of ways each node is reached, is no
+-- answer: the cut is a hole on the world, and the tag has no row at all,
+-- never a count of what arrived before the wall.
+-- expect-row: hole[$kernel]($adhoc,budget_exhausted)
+-- expect-no-row: tcb_n[main](
+tag tcb_n(C, counting N).
+tcb_n(C, N) :- ab_r(_, C, _).

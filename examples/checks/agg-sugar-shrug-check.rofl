@@ -1,0 +1,36 @@
+-- examples/checks/agg-sugar-shrug-check.rofl — agg_sugar_shrug: each sugar form reading what has no answer is a
+-- shrug inherited from the fault (agg-sugar-shrug.rofl.md asks for them in sentences, round-tripped): g5's every,
+-- at most, exactly and average, from the rule whose `oops` has no age; g6's averages from the sum cell whose total
+-- left the range, itself a shrug `fault, agg_overflow`; g7's average in millionths from its own rule's overflow.
+-- A form decided under every completion is no shrug: g6's every and at most, and nothing of g1 to g4.
+sgk_want(mean, g5). sgk_want(mean, g6).
+sgk_want(micro, g5). sgk_want(micro, g6). sgk_want(micro, g7).
+sgk_want(out, g5). sgk_want(small, g5).
+sgk_got(mean, G)  :- sgq_mean(G, inherited).
+sgk_got(micro, G) :- sgq_micro(G, inherited).
+sgk_got(out, G)   :- sgq_out(G, inherited).
+sgk_got(small, G) :- sgq_small(G, inherited).
+sgk_wrong(K, G) :- sgk_want(K, G), not sgk_got(K, G).
+sgk_wrong(K, G) :- sgk_got(K, G), not sgk_want(K, G).
+sgk_wrong(mean, G)  :- sgq_mean(G, R), R != inherited.
+sgk_wrong(micro, G) :- sgq_micro(G, R), R != inherited.
+sgk_wrong(out, G)   :- sgq_out(G, R), R != inherited.
+sgk_wrong(small, G) :- sgq_small(G, R), R != inherited.
+alarm(sgk_wrong).
+-- each shrug names its root: the rule, or the cell, the fault is in
+sgk_root(g5) :- sgq_root(g5, from($cons($rule(R), $nil))), concludes[$kernel](R, sg_age), hole[$kernel]($rule(R), arith_type_error).
+sgk_root(g6) :- sgq_root(g6, from($cons(C, $nil))), C = $cell(R, _, _, $cons(g6, $nil)), concludes[$kernel](R, sgs_mean),
+                shrug[$kernel](C, fault, agg_overflow).
+sgk_root(g7) :- shrug[$kernel](sgs_micro(g7, $unk(_, _, _)), inherited, from($cons($rule(R), $nil))),
+                concludes[$kernel](R, sgs_micro), hole[$kernel]($rule(R), arith_overflow).
+sgk_rooted(g5). sgk_rooted(g6). sgk_rooted(g7).
+sgk_unrooted(G) :- sgk_rooted(G), not sgk_root(G).
+alarm(sgk_unrooted).
+-- the shrug is asked in the answer model's own sentence, and the sugar written as the sugar (agg-phrase-check.rofl)
+sentence_word(sgq_mean, "has no answer for the reason R with some meta").
+sentence_word(sgq_root, "has no answer for the reason `inherited` with").
+sentence_word(sgs_mean, "is the average of E over M such that").
+sentence_word(sgs_out, "every M such that").
+sentence_word(sgs_small, "at most 1 of M such that").
+sentence_word(sgs_senior, "every M such that").
+sentence_word(sgs_spread, "is the average of E over M such that").

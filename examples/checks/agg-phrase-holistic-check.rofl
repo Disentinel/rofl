@@ -1,0 +1,21 @@
+-- examples/checks/agg-phrase-holistic-check.rofl — agg_holistic_phrase: the median (the lower, 20), the
+-- quantile at 90 (45), at 50 and at 100, and the rank among the distinct values, from sentences and from
+-- rofl, each after a round trip.
+ph_rank(k1, 1). ph_rank(k2, 2). ph_rank(k3, 2). ph_rank(k4, 3).
+ph_at(50, 20). ph_at(100, 45).
+ph_wrong(median) :- not phs_median(20).
+ph_wrong(median) :- not phr_median(20).
+ph_wrong(top)    :- not phs_top(45).
+ph_wrong(top)    :- not phr_top(45).
+ph_wrong(P)      :- ph_at(P, Q), not phs_at(P, Q).
+ph_wrong(P)      :- ph_at(P, Q), not phr_at(P, Q).
+ph_wrong(K)      :- ph_rank(K, R), not phs_rank(K, R).
+ph_wrong(K)      :- ph_rank(K, R), not phr_rank(K, R).
+ph_wrong(K)      :- phs_rank(K, R), not ph_rank(K, R).
+ph_wrong(K)      :- phr_rank(K, R), not ph_rank(K, R).
+alarm(ph_wrong).
+-- written in its own words (agg-phrase-check.rofl)
+sentence_word(phr_median, "is the median of V over K such that").
+sentence_word(phr_top, "is the quantile 90 of V over K such that").
+sentence_word(phr_at, "is the quantile P of V over K such that").
+sentence_word(phr_rank, "is the rank of S among V such that").

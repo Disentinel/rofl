@@ -1,5 +1,7 @@
 # GOOF — Grothendieck Or Other Foundations
 
+**Count reading:** domain — how many ways a law is proved (and so how many proofs must agree), not a measure of robustness.
+
 **One rule set. Nine books. The rules never name a foundation.**
 
 The best advertisement for "rules separate, semantics separate" is not an
@@ -94,18 +96,19 @@ that is.
 ```prolog
 thm[G](P) :- axiom[G](P).
 
-holds_from[G](S, K1) :- foundation[G](_, _), need_count(S, N), K1 is N + 1.
-holds_from[G](S, K)  :- needs(S, K, P), thm[G](P), K1 is K + 1, holds_from[G](S, K1).
-
-thm[G](P) :- step(S, P), holds_from[G](S, 1).
+premises(S, N) :- step(S, _), N is count(Q : needs(S, Q)).
+thm[G](P) :- step(S, P), premises(S, N), foundation[G](_, _),
+             at_least(N, Q : needs(S, Q), thm[G](Q)).
 ```
 
 That is the entire deduction engine: an axiom is a theorem, and a step whose
-premises are all theorems concludes one. The premise walk by index is
-`moot.rofl`'s device, and it is here for the same reason — "every premise of S
-holds" is a universal over an open set, the obvious spelling puts the rule in a
-negative cycle with itself, and walking the premises by index turns it into a
-positive recursion the engine stratifies without complaint.
+premises are all theorems concludes one. "Every premise of S holds" is a
+universal over an open set, and written with `not` it would sit in a negative
+cycle with itself. It is a threshold instead: `at_least(N, ...)` over the
+premises, with N the counted number of them, so a step with none is a quorum
+of 0 and no count is stored beside the premises. A quorum's witness is its N
+members, so a fold over it counts a lower bound when more than N support;
+here N is every premise, so the fold is exact.
 
 The claim "the rules do not change when the foundation does" is only worth
 making if the alternative is on the table. The alternative is one copy of every
@@ -113,26 +116,26 @@ rule per book — which is what `examples/sus` and `examples/aka` do — and the
 demo generates it from the same text and loads it:
 
 ```
-  28 clauses after the @rules marker, 24 of them polymorphic in the ledger.
+  27 clauses after the @rules marker, 22 of them polymorphic in the ledger.
   the string "euclid" appears in them 4 times.
 
   substitute the ledger variable away — one copy per book, which is what an
   example that wants an empty audit has to do — and the rule set goes from
-  28 clauses to 292. The rule that compares two books is copied once per
+  27 clauses to 275. The rule that compares two books is copied once per
   PAIR:
      81x  only_in[main](G, H, A) :- axiom[G](A), foundation[H](_, _), not axiom[H](A).
       9x  thm[G](P) :- axiom[G](P).
-      9x  holds_from[G](S, K1) :- foundation[G](_, _), need_count(S, N), K1 is N + 1.
+      9x  thm[G](P) :- step(S, P), premises(S, N), foundation[G](_, _),
 
   both programs loaded, and every domain fact compared:
-    polymorphic: 1716 facts     expanded: 1716 facts     IDENTICAL
+    polymorphic: 1186 facts     expanded: 1186 facts     IDENTICAL
     leak[audit] rows — polymorphic: 0   expanded: 0
     rules not range-restricted, expanded: 0
 ```
 
 (The four occurrences of "euclid" in the rule text are in comments.)
 
-Both programs derive **exactly** the same 1716 domain facts. The trade is nine
+Both programs derive **exactly** the same 1186 domain facts. The trade is nine
 copies of every rule — paid against the thesis, because a rule set with
 `[euclid]` written into it *does* change when the foundation changes. It used
 to cost an audit row as well; see "Where the kernel fought back" below for what
@@ -186,10 +189,10 @@ cycle: `depthBoundedCountingSemiring` counts derivations of height at most *n*.
 
 ```
     derivations of height at most      lobachevsky/interior        euclid/sole
-      10                                       0                  1
-      15                                     682                  1
-      20                                  699050                  1
-      25                               715827882                  1
+      10                                     682                  1
+      15                                  699050                  1
+      20                               715827882                  1
+      25                            733007751850                  1
 ```
 
 One column grows without settling and the other is fixed by depth 10. The
@@ -212,29 +215,23 @@ whynot thm[saccheri](angle_sum_180):
     failed premise: axiom[saccheri](angle_sum_180)
   rule r7cb3920d: thm[?G](?P)@now :- explodes[?G](?P)@now
     failed premise: explodes[saccheri](angle_sum_180)
-  rule r9749238b: thm[?G](?P)@now :- step[main](?S,?P)@now, holds_from[?G](?S,1)@now
-    failed premise: holds_from[saccheri](s_playfair,1)
+  rule rb3f54c28: thm[?G](?P)@now :- step[main](?S,?P)@now, premises[main](?S,?N)@now, foundation[?G](?_$0,?_$1)@now, at_least(?N, ?Q : needs[main](?S,?Q)@now, thm[?G](?Q)@now)
+    failed premise: at_least(2, ?Q#2 : needs[main](s_playfair,?Q#2), thm[saccheri](?Q#2)) reached 1 of 2 [threshold]: #1 (alternate_angles_parallel) h=6
 ```
 
 Three ways to conclude it, three failures — and the second one is the shape of
 Saccheri's own programme: *if the book explodes, everything follows*. It does
-not explode. Drill into the third:
+not explode. The third is a quorum that reached 1 of its 2 premises; ask
+about the one it lacks:
 
 ```
-whynot holds_from[saccheri](s_playfair,1):
-  rule r1cadcdda: holds_from[?G](?S,?K)@now :- needs[main](?S,?K,?P)@now, thm[?G](?P)@now, ?K1 is +(?K,1), holds_from[?G](?S,?K1)@now
-    failed premise: thm[saccheri](post5_unique)
-      rule rac159495: thm[?G](?P)@now :- axiom[?G](?P)@now
-        failed premise: axiom[saccheri](post5_unique)
-          no rule concludes 'axiom' and no matching base fact exists
-      rule r7cb3920d: thm[?G](?P)@now :- explodes[?G](?P)@now
-        failed premise: explodes[saccheri](post5_unique)
-          rule r6f42d5ca: explodes[?G](?P)@now :- clash[?G](?_$0,?_$1)@now, axiom[?G](ex_falso)@now, proposition[main](?P)@now
-            failed premise: clash[saccheri](?_$0#3,?_$1#3)
-              [depth limit 3 reached]
-      rule r9749238b: thm[?G](?P)@now :- step[main](?S,?P)@now, holds_from[?G](?S,1)@now
-        failed premise: step[main](?S#4,post5_unique)
-          no rule concludes 'step' and no matching base fact exists
+whynot thm[saccheri](post5_unique):
+  rule rac159495: thm[?G](?P)@now :- axiom[?G](?P)@now
+    failed premise: axiom[saccheri](post5_unique)
+  rule r7cb3920d: thm[?G](?P)@now :- explodes[?G](?P)@now
+    failed premise: explodes[saccheri](post5_unique)
+  rule rb3f54c28: thm[?G](?P)@now :- step[main](?S,?P)@now, premises[main](?S,?N)@now, foundation[?G](?_$0,?_$1)@now, at_least(?N, ?Q : needs[main](?S,?Q)@now, thm[?G](?Q)@now)
+    failed premise: step[main](?S#2,post5_unique)
 ```
 
 `post5_unique`. Beltrami settled it in 1868 by building a model; here it is a
@@ -257,7 +254,7 @@ semiring over the support the Boolean run already recorded:
    pythagoras                  euclid        post1_two_points post2_extend post4_right_angles post5_unique
    aaa_congruence              lobachevsky   archimedes excluded_middle post1_two_points post2_extend post4_right_angles post5_many
    aaa_congruence              riemann       archimedes post1_two_points post2_finite post5_none
-   every_knot_unties           frege         ex_falso post5_many post5_unique
+   every_knot_unties           frege         ex_falso post5_many post5_unique   (3 independent derivations)
 ```
 
 Five of Euclid's fifteen derived theorems cannot be proved without the fifth
@@ -356,9 +353,9 @@ is.
 
 ```prolog
 step(s_sacc_leg, angle_sum_at_most_180).
-needs(s_sacc_leg, 1, exterior_angle).
-needs(s_sacc_leg, 2, archimedes).
-needs(s_sacc_leg, 3, excluded_middle).
+needs(s_sacc_leg, exterior_angle).
+needs(s_sacc_leg, archimedes).
+needs(s_sacc_leg, excluded_middle).
 ```
 
 Remove `excluded_middle` from a book and exactly the theorems whose only proof
@@ -373,8 +370,9 @@ is a reductio stop being derivable:
     angle_sum_at_most_180    s_sacc_leg
 ```
 
-`whynot holds_from[brouwer](s_sacc_leg, 1)` walks the premise chain and stops on
-`thm[brouwer](excluded_middle)` — premise 3, the reductio, named.
+`whynot thm[brouwer](angle_sum_at_most_180)` says the quorum of
+`s_sacc_leg` reached 2 of its 3 premises, and `whynot thm[brouwer](excluded_middle)`
+names the one it lacks — the reductio.
 
 **A limit, stated.** This is not intuitionistic geometry. A real constructive
 treatment is subtler than "delete excluded middle and see what breaks": it
@@ -457,7 +455,7 @@ The forgery is not cosmetic. Euclid's book now contradicts itself, and it holds
 
     derivability decisions:        333   disagreements: 0
     axiom-necessity decisions:    1942   disagreements: 14  (14 of them conservative)
-    axiom-sufficiency checks:      282   disagreements: 0
+    axiom-sufficiency checks:      331   disagreements: 0
     minimal axiom sets, found / existing: 236 / 242
     angle-sum comparisons:          45   disagreements: 0
     parallel-witness decisions:     36   disagreements: 0
@@ -471,7 +469,7 @@ question two thousand years of mathematics asked about the fifth postulate.
 ### The one gap, and its size
 
 The polynomial is **sound** everywhere: every axiom set it names really does
-prove the theorem, 282 for 282. It is **incomplete** for 6 theorems, all of them
+prove the theorem, 331 for 331. It is **incomplete** for 6 theorems, all of them
 in `frege`, where 6 minimal axiom sets exist that no monomial names.
 
 `provenanceSemiring` keeps at most `PROVENANCE_MAX_TERMS` = 32 monomials and
@@ -592,7 +590,7 @@ foundation's content reaches another's.
 
 It is real, and the file's own expansion proves it without any appeal to how a
 variable perspective is reflected. `expandedWorld()` substitutes every ledger
-variable away — 28 clauses become 292, and not a `$var` is left in the program
+variable away — 27 clauses become 275, and not a `$var` is left in the program
 — and derives exactly the same domain facts. Its audit reports **81 rows**:
 nine books, each reaching the other eight and `[audit]`. Those are the same
 crossings, spelled out; `brouwer -> euclid` is a named fact about a program
@@ -659,7 +657,7 @@ assistant, and it is a different project.
   a different example, not a section of this one.
 - *Taxicab geometry*, which the spec suggests for the tropical semiring. The
   tropical fold here prices the cheapest *derivation* in rule firings
-  (`thm[euclid](pythagoras)` costs 26), which is the standard reading; a metric
+  (`thm[euclid](pythagoras)` costs 16), which is the standard reading; a metric
   axis would need points and coordinates, and this model has neither.
 - *Grothendieck*, who is in the name and not in the file. Topoi are the honest
   version of "one rule set, different foundations" — a topos *is* a universe

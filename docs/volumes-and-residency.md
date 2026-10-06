@@ -83,6 +83,20 @@ resolutions over a **materialised export surface**. Export surfaces are small �
 seven hundred services publish tens of thousands of facts against millions of
 internals — so the hot set becomes core + touched volumes + all exports.
 
+**Since 2026-10-05 this has happened, and the repair is built.** The model now
+resolves imports, calls, re-exports and `require` across files (at 500 files of
+vscode, 0.56% of derived facts have a witness that names two files), so the
+statements above about 193 same-file `resolves` describe the model of
+2026-09-09. The crossing edge is the `[surface]` book, `rules/js-surface.rofl`:
+a rule that joins two files reads the other one only through `[surface]`, and
+each file evaluated alone with the others' surface equals the whole world, fact
+for fact, in both ingest orders (world `vscode_surface_split`, `npm run
+test:split`). What crosses was measured, not guessed: it is more than exports
+(a node that leaves a file takes its elements, members and values with it), and
+a negation over `[surface]` makes ingest order matter. `docs/surface-split.md`
+is the account; the driver that cools volumes and runs the surface fixpoint is
+not built yet.
+
 ## The size of what must stay hot
 
 Facts naming no file at all — vocabulary, rules as data, reflection — are the
@@ -149,7 +163,7 @@ was in a volume nobody lifted.
 
 ## Lifting a volume: the tick boundary is required, not convenient
 
-`src/engine.ts` holds an `Assumption` — the frozen record of what `not p` is
+`src/aggeval.ts` holds an `Assumption` — the frozen record of what `not p` is
 judged against — **for the duration of a round**. Lifting a volume mid-round
 would answer some negations against a world without it and others against a
 world with it: two assumptions inside one round, and the well-founded semantics
@@ -212,9 +226,11 @@ So the layering the measurements support is three deep, not two:
 
 **1. The interface's CONTENT must be derived from the rules, not chosen.** The
 table above is a plausible guess and that is its weakness. The correct content
-is exactly the relations read by rules whose premises span volumes — today an
-empty set, because nothing crosses; when cross-module resolution lands, it is
-whatever resolution reads. `scanners/rule_shape.ts` already computes
+is exactly the relations read by rules whose premises span volumes — an
+empty set when this was written, because nothing crossed; it is now the
+`[surface]` book, and the surface lint (`examples/surface/surface.rofl`) derives
+which columns can hold another file's node from the rules themselves and
+reports a rule that reads a file-local premise at one. `scanners/rule_shape.ts` already computes
 `rule_leaves(R, B)`, rules that read outside their own book, which is the same
 shape of question. Deriving it once beats maintaining a list, for the reason
 this repository has already paid for twice: a hand-written list reopens
@@ -225,7 +241,8 @@ X whose volume is gone gives a WRONG answer, not a missing one. This is not
 hypothetical: the planted defect above invented 622 facts by exactly this
 mechanism. Safe only while no cross-volume rule negates over a discarded
 relation, and that is statically checkable by the same classifier that found
-the three scans.
+the three scans. It is now checked: the surface lint's `volatile_direct` and
+`volatile_head` name every head that reads a negation over `[surface]`.
 
 **3. Provenance is 52 per cent of the world, and it is the half being thrown
 away.** Keep only the aggregate and `why` for a cross-volume conclusion bottoms
@@ -292,7 +309,10 @@ Two consequences worth keeping straight:
 1. **Incremental is not cold.** DDlog answers "ten of seven hundred changed"
    cheaply, but to know what a change invalidates it holds the whole maintained
    state. Cheap updates, expensive residency. What is measured here is the
-   opposite: cheap residency, with the update story still unaddressed.
+   opposite: cheap residency, with the update story then unaddressed. (Since
+   2026-10-05 the Rust engine adds facts and rules to an evaluated world and
+   retracts base facts by delta, `docs/aggregates.md`, "Incremental addition, as
+   built".)
 2. **Their partitioning is by JOIN KEY, for parallelism across workers.** That
    is orthogonal to partitioning by ORIGIN, and in fact hostile to it: hashing
    by join key smears one file across every worker, which is exactly what a cold

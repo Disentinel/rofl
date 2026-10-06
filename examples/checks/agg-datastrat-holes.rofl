@@ -1,0 +1,39 @@
+-- examples/checks/agg-datastrat-holes.rofl — WHAT A HOLE IN A CELL DOES TO THE
+-- CELLS THAT ADD IT, in a component stratified by its data
+-- (docs/aggregates.md, "Data-level stratification, as built").
+--
+--   a1 = 2, a2 = 3                   typed in
+--   b1 = SUM(a1:a2)        = 5       depth 0
+--   b5 = b1 * 10^18                  overflows the term range: a hole, no value
+--   b6 = SUM(a1, b5)                 a range with a cell not known: a hole, no sum
+--   b7 = b6 + 1                      what reads b6 is unknown in turn
+--   b8 = SUM(a1:a2)        = 5       another sum, untouched by it
+--   b9 = SUM(b8, a1)       = 7       over a sum that is known
+--
+-- A sum sealed over the cells that survived would be 2 (a1 alone) and then
+-- b7 = 3: wrong numbers, the cells of an acyclic sheet that a hole reaches
+-- must be unknown, and the ones it does not reach must not be.
+edb(input).
+edb(formula).
+edb(ref).
+edb(num).
+edb(plus).
+edb(scale).
+edb(sum_head).
+edb(in_range).
+
+input(a1, 2). input(a2, 3).
+formula(b1, n1).  sum_head(n1, r1).  in_range(r1, a1). in_range(r1, a2).
+formula(b5, n7).  scale(n7, n8).  ref(n8, b1).
+formula(b6, n9).  sum_head(n9, r4).  in_range(r4, a1). in_range(r4, b5).
+formula(b7, n10). plus(n10, n11, n12). ref(n11, b6). num(n12, 1).
+formula(b8, n13). sum_head(n13, r5). in_range(r5, a1). in_range(r5, a2).
+formula(b9, n14). sum_head(n14, r6). in_range(r6, b8). in_range(r6, a1).
+
+value(C, V) :- input(C, V).
+value(C, V) :- formula(C, N), val(N, V).
+val(N, V) :- num(N, V).
+val(N, V) :- ref(N, C), value(C, V).
+val(N, V) :- plus(N, A, B), val(A, X), val(B, Y), V is X + Y.
+val(N, V) :- scale(N, A), val(A, X), V is X * 1000000000000000000.
+val(N, V) :- sum_head(N, I), V is sum(X ; C : in_range(I, C), value(C, X)).

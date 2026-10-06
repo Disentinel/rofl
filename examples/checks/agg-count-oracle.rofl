@@ -1,0 +1,57 @@
+-- examples/checks/agg-count-oracle.rofl — WHAT agg-count-data.rofl's COUNTS
+-- MUST BE, computed without an aggregate: the members are ranked by a
+-- successor chain over their order and the count is the rank of the last.
+-- Loaded by the worlds that evaluate the counts.
+
+-- one term: the distinct ballots of a candidate
+aco_m(C, B)       :- ac_cast(B, C, _).
+aco_lt(C, A, B)   :- aco_m(C, A), aco_m(C, B), A < B.
+aco_btw(C, A, B)  :- aco_lt(C, A, M), aco_lt(C, M, B).
+aco_next(C, A, B) :- aco_lt(C, A, B), not aco_btw(C, A, B).
+aco_hasprev(C, B) :- aco_next(C, _, B).
+aco_hasnext(C, A) :- aco_next(C, A, _).
+aco_pos(C, A, 1)  :- aco_m(C, A), not aco_hasprev(C, A).
+aco_pos(C, B, K)  :- aco_pos(C, A, J), aco_next(C, A, B), K is J + 1.
+aco_n(C, K)       :- aco_pos(C, A, K), not aco_hasnext(C, A).
+aco_some(C)       :- aco_m(C, _).
+aco_n(C, 0)       :- ac_candidate(C), not aco_some(C).
+
+-- two terms: the distinct (ballot, channel) pairs, ordered lexically
+aco_pm(C, B, H)             :- ac_cast(B, C, H).
+aco_plt(C, B1, H1, B2, H2)  :- aco_pm(C, B1, H1), aco_pm(C, B2, H2), B1 < B2.
+aco_plt(C, B, H1, B, H2)    :- aco_pm(C, B, H1), aco_pm(C, B, H2), H1 < H2.
+aco_pbtw(C, B1, H1, B2, H2) :- aco_plt(C, B1, H1, B, H), aco_plt(C, B, H, B2, H2).
+aco_pnext(C, B1, H1, B2, H2) :- aco_plt(C, B1, H1, B2, H2), not aco_pbtw(C, B1, H1, B2, H2).
+aco_phasprev(C, B, H)       :- aco_pnext(C, _, _, B, H).
+aco_phasnext(C, B, H)       :- aco_pnext(C, B, H, _, _).
+aco_ppos(C, B, H, 1)        :- aco_pm(C, B, H), not aco_phasprev(C, B, H).
+aco_ppos(C, B2, H2, K)      :- aco_ppos(C, B1, H1, J), aco_pnext(C, B1, H1, B2, H2), K is J + 1.
+aco_pn(C, K)                :- aco_ppos(C, B, H, K), not aco_phasnext(C, B, H).
+aco_psome(C)                :- aco_pm(C, _, _).
+aco_pn(C, 0)                :- ac_candidate(C), not aco_psome(C).
+
+-- both directions, for the correlated form, the grouped form and the pairs
+ac_count_wrong(C, N)   :- ac_votes(C, N), not aco_n(C, N).
+ac_count_missing(C, N) :- aco_n(C, N), not ac_votes(C, N).
+ac_by_wrong(C, N)      :- ac_by(C, N), not aco_n(C, N).
+ac_by_missing(C, N)    :- aco_n(C, N), N > 0, not ac_by(C, N).
+ac_by_zero(C)          :- ac_by(C, 0).
+ac_pairs_wrong(C, N)   :- ac_pairs(C, N), not aco_pn(C, N).
+ac_pairs_missing(C, N) :- aco_pn(C, N), not ac_pairs(C, N).
+alarm(ac_count_wrong).
+alarm(ac_count_missing).
+alarm(ac_by_wrong).
+alarm(ac_by_missing).
+alarm(ac_by_zero).
+alarm(ac_pairs_wrong).
+alarm(ac_pairs_missing).
+
+-- AND THE DATASET STILL HOLDS WHAT MAKES THE ORACLE BITE: a ballot through
+-- two channels, a candidate with none, a spoiled ballot left out.
+aco_dup()         :- ac_cast(B, C, H1), ac_cast(B, C, H2), H1 != H2.
+aco_has_empty()   :- aco_n(_, 0).
+aco_spoil_seen()  :- ac_cast0(B, _, _), not ac_valid(B).
+aco_vacuous(dup)   :- not aco_dup().
+aco_vacuous(empty) :- not aco_has_empty().
+aco_vacuous(spoil) :- not aco_spoil_seen().
+alarm(aco_vacuous).

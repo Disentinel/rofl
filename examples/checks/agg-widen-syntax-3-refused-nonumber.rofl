@@ -1,0 +1,3 @@
+-- expect-refusal: `widen` is followed by the number of improvements
+-- a widening names how many improvements a cell makes before it is widened
+lattice sxwr_n(A, hull I) widen.

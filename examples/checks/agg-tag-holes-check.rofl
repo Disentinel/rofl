@@ -1,0 +1,55 @@
+-- examples/checks/agg-tag-holes-check.rofl — agg_tag_holes: an idempotent
+-- tag's value is never one outside its carrier nor a wrapped one. A viterbi
+-- weight past 1 (1500000 millionths), a trust weight below 0 or that is no
+-- number, are `tag_off_carrier`, the cell's hole, never a value clamped into
+-- range; a tropical ⊗ past the term range is `arith_overflow`, never
+-- wrapped. What rested on a holed cell is withdrawn, `support_withdrawn`: b
+-- to c is the hole, and a to c, a to d and b to d through it; c to d, a to b
+-- and a to e stand. What reads one is not decided: a negation of a to d is
+-- neither held nor refused, and a count over the tag is a hole.
+edb(th_p).
+th_p(a, b, 500000). th_p(b, c, 1500000). th_p(c, d, 400000). th_p(a, e, 700000).
+tag th_pr(A, B, viterbi P).
+th_pr(A, B, W)  :- th_p(A, B, W).
+th_pr(A, C, T)  :- th_pr(A, B, _), th_pr(B, C, _).
+edb(th_q).
+th_q(x, -1). th_q(y, high). th_q(z, 300000).
+tag th_tr(A, trust T).
+th_tr(A, W)     :- th_q(A, W).
+edb(th_big).
+th_big(m, 1152921504606846970).
+tag th_c(A, tropical T).
+th_c(A, W)      :- th_big(A, W).
+tag th_o(A, tropical T).
+th_o(A, T)      :- th_c(A, _), th_c(A, _).
+th_far(A)       :- th_p(A, _, _), not th_pr(A, d, _).
+th_n(N)         :- N is count(A, B : th_pr(A, B, _)).
+th_rule(Rel, R) :- concludes[$kernel](R, Rel).
+th_decided()    :- th_far(a).
+th_decided()    :- th_far(b).
+th_decided()    :- th_n(_).
+th_lost(R)      :- th_stands(R), not th_holds(R).
+th_stands(ab). th_stands(ae). th_stands(cd). th_stands(z). th_stands(m). th_stands(far_c).
+th_holds(ab)    :- th_pr(a, b, 500000).
+th_holds(ae)    :- th_pr(a, e, 700000).
+th_holds(cd)    :- th_pr(c, d, 400000).
+th_holds(z)     :- th_tr(z, 300000).
+th_holds(m)     :- th_c(m, 1152921504606846970).
+th_holds(far_c) :- not th_far(c).
+alarm(th_decided).
+alarm(th_lost).
+-- expect-row: hole[$kernel]($lattice(th_pr,main,0,$cons(b,$cons(c,$nil))),tag_off_carrier)
+-- expect-row: hole[$kernel]($lattice(th_pr,main,0,$cons(a,$cons(c,$nil))),support_withdrawn)
+-- expect-row: hole[$kernel]($lattice(th_pr,main,0,$cons(a,$cons(d,$nil))),support_withdrawn)
+-- expect-row: hole[$kernel]($lattice(th_pr,main,0,$cons(b,$cons(d,$nil))),support_withdrawn)
+-- expect-row: hole[$kernel]($lattice(th_tr,main,0,$cons(x,$nil)),tag_off_carrier)
+-- expect-row: hole[$kernel]($lattice(th_tr,main,0,$cons(y,$nil)),tag_off_carrier)
+-- expect-row: hole[$kernel]($lattice(th_o,main,0,$cons(m,$nil)),arith_overflow)
+-- expect-row: shrug[$kernel](th_far(a),inherited,
+-- expect-row: shrug[$kernel](th_far(b),inherited,
+-- expect-no-row: th_pr[main](b,c,
+-- expect-no-row: th_pr[main](a,c,
+-- expect-no-row: th_tr[main](x,
+-- expect-no-row: th_tr[main](y,
+-- expect-no-row: th_o[main](m,
+-- expect-no-row: th_n[main](

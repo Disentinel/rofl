@@ -17,6 +17,20 @@ the rest are v0 implementation boundaries.
   is no DRed, no counting, and none of the 4–22× memory the field pays for
   those. `excise` is likewise a clean re-evaluation on the subtracted EDB plus
   a diff — sound under multiple support by construction.
+  **Amended 2026-10-05: true of the TypeScript host only.** The Rust engine
+  maintains an evaluated world by delta both ways (docs/aggregates.md, "The
+  retraction path" and "Incremental addition, as built"; the owner's decision
+  `f_the_owner_settles_walls_promises_and_incremental`, point 3).
+  `Session::retract_delta` (rofl-load `--retract`, rofl-serve `retract`) takes
+  a base fact out; `Session::assert_delta` and `Session::load_delta`
+  (rofl-serve's `assert` and `load` on an evaluated session) add facts and
+  rules, DRed level by level over the stratified program. Aggregate cells are
+  subtracted or sealed again, negations withdraw the firings they block, and a
+  world or a change a delta is not worked out for is evaluated again with the
+  reason named. Each path is held equal to a fresh evaluation byte for byte
+  (rust/rofl/tests/incremental.rs, rust/rofl/tests/addition.rs,
+  scripts/addcheck.ts). `excise` is unchanged: a fresh evaluation of a
+  scratch copy plus a diff.
 - **The derived layer is reused per relation, under an exact fingerprint.**
   What an evaluation *skips* is a relation whose dependency cone — the rules
   its conclusions pass through and the asserted facts those rules read — is
@@ -98,15 +112,24 @@ the rest are v0 implementation boundaries.
   does; boot.rofl carried those rules until nothing needed them). A negation
   rule whose head relation gets no stratum fact (its dependency cone contains
   only relations with neither facts nor `edb` marks) runs in a single final pass
-  after all known strata, in canonical order. Programs whose correctness depends
-  on negation ordering *within* that final pass are outside v0 guarantees.
+  after all known strata, in canonical order. A program whose correctness would
+  depend on negation ordering *within* that final pass is refused, in both
+  engines, by one text: when an unranked negation reads a relation another
+  unranked rule derives (or a plain rule derives from what they do), the
+  program is rejected with `P negates Q, and neither is ranked by stratum/2;
+  rank them`. Negation over what is complete before the pass (base data,
+  ranked relations, plain rules over those) stays accepted
+  (`strata_unranked_negation`).
   **The primary path has no such corner**: the peel assigns a round to every
   relation any rule mentions, from the rules alone, so there is no "unknown
   level" case to fall into. A partial answer there would be a stall, and a stall
   is a refusal, not a silent final pass.
-- **Without a `stratum/2` supplier, negation is unchecked on the STOCK
-  evaluator**: no table means all its negation rules run in the final pass, and
-  no `unstratified/1` derivations means it rejects nothing. This was the reason
+- **Without a `stratum/2` supplier, negation is checked only as far as the
+  final pass is concerned on the STOCK evaluator**: no table means all its
+  negation rules run in the final pass, so any that read what another derives are
+  refused (above); boot.rofl ranks its own relations (`boot_rank`), so that
+  its `leak` is not, and a program's are the program's to rank; and no `unstratified/1`
+  derivations means it rejects nothing else. This was the reason
   boot.rofl was not optional. It is no longer true of the default evaluator, and
   the change is measured rather than asserted: the same twelve-level chain and
   the same fourteen-layer `examples/wtf/` model come out RIGHT with no
@@ -161,6 +184,10 @@ the rest are v0 implementation boundaries.
 
 - **No aggregation, no optimization passes, no syntax sugar, no GPU anything**
   (spec §8). Resisted.
+  **Amended 2026-10-02: only the last clause holds.** Aggregation was built
+  (docs/aggregates.md), optimization passes exist (the eight lines above, and
+  `r_optimizations_exist` in the README register) and so does syntax sugar
+  (docs/sentence-form.md). GPU alone is still out, as its own duty.
 
 ## Appended 2026-09-07 — what `sealed(provenance)` changes
 

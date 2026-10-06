@@ -1,0 +1,24 @@
+-- examples/checks/agg-minmax-safety-check.rofl — agg_minmax_safety. Every
+-- group with a value has its extremes, which it can only have because
+-- safety.rofl counts the aggregate as binding G and M; a group with none has
+-- no row; and neither refused program reached the world.
+-- the input, here rather than beside the rule, so a refused rule leaves
+-- it behind for the checks to read
+edb(ams_d).
+edb(ams_g).
+ams_d(g1, 4).
+ams_d(g1, 2).
+ams_d(g2, 7).
+ams_g(g1).
+ams_g(g2).
+ams_g(g3).
+ams_has(G)              :- ams_lo(G, _), ams_hi(G, _).
+expected_row_missing(G) :- ams_d(G, _), not ams_has(G).
+ams_member(G)           :- ams_d(G, _).
+empty_group_row(G)      :- ams_lo(G, _), not ams_member(G).
+key_accepted()          :- concludes[$kernel](_, ams_keyed).
+twovals_accepted()      :- concludes[$kernel](_, ams_twovals).
+alarm(expected_row_missing).
+alarm(empty_group_row).
+alarm(key_accepted).
+alarm(twovals_accepted).

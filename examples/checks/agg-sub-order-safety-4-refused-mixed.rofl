@@ -1,0 +1,7 @@
+-- expect-refusal: is not monotone in that order
+-- two values mixed into one: the head cost reads the cost and the time, which move on their own
+edb(aosr_e).
+aosr_e(a, b, 2, 9).
+pareto aosr_mixed(A, B, min C, min T).
+aosr_mixed(A, B, C, T) :- aosr_e(A, B, C, T).
+aosr_mixed(A, C, C1, T1) :- aosr_mixed(A, B, C0, T0), aosr_e(B, C, C2, T2), C1 is C0 + T0, T1 is T0 + T2.

@@ -57,7 +57,7 @@ fn files_of(name: &str) -> Option<Vec<PathBuf>> {
 }
 
 fn cases() -> Vec<String> {
-    let mut v: Vec<String> = std::fs::read_dir(repo().join("facts/port-corpus"))
+    let mut v: Vec<String> = std::fs::read_dir(rofl::corpus::dir())
         .expect("port-corpus")
         .filter_map(|e| {
             let n = e.ok()?.file_name().to_string_lossy().into_owned();
@@ -68,17 +68,53 @@ fn cases() -> Vec<String> {
     v
 }
 
-/// A world built from text, exactly as the corpus generator builds it.
+/// The files the generator's host refused, by world (`DROPPED.tsv`), with
+/// why: `refused` by the kernel, or `rust_only` — read and refused as an
+/// aggregate by a TypeScript host older than w_agg_ts, which evaluates them.
+fn dropped(name: &str) -> Vec<(String, String)> {
+    read(&rofl::corpus::dir().join("DROPPED.tsv"))
+        .lines()
+        .filter(|l| !l.starts_with("--"))
+        .filter_map(|l| {
+            let f: Vec<&str> = l.split('\t').collect();
+            (f.len() == 3 && f[0] == name).then(|| (f[1].to_string(), f[2].to_string()))
+        })
+        .collect()
+}
+
+/// A world built from text, exactly as the corpus generator builds it. The
+/// kernel evaluates on every `load` and refuses, whole, a file its program
+/// cannot be evaluated with (`unstratifiable.rofl`), so each load here is
+/// evaluated too and undone when either step refuses; this door must refuse
+/// the files the kernel refused (`DROPPED.tsv`), no more and no fewer.
+///
+/// A `rust_only` file is LEFT OUT, not loaded: the expected state is the
+/// TypeScript host's, which never evaluated it. What the Rust engine makes of
+/// it is held by the goldens and by tests/agg_worlds.rs.
 fn build(name: &str) -> Option<Session> {
     let files = files_of(name)?;
     let mut s = Session::fresh(BUDGET);
     let boot = read(&repo().join("boot.rofl"));
     s.load(&boot, None).unwrap_or_else(|d| panic!("{name}: boot.rofl refused: {}", d.join("; ")));
+    let drops = dropped(name);
+    let rust_only: Vec<&String> = drops.iter().filter(|(_, w)| w == "rust_only").map(|(f, _)| f).collect();
+    let want: Vec<String> = drops.iter().filter(|(_, w)| w == "refused").map(|(f, _)| f.clone()).collect();
+    let mut refused = Vec::new();
     for f in &files {
-        let text = read(f);
-        s.load(&text, None)
-            .unwrap_or_else(|d| panic!("{name}: {} refused: {}", f.display(), d.join("; ")));
+        let base = f.file_name().unwrap().to_string_lossy().into_owned();
+        if rust_only.contains(&&base) {
+            continue;
+        }
+        let before = s.fork();
+        if s.load(&read(f), None).is_err() || s.evaluate().is_err() {
+            s = before;
+            refused.push(base);
+        }
     }
+    assert_eq!(
+        refused, want,
+        "{name}: the files refused here are not the ones the kernel refused (files the kernel read as aggregates, {rust_only:?}, are left out)"
+    );
     Some(s)
 }
 
@@ -97,8 +133,8 @@ fn a_program_loaded_in_rust_is_the_world_the_kernel_builds() {
             continue;
         };
         s.evaluate().unwrap_or_else(|e| panic!("{n}: {}", rofl::describe(&e)));
-        let want = read(&repo().join(format!("facts/port-corpus/{n}.expected.txt")));
-        let got = s.eval.store.canonical_state(&s.eval.h);
+        let want = read(&rofl::corpus::dir().join(format!("{n}.expected.txt")));
+        let got = s.eval.canonical_state();
         assert_eq!(got.trim_end(), want.trim_end(), "{n}: loaded in Rust differs from the kernel");
         checked += 1;
     }
@@ -116,9 +152,10 @@ fn a_loaded_program_ticks_the_way_the_kernel_ticks() {
         for _ in 0..ticks {
             s.tick().unwrap_or_else(|e| panic!("{n}: {}", rofl::describe(&e)));
         }
-        let want = read(&repo().join(format!("facts/port-corpus/{n}.expected.txt")));
+        s.eval.ensure().unwrap_or_else(|e| panic!("{n}: {}", rofl::describe(&e)));
+        let want = read(&rofl::corpus::dir().join(format!("{n}.expected.txt")));
         assert_eq!(
-            s.eval.store.canonical_state(&s.eval.h).trim_end(),
+            s.eval.canonical_state().trim_end(),
             want.trim_end(),
             "{n}: ticked after a Rust load differs from the kernel"
         );
@@ -201,6 +238,28 @@ fn the_door_refuses_what_the_kernel_refuses() {
             Err(d) => assert!(d.iter().any(|x| x.contains("already claimed")), "{d:?}"),
         }
     }
+    // The door is the store's: a claim made after a user's load, or into a
+    // store reopened from a snapshot, is too late. Only a bare store takes one.
+    {
+        let mut s = Session::fresh(BUDGET);
+        s.load("p(a).", None).expect("a plain load");
+        match s.load("$kernel_authority(late).\nq(b).", None) {
+            Ok(_) => panic!("a claim after a user's load was accepted"),
+            Err(d) => assert!(d.iter().any(|x| x.contains("too late")), "{d:?}"),
+        }
+        let mut o = Session::open(&s.save(), BUDGET).expect("the snapshot opens");
+        match o.load("$kernel_authority(reopened).", None) {
+            Ok(_) => panic!("a claim into a reopened store was accepted"),
+            Err(d) => assert!(d.iter().any(|x| x.contains("too late")), "{d:?}"),
+        }
+        let mut f = fresh().fork();
+        match f.load("$kernel_authority(forked).", None) {
+            Ok(_) => panic!("a claim into a fork of a claimed store was accepted"),
+            Err(d) => assert!(d.iter().any(|x| x.contains("already claimed")), "{d:?}"),
+        }
+        let mut b = Session::open(&Session::fresh(BUDGET).save(), BUDGET).expect("a bare snapshot opens");
+        b.load("$kernel_authority(bare).\nq(b).", None).expect("a bare reopened store takes the claim");
+    }
     // A FACT whose book is a variable — refused, while the same book on a RULE
     // is legal and must still load. This pair is the one place `check_clause`
     // and `admit_clause` could drift apart: admission asserts the perspective
@@ -221,7 +280,7 @@ fn a_refused_load_is_atomic_and_complete() {
     let mut s = Session::fresh(BUDGET);
     s.load(&boot, None).expect("boot");
     s.evaluate().expect("evaluate");
-    let before = s.eval.store.canonical_state(&s.eval.h);
+    let before = s.eval.canonical_state();
 
     // The good clause is FIRST, so a load that wrote as it went would have
     // written it before meeting the first refusal.
@@ -235,7 +294,7 @@ fn a_refused_load_is_atomic_and_complete() {
 
     s.evaluate().expect("re-evaluate");
     assert_eq!(
-        s.eval.store.canonical_state(&s.eval.h),
+        s.eval.canonical_state(),
         before,
         "a refused load left something behind"
     );

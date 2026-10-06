@@ -1,0 +1,26 @@
+-- examples/checks/agg-empty-eval-check.rofl — agg_empty_eval: over an empty
+-- group count and sum give 0 and min, max, or and and give no row; over a
+-- group with members every operation gives a row.
+ae_has(C)          :- ae_ballot(_, C).
+ae_count_zero(C)   :- ae_votes(C, 0).
+ae_sum_zero(C)     :- ae_total(C, 0).
+ae_zero_missing(Rel, C) :- ae_candidate(C), not ae_has(C), not ae_count_zero(C), Rel = ae_votes.
+ae_zero_missing(Rel, C) :- ae_candidate(C), not ae_has(C), not ae_sum_zero(C), Rel = ae_total.
+ae_empty_row(Rel, C) :- ae_best(C, _), not ae_has(C), Rel = ae_best.
+ae_empty_row(Rel, C) :- ae_worst(C, _), not ae_has(C), Rel = ae_worst.
+ae_empty_row(Rel, C) :- ae_any(C, _), not ae_has(C), Rel = ae_any.
+ae_empty_row(Rel, C) :- ae_all(C, _), not ae_has(C), Rel = ae_all.
+aee_min(C)  :- ae_best(C, _).
+aee_max(C)  :- ae_worst(C, _).
+aee_or(C)   :- ae_any(C, _).
+aee_and(C)  :- ae_all(C, _).
+ae_row_missing(Rel, C) :- ae_has(C), not aee_min(C), Rel = ae_best.
+ae_row_missing(Rel, C) :- ae_has(C), not aee_max(C), Rel = ae_worst.
+ae_row_missing(Rel, C) :- ae_has(C), not aee_or(C), Rel = ae_any.
+ae_row_missing(Rel, C) :- ae_has(C), not aee_and(C), Rel = ae_all.
+ae_empty_seen()     :- ae_candidate(C), not ae_has(C).
+ae_vacuous(empty)   :- not ae_empty_seen().
+alarm(ae_zero_missing).
+alarm(ae_empty_row).
+alarm(ae_row_missing).
+alarm(ae_vacuous).

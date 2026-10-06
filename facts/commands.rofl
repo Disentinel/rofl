@@ -10,58 +10,122 @@
 -- all of them is a document nobody reads. What is missing from this file is a
 -- decision, and the one thing that cannot happen is a name here that is not a
 -- script there.
+--
+-- NO COUNT AND NO DURATION. A note that said `175 worlds` or `20 s` was right
+-- the day it was written and stale the next; the count is what the command
+-- prints when it runs. scripts/render_docs.ts refuses a note that states one.
 
 edb(command_shown).   -- (name, ordinal) — the order the block is written in
 edb(command_note).
+edb(knob_shown).   -- (token, ordinal) — the knobs an agent may use, in the order the block is written in
+edb(knob_note).    -- (token, tool, text)
 
 command_shown("test", 0).
-command_note("test", "81 worlds, both engines, one committed golden — 11 s. THIS IS THE LOOP.").
+command_note("test", "every world, both engines, one committed golden, over a pool of ROFL_JOBS workers; it prints how many, which engine(s) ran and how long. THIS IS THE LOOP. `-- --item I`, `--world W`, `--cell K:L`, `--file F` check only those worlds; ROFL_PROFILE=fast reads the fast build. `-- --engine rust` (or `ts`) checks one engine only against the shared golden, and `-- --changed[=REF]` picks it from the tree's changes since REF (HEAD): only rust/ runs Rust alone, only src/ TypeScript alone, anything else both. The full gate before a push is plain `npm test`, both engines").
 
 command_shown("bless", 1).
 command_note("bless", "rewrite the golden, printing every world and demo it moves").
 
-command_shown("test:hosts", 2).
-command_note("test:hosts", "21 demos by their stdout, one engine — 100 s").
+command_shown("test:fast", 2).
+command_note("test:fast", "rebuild rofl-load and rofl-render with the `fast` cargo profile (release semantics, no LTO: a code edit in engine.rs rebuilds in a quarter of the release time) and run npm test on it; release stays the default for goldens and gates").
 
-command_shown("docs", 3).
+command_shown("test:agg", 3).
+command_note("test:agg", "the ledger's mutants and controls, pooled; `-- --item I` (or --world, --cell, --file) runs instead that item's proof worlds and the planted faults that must turn them red").
+
+command_shown("test:agg:breaks", 4).
+command_note("test:agg:breaks", "every planted fault of scripts/agg_breaks.ts, switched on in one `--features breaks` build and run in parallel beside a no-break control; `-- <id>...`, `--item I`, `--world W`, `--changed[=REF]` for fewer; `--legacy` plants in the source and rebuilds per fault").
+
+command_shown("test:hosts", 5).
+command_note("test:hosts", "every demo by its stdout, one engine; the slowest of the gates").
+
+command_shown("docs", 6).
 command_note("docs", "regenerate every generated block; `-- --check` fails if one is stale").
 
-command_shown("textcheck", 4).
+command_shown("textcheck", 7).
 command_note("textcheck", "no unreadable byte reached a source file").
 
-command_shown("findings", 5).
+command_shown("findings", 8).
 command_note("findings", "the ledger, rendered").
 
-command_shown("features", 6).
+command_shown("features", 9).
 command_note("features", "what the system can do, which demo shows it, what promises it").
 
-command_shown("repl", 7).
+command_shown("repl", 10).
 command_note("repl", "`? L`, `why L`, `whynot L`, `excise F`, `budget N { CMD }`; answers in sentences where a phrase exists, asks in them, loads a `.rofl.md` world").
 
-command_shown("scan", 8).
+command_shown("scan", 11).
 command_note("scan", "-- <dir>   turn TypeScript into facts under facts/generated").
 
-command_shown("report", 9).
+command_shown("report", 12).
 command_note("report", "-- <files>   the epistemic report over a set of packs").
 
-command_shown("depends", 10).
+command_shown("depends", 13).
 command_note("depends", "· cleanliness · layering · nullary — the models over the tree itself").
 
-command_shown("speccheck", 11).
+command_shown("speccheck", 14).
 command_note("speccheck", "every duty in facts/spec.rofl, and which check stands for it; `-- --write` rewrites the [checks] book").
 
-command_shown("untyped", 12).
+command_shown("untyped", 15).
 command_note("untyped", "-- rules/js-*.rofl   the one-letter variables nothing in their rule types, and what each letter means across the model").
 
 
-command_shown("view", 13).
+command_shown("view", 16).
 command_note("view", "-- <dir | file.rofl.md ...>   one HTML page over the files, tabs, colors and links; opens in a browser, nothing to install").
 
-command_shown("playground", 14).
+command_shown("playground", 17).
 command_note("playground", "the JS playground as static files in playground/dist: code on one side, a ROFL notebook of invariants over it on the other; `-- --standalone` for any web server").
 
-command_shown("conform", 15).
+command_shown("conform", 18).
 command_note("conform", "`-- [--break sign|escape|rank|book|refusal] [files]`   the host of ring 1 checked against examples/ring1/host.rofl, clause by clause; `--break` spoils one duty so the check is seen to fail").
 
-command_shown("nb", 16).
-command_note("nb", "-- <file.rofl.md> [--json] [--cell N] [--all]   run a notebook; runs go to a kept kernel started on first use, so a cell edit costs the cells; `ROFL_NB_DAEMON=0` runs in-process; `-- vocab [word]` lists the sentences a cell can use").
+command_shown("nb", 19).
+command_note("nb", "-- <file.rofl.md> [--json] [--cell N] [--all]   run a notebook (`--all`: every answer, and every why's proof whole instead of the value's steps and the proof with its side conditions counted, docs/md-world.md); runs go to a kept kernel started on first use, so a cell edit costs the cells; `ROFL_NB_DAEMON=0` runs in-process; `-- vocab [word]` lists the sentences a cell can use").
+
+command_shown("whycheck", 20).
+command_note("whycheck", "`-- [world ...]`   `why`, `why all`, `whynot`, `excise` from rofl-serve and rofl-load against src/api.ts, byte for byte and refusals included, over every world `npm test` loads, aggregate worlds too, pooled over ROFL_JOBS processes; needs `cargo build --release` in rust/").
+
+command_shown("structures", 21).
+command_note("structures", "`-- [--min-rows N] <files>`   the detection report: over boot.rofl and the files, read-only, which `function`, `tree ... closure` and `alias` declarations of docs/data-structures.md the data of a world would take, with the rows each saves and the near misses with their facts; `-- --check` runs the proof fixture against its committed report; needs `cargo build --release` in rust/").
+
+command_shown("test:split", 22).
+command_note("test:split", "the surface-split parity gate (docs/surface-split.md): each file of examples/vscode/mini and split alone with the others' [surface] facts must equal the whole world fact for fact, forward and reverse, Rust then TypeScript; run it after touching a rule of rules/js-*.rofl that reads across files, and `scripts/surface_split.ts --break naive` (or `nosurface`) must be red").
+
+-- ====================================================================
+-- THE KNOBS AN AGENT MAY USE. Only the KEEP knobs of docs/knobs.md that a working session needs;
+-- the rest (oracles of the check harness, measurement leftovers, the second spelling of a flag)
+-- stay out of CLAUDE.md on purpose, and the owner wants fewer, not more (2026-10-05).
+-- scripts/render_docs.ts refuses a token no source file of the tree contains.
+-- ====================================================================
+
+knob_shown("ROFL_JOBS", 0).
+knob_note("ROFL_JOBS", "env", "worker processes of the pooled runs (`npm test`, `whycheck`); by default the cores less two. Set 3 on a shared machine").
+
+knob_shown("ROFL_PROFILE", 1).
+knob_note("ROFL_PROFILE", "env", "the cargo profile whose binaries the scripts run: `release` (default) or `fast`. `breaks` belongs to the fault harness, never set it by hand").
+
+knob_shown("--ticks", 2).
+knob_note("--ticks", "rofl-load", "`--ticks N --budget N --space N [--strata] [--retain N]`: the ticks to run and the walls; then the state is printed").
+
+knob_shown("--why", 3).
+knob_note("--why", "rofl-load", "`--why L`, `--why-all L`, `--whynot L [--depth N --nodes N]`, `--excise F`: the explanation verbs, in the order given, answered in the reference's text; `--state` puts the dump back before them. Exit 4: a refused question").
+
+knob_shown("--retract", 4).
+knob_note("--retract", "rofl-load", "`--retract L`, repeated: take a base fact out after the first evaluation and print the state it leaves").
+
+knob_shown("--propose-structures", 5).
+knob_note("--propose-structures", "rofl-load", "the read-only detection report instead of the state; `--structures-min-rows N`; `npm run structures` wraps it").
+
+knob_shown("--bytes", 6).
+knob_note("--bytes", "rofl-eval", "`--bytes [--budget N] [--space N] [--ticks N] SEED.json`: the state, and on stderr facts, time, peak rows, bytes per table and the costliest rules. Release build only; `--derivations` prints the derivations instead of the state").
+
+knob_shown("--out", 7).
+knob_note("--out", "rofl-render", "`--out DIR FILE... [--tables PACK...]` writes the sentence form of the files; `--facts` prints their facts for a script to read").
+
+knob_shown("ROFL_NB_LIMIT", 8).
+knob_note("ROFL_NB_LIMIT", "env", "seconds a notebook run evaluates before it stops and answers what it found (exit 3); `ROFL_NB_MEMORY=<GB>` bounds the heap likewise").
+
+knob_shown("ROFL_NB_DAEMON", 9).
+knob_note("ROFL_NB_DAEMON", "env", "`0` runs a notebook in the calling process instead of the kept kernel").
+
+knob_shown("ROFL_NO_BROWSER", 10).
+knob_note("ROFL_NO_BROWSER", "env", "`1` lets `test:workbench` go without Chrome; without it a missing Chrome is a red").

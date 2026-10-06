@@ -1,0 +1,17 @@
+-- examples/checks/agg-datastrat-retract-check.rofl — agg_datastrat_retract:
+-- a base fact taken out of a world whose cells are stratified by their data
+-- leaves the world a fresh evaluation without it would have, whatever the cells
+-- it supported are: the component the fact reaches is read again whole (its
+-- facts and cells gone) and run as the evaluation runs it, its correlations
+-- released a layer at a time over the data that is left. a4 is read by d1 and d2
+-- and by what reads them (e1, e2); each of those has a range with a cell that
+-- has no value, so none has a total now, and every cell that never read a4
+-- keeps its.
+-- expect-row: value[main](c1,43) tick drv support=1
+-- expect-row: value[main](b4,19) tick drv support=1
+-- expect-row: value[main](f6,15) tick drv support=1
+-- expect-no-row: value[main](d1,
+-- expect-no-row: value[main](d2,
+-- expect-no-row: value[main](e1,
+-- expect-no-row: value[main](e2,
+-- expect-no-row: value[main](a4,

@@ -1,0 +1,84 @@
+-- examples/checks/agg-sub-order-data.rofl — DECLARED ORDERS, the dataset of
+-- the agg_sub_order_* proof worlds (docs/aggregates.md, "Declared orders, as
+-- built"). `pareto p(K..., min C, max Q).` and `lex p(K..., min C, max Q).`
+-- name the values an order compares and the direction of each; the engine
+-- lowers the declaration to the dominance rules it stands for, strict in one
+-- value each, so the dominance is a strict partial order by construction and
+-- safety.rofl judges, from the declaration, every rule that reads the
+-- relation inside its recursion.
+
+-- 1. A PARETO FRONT on (cost, time) over a graph with a cycle, declared, and
+-- the same front written by hand as dominance rules (the rules a Pareto
+-- declaration lowers to): the two relations hold the same facts.
+edb(ao_e).
+ao_e(a, b, 1, 5). ao_e(b, c, 1, 5). ao_e(a, c, 5, 1). ao_e(c, a, 1, 1). ao_e(a, c, 3, 3).
+pareto ao_route(A, B, min C, min T).
+ao_route(A, B, C, T)   :- ao_e(A, B, C, T).
+ao_route(A, C, C1, T1) :- ao_route(A, B, C0, T0), ao_e(B, C, C2, T2), C1 is C0 + C2, T1 is T0 + T2.
+ao_hand(A, B, C, T)   :- ao_e(A, B, C, T).
+ao_hand(A, C, C1, T1) :- ao_hand(A, B, C0, T0), ao_e(B, C, C2, T2), C1 is C0 + C2, T1 is T0 + T2.
+ao_hand(A, B, C1, T1) <= ao_hand(A, B, C2, T2) :- C2 < C1, T2 <= T1.
+ao_hand(A, B, C1, T1) <= ao_hand(A, B, C2, T2) :- C2 <= C1, T2 < T1.
+-- read from outside its recursion: a strict edge, fired once the front is closed
+ao_fastest(A, B, T) :- ao_route(A, B, _, T), not ao_faster(A, B, T).
+ao_faster(A, B, T)  :- ao_route(A, B, _, T), ao_route(A, B, _, T2), T2 < T.
+
+-- 2. DIRECTIONS THAT DIFFER: a route's capacity is the narrowest road on it,
+-- to be as wide as can be, and its cost the sum, as low as can be. The front
+-- over (capacity, cost) keeps the wide-and-dear beside the narrow-and-cheap.
+edb(ao_r).
+ao_r(s, m, 9, 5). ao_r(m, t, 4, 1). ao_r(s, t, 3, 2). ao_r(s, m, 2, 1). ao_r(m, s, 5, 5).
+pareto ao_cap(A, B, max W, min P).
+ao_cap(A, B, W, P)   :- ao_r(A, B, W, P).
+ao_cap(A, C, W, P)   :- ao_cap(A, B, W0, P0), ao_r(B, C, W1, P1), W is min(W0, W1), P is P0 + P1.
+
+-- 3. ON ONE VALUE A DECLARED ORDER IS THE LATTICE OF ITS DIRECTION: the
+-- shortest paths of a graph with a positive cycle, a zero-weight cycle, a tie
+-- and a value improved on, under pareto, under lex and as the min lattice;
+-- and the widest paths, under max and as the max lattice.
+edb(ao_w).
+ao_w(s, a, 4). ao_w(s, b, 1). ao_w(b, a, 1). ao_w(a, t, 1). ao_w(b, t, 3).
+ao_w(t, s, 2). ao_w(a, a2, 0). ao_w(a2, a, 0).
+pareto ao_dp(X, Y, min D).
+ao_dp(X, Y, D) :- ao_w(X, Y, D).
+ao_dp(X, Z, D) :- ao_dp(X, Y, D1), ao_w(Y, Z, W), D is D1 + W.
+lex ao_dl(X, Y, min D).
+ao_dl(X, Y, D) :- ao_w(X, Y, D).
+ao_dl(X, Z, D) :- ao_dl(X, Y, D1), ao_w(Y, Z, W), D is D1 + W.
+lattice ao_dm(X, Y, min D).
+ao_dm(X, Y, D) :- ao_w(X, Y, D).
+ao_dm(X, Z, D) :- ao_dm(X, Y, D1), ao_w(Y, Z, W), D is D1 + W.
+pareto ao_wp(X, Y, max C).
+ao_wp(X, Y, C) :- ao_w(X, Y, C).
+ao_wp(X, Z, C) :- ao_wp(X, Y, C1), ao_w(Y, Z, W), C is min(C1, W).
+lattice ao_wm(X, Y, max C).
+ao_wm(X, Y, C) :- ao_w(X, Y, C).
+ao_wm(X, Z, C) :- ao_wm(X, Y, C1), ao_w(Y, Z, W), C is min(C1, W).
+
+-- 4. NO KEY: one front over the whole relation, items by (cost, time); two
+-- items with one value are one fact.
+edb(ao_item).
+ao_item(3, 9). ao_item(5, 5). ao_item(9, 3). ao_item(6, 6). ao_item(3, 9). ao_item(7, 4).
+pareto ao_best(min C, min T).
+ao_best(C, T) :- ao_item(C, T).
+
+-- 5. A CELL PER BOOK: the same key in two books is two cells.
+edb(ao_bkin).
+ao_bkin(w1, k, 3). ao_bkin(w1, k, 1). ao_bkin(w2, k, 5).
+pareto ao_bk(K, min V).
+ao_bk[B](K, V) :- ao_bkin(B, K, V).
+
+-- 6. LEXICOGRAPHIC: over the graph of the first section the best route is
+-- the cheapest, the quickest of the cheapest (`lex`, cost then time) and the
+-- quickest, the cheapest of the quickest (time then cost); one value a key.
+-- A third value breaks a tie of the first two.
+lex ao_lc(A, B, min C, min T).
+ao_lc(A, B, C, T)   :- ao_e(A, B, C, T).
+ao_lc(A, C, C1, T1) :- ao_lc(A, B, C0, T0), ao_e(B, C, C2, T2), C1 is C0 + C2, T1 is T0 + T2.
+lex ao_lt(A, B, min T, min C).
+ao_lt(A, B, T, C)   :- ao_e(A, B, C, T).
+ao_lt(A, C, T1, C1) :- ao_lt(A, B, T0, C0), ao_e(B, C, C2, T2), C1 is C0 + C2, T1 is T0 + T2.
+edb(ao_tri).
+ao_tri(k, 2, 7, 1). ao_tri(k, 2, 7, 4). ao_tri(k, 2, 3, 9). ao_tri(k, 5, 1, 1). ao_tri(k, 5, 1, 4). ao_tri(j, 4, 4, 4).
+lex ao_l3(K, max A, min B, max C).
+ao_l3(K, A, B, C) :- ao_tri(K, A, B, C).

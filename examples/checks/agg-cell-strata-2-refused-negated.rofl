@@ -1,0 +1,9 @@
+-- expect-refusal: negates a lattice relation inside that relation's recursion
+-- examples/checks/agg-cell-strata-2-refused-negated.rofl — a negation of a
+-- lattice cell while the cell is still improving: the answer would depend on
+-- when it was asked.
+edb(acstr_e).
+acstr_e(a, b, 1).
+acstr_e(b, a, 2).
+lattice acstr_neg(A, C, min D).
+acstr_neg(A, C, D) :- acstr_e(A, C, D), not acstr_neg(C, A, D).

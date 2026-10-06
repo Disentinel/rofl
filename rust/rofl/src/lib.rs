@@ -16,8 +16,17 @@
 //! output are written in the same instant and agree with each other forever.
 //! See `f_the_conformance_corpus_was_a_photograph_of_the_kernel_not_the_kernel`.
 
+/// Planted faults for scripts/agg_breaks.ts, compiled in only under `--features breaks`.
+#[macro_use]
+pub mod breaks;
+/// Where the oracle is, refused when it no longer matches the tree.
+pub mod cell;
+pub mod corpus;
 pub mod dense;
 pub mod engine;
+pub mod forest;
+/// The kernel's own program and its hash, as the build baked them.
+pub mod kernel;
 pub mod reflect;
 /// GENERATED from examples/ring1/ring1.rofl by scanners/ring1_lexgen.ts.
 pub mod ring1_lexer;
@@ -38,7 +47,13 @@ pub mod program;
 pub mod seed;
 /// The five verbs the port offers a caller, derived in docs/port-surface.md.
 pub mod session;
+pub mod shrug;
 pub mod store;
+pub mod structure;
+/// The read-only detection report: declarations the engine could propose (docs/data-structures.md).
+pub mod structures;
+/// Semiring tags: the declarations, and the clauses the engine runs for them.
+pub mod tag;
 pub mod term;
 
 use engine::{Eval, Halt, Mode};
@@ -57,7 +72,8 @@ pub fn load(json: &str, budget: i64) -> Result<Loaded, String> {
     let r = seed::restore(&mut h, &v, json)?;
     let mut store = r.store;
     bootstrap_kernel(&mut h, &v, &mut store);
-    let eval = Eval::new(h, store, budget, Mode::Rounds, false);
+    let mut eval = Eval::new(h, store, budget, Mode::Rounds, false);
+    eval.vclosure_restore();
     Ok(Loaded {
         eval,
         dangling: r.dangling,
@@ -69,5 +85,7 @@ pub fn describe(e: &Halt) -> String {
         Halt::Budget(r, _) => format!("wall: {r}"),
         Halt::Strat(m, _) => m.clone(),
         Halt::Bug(m) => format!("defect: {m}"),
+        Halt::Narrowed => "defect: a descending pass escaped its evaluation".into(),
+        Halt::Overrun => "defect: a delta-first firing's overrun escaped it".into(),
     }
 }

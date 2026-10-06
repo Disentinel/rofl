@@ -1,0 +1,10 @@
+-- examples/checks/asks-asked-twice.rofl — TWO KERNEL RELATIONS ASKED, ONE NAMED.
+-- unknown and derived_by are asked, each a question about every rule: every rule is kept, and the diagnostics name
+-- the first of them by name, derived_by, in both engines whatever order the asks arrive in (scripts/whycheck.ts
+-- compares the two engines' words).
+asks(unknown).
+asks(derived_by).
+edb(tw_s).
+tw_s(1).
+tw_a(X) :- tw_s(X).
+-- expect-row: tw_a[main](1)

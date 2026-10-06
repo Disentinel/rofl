@@ -1,0 +1,8 @@
+-- expect-refusal: negates a lattice relation inside
+-- a negation is no monotone read: a widened hull read under `not` inside its
+-- own recursion is refused, as every lattice's is
+edb(awsr_q).
+awsr_q(a).
+lattice awsr_n(X, hull I) widen 1.
+awsr_n(X, iv(0, 0)) :- awsr_q(X).
+awsr_n(X, J)        :- awsr_n(X, I), J is ivadd(I, 1), not awsr_n(X, iv(5, 5)).

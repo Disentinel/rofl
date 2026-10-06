@@ -1,0 +1,77 @@
+-- examples/checks/agg-narrow-data.rofl — NARROWING, for the agg_narrow_*
+-- worlds (docs/aggregates.md, "Widening, as built"). Loops whose bound is NOT
+-- an integer written in the recursion, so no threshold catches it and the
+-- widening settles on [0, inf): after the widened fixpoint a descending pass
+-- evaluates the recursion again from the widened values and the ends the
+-- widening raised come down to what the rules contribute from them.
+--
+--   an_fact:  i = 0; while (i < N) i = i + 1;      N is a fact, 7
+--   an_arith: i = 0; while (i <= N * 2) i = i + 1; the bound an expression
+--   an_two:   x = 0; y = 0; while (x < 5) { x = x + 1; y = 2 * x }   two cells
+--             of one relation: y narrows only once x has, so a second pass
+--   an_chain: x = 0; y1 = 2 * x; y2 = y1 + 1; ... y5 = y4 + 1; while (x < 5) x++
+--             one pass narrows one more cell down the chain: four passes are
+--             made, so x, y1, y2 and y3 come down and y4 and y5 stay widened
+--   an_noop:  i = 0; while (true) i = i + 1         nothing to come down to
+edb(an_start).
+an_start(entry, iv(0, 0)).
+edb(an_limit).
+an_limit(7).
+
+lattice an_at(P, hull I).
+lattice an_loop(P, hull I) widen 2.
+an_at(P, I)      :- an_start(P, I).
+an_loop(head, I) :- an_at(entry, I).
+an_at(body, J)   :- an_loop(head, I), an_limit(N), M is N - 1, G = iv(ninf, M), J is ivmeet(I, G).
+an_loop(head, J) :- an_at(body, I), J is ivadd(I, 1).
+an_at(exit, J)   :- an_loop(head, I), an_limit(N), G = iv(N, inf), J is ivmeet(I, G).
+
+lattice an_aat(P, hull I).
+lattice an_arith(P, hull I) widen 2.
+an_aat(P, I)       :- an_start(P, I).
+an_arith(head, I)  :- an_aat(entry, I).
+an_aat(body, J)    :- an_arith(head, I), an_limit(N), M is N * 2, G = iv(ninf, M), J is ivmeet(I, G).
+an_arith(head, J)  :- an_aat(body, I), J is ivadd(I, 1).
+
+lattice an_two(V, hull I) widen 2.
+an_two(x, I)       :- an_start(entry, I).
+an_two(y, I)       :- an_start(entry, I).
+an_two(x, J)       :- an_two(x, I), K is ivmeet(I, iv(ninf, 4)), J is ivadd(K, 1).
+an_two(y, J)       :- an_two(y, I), an_two(x, O), K is ivmeet(I, O), J is ivadd(K, 1).
+
+lattice an_chain(V, hull I) widen 2.
+an_chain(x, I)     :- an_start(entry, I).
+an_chain(y1, I)    :- an_start(entry, I).
+an_chain(y2, I)    :- an_start(entry, I).
+an_chain(y3, I)    :- an_start(entry, I).
+an_chain(y4, I)    :- an_start(entry, I).
+an_chain(y5, I)    :- an_start(entry, I).
+an_chain(x, J)     :- an_chain(x, I), K is ivmeet(I, iv(ninf, 4)), J is ivadd(K, 1).
+an_chain(y1, J)    :- an_chain(y1, I), an_chain(x, O), K is ivmeet(I, O), J is ivadd(K, 1).
+an_chain(y2, J)    :- an_chain(y2, I), an_chain(y1, O), K is ivmeet(I, O), J is ivadd(K, 1).
+an_chain(y3, J)    :- an_chain(y3, I), an_chain(y2, O), K is ivmeet(I, O), J is ivadd(K, 1).
+an_chain(y4, J)    :- an_chain(y4, I), an_chain(y3, O), K is ivmeet(I, O), J is ivadd(K, 1).
+an_chain(y5, J)    :- an_chain(y5, I), an_chain(y4, O), K is ivmeet(I, O), J is ivadd(K, 1).
+
+lattice an_noop(P, hull I) widen 0.
+an_noop(head, I)   :- an_start(entry, I).
+an_noop(head, J)   :- an_noop(head, I), J is ivadd(I, 1).
+
+-- a widening that lands on a threshold the loop does not stop at: 10 is
+-- written, by the exit, and the loop runs while i < 3
+lattice an_tat(P, hull I).
+lattice an_thr(P, hull I) widen 2.
+an_tat(P, I)       :- an_start(P, I).
+an_thr(head, I)    :- an_tat(entry, I).
+an_tat(body, J)    :- an_thr(head, I), J is ivmeet(I, iv(ninf, 2)).
+an_thr(head, J)    :- an_tat(body, I), J is ivadd(I, 1).
+an_tat(exit, J)    :- an_thr(head, I), J is ivmeet(I, iv(10, inf)).
+
+-- a rule that faults on the widened value, E in [0, inf), contributes
+-- nothing, and what it would have contributed is unknown: the cell is left
+-- as the widening closed it, and narrowing it to the join of the rest, [0,0],
+-- would be a value below the least one
+lattice an_fault(P, hull I) widen 1.
+an_fault(head, iv(0, 0)) :- an_start(entry, _).
+an_fm(head, E)     :- an_fault(head, I), E in I.
+an_fault(head, J)  :- an_fault(head, I), an_fm(head, _), J is ivadd(I, 1).

@@ -1,0 +1,3 @@
+-- expect-refusal: the last argument is the tag
+-- a tag declaration without its semiring
+tag sxtr_alg(A, T).

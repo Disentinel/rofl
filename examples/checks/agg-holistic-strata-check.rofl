@@ -1,0 +1,27 @@
+-- examples/checks/agg-holistic-strata-check.rofl — agg_holistic_strata:
+-- median, quantile and rank are stratified. With rules/strata.rofl beside
+-- it, each holistic relation ranks above ah_line, which closes two negations
+-- deep, and the values match the hand-computed ones
+-- (agg-holistic-eval-check.rofl, loaded beside this); a median, a quantile
+-- and a rank of their rule's own conclusion
+-- (agg-holistic-strata-2-refused-*.rofl) are refused, so none of their
+-- rules reaches this world.
+ahs_higher(Rel, N) :- stratum(Rel, N), stratum(Rel, M), M > N.
+ahs_top(Rel, N)    :- stratum(Rel, N), not ahs_higher(Rel, N).
+ahs_reader(ah_med).
+ahs_reader(ah_med_by).
+ahs_reader(ah_q).
+ahs_reader(ah_rank).
+ahs_reader(ah_rank_of).
+ahs_reader(ah_inv).
+ahs_inverted(Rel, A, B) :- ahs_reader(Rel), ahs_top(Rel, A), ahs_top(ah_line, B), A <= B.
+ahs_known(Rel)          :- ahs_top(Rel, _).
+ahs_unranked(Rel)       :- ahs_reader(Rel), not ahs_known(Rel).
+ahs_unranked(ah_line)   :- not ahs_known(ah_line).
+ahr_accepted(Rel)       :- ahr_rel(Rel), concludes[$kernel](_, Rel).
+ahr_rel(ahr_med).
+ahr_rel(ahr_q).
+ahr_rel(ahr_rank).
+alarm(ahs_inverted).
+alarm(ahs_unranked).
+alarm(ahr_accepted).

@@ -1,0 +1,17 @@
+-- expect-refusal: a lattice declaration (docs/aggregates.md)
+-- examples/checks/agg-datastrat-cycle-7-refused-lattice.rofl — a component the
+-- data could order, with a lattice in it: the count of what one source reaches
+-- starts the next source (s1, then s2), which no cycle in the data prevents. A
+-- lattice is no cell the layers know how to seal, so the component is not taken
+-- and the program is refused by its relations, as it was.
+edb(src). edb(cand). edb(link). edb(road).
+lattice dist(S, X, min D).
+src(s1).
+cand(s1). cand(s2).
+link(s1, s2).
+road(a, b, 1). road(b, c, 2).
+start(S) :- src(S).
+start(S2) :- n(S, _), link(S, S2).
+dist(S, a, 0) :- start(S).
+dist(S, Y, D) :- dist(S, X, D0), road(X, Y, W), D is D0 + W.
+n(S, N) :- cand(S), start(S), N is count(X : dist(S, X, _)).

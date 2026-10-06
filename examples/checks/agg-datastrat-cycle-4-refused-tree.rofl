@@ -1,0 +1,8 @@
+-- expect-refusal: in the data the cell reads itself: sum@size(a) -> size(b,_) -> sum@size(b) -> size(a,_) -> sum@size(a)
+-- examples/checks/agg-datastrat-cycle-4-refused-tree.rofl — the size of a
+-- subtree, with two nodes each other's child. The relation is acyclic in every
+-- tree and cyclic in this one.
+edb(node). edb(child).
+node(a). node(b). node(c).
+child(a, b). child(b, a). child(b, c).
+size(T, N) :- node(T), S is sum(V ; C : child(T, C), size(C, V)), N is S + 1.

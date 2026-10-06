@@ -1,0 +1,29 @@
+-- examples/checks/agg-datastrat-tick.rofl — A RUNNING BALANCE, three ticks
+-- deep: the sheet of one tick is the sheet of the next with its first cell
+-- the last tick's last, staged `@next` (docs/aggregates.md, "Data-level
+-- stratification, as built"). Every tick the cells are stratified by their data
+-- again, and a rule that stages what a cell of the component holds reads it at
+-- the end of the round.
+--
+--   p  the balance carried in: 1 at tick 0, then the last tick's b5
+--   b3 = SUM(a1, p)         a1 = 2, a2 = 3 typed in
+--   b5 = SUM(b3, a2)
+--   tick 0: p 1, b3 3, b5 6   tick 1: p 6, b3 8, b5 11   tick 2: p 11, b3 13, b5 16
+edb(input).
+edb(formula).
+edb(sum_head).
+edb(in_range).
+edb(carried).
+input(a1, 2). input(a2, 3).
+formula(b3, n3). sum_head(n3, r3). in_range(r3, a1). in_range(r3, p).
+formula(b5, n5). sum_head(n5, r5). in_range(r5, b3). in_range(r5, a2).
+carried(1).
+input(C, V)@next :- input(C, V).
+formula(C, N)@next :- formula(C, N).
+sum_head(N, R)@next :- sum_head(N, R).
+in_range(R, C)@next :- in_range(R, C).
+carried(V)@next :- value(b5, V).
+value(C, V) :- input(C, V).
+value(p, V) :- carried(V).
+value(C, V) :- formula(C, N), val(N, V).
+val(N, V) :- sum_head(N, I), V is sum(X ; C : in_range(I, C), value(C, X)).

@@ -1,0 +1,6 @@
+-- expect-refusal: a threshold may count only what no open lattice
+-- a threshold concludes into a lattice
+edb(atsr_v).
+atsr_v(w1, c1).
+lattice atsr_head(C, min D).
+atsr_head(C, 1) :- atsr_v(_, C), at_least(1, W : atsr_v(W, C)).

@@ -1,0 +1,16 @@
+-- examples/checks/agg-sum-strata-check.rofl — agg_sum_strata: with
+-- rules/strata.rofl beside it the summing relations rank above what they
+-- read, the sums match the oracle although their input closes two
+-- negations deep, and a sum over its own conclusion
+-- (agg-sum-strata-2-refused-recursive.rofl) never reaches this world.
+ass_higher(Rel, N) :- stratum(Rel, N), stratum(Rel, M), M > N.
+ass_top(Rel, N)    :- stratum(Rel, N), not ass_higher(Rel, N).
+ass_inverted(A, B) :- ass_top(as_sums, A), ass_top(as_line, B), A <= B.
+ass_inverted(A, B) :- ass_top(as_by, A), ass_top(as_line, B), A <= B.
+ass_known(Rel)     :- ass_top(Rel, _).
+ass_unranked(as_sums) :- not ass_known(as_sums).
+ass_unranked(as_line) :- not ass_known(as_line).
+asr_accepted()     :- concludes[$kernel](_, asr_p).
+alarm(ass_inverted).
+alarm(ass_unranked).
+alarm(asr_accepted).

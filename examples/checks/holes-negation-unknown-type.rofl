@@ -1,0 +1,12 @@
+-- examples/checks/holes-negation-unknown-type.rofl — the same beside a hole a
+-- type error writes, in both engines (docs/aggregates.md, "Shrugs, as
+-- built"). c's one move is not known (oops + 0 is no number), so hut_win(c)
+-- may hold; `not hut_win(c)` is no answer and neither is
+-- `not unknown(hut_win(c))`.
+edb(hut_e).
+edb(hut_pos).
+hut_e(c, d, oops). hut_e(k, l, 1).
+hut_pos(c). hut_pos(k).
+hut_move(A, B) :- hut_e(A, B, W), V is W + 0, V > 0.
+hut_win(X) :- hut_move(X, _).
+hut_decided(X) :- hut_pos(X), not unknown(hut_win(X)).

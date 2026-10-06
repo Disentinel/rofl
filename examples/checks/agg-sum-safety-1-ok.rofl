@@ -1,0 +1,3 @@
+-- examples/checks/agg-sum-safety-1-ok.rofl — a sum safety.rofl must accept:
+-- one value, a key, and a group variable only the aggregate binds.
+ass_by(G, S) :- S is sum(V ; K : ass_line(G, K, V)).

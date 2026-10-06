@@ -1,0 +1,26 @@
+-- examples/checks/agg-shrug-given.rofl — agg_cell_shrug_given, in every
+-- engine: an `unknown` row a book writes itself is its own word that the atom
+-- is not known, a shrug of reason `given`, never a `paradox` with no cycle
+-- (f_a_hand_asserted_unknown_row_reads_as_a_paradox_with_no_cycle). Asserted
+-- as a fact it is `stated` (sg_said), concluded by a rule `concluded`, here in
+-- a book of its own (sg_concl(b), as rules/inquiry/epistemic.rofl concludes
+-- `unknown[epistemic](C)`). An atom the alternating fixpoint leaves undefined
+-- is a paradox with its cycle, also when a book asserted the same row
+-- (sg_p), and nothing about it is given.
+-- expect-row: shrug[$kernel](sg_said,given,stated)
+-- expect-row: shrug[$kernel](in(sg_book,sg_concl(b)),given,concluded)
+-- expect-row: shrug[$kernel](sg_p,paradox,cycle($cons(sg_p,$cons(sg_q,$nil))))
+-- expect-no-row: shrug[$kernel](sg_p,given
+-- expect-no-row: shrug[$kernel](sg_said,paradox
+semantics(well_founded).
+edb(sg_pos).
+edb(sg_seen).
+sg_pos(a). sg_pos(b).
+sg_seen(a).
+unknown(sg_said).
+unknown[sg_book](sg_concl(X)) :- sg_pos(X), not sg_seen(X).
+sg_p() :- not sg_q().
+sg_q() :- not sg_p().
+unknown(sg_p).
+sg_given(T, M) :- shrug(T, given, M).
+sg_paradox(T, M) :- shrug(T, paradox, M).

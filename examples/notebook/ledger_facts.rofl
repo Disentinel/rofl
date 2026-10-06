@@ -14,8 +14,11 @@ path_exists("README.md").
 path_exists("START.md").
 path_exists("adapters/sqlite-store.ts").
 path_exists("boot.rofl").
+path_exists("docs/aggregates.md").
 path_exists("docs/books-and-permission.md").
 path_exists("docs/choosing-perspectives.md").
+path_exists("docs/data-structures.md").
+path_exists("docs/demand-cones.md").
 path_exists("docs/failure-modes.md").
 path_exists("docs/formal-reasoning-landscape.md").
 path_exists("docs/md-world.md").
@@ -23,23 +26,198 @@ path_exists("docs/medium-and-large.md").
 path_exists("docs/modelling-a-language.md").
 path_exists("docs/normalisation-and-profiling.md").
 path_exists("docs/performance-invariants.md").
+path_exists("docs/port-surface.md").
 path_exists("docs/rings/README.md").
 path_exists("docs/sentence-form.md").
+path_exists("docs/three-valued-answers.md").
 path_exists("docs/time-and-continuity.md").
 path_exists("docs/volumes-and-residency.md").
 path_exists("examples/aka/").
 path_exists("examples/aka/demo.ts").
 path_exists("examples/atlas-launch/evidence.rofl").
 path_exists("examples/blam/").
+path_exists("examples/blam/blam.rofl").
 path_exists("examples/bleep/").
+path_exists("examples/checks/agg-breaks-census-check.rofl").
+path_exists("examples/checks/agg-budget-data.rofl").
+path_exists("examples/checks/agg-carry-data.rofl").
+path_exists("examples/checks/agg-carry-plain-data.rofl").
+path_exists("examples/checks/agg-cell-safety-1-ok.rofl").
+path_exists("examples/checks/agg-cell-safety-12-refused-alias.rofl").
+path_exists("examples/checks/agg-cell-safety-13-refused-unify.rofl").
+path_exists("examples/checks/agg-cell-ticks-check.rofl").
+path_exists("examples/checks/agg-cell-ticks.rofl").
+path_exists("examples/checks/agg-cell-wfs-check.rofl").
+path_exists("examples/checks/agg-count-safety-4-refused-late-binder.rofl").
+path_exists("examples/checks/agg-count-safety-5-refused-two-aggregates.rofl").
+path_exists("examples/checks/agg-count-strata-3-refused-untabled.rofl").
+path_exists("examples/checks/agg-datastrat-below.rofl").
+path_exists("examples/checks/agg-datastrat-cycle-7-refused-lattice.rofl").
+path_exists("examples/checks/agg-datastrat-cycle-8-refused-negated-body.rofl").
+path_exists("examples/checks/agg-datastrat-groups.rofl").
+path_exists("examples/checks/agg-datastrat-neg.rofl").
+path_exists("examples/checks/agg-datastrat-retract-check.rofl").
+path_exists("examples/checks/agg-datastrat-sheet.rofl").
+path_exists("examples/checks/agg-datastrat-wide.rofl").
+path_exists("examples/checks/agg-holistic-holes-check.rofl").
+path_exists("examples/checks/agg-holistic-holes-data.rofl").
+path_exists("examples/checks/agg-holistic-scale.rofl").
+path_exists("examples/checks/agg-incr-demand.rofl").
+path_exists("examples/checks/agg-incr-owner.rofl").
+path_exists("examples/checks/agg-incr-stacked.rofl").
+path_exists("examples/checks/agg-incr-staged.rofl").
+path_exists("examples/checks/agg-incr-stockholes.rofl").
+path_exists("examples/checks/agg-incr-thr.rofl").
+path_exists("examples/checks/agg-incr-twice.rofl").
+path_exists("examples/checks/agg-int-range-literal.rofl").
+path_exists("examples/checks/agg-int-range.rofl").
+path_exists("examples/checks/agg-interval-demo-check.rofl").
+path_exists("examples/checks/agg-join-budget.rofl").
+path_exists("examples/checks/agg-join-delta-first-hole.rofl").
+path_exists("examples/checks/agg-join-delta-first-persp.rofl").
+path_exists("examples/checks/agg-join-delta-first-space.rofl").
+path_exists("examples/checks/agg-join-delta-first-steps.rofl").
+path_exists("examples/checks/agg-join-delta-first-walled.rofl").
+path_exists("examples/checks/agg-join-delta-first.rofl").
+path_exists("examples/checks/agg-join-eval-check.rofl").
+path_exists("examples/checks/agg-join-holes-check.rofl").
+path_exists("examples/checks/agg-join-why-check.rofl").
+path_exists("examples/checks/agg-join-witness-check.rofl").
+path_exists("examples/checks/agg-label-data.rofl").
+path_exists("examples/checks/agg-label-sound-data.rofl").
+path_exists("examples/checks/agg-lattice-budget.rofl").
+path_exists("examples/checks/agg-lattice-eval-check.rofl").
+path_exists("examples/checks/agg-lattice-history-data.rofl").
+path_exists("examples/checks/agg-lattice-history-eval-check.rofl").
+path_exists("examples/checks/agg-lattice-history-witness-check.rofl").
+path_exists("examples/checks/agg-lattice-holes-data.rofl").
+path_exists("examples/checks/agg-lattice-holes-eval-check.rofl").
+path_exists("examples/checks/agg-lattice-holes-why-check.rofl").
+path_exists("examples/checks/agg-lattice-plain-data.rofl").
+path_exists("examples/checks/agg-lattice-strata-ranks.rofl").
+path_exists("examples/checks/agg-lattice-ticks-data.rofl").
+path_exists("examples/checks/agg-lattice-wall-data.rofl").
+path_exists("examples/checks/agg-lattice-wall-space.rofl").
+path_exists("examples/checks/agg-lattice-why-deep.rofl").
+path_exists("examples/checks/agg-minmax-why-check.rofl").
+path_exists("examples/checks/agg-minmax-witness-check.rofl").
+path_exists("examples/checks/agg-narrow-data.rofl").
+path_exists("examples/checks/agg-phrase-check.rofl").
+path_exists("examples/checks/agg-phrase-sugar-check.rofl").
+path_exists("examples/checks/agg-phrase-sugar.rofl.md").
+path_exists("examples/checks/agg-precise-holes-check.rofl").
+path_exists("examples/checks/agg-precise-oracle.rofl").
+path_exists("examples/checks/agg-precise-scale.rofl").
+path_exists("examples/checks/agg-rederived-1-given.rofl").
+path_exists("examples/checks/agg-shrug-data.rofl").
+path_exists("examples/checks/agg-shrug-given-cut-count.rofl").
+path_exists("examples/checks/agg-shrug-given-cut.rofl").
+path_exists("examples/checks/agg-shrug-late-row.rofl").
+path_exists("examples/checks/agg-shrug-late-withdrawn.rofl").
+path_exists("examples/checks/agg-shrug-lattice-roots.rofl").
+path_exists("examples/checks/agg-shrug-lattice-wall.rofl").
+path_exists("examples/checks/agg-shrug-oracle.rofl").
+path_exists("examples/checks/agg-shrug-strata.rofl").
+path_exists("examples/checks/agg-shrug-threshold-check.rofl").
+path_exists("examples/checks/agg-shrug-wfs-history.rofl").
+path_exists("examples/checks/agg-shrug-wfs-nullary-term-refused.rofl").
+path_exists("examples/checks/agg-shrug-wfs.rofl").
+path_exists("examples/checks/agg-sub-data.rofl").
+path_exists("examples/checks/agg-sub-holes-check.rofl").
+path_exists("examples/checks/agg-sub-safety-14-refused-monotone.rofl").
+path_exists("examples/checks/agg-sub-safety-15-refused-rests.rofl").
+path_exists("examples/checks/agg-sub-safety-17-refused-order.rofl").
+path_exists("examples/checks/agg-sub-shrug.rofl").
+path_exists("examples/checks/agg-sub-ticks-data.rofl").
+path_exists("examples/checks/agg-sub-why-check.rofl").
+path_exists("examples/checks/agg-sugar-forms.rofl.md").
+path_exists("examples/checks/agg-sugar-safety-10-refused-exactly-ungrouped.rofl.md").
+path_exists("examples/checks/agg-sugar-safety-6-refused-unrounded.rofl.md").
+path_exists("examples/checks/agg-sugar-safety-8-refused-exactly-unbound.rofl.md").
+path_exists("examples/checks/agg-sugar-safety-9-refused-atmost-ungrouped.rofl.md").
+path_exists("examples/checks/agg-sugar-shrug.rofl.md").
+path_exists("examples/checks/agg-sum-data.rofl").
+path_exists("examples/checks/agg-sum-eval-check.rofl").
+path_exists("examples/checks/agg-sum-oracle.rofl").
+path_exists("examples/checks/agg-sum-why-check.rofl").
+path_exists("examples/checks/agg-tag-demo-check.rofl").
+path_exists("examples/checks/agg-tag-safety-2-refused-weight.rofl").
+path_exists("examples/checks/agg-tagc-bind.rofl").
+path_exists("examples/checks/agg-threshold-data.rofl").
+path_exists("examples/checks/agg-threshold-eval-check.rofl").
+path_exists("examples/checks/agg-threshold-safety-8-refused-live.rofl").
+path_exists("examples/checks/agg-threshold-strata-check.rofl").
+path_exists("examples/checks/agg-threshold-ticks-check.rofl").
+path_exists("examples/checks/agg-threshold-witness-check.rofl").
+path_exists("examples/checks/agg-ticks-data.rofl").
+path_exists("examples/checks/agg-ticks-holes.rofl").
+path_exists("examples/checks/agg-unknown-beside-hole.rofl").
+path_exists("examples/checks/agg-why-dag-cells.rofl").
+path_exists("examples/checks/agg-why-dag-cut.rofl").
+path_exists("examples/checks/agg-why-dag-past.rofl").
+path_exists("examples/checks/agg-why-dag.rofl").
+path_exists("examples/checks/agg-widen-budget.rofl").
+path_exists("examples/checks/agg-widen-cut.rofl").
+path_exists("examples/checks/agg-widen-eval-check.rofl").
+path_exists("examples/checks/agg-widen-holes-check.rofl").
+path_exists("examples/checks/args-are-terms-functor.rofl").
+path_exists("examples/checks/args-are-terms-min.rofl").
+path_exists("examples/checks/args-are-terms.rofl").
+path_exists("examples/checks/asks-asked-twice.rofl").
+path_exists("examples/checks/asks-derived.rofl").
+path_exists("examples/checks/asks-explain-rule.rofl").
+path_exists("examples/checks/asks-hole.rofl").
+path_exists("examples/checks/asks-kernel-reads.rofl").
+path_exists("examples/checks/asks-outside.rofl").
+path_exists("examples/checks/asks-refused.rofl").
 path_exists("examples/checks/async-refused.rofl").
+path_exists("examples/checks/demand-asked-hole.rofl").
+path_exists("examples/checks/demand-chain.rofl").
+path_exists("examples/checks/demand-cycle.rofl").
+path_exists("examples/checks/demand-neg-hole.rofl").
+path_exists("examples/checks/demand-neg-round.rofl").
+path_exists("examples/checks/demand-pos-hole.rofl").
+path_exists("examples/checks/demand-recursion.rofl").
+path_exists("examples/checks/demand-shrug-read.rofl").
 path_exists("examples/checks/destructor-hole.rofl").
+path_exists("examples/checks/ds-function-holds.rofl").
+path_exists("examples/checks/ds-function-retract-2-broken.rofl").
+path_exists("examples/checks/ds-function-wall.rofl").
+path_exists("examples/checks/ds-tree-demand-book-check.rofl").
+path_exists("examples/checks/ds-tree-demand-book.rofl").
+path_exists("examples/checks/ds-tree-demand-edge.rofl").
+path_exists("examples/checks/ds-tree-explain-check.rofl").
+path_exists("examples/checks/ds-tree-explain.rofl").
+path_exists("examples/checks/ds-tree-holds.rofl").
+path_exists("examples/checks/ds-tree-plan.rofl").
+path_exists("examples/checks/holes-negation-scale.rofl").
+path_exists("examples/checks/holes-negation-ticks-unknown.rofl").
+path_exists("examples/checks/holes-negation-ticks.rofl").
+path_exists("examples/checks/holes-negation-unknown-positive.rofl").
+path_exists("examples/checks/holes-negation-unknown-type.rofl").
+path_exists("examples/checks/holes-negation-unknown.rofl").
+path_exists("examples/checks/holes-negation-wfs-unknown-draw.rofl").
+path_exists("examples/checks/holes-negation-wfs-unknown.rofl").
+path_exists("examples/checks/holes-negation-wfs.rofl").
+path_exists("examples/checks/holes-negation.rofl").
 path_exists("examples/checks/keyword-atom.rofl").
 path_exists("examples/checks/not-as-a-name.rofl").
 path_exists("examples/checks/operators.rofl").
 path_exists("examples/checks/premise-arity.rofl").
+path_exists("examples/checks/prov-lazy.rofl").
+path_exists("examples/checks/set-spelling.rofl").
+path_exists("examples/checks/staged-neg-why-check.rofl").
+path_exists("examples/checks/staged-neg-why-nocarry-check.rofl").
+path_exists("examples/checks/staged-neg-why-nocarry-data.rofl").
+path_exists("examples/checks/str-first-code-point.rofl").
+path_exists("examples/checks/strata-boot-alone.rofl").
+path_exists("examples/checks/strata-boot-canon-check.rofl").
+path_exists("examples/checks/strata-unranked-negation-3-refused.rofl").
+path_exists("examples/checks/sub-history-beside-lattice.rofl").
 path_exists("examples/checks/unstratifiable.rofl").
+path_exists("examples/checks/wfs-unknown-negated.rofl").
 path_exists("examples/cram/").
+path_exists("examples/cram/demo.ts").
 path_exists("examples/cram/flight_log.rofl").
 path_exists("examples/ditto/").
 path_exists("examples/drip/").
@@ -47,13 +225,18 @@ path_exists("examples/flag/flag.rofl").
 path_exists("examples/goof/").
 path_exists("examples/heck/").
 path_exists("examples/heck/demo.ts").
+path_exists("examples/huh/huh.rofl").
 path_exists("examples/iffy/").
 path_exists("examples/iffy/statute.rofl").
+path_exists("examples/interval/interval.rofl").
 path_exists("examples/jopa/").
+path_exists("examples/linter/linter.rofl").
 path_exists("examples/loot/").
 path_exists("examples/loot/demo.ts").
+path_exists("examples/moot/demo.ts").
 path_exists("examples/moot/moot.rofl").
 path_exists("examples/notebook/cjs.rofl.md").
+path_exists("examples/notebook/decorated.rofl.md").
 path_exists("examples/notebook/self.rofl.md").
 path_exists("examples/notebook/small.rofl.md").
 path_exists("examples/npc/").
@@ -74,18 +257,23 @@ path_exists("examples/rip/rip.rofl").
 path_exists("examples/rofl-release/frame.rofl").
 path_exists("examples/slop/").
 path_exists("examples/slop/README.md").
+path_exists("examples/slop/slop.rofl").
 path_exists("examples/spat/").
 path_exists("examples/spat/README.md").
 path_exists("examples/sus/").
 path_exists("examples/sus/sus.rofl").
 path_exists("examples/tutorial/README.md").
 path_exists("examples/wtf/").
+path_exists("examples/wtf/demo.ts").
 path_exists("examples/yak/").
+path_exists("examples/yak/fragments/08-golden-accident.ts").
+path_exists("facts/agg.rofl").
 path_exists("facts/checks.rofl").
 path_exists("facts/commands.rofl").
 path_exists("facts/deviations.rofl").
 path_exists("facts/feature-map.rofl").
 path_exists("facts/findings.rofl").
+path_exists("facts/goldens.rofl").
 path_exists("facts/js-callgraph.rofl").
 path_exists("facts/js-controlflow.rofl").
 path_exists("facts/js-effects.rofl").
@@ -98,6 +286,7 @@ path_exists("facts/js-phrases.rofl").
 path_exists("facts/js-shapes.rofl").
 path_exists("facts/js-statements.rofl").
 path_exists("facts/kernel-phrases.rofl").
+path_exists("facts/phrases.rofl").
 path_exists("facts/refactoring.rofl").
 path_exists("facts/ring1-phrases.rofl").
 path_exists("facts/spec-census.rofl").
@@ -123,6 +312,7 @@ path_exists("playground/npc.html").
 path_exists("playground/npc_host.ts").
 path_exists("playground/page.html").
 path_exists("policy.rofl").
+path_exists("rules/agg.rofl").
 path_exists("rules/decisions/public-release.rofl").
 path_exists("rules/depends.rofl").
 path_exists("rules/engine-split.rofl").
@@ -161,6 +351,7 @@ path_exists("rules/rule-shape.rofl").
 path_exists("rules/self-audit.rofl").
 path_exists("rules/sentences.rofl").
 path_exists("rules/spec-coverage.rofl").
+path_exists("rules/strata.rofl").
 path_exists("rules/untyped.rofl.md").
 path_exists("rules/worklist.rofl").
 path_exists("rules/worlds.rofl").
@@ -168,23 +359,58 @@ path_exists("runtime/admission.ts").
 path_exists("runtime/fork_pool.ts").
 path_exists("runtime/ingest.ts").
 path_exists("runtime/pair.ts").
+path_exists("runtime/port.ts").
 path_exists("runtime/report.ts").
-path_exists("runtime/round_eval.ts").
 path_exists("runtime/semirings.ts").
 path_exists("rust/colbench").
 path_exists("rust/mutants.sh").
+path_exists("rust/rofl/build.rs").
 path_exists("rust/rofl/src/bin/rofl_eval.rs").
 path_exists("rust/rofl/src/bin/rofl_load_bench.rs").
+path_exists("rust/rofl/src/bin/rofl_load_dump.rs").
 path_exists("rust/rofl/src/bin/rofl_render.rs").
+path_exists("rust/rofl/src/bin/rofl_serve.rs").
+path_exists("rust/rofl/src/breaks.rs").
+path_exists("rust/rofl/src/cell.rs").
+path_exists("rust/rofl/src/corpus.rs").
 path_exists("rust/rofl/src/engine.rs").
+path_exists("rust/rofl/src/engine/datastrat.rs").
+path_exists("rust/rofl/src/engine/delta.rs").
+path_exists("rust/rofl/src/engine/joinplan.rs").
+path_exists("rust/rofl/src/engine/labeled.rs").
+path_exists("rust/rofl/src/engine/prov.rs").
+path_exists("rust/rofl/src/engine/vclosure.rs").
+path_exists("rust/rofl/src/forest.rs").
+path_exists("rust/rofl/src/kernel.rs").
 path_exists("rust/rofl/src/program.rs").
+path_exists("rust/rofl/src/reflect.rs").
+path_exists("rust/rofl/src/rofl_lex.rs").
 path_exists("rust/rofl/src/rofl_parse.rs").
 path_exists("rust/rofl/src/seed.rs").
 path_exists("rust/rofl/src/session.rs").
+path_exists("rust/rofl/src/shrug.rs").
 path_exists("rust/rofl/src/store.rs").
+path_exists("rust/rofl/src/structure.rs").
+path_exists("rust/rofl/src/structures.rs").
+path_exists("rust/rofl/src/tag.rs").
 path_exists("rust/rofl/src/term.rs").
+path_exists("rust/rofl/tests/agg_worlds.rs").
+path_exists("rust/rofl/tests/asks_cone.rs").
+path_exists("rust/rofl/tests/datastrat_scale.rs").
 path_exists("rust/rofl/tests/explain.rs").
+path_exists("rust/rofl/tests/incremental.rs").
+path_exists("rust/rofl/tests/join_scale.rs").
+path_exists("rust/rofl/tests/lattice_scale.rs").
+path_exists("rust/rofl/tests/program.rs").
+path_exists("rust/rofl/tests/prov_lazy.rs").
 path_exists("rust/rofl/tests/session.rs").
+path_exists("rust/rofl/tests/structure.rs").
+path_exists("rust/rofl/tests/structures.rs").
+path_exists("rust/rofl/tests/tag_scale.rs").
+path_exists("rust/rofl/tests/threshold.rs").
+path_exists("rust/rofl/tests/tick_scale.rs").
+path_exists("rust/rofl/tests/tree.rs").
+path_exists("rust/rofl/tests/why_bins.rs").
 path_exists("rust/run_corpus.sh").
 path_exists("rust/share_curve.sh").
 path_exists("rust/storebench").
@@ -192,9 +418,7 @@ path_exists("rust/storebench/src/colfile.rs").
 path_exists("rust/storebench/src/column.rs").
 path_exists("rust/storebench/src/scale.rs").
 path_exists("safety.rofl").
-path_exists("scanners/ablate.ts").
 path_exists("scanners/book_locality.ts").
-path_exists("scanners/engine_split.ts").
 path_exists("scanners/eval_cost.ts").
 path_exists("scanners/features.ts").
 path_exists("scanners/floor_census.ts").
@@ -203,7 +427,6 @@ path_exists("scanners/js_ast.ts").
 path_exists("scanners/js_resolve.ts").
 path_exists("scanners/necessity.ts").
 path_exists("scanners/parse_cost.ts").
-path_exists("scanners/policy_ladder.ts").
 path_exists("scanners/ring1_lexgen.ts").
 path_exists("scanners/round_bytes.ts").
 path_exists("scanners/rule_shape.ts").
@@ -211,6 +434,10 @@ path_exists("scanners/spec.ts").
 path_exists("scanners/store_boundary.ts").
 path_exists("scanners/store_trace.ts").
 path_exists("scanners/ts_lib.ts").
+path_exists("scripts/agg_breaks.ts").
+path_exists("scripts/agg_mutants.ts").
+path_exists("scripts/agg_prose.ts").
+path_exists("scripts/agg_select.ts").
 path_exists("scripts/cut_check.ts").
 path_exists("scripts/declared_check.ts").
 path_exists("scripts/derivations.ts").
@@ -219,6 +446,10 @@ path_exists("scripts/english_check.ts").
 path_exists("scripts/flag_census.ts").
 path_exists("scripts/goldens.ts").
 path_exists("scripts/guide.ts").
+path_exists("scripts/js_lab/magic.ts").
+path_exists("scripts/js_lab/optloop.ts").
+path_exists("scripts/js_lab/sccexp.ts").
+path_exists("scripts/js_lab/stats.ts").
 path_exists("scripts/lint.ts").
 path_exists("scripts/md_blocks.ts").
 path_exists("scripts/md_world.ts").
@@ -229,29 +460,44 @@ path_exists("scripts/nb_lib.ts").
 path_exists("scripts/nb_product.ts").
 path_exists("scripts/parser_optional.ts").
 path_exists("scripts/playground.ts").
+path_exists("scripts/pool.ts").
 path_exists("scripts/port_corpus.ts").
 path_exists("scripts/published_diff.ts").
 path_exists("scripts/read.ts").
 path_exists("scripts/read_md.ts").
 path_exists("scripts/render_docs.ts").
+path_exists("scripts/sentences.ts").
 path_exists("scripts/text_check.ts").
 path_exists("scripts/view.ts").
+path_exists("scripts/why_dag.ts").
+path_exists("scripts/whycheck-worlds/demand-wall.rofl").
+path_exists("scripts/whycheck.ts").
 path_exists("scripts/witness_check.ts").
 path_exists("scripts/workbench_browser.ts").
 path_exists("scripts/workbench_check.ts").
+path_exists("shrug.rofl").
 path_exists("skills/guided-formal-reasoning/escalate.md").
+path_exists("src/aggeval.ts").
 path_exists("src/api.ts").
+path_exists("src/cell.ts").
 path_exists("src/dense.ts").
-path_exists("src/engine.ts").
 path_exists("src/kernel-dense.ts").
+path_exists("src/labeled.ts").
 path_exists("src/parser.ts").
 path_exists("src/reflect.ts").
-path_exists("src/rounds.ts").
+path_exists("src/reuse.ts").
 path_exists("src/say.ts").
+path_exists("src/scc.ts").
 path_exists("src/semiring.ts").
+path_exists("src/shrug.ts").
 path_exists("src/store.ts").
+path_exists("src/structure.ts").
+path_exists("src/tag.ts").
 path_exists("src/tokens.ts").
 path_exists("src/unify.ts").
+path_exists("test/read-out-atomic.test.ts").
+path_exists("test/scan-ids.test.ts").
+path_exists("test/semiring-cells.test.ts").
 path_exists("tsconfig.build.json").
 path_exists("visual/vscode-coverage.rofl.md").
 path_exists("vscode/extension.ts").
@@ -268,6 +514,7 @@ path_exists("vscode/visual/renderer.ts").
 path_exists("vscode/worker.ts").
 path_exists("workbench/page.ts").
 
+reason_len(f_count_is_a_kernel_change_and_the_witness_is_the_set, 33).
 reason_len(f_bun_runner_over_budget, 14).
 reason_len(f_the_check_budget_is_nearly_spent, 28).
 reason_len(f_an_unbracketed_head_defaults_without_the_explicit_flag, 30).
@@ -276,8 +523,10 @@ reason_len(f_a_query_side_gate_cannot_exist, 19).
 reason_len(f_completed_tick_provenance_is_the_cost_curve, 31).
 reason_len(f_no_string_builtins_moves_why_boundary, 22).
 reason_len(f_an_impossible_brief_deletes_its_own_requirement_silently, 18).
+reason_len(f_the_bootstrap_cut_may_be_a_chain_not_a_point, 44).
 reason_len(f_the_monotone_phase_spins_without_deriving, 31).
 reason_len(f_pairs_cut_the_cycle_then_numbers_are_safe, 30).
+reason_len(f_line_ranged_scanners_tax_every_kernel_edit, 44).
 reason_len(f_reserved_should_forbid_the_fact_not_only_the_rule, 34).
 reason_len(f_one_edge_of_the_cycle_lives_in_the_host_and_stratification_cannot_see_it, 39).
 reason_len(f_the_budget_counts_steps_and_memory_goes_first, 36).
@@ -290,6 +539,8 @@ reason_len(f_carrying_policy_with_the_kernel_works_and_reprices_every_count, 39)
 reason_len(f_quiescence_compares_a_sorted_list_against_an_unsorted_one, 30).
 reason_len(f_ring_zero_under_the_irreducibility_criterion_is_sixty_lines, 42).
 reason_len(f_the_seed_pass_is_the_constant_and_the_delta_loop_is_the_work, 24).
+reason_len(f_a_brief_requirement_must_bind_its_author_same_session, 44).
+reason_len(f_a_gate_that_fires_on_movement_is_aimed_at_the_wrong_event, 44).
 reason_len(f_a_store_size_veto_is_blind_to_the_very_explosion_it_was_proposed_for, 43).
 reason_len(f_admission_test_near_its_own_timeout, 39).
 reason_len(f_expressible_is_not_portable_the_discriminator_is_when, 36).
@@ -297,6 +548,7 @@ reason_len(f_fixing_a_limit_breaks_its_documentation, 43).
 reason_len(f_fork_copies_the_whole_store, 31).
 reason_len(f_i_briefed_before_reading_my_own_backlog, 43).
 reason_len(f_normalised_goldens_must_be_compared_as_sets, 43).
+reason_len(f_stratum_is_negation_depth_not_the_dependency_ladder, 44).
 reason_len(f_the_budget_alarm_was_load_not_cost, 43).
 reason_len(f_the_budget_marker_lags_the_frame_that_earns_it, 43).
 reason_len(f_the_matrix_collapses_threefold_and_the_tail_does_not, 40).
@@ -306,7 +558,16 @@ reason_len(f_a_top_five_is_a_rank_and_a_rank_is_not_a_set, 152).
 reason_len(f_order_collision_is_derived_non_zero_and_asserted_nowhere, 43).
 reason_len(f_a_cost_attributed_by_pack_cannot_see_the_pack_next_door, 152).
 reason_len(f_an_accessor_over_an_empty_relation_answers_none_forever, 83).
+reason_len(f_a_mutant_that_does_not_mutate_proves_nothing, 416).
+reason_len(f_a_line_count_test_fires_on_every_mutant_of_any_kind, 317).
+reason_len(f_a_lattice_is_refused_under_wfs_so_it_gets_its_own_file, 242).
+reason_len(f_adjacent_runs_are_a_min_lattice_plus_hull, 145).
+reason_len(f_provenance_results_fed_back_as_facts, 164).
+reason_len(f_a_deletion_search_is_a_double_negation, 141).
+reason_len(f_a_planted_join_fault_was_caught_by_the_monotonicity_check, 142).
+reason_len(f_a_check_file_is_linted_like_any_rule_file, 144).
 
+reason_shape(f_count_is_a_kernel_change_and_the_witness_is_the_set, atom).
 reason_shape(f_bun_runner_over_budget, atom).
 reason_shape(f_the_check_budget_is_nearly_spent, atom).
 reason_shape(f_an_unbracketed_head_defaults_without_the_explicit_flag, atom).
@@ -315,8 +576,10 @@ reason_shape(f_a_query_side_gate_cannot_exist, atom).
 reason_shape(f_completed_tick_provenance_is_the_cost_curve, atom).
 reason_shape(f_no_string_builtins_moves_why_boundary, atom).
 reason_shape(f_an_impossible_brief_deletes_its_own_requirement_silently, atom).
+reason_shape(f_the_bootstrap_cut_may_be_a_chain_not_a_point, atom).
 reason_shape(f_the_monotone_phase_spins_without_deriving, atom).
 reason_shape(f_pairs_cut_the_cycle_then_numbers_are_safe, atom).
+reason_shape(f_line_ranged_scanners_tax_every_kernel_edit, atom).
 reason_shape(f_reserved_should_forbid_the_fact_not_only_the_rule, atom).
 reason_shape(f_one_edge_of_the_cycle_lives_in_the_host_and_stratification_cannot_see_it, atom).
 reason_shape(f_the_budget_counts_steps_and_memory_goes_first, atom).
@@ -329,6 +592,8 @@ reason_shape(f_carrying_policy_with_the_kernel_works_and_reprices_every_count, a
 reason_shape(f_quiescence_compares_a_sorted_list_against_an_unsorted_one, atom).
 reason_shape(f_ring_zero_under_the_irreducibility_criterion_is_sixty_lines, atom).
 reason_shape(f_the_seed_pass_is_the_constant_and_the_delta_loop_is_the_work, atom).
+reason_shape(f_a_brief_requirement_must_bind_its_author_same_session, atom).
+reason_shape(f_a_gate_that_fires_on_movement_is_aimed_at_the_wrong_event, atom).
 reason_shape(f_a_store_size_veto_is_blind_to_the_very_explosion_it_was_proposed_for, atom).
 reason_shape(f_admission_test_near_its_own_timeout, atom).
 reason_shape(f_expressible_is_not_portable_the_discriminator_is_when, atom).
@@ -336,6 +601,7 @@ reason_shape(f_fixing_a_limit_breaks_its_documentation, atom).
 reason_shape(f_fork_copies_the_whole_store, atom).
 reason_shape(f_i_briefed_before_reading_my_own_backlog, atom).
 reason_shape(f_normalised_goldens_must_be_compared_as_sets, atom).
+reason_shape(f_stratum_is_negation_depth_not_the_dependency_ladder, atom).
 reason_shape(f_the_budget_alarm_was_load_not_cost, atom).
 reason_shape(f_the_budget_marker_lags_the_frame_that_earns_it, atom).
 reason_shape(f_the_matrix_collapses_threefold_and_the_tail_does_not, atom).
@@ -345,3 +611,11 @@ reason_shape(f_a_top_five_is_a_rank_and_a_rank_is_not_a_set, string).
 reason_shape(f_order_collision_is_derived_non_zero_and_asserted_nowhere, atom).
 reason_shape(f_a_cost_attributed_by_pack_cannot_see_the_pack_next_door, string).
 reason_shape(f_an_accessor_over_an_empty_relation_answers_none_forever, string).
+reason_shape(f_a_mutant_that_does_not_mutate_proves_nothing, string).
+reason_shape(f_a_line_count_test_fires_on_every_mutant_of_any_kind, string).
+reason_shape(f_a_lattice_is_refused_under_wfs_so_it_gets_its_own_file, string).
+reason_shape(f_adjacent_runs_are_a_min_lattice_plus_hull, string).
+reason_shape(f_provenance_results_fed_back_as_facts, string).
+reason_shape(f_a_deletion_search_is_a_double_negation, string).
+reason_shape(f_a_planted_join_fault_was_caught_by_the_monotonicity_check, string).
+reason_shape(f_a_check_file_is_linted_like_any_rule_file, string).

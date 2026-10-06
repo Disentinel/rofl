@@ -1,0 +1,112 @@
+-- examples/checks/agg-lattice-history-witness-check.rofl — agg_lattice_witness
+-- over agg-lattice-history-data.rofl. A value reached only through the
+-- cell's own earlier values has a member that cites the earlier value, a
+-- fact that no longer stands (alx_sat(a, 3) through alx_sat(b, 2)); one the
+-- final values found keeps members over final values only. Across the
+-- whole world: no member cites its own fact (the zero-weight self-loop at
+-- b, the or's self-loop at y), every member #1 cites facts lower than
+-- itself, and every lattice fact has a member. Two graphs alike but for a
+-- node's name have witnesses alike: self-support is judged by whether a
+-- derivation without the fact exists, not by which one is canonical.
+alxw_f(K, F) :- alx_d1(A, C, D), K = d1, F = $fact(alx_d1, main, $cons(A, $cons(C, $cons(D, $nil)))).
+alxw_f(K, F) :- alx_d2(A, C, D), K = d2, F = $fact(alx_d2, main, $cons(A, $cons(C, $cons(D, $nil)))).
+alxw_f(K, F) :- alx_d4(A, C, D), K = d4, F = $fact(alx_d4, main, $cons(A, $cons(C, $cons(D, $nil)))).
+alxw_f(K, F) :- alx_d6(A, C, D), K = d6, F = $fact(alx_d6, main, $cons(A, $cons(C, $cons(D, $nil)))).
+alxw_f(K, F) :- alx_sat(A, W), K = sat, F = $fact(alx_sat, main, $cons(A, $cons(W, $nil))).
+alxw_f(K, F) :- alx_ok(A, B), K = ok, F = $fact(alx_ok, main, $cons(A, $cons(B, $nil))).
+alxw_f(K, F) :- alx_sl(A, D), K = sl, F = $fact(alx_sl, main, $cons(A, $cons(D, $nil))).
+alxw_f(K, F) :- alx_t(A, B), K = t, F = $fact(alx_t, main, $cons(A, $cons(B, $nil))).
+alxw_f(K, F) :- alx_z(G, A, C, D), K = G, F = $fact(alx_z, main, $cons(G, $cons(A, $cons(C, $cons(D, $nil))))).
+alxw_f(K, F) :- alx_od(A, C, D), K = od, F = $fact(alx_od, main, $cons(A, $cons(C, $cons(D, $nil)))).
+alxw_f(K, F) :- alx_h(G, A, D), K = h, F = $fact(alx_h, main, $cons(G, $cons(A, $cons(D, $nil)))).
+alxw_f(K, F) :- alx_o1(A, C, D), K = o1, F = $fact(alx_o1, main, $cons(A, $cons(C, $cons(D, $nil)))).
+alxw_f(K, F) :- alx_o2(A, C, D), K = o2, F = $fact(alx_o2, main, $cons(A, $cons(C, $cons(D, $nil)))).
+alxw_n(F, N) :- lattice_member[$kernel](F, N, _, _), M is N + 1, not lattice_member[$kernel](F, M, _, _).
+-- how many members, by hand
+alxw_want($fact(alx_sat, main, $cons(a, $cons(3, $nil))), 1).
+alxw_want($fact(alx_sat, main, $cons(b, $cons(3, $nil))), 1).
+alxw_want($fact(alx_d1, main, $cons(a, $cons(b, $cons(0, $nil)))), 1).
+alxw_want($fact(alx_d2, main, $cons(a, $cons(b, $cons(0, $nil)))), 1).
+alxw_want($fact(alx_d4, main, $cons(a, $cons(b, $cons(0, $nil)))), 1).
+alxw_want($fact(alx_ok, main, $cons(a, $cons(true, $nil))), 2).
+alxw_want($fact(alx_ok, main, $cons(b, $cons(true, $nil))), 1).
+alxw_want($fact(alx_sl, main, $cons(b, $cons(1, $nil))), 1).
+alxw_want($fact(alx_t, main, $cons(y, $cons(true, $nil))), 1).
+alxw_want($fact(alx_z, main, $cons(gv, $cons(s, $cons(t, $cons(0, $nil))))), 2).
+alxw_want($fact(alx_z, main, $cons(ga, $cons(s, $cons(t, $cons(0, $nil))))), 2).
+alxw_want($fact(alx_z, main, $cons(gv, $cons(s, $cons(u, $cons(0, $nil))))), 2).
+alxw_want($fact(alx_z, main, $cons(ga, $cons(s, $cons(u, $cons(0, $nil))))), 2).
+alxw_wrong_count(F, N) :- alxw_want(F, W), alxw_n(F, N), N != W.
+alxw_uncounted(F)      :- alxw_want(F, _), not alxw_counted(F).
+alxw_counted(F)        :- alxw_n(F, _).
+alarm(alxw_wrong_count).
+alarm(alxw_uncounted).
+-- reached through the cell's own earlier values: the member cites a value
+-- that no longer stands
+alxw_hist($fact(alx_sat, main, $cons(a, $cons(3, $nil))), $fact(alx_sat, main, $cons(b, $cons(2, $nil)))).
+alxw_hist($fact(alx_d2, main, $cons(a, $cons(b, $cons(0, $nil)))), $fact(alx_d2, main, $cons(a, $cons(b, $cons(1, $nil))))).
+alxw_hist($fact(alx_d4, main, $cons(a, $cons(b, $cons(0, $nil)))), $fact(alx_d4, main, $cons(a, $cons(b, $cons(1, $nil))))).
+alxw_hist($fact(alx_ok, main, $cons(b, $cons(true, $nil))), $fact(alx_d6, main, $cons(a, $cons(b, $cons(1, $nil))))).
+alxw_history_lost(F, P) :- alxw_hist(F, P), not lattice_member_prem[$kernel](F, 1, P).
+alxw_history_live(P)    :- alxw_hist(_, P), P = $fact(alx_sat, main, $cons(A, $cons(W, $nil))), alx_sat(A, W).
+alxw_history_live(P)    :- alxw_hist(_, P), P = $fact(Rel, main, $cons(A, $cons(C, $cons(D, $nil)))), alxw_live3(Rel, A, C, D).
+alxw_live3(alx_d2, A, C, D) :- alx_d2(A, C, D).
+alxw_live3(alx_d4, A, C, D) :- alx_d4(A, C, D).
+alxw_live3(alx_d6, A, C, D) :- alx_d6(A, C, D).
+alarm(alxw_history_lost).
+alarm(alxw_history_live).
+-- a value the final values found cites final values only
+alxw_stale(F, P) :- alxw_f(K, F), alxw_final_only(K), lattice_member_prem[$kernel](F, _, P),
+                    P = $fact(Rel, main, L), alx_rel_of(K, Rel), not alxw_stands(Rel, L).
+alxw_final_only(od).
+alxw_final_only(gv).
+alxw_final_only(ga).
+alxw_final_only(sl).
+alxw_final_only(t).
+alxw_final_only(h).
+alxw_final_only(o1).
+alxw_final_only(o2).
+alx_rel_of(od, alx_od).
+alx_rel_of(gv, alx_z).
+alx_rel_of(ga, alx_z).
+alx_rel_of(sl, alx_sl).
+alx_rel_of(t, alx_t).
+alx_rel_of(h, alx_h).
+alx_rel_of(o1, alx_o1).
+alx_rel_of(o2, alx_o2).
+alxw_stands(alx_od, $cons(A, $cons(C, $cons(D, $nil)))) :- alx_od(A, C, D).
+alxw_stands(alx_z, $cons(G, $cons(A, $cons(C, $cons(D, $nil))))) :- alx_z(G, A, C, D).
+alxw_stands(alx_sl, $cons(A, $cons(D, $nil))) :- alx_sl(A, D).
+alxw_stands(alx_t, $cons(A, $cons(B, $nil))) :- alx_t(A, B).
+alxw_stands(alx_h, $cons(G, $cons(A, $cons(D, $nil)))) :- alx_h(G, A, D).
+alxw_stands(alx_o1, $cons(A, $cons(C, $cons(D, $nil)))) :- alx_o1(A, C, D).
+alxw_stands(alx_o2, $cons(A, $cons(C, $cons(D, $nil)))) :- alx_o2(A, C, D).
+alarm(alxw_stale).
+-- the whole world: no member cites its own fact; member #1 cites lattice
+-- facts lower than itself; every lattice fact here has a member
+alxw_self(F)            :- lattice_member_prem[$kernel](F, _, F).
+alxw_not_lower(F, P)    :- lattice_member[$kernel](F, 1, H, _), lattice_member_prem[$kernel](F, 1, P),
+                           lattice_member[$kernel](P, 1, HP, _), HP >= H.
+alxw_bare(F)            :- alxw_f(_, F), not alxw_member(F).
+alxw_member(F)          :- lattice_member[$kernel](F, 1, _, _).
+alarm(alxw_self).
+alarm(alxw_not_lower).
+alarm(alxw_bare).
+-- the two graphs, v in one where a is in the other: the same number of
+-- members at every fact
+alxw_ren(v, a).
+alxw_as(X, X) :- alx_ze(gv, X, _, _), not alxw_ren(X, _).
+alxw_as(X, X) :- alx_ze(gv, _, X, _), not alxw_ren(X, _).
+alxw_as(X, Y) :- alxw_ren(X, Y).
+alxw_zn(G, A, C, N) :- alx_z(G, A, C, D), alxw_n($fact(alx_z, main, $cons(G, $cons(A, $cons(C, $cons(D, $nil))))), N).
+alxw_renamed(A, C) :- alxw_zn(gv, A, C, N), alxw_as(A, A2), alxw_as(C, C2), alxw_zn(ga, A2, C2, M), N != M.
+alxw_renamed(A, C) :- alxw_zn(gv, A, C, _), alxw_as(A, A2), alxw_as(C, C2), not alxw_zhas(A2, C2).
+alxw_zhas(A, C)    :- alxw_zn(ga, A, C, _).
+alarm(alxw_renamed).
+-- the dataset still holds what makes the checks above bite
+alxwv(selfloop) :- alx_sle(b, b, 0), alx_link(y, y).
+alxwv(renamed)  :- alx_ze(gv, s, v, _), alx_ze(ga, s, a, _).
+alxw_vacuous(K) :- alxw_vk(K), not alxwv(K).
+alxw_vk(selfloop).
+alxw_vk(renamed).
+alarm(alxw_vacuous).

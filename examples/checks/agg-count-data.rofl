@@ -1,0 +1,38 @@
+-- examples/checks/agg-count-data.rofl — THE COUNT DATASET, shared by the
+-- agg_count_* worlds (facts/checks.rofl, docs/aggregates.md).
+--
+-- A ballot and a channel are integers so an oracle can order them. Ballot 1
+-- reaches c1 through two channels and must count ONCE; ballot 6 is spoiled;
+-- c3 has no ballot at all. The relation the aggregates read, `ac_cast`,
+-- closes only after two negations have been judged, so an aggregate sealed
+-- before its input is closed reads a different number.
+edb(ac_candidate).
+edb(ac_cast0).
+edb(ac_mark).
+edb(ac_ok_mark).
+ac_candidate(c1).
+ac_candidate(c2).
+ac_candidate(c3).
+ac_candidate(c4).
+ac_cast0(1, c1, 1).
+ac_cast0(1, c1, 2).
+ac_cast0(2, c1, 1).
+ac_cast0(3, c1, 3).
+ac_cast0(4, c2, 1).
+ac_cast0(5, c2, 1).
+ac_cast0(6, c4, 1).
+ac_cast0(7, c4, 2).
+ac_mark(6, 9).
+ac_mark(7, 1).
+ac_ok_mark(1).
+
+ac_spoiled(B)    :- ac_mark(B, M), not ac_ok_mark(M).
+ac_valid(B)      :- ac_cast0(B, _, _), not ac_spoiled(B).
+ac_cast(B, C, H) :- ac_cast0(B, C, H), ac_valid(B).
+
+-- correlated: C is bound before the aggregate, so an empty group counts 0
+ac_votes(C, N) :- ac_candidate(C), N is count(B : ac_cast(B, C, _)).
+-- grouped: C is bound only by the aggregate, so a group with no member is none
+ac_by(C, N)    :- N is count(B : ac_cast(B, C, _)).
+-- a two-term tuple: a ballot through two channels is two members
+ac_pairs(C, N) :- ac_candidate(C), N is count(B, H : ac_cast(B, C, H)).

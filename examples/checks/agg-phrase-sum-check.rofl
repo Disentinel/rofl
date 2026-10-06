@@ -1,0 +1,17 @@
+-- examples/checks/agg-phrase-sum-check.rofl — agg_sum_phrase: the sum read from its sentences and
+-- from rofl, each after a round trip, answers as the sum does: 95 over distinct (V, K), 0 for c3 bound
+-- before it, 285 over (V, K, B).
+ps_by(c1, 2). ps_by(c2, 1). ps_by(c3, 0).
+ps_wrong(total) :- not pss_total(95).
+ps_wrong(total) :- not psr_total(95).
+ps_wrong(C)     :- ps_by(C, S), not pss_by(C, S).
+ps_wrong(C)     :- ps_by(C, S), not psr_by(C, S).
+ps_wrong(C)     :- pss_by(C, S), not ps_by(C, S).
+ps_wrong(C)     :- psr_by(C, S), not ps_by(C, S).
+ps_wrong(pairs) :- not pss_pairs(285).
+ps_wrong(pairs) :- not psr_pairs(285).
+alarm(ps_wrong).
+-- written in its own words (agg-phrase-check.rofl)
+sentence_word(psr_total, "is the sum of V over K such that").
+sentence_word(psr_by, "is the sum of 1 over B such that").
+sentence_word(psr_pairs, "over (K, B) such that").

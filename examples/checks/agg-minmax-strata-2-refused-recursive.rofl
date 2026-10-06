@@ -1,0 +1,7 @@
+-- expect-refusal: reads a closed relation
+-- examples/checks/agg-minmax-strata-2-refused-recursive.rofl — a min over the
+-- rule's own conclusion. As a lattice declaration a recursive min is the
+-- order lattice's (w_agg_order_lattice); in a rule body it is refused.
+amr_q(1).
+amr_q(5).
+amr_p(X) :- amr_q(X), M is min(Y : amr_p(Y)), X >= M.

@@ -1,0 +1,10 @@
+-- expect-refusal: a threshold may count only what no open lattice
+-- via rests on the lattice inside its recursion, so it is live while the lattice is open
+edb(atsr_e).
+atsr_e(a, b, 1).
+atsr_e(b, c, 1).
+lattice atsr_d(A, C, min D).
+atsr_d(A, C, D) :- atsr_e(A, C, D).
+atsr_d(A, C, D) :- atsr_via(A, B, D1), atsr_e(B, C, W), D is D1 + W.
+atsr_via(A, B, D) :- atsr_d(A, B, D).
+atsr_live() :- at_least(1, B : atsr_via(a, B, _)).

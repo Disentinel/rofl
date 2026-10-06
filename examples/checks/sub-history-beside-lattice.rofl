@@ -1,0 +1,14 @@
+-- examples/checks/sub-history-beside-lattice.rofl — A DOMINATED VALUE KEEPS ITS HISTORY WHEN ANOTHER LATTICE CLOSES FIRST.
+-- sh_sat is subsumptive and recursive: sh_sat(q,0) was reached from sh_sat(p,1), dominated since. A lattice that no
+-- rule concludes, sh_low, closes at an earlier level; its close decided the facts that read a value since improved on
+-- and forgot them, so when sh_sat closed nothing read sh_sat(p,1) and its firings were dropped: why said "0 members".
+-- The facts kept stay to be decided again, and the history is the world's without the lattice.
+edb(sh_st). edb(sh_ring).
+sh_st(p, 5). sh_ring(p, q). sh_ring(q, p).
+sh_sat(A, W) :- sh_st(A, W).
+sh_sat(B, W) :- sh_sat(A, W1), sh_ring(A, B), X is W1 - 1, W is max(X, 0).
+sh_sat(A, X) <= sh_sat(A, Y) :- Y < X.
+lattice sh_low(K, min V).
+explain_request(why, sh_sat(q,0)).
+-- expect-row: wit sh_sat[main](p,1)
+-- expect-row: explained[$explain](why,sh_sat(q,0),3,"    sh_sat[main](p,1) [subsumption: 1 member;

@@ -1,0 +1,61 @@
+-- examples/checks/agg-threshold-reflect-check.rofl — agg_threshold_reflect: a
+-- threshold is reflected as what it is, a monotone premise. Its `$agg` is
+-- `$agg(at_least, N, Vals, $nil, Body)`: N where a result stands, no key.
+-- Walking its body list gives exactly the relations read positively inside
+-- as `premise_pos` (a trigger and a positive edge, so the recursion is an
+-- ordinary one) and those negated inside as `premise_neg`, in both
+-- directions, and never a `premise_agg` (that is a closed read); the books
+-- read inside are in `reads_from`; a builtin inside is in `uses_builtin` and
+-- `at_least` itself is not. The rule ids are held to the TypeScript engine's
+-- by scripts/goldens.ts, and tests/agg_worlds.rs saves the world, decodes
+-- every rule back from its reflection and requires the same world.
+atr_rule(R)      :- premise_lit[$kernel](R, _, $agg(at_least, _, _, _, _)).
+atr_tail(R, T)   :- premise_lit[$kernel](R, _, $agg(at_least, _, _, _, T)).
+atr_tail(R, T)   :- atr_tail(R, $cons(_, T)).
+atr_pos(R, Rel, P) :- atr_tail(R, $cons($lit(Rel, P, _, _), _)).
+atr_neg(R, Rel)    :- atr_tail(R, $cons($not($lit(Rel, _, _, _)), _)).
+atr_op_inside(R, Op) :- atr_tail(R, $cons($builtin(Op, _), _)).
+-- what the rule reads outside the threshold, positively and negated
+atr_outer_pos(R, Rel) :- atr_rule(R), premise_lit[$kernel](R, _, $lit(Rel, _, _, _)).
+atr_outer_neg(R, Rel) :- atr_rule(R), premise_lit[$kernel](R, _, $not($lit(Rel, _, _, _))).
+pos_missing(R, Rel) :- atr_pos(R, Rel, _), not premise_pos[$kernel](R, Rel).
+pos_extra(R, Rel)   :- atr_rule(R), premise_pos[$kernel](R, Rel), not atr_pos(R, Rel, _), not atr_outer_pos(R, Rel).
+neg_missing(R, Rel) :- atr_neg(R, Rel), not premise_neg[$kernel](R, Rel).
+neg_extra(R, Rel)   :- atr_rule(R), premise_neg[$kernel](R, Rel), not atr_neg(R, Rel), not atr_outer_neg(R, Rel).
+as_aggregate(R, Rel) :- atr_rule(R), premise_agg[$kernel](R, Rel), not atr_counted(R).
+atr_counted(R)      :- atr_rule(R), premise_lit[$kernel](R, _, $agg(Op, _, _, _, _)), Op != at_least.
+reads_missing(R, P) :- atr_pos(R, _, P), not reads_from[$kernel](R, P).
+builtin_missing(R, Op) :- atr_op_inside(R, Op), not uses_builtin[$kernel](R, Op).
+op_as_builtin(R)       :- atr_rule(R), uses_builtin[$kernel](R, "at_least").
+keyed(R)               :- premise_lit[$kernel](R, _, $agg(at_least, _, _, $cons(_, _), _)).
+alarm(pos_missing).
+alarm(pos_extra).
+alarm(neg_missing).
+alarm(neg_extra).
+alarm(as_aggregate).
+alarm(reads_missing).
+alarm(builtin_missing).
+alarm(op_as_builtin).
+alarm(keyed).
+-- N as written: a literal integer, and a variable where it is correlated
+atr_n(H, N) :- premise_lit[$kernel](R, _, $agg(at_least, N, _, _, _)), concludes[$kernel](R, H).
+atr_want_n(at_trusted, 2).
+atr_want_n(at_thm, $var("N")).
+atr_want_n(ar_counted, $var("Q")).
+n_wrong(H) :- atr_want_n(H, N), not atr_n(H, N).
+alarm(n_wrong).
+-- and there is something to check: the recursion is a positive self-read,
+-- a negation and a builtin stand inside one, and a book is read
+atr_vacuous(recursion) :- not atr_self().
+atr_self()             :- atr_rule(R), concludes[$kernel](R, H), atr_pos(R, H, _).
+atr_vacuous(negation)  :- not atr_any_neg().
+atr_any_neg()          :- atr_neg(_, _).
+atr_vacuous(builtin)   :- not atr_any_op().
+atr_any_op()           :- atr_op_inside(_, _).
+atr_vacuous(book)      :- not atr_any_book().
+atr_any_book()         :- atr_pos(_, _, ledger).
+alarm(atr_vacuous).
+-- a threshold reading a book of its own
+edb(atr_mark).
+atr_mark[ledger](w1, c1).
+atr_marked(C) :- at_claim(C), at_least(1, W : atr_mark[ledger](W, C)).

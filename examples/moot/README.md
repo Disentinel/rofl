@@ -1,5 +1,7 @@
 # MOOT — proving which feature flags are dead
 
+**Count reading:** robustness — many independent routes enable a feature, so losing one changes nothing.
+
 Every large codebase has hundreds of feature flags and nobody can prove which
 ones are dead. They get deleted by feel — by creation date, by "the experiment
 finished surely" — and every so often somebody deletes a live one and takes
@@ -24,7 +26,7 @@ of other rules, condemning them, with a derivation tree.
 MOOT — proving which feature flags are dead.
 not "we saw no traffic": proofs about the structure of the conditions.
 
-config   52 flags, 65 clauses, 104 conditions, 1 exclusion, parsed into 553 facts
+config   52 flags, 65 clauses, 104 conditions, 1 exclusion, parsed into 477 facts
 context  segment:6 x region:8 x version:12 x bucket:10 x channel:4 = 23,040 contexts
 rules    examples/moot/moot.rofl, loaded next to boot.rofl
 ```
@@ -94,7 +96,7 @@ Every verdict negates something, so the ordering matters and it is READ from
 Nothing in the kernel schedules it.
 
 ```
-  65 rules loaded (boot.rofl + moot.rofl); every one range-restricted: true
+  76 rules loaded (boot.rofl + moot.rofl); every one range-restricted: true
   relations evaluated by demand (top-down unfolding): 0
   unstratified: (none)
   boot.rofl's audits over MOOT's own reflection: malformed 0, breach 0, leak 0, forged 0, unmoded 0, undefined_premise 0
@@ -127,18 +129,10 @@ $ moot -n new_checkout
 whynot live[main](f_new_checkout):
   rule r2978f2d9: live[main](?F)@now :- ordered[main](?F,?C,?_$0)@now, usable[main](?C)@now
     failed premise: usable[main](c_new_checkout_1)
-      rule r1f24f2b8: usable[main](?C)@now :- clause_known[main](?C)@now, not dead_clause[main](?C)@now, ok_from[main](?C,1)@now
-        failed premise: ok_from[main](c_new_checkout_1,1)
-          rule re44c5a95: ok_from[main](?C,?K)@now :- req_at[main](?C,?K,?G)@now, live[main](?G)@now, ?K1 is +(?K,1), ok_from[main](?C,?K1)@now
-            failed premise: live[main](f_payments_v2)
-              rule r2978f2d9: live[main](?F)@now :- ordered[main](?F,?C,?_$0)@now, usable[main](?C)@now
-                failed premise: usable[main](c_payments_v2_1)
-                  rule r1f24f2b8: usable[main](?C)@now :- clause_known[main](?C)@now, not dead_clause[main](?C)@now, ok_from[main](?C,1)@now
-                    failed premise: not dead_clause[main](c_payments_v2_1) -- blocked: dead_clause[main](c_payments_v2_1) holds
-          rule r81b00576: ok_from[main](?C,?N1)@now :- req_count[main](?C,?N)@now, ?N1 is +(?N,1)
-            failed premise: 1 is +(1,1) [builtin fails]
+      rule r3f91a21e: usable[main](?C)@now :- clause_known[main](?C)@now, not dead_clause[main](?C)@now, premises[main](?C,?N)@now, at_least(?N, ?G : requires[main](?C,?G)@now, live[main](?G)@now)
+        failed premise: at_least(1, ?G#1 : requires[main](c_new_checkout_1,?G#1), live[main](?G#1)) reached 0 of 1 [threshold]
     failed premise: usable[main](c_new_checkout_2)
-      rule r1f24f2b8: usable[main](?C)@now :- clause_known[main](?C)@now, not dead_clause[main](?C)@now, ok_from[main](?C,1)@now
+      rule r3f91a21e: usable[main](?C)@now :- clause_known[main](?C)@now, not dead_clause[main](?C)@now, premises[main](?C,?N)@now, at_least(?N, ?G : requires[main](?C,?G)@now, live[main](?G)@now)
         failed premise: not dead_clause[main](c_new_checkout_2) -- blocked: dead_clause[main](c_new_checkout_2) holds
 
 read it as a sentence. new_checkout has two clauses and BOTH are dead, for
@@ -200,10 +194,10 @@ list goes empty: three people each narrowed it once.
 the engine is handed the first one back as ctx/2 facts and asked to prove it:
 $ ctx(segment, enterprise).  ctx(region, us).  ctx(version, 10).  ctx(bucket, 0).  ctx(channel, stable).
 $ why flag_on(f_scim_provisioning)
-flag_on[main](f_scim_provisioning)  <= rbb8a7699 @tick 0
+flag_on[main](f_scim_provisioning)  <= r3db586bf @tick 0
   ordered[main](f_scim_provisioning,c_scim_provisioning_1,1) [axiom]
   ctx_ok[main](c_scim_provisioning_1)  <= r7543e143 @tick 0
-    clause_known[main](c_scim_provisioning_1)  <= r3d568e85 @tick 0
+    clause_known[main](c_scim_provisioning_1)  <= rdff18905 @tick 0
       ordered[main](f_scim_provisioning,c_scim_provisioning_1,1) [axiom]
     not ctx_bad[main](c_scim_provisioning_1) [finite failure]
       whynot ctx_bad[main](c_scim_provisioning_1):
@@ -213,28 +207,33 @@ flag_on[main](f_scim_provisioning)  <= rbb8a7699 @tick 0
           failed premise: not ctx_dim_ok[main](c_scim_provisioning_1,region) -- blocked: ctx_dim_ok[main](c_scim_provisioning_1,region) holds
           failed premise: not ctx_dim_ok[main](c_scim_provisioning_1,segment) -- blocked: ctx_dim_ok[main](c_scim_provisioning_1,segment) holds
           failed premise: not ctx_dim_ok[main](c_scim_provisioning_1,version) -- blocked: ctx_dim_ok[main](c_scim_provisioning_1,version) holds
-  on_here[main](c_scim_provisioning_1,1)  <= rd308e215 @tick 0
-    req_at[main](c_scim_provisioning_1,1,f_sso_saml) [axiom]
-    flag_on[main](f_sso_saml)  <= rbb8a7699 @tick 0
-      ordered[main](f_sso_saml,c_sso_saml_1,1) [axiom]
-      ctx_ok[main](c_sso_saml_1)  <= r7543e143 @tick 0
-        clause_known[main](c_sso_saml_1)  <= r3d568e85 @tick 0
-          ordered[main](f_sso_saml,c_sso_saml_1,1) [axiom]
-        not ctx_bad[main](c_sso_saml_1) [finite failure]
-          whynot ctx_bad[main](c_sso_saml_1):
-            rule r8045b66c: ctx_bad[main](?C)@now :- clause_known[main](?C)@now, dim[main](?D)@now, not ctx_dim_ok[main](?C,?D)@now
-              failed premise: not ctx_dim_ok[main](c_sso_saml_1,bucket) -- blocked: ctx_dim_ok[main](c_sso_saml_1,bucket) holds
-              failed premise: not ctx_dim_ok[main](c_sso_saml_1,channel) -- blocked: ctx_dim_ok[main](c_sso_saml_1,channel) holds
-              failed premise: not ctx_dim_ok[main](c_sso_saml_1,region) -- blocked: ctx_dim_ok[main](c_sso_saml_1,region) holds
-              failed premise: not ctx_dim_ok[main](c_sso_saml_1,segment) -- blocked: ctx_dim_ok[main](c_sso_saml_1,segment) holds
-              failed premise: not ctx_dim_ok[main](c_sso_saml_1,version) -- blocked: ctx_dim_ok[main](c_sso_saml_1,version) holds
-      on_here[main](c_sso_saml_1,1)  <= r7fc06a55 @tick 0
-        req_count[main](c_sso_saml_1,0) [axiom]
-        1 is +(0,1) [builtin]
-    2 is +(1,1) [builtin]
-    on_here[main](c_scim_provisioning_1,2)  <= r7fc06a55 @tick 0
-      req_count[main](c_scim_provisioning_1,1) [axiom]
-      2 is +(1,1) [builtin]
+  premises[main](c_scim_provisioning_1,1)  <= re1881b69 @tick 0
+    clause_known[main](c_scim_provisioning_1)  <= rdff18905 @tick 0
+      ordered[main](f_scim_provisioning,c_scim_provisioning_1,1) [axiom]
+    count(?G : requires[main](c_scim_provisioning_1,?G)) = 1 [aggregate: 1 member, sealed requires@0]
+      #1 (f_sso_saml) h=1
+        requires[main](c_scim_provisioning_1,f_sso_saml) [axiom]
+  at_least(1, ?G : requires[main](c_scim_provisioning_1,?G), flag_on[main](?G)) [quorum: the first 1 member]
+    #1 (f_sso_saml) h=4
+      requires[main](c_scim_provisioning_1,f_sso_saml) [axiom]
+      flag_on[main](f_sso_saml)  <= r3db586bf @tick 0
+        ordered[main](f_sso_saml,c_sso_saml_1,1) [axiom]
+        ctx_ok[main](c_sso_saml_1)  <= r7543e143 @tick 0
+          clause_known[main](c_sso_saml_1)  <= rdff18905 @tick 0
+            ordered[main](f_sso_saml,c_sso_saml_1,1) [axiom]
+          not ctx_bad[main](c_sso_saml_1) [finite failure]
+            whynot ctx_bad[main](c_sso_saml_1):
+              rule r8045b66c: ctx_bad[main](?C)@now :- clause_known[main](?C)@now, dim[main](?D)@now, not ctx_dim_ok[main](?C,?D)@now
+                failed premise: not ctx_dim_ok[main](c_sso_saml_1,bucket) -- blocked: ctx_dim_ok[main](c_sso_saml_1,bucket) holds
+                failed premise: not ctx_dim_ok[main](c_sso_saml_1,channel) -- blocked: ctx_dim_ok[main](c_sso_saml_1,channel) holds
+                failed premise: not ctx_dim_ok[main](c_sso_saml_1,region) -- blocked: ctx_dim_ok[main](c_sso_saml_1,region) holds
+                failed premise: not ctx_dim_ok[main](c_sso_saml_1,segment) -- blocked: ctx_dim_ok[main](c_sso_saml_1,segment) holds
+                failed premise: not ctx_dim_ok[main](c_sso_saml_1,version) -- blocked: ctx_dim_ok[main](c_sso_saml_1,version) holds
+        premises[main](c_sso_saml_1,0)  <= re1881b69 @tick 0
+          clause_known[main](c_sso_saml_1)  <= rdff18905 @tick 0
+            ordered[main](f_sso_saml,c_sso_saml_1,1) [axiom]
+          count(?G : requires[main](c_sso_saml_1,?G)) = 0 [aggregate: empty group, sealed requires@0]
+        at_least(0, ?G : requires[main](c_sso_saml_1,?G), flag_on[main](?G)) [quorum: the first 0 members]
 
 the tree bottoms out in admits/3 — the same per-dimension sets the audits
 used — and in the requirement chain: scim_provisioning needs sso_saml, and
@@ -287,13 +286,13 @@ lines, the way they are in HUH.
 
 the fold reports cyclic: 66 facts on a cycle of the support graph, all of
 them in reach, stratum — boot.rofl's transitive closure over MOOT's own
-mutually recursive relations (live -> usable -> ok_from -> live). NO flag fact
+mutually recursive relations (live -> usable -> live). NO flag fact
 is on a cycle, because the requirement graph of this config is a DAG, which is
 why every count above is a finite number rather than "infinitely many".
   flag facts on a cycle: 0
 
 tropical (min-plus, 1 per firing) on the same graph gives GATE DEPTH: how
-many other flags must already be on. The identity cost = 5G + 4 is checked,
+many other flags must already be on. The identity cost = 5G + 5 is checked,
 not assumed — gateDepth() throws if a cost is not of that form.
   depth 0   40 flags
   depth 1   7 flags   audit_log_export cost_alerts feature_usage_beacon mention_notifications referral_widget risk_manual_review scim_provisioning
@@ -378,7 +377,7 @@ is testable: give the input and watch the verdict flip.
 ```
 
 ```
-  43 rules of moot.rofl encoded as clauses over 84 dimensions
+  42 rules of moot.rofl encoded as clauses over 83 dimensions
 
   unreachable relations: ctx ctx_dim_ok
   rules that can never fire in this store: 1
@@ -503,15 +502,19 @@ boundary, stated here rather than discovered by a reader.
   requirements puts `fires` and `match` in a relation-level negative cycle,
   which `boot.rofl` rejects — correctly, since stratification here is
   relation-level and the requirement graph being acyclic in the DATA does not
-  help. That is a real cost of the design, paid deliberately; the same cost is
-  what forces the `ok_from/2` index walk instead of the obvious
-  `blocked(C) :- requires(C, G), not live(G)`.
+  help. That is the cost of the design, and it is why "every requirement is
+  live" is `at_least(N, G : requires(C, G), live(G))`, a monotone threshold,
+  and not the obvious `blocked(C) :- requires(C, G), not live(G)`.
+- **A quorum counts a lower bound.** The witness of `at_least(N, ...)` is N
+  members, so a fold over it counts N-subsets of the support when more than N
+  support. Here N is every requirement of the clause, so the counts of
+  section 5 are exact.
 
 ## Files
 
 | file | what it is |
 |---|---|
-| `moot.rofl` | the rules: six operator rules, the per-dimension intersection, the five verdicts, and the evaluator |
+| `moot.rofl` | the rules: six operator rules, the per-dimension intersection, the five verdicts, the single deletions that revive an empty dimension (`repair/3`), and the evaluator |
 | `demo.ts` | the config, its parser, the witness search, the self-application encoder, the enumeration oracle, and the transcript above |
 | `README.md` | this file |
 | `page.html` | the same story for two audiences, self-contained |

@@ -1,0 +1,22 @@
+-- examples/checks/str-first-code-point.rofl — THE FIRST CHARACTER OF A STRING IS ITS FIRST CODE POINT
+-- (f_a_first_character_is_cut_inside_a_surrogate_pair). A host wrote str_char0
+-- as `s[0]`, one UTF-16 unit, so a string opening with an astral character
+-- ("📊 Project Overview") gave a lone surrogate and the Rust seed reader
+-- refused the world. The host now writes the first code point; both engines'
+-- str_char is by code point, so the fact it writes is the one the kernel
+-- computes. Each row below is the fact as the host writes it, and whether it
+-- is the kernel's own answer.
+-- expect-row: first_agrees[main]("📊 Project Overview")
+-- expect-row: first_agrees[main]("a/b")
+-- expect-row: first_agrees[main]("𝒳y")
+-- expect-no-row: first_differs[main](
+edb(str_char0).
+edb(first_s).
+first_s("📊 Project Overview").
+first_s("a/b").
+first_s("𝒳y").
+str_char0("📊 Project Overview", "📊").
+str_char0("a/b", "a").
+str_char0("𝒳y", "𝒳").
+first_agrees(S) :- first_s(S), str_char0(S, C), C is str_char(S, 0).
+first_differs(S) :- first_s(S), str_char0(S, C), D is str_char(S, 0), C != D.

@@ -1,0 +1,12 @@
+-- expect-refusal: no relation on that cycle declares a widening
+-- two hulls round one cycle, neither declaring a widening: a widening
+-- elsewhere in the program bounds nothing on this cycle
+edb(awsr_s).
+awsr_s(a).
+lattice awsr_pair(X, hull I).
+lattice awsr_mate(X, hull I).
+lattice awsr_far(X, hull I) widen 1.
+awsr_far(X, iv(0, 0)) :- awsr_s(X).
+awsr_pair(X, I)       :- awsr_far(X, I).
+awsr_mate(X, J)       :- awsr_pair(X, I), J is ivmeet(I, iv(ninf, 9)).
+awsr_pair(X, J)       :- awsr_mate(X, I), J is ivadd(I, 1).

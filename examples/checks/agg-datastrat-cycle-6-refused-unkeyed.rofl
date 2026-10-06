@@ -1,0 +1,13 @@
+-- expect-refusal: its correlation is bound by a relation of the component
+-- examples/checks/agg-datastrat-cycle-6-refused-unkeyed.rofl — a sum whose
+-- range is chosen by a value of the component (choice reads a cell, and a
+-- cell's value reads choice): the cell it seals cannot be named before the data
+-- is known, so no order of cells can be read off it.
+edb(input). edb(formula). edb(ref). edb(sum_head). edb(in_range).
+input(a1, 2). input(a2, 3).
+in_range(r1, a1). in_range(r1, a2).
+formula(b1, n1). sum_head(n1, none).
+value(C, V) :- input(C, V).
+value(C, V) :- formula(C, N), val(N, V).
+choice(r1) :- value(a1, _).
+val(N, V) :- sum_head(N, _), choice(I), V is sum(X ; C : in_range(I, C), value(C, X)).

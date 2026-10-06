@@ -1,0 +1,8 @@
+-- expect-refusal: in the data the cell reads itself: count@num(_) -> near(_,_) -> num(_,_) -> count@num(_)
+-- examples/checks/agg-datastrat-cycle-10-refused-wide.rofl — a count whose body reads the relation it concludes under
+-- no group: the cell that reads every group is the whole correlation, and the refusal names it with `_`, the same
+-- text in both engines.
+edb(seed).
+seed(s).
+num(B, N) :- N is count(E : near(B, E)).
+near(B, E) :- seed(E), num(_, N), N >= 0, seed(B).

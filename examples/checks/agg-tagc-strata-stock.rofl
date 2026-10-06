@@ -1,0 +1,15 @@
+-- examples/checks/agg-tagc-strata-stock.rofl — agg_tagc_strata_stock, run by
+-- the stock evaluator over the table rules/strata.rofl writes: a counting tag
+-- is ranked above what its rules read, as an aggregate is, the relation of
+-- its derivations between the two (the engine's), and the counts are the
+-- default evaluator's, as agg-tagc-eval-check.rofl holds them.
+-- a relation's rank is the highest row the table has for it
+tcst_lower(R, N)  :- stratum(R, N), stratum(R, M), M > N.
+tcst_top(R, N)    :- stratum(R, N), not tcst_lower(R, N).
+tcst_rank(R, N)   :- tcst_top(R, N), tag_decl[$kernel](R, _, counting).
+tcst_below(R, B)  :- tcst_rank(R, N), concludes[$kernel](Q, R), premise_pos[$kernel](Q, B), tcst_top(B, M), M >= N.
+tcst_unranked(R)  :- tag_decl[$kernel](R, _, counting), not tcst_ranked(R).
+tcst_ranked(R)    :- tcst_rank(R, _).
+alarm(tcst_below).
+alarm(tcst_unranked).
+-- expect-row: tc_any[main](s,b,5)

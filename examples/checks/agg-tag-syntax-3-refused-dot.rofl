@@ -1,0 +1,3 @@
+-- expect-refusal: the declaration has no closing dot
+-- the declaration ends with a dot
+tag sxtr_dot(A, counting N)

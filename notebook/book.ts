@@ -1,6 +1,6 @@
 // A book as the reader reads it: cells of sentences or of plain ROFL, the lines in them that ask, and the heads that name themselves.
 // Pure: the page, the notebook kernel and the reader of worlds share it.
-import { asking, english, proseAsks, proseLooks, readMd, slug, type ReadResult } from '../scripts/read_md.ts';
+import { asking, english, proseAsks, proseLooks, readMd, slug, type ReadOptions, type ReadResult } from '../scripts/read_md.ts';
 
 export type Kind = 'answers' | 'never' | 'why' | 'whynot' | 'unsure' | 'extends' | 'excise' | 'draw';
 /** A cell in the Markdown sentence form, as a `.rofl.md` is written, or in plain ROFL. */
@@ -109,7 +109,7 @@ export function misbound(text: string, phrases: string): string[] {
 /** The cells as the reader reads them. Markdown cells are read twice: once to name the heads nobody had a sentence for and learn their sentences, then against every cell's sentences at once. */
 /** `own`: the cells are a notebook's, whose relations are its own (host.ts): a head named from its words is named with OWN, and one about
  *  other things than a read vocabulary's sentence says is its own; a world read by a notebook keeps its names. */
-export function readBook(cells: Cell[], phrases: string, home: Record<string, string>, own = false): Book {
+export function readBook(cells: Cell[], phrases: string, home: Record<string, string>, own = false, opts: Pick<ReadOptions, 'canonVars'> = {}): Book {
   const parts = cells.map((c) => ({ c, ...(c.prose ? proseSplit(c.text) : split(c.text, c.form === 'md')) }));
   const first = parts.map(({ c, clauses }) => c.form === 'md' ? readMd(clauses, { vocab: phrases, homeBooks: home }) : null);
   const md = parts.map(({ clauses }, i) => {
@@ -139,5 +139,5 @@ export function readBook(cells: Cell[], phrases: string, home: Record<string, st
     }
   });
   if (n.promise + n.question) vocab = phrases + '\n' + learned.join('\n');
-  return { parts, read: parts.map((_, i) => md[i] ? readMd(md[i]!.text, { vocab, homeBooks: home }) : null), learned, vocab, close: md.map((m) => m?.close ?? []), closeAt: md.map((m) => m?.closeAt ?? []) };
+  return { parts, read: parts.map((_, i) => md[i] ? readMd(md[i]!.text, { vocab, homeBooks: home, ...opts }) : null), learned, vocab, close: md.map((m) => m?.close ?? []), closeAt: md.map((m) => m?.closeAt ?? []) };
 }

@@ -1,0 +1,5 @@
+-- expect-refusal: is asserted, but
+-- a join cell holds what its rules conclude
+edb(ajsr_e). ajsr_e(a, b). ajsr_e(b, a).
+lattice ajsr_assert(X, union S).
+ajsr_assert(a, set(a)).

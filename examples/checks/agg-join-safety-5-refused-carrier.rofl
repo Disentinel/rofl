@@ -1,0 +1,9 @@
+-- expect-refusal: is not monotone in the value
+-- a set's value into an interval's head: a join moves only into a head of
+-- its own carrier
+edb(ajsr_e). ajsr_e(a, b). ajsr_e(b, a).
+lattice ajsr_carrier(X, union S).
+lattice ajsr_iv(X, hull I).
+ajsr_carrier(X, set(X)) :- ajsr_e(X, _).
+ajsr_carrier(X, S)      :- ajsr_iv(X, S).
+ajsr_iv(X, I)           :- ajsr_e(X, Y), ajsr_carrier(Y, I).

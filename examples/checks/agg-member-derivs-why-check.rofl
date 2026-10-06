@@ -1,0 +1,31 @@
+-- examples/checks/agg-member-derivs-why-check.rofl — agg_member_derivs_why, run
+-- with `rofl-load --explain`: `why` of md_dn(a, 2) shows each member's
+-- canonical derivation and nothing else (sale 2 of a is counted through three
+-- md_chan rows, and only the text-least, w, is printed); `why all` adds the
+-- other two under it, each under its own `#2.k` line, and a member with
+-- one derivation (sale 1) gets none.
+edb(explain_request).
+edb(explained).
+explain_request(why, md_dn(a, 2)).
+explain_request(why_all, md_dn(a, 2)).
+mdy_holds(K, T) :- explained[$explain](K, md_dn(a, 2), _, L), mdy_want(K, T), N is str_segs(L, T), N > 1.
+mdy_want(why, "[aggregate: 2 members").
+mdy_want(why, "#2 (2) h=1").
+mdy_want(why, "md_chan[main](2,w) [axiom]").
+mdy_want(why_all, "#2 (2) h=1").
+mdy_want(why_all, "#2.2 (2) [another derivation]").
+mdy_want(why_all, "#2.3 (2) [another derivation]").
+mdy_want(why_all, "md_chan[main](2,w) [axiom]").
+mdy_want(why_all, "md_chan[main](2,y) [axiom]").
+mdy_want(why_all, "md_chan[main](2,x) [axiom]").
+mdy_never(why, "another derivation").
+mdy_never(why, "md_chan[main](2,y)").
+mdy_never(why, "md_chan[main](2,x)").
+mdy_never(why_all, "#1.2").
+mdy_never(why_all, "#2.4").
+why_text_missing(K, T) :- mdy_want(K, T), not mdy_holds(K, T).
+why_text_leaked(K, T)  :- mdy_never(K, T), explained[$explain](K, md_dn(a, 2), _, L), N is str_segs(L, T), N > 1.
+explain_refused(K, A)  :- explained[$explain](K, A, 0, _).
+alarm(why_text_missing).
+alarm(why_text_leaked).
+alarm(explain_refused).

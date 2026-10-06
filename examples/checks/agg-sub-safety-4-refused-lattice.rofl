@@ -1,0 +1,7 @@
+-- expect-refusal: subsumption assr_lat: it has dominance rules and is declared a lattice or a tag too
+-- one algebra per relation: a lattice's cell holds one value, an antichain many
+edb(assr_le).
+assr_le(a, 1).
+lattice assr_lat(A, min V).
+assr_lat(A, V) :- assr_le(A, V).
+assr_lat(A, X) <= assr_lat(A, Y) :- Y < X.

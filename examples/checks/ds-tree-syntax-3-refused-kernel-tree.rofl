@@ -1,0 +1,3 @@
+-- expect-refusal: is a kernel relation and cannot be declared tree
+-- the kernel's relations are the kernel's to keep
+tree derived_by(P, C).

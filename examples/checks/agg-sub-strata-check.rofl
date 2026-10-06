@@ -1,0 +1,45 @@
+-- examples/checks/agg-sub-strata-check.rofl — agg_sub_strata: a
+-- subsumptive relation recurses, since its algebra is a partial order,
+-- which the recursion gate reads (algebra_class(subsumption,
+-- partial_order)): the routes' fronts exist only round the cycle. What a
+-- dominance body reads is closed before any value is compared, a strict
+-- edge like a negation's: peel_rounds puts as_pick above as_qual, which a
+-- negation decides a stratum up, and rules/strata.rofl's table ranks it so
+-- (`stratum`, both above what the body reads). A count of the relation's own
+-- cells and a negation of one inside its recursion are refused, and so is a
+-- dominance that reads what depends on its own relation (-2, -3, -4), so
+-- their rules never reach this world.
+assc_want(as_route, a, a, 4, 4).
+assc_want(as_route, c, c, 6, 2).
+assc_want(as_route, b, b, 3, 11).
+assc_want(as_pick, k2, gold, x, x).
+assc_want(as_pick, k2, glass, x, x).
+assc_have(as_route, A, B, C, T) :- as_route(A, B, C, T).
+assc_have(as_pick, K, V, x, x)  :- as_pick(K, V).
+assc_missing(R, A, B, C, T) :- assc_want(R, A, B, C, T), not assc_have(R, A, B, C, T).
+assc_extra(as_pick, K, V)   :- as_pick(K, V), K = k2, V != gold, V != glass, V != ruby.
+alarm(assc_missing).
+-- no answer is a shrug, which an alarm `not answer` would pass in silence
+assc_shrug(T, R) :- shrug[$kernel](T, R, _).
+alarm(assc_shrug).
+alarm(assc_extra).
+-- the recursion is a positive edge of the relation's own rules
+assc_self(Rel) :- concludes[$kernel](R, Rel), premise_pos[$kernel](R, Rel), dominance[$kernel](_, Rel, _, _).
+assc_not_recursive(as_route) :- not assc_self(as_route).
+alarm(assc_not_recursive).
+-- the table ranks the relation above everything its dominance reads
+assc_reads(P, B) :- dominance[$kernel](R, P, _, _), premise_pos[$kernel](R, B).
+assc_reads(P, B) :- dominance[$kernel](R, P, _, _), premise_neg[$kernel](R, B).
+assc_lower(R, N)   :- stratum(R, N), stratum(R, M), M > N.
+assc_top(R, N)     :- stratum(R, N), not assc_lower(R, N).
+assc_unranked(P, B) :- assc_reads(P, B), assc_top(P, N), assc_top(B, M), N <= M.
+assc_unranked(P, B) :- assc_reads(P, B), not assc_ranked(P).
+assc_ranked(P)     :- stratum(P, _).
+assc_reads_none() :- not assc_reads(as_pick, as_qual).
+alarm(assc_unranked).
+alarm(assc_reads_none).
+assc_accepted(Rel) :- concludes[$kernel](_, Rel), assc_refused(Rel).
+assc_refused(assr_n).
+assc_refused(assr_g).
+assc_refused(assr_l).
+alarm(assc_accepted).

@@ -32,9 +32,10 @@
 # a run whose oracle is frozen has to say which run it was.
 #
 # usage: rust/run_corpus.sh [--bytes] [--no-regen]
+#   ROFL_PROFILE=fast reads rust/target/fast/rofl-eval; release otherwise
 set -u
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-BIN="$ROOT/rust/target/release/rofl-eval"
+BIN="$ROOT/rust/target/${ROFL_PROFILE:-release}/rofl-eval"
 DIR="$ROOT/facts/port-corpus"
 OUT="${TMPDIR:-/tmp}/rofl-rust-corpus"
 mkdir -p "$OUT"

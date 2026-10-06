@@ -157,7 +157,9 @@ nothing_workable[audit](W) :- work_state(W, open), claims_cell(W), not has_worka
 
 -- THE ORDER IS THE WORK. A hand number collided (file order by topic,
 -- numeric order by append) and was asserted nowhere; what replaces it is
--- LEVERAGE, a boolean because the kernel has no aggregation: an item
+-- LEVERAGE, a boolean (it was one because the kernel had no aggregation; it
+-- has aggregates now, docs/aggregates.md, and a count of waiters stays a
+-- later choice, not a missing feature): an item
 -- something else waits on comes first. `next_work` is a SET: a partial order
 -- has no unique least element. `anything_unblocks()` is the nullary head
 -- this file quoted when it argued for one — at most one row, where

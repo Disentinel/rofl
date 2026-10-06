@@ -1,0 +1,131 @@
+-- examples/checks/agg-slo-demo-check.rofl — agg_slo_demo, THE BURN-RATE PAGE
+-- (examples/slo/README.md; docs/aggregates.md, "Acceptance demos"). The rules
+-- are examples/slo/slo.rofl over examples/slo/slo-requests.rofl. Three
+-- services, two moments: api at minute 14 has a blip behind it (the long
+-- window burns, the short one has recovered); api at 24 has a fresh outage;
+-- pay at 24 is down; search at 24 has one failed request in the last minute
+-- (the short window burns, the long one does not).
+--
+-- Held by four oracles: the weighted sums per window, computed by the script
+-- that wrote the requests (slc_want), the pages and tickets by hand, p99
+-- by nearest rank (slc_wantp), and the loosened SLO by hand. The proof rows
+-- are read back through `why all`: the requests that burned the budget are
+-- named, a request outside the window is not.
+--
+-- BY HAND, the factor for a page is 14 and the budget 1% (10 per mille):
+--   api 24  long (12,24]  24 of 60 = 40%   short (22,24] 10 of 10  -> page
+--   api 14  long (2,14]   20 of 60 = 33%   short (12,14]  0 of 10  -> no page
+--   pay 24  long 40 of 48 = 83%            short 8 of 8            -> page
+--   search 24 long 1 of 36 = 2.8% (< 14%)  short 1 of 6 = 17%      -> no page
+-- a ticket is 2x over (0,24] and (18,24] (and (8,14] at 14):
+--   api 14 and 24, pay 24 -> ticket; search 24 1 of 72 = 1.4% < 2% -> none
+-- the base contract alone is 5%: a page needs 70% over the long window, so
+-- api 24 (40%) would not page and pay 24 (83%) still would.
+slc_want(api, 14, 2, 0, 10).
+slc_want(api, 14, 6, 20, 30).
+slc_want(api, 14, 12, 20, 60).
+slc_want(api, 14, 24, 20, 70).
+slc_want(api, 24, 2, 10, 10).
+slc_want(api, 24, 6, 20, 30).
+slc_want(api, 24, 12, 24, 60).
+slc_want(api, 24, 24, 44, 120).
+slc_want(pay, 14, 2, 0, 8).
+slc_want(pay, 14, 6, 0, 8).
+slc_want(pay, 14, 12, 0, 8).
+slc_want(pay, 14, 24, 0, 8).
+slc_want(pay, 24, 2, 8, 8).
+slc_want(pay, 24, 6, 24, 24).
+slc_want(pay, 24, 12, 40, 48).
+slc_want(pay, 24, 24, 40, 48).
+slc_want(search, 14, 2, 0, 6).
+slc_want(search, 14, 6, 0, 18).
+slc_want(search, 14, 12, 0, 36).
+slc_want(search, 14, 24, 0, 42).
+slc_want(search, 24, 2, 1, 6).
+slc_want(search, 24, 6, 1, 18).
+slc_want(search, 24, 12, 1, 36).
+slc_want(search, 24, 24, 1, 72).
+slc_wantp(api, 14, 1500).
+slc_wantp(api, 24, 2000).
+slc_wantp(pay, 14, 200).
+slc_wantp(pay, 24, 2500).
+slc_wantp(search, 14, 80).
+slc_wantp(search, 24, 3000).
+slc_bad(S, N, L, B)  :- bad_w(S, N, L, B), slc_want(S, N, L, B, _).
+slc_all(S, N, L, A)  :- all_w(S, N, L, A), slc_want(S, N, L, _, A).
+slc_sums_missing(S, N, L) :- slc_want(S, N, L, B, _), not slc_bad(S, N, L, B).
+slc_sums_missing(S, N, L) :- slc_want(S, N, L, B, A), not slc_all(S, N, L, A).
+slc_sums_extra(S, N, L)   :- bad_w(S, N, L, B), not slc_want(S, N, L, B, _).
+slc_sums_extra(S, N, L)   :- all_w(S, N, L, A), not slc_want(S, N, L, _, A).
+slc_sums_two(S, N, L)     :- bad_w(S, N, L, B1), bad_w(S, N, L, B2), B1 != B2.
+alarm(slc_sums_missing).
+alarm(slc_sums_extra).
+alarm(slc_sums_two).
+
+slc_alert_want(page, api, 24). slc_alert_want(page, pay, 24).
+slc_alert_want(ticket, api, 14). slc_alert_want(ticket, api, 24). slc_alert_want(ticket, pay, 24).
+slc_alert_missing(T, S, N) :- slc_alert_want(T, S, N), not alert(T, S, N).
+slc_alert_extra(T, S, N)   :- alert(T, S, N), not slc_alert_want(T, S, N).
+alarm(slc_alert_missing).
+alarm(slc_alert_extra).
+-- the two windows are why there are two: each of these burns in one and is
+-- not paged, and the world holds that it does burn
+slc_guard(blip_over)   :- burning(page, long, api, 14), not burning(page, short, api, 14), not alert(page, api, 14).
+slc_guard(spike_alone) :- burning(page, short, search, 24), not burning(page, long, search, 24), not alert(page, search, 24).
+slc_guard_want(blip_over). slc_guard_want(spike_alone).
+slc_guard_missing(G) :- slc_guard_want(G), not slc_guard(G).
+alarm(slc_guard_missing).
+
+slc_p99(S, N, P) :- p99(S, N, P), slc_wantp(S, N, P).
+slc_p99_missing(S, N) :- slc_wantp(S, N, P), not slc_p99(S, N, P).
+slc_p99_extra(S, N)   :- p99(S, N, P), not slc_wantp(S, N, P).
+alarm(slc_p99_missing).
+alarm(slc_p99_extra).
+-- the 800 ms objective: everything with a slow tail at its moment
+slc_slow_want(api, 14). slc_slow_want(api, 24). slc_slow_want(pay, 24). slc_slow_want(search, 24).
+slc_slow_missing(S, N) :- slc_slow_want(S, N), not slow(S, N).
+slc_slow_extra(S, N)   :- slow(S, N), not slc_slow_want(S, N).
+alarm(slc_slow_missing).
+alarm(slc_slow_extra).
+
+-- the budget is the strictest contract; the loosened one is the same rules
+-- with the gold contract left out, which is what `excise` of it computes
+slc_loose_budget(S, B) :- svc(S), B is min(P : slo(S, K, P), K != gold).
+slc_loose_burning(Tier, Kind, S, Now) :- burn_window(Tier, Kind, Len), burn_factor(Tier, F), slc_loose_budget(S, Budget),
+                               bad_w(S, Now, Len, B), all_w(S, Now, Len, A), A > 0,
+                               Seen is B * 1000, Limit is F * Budget * A, Seen >= Limit.
+slc_loose_alert(Tier, S, Now) :- slc_loose_burning(Tier, long, S, Now), slc_loose_burning(Tier, short, S, Now).
+slc_loose_want(page, pay, 24).
+slc_loose_want(ticket, api, 14). slc_loose_want(ticket, api, 24). slc_loose_want(ticket, pay, 24).
+slc_loose_missing(T, S, N) :- slc_loose_want(T, S, N), not slc_loose_alert(T, S, N).
+slc_loose_extra(T, S, N)   :- slc_loose_alert(T, S, N), not slc_loose_want(T, S, N).
+alarm(slc_loose_missing).
+alarm(slc_loose_extra).
+-- and the loosening moves something: api's page is gone, pay's is not
+slc_loosens(api) :- alert(page, api, 24), not slc_loose_alert(page, api, 24).
+slc_loosens(pay) :- alert(page, pay, 24), slc_loose_alert(page, pay, 24).
+slc_loosens_want(api). slc_loosens_want(pay).
+slc_loosens_missing(S) :- slc_loosens_want(S), not slc_loosens(S).
+alarm(slc_loosens_missing).
+
+-- THE PROOF ROWS. `why all` of the page names every request that failed in
+-- the long window, and none from outside it (a10a is the blip, a5a is quiet)
+explain_request(why_all, alert(page, api, 24)).
+slc_line(L) :- explained[$explain](why_all, alert(page, api, 24), _, L).
+slc_named(R) :- slc_line(L), slc_offender(R, T), N is str_segs(L, T), N > 1.
+slc_offender(a21a, "failed[main](a21a)"). slc_offender(a21b, "failed[main](a21b)").
+slc_offender(a22a, "failed[main](a22a)"). slc_offender(a22b, "failed[main](a22b)").
+slc_offender(a23a, "failed[main](a23a)"). slc_offender(a23b, "failed[main](a23b)").
+slc_offender(a24a, "failed[main](a24a)"). slc_offender(a24b, "failed[main](a24b)").
+slc_offender(a18b, "failed[main](a18b)").
+slc_unnamed(R) :- slc_offender(R, _), not slc_named(R).
+slc_outside(R) :- slc_line(L), slc_stranger(R, T), N is str_segs(L, T), N > 1.
+slc_stranger(a10a, "req[main](a10a,"). slc_stranger(a5a, "req[main](a5a,").
+slc_stranger(a12b, "req[main](a12b,"). slc_stranger(a18a, "failed[main](a18a)").
+slc_proof_empty(rows) :- not slc_line(_).
+alarm(slc_unnamed).
+alarm(slc_outside).
+alarm(slc_proof_empty).
+-- and no answer of this world is a shrug, which `not` would pass in silence
+slc_shrug(T, R) :- shrug[$kernel](T, R, _).
+alarm(slc_shrug).

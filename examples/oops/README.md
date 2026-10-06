@@ -1,5 +1,7 @@
 # OOPS — the retraction cascade
 
+**Count reading:** robustness — many independent supports let a conclusion survive a retraction.
+
 A paper is retracted. **What is now in doubt?**
 
 Nobody computes this. The retraction gets recorded — Retraction Watch has it,

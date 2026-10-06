@@ -1,0 +1,177 @@
+-- examples/checks/agg-join-eval-check.rofl — agg_join_eval: every join
+-- lattice of agg-join-data.rofl, and every reader of one, holds exactly the
+-- facts enumerated here by hand, in both directions: a missing value, a
+-- value that is not the join, and a second value for one key each raise an
+-- alarm. The values are canonical terms: a set's elements in the kernel's
+-- order with no repeat, so one join is one spelling and one fact, however
+-- many paths reached it and in whatever order.
+aje_comp(a, set(a, b, c, d)).
+aje_comp(b, set(a, b, c, d)).
+aje_comp(c, set(a, b, c, d)).
+aje_comp(d, set(a, b, c, d)).
+aje_comp(p, set(p, q)).
+aje_comp(q, set(p, q)).
+aje_comp(s, set(s)).
+aje_comp(lone, set(lone)).
+aje_live_in(b2, set(x, y, z)).
+aje_live_in(b3, set(x, y, z)).
+aje_live_in(b4, set(x, z)).
+aje_live_out(b1, set(x, y, z)).
+aje_live_out(b2, set(x, y, z)).
+aje_live_out(b3, set(x, y, z)).
+aje_range(h1, iv(-2, 7)).
+aje_range(h2, iv(-2, 7)).
+aje_range(h3, iv(-2, 7)).
+aje_range(h4, iv(-2, 10)).
+aje_range(h5, iv(4, 4)).
+aje_bits(h1, 21).
+aje_bits(h2, 21).
+aje_bits(h3, 21).
+aje_bits(h4, 23).
+aje_bits(h5, 0).
+aje_dist(m1, 0).
+aje_dist(m2, 2).
+aje_dist(m3, 5).
+aje_dist(m4, 22).
+aje_near(m1, set(m3)).
+aje_near(m2, set(m1)).
+aje_near(m3, set(m1, m2)).
+aje_near(m4, set(m2)).
+aje_pick(k, set(x, y, z)).
+aje_pair(k, set(a, b)).
+
+aj_missing(comp, K, V)     :- aje_comp(K, V), not aj_comp(K, V).
+aj_extra(comp, K, V)       :- aj_comp(K, V), not aje_comp(K, V).
+aj_missing(live_in, K, V)  :- aje_live_in(K, V), not aj_live_in(K, V).
+aj_extra(live_in, K, V)    :- aj_live_in(K, V), not aje_live_in(K, V).
+aj_missing(live_out, K, V) :- aje_live_out(K, V), not aj_live_out(K, V).
+aj_extra(live_out, K, V)   :- aj_live_out(K, V), not aje_live_out(K, V).
+aj_missing(range, K, V)    :- aje_range(K, V), not aj_range(K, V).
+aj_extra(range, K, V)      :- aj_range(K, V), not aje_range(K, V).
+aj_missing(bits, K, V)     :- aje_bits(K, V), not aj_bits(K, V).
+aj_extra(bits, K, V)       :- aj_bits(K, V), not aje_bits(K, V).
+aj_missing(dist, K, V)     :- aje_dist(K, V), not aj_dist(K, V).
+aj_extra(dist, K, V)       :- aj_dist(K, V), not aje_dist(K, V).
+aj_missing(near, K, V)     :- aje_near(K, V), not aj_near(K, V).
+aj_extra(near, K, V)       :- aj_near(K, V), not aje_near(K, V).
+-- one fact per key: a value a better one replaced is no answer
+aj_missing(pick, K, V)     :- aje_pick(K, V), not aj_pick(K, V).
+aj_extra(pick, K, V)       :- aj_pick(K, V), not aje_pick(K, V).
+aj_missing(pair, K, V)     :- aje_pair(K, V), not aj_pair(K, V).
+aj_extra(pair, K, V)       :- aj_pair(K, V), not aje_pair(K, V).
+-- a contribution outside the carrier is a hole on the cell, and no value
+aj_extra(bad, K, V)        :- aj_bad(K, V).
+aj_two(comp, K)  :- aj_comp(K, V), aj_comp(K, W), V != W.
+aj_two(range, K) :- aj_range(K, V), aj_range(K, W), V != W.
+aj_two(bits, K)  :- aj_bits(K, V), aj_bits(K, W), V != W.
+aj_two(near, K)  :- aj_near(K, V), aj_near(K, W), V != W.
+alarm(aj_missing).
+alarm(aj_extra).
+alarm(aj_two).
+
+-- the readers: membership enumerated, tested and counted; subsets; parts
+aje_in_comp(a, a).
+aje_in_comp(a, b).
+aje_in_comp(a, c).
+aje_in_comp(a, d).
+aje_in_comp(b, a).
+aje_in_comp(b, b).
+aje_in_comp(b, c).
+aje_in_comp(b, d).
+aje_in_comp(c, a).
+aje_in_comp(c, b).
+aje_in_comp(c, c).
+aje_in_comp(c, d).
+aje_in_comp(d, a).
+aje_in_comp(d, b).
+aje_in_comp(d, c).
+aje_in_comp(d, d).
+aje_in_comp(p, p).
+aje_in_comp(p, q).
+aje_in_comp(q, p).
+aje_in_comp(q, q).
+aje_in_comp(s, s).
+aje_in_comp(lone, lone).
+aje_iv_has(h1, 0).
+aje_iv_has(h1, 5).
+aje_iv_has(h2, 0).
+aje_iv_has(h2, 5).
+aje_iv_has(h3, 0).
+aje_iv_has(h3, 5).
+aje_iv_has(h4, 0).
+aje_iv_has(h4, 5).
+aje_iv_has(h4, 10).
+aje_span(h1, 6).
+aje_span(h1, 7).
+aje_bit(h1, 0).
+aje_bit(h1, 2).
+aje_bit(h1, 4).
+aje_bit(h2, 0).
+aje_bit(h2, 2).
+aje_bit(h2, 4).
+aje_bit(h3, 0).
+aje_bit(h3, 2).
+aje_bit(h3, 4).
+aje_bit(h4, 0).
+aje_bit(h4, 1).
+aje_bit(h4, 2).
+aje_bit(h4, 4).
+aje_one(bits5, h1).
+aje_one(bits5, h2).
+aje_one(bits5, h3).
+aje_one(bits5, h4).
+aje_one(iv_sub, h4).
+aje_one(set_sub, a).
+aje_one(set_sub, b).
+aje_one(set_sub, c).
+aje_one(set_sub, d).
+aje_one(with_a, 4).
+aje_ends(h1, -2, 7).
+aje_ends(h2, -2, 7).
+aje_ends(h3, -2, 7).
+aje_ends(h4, -2, 10).
+aje_ends(h5, 4, 4).
+aj_one(bits5, N)  :- aj_bits5(N).
+aj_one(iv_sub, N) :- aj_iv_sub(N).
+aj_one(set_sub, X) :- aj_set_sub(X).
+aj_one(with_a, C) :- aj_with_a(C).
+aj_read_missing(in_comp, X, Y) :- aje_in_comp(X, Y), not aj_in_comp(X, Y).
+aj_read_extra(in_comp, X, Y)   :- aj_in_comp(X, Y), not aje_in_comp(X, Y).
+aj_read_missing(iv_has, N, K)  :- aje_iv_has(N, K), not aj_iv_has(N, K).
+aj_read_extra(iv_has, N, K)    :- aj_iv_has(N, K), not aje_iv_has(N, K).
+aj_read_missing(span, N, K)    :- aje_span(N, K), not aj_span(N, K).
+aj_read_extra(span, N, K)      :- aj_span(N, K), not aje_span(N, K).
+aj_read_missing(bit, N, B)     :- aje_bit(N, B), not aj_bit(N, B).
+aj_read_extra(bit, N, B)       :- aj_bit(N, B), not aje_bit(N, B).
+aj_read_missing(K, X, X)       :- aje_one(K, X), not aj_one(K, X).
+aj_read_extra(K, X, X)         :- aj_one(K, X), not aje_one(K, X).
+aj_read_missing(ends, N, L)    :- aje_ends(N, L, H), not aj_ends(N, L, H).
+aj_read_extra(ends, N, L)      :- aj_ends(N, L, H), not aje_ends(N, L, H).
+alarm(aj_read_missing).
+alarm(aj_read_extra).
+
+-- a set read by its value however it is written: every spelling of a value
+-- the cell holds reads it, a spelling of another value does not, and three
+-- spellings of two sets held in a plain relation are two facts
+aje_lit(pair_ba).
+aje_lit(pair_repeat).
+aje_lit(mixed).
+aje_lit(mixed_eq).
+aje_lit(not_wider).
+aje_lit(held).
+aje_lit(nested).
+aje_lit(in_literal).
+aje_lit(in_open).
+aje_lit(subset_open).
+aje_held(set(a, b)).
+aje_held(f(set(c, set(a, b)))).
+aje_mix(z, set("str", -5, f(a))).
+aj_spelling_missing(lit, X)  :- aje_lit(X), not aj_lit(X).
+aj_spelling_extra(lit, X)    :- aj_lit(X), not aje_lit(X).
+aj_spelling_missing(held, S) :- aje_held(S), not aj_held(S).
+aj_spelling_extra(held, S)   :- aj_held(S), not aje_held(S).
+aj_spelling_missing(mix, V)  :- aje_mix(K, V), not aj_mix(K, V).
+aj_spelling_extra(mix, V)    :- aj_mix(K, V), not aje_mix(K, V).
+aj_spelling_extra(count, N)  :- aj_held_count(N), N != 2.
+alarm(aj_spelling_missing).
+alarm(aj_spelling_extra).

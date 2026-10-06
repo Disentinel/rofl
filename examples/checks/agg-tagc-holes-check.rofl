@@ -1,0 +1,56 @@
+-- examples/checks/agg-tagc-holes-check.rofl — agg_tagc_holes: a counting tag's
+-- count is never a value outside its carrier nor a wrapped one. A weight of
+-- 0, of -2 or that is no number is `tag_off_carrier` (a derivation counts at
+-- least once), a product of counts past the term range `arith_overflow`, and
+-- a sum of derivations past it `agg_overflow` (on its key alone): each a hole, never a count
+-- clamped or wrapped. What a fault leaves unknown is not decided, and it reaches
+-- the key it was met under alone: the tag's cell of that key is withdrawn as a
+-- group a member of which is not known, and a rule reading its count is a
+-- shrug inherited from it; a key no fault reached keeps its count, and what
+-- reads it is decided (docs/aggregates.md, "Precise holes, as built").
+edb(hc_w).
+hc_w(a, 1). hc_w(b, 0). hc_w(c, -2). hc_w(d, many).
+tag hc_n(A, counting N).
+hc_n(A, W)      :- hc_w(A, W).
+hc_many(A)      :- hc_n(A, N), N >= 1.
+edb(hc_zero).
+hc_zero(z).
+tag hc_z(A, counting N).
+hc_z(A, 0)      :- hc_zero(A).
+edb(hc_big).
+hc_big(p, 1099511627776).
+tag hc_b(A, counting N).
+hc_b(A, W)      :- hc_big(A, W).
+tag hc_sq(A, counting N).
+hc_sq(A, N)     :- hc_b(A, _), hc_b(A, _).
+edb(hc_half).
+hc_half(q, 1, 1152921504606846000). hc_half(q, 2, 1152921504606846000).
+tag hc_sum(A, counting N).
+hc_sum(A, W)    :- hc_half(A, _, W).
+hc_rule(Rel, R) :- concludes[$kernel](R, Rel).
+hc_fault(Rel, C) :- hc_rule(Rel, R), shrug[$kernel]($rule(R), fault, C).
+hc_want_fault(hc_n, tag_off_carrier).
+hc_want_fault(hc_z, tag_off_carrier).
+hc_want_fault(hc_sq, arith_overflow).
+hc_unfaulted(Rel, C) :- hc_want_fault(Rel, C), not hc_fault(Rel, C).
+hc_decided(A)   :- hc_many(A), A != a.
+hc_lost()       :- not hc_b(p, 1099511627776).
+alarm(hc_unfaulted).
+alarm(hc_decided).
+alarm(hc_lost).
+-- expect-row: hole[$kernel]($cell(hc_sum@count,1,0,$cons(q,$cons(main,$nil))),agg_overflow)
+-- expect-row: hole[$kernel]($cell(hc_n@count,1,0,$cons(b,$cons(main,$nil))),support_withdrawn)
+-- expect-row: hole[$kernel]($cell(hc_n@count,1,0,$cons(c,$cons(main,$nil))),support_withdrawn)
+-- expect-row: hole[$kernel]($cell(hc_n@count,1,0,$cons(d,$cons(main,$nil))),support_withdrawn)
+-- expect-no-row: hole[$kernel]($cell(hc_n@count,1,0,$cons(a,
+-- expect-row: shrug[$kernel](hc_n(b,$unknown_value),inherited,
+-- expect-row: shrug[$kernel](hc_many(d),inherited,
+-- expect-no-row: shrug[$kernel](every(hc_n)
+-- expect-row: hc_n[main](a,1)
+-- expect-row: hc_many[main](a)
+-- expect-no-row: hc_n[main](b,
+-- expect-no-row: hc_n[main](c,
+-- expect-no-row: hc_n[main](d,
+-- expect-no-row: hc_z[main](
+-- expect-no-row: hc_sq[main](
+-- expect-no-row: hc_sum[main](

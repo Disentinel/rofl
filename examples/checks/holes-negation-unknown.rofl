@@ -1,0 +1,14 @@
+-- examples/checks/holes-negation-unknown.rofl — `unknown(A)` OF WHAT A HOLE
+-- LEFT OUT IS A SHRUG, under the default semantics, in both engines
+-- (docs/aggregates.md, "Shrugs, as built"; it replaced the refusal of
+-- f_unknown_beside_a_hole_was_guarded_only_under_well_founded). c's win would
+-- hold if B + 1 had a value; 2^60 is past the range, so hu_win(c) is left
+-- out, and `not unknown(hu_win(c))` is no answer, never hu_decided(c). k's win
+-- holds, so its question is decided.
+edb(hu_big).
+edb(hu_pos).
+hu_big(1152921504606846975).
+hu_pos(c). hu_pos(k).
+hu_win(k).
+hu_win(c) :- hu_big(B), Z is B + 1, Z > 0.
+hu_decided(X) :- hu_pos(X), not unknown(hu_win(X)).

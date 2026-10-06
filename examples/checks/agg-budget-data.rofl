@@ -1,0 +1,98 @@
+-- examples/checks/agg-budget-data.rofl — THE BUDGET'S DATASET, shared by the
+-- agg_<kind>_budget worlds (docs/aggregates.md, "Holes, as built"). A chain
+-- of 40 nodes and its closure: the budget of each world cuts the evaluation
+-- while the closure is still being derived, so every aggregate over it reads
+-- a relation that never closed. A cut is a hole on the world,
+-- hole($adhoc, budget_exhausted), and an aggregate over what was derived
+-- before it is no answer: never a smaller count, a partial sum, the best of
+-- what arrived, the median of a group cut short, or an empty group's 0. The
+-- wall stops the rules of the world, so each world's file says, as lines of
+-- the state (scripts/goldens.ts), which rows the cut state must hold and
+-- must not.
+edb(ab_e).
+edb(ab_node).
+ab_e(n0, n1, 1).
+ab_e(n1, n2, 2).
+ab_e(n2, n3, 3).
+ab_e(n3, n4, 4).
+ab_e(n4, n5, 5).
+ab_e(n5, n6, 6).
+ab_e(n6, n7, 7).
+ab_e(n7, n8, 8).
+ab_e(n8, n9, 9).
+ab_e(n9, n10, 10).
+ab_e(n10, n11, 11).
+ab_e(n11, n12, 12).
+ab_e(n12, n13, 13).
+ab_e(n13, n14, 14).
+ab_e(n14, n15, 15).
+ab_e(n15, n16, 16).
+ab_e(n16, n17, 17).
+ab_e(n17, n18, 18).
+ab_e(n18, n19, 19).
+ab_e(n19, n20, 20).
+ab_e(n20, n21, 21).
+ab_e(n21, n22, 22).
+ab_e(n22, n23, 23).
+ab_e(n23, n24, 24).
+ab_e(n24, n25, 25).
+ab_e(n25, n26, 26).
+ab_e(n26, n27, 27).
+ab_e(n27, n28, 28).
+ab_e(n28, n29, 29).
+ab_e(n29, n30, 30).
+ab_e(n30, n31, 31).
+ab_e(n31, n32, 32).
+ab_e(n32, n33, 33).
+ab_e(n33, n34, 34).
+ab_e(n34, n35, 35).
+ab_e(n35, n36, 36).
+ab_e(n36, n37, 37).
+ab_e(n37, n38, 38).
+ab_e(n38, n39, 39).
+ab_e(n39, n40, 40).
+ab_node(n0).
+ab_node(n1).
+ab_node(n2).
+ab_node(n3).
+ab_node(n4).
+ab_node(n5).
+ab_node(n6).
+ab_node(n7).
+ab_node(n8).
+ab_node(n9).
+ab_node(n10).
+ab_node(n11).
+ab_node(n12).
+ab_node(n13).
+ab_node(n14).
+ab_node(n15).
+ab_node(n16).
+ab_node(n17).
+ab_node(n18).
+ab_node(n19).
+ab_node(n20).
+ab_node(n21).
+ab_node(n22).
+ab_node(n23).
+ab_node(n24).
+ab_node(n25).
+ab_node(n26).
+ab_node(n27).
+ab_node(n28).
+ab_node(n29).
+ab_node(n30).
+ab_node(n31).
+ab_node(n32).
+ab_node(n33).
+ab_node(n34).
+ab_node(n35).
+ab_node(n36).
+ab_node(n37).
+ab_node(n38).
+ab_node(n39).
+ab_node(n40).
+-- a node nothing reaches: its group is empty for certain once ab_r closes
+ab_node(lone).
+ab_r(A, B, W) :- ab_e(A, B, W).
+ab_r(A, C, W) :- ab_r(A, B, _), ab_e(B, C, W).

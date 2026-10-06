@@ -1,0 +1,7 @@
+-- expect-refusal: a relation has one algebra
+-- a count as a tropical tag's weight: its head keeps the least value, the
+-- weight is a count, another algebra
+edb(tsr_h).
+tsr_h(a, b). tsr_h(a, c).
+tag tsr_cnt(A, tropical T).
+tsr_cnt(A, N) :- tsr_h(A, _), N is count(X : tsr_h(A, X)).

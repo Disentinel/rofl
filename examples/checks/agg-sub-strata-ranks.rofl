@@ -1,0 +1,11 @@
+-- examples/checks/agg-sub-strata-ranks.rofl — for the stock evaluator: the
+-- ranks rules/strata.rofl cannot give (telling a read from outside a
+-- subsumptive relation's recursion from one inside needs a negation that
+-- evaluator cannot order before it reads its table), so the program ranks
+-- each outer reader of agg-sub-data.rofl and agg-sub-strata-check.rofl above
+-- what it reads.
+stratum(as_faster, 9).
+stratum(as_fastest, 10).
+stratum(assc_have, 9).
+stratum(assc_extra, 9).
+stratum(assc_missing, 10).

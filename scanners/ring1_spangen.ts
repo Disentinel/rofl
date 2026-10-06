@@ -27,7 +27,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { parseProgram } from '../src/parser.ts';
-import type { Clause, Term } from '../src/unify.ts';
+import type { Clause, PlainElem, Term } from '../src/unify.ts';
 
 const REPO = fs.realpathSync(new URL('..', import.meta.url).pathname);
 const read = (p: string): string => fs.readFileSync(path.join(REPO, p), 'utf8');
@@ -162,7 +162,7 @@ function valuedRels(prog: Clause[], byHead: Map<string, { c: Clause; i: number }
       if (c.body.length === 0 || I === null || v === null) { ok = false; break; }
       const off = offsets(c, I);
       const tests: Test[] = [];
-      for (const b of c.body) {
+      for (const b of c.body as PlainElem[]) {
         if (b.t === 'bi' || SKIP.has(b.lit.rel)) continue;
         const t = asTest(b.lit.rel, b.t === 'neg', b.lit.args, off);
         if (!t) { ok = false; break; }
@@ -244,7 +244,7 @@ export function extract(): { rels: SpanRel2[]; refused: Refusal[]; valued: Value
           const stepOff = cursor ? offsets(c, cursor) : off;
           const step: Test[] = [];
           let bad = false;
-          for (const b of c.body) {
+          for (const b of c.body as PlainElem[]) {
             if (b.t === 'bi' || (b.t === 'pos' && b.lit.rel === rel) || SKIP.has(b.lit.rel)) continue;
             const t = asTest(b.lit.rel, b.t === 'neg', b.lit.args, stepOff);
             if (!t) { bad = true; break; }
@@ -274,7 +274,7 @@ export function extract(): { rels: SpanRel2[]; refused: Refusal[]; valued: Value
         let curOff = off;
         const steps: Step[] = [];
         let bad: string | null = null;
-        for (const b of c.body) {
+        for (const b of c.body as PlainElem[]) {
           if (b.t === 'bi') continue;
           if (SKIP.has(b.lit.rel)) continue;
           const a0 = vn(b.lit.args[0]);
