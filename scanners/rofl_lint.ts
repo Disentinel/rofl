@@ -43,7 +43,7 @@ import { readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { parseProgram } from '../src/parser.ts';
 import { tokenize } from '../src/tokens.ts';
-import type { BodyElem, Clause, Lit, Term } from '../src/unify.ts';
+import type { BodyElem, Clause, Lit, PlainElem, Term } from '../src/unify.ts';
 
 const ROOT = join(import.meta.dirname, '..');
 const q = (s: string) => JSON.stringify(s);
@@ -115,7 +115,7 @@ function sig(body: BodyElem[], rels: boolean): string {
     if (!rmap.has(r)) rmap.set(r, `R${rmap.size}`);
     return rmap.get(r)!;
   };
-  return body.map((b) => {
+  return (body as PlainElem[]).map((b) => {
     if (b.t === 'bi') return `${termStr(b.l, ren)} ${b.op} ${termStr(b.r, ren)}`;
     return `${b.t === 'neg' ? 'not ' : ''}${rel(b.lit.rel)}[${bookOf(b.lit)}](${pat(b.lit, ren)})`;
   }).join(', ');
@@ -209,8 +209,8 @@ export function analyse(sources: Source[] = treeSources(), ts: Set<string> = tsN
       // verdict no fact spells because it is derived.
       const walkAtoms = (t: Term) => { if (t.k === 'a') atomSeen.add(t.name); else if (t.k === 'f') t.args.forEach(walkAtoms); };
       c.head.args.forEach(walkAtoms);
-      for (const b of c.body) { if (b.t === 'bi') { walkAtoms(b.l); walkAtoms(b.r); } else b.lit.args.forEach(walkAtoms); }
-      for (const b of c.body) if (b.t !== 'bi') readByRule.add(b.lit.rel);
+      for (const b of c.body as PlainElem[]) { if (b.t === 'bi') { walkAtoms(b.l); walkAtoms(b.r); } else b.lit.args.forEach(walkAtoms); }
+      for (const b of c.body as PlainElem[]) if (b.t !== 'bi') readByRule.add(b.lit.rel);
     });
 
     // comment blocks: maximal runs of consecutive comment lines
@@ -286,7 +286,7 @@ export function analyse(sources: Source[] = treeSources(), ts: Set<string> = tsN
     F(`clause(${q(id)}, ${q(file)}, ${line}, ${c.head.rel}, ${bookOf(c.head)}, ${c.head.args.length}).`);
     F(`head_pat(${q(id)}, ${q(pat(c.head))}).`);
     let np = 0, nn = 0, nb = 0;
-    c.body.forEach((b, i) => {
+    (c.body as PlainElem[]).forEach((b, i) => {
       if (b.t === 'bi') { nb++; return; }
       if (b.t === 'pos') np++; else nn++;
       F(`premise(${q(id)}, ${i}, ${b.lit.rel}, ${bookOf(b.lit)}, ${b.t}, ${q(pat(b.lit))}).`);
@@ -305,7 +305,7 @@ export function analyse(sources: Source[] = treeSources(), ts: Set<string> = tsN
       else if (t.k === 'f') t.args.forEach(countVars);
     };
     c.head.args.forEach(countVars);
-    for (const b of c.body) { if (b.t === 'bi') { countVars(b.l); countVars(b.r); } else b.lit.args.forEach(countVars); }
+    for (const b of c.body as PlainElem[]) { if (b.t === 'bi') { countVars(b.l); countVars(b.r); } else b.lit.args.forEach(countVars); }
     const wildcard = (t: Term) => t.k === 'v' && (t.name.startsWith('_') || varCount.get(t.name) === 1);
     const reported = new Set<string>();
     for (const qlit of pos) {

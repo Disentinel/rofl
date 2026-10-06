@@ -705,7 +705,7 @@ function setSpellingRefusals(rules: DRule[], lattices: [string, number, string][
     const head = r.clause.head;
     const t = head.args[head.args.length - 1];
     if (t !== undefined) {
-      const open = setElems(t) !== null && t.args !== undefined && openSetAt(t) === t;
+      const open = setElems(t) !== null && t.k === 'f' && t.args !== undefined && openSetAt(t) === t;
       if (open && joinOf(head.rel) === null) out.push([r.id, 'set_pattern']);
     }
     for (const l of r.clause.body.flatMap(litsOf)) {
@@ -5589,7 +5589,7 @@ export class AggEval {
       let us = this.cellReach.get(c);
       if (us === undefined) {
         if (sealedNow) continue;
-        us = this.reachOf(r.op, this.aggParam(a, s), this.rankKey(a, s), r.members.map((m) => m.proj), r.members.map((m) => m.value), r.value, index.at(g));
+        us = this.reachOf(r.op as AggOp, this.aggParam(a, s), this.rankKey(a, s), r.members.map((m) => m.proj), r.members.map((m) => m.value), r.value, index.at(g));
       }
       if (us.length > 0) groups.push([r.keyTerms, us, this.cellCond.get(c) ?? null]);
     }

@@ -454,6 +454,9 @@ export type BodyElem =
   // part of the canonical spelling.
   | { t: 'agg'; op: string; res: Term; vals: Term[]; keys: Term[]; body: BodyElem[]; at?: number; shared?: string[] };
 
+/** A body element that is not an aggregate: what the scanners of rules without one read. */
+export type PlainElem = Exclude<BodyElem, { t: 'agg' }>;
+
 /** A clause, a lattice declaration (`lattice dist(A, C, min D).` is the head
  *  `dist(A, C, D)` with no body and `lattice` the operation `min`; a tag's
  *  semiring is in `lattice` with `tag` set), or a dominance rule (`dominator`). */

@@ -1155,7 +1155,7 @@ export function decodeRules(store: FactStore): { rules: DRule[]; diagnostics: st
     const id = f.args[0].name;
     let arr = prems.get(id);
     if (!arr) { arr = []; prems.set(id, arr); }
-    arr.push({ k: f.args[1].v, t: f.args[2] });
+    arr.push({ k: f.args[1].v as number, t: f.args[2] });
   }
   const rules: DRule[] = [];
   for (const f of store.relAll(V.rule)) {

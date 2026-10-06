@@ -21,7 +21,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { parseProgram } from '../src/parser.ts';
-import type { Clause, Term } from '../src/unify.ts';
+import type { Clause, PlainElem, Term } from '../src/unify.ts';
 
 const REPO = fs.realpathSync(new URL('..', import.meta.url).pathname);
 const read = (p: string): string => fs.readFileSync(path.join(REPO, p), 'utf8');
@@ -103,7 +103,7 @@ export function extract(): { preds: Pred[]; order: string[]; refused: string[] }
       const off = offsets(c, idx);
       const xs: Test[] = [];
       let stop: string | null = null;
-      for (const b of c.body) {
+      for (const b of c.body as PlainElem[]) {
         if (b.t === 'bi') continue;                        // arithmetic folded into offsets
         const g = b.lit.args;
         const at = off.get(vn(g[0]) ?? '');

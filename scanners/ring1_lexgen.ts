@@ -27,7 +27,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { parseProgram } from '../src/parser.ts';
-import type { Clause, Lit, Term } from '../src/unify.ts';
+import type { Clause, Lit, PlainElem, Term } from '../src/unify.ts';
 
 const REPO = fs.realpathSync(new URL('..', import.meta.url).pathname);
 const read = (p: string): string => fs.readFileSync(path.join(REPO, p), 'utf8');
@@ -102,7 +102,7 @@ function condOf(lit: Lit, neg: boolean, idx: string, heads: Map<string, Clause[]
   const subOff = new Map<string, number>([[subIdx, off]]);
   collectOffsets(sub, subIdx, subOff);
   const cs: Cond[] = [];
-  for (const b of sub.body) {
+  for (const b of sub.body as PlainElem[]) {
     if (b.t === 'bi') continue;
     cs.push(condOf(b.lit, b.t === 'neg', subIdx, heads, subOff, depth + 1));
   }
@@ -184,7 +184,7 @@ export function extract(): Automaton {
     const offsets = new Map<string, number>([[idx, 0]]);
     collectOffsets(c, idx, offsets);
     const cs: Cond[] = [];
-    for (const b of c.body) {
+    for (const b of c.body as PlainElem[]) {
       if (b.t === 'bi') continue;
       cs.push(condOf(b.lit, b.t === 'neg', idx, heads, offsets));
     }

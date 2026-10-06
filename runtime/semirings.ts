@@ -467,7 +467,7 @@ export type Chaos = number | typeof REJECTED;
  *  and one for a = 0. star(one) = one, so a CLOSED declaration would compute
  *  the same values; BOUNDED is the honest one, because convergence is by
  *  finite height and not by closure. Same note as trustSemiring's. */
-export function chaosSemiring(ceiling: number): Semiring<Chaos> {
+export function chaosSemiring(ceiling: number): Extract<Semiring<Chaos>, { discipline: typeof BOUNDED }> {
   if (!(Number.isInteger(ceiling) && ceiling >= 0)) {
     throw new RangeError(
       `not a contradiction ceiling: ${ceiling} (expected a non-negative integer)`);

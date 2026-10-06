@@ -126,6 +126,7 @@ export const relOf = (fact: string): string => fact.slice(0, fact.indexOf('('));
 
 // ------------------------------------------------------------------ the program, from its reflection
 type T = string | { f: string; a: T[] };
+type Ts = T | Ts[];
 interface Lit { rel: string; book: T; args: T[] }
 interface Rule { id: string; heads: Lit[]; prems: { t: T; raw: string }[] }
 export interface Program { rules: Rule[]; books: Set<string>; relBooks: Map<string, Set<string>> }
@@ -218,7 +219,7 @@ function readings(p: Program, r: Rule): Map<string, string>[] {
   for (const [name, bs] of dom) out = out.flatMap((m) => bs.map((b) => new Map(m).set(name, b)));
   return out;
 }
-const bookIn = (l: Lit, as: Map<string, string>): string => typeof l.book === 'string' ? l.book : as.get((l.book as { a: [string] }).a[0])!;
+const bookIn = (l: Lit, as: Map<string, string>): string => typeof l.book === 'string' ? l.book : as.get((l.book as { f: string; a: [string] }).a[0])!;
 const keyIn = (l: Lit, as: Map<string, string>) => `${l.rel}[${bookIn(l, as)}]`;
 
 interface Edge { from: string; to: string; neg: boolean }
@@ -278,7 +279,7 @@ export function phaseFaults(p: Program, ph: Map<string, number>): string[] {
 export function checkKeys(p: Program): Map<string, number[]> {
   const bad: string[] = [];
   const keyed = new Map<string, Set<number>>();
-  const count = (t: T | T[], out = new Map<string, number>()): Map<string, number> => {
+  const count = (t: Ts, out = new Map<string, number>()): Map<string, number> => {
     if (Array.isArray(t)) for (const x of t) count(x, out);
     else if (isVar(t)) out.set(t.a[0], (out.get(t.a[0]) ?? 0) + 1);
     else if (typeof t === 'object') for (const x of t.a) count(x, out);

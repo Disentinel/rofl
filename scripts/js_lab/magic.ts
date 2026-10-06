@@ -8,7 +8,7 @@ import { scan } from '../../scanners/js_ast.ts';
 import { MODEL_FILES } from '../../notebook/front.ts';
 import { parseProgram } from '../../src/parser.ts';
 
-import { varsOf, type Clause, type BodyElem, type Lit, type Term } from '../../src/unify.ts';
+import { varsOf, type Clause, type BodyElem, type PlainElem, type Lit, type Term } from '../../src/unify.ts';
 import { AggEval } from '../../src/aggeval.ts';
 import { provenanceRow } from '../../src/reflect.ts';
 
@@ -88,7 +88,8 @@ function sips(c: Clause, bound0: Set<string>): { order: BodyElem[]; boundAt: Set
   const vars = (b: BodyElem) => { const s = new Set<string>(); if (b.t === 'pos' || b.t === 'neg') { for (const a of b.lit.args) varsOf(a, s); } else if (b.t === 'bi') { varsOf(b.l, s); varsOf(b.r, s); } return s; };
   const onlyHere = (v: string, me: BodyElem) => ![...rest, ...order].some((o) => o !== me && vars(o).has(v)) && !tvars(c.head as any as Term).has(v);
   while (rest.length) {
-    const score = (b: BodyElem): number => {
+    const score = (b0: BodyElem): number => {
+      const b = b0 as PlainElem;
       const vs = vars(b);
       const shared = [...vs].filter((v) => useful.has(v)).length;
       if (b.t === 'bi') {

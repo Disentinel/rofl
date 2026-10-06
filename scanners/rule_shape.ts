@@ -50,7 +50,7 @@ import { parseProgram } from '../src/parser.ts';
 import { planBodyAgg } from '../src/aggeval.ts';
 import { resolveBook } from '../src/reflect.ts';
 import { varsOf } from '../src/unify.ts';
-import type { BodyElem, Clause, Lit, Term } from '../src/unify.ts';
+import type { BodyElem, Clause, Lit, PlainElem, Term } from '../src/unify.ts';
 
 const ROOT = join(import.meta.dirname, '..');
 
@@ -164,7 +164,7 @@ for (const { group, path } of programs()) {
     };
     for (const a of c.head.args) note(a, -1);
     note(c.head.persp, -1);
-    c.body.forEach((b, i) => {
+    (c.body as PlainElem[]).forEach((b, i) => {
       if (b.t === 'bi') { note(b.l, i); note(b.r, i); }
       else { for (const a of b.lit.args) note(a, i); note(b.lit.persp, i); }
     });
@@ -177,7 +177,7 @@ for (const { group, path } of programs()) {
     const groundIn = (t: Term) => [...varsOf(t)].every((v) => bound.has(v));
     const bindAll = (t: Term) => { for (const v of varsOf(t)) bound.add(v); };
 
-    for (const b of plan) {
+    for (const b of plan as PlainElem[]) {
       if (b.t === 'neg') {
         const i = bodyIndex.get(b)!;
         const site = `${rid}@${i}`;
