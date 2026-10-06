@@ -61,7 +61,7 @@ export interface DriveOpts {
   log?: (line: string) => void;
 }
 
-interface Pub { keys: string[]; rel: string; pubs: Set<string> }
+interface Pub { keys: string[]; broadcast: boolean; rel: string; pubs: Set<string> }
 interface Vol {
   v: Volume;
   inputs: Set<string>;
@@ -83,8 +83,8 @@ export interface Driven {
   phases: Map<string, number>;
   stats: { evaluations: number; incremental: number; reheated: number; first: number; rounds: number[]; maxPhase: number;
     published: number; inputs: number; inputsMax: number; inputsByRel: Record<string, number>; cooled: number; coldBytes: number; withdrawn: number;
-    /** values at a joined later argument that no world can name (an integer, a compound): published, keyed by no volume */
-    unkeyed: number };
+    /** facts with a joined later argument no world can name (an integer, a compound): delivered to every volume */
+    broadcast: number };
   answers(): Promise<string[]>;
   /** the why of a fact in the resident world, the volumes on its chain lifted and cooled again */
   why(query: string): Promise<{ text: string; lifted: string[] }>;
@@ -108,6 +108,13 @@ export function argsOf(fact: string): string[] {
 /** A volume subscribes by a node id, a string or an atom, the names a world holds; a key of any other shape (an
  *  integer, a compound) could never be named, so the fact is refused rather than published to nobody. */
 const NAMEABLE = /^(?:n[0-9a-f]{16}_\d+|"(?:[^"\\]|\\.)*"|[a-z_]\w*)$/;
+/** The keys a surface fact is read by: its first argument, and the later joined arguments (`positions`) whose value a
+ *  world can name. A joined value no world names (an integer, a compound) cannot be subscribed to, so the fact is
+ *  BROADCAST: every volume reads it. Over-delivery costs time only. */
+export function keysOf(fact: string, positions: number[]): { keys: string[]; broadcast: boolean } {
+  const later = positions.map((at) => argsOf(fact)[at]);
+  return { keys: [...new Set([keyOf(fact), ...later.filter((k) => NAMEABLE.test(k))])], broadcast: later.some((k) => !NAMEABLE.test(k)) };
+}
 export function keyOf(fact: string, at = 0): string {
   const key = argsOf(fact)[at] ?? '';
   if (!NAMEABLE.test(key)) {
@@ -351,12 +358,13 @@ export async function drive(o: DriveOpts): Promise<Driven> {
   const byKey = new Map<string, Set<string>>();
   const subs = new Map<string, Set<string>>();
   const stats = { evaluations: 0, incremental: 0, reheated: 0, first: 0, rounds: [] as number[], maxPhase, published: 0,
-    inputs: 0, inputsMax: 0, inputsByRel: {} as Record<string, number>, cooled: 0, coldBytes: 0, withdrawn: 0, unkeyed: 0 };
+    inputs: 0, inputsMax: 0, inputsByRel: {} as Record<string, number>, cooled: 0, coldBytes: 0, withdrawn: 0, broadcast: 0 };
   let phase = 0;
   const visible = (f: string) => phaseOf(relOf(f)) <= phase;
   const hot: string[] = [];
   const dirty = new Set<string>();
   const ownerOf = (key: string) => NODE_KEY.exec(key)?.[1];
+  const touchAll = (except: string) => { for (const q of vols.keys()) if (q !== except) dirty.add(q); };
   const touch = (key: string, except: string) => {
     for (const q of subs.get(key) ?? []) if (q !== except) dirty.add(q);
     const own = ownerOf(key);
@@ -369,6 +377,11 @@ export async function drive(o: DriveOpts): Promise<Driven> {
   const wanted = (p: string, names: Iterable<string>): Set<string> => {
     const out = new Set<string>(), seen = new Set<string>();
     const todo = [...(o.brk === 'narrow' ? [] : names), ...(ownKeys.get(p) ?? [])];
+    for (const f of broadcast) {
+      if (!visible(f) || ![...surface.get(f)!.pubs].some((q) => q !== p)) continue;
+      out.add(f);
+      for (const m of f.matchAll(TERM)) todo.push(m[0]);
+    }
     while (todo.length) {
       const key = todo.pop()!;
       if (seen.has(key)) continue;
@@ -383,6 +396,7 @@ export async function drive(o: DriveOpts): Promise<Driven> {
     return out;
   };
   const ownKeys = new Map<string, Set<string>>();
+  const broadcast = new Set<string>();
 
   async function cool(p: string): Promise<void> {
     const v = vols.get(p)!;
@@ -450,10 +464,8 @@ export async function drive(o: DriveOpts): Promise<Driven> {
       let s = surface.get(f);
       if (!s) {
         const rel = relOf(f);
-        // the first argument is the key and must be nameable; a later one a rule joins on is a key where its value can be
-        // named, and an integer or a compound there is counted (`unkeyed`): no volume's world names it, so it reads it by no key
-        const later = (keyPos.get(rel) ?? []).map((at) => argsOf(f)[at]).filter((k) => NAMEABLE.test(k) || (stats.unkeyed++, false));
-        s = { keys: [...new Set([keyOf(f), ...later])], rel, pubs: new Set() };
+        s = { ...keysOf(f, keyPos.get(rel) ?? []), rel, pubs: new Set() };
+        if (s.broadcast) broadcast.add(f);
         surface.set(f, s);
         for (const k of s.keys) {
           if (!byKey.has(k)) byKey.set(k, new Set());
@@ -473,12 +485,13 @@ export async function drive(o: DriveOpts): Promise<Driven> {
     v.published = mine;
     // within a phase what is published only grows: a withdrawal is counted, and the gate reads the count
     stats.withdrawn += gone.filter(visible).length;
-    for (const f of [...added, ...gone]) if (visible(f)) for (const k of surface.get(f)!.keys) touch(k, p);
+    for (const f of [...added, ...gone]) if (visible(f)) { for (const k of surface.get(f)!.keys) touch(k, p); if (surface.get(f)!.broadcast) touchAll(p); }
     const now = added.filter(visible);
     await pin(now);
     for (const f of gone) {
       if (visible(f)) await resident.retract(f);
       for (const k of surface.get(f)!.keys) byKey.get(k)?.delete(f);
+      broadcast.delete(f);
       surface.delete(f);
     }
     v.world = w;
@@ -491,7 +504,7 @@ export async function drive(o: DriveOpts): Promise<Driven> {
     if (phase > 0) {
       // what was withheld is published now; whoever reads its key is evaluated again
       const now = [...surface.keys()].filter((f) => phaseOf(relOf(f)) === phase);
-      for (const f of now) { const s = surface.get(f)!; for (const k of s.keys) touch(k, s.pubs.size === 1 ? [...s.pubs][0] : ''); }
+      for (const f of now) { const s = surface.get(f)!; for (const k of s.keys) touch(k, s.pubs.size === 1 ? [...s.pubs][0] : ''); if (s.broadcast) touchAll(s.pubs.size === 1 ? [...s.pubs][0] : ''); }
       await pin(now);
     }
     let rounds = 0;
@@ -512,6 +525,7 @@ export async function drive(o: DriveOpts): Promise<Driven> {
   for (const p of [...hot]) await cool(p);
   hot.length = 0;
   stats.published = surface.size;
+  stats.broadcast = [...surface.values()].filter((s) => s.broadcast).length;
   stats.inputs = [...vols.values()].reduce((a, v) => a + v.inputs.size, 0);
   for (const v of vols.values()) {
     stats.inputsMax = Math.max(stats.inputsMax, v.inputs.size);

@@ -2,7 +2,7 @@
 // The driver itself, with the engine, is scripts/surface_split.ts --driver (npm run test:split).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { argsOf, checkKeys, keyOf, phaseFaults, phases, programFrom } from '../runtime/split.ts';
+import { argsOf, checkKeys, keyOf, keysOf, phaseFaults, phases, programFrom } from '../runtime/split.ts';
 
 const v = (n: string) => `$var("${n}")`;
 const lit = (rel: string, book: string, ...args: string[]) => `$lit(${rel},${book},${args.reduceRight((t, a) => `$cons(${a},${t})`, '$nil')},$now)`;
@@ -67,4 +67,17 @@ test('the phases count negations and aggregates over what the surface reaches, a
   assert.deepEqual(phaseFaults(p, ph), []);
   assert.ok(phaseFaults(p, new Map([...ph, ['d[surface]', 0]])).length > 0, 'a phase too low is a fault');
   assert.ok(phaseFaults(p, new Map([...ph, ['e[flow]', 3]])).length > 0, 'a phase no premise puts it at is a fault');
+});
+
+test('a fact joined by a value no world can name is broadcast, not keyed by nobody', () => {
+  // `sx_str(V) :- sx_export_lit(_, _, V), str_value(V)`: read by its third argument
+  const p = prog([{ head: lit('sx_str', 'surface', v('V')), prems: [lit('sx_export_lit', 'surface', v('_$0'), v('_$1'), v('V')), lit('str_value', 'flow', v('V'))] }]);
+  const positions = checkKeys(p).get('sx_export_lit[surface]')!;
+  assert.deepEqual(positions, [2]);
+  const int = keysOf('sx_export_lit[surface]("a.ts","PORT",8080)', positions);
+  assert.equal(int.broadcast, true, 'an integer value is delivered to every volume');
+  assert.deepEqual(int.keys, ['"a.ts"'], 'a keyed-by-nobody version would hold it under its first argument only, which the volume that needs 8080 never names');
+  const str = keysOf('sx_export_lit[surface]("a.ts","NAME","x")', positions);
+  assert.equal(str.broadcast, false);
+  assert.deepEqual(str.keys, ['"a.ts"', '"x"']);
 });

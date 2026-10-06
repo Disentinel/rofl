@@ -277,9 +277,11 @@ The wall moves from memory to ingest scheduling.
   `[surface]` relation must join on an argument (a variable occurring again in the rule); a premise with none is refused,
   naming the rule. Where the joined argument is not the first (8 rules of the JS model read `sx_*` by a later argument,
   `sx_esc(N) :- sx_cjs(_, N)`) the fact is also keyed by that argument, so the volume of N finds it. A first argument that is an
-  integer or a compound is refused; at a later joined argument it is counted (`stats.unkeyed`) and keyed by nobody, since no
-  world names an integer: `sx_str(V) :- sx_export_lit(_, _, V), str_value(V)` of js-concat reads the exported values by V, and
-  an integer V (8080) is such a fact. That is a known gap the parity gate stands in for, not a proof. `keyOf` skips strings, so a parenthesis in a quoted argument no longer miscounts.
+  integer or a compound is refused; at a later joined argument it is BROADCAST (`stats.broadcast`): no
+  world names an integer, so every volume reads the fact and is evaluated again when one moves (over-delivery costs time
+  only). `sx_str(V) :- sx_export_lit(_, _, V), str_value(V)` of js-concat reads the exported values by V, and an integer V
+  (8080) is such a fact. The corpus has 3 such facts and no volume's outcome depends on them (a planted break that drops them stays green), so
+  the proof is test/split-driver.test.ts, an integer-joined fact a count-only version would not deliver. `keyOf` skips strings, so a parenthesis in a quoted argument no longer miscounts.
   Necessary, not sufficient: that the joined key is one the volume names is what the parity gate shows.
 - **Phases.** A literal whose book is a variable (the closure of a `tree`) is read in every book its relation holds; a
   book that is neither refused, where it used to drop the edge. The phases are checked as a property of the
