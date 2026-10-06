@@ -28,6 +28,8 @@
 //   --break early    the answers of each volume's first evaluation, before the surface fixpoint: must be red
 //   --break narrow   a volume subscribes to its own keys only, not to the names it holds: must be red
 //   --break nophase  every surface relation published from the start, negations read an incomplete surface
+//   --break books    a volume cooled by the books code, flow and main only (a base fact of another book, `probe[audit]`
+//                    in the first volume, is forgotten: the driver refuses it, or the volume differs from the whole world)
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as os from 'node:os';
@@ -54,7 +56,7 @@ const brk = opt('--break');
 const orders = opt('--order') ? [opt('--order')!] : ['forward', 'reverse'];
 if (orders.some((o) => o !== 'forward' && o !== 'reverse')) { console.error('--order forward | reverse'); process.exit(64); }
 const verbose = argv.includes('--verbose');
-const BREAKS = driver ? ['early', 'narrow', 'nophase'] : ['naive', 'nosurface'];
+const BREAKS = driver ? ['early', 'narrow', 'nophase', 'books'] : ['naive', 'nosurface'];
 if (brk && !BREAKS.includes(brk)) { console.error(`--break ${BREAKS.join(' | ')}`); process.exit(64); }
 
 const read = (f: string): string => brk === 'naive' && (f.startsWith('rules/') && f !== 'rules/js-concat.rofl' || f === QUESTION)
@@ -82,6 +84,9 @@ for (const line of fs.readFileSync(path.join(ROOT, FACTS), 'utf8').split('\n')) 
 }
 const prefixOf = new Map([...fileOf].map(([p, f]) => [f, p]));
 const order = [...volumes.keys()].sort((a, b) => fileOf.get(a)!.localeCompare(fileOf.get(b)!));
+// one base fact in a book the model writes in but no volume fact uses: a volume that cools only the books of the model forgets it (a hot and a cold
+// volume then differ), and the driver refuses, or the volume's world differs from the whole world's
+volumes.get(order[0]!)!.push(`probe[audit](n${order[0]}_1, "tag", "x").`);
 
 // ------------------------------------------------------------------ one engine, behind four verbs
 interface World { fork(): Promise<World>; assert(text: string): Promise<void>; evaluate(): Promise<void>; state(): Promise<string>; why(q: string): Promise<string>; close(): Promise<void> }
@@ -172,17 +177,22 @@ const all = (r: Read): Set<string> => new Set([...r.cross, ...[...r.single.value
 /** The ingest through runtime/split.ts: each volume's world at its last evaluation, the surface, and the checks of
  *  the resident world (its answers, the why of each side_effect_value answer, its state after the whys). */
 async function driven(seq: string[], W: Read, whole: World, held: Map<string, boolean>): Promise<{ last: Map<string, string>; surface: Set<string>;
-  evals: number; bad: number; lines: string[] }> {
+  evals: number; bad: number; lines: string[]; refused?: string }> {
   const port = await RoflPort.start(path.join(ROOT, `rust/target/${process.env.ROFL_PROFILE ?? 'release'}/rofl-serve`));
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rofl-split-'));
   const last = new Map<string, string>();
   const t0 = performance.now();
   const d = await drive({
     port, budget: BUDGET, space: SPACE, program: model.map(read), core: core.join('\n'), dir, hot,
-    brk: brk as 'early' | 'narrow' | 'nophase' | undefined,
+    brk: brk as 'early' | 'narrow' | 'nophase' | 'books' | undefined,
     volumes: seq.map((p) => ({ prefix: p, file: fileOf.get(p)!, text: volumes.get(p)!.join('\n') })),
     inspect: (p, st) => last.set(p, st), log: verbose ? (l) => console.error(l) : undefined,
+  }).catch(async (e: Error) => {
+    await port.stop();
+    fs.rmSync(dir, { recursive: true, force: true });
+    return e;
   });
+  if (d instanceof Error) return { last, surface: new Set(), evals: 0, bad: 1, lines: [], refused: d.message };
   const ms = Math.round(performance.now() - t0);
   const lines: string[] = [];
   let bad = 0;
@@ -232,6 +242,7 @@ async function driven(seq: string[], W: Read, whole: World, held: Map<string, bo
     if (verbose && a !== b.text) { const at = path.join(os.tmpdir(), `rofl-split-why-${n}`); fs.writeFileSync(`${at}.whole`, a); fs.writeFileSync(`${at}.resident`, b.text); }
   }
   if (whyBad) { bad++; lines.push(`  ${whyBad} of ${n} whys are not proofs in the whole world`); }
+  else if (!n) lines.push('  whys: not asked (--whys 0)');
   else lines.push(`  ${n} whys are proofs in the whole world resting on base facts, ${exact} of them its own byte for byte; volumes lifted a why: ${n ? (liftedSum / n).toFixed(1) : 0} mean, ${liftedMax} max`);
   const after = await d.resident.stateText();
   if (after !== before) { bad++; lines.push("  the resident world after the whys is not the one before them"); if (verbose) { fs.writeFileSync(path.join(os.tmpdir(), "rofl-split-resident.before"), before); fs.writeFileSync(path.join(os.tmpdir(), "rofl-split-resident.after"), after); } }
@@ -262,6 +273,11 @@ for (const engine of engines) {
     let bad = 0;
     if (driver) {
       const r = await driven(seq, W, whole, held);
+      if (r.refused) {
+        console.log(`${engine} driver ${dir}: RED, the driver refused: ${r.refused}`);
+        red++;
+        continue;
+      }
       for (const [p, st] of r.last) last.set(p, readState(st));
       published.set(seq[0]!, r.surface);
       evals += r.evals;
