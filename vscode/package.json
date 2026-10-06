@@ -2,7 +2,7 @@
   "name": "rofl",
   "displayName": "ROFL",
   "description": "ROFL: a notebook of checked invariants over your code — ask, explain (why / whynot), what-if",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "preview": true,
   "publisher": "GrafemaLabs",
