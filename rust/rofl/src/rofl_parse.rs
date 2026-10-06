@@ -392,9 +392,18 @@ impl<'a> Parser<'a> {
                 while k + 1 < inner.len() {
                     if inner[k] == '\\' {
                         let e = *inner.get(k + 1).ok_or("string: a trailing backslash")?;
+                        // what `canon_term` writes is read back: a control character leaves as `\b`, `\f` or `\u00XX`
+                        if e == 'u' {
+                            let hex: String = inner.get(k + 2..k + 6).map(|h| h.iter().collect()).unwrap_or_default();
+                            let c = u32::from_str_radix(&hex, 16).ok().filter(|n| hex.len() == 4 && *n < 0x20).and_then(char::from_u32)
+                                .ok_or_else(|| format!("string: \\u is a control character as the renderer writes it, \\u0000 to \\u001f, not \\u{hex}"))?;
+                            out.push(c);
+                            k += 6;
+                            continue;
+                        }
                         out.push(match e {
-                            'n' => '\n', 't' => '\t', 'r' => '\r', '\\' => '\\', '"' => '"',
-                            _ => return Err(format!("string: unknown escape \\{e}; the escapes are \\n \\t \\r \\\\ \\\"")),
+                            'n' => '\n', 't' => '\t', 'r' => '\r', '\\' => '\\', '"' => '"', 'b' => '\u{8}', 'f' => '\u{c}',
+                            _ => return Err(format!("string: unknown escape \\{e}; the escapes are \\n \\t \\r \\b \\f \\uXXXX \\\\ \\\"")),
                         });
                         k += 2;
                     } else { out.push(inner[k]); k += 1; }

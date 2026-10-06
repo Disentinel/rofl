@@ -181,9 +181,28 @@ export class RoflSession {
    *  INDEXED rather than returning to the frontier, and `hole($cold(File),
    *  cooled_to_disk)` so a question about the cold volume refuses instead of
    *  answering empty. */
-  async cool(prefix: string, path: string): Promise<{ facts: number; bytes: number; path: string }> {
-    const r = await this.port.send({ op: 'cool', session: this.id, prefix, path });
+  async cool(prefix: string, path: string, books?: string[]): Promise<{ facts: number; bytes: number; path: string }> {
+    const r = await this.port.send({ op: 'cool', session: this.id, prefix, path, books });
     return { facts: r.facts as number, bytes: r.bytes as number, path: r.path as string };
+  }
+
+  /** A cooled volume back, refused when this engine did not write it; into an evaluated world by delta. */
+  async reheat(path: string): Promise<{ admitted: number; evaluated: boolean }> {
+    const r = await this.port.send({ op: 'reheat', session: this.id, path });
+    return { admitted: r.admitted as number, evaluated: r.evaluated as boolean };
+  }
+
+  /** `assert`, saying whether the world was brought up to date by delta (`full` null) or left for an evaluation. */
+  async add(rofl: string): Promise<{ added: number; full: string | null }> {
+    const r = await this.port.send({ op: 'assert', session: this.id, rofl });
+    return { added: r.added as number, full: r.full as string | null };
+  }
+
+  /** What this world wrote above the base it was forked from: the facts of `books` and of `rels`, and the atoms and
+   *  strings they name that do not begin with `prefix` (docs/surface-split.md, the driver). */
+  async view(prefix: string, books: string[], rels: string[] = []): Promise<{ facts: string[]; names: string[] }> {
+    const r = await this.port.send({ op: 'view', session: this.id, prefix, books, rels });
+    return { facts: r.facts as string[], names: r.names as string[] };
   }
 
   /** Cool MANY volumes in one pass over the world.

@@ -658,6 +658,9 @@ impl Facts {
     fn len(&self) -> usize {
         self.recs.len()
     }
+    fn mark(&self) -> usize {
+        self.recs.mark
+    }
     fn push(&mut self, r: FactRec) {
         self.recs.push(r);
     }
@@ -1107,6 +1110,10 @@ impl Store {
     /// pool actually found, which is the number that decides whether it paid.
     pub fn tuple_count(&self) -> usize {
         self.facts.tups.len()
+    }
+    /// The first id of this world's own layer: what a fork wrote above the base it shares (0 in a world never forked).
+    pub fn layer_mark(&self) -> FactId {
+        self.facts.mark() as FactId
     }
     pub fn all_facts(&self) -> Vec<FactId> {
         (0..self.facts.len() as FactId)

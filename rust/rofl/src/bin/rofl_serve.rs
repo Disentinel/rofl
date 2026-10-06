@@ -65,6 +65,19 @@ fn full(a: rofl::session::Addition) -> Option<String> {
     }
 }
 
+/// An optional array of strings.
+fn strings(r: &Value, k: &str) -> Result<Option<Vec<String>>, String> {
+    match r.get(k) {
+        None | Some(Value::Null) => Ok(None),
+        Some(Value::Array(a)) => a
+            .iter()
+            .map(|v| v.as_str().map(|s| s.to_string()).ok_or_else(|| format!("`{k}` is an array of strings")))
+            .collect::<Result<Vec<_>, _>>()
+            .map(Some),
+        Some(_) => Err(format!("`{k}` is an array of strings")),
+    }
+}
+
 struct Server {
     sessions: HashMap<u64, Session>,
     next: u64,
@@ -156,7 +169,11 @@ impl Server {
             "cool" => {
                 let prefix = r.get("prefix").and_then(|v| v.as_str()).ok_or("cool needs `prefix`")?.to_string();
                 let out = r.get("path").and_then(|v| v.as_str()).ok_or("cool needs `path`")?.to_string();
-                let c = self.get(r)?.cool(&prefix, &out)?;
+                // by book: only the facts of `books` go, a `[surface]` kept beside them stays
+                let c = match strings(r, "books")? {
+                    Some(bs) => self.get(r)?.cool_books(&prefix, &bs, &out)?,
+                    None => self.get(r)?.cool(&prefix, &out)?,
+                };
                 Ok(json!({ "facts": c.facts, "bytes": c.bytes, "path": c.path }))
             }
             // Many volumes in ONE pass over the world. Cooling them one at a
@@ -174,6 +191,23 @@ impl Server {
                     .map(|c| json!({ "facts": c.facts, "bytes": c.bytes, "path": c.path }))
                     .collect();
                 Ok(json!({ "volumes": rows }))
+            }
+            // A cooled volume back, refused if this engine did not write it; into an evaluated world by delta.
+            "reheat" => {
+                let p = r.get("path").and_then(|v| v.as_str()).ok_or("reheat needs `path`")?.to_string();
+                let s = self.get(r)?;
+                let n = s.reheat(&p).map_err(|d| d.join("\n"))?;
+                // evaluated by delta, or left for the next evaluation (a cooled world, a program the path refuses)
+                Ok(json!({ "admitted": n, "evaluated": !s.eval.store.dirty }))
+            }
+            // What a volume's world wrote above its base: the facts of `books` and `rels`, and the names it can
+            // subscribe by (`Session::layer_view`).
+            "view" => {
+                let prefix = r.get("prefix").and_then(|v| v.as_str()).unwrap_or("").to_string();
+                let books = strings(r, "books")?.unwrap_or_default();
+                let rels = strings(r, "rels")?.unwrap_or_default();
+                let (facts, names) = self.get(r)?.layer_view(&prefix, &books, &rels);
+                Ok(json!({ "facts": facts, "names": names }))
             }
             // The assertion trail, parked and fetched back. See
             // `Session::cool_trail` for why this is cooled rather than sealed.
