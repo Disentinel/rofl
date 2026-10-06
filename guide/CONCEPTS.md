@@ -53,16 +53,15 @@ review.rofl.md:18: cell 1 · rofl
   review.rofl.md:18: ? C is blocked by T  ->  1 answer
     - `c2` is blocked by `platform`
   review.rofl.md:19: why `c2` is blocked by `platform`
+    the value's steps, from where it is written:
+          `c2` is blocked by `platform`
+    the proof:
     `c2` is blocked by `platform`, because
       `c2` needs `platform`, because
         `c2` touches `storage` (given)
         `platform` owns `storage` (given)
-      not `c2` is covered for `platform` (nothing says so)
-        why not `c2` is covered for `platform`:
-          by the rule: C is covered for T if C is approved by P, P is on T
-            it stops at: `c2` is approved by some person
-          by the rule: C is covered for T if C is written by P, P is on T
-            it stops at: `ben` is on `platform`
+      + 1 side condition holds (nothing says otherwise)
+    (the whole proof: --all)
 review.rofl.md:26: cell 2 · rofl
   review.rofl.md:28: ? C is stuck  ->  1 answer
     - `c2` is stuck
