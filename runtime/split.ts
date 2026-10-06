@@ -33,6 +33,8 @@ import { type RoflPort, type RoflSession } from './port.ts';
 
 export const NODE = /\bn([0-9a-f]{16})_\d+/g;
 const NODE_KEY = /^n([0-9a-f]{16})_\d+$/;
+/** a node id or a string, as a fact key writes them */
+const TERM = /\bn[0-9a-f]{16}_\d+|"(?:[^"\\]|\\.)*"/g;
 /** the books a cooled volume drops; [surface] is what stays */
 export const COOLED_BOOKS = ['code', 'flow', 'main'];
 /** the question's answers, read from the resident world */
@@ -189,16 +191,22 @@ export async function drive(o: DriveOpts): Promise<Driven> {
   };
 
   /** the surface facts a volume reads: of a key it names or owns, visible, published by another volume */
+  // A fact read is mirrored into the volume, so the names it holds are the volume's too: they are followed here in
+  // one step, rather than one evaluation of the volume per hop.
   const wanted = (p: string, names: Iterable<string>): Set<string> => {
-    const out = new Set<string>();
-    const take = (key: string) => {
+    const out = new Set<string>(), seen = new Set<string>();
+    const todo = [...(o.brk === 'narrow' ? [] : names), ...(ownKeys.get(p) ?? [])];
+    while (todo.length) {
+      const key = todo.pop()!;
+      if (seen.has(key)) continue;
+      seen.add(key);
       for (const f of byKey.get(key) ?? []) {
         const s = surface.get(f)!;
-        if (visible(f) && [...s.pubs].some((q) => q !== p)) out.add(f);
+        if (out.has(f) || !visible(f) || ![...s.pubs].some((q) => q !== p)) continue;
+        out.add(f);
+        if (o.brk !== 'narrow') for (const m of f.matchAll(TERM)) if (!seen.has(m[0])) todo.push(m[0]);
       }
-    };
-    if (o.brk !== 'narrow') for (const n of names) take(n);
-    for (const key of ownKeys.get(p) ?? []) take(key);
+    }
     return out;
   };
   const ownKeys = new Map<string, Set<string>>();

@@ -48,6 +48,7 @@ check[checks]("rust/rofl/tests/asks_cone.rs", "an_explain_request_asserted_on_a_
 check[checks]("rust/rofl/tests/cool.rs", "a_cooled_volume_reheats_to_the_same_world", test).
 check[checks]("rust/rofl/tests/cool.rs", "a_cooled_file_leaves_the_frontier_only_once_it_is_recorded", test).
 check[checks]("rust/rofl/tests/cool.rs", "a_volume_this_engine_did_not_write_is_refused", test).
+check[checks]("rust/rofl/tests/cool.rs", "a_volume_cooled_by_book_keeps_its_surface_and_reheats_to_the_same_world", test).
 check[checks]("rust/rofl/tests/cool.rs", "an_unknown_volume_cools_nothing", test).
 check[checks]("rust/rofl/tests/cool.rs", "the_trail_cools_and_comes_back_whole", test).
 check[checks]("rust/rofl/tests/cool.rs", "a_trail_this_engine_did_not_write_is_refused", test).
