@@ -81,7 +81,7 @@ export interface Driven {
   surface: Map<string, Pub>;
   phases: Map<string, number>;
   stats: { evaluations: number; incremental: number; reheated: number; first: number; rounds: number[]; maxPhase: number;
-    published: number; inputs: number; cooled: number; coldBytes: number; withdrawn: number };
+    published: number; inputs: number; inputsMax: number; inputsByRel: Record<string, number>; cooled: number; coldBytes: number; withdrawn: number };
   answers(): Promise<string[]>;
   /** the why of a fact in the resident world, the volumes on its chain lifted and cooled again */
   why(query: string): Promise<{ text: string; lifted: string[] }>;
@@ -138,19 +138,28 @@ export async function phases(core: RoflSession): Promise<Map<string, number>> {
   return ph;
 }
 
+/** a refused text, with the line it names */
+const said = (text: string) => (e: Error): never => {
+  const n = Number(/line (\d+)/.exec(e.message)?.[1] ?? 0);
+  throw new Error(`${e.message}${n ? `: ${text.split('\n')[n - 1]?.slice(0, 300)}` : ''}`);
+};
+
 export async function drive(o: DriveOpts): Promise<Driven> {
   const log = o.log ?? (() => {});
   fs.mkdirSync(o.dir, { recursive: true });
   const core = await o.port.fresh(o.budget, { space: o.space });
-  for (const t of o.program) await core.load(t);
-  if (o.core.trim()) await core.assert(o.core);
+  for (const t of o.program) await core.load(t).catch(said(t));
+  if (o.core.trim()) await core.assert(o.core).catch(said(o.core));
   await core.evaluate();
   const ph = await phases(core);
   const phaseOf = (rel: string) => o.brk === 'nophase' ? 0 : ph.get(`${rel}`) ?? 0;
   const maxPhase = Math.max(0, ...[...ph].filter(([r]) => r.endsWith('[surface]')).map(([, p]) => o.brk === 'nophase' ? 0 : p));
   const resident = await core.fork();
   let rStale = false;
-  const pin = async (fs_: string[]) => { if (fs_.length && (await resident.add(fs_.map((f) => `${f}.`).join('\n'))).full !== null) rStale = true; };
+  const pin = async (fs_: string[]) => {
+    const text = fs_.map((f) => `${f}.`).join('\n');
+    if (fs_.length && (await resident.add(text).catch(said(text))).full !== null) rStale = true;
+  };
   // the relations of the volumes' facts are declared in the resident world: cold there, not undefined
   const baseRels = new Set<string>();
   for (const v of o.volumes) {
@@ -167,7 +176,7 @@ export async function drive(o: DriveOpts): Promise<Driven> {
   const byKey = new Map<string, Set<string>>();
   const subs = new Map<string, Set<string>>();
   const stats = { evaluations: 0, incremental: 0, reheated: 0, first: 0, rounds: [] as number[], maxPhase, published: 0,
-    inputs: 0, cooled: 0, coldBytes: 0, withdrawn: 0 };
+    inputs: 0, inputsMax: 0, inputsByRel: {} as Record<string, number>, cooled: 0, coldBytes: 0, withdrawn: 0 };
   let phase = 0;
   const visible = (f: string) => phaseOf(relOf(f)) <= phase;
   const hot: string[] = [];
@@ -212,7 +221,7 @@ export async function drive(o: DriveOpts): Promise<Driven> {
     v.evals++;
     let w = v.world;
     let stale = false;
-    const addFacts = async (text: string) => { if ((await w!.add(text)).full !== null) stale = true; };
+    const addFacts = async (text: string) => { if ((await w!.add(text).catch(said(text))).full !== null) stale = true; };
     if (w) {
       stats.incremental++;
       hot.splice(hot.indexOf(p), 1);
@@ -316,6 +325,10 @@ export async function drive(o: DriveOpts): Promise<Driven> {
   hot.length = 0;
   stats.published = surface.size;
   stats.inputs = [...vols.values()].reduce((a, v) => a + v.inputs.size, 0);
+  for (const v of vols.values()) {
+    stats.inputsMax = Math.max(stats.inputsMax, v.inputs.size);
+    for (const f of v.inputs) stats.inputsByRel[relOf(f)] = (stats.inputsByRel[relOf(f)] ?? 0) + 1;
+  }
 
   // the answers, once: the resident world holds them from here on
   const answerFacts = new Set<string>();
