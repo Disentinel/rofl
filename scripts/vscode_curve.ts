@@ -33,7 +33,6 @@ if (mode === 'split') {
   const t0 = performance.now();
   const vdir = fs.mkdtempSync(path.join(path.dirname(path.resolve(dir)), 'split-vol-'));
   const core: string[] = [], byPrefix = new Map<string, string[]>();
-  let twoFiles = 0;
   for (const c of chunks.filter((c) => c <= n)) {
     // a fact is one line unless a string in it holds a newline: lines are joined until the quotes close
     let open = '';
@@ -44,7 +43,7 @@ if (mode === 'split') {
       open = '';
       const ps = new Set([...line.matchAll(NODE)].map((m) => m[1]));
       if (ps.size === 0) { core.push(line); continue; }
-      if (ps.size > 1) twoFiles++;
+      if (ps.size > 1) throw new Error(`a base fact names two files, as scripts/surface_split.ts refuses: ${line.slice(0, 200)}`);
       const p = [...ps][0];
       if (!byPrefix.has(p)) byPrefix.set(p, []);
       byPrefix.get(p)!.push(line);
@@ -72,7 +71,7 @@ if (mode === 'split') {
   }
   const st = d.stats;
   console.log(JSON.stringify({
-    files: n, mode, volumes: volumes.length, baseFactsNamingTwoFiles: twoFiles, coreFacts: core.length, hot: Number(opt('--hot') ?? 8),
+    files: n, mode, volumes: volumes.length, coreFacts: core.length, hot: Number(opt('--hot') ?? 8),
     splitMs: Math.round(tSplit), wallMs: Math.round(wall), peakRssMb: Math.round(status('VmHWM')), endRssMb: Math.round(status('VmRSS')),
     nodePeakMb: Math.round(node / 1048576), residentFacts: (await d.resident.factCount()).facts, coreWorldFacts: (await d.core.factCount()).facts,
     surface: st.published, inputs: st.inputs, inputsMax: st.inputsMax, inputsByRel: st.inputsByRel, evaluations: st.evaluations, first: st.first, byDelta: st.incremental, reheated: st.reheated,
