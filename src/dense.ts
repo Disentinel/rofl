@@ -45,7 +45,13 @@ export function denseTokens(src: string): Tok[] {
       while (j < n && src[j] !== '"') {
         if (src[j] === '\\') {
           const e = src[j + 1];
-          const r = e === 'n' ? '\n' : e === 't' ? '\t' : e === 'r' ? '\r'
+          if (e === 'u') {
+            const h = src.slice(j + 2, j + 6);
+            const u = /^[0-9a-fA-F]{4}$/.test(h) ? parseInt(h, 16) : -1;
+            if (u < 0 || u >= 0x20) throw new DenseError(`line ${line}: unknown escape`);
+            s += String.fromCharCode(u); j += 6; continue;
+          }
+          const r = e === 'n' ? '\n' : e === 't' ? '\t' : e === 'r' ? '\r' : e === 'b' ? '\b' : e === 'f' ? '\f'
                   : e === '\\' ? '\\' : e === '"' ? '"' : undefined;
           if (r === undefined) throw new DenseError(`line ${line}: unknown escape`);
           s += r; j += 2; continue;
