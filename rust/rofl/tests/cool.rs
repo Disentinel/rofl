@@ -8,9 +8,11 @@
 //! So the gate is a byte-for-byte comparison of `canonicalState` before cooling
 //! and after reheating, and it is a real risk rather than a formality: the
 //! facts go out through `canon_term`, which spells a string the way
-//! `JSON.stringify` does, and come back through a parser that decodes FIVE
-//! escapes and refuses every other BY NAME. A control character in a string
-//! attribute would leave as a `\u` escape and never return. That is exactly the
+//! `JSON.stringify` does, and come back through a parser that decodes the
+//! escapes the renderer writes and refuses every other BY NAME. A control
+//! character in a string attribute left as a `\u` escape and never returned
+//! until the parser read `\u0000`..`\u001f` too (found by the surface-split
+//! driver on vscode, docs/surface-split.md). That is exactly the
 //! kind of gap a round trip finds and an eyeball does not, which is why the
 //! fixture below carries a quote, a backslash and a tab on purpose.
 use rofl::session::Session;
@@ -35,7 +37,7 @@ ast_node[code](na1b2c3d4_1, file, "a.js", 1).
 ast_node[code](na1b2c3d4_2, call, "a.js", 3).
 ast_child[code](na1b2c3d4_1, body, 0, na1b2c3d4_2).
 ast_attr[code](na1b2c3d4_2, name, "greet").
-ast_attr[code](na1b2c3d4_2, note, "a quote \" a backslash \\ a tab \t and a newline \n").
+ast_attr[code](na1b2c3d4_2, note, "a quote \" a backslash \\ a tab \t and a newline \n, a bell \u0007 and a form feed \f").
 ast_file[code](nf9e8d7c6_1, "b.js").
 ast_node[code](nf9e8d7c6_1, file, "b.js", 1).
 ast_node[code](nf9e8d7c6_2, call, "b.js", 7).
