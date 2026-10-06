@@ -181,3 +181,70 @@ The wall moves from memory to ingest scheduling.
   a fixpoint, forward and reverse, and every fact of every file equals the whole world's: 420 surface facts, 93
   evaluations. The planted break (the model before the book, no surface) loses 84 of 184 answers and invents 16.
 - **The lint** reads a mirrored relation as the channel; it is green with 8 excuses, each with its reason.
+
+## 7. Built: the driver (item 4)
+
+`runtime/split.ts` over rofl-serve; the finding is
+`f_the_driver_answers_from_core_and_surface_and_the_subscription_closure_is_the_cost`.
+
+- **A volume, locally.** The core (model, question, the facts naming no file) is one evaluated world; a volume is a
+  fork of it holding the file's facts and the `[surface]` facts it subscribes to, added by delta
+  (`Session::assert_delta`, `load_delta`). After its evaluation it publishes the `[surface]` facts it concluded and
+  not read, and is COOLED: `cool` by book (`Session::cool_books`, rofl-serve `cool` with `books`) writes its base
+  facts to a signed volume file and drops its `[code]`/`[flow]`/`[main]`, the surface staying where it was published.
+  The `hot` most recent worlds stay, and a later evaluation of one adds by delta; a cooled one is reheated (by delta
+  into a fork of the evaluated core). tests/cool.rs holds the by-book round trip byte for byte.
+- **Subscription by key.** A surface fact's key is its first argument: a module path, a callee, an escaping node. A
+  volume reads the facts of the keys it owns (its node prefix) and of the names its world holds (`view`: the atoms and
+  strings of what it wrote above the core), and since a fact read is mirrored, the names that fact holds too. It is
+  evaluated again only when a fact of a key it subscribed to moved. A subscription never shrinks.
+- **Phases: the ingest-order hazard, soundly.** Every relation gets a phase from the program's reflection: the most
+  negations (or aggregates) over relations `[surface]` reaches on a path from `[surface]` to it. A surface relation of
+  phase k is published only when the phases below are quiescent, so within a phase publications only grow (a least
+  fixpoint; a withdrawal is counted and the gate is red on one) and every negation over the surface reads a complete
+  one. The JS model has 4 phases. The answers are read after the last phase only, each from the volume's last
+  evaluation, which saw every fact of every key it reads.
+- **The resident world**: a second fork of the core holding every publication as a base fact (asserted by delta as it
+  arrives) and, after the fixpoint, the answers. `side_effect_value` and `side_effect_count` are asked there.
+- **A lifted why.** The why is asked in the resident world. A fact it shows as an axiom that the world holds as
+  published names the volumes that published it: they are reheated into the resident world (by delta) and the fact
+  loses its base copy, until the why rests on base facts of lifted volumes and core. Then the lifted volumes are
+  cooled by book again and the published facts made base again: the resident world is the one it was (the gate
+  compares it byte for byte).
+- **The gate**, `npm run test:split` (scripts/surface_split.ts `--driver`): the 14 files in both orders, every volume's
+  facts at its last evaluation equal the whole world's (as for the hand loop), the resident world's 57 answers equal
+  the whole world's, and every one of the 29 whys of a `side_effect_value` answer is a PROOF in the whole world: every
+  fact it shows holds there, every axiom is a base fact there and none is a `[surface]` fact, every negation it shows
+  fails there. 6 of the 29 are the whole world's why byte for byte; the rest differ only where a fact has more than
+  one derivation and the smaller world's least witness is another (a fact naming no file, `external_module("fs")`,
+  proved from another file's import; a function read through its surface mirror), and in the candidates a
+  negation's whynot lists from files not lifted. 1.8 volumes are lifted a why (3 at most). Forward 66 evaluations,
+  reverse 56 (4.7 and 4.0 a volume, over 4 phases). Planted: `early` (each volume's answers from its first
+  evaluation) loses 12-23 answers; `narrow` (only a volume's own keys) loses 72 answers and invents 16; `nophase`
+  (every relation published from the start) withdraws 5 and 2 publications inside one phase, the hazard itself,
+  though the final answers on 14 files come out equal.
+- **Found on the way.** A fact rendered from a scanned string holding a control character could not be read back
+  (`\u0007` in a string literal): both parsers now read the escapes the renderer writes. And restricting a volume's
+  names to the facts that name its own nodes (not following what a read fact names) is UNSOUND: on the 14 files it
+  loses 3 answers and 7 surface facts (a member written onto an object reached through another file's node).
+- **Measured, vscode subset S at 500 files** (`scripts/vscode_curve.ts DIR 500 split --hot 32`, Rust release, a
+  shared machine): the answers asked of the resident world are the whole world's EXACTLY (248 values, 67 sites, the
+  env rows, the five family counts; the 341 answer keys diff empty against the cone run). But it is not yet an
+  economy: 6,335 s wall (5 whys included, 579 s) against 40 s for the whole cone world (15 s load, 25 s eval); the
+  engine's peak RSS 2.0 GB against 2.5 GB, with 32 hot volume worlds kept. The resident world holds 770 k facts (the
+  core world 162 k of them): the surface is 136,757 facts, 273 a file, above the 95-245 estimated, because the value
+  sets of merged returns spread. 3,803 volume evaluations, 7.6 a volume (phases 6+5+2+1 rounds, no publication
+  withdrawn, none by delta in a hot world: round-robin never comes back within 32), median 1.5 s each. THE COST IS
+  THE SUBSCRIPTION CLOSURE: a volume reads on average 14 k surface facts (10 % of the surface, 45 k at most), because
+  what an escaping node holds names further nodes and the closure of the escape graph is wide; every reheat adds them
+  all again, and every growth of the surface in a round dirties the volumes that read it although their own
+  publication did not move (the last evaluations of most volumes changed nothing they publish). Narrowing the names
+  to what a volume's own facts name is unsound (above). A why lifted 1-3 volumes and took 14-186 s, nearly all of it
+  the full evaluation the resident world needs after cooling by book (the cool leaves it dirty). 1,000 and 4,243
+  files were not run: at 500 the driver is 140 times the whole world, and the curve would only say so again.
+- **What it needs next** (each bounded): a volume subscribed to a key only when one of its rules can join on it
+  (from the lint's foreign-capable columns: a mirrored row is read only where a local premise binds its key), not
+  through every name a read row holds; a volume re-evaluated only when a fact of a key a premise actually bound moved;
+  the volume kept hot through its round (or a dependency order) so re-evaluations go by delta; and cooling by book
+  that keeps the resident world evaluated (the volume's facts retracted by delta) so a why costs the lift, not a
+  re-evaluation.
