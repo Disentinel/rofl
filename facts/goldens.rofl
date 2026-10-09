@@ -6,7 +6,7 @@
 -- this replaced regenerated its expectation before every run, so no change
 -- to any `.rofl` could turn it red.
 --
--- 575 worlds.
+-- 576 worlds.
 
 edb(golden_state).
 edb(golden_rel).
@@ -587,6 +587,7 @@ golden_state("wfs_unknown_negated", "f00a8aa40edf1152", 725).
 golden_state("why_base", "e763005a8ba2722b", 858).
 golden_state("why_forest", "7c3725121e6b9988", 958).
 golden_state("why_height", "cfafae83719ecc0a", 857).
+golden_state("whynot_unloaded", "8435410a897d9c30", 703).
 
 golden_host("nope", "01a3cc5e8d9555dd", 0, 175).
 golden_host("sus", "1f5b4a224e269910", 0, 332).
@@ -31478,3 +31479,35 @@ golden_rel("why_height", "wh_known[main]", 8).
 golden_rel("why_height", "wh_line[main]", 8).
 golden_rel("why_height", "wh_reach[main]", 1).
 golden_rel("why_height", "writes_to[$kernel]", 39).
+golden_rel("whynot_unloaded", "@other", 1).
+golden_rel("whynot_unloaded", "@wit", 71).
+golden_rel("whynot_unloaded", "asserted_by[$kernel]", 20).
+golden_rel("whynot_unloaded", "authority[main]", 5).
+golden_rel("whynot_unloaded", "boot_rank[main]", 10).
+golden_rel("whynot_unloaded", "concludes[$kernel]", 34).
+golden_rel("whynot_unloaded", "conclusion_lit[$kernel]", 34).
+golden_rel("whynot_unloaded", "conclusion_tense[$kernel]", 34).
+golden_rel("whynot_unloaded", "derived_by[$kernel]", 78).
+golden_rel("whynot_unloaded", "edb[main]", 43).
+golden_rel("whynot_unloaded", "flow[main]", 4).
+golden_rel("whynot_unloaded", "flows_to[main]", 4).
+golden_rel("whynot_unloaded", "has_conclusion[$kernel]", 34).
+golden_rel("whynot_unloaded", "has_premise[$kernel]", 58).
+golden_rel("whynot_unloaded", "imports[main]", 3).
+golden_rel("whynot_unloaded", "mode[main]", 16).
+golden_rel("whynot_unloaded", "negated_under[main]", 8).
+golden_rel("whynot_unloaded", "perspective[main]", 3).
+golden_rel("whynot_unloaded", "premise_lit[$kernel]", 58).
+golden_rel("whynot_unloaded", "premise_neg[$kernel]", 11).
+golden_rel("whynot_unloaded", "premise_pos[$kernel]", 44).
+golden_rel("whynot_unloaded", "reads_from[$kernel]", 39).
+golden_rel("whynot_unloaded", "reserved[main]", 37).
+golden_rel("whynot_unloaded", "rule[$kernel]", 34).
+golden_rel("whynot_unloaded", "rule_known[main]", 34).
+golden_rel("whynot_unloaded", "sees[main]", 6).
+golden_rel("whynot_unloaded", "stratum[main]", 10).
+golden_rel("whynot_unloaded", "undefined_premise[audit]", 2).
+golden_rel("whynot_unloaded", "unit_concludes[main]", 2).
+golden_rel("whynot_unloaded", "uses_builtin[$kernel]", 3).
+golden_rel("whynot_unloaded", "writes_to[$kernel]", 34).
+golden_rel("whynot_unloaded", "wu_site[main]", 1).
