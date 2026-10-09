@@ -242,26 +242,38 @@ impl Session {
             let n = self.assert(src)?;
             return Ok((n, Addition::Full("the world is not evaluated".into())));
         }
+        let requests: Vec<Term> = facts.iter().map(|(rel, persp, args)| {
+            let f = crate::reflect::fact_term(&mut self.eval.h, &self.eval.v, *rel, *persp, args);
+            self.eval.h.mkf_named("assert", &[f])
+        }).collect();
+        let (n, a) = self.assert_facts_delta(&facts);
+        if let Addition::Full(why) = &a {
+            self.evaluated_again(&requests, why);
+        }
+        Ok((n, a))
+    }
+
+    fn assert_facts_delta(&mut self, facts: &[(Sym, Sym, Vec<Term>)]) -> (usize, Addition) {
         let mark = self.eval.prep_mark();
-        let (n, asked, ids) = self.put_facts(&facts);
+        let (n, asked, ids) = self.put_facts(facts);
         if ids.is_empty() {
-            return Ok((0, Addition::Delta(crate::engine::AddDelta::default())));
+            return (0, Addition::Delta(crate::engine::AddDelta::default()));
         }
         let (mut rules, mut called) = (Vec::new(), Vec::new());
         if asked {
             if !self.eval.reprepare_keeping_trees() {
                 self.eval.store.dirty = true;
-                return Ok((n, Addition::Full(TREES_MOVED.into())));
+                return (n, Addition::Full(TREES_MOVED.into()));
             }
             let (added, was_called, moves) = self.eval.prep_moves(&mark);
             if !moves.is_empty() {
                 self.eval.store.dirty = true;
-                return Ok((n, Addition::Full(moves.join("; "))));
+                return (n, Addition::Full(moves.join("; ")));
             }
             rules = added;
             called = was_called;
         }
-        Ok((n, self.added(&ids, &rules, &called)))
+        (n, self.added(&ids, &rules, &called))
     }
 
     /// `load`, bringing an evaluated world to the state a fresh evaluation of the whole program would hold: the
@@ -275,25 +287,57 @@ impl Session {
         let mark = self.eval.prep_mark();
         self.eval.store.arrivals = Some(Vec::new());
         let r = crate::program::load_program(&mut self.eval, src, who);
-        let mut ids = self.eval.store.arrivals.take().unwrap_or_default();
+        let ids = self.eval.store.arrivals.take().unwrap_or_default();
         if !r.ok {
             return Err(r.diagnostics);
         }
+        // the request names what the program brought: each rule by its id, each fact of its own books
+        let mut requests = Vec::new();
+        for &f in &ids {
+            let (rel, persp) = (self.eval.store.rec(f).rel, self.eval.store.rec(f).persp);
+            if rel == self.eval.v.rule {
+                let rid = self.eval.store.args(f)[0];
+                requests.push(self.eval.h.mkf_named("rule", &[rid]));
+            } else if !self.eval.v.is_reserved(rel) && !is_kernel_ledger(&self.eval.h, persp) {
+                let t = self.fact_term(f);
+                requests.push(self.eval.h.mkf_named("assert", &[t]));
+            }
+        }
+        let a = self.loaded_delta(mark, ids);
+        if let Addition::Full(why) = &a {
+            self.evaluated_again(&requests, why);
+        }
+        Ok((r.admitted, a))
+    }
+
+    fn loaded_delta(&mut self, mark: crate::engine::PrepMark, mut ids: Vec<FactId>) -> Addition {
         self.eval.store.dirty = false;
         if !self.eval.reprepare_keeping_trees() {
             self.eval.store.dirty = true;
-            return Ok((r.admitted, Addition::Full(TREES_MOVED.into())));
+            return Addition::Full(TREES_MOVED.into());
         }
         ids.retain(|i| self.eval.store.alive(*i));
         let (rules, called, moves) = self.eval.prep_moves(&mark);
         if !moves.is_empty() {
             self.eval.store.dirty = true;
-            return Ok((r.admitted, Addition::Full(moves.join("; "))));
+            return Addition::Full(moves.join("; "));
         }
         if ids.is_empty() && rules.is_empty() {
-            return Ok((r.admitted, Addition::Delta(crate::engine::AddDelta::default())));
+            return Addition::Delta(crate::engine::AddDelta::default());
         }
-        Ok((r.admitted, self.added(&ids, &rules, &called)))
+        self.added(&ids, &rules, &called)
+    }
+
+    /// `evaluated_again(Request, Reason)` in the kernel's book, a row for each request and each reason: a world that
+    /// was asked for a delta and is evaluated again says so where a rule or a notebook reads it.
+    fn evaluated_again(&mut self, requests: &[Term], why: &str) {
+        let (rel, book) = (self.eval.v.evaluated_again, self.eval.v.kernel_persp);
+        for reason in why.split("; ") {
+            let r = self.eval.h.string(reason);
+            for &q in requests {
+                self.eval.store.add(&self.eval.h, rel, book, &[q, r], F_BASE);
+            }
+        }
     }
 
     fn added(&mut self, ids: &[FactId], rules: &[Sym], called: &[Sym]) -> Addition {
@@ -1288,9 +1332,13 @@ impl Session {
             return Err(format!("{key} is derived; retract its supports instead"));
         }
         let rel = self.eval.store.rec(id).rel;
+        let ft = self.fact_term(id);
+        let request = [self.eval.h.mkf_named("retract", &[ft])];
         if rel == self.eval.v.asks || (rel == self.eval.v.explain_request && self.eval.cone.is_some()) {
             self.retract(query)?;
-            return Ok(Retraction::Full("asks names the rules the world runs".to_string()));
+            let why = "asks names the rules the world runs";
+            self.evaluated_again(&request, why);
+            return Ok(Retraction::Full(why.to_string()));
         }
         self.settle()?;
         let doomed = self.doomed(id);
@@ -1310,6 +1358,7 @@ impl Session {
                     self.eval.store.remove_many(&doomed);
                 }
                 self.eval.store.dirty = true;
+                self.evaluated_again(&request, &why);
                 Ok(Retraction::Full(why))
             }
         }
