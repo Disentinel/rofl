@@ -1265,14 +1265,7 @@ impl Session {
         if !self.eval.store.rec(id).base() {
             return Err(format!("{key} is derived; retract its supports instead"));
         }
-        let mut doomed = vec![id];
-        let ft = self.fact_term(id);
-        let ab = self.eval.v.asserted_by;
-        for f in self.eval.store.rel_all(&self.eval.h, ab) {
-            if self.eval.store.args(f).first() == Some(&ft) {
-                doomed.push(f);
-            }
-        }
+        let doomed = self.doomed(id);
         let rel = self.eval.store.rec(id).rel;
         let asks = rel == self.eval.v.asks || (rel == self.eval.v.explain_request && self.eval.cone.is_some());
         self.eval.store.remove_many(&doomed);
@@ -1300,15 +1293,11 @@ impl Session {
             return Ok(Retraction::Full("asks names the rules the world runs".to_string()));
         }
         self.settle()?;
-        let mut doomed = vec![id];
-        let ft = self.fact_term(id);
-        let ab = self.eval.v.asserted_by;
-        for f in self.eval.store.rel_all(&self.eval.h, ab) {
-            if self.eval.store.args(f).first() == Some(&ft) {
-                doomed.push(f);
-            }
-        }
-        match self.eval.retract_delta(&doomed) {
+        let doomed = self.doomed(id);
+        let marks: Vec<Sym> = doomed.iter().map(|&f| self.eval.store.rec(f).rel).filter(|r| [self.eval.v.edb, self.eval.v.authority].contains(r)).collect();
+        let read = brk!("retract_edb_unread" => false; true) && self.eval.rules.iter().any(|r| r.clause.body.iter().any(|b| b.lits_deep().iter().any(|l| marks.contains(&l.rel))));
+        let delta = if read { Err("the retraction takes an edb or authority row a rule reads".to_string()) } else { self.eval.retract_delta(&doomed) };
+        match delta {
             Ok(d) => {
                 if let Err(e) = self.eval.check_promises() {
                     brk!("function_retract_clean" => (); self.eval.store.dirty = true);
@@ -1385,6 +1374,45 @@ impl Session {
         let mut key = String::new();
         write_fact_key(&self.eval.h, lit.rel, p, &lit.args, &mut key);
         Ok((self.eval.store.get(lit.rel, p, &lit.args), key))
+    }
+
+    /// The fact `id` with its `asserted_by` rows, and the kernel's rows a load wrote for it alone: `edb(R)` when no
+    /// other base fact of R stands, the `authority` rows of its book when no other base fact stands there and no rule
+    /// names the book. A fresh load without the fact writes none of them. A row the program declared itself (its own
+    /// `asserted_by` stands) stays, and so does every row where a seal withholds what would tell the two apart.
+    fn doomed(&mut self, id: FactId) -> Vec<FactId> {
+        let mut out = vec![id];
+        let ft = self.fact_term(id);
+        let v = &self.eval.v;
+        let (ab, edb, authority, main, kernel_who, anon_who, writes_to, reads_from) =
+            (v.asserted_by, v.edb, v.authority, v.main, v.kernel_who, v.anon_who, v.writes_to, v.reads_from);
+        let declared: Vec<(FactId, Term)> = self.eval.store.rel_all(&self.eval.h, ab).into_iter().map(|f| (f, self.eval.store.args(f)[0])).collect();
+        out.extend(declared.iter().filter(|(_, t)| *t == ft).map(|(f, _)| *f));
+        let withheld = crate::program::sealed_rels(&mut self.eval);
+        if brk!("retract_keeps_edb" => true; withheld.contains(&ab)) {
+            return out;
+        }
+        let (rel, persp) = (self.eval.store.rec(id).rel, self.eval.store.rec(id).persp);
+        let mut marks: Vec<FactId> = Vec::new();
+        let others = self.eval.store.rel_all(&self.eval.h, rel).into_iter().any(|f| f != id && self.eval.store.rec(f).base());
+        if !self.eval.v.is_reserved(rel) && !others {
+            marks.extend(self.eval.store.get(edb, main, &[Term::atom(rel)]));
+        }
+        if persp != main && !self.eval.h.name(persp).starts_with('$') && !withheld.contains(&writes_to) && !self.eval.store.book_holds_base(&self.eval.h, persp, id) {
+            let named = [writes_to, reads_from].into_iter().any(|r| self.eval.store.rel_all(&self.eval.h, r).into_iter().any(|f| self.eval.store.args(f)[1] == Term::atom(persp)));
+            if !named {
+                for w in [kernel_who, anon_who] {
+                    marks.extend(self.eval.store.get(authority, main, &[Term::atom(persp), Term::atom(w)]));
+                }
+            }
+        }
+        for m in marks {
+            let mt = self.fact_term(m);
+            if self.eval.store.alive(m) && !declared.iter().any(|(_, t)| *t == mt) {
+                out.push(m);
+            }
+        }
+        out
     }
 
     /// `$fact(rel, persp, args)` — how `asserted_by` names the fact it is about.

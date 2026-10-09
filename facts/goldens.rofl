@@ -6,7 +6,7 @@
 -- this replaced regenerated its expectation before every run, so no change
 -- to any `.rofl` could turn it red.
 --
--- 575 worlds.
+-- 577 worlds.
 
 edb(golden_state).
 edb(golden_rel).
@@ -565,6 +565,8 @@ golden_state("readiness_atlas", "9ebb088593eaec88", 1905).
 golden_state("readiness_rofl", "2c592d15b849d162", 2292).
 golden_state("refactoring_queue", "a378b1faf24e3230", 4865).
 golden_state("refused", "8fc17f482876f7ef", 661).
+golden_state("retract_last", "2795ce91e90f2bac", 680).
+golden_state("retract_last_read", "dfb021711136518c", 686).
 golden_state("sealed_provenance", "07ac0f81d4c501d8", 679).
 golden_state("sensors_t3", "6f8ba26864dbb4a3", 1015).
 golden_state("set_spelling", "1f5e72d34d2a08d3", 805).
@@ -29228,6 +29230,69 @@ golden_rel("refused", "sees[main]", 6).
 golden_rel("refused", "stratum[main]", 10).
 golden_rel("refused", "uses_builtin[$kernel]", 3).
 golden_rel("refused", "writes_to[$kernel]", 32).
+golden_rel("retract_last", "@other", 1).
+golden_rel("retract_last", "@wit", 69).
+golden_rel("retract_last", "asserted_by[$kernel]", 19).
+golden_rel("retract_last", "authority[main]", 5).
+golden_rel("retract_last", "boot_rank[main]", 10).
+golden_rel("retract_last", "concludes[$kernel]", 33).
+golden_rel("retract_last", "conclusion_lit[$kernel]", 33).
+golden_rel("retract_last", "conclusion_tense[$kernel]", 33).
+golden_rel("retract_last", "derived_by[$kernel]", 76).
+golden_rel("retract_last", "edb[main]", 43).
+golden_rel("retract_last", "flow[main]", 4).
+golden_rel("retract_last", "flows_to[main]", 4).
+golden_rel("retract_last", "has_conclusion[$kernel]", 33).
+golden_rel("retract_last", "has_premise[$kernel]", 55).
+golden_rel("retract_last", "imports[main]", 3).
+golden_rel("retract_last", "mode[main]", 16).
+golden_rel("retract_last", "negated_under[main]", 8).
+golden_rel("retract_last", "perspective[main]", 3).
+golden_rel("retract_last", "premise_lit[$kernel]", 55).
+golden_rel("retract_last", "premise_neg[$kernel]", 11).
+golden_rel("retract_last", "premise_pos[$kernel]", 41).
+golden_rel("retract_last", "reads_from[$kernel]", 38).
+golden_rel("retract_last", "reserved[main]", 37).
+golden_rel("retract_last", "rl_keep[main]", 1).
+golden_rel("retract_last", "rl_out[main]", 1).
+golden_rel("retract_last", "rule[$kernel]", 33).
+golden_rel("retract_last", "rule_known[main]", 33).
+golden_rel("retract_last", "sees[main]", 6).
+golden_rel("retract_last", "stratum[main]", 10).
+golden_rel("retract_last", "uses_builtin[$kernel]", 3).
+golden_rel("retract_last", "writes_to[$kernel]", 33).
+golden_rel("retract_last_read", "@other", 1).
+golden_rel("retract_last_read", "@wit", 69).
+golden_rel("retract_last_read", "asserted_by[$kernel]", 20).
+golden_rel("retract_last_read", "authority[main]", 5).
+golden_rel("retract_last_read", "boot_rank[main]", 10).
+golden_rel("retract_last_read", "concludes[$kernel]", 33).
+golden_rel("retract_last_read", "conclusion_lit[$kernel]", 33).
+golden_rel("retract_last_read", "conclusion_tense[$kernel]", 33).
+golden_rel("retract_last_read", "derived_by[$kernel]", 76).
+golden_rel("retract_last_read", "edb[main]", 43).
+golden_rel("retract_last_read", "flow[main]", 4).
+golden_rel("retract_last_read", "flows_to[main]", 4).
+golden_rel("retract_last_read", "has_conclusion[$kernel]", 33).
+golden_rel("retract_last_read", "has_premise[$kernel]", 56).
+golden_rel("retract_last_read", "imports[main]", 3).
+golden_rel("retract_last_read", "mode[main]", 16).
+golden_rel("retract_last_read", "negated_under[main]", 8).
+golden_rel("retract_last_read", "perspective[main]", 3).
+golden_rel("retract_last_read", "premise_lit[$kernel]", 56).
+golden_rel("retract_last_read", "premise_neg[$kernel]", 12).
+golden_rel("retract_last_read", "premise_pos[$kernel]", 41).
+golden_rel("retract_last_read", "reads_from[$kernel]", 38).
+golden_rel("retract_last_read", "reserved[main]", 37).
+golden_rel("retract_last_read", "rl_lone[main]", 1).
+golden_rel("retract_last_read", "rr_kept[main]", 1).
+golden_rel("retract_last_read", "rr_name[main]", 2).
+golden_rel("retract_last_read", "rule[$kernel]", 33).
+golden_rel("retract_last_read", "rule_known[main]", 33).
+golden_rel("retract_last_read", "sees[main]", 6).
+golden_rel("retract_last_read", "stratum[main]", 10).
+golden_rel("retract_last_read", "uses_builtin[$kernel]", 3).
+golden_rel("retract_last_read", "writes_to[$kernel]", 33).
 golden_rel("sealed_provenance", "@other", 1).
 golden_rel("sealed_provenance", "@wit", 94).
 golden_rel("sealed_provenance", "asserted_by[$kernel]", 25).
