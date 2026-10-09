@@ -3839,12 +3839,12 @@ work_needs(w_add_delta_cost, w_incremental_addition).
 
 work(w_one_binary,
   "ONE BINARY (the owner, 2026-10-05): rofl-load, rofl-serve, rofl-render and rofl-eval become one `rofl` with subcommands (`rofl load`, `rofl serve`, `rofl render`); rofl-eval's seed evaluation becomes `rofl load --seed` with the per-phase timing; the eight binaries with no consumer (ring1-lex, ring1-preds, ring1-tokens, rofl-lex, rofl-parse, rofl-parse-bench, rofl-session-bench, rofl-load-bench) are deleted. Update npm scripts, runtime/port.ts, the package exports, facts/commands.rofl and CLAUDE.md (generated), docs/knobs.md, Cargo.toml, facts/depends.rofl, the ledger notebook facts.").
-work_state(w_one_binary, open).
+work_state(w_one_binary, done).
 work_needs(w_one_binary, w_incremental_addition).
 
 work(w_knobs_trim_decided,
   "THE OWNER'S DECISIONS on f_the_knob_audit_proposes_removals (2026-10-05): remove ROFL_NO_DELTA_FIRST with the written-order plan path in engine.rs; remove ROFL_COOL_PHASES; keep the flags --model and --root and remove ROFL_NB_HARNESS and ROFL_NB_ROOT; remove test:agg:breaks --legacy; the rofl-serve protocol keeps only what hosts use (cool_many and the session verbs the notebook and whycheck send) — cool, cool_trail, reheat_trail, facts, the inline seed on open and ask.keys go, and the Rust tests that used them (tests/cool.rs, tests/program.rs, tests/agg_worlds.rs) call Session directly so the cooling/reheating byte-for-byte gate stays. Supersedes w_knobs_trim.").
-work_state(w_knobs_trim_decided, open).
+work_state(w_knobs_trim_decided, done).
 work_needs(w_knobs_trim_decided, w_incremental_addition).
 
 work(w_next_version_cutoff,
