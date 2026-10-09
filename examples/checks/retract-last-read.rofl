@@ -1,0 +1,10 @@
+-- examples/checks/retract-last-read.rofl — THE LAST FACT OF A RELATION TAKEN BACK WHERE A RULE READS edb. rl_lone
+-- names the relations no load declares; retracting rr_gone(1), the only fact of its relation, takes edb(rr_gone)
+-- with it, and the rule reading edb concludes what a load without the fact concludes. The Rust engine evaluates
+-- again and says why. Both engines.
+rr_name(rr_gone). rr_name(rr_kept).
+rr_gone(1).
+rr_kept(1).
+rl_lone(R) :- rr_name(R), not edb(R).
+-- expect-row: rl_lone[main](rr_gone)
+-- expect-no-row: rl_lone[main](rr_kept)

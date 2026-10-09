@@ -119,6 +119,9 @@ export const KERNEL_BOOK: ReadonlySet<string> = new Set<string>([
   V.lattice_decl, V.lattice_widen, V.lattice_member, V.lattice_member_prem, V.tag_decl, V.order_comp,
   V.structure_decl, V.structure_role, V.structure_closure,
   V.dominance, V.dominance_lit, V.dominated_by,
+  // a request a delta was asked for and the world evaluated again instead, a row per reason (Rust's Session);
+  // the kernel's to write, and not reserved, as no load writes it
+  'evaluated_again',
 ]);
 
 /** Is this perspective one of the kernel's own books?
@@ -217,7 +220,7 @@ export const ARITY: Readonly<Record<string, number>> = {
   premise_agg: 2, agg_cell: 3, agg_member: 4, agg_member_prem: 3, agg_sealed: 3,
   lattice_decl: 3, lattice_widen: 2, lattice_member: 4, lattice_member_prem: 3,
   tag_decl: 3, order_comp: 5, structure_decl: 3, structure_role: 3, structure_closure: 2,
-  dominance: 4, dominance_lit: 3, dominated_by: 3,
+  dominance: 4, dominance_lit: 3, dominated_by: 3, evaluated_again: 2,
 };
 
 /** The one value `semantics/1` is read for. Any other argument is a fact the

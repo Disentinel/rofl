@@ -1,0 +1,11 @@
+-- examples/checks/retract-again.rofl — A DELTA ASKED FOR AND THE WORLD EVALUATED AGAIN, WRITTEN IN THE WORLD. The
+-- world retracts ra_gone(1) (the check's retract option), the only fact of a relation a rule reads the edb of, so
+-- the Rust engine evaluates again; it writes evaluated_again(Request, Reason) in the kernel's book, and a rule reads
+-- it. Rust only: the TypeScript engine evaluates every change again and writes no row.
+ra_name(ra_gone).
+ra_gone(1).
+ra_lone(R) :- ra_name(R), not edb(R).
+ra_again(Why) :- evaluated_again(retract(_), Why).
+-- expect-row: ra_lone[main](ra_gone)
+-- expect-row: evaluated_again[$kernel](retract($fact(ra_gone,main,$cons(1,$nil))),"the retraction takes an edb or authority row a rule reads")
+-- expect-row: ra_again[main]("the retraction takes an edb or authority row a rule reads")

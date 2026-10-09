@@ -1367,6 +1367,14 @@ impl Store {
         }
     }
 
+    /// Whether a base fact other than `but` stands in the book `persp`, of any relation.
+    pub fn book_holds_base(&mut self, h: &Heap, persp: Sym, but: FactId) -> bool {
+        let mut rels: Vec<Sym> = self.idx.own.iter().chain(self.idx.base.iter()).filter(|(_, ps)| ps.iter().any(|(p, _)| *p == persp)).map(|(r, _)| *r).collect();
+        rels.sort_unstable();
+        rels.dedup();
+        rels.into_iter().any(|r| self.rel_persp(h, r, persp).into_iter().any(|f| f != but && self.rec(f).base()))
+    }
+
     fn persps_sorted(&self, h: &Heap, rel: Sym) -> Vec<Sym> {
         let mut ps: Vec<Sym> = self
             .idx

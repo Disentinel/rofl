@@ -242,26 +242,38 @@ impl Session {
             let n = self.assert(src)?;
             return Ok((n, Addition::Full("the world is not evaluated".into())));
         }
+        let requests: Vec<Term> = facts.iter().map(|(rel, persp, args)| {
+            let f = crate::reflect::fact_term(&mut self.eval.h, &self.eval.v, *rel, *persp, args);
+            self.eval.h.mkf_named("assert", &[f])
+        }).collect();
+        let (n, a) = self.assert_facts_delta(&facts);
+        if let Addition::Full(why) = &a {
+            self.evaluated_again(&requests, why);
+        }
+        Ok((n, a))
+    }
+
+    fn assert_facts_delta(&mut self, facts: &[(Sym, Sym, Vec<Term>)]) -> (usize, Addition) {
         let mark = self.eval.prep_mark();
-        let (n, asked, ids) = self.put_facts(&facts);
+        let (n, asked, ids) = self.put_facts(facts);
         if ids.is_empty() {
-            return Ok((0, Addition::Delta(crate::engine::AddDelta::default())));
+            return (0, Addition::Delta(crate::engine::AddDelta::default()));
         }
         let (mut rules, mut called) = (Vec::new(), Vec::new());
         if asked {
             if !self.eval.reprepare_keeping_trees() {
                 self.eval.store.dirty = true;
-                return Ok((n, Addition::Full(TREES_MOVED.into())));
+                return (n, Addition::Full(TREES_MOVED.into()));
             }
             let (added, was_called, moves) = self.eval.prep_moves(&mark);
             if !moves.is_empty() {
                 self.eval.store.dirty = true;
-                return Ok((n, Addition::Full(moves.join("; "))));
+                return (n, Addition::Full(moves.join("; ")));
             }
             rules = added;
             called = was_called;
         }
-        Ok((n, self.added(&ids, &rules, &called)))
+        (n, self.added(&ids, &rules, &called))
     }
 
     /// `load`, bringing an evaluated world to the state a fresh evaluation of the whole program would hold: the
@@ -275,25 +287,57 @@ impl Session {
         let mark = self.eval.prep_mark();
         self.eval.store.arrivals = Some(Vec::new());
         let r = crate::program::load_program(&mut self.eval, src, who);
-        let mut ids = self.eval.store.arrivals.take().unwrap_or_default();
+        let ids = self.eval.store.arrivals.take().unwrap_or_default();
         if !r.ok {
             return Err(r.diagnostics);
         }
+        // the request names what the program brought: each rule by its id, each fact of its own books
+        let mut requests = Vec::new();
+        for &f in &ids {
+            let (rel, persp) = (self.eval.store.rec(f).rel, self.eval.store.rec(f).persp);
+            if rel == self.eval.v.rule {
+                let rid = self.eval.store.args(f)[0];
+                requests.push(self.eval.h.mkf_named("rule", &[rid]));
+            } else if !self.eval.v.is_reserved(rel) && !is_kernel_ledger(&self.eval.h, persp) {
+                let t = self.fact_term(f);
+                requests.push(self.eval.h.mkf_named("assert", &[t]));
+            }
+        }
+        let a = self.loaded_delta(mark, ids);
+        if let Addition::Full(why) = &a {
+            self.evaluated_again(&requests, why);
+        }
+        Ok((r.admitted, a))
+    }
+
+    fn loaded_delta(&mut self, mark: crate::engine::PrepMark, mut ids: Vec<FactId>) -> Addition {
         self.eval.store.dirty = false;
         if !self.eval.reprepare_keeping_trees() {
             self.eval.store.dirty = true;
-            return Ok((r.admitted, Addition::Full(TREES_MOVED.into())));
+            return Addition::Full(TREES_MOVED.into());
         }
         ids.retain(|i| self.eval.store.alive(*i));
         let (rules, called, moves) = self.eval.prep_moves(&mark);
         if !moves.is_empty() {
             self.eval.store.dirty = true;
-            return Ok((r.admitted, Addition::Full(moves.join("; "))));
+            return Addition::Full(moves.join("; "));
         }
         if ids.is_empty() && rules.is_empty() {
-            return Ok((r.admitted, Addition::Delta(crate::engine::AddDelta::default())));
+            return Addition::Delta(crate::engine::AddDelta::default());
         }
-        Ok((r.admitted, self.added(&ids, &rules, &called)))
+        self.added(&ids, &rules, &called)
+    }
+
+    /// `evaluated_again(Request, Reason)` in the kernel's book, a row for each request and each reason: a world that
+    /// was asked for a delta and is evaluated again says so where a rule or a notebook reads it.
+    fn evaluated_again(&mut self, requests: &[Term], why: &str) {
+        let (rel, book) = (self.eval.v.evaluated_again, self.eval.v.kernel_persp);
+        for reason in why.split("; ") {
+            let r = self.eval.h.string(reason);
+            for &q in requests {
+                self.eval.store.add(&self.eval.h, rel, book, &[q, r], F_BASE);
+            }
+        }
     }
 
     fn added(&mut self, ids: &[FactId], rules: &[Sym], called: &[Sym]) -> Addition {
@@ -1245,14 +1289,7 @@ impl Session {
         if !self.eval.store.rec(id).base() {
             return Err(format!("{key} is derived; retract its supports instead"));
         }
-        let mut doomed = vec![id];
-        let ft = self.fact_term(id);
-        let ab = self.eval.v.asserted_by;
-        for f in self.eval.store.rel_all(&self.eval.h, ab) {
-            if self.eval.store.args(f).first() == Some(&ft) {
-                doomed.push(f);
-            }
-        }
+        let doomed = self.doomed(id);
         let rel = self.eval.store.rec(id).rel;
         let asks = rel == self.eval.v.asks || (rel == self.eval.v.explain_request && self.eval.cone.is_some());
         self.eval.store.remove_many(&doomed);
@@ -1275,20 +1312,20 @@ impl Session {
             return Err(format!("{key} is derived; retract its supports instead"));
         }
         let rel = self.eval.store.rec(id).rel;
+        let ft = self.fact_term(id);
+        let request = [self.eval.h.mkf_named("retract", &[ft])];
         if rel == self.eval.v.asks || (rel == self.eval.v.explain_request && self.eval.cone.is_some()) {
             self.retract(query)?;
-            return Ok(Retraction::Full("asks names the rules the world runs".to_string()));
+            let why = "asks names the rules the world runs";
+            self.evaluated_again(&request, why);
+            return Ok(Retraction::Full(why.to_string()));
         }
         self.settle()?;
-        let mut doomed = vec![id];
-        let ft = self.fact_term(id);
-        let ab = self.eval.v.asserted_by;
-        for f in self.eval.store.rel_all(&self.eval.h, ab) {
-            if self.eval.store.args(f).first() == Some(&ft) {
-                doomed.push(f);
-            }
-        }
-        match self.eval.retract_delta(&doomed) {
+        let doomed = self.doomed(id);
+        let marks: Vec<Sym> = doomed.iter().map(|&f| self.eval.store.rec(f).rel).filter(|r| [self.eval.v.edb, self.eval.v.authority].contains(r)).collect();
+        let read = brk!("retract_edb_unread" => false; true) && self.eval.rules.iter().any(|r| r.clause.body.iter().any(|b| b.lits_deep().iter().any(|l| marks.contains(&l.rel))));
+        let delta = if read { Err("the retraction takes an edb or authority row a rule reads".to_string()) } else { self.eval.retract_delta(&doomed) };
+        match delta {
             Ok(d) => {
                 if let Err(e) = self.eval.check_promises() {
                     brk!("function_retract_clean" => (); self.eval.store.dirty = true);
@@ -1301,6 +1338,7 @@ impl Session {
                     self.eval.store.remove_many(&doomed);
                 }
                 self.eval.store.dirty = true;
+                self.evaluated_again(&request, &why);
                 Ok(Retraction::Full(why))
             }
         }
@@ -1365,6 +1403,45 @@ impl Session {
         let mut key = String::new();
         write_fact_key(&self.eval.h, lit.rel, p, &lit.args, &mut key);
         Ok((self.eval.store.get(lit.rel, p, &lit.args), key))
+    }
+
+    /// The fact `id` with its `asserted_by` rows, and the kernel's rows a load wrote for it alone: `edb(R)` when no
+    /// other base fact of R stands, the `authority` rows of its book when no other base fact stands there and no rule
+    /// names the book. A fresh load without the fact writes none of them. A row the program declared itself (its own
+    /// `asserted_by` stands) stays, and so does every row where a seal withholds what would tell the two apart.
+    fn doomed(&mut self, id: FactId) -> Vec<FactId> {
+        let mut out = vec![id];
+        let ft = self.fact_term(id);
+        let v = &self.eval.v;
+        let (ab, edb, authority, main, kernel_who, anon_who, writes_to, reads_from) =
+            (v.asserted_by, v.edb, v.authority, v.main, v.kernel_who, v.anon_who, v.writes_to, v.reads_from);
+        let declared: Vec<(FactId, Term)> = self.eval.store.rel_all(&self.eval.h, ab).into_iter().map(|f| (f, self.eval.store.args(f)[0])).collect();
+        out.extend(declared.iter().filter(|(_, t)| *t == ft).map(|(f, _)| *f));
+        let withheld = crate::program::sealed_rels(&mut self.eval);
+        if brk!("retract_keeps_edb" => true; withheld.contains(&ab)) {
+            return out;
+        }
+        let (rel, persp) = (self.eval.store.rec(id).rel, self.eval.store.rec(id).persp);
+        let mut marks: Vec<FactId> = Vec::new();
+        let others = self.eval.store.rel_all(&self.eval.h, rel).into_iter().any(|f| f != id && self.eval.store.rec(f).base());
+        if !self.eval.v.is_reserved(rel) && !others {
+            marks.extend(self.eval.store.get(edb, main, &[Term::atom(rel)]));
+        }
+        if persp != main && !self.eval.h.name(persp).starts_with('$') && !withheld.contains(&writes_to) && !self.eval.store.book_holds_base(&self.eval.h, persp, id) {
+            let named = [writes_to, reads_from].into_iter().any(|r| self.eval.store.rel_all(&self.eval.h, r).into_iter().any(|f| self.eval.store.args(f)[1] == Term::atom(persp)));
+            if !named {
+                for w in [kernel_who, anon_who] {
+                    marks.extend(self.eval.store.get(authority, main, &[Term::atom(persp), Term::atom(w)]));
+                }
+            }
+        }
+        for m in marks {
+            let mt = self.fact_term(m);
+            if self.eval.store.alive(m) && !declared.iter().any(|(_, t)| *t == mt) {
+                out.push(m);
+            }
+        }
+        out
     }
 
     /// `$fact(rel, persp, args)` — how `asserted_by` names the fact it is about.
