@@ -249,13 +249,18 @@ function undeclared(w: World, a: Answer, ok: Set<string>): string[] {
 }
 
 
+/** `evaluated_again` says how the Rust engine brought a world up to date (a delta, or an evaluation again and why),
+ *  not what the world holds: the TypeScript engine evaluates every change again and writes none, so neither engine's
+ *  golden counts it. A world that must show it is Rust-only and says so as a row it must hold. */
+const kept = (l: string): boolean => !l.startsWith('evaluated_again[');
+
 /** Rows per relation, read off the canonical state. `wit` lines are counted as
  *  one pseudo-relation: which support a store records among equals is not fixed
  *  by the semantics, so the COUNT is the part worth pinning. */
 function census(state: string): Map<string, number> {
   const c = new Map<string, number>();
   for (const l of state.split('\n')) {
-    if (l === '') continue;
+    if (l === '' || !kept(l)) continue;
     const k = l.startsWith('wit ') ? '@wit' : l.startsWith('cell ') ? '@cell' : l.startsWith('mem ') ? '@mem'
       : (/^([a-z_]+\[[a-z$]+\])/.exec(l)?.[1] ?? '@other');
     c.set(k, (c.get(k) ?? 0) + 1);
@@ -277,7 +282,7 @@ function census(state: string): Map<string, number> {
  *  seven red, one survivor, which is this narrowing's stated cost. */
 const WIT = /^(wit .* <- r[0-9a-f]+@\d+ )\[(.*)\]$/;
 export function normalise(state: string): string {
-  return state.split('\n').map((l) => {
+  return state.split('\n').filter(kept).map((l) => {
     const m = WIT.exec(l);
     return m ? `${m[1]}[${m[2].split('; ').length}]` : l;
   }).join('\n');
@@ -528,7 +533,8 @@ export const treeDeclared = (files: string[]): boolean => /^tree \w+\(.*\) closu
 export const treeSealed = (files: string[]): boolean => treeDeclared(files) && /^sealed\(provenance\)\./m.test(filesText(files));
 /** What the state with the closure stored says against the state answered from the tree: null where they agree or the stored one is cut by a wall. */
 export const storedIsCut = (tree: string, stored: string): boolean => WALL_HOLE.test(stored) && !WALL_HOLE.test(tree);
-export function closureVerdict(tree: string, stored: string): string | null {
+export function closureVerdict(tree0: string, stored0: string): string | null {
+  const [tree, stored] = [tree0, stored0].map((s) => s.split('\n').filter(kept).join('\n'));
   if (storedIsCut(tree, stored) || tree === stored) return null;
   const a = tree.split('\n'), b = stored.split('\n');
   const i = a.findIndex((l, k) => l !== b[k]);

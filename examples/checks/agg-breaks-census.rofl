@@ -39,6 +39,12 @@ brk("asks_demand_asked"). brk_kind("asks_demand_asked", switch).
 brk_expects("asks_demand_asked", "asks_demand").
 brk("asks_retract_unread"). brk_kind("asks_retract_unread", switch).
 brk_expects("asks_retract_unread", "asks_retracted").
+brk("retract_keeps_edb"). brk_kind("retract_keeps_edb", switch).
+brk_expects("retract_keeps_edb", "retract_last").
+brk("retract_edb_unread"). brk_kind("retract_edb_unread", switch).
+brk_expects("retract_edb_unread", "retract_last_read").
+brk("ts_retract_keeps_edb"). brk_kind("ts_retract_keeps_edb", ts).
+brk_expects("ts_retract_keeps_edb", "retract_last").
 brk("ts_asks_derived_by_unnamed"). brk_kind("ts_asks_derived_by_unnamed", ts).
 brk_expects("ts_asks_derived_by_unnamed", "asks_reads_everything").
 brk("ts_asks_blind_reflection"). brk_kind("ts_asks_blind_reflection", ts).
@@ -2501,11 +2507,13 @@ switch_site("retract_chain_gate_off", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_consumers_kept", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_deep_neg_unread", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_demand_kept", "rust/rofl/src/engine/delta.rs").
+switch_site("retract_edb_unread", "rust/rofl/src/session.rs").
 switch_site("retract_empty_gone", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_gate_neg", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_gate_plain", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_hole_kept", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_index_off", "rust/rofl/src/engine/delta.rs").
+switch_site("retract_keeps_edb", "rust/rofl/src/session.rs").
 switch_site("retract_lattice_hole_kept", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_lattice_precise", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_memo_stale", "rust/rofl/src/engine/delta.rs").
