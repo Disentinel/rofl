@@ -1,5 +1,5 @@
 -- examples/checks/agg-minmax-why-check.rofl — agg_minmax_why, run with
--- `rofl-load --explain`: `why` of a minimum, a maximum and an `or` names
+-- `rofl load --explain`: `why` of a minimum, a maximum and an `or` names
 -- both tied facts and what it sealed; `whynot` of a wrong minimum says what
 -- it is; `whynot` over an empty group says the group is empty, and over a
 -- group whose value is not a number says it is a hole, not empty.

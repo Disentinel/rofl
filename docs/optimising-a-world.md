@@ -6,7 +6,7 @@ with a before and an after), the **gain** that was measured (corpus, mode,
 caveat) and the **link** to the finding that holds the evidence and the world
 that proves the cure changes no fact. Nothing here is a claim without a
 finding; where a number is not from Rust release the text says so. The snippets
-were run (`rofl-load boot.rofl file.rofl`): each before and after concludes the
+were run (`rofl load boot.rofl file.rofl`): each before and after concludes the
 same rows, except the order-only pairs of 3.2, the rename of 3.10 and the open
 demand relation of section 6, which is the proof world's.
 
@@ -18,12 +18,12 @@ files) and **util** (100 files, 4.5M facts default), the JS model over each.
 
 **Rust release only** (`CLAUDE.md`, "Rust is the engine";
 `f_rust_is_the_engine_ts_is_the_reference`): `cd rust && cargo build --release`,
-then `rust/target/release/rofl-eval`. The TypeScript engine is the parity
+then `rust/target/release/rofl load --seed`. The TypeScript engine is the parity
 reference and its timings decide nothing. A number taken on TypeScript in this
 ledger (the first table of `f_half_the_world_is_provenance_and_a_fifth_is_the_ancestor_closure`,
 the join-width findings of September) is marked as such below.
 
-`rofl-eval [flags] SEED.json` reads a seed, evaluates, prints the state on
+`rofl load --seed SEED.json [flags]` reads a seed, evaluates, prints the state on
 stdout and, with `--bytes`, a profile on stderr.
 
 | flag | what it is for |
@@ -41,7 +41,7 @@ them: assemble the notebook's world (`notebook/cli.ts` inputs,
 `notebook/world.ts`), `Host.init` and the scan, assert the facts into a fork of
 the loaded model without evaluating, write `snapshot()`. The scripts were kept
 in a session scratchpad (exp0 `seed.ts`, `seed_sealed.ts`), not in the tree;
-`scripts/port_corpus.ts` writes seeds of the check worlds and `rofl-load --save`
+`scripts/port_corpus.ts` writes seeds of the check worlds and `rofl load --save`
 snapshots a loaded world. Two traps found: a string starting with an emoji gave
 a lone surrogate that the Rust seed reader refuses (`str_char0`; cli_exits had
 two, replaced by U+FFFD for the measurements), and seeds must be regenerated
@@ -137,7 +137,7 @@ everything).
 
 `f_costly_rules_are_shapes` (hypothesis 3, supported): the time of the JS model
 is spent in a dozen ways of *writing a rule*, not in particular rules. Measured
-on Rust release, `rofl-eval --bytes`, per-rule profile of all 1171 rules, four
+on Rust release, `rofl load --seed SEED --bytes`, per-rule profile of all 1171 rules, four
 corpora, sealed and default; base rule time summed over the four corpora 24.1 s
 sealed and 68.1 s default; the top 30 rules are 54% of sealed rule time. The
 shapes cover 504 rules and 76% of sealed rule time.
@@ -405,7 +405,7 @@ had shape 3.0 itself and saved 4%. Lint: `not_closer`.
 beside your rules and read `shape_alarm`:
 
 ```
-rofl-load boot.rofl examples/shapes/shapes.rofl my-rules.rofl lint-decl.rofl | grep '^shape_alarm'
+rofl load boot.rofl examples/shapes/shapes.rofl my-rules.rofl lint-decl.rofl | grep '^shape_alarm'
 -- lint-decl.rofl holds:  lint_closure(within).   -- a relation the engine reads as a closure
 -- over the before-forms of 3.6-3.9 and 3.12 (trailing columns dropped):
 shape_alarm[main](closure_wide_end,thrown_b)
@@ -460,7 +460,7 @@ byte-identical over small, cjs, xdir, scoped, external, mcp and self. **Gain: no
 measured, and that is the finding.** The first A/B put the aggregate at +10.9 s on
 a loaded machine (self notebook 97.8 -> 108.7 s); re-measured at load ~1 after
 engine-fast, three interleaved pairs: `seq_later` 62.3 / 62.7 / 64.2 s, `max`
-62.6 / 62.9 / 62.3 s. These are **notebook wall times, not Rust-release `rofl-eval`
+62.6 / 62.9 / 62.3 s. These are **notebook wall times, not Rust-release `rofl load --seed`
 runs**. The reason to write the aggregate is that it says what it means and costs
 one pass where the absence joins every pair; neither form is safer, both are
 stratified over base data here.
@@ -486,7 +486,7 @@ is a refusal naming the place) and a *licence* to store and answer a relation as
 structure. The author declares; **the engine only proposes.**
 
 **Step 0: the engine proposes.** `npm run structures -- [--min-rows N] <files>`
-(boot.rofl then the files), `rofl-load --propose-structures`. Read-only (`rust/rofl/src/structures.rs`), deterministic,
+(boot.rofl then the files), `rofl load --propose-structures`. Read-only (`rust/rofl/src/structures.rs`), deterministic,
 6-14 s a corpus including the evaluation. On the snippet above:
 
 ```
@@ -607,7 +607,7 @@ reach(X, Z) :- reach(X, Y), edge(Y, Z).   -- far, color, twins conclude nothing
 **Symptom.** A notebook or a served world asks a handful of relations and pays for the
 whole model: `rule_ms` is spread over rules no asked relation reads.
 
-**Measured** (Rust release, `rofl-eval --bytes --budget 4e9 --space 4e7 --unsettled` (flag removed 2026-10-05), medians of two interleaved runs, load 5-8; the cone of a notebook's own
+**Measured** (Rust release, `rofl load --seed SEED --bytes --budget 4e9 --space 4e7 --unsettled` (flag removed 2026-10-05), medians of two interleaved runs, load 5-8; the cone of a notebook's own
 questions, the note `demand-cones.md`, `f_a_notebook_cone_is_a_third_of_the_rules_and_four_fifths_of_the_facts_and_its_answers_need_a_fifth_of_a_percent`):
 
 | corpus | rules run | facts held | eval s default (sealed) | RSS MB default |
@@ -636,7 +636,7 @@ answered on demand. A cone grows by `explain_request`s and by the relations a do
 body reads. `hole` asked by name lists the holes of the rules that ran.
 
 **Growing a cone is an addition** (`w_cmp_cone_rules_added`, section 7): an ask asserted into
-an evaluated world (`Session::assert_delta`, rofl-serve's `assert`) prepares the program again
+an evaluated world (`Session::assert_delta`, rofl serve's `assert`) prepares the program again
 and fires the rules the cone adds over the store, nothing derived cleared. Before, evaluation
 cleared every derived fact: mcp 15 209 steps for the first ask then 538 491 for the second
 against 538 491 from scratch; cli_exits 838 128 then 838 446, 5.4 s against 6.1. Measured
@@ -652,7 +652,7 @@ per-node relations derived for every node. `may_be_node` is read by nothing outs
 flow book in 89-97% of its rows, and `may_be_lit` in all of them, yet the flow stays in
 the cone whole because its readers do. **Magic-set rewriting did not pay**
 (`f_magic_sets_over_the_flow_book_win_until_a_mirror_becomes_a_product`; JS kernel at 8-24
-files, then the Rust engine at 40 files on `rust/target/fast/rofl-eval`, the *fast*
+files, then the Rust engine at 40 files on `rust/target/fast/rofl load --seed`, the *fast*
 profile, not release): full 9.97 s, relation cone alone 5.85 s, cone plus magic 15.68 s.
 The flow book collapses a hundredfold (5 984 to 58 rows) and the work does not follow
 past 16 files, because a generic sideways pass takes `call_site(C, _)` first and the
@@ -710,7 +710,7 @@ demand stays rows (section 5).
 ## 7. Adding to an evaluated world
 
 A world that grows (a file scanned, a notebook cell's rules, an ask, a pack) is added to, not
-evaluated again: `Session::assert_delta` and `Session::load_delta`, and rofl-serve's `assert`
+evaluated again: `Session::assert_delta` and `Session::load_delta`, and rofl serve's `assert`
 and `load` on an evaluated session (docs/aggregates.md, "Incremental addition, as built").
 The answer's `full` is null where the addition was a delta and says every reason where the
 world was evaluated again instead; a world not yet evaluated takes the text as before.

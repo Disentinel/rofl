@@ -9,7 +9,7 @@
 -- only shrug row names dq_o(4, 1), the call dq_r makes. A whynot of dq_o(6, 9)
 -- unfolded it and STORED it, so the why asked after it found a fact the why
 -- asked before had refused; a why now asks it as whynot does, and both leave
--- the state as it was. rust ask (rofl-serve) read the store only and missed
+-- the state as it was. rust ask (rofl serve) read the store only and missed
 -- dq_o(6, 9) that the reference's query finds; scripts/whycheck.ts asks both.
 edb(dq_q). edb(dq_e). edb(dq_s). edb(dq_k).
 dq_q(0).

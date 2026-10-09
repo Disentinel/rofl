@@ -27,7 +27,7 @@ command_shown("bless", 1).
 command_note("bless", "rewrite the golden, printing every world and demo it moves").
 
 command_shown("test:fast", 2).
-command_note("test:fast", "rebuild rofl-load and rofl-render with the `fast` cargo profile (release semantics, no LTO: a code edit in engine.rs rebuilds in a quarter of the release time) and run npm test on it; release stays the default for goldens and gates").
+command_note("test:fast", "rebuild the `rofl` binary with the `fast` cargo profile (release semantics, no LTO: a code edit in engine.rs rebuilds in a quarter of the release time) and run npm test on it; release stays the default for goldens and gates").
 
 command_shown("test:agg", 3).
 command_note("test:agg", "the ledger's mutants and controls, pooled; `-- --item I` (or --world, --cell, --file) runs instead that item's proof worlds and the planted faults that must turn them red").
@@ -82,7 +82,7 @@ command_shown("nb", 19).
 command_note("nb", "-- <file.rofl.md> [--json] [--cell N] [--all]   run a notebook (`--all`: every answer, and every why's proof whole instead of the value's steps and the proof with its side conditions counted, docs/md-world.md); runs go to a kept kernel started on first use, so a cell edit costs the cells; `ROFL_NB_DAEMON=0` runs in-process; `-- vocab [word]` lists the sentences a cell can use").
 
 command_shown("whycheck", 20).
-command_note("whycheck", "`-- [world ...]`   `why`, `why all`, `whynot`, `excise` from rofl-serve and rofl-load against src/api.ts, byte for byte and refusals included, over every world `npm test` loads, aggregate worlds too, pooled over ROFL_JOBS processes; needs `cargo build --release` in rust/").
+command_note("whycheck", "`-- [world ...]`   `why`, `why all`, `whynot`, `excise` from `rofl serve` and `rofl load` against src/api.ts, byte for byte and refusals included, over every world `npm test` loads, aggregate worlds too, pooled over ROFL_JOBS processes; needs `cargo build --release` in rust/").
 
 command_shown("structures", 21).
 command_note("structures", "`-- [--min-rows N] <files>`   the detection report: over boot.rofl and the files, read-only, which `function`, `tree ... closure` and `alias` declarations of docs/data-structures.md the data of a world would take, with the rows each saves and the near misses with their facts; `-- --check` runs the proof fixture against its committed report; needs `cargo build --release` in rust/").
@@ -104,22 +104,22 @@ knob_shown("ROFL_PROFILE", 1).
 knob_note("ROFL_PROFILE", "env", "the cargo profile whose binaries the scripts run: `release` (default) or `fast`. `breaks` belongs to the fault harness, never set it by hand").
 
 knob_shown("--ticks", 2).
-knob_note("--ticks", "rofl-load", "`--ticks N --budget N --space N [--strata] [--retain N]`: the ticks to run and the walls; then the state is printed").
+knob_note("--ticks", "rofl load", "`--ticks N --budget N --space N [--strata] [--retain N]`: the ticks to run and the walls; then the state is printed").
 
 knob_shown("--why", 3).
-knob_note("--why", "rofl-load", "`--why L`, `--why-all L`, `--whynot L [--depth N --nodes N]`, `--excise F`: the explanation verbs, in the order given, answered in the reference's text; `--state` puts the dump back before them. Exit 4: a refused question").
+knob_note("--why", "rofl load", "`--why L`, `--why-all L`, `--whynot L [--depth N --nodes N]`, `--excise F`: the explanation verbs, in the order given, answered in the reference's text; `--state` puts the dump back before them. Exit 4: a refused question").
 
 knob_shown("--retract", 4).
-knob_note("--retract", "rofl-load", "`--retract L`, repeated: take a base fact out after the first evaluation and print the state it leaves").
+knob_note("--retract", "rofl load", "`--retract L`, repeated: take a base fact out after the first evaluation and print the state it leaves").
 
 knob_shown("--propose-structures", 5).
-knob_note("--propose-structures", "rofl-load", "the read-only detection report instead of the state; `--structures-min-rows N`; `npm run structures` wraps it").
+knob_note("--propose-structures", "rofl load", "the read-only detection report instead of the state; `--structures-min-rows N`; `npm run structures` wraps it").
 
-knob_shown("--bytes", 6).
-knob_note("--bytes", "rofl-eval", "`--bytes [--budget N] [--space N] [--ticks N] SEED.json`: the state, and on stderr facts, time, peak rows, bytes per table and the costliest rules. Release build only; `--derivations` prints the derivations instead of the state").
+knob_shown("--seed", 6).
+knob_note("--seed", "rofl load", "`--seed SEED.json [--bytes] [--budget N] [--space N] [--ticks N]`: a snapshot evaluated, then the state; `--bytes` adds on stderr facts, time per phase, peak rows, bytes per table and the costliest rules (release build only); `--derivations` prints the derivations instead of the state").
 
 knob_shown("--out", 7).
-knob_note("--out", "rofl-render", "`--out DIR FILE... [--tables PACK...]` writes the sentence form of the files; `--facts` prints their facts for a script to read").
+knob_note("--out", "rofl render", "`--out DIR FILE... [--tables PACK...]` writes the sentence form of the files; `--facts` prints their facts for a script to read").
 
 knob_shown("ROFL_NB_LIMIT", 8).
 knob_note("ROFL_NB_LIMIT", "env", "seconds a notebook run evaluates before it stops and answers what it found (exit 3); `ROFL_NB_MEMORY=<GB>` bounds the heap likewise").

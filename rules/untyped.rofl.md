@@ -7,7 +7,7 @@ default: main
 # untyped
 
 > A VARIABLE NOTHING IN ITS RULE TYPES, as a query over the reflection
-> (`rofl-render --facts`) and the sentence vocabulary.
+> (`rofl render --facts`) and the sentence vocabulary.
 >
 > A letter is not the smell; a letter that pretends to be a type is. `F` reads
 > as a function to whoever wrote it, and the rule says so only when a guard

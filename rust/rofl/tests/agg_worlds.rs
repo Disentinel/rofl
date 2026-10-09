@@ -20,7 +20,7 @@
 //!     and none they forbid (`-- expect-no-row:`): no rule of its own runs
 //!     after the wall to say so;
 //!   * a file that names a world below it (`-- below: <path>`) is evaluated
-//!     over what that world concludes, fed as `rofl-load --below` feeds it.
+//!     over what that world concludes, fed as `rofl load --below` feeds it.
 use rofl::engine::Mode;
 use rofl::session::Session;
 use std::path::{Path, PathBuf};
@@ -96,7 +96,7 @@ fn fresh_walled(strata: bool, budget: i64) -> Session {
 
 /// A file offered alone, as the harness offers it: `Err` carries the refusal.
 /// A fixture offered alone, under its world's ticks and retractions as
-/// `rofl-load` runs it: a promise broken only at a tick or by a retraction is
+/// `rofl load` runs it: a promise broken only at a tick or by a retraction is
 /// refused there.
 fn alone(f: &Path, w: &World) -> Result<(), String> {
     let mut s = fresh(w.strata);
@@ -107,7 +107,7 @@ fn alone(f: &Path, w: &World) -> Result<(), String> {
         return ticks(&mut s);
     }
     s.evaluate().map_err(|e| rofl::describe(&e))?;
-    // as `rofl-load --retract` runs it: a retraction the cell path refuses is a full evaluation, which may refuse the world
+    // as `rofl load --retract` runs it: a retraction the cell path refuses is a full evaluation, which may refuse the world
     for r in &w.retract {
         s.retract_delta(r).map_err(|e| e.to_string())?;
         if s.eval.store.dirty {
@@ -136,7 +136,7 @@ fn below(files: &[PathBuf]) -> Vec<PathBuf> {
     out
 }
 
-/// Evaluate the world below and feed what it concludes, as rofl-load does.
+/// Evaluate the world below and feed what it concludes, as rofl load does.
 fn feed(s: &mut Session, below: &[PathBuf]) -> Result<(), String> {
     if below.is_empty() {
         return Ok(());
@@ -198,14 +198,14 @@ fn check_world(w: &World) -> Vec<String> {
         bad.push(format!("{}: {e}", w.name));
         return bad;
     }
-    // as `rofl-load --ticks N` runs it: N boundaries, each evaluating first, after the retractions where there are any
+    // as `rofl load --ticks N` runs it: N boundaries, each evaluating first, after the retractions where there are any
     let ticks = |s: &mut rofl::session::Session| (0..w.ticks).try_for_each(|_| s.tick().map(|_| ()));
     let run = if w.ticks > 0 && w.retract.is_empty() { ticks(&mut s) } else { s.evaluate().map(|_| ()) };
     if let Err(e) = run {
         bad.push(format!("{}: does not evaluate: {}", w.name, rofl::describe(&e)));
         return bad;
     }
-    // as `rofl-load --retract` runs it: each fact out by the cell path, and the
+    // as `rofl load --retract` runs it: each fact out by the cell path, and the
     // world evaluated again only where the path refused; the second evaluation
     // below is then the check that the path left the world a fresh one
     for f in &w.retract {
@@ -224,7 +224,7 @@ fn check_world(w: &World) -> Vec<String> {
         }
     }
     // the explain bridge answers once the world is evaluated, as
-    // `rofl-load --explain` does, and its rows are read with the rest
+    // `rofl load --explain` does, and its rows are read with the rest
     if w.explain {
         if w.ticks > 0 {
             s.evaluate().unwrap();
@@ -304,9 +304,9 @@ fn every_world_loaded_together_holds_its_properties_and_its_state() {
     let ws = registry();
     assert!(ws.len() >= 31, "the registry names {} worlds loaded together", ws.len());
     // A WORLD IN SENTENCES IS READ BEFORE IT IS LOADED: a `.rofl.md` file, and
-    // under `sentences` a round trip through rofl-render, go through the
+    // under `sentences` a round trip through rofl render, go through the
     // reader (scripts/read.ts, TypeScript), which `npm test` runs before it
-    // hands the files it wrote to rofl-load. This test has no reader, so it
+    // hands the files it wrote to rofl load. This test has no reader, so it
     // names those worlds and leaves them to that path, never loads them raw.
     let (read_first, ws): (Vec<World>, Vec<World>) = ws.into_iter().partition(|w| w.sentences || w.files.iter().any(|f| f.to_string_lossy().ends_with(".rofl.md")));
     eprintln!("{} worlds in sentences are answered through the reader by npm test: {}", read_first.len(),
@@ -605,7 +605,7 @@ fn a_damaged_cell_in_a_snapshot_is_refused() {
     }
 }
 
-/// `rofl-load --space N --below F`: the space wall is the run's, so a world
+/// `rofl load --space N --below F`: the space wall is the run's, so a world
 /// below it cuts is not fed from outside the wall: every relation it feeds is
 /// what it has no answer for, a shrug above (docs/aggregates.md, "Shrugs, as
 /// built").
@@ -613,11 +613,11 @@ fn a_damaged_cell_in_a_snapshot_is_refused() {
 fn the_world_below_is_built_under_the_run_s_walls() {
     let root = repo();
     let run = |args: &[&str]| {
-        let p = std::process::Command::new(env!("CARGO_BIN_EXE_rofl-load"))
+        let p = std::process::Command::new(env!("CARGO_BIN_EXE_rofl")).arg("load")
             .current_dir(&root)
             .args(args)
             .output()
-            .expect("rofl-load");
+            .expect("rofl load");
         (p.status.code(), String::from_utf8_lossy(&p.stdout).into_owned(), String::from_utf8_lossy(&p.stderr).into_owned())
     };
     let game = "examples/checks/agg-wfs-game.rofl";
@@ -631,7 +631,7 @@ fn the_world_below_is_built_under_the_run_s_walls() {
 }
 
 /// THE PRODUCT OPENER GIVES THE WALLS TOO (f_a_snapshot_carries_the_world_not_its_walls):
-/// rofl-serve's `open` and `fresh` take `space`, `retainTicks` and `mode`, so
+/// rofl serve's `open` and `fresh` take `space`, `retainTicks` and `mode`, so
 /// a snapshot reopened through it is evaluated under the walls it was saved
 /// under, not the defaults.
 #[test]
@@ -654,12 +654,12 @@ fn rofl_serve_opens_a_snapshot_under_the_walls_it_is_given() {
         format!(r#"{{"op":"open","seedPath":"{seed}","mode":"sideways","id":7}}"#),
         format!(r#"{{"op":"open","seedPath":"{seed}","space":-1,"id":8}}"#),
     ];
-    let mut p = std::process::Command::new(env!("CARGO_BIN_EXE_rofl-serve"))
+    let mut p = std::process::Command::new(env!("CARGO_BIN_EXE_rofl")).arg("serve")
         .current_dir(&root)
         .stdin(std::process::Stdio::piped())
         .stdout(std::process::Stdio::piped())
         .spawn()
-        .expect("rofl-serve");
+        .expect("rofl serve");
     p.stdin.take().unwrap().write_all((reqs.join("\n") + "\n").as_bytes()).unwrap();
     let out = String::from_utf8(p.wait_with_output().unwrap().stdout).unwrap();
     let _ = std::fs::remove_file(&path);

@@ -21,9 +21,9 @@ the rest are v0 implementation boundaries.
   maintains an evaluated world by delta both ways (docs/aggregates.md, "The
   retraction path" and "Incremental addition, as built"; the owner's decision
   `f_the_owner_settles_walls_promises_and_incremental`, point 3).
-  `Session::retract_delta` (rofl-load `--retract`, rofl-serve `retract`) takes
+  `Session::retract_delta` (rofl load `--retract`, rofl serve `retract`) takes
   a base fact out; `Session::assert_delta` and `Session::load_delta`
-  (rofl-serve's `assert` and `load` on an evaluated session) add facts and
+  (rofl serve's `assert` and `load` on an evaluated session) add facts and
   rules, DRed level by level over the stratified program. Aggregate cells are
   subtracted or sealed again, negations withdraw the firings they block, and a
   world or a change a delta is not worked out for is evaluated again with the

@@ -1,6 +1,6 @@
 // untyped.ts — which one-letter variables nothing in their rule types.
 //
-//   npm run untyped -- rules/js-*.rofl        (needs rust/target/release/rofl-render)
+//   npm run untyped -- rules/js-*.rofl        (needs rust/target/release/rofl render)
 import { readFileSync, readdirSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { Rofl } from '../src/api.ts';
@@ -10,7 +10,7 @@ const ROOT = new URL('..', import.meta.url).pathname;
 const argv = process.argv.slice(2);
 if (!argv.length) { console.error('usage: npm run untyped -- <rules.rofl...>'); process.exit(2); }
 
-const facts = execFileSync(`${ROOT}rust/target/release/rofl-render`, ['--facts', ...argv], { maxBuffer: 1 << 28 }).toString();
+const facts = execFileSync(`${ROOT}rust/target/release/rofl`, ['render', '--facts', ...argv], { maxBuffer: 1 << 28 }).toString();
 const vocab = readFileSync(`${ROOT}facts/js-phrases.rofl`, 'utf8');
 // the typed positions of every signed or phrased relation
 // the arities each relation is used with: a signature types one arity, and a name used with two is reported

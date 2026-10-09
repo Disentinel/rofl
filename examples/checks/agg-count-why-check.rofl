@@ -1,5 +1,5 @@
 -- examples/checks/agg-count-why-check.rofl — agg_count_why, a world run with
--- `rofl-load --explain`: `why` of a count names the cell, says what it
+-- `rofl load --explain`: `why` of a count names the cell, says what it
 -- sealed, and lists each member exactly once; `whynot` of a wrong count says
 -- what the count is.
 edb(explain_request).

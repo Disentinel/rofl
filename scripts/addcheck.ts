@@ -4,19 +4,19 @@
 //
 // Incremental addition is a Rust capability (CLAUDE.md, "Rust is the engine"):
 // the TypeScript engine evaluates again. Its parity is checked through the
-// fresh world: `npm test` holds `rofl-load`'s fresh state to the golden the
-// TypeScript engine is held to, and this holds the delta to `rofl-load`, byte
+// fresh world: `npm test` holds `rofl load`'s fresh state to the golden the
+// TypeScript engine is held to, and this holds the delta to `rofl load`, byte
 // for byte. Each world `npm test` loads one file at a time (no ticks, walls,
 // strata, explain bridge or refusal fixture) is split in two: its first half
-// is loaded into a `rofl-serve` session and evaluated, and the second half is
+// is loaded into a `rofl serve` session and evaluated, and the second half is
 // loaded into the evaluated world (`Session::load_delta`: facts and rules),
 // then the state is read. A world of one file is split inside the file, at a
 // clause boundary. A split the engine refuses to load (a declaration after
 // what it declares) is skipped and counted. Every addition evaluated again
 // instead of by delta says why, and the reasons are counted.
 //
-// Rust release (rust/target/$ROFL_PROFILE/rofl-serve and rofl-load); the
-// sessions run in one rofl-serve, the worlds one at a time.
+// Rust release (rust/target/$ROFL_PROFILE/rofl serve and rofl load); the
+// sessions run in one rofl serve, the worlds one at a time.
 
 import * as fs from 'node:fs';
 import * as os from 'node:os';
@@ -27,7 +27,7 @@ import { worlds, placed, expectedRefusal, PROFILE } from './goldens.ts';
 import { belowFiles } from './agg_select.ts';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
-const LOAD = path.join(ROOT, 'rust/target', PROFILE, 'rofl-load');
+const LOAD = path.join(ROOT, 'rust/target', PROFILE, 'rofl');
 const BOOT = path.join(ROOT, 'boot.rofl');
 const want = new Set(process.argv.slice(2));
 
@@ -63,7 +63,7 @@ try {
     if (w.files.some((f) => !fs.existsSync(f) || expectedRefusal(f)) || belowFiles(w.files).length) continue;
     let fresh: string;
     try {
-      fresh = execFileSync(LOAD, [BOOT, ...w.files], { encoding: 'utf8', maxBuffer: 512 * 1024 * 1024, stdio: ['ignore', 'pipe', 'pipe'] });
+      fresh = execFileSync(LOAD, ['load', BOOT, ...w.files], { encoding: 'utf8', maxBuffer: 512 * 1024 * 1024, stdio: ['ignore', 'pipe', 'pipe'] });
     } catch { continue; }
     const texts = w.files.map((f) => fs.readFileSync(f, 'utf8'));
     if (!texts.length) continue;

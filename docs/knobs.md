@@ -1,7 +1,7 @@
 # Every knob, and what becomes of it
 
 Audit of 2026-10-05, at the owner's request: fewer flags, so agents are not confused.
-A knob is a CLI flag of a Rust binary, a request option of `rofl-serve`, a `ROFL_*`
+A knob is a CLI flag of a Rust binary, a request option of `rofl serve`, a `ROFL_*`
 environment variable, or a flag of an npm script documented in `facts/commands.rofl`.
 The short table an agent reads is the `knobs` block of CLAUDE.md, generated from
 `facts/commands.rofl`; it lists only KEEP knobs a working session needs.
@@ -18,14 +18,14 @@ Status: `done` was removed in the commit that wrote this page. The rest were pro
 to the owner (finding `f_the_knob_audit_proposes_removals`, numbered there), and the
 owner has decided them (2026-10-05): `decided` is a removal or merge the owner chose
 (work item `w_knobs_trim_decided`, proposals 1-4 and 7, done after release 1.1 except
-where a row says why not), `one binary` goes with the merge of the binaries into one
-`rofl` (work item `w_one_binary`, proposals 5 and 6).
+where a row says why not), `one binary` went with the merge of the binaries into one
+`rofl` (work item `w_one_binary`, proposals 5 and 6, done).
 
 A consumer is who passes or sets it: a script, a test, a world, a document that tells a
 reader to use it, a demo, the notebook kernel. A document that only describes the knob
 is not a consumer.
 
-## rofl-load (`rust/rofl/src/bin/rofl_load_dump.rs`)
+## rofl load (`rust/rofl/src/bin/rofl/load.rs`)
 
 Builds a world from `boot.rofl` and files and prints the state, or answers questions.
 Every flag has a consumer.
@@ -47,14 +47,13 @@ Every flag has a consumer.
 | `--propose-structures`, `--structures-min-rows N` | the detection report in place of the state | `scripts/structures.ts`, `scripts/agg_breaks.ts` | KEEP | |
 | `ROFL_VSTATS` | print the virtual closure's counters on stderr | none: the definition only | REMOVE | done |
 
-## rofl-eval (`rust/rofl/src/bin/rofl_eval.rs`)
+## rofl load --seed (`rust/rofl/src/bin/rofl/seed.rs`)
 
-Reads a seed (JSON snapshot) and prints the state; the measurement instrument.
-Its only scripted consumers are `rust/run_corpus.sh` and `rust/bytes_table.sh`; both read
-seeds under facts/port-corpus, which is not in the tree. The owner's decision (proposal 6,
-`w_one_binary`, deferred until after release 1.1): its seed evaluation becomes
-`rofl load --seed` with the per-phase timing; until then it is the tool the documents
-measure with.
+Reads a seed (JSON snapshot) and prints the state; the measurement instrument. It was the
+binary `rofl-eval` until the owner's decision (proposal 6, `w_one_binary`) made it
+`rofl load --seed SEED.json`, with the per-phase timing under `--bytes`. Its only scripted
+consumers are `rust/run_corpus.sh` and `rust/bytes_table.sh`; both read seeds under
+facts/port-corpus, which is not in the tree.
 
 | knob | what it does | consumers | verdict | status |
 |---|---|---|---|---|
@@ -64,11 +63,11 @@ measure with.
 | `--no-provenance` | `Eval::seal_provenance` | none: the definition and documents. It is the same as declaring `sealed(provenance)` since 2026-10-04 (`f_no_provenance_flag_is_not_the_seal`) | MERGE into `sealed(provenance)` | done (`seal_provenance` went with it) |
 | `--eager-provenance` | write every `derived_by` row as its firing happens | none: documents only; the baseline of a finished measurement. The engine field stays, `rust/rofl/tests/prov_lazy.rs` sets it | REMOVE | done (flag) |
 | `--unsettled` | print the state before pending `derived_by` rows are written | none: documents only; a measurement, says on stderr it is not the canonical state | REMOVE | done |
-| `--propose-structures`, `--structures-min-rows N` | the detection report | none: `rofl-load` has the same flags and every script uses it | MERGE into `rofl-load` | done |
+| `--propose-structures`, `--structures-min-rows N` | the detection report | none: `rofl load` has the same flags and every script uses it | MERGE into `rofl load` | done |
 | `ROFL_PROF_ALL` | one `prof` line per rule on stderr | none: a document | REMOVE | done |
 | `--help` | usage | | KEEP | |
 
-## rofl-serve (`rust/rofl/src/bin/rofl_serve.rs`)
+## rofl serve (`rust/rofl/src/bin/rofl/serve.rs`)
 
 No flags: one JSON object per line in, one out. It is the npm package's `./port` export,
 so a request option with no caller in this tree may still have one outside it; that is
@@ -96,7 +95,7 @@ why none is removed here. Clients in the tree: `runtime/port.ts` (used by
 | `op: cool_trail`, `reheat_trail` | park and fetch the assertion trail | `runtime/port.ts` methods only; no caller. `Session::cool_trail` stays, `rust/rofl/tests/cool.rs` calls it | REMOVE | done |
 | `op: facts` | fact count and tick | `runtime/port.ts` `factCount`, called by `runtime/ingest.ts` and `scripts/vscode_curve.ts` (the audit missed them) | REMOVE once its callers have another way to count | open: no other verb counts without evaluating again |
 
-## rofl-render (`rust/rofl/src/bin/rofl_render.rs`)
+## rofl render (`rust/rofl/src/bin/rofl/render.rs`)
 
 | knob | what it does | consumers | verdict | status |
 |---|---|---|---|---|
@@ -106,22 +105,22 @@ why none is removed here. Clients in the tree: `runtime/port.ts` (used by
 
 ## The other binaries
 
-None has a consumer: no script, test, world or document runs them, and the comments that
-say a test compares them name tests that are gone (test/rofl-lex.test.ts, test/rofl-parse.test.ts). Removing one also takes its `[[bin]]` entry in
-`rust/rofl/Cargo.toml`, its row in `facts/depends.rofl` and, for two, a `path_exists`
-fact in `examples/notebook/ledger_facts.rofl` (a world with a golden), so each is left to
-`w_one_binary` (deferred until after release 1.1) and not deleted here.
+None had a consumer: no script, test, world or document ran them, and the comments that
+said a test compares them named tests that are gone (test/rofl-lex.test.ts,
+test/rofl-parse.test.ts). They were deleted with the merge into one `rofl` (`w_one_binary`):
+their sources, their `[[bin]]` entries in `rust/rofl/Cargo.toml` and their rows in
+`facts/depends.rofl`.
 
-| binary | what it does | verdict | status |
+| binary | what it did | verdict | status |
 |---|---|---|---|
-| `ring1-lex` (`ring1_lex.rs`) | token positions as ring1 lexes a file | REMOVE | one binary |
-| `ring1-preds` (`ring1_preds_dump.rs`) | one ring1 predicate over a file | REMOVE | one binary |
-| `ring1-tokens` (`ring1_tokens_dump.rs`) | ring1 tokens of a file | REMOVE | one binary |
-| `rofl-lex` (`rofl_lex_dump.rs`) | the Rust lexer's tokens | REMOVE | one binary |
-| `rofl-parse` (`rofl_parse_dump.rs`) | the Rust parser's tree | REMOVE | one binary |
-| `rofl-parse-bench` (`rofl_parse_bench.rs`, `--seconds N`) | parse timing | REMOVE | one binary |
-| `rofl-session-bench` (`rofl_session_bench.rs`) | session open timing | REMOVE | one binary |
-| `rofl-load-bench` (`rofl_load_bench.rs`) | load timing | REMOVE | one binary |
+| `ring1-lex` (`ring1_lex.rs`) | token positions as ring1 lexes a file | REMOVE | done |
+| `ring1-preds` (`ring1_preds_dump.rs`) | one ring1 predicate over a file | REMOVE | done |
+| `ring1-tokens` (`ring1_tokens_dump.rs`) | ring1 tokens of a file | REMOVE | done |
+| `rofl-lex` (`rofl_lex_dump.rs`) | the Rust lexer's tokens | REMOVE | done |
+| `rofl-parse` (`rofl_parse_dump.rs`) | the Rust parser's tree | REMOVE | done |
+| `rofl-parse-bench` (`rofl_parse_bench.rs`, `--seconds N`) | parse timing | REMOVE | done |
+| `rofl-session-bench` (`rofl_session_bench.rs`) | session open timing | REMOVE | done |
+| `rofl-load-bench` (`rofl_load_bench.rs`) | load timing | REMOVE | done |
 
 ## Environment variables
 

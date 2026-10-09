@@ -12022,7 +12022,7 @@ impl Eval {
         // well-founded world is evaluated below and its true and unknown rows
         // fed to a stratified world that aggregates them (`Session::feed_below`).
         const COMPOSE: &str = "evaluate the well-founded world below and feed its true and unknown rows \
-                               to a stratified world that aggregates them (rofl-load --below)";
+                               to a stratified world that aggregates them (rofl load --below)";
         if let Some(p) = brk!("wfs_admits_tag" => None; self.tags.by_rel.keys().min_by(|a, b| cmp_js(self.h.name(**a), self.h.name(**b)))) {
             return Err(Halt::Strat(
                 format!(

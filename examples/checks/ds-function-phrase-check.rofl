@@ -37,7 +37,7 @@ alarm(decl_gained).
 alarm(nothing_went_round).
 sentence_inexact[audit](W, M, N) :- sentence_exact(W, M, N), M != N.
 alarm(sentence_inexact).
--- and the function is WRITTEN in its own words, a rule rofl-render wrote back as rofl would read back too
+-- and the function is WRITTEN in its own words, a rule rofl render wrote back as rofl would read back too
 edb(sentence_word).
 sentence_word(dsp_attr, "has one V for each N and K").
 sentence_word(dsp_pair, "has one A and B for each K").

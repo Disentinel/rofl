@@ -1,6 +1,6 @@
-//! THE HARNESS. Reads a seed on stdin or by path, evaluates, prints
-//! `canonicalState` on stdout. That plus a diff against `<name>.expected.txt`
-//! is the whole test rig.
+//! `rofl load --seed SEED.json`: reads a seed, evaluates, prints
+//! `canonicalState` on stdout; with `--bytes` the per-phase timing and the
+//! measurements on stderr.
 use std::alloc::{GlobalAlloc, Layout, System};
 use std::io::Read;
 use std::sync::atomic::{AtomicIsize, Ordering};
@@ -33,7 +33,7 @@ unsafe impl GlobalAlloc for Counting {
 static A: Counting = Counting;
 
 const USAGE: &str =
-    "usage: rofl-eval [--bytes] [--derivations] [--budget N] [--space N] [--ticks N] [SEED.json]";
+    "usage: rofl load --seed SEED.json [--bytes] [--derivations] [--budget N] [--space N] [--ticks N]";
 
 /// WHY THIS REFUSES RATHER THAN IGNORES. The catch-all arm below used to be
 /// `a => path = Some(a)`, so `--ticks 3` set the path to "--ticks", then to
@@ -130,8 +130,7 @@ fn parse_args(args: &[String]) -> Result<Args, String> {
     Ok(a)
 }
 
-fn main() {
-    let argv: Vec<String> = std::env::args().skip(1).collect();
+pub fn main(argv: Vec<String>) {
     let Args {
         path,
         budget,

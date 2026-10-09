@@ -9,7 +9,7 @@ in `docs/`. Everything ever learned here is in `facts/findings.rofl`.
 
     npm test                 every world, both engines, one committed golden, over a pool of ROFL_JOBS workers; it prints how many, which engine(s) ran and how long. THIS IS THE LOOP. `-- --item I`, `--world W`, `--cell K:L`, `--file F` check only those worlds; ROFL_PROFILE=fast reads the fast build. `-- --engine rust` (or `ts`) checks one engine only against the shared golden, and `-- --changed[=REF]` picks it from the tree's changes since REF (HEAD): only rust/ runs Rust alone, only src/ TypeScript alone, anything else both. The full gate before a push is plain `npm test`, both engines
     npm run bless            rewrite the golden, printing every world and demo it moves
-    npm run test:fast        rebuild rofl-load and rofl-render with the `fast` cargo profile (release semantics, no LTO: a code edit in engine.rs rebuilds in a quarter of the release time) and run npm test on it; release stays the default for goldens and gates
+    npm run test:fast        rebuild the `rofl` binary with the `fast` cargo profile (release semantics, no LTO: a code edit in engine.rs rebuilds in a quarter of the release time) and run npm test on it; release stays the default for goldens and gates
     npm run test:agg         the ledger's mutants and controls, pooled; `-- --item I` (or --world, --cell, --file) runs instead that item's proof worlds and the planted faults that must turn them red
     npm run test:agg:breaks  every planted fault of scripts/agg_breaks.ts, switched on in one `--features breaks` build and run in parallel beside a no-break control; `-- <id>...`, `--item I`, `--world W`, `--changed[=REF]` for fewer
     npm run test:hosts       every demo by its stdout, one engine; the slowest of the gates
@@ -27,7 +27,7 @@ in `docs/`. Everything ever learned here is in `facts/findings.rofl`.
     npm run playground       the JS playground as static files in playground/dist: code on one side, a ROFL notebook of invariants over it on the other; `-- --standalone` for any web server
     npm run conform          `-- [--break sign|escape|rank|book|refusal] [files]`   the host of ring 1 checked against examples/ring1/host.rofl, clause by clause; `--break` spoils one duty so the check is seen to fail
     npm run nb               -- <file.rofl.md> [--json] [--cell N] [--all]   run a notebook (`--all`: every answer, and every why's proof whole instead of the value's steps and the proof with its side conditions counted, docs/md-world.md); runs go to a kept kernel started on first use, so a cell edit costs the cells; `ROFL_NB_DAEMON=0` runs in-process; `-- vocab [word]` lists the sentences a cell can use
-    npm run whycheck         `-- [world ...]`   `why`, `why all`, `whynot`, `excise` from rofl-serve and rofl-load against src/api.ts, byte for byte and refusals included, over every world `npm test` loads, aggregate worlds too, pooled over ROFL_JOBS processes; needs `cargo build --release` in rust/
+    npm run whycheck         `-- [world ...]`   `why`, `why all`, `whynot`, `excise` from `rofl serve` and `rofl load` against src/api.ts, byte for byte and refusals included, over every world `npm test` loads, aggregate worlds too, pooled over ROFL_JOBS processes; needs `cargo build --release` in rust/
     npm run structures       `-- [--min-rows N] <files>`   the detection report: over boot.rofl and the files, read-only, which `function`, `tree ... closure` and `alias` declarations of docs/data-structures.md the data of a world would take, with the rows each saves and the near misses with their facts; `-- --check` runs the proof fixture against its committed report; needs `cargo build --release` in rust/
     npm run test:split       the surface-split parity gate (docs/surface-split.md): each file of examples/vscode/mini and split alone with the others' [surface] facts must equal the whole world fact for fact, forward and reverse, Rust then TypeScript; run it after touching a rule of rules/js-*.rofl that reads across files, and `scripts/surface_split.ts --break naive` (or `nosurface`) must be red
 
@@ -45,12 +45,12 @@ verdict in docs/knobs.md.
 |---|---|---|
 | `ROFL_JOBS` | env | worker processes of the pooled runs (`npm test`, `whycheck`); by default the cores less two. Set 3 on a shared machine |
 | `ROFL_PROFILE` | env | the cargo profile whose binaries the scripts run: `release` (default) or `fast`. `breaks` belongs to the fault harness, never set it by hand |
-| `--ticks` | rofl-load | `--ticks N --budget N --space N [--strata] [--retain N]`: the ticks to run and the walls; then the state is printed |
-| `--why` | rofl-load | `--why L`, `--why-all L`, `--whynot L [--depth N --nodes N]`, `--excise F`: the explanation verbs, in the order given, answered in the reference's text; `--state` puts the dump back before them. Exit 4: a refused question |
-| `--retract` | rofl-load | `--retract L`, repeated: take a base fact out after the first evaluation and print the state it leaves |
-| `--propose-structures` | rofl-load | the read-only detection report instead of the state; `--structures-min-rows N`; `npm run structures` wraps it |
-| `--bytes` | rofl-eval | `--bytes [--budget N] [--space N] [--ticks N] SEED.json`: the state, and on stderr facts, time, peak rows, bytes per table and the costliest rules. Release build only; `--derivations` prints the derivations instead of the state |
-| `--out` | rofl-render | `--out DIR FILE... [--tables PACK...]` writes the sentence form of the files; `--facts` prints their facts for a script to read |
+| `--ticks` | rofl load | `--ticks N --budget N --space N [--strata] [--retain N]`: the ticks to run and the walls; then the state is printed |
+| `--why` | rofl load | `--why L`, `--why-all L`, `--whynot L [--depth N --nodes N]`, `--excise F`: the explanation verbs, in the order given, answered in the reference's text; `--state` puts the dump back before them. Exit 4: a refused question |
+| `--retract` | rofl load | `--retract L`, repeated: take a base fact out after the first evaluation and print the state it leaves |
+| `--propose-structures` | rofl load | the read-only detection report instead of the state; `--structures-min-rows N`; `npm run structures` wraps it |
+| `--seed` | rofl load | `--seed SEED.json [--bytes] [--budget N] [--space N] [--ticks N]`: a snapshot evaluated, then the state; `--bytes` adds on stderr facts, time per phase, peak rows, bytes per table and the costliest rules (release build only); `--derivations` prints the derivations instead of the state |
+| `--out` | rofl render | `--out DIR FILE... [--tables PACK...]` writes the sentence form of the files; `--facts` prints their facts for a script to read |
 | `ROFL_NB_LIMIT` | env | seconds a notebook run evaluates before it stops and answers what it found (exit 3); `ROFL_NB_MEMORY=<GB>` bounds the heap likewise |
 | `ROFL_NB_DAEMON` | env | `0` runs a notebook in the calling process instead of the kept kernel |
 | `ROFL_NO_BROWSER` | env | `1` lets `test:workbench` go without Chrome; without it a missing Chrome is a red |
@@ -65,7 +65,7 @@ diff.
 ## Rust is the engine
 
 **Every performance measurement is taken on the Rust engine, release build**
-(`rust/target/release/rofl-load`, `rofl-eval`, `rofl-serve`). The TypeScript
+(`rust/target/release/rofl`: `rofl load`, `rofl load --seed`, `rofl serve`). The TypeScript
 engine is not a performance engine and its timings decide nothing. New engine
 work (speed, scale, incremental maintenance, compression) is built in Rust
 first; the TS engine stays the parity reference that `npm test` and whycheck

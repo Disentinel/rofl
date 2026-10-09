@@ -1,5 +1,5 @@
 -- examples/checks/agg-member-derivs-why-check.rofl — agg_member_derivs_why, run
--- with `rofl-load --explain`: `why` of md_dn(a, 2) shows each member's
+-- with `rofl load --explain`: `why` of md_dn(a, 2) shows each member's
 -- canonical derivation and nothing else (sale 2 of a is counted through three
 -- md_chan rows, and only the text-least, w, is printed); `why all` adds the
 -- other two under it, each under its own `#2.k` line, and a member with

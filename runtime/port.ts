@@ -38,7 +38,7 @@ import * as path from 'node:path';
 import * as readline from 'node:readline';
 
 const ROOT = path.join(path.dirname(new URL(import.meta.url).pathname), '..');
-export const DEFAULT_BIN = path.join(ROOT, 'rust/target', process.env.ROFL_PROFILE || 'release', 'rofl-serve');
+export const DEFAULT_BIN = path.join(ROOT, 'rust/target', process.env.ROFL_PROFILE || 'release', 'rofl');
 
 /** The engine's own `ok: false` reply: a request it understood and refused. Anything else a call rejects with (a dead
  *  engine, an unreadable answer) is a failure of the protocol, not an answer. */
@@ -267,20 +267,16 @@ export class RoflPort {
   }
 
   private constructor(bin: string) {
-    this.child = spawn(bin, [], { stdio: ['pipe', 'pipe', 'pipe'] });
+    this.child = spawn(bin, ['serve'], { stdio: ['pipe', 'pipe', 'pipe'] });
     this.rl = readline.createInterface({ input: this.child.stdout });
     this.rl.on('line', (line) => this.receive(line));
     // A child that dies with requests outstanding must REJECT them. A protocol
     // whose failures are silent leaves the caller awaiting a promise that can
     // never settle, which is worse than the crash it came from.
-    // THE ENGINE'S STDERR IS KEPT FOR THE DEATH MESSAGE — and, when asked,
-    // forwarded live. Held only, it means an engine that DIAGNOSES ITSELF says
-    // it into a buffer nobody reads unless it dies, which is how a phase
-    // breakdown printed by the engine went missing while I was measuring with
-    // it. A diagnostic that only survives a crash is not a diagnostic.
+    // THE ENGINE'S STDERR IS KEPT FOR THE DEATH MESSAGE.
     this.child.stderr.on('data', (b: Buffer) => { this.err += b.toString(); });
-    this.child.on('error', (e) => this.fail(`rofl-serve would not start (${e.message})`));
-    this.child.on('exit', (code, sig) => this.fail(`rofl-serve exited (code ${code}, signal ${sig})`));
+    this.child.on('error', (e) => this.fail(`rofl serve would not start (${e.message})`));
+    this.child.on('exit', (code, sig) => this.fail(`rofl serve exited (code ${code}, signal ${sig})`));
   }
 
   /** Start the engine. `bin` defaults to the release build in this tree; a
@@ -288,7 +284,7 @@ export class RoflPort {
    *  repair and `ENOENT` is not. */
   static async start(bin: string = DEFAULT_BIN): Promise<RoflPort> {
     if (!fs.existsSync(bin)) {
-      throw new Error(`no engine at ${bin} — build it with: cargo build --release --bin rofl-serve`);
+      throw new Error(`no engine at ${bin} — build it with: cargo build --release --bin rofl`);
     }
     return new RoflPort(bin);
   }

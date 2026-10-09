@@ -1,4 +1,4 @@
--- examples/checks/why-forest-check.rofl — why_forest, run with `rofl-load
+-- examples/checks/why-forest-check.rofl — why_forest, run with `rofl load
 -- --explain`: `why` and `why all` of wf_t(1), derived by hand.
 --
 --   wf_a(1), wf_b(1) are base (height 0); wf_p(1) and wf_q(1) 1; wf_m(1) 2.

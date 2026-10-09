@@ -37,7 +37,7 @@ let r: { report: string; traced: string[]; rofl: string; phrases: string[] };
 if (srcPaths.length) {
   // a round trip: the source as facts, the same dump the renderer reads; a rendered model's vocabulary comes with a file rendered from it
   const vocab = libFiles(mdPath, parseFront(text)).phrases.map((v) => readFileSync(LIB + v, 'utf8')).join('\n') + extra;
-  const facts = execFileSync(`${ROOT}rust/target/${process.env.ROFL_PROFILE || 'release'}/rofl-render`, ['--facts', ...srcPaths.map(abs)], { maxBuffer: 1 << 28 }).toString();
+  const facts = execFileSync(`${ROOT}rust/target/${process.env.ROFL_PROFILE || 'release'}/rofl`, ['render', '--facts', ...srcPaths.map(abs)], { maxBuffer: 1 << 28 }).toString();
   r = readMd(text, { vocab, facts, canonVars });
 } else {
   // a world is read the way a notebook is: its prose and its cells, in the words its front matter names, after the worlds it reads
@@ -53,6 +53,6 @@ console.log(r.report);
 if (process.env.READ_TRACE) writeFileSync(process.env.READ_TRACE, r.traced.join('\n') + '\n');
 if (outPath) {
   put(outPath, r.rofl);
-  // the vocabulary the file declared, as the phrase facts the renderer reads: `rofl-render --out DIR X.phrases.rofl X.rofl`
+  // the vocabulary the file declared, as the phrase facts the renderer reads: `rofl render --out DIR X.phrases.rofl X.rofl`
   if (r.phrases.length) put(outPath.replace(/\.rofl$/, '') + '.phrases.rofl', [`-- the sentences ${mdPath.replace(ROOT, '')} declares, read by scripts/read.ts; a phrase is what the renderer reads`, 'edb(phrase).', ...r.phrases].join('\n') + '\n');
 }

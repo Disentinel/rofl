@@ -1,4 +1,4 @@
-//! THE ENGINE AS A SERVICE: one JSON object per line in, one out.
+//! `rofl serve`, THE ENGINE AS A SERVICE: one JSON object per line in, one out.
 //!
 //! The owner asked for the port to be usable "as a library or as a DBMS" from
 //! node. Two ways to do that, and this is the second on purpose:
@@ -336,7 +336,7 @@ impl Server {
     }
 }
 
-fn main() {
+pub fn main() {
     let mut srv = Server { sessions: HashMap::new(), next: 1 };
     let stdin = std::io::stdin();
     let mut out = std::io::stdout().lock();

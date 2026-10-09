@@ -1,5 +1,5 @@
 -- examples/checks/agg-narrow-why-check.rofl — agg_narrow_why, run with
--- `rofl-load --explain`. The witness of a narrowed cell is the widening's
+-- `rofl load --explain`. The witness of a narrowed cell is the widening's
 -- record and then each narrowing step, the value before, the value it came
 -- down to, and the join of what the rules contribute from it that it came
 -- down by; the enclosure it closed on is the narrowed one. `why` of the cell,

@@ -259,7 +259,7 @@ export class Rofl {
   // loading & asserting (rules become reflection facts through this one path)
 
   /** `defer` writes the clauses and leaves the evaluation to the caller, as
-   *  rofl-load loads every file of a world before it evaluates once. */
+   *  rofl load loads every file of a world before it evaluates once. */
   load(text: string, opts: { who?: string; budget?: number; defer?: boolean } = {}): LoadResult {
     this.loadn++;
     const holeId = mkf('$load', [mki(this.loadn)]);
