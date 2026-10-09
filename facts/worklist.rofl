@@ -3870,3 +3870,41 @@ work(w_proof_viewer_library,
   "FIND A VISUALISATION LIBRARY FOR ROFL, mature if one exists, to show a proof graph and the levels of abstraction over it. Start from f_a_proof_graph_reads_when_boxes_are_short_and_edges_are_routed_and_no_viewer_here_does_both: what a reader needs is known (short boxes with the code line, the sentence in a side panel, routed edges that never merge, collapse to an abstraction and open on double click down to the scanner's facts, a stable viewport when a box opens, zoom, pan, full screen, a few hundred boxes open at once and thousands behind them, light and dark). THE CANDIDATES TO MEASURE, not chosen: ELK (elkjs) and Graphviz as layout engines behind a renderer; React Flow / xyflow, Sigma.js, G6 / AntV, yFiles for HTML (commercial, with incremental hierarchic layout), Cytoscape.js with an ELK adapter that keeps ELK's routes, and whatever a search finds. CRITERIA: incremental layout (opening a box must not reshuffle the rest), edge routing, collapsible groups for abstraction levels, licence, size, maintenance. Judge each the way the prototype was judged: the same proof, a reader with no context explains the answers from a screenshot, and the owner looks.").
 work_state(w_proof_viewer_library, open).
 work_spawned(w_proof_viewer_library, f_a_proof_graph_reads_when_boxes_are_short_and_edges_are_routed_and_no_viewer_here_does_both).
+
+-- STAGED EVALUATION, 1.2 (the owner, 2026-10-09: "collect the decisions into a plan and build version 1.2 with this
+-- engine, test the hypotheses"). The account is docs/staged-evaluation.md; each item opens with its hypothesis measured.
+work(w_stage_hypotheses,
+  "DONE 2026-10-09 (f_the_staged_hypotheses_hold_but_the_files_form_one_cycle_that_only_a_thin_delta_crosses): H1, H2, H4 hold, H3 refuted as stated (one file cycle, a thin crossing delta). MEASURE H1-H4 of docs/staged-evaluation.md on vscode subset S before building: the largest SCC of the import graph (H1), the share of derived facts resting on two files on the current model and the derived-to-base ratio (H2), the largest recursive cross-file data-flow component (H3), a mapped kept fact against deriving it (H4). A refuted hypothesis is recorded and changes the order of what follows.").
+work_state(w_stage_hypotheses, done).
+work_spawned(w_stage_hypotheses, f_the_owner_sets_staged_evaluation_as_the_engine_of_1_2).
+
+work(w_derived_as_given,
+  "THE KEYSTONE of staged evaluation: a frozen layer of derived facts is taken as complete, run_pass does not clear it and no rule whose head is in it fires. Proof: a world evaluated in two stages equals the world evaluated whole, byte for byte, on every world of npm test that splits.").
+work_state(w_derived_as_given, open).
+work_needs(w_derived_as_given, w_stage_hypotheses).
+
+work(w_mapped_volume,
+  "The colfile of rust/storebench into the engine as the frozen base a fork reads: a kept stage or volume is a mapped columnar file, keyed by (program hash, input hashes).").
+work_state(w_mapped_volume, open).
+work_needs(w_mapped_volume, w_derived_as_given).
+
+work(w_resume_after_budget,
+  "A stop by budget keeps the pending delta and the stratum position, and a later evaluation resumes from them to the fixpoint a whole evaluation reaches (H5: the differential of tests/incremental.rs cut at every budget). A negation or aggregate over a relation with pending delta does not run.").
+work_state(w_resume_after_budget, open).
+work_needs(w_resume_after_budget, w_derived_as_given).
+
+work(w_stage_planner,
+  "Plan the evaluation as stages that each fit a stated memory limit (stage, stage_reads, stage_writes, stage_mem as facts, checked by rules); refuse a recursion through a foreign-capable column over an import cycle larger than the limit, naming the rule, the files and the reformulations.").
+work_state(w_stage_planner, open).
+work_needs(w_stage_planner, w_mapped_volume).
+work_needs(w_stage_planner, w_resume_after_budget).
+
+work(w_workers_by_key,
+  "The round's delta split by join key over worker threads, then processes; a stratum boundary is a barrier.").
+work_state(w_workers_by_key, open).
+work_needs(w_workers_by_key, w_stage_planner).
+
+work(w_why_by_file,
+  "The explanation of an absence as a table of files (each: zero, its hash, the program's), a row expanded by lifting one volume.").
+work_state(w_why_by_file, open).
+work_needs(w_why_by_file, w_stage_planner).
