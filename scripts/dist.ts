@@ -2,6 +2,8 @@
 // dist/rofl-<ext>.vsix (the editor, the extension's own version from vscode/package.json), both plain JS.
 // One tree serves both: the modules the command line and the extension import, transpiled in place, the model's .rofl files beside them, @babel/parser vendored.
 // The extension is that tree under rofl-nb/, entered through a CommonJS main, so an editor that loads extensions with require runs it too.
+// `-- --target <vsce target>` (linux-x64, darwin-arm64, win32-x64, ...): the VSIX for that platform, carrying the Rust engine this tree built for it
+// (rust/target/release/rofl) in rofl-nb/bin; without one, the VSIX for every platform, which evaluates on the TypeScript engine.
 import { cpSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import * as path from 'node:path';
@@ -17,6 +19,7 @@ const NODE = '>=22.0.0', VSCODE = '^1.101.0';   // fs.globSync is Node 22; VS Co
 const PKG = path.join(OUT, 'rofl-nb'), VSIX = path.join(OUT, 'vsix');
 // ROFL_DIST_BREAK, for vscode/test/dist.ts --break: `vocab` leaves out what `rofl:` names, `resolver` makes a `rofl:` name read as a path
 const BREAK = process.env.ROFL_DIST_BREAK;
+const TARGET = process.argv.includes('--target') ? process.argv[process.argv.indexOf('--target') + 1] : undefined;
 rmSync(OUT, { recursive: true, force: true });
 // the guide shows the tool's own output; a stale block is a build error, not a doc that lies
 execFileSync(process.execPath, ['--experimental-strip-types', path.join(ROOT, 'scripts/guide.ts'), '--check'], { stdio: 'inherit' });
@@ -101,11 +104,16 @@ for (const f of [path.join(VSIX, 'README.md'), path.join(PKG, 'README.md')]) for
 }
 // the notebook renderer, browser JS the extension's pictures are drawn with
 buildRenderer(path.join(VSIX, 'rofl-nb/vscode/visual/out'));
+if (TARGET) {
+  const exe = `rofl${TARGET.startsWith('win32') ? '.exe' : ''}`;
+  mkdirSync(path.join(VSIX, 'rofl-nb/bin'), { recursive: true });
+  cpSync(path.join(ROOT, 'rust/target/release', exe), path.join(VSIX, 'rofl-nb/bin', exe));
+}
 writeFileSync(path.join(VSIX, 'main.js'), "exports.activate = async (ctx) => (await import('./rofl-nb/vscode/extension.js')).activate(ctx);\n");
 const { type: _, devDependencies: __, ...manifest } = ext;
 manifest.contributes.notebookRenderer = manifest.contributes.notebookRenderer.map((r: { entrypoint: string }) => ({ ...r, entrypoint: r.entrypoint.replace(/^\.\//, './rofl-nb/vscode/') }));
 writeFileSync(path.join(VSIX, 'package.json'), JSON.stringify({ ...manifest,
   main: './main.js', files: ['main.js', 'rofl-nb', '*.tmLanguage.json', 'language-configuration.json', '*.png', 'CHANGELOG.md', 'LICENSE', 'THIRD_PARTY_NOTICES'], engines: { vscode: VSCODE } }, null, 2) + '\n');
-execFileSync(path.join(ROOT, 'vscode/node_modules/.bin/vsce'), ['package', '--no-dependencies', '--out', path.join(OUT, vsix)], { cwd: VSIX, stdio: ['ignore', 'ignore', 'inherit'] });
+execFileSync(path.join(ROOT, 'vscode/node_modules/.bin/vsce'), ['package', '--no-dependencies', ...(TARGET ? ['--target', TARGET] : []), '--out', path.join(OUT, vsix)], { cwd: VSIX, stdio: ['ignore', 'ignore', 'inherit'] });
 
 for (const f of [`rofl-nb-${version}.tgz`, vsix]) console.log(`dist/${f}: ${Math.round(readFileSync(path.join(OUT, f)).length / 1024)} KB`);

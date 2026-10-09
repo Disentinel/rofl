@@ -3548,7 +3548,7 @@ work_state(w_a_refused_cycle_names_itself, open).
 
 work(w_kernel_backend_seam,
   "THE NOTEBOOK KERNEL HAS NO EXECUTION SEAM: vscode/worker.ts -> notebook/kernel.ts -> playground/host.ts Host is one path, and Host.run both executes and renders. Put Host on a backend interface (init / run / why / whynot) with two implementations, the TS evaluator in process and a rofl-serve child with fork reuse, rendering shared so answers and witnesses are identical. w_rust_default_backend builds on it.").
-work_state(w_kernel_backend_seam, open).
+work_state(w_kernel_backend_seam, done).
 work_needs(w_rust_default_backend, w_kernel_backend_seam).
 
 work(w_the_sentence_form_never_fails_silently,
