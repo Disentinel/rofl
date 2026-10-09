@@ -309,7 +309,7 @@ hole(agg_overflow) [aggregate]` (any reason: the members exist, so nothing
 below is asked), or `... has no value: empty group [aggregate]`, and only the
 last goes on to ask why the inner literal has no match. A world asks for these with
 `explain_request(Kind, Atom)` and reads `explained[$explain](Kind, Atom, I,
-Line)` under `rofl-load --explain`.
+Line)` under `rofl load --explain`.
 
 **Proofs.** Each closed cell names a world in `facts/checks.rofl`
 (`agg_<kind>_<column>`), loaded together (`check_opt(W, together, 1)`: every
@@ -617,7 +617,7 @@ eval_rust at a wall beside `agg_lattice_eval`. A wall stops the rules of its
 own world, so those two are checked by the rows their cut state must and
 must not hold, lines of their files (`-- expect-row: ...`, `-- expect-no-row:
 ...`, read by scripts/goldens.ts; `check_opt(W, space, N)` sets the space
-wall, `rofl-load --space N`). `agg_lattice_strata_stock` is coverage of the
+wall, `rofl load --space N`). `agg_lattice_strata_stock` is coverage of the
 stock evaluator. Their dataset,
 `examples/checks/agg-lattice-data.rofl`: shortest paths with a positive and a
 zero-weight cycle, a tie and a value improved on, widest paths, a critical
@@ -935,7 +935,7 @@ is a variable or a constant, in `asc(..)` or `desc(..)` for its direction, and
 `src/parser.ts` and ring 1 read it as they read a key, and a direction is a term
 like any other (ring 1 reads `desc(K)` as `comp(desc, [K])`). The sentence is
 `R is the rank of (S1, S2) among (K1, K2 descending) such that (...)`, read in
-`scripts/read_md.ts` and written by rofl-render; a single subject and key are
+`scripts/read_md.ts` and written by rofl render; a single subject and key are
 `the rank of S among (K descending)`.
 
 **The order.** A key is an Int, an atom or a string: an Int before an atom
@@ -1025,7 +1025,7 @@ naming the construct and its rule and saying what to do instead
     program rejected: count is not evaluated under well_founded semantics (rule r…): a cell
       sealed under an assumption counts facts that may not hold; evaluate the well-founded
       world below and feed its true and unknown rows to a stratified world that aggregates
-      them (rofl-load --below)
+      them (rofl load --below)
 
 The TypeScript engine refuses in the same words (src/aggeval.ts
 `runWellFounded`).
@@ -1047,7 +1047,7 @@ out, an undefined atom, or everything a wall cut, is fed as a shrug
 (`$below` holes, "Shrugs, as built"), never as base, where it would read as
 false. The world above reads `unknown(wg_win(X))` as a closed relation and
 decides what an undefined atom counts as itself, reading `wg_win(X)` with
-`not unknown(wg_win(X))` beside it: a draw, in the minimax demo. `rofl-load --below F` (repeated) builds the world below from
+`not unknown(wg_win(X))` beside it: a draw, in the minimax demo. `rofl load --below F` (repeated) builds the world below from
 boot.rofl and the files F, under the run's `--budget`, `--space` and
 `--strata`: a world below the space wall cuts is refused, never fed from
 outside the wall; a file of a world loaded together names its world below
@@ -1083,7 +1083,7 @@ fact at T+1 whose firing, stamped T+1, cites the cell sealed at T,
   the reference's accumulation, src/store.ts `advanceTick`: both engines
   render its `why` alike, f_a_plain_staged_firing_is_explained_in_the_tick_it_arrived_in.)
 
-`retain_ticks` (rofl-load `--retain N`) drops completed ticks' `derived_by`
+`retain_ticks` (rofl load `--retain N`) drops completed ticks' `derived_by`
 rows, but never one of a fact a cell cites from a past tick while a firing
 that crosses the boundary cites that cell, nor one of a premise of a carried
 lattice value (`cited_past`, a third gate beside the two of `frozen_retention`).
@@ -1527,7 +1527,7 @@ if in none, a shrug only if they disagree.
 **Surfaces.** `?` lists the shrugs a literal names beside the rows that hold,
 with the bindings they give (`_` where a value is not known) and the line
 `L is a shrug: Reason, reason text; Meta` (TypeScript `QueryResult.shrugs`
-and the repl; Rust `Answer::shrugs` and rofl-serve's `ask`). `why` of a shrug
+and the repl; Rust `Answer::shrugs` and rofl serve's `ask`). `why` of a shrug
 is that line, then each root with its own line, and a rule root's text.
 `whynot` of a shrug says `no answer, a shrug` and why, then the
 demonstration; of an unentailed literal, the failed premises as always. The
@@ -2849,7 +2849,7 @@ declaration (`two_orders`), and no lattice or tag beside it (`two_algebras`).
 The sentence form says `` `route` is ordered by Pareto dominance, the least C
 and the least T for each A and B. `` and `` `route` is ordered
 lexicographically, the least C then the greatest Q for each A and B. ``
-(rofl-render writes it, scripts/read_md.ts reads it).
+(rofl render writes it, scripts/read_md.ts reads it).
 
 **Lowering.** The declaration is lowered at the door to the dominance rules it
 stands for, as source text the ordinary door then reads, one rule strict in
@@ -2939,11 +2939,11 @@ built (the sentences read back, scripts/read_md.ts, unproven by a world).
 
 ## The sentence form, as built
 
-Built 2026-09-30 in the reader (`scripts/read_md.ts`) and rofl-render
-(`rust/rofl/src/bin/rofl_render.rs`), w_agg_phrase. Every kind is a condition
+Built 2026-09-30 in the reader (`scripts/read_md.ts`) and rofl render
+(`rust/rofl/src/bin/rofl/render.rs`), w_agg_phrase. Every kind is a condition
 that names its result, what it takes, and its own body in parentheses; a
 declaration is a sentence of its own. The reader reads each into the rofl on
-the right, and rofl-render writes that rofl back as the sentence on the left.
+the right, and rofl render writes that rofl back as the sentence on the left.
 
 | Kind | Sentence | Rofl |
 | --- | --- | --- |
@@ -2995,7 +2995,7 @@ comparison:
   of what it names: both counts also take every variable the domain writes
   that the satisfies clause reads and nothing outside the pair writes, so one
   failing rank of a member fails it beside a passing one
-  (f_every_counted_members_where_its_sentence_says_rows); rofl-render writes
+  (f_every_counted_members_where_its_sentence_says_rows); rofl render writes
   every only where the reader would complete the sentence's tuple to the
   counts', and two counts of the member alone are written as the counts they
   are. Bound by nothing outside, the two counts would group
@@ -3023,7 +3023,7 @@ comparison:
   before, what the sugar takes is asked per value, as it is of any aggregate,
   so `G lists M at some number and Y is the average of X over M such that
   (G lists M at X)` is each member's own average
-  (f_the_sugar_counted_the_whole_group_for_a_member_bound_before). rofl-render
+  (f_the_sugar_counted_the_whole_group_for_a_member_bound_before). rofl render
   recognises a pair only up to that renaming (`apart_map`): the copy's
   variables mapped one to one onto the first's through what each takes and its
   body, one written outside the pair onto itself and one the pair alone writes
@@ -3049,7 +3049,7 @@ comparison:
   sentences are read once more beside the rofl they were written from
   (`npm run read -- X.rofl.md X.rofl`, `scripts/sentences.ts` `through`), and
   every rule, fact and declaration must come back exactly
-  (`sentence_exact`, alarm `sentence_inexact`). `rofl-render --facts` writes
+  (`sentence_exact`, alarm `sentence_inexact`). `rofl render --facts` writes
   an aggregate whole (`aggj`), a dominance's dominating fact (`dom`) and a
   declaration as one (`decl`), and the count compares an aggregate's result,
   values, keys and body, not its operator alone
@@ -3074,7 +3074,7 @@ would end a condition (f_the_shrug_sentence_was_written_and_never_read). A
 reason is a name, so a constant one is backticked: ``has no answer for the
 reason `inherited` with a meta M``.
 
-rofl-render writes a declaration and a dominance rule each as a sentence of
+rofl render writes a declaration and a dominance rule each as a sentence of
 its own, never merged with a neighbour into `a/b keeps ...`
 (f_a_declaration_merged_with_its_neighbour_read_as_nothing), and introduces
 the variables of both facts of a dominance before its body
@@ -3083,11 +3083,11 @@ the variables of both facts of a dominance before its body
 **Proofs.** The `phrase` column is swept by w_agg_phrase: for each kind a
 world `agg_<kind>_phrase` (`check_opt(W, sentences, 1)`) states its rules in
 sentences and in rofl in one `.rofl.md` file, reads it, writes both as
-sentences with rofl-render and reads them back, and
+sentences with rofl render and reads them back, and
 `examples/checks/agg-phrase-check.rofl` holds that nothing was lost or
 gained (every rule by its id, every declaration), that each relation was
 written in the kind's own words (`sentence_of`, which `scripts/sentences.ts`
-takes from what rofl-render wrote, against the check's `sentence_word`; a
+takes from what rofl render wrote, against the check's `sentence_word`; a
 rule written back as rofl reads back too, so the round trip alone cannot
 say this), and the kind's check that both readings answer as the kind does.
 The sugar row: `agg_sugar_phrase` (the forms, and the shapes that are no
@@ -3100,7 +3100,7 @@ count, a body joining through `X`, and a member's own average and every),
 count, `> 0` and the division; `whynot` the empty group and the holes),
 `agg_sugar_holes` and `agg_sugar_shrug` (the shrugs asked in the answer
 model's sentence, round-tripped, and the roots they name), all over
-`agg-sugar-forms.rofl.md` and `agg-sugar-data.rofl`. The faults: rofl-render's
+`agg-sugar-forms.rofl.md` and `agg-sugar-data.rofl`. The faults: rofl render's
 `phrase_*` (`subset_as_member`, `inner_unread`, `sum_as_median`,
 `max_as_min`, `count_tuple_first`, `quantile_swapped`,
 `threshold_as_atmost`, `lattice_op_lost`, `widen_off_by_one`,
@@ -3346,14 +3346,14 @@ both engines.
 
 **The harness.** Every aggregate proof world is `check_opt(W, together, 1)`
 (what `one_engine, rust` was): its files load before it is evaluated once,
-as `rofl-load` runs a world, and a refusal fixture is offered alone, refused
+as `rofl load` runs a world, and a refusal fixture is offered alone, refused
 at the door (`load`) or by the evaluation (`eval`). Both engines answer it
 that way (`answerTSTogether` in scripts/goldens.ts, `Rofl.load` with `defer`)
 and must reach the golden's one hash; its alarms, its `-- expect-row:` lines
 and its refusal texts are read in either engine. The TypeScript host feeds a
 world below (`Rofl.feedBelow`), answers `explain_request` rows
 (`Rofl.explainRequests`, re-evaluating a plain program with `AggEval` so its
-unknowns are known), keeps `retainTicks` and a `space` wall as `rofl-load
+unknowns are known), keeps `retainTicks` and a `space` wall as `rofl load
 --retain` and `--space` do. `aggregateDoors` holds each door: `load`,
 `assert` and `assertClauses` of a count, a lattice, a threshold, a join, a
 join read, a widening, an interval function and a dominance rule give one
@@ -3537,7 +3537,7 @@ and the TypeScript `ts_keep_first_derivation`, `ts_why_all_one_derivation`.
 
 ### The retraction path
 
-`Session::retract_delta(fact)` (rofl-load `--retract`) takes a base fact out of
+`Session::retract_delta(fact)` (rofl load `--retract`) takes a base fact out of
 an evaluated world and brings what it supported to what a fresh evaluation
 holds, without evaluating the world again:
 
@@ -3649,7 +3649,7 @@ answered on demand made, and a component stratified by its data.
 The counterpart of the retraction path, on the Rust engine only
 (`f_an_evaluated_world_takes_facts_and_rules_by_delta`; the owner's point 3 of
 `f_the_owner_settles_walls_promises_and_incremental`). `Session::assert_delta`
-and `Session::load_delta` (and rofl-serve's `assert` and `load` on an evaluated
+and `Session::load_delta` (and rofl serve's `assert` and `load` on an evaluated
 session) bring a world to the state a fresh evaluation of the whole program
 holds, byte for byte, without clearing what it derived
 (`rust/rofl/src/engine/addition.rs`). TypeScript evaluates again.
@@ -3684,7 +3684,7 @@ holds, byte for byte, without clearing what it derived
   the program are peeled again. An ask grows the cone: the rules it adds fire
   over the store (`w_cmp_cone_rules_added`).
 
-**What is evaluated again, every reason said** (`Addition::Full`, rofl-serve's
+**What is evaluated again, every reason said** (`Addition::Full`, rofl serve's
 `full`): a world not evaluated, cut by a wall, at a later tick, well-founded,
 holding a hole or reading a shrug (the hole a seal of provenance writes is not
 one); a lattice beside a relation answered on demand; a rule that reads the ledger of cells or provenance; a component
@@ -3700,7 +3700,7 @@ facts added later, each step byte for byte against a fresh evaluation, `why
 all`, `whynot`, `excise` and a snapshot included; lattice, tree, demand, asks,
 sealed and negation sweeps), `scripts/addcheck.ts` (every world `npm test`
 loads file by file, split in two and the second half added, held to
-`rofl-load`'s fresh state), planted breaks `add_*` in `scripts/agg_breaks.ts`.
+`rofl load`'s fresh state), planted breaks `add_*` in `scripts/agg_breaks.ts`.
 
 **Aggregates, the two ways.** Retraction uses a cell's algebra: an
 invertible cell (count, sum, a counting tag) subtracts the members whose
@@ -3772,7 +3772,7 @@ Every closed cell is proved by a world that goes red under a planted fault,
 and checking that is minutes of wall time, not hours (w_agg_fast_loop,
 f_a_planted_fault_is_a_switch_in_one_build).
 
-- **Engine edits.** `npm run test:fast` rebuilds `rofl-load` with the cargo
+- **Engine edits.** `npm run test:fast` rebuilds `rofl load` with the cargo
   profile `fast` (release semantics: no overflow checks, no debug assertions;
   no LTO, 256 codegen units, incremental) and runs `npm test` on it
   (`ROFL_PROFILE=fast`). A code edit in `engine.rs` rebuilds in about 9 s
@@ -3787,7 +3787,7 @@ f_a_planted_fault_is_a_switch_in_one_build).
   `brk!("id" => broken; original)` (`rust/rofl/src/breaks.rs`). Without
   `--features breaks` the macro is `original` and nothing else, so a normal
   build carries no fault and no switch. `scripts/agg_breaks.ts` builds
-  `rust/target/breaks/rofl-load` once (profile `breaks`), turns one fault on
+  `rust/target/breaks/rofl load` once (profile `breaks`), turns one fault on
   per run with `ROFL_BREAK=id`, and runs each break's worlds in parallel. A
   fault in `safety.rofl` is that build reading a `kernel-dense.ts` compiled
   from the edited text (`ROFL_KERNEL_OVERRIDE`); a fault in another `.rofl`
@@ -3801,8 +3801,7 @@ f_a_planted_fault_is_a_switch_in_one_build).
   once, that `src/kernel-dense.ts` is current, and that every world, run with
   nothing switched on, equals its golden and raises nothing. About 30 s for
   all of them, most of it the break `lattice_keep_dominated`, whose world runs to its
-  budget. `--legacy` plants each fault in the source and rebuilds, as before;
-  29 breaks were run both ways over every agg world and agreed byte for byte.
+  budget.
 - **A new fault** is a `brk!` site plus an entry with no `edits` in
   `scripts/agg_breaks.ts`; then `node --experimental-strip-types
   scripts/agg_breaks.ts --census --write`. The census is the world
@@ -3824,7 +3823,7 @@ f_a_planted_fault_is_a_switch_in_one_build).
   regenerates and compares that pack, as `npm test` does.
 - **No fault from the shell.** `npm test`, `npm run bless` and the breaks
   refuse to run with ROFL_BREAK or ROFL_KERNEL_OVERRIDE set, and bless refuses
-  the `breaks` profile or any rofl-load built with `--features breaks`.
+  the `breaks` profile or any rofl load built with `--features breaks`.
 
 ## The matrix
 
@@ -3890,7 +3889,7 @@ a recorded `decision`.
 - Voting with pivotality: empty group.
 - A quorum of at least two independent witnesses, replacing `req_count`/`need_count` in `examples/moot` and `examples/goof`: threshold, sugar.
 - Game of Life: cell.
-- Minimax tic-tac-toe, with the draws computed by a well-founded world and read by the aggregating world above it (the composition from below, built by `w_agg_wfs_ticks`: `rofl-load --below`, `Session::feed_below`): min/max, stratified.
+- Minimax tic-tac-toe, with the draws computed by a well-founded world and read by the aggregating world above it (the composition from below, built by `w_agg_wfs_ticks`: `rofl load --below`, `Session::feed_below`): min/max, stratified.
 - Interval analysis with widening: join lattice, widening.
 - A Pareto front of its own: subsumption.
 - A tagged world whose tag equals the host fold on the same store: both tag rows.

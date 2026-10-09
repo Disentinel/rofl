@@ -1,5 +1,5 @@
 -- examples/checks/agg-tagc-why-check.rofl — agg_tagc_why, run with
--- `rofl-load --explain`. `why` of a counting tag's fact names it the sum of
+-- `rofl load --explain`. `why` of a counting tag's fact names it the sum of
 -- its derivations and shows each, the count it adds and its height, and the
 -- fact of the derivation with the rule that made it; `whynot` of another
 -- count says what the cell holds and lists every derivation it adds; of a

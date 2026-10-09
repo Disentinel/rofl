@@ -10,18 +10,18 @@
 // (a `why` refused, a `whynot` that fails), an undefined atom and a fact
 // resting on one where the world is three-valued, the target of a shrug row,
 // one failing `whynot` under small and out-of-range bounds, and one base fact
-// excised. Each is put to `rofl-serve` through runtime/port.ts AND to
-// `rofl-load --why/--why-all/--whynot/--excise`, and both must print what
+// excised. Each is put to `rofl serve` through runtime/port.ts AND to
+// `rofl load --why/--why-all/--whynot/--excise`, and both must print what
 // src/api.ts prints, and refuse what it refuses.
 //
 // A REFUSAL IS COMPARED TOO. Every question the reference refuses is asked,
 // and the Rust engine must refuse it — over the protocol as an error, from
-// rofl-load as exit code 4 — with the reference's text. ONE CLASS IS COMPARED
+// rofl load as exit code 4 — with the reference's text. ONE CLASS IS COMPARED
 // BY KIND AND NOT BY TEXT: a question the reference's parser rejects
 // (`line N: ...`). Two parsers word a syntax error differently, and the
 // goldens hold a refused FILE to the same contract (scripts/goldens.ts): that
 // it is refused is the part both must agree on. A malformed set is asked of
-// the first world for exactly that, and rofl-load is asked each such question
+// the first world for exactly that, and rofl load is asked each such question
 // in a run of its own, which must exit 4. A whynot's `holds` is compared over
 // the protocol.
 //
@@ -31,7 +31,7 @@
 // A few corpus worlds are asked named questions besides (ASKED).
 //
 // THE WORLDS ARE SPLIT OVER ROFL_JOBS PROCESSES (default: the cores, at most
-// 8), each with its own rofl-serve, as `npm test` pools its worlds.
+// 8), each with its own rofl serve, as `npm test` pools its worlds.
 
 import { Rofl } from '../src/api.ts';
 import { storeHasAggregates } from '../src/aggeval.ts';
@@ -49,12 +49,12 @@ import { spawn, spawnSync } from 'node:child_process';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const BOOT = path.join(ROOT, 'boot.rofl');
-const LOAD = path.join(ROOT, 'rust/target', process.env.ROFL_PROFILE || 'release', 'rofl-load');
+const LOAD = path.join(ROOT, 'rust/target', process.env.ROFL_PROFILE || 'release', 'rofl');
 
 type Op = 'why' | 'whyall' | 'whynot' | 'excise' | 'ask';
 type Q = { op: Op; query: string; depth?: number; nodes?: number };
 /** An answer: refused or not, its text, and for a whynot whether the
- *  literal holds (the protocol's `holds`; rofl-load prints text alone). */
+ *  literal holds (the protocol's `holds`; rofl load prints text alone). */
 type A = { ok: boolean; text: string; holds?: boolean };
 
 /** The world as `npm test` builds it in the reference: a refused file is
@@ -189,9 +189,9 @@ function questions(r: Rofl, budget: number | undefined, first: boolean, excise =
 
 /** The questions of a Rust-only world, taken from the Rust state alone (the reference is not run on it): a few
  *  derived facts spread over the store, each asked why and whynot, the same with its last argument changed, one base
- *  fact excised. There is no oracle, so the answers are compared rofl-serve against rofl-load only. */
+ *  fact excised. There is no oracle, so the answers are compared rofl serve against rofl load only. */
 function rustQuestions(w: World, rich = false): Q[] {
-  const p = spawnSync(LOAD, [...(w.budget ? ['--budget', String(w.budget)] : []), ...(w.ticks ? ['--ticks', String(w.ticks)] : []), BOOT, ...w.files],
+  const p = spawnSync(LOAD, ['load', ...(w.budget ? ['--budget', String(w.budget)] : []), ...(w.ticks ? ['--ticks', String(w.ticks)] : []), BOOT, ...w.files],
     { encoding: 'utf8', maxBuffer: 512 * 1024 * 1024 });
   const keys = (kind: string): string[] => p.stdout.split('\n').flatMap((l) => {
     const m = /^([a-z]\w*)(?:\[(\w+)\])?(\(.*\)) (?:timeless|tick) (\w+) support=\d+$/.exec(l);
@@ -220,8 +220,8 @@ function rustQuestions(w: World, rich = false): Q[] {
 }
 
 /** AN ASK, as one text both engines can be held to: the rows as `V = x` (variables in name order) and the shrugs with their
- *  lines, each sorted, then whether the rows may be short of an answer. rofl-serve's `ask` against src/api.ts `query`
- *  (f_ask_read_the_store_where_query_unfolded); rofl-load has no ask, so it is asked over the protocol alone. */
+ *  lines, each sorted, then whether the rows may be short of an answer. rofl serve's `ask` against src/api.ts `query`
+ *  (f_ask_read_the_store_where_query_unfolded); rofl load has no ask, so it is asked over the protocol alone. */
 const askText = (rows: string[], shrugs: string[], partial: boolean): string =>
   [...[...rows].sort().map((r) => `row ${r}`), ...[...shrugs].sort().map((x) => `shrug ${x}`), `partial ${partial}`].join('\n');
 const bound = (vars: string[], row: string[]): string => {
@@ -317,7 +317,7 @@ const walls = (w: World): Walls => ({ ...(w.space ? { space: w.space } : {}), ..
   ...(w.strata ? { mode: 'strata' as const } : {}) });
 
 /** The protocol cannot feed a world below or answer explain requests; such a
- *  world is asked of rofl-load alone. */
+ *  world is asked of rofl load alone. */
 const servable = (w: World): boolean => !w.explain && belowFiles(w.files).length === 0;
 
 async function served(port: RoflPort, w: World, qs: Q[]): Promise<A[]> {
@@ -343,23 +343,23 @@ async function served(port: RoflPort, w: World, qs: Q[]): Promise<A[]> {
   } finally { await s.close(); }
 }
 
-/** The set of whynot bounds a question is asked under; rofl-load takes one
+/** The set of whynot bounds a question is asked under; rofl load takes one
  *  per run. */
 const boundsOf = (q: Q): string => (q.depth !== undefined || q.nodes !== undefined ? `${q.depth}/${q.nodes}` : '');
 
-/** The rofl-load run a question is asked in: one per set of whynot bounds,
+/** The rofl load run a question is asked in: one per set of whynot bounds,
  *  and a run of its own for each question the reference's parser refuses —
  *  its text is compared by kind only, so the run's exit code (4) is the one
- *  thing that says rofl-load refused it rather than answered. */
+ *  thing that says rofl load refused it rather than answered. */
 const groupOf = (qs: Q[], want: A[], i: number): string => (parseRefusal(want[i]) ? `parse#${i}` : boundsOf(qs[i]));
 
-/** The flags that make rofl-load build the world as `npm test` does. */
+/** The flags that make rofl load build the world as `npm test` does. */
 const loadOpts = (w: World): string[] => [...(w.ticks ? ['--ticks', String(w.ticks)] : []), ...(w.budget ? ['--budget', String(w.budget)] : []),
   ...(w.space ? ['--space', String(w.space)] : []), ...(w.strata ? ['--strata'] : []),
   ...(w.retain !== undefined ? ['--retain', String(w.retain)] : []), ...(w.retract ?? []).flatMap((f) => ['--retract', f]), ...(w.explain ? ['--explain'] : []),
   ...belowFiles(w.files).flatMap((f) => ['--below', f])];
 
-/** One rofl-load run per group, the flags in question order; the answers
+/** One rofl load run per group, the flags in question order; the answers
  *  come back in that order, and each run's exit code says whether any of its
  *  questions was refused. */
 function cli(w: World, qs: Q[], want: A[], env: Record<string, string> = {}): { texts: (string | undefined)[]; exits: Map<string, number>; problems: string[] } {
@@ -373,8 +373,8 @@ function cli(w: World, qs: Q[], want: A[], env: Record<string, string> = {}): { 
     const b = boundsOf(qs[idx[0]]);
     const bounds = b ? ['--depth', b.split('/')[0], '--nodes', b.split('/')[1]] : [];
     const args = [...opts, ...bounds, ...idx.flatMap((i) => [flag(qs[i].op), qs[i].query]), BOOT, ...w.files];
-    const p = spawnSync(LOAD, args, { encoding: 'utf8', maxBuffer: 512 * 1024 * 1024, env: { ...process.env, ...env } });
-    if (p.status !== 0 && p.status !== 4) { problems.push(`rofl-load exited ${p.status}${g ? ` (run ${g})` : ''}: ${p.stderr.trim().split('\n')[0]}`); continue; }
+    const p = spawnSync(LOAD, ['load', ...args], { encoding: 'utf8', maxBuffer: 512 * 1024 * 1024, env: { ...process.env, ...env } });
+    if (p.status !== 0 && p.status !== 4) { problems.push(`rofl load exited ${p.status}${g ? ` (run ${g})` : ''}: ${p.stderr.trim().split('\n')[0]}`); continue; }
     exits.set(g, p.status);
     const got = p.stdout.replace(/\n\n$/, '').split('\n\n');
     idx.forEach((i, j) => { texts[i] = got[j]; });
@@ -396,7 +396,7 @@ type Report = { asked: number; bad: string[]; loadOnly: string[]; walled: string
  *  stores none of its rows, which the reference does not do and TypeScript cannot be held to. Its oracle is the same world on
  *  Rust with the closure STORED (ROFL_NO_VCLOSURE: the declaration's virtual path off, the kernel's rows as in a world that
  *  keeps provenance): every why, why all, whynot and excise, and the canonical state, must be the stored world's byte for byte,
- *  and rofl-serve must say what rofl-load says. The same files without the seal are asked against the reference. */
+ *  and rofl serve must say what rofl load says. The same files without the seal are asked against the reference. */
 const fromTree = (w: World): boolean => treeSealed(placed(w).files);
 const declared = (w: World): boolean => treeDeclared(placed(w).files);
 
@@ -417,19 +417,19 @@ function storedOracle(rep: Report, kept: World, qs: Q[], texts: (string | undefi
   });
 }
 
-/** The canonical state rofl-load prints for the world, with the closure answered from its tree or stored. */
+/** The canonical state rofl load prints for the world, with the closure answered from its tree or stored. */
 function stateOf(w: World, env: Record<string, string>): string {
-  const p = spawnSync(LOAD, [...loadOpts(w), '--state', BOOT, ...w.files], { encoding: 'utf8', maxBuffer: 1024 * 1024 * 1024, env: { ...process.env, ...env } });
-  return p.status === 0 ? p.stdout : `rofl-load exited ${p.status}: ${p.stderr.trim().split('\n')[0]}`;
+  const p = spawnSync(LOAD, ['load', ...loadOpts(w), '--state', BOOT, ...w.files], { encoding: 'utf8', maxBuffer: 1024 * 1024 * 1024, env: { ...process.env, ...env } });
+  return p.status === 0 ? p.stdout : `rofl load exited ${p.status}: ${p.stderr.trim().split('\n')[0]}`;
 }
 
-/** WHAT `asks` SAYS OF A WORLD, in both engines' words: each diagnostic about the cone, rofl-load's against the reference's. */
+/** WHAT `asks` SAYS OF A WORLD, in both engines' words: each diagnostic about the cone, rofl load's against the reference's. */
 function asksSaid(r: Rofl, w: World): string | null {
   if (!w.files.some((f) => f.endsWith('.rofl') && /^asks\(/m.test(fs.readFileSync(f, 'utf8')))) return null;
-  const p = spawnSync(LOAD, [...loadOpts(w), '--state', BOOT, ...w.files], { encoding: 'utf8', maxBuffer: 1024 * 1024 * 1024 });
+  const p = spawnSync(LOAD, ['load', ...loadOpts(w), '--state', BOOT, ...w.files], { encoding: 'utf8', maxBuffer: 1024 * 1024 * 1024 });
   const rust = [...new Set(p.stderr.split('\n').filter((l) => l.startsWith('diag: asks: ')).map((l) => l.slice(6)))].sort();
   const ts = [...new Set(r.diagnostics.filter((d) => d.startsWith('asks: ')))].sort();
-  return rust.join('\n') === ts.join('\n') ? null : `asks says ${JSON.stringify(ts)} in the reference and ${JSON.stringify(rust)} in rofl-load`;
+  return rust.join('\n') === ts.join('\n') ? null : `asks says ${JSON.stringify(ts)} in the reference and ${JSON.stringify(rust)} in rofl load`;
 }
 
 async function check(ws: World[], firstName: string): Promise<Report> {
@@ -439,7 +439,7 @@ async function check(ws: World[], firstName: string): Promise<Report> {
     for (const w0 of ws) {
       if (process.env.WHYCHECK_TRACE) process.stderr.write(`whycheck: ${w0.name}\n`);
       if (w0.oneEngine === 'rust' || fromTree(w0)) {
-        // the reference is not run on a Rust-only world; rofl-serve and rofl-load must still agree
+        // the reference is not run on a Rust-only world; rofl serve and rofl load must still agree
         const w = placed(w0);
         const kept = { ...w, files: w.files.filter((f) => !expectedRefusal(f) && unreadOf(f).length === 0) };
         const qs = rustQuestions(kept, declared(w0));
@@ -457,7 +457,7 @@ async function check(ws: World[], firstName: string): Promise<Report> {
       let built;
       try { built = reference(w0); } catch (e) { rep.bad.push(`${w0.name}: ${(e as Error).message}`); continue; }
       const { r, w } = built;
-      // the budget a question may spend is the world's, or rofl-load's default
+      // the budget a question may spend is the world's, or rofl load's default
       // (an excise evaluates its counterfactual world under it)
       const budget = w.budget ?? 200_000_000;
       const o = own.get(w.name);
@@ -505,7 +505,7 @@ async function check(ws: World[], firstName: string): Promise<Report> {
         if (texts[i] !== want[i].text) rep.bad.push(`${at}: ${firstDiff(want[i].text, texts[i]!)}`);
       });
       // exit 4 exactly when some question in the run was refused; a run of a
-      // question the parser refuses must exit 4, or rofl-load answered it
+      // question the parser refuses must exit 4, or rofl load answered it
       for (const [g, code] of exits) {
         const refused = qs.some((_, i) => !want[i].ok && groupOf(qs, want, i) === g);
         if ((code === 4) !== refused) rep.bad.push(`${w.name} load exit ${code}${g.startsWith('parse#') ? ` (${JSON.stringify(qs[Number(g.slice(6))].query)} alone)` : g ? ` (bounds ${g})` : ''}, and the reference ${refused ? 'refused a question' : 'refused none'}`);
@@ -555,9 +555,9 @@ const n = reps.reduce((s, r) => s + r.asked, 0);
 const loadOnly = reps.flatMap((r) => r.loadOnly).sort();
 const walled = reps.flatMap((r) => r.walled).sort();
 for (const b of bad) console.log(`FAIL ${b}`);
-console.log(`\n${n} questions over ${asked.length} worlds, each to rofl-serve and rofl-load, ${bad.length} differ from src/api.ts (Rust-only worlds: from each other)`
+console.log(`\n${n} questions over ${asked.length} worlds, each to rofl serve and rofl load, ${bad.length} differ from src/api.ts (Rust-only worlds: from each other)`
   + `, ${((Date.now() - t0) / 1000).toFixed(1)} s over ${jobs} processes`
-  + `\nasked of rofl-load alone (a world below, or explain requests): ${loadOnly.length}`
+  + `\nasked of rofl load alone (a world below, or explain requests): ${loadOnly.length}`
   + `\nasked of Rust only, serve against load (no reference run): ${rustOnly.length} ${rustOnly.join(' ') || 'none'}`
   + `\nnot held to the world with its closure stored (it meets a wall stored that the tree does not): ${walled.join(' ') || 'none'}`
   + `\nnot asked (one engine, TypeScript): ${all.filter((w) => w.oneEngine === 'ts').map((w) => w.name).join(' ') || 'none'}`);

@@ -1,4 +1,4 @@
--- examples/checks/agg-tag-shrug.rofl — agg_tag_shrug, run with `rofl-load
+-- examples/checks/agg-tag-shrug.rofl — agg_tag_shrug, run with `rofl load
 -- --explain`: an idempotent tag's fault is a shrug, `fault`, its meta the
 -- cause, on the cell (b to c, a probability of 2); a cell that rested on it
 -- is a shrug inherited from it (a to c, a to d), one row each; a rule reading

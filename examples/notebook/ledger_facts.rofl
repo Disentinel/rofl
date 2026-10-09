@@ -21,6 +21,7 @@ path_exists("docs/data-structures.md").
 path_exists("docs/demand-cones.md").
 path_exists("docs/failure-modes.md").
 path_exists("docs/formal-reasoning-landscape.md").
+path_exists("docs/knobs.md").
 path_exists("docs/md-world.md").
 path_exists("docs/medium-and-large.md").
 path_exists("docs/modelling-a-language.md").
@@ -365,11 +366,11 @@ path_exists("runtime/semirings.ts").
 path_exists("rust/colbench").
 path_exists("rust/mutants.sh").
 path_exists("rust/rofl/build.rs").
-path_exists("rust/rofl/src/bin/rofl_eval.rs").
-path_exists("rust/rofl/src/bin/rofl_load_bench.rs").
-path_exists("rust/rofl/src/bin/rofl_load_dump.rs").
-path_exists("rust/rofl/src/bin/rofl_render.rs").
-path_exists("rust/rofl/src/bin/rofl_serve.rs").
+path_exists("rust/rofl/src/bin/rofl/load.rs").
+path_exists("rust/rofl/src/bin/rofl/main.rs").
+path_exists("rust/rofl/src/bin/rofl/render.rs").
+path_exists("rust/rofl/src/bin/rofl/seed.rs").
+path_exists("rust/rofl/src/bin/rofl/serve.rs").
 path_exists("rust/rofl/src/breaks.rs").
 path_exists("rust/rofl/src/cell.rs").
 path_exists("rust/rofl/src/corpus.rs").

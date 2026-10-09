@@ -11,7 +11,7 @@ import { parseMd } from './md_blocks.ts';
 
 export type ReadOptions = {
   vocab: string;
-  /** the source's facts dump from `rofl-render --facts`, for measuring a round trip */
+  /** the source's facts dump from `rofl render --facts`, for measuring a round trip */
   facts?: string;
   /** relation -> the book it is read from, for relations defined outside the text */
   homeBooks?: Record<string, string>;
@@ -319,7 +319,7 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
   }
   // AN AGGREGATE (docs/aggregates.md, "The sentence form, as built"): a condition naming its result, what it takes,
   // and its own body in parentheses, `N is the number of B such that (B votes for C)`. The sugar is lowered here
-  // onto count, sum and a comparison, each in the one spelling rofl-render reads back as the sugar.
+  // onto count, sum and a comparison, each in the one spelling rofl render reads back as the sugar.
   const TAKES = `\\((?:[^()"\`]|"[^"]*"|\`[^\`]*\`)*\\)|${TERM}`;
   let freshNames = new Set<string>();
   const fresh = (stem: string): string => { for (let k = 0; ; k++) if (!freshNames.has(`${stem}${k}`)) { freshNames.add(`${stem}${k}`); return `${stem}${k}`; } };
@@ -1040,7 +1040,7 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
   for (const m of facts.matchAll(/^tense\((r\d+), (next|init)\)\.$/gm)) srcClauses.get(m[1])!.tense = m[2];
   for (const m of facts.matchAll(/^lit\((r\d+), (\d+), (\w+), (pos|neg)\)\.$/gm)) srcClauses.get(m[1])!.body.push({ rel: m[3], neg: m[4] === 'neg', args: argsOf(m[1], Number(m[2])) });
   for (const m of facts.matchAll(/^bi\((r\d+), (\d+), "([^"]+)"\)\.$/gm)) srcClauses.get(m[1])!.body.push({ rel: m[3], neg: false, args: argsOf(m[1], Number(m[2])) });
-  // an aggregate whole (`aggj`, rofl-render's JSON of it), compared whole by `canon`
+  // an aggregate whole (`aggj`, rofl render's JSON of it), compared whole by `canon`
   for (const m of facts.matchAll(/^aggj\((r\d+), (\d+), (".*")\)\.$/gm)) srcClauses.get(m[1])!.body.push({ rel: '$agg', neg: false, args: [], agg: fromAggJ(JSON.parse(JSON.parse(m[3])) as AggJ) });
   // a lattice or tag declaration (`decl`, `decl_widen`): its head, the operation of its last argument
   const declOf = new Map<string, { kind: string; op: string; widen?: string; closure?: string }>();
@@ -1050,7 +1050,7 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
   // a dominance rule's dominating fact (`dom`, after the body)
   for (const m of facts.matchAll(/^dom\((r\d+), (\d+), (\$?\w+)\)\.$/gm)) srcClauses.get(m[1])!.dom = { rel: m[3], neg: false, args: argsOf(m[1], Number(m[2])) };
   const OWN = new Set(['phrase', 'kind_noun', 'sig', 'edb']);
-  /** An aggregate as rofl-render's `--facts` writes it whole (`aggj`): each term in the kernel's canonical spelling. */
+  /** An aggregate as rofl render's `--facts` writes it whole (`aggj`): each term in the kernel's canonical spelling. */
   type AggJ = { op: string; res: string; vals: string[]; keys: string[]; body: ({ k: 'pos' | 'neg'; rel: string; args: string[] } | { k: 'bi'; op: string; args: string[] } | { k: 'agg'; agg: AggJ })[] };
   /** The source's aggregate in the read-back clause's spelling: a variable `?X` is `X`, a wildcard `?_$0` is `_`. */
   function fromAggJ(a: AggJ): CAgg {

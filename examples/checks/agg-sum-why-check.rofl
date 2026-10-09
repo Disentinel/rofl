@@ -1,5 +1,5 @@
 -- examples/checks/agg-sum-why-check.rofl — agg_sum_why, run with
--- `rofl-load --explain`: `why` of a sum names what it sealed and lists its
+-- `rofl load --explain`: `why` of a sum names what it sealed and lists its
 -- members, a digest of five with the rest counted; `why_all` lists all six;
 -- `whynot` of a wrong sum says what the sum is, and of a sum with no value
 -- says which hole it is: gbig's overflow, gmix's multiplication. A hole is

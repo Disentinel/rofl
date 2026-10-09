@@ -1,5 +1,5 @@
 -- examples/checks/agg-member-derivs-ticks.rofl — agg_member_derivs_ticks, run
--- two ticks deep with `rofl-load --explain` and retain_ticks 0: A MEMBER'S
+-- two ticks deep with `rofl load --explain` and retain_ticks 0: A MEMBER'S
 -- OTHER DERIVATIONS KEEP THE PROVENANCE OF THEIR PAST-TICK PREMISES.
 -- mt_n(1) is staged @next at tick 0 and read at tick 1 through the cell
 -- tick 0 sealed. Its one member, 2, has two derivations, through mt_lv(a)

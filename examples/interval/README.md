@@ -59,7 +59,7 @@ The rules are `examples/interval/interval.rofl`. The enclosures it closes on:
 Run one:
 
 ```
-rofl-load --why "f_head(head,iv(0,7))" boot.rofl examples/interval/interval.rofl
+rofl load --why "f_head(head,iv(0,7))" boot.rofl examples/interval/interval.rofl
 ```
 ```
 f_head(head, _) is a shrug: inherited, the answer reads another answer that is a shrug; from([$lattice(f_head, main, 0, [head])])

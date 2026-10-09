@@ -1,5 +1,5 @@
 -- examples/checks/agg-widen-witness-check.rofl — agg_widen_witness, run with
--- `rofl-load --explain`. A widened cell's witness is Widened: not a Cover,
+-- `rofl load --explain`. A widened cell's witness is Widened: not a Cover,
 -- since no set of contributions joins to an infinite end, but the record of
 -- how the value was reached — the declared N, and each widening in order,
 -- the value before it, the contribution, their join and the value widened to

@@ -106,7 +106,7 @@ the centre with O to move. One move keeps the draw, the block at the third
 cell, and the other five lose:
 
 ```
-rofl-load --why "v3(b(x,x,e,e,o,e,e,e,e),0)" boot.rofl examples/minimax/minimax.rofl
+rofl load --why "v3(b(x,x,e,e,o,e,e,e,e),0)" boot.rofl examples/minimax/minimax.rofl
 ```
 ```
   min(?W : move[main](3,b(x,x,e,e,o,e,e,e,e),?C), v4[main](?C,?W)) = 0 [aggregate: 1 member, sealed move@1, v4@8]
@@ -122,7 +122,7 @@ centre, O an edge and the far corner, X to move: two moves win (cells 4 and 7),
 three do not:
 
 ```
-rofl-load --why "v4(b(x,o,e,e,x,e,e,e,o),1)" boot.rofl examples/minimax/minimax.rofl
+rofl load --why "v4(b(x,o,e,e,x,e,e,e,o),1)" boot.rofl examples/minimax/minimax.rofl
 ```
 ```
 max(?W : move[main](4,b(x,o,e,e,x,e,e,e,o),?C), v5[main](?C,?W)) = 1 [aggregate: 2 members, sealed move@1, v5@7]
@@ -142,7 +142,7 @@ more than a million lines, and the world's alarms do not ask for it.
 `whynot` of a better value is a sentence:
 
 ```
-rofl-load --whynot "v0(b(e,e,e,e,e,e,e,e,e),1)" ...
+rofl load --whynot "v0(b(e,e,e,e,e,e,e,e,e),1)" ...
 whynot v0[main](b(e,e,e,e,e,e,e,e,e),1):
   rule r62880530: v0[main](?B,?V)@now :- real[main](0,?B)@now, not decided[main](?B)@now, ?V is max(...)
     failed premise: max(?W#0 : move[main](0,b(e,e,e,e,e,e,e,e,e),?C#0), v1[main](?C#0,?W#0)) = 0, not 1 [aggregate]
@@ -164,7 +164,7 @@ engine refuses to put a count, a sum, a min or a max inside one:
 program rejected: max is not evaluated under well_founded semantics (rule r62880530):
 a cell sealed under an assumption counts facts that may not hold; evaluate the
 well-founded world below and feed its true and unknown rows to a stratified world
-that aggregates them (rofl-load --below)
+that aggregates them (rofl load --below)
 ```
 
 (That is this file loaded with `semantics(well_founded).`) The composition the

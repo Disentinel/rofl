@@ -30,7 +30,7 @@
 // WHY A HASH AND A CENSUS RATHER THAN THE STATE. The states are 42 MB. The hash
 // is exact — any change moves it. The census says WHERE: rows per relation, so
 // a red names the relation that moved and by how much. For the exact firing,
-// run the two engines by hand and diff; `rust/target/release/rofl-load` prints
+// run the two engines by hand and diff; `rust/target/release/rofl load` prints
 // the state a world evaluates to.
 
 import { Rofl } from '../src/api.ts';
@@ -51,11 +51,11 @@ import { parseSelector, select, NotAWorld, belowFiles } from './agg_select.ts';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const GOLDEN = path.join(ROOT, 'facts/goldens.rofl');
-// ROFL_PROFILE names the cargo profile whose `rofl-load` answers for Rust:
+// ROFL_PROFILE names the cargo profile whose `rofl load` answers for Rust:
 // `release` unless said otherwise, `fast` for the development loop, `breaks`
 // for scripts/agg_breaks.ts. Every profile has the release semantics.
 export const PROFILE = process.env.ROFL_PROFILE || 'release';
-const RUST = path.join(ROOT, 'rust/target', PROFILE, 'rofl-load');
+const RUST = path.join(ROOT, 'rust/target', PROFILE, 'rofl');
 const BOOT = fs.readFileSync(path.join(ROOT, 'boot.rofl'), 'utf8');
 /** boot.rofl, or the copy a planted fault of scripts/agg_breaks.ts names in ROFL_BOOT, read where a world is answered */
 const bootPath = (): string => process.env.ROFL_BOOT || path.join(ROOT, 'boot.rofl');
@@ -85,16 +85,16 @@ const col = (r: Rofl, lit: string, ...vs: string[]): string[][] =>
  *  only the Rust engine can answer, or one too big for TypeScript to be asked
  *  (the TypeScript engine is not run on it at all: not by npm test, bless, whycheck
  *  or test:agg; facts/checks.rofl, "RUST ONLY", states the rule and each world's reason). `strata` runs the stock evaluator, `explain` the
- *  `explain_request` bridge of rofl-load. */
+ *  `explain_request` bridge of rofl load. */
 export interface World {
   /** a budget no world needs, which a planted fault that runs away is cut by sooner (scripts/agg_breaks.ts); a cut it makes is still a problem */
   name: string; files: string[]; ticks?: number; budget?: number; cap?: number; space?: number;
   oneEngine?: 'ts' | 'rust'; strata?: boolean; explain?: boolean; retain?: number;
-  /** base facts retracted one by one after the evaluation (rofl-load `--retract`: the Rust engine updates the cells they
+  /** base facts retracted one by one after the evaluation (rofl load `--retract`: the Rust engine updates the cells they
    *  supported, the TypeScript engine evaluates again); both must hold the state a world without them holds */
   retract?: string[];
   /** its files load together and are evaluated once, a fixture offered alone
-   *  (as rofl-load runs a world), in both engines: the aggregate proof worlds */
+   *  (as rofl load runs a world), in both engines: the aggregate proof worlds */
   together?: boolean;
   /** its `.rofl.md` files, and its `.rofl` files headed `-- through-sentences`, go once round the sentence form (scripts/sentences.ts) */
   sentences?: boolean;
@@ -209,19 +209,19 @@ export function declared(text?: string): World[] {
   for (const [n, v] of col(r, 'check_opt(N, budget, V)', 'N', 'V')) {
     const w = out.get(n); if (w) w.budget = Number(v);
   }
-  // the completed ticks whose provenance is kept (rofl-load --retain); Rust only
+  // the completed ticks whose provenance is kept (rofl load --retain); Rust only
   for (const [n, v] of col(r, 'check_opt(N, retain, V)', 'N', 'V')) {
     const w = out.get(n);
     if (w && w.oneEngine !== 'rust' && !w.together) throw new Error(`check_opt("${n}", retain, ${v}): retain_ticks is set on a world not loaded together`);
     if (w) w.retain = Number(v);
   }
-  // the facts retracted after the evaluation, in the order the registry lists them (rofl-load --retract)
+  // the facts retracted after the evaluation, in the order the registry lists them (rofl load --retract)
   for (const [n, v] of col(r, 'check_opt(N, retract, V)', 'N', 'V')) {
     const w = out.get(n);
     if (w && !w.together) throw new Error(`check_opt("${n}", retract, "${v}"): a retraction is made in a world loaded together`);
     if (w) (w.retract ??= []).push(v);
   }
-  // the space wall, in rows (rofl-load --space); Rust only
+  // the space wall, in rows (rofl load --space); Rust only
   for (const [n, v] of col(r, 'check_opt(N, space, V)', 'N', 'V')) {
     const w = out.get(n);
     if (w && w.oneEngine !== 'rust' && !w.together) throw new Error(`check_opt("${n}", space, ${v}): a space wall is set on a world not loaded together`);
@@ -350,7 +350,7 @@ function rowProblems(files: string[], state: string): string[] {
 export function answerTS(w0: World, Engine: typeof Rofl = Rofl): Answer {
   if (w0.together) return answerTSTogether(w0, Engine);
   const w = placed(w0);
-  // `evaluator, strata` reaches this engine as it reaches rofl-load: a world
+  // `evaluator, strata` reaches this engine as it reaches rofl load: a world
   // both engines answer runs the stock evaluator in both, or the option would
   // be read by one and silently dropped by the other
   const r = new Engine(w.strata ? { evaluator: 'strata' } : {});
@@ -405,12 +405,12 @@ export function expectedRefusal(f: string): string | null {
   return m ? m[1].trim() : null;
 }
 
-/** A TOGETHER WORLD IN THE TYPESCRIPT ENGINE, as rofl-load runs one
+/** A TOGETHER WORLD IN THE TYPESCRIPT ENGINE, as rofl load runs one
  *  (`answerRustOnly`): a fixture is offered alone, boot and the world below
  *  it fed, and refused at the door (`load`) or by the evaluation (`eval`);
  *  every other file goes into the world, whose files all load before it is
  *  evaluated once, then ticked, explained, and read. */
-/** The steps of a together world in the TypeScript engine, as rofl-load
+/** The steps of a together world in the TypeScript engine, as rofl load
  *  takes them: a fresh engine under the world's walls with boot loaded, the
  *  world below fed, and the evaluation (ticked and explained as declared),
  *  with its exit class for a refusal. */
@@ -434,7 +434,7 @@ function together(w: World, Engine: typeof Rofl) {
     try { b.evaluate(budget); r.feedBelow(b); } catch (e) { return `below: ${(e as Error).message}`; }
     return null;
   };
-  // the evaluation: rofl-load's, with its exit class for a refusal
+  // the evaluation: rofl load's, with its exit class for a refusal
   const run = (r: Rofl, explain: boolean): { cls: 'eval'; msg: string } | null => {
     try {
       if (!w.ticks || w.retract?.length) {
@@ -452,7 +452,7 @@ function together(w: World, Engine: typeof Rofl) {
       }
     } catch (e) {
       const msg = (e as Error).message;
-      // a world refused for a broken promise is asked again, as rofl-load asks it: it refuses again, never answers
+      // a world refused for a broken promise is asked again, as rofl load asks it: it refuses again, never answers
       if (!/has two values in the book/.test(msg)) return { cls: 'eval', msg };
       try { r.evaluate(budget); } catch (e2) { return { cls: 'eval', msg: (e2 as Error).message }; }
       return { cls: 'eval', msg: 'a broken world was answered after its refusal' };
@@ -542,7 +542,7 @@ export function closureVerdict(tree0: string, stored0: string): string | null {
 }
 function storedClosureProblems(w: World, keep: string[], args: string[], state: string): string[] {
   if (!treeDeclared(keep)) return [];
-  const p = spawnSync(RUST, args, { encoding: 'utf8', maxBuffer: 512 * 1024 * 1024, env: { ...process.env, ROFL_NO_VCLOSURE: '1' } });
+  const p = spawnSync(RUST, ['load', ...args], { encoding: 'utf8', maxBuffer: 512 * 1024 * 1024, env: { ...process.env, ROFL_NO_VCLOSURE: '1' } });
   if (p.status !== 0) return [`the world with its closure stored does not evaluate (${p.status})`];
   const v = closureVerdict(state, p.stdout);
   return [...(v === null ? [] : [v]), ...snapshotProblems(args, state)];
@@ -550,17 +550,17 @@ function storedClosureProblems(w: World, keep: string[], args: string[], state: 
 
 /** A SNAPSHOT OF THAT WORLD, OPENED AND NOT EVALUATED, holds what the world held: the closure's rows were never stored, so a
  *  snapshot that did not carry the closure (or whose reopened engine did not read it off its tree) answered `ask` with nothing
- *  and listed none of the rows, though the readers held. rofl-serve opens what rofl-load --save wrote; its state is the world's. */
+ *  and listed none of the rows, though the readers held. rofl serve opens what rofl load --save wrote; its state is the world's. */
 function snapshotProblems(args: string[], state: string): string[] {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rofl-closure-snap-'));
   try {
     const snap = path.join(dir, 'world.seed.json');
-    const saved = spawnSync(RUST, [...args, '--save', snap], { encoding: 'utf8', maxBuffer: 512 * 1024 * 1024 });
+    const saved = spawnSync(RUST, ['load', ...args, '--save', snap], { encoding: 'utf8', maxBuffer: 512 * 1024 * 1024 });
     if (saved.status !== 0) return [`the world does not save a snapshot (${saved.status})`];
-    const serve = spawnSync(path.join(path.dirname(RUST), 'rofl-serve'), [], { encoding: 'utf8', maxBuffer: 1024 * 1024 * 1024,
+    const serve = spawnSync(RUST, ['serve'], { encoding: 'utf8', maxBuffer: 1024 * 1024 * 1024,
       input: `${JSON.stringify({ op: 'open', seedPath: snap })}\n${JSON.stringify({ op: 'state', session: 1 })}\n` });
     const reopened = (JSON.parse((serve.stdout ?? '').split('\n')[1] || '{}') as { state?: string }).state;
-    if (reopened === undefined) return ['a snapshot of the world is not opened by rofl-serve'];
+    if (reopened === undefined) return ['a snapshot of the world is not opened by rofl serve'];
     if (reopened === state.replace(/\n$/, '')) return [];
     const a = reopened.split('\n'), b = state.replace(/\n$/, '').split('\n');
     const i = a.findIndex((l, k) => l !== b[k]);
@@ -579,7 +579,7 @@ export function answerRust(w0: World): Answer | null {
   if (w.oneEngine === 'ts') return null;
   if (w.oneEngine === 'rust') return answerRustOnly(w);
   if (belowFiles(w.files).length > 0) throw new Error(`${w.name}: a world below is fed by the Rust engine alone, and this world is not Rust-only`);
-  // A REFUSED FILE IS OBSERVED, NOT FATAL. `rofl-load` exits non-zero and
+  // A REFUSED FILE IS OBSERVED, NOT FATAL. `rofl load` exits non-zero and
   // prints to stderr when it will not load a program — which IS the answer for
   // a world written to be refused. The first version let execFileSync throw,
   // and the whole check died on the one world whose point is the refusal. Each
@@ -589,7 +589,7 @@ export function answerRust(w0: World): Answer | null {
   // The MESSAGE is not hashed. Two implementations word a syntax error
   // differently and always will; that a file is refused, and which one, is the
   // part both must agree on.
-  const run = (args: string[]): string => execFileSync(RUST, args,
+  const run = (args: string[]): string => execFileSync(RUST, ['load', ...args],
     { encoding: 'utf8', maxBuffer: 512 * 1024 * 1024, stdio: ['ignore', 'pipe', 'pipe'] });
   const boot = bootPath();
   const diags: string[] = [], keep: string[] = [], problems: string[] = [];
@@ -597,7 +597,7 @@ export function answerRust(w0: World): Answer | null {
     const unread = unreadOf(f), want = expectedRefusal(f), base = path.basename(f);
     // only a fixture is offered alone, as answerRustOnly does: a file that needs its stratum table beside it is refused alone, rightly
     if (!want && !unread.length && w.strata) { keep.push(f); continue; }
-    const p = unread.length ? { status: 2, stderr: unread.join('\n') } : spawnSync(RUST, [boot, ...(w.strata ? ['--strata'] : []), f], { encoding: 'utf8', maxBuffer: 512 * 1024 * 1024 });
+    const p = unread.length ? { status: 2, stderr: unread.join('\n') } : spawnSync(RUST, ['load', boot, ...(w.strata ? ['--strata'] : []), f], { encoding: 'utf8', maxBuffer: 512 * 1024 * 1024 });
     if (p.status === 0) {
       keep.push(f);
       if (want) problems.push(`${base} was to be refused (${want}) and loaded`);
@@ -633,21 +633,21 @@ function answerRustOnly(w: World): Answer {
   for (const f of w.files) {
     const want = expectedRefusal(f), unread = unreadOf(f);
     if (!want && !unread.length) { keep.push(f); continue; }
-    const p = unread.length ? { status: 2, stderr: unread.join('\n') } : spawnSync(RUST, [boot, ...opts, ...belowArgs([f]), f], { encoding: 'utf8', maxBuffer: 512 * 1024 * 1024 });
+    const p = unread.length ? { status: 2, stderr: unread.join('\n') } : spawnSync(RUST, ['load', boot, ...opts, ...belowArgs([f]), f], { encoding: 'utf8', maxBuffer: 512 * 1024 * 1024 });
     const base = path.basename(f);
     if (p.status === 0) {
       keep.push(f);
       if (want) problems.push(`${base} was to be refused (${want}) and loaded`);
       continue;
     }
-    if (p.status !== 2 && p.status !== 3) throw new Error(`rofl-load died on ${base} (${p.status}): ${p.stderr}`);
+    if (p.status !== 2 && p.status !== 3) throw new Error(`rofl load died on ${base} (${p.status}): ${p.stderr}`);
     diags.push(`refused ${base} (${p.status === 2 ? 'load' : 'eval'})`);
     dropped.push(`${base}: ${p.stderr.split('\n').filter((l) => l.trim()).slice(-1)[0]?.trim() ?? ''}`);
     if (!want) problems.push(`${base} refused: ${p.stderr.trim().split('\n').slice(0, 3).join(' / ')}`);
     else if (!p.stderr.includes(want)) problems.push(`${base} refused, but not for '${want}': ${p.stderr.trim().split('\n').slice(0, 3).join(' / ')}`);
   }
   const runArgs = [boot, ...opts, ...(w.explain ? ['--explain'] : []), ...belowArgs(keep), ...keep];
-  const p = spawnSync(RUST, runArgs, { encoding: 'utf8', maxBuffer: 512 * 1024 * 1024 });
+  const p = spawnSync(RUST, ['load', ...runArgs], { encoding: 'utf8', maxBuffer: 512 * 1024 * 1024 });
   if (p.status !== 0) {
     problems.push(`the world does not evaluate (${p.status}): ${p.stderr.trim().split('\n').slice(0, 3).join(' / ')}`);
   }
@@ -753,7 +753,7 @@ export function aggregateDoors(): string[] {
       if (!fs.existsSync(RUST)) continue;
       const src = path.join(dir, 'door.rofl'), snap = path.join(dir, 'door.json');
       fs.writeFileSync(src, `${base}\n${prog}\n`);
-      const rust = execFileSync(RUST, [path.join(ROOT, 'boot.rofl'), '--save', snap, src], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+      const rust = execFileSync(RUST, ['load', path.join(ROOT, 'boot.rofl'), '--save', snap, src], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
       if (normalise(rust) !== normalise(viaLoad)) out.push(`${what}: the TypeScript engine's state is not the Rust engine's`);
       try {
         const r = Rofl.fromSnapshot(fs.readFileSync(snap, 'utf8'));

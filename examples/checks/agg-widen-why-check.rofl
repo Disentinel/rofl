@@ -1,5 +1,5 @@
 -- examples/checks/agg-widen-why-check.rofl — agg_widen_why, run with
--- `rofl-load --explain`. `why` of a widened cell's value is no derivation:
+-- `rofl load --explain`. `why` of a widened cell's value is no derivation:
 -- the cell is a shrug, and why says so, `widened`, with the enclosure, the
 -- declared N and each widening; `why` of a point that read it names that
 -- cell as its root, and the widening under it. `whynot` of the least value

@@ -32,7 +32,7 @@ ui 8 after design; auth 4 after spec; integ 3 after api, ui and auth; docs 2
 after api; tests 4 and perf 3 after integ; release 1 after tests, perf and docs.
 
 ```
-rofl-load --why "finish(release,23)" boot.rofl examples/critpath/critpath.rofl examples/critpath/critpath-plan.rofl
+rofl load --why "finish(release,23)" boot.rofl examples/critpath/critpath.rofl examples/critpath/critpath-plan.rofl
 ```
 ```
 finish[main](release,23) [lattice max: 1 member]
@@ -55,7 +55,7 @@ two ways to reach 18: ui finishes at 15 (design 7 + 8) and so does api (schema
 have hidden one of them. `--why-all` on the tie names both:
 
 ```
-rofl-load --why-all "finish(integ,18)" boot.rofl examples/critpath/critpath.rofl examples/critpath/critpath-plan.rofl
+rofl load --why-all "finish(integ,18)" boot.rofl examples/critpath/critpath.rofl examples/critpath/critpath-plan.rofl
 ```
 ```
 finish[main](integ,18) [lattice max: 2 members]
@@ -115,7 +115,7 @@ lattice settles with 18, one per source and host. The cheapest chain from the
 internet to the database:
 
 ```
-rofl-load --why "exploit(internet,db,12)" boot.rofl examples/critpath/taint.rofl examples/critpath/taint-hosts.rofl
+rofl load --why "exploit(internet,db,12)" boot.rofl examples/critpath/taint.rofl examples/critpath/taint-hosts.rofl
 ```
 ```
 exploit[main](internet,db,12) [lattice min: 1 member]
@@ -148,7 +148,7 @@ contractor all three jewels.
 every road that reaches it:
 
 ```
-rofl-load --whynot "exploit(internet,db,9)" boot.rofl examples/critpath/taint.rofl examples/critpath/taint-hosts.rofl
+rofl load --whynot "exploit(internet,db,9)" boot.rofl examples/critpath/taint.rofl examples/critpath/taint-hosts.rofl
 ```
 ```
 whynot exploit[main](internet,db,9):

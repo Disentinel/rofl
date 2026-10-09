@@ -1,4 +1,4 @@
--- examples/checks/why-base-check.rofl — why_base, run with `rofl-load --explain`: the
+-- examples/checks/why-base-check.rofl — why_base, run with `rofl load --explain`: the
 -- text of `why` and `why all`, derived by hand.
 --
 --   wb_h(a) is asserted (height 0) and derived from wb_c(a), derived from it (height 2).

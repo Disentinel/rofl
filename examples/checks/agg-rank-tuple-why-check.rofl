@@ -1,5 +1,5 @@
 -- examples/checks/agg-rank-tuple-why-check.rofl — agg_rank_tuple_why, run with
--- `rofl-load --explain`: `why` of a rank over a tuple names the aggregate as
+-- `rofl load --explain`: `why` of a rank over a tuple names the aggregate as
 -- written, directions and all, with its subject tuple, what it sealed and its
 -- members in the tuple's order, each as its key tuple; `whynot` of a wrong
 -- place says which place it is, of a subject none of the tuples names the

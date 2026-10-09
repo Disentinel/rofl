@@ -20,7 +20,7 @@ pub fn describe(e: &Halt) -> String
 pub mod dense; pub mod engine; pub mod reflect; pub mod seed; pub mod store; pub mod term;
 ```
 
-One binary, `rofl-eval`, which reads a seed and prints the state to stdout.
+One binary, `rofl load --seed`, which reads a seed and prints the state to stdout.
 
 **So the port was not an engine, it was an accelerator.** Its only input was a
 snapshot the TypeScript kernel produced; there was no parser, no incremental
@@ -127,7 +127,7 @@ scanned a relation.
 - **A tick is `tick()` N times and nothing else.** The gate mirrors the corpus
   generator rather than calling `evaluate()` beside it — calling both re-derives
   a layer the tick already has and re-dates every witness, which is the harness
-  defect recorded at the top of `rust/rofl/src/bin/rofl_eval.rs`.
+  defect recorded at the top of `rust/rofl/src/bin/rofl/seed.rs`.
 
 ### What the gate compares against
 
@@ -184,7 +184,7 @@ the code; the code is held to the syntax.
 `open(packs)` above still means `open(seed)`. Parsing a `.rofl` file into
 CLAUSES the engine will run is a different bridge from parsing it into an AST,
 and it was not built when this was written. It is now: `Session::load` reads
-`.rofl` text (`rofl_parse.rs`); `rofl-load`, and rofl-serve's `fresh` then
+`.rofl` text (`rofl_parse.rs`); `rofl load`, and rofl serve's `fresh` then
 `load`, take packs as source with no seed.
 
 ## What must be said to anyone handed this
@@ -347,14 +347,14 @@ signature is the least, and a direct one) and `why_forest` (three firings sharin
 `Session` could explain and no binary asked it to, so a proof still needed the
 TypeScript engine. Since 2026-10-01:
 
-- `rofl-serve`: `{"op":"why","session":S,"query":L,"all"?:true}` → `{text}`
+- `rofl serve`: `{"op":"why","session":S,"query":L,"all"?:true}` → `{text}`
   (`all` is `why all`: every member of every cell; a value that is not a
   boolean is refused);
   `{"op":"whynot",...,"depth"?:N,"nodes"?:N}` → `{holds, text}`; `{"op":"excise",...}`
   → `{removed, added}`. A `why` of a fact that does not hold, and any refused
   question, are `ok:false` with the reference's text as the `error`.
   `RoflSession.why/whynot/excise` in `runtime/port.ts`.
-- `rofl-load --why L --why-all L --whynot L --excise F` (each repeatable):
+- `rofl load --why L --why-all L --whynot L --excise F` (each repeatable):
   answers in flag order, each followed by an empty line, instead of the state;
   `--state` keeps the state, printed first. `--depth N --nodes N` bound every
   `--whynot` of the run. A refusal is printed as the answer and the exit code

@@ -1,4 +1,4 @@
--- examples/checks/agg-why-dag-past.rofl — agg_why_dag_past, run with `rofl-load --ticks 1 --explain`.
+-- examples/checks/agg-why-dag-past.rofl — agg_why_dag_past, run with `rofl load --ticks 1 --explain`.
 -- `p(a,c)` is written as a past-tick premise (`p[main](a,c)  <= r @tick 0 [past tick]`, under `was`) before its
 -- derivation of tick 1. That line begins with the key and carries a firing, and is not a block: a reference
 -- `p[main](a,c) [above]` stands for the first line with the key that is not a leaf (`[past tick]`, `[axiom]`).

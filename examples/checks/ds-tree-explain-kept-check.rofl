@@ -1,4 +1,4 @@
--- examples/checks/ds-tree-explain-kept-check.rofl — ds_tree_explain_kept (witnesses kept), run with `rofl-load --explain`: the
+-- examples/checks/ds-tree-explain-kept-check.rofl — ds_tree_explain_kept (witnesses kept), run with `rofl load --explain`: the
 -- closure is answered from its tree and no row of it is stored, yet each row is explained, weighed and cited as the stored row is.
 --
 --   A row's height is its chain's: dte_w(a,b) 1, dte_w(a,c) 2, dte_w(a,d) 3, so the count's members are b and x h=2, c h=3, d h=4,

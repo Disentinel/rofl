@@ -107,7 +107,7 @@ async function coreWorld(engine: string): Promise<{ world: World; stop: () => Pr
     r.evaluate(BUDGET);
     return { world: wrap(r), stop: async () => {} };
   }
-  const port = await RoflPort.start(path.join(ROOT, `rust/target/${process.env.ROFL_PROFILE ?? 'release'}/rofl-serve`));
+  const port = await RoflPort.start(path.join(ROOT, `rust/target/${process.env.ROFL_PROFILE ?? 'release'}/rofl`));
   const wrap = (s: RoflSession): World => ({
     fork: async () => wrap(await s.fork()),
     assert: async (t) => { await s.assert(t); },
@@ -178,7 +178,7 @@ const all = (r: Read): Set<string> => new Set([...r.cross, ...[...r.single.value
  *  the resident world (its answers, the why of each side_effect_value answer, its state after the whys). */
 async function driven(seq: string[], W: Read, whole: World, held: Map<string, boolean>): Promise<{ last: Map<string, string>; surface: Set<string>;
   evals: number; bad: number; lines: string[]; refused?: string }> {
-  const port = await RoflPort.start(path.join(ROOT, `rust/target/${process.env.ROFL_PROFILE ?? 'release'}/rofl-serve`));
+  const port = await RoflPort.start(path.join(ROOT, `rust/target/${process.env.ROFL_PROFILE ?? 'release'}/rofl`));
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rofl-split-'));
   const last = new Map<string, string>();
   const t0 = performance.now();

@@ -1,4 +1,4 @@
--- examples/checks/why-height-check.rofl — why_height, run with `rofl-load
+-- examples/checks/why-height-check.rofl — why_height, run with `rofl load
 -- --explain`: the whole text of `why` and `why all` of wh_reach(c, c), derived by
 -- hand and compared line for line.
 --
