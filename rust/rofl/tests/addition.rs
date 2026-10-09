@@ -106,11 +106,17 @@ fn fact(r: &mut Rng) -> String {
 
 const EDB: &str = "edb(e). edb(n). edb(w).";
 
+/// The state without `evaluated_again`, the record of how the world was brought up to date, which a fresh world has
+/// no reason to hold.
+fn without_record(state: &str) -> String {
+    state.lines().filter(|l| !l.starts_with("evaluated_again[")).map(|l| format!("{l}\n")).collect()
+}
+
 fn state(s: &mut Session) -> String {
     if s.eval.store.dirty {
         s.evaluate().expect("evaluates");
     }
-    let mut out = s.eval.canonical_state();
+    let mut out = without_record(&s.eval.canonical_state());
     out.push_str("\nstaged\n");
     out.push_str(&s.eval.staged_text());
     out
@@ -329,6 +335,13 @@ fn differential(seed: u64, head: &str, rules: Vec<String>, gen: fn(&mut Rng) -> 
         });
         log.push(format!("  -> {a:?}"));
         if let Ok(a) = &a {
+            if let Addition::Full(why) = a {
+                // the world says it was evaluated again, and why, where a rule reads it
+                let said = s.eval.canonical_state();
+                for w in why.split("; ").filter(|w| *w != "the world is not evaluated") {
+                    assert!(said.lines().any(|l| l.starts_with("evaluated_again[$kernel](") && l.contains(&format!(",\"{w}\")"))), "seed {seed}: {log:?} evaluated again ({w}) and the world does not say so");
+                }
+            }
             st.took(a);
         }
         ops.push(op);
@@ -809,7 +822,7 @@ fn corpus_additions_are_a_fresh_evaluation() {
             a
         });
         let (mut f, t_fresh) = world(&[&facts, &format!("asks({first}).\nasks({then}).")]);
-        let same = s.eval.canonical_state() == f.eval.canonical_state();
+        let same = without_record(&s.eval.canonical_state()) == without_record(&f.eval.canonical_state());
         eprintln!("asks({first}) then asks({then}): first cone {t_world:.2}s ({steps0} steps), delta {t_delta:.2}s, fresh {t_fresh:.2}s ({} steps), x{:.1}; same={same}; {a:?}", f.eval.steps, t_fresh / t_delta.max(1e-6));
         assert!(same);
         return;
@@ -839,7 +852,7 @@ fn corpus_additions_are_a_fresh_evaluation() {
             f.evaluate().unwrap();
             f
         });
-        let same = s.eval.canonical_state() == f.eval.canonical_state();
+        let same = without_record(&s.eval.canonical_state()) == without_record(&f.eval.canonical_state());
         eprintln!("cell {cell}: {} rules; world {t_world:.2}s, delta {t_delta:.2}s, fresh {t_fresh:.2}s, x{:.1}; same={same}; {a:?}", rules.lines().count(), t_fresh / t_delta.max(1e-6));
         assert!(same);
         return;
@@ -852,7 +865,7 @@ fn corpus_additions_are_a_fresh_evaluation() {
         let (mut s, t_world) = world(&[&rest]);
         let ((_, a), t_delta) = timed(|| { let a = s.assert_delta(file).unwrap(); s.eval.ensure().unwrap(); a });
         let (mut f, t_fresh) = world(&[&rest, file]);
-        let same = s.eval.canonical_state() == f.eval.canonical_state();
+        let same = without_record(&s.eval.canonical_state()) == without_record(&f.eval.canonical_state());
         eprintln!(
             "file {held} ({} facts of {}): world of the rest {t_world:.2}s, delta {t_delta:.2}s, fresh {t_fresh:.2}s, x{:.1}; {} facts; same={same}; {a:?}",
             file.lines().count(),

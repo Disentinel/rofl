@@ -3806,7 +3806,8 @@ work_spawned(w_knobs_trim, f_the_knob_audit_proposes_removals).
 
 work(w_delta_edb_leftover,
   "A retraction of the last base fact of a relation leaves its edb(R) (and authority) row, which a fresh evaluation without that fact never writes (found by the tree fuzzer: 9 of 400 retract-vs-fresh differences, the stored closure shows the same). Make a delta retraction drop what a fresh world would not have; proof world + planted break.").
-work_state(w_delta_edb_leftover, open).
+work_state(w_delta_edb_leftover, done).
+-- DONE 2026-10-09 (f_a_retraction_takes_what_a_load_wrote_for_the_fact_and_the_world_says_when_it_is_evaluated_again).
 
 work(w_demand_scc_fixpoint,
   "A cycle of open demand calls iterates call by call: the nested calls of one cycle all read the outermost call's growing answers, so none can be tabled and each pass unfolds them all again (ringo400: 800 answers in 10.1 s against the stored copy's fraction of a second; f_the_space_wall_counted_open_answers_already_dropped). Iterate the whole cycle together (SCC-level tabling: one fixpoint for the cycle's calls, semi-naive within it), identical answers to the non-demand copy; measure ringo400, sc800, the random cyclic fuzzer (rvd2/gen.py) on Rust release.").
@@ -3820,7 +3821,8 @@ work_needs(w_delta_full_reasons, w_incremental_addition).
 
 work(w_full_eval_indicator,
   "A full re-evaluation where a delta was asked is visible today only to the caller (rofl-load stderr `evaluated again, <reasons>`, a rofl-serve field). Write it into the world too (a kernel fact naming the request and every reason, e.g. evaluated_again(Request, Reason)) so a notebook and rules can see it, and count the fallback rate in the differential tests; both engines' text identical.").
-work_state(w_full_eval_indicator, open).
+work_state(w_full_eval_indicator, done).
+-- DONE 2026-10-09, Rust (the TypeScript engine has no delta and writes no row): the same finding.
 
 work(w_incremental_addition,
   "GENERAL INCREMENTAL ADDITION (the owner, 2026-10-05, f_the_owner_settles_walls_promises_and_incremental point 3; settles the AFK / incremental-addition question): an evaluated Rust world takes new base facts and new rules without clearing derived facts and reaches the state of a fresh evaluation, byte for byte; non-monotone readers by retract-then-rederive, a full evaluation only with every reason named. In progress (agent, 2026-10-05).").

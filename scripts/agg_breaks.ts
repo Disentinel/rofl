@@ -162,6 +162,34 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "retract_keeps_edb",
+  "what": "a retraction of the last fact of a relation or a book leaves the edb and authority rows a load without it never writes",
+  "expect": {
+   "retract_last": "edb"
+  }
+ },
+ {
+  "id": "retract_edb_unread",
+  "what": "a retraction that takes an edb row a rule reads is worked out as a delta, and the rule's conclusions are not read again",
+  "expect": {
+   "retract_last_read": "rl_lone"
+  }
+ },
+ {
+  "id": "ts_retract_keeps_edb",
+  "what": "the TypeScript engine leaves the edb and authority rows of the last fact of a relation or a book it retracts",
+  "edits": [
+   [
+    "src/api.ts",
+    "    if (withheld.has(V.asserted_by)) return out;",
+    "    return out;"
+   ]
+  ],
+  "expect": {
+   "retract_last": "edb"
+  }
+ },
+ {
   "id": "ts_asks_derived_by_unnamed",
   "what": "the TypeScript engine keeps only the cone for a rule that reads derived_by with its fact unbound",
   "edits": [
