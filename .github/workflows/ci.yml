@@ -75,20 +75,21 @@ jobs:
         include:
           - { target: linux-x64, os: ubuntu-latest }
           - { target: linux-arm64, os: ubuntu-24.04-arm }
-          - { target: darwin-x64, os: macos-13 }
+          - { target: darwin-x64, os: macos-14, triple: x86_64-apple-darwin }
           - { target: darwin-arm64, os: macos-14 }
           - { target: win32-x64, os: windows-latest }
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
+        with: { targets: '${{ matrix.triple }}' }
       - uses: Swatinem/rust-cache@v2
         with: { workspaces: rust, key: '${{ matrix.target }}' }
-      - run: cd rust && cargo build --release --bin rofl
+      - run: cd rust && cargo build --release --bin rofl ${{ matrix.triple && format('--target {0}', matrix.triple) || '' }}
       - uses: actions/upload-artifact@v4
         with:
           name: rofl-${{ matrix.target }}
-          path: rust/target/release/rofl${{ startsWith(matrix.target, 'win32') && '.exe' || '' }}
+          path: rust/target/${{ matrix.triple && format('{0}/', matrix.triple) || '' }}release/rofl${{ startsWith(matrix.target, 'win32') && '.exe' || '' }}
 
   vsix:
     needs: engine
