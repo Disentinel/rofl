@@ -75,6 +75,13 @@ So the first stage of any plan is "everything local, per file". The second is th
 delta over the 0.81 %, which is decision 4's resume plus decision 7's split by key, at the size of the crossing
 facts.
 
+**Ingest by delta already works** (`f_ingest_by_delta_is_exact_and_an_addition_costs_a_few_times_its_share`,
+`scripts/ingest_by_delta.ts`). The core is evaluated once and each file is added to the evaluated world by the
+addition path. The result equals the whole world byte for byte, and cross-file joins are found as files arrive, with
+no second pass. At 20 files an addition costs about five times its share of the whole (0.45 s a file) and grows
+slowly with the world. A world an addition left up to date must not be evaluated again: `evaluate` runs the whole
+pass whatever the store holds.
+
 ## What is built, in order
 
 1. **Derived as given** (the keystone: stages, cache and resume all need it). A frozen layer of derived facts is
