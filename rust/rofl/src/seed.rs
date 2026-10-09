@@ -4,10 +4,10 @@
 
 use crate::cell::AggOp;
 use crate::reflect::Vocab;
-use crate::store::{
+use crate::store::{CellId, FactId, 
     CellOwner, CellValue, EvalRecord, NewCell, NewMember, PremRef, Seal, Store, Witness, F_BASE, F_FROZEN, F_TICK,
 };
-use crate::term::{cmp_js, Heap, Term, TermK};
+use crate::term::{cmp_js, Heap, Sym, Term, TermK};
 use serde_json::{json, Value};
 use std::borrow::Cow;
 use std::collections::HashMap;
@@ -616,46 +616,79 @@ fn prems_json(h: &Heap, s: &Store, prems: &[PremRef]) -> Vec<Value> {
 /// what it sealed. The TypeScript host reads the field (src/store.ts
 /// `restore`) and ignores `ghosts`: its premises name facts by key.
 fn cells_json(h: &Heap, s: &Store) -> Vec<Value> {
-    s.cells_in_order(h)
-        .into_iter()
-        .map(|(c, like)| {
-            let r = s.cell(c);
-            let CellOwner::Body { rule, at } = r.owner;
-            let mut key = String::new();
-            s.write_cell_key(h, c, &mut key);
-            let (value, hole) = match r.value {
-                CellValue::Value(t) => (term_to_json(h, t), Value::Null),
-                CellValue::Empty => (Value::Null, Value::Null),
-                CellValue::Hole(x) => (Value::Null, json!(h.name(x))),
-            };
-            let members: Vec<Value> = s
-                .cell_members(c)
-                .iter()
-                .filter(|_| like.is_none())
-                .map(|m| {
-                    let mut j = json!({ "proj": m.proj.iter().map(|t| term_to_json(h, *t)).collect::<Vec<_>>(),
-                            "value": term_to_json(h, m.value), "height": m.height,
-                            "prems": prems_json(h, s, s.member_prems(m)) });
-                    let others: Vec<Value> = s.member_derivs(m).skip(1).map(|o| Value::Array(prems_json(h, s, o))).collect();
-                    if !others.is_empty() {
-                        j["others"] = Value::Array(others);
-                    }
-                    j
-                })
-                .collect();
-            let sealed: Vec<Value> =
-                s.cell_seals(c).iter().map(|x| json!({ "rel": h.name(x.rel), "round": x.round })).collect();
-            let mut out = json!({ "key": key, "rule": h.name(rule), "at": at, "op": r.op.name(),
-                    "keyTerms": r.key.iter().map(|t| term_to_json(h, *t)).collect::<Vec<_>>(),
-                    "value": value, "hole": hole, "height": r.height, "tick": r.tick,
-                    "desc": h.name(r.desc), "members": members, "sealed": sealed });
-            // a holistic group shared by many cells is written once
-            if let Some(x) = like {
-                let mut k = String::new();
-                s.write_cell_key(h, x, &mut k);
-                out["membersOf"] = json!(k);
+    s.cells_in_order(h).into_iter().map(|(c, like)| cell_json(h, s, c, like)).collect()
+}
+
+/// One cell as `cells_json` writes it; with `like`, its members are that cell's and named, not written again.
+pub fn cell_json(h: &Heap, s: &Store, c: CellId, like: Option<CellId>) -> Value {
+    let r = s.cell(c);
+    let CellOwner::Body { rule, at } = r.owner;
+    let mut key = String::new();
+    s.write_cell_key(h, c, &mut key);
+    let (value, hole) = match r.value {
+        CellValue::Value(t) => (term_to_json(h, t), Value::Null),
+        CellValue::Empty => (Value::Null, Value::Null),
+        CellValue::Hole(x) => (Value::Null, json!(h.name(x))),
+    };
+    let members: Vec<Value> = s
+        .cell_members(c)
+        .iter()
+        .filter(|_| like.is_none())
+        .map(|m| {
+            let mut j = json!({ "proj": m.proj.iter().map(|t| term_to_json(h, *t)).collect::<Vec<_>>(),
+                    "value": term_to_json(h, m.value), "height": m.height,
+                    "prems": prems_json(h, s, s.member_prems(m)) });
+            let others: Vec<Value> = s.member_derivs(m).skip(1).map(|o| Value::Array(prems_json(h, s, o))).collect();
+            if !others.is_empty() {
+                j["others"] = Value::Array(others);
             }
-            out
+            j
+        })
+        .collect();
+    let sealed: Vec<Value> = s.cell_seals(c).iter().map(|x| json!({ "rel": h.name(x.rel), "round": x.round })).collect();
+    let mut out = json!({ "key": key, "rule": h.name(rule), "at": at, "op": r.op.name(),
+            "keyTerms": r.key.iter().map(|t| term_to_json(h, *t)).collect::<Vec<_>>(),
+            "value": value, "hole": hole, "height": r.height, "tick": r.tick,
+            "desc": h.name(r.desc), "members": members, "sealed": sealed });
+    // a holistic group shared by many cells is written once
+    if let Some(x) = like {
+        let mut k = String::new();
+        s.write_cell_key(h, x, &mut k);
+        out["membersOf"] = json!(k);
+    }
+    out
+}
+
+/// A row a structure answers, as `fact_json` writes a stored one: derived, of its tick.
+pub fn virtual_json(h: &Heap, rel: Sym, book: Sym, a: Term, d: Term) -> Value {
+    let mut key = String::new();
+    crate::store::write_fact_key(h, rel, book, &[a, d], &mut key);
+    json!({ "key": key, "rel": h.name(rel), "persp": h.name(book), "args": [term_to_json(h, a), term_to_json(h, d)], "scope": "tick", "base": false, "frozen": false })
+}
+
+/// One fact as a snapshot's `facts` list writes it, with its key.
+pub fn fact_json(h: &Heap, s: &Store, id: FactId) -> Value {
+    let r = s.rec(id);
+    json!({
+        "key": s.key(h, id),
+        "rel": h.name(r.rel),
+        "persp": h.name(r.persp),
+        "args": s.args(id).iter().map(|a| term_to_json(h, *a)).collect::<Vec<_>>(),
+        "scope": if r.tick_scope() { "tick" } else { "timeless" },
+        "base": r.base(),
+        "frozen": r.frozen(),
+    })
+}
+
+/// Every firing of a fact in the order `witness_of` ranks them, each with its signature, as a snapshot's `firings` writes one.
+pub fn firings_json(h: &Heap, s: &Store, id: FactId) -> Vec<Value> {
+    let mut memo = HashMap::new();
+    s.firings_ranked(h, id, &mut memo)
+        .into_iter()
+        .map(|(rule, tick, prems)| {
+            let mut sig = String::new();
+            s.write_sig(h, &crate::store::WitView { rule, tick, prems: &prems }, &mut sig);
+            json!({ "sig": sig, "ruleId": h.name(rule), "tick": tick, "prems": prems_json(h, s, &prems) })
         })
         .collect()
 }

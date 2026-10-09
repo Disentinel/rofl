@@ -5,6 +5,7 @@ import { cellsOf, libFiles, parseFront, translated, type CellKind, type Front } 
 import { asCell, assemble, type Inputs } from './world.ts';
 import { counted, type View } from './draw.ts';
 import { folded } from '../playground/chain.ts';
+import type { Engine, EngineName } from '../playground/engine.ts';
 
 export type Verdict = 'answers' | 'holds' | 'blind' | 'fails' | 'explained' | 'unasked' | 'unknown';
 export type Answer = { sentence: string; literal: string; at: string[] };
@@ -26,15 +27,19 @@ export type Status = 'ok' | 'blind' | 'fails' | 'unread' | 'cut';
 export type NbResult = { status: Status; front: Front; cells: NbCellOut[]; errors: string[]; unresolved?: string[]; ms: { load: number; run: number; phases?: Record<string, number>; loaded?: boolean; model?: 'evaluated' | 'kept' } };
 
 export class Kernel {
-  private host = new Host();
+  private host: Host;
   private loaded = '';
   private vocab?: { key: string; sentences: string[] };
   private whole: boolean;
   private wall?: () => () => boolean;
 
   /** `whole`: every run evaluates the model, the code and the cells as one world, never the cells alone over the model kept from the last run. `all`: every answer of a line, not the first fifty.
-   *  `wall`: a run's stop, made as the run starts; a run it stops answers what it found and its status is `cut`. */
-  constructor(opts: { whole?: boolean; all?: boolean; wall?: () => () => boolean } = {}) { this.whole = !!opts.whole; if (opts.all) this.host.rows = Infinity; this.wall = opts.wall; }
+   *  `wall`: a run's stop, made as the run starts; a run it stops answers what it found and its status is `cut`.
+   *  `engine`: what evaluates the model over the code, a host's choice (playground/rust.ts engineOf); the TypeScript engine when none is given. */
+  constructor(opts: { whole?: boolean; all?: boolean; wall?: () => () => boolean; engine?: Engine } = {}) {
+    this.host = new Host(opts.engine); this.whole = !!opts.whole; if (opts.all) this.host.rows = Infinity; this.wall = opts.wall;
+  }
+  get engine(): EngineName { return this.host.engine.name; }
 
   /** The proof of a ground literal over the last run, as a person reads it: what a picture's mark asks. Short, as `brief` (above it the
    *  value's chain), or `full`, the whole proof. */
