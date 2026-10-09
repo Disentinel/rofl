@@ -176,9 +176,9 @@ export function legible(text: string): string {
     .replace(/ \[builtin\]$/, ' (arithmetic)')
     .replace(/^why needs a ground literal$/, 'why explains one answer: put a name in every blank, or ask `?` first for the answers'));
   // a relation by the sentence above it, not by its anchor
-  return out.map((l, k) => l.replace(/^(\s*)no rule concludes '\w+' and no matching base fact exists$/, (_, pad) => {
+  return out.map((l, k) => l.replace(/^(\s*)no rule concludes '\w+' and no matching base fact exists(.*)$/, (_, pad, unit) => {
     const above = /(?:^\s*why not |it stops at: )(.*?):?$/.exec(out[k - 1] ?? '')?.[1];
-    return `${pad}nothing says ${above ?? 'so'}, and no rule concludes it`;
+    return `${pad}nothing says ${above ?? 'so'}, and no rule concludes it${unit}`;
   })).join('\n');
 }
 

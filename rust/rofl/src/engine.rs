@@ -2915,11 +2915,13 @@ impl Eval {
                         }
                         let names: Vec<&str> = peel.stuck.iter().map(|s| self.h.name(*s)).collect();
                         return Err(Halt::Strat(
-                            format!(
-                                "program rejected: round {} settled nothing while {} remained",
-                                peel.rounds + 1,
-                                names.join(", ")
-                            ),
+                            match stall_cycle(&peel, |s| self.h.name(s)) {
+                                Some(c) => format!(
+                                    "program rejected: nothing on the cycle {c} can be settled first: it reads its own \
+                                     conclusion under a negation (-/->) or an aggregate (-agg->)"
+                                ),
+                                None => format!("program rejected: round {} settled nothing while {} remained", peel.rounds + 1, names.join(", ")),
+                            },
                             String::new(),
                         ));
                     }
@@ -15570,6 +15572,34 @@ impl Eval {
         Ok(out.into_iter().map(|(_, _, v, t)| (v, t)).collect())
     }
 
+    /// WHERE A MODEL CONCLUDES WHAT NOTHING LOADED DOES (`unloaded`,
+    /// src/aggeval.ts): read off its index of units, `unit_concludes(Unit, Rel)`,
+    /// for a relation with neither a rule nor a fact here.
+    fn unloaded(&mut self, rel: Sym) -> String {
+        let index = self.h.intern("unit_concludes");
+        let rows = self.store.rel_all(&self.h, index);
+        if rows.is_empty() || !self.store.rel_all(&self.h, rel).is_empty() {
+            return String::new();
+        }
+        let mut units: Vec<String> = rows
+            .iter()
+            .filter_map(|f| match self.store.args(*f) {
+                [u, r] if r.as_atom() == Some(rel) => match u.kind() {
+                    TermK::Str(s) | TermK::Atom(s) => Some(self.h.name(s).to_string()),
+                    _ => None,
+                },
+                _ => None,
+            })
+            .collect();
+        units.sort_by(|a, b| cmp_js(a, b));
+        units.dedup();
+        match units.len() {
+            0 => ", and no unit of the model concludes it".into(),
+            1 => format!(": {} concludes it and is not loaded", units[0]),
+            _ => format!(": {} conclude it and are not loaded", units.join(", ")),
+        }
+    }
+
     /// One node: for every rule that could conclude the literal, the failing
     /// premise instances, each followed in turn (`explain_rule`).
     fn explain_failure(&mut self, lit: &Lit, level: usize, ctx: &mut WnCtx, next: &mut Vec<WnTask>) {
@@ -15582,8 +15612,9 @@ impl Eval {
             .cloned()
             .collect();
         if rules.is_empty() {
+            let unloaded = self.unloaded(lit.rel);
             next.push(WnTask::Line(format!(
-                "{pad}no rule concludes '{}' and no matching base fact exists",
+                "{pad}no rule concludes '{}' and no matching base fact exists{unloaded}",
                 self.h.name(lit.rel)
             )));
             return;
@@ -15992,6 +16023,67 @@ impl Eval {
 }
 
 /// Whether `to` is reached from `from` over `deps`.
+/// THE CYCLE A STALL TURNS ON (`stallCycle`, src/aggeval.ts): the shortest
+/// through a strict edge among the stuck relations, first by name on a tie,
+/// written the way facts flow: `a -> b` is b reading a.
+fn stall_cycle<'a>(peel: &Peel, name: impl Fn(Sym) -> &'a str) -> Option<String> {
+    let stuck: HashSet<Sym> = peel.stuck.iter().copied().collect();
+    let by_name = |xs: &mut Vec<Sym>| xs.sort_by(|a, b| cmp_js(name(*a), name(*b)));
+    let reads = |x: Sym| {
+        let mut out: Vec<Sym> = peel.pos.get(&x).into_iter().flatten().chain(peel.neg.get(&x).into_iter().flatten()).copied().filter(|y| stuck.contains(y)).collect();
+        by_name(&mut out);
+        out.dedup();
+        out
+    };
+    let mut heads = peel.stuck.clone();
+    by_name(&mut heads);
+    let mut best: Option<Vec<Sym>> = None;
+    for hd in heads {
+        let mut strict: Vec<Sym> = peel.neg.get(&hd).into_iter().flatten().copied().filter(|b| stuck.contains(b)).collect();
+        by_name(&mut strict);
+        for b in strict {
+            let (mut prev, mut seen, mut queue) = (HashMap::new(), HashSet::from([b]), std::collections::VecDeque::from([b]));
+            while let Some(x) = queue.pop_front() {
+                if x == hd {
+                    break;
+                }
+                for y in reads(x) {
+                    if seen.insert(y) {
+                        prev.insert(y, x);
+                        queue.push_back(y);
+                    }
+                }
+            }
+            if !seen.contains(&hd) {
+                continue;
+            }
+            let mut path = vec![hd];
+            while *path.last().unwrap() != b {
+                path.push(prev[path.last().unwrap()]);
+            }
+            if best.as_ref().map_or(true, |p| path.len() < p.len()) {
+                best = Some(path);
+            }
+        }
+    }
+    let path = best?;
+    let mut out = String::new();
+    for (i, x) in path.iter().enumerate() {
+        let reader = path[(i + 1) % path.len()];
+        let edge = if !peel.neg.get(&reader).is_some_and(|n| n.contains(x)) {
+            " -> "
+        } else if peel.soft.contains(&(reader, *x)) {
+            " -agg-> "
+        } else {
+            " -/-> "
+        };
+        out += name(*x);
+        out += edge;
+    }
+    out += name(path[0]);
+    Some(out)
+}
+
 fn reaches_in(deps: &HashMap<Sym, HashSet<Sym>>, from: Sym, to: Sym) -> bool {
     let (mut seen, mut stack) = (HashSet::new(), vec![from]);
     while let Some(x) = stack.pop() {

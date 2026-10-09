@@ -1793,7 +1793,10 @@ export class AggEval {
               throw new Rejected(`program rejected: the dominance of ${p} reads ${b}, which depends on ${p} itself: which of two values dominates is decided from relations closed below it (docs/aggregates.md, "Subsumption, as built")`);
             }
           }
-          throw new Rejected(`program rejected: round ${peel.rounds + 1} settled nothing while ${peel.stuck.join(', ')} remained`);
+          const c = stallCycle(peel);
+          throw new Rejected(c !== null
+            ? `program rejected: nothing on the cycle ${c} can be settled first: it reads its own conclusion under a negation (-/->) or an aggregate (-agg->)`
+            : `program rejected: round ${peel.rounds + 1} settled nothing while ${peel.stuck.join(', ')} remained`);
         }
         this.roundOf = new Map(peel.round);
         this.planned = true;
@@ -8248,13 +8251,24 @@ export class AggEval {
     return dedup.map(([, v, t]) => [v, t]);
   }
 
+  /** WHERE A MODEL CONCLUDES WHAT NOTHING LOADED DOES (`unloaded`, engine.rs): read off its index of units,
+   *  `unit_concludes(Unit, Rel)`, for a relation with neither a rule nor a fact here. */
+  private unloaded(rel: string): string {
+    const rows = this.store.relAll('unit_concludes');
+    if (rows.length === 0 || this.store.relAll(rel).length > 0) return '';
+    const units = [...new Set(rows.flatMap(({ args }) => (args.length === 2 && args[1].k === 'a' && args[1].name === rel
+      ? args[0].k === 's' ? [args[0].v] : args[0].k === 'a' ? [args[0].name] : [] : [])))].sort(cmpStr);
+    if (units.length === 0) return ', and no unit of the model concludes it';
+    return units.length === 1 ? `: ${units[0]} concludes it and is not loaded` : `: ${units.join(', ')} conclude it and are not loaded`;
+  }
+
   /** One node: for every rule that could conclude the literal, the failing premise instances, each followed in turn
    *  (`explainRule`), after the one before it has been followed down. */
   private explainFailure(lit: Lit, level: number, ctx: WnCtx, next: WnTask[]): void {
     ctx.nodes++;
     const pad = '  '.repeat(2 * level - 1);
     const rules = this.rules.filter((r) => r.clause.head.rel === lit.rel);
-    if (rules.length === 0) { next.push({ t: 'line', line: `${pad}no rule concludes '${lit.rel}' and no matching base fact exists` }); return; }
+    if (rules.length === 0) { next.push({ t: 'line', line: `${pad}no rule concludes '${lit.rel}' and no matching base fact exists${this.unloaded(lit.rel)}` }); return; }
     for (const r of rules) next.push({ t: 'rule', lit, r, level });
   }
 
@@ -8880,6 +8894,30 @@ function canonClauseSetsBody(body: BodyElem[]): BodyElem[] {
 }
 
 /** Whether `to` is reached from `from` over `deps`. */
+/** THE CYCLE A STALL TURNS ON (`stall_cycle`, engine.rs): the shortest through a strict edge among the stuck
+ *  relations, first by name on a tie, written the way facts flow: `a -> b` is b reading a. */
+function stallCycle(peel: Peel): string | null {
+  const stuck = new Set(peel.stuck);
+  const reads = (x: string) => [...new Set([...(peel.pos.get(x) ?? []), ...(peel.neg.get(x) ?? [])])].filter((y) => stuck.has(y)).sort(cmpStr);
+  let best: string[] | null = null;
+  for (const hd of [...peel.stuck].sort(cmpStr)) {
+    for (const b of [...(peel.neg.get(hd) ?? [])].filter((y) => stuck.has(y)).sort(cmpStr)) {
+      const prev = new Map<string, string>(), seen = new Set([b]), queue = [b];
+      for (let i = 0; i < queue.length && queue[i] !== hd; i++) {
+        for (const y of reads(queue[i])) if (!seen.has(y)) { seen.add(y); prev.set(y, queue[i]); queue.push(y); }
+      }
+      if (!seen.has(hd)) continue;
+      const path = [hd];
+      while (path[path.length - 1] !== b) path.push(prev.get(path[path.length - 1])!);
+      if (best === null || path.length < best.length) best = path;
+    }
+  }
+  if (best === null) return null;
+  const p = best;
+  const edge = (read: string, reader: string) => (!peel.neg.get(reader)?.has(read) ? ' -> ' : peel.soft.has(edgeKey(reader, read)) ? ' -agg-> ' : ' -/-> ');
+  return p.map((x, i) => x + edge(x, p[(i + 1) % p.length])).join('') + p[0];
+}
+
 function reachesIn(deps: Map<string, Set<string>>, from: string, to: string): boolean {
   const seen = new Set<string>(), stack = [from];
   while (stack.length > 0) {

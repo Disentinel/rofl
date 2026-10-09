@@ -75,7 +75,7 @@ const lineOf = (s: string) => lines.findIndex((l) => l.includes(s));
   const d = know('/x/broken.rofl', 'a(1).\nb(X) :- a(X).\nc(X) :- a(X) b(X).\n', lib, () => undefined).diags;
   expect(d.length === 1 && d[0].line === 2 && d[0].col === 13 && d[0].severity === 1, `a broken rule on line 3: ${JSON.stringify(d)}`);
   const r = know('/x/cycle.rofl', 'p() :- a(), not q().\nq() :- a(), not p().\na().\n', lib, () => undefined).diags;
-  expect(r.length === 1 && r[0].line === 0 && /refused: .*settled nothing while p, q/.test(r[0].message), `an unstratifiable program: ${JSON.stringify(r)}`);
+  expect(r.length === 1 && r[0].line === 0 && /refused: .*nothing on the cycle p -\/-> q -\/-> p can be settled first/.test(r[0].message), `an unstratifiable program: ${JSON.stringify(r)}`);
   const text = lines.join('\n') + '\nA change C is late if C touches a module M and M is frozen by a team T.\n';
   const m = know(path.join(ROOT, 'examples/late.rofl.md'), text, lib, () => undefined).diags.filter((x) => x.severity === 1);
   expect(m.some((x) => x.line === lines.length && x.col === 47 && /^not read: M is frozen by a team T; the nearest sentences: "a team T owns a module M"/.test(x.message)), `a sentence not read: ${JSON.stringify(m)}`);
