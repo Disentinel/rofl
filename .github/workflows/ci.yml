@@ -102,14 +102,14 @@ jobs:
         with:
           node-version: '22'
       - run: npm ci && (cd vscode && npm ci)
+      # each platform's engine in rust/target/rofl-<target>; this runner's own in release, which the guide check runs
       - uses: actions/download-artifact@v4
-        with: { path: engines }
+        with: { path: rust/target }
       - name: one VSIX per platform
         run: |
-          mkdir -p rust/target/release vsix
+          chmod +x rust/target/rofl-*/rofl*
+          mkdir -p rust/target/release vsix && cp rust/target/rofl-linux-x64/rofl rust/target/release/
           for t in linux-x64 linux-arm64 darwin-x64 darwin-arm64 win32-x64; do
-            rm -f rust/target/release/rofl rust/target/release/rofl.exe
-            cp engines/rofl-$t/* rust/target/release/ && chmod +x rust/target/release/rofl*
             node --experimental-strip-types scripts/dist.ts --target $t
             unzip -l dist/*.vsix | grep -q "extension/rofl-nb/bin/rofl" || { echo "the $t VSIX carries no engine"; exit 1; }
             for f in dist/*.vsix; do mv "$f" "vsix/$(basename "$f" .vsix)-$t.vsix"; done

@@ -2,9 +2,9 @@
 // dist/rofl-<ext>.vsix (the editor, the extension's own version from vscode/package.json), both plain JS.
 // One tree serves both: the modules the command line and the extension import, transpiled in place, the model's .rofl files beside them, @babel/parser vendored.
 // The extension is that tree under rofl-nb/, entered through a CommonJS main, so an editor that loads extensions with require runs it too.
-// `-- --target <vsce target>` (linux-x64, darwin-arm64, win32-x64, ...): the VSIX for that platform, carrying the Rust engine this tree built for it
-// (rust/target/release/rofl) in rofl-nb/bin; without one, the VSIX for every platform, which evaluates on the TypeScript engine.
-import { cpSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+// `-- --target <vsce target>` (linux-x64, darwin-arm64, win32-x64, ...): the VSIX for that platform, carrying the Rust engine built for it
+// (rust/target/rofl-<target>/rofl, else this machine's rust/target/release/rofl) in rofl-nb/bin; without one, the VSIX for every platform, which evaluates on the TypeScript engine.
+import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -107,7 +107,8 @@ buildRenderer(path.join(VSIX, 'rofl-nb/vscode/visual/out'));
 if (TARGET) {
   const exe = `rofl${TARGET.startsWith('win32') ? '.exe' : ''}`;
   mkdirSync(path.join(VSIX, 'rofl-nb/bin'), { recursive: true });
-  cpSync(path.join(ROOT, 'rust/target/release', exe), path.join(VSIX, 'rofl-nb/bin', exe));
+  const built = [`rofl-${TARGET}`, 'release'].map((d) => path.join(ROOT, 'rust/target', d, exe)).find(existsSync)!;
+  cpSync(built, path.join(VSIX, 'rofl-nb/bin', exe));
 }
 writeFileSync(path.join(VSIX, 'main.js'), "exports.activate = async (ctx) => (await import('./rofl-nb/vscode/extension.js')).activate(ctx);\n");
 const { type: _, devDependencies: __, ...manifest } = ext;
