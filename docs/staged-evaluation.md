@@ -82,10 +82,17 @@ no second pass. At 20 files an addition costs about five times its share of the 
 slowly with the world. A world an addition left up to date must not be evaluated again: `evaluate` runs the whole
 pass whatever the store holds.
 
+**A stage added above an evaluated one already costs its own delta**
+(`f_a_question_added_to_an_evaluated_cone_costs_its_own_delta`, `scripts/stage_by_asks.ts`). A world evaluated
+over the cone of `asks(may_be_node)`, then given the question's asks by delta, equals the world that asked both at
+once, byte for byte; the question cost 0.38 s against 5.2 s whole at 20 files. What is missing is keeping the lower
+stage across a process: `cool` writes base facts only.
+
 ## What is built, in order
 
-1. **Derived as given** (the keystone: stages, cache and resume all need it). A frozen layer of derived facts is
-   taken as complete: `run_pass` does not clear it and no rule whose head is in it fires. Proof: a world evaluated
+1. **Derived as given** (the keystone: stages, cache and resume all need it). In memory a stage already builds on the
+   one below it; what is built is a kept stage read back as complete: `run_pass` does not clear it and no rule whose
+   head is in it fires. Proof: a world evaluated
    in two stages equals the world evaluated whole, byte for byte, on every world of `npm test` that splits.
 2. **The mapped volume.** colfile into the engine as the frozen base a fork reads.
 3. **Resume** (decision 4, H5).
