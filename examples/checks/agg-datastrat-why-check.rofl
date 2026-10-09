@@ -1,5 +1,5 @@
 -- examples/checks/agg-datastrat-why-check.rofl — agg_datastrat_why, a world
--- run with `rofl-load --explain` over the sheet of agg-datastrat-sheet.rofl:
+-- run with `rofl load --explain` over the sheet of agg-datastrat-sheet.rofl:
 -- the `why` of a cell sealed in the order of the data is the `why` of any
 -- sealed cell. It names the aggregate and what it sealed, lists the cells it
 -- added as members, and goes on into each member's own derivation, which is

@@ -32,10 +32,10 @@
 # a run whose oracle is frozen has to say which run it was.
 #
 # usage: rust/run_corpus.sh [--bytes] [--no-regen]
-#   ROFL_PROFILE=fast reads rust/target/fast/rofl-eval; release otherwise
+#   ROFL_PROFILE=fast reads rust/target/fast/rofl; release otherwise
 set -u
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-BIN="$ROOT/rust/target/${ROFL_PROFILE:-release}/rofl-eval"
+BIN="$ROOT/rust/target/${ROFL_PROFILE:-release}/rofl"
 DIR="$ROOT/facts/port-corpus"
 OUT="${TMPDIR:-/tmp}/rofl-rust-corpus"
 mkdir -p "$OUT"
@@ -110,7 +110,7 @@ while IFS=$'\t' read -r name facts _ _ _ ticks; do
   reason=""
 
   got="$OUT/$name.out"; err="$OUT/$name.err"
-  "$BIN" ${BYTES:+--bytes} $TICKARG "$DIR/$name.seed.json" > "$got" 2> "$err"
+  "$BIN" load --seed "$DIR/$name.seed.json" ${BYTES:+--bytes} $TICKARG > "$got" 2> "$err"
   if [ $? -ne 0 ]; then
     sv=FAIL; sd=-; sf=$((sf+1)); reason="$(grep -v '^[a-z_]*\s' "$err" | head -1)"
   else
@@ -123,7 +123,7 @@ while IFS=$'\t' read -r name facts _ _ _ ticks; do
   fi
 
   dgot="$OUT/$name.deriv"; derr="$OUT/$name.deriv.err"
-  "$BIN" --derivations $TICKARG "$DIR/$name.seed.json" > "$dgot" 2> "$derr"
+  "$BIN" load --seed "$DIR/$name.seed.json" --derivations $TICKARG > "$dgot" 2> "$derr"
   if [ $? -ne 0 ]; then
     lv=FAIL; ld=-; lf=$((lf+1)); reason="${reason:-$(head -1 "$derr")}"
   else

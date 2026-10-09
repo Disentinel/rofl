@@ -3,7 +3,7 @@
 //! while ROFL_BREAK=id. The broken text is dropped by the macro, not by the
 //! optimiser, so a normal build holds neither the faults nor their names.
 //! One site may carry several ids: `brk!("a" => x, "b" => y; original)`.
-//! Exported, so a binary of the crate (rofl-render) plants its own.
+//! Exported, so a binary of the crate (`rofl render`) plants its own.
 
 #[cfg(feature = "breaks")]
 pub fn active() -> Option<&'static str> {

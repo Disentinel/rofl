@@ -14,7 +14,7 @@ JS="${TMPDIR:-/tmp}/rofl-mem-js.tsv"
 printf '%-14s %5s %7s %10s %10s %8s %9s %9s\n' case ticks facts js_bpf rust_bpf ratio js_ms rust_ms
 awk 'NR>1' "$JS" | while IFS=$'\t' read -r name facts bytes bpf jsms ticks; do
   TICKARG=""; [ "${ticks:-0}" != "0" ] && TICKARG="--ticks $ticks"
-  err=$("$ROOT/rust/target/${ROFL_PROFILE:-release}/rofl-eval" --bytes $TICKARG "$ROOT/facts/port-corpus/$name.seed.json" 2>&1 >/dev/null)
+  err=$("$ROOT/rust/target/${ROFL_PROFILE:-release}/rofl" load --seed "$ROOT/facts/port-corpus/$name.seed.json" --bytes $TICKARG 2>&1 >/dev/null)
   rb=$(echo "$err" | awk -F'\t' '$1=="bytes_per_fact"{print $2}')
   lm=$(echo "$err" | awk -F'\t' '$1=="load_ms"{print $2}')
   em=$(echo "$err" | awk -F'\t' '$1=="eval_ms"{print $2}')

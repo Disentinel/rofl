@@ -133,7 +133,7 @@ What it took:
   from there, so `rules/*.md` and `rules/*.rofl` are found alike.
 - **The vocabulary it declares is data.** The reader writes the sentences
   it learned beside the rules, `X.phrases.rofl`, as the `phrase` facts the
-  renderer reads; `rofl-render --out DIR X.phrases.rofl X.rofl` renders
+  renderer reads; `rofl render --out DIR X.phrases.rofl X.rofl` renders
   the world back in its own words (15 of 15 heads phrased for `untyped`),
   and reading that rendering back against the rules is exact. So the
   formatter of the design, `collapse then expand`, exists by composition,

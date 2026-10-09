@@ -314,15 +314,11 @@ ROFL_NB_DAEMON=0         run in this process; by default runs go to a kept kerne
                          (the model loads once, 10 to 20 s; later runs take seconds)
 ROFL_NB_TIMEOUT=<s>      how long to wait for the kept kernel; by default ROFL_NB_LIMIT + 180
 ROFL_NB_IDLE=900         seconds the kept kernel waits for a run before it exits
-ROFL_NB_HARNESS=<name>   the model translate asks (npm run nb -- models lists them), as --model does: claude, codex, opencode, pi, copilot, hermes, command
-                         (NAME:MODEL picks the harness's model); by default the first installed that runs with no tools
 ROFL_NB_MODEL_CMD=<sh>   a command that reads the prompt on stdin and prints the answer (the harness named command)
 ROFL_NB_<NAME>=<path>    the binary of that harness, e.g. ROFL_NB_CLAUDE=/opt/claude
 ROFL_NB_ALLOW_TOOLS=1    run a harness that cannot be run without tools (codex, copilot, hermes)
 ROFL_NB_MODEL_TIMEOUT=180  seconds translate waits for the model
 ROFL_NB_READ_ROUNDS=6    rounds the model may read the workspace's files before it writes; ROFL_NB_READ_BUDGET=200000 bytes in all
-ROFL_NB_ROOT=<dir>       the folder translate lets the model read, as --root DIR does; by default the working
-                         directory if it holds the notebook, else the notebook's folder; .rofl/read.rofl in it narrows it
 ROFL_NB_UNTRACKED_COMMAND=<sh>  prints the files your version control tracks, for untracked_by(command) in .rofl/read.rofl`;
 
 const isMain = process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url);
@@ -346,7 +342,7 @@ if (isMain) {
   if (argv[0] === 'translate') {
     const m = argv.indexOf('--model'), c = choose(m > 0 ? argv[m + 1] : undefined);
     if (c.error || c.refused) { console.error(`${named}: ${c.error ?? c.refused}`); process.exit(2); }
-    const at = argv.indexOf('--root'), root = at > 0 ? argv[at + 1] : process.env.ROFL_NB_ROOT, cwd = realpathSync(process.cwd());
+    const at = argv.indexOf('--root'), root = at > 0 ? argv[at + 1] : undefined, cwd = realpathSync(process.cwd());
     const r = await translate(named, llm(c), { root: root ? path.resolve(root) : path.relative(cwd, realpathSync(named)).startsWith(`..${path.sep}`) ? undefined : cwd });
     console.log(r.said.join('\n'));
     process.exit(r.code);

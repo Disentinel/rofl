@@ -1,13 +1,13 @@
 // sentences.ts — a world's file through the sentence form (docs/aggregates.md, "The sentence form, as built").
 //
 // A `.rofl.md` file of a declared world is read into rules by the reader. Under `check_opt(W, sentences, 1)`
-// it goes once more round: its rules are written as sentences by rofl-render and read back, and so is every
+// it goes once more round: its rules are written as sentences by rofl render and read back, and so is every
 // `.rofl` file whose first line is `-- through-sentences`. The world loads what was read back, and beside it
 // the rule ids of what was written, each rule's variables renamed V0, V1, ... in the order the clause writes
 // them (the reader writes the read-back the same way, `canonVars`), with the declarations it made. The world's
 // own alarms (examples/checks/agg-phrase-check.rofl) then say what the round trip lost or gained.
 //
-// The reader is `ROFL_READER` when set (scripts/agg_breaks.ts plants a fault in a copy of it), and rofl-render is
+// The reader is `ROFL_READER` when set (scripts/agg_breaks.ts plants a fault in a copy of it), and rofl render is
 // the one ROFL_PROFILE builds, so a break reaches both.
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
@@ -24,7 +24,7 @@ export const THROUGH = '-- through-sentences';
 /** This file's own text is in every cache key: what it writes beside a reading changes with it. */
 const SELF = fs.readFileSync(new URL(import.meta.url), 'utf8');
 const reader = (): string => process.env.ROFL_READER || path.join(ROOT, 'scripts/read.ts');
-const renderer = (): string => path.join(ROOT, 'rust/target', process.env.ROFL_PROFILE || 'release', 'rofl-render');
+const renderer = (): string => path.join(ROOT, 'rust/target', process.env.ROFL_PROFILE || 'release', 'rofl');
 
 export const isThrough = (f: string): boolean => f.endsWith('.rofl') && fs.readFileSync(f, 'utf8').startsWith(THROUGH);
 
@@ -71,7 +71,7 @@ export function written(text: string): string[] {
   return out;
 }
 
-/** What rofl-render wrote, as `sentence_of(Rel, Text)`: each rule's sentence under its anchor, each declaration and
+/** What rofl render wrote, as `sentence_of(Rel, Text)`: each rule's sentence under its anchor, each declaration and
  *  dominance rule by the relation it names, links reduced to their words. A world asks it for a kind's own words
  *  (examples/checks/agg-phrase-check.rofl), which a round trip alone cannot: a rule written back as rofl reads back too. */
 export function said(md: string): string[] {
@@ -182,7 +182,7 @@ export function through(src: string, vocab: string[]): string {
   if (fs.existsSync(out)) return out;
   // each worker renders into a directory of its own, the vocabulary beside the file
   const work = path.join(dir, `w${process.pid}`);
-  execFileSync(renderer(), ['--out', work, src, ...vocab], { stdio: ['ignore', 'pipe', 'pipe'] });
+  execFileSync(renderer(), ['render', '--out', work, src, ...vocab], { stdio: ['ignore', 'pipe', 'pipe'] });
   const md = path.join(work, `${stem}.rofl.md`), back = path.join(work, `${stem}.back.rofl`);
   execFileSync('node', ['--experimental-strip-types', reader(), md, '--out', back, '--canon', '--vocab', src, ...vocab.flatMap((v) => ['--vocab', v])],
     { stdio: ['ignore', 'pipe', 'pipe'], maxBuffer: 1 << 28 });

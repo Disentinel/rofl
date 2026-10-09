@@ -1,6 +1,6 @@
 -- sentences.rofl — the eight structures of the sentence form, as rules.
 --
--- Over the reflection of a program (`rofl-render --facts`: head, arity, pos,
+-- Over the reflection of a program (`rofl render --facts`: head, arity, pos,
 -- name_word, word_shape) and the noun of each argument position (pick/3,
 -- chosen by support from the propagation in scripts/sentences.ts), these
 -- rules say which structures a relation ADMITS, which one it TAKES, which

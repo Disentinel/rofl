@@ -1,6 +1,6 @@
 -- examples/checks/agg-phrase-check.rofl — WHAT A ROUND TRIP THROUGH THE SENTENCE FORM LOST OR GAINED
 -- (docs/aggregates.md, "The sentence form, as built"). A world with check_opt(W, sentences, 1) loads each of
--- its files headed `-- through-sentences`, and each of its `.rofl.md` files once read, as rofl-render writes
+-- its files headed `-- through-sentences`, and each of its `.rofl.md` files once read, as rofl render writes
 -- it and the reader reads it back; scripts/sentences.ts puts beside it what was written: the id of every rule
 -- (`sentence_want`, variables renamed in the order a clause writes them, as the reader renames what it reads
 -- back), every declaration, and the relations they are about. Nothing may be lost and nothing gained.
@@ -26,7 +26,7 @@ alarm(nothing_went_round).
 -- fact (`sentence_exact(What, M, N)`, scripts/sentences.ts `through`)
 sentence_inexact[audit](W, M, N) :- sentence_exact(W, M, N), M != N.
 alarm(sentence_inexact).
--- and each kind is WRITTEN in its own words: a rule rofl-render wrote back as rofl would read back as well, so each
+-- and each kind is WRITTEN in its own words: a rule rofl render wrote back as rofl would read back as well, so each
 -- world names the words its relations' sentences must hold (`sentence_word`), and `sentence_of` is what was written
 edb(sentence_word).
 sentence_says(Rel, T)          :- sentence_word(Rel, T), sentence_of(Rel, S), N is str_segs(S, T), N > 1.

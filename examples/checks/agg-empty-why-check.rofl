@@ -1,5 +1,5 @@
 -- examples/checks/agg-empty-why-check.rofl — agg_empty_why, run with
--- `rofl-load --explain`: `why` of a zero says the group is empty and what it
+-- `rofl load --explain`: `why` of a zero says the group is empty and what it
 -- sealed, and `whynot` of a minimum over an empty group says the same.
 edb(explain_request).
 edb(explained).

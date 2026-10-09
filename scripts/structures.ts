@@ -8,9 +8,9 @@ import * as path from 'node:path';
 import { execFileSync } from 'node:child_process';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
-const RUST = path.join(ROOT, 'rust/target', process.env.ROFL_PROFILE || 'release', 'rofl-load');
+const RUST = path.join(ROOT, 'rust/target', process.env.ROFL_PROFILE || 'release', 'rofl');
 const FIXTURE = 'rust/rofl/tests/fixtures/structures_proof';
-const run = (args: string[]): string => execFileSync(RUST, ['--propose-structures', ...args], { encoding: 'utf8', maxBuffer: 1 << 28 });
+const run = (args: string[]): string => execFileSync(RUST, ['load', '--propose-structures', ...args], { encoding: 'utf8', maxBuffer: 1 << 28 });
 
 const args = process.argv.slice(2);
 if (args.includes('--check')) {

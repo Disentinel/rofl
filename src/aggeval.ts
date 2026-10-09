@@ -7350,7 +7350,7 @@ export class AggEval {
   }
 
   private runWellFounded(): void {
-    const COMPOSE = 'evaluate the well-founded world below and feed its true and unknown rows to a stratified world that aggregates them (rofl-load --below)';
+    const COMPOSE = 'evaluate the well-founded world below and feed its true and unknown rows to a stratified world that aggregates them (rofl load --below)';
     const tagged = [...this.tags.byRel.keys()].sort(cmpStr)[0];
     if (tagged !== undefined) throw new Rejected(`program rejected: tag ${tagged} (${this.tags.byRel.get(tagged)![1]}) is not evaluated under well_founded semantics: a tag is a cell, and a cell merged under an assumption holds a value no model may have; ${COMPOSE}`);
     const sub = [...this.subs.keys()].sort(cmpStr)[0];

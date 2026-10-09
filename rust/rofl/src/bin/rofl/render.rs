@@ -1,6 +1,6 @@
-//! rofl-render — the canonical text form of a ROFL program, as Markdown.
+//! `rofl render` — the canonical text form of a ROFL program, as Markdown.
 //!
-//!   rofl-render [--out DIR] FILE...
+//!   rofl render [--out DIR] FILE...
 //!
 //! Parses, never evaluates. A relation's phrase comes from a
 //! `phrase(Rel, "…")` fact and a node kind's noun from a `kind_noun(Kind, "…")`
@@ -1650,13 +1650,12 @@ impl<'a> R<'a> {
     }
 }
 
-fn main() {
-    let mut args: Vec<String> = std::env::args().skip(1).collect();
+pub fn main(mut args: Vec<String>) {
     let mut out_dir: Option<String> = None;
     if let Some(i) = args.iter().position(|a| a == "--out") { args.remove(i); out_dir = Some(args.remove(i)); }
     let facts_mode = if let Some(i) = args.iter().position(|a| a == "--facts") { args.remove(i); true } else { false };
     let tables: Vec<String> = if let Some(i) = args.iter().position(|a| a == "--tables") { args.split_off(i)[1..].to_vec() } else { Vec::new() };
-    if args.is_empty() { eprintln!("usage: rofl-render [--out DIR] FILE... [--tables PACK...]"); std::process::exit(2); }
+    if args.is_empty() { eprintln!("usage: rofl render [--out DIR] FILE... [--tables PACK...]"); std::process::exit(2); }
 
     let mut h = Heap::default();
     let fresh: Vec<Sym> = ["N", "E", "X", "Y", "Z", "W", "U", "V", "X1", "X2", "X3", "X4"].iter().map(|s| h.intern(s)).collect();

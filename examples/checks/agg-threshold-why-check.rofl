@@ -1,5 +1,5 @@
 -- examples/checks/agg-threshold-why-check.rofl — agg_threshold_why, a world
--- run with `rofl-load --explain`. `why` of a conclusion a threshold reached
+-- run with `rofl load --explain`. `why` of a conclusion a threshold reached
 -- names its Quorum and lists exactly its N members, the first by height,
 -- each with its derivation, and says nothing of a seal; `whynot` of one it
 -- did not reach says how far it got — `reached k of N` — and names the k,

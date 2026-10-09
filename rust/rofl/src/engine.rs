@@ -675,9 +675,7 @@ pub struct Eval {
     /// Firings solved delta-first.
     pub delta_by_rule: HashMap<Sym, u64>,
     /// Delta-first join plans (`joinplan.rs`), per rule and news position, and
-    /// the premise statistics their estimates read. `ROFL_NO_DELTA_FIRST` keeps
-    /// every firing in written order.
-    delta_first: bool,
+    /// the premise statistics their estimates read.
     plan_trial: bool,
     pub delta_ns: u64,
     delta_plans: HashMap<(Sym, usize), joinplan::Slot>,
@@ -1313,7 +1311,6 @@ impl Eval {
             new_by_rule: HashMap::new(),
             delta_by_rule: HashMap::new(),
             delta_ns: 0,
-            delta_first: std::env::var_os("ROFL_NO_DELTA_FIRST").is_none(),
             plan_trial: false,
             delta_plans: HashMap::new(),
             delta_stats: HashMap::new(),
@@ -12027,7 +12024,7 @@ impl Eval {
         // well-founded world is evaluated below and its true and unknown rows
         // fed to a stratified world that aggregates them (`Session::feed_below`).
         const COMPOSE: &str = "evaluate the well-founded world below and feed its true and unknown rows \
-                               to a stratified world that aggregates them (rofl-load --below)";
+                               to a stratified world that aggregates them (rofl load --below)";
         if let Some(p) = brk!("wfs_admits_tag" => None; self.tags.by_rel.keys().min_by(|a, b| cmp_js(self.h.name(**a), self.h.name(**b)))) {
             return Err(Halt::Strat(
                 format!(

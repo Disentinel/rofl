@@ -12,7 +12,7 @@
 -- retract, evaluator, explain, sentences, together and one_engine. `one_engine, ts` checks a world on the
 -- TypeScript engine alone (a host contract the two answer differently); `one_engine, rust` checks it on
 -- the Rust engine alone: the TypeScript engine is never run on it, its golden is the Rust golden, and
--- whycheck asks its questions of rofl-serve and rofl-load only and holds them to each other. It may name a
+-- whycheck asks its questions of rofl serve and rofl load only and holds them to each other. It may name a
 -- world the tree is walked to as well as a declared one. See "RUST ONLY" at the end of this file.
 
 edb(check_world).
@@ -42,13 +42,13 @@ check_file("refused", "examples/checks/refused.rofl").
 check_world("destructor_hole").
 check_file("destructor_hole", "examples/checks/destructor-hole.rofl").
 
--- The same world advanced three ticks: `rofl-load --ticks N` takes it, so both
+-- The same world advanced three ticks: `rofl load --ticks N` takes it, so both
 -- engines answer.
 check_world("sensors_t3").
 check_file("sensors_t3", "examples/sensors.rofl").
 check_opt("sensors_t3", ticks, 3).
 
--- A WALL, ON BOTH ENGINES. `rofl-load` grew `--budget` for this: it always
+-- A WALL, ON BOTH ENGINES. `rofl load` grew `--budget` for this: it always
 -- had `Session::fresh(budget)` and hard-coded the number, so a world that runs
 -- out was checked by one engine.
 check_world("budget_wall").
@@ -57,7 +57,7 @@ check_opt("budget_wall", budget, 50).
 -- ONE ENGINE, AND THE REASON IS A CONTRACT QUESTION RATHER THAN A DEFECT. The
 -- two hosts attribute the wall differently: this one evaluates on every `load`
 -- and names which one ran out -- `hole($load(1), budget_exhausted)`,
--- `hole($load(2), ...)` -- while `rofl-load` loads every file and evaluates
+-- `hole($load(2), ...)` -- while `rofl load` loads every file and evaluates
 -- once, recording `hole($adhoc, budget_exhausted)`. Same wall, same reason atom,
 -- different attribution. Whether a load evaluates is a decision about the host
 -- contract and not something to patch under a green bar.
@@ -679,7 +679,7 @@ proves("agg_why_dag_cut", agg, cell, why).
 -- "Well-founded worlds and ticks, as built"). The wfs column: a cell under
 -- semantics(well_founded) is refused (each world's `-refused-` fixtures),
 -- and a well-founded world below is read by a stratified one above it
--- (`-- below:` in a file: rofl-load --below, Session::feed_below). The world
+-- (`-- below:` in a file: rofl load --below, Session::feed_below). The world
 -- below is declared on its own too, so both engines agree on what is fed.
 check_world("agg_wfs_game").
 check_file("agg_wfs_game", "examples/checks/agg-wfs-game.rofl").
@@ -2182,7 +2182,7 @@ proves("agg_sub_shrug_wall", agg, subsumption, shrug).
 
 -- THE SENTENCE FORM OF EVERY KIND (w_agg_phrase; docs/aggregates.md, "The sentence form, as built"). Each
 -- world reads the kind's rules from sentences and from rofl in one `.rofl.md` file, writes them as sentences
--- with rofl-render and reads them back (`sentences`), and must lose and gain nothing
+-- with rofl render and reads them back (`sentences`), and must lose and gain nothing
 -- (examples/checks/agg-phrase-check.rofl) and answer as the kind does (its own check).
 check_world("agg_count_phrase").
 check_file("agg_count_phrase", "examples/checks/agg-phrase-data.rofl").
@@ -3414,7 +3414,7 @@ check_opt("ds_tree_retract_edge_sealed", together, 1).
 check_opt("ds_tree_retract_edge_sealed", retract, "dtg_in(b, c)").
 
 -- A RETRACTION THAT DOES NOT REACH THE EDGES of a closure answered from its tree leaves the forest as it is, and is a delta over what
--- reads the closure (rofl-load says `retract ...: Delta`); one that reaches them is a full evaluation.
+-- reads the closure (rofl load says `retract ...: Delta`); one that reaches them is a full evaluation.
 check_world("ds_tree_retract_other").
 check_file("ds_tree_retract_other", "examples/checks/ds-tree-retract-4-other.rofl").
 check_file("ds_tree_retract_other", "examples/checks/ds-tree-retract-4-other-check.rofl").

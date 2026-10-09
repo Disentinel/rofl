@@ -6,7 +6,7 @@
 // so a report built from them reads the same on every run and at any width.
 //
 // The width is ROFL_JOBS, or the machine's parallelism less two: every task
-// here spends part of its time in a `rofl-load` child it waits on, and the
+// here spends part of its time in a `rofl load` child it waits on, and the
 // two left over keep a desktop usable while the loop runs.
 import { fork, type ChildProcess } from 'node:child_process';
 import * as os from 'node:os';

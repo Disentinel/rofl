@@ -1,5 +1,5 @@
 -- examples/checks/agg-sub-order-why-check.rofl — agg_sub_order_why, run with
--- `rofl-load --explain`. `why` and `whynot` of a declared order read as they
+-- `rofl load --explain`. `why` and `whynot` of a declared order read as they
 -- do of the dominance rules it lowers to: `why` of a member names its
 -- relation's algebra, its members and its place in the front, and every
 -- value given to the cell that it dominates, with the lowered rule; `whynot`
