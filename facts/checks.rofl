@@ -3492,6 +3492,24 @@ check_file("asks_retracted", "examples/checks/asks-retracted.rofl").
 check_opt("asks_retracted", together, 1).
 check_opt("asks_retracted", retract, "asks(rr_b)").
 
+check_world("retract_last").
+check_file("retract_last", "examples/checks/retract-last.rofl").
+check_opt("retract_last", together, 1).
+check_opt("retract_last", retract, "rl_gone(1)").
+check_opt("retract_last", retract, "rl_book[rl_mine](2)").
+check_opt("retract_last", retract, "rl_said(1)").
+
+check_world("retract_last_read").
+check_file("retract_last_read", "examples/checks/retract-last-read.rofl").
+check_opt("retract_last_read", together, 1).
+check_opt("retract_last_read", retract, "rr_gone(1)").
+
+check_world("retract_again").
+check_file("retract_again", "examples/checks/retract-again.rofl").
+check_opt("retract_again", together, 1).
+check_opt("retract_again", one_engine, rust).
+check_opt("retract_again", retract, "ra_gone(1)").
+
 check_world("asks_demand").
 check_file("asks_demand", "examples/checks/asks-demand.rofl").
 check_opt("asks_demand", together, 1).

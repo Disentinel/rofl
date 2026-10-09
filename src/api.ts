@@ -8,7 +8,7 @@ const KERNEL_CLAIM = '$kernel_authority';
 /** How many rows a store holds with the kernel's bootstrap tables and nothing else: the only store a kernel claim may enter. */
 let bootRows: number | undefined;
 const bootstrapRows = (): number => bootRows ??= (() => { const s = new Store(); bootstrapKernel(s); return s.factCount(); })();
-import { Store, factKey, type FactStore } from './store.ts';
+import { Store, factKey, type FactStore, type FactRec } from './store.ts';
 import {
   V, RESERVED, IFACE, MAIN, ANON_WHO, KERNEL_WHO, ARITY, encodeRule, bootstrapKernel, registerPersp,
   factMetaFacts, factTerm, canonClause, BUDGET_REASON,
@@ -733,6 +733,34 @@ export class Rofl {
   }
 
   /** Retract a base fact (god-mode API; used by tests and the REPL). */
+  /** The fact with its `asserted_by` rows, and the kernel's rows a load wrote for it alone: `edb(R)` when no other base
+   *  fact of R stands, the `authority` rows of its book when no other base fact stands there and no rule names the
+   *  book. A fresh load without the fact writes none of them. A row the program declared itself (its own
+   *  `asserted_by` stands) stays, and so does every row where a seal withholds what would tell the two apart. */
+  private doomed(rec: FactRec): string[] {
+    const meta = this.store.relAll(V.asserted_by);
+    const declared = new Set(meta.map((f) => canonTerm(f.args[0])));
+    const ft = canonTerm(factTerm(rec.rel, rec.persp, rec.args));
+    const out = [rec.key, ...meta.filter((f) => canonTerm(f.args[0]) === ft).map((f) => f.key)];
+    const withheld = sealedRels(sealedBodies(this.store));
+    if (withheld.has(V.asserted_by)) return out;
+    const marks: string[] = [];
+    if (!RESERVED.has(rec.rel) && !this.store.relAll(rec.rel).some((f) => f.key !== rec.key && f.base)) {
+      marks.push(factKey(V.edb, MAIN, [mka(rec.rel)]));
+    }
+    const p = rec.persp;
+    if (p !== MAIN && !p.startsWith('$') && !withheld.has(V.writes_to)
+      && !this.store.allFacts().some((f) => f.persp === p && f.base && f.key !== rec.key)
+      && ![V.writes_to, V.reads_from].some((r) => this.store.relAll(r).some((f) => f.args[1].k === 'a' && f.args[1].name === p))) {
+      for (const w of [KERNEL_WHO, ANON_WHO]) marks.push(factKey(V.authority, MAIN, [mka(p), mka(w)]));
+    }
+    for (const k of marks) {
+      const m = this.store.get(k);
+      if (m && !declared.has(canonTerm(factTerm(m.rel, m.persp, m.args)))) out.push(k);
+    }
+    return out;
+  }
+
   retract(text: Ask): { ok: boolean; diagnostics: string[] } {
     let lit: Lit;
     try { lit = this.asked(text); } catch (e) { return { ok: false, diagnostics: [(e as Error).message] }; }
@@ -743,13 +771,7 @@ export class Rofl {
     const rec = this.store.get(key);
     if (!rec) return { ok: false, diagnostics: [`no such fact: ${key}`] };
     if (!rec.base) return { ok: false, diagnostics: [`${key} is derived; retract its supports instead`] };
-    this.store.remove(key);
-    const ft = factTerm(lit.rel, lit.persp.name, lit.args);
-    for (const rel of [V.asserted_by]) {
-      for (const f of this.store.relAll(rel)) {
-        if (canonTerm(f.args[0]) === canonTerm(ft)) this.store.remove(f.key);
-      }
-    }
+    for (const k of this.doomed(rec)) this.store.remove(k);
     this.store.dirty = true;
     return { ok: true, diagnostics: [] };
   }
