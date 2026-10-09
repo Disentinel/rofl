@@ -3801,8 +3801,7 @@ f_a_planted_fault_is_a_switch_in_one_build).
   once, that `src/kernel-dense.ts` is current, and that every world, run with
   nothing switched on, equals its golden and raises nothing. About 30 s for
   all of them, most of it the break `lattice_keep_dominated`, whose world runs to its
-  budget. `--legacy` plants each fault in the source and rebuilds, as before;
-  29 breaks were run both ways over every agg world and agreed byte for byte.
+  budget.
 - **A new fault** is a `brk!` site plus an entry with no `edits` in
   `scripts/agg_breaks.ts`; then `node --experimental-strip-types
   scripts/agg_breaks.ts --census --write`. The census is the world

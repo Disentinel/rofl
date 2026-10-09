@@ -207,9 +207,9 @@ instead of answering empty, and a rule that reads provenance there is named in
 a diagnostic. Nothing else prunes provenance and no host setting can.
 
 - **No residency in the JavaScript host** (decided 2026-09-10). `cool`,
-  `cool_many`, `cool_trail`, `reheat`, `reheat_trail` and `volume` are the
+  `cool_many`, `reheat` and `view` are the
   port's, and stay the port's. This host keeps a world in memory and says so;
   a corpus that outgrows that is the Rust engine's case, which is what
   `docs/volumes-and-residency.md` was written for. The two surfaces are
-  therefore NOT one API in two languages, and this line is why: ten of the
-  port's fourteen public methods have no counterpart here on purpose.
+  therefore NOT one API in two languages, and this line is why: the port's volume
+  methods have no counterpart here on purpose.

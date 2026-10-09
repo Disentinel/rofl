@@ -119,16 +119,12 @@ impl Server {
     fn handle(&mut self, r: &Value) -> Result<Value, String> {
         let op = r.get("op").and_then(|v| v.as_str()).ok_or("`op` is required")?;
         match op {
-            // A seed may arrive inline or by path. By path is the one that
-            // scales: a 5.7M-fact snapshot has no business going through a
-            // pipe and a JSON string escape when both ends can read a file.
+            // A seed arrives by path: a 5.7M-fact snapshot has no business going
+            // through a pipe and a JSON string escape when both ends can read a file.
             "open" => {
                 let budget = r.get("budget").and_then(|v| v.as_i64()).unwrap_or(DEFAULT_BUDGET);
-                let seed = match (r.get("seedPath").and_then(|v| v.as_str()), r.get("seed").and_then(|v| v.as_str())) {
-                    (Some(p), _) => std::fs::read_to_string(p).map_err(|e| format!("{p}: {e}"))?,
-                    (None, Some(s)) => s.to_string(),
-                    (None, None) => return Err("open needs `seedPath` or `seed`".into()),
-                };
+                let p = r.get("seedPath").and_then(|v| v.as_str()).ok_or("open needs `seedPath`")?;
+                let seed = std::fs::read_to_string(p).map_err(|e| format!("{p}: {e}"))?;
                 let mut s = Session::open(&seed, budget)?;
                 Self::walls(r, &mut s)?;
                 let facts = s.eval.store.fact_count();
@@ -212,18 +208,6 @@ impl Server {
                 let rels = strings(r, "rels")?.unwrap_or_default();
                 let (facts, names) = self.get(r)?.layer_view(&prefix, &books, &rels)?;
                 Ok(json!({ "facts": facts, "names": names }))
-            }
-            // The assertion trail, parked and fetched back. See
-            // `Session::cool_trail` for why this is cooled rather than sealed.
-            "cool_trail" => {
-                let out = r.get("path").and_then(|v| v.as_str()).ok_or("cool_trail needs `path`")?.to_string();
-                let c = self.get(r)?.cool_trail(&out)?;
-                Ok(json!({ "facts": c.facts, "bytes": c.bytes, "path": c.path }))
-            }
-            "reheat_trail" => {
-                let p = r.get("path").and_then(|v| v.as_str()).ok_or("reheat_trail needs `path`")?.to_string();
-                let n = self.get(r)?.reheat_trail(&p)?;
-                Ok(json!({ "restored": n }))
             }
             "fork" => {
                 let f = self.get(r)?.fork();

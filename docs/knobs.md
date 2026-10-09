@@ -17,10 +17,9 @@ Verdicts:
 Status: `done` was removed in the commit that wrote this page. The rest were proposals
 to the owner (finding `f_the_knob_audit_proposes_removals`, numbered there), and the
 owner has decided them (2026-10-05): `decided` is a removal or merge the owner chose
-(work item `w_knobs_trim_decided`, proposals 1-4 and 7), `one binary` goes with the
-merge of the binaries into one `rofl` (work item `w_one_binary`, proposals 5 and 6).
-Neither is done yet: both are deferred until after release 1.1, so every knob marked so
-still exists and works as described here.
+(work item `w_knobs_trim_decided`, proposals 1-4 and 7, done after release 1.1 except
+where a row says why not), `one binary` goes with the merge of the binaries into one
+`rofl` (work item `w_one_binary`, proposals 5 and 6).
 
 A consumer is who passes or sets it: a script, a test, a world, a document that tells a
 reader to use it, a demo, the notebook kernel. A document that only describes the knob
@@ -81,21 +80,21 @@ why none is removed here. Clients in the tree: `runtime/port.ts` (used by
 |---|---|---|---|---|
 | `id` | echoed on every answer | `runtime/port.ts` | KEEP | |
 | `op: open` with `seedPath` | a snapshot by path | `scripts/goldens.ts`, `runtime/port.ts` | KEEP | |
-| `open` with `seed` (inline) | the same snapshot as a string | `rust/rofl/tests/agg_worlds.rs` only | MERGE into `seedPath` | decided |
+| `open` with `seed` (inline) | the same snapshot as a string | `rust/rofl/tests/agg_worlds.rs` only | MERGE into `seedPath` | done |
 | `budget` (`open`, `fresh`) | the step wall | `runtime/port.ts` | KEEP | |
 | `space`, `retainTicks`, `mode` (`open`, `fresh`) | the walls a snapshot does not carry | `scripts/whycheck.ts`, `rust/rofl/tests/agg_worlds.rs` | KEEP | |
 | `op: fresh`, `load` (`path`, `rofl`), `evaluate`, `retract`, `why`, `whynot`, `excise`, `close` | the core verbs; `load` into an evaluated session is an addition by delta (facts and rules) and answers `full`, as `retract` does | `scripts/whycheck.ts`, `runtime/ingest.ts`, `scripts/addcheck.ts`, `scripts/vscode_curve.ts`, `rust/rofl/tests/why_bins.rs` | KEEP | |
 | `load` with `who` | the author of the loaded text | `runtime/port.ts` passes it; no caller sets it | KEEP (the permission model of `docs/books-and-permission.md`) | |
 | `why` with `all`, `whynot` with `depth`, `nodes` | the verbs' options | `scripts/whycheck.ts`, `rust/rofl/tests/why_bins.rs` | KEEP | |
 | `op: ask` | rows of a query | `runtime/ingest.ts` | KEEP | |
-| `ask` with `keys` | the matched facts in `canonicalState`'s key form | `runtime/port.ts` passes it; no caller sets it | REMOVE | decided |
+| `ask` with `keys` | the matched facts in `canonicalState`'s key form | `runtime/split.ts`, `scripts/vscode_curve.ts` (since the audit) | KEEP: the decision to remove it predates its callers | |
 | `op: assert`, `tick` | assert text; advance a tick. On an evaluated session `assert` is an addition by delta and answers `full` (null, or why it evaluated again) | `scripts/surface_split.ts` (`assert`), `scripts/whycheck.ts` (`tick`) | KEEP (the core of the protocol; `docs/port-surface.md`) | |
 | `op: fork` | the cheap copy of a session | `scripts/surface_split.ts` | KEEP (the protocol's headline verb, `docs/port-surface.md`) | |
 | `op: state` | the state to a path, or as text | `scripts/goldens.ts` | KEEP | |
 | `op: cool_many` | cool several volumes in one pass | `runtime/ingest.ts` | KEEP | |
-| `op: cool` | cool one volume | `runtime/port.ts` method only; `cool_many` covers it | MERGE into `cool_many` | decided |
-| `op: cool_trail`, `reheat_trail` | park and fetch the assertion trail | `runtime/port.ts` methods only; no caller | REMOVE | decided |
-| `op: facts` | fact count and tick | `runtime/port.ts` `factCount`, called by `runtime/ingest.ts` and `scripts/vscode_curve.ts` (the audit missed them) | REMOVE | decided; its callers need another way to count first |
+| `op: cool` | cool one volume, by book with `books` and `keep` | `runtime/split.ts` (since the audit); `cool_many` does not cool by book | KEEP: the decision to merge it predates its caller | |
+| `op: cool_trail`, `reheat_trail` | park and fetch the assertion trail | `runtime/port.ts` methods only; no caller. `Session::cool_trail` stays, `rust/rofl/tests/cool.rs` calls it | REMOVE | done |
+| `op: facts` | fact count and tick | `runtime/port.ts` `factCount`, called by `runtime/ingest.ts` and `scripts/vscode_curve.ts` (the audit missed them) | REMOVE once its callers have another way to count | open: no other verb counts without evaluating again |
 
 ## rofl-render (`rust/rofl/src/bin/rofl_render.rs`)
 
@@ -141,8 +140,8 @@ fact in `examples/notebook/ledger_facts.rofl` (a world with a golden), so each i
 | `ROFL_TREE` | the tree the reader reads | `scripts/agg_breaks.ts`, `scripts/read.ts` | INTERNAL | |
 | `ROFL_KERNEL_HASH` | set by `rust/rofl/build.rs` at compile time; not settable | `rust/rofl/src/kernel.rs` | INTERNAL | |
 | `ROFL_TIMES` | append a line per world (times, facts) to a file, to pick the scale cap | `scripts/goldens.ts`; the recipe is in `facts/checks.rofl` | INTERNAL | |
-| `ROFL_NO_DELTA_FIRST` | plan joins in written order | `rust/rofl/src/engine.rs` reads it; documents (`docs/optimising-a-world.md` names it as the baseline of one measurement); no script or test sets it | REMOVE | decided |
-| `ROFL_COOL_PHASES` | print the phases of a cool on stderr | `rust/rofl/src/session.rs` prints; `runtime/port.ts` forwards the stderr; nobody sets it | REMOVE | decided |
+| `ROFL_NO_DELTA_FIRST` | plan joins in written order | `rust/rofl/src/engine.rs` reads it; documents (`docs/optimising-a-world.md` names it as the baseline of one measurement); no script or test sets it | REMOVE | done |
+| `ROFL_COOL_PHASES` | print the phases of a cool on stderr | `rust/rofl/src/session.rs` prints; `runtime/port.ts` forwards the stderr; nobody sets it | REMOVE | done |
 | `ROFL_PROF_ALL`, `ROFL_VSTATS`, `ROFL_PORT_TRACE`, `ROFL_LSP_DEBOUNCE`, `ROFL_READ_SCRIPT`, `ROFL_TESTS` | per-rule profile; closure counters; request trace; LSP debounce; the reader a test runs; an env prefix of `npm run loop` that nothing reads | none (definition only) | REMOVE | done |
 | `ROFL_DELTA_FIRST`, `ROFL_NB_CLAUDE_TIMEOUT` | named in ledger prose only; no code reads them | | REMOVE | nothing to do |
 | `ROFL_GUIDE_CLI` | the command line `scripts/guide.ts` prints | `scripts/guide.ts`, `vscode/test/dist.ts` | INTERNAL | |
@@ -160,8 +159,8 @@ fact in `examples/notebook/ledger_facts.rofl` (a world with a golden), so each i
 | `ROFL_NB_TIMEOUT` | seconds to wait for the kept kernel | `notebook/serve.ts`, `scripts/nb_product.ts`, help | KEEP | |
 | `ROFL_NB_IDLE` | seconds the kept kernel waits before it exits | `scripts/cut_check.ts`, `scripts/nb_product.ts` set it to short values; help | INTERNAL | |
 | `ROFL_NB_SOCKET` | the kernel's socket path | `scripts/cut_check.ts`, `scripts/nb_product.ts` | INTERNAL | |
-| `ROFL_NB_HARNESS` | the model `translate` asks | `guide/MODELS.md`, `scripts/nb_product.ts`; the same choice as `--model NAME` | MERGE into `--model` | decided |
-| `ROFL_NB_ROOT` | the folder `translate` lets the model read | `guide/MODELS.md`, `scripts/nb_product.ts`; the same as `--root DIR` | MERGE into `--root` | decided |
+| `ROFL_NB_HARNESS` | the model `translate` asks | `guide/MODELS.md`, `scripts/nb_product.ts`; the same choice as `--model NAME` | MERGE into `--model` | done |
+| `ROFL_NB_ROOT` | the folder `translate` lets the model read | `guide/MODELS.md`, `scripts/nb_product.ts`; the same as `--root DIR` | MERGE into `--root` | done |
 | `ROFL_NB_MODEL_CMD` | a command that reads the prompt and prints the answer | `guide/MODELS.md`, `notebook/model.ts`, `vscode/extension.ts` | KEEP | |
 | `ROFL_NB_<NAME>` (`CLAUDE`, `CODEX`, `COPILOT`, `OPENCODE`, ...) | the binary of that harness | `scripts/nb_check.ts`, `scripts/nb_product.ts` plant spy binaries through it; `notebook/model.ts` | KEEP | |
 | `ROFL_NB_ALLOW_TOOLS` | run a harness that cannot be run without tools | `guide/MODELS.md`, `notebook/model.ts`, `scripts/nb_product.ts` | KEEP | |
@@ -180,7 +179,7 @@ fact in `examples/notebook/ledger_facts.rofl` (a world with a golden), so each i
 | `test:fast` | build the `fast` profile and run `npm test` on it | CLAUDE.md. `ROFL_PROFILE=fast npm test` reads an already built `fast`; `test:fast` is the build plus that | KEEP | |
 | `bless`, `test:hosts` | rewrite the golden; the demos by stdout | `scripts/goldens.ts` | KEEP | |
 | `test:agg:breaks -- <id>...` | run only those planted faults | `scripts/agg_breaks.ts` | KEEP | |
-| `test:agg:breaks -- --legacy` | plant in the source and rebuild per fault | none run it: `docs/aggregates.md` describes it and the `test:agg:breaks` line of CLAUDE.md (from `facts/commands.rofl`) names it; the second planting mechanism, slower | REMOVE | decided (the CLAUDE.md line goes with it) |
+| `test:agg:breaks -- --legacy` | plant in the source and rebuild per fault | none run it: `docs/aggregates.md` describes it and the `test:agg:breaks` line of CLAUDE.md (from `facts/commands.rofl`) names it; the second planting mechanism, slower | REMOVE | done |
 | `test:agg:breaks -- --write` | rewrite the fault census | `scripts/agg_breaks.ts` | INTERNAL | |
 | `docs -- --check` | fail if a generated block is stale | `scripts/render_docs.ts`, `scripts/goldens.ts` | KEEP | |
 | `speccheck -- --write`, `--check` | rewrite or check the `[checks]` book | `scanners/spec.ts` | KEEP | |

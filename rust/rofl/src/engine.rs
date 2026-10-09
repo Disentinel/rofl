@@ -675,9 +675,7 @@ pub struct Eval {
     /// Firings solved delta-first.
     pub delta_by_rule: HashMap<Sym, u64>,
     /// Delta-first join plans (`joinplan.rs`), per rule and news position, and
-    /// the premise statistics their estimates read. `ROFL_NO_DELTA_FIRST` keeps
-    /// every firing in written order.
-    delta_first: bool,
+    /// the premise statistics their estimates read.
     plan_trial: bool,
     pub delta_ns: u64,
     delta_plans: HashMap<(Sym, usize), joinplan::Slot>,
@@ -1313,7 +1311,6 @@ impl Eval {
             new_by_rule: HashMap::new(),
             delta_by_rule: HashMap::new(),
             delta_ns: 0,
-            delta_first: std::env::var_os("ROFL_NO_DELTA_FIRST").is_none(),
             plan_trial: false,
             delta_plans: HashMap::new(),
             delta_stats: HashMap::new(),

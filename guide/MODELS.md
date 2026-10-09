@@ -7,8 +7,7 @@ language model VS Code already has (GitHub Copilot's, for example), else a
 command-line harness.
 
 On the command line, `rofl-nb models` lists the harnesses and how each one is run.
-Pick one with `--model NAME` or `ROFL_NB_HARNESS=NAME`, and add `NAME:MODEL` to
-pick its model:
+Pick one with `--model NAME`, and add `NAME:MODEL` to pick its model:
 
     rofl-nb translate file.rofl.md --model codex:gpt-5.5
 
@@ -26,7 +25,7 @@ in lines, and translate answers them: `list <glob>`, `grep <regex> [<glob>]`,
 The workspace is, in VS Code, the workspace folder that holds the notebook (with
 no folder open, the notebook's own folder). On the command line it is the
 folder you run from, if the notebook is in it, else the notebook's own folder;
-`--root DIR` or `ROFL_NB_ROOT` names another, which must hold the notebook.
+`--root DIR` names another, which must hold the notebook.
 Nothing is read when the workspace is your home directory, holds it, or is the
 filesystem root. VS Code runs the extension only in a trusted workspace.
 

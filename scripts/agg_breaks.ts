@@ -31,13 +31,7 @@
 //   node --experimental-strip-types scripts/agg_breaks.ts [id ...]
 //        [--world W] [--item I] [--cell K:L] [--file F]   the breaks whose worlds these select
 //        [--changed[=REF]]   the breaks a change since REF (HEAD) can move
-//        [--legacy]          plant each fault in the source and rebuild, one at a time
 //        --census [--write]   check (or write) examples/checks/agg-breaks-census.rofl
-//
-// `--legacy` is the old mode: a switch is written into the source as its
-// broken text (the other switches as their originals), safety.rofl edited in
-// place and compiled, and the engine rebuilt with ROFL_PROFILE (release) for
-// every break. It is what a switch is checked against, and it is slow.
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
@@ -8675,19 +8669,6 @@ export function census(): Map<string, Site[]> {
   return out;
 }
 
-/** The file as a normal build would compile it with break `id` written in:
- *  each of its sites replaced by that arm, every other site left, which the
- *  macro turns into its original. */
-function materialize(file: string, text: string, id: string): string {
-  // one site at a time, the last first, read again after each: a site may
-  // hold another
-  for (;;) {
-    const s = sitesIn(file, text).filter((x) => x.arms.has(id)).pop();
-    if (!s) return text;
-    text = text.slice(0, s.start) + `(${s.arms.get(id)})` + text.slice(s.end);
-  }
-}
-
 // ------------------------------------------------------------ the census
 
 const CENSUS = 'examples/checks/agg-breaks-census.rofl';
@@ -9004,7 +8985,6 @@ if (isMain) {
   const planted = ['ROFL_BREAK', 'ROFL_KERNEL_OVERRIDE', 'ROFL_BOOT', 'ROFL_READER'].filter((k) => process.env[k]);
   if (planted.length) { console.log(`FAIL ${planted.join(', ')} is set in the environment: unset it; the loop switches each fault on itself`); process.exit(1); }
   const { sel, rest } = parseSelector(process.argv.slice(2));
-  const legacy = rest.includes('--legacy');
   const changed = rest.find((a) => a === '--changed' || a.startsWith('--changed='));
   const ids = rest.filter((a) => !a.startsWith('--'));
   for (const id of ids) if (!BREAKS.some((b) => b.id === id)) throw new Error(`no break ${id}`);
@@ -9064,94 +9044,58 @@ if (isMain) {
   const out: Verdict[] = [];
   const sh = (cmd: string): string => execSync(cmd, { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
 
-  if (!legacy) {
-    const tb = Date.now();
-    sh('cd rust && cargo build --profile breaks --features breaks -p rofl --bin rofl-load --bin rofl-render --bin rofl-serve');
-    console.log(`built rust/target/breaks/rofl-load, rofl-render and rofl-serve in ${((Date.now() - tb) / 1000).toFixed(1)} s`);
-    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'agg-breaks-'));
-    try {
-      const plants = chosen.map((b) => {
-        const dir = path.join(tmp, b.id);
-        fs.mkdirSync(dir);
-        try { return plant(b, dir); } catch (e) { return e as Error; }
-      });
-      // THE CONTROL: the breaks build with no break answers every world a
-      // selected break reads exactly as the golden does, and raises nothing
-      const want = parse();
-      const controls = [...new Set(chosen.flatMap((b) => wsOf(b)))];
-      const self = path.resolve(import.meta.filename);
-      // one task per break and world, the slowest of the last run first: a
-      // break that runs a world to its budget is most of the wall time
-      type Job = { key: string; task: Task };
-      const jobs: Job[] = controls.map((w) => ({ key: `control/${w.name}`, task: { mod: self, fn: 'timedControl', args: [w, want.get(w.name), false] } }));
-      for (const w of new Set(chosen.flatMap((b) => wsOf(b).filter((x) => b.expect[x.name] === CUT)))) {
-        jobs.push({ key: `capped/${w.name}`, task: { mod: self, fn: 'timedControl', args: [{ ...w, cap: CAP }, want.get(w.name), false] } });
-      }
-      chosen.forEach((b, i) => {
-        const p = plants[i];
-        if (p instanceof Error) return;
-        for (const w of wsOf(b)) {
-          jobs.push({ key: `${b.id}/${w.name}`, task: { mod: self, fn: 'timedBreak', args: [{ ...b, expect: { [w.name]: b.expect[w.name] } }, [w], p] } });
-        }
-      });
-      const past = lastTimes();
-      const order = jobs.map((_, i) => i).sort((x, y) => (past[jobs[y].key] ?? 1e12) - (past[jobs[x].key] ?? 1e12));
-      const ran = await runPool<{ v: unknown; ms: number }>(order.map((i) => jobs[i].task),
-        { env: { ROFL_PROFILE: 'breaks', ROFL_BREAK: '', ROFL_KERNEL_OVERRIDE: '', ROFL_BOOT: '', ROFL_READER: '', ROFL_TREE: '' } });
-      const res = new Map<string, unknown>();
-      order.forEach((i, k) => { res.set(jobs[i].key, ran[k].v); past[jobs[i].key] = ran[k].ms; });
-      saveTimes(past);
-      for (const w of controls) { const r = res.get(`control/${w.name}`); if (r !== null) bad.push(`control, no break planted: ${r}`); }
-      for (const [k, r] of res) if (k.startsWith('capped/') && r !== null) bad.push(`control under the cap of ${CAP} steps: ${r}`);
-      chosen.forEach((b, i) => {
-        const p = plants[i];
-        if (p instanceof Error) { out.push({ lines: [], bad: [`${b.id}: ${p.message}`] }); return; }
-        if (Object.keys(b.expect).some((n) => REPORTS[n])) out.push(proofReports(b, path.join(ROOT, 'rust/target/breaks/rofl-load'), true));
-        if (Object.keys(b.expect).some((n) => TESTS[n])) out.push(proofTests(b, 'breaks', true));
-        const vs = wsOf(b).map((w) => res.get(`${b.id}/${w.name}`) as Verdict);
-        out.push({ lines: vs.flatMap((v) => v.lines), bad: vs.flatMap((v) => v.bad) });
-      });
-    } finally {
-      fs.rmSync(tmp, { recursive: true, force: true });
+  const tb = Date.now();
+  sh('cd rust && cargo build --profile breaks --features breaks -p rofl --bin rofl-load --bin rofl-render --bin rofl-serve');
+  console.log(`built rust/target/breaks/rofl-load, rofl-render and rofl-serve in ${((Date.now() - tb) / 1000).toFixed(1)} s`);
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'agg-breaks-'));
+  try {
+    const plants = chosen.map((b) => {
+      const dir = path.join(tmp, b.id);
+      fs.mkdirSync(dir);
+      try { return plant(b, dir); } catch (e) { return e as Error; }
+    });
+    // THE CONTROL: the breaks build with no break answers every world a
+    // selected break reads exactly as the golden does, and raises nothing
+    const want = parse();
+    const controls = [...new Set(chosen.flatMap((b) => wsOf(b)))];
+    const self = path.resolve(import.meta.filename);
+    // one task per break and world, the slowest of the last run first: a
+    // break that runs a world to its budget is most of the wall time
+    type Job = { key: string; task: Task };
+    const jobs: Job[] = controls.map((w) => ({ key: `control/${w.name}`, task: { mod: self, fn: 'timedControl', args: [w, want.get(w.name), false] } }));
+    for (const w of new Set(chosen.flatMap((b) => wsOf(b).filter((x) => b.expect[x.name] === CUT)))) {
+      jobs.push({ key: `capped/${w.name}`, task: { mod: self, fn: 'timedControl', args: [{ ...w, cap: CAP }, want.get(w.name), false] } });
     }
-  } else {
-    const profile = process.env.ROFL_PROFILE || 'release';
-    const build = (): void => { sh(`cd rust && cargo build --profile ${profile} -p rofl --bin rofl-load --bin rofl-render --bin rofl-serve`); };
-    for (const b of chosen) {
-      const saved = new Map<string, string>();
-      const kernel = (b.edits ?? []).some(([f]) => KERNEL.includes(f));
-      if (isTs(b)) {
-        // the engine this process runs is already imported: a copy is planted
-        const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'agg-breaks-'));
-        try { out.push(await runBreak(b, wsOf(b), plant(b, tmp))); }
-        catch (e) { out.push({ lines: [], bad: [`${b.id}: ${(e as Error).message.split('\n')[0]}`] }); }
-        finally { fs.rmSync(tmp, { recursive: true, force: true }); }
-        continue;
+    chosen.forEach((b, i) => {
+      const p = plants[i];
+      if (p instanceof Error) return;
+      for (const w of wsOf(b)) {
+        jobs.push({ key: `${b.id}/${w.name}`, task: { mod: self, fn: 'timedBreak', args: [{ ...b, expect: { [w.name]: b.expect[w.name] } }, [w], p] } });
       }
-      try {
-        const texts = b.edits ? edited(b)
-          : new Map((sites.get(b.id) ?? []).map((s) => [s.file, materialize(s.file, read(s.file), b.id)]));
-        if (texts.size === 0) throw new Error(`NOT PLANTED: no brk!("${b.id}") in ${SRC}`);
-        for (const [f, text] of texts) { saved.set(f, read(f)); fs.writeFileSync(path.join(ROOT, f), text); }
-        if (kernel) sh('npm run build:dense');
-        build();
-        out.push(await runBreak(b, wsOf(b), { env: {}, subs: [] }));
-        if (Object.keys(b.expect).some((n) => REPORTS[n])) out.push(proofReports(b, path.join(ROOT, `rust/target/${profile}/rofl-load`), false));
-        if (Object.keys(b.expect).some((n) => TESTS[n])) out.push(proofTests(b, profile, false));
-      } catch (e) {
-        out.push({ lines: [], bad: [`${b.id}: ${(e as Error).message.split('\n')[0]}`] });
-      } finally {
-        for (const [f, t] of saved) fs.writeFileSync(path.join(ROOT, f), t);
-        // a restored safety.rofl is not a restored kernel until it is compiled
-        // again, or the next break runs over this one's
-        if (kernel) sh('npm run build:dense');
-      }
-    }
-    build();
+    });
+    const past = lastTimes();
+    const order = jobs.map((_, i) => i).sort((x, y) => (past[jobs[y].key] ?? 1e12) - (past[jobs[x].key] ?? 1e12));
+    const ran = await runPool<{ v: unknown; ms: number }>(order.map((i) => jobs[i].task),
+      { env: { ROFL_PROFILE: 'breaks', ROFL_BREAK: '', ROFL_KERNEL_OVERRIDE: '', ROFL_BOOT: '', ROFL_READER: '', ROFL_TREE: '' } });
+    const res = new Map<string, unknown>();
+    order.forEach((i, k) => { res.set(jobs[i].key, ran[k].v); past[jobs[i].key] = ran[k].ms; });
+    saveTimes(past);
+    for (const w of controls) { const r = res.get(`control/${w.name}`); if (r !== null) bad.push(`control, no break planted: ${r}`); }
+    for (const [k, r] of res) if (k.startsWith('capped/') && r !== null) bad.push(`control under the cap of ${CAP} steps: ${r}`);
+    chosen.forEach((b, i) => {
+      const p = plants[i];
+      if (p instanceof Error) { out.push({ lines: [], bad: [`${b.id}: ${p.message}`] }); return; }
+      if (Object.keys(b.expect).some((n) => REPORTS[n])) out.push(proofReports(b, path.join(ROOT, 'rust/target/breaks/rofl-load'), true));
+      if (Object.keys(b.expect).some((n) => TESTS[n])) out.push(proofTests(b, 'breaks', true));
+      const vs = wsOf(b).map((w) => res.get(`${b.id}/${w.name}`) as Verdict);
+      out.push({ lines: vs.flatMap((v) => v.lines), bad: vs.flatMap((v) => v.bad) });
+    });
+  } finally {
+    fs.rmSync(tmp, { recursive: true, force: true });
   }
   for (const v of out) for (const l of v.lines) console.log(l);
   for (const v of out) bad.push(...v.bad);
   for (const x of bad) console.log(`FAIL ${x}`);
-  console.log(`${chosen.length} breaks, ${bad.length === 0 ? 'every one caught' : `${bad.length} failures`}; ${legacy ? 'planted in the source, rebuilt for each, the source restored' : 'switched on in one build'}, ${((Date.now() - t0) / 1000).toFixed(1)} s`);
+  console.log(`${chosen.length} breaks, ${bad.length === 0 ? 'every one caught' : `${bad.length} failures`}; switched on in one build, ${((Date.now() - t0) / 1000).toFixed(1)} s`);
   process.exit(bad.length === 0 ? 0 : 1);
 }

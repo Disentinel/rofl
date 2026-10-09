@@ -224,30 +224,6 @@ export class RoflSession {
     return r.volumes as { facts: number; bytes: number; path: string }[];
   }
 
-  /** COOL THE ASSERTION TRAIL: park `asserted_by` on disk and drop it.
-   *
-   *  It is half the world and two thirds of what a load writes — 41 722 rows
-   *  against 43 078 base facts on 16 eslint files, and dropping it takes a load
-   *  from 331 ms to 94 — and it is the layer nobody asks about until something
-   *  is wrong. `sealed(assertions)` gets the same numbers more cheaply and
-   *  never writes the information at all; this parks it.
-   *
-   *  Write `hole($cold(assertions), cooled_to_disk)` alongside, so a question
-   *  about authorship REFUSES rather than answering empty. */
-  async coolTrail(path: string): Promise<{ facts: number; bytes: number; path: string }> {
-    const r = await this.port.send({ op: 'cool_trail', session: this.id, path });
-    return { facts: r.facts as number, bytes: r.bytes as number, path: r.path as string };
-  }
-
-  /** Fetch the trail back. This goes PAST THE DOOR — `asserted_by` lives in
-   *  `[$kernel]` and a program may not write a kernel ledger — and the header
-   *  is what earns that: a file this engine did not write is refused, not
-   *  translated. Same category as restoring a seed, not a new one. */
-  async reheatTrail(path: string): Promise<number> {
-    const r = await this.port.send({ op: 'reheat_trail', session: this.id, path });
-    return r.restored as number;
-  }
-
   /** Write canonicalState to a file. Deliberately not a string — see the
    *  module note on V8's cap and where the port stops being judged. */
   async state(outPath: string): Promise<number> {
@@ -302,11 +278,7 @@ export class RoflPort {
     // it into a buffer nobody reads unless it dies, which is how a phase
     // breakdown printed by the engine went missing while I was measuring with
     // it. A diagnostic that only survives a crash is not a diagnostic.
-    this.child.stderr.on('data', (b: Buffer) => {
-      const t = b.toString();
-      this.err += t;
-      if (process.env.ROFL_COOL_PHASES) process.stderr.write(t);
-    });
+    this.child.stderr.on('data', (b: Buffer) => { this.err += b.toString(); });
     this.child.on('error', (e) => this.fail(`rofl-serve would not start (${e.message})`));
     this.child.on('exit', (code, sig) => this.fail(`rofl-serve exited (code ${code}, signal ${sig})`));
   }
@@ -388,7 +360,7 @@ export class RoflPort {
   /** Build the core from a snapshot. Expensive; fork it after that. A snapshot
    *  carries the world, not its walls: give them again or a world past the
    *  default row limit comes back holed. */
-  async open(opts: { seedPath?: string; seed?: string; budget?: number } & Walls): Promise<RoflSession> {
+  async open(opts: { seedPath: string; budget?: number } & Walls): Promise<RoflSession> {
     const r = await this.send({ op: 'open', ...opts });
     return new RoflSession(this, r.session as number, r.facts as number);
   }

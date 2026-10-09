@@ -641,16 +641,18 @@ fn rofl_serve_opens_a_snapshot_under_the_walls_it_is_given() {
     let mut s = Session::fresh(BUDGET);
     s.load(&read(&root.join("boot.rofl")), None).expect("boot");
     s.load(&read(&root.join("examples/checks/agg-wfs-game.rofl")), None).expect("the world");
-    let seed = s.save().replace('\\', "\\\\").replace('"', "\\\"");
+    let path = std::env::temp_dir().join(format!("rofl_serve_walls_{}.seed.json", std::process::id()));
+    std::fs::write(&path, s.save()).unwrap();
+    let seed = path.to_str().unwrap().replace('\\', "\\\\");
     let reqs = [
-        format!(r#"{{"op":"open","seed":"{seed}","id":1}}"#),
+        format!(r#"{{"op":"open","seedPath":"{seed}","id":1}}"#),
         r#"{"op":"evaluate","session":1,"id":2}"#.to_string(),
-        format!(r#"{{"op":"open","seed":"{seed}","space":100,"retainTicks":2,"mode":"strata","id":3}}"#),
+        format!(r#"{{"op":"open","seedPath":"{seed}","space":100,"retainTicks":2,"mode":"strata","id":3}}"#),
         r#"{"op":"evaluate","session":2,"id":4}"#.to_string(),
         r#"{"op":"fresh","space":7,"id":5}"#.to_string(),
         r#"{"op":"evaluate","session":3,"id":6}"#.to_string(),
-        format!(r#"{{"op":"open","seed":"{seed}","mode":"sideways","id":7}}"#),
-        format!(r#"{{"op":"open","seed":"{seed}","space":-1,"id":8}}"#),
+        format!(r#"{{"op":"open","seedPath":"{seed}","mode":"sideways","id":7}}"#),
+        format!(r#"{{"op":"open","seedPath":"{seed}","space":-1,"id":8}}"#),
     ];
     let mut p = std::process::Command::new(env!("CARGO_BIN_EXE_rofl-serve"))
         .current_dir(&root)
@@ -660,6 +662,7 @@ fn rofl_serve_opens_a_snapshot_under_the_walls_it_is_given() {
         .expect("rofl-serve");
     p.stdin.take().unwrap().write_all((reqs.join("\n") + "\n").as_bytes()).unwrap();
     let out = String::from_utf8(p.wait_with_output().unwrap().stdout).unwrap();
+    let _ = std::fs::remove_file(&path);
     let lines: Vec<&str> = out.lines().collect();
     assert_eq!(lines.len(), reqs.len(), "{out}");
     assert!(lines[1].contains(r#""partial":false"#) && lines[1].contains(r#""space":500000"#), "unwalled: {}", lines[1]);

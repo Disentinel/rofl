@@ -825,9 +825,6 @@ impl Session {
         for (i, (p, _)) in vols.iter().enumerate() {
             by_len.entry(p.len()).or_default().insert(p.as_str(), i);
         }
-        let t0 = std::time::Instant::now();
-        let mut ns_match = 0u128;
-        let mut ns_render = 0u128;
         self.eval.settle_provenance();
         let mut texts: Vec<String> = vols.iter().map(|(p, _)| self.header(p)).collect();
         let mut counts = vec![0usize; vols.len()];
@@ -837,38 +834,21 @@ impl Session {
                 continue;
             }
             let args = self.eval.store.args(id).to_vec();
-            let m0 = std::time::Instant::now();
-            let hit = self.volume_of(&args, &by_len);
-            ns_match += m0.elapsed().as_nanos();
-            let Some(k) = hit else { continue };
+            let Some(k) = self.volume_of(&args, &by_len) else { continue };
             let r = self.eval.store.rec(id);
             if r.base() && !is_kernel_ledger(&self.eval.h, r.persp) {
-                let w0 = std::time::Instant::now();
                 write_fact_key(&self.eval.h, r.rel, r.persp, &args, &mut texts[k]);
                 texts[k].push_str(".\n");
-                ns_render += w0.elapsed().as_nanos();
                 counts[k] += 1;
             }
             drop.push(id);
         }
-        let t_walk = t0.elapsed().as_millis();
-        let t1 = std::time::Instant::now();
         let mut out = Vec::with_capacity(vols.len());
         for (i, (_, path)) in vols.iter().enumerate() {
             std::fs::write(path, &texts[i]).map_err(|e| format!("{path}: {e}"))?;
             out.push(Cooled { facts: counts[i], bytes: texts[i].len(), path: path.clone(), books: Vec::new() });
         }
-        let t_write = t1.elapsed().as_millis();
-        let t2 = std::time::Instant::now();
         self.eval.store.remove_many(&drop);
-        if std::env::var("ROFL_COOL_PHASES").is_ok() {
-            eprintln!(
-                "cool: walk {}ms (match {}ms render {}ms) write {}ms remove {}ms | {} vols {} facts {} bytes",
-                t_walk, ns_match / 1_000_000, ns_render / 1_000_000, t_write,
-                t2.elapsed().as_millis(), vols.len(),
-                counts.iter().sum::<usize>(), texts.iter().map(|t| t.len()).sum::<usize>()
-            );
-        }
         self.eval.store.dirty = true;
         Ok(out)
     }

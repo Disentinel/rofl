@@ -11,7 +11,7 @@ in `docs/`. Everything ever learned here is in `facts/findings.rofl`.
     npm run bless            rewrite the golden, printing every world and demo it moves
     npm run test:fast        rebuild rofl-load and rofl-render with the `fast` cargo profile (release semantics, no LTO: a code edit in engine.rs rebuilds in a quarter of the release time) and run npm test on it; release stays the default for goldens and gates
     npm run test:agg         the ledger's mutants and controls, pooled; `-- --item I` (or --world, --cell, --file) runs instead that item's proof worlds and the planted faults that must turn them red
-    npm run test:agg:breaks  every planted fault of scripts/agg_breaks.ts, switched on in one `--features breaks` build and run in parallel beside a no-break control; `-- <id>...`, `--item I`, `--world W`, `--changed[=REF]` for fewer; `--legacy` plants in the source and rebuilds per fault
+    npm run test:agg:breaks  every planted fault of scripts/agg_breaks.ts, switched on in one `--features breaks` build and run in parallel beside a no-break control; `-- <id>...`, `--item I`, `--world W`, `--changed[=REF]` for fewer
     npm run test:hosts       every demo by its stdout, one engine; the slowest of the gates
     npm run docs             regenerate every generated block; `-- --check` fails if one is stale
     npm run textcheck        no unreadable byte reached a source file
@@ -33,10 +33,11 @@ in `docs/`. Everything ever learned here is in `facts/findings.rofl`.
 
 <!-- END commands -->
 
-Knobs: **fewer is the rule** (owner, 2026-10-05). These are the only ones to use;
-every other flag and `ROFL_*` variable is an oracle of a check harness or a
-leftover, inventoried with its verdict in docs/knobs.md. Add none without
-removing one.
+Knobs: **fewer is the rule** (owner, 2026-10-05). The interface has as few tools
+as possible, and what is configuration goes in as a config, a preset or a view,
+not as another flag or variable. These are the only ones to use; every other
+flag and `ROFL_*` variable is an oracle of a check harness, inventoried with its
+verdict in docs/knobs.md.
 
 <!-- BEGIN knobs: generated from facts/commands.rofl, inventory in docs/knobs.md -->
 

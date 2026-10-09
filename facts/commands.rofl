@@ -33,7 +33,7 @@ command_shown("test:agg", 3).
 command_note("test:agg", "the ledger's mutants and controls, pooled; `-- --item I` (or --world, --cell, --file) runs instead that item's proof worlds and the planted faults that must turn them red").
 
 command_shown("test:agg:breaks", 4).
-command_note("test:agg:breaks", "every planted fault of scripts/agg_breaks.ts, switched on in one `--features breaks` build and run in parallel beside a no-break control; `-- <id>...`, `--item I`, `--world W`, `--changed[=REF]` for fewer; `--legacy` plants in the source and rebuilds per fault").
+command_note("test:agg:breaks", "every planted fault of scripts/agg_breaks.ts, switched on in one `--features breaks` build and run in parallel beside a no-break control; `-- <id>...`, `--item I`, `--world W`, `--changed[=REF]` for fewer").
 
 command_shown("test:hosts", 5).
 command_note("test:hosts", "every demo by its stdout, one engine; the slowest of the gates").

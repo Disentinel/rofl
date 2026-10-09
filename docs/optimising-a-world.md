@@ -158,7 +158,7 @@ the fewest estimated matches given what is bound (`engine/joinplan.rs`,
 `f_delta_first_plans_fire_a_rule_from_its_news`). Default on. Facts and the whole
 `--bytes` state identical in all eight worlds, derived_by and witnesses too.
 
-**Gain** (Rust release, `--bytes`, before = same binary with `ROFL_NO_DELTA_FIRST`):
+**Gain** (Rust release, `--bytes`, before = the same binary with delta-first plans switched off, a switch since removed):
 
 | eval ms | self | mcp | cli_exits | util |
 |---|---|---|---|---|
