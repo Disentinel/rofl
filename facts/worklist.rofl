@@ -3883,6 +3883,7 @@ work(w_derived_as_given,
   "THE KEYSTONE of staged evaluation: a frozen layer of derived facts is taken as complete, run_pass does not clear it and no rule whose head is in it fires. Proof: a world evaluated in two stages equals the world evaluated whole, byte for byte, on every world of npm test that splits.").
 work_state(w_derived_as_given, open).
 work_needs(w_derived_as_given, w_stage_hypotheses).
+work_spawned(w_derived_as_given, f_an_evaluated_world_kept_on_disk_opens_evaluated_and_takes_the_next_stage_by_delta).
 
 work(w_mapped_volume,
   "The colfile of rust/storebench into the engine as the frozen base a fork reads: a kept stage or volume is a mapped columnar file, keyed by (program hash, input hashes).").

@@ -2286,6 +2286,17 @@ impl Store {
     /// `Store.firings` is a map of on the reference side. `witness_of` picks
     /// ONE of these; a snapshot carries them all, because which one a store
     /// would pick back is a property of the store and not of the world.
+    /// The witnesses of `id`, in the order its chain holds them.
+    pub fn witnesses(&self, id: FactId) -> Vec<WitView<'_>> {
+        let mut out = Vec::new();
+        let mut c = self.wit_head.get(id as usize).copied().unwrap_or(EMPTY);
+        while c != EMPTY {
+            out.push(self.view(c));
+            c = self.wits[c as usize].next;
+        }
+        out
+    }
+
     pub fn supports_of(&self, h: &Heap, id: FactId) -> Vec<(String, Sym, u32, Vec<PremRef>)> {
         let mut out = Vec::new();
         let Some(&head) = self.wit_head.get(id as usize) else { return out };

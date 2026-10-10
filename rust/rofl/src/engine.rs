@@ -3841,6 +3841,29 @@ impl Eval {
     }
 
     /// The staged facts, each with the rule and the premises of the firing that staged it, one a line.
+    /// What is staged for the next tick, with the other derivations of each: the evaluation's, not the store's, so
+    /// a kept image carries it beside the store (`crate::image`).
+    pub fn staged_kept(&self) -> Vec<(StagedFact, Vec<(Sym, Vec<PremRef>)>)> {
+        self.staged_sorted()
+            .into_iter()
+            .map(|(_, f)| {
+                let k: FKey = (f.rel, f.persp, f.args.clone().into());
+                let alts = self.staged_alts.get(&k).cloned().unwrap_or_default();
+                (f, alts)
+            })
+            .collect()
+    }
+
+    pub fn stage_kept(&mut self, kept: Vec<(StagedFact, Vec<(Sym, Vec<PremRef>)>)>) {
+        for (f, alts) in kept {
+            let k: FKey = (f.rel, f.persp, f.args.clone().into());
+            if !alts.is_empty() {
+                self.staged_alts.insert(k.clone(), alts);
+            }
+            self.staged.insert(k, f);
+        }
+    }
+
     pub fn staged_text(&self) -> String {
         let mut out = String::new();
         for (k, f) in self.staged_sorted() {

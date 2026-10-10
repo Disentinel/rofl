@@ -1,13 +1,13 @@
 // Two stages by asks (docs/staged-evaluation.md, decision 1): a world evaluated over the cone of LOWER, then the
 // question's asks added to the evaluated world by delta, against the same world asking both at once, byte for byte.
-//   stage_by_asks.ts FACTS N LOWER,...
+//   stage_by_asks.ts FACTS N LOWER,... [kept]     kept: the lower stage kept on disk and opened again before the question
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { RoflPort } from '../runtime/port.ts';
 import { MODEL_FILES } from '../notebook/front.ts';
 import { NODE } from '../runtime/split.ts';
 const ROOT = new URL('..', import.meta.url).pathname;
-const [factsPath, nArg, lowerArg] = process.argv.slice(2);
+const [factsPath, nArg, lowerArg, mode] = process.argv.slice(2);
 const lower = lowerArg.split(',');
 const upper = ['side_effect_value', 'side_effect_site', 'side_effect_count', 'side_effect_env', 'side_effect_form'];
 const facts: string[] = []; const seen: string[] = [];
@@ -37,10 +37,19 @@ const T = () => performance.now();
 let t = T(); const w = await world(lower, asks(upper)); await w.evaluate();
 const whole = { ms: Math.round(T() - t), facts: (await w.factCount()).facts };
 const want = await w.stateText(); await w.close?.();
-t = T(); const s = await world(lower); await s.evaluate();
+t = T(); let s = await world(lower); await s.evaluate();
 const lowerMs = Math.round(T() - t); const lowerFacts = (await s.factCount()).facts;
+let kept;
+if (mode === 'kept') {
+  const keptPath = path.join(fs.mkdtempSync('/tmp/rofl-stage-'), 'lower.kept');
+  t = T(); const bytes = await s.keep(keptPath); const saveMs = Math.round(T() - t);
+  await s.close?.();
+  t = T(); s = await port.open({ keptPath, budget: 4_000_000_000, space: 40_000_000 }); const openMs = Math.round(T() - t);
+  kept = { bytes, saveMs, openMs };
+  fs.rmSync(path.dirname(keptPath), { recursive: true });
+}
 t = T(); const r = await s.add(asks(upper)); const upperMs = Math.round(T() - t);
 const got = await s.stateText();
 if (process.env.DIFF) { fs.writeFileSync(process.env.DIFF + '.want', want); fs.writeFileSync(process.env.DIFF + '.got', got); }
-console.log(JSON.stringify({ files: seen.length, lower, whole, lowerMs, lowerFacts, upperMs, full: r.full, facts: (await s.factCount()).facts, sameState: got === want }));
+console.log(JSON.stringify({ files: seen.length, lower, whole, lowerMs, lowerFacts, kept, upperMs, full: r.full, facts: (await s.factCount()).facts, sameState: got === want }));
 await port.stop();

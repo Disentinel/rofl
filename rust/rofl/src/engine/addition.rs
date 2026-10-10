@@ -256,6 +256,19 @@ impl Eval {
         Ok(moved)
     }
 
+    /// A WORLD OPENED EVALUATED (`crate::image`) holds what the evaluation derived but not what it ranked: the rounds are
+    /// peeled again from the program. What the image does not carry leaves the world to be evaluated again: a program
+    /// ranked only by its data, the cells of a lattice, and the firings a sealed world solves again for `why`.
+    pub fn after_open(&mut self) {
+        if self.store.dirty {
+            return;
+        }
+        self.round_of.clear();
+        if self.rerank().is_err() || !self.lattices.is_empty() || self.no_witness {
+            self.store.dirty = true;
+        }
+    }
+
     /// WHY AN ADDITION IS NOT WORKED OUT for this world: every reason that holds, in a fixed order (empty where it is).
     fn addition_refusals(&mut self) -> Vec<&'static str> {
         let mut out = Vec::new();

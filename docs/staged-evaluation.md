@@ -85,14 +85,19 @@ pass whatever the store holds.
 **A stage added above an evaluated one already costs its own delta**
 (`f_a_question_added_to_an_evaluated_cone_costs_its_own_delta`, `scripts/stage_by_asks.ts`). A world evaluated
 over the cone of `asks(may_be_node)`, then given the question's asks by delta, equals the world that asked both at
-once, byte for byte; the question cost 0.38 s against 5.2 s whole at 20 files. What is missing is keeping the lower
-stage across a process: `cool` writes base facts only.
+once, byte for byte; the question cost 0.38 s against 5.2 s whole at 20 files.
+
+**A stage kept on disk opens evaluated**
+(`f_an_evaluated_world_kept_on_disk_opens_evaluated_and_takes_the_next_stage_by_delta`, `rust/rofl/src/image.rs`).
+`Session::keep` writes the world in binary, derived facts and witnesses included; `Session::open_kept` reads it back
+evaluated, and the next stage goes on by delta. At 20 files: 57 MB, kept in 0.65 s, opened in 1.6 s against 4 s to
+evaluate, and the result equal byte for byte. A world with lattices, or sealed, opens to be evaluated again.
 
 ## What is built, in order
 
-1. **Derived as given** (the keystone: stages, cache and resume all need it). In memory a stage already builds on the
-   one below it; what is built is a kept stage read back as complete: `run_pass` does not clear it and no rule whose
-   head is in it fires. Proof: a world evaluated
+1. **Derived as given** (the keystone: stages, cache and resume all need it). A stage builds on the one below it in
+   memory and across a process (the kept image); what remains is a kept stage read back under a cone that does not
+   run its rules again, and a lattice world kept evaluated. Proof: a world evaluated
    in two stages equals the world evaluated whole, byte for byte, on every world of `npm test` that splits.
 2. **The mapped volume.** colfile into the engine as the frozen base a fork reads.
 3. **Resume** (decision 4, H5).

@@ -257,6 +257,12 @@ export class RoflSession {
 
   /** The whole state as a string. Separate from `state` and named so that
    *  reaching for it is a decision rather than a default. */
+  /** This world as a kept image that `RoflPort.open({ keptPath })` reads back; an evaluated world opens evaluated. */
+  async keep(path: string): Promise<number> {
+    const r = await this.port.send({ op: 'keep', session: this.id, path });
+    return r.bytes as number;
+  }
+
   async stateText(): Promise<string> {
     const r = await this.port.send({ op: 'state', session: this.id });
     return r.state as string;
@@ -388,7 +394,7 @@ export class RoflPort {
   /** Build the core from a snapshot. Expensive; fork it after that. A snapshot
    *  carries the world, not its walls: give them again or a world past the
    *  default row limit comes back holed. */
-  async open(opts: { seedPath?: string; seed?: string; budget?: number } & Walls): Promise<RoflSession> {
+  async open(opts: { seedPath?: string; keptPath?: string; seed?: string; budget?: number } & Walls): Promise<RoflSession> {
     const r = await this.send({ op: 'open', ...opts });
     return new RoflSession(this, r.session as number, r.facts as number);
   }

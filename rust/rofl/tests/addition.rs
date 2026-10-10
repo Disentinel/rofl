@@ -371,6 +371,17 @@ fn differential(seed: u64, head: &str, rules: Vec<String>, gen: fn(&mut Rng) -> 
             st.explained += 1;
         }
         was = now;
+        // every third step the world goes to disk (`Session::keep`) and the additions go on over the one read back
+        if step % 3 == 2 {
+            let before = s.eval.canonical_state();
+            s = Session::open_kept(&s.keep(), BUDGET).unwrap_or_else(|e| panic!("seed {seed} step {step}: the kept world does not open: {e}"));
+            assert_eq!(s.eval.canonical_state(), before, "seed {seed} step {step}: the kept world opens as another");
+            // a world the image cannot carry evaluated (a lattice, a sealed world) opens to be evaluated again
+            if s.eval.store.dirty {
+                s.evaluate().unwrap_or_else(|e| panic!("seed {seed} step {step}: the kept world does not evaluate: {}", rofl::describe(&e)));
+                assert_eq!(s.eval.canonical_state(), before, "seed {seed} step {step}: the kept world evaluates as another");
+            }
+        }
     }
     // a snapshot of the world the additions made opens as that world
     // (what is staged for the next tick is the evaluation's, not the store's: a snapshot carries the store)
