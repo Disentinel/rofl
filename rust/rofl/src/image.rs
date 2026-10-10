@@ -1,20 +1,23 @@
 //! A KEPT WORLD: what a seed holds (`crate::seed`), written by id and in binary, so an evaluated world goes to disk
 //! and comes back evaluated without a key spelled, sorted or parsed (docs/staged-evaluation.md, decision 1). The
 //! facts, ghosts, witnesses, cells, lattices and the program are the seed's; only the encoding differs, and an
-//! image is read by the build that wrote it.
+//! image is read by the build that wrote it. Each distinct term is written once, in a table ahead of the facts, and
+//! built once when read.
 use crate::cell::{AggOp, Algebra};
 use crate::engine::StagedFact;
 use crate::store::{CellOwner, CellValue, EvalRecord, LatReg, NewCell, NewMember, PremRef, Seal, Store, Witness, F_BASE, F_FROZEN, F_TICK};
 use crate::term::{Heap, Sym, Term, TermK};
 use std::collections::HashMap;
 
-const MAGIC: &[u8] = b"ROFL-KEPT-1\n";
+const MAGIC: &[u8] = b"ROFL-KEPT-2\n";
 
 #[derive(Default)]
 struct W {
     out: Vec<u8>,
     names: Vec<Sym>,
     name_ix: HashMap<Sym, u32>,
+    table: Vec<u8>,
+    term_of: HashMap<Term, u32>,
 }
 
 impl W {
@@ -25,45 +28,49 @@ impl W {
         self.out.extend_from_slice(&x.to_le_bytes());
     }
     fn sym(&mut self, s: Sym) {
+        let i = self.sym_ix(s);
+        self.u32(i);
+    }
+    fn sym_ix(&mut self, s: Sym) -> u32 {
         let n = self.names.len() as u32;
         let i = *self.name_ix.entry(s).or_insert(n);
         if i == n {
             self.names.push(s);
         }
-        self.u32(i);
+        i
     }
     fn text(&mut self, s: &str) {
         self.u32(s.len() as u32);
         self.out.extend_from_slice(s.as_bytes());
     }
     fn term(&mut self, h: &Heap, t: Term) {
+        let i = self.term_ix(h, t);
+        self.u32(i)
+    }
+    /// The term's place in the table, written there once, after its arguments.
+    fn term_ix(&mut self, h: &Heap, t: Term) -> u32 {
+        if let Some(&i) = self.term_of.get(&t) {
+            return i;
+        }
+        let mut e = Vec::new();
         match t.kind() {
-            TermK::Var(s) => {
-                self.out.push(0);
-                self.sym(s)
-            }
-            TermK::Atom(s) => {
-                self.out.push(1);
-                self.sym(s)
-            }
-            TermK::Str(s) => {
-                self.out.push(2);
-                self.sym(s)
-            }
-            TermK::Int(n) => {
-                self.out.push(3);
-                self.i64(n)
-            }
-            TermK::Func(i) => {
-                self.out.push(4);
-                self.sym(h.fname(i));
-                let args = h.fargs(i);
-                self.u32(args.len() as u32);
-                for &a in args {
-                    self.term(h, a);
+            TermK::Var(s) => e.extend([0, self.sym_ix(s)]),
+            TermK::Atom(s) => e.extend([1, self.sym_ix(s)]),
+            TermK::Str(s) => e.extend([2, self.sym_ix(s)]),
+            TermK::Int(n) => e.extend([3, n as u32, (n >> 32) as u32]),
+            TermK::Func(f) => {
+                e.extend([4, self.sym_ix(h.fname(f)), h.fargs(f).len() as u32]);
+                for &a in h.fargs(f) {
+                    e.push(self.term_ix(h, a));
                 }
             }
         }
+        for x in e {
+            self.table.extend_from_slice(&x.to_le_bytes());
+        }
+        let i = self.term_of.len() as u32;
+        self.term_of.insert(t, i);
+        i
     }
     fn terms(&mut self, h: &Heap, ts: &[Term]) {
         self.u32(ts.len() as u32);
@@ -218,6 +225,8 @@ pub fn keep(h: &Heap, s: &Store, staged: &[(StagedFact, Vec<(Sym, Vec<PremRef>)>
         file.extend_from_slice(&(t.len() as u32).to_le_bytes());
         file.extend_from_slice(t);
     }
+    file.extend_from_slice(&(w.term_of.len() as u32).to_le_bytes());
+    file.extend_from_slice(&w.table);
     file.extend_from_slice(&w.out);
     file
 }
@@ -226,6 +235,7 @@ struct R<'a> {
     b: &'a [u8],
     i: usize,
     names: Vec<Sym>,
+    terms: Vec<Term>,
 }
 
 impl R<'_> {
@@ -251,23 +261,42 @@ impl R<'_> {
         let n = self.u32()? as usize;
         String::from_utf8(self.bytes(n)?.to_vec()).map_err(|e| e.to_string())
     }
-    fn term(&mut self, h: &mut Heap) -> Result<Term, String> {
-        Ok(match self.u8()? {
-            0 => Term::var(self.sym()?),
-            1 => Term::atom(self.sym()?),
-            2 => Term::str(self.sym()?),
-            3 => Term::int(self.i64()?),
-            4 => {
-                let name = self.sym()?;
-                let args = self.terms(h)?;
-                h.mkf(name, &args)
-            }
-            _ => return Err("a kept image holds a term of no kind".into()),
-        })
+    fn term(&mut self) -> Result<Term, String> {
+        let i = self.u32()?;
+        self.terms.get(i as usize).copied().ok_or_else(|| "a kept image names no such term".into())
     }
-    fn terms(&mut self, h: &mut Heap) -> Result<Vec<Term>, String> {
+    fn terms(&mut self, out: &mut Vec<Term>) -> Result<(), String> {
+        out.clear();
+        for _ in 0..self.u32()? {
+            out.push(self.term()?);
+        }
+        Ok(())
+    }
+    fn term_list(&mut self) -> Result<Vec<Term>, String> {
+        let mut v = Vec::new();
+        self.terms(&mut v)?;
+        Ok(v)
+    }
+    fn table(&mut self, h: &mut Heap) -> Result<(), String> {
         let n = self.u32()? as usize;
-        (0..n).map(|_| self.term(h)).collect()
+        self.terms.reserve(n);
+        let mut args = Vec::new();
+        for _ in 0..n {
+            let t = match self.u32()? {
+                0 => Term::var(self.sym()?),
+                1 => Term::atom(self.sym()?),
+                2 => Term::str(self.sym()?),
+                3 => Term::int(self.u32()? as i64 | ((self.u32()? as i64) << 32)),
+                4 => {
+                    let name = self.sym()?;
+                    self.terms(&mut args)?;
+                    h.mkf(name, &args)
+                }
+                _ => return Err("a kept image holds a term of no kind".into()),
+            };
+            self.terms.push(t);
+        }
+        Ok(())
     }
     fn prems(&mut self, ids: &[u32], cells: &[u32]) -> Result<Option<Vec<PremRef>>, String> {
         let n = self.u32()? as usize;
@@ -309,13 +338,14 @@ pub fn open(h: &mut Heap, bytes: &[u8]) -> Result<Opened, String> {
     if !bytes.starts_with(MAGIC) {
         return Err("not a kept image of this build".into());
     }
-    let mut r = R { b: bytes, i: MAGIC.len(), names: Vec::new() };
+    let mut r = R { b: bytes, i: MAGIC.len(), names: Vec::new(), terms: Vec::new() };
     let n = r.u32()?;
     for _ in 0..n {
         let len = r.u32()? as usize;
         let t = std::str::from_utf8(r.bytes(len)?).map_err(|e| e.to_string())?.to_string();
         r.names.push(h.intern(&t));
     }
+    r.table(h)?;
     let mut s = Store::new();
     s.tick = r.u32()?;
     let evaluated = r.u8()? == 1;
@@ -334,6 +364,7 @@ pub fn open(h: &mut Heap, bytes: &[u8]) -> Result<Opened, String> {
         s.tag_rules.insert(t);
     }
     let mut ids: Vec<u32> = Vec::new();
+    let mut args = Vec::new();
     let mut ghosts = 0..0;
     for part in 0..2 {
         let from = ids.len();
@@ -341,9 +372,8 @@ pub fn open(h: &mut Heap, bytes: &[u8]) -> Result<Opened, String> {
             let rel = r.sym()?;
             let persp = r.sym()?;
             let flags = r.u8()?;
-            let args = r.terms(h)?;
-            s.add(h, rel, persp, &args, flags);
-            ids.push(s.get(rel, persp, &args).ok_or("a kept fact did not go in")?);
+            r.terms(&mut args)?;
+            ids.push(s.put(h, rel, persp, &args, flags).0);
         }
         if part == 1 {
             ghosts = from..ids.len();
@@ -355,9 +385,9 @@ pub fn open(h: &mut Heap, bytes: &[u8]) -> Result<Opened, String> {
         let rule = r.sym()?;
         let at = r.u32()?;
         let op = AggOp::from_name(&r.text()?).ok_or("a kept cell has no such aggregate")?;
-        let key: Box<[Term]> = r.terms(h)?.into();
+        let key: Box<[Term]> = r.term_list()?.into();
         let value = match r.u8()? {
-            0 => CellValue::Value(r.term(h)?),
+            0 => CellValue::Value(r.term()?),
             1 => CellValue::Empty,
             _ => CellValue::Hole(r.sym()?),
         };
@@ -367,8 +397,8 @@ pub fn open(h: &mut Heap, bytes: &[u8]) -> Result<Opened, String> {
         let like = r.u32()?;
         let mut members = Vec::new();
         for _ in 0..r.u32()? {
-            let proj: Box<[Term]> = r.terms(h)?.into();
-            let value = r.term(h)?;
+            let proj: Box<[Term]> = r.term_list()?.into();
+            let value = r.term()?;
             let height = r.u32()?;
             let mut derivs = Vec::new();
             for _ in 0..r.u32()? {
@@ -412,7 +442,7 @@ pub fn open(h: &mut Heap, bytes: &[u8]) -> Result<Opened, String> {
     for _ in 0..r.u32()? {
         let rel = r.sym()?;
         let persp = r.sym()?;
-        let args = r.terms(h)?;
+        let args = r.term_list()?;
         let rule = r.sym()?;
         let prems = r.prems(&ids, &cells)?.ok_or("a staged fact names a fact the image does not hold")?;
         let mut alts = Vec::new();

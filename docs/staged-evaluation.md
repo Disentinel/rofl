@@ -90,8 +90,9 @@ once, byte for byte; the question cost 0.38 s against 5.2 s whole at 20 files.
 **A stage kept on disk opens evaluated**
 (`f_an_evaluated_world_kept_on_disk_opens_evaluated_and_takes_the_next_stage_by_delta`, `rust/rofl/src/image.rs`).
 `Session::keep` writes the world in binary, derived facts and witnesses included; `Session::open_kept` reads it back
-evaluated, and the next stage goes on by delta. At 20 files: 57 MB, kept in 0.65 s, opened in 1.6 s against 4 s to
-evaluate, and the result equal byte for byte. A world with lattices, or sealed, opens to be evaluated again.
+evaluated, and the next stage goes on by delta. At 20 files: 50 MB, kept in 0.8 s, opened in 1.2 s against 4 s to
+evaluate, and the result equal byte for byte. Of the 1.2 s, 0.55 s builds the terms and puts the facts one by one
+(what the mapped volume removes) and 0.4 s prepares the program, as an evaluation does. A world with lattices, or sealed, opens to be evaluated again.
 
 ## What is built, in order
 
