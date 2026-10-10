@@ -2,7 +2,7 @@
 // Runs the same in a worker, in a page and under node.
 import { Rofl } from '../src/api.ts';
 import { parseLiteral, parseProgram } from '../src/parser.ts';
-import { KERNEL_BOOK, RESERVED, ruleIdOf } from '../src/reflect.ts';
+import { KERNEL_BOOK, RESERVED, STR_ARITY, ruleIdOf } from '../src/reflect.ts';
 import { fold, keyOf, type Step } from './fold.ts';
 import { chainOf } from './chain.ts';
 import { proofView, type Proven } from '../notebook/draw-proof.ts';
@@ -10,8 +10,8 @@ import { collect, diff, scoped, status, KINDS, VIEW_RELS, unquote as termText, t
 import { Vocabulary } from '../src/say.ts';
 import { scan } from '../scanners/js_ast.ts';
 import { readBook, homeOf, booksOf, OWN, type Ask, type Cell, type Kind } from '../notebook/book.ts';
-import { plural, type Question } from '../scripts/read_md.ts';
-import { varsOf, canonTerm, mka, litsOf, termsOf, type Clause, type Lit, type Term } from '../src/unify.ts';
+import { plural, theVariable, type Question } from '../scripts/read_md.ts';
+import { ARITH_OPS, varsOf, canonTerm, mka, litsOf, termsOf, type Clause, type Lit, type Term } from '../src/unify.ts';
 import type { FactRec, Store } from '../src/store.ts';
 import { holding, remote, typescript, type Engine } from './engine.ts';
 
@@ -425,7 +425,7 @@ export class Host {
       const at = rules.get(/\$rule\((\w+)\)/.exec(r.bindings.H)?.[1] ?? '');
       if (!at || holed.has(at.rel)) continue;
       holed.set(at.rel, r.bindings.R);
-      outs[at.cell].notes.push(`the rule for ${plain(at.rel).replace(/_/g, ' ')} met an expression it could not evaluate (${r.bindings.R}) and concluded nothing there`);
+      outs[at.cell].notes.push(`the rule for ${plain(at.rel).replace(/_/g, ' ')} met an expression it could not evaluate (${r.bindings.R}) and concluded nothing there${r.bindings.R === 'arith_type_error' ? `: arithmetic is on integers, with ${[...ARITH_OPS].join(' ')}, and the only string functions are ${[...STR_ARITY.keys()].join(', ')}` : ''}`);
     }
     const holedUnder = (rel: string) => under(rel, (r) => holed.has(r) ? `it rests on ${plain(r).replace(/_/g, ' ')}, whose rule could not evaluate an expression (${holed.get(r)})` : undefined, true);
     // a never over a cell's relation with exceptions (unless, differs from), every rule of which has a condition that finds no row on its own
@@ -560,7 +560,7 @@ export class Host {
         // what a line of the cell says is said on that line: under a bare cell, when the line is the prose's
         const e0 = outs[i].errors.length, n0 = outs[i].notes.length;
         try {
-          if (!a.lit) { const w = a.unread ? undefined : bare(a.text.replace(/^\S+\s+/, ''), vocab); outs[i].errors.push(`${a.text}: ${a.unread ?? (w ? BARE(w) : 'no sentence reads this question')}`); continue; }
+          if (!a.lit) { const s = a.text.replace(/^\S+\s+/, ''), w = a.unread ? undefined : bare(s, vocab); outs[i].errors.push(`${a.text}: ${a.unread ?? (w ? BARE(w) : theVariable(s, (x) => !!vocab.literal(x)) ?? 'no sentence reads this question')}`); continue; }
           const blanks = a.q ? [] : [...a.text.replace(/`[^`]*`|"[^"]*"/g, '').matchAll(/\b[A-Z][A-Za-z0-9]*[a-z][A-Za-z0-9]*\b/g)].map((x) => x[0]).filter((x) => new RegExp(`\\b${x}\\b`).test(a.lit) && named(x.toLowerCase()));
           for (const x of blanks) outs[i].notes.push(`${a.text}: ${x} is read as a blank, which matches anything; \`${x.toLowerCase()}\` is a name here, and a name is in backticks`);
           if (a.kind === 'excise' || a.kind === 'draw') continue;

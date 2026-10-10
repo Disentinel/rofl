@@ -82,6 +82,7 @@ check[checks]("rust/rofl/tests/explain.rs", "why_refuses_a_literal_that_is_not_g
 check[checks]("rust/rofl/tests/explain.rs", "whynot_names_the_negation_that_blocked_it_and_the_fact_that_did", test).
 check[checks]("rust/rofl/tests/explain.rs", "whynot_recurses_and_reports_the_cycle_it_found", test).
 check[checks]("rust/rofl/tests/explain.rs", "whynot_over_a_relation_no_rule_concludes", test).
+check[checks]("rust/rofl/tests/explain.rs", "whynot_names_the_unit_not_loaded", test).
 check[checks]("rust/rofl/tests/explain.rs", "whynot_on_something_that_holds_says_so", test).
 check[checks]("rust/rofl/tests/explain.rs", "holds_is_the_question_with_the_answer_thrown_away", test).
 check[checks]("rust/rofl/tests/explain.rs", "fact_keys_narrows_by_relation_and_comes_back_in_canonical_order", test).
@@ -809,6 +810,7 @@ check[checks]("facts/goldens.rofl", "wfs_unknown_negated", world).
 check[checks]("facts/goldens.rofl", "why_base", world).
 check[checks]("facts/goldens.rofl", "why_forest", world).
 check[checks]("facts/goldens.rofl", "why_height", world).
+check[checks]("facts/goldens.rofl", "whynot_unloaded", world).
 check[checks]("scripts/measurement_check.ts", "npm run measurecheck", gate).
 check[checks]("scripts/goldens.ts", "npm run test", gate).
 check[checks]("scripts/goldens.ts", "npm run test:bun", gate).

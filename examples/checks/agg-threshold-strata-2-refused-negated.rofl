@@ -1,4 +1,4 @@
--- expect-refusal: settled nothing
+-- expect-refusal: nothing on the cycle atn_r -/-> atn_r can be settled first
 -- a negation inside a threshold is a strict edge: this one negates the
 -- threshold's own conclusion, which no stratification can order
 edb(atn_e).

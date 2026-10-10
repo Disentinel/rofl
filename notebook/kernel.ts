@@ -71,7 +71,7 @@ export class Kernel {
     const at = (literal: string) => [...literal.matchAll(/n[0-9a-f]{8,16}_\d+/g)].flatMap((m) => out.nodes[m[0]] ? [`${out.nodes[m[0]].file}:${out.nodes[m[0]].line}`] : []);
     const answers = (rows: Row[]) => rows.map((r) => ({ sentence: labelled(r.sentence, out.nodes), literal: r.literal, at: at(r.literal) }));
     const hint = (e: string) => {
-      const m = /^not read(?: \(list item\))?: (?!the table |under "|a list item |\d+ list items )((?:(?!names go in backticks|is not a name).)*)$|^(?:\?|never|unsure|why|whynot) (.*): no sentence reads this question$/.exec(e);
+      const m = /^not read(?: \(list item\))?: (?!the table |under "|a list item |\d+ list items )((?:(?!names go in backticks|is not a name|is not read as a variable|cannot say).)*)$|^(?:\?|never|unsure|why|whynot) (.*): no sentence reads this question$/.exec(e);
       if (!m) return e;
       if (this.vocab?.key !== key) this.vocab = { key, sentences: [...translatorVocab(model, phrases).vocab, ...sentencesOf(out.learned)] };
       const near = nearest(m[1] ?? m[2], this.vocab.sentences);
@@ -181,9 +181,9 @@ export function legible(text: string): string {
     .replace(/ \[builtin\]$/, ' (arithmetic)')
     .replace(/^why needs a ground literal$/, 'why explains one answer: put a name in every blank, or ask `?` first for the answers'));
   // a relation by the sentence above it, not by its anchor
-  return out.map((l, k) => l.replace(/^(\s*)no rule concludes '\w+' and no matching base fact exists$/, (_, pad) => {
+  return out.map((l, k) => l.replace(/^(\s*)no rule concludes '\w+' and no matching base fact exists(.*)$/, (_, pad, unit) => {
     const above = /(?:^\s*why not |it stops at: )(.*?):?$/.exec(out[k - 1] ?? '')?.[1];
-    return `${pad}nothing says ${above ?? 'so'}, and no rule concludes it`;
+    return `${pad}nothing says ${above ?? 'so'}, and no rule concludes it${unit}`;
   })).join('\n');
 }
 
