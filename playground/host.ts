@@ -13,8 +13,9 @@ import { readBook, homeOf, booksOf, OWN, type Ask, type Cell, type Kind } from '
 import { plural, theVariable, type Question } from '../scripts/read_md.ts';
 import { ARITH_OPS, varsOf, canonTerm, mka, litsOf, termsOf, type Clause, type Lit, type Term } from '../src/unify.ts';
 import type { FactRec, Store } from '../src/store.ts';
+import { holding, remote, typescript, type Engine } from './engine.ts';
 
-const BUDGET = 4_000_000_000;
+const BUDGET = 4_000_000_000, SPACE = 40_000_000;
 export const FILE = 'play.js';
 
 export { MODEL_FILES, PHRASE_FILES } from '../notebook/front.ts';
@@ -189,7 +190,7 @@ function proofs(model: Store, cells: Store, heads: Set<string>, kernel: Set<stri
     has: (key: string) => byKey(key, (s) => s.has(key) || undefined) ?? false,
     get: (key: string) => byKey(key, (s) => s.get(key)),
     recAny: (key: string) => byKey(key, (s) => s.recAny(key)),
-    ghosts: new Map([...model.ghosts, ...cells.ghosts]), dead: new Map([...model.dead, ...cells.dead]), cells: new Map([...model.cells, ...cells.cells]), keepDead: true,
+    ghosts: new Map([...model.ghosts, ...cells.ghosts]), dead: new Map([...model.dead, ...cells.dead]), cells: Object.assign(new Map([...model.cells, ...cells.cells]), { get: (k: string) => cells.cells.get(k) ?? model.cells.get(k), has: (k: string) => cells.cells.has(k) || model.cells.has(k) }), keepDead: true,
     firingList: (key: string) => byKey(key, (s) => s.firingList(key)), firings: new Map([...model.firings, ...cells.firings]),
     witnessOf: (key: string) => byKey(key, (s) => s.witnessOf(key)),
     firingsRanked: (key: string, memo?: Map<string, number>) => byKey(key, (s) => s.firingsRanked(key, memo)),
@@ -202,7 +203,7 @@ function proofs(model: Store, cells: Store, heads: Set<string>, kernel: Set<stri
     indexed: (rel: string, persp: string | null) => kernel.has(rel) ? model.indexed(rel, persp) && cells.indexed(rel, persp) : one(rel).indexed(rel, persp),
     perspectivesOf: (rel: string) => kernel.has(rel) ? [...new Set([...model.perspectivesOf(rel), ...cells.perspectivesOf(rel)])] : one(rel).perspectivesOf(rel),
   };
-  const r = new Rofl({ reuse: false, space: 40_000_000 });
+  const r = new Rofl({ reuse: false, space: SPACE });
   r.store = store as unknown as Store;
   return r;
 }
@@ -243,11 +244,15 @@ export class Host {
   private base: Rofl | null = null;
   rows = 50;   // answers kept per line
 
+  /** `engine`: what evaluates the model over the code (playground/engine.ts); the cells and everything read after are the TypeScript engine's. */
+  readonly engine: Engine;
+  constructor(engine: Engine = typescript) { this.engine = engine; }
+
   /** `boot`: the kernel's boot, whose relations a notebook reads only by naming their book; given apart from `kernel`, which also asks for the layered run. */
   init(model: string, phraseText: string, concernMap?: Concerns, kernel?: string, boot = kernel): { ok: boolean; diagnostics: string[]; ms: number } {
     const t = performance.now();
     // reuse is off: every run adds the cells' rules, which re-derives the stratum table and throws away all a reuse plan would keep, after paying seconds to plan it
-    this.core = new Rofl({ space: 40_000_000, reuse: false });
+    this.core = new Rofl({ space: SPACE, reuse: false });
     const l = this.core.load(model, { budget: BUDGET });
     this.phrases = phraseText;
     if (concernMap) this.concerns = concernMap;
@@ -259,7 +264,7 @@ export class Host {
     this.scanned = this.base = null;
     this.shell = null;
     if (kernel !== undefined && l.ok) {
-      this.shell = new Rofl({ space: 40_000_000, reuse: false });
+      this.shell = new Rofl({ space: SPACE, reuse: false });
       this.shell.load(kernel, { budget: BUDGET });
       this.shell.evaluate(BUDGET);
       this.kernelRels = new Set([...relsOf(parseProgram(kernel)), ...this.shell.store.allFacts().map((f) => f.rel)]);
@@ -503,13 +508,14 @@ export class Host {
     // a constant no fact mentions matches nothing, and a never over it holds whatever the code does; a rule's constants are facts too, in its reflection
     let known: Set<string> | null = null;
     const worlds = base ? [base, f] : [f];
-    const atoms = (): Set<string> => { if (!known) { known = new Set(); for (const w of worlds) for (const r of w.store.allFacts()) atomsIn(r.args, known); } return known; };
+    const atoms = (): Set<string> => { if (!known) { known = new Set(); for (const w of worlds) if (!remote(w)) for (const r of w.store.allFacts()) atomsIn(r.args, known); } return known; };
+    const named = (x: string) => atoms().has(x) || worlds.some((w) => holding(w, { atom: x }, 1)?.length);
     const nameless = (lit: string, text: string): string | undefined => {
       let l: ReturnType<typeof parseLiteral>;
       try { l = parseLiteral(lit); } catch { return; }
       const want = atomsIn(l.args);
       if (!want.size) return;
-      const name = [...want].find((x) => !atoms().has(x));
+      const name = [...want].find((x) => !named(x));
       if (!name) return;
       // the sentence that names a node by this name, the node one the asked relation holds first, the shortest, a conclusion over a given fact
       const held = new Set<string>();
@@ -517,7 +523,7 @@ export class Host {
       const rank = (r: FactRec) => [r.args.some((t) => t.k === 'a' && held.has(t.name)) ? 0 : 1, r.args.length, r.base ? 1 : 0];
       const before = (a: number[], b: number[]) => a[0] - b[0] || a[1] - b[1] || a[2] - b[2];
       let by: FactRec | undefined;
-      for (const w of worlds) for (const r of w.store.allFacts()) {
+      for (const w of worlds) for (const r of holding(w, { string: name }) ?? w.store.allFacts()) {
         if (!r.args.some((t) => t.k === 's' && t.v === name) || !r.args.some((t) => t.k === 'a' && t.name in nodes)) continue;
         if ((!by || before(rank(r), rank(by)) < 0) && vocab.say(r.key)) by = r;
       }
@@ -555,7 +561,7 @@ export class Host {
         const e0 = outs[i].errors.length, n0 = outs[i].notes.length;
         try {
           if (!a.lit) { const s = a.text.replace(/^\S+\s+/, ''), w = a.unread ? undefined : bare(s, vocab); outs[i].errors.push(`${a.text}: ${a.unread ?? (w ? BARE(w) : theVariable(s, (x) => !!vocab.literal(x)) ?? 'no sentence reads this question')}`); continue; }
-          const blanks = a.q ? [] : [...a.text.replace(/`[^`]*`|"[^"]*"/g, '').matchAll(/\b[A-Z][A-Za-z0-9]*[a-z][A-Za-z0-9]*\b/g)].map((x) => x[0]).filter((x) => new RegExp(`\\b${x}\\b`).test(a.lit) && atoms().has(x.toLowerCase()));
+          const blanks = a.q ? [] : [...a.text.replace(/`[^`]*`|"[^"]*"/g, '').matchAll(/\b[A-Z][A-Za-z0-9]*[a-z][A-Za-z0-9]*\b/g)].map((x) => x[0]).filter((x) => new RegExp(`\\b${x}\\b`).test(a.lit) && named(x.toLowerCase()));
           for (const x of blanks) outs[i].notes.push(`${a.text}: ${x} is read as a blank, which matches anything; \`${x.toLowerCase()}\` is a name here, and a name is in backticks`);
           if (a.kind === 'excise' || a.kind === 'draw') continue;
           const english = a.q && { line: a.q.line, note: a.q.note };
@@ -664,10 +670,8 @@ export class Host {
   /** The model evaluated over the code, once per text of the files. */
   private evaluated(files: Record<string, string>, sc: Scanned): Rofl {
     if (this.base) return this.base;
-    const b = this.core!.fork();
-    const given = b.assert(sc.text);
-    if (!given.ok) throw new Error(`the code's facts were refused, so nothing was asked: ${given.diagnostics[0]}`);
-    return b.evaluate(BUDGET).partial ? b : this.base = b;   // a world cut short is not kept for the next run
+    const b = this.engine.evaluated(this.core!, this.model, sc.text, { budget: BUDGET, space: SPACE });
+    return b.store.partialEval ? b : this.base = b;   // a world cut short is not kept for the next run
   }
 
   /** A proof as steps (playground/fold.ts), by the section of the model or the notebook cell each rule sits in. */

@@ -48,6 +48,17 @@
 //!   {"op":"tick","session":2}
 //!   {"op":"state","session":2,"path":"out.txt"}
 //!   {"op":"close","session":2}
+//!
+//! THE STORE, READ PIECE BY PIECE, for a host that keeps the world here and reads only what it renders
+//! (playground/rust.ts RustStore), each answer in a snapshot's own form:
+//!   {"op":"rows","session":2,"rel":"r","persp":"main","at":{"0":"a"}} -> {"facts":[...]}: the facts of a relation, in one
+//!                                                        book or all, those whose argument at each position is spelled so
+//!   {"op":"fact","session":2,"key":"r[main](a)"}      -> {"fact":{...}|null}
+//!   {"op":"firings","session":2,"key":"r[main](a)"}   -> {"firings":[...]}: ranked, the witness first
+//!   {"op":"cell","session":2,"key":"$cell(...)"}      -> {"cell":{...}|null}
+//!   {"op":"books","session":2,"rel":"r"}              -> {"books":[...]}
+//!   {"op":"holding","session":2,"atom":"a","limit":1} -> {"facts":[...]}: the facts holding the atom anywhere in their terms,
+//!                                                        or with "string" the string, in the order they were added
 use rofl::engine::WhynotBounds;
 use rofl::session::Session;
 use serde_json::{json, Value};
@@ -78,9 +89,14 @@ fn strings(r: &Value, k: &str) -> Result<Option<Vec<String>>, String> {
     }
 }
 
+/// A world's facts, cells and rows answered from a structure, by key.
+type Keys = (HashMap<String, u32>, HashMap<String, u32>, HashMap<String, (u32, u32, rofl::term::Term, rofl::term::Term)>);
+
 struct Server {
     sessions: HashMap<u64, Session>,
     next: u64,
+    /// a session's facts and cells by key, built on the first read by key and dropped by anything that may change a world
+    keys: HashMap<u64, Keys>,
 }
 
 impl Server {
@@ -118,7 +134,107 @@ impl Server {
 
     fn handle(&mut self, r: &Value) -> Result<Value, String> {
         let op = r.get("op").and_then(|v| v.as_str()).ok_or("`op` is required")?;
+        if !matches!(op, "rows" | "fact" | "firings" | "cell" | "books" | "holding" | "ask" | "why" | "whynot" | "state" | "facts") {
+            self.keys.clear();
+        }
         match op {
+            "rows" => {
+                let rel = r.get("rel").and_then(|v| v.as_str()).ok_or("rows needs `rel`")?;
+                let at: Vec<(usize, String)> = match r.get("at").and_then(|v| v.as_object()) {
+                    Some(m) => m.iter().map(|(k, v)| Ok((k.parse::<usize>().map_err(|_| "`at` is keyed by position")?, v.as_str().ok_or("`at` spells each argument")?.to_string()))).collect::<Result<_, String>>()?,
+                    None => Vec::new(),
+                };
+                let persp = r.get("persp").and_then(|v| v.as_str()).map(|p| p.to_string());
+                let s = self.get(r)?;
+                let e = &mut s.eval;
+                let rel = e.h.intern(rel);
+                let ids = match &persp {
+                    Some(p) => {
+                        let p = e.h.intern(p);
+                        e.store.rel_persp(&e.h, rel, p)
+                    }
+                    None => e.store.rel_all(&e.h, rel),
+                };
+                let book = persp.as_deref().map(|p| e.h.intern(p));
+                let mut facts: Vec<Value> = ids
+                    .into_iter()
+                    .filter(|id| at.iter().all(|(k, v)| e.store.args(*id).get(*k).is_some_and(|a| e.h.canon(*a) == *v)))
+                    .map(|id| rofl::seed::fact_json(&e.h, &e.store, id))
+                    .collect();
+                for (rel, b, a, d) in e.store.virtual_pairs(Some(rel)) {
+                    if book.is_none_or(|x| x == b) && at.iter().all(|(k, v)| [a, d].get(*k).is_some_and(|t| e.h.canon(*t) == *v)) {
+                        facts.push(rofl::seed::virtual_json(&e.h, rel, b, a, d));
+                    }
+                }
+                Ok(json!({ "facts": facts }))
+            }
+            "holding" => {
+                let limit = r.get("limit").and_then(|v| v.as_u64()).map_or(usize::MAX, |n| n as usize);
+                let (atom, text) = match (r.get("atom").and_then(|v| v.as_str()), r.get("string").and_then(|v| v.as_str())) {
+                    (Some(a), _) => (true, a.to_string()),
+                    (None, Some(t)) => (false, t.to_string()),
+                    _ => return Err("holding needs `atom` or `string`".into()),
+                };
+                let s = self.get(r)?;
+                let e = &mut s.eval;
+                let sym = e.h.intern(&text);
+                fn holds(h: &rofl::term::Heap, t: rofl::term::Term, atom: bool, sym: u32) -> bool {
+                    match t.kind() {
+                        rofl::term::TermK::Atom(x) => atom && x == sym,
+                        rofl::term::TermK::Str(x) => !atom && x == sym,
+                        rofl::term::TermK::Func(i) => h.fargs(i).iter().any(|a| holds(h, *a, atom, sym)),
+                        _ => false,
+                    }
+                }
+                let facts: Vec<Value> = e
+                    .store
+                    .live_ids()
+                    .into_iter()
+                    .filter(|id| e.store.args(*id).iter().any(|a| holds(&e.h, *a, atom, sym)))
+                    .take(limit)
+                    .map(|id| rofl::seed::fact_json(&e.h, &e.store, id))
+                    .collect();
+                Ok(json!({ "facts": facts }))
+            }
+            "books" => {
+                let rel = r.get("rel").and_then(|v| v.as_str()).ok_or("books needs `rel`")?;
+                let s = self.get(r)?;
+                let e = &mut s.eval;
+                let rel = e.h.intern(rel);
+                let mut books: Vec<String> = Vec::new();
+                let virt: Vec<u32> = e.store.virtual_pairs(Some(rel)).into_iter().map(|x| x.1).collect();
+                for b in e.store.rel_all(&e.h, rel).into_iter().map(|id| e.store.rec(id).persp).chain(virt) {
+                    let b = e.h.name(b).to_string();
+                    if !books.contains(&b) {
+                        books.push(b);
+                    }
+                }
+                Ok(json!({ "books": books }))
+            }
+            "fact" | "firings" | "cell" => {
+                let key = r.get("key").and_then(|v| v.as_str()).ok_or("needs `key`")?.to_string();
+                let id = r.get("session").and_then(|v| v.as_u64()).ok_or("`session` is required")?;
+                let s = self.sessions.get_mut(&id).ok_or_else(|| format!("no such session: {id}"))?;
+                let e = &mut s.eval;
+                let (facts, cells, rows) = self.keys.entry(id).or_insert_with(|| {
+                    let facts = e.store.live_ids().into_iter().map(|f| (e.store.key(&e.h, f), f)).collect();
+                    let cells = e.store.cells_in_order(&e.h).into_iter().map(|(c, _)| { let mut k = String::new(); e.store.write_cell_key(&e.h, c, &mut k); (k, c) }).collect();
+                    let rows = e.store.virtual_pairs(None).into_iter().map(|r| { let mut k = String::new(); rofl::store::write_fact_key(&e.h, r.0, r.1, &[r.2, r.3], &mut k); (k, r) }).collect();
+                    (facts, cells, rows)
+                });
+                let row = rows.get(&key).copied();
+                Ok(match op {
+                    "fact" => json!({ "fact": facts.get(&key).map(|f| rofl::seed::fact_json(&e.h, &e.store, *f)).or_else(|| row.map(|(r, b, a, d)| rofl::seed::virtual_json(&e.h, r, b, a, d))) }),
+                    "firings" => json!({ "firings": match (facts.get(&key), row) {
+                        (Some(f), _) => rofl::seed::firings_json(&e.h, &e.store, *f),
+                        (None, Some((r, b, a, d))) => e.store.virtual_firing(&e.h, r, b, a, d).map(|(rule, tick, prems)| {
+                            vec![json!({ "ruleId": e.h.name(rule), "tick": tick, "prems": prems.iter().map(|k| json!({ "t": "fact", "key": k })).collect::<Vec<_>>() })]
+                        }).unwrap_or_default(),
+                        _ => Vec::new(),
+                    } }),
+                    _ => json!({ "cell": cells.get(&key).map(|c| rofl::seed::cell_json(&e.h, &e.store, *c, None)) }),
+                })
+            }
             // A seed arrives by path: a 5.7M-fact snapshot has no business going
             // through a pipe and a JSON string escape when both ends can read a file.
             "open" => {
@@ -337,7 +453,7 @@ impl Server {
 }
 
 pub fn main() {
-    let mut srv = Server { sessions: HashMap::new(), next: 1 };
+    let mut srv = Server { sessions: HashMap::new(), next: 1, keys: HashMap::new() };
     let stdin = std::io::stdin();
     let mut out = std::io::stdout().lock();
     for line in stdin.lock().lines() {

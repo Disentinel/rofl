@@ -64,3 +64,55 @@ jobs:
       - run: cd rust && cargo build --release
       - name: goldens (bun)
         run: bun run scripts/goldens.ts
+
+  # THE EXTENSION CARRIES THE RUST ENGINE. One `rofl` binary per platform VS Code
+  # publishes for, then one VSIX per platform with its binary in rofl-nb/bin: the
+  # extension evaluates on it by default (playground/rust.ts), and a platform
+  # without one falls back to the TypeScript engine.
+  engine:
+    strategy:
+      matrix:
+        include:
+          - { target: linux-x64, os: ubuntu-latest }
+          - { target: linux-arm64, os: ubuntu-24.04-arm }
+          - { target: darwin-x64, os: macos-14, triple: x86_64-apple-darwin }
+          - { target: darwin-arm64, os: macos-14 }
+          - { target: win32-x64, os: windows-latest }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with: { targets: '${{ matrix.triple }}' }
+      - uses: Swatinem/rust-cache@v2
+        with: { workspaces: rust, key: '${{ matrix.target }}' }
+      - run: cd rust && cargo build --release --bin rofl ${{ matrix.triple && format('--target {0}', matrix.triple) || '' }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rofl-${{ matrix.target }}
+          path: rust/target/${{ matrix.triple && format('{0}/', matrix.triple) || '' }}release/rofl${{ startsWith(matrix.target, 'win32') && '.exe' || '' }}
+
+  vsix:
+    needs: engine
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        # dist checks each README image against the pushed branches
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci && (cd vscode && npm ci)
+      # each platform's engine in rust/target/rofl-<target>; this runner's own in release, which the guide check runs
+      - uses: actions/download-artifact@v4
+        with: { path: rust/target }
+      - name: one VSIX per platform
+        run: |
+          chmod +x rust/target/rofl-*/rofl*
+          mkdir -p rust/target/release vsix && cp rust/target/rofl-linux-x64/rofl rust/target/release/
+          for t in linux-x64 linux-arm64 darwin-x64 darwin-arm64 win32-x64; do
+            node --experimental-strip-types scripts/dist.ts --target $t
+            unzip -l dist/*.vsix | grep -q "extension/rofl-nb/bin/rofl" || { echo "the $t VSIX carries no engine"; exit 1; }
+            for f in dist/*.vsix; do mv "$f" "vsix/$(basename "$f" .vsix)-$t.vsix"; done
+          done
+      - uses: actions/upload-artifact@v4
+        with: { name: vsix, path: vsix }
