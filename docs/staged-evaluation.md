@@ -78,8 +78,9 @@ facts.
 **Ingest by delta already works** (`f_ingest_by_delta_is_exact_and_an_addition_costs_a_few_times_its_share`,
 `scripts/ingest_by_delta.ts`). The core is evaluated once and each file is added to the evaluated world by the
 addition path. The result equals the whole world byte for byte, and cross-file joins are found as files arrive, with
-no second pass. At 20 files an addition costs about five times its share of the whole (0.45 s a file) and grows
-slowly with the world. A world an addition left up to date must not be evaluated again: `evaluate` runs the whole
+no second pass. At 20 files an addition costs about three times its share of the whole (0.35 s a file, was 0.45 s)
+and grows slowly with the world: a reset aggregate rule withdraws and fires only its own firings, and a rule fires
+whole only in the round that needs it. A world an addition left up to date must not be evaluated again: `evaluate` runs the whole
 pass whatever the store holds.
 
 **A stage added above an evaluated one already costs its own delta**
@@ -90,15 +91,17 @@ once, byte for byte; the question cost 0.38 s against 5.2 s whole at 20 files.
 **A stage kept on disk opens evaluated**
 (`f_an_evaluated_world_kept_on_disk_opens_evaluated_and_takes_the_next_stage_by_delta`, `rust/rofl/src/image.rs`).
 `Session::keep` writes the world in binary, derived facts and witnesses included; `Session::open_kept` reads it back
-evaluated, and the next stage goes on by delta. At 20 files: 50 MB, kept in 0.8 s, opened in 1.2 s against 4 s to
-evaluate, and the result equal byte for byte. Of the 1.2 s, 0.55 s builds the terms and puts the facts one by one
-(what the mapped volume removes) and 0.4 s prepares the program, as an evaluation does. A world with lattices, or sealed, opens to be evaluated again.
+evaluated, and the next stage goes on by delta. At 20 files: 50 MB, kept in 0.8 s, opened in 0.6 s against 4 s to
+evaluate, and the result equal byte for byte. The facts go in by a bulk path, the image keeps the program's safety
+answer, and the program is prepared once. A world with lattices (but dominance and join lattices) or sealed opens
+evaluated too: the lattice cells, their history and the citers, and the aggregate cells by correlation, are rebuilt
+from the store.
 
 ## What is built, in order
 
 1. **Derived as given** (the keystone: stages, cache and resume all need it). A stage builds on the one below it in
    memory and across a process (the kept image); what remains is a kept stage read back under a cone that does not
-   run its rules again, and a lattice world kept evaluated. Proof: a world evaluated
+   run its rules again, and dominance and join lattice worlds kept evaluated. Proof: a world evaluated
    in two stages equals the world evaluated whole, byte for byte, on every world of `npm test` that splits.
 2. **The mapped volume.** colfile into the engine as the frozen base a fork reads.
 3. **Resume** (decision 4, H5).

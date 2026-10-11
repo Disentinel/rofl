@@ -4,12 +4,12 @@
 //! image is read by the build that wrote it. Each distinct term is written once, in a table ahead of the facts, and
 //! built once when read.
 use crate::cell::{AggOp, Algebra};
-use crate::engine::StagedFact;
+use crate::engine::{RuleAnswer, StagedFact};
 use crate::store::{CellOwner, CellValue, EvalRecord, LatReg, NewCell, NewMember, PremRef, Seal, Store, Witness, F_BASE, F_FROZEN, F_TICK};
 use crate::term::{Heap, Sym, Term, TermK};
 use std::collections::HashMap;
 
-const MAGIC: &[u8] = b"ROFL-KEPT-2\n";
+const MAGIC: &[u8] = b"ROFL-KEPT-3\n";
 
 #[derive(Default)]
 struct W {
@@ -78,6 +78,46 @@ impl W {
             self.term(h, t);
         }
     }
+    fn syms(&mut self, ss: &[Sym]) {
+        self.u32(ss.len() as u32);
+        for &x in ss {
+            self.sym(x);
+        }
+    }
+    fn pairs(&mut self, ps: &[(Sym, Sym)]) {
+        self.u32(ps.len() as u32);
+        for &(a, b) in ps {
+            self.sym(a);
+            self.sym(b);
+        }
+    }
+    /// What `safety_answer` found for the program, so that opening the image asks the kernel nothing.
+    fn answer(&mut self, a: &RuleAnswer) {
+        self.syms(&a.unsafe_rules);
+        self.syms(&a.demand_rels);
+        self.syms(&a.late);
+        self.pairs(&a.agg_refused);
+        self.pairs(&a.lattice_refused);
+        for flag in [a.reads_provenance, a.reads_members, a.reads_lattice_members, a.reads_dominated] {
+            self.out.push(flag as u8);
+        }
+        let mut zero: Vec<(Sym, u32)> = a.empty_zero.iter().copied().collect();
+        zero.sort_unstable();
+        self.u32(zero.len() as u32);
+        for (r, at) in zero {
+            self.sym(r);
+            self.u32(at);
+        }
+        for m in [&a.trigger, &a.lattice_outer] {
+            let mut ks: Vec<Sym> = m.keys().copied().collect();
+            ks.sort_unstable();
+            self.u32(ks.len() as u32);
+            for k in ks {
+                self.sym(k);
+                self.syms(&m[&k]);
+            }
+        }
+    }
     fn prems(&mut self, ps: &[PremRef], fact_ix: &HashMap<u32, u32>, cell_ix: &HashMap<u32, u32>) {
         self.u32(ps.len() as u32);
         for p in ps {
@@ -108,7 +148,7 @@ impl W {
 }
 
 /// The world in `s`, and what its evaluation staged for the next tick, as a kept image.
-pub fn keep(h: &Heap, s: &Store, staged: &[(StagedFact, Vec<(Sym, Vec<PremRef>)>)]) -> Vec<u8> {
+pub fn keep(h: &Heap, s: &Store, staged: &[(StagedFact, Vec<(Sym, Vec<PremRef>)>)], answer: &RuleAnswer) -> Vec<u8> {
     let mut w = W::default();
     w.u32(s.tick);
     w.out.push((!s.dirty && !s.partial_eval) as u8);
@@ -218,6 +258,7 @@ pub fn keep(h: &Heap, s: &Store, staged: &[(StagedFact, Vec<(Sym, Vec<PremRef>)>
             w.prems(prems, &fact_ix, &cell_ix);
         }
     }
+    w.answer(answer);
     let mut file = MAGIC.to_vec();
     file.extend_from_slice(&(w.names.len() as u32).to_le_bytes());
     for &n in &w.names {
@@ -236,6 +277,7 @@ struct R<'a> {
     i: usize,
     names: Vec<Sym>,
     terms: Vec<Term>,
+    ground: Vec<bool>,
 }
 
 impl R<'_> {
@@ -265,12 +307,15 @@ impl R<'_> {
         let i = self.u32()?;
         self.terms.get(i as usize).copied().ok_or_else(|| "a kept image names no such term".into())
     }
-    fn terms(&mut self, out: &mut Vec<Term>) -> Result<(), String> {
+    fn terms(&mut self, out: &mut Vec<Term>) -> Result<bool, String> {
         out.clear();
+        let mut ground = true;
         for _ in 0..self.u32()? {
-            out.push(self.term()?);
+            let i = self.u32()? as usize;
+            out.push(*self.terms.get(i).ok_or("a kept image names no such term")?);
+            ground &= self.ground[i];
         }
-        Ok(())
+        Ok(ground)
     }
     fn term_list(&mut self) -> Result<Vec<Term>, String> {
         let mut v = Vec::new();
@@ -280,23 +325,48 @@ impl R<'_> {
     fn table(&mut self, h: &mut Heap) -> Result<(), String> {
         let n = self.u32()? as usize;
         self.terms.reserve(n);
+        self.ground.reserve(n);
+        h.reserve_funcs(n, 2 * n);
         let mut args = Vec::new();
         for _ in 0..n {
-            let t = match self.u32()? {
-                0 => Term::var(self.sym()?),
-                1 => Term::atom(self.sym()?),
-                2 => Term::str(self.sym()?),
-                3 => Term::int(self.u32()? as i64 | ((self.u32()? as i64) << 32)),
+            let (t, ground) = match self.u32()? {
+                0 => (Term::var(self.sym()?), false),
+                1 => (Term::atom(self.sym()?), true),
+                2 => (Term::str(self.sym()?), true),
+                3 => (Term::int(self.u32()? as i64 | ((self.u32()? as i64) << 32)), true),
                 4 => {
                     let name = self.sym()?;
-                    self.terms(&mut args)?;
-                    h.mkf(name, &args)
+                    let ground = self.terms(&mut args)?;
+                    (h.mkf(name, &args), ground)
                 }
                 _ => return Err("a kept image holds a term of no kind".into()),
             };
             self.terms.push(t);
+            self.ground.push(ground);
         }
         Ok(())
+    }
+    fn syms(&mut self) -> Result<Vec<Sym>, String> {
+        (0..self.u32()?).map(|_| self.sym()).collect()
+    }
+    fn pairs(&mut self) -> Result<Vec<(Sym, Sym)>, String> {
+        (0..self.u32()?).map(|_| Ok((self.sym()?, self.sym()?))).collect()
+    }
+    fn answer(&mut self) -> Result<RuleAnswer, String> {
+        let mut a = RuleAnswer { unsafe_rules: self.syms()?, demand_rels: self.syms()?, late: self.syms()?, agg_refused: self.pairs()?, lattice_refused: self.pairs()?, ..Default::default() };
+        let [p, m, l, d] = [(); 4].map(|_| self.u8().map(|x| x == 1));
+        (a.reads_provenance, a.reads_members, a.reads_lattice_members, a.reads_dominated) = (p?, m?, l?, d?);
+        for _ in 0..self.u32()? {
+            a.empty_zero.insert((self.sym()?, self.u32()?));
+        }
+        for m in 0..2 {
+            for _ in 0..self.u32()? {
+                let k = self.sym()?;
+                let v = self.syms()?;
+                if m == 0 { a.trigger.insert(k, v) } else { a.lattice_outer.insert(k, v) };
+            }
+        }
+        Ok(a)
     }
     fn prems(&mut self, ids: &[u32], cells: &[u32]) -> Result<Option<Vec<PremRef>>, String> {
         let n = self.u32()? as usize;
@@ -331,6 +401,8 @@ pub struct Opened {
     pub staged: Vec<(StagedFact, Vec<(Sym, Vec<PremRef>)>)>,
     /// premises the image named that it does not hold
     pub dangling: usize,
+    /// the program's safety answer, when the image was kept evaluated and so holds it current
+    pub answer: Option<RuleAnswer>,
 }
 
 /// The store a kept image holds, and what it had staged.
@@ -338,7 +410,7 @@ pub fn open(h: &mut Heap, bytes: &[u8]) -> Result<Opened, String> {
     if !bytes.starts_with(MAGIC) {
         return Err("not a kept image of this build".into());
     }
-    let mut r = R { b: bytes, i: MAGIC.len(), names: Vec::new(), terms: Vec::new() };
+    let mut r = R { b: bytes, i: MAGIC.len(), names: Vec::new(), terms: Vec::new(), ground: Vec::new() };
     let n = r.u32()?;
     for _ in 0..n {
         let len = r.u32()? as usize;
@@ -368,13 +440,17 @@ pub fn open(h: &mut Heap, bytes: &[u8]) -> Result<Opened, String> {
     let mut ghosts = 0..0;
     for part in 0..2 {
         let from = ids.len();
-        for _ in 0..r.u32()? {
+        let n = r.u32()? as usize;
+        s.reserve_kept(n, 3 * n);
+        ids.reserve(n);
+        for _ in 0..n {
             let rel = r.sym()?;
             let persp = r.sym()?;
             let flags = r.u8()?;
-            r.terms(&mut args)?;
-            ids.push(s.put(h, rel, persp, &args, flags).0);
+            let ground = r.terms(&mut args)?;
+            ids.push(s.put_kept(h, rel, persp, &args, flags, ground));
         }
+        s.bump();
         if part == 1 {
             ghosts = from..ids.len();
         }
@@ -452,6 +528,7 @@ pub fn open(h: &mut Heap, bytes: &[u8]) -> Result<Opened, String> {
         }
         staged.push((StagedFact { rel, persp, args, rule, prems }, alts));
     }
+    let answer = r.answer()?;
     if r.i != bytes.len() {
         return Err("a kept image has bytes after its end".into());
     }
@@ -460,5 +537,5 @@ pub fn open(h: &mut Heap, bytes: &[u8]) -> Result<Opened, String> {
     }
     s.sweep();
     s.dirty = !evaluated;
-    Ok(Opened { store: s, staged, dangling })
+    Ok(Opened { store: s, staged, dangling, answer: evaluated.then_some(answer) })
 }

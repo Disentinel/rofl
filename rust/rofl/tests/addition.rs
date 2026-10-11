@@ -191,6 +191,8 @@ struct Stats {
     full: BTreeMap<String, usize>,
     explained: usize,
     skipped: usize,
+    opened: usize,
+    opened_clean: usize,
     sum: AddDelta,
 }
 
@@ -226,6 +228,8 @@ impl Stats {
         self.delta += o.delta;
         self.explained += o.explained;
         self.skipped += o.skipped;
+        self.opened += o.opened;
+        self.opened_clean += o.opened_clean;
         for (k, v) in o.full {
             *self.full.entry(k).or_default() += v;
         }
@@ -389,7 +393,8 @@ fn differential(seed: u64, head: &str, rules: Vec<String>, gen: fn(&mut Rng) -> 
             let before = s.eval.canonical_state();
             s = Session::open_kept(&s.keep(), BUDGET).unwrap_or_else(|e| panic!("seed {seed} step {step}: the kept world does not open: {e}"));
             assert_eq!(s.eval.canonical_state(), before, "seed {seed} step {step}: the kept world opens as another");
-            // a world the image cannot carry evaluated (a lattice, a sealed world) opens to be evaluated again
+            st.opened += 1;
+            st.opened_clean += !s.eval.store.dirty as usize;
             if s.eval.store.dirty {
                 s.evaluate().unwrap_or_else(|e| panic!("seed {seed} step {step}: the kept world does not evaluate: {}", rofl::describe(&e)));
                 assert_eq!(s.eval.canonical_state(), before, "seed {seed} step {step}: the kept world evaluates as another");
@@ -411,13 +416,15 @@ fn differential(seed: u64, head: &str, rules: Vec<String>, gen: fn(&mut Rng) -> 
 
 fn report(name: &str, st: &Stats) {
     eprintln!(
-        "{name}: {} additions ({} of rules), {} by delta ({:.0}%), {} explained, {} skipped\n  full: {:?}\n  {:?}",
+        "{name}: {} additions ({} of rules), {} by delta ({:.0}%), {} explained, {} skipped, {} of {} kept images opened evaluated\n  full: {:?}\n  {:?}",
         st.additions,
         st.rule_additions,
         st.delta,
         100.0 * st.delta as f64 / st.additions.max(1) as f64,
         st.explained,
         st.skipped,
+        st.opened_clean,
+        st.opened,
         st.full,
         st.sum
     );
@@ -486,6 +493,7 @@ fn a_lattice_world_is_a_fresh_evaluation_after_every_addition() {
     ];
     let all = sweep("lattice", "edb(e3).\nlattice d(A, B, min W).", &rules, fact_edge, 1..=12, 10);
     assert!(all.additions > 50 && all.full.is_empty(), "every addition to the lattice is a delta: {all:?}");
+    assert!(all.opened > 10 && all.opened_clean * 10 >= all.opened * 9, "a kept lattice world opens evaluated: {} of {}", all.opened_clean, all.opened);
 }
 
 fn fact_tree(r: &mut Rng) -> String {
@@ -609,6 +617,7 @@ fn random_sealed_programs_take_additions_as_a_fresh_evaluation_does() {
         all.add(differential(seed * 7919 + 9, &format!("{EDB}\nsealed(provenance)."), rules, fact, 10));
     }
     report("sealed", &all);
+    assert!(all.opened > 10 && all.opened_clean * 10 >= all.opened * 9, "a kept sealed world opens evaluated: {} of {}", all.opened_clean, all.opened);
     assert!(all.delta > 30, "the monotone part of an addition to a sealed world is a delta: {all:?}");
 }
 

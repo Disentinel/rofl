@@ -156,7 +156,7 @@ impl Session {
         let v = Vocab::new(&mut h);
         let mut o = crate::image::open(&mut h, bytes)?;
         bootstrap_kernel(&mut h, &v, &mut o.store);
-        let mut eval = Eval::new(h, o.store, budget, Mode::Rounds, false);
+        let mut eval = Eval::with_answer(h, o.store, budget, Mode::Rounds, false, o.answer);
         eval.vclosure_restore();
         eval.stage_kept(o.staged);
         eval.after_open();
@@ -166,7 +166,7 @@ impl Session {
     /// This world as a kept image, which `open_kept` reads back.
     pub fn keep(&mut self) -> Vec<u8> {
         self.eval.settle_provenance();
-        crate::image::keep(&self.eval.h, &self.eval.store, &self.eval.staged_kept())
+        crate::image::keep(&self.eval.h, &self.eval.store, &self.eval.staged_kept(), self.eval.safety())
     }
 
     /// AN EMPTY WORLD with the kernel's bootstrap tables and nothing else —
