@@ -61,3 +61,8 @@ xl_ok(next_send, delegates, "the generator's own delegation, in its volume: next
 -- The arm for the volume's own argument; another file's array element spread into the call is named by `sx_name`.
 xl_ok(passes_function, ast_name, "the volume's own argument; the arm beside it reads sx_name for another file's element").
 xl_ok(sx_name, ast_name, "the publication: the array's own volume names its element; another volume holds no name of it").
+
+-- Object.assign (w_js_object_assign): the library member is recognised in the file that reads it. `const assign = Object.assign`
+-- exported and called from another file is not seen as a merge by the importing volume (declared); the common shape, the
+-- member or the module read in the calling file, is.
+xl_ok(merge_call, merge_fn, "the library member is a node of the file that reads it; an alias exported to another file is not recognised there (declared)").
