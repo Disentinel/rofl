@@ -41,7 +41,7 @@
 use std::collections::HashMap;
 
 use crate::describe;
-use crate::engine::{Eval, Halt, Mode, TickOutcome, WhyOpts, WhynotBounds, EXPLAIN_WHYNOT_BOUNDS};
+use crate::engine::{Eval, Halt, Mode, Outcome, TickOutcome, WhyOpts, WhynotBounds, EXPLAIN_WHYNOT_BOUNDS};
 use crate::reflect::{self, bootstrap_kernel, is_kernel_ledger, Vocab};
 use crate::rofl_parse::{self, Book, Tense};
 use crate::store::{write_fact_key, FactId, Store, F_BASE, F_TICK};
@@ -505,7 +505,12 @@ impl Session {
     /// comes back as `partial` with a `hole` in the store naming what is
     /// unfinished.
     pub fn evaluate(&mut self) -> Result<Evaluated, Halt> {
-        let o = match self.eval.run() {
+        let r = self.eval.run();
+        self.evaluated(r)
+    }
+
+    fn evaluated(&mut self, r: Result<Outcome, Halt>) -> Result<Evaluated, Halt> {
+        let o = match r {
             Ok(o) => o,
             Err(Halt::Budget(_, _)) => {
                 // The wall unwinds past `run`'s own exits, so the record is
@@ -536,6 +541,21 @@ impl Session {
             peak_rows: self.eval.peak_rows,
             space: self.eval.space,
         })
+    }
+
+    /// Go on from where a step wall stopped the last evaluation, with `more`
+    /// steps (`engine/resume.rs`): the world it reaches is the one a single
+    /// evaluation with the larger budget reaches, steps included. A world
+    /// the wall left no cut in, or that changed since, is evaluated again
+    /// whole under the steps spent and `more`. The flag says whether it went on.
+    pub fn resume(&mut self, more: i64) -> Result<(Evaluated, bool), Halt> {
+        let budget = self.eval.budget;
+        let r = self.eval.resume(more);
+        let went_on = matches!(r, Ok((_, true)));
+        let r = r.map(|(o, _)| o);
+        let out = self.evaluated(r);
+        self.eval.budget = budget;
+        Ok((out?, went_on))
     }
 
     /// COOL A VOLUME TO DISK: write its facts out as ROFL and drop them.

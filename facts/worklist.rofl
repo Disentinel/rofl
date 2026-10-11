@@ -3893,8 +3893,8 @@ work_state(w_mapped_volume, open).
 work_needs(w_mapped_volume, w_derived_as_given).
 
 work(w_resume_after_budget,
-  "A stop by budget keeps the pending delta and the stratum position, and a later evaluation resumes from them to the fixpoint a whole evaluation reaches (H5: the differential of tests/incremental.rs cut at every budget). A negation or aggregate over a relation with pending delta does not run.").
-work_state(w_resume_after_budget, open).
+  "DONE 2026-10-11 for the plain path (f_a_step_wall_in_the_plain_path_is_a_continuation): Session::resume(more), rust/rofl/src/engine/resume.rs, proved by rust/rofl/tests/resume.rs. OPEN: a wall in a lattice, threshold, demand unfolding, vclosure, data-stratified component, aggregate solving or the space wall still evaluates again. A stop by budget keeps the pending delta and the stratum position, and a later evaluation resumes from them to the fixpoint a whole evaluation reaches (H5: the differential of tests/incremental.rs cut at every budget). A negation or aggregate over a relation with pending delta does not run.").
+work_state(w_resume_after_budget, done).
 work_needs(w_resume_after_budget, w_derived_as_given).
 
 work(w_stage_planner,
