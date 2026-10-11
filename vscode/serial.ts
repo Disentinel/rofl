@@ -79,9 +79,10 @@ function layout(doc: Doc): { out: string[]; at: number[] } {
   doc.cells.forEach((c, n) => {
     const m = c.metadata ?? {};
     for (let k = m.blank ?? (n ? 1 : 0); k > 0; k--) put('');
-    if (c.kind === MARKUP || m.bare) { at.push(lines); put(c.value); return; }
-    const front = c.languageId === 'yaml' && n === 0;
-    put(front ? '---' : m.open && FENCE.exec(m.open)?.[1] === c.languageId ? m.open : '```' + c.languageId);
+    const lang = KINDS.includes(c.languageId) ? c.languageId : 'rofl', front = c.languageId === 'yaml' && n === 0;
+    // a cell is prose by its kind and language, whatever else its metadata says: a markdown cell, or a bare cell still rofl; any other code cell is a fenced one, in a language the reader knows
+    if (!front && (c.kind === MARKUP ? !KINDS.includes(c.languageId) : m.bare && c.languageId === 'rofl')) { at.push(lines); put(c.value); return; }
+    put(front ? '---' : m.open && FENCE.exec(m.open)?.[1] === lang ? m.open : '```' + lang);
     at.push(lines);
     if (c.value !== '' || !m.empty) put(c.value);
     if (m.close !== null) put(front ? '---' : m.close ?? '```');
