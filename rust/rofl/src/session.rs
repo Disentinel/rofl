@@ -169,6 +169,31 @@ impl Session {
         crate::image::keep(&self.eval.h, &self.eval.store, &self.eval.staged_kept(), self.eval.safety())
     }
 
+    /// This world kept as a volume at `path`, which `open_volume` maps back. It freezes the world, as a fork does.
+    pub fn keep_volume(&mut self, path: &str) -> std::io::Result<usize> {
+        self.eval.settle_provenance();
+        let (staged, answer) = (self.eval.staged_kept(), self.eval.safety().clone());
+        let tmp = format!("{path}.part");
+        let n = crate::volume::keep(&tmp, &mut self.eval.h, &mut self.eval.store, &staged, &answer)?;
+        std::fs::rename(&tmp, path)?;
+        Ok(n)
+    }
+
+    /// The world a volume holds, its facts, names and witnesses read from the file where they lie.
+    pub fn open_volume(path: &str, budget: i64) -> Result<Session, String> {
+        let mut o = crate::volume::open(path)?;
+        let evaluated = !o.store.dirty && !o.store.partial_eval;
+        o.store.dirty = !evaluated;
+        let mut h = o.heap;
+        let v = Vocab::new(&mut h);
+        bootstrap_kernel(&mut h, &v, &mut o.store);
+        let mut eval = Eval::with_answer(h, o.store, budget, Mode::Rounds, false, evaluated.then_some(o.answer));
+        eval.vclosure_restore();
+        eval.stage_kept(o.staged);
+        eval.after_open();
+        Ok(Session { eval, dangling: 0, asks: 0 })
+    }
+
     /// AN EMPTY WORLD with the kernel's bootstrap tables and nothing else —
     /// `new Rofl()` on the TypeScript side. This is where `load` starts from,
     /// and it is the reason the port no longer needs a seed to exist: a caller

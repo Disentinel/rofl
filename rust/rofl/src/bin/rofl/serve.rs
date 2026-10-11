@@ -29,7 +29,8 @@
 //! 2) and the protocol makes it the obvious one: `open` takes a seed, `fork`
 //! takes a session id.
 //!
-//!   {"op":"open","seedPath":"x.seed.json"}   -> {"ok":true,"session":1,...}; `keptPath` opens a kept image
+//!   {"op":"open","seedPath":"x.seed.json"}   -> {"ok":true,"session":1,...}; `keptPath` opens a kept image,
+//!     `volumePath` maps a volume
 //!     `open` and `fresh` also take the walls a snapshot does not carry:
 //!     `space` (rows), `retainTicks` and `mode` ("rounds" or "strata")
 //!   {"op":"fork","session":1}                -> {"ok":true,"session":2}
@@ -50,7 +51,8 @@
 //!   {"op":"tick","session":2}
 //!   {"op":"state","session":2,"path":"out.txt"}
 //!   {"op":"keep","session":2,"path":"w.kept"}  -> {"path":...,"bytes":n}: the world as a kept image; an evaluated
-//!                                                        world opens evaluated (`open` with `keptPath`)
+//!                                                        world opens evaluated (`open` with `keptPath`); with
+//!                                                        "volume":true, as a volume (`open` with `volumePath`)
 //!   {"op":"close","session":2}
 //!   any op on a session may carry "limit":{"ms":n,"bytes":n}: past n milliseconds, or n live bytes in this
 //!   process, its evaluation stops as at the step budget, and the answer says "stopped":"clock"|"heap"
@@ -292,10 +294,12 @@ impl Server {
             // through a pipe and a JSON string escape when both ends can read a file.
             "open" => {
                 let budget = r.get("budget").and_then(|v| v.as_i64()).unwrap_or(DEFAULT_BUDGET);
-                let mut s = match (r.get("keptPath").and_then(|v| v.as_str()), r.get("seedPath").and_then(|v| v.as_str())) {
-                    (Some(p), _) => Session::open_kept(&std::fs::read(p).map_err(|e| format!("{p}: {e}"))?, budget)?,
-                    (None, Some(p)) => Session::open(&std::fs::read_to_string(p).map_err(|e| format!("{p}: {e}"))?, budget)?,
-                    _ => return Err("open needs `keptPath` or `seedPath`".into()),
+                let path = |k: &str| r.get(k).and_then(|v| v.as_str());
+                let mut s = match (path("keptPath"), path("volumePath"), path("seedPath")) {
+                    (Some(p), _, _) => Session::open_kept(&std::fs::read(p).map_err(|e| format!("{p}: {e}"))?, budget)?,
+                    (None, Some(p), _) => Session::open_volume(p, budget)?,
+                    (None, None, Some(p)) => Session::open(&std::fs::read_to_string(p).map_err(|e| format!("{p}: {e}"))?, budget)?,
+                    _ => return Err("open needs `keptPath`, `volumePath` or `seedPath`".into()),
                 };
                 Self::walls(r, &mut s)?;
                 let facts = s.eval.store.fact_count();
@@ -489,6 +493,10 @@ impl Server {
             // the whole state is exactly the thing a pipe should not carry.
             "keep" => {
                 let p = r.get("path").and_then(|v| v.as_str()).ok_or("keep needs `path`")?.to_string();
+                if r.get("volume").and_then(|v| v.as_bool()) == Some(true) {
+                    let bytes = self.get(r)?.keep_volume(&p).map_err(|e| format!("{p}: {e}"))?;
+                    return Ok(json!({ "path": p, "bytes": bytes }));
+                }
                 let image = self.get(r)?.keep();
                 std::fs::write(&p, &image).map_err(|e| format!("{p}: {e}"))?;
                 Ok(json!({ "path": p, "bytes": image.len() }))

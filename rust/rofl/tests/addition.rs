@@ -388,10 +388,21 @@ fn differential(seed: u64, head: &str, rules: Vec<String>, gen: fn(&mut Rng) -> 
             st.explained += 1;
         }
         was = now;
-        // every third step the world goes to disk (`Session::keep`) and the additions go on over the one read back
+        // every third step the world goes to disk, as an image (`Session::keep`) or as a volume (`keep_volume`)
+        // in turn, and the additions go on over the one read back
         if step % 3 == 2 {
             let before = s.eval.canonical_state();
-            s = Session::open_kept(&s.keep(), BUDGET).unwrap_or_else(|e| panic!("seed {seed} step {step}: the kept world does not open: {e}"));
+            s = if step % 6 == 5 {
+                let path = std::env::temp_dir().join(format!("rofl-addition-{}-{seed}.vol", std::process::id()));
+                let path = path.to_str().unwrap();
+                s.keep_volume(path).unwrap();
+                let opened = Session::open_volume(path, BUDGET);
+                std::fs::remove_file(path).unwrap();
+                opened
+            } else {
+                Session::open_kept(&s.keep(), BUDGET)
+            }
+            .unwrap_or_else(|e| panic!("seed {seed} step {step}: the kept world does not open: {e}"));
             assert_eq!(s.eval.canonical_state(), before, "seed {seed} step {step}: the kept world opens as another");
             st.opened += 1;
             st.opened_clean += !s.eval.store.dirty as usize;

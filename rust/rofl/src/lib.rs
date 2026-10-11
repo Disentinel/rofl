@@ -19,6 +19,8 @@
 /// Planted faults for scripts/agg_breaks.ts, compiled in only under `--features breaks`.
 #[macro_use]
 pub mod breaks;
+pub mod arena;
+pub mod volume;
 /// Where the oracle is, refused when it no longer matches the tree.
 pub mod cell;
 pub mod corpus;

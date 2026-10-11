@@ -7,7 +7,7 @@
 //! nor the reader is in the binary.
 
 const SAFETY_DENSE: &str = include_str!(concat!(env!("OUT_DIR"), "/safety.dense"));
-const KERNEL_HASH: &str = env!("ROFL_KERNEL_HASH");
+pub(crate) const KERNEL_HASH: &str = env!("ROFL_KERNEL_HASH");
 
 #[cfg(not(feature = "breaks"))]
 #[inline(always)]
