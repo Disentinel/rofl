@@ -4553,9 +4553,9 @@ impl Eval {
         self.fire_in_round_from(r, cur, 0, None)
     }
 
-    /// `r` fired on the round's news from body position `pos0`, the firing
-    /// there finished from `fl` when a step wall stopped it.
-    fn fire_in_round_from(&mut self, r: &Rc<ERule>, cur: &Front, pos0: usize, mut fl: Option<InFlight>) -> Result<(), Halt> {
+    /// `r` fired on the round's news from step `at0` (0 a reader of a closure fired whole, `i + 1` body position
+    /// `i`), the firing there finished from `fl` when a step wall stopped it.
+    fn fire_in_round_from(&mut self, r: &Rc<ERule>, cur: &Front, at0: usize, mut fl: Option<InFlight>) -> Result<(), Halt> {
         {
             {
                 if self.naive {
@@ -4568,8 +4568,8 @@ impl Eval {
                         return Ok(());
                     }
                     // a closure answered from its tree has no news of its own: news of its edges fires a reader whole
-                    if !brk!("vclosure_reader_stale" => true; false) && self.vreader_due(r, cur) {
-                        let f = self.fire_rule(r, None)?;
+                    if at0 == 0 && (fl.is_some() || !brk!("vclosure_reader_stale" => true; false) && self.vreader_due(r, cur)) {
+                        let f = self.fire_at(r, 0, fl.take(), |e| e.fire_rule(r, None))?;
                         merge_front(&mut self.cur_front, f);
                     }
                 }
@@ -4581,11 +4581,11 @@ impl Eval {
                     return Ok(());
                 }
                 if r.has_demand_prem {
-                    let f = self.fire_rule(r, None)?;
+                    let f = self.fire_at(r, 1, fl.take(), |e| e.fire_rule(r, None))?;
                     merge_front(&mut self.cur_front, f);
                     return Ok(());
                 }
-                for (i, b) in r.plan.iter().enumerate().skip(pos0) {
+                for (i, b) in r.plan.iter().enumerate().skip(at0.saturating_sub(1)) {
                     let BodyElem::Pos(l) = b else { continue };
                     let Some(keys) = cur.by_rel.get(&l.rel) else {
                         continue;
@@ -4594,19 +4594,7 @@ impl Eval {
                         Some(p) => e.fire_planned(r, &p, Some(keys)),
                         None => e.fire_rule(r, Some((i, keys))),
                     };
-                    let f = match fl.take() {
-                        Some(fl) => self.finish(r, fl, fire),
-                        None => fire(self),
-                    };
-                    let f = match f {
-                        Ok(f) => f,
-                        Err(e) => {
-                            if let Some(c) = self.cutting.as_mut() {
-                                c.pos.get_or_insert(i);
-                            }
-                            return Err(e);
-                        }
-                    };
+                    let f = self.fire_at(r, i + 1, fl.take(), fire)?;
                     merge_front(&mut self.cur_front, f);
                 }
                 // NEWS READ INSIDE A THRESHOLD: the rule fires again, and its
@@ -4660,10 +4648,11 @@ impl Eval {
         *self.fires_by_rule.entry(r.id).or_insert(0) += 1;
         let outer = self.cur_rule.replace(r.id);
         let was_firing = std::mem::replace(&mut self.firing, true);
+        let before = self.steps;
         let sols = self.solve_body(&r.plan, s0, 0, front_at, Some(r.id));
         self.firing = was_firing;
         self.cur_rule = outer;
-        let sols = self.solved(r, sols)?;
+        let sols = self.solved(r, sols, before)?;
         *self.sols_by_rule.entry(r.id).or_insert(0) += sols.len() as u64;
         self.conclude_all(r, sols, Front::default(), true)
     }

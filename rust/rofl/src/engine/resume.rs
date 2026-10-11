@@ -57,10 +57,15 @@ pub(super) struct Cut {
 
 impl Eval {
     /// What a firing solved; a step wall while solving marks a firing to make again.
-    pub(super) fn solved(&mut self, r: &Rc<ERule>, sols: Result<Vec<Sol>, Halt>) -> Result<Vec<Sol>, Halt> {
+    /// Only a firing whose first step was the one refused is made again: a
+    /// solve that had spent steps (an unfolding on demand, an aggregate's
+    /// cells) would spend them twice, and one larger than the steps given
+    /// would never end. That refused step is given back.
+    pub(super) fn solved(&mut self, r: &Rc<ERule>, sols: Result<Vec<Sol>, Halt>, before: i64) -> Result<Vec<Sol>, Halt> {
         if let (Err(Halt::Budget("budget_exhausted", _)), Some(c)) = (&sols, self.cutting.as_mut()) {
-            if c.fl.is_none() && !r.has_agg {
+            if c.fl.is_none() && !r.has_agg && self.steps == before + 1 {
                 c.fl = Some(InFlight::Refire);
+                self.steps = before;
             }
         }
         sols
@@ -121,6 +126,20 @@ impl Eval {
         self.conclude_all(r, sols, out, false)
     }
 
+    /// A firing at step `at` of a rule's round, finished from `fl` when resumed; a wall in it names the step.
+    pub(super) fn fire_at(&mut self, r: &Rc<ERule>, at: usize, fl: Option<InFlight>, fire: impl FnOnce(&mut Eval) -> Result<Front, Halt>) -> Result<Front, Halt> {
+        let f = match fl {
+            Some(fl) => self.finish(r, fl, fire),
+            None => fire(self),
+        };
+        if f.is_err() {
+            if let Some(c) = self.cutting.as_mut() {
+                c.pos.get_or_insert(at);
+            }
+        }
+        f
+    }
+
     fn cut_rest(&mut self, sols: Vec<Sol>, out: Front, tail: Option<Tail>, e: Halt) -> Halt {
         if let Some(c) = self.cutting.as_mut() {
             if c.fl.is_none() {
@@ -135,12 +154,10 @@ impl Eval {
         self.lattices.is_empty()
             && !self.well_founded
             && !self.naive
-            && !self.vany
-            && self.demand_rels.is_empty()
             && self.shrug_readers.is_empty()
             && self.ds_comps.is_empty()
             && self.narrowing.is_none()
-            && self.rules.iter().all(|r| !r.has_thr && !r.has_demand_prem)
+            && self.rules.iter().all(|r| !r.has_thr)
     }
 
     /// The cut gathered as the wall unwound, kept if it is whole.
@@ -174,6 +191,7 @@ impl Eval {
         let shrugs = self.store.rel_all(&self.h, self.v.shrug);
         self.store.remove_many(&shrugs);
         self.wall_spent.set(None);
+        self.store.vlisted = false;
         self.budget = self.steps + more;
         self.resume_at = Some(cut);
         let out = self.run_pass_from();
