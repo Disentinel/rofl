@@ -23,7 +23,7 @@ for (const raw of fs.readFileSync(factsPath, 'utf8').split('\n')) {
   facts.push(line);
 }
 const asks = (rs: string[]) => rs.map((r) => `asks(${r}).`).join('\n');
-const port = await RoflPort.start(path.join(ROOT, `rust/target/${process.env.ROFL_PROFILE ?? 'release'}/rofl-serve`));
+const port = await RoflPort.start();
 async function world(rs: string[], more = '') {
   const s = await port.fresh(4_000_000_000, { space: 40_000_000 });
   for (const f of MODEL_FILES) await s.loadFile(path.join(ROOT, f));
