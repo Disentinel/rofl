@@ -1860,10 +1860,31 @@ impl Eval {
             self.join_of.insert(c, l);
         }
         self.register_lattices(&rules);
-        // under the seal the set of facts is the contract: where nothing
-        // withdraws, groups and candidates are then in the engine's own order
-        // and rules are activated by component; a closure is walked either way
-        self.store.unordered = self.no_witness && self.lattices.is_empty();
+        // where nothing withdraws and no fact can be staged by two firings (the first is the schedule's), the order
+        // candidates come in is unobservable: the set of facts is the contract, and with witnesses kept the set of
+        // firings, which `why` ranks by height and signature; only a wall's cut moves with it. Groups and candidates
+        // are then in the engine's own order, and under the seal rules are activated by component; a closure is
+        // walked either way
+        let staged_twice = {
+            let next: Vec<&DRule> = rules.iter().filter(|r| r.clause.head.temporal == Temporal::Next).collect();
+            let mut heads: Vec<Sym> = next.iter().map(|r| r.clause.head.rel).collect();
+            heads.sort_unstable();
+            heads.windows(2).any(|w| w[0] == w[1])
+                || next.iter().any(|r| {
+                    let mut head = Vec::new();
+                    BodyElem::Pos(r.clause.head.clone()).vars(&self.h, &mut head);
+                    r.clause.body.iter().any(|b| match b {
+                        BodyElem::Agg(_) => true,
+                        BodyElem::Pos(_) => {
+                            let mut vs = Vec::new();
+                            b.vars(&self.h, &mut vs);
+                            vs.iter().any(|v| !head.contains(v))
+                        }
+                        _ => false,
+                    })
+                })
+        };
+        self.store.unordered = self.lattices.is_empty() && (self.no_witness || !staged_twice);
         self.diags.extend(diags);
         self.answer = self.safety_answer(&rules);
         self.prov_eager = HashSet::new();
@@ -11220,6 +11241,14 @@ impl Eval {
     fn in_key_order(&mut self, mut out: Vec<(Subst, PremRef)>, open: Vec<(Subst, PremRef, String)>) -> Vec<(Subst, PremRef)> {
         if self.store.unordered && self.firing {
             out.extend(open.into_iter().map(|(s, r, _)| (s, r)));
+            return out;
+        }
+        if open.is_empty() {
+            let fact = |r: &PremRef| match r {
+                PremRef::Fact(f) => *f,
+                _ => unreachable!(),
+            };
+            out.sort_by(|a, b| self.store.cmp_key(&self.h, fact(&a.1), fact(&b.1)));
             return out;
         }
         let mut keyed: Vec<(String, Subst, PremRef)> = out

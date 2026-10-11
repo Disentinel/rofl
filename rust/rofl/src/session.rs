@@ -1370,6 +1370,7 @@ impl Session {
     /// and an instrument that answers it by damaging its subject has only one
     /// use.
     pub fn excise(&mut self, query: &str) -> Result<(Vec<String>, Vec<String>), String> {
+        self.eval.store.unordered = false;
         let (id, key) = self.ground_fact(query, "excise")?;
         let Some(id) = id else { return Err(format!("{key} is not a base fact")) };
         if !self.eval.store.rec(id).base() {
@@ -1476,7 +1477,7 @@ impl Session {
     pub fn why(&mut self, query: &str) -> Result<String, String> {
         let lit = self.one_lit(query)?;
         self.ground_lit(&lit)?;
-        self.settle()?;
+        self.explaining()?;
         self.cone_holds(&lit)?;
         self.settle_if_provenance(&lit);
         self.eval.why_text(&lit, Some(query))
@@ -1487,7 +1488,7 @@ impl Session {
     pub fn why_all(&mut self, query: &str) -> Result<String, String> {
         let lit = self.one_lit(query)?;
         self.ground_lit(&lit)?;
-        self.settle()?;
+        self.explaining()?;
         self.cone_holds(&lit)?;
         self.settle_if_provenance(&lit);
         self.eval.why_text_with(&lit, &WhyOpts { members: usize::MAX, query: String::new() }, Some(query))
@@ -1505,6 +1506,7 @@ impl Session {
     /// tick-scoped; the caller evaluates again so rules can read them.
     /// Returns how many requests were answered.
     pub fn explain_requests(&mut self) -> Result<usize, String> {
+        self.eval.store.unordered = false;
         // a plain program is evaluated again by the aggregate evaluator, whose
         // planner and explanations the reference answers these with
         if self.eval.plain {
@@ -1587,7 +1589,7 @@ impl Session {
     /// so; the plain one answers a wall and refuses the rest, as its evaluator
     /// throws them.
     pub fn whynot(&mut self, query: &str, b: &WhynotBounds) -> Result<(bool, String), String> {
-        self.settle()?;
+        self.explaining()?;
         let lit = self.one_lit(query)?;
         self.cone_holds(&lit)?;
         self.settle_if_provenance(&lit);
@@ -1611,6 +1613,13 @@ impl Session {
     /// evaluated again.
     fn settle(&mut self) -> Result<(), String> {
         self.eval.ensure().map(|_| ()).map_err(|h| describe(&h))
+    }
+
+    /// An explanation reads candidates in key order, as the reference does, whatever order the evaluation took.
+    fn explaining(&mut self) -> Result<(), String> {
+        self.settle()?;
+        self.eval.store.unordered = false;
+        Ok(())
     }
 
     /// One literal, parsed and lowered. `ask` open-codes the same first three

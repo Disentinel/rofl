@@ -305,13 +305,104 @@ struct KeyRun {
     loose: Vec<FactId>,
     by_pat: Option<Rc<ArgIndex>>,
     staged: Vec<FactId>,
+    /// The run is in the engine's own order (tuple ids), which an evaluation in key order sorts first.
+    by_tup: bool,
 }
 
 /// Argument indexes, keyed by BINDING PATTERN — the bitmask of argument
 /// positions a premise had already bound when it asked — then by the tuple of
-/// canonical VALUES at those positions. Terms are hash-consed, so the tuple is
-/// the value and no rendering is stored (`KeyRun.byPat`, src/store.ts:75).
-type ArgIndex = FxMap<u32, FxMap<Box<[Term]>, Vec<FactId>>>;
+/// canonical VALUES at those positions (`KeyRun.byPat`, src/store.ts:75).
+type ArgIndex = FxMap<u32, PatIndex>;
+
+/// One pattern's index with no allocation per value: a fact's values at the
+/// pattern's positions are read from the fact, so a slot holds only the last
+/// entry of its value's chain and an entry the fact and the one before it. A
+/// map of boxed values to vectors cost about 110 bytes a value, and most
+/// patterns bind a node, whose value has one fact.
+#[derive(Clone, Default)]
+struct PatIndex {
+    pos: Box<[usize]>,
+    slots: Vec<u32>,
+    ids: Vec<FactId>,
+    prev: Vec<u32>,
+    values: usize,
+}
+
+impl PatIndex {
+    fn new(pos: &[usize]) -> PatIndex {
+        PatIndex { pos: pos.into(), slots: vec![EMPTY; 8], ..Default::default() }
+    }
+
+    fn hash(vals: impl Iterator<Item = Term>) -> usize {
+        let mut f = Fx::default();
+        for v in vals {
+            f.write_u64(v.bits());
+        }
+        f.finish() as usize
+    }
+
+    /// The slot of the chain holding `vals`, or the empty slot where it would go.
+    fn slot(&self, facts: &Facts, vals: &[Term]) -> usize {
+        let mask = self.slots.len() - 1;
+        let mut i = Self::hash(vals.iter().copied()) & mask;
+        loop {
+            let e = self.slots[i];
+            if e == EMPTY {
+                return i;
+            }
+            let args = facts.args(self.ids[e as usize]);
+            if self.pos.iter().zip(vals).all(|(&p, v)| args[p] == *v) {
+                return i;
+            }
+            i = (i + 1) & mask;
+        }
+    }
+
+    fn put(&mut self, facts: &Facts, sig: &[Term], k: FactId) {
+        if (self.values + 1) * 4 > self.slots.len() * 3 {
+            self.grow(facts);
+        }
+        let i = self.slot(facts, sig);
+        if self.slots[i] == EMPTY {
+            self.values += 1;
+        }
+        self.prev.push(self.slots[i]);
+        self.ids.push(k);
+        self.slots[i] = self.ids.len() as u32 - 1;
+    }
+
+    fn grow(&mut self, facts: &Facts) {
+        let n = self.slots.len() * 2;
+        let old = std::mem::replace(&mut self.slots, vec![EMPTY; n]);
+        let mask = self.slots.len() - 1;
+        for e in old.into_iter().filter(|&e| e != EMPTY) {
+            let args = facts.args(self.ids[e as usize]);
+            let mut i = Self::hash(self.pos.iter().map(|&p| args[p])) & mask;
+            while self.slots[i] != EMPTY {
+                i = (i + 1) & mask;
+            }
+            self.slots[i] = e;
+        }
+    }
+
+    /// The facts holding `vals`, in the order they were put.
+    fn get(&self, facts: &Facts, vals: &[Term], out: &mut Vec<FactId>) {
+        let at = out.len();
+        let mut e = self.slots[self.slot(facts, vals)];
+        while e != EMPTY {
+            let k = self.ids[e as usize];
+            if facts.alive(k) {
+                out.push(k);
+            }
+            e = self.prev[e as usize];
+        }
+        out[at..].reverse();
+    }
+
+    fn bytes(&self) -> usize {
+        self.slots.capacity() * 4 + self.ids.capacity() * 4 + self.prev.capacity() * 4
+    }
+}
 
 const MIN_INDEXED: usize = 16;
 const MAX_PATTERNS: usize = 8;
@@ -1348,7 +1439,7 @@ impl Store {
     }
 
     fn absorb(&mut self, h: &Heap, rel: Sym, persp: Sym) {
-        if self.run(rel, persp).is_none_or(|r| r.arrived.is_empty()) {
+        if self.run(rel, persp).is_none_or(|r| r.arrived.is_empty() && (self.unordered || !r.by_tup)) {
             return;
         }
         let v = self.idx.get_mut(&rel).unwrap();
@@ -1373,6 +1464,9 @@ impl Store {
         // it is dropped here, where the run is being rewritten regardless.
         canon.retain(|&i| me.alive(i));
         fresh.retain(|&i| me.alive(i));
+        if !unordered && v[i].1.by_tup {
+            canon.sort_by(|x, y| cmp_args(h, *x, *y));
+        }
         fresh.sort_by(|x, y| cmp_args(h, *x, *y));
         if canon.is_empty() {
             canon = fresh;
@@ -1396,6 +1490,7 @@ impl Store {
         let v = self.idx.get_mut(&rel).unwrap();
         let i = v.iter().position(|(p, _)| *p == persp).unwrap();
         v[i].1.canon = canon;
+        v[i].1.by_tup = unordered;
         self.absorb_ns += t_absorb.elapsed().as_nanos();
     }
 
@@ -1623,11 +1718,11 @@ impl Store {
         let canon = &run.canon;
         let by_val = Rc::make_mut(run.by_pat.as_mut().unwrap()).entry(mask).or_insert_with(|| {
             self.argm_cloned += canon.len() as u64;
-            let mut by_val = FxMap::default();
+            let mut by_val = PatIndex::new(pos);
             let mut sig = Vec::new();
             for &k in canon {
                 if facts.alive(k) && pat_sig(h, pos, facts.args(k), &mut sig) {
-                    put_sig(&mut by_val, &sig, k);
+                    by_val.put(facts, &sig, k);
                 }
             }
             by_val
@@ -1649,11 +1744,11 @@ impl Store {
             return;
         }
         let mut sig = Vec::new();
-        for (&m, by_val) in Rc::make_mut(by_pat).iter_mut() {
-            let pos = mask_pos(m);
+        for by_val in Rc::make_mut(by_pat).values_mut() {
+            let pos = by_val.pos.clone();
             for &k in &run.staged {
                 if facts.alive(k) && pat_sig(h, &pos, facts.args(k), &mut sig) {
-                    put_sig(by_val, &sig, k);
+                    by_val.put(facts, &sig, k);
                 }
             }
         }
@@ -3761,19 +3856,7 @@ impl Store {
                                 + r.loose.capacity()
                                 + r.staged.capacity())
                                 * 4
-                                + r.by_pat
-                                    .as_ref()
-                                    .map(|m| {
-                                        m.values()
-                                            .map(|b| {
-                                                b.capacity() * 64
-                                                    + b.values()
-                                                        .map(|v| v.capacity() * 4)
-                                                        .sum::<usize>()
-                                            })
-                                            .sum::<usize>()
-                                    })
-                                    .unwrap_or(0)
+                                + r.by_pat.as_ref().map(|m| m.values().map(PatIndex::bytes).sum::<usize>()).unwrap_or(0)
                         })
                         .sum::<usize>()
             })
@@ -3800,10 +3883,6 @@ impl Store {
     }
 }
 
-fn mask_pos(mask: u32) -> Vec<usize> {
-    (0..31).filter(|i| (mask >> i) & 1 == 1).collect()
-}
-
 fn pat_sig(h: &Heap, pos: &[usize], args: &[Term], out: &mut Vec<Term>) -> bool {
     out.clear();
     for &p in pos {
@@ -3815,14 +3894,6 @@ fn pat_sig(h: &Heap, pos: &[usize], args: &[Term], out: &mut Vec<Term>) -> bool 
     true
 }
 
-fn put_sig(by_val: &mut FxMap<Box<[Term]>, Vec<FactId>>, sig: &[Term], k: FactId) {
-    match by_val.get_mut(sig) {
-        Some(v) => v.push(k),
-        None => {
-            by_val.insert(sig.into(), vec![k]);
-        }
-    }
-}
 
 fn firing_hash(id: FactId, rule: Sym, prems: &[PremRef]) -> u64 {
     let mut f = Fx::default();
@@ -3834,11 +3905,9 @@ fn run_in(idx: &mut Runs, rel: Sym, persp: Sym) -> &mut KeyRun {
     &mut idx.get_mut(&rel).unwrap().iter_mut().find(|(q, _)| *q == persp).unwrap().1
 }
 
-fn hits(facts: &Facts, loose: &[FactId], by_val: &FxMap<Box<[Term]>, Vec<FactId>>, vals: &[Term]) -> Vec<FactId> {
-    let mut out: Vec<FactId> = match by_val.get(vals) {
-        Some(hit) => hit.iter().copied().filter(|&i| facts.alive(i)).collect(),
-        None => Vec::new(),
-    };
+fn hits(facts: &Facts, loose: &[FactId], by_val: &PatIndex, vals: &[Term]) -> Vec<FactId> {
+    let mut out = Vec::new();
+    by_val.get(facts, vals, &mut out);
     out.extend(loose.iter().copied().filter(|&k| facts.alive(k)));
     out
 }
