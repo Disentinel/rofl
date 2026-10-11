@@ -435,7 +435,7 @@ impl Eval {
                             BodyElem::Pos(l) => front.by_rel.get(&l.rel).map(|k| (i, k.len())),
                             _ => None,
                         }).collect();
-                        if at.iter().any(|&(i, n)| i > 0 && self.delta_pick(r, Some(i), n).is_none()) {
+                        if at.iter().any(|&(i, n)| i > 0 && self.delta_pick(r, Some(i), n).is_none() && !self.plannable(r, i)) {
                             whole.push(r.clone());
                             continue;
                         }
@@ -448,7 +448,7 @@ impl Eval {
                 if whole.is_empty() {
                     return Ok(());
                 }
-                for r in whole.clone() {
+                for r in std::mem::take(&mut whole) {
                     let t = std::time::Instant::now();
                     let f = self.fire_rule(&r, None)?;
                     *self.ns_by_rule.entry(r.id).or_insert(0) += t.elapsed().as_nanos() as u64;
@@ -566,9 +566,22 @@ impl Eval {
             // lost, and what rests on it goes too (a fact of the relation that comes back keeps its record, and so what
             // cites it)
             let here: Vec<Rc<ERule>> = recompute.iter().filter(|r| at_(r)).cloned().collect();
-            let heads: HashSet<Sym> = here.iter().map(|r| r.clause.head.rel).collect();
+            // (an aggregate rule alone withdraws its own firings and fires again: what other rules conclude into its head stands)
+            let (own, wide): (Vec<Rc<ERule>>, Vec<Rc<ERule>>) = here.iter().cloned().partition(|r| r.has_agg && !r.has_thr && r.lattice_outer.is_empty() && !r.demand_strict);
+            let heads: HashSet<Sym> = wide.iter().map(|r| r.clause.head.rel).collect();
             let mut held: HashSet<FactId> = HashSet::new();
-            let mut into: Vec<Rc<ERule>> = Vec::new();
+            let mut into: Vec<Rc<ERule>> = own.clone();
+            for r in &own {
+                for id in self.store.rel_all(&self.h, r.clause.head.rel) {
+                    if self.store.fired_by(id, r.id) {
+                        held.insert(id);
+                        self.withdraw_firings(&[id], |x, _| x == r.id);
+                        if self.store.alive(id) && !self.store.rec(id).base() && self.store.support_count(id) == 0 {
+                            self.store.remove_many(&[id]);
+                        }
+                    }
+                }
+            }
             for h in &heads {
                 for id in self.store.rel_all(&self.h, *h) {
                     held.insert(id);
@@ -937,6 +950,7 @@ impl Eval {
         let holes0 = self.store.rel_count(self.v.hole);
         let active = std::mem::take(&mut self.active);
         let mut ambiguous = false;
+        self.adding = true;
         let r = (|| -> Result<(), Halt> {
             // the part kept, level by level: the news through the rules that read it, the added plain rules whole, and
             // under a negation the firings a new fact blocks withdrawn, what rested on them derived again
@@ -955,6 +969,7 @@ impl Eval {
             }
             Ok(())
         })();
+        self.adding = false;
         self.active = active;
         self.cur_front = Front::default();
         (self.steps, self.rows) = outer;

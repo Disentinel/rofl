@@ -677,6 +677,9 @@ pub struct Eval {
     /// Delta-first join plans (`joinplan.rs`), per rule and news position, and
     /// the premise statistics their estimates read.
     plan_trial: bool,
+    /// An addition is solving: a builtin may be planned after the premises written before it (it holds no hole,
+    /// or the world is evaluated again).
+    adding: bool,
     pub delta_ns: u64,
     delta_plans: HashMap<(Sym, usize), joinplan::Slot>,
     delta_stats: HashMap<Vec<u64>, (usize, usize, usize)>,
@@ -1319,6 +1322,7 @@ impl Eval {
             delta_by_rule: HashMap::new(),
             delta_ns: 0,
             plan_trial: false,
+            adding: false,
             delta_plans: HashMap::new(),
             delta_stats: HashMap::new(),
             functions: Vec::new(),
