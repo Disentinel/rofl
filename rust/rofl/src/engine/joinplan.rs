@@ -97,13 +97,22 @@ impl Eval {
     /// The plan for news at plan position `at` (None: a firing over the whole
     /// store, no news) when it is cheaper than the written order for `n` news
     /// rows; None keeps the written order.
+    fn plan_key(&self, r: &Rc<ERule>, at: Option<usize>) -> (Sym, usize) {
+        (r.id, at.unwrap_or(usize::MAX >> 1) | if self.adding { 1 << 62 } else { 0 })
+    }
+
+    /// A plan can start from the news at `at`: when `delta_pick` still found none, the written order is the cheaper.
+    pub(super) fn plannable(&self, r: &Rc<ERule>, at: usize) -> bool {
+        matches!(self.delta_plans.get(&self.plan_key(r, Some(at))), Some(Slot::Plan(_)))
+    }
+
     pub(super) fn delta_pick(&mut self, r: &Rc<ERule>, at: Option<usize>, n: usize) -> Option<Rc<DeltaPlan>> {
         if brk!("delta_first_off" => true; false)
             || brk!("delta_first_spread" => false; !self.lat_spread.is_empty())
         {
             return None;
         }
-        let key = (r.id, at.unwrap_or(usize::MAX));
+        let key = self.plan_key(r, at);
         self.vrefresh();
         let fresh = match self.delta_plans.get(&key) {
             Some(Slot::No) => return None,
@@ -151,8 +160,26 @@ impl Eval {
             && r.plan.iter().all(|b| match b {
                 BodyElem::Pos(_) => true,
                 BodyElem::Neg(l) => !self.demand_rels.iter().any(|(d, _)| *d == l.rel),
-                _ => false,
+                BodyElem::Bi { .. } => self.adding,
+                BodyElem::Agg(_) => false,
             })
+    }
+
+    /// The variable sets a builtin can run from: one fully bound among them, it holds or binds the rest (`is` and `in`
+    /// read their right side, `=` either side, a comparison both).
+    fn bi_needs(&self, b: &BodyElem) -> Vec<Vec<Sym>> {
+        let BodyElem::Bi { op, l, r } = b else { return Vec::new() };
+        let (mut lv, mut rv) = (Vec::new(), Vec::new());
+        self.h.vars_of(*l, &mut lv);
+        self.h.vars_of(*r, &mut rv);
+        if *op == self.v.op_eq {
+            vec![lv, rv]
+        } else if *op == self.v.op_is || *op == self.v.op_in {
+            vec![rv]
+        } else {
+            lv.extend(rv);
+            vec![lv]
+        }
     }
 
     /// Rows holding the premise's constants and matches per binding, given
@@ -254,6 +281,11 @@ impl Eval {
                     }
                 }
                 _ => {
+                    // a builtin that runs from nothing the premises before it bound faults in written order
+                    let needs = self.bi_needs(b);
+                    if matches!(b, BodyElem::Bi { .. }) && !needs.iter().any(|n| n.iter().all(|v| bound.contains(v))) {
+                        return None;
+                    }
                     if j < i {
                         pre += cur.min(1e15);
                     } else {
@@ -275,6 +307,7 @@ impl Eval {
         }
         self.h.vars_of(r.clause.head.persp, &mut head_vars);
         let all_vars: Vec<Vec<Sym>> = plan.iter().map(|b| vars_of(&self.h, b)).collect();
+        let needs: Vec<Vec<Vec<Sym>>> = plan.iter().map(|b| self.bi_needs(b)).collect();
         let ready = |j: usize, bound: &Vec<Sym>| -> bool {
             all_vars[j].iter().all(|v| {
                 bound.contains(v) || (!head_vars.contains(v) && all_vars.iter().enumerate().all(|(k, vs)| k == j || !vs.contains(v)))
@@ -326,10 +359,21 @@ impl Eval {
             (unit, cur_d) = (1.0, sel);
         }
         loop {
-            while let Some(at) = rest.iter().position(|&j| matches!(plan[j], BodyElem::Neg(_)) && ready(j, &bound) && placeable(j, &bound, &rest)) {
+            while let Some(at) = rest.iter().position(|&j| match plan[j] {
+                BodyElem::Neg(_) => ready(j, &bound) && placeable(j, &bound, &rest),
+                BodyElem::Bi { .. } => rest.iter().all(|&k| k >= j) && needs[j].iter().any(|n| n.iter().all(|v| bound.contains(v))),
+                _ => false,
+            }) {
                 let j = rest.remove(at);
                 unit += cur_d;
                 order.push(j);
+                if matches!(plan[j], BodyElem::Bi { .. }) {
+                    for v in &all_vars[j] {
+                        if !bound.contains(v) {
+                            bound.push(*v);
+                        }
+                    }
+                }
             }
             let mut best: Option<(usize, f64)> = None;
             for (at, &j) in rest.iter().enumerate() {

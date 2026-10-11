@@ -1,4 +1,5 @@
 // npm run nb -- <file.rofl.md> [--json] [--cell N] [--all]   run a notebook, print what every cell said
+// npm run nb -- edit <file.rofl.md> --cell N [--lang L]  replace cell N with stdin (N one past the last adds a cell); refused, the file untouched, when it would not read back as written
 // npm run nb -- translate <file.rofl.md>                 write a rofl cell under every natural cell that has none
 // Exit 0: every never holds and every cell was read; 1: some never fails; 2: a cell, a file or the model was not read;
 // 3: every never holds, some only as far as the model sees; or the run was cut short by ROFL_NB_LIMIT or ROFL_NB_MEMORY and no never found a row.
@@ -31,7 +32,16 @@ export type Limits = { ROFL_NB_LIMIT?: string; ROFL_NB_MEMORY?: string };
 /** The wall of the limits as set, each read afresh, so a kept kernel (notebook/serve.ts) runs under its caller's and not the ones it started with. */
 export const wallOf = ({ ROFL_NB_LIMIT: limit, ROFL_NB_MEMORY: memory }: Limits) => {
   const ms = Number(limit ?? 120) * 1000, heap = memory ? Number(memory) * 2 ** 30 : 0.8 * getHeapStatistics().heap_size_limit;
-  return () => { const end = performance.now() + ms; return () => performance.now() > end || process.memoryUsage().heapUsed > heap; };
+  return () => {
+    const end = performance.now() + ms;
+    // `limited`: the person set a limit, which only the TypeScript engine can keep (a Rust evaluation is one call that cannot be asked to stop)
+    const stop = Object.assign((): boolean => {
+      if (performance.now() > end) stop.cause = `the clock ran out at ${ms / 1000} s; ROFL_NB_LIMIT=<seconds> raises it`;
+      else if (process.memoryUsage().heapUsed > heap) stop.cause = `the heap passed ${+(heap / 2 ** 30).toFixed(3)} GB; ROFL_NB_MEMORY=<GB> raises it`;
+      return !!stop.cause;
+    }, { cause: undefined as string | undefined, limited: limit !== undefined || memory !== undefined });
+    return stop;
+  };
 };
 export const limits = (): Limits => ({ ROFL_NB_LIMIT: process.env.ROFL_NB_LIMIT, ROFL_NB_MEMORY: process.env.ROFL_NB_MEMORY });
 export const LIMIT = Number(process.env.ROFL_NB_LIMIT ?? 120) * 1000;
@@ -150,7 +160,7 @@ export function tally(r: NbResult): string {
   ].filter(Boolean).join(', ') || (r.cells.length > 1 ? 'nothing asked' : `0 cells: this is a world (facts and rules), not a notebook; a notebook asks in fenced \`\`\`rofl cells`);
   const unparsed = r.errors.flatMap((e) => /^(.*): not parsed: /.exec(e)?.[1] ?? []);
   const failed = r.cells.flatMap((c) => c.lines.filter((l) => l.verdict === 'fails').map((l) => l.line));
-  const why = r.status === 'cut' ? `CUT SHORT at its limit: every count is at least, and no never is known to hold${failed.length ? `; FAILS at ${failed.length === 1 ? 'line' : 'lines'} ${failed.join(', ')}` : ''}`
+  const why = r.status === 'cut' ? `CUT SHORT${r.cut ? ` (${r.cut})` : ' at its limit'}: every count is at least, and no never is known to hold${failed.length ? `; FAILS at ${failed.length === 1 ? 'line' : 'lines'} ${failed.join(', ')}` : ''}`
     : r.status === 'fails' ? `FAILS at ${failed.length === 1 ? 'line' : 'lines'} ${failed.join(', ')}` : r.status === 'unread' ? `not everything was read${unparsed.length ? `: not parsed: ${unparsed.join(', ')}` : ''}`
     : r.status === 'blind' ? 'some invariant holds only as far as the model sees' : '';
   return why ? `${said} — ${why} (exit ${exitOf(r)}; ${HELP_AT})` : r.cells.length > 1 ? said : `${said} (${HELP_AT})`;
@@ -281,9 +291,40 @@ function translateOne(file: string, text: string, c: NbCell, ask: Ask, kernel: K
     said: cx.outside.length ? [`${file}: note: ${OUTSIDE(cx.outside)}, and what they say goes to the model with the request`] : [], follow, step });
 }
 
+/** The notebook with fenced cell `n` (from 1, as --cell counts) holding `body`, in language `lang` (its own, or rofl for a new one); one past the last adds it at the end.
+ *  Or the reason it would not read back as written: the file is only ever written whole, from a text that was read again and found to be this. */
+export function editCell(text: string, n: number, lang: string | undefined, body: string): { text: string } | { refused: string } {
+  body = body.replace(/\r\n/g, '\n');
+  const eol = text.includes('\r\n') ? '\r\n' : '\n', lines = text.split('\n'), was = cellsOf(text).slice(1), fence = (l: string) => l.replace(/\r$/, '');
+  if (!Number.isInteger(n) || n < 1 || n > was.length + 1) return { refused: `cell ${n}: the notebook has ${was.length} cells; --cell takes 1 to ${was.length}, or ${was.length + 1} to add one` };
+  if (lang !== undefined && !['rofl', 'datalog', 'natural'].includes(lang)) return { refused: `--lang ${lang}: a cell is rofl, datalog or natural` };
+  const bad = body.split('\n').find((l) => /^```/.test(l));
+  if (bad !== undefined) return { refused: `the new cell has a line that starts a fence (${JSON.stringify(bad)}), which would cut it in two or swallow the next` };
+  const put = body === '' ? [] : body.replace(/\r$/, '').split('\n'), cell = was[n - 1];
+  if (cell) {
+    let close = cell.line - 1;
+    while (close < lines.length && !/^```\s*$/.test(fence(lines[close]))) close++;
+    if (close >= lines.length) return { refused: `cell ${n} is not closed: its fence has no end` };
+    lines.splice(cell.line - 2, 1, '```' + (lang ?? cell.kind) + (eol === '\r\n' ? '\r' : ''));
+    lines.splice(cell.line - 1, close - cell.line + 1, ...put.map((l) => l + (eol === '\r\n' ? '\r' : '')));
+  } else {
+    const r = eol === '\r\n' ? '\r' : '';
+    if (lines.length && lines[lines.length - 1] === '') lines.pop();
+    lines.push(...(lines.length ? [r] : []), '```' + (lang ?? 'rofl') + r, ...put.map((l) => l + r), '```' + r, '');
+  }
+  const out = lines.join('\n'), now = cellsOf(out).slice(1), want = was.map((c) => ({ kind: c.kind, text: c.text.replace(/\r/g, '') }));
+  want.splice(n - 1, cell ? 1 : 0, { kind: (lang ?? cell?.kind ?? 'rofl') as NbCell['kind'], text: put.join('\n') });
+  const got = now.map((c) => ({ kind: c.kind, text: c.text.replace(/\r/g, '') }));
+  return JSON.stringify(got) === JSON.stringify(want) ? { text: out } : { refused: `the file would not read back as written: ${now.length} cells where ${want.length} were meant, or a cell's text or language moved` };
+}
+
 const HELP = `New here? Play examples/tutorial (6 levels), from examples/tutorial/1-what-ships.rofl.md.
 
 npm run nb -- <file.rofl.md> [--json] [--cell N] [--all] [--format dot|vega-lite]   run a notebook
+npm run nb -- edit <file.rofl.md> --cell N [--lang L]   the new text of cell N on stdin; N one past the last adds a cell.
+                                              The way for a program or an agent to change a notebook: it writes
+                                              the file only if it reads back as written. Never edit a .rofl.md
+                                              with an editor's file tools: VS Code opens it as a notebook.
 npm run nb -- translate <file.rofl.md>        a model answers each natural cell in rofl
 npm run nb -- vocab [<file.rofl.md>] [word]   the sentences a cell can use
 npm run nb -- --help env                      the environment variables
@@ -336,10 +377,19 @@ if (isMain) {
     console.log(v.lines.join('\n'));
     process.exit(v.errors.length ? 2 : 0);
   }
-  const named = argv[0] === 'translate' ? argv[1] : argv.find((a, i) => !a.startsWith('--') && !['--cell', '--format'].includes(argv[i - 1]));
+  const named = argv[0] === 'translate' || argv[0] === 'edit' ? argv[1] : argv.find((a, i) => !a.startsWith('--') && !['--cell', '--format'].includes(argv[i - 1]));
   if (!named) { console.error(`usage: npm run nb -- ${argv[0] === 'translate' ? 'translate ' : ''}<file.rofl.md> (see --help)`); process.exit(2); }
   if (!named.endsWith('.rofl.md')) { console.error(`${named}: not a notebook: a notebook is a .rofl.md file (see --help)`); process.exit(2); }
   if (!existsSync(named)) { console.error(`${named}: no such file`); process.exit(2); }
+  if (argv[0] === 'edit') {
+    const at = (f: string) => argv.indexOf(f) > 0 ? argv[argv.indexOf(f) + 1] : undefined, cell = at('--cell');
+    if (cell === undefined) { console.error('usage: npm run nb -- edit <file.rofl.md> --cell N [--lang L]  (the new text on stdin)'); process.exit(2); }
+    const r = editCell(readFileSync(named, 'utf8'), Number(cell), at('--lang'), readFileSync(0, 'utf8').replace(/\r?\n$/, ''));
+    if ('refused' in r) { console.error(`${named}: not written: ${r.refused}`); process.exit(2); }
+    writeFileSync(`${named}.tmp`, r.text); renameSync(`${named}.tmp`, named);
+    console.log(`${named}: cell ${cell} written`);
+    process.exit(0);
+  }
   if (argv[0] === 'translate') {
     const m = argv.indexOf('--model'), c = choose(m > 0 ? argv[m + 1] : undefined);
     if (c.error || c.refused) { console.error(`${named}: ${c.error ?? c.refused}`); process.exit(2); }

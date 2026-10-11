@@ -256,6 +256,70 @@ impl Eval {
         Ok(moved)
     }
 
+    /// A WORLD OPENED EVALUATED (`crate::image`) holds what the evaluation derived but not what it ranked: the rounds are
+    /// peeled again from the program. What the image does not carry leaves the world to be evaluated again: a program
+    /// ranked only by its data, the cells of a lattice, and the firings a sealed world solves again for `why`.
+    pub fn after_open(&mut self) {
+        if self.store.dirty {
+            return;
+        }
+        self.round_of.clear();
+        if self.rerank().is_err() || !self.restore_lattices() {
+            self.store.dirty = true;
+        } else if self.no_witness {
+            self.restore_cells();
+        }
+    }
+
+    /// A sealed world solves a firing again for `why` and finds each aggregate's cells by correlation, as the
+    /// evaluation listed them (`agg_memo`): the cells the store holds, by the correlation their key carries.
+    fn restore_cells(&mut self) {
+        let mut by: HashMap<(Sym, u32, Box<[Term]>), Vec<(String, CellId)>> = HashMap::new();
+        for c in self.store.live_cells() {
+            let r = self.store.cell(c);
+            let CellOwner::Body { rule, at } = r.owner;
+            let Some(plan) = self.agg_plans.get(&(rule, at)).filter(|p| p.op != AggOp::AtLeast) else { continue };
+            let corr: Box<[Term]> = plan.corr.iter().map(|i| r.key[*i]).collect();
+            let mut k = String::new();
+            self.store.write_cell_key(&self.h, c, &mut k);
+            by.entry((rule, at, corr)).or_default().push((k, c));
+        }
+        for (mk, mut cs) in by {
+            cs.sort_by(|x, y| cmp_js(&x.0, &y.0));
+            self.agg_memo.insert(mk, cs.into_iter().map(|(_, c)| c).collect::<Vec<_>>().into());
+        }
+    }
+
+    /// The cells of the order lattices stand in the store at their values, closed, and the values they replaced stand as ghosts, as the evaluation left them. A
+    /// lattice of dominance or a join keeps more than that, and is not restored.
+    fn restore_lattices(&mut self) -> bool {
+        if !self.subs.is_empty() || self.lattices.values().any(|(_, op)| op.is_join()) {
+            return self.lattices.is_empty();
+        }
+        if !self.lattices.is_empty() {
+            self.store.index_citers();
+        }
+        let lats: Vec<(Sym, usize)> = self.lattices.iter().map(|(r, (n, _))| (*r, *n)).collect();
+        for (rel, n) in lats {
+            for id in self.store.rel_all(&self.h, rel) {
+                if self.store.alive(id) && self.store.arity(id) == n {
+                    let key: Box<[Term]> = self.store.args(id)[..n - 1].into();
+                    self.lat_cur.insert((rel, self.store.rec(id).persp, key), id);
+                }
+            }
+            self.lat_closed.insert(rel);
+        }
+        for id in self.store.firing_keys().into_iter().filter(|id| !self.store.alive(*id)) {
+            let r = self.store.rec(id);
+            if let Some(&(n, _)) = self.lattices.get(&r.rel).filter(|(n, _)| self.store.arity(id) == *n) {
+                self.lat_superseded.insert(id);
+                let key: Box<[Term]> = self.store.args(id)[..n - 1].into();
+                self.lat_history.entry((r.rel, r.persp, key)).or_default().push(id);
+            }
+        }
+        true
+    }
+
     /// WHY AN ADDITION IS NOT WORKED OUT for this world: every reason that holds, in a fixed order (empty where it is).
     fn addition_refusals(&mut self) -> Vec<&'static str> {
         let mut out = Vec::new();
@@ -371,7 +435,7 @@ impl Eval {
                             BodyElem::Pos(l) => front.by_rel.get(&l.rel).map(|k| (i, k.len())),
                             _ => None,
                         }).collect();
-                        if at.iter().any(|&(i, n)| i > 0 && self.delta_pick(r, Some(i), n).is_none()) {
+                        if at.iter().any(|&(i, n)| i > 0 && self.delta_pick(r, Some(i), n).is_none() && !self.plannable(r, i)) {
                             whole.push(r.clone());
                             continue;
                         }
@@ -384,7 +448,7 @@ impl Eval {
                 if whole.is_empty() {
                     return Ok(());
                 }
-                for r in whole.clone() {
+                for r in std::mem::take(&mut whole) {
                     let t = std::time::Instant::now();
                     let f = self.fire_rule(&r, None)?;
                     *self.ns_by_rule.entry(r.id).or_insert(0) += t.elapsed().as_nanos() as u64;
@@ -502,9 +566,22 @@ impl Eval {
             // lost, and what rests on it goes too (a fact of the relation that comes back keeps its record, and so what
             // cites it)
             let here: Vec<Rc<ERule>> = recompute.iter().filter(|r| at_(r)).cloned().collect();
-            let heads: HashSet<Sym> = here.iter().map(|r| r.clause.head.rel).collect();
+            // (an aggregate rule alone withdraws its own firings and fires again: what other rules conclude into its head stands)
+            let (own, wide): (Vec<Rc<ERule>>, Vec<Rc<ERule>>) = here.iter().cloned().partition(|r| r.has_agg && !r.has_thr && r.lattice_outer.is_empty() && !r.demand_strict);
+            let heads: HashSet<Sym> = wide.iter().map(|r| r.clause.head.rel).collect();
             let mut held: HashSet<FactId> = HashSet::new();
-            let mut into: Vec<Rc<ERule>> = Vec::new();
+            let mut into: Vec<Rc<ERule>> = own.clone();
+            for r in &own {
+                for id in self.store.rel_all(&self.h, r.clause.head.rel) {
+                    if self.store.fired_by(id, r.id) {
+                        held.insert(id);
+                        self.withdraw_firings(&[id], |x, _| x == r.id);
+                        if self.store.alive(id) && !self.store.rec(id).base() && self.store.support_count(id) == 0 {
+                            self.store.remove_many(&[id]);
+                        }
+                    }
+                }
+            }
             for h in &heads {
                 for id in self.store.rel_all(&self.h, *h) {
                     held.insert(id);
@@ -873,6 +950,7 @@ impl Eval {
         let holes0 = self.store.rel_count(self.v.hole);
         let active = std::mem::take(&mut self.active);
         let mut ambiguous = false;
+        self.adding = true;
         let r = (|| -> Result<(), Halt> {
             // the part kept, level by level: the news through the rules that read it, the added plain rules whole, and
             // under a negation the firings a new fact blocks withdrawn, what rested on them derived again
@@ -891,6 +969,7 @@ impl Eval {
             }
             Ok(())
         })();
+        self.adding = false;
         self.active = active;
         self.cur_front = Front::default();
         (self.steps, self.rows) = outer;

@@ -3532,15 +3532,15 @@ work_state(w_witnesses_survive_cooling, open).
 
 work(w_a_wall_names_itself_in_the_notebook,
   "rofl-nb over 2-3 real files answers \"at least N answers, cut short\" (exit 3) after about 30 s and ROFL_NB_LIMIT does not change it, because the cut is not the clock (the memory wall, f_a_run_cut_short_said_it_held). The message names which wall cut the run and the setting that raises it. Speed is w_rust_default_backend's.").
-work_state(w_a_wall_names_itself_in_the_notebook, open).
+work_state(w_a_wall_names_itself_in_the_notebook, done).
 
 work(w_reads_is_transitive_or_says_not,
   "QUESTION FOR THE OWNER, then code: a world file's own `reads:` is not followed when another notebook reads it, so every view lists every world. Decide transitive or not; if not, refuse or warn on a read file whose reads are dropped.").
 work_state(w_reads_is_transitive_or_says_not, open).
 
 work(w_rofl_md_survives_agent_editing,
-  "AGENT TOOLS CORRUPT .rofl.md: in VS Code it is a notebook document, so create_file / replace_string_in_file produce empty or shredded files, and edit_notebook_file with language datalog writes a cell without a fence that rofl-nb then reads as prose. A cell's language and fence must round-trip whatever writes it, and the CLI gives agents a safe edit path (rofl nb edit / a cell-level write that validates). ACCEPTANCE: each of the three edits leaves a file rofl-nb reads as written.").
-work_state(w_rofl_md_survives_agent_editing, open).
+  "AGENT TOOLS CORRUPT .rofl.md: in VS Code it is a notebook document, so create_file / replace_string_in_file produce empty or shredded files, and edit_notebook_file with language datalog writes a cell without a fence that rofl-nb then reads as prose. A cell's language and fence must round-trip whatever writes it, and the CLI gives agents a safe edit path (rofl nb edit / a cell-level write that validates). ACCEPTANCE: each of the three edits leaves a file rofl-nb reads as written. DONE 2026-10-11: vscode/serial.ts fences a cell by its kind and language, not by stale metadata (a bare cell turned datalog, a markup cell in datalog, a code cell in an unclaimed language such as plaintext, now fenced and read back; the last as rofl); `npm run nb -- edit F --cell N [--lang L]` (editCell in notebook/cli.ts) writes cell N from stdin, N one past the last adds one, and refuses with the reason, file untouched, when the text would not read back as written (a fence line in the body, an unclosed cell, a cell out of range); CRLF kept. Pinned by vscode/test/roundtrip.ts (agent: create_file, replace_string_in_file and edit_notebook_file cases, and the planted agent-fence). Not reproducible outside VS Code: the editor's own handling of a text-tool write to a notebook-typed file; the answer there is the edit subcommand, CLAUDE.md says so. Open question for the owner: a notebooks `priority: option` in vscode/package.json would open .rofl.md as text by default.").
+work_state(w_rofl_md_survives_agent_editing, done).
 
 work(w_a_refused_cycle_names_itself,
   "\"PROGRAM REJECTED: ROUND N SETTLED NOTHING WHILE <huge predicate list> REMAINED\" gives no hint that the cause is a negation (or aggregate) cycle through one relation. Name the cycle: the relations and the negated or aggregated edge on it (e.g. may_be_node -> resolves -> resolved_site -> unresolved_call -/-> may_be_node), both engines, the same text; examples/checks/unstratifiable.rofl and lsp/test.ts pin the message. DONE 2026-10-09: a stall names the shortest cycle through a strict edge among the stuck relations, in the direction facts flow (`a -> b`: b reads a; `-/->` under a negation, `-agg->` in an aggregate), e.g. `program rejected: nothing on the cycle at -> saw -> knows -> does -/-> at can be settled first: it reads its own conclusion under a negation (-/->) or an aggregate (-agg->)`; stall_cycle in engine.rs and stallCycle in src/aggeval.ts, the same text; pinned by examples/checks/unstratifiable.rofl, asks-refused-cycle.rofl, agg-threshold-strata-2-refused-negated.rofl, lsp/test.ts and examples/npc/demo.ts.").
@@ -3837,6 +3837,7 @@ work_needs(w_add_full_reasons, w_incremental_addition).
 work(w_add_delta_cost,
   "REMAINDER of w_incremental_addition, the measured costs of an addition (f_an_evaluated_world_takes_facts_and_rules_by_delta: mcp x1.7-x3.9, self and cli_exits x1.2-x1.3 for a file of 6% of the corpus). (1) AN AGGREGATE SEALED AGAIN WHOLE: may_be_node and may_be_lit are sealed again at their level for any file; seal again only the groups whose members changed (the retraction's delta_cell by key, the addition's counterpart: a member added to a count or sum, a min or max improved, a holistic group derived again). (2) NEWS AT A PREMISE NO PLAN STARTS FROM: store_answers walks every news row for each partial solution where no index serves the bound arguments (global_ref over 1 120 ident_in rows: 8.3 s against 0.2 s whole); probe the index and filter by the news, or build the pattern, in the engine (it serves a fresh evaluation's rounds too). (3) THE PREPARATION AGAIN for rules (about 1.4 s on mcp: safety.rofl's sub-evaluation over the whole program): prepare only what the added rules change. (4) A DECLARED TREE'S FOREST is built again whole from its edges when an edge is added (linear in the edges of the book; derived facts kept): insert an added leaf without renumbering where the pre-order allows. Each measured on the four corpora, Rust release, before and after.").
 work_state(w_add_delta_cost, open).
+work_spawned(w_add_delta_cost, f_ingest_by_delta_is_exact_and_an_addition_costs_a_few_times_its_share).
 work_needs(w_add_delta_cost, w_incremental_addition).
 
 work(w_one_binary,
@@ -3866,6 +3867,51 @@ work_needs(w_cutoff_agent_usability, w_next_version_cutoff).
 work(w_release_1_1,
   "RELEASE 1.1 (the owner, 2026-10-05: 'as soon as the pre-release work lands, package it into a release and merge; make sure the agent documentation is updated for ALL changes'). PRE-RELEASE (must land first): the [surface] model rewrite + parity world, the surface lint (done), path values (w_concat_value), incremental addition with its review fixes, the volume/surface driver (cool by (volume, book), surface fixpoint, why lifts volumes), a readable why (a one-line chain summary above the proof, negations folded, file:line labels), a shallow vscode measurement with the split; the context prototype on small examples if it fits. NOT in this release: the agent-usability check (the owner checks after the release), host strings into volumes, the deferred knob trim / one binary / edb leftover / full-eval indicator / delta reasons. PACKAGING: (1) agent docs updated for EVERY change since main (origin/main..core-aggregations, ~335+ commits): CLAUDE.md (commands, the agent knob table, Rust is the engine, the owner's principles that bind agents), README map, docs/ (optimising-a-world, data-structures, demand-cones, surface-split, knobs, aggregates incremental section, volumes), a short release notes file listing what changed and what an agent must do differently; npm run docs -- --check clean; (2) version bump (package.json 1.0.5 -> 1.1.0; Cargo crate version as appropriate); (3) the full gates once (breaks, whycheck, cargo test, test:nb shards, test:hosts) green; (4) PR core-aggregations -> main on Disentinel/rofl with the release notes, merge, tag rofl-nb-1.1.0 — the owner authorized the merge and the release for THIS release in these words. PROGRESS 2026-10-06: the volume/surface driver is in (runtime/split.ts, cool by (volume, book), phases for the surface fixpoint, whys lift volumes; f_the_driver_answers_from_core_and_surface_and_the_subscription_closure_is_the_cost) and the shallow vscode measurement with the split is taken at 500 files (answers equal to the whole world; 140x the time, the subscription closure is the cost). The parsers now read \\b, \\f and \\u0000-\\u001f (what the renderer writes): a language-surface change the release notes must name.").
 work_state(w_release_1_1, done).
+
+-- THE PROOF VIEWER (the owner, 2026-10-09: "I definitely need something mature, if it exists").
+work(w_proof_viewer_library,
+  "FIND A VISUALISATION LIBRARY FOR ROFL, mature if one exists, to show a proof graph and the levels of abstraction over it. Start from f_a_proof_graph_reads_when_boxes_are_short_and_edges_are_routed_and_no_viewer_here_does_both: what a reader needs is known (short boxes with the code line, the sentence in a side panel, routed edges that never merge, collapse to an abstraction and open on double click down to the scanner's facts, a stable viewport when a box opens, zoom, pan, full screen, a few hundred boxes open at once and thousands behind them, light and dark). THE CANDIDATES TO MEASURE, not chosen: ELK (elkjs) and Graphviz as layout engines behind a renderer; React Flow / xyflow, Sigma.js, G6 / AntV, yFiles for HTML (commercial, with incremental hierarchic layout), Cytoscape.js with an ELK adapter that keeps ELK's routes, and whatever a search finds. CRITERIA: incremental layout (opening a box must not reshuffle the rest), edge routing, collapsible groups for abstraction levels, licence, size, maintenance. Judge each the way the prototype was judged: the same proof, a reader with no context explains the answers from a screenshot, and the owner looks.").
+work_state(w_proof_viewer_library, open).
+work_spawned(w_proof_viewer_library, f_a_proof_graph_reads_when_boxes_are_short_and_edges_are_routed_and_no_viewer_here_does_both).
+
+-- STAGED EVALUATION, 1.2 (the owner, 2026-10-09: "collect the decisions into a plan and build version 1.2 with this
+-- engine, test the hypotheses"). The account is docs/staged-evaluation.md; each item opens with its hypothesis measured.
+work(w_stage_hypotheses,
+  "DONE 2026-10-09 (f_the_staged_hypotheses_hold_but_the_files_form_one_cycle_that_only_a_thin_delta_crosses): H1, H2, H4 hold, H3 refuted as stated (one file cycle, a thin crossing delta). MEASURE H1-H4 of docs/staged-evaluation.md on vscode subset S before building: the largest SCC of the import graph (H1), the share of derived facts resting on two files on the current model and the derived-to-base ratio (H2), the largest recursive cross-file data-flow component (H3), a mapped kept fact against deriving it (H4). A refuted hypothesis is recorded and changes the order of what follows.").
+work_state(w_stage_hypotheses, done).
+work_spawned(w_stage_hypotheses, f_the_owner_sets_staged_evaluation_as_the_engine_of_1_2).
+
+work(w_derived_as_given,
+  "THE KEYSTONE of staged evaluation: a frozen layer of derived facts is taken as complete, run_pass does not clear it and no rule whose head is in it fires. Proof: a world evaluated in two stages equals the world evaluated whole, byte for byte, on every world of npm test that splits.").
+work_state(w_derived_as_given, open).
+work_needs(w_derived_as_given, w_stage_hypotheses).
+work_spawned(w_derived_as_given, f_an_evaluated_world_kept_on_disk_opens_evaluated_and_takes_the_next_stage_by_delta).
+
+work(w_mapped_volume,
+  "The colfile of rust/storebench into the engine as the frozen base a fork reads: a kept stage or volume is a mapped columnar file, keyed by (program hash, input hashes).").
+work_state(w_mapped_volume, open).
+work_needs(w_mapped_volume, w_derived_as_given).
+
+work(w_resume_after_budget,
+  "A stop by budget keeps the pending delta and the stratum position, and a later evaluation resumes from them to the fixpoint a whole evaluation reaches (H5: the differential of tests/incremental.rs cut at every budget). A negation or aggregate over a relation with pending delta does not run.").
+work_state(w_resume_after_budget, open).
+work_needs(w_resume_after_budget, w_derived_as_given).
+
+work(w_stage_planner,
+  "Plan the evaluation as stages that each fit a stated memory limit (stage, stage_reads, stage_writes, stage_mem as facts, checked by rules); refuse a recursion through a foreign-capable column over an import cycle larger than the limit, naming the rule, the files and the reformulations.").
+work_state(w_stage_planner, open).
+work_needs(w_stage_planner, w_mapped_volume).
+work_needs(w_stage_planner, w_resume_after_budget).
+
+work(w_workers_by_key,
+  "The round's delta split by join key over worker threads, then processes; a stratum boundary is a barrier.").
+work_state(w_workers_by_key, open).
+work_needs(w_workers_by_key, w_stage_planner).
+
+work(w_why_by_file,
+  "The explanation of an absence as a table of files (each: zero, its hash, the program's), a row expanded by lifting one volume.").
+work_state(w_why_by_file, open).
+work_needs(w_why_by_file, w_stage_planner).
 
 work(w_bench_legacy_pilot,
   "A PILOT BENCHMARK, CHEAP AND SIGNIFICANT (the owner, 2026-10-09): does a ROFL model of a project help a weak model (Haiku) answer the questions a team meets in real legacy JS more correctly and more honestly than the same model with grep and file reads? The corpus is what real JS does, NOT what the JS model covers today: where ROFL cannot answer, that is the work list for the engine. CORPUS: 84 small whole projects (code, package.json, Dockerfile or compose, k8s or terraform, nginx, .env) written by a strong model told only to confuse an experienced reviewer as in a real incident, never told of ROFL; 60 single traps spread over 14 families (types and coercion, undefined, scope and this, control flow and errors incl. Express arity and middleware order, async and races: check-then-act across await, a forgotten await, module state shared between requests, event before subscription, TOCTOU; import side effects and load order incl. circular imports, dotenv order, two copies of a package; runtime modification and non-obvious renaming: patched builtins and globals, Proxy, computed names, string events and DI tokens, mixins, re-exports, ORM hooks; aliasing and prototype pollution; dangerous sinks; resources; config and env; infrastructure around the code: 0.0.0.0, open debug port, missing NetworkPolicy, port mismatches, nginx prefix and slash rules, X-Forwarded-For trust, secrets in image layers; dependencies and build; old legacy: Grunt or Gulp concatenation order, global namespaces, AMD and CommonJS mixed) and 24 incident scenarios where 3-5 of them act together across code and infrastructure. About a third of the questions have 'no' or 'cannot tell' as the honest answer. TRUTH NEVER COMES FROM ROFL: a run with a logger on fs, net, child_process and env; a scheduler that enumerates the orders of promises and timers for races; a script over the configs; 'by construction' only where nothing runs, reported apart as weaker. Answers are checked by a script, no LLM judge. ARMS: A Haiku + grep and file reads, B the same + ROFL (?, why, whynot), the model built by the scanner and rules only, no LLM. 5 repeats per question and arm (840 runs), paired: McNemar per question and a bootstrap on the difference; enough to see about 20 points over the whole corpus, a direction only per family. OUTPUT: accuracy per family and per difficulty step A against B; confidently wrong against honest 'cannot tell' per arm; tokens per correct answer; the table of family x what ROFL could not answer. FIRST: the harness and a dry run on one project per family. NEEDS an Anthropic API key where it runs.").

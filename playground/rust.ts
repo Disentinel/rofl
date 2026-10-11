@@ -46,24 +46,36 @@ export class RustEngine implements Engine {
   readonly name = 'rust';
   private call: (req: Record<string, unknown>) => Record<string, any>;
   private core?: { model: string; session: number };
-  private world?: number;
+  private worlds: { base?: number; cells?: number } = {};
 
   constructor(bin: string) { this.call = serve(bin); }
 
   evaluated(_core: Rofl, model: string, code: string, walls: Walls): Rofl {
+    return this.run('base', model, code, [], walls).world;
+  }
+
+  /** The cells' texts loaded beside the code in their own world, the kept base left alone; a text the engine refuses is said in `errors` at its place and left out. */
+  withCells(_core: Rofl, model: string, code: string, texts: string[], walls: Walls): { world: Rofl; errors: string[][] } {
+    return this.run('cells', model, code, texts, walls);
+  }
+
+  private run(slot: 'base' | 'cells', model: string, code: string, texts: string[], walls: Walls): { world: Rofl; errors: string[][] } {
     if (this.core?.model !== model) {
       if (this.core) this.call({ op: 'close', session: this.core.session });
       const s = this.call({ op: 'fresh', ...walls }).session;
       this.call({ op: 'load', session: s, rofl: model });
       this.core = { model, session: s };
     }
-    if (this.world) this.call({ op: 'close', session: this.world });
-    const session = this.world = this.call({ op: 'fork', session: this.core.session }).session;
-    try { this.call({ op: 'assert', session, rofl: code }); } catch (e) { throw new Error(`the code's facts were refused, so nothing was asked: ${(e as Error).message}`); }
+    if (this.worlds[slot]) this.call({ op: 'close', session: this.worlds[slot] });
+    const session = this.worlds[slot] = this.call({ op: 'fork', session: this.core.session }).session;
+    try { if (code) this.call({ op: 'assert', session, rofl: code }); } catch (e) { throw new Error(`the code's facts were refused, so nothing was asked: ${(e as Error).message}`); }
+    const errors: string[][] = texts.map(() => []), all = texts.filter((x) => x.trim()).join('\n');
+    const load = (rofl: string) => { try { this.call({ op: 'load', session, rofl }); return undefined; } catch (e) { return (e as Error).message.replace(/^the Rust engine refused load: /, '').split('\n'); } };
+    if (all.trim() && load(all)) texts.forEach((x, i) => { if (x.trim()) errors[i] = load(x) ?? []; });
     const { partial } = this.call({ op: 'evaluate', session });
-    const b = new Rofl({ space: walls.space, reuse: false });
-    b.store = rustStore((req) => this.call({ ...req, session }), partial);
-    return b;
+    const world = new Rofl({ space: walls.space, reuse: false });
+    world.store = rustStore((req) => this.call({ ...req, session }), partial);
+    return { world, errors };
   }
 }
 

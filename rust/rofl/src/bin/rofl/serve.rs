@@ -29,7 +29,7 @@
 //! 2) and the protocol makes it the obvious one: `open` takes a seed, `fork`
 //! takes a session id.
 //!
-//!   {"op":"open","seedPath":"x.seed.json"}   -> {"ok":true,"session":1,...}
+//!   {"op":"open","seedPath":"x.seed.json"}   -> {"ok":true,"session":1,...}; `keptPath` opens a kept image
 //!     `open` and `fresh` also take the walls a snapshot does not carry:
 //!     `space` (rows), `retainTicks` and `mode` ("rounds" or "strata")
 //!   {"op":"fork","session":1}                -> {"ok":true,"session":2}
@@ -47,6 +47,8 @@
 //!                                                        cells updated by delta, evaluated again if not
 //!   {"op":"tick","session":2}
 //!   {"op":"state","session":2,"path":"out.txt"}
+//!   {"op":"keep","session":2,"path":"w.kept"}  -> {"path":...,"bytes":n}: the world as a kept image; an evaluated
+//!                                                        world opens evaluated (`open` with `keptPath`)
 //!   {"op":"close","session":2}
 //!
 //! THE STORE, READ PIECE BY PIECE, for a host that keeps the world here and reads only what it renders
@@ -239,9 +241,11 @@ impl Server {
             // through a pipe and a JSON string escape when both ends can read a file.
             "open" => {
                 let budget = r.get("budget").and_then(|v| v.as_i64()).unwrap_or(DEFAULT_BUDGET);
-                let p = r.get("seedPath").and_then(|v| v.as_str()).ok_or("open needs `seedPath`")?;
-                let seed = std::fs::read_to_string(p).map_err(|e| format!("{p}: {e}"))?;
-                let mut s = Session::open(&seed, budget)?;
+                let mut s = match (r.get("keptPath").and_then(|v| v.as_str()), r.get("seedPath").and_then(|v| v.as_str())) {
+                    (Some(p), _) => Session::open_kept(&std::fs::read(p).map_err(|e| format!("{p}: {e}"))?, budget)?,
+                    (None, Some(p)) => Session::open(&std::fs::read_to_string(p).map_err(|e| format!("{p}: {e}"))?, budget)?,
+                    _ => return Err("open needs `keptPath` or `seedPath`".into()),
+                };
                 Self::walls(r, &mut s)?;
                 let facts = s.eval.store.fact_count();
                 let dangling = s.dangling;
@@ -423,6 +427,12 @@ impl Server {
             }
             // Written to a path unless the caller insists. See the module note:
             // the whole state is exactly the thing a pipe should not carry.
+            "keep" => {
+                let p = r.get("path").and_then(|v| v.as_str()).ok_or("keep needs `path`")?.to_string();
+                let image = self.get(r)?.keep();
+                std::fs::write(&p, &image).map_err(|e| format!("{p}: {e}"))?;
+                Ok(json!({ "path": p, "bytes": image.len() }))
+            }
             "state" => {
                 let path = r.get("path").and_then(|v| v.as_str()).map(|s| s.to_string());
                 let s = self.get(r)?;

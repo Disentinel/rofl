@@ -409,6 +409,15 @@ impl Funcs {
         self.cons_n = self.funcs.len();
     }
 
+    /// Room for `n` more functors of `n_args` arguments in all, in a table still empty.
+    fn reserve(&mut self, n: usize, n_args: usize) {
+        self.funcs.reserve(n);
+        self.args.reserve(n_args);
+        if self.funcs.is_empty() {
+            self.cons = vec![CONS_EMPTY; ((n + 1) * 4).next_power_of_two()];
+        }
+    }
+
     fn mkf(&mut self, name: Sym, args: &[Term], h: u64) -> u32 {
         if (self.cons_n + 1) * 4 >= self.cons.len() * 3 {
             self.grow();
@@ -443,6 +452,9 @@ impl Heap {
     }
     pub fn var(&mut self, s: &str) -> Term {
         Term::var(self.syms.intern(s))
+    }
+    pub fn reserve_funcs(&mut self, n: usize, n_args: usize) {
+        self.top.reserve(n, n_args);
     }
     pub fn mkf(&mut self, name: Sym, args: &[Term]) -> Term {
         let h = cons_hash(name, args);
