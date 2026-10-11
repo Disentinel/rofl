@@ -37,7 +37,9 @@ export type Line = { kind: Kind; text: string; lit: string; rows: Row[]; total: 
 export type CellOut = { id: string; errors: string[]; notes: string[]; lines: Line[]; rofl?: string; at?: Record<string, number> };
 export type Node = { kind: string; file: string; line: number; label: string };
 /** `unresolved`: a relative import or require that names no file of the code, as `file:line 'spec'`; a never holds only as far as these. */
-export type RunOut = { parseErrors: Record<string, string>; facts: number; ms: number; phases: Record<string, number>; learned: string[]; cells: CellOut[]; nodes: Record<string, Node>; unresolved: string[]; error?: string; /** an evaluation was stopped */ partial?: boolean; /** the model over the code: evaluated by this run, or kept from one before */ model?: 'evaluated' | 'kept' };
+/** A run's stop: true when the clock or the heap says so, and then `cause` says which. `limited`: a limit was asked for by the person. */
+export type Stop = (() => boolean) & { cause?: string; limited?: boolean };
+export type RunOut = { parseErrors: Record<string, string>; facts: number; ms: number; phases: Record<string, number>; learned: string[]; cells: CellOut[]; nodes: Record<string, Node>; unresolved: string[]; error?: string; /** an evaluation was stopped */ partial?: boolean; /** what stopped it and the setting that raises it, in a sentence */ cut?: string; /** the model over the code: evaluated by this run, or kept from one before */ model?: 'evaluated' | 'kept' };
 
 const LITERAL = /^[a-z_]\w*(?:\[\w+\])?\(/;   // a question may also be asked in ROFL
 
@@ -275,7 +277,7 @@ export class Host {
 
   /** `data`: files that exist beside the code and are not code, which a specifier may name.
    *  `stop`: asked as the run's evaluations go; true stops them as when the budget runs out. */
-  run(code: string | Record<string, string>, cells: Cell[], data: string[] = [], stop?: () => boolean): RunOut {
+  run(code: string | Record<string, string>, cells: Cell[], data: string[] = [], stop?: Stop): RunOut {
     const files = typeof code === 'string' ? { [FILE]: code } : code;
     if (!this.core) throw new Error('the model is not loaded');
     for (const w of [this.core, this.shell]) if (w) w.stop = stop;
@@ -370,23 +372,46 @@ export class Host {
       && !over.some((r) => this.kernelRels.has(r))
       && asks.every((as, i) => refused.has(i) || as.every((a) => a.kind !== 'excise' && !this.kernelRels.has(relOf(a.lit))));
     let unresolved: string[] = [], partial = false, model: RunOut['model'];
-    const done = (error?: string): RunOut => ({ parseErrors, facts: facts.length, ms: Math.round(performance.now() - t), phases, learned, cells: outs, nodes, unresolved, error, partial, model });
+    let evaluatedWorld: Rofl | undefined;
+    // a wall of the clock or the heap says itself; the engine's own, the step budget or the space, is the hole its evaluation left
+    const cutBy = (): string | undefined => {
+      if (!partial) return undefined;
+      if (stop?.cause) return stop.cause;
+      let holes: string[] = [];
+      try { holes = (evaluatedWorld ?? base)?.query('hole[$kernel](H, R)').rows.map((r) => r.bindings.R) ?? []; } catch { /* the world could not say */ }
+      return holes.includes('space_exhausted') ? `the space wall of ${SPACE.toLocaleString('en')} rows was reached, the usual mark of a rule that climbs without end; a notebook has no setting that raises it`
+        : holes.includes('budget_exhausted') ? `the step budget of ${BUDGET.toLocaleString('en')} was spent, the usual mark of a rule that climbs without end; a notebook has no setting that raises it` : undefined;
+    };
+    const done = (error?: string): RunOut => ({ parseErrors, facts: facts.length, ms: Math.round(performance.now() - t), phases, learned, cells: outs, nodes, unresolved, error, partial, cut: cutBy(), model });
     let base: Rofl | null = null;
     if (layered) {
-      try { model = this.base ? 'kept' : 'evaluated'; base = this.evaluated(files, sc); partial = base.store.partialEval; } catch (e) { return done((e as Error).message); }
+      try { model = this.base ? 'kept' : 'evaluated'; base = this.evaluated(files, sc, stop?.limited ? typescript : this.engine); partial = base.store.partialEval; } catch (e) { return done((e as Error).message); }
     }
     lap('model');
-    const f = base ? this.shell!.fork() : this.core.fork();
-    const given = base ? copyFacts(base, f, over) : Object.keys(files).length ? f.assert(sc.text) : { ok: true, diagnostics: [] };
-    if (!given.ok) return { parseErrors, facts: facts.length, ms: Math.round(performance.now() - t), phases, learned: [], cells: cells.map((c) => ({ id: c.id, errors: [], notes: [], lines: [] })), nodes, unresolved, error: `the code's facts were refused, so nothing was asked: ${given.diagnostics[0]}` };
-    lap('fork');
-    // one load evaluates the whole model again, so the cells go in together; only when that is refused does each go in alone, to say which
+    // not layered: the engine evaluates the code and the cells together, the TypeScript one where a limit was asked for (a Rust evaluation cannot be stopped)
+    // or a world is forked after (an excise)
     const all = texts.filter((x) => x.trim()).join('\n');
-    if (all.trim() && !f.load(all, { budget: BUDGET }).ok) {
-      texts.forEach((x, i) => { if (!x.trim()) return; const l = f.load(x, { budget: BUDGET }); if (!l.ok) outs[i].errors.push(...l.diagnostics); });
+    let f: Rofl;
+    if (!base) {
+      const eng = stop?.limited || asks.some((as, i) => !refused.has(i) && as.some((a) => a.kind === 'excise')) ? typescript : this.engine;
+      try {
+        const r = eng.withCells(this.core, this.model, Object.keys(files).length ? sc.text : '', texts, { budget: BUDGET, space: SPACE });
+        r.errors.forEach((e, i) => outs[i].errors.push(...e));
+        f = r.world; partial ||= f.store.partialEval;
+      } catch (e) { return done((e as Error).message); }
+      lap('fork'); lap('load');
+    } else {
+      f = this.shell!.fork();
+      const given = copyFacts(base, f, over);
+      if (!given.ok) return { parseErrors, facts: facts.length, ms: Math.round(performance.now() - t), phases, learned: [], cells: cells.map((c) => ({ id: c.id, errors: [], notes: [], lines: [] })), nodes, unresolved, error: `the code's facts were refused, so nothing was asked: ${given.diagnostics[0]}` };
+      lap('fork');
+      if (all.trim() && !f.load(all, { budget: BUDGET }).ok) {
+        texts.forEach((x, i) => { if (!x.trim()) return; const l = f.load(x, { budget: BUDGET }); if (!l.ok) outs[i].errors.push(...l.diagnostics); });
+      }
+      lap('load');
+      try { partial ||= f.evaluate(BUDGET).partial; } catch (e) { return done((e as Error).message); }
     }
-    lap('load');
-    try { partial ||= f.evaluate(BUDGET).partial; } catch (e) { return done((e as Error).message); }
+    evaluatedWorld = f;
     lap('evaluate');
     // a proof reads the cells' facts in their world and the model's in the kept one, so a why walks down into the model without evaluating it again
     const w = base ? proofs(base.store, f.store, heads, this.kernelRels, new Set(over)) : f;
@@ -668,9 +693,9 @@ export class Host {
   }
 
   /** The model evaluated over the code, once per text of the files. */
-  private evaluated(files: Record<string, string>, sc: Scanned): Rofl {
+  private evaluated(files: Record<string, string>, sc: Scanned, engine: Engine): Rofl {
     if (this.base) return this.base;
-    const b = this.engine.evaluated(this.core!, this.model, sc.text, { budget: BUDGET, space: SPACE });
+    const b = engine.evaluated(this.core!, this.model, sc.text, { budget: BUDGET, space: SPACE });
     return b.store.partialEval ? b : this.base = b;   // a world cut short is not kept for the next run
   }
 

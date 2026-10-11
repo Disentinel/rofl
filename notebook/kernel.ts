@@ -1,6 +1,6 @@
 // The notebook kernel: a `.rofl.md` notebook's text and the texts of the files it names in, what every cell said out.
 // No I/O, no printing, no exit: the command line (notebook/cli.ts) and an editor read the files and show the result.
-import { Host, concernsOf, translatorVocab, type Line, type Node, type Row } from '../playground/host.ts';
+import { Host, concernsOf, type Stop, translatorVocab, type Line, type Node, type Row } from '../playground/host.ts';
 import { cellsOf, libFiles, parseFront, translated, type CellKind, type Front } from './front.ts';
 import { asCell, assemble, type Inputs } from './world.ts';
 import { counted, type View } from './draw.ts';
@@ -24,19 +24,19 @@ export type NbCellOut = { index: number; kind: CellKind; line: number; errors: s
  *  `cut`: the wall stopped the run, so what it found is a part and a never that found nothing is not known. */
 export type Status = 'ok' | 'blind' | 'fails' | 'unread' | 'cut';
 /** `unresolved`, only when there is one: the relative imports and requires that name no file of the code, which every never is blind to. */
-export type NbResult = { status: Status; front: Front; cells: NbCellOut[]; errors: string[]; unresolved?: string[]; ms: { load: number; run: number; phases?: Record<string, number>; loaded?: boolean; model?: 'evaluated' | 'kept' } };
+export type NbResult = { status: Status; /** a run cut short: what cut it and the setting that raises it, in a sentence */ cut?: string; front: Front; cells: NbCellOut[]; errors: string[]; unresolved?: string[]; ms: { load: number; run: number; phases?: Record<string, number>; loaded?: boolean; model?: 'evaluated' | 'kept' } };
 
 export class Kernel {
   private host: Host;
   private loaded = '';
   private vocab?: { key: string; sentences: string[] };
   private whole: boolean;
-  private wall?: () => () => boolean;
+  private wall?: () => Stop;
 
   /** `whole`: every run evaluates the model, the code and the cells as one world, never the cells alone over the model kept from the last run. `all`: every answer of a line, not the first fifty.
    *  `wall`: a run's stop, made as the run starts; a run it stops answers what it found and its status is `cut`.
    *  `engine`: what evaluates the model over the code, a host's choice (playground/rust.ts engineOf); the TypeScript engine when none is given. */
-  constructor(opts: { whole?: boolean; all?: boolean; wall?: () => () => boolean; engine?: Engine } = {}) {
+  constructor(opts: { whole?: boolean; all?: boolean; wall?: () => Stop; engine?: Engine } = {}) {
     this.host = new Host(opts.engine); this.whole = !!opts.whole; if (opts.all) this.host.rows = Infinity; this.wall = opts.wall;
   }
   get engine(): EngineName { return this.host.engine.name; }
@@ -96,7 +96,7 @@ export class Kernel {
       }) };
     });
     const status: Status = out.partial ? 'cut' : errors.length || result.some((c) => c.errors.length || c.lines.some((l) => l.verdict === 'unasked')) ? 'unread' : result.some((c) => c.lines.some((l) => l.verdict === 'fails')) ? 'fails' : out.partial || result.some((c) => c.lines.some((l) => l.verdict === 'blind')) ? 'blind' : 'ok';
-    return { status, front, cells: result, errors, ...(out.unresolved.length ? { unresolved: out.unresolved } : {}), ms: { load, run: out.ms, phases: out.phases, loaded, model: out.model } };
+    return { status, front, ...(out.cut && status === 'cut' ? { cut: out.cut } : {}), cells: result, errors, ...(out.unresolved.length ? { unresolved: out.unresolved } : {}), ms: { load, run: out.ms, phases: out.phases, loaded, model: out.model } };
   }
 }
 

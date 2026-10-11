@@ -9,6 +9,8 @@ export interface Engine {
   readonly name: EngineName;
   /** `core`, the model `model` loaded and not evaluated, over the code's facts `code`, evaluated: a world whose store says `partialEval` when it was cut short. */
   evaluated(core: Rofl, model: string, code: string, walls: Walls): Rofl;
+  /** The same with the cells' texts loaded beside the code, in a world of its own; a text the engine refuses is said in `errors` at its place and left out. */
+  withCells(core: Rofl, model: string, code: string, texts: string[], walls: Walls): { world: Rofl; errors: string[][] };
 }
 
 export const typescript: Engine = {
@@ -19,6 +21,17 @@ export const typescript: Engine = {
     if (!given.ok) throw new Error(`the code's facts were refused, so nothing was asked: ${given.diagnostics[0]}`);
     b.evaluate(budget);
     return b;
+  },
+  withCells(core, _model, code, texts, { budget }) {
+    const f = core.fork(), errors: string[][] = texts.map(() => []);
+    if (code) { const given = f.assert(code); if (!given.ok) throw new Error(`the code's facts were refused, so nothing was asked: ${given.diagnostics[0]}`); }
+    // one load evaluates the whole model again, so the cells go in together; only when that is refused does each go in alone, to say which
+    const all = texts.filter((x) => x.trim()).join('\n');
+    if (all.trim() && !f.load(all, { budget }).ok) {
+      texts.forEach((x, i) => { if (!x.trim()) return; const l = f.load(x, { budget }); if (!l.ok) errors[i].push(...l.diagnostics); });
+    }
+    f.evaluate(budget);
+    return { world: f, errors };
   },
 };
 
