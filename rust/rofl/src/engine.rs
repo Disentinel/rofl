@@ -1145,6 +1145,10 @@ pub struct Eval {
     /// A provenanced world no rule reads `derived_by` of writes its rows when
     /// something asks (prov.rs): firings noted, and whether to note them.
     pending_prov: Vec<(FactId, Sym, u32)>,
+    /// The base facts whose `asserted_by` row is not written yet: the fact, who, the tick (prov.rs).
+    pub(crate) pending_assert: Vec<(FactId, Sym, u32)>,
+    /// A rule of the program reads `asserted_by`: a load writes its rows as it asserts.
+    pub(crate) reads_assertions: bool,
     pub lazy_prov: bool,
     /// The relations a rule reads `derived_by` of, whose rows are written as they fire.
     prov_eager: HashSet<Sym>,
@@ -1540,6 +1544,8 @@ impl Eval {
             known_answer: known,
             no_provenance: false,
             pending_prov: Vec::new(),
+            pending_assert: Vec::new(),
+            reads_assertions: false,
             lazy_prov: false,
             prov_eager: HashSet::new(),
             eager_prov: false,
@@ -1802,7 +1808,7 @@ impl Eval {
     }
 
     fn prepare(&mut self) {
-        self.settle_provenance();
+        self.settle_derived();
         self.well_founded = well_founded_declared(&mut self.h, &self.v, &mut self.store);
         self.no_provenance = sealed_bodies(&mut self.h, &self.v, &mut self.store)
             .contains(&self.v.sealed_provenance);
@@ -2018,6 +2024,10 @@ impl Eval {
             }
         }
         self.rules = kept.into_iter().map(Rc::new).collect();
+        self.reads_assertions = self.rules.iter().any(|r| r.clause.body.iter().flat_map(|b| b.lits_deep()).any(|l| l.rel == self.v.asserted_by));
+        if self.reads_assertions {
+            self.settle_assertions();
+        }
         self.demand_rels = demand.iter().map(|(rel, is)| (*rel, is.iter().map(|&i| self.rules[i].clone()).collect())).collect();
         self.demand_closed = self.demand_closed_rels();
         self.demand_rels.clear();
@@ -3872,13 +3882,20 @@ impl Eval {
     /// `asserted_by` names them.
     fn asserted_below(&mut self) -> HashSet<Term> {
         let below = self.h.atom("below");
-        self.store
+        let mut out: HashSet<Term> = self
+            .store
             .rel_persp(&self.h, self.v.asserted_by, self.v.kernel_persp)
             .into_iter()
             .map(|f| self.store.args(f))
             .filter(|a| a.len() == 3 && a[1] == below)
             .map(|a| a[0])
-            .collect()
+            .collect();
+        let noted: Vec<FactId> = self.pending_assert.iter().filter(|n| Term::atom(n.1) == below && self.store.alive(n.0)).map(|n| n.0).collect();
+        for id in noted {
+            let (rec, args) = (self.store.rec(id), self.store.args(id).to_vec());
+            out.insert(fact_term(&mut self.h, &self.v, rec.rel, rec.persp, &args));
+        }
+        out
     }
 
     /// THE NEGATIVE CYCLES of the rules' dependency graph, once per

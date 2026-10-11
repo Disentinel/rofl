@@ -52,9 +52,30 @@ impl Eval {
         }
     }
 
-    /// Write the rows of the firings noted since the last call. Idempotent;
-    /// the world is then as the eager one is, and stays lazy for what fires after.
+    /// Write every row noted and not written, `derived_by` and `asserted_by`. Idempotent; the world is then as the
+    /// eager one is, and stays lazy for what fires and is asserted after.
     pub fn settle_provenance(&mut self) {
+        self.settle_derived();
+        self.settle_assertions();
+    }
+
+    /// The `asserted_by` rows of the base facts asserted since the last call, where no rule reads them: a quarter of
+    /// a code world's stored facts, each naming its fact by a term as large as the fact.
+    pub fn settle_assertions(&mut self) {
+        for (id, who, tick) in std::mem::take(&mut self.pending_assert) {
+            if !self.store.alive(id) {
+                continue;
+            }
+            let rec = self.store.rec(id);
+            let args = self.store.args(id).to_vec();
+            let f = fact_term(&mut self.h, &self.v, rec.rel, rec.persp, &args);
+            let (ab, kp) = (self.v.asserted_by, self.v.kernel_persp);
+            self.store.add(&self.h, ab, kp, &[f, Term::atom(who), Term::int(tick as i64)], F_BASE);
+        }
+    }
+
+    /// Write the `derived_by` rows of the firings noted since the last call.
+    pub fn settle_derived(&mut self) {
         self.vsettle();
         if self.pending_prov.is_empty() {
             return;

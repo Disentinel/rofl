@@ -44,7 +44,7 @@
 use crate::cell::AggOp;
 use crate::engine::{plan_body, plan_elems, plan_order, Eval};
 use crate::reflect::{
-    annotate_aggs, canon_clause, encode_dominance, encode_rule, fact_term, is_kernel_ledger, register_persp,
+    annotate_aggs, canon_clause, encode_dominance, encode_rule, is_kernel_ledger, register_persp,
     resolve_clause_books, sealed_bodies, Agg, BodyElem, Clause, Lit, Temporal, Vocab,
 };
 use crate::rofl_parse::{self, Book, Tense};
@@ -653,6 +653,7 @@ fn add_fact(e: &mut Eval, c: &Clause, who: Option<&str>) {
     let flags = if timeless { F_BASE } else { F_BASE | F_TICK };
     let args = h_.args.clone();
     e.store.add(&e.h, h_.rel, persp, &args, flags);
+    let id = e.store.get(h_.rel, persp, &args).expect("just added");
     if !e.v.is_reserved(h_.rel) {
         let (edb, main, rel) = (e.v.edb, e.v.main, Term::atom(h_.rel));
         e.store.add(&e.h, edb, main, &[rel], F_BASE);
@@ -661,24 +662,17 @@ fn add_fact(e: &mut Eval, c: &Clause, who: Option<&str>) {
     // The tick of the ASSERTION: read now, at the call, never at evaluation.
     // The trail is the kernel's own writing about this call, so it goes in the
     // kernel's book — not in the ledger the fact went to.
-    let withheld = sealed_rels(e);
-    let tick = e.store.tick as i64;
-    let f = fact_term(&mut e.h, &e.v, h_.rel, persp, &args);
-    let wt = {
-        let n = who.unwrap_or("user").to_string();
-        e.h.atom(&n)
-    };
     // ONE ROW, NOT TWO. `in_perspective(f, persp)` stood beside this and was a
     // projection of its own left-hand side — `f` IS `$fact(rel, persp, args)`.
     // 41 722 rows on 16 eslint files, a third of the world, for the second
-    // argument of the term it was keyed by.
-    let meta = [(e.v.asserted_by, vec![f, wt, Term::int(tick)])];
-    for (rel, margs) in meta {
-        if withheld.contains(&rel) {
-            continue;
+    // argument of the term it was keyed by. Noted, and written when something
+    // reads it (prov.rs).
+    if !sealed_rels(e).contains(&e.v.asserted_by) {
+        let who = e.h.intern(who.unwrap_or("user"));
+        e.pending_assert.push((id, who, e.store.tick));
+        if e.reads_assertions {
+            e.settle_assertions();
         }
-        let kp = e.v.kernel_persp;
-        e.store.add(&e.h, rel, kp, &margs, F_BASE);
     }
 
     // THE REFUSAL, WRITTEN DOWN AT THE MOMENT THE DECLARATION ARRIVES. A sealed
