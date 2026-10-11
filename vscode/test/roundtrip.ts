@@ -5,7 +5,7 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync, rmSync, writeFileSync } from 'node:fs';
 import * as path from 'node:path';
 import { cellsOf } from '../../notebook/front.ts';
-import { runFile, wall } from '../../notebook/cli.ts';
+import { editCell, runFile, wall } from '../../notebook/cli.ts';
 import { Kernel } from '../../notebook/kernel.ts';
 import { sentenceSpans } from '../../scripts/read_md.ts';
 import { render, type Run } from '../render.ts';
@@ -90,6 +90,43 @@ function serialChecks(serial: Serial, count: boolean): string[] {
   return bad;
 }
 
+/** The three ways an agent's tools have broken a notebook, each reproduced and each now read back as written. */
+function agent(serial: Serial, edit: typeof editCell): string[] {
+  const bad: string[] = [], same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
+  const kernel = (t: string) => cellsOf(t).slice(1).map((c) => [c.kind, c.text]);
+  const base = '# Cars\n\n```rofl\n? X is on the line\n```\n\nNotes.\n\n```datalog\np(1).\n```\n';
+  // create_file: a file with no bytes, which the cell write fills; the same on a file with CRLF line ends
+  const made = edit('', 1, undefined, '? X is on the line');
+  if (!('text' in made) || !same(kernel(made.text), [['rofl', '? X is on the line']])) bad.push(`create_file: an empty file is not filled by a cell write: ${JSON.stringify(made)}`);
+  const crlf = edit(base.replace(/\n/g, '\r\n'), 2, 'natural', 'two\nlines');
+  if (!('text' in crlf) || !same(kernel(crlf.text.replace(/\r/g, '')), [['rofl', '? X is on the line'], ['natural', 'two\nlines']]) || /[^\r]\n/.test(crlf.text)) bad.push(`create_file: a CRLF notebook is not kept CRLF by a cell write: ${JSON.stringify(crlf)}`);
+  // replace_string_in_file: a replacement that carries a fence, or a cell left open, shreds the cells around it; the text edit does, the cell write refuses and says why
+  const shred = base.replace('p(1).', 'p(1).\n```\nq(2).');
+  if (same(kernel(shred), [['rofl', '? X is on the line'], ['datalog', 'p(1).\n```\nq(2).']])) bad.push('replace_string_in_file: the shredding text edit did not shred; the test proves nothing');
+  const fenced = edit(base, 2, undefined, 'p(1).\n```\nq(2).');
+  if (!('refused' in fenced) || !/starts a fence/.test(fenced.refused)) bad.push(`replace_string_in_file: a body with a fence line was not refused: ${JSON.stringify(fenced)}`);
+  const open = edit('```rofl\n? a\n', 1, undefined, '? b');
+  if (!('refused' in open) || !/not closed/.test(open.refused)) bad.push(`replace_string_in_file: a cell left open was not refused: ${JSON.stringify(open)}`);
+  const mid = edit(base, 1, undefined, '? Y is on the line\n? Z is on the line');
+  if (!('text' in mid) || !same(kernel(mid.text), [['rofl', '? Y is on the line\n? Z is on the line'], ['datalog', 'p(1).']]) || !mid.text.includes('\n\nNotes.\n\n')) bad.push(`replace_string_in_file: a cell write moved something else: ${JSON.stringify(mid)}`);
+  if (!('refused' in edit(base, 4, undefined, 'x'))) bad.push('replace_string_in_file: a cell past the end was written');
+  // edit_notebook_file: the cell it writes is a datalog cell, in whatever kind and with whatever metadata the tool gave it
+  const first = serial.deserialize('# a\n\nA car X is fine if X is on the line.\n\n```rofl\n? x\n```\n').cells;
+  const cases: [string, serial.Cell[]][] = [
+    ['a code cell, language datalog, no metadata', [...first, { kind: serial.CODE, value: 'p(1).', languageId: 'datalog' }]],
+    ['a markup cell, language datalog', [...first, { kind: serial.MARKUP, value: 'p(1).', languageId: 'datalog' }]],
+    ['a bare cell whose language became datalog', [first[0], { ...first[1], languageId: 'datalog' }, first[2]]],
+    ['a fenced cell whose language became natural', [first[0], first[1], { ...first[2], languageId: 'natural' }]],
+    ['a code cell in a language the extension does not claim', [...first, { kind: serial.CODE, value: 'p(1).', languageId: 'plaintext' }]],
+  ];
+  for (const [name, cells] of cases) {
+    const back = serial.deserialize(serial.serialize({ cells, metadata: {} })).cells, last = cells[cells.length - 1], got = back[back.length - 1];
+    const lang = serial.KINDS.includes(last.languageId) ? last.languageId : 'rofl';
+    if (got.kind !== serial.CODE || got.languageId !== lang || got.value !== last.value || got.metadata?.bare) bad.push(`edit_notebook_file: ${name} reads back as ${got.kind === serial.CODE ? got.languageId : 'prose'} ${JSON.stringify(got.value)}, not ${lang} ${JSON.stringify(last.value)}`);
+  }
+  return bad;
+}
+
 /** A run's prose errors and notes, said under the bare cell whose lines they were found on and not in the head. */
 function attribution(serial: Serial, share: Share): string[] {
   const bad: string[] = [], doc = serial.deserialize(ATTRIBUTION);
@@ -120,10 +157,11 @@ function attribution(serial: Serial, share: Share): string[] {
 
 // A plant is a copy beside the file, one line changed; a pattern that no longer matches plants nothing, so it throws.
 const PLANTS: Record<string, [string, RegExp, string, 'serial' | 'share', RegExp]> = {
-  fence: ['vscode/serial.ts', /if \(c\.kind === MARKUP \|\| m\.bare\) \{/, 'if (c.kind === MARKUP) {', 'serial', /not the same bytes/],
+  fence: ['vscode/serial.ts', /: m\.bare && c\.languageId === 'rofl'\)/, ': false)', 'serial', /not the same bytes/],
   regex: ['vscode/serial.ts', /spans = sentenceSpans\(text\);/, "spans = text.split('\\n').flatMap((l, i): [number, number][] => /^- |\\.$/.test(l) ? [[i, i + 1]] : []);", 'serial', /the reader does not read line|reads line .* of a markdown cell/],
   head: ['notebook/kernel.ts', /return k < 0 \? rest : out\[k\];/, 'return rest;', 'share', /is in the head, not under its cell/],
   'english-cut': ['vscode/serial.ts', /spans = sentenceSpans\(text\);/, "spans = sentenceSpans(text).filter(([a, b]) => b - a > 1 || !/\\?$/.test(lines[a]));", 'serial', /an English question .*: cut as/],
+  'agent-fence': ['vscode/serial.ts', /if \(!front && \(c\.kind === MARKUP \? [^\n]*\) \{ at\.push/, 'if (c.kind === MARKUP || m.bare) { at.push', 'serial', /edit_notebook_file/],
   'english-head': ['notebook/kernel.ts', /prose\.lines\.forEach\(\(l\) => to\(l\.line\)\.lines\.push\(l\)\);/, 'prose.lines.forEach((l) => rest.lines.push(l));', 'share', /is not answered under its cell/],
 };
 async function planted(name: string): Promise<string[]> {
@@ -132,12 +170,12 @@ async function planted(name: string): Promise<string[]> {
   writeFileSync(copy, text.replace(at, plant));
   try {
     const mod = await import(copy);
-    return kind === 'serial' ? serialChecks(mod, false) : attribution(await import('../serial.ts'), mod.share);
+    return kind === 'serial' ? name === 'agent-fence' ? agent(mod, editCell) : serialChecks(mod, false) : attribution(await import('../serial.ts'), mod.share);
   } finally { rmSync(copy, { force: true }); }
 }
 
 const t0 = performance.now();
-const bad = [...serialChecks(await import('../serial.ts'), true), ...attribution(await import('../serial.ts'), (await import('../../notebook/kernel.ts')).share)];
+const bad = [...serialChecks(await import('../serial.ts'), true), ...agent(await import('../serial.ts'), editCell), ...attribution(await import('../serial.ts'), (await import('../../notebook/kernel.ts')).share)];
 // a string from the code that reads as a Markdown link is shown as text; the node beside it is still the one link
 const line = { line: 2, kind: 'answers', text: '? S', verdict: 'answers', total: 1, answers: [{ sentence: '[f() at a.js:3] says "[login](https://evil) [go](command:x)"', literal: '', at: [] }] };
 const md = render({ status: 'ok', errors: [], ms: { load: 0, run: 0 }, paths: { 'a.js': '/w/a.js' }, cells: [{ index: 0, kind: 'prose', line: 1, errors: [], notes: [], lines: [] }, { index: 1, kind: 'rofl', line: 1, errors: [], notes: [], lines: [line] }] } as unknown as Run).cells[0].md;
