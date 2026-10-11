@@ -114,5 +114,27 @@ jobs:
             unzip -l dist/*.vsix | grep -q "extension/rofl-nb/bin/rofl" || { echo "the $t VSIX carries no engine"; exit 1; }
             for f in dist/*.vsix; do mv "$f" "vsix/$(basename "$f" .vsix)-$t.vsix"; done
           done
+          node --experimental-strip-types scripts/dist.ts && mv dist/*.tgz vsix/
       - uses: actions/upload-artifact@v4
         with: { name: vsix, path: vsix }
+
+  # A TAG rofl-nb-<version> IS A RELEASE, made only when every gate is green on it:
+  # the engine per platform, a VSIX per platform, the command line's tgz, their
+  # sha256, and docs/releases/<major.minor>.md as the notes.
+  release:
+    if: startsWith(github.ref, 'refs/tags/rofl-nb-')
+    needs: [node, bun, vsix]
+    runs-on: ubuntu-latest
+    permissions: { contents: write }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with: { path: artifacts }
+      - name: publish
+        env: { GH_TOKEN: '${{ github.token }}' }
+        run: |
+          v=${GITHUB_REF_NAME#rofl-nb-}
+          mkdir out && mv artifacts/vsix/* out/
+          for d in artifacts/rofl-*; do t=${d#artifacts/rofl-}; for f in "$d"/*; do b=$(basename "$f"); mv "$f" "out/${b%.exe}-$t${b#rofl}"; done; done
+          (cd out && sha256sum * > SHA256SUMS)
+          gh release create "$GITHUB_REF_NAME" out/* --prerelease --title "ROFL $v (preview)" --notes-file "docs/releases/${v%.*}.md"
