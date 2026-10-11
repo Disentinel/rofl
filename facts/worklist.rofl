@@ -3532,7 +3532,7 @@ work_state(w_witnesses_survive_cooling, open).
 
 work(w_a_wall_names_itself_in_the_notebook,
   "rofl-nb over 2-3 real files answers \"at least N answers, cut short\" (exit 3) after about 30 s and ROFL_NB_LIMIT does not change it, because the cut is not the clock (the memory wall, f_a_run_cut_short_said_it_held). The message names which wall cut the run and the setting that raises it. Speed is w_rust_default_backend's.").
-work_state(w_a_wall_names_itself_in_the_notebook, open).
+work_state(w_a_wall_names_itself_in_the_notebook, done).
 
 work(w_reads_is_transitive_or_says_not,
   "QUESTION FOR THE OWNER, then code: a world file's own `reads:` is not followed when another notebook reads it, so every view lists every world. Decide transitive or not; if not, refuse or warn on a read file whose reads are dropped.").

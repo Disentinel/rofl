@@ -31,7 +31,16 @@ export type Limits = { ROFL_NB_LIMIT?: string; ROFL_NB_MEMORY?: string };
 /** The wall of the limits as set, each read afresh, so a kept kernel (notebook/serve.ts) runs under its caller's and not the ones it started with. */
 export const wallOf = ({ ROFL_NB_LIMIT: limit, ROFL_NB_MEMORY: memory }: Limits) => {
   const ms = Number(limit ?? 120) * 1000, heap = memory ? Number(memory) * 2 ** 30 : 0.8 * getHeapStatistics().heap_size_limit;
-  return () => { const end = performance.now() + ms; return () => performance.now() > end || process.memoryUsage().heapUsed > heap; };
+  return () => {
+    const end = performance.now() + ms;
+    // `limited`: the person set a limit, which only the TypeScript engine can keep (a Rust evaluation is one call that cannot be asked to stop)
+    const stop = Object.assign((): boolean => {
+      if (performance.now() > end) stop.cause = `the clock ran out at ${ms / 1000} s; ROFL_NB_LIMIT=<seconds> raises it`;
+      else if (process.memoryUsage().heapUsed > heap) stop.cause = `the heap passed ${+(heap / 2 ** 30).toFixed(3)} GB; ROFL_NB_MEMORY=<GB> raises it`;
+      return !!stop.cause;
+    }, { cause: undefined as string | undefined, limited: limit !== undefined || memory !== undefined });
+    return stop;
+  };
 };
 export const limits = (): Limits => ({ ROFL_NB_LIMIT: process.env.ROFL_NB_LIMIT, ROFL_NB_MEMORY: process.env.ROFL_NB_MEMORY });
 export const LIMIT = Number(process.env.ROFL_NB_LIMIT ?? 120) * 1000;
@@ -150,7 +159,7 @@ export function tally(r: NbResult): string {
   ].filter(Boolean).join(', ') || (r.cells.length > 1 ? 'nothing asked' : `0 cells: this is a world (facts and rules), not a notebook; a notebook asks in fenced \`\`\`rofl cells`);
   const unparsed = r.errors.flatMap((e) => /^(.*): not parsed: /.exec(e)?.[1] ?? []);
   const failed = r.cells.flatMap((c) => c.lines.filter((l) => l.verdict === 'fails').map((l) => l.line));
-  const why = r.status === 'cut' ? `CUT SHORT at its limit: every count is at least, and no never is known to hold${failed.length ? `; FAILS at ${failed.length === 1 ? 'line' : 'lines'} ${failed.join(', ')}` : ''}`
+  const why = r.status === 'cut' ? `CUT SHORT${r.cut ? ` (${r.cut})` : ' at its limit'}: every count is at least, and no never is known to hold${failed.length ? `; FAILS at ${failed.length === 1 ? 'line' : 'lines'} ${failed.join(', ')}` : ''}`
     : r.status === 'fails' ? `FAILS at ${failed.length === 1 ? 'line' : 'lines'} ${failed.join(', ')}` : r.status === 'unread' ? `not everything was read${unparsed.length ? `: not parsed: ${unparsed.join(', ')}` : ''}`
     : r.status === 'blind' ? 'some invariant holds only as far as the model sees' : '';
   return why ? `${said} — ${why} (exit ${exitOf(r)}; ${HELP_AT})` : r.cells.length > 1 ? said : `${said} (${HELP_AT})`;
