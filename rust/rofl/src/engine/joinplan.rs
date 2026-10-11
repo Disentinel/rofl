@@ -20,7 +20,7 @@
 //! THE ESTIMATE: for a premise, the rows that hold its constants and the
 //! distinct values of the positions already bound, read off the rows
 //! (`Store::probe_stats`, one pass over the rows, cached, recomputed when the
-//! relation has doubled). Matches per binding are rows/distinct; with nothing bound, rows.
+//! relation has doubled, or was empty and is not, or the reverse). Matches per binding are rows/distinct; with nothing bound, rows.
 //! The same model costs the written-order firing (premises before `i` in full;
 //! at `i`, the cheaper of an index narrowing and the news) and the delta-first
 //! one (the news, then the order above), and the delta-first plan is taken for
@@ -90,7 +90,7 @@ const MARGIN: f64 = 1.25;
 const MARGIN_FULL: f64 = 4.0;
 
 fn stale(now: usize, then: usize) -> bool {
-    now >= 2 * then + 32 || 2 * now + 32 <= then
+    now >= 2 * then + 32 || 2 * now + 32 <= then || (now == 0) != (then == 0)
 }
 
 impl Eval {
@@ -301,6 +301,21 @@ impl Eval {
         }
 
         // the delta-first order
+        let (order, unit) = self.greedy_order(r, news.map(|_| i), &[], &[])?;
+        let body: Vec<BodyElem> = order.iter().map(|&j| plan[j].clone()).collect();
+        Some(DeltaPlan { body: Rc::from(body), perm: order, unit, pre, cur, fan: fan_i, rows_i: size_i, tail, watch })
+    }
+
+    /// THE GREEDY ORDER of `r`'s plan, its positions `skip` left out: from the news premise `start`, or from the
+    /// variables `pre` bound before the body, the premise with the fewest estimated matches for what is bound, a
+    /// negation once what it shares is bound; and the estimated cost per start. None where a premise cannot be placed.
+    fn greedy_order(&mut self, r: &Rc<ERule>, start: Option<usize>, pre: &[Sym], skip: &[usize]) -> Option<(Vec<usize>, f64)> {
+        let plan = &r.plan;
+        let vars_of = |h: &Heap, b: &BodyElem| {
+            let mut v = Vec::new();
+            b.vars(h, &mut v);
+            v
+        };
         let mut head_vars = Vec::new();
         for a in &r.clause.head.args {
             self.h.vars_of(*a, &mut head_vars);
@@ -310,7 +325,7 @@ impl Eval {
         let needs: Vec<Vec<Vec<Sym>>> = plan.iter().map(|b| self.bi_needs(b)).collect();
         let ready = |j: usize, bound: &Vec<Sym>| -> bool {
             all_vars[j].iter().all(|v| {
-                bound.contains(v) || (!head_vars.contains(v) && all_vars.iter().enumerate().all(|(k, vs)| k == j || !vs.contains(v)))
+                bound.contains(v) || (!head_vars.contains(v) && all_vars.iter().enumerate().all(|(k, vs)| k == j || skip.contains(&k) || !vs.contains(v)))
             })
         };
         // A PERSPECTIVE VARIABLE does not range over the kernel's books while
@@ -343,17 +358,19 @@ impl Eval {
             matches!(plan[j], BodyElem::Neg(_))
                 || !rest.iter().any(|&k| k != j && matches!(vp[k], Some((p, false)) if all_vars[j].contains(&p)) && brk!("delta_first_persp" => false; true))
         };
-        let mut bound: Vec<Sym> = Vec::new();
+        let mut bound: Vec<Sym> = pre.to_vec();
         let mut order: Vec<usize> = Vec::new();
-        let mut rest: Vec<usize> = (0..plan.len()).collect();
+        let mut rest: Vec<usize> = (0..plan.len()).filter(|j| !skip.contains(j)).collect();
         let (mut unit, mut cur_d) = (0.0f64, 1.0f64);
-        if let Some(l) = news {
-            rest.remove(i);
+        if let Some(i) = start {
+            let BodyElem::Pos(l) = &plan[i] else { return None };
+            rest.retain(|&j| j != i);
             if !placeable(i, &[], &rest) {
                 return None;
             }
             bound = all_vars[i].clone();
             order.push(i);
+            let size_i = self.len_est(l.rel, l.persp.as_atom()).max(1) as f64;
             let st0 = self.delta_stat(l, &[]);
             let sel = if st0.rows == 0.0 { 0.0 } else { (st0.rows / size_i).min(1.0) };
             (unit, cur_d) = (1.0, sel);
@@ -375,18 +392,20 @@ impl Eval {
                     }
                 }
             }
-            let mut best: Option<(usize, f64)> = None;
+            // (of two as cheap, the one that shares a bound variable: a filter, not a cross product)
+            let mut best: Option<(usize, f64, bool)> = None;
             for (at, &j) in rest.iter().enumerate() {
                 let BodyElem::Pos(l) = &plan[j] else { continue };
                 if !placeable(j, &bound, &rest) {
                     continue;
                 }
                 let st = self.delta_stat(l, &bound);
-                if best.is_none_or(|(_, f)| st.fan < f) {
-                    best = Some((at, st.fan));
+                let joined = all_vars[j].iter().any(|v| bound.contains(v));
+                if best.is_none_or(|(_, f, b)| st.fan < f || (st.fan == f && joined && !b)) {
+                    best = Some((at, st.fan, joined));
                 }
             }
-            let Some((at, fan)) = best else { break };
+            let Some((at, fan, _)) = best else { break };
             let j = rest.remove(at);
             unit += cur_d * (1.0 + fan);
             cur_d = (cur_d * fan).min(1e15);
@@ -400,8 +419,36 @@ impl Eval {
         if !rest.is_empty() {
             return None;
         }
-        let body: Vec<BodyElem> = order.iter().map(|&j| plan[j].clone()).collect();
-        Some(DeltaPlan { body: Rc::from(body), perm: order, unit, pre, cur, fan: fan_i, rows_i: size_i, tail, watch })
+        Some((order, unit))
+    }
+
+    /// The greedy order of `r`'s premises at `keep` (positions of its plan, ascending) from the variables `pre`, where
+    /// the rule takes one.
+    pub(super) fn bound_order(&mut self, r: &Rc<ERule>, keep: &[usize], pre: &[Sym]) -> Option<Vec<usize>> {
+        let skip: Vec<usize> = (0..r.plan.len()).filter(|j| !keep.contains(j)).collect();
+        if !self.delta_eligible(r) {
+            return None;
+        }
+        self.greedy_order(r, None, pre, &skip).map(|(o, _)| o)
+    }
+
+    /// `r`'s premises at `keep` solved from each of `seeds`: in `order` (`bound_order`), else as written; each solution's premises
+    /// put back in the order of `keep`, as the written order would have found them.
+    pub(super) fn solve_bound(&mut self, r: &Rc<ERule>, keep: &[usize], order: Option<&[usize]>, seeds: Vec<Subst>) -> Result<Vec<Sol>, Halt> {
+        let Some(o) = order else {
+            let plan: Vec<BodyElem> = keep.iter().map(|&j| r.plan[j].clone()).collect();
+            return self.solve_seeds_as(r, &plan, seeds);
+        };
+        let body: Vec<BodyElem> = o.iter().map(|&j| r.plan[j].clone()).collect();
+        let mut sols = self.solve_seeds_as(r, &body, seeds)?;
+        for sol in &mut sols {
+            let mut prems = sol.prems.clone();
+            for (k, j) in o.iter().enumerate() {
+                prems[keep.binary_search(j).unwrap()] = sol.prems[k];
+            }
+            sol.prems = prems;
+        }
+        Ok(sols)
     }
 
     /// `r` fired by `p`: on the news `keys` of the premise the plan starts

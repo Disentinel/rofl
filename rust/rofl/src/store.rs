@@ -2079,6 +2079,16 @@ impl Store {
         out
     }
 
+    /// Is the citer index kept (`track_citers`, `index_citers`)?
+    pub fn has_citers(&self) -> bool {
+        self.citers.is_some()
+    }
+
+    /// The facts the citer index says cite `of`: a superset (a firing withdrawn since stays listed).
+    pub fn citers_one(&self, of: FactId) -> Vec<FactId> {
+        self.citers.as_ref().and_then(|ix| ix.get(&of)).cloned().unwrap_or_default()
+    }
+
     /// The facts with a firing that cites one of `of`, from the citer index.
     pub fn citers_of(&self, of: &HashSet<FactId>) -> Vec<FactId> {
         let Some(ix) = &self.citers else { return Vec::new() };

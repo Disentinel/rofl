@@ -682,6 +682,8 @@ pub struct Eval {
     /// An addition is solving: a builtin may be planned after the premises written before it (it holds no hole,
     /// or the world is evaluated again).
     adding: bool,
+    /// The facts an addition made new (`add_fresh` in the fine path), where it knows them: a promise is checked on them.
+    add_fresh: Option<Vec<FactId>>,
     pub delta_ns: u64,
     delta_plans: HashMap<(Sym, usize), joinplan::Slot>,
     delta_stats: HashMap<Vec<u64>, (usize, usize, usize)>,
@@ -1326,6 +1328,7 @@ impl Eval {
             delta_ns: 0,
             plan_trial: false,
             adding: false,
+            add_fresh: None,
             delta_plans: HashMap::new(),
             delta_stats: HashMap::new(),
             functions: Vec::new(),
@@ -3095,6 +3098,83 @@ impl Eval {
         })
     }
 
+    /// The promises checked after an addition: on the facts it made new where it knows them (a key a new row shares
+    /// with another, a child given a second parent or an edge that closes a cycle), the whole check where one may be
+    /// broken or it does not know them, which names the break.
+    pub fn check_promises_added(&mut self) -> Result<(), Halt> {
+        match self.add_fresh.take() {
+            Some(ids) if !cfg!(feature = "breaks") && self.promises_hold_at(&ids) => {
+                self.promise_broken = None;
+                Ok(())
+            }
+            _ => self.check_promises(),
+        }
+    }
+
+    fn promises_hold_at(&mut self, ids: &[FactId]) -> bool {
+        let functions = self.functions.clone();
+        for f in &functions {
+            let n = f.key.len() + f.to.len();
+            for &id in ids {
+                let rec = self.store.rec(id);
+                if rec.rel != f.rel || !self.store.alive(id) || self.store.arity(id) != n {
+                    continue;
+                }
+                let a = self.store.args(id).to_vec();
+                let vals: Vec<Term> = f.key.iter().map(|i| a[*i]).collect();
+                let Some(same) = self.rows_at(f.rel, rec.persp, n, &f.key, &vals) else { return false };
+                if same.iter().any(|&o| o != id && self.store.alive(o) && f.to.iter().any(|i| self.store.args(o)[*i] != a[*i])) {
+                    return false;
+                }
+            }
+        }
+        let trees: Vec<Sym> = self.trees.iter().map(|t| t.rel).collect();
+        for rel in trees {
+            let mut rooted: FxSet<(Sym, u64)> = FxSet::default();
+            for &id in ids {
+                let rec = self.store.rec(id);
+                if rec.rel != rel || !self.store.alive(id) {
+                    continue;
+                }
+                let &[p, c] = self.store.args(id) else { continue };
+                let parents = |e: &mut Eval, t: Term| -> Option<Vec<FactId>> { e.rows_at(rel, rec.persp, 2, &[1], &[t]) };
+                if parents(self, c).is_none_or(|ps| ps.len() != 1) {
+                    return false;
+                }
+                // the edge closes a cycle where its parent's chain comes back to a node of it (each node has one parent
+                // here); a chain that reaches a root, or a node known to, is noted so
+                let mut path: FxSet<u64> = FxSet::default();
+                let mut x = p;
+                loop {
+                    if rooted.contains(&(rec.persp, x.bits())) {
+                        break;
+                    }
+                    if !path.insert(x.bits()) || x == c {
+                        return false;
+                    }
+                    match parents(self, x).as_deref() {
+                        Some([]) => break,
+                        Some([e]) => x = self.store.args(*e)[0],
+                        _ => return false,
+                    }
+                }
+                rooted.extend(path.into_iter().map(|b| (rec.persp, b)));
+            }
+        }
+        true
+    }
+
+    /// The live rows of `rel` in `persp` of arity `n` with `vals` at `pos`: from the index, or read whole where the
+    /// relation is too small to have one; None where it is large and not indexed so.
+    fn rows_at(&mut self, rel: Sym, persp: Sym, n: usize, pos: &[usize], vals: &[Term]) -> Option<Vec<FactId>> {
+        let rows = match self.store.arg_matches(&self.h, rel, Some(persp), n, pos, vals) {
+            Some(rows) => rows,
+            None if self.store.rel_len_est(rel, Some(persp)) <= 256 => self.store.rel_persp(&self.h, rel, persp),
+            None => return None,
+        };
+        Some(rows.into_iter().filter(|&o| self.store.alive(o) && self.store.arity(o) == n && pos.iter().zip(vals).all(|(i, v)| self.store.args(o)[*i] == *v)).collect())
+    }
+
     /// THE SHRUG MODEL, set up for one evaluation (docs/aggregates.md,
     /// "Shrugs, as built"). A literal holds, is unentailed, or is a shrug. What
     /// a hole leaves out is a shrug, and so is `unknown(A)` read of it: the
@@ -4451,7 +4531,14 @@ impl Eval {
                     }
                     // a closure answered from its tree has no news of its own: news of its edges fires a reader whole
                     if !brk!("vclosure_reader_stale" => true; false) && self.vreader_due(r, cur) {
-                        let f = self.fire_rule(r, None)?;
+                        // (an addition fires it on the rows the new edges make)
+                        let f = if self.adding && !r.has_agg && !r.has_thr && r.lattice_outer.is_empty() && !r.demand_strict {
+                            let f = self.vfire_news(r, cur)?;
+                            self.vreader_fired(r);
+                            f
+                        } else {
+                            self.fire_rule(r, None)?
+                        };
                         merge_front(&mut self.cur_front, f);
                     }
                 }
@@ -4921,10 +5008,19 @@ impl Eval {
         front_at: Option<(usize, &FxSet<FactId>)>,
         rule_id: Option<Sym>,
     ) -> Result<Vec<Sol>, Halt> {
-        let mut acc: Vec<Sol> = vec![Sol {
-            s: s0,
-            prems: Vec::new(),
-        }];
+        self.solve_body_seeds(body, vec![s0], depth, front_at, rule_id)
+    }
+
+    /// `solve_body` from each of `seeds`, the solutions in the order of the seeds.
+    fn solve_body_seeds(
+        &mut self,
+        body: &[BodyElem],
+        seeds: Vec<Subst>,
+        depth: usize,
+        front_at: Option<(usize, &FxSet<FactId>)>,
+        rule_id: Option<Sym>,
+    ) -> Result<Vec<Sol>, Halt> {
+        let mut acc: Vec<Sol> = seeds.into_iter().map(|s| Sol { s, prems: Vec::new() }).collect();
         let mut held: i64 = 0;
         let res = (|| -> Result<Vec<Sol>, Halt> {
             for (i, b) in body.iter().enumerate() {

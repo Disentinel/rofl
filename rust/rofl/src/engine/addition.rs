@@ -386,13 +386,30 @@ impl Eval {
     }
 
     /// `plan` solved as rule `r` solves its body, from `s0`.
-    fn solve_as(&mut self, r: &ERule, plan: &[BodyElem], s0: Subst) -> Result<Vec<Sol>, Halt> {
+    pub(super) fn solve_as(&mut self, r: &ERule, plan: &[BodyElem], s0: Subst) -> Result<Vec<Sol>, Halt> {
+        self.solve_seeds_as(r, plan, vec![s0])
+    }
+
+    /// `solve_as` from each of `seeds`, the solutions in the order of the seeds.
+    pub(super) fn solve_seeds_as(&mut self, r: &ERule, plan: &[BodyElem], seeds: Vec<Subst>) -> Result<Vec<Sol>, Halt> {
         let outer = self.cur_rule.replace(r.id);
         let was = std::mem::replace(&mut self.firing, true);
-        let sols = self.solve_body(plan, s0, 0, None, Some(r.id));
+        let sols = self.solve_body_seeds(plan, seeds, 0, None, Some(r.id));
         self.firing = was;
         self.cur_rule = outer;
         sols
+    }
+
+    /// The variables a fact binds in a negated premise of the fine path (`bind_neg`).
+    fn neg_vars(&self, n: &NegAt) -> Vec<Sym> {
+        let mut vs = Vec::new();
+        for k in &n.binds {
+            self.h.vars_of(n.lit.args[*k], &mut vs);
+        }
+        if n.persp {
+            self.h.vars_of(n.lit.persp, &mut vs);
+        }
+        vs
     }
 
     /// The bindings a fact gives a negated premise of the fine path, where it matches the premise's pattern.
@@ -467,7 +484,7 @@ impl Eval {
     /// DRed's overdeletion: each of `seeds` (which lost a firing, and may have gone with it) goes whole, and so does
     /// every fact with a firing that cites one gone, through each other; a base fact stays and loses its firings, to
     /// be given them again.
-    fn overdelete(&mut self, mut seeds: Vec<FactId>, cm: &HashMap<FactId, Vec<FactId>>, over: &mut HashSet<FactId>, over_base: &mut HashSet<FactId>, d: &mut AddDelta) {
+    fn overdelete(&mut self, mut seeds: Vec<FactId>, over: &mut HashSet<FactId>, over_base: &mut HashSet<FactId>, d: &mut AddDelta) {
         let lost: HashSet<FactId> = seeds.iter().copied().collect();
         while let Some(x) = seeds.pop() {
             if over.contains(&x) || over_base.contains(&x) {
@@ -487,10 +504,10 @@ impl Eval {
             }
             over.insert(x);
             d.overdeleted += 1;
-            // (the citers were read before the addition: one made again since cites what holds now, or nothing gone)
-            for y in cm.get(&x).into_iter().flatten() {
-                if self.store.alive(*y) && !over.contains(y) && brk!("add_stale_citer_followed" => true; self.store.firings(*y).iter().any(|(_, _, ps)| ps.contains(&PremRef::Fact(x)))) {
-                    seeds.push(*y);
+            // (the index lists a firing withdrawn since: a citer is followed where a firing of it still cites the fact)
+            for y in self.store.citers_one(x) {
+                if self.store.alive(y) && !over.contains(&y) && brk!("add_stale_citer_followed" => true; self.store.firings(y).iter().any(|(_, _, ps)| ps.contains(&PremRef::Fact(x)))) {
+                    seeds.push(y);
                 }
             }
         }
@@ -511,7 +528,10 @@ impl Eval {
         for r in self.rules.iter().filter(|r| r.clause.head.temporal != Temporal::Next && r.safe && !skip.contains(&r.id)) {
             by_head.entry(r.clause.head.rel).or_default().push(r.clone());
         }
-        let cm = if negs.is_empty() && recompute.is_empty() { HashMap::new() } else { self.citer_map() };
+        // the citer index, made once and kept by every firing added since
+        if !(negs.is_empty() && recompute.is_empty()) && !self.store.has_citers() {
+            self.store.index_citers();
+        }
         let mut news = Front::default();
         for f in added {
             news.note(self.store.rec(*f).rel, *f);
@@ -533,34 +553,34 @@ impl Eval {
                 if dropped.is_empty() {
                     continue;
                 }
-                let plan: Vec<BodyElem> = r.plan.iter().enumerate().filter(|(i, _)| !dropped.contains(i)).map(|(_, b)| b.clone()).collect();
+                let keep: Vec<usize> = (0..r.plan.len()).filter(|i| !dropped.contains(i)).collect();
                 for n in ns.iter().filter(|n| dropped.contains(&n.at)) {
                     let mut blockers: Vec<FactId> = news.by_rel[&n.lit.rel].iter().copied().collect();
                     blockers.sort_unstable();
-                    for g in blockers {
-                        let Some(s0) = self.bind_neg(n, g) else { continue };
-                        for sol in self.solve_as(r, &plan, s0)? {
-                            let mut prems = sol.prems.clone();
-                            for j in &dropped {
-                                let BodyElem::Neg(l) = &r.plan[*j] else { unreachable!() };
-                                let k = self.anon_lit_key(l, &sol.s);
-                                prems.insert(*j, PremRef::Neg(self.h.intern(&k)));
-                            }
-                            let head = &r.clause.head;
-                            let persp = walk(&self.h, head.persp, &sol.s);
-                            let args: Vec<Term> = head.args.iter().map(|a| resolve(&mut self.h, *a, &sol.s)).collect();
-                            let Some(id) = persp.as_atom().and_then(|p| self.store.get(head.rel, p, &args)) else { continue };
-                            if self.store.firings(id).iter().any(|(x, _, ps)| *x == r.id && *ps == prems) {
-                                self.withdraw_firings(&[id], |x, ps| x == r.id && ps == prems.as_slice());
-                                seeds.push(id);
-                            }
+                    let pre = self.neg_vars(n);
+                    let order = self.bound_order(r, &keep, &pre);
+                    let starts: Vec<Subst> = blockers.into_iter().filter_map(|g| self.bind_neg(n, g)).collect();
+                    for sol in self.solve_bound(r, &keep, order.as_deref(), starts)? {
+                        let mut prems = sol.prems.clone();
+                        for j in &dropped {
+                            let BodyElem::Neg(l) = &r.plan[*j] else { unreachable!() };
+                            let k = self.anon_lit_key(l, &sol.s);
+                            prems.insert(*j, PremRef::Neg(self.h.intern(&k)));
+                        }
+                        let head = &r.clause.head;
+                        let persp = walk(&self.h, head.persp, &sol.s);
+                        let args: Vec<Term> = head.args.iter().map(|a| resolve(&mut self.h, *a, &sol.s)).collect();
+                        let Some(id) = persp.as_atom().and_then(|p| self.store.get(head.rel, p, &args)) else { continue };
+                        if self.store.firings(id).iter().any(|(x, _, ps)| *x == r.id && *ps == prems) {
+                            self.withdraw_firings(&[id], |x, ps| x == r.id && ps == prems.as_slice());
+                            seeds.push(id);
                         }
                     }
                 }
             }
             // what lost a firing goes whole (it may have gone with that firing already), and what rests on it, through
             // each other
-            self.overdelete(seeds, &cm, &mut over, &mut over_base, d);
+            self.overdelete(seeds, &mut over, &mut over_base, d);
             // A RELATION A RESET RULE CONCLUDES IS DERIVED AGAIN WHOLE at its level (its cells sealed again): its facts go,
             // and every rule into it fires again over what holds; a fact that does not come back at once is taken as
             // lost, and what rests on it goes too (a fact of the relation that comes back keeps its record, and so what
@@ -616,7 +636,7 @@ impl Eval {
                     }
                 }
                 let lost: Vec<FactId> = held.iter().copied().filter(|id| !self.store.alive(*id)).collect();
-                self.overdelete(lost, &cm, &mut over, &mut over_base, d);
+                self.overdelete(lost, &mut over, &mut over_base, d);
             }
             self.store.arrivals = Some(Vec::new());
             let r = (|| -> Result<(), Halt> {
@@ -627,6 +647,7 @@ impl Eval {
                 }).collect();
                 again.sort_unstable();
                 let mut out = Front::default();
+                let mut orders: HashMap<Sym, Option<Vec<usize>>> = HashMap::new();
                 for x in again {
                     let (rel, persp) = (self.store.rec(x).rel, self.store.rec(x).persp);
                     let args = self.store.args(x).to_vec();
@@ -637,7 +658,16 @@ impl Eval {
                             s0 = s0.and_then(|s| unify(&self.h, *a, *b, &s));
                         }
                         let Some(s0) = s0.filter(|_| r.clause.head.args.len() == args.len()) else { continue };
-                        for sol in self.solve_as(&r, &r.plan, s0)? {
+                        let all: Vec<usize> = (0..r.plan.len()).collect();
+                        if !orders.contains_key(&r.id) {
+                            let mut pre = Vec::new();
+                            for a in r.clause.head.args.iter().chain([&r.clause.head.persp]) {
+                                self.h.vars_of(*a, &mut pre);
+                            }
+                            let o = self.bound_order(&r, &all, &pre);
+                            orders.insert(r.id, o);
+                        }
+                        for sol in self.solve_bound(&r, &all, orders[&r.id].clone().as_deref(), vec![s0])? {
                             self.conclude(&r, sol, &mut out)?;
                         }
                     }
@@ -647,11 +677,11 @@ impl Eval {
                     for n in ns {
                         let mut freed: Vec<FactId> = gone.get(&n.lit.rel).cloned().unwrap_or_default();
                         freed.sort_unstable();
-                        for g in freed {
-                            let Some(s0) = self.bind_neg(n, g) else { continue };
-                            for sol in self.solve_as(r, &r.plan, s0)? {
-                                self.conclude(r, sol, &mut out)?;
-                            }
+                        let (pre, all) = (self.neg_vars(n), (0..r.plan.len()).collect::<Vec<usize>>());
+                        let order = self.bound_order(r, &all, &pre);
+                        let seeds: Vec<Subst> = freed.into_iter().filter_map(|g| self.bind_neg(n, g)).collect();
+                        for sol in self.solve_bound(r, &all, order.as_deref(), seeds)? {
+                            self.conclude(r, sol, &mut out)?;
                         }
                     }
                 }
@@ -691,6 +721,8 @@ impl Eval {
                 }
             }
         }
+        // (a threshold closed after the levels makes facts the news does not hold)
+        self.add_fresh = self.thr_open.is_empty().then(|| news.keys.iter().copied().collect());
         while !self.thr_open.is_empty() {
             let open = self.thr_open.len();
             self.close_thresholds_below(i64::MAX, true)?;
@@ -951,6 +983,7 @@ impl Eval {
         let active = std::mem::take(&mut self.active);
         let mut ambiguous = false;
         self.adding = true;
+        self.add_fresh = None;
         let r = (|| -> Result<(), Halt> {
             // the part kept, level by level: the news through the rules that read it, the added plain rules whole, and
             // under a negation the firings a new fact blocks withdrawn, what rested on them derived again
@@ -959,6 +992,9 @@ impl Eval {
             self.active.clear();
             // the rest, as a full evaluation fires it
             self.refire(&again, &[])?;
+            if !again.is_empty() || !staged.is_empty() {
+                self.add_fresh = None;
+            }
             let mut rd = Delta::default();
             ambiguous = self.restage(&staged, &mut rd)?;
             if self.store.rel_count(self.v.hole) > holes0 || !self.lat_pending.is_empty() {
