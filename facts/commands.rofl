@@ -90,6 +90,9 @@ command_note("structures", "`-- [--min-rows N] <files>`   the detection report: 
 command_shown("test:split", 22).
 command_note("test:split", "the surface-split parity gate (docs/surface-split.md): each file of examples/vscode/mini and split alone with the others' [surface] facts must equal the whole world fact for fact, forward and reverse, Rust then TypeScript; run it after touching a rule of rules/js-*.rofl that reads across files, and `scripts/surface_split.ts --break naive` (or `nosurface`) must be red").
 
+command_shown("bench", 23).
+command_note("bench", "`[-- --write]`   the reference benchmark: vscode at a pinned commit, the side-effect question, the median of three runs of each measure (the cone and the witnessed world at 250 files, adding a file and opening a kept world at 20) on the Rust release build, against the last version in facts/bench.rofl; `--write` appends this version's medians there. Run it on a quiet machine before a release").
+
 -- ====================================================================
 -- THE KNOBS AN AGENT MAY USE. Only the KEEP knobs of docs/knobs.md that a working session needs;
 -- the rest (oracles of the check harness, measurement leftovers, the second spelling of a flag)
