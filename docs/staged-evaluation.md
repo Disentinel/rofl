@@ -109,7 +109,9 @@ from the store.
    `f_a_world_kept_as_a_volume_opens_mapped_in_a_fifteenth_of_the_time`). Left: a write below the mark copies a
    whole mapped arena.
 3. **Resume** (decision 4, H5). Built for the plain path: `Session::resume`
-   (`f_a_step_wall_in_the_plain_path_is_a_continuation`).
+   (`f_a_step_wall_in_the_plain_path_is_a_continuation`). The place it stopped is kept in the volume, so another
+   process opens it and goes on: `scripts/vscode_pieces.ts` evaluates vscode in pieces of a fixed time, each its own
+   process, to the same state (`f_an_evaluation_goes_on_in_another_process_from_its_volume`).
 4. **The planner and its refusal** (decisions 3 and 6, H1, H3).
 5. **Workers by key** (decision 7).
 6. **The explanation by file**: the why of an absence as a table of files, each row expanded by lifting one volume.

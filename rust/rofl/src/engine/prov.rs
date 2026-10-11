@@ -108,3 +108,26 @@ impl Eval {
         self.pending_prov.len()
     }
 }
+
+fn triples(ns: &[(FactId, Sym, u32)]) -> Vec<u32> {
+    ns.iter().flat_map(|&(f, r, t)| [f, r, t]).collect()
+}
+
+fn read_triples(r: &mut crate::arena::VolR) -> Result<Vec<(FactId, Sym, u32)>, String> {
+    Ok(r.arena::<u32>()?.chunks_exact(3).map(|x| (x[0], x[1], x[2])).collect())
+}
+
+impl Eval {
+    /// The rows noted and not written, as a volume keeps them: the opened world writes them when asked, as this one
+    /// would, and keeping writes none.
+    pub(crate) fn write_notes(&self, w: &mut crate::arena::VolW) {
+        w.arena(&triples(&self.pending_prov));
+        w.arena(&triples(&self.pending_assert));
+    }
+
+    pub(crate) fn read_notes(&mut self, r: &mut crate::arena::VolR) -> Result<(), String> {
+        self.pending_prov = read_triples(r)?;
+        self.pending_assert = read_triples(r)?;
+        Ok(())
+    }
+}

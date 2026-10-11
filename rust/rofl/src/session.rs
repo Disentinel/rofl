@@ -171,10 +171,8 @@ impl Session {
 
     /// This world kept as a volume at `path`, which `open_volume` maps back. It freezes the world, as a fork does.
     pub fn keep_volume(&mut self, path: &str) -> std::io::Result<usize> {
-        self.eval.settle_provenance();
-        let (staged, answer) = (self.eval.staged_kept(), self.eval.safety().clone());
         let tmp = format!("{path}.part");
-        let n = crate::volume::keep(&tmp, &mut self.eval.h, &mut self.eval.store, &staged, &answer)?;
+        let n = crate::volume::keep(&tmp, &mut self.eval)?;
         std::fs::rename(&tmp, path)?;
         Ok(n)
     }
@@ -183,7 +181,8 @@ impl Session {
     pub fn open_volume(path: &str, budget: i64) -> Result<Session, String> {
         let mut o = crate::volume::open(path)?;
         let evaluated = !o.store.dirty && !o.store.partial_eval;
-        o.store.dirty = !evaluated;
+        let cut_short = !o.store.dirty && o.store.partial_eval;
+        o.store.dirty = !evaluated && !cut_short;
         let mut h = o.heap;
         let v = Vocab::new(&mut h);
         bootstrap_kernel(&mut h, &v, &mut o.store);
@@ -191,6 +190,11 @@ impl Session {
         eval.vclosure_restore();
         eval.stage_kept(o.staged);
         eval.after_open();
+        eval.read_notes(&mut o.cut)?;
+        eval.read_cut(&mut o.cut)?;
+        if !o.cut.at_end() {
+            return Err(format!("{path}: a volume has bytes after its end"));
+        }
         Ok(Session { eval, dangling: 0, asks: 0 })
     }
 

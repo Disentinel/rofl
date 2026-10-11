@@ -273,7 +273,7 @@ impl Eval {
 
     /// A sealed world solves a firing again for `why` and finds each aggregate's cells by correlation, as the
     /// evaluation listed them (`agg_memo`): the cells the store holds, by the correlation their key carries.
-    fn restore_cells(&mut self) {
+    pub(super) fn restore_cells(&mut self) {
         let mut by: HashMap<(Sym, u32, Box<[Term]>), Vec<(String, CellId)>> = HashMap::new();
         for c in self.store.live_cells() {
             let r = self.store.cell(c);
