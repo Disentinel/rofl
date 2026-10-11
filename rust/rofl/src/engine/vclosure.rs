@@ -29,7 +29,8 @@
 //! rows than when it was built, once per change, and a rule that reads the
 //! closure is fired again, whole, when news of the edges reaches it and it has
 //! not fired since they last changed (`fire_in_round`): the closure has no news
-//! of its own.
+//! of its own. An addition gives it news: the rows the new edges make
+//! (`vnews`), from which the reader is solved (`vfire_news`).
 
 use super::*;
 use crate::forest::Forest;
@@ -444,6 +445,80 @@ impl Eval {
             }
         }
         due
+    }
+
+    /// THE NEWS OF A CLOSURE, in an addition: an edge `(p, c)` new in a book makes the rows from `p` and each of its
+    /// ancestors to `c` and each of its descendants (a child had no parent before it, or the tree is broken and the
+    /// world refused). Every row into a node whose own edge is new is news: such a node is given as an end, its rows
+    /// read from the tree; the rest each as a row, once.
+    fn vnews(&mut self, ci: usize, cur: &Front) -> (Vec<(Sym, Term)>, Vec<(Sym, Term, Term)>) {
+        let forests = self.vforests(ci);
+        let mut edges: Vec<(Sym, Term, Term)> = cur.by_rel.get(&self.vclosures[ci].edge).into_iter().flatten().filter_map(|e| match self.store.args(*e) {
+            [p, c] => Some((self.store.rec(*e).persp, *p, *c)),
+            _ => None,
+        }).collect();
+        edges.sort_unstable_by_key(|(b, p, c)| (*b, p.bits(), c.bits()));
+        let ends: FxSet<(Sym, u64)> = edges.iter().map(|(b, _, c)| (*b, c.bits())).collect();
+        let mut rows: Vec<(Sym, Term, Term)> = Vec::new();
+        let mut seen: FxSet<(Sym, u64, u64)> = FxSet::default();
+        for &(book, p, c) in &edges {
+            let Some((_, f)) = forests.iter().find(|(b, _)| *b == book) else { continue };
+            let mut down = Vec::new();
+            f.descendants(c, &mut down);
+            down.retain(|d| !ends.contains(&(book, d.bits())));
+            if down.is_empty() {
+                continue;
+            }
+            let mut up = vec![p];
+            f.ancestors(p, &mut up);
+            for &a in &up {
+                for &d in &down {
+                    if seen.insert((book, a.bits(), d.bits())) {
+                        rows.push((book, a, d));
+                    }
+                }
+            }
+        }
+        (edges.into_iter().map(|(b, _, c)| (b, c)).collect(), rows)
+    }
+
+    /// A rule that reads a closure, fired in an addition on the closure's news: each premise over the closure bound to
+    /// each new end and each new row in turn, the rest solved from it in the planner's order; whole where the rule takes
+    /// no such order.
+    pub(super) fn vfire_news(&mut self, r: &Rc<ERule>, cur: &Front) -> Result<Front, Halt> {
+        let all: Vec<usize> = (0..r.plan.len()).collect();
+        let mut at: Vec<(Lit, usize, Vec<usize>, Vec<usize>)> = Vec::new();
+        for b in r.plan.iter() {
+            let BodyElem::Pos(l) = b else { continue };
+            let Some(ci) = self.vclosure_for(l.rel) else { continue };
+            if !cur.by_rel.contains_key(&self.vclosures[ci].edge) {
+                continue;
+            }
+            let (mut end, mut pre) = (Vec::new(), Vec::new());
+            for t in l.args.iter().chain([&l.persp]) {
+                self.h.vars_of(*t, &mut pre);
+            }
+            for t in l.args.iter().skip(1).chain([&l.persp]) {
+                self.h.vars_of(*t, &mut end);
+            }
+            match (self.bound_order(r, &all, &end), self.bound_order(r, &all, &pre)) {
+                (Some(oe), Some(o)) if l.args.len() == 2 => at.push((l.clone(), ci, oe, o)),
+                _ => return self.fire_rule(r, None),
+            }
+        }
+        let mut out = Front::default();
+        for (l, ci, oe, o) in at {
+            let (ends, rows) = self.vnews(ci, cur);
+            let seeds: Vec<Subst> = ends.into_iter().filter_map(|(book, d)| unify(&self.h, l.persp, Term::atom(book), &Subst::new()).and_then(|s| unify(&self.h, l.args[1], d, &s))).collect();
+            for sol in self.solve_bound(r, &all, Some(&oe), seeds)? {
+                self.conclude(r, sol, &mut out)?;
+            }
+            let seeds: Vec<Subst> = rows.into_iter().filter_map(|(book, a, d)| unify(&self.h, l.persp, Term::atom(book), &Subst::new()).and_then(|s| unify_all(&self.h, &l.args, &[a, d], &s))).collect();
+            for sol in self.solve_bound(r, &all, Some(&o), seeds)? {
+                self.conclude(r, sol, &mut out)?;
+            }
+        }
+        Ok(out)
     }
 
     /// A whole firing of a rule that reads a closure notes the rows its edges had.

@@ -387,7 +387,7 @@ impl Session {
     fn added(&mut self, ids: &[FactId], rules: &[Sym], called: &[Sym]) -> Addition {
         match self.eval.add_delta(ids, rules, called) {
             Ok(d) => {
-                if self.eval.check_promises().is_err() {
+                if self.eval.check_promises_added().is_err() {
                     self.eval.store.dirty = true;
                     return Addition::Full("a declared promise is broken; the evaluation refuses the world".into());
                 }
