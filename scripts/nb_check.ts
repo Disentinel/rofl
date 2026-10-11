@@ -187,7 +187,7 @@ const RUNS: Record<string, () => Promise<Out>> = {
     const rust = engineOf('rust');
     if (rust.name !== 'rust') return { code: 1, out: 'no Rust engine: cargo build --release --bin rofl in rust/', stdout: '' };
     const on = (f: string, k: Kernel) => JSON.stringify(runFile(f, k), (key, v) => key === 'ms' ? undefined : v);
-    const differ = [SIDES, path.join(NB, 'small.rofl.md')].filter((f) => on(f, new Kernel()) !== on(f, new Kernel({ engine: engineOf('rust') })));
+    const differ = [SIDES, path.join(NB, 'small.rofl.md'), path.join(NB, 'spat.rofl.md')].filter((f) => on(f, new Kernel()) !== on(f, new Kernel({ engine: engineOf('rust') })));
     return { code: differ.length, out: differ.length ? `not the same on the two engines: ${differ.join(', ')}` : 'the same on both engines', stdout: '' };
   },
 };
@@ -270,7 +270,7 @@ test('W1 a why of a value says first the steps the value took, one line each, wh
       mini/node/server.ts:6      port             the parameter port
       mini/node/server.ts:6      server.listen()  argument 0 at the answer`)
   && (sides.stdout?.match(/\(the whole proof: --all\)/g) ?? []).length === 3, () => sides);
-test('R1 the Rust engine and the TypeScript one say the same, answers, whys and pictures: side effects, small', ['engines'], () => engines.code === 0, () => engines);
+test('R1 the Rust engine and the TypeScript one say the same, answers, whys and pictures: side effects, small, the excises of spat', ['engines'], () => engines.code === 0, () => engines);
 test('W2 the proof under a chain counts its side conditions instead of writing them and names a node by its code and place', ['sidesJson'], () => (() => {
   const ws = whys(sidesJson);
   return ws.length === 3 && ws.every((l) => l.chain!.length >= 3 && l.brief!.split('\n').length < l.why!.split('\n').length && /side conditions? holds?/.test(l.brief!)
