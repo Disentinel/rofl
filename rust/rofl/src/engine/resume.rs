@@ -13,6 +13,7 @@
 //! unfolding, the alternating fixpoint, a component stratified by its data,
 //! the space wall) leaves no cut, and `resume` evaluates the world again.
 use super::*;
+use crate::arena::{VolR, VolW};
 
 /// The firing the wall fell in.
 #[derive(Clone)]
@@ -197,5 +198,165 @@ impl Eval {
         let out = self.run_pass_from();
         self.resume_at = None;
         Ok((out?, true))
+    }
+}
+
+fn opt(w: &mut VolW, x: Option<usize>) {
+    w.u64(x.map_or(u64::MAX, |x| x as u64));
+}
+
+fn read_opt(r: &mut VolR) -> Result<Option<usize>, String> {
+    Ok(Some(r.u64()?).filter(|&x| x != u64::MAX).map(|x| x as usize))
+}
+
+fn sorted(ids: &FxSet<FactId>) -> Vec<FactId> {
+    let mut v: Vec<FactId> = ids.iter().copied().collect();
+    v.sort_unstable();
+    v
+}
+
+fn write_front(w: &mut VolW, f: &Front) {
+    w.arena(&sorted(&f.keys));
+    let mut rels: Vec<&Sym> = f.by_rel.keys().collect();
+    rels.sort_unstable();
+    w.u32(rels.len() as u32);
+    for rel in rels {
+        w.u32(*rel);
+        w.arena(&sorted(&f.by_rel[rel]));
+    }
+}
+
+fn read_front(r: &mut VolR) -> Result<Front, String> {
+    let mut f = Front { keys: r.arena::<FactId>()?.iter().copied().collect(), ..Front::default() };
+    for _ in 0..r.u32()? {
+        let rel = r.u32()?;
+        f.by_rel.insert(rel, r.arena::<FactId>()?.iter().copied().collect());
+    }
+    Ok(f)
+}
+
+fn read_prems(r: &mut VolR) -> Result<Vec<PremRef>, String> {
+    Ok(r.arena_checked::<PremRef>(|w| w.iter().step_by(2).all(|&t| t <= 4))?.to_vec())
+}
+
+impl Eval {
+    /// The cut a step wall left, and what the evaluation it stopped had counted, as a volume keeps them: so a
+    /// process can go on from where another stopped (`crate::volume`).
+    pub(crate) fn write_cut(&self, w: &mut VolW) {
+        let Some(c) = self.cut.as_ref().filter(|_| self.resumable()) else {
+            w.u32(0);
+            return;
+        };
+        w.u32(1);
+        opt(w, c.phase);
+        w.u64(c.comp as u64);
+        opt(w, c.pos);
+        opt(w, c.hole.map(|h| h as usize));
+        w.u64(c.facts as u64);
+        w.u32(c.tick);
+        match &c.at {
+            None => w.u32(0),
+            Some(CutAt::Whole { i, front }) => {
+                w.u32(1);
+                w.u64(*i as u64);
+                write_front(w, front);
+            }
+            Some(CutAt::Round { cur, j, pos, front }) => {
+                w.u32(2);
+                write_front(w, cur);
+                w.u64(*j as u64);
+                w.u64(*pos as u64);
+                write_front(w, front);
+            }
+        }
+        match &c.fl {
+            None => w.u32(0),
+            Some(InFlight::Refire) => w.u32(1),
+            Some(InFlight::Rest { sols, out, tail }) => {
+                w.u32(2);
+                w.u32(sols.len() as u32);
+                for s in sols {
+                    w.arena(&s.s.iter().map(|(v, _)| *v).collect::<Vec<Sym>>());
+                    w.arena(&s.s.iter().map(|(_, t)| *t).collect::<Vec<Term>>());
+                    w.arena(&s.prems);
+                }
+                write_front(w, out);
+                match tail {
+                    None => w.u32(0),
+                    Some(Tail::Staged(rule)) => {
+                        w.u32(1);
+                        w.u32(*rule);
+                    }
+                    Some(Tail::Fact { rule, rel, persp, args, id, is_new }) => {
+                        w.u32(2);
+                        for x in [*rule, *rel, *persp, *id, *is_new as u32] {
+                            w.u32(x);
+                        }
+                        w.arena(args);
+                    }
+                }
+            }
+        }
+        for x in [self.steps, self.rows, self.peak_rows, self.carry_wall.0, self.carry_wall.1, self.carry_steps, self.carry_rows] {
+            w.u64(x as u64);
+        }
+        w.arena(&self.active.iter().map(|r| r.id).collect::<Vec<Sym>>());
+    }
+
+    /// The cut a volume kept, put back as the evaluation that wrote it left it; `resume` goes on from it.
+    pub(crate) fn read_cut(&mut self, r: &mut VolR) -> Result<(), String> {
+        if r.u32()? == 0 {
+            // no cut to go on from: `resume` evaluates again under the steps spent and more
+            if self.store.partial_eval {
+                self.steps = self.store.eval_log.get(&self.store.tick).map_or(0, |e| e.steps);
+            }
+            return Ok(());
+        }
+        let mut c = Cut { phase: read_opt(r)?, comp: r.u64()? as usize, pos: read_opt(r)?, hole: read_opt(r)?.map(|h| h as FactId), ..Cut::default() };
+        (c.facts, c.tick) = (r.u64()? as usize, r.u32()?);
+        c.at = match r.u32()? {
+            0 => None,
+            1 => Some(CutAt::Whole { i: r.u64()? as usize, front: read_front(r)? }),
+            _ => {
+                let cur = read_front(r)?;
+                let (j, pos) = (r.u64()? as usize, r.u64()? as usize);
+                Some(CutAt::Round { cur, j, pos, front: read_front(r)? })
+            }
+        };
+        c.fl = match r.u32()? {
+            0 => None,
+            1 => Some(InFlight::Refire),
+            _ => {
+                let mut sols = Vec::new();
+                for _ in 0..r.u32()? {
+                    let (vs, ts) = (r.arena::<Sym>()?, r.arena::<Term>()?);
+                    sols.push(Sol { s: vs.iter().copied().zip(ts.iter().copied()).collect(), prems: read_prems(r)? });
+                }
+                let out = read_front(r)?;
+                let tail = match r.u32()? {
+                    0 => None,
+                    1 => Some(Tail::Staged(r.u32()?)),
+                    _ => {
+                        let [rule, rel, persp, id, is_new] = [(); 5].map(|_| r.u32());
+                        Some(Tail::Fact { rule: rule?, rel: rel?, persp: persp?, id: id?, is_new: is_new? == 1, args: r.arena::<Term>()?.to_vec() })
+                    }
+                };
+                Some(InFlight::Rest { sols, out, tail })
+            }
+        };
+        let [steps, rows, peak, wall_steps, wall_space, carry_steps, carry_rows] = [(); 7].map(|_| r.u64().map(|x| x as i64));
+        (self.steps, self.rows, self.peak_rows) = (steps?, rows?, peak?);
+        self.carry_wall = (wall_steps?, wall_space?);
+        (self.carry_steps, self.carry_rows) = (carry_steps?, carry_rows?);
+        let active: HashSet<Sym> = r.arena::<Sym>()?.iter().copied().collect();
+        self.active = self.rules.iter().filter(|r| active.contains(&r.id)).cloned().collect();
+        self.active.sort_by(|a, b| cmp_js(&a.canon, &b.canon));
+        self.derived_rels = self.rules.iter().filter(|r| r.clause.head.temporal != Temporal::Next).map(|r| r.clause.head.rel).collect();
+        self.vclosure_engage();
+        self.closures_engage();
+        // the cells sealed before the cut are found again by correlation, as the evaluation that sealed them did
+        self.restore_cells();
+        self.cut = Some(Box::new(c));
+        Ok(())
     }
 }

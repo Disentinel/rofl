@@ -3,7 +3,7 @@
 //! nothing. A page of it is brought in when something reads it and can be dropped again by the system; a write to
 //! a mapped arena copies that arena into the heap first. Read by the build that wrote it.
 use crate::arena::{map_file, VolR, VolW};
-use crate::engine::{RuleAnswer, StagedFact};
+use crate::engine::{Eval, RuleAnswer, StagedFact};
 use crate::store::{PremRef, Store};
 use crate::term::{Heap, Sym, Term};
 
@@ -15,15 +15,18 @@ fn build_id() -> String {
 
 pub type Staged = Vec<(StagedFact, Vec<(Sym, Vec<PremRef>)>)>;
 
-/// The world in `h` and `s`, frozen, and what its evaluation staged, as a volume at `path`; its size.
-pub fn keep(path: &str, h: &mut Heap, s: &mut Store, staged: &Staged, answer: &RuleAnswer) -> std::io::Result<usize> {
+/// The world `e` evaluated, frozen, what its evaluation staged and where a step wall cut it, as a volume at
+/// `path`; its size.
+pub fn keep(path: &str, e: &mut Eval) -> std::io::Result<usize> {
+    let (staged, answer) = (e.staged_kept(), e.safety().clone());
+    let (h, s) = (&mut e.h, &mut e.store);
     let mut w = VolW::create(path)?;
     w.bytes(MAGIC);
     w.text(&build_id());
     s.write_volume(&mut w);
     h.write_volume(&mut w);
     w.u32(staged.len() as u32);
-    for (f, alts) in staged {
+    for (f, alts) in &staged {
         w.u32(f.rel);
         w.u32(f.persp);
         w.arena(&f.args);
@@ -56,6 +59,8 @@ pub fn keep(path: &str, h: &mut Heap, s: &mut Store, staged: &Staged, answer: &R
             w.arena(&m[&k]);
         }
     }
+    e.write_notes(&mut w);
+    e.write_cut(&mut w);
     w.finish()
 }
 
@@ -64,6 +69,9 @@ pub struct Opened {
     pub store: Store,
     pub staged: Staged,
     pub answer: RuleAnswer,
+    /// the rest of the volume: the provenance notes and the cut, which the evaluation reads (`Eval::read_notes`,
+    /// `Eval::read_cut`)
+    pub cut: VolR,
 }
 
 fn pairs(r: &mut VolR) -> Result<Vec<(u32, u32)>, String> {
@@ -111,8 +119,5 @@ pub fn open(path: &str) -> Result<Opened, String> {
             if which == 0 { a.trigger.insert(k, v) } else { a.lattice_outer.insert(k, v) };
         }
     }
-    if !r.at_end() {
-        return Err(format!("{path}: a volume has bytes after its end"));
-    }
-    Ok(Opened { heap, store, staged, answer: a })
+    Ok(Opened { heap, store, staged, answer: a, cut: r })
 }

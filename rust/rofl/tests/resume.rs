@@ -9,11 +9,14 @@
 //! quietly stopped going on fails as much as one that went on wrongly.
 mod common;
 use common::{build, first_diff, state, worlds, BUDGET};
+use rofl::session::Session;
 use std::time::{Duration, Instant};
 
 #[test]
 fn a_resumed_evaluation_is_a_whole_one() {
-    let (mut checked, mut chains, mut went_on, mut again) = (0, 0, 0, 0);
+    let (mut checked, mut chains, mut went_on, mut again, mut kept) = (0, 0, 0, 0, 0);
+    let vol = std::env::temp_dir().join(format!("rofl-resume-{}", std::process::id()));
+    std::fs::create_dir_all(&vol).unwrap();
     let mut bad = Vec::new();
     let mut slowest = (Duration::ZERO, String::new());
     for (name, files) in worlds() {
@@ -31,6 +34,15 @@ fn a_resumed_evaluation_is_a_whole_one() {
             let mut e = s.evaluate().unwrap();
             let (mut n, mut chain_again) = (0, false);
             while e.partial && n < 100 {
+                // every other cut goes through a volume: kept, opened in a session of its own, and gone on from there
+                if n % 2 == 1 {
+                    let path = vol.join(format!("{}-{k}.vol", name.replace('/', "_")));
+                    let path = path.to_str().unwrap();
+                    s.keep_volume(path).unwrap();
+                    s = Session::open_volume(path, b).unwrap_or_else(|e| panic!("{name}: {e}"));
+                    std::fs::remove_file(path).unwrap();
+                    kept += 1;
+                }
                 let (r, on) = s.resume(b).unwrap_or_else(|h| panic!("{name}: {}", rofl::describe(&h)));
                 if on { went_on += 1 } else { again += 1; chain_again = true }
                 e = r;
@@ -48,7 +60,8 @@ fn a_resumed_evaluation_is_a_whole_one() {
             slowest = (t.elapsed(), name.clone());
         }
     }
-    eprintln!("{checked} worlds, {chains} chains, {went_on} resumed, {again} evaluated again; slowest {} {:?}", slowest.1, slowest.0);
+    std::fs::remove_dir_all(&vol).unwrap();
+    eprintln!("{checked} worlds, {chains} chains, {went_on} resumed ({kept} from a volume), {again} evaluated again; slowest {} {:?}", slowest.1, slowest.0);
     assert!(bad.is_empty(), "{} chains differ:\n{}", bad.len(), bad.join("\n"));
     assert!(went_on > again, "most walls must be gone on from: {went_on} resumed, {again} evaluated again");
 }
