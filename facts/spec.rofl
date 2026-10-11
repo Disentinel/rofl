@@ -312,7 +312,8 @@ duty[wfs](t_stratum_table_survives, guaranteed, "docs/three-valued-answers.md", 
 -- naming a runner it had stopped using, which is the worse half: a citation
 -- that is correct and describes nothing.
 cited_check[map](c_ci_node, ".github/workflows/ci.yml", "goldens (node)").
-cited_check[map](c_ci_bun, ".github/workflows/ci.yml", "goldens (bun)").
+-- THE BUN JOB IS GONE, 2026-10-11, by the owner: it gave nothing node did not.
+-- `s_two_runtimes` keeps the node guard; its bun half is unguarded, said here.
 cited_check[map](c_ci_typecheck, ".github/workflows/ci.yml", "typecheck").
 
 -- ---- the prohibitions, which had nothing behind them at all -------------
@@ -412,11 +413,9 @@ accepted[map](s7_no_clause_objects, "satisfied by construction: one call site, d
 
 -- ---- what stands behind what ----------------------------------------------
 
-guards[map](c_ci_bun, s_two_runtimes).
 guards[map](c_ci_node, s_two_runtimes).
 
 guards[map](c_ci_node, s_done_ci_green).
-guards[map](c_ci_bun, s_done_ci_green).
 
 
 

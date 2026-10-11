@@ -42,29 +42,6 @@ jobs:
         env: { ROFL_JOBS: 4 }
         run: npm test
 
-  bun:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        # THE GRAVES NEED HISTORY. `removed_in(Path, Sha)` is checked by
-        # `git cat-file -e <sha>^:<path>`, and a depth-1 checkout has no parent
-        # tree to look in — which made every grave unverifiable and CI red on
-        # six consecutive pushes before anybody looked at CI.
-        with: { fetch-depth: 0 }
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
-      - name: install dependencies (the scanner needs @babel/parser)
-        run: bun install
-      # THE GOLDENS RUN THE RUST ENGINE. `npm test` and goldens.ts spawn
-      # rust/target/release binaries; CI built none, so bun died on ENOENT.
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-        with: { workspaces: rust }
-      - run: cd rust && cargo build --release
-      - name: goldens (bun)
-        run: bun run scripts/goldens.ts
-
   # THE EXTENSION CARRIES THE RUST ENGINE. One `rofl` binary per platform VS Code
   # publishes for, then one VSIX per platform with its binary in rofl-nb/bin: the
   # extension evaluates on it by default (playground/rust.ts), and a platform
@@ -123,7 +100,7 @@ jobs:
   # sha256, and docs/releases/<major.minor>.md as the notes.
   release:
     if: startsWith(github.ref, 'refs/tags/rofl-nb-')
-    needs: [node, bun, vsix]
+    needs: [node, vsix]
     runs-on: ubuntu-latest
     permissions: { contents: write }
     steps:
