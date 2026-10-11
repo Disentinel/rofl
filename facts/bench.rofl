@@ -1,0 +1,21 @@
+-- facts/bench.rofl — THE REFERENCE BENCHMARK'S RESULTS, one block per version, written by `npm run bench -- --write`.
+--
+-- bench(Version, Measure, Value): the median of three runs of scripts/bench.ts on the Rust release build; a measure
+-- ending in _ms is wall milliseconds, _mb the engine's peak RSS. The corpus is microsoft/vscode at the commit pinned in
+-- scripts/bench.ts, subset S, the question examples/vscode/side-effects.rofl. Each block names its machine: numbers
+-- from two machines are not compared. One run on a quiet machine moves by about 10%, which is why a median is kept.
+
+edb(bench).
+
+-- 1.2.0, 2026-10-11, 4 cores, 16 GB
+bench("1.2.0", cone_250_load_ms, 11838).
+bench("1.2.0", cone_250_eval_ms, 16457).
+bench("1.2.0", cone_250_peak_mb, 1345).
+bench("1.2.0", witnessed_250_load_ms, 11401).
+bench("1.2.0", witnessed_250_eval_ms, 36515).
+bench("1.2.0", witnessed_250_peak_mb, 1598).
+bench("1.2.0", add_20_whole_ms, 4521).
+bench("1.2.0", add_20_file_median_ms, 335).
+bench("1.2.0", add_20_files_sum_ms, 11638).
+bench("1.2.0", kept_20_open_ms, 575).
+bench("1.2.0", kept_20_question_ms, 841).

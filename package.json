@@ -123,7 +123,8 @@
     "whyfloor": "node --experimental-strip-types runtime/report.ts facts/floor-census.rofl rules/floor-census.rofl",
     "whyjoin": "node --experimental-strip-types runtime/report.ts facts/eval-cost.rofl rules/eval-cost.rofl",
     "whyperm": "node --experimental-strip-types runtime/report.ts facts/permission-inventory.rofl rules/permission-model.rofl",
-    "whyslow": "node --experimental-strip-types runtime/report.ts facts/parse-cost.rofl rules/parse-cost.rofl"
+    "whyslow": "node --experimental-strip-types runtime/report.ts facts/parse-cost.rofl rules/parse-cost.rofl",
+    "bench": "node --experimental-strip-types scripts/bench.ts"
   },
   "devDependencies": {
     "@babel/core": "^8.0.1",
