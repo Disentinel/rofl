@@ -608,3 +608,16 @@ handled(js, variable_declarator,   dataflow, r_bare_binder).
 -- r_external_value has no oracle: nothing in the tree executes a corpus that
 -- requires a package, and its cells stay unverified.
 checked(js, assignment_expression, dataflow, r_assign_scoped, o_run_with_values, 1).
+
+-- EVIDENCE for r_destructure and r_param_default, 2026-10-11
+-- (w_js_destructuring_claims_are_true): examples/notebook/destructure/shapes.js
+-- is EXECUTED under V8 (scripts/nb_check.ts, `destructureV8`) and every value
+-- observed at a read is looked up in the model's may-set for it, over an object
+-- pattern in a declarator with a default (`const { PORT = 1343 } = env`), off a
+-- required module (literal arm), as a parameter (`({ port, host }) =>`), with a
+-- default (`({ port = 80 })`, `({ port: p = 82 })`) and a plain default
+-- (`(port = 81)`), and the conversions parseInt / Number / parseFloat. Nothing
+-- observed is missing. Before these rules the model answered one of the
+-- eighteen values it now holds, and the claims were assertions.
+checked(js, object_pattern,     dataflow, r_destructure,    o_run_with_values, 1).
+checked(js, assignment_pattern, dataflow, r_param_default,  o_run_with_values, 1).

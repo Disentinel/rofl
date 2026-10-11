@@ -61,8 +61,8 @@ const [whole, text, data, timed, model, said3, cut3] = await Promise.all([
 check('the control: uncut, 30001 answers, never top(X) FAILS, nothing says cut short, exit 1',
   whole.code === 1 && has(whole, '? n(X)  ->  30001 answers') && has(whole, 'never top(X)  ->  FAILS · 2') && !/cut short/i.test(whole.out), whole);
 const bad = cutSaid(text, data);
-check('cut by memory in milliseconds: every host says cut short, counts at least, no never holds', !bad.length && text.ms! < 20_000, { ...text, out: `${bad.join('\n')}\n${text.out}` });
-check('cut by time (ROFL_NB_LIMIT=0) says the same', timed.code === 1 && /CUT SHORT/.test(last(timed)) && has(timed, 'never low(X)  ->  not known'), timed);
+check('cut by memory in milliseconds: every host says cut short and names the heap and ROFL_NB_MEMORY, counts at least, no never holds', !bad.length && /CUT SHORT \(the heap passed .* GB; ROFL_NB_MEMORY=/.test(last(text)) && text.ms! < 20_000, { ...text, out: `${bad.join('\n')}\n${text.out}` });
+check('cut by time (ROFL_NB_LIMIT=0) says the same, and names the clock and the setting', timed.code === 1 && /CUT SHORT \(the clock ran out at 0 s; ROFL_NB_LIMIT=/.test(last(timed)) && has(timed, 'never low(X)  ->  not known'), timed);
 check('a JS model cut while its code is evaluated says so too (small)', /CUT SHORT/.test(last(model)) && !/  ->  holds( as far as it sees)?\n/.test(model.out) && has(model, 'not known: the run was cut short'), model);
 
 check('English, uncut: car no, truck yes, one late', has(said3, 'Is `car` late?  ->  no') && has(said3, 'Is `truck` late?  ->  yes') && has(said3, 'Which products are late?  ->  1 answer'), said3);
