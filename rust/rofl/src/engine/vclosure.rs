@@ -198,7 +198,6 @@ impl Eval {
         if crate::structure::closures(&self.h, &self.v, &mut self.store).is_empty() {
             return;
         }
-        self.prepare();
         if !brk!("vclosure_restore_unengaged" => true; false) {
             self.vclosure_engage();
             self.vpublish();
