@@ -3560,8 +3560,8 @@ work(w_every_picture_its_own_frame,
 work_state(w_every_picture_its_own_frame, open).
 
 work(w_js_dead_call_sites,
-  "arg_at TAKES ARGUMENTS FROM DEAD CALL SITES: code under `if (!module.parent) main()` or `require.main === module` (1021 and 778 files in the demo repo) contributes values to every callee. Model the entry guards (dead_guard / dead_fn in the demo's js-net-listen.rofl) and keep their sites out of arg_at, with a world over both guard shapes.").
-work_state(w_js_dead_call_sites, open).
+  "arg_at TAKES ARGUMENTS FROM DEAD CALL SITES: code under `if (!module.parent) main()` or `require.main === module` (1021 and 778 files in the demo repo) contributes values to every callee. Model the entry guards (dead_guard / dead_fn in the demo's js-net-listen.rofl) and keep their sites out of arg_at, with a world over both guard shapes. DONE 2026-10-11: `dead_site[code]` (rules/js-dataflow.rofl section 7) keeps the calls under `!module.parent` / `require.main === module` (also `module === require.main`, `&&` form), the else arm of `module.parent` / `require.main !== module`, and the calls in a function declaration or declarator whose every mention in its file is under such an arm (`dead_fn`, by name, syntax only because arg_at sits under the fixpoint) out of arg_at. Proof: examples/notebook/guard.rofl.md. Declared limit: a function reached only through another dead function is dead only if it is itself mentioned only under a guard.").
+work_state(w_js_dead_call_sites, done).
 
 work(w_js_call_site_context,
   "NO CALL-SITE CONTEXT: express() inside a shared init is one allocation site, so app.set/app.get merge the values of every caller (two init() calls in one service got each other's port). Add bounded context (k-limited call strings or allocation-site cloning at named factories), sound, and measured against w_dataflow_pruning.").
@@ -3577,12 +3577,12 @@ work(w_js_new_of_an_imported_class,
 work_state(w_js_new_of_an_imported_class, open).
 
 work(w_js_destructuring_claims_are_true,
-  "THE MATRIX CLAIMS WHAT THE RULES DO NOT DO: handled(js, object_pattern, dataflow, r_destructure) and handled(js, assignment_pattern, dataflow, r_param_default) are claimed, yet object-pattern PARAMETERS (`({port, host}) =>`) bind nothing any rule reads, `const {PORT = 1343} = env` binds nothing, `const {PORT} = require('./config')` has only the node arm and no literal arm, and `(port = 80) =>` / `({port = 80}) =>` give no literal. Either the rules do it or the claims become unknown_because cells; plus parseInt / Number / parseFloat keep their argument's value. The over-claim is the defect: a handled cell must be proven by its oracle on these shapes.").
-work_state(w_js_destructuring_claims_are_true, open).
+  "THE MATRIX CLAIMS WHAT THE RULES DO NOT DO: handled(js, object_pattern, dataflow, r_destructure) and handled(js, assignment_pattern, dataflow, r_param_default) are claimed, yet object-pattern PARAMETERS (`({port, host}) =>`) bind nothing any rule reads, `const {PORT = 1343} = env` binds nothing, `const {PORT} = require('./config')` has only the node arm and no literal arm, and `(port = 80) =>` / `({port = 80}) =>` give no literal. Either the rules do it or the claims become unknown_because cells; plus parseInt / Number / parseFloat keep their argument's value. The over-claim is the defect: a handled cell must be proven by its oracle on these shapes. DONE 2026-10-11: the rules do it: a property's default and a literal arm for `destructures` (rules/js-dataflow.rofl section 6), object-pattern parameters through `param_prop` and `param_bound`, a literal arm for `param_default`, and parseInt / parseFloat / Number / Number.parseInt keeping their argument through the table `keeps_argument`; the cells are checked, not asserted: examples/notebook/destructure.rofl.md runs destructure/shapes.js under V8 and scripts/nb_check.ts finds nothing observed missing from the model. A string that is no number is kept where V8 has NaN, and a nested pattern or a rest in a parameter is not read.").
+work_state(w_js_destructuring_claims_are_true, done).
 
 work(w_js_object_assign,
-  "Object.assign(target, ...sources) IS NOT MODELLED as mutating and returning its first argument (311 files in the demo repo start with `const E = assign(exports, {...})`; without it E.f() never resolves). Model it by the library contract, not by method name.").
-work_state(w_js_object_assign, open).
+  "Object.assign(target, ...sources) IS NOT MODELLED as mutating and returning its first argument (311 files in the demo repo start with `const E = assign(exports, {...})`; without it E.f() never resolves). Model it by the library contract, not by method name. DONE 2026-10-11: Object.assign(target, ...sources) and the module object-assign are rows of `merges_into_first` / `merges_into_first_module`, found through the value layer (`const assign = Object.assign`), so the sources' members are written onto the target through sx_mwrite and the call is the target; a method of the program named assign is untouched. Proof: examples/notebook/assign.rofl.md across two files. Not modelled: lodash assign/extend, util._extend, a spread argument.").
+work_state(w_js_object_assign, done).
 
 work(w_js_keyed_collections,
   "KEYED COLLECTIONS: .set(k, v) / .get(k) pairing on a Map or an Express app has no edge (the demo matched by method name), and iteration of a Map as [key, value] pairs (`for (const [k, w] of m)`) is not modelled. Needs the receiver's type (w_js_receiver_typed_catalogues, w_prototype_of_a_constructed_value).").
