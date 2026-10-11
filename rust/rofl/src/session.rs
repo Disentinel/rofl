@@ -768,6 +768,7 @@ impl Session {
     /// caller writes `hole($cold(assertions), cooled_to_disk)` as it cools,
     /// exactly as it does for a volume.
     pub fn cool_trail(&mut self, out: &str) -> Result<Cooled, String> {
+        self.eval.settle_assertions();
         let ab = self.eval.v.asserted_by;
         let mut ids = Vec::new();
         for id in self.eval.store.all_facts() {
@@ -1071,7 +1072,7 @@ impl Session {
         if let Some(m) = self.eval.outside_cone(rel) {
             return Err(m);
         }
-        if rel == self.eval.v.derived_by {
+        if rel == self.eval.v.derived_by || rel == self.eval.v.asserted_by {
             self.eval.settle_provenance();
         }
         let persp_opt = match lit.book {
@@ -1327,7 +1328,7 @@ impl Session {
     /// `Rofl.factKeys` (src/api.ts:1220), in canonical order. `rel` narrows.
     pub fn fact_keys(&mut self, rel: Option<&str>) -> Vec<String> {
         let want = rel.map(|r| self.eval.h.intern(r));
-        if want.is_none_or(|w| w == self.eval.v.derived_by) {
+        if want.is_none_or(|w| w == self.eval.v.derived_by || w == self.eval.v.asserted_by) {
             self.eval.settle_provenance();
         }
         let mut out = Vec::new();
@@ -1348,6 +1349,7 @@ impl Session {
     /// it would leave the rule that concluded it still concluding it — the
     /// caller wants `excise` and is told so.
     pub fn retract(&mut self, query: &str) -> Result<(), String> {
+        self.eval.settle_assertions();
         let (id, key) = self.ground_fact(query, "retract")?;
         let Some(id) = id else { return Err(format!("no such fact: {key}")) };
         if !self.eval.store.rec(id).base() {
@@ -1370,6 +1372,7 @@ impl Session {
     /// world or a fact the path is not worked out for is retracted as
     /// `retract` does, and `Full` says why: the next evaluation answers.
     pub fn retract_delta(&mut self, query: &str) -> Result<Retraction, String> {
+        self.eval.settle_assertions();
         let (id, key) = self.ground_fact(query, "retract")?;
         let Some(id) = id else { return Err(format!("no such fact: {key}")) };
         if !self.eval.store.rec(id).base() {
@@ -1415,6 +1418,7 @@ impl Session {
     /// and an instrument that answers it by damaging its subject has only one
     /// use.
     pub fn excise(&mut self, query: &str) -> Result<(Vec<String>, Vec<String>), String> {
+        self.eval.settle_assertions();
         self.eval.store.unordered = false;
         let (id, key) = self.ground_fact(query, "excise")?;
         let Some(id) = id else { return Err(format!("{key} is not a base fact")) };
@@ -1673,7 +1677,7 @@ impl Session {
     /// A question about a `derived_by` row reads the rows, so the deferred
     /// ones are written first, as `ask` does.
     fn settle_if_provenance(&mut self, lit: &reflect::Lit) {
-        if lit.rel == self.eval.v.derived_by {
+        if lit.rel == self.eval.v.derived_by || lit.rel == self.eval.v.asserted_by {
             self.eval.settle_provenance();
         }
     }

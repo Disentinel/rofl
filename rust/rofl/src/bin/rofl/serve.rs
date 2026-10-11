@@ -192,6 +192,11 @@ impl Server {
         if !matches!(op, "rows" | "fact" | "firings" | "cell" | "books" | "holding" | "ask" | "why" | "whynot" | "state" | "facts") {
             self.keys.clear();
         }
+        if matches!(op, "rows" | "fact" | "firings" | "cell" | "books" | "holding") {
+            if let Ok(s) = self.get(r) {
+                s.eval.settle_assertions();
+            }
+        }
         match op {
             "rows" => {
                 let rel = r.get("rel").and_then(|v| v.as_str()).ok_or("rows needs `rel`")?;
