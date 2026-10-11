@@ -2394,7 +2394,7 @@ switch_site("lattice_self_support", "rust/rofl/src/engine.rs").
 switch_site("lattice_settled_cut", "rust/rofl/src/engine.rs").
 switch_site("lattice_space_uncut", "rust/rofl/src/engine.rs").
 switch_site("lattice_stale_firings", "rust/rofl/src/engine.rs").
-switch_site("lattice_stale_solution", "rust/rofl/src/engine.rs").
+switch_site("lattice_stale_solution", "rust/rofl/src/engine/resume.rs").
 switch_site("lattice_tuple_unspread", "rust/rofl/src/engine.rs").
 switch_site("lattice_unknown_decides", "rust/rofl/src/engine.rs").
 switch_site("lattice_value_dropped", "rust/rofl/src/rofl_parse.rs").

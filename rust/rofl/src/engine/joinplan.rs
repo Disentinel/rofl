@@ -427,21 +427,23 @@ impl Eval {
         debug_assert_eq!(self.lat_undecided.len(), undecided);
         let sols = match sols {
             Err(Halt::Overrun) => return written(self, peak),
-            s => s?,
+            s => self.solved(r, s)?,
         };
         let n = sols.len() as i64;
         *self.fires_by_rule.entry(r.id).or_insert(0) += 1;
         *self.delta_by_rule.entry(r.id).or_insert(0) += 1;
         *self.sols_by_rule.entry(r.id).or_insert(0) += n as u64;
-        let mut out = Front::default();
-        for mut sol in sols {
-            let mut prems = sol.prems.clone();
-            for (k, &at) in p.perm.iter().enumerate() {
-                prems[at] = sol.prems[k];
-            }
-            sol.prems = prems;
-            self.conclude(r, sol, &mut out)?;
-        }
-        Ok(out)
+        let sols = sols
+            .into_iter()
+            .map(|mut sol| {
+                let mut prems = sol.prems.clone();
+                for (k, &at) in p.perm.iter().enumerate() {
+                    prems[at] = sol.prems[k];
+                }
+                sol.prems = prems;
+                sol
+            })
+            .collect();
+        self.conclude_all(r, sols, Front::default(), false)
     }
 }
