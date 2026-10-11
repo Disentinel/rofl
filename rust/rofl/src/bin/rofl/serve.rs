@@ -37,6 +37,8 @@
 //!                                                        world by delta (Session::assert_delta), else evaluated again
 //!   {"op":"load","session":2,"path":"pack.rofl"}      -> {"admitted":n,"full":null|"why"}: the same for facts and rules
 //!   {"op":"evaluate","session":2}
+//!   {"op":"resume","session":2,"steps":n}            -> as evaluate, and "resumed": went on from where the budget
+//!                                                        stopped the last evaluation, or evaluated again
 //!   {"op":"ask","session":2,"query":"p(X)"}
 //!   {"op":"why","session":2,"query":"p(a)"}            -> {"text":...}
 //!   {"op":"why","session":2,"query":"c(a)","all":true} -> every member of every cell
@@ -399,6 +401,15 @@ impl Server {
                 Ok(json!({
                     "partial": o.partial, "staged": o.staged, "steps": o.steps,
                     "peakRows": o.peak_rows, "space": o.space,
+                }))
+            }
+            "resume" => {
+                let more = r.get("steps").and_then(|v| v.as_i64()).ok_or("resume needs `steps`")?;
+                let s = self.get(r)?;
+                let (o, resumed) = s.resume(more).map_err(|e| rofl::describe(&e))?;
+                Ok(json!({
+                    "partial": o.partial, "staged": o.staged, "steps": o.steps,
+                    "peakRows": o.peak_rows, "space": o.space, "resumed": resumed,
                 }))
             }
             "retract" => {
