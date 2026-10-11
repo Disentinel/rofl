@@ -525,27 +525,27 @@ struct Assumption {
 }
 
 #[derive(Default, Clone)]
-struct RuleAnswer {
-    unsafe_rules: Vec<Sym>,
-    demand_rels: Vec<Sym>,
-    trigger: HashMap<Sym, Vec<Sym>>,
-    late: Vec<Sym>,
-    reads_provenance: bool,
+pub struct RuleAnswer {
+    pub unsafe_rules: Vec<Sym>,
+    pub demand_rels: Vec<Sym>,
+    pub trigger: HashMap<Sym, Vec<Sym>>,
+    pub late: Vec<Sym>,
+    pub reads_provenance: bool,
     /// safety.rofl's refusals of an aggregate, `(rule, reason)`.
-    agg_refused: Vec<(Sym, Sym)>,
+    pub agg_refused: Vec<(Sym, Sym)>,
     /// `(rule, at)`: an aggregate whose empty group is a sealed zero.
-    empty_zero: HashSet<(Sym, u32)>,
+    pub empty_zero: HashSet<(Sym, u32)>,
     /// Some rule reads `agg_member` or `agg_member_prem`, so they are written.
-    reads_members: bool,
+    pub reads_members: bool,
     /// safety.rofl's refusals of a lattice declaration, `(relation, reason)`.
-    lattice_refused: Vec<(Sym, Sym)>,
+    pub lattice_refused: Vec<(Sym, Sym)>,
     /// Rule -> the lattice relations it reads from outside their recursion:
     /// strict edges, like a negation's.
-    lattice_outer: HashMap<Sym, Vec<Sym>>,
+    pub lattice_outer: HashMap<Sym, Vec<Sym>>,
     /// Some rule reads `lattice_member` or `lattice_member_prem`.
-    reads_lattice_members: bool,
+    pub reads_lattice_members: bool,
     /// Some rule reads `dominated_by`.
-    reads_dominated: bool,
+    pub reads_dominated: bool,
 }
 
 /// An aggregate element, planned once per rule by `prepare`. Indices, not
@@ -1124,6 +1124,8 @@ pub struct Eval {
     assume: Option<Rc<Assumption>>,
     bootstrap: bool,
     answer: RuleAnswer,
+    /// What a kept image holds of `safety_answer`, spent by the first `prepare`.
+    known_answer: Option<RuleAnswer>,
     pub no_provenance: bool,
     /// A provenanced world no rule reads `derived_by` of writes its rows when
     /// something asks (prov.rs): firings noted, and whether to note them.
@@ -1293,7 +1295,12 @@ enum Sealed {
 }
 
 impl Eval {
-    pub fn new(mut h: Heap, store: Store, budget: i64, mode: Mode, bootstrap: bool) -> Eval {
+    pub fn new(h: Heap, store: Store, budget: i64, mode: Mode, bootstrap: bool) -> Eval {
+        Eval::with_answer(h, store, budget, mode, bootstrap, None)
+    }
+
+    /// `new`, the program's safety answer already known (a kept image holds it), so no kernel evaluation asks it again.
+    pub fn with_answer(mut h: Heap, store: Store, budget: i64, mode: Mode, bootstrap: bool, known: Option<RuleAnswer>) -> Eval {
         let v = Vocab::new(&mut h);
         let hole_id = h.atom("$adhoc");
         let unknown_value = h.atom("$unknown_value");
@@ -1507,6 +1514,7 @@ impl Eval {
             assume: None,
             bootstrap,
             answer: RuleAnswer::default(),
+            known_answer: known,
             no_provenance: false,
             pending_prov: Vec::new(),
             lazy_prov: false,
@@ -2291,6 +2299,9 @@ impl Eval {
     /// under the stock evaluator with `bootstrap` set — which is the rung that
     /// stops the tower: a bootstrap evaluation asks nothing of anybody.
     fn safety_answer(&mut self, rules: &[DRule]) -> RuleAnswer {
+        if let Some(a) = self.known_answer.take() {
+            return a;
+        }
         if self.bootstrap || (rules.is_empty() && self.lattice_rows.is_empty() && self.dom_rels.is_empty()) {
             return RuleAnswer::default();
         }
@@ -3842,6 +3853,10 @@ impl Eval {
     /// The staged facts, each with the rule and the premises of the firing that staged it, one a line.
     /// What is staged for the next tick, with the other derivations of each: the evaluation's, not the store's, so
     /// a kept image carries it beside the store (`crate::image`).
+    pub fn safety(&self) -> &RuleAnswer {
+        &self.answer
+    }
+
     pub fn staged_kept(&self) -> Vec<(StagedFact, Vec<(Sym, Vec<PremRef>)>)> {
         self.staged_sorted()
             .into_iter()

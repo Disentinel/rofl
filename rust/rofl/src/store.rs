@@ -405,6 +405,20 @@ impl TupSeg {
             self.cons[i] = k as u32;
         }
     }
+    /// Room for `n` more tuples of about `n_args` arguments, so a bulk load grows nothing.
+    fn reserve(&mut self, n: usize, n_args: usize) {
+        self.ends.reserve(n);
+        self.sks.reserve(n);
+        self.args.reserve(n_args);
+        let want = ((self.ends.len() + n + 1) * 2).next_power_of_two().max(self.cons.len());
+        if want > self.cons.len() {
+            self.cons = vec![TUP_EMPTY; want];
+            for k in 0..self.ends.len() {
+                let i = self.slot(self.args(k as TupId), tup_hash(self.args(k as TupId)));
+                self.cons[i] = k as u32;
+            }
+        }
+    }
     fn intern(&mut self, args: &[Term], hash: u64, sk: impl FnOnce() -> u64) -> TupId {
         if (self.ends.len() + 1) * 4 >= self.cons.len() * 3 {
             self.grow();
@@ -483,6 +497,9 @@ impl Tuples {
             }
         }
         self.t0 + self.top.intern(args, hash, || args_sortkey(h, args))
+    }
+    fn reserve(&mut self, n: usize, n_args: usize) {
+        self.top.reserve(n, n_args);
     }
     fn freeze(&mut self) {
         if self.top.len() == 0 {
@@ -663,6 +680,10 @@ impl Facts {
     }
     fn push(&mut self, r: FactRec) {
         self.recs.push(r);
+    }
+    fn reserve(&mut self, n: usize, n_args: usize) {
+        self.recs.own.reserve(n);
+        self.tups.reserve(n, n_args);
     }
     #[inline]
     fn set_flags(&mut self, id: FactId, f: u8) {
@@ -1119,6 +1140,37 @@ impl Store {
         (0..self.facts.len() as FactId)
             .filter(|&i| self.alive(i))
             .collect()
+    }
+
+    /// Room for `n` facts of about `n_args` arguments in all, ahead of a load of `put_kept`.
+    pub fn reserve_kept(&mut self, n: usize, n_args: usize) {
+        self.facts.reserve(n, n_args);
+        self.wit_head.own.reserve(n);
+        if self.facts.len() == 0 {
+            self.keys = vec![EMPTY; ((n + 1) * 4).next_power_of_two()];
+        }
+    }
+
+    /// `put` for a fact the caller knows is new: a kept image holds each key once, so nothing looks the key up, and
+    /// the caller bumps the version once, after the load.
+    pub fn put_kept(&mut self, h: &Heap, rel: Sym, persp: Sym, args: &[Term], flags: u8, ground: bool) -> FactId {
+        let tup = self.facts.tups.intern(h, args);
+        let id = self.facts.len() as FactId;
+        self.facts.push(FactRec::new(rel, persp, tup, flags));
+        self.wit_head.push(EMPTY);
+        self.key_insert(id);
+        self.n_live += 1;
+        if let Some(a) = self.arrivals.as_mut() {
+            a.push(id);
+        }
+        let run = self.run_mut(rel, persp);
+        run.arrived.push(id);
+        if !ground {
+            run.loose.push(id);
+        } else if run.by_pat.is_some() {
+            run.staged.push(id);
+        }
+        id
     }
 
     fn run_mut(&mut self, rel: Sym, persp: Sym) -> &mut KeyRun {
