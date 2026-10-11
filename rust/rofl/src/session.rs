@@ -150,6 +150,25 @@ impl Session {
         Ok(Session { eval: l.eval, dangling: l.dangling, asks: 0 })
     }
 
+    /// A world from a kept image (`crate::image`): an evaluated world opens evaluated.
+    pub fn open_kept(bytes: &[u8], budget: i64) -> Result<Session, String> {
+        let mut h = Heap::default();
+        let v = Vocab::new(&mut h);
+        let mut o = crate::image::open(&mut h, bytes)?;
+        bootstrap_kernel(&mut h, &v, &mut o.store);
+        let mut eval = Eval::new(h, o.store, budget, Mode::Rounds, false);
+        eval.vclosure_restore();
+        eval.stage_kept(o.staged);
+        eval.after_open();
+        Ok(Session { eval, dangling: o.dangling, asks: 0 })
+    }
+
+    /// This world as a kept image, which `open_kept` reads back.
+    pub fn keep(&mut self) -> Vec<u8> {
+        self.eval.settle_provenance();
+        crate::image::keep(&self.eval.h, &self.eval.store, &self.eval.staged_kept())
+    }
+
     /// AN EMPTY WORLD with the kernel's bootstrap tables and nothing else —
     /// `new Rofl()` on the TypeScript side. This is where `load` starts from,
     /// and it is the reason the port no longer needs a seed to exist: a caller
