@@ -60,7 +60,10 @@ use std::cmp::{Ordering, Reverse};
 use std::collections::{BTreeMap, BinaryHeap, HashMap, HashSet};
 use std::hash::{BuildHasherDefault, Hash, Hasher};
 use std::ops::{Index, IndexMut, Range};
+use crate::arena::{Arena, Pod};
 use std::rc::Rc;
+
+mod volume;
 
 pub type FactId = u32;
 pub type CellId = u32;
@@ -96,6 +99,7 @@ impl Dominators {
 /// the four flag bits above it. `(rel, persp, tup)` is the key, injectively —
 /// see the module note.
 #[derive(Clone, Copy)]
+#[repr(C)]
 pub struct FactRec {
     pub rel: Sym,
     pub persp: Sym,
@@ -156,6 +160,7 @@ pub struct EvalRecord {
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
+#[repr(C, u32)]
 pub enum PremRef {
     /// A fact that was matched: the identity, not the spelling.
     Fact(FactId),
@@ -298,8 +303,8 @@ pub struct Witness {
 
 #[derive(Default, Clone)]
 struct KeyRun {
-    canon: Vec<FactId>,
-    arrived: Vec<FactId>,
+    canon: Arena<FactId>,
+    arrived: Arena<FactId>,
     /// Facts holding a non-ground argument: they belong to no bucket and to
     /// every answer (`KeyRun.loose`, src/store.ts:68).
     loose: Vec<FactId>,
@@ -342,12 +347,12 @@ fn tup_hash(args: &[Term]) -> u64 {
 #[derive(Default, Clone)]
 struct TupSeg {
     /// Where each tuple's arguments END in `args`.
-    ends: Vec<u32>,
+    ends: Arena<u32>,
     /// The eight-byte order prefix — see the module note. It belongs to the
     /// TUPLE and not to the fact, because that is what it is a function of.
-    sks: Vec<u64>,
-    args: Vec<Term>,
-    cons: Vec<u32>,
+    sks: Arena<u64>,
+    args: Arena<Term>,
+    cons: Arena<u32>,
 }
 
 impl TupSeg {
@@ -394,28 +399,29 @@ impl TupSeg {
     /// a tuple for nothing this table's probe lengths need.
     fn grow(&mut self) {
         let want = ((self.ends.len() + 1) * 2).next_power_of_two().max(64);
-        self.cons = vec![TUP_EMPTY; want];
+        let mut cons = vec![TUP_EMPTY; want];
         let mask = want - 1;
         for k in 0..self.ends.len() {
             let a = self.args(k as TupId);
             let mut i = (tup_hash(a) as usize) & mask;
-            while self.cons[i] != TUP_EMPTY {
+            while cons[i] != TUP_EMPTY {
                 i = (i + 1) & mask;
             }
-            self.cons[i] = k as u32;
+            cons[i] = k as u32;
         }
+        self.cons = cons.into();
     }
     /// Room for `n` more tuples of about `n_args` arguments, so a bulk load grows nothing.
     fn reserve(&mut self, n: usize, n_args: usize) {
-        self.ends.reserve(n);
-        self.sks.reserve(n);
-        self.args.reserve(n_args);
+        self.ends.to_mut().reserve(n);
+        self.sks.to_mut().reserve(n);
+        self.args.to_mut().reserve(n_args);
         let want = ((self.ends.len() + n + 1) * 2).next_power_of_two().max(self.cons.len());
         if want > self.cons.len() {
-            self.cons = vec![TUP_EMPTY; want];
+            self.cons = vec![TUP_EMPTY; want].into();
             for k in 0..self.ends.len() {
                 let i = self.slot(self.args(k as TupId), tup_hash(self.args(k as TupId)));
-                self.cons[i] = k as u32;
+                self.cons.to_mut()[i] = k as u32;
             }
         }
     }
@@ -427,11 +433,11 @@ impl TupSeg {
         if self.cons[slot] != TUP_EMPTY {
             return self.cons[slot];
         }
-        self.args.extend_from_slice(args);
+        self.args.to_mut().extend_from_slice(args);
         let i = self.ends.len() as TupId;
-        self.ends.push(self.args.len() as u32);
-        self.sks.push(sk());
-        self.cons[slot] = i;
+        self.ends.to_mut().push(self.args.len() as u32);
+        self.sks.to_mut().push(sk());
+        self.cons.to_mut()[slot] = i;
         i
     }
     /// FOUR NUMBERS AND NOT TWO, because the two hid a claim. Rolled up as one
@@ -530,25 +536,25 @@ impl Tuples {
 /// provenance a layer changes on a record it shares (its firing chain head,
 /// a base firing's link) does it once.
 #[derive(Clone)]
-struct Col<T> {
+struct Col<T: Pod> {
     mark: usize,
-    base: Rc<Vec<T>>,
+    base: Rc<Arena<T>>,
     own: Vec<T>,
 }
 
-impl<T> Default for Col<T> {
+impl<T: Pod> Default for Col<T> {
     fn default() -> Self {
-        Col { mark: 0, base: Rc::new(Vec::new()), own: Vec::new() }
+        Col { mark: 0, base: Rc::default(), own: Vec::new() }
     }
 }
 
-impl<T> From<Vec<T>> for Col<T> {
+impl<T: Pod> From<Vec<T>> for Col<T> {
     fn from(own: Vec<T>) -> Self {
         Col { own, ..Col::default() }
     }
 }
 
-impl<T: Clone> Col<T> {
+impl<T: Pod> Col<T> {
     #[inline]
     fn len(&self) -> usize {
         self.mark + self.own.len()
@@ -578,15 +584,15 @@ impl<T: Clone> Col<T> {
             return;
         }
         if self.mark == 0 {
-            self.base = Rc::new(std::mem::take(&mut self.own));
+            self.base = Rc::new(std::mem::take(&mut self.own).into());
         } else {
-            Rc::make_mut(&mut self.base).append(&mut self.own);
+            Rc::make_mut(&mut self.base).to_mut().append(&mut self.own);
         }
         self.mark = self.base.len();
     }
 }
 
-impl<T> Index<usize> for Col<T> {
+impl<T: Pod> Index<usize> for Col<T> {
     type Output = T;
     /// The layer's own first, whose bounds check is then the only test an
     /// unlayered store pays: below the mark the subtraction wraps and misses.
@@ -599,11 +605,11 @@ impl<T> Index<usize> for Col<T> {
     }
 }
 
-impl<T: Clone> IndexMut<usize> for Col<T> {
+impl<T: Pod> IndexMut<usize> for Col<T> {
     #[inline]
     fn index_mut(&mut self, i: usize) -> &mut T {
         if i < self.mark {
-            &mut Rc::make_mut(&mut self.base)[i]
+            &mut Rc::make_mut(&mut self.base).to_mut()[i]
         } else {
             &mut self.own[i - self.mark]
         }
@@ -611,7 +617,7 @@ impl<T: Clone> IndexMut<usize> for Col<T> {
 }
 
 /// A span never straddles the mark: it was appended in one piece.
-impl<T> Index<Range<usize>> for Col<T> {
+impl<T: Pod> Index<Range<usize>> for Col<T> {
     type Output = [T];
     #[inline]
     fn index(&self, r: Range<usize>) -> &[T] {
@@ -623,10 +629,10 @@ impl<T> Index<Range<usize>> for Col<T> {
     }
 }
 
-impl<T: Clone> IndexMut<Range<usize>> for Col<T> {
+impl<T: Pod> IndexMut<Range<usize>> for Col<T> {
     fn index_mut(&mut self, r: Range<usize>) -> &mut [T] {
         if r.start < self.mark {
-            &mut Rc::make_mut(&mut self.base)[r]
+            &mut Rc::make_mut(&mut self.base).to_mut()[r]
         } else {
             &mut self.own[r.start - self.mark..r.end - self.mark]
         }
@@ -643,7 +649,7 @@ impl<T: Clone> IndexMut<Range<usize>> for Col<T> {
 #[derive(Default, Clone)]
 pub struct Facts {
     recs: Col<FactRec>,
-    bflags: Rc<Vec<u8>>,
+    bflags: Rc<Arena<u8>>,
     tups: Tuples,
 }
 
@@ -689,7 +695,7 @@ impl Facts {
     fn set_flags(&mut self, id: FactId, f: u8) {
         let i = id as usize;
         if i < self.recs.mark {
-            Rc::make_mut(&mut self.bflags)[i] = f;
+            Rc::make_mut(&mut self.bflags).to_mut()[i] = f;
         } else {
             self.recs.own[i - self.recs.mark].set_flags(f);
         }
@@ -703,7 +709,7 @@ impl Facts {
         self.recs.freeze();
         if self.recs.mark > m {
             let fresh = self.recs.base[m..].iter().map(|r| r.flags());
-            Rc::make_mut(&mut self.bflags).extend(fresh);
+            Rc::make_mut(&mut self.bflags).to_mut().extend(fresh);
         }
         self.tups.freeze();
     }
@@ -876,7 +882,7 @@ pub struct Store {
     ///
     /// Layered: `keys_base` holds the ids below the records' mark and is
     /// shared, `keys` the ids this layer added. A key is in one of the two.
-    keys_base: Rc<Vec<u32>>,
+    keys_base: Rc<Arena<u32>>,
     keys: Vec<u32>,
     keys_n: usize,
     idx: Runs,
@@ -971,37 +977,106 @@ impl Runs {
 /// this layer's own set.
 #[derive(Default, Clone)]
 struct Fired {
-    base: Rc<FxSet<u64>>,
+    base: Rc<HashSlots>,
     own: FxSet<u64>,
 }
 
 impl Fired {
     #[inline]
     fn insert(&mut self, h: u64) -> bool {
-        (self.base.is_empty() || !self.base.contains(&h)) && self.own.insert(h)
+        !self.base.contains(h) && self.own.insert(h)
     }
     fn clear(&mut self) {
         self.base = Rc::default();
         self.own.clear();
     }
     fn capacity(&self) -> usize {
-        self.base.capacity() + self.own.capacity()
+        self.base.slots.capacity() + self.own.capacity()
     }
     fn freeze(&mut self) {
         if self.own.is_empty() {
             return;
         }
-        if self.base.is_empty() {
-            self.base = Rc::new(std::mem::take(&mut self.own));
-        } else {
-            Rc::make_mut(&mut self.base).extend(self.own.drain());
+        let b = Rc::make_mut(&mut self.base);
+        b.reserve(self.own.len());
+        for h in self.own.drain() {
+            b.insert(h);
         }
+    }
+}
+
+/// Hashes in an open-addressed table, half full at most, 0 marking an empty slot: a set that reads the same
+/// from a file as from the heap.
+#[derive(Default, Clone)]
+struct HashSlots {
+    slots: Arena<u64>,
+    n: usize,
+    zero: bool,
+}
+
+impl HashSlots {
+    #[inline]
+    fn contains(&self, h: u64) -> bool {
+        if h == 0 {
+            return self.zero;
+        }
+        if self.slots.is_empty() {
+            return false;
+        }
+        let mask = self.slots.len() - 1;
+        let mut i = h as usize & mask;
+        loop {
+            match self.slots[i] {
+                0 => return false,
+                x if x == h => return true,
+                _ => i = (i + 1) & mask,
+            }
+        }
+    }
+    fn insert(&mut self, h: u64) {
+        if h == 0 {
+            self.zero = true;
+            return;
+        }
+        self.reserve(1);
+        let slots = self.slots.to_mut();
+        let mask = slots.len() - 1;
+        let mut i = h as usize & mask;
+        while slots[i] != 0 {
+            if slots[i] == h {
+                return;
+            }
+            i = (i + 1) & mask;
+        }
+        slots[i] = h;
+        self.n += 1;
+    }
+    fn reserve(&mut self, more: usize) {
+        let want = ((self.n + more) * 2).next_power_of_two().max(64);
+        if want <= self.slots.len() {
+            return;
+        }
+        let mut slots = vec![0u64; want];
+        for &h in self.slots.iter().filter(|&&h| h != 0) {
+            let mut i = h as usize & (want - 1);
+            while slots[i] != 0 {
+                i = (i + 1) & (want - 1);
+            }
+            slots[i] = h;
+        }
+        self.slots = slots.into();
     }
 }
 
 const EMPTY: u32 = u32::MAX;
 
+unsafe impl Pod for FactRec {}
+unsafe impl Pod for WitNode {}
+// a mapped arena of premises is checked tag by tag when its volume is opened
+unsafe impl Pod for PremRef {}
+
 #[derive(Clone, Copy)]
+#[repr(C)]
 struct WitNode {
     rule: Sym,
     tick: u32,
@@ -1088,12 +1163,17 @@ impl Store {
         for (rel, persp) in self.idx.arriving() {
             self.absorb(h, rel, persp);
         }
+        self.freeze_as_is();
+    }
+
+    /// Everything under the mark, the runs with arrivals not yet merged included.
+    fn freeze_as_is(&mut self) {
         let layered = self.facts.recs.mark > 0;
         self.facts.freeze();
         if !layered {
-            self.keys_base = Rc::new(std::mem::take(&mut self.keys));
+            self.keys_base = Rc::new(std::mem::take(&mut self.keys).into());
         } else if !self.keys.is_empty() {
-            self.keys_base = Rc::new(self.key_table(0));
+            self.keys_base = Rc::new(self.key_table(0).into());
             self.keys = Vec::new();
         }
         self.keys_n = 0;
@@ -1164,7 +1244,7 @@ impl Store {
             a.push(id);
         }
         let run = self.run_mut(rel, persp);
-        run.arrived.push(id);
+        run.arrived.to_mut().push(id);
         if !ground {
             run.loose.push(id);
         } else if run.by_pat.is_some() {
@@ -1326,7 +1406,7 @@ impl Store {
         }
         let ground = args.iter().all(|a| h.is_ground(*a));
         let run = self.run_mut(rel, persp);
-        run.arrived.push(id);
+        run.arrived.to_mut().push(id);
         if !ground {
             run.loose.push(id);
         } else if run.by_pat.is_some() {
@@ -1354,8 +1434,8 @@ impl Store {
         let v = self.idx.get_mut(&rel).unwrap();
         let i = v.iter().position(|(p, _)| *p == persp).unwrap();
         let t_absorb = std::time::Instant::now();
-        let mut canon = std::mem::take(&mut v[i].1.canon);
-        let mut fresh = std::mem::take(&mut v[i].1.arrived);
+        let mut canon = v[i].1.canon.take();
+        let mut fresh = v[i].1.arrived.take();
         self.absorb_calls += 1;
         self.absorb_fresh += fresh.len() as u64;
         self.absorb_canon += canon.len() as u64;
@@ -1395,7 +1475,7 @@ impl Store {
         }
         let v = self.idx.get_mut(&rel).unwrap();
         let i = v.iter().position(|(p, _)| *p == persp).unwrap();
-        v[i].1.canon = canon;
+        v[i].1.canon = canon.into();
         self.absorb_ns += t_absorb.elapsed().as_nanos();
     }
 
@@ -1406,7 +1486,7 @@ impl Store {
         match self.idx.get(&rel).and_then(|v| {
             v.iter()
                 .find(|(p, _)| *p == persp)
-                .map(|(_, r)| r.canon.clone())
+                .map(|(_, r)| r.canon.to_vec())
         }) {
             Some(mut c) => {
                 let before = c.len();
@@ -1625,7 +1705,7 @@ impl Store {
             self.argm_cloned += canon.len() as u64;
             let mut by_val = FxMap::default();
             let mut sig = Vec::new();
-            for &k in canon {
+            for &k in canon.iter() {
                 if facts.alive(k) && pat_sig(h, pos, facts.args(k), &mut sig) {
                     put_sig(&mut by_val, &sig, k);
                 }
@@ -1759,8 +1839,8 @@ impl Store {
             let v = self.idx.get_mut(&rel).unwrap();
             let i = v.iter().position(|(p, _)| *p == persp).unwrap();
             let run = &mut v[i].1;
-            let dead: Vec<FactId> = std::mem::take(&mut run.canon);
-            let dead2: Vec<FactId> = std::mem::take(&mut run.arrived);
+            let dead: Vec<FactId> = run.canon.take();
+            let dead2: Vec<FactId> = run.arrived.take();
             let loose: Vec<FactId> = std::mem::take(&mut run.loose);
             Self::drop_patterns(run);
             let alive: Vec<FactId> = dead
@@ -1777,8 +1857,8 @@ impl Store {
                 .collect();
             let v = self.idx.get_mut(&rel).unwrap();
             let i = v.iter().position(|(p, _)| *p == persp).unwrap();
-            v[i].1.canon = alive;
-            v[i].1.arrived = alive2;
+            v[i].1.canon = alive.into();
+            v[i].1.arrived = alive2.into();
             v[i].1.loose = loose;
         }
     }
@@ -4437,3 +4517,5 @@ pub fn tuple_text(h: &Heap, ts: &[Term]) -> String {
     o.push(')');
     o
 }
+
+const _: () = assert!(std::mem::size_of::<PremRef>() == 8 && std::mem::size_of::<FactRec>() == 12 && std::mem::size_of::<WitNode>() == 20);

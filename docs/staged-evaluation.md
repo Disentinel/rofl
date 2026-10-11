@@ -103,8 +103,13 @@ from the store.
    memory and across a process (the kept image); what remains is a kept stage read back under a cone that does not
    run its rules again, and dominance and join lattice worlds kept evaluated. Proof: a world evaluated
    in two stages equals the world evaluated whole, byte for byte, on every world of `npm test` that splits.
-2. **The mapped volume.** colfile into the engine as the frozen base a fork reads.
-3. **Resume** (decision 4, H5).
+2. **The mapped volume.** Built: `Session::keep_volume` writes the world as the arenas it is, `open_volume` maps
+   them and copies nothing (`rust/rofl/src/volume.rs`; at 250 vscode files it opens in 0.6 s against 9.2 s for the
+   image, holding 0.36 GB against 1.6 GB, for twice the disk;
+   `f_a_world_kept_as_a_volume_opens_mapped_in_a_fifteenth_of_the_time`). Left: a write below the mark copies a
+   whole mapped arena.
+3. **Resume** (decision 4, H5). Built for the plain path: `Session::resume`
+   (`f_a_step_wall_in_the_plain_path_is_a_continuation`).
 4. **The planner and its refusal** (decisions 3 and 6, H1, H3).
 5. **Workers by key** (decision 7).
 6. **The explanation by file**: the why of an absence as a table of files, each row expanded by lifting one volume.
