@@ -1,0 +1,118 @@
+//! A WORLD KEPT AS A VOLUME (docs/staged-evaluation.md, decision 2): what a kept image holds (`crate::image`), but
+//! written as the arenas the heap and the store are, so opening it maps the file and reads, parses and copies
+//! nothing. A page of it is brought in when something reads it and can be dropped again by the system; a write to
+//! a mapped arena copies that arena into the heap first. Read by the build that wrote it.
+use crate::arena::{map_file, VolR, VolW};
+use crate::engine::{RuleAnswer, StagedFact};
+use crate::store::{PremRef, Store};
+use crate::term::{Heap, Sym, Term};
+
+const MAGIC: &[u8; 16] = b"ROFL-VOLUME-1\n\0\0";
+
+fn build_id() -> String {
+    format!("{} {} {:x}", env!("CARGO_PKG_VERSION"), crate::kernel::KERNEL_HASH, 0x0102_0304u32)
+}
+
+pub type Staged = Vec<(StagedFact, Vec<(Sym, Vec<PremRef>)>)>;
+
+/// The world in `h` and `s`, frozen, and what its evaluation staged, as a volume at `path`; its size.
+pub fn keep(path: &str, h: &mut Heap, s: &mut Store, staged: &Staged, answer: &RuleAnswer) -> std::io::Result<usize> {
+    let mut w = VolW::create(path)?;
+    w.bytes(MAGIC);
+    w.text(&build_id());
+    s.write_volume(&mut w);
+    h.write_volume(&mut w);
+    w.u32(staged.len() as u32);
+    for (f, alts) in staged {
+        w.u32(f.rel);
+        w.u32(f.persp);
+        w.arena(&f.args);
+        w.u32(f.rule);
+        w.arena(&f.prems);
+        w.u32(alts.len() as u32);
+        for (rule, prems) in alts {
+            w.u32(*rule);
+            w.arena(prems);
+        }
+    }
+    w.arena(&answer.unsafe_rules);
+    w.arena(&answer.demand_rels);
+    w.arena(&answer.late);
+    for ps in [&answer.agg_refused, &answer.lattice_refused] {
+        w.arena(&ps.iter().flat_map(|&(a, b)| [a, b]).collect::<Vec<_>>());
+    }
+    for flag in [answer.reads_provenance, answer.reads_members, answer.reads_lattice_members, answer.reads_dominated] {
+        w.u32(flag as u32);
+    }
+    let mut zero: Vec<(Sym, u32)> = answer.empty_zero.iter().copied().collect();
+    zero.sort_unstable();
+    w.arena(&zero.iter().flat_map(|&(a, b)| [a, b]).collect::<Vec<_>>());
+    for m in [&answer.trigger, &answer.lattice_outer] {
+        let mut ks: Vec<Sym> = m.keys().copied().collect();
+        ks.sort_unstable();
+        w.u32(ks.len() as u32);
+        for k in ks {
+            w.u32(k);
+            w.arena(&m[&k]);
+        }
+    }
+    w.finish()
+}
+
+pub struct Opened {
+    pub heap: Heap,
+    pub store: Store,
+    pub staged: Staged,
+    pub answer: RuleAnswer,
+}
+
+fn pairs(r: &mut VolR) -> Result<Vec<(u32, u32)>, String> {
+    Ok(r.arena::<u32>()?.chunks_exact(2).map(|x| (x[0], x[1])).collect())
+}
+
+fn prems(r: &mut VolR) -> Result<Vec<PremRef>, String> {
+    Ok(r.arena_checked::<PremRef>(|w| w.iter().step_by(2).all(|&t| t <= 4))?.to_vec())
+}
+
+/// The world a volume at `path` holds, mapped.
+pub fn open(path: &str) -> Result<Opened, String> {
+    let map = map_file(path).map_err(|e| format!("{path}: {e}"))?;
+    if !map.starts_with(MAGIC) {
+        return Err(format!("{path}: not a volume"));
+    }
+    let mut r = VolR::new(map, MAGIC.len());
+    if r.text()? != build_id() {
+        return Err(format!("{path}: a volume of another build"));
+    }
+    let store = Store::read_volume(&mut r)?;
+    let heap = Heap::read_volume(&mut r)?;
+    let mut staged = Vec::new();
+    for _ in 0..r.u32()? {
+        let (rel, persp) = (r.u32()?, r.u32()?);
+        let args: Vec<Term> = r.arena::<Term>()?.to_vec();
+        let rule = r.u32()?;
+        let ps = prems(&mut r)?;
+        let mut alts = Vec::new();
+        for _ in 0..r.u32()? {
+            let rule = r.u32()?;
+            alts.push((rule, prems(&mut r)?));
+        }
+        staged.push((StagedFact { rel, persp, args, rule, prems: ps }, alts));
+    }
+    let mut a = RuleAnswer { unsafe_rules: r.arena::<Sym>()?.to_vec(), demand_rels: r.arena::<Sym>()?.to_vec(), late: r.arena::<Sym>()?.to_vec(), ..Default::default() };
+    (a.agg_refused, a.lattice_refused) = (pairs(&mut r)?, pairs(&mut r)?);
+    let [p, m, l, d] = [(); 4].map(|_| r.u32().map(|x| x == 1));
+    (a.reads_provenance, a.reads_members, a.reads_lattice_members, a.reads_dominated) = (p?, m?, l?, d?);
+    a.empty_zero = pairs(&mut r)?.into_iter().collect();
+    for which in 0..2 {
+        for _ in 0..r.u32()? {
+            let k = r.u32()?;
+            let v = r.arena::<Sym>()?.to_vec();
+            if which == 0 { a.trigger.insert(k, v) } else { a.lattice_outer.insert(k, v) };
+        }
+    }
+    if !r.at_end() {
+        return Err(format!("{path}: a volume has bytes after its end"));
+    }
+    Ok(Opened { heap, store, staged, answer: a })
+}

@@ -1,6 +1,7 @@
 // Two stages by asks (docs/staged-evaluation.md, decision 1): a world evaluated over the cone of LOWER, then the
 // question's asks added to the evaluated world by delta, against the same world asking both at once, byte for byte.
-//   stage_by_asks.ts FACTS N LOWER,... [kept]     kept: the lower stage kept on disk and opened again before the question
+//   stage_by_asks.ts FACTS N LOWER,... [kept|volume]     kept: the lower stage kept on disk and opened again before the
+//   question; volume: kept as a volume and mapped
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { RoflPort } from '../runtime/port.ts';
@@ -40,11 +41,12 @@ const want = await w.stateText(); await w.close?.();
 t = T(); let s = await world(lower); await s.evaluate();
 const lowerMs = Math.round(T() - t); const lowerFacts = (await s.factCount()).facts;
 let kept;
-if (mode === 'kept') {
+if (mode === 'kept' || mode === 'volume') {
+  const volume = mode === 'volume';
   const keptPath = path.join(fs.mkdtempSync('/tmp/rofl-stage-'), 'lower.kept');
-  t = T(); const bytes = await s.keep(keptPath); const saveMs = Math.round(T() - t);
+  t = T(); const bytes = await s.keep(keptPath, volume); const saveMs = Math.round(T() - t);
   await s.close?.();
-  t = T(); s = await port.open({ keptPath, budget: 4_000_000_000, space: 40_000_000 }); const openMs = Math.round(T() - t);
+  t = T(); s = await port.open({ [volume ? 'volumePath' : 'keptPath']: keptPath, budget: 4_000_000_000, space: 40_000_000 }); const openMs = Math.round(T() - t);
   kept = { bytes, saveMs, openMs };
   fs.rmSync(path.dirname(keptPath), { recursive: true });
 }
