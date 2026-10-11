@@ -1,5 +1,5 @@
 -- examples/checks/agg-tag-why-check.rofl — agg_tag_why, run with
--- `rofl-load --explain`. `why` of an idempotent tag's fact names the tag and
+-- `rofl load --explain`. `why` of an idempotent tag's fact names the tag and
 -- its semiring and shows the best derivations, the digest of its members,
 -- each with its height and rule, and the ⊗ the engine ran for it, step by
 -- step (`2 is $tropical(1,1)`, and the product of two millionths rounded down

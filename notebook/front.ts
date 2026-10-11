@@ -2,7 +2,7 @@
 // A notebook is a world written as Markdown (`X.rofl.md`); the fenced ```rofl, ```datalog and ```natural blocks are its cells.
 
 /** The part of the JS model a notebook over code loads: structure, dataflow, calls, control flow, effects, globals, the host and the module graph between the files. */
-export const MODEL_FILES = ['boot.rofl',
+export const MODEL_FILES = ['boot.rofl', 'facts/model-units.rofl',
   'facts/js-kinds.rofl', 'facts/js-callgraph.rofl', 'facts/js-dataflow.rofl', 'facts/js-modules.rofl', 'facts/js-shapes.rofl', 'facts/js-statements.rofl',
   'facts/js-controlflow.rofl', 'facts/js-effects.rofl', 'facts/js-globals.rofl', 'facts/js-host.rofl', 'facts/js-host-surface.rofl', 'facts/js-lib-surface.rofl', 'facts/js-attrs.rofl',
   'rules/js-structure.rofl', 'rules/js-dataflow.rofl', 'rules/js-model.rofl', 'rules/js-callgraph.rofl', 'rules/js-controlflow.rofl',

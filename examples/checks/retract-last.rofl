@@ -1,0 +1,16 @@
+-- examples/checks/retract-last.rofl — THE LAST FACT OF A RELATION, AND OF A BOOK, TAKEN BACK. The world retracts
+-- rl_gone(1), the only fact of its relation, rl_book[rl_mine](2), the only fact of its book, and rl_said(1), whose
+-- relation the program declares itself (the check's retract option). A load without them writes no edb(rl_gone) and
+-- no authority for rl_mine, so the retraction takes them too; the declared edb(rl_said) stays. Both engines.
+edb(rl_said).
+rl_keep(1).
+rl_gone(1).
+rl_said(1).
+rl_book[rl_mine](2).
+rl_out(X) :- rl_keep(X).
+-- expect-row: edb[main](rl_keep)
+-- expect-row: edb[main](rl_said)
+-- expect-no-row: edb[main](rl_gone)
+-- expect-no-row: edb[main](rl_book)
+-- expect-no-row: authority[main](rl_mine,$kernel)
+-- expect-no-row: authority[main](rl_mine,user)

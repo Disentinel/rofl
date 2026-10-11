@@ -508,19 +508,13 @@ function main(): void {
   say('TIME read as a negative cycle. `not p` now means "p is not derivable in');
   say('THIS TICK", and a @next head contributes no same-tick edge.');
   say();
-  say('READ THE SECOND REFUSAL CLOSELY: it names FIVE relations where the old');
-  say('one named two. The old refusal was `unstratified[main](at, does)` --');
-  say('boot.rofl derived `unstratified/1` as the relations sitting ON the');
-  say('negative cycle, and only those. The schedule is now peeled off the');
-  say('decoded rules before anything fires, and a round that settles nothing');
-  say('reports everything still standing: `at` and `does` are on the cycle,');
-  say('and `knows`, `saw` and `settled` negate something that never settles,');
-  say('so no round can ever contain them either. They are uncomputable for a');
-  say('DERIVED reason rather than a structural one, and the old verdict was');
-  say('silent about them -- it would have named two relations in a program');
-  say('where five have no value. The price is on the other side: the refusal');
-  say('no longer carries the `reach` trace that showed WHY, because there is');
-  say('no `reach` any more. Wider answer, thinner explanation.');
+  say('READ THE SECOND REFUSAL CLOSELY: it names the cycle, in the direction');
+  say('facts flow, and marks the edge read under `not` (-/->). The old refusal');
+  say('was `unstratified[main](at, does)`, the relations ON the negative cycle;');
+  say('then rounds were peeled off the decoded rules and a stalled round listed');
+  say('everything still standing, the cycle and all that negates it, with');
+  say('nothing to say which was the cause. Now the stall is traced back to the');
+  say('shortest cycle through a strict edge, so the refusal says where to cut.');
   say();
   const lp = loopProbe();
   say(`  with the transition as @next rules:  load ok = ${lp.closedOk}  ${lp.closedDiag}`);
@@ -536,7 +530,7 @@ function main(): void {
   say('  reason, not because all three failed for some fourth one.');
   check('the kernel closes the loop across a tick, still refuses it inside one, and the world it computes is right',
     lp.closedOk === true && lp.sameTickOk === false
-    && /settled nothing while at, does, knows, saw, settled remained/.test(lp.sameTickDiag)
+    && /nothing on the cycle at -> saw -> knows -> does -\/-> at can be settled first/.test(lp.sameTickDiag)
     && lp.openOk === true && lp.openDerives.length > 0
     && lp.moved.join('; ') === 'E = npc_1, X = 2, Y = 1; E = npc_7, X = 3, Y = 1');
 

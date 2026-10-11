@@ -1,6 +1,6 @@
 // npm run test:declared — a declaration with no anchor is named from its words, as a head is (read_md.ts slug); two named alike, or one named as
 // another relation is, are refused, never merged; an anchor still wins. Each case over the reader, the notebook's ownership over a real run, and
-// each planted defect, made in a copy of the reader, red for its own reason.
+// each planted defect, made in a copy of the reader, red for its own reason. And what the sentence form used to answer with silence, refused with its reason.
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
@@ -58,6 +58,31 @@ const r = runFile(file, k, readFileSync(file, 'utf8')), last = (k as unknown as 
 const asked = r.cells[1]?.lines[0], mine = last.query('nb__concludes(X, Y)').rows.length, kernel = last.query('concludes[$kernel](X, Y)').rows.length;
 say(asked?.total === 1 && mine === 1 && kernel > 1, `boot's concludes: the notebook's own row answers (${asked?.total}), nb__concludes holds ${mine}, the kernel's ${kernel} untouched`, JSON.stringify(r.cells.map((c) => c.errors)));
 rmSync(file, { force: true });
+
+// what the sentence form used to answer with silence or a parser's word is refused with its reason, each over a real run (w_the_sentence_form_never_fails_silently)
+const said = (text: string) => {
+  writeFileSync(file, text);
+  const r = runFile(file, new Kernel({ wall }), text);
+  rmSync(file, { force: true });
+  return { status: r.status, out: r.cells.flatMap((c) => [...c.errors, ...c.notes]).join('\n') };
+};
+const SILENT: [string, string, string[]][] = [
+  ['a declared sentence saying "but is not"', `${md(['A module M is kept but is not tested'], ['`auth` is kept but is not tested.'])}\nA module M is risky if M is kept but is not tested.\n`,
+    ['not read: "A module M is kept but is not tested": a declared sentence cannot say "but is not", which a condition reads as a negation; declare it without the negation and write that in the rule that uses it, with unless']],
+  ['a variable written with "the"', `${md(['A team T works under an area A', 'An area A is big'], ['`platform` works under `infra`.', '`infra` is big.'])}\n\`\`\`rofl\nA team T is wide if T works under an area A and the area A is big.\n\n? T works under the area A\n\`\`\`\n`,
+    ['not read: the area A is big: "the area A" is not read as a variable: a variable takes "a" or "an" before its noun, never "the"; write "an area A"',
+      '? T works under the area A: "the area A" is not read as a variable: a variable takes "a" or "an" before its noun, never "the"; write "an area A"']],
+  ['two relations on one verb phrase', md(['A team T owns a module M', 'A person P owns a car C'], ['`platform` owns `auth`.']),
+    ['not read: under "Declared as facts:": A team T owns a module M — it says the words of "A person P owns a car C", their nouns aside, and a row leaves the nouns out, so a row of either would be read as a row of the one: say one of them in other words',
+      'not read: under "Declared as facts:": A person P owns a car C — it says the words of "A team T owns a module M"']],
+  ['the limits of a datalog cell', ['p(1).\n// a comment', 'p(1).\n# a comment', 'q(74.006).', 'r(X) :- p(X), X == 1.', 's("ab").\nu(X) :- s(S), X is concat(S, "c").\n\n? u(X)'].map((c) => `\`\`\`datalog\n${c}\n\`\`\`\n`).join('\n'),
+    ["line 3: '//' starts no comment: a comment starts with --", "line 8: '#' starts no comment: a comment starts with --", 'line 12: 74.006 is not a number here: numbers are integers', "line 16: '==' is no operator: equality is =",
+      'the rule for u met an expression it could not evaluate (arith_type_error) and concluded nothing there: arithmetic is on integers, with + - * / mod min max, and the only string functions are str_char, str_len, str_pre, str_seg, str_segs, str_sub, atom_of']],
+];
+for (const [name, text, want] of SILENT) {
+  const r = said(text), missing = want.filter((w) => !r.out.includes(w));
+  say(r.status === 'unread' && !missing.length, `refused with its reason: ${name}`, `${r.status}; missing ${JSON.stringify(missing)} in\n${r.out}`);
+}
 
 // each defect in a copy of the reader, whose imports point back into the tree
 const dir = mkdtempSync(path.join(os.tmpdir(), 'rofl-declared-'));

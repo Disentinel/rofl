@@ -198,7 +198,7 @@ run "T12 retention off by one" unit-only "corpus cannot see retainTicks"
 # ------------------------------------------------------------- the argument
 # T13 an unrecognised flag is swallowed, which is how the seven ticked cases
 # came to fail on CONTENT instead of saying the flag was not implemented.
-perl -0pi -e 's/            f if f\.starts_with\(.-.\) && f != "-" => \{\n                return Err\(format!\("unknown flag: \{f\}"\)\);\n            \}\n//' $SRC/bin/rofl_eval.rs
+perl -0pi -e 's/            f if f\.starts_with\(.-.\) && f != "-" => \{\n                return Err\(format!\("unknown flag: \{f\}"\)\);\n            \}\n//' $SRC/bin/rofl/seed.rs
 run "T13 unknown flag swallowed" unit-only "the corpus passes no bad flag"
 
 # ------------------------------------------------------- the loose contract

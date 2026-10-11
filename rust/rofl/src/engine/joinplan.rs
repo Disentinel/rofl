@@ -98,8 +98,7 @@ impl Eval {
     /// store, no news) when it is cheaper than the written order for `n` news
     /// rows; None keeps the written order.
     pub(super) fn delta_pick(&mut self, r: &Rc<ERule>, at: Option<usize>, n: usize) -> Option<Rc<DeltaPlan>> {
-        if !self.delta_first
-            || brk!("delta_first_off" => true; false)
+        if brk!("delta_first_off" => true; false)
             || brk!("delta_first_spread" => false; !self.lat_spread.is_empty())
         {
             return None;

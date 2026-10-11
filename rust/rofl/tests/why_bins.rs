@@ -2,7 +2,7 @@
 //!
 //! The text itself is pinned against the reference in `explain.rs` and, over
 //! every world the tree loads, by `scripts/whycheck.ts`. What is left to show
-//! here is that `rofl-serve` and `rofl-load` carry that text unchanged, and
+//! here is that `rofl serve` and `rofl load` carry that text unchanged, and
 //! that their contracts — the JSON fields, the error shape, the order of the
 //! answers, the dump they replace, the exit code — are what they say.
 
@@ -31,11 +31,11 @@ fn world() -> Session {
 }
 
 fn serve(reqs: &[Value]) -> Vec<Value> {
-    let mut c = Command::new(env!("CARGO_BIN_EXE_rofl-serve"))
+    let mut c = Command::new(env!("CARGO_BIN_EXE_rofl")).arg("serve")
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .spawn()
-        .expect("rofl-serve");
+        .expect("rofl serve");
     let mut i = c.stdin.take().unwrap();
     for r in reqs {
         writeln!(i, "{r}").unwrap();
@@ -90,11 +90,11 @@ fn load(args: &[&str]) -> (String, i32) {
     std::fs::create_dir_all(&dir).unwrap();
     let f = dir.join(format!("w{n}.rofl"));
     std::fs::write(&f, W).unwrap();
-    let o = Command::new(env!("CARGO_BIN_EXE_rofl-load"))
+    let o = Command::new(env!("CARGO_BIN_EXE_rofl")).arg("load")
         .args(args)
         .arg(&f)
         .output()
-        .expect("rofl-load");
+        .expect("rofl load");
     (String::from_utf8(o.stdout).unwrap(), o.status.code().unwrap())
 }
 
@@ -196,7 +196,7 @@ fn load_bounds_every_whynot_and_refuses_a_bound_that_is_not_an_integer() {
 fn load_refuses_a_numeric_flag_that_does_not_parse() {
     for (flag, v) in [("--ticks", "x"), ("--ticks", "-1"), ("--budget", "1e6"), ("--retain", "-1"),
                       ("--retain", "99999999999"), ("--space", "abc"), ("--space", "0"), ("--nodes", "2.5")] {
-        let o = Command::new(env!("CARGO_BIN_EXE_rofl-load")).args([flag, v, "nowhere.rofl"]).output().expect("rofl-load");
+        let o = Command::new(env!("CARGO_BIN_EXE_rofl")).arg("load").args([flag, v, "nowhere.rofl"]).output().expect("rofl load");
         let err = String::from_utf8(o.stderr).unwrap();
         assert_eq!(o.status.code(), Some(1), "{flag} {v}: {err}");
         assert!(err.starts_with(&format!("{flag} takes ")) && err.contains(&format!("{v:?}")), "{flag} {v}: {err}");

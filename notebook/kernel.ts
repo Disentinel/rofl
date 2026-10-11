@@ -5,6 +5,7 @@ import { cellsOf, libFiles, parseFront, translated, type CellKind, type Front } 
 import { asCell, assemble, type Inputs } from './world.ts';
 import { counted, type View } from './draw.ts';
 import { folded } from '../playground/chain.ts';
+import type { Engine, EngineName } from '../playground/engine.ts';
 
 export type Verdict = 'answers' | 'holds' | 'blind' | 'fails' | 'explained' | 'unasked' | 'unknown';
 export type Answer = { sentence: string; literal: string; at: string[] };
@@ -26,15 +27,19 @@ export type Status = 'ok' | 'blind' | 'fails' | 'unread' | 'cut';
 export type NbResult = { status: Status; front: Front; cells: NbCellOut[]; errors: string[]; unresolved?: string[]; ms: { load: number; run: number; phases?: Record<string, number>; loaded?: boolean; model?: 'evaluated' | 'kept' } };
 
 export class Kernel {
-  private host = new Host();
+  private host: Host;
   private loaded = '';
   private vocab?: { key: string; sentences: string[] };
   private whole: boolean;
   private wall?: () => () => boolean;
 
   /** `whole`: every run evaluates the model, the code and the cells as one world, never the cells alone over the model kept from the last run. `all`: every answer of a line, not the first fifty.
-   *  `wall`: a run's stop, made as the run starts; a run it stops answers what it found and its status is `cut`. */
-  constructor(opts: { whole?: boolean; all?: boolean; wall?: () => () => boolean } = {}) { this.whole = !!opts.whole; if (opts.all) this.host.rows = Infinity; this.wall = opts.wall; }
+   *  `wall`: a run's stop, made as the run starts; a run it stops answers what it found and its status is `cut`.
+   *  `engine`: what evaluates the model over the code, a host's choice (playground/rust.ts engineOf); the TypeScript engine when none is given. */
+  constructor(opts: { whole?: boolean; all?: boolean; wall?: () => () => boolean; engine?: Engine } = {}) {
+    this.host = new Host(opts.engine); this.whole = !!opts.whole; if (opts.all) this.host.rows = Infinity; this.wall = opts.wall;
+  }
+  get engine(): EngineName { return this.host.engine.name; }
 
   /** The proof of a ground literal over the last run, as a person reads it: what a picture's mark asks. Short, as `brief` (above it the
    *  value's chain), or `full`, the whole proof. */
@@ -66,7 +71,7 @@ export class Kernel {
     const at = (literal: string) => [...literal.matchAll(/n[0-9a-f]{8,16}_\d+/g)].flatMap((m) => out.nodes[m[0]] ? [`${out.nodes[m[0]].file}:${out.nodes[m[0]].line}`] : []);
     const answers = (rows: Row[]) => rows.map((r) => ({ sentence: labelled(r.sentence, out.nodes), literal: r.literal, at: at(r.literal) }));
     const hint = (e: string) => {
-      const m = /^not read(?: \(list item\))?: (?!the table |under "|a list item |\d+ list items )((?:(?!names go in backticks|is not a name).)*)$|^(?:\?|never|unsure|why|whynot) (.*): no sentence reads this question$/.exec(e);
+      const m = /^not read(?: \(list item\))?: (?!the table |under "|a list item |\d+ list items )((?:(?!names go in backticks|is not a name|is not read as a variable|cannot say).)*)$|^(?:\?|never|unsure|why|whynot) (.*): no sentence reads this question$/.exec(e);
       if (!m) return e;
       if (this.vocab?.key !== key) this.vocab = { key, sentences: [...translatorVocab(model, phrases).vocab, ...sentencesOf(out.learned)] };
       const near = nearest(m[1] ?? m[2], this.vocab.sentences);
@@ -176,9 +181,9 @@ export function legible(text: string): string {
     .replace(/ \[builtin\]$/, ' (arithmetic)')
     .replace(/^why needs a ground literal$/, 'why explains one answer: put a name in every blank, or ask `?` first for the answers'));
   // a relation by the sentence above it, not by its anchor
-  return out.map((l, k) => l.replace(/^(\s*)no rule concludes '\w+' and no matching base fact exists$/, (_, pad) => {
+  return out.map((l, k) => l.replace(/^(\s*)no rule concludes '\w+' and no matching base fact exists(.*)$/, (_, pad, unit) => {
     const above = /(?:^\s*why not |it stops at: )(.*?):?$/.exec(out[k - 1] ?? '')?.[1];
-    return `${pad}nothing says ${above ?? 'so'}, and no rule concludes it`;
+    return `${pad}nothing says ${above ?? 'so'}, and no rule concludes it${unit}`;
   })).join('\n');
 }
 

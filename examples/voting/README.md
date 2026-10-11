@@ -60,7 +60,7 @@ The same question can be put to the engine as it stands, without a rule for it:
 `excise` takes one ballot out of the world and prints what changed.
 
 ```
-rofl-load --excise "ballot(e1,v17,a,c,b,d)" boot.rofl examples/voting/voting.rofl examples/voting/voting-ballots.rofl
+rofl load --excise "ballot(e1,v17,a,c,b,d)" boot.rofl examples/voting/voting.rofl examples/voting/voting-ballots.rofl
 ```
 ```
 - ballot[main](e1,v17,a,c,b,d)
@@ -78,7 +78,7 @@ set `{a, b}`. The Borda and Condorcet winners do not move: no `borda` or
 34 40 46. A bloc `b` voter, v1, moves nothing but its own count:
 
 ```
-rofl-load --excise "ballot(e1,v1,b,c,a,d)" ...
+rofl load --excise "ballot(e1,v1,b,c,a,d)" ...
 - ballot[main](e1,v1,b,c,a,d)
 - votes[main](e1,b,7)
 + votes[main](e1,b,6)
@@ -90,7 +90,7 @@ world below (`vc_pivotal`).
 
 ## Why `a` won
 
-`rofl-load --why "plurality(e1,a)" ...` shows the winner, its count, and the
+`rofl load --why "plurality(e1,a)" ...` shows the winner, its count, and the
 members of the count, each with the ballot it came from:
 
 ```

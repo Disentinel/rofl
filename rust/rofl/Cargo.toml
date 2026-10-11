@@ -16,49 +16,5 @@ name = "rofl"
 path = "src/lib.rs"
 
 [[bin]]
-name = "rofl-eval"
-path = "src/bin/rofl_eval.rs"
-
-[[bin]]
-name = "rofl-render"
-path = "src/bin/rofl_render.rs"
-
-[[bin]]
-name = "ring1-lex"
-path = "src/bin/ring1_lex.rs"
-
-[[bin]]
-name = "ring1-preds"
-path = "src/bin/ring1_preds_dump.rs"
-
-[[bin]]
-name = "ring1-tokens"
-path = "src/bin/ring1_tokens_dump.rs"
-
-[[bin]]
-name = "rofl-lex"
-path = "src/bin/rofl_lex_dump.rs"
-
-[[bin]]
-name = "rofl-parse"
-path = "src/bin/rofl_parse_dump.rs"
-
-[[bin]]
-name = "rofl-parse-bench"
-path = "src/bin/rofl_parse_bench.rs"
-
-[[bin]]
-name = "rofl-session-bench"
-path = "src/bin/rofl_session_bench.rs"
-
-[[bin]]
-name = "rofl-serve"
-path = "src/bin/rofl_serve.rs"
-
-[[bin]]
-name = "rofl-load"
-path = "src/bin/rofl_load_dump.rs"
-
-[[bin]]
-name = "rofl-load-bench"
-path = "src/bin/rofl_load_bench.rs"
+name = "rofl"
+path = "src/bin/rofl/main.rs"

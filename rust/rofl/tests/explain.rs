@@ -122,6 +122,23 @@ fn whynot_over_a_relation_no_rule_concludes() {
     );
 }
 
+/// A RELATION A FILE LEFT OUT IS NOT A GAP (w_whynot_tells_absent_from_unloaded):
+/// a world carrying an index of its units names the file that concludes what
+/// nothing loaded does, and says of a relation no file concludes that it is one.
+#[test]
+fn whynot_names_the_unit_not_loaded() {
+    let mut s = Session::fresh(1_000_000);
+    s.load(std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/../../examples/checks/whynot-unloaded.rofl")).unwrap().as_str(), None).expect("load");
+    s.evaluate().expect("evaluate");
+    let (_, text) = s.whynot("wu_reaches(a, b)", &WhynotBounds::default()).unwrap();
+    assert_eq!(
+        text,
+        "whynot wu_reaches[main](a,b):\n  no rule concludes 'wu_reaches' and no matching base fact exists: rules/wu-calls.rofl concludes it and is not loaded"
+    );
+    let (_, text) = s.whynot("wu_orphan(a)", &WhynotBounds::default()).unwrap();
+    assert!(text.ends_with("no rule concludes 'wu_nowhere' and no matching base fact exists, and no unit of the model concludes it"), "{text}");
+}
+
 /// A LITERAL THAT HOLDS IS THE ANSWER, NOT AN ERROR. The reference echoes
 /// the question as it was written, here and in `why`'s refusal above.
 #[test]

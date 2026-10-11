@@ -1,4 +1,4 @@
--- examples/checks/agg-why-dag.rofl — agg_why_dag, run with `rofl-load --explain`.
+-- examples/checks/agg-why-dag.rofl — agg_why_dag, run with `rofl load --explain`.
 -- A derivation is a DAG, and `why` prints it as one (f_why_writes_a_shared_derivation_out_in_full):
 -- a fact or a cell written out once is referred to after, as `K [above]`, and
 -- the lines under the reference are not written again. `dg_top(x)` rests on

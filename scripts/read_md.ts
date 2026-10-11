@@ -11,7 +11,7 @@ import { parseMd } from './md_blocks.ts';
 
 export type ReadOptions = {
   vocab: string;
-  /** the source's facts dump from `rofl-render --facts`, for measuring a round trip */
+  /** the source's facts dump from `rofl render --facts`, for measuring a round trip */
   facts?: string;
   /** relation -> the book it is read from, for relations defined outside the text */
   homeBooks?: Record<string, string>;
@@ -53,6 +53,13 @@ export function plural(n: string): string {
   const w = n.split(' '), i = w.indexOf('of') > 0 ? w.indexOf('of') - 1 : w.length - 1;
   w[i] = IRREGULAR.get(w[i]) ?? (/(?:s|x|z|ch|sh)$/.test(w[i]) ? w[i] + 'es' : /[^aeiou]y$/.test(w[i]) ? w[i].slice(0, -1) + 'ies' : w[i] + 's');
   return w.join(' ');
+}
+/** `the area A` where a variable is meant: why the line does not read, when it reads with `an area A`. */
+export function theVariable(s: string, reads: (s: string) => boolean): string | undefined {
+  for (const m of s.matchAll(/\bthe ([a-z][\w-]*(?: [a-z][\w-]*){0,2}) ([A-Z][A-Za-z0-9]*)\b/g)) {
+    const a = `${/^[aeiou]/.test(m[1]) ? 'an' : 'a'} ${m[1]} ${m[2]}`;
+    if (reads(s.slice(0, m.index) + a + s.slice(m.index + m[0].length))) return `"${m[0]}" is not read as a variable: a variable takes "a" or "an" before its noun, never "the"; write "${a}"`;
+  }
 }
 const IRREGULAR = new Map([['person', 'people'], ['child', 'children'], ['index', 'indices'], ['axis', 'axes']]);
 const QUANTIFIER = /^(Nothing|Nobody|None|No|Every|Each)\b/;
@@ -315,11 +322,12 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
         if (l1 && l2) { freshN++; l1.neg = neg; rule.body.push(l1, l2); return true; }
       }
     }
-    unparsed.push(text); return false;
+    const the = theVariable(text, (s) => templates.some((t) => regexOf(t).test(s)));
+    unparsed.push(the ? `${text}: ${the}` : text); return false;
   }
   // AN AGGREGATE (docs/aggregates.md, "The sentence form, as built"): a condition naming its result, what it takes,
   // and its own body in parentheses, `N is the number of B such that (B votes for C)`. The sugar is lowered here
-  // onto count, sum and a comparison, each in the one spelling rofl-render reads back as the sugar.
+  // onto count, sum and a comparison, each in the one spelling rofl render reads back as the sugar.
   const TAKES = `\\((?:[^()"\`]|"[^"]*"|\`[^\`]*\`)*\\)|${TERM}`;
   let freshNames = new Set<string>();
   const fresh = (stem: string): string => { for (let k = 0; ; k++) if (!freshNames.has(`${stem}${k}`)) { freshNames.add(`${stem}${k}`); return `${stem}${k}`; } };
@@ -647,6 +655,8 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
   const learnedAt = new Map<Tpl, number>();   // the line each was declared on
   function learn(rel: string, head: string, at = 0) {
     if (templates.some((t) => t.rel === rel)) return;
+    // a condition takes `but is not` apart (condition), so a rule could never say the sentence
+    if (/\bbut is not\b/.test(head)) { const u = `HEAD "${head}": a declared sentence cannot say "but is not", which a condition reads as a negation; declare it without the negation and write that in the rule that uses it, with unless`; unparsed.push(u); if (!(u in lineOf)) lineOf[u] = at; return; }
     head = head.charAt(0).toLowerCase() + head.slice(1);
     const parts: Part[] = []; let buf = ''; let n = 0; let last = 0; let m;
     const flush = () => { const t = buf.trim(); if (t) parts.push({ t: 'text', s: t }); buf = ''; };
@@ -761,6 +771,12 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
       else if (held) refusedName.set(t, `its name from its words, ${name}, is the relation of "${held.src}": give it an anchor of its own, <a id="..."></a>`);
     }
     for (const t of decls) if (!refusedName.has(t) && slug(t)) learn(slug(t), t, at.get(t));
+    // two declared sentences whose words are one, their nouns aside: a row leaves the nouns out, so it would be a row of either
+    const words = (t: string) => (t.charAt(0).toLowerCase() + t.slice(1)).replace(/(?:\b(?:an?) [a-z][\w-]*(?: [a-z][\w-]*){0,2} )?\b[A-Z][A-Za-z0-9]*\b/g, '_');
+    for (const t of items) for (const o of items) if (o !== t && words(o) === words(t)) {
+      const u = `DECLARED ${t} — it says the words of "${o}", their nouns aside, and a row leaves the nouns out, so a row of either would be read as a row of the one: say one of them in other words`;
+      if (!unparsed.includes(u)) { unparsed.push(u); lineOf[u] = at.get(t)!; }
+    }
     // the file's sentences in the order it says them, anchored or not
     learned.sort((a, b) => learnedAt.get(a)! - learnedAt.get(b)!);
     templates.splice(templates.length - learned.length, learned.length, ...learned);
@@ -1040,7 +1056,7 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
   for (const m of facts.matchAll(/^tense\((r\d+), (next|init)\)\.$/gm)) srcClauses.get(m[1])!.tense = m[2];
   for (const m of facts.matchAll(/^lit\((r\d+), (\d+), (\w+), (pos|neg)\)\.$/gm)) srcClauses.get(m[1])!.body.push({ rel: m[3], neg: m[4] === 'neg', args: argsOf(m[1], Number(m[2])) });
   for (const m of facts.matchAll(/^bi\((r\d+), (\d+), "([^"]+)"\)\.$/gm)) srcClauses.get(m[1])!.body.push({ rel: m[3], neg: false, args: argsOf(m[1], Number(m[2])) });
-  // an aggregate whole (`aggj`, rofl-render's JSON of it), compared whole by `canon`
+  // an aggregate whole (`aggj`, rofl render's JSON of it), compared whole by `canon`
   for (const m of facts.matchAll(/^aggj\((r\d+), (\d+), (".*")\)\.$/gm)) srcClauses.get(m[1])!.body.push({ rel: '$agg', neg: false, args: [], agg: fromAggJ(JSON.parse(JSON.parse(m[3])) as AggJ) });
   // a lattice or tag declaration (`decl`, `decl_widen`): its head, the operation of its last argument
   const declOf = new Map<string, { kind: string; op: string; widen?: string; closure?: string }>();
@@ -1050,7 +1066,7 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
   // a dominance rule's dominating fact (`dom`, after the body)
   for (const m of facts.matchAll(/^dom\((r\d+), (\d+), (\$?\w+)\)\.$/gm)) srcClauses.get(m[1])!.dom = { rel: m[3], neg: false, args: argsOf(m[1], Number(m[2])) };
   const OWN = new Set(['phrase', 'kind_noun', 'sig', 'edb']);
-  /** An aggregate as rofl-render's `--facts` writes it whole (`aggj`): each term in the kernel's canonical spelling. */
+  /** An aggregate as rofl render's `--facts` writes it whole (`aggj`): each term in the kernel's canonical spelling. */
   type AggJ = { op: string; res: string; vals: string[]; keys: string[]; body: ({ k: 'pos' | 'neg'; rel: string; args: string[] } | { k: 'bi'; op: string; args: string[] } | { k: 'agg'; agg: AggJ })[] };
   /** The source's aggregate in the read-back clause's spelling: a variable `?X` is `X`, a wildcard `?_$0` is `_`. */
   function fromAggJ(a: AggJ): CAgg {

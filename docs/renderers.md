@@ -10,7 +10,7 @@ case and the sources are in
 ## The idea, restated
 
 A scanner turns an artifact into facts. A renderer goes the other way and
-turns facts into an artifact. `rofl-render` (rules → prose) and `src/say.ts`
+turns facts into an artifact. `rofl render` (rules → prose) and `src/say.ts`
 (a literal → its sentence) are the first renderer, and
 [`sentence-form.md`](sentence-form.md) shows that it round-trips.
 

@@ -21,9 +21,9 @@ the rest are v0 implementation boundaries.
   maintains an evaluated world by delta both ways (docs/aggregates.md, "The
   retraction path" and "Incremental addition, as built"; the owner's decision
   `f_the_owner_settles_walls_promises_and_incremental`, point 3).
-  `Session::retract_delta` (rofl-load `--retract`, rofl-serve `retract`) takes
+  `Session::retract_delta` (rofl load `--retract`, rofl serve `retract`) takes
   a base fact out; `Session::assert_delta` and `Session::load_delta`
-  (rofl-serve's `assert` and `load` on an evaluated session) add facts and
+  (rofl serve's `assert` and `load` on an evaluated session) add facts and
   rules, DRed level by level over the stratified program. Aggregate cells are
   subtracted or sealed again, negations withdraw the firings they block, and a
   world or a change a delta is not worked out for is evaluated again with the
@@ -207,9 +207,9 @@ instead of answering empty, and a rule that reads provenance there is named in
 a diagnostic. Nothing else prunes provenance and no host setting can.
 
 - **No residency in the JavaScript host** (decided 2026-09-10). `cool`,
-  `cool_many`, `cool_trail`, `reheat`, `reheat_trail` and `volume` are the
+  `cool_many`, `reheat` and `view` are the
   port's, and stay the port's. This host keeps a world in memory and says so;
   a corpus that outgrows that is the Rust engine's case, which is what
   `docs/volumes-and-residency.md` was written for. The two surfaces are
-  therefore NOT one API in two languages, and this line is why: ten of the
-  port's fourteen public methods have no counterpart here on purpose.
+  therefore NOT one API in two languages, and this line is why: the port's volume
+  methods have no counterpart here on purpose.

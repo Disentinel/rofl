@@ -1,5 +1,5 @@
 -- examples/checks/agg-holistic-why-check.rofl — agg_holistic_why, run with
--- `rofl-load --explain`: `why` of a median, a quantile and a rank names the
+-- `rofl load --explain`: `why` of a median, a quantile and a rank names the
 -- aggregate with its percent or subject, what it sealed and its members, a
 -- digest of five with the rest counted; `why_all` lists all seven; `whynot`
 -- of a wrong median says what the median is; of a group with no value it

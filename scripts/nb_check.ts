@@ -4,7 +4,9 @@ import { chmodSync, existsSync, readdirSync, readFileSync, realpathSync, writeFi
 import * as os from 'node:os';
 import * as path from 'node:path';
 import * as vm from 'node:vm';
-import type { NbLine } from '../notebook/kernel.ts';
+import { Kernel, type NbLine } from '../notebook/kernel.ts';
+import { runFile } from '../notebook/cli.ts';
+import { engineOf } from '../playground/rust.ts';
 import { Vocabulary } from '../src/say.ts';
 import { check, cli, fake, good, has, is, linked, mutate, NB, planted, put, report, REVIEW, ROOT, smallJs, spinning, spy, tmp, verdict, withCell, withNatural, type Out } from './nb_lib.ts';
 
@@ -164,8 +166,15 @@ const RUNS: Record<string, () => Promise<Out>> = {
   sides: () => cli([SIDES]),
   sidesAll: () => cli([SIDES, '--all']),
   sidesJson: () => cli([SIDES, '--json']),
+  engines: async (): Promise<Out> => {
+    const rust = engineOf('rust');
+    if (rust.name !== 'rust') return { code: 1, out: 'no Rust engine: cargo build --release --bin rofl in rust/', stdout: '' };
+    const on = (f: string, k: Kernel) => JSON.stringify(runFile(f, k), (key, v) => key === 'ms' ? undefined : v);
+    const differ = [SIDES, path.join(NB, 'small.rofl.md')].filter((f) => on(f, new Kernel()) !== on(f, new Kernel({ engine: engineOf('rust') })));
+    return { code: differ.length, out: differ.length ? `not the same on the two engines: ${differ.join(', ')}` : 'the same on both engines', stdout: '' };
+  },
 };
-let review!: Out, small!: Out, self!: Out, reviewJson!: Out, fails!: Out, notRead!: Out, rewrite!: Out, extended!: Out, collided!: Out, recurse!: Out, red!: Out, blind!: Out, unpop!: Out, early!: Out, nat!: Out, trOk!: Out, trBad!: Out, trGone!: Out, unparsedOut!: Out, fr!: Out, badRead!: Out, trSlow!: Out, spat!: Out, ex!: Out, wo!: Out, hol!: Out, xdir!: Out, xdirFails!: Out, cjs!: Out, cjsBlind!: Out, external!: Out, decorated!: Out, scoped!: Out, scopedV8!: Out, climb!: Out, heavy!: Out, nmWorld!: Out, out!: Out, three!: Out, part!: Out, nothing!: Out, sides!: Out, sidesAll!: Out, sidesJson!: Out;
+let engines!: Out, review!: Out, small!: Out, self!: Out, reviewJson!: Out, fails!: Out, notRead!: Out, rewrite!: Out, extended!: Out, collided!: Out, recurse!: Out, red!: Out, blind!: Out, unpop!: Out, early!: Out, nat!: Out, trOk!: Out, trBad!: Out, trGone!: Out, unparsedOut!: Out, fr!: Out, badRead!: Out, trSlow!: Out, spat!: Out, ex!: Out, wo!: Out, hol!: Out, xdir!: Out, xdirFails!: Out, cjs!: Out, cjsBlind!: Out, external!: Out, decorated!: Out, scoped!: Out, scopedV8!: Out, climb!: Out, heavy!: Out, nmWorld!: Out, out!: Out, three!: Out, part!: Out, nothing!: Out, sides!: Out, sidesAll!: Out, sidesJson!: Out;
 type Test = { name: string; needs: string[]; ok: () => boolean; o?: () => Out };
 const TESTS: Test[] = [];
 /** A check, by the runs it reads; it is judged once they are done. */
@@ -240,6 +249,7 @@ test('W1 a why of a value says first the steps the value took, one line each, wh
       mini/node/server.ts:6      port             the parameter port
       mini/node/server.ts:6      server.listen()  argument 0 at the answer`)
   && (sides.stdout?.match(/\(the whole proof: --all\)/g) ?? []).length === 3, () => sides);
+test('R1 the Rust engine and the TypeScript one say the same, answers, whys and pictures: side effects, small', ['engines'], () => engines.code === 0, () => engines);
 test('W2 the proof under a chain counts its side conditions instead of writing them and names a node by its code and place', ['sidesJson'], () => (() => {
   const ws = whys(sidesJson);
   return ws.length === 3 && ws.every((l) => l.chain!.length >= 3 && l.brief!.split('\n').length < l.why!.split('\n').length && /side conditions? holds?/.test(l.brief!)
@@ -311,7 +321,7 @@ if (shard) {
 }
 if (only) chosen = chosen.filter((t) => new RegExp(only).test(t.name));
 const got: Record<string, Out> = Object.fromEntries(await Promise.all([...new Set(chosen.flatMap((t) => t.needs))].map(async (r) => [r, await RUNS[r]()])));
-({ review, small, self, reviewJson, fails, notRead, rewrite, extended, collided, recurse, red, blind, unpop, early, nat, trOk, trBad, trGone, unparsedOut, fr, badRead, trSlow, spat, ex, wo, hol, xdir, xdirFails, cjs, cjsBlind, external, decorated, scoped, scopedV8, climb, heavy, nmWorld, out, three, part, nothing, sides, sidesAll, sidesJson } = got);
+({ engines, review, small, self, reviewJson, fails, notRead, rewrite, extended, collided, recurse, red, blind, unpop, early, nat, trOk, trBad, trGone, unparsedOut, fr, badRead, trSlow, spat, ex, wo, hol, xdir, xdirFails, cjs, cjsBlind, external, decorated, scoped, scopedV8, climb, heavy, nmWorld, out, three, part, nothing, sides, sidesAll, sidesJson } = got);
 for (const t of chosen) {
   let ok = false, o: Out | undefined;
   try { ok = t.ok(); o = t.o?.(); } catch (e) { o = { code: -1, out: `the check threw, a run it reads not named among its needs? ${(e as Error).stack}` }; }

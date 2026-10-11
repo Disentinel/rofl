@@ -120,7 +120,7 @@ points; the whole list is in `package.json`.
 | `shrug.rofl` | the closed vocabulary of a shrug, the third answer: every cause and reason an engine may write in `shrug(Target, Reason, Meta)` (docs/aggregates.md) | compiled into `src/kernel-dense.ts` by `build:dense` |
 | `runtime/` | the report renderer, the admission gate, the scheduler, the tick loop, the port client | `report` `pair` |
 | `adapters/` | the storage port: a `FactStore` behind an interface, with a SQLite adapter, gated by a byte-identical `canonicalState()` against the in-memory reference | `boundary` |
-| `rust/` | **the Rust engine, and the reference for performance** (CLAUDE.md, *Rust is the engine*): `rofl-load`, `rofl-eval`, `rofl-serve`, `rofl-render` under `rust/rofl/src/bin/`; the engine's new parts since 1.0.5 are `engine/` (`delta.rs` plans fired from their news, `addition.rs` facts and rules added to an evaluated world, `prov.rs` provenance written when asked, `vclosure.rs` a declared closure answered from its tree, `labeled.rs`, `datastrat.rs`, `joinplan.rs`), `cell.rs`/`tag.rs`/`shrug.rs` (aggregates), `structure.rs`/`structures.rs`/`forest.rs` (declared structures and their detection report) | `cargo test` under `rust/` |
+| `rust/` | **the Rust engine, and the reference for performance** (CLAUDE.md, *Rust is the engine*): one binary, `rofl` (`load`, `load --seed`, `serve`, `render`), under `rust/rofl/src/bin/rofl/`; the engine's new parts since 1.0.5 are `engine/` (`delta.rs` plans fired from their news, `addition.rs` facts and rules added to an evaluated world, `prov.rs` provenance written when asked, `vclosure.rs` a declared closure answered from its tree, `labeled.rs`, `datastrat.rs`, `joinplan.rs`), `cell.rs`/`tag.rs`/`shrug.rs` (aggregates), `structure.rs`/`structures.rs`/`forest.rs` (declared structures and their detection report) | `cargo test` under `rust/` |
 | `scripts/` | the harnesses: `goldens.ts` (`test`, `bless`), `whycheck.ts`, `agg_mutants.ts` and `agg_breaks.ts` (`test:agg`, `test:agg:breaks`), `surface_split.ts` (`test:split`), `structures.ts`, `render_docs.ts` (`docs`), `pool.ts` (the `ROFL_JOBS` pool); `vscode_corpus.ts` and `vscode_curve.ts` build the vscode subset and measure the side-effect question over it; `js_lab/` is the rule-rewriting lab of docs/optimising-a-world.md | `test` `whycheck` `structures` |
 | `examples/` `facts/` `docs/` | runnable demos, the ledgers and goldens, the design decisions. New since 1.0.5: `examples/checks/` holds the small proof worlds of the engine (aggregates, demand, asks, trees, addition), `examples/vscode/` the side-effect question over a vscode subset (`side-effects.rofl`, its notebook, `mini/` and `split/` corpora), `examples/surface/` the surface lint, `examples/concat/` path values, `examples/shapes/` the costly-shape finder; `facts/commands.rofl` is the source of CLAUDE.md's commands and knobs, `facts/surface-lint.rofl` and `facts/cost-shapes.rofl` the registers of the surface lint and the costly shapes | `test` |
 | `visual/` | the view vocabularies a notebook draws with (graph, time, table); a cell's `draw K` shows them, `notebook/draw.ts` writes them as mermaid, DOT, Argdown, Markdown, Vega-Lite (docs/renderers.md, examples in `examples/visual/`) | `nb` `playground` |
@@ -563,12 +563,12 @@ negated anywhere cannot be answered from a part of the corpus.
 - `runtime/port.ts` is the JS-side client; `npm run portcorpus` builds the
   corpus both engines are diffed over, and the oracle is a byte-identical
   `canonicalState()`.
-- **A proof without the TypeScript engine.** `rofl-serve` answers `why`,
+- **A proof without the TypeScript engine.** `rofl serve` answers `why`,
   `whynot` and `excise` over its JSON protocol (`RoflSession.why/whynot/excise`
-  in `runtime/port.ts`), and `rofl-load` answers them on the command line:
+  in `runtime/port.ts`), and `rofl load` answers them on the command line:
 
   ```sh
-  rust/target/release/rofl-load boot.rofl facts/js-dataflow.rofl rules/js-dataflow.rofl \
+  rust/target/release/rofl load boot.rofl facts/js-dataflow.rofl rules/js-dataflow.rofl \
     --why 'flows_to(code, audit)' --whynot 'flows_to(audit, code)'
   ```
 

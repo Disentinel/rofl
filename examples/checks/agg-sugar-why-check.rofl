@@ -1,4 +1,4 @@
--- examples/checks/agg-sugar-why-check.rofl — agg_sugar_why, run with `rofl-load --explain` over the sugar as the
+-- examples/checks/agg-sugar-why-check.rofl — agg_sugar_why, run with `rofl load --explain` over the sugar as the
 -- reader lowers it (agg-sugar-forms.rofl.md): `why` of an average names the sum and the count it divides, the
 -- count's `> 0` and the division rounded toward zero (71 / 2 = 35); of every, the domain and what holds of it,
 -- equal; of at most, the count and its bound. `whynot` of an empty group's average says the count is 0, not 0 > 0

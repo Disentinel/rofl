@@ -75,7 +75,7 @@ Corpora as in `f_half_the_world_is_provenance_and_a_fifth_is_the_ancestor_closur
 cli_exits, util), world assembled from the notebook, plus the cells' rules; the asks are the
 relations of every asking line of the notebook (`never`, `unsure`, `?`, `why`) and the two the host
 asks after the run (`hole`, `unresolved_relative`). util has no cells: it is asked with the union
-of the three notebooks' questions. `rofl-eval --bytes --budget 4e9 --space 4e7 --unsettled` (flag removed 2026-10-05; the evaluation, no `derived_by` row written for what nothing reads), medians of two
+of the three notebooks' questions. `rofl load --seed SEED --bytes --budget 4e9 --space 4e7 --unsettled` (flag removed 2026-10-05; the evaluation, no `derived_by` row written for what nothing reads), medians of two
 interleaved runs, load 5-8 on a shared machine.
 
 These numbers were taken before the review of 2026-10-05: an ask for `hole` now keeps every rule, so
@@ -117,7 +117,7 @@ no relation outside it holds a derived row but the kernel's cells of an aggregat
 ## Hypothesis 7, as measured
 
 The 2026-10-04 numbers were taken on TS in the full world. On Rust, derivations of every firing
-(`rofl-eval --derivations`), the rows of a flow relation read by a firing whose head is outside the
+(`rofl load --seed SEED --derivations`), the rows of a flow relation read by a firing whose head is outside the
 flow book:
 
 | | may_be_node read outside the flow book (cone world / whole world; self, util: cone world only) | may_be_lit read outside |
@@ -154,7 +154,7 @@ aggregates and lattices **inside** a component, where the walk degrades to the r
 
 ## Growing a cone, as built (incremental addition)
 
-An ask asserted into an evaluated world is an addition (`Session::assert_delta`, rofl-serve's
+An ask asserted into an evaluated world is an addition (`Session::assert_delta`, rofl serve's
 `assert`; docs/aggregates.md, "Incremental addition, as built"): the program is prepared again,
 the rules the cone adds fire over the store as it stands, and nothing derived is cleared. The
 world is the one asked everything from the start, byte for byte (`rust/rofl/tests/addition.rs`
@@ -165,7 +165,7 @@ plan the work was built from.
 
 ## What the cone needed from incremental addition (measured before it was built)
 
-Measured, Rust, `rofl-serve`, the full world opened, `asks` asserted, evaluated, then one more ask
+Measured, Rust, `rofl serve`, the full world opened, `asks` asserted, evaluated, then one more ask
 asserted:
 
 | world | first ask | then | steps first | steps for the second ask | from scratch (both) |

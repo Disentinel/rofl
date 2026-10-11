@@ -21,7 +21,7 @@ const waiting = new Map<number, { ok: (r: any) => void; fail: (e: Error) => void
 /** `step` hears a translation's steps as they start; `stop` cancelled kills the model's process, or cancels VS Code's model's request. */
 function ask<T>(op: 'run' | 'translate' | 'why', file: string, text: string, unsaved: Record<string, string> = {}, cell?: Ask, step?: (s: string) => void, stop?: vscode.CancellationToken, via: Via = {}): Promise<T> {
   if (!worker) {
-    const w = worker = new Worker(new URL('./worker.ts', import.meta.url));
+    const w = worker = new Worker(new URL('./worker.ts', import.meta.url), { workerData: { engine: vscode.workspace.getConfiguration('rofl').get<string>('engine') } });
     w.on('message', ({ id, r, error, step, lm, k }) => {
       const p = waiting.get(id)!;
       if (step !== undefined) return p.step?.(step);
@@ -390,6 +390,7 @@ export function activate(ctx: vscode.ExtensionContext) {
     vscode.commands.registerCommand('rofl-notebook.revert', (c?: vscode.NotebookCell) => revert(cellArg(c))),
     vscode.commands.registerCommand('rofl-notebook.reveal', reveal),
     vscode.commands.registerCommand('rofl-notebook.restart', restart),
+    vscode.workspace.onDidChangeConfiguration((e) => { if (e.affectsConfiguration('rofl.engine')) restart(); }),
     vscode.commands.registerCommand('rofl-notebook.reading', readingView),
     vscode.commands.registerCommand('rofl-notebook.chooseModel', chooseModel));
   translations();

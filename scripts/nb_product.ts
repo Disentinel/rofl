@@ -109,7 +109,7 @@ const sockDirs = !on('sockets') ? undefined : (async () => {
 
 // H3 on the command line: a harness that keeps tools refused, one whose login fails said; started now, read with the rest of H3
 const noLogin = path.join(tmp, 'no-login.sh'); writeFileSync(noLogin, '#!/bin/sh\ncat > /dev/null\nprintf "\\033[91mError:\\033[0m Incorrect API key provided\\n" >&2\nexit 1\n'); chmodSync(noLogin, 0o755);
-const h3cli = !on('harness') ? undefined : Promise.all([cli(['translate', planted('tr-refused', 'review.rofl.md', withNatural), '--model', 'codex'], { ROFL_NB_CODEX: good }), cli(['translate', planted('tr-auth', 'review.rofl.md', withNatural)], { ROFL_NB_HARNESS: 'opencode', ROFL_NB_OPENCODE: noLogin })]);
+const h3cli = !on('harness') ? undefined : Promise.all([cli(['translate', planted('tr-refused', 'review.rofl.md', withNatural), '--model', 'codex'], { ROFL_NB_CODEX: good }), cli(['translate', planted('tr-auth', 'review.rofl.md', withNatural), '--model', 'opencode'], { ROFL_NB_OPENCODE: noLogin })]);
 // what a newcomer meets, each where the output could mislead: a bare word where a name goes, the engine's words in a proof, a list the reader does not claim,
 // a what-if counted as answers, a natural cell answered by a cell in another section, a note that calls a cell above "further down", a world with no cells
 const newcomer = path.join(tmp, 'newcomer/newcomer.rofl.md'), world = path.join(tmp, 'newcomer/world.rofl.md');
@@ -461,7 +461,7 @@ process.stdin.on('data', (d) => { i += d; }).on('end', () => {
 });
 `); chmodSync(f, 0o755); return { f, prompts: () => readdirSync(dir).sort((a, b) => Number(a.split('.')[1]) - Number(b.split('.')[1])).map((x) => readFileSync(path.join(dir, x), 'utf8')) }; };
 /** A run of translate over a planted workspace, from `cwd` (by default the workspace, which then is the boundary). */
-const protoRun = (name: string, env: Record<string, string>, root: string, forever: boolean, git: boolean, cwd?: string, config?: string) => { const nb = proto(name, git, config), m = reader(name, forever); return cli(['translate', nb], { ROFL_NB_CLAUDE: m.f, ...env }, root, cwd ?? path.join(tmp, name)).then((o) => ({ o, prompts: m.prompts(), nb })); };
+const protoRun = (name: string, env: Record<string, string>, root: string, forever: boolean, git: boolean, cwd?: string, config?: string, args: string[] = []) => { const nb = proto(name, git, config), m = reader(name, forever); return cli(['translate', nb, ...args], { ROFL_NB_CLAUDE: m.f, ...env }, root, cwd ?? path.join(tmp, name)).then((o) => ({ o, prompts: m.prompts(), nb })); };
 const srcOf = (file: string) => readFileSync(path.join(ROOT, file), 'utf8');
 // a PATH with node on it and no git: grep falls back to a search in a process of its own
 const noGit = path.join(tmp, 'no-git-path'); mkdirSync(noGit); symlinkSync(process.execPath, path.join(noGit, 'node'));
@@ -601,16 +601,16 @@ const BANNED = ['OUTSIDE_TOKEN', 'ENV_TOKEN', 'KEY_TOKEN', 'NPMRC_TOKEN', 'IGNOR
 /** What is wrong with the runs of the protocol named in `runs`: empty when every guard held. */
 async function protocol(tag: string, root = ROOT, runs = RUNS): Promise<string[]> {
   const bad: string[] = [];
-  const env: Record<string, [Record<string, string>, boolean, boolean, string?, string?]> = {
+  const env: Record<string, [Record<string, string>, boolean, boolean, string?, string?, string[]?]> = {
     plain: [{}, false, true], small: [{ ROFL_NB_READ_BUDGET: '600', ROFL_NB_GREP_MS: '1' }, false, true], forever: [{ ROFL_NB_READ_ROUNDS: '3', ROFL_NB_READ_FILE_BYTES: '1000', ROFL_FAKE_MANY: '1' }, true, true],
-    // a folder with no git, and one on a machine with no git, named by ROFL_NB_ROOT from elsewhere
+    // a folder with no git, and one on a machine with no git, named by --root from elsewhere
     // `.` first on PATH, and a program named git in the workspace, which the search must not run
     dotgit: [{ PATH: `.${path.delimiter}${noGit}` }, false, false],
     // a config whose rule builds ever larger terms, in a process of 256 MB: refused before it runs, or the process dies
     compound: [{ NODE_OPTIONS: '--max-old-space-size=256' }, false, false, undefined, 'n(a).\nn(g(X, X)) :- n(X).\n'],
     dirs: [{ ROFL_NB_READ_FILES: '80' }, false, false],
     big: [{}, false, false, undefined, 'x(a).\n'],
-    nogit: [{}, false, false], nobin: [{ PATH: noGit, ROFL_NB_ROOT: path.join(tmp, `proto-${tag}-nobin`) }, false, false, ROOT],
+    nogit: [{}, false, false], nobin: [{ PATH: noGit }, false, false, ROOT, undefined, ['--root', path.join(tmp, `proto-${tag}-nobin`)]],
     // the workspace is the home directory, or holds it: nothing is read
     home: [{ HOME: path.join(tmp, `proto-${tag}-home`) }, false, true], above: [{ HOME: path.join(tmp, `proto-${tag}-above/src`) }, false, true],
     // run from elsewhere: the workspace is the notebook's own folder, and its parent is not read
@@ -620,7 +620,7 @@ async function protocol(tag: string, root = ROOT, runs = RUNS): Promise<string[]
     // an answer of words with one request line in it is words to the person, and nothing is read
     words: [{ ROFL_FAKE_WORDS: '1' }, false, true],
   };
-  const got = Object.fromEntries(await Promise.all(runs.filter((k) => k !== 'config').map(async (k) => [k, await protoRun(`proto-${tag}-${k}`, env[k][0], root, env[k][1], env[k][2], env[k][3], env[k][4])] as const)));
+  const got = Object.fromEntries(await Promise.all(runs.filter((k) => k !== 'config').map(async (k) => [k, await protoRun(`proto-${tag}-${k}`, env[k][0], root, env[k][1], env[k][2], env[k][3], env[k][4], env[k][5])] as const)));
   if (runs.includes('config')) bad.push(...await configs(tag, root));
   const at = (s: string, from: string, n = 200) => s.slice(s.indexOf(from), s.indexOf(from) + n);
   for (const [k, r] of Object.entries(got)) for (const token of [...BANNED, ...k === 'sub' ? ['PARENT_TOKEN'] : [], ...k === 'gitenv' ? ['OTHER_TOKEN'] : []]) if (r.prompts.join('\n').includes(`${token}_9f2`)) bad.push(`${token} reached a prompt in the ${k} run`);

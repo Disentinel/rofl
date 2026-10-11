@@ -1,4 +1,4 @@
--- examples/checks/agg-tagc-shrug.rofl — agg_tagc_shrug, run with `rofl-load
+-- examples/checks/agg-tagc-shrug.rofl — agg_tagc_shrug, run with `rofl load
 -- --explain`: a counting tag's fault is a shrug. A derivation weighed off the
 -- carrier is its rule's `fault`, `tag_off_carrier`; the tag's cell of the key
 -- it was met under, whose member could not be computed, a shrug inherited

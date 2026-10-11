@@ -1,5 +1,5 @@
 -- examples/checks/agg-sub-why-check.rofl — agg_sub_why, run with
--- `rofl-load --explain`. `why` of a member of a front names its relation's
+-- `rofl load --explain`. `why` of a member of a front names its relation's
 -- algebra, its members and its place in the front, and every value given to
 -- the cell that it dominates, with the dominance rule; a value it was
 -- reached through and that was dominated since says so, and by what.

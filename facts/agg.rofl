@@ -773,7 +773,7 @@ work_spawned(w_agg_phrase, f_the_round_trip_count_saw_an_aggregate_as_its_operat
 -- members where its sentence says rows (f_every_counted_members_where_its_sentence_says_rows); agg_sugar_eval and
 -- agg_sugar_phrase now hold a failing row beside a passing one of the same member.
 -- CLOSED 2026-09-30, each cell by the world facts/checks.rofl binds to it, each
--- red under planted faults of scripts/agg_breaks.ts (`phrase_*` in rofl-render,
+-- red under planted faults of scripts/agg_breaks.ts (`phrase_*` in rofl render,
 -- `reader_*` in scripts/read_md.ts, `div_floor` in the engine; docs/aggregates.md,
 -- "The sentence form, as built"). The phrase column is swept: one world per row
 -- reads the kind's rules from sentences and from rofl, writes both as sentences

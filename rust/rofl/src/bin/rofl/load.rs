@@ -1,7 +1,6 @@
-// Build a world from .rofl TEXT and print canonicalState — the load path's
-// counterpart to `rofl-eval`, so a divergence can be diffed rather than read
-// out of a test panic.
-//   rofl-load [--ticks N] [--budget N] [--space N] [--strata] [--explain] [--save F] [--below F]... [--retain N] [--retract L]...
+// `rofl load`: build a world from .rofl TEXT and print canonicalState; with
+// `--seed` (seed.rs) the world comes from a snapshot instead.
+//   rofl load [--ticks N] [--budget N] [--space N] [--strata] [--explain] [--save F] [--below F]... [--retain N] [--retract L]...
 //             [--why L]... [--why-all L]... [--whynot L]... [--excise F]... [--depth N] [--nodes N] [--state]
 //             [--propose-structures [--structures-min-rows N]]
 //             boot.rofl file.rofl...
@@ -50,8 +49,7 @@ fn refuse(s: &mut rofl::session::Session, msg: String) -> ! {
     std::process::exit(3);
 }
 
-fn main() {
-    let args: Vec<String> = std::env::args().skip(1).collect();
+pub fn main(args: Vec<String>) {
     let mut ticks = 0u32;
     // `Session::fresh` has always taken the budget; this binary hard-coded one
     // and so could not answer about a world that runs out. A world with a

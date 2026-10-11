@@ -71,7 +71,7 @@ nearest rank, and the two "burns in one window, no page" cases by name.
 ## Why did it page
 
 ```
-rofl-load --why-all "bad_w(api,24,12,24)" boot.rofl examples/slo/slo.rofl examples/slo/slo-requests.rofl
+rofl load --why-all "bad_w(api,24,12,24)" boot.rofl examples/slo/slo.rofl examples/slo/slo-requests.rofl
 ```
 ```
 bad_w[main](api,24,12,24)  <= rce851e17 @tick 0
@@ -99,7 +99,7 @@ The `slo` rows are facts, so the question is `excise`. Take the gold contract
 away from api, which leaves the 5% base contract, and ask what changes:
 
 ```
-rofl-load --excise "slo(api,gold,10)" boot.rofl examples/slo/slo.rofl examples/slo/slo-requests.rofl
+rofl load --excise "slo(api,gold,10)" boot.rofl examples/slo/slo.rofl examples/slo/slo-requests.rofl
 ```
 ```
 - alert[main](page,api,24)
@@ -115,7 +115,7 @@ The page goes. At 5% a page needs 70% of the long window failing and api had
 The same for pay:
 
 ```
-rofl-load --excise "slo(pay,gold,10)" boot.rofl examples/slo/slo.rofl examples/slo/slo-requests.rofl
+rofl load --excise "slo(pay,gold,10)" boot.rofl examples/slo/slo.rofl examples/slo/slo-requests.rofl
 ```
 ```
 - slo[main](pay,gold,10)

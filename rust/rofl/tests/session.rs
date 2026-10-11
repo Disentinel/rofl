@@ -58,7 +58,7 @@ fn open(name: &str) -> Session {
 /// once it has been evaluated (f_a_ticked_case_is_read_before_its_tick_is_evaluated),
 /// through `ensure`: a tick already at its fixpoint (a quiescent call) is not
 /// derived again and re-dated — the harness defect recorded at the top of
-/// `src/bin/rofl_eval.rs`, and the reason this helper exists instead of the
+/// `src/bin/rofl/seed.rs`, and the reason this helper exists instead of the
 /// two verbs being called wherever they seem to fit.
 fn ticks_of(name: &str) -> u32 {
     name.rsplit('.').next().and_then(|s| s.strip_prefix('t')).and_then(|s| s.parse().ok()).unwrap_or(0)

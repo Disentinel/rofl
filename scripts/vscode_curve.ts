@@ -1,4 +1,4 @@
-// One point of the side-effect question's curve (w_next_version_cutoff), on the Rust engine (rofl-serve, release):
+// One point of the side-effect question's curve (w_next_version_cutoff), on the Rust engine (rofl serve, release):
 //   vscode_curve.ts DIR N MODE [--space ROWS] [--budget STEPS] [--census FILE] [--answers FILE] [--why K] [--keys FILE]
 //   vscode_curve.ts DIR N split [--hot K] [--keys FILE] [--why K]
 // loads the JS model, DIR/facts-*.rofl up to N files (scripts/vscode_corpus.ts corpus) and examples/vscode/side-effects.rofl
@@ -26,7 +26,7 @@ const chunks = fs.readdirSync(dir).flatMap((f) => /^facts-(\d+)\.rofl$/.exec(f) 
 const n = Number(nArg);
 if (!chunks.includes(n) || !['full', 'cone', 'witnessed', 'split'].includes(mode)) { console.error(`N is one of ${chunks.join(', ')}; MODE full, cone, witnessed or split`); process.exit(64); }
 
-const port = await RoflPort.start(path.join(ROOT, `rust/target/${process.env.ROFL_PROFILE ?? 'release'}/rofl-serve`));
+const port = await RoflPort.start(path.join(ROOT, `rust/target/${process.env.ROFL_PROFILE ?? 'release'}/rofl`));
 const pid = (port as unknown as { child: { pid: number } }).child.pid;
 const status = (k: string) => Number(new RegExp(`^${k}:\\s+(\\d+)`, 'm').exec(fs.readFileSync(`/proc/${pid}/status`, 'utf8'))?.[1] ?? 0) / 1024;
 if (mode === 'split') {

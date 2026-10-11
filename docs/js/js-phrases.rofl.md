@@ -7,7 +7,7 @@ default: main
 # js-phrases
 
 > js-phrases.rofl — the phrase of every JS-model relation that has one, and
-> the noun of every node kind that has one. Read by `rofl-render`, which
+> the noun of every node kind that has one. Read by `rofl render`, which
 > parses and never evaluates; loaded by nothing else. A hole is `<noun>` in
 > argument order or `<i:noun>` for argument i; `<i=0>` and `<i=_>` pick a
 > template by the shape of the call and render nothing.

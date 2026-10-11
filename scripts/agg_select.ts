@@ -126,7 +126,7 @@ export function select<W extends { name: string; files: string[] }>(all: W[], se
   return { picked: all.filter((w) => names.has(w.name)), why };
 }
 
-/** THE WORLD BELOW, named by a file's `-- below: <path>` lines: rofl-load
+/** THE WORLD BELOW, named by a file's `-- below: <path>` lines: rofl load
  *  evaluates boot.rofl and those files on their own and feeds what they
  *  conclude to the world before it evaluates (`Session::feed_below`). A
  *  composition is the Rust engine's, so only a Rust-only world may name one. */

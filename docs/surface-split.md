@@ -157,7 +157,7 @@ The wall moves from memory to ingest scheduling.
    crossing census, not listed by hand) in one premise and a file-local one (`fn_node`, `ast_child`, `param_of`,
    `returns`) on its foreign column is an alarm unless its other side is `[surface]` or it is excused; a negation over
    `[surface]` marks the head volatile.
-4. **Driver, Rust.** NOT BUILT YET: being finished in its own branch. Cool by (volume, book) in rofl-serve and the ingest loop (the surface survives, `[code]`/`[flow]`
+4. **Driver, Rust.** NOT BUILT YET: being finished in its own branch. Cool by (volume, book) in rofl serve and the ingest loop (the surface survives, `[code]`/`[flow]`
    go); the ingest as a surface fixpoint with dirty tracking by KEY (volume subscribes to the surface facts keyed on
    the files and functions it names); a volume lift for a `why` that expands a `[surface]` axiom by the origin prefix.
    Unknown, needs a measurement first: `fork()` of a world holding 1 M surface facts.
@@ -196,13 +196,13 @@ The wall moves from memory to ingest scheduling.
 
 ## 7. Built: the driver (item 4)
 
-`runtime/split.ts` over rofl-serve; the finding is
+`runtime/split.ts` over rofl serve; the finding is
 `f_the_driver_answers_from_core_and_surface_and_the_subscription_closure_is_the_cost`.
 
 - **A volume, locally.** The core (model, question, the facts naming no file) is one evaluated world; a volume is a
   fork of it holding the file's facts and the `[surface]` facts it subscribes to, added by delta
   (`Session::assert_delta`, `load_delta`). After its evaluation it publishes the `[surface]` facts it concluded and
-  not read, and is COOLED: `cool` by book (`Session::cool_books`, rofl-serve `cool` with `books`) writes its base
+  not read, and is COOLED: `cool` by book (`Session::cool_books`, rofl serve `cool` with `books`) writes its base
   facts to a signed volume file and drops every book of the program but `[surface]` (the list is read from the program's
   reflection), the surface staying where it was published.
   The `hot` most recent worlds stay, and a later evaluation of one adds by delta; a cooled one is reheated (by delta
@@ -266,10 +266,10 @@ The wall moves from memory to ingest scheduling.
 
 - **Never from a partial or unevaluated world.** The driver throws on a partial evaluation of the core, a volume or the
   resident world (`evaluate`'s `partial`, and an `ask` of the resident world before the answers and before each why).
-  rofl-serve `view` refuses a world not evaluated or partial, and needs a non-empty `prefix`.
+  rofl serve `view` refuses a world not evaluated or partial, and needs a non-empty `prefix`.
 - **A cooled volume forgets nothing.** Cooling is by every book of the program but `[surface]`, the list read from the
   reflection (`main` always); the why lift cools the same list, less `main`, where the resident world keeps its answers.
-  rofl-serve `cool` with `books` REFUSES, before anything moves, a base fact of the volume in a book neither cooled nor
+  rofl serve `cool` with `books` REFUSES, before anything moves, a base fact of the volume in a book neither cooled nor
   kept (`keep`), and says what it wrote by book: a volume holding base facts in `[main]` is refused (they could not be
   told from the answers), as one holding a `[surface]` base fact. tests/cool.rs; the gate's `probe[audit]` fact in a
   volume, and the planted `books` break (cooling code, flow, main only), which the refusal turns red.

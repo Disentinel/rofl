@@ -23,7 +23,7 @@ tried on real work. What it is:
   to link, an alternative that does not start with `if` or `unless`; a rule
   with a condition it could not read is not loaded, so a world never answers
   more than its sentences say;
-- the renderer the other way, `rofl-render`, for a world with phrases.
+- the renderer the other way, `rofl render`, for a world with phrases.
 
 What 1.05 defers, on purpose:
 
@@ -152,7 +152,7 @@ What has to exist for it to be code rather than a description of code
    `whynot` through it, a derivation reading as the fact, the rule and its
    axioms in the words of the document
    (f_why_and_the_query_answer_in_the_sentences_of_the_document).
-   For files it exists: `rofl-render` (rust/rofl/src/bin/rofl_render.rs)
+   For files it exists: `rofl render` (rust/rofl/src/bin/rofl/render.rs)
    renders a program to Markdown from its rules, with phrases as facts, and
    `docs/js/` is the JS model rendered
    (f_the_renderer_from_rules_to_prose_parses_only_and_its_fallback_is_the_lint).

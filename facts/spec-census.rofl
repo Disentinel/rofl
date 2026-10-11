@@ -82,6 +82,7 @@ check[checks]("rust/rofl/tests/explain.rs", "why_refuses_a_literal_that_is_not_g
 check[checks]("rust/rofl/tests/explain.rs", "whynot_names_the_negation_that_blocked_it_and_the_fact_that_did", test).
 check[checks]("rust/rofl/tests/explain.rs", "whynot_recurses_and_reports_the_cycle_it_found", test).
 check[checks]("rust/rofl/tests/explain.rs", "whynot_over_a_relation_no_rule_concludes", test).
+check[checks]("rust/rofl/tests/explain.rs", "whynot_names_the_unit_not_loaded", test).
 check[checks]("rust/rofl/tests/explain.rs", "whynot_on_something_that_holds_says_so", test).
 check[checks]("rust/rofl/tests/explain.rs", "holds_is_the_question_with_the_answer_thrown_away", test).
 check[checks]("rust/rofl/tests/explain.rs", "fact_keys_narrows_by_relation_and_comes_back_in_canonical_order", test).
@@ -784,6 +785,9 @@ check[checks]("facts/goldens.rofl", "readiness_atlas", world).
 check[checks]("facts/goldens.rofl", "readiness_rofl", world).
 check[checks]("facts/goldens.rofl", "refactoring_queue", world).
 check[checks]("facts/goldens.rofl", "refused", world).
+check[checks]("facts/goldens.rofl", "retract_again", world).
+check[checks]("facts/goldens.rofl", "retract_last", world).
+check[checks]("facts/goldens.rofl", "retract_last_read", world).
 check[checks]("facts/goldens.rofl", "sealed_provenance", world).
 check[checks]("facts/goldens.rofl", "sensors_t3", world).
 check[checks]("facts/goldens.rofl", "set_spelling", world).
@@ -806,6 +810,7 @@ check[checks]("facts/goldens.rofl", "wfs_unknown_negated", world).
 check[checks]("facts/goldens.rofl", "why_base", world).
 check[checks]("facts/goldens.rofl", "why_forest", world).
 check[checks]("facts/goldens.rofl", "why_height", world).
+check[checks]("facts/goldens.rofl", "whynot_unloaded", world).
 check[checks]("scripts/measurement_check.ts", "npm run measurecheck", gate).
 check[checks]("scripts/goldens.ts", "npm run test", gate).
 check[checks]("scripts/goldens.ts", "npm run test:bun", gate).
@@ -814,6 +819,7 @@ check[checks](".github/workflows/ci.yml", "typecheck", ci).
 check[checks](".github/workflows/ci.yml", "goldens (node)", ci).
 check[checks](".github/workflows/ci.yml", "install dependencies (the scanner needs @babel/parser)", ci).
 check[checks](".github/workflows/ci.yml", "goldens (bun)", ci).
+check[checks](".github/workflows/ci.yml", "one VSIX per platform", ci).
 test_file[checks]("rust/rofl/tests/addition.rs").
 test_file[checks]("rust/rofl/tests/agg_worlds.rs").
 test_file[checks]("rust/rofl/tests/asks_cone.rs").

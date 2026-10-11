@@ -1,4 +1,4 @@
--- examples/checks/agg-why-dag-cells.rofl — agg_why_dag_cells, run with `rofl-load --ticks 1 --explain`.
+-- examples/checks/agg-why-dag-cells.rofl — agg_why_dag_cells, run with `rofl load --ticks 1 --explain`.
 -- Two cells can write one header: `sum(?S ; ?N : sc(?N,?S)) = 10` is the cell sealed in tick 0 (members n1, n2) under
 -- snap, and the cell sealed in tick 1 (members n2, n4) under c1. The header names neither tick nor rule, so the
 -- second cell's lines end `(cell 2)` and a reference to it too; the first is unmarked. Without the mark `c1(b)`'s

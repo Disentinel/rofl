@@ -64,6 +64,13 @@
           "default": "auto",
           "markdownDescription": "The model Translate asks. `auto`: VS Code's language model (GitHub Copilot's, for one) if there is one, else the first installed command-line harness that runs with no tools. `vscode:<id>`: that language model. Or a harness: `claude`, `codex`, `opencode`, `pi`, `copilot`, `hermes`, `command`, with `:<model>` to pick its model. **ROFL: Choose model** sets it."
         },
+        "rofl.engine": {
+          "type": "string",
+          "scope": "machine",
+          "enum": ["rust", "typescript"],
+          "default": "rust",
+          "markdownDescription": "What evaluates the model over your code. `rust`: the Rust engine the extension carries, the fast one; where it is not carried for this platform, the TypeScript one. `typescript`: the TypeScript engine, the reference. The answers and proofs are the same."
+        },
         "rofl.untrackedCommand": {
           "type": "string",
           "scope": "machine",

@@ -39,6 +39,12 @@ brk("asks_demand_asked"). brk_kind("asks_demand_asked", switch).
 brk_expects("asks_demand_asked", "asks_demand").
 brk("asks_retract_unread"). brk_kind("asks_retract_unread", switch).
 brk_expects("asks_retract_unread", "asks_retracted").
+brk("retract_keeps_edb"). brk_kind("retract_keeps_edb", switch).
+brk_expects("retract_keeps_edb", "retract_last").
+brk("retract_edb_unread"). brk_kind("retract_edb_unread", switch).
+brk_expects("retract_edb_unread", "retract_last_read").
+brk("ts_retract_keeps_edb"). brk_kind("ts_retract_keeps_edb", ts).
+brk_expects("ts_retract_keeps_edb", "retract_last").
 brk("ts_asks_derived_by_unnamed"). brk_kind("ts_asks_derived_by_unnamed", ts).
 brk_expects("ts_asks_derived_by_unnamed", "asks_reads_everything").
 brk("ts_asks_blind_reflection"). brk_kind("ts_asks_blind_reflection", ts).
@@ -2292,9 +2298,9 @@ switch_site("ds_wide_unlisted", "rust/rofl/src/engine.rs").
 switch_site("ds_wild_keys", "rust/rofl/src/engine/datastrat.rs").
 switch_site("empty_none", "rust/rofl/src/engine.rs").
 switch_site("empty_text", "rust/rofl/src/engine.rs").
-switch_site("facts_agg_unwritten", "rust/rofl/src/bin/rofl_render.rs").
-switch_site("facts_decl_as_fact", "rust/rofl/src/bin/rofl_render.rs").
-switch_site("facts_dom_unwritten", "rust/rofl/src/bin/rofl_render.rs").
+switch_site("facts_agg_unwritten", "rust/rofl/src/bin/rofl/render.rs").
+switch_site("facts_decl_as_fact", "rust/rofl/src/bin/rofl/render.rs").
+switch_site("facts_dom_unwritten", "rust/rofl/src/bin/rofl/render.rs").
 switch_site("fir_superseded_live", "rust/rofl/src/store.rs").
 switch_site("firing_id_tickless", "rust/rofl/src/store.rs").
 switch_site("first_rep", "rust/rofl/src/engine.rs").
@@ -2432,29 +2438,29 @@ switch_site("order_row_unread", "rust/rofl/src/engine.rs").
 switch_site("order_unread", "rust/rofl/src/rofl_parse.rs").
 switch_site("partial_check", "rust/rofl/src/cell.rs").
 switch_site("phantom", "rust/rofl/src/engine.rs").
-switch_site("phrase_apart_copy_bound", "rust/rofl/src/bin/rofl_render.rs").
-switch_site("phrase_apart_first_bound", "rust/rofl/src/bin/rofl_render.rs").
-switch_site("phrase_apart_takes_only", "rust/rofl/src/bin/rofl_render.rs").
-switch_site("phrase_atmost_as_exactly", "rust/rofl/src/bin/rofl_render.rs").
-switch_site("phrase_avg_copy_unchecked", "rust/rofl/src/bin/rofl_render.rs").
-switch_site("phrase_avg_rounding_lost", "rust/rofl/src/bin/rofl_render.rs").
-switch_site("phrase_count_tuple_first", "rust/rofl/src/bin/rofl_render.rs").
-switch_site("phrase_decl_twinned", "rust/rofl/src/bin/rofl_render.rs").
-switch_site("phrase_dom_reintroduced", "rust/rofl/src/bin/rofl_render.rs").
-switch_site("phrase_every_rows_unchecked", "rust/rofl/src/bin/rofl_render.rs").
-switch_site("phrase_function_key_lost", "rust/rofl/src/bin/rofl_render.rs").
-switch_site("phrase_inner_unread", "rust/rofl/src/bin/rofl_render.rs").
-switch_site("phrase_lattice_op_lost", "rust/rofl/src/bin/rofl_render.rs").
-switch_site("phrase_max_as_min", "rust/rofl/src/bin/rofl_render.rs").
-switch_site("phrase_quantile_swapped", "rust/rofl/src/bin/rofl_render.rs").
-switch_site("phrase_rank_dir_dropped", "rust/rofl/src/bin/rofl_render.rs").
-switch_site("phrase_subset_as_member", "rust/rofl/src/bin/rofl_render.rs").
-switch_site("phrase_sugar_unseen", "rust/rofl/src/bin/rofl_render.rs").
-switch_site("phrase_sum_as_median", "rust/rofl/src/bin/rofl_render.rs").
-switch_site("phrase_tag_alg_lost", "rust/rofl/src/bin/rofl_render.rs").
-switch_site("phrase_threshold_as_atmost", "rust/rofl/src/bin/rofl_render.rs").
-switch_site("phrase_tree_closure_lost", "rust/rofl/src/bin/rofl_render.rs").
-switch_site("phrase_widen_off_by_one", "rust/rofl/src/bin/rofl_render.rs").
+switch_site("phrase_apart_copy_bound", "rust/rofl/src/bin/rofl/render.rs").
+switch_site("phrase_apart_first_bound", "rust/rofl/src/bin/rofl/render.rs").
+switch_site("phrase_apart_takes_only", "rust/rofl/src/bin/rofl/render.rs").
+switch_site("phrase_atmost_as_exactly", "rust/rofl/src/bin/rofl/render.rs").
+switch_site("phrase_avg_copy_unchecked", "rust/rofl/src/bin/rofl/render.rs").
+switch_site("phrase_avg_rounding_lost", "rust/rofl/src/bin/rofl/render.rs").
+switch_site("phrase_count_tuple_first", "rust/rofl/src/bin/rofl/render.rs").
+switch_site("phrase_decl_twinned", "rust/rofl/src/bin/rofl/render.rs").
+switch_site("phrase_dom_reintroduced", "rust/rofl/src/bin/rofl/render.rs").
+switch_site("phrase_every_rows_unchecked", "rust/rofl/src/bin/rofl/render.rs").
+switch_site("phrase_function_key_lost", "rust/rofl/src/bin/rofl/render.rs").
+switch_site("phrase_inner_unread", "rust/rofl/src/bin/rofl/render.rs").
+switch_site("phrase_lattice_op_lost", "rust/rofl/src/bin/rofl/render.rs").
+switch_site("phrase_max_as_min", "rust/rofl/src/bin/rofl/render.rs").
+switch_site("phrase_quantile_swapped", "rust/rofl/src/bin/rofl/render.rs").
+switch_site("phrase_rank_dir_dropped", "rust/rofl/src/bin/rofl/render.rs").
+switch_site("phrase_subset_as_member", "rust/rofl/src/bin/rofl/render.rs").
+switch_site("phrase_sugar_unseen", "rust/rofl/src/bin/rofl/render.rs").
+switch_site("phrase_sum_as_median", "rust/rofl/src/bin/rofl/render.rs").
+switch_site("phrase_tag_alg_lost", "rust/rofl/src/bin/rofl/render.rs").
+switch_site("phrase_threshold_as_atmost", "rust/rofl/src/bin/rofl/render.rs").
+switch_site("phrase_tree_closure_lost", "rust/rofl/src/bin/rofl/render.rs").
+switch_site("phrase_widen_off_by_one", "rust/rofl/src/bin/rofl/render.rs").
 switch_site("plain_alive_unknown", "rust/rofl/src/engine.rs").
 switch_site("plain_cell_hole_unspread", "rust/rofl/src/engine.rs").
 switch_site("plain_flush_early", "rust/rofl/src/engine.rs").
@@ -2501,11 +2507,13 @@ switch_site("retract_chain_gate_off", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_consumers_kept", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_deep_neg_unread", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_demand_kept", "rust/rofl/src/engine/delta.rs").
+switch_site("retract_edb_unread", "rust/rofl/src/session.rs").
 switch_site("retract_empty_gone", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_gate_neg", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_gate_plain", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_hole_kept", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_index_off", "rust/rofl/src/engine/delta.rs").
+switch_site("retract_keeps_edb", "rust/rofl/src/session.rs").
 switch_site("retract_lattice_hole_kept", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_lattice_precise", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_memo_stale", "rust/rofl/src/engine/delta.rs").

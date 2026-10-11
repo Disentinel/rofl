@@ -32,7 +32,7 @@ bottom right.
 ## Several ticks
 
 ```
-rofl-load --ticks 8 boot.rofl examples/life/life.rofl
+rofl load --ticks 8 boot.rofl examples/life/life.rofl
 ```
 
 Eight ticks later the glider is the same five cells two down and two right,
@@ -45,7 +45,7 @@ world holds all eight boards.
 ## Why is this cell alive
 
 ```
-rofl-load --ticks 8 --why "live(4,4)" boot.rofl examples/life/life.rofl
+rofl load --ticks 8 --why "live(4,4)" boot.rofl examples/life/life.rofl
 ```
 ```
 live[main](4,4)  <= r5fbf34df @tick 8
@@ -72,7 +72,7 @@ cone(AX, AY, S) :- cone(X, Y, T), T > 0, S is T - 1, off(DX, DY), AX is X + DX, 
 `why` of a cell of the cone, at tick 8, is the chain from it to the head:
 
 ```
-rofl-load --ticks 8 --why "cone(1,0,0)" boot.rofl examples/life/life.rofl
+rofl load --ticks 8 --why "cone(1,0,0)" boot.rofl examples/life/life.rofl
 ```
 ```
 cone[main](1,0,0)  <= r34f17869 @tick 8

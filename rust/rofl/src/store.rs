@@ -1367,6 +1367,14 @@ impl Store {
         }
     }
 
+    /// Whether a base fact other than `but` stands in the book `persp`, of any relation.
+    pub fn book_holds_base(&mut self, h: &Heap, persp: Sym, but: FactId) -> bool {
+        let mut rels: Vec<Sym> = self.idx.own.iter().chain(self.idx.base.iter()).filter(|(_, ps)| ps.iter().any(|(p, _)| *p == persp)).map(|(r, _)| *r).collect();
+        rels.sort_unstable();
+        rels.dedup();
+        rels.into_iter().any(|r| self.rel_persp(h, r, persp).into_iter().any(|f| f != but && self.rec(f).base()))
+    }
+
     fn persps_sorted(&self, h: &Heap, rel: Sym) -> Vec<Sym> {
         let mut ps: Vec<Sym> = self
             .idx
@@ -2413,6 +2421,36 @@ impl Store {
             PremRef::VRow(k) => self.vrow_height(*k, memo),
             PremRef::Neg(_) | PremRef::Bi(_) => 0,
         }
+    }
+
+    /// The rows a structure answers, as `(relation, book, ancestor, descendant)`; with `rel`, that relation's alone.
+    pub fn virtual_pairs(&self, rel: Option<Sym>) -> Vec<(Sym, Sym, Term, Term)> {
+        let mut out = Vec::new();
+        for v in self.listed().filter(|v| rel.is_none_or(|r| r == v.rel)) {
+            for (book, f) in v.forests.iter() {
+                f.each_pair(|a, d| out.push((v.rel, *book, a, d)));
+            }
+        }
+        out
+    }
+
+    /// The one firing of such a row: the rule, the tick and the premises' keys in the order of the rule's body (src/structure.ts).
+    pub fn virtual_firing(&self, h: &Heap, rel: Sym, book: Sym, a: Term, d: Term) -> Option<(Sym, u32, Vec<String>)> {
+        if !self.vwit {
+            return None;
+        }
+        let v = self.listed().find(|v| v.rel == rel)?;
+        let (rule, p, step) = v.firing(book, a, d)?;
+        let mut edge = String::new();
+        write_fact_key(h, v.edge, book, &[p, d], &mut edge);
+        let mut prems = Vec::new();
+        if step {
+            let mut up = String::new();
+            write_fact_key(h, v.rel, book, &[a, p], &mut up);
+            prems.push(up);
+        }
+        prems.push(edge);
+        Some((rule, self.tick, prems))
     }
 
     /// The keys of those rows.

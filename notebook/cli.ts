@@ -14,6 +14,7 @@ import { builtin, cellsOf, codeNames, libFiles, NOT_BUILTIN, parseFront, transla
 import { worldOf, type Inputs } from './world.ts';
 import { concernsOf, homeOf, translatorVocab } from '../playground/host.ts';
 import { viaDaemon } from './serve.ts';
+import { engineOf } from '../playground/rust.ts';
 import { choose, llm, models, type Ask } from './model.ts';
 import { counted, framesOf, zoom, type View } from './draw.ts';
 import { backendOf } from './draw-text.ts';
@@ -86,7 +87,7 @@ const CODE = /\.[cm]?[jt]sx?$/;
 const isFile = (p: string) => { try { return statSync(p).isFile(); } catch { return false; } };
 
 /** `paths`: where each code file the answers name is, for a host that opens it. */
-export function runFile(file: string, kernel = new Kernel({ wall }), text = readFileSync(file, 'utf8'), unsaved: Record<string, string> = {}): NbResult & { paths: Record<string, string>; outside: string[] } {
+export function runFile(file: string, kernel = new Kernel({ wall, engine: engineOf() }), text = readFileSync(file, 'utf8'), unsaved: Record<string, string> = {}): NbResult & { paths: Record<string, string>; outside: string[] } {
   const { input, errors, paths, outside } = inputs(file, text, unsaved);
   const r = kernel.run(path.relative(ROOT, path.resolve(file)), text, input);
   if (errors.length) { r.errors.unshift(...errors); r.status = 'unread'; }
@@ -174,7 +175,7 @@ function slice(cx: Context, request: string): { text: string; read: string[] } {
 export async function translate(file: string, ask: Ask, where?: Where): Promise<{ code: number; said: string[] }> {
   const said: string[] = [], tmp = `${file}.${process.pid}.tmp`;
   let code = 0;
-  for await (const r of translating(file, readFileSync(file, 'utf8'), ask, new Kernel({ wall }), (line) => process.stderr.write(line + '\n'), where)) {
+  for await (const r of translating(file, readFileSync(file, 'utf8'), ask, new Kernel({ wall, engine: engineOf() }), (line) => process.stderr.write(line + '\n'), where)) {
     said.push(...r.said);
     code = r.code || code;
     if (r.text !== undefined) { writeFileSync(tmp, r.text); renameSync(tmp, file); }
@@ -314,15 +315,11 @@ ROFL_NB_DAEMON=0         run in this process; by default runs go to a kept kerne
                          (the model loads once, 10 to 20 s; later runs take seconds)
 ROFL_NB_TIMEOUT=<s>      how long to wait for the kept kernel; by default ROFL_NB_LIMIT + 180
 ROFL_NB_IDLE=900         seconds the kept kernel waits for a run before it exits
-ROFL_NB_HARNESS=<name>   the model translate asks (npm run nb -- models lists them), as --model does: claude, codex, opencode, pi, copilot, hermes, command
-                         (NAME:MODEL picks the harness's model); by default the first installed that runs with no tools
 ROFL_NB_MODEL_CMD=<sh>   a command that reads the prompt on stdin and prints the answer (the harness named command)
 ROFL_NB_<NAME>=<path>    the binary of that harness, e.g. ROFL_NB_CLAUDE=/opt/claude
 ROFL_NB_ALLOW_TOOLS=1    run a harness that cannot be run without tools (codex, copilot, hermes)
 ROFL_NB_MODEL_TIMEOUT=180  seconds translate waits for the model
 ROFL_NB_READ_ROUNDS=6    rounds the model may read the workspace's files before it writes; ROFL_NB_READ_BUDGET=200000 bytes in all
-ROFL_NB_ROOT=<dir>       the folder translate lets the model read, as --root DIR does; by default the working
-                         directory if it holds the notebook, else the notebook's folder; .rofl/read.rofl in it narrows it
 ROFL_NB_UNTRACKED_COMMAND=<sh>  prints the files your version control tracks, for untracked_by(command) in .rofl/read.rofl`;
 
 const isMain = process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url);
@@ -346,7 +343,7 @@ if (isMain) {
   if (argv[0] === 'translate') {
     const m = argv.indexOf('--model'), c = choose(m > 0 ? argv[m + 1] : undefined);
     if (c.error || c.refused) { console.error(`${named}: ${c.error ?? c.refused}`); process.exit(2); }
-    const at = argv.indexOf('--root'), root = at > 0 ? argv[at + 1] : process.env.ROFL_NB_ROOT, cwd = realpathSync(process.cwd());
+    const at = argv.indexOf('--root'), root = at > 0 ? argv[at + 1] : undefined, cwd = realpathSync(process.cwd());
     const r = await translate(named, llm(c), { root: root ? path.resolve(root) : path.relative(cwd, realpathSync(named)).startsWith(`..${path.sep}`) ? undefined : cwd });
     console.log(r.said.join('\n'));
     process.exit(r.code);
@@ -355,7 +352,7 @@ if (isMain) {
   const ci = argv.indexOf('--cell'), only = ci >= 0 ? Number(argv[ci + 1]) : undefined;
   let r: ReturnType<typeof runFile>;
   const all = argv.includes('--all'), d = all ? undefined : await viaDaemon(file);
-  try { if (d && 'error' in d) throw new Error(d.error); r = d?.result ?? runFile(file, new Kernel({ all, wall })); } catch (e) { console.error(`${file}: ${(e as Error).message}`); console.log(`${file}: nothing asked — not everything was read (exit 2; ${HELP_AT})`); process.exit(2); }
+  try { if (d && 'error' in d) throw new Error(d.error); r = d?.result ?? runFile(file, new Kernel({ all, wall, engine: engineOf() })); } catch (e) { console.error(`${file}: ${(e as Error).message}`); console.log(`${file}: nothing asked — not everything was read (exit 2; ${HELP_AT})`); process.exit(2); }
   if (r.outside?.length) console.error(`${file}: note: ${OUTSIDE(r.outside)}`);
   if (argv.includes('--timing')) console.error(`load ${r.ms.load} ms, run ${r.ms.run} ms (${Object.entries(r.ms.phases ?? {}).map(([k, v]) => `${k} ${v}`).join(", ")})`);
   // exit once the text is out: a pipe takes 64 KB at a time, and an exit before it drains cuts the JSON short

@@ -67,8 +67,8 @@ pub fn footprint() -> u64 {
 ///
 /// This counter is exact, deterministic and independent of the OS: every
 /// allocation and free the process makes passes through it. It is the same
-/// instrument `rofl-eval --bytes` already uses on the engine side
-/// (rust/rofl/src/bin/rofl_eval.rs), so the two now report in one unit.
+/// instrument `rofl load --seed SEED --bytes` already uses on the engine side
+/// (rust/rofl/src/bin/rofl/seed.rs), so the two now report in one unit.
 ///
 /// What it cannot see, stated: the allocator's own bookkeeping and the
 /// rounding it does above the requested size — so it is a floor on real

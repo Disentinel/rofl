@@ -1021,9 +1021,22 @@ pub fn parse(h: &mut Heap, src: &str) -> Result<Vec<Clause>, String> {
     let toks = tokens(src);
     // A STRAY CHARACTER REFUSES THE FILE, before any clause is read, which is
     // where src/tokens.ts refuses it: the lexis fails first.
-    if let Some(s) = toks.iter().find(|s| s.tok == Tok::Stray) {
+    for (k, s) in toks.iter().enumerate() {
+        let next = |d: usize| toks.get(k + d).filter(|t| t.start == toks[k + d - 1].end + 1);
+        let digits = |t: &Span| ch[t.start..=t.end].iter().all(|c| c.is_ascii_digit());
+        let why = match s.tok {
+            Tok::Stray if ch[s.start] == '#' => "'#' starts no comment: a comment starts with --".to_string(),
+            Tok::Stray => format!("unexpected character '{}'", ch[s.start]),
+            Tok::Arith("slash") if next(1).is_some_and(|t| t.tok == Tok::Arith("slash")) => "'//' starts no comment: a comment starts with --".to_string(),
+            Tok::Op("eq") if next(1).is_some_and(|t| t.tok == Tok::Op("eq")) => "'==' is no operator: equality is =".to_string(),
+            Tok::Word if digits(s) && next(1).is_some_and(|t| t.tok == Tok::Punct("dot")) && next(2).is_some_and(|t| t.tok == Tok::Word && ch[t.start].is_ascii_digit()) => {
+                let end = toks[k + 2].start + ch[toks[k + 2].start..=toks[k + 2].end].iter().take_while(|c| c.is_ascii_digit()).count();
+                format!("{} is not a number here: numbers are integers", ch[s.start..end].iter().collect::<String>())
+            }
+            _ => continue,
+        };
         let line = 1 + ch[..s.start].iter().filter(|c| **c == '\n').count();
-        return Err(format!("line {line}: unexpected character '{}'", ch[s.start]));
+        return Err(format!("line {line}: {why}"));
     }
     let mut p = Parser { src: &ch, h, buf: String::with_capacity(64), toks, at: 0, fresh: 0 };
     let mut out = Vec::new();
@@ -1178,7 +1191,10 @@ mod tests {
             ("p(N) :- N is sum(V ; K * 2 : q(K, V)).", "not expressions"),
             ("p(N) :- N+1 is count(X : q(X)).", "not an expression"),
             ("p(a) ; p(b).", "no closing dot"),
-            ("p(a). # q(b).", "unexpected character '#'"),
+            ("p(a). # q(b).", "line 1: '#' starts no comment: a comment starts with --"),
+            ("p(a).\n// q(b).", "line 2: '//' starts no comment: a comment starts with --"),
+            ("q(74.006).", "line 1: 74.006 is not a number here: numbers are integers"),
+            ("r(X) :- p(X), X == 1.", "line 1: '==' is no operator: equality is ="),
             ("p(99999999999999999999).", "out of range"),
             ("p(1152921504606846976).", "out of range"),
             ("lattice d(A, C, D).", "the last argument is the value"),

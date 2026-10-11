@@ -21,6 +21,8 @@
 
 import { Rofl } from '../src/api.ts';
 import { canonTerm } from '../src/unify.ts';
+import { parseProgram } from '../src/parser.ts';
+import { MODEL_FILES } from '../notebook/front.ts';
 import { evaluateSemiring, BOUNDED, type Semiring } from '../src/semiring.ts';
 import { tropicalSemiring, countingSemiring } from '../runtime/semirings.ts';
 import * as fs from 'node:fs';
@@ -137,10 +139,21 @@ function tagHostFold(): string {
   return out.join('\n');
 }
 
+/** THE INDEX OF THE JS MODEL'S UNITS: which file concludes each relation, by a rule or a fact, so that a world that
+ *  loads part of the model hears from whynot which file it left out (w_whynot_tells_absent_from_unloaded). */
+function modelUnits(): string {
+  const out = new Set<string>();
+  for (const f of MODEL_FILES.filter((x) => x !== 'boot.rofl' && x !== 'facts/model-units.rofl')) {
+    for (const c of parseProgram(read(f))) if (c.head.temporal !== 'next') out.add(`unit_concludes(${JSON.stringify(f)}, ${c.head.rel}).`);
+  }
+  return [...out].join('\n');
+}
+
 const BLOCKS: Block[] = [
   { file: 'README.md', name: 'deviations', source: 'facts/deviations.rofl', render: deviations },
   { file: 'CLAUDE.md', name: 'commands', source: 'package.json + facts/commands.rofl', render: commands },
   { file: 'CLAUDE.md', name: 'knobs', source: 'facts/commands.rofl, inventory in docs/knobs.md', render: knobs },
+  { file: 'facts/model-units.rofl', name: 'units', source: 'MODEL_FILES of notebook/front.ts', render: modelUnits, comment: '-- ' },
   { file: 'examples/checks/agg-tag-demo-host.rofl', name: 'host_fold', source: 'agg-tag-demo-plain.rofl folded by src/semiring.ts', render: tagHostFold, comment: '-- ' },
 ];
 

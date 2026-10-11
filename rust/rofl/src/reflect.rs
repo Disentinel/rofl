@@ -283,6 +283,7 @@ pub struct Vocab {
     pub dominance: Sym,
     pub dominance_lit: Sym,
     pub dominated_by: Sym,
+    pub evaluated_again: Sym,
     pub dominated_reader: Sym,
     pub premise_arith: Sym,
     pub s_lattice: Sym,
@@ -451,6 +452,7 @@ const KERNEL_BOOK_NAMES: &[&str] = &[
     "dominance",
     "dominance_lit",
     "dominated_by",
+    "evaluated_again",
 ];
 
 const ARITY_TABLE: &[(&str, usize)] = &[
@@ -497,6 +499,7 @@ const ARITY_TABLE: &[(&str, usize)] = &[
     ("dominance", 4),
     ("dominance_lit", 3),
     ("dominated_by", 3),
+    ("evaluated_again", 2),
 ];
 
 pub const BUILTIN_OPS: &[&str] = &["=", "!=", "<", "<=", ">", ">=", "is", "in", "subset"];
@@ -572,6 +575,7 @@ impl Vocab {
             dominance: i("dominance"),
             dominance_lit: i("dominance_lit"),
             dominated_by: i("dominated_by"),
+            evaluated_again: i("evaluated_again"),
             dominated_reader: i("dominated_reader"),
             premise_arith: i("premise_arith"),
             s_lattice: i("$lattice"),

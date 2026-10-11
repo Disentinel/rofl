@@ -1,4 +1,4 @@
--- examples/checks/agg-why-dag-cut.rofl — agg_why_dag_cut, run with `rofl-load --explain` (whynot at depth 3).
+-- examples/checks/agg-why-dag-cut.rofl — agg_why_dag_cut, run with `rofl load --explain` (whynot at depth 3).
 -- `k(x)` is first met at the depth limit (under a1, a2), where nothing of it is demonstrated, then demonstrated
 -- under the second rule of top (level 2) and again under y1 (level 3, so with less below it); y2's mention, at level 3
 -- like y1's, is `k[main](x) [above]` and stands for the y1 block: a reference stands for the block written at its own

@@ -1,7 +1,7 @@
 -- kernel-phrases.rofl — the sentence of every relation ring 0 is written in:
 -- the reflection the kernel keeps about each clause it loads, and what the
 -- kernel's own programs (boot.rofl, safety.rofl, policy.rofl,
--- rules/strata.rofl) derive from it. Read by `rofl-render`, which renders
+-- rules/strata.rofl) derive from it. Read by `rofl render`, which renders
 -- those programs as docs/rings; loaded by nothing else. The format is
 -- facts/js-phrases.rofl's.
 edb(phrase).

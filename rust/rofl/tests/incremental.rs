@@ -446,11 +446,17 @@ fn member_ids(state: &str) -> BTreeSet<String> {
     out
 }
 
+/// The state without `evaluated_again`, the record of how the world was brought up to date, which a fresh world has
+/// no reason to hold.
+fn without_record(state: &str) -> String {
+    state.lines().filter(|l| !l.starts_with("evaluated_again[")).map(|l| format!("{l}\n")).collect()
+}
+
 fn state(s: &mut Session) -> String {
     if s.eval.store.dirty {
         s.evaluate().expect("evaluates");
     }
-    let mut out = s.eval.canonical_state();
+    let mut out = without_record(&s.eval.canonical_state());
     out.push_str("\nstaged\n");
     out.push_str(&s.eval.staged_text());
     out
@@ -594,6 +600,11 @@ fn differential(program: &str, gen: Gen, seed: u64, start: usize, steps: usize, 
                     st.sum.take(&d);
                 }
                 Retraction::Full(why) => {
+                    // the world says it was evaluated again, and why, where a rule reads it
+                    let said = s.eval.canonical_state();
+                    for w in why.split("; ") {
+                        assert!(said.lines().any(|l| l.starts_with("evaluated_again[$kernel](retract(") && l.contains(&format!(",\"{w}\")"))), "seed {seed} step {step}: {f} evaluated again ({w}) and the world does not say so");
+                    }
                     st.full.insert(why);
                     st.full_n += 1;
                 }
@@ -651,6 +662,7 @@ fn sweep(program: &str, gen: Gen, seeds: std::ops::RangeInclusive<u64>, start: u
         all.add(differential(program, gen, seed * 7919, start, steps, 1));
     }
     eprintln!("{all:?}");
+    eprintln!("evaluated again: {} of {} retractions", all.full_n, all.retracts);
     all
 }
 

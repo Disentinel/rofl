@@ -1,5 +1,5 @@
 -- examples/checks/agg-lattice-why-deep.rofl — agg_lattice_why, run with
--- `rofl-load --explain`: `why` of a lattice value 1200 derivations deep is
+-- `rofl load --explain`: `why` of a lattice value 1200 derivations deep is
 -- the whole tree in both engines, down to the source, and not a stack cut
 -- short (an `explained` row 0 is the text of an error, which
 -- agg-lattice-why-check.rofl's explain_refused names). Each level is a

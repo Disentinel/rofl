@@ -1,4 +1,4 @@
--- examples/checks/ds-tree-explain-check.rofl — ds_tree_explain, run with `rofl-load --explain`: the derivations of a closure row, of a fact that reads one, and of an aggregate over the closure, as the world that stores the closure writes them.
+-- examples/checks/ds-tree-explain-check.rofl — ds_tree_explain, run with `rofl load --explain`: the derivations of a closure row, of a fact that reads one, and of an aggregate over the closure, as the world that stores the closure writes them.
 --
 --   dte_w(a,b) is the first rule over the edge dte_e(a,b); dte_w(a,c) is the second, over dte_w(a,b) and dte_e(b,c); dte_w(a,d) over
 --   dte_w(a,c) and dte_e(c,d). A row written once is referred to after. The count's members are the four rows dte_w(a, _).

@@ -1,5 +1,5 @@
 -- examples/checks/agg-why-cell-check.rofl — agg_cell_why, run with
--- `rofl-load --explain`: `why` of a seven-member count prints a digest of
+-- `rofl load --explain`: `why` of a seven-member count prints a digest of
 -- five members and counts the other two; `why_all` prints all seven;
 -- `whynot` of a wrong value says what the value is; `whynot` of a minimum
 -- over an empty group says the group is empty.

@@ -1,5 +1,5 @@
 -- examples/checks/agg-join-why-check.rofl — agg_join_why, run with
--- `rofl-load --explain`. `why` of a join fact names its lattice and its
+-- `rofl load --explain`. `why` of a join fact names its lattice and its
 -- Cover, each contribution by its value and height, lowest first, each
 -- explained by the firing that contributed it: never by the self-loop that
 -- also contributes aj_comp(s)'s value, which rests on the cell itself; a

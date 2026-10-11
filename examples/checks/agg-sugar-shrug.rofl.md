@@ -5,7 +5,7 @@ world: agg-sugar-shrug
 # the sugar's shrugs, asked in sentences
 
 > What a sugar form answers when what it reads has no answer: a shrug inherited from the fault, asked here in the
-> answer model's own sentence, `... has no answer for the reason R with M`, which the reader reads and rofl-render
+> answer model's own sentence, `... has no answer for the reason R with M`, which the reader reads and rofl render
 > writes (docs/aggregates.md, "Shrugs, as built" and "The sentence form, as built").
 
 Declared as facts:

@@ -1,0 +1,12 @@
+-- examples/checks/whynot-unloaded.rofl — A RELATION A FILE LEFT OUT IS NOT A GAP.
+--
+-- The world carries an index of its units, as facts/model-units.rofl is the JS
+-- model's: `wu_calls` is concluded by a file this world does not load, and
+-- `wu_nowhere` by none. whynot names the one and says the other is a gap
+-- (w_whynot_tells_absent_from_unloaded); whycheck asks both of each engine.
+
+unit_concludes("rules/wu-calls.rofl", wu_calls).
+unit_concludes("rules/wu-calls.rofl", wu_reaches).
+wu_site(a).
+wu_linked(X) :- wu_site(X), wu_calls(X, _).
+wu_orphan(X) :- wu_site(X), wu_nowhere(X).

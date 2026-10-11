@@ -1,5 +1,5 @@
 -- examples/checks/agg-lattice-why-check.rofl — agg_lattice_why, run with
--- `rofl-load --explain`. `why` of a lattice fact names its cell and every
+-- `rofl load --explain`. `why` of a lattice fact names its cell and every
 -- member, lowest first (the tie al_dist(a, c, 3); the tie al_finish(p4, 8));
 -- `whynot` of a value better than the cell's says what the cell holds and
 -- lists the contributions, none of which reaches it: that is why there is

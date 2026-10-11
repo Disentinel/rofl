@@ -82,6 +82,7 @@ export function tokenize(src: string): Tok[] {
     if (/[0-9]/.test(c)) {
       let j = i;
       while (j < n && /[0-9]/.test(src[j])) j++;
+      if (src[j] === '.' && /[0-9]/.test(src[j + 1] ?? '')) { let k = j + 1; while (k < n && /[0-9]/.test(src[k])) k++; throw new ParseError(`line ${line}: ${src.slice(i, k)} is not a number here: numbers are integers`); }
       toks.push({ t: 'int', v: src.slice(i, j), line });
       i = j;
       continue;
@@ -100,6 +101,8 @@ export function tokenize(src: string): Tok[] {
       i = j;
       continue;
     }
+    if (c === '#' || (c === '/' && src[i + 1] === '/')) throw new ParseError(`line ${line}: '${c === '#' ? '#' : '//'}' starts no comment: a comment starts with --`);
+    if (c === '=' && src[i + 1] === '=') throw new ParseError(`line ${line}: '==' is no operator: equality is =`);
     let matched = '';
     for (const p of PUNCT) if (src.startsWith(p, i) && p.length > matched.length) matched = p;
     if (matched) { toks.push({ t: matched, v: matched, line }); i += matched.length; continue; }

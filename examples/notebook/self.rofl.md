@@ -15,6 +15,7 @@ code:
   - ../../notebook/draw.ts
   - ../../notebook/draw-proof.ts
   - ../../playground/host.ts
+  - ../../playground/engine.ts
   - ../../vscode/extension.ts
   - ../../vscode/worker.ts
   - ../../vscode/serial.ts

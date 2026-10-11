@@ -1,6 +1,6 @@
 // The model translate asks: a command-line harness run for text alone, with no tools, no MCP servers and no project or user instructions,
 // from a directory made for the one call and removed after it. A natural cell is text from whoever wrote the file.
-// Which: `--model NAME[:MODEL]` or ROFL_NB_HARNESS, else ROFL_NB_MODEL_CMD, else a harness whose ROFL_NB_<NAME> points at its binary,
+// Which: `--model NAME[:MODEL]`, else ROFL_NB_MODEL_CMD, else a harness whose ROFL_NB_<NAME> points at its binary,
 // else the first installed in the order below. A harness that keeps a tool is refused unless ROFL_NB_ALLOW_TOOLS=1.
 import { spawn } from 'node:child_process';
 import { accessSync, constants, existsSync, mkdirSync, mkdtempSync, realpathSync, rmdirSync, rmSync, symlinkSync } from 'node:fs';
@@ -73,7 +73,7 @@ export function located(name: string, env = process.env): string | undefined {
 
 export type Choice = { name: string; model?: string; path?: string; command?: string; refused?: string; error?: string; limit?: number };
 /** The harness a translation asks, and why not when it cannot. */
-export function choose(asked = process.env.ROFL_NB_HARNESS, env = process.env): Choice {
+export function choose(asked?: string, env = process.env): Choice {
   const allow = env.ROFL_NB_ALLOW_TOOLS === '1', limit = Number(env.ROFL_NB_MODEL_TIMEOUT ?? 180) * 1000;
   const refusal = (name: string) => !allow && HARNESSES[name].keeps ? `${name} cannot be run without tools: it keeps ${HARNESSES[name].keeps}. ROFL_NB_ALLOW_TOOLS=1 runs it anyway` : undefined;
   if (asked) {
@@ -145,5 +145,5 @@ export function models(env = process.env): string[] {
     return `${n === c.name ? '*' : ' '} ${n.padEnd(9)}${standing(n, env)}${at ? `\n            ${argv.join(' ')}${HARNESSES[n].env ? ` (and ${Object.keys(HARNESSES[n].env!('<dir>')).join(', ')})` : ''}` : ''}`;
   });
   const cmd = `${c.name === 'command' ? '*' : ' '} command  ${env.ROFL_NB_MODEL_CMD ? `sh -c ${JSON.stringify(env.ROFL_NB_MODEL_CMD)}, the prompt on stdin; its isolation is its own` : 'ROFL_NB_MODEL_CMD is not set'}`;
-  return [...rows, cmd, '', c.error || c.refused ? `translate asks none: ${c.error ?? c.refused}` : `translate asks ${c.name}${c.model ? ` (${c.model})` : ''}; choose with --model NAME[:MODEL] or ROFL_NB_HARNESS.`];
+  return [...rows, cmd, '', c.error || c.refused ? `translate asks none: ${c.error ?? c.refused}` : `translate asks ${c.name}${c.model ? ` (${c.model})` : ''}; choose with --model NAME[:MODEL].`];
 }

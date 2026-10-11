@@ -93,10 +93,10 @@ into a table cell, which ended the row.
   known* has no variable letter for the reader to learn it from, so the reader
   takes the vocabulary from the two phrase files, as it does for
   `docs/js`.
-- No gate in CI: `rofl-render` is not built there, as for `docs/js`. After
+- No gate in CI: `rofl render` is not built there, as for `docs/js`. After
   changing one of these programs, render again.
 
 ## Regenerating
 
-    npm run render:rings        needs rust/target/release/rofl-render
+    npm run render:rings        needs rust/target/release/rofl render
     npm run view -- docs/rings/README.md docs/rings/boot.rofl.md docs/rings/safety.rofl.md docs/rings/strata.rofl.md docs/rings/policy.rofl.md docs/rings/ring1.rofl.md docs/rings/charclass.rofl.md

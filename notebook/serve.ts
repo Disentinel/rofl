@@ -13,6 +13,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Kernel } from './kernel.ts';
+import { engineOf } from '../playground/rust.ts';
 import { LIMIT, from, limits, readAt, runFile, wallOf, type Limits } from './cli.ts';
 import { libFiles, parseFront } from './front.ts';
 
@@ -128,7 +129,7 @@ function serve(sock: string) {
       const file = req.file;
       if (typeof file !== 'string' || !file.endsWith('.rofl.md')) return void c.end(JSON.stringify({ error: `${String(file)}: not a notebook: a notebook is a .rofl.md file` }));
       wall = wallOf(req.limits ?? {});
-      const key = keptFor(file), kernel = kept?.key === key ? kept.kernel : new Kernel({ wall: () => wall() });
+      const key = keptFor(file), kernel = kept?.key === key ? kept.kernel : new Kernel({ wall: () => wall(), engine: engineOf() });
       kept = undefined;
       let reply: Reply;
       try { reply = { result: runFile(file, kernel) }; kept = { key, kernel }; } catch (e) { reply = { error: (e as Error).message }; }

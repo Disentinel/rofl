@@ -58,7 +58,7 @@ variable they mark, as `min` and `max` do in `pareto p(K, min C, max T).`
 | ordered | `ordered ast_node(N, _, _, by L).` | `` `ast_node` is ordered by its integer L. `` |
 | dag | `dag calls(F, G).` `dag calls(F, G) closure reaches.` | `` No `calls` path returns to where it began. `` `` `reaches` holds of each node and every node a path leads to. `` |
 
-The reader reads each sentence into its line and rofl-render writes it back,
+The reader reads each sentence into its line and rofl render writes it back,
 as for the aggregate declarations. Reflection gets one kernel row per
 declaration beside `lattice_decl`: `structure_decl(Rel, Arity, Kind)`, with
 `structure_role(Rel, Pos, Role)` and `structure_closure(Rel, Closure)`, timeless
@@ -204,7 +204,7 @@ time and memory.
 
 Only the author knows whether every *future* fact of a relation keeps the
 promise (the scanner can change; a flag can add a parent). The engine never
-declares a structure. `npm run structures` (a mode of rofl-load, read-only,
+declares a structure. `npm run structures` (a mode of rofl load, read-only,
 over a world and its facts) inspects each relation and prints a proposal as
 the declaration's sentence, with what it measured:
 
@@ -239,7 +239,7 @@ tree) is read by no proposal or near miss.
    touches no read path of the engine, so it can land before
    `w_cmp_delta_first`, and it settles by measurement that the promises hold
    on the four corpora before anything stores them. **Built 2026-10-04**
-   (`rust/rofl/src/structures.rs`; `rofl-load --propose-structures`, `npm run structures`): on self, mcp, cli_exits and
+   (`rust/rofl/src/structures.rs`; `rofl load --propose-structures`, `npm run structures`): on self, mcp, cli_exits and
    util it proposes `tree ast_in(P, C) closure ast_within.` (the closure is
    exact), the ast_in and in_fn aliases, and 169 functions that hold on all
    four (`f_the_engine_proposes_a_forest_a_closure_and_aliases_on_all_four_corpora`).
@@ -269,7 +269,7 @@ tree) is read by no proposal or near miss.
 `rust/rofl/src/rofl_parse.rs`, `examples/ring1/ring1.rofl`) and as the sentence
 `` `ast_name` has one Name for each N. `` (`` `best` has one W. `` for no key,
 `` has one A and B for each K. `` for two values; `scripts/read_md.ts` reads it,
-rofl-render writes it). A word, not a keyword: it declares only when a second
+rofl render writes it). A word, not a keyword: it declares only when a second
 name follows, so `function(x).` is a fact. A role word, `to`, marks each value;
 an unmarked argument is the key, and the values come last. The door
 (`src/structure.ts`, `rust/rofl/src/structure.rs`) refuses, with these words in
@@ -322,7 +322,7 @@ Facts, `why` and `whynot` are the same with and without the declaration
 tree wraps a closure as `$closure(Name, $structure(..))`) and as the sentences
 `` Each child of `ast_in` has one parent and no node is its own ancestor. `` and, with a
 closure, `` ... , and `ast_within` holds of each node and every ancestor of it. ``
-(`scripts/read_md.ts`, rofl-render; a line that opens with `Each` is no question to
+(`scripts/read_md.ts`, rofl render; a line that opens with `Each` is no question to
 the notebook, `english()` leaves these two alone as it leaves a tag's). A tree has
 no role word; its first argument is the parent and its second the child. The door
 refuses, with the same words in both engines: what a function's door refuses; a tree
@@ -395,7 +395,7 @@ an unbound closure at one row, `vclosure_unbound_cheap`, the world is cut).
 output from the forests (`tick drv support=0` sealed, as a sealed derived row prints;
 `support=1` where witnesses are kept, with the row's `wit` line: its rule, the tick
 evaluated and its premises), so the census counts them and the goldens keep their meaning;
-the count of stored facts (`fact_count`, rofl-eval's `facts`) does not. The rows are those
+the count of stored facts (`fact_count`, `rofl load --seed`'s `facts`) does not. The rows are those
 of the tick evaluated: a tick that ends takes them as it takes any derived row.
 
 **Provenance on demand, where witnesses are kept.** A row's `derived_by` row is written
@@ -453,7 +453,7 @@ fresh world; twelve keeping witnesses, each row's support, witness, `derived_by`
 the cells over them against the rules'); 32 planted faults, and 8 more for the witnessed
 world (`scripts/agg_breaks.ts`).
 
-**Measured** (Rust release, `rofl-eval --bytes --budget 4000000000 --space 40000000`, three runs, median; the seeds regenerated for the scanner's 16-hex node
+**Measured** (Rust release, `rofl load --seed SEED --bytes --budget 4000000000 --space 40000000`, three runs, median; the seeds regenerated for the scanner's 16-hex node
 ids; before is the engine and the model of 3f37887, after this tree's).
 
 | world | facts stored, before | after | closure rows not stored | eval ms, before | after | RSS MB, before | after |
@@ -479,11 +479,11 @@ reflection of the two lowered rules and the structure rows (17 relations, none o
 facts of the world). Over one seed the sealed state (the closure from the tree) equals the state with the kernel's rows relation by relation and row by row on all four corpora (the provenance's relations aside; only `shrug`, a row the seal writes, differs). A reader asks the tree for 48% of the closure's rows (matches, not
 distinct rows: 248,461 of 513,629 on self, 445,682 of 888,133 on util).
 
-**Measured where witnesses are kept** (the default mode; Rust release, `rofl-eval --bytes
+**Measured where witnesses are kept** (the default mode; Rust release, `rofl load --seed SEED --bytes
 --budget 4000000000 --space 40000000`, three runs, median, seeds regenerated 2026-10-05;
 before is fe3bdfc, which stored the closure there). "Observed" is the canonical state as
-rofl-eval prints it, which settles provenance, so the closure's `derived_by` rows are
-written before `facts` is counted; "unobserved" is `--unsettled` (a flag of rofl-eval since removed, docs/knobs.md), where no `derived_by`
+`rofl load --seed` prints it, which settles provenance, so the closure's `derived_by` rows are
+written before `facts` is counted; "unobserved" is `--unsettled` (a flag of `rofl load --seed` since removed, docs/knobs.md), where no `derived_by`
 row of a firing nothing reads is written.
 
 | world | facts stored, before | after | eval ms, before | after | RSS MB, before | after |

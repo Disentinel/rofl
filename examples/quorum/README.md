@@ -45,7 +45,7 @@ quorum is read as a least fixpoint: a belief founds only on beliefs already
 founded, so the circle believes nothing, and `whynot` says how far it got:
 
 ```
-rofl-load --whynot "believed(m1)" boot.rofl examples/quorum/quorum.rofl examples/quorum/quorum-data.rofl
+rofl load --whynot "believed(m1)" boot.rofl examples/quorum/quorum.rofl examples/quorum/quorum-data.rofl
 ```
 ```
 failed premise: at_least(2, ?O#0 : backs[main](?S#0,m1), believed[main](?S#0), speaks_for[main](?S#0,?O#0)) reached 1 of 2 [threshold]: #1 (wire) h=2
@@ -151,7 +151,7 @@ has seen work, so the data holds two **drills**, logs corrupted on purpose:
   committed, and the alarm is `old_term`: the entry can still be overwritten.
 
 ```
-rofl-load --why "unsafe_commit(old,2,old_term)" boot.rofl examples/quorum/quorum.rofl examples/quorum/quorum-data.rofl
+rofl load --why "unsafe_commit(old,2,old_term)" boot.rofl examples/quorum/quorum.rofl examples/quorum/quorum-data.rofl
 ```
 ```
 unsafe_commit[main](old,2,old_term)  <= r0dd62093 @tick 0

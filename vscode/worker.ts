@@ -1,15 +1,16 @@
 // The kernels off the extension host's thread: a Kernel per notebook, so a run does not freeze the editor and each notebook's last run answers its own whys.
-import { parentPort } from 'node:worker_threads';
+import { parentPort, workerData } from 'node:worker_threads';
 import { randomUUID } from 'node:crypto';
 import { getHeapStatistics } from 'node:v8';
 import { Kernel, share } from '../notebook/kernel.ts';
 import { wall, runFile, translateCell, translateText } from '../notebook/cli.ts';
+import { engineOf } from '../playground/rust.ts';
 import { choose, llm, type Ask } from '../notebook/model.ts';
 import { render } from './render.ts';
 
 // every run is named, by this worker and its count: a restart is another worker. The last KEPT notebooks keep their kernel and its last run, the least recent dropped first,
 // and all but the notebook about to run, and a translation's, once the heap is past half its limit, so a heavy world is let go before another is built
-const KEPT = 3, me = randomUUID().slice(0, 8);
+const KEPT = 3, me = randomUUID().slice(0, 8), engine = workerData?.engine === 'typescript' ? 'typescript' : 'rust';
 const kept = new Map<string, { kernel: Kernel; stamp: string }>(), dropped = new Set<string>();
 let runs = 0;
 let translating: Kernel | undefined;   // a translation's runs are its own, never a notebook's
@@ -19,7 +20,7 @@ const run = (file: string, text: string, unsaved: Record<string, string>, bare: 
   const stamp = `${me}.${++runs}`, heap = getHeapStatistics(), heavy = heap.used_heap_size > heap.heap_size_limit / 2;
   for (const f of kept.keys()) if (f !== file && (heavy || kept.size + +!kept.has(file) > KEPT)) drop(f);
   if (heavy) translating = undefined;
-  const kernel = kept.get(file)?.kernel ?? new Kernel({ wall });
+  const kernel = kept.get(file)?.kernel ?? new Kernel({ wall, engine: engineOf(engine) });
   kept.delete(file);
   const r = runFile(file, kernel, text, unsaved);
   kept.set(file, { kernel, stamp });
@@ -43,7 +44,7 @@ const viaHost = (id: number, who: string): Ask => Object.assign((prompt: string)
 /** Every natural cell with none under it, or one cell `at` again with the person's `words` and what the model `asked`; each step is posted as it starts, and a stop kills the model's process.
  *  `model`: `vscode:<name>` for VS Code's, else a harness as `--model` takes it, or none for the first installed. */
 function translate(id: number, file: string, text: string, { at, words, asked, where }: Cell = {}, model?: string) {
-  translating ??= new Kernel({ wall });
+  translating ??= new Kernel({ wall, engine: engineOf(engine) });
   const stop = new AbortController(), cli = model?.startsWith('vscode:') ? viaHost(id, model.slice(7)) : llm(choose(model));
   const ask = Object.assign((p: string) => cli(p, stop.signal), { who: cli.who });
   stops.set(id, stop);
