@@ -13,7 +13,8 @@ import { readBook, homeOf, booksOf, OWN, type Ask, type Cell, type Kind } from '
 import { plural, theVariable, type Question } from '../scripts/read_md.ts';
 import { ARITH_OPS, varsOf, canonTerm, mka, litsOf, termsOf, type Clause, type Lit, type Term } from '../src/unify.ts';
 import type { FactRec, Store } from '../src/store.ts';
-import { holding, remote, typescript, type Engine } from './engine.ts';
+import { holding, remote, typescript, type Engine, type Stop } from './engine.ts';
+export type { Stop };
 
 const BUDGET = 4_000_000_000, SPACE = 40_000_000;
 export const FILE = 'play.js';
@@ -37,8 +38,6 @@ export type Line = { kind: Kind; text: string; lit: string; rows: Row[]; total: 
 export type CellOut = { id: string; errors: string[]; notes: string[]; lines: Line[]; rofl?: string; at?: Record<string, number> };
 export type Node = { kind: string; file: string; line: number; label: string };
 /** `unresolved`: a relative import or require that names no file of the code, as `file:line 'spec'`; a never holds only as far as these. */
-/** A run's stop: true when the clock or the heap says so, and then `cause` says which. `limited`: a limit was asked for by the person. */
-export type Stop = (() => boolean) & { cause?: string; limited?: boolean };
 export type RunOut = { parseErrors: Record<string, string>; facts: number; ms: number; phases: Record<string, number>; learned: string[]; cells: CellOut[]; nodes: Record<string, Node>; unresolved: string[]; error?: string; /** an evaluation was stopped */ partial?: boolean; /** what stopped it and the setting that raises it, in a sentence */ cut?: string; /** the model over the code: evaluated by this run, or kept from one before */ model?: 'evaluated' | 'kept' };
 
 const LITERAL = /^[a-z_]\w*(?:\[\w+\])?\(/;   // a question may also be asked in ROFL
@@ -385,17 +384,15 @@ export class Host {
     const done = (error?: string): RunOut => ({ parseErrors, facts: facts.length, ms: Math.round(performance.now() - t), phases, learned, cells: outs, nodes, unresolved, error, partial, cut: cutBy(), model });
     let base: Rofl | null = null;
     if (layered) {
-      try { model = this.base ? 'kept' : 'evaluated'; base = this.evaluated(files, sc, stop?.limited ? typescript : this.engine); partial = base.store.partialEval; } catch (e) { return done((e as Error).message); }
+      try { model = this.base ? 'kept' : 'evaluated'; base = this.evaluated(files, sc, stop); partial = base.store.partialEval; } catch (e) { return done((e as Error).message); }
     }
     lap('model');
-    // not layered: the engine evaluates the code and the cells together, the TypeScript one where a limit was asked for (a Rust evaluation cannot be stopped)
-    // or a world is forked after (an excise)
+    // not layered: the engine evaluates the code and the cells together
     const all = texts.filter((x) => x.trim()).join('\n');
     let f: Rofl;
     if (!base) {
-      const eng = stop?.limited || asks.some((as, i) => !refused.has(i) && as.some((a) => a.kind === 'excise')) ? typescript : this.engine;
       try {
-        const r = eng.withCells(this.core, this.model, Object.keys(files).length ? sc.text : '', texts, { budget: BUDGET, space: SPACE });
+        const r = this.engine.withCells(this.core, this.model, Object.keys(files).length ? sc.text : '', texts, { budget: BUDGET, space: SPACE, stop });
         r.errors.forEach((e, i) => outs[i].errors.push(...e));
         f = r.world; partial ||= f.store.partialEval;
       } catch (e) { return done((e as Error).message); }
@@ -621,9 +618,12 @@ export class Host {
     parts.forEach((_, i) => {
       const cut = asks[i].filter((a) => a.kind === 'excise' && a.lit);
       if (!cut.length || refused.has(i)) return;
-      const g = f.fork();
-      for (const a of cut) { const r = g.retract(a.lit); if (!r.ok) outs[i].errors.push(`${a.text}: ${r.diagnostics[0]}`); }
-      try { partial ||= g.evaluate(BUDGET).partial; } catch (e) { outs[i].errors.push(`${cut[0].text}: ${(e as Error).message}`); return; }
+      let g: Rofl;
+      try {
+        const r = this.engine.excised(f, cut.map((a) => a.lit), { budget: BUDGET, space: SPACE, stop });
+        r.errors.forEach((e) => outs[i].errors.push(`${cut[0].text}: ${e}`));
+        g = r.world; partial ||= g.store.partialEval;
+      } catch (e) { outs[i].errors.push(`${cut[0].text}: ${(e as Error).message}`); return; }
       const rows: Row[] = [], failing: string[][] = [];
       excised.set(i, { world: g, failing });
       const said = (lit: string) => plain(vocab.say(lit) ?? lit);
@@ -693,9 +693,9 @@ export class Host {
   }
 
   /** The model evaluated over the code, once per text of the files. */
-  private evaluated(files: Record<string, string>, sc: Scanned, engine: Engine): Rofl {
+  private evaluated(files: Record<string, string>, sc: Scanned, stop?: Stop): Rofl {
     if (this.base) return this.base;
-    const b = engine.evaluated(this.core!, this.model, sc.text, { budget: BUDGET, space: SPACE });
+    const b = this.engine.evaluated(this.core!, this.model, sc.text, { budget: BUDGET, space: SPACE, stop });
     return b.store.partialEval ? b : this.base = b;   // a world cut short is not kept for the next run
   }
 

@@ -37,6 +37,8 @@
 //!                                                        world by delta (Session::assert_delta), else evaluated again
 //!   {"op":"load","session":2,"path":"pack.rofl"}      -> {"admitted":n,"full":null|"why"}: the same for facts and rules
 //!   {"op":"evaluate","session":2}
+//!   {"op":"resume","session":2,"steps":n}            -> as evaluate, and "resumed": went on from where the budget
+//!                                                        stopped the last evaluation, or evaluated again
 //!   {"op":"ask","session":2,"query":"p(X)"}
 //!   {"op":"why","session":2,"query":"p(a)"}            -> {"text":...}
 //!   {"op":"why","session":2,"query":"c(a)","all":true} -> every member of every cell
@@ -50,6 +52,8 @@
 //!   {"op":"keep","session":2,"path":"w.kept"}  -> {"path":...,"bytes":n}: the world as a kept image; an evaluated
 //!                                                        world opens evaluated (`open` with `keptPath`)
 //!   {"op":"close","session":2}
+//!   any op on a session may carry "limit":{"ms":n,"bytes":n}: past n milliseconds, or n live bytes in this
+//!   process, its evaluation stops as at the step budget, and the answer says "stopped":"clock"|"heap"
 //!
 //! THE STORE, READ PIECE BY PIECE, for a host that keeps the world here and reads only what it renders
 //! (playground/rust.ts RustStore), each answer in a snapshot's own form:
@@ -134,7 +138,54 @@ impl Server {
         Ok(())
     }
 
+    /// `r` under its `limit`: a watcher sets the session's halt when the clock or the heap passes it.
+    fn limited(&mut self, r: &Value, limit: &Value) -> Result<Value, String> {
+        use std::sync::atomic::{AtomicBool, AtomicU8, Ordering::Relaxed};
+        use std::sync::Arc;
+        let (ms, bytes) = (limit.get("ms").and_then(Value::as_u64), limit.get("bytes").and_then(Value::as_i64));
+        let (halt, done, cause) = (Arc::new(AtomicBool::new(false)), Arc::new(AtomicBool::new(false)), Arc::new(AtomicU8::new(0)));
+        self.get(r)?.eval.halt = Some(halt.clone());
+        let watch = {
+            let (halt, done, cause, t0) = (halt.clone(), done.clone(), cause.clone(), std::time::Instant::now());
+            std::thread::spawn(move || {
+                while !done.load(Relaxed) {
+                    let c = if ms.is_some_and(|ms| t0.elapsed().as_millis() as u64 >= ms) {
+                        1
+                    } else if bytes.is_some_and(|b| crate::seed::LIVE.load(Relaxed) as i64 >= b) {
+                        2
+                    } else {
+                        0
+                    };
+                    if c != 0 {
+                        cause.store(c, Relaxed);
+                        halt.store(true, Relaxed);
+                        break;
+                    }
+                    std::thread::sleep(std::time::Duration::from_millis(2));
+                }
+            })
+        };
+        let mut plain = r.clone();
+        plain.as_object_mut().unwrap().remove("limit");
+        let res = self.handle(&plain);
+        done.store(true, Relaxed);
+        let _ = watch.join();
+        if let Ok(s) = self.get(r) {
+            s.eval.halt = None;
+        }
+        let mut v = res?;
+        v["stopped"] = match cause.load(Relaxed) {
+            1 => json!("clock"),
+            2 => json!("heap"),
+            _ => Value::Null,
+        };
+        Ok(v)
+    }
+
     fn handle(&mut self, r: &Value) -> Result<Value, String> {
+        if let Some(limit) = r.get("limit").filter(|v| !v.is_null()) {
+            return self.limited(r, limit);
+        }
         let op = r.get("op").and_then(|v| v.as_str()).ok_or("`op` is required")?;
         if !matches!(op, "rows" | "fact" | "firings" | "cell" | "books" | "holding" | "ask" | "why" | "whynot" | "state" | "facts") {
             self.keys.clear();
@@ -350,6 +401,15 @@ impl Server {
                 Ok(json!({
                     "partial": o.partial, "staged": o.staged, "steps": o.steps,
                     "peakRows": o.peak_rows, "space": o.space,
+                }))
+            }
+            "resume" => {
+                let more = r.get("steps").and_then(|v| v.as_i64()).ok_or("resume needs `steps`")?;
+                let s = self.get(r)?;
+                let (o, resumed) = s.resume(more).map_err(|e| rofl::describe(&e))?;
+                Ok(json!({
+                    "partial": o.partial, "staged": o.staged, "steps": o.steps,
+                    "peakRows": o.peak_rows, "space": o.space, "resumed": resumed,
                 }))
             }
             "retract" => {

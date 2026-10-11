@@ -26,6 +26,8 @@ mod labeled;
 mod joinplan;
 mod vclosure;
 mod prov;
+mod resume;
+use resume::{Cut, CutAt, InFlight, Tail};
 pub use addition::{AddDelta, PrepMark};
 pub use delta::Delta;
 
@@ -646,11 +648,19 @@ pub struct TickOutcome {
 
 #[derive(Clone)]
 pub struct Eval {
+    /// Where the last step wall fell, if the evaluation can go on from it (`resume.rs`).
+    cut: Option<Box<Cut>>,
+    cutting: Option<Box<Cut>>,
+    cut_tail: Option<Tail>,
+    resume_at: Option<Box<Cut>>,
+    round_resume: Option<(Front, usize, usize, Front, Option<InFlight>)>,
     pub h: Heap,
     pub v: Vocab,
     pub store: Store,
     pub budget: i64,
     pub space: i64,
+    /// Set from outside while an evaluation runs (the clock or the heap of a caller's limit): the evaluation stops as at its step budget.
+    pub halt: Option<std::sync::Arc<std::sync::atomic::AtomicBool>>,
     /// WHICH RULE IS FIRING, and how many index probes each one has asked for.
     ///
     /// `argm_calls` on the store is the aggregate, and it is what showed that
@@ -1312,6 +1322,7 @@ impl Eval {
             v,
             store,
             budget,
+            halt: None,
             space: DEFAULT_SPACE,
             cur_rule: None,
             argm_by_rule: HashMap::new(),
@@ -1429,6 +1440,11 @@ impl Eval {
             widened_x: HashMap::new(),
             narrowing: None,
             narrow_out: HashMap::new(),
+            cut: None,
+            cutting: None,
+            cut_tail: None,
+            resume_at: None,
+            round_resume: None,
             lat_unknown: HashMap::new(),
             lat_withdrawn: Vec::new(),
             lat_spread: HashSet::new(),
@@ -2778,7 +2794,7 @@ impl Eval {
         self.demand_done_rows = 0;
         self.carry_wall = (self.budget, self.space);
         (self.carry_steps, self.carry_rows, self.carry_broken) = (0, 0, false);
-        let mut partial = false;
+        self.cut = None;
         if self.well_founded {
             let partial = match self.run_well_founded() {
                 Ok(()) => false,
@@ -2870,6 +2886,14 @@ impl Eval {
         self.ds_done.clear();
         self.lattice_improvements = 0;
         self.seed_narrowing()?;
+        self.run_pass_from()
+    }
+
+    /// The pass after its preparation: from the start, or from `resume_at`.
+    fn run_pass_from(&mut self) -> Result<Outcome, Halt> {
+        let mut partial = false;
+        self.cutting = Some(Box::default());
+        let from = self.resume_at.as_ref().and_then(|c| c.phase);
         let safe_rules: Vec<Rc<ERule>> = self.rules.iter().filter(|r| r.safe).cloned().collect();
         let readers = self.shrug_readers.clone();
         // a rule into a subsumptive relation whose dominance reads a relation
@@ -2987,11 +3011,15 @@ impl Eval {
                 .filter(|r| late.contains(&r.id))
                 .cloned()
                 .collect();
-            self.activate(&first)?;
+            if from.is_none_or(|p| p == 0) {
+                self.activate_phase(&first, 0)?;
+            }
             if self.mode == Mode::Strata && !strat_rules.is_empty() {
                 self.check_unstratified()?;
             }
-            self.activate(&second)?;
+            if from.is_none_or(|p| p <= 1) {
+                self.activate_phase(&second, 1)?;
+            }
             let levels = match peeled {
                 Some(l) => l,
                 None => {
@@ -3012,11 +3040,17 @@ impl Eval {
                     })
                 }
             };
-            for (lv, rs) in levels {
-                self.close_plain_rules(lv)?;
-                self.plain_flush(lv)?;
-                self.close_thresholds_below(lv, true)?;
-                self.close_lattices_below(lv)?;
+            for (n, (lv, rs)) in levels.into_iter().enumerate() {
+                let ph = n + 2;
+                if from.is_some_and(|p| p > ph) {
+                    continue;
+                }
+                if from != Some(ph) {
+                    self.close_plain_rules(lv)?;
+                    self.plain_flush(lv)?;
+                    self.close_thresholds_below(lv, true)?;
+                    self.close_lattices_below(lv)?;
+                }
                 // the rules that own an element a stratification by data took run
                 // last at their level, a layer at a time (`datastrat.rs`)
                 let (ds, rs): (Vec<Rc<ERule>>, Vec<Rc<ERule>>) = rs.into_iter().partition(|r| self.ds_owner(r));
@@ -3032,7 +3066,7 @@ impl Eval {
                     self.run_data_levels(lv, &ds)?;
                     continue;
                 }
-                self.activate(&rs)?;
+                self.activate_phase(&rs, ph)?;
                 self.poison_readers(&rs)?;
                 self.run_data_levels(lv, &ds)?;
             }
@@ -3059,8 +3093,15 @@ impl Eval {
                 // always did: a world hole with the wall's reason, and the
                 // evaluation partial, whatever else the cut left.
                 partial = brk!("space_uncut_world" => reason == "budget_exhausted"; true);
+                if reason != "budget_exhausted" {
+                    self.cutting = None;
+                }
                 if partial {
+                    let n = self.store.eval_holes.len();
                     self.wall_hole(reason)?;
+                    if let Some(c) = self.cutting.as_mut() {
+                        c.hole = self.store.eval_holes.get(n).copied();
+                    }
                 }
                 brk!("agg_seal_at_wall" => {
                     let aggs: Vec<Rc<ERule>> = strat_rules.iter().filter(|r| r.has_agg).cloned().collect();
@@ -3088,6 +3129,13 @@ impl Eval {
         // replay of THIS tick needs and a tick that finished is as replayable
         // as one that did not.
         self.store.note_eval(self.budget, self.steps, partial);
+        if partial {
+            if let Some(c) = self.cutting.as_mut() {
+                (c.facts, c.tick) = (self.store.len_ids() as usize, self.store.tick);
+            }
+            self.keep_cut();
+        }
+        self.cutting = None;
         Ok(Outcome {
             partial,
             staged: self.staged.len(),
@@ -4363,13 +4411,29 @@ impl Eval {
 
     // --------------------------------------------------------- the fixpoint
 
+    /// A phase of the pass activated; a step wall in it names the phase.
+    fn activate_phase(&mut self, rules: &[Rc<ERule>], ph: usize) -> Result<(), Halt> {
+        let r = self.activate(rules);
+        if let (Err(Halt::Budget(..)), Some(c)) = (&r, self.cutting.as_mut()) {
+            c.phase.get_or_insert(ph);
+        }
+        r
+    }
+
     fn activate(&mut self, rules: &[Rc<ERule>]) -> Result<(), Halt> {
         if rules.is_empty() {
             return Ok(());
         }
         if self.no_witness && self.lattices.is_empty() && rules.len() > 1 {
-            for component in components(rules) {
-                self.activate_batch(&component)?;
+            let from = self.resume_at.as_ref().map_or(0, |c| c.comp);
+            for (c, component) in components(rules).into_iter().enumerate().skip(from) {
+                let r = self.activate_batch(&component);
+                if let (Err(Halt::Budget(..)), Some(cut)) = (&r, self.cutting.as_mut()) {
+                    if cut.phase.is_none() {
+                        cut.comp = c;
+                    }
+                }
+                r?;
             }
             return Ok(());
         }
@@ -4379,8 +4443,11 @@ impl Eval {
     fn activate_batch(&mut self, rules: &[Rc<ERule>]) -> Result<(), Halt> {
         let mut sorted: Vec<Rc<ERule>> = rules.to_vec();
         sorted.sort_by(|a, b| cmp_js(&a.canon, &b.canon));
-        self.active.extend(sorted.iter().cloned());
-        self.active.sort_by(|a, b| cmp_js(&a.canon, &b.canon));
+        // a batch resumed in is active already
+        if self.resume_at.is_none() {
+            self.active.extend(sorted.iter().cloned());
+            self.active.sort_by(|a, b| cmp_js(&a.canon, &b.canon));
+        }
         self.fire_all(sorted)
     }
 
@@ -4393,10 +4460,38 @@ impl Eval {
         let batch: Rc<[Rc<ERule>]> = Rc::from(sorted);
         let outer = (std::mem::replace(&mut self.batch, batch.clone()), self.batch_at);
         let (mut sum, mut mx) = (0u64, 0u64);
-        for (i, r) in batch.iter().enumerate() {
+        let (from, mut round) = match self.resume_at.take() {
+            None => (0, None),
+            Some(mut c) => match c.at.take() {
+                Some(CutAt::Whole { i, front }) => {
+                    self.cur_front = front;
+                    (i, c.fl.take())
+                }
+                Some(CutAt::Round { cur, j, pos, front }) => {
+                    self.round_resume = Some((cur, j, pos, front, c.fl.take()));
+                    (batch.len(), None)
+                }
+                None => (0, None),
+            },
+        };
+        for (i, r) in batch.iter().enumerate().skip(from) {
             self.batch_at = i;
             let t = std::time::Instant::now();
-            let f = self.fire_rule(r, None)?;
+            let f = match round.take() {
+                Some(fl) => self.finish(r, fl, |e| e.fire_rule(r, None)),
+                None => self.fire_rule(r, None),
+            };
+            let f = match f {
+                Ok(f) => f,
+                Err(e) => {
+                    if let (Halt::Budget(..), Some(c)) = (&e, self.cutting.as_mut()) {
+                        if c.at.is_none() {
+                            c.at = Some(CutAt::Whole { i, front: std::mem::take(&mut self.cur_front) });
+                        }
+                    }
+                    return Err(e);
+                }
+            };
             merge_front(&mut self.cur_front, f);
             let d = t.elapsed().as_nanos() as u64;
             *self.ns_by_rule.entry(r.id).or_insert(0) += d;
@@ -4419,6 +4514,10 @@ impl Eval {
 
     fn propagate(&mut self, mut front: Front) -> Result<(), Halt> {
         let outer = std::mem::take(&mut self.live_front);
+        let mut resume = self.round_resume.take();
+        if let Some(r) = resume.as_mut() {
+            front = std::mem::take(&mut r.0);
+        }
         loop {
             // A lattice fact improved on since it entered the front is not
             // news any more; its successor is.
@@ -4434,19 +4533,38 @@ impl Eval {
             }
             let cur = front;
             self.live_front = cur.by_rel.keys().copied().collect();
-            self.cur_front = Front::default();
-            self.thr_round += 1;
-            self.thr_fresh.clear();
+            let (j0, mut at) = match resume.take() {
+                Some((_, j, pos, made, fl)) => {
+                    self.cur_front = made;
+                    (j, Some((pos, fl)))
+                }
+                None => {
+                    self.cur_front = Front::default();
+                    self.thr_round += 1;
+                    self.thr_fresh.clear();
+                    (0, None)
+                }
+            };
             let active = self.active.clone();
             let (mut sum, mut mx) = (0u64, 0u64);
-            for r in &active {
+            for (j, r) in active.iter().enumerate().skip(j0) {
                 let t = std::time::Instant::now();
-                let done = self.fire_in_round(r, &cur);
+                let done = match at.take() {
+                    Some((pos, fl)) => self.fire_in_round_from(r, &cur, pos, fl),
+                    None => self.fire_in_round(r, &cur),
+                };
                 let d = t.elapsed().as_nanos() as u64;
                 *self.ns_by_rule.entry(r.id).or_insert(0) += d;
                 sum += d;
                 mx = mx.max(d);
-                done?;
+                if let Err(e) = done {
+                    if let (Halt::Budget(..), Some(c)) = (&e, self.cutting.as_mut()) {
+                        if let (None, Some(pos)) = (&c.at, c.pos) {
+                            c.at = Some(CutAt::Round { cur, j, pos, front: std::mem::take(&mut self.cur_front) });
+                        }
+                    }
+                    return Err(e);
+                }
             }
             self.rounds.push((sum, mx));
             front = std::mem::take(&mut self.cur_front);
@@ -4456,6 +4574,12 @@ impl Eval {
     }
 
     fn fire_in_round(&mut self, r: &Rc<ERule>, cur: &Front) -> Result<(), Halt> {
+        self.fire_in_round_from(r, cur, 0, None)
+    }
+
+    /// `r` fired on the round's news from step `at0` (0 a reader of a closure fired whole, `i + 1` body position
+    /// `i`), the firing there finished from `fl` when a step wall stopped it.
+    fn fire_in_round_from(&mut self, r: &Rc<ERule>, cur: &Front, at0: usize, mut fl: Option<InFlight>) -> Result<(), Halt> {
         {
             {
                 if self.naive {
@@ -4468,8 +4592,8 @@ impl Eval {
                         return Ok(());
                     }
                     // a closure answered from its tree has no news of its own: news of its edges fires a reader whole
-                    if !brk!("vclosure_reader_stale" => true; false) && self.vreader_due(r, cur) {
-                        let f = self.fire_rule(r, None)?;
+                    if at0 == 0 && (fl.is_some() || !brk!("vclosure_reader_stale" => true; false) && self.vreader_due(r, cur)) {
+                        let f = self.fire_at(r, 0, fl.take(), |e| e.fire_rule(r, None))?;
                         merge_front(&mut self.cur_front, f);
                     }
                 }
@@ -4481,21 +4605,20 @@ impl Eval {
                     return Ok(());
                 }
                 if r.has_demand_prem {
-                    let f = self.fire_rule(r, None)?;
+                    let f = self.fire_at(r, 1, fl.take(), |e| e.fire_rule(r, None))?;
                     merge_front(&mut self.cur_front, f);
                     return Ok(());
                 }
-                for (i, b) in r.plan.iter().enumerate() {
+                for (i, b) in r.plan.iter().enumerate().skip(at0.saturating_sub(1)) {
                     let BodyElem::Pos(l) = b else { continue };
                     let Some(keys) = cur.by_rel.get(&l.rel) else {
                         continue;
                     };
-                    if let Some(p) = self.delta_pick(r, Some(i), keys.len()) {
-                        let f = self.fire_planned(r, &p, Some(keys))?;
-                        merge_front(&mut self.cur_front, f);
-                        continue;
-                    }
-                    let f = self.fire_rule(r, Some((i, keys)))?;
+                    let fire = |e: &mut Eval| match e.delta_pick(r, Some(i), keys.len()) {
+                        Some(p) => e.fire_planned(r, &p, Some(keys)),
+                        None => e.fire_rule(r, Some((i, keys))),
+                    };
+                    let f = self.fire_at(r, i + 1, fl.take(), fire)?;
                     merge_front(&mut self.cur_front, f);
                 }
                 // NEWS READ INSIDE A THRESHOLD: the rule fires again, and its
@@ -4549,27 +4672,13 @@ impl Eval {
         *self.fires_by_rule.entry(r.id).or_insert(0) += 1;
         let outer = self.cur_rule.replace(r.id);
         let was_firing = std::mem::replace(&mut self.firing, true);
+        let before = self.steps;
         let sols = self.solve_body(&r.plan, s0, 0, front_at, Some(r.id));
         self.firing = was_firing;
         self.cur_rule = outer;
-        let sols = sols?;
+        let sols = self.solved(r, sols, before)?;
         *self.sols_by_rule.entry(r.id).or_insert(0) += sols.len() as u64;
-        let mut out = Front::default();
-        for sol in sols {
-            // A SOLUTION CITING A VALUE IMPROVED ON earlier in this batch is
-            // not concluded: the value that replaced it is in Δ and the rule,
-            // monotone in it, fires again on it. The values never change for
-            // it; the history does — a firing on a value that no longer stood
-            // when it fired is no way the cell was reached (agg_lattice_witness,
-            // docs/aggregates.md, "The order lattice, as built").
-            if !self.lattices.is_empty()
-                && brk!("lattice_stale_solution" => false; sol.prems.iter().any(|p| matches!(p, PremRef::Fact(f) if !self.store.alive(*f))))
-            {
-                continue;
-            }
-            self.conclude(r, sol, &mut out)?;
-        }
-        Ok(out)
+        self.conclude_all(r, sols, Front::default(), true)
     }
 
     /// THE CLOSURES WALKED WHOLE: those whose relation holds no base fact. The walk starts from the edges, so a base
@@ -4780,7 +4889,10 @@ impl Eval {
                         rule: r.id,
                         prems: sol.prems.clone(),
                     });
-                    self.bump_steps()?;
+                    if let Err(e) = self.bump_steps() {
+                        self.cut_tail = Some(Tail::Staged(r.id));
+                        return Err(e);
+                    }
                     self.charge_row(Some(r.id), true)?;
                 }
                 std::collections::hash_map::Entry::Occupied(slot) => {
@@ -4875,25 +4987,12 @@ impl Eval {
                     self.h.name(head.rel)
                 )));
             }
-            self.bump_steps()?;
-            self.charge_row(Some(r.id), true)?;
-            if self.defers(head.rel) {
-                self.defer_derived_by(id, r.id);
-            } else if !self.no_provenance {
-                let ft = fact_term(&mut self.h, &self.v, head.rel, persp, &args);
-                let rid = Term::atom(r.id);
-                let db_args = [ft, rid, Term::int(tick as i64)];
-                let db_new =
-                    self.store
-                        .add(&self.h, self.v.derived_by, self.v.kernel_persp, &db_args, 0);
-                if db_new {
-                    let dbid = self
-                        .store
-                        .get(self.v.derived_by, self.v.kernel_persp, &db_args)
-                        .unwrap();
-                    out.note(self.v.derived_by, dbid);
-                }
+            if let Err(e) = self.bump_steps() {
+                self.cut_tail = Some(Tail::Fact { rule: r.id, rel: head.rel, persp, args, id, is_new });
+                return Err(e);
             }
+            self.charge_row(Some(r.id), true)?;
+            self.write_derived_by(r.id, head.rel, persp, &args, id, out);
         } else if self.ds_charge {
             self.bump_steps()?;
         }
@@ -4903,10 +5002,27 @@ impl Eval {
         Ok(())
     }
 
+    fn write_derived_by(&mut self, rule: Sym, rel: Sym, persp: Sym, args: &[Term], id: FactId, out: &mut Front) {
+        if self.defers(rel) {
+            self.defer_derived_by(id, rule);
+        } else if !self.no_provenance {
+            let ft = fact_term(&mut self.h, &self.v, rel, persp, args);
+            let db_args = [ft, Term::atom(rule), Term::int(self.store.tick as i64)];
+            if self.store.add(&self.h, self.v.derived_by, self.v.kernel_persp, &db_args, 0) {
+                let dbid = self.store.get(self.v.derived_by, self.v.kernel_persp, &db_args).unwrap();
+                out.note(self.v.derived_by, dbid);
+            }
+        }
+    }
+
+    fn halted(&self) -> bool {
+        self.halt.as_ref().is_some_and(|h| h.load(std::sync::atomic::Ordering::Relaxed))
+    }
+
     fn bump_steps(&mut self) -> Result<(), Halt> {
         self.steps += 1;
-        if self.steps > self.budget {
-            self.wall_spent.set(Some(("steps", self.steps, self.budget)));
+        if self.steps > self.budget || self.steps & 0x3ff == 0 && self.budget != i64::MAX && self.halted() {
+            self.wall_spent.set(Some(("steps", self.steps, self.budget.min(self.steps))));
             return Err(Halt::Budget("budget_exhausted", None));
         }
         Ok(())

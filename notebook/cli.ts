@@ -13,7 +13,7 @@ import { fileURLToPath } from 'node:url';
 import { Kernel, nearest, short, unresolvedSaid, VERDICT, type NbLine, type NbResult } from './kernel.ts';
 import { builtin, cellsOf, codeNames, libFiles, NOT_BUILTIN, parseFront, translated, type NbCell } from './front.ts';
 import { worldOf, type Inputs } from './world.ts';
-import { concernsOf, homeOf, translatorVocab } from '../playground/host.ts';
+import { concernsOf, homeOf, translatorVocab, type Stop } from '../playground/host.ts';
 import { viaDaemon } from './serve.ts';
 import { engineOf } from '../playground/rust.ts';
 import { choose, llm, models, type Ask } from './model.ts';
@@ -34,12 +34,15 @@ export const wallOf = ({ ROFL_NB_LIMIT: limit, ROFL_NB_MEMORY: memory }: Limits)
   const ms = Number(limit ?? 120) * 1000, heap = memory ? Number(memory) * 2 ** 30 : 0.8 * getHeapStatistics().heap_size_limit;
   return () => {
     const end = performance.now() + ms;
-    // `limited`: the person set a limit, which only the TypeScript engine can keep (a Rust evaluation is one call that cannot be asked to stop)
-    const stop = Object.assign((): boolean => {
-      if (performance.now() > end) stop.cause = `the clock ran out at ${ms / 1000} s; ROFL_NB_LIMIT=<seconds> raises it`;
-      else if (process.memoryUsage().heapUsed > heap) stop.cause = `the heap passed ${+(heap / 2 ** 30).toFixed(3)} GB; ROFL_NB_MEMORY=<GB> raises it`;
+    const clock = `the clock ran out at ${ms / 1000} s; ROFL_NB_LIMIT=<seconds> raises it`, full = `the heap passed ${+(heap / 2 ** 30).toFixed(3)} GB; ROFL_NB_MEMORY=<GB> raises it`;
+    // the Rust engine keeps the clock, and the heap only where one was set: its own heap is not this process's
+    const stop: Stop = Object.assign((): boolean => {
+      if (performance.now() > end) stop.cause = clock;
+      else if (process.memoryUsage().heapUsed > heap) stop.cause = full;
       return !!stop.cause;
-    }, { cause: undefined as string | undefined, limited: limit !== undefined || memory !== undefined });
+    }, { cause: undefined as string | undefined,
+      left: () => ({ ms: Math.max(0, Math.round(end - performance.now())), ...(memory && { bytes: Math.round(heap) }) }),
+      said: (by: 'clock' | 'heap') => { stop.cause = by === 'clock' ? clock : full; } });
     return stop;
   };
 };
