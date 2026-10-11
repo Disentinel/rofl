@@ -659,6 +659,8 @@ pub struct Eval {
     pub store: Store,
     pub budget: i64,
     pub space: i64,
+    /// Set from outside while an evaluation runs (the clock or the heap of a caller's limit): the evaluation stops as at its step budget.
+    pub halt: Option<std::sync::Arc<std::sync::atomic::AtomicBool>>,
     /// WHICH RULE IS FIRING, and how many index probes each one has asked for.
     ///
     /// `argm_calls` on the store is the aggregate, and it is what showed that
@@ -1320,6 +1322,7 @@ impl Eval {
             v,
             store,
             budget,
+            halt: None,
             space: DEFAULT_SPACE,
             cur_rule: None,
             argm_by_rule: HashMap::new(),
@@ -4991,10 +4994,14 @@ impl Eval {
         }
     }
 
+    fn halted(&self) -> bool {
+        self.halt.as_ref().is_some_and(|h| h.load(std::sync::atomic::Ordering::Relaxed))
+    }
+
     fn bump_steps(&mut self) -> Result<(), Halt> {
         self.steps += 1;
-        if self.steps > self.budget {
-            self.wall_spent.set(Some(("steps", self.steps, self.budget)));
+        if self.steps > self.budget || self.steps & 0x3ff == 0 && self.budget != i64::MAX && self.halted() {
+            self.wall_spent.set(Some(("steps", self.steps, self.budget.min(self.steps))));
             return Err(Halt::Budget("budget_exhausted", None));
         }
         Ok(())
