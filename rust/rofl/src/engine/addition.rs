@@ -264,9 +264,60 @@ impl Eval {
             return;
         }
         self.round_of.clear();
-        if self.rerank().is_err() || !self.lattices.is_empty() || self.no_witness {
+        if self.rerank().is_err() || !self.restore_lattices() {
             self.store.dirty = true;
+        } else if self.no_witness {
+            self.restore_cells();
         }
+    }
+
+    /// A sealed world solves a firing again for `why` and finds each aggregate's cells by correlation, as the
+    /// evaluation listed them (`agg_memo`): the cells the store holds, by the correlation their key carries.
+    fn restore_cells(&mut self) {
+        let mut by: HashMap<(Sym, u32, Box<[Term]>), Vec<(String, CellId)>> = HashMap::new();
+        for c in self.store.live_cells() {
+            let r = self.store.cell(c);
+            let CellOwner::Body { rule, at } = r.owner;
+            let Some(plan) = self.agg_plans.get(&(rule, at)).filter(|p| p.op != AggOp::AtLeast) else { continue };
+            let corr: Box<[Term]> = plan.corr.iter().map(|i| r.key[*i]).collect();
+            let mut k = String::new();
+            self.store.write_cell_key(&self.h, c, &mut k);
+            by.entry((rule, at, corr)).or_default().push((k, c));
+        }
+        for (mk, mut cs) in by {
+            cs.sort_by(|x, y| cmp_js(&x.0, &y.0));
+            self.agg_memo.insert(mk, cs.into_iter().map(|(_, c)| c).collect::<Vec<_>>().into());
+        }
+    }
+
+    /// The cells of the order lattices stand in the store at their values, closed, and the values they replaced stand as ghosts, as the evaluation left them. A
+    /// lattice of dominance or a join keeps more than that, and is not restored.
+    fn restore_lattices(&mut self) -> bool {
+        if !self.subs.is_empty() || self.lattices.values().any(|(_, op)| op.is_join()) {
+            return self.lattices.is_empty();
+        }
+        if !self.lattices.is_empty() {
+            self.store.index_citers();
+        }
+        let lats: Vec<(Sym, usize)> = self.lattices.iter().map(|(r, (n, _))| (*r, *n)).collect();
+        for (rel, n) in lats {
+            for id in self.store.rel_all(&self.h, rel) {
+                if self.store.alive(id) && self.store.arity(id) == n {
+                    let key: Box<[Term]> = self.store.args(id)[..n - 1].into();
+                    self.lat_cur.insert((rel, self.store.rec(id).persp, key), id);
+                }
+            }
+            self.lat_closed.insert(rel);
+        }
+        for id in self.store.firing_keys().into_iter().filter(|id| !self.store.alive(*id)) {
+            let r = self.store.rec(id);
+            if let Some(&(n, _)) = self.lattices.get(&r.rel).filter(|(n, _)| self.store.arity(id) == *n) {
+                self.lat_superseded.insert(id);
+                let key: Box<[Term]> = self.store.args(id)[..n - 1].into();
+                self.lat_history.entry((r.rel, r.persp, key)).or_default().push(id);
+            }
+        }
+        true
     }
 
     /// WHY AN ADDITION IS NOT WORKED OUT for this world: every reason that holds, in a fixed order (empty where it is).

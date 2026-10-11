@@ -1737,6 +1737,21 @@ impl Store {
         self.citers = on.then(Rc::default);
     }
 
+    /// The premise -> citing facts index, built from the firings the store holds.
+    pub fn index_citers(&mut self) {
+        let mut ix: HashMap<FactId, Vec<FactId>> = HashMap::new();
+        for id in self.firing_keys() {
+            for (_, _, prems) in self.firings(id) {
+                for p in prems {
+                    if let PremRef::Fact(g) = p {
+                        ix.entry(g).or_default().push(id);
+                    }
+                }
+            }
+        }
+        self.citers = Some(Rc::new(ix));
+    }
+
     /// Drop the dead ids `retire` left in the runs. A key is revived only
     /// after this, so a revival never finds its old id still in a run.
     pub fn sweep(&mut self) {
