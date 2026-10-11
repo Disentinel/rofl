@@ -1179,11 +1179,13 @@ check_world("agg_cell_shrug_given_agg").
 check_file("agg_cell_shrug_given_agg", "examples/checks/agg-shrug-given-count.rofl").
 proves("agg_cell_shrug_given_agg", agg, cell, shrug).
 check_world("agg_cell_shrug_given_cut").
+check_opt("agg_cell_shrug_given_cut", one_engine, rust).
 check_file("agg_cell_shrug_given_cut", "examples/checks/agg-shrug-given-cut.rofl").
 check_opt("agg_cell_shrug_given_cut", together, 1).
 check_opt("agg_cell_shrug_given_cut", budget, 2500).
 proves("agg_cell_shrug_given_cut", agg, cell, shrug).
 check_world("agg_cell_shrug_given_cut_agg").
+check_opt("agg_cell_shrug_given_cut_agg", one_engine, rust).
 check_file("agg_cell_shrug_given_cut_agg", "examples/checks/agg-shrug-given-cut-count.rofl").
 check_opt("agg_cell_shrug_given_cut_agg", together, 1).
 check_opt("agg_cell_shrug_given_cut_agg", budget, 2500).
@@ -1394,6 +1396,7 @@ proves("agg_lattice_holes", agg, order_lattice, holes).
 -- rows the cut state must hold and must not.
 
 check_world("agg_count_budget").
+check_opt("agg_count_budget", one_engine, rust).
 check_file("agg_count_budget", "examples/checks/agg-budget-data.rofl").
 check_file("agg_count_budget", "examples/checks/agg-count-budget.rofl").
 check_opt("agg_count_budget", together, 1).
@@ -1401,6 +1404,7 @@ check_opt("agg_count_budget", budget, 500).
 proves("agg_count_budget", agg, count, holes).
 
 check_world("agg_sum_budget").
+check_opt("agg_sum_budget", one_engine, rust).
 check_file("agg_sum_budget", "examples/checks/agg-budget-data.rofl").
 check_file("agg_sum_budget", "examples/checks/agg-sum-budget.rofl").
 check_opt("agg_sum_budget", together, 1).
@@ -1408,6 +1412,7 @@ check_opt("agg_sum_budget", budget, 500).
 proves("agg_sum_budget", agg, sum, holes).
 
 check_world("agg_minmax_budget").
+check_opt("agg_minmax_budget", one_engine, rust).
 check_file("agg_minmax_budget", "examples/checks/agg-budget-data.rofl").
 check_file("agg_minmax_budget", "examples/checks/agg-minmax-budget.rofl").
 check_opt("agg_minmax_budget", together, 1).
@@ -1415,6 +1420,7 @@ check_opt("agg_minmax_budget", budget, 500).
 proves("agg_minmax_budget", agg, min_max_strat, holes).
 
 check_world("agg_holistic_budget").
+check_opt("agg_holistic_budget", one_engine, rust).
 check_file("agg_holistic_budget", "examples/checks/agg-budget-data.rofl").
 check_file("agg_holistic_budget", "examples/checks/agg-holistic-budget.rofl").
 check_opt("agg_holistic_budget", together, 1).
@@ -1422,6 +1428,7 @@ check_opt("agg_holistic_budget", budget, 500).
 proves("agg_holistic_budget", agg, holistic, holes).
 
 check_world("agg_empty_budget").
+check_opt("agg_empty_budget", one_engine, rust).
 check_file("agg_empty_budget", "examples/checks/agg-budget-data.rofl").
 check_file("agg_empty_budget", "examples/checks/agg-empty-budget.rofl").
 check_opt("agg_empty_budget", together, 1).
@@ -1919,6 +1926,7 @@ check_opt("agg_tagc_holes", together, 1).
 proves("agg_tagc_holes", agg, tag_counting, holes).
 
 check_world("agg_tagc_budget").
+check_opt("agg_tagc_budget", one_engine, rust).
 check_file("agg_tagc_budget", "examples/checks/agg-budget-data.rofl").
 check_file("agg_tagc_budget", "examples/checks/agg-tagc-budget.rofl").
 check_opt("agg_tagc_budget", together, 1).
@@ -3190,6 +3198,7 @@ check_opt("ds_function_tick", together, 1).
 check_opt("ds_function_tick", ticks, 3).
 
 check_world("ds_function_wall").
+check_opt("ds_function_wall", one_engine, rust).
 check_file("ds_function_wall", "examples/checks/ds-function-wall.rofl").
 check_opt("ds_function_wall", together, 1).
 check_opt("ds_function_wall", budget, 60).
@@ -3378,6 +3387,7 @@ check_opt("ds_tree_retract_sealed", together, 1).
 check_opt("ds_tree_retract_sealed", retract, "dtr_blocked(b, c)").
 
 check_world("ds_tree_wall").
+check_opt("ds_tree_wall", one_engine, rust).
 check_file("ds_tree_wall", "examples/checks/ds-tree-wall.rofl").
 check_opt("ds_tree_wall", together, 1).
 check_opt("ds_tree_wall", budget, 60).

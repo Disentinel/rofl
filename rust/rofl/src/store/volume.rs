@@ -149,7 +149,7 @@ impl Store {
                 let (canon, arrived) = (r.arena()?, r.arena()?);
                 let loose = r.arena::<FactId>()?.to_vec();
                 let staged = r.arena::<FactId>()?.to_vec();
-                v.push((p, KeyRun { canon, arrived, loose, staged, by_pat: None }));
+                v.push((p, KeyRun { canon, arrived, loose, staged, by_pat: None, by_tup: true }));
             }
             groups.insert(rel, v);
         }

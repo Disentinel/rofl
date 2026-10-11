@@ -5,7 +5,7 @@
 -- before the cut. Which they are is the engine's (the plan concludes in its own order, and the cut
 -- moves as the engine improves), so the world is Rust's alone.
 -- expect-row: hole[$kernel]($adhoc,budget_exhausted)
--- expect-row: p[main](q,y1) tick
+-- expect-row: p[main](q,y5) tick
 edb(h). edb(l). edb(trig).
 p(Q, Y) :- h(X, Z), l(X, Y), trig(Y, Z, Q).
 h(c, z1). l(c, y1).
