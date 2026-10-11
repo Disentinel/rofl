@@ -3888,8 +3888,8 @@ work_needs(w_derived_as_given, w_stage_hypotheses).
 work_spawned(w_derived_as_given, f_an_evaluated_world_kept_on_disk_opens_evaluated_and_takes_the_next_stage_by_delta).
 
 work(w_mapped_volume,
-  "The colfile of rust/storebench into the engine as the frozen base a fork reads: a kept stage or volume is a mapped columnar file, keyed by (program hash, input hashes).").
-work_state(w_mapped_volume, open).
+  "DONE 2026-10-11 (f_a_world_kept_as_a_volume_opens_mapped_in_a_fifteenth_of_the_time): Session::keep_volume / open_volume, rust/rofl/src/volume.rs, proved by rust/rofl/tests/volume.rs and tests/addition.rs. OPEN: the key by (program hash, input hashes) belongs to the cache of decision 1; a write below the mark copies the whole mapped arena it lands in (a flag, a witness chain head, a run absorbed), where an overlay would copy a page. The colfile of rust/storebench into the engine as the frozen base a fork reads: a kept stage or volume is a mapped columnar file, keyed by (program hash, input hashes).").
+work_state(w_mapped_volume, done).
 work_needs(w_mapped_volume, w_derived_as_given).
 
 work(w_resume_after_budget,

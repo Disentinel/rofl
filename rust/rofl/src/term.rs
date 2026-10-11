@@ -17,6 +17,7 @@
 //! object per node with a `k` string tag, plus a `name` or `v` field, plus an
 //! args array for a functor.
 
+use crate::arena::{Arena, VolR, VolW};
 use std::rc::Rc;
 
 pub type Sym = u32;
@@ -104,18 +105,16 @@ impl Interner {
 struct Names {
     /// Every name's bytes, concatenated, never moved and never freed.
     ///
-    /// A `String` and not a `Vec<u8>` deliberately: `&self.buf[a..b]` is then a
-    /// SAFE slice whose only check is `is_char_boundary` at each end, which is
-    /// O(1) — where `Vec<u8>` would force either a full `from_utf8` revalidation
-    /// on every `name()` or the one `unsafe` block in this library.
-    buf: String,
+    /// Bytes that are UTF-8 by construction: only a `&str` is appended, and a
+    /// mapped arena is checked whole when it is opened (`arena::str_of`).
+    buf: Arena<u8>,
     /// `ends[i]` is where name `i` ends in `buf`; it begins where `i - 1` ended.
     /// One `u32` per name, and no start array, because the names are appended
     /// in id order and never removed.
-    ends: Vec<u32>,
+    ends: Arena<u32>,
     /// Open addressing, power-of-two length, linear probing. A slot holds
     /// `id + 1` so that 0 can mean empty without a sentinel id.
-    slots: Vec<u32>,
+    slots: Arena<u32>,
 }
 
 /// FxHash's mixing step over 8-byte chunks, with the length folded in at the
@@ -161,9 +160,9 @@ impl Names {
             self.buf.len() + s.len() <= u32::MAX as usize,
             "interner: more than 4 GiB of distinct name text"
         );
-        self.buf.push_str(s);
-        self.ends.push(self.buf.len() as u32);
-        self.slots[i] = id + 1;
+        self.buf.to_mut().extend_from_slice(s.as_bytes());
+        self.ends.to_mut().push(self.buf.len() as u32);
+        self.slots.to_mut()[i] = id + 1;
         // 0.7 load, checked after the insert so the slot index above cannot go
         // stale under a resize that happens between finding it and filling it.
         if self.ends.len() * 10 >= self.slots.len() * 7 {
@@ -194,13 +193,13 @@ impl Names {
             }
             slots[i] = id + 1;
         }
-        self.slots = slots;
+        self.slots = slots.into();
     }
     #[inline]
     fn name(&self, id: Sym) -> &str {
         let i = id as usize;
         let start = if i == 0 { 0 } else { self.ends[i - 1] as usize };
-        &self.buf[start..self.ends[i] as usize]
+        crate::arena::str_of(&self.buf[start..self.ends[i] as usize])
     }
     fn len(&self) -> usize {
         self.ends.len()
@@ -226,7 +225,11 @@ const T_FUNC: u64 = 3;
 const T_INT: u64 = 4;
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Debug)]
+#[repr(transparent)]
 pub struct Term(u64);
+
+unsafe impl crate::arena::Pod for Term {}
+unsafe impl crate::arena::Pod for FuncNode {}
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum TermK {
@@ -268,6 +271,9 @@ impl Term {
     pub fn bits(self) -> u64 {
         self.0
     }
+    pub fn from_bits(b: u64) -> Term {
+        Term(b)
+    }
     #[inline]
     pub fn kind(self) -> TermK {
         match self.0 & TAG_MASK {
@@ -307,6 +313,7 @@ impl Term {
 }
 
 #[derive(Clone, Copy)]
+#[repr(C)]
 struct FuncNode {
     name: Sym,
     start: u32,
@@ -329,8 +336,8 @@ pub struct Heap {
 
 #[derive(Default, Clone)]
 struct Funcs {
-    funcs: Vec<FuncNode>,
-    args: Vec<Term>,
+    funcs: Arena<FuncNode>,
+    args: Arena<Term>,
     /// Hash-consing for functors. A `$fact(...)` reification is built once per
     /// firing and again per provenance row, and the same subterms recur across
     /// a whole program, so sharing them is the largest single saving available
@@ -343,7 +350,7 @@ struct Funcs {
     /// records for interning inside the store: the copy is added rather than
     /// saved. Measured on examples/spat: 1.46 MB as a `HashMap<u64, Vec<u32>>`
     /// against 0.26 MB here, on the same 19572 functors.
-    cons: Vec<u32>,
+    cons: Arena<u32>,
     cons_n: usize,
 }
 
@@ -395,26 +402,27 @@ impl Funcs {
 
     fn grow(&mut self) {
         let want = ((self.funcs.len() + 1) * 4).next_power_of_two().max(64);
-        self.cons = vec![CONS_EMPTY; want];
+        let mut cons = vec![CONS_EMPTY; want];
         let mask = want - 1;
         for k in 0..self.funcs.len() {
             let f = self.funcs[k];
             let a = &self.args[f.start as usize..(f.start + f.len) as usize];
             let mut i = (cons_hash(f.name, a) as usize) & mask;
-            while self.cons[i] != CONS_EMPTY {
+            while cons[i] != CONS_EMPTY {
                 i = (i + 1) & mask;
             }
-            self.cons[i] = k as u32;
+            cons[i] = k as u32;
         }
+        self.cons = cons.into();
         self.cons_n = self.funcs.len();
     }
 
     /// Room for `n` more functors of `n_args` arguments in all, in a table still empty.
     fn reserve(&mut self, n: usize, n_args: usize) {
-        self.funcs.reserve(n);
-        self.args.reserve(n_args);
+        self.funcs.to_mut().reserve(n);
+        self.args.to_mut().reserve(n_args);
         if self.funcs.is_empty() {
-            self.cons = vec![CONS_EMPTY; ((n + 1) * 4).next_power_of_two()];
+            self.cons = vec![CONS_EMPTY; ((n + 1) * 4).next_power_of_two()].into();
         }
     }
 
@@ -427,16 +435,47 @@ impl Funcs {
             return self.cons[slot];
         }
         let start = self.args.len() as u32;
-        self.args.extend_from_slice(args);
+        self.args.to_mut().extend_from_slice(args);
         let i = self.funcs.len() as u32;
-        self.funcs.push(FuncNode {
+        self.funcs.to_mut().push(FuncNode {
             name,
             start,
             len: args.len() as u32,
         });
-        self.cons[slot] = i;
+        self.cons.to_mut()[slot] = i;
         self.cons_n += 1;
         i
+    }
+}
+
+impl Heap {
+    /// The names and functors, frozen, as a volume holds them (`crate::volume`).
+    pub fn write_volume(&mut self, w: &mut VolW) {
+        self.freeze();
+        let (n, f) = (&self.syms.base, &self.base);
+        w.arena(&n.buf);
+        w.arena(&n.ends);
+        w.arena(&n.slots);
+        w.arena(&f.funcs);
+        w.arena(&f.args);
+        w.arena(&f.cons);
+        w.u64(f.cons_n as u64);
+    }
+    /// The heap a volume holds, mapped; its names are checked to be text, cut where one ends.
+    pub fn read_volume(r: &mut VolR) -> Result<Heap, String> {
+        let names = Names { buf: r.arena()?, ends: r.arena()?, slots: r.arena()? };
+        let text = std::str::from_utf8(&names.buf).map_err(|_| "a volume holds a name that is not text")?;
+        let mut at = 0;
+        for &e in names.ends.iter() {
+            if (e as usize) < at || !text.is_char_boundary(e as usize) {
+                return Err("a volume holds a name cut inside a character".into());
+            }
+            at = e as usize;
+        }
+        let funcs = Funcs { funcs: r.arena()?, args: r.arena()?, cons: r.arena()?, cons_n: r.u64()? as usize };
+        let n0 = names.len() as Sym;
+        let f0 = funcs.funcs.len() as u32;
+        Ok(Heap { syms: Interner { n0, base: Rc::new(names), top: Names::default() }, f0, base: Rc::new(funcs), top: Funcs::default() })
     }
 }
 
