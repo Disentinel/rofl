@@ -157,7 +157,7 @@ golden_state("rules_spec-coverage", "db6523a22902e59a", 1097).
 golden_state("rules_strata", "a366d372f37910d8", 1900).
 golden_state("rules_swarm", "cdee3a8b2f42dcbe", 765).
 golden_state("rules_untyped", "58722dc3d17835c2", 1032).
-golden_state("rules_worklist", "c57165f849f67cf4", 4793).
+golden_state("rules_worklist", "f453cc4cadccc537", 4791).
 golden_state("rules_worlds", "11316227b3cf0025", 1386).
 golden_state("boot_only", "f4c6c2be7a0dffcd", 661).
 golden_state("agg_breaks_census", "8e2f9e892bd8ef02", 12034).
@@ -7314,7 +7314,7 @@ golden_rel("rules_untyped", "stratum[main]", 10).
 golden_rel("rules_untyped", "uses_builtin[$kernel]", 13).
 golden_rel("rules_untyped", "writes_to[$kernel]", 51).
 golden_rel("rules_worklist", "@other", 1).
-golden_rel("rules_worklist", "@wit", 1068).
+golden_rel("rules_worklist", "@wit", 1067).
 golden_rel("rules_worklist", "anything_unblocks[main]", 1).
 golden_rel("rules_worklist", "asserted_by[$kernel]", 758).
 golden_rel("rules_worklist", "authority[main]", 5).
@@ -7329,7 +7329,7 @@ golden_rel("rules_worklist", "concludes[$kernel]", 80).
 golden_rel("rules_worklist", "conclusion_lit[$kernel]", 80).
 golden_rel("rules_worklist", "conclusion_tense[$kernel]", 80).
 golden_rel("rules_worklist", "crossing[main]", 1).
-golden_rel("rules_worklist", "derived_by[$kernel]", 1077).
+golden_rel("rules_worklist", "derived_by[$kernel]", 1076).
 golden_rel("rules_worklist", "edb[main]", 57).
 golden_rel("rules_worklist", "flow[main]", 6).
 golden_rel("rules_worklist", "flows_to[main]", 6).
@@ -7360,7 +7360,7 @@ golden_rel("rules_worklist", "sees[main]", 6).
 golden_rel("rules_worklist", "spawn_orphan[audit]", 196).
 golden_rel("rules_worklist", "stated_state[main]", 170).
 golden_rel("rules_worklist", "stratum[main]", 10).
-golden_rel("rules_worklist", "takeable[main]", 50).
+golden_rel("rules_worklist", "takeable[main]", 49).
 golden_rel("rules_worklist", "unblocking_work[main]", 9).
 golden_rel("rules_worklist", "unblocks[main]", 36).
 golden_rel("rules_worklist", "unclaimed_item[main]", 147).
