@@ -948,9 +948,14 @@ fn bootstrap_rows() -> usize {
 /// `Rofl.load` (src/api.ts:268). Parse, check the kernel claim, admit every
 /// clause, and evaluate — or restore the store and return every diagnostic.
 pub fn load_program(e: &mut Eval, text: &str, who: Option<&str>) -> Loaded {
-    let mut clauses = match rofl_parse::parse(&mut e.h, text) {
+    // A LARGE TEXT IS READ A PIECE AT A TIME: the parser holds four bytes a character and forty a token, ten times
+    // the text, so a pack is cut between clauses and each piece parsed and checked before the next. A piece the
+    // parser refuses is refused as the whole text is, with the whole text's line.
+    let mut pieces = rofl_parse::pieces(text, 1 << 20).into_iter();
+    let refused = |e: &mut Eval, d: String| Loaded { ok: false, diagnostics: vec![rofl_parse::parse(&mut e.h, text).err().unwrap_or(d)], admitted: 0 };
+    let mut clauses = match rofl_parse::parse(&mut e.h, pieces.next().unwrap_or("")) {
         Ok(cs) => cs,
-        Err(d) => return Loaded { ok: false, diagnostics: vec![d], admitted: 0 },
+        Err(d) => return refused(e, d),
     };
 
     // THE KERNEL DECLARES ITSELF, IN ITS OWN FILE, AT THE TOP. Two conditions,
@@ -997,33 +1002,35 @@ pub fn load_program(e: &mut Eval, text: &str, who: Option<&str>) -> Loaded {
         who_owned = Some("$kernel".to_string());
         trusted = true;
         clauses.remove(0);
-    } else if clauses.iter().any(|c| c.head.rel == claim) {
-        return Loaded {
-            ok: false,
-            admitted: 0,
-            diagnostics: vec![format!(
-                "'{KERNEL_CLAIM}' must be the FIRST clause of the FIRST load, or it is not a claim at all"
-            )],
-        };
     }
+    let late_claim = || Loaded {
+        ok: false,
+        admitted: 0,
+        diagnostics: vec![format!("'{KERNEL_CLAIM}' must be the FIRST clause of the FIRST load, or it is not a claim at all")],
+    };
 
     // ATOMIC, WITHOUT COPYING THE WORLD. A program with three bad clauses
     // hears about all three and leaves nothing behind — and it leaves nothing
     // behind because nothing was written, not because a backup was restored.
     // See `check_clause` for why every refusal can be decided before any write.
-    let mut cs: Vec<Clause> = Vec::with_capacity(clauses.len());
+    let mut ready: Vec<Clause> = Vec::with_capacity(clauses.len());
     let mut diags: Vec<String> = Vec::new();
+    let mut unready: Vec<String> = Vec::new();
     let mut decls: Vec<(Sym, usize, Sym, Option<i64>)> = Vec::new();
     let mut tags: Vec<(Sym, usize, Sym)> = Vec::new();
     let mut doms: Vec<(Lit, Lit, Vec<BodyElem>, usize)> = Vec::new();
     let mut ords: Vec<(Sym, Sym, Vec<Sym>, usize)> = Vec::new();
-    let mut structs: Vec<&rofl_parse::Clause> = Vec::new();
+    let mut structs: Vec<rofl_parse::Clause> = Vec::new();
     let mut declared = crate::structure::declared(&e.h, &e.v, &mut e.store);
     // the closures of declared trees, and what a batch concludes before a declaration reads it
     let mut closure_of = crate::structure::closures(&e.h, &e.v, &mut e.store);
     let (mut batch_rules, mut batch_facts): (std::collections::HashSet<Sym>, std::collections::HashSet<Sym>) = Default::default();
     let mut lowered: Vec<String> = Vec::new();
-    for pc in &clauses {
+    let mut claimed_late = false;
+    loop {
+    claimed_late |= !trusted && clauses.iter().any(|c| c.head.rel == claim);
+    for pc in std::mem::take(&mut clauses) {
+        let pc = &pc;
         if let Some(st) = &pc.structure {
             let stored = if st.closure.is_some() { crate::structure::concluded_by_rules(&e.h, &e.v, &mut e.store) } else { Default::default() };
             let concluded = |cl: Sym| -> Option<String> {
@@ -1043,7 +1050,7 @@ pub fn load_program(e: &mut Eval, text: &str, who: Option<&str>) -> Loaded {
                         closure_of.insert(cl, pc.head.rel);
                         lowered.extend(crate::structure::lower_closure(&e.h, pc));
                     }
-                    structs.push(pc);
+                    structs.push(pc.clone());
                 }
                 Err(d) => diags.push(d),
             }
@@ -1088,20 +1095,26 @@ pub fn load_program(e: &mut Eval, text: &str, who: Option<&str>) -> Loaded {
                     continue;
                 }
                 if c.body.is_empty() { batch_facts.insert(c.head.rel); } else { batch_rules.insert(c.head.rel); }
-                cs.push(c);
+                // The RESOLVED clauses come back from the checker, so admission does not
+                // resolve a second time.
+                match check_clause(&e.h, &e.v, &c, who_owned.as_deref(), trusted) {
+                    Ok(r) => ready.push(r),
+                    Err(d) => unready.push(d),
+                }
             }
             Err(d) => diags.push(d),
         }
     }
-    // The RESOLVED clauses come back from the checker, so admission does not
-    // resolve a second time.
-    let mut ready: Vec<Clause> = Vec::with_capacity(cs.len());
-    for c in &cs {
-        match check_clause(&e.h, &e.v, c, who_owned.as_deref(), trusted) {
-            Ok(r) => ready.push(r),
-            Err(d) => diags.push(d),
-        }
+    let Some(piece) = pieces.next() else { break };
+    clauses = match rofl_parse::parse(&mut e.h, piece) {
+        Ok(cs) => cs,
+        Err(d) => return refused(e, d),
+    };
     }
+    if claimed_late {
+        return late_claim();
+    }
+    diags.extend(unready);
     // THE RULES A CLOSURE LOWERS TO are the declaration's, trusted as the kernel's own writing is
     let mut low: Vec<Clause> = Vec::with_capacity(lowered.len());
     for t in &lowered {

@@ -1016,6 +1016,46 @@ impl<'a> Parser<'a> {
 }
 
 /// `top(I) :- first_tok(I).`  `top(I2) :- top(I), clause_at(I, D, H, B), nexttok(D, I2).`
+/// The text cut into pieces of at least `size` bytes, each ending at a line break after a clause's dot, outside a
+/// string and a comment (the automaton of `ring1_lexer::step`). A dot ends a clause and nothing else, so the pieces
+/// parse to the clauses the whole text does, or one of them is refused where the whole text is.
+pub fn pieces(src: &str, size: usize) -> Vec<&str> {
+    #[derive(PartialEq)]
+    enum S { Code, Cmt, Str, Esc }
+    let b = src.as_bytes();
+    let (mut out, mut from, mut s, mut last) = (Vec::new(), 0, S::Code, 0u8);
+    for i in 0..b.len() {
+        s = match s {
+            S::Code if b[i] == b'-' && b.get(i + 1) == Some(&b'-') => S::Cmt,
+            S::Code if b[i] == b'"' => S::Str,
+            S::Code => {
+                if b[i] == b'\n' && last == b'.' && i + 1 - from >= size {
+                    out.push(&src[from..=i]);
+                    from = i + 1;
+                } else if !b[i].is_ascii_whitespace() {
+                    last = b[i];
+                }
+                S::Code
+            }
+            S::Cmt if b[i] == b'\n' => {
+                if last == b'.' && i + 1 - from >= size {
+                    out.push(&src[from..=i]);
+                    from = i + 1;
+                }
+                S::Code
+            }
+            S::Cmt => S::Cmt,
+            S::Str if b[i] == b'\\' => S::Esc,
+            S::Str if b[i] == b'"' => { last = b'"'; S::Code }
+            S::Str | S::Esc => { last = 0; S::Str }
+        };
+    }
+    if from < b.len() || out.is_empty() {
+        out.push(&src[from..]);
+    }
+    out
+}
+
 pub fn parse(h: &mut Heap, src: &str) -> Result<Vec<Clause>, String> {
     let ch: Vec<char> = src.chars().collect();
     let toks = tokens(src);
@@ -1115,6 +1155,16 @@ mod tests {
         let mut h = Heap::default();
         let cs = parse(&mut h, src)?;
         Ok(cs.iter().map(|c| show(&h, c)).collect::<Vec<_>>().join("\n"))
+    }
+
+    #[test]
+    fn pieces_cut_between_clauses_only() {
+        let src = "p(a). -- x.\nq(\"b.\nc.\") :- p(a).\nr(X) :-\n  q(X).\n-- c.\ns(\"1\").\nt(\"\\\".\n\").\nu(1).";
+        let ps = pieces(src, 1);
+        assert_eq!(ps.concat(), src);
+        assert_eq!(ps.len(), 7, "{ps:?}");
+        let whole = one(src).unwrap();
+        assert_eq!(ps.iter().map(|p| one(p).unwrap()).filter(|s| !s.is_empty()).collect::<Vec<_>>().join("\n"), whole);
     }
 
     #[test]

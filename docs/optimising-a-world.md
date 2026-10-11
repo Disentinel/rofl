@@ -78,7 +78,7 @@ supported (owner, 2026-10-04, in `f_half_the_world_is_provenance_and_a_fifth_is_
 
 | mode | declare | what it keeps | when it pays |
 |---|---|---|---|
-| provenanced, canonical (default) | nothing | one `derived_by` row per derived fact, one witness per firing, the canonical first witness; budgets and staging reproduce the reference | explanation; any world a wall can reach; the world the TypeScript engine must equal byte for byte |
+| provenanced, canonical (default) | nothing | one `derived_by` row per derived fact, one witness per firing; staging reproduces the reference, a wall may cut elsewhere | explanation; the world the TypeScript engine must equal byte for byte |
 | provenance on demand | nothing (the default, lazy) | witnesses as before; the `derived_by` row is written when something observes it | a **served or interactive** world nothing prints whole: `why`, `excise`, questions |
 | sealed | `sealed(provenance)` | no `derived_by`, and where nothing withdraws no witness; `why` re-finds the firings by solving the rules with the head bound | bulk analysis: 2.2-3.2x faster and 2.6-2.7x less RSS than default on the four corpora |
 
@@ -101,10 +101,10 @@ Costs to know before sealing:
   `f_one_knob_the_same_conclusions_and_a_budget_that_may_move_under_it`: accepted
   because the seal is explicit). Do not compare a sealed world with an unsealed
   one under a budget it can reach.
-- The engine's own order is **sealed-only by decision**: made the default it
-  changed the state of eight worlds, five of them budget worlds and three
-  staging worlds (`f_the_engines_own_order_is_another_answer_wherever_the_semantics_names_an_order`).
-  Default stays canonical.
+- The engine's own order is the default wherever no fact can be staged by two
+  firings (`f_a_witnessed_world_takes_the_engines_own_order_where_no_fact_is_staged_twice`):
+  a wall then cuts elsewhere than the reference, so a walled world is Rust's alone,
+  and an explanation reads in key order again.
 - A sealed `why` costs 0.2-6.3 ms against 0.1-0.4 ms with stored witnesses
   (ten facts of the 40-file seed, `f_under_the_seal_a_why_finds_its_witnesses_again_by_solving_the_rules_with_the_head_bound`).
 - A rule that reads `derived_by` finds nothing in a sealed world.
