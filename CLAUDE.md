@@ -101,8 +101,8 @@ Decided by the owner; each is a finding, read it before arguing with it.
   rules R needs, and a question outside the cone is refused, not answered
   wrong (docs/demand-cones.md).
 
-What changed for an agent in 1.1, and the known gaps, are in
-docs/releases/1.1.md.
+What changed for an agent, and the known gaps, are in docs/releases/1.2.md
+(and 1.1.md before it).
 
 ## Testing has a hard limit
 

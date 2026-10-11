@@ -820,9 +820,8 @@ check[checks]("scripts/goldens.ts", "npm run test:bun", gate).
 check[checks]("scripts/text_check.ts", "npm run textcheck", gate).
 check[checks](".github/workflows/ci.yml", "typecheck", ci).
 check[checks](".github/workflows/ci.yml", "goldens (node)", ci).
-check[checks](".github/workflows/ci.yml", "install dependencies (the scanner needs @babel/parser)", ci).
-check[checks](".github/workflows/ci.yml", "goldens (bun)", ci).
 check[checks](".github/workflows/ci.yml", "one VSIX per platform", ci).
+check[checks](".github/workflows/ci.yml", "publish", ci).
 test_file[checks]("rust/rofl/tests/addition.rs").
 test_file[checks]("rust/rofl/tests/agg_worlds.rs").
 test_file[checks]("rust/rofl/tests/asks_cone.rs").

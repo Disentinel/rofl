@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.0 (preview, with ROFL 1.2.0)
+
+- Every notebook evaluates on the Rust engine by default, not only the layered
+  ones; a run cut short says which limit cut it and the setting that raises it.
+- A cell's fence follows its kind and language, so an agent's notebook edit no
+  longer leaves a cell read as prose; `rofl-nb edit F --cell N` writes one cell
+  only if the file reads back as written.
+- The kernel is ROFL 1.2.0. See docs/releases/1.2.md.
+
 ## 0.2.0 (preview, with ROFL 1.1.0)
 
 - A `why` of a value reads first: the steps the value took, origin first,
