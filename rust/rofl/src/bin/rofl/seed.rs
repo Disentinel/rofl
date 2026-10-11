@@ -12,7 +12,7 @@ use std::sync::atomic::{AtomicIsize, Ordering};
 /// (node's own object headers and the collector's slack, and this one's
 /// allocator bookkeeping).
 struct Counting;
-static LIVE: AtomicIsize = AtomicIsize::new(0);
+pub(crate) static LIVE: AtomicIsize = AtomicIsize::new(0);
 
 unsafe impl GlobalAlloc for Counting {
     unsafe fn alloc(&self, l: Layout) -> *mut u8 {

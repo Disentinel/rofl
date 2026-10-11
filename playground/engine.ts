@@ -4,13 +4,19 @@ import type { Rofl } from '../src/api.ts';
 import type { FactRec, Store } from '../src/store.ts';
 
 export type EngineName = 'rust' | 'typescript';
-export type Walls = { budget: number; space: number };
+/** The clock and the heap a run has left, which an engine that evaluates elsewhere keeps for itself. */
+export type Limit = { ms?: number; bytes?: number };
+/** A run's stop: true when the clock or the heap says so, and then `cause` says which. `left`: what remains of each; `said`: an engine stopped by one. */
+export type Stop = (() => boolean) & { cause?: string; left?: () => Limit; said?: (by: 'clock' | 'heap') => void };
+export type Walls = { budget: number; space: number; stop?: Stop };
 export interface Engine {
   readonly name: EngineName;
   /** `core`, the model `model` loaded and not evaluated, over the code's facts `code`, evaluated: a world whose store says `partialEval` when it was cut short. */
   evaluated(core: Rofl, model: string, code: string, walls: Walls): Rofl;
   /** The same with the cells' texts loaded beside the code, in a world of its own; a text the engine refuses is said in `errors` at its place and left out. */
   withCells(core: Rofl, model: string, code: string, texts: string[], walls: Walls): { world: Rofl; errors: string[][] };
+  /** A world this engine evaluated, with the base facts `lits` taken out and evaluated again, in a world of its own; a fact it cannot take out is said in `errors`. */
+  excised(world: Rofl, lits: string[], walls: Walls): { world: Rofl; errors: string[] };
 }
 
 export const typescript: Engine = {
@@ -32,6 +38,11 @@ export const typescript: Engine = {
     }
     f.evaluate(budget);
     return { world: f, errors };
+  },
+  excised(world, lits, { budget }) {
+    const g = world.fork(), errors = lits.flatMap((l) => { const r = g.retract(l); return r.ok ? [] : [r.diagnostics[0]]; });
+    g.evaluate(budget);
+    return { world: g, errors };
   },
 };
 

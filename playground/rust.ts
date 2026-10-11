@@ -6,7 +6,7 @@ import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { MessageChannel, receiveMessageOnPort, Worker } from 'node:worker_threads';
 import { Rofl } from '../src/api.ts';
-import { typescript, type Engine, type EngineName, type Holding, type Walls } from './engine.ts';
+import { typescript, type Engine, type EngineName, type Holding, type Stop, type Walls } from './engine.ts';
 import type { CellRec, FactRec, PremRef, Store, Witness } from '../src/store.ts';
 import { termFromJson } from '../src/unify.ts';
 
@@ -47,6 +47,8 @@ export class RustEngine implements Engine {
   private call: (req: Record<string, unknown>) => Record<string, any>;
   private core?: { model: string; session: number };
   private worlds: { base?: number; cells?: number } = {};
+  private forks: number[] = [];
+  private sessions = new WeakMap<Rofl, number>();
 
   constructor(bin: string) { this.call = serve(bin); }
 
@@ -59,23 +61,46 @@ export class RustEngine implements Engine {
     return this.run('cells', model, code, texts, walls);
   }
 
+  excised(world: Rofl, lits: string[], walls: Walls): { world: Rofl; errors: string[] } {
+    const from = this.sessions.get(world);
+    if (from === undefined) return typescript.excised(world, lits, walls);
+    const session = this.call({ op: 'fork', session: from }).session;
+    this.forks.push(session);
+    const errors = lits.flatMap((query) => { try { this.limited({ op: 'retract', session, query }, walls.stop); return []; } catch (e) { return [(e as Error).message.replace(/^the Rust engine refused retract: /, '')]; } });
+    const { partial } = this.limited({ op: 'evaluate', session }, walls.stop);
+    return { world: this.world(session, walls, partial), errors };
+  }
+
+  /** A request under what the run has left of its clock and heap; a stop by either is said to the run. */
+  private limited(req: Record<string, unknown>, stop?: Stop) {
+    const limit = stop?.left?.(), r = this.call(limit ? { ...req, limit } : req);
+    if (r.stopped) stop?.said?.(r.stopped);
+    return r;
+  }
+
+  private world(session: number, walls: Walls, partial: boolean): Rofl {
+    const world = new Rofl({ space: walls.space, reuse: false });
+    world.store = rustStore((req) => this.call({ ...req, session }), partial);
+    this.sessions.set(world, session);
+    return world;
+  }
+
   private run(slot: 'base' | 'cells', model: string, code: string, texts: string[], walls: Walls): { world: Rofl; errors: string[][] } {
     if (this.core?.model !== model) {
       if (this.core) this.call({ op: 'close', session: this.core.session });
-      const s = this.call({ op: 'fresh', ...walls }).session;
+      const s = this.call({ op: 'fresh', budget: walls.budget, space: walls.space }).session;
       this.call({ op: 'load', session: s, rofl: model });
       this.core = { model, session: s };
     }
     if (this.worlds[slot]) this.call({ op: 'close', session: this.worlds[slot] });
+    for (const f of this.forks.splice(0)) this.call({ op: 'close', session: f });
     const session = this.worlds[slot] = this.call({ op: 'fork', session: this.core.session }).session;
-    try { if (code) this.call({ op: 'assert', session, rofl: code }); } catch (e) { throw new Error(`the code's facts were refused, so nothing was asked: ${(e as Error).message}`); }
+    try { if (code) this.limited({ op: 'assert', session, rofl: code }, walls.stop); } catch (e) { throw new Error(`the code's facts were refused, so nothing was asked: ${(e as Error).message}`); }
     const errors: string[][] = texts.map(() => []), all = texts.filter((x) => x.trim()).join('\n');
-    const load = (rofl: string) => { try { this.call({ op: 'load', session, rofl }); return undefined; } catch (e) { return (e as Error).message.replace(/^the Rust engine refused load: /, '').split('\n'); } };
+    const load = (rofl: string) => { try { this.limited({ op: 'load', session, rofl }, walls.stop); return undefined; } catch (e) { return (e as Error).message.replace(/^the Rust engine refused load: /, '').split('\n'); } };
     if (all.trim() && load(all)) texts.forEach((x, i) => { if (x.trim()) errors[i] = load(x) ?? []; });
-    const { partial } = this.call({ op: 'evaluate', session });
-    const world = new Rofl({ space: walls.space, reuse: false });
-    world.store = rustStore((req) => this.call({ ...req, session }), partial);
-    return { world, errors };
+    const { partial } = this.limited({ op: 'evaluate', session }, walls.stop);
+    return { world: this.world(session, walls, partial), errors };
   }
 }
 
