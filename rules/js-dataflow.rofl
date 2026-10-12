@@ -549,13 +549,17 @@ param_of[flow](F, I, Name) :- fn_node[code](F), ast_child[code](F, params, I, P)
 -- parameter, 58.7 % of a world. The nested function is found by its
 -- parameter's name before it is looked for under F: every descendant of F
 -- was read once per parameter, 16.3 s of the self notebook against 5.1 s.
-param_hidden[flow](F, Name, U) :- binder_region[code](D, R), binds_name[code](D, Name, _),
-                                  ast_within[code](F, R), param_bound[flow](F, Name),
-                                  ast_within[code](R, U), ident[code](U, Name).
-param_hidden[flow](F, Name, U) :- param_bound[flow](G, Name),
+-- A name is looked up in its file: `e` and `options` are parameters and
+-- identifiers thousands of times over a corpus, and the planner, which counts
+-- an average name, read all of them per parameter (55 s of a piece of vscode).
+param_bound_in[flow](F, Name, File) :- param_bound[flow](F, Name), ast_node[code](F, _, File, _).
+param_hidden[flow](F, Name, U) :- binder_region[code](D, R), binds_name[code](D, Name, File),
+                                  ast_within[code](F, R), param_bound_in[flow](F, Name, File),
+                                  ast_within[code](R, U), ident_in[code](U, Name, File).
+param_hidden[flow](F, Name, U) :- param_bound_in[flow](G, Name, File),
                                   ast_within[code](F, G), fn_node[code](F),
-                                  param_bound[flow](F, Name),
-                                  ast_within[code](G, U), ident[code](U, Name).
+                                  param_bound_in[flow](F, Name, File),
+                                  ast_within[code](G, U), ident_in[code](U, Name, File).
 param_use[flow](F, Name, U) :- param_bound[flow](F, Name),
                                ast_within[code](F, U),
                                ident[code](U, Name),

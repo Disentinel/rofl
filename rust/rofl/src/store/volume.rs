@@ -8,6 +8,44 @@ fn terms(w: &mut VolW, ts: &[Term]) {
     w.arena(ts);
 }
 
+/// A run's argument indexes, so a world opened from a volume probes them where they lie instead of building them again.
+fn write_patterns(w: &mut VolW, by_pat: Option<&ArgIndex>) {
+    let Some(by_pat) = by_pat else {
+        return w.u32(u32::MAX);
+    };
+    let mut masks: Vec<&u32> = by_pat.keys().collect();
+    masks.sort_unstable();
+    w.u32(masks.len() as u32);
+    for m in masks {
+        let x = &by_pat[m];
+        w.u32(*m);
+        w.arena(&x.pos.iter().map(|&p| p as u32).collect::<Vec<u32>>());
+        w.u64(x.values as u64);
+        w.arena(&x.slots);
+        w.arena(&x.ids);
+        w.arena(&x.prev);
+    }
+}
+
+fn read_patterns(r: &mut VolR) -> Result<Option<Rc<ArgIndex>>, String> {
+    let n = r.u32()?;
+    if n == u32::MAX {
+        return Ok(None);
+    }
+    let mut by_pat = ArgIndex::default();
+    for _ in 0..n {
+        let mask = r.u32()?;
+        let pos: Box<[usize]> = r.arena::<u32>()?.iter().map(|&p| p as usize).collect();
+        let values = r.u64()? as usize;
+        let (slots, ids, prev): (Arena<u32>, Arena<FactId>, Arena<u32>) = (r.arena()?, r.arena()?, r.arena()?);
+        if !slots.len().is_power_of_two() || ids.len() != prev.len() || slots.iter().chain(prev.iter()).any(|&e| e != EMPTY && e as usize >= ids.len()) {
+            return Err("a volume's argument index is not an index".into());
+        }
+        by_pat.insert(mask, PatIndex { pos, slots, ids, prev, values });
+    }
+    Ok(Some(Rc::new(by_pat)))
+}
+
 fn prem_tags_ok(words: &[u32]) -> bool {
     words.iter().step_by(2).all(|&t| t <= 4)
 }
@@ -61,6 +99,7 @@ impl Store {
                 w.arena(&k.arrived);
                 w.arena(&k.loose);
                 w.arena(&k.staged);
+                write_patterns(w, k.by_pat.as_deref());
             }
         }
         w.arena(&self.wit_head.base);
@@ -149,7 +188,8 @@ impl Store {
                 let (canon, arrived) = (r.arena()?, r.arena()?);
                 let loose = r.arena::<FactId>()?.to_vec();
                 let staged = r.arena::<FactId>()?.to_vec();
-                v.push((p, KeyRun { canon, arrived, loose, staged, by_pat: None, by_tup: true }));
+                let by_pat = read_patterns(r)?;
+                v.push((p, KeyRun { canon, arrived, loose, staged, by_pat, by_tup: true }));
             }
             groups.insert(rel, v);
         }

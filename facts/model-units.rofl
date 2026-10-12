@@ -210,6 +210,7 @@ unit_concludes("rules/js-dataflow.rofl", dead_fn).
 unit_concludes("rules/js-dataflow.rofl", spread_arg).
 unit_concludes("rules/js-dataflow.rofl", after_spread).
 unit_concludes("rules/js-dataflow.rofl", arg_at).
+unit_concludes("rules/js-dataflow.rofl", param_bound_in).
 unit_concludes("rules/js-dataflow.rofl", param_hidden).
 unit_concludes("rules/js-dataflow.rofl", param_use).
 unit_concludes("rules/js-dataflow.rofl", returns).
@@ -490,6 +491,8 @@ unit_concludes("rules/js-controlflow.rofl", always_throws).
 unit_concludes("rules/js-controlflow.rofl", throwing_call).
 unit_concludes("rules/js-controlflow.rofl", accessor_kind).
 unit_concludes("rules/js-controlflow.rofl", accessor_of).
+unit_concludes("rules/js-controlflow.rofl", accessor_obj).
+unit_concludes("rules/js-controlflow.rofl", accessor_recv).
 unit_concludes("rules/js-controlflow.rofl", accessor_read).
 unit_concludes("rules/js-controlflow.rofl", resolves).
 unit_concludes("rules/js-controlflow.rofl", site).

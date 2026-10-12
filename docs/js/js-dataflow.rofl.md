@@ -949,23 +949,28 @@ A [function](js-callgraph.rofl.md#fn_node) takes Name at an index I if a node P 
 > parameter, 58.7 % of a world. The nested function is found by its
 > parameter's name before it is looked for under F: every descendant of F
 > was read once per parameter, 16.3 s of the self notebook against 5.1 s.
+> A name is looked up in its file: `e` and `options` are parameters and
+> identifiers thousands of times over a corpus, and the planner, which counts
+> an average name, read all of them per parameter (55 s of a piece of vscode).
+
+<a id="param_bound_in"></a>`param_bound_in`(F, Name, File) if [`param_bound`](#param_bound)(F, Name) and a node F [is in file](js-model.rofl.md#ast_node) File.
 
 <a id="param_hidden"></a>A node F hides Name at a node U either:
 
 1. if all of:
    - [the region](#binder_region) of D is a node R;
-   - D [introduces](#binds_name) Name in some file;
+   - D [introduces](#binds_name) Name in File;
    - R [is within](#ast_within) F;
-   - [`param_bound`](#param_bound)(F, Name);
+   - [`param_bound_in`](#param_bound_in)(F, Name, File);
    - U [is within](#ast_within) R;
-   - U [reads](#ident) Name;
+   - U [reads](#ident_in) Name in File;
 2. if all of:
-   - [`param_bound`](#param_bound)(G, Name);
+   - [`param_bound_in`](#param_bound_in)(G, Name, File);
    - a node G [is within](#ast_within) F;
    - F is a [function](js-callgraph.rofl.md#fn_node);
-   - [`param_bound`](#param_bound)(F, Name);
+   - [`param_bound_in`](#param_bound_in)(F, Name, File);
    - U [is within](#ast_within) G;
-   - U [reads](#ident) Name.
+   - U [reads](#ident_in) Name in File.
 
 <a id="param_use"></a>A node uses Name at a node U if all of:
   - [`param_bound`](#param_bound)(it, Name);
