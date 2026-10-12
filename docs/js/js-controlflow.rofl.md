@@ -332,8 +332,9 @@ In the code:
 
 > AN ACCESSOR IS A CALL WEARING A READ'S SYNTAX: `o.p` on a getter transfers
 > control; what the getter returns is a different question, not answered here.
-> `accessor_of` binds Obj and Key first, then `selects(N, Key)` before
-> `member_node_v(N)`, or every accessor is laid beside every member read. A
+> The read is found from the receiver, by the object's value, never by the
+> key: over vscode the planner went from `accessor_of` to every read of a key
+> as common as `value` (20 s and 9.7 M lookups for 292 reads). A
 > private accessor needs no receiver literal: `private_binds` decided both
 > halves. A getter that always throws makes the READ an exit. The call graph
 > has to say so too: `resolves`, and the read must be a `site` or the edge has
@@ -346,15 +347,21 @@ In the flow:
 
 <a id="accessor_of"></a>The accessor of a node Obj at Key is a node M if [the member](js-dataflow.rofl.md#member_value) Key of Obj holds M and [the attribute](#ast_attr) `kind` of M [is an accessor kind](#accessor_kind).
 
+<a id="accessor_obj"></a>`accessor_obj`(Obj) if [the accessor](#accessor_of) of a node Obj at some key is some node.
+
+<a id="accessor_recv"></a>`accessor_recv`(a [member access](js-dataflow.rofl.md#member_node_v) N, Obj) if all of:
+  - [`accessor_obj`](#accessor_obj)(Obj);
+  - a node O [points to](js-concat.rofl.md#may_be_node) a node Obj;
+  - the `object` of N is O.
+
 In the code:
 
-<a id="accessor_read"></a>N reads through the accessor M either:
+<a id="accessor_read"></a>A node N reads through the accessor M either:
 
 1. if all of:
+   - [`accessor_recv`](#accessor_recv)(N, Obj);
    - [the accessor](#accessor_of) of a node Obj at Key is M;
    - N [selects](js-dataflow.rofl.md#selects) Key;
-   - N is a [member access](js-dataflow.rofl.md#member_node_v);
-   - the `object` of N [points to](js-concat.rofl.md#may_be_node) Obj;
 2. if N [binds privately to](js-dataflow.rofl.md#private_binds) M and [the attribute](#ast_attr) `kind` of M [is an accessor kind](#accessor_kind).
 
 A node

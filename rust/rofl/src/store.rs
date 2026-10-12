@@ -327,15 +327,15 @@ type ArgIndex = FxMap<u32, PatIndex>;
 #[derive(Clone, Default)]
 struct PatIndex {
     pos: Box<[usize]>,
-    slots: Vec<u32>,
-    ids: Vec<FactId>,
-    prev: Vec<u32>,
+    slots: Arena<u32>,
+    ids: Arena<FactId>,
+    prev: Arena<u32>,
     values: usize,
 }
 
 impl PatIndex {
     fn new(pos: &[usize]) -> PatIndex {
-        PatIndex { pos: pos.into(), slots: vec![EMPTY; 8], ..Default::default() }
+        PatIndex { pos: pos.into(), slots: vec![EMPTY; 8].into(), ..Default::default() }
     }
 
     fn hash(vals: impl Iterator<Item = Term>) -> usize {
@@ -371,23 +371,25 @@ impl PatIndex {
         if self.slots[i] == EMPTY {
             self.values += 1;
         }
-        self.prev.push(self.slots[i]);
-        self.ids.push(k);
-        self.slots[i] = self.ids.len() as u32 - 1;
+        let e = self.slots[i];
+        self.prev.to_mut().push(e);
+        self.ids.to_mut().push(k);
+        self.slots.to_mut()[i] = self.ids.len() as u32 - 1;
     }
 
     fn grow(&mut self, facts: &Facts) {
         let n = self.slots.len() * 2;
-        let old = std::mem::replace(&mut self.slots, vec![EMPTY; n]);
-        let mask = self.slots.len() - 1;
-        for e in old.into_iter().filter(|&e| e != EMPTY) {
+        let mut slots = vec![EMPTY; n];
+        let mask = n - 1;
+        for &e in self.slots.iter().filter(|&&e| e != EMPTY) {
             let args = facts.args(self.ids[e as usize]);
             let mut i = Self::hash(self.pos.iter().map(|&p| args[p])) & mask;
-            while self.slots[i] != EMPTY {
+            while slots[i] != EMPTY {
                 i = (i + 1) & mask;
             }
-            self.slots[i] = e;
+            slots[i] = e;
         }
+        self.slots = slots.into();
     }
 
     /// The facts holding `vals`, in the order they were put.

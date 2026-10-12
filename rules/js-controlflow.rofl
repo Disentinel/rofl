@@ -191,8 +191,9 @@ throwing_call[code](C) :- always_throws[code](F), resolves[code](C, F),
 
 -- AN ACCESSOR IS A CALL WEARING A READ'S SYNTAX: `o.p` on a getter transfers
 -- control; what the getter returns is a different question, not answered here.
--- `accessor_of` binds Obj and Key first, then `selects(N, Key)` before
--- `member_node_v(N)`, or every accessor is laid beside every member read. A
+-- The read is found from the receiver, by the object's value, never by the
+-- key: over vscode the planner went from `accessor_of` to every read of a key
+-- as common as `value` (20 s and 9.7 M lookups for 292 reads). A
 -- private accessor needs no receiver literal: `private_binds` decided both
 -- halves. A getter that always throws makes the READ an exit. The call graph
 -- has to say so too: `resolves`, and the read must be a `site` or the edge has
@@ -204,10 +205,11 @@ accessor_kind("set").
 
 accessor_of[flow](Obj, Key, M) :- member_value[flow](Obj, Key, M),
                                   ast_attr[code](M, kind, K), accessor_kind(K).
-accessor_read[code](N, M) :- accessor_of[flow](Obj, Key, M),
-                             selects[flow](N, Key), member_node_v[flow](N),
-                             ast_child[code](N, object, 0, O),
-                             may_be_node[flow](O, Obj).
+accessor_obj[flow](Obj) :- accessor_of[flow](Obj, _, _).
+accessor_recv[flow](N, Obj) :- accessor_obj[flow](Obj), may_be_node[flow](O, Obj),
+                               ast_child[code](N, object, 0, O), member_node_v[flow](N).
+accessor_read[code](N, M) :- accessor_recv[flow](N, Obj), accessor_of[flow](Obj, Key, M),
+                             selects[flow](N, Key).
 accessor_read[code](N, M) :- private_binds[code](N, M),
                              ast_attr[code](M, kind, K), accessor_kind(K).
 
