@@ -45,6 +45,9 @@
 //!   {"op":"why","session":2,"query":"c(a)","all":true} -> every member of every cell
 //!   {"op":"whynot","session":2,"query":"p(b)","depth":6,"nodes":64}
 //!                                                     -> {"holds":false,"text":...}
+//!   {"op":"whynot","session":2,"query":"p(X)","files":[["na","a.ts"],...]}
+//!                                                     -> {"files":[{"file","found","stops","text"}]}: a row a file,
+//!                                                        a file being the key prefix its nodes share
 //!   {"op":"excise","session":2,"query":"q(a)"}         -> {"removed":[...],"added":[...]}
 //!   {"op":"retract","session":2,"query":"q(a)"}       -> {"full":null|"why"}: the base fact out, the
 //!                                                        cells updated by delta, evaluated again if not
@@ -489,6 +492,11 @@ impl Server {
                     }
                 };
                 let b = WhynotBounds::clamped(bound("depth")?, bound("nodes")?);
+                if let Some(v) = r.get("files") {
+                    let vols: Vec<(String, String)> = serde_json::from_value(v.clone()).map_err(|_| "whynot `files` takes [[prefix, file], ...]".to_string())?;
+                    let rows = self.get(r)?.whynot_files(&q, &b, &vols)?;
+                    return Ok(json!({ "files": rows.iter().map(|f| json!({ "file": f.file, "found": f.found, "stops": f.stops, "text": f.text })).collect::<Vec<_>>() }));
+                }
                 let (holds, text) = self.get(r)?.whynot(&q, &b)?;
                 Ok(json!({ "holds": holds, "text": text }))
             }
