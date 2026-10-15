@@ -39,7 +39,11 @@ export function render(r: Run, run = ''): { head: Shown; cells: Shown[] } {
     if (l.unsure?.total) out.push(`**warning**, out of sight (${link(l.unsure.text)}):\n\n` + list(l.unsure.answers, l.unsure.total, FOLD, asks));
     // a value's chain shows; the proof with its side conditions counted folds under it, and the whole proof under that
     if (l.chain?.length) out.push(`\`\`\`\n${l.chain.join('\n')}\n\`\`\``);
-    if (l.why) out.push(l.brief === undefined ? `<details><summary>proof</summary>\n\n\`\`\`\n${l.why}\n\`\`\`\n\n</details>`
+    // a whynot over files is a table of them, each row opening on its file's demonstration
+    if (l.byFile) {
+      const name = (f: string) => short[f] ?? f;
+      out.push(l.byFile.map((g) => `<details><summary>${g.files.map(name).join(', ')}: ${g.found ? `${g.found} ${g.found === 1 ? 'answer' : 'answers'}` : 'none'}${g.stops.length ? ` — it stops at: ${link(g.stops[0])}${g.stops.length > 1 ? ` and ${g.stops.length - 1} more` : ''}` : ''}</summary>\n\n\`\`\`\n${g.why}\n\`\`\`\n\n</details>`).join('\n\n'));
+    } else if (l.why) out.push(l.brief === undefined ? `<details><summary>proof</summary>\n\n\`\`\`\n${l.why}\n\`\`\`\n\n</details>`
       : `<details><summary>proof</summary>\n\n\`\`\`\n${l.brief}\n\`\`\`\n\n<details><summary>the whole proof</summary>\n\n\`\`\`\n${l.why}\n\`\`\`\n\n</details>\n\n</details>`);
     return out.join('\n\n');
   };
