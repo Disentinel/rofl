@@ -266,7 +266,7 @@ impl Eval {
         self.round_of.clear();
         if self.rerank().is_err() || !self.restore_lattices(lattices) {
             self.store.dirty = true;
-        } else if self.no_witness {
+        } else {
             self.restore_cells();
         }
     }
@@ -521,7 +521,7 @@ impl Eval {
     /// fact gone for good below makes a negation over it hold (the rule solved with it bound to the premise); and the
     /// news of every level below, and what this level made, fires the rules of the level semi-naively.
     #[allow(clippy::too_many_arguments)]
-    fn fine_levels(&mut self, added: &[FactId], mono: &[Rc<ERule>], negs: &[(Rc<ERule>, Vec<NegAt>)], fresh: &[Rc<ERule>], recompute: &[Rc<ERule>], grown: &HashSet<Sym>, dirty: &HashSet<Sym>, skip: &HashSet<Sym>, d: &mut AddDelta) -> Result<(), Halt> {
+    fn fine_levels(&mut self, added: &[FactId], mono: &[Rc<ERule>], negs: &[(Rc<ERule>, Vec<NegAt>)], fresh: &[Rc<ERule>], recompute: &[Rc<ERule>], keyable: &HashSet<Sym>, grown: &HashSet<Sym>, dirty: &HashSet<Sym>, skip: &HashSet<Sym>, d: &mut AddDelta) -> Result<(), Halt> {
         let mut levels: std::collections::BTreeSet<i64> = mono.iter().chain(fresh).chain(recompute).chain(negs.iter().map(|(r, _)| r)).map(|r| self.rule_level(r)).collect();
         levels.extend(grown.iter().filter(|r| !dirty.contains(r)).map(|r| self.rel_level(*r)));
         let mut by_head: HashMap<Sym, Vec<Rc<ERule>>> = HashMap::new();
@@ -536,6 +536,11 @@ impl Eval {
         for f in added {
             news.note(self.store.rec(*f).rel, *f);
         }
+        // a base fact put over a derived one stands lower now, and so may what rests on it
+        self.add_refired = added.iter().copied().filter(|f| self.store.support_count(*f) > 0).collect();
+        self.add_mark = self.store.len_ids();
+        // the facts withdrawn and made again at a level, which a cell above may list
+        let mut touched: HashSet<FactId> = HashSet::new();
         let mut over: HashSet<FactId> = HashSet::new();
         let mut over_base: HashSet<FactId> = HashSet::new();
         let mut gone: HashMap<Sym, Vec<FactId>> = HashMap::new();
@@ -585,10 +590,37 @@ impl Eval {
             // and every rule into it fires again over what holds; a fact that does not come back at once is taken as
             // lost, and what rests on it goes too (a fact of the relation that comes back keeps its record, and so what
             // cites it)
-            let here: Vec<Rc<ERule>> = recompute.iter().filter(|r| at_(r)).cloned().collect();
             // (an aggregate rule alone withdraws its own firings and fires again: what other rules conclude into its head stands)
-            let (own, wide): (Vec<Rc<ERule>>, Vec<Rc<ERule>>) = here.iter().cloned().partition(|r| r.has_agg && !r.has_thr && r.lattice_outer.is_empty() && !r.demand_strict);
+            let (own, wide): (Vec<Rc<ERule>>, Vec<Rc<ERule>>) = recompute.iter().filter(|r| at_(r)).cloned().partition(|r| r.has_agg && !r.has_thr && r.lattice_outer.is_empty() && !r.demand_strict);
             let heads: HashSet<Sym> = wide.iter().map(|r| r.clause.head.rel).collect();
+            // and only at the correlations what changed falls in, where it names them, once every rule reset here that
+            // concludes what it reads was asked again by key before it
+            let concluded: Vec<Sym> = own.iter().chain(&wide).map(|r| r.clause.head.rel).collect();
+            let mut by_key: HashSet<Sym> = HashSet::new();
+            let mut own_whole: Vec<Rc<ERule>> = Vec::new();
+            let mut pending: Vec<Rc<ERule>> = own.into_iter().filter(|r| {
+                let alone = keyable.contains(&r.id) && !heads.contains(&r.clause.head.rel) && concluded.iter().filter(|h| **h == r.clause.head.rel).count() == 1;
+                if !alone {
+                    own_whole.push(r.clone());
+                }
+                alone
+            }).collect();
+            loop {
+                let below: HashSet<Sym> = concluded.iter().copied().filter(|h| !by_key.contains(h)).collect();
+                let Some(i) = pending.iter().position(|r| !reads(r, &below.iter().copied().filter(|h| *h != r.clause.head.rel).collect()).0) else { break };
+                let r = pending.remove(i);
+                let changed: HashSet<FactId> = over.iter().chain(&over_base).chain(&touched).copied().collect();
+                match self.agg_keys(&r, lv, &news, &changed) {
+                    Some(seeds) => {
+                        self.refire_keyed(&r, seeds, &mut news, &mut over, &mut over_base, &mut touched, d)?;
+                        by_key.insert(r.clause.head.rel);
+                    }
+                    None => own_whole.push(r),
+                }
+            }
+            own_whole.extend(pending);
+            let own = own_whole;
+            let here: Vec<Rc<ERule>> = own.iter().chain(&wide).cloned().collect();
             let mut held: HashSet<FactId> = HashSet::new();
             let mut into: Vec<Rc<ERule>> = own.clone();
             for r in &own {
@@ -637,6 +669,7 @@ impl Eval {
                 }
                 let lost: Vec<FactId> = held.iter().copied().filter(|id| !self.store.alive(*id)).collect();
                 self.overdelete(lost, &mut over, &mut over_base, d);
+                touched.extend(held.iter().copied());
             }
             self.store.arrivals = Some(Vec::new());
             let r = (|| -> Result<(), Halt> {
@@ -733,6 +766,142 @@ impl Eval {
         Ok(())
     }
 
+    /// THE CORRELATIONS AN AGGREGATE RULE IS ASKED AGAIN AT: the keys of its cells that what changed falls in, each as the
+    /// binding the rule is solved from. None, and the rule is sealed again whole, where a change names no key (a premise
+    /// it matches leaves a variable of the key free), the key is not the head's, or a fact below may stand lower than it
+    /// did (a cell lists its members' heights).
+    fn agg_keys(&mut self, r: &ERule, lv: i64, news: &Front, changed: &HashSet<FactId>) -> Option<Vec<Subst>> {
+        if !self.ds_elems.is_empty() || !self.lattices.is_empty() || self.add_refired.iter().any(|f| !changed.contains(f) && self.rel_level(self.store.rec(*f).rel) < lv) {
+            return None;
+        }
+        let mut key: Option<Vec<Sym>> = None;
+        let mut lits: Vec<&Lit> = Vec::new();
+        for b in &r.plan {
+            match b {
+                BodyElem::Pos(l) | BodyElem::Neg(l) => lits.push(l),
+                BodyElem::Agg(a) => {
+                    let plan = self.agg_plans.get(&(r.id, a.at))?;
+                    let mut vs: Vec<Sym> = plan.corr.iter().map(|i| a.shared[*i]).collect();
+                    vs.sort_unstable();
+                    if plan.op.class() == Class::Holistic || vs.is_empty() || key.as_ref().is_some_and(|k| *k != vs) {
+                        return None;
+                    }
+                    key = Some(vs);
+                    for x in &a.body {
+                        match x {
+                            BodyElem::Pos(l) | BodyElem::Neg(l) => lits.push(l),
+                            BodyElem::Agg(_) => return None,
+                            BodyElem::Bi { .. } => {}
+                        }
+                    }
+                }
+                BodyElem::Bi { .. } => {}
+            }
+        }
+        let key = key?;
+        let rels: HashSet<Sym> = lits.iter().map(|l| l.rel).collect();
+        if lits.iter().any(|l| l.temporal != Temporal::Now) || key.iter().any(|v| !r.clause.head.args.contains(&Term::var(*v))) || self.vclosures.iter().any(|c| rels.contains(&c.rel)) {
+            return None;
+        }
+        let mut facts: Vec<FactId> = news.by_rel.iter().filter(|(rel, _)| rels.contains(rel)).flat_map(|(_, ids)| ids.iter().copied()).collect();
+        facts.extend(changed.iter().copied().filter(|f| rels.contains(&self.store.rec(*f).rel)));
+        facts.sort_unstable();
+        facts.dedup();
+        let mut keys: Vec<Vec<Term>> = Vec::new();
+        let mut seen: HashSet<Vec<Term>> = HashSet::new();
+        for f in facts {
+            let (rel, persp) = (self.store.rec(f).rel, self.store.rec(f).persp);
+            let args = self.store.args(f).to_vec();
+            for l in lits.iter().filter(|l| l.rel == rel && l.args.len() == args.len()) {
+                let mut s = unify(&self.h, l.persp, Term::atom(persp), &Subst::new());
+                for (a, b) in l.args.iter().zip(&args) {
+                    s = s.and_then(|s| unify(&self.h, *a, *b, &s));
+                }
+                let Some(s) = s else { continue };
+                let k: Vec<Term> = key.iter().map(|v| resolve(&mut self.h, Term::var(*v), &s)).collect();
+                if k.iter().any(|t| !self.h.is_ground(*t)) {
+                    return None;
+                }
+                if seen.insert(k.clone()) {
+                    keys.push(k);
+                }
+            }
+        }
+        Some(keys.into_iter().map(|k| key.iter().zip(k).fold(Subst::new(), |s, (v, t)| unify(&self.h, Term::var(*v), t, &s).expect("a free variable binds"))).collect())
+    }
+
+    /// `agg_keys`'s rule at its keys: what it concluded there withdrawn, the cells of those correlations unsealed, and the
+    /// rule solved from each key; what it makes new is news, and what it no longer makes goes with what rests on it.
+    #[allow(clippy::too_many_arguments)]
+    fn refire_keyed(&mut self, r: &Rc<ERule>, seeds: Vec<Subst>, news: &mut Front, over: &mut HashSet<FactId>, over_base: &mut HashSet<FactId>, touched: &mut HashSet<FactId>, d: &mut AddDelta) -> Result<(), Halt> {
+        let head = r.clause.head.clone();
+        let persp = head.persp.as_atom();
+        let mut held: HashSet<FactId> = HashSet::new();
+        let mut cells: Vec<CellId> = Vec::new();
+        for s in &seeds {
+            let mut pos: Vec<usize> = Vec::new();
+            let mut vals: Vec<Term> = Vec::new();
+            for (j, a) in head.args.iter().enumerate() {
+                let t = resolve(&mut self.h, *a, s);
+                if self.h.is_ground(t) {
+                    pos.push(j);
+                    vals.push(t);
+                }
+            }
+            let cands = match self.store.arg_matches(&self.h, head.rel, persp, head.args.len(), &pos, &vals) {
+                Some(c) => c,
+                None => self.store.rel_all(&self.h, head.rel),
+            };
+            for id in cands {
+                if !self.store.alive(id) || pos.iter().zip(&vals).any(|(j, v)| self.store.args(id)[*j] != *v) || !self.store.fired_by(id, r.id) || !held.insert(id) {
+                    continue;
+                }
+                self.withdraw_firings(&[id], |x, _| x == r.id);
+                if self.store.alive(id) && !self.store.rec(id).base() && self.store.support_count(id) == 0 {
+                    self.store.remove_many(&[id]);
+                }
+            }
+            for b in &r.plan {
+                let BodyElem::Agg(a) = b else { continue };
+                let plan = self.agg_plans[&(r.id, a.at)].clone();
+                let corr: Box<[Term]> = plan.corr.iter().map(|i| resolve(&mut self.h, Term::var(a.shared[*i]), s)).collect();
+                let mk = (r.id, a.at, corr);
+                if let Some(cs) = self.agg_memo.remove(&mk) {
+                    cells.extend(cs.iter().copied());
+                }
+                self.reach_memo.remove(&mk);
+                self.agg_opened.remove(&mk);
+            }
+        }
+        self.kill_cells(&cells);
+        d.stacked_cells += cells.len();
+        self.height_memo.clear();
+        self.store.arrivals = Some(Vec::new());
+        let saved = std::mem::replace(&mut self.active, vec![r.clone()]);
+        let t = std::time::Instant::now();
+        let res = (|| -> Result<(), Halt> {
+            let mut front = Front::default();
+            for s in seeds {
+                let f = self.fire_rule_from(r, s, None)?;
+                merge_front(&mut front, f);
+            }
+            self.propagate(front)
+        })();
+        *self.ns_by_rule.entry(r.id).or_insert(0) += t.elapsed().as_nanos() as u64;
+        self.active = saved;
+        let came = self.store.arrivals.take().unwrap_or_default();
+        res?;
+        for id in came {
+            if !held.contains(&id) && self.store.alive(id) && self.store.rec(id).rel != self.v.derived_by {
+                news.note(self.store.rec(id).rel, id);
+            }
+        }
+        let lost: Vec<FactId> = held.iter().copied().filter(|id| !self.store.alive(*id)).collect();
+        self.overdelete(lost, over, over_base, d);
+        touched.extend(held);
+        Ok(())
+    }
+
     /// The relations that may grow: those added to, and the heads of every rule that reads one, through each other.
     fn grow(&self, from: &HashSet<Sym>, fresh: &HashSet<Sym>) -> HashSet<Sym> {
         let mut seen = from.clone();
@@ -780,6 +949,8 @@ impl Eval {
         }
         // THE RESET: a rule that may withdraw what it concluded
         let mut reset: HashSet<Sym> = HashSet::new();
+        // (a rule reset for what grew under its aggregate alone, which may be asked again by key)
+        let mut keyable: HashSet<Sym> = HashSet::new();
         let mut mono: Vec<Rc<ERule>> = Vec::new();
         let mut negs: Vec<(Rc<ERule>, Vec<NegAt>)> = Vec::new();
         let mut new_plain: Vec<Rc<ERule>> = Vec::new();
@@ -817,6 +988,7 @@ impl Eval {
                     negs.push((r.clone(), ns));
                 } else {
                     reset.insert(r.id);
+                    keyable.insert(r.id);
                 }
             }
         }
@@ -988,7 +1160,7 @@ impl Eval {
             // the part kept, level by level: the news through the rules that read it, the added plain rules whole, and
             // under a negation the firings a new fact blocks withdrawn, what rested on them derived again
             let skip: HashSet<Sym> = again.iter().map(|r| r.id).collect();
-            self.fine_levels(added, &mono, &negs, &new_plain, &recompute, grown, &dirty, &skip, &mut d)?;
+            self.fine_levels(added, &mono, &negs, &new_plain, &recompute, &keyable, grown, &dirty, &skip, &mut d)?;
             self.active.clear();
             // the rest, as a full evaluation fires it
             self.refire(&again, &[])?;

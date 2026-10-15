@@ -169,7 +169,7 @@ impl<'a> Cands<'a> {
 impl<'a> Frozen<'a> {
     /// `index_probe` unwritten: the rows an index narrows to, None to scan; whether it probed. The outer None: the
     /// probe would write.
-    fn probe(&self, s: &Subst, persp: Option<Sym>) -> Option<(Option<Vec<FactId>>, bool)> {
+    fn probe(&self, s: &Subst, persp: Option<Sym>, limit: usize) -> Option<(Option<Vec<FactId>>, bool)> {
         let l = self.l;
         if !self.store.indexed(l.rel, persp) {
             return Some((None, false));
@@ -185,7 +185,7 @@ impl<'a> Frozen<'a> {
         if pos.is_empty() {
             return Some((None, false));
         }
-        Some((self.store.arg_matches_ro(self.h, l.rel, persp, l.args.len(), &pos, &vals)?, true))
+        Some((self.store.arg_matches_ro(self.h, l.rel, persp, l.args.len(), &pos, &vals, limit)?, true))
     }
 
     /// The runs a scan reads, in `rel_persp` / `rel_all` order.
@@ -205,11 +205,12 @@ impl<'a> Frozen<'a> {
         }
         let persp_t = walk(self.h, self.l.persp, &a.s);
         let persp = persp_t.as_atom();
-        let (narrow, probed) = self.probe(&a.s, persp)?;
+        let limit = self.news.as_ref().map_or(usize::MAX, |(keys, _)| keys.len().saturating_sub(1));
+        let (narrow, probed) = self.probe(&a.s, persp, limit)?;
         *probes += probed as u64;
         let mut c = Cands { persp_t, persp, segs: Vec::new(), owned: Vec::new(), keep: Keep::All };
         match (&self.news, narrow) {
-            (Some((keys, _)), Some(n)) if n.len() < keys.len() => c.owned = n.into_iter().filter(|f| keys.contains(f)).collect(),
+            (Some((keys, _)), Some(n)) => c.owned = n.into_iter().filter(|f| keys.contains(f)).collect(),
             (Some((_, news)), _) => {
                 c.segs = vec![&news[..]];
                 c.keep = Keep::News;
@@ -312,13 +313,13 @@ impl Eval {
             return None;
         }
         let off = l.temporal == Temporal::Init && self.store.tick != 0;
-        if !off {
-            self.par_prepare(l, acc);
-        }
-        let news = match front_at {
+        let news: Option<(&FxSet<FactId>, Vec<FactId>)> = match front_at {
             Some((p, keys)) if p == i && !neg => Some((keys, keys.iter().copied().collect())),
             _ => None,
         };
+        if !off {
+            self.par_prepare(l, acc, news.as_ref().map_or(usize::MAX, |(keys, _)| keys.len().saturating_sub(1)));
+        }
         let fr = Frozen { store: &self.store, h: &self.h, l, neg, news, off };
         let threads = self.par.threads;
 
@@ -409,7 +410,7 @@ impl Eval {
 
     /// The groups `l` reads merged and the index its bound arguments probe built, as the first read of each partial
     /// solution with its own book would merge and build them.
-    fn par_prepare(&mut self, l: &Lit, acc: &[Sol]) {
+    fn par_prepare(&mut self, l: &Lit, acc: &[Sol], limit: usize) {
         let mut books: Vec<Option<Sym>> = Vec::new();
         for a in acc {
             let persp = walk(&self.h, l.persp, &a.s).as_atom();
@@ -430,7 +431,7 @@ impl Eval {
                 }
             }
             if !pos.is_empty() {
-                self.store.arg_matches(&self.h, l.rel, persp, l.args.len(), &pos, &vals);
+                self.store.arg_matches_upto(&self.h, l.rel, persp, l.args.len(), &pos, &vals, limit);
             }
         }
     }
