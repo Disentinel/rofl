@@ -161,6 +161,13 @@ bookkeeping (`--json` keeps it as `whyRaw`), and `excise F` in a cell takes
 the fact F out of the world every line was asked over and lists the lines
 whose answers move, before and after, leaving their own answers as they are.
 
+A `whynot` over more than one code file is a table of the files: a row a
+file, how many answers it holds, and where each rule stopped in it, files that
+stopped alike in one row; `--all` (and in VS Code, opening a row) prints a
+row's demonstration. The walk is parted by file at the first premise whose
+candidates name one, so every file is read and not only the first few
+(`f_whynot_by_file_parts_the_walk_where_a_candidate_first_names_a_file`).
+
 A `why` of a value (`side_effect_value(S, F, V)`, `E may be the literal V`,
 any answer whose last argument a premise relates to something) prints first
 the steps the value took, origin first, one line each: the file and line, the

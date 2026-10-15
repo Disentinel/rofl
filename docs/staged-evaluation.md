@@ -100,9 +100,11 @@ from the store.
 ## What is built, in order
 
 1. **Derived as given** (the keystone: stages, cache and resume all need it). A stage builds on the one below it in
-   memory and across a process (the kept image); what remains is a kept stage read back under a cone that does not
-   run its rules again, and dominance and join lattice worlds kept evaluated. Proof: a world evaluated
-   in two stages equals the world evaluated whole, byte for byte, on every world of `npm test` that splits.
+   memory and across a process (the kept image, the volume). Proved on every world of `npm test` that splits
+   (`scripts/addcheck.ts`, `f_two_stages_equal_the_whole_on_every_world_that_splits`): the lower half of the world's
+   relations asked, evaluated, kept as a volume and opened, the upper half asked of it, equals the world asking both,
+   byte for byte, on all 167; the upper stage goes by delta in 137. Dominance and join lattices are kept with the
+   world and open evaluated. Left: an upper stage the addition path evaluates again evaluates the lower one too.
 2. **The mapped volume.** Built: `Session::keep_volume` writes the world as the arenas it is, `open_volume` maps
    them and copies nothing (`rust/rofl/src/volume.rs`; at 250 vscode files it opens in 0.6 s against 9.2 s for the
    image, holding 0.36 GB against 1.6 GB, for twice the disk;
@@ -115,6 +117,10 @@ from the store.
 4. **The planner and its refusal** (decisions 3 and 6, H1, H3).
 5. **Workers by key** (decision 7).
 6. **The explanation by file**: the why of an absence as a table of files, each row expanded by lifting one volume.
+   Built over the evaluated world: a whynot walk parted by file, a row a file with its answers and the premises it
+   stopped at, shown as the table in a notebook and answered by `rofl serve`
+   (`f_whynot_by_file_parts_the_walk_where_a_candidate_first_names_a_file`). Left: the zero of a row read from the
+   file's kept stage under its hash and the program's, which needs item 1.
 
 Each item opens with its hypothesis measured; a refuted hypothesis is recorded and changes the order before
 anything is built on it.

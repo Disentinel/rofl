@@ -1,6 +1,7 @@
 // The notebook's engine side: the JS model loaded once, then every run forks it, scans the code, adds the book's cells and answers their lines.
 // Runs the same in a worker, in a page and under node.
 import { Rofl } from '../src/api.ts';
+import type { WhynotFile } from '../src/aggeval.ts';
 import { parseLiteral, parseProgram } from '../src/parser.ts';
 import { KERNEL_BOOK, RESERVED, STR_ARITY, ruleIdOf } from '../src/reflect.ts';
 import { fold, keyOf, type Step } from './fold.ts';
@@ -23,7 +24,11 @@ export { MODEL_FILES, PHRASE_FILES } from '../notebook/front.ts';
 export { readBook, homeOf, booksOf, type Cell } from '../notebook/book.ts';
 
 export type Row = { sentence: string; literal: string };
+/** A file's row of a whynot: how many answers it holds, and where each rule stopped in it, with the demonstration. */
+export type FileRow = { file: string; found: number; stops: string[]; why: string };
 export type Line = { kind: Kind; text: string; lit: string; rows: Row[]; total: number; ok: boolean; note?: string; why?: string; proof?: Step | string;
+  /** a whynot over more than one file: a row for each file that holds an answer or stopped somewhere */
+  files?: FileRow[];
   /** a `why` of a value: the steps the value took, playground/chain.ts */
   chain?: string[];
   /** what the invariant above could not see: its `unsure` line's answers */
@@ -412,6 +417,14 @@ export class Host {
     lap('evaluate');
     // a proof reads the cells' facts in their world and the model's in the kept one, so a why walks down into the model without evaluating it again
     const w = base ? proofs(base.store, f.store, heads, this.kernelRels, new Set(over)) : f;
+    // a whynot over more than one file is also a table of the files: a file is the key prefix of its nodes
+    const vols = [...new Map(Object.entries(nodes).map(([id, n]) => [id.slice(0, id.lastIndexOf('_')), n.file]))];
+    const byFile = (lit: string): FileRow[] | undefined => {
+      if (new Set(vols.map(([, f]) => f)).size < 2) return;
+      let rows: WhynotFile[];
+      try { rows = w.whynotFiles(lit, vols).filter((r) => r.found || r.stops.length); } catch { return; }
+      return rows.length < 2 ? undefined : rows.map((r) => ({ file: r.file, found: r.found, stops: r.stops.map((x) => plain(vocab.sayAll(x))), why: plain(vocab.sayAll(r.text)) }));
+    };
     unresolved = (base ?? f).query('unresolved_relative[code](F, L, S)').rows.map((r) => `${unquote(r.bindings.F)}:${r.bindings.L} ${r.bindings.S}`).sort();
     this.last = w;
     // a relation the cells read and nothing defines, a cell's left-out rule the usual cause: what rests on it is empty for no reason in the code
@@ -593,7 +606,7 @@ export class Host {
           }
           try {
             if (a.kind === 'why') { const y = w.why(a.lit); outs[i].lines.push({ unasked: unread[i], kind: 'why', text: a.text, lit: a.lit, rows: [], total: 0, ok: y.ok, why: plain(vocab.sayAll(y.text)), chain: y.ok ? chainOf(y.text, nodes, (k) => plain(vocab.say(k) ?? k)) : undefined, proof: y.ok ? this.explain(a.lit) : undefined, note: nameless(a.lit, a.text), english }); continue; }
-            if (a.kind === 'whynot') { const y = w.whynot(a.lit); outs[i].lines.push({ unasked: unread[i], kind: 'whynot', text: a.text, lit: a.lit, rows: [], total: 0, ok: !y.holds, why: plain(vocab.sayAll(y.text)), note: nameless(a.lit, a.text), english }); continue; }
+            if (a.kind === 'whynot') { const y = w.whynot(a.lit); outs[i].lines.push({ unasked: unread[i], kind: 'whynot', text: a.text, lit: a.lit, rows: [], total: 0, ok: !y.holds, why: plain(vocab.sayAll(y.text)), files: byFile(a.lit), note: nameless(a.lit, a.text), english }); continue; }
           } catch (e) { outs[i].errors.push(`${a.text}: ${(e as Error).message}`); continue; }
           if (conjunction(a.lit)) { outs[i].errors.push(`${a.text}: a question is one literal; write a rule that joins these and ask its head`); continue; }
           if (this.foreign.has(relOf(a.lit)) && !/^\w+\[/.test(a.lit)) { outs[i].lines.push({ unasked: NOT_OURS(relOf(a.lit), home), kind: a.kind, text: a.text, lit: a.lit, rows: [], total: 0, ok: false }); continue; }

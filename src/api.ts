@@ -17,7 +17,7 @@ import {
 } from './reflect.ts';
 import { SHRUG, shrugsOf, shrugLine, shrugAtom, shown } from './shrug.ts';
 import { AggEval, DEFAULT_SPACE, Rejected, Wall, checkAggregatesDoor, checkSetPatternsDoor, checkOrderableAgg,
-  checkNextInBody, checkLatticeDecl, checkDominance, lowerOrder, type Unknown } from './aggeval.ts';
+  checkNextInBody, checkLatticeDecl, checkDominance, lowerOrder, type Unknown, type WhynotFile } from './aggeval.ts';
 import { encodeDominance } from './reflect.ts';
 import { checkStructureDecl, structureRows, declaredStructures, checkFunctions, checkTrees, checkClosureHead, declaredClosures, concludedBy, lowerClosure } from './structure.ts';
 
@@ -998,6 +998,22 @@ export class Rofl {
     if (outside !== undefined) return { ok: false, text: outside };
     ev.dag = !opts.tree;
     try { return { ok: true, text: ev.questioned(budget, () => ev.whyText(lit, opts.all ? Infinity : undefined, typeof text === 'string' ? text : undefined)) }; } catch (e) { return { ok: false, text: (e as Error).message }; } finally { ev.dag = true; }
+  }
+
+  /** `whynot` by file (src/aggeval.ts `whynotFiles`): a row for each file of `vols`, a key prefix and the file's name, with its answers and
+   *  where each rule stopped in it. A wall met is no table. */
+  whynotFiles(text: Ask, vols: [string, string][], opts: WhynotOpts = {}): WhynotFile[] {
+    const budget = opts.budget ?? DEFAULT_BUDGET;
+    this.ensure(budget, mka('$adhoc'));
+    const ev = this.standing(budget), lit = this.asked(text);
+    const outside = ev.outsideCone(lit.rel);
+    if (outside !== undefined) throw new Error(outside);
+    try {
+      return ev.questioned(budget, () => ev.whynotFiles(lit, { maxDepth: opts.depth ?? DEFAULT_WHYNOT_DEPTH, maxNodes: opts.nodes ?? DEFAULT_WHYNOT_NODES }, vols));
+    } catch (e) {
+      if (e instanceof Wall) return [];
+      throw e;
+    }
   }
 
   whynot(text: Ask, opts: WhynotOpts = {}): { holds: boolean; text: string } {
