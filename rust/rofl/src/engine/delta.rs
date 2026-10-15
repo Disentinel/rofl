@@ -422,25 +422,11 @@ impl Eval {
         if brk!("retract_stacked_cells_kept" => true; false) {
             return 0;
         }
-        let mut n = 0;
-        for c in self.store.live_cells() {
-            let CellOwner::Body { rule, at } = self.store.cell(c).owner;
-            if !reset.contains(&rule) {
-                continue;
-            }
-            let key = self.store.cell_key_term(&mut self.h, c);
-            self.forget_reflection(key);
-            if let Some(ix) = self.support_ix.as_mut() {
-                Self::unindex_cell(&self.store, c, ix);
-            }
-            if self.store.cell(c).op == AggOp::AtLeast && brk!("retract_thr_cells_kept" => false; true) {
-                let rec = self.store.cell(c);
-                self.thr_cells.remove(&(rule, at, rec.key.clone()));
-                self.thr_fresh.remove(&c);
-            }
-            self.store.kill_cell(c);
-            n += 1;
-        }
+        let cells: Vec<CellId> = self.store.live_cells().into_iter().filter(|c| {
+            let CellOwner::Body { rule, .. } = self.store.cell(*c).owner;
+            reset.contains(&rule)
+        }).collect();
+        let n = self.kill_cells(&cells);
         self.thr_open.retain(|(c, _)| !self.store.cell_dead(*c));
         self.thr_acc.retain(|(r, _, _), _| !reset.contains(r));
         self.agg_memo.retain(|(r, _, _), _| !reset.contains(r));
@@ -1071,7 +1057,7 @@ impl Eval {
         let head = er.clause.head.rel;
         let key_term = self.store.cell_key_term(&mut self.h, old);
         d.retired += brk!("retract_no_readers" => 0; self.drop_readers(er.id, head, old));
-        self.forget_reflection(key_term);
+        self.forget_reflection(&HashSet::from([key_term]));
         Self::unindex_cell(&self.store, old, self.support_ix.as_mut().unwrap());
         self.store.kill_cell(old);
         let new: Vec<CellId> = match fresh {
@@ -1272,12 +1258,43 @@ impl Eval {
         retire
     }
 
-    /// The reflection of a cell, withdrawn: every row of the cell's name.
-    fn forget_reflection(&mut self, key: Term) {
+    /// `cells` killed, their reflection forgotten in one pass. How many.
+    pub(super) fn kill_cells(&mut self, cells: &[CellId]) -> usize {
+        let reflected = self.reflected();
+        let mut keys: HashSet<Term> = HashSet::new();
+        for &c in cells {
+            let CellOwner::Body { rule, at } = self.store.cell(c).owner;
+            if reflected {
+                keys.insert(self.store.cell_key_term(&mut self.h, c));
+            }
+            if let Some(ix) = self.support_ix.as_mut() {
+                Self::unindex_cell(&self.store, c, ix);
+            }
+            if self.store.cell(c).op == AggOp::AtLeast && brk!("retract_thr_cells_kept" => false; true) {
+                let rec = self.store.cell(c);
+                self.thr_cells.remove(&(rule, at, rec.key.clone()));
+                self.thr_fresh.remove(&c);
+            }
+            self.store.kill_cell(c);
+        }
+        self.forget_reflection(&keys);
+        cells.len()
+    }
+
+    /// Whether a cell has a reflection row to forget.
+    fn reflected(&self) -> bool {
+        [self.v.agg_cell, self.v.agg_sealed, self.v.agg_member, self.v.agg_member_prem].iter().any(|r| self.store.rel_count(*r) > 0)
+    }
+
+    /// The reflection of the cells named `keys`, withdrawn: every row of their names, in one pass.
+    fn forget_reflection(&mut self, keys: &HashSet<Term>) {
+        if keys.is_empty() {
+            return;
+        }
         let mut gone: Vec<FactId> = Vec::new();
         for rel in [self.v.agg_cell, self.v.agg_sealed, self.v.agg_member, self.v.agg_member_prem] {
             for id in self.store.rel_all(&self.h, rel) {
-                if self.store.args(id).first() == Some(&key) {
+                if self.store.args(id).first().is_some_and(|k| keys.contains(k)) {
                     gone.push(id);
                 }
             }

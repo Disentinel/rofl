@@ -392,18 +392,22 @@ impl PatIndex {
         self.slots = slots.into();
     }
 
-    /// The facts holding `vals`, in the order they were put.
-    fn get(&self, facts: &Facts, vals: &[Term], out: &mut Vec<FactId>) {
+    /// The facts holding `vals`, in the order they were put; false, the walk stopped, once there are more than `limit`.
+    fn get(&self, facts: &Facts, vals: &[Term], out: &mut Vec<FactId>, limit: usize) -> bool {
         let at = out.len();
         let mut e = self.slots[self.slot(facts, vals)];
         while e != EMPTY {
             let k = self.ids[e as usize];
             if facts.alive(k) {
+                if out.len() - at == limit {
+                    return false;
+                }
                 out.push(k);
             }
             e = self.prev[e as usize];
         }
         out[at..].reverse();
+        true
     }
 
     fn bytes(&self) -> usize {
@@ -1727,6 +1731,22 @@ impl Store {
         pos: &[usize],
         vals: &[Term],
     ) -> Option<Vec<FactId>> {
+        self.arg_matches_upto(h, rel, persp, arity, pos, vals, usize::MAX)
+    }
+
+    /// `arg_matches` where it answers with at most `limit` facts; None where it would answer more, without
+    /// listing them.
+    #[allow(clippy::too_many_arguments)]
+    pub fn arg_matches_upto(
+        &mut self,
+        h: &Heap,
+        rel: Sym,
+        persp: Option<Sym>,
+        arity: usize,
+        pos: &[usize],
+        vals: &[Term],
+        limit: usize,
+    ) -> Option<Vec<FactId>> {
         if pos.is_empty() {
             return None;
         }
@@ -1736,9 +1756,10 @@ impl Store {
         let Some(p) = persp else {
             let mut out = Vec::new();
             for q in self.persps_sorted(h, rel) {
-                match self.arg_matches(h, rel, Some(q), arity, pos, vals) {
+                match self.arg_matches_upto(h, rel, Some(q), arity, pos, vals, limit.saturating_sub(out.len())) {
                     Some(part) => out.extend(part),
-                    None => out.extend(self.rel_persp(h, rel, q)),
+                    None if limit == usize::MAX => out.extend(self.rel_persp(h, rel, q)),
+                    None => return None,
                 }
             }
             return Some(out);
@@ -1787,7 +1808,7 @@ impl Store {
         match &run.by_pat {
             None if run.canon.len() < MIN_INDEXED => return None,
             Some(bp) if !bp.contains_key(&mask) && bp.len() >= MAX_PATTERNS => return None,
-            Some(bp) if run.staged.is_empty() && bp.contains_key(&mask) => return Some(hits(&self.facts, &run.loose, &bp[&mask], vals)),
+            Some(bp) if run.staged.is_empty() && bp.contains_key(&mask) => return hits(&self.facts, &run.loose, &bp[&mask], vals, limit),
             _ => {}
         }
         let run = self.run_mut(rel, p);
@@ -1809,7 +1830,7 @@ impl Store {
             }
             by_val
         });
-        Some(hits(facts, &run.loose, by_val, vals))
+        hits(facts, &run.loose, by_val, vals, limit)
     }
 
     fn run(&self, rel: Sym, persp: Sym) -> Option<&KeyRun> {
@@ -3997,11 +4018,13 @@ fn run_in(idx: &mut Runs, rel: Sym, persp: Sym) -> &mut KeyRun {
     &mut idx.get_mut(&rel).unwrap().iter_mut().find(|(q, _)| *q == persp).unwrap().1
 }
 
-fn hits(facts: &Facts, loose: &[FactId], by_val: &PatIndex, vals: &[Term]) -> Vec<FactId> {
+fn hits(facts: &Facts, loose: &[FactId], by_val: &PatIndex, vals: &[Term], limit: usize) -> Option<Vec<FactId>> {
     let mut out = Vec::new();
-    by_val.get(facts, vals, &mut out);
+    if !by_val.get(facts, vals, &mut out, limit) {
+        return None;
+    }
     out.extend(loose.iter().copied().filter(|&k| facts.alive(k)));
-    out
+    (out.len() <= limit).then_some(out)
 }
 
 /// FxHash's step. Terms, symbols and fact ids are already numbers, so
