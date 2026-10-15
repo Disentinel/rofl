@@ -81,9 +81,11 @@ Declared as facts:
 | `encloses_s` | "encloses(scope R, declarator D)" |
 | `closer_s` | "is_outranked_for(scope R, declarator D)" |
 | `nearest_s` | "is_the_nearest_scope_of(scope R, declarator D)" |
-| `shadowed_by` | "is_shadowed_by(declarator Outer, declarator Inner, on name Name)" |
-| `shadowed_by_param` | "is_shadowed_by_the_function(declarator Outer, function F, on name Name)" |
-| `hidden_at` | "is_hidden_from(node E, declarator D)" |
+| `scope_declares` | "declares(scope S, name Name, in file File)" |
+| `scoped_name` | "is_declared_in_a_scope(name Name, in file File)" |
+| `name_cand` | "may_find_its_name_in(node E, name Name, in file File, scope S)" |
+| `name_outer` | "passes_over(node E, scope S)" |
+| `name_scope` | "finds_its_name_in(node E, name Name, in file File, scope S)" |
 | `tdz_cand` | "is_a_dead_zone_candidate_of(node E, declarator D)" |
 | `tdz_deferred` | "is_deferred_for(node E, declarator D)" |
 | `tdz_at` | "is_in_the_dead_zone_of(node E, declarator D)" |
@@ -117,7 +119,6 @@ Declared as facts:
 | `rest_binds` | "binds(declarator D, name Local:2, through the rest node R:1, in file File:3)" |
 | `param_of` | "takes(function F, name Name:2, at index I:1)" |
 | `param_default` | "defaults(function F, name Name, to node Init)" |
-| `param_hidden` | "hides(function F, name Name, at node U)" |
 | `param_use` | "uses(function F, name Name, at node U)" |
 | `elem_at` | "the_element(of node X, index I, is node E)" |
 | `iter_elem` | "has_an_element(node X, node E)" |

@@ -95,21 +95,20 @@ has_init[code](D)               :- ast_child[code](D, init, 0, _).
 scoped_binder[code](D, File)    :- bare_binder[code](D, _, File).
 
 -- A binder's region: the nearest block for `let`/`const`, the nearest function
--- for `var` (function-scoped, hoisted), none at the top of a file. Block
--- regions are what makes shadowing statable. `sees_binder` carries
--- `not hidden_at` on both arms so every consumer inherits shadowing. It is a
--- relation between a binder and the reads of ITS NAME: every consumer joins the
--- name, and a read of any other name in the region was a (node × binder)
--- product nothing read, 333 649 rows of the self notebook's 2 M join width.
+-- for `var` (function-scoped, hoisted), none at the top of a file. A name is
+-- resolved where it is READ: from the identifier outward through the scopes
+-- around it, nearest first, to the first that declares the name (section 3a).
+-- What it sees there is every binder of the name whose region that scope is,
+-- less those it reads before their line (the TDZ below); a name no scope
+-- declares sees the binders at the top of its file.
 binder_region[code](D, R)    :- lexical_binder[code](D), nearest_s[code](R, D).
 binder_region[code](D, R)    :- scoped_binder[code](D, _), not lexical_binder[code](D),
                                 nearest_v[flow](R, D).
 binder_at_top[code](D)       :- scoped_binder[code](D, _), not binder_region[code](D, _).
-sees_binder[code](E, D)      :- binds_name[code](D, Name, File), ident_in[code](E, Name, File),
-                                binder_region[code](D, R), ast_within[code](R, E),
-                                not hidden_at[code](E, D).
+sees_binder[code](E, D)      :- name_scope[code](E, Name, File, S), binder_region[code](D, S),
+                                binds_name[code](D, Name, File), not tdz_at[code](E, D).
 sees_binder[code](E, D)      :- binder_at_top[code](D), binds_name[code](D, Name, File),
-                                ident_in[code](E, Name, File), not hidden_at[code](E, D).
+                                ident_in[code](E, Name, File), not name_cand[code](E, _, _, _).
 
 -- Scope kinds are only those a declarator can be nearest to AND a fixture
 -- reaches. `catch_clause`/`switch_case` never are (grammar); a for-of/for-in
@@ -149,39 +148,24 @@ binds_name[code](D, Name, File) :- destructures[code](D, Name, _, File).
 binds_name[code](D, Name, File) :- destructures_at[code](D, Name, _, File).
 binds_name[code](D, Name, File) :- rest_binds[code](D, _, Name, File).
 
--- Shadowing is containment between REGIONS, not distance in the source: the
--- outer binder's region strictly contains the inner's, or the outer has no
--- region at all (top of file). `RO != RI` and `Outer != Inner` follow from
--- `ast_within` being irreflexive and are kept explicit.
-shadowed_by[code](Outer, Inner, Name) :- binds_name[code](Outer, Name, File),
-                                         binds_name[code](Inner, Name, File),
-                                         Outer != Inner,
-                                         binder_region[code](Outer, RO),
-                                         binder_region[code](Inner, RI),
-                                         RO != RI, ast_within[code](RO, RI).
-shadowed_by[code](Outer, Inner, Name) :- binds_name[code](Outer, Name, File),
-                                         binds_name[code](Inner, Name, File),
-                                         Outer != Inner, binder_at_top[code](Outer),
-                                         binder_region[code](Inner, _).
+-- 3a. THE LOOKUP. A scope declares a name by a binder whose region it is, or
+-- by a parameter of the function it is. An identifier's name is found in the
+-- nearest scope around it that declares the name: its ancestors are walked
+-- up the tree (`ast_within` with the identifier bound is the parent chain, no
+-- rows), each asked whether it declares the name, and of the scopes that do,
+-- an outer one is passed over. Matching by name joined every reader of a name
+-- to every binder of it in the file, `e` a few thousand times over
+-- (f_all_of_vscode_answers_in_pieces_once_names_are_looked_up_in_their_file).
+-- A name nothing in its file declares in a scope is not looked up: it is at the top.
+scope_declares[code](S, Name, File) :- binder_region[code](D, S), binds_name[code](D, Name, File).
+scope_declares[code](F, Name, File) :- param_bound[flow](F, Name), ast_node[code](F, _, File, _).
+scoped_name[code](Name, File) :- scope_declares[code](_, Name, File).
 
--- A parameter shadows too, and no `binds_name` row exists for it.
-shadowed_by_param[code](Outer, F, Name) :- binds_name[code](Outer, Name, _),
-                                           binder_region[code](Outer, RO),
-                                           param_bound[flow](F, Name),
-                                           ast_within[code](RO, F).
-shadowed_by_param[code](Outer, F, Name) :- binds_name[code](Outer, Name, File),
-                                           binder_at_top[code](Outer),
-                                           param_bound[flow](F, Name),
-                                           ast_file[code](Root, File), ast_within[code](Root, F).
-
--- The inner binder's whole REGION is the extent of the hiding, including the
--- lines above its declaration — the temporal dead zone stated as scope.
--- `ident_in(E, Name, _)` is a cost narrowing: every consumer joins the name.
-hidden_at[code](E, Outer) :- shadowed_by[code](Outer, Inner, Name),
-                             binder_region[code](Inner, RI),
-                             ast_within[code](RI, E), ident_in[code](E, Name, _).
-hidden_at[code](E, Outer) :- shadowed_by_param[code](Outer, F, Name),
-                             ast_within[code](F, E), ident_in[code](E, Name, _).
+name_cand[code](E, Name, File, S)  :- ident_in[code](E, Name, File), scoped_name[code](Name, File),
+                                      ast_within[code](S, E), scope_declares[code](S, Name, File).
+name_outer[code](E, S)             :- name_cand[code](E, Name, File, S), name_cand[code](E, Name, File, S2),
+                                      ast_within[code](S, S2).
+name_scope[code](E, Name, File, S) :- name_cand[code](E, Name, File, S), not name_outer[code](E, S).
 
 -- The TDZ, the one place the LINE matters: a read of a `let`/`const` name
 -- above its declaration in the same region throws, so the model says nothing
@@ -195,7 +179,6 @@ tdz_cand[code](E, D)     :- lexical_binder[code](D), binder_region[code](D, R),
 tdz_deferred[code](E, D) :- tdz_cand[code](E, D), binder_region[code](D, R),
                             nearest_v[flow](G, E), ast_within[code](R, G).
 tdz_at[code](E, D)       :- tdz_cand[code](E, D), not tdz_deferred[code](E, D).
-hidden_at[code](E, D)    :- tdz_at[code](E, D).
 
 may_be_lit[flow](E, V)  :- may_be_lit[flow](Init, V), binder[code](D, Name, Init, File),
                            ident_in[code](E, Name, File), sees_binder[code](E, D).
@@ -541,29 +524,10 @@ arg_at[flow](C, I, E)      :- spread_arg[code](C, J), not after_spread[code](C, 
 param_of[flow](F, I, Name) :- fn_node[code](F), ast_child[code](F, params, I, P),
                               ast_name[code](P, Name).
 
--- Where a parameter is read: every identifier of its name under F, minus two
--- ways of hiding it — a declarator whose region is STRICTLY inside F
--- (`function f(x) { var x }` is the same binding: region F itself, not hidden)
--- and a nested function with its own parameter of the name. `ast_within(F, G)`
--- before `fn_node(G)`: the other order read all of `fn_node` once per
--- parameter, 58.7 % of a world. The nested function is found by its
--- parameter's name before it is looked for under F: every descendant of F
--- was read once per parameter, 16.3 s of the self notebook against 5.1 s.
--- A name is looked up in its file: `e` and `options` are parameters and
--- identifiers thousands of times over a corpus, and the planner, which counts
--- an average name, read all of them per parameter (55 s of a piece of vscode).
-param_bound_in[flow](F, Name, File) :- param_bound[flow](F, Name), ast_node[code](F, _, File, _).
-param_hidden[flow](F, Name, U) :- binder_region[code](D, R), binds_name[code](D, Name, File),
-                                  ast_within[code](F, R), param_bound_in[flow](F, Name, File),
-                                  ast_within[code](R, U), ident_in[code](U, Name, File).
-param_hidden[flow](F, Name, U) :- param_bound_in[flow](G, Name, File),
-                                  ast_within[code](F, G), fn_node[code](F),
-                                  param_bound_in[flow](F, Name, File),
-                                  ast_within[code](G, U), ident_in[code](U, Name, File).
-param_use[flow](F, Name, U) :- param_bound[flow](F, Name),
-                               ast_within[code](F, U),
-                               ident[code](U, Name),
-                               not param_hidden[flow](F, Name, U).
+-- Where a parameter is read: every identifier whose lookup stops at the
+-- function (section 3a). A declarator whose region is the function itself
+-- (`function f(x) { var x }`) is the same binding, read there too.
+param_use[flow](F, Name, U) :- name_scope[code](U, Name, _, F), param_bound[flow](F, Name).
 
 -- The caller publishes what it hands the callee (rules/js-surface.rofl), the callee reads it.
 may_be_lit[flow](U, V)  :- sx_arg_lit[surface](F, I, V), param_of[flow](F, I, Name), param_use[flow](F, Name, U).

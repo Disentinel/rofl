@@ -3,13 +3,13 @@
 | file | clauses | heads | phrased | positional | absorbed guards | links | either | tables | not defined here | refused |
 |---|---|---|---|---|---|---|---|---|---|---|
 | [phrases](phrases.rofl.md) | 10 | 1 | 0 | 0 | 0 | 0 | 0 | 1 | 0 | 0 |
-| [js-phrases](js-phrases.rofl.md) | 1031 | 3 | 0 | 0 | 0 | 0 | 0 | 32 | 0 | 0 |
+| [js-phrases](js-phrases.rofl.md) | 1032 | 3 | 0 | 0 | 0 | 0 | 0 | 32 | 0 | 0 |
 | [js-ambient](js-ambient.rofl.md) | 69 | 42 | 39 | 0 | 1 | 90 | 5 | 1 | 13 | 0 |
 | [js-attrs](js-attrs.rofl.md) | 51 | 39 | 37 | 2 | 0 | 105 | 4 | 0 | 6 | 0 |
 | [js-callgraph](js-callgraph.rofl.md) | 221 | 93 | 83 | 1 | 35 | 251 | 23 | 4 | 7 | 0 |
 | [js-concat](js-concat.rofl.md) | 209 | 71 | 2 | 58 | 18 | 336 | 24 | 7 | 2 | 0 |
 | [js-controlflow](js-controlflow.rofl.md) | 236 | 92 | 74 | 4 | 42 | 209 | 15 | 6 | 3 | 0 |
-| [js-dataflow](js-dataflow.rofl.md) | 433 | 182 | 129 | 35 | 157 | 630 | 40 | 4 | 4 | 0 |
+| [js-dataflow](js-dataflow.rofl.md) | 429 | 182 | 130 | 34 | 156 | 612 | 37 | 4 | 3 | 0 |
 | [js-effects](js-effects.rofl.md) | 211 | 126 | 116 | 2 | 21 | 306 | 19 | 2 | 7 | 0 |
 | [js-env-api](js-env-api.rofl.md) | 5 | 5 | 5 | 0 | 0 | 6 | 0 | 0 | 4 | 0 |
 | [js-env](js-env.rofl.md) | 45 | 34 | 33 | 0 | 0 | 47 | 5 | 1 | 18 | 0 |
@@ -23,7 +23,7 @@
 | [js-surface](js-surface.rofl.md) | 102 | 80 | 22 | 57 | 6 | 152 | 7 | 1 | 1 | 0 |
 | [js-vocabulary](js-vocabulary.rofl.md) | 12 | 10 | 10 | 0 | 0 | 17 | 2 | 0 | 2 | 0 |
 
-159 heads without a phrase across these files.
+158 heads without a phrase across these files.
 
 ## Proposed renames
 
@@ -483,7 +483,6 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `has_value_binding` | `binds_a_value` |
 | `has_verdict` | `has_a_verdict` |
 | `has_via` | `has_a_mechanism` |
-| `hidden_at` | `is_hidden_from` |
 | `hidden_call_accounted` | `has_an_accounted_hidden_call` |
 | `hidden_call_builtin` | `hides_a_builtin_call_on` |
 | `hidden_call_fires` | `fires_a_hidden_call` |
@@ -649,6 +648,9 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `module_type` | `imports_the_module_type` |
 | `multi_shape` | `has_two_shapes` |
 | `name_bound_in` | `binds_the_name` |
+| `name_cand` | `may_find_its_name_in` |
+| `name_outer` | `passes_over` |
+| `name_scope` | `finds_its_name_in` |
 | `nearest_fn` | `is_the_nearest_function_of` |
 | `nearest_s` | `is_the_nearest_scope_of` |
 | `nearest_v` | `is_nearest_to` |
@@ -684,7 +686,6 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `pack_fact` | `asserts` |
 | `pack_speaks` | `speaks_of_the_kind` |
 | `param_default` | `defaults` |
-| `param_hidden` | `hides` |
 | `param_of` | `takes` |
 | `param_use` | `uses` |
 | `passes_function` | `passes_the_function` |
@@ -772,11 +773,11 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `runtime_vnum` | `the_version_number` |
 | `scanned` | `has_a_scanned_corpus` |
 | `scanned_file` | `is_scanned` |
+| `scope_declares` | `declares` |
 | `scoped_binder` | `is_scoped` |
+| `scoped_name` | `is_declared_in_a_scope` |
 | `sees_binder` | `sees` |
 | `self_referential_module` | `is_self_referential` |
-| `shadowed_by` | `is_shadowed_by` |
-| `shadowed_by_param` | `is_shadowed_by_the_function` |
 | `shape` | `has_the_shape` |
 | `shape_bad_reason` | `has_a_bad_reason` |
 | `shape_conflict` | `has_two_site_shapes` |

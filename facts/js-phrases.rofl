@@ -155,9 +155,11 @@ sig(lexical_decl, "is_let_or_const(declaration V)").
 sig(encloses_s, "encloses(scope R, declarator D)").
 sig(closer_s, "is_outranked_for(scope R, declarator D)").
 sig(nearest_s, "is_the_nearest_scope_of(scope R, declarator D)").
-sig(shadowed_by, "is_shadowed_by(declarator Outer, declarator Inner, on name Name)").
-sig(shadowed_by_param, "is_shadowed_by_the_function(declarator Outer, function F, on name Name)").
-sig(hidden_at, "is_hidden_from(node E, declarator D)").
+sig(scope_declares, "declares(scope S, name Name, in file File)").
+sig(scoped_name, "is_declared_in_a_scope(name Name, in file File)").
+sig(name_cand, "may_find_its_name_in(node E, name Name, in file File, scope S)").
+sig(name_outer, "passes_over(node E, scope S)").
+sig(name_scope, "finds_its_name_in(node E, name Name, in file File, scope S)").
 sig(tdz_cand, "is_a_dead_zone_candidate_of(node E, declarator D)").
 sig(tdz_deferred, "is_deferred_for(node E, declarator D)").
 sig(tdz_at, "is_in_the_dead_zone_of(node E, declarator D)").
@@ -191,7 +193,6 @@ sig(rest_in_pattern, "holds_a_rest(declarator D, node R, in file File)").
 sig(rest_binds, "binds(declarator D, name Local:2, through the rest node R:1, in file File:3)").
 sig(param_of, "takes(function F, name Name:2, at index I:1)").
 sig(param_default, "defaults(function F, name Name, to node Init)").
-sig(param_hidden, "hides(function F, name Name, at node U)").
 sig(param_use, "uses(function F, name Name, at node U)").
 sig(elem_at, "the_element(of node X, index I, is node E)").
 sig(iter_elem, "has_an_element(node X, node E)").

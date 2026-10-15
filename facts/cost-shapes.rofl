@@ -46,11 +46,9 @@ shape_ok(name_bound_in, twin_bodies, "small_set: the same body keyed by file, 4 
 
 shape_ok(call_in_try, closure_wide_end, "tried_no_net_gain: entering from call_site moved nothing (mcp default 33 -> 62 ms)").
 shape_ok(for_of_use, closure_wide_end, "tried_no_net_gain: ident first took the rule from 653 to 87 ms (mcp default) and put 664 ms on guarded, the next reader of the ast_within index").
-shape_ok(hidden_at, closure_wide_end, "tried_no_net_gain: ident_in first changed nothing measurable, 16 ms sealed").
-shape_ok(param_hidden, closure_wide_end, "tried_no_net_gain: the order is the measured one, its comment names the 16.3 s against 5.1 s").
-shape_ok(param_use, closure_wide_end, "tried_no_net_gain: ident first raised it from 129 to 213 ms (self+mcp sealed), probes 172k -> 209k").
 
 shape_ok(dec_up, scoped_descent, "small_set: a site inside a decorator, 0 ms; the first version led with site(C) and cost 21 firings").
+shape_ok(name_outer, not_closer, "small_set: name_cand holds 1.01 rows an identifier over 20 vscode files (5229 for 5182), the pairs are the one or two scopes of one identifier, 47 rows").
 shape_ok(tdz_deferred, scoped_descent, "small_set: the descendant set is tdz_cand (a read above its declaration), nearest_v asked once per candidate, 1 ms").
 
 shape_ok(calls, twin_bodies, "alias_of_a_derived: eff_edge_closed reads the same edge in the flow book; calls has the arms eff_edge_closed lacks, 12 ms sealed / 38 default (all arms)").
