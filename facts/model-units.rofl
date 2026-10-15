@@ -37,7 +37,7 @@ unit_concludes("facts/js-modules.rofl", layer).
 unit_concludes("facts/js-modules.rofl", node_kind).
 unit_concludes("facts/js-modules.rofl", kind_absent_ok).
 unit_concludes("facts/js-modules.rofl", host_emitter).
-unit_concludes("facts/js-modules.rofl", node_builtin_bare).
+unit_concludes("rules/js-modules.rofl", node_builtin_bare).
 unit_concludes("facts/js-modules.rofl", shape_verdict).
 unit_concludes("facts/js-modules.rofl", axis_applies).
 unit_concludes("facts/js-modules.rofl", shape_of).
@@ -126,10 +126,6 @@ unit_concludes("rules/js-structure.rofl", meta_unformed).
 unit_concludes("rules/js-structure.rofl", meta_form_conflict).
 unit_concludes("rules/js-dataflow.rofl", ident_in).
 unit_concludes("rules/js-dataflow.rofl", ident).
-unit_concludes("rules/js-dataflow.rofl", decl_binds).
-unit_concludes("rules/js-dataflow.rofl", decl_reads).
-unit_concludes("rules/js-dataflow.rofl", var_flow).
-unit_concludes("rules/js-dataflow.rofl", var_reaches).
 unit_concludes("rules/js-dataflow.rofl", edb).
 unit_concludes("rules/js-dataflow.rofl", literal_kind).
 unit_concludes("rules/js-dataflow.rofl", may_be_lit).
@@ -516,7 +512,6 @@ unit_concludes("rules/js-controlflow.rofl", hidden_call_unsourced).
 unit_concludes("rules/js-controlflow.rofl", hidden_call_accounted).
 unit_concludes("rules/js-controlflow.rofl", hidden_call_unaccounted).
 unit_concludes("rules/js-controlflow.rofl", hidden_call_off_table).
-unit_concludes("rules/js-controlflow.rofl", try_of).
 unit_concludes("rules/js-controlflow.rofl", in_try_block).
 unit_concludes("rules/js-controlflow.rofl", catches_via).
 unit_concludes("rules/js-controlflow.rofl", try_catches).
@@ -748,8 +743,6 @@ unit_concludes("rules/js-host.rofl", host_global_uneffected).
 unit_concludes("rules/js-host.rofl", runtime_unversioned).
 unit_concludes("rules/js-host.rofl", runtime_separates).
 unit_concludes("rules/js-host.rofl", runtime_pair_indistinct).
-unit_concludes("rules/js-host.rofl", bare_listed).
-unit_concludes("rules/js-host.rofl", bare_builtin_unlisted).
 unit_concludes("rules/js-host.rofl", runtime_family_undeclared).
 unit_concludes("rules/js-host.rofl", runtime_cross_family).
 unit_concludes("rules/js-host.rofl", host_family_mismatch).

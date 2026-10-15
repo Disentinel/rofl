@@ -65,14 +65,10 @@ only_prose[dep](X) :- depended_on[dep](X), not code_needs[dep](X).
 -- =========================================================================
 -- WHAT THE REFEREE RUNS. A gate CI does not run runs when somebody remembers
 -- (scripts/witness_check.ts exited non-zero on a stale witness since the day
--- it was written and nothing ran it). The glob is seeded into the CLOSURE, not the
--- verdict, so a helper a test imports is reached too; whether the referee
--- runs the suite at all is a proposition, and `ci_suite_runs` is the nullary
--- head `wants_nullary[audit]` in rules/nullary.rofl named off the reflection.
+-- it was written and nothing ran it). Only code edges carry it: a script a
+-- ledger note or a doc names is mentioned, not run.
 ci_runs[dep](X) :- edge[dep](W, X, ci_step), artifact[dep](W, yml).
-ci_runs[dep](X) :- ci_runs[dep](Y), edge[dep](Y, X, _).
-ci_suite_runs[dep]() :- edge[dep](W, "npm:test", ci_step), artifact[dep](W, yml).
-ci_runs[dep](T) :- test_file[dep](T), ci_suite_runs[dep]().
+ci_runs[dep](X) :- ci_runs[dep](Y), code_edge[dep](Y, X).
 
 script[dep](S) :- artifact[dep](S, script).
 unrun_gate[dep](S) :- script[dep](S), not ci_runs[dep](S).
@@ -81,17 +77,7 @@ unrun_gate[dep](S) :- script[dep](S), not ci_runs[dep](S).
 -- GENERATED PACKS. A pack with a generator and no regeneration gate is the
 -- defect the ledger records twice; here it is derivable.
 generated[dep](P) :- edge[dep](_, P, generates).
-regenerated_by_test[dep](P) :- edge[dep](T, P, reads_path), test_file[dep](T).
-
--- `npm test` runs `test/*.test.ts`, a glob no scanner expands, so a test
--- file is identified by where it lives — the one place this model
--- substitutes a convention for a measurement. The directory is NOT the glob:
--- test/cleanliness.check.ts is deliberately held out of CI. And the
--- destructor must produce into a variable: `str_pre(T, "/") = "test"` is a
--- relational literal over a relation nothing populates, and `test_file` was
--- silently empty (the same defect as in rules/cleanliness.rofl).
-test_file[dep](T) :- artifact[dep](T, ts), D is str_pre(T, "/"), D = "test",
-                     N is str_segs(T, ".test.ts"), N = 2.
+regenerated_by_test[dep](P) :- edge[dep](T, P, reads_path), ci_runs[dep](T).
 
 -- a generated pack no test reads back is one nothing can find stale.
 -- No counts pinned here: the pack grows with the tree

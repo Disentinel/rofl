@@ -102,12 +102,10 @@ g_cached(G, Rel, B)  :- neg_rel_g(Rel, B, G), cold_cached(Rel, B).
 g_hot(G, Rel, B)     :- neg_rel_g(Rel, B, G), must_be_hot(Rel, B).
 
 -- =========================================================================
--- THE JOIN SIDE. A cross product is a property of the WRITTEN order and the
--- engine will not rescue it: `planBody` moves only negations, because a
--- positive premise's position is a choice the author already has (examples/yak
--- fragment 09 means two different things depending on it). The signature: a
--- positive premise, not the first, naming a variable and sharing none with
--- anything bound before it.
+-- THE JOIN SIDE. The engine orders positive premises itself
+-- (rust/rofl/src/engine/joinplan.rs), so a cross product is not a matter of
+-- the written order: a positive premise naming a variable that no chain of
+-- premises and builtins connects to the first premise's (scanners/rule_shape.ts).
 cross_product(S)   :- pos_site(S, _, _, _, _), pos_nvars(S, N), N > 0,
                       not pos_first(S), not pos_shares(S).
 

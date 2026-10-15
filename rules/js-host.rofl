@@ -254,13 +254,6 @@ runtime_pair_indistinct[audit](A, B) :- runtime_version(A, F, _), runtime_versio
                                         not runtime_separates[audit](A, B),
                                         not runtime_separates[audit](B, A).
 
--- a builtin no bare import can reach: `explicit_shape` knows the `node:`
--- scheme for all 57 and the bare spelling only through `node_builtin_bare`,
--- so `"fs/promises"` classifies as a third-party package. A modules-layer
--- gap this pack can see and must not fix.
-bare_listed(Spec) :- node_builtin_bare(_, Spec).
-bare_builtin_unlisted[audit](Spec) :- host_module(node, Spec), not bare_listed(Spec).
-
 -- an inclusion ACROSS families claims one runtime is a later edition of
 -- another; the order is not total across families
 runtime_family_undeclared[audit](R, F) :- runtime_version(R, F, _), not runtime(F).

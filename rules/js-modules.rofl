@@ -16,8 +16,8 @@
 -- from outside the AST (facts/js-modules.rofl): str_seg(S, K, Seg) cut on "/",
 -- str_segs(S, N), str_char0(S, C), str_scheme(S, Scheme) before the first
 -- ":"; fs_file, fs_dir, fs_parent, fs_file_in(Dir, Name, Path),
--- fs_dir_in(Dir, Name, Child), fs_dir_of(File, Dir); node_builtin_bare(Bare,
--- Canonical); shape_verdict(Shape, Reason); unknown_because.
+-- fs_dir_in(Dir, Name, Child), fs_dir_of(File, Dir); node_prefix_only(Canonical);
+-- shape_verdict(Shape, Reason); unknown_because.
 edb(str_seg).           -- str_seg[code](S, K, Segment)   S cut on "/", 0-based
 edb(str_segs).
 edb(str_char0).
@@ -28,7 +28,8 @@ edb(fs_parent).
 edb(fs_file_in).
 edb(fs_dir_in).
 edb(fs_dir_of).
-edb(node_builtin_bare). -- node_builtin_bare(Bare, Canonical)  "fs" -> "node:fs"
+edb(node_prefix_only).  -- node_prefix_only(Canonical)  a builtin node loads under `node:` only
+edb(host_module).
 edb(shape_verdict).
 edb(unknown_because).
 
@@ -46,11 +47,11 @@ reexport_site[code](E, reexport_named) :- ast_node[code](E, export_named_declara
 reexport_site[code](E, reexport_all)   :- ast_node[code](E, export_all_declaration, _, _),
                                           ast_child[code](E, source, 0, _).
 
--- `require('./p')` is CommonJS's import: an ordinary call whose callee is the
--- name `require` and whose first argument is the specifier. Scope-blind, as the
--- call graph is: a local `require` would count too. `require.resolve(s)` names
--- a file and loads nothing, and is not a site.
-require_site[code](C) :- ast_name[code](N, "require"), ast_node[code](N, identifier, _, _),
+-- `require('./p')` is CommonJS's import: a call whose callee is the free
+-- global `require` and whose first argument is the specifier; a `require` the
+-- file declares itself is not node's. `require.resolve(s)` names a file and
+-- loads nothing, and is not a site.
+require_site[code](C) :- free_global[code](N, "require", _),
                          ast_child[code](C, callee, 0, N), ast_node[code](C, call_expression, _, _),
                          ast_child[code](C, arguments, 0, _).
 
@@ -86,15 +87,18 @@ site_source_computed[code](I) :- site_source_node[code](I, _),
 -- 2. SOURCE SHAPE — total over literal sources, disjoint, keyed on the STRING.
 -- `./x` and `../x`: the first character discriminates. `#foo` is a package
 -- subpath (needs package.json `imports`, not read here). `node:` is a builtin
--- by scheme, whatever follows; the bare form is a lookup keyed on the whole
--- specifier, so `fs/promises` falls to `bare` and the oracle reports it rather
--- than a rule guessing. `bare` is the complement: the classification has no hole.
+-- by scheme, whatever follows; the bare form is a builtin of the host surface
+-- spelled without its scheme, `fs/promises` included. `bare` is the complement: the classification has no hole.
 explicit_shape[code](S, relative) :- str_char0[code](S, ".").
 
 explicit_shape[code](S, subpath)  :- str_char0[code](S, "#").
 
 explicit_shape[code](S, node_builtin) :- str_scheme[code](S, "node").
 explicit_shape[code](S, node_builtin) :- node_builtin_bare(S, _).
+
+-- a builtin of the host surface is reachable bare unless node says otherwise
+node_builtin_bare(B, C) :- host_module(node, C), not node_prefix_only(C),
+                           L is str_len(C), N is L - 5, B is str_sub(C, 5, N).
 
 has_explicit_shape[code](S) :- explicit_shape[code](S, _).
 
@@ -151,11 +155,13 @@ dangling_import[code](I, S) :- site_shape[code](I, relative), site_source[code](
 -- `./config` names `config.ts` or `config.js`, `./handlers` names
 -- `handlers/index.ts`. `resolved_import` stays node's alone, because
 -- rules/js-resolve.rofl holds it to node's own resolver.
-ts_ext("js", "ts").  ts_ext("js", "tsx").  ts_ext("jsx", "tsx").  ts_ext("mjs", "mts").  ts_ext("cjs", "cts").
+-- TypeScript tries the candidates in this order and takes the first file that
+-- exists: `./utils` beside `utils.ts` and `utils/index.ts` is `utils.ts` alone.
+ts_ext("js", "ts", 0).  ts_ext("js", "tsx", 1).  ts_ext("jsx", "tsx", 0).  ts_ext("mjs", "mts", 0).  ts_ext("cjs", "cts", 0).
 
-probe_ext("ts").  probe_ext("tsx").  probe_ext("js").  probe_ext("jsx").  probe_ext("mjs").  probe_ext("cjs").  probe_ext("json").
+probe_ext("ts", 10).  probe_ext("tsx", 11).  probe_ext("js", 12).  probe_ext("jsx", 13).  probe_ext("mjs", 14).  probe_ext("cjs", 15).  probe_ext("json", 16).
 
-index_file("index.ts").  index_file("index.tsx").  index_file("index.js").  index_file("index.jsx").
+index_file("index.ts", 20).  index_file("index.tsx", 21).  index_file("index.js", 22).  index_file("index.jsx", 23).
 
 last_ext[code](Name, E, L) :- fs_file_in[code](_, Name, _),
                               N is str_segs(Name, "."), N > 1, K is N - 1,
@@ -164,21 +170,24 @@ last_ext[code](Name, E, L) :- fs_file_in[code](_, Name, _),
 site_last_seg[code](I, D, Seg) :- walk[code](I, K, D), site_source[code](I, S),
                                   str_seg[code](S, K, Seg), N is K + 1, str_segs[code](S, N).
 
-ts_resolved[code](I, T) :- site_last_seg[code](I, D, Seg), fs_file_in[code](D, Name, T),
+ts_candidate[code](I, T, R) :- site_last_seg[code](I, D, Seg), fs_file_in[code](D, Name, T),
                            last_ext[code](Name, En, Ln),
                            N is str_segs(Seg, "."), N > 1, K is N - 1,
-                           Es is str_seg(Seg, ".", K), ts_ext(Es, En),
+                           Es is str_seg(Seg, ".", K), ts_ext(Es, En, R),
                            Ls is str_len(Seg), Les is str_len(Es), Stem is Ls - Les - 1,
                            Lname is str_len(Name), Stem2 is Lname - Ln - 1, Stem = Stem2,
                            P is str_sub(Seg, 0, Stem), P2 is str_sub(Name, 0, Stem), P = P2.
 
-ts_resolved[code](I, T) :- site_last_seg[code](I, D, Seg), fs_file_in[code](D, Name, T),
-                           last_ext[code](Name, E, L), probe_ext(E),
+ts_candidate[code](I, T, R) :- site_last_seg[code](I, D, Seg), fs_file_in[code](D, Name, T),
+                           last_ext[code](Name, E, L), probe_ext(E, R),
                            Ls is str_len(Seg), Want is Ls + L + 1, Have is str_len(Name), Want = Have,
                            P is str_sub(Name, 0, Ls), P = Seg.
 
-ts_resolved[code](I, T) :- walk[code](I, N, D), site_source[code](I, S), str_segs[code](S, N),
-                           index_file(Name), fs_file_in[code](D, Name, T).
+ts_candidate[code](I, T, R) :- walk[code](I, N, D), site_source[code](I, S), str_segs[code](S, N),
+                           index_file(Name, R), fs_file_in[code](D, Name, T).
+
+ts_passed_over[code](I, R) :- ts_candidate[code](I, _, R), ts_candidate[code](I, _, R2), R2 < R.
+ts_resolved[code](I, T)    :- ts_candidate[code](I, T, R), not ts_passed_over[code](I, R).
 
 module_target[code](I, T) :- resolved_import[code](I, T).
 module_target[code](I, T) :- ts_resolved[code](I, T), not resolved_import[code](I, _).
@@ -327,9 +336,24 @@ flows[code](F, T) :- import_site[code](I, dynamic_import),
 flows[code](F, T) :- require_site[code](I),
                      module_target[code](I, T), site_file[code](I, F).
 
-evaluates[code](F, T) :- flows[code](F, T).
-evaluates[code](F, T) :- no_specifiers[code](I), not decl_type_only[code](I),
-                         module_target[code](I, T), site_file[code](I, F).
+-- A SITE RUNS ITS TARGET unless TypeScript erases it or it imports data.
+-- Erasure needs both markers: `import type {X}` marks the declaration,
+-- `import {type X}` the specifier; a site ALL of whose specifiers are erased
+-- evaluates nothing and one with NO specifier evaluates everything. A module
+-- imported as data (section 9) is read, not run.
+type_only_site[code](I)  :- module_site[code](I, _), ast_attr[code](I, import_kind, "type").
+type_only_site[code](I)  :- module_site[code](I, _), ast_attr[code](I, export_kind, "type").
+site_has_spec[code](I)   :- module_site[code](I, _), ast_child[code](I, specifiers, _, _).
+site_value_spec[code](I) :- module_site[code](I, _), ast_child[code](I, specifiers, _, Sp),
+                            not ast_attr[code](Sp, import_kind, "type"),
+                            not ast_attr[code](Sp, export_kind, "type").
+erased_site[code](I)     :- type_only_site[code](I).
+erased_site[code](I)     :- site_has_spec[code](I), not site_value_spec[code](I).
+runs_site[code](I)       :- module_site[code](I, _), not erased_site[code](I), not module_is_data[code](I, _).
+
+evaluates_at[code](I, T)       :- runs_site[code](I), module_target[code](I, T).
+evaluates_unresolved[code](I)  :- runs_site[code](I), not module_target[code](I, _).
+evaluates[code](F, T)          :- evaluates_at[code](I, T), site_file[code](I, F).
 
 -- =========================================================================
 -- 5b. THE RE-EXPORT EDGE, through a different set of markers: the export-all

@@ -136,12 +136,6 @@ kind_set(call_kind).
 -- variants need the fixed holes.
 sig(ident, "reads(identifier N, name Name)").
 sig(ident_in, "reads(identifier E, name Name, in file File)").
-sig(decl_binds, "binds(declarator D, name Name)").
-sig(decl_reads, "is_initialised_from(declarator D, name Name)").
--- name to name through `const To = From` only, the first cell of the value layer: most code has none,
--- and a value's path is `points_to` and `may_be_the_literal`; the words say so, so nobody asks these for a dataflow
-sig(var_flow, "is_copied_by_a_declaration_into(name From, name To)").
-sig(var_reaches, "is_copied_by_declarations_into(name From, name To)").
 sig(may_be_lit, "may_be_the_literal(node E, text V)").
 sig(may_be_node, "points_to(node E, node N)").
 sig(interpolated, "is_interpolated(template T)").
@@ -240,7 +234,6 @@ sig(obj_method_of, "has_the_object_method(object literal O, method M)").
 sig(decorated_by, "is_replaced_by_its_decorator_with(node Owner, node N)").
 sig(decorated_member, "has_the_decorated_member(class CD, key Key, at method M, replaced with node N)").
 sig(corpus_file, "is_in_the_corpus(file File)").
-sig(module_source, "sources(node N, text Src, in file File)").
 sig(import_outside_corpus, "is_outside_the_corpus(text Src, from file File)").
 sig(imports_name, "imports(name Local, name Name, at site D, in file File)").
 sig(imports_ns, "imports_the_namespace(name Local, at site D, in file File)").
@@ -260,6 +253,7 @@ sig(catch_of, "the_catch(of try T, is catch H)").
 sig(catch_param, "the_param(of catch H, is node P)").
 sig(try_block, "the_block(of try T, is node B)").
 sig(thrown_in, "throws(try T, node V)").
+sig(in_a_fn, "is_inside_a_function(node X)").
 sig(call_in_try, "calls(try T)").
 sig(catch_from_call, "catches_from_a_call(node P)").
 sig(catch_from_host, "catches_from_the_host(node P)").
@@ -571,6 +565,7 @@ kind_noun(export_kind, "export declaration").
 kind_set(short_circuit_kind).
 kind_noun(short_circuit_kind, "short circuit").
 sig(guard_arm, "guards_the_arm(node P, node X)").
+sig(short_circuit_assign, "short_circuits(operator Op)").
 sig(field_init, "has_the_field_initialiser(node P, node V)").
 sig(guarded, "is_guarded(node X)").
 sig(after_abrupt, "follows_an_abrupt_completion(node S)").
@@ -590,9 +585,14 @@ sig(completion_unaccounted, "has_an_unaccounted_completion(kind K)").
 sig(has_return, "has_a_return(function F)").
 sig(top_throw, "throws_at_the_top(function F)").
 sig(always_throws, "always_throws(function F)").
+sig(deferred_body, "runs_its_body_later(function F)").
+sig(async_body, "is_async(function F)").
+sig(awaited_call, "awaits_the_call(await A, call C)").
 sig(throwing_call, "is_a_throwing_call(call C)").
 sig(accessor_of, "the_accessor(of node Obj, at key Key, is node M)").
 sig(accessor_read, "reads_through_the_accessor(node N, node M)").
+sig(written_member, "is_written(member N)").
+sig(only_written, "is_only_written(member N)").
 sig(pattern_source, "the_pattern_source(of node P, is node Init)").
 sig(pattern_accessor, "destructures_through_the_accessor(object pattern P, node M)").
 sig(spread_iterated, "is_iterated(spread S)").
@@ -611,7 +611,6 @@ sig(hidden_call_unsourced, "has_an_unsourced_hidden_call(node N, of kind K)").
 sig(hidden_call_accounted, "has_an_accounted_hidden_call(node N)").
 sig(hidden_call_unaccounted, "has_an_unaccounted_hidden_call(node N)").
 sig(hidden_call_off_table, "hides_a_call_off_the_table(kind K, by mechanism M)").
-sig(try_of, "lies_in(try TS, function F)").
 sig(in_try_block, "tries(try TS, node N)").
 sig(try_catches, "has_a_handler(node TS)").
 sig(caught_here, "is_caught_here(node N)").
@@ -717,12 +716,13 @@ sig(eff_conv_untraced, "coerces_the_untraced(node N, node X)").
 sig(eff_conv_accounted, "accounts_for_coercing(node N, node X)").
 sig(eff_conv_unaccounted, "coerces_without_an_account(node N, node X)").
 sig(eff_op_off_kind, "inspects_off_its_kind(node N, kind K)").
-sig(eff_mod_src, "imports_the_source(node N, text Src, in file F)").
-sig(eff_type_only, "is_type_only(node I)").
-sig(eff_has_spec, "has_specifiers(node I)").
-sig(eff_value_spec, "has_a_value_specifier(node I)").
-sig(eff_erased, "is_erased(node I)").
-sig(eff_evaluates_at, "evaluates(node I, file T)").
+sig(type_only_site, "is_type_only(site I)").
+sig(site_has_spec, "has_specifiers(site I)").
+sig(site_value_spec, "has_a_value_specifier(site I)").
+sig(erased_site, "is_erased(site I)").
+sig(runs_site, "runs_its_target(site I)").
+sig(evaluates_at, "evaluates(site I, file T)").
+sig(evaluates_unresolved, "evaluates_a_module_outside_the_corpus(site I)").
 sig(eff_import_outside, "imports_outside_the_corpus(node I, text Src)").
 sig(eff_module, "has_the_module_effect(file F, effect label L, at host H)").
 sig(eff_import_invented, "invents_the_effect(node I, effect label L, at host H)").
@@ -833,6 +833,7 @@ sig(runtime_includes, "includes_the_runtime(runtime R, runtime P)").
 sig(provides_release, "ships_the_release(runtime P, release Rel)").
 sig(runtime_undated, "is_undated(runtime R, because reason Reason)").
 sig(node_builtin_bare, "is_the_bare_name(text Bare, of spec Spec)").
+sig(node_prefix_only, "is_loaded_only_under_its_scheme(spec Spec)").
 sig(resolved_builtin, "resolves_to_the_builtin(site I, spec Spec)").
 sig(site_file, "sits_in(site I, file F)").
 sig(name_bound_in, "binds_the_name(file File, name Name)").
@@ -869,8 +870,6 @@ sig(host_global_uneffected, "has_no_global_effect(host H, at name Name)").
 sig(runtime_unversioned, "is_unversioned(runtime R)").
 sig(runtime_separates, "is_told_apart_from(runtime X, runtime B)").
 sig(runtime_pair_indistinct, "is_not_told_apart_from(runtime X, runtime B)").
-sig(bare_listed, "is_listed_bare(spec Spec)").
-sig(bare_builtin_unlisted, "is_not_listed_bare(spec Spec)").
 sig(runtime_family_undeclared, "has_an_undeclared_family(runtime R, runtime F)").
 sig(runtime_cross_family, "includes_across_families(runtime X, runtime B)").
 sig(host_family_mismatch, "is_half_declared(host H)").
@@ -944,11 +943,13 @@ sig(has_module_target, "names_a_file_of_the_code(site I)").
 sig(unresolved_relative, "leaves_unresolved(file F, text S:2, at line L:1)").
 sig(module_target, "means_the_file(site I, file T)").
 sig(ts_resolved, "names_under_typescript(site I, file T)").
+sig(ts_candidate, "may_name_under_typescript(site I, file T, at rank R)").
+sig(ts_passed_over, "passes_over_under_typescript(site I, rank R)").
 sig(site_last_seg, "reaches(site I, directory D, before segment Seg)").
 sig(last_ext, "the_extension(of name Name, is text E, of length L)").
-sig(ts_ext, "is_written_for(text Js, text Ts)").
-sig(probe_ext, "is_probed(text E)").
-sig(index_file, "is_an_index_file(name Name)").
+sig(ts_ext, "is_written_for(text Js, text Ts, at rank R)").
+sig(probe_ext, "is_probed(text E, at rank R)").
+sig(index_file, "is_an_index_file(name Name, at rank R)").
 sig(import_specifier_node, "names_an_import(node Sp)").
 sig(import_spec, "has_the_import_specifier(site I, node Sp)").
 sig(spec_local, "binds_locally(node Sp, name L)").

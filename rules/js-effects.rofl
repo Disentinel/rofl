@@ -359,30 +359,9 @@ eff_op_off_kind[audit](N, K) :- eff_op_inspects[code](N), ast_node[code](N, K, _
 -- 5c. AN IMPORT EVALUATES A MODULE
 --
 -- `import './m.js'` runs m's top level, so an import's effect is the target's
--- module effect — a missing EDGE, not a missing surface. The dynamic form and
--- `require` are the kinds `module_source` does not carry. Erasure needs both markers:
--- `import type {X}` marks the declaration, `import {type X}` the specifier; a
--- declaration ALL of whose specifiers are erased evaluates nothing and one
--- with NO specifier evaluates everything, hence `eff_has_spec`.
-eff_mod_src[code](N, Src, F) :- module_source[code](N, Src, F).
-eff_mod_src[code](N, Src, F) :- ast_node[code](N, import_expression, F, _),
-                                ast_child[code](N, source, 0, S), ast_value[code](S, Src).
-eff_mod_src[code](N, Src, F) :- require_site[code](N), site_source[code](N, Src), site_file[code](N, F).
-
-eff_type_only[code](I)  :- ast_attr[code](I, import_kind, "type").
-eff_type_only[code](I)  :- ast_attr[code](I, export_kind, "type").
-eff_has_spec[code](I)   :- eff_mod_src[code](I, _, _), ast_child[code](I, specifiers, _, _).
-eff_value_spec[code](I) :- eff_mod_src[code](I, _, _), ast_child[code](I, specifiers, _, Sp),
-                           not ast_attr[code](Sp, import_kind, "type"),
-                           not ast_attr[code](Sp, export_kind, "type").
-eff_erased[code](I)     :- eff_type_only[code](I).
-eff_erased[code](I)     :- eff_has_spec[code](I), not eff_value_spec[code](I).
-
-eff_evaluates_at[code](I, T) :- eff_mod_src[code](I, _, _), not eff_erased[code](I),
-                                module_target[code](I, T).
-
-eff_import_outside[flow](I, Src) :- eff_mod_src[code](I, Src, _), not eff_erased[code](I),
-                                    not module_target[code](I, _).
+-- module effect — a missing EDGE, not a missing surface. Which sites run their
+-- target is rules/js-modules.rofl's `evaluates_at`.
+eff_import_outside[flow](I, Src) :- site_source[code](I, Src), evaluates_unresolved[code](I).
 
 -- A module's own top level: the join over nodes no function encloses, plus
 -- top-level calls. `eff_here -> eff_module -> eff_here` is a POSITIVE cycle,
@@ -395,9 +374,9 @@ eff_module[flow](F, L, H) :- eff_here[flow](N, L, H), not in_fn[code](N),
 eff_module[flow](F, L, H) :- resolves[code](C, G), not in_fn[code](C),
                              ast_node[code](C, _, F, _), eff_latent[flow](G, L, H).
 
-eff_here[flow](I, L, H) :- eff_evaluates_at[code](I, T), sx_eff_module[surface](T, L, H).
+eff_here[flow](I, L, H) :- evaluates_at[code](I, T), sx_eff_module[surface](T, L, H).
 
-eff_import_invented[audit](I, L, H) :- eff_evaluates_at[code](I, T), eff_here[flow](I, L, H),
+eff_import_invented[audit](I, L, H) :- evaluates_at[code](I, T), eff_here[flow](I, L, H),
                                        not sx_eff_module[surface](T, L, H).
 
 -- The same Moore closure as section 4, over a file.
@@ -410,7 +389,7 @@ effect_of_module[flow](F, N)    :- eff_mod_bounded[flow](F, N), not eff_mod_boun
 eff_mod_unnamed[audit](F)         :- eff_mod_subject[flow](F), not effect_of_module[flow](F, _).
 eff_mod_two_names[audit](F, A, B) :- effect_of_module[flow](F, A), effect_of_module[flow](F, B), A != B.
 
-eff_mod_join_short[audit](F, T, J) :- eff_evaluates_at[code](I, T), ast_node[code](I, _, F, _),
+eff_mod_join_short[audit](F, T, J) :- evaluates_at[code](I, T), ast_node[code](I, _, F, _),
                                       effect_of_module[flow](F, NF), sx_effect_module[surface](T, NT),
                                       eff_join(NF, NT, J), J != NF.
 

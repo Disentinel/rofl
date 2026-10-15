@@ -34,6 +34,15 @@ guard_kind(try_statement,              handler).
 guard_arm[code](P, A) :- guard_kind(K, Field), ast_node[code](P, K, _, _),
                          ast_child[code](P, Field, _, A).
 
+-- `x ??= f()`, `x ||= f()`, `x &&= f()` short-circuit as their operators do;
+-- the branching is in the operator, not the kind.
+edb(short_circuit_assign).
+short_circuit_assign("??=").
+short_circuit_assign("||=").
+short_circuit_assign("&&=").
+guard_arm[code](P, A) :- short_circuit_assign(Op), ast_attr[code](P, operator, Op),
+                         ast_node[code](P, assignment_expression, _, _), ast_child[code](P, right, 0, A).
+
 -- A non-static field initialiser runs once per construction and never if the
 -- class is never constructed; a static one runs with the definition. Derived
 -- from `transfer_mechanism(K, per_construction)`, not a second list.
@@ -173,18 +182,21 @@ completion_unaccounted[audit](K)  :- completion_outer[code](P, S), ast_node[code
                                      not completion_fn_between[code](P, S).
 
 -- =========================================================================
--- 3. A CALL IS AN EXIT. Decidable from syntax alone: no `return` anywhere in
--- the body and a `throw` at its top level. The error direction is safe: a
--- function that always throws but has a return somewhere is simply not named.
--- The return statement leads: leading with `fn_node(F)` enumerated every
--- return against every function — 94 % of the layer's read cost, measured on
--- two corpora with two instruments.
-has_return[code](F)    :- ast_node[code](R, return_statement, _, _),
-                          ast_within[code](F, R), fn_node[code](F).
+-- 3. A CALL IS AN EXIT. Decidable from syntax alone: no `return` in the
+-- function's own body and a `throw` at its top level. The error direction is
+-- safe: a function that always throws but has a return somewhere is simply not
+-- named. An async function or a generator throws nothing at its call: the
+-- call hands back a promise or an iterator, and the throw comes out of that.
+deferred_body[code](F) :- fn_node[code](F), ast_attr[code](F, async, true).
+deferred_body[code](F) :- fn_node[code](F), ast_attr[code](F, generator, true).
+async_body[code](F)    :- fn_node[code](F), ast_attr[code](F, async, true),
+                          not ast_attr[code](F, generator, true).
+
+has_return[code](F)    :- ast_node[code](R, return_statement, _, _), nearest_v[flow](F, R).
 top_throw[code](F)     :- fn_node[code](F), ast_child[code](F, body, 0, B),
                           ast_child[code](B, body, _, S),
                           ast_node[code](S, throw_statement, _, _).
-always_throws[code](F) :- top_throw[code](F), not has_return[code](F).
+always_throws[code](F) :- top_throw[code](F), not has_return[code](F), not deferred_body[code](F).
 
 throwing_call[code](C) :- always_throws[code](F), resolves[code](C, F),
                           call_site[code](C, _).
@@ -208,10 +220,16 @@ accessor_of[flow](Obj, Key, M) :- member_value[flow](Obj, Key, M),
 accessor_obj[flow](Obj) :- accessor_of[flow](Obj, _, _).
 accessor_recv[flow](N, Obj) :- accessor_obj[flow](Obj), may_be_node[flow](O, Obj),
                                ast_child[code](N, object, 0, O), member_node_v[flow](N).
+-- A read runs the getter, `o.p = v` the setter, `o.p += v` and `o.p++` both.
 accessor_read[code](N, M) :- accessor_recv[flow](N, Obj), accessor_of[flow](Obj, Key, M),
-                             selects[flow](N, Key).
-accessor_read[code](N, M) :- private_binds[code](N, M),
-                             ast_attr[code](M, kind, K), accessor_kind(K).
+                             selects[flow](N, Key), ast_attr[code](M, kind, "get"), not only_written[code](N).
+accessor_read[code](N, M) :- accessor_recv[flow](N, Obj), accessor_of[flow](Obj, Key, M),
+                             selects[flow](N, Key), ast_attr[code](M, kind, "set"), written_member[code](N).
+accessor_read[code](N, M) :- private_binds[code](N, M), ast_attr[code](M, kind, "get"), not only_written[code](N).
+accessor_read[code](N, M) :- private_binds[code](N, M), ast_attr[code](M, kind, "set"), written_member[code](N).
+written_member[code](N)   :- ast_node[code](A, assignment_expression, _, _), ast_child[code](A, left, 0, N).
+written_member[code](N)   :- ast_node[code](U, update_expression, _, _), ast_child[code](U, argument, 0, N).
+only_written[code](N)     :- plain_assign[flow](A), ast_child[code](A, left, 0, N).
 
 throwing_call[code](N) :- accessor_read[code](N, M), always_throws[code](M).
 
@@ -351,7 +369,6 @@ hidden_call_off_table[audit](K, M) :- hidden_call_pos[code](N, M),
 -- `try { const f = () => g() } catch {}` has `g()` inside the block textually
 -- and it runs later, elsewhere. A throw in a HANDLER is not caught by its own
 -- clause: `block`, not the whole try.
-try_of[code](TS, F)        :- ast_node[code](TS, try_statement, _, _), nearest_v[flow](F, TS).
 in_try_block[code](TS, N)  :- ast_node[code](TS, try_statement, _, _),
                               ast_child[code](TS, block, 0, B), ast_within[code](B, N).
 
@@ -365,7 +382,7 @@ try_catches[code](TS)      :- catches_via(K, Field), ast_node[code](TS, K, _, _)
                               ast_child[code](TS, Field, 0, _).
 -- The block walked down to the first function boundary, as `nearest_v` walks:
 -- the whole subtree joined back to its function was 1.4 M probes.
-try_walk[code](TS, X)      :- try_catches[code](TS), try_of[code](TS, _),
+try_walk[code](TS, X)      :- try_catches[code](TS),
                               ast_child[code](TS, block, 0, B), ast_in[code](B, X).
 try_walk[code](TS, X)      :- try_walk[code](TS, P), not fn_node[code](P), ast_in[code](P, X).
 caught_here[code](N)       :- try_walk[code](_, N).
@@ -376,24 +393,34 @@ throws_outright[code](F) :- ast_node[code](T, throw_statement, _, _),
 -- `may_throw` is a handful of rows and binds G, so `resolves` is probed by
 -- callee. The value travels with the throw: `thrown_by`, `caught_value`.
 may_throw[code](F) :- throws_outright[code](F).
-may_throw[code](F) :- may_throw[code](G), resolves[code](C, G), nearest_v[flow](F, C),
-                      not caught_here[code](C).
+may_throw[code](F) :- may_throw[code](G), not deferred_body[code](G), resolves[code](C, G),
+                      nearest_fn[code](F, C), not caught_here[code](C).
+-- an async callee's throw is the rejection of its promise, and comes out where
+-- the promise is awaited
+may_throw[code](F) :- may_throw[code](G), async_body[code](G), resolves[code](C, G),
+                      awaited_call[code](A, C), nearest_v[flow](F, A), not caught_here[code](A).
+awaited_call[code](A, C) :- ast_node[code](A, await_expression, _, _), ast_child[code](A, argument, 0, C).
 
 thrown_by[flow](F, V) :- ast_node[code](T, throw_statement, _, _), nearest_v[flow](F, T),
                          not caught_here[code](T), ast_child[code](T, argument, 0, V).
-thrown_by[flow](F, V) :- thrown_by[flow](G, V), resolves[code](C, G),
-                         nearest_v[flow](F, C), not caught_here[code](C).
+thrown_by[flow](F, V) :- thrown_by[flow](G, V), not deferred_body[code](G), resolves[code](C, G),
+                         nearest_fn[code](F, C), not caught_here[code](C).
+thrown_by[flow](F, V) :- thrown_by[flow](G, V), async_body[code](G), resolves[code](C, G),
+                         awaited_call[code](A, C), nearest_v[flow](F, A), not caught_here[code](A).
 caught_value[flow](P, V) :- catch_of[flow](T, H), catch_param[flow](H, P),
-                            try_block[flow](T, B), ast_within[code](B, C),
-                            resolves[code](C, G), thrown_by[flow](G, V).
+                            try_walk[code](T, C), resolves[code](C, G),
+                            not deferred_body[code](G), thrown_by[flow](G, V).
+caught_value[flow](P, V) :- catch_of[flow](T, H), catch_param[flow](H, P),
+                            try_walk[code](T, A), awaited_call[code](A, C), resolves[code](C, G),
+                            async_body[code](G), thrown_by[flow](G, V).
 
 -- A throwing call is an abrupt transfer for every list out to the `try` that
 -- catches it — code after the try runs precisely because the handler caught —
 -- and out to the FUNCTION boundary: without `ast_within(G, S)` the walk
 -- reached the module's own list and everything after `class Lit` was
--- unreachable (`after_abrupt` 3 -> 37).
-try_stops[code](C, T) :- throwing_call[code](C), ast_within[code](T, C),
-                         ast_node[code](T, try_statement, _, _).
+-- unreachable (`after_abrupt` 3 -> 37). A try catches only from its block and
+-- only with a handler: `try { f() } finally {}` stops nothing.
+try_stops[code](C, T) :- throwing_call[code](C), try_walk[code](T, C).
 try_stops[code](C, S) :- try_stops[code](C, T), ast_within[code](S, T).
 
 abrupt_at[code](B, F, I) :- throwing_call[code](C), nearest_v[flow](G, C),

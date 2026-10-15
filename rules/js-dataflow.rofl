@@ -22,17 +22,6 @@
 ident_in[code](N, Name, File) :- ast_node[code](N, identifier, File, _), ast_name[code](N, Name).
 ident[code](N, Name)        :- ident_in[code](N, Name, _).
 
--- Name-to-name flow through a declarator initialiser: the first cell, kept.
-decl_binds[code](D, Name)   :- ast_node[code](D, variable_declarator, _, _),
-                               ast_child[code](D, id, _, N), ident[code](N, Name).
-decl_reads[code](D, Name)   :- ast_node[code](D, variable_declarator, _, _),
-                               ast_child[code](D, init, _, N), ident[code](N, Name).
-
-var_flow[code](From, To)    :- decl_reads[code](D, From), decl_binds[code](D, To).
-
-var_reaches[code](A, B)     :- var_flow[code](A, B).
-var_reaches[code](A, C)     :- var_reaches[code](A, B), var_flow[code](B, C).
-
 -- =========================================================================
 -- 2. WHAT A VALUE IS
 --
@@ -824,10 +813,6 @@ imports_name[code](Local, Name, D, File) :-
 -- the corpus to learn three strings
 corpus_file[code](File) :- ast_node[code](_, program, File, _).
 
-module_source[code](N, Src, File) :- ast_node[code](N, import_declaration, File, _),
-                                     ast_child[code](N, source, 0, S), ast_value[code](S, Src).
-module_source[code](N, Src, File) :- ast_node[code](N, export_all_declaration, File, _),
-                                     ast_child[code](N, source, 0, S), ast_value[code](S, Src).
 
 
 exports_name[code](F, Name, File) :- ast_node[code](E, export_named_declaration, File, _),
@@ -836,7 +821,7 @@ exports_name[code](F, Name, File) :- ast_node[code](E, export_named_declaration,
                                      ast_child[code](F, id, 0, I), ast_name[code](I, Name).
 
 -- `export * from` re-exports every NAME (not the default), recursively. The
--- kind guard is not redundant with `module_source`, which holds of imports too.
+-- kind guard is not redundant with `module_site`, which holds of imports too.
 exports_name[code](F, Name, File) :- ast_node[code](E, export_all_declaration, File, _),
                                      module_target[code](E, Target),
                                      sx_export_node[surface](Target, Name, F).
@@ -870,8 +855,6 @@ exports_name[code](F, Ext, File) :- export_local[code](L, Ext, File),
 
 -- `export * as ns from` exports the other module's OBJECT — its `program` node —
 -- so `ns.f()` is an ordinary member lookup.
-module_source[code](N, Src, File) :- ast_node[code](N, export_named_declaration, File, _),
-                                     ast_child[code](N, source, 0, S), ast_value[code](S, Src).
 
 export_ns_name[code](Name, E, File) :-
     ast_node[code](E, export_named_declaration, File, _),
@@ -942,7 +925,7 @@ may_be_node[flow](E, F) :- imports_default[code](Local, D, File),
 -- whatever `module.exports = X` puts there. Both stay in the may-set, so
 -- `module.exports = f; module.exports.g = h` answers `.g`, and `exports.a = f`
 -- is an ordinary member write (section 8) on the first.
-cjs_module_exports[code](M, File) :- ident_in[code](O, "module", File), ast_child[code](M, object, 0, O),
+cjs_module_exports[code](M, File) :- free_global[code](O, "module", File), ast_child[code](M, object, 0, O),
                                      ast_node[code](M, member_expression, _, _), ast_attr[code](M, computed, false),
                                      ast_child[code](M, property, 0, P), ast_name[code](P, "exports").
 
@@ -953,12 +936,11 @@ cjs_exports[flow](File, V) :- cjs_module_exports[code](L, File), ast_child[code]
                               plain_assign[flow](A), ast_child[code](A, right, 0, R), may_be_node[flow](R, V).
 
 may_be_node[flow](M, V) :- cjs_module_exports[code](M, File), cjs_exports[flow](File, V).
-may_be_node[flow](E, P) :- ident_in[code](E, "exports", File), not cjs_key[code](E),
-                           module_object[flow](P, File).
+may_be_node[flow](E, P) :- free_global[code](E, "exports", File), module_object[flow](P, File).
 may_be_node[flow](C, V) :- require_site[code](C), module_target[code](C, T), sx_cjs[surface](T, V).
 
 -- The frontier: a module this corpus does not contain, one row per module.
-import_outside_corpus[audit](Src, File) :- module_source[code](N, Src, File),
+import_outside_corpus[audit](Src, File) :- site_source[code](N, Src), site_file[code](N, File),
                                            not module_target[code](N, _).
 
 -- `this` in an object literal's own method is that object.
@@ -1245,9 +1227,16 @@ catch_param[flow](H, P)  :- ast_node[code](H, catch_clause, _, _),
                             ast_child[code](H, param, 0, P).
 try_block[flow](T, B)    :- ast_node[code](T, try_statement, _, _),
                             ast_child[code](T, block, 0, B).
+-- a throw in a function the try only defines is not thrown by the try
 thrown_in[flow](T, V)    :- ast_node[code](Th, throw_statement, _, _),
                             ast_within[code](B, Th), try_block[flow](T, B),
-                            ast_child[code](Th, argument, 0, V).
+                            ast_child[code](Th, argument, 0, V),
+                            nearest_v[flow](G, Th), nearest_v[flow](G, T).
+thrown_in[flow](T, V)    :- ast_node[code](Th, throw_statement, _, _),
+                            ast_within[code](B, Th), try_block[flow](T, B),
+                            ast_child[code](Th, argument, 0, V),
+                            not in_a_fn[flow](Th).
+in_a_fn[flow](X)         :- nearest_v[flow](_, X).
 
 caught_value[flow](P, V) :- catch_of[flow](T, H), catch_param[flow](H, P),
                             thrown_in[flow](T, V).

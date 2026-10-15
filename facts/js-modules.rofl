@@ -86,44 +86,14 @@ host_emitter(js, modules, str_algebra, a_kernel_has_no_string_builtins).
 host_emitter(js, modules, fs_listing,  a_no_ast_can_see_the_disk).
 
 -- ---------------------------------------------------------------------------
--- THE BARE-FORM BUILTIN VOCABULARY, with the canonical spelling beside it.
---
--- `node:fs` is classified by its SCHEME and needs no list. This table is only
--- for the un-prefixed form, `import fs from 'fs'`, and it carries the `node:`
--- spelling as DATA because prefixing a string is not something a rule can do
--- with the kernel's builtins — the canonical name is what makes a builtin
--- compare exactly against node's own resolver instead of approximately.
---
--- Measured over this repository: 371 builtin imports, every single one
--- `node:`-prefixed, so this table matches nothing here. It exists because
--- babel's grammar and node's resolver both still accept the bare form, and a
--- fixture exercises it so the branch is not a rule nothing runs.
---
--- Keyed on the WHOLE specifier, not on its first segment: `fs/promises` is
--- deliberately absent, falls through to `bare`, and shows up as an
--- under-report against the oracle rather than as a rule guessing.
-node_builtin_bare("assert",         "node:assert").
-node_builtin_bare("buffer",         "node:buffer").
-node_builtin_bare("child_process",  "node:child_process").
-node_builtin_bare("crypto",         "node:crypto").
-node_builtin_bare("events",         "node:events").
-node_builtin_bare("fs",             "node:fs").
-node_builtin_bare("http",           "node:http").
-node_builtin_bare("https",          "node:https").
-node_builtin_bare("module",         "node:module").
-node_builtin_bare("os",             "node:os").
-node_builtin_bare("path",           "node:path").
-node_builtin_bare("process",        "node:process").
-node_builtin_bare("readline",       "node:readline").
-node_builtin_bare("stream",         "node:stream").
-node_builtin_bare("string_decoder", "node:string_decoder").
-node_builtin_bare("test",           "node:test").
-node_builtin_bare("timers",         "node:timers").
-node_builtin_bare("tty",            "node:tty").
-node_builtin_bare("url",            "node:url").
-node_builtin_bare("util",           "node:util").
-node_builtin_bare("worker_threads", "node:worker_threads").
-node_builtin_bare("zlib",           "node:zlib").
+-- THE BUILTINS NODE LOADS ONLY UNDER ITS SCHEME: `import 'test'` is the npm
+-- package, `node:test` the runner (node's documentation, "Built-in modules
+-- with mandatory node: prefix"). Every other builtin of the host surface is
+-- reachable bare too (rules/js-modules.rofl, `node_builtin_bare`).
+node_prefix_only("node:test").
+node_prefix_only("node:test/reporters").
+node_prefix_only("node:sqlite").
+node_prefix_only("node:sea").
 
 -- ---------------------------------------------------------------------------
 -- THE VERDICT PER SHAPE. Total over the shapes the rules can produce, and

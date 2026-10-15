@@ -16,8 +16,14 @@
 
 maps_to(A, C)      :- alias_of(A, C).
 
-canonical(T, C)    :- maps_to(T, C).
+-- a chain of mappings ends at a term that maps nowhere; a cycle or a fork is
+-- a decision gone wrong, named rather than counted twice
+maps_reach(T, C)   :- maps_to(T, C).
+maps_reach(T, D)   :- maps_reach(T, C), maps_to(C, D).
+canonical(T, C)    :- maps_reach(T, C), not maps_to(C, _).
 canonical(C, C)    :- claim(C), not maps_to(C, _).
+mapping_cycle[audit](T)   :- maps_reach(T, T).
+mapping_fork[audit](T)    :- maps_to(T, A), maps_to(T, B), A != B.
 
 -- normalized obligations: frames may require/block on aliases;
 -- everything downstream sees only canonical targets.
@@ -28,3 +34,5 @@ blocks_on(I, C)    :- blocking(I, T), canonical(T, C).
 mapping_proposal(A, B) :- semantic_candidate(A, B, _),
                           A != B,
                           not maps_to(A, _).
+alarm(mapping_cycle).
+alarm(mapping_fork).
