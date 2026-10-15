@@ -167,6 +167,12 @@ export class RoflSession {
     return { holds: r.holds as boolean, text: r.text as string };
   }
 
+  /** `Rofl.whynotFiles`: a row for each file of `files`, a key prefix and the file's name. */
+  async whynotFiles(query: string, files: [string, string][], opts: { depth?: number; nodes?: number } = {}): Promise<{ file: string; found: number; stops: string[]; text: string }[]> {
+    const r = await this.port.send({ op: 'whynot', session: this.id, query, files, ...opts });
+    return r.files as { file: string; found: number; stops: string[]; text: string }[];
+  }
+
   /** `Rofl.excise`: what this base fact holds up, on a fork; this world is
    *  not touched. */
   async excise(query: string): Promise<{ removed: string[]; added: string[] }> {

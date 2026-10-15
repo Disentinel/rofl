@@ -41,7 +41,7 @@
 use std::collections::HashMap;
 
 use crate::describe;
-use crate::engine::{Eval, Halt, Mode, Outcome, TickOutcome, WhyOpts, WhynotBounds, EXPLAIN_WHYNOT_BOUNDS};
+use crate::engine::{Eval, Halt, Mode, Outcome, TickOutcome, WhyOpts, WhynotBounds, WhynotFile, EXPLAIN_WHYNOT_BOUNDS};
 use crate::reflect::{self, bootstrap_kernel, is_kernel_ledger, Vocab};
 use crate::rofl_parse::{self, Book, Tense};
 use crate::store::{write_fact_key, FactId, Store, F_BASE, F_TICK};
@@ -159,14 +159,14 @@ impl Session {
         let mut eval = Eval::with_answer(h, o.store, budget, Mode::Rounds, false, o.answer);
         eval.vclosure_restore();
         eval.stage_kept(o.staged);
-        eval.after_open();
+        eval.after_open(o.lattices);
         Ok(Session { eval, dangling: o.dangling, asks: 0 })
     }
 
     /// This world as a kept image, which `open_kept` reads back.
     pub fn keep(&mut self) -> Vec<u8> {
         self.eval.settle_provenance();
-        crate::image::keep(&self.eval.h, &self.eval.store, &self.eval.staged_kept(), self.eval.safety())
+        crate::image::keep(&self.eval.h, &self.eval.store, &self.eval.staged_kept(), self.eval.safety(), &self.eval.lattices_kept())
     }
 
     /// This world kept as a volume at `path`, which `open_volume` maps back. It freezes the world, as a fork does.
@@ -188,8 +188,8 @@ impl Session {
         bootstrap_kernel(&mut h, &v, &mut o.store);
         let mut eval = Eval::with_answer(h, o.store, budget, Mode::Rounds, false, evaluated.then_some(o.answer));
         eval.vclosure_restore();
-        eval.stage_kept(o.staged);
-        eval.after_open();
+        eval.stage_kept(std::mem::take(&mut o.staged));
+        eval.after_open(std::mem::take(&mut o.lattices));
         eval.read_notes(&mut o.cut)?;
         eval.read_cut(&mut o.cut)?;
         if !o.cut.at_end() {
@@ -1650,6 +1650,19 @@ impl Session {
             Ok(r) => Ok(r),
             Err(h @ Halt::Budget(..)) => Ok((false, describe(&h))),
             Err(h) if !self.eval.plain => Ok((false, describe(&h))),
+            Err(h) => Err(describe(&h)),
+        }
+    }
+
+    /// `whynot` by file (`Eval::whynot_files`): a row for each file of `vols`,
+    /// a key prefix and the file's name. A wall met is no table.
+    pub fn whynot_files(&mut self, query: &str, b: &WhynotBounds, vols: &[(String, String)]) -> Result<Vec<WhynotFile>, String> {
+        self.explaining()?;
+        let lit = self.one_lit(query)?;
+        self.cone_holds(&lit)?;
+        match self.eval.whynot_files(&lit, b, vols) {
+            Ok(r) => Ok(r),
+            Err(Halt::Budget(..)) => Ok(Vec::new()),
             Err(h) => Err(describe(&h)),
         }
     }

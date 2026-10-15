@@ -127,6 +127,16 @@ export function print(file: string, r: NbResult, only?: number, shown = SHOWN, f
       for (const a of l.answers.slice(0, shown)) out.push(l.kind === 'excise' ? `    ${a.sentence}` : `    - ${a.sentence}`);
       if (l.total > shown && !l.view) out.push(`    ... ${l.total - shown} more${shown < l.answers.length ? ' (--all prints them)' : ''}`);
       if (l.unsure?.total) { out.push(`    out of sight (${l.unsure.text}):`); for (const a of l.unsure.answers) out.push(`    - ${a.sentence}`); }
+      if (l.byFile) {
+        out.push('    by file:');
+        for (const g of l.byFile) {
+          const stops = g.stops.length > 2 ? [...g.stops.slice(0, 2), `${g.stops.length - 2} more`] : g.stops;
+          out.push(`      ${g.files.join(', ')}: ${g.found ? `${g.found} ${g.found === 1 ? 'answer' : 'answers'}` : 'none'}${stops.length ? `; it stops at: ${stops.join('; ')}` : ''}`);
+          if (full) out.push(...g.why.split('\n').map((x) => `        ${x}`));
+        }
+        if (!full) out.push(`    (each file's demonstration: --all)`);
+        continue;
+      }
       const why = !full && l.brief !== undefined ? short(l.chain ?? [], l.brief) : l.why;
       if (why) out.push(...why.split('\n').map((x) => `    ${x}`));
       if (why !== l.why) out.push(`    (the whole proof: --all)`);

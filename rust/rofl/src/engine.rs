@@ -28,6 +28,8 @@ mod vclosure;
 mod prov;
 mod resume;
 mod cost;
+mod latkept;
+pub use latkept::Tok;
 pub use cost::{Hot, PremCost};
 use resume::{Cut, CutAt, InFlight, Tail};
 pub use addition::{AddDelta, PrepMark};
@@ -1054,6 +1056,8 @@ pub struct Eval {
     /// A question is being answered (why, whynot): below a call, what a hole
     /// left unknown is read as unknown, as in a firing, and noted in `asked`.
     pub asking: bool,
+    /// A whynot by file under way: the files, and what each has met (`whynot_files`).
+    wn_vols: Option<VolWalk>,
     /// What a question's unfolding read that a hole left unknown.
     asked: Vec<Unknown>,
     /// The relations answered on demand whose every answer is ground and
@@ -1535,6 +1539,7 @@ impl Eval {
             asked_made: Vec::new(),
             demand_rule_ids: Vec::new(),
             asking: false,
+            wn_vols: None,
             asked: Vec::new(),
             demand_closed: HashSet::new(),
             last_fault: None,
@@ -14260,6 +14265,26 @@ enum WnTask {
     Unpath(String),
 }
 
+/// A by-file walk (`whynot_files`): the files by key prefix, each file's
+/// failures, and the premise the walk first parted at.
+#[derive(Clone)]
+pub struct VolWalk {
+    names: HashMap<String, String>,
+    lens: Vec<usize>,
+    outs: HashMap<String, HashMap<String, Option<Lit>>>,
+    split: Option<String>,
+}
+
+/// A file's row of whynot by file: its answers, and the premises it stopped
+/// at, with the demonstration below them.
+#[derive(Debug, Clone, PartialEq)]
+pub struct WhynotFile {
+    pub file: String,
+    pub found: usize,
+    pub stops: Vec<String>,
+    pub text: String,
+}
+
 struct WnCtx {
     max_depth: usize,
     max_nodes: usize,
@@ -16025,8 +16050,13 @@ impl Eval {
     /// walks `why`): a failure as deep as the bounds allow takes no frame per
     /// level, and each line is written once.
     fn explain_tree(&mut self, lit: &Lit, ctx: &mut WnCtx) -> Result<Vec<String>, Halt> {
+        self.explain_from(vec![WnTask::Failure(lit.clone(), 1)], ctx)
+    }
+
+    fn explain_from(&mut self, mut tasks: Vec<WnTask>, ctx: &mut WnCtx) -> Result<Vec<String>, Halt> {
         let mut lines = Vec::new();
-        let mut todo = vec![WnTask::Failure(lit.clone(), 1)];
+        tasks.reverse();
+        let mut todo = tasks;
         let mut next: Vec<WnTask> = Vec::new();
         while let Some(t) = todo.pop() {
             match t {
@@ -16043,6 +16073,176 @@ impl Eval {
         Ok(lines)
     }
 
+    /// WHYNOT BY FILE (src/aggeval.ts `whynotFiles`): for each file, how
+    /// many answers it holds and, where it holds none, where each rule
+    /// stopped in it. A file is a volume, a key prefix its scanner minted
+    /// (session.rs `cool`): `vols` pairs each prefix with the file's name.
+    /// One walk keeps each file's candidates apart, 16 a premise and 2000
+    /// steps each; below the premises a file stops at, its demonstration is
+    /// the plain one.
+    pub fn whynot_files(&mut self, lit: &Lit, b: &WhynotBounds, vols: &[(String, String)]) -> Result<Vec<WhynotFile>, Halt> {
+        let saved = std::mem::replace(&mut self.rename_counter, 0);
+        let asking = std::mem::replace(&mut self.asking, true);
+        let r = self.questioned(|e| e.whynot_files_at(lit, b, vols));
+        self.wn_vols = None;
+        self.asking = asking;
+        self.asked.clear();
+        self.demand_trail.clear();
+        self.forget_asked();
+        self.rename_counter = saved;
+        r
+    }
+
+    fn whynot_files_at(&mut self, lit: &Lit, b: &WhynotBounds, vols: &[(String, String)]) -> Result<Vec<WhynotFile>, Halt> {
+        let names: HashMap<String, String> = vols.iter().cloned().collect();
+        let mut lens: Vec<usize> = vols.iter().map(|(p, _)| p.len()).collect();
+        lens.sort_unstable();
+        lens.dedup();
+        let walk = VolWalk { names, lens, outs: HashMap::new(), split: None };
+        let mut found: HashMap<String, usize> = HashMap::new();
+        for (s, _) in self.match_premise(lit, &Subst::default(), 0, None)? {
+            if let Some(v) = self.vol_of_lit(&walk, lit, &s) {
+                *found.entry(v).or_default() += 1;
+            }
+        }
+        let head = self.vol_of_lit(&walk, lit, &Subst::default());
+        let rules: Vec<Rc<ERule>> = self.rules.iter().filter(|r| r.clause.head.rel == lit.rel).cloned().collect();
+        let mut walks: Vec<(Rc<ERule>, HashMap<String, HashMap<String, Option<Lit>>>, Option<String>)> = Vec::new();
+        for r in rules {
+            let rn = self.rename_clause(&r.clause);
+            let mut s = self.eval_builtin(self.v.op_eq, rn.head.persp, lit.persp, &Subst::default(), None);
+            for i in 0..rn.head.args.len().min(lit.args.len()) {
+                let Some(cur) = s.take() else { break };
+                s = self.eval_builtin(self.v.op_eq, rn.head.args[i], lit.args[i], &cur, None);
+            }
+            let Some(s0) = s.filter(|_| rn.head.args.len() == lit.args.len()) else { continue };
+            let body = if self.plain { plan_body_plain(&self.h, &rn) } else { plan_body(&self.h, &rn).0 };
+            self.wn_vols = Some(walk.clone());
+            let mut out = HashMap::new();
+            let mut nodes = 0usize;
+            self.explore_body(&body, 0, &s0, &mut out, &mut nodes, Some(r.id), head.is_some())?;
+            let w = self.wn_vols.take().expect("the walk is kept while it runs");
+            let mut outs = w.outs;
+            outs.insert(head.clone().unwrap_or_default(), out);
+            walks.push((r, outs, w.split));
+        }
+        let mut k = String::new();
+        resolved_lit_key(&mut self.h, lit.rel, lit.persp, &lit.args, &Subst::default(), &mut k);
+        let mut files: Vec<String> = vols.iter().map(|(_, n)| n.clone()).collect();
+        files.sort_by(|a, b| cmp_js(a, b));
+        files.dedup();
+        let mut rows = Vec::with_capacity(files.len());
+        for name in files {
+            let mut tasks = Vec::new();
+            let mut stops = Vec::new();
+            for (r, outs, split) in &walks {
+                let none: HashMap<String, Option<Lit>>;
+                let own = match (outs.get(&name), split) {
+                    (Some(o), _) => o,
+                    (None, Some(sp)) => {
+                        none = HashMap::from([(format!("{sp} -- none in this file"), None)]);
+                        &none
+                    }
+                    (None, None) => match outs.get("") {
+                        Some(o) => o,
+                        None => continue,
+                    },
+                };
+                let mut keys: Vec<String> = own.keys().cloned().collect();
+                keys.sort_by(|a, b| cmp_js(a, b));
+                keys.truncate(12);
+                if keys.is_empty() {
+                    continue;
+                }
+                tasks.push(WnTask::Line(format!("  rule {}: {}", self.h.name(r.id), r.canon)));
+                for f in &keys {
+                    tasks.push(WnTask::Line(format!("    failed premise: {f}")));
+                    if let Some(Some(sub)) = own.get(f) {
+                        tasks.push(WnTask::Deeper(sub.clone(), 2));
+                    }
+                }
+                stops.extend(keys);
+            }
+            let mut ctx = WnCtx {
+                max_depth: b.max_depth.max(1),
+                max_nodes: b.max_nodes.max(1),
+                nodes: 0,
+                path: HashSet::from([self.cycle_key(lit)]),
+                done: HashMap::new(),
+            };
+            let mut text = vec![format!("whynot {k} in {name}:")];
+            text.extend(self.explain_from(tasks, &mut ctx)?);
+            rows.push(WhynotFile { found: found.get(&name).copied().unwrap_or(0), file: name, stops, text: text.join("\n") });
+        }
+        Ok(rows)
+    }
+
+    /// The candidates of the premise where a by-file walk first meets a file,
+    /// each file's apart, with failures and steps of its own.
+    #[allow(clippy::too_many_arguments)]
+    fn explore_split(
+        &mut self,
+        body: &[BodyElem],
+        k: usize,
+        s: &Subst,
+        l: &Lit,
+        s2s: Vec<Subst>,
+        out: &mut HashMap<String, Option<Lit>>,
+        nodes: &mut usize,
+        rule: Option<Sym>,
+    ) -> Result<(), Halt> {
+        let mut w = self.wn_vols.take().expect("a split is of a by-file walk");
+        let mut taken: HashMap<String, usize> = HashMap::new();
+        let mut steps: HashMap<String, usize> = HashMap::new();
+        for s2 in s2s {
+            let v = self.vol_of_lit(&w, l, &s2).unwrap_or_default();
+            let n = taken.entry(v.clone()).or_default();
+            if *n >= 16 {
+                continue;
+            }
+            *n += 1;
+            if v.is_empty() {
+                self.wn_vols = Some(w);
+                self.explore_body(body, k + 1, &s2, out, nodes, rule, false)?;
+                w = self.wn_vols.take().expect("the walk is kept while it runs");
+                continue;
+            }
+            if w.split.is_none() {
+                let mut key = String::new();
+                resolved_lit_key(&mut self.h, l.rel, l.persp, &l.args, s, &mut key);
+                w.split = Some(key);
+            }
+            let mine = w.outs.entry(v.clone()).or_default();
+            self.explore_body(body, k + 1, &s2, mine, steps.entry(v).or_default(), rule, true)?;
+        }
+        self.wn_vols = Some(w);
+        Ok(())
+    }
+
+    /// The file of a literal under a substitution: the first argument naming a key prefix of one.
+    fn vol_of_lit(&mut self, w: &VolWalk, l: &Lit, s: &Subst) -> Option<String> {
+        l.args.iter().find_map(|a| {
+            let t = resolve(&mut self.h, *a, s);
+            self.vol_of_term(w, t)
+        })
+    }
+
+    fn vol_of_term(&self, w: &VolWalk, t: Term) -> Option<String> {
+        let name = match t.kind() {
+            TermK::Atom(a) => a,
+            TermK::Func(i) => self.h.fname(i),
+            _ => return None,
+        };
+        let n = self.h.name(name);
+        if let Some(v) = w.lens.iter().find_map(|&k| n.get(..k).and_then(|p| w.names.get(p))) {
+            return Some(v.clone());
+        }
+        match t.kind() {
+            TermK::Func(i) => self.h.fargs(i).to_vec().into_iter().find_map(|x| self.vol_of_term(w, x)),
+            _ => None,
+        }
+    }
+
     /// Single-step failure analysis of one body under a head substitution.
     ///
     /// IN THE ORDER THE EVALUATOR SOLVES IN, and the two engines' hosts once
@@ -16053,7 +16253,7 @@ impl Eval {
         let mut out: HashMap<String, Option<Lit>> = HashMap::new();
         let body = if self.plain { plan_body_plain(&self.h, rn) } else { plan_body(&self.h, rn).0 };
         let mut nodes = 0usize;
-        self.explore_body(&body, 0, s0, &mut out, &mut nodes, Some(rid))?;
+        self.explore_body(&body, 0, s0, &mut out, &mut nodes, Some(rid), true)?;
         Ok(out)
     }
 
@@ -16065,6 +16265,7 @@ impl Eval {
         out: &mut HashMap<String, Option<Lit>>,
         nodes: &mut usize,
         rule: Option<Sym>,
+        parted: bool,
     ) -> Result<(), Halt> {
         *nodes += 1;
         if *nodes > 2000 || k >= body.len() {
@@ -16083,9 +16284,11 @@ impl Eval {
                     resolved_lit_key(&mut self.h, l.rel, l.persp, &l.args, s, &mut key);
                     let inst = self.instantiate(l, s);
                     out.entry(key).or_insert(Some(inst));
+                } else if !parted && self.wn_vols.is_some() {
+                    self.explore_split(body, k, s, l, mm.into_iter().map(|(s2, _)| s2).collect(), out, nodes, rule)?;
                 } else {
                     for (s2, _) in mm.into_iter().take(16) {
-                        self.explore_body(body, k + 1, &s2, out, nodes, rule)?;
+                        self.explore_body(body, k + 1, &s2, out, nodes, rule, parted)?;
                     }
                 }
             }
@@ -16116,12 +16319,12 @@ impl Eval {
                     resolved_lit_key(&mut self.h, l.rel, l.persp, &l.args, s, &mut key);
                     out.entry(format!("not {key} -- blocked: {wit} holds")).or_insert(None);
                 } else {
-                    self.explore_body(body, k + 1, s, out, nodes, rule)?;
+                    self.explore_body(body, k + 1, s, out, nodes, rule, parted)?;
                 }
             }
             BodyElem::Agg(a) if a.op == AggOp::AtLeast => {
                 let rid = rule.ok_or_else(|| Halt::Bug("an aggregate explored outside a rule".into()))?;
-                self.explore_threshold(body, k, s, a, rid, out, nodes)?;
+                self.explore_threshold(body, k, s, a, rid, out, nodes, parted)?;
             }
             BodyElem::Agg(a) => {
                 let rid = rule.ok_or_else(|| Halt::Bug("an aggregate explored outside a rule".into()))?;
@@ -16181,7 +16384,7 @@ impl Eval {
                     }
                 } else {
                     for (s2, _) in mm.into_iter().take(16) {
-                        self.explore_body(body, k + 1, &s2, out, nodes, rule)?;
+                        self.explore_body(body, k + 1, &s2, out, nodes, rule, parted)?;
                     }
                 }
             }
@@ -16190,7 +16393,7 @@ impl Eval {
                 match s2s.first().is_some() {
                     true => {
                         for s2 in s2s.into_iter().take(16) {
-                            self.explore_body(body, k + 1, &s2, out, nodes, rule)?;
+                            self.explore_body(body, k + 1, &s2, out, nodes, rule, parted)?;
                         }
                     }
                     false => {
@@ -16222,6 +16425,7 @@ impl Eval {
         rid: Sym,
         out: &mut HashMap<String, Option<Lit>>,
         nodes: &mut usize,
+        parted: bool,
     ) -> Result<(), Halt> {
         let (plan, corr) = self.agg_corr(rid, a, s)?;
         let desc = self.agg_desc(a, s);
@@ -16250,7 +16454,7 @@ impl Eval {
         }
         if !reached.is_empty() {
             for s2 in reached.into_iter().take(16) {
-                self.explore_body(body, k + 1, &s2, out, nodes, Some(rid))?;
+                self.explore_body(body, k + 1, &s2, out, nodes, Some(rid), parted)?;
             }
             return Ok(());
         }
