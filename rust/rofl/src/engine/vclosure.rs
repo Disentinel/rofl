@@ -43,6 +43,9 @@ pub struct VClosure {
     /// Where witnesses are kept, a rule reads the closure's `derived_by` rows: it is rows then.
     prov_read: bool,
     built: Option<usize>,
+    /// The edges the forests were built from, and the first fact id after them: an edge of a later id is one added since.
+    rows: usize,
+    mark: FactId,
     pairs: u64,
     deep: u64,
     internal: u64,
@@ -119,7 +122,7 @@ impl Eval {
             if prov_read {
                 self.vclosure_reason.push(format!("{}: a rule reads its derived_by rows, which a world that keeps witnesses stores", self.h.name(rel)));
             }
-            self.vclosures.push(VClosure { rel, edge, active: false, prov_read, built: None, pairs: 0, deep: 0, internal: 0 });
+            self.vclosures.push(VClosure { rel, edge, active: false, prov_read, built: None, rows: 0, mark: 0, pairs: 0, deep: 0, internal: 0 });
             self.store.virtuals.push(crate::store::VirtualRel { rel, edge, base_rule: rule_ids.0, step_rule: rule_ids.1, forests: Rc::from(Vec::new()) });
             if !why.is_empty() {
                 self.vclosures[ci].built = Some(usize::MAX);
@@ -239,15 +242,24 @@ impl Eval {
         let edge = self.vclosures[ci].edge;
         let n = self.store.rel_len_est(edge, None);
         if self.vclosures[ci].built != Some(n) && !(self.vclosures[ci].built.is_some() && brk!("vclosure_stale_forest" => true; false)) {
-            let mut books: FxMap<Sym, Vec<(Term, Term)>> = FxMap::default();
-            self.store.each_row(edge, |persp, id| {
-                if let [p, c] = self.store.args(id) {
-                    books.entry(persp).or_default().push((*p, *c));
+            let forests = match self.vextended(ci) {
+                Some(f) => f,
+                None => {
+                    let mut books: FxMap<Sym, Vec<(Term, Term)>> = FxMap::default();
+                    let mut rows = 0;
+                    self.store.each_row(edge, |persp, id| {
+                        if let [p, c] = self.store.args(id) {
+                            books.entry(persp).or_default().push((*p, *c));
+                            rows += 1;
+                        }
+                    });
+                    self.vclosures[ci].rows = rows;
+                    let mut books: Vec<(Sym, Vec<(Term, Term)>)> = books.into_iter().collect();
+                    books.sort_by_key(|b| b.0);
+                    books.into_iter().map(|(b, es)| (b, Rc::new(Forest::build(&es)))).collect()
                 }
-            });
-            let mut books: Vec<(Sym, Vec<(Term, Term)>)> = books.into_iter().collect();
-            books.sort_by_key(|b| b.0);
-            let forests: Vec<(Sym, Rc<Forest>)> = books.into_iter().map(|(b, es)| (b, Rc::new(Forest::build(&es)))).collect();
+            };
+            self.vclosures[ci].mark = self.store.len_ids();
             let c = &mut self.vclosures[ci];
             c.pairs = forests.iter().map(|f| f.1.pairs).sum();
             c.deep = forests.iter().map(|f| f.1.deep as u64).sum();
@@ -257,6 +269,40 @@ impl Eval {
             self.vbuilds += 1;
         }
         self.store.virtuals[ci].forests.clone()
+    }
+
+    /// The forests of `ci` with the edges added since they were built, where every old edge stands and each new one
+    /// adds a tree below the old ones (`Forest::extended`): a file added to a corpus, without numbering it all again.
+    fn vextended(&mut self, ci: usize) -> Option<Vec<(Sym, Rc<Forest>)>> {
+        let c = &self.vclosures[ci];
+        c.built?;
+        let (edge, mark, rows) = (c.edge, c.mark, c.rows);
+        let mut old = 0;
+        let mut books: FxMap<Sym, Vec<(Term, Term)>> = FxMap::default();
+        self.store.each_row(edge, |persp, id| {
+            if let [p, c] = self.store.args(id) {
+                if id < mark {
+                    old += 1;
+                } else {
+                    books.entry(persp).or_default().push((*p, *c));
+                }
+            }
+        });
+        if old != rows {
+            return None;
+        }
+        let mut forests: Vec<(Sym, Rc<Forest>)> = self.store.virtuals[ci].forests.to_vec();
+        let mut added = 0;
+        for (b, es) in books {
+            added += es.len();
+            match forests.iter_mut().find(|f| f.0 == b) {
+                Some(f) => f.1 = Rc::new(f.1.extended(&es)?),
+                None => forests.push((b, Rc::new(Forest::build(&es)))),
+            }
+        }
+        forests.sort_by_key(|b| b.0);
+        self.vclosures[ci].rows = rows + added;
+        Some(forests)
     }
 
     /// The forests of every active closure, built as the edges stand: the planner's estimates read them.

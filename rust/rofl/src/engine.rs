@@ -707,6 +707,10 @@ pub struct Eval {
     adding: bool,
     /// The facts an addition made new (`add_fresh` in the fine path), where it knows them: a promise is checked on them.
     add_fresh: Option<Vec<FactId>>,
+    /// The facts an addition gave a firing while they stood: their heights, and those above them, may be lower now.
+    add_refired: Vec<FactId>,
+    /// The first id an addition's facts take: a fact below it stood before.
+    add_mark: FactId,
     pub delta_ns: u64,
     delta_plans: HashMap<(Sym, usize), joinplan::Slot>,
     delta_stats: HashMap<Vec<u64>, (usize, usize, usize)>,
@@ -1366,6 +1370,8 @@ impl Eval {
             plan_trial: false,
             adding: false,
             add_fresh: None,
+            add_refired: Vec::new(),
+            add_mark: 0,
             delta_plans: HashMap::new(),
             delta_stats: HashMap::new(),
             functions: Vec::new(),
@@ -5096,6 +5102,9 @@ impl Eval {
                 self.lat_cur.insert(ck, id);
             }
         }
+        // a fact that stood before an addition, given a firing that may lower it
+        let stood = self.adding && !is_new && id < self.add_mark && !self.store.rec(id).base();
+        let was = if stood && self.store.heights(&[id], &mut self.height_memo).is_ok() { self.height_memo.get(&id).copied() } else { None };
         let tick = self.store.tick;
         let new_firing = if self.no_witness && self.lattices.is_empty() {
             is_new
@@ -5110,6 +5119,9 @@ impl Eval {
             )
         };
         if new_firing {
+            if stood && was.is_none_or(|h| self.member_height(&sol.prems).map_or(true, |n| n < h)) {
+                self.add_refired.push(id);
+            }
             if self.ds_check {
                 return Err(Halt::Bug(format!(
                     "the layers of a component stratified by its data missed an instance of rule {}: it concludes {} again, new",
@@ -11066,7 +11078,7 @@ impl Eval {
         out
     }
 
-    fn index_probe(&mut self, l: &Lit, s: &Subst, persp: Option<Sym>) -> Option<Vec<FactId>> {
+    fn index_probe(&mut self, l: &Lit, s: &Subst, persp: Option<Sym>, limit: usize) -> Option<Vec<FactId>> {
         if !self.store.indexed(l.rel, persp) {
             return None;
         }
@@ -11093,7 +11105,7 @@ impl Eval {
             *self.argm_by_rule.entry(rid).or_insert(0) += 1;
         }
         self.store
-            .arg_matches(&self.h, l.rel, persp, l.args.len(), &pos, &vals)
+            .arg_matches_upto(&self.h, l.rel, persp, l.args.len(), &pos, &vals, limit)
     }
 
     /// A COMPLETE CALL THAT COVERS THIS ONE, while the store stands as it did: the
@@ -11353,11 +11365,10 @@ impl Eval {
         let persp = persp_t.as_atom();
         let cands: Vec<FactId> = match only {
             Some(keys) => {
-                let narrow = self.index_probe(l, s, persp);
+                // (the index read only as far as it is narrower than the news)
+                let narrow = self.index_probe(l, s, persp, keys.len().saturating_sub(1));
                 match narrow {
-                    Some(n) if n.len() < keys.len() => {
-                        n.into_iter().filter(|f| keys.contains(f)).collect()
-                    }
+                    Some(n) => n.into_iter().filter(|f| keys.contains(f)).collect(),
                     _ => keys
                         .iter()
                         .copied()
@@ -11370,7 +11381,7 @@ impl Eval {
                         .collect(),
                 }
             }
-            None => match self.index_probe(l, s, persp) {
+            None => match self.index_probe(l, s, persp, usize::MAX) {
                 Some(c) => c,
                 None => match persp {
                     Some(p) => self.store.rel_persp(&self.h, l.rel, p),
@@ -11928,7 +11939,7 @@ impl Eval {
         }
         let persp_t = walk(&self.h, l.persp, s);
         let persp = persp_t.as_atom();
-        let cands = match self.index_probe(l, s, persp) {
+        let cands = match self.index_probe(l, s, persp, usize::MAX) {
             Some(c) => c,
             None => match persp {
                 Some(p) => self.store.rel_persp(&self.h, l.rel, p),

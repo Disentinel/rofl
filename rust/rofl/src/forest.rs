@@ -21,6 +21,7 @@ use crate::term::Term;
 
 const NONE: u32 = u32::MAX;
 
+#[derive(Clone)]
 pub struct Forest {
     nodes: Vec<Term>,
     idx: FxMap<u64, u32>,
@@ -117,6 +118,30 @@ impl Forest {
             internal += (start[v + 1] > start[v]) as u32;
         }
         Forest { nodes, idx, parent, pre, order, end, depth, pairs, deep, internal, broken }
+    }
+
+    /// This forest with `edges` added, where each adds a node it does not hold below a node an earlier one added:
+    /// the new trees after the old ones, the old numbering kept. None where an edge reaches a node it holds.
+    pub fn extended(&self, edges: &[(Term, Term)]) -> Option<Forest> {
+        if edges.iter().any(|(p, c)| self.idx.contains_key(&p.bits()) || self.idx.contains_key(&c.bits())) {
+            return None;
+        }
+        let add = Forest::build(edges);
+        let (n, o) = (self.nodes.len() as u32, self.order.len() as u32);
+        let shift = |v: u32, by: u32| if v == NONE { NONE } else { v + by };
+        let mut f = self.clone();
+        f.nodes.extend_from_slice(&add.nodes);
+        f.idx.extend(add.idx.iter().map(|(k, v)| (*k, v + n)));
+        f.parent.extend(add.parent.iter().map(|&v| shift(v, n)));
+        f.pre.extend(add.pre.iter().map(|&v| shift(v, o)));
+        f.order.extend(add.order.iter().map(|&v| v + n));
+        f.end.extend(add.end.iter().map(|&v| v + o));
+        f.depth.extend_from_slice(&add.depth);
+        f.pairs += add.pairs;
+        f.deep += add.deep;
+        f.internal += add.internal;
+        f.broken |= add.broken;
+        Some(f)
     }
 
     fn at(&self, t: Term) -> Option<u32> {
