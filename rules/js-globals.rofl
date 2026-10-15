@@ -14,55 +14,12 @@
 -- value with no members), and `es_construct_not_constructor[audit]` uses it.
 
 -- =========================================================================
--- 1. WHERE A NAME IS NOT A REFERENCE. Every property name, key, label and
--- type name is an `identifier` node too; these are the positions where an
--- identifier names something other than a binding. Everywhere else it is a
--- reference, `typeof Promise` and `arr.map(String)` included.
-edb(not_a_reference).   -- not_a_reference(Kind, Field)
-not_a_reference(labeled_statement, label).
-not_a_reference(break_statement, label).
-not_a_reference(continue_statement, label).
-not_a_reference(import_specifier, imported).
-not_a_reference(export_specifier, exported).
-not_a_reference(export_namespace_specifier, exported).
-not_a_reference(meta_property, meta).
-not_a_reference(meta_property, property).
-not_a_reference(ts_type_reference, type_name).
-not_a_reference(ts_qualified_name, left).
-not_a_reference(ts_qualified_name, right).
-not_a_reference(ts_expression_with_type_arguments, expression).
-not_a_reference(ts_class_implements, expression).
-not_a_reference(ts_interface_heritage, expression).
-not_a_reference(ts_type_query, expr_name).
-not_a_reference(ts_interface_declaration, id).
-not_a_reference(ts_type_alias_declaration, id).
-not_a_reference(ts_enum_member, id).
-not_a_reference(ts_module_declaration, id).
-not_a_reference(ts_type_predicate, parameter_name).
-not_a_reference(ts_import_type, qualifier).
-
-not_a_ref[code](E) :- not_a_reference(K, Field), ast_node[code](P, K, _, _), ast_child[code](P, Field, _, E).
--- a key written as a name: `o.p`, `{ p: v }`, `p() {}`, a class field
-not_a_ref[code](E) :- ast_child[code](P, property, 0, E), ast_attr[code](P, computed, false).
-not_a_ref[code](E) :- ast_child[code](P, key, 0, E), ast_attr[code](P, computed, false).
-
--- =========================================================================
--- 2. WHAT IS DECLARED AT THE TOP OF A FILE. Inside it, a name is looked up
--- through the scopes around the reading (rules/js-dataflow.rofl, 3a); what no
--- scope declares is the file's own top-level binding or import, else global.
-top_declares[code](Name, File) :- binder_at_top[code](D), binds_name[code](D, Name, File).
-top_declares[code](Name, File) :- decl_at_top[code](D), named_decl[code](D, Name, File).
-top_declares[code](Name, File) :- binding[code](I, _, Name, _), ast_node[code](I, _, File, _).
-
--- =========================================================================
--- 3. A GLOBAL AS A FACT, not a spelling — the relation the effect layer joins
--- against. `es_global[code]` is what ECMAScript declares, dated;
+-- A GLOBAL AS A FACT, not a spelling — the relation the effect layer joins
+-- against. `free_global[code]` is found by the name lookup of
+-- rules/js-dataflow.rofl; `es_global[code]` is what ECMAScript declares, dated;
 -- `global_unattributed[audit]` is the RUNTIME half (`console`, `process`,
 -- `fetch`), an in-tray rather than a defect. Both are keyed by node and by
 -- name, so a runtime table keyed by name joins straight on.
-free_global[code](E, Name, File) :- ident_in[code](E, Name, File), not not_a_ref[code](E),
-                                    not name_cand[code](E, _, _, _), not top_declares[code](Name, File).
-
 es_global[code](E, Name, Rel, Form) :- free_global[code](E, Name, _),
                                        lib_global(Name, Rel, Form).
 

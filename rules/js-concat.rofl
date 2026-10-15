@@ -121,7 +121,7 @@ vlib_fn[flow](M, Surface, K) :- vlib_member[flow](M, Surface, K), ambient_value(
 vlib_fn[flow](Sp, Surface, K) :- external_import[code](Sp, _, Spec, _), builtin_canonical[code](Spec, Surface),
                                 ast_child[code](Sp, imported, 0, I), ast_name[code](I, K),
                                 ambient_value(Surface, K, _, _).
-vlib_fn[flow](P, Surface, K) :- vlib_ns[flow](Y, Surface), may_be_node[flow](Init, Y), ast_child[code](D, init, 0, Init),
+vlib_fn[flow](P, Surface, K) :- vlib_ns[flow](Y, Surface), may_be_node[flow](Init, Y), decl_value[flow](D, Init),
                                destr_prop[code](D, P, Key, _, _), key_name[code](Key, K), ambient_value(Surface, K, _, _).
 
 vlib_fn[flow](M, Surface, K) :- ambient_module(File, Surface), ast_node[code](M, object_method, File, _),

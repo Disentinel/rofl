@@ -253,16 +253,8 @@ eff_alias(top, st_local).
 --       `f_unpopulatable_sees_the_relation_and_is_blind_to_the_constant`
 --       already records: a misspelt CONSTANT in the right lexical form is a
 --       well-formed question about a real relation, and nothing objects.
---   ambient_binding(File, Name, Surface)
---       which free NAME in which file is which surface. Needed for
---       `console.log(...)`: the receiver `console` is a free identifier and
---       nothing in this program says what it is. Without this relation the
---       `io` half of this layer cannot be derived at all, which is why
---       `call_expression` and `identifier` are open cells below rather than
---       stamped rows.
 edb(surface_origin).
 edb(ambient_effect).
-edb(ambient_binding).
 edb(eff_origin).
 -- `lib.es*.d.ts` — an ECMAScript intrinsic. Present in every host.
 eff_origin(es_intrinsic).

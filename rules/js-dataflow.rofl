@@ -97,7 +97,7 @@ binder_at_top[code](D)       :- scoped_binder[code](D, _), not binder_region[cod
 sees_binder[code](E, D)      :- name_scope[code](E, Name, File, S), binder_region[code](D, S),
                                 binds_name[code](D, Name, File), not tdz_at[code](E, D).
 sees_binder[code](E, D)      :- binder_at_top[code](D), binds_name[code](D, Name, File),
-                                ident_in[code](E, Name, File), not name_cand[code](E, _, _, _).
+                                top_read[code](E, Name, File).
 
 -- Scope kinds are only those a declarator can be nearest to AND a fixture
 -- reaches. `catch_clause`/`switch_case` never are (grammar); a for-of/for-in
@@ -133,7 +133,7 @@ closer_s[code](R, D)   :- encloses_s[code](R, D), nearest_s[code](S, D), R != S.
 -- Shadowing is a question about a NAME; this is the projection that carries one.
 binds_name[code](D, Name, File) :- binder[code](D, Name, _, File).
 binds_name[code](D, Name, File) :- bare_binder[code](D, Name, File).
-binds_name[code](D, Name, File) :- destructures[code](D, Name, _, File).
+binds_name[code](D, Name, File) :- destr_prop[code](D, _, _, Name, File).
 binds_name[code](D, Name, File) :- destructures_at[code](D, Name, _, File).
 binds_name[code](D, Name, File) :- rest_binds[code](D, _, Name, File).
 
@@ -148,6 +148,8 @@ binds_name[code](D, Name, File) :- rest_binds[code](D, _, Name, File).
 -- A name nothing in its file declares in a scope is not looked up: it is at the top.
 scope_declares[code](S, Name, File) :- binder_region[code](D, S), binds_name[code](D, Name, File).
 scope_declares[code](F, Name, File) :- param_bound[flow](F, Name), ast_node[code](F, _, File, _).
+scope_declares[code](F, "arguments", File) :- fn_node[code](F), ast_node[code](F, K, File, _),
+                                              K != arrow_function_expression.
 scope_declares[code](S, Name, File) :- named_decl[code](D, Name, File), decl_region[code](D, S).
 scope_declares[code](B, Name, File) :- catch_names[code](B, Name, File).
 scope_declares[code](X, Name, File) :- ast_node[code](X, function_expression, File, _),
@@ -173,7 +175,7 @@ catch_names[code](H, Name, File) :- ast_node[code](H, catch_clause, File, _), as
 sees_decl[code](E, D) :- named_decl[code](D, Name, File), decl_region[code](D, S),
                          name_scope[code](E, Name, File, S).
 sees_decl[code](E, D) :- decl_at_top[code](D), named_decl[code](D, Name, File),
-                         ident_in[code](E, Name, File), not name_cand[code](E, _, _, _).
+                         top_read[code](E, Name, File).
 scoped_name[code](Name, File) :- scope_declares[code](_, Name, File).
 
 name_cand[code](E, Name, File, S)  :- ident_in[code](E, Name, File), scoped_name[code](Name, File),
@@ -181,6 +183,71 @@ name_cand[code](E, Name, File, S)  :- ident_in[code](E, Name, File), scoped_name
 name_outer[code](E, S)             :- name_cand[code](E, Name, File, S), name_cand[code](E, Name, File, S2),
                                       ast_within[code](S, S2).
 name_scope[code](E, Name, File, S) :- name_cand[code](E, Name, File, S), not name_outer[code](E, S).
+
+-- 3b. WHERE A NAME IS NOT A REFERENCE. Every property name, key, label and
+-- type name is an `identifier` node too; these are the positions where an
+-- identifier names something other than a binding. Everywhere else it is a
+-- reference, `typeof Promise` and `arr.map(String)` included.
+edb(not_a_reference).   -- not_a_reference(Kind, Field)
+not_a_reference(labeled_statement, label).
+not_a_reference(break_statement, label).
+not_a_reference(continue_statement, label).
+not_a_reference(import_specifier, imported).
+not_a_reference(export_specifier, exported).
+not_a_reference(export_namespace_specifier, exported).
+not_a_reference(meta_property, meta).
+not_a_reference(meta_property, property).
+not_a_reference(ts_type_reference, type_name).
+not_a_reference(ts_qualified_name, left).
+not_a_reference(ts_qualified_name, right).
+not_a_reference(ts_expression_with_type_arguments, expression).
+not_a_reference(ts_class_implements, expression).
+not_a_reference(ts_interface_heritage, expression).
+not_a_reference(ts_type_query, expr_name).
+not_a_reference(ts_interface_declaration, id).
+not_a_reference(ts_type_alias_declaration, id).
+not_a_reference(ts_enum_member, id).
+not_a_reference(ts_module_declaration, id).
+not_a_reference(ts_type_predicate, parameter_name).
+not_a_reference(ts_import_type, qualifier).
+
+not_a_ref[code](E) :- not_a_reference(K, Field), ast_node[code](P, K, _, _), ast_child[code](P, Field, _, E).
+-- a key written as a name: `o.p`, `{ p: v }`, `p() {}`, a class field
+not_a_ref[code](E) :- ast_child[code](P, property, 0, E), ast_attr[code](P, computed, false).
+not_a_ref[code](E) :- ast_child[code](P, key, 0, E), ast_attr[code](P, computed, false).
+
+-- 3c. WHAT IS DECLARED AT THE TOP OF A FILE. A name no scope around its
+-- reading declares is the file's own top-level binding or import, else global.
+top_read[code](E, Name, File)  :- ident_in[code](E, Name, File), not not_a_ref[code](E),
+                                  not name_cand[code](E, _, _, _).
+top_declares[code](Name, File) :- binder_at_top[code](D), binds_name[code](D, Name, File).
+top_declares[code](Name, File) :- decl_at_top[code](D), named_decl[code](D, Name, File).
+top_declares[code](Name, File) :- imports_name[code](Name, _, _, File).
+top_declares[code](Name, File) :- imports_ns[code](Name, _, File).
+top_declares[code](Name, File) :- imports_default[code](Name, _, File).
+
+free_global[code](E, Name, File) :- top_read[code](E, Name, File), not top_declares[code](Name, File).
+
+-- A WELL-KNOWN SYMBOL is a key of its own kind: `[Symbol.iterator]` and a
+-- method called `iterator` are two members. The thirteen are the language's.
+edb(well_known_symbol).
+well_known_symbol("asyncIterator", symbol_async_iterator).
+well_known_symbol("hasInstance", symbol_has_instance).
+well_known_symbol("isConcatSpreadable", symbol_is_concat_spreadable).
+well_known_symbol("iterator", symbol_iterator).
+well_known_symbol("match", symbol_match).
+well_known_symbol("matchAll", symbol_match_all).
+well_known_symbol("replace", symbol_replace).
+well_known_symbol("search", symbol_search).
+well_known_symbol("species", symbol_species).
+well_known_symbol("split", symbol_split).
+well_known_symbol("toPrimitive", symbol_to_primitive).
+well_known_symbol("toStringTag", symbol_to_string_tag).
+well_known_symbol("unscopables", symbol_unscopables).
+symbol_ref[code](E, Key) :- ast_child[code](E, object, 0, O), free_global[code](O, "Symbol", _),
+                            ast_attr[code](E, computed, false), ast_child[code](E, property, 0, P),
+                            ast_name[code](P, N), well_known_symbol(N, Key).
+key_name[code](K, Key)   :- ast_child[code](_, key, 0, K), symbol_ref[code](K, Key).
 
 -- The TDZ, the one place the LINE matters: a read of a `let`/`const` name
 -- above its declaration in the same region throws, so the model says nothing
@@ -215,12 +282,6 @@ assign_value_op("||=").
 assign_value_op("&&=").
 assign_value_op("??=").
 
--- `assigns` is every write of a name, whatever the operator: what is MUTATED
--- (rules/js-effects.rofl), not what a name may hold.
-assigns[code](Name, Src, File) :- ast_node[code](A, assignment_expression, File, _),
-                                  ast_child[code](A, left, 0, L), ast_name[code](L, Name),
-                                  ast_child[code](A, right, 0, Src).
-
 assigned[code](A, L, Name, Src, File) :- ast_node[code](A, assignment_expression, File, _),
                                          ast_attr[code](A, operator, Op), assign_value_op(Op),
                                          ast_child[code](A, left, 0, L), ast_name[code](L, Name),
@@ -250,22 +311,15 @@ may_be_lit[flow](U, V)  :- assign_param[flow](A, F), assigned[code](A, _, Name, 
 may_be_node[flow](U, N) :- assign_param[flow](A, F), assigned[code](A, _, Name, Src, _),
                            may_be_node[flow](Src, N), param_use[flow](F, Name, U).
 
--- WHERE SCOPE CANNOT BE DECIDED the over-approximation stays, and is a row.
--- A target no declarator or parameter owns is an implicit global, a function or
--- class name, an import, a catch parameter or a form this layer has no binder
--- for. It reaches every read of the name in the file that no binder or
--- parameter claims. `assign_reaches_unscoped(E, Src)` is the whole of it: E may
--- hold what Src holds, by name alone. `assign_unscoped` is the queue.
-unscoped_name[flow](Name, File) :- assign_unscoped[flow](A), assigned[code](A, _, Name, _, File).
-bound_read[flow](E)       :- unscoped_name[flow](Name, File), binds_name[code](D, Name, File),
-                             ident_in[code](E, Name, File), sees_binder[code](E, D).
-bound_read[flow](E)       :- unscoped_name[flow](Name, File), ident_in[code](E, Name, File),
-                             param_use[flow](_, Name, E).
-
+-- A TARGET NO DECLARATOR OR PARAMETER OWNS — a function or class name, a
+-- catch parameter, an import, an implicit global — is still a name found by
+-- the same lookup: it reaches the reads that find the scope it finds, or, at
+-- the top of the file, the reads at the top. `assign_unscoped` is the queue.
 assign_unscoped[flow](A)  :- assigned[code](A, _, _, _, _), not assign_decided[flow](A).
-assign_reaches_unscoped[flow](E, Src) :- assign_unscoped[flow](A),
-                                         assigned[code](A, _, Name, Src, File),
-                                         ident_in[code](E, Name, File), not bound_read[flow](E).
+assign_reaches_unscoped[flow](E, Src) :- assign_unscoped[flow](A), assigned[code](A, L, Name, Src, File),
+                                         name_scope[code](L, Name, File, S), name_scope[code](E, Name, File, S).
+assign_reaches_unscoped[flow](E, Src) :- assign_unscoped[flow](A), assigned[code](A, L, Name, Src, File),
+                                         top_read[code](L, Name, File), top_read[code](E, Name, File).
 
 may_be_lit[flow](E, V)  :- assign_reaches_unscoped[flow](E, Src), may_be_lit[flow](Src, V).
 may_be_node[flow](E, N) :- assign_reaches_unscoped[flow](E, Src), may_be_node[flow](Src, N).
@@ -312,6 +366,23 @@ builtin_prototype(number).
 builtin_prototype(boolean).
 builtin_prototype(regexp).
 builtin_prototype(bigint).
+builtin_prototype(promise).
+
+-- A promise has no node to be: it is made by calling an async function, by
+-- `new Promise`, by a static of `Promise`, and by `then`, `catch` or `finally`
+-- on a promise, and a name bound to one is one.
+edb(lib_member).
+prototype_of[flow](C, promise) :- resolves[code](C, F), ast_attr[code](F, async, true),
+                                  not ast_attr[code](F, generator, true).
+prototype_of[flow](X, promise) :- ast_node[code](X, new_expression, _, _), ast_child[code](X, callee, 0, G),
+                                  free_global[code](G, "Promise", _).
+prototype_of[flow](C, promise) :- ast_child[code](C, callee, 0, N), ast_child[code](N, object, 0, G),
+                                  free_global[code](G, "Promise", _).
+prototype_of[flow](C, promise) :- ast_child[code](C, callee, 0, N), ast_child[code](N, object, 0, O),
+                                  prototype_of[flow](O, promise), selects[flow](N, Key),
+                                  lib_member(promise, Key, _).
+prototype_of[flow](E, promise) :- binder[code](D, _, Init, _), prototype_of[flow](Init, promise),
+                                  sees_binder[code](E, D).
 
 -- =========================================================================
 -- 6. DESTRUCTURING — a name bound from a PATTERN. `{ pulled: taken }` binds
@@ -331,6 +402,10 @@ prop_default[code](Prop, Init)  :- ast_child[code](Prop, value, 0, A),
                                    ast_node[code](A, assignment_pattern, _, _),
                                    ast_child[code](A, right, 0, Init).
 
+-- What a declarator's pattern takes apart: its initialiser, or at the head of
+-- a for-of each element the loop walks (section 14).
+decl_value[flow](D, X) :- ast_child[code](D, init, 0, X).
+
 destr_prop[code](D, Prop, K, Local, File) :- ast_node[code](D, variable_declarator, File, _),
                                              ast_child[code](D, id, 0, P),
                                              ast_node[code](P, object_pattern, _, _),
@@ -338,14 +413,14 @@ destr_prop[code](D, Prop, K, Local, File) :- ast_node[code](D, variable_declarat
                                              ast_child[code](Prop, key, 0, K),
                                              prop_local[code](Prop, Local).
 destructures[code](D, Local, Key, File) :- destr_prop[code](D, _, K, Local, File), key_name[code](K, Key).
-scoped_binder[code](D, File) :- destructures[code](D, _, _, File).
+scoped_binder[code](D, File) :- destr_prop[code](D, _, _, _, File).
 
 may_be_node[flow](E, N) :- destructures[code](D, Local, Key, File),
-                           ast_child[code](D, init, 0, Init), may_be_node[flow](Init, Obj),
+                           decl_value[flow](D, Init), may_be_node[flow](Init, Obj),
                            member_value[flow](Obj, Key, V), may_be_node[flow](V, N),
                            ident_in[code](E, Local, File), sees_binder[code](E, D).
 may_be_lit[flow](E, L)  :- destructures[code](D, Local, Key, File),
-                           ast_child[code](D, init, 0, Init), may_be_node[flow](Init, Obj),
+                           decl_value[flow](D, Init), may_be_node[flow](Init, Obj),
                            member_value[flow](Obj, Key, V), may_be_lit[flow](V, L),
                            ident_in[code](E, Local, File), sees_binder[code](E, D).
 
@@ -367,7 +442,7 @@ array_elem[flow](A, I, E) :- ast_node[code](A, array_expression, _, _), ast_chil
 elem_at[flow](X, I, E)    :- may_be_node[flow](X, A), array_elem[flow](A, I, E).
 
 may_be_node[flow](E, N) :- destructures_at[code](D, Local, Index, File),
-                           ast_child[code](D, init, 0, Init), elem_at[flow](Init, Index, V),
+                           decl_value[flow](D, Init), elem_at[flow](Init, Index, V),
                            may_be_node[flow](V, N),
                            ident_in[code](E, Local, File), sees_binder[code](E, D).
 
@@ -401,7 +476,8 @@ param_prop[code](F, I, Key, Local, Prop) :- param_pattern[code](F, I, P),
                                             ast_child[code](Prop, key, 0, K), key_name[code](K, Key),
                                             prop_local[code](Prop, Local).
 param_bound[flow](F, Name) :- param_of[flow](F, _, Name).
-param_bound[flow](F, Name) :- param_prop[code](F, _, _, Name, _).
+param_bound[flow](F, Name) :- param_pattern[code](F, _, P), ast_child[code](P, properties, _, Prop),
+                              prop_local[code](Prop, Name).
 
 may_be_lit[flow](U, L)  :- param_prop[code](F, I, Key, Local, _), sx_arg_node[surface](F, I, O),
                            member_value[flow](O, Key, V), may_be_lit[flow](V, L),
@@ -433,7 +509,7 @@ scoped_binder[code](D, File) :- rest_binds[code](D, _, _, File).
 
 member_value[flow](R, Key, V) :- rest_in_pattern[code](D, R, _),
                                  ast_child[code](D, id, 0, P),
-                                 ast_child[code](D, init, 0, Init), may_be_node[flow](Init, Obj),
+                                 decl_value[flow](D, Init), may_be_node[flow](Init, Obj),
                                  member_value[flow](Obj, Key, V),
                                  not pattern_takes[code](P, Key).
 member_plain[flow](R, Key, V) :- rest_in_pattern[code](_, R, _), member_value[flow](R, Key, V).
@@ -528,8 +604,8 @@ dead_site[code](C)      :- dead_fn[code](F), ast_within[code](F, C), call_like_v
 
 -- Argument into parameter by INDEX. A spread destroys the correspondence for
 -- everything after it, and a may-set may be silent but not wrong, so `arg_at`
--- stops at the first spread; a spread of an array this layer can see
--- contributes element K at position J + K. `f(...a, ...b)` is unexercised.
+-- stops at the first spread; a spread of an array this layer can see (a
+-- literal, or a rest parameter) contributes element K at position J + K.
 spread_arg[code](C, I)   :- call_like_v(K), ast_node[code](C, K, _, _),
                             ast_child[code](C, arguments, I, S),
                             ast_node[code](S, spread_element, _, _).
@@ -546,6 +622,17 @@ arg_at[flow](C, I, E)      :- spread_arg[code](C, J), not after_spread[code](C, 
                               I is J + K.
 param_of[flow](F, I, Name) :- fn_node[code](F), ast_child[code](F, params, I, P),
                               ast_name[code](P, Name).
+
+-- A rest parameter is an array of the arguments from its index on: element K
+-- of `...args` at J is the argument at J + K of every call of the function,
+-- so `inner(...args)` hands them on through the spread rule above.
+param_rest[code](F, J, R, Name) :- fn_node[code](F), ast_child[code](F, params, J, R),
+                                   ast_node[code](R, rest_element, _, _),
+                                   ast_child[code](R, argument, 0, L), ast_name[code](L, Name).
+param_bound[flow](F, Name)  :- param_rest[code](F, _, _, Name).
+may_be_node[flow](U, R)     :- param_rest[code](F, _, R, Name), param_use[flow](F, Name, U).
+array_elem[flow](R, K, A)   :- param_rest[code](F, J, R, _), resolves[code](C, F), arg_at[flow](C, I, A),
+                               I >= J, K is I - J.
 
 -- Where a parameter is read: every identifier whose lookup stops at the
 -- function (section 3a). A declarator whose region is the function itself
@@ -673,6 +760,7 @@ selects[flow](N, Key)       :- member_node_v[flow](N), ast_attr[code](N, compute
                                ast_child[code](N, property, 0, P), ast_name[code](P, Key).
 computed_key[code](N, P)    :- ast_attr[code](N, computed, true), member_node_v[flow](N), ast_child[code](N, property, 0, P).
 selects[flow](N, Key)       :- may_be_lit[flow](P, Key), computed_key[code](N, P).
+selects[flow](N, Key)       :- symbol_ref[code](P, Key), computed_key[code](N, P).
 
 -- The receiver decides which half of a class it sees: `Vat.poured()` and
 -- `new Vat().tapped()` are both TypeErrors and both resolved until the `static`
@@ -903,7 +991,7 @@ exports_name[code](P, Name, File) :- export_ns_name[code](Name, E, File),
 may_be_node[flow](E, F) :- imports_name[code](Local, Name, D, File),
                            module_target[code](D, Target),
                            sx_export_node[surface](Target, Name, F),
-                           ident_in[code](E, Local, File).
+                           top_read[code](E, Local, File).
 
 -- `export const X = init`: the name offers what the initialiser may be, a node through `exports_name` and a
 -- literal through `exports_value`, which also carries `export { x }` and the re-exports, so a constant written
@@ -921,7 +1009,7 @@ exports_value[code](X, Ext, File) :- reexport_offers[code](File, Ext, T, Int), s
 
 may_be_lit[flow](E, V) :- imports_name[code](Local, Name, D, File), module_target[code](D, Target),
                           sx_export_lit[surface](Target, Name, V),
-                          ident_in[code](E, Local, File).
+                          top_read[code](E, Local, File).
 member_value[flow](P, Name, X) :- module_object[flow](P, Target), exports_value[code](X, Name, Target).
 
 -- A namespace import binds the module object. A default import binds the one
@@ -935,7 +1023,7 @@ imports_ns[code](Local, D, File) :-
 module_object[flow](P, File) :- ast_node[code](P, program, File, _).
 
 may_be_node[flow](E, P) :- imports_ns[code](Local, D, File), module_target[code](D, Target),
-                           sx_module[surface](Target, P), ident_in[code](E, Local, File).
+                           sx_module[surface](Target, P), top_read[code](E, Local, File).
 member_value[flow](P, Name, F) :- module_object[flow](P, Target),
                                   exports_name[code](F, Name, Target).
 
@@ -952,7 +1040,7 @@ exports_default[code](F, File) :- ast_node[code](E, export_default_declaration, 
 may_be_node[flow](E, F) :- imports_default[code](Local, D, File),
                            module_target[code](D, Target),
                            sx_default[surface](Target, F),
-                           ident_in[code](E, Local, File).
+                           top_read[code](E, Local, File).
 
 -- CommonJS. `require(S)` is what the target's `module.exports` may be: first
 -- the module's own object — its `program` node, as for a namespace — then
@@ -1038,9 +1126,9 @@ may_be_node[flow](I, Spec) :- external_site[code](I, Spec), require_site[code](I
 may_be_node[flow](I, Spec) :- external_site[code](I, Spec),
                               ast_node[code](I, import_expression, _, _).
 may_be_node[flow](E, Spec) :- imports_default[code](Local, D, File), external_site[code](D, Spec),
-                              ident_in[code](E, Local, File).
+                              top_read[code](E, Local, File).
 may_be_node[flow](E, Spec) :- imports_ns[code](Local, D, File), external_site[code](D, Spec),
-                              ident_in[code](E, Local, File).
+                              top_read[code](E, Local, File).
 
 external_import[code](Sp, Local, Spec, File) :-
     ast_node[code](D, import_declaration, File, _), external_site[code](D, Spec),
@@ -1049,7 +1137,7 @@ external_import[code](Sp, Local, Spec, File) :-
     ast_child[code](Sp, local, 0, L), ast_name[code](L, Local).
 external_value[flow](Sp, Spec) :- external_import[code](Sp, _, Spec, _).
 may_be_node[flow](E, Sp)       :- external_import[code](Sp, Local, _, File),
-                                  ident_in[code](E, Local, File).
+                                  top_read[code](E, Local, File).
 
 -- Calling, constructing or reading a member off an external value gives
 -- another one. A callee that is also a corpus function keeps both rows. The
@@ -1080,14 +1168,14 @@ member_plain[flow](X, Key, V) :- external_value[flow](X, _), member_value[flow](
 external_destructured[code](D, Prop, Local, File) :-
     destr_prop[code](D, Prop, K, Local, File), key_name[code](K, _).
 external_value[flow](Prop, Spec) :- external_destructured[code](D, Prop, _, _),
-                                    ast_child[code](D, init, 0, Init), may_be_node[flow](Init, X),
+                                    decl_value[flow](D, Init), may_be_node[flow](Init, X),
                                     external_value[flow](X, Spec).
 may_be_node[flow](E, Prop)       :- external_destructured[code](D, Prop, Local, File),
-                                    ast_child[code](D, init, 0, Init), may_be_node[flow](Init, X),
+                                    decl_value[flow](D, Init), may_be_node[flow](Init, X),
                                     external_value[flow](X, _),
                                     ident_in[code](E, Local, File), sees_binder[code](E, D).
 external_value[flow](R, Spec)    :- rest_in_pattern[code](D, R, _),
-                                    ast_child[code](D, init, 0, Init), may_be_node[flow](Init, X),
+                                    decl_value[flow](D, Init), may_be_node[flow](Init, X),
                                     external_value[flow](X, Spec).
 
 -- A function handed to an external call as an argument is called back with
@@ -1202,26 +1290,20 @@ may_be_node[flow](Y, X) :- ast_node[code](Y, yield_expression, _, _),
                            ast_child[code](Y, argument, 0, A), resolves[code](A, Inner),
                            ret_node_any[flow](Inner, X).
 
--- FOR-OF: the loop variable takes the elements. An array is a VALUE (through
--- `may_be_node`); a generator is a CALL, read at the site, because its returns
--- are not what for-of walks.
-for_of_src[flow](S, X)     :- ast_node[code](S, for_of_statement, _, _),
-                              ast_child[code](S, right, 0, X).
-for_of_name[flow](S, Name) :- ast_node[code](S, for_of_statement, _, _),
-                              ast_child[code](S, left, 0, D),
-                              ast_child[code](D, declarations, 0, V),
-                              ast_child[code](V, id, 0, I), ast_name[code](I, Name).
-for_of_use[flow](S, Name, U) :- for_of_name[flow](S, Name),
-                                ast_child[code](S, body, 0, B), ast_within[code](B, U),
-                                ident[code](U, Name).
-
+-- FOR-OF: the head is a declarator like any other, whose value is each
+-- element walked. An array is a VALUE (through `may_be_node`); a generator is
+-- a CALL, read at the site, because its returns are not what for-of walks.
 iter_elem[flow](X, E) :- elem_at[flow](X, _, E).
 iter_elem[flow](X, E) :- resolves[code](X, F), yields[flow](F, E).
 
-may_be_node[flow](U, N) :- for_of_use[flow](S, _, U), for_of_src[flow](S, X),
-                           iter_elem[flow](X, E), may_be_node[flow](E, N).
-may_be_lit[flow](U, V)  :- for_of_use[flow](S, _, U), for_of_src[flow](S, X),
-                           iter_elem[flow](X, E), may_be_lit[flow](E, V).
+decl_value[flow](D, E) :- ast_node[code](S, for_of_statement, _, _), ast_child[code](S, left, 0, V),
+                          ast_child[code](V, declarations, 0, D), ast_child[code](S, right, 0, X),
+                          iter_elem[flow](X, E).
+
+may_be_node[flow](U, N) :- bare_binder[code](D, Name, File), decl_value[flow](D, E), may_be_node[flow](E, N),
+                           ident_in[code](U, Name, File), sees_binder[code](U, D).
+may_be_lit[flow](U, V)  :- bare_binder[code](D, Name, File), decl_value[flow](D, E), may_be_lit[flow](E, V),
+                           ident_in[code](U, Name, File), sees_binder[code](U, D).
 
 may_be_node[flow](E, N) :- may_be_node[flow](X, N), ast_child[code](E, left, 0, X), ast_node[code](E, logical_expression, _, _).
 may_be_node[flow](E, N) :- may_be_node[flow](X, N), ast_child[code](E, right, 0, X), ast_node[code](E, logical_expression, _, _).
@@ -1266,8 +1348,8 @@ thrown_in[flow](T, V)    :- ast_node[code](Th, throw_statement, _, _),
 thrown_in[flow](T, V)    :- ast_node[code](Th, throw_statement, _, _),
                             ast_within[code](B, Th), try_block[flow](T, B),
                             ast_child[code](Th, argument, 0, V),
-                            not in_a_fn[flow](Th).
-in_a_fn[flow](X)         :- nearest_v[flow](_, X).
+                            not in_fn[code](Th).
+in_fn[code](N)           :- nearest_v[flow](_, N).
 
 caught_value[flow](P, V) :- catch_of[flow](T, H), catch_param[flow](H, P),
                             thrown_in[flow](T, V).

@@ -317,7 +317,7 @@ resolves[code](X, F) :- transfer_site[code](X, decorator),
 for_of_iterates[code](X, M) :- transfer_site[code](X, for_of_statement),
                                ast_child[code](X, right, 0, R),
                                may_be_node[flow](R, Obj),
-                               member_value[flow](Obj, "iterator", M), fn_value[flow](M).
+                               member_value[flow](Obj, symbol_iterator, M), fn_value[flow](M).
 resolves[code](X, M) :- for_of_iterates[code](X, M).
 
 calls[code](Caller, Next) :- for_of_iterates[code](X, M), nearest_fn[code](Caller, X),
@@ -361,7 +361,6 @@ passes_function[code](C, I, F, Name) :- arg_at[flow](C, I, A), may_be_node[flow]
 callback_site[code](C, P, Key)        :- builtin_prototype(P), prototype_of[flow](O, P), ast_child[code](N, object, 0, O),
                                          callee_of[code](C, N), selects[flow](N, Key).
 callback_site[code](C, Origin, Key)   :- host_site[code](C, _, Origin, Key).
-callback_site[code](C, thenable, Key) :- unresolved_call[code](C, _), callee_of[code](C, N), selects[flow](N, Key).
 calls_back[code](C, F, When) :- callback_site[code](C, O, Key), host_calls_back(O, Key, I, When),
                                 arg_at[flow](C, I, A), may_be_node[flow](A, F), fn_value[flow](F).
 calls_back[code](C, F, When) :- callback_site[code](C, O, Key), host_calls_back(O, Key, last, When),

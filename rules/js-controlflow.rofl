@@ -243,19 +243,19 @@ site[code](N) :- accessor_read[code](N, _).
 -- still READS it, so no exclusion); an array pattern, an array spread and a
 -- spread argument run `[Symbol.iterator]` and `next`; a plain array or object
 -- runs no user code. THE RECEIVER DECIDES, not the syntax — which is what
--- `accessor_of` and `member_value(Obj, "iterator", M)` already decide. Only
+-- `accessor_of` and `member_value(Obj, symbol_iterator, M)` already decide. Only
 -- the declarator form: a pattern in a parameter reads the argument, a
 -- call-site question, so it is silent here rather than wrong.
 pattern_source[code](P, Init) :- ast_node[code](D, variable_declarator, _, _),
                                  ast_child[code](D, id, 0, P),
-                                 ast_child[code](D, init, 0, Init).
+                                 decl_value[flow](D, Init).
 
 pattern_accessor[code](P, M) :- accessor_of[flow](Obj, Key, M), may_be_node[flow](Init, Obj),
                                 pattern_source[code](P, Init), ast_node[code](P, object_pattern, _, _),
                                 pattern_takes[code](P, Key).
 pattern_accessor[code](R, M) :- rest_in_pattern[code](D, R, _),
                                 ast_child[code](D, id, 0, P),
-                                ast_child[code](D, init, 0, Init), may_be_node[flow](Init, Obj),
+                                decl_value[flow](D, Init), may_be_node[flow](Init, Obj),
                                 accessor_of[flow](Obj, Key, M), not pattern_takes[code](P, Key).
 pattern_accessor[code](S, M) :- accessor_of[flow](Obj, Key, M), may_be_node[flow](A, Obj),
                                 ast_child[code](S, argument, 0, A), ast_node[code](S, spread_element, _, _),
@@ -271,10 +271,10 @@ spread_iterated[code](S) :- ast_node[code](S, spread_element, _, _),
 
 pattern_iterates[code](P, M) :- ast_node[code](P, array_pattern, _, _),
                                 pattern_source[code](P, Init), may_be_node[flow](Init, Obj),
-                                member_value[flow](Obj, "iterator", M), fn_value[flow](M).
+                                member_value[flow](Obj, symbol_iterator, M), fn_value[flow](M).
 pattern_iterates[code](S, M) :- spread_iterated[code](S),
                                 ast_child[code](S, argument, 0, A), may_be_node[flow](A, Obj),
-                                member_value[flow](Obj, "iterator", M), fn_value[flow](M).
+                                member_value[flow](Obj, symbol_iterator, M), fn_value[flow](M).
 
 -- The two sides reach the call graph differently. An iterable position has one
 -- `[Symbol.iterator]` per receiver, so two answers are two candidate receivers
@@ -325,7 +325,7 @@ hidden_call_src[code](P, Init) :- ast_node[code](P, object_pattern, _, _),
 hidden_call_src[code](P, Init) :- ast_node[code](P, array_pattern, _, _),
                                   pattern_source[code](P, Init).
 hidden_call_src[code](R, Init) :- rest_in_pattern[code](D, R, _),
-                                  ast_child[code](D, init, 0, Init).
+                                  decl_value[flow](D, Init).
 hidden_call_src[code](S, A)    :- ast_node[code](S, spread_element, _, _),
                                   hidden_call_pos[code](S, _),
                                   ast_child[code](S, argument, 0, A).
@@ -456,9 +456,6 @@ may_not_run[code](F)       :- sx_called[surface](F), not reached_unguarded[code]
 edb(export_kind).
 export_kind(export_named_declaration).
 export_kind(export_default_declaration).
-
-fn_node[code](F) :- fn_name[code](F, _).
-in_fn[code](N)   :- nearest_v[flow](_, N).
 
 exported_fn[code](F) :- fn_node[code](F), not in_fn[code](F), ast_within[code](E, F),
                         ast_node[code](E, K, _, _), export_kind(K).

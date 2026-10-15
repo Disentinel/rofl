@@ -89,11 +89,12 @@ eff_here[flow](T, exn, none) :- ast_node[code](T, throw_statement, _, _),
 -- `nearest_fn`, the call graph's own caller, and not `nearest_v`: a decorator
 -- sits inside the method it decorates and runs when the class is defined, so
 -- `@mark() m() {}` is a call of the function around the class, never of `m`.
+-- A `for-in` walks the keys the object had when it started, so it ends; a
+-- `for-of` walks an iterator, which need not.
 edb(eff_loop_kind).
 eff_loop_kind(while_statement).
 eff_loop_kind(do_while_statement).
 eff_loop_kind(for_statement).
-eff_loop_kind(for_in_statement).
 eff_loop_kind(for_of_statement).
 
 eff_here[flow](N, div, none) :- eff_loop_kind(K), ast_node[code](N, K, _, _).
@@ -155,14 +156,17 @@ eff_here[flow](U, read, H)      :- eff_update_arg[code](U, X), eff_heap_of[flow]
 eff_here[flow](U, write, H)     :- eff_update_arg[code](U, X), eff_heap_of[flow](X, H).
 
 -- Reading a MUTABLE binding is `read<local>`; reading an immutable one is
--- nothing — Koka's answer: a binding nothing reassigns has no cell. Ordered for
--- cost: the mutable names bind (Name, File), which is exactly what `ident_in`
--- is indexed on.
-eff_mutable_name[code](Name, File) :- assigns[code](Name, _, File).
-eff_mutable_name[code](Name, File) :- eff_update_arg[code](U, X), ast_name[code](X, Name),
-                                      ast_node[code](U, _, File, _).
-eff_here[flow](N, read, local) :- eff_mutable_name[code](Name, File),
-                                  ident_in[code](N, Name, File),
+-- nothing — Koka's answer: a binding nothing reassigns has no cell. A binding
+-- is the scope its name is found in (rules/js-dataflow.rofl, 3a), or the top
+-- of the file: a write of `n` in one function makes another function's own
+-- `n` no more mutable than before.
+eff_written[code](X)               :- eff_name_target[code](X).
+eff_written[code](X)               :- eff_update_arg[code](_, X), ast_name[code](X, _).
+eff_mutable_in[code](Name, File, S) :- eff_written[code](X), name_scope[code](X, Name, File, S).
+eff_mutable_top[code](Name, File)  :- eff_written[code](X), top_read[code](X, Name, File).
+eff_here[flow](N, read, local) :- eff_mutable_in[code](Name, File, S), name_scope[code](N, Name, File, S),
+                                  not eff_name_target[code](N).
+eff_here[flow](N, read, local) :- eff_mutable_top[code](Name, File), top_read[code](N, Name, File),
                                   not eff_name_target[code](N).
 
 -- Which labels the corpus exercises — POSITIVE, not an audit, because two are
@@ -242,14 +246,11 @@ eff_purer_callee[flow](C, F, G) :- resolves[code](C, G), nearest_fn[code](F, C),
 --
 -- A concrete effect is a pair (Surface, Operation) and BOTH halves are
 -- derived: a surface somebody typed would be the taxonomy being invented
--- after all. Derivable with no surface pack: the builtin prototypes. The
--- second `eff_surface` arm is the shape `ambient_binding` plugs into.
+-- after all. Derivable with no surface pack: the builtin prototypes; the
+-- ambient surfaces add their arms in rules/js-ambient.rofl.
 eff_surface[flow](C, P) :- unresolved_call[code](C, _), callee_of[code](C, N),
                            ast_child[code](N, object, 0, O),
                            prototype_of[flow](O, P), builtin_prototype(P).
-eff_surface[flow](C, S) :- unresolved_call[code](C, _), callee_of[code](C, N),
-                           ast_child[code](N, object, 0, O), ast_name[code](O, Name),
-                           ast_node[code](C, _, File, _), ambient_binding(File, Name, S).
 
 eff_operation[flow](C, Key) :- eff_surface[flow](C, _), callee_of[code](C, N),
                                selects[flow](N, Key).

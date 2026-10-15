@@ -4,11 +4,11 @@
 -- see `console.log`, `fs.readFileSync` or `fetch`, which come from the HOST.
 --
 -- TWO DOORS, ONE PRODUCT. A MODULE arrives through a boundary the model owns:
--- rules/js-modules.rofl classifies, canonicalises, resolves and BINDS
--- `node:fs`, four positive joins. A GLOBAL arrives from nowhere: the only
+-- rules/js-modules.rofl classifies, canonicalises and resolves `node:fs`, and
+-- the value layer follows it wherever it goes. A GLOBAL arrives from nowhere: the only
 -- thing that makes `console` a global is that NOTHING IN THE PROGRAM BINDS
 -- IT, a negation over the file. The doors are `host_module_ns` with
--- `host_module_named`, and `host_global_ref[code]`; they meet at
+-- `builtin_member`, and `host_global_ref[code]`; they meet at
 -- `host_call_effect[audit]`, the row the effect layer joins against.
 
 -- the audits read the scanner's book; `ast_parse_error` is `edb` because
@@ -28,27 +28,27 @@ host_global_only_in[code](E, H, Name) :- host_global_ref[code](E, H, Name),
                                          not host_global(G, Name).
 
 -- =========================================================================
--- 2. THE MODULE DOOR — a local name bound to a node builtin. Four joins over
--- rules/js-modules.rofl's work, no new scanner contract. The NAMESPACE form
--- (`import * as fs`, `import fs`) binds a name standing for the whole module.
-host_module_ns[code](File, Local, Spec) :- resolved_builtin[code](I, Spec),
-                                           site_file[code](I, File),
-                                           binding[code](I, _, Local, "*").
-host_module_ns[code](File, Local, Spec) :- resolved_builtin[code](I, Spec),
-                                           site_file[code](I, File),
-                                           binding[code](I, _, Local, "default").
+-- 2. THE MODULE DOOR — a VALUE that is a node builtin, or a member of one.
+-- The value layer (rules/js-dataflow.rofl, external values) carries the module
+-- through `require`, imports, aliases and patterns; a door matched by the
+-- local name would open for a parameter that happens to be called `fs` and
+-- stay shut for `const fs = require('fs')`.
+builtin_ns[flow](S, Spec) :- external_value[flow](S, S), builtin_canonical[code](S, Spec).
 
--- The NAMED form binds ONE member under a local name that need not be its
--- own; reading `Imported` for the member covers the rename without a test.
-host_module_named[code](File, Local, Spec, Key) :- resolved_builtin[code](I, Spec),
-                                                   site_file[code](I, File),
-                                                   binding[code](I, _, Local, Key),
-                                                   Key != "*", Key != "default".
+builtin_member[flow](M, Spec, Key) :- builtin_ns[flow](Y, Spec), may_be_node[flow](O, Y),
+                                      ast_child[code](M, object, 0, O), member_node_v[flow](M),
+                                      selects[flow](M, Key).
+builtin_member[flow](Sp, Spec, Key) :- external_import[code](Sp, _, S, _), builtin_canonical[code](S, Spec),
+                                       ast_child[code](Sp, imported, 0, I), ast_name[code](I, Key).
+builtin_member[flow](P, Spec, Key) :- builtin_ns[flow](Y, Spec), may_be_node[flow](Init, Y),
+                                      decl_value[flow](D, Init),
+                                      destr_prop[code](D, P, K, _, _), key_name[code](K, Key).
 
 -- An import naming something the generated surface lacks: a typo, a member
 -- newer than @types/node, or one the declarations do not carry. The module
 -- door's twin of `stdlib_unattributed[audit]`.
-host_import_unknown[audit](File, Spec, Key) :- host_module_named[code](File, _, Spec, Key),
+host_import_unknown[audit](File, Spec, Key) :- external_import[code](Sp, _, _, File),
+                                               builtin_member[flow](Sp, Spec, Key),
                                                not host_module_member(node, Spec, Key).
 
 -- =========================================================================
@@ -56,8 +56,8 @@ host_import_unknown[audit](File, Spec, Key) :- host_module_named[code](File, _, 
 -- program as pure:
 --    console.log(x)         3a. a member call on a global
 --    fetch(u)               3b. a plain call of a global
---    fs.readFileSync(p)     3c. a member call on a module namespace
---    readFileSync(p)        3d. a plain call of a named import
+--    fs.readFileSync(p)     3c. a call of a member of a module, however it
+--    readFileSync(p)            was reached: dotted, imported, destructured, aliased
 -- `selects[flow]` answers the key for the dotted and the computed form alike.
 host_member_call[code](C, H, Name, Key) :- callee_of[code](C, N),
                                            ast_child[code](N, object, 0, O),
@@ -66,15 +66,8 @@ host_member_call[code](C, H, Name, Key) :- callee_of[code](C, N),
 
 host_global_call[code](C, H, Name) :- callee_of[code](C, N), host_global_ref[code](N, H, Name).
 
-host_module_call[code](C, Spec, Key) :- callee_of[code](C, N),
-                                        ast_child[code](N, object, 0, O),
-                                        ident_in[code](O, Local, File),
-                                        host_module_ns[code](File, Local, Spec),
-                                        selects[flow](N, Key).
-
-host_module_call[code](C, Spec, Key) :- callee_of[code](C, N),
-                                        ident_in[code](N, Local, File),
-                                        host_module_named[code](File, Local, Spec, Key).
+host_module_call[code](C, Spec, Key) :- builtin_member[flow](X, Spec, Key), may_be_node[flow](G, X),
+                                        callee_of[code](C, G).
 
 -- The union, with the receiver in the origin column: the canonical specifier
 -- for a module, the global's own name for a member call, and the atom `itself`

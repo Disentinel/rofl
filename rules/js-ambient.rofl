@@ -5,8 +5,7 @@
 -- in facts/js-host.rofl; lib.es*.d.ts through facts/js-lib-surface.rofl) plus
 -- a TRANSLATION of its atoms into lattice landmarks, both arguable as rules.
 --
--- rules/js-effects.rofl declares three relations `edb` and reads them here:
---   ambient_binding(File, Name, Surface)     which free NAME is which surface
+-- rules/js-effects.rofl declares two relations `edb` and reads them here:
 --   surface_origin(Surface, Origin)          es_intrinsic | host_runtime | builtin_prototype
 --   ambient_effect(Surface, Member, Effect)  one row per member
 -- The member is a STRING because `selects[flow]` carries keys as strings; an
@@ -41,22 +40,12 @@ surface_origin(P, builtin_prototype) :- builtin_prototype(P).
 surface_two_origins[audit](S, A, B) :- surface_origin(S, A), surface_origin(S, B), A != B.
 
 -- =========================================================================
--- 2. WHICH FREE NAME IS WHICH SURFACE. Two doors, not three: a NAMESPACE
--- stands for a whole surface, a FREE GLOBAL stands for itself, and a NAMED
--- IMPORT binds a function rather than the module, so it gets no row here and
--- has its own site rule in section 5.
-ambient_binding(File, Local, Spec) :- host_module_ns[code](File, Local, Spec).
-
--- The global door reads `free_global[code]`, not `host_global_ref[code]`: the
--- latter has no reference-position restriction and reports `x.length` as a
--- reference to a browser global. Attributing io to a program that does none
--- is the direction this layer must not err in.
-ambient_binding(File, Name, Name) :- free_global[code](_, Name, File), host_global(_, Name).
-ambient_binding(File, Name, Name) :- free_global[code](_, Name, File), lib_global(Name, _, _).
-
--- empty by construction; the place a fourth door would arrive without an origin
-ambient_binding_unowned[audit](File, Name, S) :- ambient_binding(File, Name, S),
-                                                 not surface_origin(S, _).
+-- 2. WHICH GLOBAL IS A SURFACE. A free global (rules/js-globals.rofl) the
+-- host or the language carries stands for itself. A module is not a name: it
+-- is a value rules/js-host.rofl follows, and its calls arrive in section 5
+-- already keyed.
+ambient_global(Name) :- host_global(_, Name).
+ambient_global(Name) :- lib_global(Name, _, _).
 
 -- =========================================================================
 -- 3. THE TRANSLATION — a host effect atom is a lattice landmark, derived.
@@ -126,22 +115,20 @@ ambient_enumerated(S)         :- lib_member(S, _, _).
 ambient_unenumerated[flow](S) :- ambient_effect(S, _, _), not ambient_enumerated(S).
 
 -- =========================================================================
--- 5. THE THREE SITE SHAPES `eff_surface[flow]` DOES NOT COVER. Both its arms
--- read a member call; the other three ways to reach an ambient callee are
--- here because `ambient_binding` alone cannot express them.
---
--- 5a. A plain call of a named import — `join(a, b)`. The local name is the
--- binding and the imported name the member, as `host_module_named` reads it.
-amb_named_call[flow](C, Spec, Key) :- unresolved_call[code](C, _), callee_of[code](C, N),
-                                      ident_in[code](N, Local, File),
-                                      host_module_named[code](File, Local, Spec, Key).
-eff_surface[flow](C, Spec)  :- amb_named_call[flow](C, Spec, _).
-eff_operation[flow](C, Key) :- amb_named_call[flow](C, _, Key).
+-- 5. THE SITE SHAPES. A call of a member of a node module, however it was
+-- reached, is `host_module_call[code]` with its key.
+eff_surface[flow](C, Spec)  :- host_module_call[code](C, Spec, _).
+eff_operation[flow](C, Key) :- host_module_call[code](C, _, Key).
+
+-- 5a. A member call on an ambient global — `console.log(x)`.
+eff_surface[flow](C, Name) :- unresolved_call[code](C, _), callee_of[code](C, N),
+                              ast_child[code](N, object, 0, O), free_global[code](O, Name, _),
+                              ambient_global(Name).
 
 -- 5b. A plain call of an ambient global — `fetch(u)`, `BigInt(n)`.
 amb_global_call[flow](C, Name) :- unresolved_call[code](C, _), callee_of[code](C, N),
-                                  free_global[code](N, Name, File),
-                                  ambient_binding(File, Name, Name).
+                                  free_global[code](N, Name, _),
+                                  ambient_global(Name).
 eff_surface[flow](C, Name)     :- amb_global_call[flow](C, Name).
 eff_operation[flow](C, itself) :- amb_global_call[flow](C, _).
 
@@ -151,8 +138,8 @@ eff_operation[flow](C, itself) :- amb_global_call[flow](C, _).
 amb_construct[flow](X, Name) :- transfer_site[code](X, new_expression),
                                 not resolved_site[code](X),
                                 ast_child[code](X, callee, 0, N),
-                                free_global[code](N, Name, File),
-                                ambient_binding(File, Name, Name).
+                                free_global[code](N, Name, _),
+                                ambient_global(Name).
 eff_surface[flow](X, Name)        :- amb_construct[flow](X, Name).
 eff_operation[flow](X, construct) :- amb_construct[flow](X, _).
 

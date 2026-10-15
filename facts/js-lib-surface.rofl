@@ -103,6 +103,9 @@ lib_member(object, "propertyIsEnumerable", es5).
 lib_member(object, "toLocaleString", es5).
 lib_member(object, "toString", es5).
 lib_member(object, "valueOf", es5).
+lib_member(promise, "catch", es5).
+lib_member(promise, "finally", es2018).
+lib_member(promise, "then", es5).
 lib_member(regexp, "compile", es5).
 lib_member(regexp, "dotAll", es2018).
 lib_member(regexp, "exec", es5).
