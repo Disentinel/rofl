@@ -27,6 +27,8 @@ mod joinplan;
 mod vclosure;
 mod prov;
 mod resume;
+mod cost;
+pub use cost::{Hot, PremCost};
 use resume::{Cut, CutAt, InFlight, Tail};
 pub use addition::{AddDelta, PrepMark};
 pub use delta::Delta;
@@ -682,6 +684,17 @@ pub struct Eval {
     pub fires_by_rule: HashMap<Sym, u64>,
     pub sols_by_rule: HashMap<Sym, u64>,
     pub new_by_rule: HashMap<Sym, u64>,
+    /// What each premise of each rule cost (`cost.rs`), by rule and premise.
+    pub prem_cost: FxMap<(Sym, u64), PremCost>,
+    read_rows: u64,
+    widest: cost::Widest,
+    wide_floor: usize,
+    /// Rows read under each rule, and the count at which it is next said to be hot.
+    pub read_by_rule: FxMap<Sym, (u64, u64)>,
+    hot_read: u64,
+    /// Told each hot rule as it is found, as the sentence `hot_said` keeps.
+    pub on_hot: Option<fn(&str)>,
+    pub hot_said: Vec<String>,
     /// Firings solved delta-first.
     pub delta_by_rule: HashMap<Sym, u64>,
     /// Delta-first join plans (`joinplan.rs`), per rule and news position, and
@@ -1336,6 +1349,14 @@ impl Eval {
             fires_by_rule: HashMap::new(),
             sols_by_rule: HashMap::new(),
             new_by_rule: HashMap::new(),
+            prem_cost: FxMap::default(),
+            read_rows: 0,
+            widest: cost::Widest::default(),
+            wide_floor: 0,
+            read_by_rule: FxMap::default(),
+            hot_read: cost::HOT_READ,
+            on_hot: None,
+            hot_said: Vec::new(),
             delta_by_rule: HashMap::new(),
             delta_ns: 0,
             plan_trial: false,
@@ -5172,6 +5193,7 @@ impl Eval {
         let res = (|| -> Result<Vec<Sol>, Halt> {
             for (i, b) in body.iter().enumerate() {
                 let mut next: Vec<Sol> = Vec::new();
+                let mark = self.cost_mark(rule_id, b);
                 for a in &acc {
                     let now = self.rows + next.len() as i64;
                     if now > self.peak_rows {
@@ -5228,6 +5250,9 @@ impl Eval {
                             self.solve_agg(ag, a, i, depth, rule_id, &mut next)?;
                         }
                     }
+                }
+                if let Some(m) = mark {
+                    self.note_cost(m, acc.len(), next.len());
                 }
                 let grew = next.len() as i64 - if i == 0 { 0 } else { acc.len() as i64 };
                 self.rows += grew;
@@ -11348,6 +11373,7 @@ impl Eval {
                 },
             },
         };
+        self.note_read(l, s, cands.len());
         let mut out: Vec<(Subst, PremRef)> = Vec::new();
         let mut seen: HashSet<FactId> = HashSet::new();
         for f in cands {
@@ -11384,7 +11410,9 @@ impl Eval {
             return Ok(Vec::new());
         }
         if let Some(ci) = self.vclosure_for(l.rel) {
-            return Ok(self.vmatch(ci, l, s));
+            let out = self.vmatch(ci, l, s);
+            self.note_read(l, s, out.len());
+            return Ok(out);
         }
         let drs: Option<Vec<Rc<ERule>>> = self
             .demand_rels

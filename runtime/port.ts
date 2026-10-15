@@ -55,6 +55,9 @@ export interface Evaluated {
    *  reading one against the other is a category error made here once. */
   peakRows: number;
   space: number;
+  /** The rules that read so much for what they add that their author should
+   *  hear of it, one sentence each, the costliest premise named (Rust only). */
+  hot?: string[];
 }
 
 export interface Answer {

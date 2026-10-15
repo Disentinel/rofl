@@ -104,6 +104,7 @@ pub fn main(args: Vec<String>) {
     let bounds = WhynotBounds::clamped(depth, nodes);
     let read = |f: &String| std::fs::read_to_string(f).unwrap_or_else(|e| { eprintln!("{f}: {e}"); std::process::exit(1) });
     let mut s = rofl::session::Session::fresh(budget);
+    s.eval.on_hot = Some(|t| eprintln!("hot: {t}"));
     if strata { s.eval.mode = rofl::engine::Mode::Strata; }
     if let Some(n) = space { s.eval.space = n; }
     s.eval.retain_ticks = retain;

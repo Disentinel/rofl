@@ -28,7 +28,7 @@ stdout and, with `--bytes`, a profile on stderr.
 
 | flag | what it is for |
 |---|---|
-| `--bytes` | `facts`, `eval_ms`, `peak_rows`, `steps`, `absorb_ms`, bytes per table, and two top-20 tables: `argm_rule` (index probes per rule, **deterministic**) and `rule_ms` (time per rule, noisy). |
+| `--bytes` | `facts`, `eval_ms`, `peak_rows`, `steps`, `absorb_ms`, bytes per table, two top-20 tables: `argm_rule` (index probes per rule, **deterministic**) and `rule_ms` (time per rule, noisy), and `hot`: the ten rules that read the most rows, each at its costliest premise (below). |
 | `--budget N --space N` | the walls. The plans are on under them too, so a wall's cut moves as the engine improves (`f_the_owner_settles_walls_promises_and_incremental`). The corpus runs use `--budget 4000000000 --space 40000000`. |
 | `--ticks N` | advance N ticks |
 
@@ -47,6 +47,28 @@ a lone surrogate that the Rust seed reader refuses (`str_char0`; cli_exits had
 two, replaced by U+FFFD for the measurements), and seeds must be regenerated
 when the node-id format changes (the tree measurement regenerated them for the
 16-hex ids). The sealed seed is the same world with `sealed(provenance)` asserted.
+
+**Which rule blows up, without asking** (`rust/rofl/src/engine/cost.rs`). The
+engine counts, per premise of each rule, the partial rows it was solved from,
+the rows it read from the store (a tree closure's answers included), the rows it
+left, and its widest single read with the values bound there. A rule that has
+read 50 M rows, a quarter or more of everything read so far, is said at once on
+stderr by `rofl load` and `rofl serve`, again at each tenfold, while the
+evaluation is still running: a rule that blows up may never end for a report to
+be read. One line names the rule, the premise it is reading and the values bound
+there (the unit test `a_join_by_a_common_name_is_named_with_the_name`, its
+threshold lowered to 10 000 rows):
+
+```
+hot: rule r75512e2d (sees) has read 10231 rows for 0 new facts, a quarter or more of all read; it is reading premise 2, bind[main](?B,?N)@now at ?N = e
+```
+
+That is the case the shape lint cannot see (3.14, a premise whose cost is a
+data distribution): the planner prices the average name, the data has one name
+thousands of times. Rows read are deterministic; the engine does not act on
+them, the author rewrites the rule. `serve`'s evaluate and resume answers carry
+`hot`, and `--seed --bytes` prints its ten `hot` rules, each at its costliest
+premise with its widest read.
 
 **Probes are deterministic, time is noisy.** Index probes (`arg_matches`,
 `argm_rule`) repeat exactly; wall time moved 5-30% with the load of the shared
@@ -425,7 +447,7 @@ is an alarm (`shape_ok_stale`). The model's register is `facts/cost-shapes.rofl`
 Over the pre-rewrite rules the detectors found 69 (shape, head) pairs, including
 every rule the rewrites changed; over the rewritten model, 59 findings, all
 excused. **Not detected:** delta behind a prefix (the engine's), the materialised
-closure, premises whose cost is a data distribution. Worlds: `shapes` (both engines,
+closure, premises whose cost is a data distribution (said at run time instead, §1). Worlds: `shapes` (both engines,
 one planted instance of each shape beside the rewrite that is not one) and
 `cost_shapes_model` (Rust only: red on a finding the register does not excuse and
 on a register row whose finding is gone). Findings: `f_costly_rules_are_shapes`,
