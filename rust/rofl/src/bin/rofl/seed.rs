@@ -260,6 +260,10 @@ pub fn main(argv: Vec<String>) {
             let head = l.eval.rules.iter().find(|r| r.id == *rid).map(|r| l.eval.h.name(r.clause.head.rel).to_string()).unwrap_or_else(|| "?".to_string());
             eprintln!("rule_ms\t{}\t{}\t{:.1}", l.eval.h.name(*rid), head, *ns as f64 / 1e6);
         }
+        // WHERE THE ROWS ARE READ, deterministic: the rules that read most, each at its costliest premise
+        for h in l.eval.hot_rules(10) {
+            eprintln!("hot\t{}", h.sentence());
+        }
         let (sum, mx): (u64, u64) = l.eval.rounds.iter().fold((0, 0), |(s, m), (a, b)| (s + a, m + b));
         let bound = |k: u64| l.eval.rounds.iter().map(|(s, m)| (*m).max(s / k)).sum::<u64>() as f64 / 1e6;
         for c in &l.eval.closures {

@@ -59,7 +59,7 @@ for (let piece = 1; ; piece++) {
   const m = memory(port);
   const next = path.join(dir, `${piece}.vol`);
   t = T(); const bytes = await s.keep(next, true); const keepMs = Math.round(T() - t);
-  console.log(JSON.stringify({ piece, loadMs: r.loadMs, openMs: r.openMs, evalMs, wentOn: r.resumed, steps: r.steps, partial: r.partial, keepMs, volumeMb: Math.round(bytes / 2 ** 20), ...m }));
+  console.log(JSON.stringify({ piece, loadMs: r.loadMs, openMs: r.openMs, evalMs, wentOn: r.resumed, steps: r.steps, partial: r.partial, keepMs, volumeMb: Math.round(bytes / 2 ** 20), ...m, hot: r.hot }));
   if (vol) fs.rmSync(vol);
   vol = next;
   if (!r.partial) {

@@ -113,7 +113,8 @@ impl Server {
         self.sessions.get_mut(&id).ok_or_else(|| format!("no such session: {id}"))
     }
 
-    fn keep(&mut self, s: Session) -> u64 {
+    fn keep(&mut self, mut s: Session) -> u64 {
+        s.eval.on_hot = Some(|t| eprintln!("hot: {t}"));
         let id = self.next;
         self.next += 1;
         self.sessions.insert(id, s);
@@ -410,6 +411,7 @@ impl Server {
                 Ok(json!({
                     "partial": o.partial, "staged": o.staged, "steps": o.steps,
                     "peakRows": o.peak_rows, "space": o.space,
+                    "hot": s.eval.too_hot().iter().map(|h| h.sentence()).collect::<Vec<_>>(),
                 }))
             }
             "resume" => {
@@ -419,6 +421,7 @@ impl Server {
                 Ok(json!({
                     "partial": o.partial, "staged": o.staged, "steps": o.steps,
                     "peakRows": o.peak_rows, "space": o.space, "resumed": resumed,
+                    "hot": s.eval.too_hot().iter().map(|h| h.sentence()).collect::<Vec<_>>(),
                 }))
             }
             "retract" => {

@@ -105,7 +105,7 @@ const out = {
   evalMs: Math.round(evalMs), peakRssMb: Math.round(peakRss), partial: ev.partial, steps: ev.steps, peakRows: ev.peakRows,
   values: await count('side_effect_value(S, F, V)'), sites: await count('side_effect_site(S, F)'), counts,
   forms: await count('side_effect_form(S, F, T)'),
-  facts: (await s.factCount()).facts,
+  facts: (await s.factCount()).facts, hot: ev.hot,
 };
 console.log(JSON.stringify(out));
 const census = opt('--census');
