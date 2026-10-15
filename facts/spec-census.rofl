@@ -173,6 +173,7 @@ check[checks]("rust/rofl/tests/lattice_scale.rs", "a_hole_reaches_what_reads_it_
 check[checks]("rust/rofl/tests/lattice_scale.rs", "a_wall_holes_an_improving_cycle_and_what_it_reaches", test).
 check[checks]("rust/rofl/tests/lattice_scale.rs", "a_wall_names_no_cell_that_improved_only_through_others", test).
 check[checks]("rust/rofl/tests/lattice_scale.rs", "a_wall_before_a_cycle_came_round_names_none_of_it", test).
+check[checks]("rust/rofl/tests/par.rs", "the_threads_answer_as_one_thread_does", test).
 check[checks]("rust/rofl/tests/program.rs", "a_program_loaded_in_rust_is_the_world_the_kernel_builds", test).
 check[checks]("rust/rofl/tests/program.rs", "a_loaded_program_ticks_the_way_the_kernel_ticks", test).
 check[checks]("rust/rofl/tests/program.rs", "the_door_refuses_what_the_kernel_refuses", test).
@@ -836,6 +837,7 @@ test_file[checks]("rust/rofl/tests/explain.rs").
 test_file[checks]("rust/rofl/tests/incremental.rs").
 test_file[checks]("rust/rofl/tests/join_scale.rs").
 test_file[checks]("rust/rofl/tests/lattice_scale.rs").
+test_file[checks]("rust/rofl/tests/par.rs").
 test_file[checks]("rust/rofl/tests/program.rs").
 test_file[checks]("rust/rofl/tests/prov_lazy.rs").
 test_file[checks]("rust/rofl/tests/resume.rs").

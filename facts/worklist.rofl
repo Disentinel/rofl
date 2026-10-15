@@ -3907,8 +3907,8 @@ work_needs(w_stage_planner, w_mapped_volume).
 work_needs(w_stage_planner, w_resume_after_budget).
 
 work(w_workers_by_key,
-  "The round's delta split by join key over worker threads, then processes; a stratum boundary is a barrier.").
-work_state(w_workers_by_key, open).
+  "DONE 2026-10-15 for threads (f_a_rounds_level_splits_over_threads_and_answers_as_one_thread): rust/rofl/src/engine/par.rs, proved by rust/rofl/tests/par.rs. OPEN: processes; conclude and index building on the threads. The round's delta split by join key over worker threads, then processes; a stratum boundary is a barrier.").
+work_state(w_workers_by_key, done).
 work_needs(w_workers_by_key, w_stage_planner).
 
 work(w_why_by_file,

@@ -377,6 +377,57 @@ impl PatIndex {
         self.slots.to_mut()[i] = self.ids.len() as u32 - 1;
     }
 
+    /// The index over `rows`, as `put` would build it one row at a time: each slot's hash kept beside it while it is
+    /// built, so neither a probe nor a growth reads a fact for a value it does not hold.
+    fn build(h: &Heap, facts: &Facts, pos: &[usize], rows: &[FactId]) -> PatIndex {
+        let mut ix = PatIndex::new(pos);
+        let mut slots: Vec<u32> = vec![EMPTY; 8];
+        let mut tags: Vec<u64> = vec![0; 8];
+        let (mut ids, mut prev): (Vec<FactId>, Vec<u32>) = (Vec::new(), Vec::new());
+        let mut sig = Vec::new();
+        for &k in rows {
+            if !facts.alive(k) || !pat_sig(h, pos, facts.args(k), &mut sig) {
+                continue;
+            }
+            if (ix.values + 1) * 4 > slots.len() * 3 {
+                let n = slots.len() * 2;
+                let (mut s2, mut t2) = (vec![EMPTY; n], vec![0u64; n]);
+                for (&e, &t) in slots.iter().zip(&tags).filter(|(&e, _)| e != EMPTY) {
+                    let mut i = t as usize & (n - 1);
+                    while s2[i] != EMPTY {
+                        i = (i + 1) & (n - 1);
+                    }
+                    s2[i] = e;
+                    t2[i] = t;
+                }
+                (slots, tags) = (s2, t2);
+            }
+            let hash = Self::hash(sig.iter().copied()) as u64;
+            let mask = slots.len() - 1;
+            let mut i = hash as usize & mask;
+            loop {
+                let e = slots[i];
+                if e == EMPTY {
+                    ix.values += 1;
+                    break;
+                }
+                if tags[i] == hash {
+                    let args = facts.args(ids[e as usize]);
+                    if pos.iter().zip(&sig).all(|(&p, v)| args[p] == *v) {
+                        break;
+                    }
+                }
+                i = (i + 1) & mask;
+            }
+            prev.push(slots[i]);
+            ids.push(k);
+            slots[i] = ids.len() as u32 - 1;
+            tags[i] = hash;
+        }
+        (ix.slots, ix.ids, ix.prev) = (slots.into(), ids.into(), prev.into());
+        ix
+    }
+
     fn grow(&mut self, facts: &Facts) {
         let n = self.slots.len() * 2;
         let mut slots = vec![EMPTY; n];
@@ -1720,6 +1771,96 @@ impl Store {
         n >= MIN_INDEXED
     }
 
+    /// The group must be merged before it is read in order (`absorb`).
+    fn unabsorbed(&self, rel: Sym, persp: Sym) -> bool {
+        self.run(rel, persp).is_some_and(|r| !r.arrived.is_empty() || !self.unordered && r.by_tup)
+    }
+
+    /// Every group of `rel` (`persp` None) or the one, merged, as a read of it would merge it.
+    pub fn absorb_for_read(&mut self, h: &Heap, rel: Sym, persp: Option<Sym>) {
+        let ps = match persp {
+            Some(p) => vec![p],
+            None => self.persps_sorted(h, rel),
+        };
+        for p in ps {
+            self.absorb(h, rel, p);
+        }
+    }
+
+    /// `rel_persp` from a store that is not written: None when the group must be merged first.
+    pub fn rel_persp_ro(&self, rel: Sym, persp: Sym) -> Option<Vec<FactId>> {
+        if self.unabsorbed(rel, persp) {
+            return None;
+        }
+        Some(self.run(rel, persp).map_or(Vec::new(), |r| r.canon.iter().copied().filter(|&i| self.alive(i)).collect()))
+    }
+
+    /// The run of one group as `rel_persp` reads it, dead rows included, without copying it: None when it must be
+    /// merged first.
+    pub fn run_ro(&self, rel: Sym, persp: Sym) -> Option<&[FactId]> {
+        if self.unabsorbed(rel, persp) {
+            return None;
+        }
+        Some(self.run(rel, persp).map_or(&[][..], |r| &r.canon[..]))
+    }
+
+    pub fn books_of(&self, h: &Heap, rel: Sym) -> Vec<Sym> {
+        self.persps_sorted(h, rel)
+    }
+
+    pub fn rel_all_ro(&self, h: &Heap, rel: Sym) -> Option<Vec<FactId>> {
+        let mut out = Vec::new();
+        for p in self.persps_sorted(h, rel) {
+            out.extend(self.rel_persp_ro(rel, p)?);
+        }
+        Some(out)
+    }
+
+    /// `arg_matches` from a store that is not written: the outer None when it would merge a group or build an index.
+    #[allow(clippy::too_many_arguments)]
+    pub fn arg_matches_ro(&self, h: &Heap, rel: Sym, persp: Option<Sym>, arity: usize, pos: &[usize], vals: &[Term], limit: usize) -> Option<Option<Vec<FactId>>> {
+        if pos.is_empty() {
+            return Some(None);
+        }
+        if !self.idx.contains_key(&rel) {
+            return Some(Some(Vec::new()));
+        }
+        let Some(p) = persp else {
+            let mut out = Vec::new();
+            for q in self.persps_sorted(h, rel) {
+                match self.arg_matches_ro(h, rel, Some(q), arity, pos, vals, limit.saturating_sub(out.len()))? {
+                    Some(part) => out.extend(part),
+                    None if limit == usize::MAX => out.extend(self.rel_persp_ro(rel, q)?),
+                    None => return Some(None),
+                }
+            }
+            return Some(Some(out));
+        };
+        let Some(run) = self.run(rel, p) else { return Some(Some(Vec::new())) };
+        if pos.len() == arity {
+            let hit = self.find(rel, p, vals);
+            let mut out: Vec<FactId> = hit.into_iter().collect();
+            out.extend(run.loose.iter().copied().filter(|&k| self.alive(k) && Some(k) != hit));
+            return Some(Some(out));
+        }
+        let mut mask = 0u32;
+        for &q in pos {
+            if q > 30 {
+                return Some(None);
+            }
+            mask |= 1 << q;
+        }
+        if self.unabsorbed(rel, p) {
+            return None;
+        }
+        match &run.by_pat {
+            None if run.canon.len() < MIN_INDEXED => Some(None),
+            Some(bp) if !bp.contains_key(&mask) && bp.len() >= MAX_PATTERNS => Some(None),
+            Some(bp) if run.staged.is_empty() && bp.contains_key(&mask) => Some(hits(&self.facts, &run.loose, &bp[&mask], vals, limit)),
+            _ => None,
+        }
+    }
+
     /// `argMatches` (src/store.ts:477). A candidate SUPERSET in no promised
     /// order; `None` means the store declines and the caller scans.
     pub fn arg_matches(
@@ -1821,14 +1962,7 @@ impl Store {
         let canon = &run.canon;
         let by_val = Rc::make_mut(run.by_pat.as_mut().unwrap()).entry(mask).or_insert_with(|| {
             self.argm_cloned += canon.len() as u64;
-            let mut by_val = PatIndex::new(pos);
-            let mut sig = Vec::new();
-            for &k in canon.iter() {
-                if facts.alive(k) && pat_sig(h, pos, facts.args(k), &mut sig) {
-                    by_val.put(facts, &sig, k);
-                }
-            }
-            by_val
+            PatIndex::build(h, facts, pos, canon)
         });
         hits(facts, &run.loose, by_val, vals, limit)
     }
