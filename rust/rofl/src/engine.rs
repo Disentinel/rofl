@@ -28,6 +28,8 @@ mod vclosure;
 mod prov;
 mod resume;
 mod cost;
+mod latkept;
+pub use latkept::Tok;
 pub use cost::{Hot, PremCost};
 use resume::{Cut, CutAt, InFlight, Tail};
 pub use addition::{AddDelta, PrepMark};
