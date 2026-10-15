@@ -152,9 +152,11 @@ unit_concludes("rules/js-dataflow.rofl", nearest_s).
 unit_concludes("rules/js-dataflow.rofl", encloses_s).
 unit_concludes("rules/js-dataflow.rofl", closer_s).
 unit_concludes("rules/js-dataflow.rofl", binds_name).
-unit_concludes("rules/js-dataflow.rofl", shadowed_by).
-unit_concludes("rules/js-dataflow.rofl", shadowed_by_param).
-unit_concludes("rules/js-dataflow.rofl", hidden_at).
+unit_concludes("rules/js-dataflow.rofl", scope_declares).
+unit_concludes("rules/js-dataflow.rofl", scoped_name).
+unit_concludes("rules/js-dataflow.rofl", name_cand).
+unit_concludes("rules/js-dataflow.rofl", name_outer).
+unit_concludes("rules/js-dataflow.rofl", name_scope).
 unit_concludes("rules/js-dataflow.rofl", tdz_cand).
 unit_concludes("rules/js-dataflow.rofl", tdz_deferred).
 unit_concludes("rules/js-dataflow.rofl", tdz_at).
@@ -210,8 +212,6 @@ unit_concludes("rules/js-dataflow.rofl", dead_fn).
 unit_concludes("rules/js-dataflow.rofl", spread_arg).
 unit_concludes("rules/js-dataflow.rofl", after_spread).
 unit_concludes("rules/js-dataflow.rofl", arg_at).
-unit_concludes("rules/js-dataflow.rofl", param_bound_in).
-unit_concludes("rules/js-dataflow.rofl", param_hidden).
 unit_concludes("rules/js-dataflow.rofl", param_use).
 unit_concludes("rules/js-dataflow.rofl", returns).
 unit_concludes("rules/js-dataflow.rofl", keeps_argument).

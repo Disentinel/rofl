@@ -34,7 +34,6 @@ Reads:
 - from js-surface: [ret_node_any](js-surface.rofl.md#ret_node_any)
 - from js-surface, in the surface: [sx_arg_lit](js-surface.rofl.md#sx_arg_lit), [sx_arg_node](js-surface.rofl.md#sx_arg_node), [sx_cb](js-surface.rofl.md#sx_cb), [sx_cjs](js-surface.rofl.md#sx_cjs), [sx_default](js-surface.rofl.md#sx_default), [sx_export_lit](js-surface.rofl.md#sx_export_lit), [sx_export_node](js-surface.rofl.md#sx_export_node), [sx_export_val](js-surface.rofl.md#sx_export_val), [sx_module](js-surface.rofl.md#sx_module), [sx_ret_lit](js-surface.rofl.md#sx_ret_lit), [sx_ret_node](js-surface.rofl.md#sx_ret_node), [sx_ret_param](js-surface.rofl.md#sx_ret_param)
 - from outside these files, in the code:
-  - <a id="ast_file"></a>`ast_file`
   - <a id="ast_within"></a>A node is within a node (`ast_within`)
 - from the scanner, in the code:
   - <a id="ast_attr"></a>The attribute of a node is a value (`ast_attr`)
@@ -117,6 +116,7 @@ Phrases this file defines in one step, each by the sentence it stands for:
 - <a id="interpolated"></a>A node is interpolated if some node [is among the](#ast_child) `expressions` of it.
 - <a id="has_init"></a>A node has an initialiser if the `init` of it is some node.
 - <a id="nearest_s"></a>A [scope](#scope_node) is the nearest scope of D if [`up_s`](#up_s)(D, it).
+- <a id="scoped_name"></a>Name is declared in a scope in File if some scope [declares](#scope_declares) Name in File.
 - <a id="this_binder"></a>A [this-binder](#noun-this-binder) binds this.
 - <a id="corpus_file"></a>File is in the corpus if some node [is of kind](js-model.rofl.md#ast_node) `program` in file File.
 - <a id="reexport_decl"></a>A [named export](#noun-named_export) re exports if the `source` of it is some node.
@@ -224,12 +224,12 @@ In the code:
 D is scoped in File if D [declares without a value](#bare_binder) some name in File.
 
 > A binder's region: the nearest block for `let`/`const`, the nearest function
-> for `var` (function-scoped, hoisted), none at the top of a file. Block
-> regions are what makes shadowing statable. `sees_binder` carries
-> `not hidden_at` on both arms so every consumer inherits shadowing. It is a
-> relation between a binder and the reads of ITS NAME: every consumer joins the
-> name, and a read of any other name in the region was a (node × binder)
-> product nothing read, 333 649 rows of the self notebook's 2 M join width.
+> for `var` (function-scoped, hoisted), none at the top of a file. A name is
+> resolved where it is READ: from the identifier outward through the scopes
+> around it, nearest first, to the first that declares the name (section 3a).
+> What it sees there is every binder of the name whose region that scope is,
+> less those it reads before their line (the TDZ below); a name no scope
+> declares sees the binders at the top of its file.
 
 <a id="binder_region"></a>The region of D is a node R either:
 
@@ -244,16 +244,15 @@ D is scoped in File if D [declares without a value](#bare_binder) some name in F
 <a id="sees_binder"></a>A node E sees D either:
 
 1. if all of:
+   - E [finds its name in](#name_scope) Name in File a node S;
+   - [the region](#binder_region) of D is S;
    - D [introduces](#binds_name) Name in File;
-   - E [reads](#ident_in) Name in File;
-   - [the region](#binder_region) of D is a node R;
-   - E [is within](#ast_within) R;
-   - unless E [is hidden from](#hidden_at) D;
+   - unless E [is in the dead zone of](#tdz_at) D;
 2. if all of:
    - D [is at the top](#binder_at_top);
    - D [introduces](#binds_name) Name in File;
    - E [reads](#ident_in) Name in File;
-   - unless E [is hidden from](#hidden_at) D.
+   - unless E [may find its name in](#name_cand) some name in some file some scope.
 
 > Scope kinds are only those a declarator can be nearest to AND a fixture
 > reaches. `catch_clause`/`switch_case` never are (grammar); a for-of/for-in
@@ -302,59 +301,33 @@ Declared as facts:
 4. if D [destructures](#destructures_at) Name at some index in File;
 5. if D [binds](#rest_binds) Name through the rest some node in File.
 
-> Shadowing is containment between REGIONS, not distance in the source: the
-> outer binder's region strictly contains the inner's, or the outer has no
-> region at all (top of file). `RO != RI` and `Outer != Inner` follow from
-> `ast_within` being irreflexive and are kept explicit.
+> 3a. THE LOOKUP. A scope declares a name by a binder whose region it is, or
+> by a parameter of the function it is. An identifier's name is found in the
+> nearest scope around it that declares the name: its ancestors are walked
+> up the tree (`ast_within` with the identifier bound is the parent chain, no
+> rows), each asked whether it declares the name, and of the scopes that do,
+> an outer one is passed over. Matching by name joined every reader of a name
+> to every binder of it in the file, `e` a few thousand times over
+> (f_all_of_vscode_answers_in_pieces_once_names_are_looked_up_in_their_file).
+> A name nothing in its file declares in a scope is not looked up: it is at the top.
 
-<a id="shadowed_by"></a>Outer is shadowed by Inner on Name either:
+<a id="scope_declares"></a>A node S declares Name in File either:
 
-1. if all of:
-   - Outer [introduces](#binds_name) Name in File;
-   - Inner [introduces](#binds_name) Name in File;
-   - Outer differs from Inner;
-   - [the region](#binder_region) of Outer is a node RO;
-   - [the region](#binder_region) of Inner is a node RI;
-   - RO differs from RI;
-   - RI [is within](#ast_within) RO;
-2. if all of:
-   - Outer [introduces](#binds_name) Name in File;
-   - Inner [introduces](#binds_name) Name in File;
-   - Outer differs from Inner;
-   - Outer [is at the top](#binder_at_top);
-   - [the region](#binder_region) of Inner is some node.
+1. if [the region](#binder_region) of D is S and D [introduces](#binds_name) Name in File;
+2. if [`param_bound`](#param_bound)(S, Name) and S [is in file](js-model.rofl.md#ast_node) File.
 
-> A parameter shadows too, and no `binds_name` row exists for it.
+A node
 
-<a id="shadowed_by_param"></a>Outer is shadowed by the function F on Name either:
-
-1. if all of:
-   - Outer [introduces](#binds_name) Name in some file;
-   - [the region](#binder_region) of Outer is a node RO;
-   - [`param_bound`](#param_bound)(F, Name);
-   - F [is within](#ast_within) RO;
-2. if all of:
-   - Outer [introduces](#binds_name) Name in File;
-   - Outer [is at the top](#binder_at_top);
-   - [`param_bound`](#param_bound)(F, Name);
-   - [`ast_file`](#ast_file)(Root, File);
-   - F [is within](#ast_within) a node Root.
-
-> The inner binder's whole REGION is the extent of the hiding, including the
-> lines above its declaration — the temporal dead zone stated as scope.
-> `ident_in(E, Name, _)` is a cost narrowing: every consumer joins the name.
-
-<a id="hidden_at"></a>A node E is hidden from Outer either:
-
-1. if all of:
-   - Outer [is shadowed by](#shadowed_by) Inner on Name;
-   - [the region](#binder_region) of Inner is a node RI;
-   - E [is within](#ast_within) RI;
-   - E [reads](#ident_in) Name in some file;
-2. if all of:
-   - Outer [is shadowed by the function](#shadowed_by_param) F on Name;
-   - E [is within](#ast_within) F;
-   - E [reads](#ident_in) Name in some file.
+- <a id="name_cand"></a>may find its name in Name in File a node S if all of:
+  - it [reads](#ident_in) Name in File;
+  - Name [is declared in a scope](#scoped_name) in File;
+  - it [is within](#ast_within) S;
+  - S [declares](#scope_declares) Name in File.
+- <a id="name_outer"></a>passes over a node S if all of:
+  - it [may find its name in](#name_cand) Name in File S;
+  - it [may find its name in](#name_cand) Name in File a node S2;
+  - S2 [is within](#ast_within) S.
+- <a id="name_scope"></a>finds its name in Name in File S if it [may find its name in](#name_cand) Name in File S, unless it [passes over](#name_outer) S.
 
 > The TDZ, the one place the LINE matters: a read of a `let`/`const` name
 > above its declaration in the same region throws, so the model says nothing
@@ -378,7 +351,6 @@ A node
   - a node G [is nearest to](#nearest_v) it;
   - G [is within](#ast_within) R.
 - <a id="tdz_at"></a>is in the dead zone of D if it [is a dead zone candidate of](#tdz_cand) D, unless it [is deferred for](#tdz_deferred) D.
-- is hidden from D if it [is in the dead zone of](#tdz_at) D.
 
 In the flow:
 
@@ -941,42 +913,11 @@ A node passes a node E at an index I if all of:
 
 A [function](js-callgraph.rofl.md#fn_node) takes Name at an index I if a node P is the I-th of the `params` of it and P [is named](js-structure.rofl.md#ast_name) Name.
 
-> Where a parameter is read: every identifier of its name under F, minus two
-> ways of hiding it — a declarator whose region is STRICTLY inside F
-> (`function f(x) { var x }` is the same binding: region F itself, not hidden)
-> and a nested function with its own parameter of the name. `ast_within(F, G)`
-> before `fn_node(G)`: the other order read all of `fn_node` once per
-> parameter, 58.7 % of a world. The nested function is found by its
-> parameter's name before it is looked for under F: every descendant of F
-> was read once per parameter, 16.3 s of the self notebook against 5.1 s.
-> A name is looked up in its file: `e` and `options` are parameters and
-> identifiers thousands of times over a corpus, and the planner, which counts
-> an average name, read all of them per parameter (55 s of a piece of vscode).
+> Where a parameter is read: every identifier whose lookup stops at the
+> function (section 3a). A declarator whose region is the function itself
+> (`function f(x) { var x }`) is the same binding, read there too.
 
-<a id="param_bound_in"></a>`param_bound_in`(F, Name, File) if [`param_bound`](#param_bound)(F, Name) and a node F [is in file](js-model.rofl.md#ast_node) File.
-
-<a id="param_hidden"></a>A node F hides Name at a node U either:
-
-1. if all of:
-   - [the region](#binder_region) of D is a node R;
-   - D [introduces](#binds_name) Name in File;
-   - R [is within](#ast_within) F;
-   - [`param_bound_in`](#param_bound_in)(F, Name, File);
-   - U [is within](#ast_within) R;
-   - U [reads](#ident_in) Name in File;
-2. if all of:
-   - [`param_bound_in`](#param_bound_in)(G, Name, File);
-   - a node G [is within](#ast_within) F;
-   - F is a [function](js-callgraph.rofl.md#fn_node);
-   - [`param_bound_in`](#param_bound_in)(F, Name, File);
-   - U [is within](#ast_within) G;
-   - U [reads](#ident_in) Name in File.
-
-<a id="param_use"></a>A node uses Name at a node U if all of:
-  - [`param_bound`](#param_bound)(it, Name);
-  - U [is within](#ast_within) it;
-  - U [reads](#ident) Name;
-  - unless it [hides](#param_hidden) Name at U.
+<a id="param_use"></a>F uses Name at a node U if U [finds its name in](#name_scope) Name in some file F and [`param_bound`](#param_bound)(F, Name).
 
 > The caller publishes what it hands the callee (rules/js-surface.rofl), the callee reads it.
 
