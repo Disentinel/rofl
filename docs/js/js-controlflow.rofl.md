@@ -16,7 +16,7 @@ default: code
 
 Reads:
 
-- from js-callgraph: [call_site](js-callgraph.rofl.md#call_site), [fn_node](js-callgraph.rofl.md#fn_node), [for_of_iterates](js-callgraph.rofl.md#for_of_iterates), [nearest_fn](js-callgraph.rofl.md#nearest_fn), [resolves](js-callgraph.rofl.md#resolves), [top_call](js-callgraph.rofl.md#top_call)
+- from js-callgraph: [await_arg](js-callgraph.rofl.md#await_arg), [call_site](js-callgraph.rofl.md#call_site), [fn_node](js-callgraph.rofl.md#fn_node), [for_of_iterates](js-callgraph.rofl.md#for_of_iterates), [nearest_fn](js-callgraph.rofl.md#nearest_fn), [resolves](js-callgraph.rofl.md#resolves), [top_call](js-callgraph.rofl.md#top_call)
 - from js-concat, in the flow: [may_be_lit](js-concat.rofl.md#may_be_lit), [may_be_node](js-concat.rofl.md#may_be_node)
 - from js-dataflow: [export_local](js-dataflow.rofl.md#export_local), [pattern_takes](js-dataflow.rofl.md#pattern_takes), [private_binds](js-dataflow.rofl.md#private_binds), [rest_in_pattern](js-dataflow.rofl.md#rest_in_pattern)
 - from js-dataflow, in the flow: [catch_of](js-dataflow.rofl.md#catch_of), [catch_param](js-dataflow.rofl.md#catch_param), [decl_value](js-dataflow.rofl.md#decl_value), [member_node_v](js-dataflow.rofl.md#member_node_v), [member_value](js-dataflow.rofl.md#member_value), [nearest_v](js-dataflow.rofl.md#nearest_v), [plain_assign](js-dataflow.rofl.md#plain_assign), [selects](js-dataflow.rofl.md#selects)
@@ -39,7 +39,6 @@ What this file calls a node, and what each word stands for:
 | <a id="noun-abrupt_statement"></a>an abrupt statement | a node of one of the kinds `return_statement`, `throw_statement`, `break_statement`, `continue_statement` (`abrupt_kind`) |
 | <a id="noun-array_pattern"></a>an array pattern | a node of kind `array_pattern` |
 | <a id="noun-assignment"></a>an assignment | a node of kind `assignment_expression` |
-| <a id="noun-await"></a>an await | a node of kind `await_expression` |
 | <a id="noun-block"></a>a block | a node of kind `block_statement` |
 | <a id="noun-declarator"></a>a declarator | a node of kind `variable_declarator` |
 | <a id="noun-export_declaration"></a>an export declaration | a node of one of the kinds `export_named_declaration`, `export_default_declaration` (`export_kind`) |
@@ -62,10 +61,10 @@ Phrases this file defines in one step, each by the sentence it stands for:
 
 - <a id="label_escaped"></a>LS is escaped if some node [targets the label](#label_target) LS.
 - <a id="has_return"></a>F has a return if F [is nearest to](js-dataflow.rofl.md#nearest_v) a [return](#noun-return) R.
+- <a id="accessor_of"></a>The accessor of a node Obj at Key is a node M if [the accessor](#accessor_as) of Obj and some kind at Key is M.
 - <a id="hidden_call_fires"></a>A node fires a hidden call if it [fires the hidden call](#hidden_call_user) some node.
 - <a id="hidden_call_sourced"></a>A node has a sourced hidden call if [the hidden call source](#hidden_call_src) of it is some node.
 - <a id="caught_here"></a>A node is caught here if [`try_walk`](#try_walk)(something, it).
-- <a id="awaited_call"></a>An [await](#noun-await) awaits the call C if the `argument` of it is C.
 - <a id="reached_unguarded"></a>F is reached unguarded if [`sx_reached`](js-surface.rofl.md#sx_reached)(F).
 - <a id="in_fn"></a>A node is inside a function if some function [is nearest to](js-dataflow.rofl.md#nearest_v) it.
 - <a id="entry_point"></a>F is an entry point if F [is exported](#exported_fn).
@@ -334,13 +333,17 @@ In the audit:
 > named. An async function or a generator throws nothing at its call: the
 > call hands back a promise or an iterator, and the throw comes out of that.
 
+`deferred_attr` includes `async`, `generator`.
+
 In the code:
 
-<a id="deferred_body"></a>F runs its body later if F is a [function](js-callgraph.rofl.md#fn_node) and [the attribute](#ast_attr) `async` or `generator` of F is `true`.
+<a id="deferred_body"></a>A [function](js-callgraph.rofl.md#fn_node) runs its body later if [the attribute](#ast_attr) X of it is `true` and X [defers the body](#deferred_attr).
+
+<a id="async_body"></a>A node is async if it [runs its body later](#deferred_body), unless [the attribute](#ast_attr) `generator` of it is `true`.
 
 A [function](js-callgraph.rofl.md#fn_node)
 
-- <a id="async_body"></a>is async if [the attribute](#ast_attr) `async` of it is `true`, unless [the attribute](#ast_attr) `generator` of it is `true`.
+- <a id="sync_body"></a>runs its body at once unless it [runs its body later](#deferred_body).
 - <a id="top_throw"></a>throws at the top if the `body` of it is a node B and a [throw](#noun-throw) S [is among the](#ast_child) `body` of B.
 
 <a id="always_throws"></a>F always throws if F [throws at the top](#top_throw) and F neither [has a return](#has_return) nor [runs its body later](#deferred_body).
@@ -349,6 +352,10 @@ A [function](js-callgraph.rofl.md#fn_node)
   - F [always throws](#always_throws);
   - C [resolves to](js-callgraph.rofl.md#resolves) F;
   - C [is a call site](js-callgraph.rofl.md#call_site) in some file.
+
+Declared as facts:
+
+- <a id="deferred_attr"></a>An attribute A defers the body — rows in this file
 
 > AN ACCESSOR IS A CALL WEARING A READ'S SYNTAX: `o.p` on a getter transfers
 > control; what the getter returns is a different question, not answered here.
@@ -365,7 +372,10 @@ A [function](js-callgraph.rofl.md#fn_node)
 
 In the flow:
 
-<a id="accessor_of"></a>The accessor of a node Obj at Key is a node M if [the member](js-dataflow.rofl.md#member_value) Key of Obj holds M and [the attribute](#ast_attr) `kind` of M [is an accessor kind](#accessor_kind).
+<a id="accessor_as"></a>The accessor of a node Obj and K at Key is a node M if all of:
+  - [the member](js-dataflow.rofl.md#member_value) Key of Obj holds M;
+  - [the attribute](#ast_attr) `kind` of M is K;
+  - K [is an accessor kind](#accessor_kind).
 
 <a id="accessor_obj"></a>`accessor_obj`(Obj) if [the accessor](#accessor_of) of a node Obj at some key is some node.
 
@@ -386,15 +396,13 @@ In the code:
 
 1. if all of:
    - [`accessor_recv`](#accessor_recv)(N, Obj);
-   - [the accessor](#accessor_of) of a node Obj at Key is M;
+   - [the accessor](#accessor_as) of a node Obj and "get" at Key is M;
    - N [selects](js-dataflow.rofl.md#selects) Key;
-   - [the attribute](#ast_attr) `kind` of M is "get";
    - unless N [is only written](#only_written);
 2. if all of:
    - [`accessor_recv`](#accessor_recv)(N, Obj);
-   - [the accessor](#accessor_of) of a node Obj at Key is M;
+   - [the accessor](#accessor_as) of a node Obj and "set" at Key is M;
    - N [selects](js-dataflow.rofl.md#selects) Key;
-   - [the attribute](#ast_attr) `kind` of M is "set";
    - N [is written](#written_member);
 3. if all of:
    - N [binds privately to](js-dataflow.rofl.md#private_binds) M;
@@ -647,9 +655,10 @@ Declared as facts:
 1. if F [throws outright](#throws_outright);
 2. if all of:
    - G [may throw](#may_throw);
+   - G [runs its body at once](#sync_body);
    - a node C [resolves to](js-callgraph.rofl.md#resolves) G;
    - F [is the nearest function of](js-callgraph.rofl.md#nearest_fn) C;
-   - unless G [runs its body later](#deferred_body) or C [is caught here](#caught_here).
+   - unless C [is caught here](#caught_here).
 
 > an async callee's throw is the rejection of its promise, and comes out where
 > the promise is awaited
@@ -657,8 +666,8 @@ Declared as facts:
 F may throw if all of:
   - G [may throw](#may_throw);
   - G [is async](#async_body);
-  - C [resolves to](js-callgraph.rofl.md#resolves) G;
-  - a node X [awaits the call](#awaited_call) C;
+  - a node C [resolves to](js-callgraph.rofl.md#resolves) G;
+  - a node X [awaits](js-callgraph.rofl.md#await_arg) C;
   - F [is nearest to](js-dataflow.rofl.md#nearest_v) X;
   - unless X [is caught here](#caught_here).
 
@@ -672,14 +681,15 @@ In the flow:
    - unless T [is caught here](#caught_here);
 2. if all of:
    - G [throws out](#thrown_by) V;
+   - G [runs its body at once](#sync_body);
    - a node C [resolves to](js-callgraph.rofl.md#resolves) G;
    - F [is the nearest function of](js-callgraph.rofl.md#nearest_fn) C;
-   - unless G [runs its body later](#deferred_body) or C [is caught here](#caught_here);
+   - unless C [is caught here](#caught_here);
 3. if all of:
    - G [throws out](#thrown_by) V;
    - G [is async](#async_body);
-   - C [resolves to](js-callgraph.rofl.md#resolves) G;
-   - a node X [awaits the call](#awaited_call) C;
+   - a node C [resolves to](js-callgraph.rofl.md#resolves) G;
+   - a node X [awaits](js-callgraph.rofl.md#await_arg) C;
    - F [is nearest to](js-dataflow.rofl.md#nearest_v) X;
    - unless X [is caught here](#caught_here).
 
@@ -690,13 +700,13 @@ In the flow:
    - [the param](js-dataflow.rofl.md#catch_param) of H is P;
    - [`try_walk`](#try_walk)(T, C);
    - C [resolves to](js-callgraph.rofl.md#resolves) G;
+   - G [runs its body at once](#sync_body);
    - G [throws out](#thrown_by) V;
-   - unless G [runs its body later](#deferred_body);
 2. if all of:
    - [the catch](js-dataflow.rofl.md#catch_of) of T is H;
    - [the param](js-dataflow.rofl.md#catch_param) of H is P;
    - [`try_walk`](#try_walk)(T, X);
-   - X [awaits the call](#awaited_call) C;
+   - X [awaits](js-callgraph.rofl.md#await_arg) a node C;
    - C [resolves to](js-callgraph.rofl.md#resolves) G;
    - G [is async](#async_body);
    - G [throws out](#thrown_by) V.

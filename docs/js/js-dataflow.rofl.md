@@ -26,6 +26,7 @@ Reads:
 - from js-callgraph, in the code: [call_site](js-callgraph.rofl.md#call_site), [callee_of](js-callgraph.rofl.md#callee_of), [decorates](js-callgraph.rofl.md#decorates), [fn_node](js-callgraph.rofl.md#fn_node), [resolves](js-callgraph.rofl.md#resolves)
 - from js-concat: [may_be_lit](js-concat.rofl.md#may_be_lit), [may_be_node](js-concat.rofl.md#may_be_node)
 - from js-concat, in the surface: [sx_mwrite](js-concat.rofl.md#sx_mwrite)
+- from js-controlflow, in the code: [async_body](js-controlflow.rofl.md#async_body)
 - from js-controlflow: [caught_value](js-controlflow.rofl.md#caught_value)
 - from js-globals, in the code: [es_static](js-globals.rofl.md#es_static), [es_static_call](js-globals.rofl.md#es_static_call)
 - from js-model, in the code: [ast_node](js-model.rofl.md#ast_node)
@@ -70,7 +71,6 @@ What this file calls a node, and what each word stands for:
 | <a id="noun-external_shape"></a>an external shape | a node of one of the kinds `bare`, `node_builtin` (`external_shape`) |
 | <a id="noun-for-of"></a>a for-of | a node of kind `for_of_statement` |
 | <a id="noun-function_declaration"></a>a function declaration | a node of kind `function_declaration` |
-| <a id="noun-function_expression"></a>a function expression | a node of kind `function_expression` |
 | <a id="noun-identifier"></a>an identifier | a node of kind `identifier` |
 | <a id="noun-import"></a>an import | a node of kind `import_declaration` |
 | <a id="noun-import_specifier"></a>an import specifier | a node of kind `import_specifier` |
@@ -119,6 +119,7 @@ Phrases this file defines in one step, each by the sentence it stands for:
 - <a id="interpolated"></a>A node is interpolated if some node [is among the](#ast_child) `expressions` of it.
 - <a id="has_init"></a>A node has an initialiser if the `init` of it is some node.
 - <a id="nearest_s"></a>A [scope](#scope_node) is the nearest scope of D if [`up_s`](#up_s)(D, it).
+- <a id="named_decl"></a>A node declares the name Name in File if it [carries its own name](#own_name) Name and File and `around`.
 - <a id="decl_region"></a>D is scoped to a [scope](#scope_node) R if D [climbs from](#up_d) R.
 - <a id="scoped_name"></a>Name is declared in a scope in File if some scope [declares](#scope_declares) Name in File.
 - <a id="this_binder"></a>A [this-binder](#noun-this-binder) binds this.
@@ -317,29 +318,31 @@ Declared as facts:
    - S is in file File;
    - a node M [is among the](#ast_child) `members` of S;
    - the `id` of M [is named](js-structure.rofl.md#ast_name) Name;
-7. if all of:
-   - S is a [function expression](#noun-function_expression) or a [class expression](#noun-class_expression);
-   - S is in file File;
-   - the `id` of S [is named](js-structure.rofl.md#ast_name) Name.
+7. if S [carries its own name](#own_name) Name and File and `itself`.
 
 > A function or class declaration declares its name in the scope around it,
-> as a binder does; a catch clause its parameter. One
-> with no scope around it is at the top of its file.
+> as a binder does; a function or class expression inside itself. A
+> declaration with no scope around it is at the top of its file.
 
-<a id="named_decl"></a>D declares the name Name in File either:
+`named_kind` lists:
 
-1. if all of:
-   - D is a [function declaration](#noun-function_declaration) or a [class declaration](#noun-class_declaration);
-   - D is in file File;
-   - the `id` of D [is named](js-structure.rofl.md#ast_name) Name;
-2. if all of:
-   - a kind K [is a typescript declaration with a value](#ts_value_decl);
-   - D [is of kind](js-model.rofl.md#ast_node) K in file File;
-   - the `id` of D [is named](js-structure.rofl.md#ast_name) Name.
+| kind | where |
+|---|---|
+| `function_declaration` | `around` |
+| `class_declaration` | `around` |
+| `tsenum_declaration` | `around` |
+| `tsmodule_declaration` | `around` |
+| `tsdeclare_function` | `around` |
+| `function_expression` | `itself` |
+| `class_expression` | `itself` |
 
-`ts_value_decl` includes `tsenum_declaration`, `tsmodule_declaration`, `tsdeclare_function`.
+A node
 
-<a id="up_d"></a>A node climbs from a node P if it [declares the name](#named_decl) some name in some file and it [is under](js-structure.rofl.md#ast_in) P.
+- <a id="own_name"></a>carries its own name Name and File and W if all of:
+  - a kind K [declares its name](#named_kind) W;
+  - it [is of kind](js-model.rofl.md#ast_node) K in file File;
+  - the `id` of it [is named](js-structure.rofl.md#ast_name) Name.
+- <a id="up_d"></a>climbs from a node P if it [declares the name](#named_decl) some name in some file and it [is under](js-structure.rofl.md#ast_in) P.
 
 D climbs from a node P2 if D [climbs from](#up_d) a node P and P [is under](js-structure.rofl.md#ast_in) P2 but is not a [scope](#scope_node).
 
@@ -349,7 +352,7 @@ D climbs from a node P2 if D [climbs from](#up_d) a node P and P [is under](js-s
 
 Declared as facts:
 
-- <a id="ts_value_decl"></a>A kind K is a typescript declaration with a value — rows in this file
+- <a id="named_kind"></a>A kind K declares its name W — rows in this file
 
 > which declaration a read of its name sees, found by the same lookup
 
@@ -674,13 +677,11 @@ Declared as facts:
 > `new Promise`, by a static of `Promise`, and by `then`, `catch` or `finally`
 > on a promise, and a name bound to one is one.
 
-<a id="async_fn"></a>A [function](js-callgraph.rofl.md#fn_node) is an async function if [the attribute](#ast_attr) `async` of it is `true`, unless [the attribute](#ast_attr) `generator` of it is `true`.
-
 The prototype of a node C is Y either:
 
 1. if all of:
    - C [resolves to](js-callgraph.rofl.md#resolves) F;
-   - F [is an async function](#async_fn);
+   - F [is async](js-controlflow.rofl.md#async_body);
    - Y is `promise`;
 2. if all of:
    - C is a [new](#noun-new);
@@ -806,7 +807,9 @@ In the flow:
 A node points to a node N if all of:
   - D [destructures](#destructures_at) Local at Index in File;
   - D [takes its value from](#decl_value) a node Init;
-  - [the element](#elem_at) Index of Init [points to](js-concat.rofl.md#may_be_node) N;
+  - Init [points to](js-concat.rofl.md#may_be_node) a node X;
+  - [`array_elem`](#array_elem)(X, Index, V);
+  - a node V [points to](js-concat.rofl.md#may_be_node) N;
   - it [reads](#ident_in) Local in File;
   - it [sees](#sees_binder) D.
 
@@ -1128,7 +1131,8 @@ F takes Name at an index I either:
 
 > A rest parameter is an array of the arguments from its index on: element K
 > of `...args` at J is the argument at J + K of every call of the function,
-> so `inner(...args)` hands them on through the spread rule above.
+> so `inner(...args)` hands them on through the spread rule above. The caller
+> knows its arguments and publishes them (sx_rest_elem, rules/js-surface.rofl).
 
 In the code:
 
@@ -1139,13 +1143,6 @@ In the flow:
 `param_bound`(F, Name) if F [has the rest parameter](#param_rest) at some index some node and Name.
 
 A node points to a node R if F [has the rest parameter](#param_rest) at some index R and Name, and F [uses](#param_use) Name at it.
-
-`array_elem`(R, K, X) if all of:
-  - F [has the rest parameter](#param_rest) at an index J a node R and some name;
-  - C [resolves to](js-callgraph.rofl.md#resolves) F;
-  - C [passes](#arg_at) a node X at an index I;
-  - I >= J;
-  - K is I - J.
 
 > Where a parameter is read: every identifier whose lookup stops at the
 > function (section 3a). A declarator whose region is the function itself
@@ -1488,12 +1485,13 @@ Declared as facts:
 > Walks FIELDS and not members: written over `class_member_proto` it inherited
 > methods a second way and silently disarmed the mutant guarding the method arm.
 
-<a id="inherited_field"></a>A class CD inherits the field Key at a node P holding a node V either:
+A class
 
-1. if [the super](#super_of) of CD [has the field](#field_of) Key at P holding V, unless CD [owns the key](#own_key) Key;
-2. if [the super](#super_of) of CD [inherits the field](#inherited_field) Key at P holding V, unless CD [owns the key](#own_key) Key.
+- <a id="field_at"></a>has a field own or inherited Key holding a node V a static S if it [has the field](#field_of) Key at a node P holding V and [the attribute](#ast_attr) `static` of P is S.
+- <a id="inherited_field"></a>inherits the field Key holding a node V a static S if [the super](#super_of) of it [has a field own or inherited](#field_at) Key holding V S, unless it [owns the key](#own_key) Key.
+- has a field own or inherited Key holding a node V a static S if it [inherits the field](#inherited_field) Key holding V S.
 
-The instance/static member Key of a class CD is a node V if CD [inherits the field](#inherited_field) Key at a node P holding V and [the attribute](#ast_attr) `static` of P is `false`/`true`.
+The instance/static member Key of a class CD is a node V if CD [inherits the field](#inherited_field) Key holding V `false`/`true`.
 
 > A private name is LEXICAL, not a lookup: bound by the declaring class body,
 > never inherited, computed or reached from outside, so these rules never ask

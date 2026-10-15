@@ -137,7 +137,8 @@ Declared as facts:
 | `this_host` | "hosts(node H, this T)" |
 | `this_binder` | "binds_this(node F)" |
 | `field_of` | "has_the_field(class CD, key Key, at node P, holding node V)" |
-| `inherited_field` | "inherits_the_field(class CD, key Key, at node P, holding node V)" |
+| `inherited_field` | "inherits_the_field(class CD, key Key, holding node V, static S)" |
+| `field_at` | "has_a_field_own_or_inherited(class CD, key Key, holding node V, static S)" |
 | `private_key` | "is_the_private_key(node P, name Name)" |
 | `private_member` | "has_the_private_member(class CD, name Name, at node M)" |
 | `private_ref` | "refers_privately_to(member access N, name Name)" |
@@ -585,9 +586,10 @@ Declared as facts:
 | `always_throws` | "always_throws(function F)" |
 | `deferred_body` | "runs_its_body_later(function F)" |
 | `async_body` | "is_async(function F)" |
-| `awaited_call` | "awaits_the_call(await A, call C)" |
+| `sync_body` | "runs_its_body_at_once(function F)" |
 | `throwing_call` | "is_a_throwing_call(call C)" |
 | `accessor_of` | "the_accessor(of node Obj, at key Key, is node M)" |
+| `accessor_as` | "the_accessor(of node Obj, at key Key, is node M, of kind K)" |
 | `accessor_read` | "reads_through_the_accessor(node N, node M)" |
 | `written_member` | "is_written(member N)" |
 | `only_written` | "is_only_written(member N)" |
@@ -643,7 +645,7 @@ Declared as facts:
 |---|---|
 | `gen_fn` | "is_a_generator_function(function F)" |
 | `throw_in_fn` | "throws_inside_a_function(throw statement Th)" |
-| `async_fn` | "is_an_async_function(function F)" |
+| `deferred_attr` | "defers_the_body(attribute A)" |
 | `gen_of` | "makes_a_generator_of(call C, function F)" |
 | `call_returns` | "returns_to_its_call(function F, node E)" |
 
@@ -828,7 +830,8 @@ Declared as facts:
 | `not_a_reference` | "is_no_reference_at(kind K, field Field)" |
 | `not_a_ref` | "is_no_reference(identifier E)" |
 | `named_decl` | "declares_the_name(declaration D, name Name, in file File)" |
-| `ts_value_decl` | "is_a_typescript_declaration_with_a_value(kind K)" |
+| `named_kind` | "declares_its_name(kind K, where W)" |
+| `own_name` | "carries_its_own_name(node X, name Name, file File, where W)" |
 | `decl_region` | "is_scoped_to(declaration D, scope R)" |
 | `decl_at_top` | "is_declared_at_the_top(declaration D)" |
 | `catch_names` | "declares_its_caught_name(catch H, name Name, in file File)" |
