@@ -14,58 +14,45 @@
 -- value with no members), and `es_construct_not_constructor[audit]` uses it.
 
 -- =========================================================================
--- 1. WHERE A GLOBAL CAN BE SEEN, and the ceiling is this table. Every
--- property name and declaration id is an `identifier` node too; rather than
--- subtract the non-reference positions, this names the reference positions
--- the three surfaces need. A bare reference (`typeof Promise`) is invisible,
--- and test/js-globals.test.ts asserts that silence by name.
-edb(global_ref_position).   -- global_ref_position(Kind, Field)
-global_ref_position(member_expression, object).
-global_ref_position(optional_member_expression, object).
-global_ref_position(call_expression, callee).
-global_ref_position(optional_call_expression, callee).
-global_ref_position(new_expression, callee).
+-- 1. WHERE A NAME IS NOT A REFERENCE. Every property name, key, label and
+-- type name is an `identifier` node too; these are the positions where an
+-- identifier names something other than a binding. Everywhere else it is a
+-- reference, `typeof Promise` and `arr.map(String)` included.
+edb(not_a_reference).   -- not_a_reference(Kind, Field)
+not_a_reference(labeled_statement, label).
+not_a_reference(break_statement, label).
+not_a_reference(continue_statement, label).
+not_a_reference(import_specifier, imported).
+not_a_reference(export_specifier, exported).
+not_a_reference(export_namespace_specifier, exported).
+not_a_reference(meta_property, meta).
+not_a_reference(meta_property, property).
+not_a_reference(ts_type_reference, type_name).
+not_a_reference(ts_qualified_name, left).
+not_a_reference(ts_qualified_name, right).
+not_a_reference(ts_expression_with_type_arguments, expression).
+not_a_reference(ts_class_implements, expression).
+not_a_reference(ts_interface_heritage, expression).
+not_a_reference(ts_type_query, expr_name).
+not_a_reference(ts_interface_declaration, id).
+not_a_reference(ts_type_alias_declaration, id).
+not_a_reference(ts_enum_member, id).
+not_a_reference(ts_module_declaration, id).
+not_a_reference(ts_type_predicate, parameter_name).
+not_a_reference(ts_import_type, qualifier).
 
--- the small table leads: five positions by their nodes is selective, where an
--- unbound `ast_node(E, identifier, _, _)` first was once 39% of the fixpoint
-global_ref[code](E, Name, File) :- global_ref_position(K, Field),
-                                   ast_node[code](P, K, _, _),
-                                   ast_child[code](P, Field, 0, E),
-                                   ident_in[code](E, Name, File).
+not_a_ref[code](E) :- not_a_reference(K, Field), ast_node[code](P, K, _, _), ast_child[code](P, Field, _, E).
+-- a key written as a name: `o.p`, `{ p: v }`, `p() {}`, a class field
+not_a_ref[code](E) :- ast_child[code](P, property, 0, E), ast_attr[code](P, computed, false).
+not_a_ref[code](E) :- ast_child[code](P, key, 0, E), ast_attr[code](P, computed, false).
 
 -- =========================================================================
--- 2. WHAT THE FILE BINDS — deliberately over-broad. `sees_binder[code]`
--- covers declarators and destructuring only, so `function Box() {}` would be
--- invisible and every call to `Box` a global. This wants the SAFE direction:
--- FILE-scoped, so a genuine use of `Set` in a file with a local `Set` is
--- LOST and a global is never INVENTED. Under-reports, never over-reports.
-edb(declaring_position).   -- declaring_position(Kind, Field)
-declaring_position(variable_declarator, id).
-declaring_position(function_declaration, id).
-declaring_position(class_declaration, id).
-declaring_position(function_expression, id).
-declaring_position(class_expression, id).
-declaring_position(import_specifier, local).
-declaring_position(import_default_specifier, local).
-declaring_position(import_namespace_specifier, local).
-declaring_position(catch_clause, param).
-
-declares_name[code](Name, File) :- declaring_position(K, Field),
-                                   ast_node[code](D, K, File, _),
-                                   ast_child[code](D, Field, 0, I), ast_name[code](I, Name).
-
--- the names a pattern introduces, keys and defaults included: widening
--- `declares_name` narrows the globals, the safe direction again
-pattern_root[code](I, File) :- declaring_position(K, Field), ast_node[code](D, K, File, _),
-                               ast_child[code](D, Field, 0, I).
-declares_name[code](Name, File) :- pattern_root[code](I, File), ast_within[code](I, X), ast_name[code](X, Name).
-
--- a parameter is a position, not a declaration kind
-declares_name[code](Name, File) :- fn_node[code](F), fn_file[code](F, File),
-                                   ast_child[code](F, params, _, P), ast_name[code](P, Name).
-declares_name[code](Name, File) :- fn_node[code](F), fn_file[code](F, File),
-                                   ast_child[code](F, params, _, P),
-                                   ast_within[code](P, X), ast_name[code](X, Name).
+-- 2. WHAT IS DECLARED AT THE TOP OF A FILE. Inside it, a name is looked up
+-- through the scopes around the reading (rules/js-dataflow.rofl, 3a); what no
+-- scope declares is the file's own top-level binding or import, else global.
+top_declares[code](Name, File) :- binder_at_top[code](D), binds_name[code](D, Name, File).
+top_declares[code](Name, File) :- decl_at_top[code](D), named_decl[code](D, Name, File).
+top_declares[code](Name, File) :- binding[code](I, _, Name, _), ast_node[code](I, _, File, _).
 
 -- =========================================================================
 -- 3. A GLOBAL AS A FACT, not a spelling — the relation the effect layer joins
@@ -73,8 +60,8 @@ declares_name[code](Name, File) :- fn_node[code](F), fn_file[code](F, File),
 -- `global_unattributed[audit]` is the RUNTIME half (`console`, `process`,
 -- `fetch`), an in-tray rather than a defect. Both are keyed by node and by
 -- name, so a runtime table keyed by name joins straight on.
-free_global[code](E, Name, File) :- global_ref[code](E, Name, File),
-                                    not declares_name[code](Name, File).
+free_global[code](E, Name, File) :- ident_in[code](E, Name, File), not not_a_ref[code](E),
+                                    not name_cand[code](E, _, _, _), not top_declares[code](Name, File).
 
 es_global[code](E, Name, Rel, Form) :- free_global[code](E, Name, _),
                                        lib_global(Name, Rel, Form).
@@ -140,8 +127,8 @@ es_static_unsupported[audit](E, N, Name, Key) :- es_static[code](N, Name, Key, R
 -- `new Box()` are one kind and two questions). The binder and assignment arms
 -- of `may_be_node` then carry the instance to the receiver for free.
 --
--- Not done here: `new Foo()` for a class in this program (`free_global` is
--- `not declares_name`, so the two never meet); a form that cannot be
+-- Not done here: `new Foo()` for a class in this program (its name is
+-- declared, so it is no free global); a form that cannot be
 -- constructed (the audit above says it throws); a prototype for the
 -- thirty-nine globals with no bridge row.
 es_instance[flow](X, Name, Rel) :- es_global_construct[code](X, Name, Rel),

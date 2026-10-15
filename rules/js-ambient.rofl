@@ -160,10 +160,12 @@ eff_operation[flow](X, construct) :- amb_construct[flow](X, _).
 -- 6. `identifier` — THE THIRD CASE. js-effects derives a reassigned name as
 -- `read<local>` and an unreassigned one as a value with no cell. A FREE
 -- GLOBAL is a read of the host's global object, a cell this program did not
--- allocate: `global` by the test `eff_heap_of` applies to a receiver. The
--- ceiling is `global_ref_position` in rules/js-globals.rofl: a bare mention
--- (`typeof Promise`) seeds nothing.
-eff_here[flow](E, read, global) :- free_global[code](E, _, _).
+-- allocate: `global` by the test `eff_heap_of` applies to a receiver. A
+-- global no program can write (`undefined`, `NaN`, `Infinity`) is a constant.
+eff_here[flow](E, read, global) :- free_global[code](E, Name, _), not constant_global(Name).
+edb(constant_global).
+constant_global("undefined").
+constant_global(Name) :- lib_global(Name, _, plain_value).
 
 -- =========================================================================
 -- 7. THE BUILTIN PROTOTYPES — the mutating half, read and not typed. Every

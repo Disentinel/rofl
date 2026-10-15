@@ -797,14 +797,22 @@ sig(env_separates, "is_separated_from(environment X, environment B)").
 sig(env_pair_indistinct, "is_indistinct_from(environment X, environment B)").
 
 -- globals: the free name, the ES global and its statics
-sig(global_ref_position, "reads_a_global_at(kind K, field Field)").
-sig(declaring_position, "declares_at(kind K, field Field)").
+sig(not_a_reference, "is_no_reference_at(kind K, field Field)").
+sig(not_a_ref, "is_no_reference(identifier E)").
+sig(named_decl, "declares_the_name(declaration D, name Name, in file File)").
+sig(decl_region, "is_scoped_to(declaration D, scope R)").
+sig(decl_at_top, "is_at_the_top(declaration D)").
+sig(catch_names, "declares_its_caught_name(catch H, name Name, in file File)").
+sig(sees_decl, "sees_the_declaration(identifier E, declaration D)").
+sig(reads_the_file_as, "is_read_as_the(view V)").
+sig(up_d, "climbs_from(declaration D, node P)").
+sig(class_like, "is_a_class(node O)").
+sig(constant_global, "is_a_constant_global(name Name)").
+sig(top_declares, "is_declared_at_the_top_of(name Name, file File)").
 sig(lib_global, "is_a_global(name Name, since release Rel, with form Form)").
 sig(lib_static, "has_the_static(name Name, key Key, since release Rel)").
 sig(constructible_form, "is_constructible(form Form)").
 sig(lib_global_prototype, "has_the_prototype(name Name, prototype P)").
-sig(global_ref, "refers_to(node E, name Name, in file File)").
-sig(declares_name, "is_declared(name Name, in file File)").
 sig(free_global, "refers_to_the_free(node E, name Name, in file File)").
 sig(global_unattributed, "refers_to_an_unattributed_global(node E, name Name)").
 sig(es_static_unattributed, "selects_an_unattributed_static(node N, key Key:2, of name Name:1)").
@@ -836,7 +844,6 @@ sig(node_builtin_bare, "is_the_bare_name(text Bare, of spec Spec)").
 sig(node_prefix_only, "is_loaded_only_under_its_scheme(spec Spec)").
 sig(resolved_builtin, "resolves_to_the_builtin(site I, spec Spec)").
 sig(site_file, "sits_in(site I, file F)").
-sig(name_bound_in, "binds_the_name(file File, name Name)").
 sig(host_module_ns, "imports_the_namespace(file File, name Local, of spec Spec)").
 sig(host_module_named, "imports(file File, name Local, as key Key:3, of spec Spec:2)").
 sig(host_import_unknown, "imports_an_unknown_member(file File, key Key:2, of spec Spec:1)").

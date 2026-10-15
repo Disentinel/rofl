@@ -148,6 +148,32 @@ binds_name[code](D, Name, File) :- rest_binds[code](D, _, Name, File).
 -- A name nothing in its file declares in a scope is not looked up: it is at the top.
 scope_declares[code](S, Name, File) :- binder_region[code](D, S), binds_name[code](D, Name, File).
 scope_declares[code](F, Name, File) :- param_bound[flow](F, Name), ast_node[code](F, _, File, _).
+scope_declares[code](S, Name, File) :- named_decl[code](D, Name, File), decl_region[code](D, S).
+scope_declares[code](B, Name, File) :- catch_names[code](B, Name, File).
+scope_declares[code](X, Name, File) :- ast_node[code](X, function_expression, File, _),
+                                       ast_child[code](X, id, 0, I), ast_name[code](I, Name).
+scope_declares[code](X, Name, File) :- ast_node[code](X, class_expression, File, _),
+                                       ast_child[code](X, id, 0, I), ast_name[code](I, Name).
+
+-- A function or class declaration declares its name in the scope around it,
+-- as a binder does; a catch clause its parameter. One
+-- with no scope around it is at the top of its file.
+named_decl[code](D, Name, File) :- ast_node[code](D, function_declaration, File, _),
+                                   ast_child[code](D, id, 0, I), ast_name[code](I, Name).
+named_decl[code](D, Name, File) :- ast_node[code](D, class_declaration, File, _),
+                                   ast_child[code](D, id, 0, I), ast_name[code](I, Name).
+up_d[code](D, P)         :- named_decl[code](D, _, _), ast_in[code](P, D).
+up_d[code](D, P2)        :- up_d[code](D, P), not scope_node[code](P), ast_in[code](P2, P).
+decl_region[code](D, R)  :- up_d[code](D, R), scope_node[code](R).
+decl_at_top[code](D)     :- named_decl[code](D, _, _), not decl_region[code](D, _).
+catch_names[code](H, Name, File) :- ast_node[code](H, catch_clause, File, _), ast_child[code](H, param, 0, P),
+                                    ast_name[code](P, Name).
+
+-- which declaration a read of its name sees, found by the same lookup
+sees_decl[code](E, D) :- named_decl[code](D, Name, File), decl_region[code](D, S),
+                         name_scope[code](E, Name, File, S).
+sees_decl[code](E, D) :- decl_at_top[code](D), named_decl[code](D, Name, File),
+                         ident_in[code](E, Name, File), not name_cand[code](E, _, _, _).
 scoped_name[code](Name, File) :- scope_declares[code](_, Name, File).
 
 name_cand[code](E, Name, File, S)  :- ident_in[code](E, Name, File), scoped_name[code](Name, File),
@@ -454,6 +480,11 @@ nearest_v[flow](F, X)  :- nearest_v[flow](F, P), not fn_node[code](P),
 -- what `arg_at` feeds. A function whose every mention is under a guard (`main`)
 -- is dead by name in its file, so its own calls are dead too; a mention anywhere
 -- else (`module.exports = main`, a call from a live site) makes it live.
+-- Reading the file as the library is the default VIEW: a world that asks about
+-- the file as the script node runs says `reads_the_file_as(script)`, and then
+-- nothing is dead.
+edb(reads_the_file_as).
+read_as_script() :- reads_the_file_as(script).
 entry_test[code](T) :- ast_node[code](T, unary_expression, _, _), ast_attr[code](T, operator, "!"),
                        ast_child[code](T, argument, 0, M), module_member[code](M, "parent").
 entry_test[code](T) :- main_is_module[code](T, "===").
@@ -464,30 +495,33 @@ imported_test[code](T) :- main_is_module[code](T, "!=").
 
 module_member[code](M, Key) :- ast_node[code](M, member_expression, File, _), ast_attr[code](M, computed, false),
                                ast_child[code](M, property, 0, P), ast_name[code](P, Key),
-                               ast_child[code](M, object, 0, O), ident_in[code](O, "module", File).
+                               ast_child[code](M, object, 0, O), free_global[code](O, "module", File).
 main_is_module[code](T, Op) :- ast_node[code](T, binary_expression, File, _), ast_attr[code](T, operator, Op),
                                ast_child[code](T, left, 0, L), ast_child[code](T, right, 0, R),
-                               require_main[code](L), ident_in[code](R, "module", File).
+                               require_main[code](L), free_global[code](R, "module", File).
 main_is_module[code](T, Op) :- ast_node[code](T, binary_expression, File, _), ast_attr[code](T, operator, Op),
                                ast_child[code](T, left, 0, L), ast_child[code](T, right, 0, R),
-                               require_main[code](R), ident_in[code](L, "module", File).
+                               require_main[code](R), free_global[code](L, "module", File).
 require_main[code](M) :- ast_node[code](M, member_expression, File, _), ast_attr[code](M, computed, false),
                          ast_child[code](M, property, 0, P), ast_name[code](P, "main"),
-                         ast_child[code](M, object, 0, O), ident_in[code](O, "require", File).
+                         ast_child[code](M, object, 0, O), free_global[code](O, "require", File).
 
-dead_arm[code](A) :- entry_test[code](T), ast_child[code](S, test, 0, T), ast_child[code](S, consequent, 0, A).
-dead_arm[code](A) :- imported_test[code](T), ast_child[code](S, test, 0, T), ast_child[code](S, alternate, 0, A).
+dead_arm[code](A) :- entry_test[code](T), ast_child[code](S, test, 0, T), ast_child[code](S, consequent, 0, A),
+                     not read_as_script().
+dead_arm[code](A) :- imported_test[code](T), ast_child[code](S, test, 0, T), ast_child[code](S, alternate, 0, A),
+                     not read_as_script().
 dead_arm[code](A) :- entry_test[code](T), ast_child[code](S, left, 0, T), ast_node[code](S, logical_expression, _, _),
-                     ast_attr[code](S, operator, "&&"), ast_child[code](S, right, 0, A).
+                     ast_attr[code](S, operator, "&&"), ast_child[code](S, right, 0, A), not read_as_script().
+dead_arm[code](A) :- imported_test[code](T), ast_child[code](S, left, 0, T), ast_node[code](S, logical_expression, _, _),
+                     ast_attr[code](S, operator, "||"), ast_child[code](S, right, 0, A), not read_as_script().
 
 dead_in[code](A, C) :- dead_arm[code](A), ast_within[code](A, C).
 dead_site[code](C)  :- dead_in[code](_, C), call_like_v(K), ast_node[code](C, K, _, _).
 
-mention[code](F, E)     :- ast_node[code](F, function_declaration, File, _), ast_child[code](F, id, 0, I),
-                           ast_name[code](I, Name), ident_in[code](E, Name, File), E != I, not cjs_key[code](E).
-mention[code](F, E)     :- ast_node[code](D, variable_declarator, File, _), ast_child[code](D, id, 0, I),
-                           ast_name[code](I, Name), ast_child[code](D, init, 0, F), fn_node[code](F),
-                           ident_in[code](E, Name, File), E != I, not cjs_key[code](E).
+mention[code](F, E)     :- sees_decl[code](E, F), ast_node[code](F, function_declaration, _, _),
+                           ast_child[code](F, id, 0, I), E != I.
+mention[code](F, E)     :- sees_binder[code](E, D), binder[code](D, _, F, _), fn_node[code](F),
+                           ast_child[code](D, id, 0, I), E != I.
 live_mention[code](F)   :- mention[code](F, E), not dead_in[code](_, E).
 dead_fn[code](F)        :- mention[code](F, _), not live_mention[code](F).
 dead_site[code](C)      :- dead_fn[code](F), ast_within[code](F, C), call_like_v(K), ast_node[code](C, K, _, _).
@@ -586,6 +620,8 @@ sx_mwrite[surface](O, Key, V) :- merge_call[flow](C), arg_at[flow](C, 0, T), may
 obj_like[flow](O) :- ast_node[code](O, object_expression, _, _).
 obj_like[flow](O) :- ast_node[code](O, class_declaration, _, _).
 obj_like[flow](O) :- ast_node[code](O, class_expression, _, _).
+class_like[flow](O) :- ast_node[code](O, class_declaration, _, _).
+class_like[flow](O) :- ast_node[code](O, class_expression, _, _).
 
 member_value[flow](O, Key, V) :- ast_node[code](O, object_expression, _, _),
                                  ast_child[code](O, properties, _, M),
@@ -666,15 +702,13 @@ may_be_node[flow](N, V2) :- member_at[flow](N, O, Obj, Key), not class_receiver[
 may_be_node[flow](N, V2) :- member_at[flow](N, _, Obj, Key), member_plain[flow](Obj, Key, V), may_be_node[flow](V, V2).
 may_be_lit[flow](N, L)   :- member_at[flow](N, _, Obj, Key), member_value[flow](Obj, Key, V), may_be_lit[flow](V, L).
 
--- A method is a value; a declared function is reached by its name with no
--- declarator.
+-- A method is a value; a declared function is reached by its name, looked up
+-- as any name is.
 may_be_node[flow](M, M) :- ast_node[code](M, object_method, _, _).
 may_be_node[flow](M, M) :- ast_node[code](M, class_method, _, _).
 may_be_node[flow](M, M) :- ast_node[code](M, function_declaration, _, _).
 
-may_be_node[flow](E, F) :- ast_node[code](F, function_declaration, File, _),
-                           ast_child[code](F, id, 0, I), ast_name[code](I, Name),
-                           ident_in[code](E, Name, File).
+may_be_node[flow](E, F) :- sees_decl[code](E, F), ast_node[code](F, function_declaration, _, _).
 
 may_be_node[flow](P, N) :- may_be_node[flow](X, N), ast_child[code](P, value, 0, X), ast_node[code](P, object_property, _, _).
 may_be_lit[flow](P, V)  :- may_be_lit[flow](X, V), ast_child[code](P, value, 0, X), ast_node[code](P, object_property, _, _).
@@ -929,7 +963,6 @@ cjs_module_exports[code](M, File) :- free_global[code](O, "module", File), ast_c
                                      ast_node[code](M, member_expression, _, _), ast_attr[code](M, computed, false),
                                      ast_child[code](M, property, 0, P), ast_name[code](P, "exports").
 
-cjs_key[code](E) :- ast_child[code](M, property, 0, E), ast_attr[code](M, computed, false).
 
 cjs_exports[flow](File, P) :- module_object[flow](P, File).
 cjs_exports[flow](File, V) :- cjs_module_exports[code](L, File), ast_child[code](A, left, 0, L),
@@ -1083,18 +1116,16 @@ class_named[flow](CD, Name, File) :- ast_node[code](CD, class_expression, File, 
                                      ast_child[code](D, init, 0, CD),
                                      ast_child[code](D, id, 0, I), ast_name[code](I, Name).
 
-may_be_node[flow](E, CD) :- class_named[flow](CD, Name, File),
-                            ident_in[code](E, Name, File).
+may_be_node[flow](E, CD) :- sees_decl[code](E, CD), ast_node[code](CD, class_declaration, _, _).
 
-may_be_node[flow](E, CD) :- ast_node[code](E, new_expression, File, _),
-                            ast_child[code](E, callee, 0, CE), ast_name[code](CE, Name),
-                            class_named[flow](CD, Name, File).
+-- `new X()` is whichever class its callee may be, by value: `new ns.Foo()` and
+-- an imported class are reached as a call's callee is.
+may_be_node[flow](E, CD) :- ast_node[code](E, new_expression, _, _),
+                            ast_child[code](E, callee, 0, CE), may_be_node[flow](CE, CD), class_like[flow](CD).
 
--- `super` denotes the class above, found by NAME in the same file, so a class
--- extending an imported one reaches nothing.
-super_of[flow](CD, SD) :- obj_like[flow](CD), ast_node[code](CD, _, File, _),
-                          ast_child[code](CD, super_class, 0, SC), ast_name[code](SC, Name),
-                          class_named[flow](SD, Name, File).
+-- `super` denotes the class its `extends` expression may be.
+super_of[flow](CD, SD) :- class_like[flow](CD), ast_child[code](CD, super_class, 0, SC),
+                          may_be_node[flow](SC, SD), class_like[flow](SD).
 
 -- A class with no constructor answers with its nearest ancestor's. Measured on
 -- V8: `super()` inside C reports `C -> A`, skipping the synthesised B frame.
@@ -1265,8 +1296,8 @@ catch_unsourced[audit](P) :- catch_of[flow](T, H), catch_param[flow](H, P),
 -- so the rule does not depend silently on another relation's blindness.
 decorated_by[flow](Owner, N) :- decorates[code](Owner, D), may_be_node[flow](D, N).
 
-may_be_node[flow](E, N) :- decorated_by[flow](CD, N), class_named[flow](CD, Name, File),
-                           ident_in[code](E, Name, File).
+may_be_node[flow](E, N) :- decorated_by[flow](CD, N), sees_decl[code](E, CD).
+may_be_node[flow](CD, N) :- decorated_by[flow](CD, N), ast_node[code](CD, class_expression, _, _).
 
 decorated_member[flow](CD, Key, M, N) :- decorated_by[flow](M, N),
                                          ast_node[code](M, class_method, _, _),

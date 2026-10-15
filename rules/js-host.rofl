@@ -18,28 +18,9 @@ imports(audit, code).
 edb(ast_parse_error).
 
 -- =========================================================================
--- 1. THE GLOBAL DOOR — an identifier nothing in this FILE binds. The ceiling
--- is that `name_bound_in` is file-scoped, not scope-scoped: a name bound
--- anywhere in a file suppresses the global everywhere in it. Chosen: the
--- precise relation `sees_binder[code]` covers declarators and destructuring
--- only, so `not sees_binder` would call every parameter named `url` a global
--- reference and attribute io to a program that does none. Under-reporting a
--- shadowed global is a missed row; over-reporting is a false accusation.
-name_bound_in[code](File, Name) :- binds_name[code](_, Name, File).
-
--- the `id` child and not `fn_name[code]`, which also covers object and class
--- METHODS: `{ log() {} }` would have suppressed `console`
-name_bound_in[code](File, Name) :- ast_node[code](F, function_declaration, File, _),
-                                   ast_child[code](F, id, 0, I), ast_name[code](I, Name).
-name_bound_in[code](File, Name) :- param_of[flow](F, _, Name),
-                                   ast_node[code](F, _, File, _).
-name_bound_in[code](File, Name) :- class_named[flow](_, Name, File).
-name_bound_in[code](File, Name) :- binding[code](I, _, Name, _), site_file[code](I, File).
-
+-- 1. THE GLOBAL DOOR — a free global (rules/js-globals.rofl) the host carries.
 -- The host stays in the row: `console` under node and under browser are two rows.
-host_global_ref[code](E, H, Name) :- ident_in[code](E, Name, File),
-                                     host_global(H, Name),
-                                     not name_bound_in[code](File, Name).
+host_global_ref[code](E, H, Name) :- free_global[code](E, Name, _), host_global(H, Name).
 
 -- `document` is a reference under `browser` and there is no `node` row for it.
 host_global_only_in[code](E, H, Name) :- host_global_ref[code](E, H, Name),
