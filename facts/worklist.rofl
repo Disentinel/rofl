@@ -3883,10 +3883,11 @@ work_state(w_stage_hypotheses, done).
 work_spawned(w_stage_hypotheses, f_the_owner_sets_staged_evaluation_as_the_engine_of_1_2).
 
 work(w_derived_as_given,
-  "THE KEYSTONE of staged evaluation: a frozen layer of derived facts is taken as complete, run_pass does not clear it and no rule whose head is in it fires. Proof: a world evaluated in two stages equals the world evaluated whole, byte for byte, on every world of npm test that splits.").
+  "THE KEYSTONE of staged evaluation: a frozen layer of derived facts is taken as complete, run_pass does not clear it and no rule whose head is in it fires. Proof: a world evaluated in two stages equals the world evaluated whole, byte for byte, on every world of npm test that splits. PROGRESS 2026-10-15 (f_two_stages_equal_the_whole_on_every_world_that_splits): the proof holds on all 167 worlds that split (scripts/addcheck.ts, the lower stage kept as a volume and opened in between), the upper stage by delta in 137; dominance and join lattices open evaluated. LEFT: an upper stage the addition path evaluates again (30 of 167, each reason one of w_add_full_reasons) evaluates the lower stage again too; a full pass that keeps the finished layer is what would stop that.").
 work_state(w_derived_as_given, open).
 work_needs(w_derived_as_given, w_stage_hypotheses).
 work_spawned(w_derived_as_given, f_an_evaluated_world_kept_on_disk_opens_evaluated_and_takes_the_next_stage_by_delta).
+work_spawned(w_derived_as_given, f_two_stages_equal_the_whole_on_every_world_that_splits).
 
 work(w_mapped_volume,
   "DONE 2026-10-11 (f_a_world_kept_as_a_volume_opens_mapped_in_a_fifteenth_of_the_time): Session::keep_volume / open_volume, rust/rofl/src/volume.rs, proved by rust/rofl/tests/volume.rs and tests/addition.rs. OPEN: the key by (program hash, input hashes) belongs to the cache of decision 1; a write below the mark copies the whole mapped arena it lands in (a flag, a witness chain head, a run absorbed), where an overlay would copy a page. The colfile of rust/storebench into the engine as the frozen base a fork reads: a kept stage or volume is a mapped columnar file, keyed by (program hash, input hashes).").

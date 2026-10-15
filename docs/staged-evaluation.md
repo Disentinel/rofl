@@ -100,9 +100,11 @@ from the store.
 ## What is built, in order
 
 1. **Derived as given** (the keystone: stages, cache and resume all need it). A stage builds on the one below it in
-   memory and across a process (the kept image); what remains is a kept stage read back under a cone that does not
-   run its rules again, and dominance and join lattice worlds kept evaluated. Proof: a world evaluated
-   in two stages equals the world evaluated whole, byte for byte, on every world of `npm test` that splits.
+   memory and across a process (the kept image, the volume). Proved on every world of `npm test` that splits
+   (`scripts/addcheck.ts`, `f_two_stages_equal_the_whole_on_every_world_that_splits`): the lower half of the world's
+   relations asked, evaluated, kept as a volume and opened, the upper half asked of it, equals the world asking both,
+   byte for byte, on all 167; the upper stage goes by delta in 137. Dominance and join lattices are kept with the
+   world and open evaluated. Left: an upper stage the addition path evaluates again evaluates the lower one too.
 2. **The mapped volume.** Built: `Session::keep_volume` writes the world as the arenas it is, `open_volume` maps
    them and copies nothing (`rust/rofl/src/volume.rs`; at 250 vscode files it opens in 0.6 s against 9.2 s for the
    image, holding 0.36 GB against 1.6 GB, for twice the disk;

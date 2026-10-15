@@ -159,14 +159,14 @@ impl Session {
         let mut eval = Eval::with_answer(h, o.store, budget, Mode::Rounds, false, o.answer);
         eval.vclosure_restore();
         eval.stage_kept(o.staged);
-        eval.after_open();
+        eval.after_open(o.lattices);
         Ok(Session { eval, dangling: o.dangling, asks: 0 })
     }
 
     /// This world as a kept image, which `open_kept` reads back.
     pub fn keep(&mut self) -> Vec<u8> {
         self.eval.settle_provenance();
-        crate::image::keep(&self.eval.h, &self.eval.store, &self.eval.staged_kept(), self.eval.safety())
+        crate::image::keep(&self.eval.h, &self.eval.store, &self.eval.staged_kept(), self.eval.safety(), &self.eval.lattices_kept())
     }
 
     /// This world kept as a volume at `path`, which `open_volume` maps back. It freezes the world, as a fork does.
@@ -188,8 +188,8 @@ impl Session {
         bootstrap_kernel(&mut h, &v, &mut o.store);
         let mut eval = Eval::with_answer(h, o.store, budget, Mode::Rounds, false, evaluated.then_some(o.answer));
         eval.vclosure_restore();
-        eval.stage_kept(o.staged);
-        eval.after_open();
+        eval.stage_kept(std::mem::take(&mut o.staged));
+        eval.after_open(std::mem::take(&mut o.lattices));
         eval.read_notes(&mut o.cut)?;
         eval.read_cut(&mut o.cut)?;
         if !o.cut.at_end() {

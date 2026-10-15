@@ -3,7 +3,7 @@
 //! nothing. A page of it is brought in when something reads it and can be dropped again by the system; a write to
 //! a mapped arena copies that arena into the heap first. Read by the build that wrote it.
 use crate::arena::{map_file, VolR, VolW};
-use crate::engine::{Eval, RuleAnswer, StagedFact};
+use crate::engine::{Eval, RuleAnswer, StagedFact, Tok};
 use crate::store::{PremRef, Store};
 use crate::term::{Heap, Sym, Term};
 
@@ -59,6 +59,23 @@ pub fn keep(path: &str, e: &mut Eval) -> std::io::Result<usize> {
             w.arena(&m[&k]);
         }
     }
+    let lattices = e.lattices_kept();
+    w.u32(lattices.len() as u32);
+    for t in &lattices {
+        match t {
+            Tok::N(x) => [0, *x].iter().for_each(|x| w.u32(*x)),
+            Tok::T(x) => {
+                w.u32(1);
+                w.arena(&[*x])
+            }
+            Tok::F(x) => [2, *x].iter().for_each(|x| w.u32(*x)),
+            Tok::S(x) => [3, *x].iter().for_each(|x| w.u32(*x)),
+            Tok::P(ps) => {
+                w.u32(4);
+                w.arena(ps)
+            }
+        }
+    }
     e.write_notes(&mut w);
     e.write_cut(&mut w);
     w.finish()
@@ -69,6 +86,8 @@ pub struct Opened {
     pub store: Store,
     pub staged: Staged,
     pub answer: RuleAnswer,
+    /// what its dominance and join lattices knew (`Eval::lattices_kept`)
+    pub lattices: Vec<Tok>,
     /// the rest of the volume: the provenance notes and the cut, which the evaluation reads (`Eval::read_notes`,
     /// `Eval::read_cut`)
     pub cut: VolR,
@@ -119,5 +138,15 @@ pub fn open(path: &str) -> Result<Opened, String> {
             if which == 0 { a.trigger.insert(k, v) } else { a.lattice_outer.insert(k, v) };
         }
     }
-    Ok(Opened { heap, store, staged, answer: a, cut: r })
+    let mut lattices = Vec::new();
+    for _ in 0..r.u32()? {
+        lattices.push(match r.u32()? {
+            0 => Tok::N(r.u32()?),
+            1 => Tok::T(*r.arena::<Term>()?.first().ok_or("a kept lattice term is empty")?),
+            2 => Tok::F(r.u32()?),
+            3 => Tok::S(r.u32()?),
+            _ => Tok::P(prems(&mut r)?),
+        });
+    }
+    Ok(Opened { heap, store, staged, answer: a, lattices, cut: r })
 }

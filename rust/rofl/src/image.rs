@@ -4,7 +4,7 @@
 //! image is read by the build that wrote it. Each distinct term is written once, in a table ahead of the facts, and
 //! built once when read.
 use crate::cell::{AggOp, Algebra};
-use crate::engine::{RuleAnswer, StagedFact};
+use crate::engine::{RuleAnswer, StagedFact, Tok};
 use crate::store::{CellOwner, CellValue, EvalRecord, LatReg, NewCell, NewMember, PremRef, Seal, Store, Witness, F_BASE, F_FROZEN, F_TICK};
 use crate::term::{Heap, Sym, Term, TermK};
 use std::collections::HashMap;
@@ -148,7 +148,7 @@ impl W {
 }
 
 /// The world in `s`, and what its evaluation staged for the next tick, as a kept image.
-pub fn keep(h: &Heap, s: &Store, staged: &[(StagedFact, Vec<(Sym, Vec<PremRef>)>)], answer: &RuleAnswer) -> Vec<u8> {
+pub fn keep(h: &Heap, s: &Store, staged: &[(StagedFact, Vec<(Sym, Vec<PremRef>)>)], answer: &RuleAnswer, lattices: &[Tok]) -> Vec<u8> {
     let mut w = W::default();
     w.u32(s.tick);
     w.out.push((!s.dirty && !s.partial_eval) as u8);
@@ -259,6 +259,31 @@ pub fn keep(h: &Heap, s: &Store, staged: &[(StagedFact, Vec<(Sym, Vec<PremRef>)>
         }
     }
     w.answer(answer);
+    w.u32(lattices.len() as u32);
+    for t in lattices {
+        match t {
+            Tok::N(n) => {
+                w.out.push(0);
+                w.u32(*n)
+            }
+            Tok::T(x) => {
+                w.out.push(1);
+                w.term(h, *x)
+            }
+            Tok::F(f) => {
+                w.out.push(2);
+                w.u32(fact_ix.get(f).copied().unwrap_or(u32::MAX))
+            }
+            Tok::S(x) => {
+                w.out.push(3);
+                w.sym(*x)
+            }
+            Tok::P(ps) => {
+                w.out.push(4);
+                w.prems(ps, &fact_ix, &cell_ix)
+            }
+        }
+    }
     let mut file = MAGIC.to_vec();
     file.extend_from_slice(&(w.names.len() as u32).to_le_bytes());
     for &n in &w.names {
@@ -403,6 +428,8 @@ pub struct Opened {
     pub dangling: usize,
     /// the program's safety answer, when the image was kept evaluated and so holds it current
     pub answer: Option<RuleAnswer>,
+    /// what its dominance and join lattices knew (`Eval::lattices_kept`), empty when it names a fact the image does not hold
+    pub lattices: Vec<Tok>,
 }
 
 /// The store a kept image holds, and what it had staged.
@@ -529,6 +556,32 @@ pub fn open(h: &mut Heap, bytes: &[u8]) -> Result<Opened, String> {
         staged.push((StagedFact { rel, persp, args, rule, prems }, alts));
     }
     let answer = r.answer()?;
+    let mut lattices = Vec::new();
+    let mut whole = true;
+    for _ in 0..r.u32()? {
+        lattices.push(match r.u8()? {
+            0 => Tok::N(r.u32()?),
+            1 => Tok::T(r.term()?),
+            2 => match ids.get(r.u32()? as usize) {
+                Some(&f) => Tok::F(f),
+                None => {
+                    whole = false;
+                    continue;
+                }
+            },
+            3 => Tok::S(r.sym()?),
+            _ => match r.prems(&ids, &cells)? {
+                Some(p) => Tok::P(p),
+                None => {
+                    whole = false;
+                    continue;
+                }
+            },
+        });
+    }
+    if !whole {
+        lattices.clear();
+    }
     if r.i != bytes.len() {
         return Err("a kept image has bytes after its end".into());
     }
@@ -537,5 +590,5 @@ pub fn open(h: &mut Heap, bytes: &[u8]) -> Result<Opened, String> {
     }
     s.sweep();
     s.dirty = !evaluated;
-    Ok(Opened { store: s, staged, dangling, answer: evaluated.then_some(answer) })
+    Ok(Opened { store: s, staged, dangling, answer: evaluated.then_some(answer), lattices })
 }
