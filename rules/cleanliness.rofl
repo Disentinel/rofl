@@ -54,7 +54,6 @@ has_role(P, rule_pack)   :- dir_of(P, "rules").
 has_role(P, demo)        :- dir_of(P, "examples").
 has_role(P, gate)        :- dir_of(P, "test").
 has_role(P, gate)        :- dir_of(P, "scripts").
-has_role(P, measurement) :- dir_of(P, "bench").
 has_role(P, document)    :- dir_of(P, "docs").
 has_role(P, runtime)     :- dir_of(P, "runtime").
 has_role(P, skill)       :- dir_of(P, "skills").
@@ -99,13 +98,8 @@ meets(P, has_consumer) :- consumed(P).
 -- runs when somebody remembers (`witness_check.ts` exited non-zero on a stale
 -- witness from the day it was written and nothing ran it).
 meets(P, run_by_ci) :- ci_runs[dep](P).
--- The `npm test` glob is seeded into `ci_runs` itself in rules/depends.rofl,
--- so it propagates to the helpers and fixtures a test imports. Stating it as a
--- VERDICT here instead covered the test files and not what they reach.
--- A SCRIPT REACHED BY ANOTHER SCRIPT'S COMMAND is run too.
-meets(S, run_by_ci) :- artifact[dep](S, script), ci_runs[dep](S).
 
--- regenerable: a generated artifact has a generator AND a gate that compares.
+-- regenerable: a generated artifact has a generator AND something CI runs reads it back.
 -- `facts/rule-shape.rofl` has the first and not the second, and rotted by
 -- 4 903 lines without anything going red.
 meets(P, regenerable) :- regenerates[dep](_, P), regenerated_by_test[dep](P).
@@ -120,15 +114,10 @@ pack_read(P)       :- edge[dep](R, P, doc_ref), has_role(R, rule_pack).
 meets(S, read_by_rules) :- writes_pack(S, P), pack_read(P).
 meets(S, read_by_rules) :- has_role(S, scanner), not writes_pack(S, _).
 
--- indexed: a document is reachable from README's index. Already gated by
--- test/docs-index.test.ts; stated here so the table is complete and so that
--- gate can eventually be deleted in favour of this one.
-meets(P, indexed) :- edge[dep]("README.md", P, doc_ref).
-meets(P, indexed) :- P = "README.md".
--- THE DOGFOOD PAGES ARE INDEXED AS A DIRECTORY, not one by one — dated session
--- records, and a table demanding a line per page would go red for adding one.
--- test/docs-index.test.ts carries the same carve-out as its negative control.
-meets(P, indexed) :- D is str_pre(P, "/"), D = "docs", R is str_sub(P, 5, 8), R = "dogfood/".
+-- indexed: a document is reachable from README through documents that link it.
+meets(P, indexed) :- index_reach(P).
+index_reach("README.md").
+index_reach(P) :- index_reach(Q), edge[dep](Q, P, doc_ref), artifact[dep](Q, md).
 
 -- ==================================================================== VERDICT
 -- A cell is answered when EVERY artifact in the role meets the duty, or the

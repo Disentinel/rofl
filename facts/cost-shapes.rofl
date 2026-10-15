@@ -21,6 +21,7 @@ shape_ok(axis_earns, cross_product, "product_is_the_output: an audit over axes x
 shape_ok(eff_lacks, cross_product, "product_is_the_output: names x rows of the inclusion order, 3 ms sealed / 4 default").
 shape_ok(ambient_effect, cross_product, "product_is_the_output: the head is names x effects, 0 ms").
 shape_ok(runtime_lib_unsupported, cross_product, "product_is_the_output: releases x library calls is the audited pair, 0 ms").
+shape_ok(eff_latent, cross_product, "product_is_the_output: an operand whose value is not traced may run any conversion the program defines, sites x conversions; the vscode 250 cone took 31 s as on main").
 
 shape_ok(ambient_surface_unattributed, project_then_negate, "one_row_per_key: 3 ms sealed / 8 default").
 shape_ok(concrete_unmapped, project_then_negate, "one_row_per_key: 6 ms sealed / 11 default").
@@ -41,11 +42,8 @@ shape_ok(calls_in, twin_bodies, "small_set: calls by (file, name), 1 ms sealed /
 shape_ok(calls_named, twin_bodies, "small_set: the same body one column short, 1 ms sealed / 2 default").
 shape_ok(eff_conv_call, twin_bodies, "small_set: the converting call and its override test, 4 ms sealed / 14 default").
 shape_ok(eff_conv_overridden, twin_bodies, "small_set: the other head of the pair, 1 ms sealed / 2 default").
-shape_ok(fn_name, twin_bodies, "small_set: function declarations by name, 5 ms sealed / 14 default").
-shape_ok(name_bound_in, twin_bodies, "small_set: the same body keyed by file, 4 ms sealed / 16 default").
 
 shape_ok(call_in_try, closure_wide_end, "tried_no_net_gain: entering from call_site moved nothing (mcp default 33 -> 62 ms)").
-shape_ok(for_of_use, closure_wide_end, "tried_no_net_gain: ident first took the rule from 653 to 87 ms (mcp default) and put 664 ms on guarded, the next reader of the ast_within index").
 
 shape_ok(dec_up, scoped_descent, "small_set: a site inside a decorator, 0 ms; the first version led with site(C) and cost 21 firings").
 shape_ok(name_outer, not_closer, "small_set: name_cand holds 1.01 rows an identifier over 20 vscode files (5229 for 5182), the pairs are the one or two scopes of one identifier, 47 rows").
@@ -58,8 +56,6 @@ shape_ok(own_ctor, twin_bodies, "alias_of_a_derived: class_ctor is the code book
 shape_ok(fn_value, twin_bodies, "alias_of_a_derived: the flow book's name for fn_node, the one a function of another file reaches through rules/js-surface.rofl; one row per function, not timed").
 shape_ok(eff_subject, twin_bodies, "alias_of_a_derived: scope_node has more arms than the fn_node one, 2 ms sealed / 13 default").
 shape_ok(scope_node, twin_bodies, "alias_of_a_derived: eff_subject is its fn_node arm in the flow book, 10 ms sealed / 57 default (all arms)").
-shape_ok(for_of_src, twin_bodies, "alias_of_a_derived: hidden_call_src is the code book's copy, 3 ms sealed / 8 default").
-shape_ok(hidden_call_src, twin_bodies, "alias_of_a_derived: for_of_src is the flow book's copy, 5 ms sealed / 21 default").
 shape_ok(hidden_call_user, twin_bodies, "alias_of_a_derived: one hidden call fans to the flow book's names, 0 ms").
 shape_ok(eff_hidden_call, twin_bodies, "alias_of_a_derived: the same fan-out, 0 ms").
 shape_ok(resolves, twin_bodies, "alias_of_a_derived: a hidden call is a call edge too, 96 ms sealed / 221 default (all arms; this body is the one-premise arms)").

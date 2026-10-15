@@ -13,8 +13,7 @@ default: main
 > in facts/js-host.rofl; lib.es*.d.ts through facts/js-lib-surface.rofl) plus
 > a TRANSLATION of its atoms into lattice landmarks, both arguable as rules.
 > 
-> rules/js-effects.rofl declares three relations `edb` and reads them here:
->   ambient_binding(File, Name, Surface)     which free NAME is which surface
+> rules/js-effects.rofl declares two relations `edb` and reads them here:
 >   surface_origin(Surface, Origin)          es_intrinsic | host_runtime | builtin_prototype
 >   ambient_effect(Surface, Member, Effect)  one row per member
 > The member is a STRING because `selects[flow]` carries keys as strings; an
@@ -37,24 +36,21 @@ Reads:
   - <a id="lib_static"></a>A name Name has the static Key since a release Rel (`lib_static`)
 - from facts/js-host-surface.rofl:
   - <a id="host_global"></a>A host H has the global Name (`host_global`)
-  - <a id="host_module"></a>A host H has the module Spec (`host_module`)
   - <a id="host_module_member"></a>A host H exposes a key Key of a spec Spec (`host_module_member`)
 - from facts/js-host.rofl:
   - <a id="host_effect_atom"></a>An effect E is a host effect (`host_effect_atom`)
   - <a id="host_global_effect"></a>A host H attributes the global Name to an effect E (`host_global_effect`)
-- from facts/js-lib-surface.rofl:
-  - <a id="lib_member"></a>A prototype P has the member Key since a release Rel (`lib_member`)
 - from js-callgraph, in the code: [callee_of](js-callgraph.rofl.md#callee_of), [resolved_site](js-callgraph.rofl.md#resolved_site), [resolves](js-callgraph.rofl.md#resolves), [transfer_site](js-callgraph.rofl.md#transfer_site), [unresolved_call](js-callgraph.rofl.md#unresolved_call)
-- from js-dataflow, in the code: [ident_in](js-dataflow.rofl.md#ident_in)
+- from js-dataflow, in the code: [free_global](js-dataflow.rofl.md#free_global)
 - from js-dataflow, in the flow: [member_node_v](js-dataflow.rofl.md#member_node_v), [nearest_v](js-dataflow.rofl.md#nearest_v), [prototype_of](js-dataflow.rofl.md#prototype_of), [selects](js-dataflow.rofl.md#selects)
-- from js-dataflow: [builtin_prototype](js-dataflow.rofl.md#builtin_prototype), [kind_prototype](js-dataflow.rofl.md#kind_prototype), [node_value_kind](js-dataflow.rofl.md#node_value_kind)
+- from js-dataflow: [builtin_prototype](js-dataflow.rofl.md#builtin_prototype), [kind_prototype](js-dataflow.rofl.md#kind_prototype), [lib_member](js-dataflow.rofl.md#lib_member), [node_value_kind](js-dataflow.rofl.md#node_value_kind)
 - from js-effects, in the audit: [eff_exn_only](js-effects.rofl.md#eff_exn_only)
 - from js-effects, in the code: [eff_discharged_at](js-effects.rofl.md#eff_discharged_at)
 - from js-effects, in the flow: [concrete_effect](js-effects.rofl.md#concrete_effect), [concrete_unmapped](js-effects.rofl.md#concrete_unmapped), [eff_heap_of](js-effects.rofl.md#eff_heap_of)
 - from js-effects: [eff_lt](js-effects.rofl.md#eff_lt), [eff_row](js-effects.rofl.md#eff_row)
-- from js-globals, in the code: [free_global](js-globals.rofl.md#free_global)
 - from js-globals: [constructible_form](js-globals.rofl.md#constructible_form)
-- from js-host, in the code: [host_module_named](js-host.rofl.md#host_module_named), [host_module_ns](js-host.rofl.md#host_module_ns), [member_effect](js-host.rofl.md#member_effect)
+- from js-host, in the code: [host_module_call](js-host.rofl.md#host_module_call), [member_effect](js-host.rofl.md#member_effect)
+- from js-modules: [host_module](js-modules.rofl.md#host_module)
 - from outside these files:
   - <a id="lib_readonly_member"></a>`lib_readonly_member`
   - <a id="lib_readonly_view"></a>`lib_readonly_view`
@@ -71,7 +67,7 @@ What this file calls a node, and what each word stands for:
 
 Phrases this file defines in one step, each by the sentence it stands for:
 
-- <a id="eff_here"></a>A node has the effect `read` at `global` if it [refers to the free](js-globals.rofl.md#free_global) some name in some file.
+- Name is a constant global if Name [is a global](#lib_global) since some release with `plain_value`.
 - <a id="amb_surface_attributed"></a>A surface is attributed if it [has the ambient effect](#ambient_effect) some effect at some key.
 
 <a id="imports"></a>`imports` lists:
@@ -94,7 +90,7 @@ Phrases this file defines in one step, each by the sentence it stands for:
 
 <a id="surface_origin"></a>The origin of a surface Spec is an origin N either:
 
-1. if `node` [has the module](#host_module) Spec and N is `host_runtime`;
+1. if `node` [has the module](js-modules.rofl.md#host_module) Spec and N is `host_runtime`;
 2. if some host [has the global](#host_global) Spec and N is `host_runtime`;
 3. if Spec [is a global](#lib_global) since some release with some form and N is `es_intrinsic`;
 4. if Spec [is a builtin prototype](js-dataflow.rofl.md#builtin_prototype) and N is `builtin_prototype`.
@@ -109,37 +105,18 @@ In the audit:
   - [the origin](#surface_origin) of it is B;
   - X differs from B.
 
-## 2. WHICH FREE NAME IS WHICH SURFACE. Two doors, not three: a NAMESPACE
+## 2. WHICH GLOBAL IS A SURFACE. A free global (rules/js-globals.rofl) the
 
-> stands for a whole surface, a FREE GLOBAL stands for itself, and a NAMED
-> IMPORT binds a function rather than the module, so it gets no row here and
-> has its own site rule in section 5.
+> host or the language carries stands for itself. A module is not a name: it
+> is a value rules/js-host.rofl follows, and its calls arrive in section 5
+> already keyed.
 
 In the main:
 
-<a id="ambient_binding"></a>Local names the surface Spec in File if File [imports the namespace](js-host.rofl.md#host_module_ns) Local of Spec.
+<a id="ambient_global"></a>Name is an ambient global either:
 
-> The global door reads `free_global[code]`, not `host_global_ref[code]`: the
-> latter has no reference-position restriction and reports `x.length` as a
-> reference to a browser global. Attributing io to a program that does none
-> is the direction this layer must not err in.
-
-Name names the surface N in File either:
-
-1. if all of:
-   - some node [refers to the free](js-globals.rofl.md#free_global) Name in File;
-   - some host [has the global](#host_global) Name;
-   - N is Name;
-2. if all of:
-   - some node [refers to the free](js-globals.rofl.md#free_global) Name in File;
-   - Name [is a global](#lib_global) since some release with some form;
-   - N is Name.
-
-> empty by construction; the place a fourth door would arrive without an origin
-
-In the audit:
-
-<a id="ambient_binding_unowned"></a>Name names an unowned surface S in File if Name [names the surface](#ambient_binding) S in File, unless [the origin](#surface_origin) of S is some origin.
+1. if some host [has the global](#host_global) Name;
+2. if Name [is a global](#lib_global) since some release with some form.
 
 ## 3. THE TRANSLATION — a host effect atom is a lattice landmark, derived.
 
@@ -150,8 +127,6 @@ In the audit:
 > not allocated in this program.
 
 `amb_heap` includes `none`, `global`.
-
-In the main:
 
 <a id="amb_atom_label"></a>An effect is a label on the heap H if all of:
   - it [is a host effect](#host_effect_atom);
@@ -222,7 +197,7 @@ In the main:
 In the flow:
 
 <a id="amb_global_member"></a>Key is selected on the global Name if all of:
-  - a node O [refers to the free](js-globals.rofl.md#free_global) Name in some file;
+  - a node O [refers to the free](js-dataflow.rofl.md#free_global) Name in some file;
   - the `object` of a node M is O;
   - M [selects](js-dataflow.rofl.md#selects) Key;
   - some host [attributes the global](#host_global_effect) Name to some effect.
@@ -252,35 +227,34 @@ Declared as facts:
 
 1. if `node` [exposes](#host_module_member) some key of S;
 2. if S [is a global](#lib_global) since some release with some form;
-3. if S [has the member](#lib_member) some key since some release.
+3. if S [has the member](js-dataflow.rofl.md#lib_member) some key since some release.
 
 In the flow:
 
 <a id="ambient_unenumerated"></a>A surface is unenumerated if it [has the ambient effect](#ambient_effect) some effect at some key, unless it [is enumerated](#ambient_enumerated).
 
-## 5. THE THREE SITE SHAPES `eff_surface[flow]` DOES NOT COVER. Both its arms
+## 5. THE SITE SHAPES. A call of a member of a node module, however it was
 
-> read a member call; the other three ways to reach an ambient callee are
-> here because `ambient_binding` alone cannot express them.
-> 
-> 5a. A plain call of a named import — `join(a, b)`. The local name is the
-> binding and the imported name the member, as `host_module_named` reads it.
+> reached, is `host_module_call[code]` with its key.
 
-<a id="amb_named_call"></a>C calls the named import Key of a surface Spec if all of:
+<a id="eff_surface"></a>C reaches the surface Spec if C [calls the module member](js-host.rofl.md#host_module_call) some key of Spec.
+
+<a id="eff_operation"></a>C performs the operation Key if C [calls the module member](js-host.rofl.md#host_module_call) Key of some spec.
+
+> 5a. A member call on an ambient global — `console.log(x)`.
+
+C reaches the surface Name if all of:
   - C [is unresolved](js-callgraph.rofl.md#unresolved_call) with some shape;
-  - [the callee](js-callgraph.rofl.md#callee_of) of C [reads](js-dataflow.rofl.md#ident_in) Local in File;
-  - File [imports](js-host.rofl.md#host_module_named) Local as Key of Spec.
-
-<a id="eff_surface"></a>C reaches the surface Spec if C [calls the named import](#amb_named_call) some key of Spec.
-
-<a id="eff_operation"></a>C performs the operation Key if C [calls the named import](#amb_named_call) Key of some surface.
+  - [the callee](js-callgraph.rofl.md#callee_of) of C is a node N;
+  - the `object` of N [refers to the free](js-dataflow.rofl.md#free_global) Name in some file;
+  - Name [is an ambient global](#ambient_global).
 
 > 5b. A plain call of an ambient global — `fetch(u)`, `BigInt(n)`.
 
 <a id="amb_global_call"></a>C calls the global Name if all of:
   - C [is unresolved](js-callgraph.rofl.md#unresolved_call) with some shape;
-  - [the callee](js-callgraph.rofl.md#callee_of) of C [refers to the free](js-globals.rofl.md#free_global) Name in File;
-  - Name [names the surface](#ambient_binding) Name in File.
+  - [the callee](js-callgraph.rofl.md#callee_of) of C [refers to the free](js-dataflow.rofl.md#free_global) Name in some file;
+  - Name [is an ambient global](#ambient_global).
 
 C reaches the surface Name if C [calls the global](#amb_global_call) Name.
 
@@ -292,8 +266,8 @@ C performs the operation `itself` if C [calls the global](#amb_global_call) some
 
 <a id="amb_construct"></a>A node constructs the ambient global Name if all of:
   - it [is a transfer site](js-callgraph.rofl.md#transfer_site) of `new_expression`;
-  - the `callee` of it [refers to the free](js-globals.rofl.md#free_global) Name in File;
-  - Name [names the surface](#ambient_binding) Name in File;
+  - the `callee` of it [refers to the free](js-dataflow.rofl.md#free_global) Name in some file;
+  - Name [is an ambient global](#ambient_global);
   - unless it [is resolved](js-callgraph.rofl.md#resolved_site).
 
 X reaches the surface Name if X [constructs the ambient global](#amb_construct) Name.
@@ -304,9 +278,18 @@ X performs the operation `construct` if X [constructs the ambient global](#amb_c
 
 > `read<local>` and an unreassigned one as a value with no cell. A FREE
 > GLOBAL is a read of the host's global object, a cell this program did not
-> allocate: `global` by the test `eff_heap_of` applies to a receiver. The
-> ceiling is `global_ref_position` in rules/js-globals.rofl: a bare mention
-> (`typeof Promise`) seeds nothing.
+> allocate: `global` by the test `eff_heap_of` applies to a receiver. A
+> global no program can write (`undefined`, `NaN`, `Infinity`) is a constant.
+
+<a id="eff_here"></a>A node has the effect `read` at `global` if it [refers to the free](js-dataflow.rofl.md#free_global) Name in some file, unless Name [is a constant global](#constant_global).
+
+`constant_global` includes "undefined".
+
+In the main:
+
+Declared as facts:
+
+- <a id="constant_global"></a>A name Name is a constant global — rows in this file
 
 ## 7. THE BUILTIN PROTOTYPES — the mutating half, read and not typed. Every
 
@@ -316,10 +299,8 @@ X performs the operation `construct` if X [constructs the ambient global](#amb_c
 > The subtraction is here rather than in the scanner so the inference is a
 > rule.
 
-In the main:
-
 <a id="lib_mutator"></a>A prototype has the mutator Key if all of:
-  - it [has the member](#lib_member) Key since some release;
+  - it [has the member](js-dataflow.rofl.md#lib_member) Key since some release;
   - [`lib_readonly_view`](#lib_readonly_view)(it, something);
   - unless [`lib_readonly_member`](#lib_readonly_member)(it, Key).
 
@@ -334,7 +315,7 @@ In the flow:
 
 In the audit:
 
-<a id="lib_readonly_only"></a>A prototype has a readonly only member Key if [`lib_readonly_member`](#lib_readonly_member)(it, Key), unless it [has the member](#lib_member) Key since some release.
+<a id="lib_readonly_only"></a>A prototype has a readonly only member Key if [`lib_readonly_member`](#lib_readonly_member)(it, Key), unless it [has the member](js-dataflow.rofl.md#lib_member) Key since some release.
 
 > `ambient_effect` has no heap column, and a prototype's receiver is a value
 > in THIS program, so a row can only be written where the receiver's heap is
@@ -409,7 +390,7 @@ In the flow:
    - some call [operates](js-effects.rofl.md#concrete_effect) on S by Op;
    - [the origin](#surface_origin) of S is `builtin_prototype`;
    - unless [`amb_operation_word`](#amb_operation_word)(Op);
-   - unless S [has the member](#lib_member) Op since some release.
+   - unless S [has the member](js-dataflow.rofl.md#lib_member) Op since some release.
 
 ## 9. THE FRONTIER, AS POSITIVE RELATIONS — which SURFACE nobody has
 

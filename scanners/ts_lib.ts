@@ -31,13 +31,13 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import ts from 'typescript';
 
-/** the eight prototypes this model can already name a receiver's kind for —
- *  see `kind_prototype` and `builtin_prototype` in rules/js-dataflow.rofl. A
- *  ninth here would be a row no rule reads. */
+/** the nine prototypes this model can already name a receiver for — see
+ *  `kind_prototype`, `prototype_of` and `builtin_prototype` in
+ *  rules/js-dataflow.rofl. A tenth here would be a row no rule reads. */
 export const PROTOTYPES = new Map<string, string>([
   ['Array', 'array'], ['String', 'string'], ['Number', 'number'],
   ['Boolean', 'boolean'], ['RegExp', 'regexp'], ['BigInt', 'bigint'],
-  ['Object', 'object'], ['Function', 'function'],
+  ['Object', 'object'], ['Function', 'function'], ['Promise', 'promise'],
 ]);
 
 /** `lib.es2015.core.d.ts` -> `es2015`, `lib.es5.d.ts` -> `es5`. THE RELEASE AND
@@ -104,7 +104,7 @@ const LIB_DIR = path.resolve(path.dirname(new URL(import.meta.url).pathname),
                              '..', 'node_modules', 'typescript', 'lib');
 const COMPOSITION: [string, string][] = fs.existsSync(LIB_DIR) ? scanComposition(LIB_DIR) : [];
 
-/** every member of the eight prototypes, with the EARLIEST lib file that
+/** every member of the nine prototypes, with the EARLIEST lib file that
  *  declares it — the year it became available. */
 export function scanLib(libDir: string): LibMember[] {
   const files = fs.readdirSync(libDir)
@@ -174,7 +174,7 @@ export function scanLib(libDir: string): LibMember[] {
 // `viewOnly` carries that direction so it is checked rather than assumed.
 //
 // ONLY `Array` REACHES A ROW, and that is a fact about THIS model rather than
-// about the source. `PROTOTYPES` above is the eight prototypes
+// about the source. `PROTOTYPES` above is the nine prototypes
 // `kind_prototype` can name a receiver for; `Map` and `Set` are not among them
 // — their instance surface is what `es_prototype_gap[audit]` already names —
 // so rows for them would be rows no rule reads, which this file's own header
@@ -342,7 +342,7 @@ export function emit(members: LibMember[], composition: [string, string][] = COM
 //                     off the NAME.                          -> `lib_static`
 //   the PROTOTYPE     `interface Promise<T> { then(...) }` — what hangs off an
 //                     INSTANCE.                              -> `lib_member`,
-//                     for the eight prototypes `kind_prototype` can reach, with
+//                     for the nine prototypes `kind_prototype` can reach, with
 //                     `lib_global_prototype` as the bridge between the two
 //                     keys. A global with no bridge row has an instance surface
 //                     this model does not carry, and the bridge being PARTIAL
@@ -541,9 +541,9 @@ export function emitGlobals(globals: LibGlobal[], statics: LibStatic[]): string 
     '-- KEYS rather than as calls without anybody asserting that they are.',
     '-- `lib_global_prototype(Name, Proto)` — THE BRIDGE to the third surface,',
     '-- the instance one, which facts/js-lib-surface.rofl already carries under a',
-    '-- lower-case prototype atom. It is PARTIAL BY CONSTRUCTION: eight globals',
-    '-- have a row, because eight is what `kind_prototype` in',
-    '-- rules/js-dataflow.rofl can name a receiver for. `Promise`, `Map` and',
+    '-- lower-case prototype atom. It is PARTIAL BY CONSTRUCTION: nine globals',
+    '-- have a row, because nine is what `prototype_of` in',
+    '-- rules/js-dataflow.rofl can name a receiver for. `Map` and',
     '-- `Set` have an instance surface this model does not carry, and the missing',
     '-- bridge row is where that is visible.',
     '--',
@@ -563,7 +563,7 @@ export function emitGlobals(globals: LibGlobal[], statics: LibStatic[]): string 
   ];
   const rows = globals.map((g) => `lib_global(${JSON.stringify(g.name)}, ${g.since}, ${g.form}).`);
   const bridge = ['',
-    '-- the bridge to the prototype surface, for the eight prototypes',
+    '-- the bridge to the prototype surface, for the nine prototypes',
     '-- `kind_prototype` can name a receiver for.',
     ...globals.filter((g) => PROTOTYPES.has(g.name))
       .map((g) => `lib_global_prototype(${JSON.stringify(g.name)}, ${PROTOTYPES.get(g.name)}).`),
@@ -574,7 +574,7 @@ export function emitGlobals(globals: LibGlobal[], statics: LibStatic[]): string 
     ...statics.map((s) =>
       `lib_static_shape(${JSON.stringify(s.global)}, ${JSON.stringify(s.member)}, ${s.shape}).`)];
   // NOT ONE DEPRECATED STATIC, MEASURED. `lib_deprecated` has seventeen rows on
-  // the eight prototypes and this walk finds ZERO across the static surface, so
+  // the nine prototypes and this walk finds ZERO across the static surface, so
   // the number is written into the pack as prose rather than as an empty `edb`
   // no rule could ever read. The branch below exists so that the day a static
   // IS deprecated, the pack grows a relation instead of staying silent.
@@ -583,7 +583,7 @@ export function emitGlobals(globals: LibGlobal[], statics: LibStatic[]): string 
     ? ['',
        '-- NO STATIC IN THE ECMASCRIPT LIB FILES CARRIES `@deprecated`, measured',
        `-- over all ${statics.length} of them. \`lib_deprecated\` has seventeen rows on the`,
-       '-- eight prototypes; the static surface has none. No relation is declared',
+       '-- nine prototypes; the static surface has none. No relation is declared',
        '-- for a set that is empty in the SOURCE rather than empty here.']
     : ['', 'edb(lib_static_deprecated).',
        ...dep.map((s) => `lib_static_deprecated(${JSON.stringify(s.global)}, ${JSON.stringify(s.member)}).`)];

@@ -12,7 +12,7 @@
 --   adjective   S is <word>                    unary, no verb
 --   bare_verb   S <verb>                       unary, a verb
 --   verb        S <verb> O [marker Z]*         a verb word leads the name
---   the_of      the <role> of S is O           the name ends in `of`: functional
+--   the_of      the <role> of S is O           the name ends in `of` and it is declared a `function`
 --   has         S has <role> O [marker Z]*     the subject is a container
 --   passive     S is <participle> [by O]       the head word ends in `ed`
 --   role_of     S is the <role> of O           binary, no verb, no `of`
@@ -24,7 +24,7 @@
 --                                              twice over S, once with A and once with B, and A != B
 
 edb(namespace). edb(verb_word). edb(container). edb(rank). edb(marker_by_noun).
-edb(takes_by_hand). edb(subject_by_hand). edb(marker_by_hand). edb(pick).
+edb(takes_by_hand). edb(subject_by_hand). edb(marker_by_hand). edb(pick). edb(sentence_structure).
 
 namespace("eff"). namespace("host"). namespace("attr"). namespace("amb"). namespace("es").
 namespace("runtime"). namespace("cg"). namespace("cf"). namespace("kind").
@@ -81,7 +81,7 @@ earlier_free(Rel, I)   :- pos(Rel, I), pos(Rel, J), J < I, not subject(Rel, J).
 s_adjective(Rel) :- arity(Rel, 1), not verb_named(Rel), not participle_named(Rel).
 s_bare_verb(Rel) :- arity(Rel, 1), verb_named(Rel).
 s_verb(Rel)      :- arity(Rel, N), N >= 2, verb_named(Rel).
-s_the_of(Rel)    :- arity(Rel, N), N >= 2, last_word(Rel, "of").
+s_the_of(Rel)    :- arity(Rel, N), N >= 2, last_word(Rel, "of"), sentence_structure(Rel, N, function).
 s_has(Rel)       :- arity(Rel, N), N >= 2, subject(Rel, I), pick(Rel, I, C), container(C), not verb_named(Rel), not last_word(Rel, "of").
 s_has(Rel)       :- first_word(Rel, "has").
 s_passive(Rel)   :- participle_named(Rel).

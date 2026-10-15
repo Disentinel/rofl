@@ -24,13 +24,14 @@ default: code
 > from outside the AST (facts/js-modules.rofl): str_seg(S, K, Seg) cut on "/",
 > str_segs(S, N), str_char0(S, C), str_scheme(S, Scheme) before the first
 > ":"; fs_file, fs_dir, fs_parent, fs_file_in(Dir, Name, Path),
-> fs_dir_in(Dir, Name, Child), fs_dir_of(File, Dir); node_builtin_bare(Bare,
-> Canonical); shape_verdict(Shape, Reason); unknown_because.
+> fs_dir_in(Dir, Name, Child), fs_dir_of(File, Dir); node_prefix_only(Canonical);
+> shape_verdict(Shape, Reason); unknown_because.
 
 Reads:
 
 - from js-callgraph, in the audit: [shape_verdict](js-callgraph.rofl.md#shape_verdict)
 - from js-callgraph: [has_shape](js-callgraph.rofl.md#has_shape), [resolved_site](js-callgraph.rofl.md#resolved_site)
+- from js-dataflow: [free_global](js-dataflow.rofl.md#free_global)
 - from js-model: [ast_node](js-model.rofl.md#ast_node)
 - from js-model, in the main: [unknown_because](js-model.rofl.md#unknown_because)
 - from js-structure: [ast_name](js-structure.rofl.md#ast_name), [ast_value](js-structure.rofl.md#ast_value), [meta_form](js-structure.rofl.md#meta_form)
@@ -97,7 +98,8 @@ Declared as facts:
 - <a id="fs_file_in"></a>A directory D holds the file Seg being a file T — rows from the host, which lists the files
 - <a id="fs_dir_in"></a>`fs_dir_in` — rows from the host, which lists the files
 - <a id="fs_dir_of"></a>`fs_dir_of` — rows from the host, which lists the files
-- <a id="node_builtin_bare"></a>A text Bare is the bare name of a spec Spec — rows from facts/js-modules.rofl
+- <a id="node_prefix_only"></a>A spec Spec is loaded only under its scheme — rows from facts/js-modules.rofl
+- <a id="host_module"></a>A host H has the module Spec — rows from facts/js-host-surface.rofl
 - The shape verdict of a shape S is a verdict N — rows from facts/js-modules.rofl
 - A kind K is unknown in a layer L of a language Lang because a reason R — rows from facts/js-callgraph.rofl
 - A kind K is unknown with a shape S in a layer Lay of a language Lang because a reason R — rows from facts/js-callgraph.rofl
@@ -122,13 +124,13 @@ Declared as facts:
    - N is `reexport_named`;
 2. if E is an [export-all](#noun-export-all), the `source` of E is some node, and N is `reexport_all`.
 
-> `require('./p')` is CommonJS's import: an ordinary call whose callee is the
-> name `require` and whose first argument is the specifier. Scope-blind, as the
-> call graph is: a local `require` would count too. `require.resolve(s)` names
-> a file and loads nothing, and is not a site.
+> `require('./p')` is CommonJS's import: a call whose callee is the free
+> global `require` and whose first argument is the specifier; a `require` the
+> file declares itself is not node's. `require.resolve(s)` names a file and
+> loads nothing, and is not a site.
 
 <a id="require_site"></a>A [call expression](#noun-call_expression) is a require site if all of:
-  - an [identifier](#noun-identifier) N [is named](js-structure.rofl.md#ast_name) "require";
+  - a node N [refers to the free](js-dataflow.rofl.md#free_global) "require" in some file;
   - the `callee` of it is N;
   - the `arguments` of it is some node.
 
@@ -167,9 +169,8 @@ A site
 
 > `./x` and `../x`: the first character discriminates. `#foo` is a package
 > subpath (needs package.json `imports`, not read here). `node:` is a builtin
-> by scheme, whatever follows; the bare form is a lookup keyed on the whole
-> specifier, so `fs/promises` falls to `bare` and the oracle reports it rather
-> than a rule guessing. `bare` is the complement: the classification has no hole.
+> by scheme, whatever follows; the bare form is a builtin of the host surface
+> spelled without its scheme, `fs/promises` included. `bare` is the complement: the classification has no hole.
 
 <a id="explicit_shape"></a>A text S has the explicit shape N either:
 
@@ -177,6 +178,19 @@ A site
 2. if S [starts with](#str_char0) "#" and N is `subpath`;
 3. if S [has the scheme](#str_scheme) "node" and N is `node_builtin`;
 4. if S [is the bare name](#node_builtin_bare) of some spec and N is `node_builtin`.
+
+> a builtin of the host surface is reachable bare unless node says otherwise
+
+In the main:
+
+<a id="node_builtin_bare"></a>A text B is the bare name of a spec C if all of:
+  - `node` [has the module](#host_module) C;
+  - L is the length of C;
+  - N is L - 5;
+  - B is the substring of C from 5 of length N;
+  - unless C [is loaded only under its scheme](#node_prefix_only).
+
+In the code:
 
 <a id="src_shape"></a>The shape of a text S is a shape Sh either:
 
@@ -267,20 +281,39 @@ A node I is resolved either:
 > `./config` names `config.ts` or `config.js`, `./handlers` names
 > `handlers/index.ts`. `resolved_import` stays node's alone, because
 > rules/js-resolve.rofl holds it to node's own resolver.
+> TypeScript tries the candidates in this order and takes the first file that
+> exists: `./utils` beside `utils.ts` and `utils/index.ts` is `utils.ts` alone.
 
 <a id="ts_ext"></a>`ts_ext` lists:
 
-| text | text |
+| text | text | rank |
+|---|---|---|
+| "js" | "ts" | 0 |
+| "js" | "tsx" | 1 |
+| "jsx" | "tsx" | 0 |
+| "mjs" | "mts" | 0 |
+| "cjs" | "cts" | 0 |
+
+<a id="probe_ext"></a>`probe_ext` lists:
+
+| text | rank |
 |---|---|
-| "js" | "ts" |
-| "js" | "tsx" |
-| "jsx" | "tsx" |
-| "mjs" | "mts" |
-| "cjs" | "cts" |
+| "ts" | 10 |
+| "tsx" | 11 |
+| "js" | 12 |
+| "jsx" | 13 |
+| "mjs" | 14 |
+| "cjs" | 15 |
+| "json" | 16 |
 
-<a id="probe_ext"></a>`probe_ext` includes "ts", "tsx", "js", "jsx", "mjs", "cjs", "json".
+<a id="index_file"></a>`index_file` lists:
 
-<a id="index_file"></a>`index_file` includes "index.ts", "index.tsx", "index.js", "index.jsx".
+| name | rank |
+|---|---|
+| "index.ts" | 20 |
+| "index.tsx" | 21 |
+| "index.js" | 22 |
+| "index.jsx" | 23 |
 
 <a id="last_ext"></a>The extension of Name and L is E if all of:
   - some directory [holds the file](#fs_file_in) Name being some file;
@@ -297,7 +330,7 @@ A node I is resolved either:
   - N is K + 1;
   - [`str_segs`](#str_segs)(S, N).
 
-<a id="ts_resolved"></a>A site I names under typescript T either:
+<a id="ts_candidate"></a>A site I may name under typescript T at a rank R either:
 
 1. if all of:
    - I [reaches](#site_last_seg) a directory D before a segment Seg;
@@ -307,7 +340,7 @@ A node I is resolved either:
    - N > 1;
    - K is N - 1;
    - Es is the segment K of Seg split by ".";
-   - Es [is written for](#ts_ext) En;
+   - Es [is written for](#ts_ext) En at R;
    - Ls is the length of Seg;
    - Les is the length of Es;
    - Stem is Ls - Les - 1;
@@ -320,7 +353,7 @@ A node I is resolved either:
 2. if all of:
    - I [reaches](#site_last_seg) a directory D before a segment Seg;
    - D [holds the file](#fs_file_in) Name being T;
-   - [the extension](#last_ext) of Name and L [is probed](#probe_ext);
+   - [the extension](#last_ext) of Name and L [is probed](#probe_ext) at R;
    - Ls is the length of Seg;
    - Want is Ls + L + 1;
    - Have is the length of Name;
@@ -331,8 +364,16 @@ A node I is resolved either:
    - I [walks](#walk) at a step N to a directory D;
    - [the source text](#site_source) of I is S;
    - [`str_segs`](#str_segs)(S, N);
-   - Name [is an index file](#index_file);
+   - Name [is an index file](#index_file) at R;
    - D [holds the file](#fs_file_in) Name being T.
+
+A site
+
+- <a id="ts_passed_over"></a>passes over under typescript a rank R if all of:
+  - it [may name under typescript](#ts_candidate) some file at R;
+  - it [may name under typescript](#ts_candidate) some file at a rank R2;
+  - R2 < R.
+- <a id="ts_resolved"></a>names under typescript T if it [may name under typescript](#ts_candidate) T at a rank R, unless it [passes over under typescript](#ts_passed_over) R.
 
 <a id="module_target"></a>A site I means the file T either:
 
@@ -487,14 +528,34 @@ A site
    - I [means the file](#module_target) T;
    - I [sits in](#site_file) F.
 
-<a id="evaluates"></a>A file F evaluates the module T either:
+> A SITE RUNS ITS TARGET unless TypeScript erases it or it imports data.
+> Erasure needs both markers: `import type {X}` marks the declaration,
+> `import {type X}` the specifier; a site ALL of whose specifiers are erased
+> evaluates nothing and one with NO specifier evaluates everything. A module
+> imported as data (section 9) is read, not run.
 
-1. if F [takes values from](#flows) T;
-2. if all of:
-   - a site I [has no specifiers](#no_specifiers);
-   - I [means the file](#module_target) T;
-   - I [sits in](#site_file) F;
-   - unless I [is a type only import](#decl_type_only).
+A site
+
+- <a id="type_only_site"></a>is type only if it [is a module site](#module_site) of some form and [the attribute](#ast_attr) `import_kind` or `export_kind` of it is "type".
+- <a id="site_has_spec"></a>has specifiers if it [is a module site](#module_site) of some form and some node [is among the](#ast_child) `specifiers` of it.
+- <a id="site_value_spec"></a>has a value specifier if all of:
+  - it [is a module site](#module_site) of some form;
+  - a node Sp [is among the](#ast_child) `specifiers` of it;
+  - unless [the attribute](#ast_attr) `import_kind` of Sp is "type";
+  - unless [the attribute](#ast_attr) `export_kind` of Sp is "type".
+
+<a id="erased_site"></a>A site I is erased either:
+
+1. if I [is type only](#type_only_site);
+2. if I [has specifiers](#site_has_spec), unless I [has a value specifier](#site_value_spec).
+
+A site
+
+- <a id="runs_site"></a>runs its target if it [is a module site](#module_site) of some form and it neither [is erased](#erased_site) nor [imports a data module](#module_is_data) of some text.
+- <a id="evaluates_at"></a>evaluates T if it [runs its target](#runs_site) and it [means the file](#module_target) T.
+- <a id="evaluates_unresolved"></a>evaluates a module outside the corpus if it [runs its target](#runs_site), unless it [means the file](#module_target) some file.
+
+<a id="evaluates"></a>A file F evaluates the module T if a site I [evaluates](#evaluates_at) T and I [sits in](#site_file) F.
 
 ## 5b. THE RE-EXPORT EDGE, through a different set of markers: the export-all
 

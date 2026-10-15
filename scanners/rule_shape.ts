@@ -171,6 +171,23 @@ for (const { group, path } of programs()) {
     const bodyIndex = new Map<BodyElem, number>();
     c.body.forEach((b, i) => bodyIndex.set(b, i));
 
+    // The engine orders positive premises itself, so a product is not a matter
+    // of the written order: it is a premise whose variables never meet those of
+    // the first positive premise, through any chain of positive premises and
+    // builtins.
+    const comp = new Map<string, string>();
+    const root = (v: string): string => { while (comp.get(v) !== v) v = comp.get(v)!; return v; };
+    const link = (vs: string[]) => {
+      for (const v of vs) if (!comp.has(v)) comp.set(v, v);
+      for (const v of vs.slice(1)) comp.set(root(v), root(vs[0]));
+    };
+    const elemVars = (b: PlainElem): string[] => b.t === 'bi'
+      ? [...varsOf(b.l), ...varsOf(b.r)]
+      : [...b.lit.args.flatMap((a) => [...varsOf(a)]), ...varsOf(b.lit.persp)];
+    for (const b of c.body as PlainElem[]) if (b.t !== 'neg') link(elemVars(b));
+    const firstLit = (c.body as PlainElem[]).find((b) => b.t === 'pos' && elemVars(b).length > 0);
+    const mainComp = firstLit ? root(elemVars(firstLit)[0]) : undefined;
+
     // The fold, in PLAN order. Mirrors src/engine.ts:319-326.
     const bound = new Set<string>();
     let firstPos = true;
@@ -209,11 +226,9 @@ for (const { group, path } of programs()) {
         continue;
       }
       if (b.t === 'pos') {
-        // THE JOIN SIDE. A positive premise that shares no variable with
-        // anything already bound is a cross product: every row of it against
-        // every row of what stands, and the filter comes later or not at all.
-        // `first` is not a cross product — there is nothing for it to share
-        // with — and a premise carrying no variables at all is a lookup.
+        // THE JOIN SIDE. A positive premise apart from the first premise's
+        // variables is a cross product, in any order the engine picks; a
+        // premise carrying no variables at all is a lookup.
         const i = bodyIndex.get(b)!;
         const site = `${rid}@${i}`;
         const vs = new Set<string>();
@@ -223,8 +238,7 @@ for (const { group, path } of programs()) {
         facts.push(`pos_site(${q(site)}, ${q(rid)}, ${q(b.lit.rel)}, ${q(bookOf(b.lit))}, ${q(group)}).`);
         facts.push(`pos_nvars(${q(site)}, ${vs.size}).`);
         if (firstPos) facts.push(`pos_first(${q(site)}).`);
-        let shares = false;
-        for (const v of vs) if (bound.has(v)) { shares = true; break; }
+        const shares = [...vs].some((v) => root(v) === mainComp);
         if (shares) facts.push(`pos_shares(${q(site)}).`);
         if (!shares && !firstPos && vs.size > 0) {
           cross.push({
@@ -268,7 +282,7 @@ export function render(a: Analysis): string {
     '-- pos_site(Site, Rule, Rel, Book, Group)  a POSITIVE premise, in plan order',
     '-- pos_nvars(Site, N)                      how many distinct variables it names',
     '-- pos_first(Site)                         it is the first positive premise',
-    '-- pos_shares(Site)                        it shares a variable with what is bound',
+    '-- pos_shares(Site)                        its variables meet the first premise\'s',
     '-- concl(Rule, Rel, Book, Group, File)     a rule, and what it concludes where',
     '-- reads(Rule, Rel, Book)                  a premise of that rule, and its book',
     '-- base_clause(Rel, Book)                  a fact asserted with no body',

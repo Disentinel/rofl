@@ -70,5 +70,15 @@ both_minds[audit](I, Con)  :- not_applicable(I, Con), concern_covered(I, Con).
 alarm(both_minds).
 
 -- preliminary verdicts; a full GO is a domain certificate (Phase 3),
--- derived per decision pack, never by a generic kernel rule.
+-- named per decision pack, never by a generic kernel rule. What the kernel
+-- states is the shape every pack's positive verdict takes: clear, nothing
+-- blocks, nothing unresolved in any direction, full coverage; or clear with
+-- gaps, every one of them accepted by authority and at least one there.
 recommendation(I, no_go)   :- violated_blocking(I, _).
+
+clear(I)                   :- inquiry(I, decide), not go_blocked(I, _),
+                              not open_obligation(I, _), not refuted_obligation(I, _),
+                              not contested_obligation(I, _), not coverage_gap(I, _).
+clear_with_gaps(I)         :- inquiry(I, decide), not go_blocked(I, _),
+                              not contested_obligation(I, _), not coverage_gap(I, _),
+                              accepted_residual(I, _), not unaccepted_gap(I, _).
