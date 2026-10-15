@@ -28,10 +28,12 @@ mod vclosure;
 mod prov;
 mod resume;
 mod cost;
+mod par;
 pub use cost::{Hot, PremCost};
 use resume::{Cut, CutAt, InFlight, Tail};
 pub use addition::{AddDelta, PrepMark};
 pub use delta::Delta;
+pub use par::Split;
 
 const MAX_DEPTH: usize = 512;
 const MAX_ALTERNATIONS: usize = 256;
@@ -739,6 +741,11 @@ pub struct Eval {
     /// Premises the planner estimated from a promise instead of counting rows.
     pub promise_stats: u64,
     pub rounds: Vec<(u64, u64)>,
+    /// How a premise's matching is split over threads (engine/par.rs), the premises matched by that path, and those
+    /// it gave back to the written one.
+    pub par: par::Split,
+    pub par_levels: u64,
+    pub par_given_back: u64,
     /// The relations read off the program as a transitive closure: a base rule
     /// `R(X, Y) :- E(X, Y)` and one linear step through E, nothing else
     /// concluding R. Where no lattice can withdraw, the pair is one walk over
@@ -1383,6 +1390,9 @@ impl Eval {
             promise_broken: None,
             promise_stats: 0,
             rounds: Vec::new(),
+            par: par::Split::default(),
+            par_levels: 0,
+            par_given_back: 0,
             closures: Vec::new(),
             closure_of: HashMap::new(),
             closure_rows: 0,
@@ -5153,6 +5163,24 @@ impl Eval {
         Ok(())
     }
 
+    /// The rows held while a premise is matched, `now`, against the space: the wall a body solved meets.
+    fn room(&mut self, now: i64, rule_id: Option<Sym>) -> Result<(), Halt> {
+        if now > self.peak_rows {
+            self.peak_rows = now;
+        }
+        if now > self.space {
+            if brk!("delta_first_overrun_holes" => false; self.plan_trial) {
+                return Err(Halt::Overrun);
+            }
+            self.wall_spent.set(Some(("rows", now, self.space)));
+            if let Some(rid) = rule_id {
+                self.arith_hole(rid, self.v.space_reason);
+            }
+            return Err(Halt::Budget("space_exhausted", rule_id));
+        }
+        Ok(())
+    }
+
     fn charge_row(&mut self, rule: Option<Sym>, enforce: bool) -> Result<(), Halt> {
         self.rows += 1;
         if self.rows > self.peak_rows {
@@ -5194,21 +5222,15 @@ impl Eval {
             for (i, b) in body.iter().enumerate() {
                 let mut next: Vec<Sol> = Vec::new();
                 let mark = self.cost_mark(rule_id, b);
-                for a in &acc {
-                    let now = self.rows + next.len() as i64;
-                    if now > self.peak_rows {
-                        self.peak_rows = now;
+                let left = match self.par_level(b, i, &acc, depth, front_at, rule_id) {
+                    Some(made) => {
+                        next = made?;
+                        &acc[..0]
                     }
-                    if now > self.space {
-                        if brk!("delta_first_overrun_holes" => false; self.plan_trial) {
-                            return Err(Halt::Overrun);
-                        }
-                        self.wall_spent.set(Some(("rows", now, self.space)));
-                        if let Some(rid) = rule_id {
-                            self.arith_hole(rid, self.v.space_reason);
-                        }
-                        return Err(Halt::Budget("space_exhausted", rule_id));
-                    }
+                    None => &acc[..],
+                };
+                for a in left {
+                    self.room(self.rows + next.len() as i64, rule_id)?;
                     match b {
                         BodyElem::Pos(l) => {
                             let only = match front_at {
