@@ -293,7 +293,7 @@ class_ctor[code](CD, M) :- class_method_of[flow](CD, M),
                            ast_attr[code](M, kind, "constructor").
 
 resolves[code](X, M) :- transfer_site[code](X, new_expression),
-                        may_be_node[flow](X, CD), class_ctor[code](CD, M).
+                        may_be_node[flow](X, I), inst_of[flow](I, CD), class_ctor[code](CD, M).
 
 resolves[code](C, M) :- ast_node[code](N, super, _, _), callee_of[code](C, N),
                         may_be_node[flow](N, SD), ctor_of[flow](SD, M).

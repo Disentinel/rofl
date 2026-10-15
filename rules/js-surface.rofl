@@ -28,8 +28,11 @@ sx_esc[surface](N) :- sx_module[surface](_, N).
 sx_esc[surface](N) :- sx_arg_node[surface](_, _, N).
 sx_esc[surface](N) :- sx_ret_node[surface](_, N).
 sx_esc[surface](N) :- sx_ret_pnode[surface](_, N).
+sx_esc[surface](N) :- sx_gen_ret[surface](_, N).
 sx_esc[surface](N) :- sx_next[surface](_, N).
 sx_esc[surface](F) :- sx_cb[surface](F, _).
+sx_esc[surface](I) :- sx_esc[surface](C), inst_of[flow](I, C).
+sx_esc[surface](C) :- sx_esc[surface](I), inst_of[flow](I, C).
 -- ... and what an escaping node holds
 sx_esc[surface](M) :- sx_esc[surface](N), may_be_node[flow](N, M).
 sx_esc[surface](V) :- sx_esc[surface](O), member_value[flow](O, _, V).
@@ -51,8 +54,11 @@ sx_proto[surface](N, P)      :- sx_esc[surface](N), kind_proto[flow](N, P).
 sx_ext[surface](N, S)        :- sx_esc[surface](N), external_value[flow](N, S).
 sx_es[surface](N, G, R)      :- sx_esc[surface](N), es_instance[flow](N, G, R).
 sx_fn[surface](F)            :- sx_esc[surface](F), fn_node[code](F).
+sx_gen[surface](F)           :- sx_esc[surface](F), gen_fn[flow](F).
+sx_async[surface](F)         :- sx_esc[surface](F), async_fn[flow](F).
 sx_fn_name[surface](F, A)    :- sx_esc[surface](F), fn_name[code](F, A).
 sx_nested[surface](F)        :- sx_esc[surface](F), fn_nested[flow](F).
+sx_inst[surface](I, C)       :- sx_esc[surface](I), inst_of[flow](I, C).
 sx_ctor[surface](C, M)       :- sx_esc[surface](C), class_ctor[code](C, M).
 sx_ctor_of[surface](C, M)    :- sx_esc[surface](C), ctor_of[flow](C, M).
 sx_class_eff[surface](C, L, H) :- sx_esc[surface](C), class_construct_eff[flow](C, L, H).
@@ -81,10 +87,13 @@ es_instance[flow](N, G, R)    :- sx_es[surface](N, G, R).
 -- another file's, is asked in [flow]: `fn_value`, `fn_label`, `fn_nested`.
 fn_value[flow](F)             :- fn_node[code](F).
 fn_value[flow](F)             :- sx_fn[surface](F).
+gen_fn[flow](F)               :- sx_gen[surface](F).
+async_fn[flow](F)             :- sx_async[surface](F).
 fn_label[flow](F, A)          :- fn_name[code](F, A).
 fn_label[flow](F, A)          :- sx_fn_name[surface](F, A).
 fn_nested[flow](F)            :- fn_node[code](F), in_fn[code](F).
 fn_nested[flow](F)            :- sx_nested[surface](F).
+inst_of[flow](I, C)           :- sx_inst[surface](I, C).
 class_ctor[code](C, M)        :- sx_ctor[surface](C, M).
 ctor_of[flow](C, M)           :- sx_ctor_of[surface](C, M).
 class_construct_eff[flow](C, L, H) :- sx_class_eff[surface](C, L, H).
@@ -127,20 +136,25 @@ next_send[flow](G, V) :- sx_next[surface](G, V).
 -- A return that is the function's own parameter, read as nothing else: a plain identifier parameter, never assigned,
 -- not redeclared where it is read. Its value at a call is that call's argument; the other returns are the summary.
 param_assigned[flow](F, Name) :- assign_param[flow](A, F), assigned[code](A, _, Name, _, _).
-ret_param[flow](F, I, E) :- returns[flow](F, E), param_use[flow](F, Name, E), param_of[flow](F, I, Name),
+-- A generator's call is a generator object (rules/js-dataflow.rofl, `gen_of`): its `return` is what `yield*` gets, not
+-- what the call is.
+call_returns[flow](F, E) :- returns[flow](F, E), not ast_attr[code](F, generator, true).
+ret_param[flow](F, I, E) :- call_returns[flow](F, E), param_use[flow](F, Name, E), param_of[flow](F, I, Name),
                             ast_child[code](F, params, I, P), ast_node[code](P, identifier, _, _),
                             not param_assigned[flow](F, Name), not sees_binder[code](E, _).
-ret_plain[flow](F, E) :- returns[flow](F, E), not ret_param[flow](F, _, E).
+ret_plain[flow](F, E) :- call_returns[flow](F, E), not ret_param[flow](F, _, E).
 
 sx_ret_node[surface](F, N)  :- ret_plain[flow](F, E), may_be_node[flow](E, N).
 sx_ret_lit[surface](F, V)   :- ret_plain[flow](F, E), may_be_lit[flow](E, V).
 sx_ret_pnode[surface](F, N) :- ret_param[flow](F, _, E), may_be_node[flow](E, N).
 sx_ret_plit[surface](F, V)  :- ret_param[flow](F, _, E), may_be_lit[flow](E, V).
 sx_ret_param[surface](F, I) :- ret_param[flow](F, I, _).
+sx_gen_ret[surface](F, N)   :- returns[flow](F, E), ast_attr[code](F, generator, true), may_be_node[flow](E, N).
 
 -- every value the function's returns may be, whoever called it: the iterator protocol and `yield*` read this
 ret_node_any[flow](F, N) :- sx_ret_node[surface](F, N).
 ret_node_any[flow](F, N) :- sx_ret_pnode[surface](F, N).
+ret_node_any[flow](F, N) :- sx_gen_ret[surface](F, N).
 
 imports(surface, code).
 imports(surface, flow).

@@ -108,8 +108,7 @@ ambient_value_ns("posix").
 ambient_value_ns("default").
 
 -- A value that is a module of the table, or a namespace inside one.
-vlib_ns[flow](S, Surface) :- external_value[flow](S, S), builtin_canonical[code](S, Surface),
-                            ambient_value(Surface, _, _, _).
+vlib_ns[flow](S, Surface) :- builtin_ns[flow](S, Surface), ambient_value(Surface, _, _, _).
 vlib_ns[flow](M, Surface) :- vlib_member[flow](M, Surface, K), ambient_value_ns(K).
 
 vlib_member[flow](M, Surface, K) :- vlib_ns[flow](Y, Surface), may_be_node[flow](O, Y),
@@ -118,21 +117,19 @@ vlib_member[flow](M, Surface, K) :- vlib_ns[flow](Y, Surface), may_be_node[flow]
 -- The value of a function of the table: a member read off the module, a name
 -- imported from it, a name destructured from it.
 vlib_fn[flow](M, Surface, K) :- vlib_member[flow](M, Surface, K), ambient_value(Surface, K, _, _).
-vlib_fn[flow](Sp, Surface, K) :- external_import[code](Sp, _, Spec, _), builtin_canonical[code](Spec, Surface),
-                                ast_child[code](Sp, imported, 0, I), ast_name[code](I, K),
-                                ambient_value(Surface, K, _, _).
+vlib_fn[flow](X, Surface, K) :- builtin_member[flow](X, Surface, K), ambient_value(Surface, K, _, _).
 vlib_fn[flow](P, Surface, K) :- vlib_ns[flow](Y, Surface), may_be_node[flow](Init, Y), decl_value[flow](D, Init),
                                destr_prop[code](D, P, Key, _, _), key_name[code](Key, K), ambient_value(Surface, K, _, _).
 
-vlib_fn[flow](M, Surface, K) :- ambient_module(File, Surface), ast_node[code](M, object_method, File, _),
-                              ast_child[code](M, key, 0, Key), key_name[code](Key, K), ambient_value(Surface, K, _, _).
-vlib_fn[flow](F, Surface, K) :- ambient_module(File, Surface), ast_node[code](F, function_declaration, File, _),
-                              ast_child[code](F, id, 0, I), ast_name[code](I, K), ambient_value(Surface, K, _, _).
+vlib_fn[flow](F, Surface, K) :- ambient_module(File, Surface), exports_name[code](F, K, File),
+                              ambient_value(Surface, K, _, _).
+vlib_fn[flow](M, Surface, K) :- ambient_module(File, Surface), exports_name[code](O, N, File), ambient_value_ns(N),
+                              member_value[flow](O, K, M), ambient_value(Surface, K, _, _).
 
 vlib_call[flow](C, Surface, K) :- vlib_fn[flow](X, Surface, K), may_be_node[flow](G, X), ast_child[code](C, callee, 0, G),
                                   ast_node[code](C, T, _, _), call_like_v(T).
-vlib_call[flow](C, "URL", construct) :- free_global[code](G, "URL", _), ast_child[code](C, callee, 0, G),
-                                        ast_node[code](C, new_expression, _, _).
+vlib_call[flow](C, S, construct) :- ast_node[code](C, new_expression, _, _), ast_child[code](C, callee, 0, G),
+                                    free_global[code](G, S, _), ambient_value(S, construct, _, _).
 
 -- A method of a prototype: the receiver decides the surface.
 str_recv[flow](O) :- proto_call[flow](_, O, _), may_be_lit[flow](O, V), str_value[flow](V).
@@ -246,8 +243,8 @@ last_slot[flow](C, L) :- slot[flow](C, 0), L is max(I : slot[flow](C, I)).
 -- other is a piece `node(X)` of its parent, not a text that cannot come.
 textable[flow](C) :- last_slot[flow](C, L), N is count(I : slot[flow](C, I)), M is L + 1, N = M.
 
--- A CORPUS MODULE THAT IS A LIBRARY. `ambient_module(File, Surface)`: the
--- functions of File are Surface's (vscode's src/vs/base/common/path.ts is a
+-- A CORPUS MODULE THAT IS A LIBRARY. `ambient_module(File, Surface)`: what
+-- File exports, and the members of its `posix` namespace, are Surface's (vscode's src/vs/base/common/path.ts is a
 -- port of node's path), so a call of one composes as the table says. What the
 -- function's own body composes is `summarized`: a part reads past it, to the
 -- summary of the call.

@@ -372,8 +372,9 @@ builtin_prototype(promise).
 -- `new Promise`, by a static of `Promise`, and by `then`, `catch` or `finally`
 -- on a promise, and a name bound to one is one.
 edb(lib_member).
-prototype_of[flow](C, promise) :- resolves[code](C, F), ast_attr[code](F, async, true),
+async_fn[flow](F)              :- fn_node[code](F), ast_attr[code](F, async, true),
                                   not ast_attr[code](F, generator, true).
+prototype_of[flow](C, promise) :- resolves[code](C, F), async_fn[flow](F).
 prototype_of[flow](X, promise) :- ast_node[code](X, new_expression, _, _), ast_child[code](X, callee, 0, G),
                                   free_global[code](G, "Promise", _).
 prototype_of[flow](C, promise) :- ast_child[code](C, callee, 0, N), ast_child[code](N, object, 0, G),
@@ -710,6 +711,14 @@ obj_like[flow](O) :- ast_node[code](O, class_expression, _, _).
 class_like[flow](O) :- ast_node[code](O, class_declaration, _, _).
 class_like[flow](O) :- ast_node[code](O, class_expression, _, _).
 
+-- An INSTANCE is not its class. The class node is the class object (`C`, and
+-- `this` in a static member); its body node stands for every instance (`new
+-- C()`, and `this` in an instance member), which answers the prototype half
+-- and whatever is written onto an instance.
+inst_of[flow](I, CD)          :- class_like[flow](CD), ast_child[code](CD, body, 0, I).
+member_value[flow](I, Key, V) :- inst_of[flow](I, CD), class_member_proto[flow](CD, Key, V).
+member_plain[flow](I, Key, V) :- inst_of[flow](I, _), member_value[flow](I, Key, V).
+
 member_value[flow](O, Key, V) :- ast_node[code](O, object_expression, _, _),
                                  ast_child[code](O, properties, _, M),
                                  ast_node[code](M, object_method, _, _),
@@ -764,9 +773,9 @@ selects[flow](N, Key)       :- symbol_ref[code](P, Key), computed_key[code](N, P
 
 -- The receiver decides which half of a class it sees: `Vat.poured()` and
 -- `new Vat().tapped()` are both TypeErrors and both resolved until the `static`
--- attribute — emitted for every method, read by nothing — was read. An object
--- literal's members carry no `static`, so they get `member_plain`; so does a
--- module namespace.
+-- attribute — emitted for every method, read by nothing — was read. The class
+-- object answers the static half and what is written onto it; an object
+-- literal, a module namespace and an instance answer `member_plain`.
 class_member_static[flow](CD, Key, M) :- member_value[flow](CD, Key, M),
                                          ast_attr[code](M, static, true).
 class_member_proto[flow](CD, Key, M)  :- member_value[flow](CD, Key, M),
@@ -775,20 +784,14 @@ member_plain[flow](O, Key, V) :- ast_node[code](O, object_expression, _, _),
                                  member_value[flow](O, Key, V).
 member_plain[flow](P, Key, V) :- module_object[flow](P, _),
                                  member_value[flow](P, Key, V).
-
--- Which role the receiver is in, syntactically: a bare name that IS a class
--- name denotes the class object; anything else reaching a class node is an
--- instance. `const A = Vat; A.tapped()` therefore loses the static — declared.
-class_receiver[flow](E) :- class_named[flow](_, Name, File), ident_in[code](E, Name, File).
+class_member_static[flow](CD, Key, V) :- class_like[flow](CD), sx_mwrite[surface](CD, Key, V).
 
 member_obj[flow](N, O, Obj)      :- may_be_node[flow](O, Obj), ast_child[code](N, object, 0, O), member_node_v[flow](N).
 member_at[flow](N, O, Obj, Key)  :- member_obj[flow](N, O, Obj), selects[flow](N, Key).
-may_be_node[flow](N, V2) :- member_at[flow](N, O, Obj, Key), class_receiver[flow](O),
-                            class_member_static[flow](Obj, Key, V), may_be_node[flow](V, V2).
-may_be_node[flow](N, V2) :- member_at[flow](N, O, Obj, Key), not class_receiver[flow](O),
-                            class_member_proto[flow](Obj, Key, V), may_be_node[flow](V, V2).
+may_be_node[flow](N, V2) :- member_at[flow](N, _, Obj, Key), class_member_static[flow](Obj, Key, V), may_be_node[flow](V, V2).
 may_be_node[flow](N, V2) :- member_at[flow](N, _, Obj, Key), member_plain[flow](Obj, Key, V), may_be_node[flow](V, V2).
-may_be_lit[flow](N, L)   :- member_at[flow](N, _, Obj, Key), member_value[flow](Obj, Key, V), may_be_lit[flow](V, L).
+may_be_lit[flow](N, L)   :- member_at[flow](N, _, Obj, Key), class_member_static[flow](Obj, Key, V), may_be_lit[flow](V, L).
+may_be_lit[flow](N, L)   :- member_at[flow](N, _, Obj, Key), member_plain[flow](Obj, Key, V), may_be_lit[flow](V, L).
 
 -- A method is a value; a declared function is reached by its name, looked up
 -- as any name is.
@@ -823,7 +826,10 @@ this_host[flow](F, T)   :- this_over[flow](F, T), not this_nearer[flow](F, T).
 class_method_of[flow](CD, M) :- obj_like[flow](CD), ast_child[code](CD, body, 0, B),
                                 ast_child[code](B, body, _, M),
                                 ast_node[code](M, class_method, _, _).
-may_be_node[flow](T, CD) :- class_method_of[flow](CD, M), this_host[flow](M, T).
+may_be_node[flow](T, I)  :- class_method_of[flow](CD, M), ast_attr[code](M, static, false),
+                            inst_of[flow](I, CD), this_host[flow](M, T).
+may_be_node[flow](T, CD) :- class_method_of[flow](CD, M), ast_attr[code](M, static, true),
+                            this_host[flow](M, T).
 
 -- =========================================================================
 -- 10. ES2022 CLASS SYNTAX
@@ -910,15 +916,15 @@ this_binds_kind(static_block).
 class_field_this[flow](CD, P) :- field_of[flow](CD, _, P, _).
 class_field_this[flow](CD, P) :- private_member[code](CD, _, P),
                                  ast_node[code](P, class_private_property, _, _).
-may_be_node[flow](T, CD)      :- class_field_this[flow](CD, P), this_host[flow](P, T).
+may_be_node[flow](T, I)       :- class_field_this[flow](CD, P), not ast_attr[code](P, static, true),
+                                 inst_of[flow](I, CD), this_host[flow](P, T).
+may_be_node[flow](T, CD)      :- class_field_this[flow](CD, P), ast_attr[code](P, static, true),
+                                 this_host[flow](P, T).
 
 static_block_of[flow](CD, SB) :- obj_like[flow](CD), ast_child[code](CD, body, 0, B),
                                  ast_child[code](B, body, _, SB),
                                  ast_node[code](SB, static_block, _, _).
 may_be_node[flow](T, CD)      :- static_block_of[flow](CD, SB), this_host[flow](SB, T).
-
--- `this` in a static block is the CLASS object and must read the static half.
-class_receiver[flow](T)       :- static_block_of[flow](_, SB), this_host[flow](SB, T).
 
 -- =========================================================================
 -- 11. THE MODULE BOUNDARY, AS VALUE FACTS: an imported name may be what the
@@ -1190,30 +1196,17 @@ may_be_node[flow](U, P)       :- callback_param[flow](P, F, _), ast_name[code](P
 -- =========================================================================
 -- 12. CONSTRUCTION
 --
--- An instance is represented by its class: enough to answer `.m`, not enough
--- to refuse a static (`w_df_instance_vs_class`). `class_named` is WHICH NAME
--- REACHES THIS CLASS in this file — the `id`, and for a class expression its
--- binding too (`const W = class Hoist {}` is reached by both; V8 reports
--- `Hoist`). The binding arm is file-scoped through `ident_in`, unlike
--- `sees_binder`: declared.
-class_named[flow](CD, Name, File) :- obj_like[flow](CD), ast_node[code](CD, _, File, _),
-                                     ast_child[code](CD, id, 0, I), ast_name[code](I, Name).
-
-class_named[flow](CD, Name, File) :- ast_node[code](CD, class_expression, File, _),
-                                     ast_node[code](D, variable_declarator, File, _),
-                                     ast_child[code](D, init, 0, CD),
-                                     ast_child[code](D, id, 0, I), ast_name[code](I, Name).
-
+-- A class declaration is reached by its name, looked up as any name is.
 may_be_node[flow](E, CD) :- sees_decl[code](E, CD), ast_node[code](CD, class_declaration, _, _).
 
--- `new X()` is whichever class its callee may be, by value: `new ns.Foo()` and
--- an imported class are reached as a call's callee is.
-may_be_node[flow](E, CD) :- ast_node[code](E, new_expression, _, _),
-                            ast_child[code](E, callee, 0, CE), may_be_node[flow](CE, CD), class_like[flow](CD).
+-- `new X()` is an instance of whichever class its callee may be, by value:
+-- `new ns.Foo()` and an imported class are reached as a call's callee is.
+may_be_node[flow](E, I) :- ast_node[code](E, new_expression, _, _),
+                           ast_child[code](E, callee, 0, CE), may_be_node[flow](CE, CD), inst_of[flow](I, CD).
 
 -- `super` denotes the class its `extends` expression may be.
 super_of[flow](CD, SD) :- class_like[flow](CD), ast_child[code](CD, super_class, 0, SC),
-                          may_be_node[flow](SC, SD), class_like[flow](SD).
+                          may_be_node[flow](SC, SD), inst_of[flow](_, SD).
 
 -- A class with no constructor answers with its nearest ancestor's. Measured on
 -- V8: `super()` inside C reports `C -> A`, skipping the synthesised B frame.
@@ -1255,22 +1248,20 @@ may_be_node[flow](E, N) :- may_be_node[flow](X, N), ast_child[code](E, argument,
 may_be_lit[flow](E, V)  :- may_be_lit[flow](X, V), ast_child[code](E, argument, 0, X), ast_node[code](E, await_expression, _, _).
 
 -- =========================================================================
--- 14. GENERATORS. What a generator YIELDS is not what it returns: `for-of`
--- walks the yields. The value a `yield` RECEIVES comes from the consumer's
--- `.next(v)` — through `bound_to_call`, because `may_be_node` of a name bound
--- to a call gives the call's RETURNS, the wrong object for a generator — and
--- passes through `yield*`; the delegating expression itself is the inner
--- generator's return. `selects(N, "next")`: the key is a string.
+-- 14. GENERATORS. Calling a generator function makes a generator OBJECT, the
+-- call site's own value (`gen_of`), as `new` makes an instance; what the
+-- function yields is what `for-of` walks, and the value a `yield` RECEIVES is
+-- what the consumer hands `.next(v)`, through `yield*` too. The delegating
+-- expression itself is the inner generator's return.
 yields[flow](F, E) :- ast_node[code](Y, yield_expression, _, _), nearest_v[flow](F, Y),
                       ast_child[code](Y, argument, 0, E).
 
-bound_to_call[flow](E, C) :- ast_node[code](C, call_expression, _, _),
-                             binder[code](_, Name, C, File),
-                             ident_in[code](E, Name, File).
+gen_fn[flow](F)          :- fn_node[code](F), ast_attr[code](F, generator, true).
+gen_of[flow](C, F)       :- resolves[code](C, F), gen_fn[flow](F).
+may_be_node[flow](C, C)  :- gen_of[flow](C, _).
 
 next_send[flow](G, V) :- selects[flow](N, "next"), callee_of[code](C, N),
-                         ast_child[code](N, object, 0, O), bound_to_call[flow](O, GC),
-                         resolves[code](GC, G),
+                         ast_child[code](N, object, 0, O), may_be_node[flow](O, GC), gen_of[flow](GC, G),
                          ast_child[code](C, arguments, 0, V).
 
 delegates[flow](Outer, Inner) :- ast_node[code](Y, yield_expression, _, _),
@@ -1294,7 +1285,7 @@ may_be_node[flow](Y, X) :- ast_node[code](Y, yield_expression, _, _),
 -- element walked. An array is a VALUE (through `may_be_node`); a generator is
 -- a CALL, read at the site, because its returns are not what for-of walks.
 iter_elem[flow](X, E) :- elem_at[flow](X, _, E).
-iter_elem[flow](X, E) :- resolves[code](X, F), yields[flow](F, E).
+iter_elem[flow](X, E) :- may_be_node[flow](X, GC), gen_of[flow](GC, F), yields[flow](F, E).
 
 decl_value[flow](D, E) :- ast_node[code](S, for_of_statement, _, _), ast_child[code](S, left, 0, V),
                           ast_child[code](V, declarations, 0, D), ast_child[code](S, right, 0, X),

@@ -210,8 +210,7 @@ sig(selects, "selects(member access N, key Key)").
 sig(class_member_static, "the_static_member(of class CD, key Key, is node V)").
 sig(class_member_proto, "the_instance_member(of class CD, key Key, is node V)").
 sig(member_plain, "the_plain_member(of node O, key Key, is node V)").
-sig(class_receiver, "denotes_a_class(node E)").
-sig(class_named, "is_named(class CD, name Name, in file File)").
+sig(inst_of, "stands_for_an_instance_of(node I, class CD)").
 sig(class_method_of, "has_the_method(class CD, method M)").
 sig(this_over, "is_over(this-binder F, this T)").
 sig(this_nearer, "is_outdone_for(this-binder F, this T)").
@@ -340,6 +339,9 @@ sig(eff_latent, "has_the_latent_effect(function F, effect label L, at host H)").
 sig(eff_two_names, "has_two_effects(function F, effect A, effect B)").
 sig(eff_join_short, "is_short_of_the_join(function F, effect J:2, with function G:1)").
 sig(eff_purer_callee, "calls_a_purer_callee(call C, function G:2, from function F:1)").
+sig(eff_callee_less, "has_a_callee_without_a_row(call C, function G:2, of function F:1)").
+sig(eff_callee_more, "has_a_callee_with_an_extra_row(call C, function G:2, over function F:1)").
+sig(eff_conv_any, "may_be_done_by_a_conversion(label L, heap H)").
 sig(concrete_effect, "operates(call C, on surface S, by operation Op)").
 sig(concrete_leq, "is_purer(surface S1, at operation O1, than surface S2, at operation O2)").
 sig(eff_field_value, "initialises_the_field(class CD, at node P, with node V)").
@@ -632,7 +634,10 @@ sig(guard_arm_unseen, "is_unseen_guarding(kind K, field F)").
 sig(guarded_at, "has_a_guarded_call_at(file File, line Line)").
 
 -- dataflow: the one left
-sig(bound_to_call, "is_bound_to_the_call(node E, call expression C)").
+sig(gen_fn, "is_a_generator_function(function F)").
+sig(async_fn, "is_an_async_function(function F)").
+sig(gen_of, "makes_a_generator_of(call C, function F)").
+sig(call_returns, "returns_to_its_call(function F, node E)").
 
 -- effects: the lattice tables, the order, writes, coercion, modules, classes
 sig(eff_name, "is_in_the_lattice(effect N)").
@@ -739,7 +744,6 @@ sig(eff_construct_part, "constructs_by_running(class CD, node V)").
 sig(eff_plain_key, "has_a_plain_key(node P)").
 sig(eff_runs_in, "runs(node P, node N)").
 sig(eff_moment_unplaced, "has_no_moment(node P)").
-sig(eff_define_unreached, "defines_without_reaching(class expression CE, node S)").
 
 -- env-api: the stdlib call and what an environment lacks of it
 sig(lib_member, "has_the_member(prototype P, key Key, since release Rel)").

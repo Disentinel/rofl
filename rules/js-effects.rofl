@@ -219,7 +219,7 @@ eff_swallowed[audit](F, C, L, H) :- eff_catch_here[code](C), resolves[code](C, G
 -- `effect_of` and `eff_leq`, NOT a relation: |functions|² rows for nothing.
 -- `eff_join_short` is the one place the join is READ: a caller's name joined
 -- with its callee's must give the caller's own back. `eff_purer_callee`
--- compares names, not rows, so it under-reports incomparable pairs.
+-- compares rows: the callee lacks one of the caller's and has none it lacks.
 eff_subject[flow](F)        :- fn_node[code](F).
 eff_lh[flow](L, H)          :- eff_latent[flow](_, L, H).
 eff_lh[flow](L, H)          :- eff_module[flow](_, L, H).
@@ -237,9 +237,11 @@ eff_join_short[audit](F, G, J) :- resolves[code](C, G), nearest_fn[code](F, C),
                                   effect_of[flow](F, NF), effect_of[flow](G, NG),
                                   eff_join(NF, NG, J), J != NF.
 
-eff_purer_callee[flow](C, F, G) :- resolves[code](C, G), nearest_fn[code](F, C),
-                                   effect_of[flow](F, NF), effect_of[flow](G, NG),
-                                   eff_lt(NG, NF).
+eff_callee_less[flow](C, F, G) :- resolves[code](C, G), nearest_fn[code](F, C),
+                                  eff_latent[flow](F, L, H), not eff_latent[flow](G, L, H).
+eff_callee_more[flow](C, F, G) :- resolves[code](C, G), nearest_fn[code](F, C),
+                                  eff_latent[flow](G, L, H), not eff_latent[flow](F, L, H).
+eff_purer_callee[flow](C, F, G) :- eff_callee_less[flow](C, F, G), not eff_callee_more[flow](C, F, G).
 
 -- =========================================================================
 -- 5. THE CONCRETE COLUMN — `http:get` RATHER THAN `io`
@@ -295,8 +297,8 @@ eff_suspension_word(next).
 -- THE OPERAND DECIDES: a primitive converts to itself; an in-program object
 -- overriding a conversion key is a CALL and propagates as one; one overriding
 -- neither converts through `Object.prototype`, which performs nothing; an
--- untraced operand is the RESIDUE, named and not seeded — seeding `top` was
--- measured and makes `effect_of` top for most of the corpus.
+-- untraced operand may be any object, so it may run any conversion this
+-- program defines, and nothing else it could run is the program's.
 --
 -- The non-converting operators are a list and the rest are the complement
 -- (the safe direction for a may-set). One rule per constant, not a table:
@@ -323,9 +325,8 @@ eff_coerced[flow](N, X) :- eff_converts[code](N), ast_child[code](N, argument, 0
 eff_coerced[flow](T, X) :- ast_node[code](T, template_literal, _, _),
                            ast_child[code](T, expressions, _, X).
 
--- `Symbol.toPrimitive` is deliberately absent: a computed key, and what
--- spelling `key_name` gives one is `w_computed_key_names`' open question.
 edb(eff_conv_key).
+eff_conv_key(symbol_to_primitive).
 eff_conv_key("valueOf").
 eff_conv_key("toString").
 
@@ -344,6 +345,9 @@ eff_conv_untraced[flow](N, X)   :- eff_coerced[flow](N, X), not may_be_lit[flow]
 -- oracle is V8's stack frames, which know nothing about a conversion.
 eff_latent[flow](F, L, H) :- eff_conv_call[flow](N, M), eff_latent[flow](M, L, H),
                              nearest_v[flow](F, N), not in_own_decorator[code](F, N).
+eff_conv_any[flow](L, H)  :- eff_conv_key(Key), member_value[flow](_, Key, M), eff_latent[flow](M, L, H).
+eff_latent[flow](F, L, H) :- eff_conv_untraced[flow](N, _), nearest_v[flow](F, N), eff_conv_any[flow](L, H),
+                             not in_own_decorator[code](F, N).
 
 -- Totality: every coerced operand is primitive, object or untraced. And the
 -- operator table must not name a node that is neither binary nor unary —
@@ -424,12 +428,14 @@ eff_edge_unclosed[flow](F, G, L, H) :- calls[code](F, G), fn_node[code](F),
 -- run at ANOTHER moment. `static { f() }` and `static x = f()` run where the
 -- declaration stands; `x = f()` runs at every `new C()` and never otherwise.
 -- Construction hangs on the `new` through `may_be_node`; definition needed an
--- edge to the DECLARATION node. `class_expression` is deliberately not in
--- `eff_class_form` (its cell is another item's); `eff_define_unreached` is the
--- price, one row today. Methods are not field kinds: they are latent.
+-- edge to the class node, which runs where it is written: a declaration where
+-- it stands, an expression where it is evaluated (a mixin's
+-- `B => class extends B { static { init() } }` at each call). Methods are not
+-- field kinds: they are latent.
 -- `class_accessor_property` adds no label beyond a plain field.
 edb(eff_class_form).
 eff_class_form(class_declaration).
+eff_class_form(class_expression).
 
 edb(eff_field_kind).
 eff_field_kind(class_property).
@@ -515,7 +521,7 @@ class_construct_eff[flow](CD, L, H) :- super_of[flow](CD, SD),
 -- where it is written).
 eff_here[flow](CD, L, H) :- class_define_eff[flow](CD, L, H).
 eff_here[flow](X, L, H)  :- ast_node[code](X, new_expression, _, _),
-                            may_be_node[flow](X, CD), class_construct_eff[flow](CD, L, H).
+                            may_be_node[flow](X, I), inst_of[flow](I, CD), class_construct_eff[flow](CD, L, H).
 
 eff_alloc_kind(class_declaration).
 
@@ -526,43 +532,27 @@ eff_moment_both[audit](P, A, B) :- eff_field_moment[flow](P, A),
 eff_moment_unplaced[audit](P)   :- eff_field_value[code](_, P, _),
                                    not eff_field_moment[flow](P, _).
 
-eff_define_unreached[flow](CE, S) :- ast_node[code](CE, class_expression, _, _),
-                                     ast_child[code](CE, super_class, 0, S).
-eff_define_unreached[flow](CE, P) :- ast_node[code](CE, class_expression, _, _),
-                                     ast_child[code](CE, body, 0, B),
-                                     ast_child[code](B, body, _, P),
-                                     ast_node[code](P, static_block, _, _).
-eff_define_unreached[flow](CE, V) :- ast_node[code](CE, class_expression, _, _),
-                                     ast_child[code](CE, body, 0, B),
-                                     ast_child[code](B, body, _, P),
-                                     eff_field_kind(K), ast_node[code](P, K, _, _),
-                                     ast_attr[code](P, static, true),
-                                     ast_child[code](P, value, 0, V).
 
 -- =========================================================================
 -- 7. WHERE THIS PACK CANNOT LOOK
 --
 -- 1. No implicit throw: `exn` is seeded from `throw_statement` only, as
 --    `may_throw` is, so `null.x` and a failed coercion are `total` here.
--- 2. No termination argument: every loop is `div`.
+-- 2. No termination argument: every loop but a `for-in` is `div`.
 -- 3. The heap is two-valued and `global` means "the value layer lost it" —
 --    a parameter's receiver is `global` though it may be a caller's local.
 -- 4. The join happens at the function boundary; a block's row is not
 --    materialised (one rule over `ast_within` if ever wanted, and a large one).
--- 5. `eff_purer_callee` compares names, so incomparable rows read as equal.
--- 6. An untraced coerced operand contributes nothing — 141 of 369 conversion
---    sites — so here the layer UNDER-reports, in the direction a may-set is
---    not supposed to err.
--- 7. A conversion reaches `valueOf` and `toString` only; `Symbol.toPrimitive`
---    is a computed key, and `Array.prototype.toString` converting its elements
---    is not followed.
--- 8. A conversion at a module's TOP LEVEL reaches no function and no module:
+-- 5. A conversion of an untraced operand runs every conversion the program
+--    defines, the may-set's price for not knowing the operand.
+-- 6. `Array.prototype.toString` converting its elements is not followed.
+-- 7. A conversion at a module's TOP LEVEL reaches no function and no module:
 --    the conversion arm propagates through `nearest_v` only.
--- 9. An instance initialiser reaches its enclosing function twice, once early:
+-- 8. An instance initialiser reaches its enclosing function twice, once early:
 --    `nearest_v` walks into a non-static field, so a function that merely
 --    DEFINES a class carries the initialiser's labels. Narrowing it means
 --    changing `nearest_v`, the value layer's relation.
--- 10. `may_throw` has no construction edge, so the oracle in section 3 and the
+-- 9. `may_throw` has no construction edge, so the oracle in section 3 and the
 --    rule in section 6 disagree in principle (`function g() { return new C() }`
 --    with `class C { x = boom() }`) and agree on this corpus; the test plants
 --    the shape. `f_may_throw_has_no_construction_edge`.
