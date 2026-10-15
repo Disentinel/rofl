@@ -453,6 +453,8 @@ may_not_run[code](F)       :- sx_called[surface](F), not reached_unguarded[code]
 -- `export { f as g }` contains no function, so the second arm joins
 -- `export_local`, which already excludes re-exports and type-only exports.
 -- `export_all_declaration` introduces no local entry.
+in_fn[code](N)   :- nearest_v[flow](_, N).
+
 edb(export_kind).
 export_kind(export_named_declaration).
 export_kind(export_default_declaration).

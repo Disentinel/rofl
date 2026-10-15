@@ -152,6 +152,8 @@ scope_declares[code](F, "arguments", File) :- fn_node[code](F), ast_node[code](F
                                               K != arrow_function_expression.
 scope_declares[code](S, Name, File) :- named_decl[code](D, Name, File), decl_region[code](D, S).
 scope_declares[code](B, Name, File) :- catch_names[code](B, Name, File).
+scope_declares[code](B, Name, File) :- ast_node[code](B, tsenum_body, File, _), ast_child[code](B, members, _, M),
+                                       ast_child[code](M, id, 0, I), ast_name[code](I, Name).
 scope_declares[code](X, Name, File) :- ast_node[code](X, function_expression, File, _),
                                        ast_child[code](X, id, 0, I), ast_name[code](I, Name).
 scope_declares[code](X, Name, File) :- ast_node[code](X, class_expression, File, _),
@@ -164,6 +166,12 @@ named_decl[code](D, Name, File) :- ast_node[code](D, function_declaration, File,
                                    ast_child[code](D, id, 0, I), ast_name[code](I, Name).
 named_decl[code](D, Name, File) :- ast_node[code](D, class_declaration, File, _),
                                    ast_child[code](D, id, 0, I), ast_name[code](I, Name).
+named_decl[code](D, Name, File) :- ts_value_decl(K), ast_node[code](D, K, File, _),
+                                   ast_child[code](D, id, 0, I), ast_name[code](I, Name).
+edb(ts_value_decl).
+ts_value_decl(tsenum_declaration).
+ts_value_decl(tsmodule_declaration).
+ts_value_decl(tsdeclare_function).
 up_d[code](D, P)         :- named_decl[code](D, _, _), ast_in[code](P, D).
 up_d[code](D, P2)        :- up_d[code](D, P), not scope_node[code](P), ast_in[code](P2, P).
 decl_region[code](D, R)  :- up_d[code](D, R), scope_node[code](R).
@@ -197,19 +205,26 @@ not_a_reference(export_specifier, exported).
 not_a_reference(export_namespace_specifier, exported).
 not_a_reference(meta_property, meta).
 not_a_reference(meta_property, property).
-not_a_reference(ts_type_reference, type_name).
-not_a_reference(ts_qualified_name, left).
-not_a_reference(ts_qualified_name, right).
-not_a_reference(ts_expression_with_type_arguments, expression).
-not_a_reference(ts_class_implements, expression).
-not_a_reference(ts_interface_heritage, expression).
-not_a_reference(ts_type_query, expr_name).
-not_a_reference(ts_interface_declaration, id).
-not_a_reference(ts_type_alias_declaration, id).
-not_a_reference(ts_enum_member, id).
-not_a_reference(ts_module_declaration, id).
-not_a_reference(ts_type_predicate, parameter_name).
-not_a_reference(ts_import_type, qualifier).
+not_a_reference(tstype_reference, type_name).
+not_a_reference(tsqualified_name, left).
+not_a_reference(tsqualified_name, right).
+not_a_reference(tsexpression_with_type_arguments, expression).
+not_a_reference(tsclass_implements, expression).
+not_a_reference(tsinterface_heritage, expression).
+not_a_reference(tstype_query, expr_name).
+not_a_reference(tsinterface_declaration, id).
+not_a_reference(tstype_alias_declaration, id).
+not_a_reference(tsenum_member, id).
+not_a_reference(tstype_predicate, parameter_name).
+not_a_reference(tsimport_type, qualifier).
+-- the parameters of a signature with no body name types, not bindings
+not_a_reference(tsdeclare_function, params).
+not_a_reference(tsdeclare_method, params).
+not_a_reference(tsfunction_type, params).
+not_a_reference(tsconstructor_type, params).
+not_a_reference(tsmethod_signature, params).
+not_a_reference(tscall_signature_declaration, params).
+not_a_reference(tsconstruct_signature_declaration, params).
 
 not_a_ref[code](E) :- not_a_reference(K, Field), ast_node[code](P, K, _, _), ast_child[code](P, Field, _, E).
 -- a key written as a name: `o.p`, `{ p: v }`, `p() {}`, a class field
@@ -623,6 +638,9 @@ arg_at[flow](C, I, E)      :- spread_arg[code](C, J), not after_spread[code](C, 
                               I is J + K.
 param_of[flow](F, I, Name) :- fn_node[code](F), ast_child[code](F, params, I, P),
                               ast_name[code](P, Name).
+param_of[flow](F, I, Name) :- fn_node[code](F), ast_child[code](F, params, I, P),
+                              ast_node[code](P, tsparameter_property, _, _),
+                              ast_child[code](P, parameter, 0, X), ast_name[code](X, Name).
 
 -- A rest parameter is an array of the arguments from its index on: element K
 -- of `...args` at J is the argument at J + K of every call of the function,
@@ -1339,8 +1357,8 @@ thrown_in[flow](T, V)    :- ast_node[code](Th, throw_statement, _, _),
 thrown_in[flow](T, V)    :- ast_node[code](Th, throw_statement, _, _),
                             ast_within[code](B, Th), try_block[flow](T, B),
                             ast_child[code](Th, argument, 0, V),
-                            not in_fn[code](Th).
-in_fn[code](N)           :- nearest_v[flow](_, N).
+                            not throw_in_fn[flow](Th).
+throw_in_fn[flow](Th)    :- ast_node[code](Th, throw_statement, _, _), nearest_v[flow](_, Th).
 
 caught_value[flow](P, V) :- catch_of[flow](T, H), catch_param[flow](H, P),
                             thrown_in[flow](T, V).
