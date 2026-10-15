@@ -56,18 +56,6 @@ Declared as facts:
 |---|---|
 | `ident` | "reads(identifier N, name Name)" |
 | `ident_in` | "reads(identifier E, name Name, in file File)" |
-| `decl_binds` | "binds(declarator D, name Name)" |
-| `decl_reads` | "is_initialised_from(declarator D, name Name)" |
-
-> name to name through `const To = From` only, the first cell of the value layer: most code has none,
-> and a value's path is `points_to` and `may_be_the_literal`; the words say so, so nobody asks these for a dataflow
-
-`sig` lists:
-
-| arg 1 | arg 2 |
-|---|---|
-| `var_flow` | "is_copied_by_a_declaration_into(name From, name To)" |
-| `var_reaches` | "is_copied_by_declarations_into(name From, name To)" |
 | `may_be_lit` | "may_be_the_literal(node E, text V)" |
 | `may_be_node` | "points_to(node E, node N)" |
 | `interpolated` | "is_interpolated(template T)" |
@@ -89,7 +77,6 @@ Declared as facts:
 | `tdz_cand` | "is_a_dead_zone_candidate_of(node E, declarator D)" |
 | `tdz_deferred` | "is_deferred_for(node E, declarator D)" |
 | `tdz_at` | "is_in_the_dead_zone_of(node E, declarator D)" |
-| `assigns` | "is_assigned(name Name, node Src, in file File)" |
 | `assigned` | "is_written_by(assignment A, target T:2, name Name:3, value node Src:4, in file File:5)" |
 | `assign_binder` | "is_written_into(assignment A, declarator D)" |
 | `assign_param` | "is_written_into_a_parameter_of(assignment A, function F)" |
@@ -97,7 +84,6 @@ Declared as facts:
 | `assign_decided` | "has_a_decided_target(assignment A)" |
 | `assign_unscoped` | "has_no_decided_target(assignment A)" |
 | `assign_reaches_unscoped` | "may_hold_by_name_alone(node E, what node Src holds)" |
-| `bound_read` | "is_claimed_by_a_binder_or_parameter(node E)" |
 | `bare_binder` | "declares_without_a_value(declarator D, name Name, in file File)" |
 | `has_init` | "has_an_initialiser(declarator D)" |
 | `type_import` | "imports_types_only(node X)" |
@@ -118,9 +104,11 @@ Declared as facts:
 | `rest_in_pattern` | "holds_a_rest(declarator D, node R, in file File)" |
 | `rest_binds` | "binds(declarator D, name Local:2, through the rest node R:1, in file File:3)" |
 | `param_of` | "takes(function F, name Name:2, at index I:1)" |
+| `param_rest` | "has_the_rest_parameter(function F, at index J, node R, name Name)" |
 | `param_default` | "defaults(function F, name Name, to node Init)" |
 | `param_use` | "uses(function F, name Name, at node U)" |
 | `elem_at` | "the_element(of node X, index I, is node E)" |
+| `decl_value` | "takes_its_value_from(declarator D, node X)" |
 | `iter_elem` | "has_an_element(node X, node E)" |
 | `valued` | "is_valued(node E)" |
 | `prototype_of` | "the_prototype(of node E, is name P)" |
@@ -142,8 +130,7 @@ Declared as facts:
 | `class_member_static` | "the_static_member(of class CD, key Key, is node V)" |
 | `class_member_proto` | "the_instance_member(of class CD, key Key, is node V)" |
 | `member_plain` | "the_plain_member(of node O, key Key, is node V)" |
-| `class_receiver` | "denotes_a_class(node E)" |
-| `class_named` | "is_named(class CD, name Name, in file File)" |
+| `inst_of` | "stands_for_an_instance_of(node I, class CD)" |
 | `class_method_of` | "has_the_method(class CD, method M)" |
 | `this_over` | "is_over(this-binder F, this T)" |
 | `this_nearer` | "is_outdone_for(this-binder F, this T)" |
@@ -166,7 +153,6 @@ Declared as facts:
 | `decorated_by` | "is_replaced_by_its_decorator_with(node Owner, node N)" |
 | `decorated_member` | "has_the_decorated_member(class CD, key Key, at method M, replaced with node N)" |
 | `corpus_file` | "is_in_the_corpus(file File)" |
-| `module_source` | "sources(node N, text Src, in file File)" |
 | `import_outside_corpus` | "is_outside_the_corpus(text Src, from file File)" |
 | `imports_name` | "imports(name Local, name Name, at site D, in file File)" |
 | `imports_ns` | "imports_the_namespace(name Local, at site D, in file File)" |
@@ -190,9 +176,6 @@ Declared as facts:
 | `catch_from_call` | "catches_from_a_call(node P)" |
 | `catch_from_host` | "catches_from_the_host(node P)" |
 | `catch_unsourced` | "catches_from_nowhere(node P)" |
-| `for_of_src` | "iterates(for-of S, node X)" |
-| `for_of_name` | "loops_over(for-of S, name Name)" |
-| `for_of_use` | "loops_with(for-of S, name Name, at node U)" |
 | `next_send` | "is_sent(function G, node V)" |
 | `delegates` | "delegates_to(function Outer, function Inner)" |
 | `nearest_v` | "is_nearest_to(function F, node R)" |
@@ -306,6 +289,9 @@ Declared as facts:
 | `eff_two_names` | "has_two_effects(function F, effect A, effect B)" |
 | `eff_join_short` | "is_short_of_the_join(function F, effect J:2, with function G:1)" |
 | `eff_purer_callee` | "calls_a_purer_callee(call C, function G:2, from function F:1)" |
+| `eff_callee_less` | "has_a_callee_without_a_row(call C, function G:2, of function F:1)" |
+| `eff_callee_more` | "has_a_callee_with_an_extra_row(call C, function G:2, over function F:1)" |
+| `eff_conv_any` | "may_be_done_by_a_conversion(label L, heap H)" |
 | `concrete_effect` | "operates(call C, on surface S, by operation Op)" |
 | `concrete_leq` | "is_purer(surface S1, at operation O1, than surface S2, at operation O2)" |
 | `eff_field_value` | "initialises_the_field(class CD, at node P, with node V)" |
@@ -400,8 +386,7 @@ Declared as facts:
 | arg 1 | arg 2 |
 |---|---|
 | `surface_origin` | "the_origin(of surface Spec, is origin N)" |
-| `ambient_binding` | "names_the_surface(name Local:1, surface Spec:2, in file File:0)" |
-| `ambient_binding_unowned` | "names_an_unowned_surface(name Name:1, surface S:2, in file File:0)" |
+| `ambient_global` | "is_an_ambient_global(name Name)" |
 | `amb_atom_label` | "is_a_label_on_the_heap(effect X, heap H)" |
 | `eff_of_host` | "the_landmark(of effect X, is effect N)" |
 | `host_atom_unmapped` | "has_no_landmark(effect X)" |
@@ -409,7 +394,6 @@ Declared as facts:
 | `amb_global_member` | "is_selected_on_the_global(key Key:1, name Name:0)" |
 | `ambient_enumerated` | "is_enumerated(surface S)" |
 | `ambient_unenumerated` | "is_unenumerated(surface S)" |
-| `amb_named_call` | "calls_the_named_import(call C, key Key:2, of surface Spec:1)" |
 | `eff_surface` | "reaches_the_surface(call C, surface Spec)" |
 | `eff_operation` | "performs_the_operation(call C, operation Key)" |
 | `amb_global_call` | "calls_the_global(call C, name Name)" |
@@ -579,6 +563,7 @@ Declared as facts:
 | arg 1 | arg 2 |
 |---|---|
 | `guard_arm` | "guards_the_arm(node P, node X)" |
+| `short_circuit_assign` | "short_circuits(operator Op)" |
 | `field_init` | "has_the_field_initialiser(node P, node V)" |
 | `guarded` | "is_guarded(node X)" |
 | `after_abrupt` | "follows_an_abrupt_completion(node S)" |
@@ -598,9 +583,14 @@ Declared as facts:
 | `has_return` | "has_a_return(function F)" |
 | `top_throw` | "throws_at_the_top(function F)" |
 | `always_throws` | "always_throws(function F)" |
+| `deferred_body` | "runs_its_body_later(function F)" |
+| `async_body` | "is_async(function F)" |
+| `awaited_call` | "awaits_the_call(await A, call C)" |
 | `throwing_call` | "is_a_throwing_call(call C)" |
 | `accessor_of` | "the_accessor(of node Obj, at key Key, is node M)" |
 | `accessor_read` | "reads_through_the_accessor(node N, node M)" |
+| `written_member` | "is_written(member N)" |
+| `only_written` | "is_only_written(member N)" |
 | `pattern_source` | "the_pattern_source(of node P, is node Init)" |
 | `pattern_accessor` | "destructures_through_the_accessor(object pattern P, node M)" |
 | `spread_iterated` | "is_iterated(spread S)" |
@@ -619,7 +609,6 @@ Declared as facts:
 | `hidden_call_accounted` | "has_an_accounted_hidden_call(node N)" |
 | `hidden_call_unaccounted` | "has_an_unaccounted_hidden_call(node N)" |
 | `hidden_call_off_table` | "hides_a_call_off_the_table(kind K, by mechanism M)" |
-| `try_of` | "lies_in(try TS, function F)" |
 | `in_try_block` | "tries(try TS, node N)" |
 | `try_catches` | "has_a_handler(node TS)" |
 | `caught_here` | "is_caught_here(node N)" |
@@ -652,7 +641,11 @@ Declared as facts:
 
 | arg 1 | arg 2 |
 |---|---|
-| `bound_to_call` | "is_bound_to_the_call(node E, call expression C)" |
+| `gen_fn` | "is_a_generator_function(function F)" |
+| `throw_in_fn` | "throws_inside_a_function(throw statement Th)" |
+| `async_fn` | "is_an_async_function(function F)" |
+| `gen_of` | "makes_a_generator_of(call C, function F)" |
+| `call_returns` | "returns_to_its_call(function F, node E)" |
 
 > effects: the lattice tables, the order, writes, coercion, modules, classes
 
@@ -701,7 +694,9 @@ Declared as facts:
 | `eff_read_site` | "is_a_read_member(member access M)" |
 | `eff_member_both` | "is_read_and_written(member access M)" |
 | `eff_update_arg` | "updates(update expression U, node X)" |
-| `eff_mutable_name` | "is_mutable(name Name, in file File)" |
+| `eff_written` | "is_written_to(node X)" |
+| `eff_mutable_in` | "is_mutable_in(name Name, file File, scope S)" |
+| `eff_mutable_top` | "is_mutable_at_the_top(name Name, file File)" |
 | `eff_label_seen` | "is_seen(effect label L, at host H)" |
 | `eff_label_unseen` | "is_unseen(effect label L, at host H)" |
 | `eff_discharged_at` | "discharges_here(node C, effect label L)" |
@@ -735,12 +730,13 @@ Declared as facts:
 | `eff_conv_accounted` | "accounts_for_coercing(node N, node X)" |
 | `eff_conv_unaccounted` | "coerces_without_an_account(node N, node X)" |
 | `eff_op_off_kind` | "inspects_off_its_kind(node N, kind K)" |
-| `eff_mod_src` | "imports_the_source(node N, text Src, in file F)" |
-| `eff_type_only` | "is_type_only(node I)" |
-| `eff_has_spec` | "has_specifiers(node I)" |
-| `eff_value_spec` | "has_a_value_specifier(node I)" |
-| `eff_erased` | "is_erased(node I)" |
-| `eff_evaluates_at` | "evaluates(node I, file T)" |
+| `type_only_site` | "is_type_only(site I)" |
+| `site_has_spec` | "has_specifiers(site I)" |
+| `site_value_spec` | "has_a_value_specifier(site I)" |
+| `erased_site` | "is_erased(site I)" |
+| `runs_site` | "runs_its_target(site I)" |
+| `evaluates_at` | "evaluates(site I, file T)" |
+| `evaluates_unresolved` | "evaluates_a_module_outside_the_corpus(site I)" |
 | `eff_import_outside` | "imports_outside_the_corpus(node I, text Src)" |
 | `eff_module` | "has_the_module_effect(file F, effect label L, at host H)" |
 | `eff_import_invented` | "invents_the_effect(node I, effect label L, at host H)" |
@@ -761,7 +757,6 @@ Declared as facts:
 | `eff_plain_key` | "has_a_plain_key(node P)" |
 | `eff_runs_in` | "runs(node P, node N)" |
 | `eff_moment_unplaced` | "has_no_moment(node P)" |
-| `eff_define_unreached` | "defines_without_reaching(class expression CE, node S)" |
 
 > env-api: the stdlib call and what an environment lacks of it
 
@@ -830,14 +825,26 @@ Declared as facts:
 
 | arg 1 | arg 2 |
 |---|---|
-| `global_ref_position` | "reads_a_global_at(kind K, field Field)" |
-| `declaring_position` | "declares_at(kind K, field Field)" |
+| `not_a_reference` | "is_no_reference_at(kind K, field Field)" |
+| `not_a_ref` | "is_no_reference(identifier E)" |
+| `named_decl` | "declares_the_name(declaration D, name Name, in file File)" |
+| `ts_value_decl` | "is_a_typescript_declaration_with_a_value(kind K)" |
+| `decl_region` | "is_scoped_to(declaration D, scope R)" |
+| `decl_at_top` | "is_declared_at_the_top(declaration D)" |
+| `catch_names` | "declares_its_caught_name(catch H, name Name, in file File)" |
+| `sees_decl` | "sees_the_declaration(identifier E, declaration D)" |
+| `reads_the_file_as` | "is_read_as_the(view V)" |
+| `up_d` | "climbs_from(declaration D, node P)" |
+| `class_like` | "is_a_class(node O)" |
+| `constant_global` | "is_a_constant_global(name Name)" |
+| `top_declares` | "is_declared_at_the_top_of(name Name, file File)" |
+| `top_read` | "is_read_at_the_top_of(node E, name Name, file File)" |
+| `symbol_ref` | "is_the_well_known_symbol(node E, key Key)" |
+| `well_known_symbol` | "names_the_well_known_symbol(name Name, key Key)" |
 | `lib_global` | "is_a_global(name Name, since release Rel, with form Form)" |
 | `lib_static` | "has_the_static(name Name, key Key, since release Rel)" |
 | `constructible_form` | "is_constructible(form Form)" |
 | `lib_global_prototype` | "has_the_prototype(name Name, prototype P)" |
-| `global_ref` | "refers_to(node E, name Name, in file File)" |
-| `declares_name` | "is_declared(name Name, in file File)" |
 | `free_global` | "refers_to_the_free(node E, name Name, in file File)" |
 | `global_unattributed` | "refers_to_an_unattributed_global(node E, name Name)" |
 | `es_static_unattributed` | "selects_an_unattributed_static(node N, key Key:2, of name Name:1)" |
@@ -871,11 +878,11 @@ Declared as facts:
 | `provides_release` | "ships_the_release(runtime P, release Rel)" |
 | `runtime_undated` | "is_undated(runtime R, because reason Reason)" |
 | `node_builtin_bare` | "is_the_bare_name(text Bare, of spec Spec)" |
+| `node_prefix_only` | "is_loaded_only_under_its_scheme(spec Spec)" |
 | `resolved_builtin` | "resolves_to_the_builtin(site I, spec Spec)" |
 | `site_file` | "sits_in(site I, file F)" |
-| `name_bound_in` | "binds_the_name(file File, name Name)" |
-| `host_module_ns` | "imports_the_namespace(file File, name Local, of spec Spec)" |
-| `host_module_named` | "imports(file File, name Local, as key Key:3, of spec Spec:2)" |
+| `builtin_ns` | "is_the_builtin_module(value S, of spec Spec)" |
+| `builtin_member` | "is_a_member_of_the_builtin(value M, of spec Spec, key Key)" |
 | `host_import_unknown` | "imports_an_unknown_member(file File, key Key:2, of spec Spec:1)" |
 | `host_member_call` | "calls_the_host_member(call C, key Key:3, of name Name:2, in host H:1)" |
 | `host_global_call` | "calls_the_host_global(call C, name Name:2, of host H:1)" |
@@ -907,8 +914,6 @@ Declared as facts:
 | `runtime_unversioned` | "is_unversioned(runtime R)" |
 | `runtime_separates` | "is_told_apart_from(runtime X, runtime B)" |
 | `runtime_pair_indistinct` | "is_not_told_apart_from(runtime X, runtime B)" |
-| `bare_listed` | "is_listed_bare(spec Spec)" |
-| `bare_builtin_unlisted` | "is_not_listed_bare(spec Spec)" |
 | `runtime_family_undeclared` | "has_an_undeclared_family(runtime R, runtime F)" |
 | `runtime_cross_family` | "includes_across_families(runtime X, runtime B)" |
 | `host_family_mismatch` | "is_half_declared(host H)" |
@@ -992,11 +997,13 @@ Declared as facts:
 | `unresolved_relative` | "leaves_unresolved(file F, text S:2, at line L:1)" |
 | `module_target` | "means_the_file(site I, file T)" |
 | `ts_resolved` | "names_under_typescript(site I, file T)" |
+| `ts_candidate` | "may_name_under_typescript(site I, file T, at rank R)" |
+| `ts_passed_over` | "passes_over_under_typescript(site I, rank R)" |
 | `site_last_seg` | "reaches(site I, directory D, before segment Seg)" |
 | `last_ext` | "the_extension(of name Name, is text E, of length L)" |
-| `ts_ext` | "is_written_for(text Js, text Ts)" |
-| `probe_ext` | "is_probed(text E)" |
-| `index_file` | "is_an_index_file(name Name)" |
+| `ts_ext` | "is_written_for(text Js, text Ts, at rank R)" |
+| `probe_ext` | "is_probed(text E, at rank R)" |
+| `index_file` | "is_an_index_file(name Name, at rank R)" |
 | `import_specifier_node` | "names_an_import(node Sp)" |
 | `import_spec` | "has_the_import_specifier(site I, node Sp)" |
 | `spec_local` | "binds_locally(node Sp, name L)" |

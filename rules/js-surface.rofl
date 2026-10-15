@@ -31,6 +31,7 @@ sx_esc[surface](N) :- sx_ret_pnode[surface](_, N).
 sx_esc[surface](N) :- sx_gen_ret[surface](_, N).
 sx_esc[surface](N) :- sx_next[surface](_, N).
 sx_esc[surface](F) :- sx_cb[surface](F, _).
+sx_esc[surface](A) :- sx_rest_elem[surface](_, _, A).
 sx_esc[surface](I) :- sx_esc[surface](C), inst_of[flow](I, C).
 sx_esc[surface](C) :- sx_esc[surface](I), inst_of[flow](I, C).
 -- ... and what an escaping node holds
@@ -48,14 +49,20 @@ sx_mplain[surface](O, K, V)  :- sx_esc[surface](O), member_plain[flow](O, K, V).
 sx_mstatic[surface](O, K, V) :- sx_esc[surface](O), class_member_static[flow](O, K, V).
 sx_mproto[surface](O, K, V)  :- sx_esc[surface](O), class_member_proto[flow](O, K, V).
 sx_accessor[surface](O, K, M) :- sx_esc[surface](O), accessor_of[flow](O, K, M).
+sx_accessor_as[surface](O, K, M, A) :- sx_esc[surface](O), accessor_as[flow](O, K, M, A).
+sx_field[surface](C, K, V, S) :- sx_esc[surface](C), field_at[flow](C, K, V, S).
 sx_elem[surface](A, I, E)    :- sx_esc[surface](A), array_elem[flow](A, I, E).
 sx_name[surface](E, Name)    :- sx_elem[surface](_, _, E), ast_name[code](E, Name).
 sx_proto[surface](N, P)      :- sx_esc[surface](N), kind_proto[flow](N, P).
 sx_ext[surface](N, S)        :- sx_esc[surface](N), external_value[flow](N, S).
+sx_bns[surface](N, S)        :- sx_esc[surface](N), builtin_ns[flow](N, S).
+sx_bmember[surface](N, S, K) :- sx_esc[surface](N), builtin_member[flow](N, S, K).
 sx_es[surface](N, G, R)      :- sx_esc[surface](N), es_instance[flow](N, G, R).
 sx_fn[surface](F)            :- sx_esc[surface](F), fn_node[code](F).
 sx_gen[surface](F)           :- sx_esc[surface](F), gen_fn[flow](F).
-sx_async[surface](F)         :- sx_esc[surface](F), async_fn[flow](F).
+sx_gen_of[surface](C, F)     :- sx_esc[surface](C), gen_of[flow](C, F).
+sx_sync[surface](F)          :- sx_esc[surface](F), sync_body[code](F).
+sx_abody[surface](F)         :- sx_esc[surface](F), async_body[code](F).
 sx_fn_name[surface](F, A)    :- sx_esc[surface](F), fn_name[code](F, A).
 sx_nested[surface](F)        :- sx_esc[surface](F), fn_nested[flow](F).
 sx_inst[surface](I, C)       :- sx_esc[surface](I), inst_of[flow](I, C).
@@ -79,16 +86,22 @@ member_plain[flow](O, K, V)   :- sx_mplain[surface](O, K, V).
 class_member_static[flow](O, K, V) :- sx_mstatic[surface](O, K, V).
 class_member_proto[flow](O, K, V)  :- sx_mproto[surface](O, K, V).
 accessor_of[flow](O, K, M)    :- sx_accessor[surface](O, K, M).
+accessor_as[flow](O, K, M, A) :- sx_accessor_as[surface](O, K, M, A).
+field_at[flow](C, K, V, S)    :- sx_field[surface](C, K, V, S).
 array_elem[flow](A, I, E)     :- sx_elem[surface](A, I, E).
 kind_proto[flow](N, P)        :- sx_proto[surface](N, P).
 external_value[flow](N, S)    :- sx_ext[surface](N, S).
+builtin_ns[flow](N, S)        :- sx_bns[surface](N, S).
+builtin_member[flow](N, S, K) :- sx_bmember[surface](N, S, K).
 es_instance[flow](N, G, R)    :- sx_es[surface](N, G, R).
 -- `fn_node`, `fn_name` and `in_fn` are syntax and are negated below the flow, so a function read as a VALUE, which may be
 -- another file's, is asked in [flow]: `fn_value`, `fn_label`, `fn_nested`.
 fn_value[flow](F)             :- fn_node[code](F).
 fn_value[flow](F)             :- sx_fn[surface](F).
 gen_fn[flow](F)               :- sx_gen[surface](F).
-async_fn[flow](F)             :- sx_async[surface](F).
+gen_of[flow](C, F)            :- sx_gen_of[surface](C, F).
+sync_body[code](F)            :- sx_sync[surface](F).
+async_body[code](F)           :- sx_abody[surface](F).
 fn_label[flow](F, A)          :- fn_name[code](F, A).
 fn_label[flow](F, A)          :- sx_fn_name[surface](F, A).
 fn_nested[flow](F)            :- fn_node[code](F), in_fn[code](F).
@@ -125,12 +138,16 @@ sx_reached[surface](F)        :- resolves[code](C, F), not guarded[code](C).
 sx_reach[surface](F)          :- resolves[code](C, F), not guarded[code](C), not in_fn[code](C).
 sx_reach[surface](F)          :- reachable[code](G), nearest_v[flow](G, C), resolves[code](C, F), not guarded[code](C).
 sx_next[surface](G, V)        :- next_send[flow](G, V).
+sx_rest[surface](F, J, R)     :- param_rest[code](F, J, R, _).
+sx_rest_elem[surface](R, K, A) :- sx_rest[surface](F, J, R), resolves[code](C, F), arg_at[flow](C, I, A),
+                                  I >= J, K is I - J.
 -- a function handed to an external call is called back by code the corpus cannot see
 sx_cb[surface](F, Spec)       :- external_value[flow](X, Spec), may_be_node[flow](G, X),
                                  ast_child[code](C, callee, 0, G), ast_node[code](C, K, _, _), call_like_v(K),
                                  ast_child[code](C, arguments, _, A), may_be_node[flow](A, F), fn_value[flow](F).
 
 next_send[flow](G, V) :- sx_next[surface](G, V).
+array_elem[flow](R, K, A) :- sx_rest_elem[surface](R, K, A).
 
 -- ---------------------------------------------------------------- what a call gets back
 -- A return that is the function's own parameter, read as nothing else: a plain identifier parameter, never assigned,

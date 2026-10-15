@@ -38,7 +38,7 @@ Reads:
 - from js-controlflow, in the code: [always_throws](js-controlflow.rofl.md#always_throws), [guarded](js-controlflow.rofl.md#guarded), [in_fn](js-controlflow.rofl.md#in_fn), [may_throw](js-controlflow.rofl.md#may_throw), [reachable](js-controlflow.rofl.md#reachable)
 - from js-controlflow, in the flow: [accessor_of](js-controlflow.rofl.md#accessor_of), [thrown_by](js-controlflow.rofl.md#thrown_by)
 - from js-dataflow, in the code: [assigned](js-dataflow.rofl.md#assigned), [corpus_file](js-dataflow.rofl.md#corpus_file), [exports_default](js-dataflow.rofl.md#exports_default), [exports_name](js-dataflow.rofl.md#exports_name), [exports_value](js-dataflow.rofl.md#exports_value), [sees_binder](js-dataflow.rofl.md#sees_binder)
-- from js-dataflow, in the flow: [arg_at](js-dataflow.rofl.md#arg_at), [array_elem](js-dataflow.rofl.md#array_elem), [assign_param](js-dataflow.rofl.md#assign_param), [cjs_exports](js-dataflow.rofl.md#cjs_exports), [class_member_proto](js-dataflow.rofl.md#class_member_proto), [class_member_static](js-dataflow.rofl.md#class_member_static), [ctor_of](js-dataflow.rofl.md#ctor_of), [external_value](js-dataflow.rofl.md#external_value), [kind_proto](js-dataflow.rofl.md#kind_proto), [member_plain](js-dataflow.rofl.md#member_plain), [member_value](js-dataflow.rofl.md#member_value), [module_object](js-dataflow.rofl.md#module_object), [nearest_v](js-dataflow.rofl.md#nearest_v), [next_send](js-dataflow.rofl.md#next_send), [param_of](js-dataflow.rofl.md#param_of), [param_use](js-dataflow.rofl.md#param_use), [returns](js-dataflow.rofl.md#returns), [yields](js-dataflow.rofl.md#yields)
+- from js-dataflow, in the flow: [arg_at](js-dataflow.rofl.md#arg_at), [array_elem](js-dataflow.rofl.md#array_elem), [assign_param](js-dataflow.rofl.md#assign_param), [async_fn](js-dataflow.rofl.md#async_fn), [cjs_exports](js-dataflow.rofl.md#cjs_exports), [class_member_proto](js-dataflow.rofl.md#class_member_proto), [class_member_static](js-dataflow.rofl.md#class_member_static), [ctor_of](js-dataflow.rofl.md#ctor_of), [external_value](js-dataflow.rofl.md#external_value), [gen_fn](js-dataflow.rofl.md#gen_fn), [inst_of](js-dataflow.rofl.md#inst_of), [kind_proto](js-dataflow.rofl.md#kind_proto), [member_plain](js-dataflow.rofl.md#member_plain), [member_value](js-dataflow.rofl.md#member_value), [module_object](js-dataflow.rofl.md#module_object), [nearest_v](js-dataflow.rofl.md#nearest_v), [next_send](js-dataflow.rofl.md#next_send), [param_of](js-dataflow.rofl.md#param_of), [param_use](js-dataflow.rofl.md#param_use), [returns](js-dataflow.rofl.md#returns), [yields](js-dataflow.rofl.md#yields)
 - from js-dataflow, in the main: [call_like_v](js-dataflow.rofl.md#call_like_v)
 - from js-effects, in the code: [eff_calls](js-effects.rofl.md#eff_calls), [eff_reaches](js-effects.rofl.md#eff_reaches)
 - from js-effects, in the flow: [class_construct_eff](js-effects.rofl.md#class_construct_eff), [eff_latent](js-effects.rofl.md#eff_latent), [eff_module](js-effects.rofl.md#eff_module), [effect_of](js-effects.rofl.md#effect_of), [effect_of_module](js-effects.rofl.md#effect_of_module)
@@ -46,6 +46,7 @@ Reads:
 - from js-model, in the code: [ast_node](js-model.rofl.md#ast_node)
 - from js-structure, in the code: [ast_name](js-structure.rofl.md#ast_name)
 - from the scanner, in the code:
+  - <a id="ast_attr"></a>The attribute of a node is a value (`ast_attr`)
   - <a id="ast_child"></a>A node is a child of a node (`ast_child`)
 
 ## Words
@@ -69,6 +70,9 @@ Phrases this file defines in one step, each by the sentence it stands for:
 - The accessor of a node O at a key K is a node M if [`sx_accessor`](#sx_accessor)(O, K, M).
 - A node comes out of a module S if [`sx_ext`](#sx_ext)(it, S).
 - N is an instance of a name G from a release R if [`sx_es`](#sx_es)(N, G, R).
+- F is a generator function if [`sx_gen`](#sx_gen)(F).
+- F is an async function if [`sx_async`](#sx_async)(F).
+- A node stands for an instance of a class C if [`sx_inst`](#sx_inst)(it, C).
 - A class has the constructor M if [`sx_ctor`](#sx_ctor)(it, M).
 - The constructor of a class C is M if [`sx_ctor_of`](#sx_ctor_of)(C, M).
 - A class constructs with effect an effect label L at a host H if [`sx_class_eff`](#sx_class_eff)(it, L, H).
@@ -92,8 +96,11 @@ Phrases this file defines in one step, each by the sentence it stands for:
 5. if [`sx_arg_node`](#sx_arg_node)(something, something, N);
 6. if [`sx_ret_node`](#sx_ret_node)(something, N);
 7. if [`sx_ret_pnode`](#sx_ret_pnode)(something, N);
-8. if [`sx_next`](#sx_next)(something, N);
-9. if [`sx_cb`](#sx_cb)(N, something).
+8. if [`sx_gen_ret`](#sx_gen_ret)(something, N);
+9. if [`sx_next`](#sx_next)(something, N);
+10. if [`sx_cb`](#sx_cb)(N, something);
+11. if [`sx_esc`](#sx_esc)(C) and N [stands for an instance of](js-dataflow.rofl.md#inst_of) a class C;
+12. if [`sx_esc`](#sx_esc)(I) and a node I [stands for an instance of](js-dataflow.rofl.md#inst_of) N.
 
 > ... and what an escaping node holds
 
@@ -133,9 +140,15 @@ Phrases this file defines in one step, each by the sentence it stands for:
 
 <a id="sx_fn"></a>`sx_fn`(a [function](js-callgraph.rofl.md#fn_node) F) if [`sx_esc`](#sx_esc)(F).
 
+<a id="sx_gen"></a>`sx_gen`(F) if [`sx_esc`](#sx_esc)(F) and F [is a generator function](js-dataflow.rofl.md#gen_fn).
+
+<a id="sx_async"></a>`sx_async`(F) if [`sx_esc`](#sx_esc)(F) and F [is an async function](js-dataflow.rofl.md#async_fn).
+
 <a id="sx_fn_name"></a>`sx_fn_name`(F, X) if [`sx_esc`](#sx_esc)(F) and F [answers to](js-callgraph.rofl.md#fn_name) a name X.
 
 <a id="sx_nested"></a>`sx_nested`(F) if [`sx_esc`](#sx_esc)(F) and [`fn_nested`](#fn_nested)(F).
+
+<a id="sx_inst"></a>`sx_inst`(I, C) if [`sx_esc`](#sx_esc)(I) and a node I [stands for an instance of](js-dataflow.rofl.md#inst_of) a class C.
 
 <a id="sx_ctor"></a>`sx_ctor`(C, M) if [`sx_esc`](#sx_esc)(C) and a class C [has the constructor](js-callgraph.rofl.md#class_ctor) M.
 
@@ -262,15 +275,20 @@ In the flow:
 
 <a id="param_assigned"></a>`param_assigned`(F, Name) if X [is written into a parameter of](js-dataflow.rofl.md#assign_param) F and [`assigned`](js-dataflow.rofl.md#assigned)(X, something, Name, something, something).
 
+> A generator's call is a generator object (rules/js-dataflow.rofl, `gen_of`): its `return` is what `yield*` gets, not
+> what the call is.
+
+<a id="call_returns"></a>A node returns to its call E if it [returns](js-dataflow.rofl.md#returns) E, unless [the attribute](#ast_attr) `generator` of it is `true`.
+
 <a id="ret_param"></a>`ret_param`(F, I, E) if all of:
-  - a node F [returns](js-dataflow.rofl.md#returns) a node E;
+  - a node F [returns to its call](#call_returns) E;
   - F [uses](js-dataflow.rofl.md#param_use) Name at E;
   - F [takes](js-dataflow.rofl.md#param_of) Name at an index I;
   - an [identifier](#noun-identifier) P is the I-th of the `params` of F;
   - unless [`param_assigned`](#param_assigned)(F, Name);
   - unless E [sees](js-dataflow.rofl.md#sees_binder) some declarator.
 
-<a id="ret_plain"></a>`ret_plain`(F, E) if F [returns](js-dataflow.rofl.md#returns) a node E, unless [`ret_param`](#ret_param)(F, something, E).
+<a id="ret_plain"></a>`ret_plain`(F, E) if F [returns to its call](#call_returns) E, unless [`ret_param`](#ret_param)(F, something, E).
 
 In the surface:
 
@@ -284,6 +302,11 @@ In the surface:
 
 <a id="sx_ret_param"></a>`sx_ret_param`(F, I) if [`ret_param`](#ret_param)(F, I, something).
 
+<a id="sx_gen_ret"></a>`sx_gen_ret`(F, N) if all of:
+  - a node F [returns](js-dataflow.rofl.md#returns) a node E;
+  - [the attribute](#ast_attr) `generator` of F is `true`;
+  - E [points to](js-concat.rofl.md#may_be_node) a node N.
+
 > every value the function's returns may be, whoever called it: the iterator protocol and `yield*` read this
 
 In the flow:
@@ -291,7 +314,8 @@ In the flow:
 <a id="ret_node_any"></a>`ret_node_any`(F, N) either:
 
 1. if [`sx_ret_node`](#sx_ret_node)(F, N);
-2. if [`sx_ret_pnode`](#sx_ret_pnode)(F, N).
+2. if [`sx_ret_pnode`](#sx_ret_pnode)(F, N);
+3. if [`sx_gen_ret`](#sx_gen_ret)(F, N).
 
 `imports` lists:
 

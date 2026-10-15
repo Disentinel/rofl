@@ -12,11 +12,11 @@ default: audit
 > see `console.log`, `fs.readFileSync` or `fetch`, which come from the HOST.
 > 
 > TWO DOORS, ONE PRODUCT. A MODULE arrives through a boundary the model owns:
-> rules/js-modules.rofl classifies, canonicalises, resolves and BINDS
-> `node:fs`, four positive joins. A GLOBAL arrives from nowhere: the only
+> rules/js-modules.rofl classifies, canonicalises and resolves `node:fs`, and
+> the value layer follows it wherever it goes. A GLOBAL arrives from nowhere: the only
 > thing that makes `console` a global is that NOTHING IN THE PROGRAM BINDS
 > IT, a negation over the file. The doors are `host_module_ns` with
-> `host_module_named`, and `host_global_ref[code]`; they meet at
+> `builtin_member`, and `host_global_ref[code]`; they meet at
 > `host_call_effect[audit]`, the row the effect layer joins against.
 
 > the audits read the scanner's book; `ast_parse_error` is `edb` because
@@ -30,7 +30,6 @@ Reads:
   - <a id="host_member_deprecated"></a>A host H deprecates a key Key of a spec Spec (`host_member_deprecated`)
   - <a id="host_member_replaced_by"></a>A host H replaces a key Key of a spec Spec with a key Use (`host_member_replaced_by`)
   - <a id="host_member_since"></a>A runtime F adds a key Key of a spec Spec since a text Since being a number Sv (`host_member_since`)
-  - <a id="host_module"></a>A host H has the module Spec (`host_module`)
   - <a id="host_module_member"></a>A host H exposes a key Key of a spec Spec (`host_module_member`)
 - from facts/js-host.rofl, in the main:
   - <a id="host_effect_atom"></a>An effect E is a host effect (`host_effect_atom`)
@@ -44,13 +43,14 @@ Reads:
   - <a id="runtime_undated"></a>A runtime R is undated because a reason Reason (`runtime_undated`)
   - <a id="runtime_version"></a>A runtime R is the version V of a runtime F (`runtime_version`)
 - from js-callgraph, in the code: [callee_of](js-callgraph.rofl.md#callee_of)
-- from js-dataflow, in the code: [binds_name](js-dataflow.rofl.md#binds_name), [ident_in](js-dataflow.rofl.md#ident_in)
-- from js-dataflow, in the flow: [class_named](js-dataflow.rofl.md#class_named), [param_of](js-dataflow.rofl.md#param_of), [selects](js-dataflow.rofl.md#selects)
+- from js-concat, in the flow: [may_be_node](js-concat.rofl.md#may_be_node)
+- from js-dataflow, in the code: [destr_prop](js-dataflow.rofl.md#destr_prop), [external_import](js-dataflow.rofl.md#external_import), [free_global](js-dataflow.rofl.md#free_global), [key_name](js-dataflow.rofl.md#key_name)
+- from js-dataflow, in the flow: [decl_value](js-dataflow.rofl.md#decl_value), [external_value](js-dataflow.rofl.md#external_value), [member_node_v](js-dataflow.rofl.md#member_node_v), [selects](js-dataflow.rofl.md#selects)
 - from js-env: [reaches](js-env.rofl.md#reaches)
 - from js-env-api, in the code: [lib_call](js-env-api.rofl.md#lib_call)
 - from js-model, in the code: [ast_node](js-model.rofl.md#ast_node)
-- from js-modules, in the code: [binding](js-modules.rofl.md#binding), [resolved_builtin](js-modules.rofl.md#resolved_builtin), [site_file](js-modules.rofl.md#site_file)
-- from js-modules, in the main: [node_builtin_bare](js-modules.rofl.md#node_builtin_bare)
+- from js-modules, in the code: [builtin_canonical](js-modules.rofl.md#builtin_canonical)
+- from js-modules, in the main: [host_module](js-modules.rofl.md#host_module)
 - from js-structure, in the code: [ast_name](js-structure.rofl.md#ast_name)
 - from the scanner, in the code:
   - <a id="ast_child"></a>A node is a child of a node (`ast_child`)
@@ -61,13 +61,12 @@ What this file calls a node, and what each word stands for:
 
 | word | stands for |
 |---|---|
-| <a id="noun-function_declaration"></a>a function declaration | a node of kind `function_declaration` |
+| a member access | a node [`member_node_v`](js-dataflow.rofl.md#member_node_v) holds of |
 
 Phrases this file defines in one step, each by the sentence it stands for:
 
 - <a id="host_effect_used"></a>An effect is used by a host call if some call [has the host effect](#host_call_effect) it by some route.
 - <a id="runtime_has_release"></a>A runtime has a release if it [runs the release](#runtime_reaches_release) some release.
-- <a id="bare_listed"></a>A spec is listed bare if some text [is the bare name](js-modules.rofl.md#node_builtin_bare) of it.
 
 `imports` lists:
 
@@ -79,35 +78,13 @@ Declared as facts:
 
 - `ast_parse_error` — rows from the scanner
 
-## 1. THE GLOBAL DOOR — an identifier nothing in this FILE binds. The ceiling
-
-> is that `name_bound_in` is file-scoped, not scope-scoped: a name bound
-> anywhere in a file suppresses the global everywhere in it. Chosen: the
-> precise relation `sees_binder[code]` covers declarators and destructuring
-> only, so `not sees_binder` would call every parameter named `url` a global
-> reference and attribute io to a program that does none. Under-reporting a
-> shadowed global is a missed row; over-reporting is a false accusation.
-
-In the code:
-
-<a id="name_bound_in"></a>File binds the name Name if some declarator [introduces](js-dataflow.rofl.md#binds_name) Name in File.
-
-> the `id` child and not `fn_name[code]`, which also covers object and class
-> METHODS: `{ log() {} }` would have suppressed `console`
-
-File binds the name Name either:
-
-1. if a [function declaration](#noun-function_declaration) F is in file File and the `id` of F [is named](js-structure.rofl.md#ast_name) Name;
-2. if a node F [takes](js-dataflow.rofl.md#param_of) Name at some index and F [is in file](js-model.rofl.md#ast_node) File;
-3. if some class [is named](js-dataflow.rofl.md#class_named) Name in File;
-4. if a site I [binds the name](js-modules.rofl.md#binding) Name to some name at some specifier and I [sits in](js-modules.rofl.md#site_file) File.
+## 1. THE GLOBAL DOOR — a free global (rules/js-globals.rofl) the host carries.
 
 > The host stays in the row: `console` under node and under browser are two rows.
 
-<a id="host_global_ref"></a>A node refers to the global Name of a host H if all of:
-  - it [reads](js-dataflow.rofl.md#ident_in) Name in File;
-  - H [has the global](#host_global) Name;
-  - unless File [binds the name](#name_bound_in) Name.
+In the code:
+
+<a id="host_global_ref"></a>A node refers to the global Name of a host H if it [refers to the free](js-dataflow.rofl.md#free_global) Name in some file and H [has the global](#host_global) Name.
 
 > `document` is a reference under `browser` and there is no `node` row for it.
 
@@ -117,25 +94,35 @@ File binds the name Name either:
   - G differs from H;
   - unless G [has the global](#host_global) Name.
 
-## 2. THE MODULE DOOR — a local name bound to a node builtin. Four joins over
+## 2. THE MODULE DOOR — a VALUE that is a node builtin, or a member of one.
 
-> rules/js-modules.rofl's work, no new scanner contract. The NAMESPACE form
-> (`import * as fs`, `import fs`) binds a name standing for the whole module.
+> The value layer (rules/js-dataflow.rofl, external values) carries the module
+> through `require`, imports, aliases and patterns; a door matched by the
+> local name would open for a parameter that happens to be called `fs` and
+> stay shut for `const fs = require('fs')`.
 
-<a id="host_module_ns"></a>File imports the namespace Local of a spec Spec if all of:
-  - a site I [resolves to the builtin](js-modules.rofl.md#resolved_builtin) Spec;
-  - I [sits in](js-modules.rofl.md#site_file) File;
-  - I [binds the name](js-modules.rofl.md#binding) Local to "*" or "default" at some specifier.
+In the flow:
 
-> The NAMED form binds ONE member under a local name that need not be its
-> own; reading `Imported` for the member covers the rename without a test.
+<a id="builtin_ns"></a>A node is the builtin module of a spec Spec if it [comes out of](js-dataflow.rofl.md#external_value) it and [the canonical builtin](js-modules.rofl.md#builtin_canonical) of it is Spec.
 
-<a id="host_module_named"></a>File imports Local as Key of a spec Spec if all of:
-  - a site I [resolves to the builtin](js-modules.rofl.md#resolved_builtin) Spec;
-  - I [sits in](js-modules.rofl.md#site_file) File;
-  - I [binds the name](js-modules.rofl.md#binding) Local to Key at some specifier;
-  - Key differs from "*";
-  - Key differs from "default".
+<a id="builtin_member"></a>M is a member of the builtin of a spec Spec Key either:
+
+1. if all of:
+   - a node Y [is the builtin module](#builtin_ns) of Spec;
+   - a node O [points to](js-concat.rofl.md#may_be_node) Y;
+   - the `object` of M is O;
+   - M is a [member access](js-dataflow.rofl.md#member_node_v);
+   - M [selects](js-dataflow.rofl.md#selects) Key;
+2. if all of:
+   - M [imports from outside](js-dataflow.rofl.md#external_import) some name from a module S in some file;
+   - [the canonical builtin](js-modules.rofl.md#builtin_canonical) of S is Spec;
+   - the `imported` of M [is named](js-structure.rofl.md#ast_name) Key;
+3. if all of:
+   - a node Y [is the builtin module](#builtin_ns) of Spec;
+   - a node Init [points to](js-concat.rofl.md#may_be_node) Y;
+   - D [takes its value from](js-dataflow.rofl.md#decl_value) Init;
+   - [`destr_prop`](js-dataflow.rofl.md#destr_prop)(D, M, K, something, something);
+   - a node K [spells](js-dataflow.rofl.md#key_name) Key.
 
 > An import naming something the generated surface lacks: a typo, a member
 > newer than @types/node, or one the declarations do not carry. The module
@@ -143,15 +130,18 @@ File binds the name Name either:
 
 In the audit:
 
-<a id="host_import_unknown"></a>File imports an unknown member Key of a spec Spec if File [imports](#host_module_named) some name as Key of Spec, unless `node` [exposes](#host_module_member) Key of Spec.
+<a id="host_import_unknown"></a>File imports an unknown member Key of a spec Spec if all of:
+  - a node Sp [imports from outside](js-dataflow.rofl.md#external_import) some name from some module in File;
+  - Sp [is a member of the builtin](#builtin_member) of Spec Key;
+  - unless `node` [exposes](#host_module_member) Key of Spec.
 
 ## 3. THE SITES — four shapes, because a rule covering three would report a
 
 > program as pure:
 >    console.log(x)         3a. a member call on a global
 >    fetch(u)               3b. a plain call of a global
->    fs.readFileSync(p)     3c. a member call on a module namespace
->    readFileSync(p)        3d. a plain call of a named import
+>    fs.readFileSync(p)     3c. a call of a member of a module, however it
+>    readFileSync(p)            was reached: dotted, imported, destructured, aliased
 > `selects[flow]` answers the key for the dotted and the computed form alike.
 
 In the code:
@@ -163,14 +153,10 @@ In the code:
 
 <a id="host_global_call"></a>C calls the host global Name of a host H if [the callee](js-callgraph.rofl.md#callee_of) of C [refers to the global](#host_global_ref) Name of H.
 
-<a id="host_module_call"></a>C calls the module member Key of a spec Spec either:
-
-1. if all of:
-   - [the callee](js-callgraph.rofl.md#callee_of) of C is a node N;
-   - the `object` of N [reads](js-dataflow.rofl.md#ident_in) Local in File;
-   - File [imports the namespace](#host_module_ns) Local of Spec;
-   - N [selects](js-dataflow.rofl.md#selects) Key;
-2. if [the callee](js-callgraph.rofl.md#callee_of) of C [reads](js-dataflow.rofl.md#ident_in) Local in File and File [imports](#host_module_named) Local as Key of Spec.
+<a id="host_module_call"></a>C calls the module member Key of a spec Spec if all of:
+  - a node X [is a member of the builtin](#builtin_member) of Spec Key;
+  - a node G [points to](js-concat.rofl.md#may_be_node) X;
+  - [the callee](js-callgraph.rofl.md#callee_of) of C is G.
 
 > The union, with the receiver in the origin column: the canonical specifier
 > for a module, the global's own name for a member call, and the atom `itself`
@@ -361,7 +347,7 @@ In the audit:
 2. if all of:
    - `node` [attributes the module](#host_module_effect) Spec to some effect;
    - Key is `global`;
-   - unless `node` [has the module](#host_module) Spec.
+   - unless `node` [has the module](js-modules.rofl.md#host_module) Spec.
 
 <a id="host_global_effect_orphan"></a>A host has an orphan global effect at Name if it [attributes the global](#host_global_effect) Name to some effect, unless it [has the global](#host_global) Name.
 
@@ -374,7 +360,7 @@ In the main:
 
 In the audit:
 
-<a id="host_module_uneffected"></a>A spec has no module effect if `node` [has the module](#host_module) it, unless `node` [attributes the module](#host_module_effect) it to some effect.
+<a id="host_module_uneffected"></a>A spec has no module effect if `node` [has the module](js-modules.rofl.md#host_module) it, unless `node` [attributes the module](#host_module_effect) it to some effect.
 
 <a id="host_global_uneffected"></a>A host has no global effect at Name if all of:
   - it [has the global](#host_global) Name;
@@ -397,17 +383,6 @@ A runtime
   - B [is the version](#runtime_version) some number of F;
   - it differs from B;
   - unless it [is told apart from](#runtime_separates) B or B [is told apart from](#runtime_separates) it.
-
-> a builtin no bare import can reach: `explicit_shape` knows the `node:`
-> scheme for all 57 and the bare spelling only through `node_builtin_bare`,
-> so `"fs/promises"` classifies as a third-party package. A modules-layer
-> gap this pack can see and must not fix.
-
-In the main:
-
-In the audit:
-
-<a id="bare_builtin_unlisted"></a>A spec is not listed bare if `node` [has the module](#host_module) it, unless it [is listed bare](#bare_listed).
 
 > an inclusion ACROSS families claims one runtime is a later edition of
 > another; the order is not total across families

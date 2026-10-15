@@ -187,10 +187,12 @@ completion_unaccounted[audit](K)  :- completion_outer[code](P, S), ast_node[code
 -- safe: a function that always throws but has a return somewhere is simply not
 -- named. An async function or a generator throws nothing at its call: the
 -- call hands back a promise or an iterator, and the throw comes out of that.
-deferred_body[code](F) :- fn_node[code](F), ast_attr[code](F, async, true).
-deferred_body[code](F) :- fn_node[code](F), ast_attr[code](F, generator, true).
-async_body[code](F)    :- fn_node[code](F), ast_attr[code](F, async, true),
-                          not ast_attr[code](F, generator, true).
+edb(deferred_attr).
+deferred_attr(async).
+deferred_attr(generator).
+deferred_body[code](F) :- fn_node[code](F), ast_attr[code](F, A, true), deferred_attr(A).
+async_body[code](F)    :- deferred_body[code](F), not ast_attr[code](F, generator, true).
+sync_body[code](F)     :- fn_node[code](F), not deferred_body[code](F).
 
 has_return[code](F)    :- ast_node[code](R, return_statement, _, _), nearest_v[flow](F, R).
 top_throw[code](F)     :- fn_node[code](F), ast_child[code](F, body, 0, B),
@@ -215,16 +217,17 @@ edb(accessor_kind).
 accessor_kind("get").
 accessor_kind("set").
 
-accessor_of[flow](Obj, Key, M) :- member_value[flow](Obj, Key, M),
-                                  ast_attr[code](M, kind, K), accessor_kind(K).
+accessor_as[flow](Obj, Key, M, K) :- member_value[flow](Obj, Key, M),
+                                     ast_attr[code](M, kind, K), accessor_kind(K).
+accessor_of[flow](Obj, Key, M) :- accessor_as[flow](Obj, Key, M, _).
 accessor_obj[flow](Obj) :- accessor_of[flow](Obj, _, _).
 accessor_recv[flow](N, Obj) :- accessor_obj[flow](Obj), may_be_node[flow](O, Obj),
                                ast_child[code](N, object, 0, O), member_node_v[flow](N).
 -- A read runs the getter, `o.p = v` the setter, `o.p += v` and `o.p++` both.
-accessor_read[code](N, M) :- accessor_recv[flow](N, Obj), accessor_of[flow](Obj, Key, M),
-                             selects[flow](N, Key), ast_attr[code](M, kind, "get"), not only_written[code](N).
-accessor_read[code](N, M) :- accessor_recv[flow](N, Obj), accessor_of[flow](Obj, Key, M),
-                             selects[flow](N, Key), ast_attr[code](M, kind, "set"), written_member[code](N).
+accessor_read[code](N, M) :- accessor_recv[flow](N, Obj), accessor_as[flow](Obj, Key, M, "get"),
+                             selects[flow](N, Key), not only_written[code](N).
+accessor_read[code](N, M) :- accessor_recv[flow](N, Obj), accessor_as[flow](Obj, Key, M, "set"),
+                             selects[flow](N, Key), written_member[code](N).
 accessor_read[code](N, M) :- private_binds[code](N, M), ast_attr[code](M, kind, "get"), not only_written[code](N).
 accessor_read[code](N, M) :- private_binds[code](N, M), ast_attr[code](M, kind, "set"), written_member[code](N).
 written_member[code](N)   :- ast_node[code](A, assignment_expression, _, _), ast_child[code](A, left, 0, N).
@@ -393,25 +396,24 @@ throws_outright[code](F) :- ast_node[code](T, throw_statement, _, _),
 -- `may_throw` is a handful of rows and binds G, so `resolves` is probed by
 -- callee. The value travels with the throw: `thrown_by`, `caught_value`.
 may_throw[code](F) :- throws_outright[code](F).
-may_throw[code](F) :- may_throw[code](G), not deferred_body[code](G), resolves[code](C, G),
+may_throw[code](F) :- may_throw[code](G), sync_body[code](G), resolves[code](C, G),
                       nearest_fn[code](F, C), not caught_here[code](C).
 -- an async callee's throw is the rejection of its promise, and comes out where
 -- the promise is awaited
 may_throw[code](F) :- may_throw[code](G), async_body[code](G), resolves[code](C, G),
-                      awaited_call[code](A, C), nearest_v[flow](F, A), not caught_here[code](A).
-awaited_call[code](A, C) :- ast_node[code](A, await_expression, _, _), ast_child[code](A, argument, 0, C).
+                      await_arg[code](A, C), nearest_v[flow](F, A), not caught_here[code](A).
 
 thrown_by[flow](F, V) :- ast_node[code](T, throw_statement, _, _), nearest_v[flow](F, T),
                          not caught_here[code](T), ast_child[code](T, argument, 0, V).
-thrown_by[flow](F, V) :- thrown_by[flow](G, V), not deferred_body[code](G), resolves[code](C, G),
+thrown_by[flow](F, V) :- thrown_by[flow](G, V), sync_body[code](G), resolves[code](C, G),
                          nearest_fn[code](F, C), not caught_here[code](C).
 thrown_by[flow](F, V) :- thrown_by[flow](G, V), async_body[code](G), resolves[code](C, G),
-                         awaited_call[code](A, C), nearest_v[flow](F, A), not caught_here[code](A).
+                         await_arg[code](A, C), nearest_v[flow](F, A), not caught_here[code](A).
 caught_value[flow](P, V) :- catch_of[flow](T, H), catch_param[flow](H, P),
                             try_walk[code](T, C), resolves[code](C, G),
-                            not deferred_body[code](G), thrown_by[flow](G, V).
+                            sync_body[code](G), thrown_by[flow](G, V).
 caught_value[flow](P, V) :- catch_of[flow](T, H), catch_param[flow](H, P),
-                            try_walk[code](T, A), awaited_call[code](A, C), resolves[code](C, G),
+                            try_walk[code](T, A), await_arg[code](A, C), resolves[code](C, G),
                             async_body[code](G), thrown_by[flow](G, V).
 
 -- A throwing call is an abrupt transfer for every list out to the `try` that

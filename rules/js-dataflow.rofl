@@ -154,24 +154,22 @@ scope_declares[code](S, Name, File) :- named_decl[code](D, Name, File), decl_reg
 scope_declares[code](B, Name, File) :- catch_names[code](B, Name, File).
 scope_declares[code](B, Name, File) :- ast_node[code](B, tsenum_body, File, _), ast_child[code](B, members, _, M),
                                        ast_child[code](M, id, 0, I), ast_name[code](I, Name).
-scope_declares[code](X, Name, File) :- ast_node[code](X, function_expression, File, _),
-                                       ast_child[code](X, id, 0, I), ast_name[code](I, Name).
-scope_declares[code](X, Name, File) :- ast_node[code](X, class_expression, File, _),
-                                       ast_child[code](X, id, 0, I), ast_name[code](I, Name).
+scope_declares[code](X, Name, File) :- own_name[code](X, Name, File, itself).
 
 -- A function or class declaration declares its name in the scope around it,
--- as a binder does; a catch clause its parameter. One
--- with no scope around it is at the top of its file.
-named_decl[code](D, Name, File) :- ast_node[code](D, function_declaration, File, _),
-                                   ast_child[code](D, id, 0, I), ast_name[code](I, Name).
-named_decl[code](D, Name, File) :- ast_node[code](D, class_declaration, File, _),
-                                   ast_child[code](D, id, 0, I), ast_name[code](I, Name).
-named_decl[code](D, Name, File) :- ts_value_decl(K), ast_node[code](D, K, File, _),
-                                   ast_child[code](D, id, 0, I), ast_name[code](I, Name).
-edb(ts_value_decl).
-ts_value_decl(tsenum_declaration).
-ts_value_decl(tsmodule_declaration).
-ts_value_decl(tsdeclare_function).
+-- as a binder does; a function or class expression inside itself. A
+-- declaration with no scope around it is at the top of its file.
+edb(named_kind).
+named_kind(function_declaration, around).
+named_kind(class_declaration, around).
+named_kind(tsenum_declaration, around).
+named_kind(tsmodule_declaration, around).
+named_kind(tsdeclare_function, around).
+named_kind(function_expression, itself).
+named_kind(class_expression, itself).
+own_name[code](X, Name, File, W) :- named_kind(K, W), ast_node[code](X, K, File, _),
+                                    ast_child[code](X, id, 0, I), ast_name[code](I, Name).
+named_decl[code](D, Name, File)  :- own_name[code](D, Name, File, around).
 up_d[code](D, P)         :- named_decl[code](D, _, _), ast_in[code](P, D).
 up_d[code](D, P2)        :- up_d[code](D, P), not scope_node[code](P), ast_in[code](P2, P).
 decl_region[code](D, R)  :- up_d[code](D, R), scope_node[code](R).
@@ -387,9 +385,7 @@ builtin_prototype(promise).
 -- `new Promise`, by a static of `Promise`, and by `then`, `catch` or `finally`
 -- on a promise, and a name bound to one is one.
 edb(lib_member).
-async_fn[flow](F)              :- fn_node[code](F), ast_attr[code](F, async, true),
-                                  not ast_attr[code](F, generator, true).
-prototype_of[flow](C, promise) :- resolves[code](C, F), async_fn[flow](F).
+prototype_of[flow](C, promise) :- resolves[code](C, F), async_body[code](F).
 prototype_of[flow](X, promise) :- ast_node[code](X, new_expression, _, _), ast_child[code](X, callee, 0, G),
                                   free_global[code](G, "Promise", _).
 prototype_of[flow](C, promise) :- ast_child[code](C, callee, 0, N), ast_child[code](N, object, 0, G),
@@ -458,7 +454,7 @@ array_elem[flow](A, I, E) :- ast_node[code](A, array_expression, _, _), ast_chil
 elem_at[flow](X, I, E)    :- may_be_node[flow](X, A), array_elem[flow](A, I, E).
 
 may_be_node[flow](E, N) :- destructures_at[code](D, Local, Index, File),
-                           decl_value[flow](D, Init), elem_at[flow](Init, Index, V),
+                           decl_value[flow](D, Init), may_be_node[flow](Init, A), array_elem[flow](A, Index, V),
                            may_be_node[flow](V, N),
                            ident_in[code](E, Local, File), sees_binder[code](E, D).
 
@@ -644,14 +640,13 @@ param_of[flow](F, I, Name) :- fn_node[code](F), ast_child[code](F, params, I, P)
 
 -- A rest parameter is an array of the arguments from its index on: element K
 -- of `...args` at J is the argument at J + K of every call of the function,
--- so `inner(...args)` hands them on through the spread rule above.
+-- so `inner(...args)` hands them on through the spread rule above. The caller
+-- knows its arguments and publishes them (sx_rest_elem, rules/js-surface.rofl).
 param_rest[code](F, J, R, Name) :- fn_node[code](F), ast_child[code](F, params, J, R),
                                    ast_node[code](R, rest_element, _, _),
                                    ast_child[code](R, argument, 0, L), ast_name[code](L, Name).
 param_bound[flow](F, Name)  :- param_rest[code](F, _, _, Name).
 may_be_node[flow](U, R)     :- param_rest[code](F, _, R, Name), param_use[flow](F, Name, U).
-array_elem[flow](R, K, A)   :- param_rest[code](F, J, R, _), resolves[code](C, F), arg_at[flow](C, I, A),
-                               I >= J, K is I - J.
 
 -- Where a parameter is read: every identifier whose lookup stops at the
 -- function (section 3a). A declarator whose region is the function itself
@@ -875,15 +870,12 @@ class_member_proto[flow](CD, Key, V)  :- field_of[flow](CD, Key, P, V),
 
 -- Walks FIELDS and not members: written over `class_member_proto` it inherited
 -- methods a second way and silently disarmed the mutant guarding the method arm.
-inherited_field[flow](CD, Key, P, V)  :- super_of[flow](CD, SD), field_of[flow](SD, Key, P, V),
+field_at[flow](CD, Key, V, S)         :- field_of[flow](CD, Key, P, V), ast_attr[code](P, static, S).
+inherited_field[flow](CD, Key, V, S)  :- super_of[flow](CD, SD), field_at[flow](SD, Key, V, S),
                                          not own_key[flow](CD, Key).
-inherited_field[flow](CD, Key, P, V)  :- super_of[flow](CD, SD),
-                                         inherited_field[flow](SD, Key, P, V),
-                                         not own_key[flow](CD, Key).
-class_member_proto[flow](CD, Key, V)  :- inherited_field[flow](CD, Key, P, V),
-                                         ast_attr[code](P, static, false).
-class_member_static[flow](CD, Key, V) :- inherited_field[flow](CD, Key, P, V),
-                                         ast_attr[code](P, static, true).
+field_at[flow](CD, Key, V, S)         :- inherited_field[flow](CD, Key, V, S).
+class_member_proto[flow](CD, Key, V)  :- inherited_field[flow](CD, Key, V, false).
+class_member_static[flow](CD, Key, V) :- inherited_field[flow](CD, Key, V, true).
 
 -- A private name is LEXICAL, not a lookup: bound by the declaring class body,
 -- never inherited, computed or reached from outside, so these rules never ask

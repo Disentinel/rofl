@@ -217,7 +217,8 @@ sig(this_nearer, "is_outdone_for(this-binder F, this T)").
 sig(this_host, "hosts(node H, this T)").
 sig(this_binder, "binds_this(node F)").
 sig(field_of, "has_the_field(class CD, key Key, at node P, holding node V)").
-sig(inherited_field, "inherits_the_field(class CD, key Key, at node P, holding node V)").
+sig(inherited_field, "inherits_the_field(class CD, key Key, holding node V, static S)").
+sig(field_at, "has_a_field_own_or_inherited(class CD, key Key, holding node V, static S)").
 sig(private_key, "is_the_private_key(node P, name Name)").
 sig(private_member, "has_the_private_member(class CD, name Name, at node M)").
 sig(private_ref, "refers_privately_to(member access N, name Name)").
@@ -583,9 +584,10 @@ sig(top_throw, "throws_at_the_top(function F)").
 sig(always_throws, "always_throws(function F)").
 sig(deferred_body, "runs_its_body_later(function F)").
 sig(async_body, "is_async(function F)").
-sig(awaited_call, "awaits_the_call(await A, call C)").
+sig(sync_body, "runs_its_body_at_once(function F)").
 sig(throwing_call, "is_a_throwing_call(call C)").
 sig(accessor_of, "the_accessor(of node Obj, at key Key, is node M)").
+sig(accessor_as, "the_accessor(of node Obj, at key Key, is node M, of kind K)").
 sig(accessor_read, "reads_through_the_accessor(node N, node M)").
 sig(written_member, "is_written(member N)").
 sig(only_written, "is_only_written(member N)").
@@ -636,7 +638,7 @@ sig(guarded_at, "has_a_guarded_call_at(file File, line Line)").
 -- dataflow: the one left
 sig(gen_fn, "is_a_generator_function(function F)").
 sig(throw_in_fn, "throws_inside_a_function(throw statement Th)").
-sig(async_fn, "is_an_async_function(function F)").
+sig(deferred_attr, "defers_the_body(attribute A)").
 sig(gen_of, "makes_a_generator_of(call C, function F)").
 sig(call_returns, "returns_to_its_call(function F, node E)").
 
@@ -801,7 +803,8 @@ sig(env_pair_indistinct, "is_indistinct_from(environment X, environment B)").
 sig(not_a_reference, "is_no_reference_at(kind K, field Field)").
 sig(not_a_ref, "is_no_reference(identifier E)").
 sig(named_decl, "declares_the_name(declaration D, name Name, in file File)").
-sig(ts_value_decl, "is_a_typescript_declaration_with_a_value(kind K)").
+sig(named_kind, "declares_its_name(kind K, where W)").
+sig(own_name, "carries_its_own_name(node X, name Name, file File, where W)").
 sig(decl_region, "is_scoped_to(declaration D, scope R)").
 sig(decl_at_top, "is_declared_at_the_top(declaration D)").
 sig(catch_names, "declares_its_caught_name(catch H, name Name, in file File)").
