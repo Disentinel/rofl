@@ -13,6 +13,8 @@
 //!   * the world saved and opened again (`save`, `Session::open`) evaluates to
 //!     the same world, which is the round trip of rules reflected as data and
 //!     decoded back, aggregates included (the `reflect` column of `cell`);
+//!   * the world kept (`keep`, `Session::open_kept`) opens as the same world, and its lattices' facts, a
+//!     dominance's and a join's included, are explained as before;
 //!   * a budget cut never seals a partial group: at every budget that cuts the
 //!     evaluation short, no zero stands where a member exists;
 //!   * a world that asks for a wall (`budget`, `space`) is cut by it, and its
@@ -286,6 +288,21 @@ fn check_world(w: &World) -> Vec<String> {
     // evaluated under. Opened under the default space, agg_precise_oracle's
     // 528 720 rows met the wall of 500 000 and came back with a hole
     // (f_a_snapshot_carries_the_world_not_its_walls).
+    let mut kept = Session::open_kept(&s.keep(), s.eval.budget).unwrap_or_else(|e| panic!("{}: {e}", w.name));
+    (kept.eval.mode, kept.eval.space, kept.eval.retain_ticks) = (s.eval.mode, s.eval.space, s.eval.retain_ticks);
+    if !kept.eval.store.dirty {
+        if state(&kept) != first {
+            bad.push(format!("{}: kept and opened, it is another world", w.name));
+        }
+        let rels: Vec<String> = s.eval.store.lat_regs.iter().map(|r| r.rel).chain(s.eval.subs.keys().copied()).map(|r| s.eval.h.name(r).to_string()).collect();
+        for rel in rels {
+            for k in s.fact_keys(Some(&rel)).into_iter().take(40) {
+                if s.why_all(&k) != kept.why_all(&k) {
+                    bad.push(format!("{}: kept and opened, {k} is explained otherwise", w.name));
+                }
+            }
+        }
+    }
     let mut back = Session::open(&s.save(), s.eval.budget).unwrap_or_else(|e| panic!("{}: {e}", w.name));
     back.eval.mode = s.eval.mode;
     back.eval.space = s.eval.space;

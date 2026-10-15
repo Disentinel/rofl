@@ -55,7 +55,12 @@ type Op = 'why' | 'whyall' | 'whynot' | 'excise' | 'ask';
 type Q = { op: Op; query: string; depth?: number; nodes?: number };
 /** An answer: refused or not, its text, and for a whynot whether the
  *  literal holds (the protocol's `holds`; rofl load prints text alone). */
-type A = { ok: boolean; text: string; holds?: boolean };
+type A = { ok: boolean; text: string; holds?: boolean; files?: string };
+/** THE FILES OF A WHYNOT BY FILE, for every world: an atom's file is its first letter, so each world's candidates part as a corpus's
+ *  nodes part by file (src/aggeval.ts `whynotFiles`). */
+const LETTERS: [string, string][] = [...'abcdefghijklmnopqrstuvwxyz'].map((c) => [c, c]);
+const byFileText = (rows: { file: string; found: number; stops: string[]; text: string }[]): string =>
+  rows.map((r) => `${r.file} ${r.found}\n${r.stops.join('\n')}\n${r.text}`).join('\n\n');
 
 /** The world as `npm test` builds it in the reference: a refused file is
  *  left out, and the world is the rest — the golden already pins that both
@@ -175,6 +180,9 @@ function questions(r: Rofl, budget: number | undefined, first: boolean, excise =
   for (const k of shrugs) qs.push({ op: 'why', query: k }, { op: 'whynot', query: k });
   if (failing) {
     for (const [depth, nodes] of [[1, 3], [2, 64], [-3, -1], [0, 0]]) qs.push({ op: 'whynot', query: failing, depth, nodes });
+    // its first argument open, so that a walk by file parts at a premise
+    const open = failing.replace(/^([^(]+)\([^,()"]+([,)])/, '$1(Who$2');
+    if (open !== failing) qs.push({ op: 'whynot', query: open });
     // a plain world's refusal echoes the question exactly as typed, padding
     // and all; whynot's holds line trims it
     qs.push({ op: 'why', query: ` ${failing}` }, { op: 'why', query: `${failing} ` }, { op: 'whyall', query: `  ${failing}` });
@@ -256,7 +264,9 @@ function expected(r: Rofl, q: Q, budget?: number): A {
     if (q.op === 'whynot') {
       // the aggregate evaluator's whynot hands back the parser's refusal as its text
       const { holds, text: t } = r.whynot(q.query, { budget, depth: q.depth, nodes: q.nodes });
-      return dag({ ok: !/^line \d+: /.test(t), text: t, holds }, () => r.whynot(q.query, { budget, depth: q.depth, nodes: q.nodes, tree: true }).text);
+      let files: string;
+      try { files = byFileText(r.whynotFiles(q.query, LETTERS, { budget, depth: q.depth, nodes: q.nodes })); } catch (e) { files = `refused: ${(e as Error).message}`; }
+      return { ...dag({ ok: !/^line \d+: /.test(t), text: t, holds }, () => r.whynot(q.query, { budget, depth: q.depth, nodes: q.nodes, tree: true }).text), files };
     }
     const x = r.excise(q.query, { budget });
     return x.ok ? { ok: true, text: exciseText(x.removed, x.added) } : { ok: false, text: `error: ${x.error}` };
@@ -333,7 +343,12 @@ async function served(port: RoflPort, w: World, qs: Q[]): Promise<A[]> {
       if (process.env.WHYCHECK_TRACE) process.stderr.write(`whycheck:   serve ${q.op} ${q.query}\n`);
       try {
         if (q.op === 'why' || q.op === 'whyall') out.push({ ok: true, text: await s.why(q.query, q.op === 'whyall' ? { all: true } : {}) });
-        else if (q.op === 'whynot') { const x = await s.whynot(q.query, { depth: q.depth, nodes: q.nodes }); out.push({ ok: true, text: x.text, holds: x.holds }); }
+        else if (q.op === 'whynot') {
+          const x = await s.whynot(q.query, { depth: q.depth, nodes: q.nodes });
+          let files: string;
+          try { files = byFileText(await s.whynotFiles(q.query, LETTERS, { depth: q.depth, nodes: q.nodes })); } catch (e) { files = `refused: ${(e as Error).message}`; }
+          out.push({ ok: true, text: x.text, holds: x.holds, files });
+        }
         else if (q.op === 'ask') {
           const x = await s.ask(q.query) as unknown as { vars: string[]; rows: string[][]; partial?: boolean; shrugs?: { row: string[]; line: string }[] };
           out.push({ ok: true, text: askText(x.rows.map((r) => bound(x.vars, r)), (x.shrugs ?? []).map((h) => `${bound(x.vars, h.row)} :: ${h.line}`), x.partial ?? false) });
@@ -480,7 +495,8 @@ async function check(ws: World[], firstName: string): Promise<Report> {
         if (parseRefusal(a)) return b.ok ? `the reference refuses it (${a.text}) and this answered` : null;
         if (a.ok !== b.ok) return `the reference ${a.ok ? 'answers' : 'refuses'} and this ${b.ok ? 'answers' : 'refuses'}: ${firstDiff(a.text, b.text)}`;
         if (a.ok && a.holds !== undefined && b.holds !== undefined && a.holds !== b.holds) return `the reference says holds=${a.holds} and this holds=${b.holds}`;
-        return a.text === b.text ? null : firstDiff(a.text, b.text);
+        if (a.text !== b.text) return firstDiff(a.text, b.text);
+        return a.ok && a.files !== undefined && b.files !== undefined && a.files !== b.files ? `by file: ${firstDiff(a.files, b.files)}` : null;
       };
       if (servable(w)) {
         const got = await served(port, w, qs);

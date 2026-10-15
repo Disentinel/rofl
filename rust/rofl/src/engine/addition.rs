@@ -223,8 +223,8 @@ impl Eval {
         if was.late != now.late || was.shrugs != now.shrugs {
             out.push("the rules fired late or after the shrugs changed");
         }
-        if was.cone.is_some() != now.cone.is_some() {
-            out.push("the world started or stopped running a cone of asks");
+        if was.cone.is_none() && now.cone.is_some() {
+            out.push("the world started running a cone of asks");
         }
         let demand_moved: HashSet<Sym> = was.demand.iter().chain(&now.demand).copied().filter(|r| was.demand.contains(r) != now.demand.contains(r)).collect();
         let fresh = |r: &ERule| match was.rules.get(&r.id) {
@@ -259,12 +259,12 @@ impl Eval {
     /// A WORLD OPENED EVALUATED (`crate::image`) holds what the evaluation derived but not what it ranked: the rounds are
     /// peeled again from the program. What the image does not carry leaves the world to be evaluated again: a program
     /// ranked only by its data, the cells of a lattice, and the firings a sealed world solves again for `why`.
-    pub fn after_open(&mut self) {
+    pub fn after_open(&mut self, lattices: Vec<super::Tok>) {
         if self.store.dirty {
             return;
         }
         self.round_of.clear();
-        if self.rerank().is_err() || !self.restore_lattices() {
+        if self.rerank().is_err() || !self.restore_lattices(lattices) {
             self.store.dirty = true;
         } else {
             self.restore_cells();
@@ -291,13 +291,13 @@ impl Eval {
     }
 
     /// The cells of the order lattices stand in the store at their values, closed, and the values they replaced stand as ghosts, as the evaluation left them. A
-    /// lattice of dominance or a join keeps more than that, and is not restored.
-    fn restore_lattices(&mut self) -> bool {
-        if !self.subs.is_empty() || self.lattices.values().any(|(_, op)| op.is_join()) {
-            return self.lattices.is_empty();
-        }
+    /// lattice of dominance or a join keeps more than that, and is restored from what was kept with it (`latkept.rs`).
+    fn restore_lattices(&mut self, kept: Vec<super::Tok>) -> bool {
         if !self.lattices.is_empty() {
             self.store.index_citers();
+        }
+        if !self.subs.is_empty() || self.lattices.values().any(|(_, op)| op.is_join()) {
+            return self.lattices_from(kept).unwrap_or(false);
         }
         let lats: Vec<(Sym, usize)> = self.lattices.iter().map(|(r, (n, _))| (*r, *n)).collect();
         for (rel, n) in lats {
