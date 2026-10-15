@@ -20,7 +20,7 @@ ct_composed(Name) :- ct_bound(Name, _).
 -- rest is the node itself, so the evaluation stops; `unknown`'s parameter has no caller and stays a reference;
 -- `either` (1 or 'z', plus 2) is a string only where w is one, never "12"; `doubled` (dirname of '//x', which node
 -- answers "//") and `spread` (a join whose arguments a spread hides) have no text and no literal; `wrapped` reads
--- lib.join of src/mypath.ts as the join it stands for, not as the `+` of its body; `emptyJoin` holds a join of an
+-- posix.join of src/mypath.ts as the join it stands for, not as the `+` of its body; `emptyJoin` holds a join of an
 -- empty array, which has no text, as a node; `branched` (forked = forked + v, v 'x' or 'y', in a loop) is over the cap
 -- from its third level, so it has no text and the loop it widens is the one a break unfolds without end.
 ct_want_composed("template").  ct_want_composed("plus").  ct_want_composed("mixed").  ct_want_composed(grown).

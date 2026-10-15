@@ -917,8 +917,8 @@ impl<'a> R<'a> {
                     // a negated guard names its variable bare: `unless Y is a function`, `unless X is a spread`
                     let kind = if l.rel == self.ast_node && l.args.len() == 4 && is_wild(self.h, l.args[2]) && is_wild(self.h, l.args[3]) { l.args[1].as_atom().map(|k| self.kind_phrase(Term::atom(k))) }
                         else if l.args.len() == 1 && self.guard_bound(l.rel) { self.noun_guards.get(&l.rel).map(|n| self.a_noun(n)) } else { None };
-                    match (kind, l.args[0].kind()) {
-                        (Some(k), TermK::Var(v)) if !is_wild(self.h, l.args[0]) => { let n = ctx.display.get(&v).cloned().unwrap_or_else(|| self.h.name(v).to_string()); let n = if ctx.subject == Some(v) && ctx.intro.contains(&v) { "it".to_string() } else { n }; neg.push((format!("{n} is {k}"), Some(n))); }
+                    match (kind, l.args.first().map(|a| a.kind())) {
+                        (Some(k), Some(TermK::Var(v))) if !is_wild(self.h, l.args[0]) => { let n = ctx.display.get(&v).cloned().unwrap_or_else(|| self.h.name(v).to_string()); let n = if ctx.subject == Some(v) && ctx.intro.contains(&v) { "it".to_string() } else { n }; neg.push((format!("{n} is {k}"), Some(n))); }
                         _ => { let t = self.lit(l, ctx, stats); let subj = ctx.last_subj.take(); neg.push((t, subj)); }
                     }
                 }

@@ -26,15 +26,15 @@ Reads:
   - <a id="environment"></a>An environment E is an environment (`environment`)
 - from facts/js-lib-surface.rofl, in the main:
   - <a id="lib_deprecated"></a>A prototype P has the deprecated member Key (`lib_deprecated`)
-  - <a id="lib_member"></a>A prototype P has the member Key since a release Rel (`lib_member`)
 - from js-callgraph: [stdlib_member](js-callgraph.rofl.md#stdlib_member)
+- from js-dataflow, in the main: [lib_member](js-dataflow.rofl.md#lib_member)
 - from js-env: [reaches](js-env.rofl.md#reaches)
 - from outside these files, in the main:
   - <a id="lib_replaced_by"></a>`lib_replaced_by`
 
 In the code:
 
-<a id="lib_call"></a>C calls the stdlib Key of a prototype P since a release Rel if C [calls the stdlib member](js-callgraph.rofl.md#stdlib_member) Key of P and P [has the member](#lib_member) Key since Rel.
+<a id="lib_call"></a>C calls the stdlib Key of a prototype P since a release Rel if C [calls the stdlib member](js-callgraph.rofl.md#stdlib_member) Key of P and P [has the member](js-dataflow.rofl.md#lib_member) Key since Rel.
 
 > a member call on a KNOWN prototype whose name TypeScript does not carry: a
 > newer edition, a wrong prototype, or a typo; the only thing that would
@@ -42,7 +42,7 @@ In the code:
 
 In the audit:
 
-<a id="stdlib_unattributed"></a>C calls an unattributed stdlib member Key of a prototype P if C [calls the stdlib member](js-callgraph.rofl.md#stdlib_member) Key of P, unless P [has the member](#lib_member) Key since some release.
+<a id="stdlib_unattributed"></a>C calls an unattributed stdlib member Key of a prototype P if C [calls the stdlib member](js-callgraph.rofl.md#stdlib_member) Key of P, unless P [has the member](js-dataflow.rofl.md#lib_member) Key since some release.
 
 > THE ERA QUESTION, the same one `unsupported[audit]` asks of syntax, by
 > composition: `Rel` is a RELEASE (lib.es2022.array.d.ts names es2022), so

@@ -59,7 +59,7 @@ measured(Rel)      :- ablation(_, Rel, _, refused).
 unmeasured(Rel)    :- ablation(_, Rel, _, not_live).
 load_bearing(Rel)  :- ablation(_, Rel, _, diverged).
 load_bearing(Rel)  :- ablation(_, Rel, _, refused).
-droppable(Rel)     :- ablation(_, Rel, _, identical).
+droppable(Rel)     :- ablation(_, Rel, _, identical), not load_bearing(Rel).
 
 -- ------------------------------------------------------------- 3. the readers
 -- A reader is a rule body in some .rofl file of this tree. The kernel's own

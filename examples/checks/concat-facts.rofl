@@ -33,11 +33,11 @@ ast_node[code](nf85e80d35f2c16b6_12, import_declaration, "src/entry.ts", 3).
 ast_attr[code](nf85e80d35f2c16b6_12, import_kind, "value").
 ast_node[code](nf85e80d35f2c16b6_13, import_specifier, "src/entry.ts", 3).
 ast_node[code](nf85e80d35f2c16b6_14, identifier, "src/entry.ts", 3).
-ast_attr[code](nf85e80d35f2c16b6_14, name, "lib").
+ast_attr[code](nf85e80d35f2c16b6_14, name, "posix").
 ast_child[code](nf85e80d35f2c16b6_13, imported, 0, nf85e80d35f2c16b6_14).
 ast_attr[code](nf85e80d35f2c16b6_13, import_kind, "value").
 ast_node[code](nf85e80d35f2c16b6_15, identifier, "src/entry.ts", 3).
-ast_attr[code](nf85e80d35f2c16b6_15, name, "lib").
+ast_attr[code](nf85e80d35f2c16b6_15, name, "posix").
 ast_child[code](nf85e80d35f2c16b6_13, local, 0, nf85e80d35f2c16b6_15).
 ast_child[code](nf85e80d35f2c16b6_12, specifiers, 0, nf85e80d35f2c16b6_13).
 ast_node[code](nf85e80d35f2c16b6_16, string_literal, "src/entry.ts", 3).
@@ -830,7 +830,7 @@ ast_node[code](nf85e80d35f2c16b6_291, template_literal, "src/entry.ts", 36).
 ast_node[code](nf85e80d35f2c16b6_292, call_expression, "src/entry.ts", 36).
 ast_node[code](nf85e80d35f2c16b6_293, member_expression, "src/entry.ts", 36).
 ast_node[code](nf85e80d35f2c16b6_294, identifier, "src/entry.ts", 36).
-ast_attr[code](nf85e80d35f2c16b6_294, name, "lib").
+ast_attr[code](nf85e80d35f2c16b6_294, name, "posix").
 ast_child[code](nf85e80d35f2c16b6_293, object, 0, nf85e80d35f2c16b6_294).
 ast_attr[code](nf85e80d35f2c16b6_293, computed, false).
 ast_node[code](nf85e80d35f2c16b6_295, identifier, "src/entry.ts", 36).
@@ -965,7 +965,7 @@ ast_attr[code](nfb3ebe8b34f12aa0_3, export_kind, "value").
 ast_node[code](nfb3ebe8b34f12aa0_4, variable_declaration, "src/mypath.ts", 1).
 ast_node[code](nfb3ebe8b34f12aa0_5, variable_declarator, "src/mypath.ts", 1).
 ast_node[code](nfb3ebe8b34f12aa0_6, identifier, "src/mypath.ts", 1).
-ast_attr[code](nfb3ebe8b34f12aa0_6, name, "lib").
+ast_attr[code](nfb3ebe8b34f12aa0_6, name, "posix").
 ast_child[code](nfb3ebe8b34f12aa0_5, id, 0, nfb3ebe8b34f12aa0_6).
 ast_node[code](nfb3ebe8b34f12aa0_7, object_expression, "src/mypath.ts", 1).
 ast_node[code](nfb3ebe8b34f12aa0_8, object_method, "src/mypath.ts", 2).

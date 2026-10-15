@@ -69,14 +69,14 @@ finding_action(F, W) :- open_finding(F), demands(F, W).
 -- settled before B is briefed; until 2026-08-31 the order of work lived
 -- nowhere but in my head, so the ledger could say what was found and whether
 -- it was closed, and not what to do next. Three rules make the order a
--- consequence of the facts, with a why-tree. A CIRCULAR QUEUE IS NOT REFUSED:
--- `blocks` is data and these rules read only a finding's direct blocker, so
--- nothing here is recursive and nothing sees a cycle; two findings blocking
--- each other are both `waiting` for ever, silently. Measured by
--- examples/notebook/ledger.rofl.md (N6); see f_the_queue_accepts_a_cycle_silently.
+-- consequence of the facts, with a why-tree. Two findings blocking each other
+-- are both `waiting` for ever, so a cycle is named (f_the_queue_accepts_a_cycle_silently).
 waiting(F)           :- blocks(A, F), not settled(A).
 ready(F)             :- open_finding(F), not waiting(F).
 blocked_by(F, A)     :- blocks(A, F), not settled(A).
+blocks_reach(A, B)   :- blocks(A, B).
+blocks_reach(A, C)   :- blocks_reach(A, B), blocks(B, C).
+blocks_cycle[audit](F) :- blocks_reach(F, F).
 
 -- CAUGHT, AND FORBIDDEN TO EXECUTE. Three times in one session I took a
 -- DIAGNOSTIC mechanism -- a row in a report that blocks nothing -- and argued

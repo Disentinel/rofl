@@ -27,8 +27,8 @@ What this file calls a node, and what each word stands for:
 
 | word | stands for |
 |---|---|
-| <a id="noun-member_expression"></a>a member expression | a node of kind `member_expression` |
 | <a id="noun-meta_property"></a>a meta property | a node of kind `meta_property` |
+| <a id="noun-string_literal"></a>a string literal | a node of kind `string_literal` |
 
 Phrases this file defines in one step, each by the sentence it stands for:
 
@@ -46,19 +46,15 @@ Each child of `ast_in` has one parent and no node is its own ancestor, and `ast_
 
 `ast_name` has one V for each N.
 
-> THE NAME A KEY STANDS FOR, wherever a key appears, written once. A computed
-> well-known symbol IS a name: `{ [Symbol.iterator]() {} }` puts a
-> `member_expression` where every other key has an identifier, and the
-> property `iterator` is what V8 says. Guarded on `Symbol` because
-> `obj[someVar]` has no static name; the guard is on the second arm, and the
-> first arm carries `not computed` for the same case (`{ [spoke]() {} }`
-> has the identifier `spoke` as its key). Both arms range over keys only:
-> `ast_name` in any position was 95% not about keys.
+> THE NAME A KEY STANDS FOR, wherever a key appears, written once: a name, or
+> a string written as the key (`{ "x-id": 1 }`, `{ ["x-id"]: 1 }`). A
+> well-known symbol is a key too, found where globals are
+> (rules/js-dataflow.rofl, `symbol_ref`); `obj[someVar]` has no static name.
 > 
 > A NEGATION and not `computed, false`: `class_private_property` and
 > `class_private_method` carry no `computed` attribute at all.
 
-<a id="key_name"></a>A node K spells N either:
+A node K spells N either:
 
 1. if all of:
    - the `key` of a node P is K;
@@ -66,9 +62,8 @@ Each child of `ast_in` has one parent and no node is its own ancestor, and `ast_
    - unless [the attribute](#ast_attr) `computed` of P is `true`;
 2. if all of:
    - the `key` of some node is K;
-   - K is a [member expression](#noun-member_expression);
-   - the `object` of K [is named](#ast_name) "Symbol";
-   - the `property` of K [is named](#ast_name) N.
+   - K is a [string literal](#noun-string_literal);
+   - [the attribute](#ast_attr) `value` of K is N.
 
 `ast_value` has one V for each N.
 

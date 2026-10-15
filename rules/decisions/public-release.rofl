@@ -25,25 +25,7 @@ concern(public_release, first_hour).
 concern(public_release, versioning).
 concern(public_release, support).
 
--- PUBLISH: nothing blocks, nothing unresolved in any direction, full coverage.
-recommendation(I, publish) :-
-    pack(I, public_release),
-    inquiry(I, decide),
-    not go_blocked(I, _),
-    not open_obligation(I, _),
-    not refuted_obligation(I, _),
-    not contested_obligation(I, _),
-    not coverage_gap(I, _).
-
--- PUBLISH WITH KNOWN GAPS: nothing blocks and nothing is contested, but gaps
--- remain — every one of them accepted by authority, and at least one there.
--- A first public release is normally this and not the one above; what makes it
+-- A first public release is normally `publish_with_known_gaps`; what makes it
 -- honest is that the gaps are named in the record rather than in a mood.
-recommendation(I, publish_with_known_gaps) :-
-    pack(I, public_release),
-    inquiry(I, decide),
-    not go_blocked(I, _),
-    not contested_obligation(I, _),
-    not coverage_gap(I, _),
-    accepted_residual(I, _),
-    not unaccepted_gap(I, _).
+recommendation(I, publish)                 :- pack(I, public_release), clear(I).
+recommendation(I, publish_with_known_gaps) :- pack(I, public_release), clear_with_gaps(I).
