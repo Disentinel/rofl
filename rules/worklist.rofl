@@ -124,9 +124,6 @@ work_sweeps_nolayer[audit](W, L) :- work_sweeps(W, L), not layer(L).
 blocked[audit](W)   :- work_needs(W, O), not work_state(O, done).
 
 needs_unknown[audit](W, O) :- work_needs(W, O), not work(O, _).
-needs_reach(A, B)          :- work_needs(A, B).
-needs_reach(A, C)          :- needs_reach(A, B), work_needs(B, C).
-needs_cycle[audit](W)      :- needs_reach(W, W).
 
 -- =========================================================================
 -- WHAT TO DO NEXT, as a query. Three ways an open item can be workable: a
@@ -153,7 +150,8 @@ takeable(W)         :- work_state(W, open), not blocked[audit](W), unclaimed_ite
 
 -- the item the queue is silent about, said out loud: every cell blocked, or
 -- every cell already closed and nobody said done
-nothing_workable[audit](W) :- work_state(W, open), claims_cell(W), not has_workable(W).
+nothing_workable[audit](W) :- work_state(W, open), claims_cell(W), not has_workable(W),
+                              not sweep_workable(W).
 
 -- THE ORDER IS THE WORK. A hand number collided (file order by topic,
 -- numeric order by append) and was asserted nowhere; what replaces it is

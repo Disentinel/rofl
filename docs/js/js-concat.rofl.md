@@ -49,13 +49,12 @@ default: flow
 Reads:
 
 - from js-ambient, in the main: [surface_origin](js-ambient.rofl.md#surface_origin)
-- from js-dataflow, in the code: [binds_name](js-dataflow.rofl.md#binds_name), [destr_prop](js-dataflow.rofl.md#destr_prop), [external_import](js-dataflow.rofl.md#external_import), [ident_in](js-dataflow.rofl.md#ident_in), [interpolated](js-dataflow.rofl.md#interpolated), [sees_binder](js-dataflow.rofl.md#sees_binder), [spread_arg](js-dataflow.rofl.md#spread_arg)
-- from js-dataflow: [arg_at](js-dataflow.rofl.md#arg_at), [array_elem](js-dataflow.rofl.md#array_elem), [external_value](js-dataflow.rofl.md#external_value), [kind_proto](js-dataflow.rofl.md#kind_proto), [member_node_v](js-dataflow.rofl.md#member_node_v), [param_use](js-dataflow.rofl.md#param_use), [prototype_of](js-dataflow.rofl.md#prototype_of), [selects](js-dataflow.rofl.md#selects)
+- from js-dataflow, in the code: [binds_name](js-dataflow.rofl.md#binds_name), [destr_prop](js-dataflow.rofl.md#destr_prop), [exports_name](js-dataflow.rofl.md#exports_name), [free_global](js-dataflow.rofl.md#free_global), [ident_in](js-dataflow.rofl.md#ident_in), [interpolated](js-dataflow.rofl.md#interpolated), [key_name](js-dataflow.rofl.md#key_name), [sees_binder](js-dataflow.rofl.md#sees_binder), [spread_arg](js-dataflow.rofl.md#spread_arg)
+- from js-dataflow: [arg_at](js-dataflow.rofl.md#arg_at), [array_elem](js-dataflow.rofl.md#array_elem), [decl_value](js-dataflow.rofl.md#decl_value), [kind_proto](js-dataflow.rofl.md#kind_proto), [member_node_v](js-dataflow.rofl.md#member_node_v), [member_value](js-dataflow.rofl.md#member_value), [param_use](js-dataflow.rofl.md#param_use), [prototype_of](js-dataflow.rofl.md#prototype_of), [selects](js-dataflow.rofl.md#selects)
 - from js-dataflow, in the main: [builtin_prototype](js-dataflow.rofl.md#builtin_prototype), [call_like_v](js-dataflow.rofl.md#call_like_v)
-- from js-globals, in the code: [free_global](js-globals.rofl.md#free_global)
+- from js-host: [builtin_member](js-host.rofl.md#builtin_member), [builtin_ns](js-host.rofl.md#builtin_ns)
 - from js-model, in the code: [ast_node](js-model.rofl.md#ast_node)
-- from js-modules, in the code: [builtin_canonical](js-modules.rofl.md#builtin_canonical)
-- from js-structure, in the code: [ast_name](js-structure.rofl.md#ast_name), [ast_value](js-structure.rofl.md#ast_value), [key_name](js-structure.rofl.md#key_name)
+- from js-structure, in the code: [ast_name](js-structure.rofl.md#ast_name), [ast_value](js-structure.rofl.md#ast_value)
 - from js-surface, in the surface: [sx_arg_lit](js-surface.rofl.md#sx_arg_lit), [sx_esc](js-surface.rofl.md#sx_esc), [sx_export_lit](js-surface.rofl.md#sx_export_lit), [sx_lit](js-surface.rofl.md#sx_lit), [sx_ret_lit](js-surface.rofl.md#sx_ret_lit), [sx_ret_plit](js-surface.rofl.md#sx_ret_plit)
 - from the scanner, in the code:
   - <a id="ast_attr"></a>The attribute of a node is a value (`ast_attr`)
@@ -69,10 +68,8 @@ What this file calls a node, and what each word stands for:
 |---|---|
 | <a id="noun-assignment"></a>an assignment | a node of kind `assignment_expression` |
 | <a id="noun-binary_expression"></a>a binary expression | a node of kind `binary_expression` |
-| <a id="noun-function_declaration"></a>a function declaration | a node of kind `function_declaration` |
 | <a id="noun-invocation"></a>an invocation | a node of a kind in [`call_like_v`](js-dataflow.rofl.md#call_like_v) |
 | <a id="noun-new"></a>a new | a node of kind `new_expression` |
-| <a id="noun-object_method"></a>an object method | a node of kind `object_method` |
 | <a id="noun-string_literal"></a>a string literal | a node of kind `string_literal` |
 | <a id="noun-tagged_template"></a>a tagged template | a node of kind `tagged_template_expression` |
 | <a id="noun-template"></a>a template | a node of kind `template_literal` |
@@ -224,10 +221,7 @@ In the flow:
 
 <a id="vlib_ns"></a>`vlib_ns`(S, Surface) either:
 
-1. if all of:
-   - a node S [comes out of](js-dataflow.rofl.md#external_value) S;
-   - [the canonical builtin](js-modules.rofl.md#builtin_canonical) of S is a spec Surface;
-   - [`ambient_value`](#ambient_value)(Surface, something, something, something);
+1. if S [is the builtin module](js-host.rofl.md#builtin_ns) of a spec Surface and [`ambient_value`](#ambient_value)(Surface, something, something, something);
 2. if [`vlib_member`](#vlib_member)(S, Surface, K) and [`ambient_value_ns`](#ambient_value_ns)(K).
 
 <a id="vlib_member"></a>`vlib_member`(a [member access](js-dataflow.rofl.md#member_node_v) M, Surface, K) if all of:
@@ -242,29 +236,23 @@ In the flow:
 <a id="vlib_fn"></a>`vlib_fn`(M, Surface, K) either:
 
 1. if [`vlib_member`](#vlib_member)(M, Surface, K) and [`ambient_value`](#ambient_value)(Surface, K, something, something);
-2. if all of:
-   - M [imports from outside](js-dataflow.rofl.md#external_import) some name from a module Spec in some file;
-   - [the canonical builtin](js-modules.rofl.md#builtin_canonical) of Spec is Surface;
-   - the `imported` of M [is named](js-structure.rofl.md#ast_name) K;
-   - [`ambient_value`](#ambient_value)(Surface, K, something, something);
+2. if M [is a member of the builtin](js-host.rofl.md#builtin_member) of Surface K and [`ambient_value`](#ambient_value)(Surface, K, something, something);
 3. if all of:
    - [`vlib_ns`](#vlib_ns)(Y, Surface);
    - a node Init [points to](#may_be_node) a node Y;
-   - the `init` of a node D is Init;
+   - D [takes its value from](js-dataflow.rofl.md#decl_value) Init;
    - [`destr_prop`](js-dataflow.rofl.md#destr_prop)(D, M, Key, something, something);
-   - a node Key [spells](js-structure.rofl.md#key_name) K;
+   - a node Key [spells](js-dataflow.rofl.md#key_name) K;
    - [`ambient_value`](#ambient_value)(Surface, K, something, something);
 4. if all of:
    - [`ambient_module`](#ambient_module)(File, Surface);
-   - M is an [object method](#noun-object_method);
-   - M is in file File;
-   - the `key` of M [spells](js-structure.rofl.md#key_name) K;
+   - M [is exported as](js-dataflow.rofl.md#exports_name) K from File;
    - [`ambient_value`](#ambient_value)(Surface, K, something, something);
 5. if all of:
    - [`ambient_module`](#ambient_module)(File, Surface);
-   - M is a [function declaration](#noun-function_declaration);
-   - M is in file File;
-   - the `id` of M [is named](js-structure.rofl.md#ast_name) K;
+   - a node O [is exported as](js-dataflow.rofl.md#exports_name) N from File;
+   - [`ambient_value_ns`](#ambient_value_ns)(N);
+   - [the member](js-dataflow.rofl.md#member_value) K of O holds M;
    - [`ambient_value`](#ambient_value)(Surface, K, something, something).
 
 <a id="vlib_call"></a>`vlib_call`(C, Surface, K) either:
@@ -275,10 +263,9 @@ In the flow:
    - the `callee` of C is G;
    - C is an [invocation](#noun-invocation);
 2. if all of:
-   - a node G [refers to the free](js-globals.rofl.md#free_global) "URL" in some file;
-   - the `callee` of C is G;
    - C is a [new](#noun-new);
-   - Surface is "URL";
+   - the `callee` of C [refers to the free](js-dataflow.rofl.md#free_global) Surface in some file;
+   - [`ambient_value`](#ambient_value)(Surface, `construct`, something, something);
    - K is `construct`.
 
 > A method of a prototype: the receiver decides the surface.
@@ -563,8 +550,8 @@ Declared as facts:
   - M is L + 1;
   - N is M.
 
-> A CORPUS MODULE THAT IS A LIBRARY. `ambient_module(File, Surface)`: the
-> functions of File are Surface's (vscode's src/vs/base/common/path.ts is a
+> A CORPUS MODULE THAT IS A LIBRARY. `ambient_module(File, Surface)`: what
+> File exports, and the members of its `posix` namespace, are Surface's (vscode's src/vs/base/common/path.ts is a
 > port of node's path), so a call of one composes as the table says. What the
 > function's own body composes is `summarized`: a part reads past it, to the
 > summary of the call.

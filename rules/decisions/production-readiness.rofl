@@ -18,23 +18,5 @@ concern(production_readiness, billing).
 concern(production_readiness, dependencies).
 concern(production_readiness, customer_acceptance).
 
--- GO: nothing blocks, nothing unresolved in any direction, full coverage.
-recommendation(I, go) :-
-    pack(I, production_readiness),
-    inquiry(I, decide),
-    not go_blocked(I, _),
-    not open_obligation(I, _),
-    not refuted_obligation(I, _),
-    not contested_obligation(I, _),
-    not coverage_gap(I, _).
-
--- CONDITIONAL GO: nothing blocks and nothing is contested, but gaps remain --
--- every one of them accepted by authority, and at least one of them there.
-recommendation(I, conditional_go) :-
-    pack(I, production_readiness),
-    inquiry(I, decide),
-    not go_blocked(I, _),
-    not contested_obligation(I, _),
-    not coverage_gap(I, _),
-    accepted_residual(I, _),
-    not unaccepted_gap(I, _).
+recommendation(I, go)             :- pack(I, production_readiness), clear(I).
+recommendation(I, conditional_go) :- pack(I, production_readiness), clear_with_gaps(I).

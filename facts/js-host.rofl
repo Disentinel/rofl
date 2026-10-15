@@ -309,11 +309,9 @@ host_no_effects(browser, a_surface_scanned_and_not_yet_attributed).
 -- `host_calls_back(Origin, Key, Arg, When)`: the member Key of Origin calls
 -- its argument Arg (an index, or `last`) `at_once`, inside the call, or
 -- `later`, after the synchronous run that handed it over has finished.
--- Origin is a builtin prototype (`array`, `string`), a host site's origin (a
--- module's specifier, a global's name, with `itself` for a plain call of the
--- global), or `thenable`: a promise has no instance surface
--- (`es_prototype_gap`), so `then` is known by its key on a call nothing
--- resolves. `later` says nothing about the order of two later callbacks,
+-- Origin is a builtin prototype (`array`, `string`, `promise`) or a host
+-- site's origin (a module's specifier, a global's name, with `itself` for a
+-- plain call of the global). `later` says nothing about the order of two later callbacks,
 -- which is when timers fire and promises settle; a microtask and a macrotask
 -- are both after the run, and that is all this table claims.
 edb(host_calls_back).
@@ -335,10 +333,10 @@ host_calls_back(array,  "toSorted",      0, at_once).
 host_calls_back(string, "replace",       1, at_once).
 host_calls_back(string, "replaceAll",    1, at_once).
 
-host_calls_back(thenable, "then",    0, later).
-host_calls_back(thenable, "then",    1, later).
-host_calls_back(thenable, "catch",   0, later).
-host_calls_back(thenable, "finally", 0, later).
+host_calls_back(promise,  "then",    0, later).
+host_calls_back(promise,  "then",    1, later).
+host_calls_back(promise,  "catch",   0, later).
+host_calls_back(promise,  "finally", 0, later).
 
 host_calls_back("setTimeout",     itself,     0, later).
 host_calls_back("setInterval",    itself,     0, later).

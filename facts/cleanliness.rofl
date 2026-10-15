@@ -27,7 +27,6 @@ role_decl(runtime).      -- runtime/        renders, admits, schedules
 role_decl(data).         -- facts/          packs and ledgers
 role_decl(demo).         -- examples/       exercises a capability
 role_decl(gate).         -- test/, scripts/ refuses something
-role_decl(measurement).  -- bench/          measures, never refuses
 role_decl(document).     -- docs/, *.md
 role_decl(skill).        -- skills/         the user-facing surface
 role_decl(script).       -- npm run <name>

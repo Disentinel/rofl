@@ -157,12 +157,13 @@ controlflow: what propagates
   a function F throws outright   (throws_outright)
 
 dataflow: the exception path
+  a statement Th throws inside a function   (throw_in_fn)
   a try T throws a node V   (thrown_in)
 
 effects: the join over a body
   a function F may throw without a latent exception   (may_throw_only)
 
-8 sentences with "throw"
+9 sentences with "throw"
 ```
 <!-- END run -->
 

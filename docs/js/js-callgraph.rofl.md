@@ -24,16 +24,15 @@ Reads:
   - <a id="node_kind"></a>A language L has the node kind K (`node_kind`)
 - from facts/js-host.rofl, in the main:
   - <a id="host_calls_back"></a>An origin Origin calls back its argument Key and an argument Arg and a when When (`host_calls_back`)
-- from facts/js-lib-surface.rofl, in the main:
-  - <a id="lib_member"></a>A prototype P has the member Key since a release Rel (`lib_member`)
 - from js-concat, in the flow: [may_be_node](js-concat.rofl.md#may_be_node)
-- from js-dataflow, in the flow: [arg_at](js-dataflow.rofl.md#arg_at), [class_method_of](js-dataflow.rofl.md#class_method_of), [ctor_of](js-dataflow.rofl.md#ctor_of), [member_value](js-dataflow.rofl.md#member_value), [nearest_v](js-dataflow.rofl.md#nearest_v), [prototype_of](js-dataflow.rofl.md#prototype_of), [selects](js-dataflow.rofl.md#selects)
-- from js-dataflow, in the main: [builtin_prototype](js-dataflow.rofl.md#builtin_prototype), [class_field_kind](js-dataflow.rofl.md#class_field_kind)
+- from js-dataflow: [key_name](js-dataflow.rofl.md#key_name)
+- from js-dataflow, in the flow: [arg_at](js-dataflow.rofl.md#arg_at), [class_method_of](js-dataflow.rofl.md#class_method_of), [ctor_of](js-dataflow.rofl.md#ctor_of), [inst_of](js-dataflow.rofl.md#inst_of), [member_value](js-dataflow.rofl.md#member_value), [nearest_v](js-dataflow.rofl.md#nearest_v), [prototype_of](js-dataflow.rofl.md#prototype_of), [selects](js-dataflow.rofl.md#selects)
+- from js-dataflow, in the main: [builtin_prototype](js-dataflow.rofl.md#builtin_prototype), [class_field_kind](js-dataflow.rofl.md#class_field_kind), [lib_member](js-dataflow.rofl.md#lib_member)
 - from js-host: [host_site](js-host.rofl.md#host_site)
 - from js-model, in the audit: [verdict](js-model.rofl.md#verdict)
 - from js-model: [ast_node](js-model.rofl.md#ast_node)
 - from js-model, in the main: [shape_of](js-model.rofl.md#shape_of), [unknown_type](js-model.rofl.md#unknown_type)
-- from js-structure: [ast_name](js-structure.rofl.md#ast_name), [key_name](js-structure.rofl.md#key_name)
+- from js-structure: [ast_name](js-structure.rofl.md#ast_name)
 - from js-surface, in the flow: [fn_label](js-surface.rofl.md#fn_label), [fn_value](js-surface.rofl.md#fn_value), [ret_node_any](js-surface.rofl.md#ret_node_any)
 - from js-surface, in the surface: [sx_name](js-surface.rofl.md#sx_name)
 - from outside these files:
@@ -334,20 +333,20 @@ Declared as facts:
 <a id="fn_name"></a>F answers to a name N either:
 
 1. if F is a [function declaration](#noun-function_declaration) or a [function expression](#noun-function_expression) and the `id` of F [is named](js-structure.rofl.md#ast_name) N;
-2. if F is an [object method](#noun-object_method) and the `key` of F [spells](js-structure.rofl.md#key_name) N.
+2. if F is an [object method](#noun-object_method) and the `key` of F [spells](js-dataflow.rofl.md#key_name) N.
 
 F answers to a name N either:
 
 1. if all of:
    - F is a [method](#noun-method);
-   - the `key` of F [spells](js-structure.rofl.md#key_name) N;
+   - the `key` of F [spells](js-dataflow.rofl.md#key_name) N;
    - unless F [is a constructor](#ctor_method);
 2. if all of:
    - the `init` of a [declarator](#noun-declarator) D is F;
    - F is a [function](#fn_node);
    - the `id` of D [is named](js-structure.rofl.md#ast_name) N;
 3. if all of:
-   - a node K [spells](js-structure.rofl.md#key_name) N;
+   - a node K [spells](js-dataflow.rofl.md#key_name) N;
    - the `key` of a [property](#noun-property) P is K;
    - the `value` of P is F;
    - F is a [function](#fn_node);
@@ -360,7 +359,7 @@ F answers to a name N either:
 5. if all of:
    - the `value` of a [class field](#noun-class_field) P is F;
    - F is a [function](#fn_node);
-   - the `key` of P [spells](js-structure.rofl.md#key_name) N.
+   - the `key` of P [spells](js-dataflow.rofl.md#key_name) N.
 
 > A class expression with no `id` takes its binding's name — the language's own
 > inference: `const A = class {}` has `A.name === "A"`, but
@@ -435,13 +434,13 @@ A [method](#noun-method) answers to a name N if all of:
 <a id="obj_member_fn"></a>O has the member function M at Key either:
 
 1. if all of:
-   - a node K [spells](js-structure.rofl.md#key_name) Key;
+   - a node K [spells](js-dataflow.rofl.md#key_name) Key;
    - the `key` of M is K;
    - M is an [object method](#noun-object_method);
    - M [is among the](#ast_child) `properties` of O;
    - O is an [object literal](#noun-object_literal);
 2. if all of:
-   - a node K [spells](js-structure.rofl.md#key_name) Key;
+   - a node K [spells](js-dataflow.rofl.md#key_name) Key;
    - the `key` of a [property](#noun-property) P is K;
    - the `value` of P is M;
    - M is a [function](#fn_node);
@@ -460,7 +459,8 @@ A [method](#noun-method) answers to a name N if all of:
 
 1. if all of:
    - X [is a transfer site](#transfer_site) of `new_expression`;
-   - X [points to](js-concat.rofl.md#may_be_node) a node CD;
+   - X [points to](js-concat.rofl.md#may_be_node) a node I;
+   - I [stands for an instance of](js-dataflow.rofl.md#inst_of) a class CD;
    - CD [has the constructor](#class_ctor) M;
 2. if all of:
    - [the callee](#callee_of) of X is a [super](#noun-super) N;
@@ -491,7 +491,7 @@ A node X resolves to a node F either:
 <a id="for_of_iterates"></a>A node iterates through a node M if all of:
   - it [is a transfer site](#transfer_site) of `for_of_statement`;
   - the `right` of it [points to](js-concat.rofl.md#may_be_node) a node Obj;
-  - [the member](js-dataflow.rofl.md#member_value) "iterator" of Obj holds M;
+  - [the member](js-dataflow.rofl.md#member_value) `symbol_iterator` of Obj holds M;
   - [`fn_value`](js-surface.rofl.md#fn_value)(M).
 
 X resolves to M if X [iterates through](#for_of_iterates) M.
@@ -582,11 +582,7 @@ C passes the function F named Name at an index I if all of:
    - the `object` of a node N is O;
    - [the callee](#callee_of) of C is N;
    - N [selects](js-dataflow.rofl.md#selects) Key;
-2. if C [is a host site](js-host.rofl.md#host_site) of some host from P at Key;
-3. if all of:
-   - C [is unresolved](#unresolved_call) with some shape;
-   - [the callee](#callee_of) of C [selects](js-dataflow.rofl.md#selects) Key;
-   - P is `thenable`.
+2. if C [is a host site](js-host.rofl.md#host_site) of some host from P at Key.
 
 <a id="calls_back"></a>C calls back a node F a when When either:
 
@@ -612,7 +608,7 @@ In the audit:
 <a id="callback_key_unknown"></a>A prototype names an unknown callback member Key if all of:
   - it [calls back its argument](#host_calls_back) Key and some argument and some when;
   - it [is a builtin prototype](js-dataflow.rofl.md#builtin_prototype);
-  - unless it [has the member](#lib_member) Key since some release.
+  - unless it [has the member](js-dataflow.rofl.md#lib_member) Key since some release.
 
 ## 6. The frontier, as a positive relation
 

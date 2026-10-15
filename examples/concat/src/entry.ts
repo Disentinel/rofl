@@ -1,6 +1,6 @@
 import * as path from 'path';
 import { dirname as dir } from 'node:path';
-import { lib } from './mypath.js';
+import { posix } from './mypath.js';
 
 const root = '/srv';
 const n = 7;
@@ -33,7 +33,7 @@ export const either = w + 2;
 export const doubled = path.dirname('//x');
 const rest: string[] = [];
 export const spread = path.join(root, ...rest);
-export const wrapped = `${lib.join(root, 'm')}!`;
+export const wrapped = `${posix.join(root, 'm')}!`;
 export const emptyJoin = `${[].join()}/z`;
 let forked = '';
 for (const _ of [1, 2]) { forked = forked + v; }

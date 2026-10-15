@@ -33,30 +33,14 @@
 
 edb(src_call).
 edb(src_method).
+edb(src_hidden).
 edb(src_export).
 edb(src_file).
 
 -- ---------------------------------------------------------- ENTRY_POINT
--- A method whose name the outside may say. The rest of the class is reached
--- THROUGH an entry point and is never one.
---
--- STRINGS, NOT ATOMS. The first version wrote `private_name(addClause).` and
--- the facts carry `"addClause"`; `not private_name(M)` then excluded nothing
--- and all 34 methods read as entry points. `ast_name[code](N, twin)` against
--- `ast_name[code](N, "twin")` is the same trap, already in the ledger.
-private_name("addClause").    private_name("asked").
-private_name("checkArity").   private_name("checkKernelBook").
-private_name("checkWho").     private_name("cycleKey").
-private_name("ensure").       private_name("explainDeeper").
-private_name("explainFailure"). private_name("failingPremises").
-private_name("frozenRetention"). private_name("newEval").
-private_name("prepared").     private_name("renderWhy").
-private_name("unknownCtx").   private_name("whynotStruct").
-private_name("plain").        private_name("renderTree").
-private_name("explainRule").  private_name("explainTree").
-private_name("constructor").
-
-entry_point(M) :- src_method[code]("api.ts", "Rofl", M, _), not private_name(M).
+-- A method whose name the outside may say: the source marks the rest private.
+entry_point(M) :- src_method[code]("api.ts", "Rofl", M, _), M != "constructor",
+                  not src_hidden[code]("api.ts", "Rofl", M).
 
 -- ------------------------------------------------------------- BEHAVIOR
 -- Both ends normalised to the last segment, so `Rofl.why` and `E.activate`
@@ -86,7 +70,8 @@ entry_reach(M, X) :- entry_point(M), reaches(M, X).
 -- is the absence of a witness that they differ, in both directions.
 differs(A, B) :- entry_reach(A, X), entry_point(B), not entry_reach(B, X).
 shares_behavior(A, B) :- entry_point(A), entry_point(B), A != B,
-                         not differs(A, B), not differs(B, A).
+                         not differs(A, B), not differs(B, A),
+                         not leaf_entry[audit](A), not leaf_entry[audit](B).
 
 -- An entry point that reaches nothing is its own behaviour and shares with
 -- nobody; named so an empty closure is not read as an equivalence.

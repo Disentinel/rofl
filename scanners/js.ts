@@ -10,6 +10,7 @@
 //   src_func[code](Path, Name, Line)      -- function decls + named fn/arrow consts
 //   src_class[code](Path, Name, Line)
 //   src_method[code](Path, Class, Name, Line)
+//   src_hidden[code](Path, Class, Name)   -- a method marked private, protected or #
 //   src_import[code](Path, Source)        -- import decls + require("...")
 //   src_export[code](Path, Name)          -- named exports; default => "default"
 //   src_call[code](Path, Caller, Callee)  -- approximate: identifier / obj.prop
@@ -100,6 +101,9 @@ export function extractFacts(relPath: string, code: string, hash12: string): str
         const name = node.key?.name ?? node.key?.id?.name ?? node.key?.value;
         if (typeof name === 'string' && ctx.cls) {
           facts.add(fact('src_method', relPath, ctx.cls, name, line));
+          if (node.type === 'ClassPrivateMethod' || node.accessibility === 'private' || node.accessibility === 'protected') {
+            facts.add(fact('src_hidden', relPath, ctx.cls, name));
+          }
           next = { ...ctx, fn: `${ctx.cls}.${name}` };
         }
         break;
