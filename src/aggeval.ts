@@ -8310,8 +8310,10 @@ export class AggEval {
 
   /** THE DEMONSTRATION, WALKED WITH A STACK OF ITS OWN (as `renderTree` walks `why`): a failure as deep as the bounds
    *  allow takes no frame per level, and each line is written once. */
-  private explainTree(lit: Lit, ctx: WnCtx): string[] {
-    const lines: string[] = [], todo: WnTask[] = [{ t: 'failure', lit, level: 1 }], next: WnTask[] = [];
+  private explainTree(lit: Lit, ctx: WnCtx): string[] { return this.explainFrom([{ t: 'failure', lit, level: 1 }], ctx); }
+
+  private explainFrom(tasks: WnTask[], ctx: WnCtx): string[] {
+    const lines: string[] = [], todo: WnTask[] = tasks.reverse(), next: WnTask[] = [];
     for (let t = todo.pop(); t !== undefined; t = todo.pop()) {
       if (t.t === 'failure') this.explainFailure(t.lit, t.level, ctx, next);
       else if (t.t === 'rule') this.explainRule(t.lit, t.r, t.level, next);
@@ -8324,13 +8326,79 @@ export class AggEval {
     return lines;
   }
 
+  /** WHYNOT BY FILE: for each file, how many answers it holds and, where it holds none, where each rule stopped in it. A file is a
+   *  volume, a key prefix its scanner minted (rust/rofl/src/session.rs `cool`): `vols` pairs each prefix with the file's name. One walk
+   *  keeps each file's candidates apart, 16 a premise and 2000 steps each, where the plain walk takes the first 16 of all; below the
+   *  premises a file stops at, its demonstration is the plain one. */
+  whynotFiles(lit: Lit, b: { maxDepth: number; maxNodes: number }, vols: [string, string][]): WhynotFile[] {
+    const saved = this.renameCounter, asking = this.asking;
+    this.renameCounter = 0;
+    this.asking = true;
+    try { return this.whynotFilesAt(lit, b, vols); } finally { this.renameCounter = saved; this.asking = asking; this.asked = []; this.demandTrail = []; this.forgetAsked(); }
+  }
+
+  private whynotFilesAt(lit: Lit, b: { maxDepth: number; maxNodes: number }, vols: [string, string][]): WhynotFile[] {
+    const names = new Map(vols), lens = [...new Set(vols.map(([p]) => p.length))];
+    const volOf = (t: Term): string | undefined => {
+      if (t.k === 'a' || t.k === 'f') for (const n of lens) { const v = names.get(t.name.slice(0, n)); if (v !== undefined) return v; }
+      if (t.k === 'f') for (const a of t.args) { const v = volOf(a); if (v !== undefined) return v; }
+      return undefined;
+    };
+    const of = (l: Lit, s: Subst) => { for (const a of l.args) { const v = volOf(resolve(a, s)); if (v !== undefined) return v; } return undefined; };
+    const found = new Map<string, number>();
+    for (const [s] of this.matchPremise(lit, new Map(), 0, null)) { const v = of(lit, s); if (v !== undefined) found.set(v, (found.get(v) ?? 0) + 1); }
+    const head = of(lit, new Map());
+    const walks: { r: ERule; outs: Map<string, Map<string, Lit | null>>; split?: string }[] = [];
+    for (const r of this.rules.filter((x) => x.clause.head.rel === lit.rel)) {
+      const rn = this.renameClause(r.clause);
+      let s: Subst | null = this.evalBuiltin('=', rn.head.persp, lit.persp, new Map(), null);
+      for (let i = 0; s && i < Math.min(rn.head.args.length, lit.args.length); i++) s = this.evalBuiltin('=', rn.head.args[i], lit.args[i], s, null);
+      if (s === null || rn.head.args.length !== lit.args.length) continue;
+      const outs = new Map<string, Map<string, Lit | null>>(), steps = new Map<string, { n: number }>();
+      const vw: VolWalk = { of, out: (at = '') => outs.get(at) ?? outs.set(at, new Map()).get(at)!, nodes: (at = '') => steps.get(at) ?? steps.set(at, { n: 0 }).get(at)! };
+      this.exploreBody(planBodyAgg(rn, this.plain).plan, 0, s, new Map(), { n: 0 }, r.id, vw, head);
+      walks.push({ r, outs, split: vw.split });
+    }
+    const k = this.resolvedLitKey(lit, new Map());
+    return [...new Set(vols.map(([, n]) => n))].sort(cmpStr).map((name) => {
+      const tasks: WnTask[] = [], stops: string[] = [];
+      for (const w of walks) {
+        const own = w.outs.get(name) ?? (w.split ? new Map([[`${w.split} -- none in this file`, null]]) : w.outs.get('') ?? new Map<string, Lit | null>());
+        const keys = [...own.keys()].sort(cmpStr).slice(0, 12);
+        if (keys.length === 0) continue;
+        tasks.push({ t: 'line', line: `  rule ${w.r.id}: ${w.r.canon}` });
+        for (const f of keys) {
+          tasks.push({ t: 'line', line: `    failed premise: ${f}` });
+          const sub = own.get(f);
+          if (sub) tasks.push({ t: 'deeper', lit: sub, level: 2 });
+        }
+        stops.push(...keys);
+      }
+      const ctx: WnCtx = { maxDepth: Math.max(1, b.maxDepth), maxNodes: Math.max(1, b.maxNodes), nodes: 0, path: new Set([this.cycleKey(lit)]), done: new Map() };
+      return { file: name, found: found.get(name) ?? 0, stops, text: [`whynot ${k} in ${name}:`, ...this.explainFrom(tasks, ctx)].join('\n') };
+    });
+  }
+
+  /** The candidates of the premise where a by-file walk first meets a file, each file's apart. */
+  private exploreSplit(body: BodyElem[], k: number, s: Subst, s2s: Subst[], rule: string | null, vw: VolWalk): void {
+    const l = (body[k] as { lit: Lit }).lit, taken = new Map<string, number>();
+    for (const s2 of s2s) {
+      const v = vw.of(l, s2) ?? '', n = taken.get(v) ?? 0;
+      if (n >= 16) continue;
+      taken.set(v, n + 1);
+      if (v && vw.split === undefined) vw.split = this.resolvedLitKey(l, s);
+      this.exploreBody(body, k + 1, s2, new Map(), { n: 0 }, rule, vw, v || undefined);
+    }
+  }
+
   private failingPremises(rn: Clause, s0: Subst, rid: string): Map<string, Lit | null> {
     const out = new Map<string, Lit | null>();
     this.exploreBody(planBodyAgg(rn, this.plain).plan, 0, s0, out, { n: 0 }, rid);
     return out;
   }
 
-  private exploreBody(body: BodyElem[], k: number, s: Subst, out: Map<string, Lit | null>, nodes: { n: number }, rule: string | null): void {
+  private exploreBody(body: BodyElem[], k: number, s: Subst, out: Map<string, Lit | null>, nodes: { n: number }, rule: string | null, vw?: VolWalk, at?: string): void {
+    if (vw) { out = vw.out(at); nodes = vw.nodes(at); }
     nodes.n++;
     if (nodes.n > 2000 || k >= body.length) return;
     const put = (key: string, v: Lit | null) => { if (!out.has(key)) out.set(key, v); };
@@ -8340,7 +8408,8 @@ export class AggEval {
       const mm = this.matchPremise(b.lit, s, 0, null);
       if (mm.length === 0 && this.demandTrail.length > unknowns) put(`${this.resolvedLitKey(b.lit, s)} -- not known: it reads what a hole left unknown`, null);
       else if (mm.length === 0) put(this.resolvedLitKey(b.lit, s), this.instantiate(b.lit, s));
-      else for (const [s2] of mm.slice(0, 16)) this.exploreBody(body, k + 1, s2, out, nodes, rule);
+      else if (vw && at === undefined) this.exploreSplit(body, k, s, mm.map(([s2]) => s2), rule, vw);
+      else for (const [s2] of mm.slice(0, 16)) this.exploreBody(body, k + 1, s2, out, nodes, rule, vw, at);
     } else if (b.t === 'neg') {
       const unknowns = this.demandTrail.length;
       const mm = this.matchPremise(b.lit, s, 0, null);
@@ -8349,15 +8418,15 @@ export class AggEval {
         const [s2, r] = mm[0];
         const wit = r.t === 'fact' ? r.key : this.resolvedLitKey(b.lit, s2);
         put(`not ${this.resolvedLitKey(b.lit, s)} -- blocked: ${wit} holds`, null);
-      } else this.exploreBody(body, k + 1, s, out, nodes, rule);
+      } else this.exploreBody(body, k + 1, s, out, nodes, rule, vw, at);
     } else if (b.t === 'agg' && b.op === 'at_least') {
       if (rule === null) throw new Bug('an aggregate explored outside a rule');
-      this.exploreThreshold(body, k, s, b, rule, out, nodes);
+      this.exploreThreshold(body, k, s, b, rule, out, nodes, vw, at);
     } else if (b.t === 'agg') {
       if (rule === null) throw new Bug('an aggregate explored outside a rule');
       const desc = this.aggDesc(b, s);
       const mm = this.aggPremise(rule, b, s, 0, false);
-      if (mm.length > 0) { for (const [s2] of mm.slice(0, 16)) this.exploreBody(body, k + 1, s2, out, nodes, rule); return; }
+      if (mm.length > 0) { for (const [s2] of mm.slice(0, 16)) this.exploreBody(body, k + 1, s2, out, nodes, rule, vw, at); return; }
       const [plan, corr] = this.aggCorr(rule, b, s);
       const sealed = this.sealCells(rule, b, plan, s, corr, 0, false);
       if (sealed.k === 'open') { put(`${desc} has no value: hole(${sealed.reason}) [aggregate]`, null); return; }
@@ -8374,13 +8443,13 @@ export class AggEval {
       else put(`${desc} has no value: empty group [aggregate]`, b.body.length === 1 && b.body[0].t === 'pos' ? this.instantiate(b.body[0].lit, s) : null);
     } else {
       const s2s = this.evalBuiltins(b.op, b.l, b.r, s, null);
-      if (s2s.length > 0) for (const s2 of s2s.slice(0, 16)) this.exploreBody(body, k + 1, s2, out, nodes, rule);
+      if (s2s.length > 0) for (const s2 of s2s.slice(0, 16)) this.exploreBody(body, k + 1, s2, out, nodes, rule, vw, at);
       else put(`${canonTerm(resolve(b.l, s))} ${b.op} ${canonTerm(resolve(b.r, s))} [builtin fails]`, null);
     }
   }
 
   /** WHYNOT OF A THRESHOLD. */
-  private exploreThreshold(body: BodyElem[], k: number, s: Subst, a: AggElem, rid: string, out: Map<string, Lit | null>, nodes: { n: number }): void {
+  private exploreThreshold(body: BodyElem[], k: number, s: Subst, a: AggElem, rid: string, out: Map<string, Lit | null>, nodes: { n: number }, vw?: VolWalk, at?: string): void {
     const put = (key: string, v: Lit | null) => { if (!out.has(key)) out.set(key, v); };
     const [plan, corr] = this.aggCorr(rid, a, s);
     const desc = this.aggDesc(a, s);
@@ -8397,7 +8466,7 @@ export class AggEval {
       if (ms.length >= need) reached.push(s2);
       else if (best === null || ms.length > best[1].length) best = [gkey, ms];
     }
-    if (reached.length > 0) { for (const s2 of reached.slice(0, 16)) this.exploreBody(body, k + 1, s2, out, nodes, rid); return; }
+    if (reached.length > 0) { for (const s2 of reached.slice(0, 16)) this.exploreBody(body, k + 1, s2, out, nodes, rid, vw, at); return; }
     const [gkey, ms] = best ?? [[], []];
     const named = gkey.length === plan.group.length ? (this.bindGroup(a, plan, s, this.thrShared(a, plan, corr, gkey)) ?? s) : s;
     const d = this.aggDesc(a, named);
@@ -8435,6 +8504,10 @@ interface WnCtx {
   /** The ground literals demonstrated, with the levels each was written at: the depth below a level is what the demonstration shows, so one reached again at a level it was written at is referred to, at another it is written again. */
   done: Map<string, Set<number>>;
 }
+/** A by-file walk (`whynotFiles`): the file of a candidate, and each file's failures and steps; `split`, the premise it first parted at. */
+interface VolWalk { of: (l: Lit, s: Subst) => string | undefined; out: (at?: string) => Map<string, Lit | null>; nodes: (at?: string) => { n: number }; split?: string }
+/** A file's row of whynot by file: its answers, and the premises it stopped at, with the demonstration below them. */
+export type WhynotFile = { file: string; found: number; stops: string[]; text: string };
 /** One step of `whynot`'s walk (`explainTree`). */
 type WnTask = { t: 'failure'; lit: Lit; level: number } | { t: 'rule'; lit: Lit; r: ERule; level: number }
   | { t: 'deeper'; lit: Lit; level: number } | { t: 'line'; line: string } | { t: 'unpath'; ck: string };

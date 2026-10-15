@@ -1,6 +1,6 @@
 // The notebook kernel: a `.rofl.md` notebook's text and the texts of the files it names in, what every cell said out.
 // No I/O, no printing, no exit: the command line (notebook/cli.ts) and an editor read the files and show the result.
-import { Host, concernsOf, type Stop, translatorVocab, type Line, type Node, type Row } from '../playground/host.ts';
+import { Host, concernsOf, type Stop, translatorVocab, type Line, type Node, type Row, type FileRow } from '../playground/host.ts';
 import { cellsOf, libFiles, parseFront, translated, type CellKind, type Front } from './front.ts';
 import { asCell, assemble, type Inputs } from './world.ts';
 import { counted, type View } from './draw.ts';
@@ -14,6 +14,9 @@ export type NbLine = { line: number; kind: Line['kind']; text: string; verdict: 
   /** a `why`'s short form, what a reader sees first: `chain`, the steps of the value it explains (playground/chain.ts), and `brief`, the proof with
    *  node ids as the code and its place and the premises proved by finite failure counted; `why` is the whole proof */
   chain?: string[]; brief?: string;
+  /** a whynot over more than one file: one row for each file that holds an answer or stopped apart, and one for the files that stopped
+   *  alike, `files` naming them all */
+  byFile?: { files: string[]; found: number; stops: string[]; why: string }[];
   /** a line in English: the asking line it reads as; `headline`, the yes, no or count it answers with */
   readAs?: string; headline?: string;
   /** the run was cut short: its count is at least `total`, and a never that found nothing, or a no, is `unknown` */
@@ -87,7 +90,7 @@ export class Kernel {
       const lineOf = (t: string) => { let k = ls.findIndex((l, j) => !seen.has(j) && l.trim() === t); if (k < 0) k = Math.max(0, ls.findIndex((l) => l.trim() === t)); seen.add(k); return c.line + k; };
       const at = o.at && ((ms: string[]) => ms.map((m) => m in o.at! ? c.line + o.at![m] : null));
       return { index: c.index, kind: c.kind, line: c.line, ...(at && { at: { errors: at(o.errors), notes: at(o.notes) } }), errors: c.kind === 'datalog' ? o.errors.map((e) => e.replace(/^line (\d+)/, (_, n) => `line ${c.line + Number(n) - 1}`)) : o.errors.map(hint), notes: o.notes, lines: o.lines.map((l) => {
-        const line: NbLine = { line: lineOf(l.text), kind: l.kind, text: l.text, verdict: l.unasked ? 'unasked' : verdict(l), total: l.total, answers: answers(l.rows), note: l.note && labelled(l.note, out.nodes), why: l.why && legible(l.why), whyRaw: l.why, ...(l.chain?.length && l.why && { chain: l.chain, brief: brief(legible(l.why), out.nodes) }), unasked: l.unasked, ...(l.view && { view: l.view }),
+        const line: NbLine = { line: lineOf(l.text), kind: l.kind, text: l.text, verdict: l.unasked ? 'unasked' : verdict(l), total: l.total, answers: answers(l.rows), note: l.note && labelled(l.note, out.nodes), why: l.why && legible(l.why), whyRaw: l.why, ...(l.chain?.length && l.why && { chain: l.chain, brief: brief(legible(l.why), out.nodes) }), unasked: l.unasked, ...(l.view && { view: l.view }), ...(l.files && { byFile: grouped(l.files.map((r) => ({ ...r, stops: [...new Set(r.stops.map((s) => labelled(legible(s), out.nodes)))], why: labelled(legible(r.why), out.nodes) }))) }),
           ...(l.english && { readAs: l.english.line + (l.english.note ? ` (${l.english.note})` : ''), ...(l.english.headline && { headline: l.english.headline }) }) };
         if (lost && line.verdict === 'holds') { line.verdict = 'blind'; line.note = lost; }
         if (out.partial) { line.cut = true; if (line.verdict === 'holds' || line.verdict === 'blind' || line.headline === 'no' || line.headline === 'none') line.verdict = 'unknown'; }
@@ -98,6 +101,17 @@ export class Kernel {
     const status: Status = out.partial ? 'cut' : errors.length || result.some((c) => c.errors.length || c.lines.some((l) => l.verdict === 'unasked')) ? 'unread' : result.some((c) => c.lines.some((l) => l.verdict === 'fails')) ? 'fails' : out.partial || result.some((c) => c.lines.some((l) => l.verdict === 'blind')) ? 'blind' : 'ok';
     return { status, front, ...(out.cut && status === 'cut' ? { cut: out.cut } : {}), cells: result, errors, ...(out.unresolved.length ? { unresolved: out.unresolved } : {}), ms: { load, run: out.ms, phases: out.phases, loaded, model: out.model } };
   }
+}
+
+/** The files of a whynot, those that stopped at the same premises in one row. */
+function grouped(rows: FileRow[]): NonNullable<NbLine['byFile']> {
+  const by = new Map<string, NonNullable<NbLine['byFile']>[number]>();
+  for (const r of rows) {
+    const k = r.found ? `\u0000${r.file}` : r.stops.join('\n'), g = by.get(k);
+    if (g) g.files.push(r.file); else by.set(k, { files: [r.file], found: r.found, stops: r.stops, why: r.why });
+  }
+  for (const g of by.values()) if (g.files.length > 1) g.why = g.why.replace(/^(.*) in [^\n]*:(\n|$)/, '$1 in each of these files:$2');
+  return [...by.values()].sort((a, b) => a.files.length - b.files.length || (a.files[0] < b.files[0] ? -1 : 1));
 }
 
 /** The prose's errors, notes and asking lines, each given to the block of lines holding the line it was found on (a bare cell: vscode/serial.ts), the rest left to the prose.

@@ -41,7 +41,7 @@
 use std::collections::HashMap;
 
 use crate::describe;
-use crate::engine::{Eval, Halt, Mode, Outcome, TickOutcome, WhyOpts, WhynotBounds, EXPLAIN_WHYNOT_BOUNDS};
+use crate::engine::{Eval, Halt, Mode, Outcome, TickOutcome, WhyOpts, WhynotBounds, WhynotFile, EXPLAIN_WHYNOT_BOUNDS};
 use crate::reflect::{self, bootstrap_kernel, is_kernel_ledger, Vocab};
 use crate::rofl_parse::{self, Book, Tense};
 use crate::store::{write_fact_key, FactId, Store, F_BASE, F_TICK};
@@ -1650,6 +1650,19 @@ impl Session {
             Ok(r) => Ok(r),
             Err(h @ Halt::Budget(..)) => Ok((false, describe(&h))),
             Err(h) if !self.eval.plain => Ok((false, describe(&h))),
+            Err(h) => Err(describe(&h)),
+        }
+    }
+
+    /// `whynot` by file (`Eval::whynot_files`): a row for each file of `vols`,
+    /// a key prefix and the file's name. A wall met is no table.
+    pub fn whynot_files(&mut self, query: &str, b: &WhynotBounds, vols: &[(String, String)]) -> Result<Vec<WhynotFile>, String> {
+        self.explaining()?;
+        let lit = self.one_lit(query)?;
+        self.cone_holds(&lit)?;
+        match self.eval.whynot_files(&lit, b, vols) {
+            Ok(r) => Ok(r),
+            Err(Halt::Budget(..)) => Ok(Vec::new()),
             Err(h) => Err(describe(&h)),
         }
     }
