@@ -357,12 +357,15 @@ check[checks]("facts/goldens.rofl", "rules_js-dataflow", world).
 check[checks]("facts/goldens.rofl", "rules_js-effects", world).
 check[checks]("facts/goldens.rofl", "rules_js-env-api", world).
 check[checks]("facts/goldens.rofl", "rules_js-env", world).
+check[checks]("facts/goldens.rofl", "rules_js-express", world).
+check[checks]("facts/goldens.rofl", "rules_js-fetch", world).
 check[checks]("facts/goldens.rofl", "rules_js-globals", world).
 check[checks]("facts/goldens.rofl", "rules_js-host", world).
 check[checks]("facts/goldens.rofl", "rules_js-model", world).
 check[checks]("facts/goldens.rofl", "rules_js-modules", world).
 check[checks]("facts/goldens.rofl", "rules_js-pack-home", world).
 check[checks]("facts/goldens.rofl", "rules_js-resolve", world).
+check[checks]("facts/goldens.rofl", "rules_js-service", world).
 check[checks]("facts/goldens.rofl", "rules_js-structure", world).
 check[checks]("facts/goldens.rofl", "rules_js-surface", world).
 check[checks]("facts/goldens.rofl", "rules_js-vocabulary", world).
@@ -383,6 +386,7 @@ check[checks]("facts/goldens.rofl", "rules_spec-coverage", world).
 check[checks]("facts/goldens.rofl", "rules_strata", world).
 check[checks]("facts/goldens.rofl", "rules_swarm", world).
 check[checks]("facts/goldens.rofl", "rules_untyped", world).
+check[checks]("facts/goldens.rofl", "rules_url", world).
 check[checks]("facts/goldens.rofl", "rules_worklist", world).
 check[checks]("facts/goldens.rofl", "rules_worlds", world).
 check[checks]("facts/goldens.rofl", "boot_only", world).
@@ -796,6 +800,7 @@ check[checks]("facts/goldens.rofl", "retract_last", world).
 check[checks]("facts/goldens.rofl", "retract_last_read", world).
 check[checks]("facts/goldens.rofl", "sealed_provenance", world).
 check[checks]("facts/goldens.rofl", "sensors_t3", world).
+check[checks]("facts/goldens.rofl", "services", world).
 check[checks]("facts/goldens.rofl", "set_spelling", world).
 check[checks]("facts/goldens.rofl", "spec_coverage", world).
 check[checks]("facts/goldens.rofl", "staged_neg_why", world).
