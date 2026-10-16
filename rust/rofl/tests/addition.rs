@@ -744,6 +744,20 @@ fn a_dominance_the_change_reaches_is_derived_again() {
     assert!(all.additions > 40 && all.full.keys().all(|k| k.contains("declaration changed")), "every addition to the front but a dominance rule is a delta: {all:?}");
 }
 
+/// Counting tags, their sums read plainly and under a negation: what a change adds is new derivations, summed.
+#[test]
+fn a_counting_tag_sums_the_derivations_an_addition_makes() {
+    let rules = [
+        "walks(A, C, N) :- e(A, C).",
+        "walks(A, C, N) :- e(A, B), e(B, C).",
+        "tot(N) :- n(_).",
+        "many(A, C) :- walks(A, C, N), N > 1.",
+        "lone(X) :- n(X), not many(X, X).",
+    ];
+    let all = sweep("tagc", &format!("{EDB}\ntag walks(A, C, counting N).\ntag tot(counting N)."), &rules, fact, 1..=12, 10);
+    assert!(all.additions > 40 && all.full.is_empty(), "every addition to a counting tag is a delta: {all:?}");
+}
+
 /// An aggregate the change reaches is sealed again at its level, and what reads it, plainly or under a negation, is
 /// kept and fed what the new seal changed, not fired again whole.
 #[test]

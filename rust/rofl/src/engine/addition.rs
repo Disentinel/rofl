@@ -1135,7 +1135,8 @@ impl Eval {
         }
         for r in mono.iter().chain(&new_plain).chain(&again).chain(&recompute).chain(negs.iter().map(|(r, _)| r)) {
             let head = r.clause.head.rel;
-            if (self.lattices.contains_key(&head) && !lats.contains(&head)) || self.tags.count_of.contains_key(&head) || self.v.is_reserved(head) {
+            // (a counting tag's derivations are facts of their own, one per firing, summed by the tag's rule as any sum)
+            if (self.lattices.contains_key(&head) && !lats.contains(&head)) || brk!("add_tag_count_refused" => self.tags.count_of.contains_key(&head); false) || self.v.is_reserved(head) {
                 return Err("a lattice, a tag or a ledger is concluded from what changed");
             }
             // late is an order only the stock evaluator reads its strata between
