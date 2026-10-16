@@ -1,0 +1,68 @@
+-- js-express.rofl — THE SERVER SIDE OF A SERVICE CALL (w_express_semantics).
+--
+--   serves[surface](App, M, P, H, R)   the app App answers method M (or `any`)
+--                                      on the pattern P, a text over the route's
+--                                      strings, with the function H, a `route`
+--                                      or a `middleware` that runs before one
+--
+-- Knows nothing about clients. An app is a call of the module (`express()`), a
+-- router a call of its `Router`; `app.get(p, h)`, `router.post(p, h)` and
+-- `app.all` register a handler, `app.use(p, f)` a middleware that answers
+-- every method under p, `app.use(f)` one under every path, `app.use(p, router)`
+-- mounts a router under p. A handler is any function the call is handed, in
+-- place or by name. A router reached through several mounts serves under each,
+-- up to `ex_depth` mounts deep.
+edb(express_module).
+express_module("express").
+
+edb(express_verb).
+express_verb("get", get).  express_verb("post", post).  express_verb("put", put).  express_verb("delete", delete).
+express_verb("patch", patch).  express_verb("head", head).  express_verb("options", options).  express_verb("all", any).
+
+edb(ex_depth).
+ex_depth(3).
+
+-- =========================================================================
+-- 1. THE APPS AND THE ROUTERS.
+ex_router_fn[flow](G) :- member_node_v[flow](G), selects[flow](G, "Router"), ast_child[code](G, object, 0, O),
+                         may_be_node[flow](O, S), external_value[flow](S, S), express_module(S).
+ex_router_fn[flow](G) :- may_be_node[flow](G, Sp), ex_import[flow](Sp, "Router").
+ex_import[flow](Sp, K) :- external_import[code](Sp, _, S, _), express_module(S),
+                          ast_child[code](Sp, imported, 0, I), ast_name[code](I, K).
+sx_ex_import[surface](Sp, K) :- sx_esc[surface](Sp), ex_import[flow](Sp, K).
+ex_import[flow](Sp, K) :- sx_ex_import[surface](Sp, K).
+ex_app[flow](C) :- ast_node[code](C, call_expression, _, _), ast_child[code](C, callee, 0, G),
+                   may_be_node[flow](G, S), external_value[flow](S, S), express_module(S).
+ex_router[flow](C) :- ast_node[code](C, call_expression, _, _), ast_child[code](C, callee, 0, G), ex_router_fn[flow](G).
+ex_target[flow](Y) :- sx_ex_app[surface](Y).
+ex_target[flow](Y) :- ex_router[flow](Y).
+
+-- =========================================================================
+-- 2. WHAT A CALL ON ONE REGISTERS.
+ex_on[flow](R, Y, K) :- ast_node[code](R, call_expression, _, _), ast_child[code](R, callee, 0, M),
+                        member_node_v[flow](M), selects[flow](M, K), ast_child[code](M, object, 0, O),
+                        may_be_node[flow](O, Y), ex_target[flow](Y).
+ex_path[flow](R, V) :- ex_on[flow](R, _, _), arg_at[flow](R, 0, A), may_be_lit[flow](A, V), str_value[flow](V).
+ex_fn[flow](R, I, F) :- ex_on[flow](R, _, _), arg_at[flow](R, I, A), may_be_node[flow](A, F), fn_value[flow](F).
+ex_sub[flow](R, I, Y) :- ex_on[flow](R, _, "use"), arg_at[flow](R, I, A), may_be_node[flow](A, Y), ex_target[flow](Y).
+
+ex_route[flow](Y, M, V, H, route) :- ex_on[flow](R, Y, K), express_verb(K, M), ex_path[flow](R, V), ex_fn[flow](R, I, H), I > 0.
+ex_route[flow](Y, any, join(V, "*"), H, middleware) :- ex_on[flow](R, Y, "use"), ex_path[flow](R, V), ex_fn[flow](R, I, H), I > 0.
+ex_route[flow](Y, any, "*", H, middleware) :- ex_on[flow](R, Y, "use"), ex_fn[flow](R, 0, _), ex_fn[flow](R, _, H).
+ex_mount[flow](Y, V, Y2) :- ex_path[flow](R, V), ex_sub[flow](R, I, Y2), I > 0, ex_on[flow](R, Y, "use").
+ex_mount[flow](Y, "/", Y2) :- ex_sub[flow](R, 0, Y2), ex_on[flow](R, Y, "use").
+
+-- =========================================================================
+-- 3. ACROSS FILES. A router is made in one file and mounted in another; what
+-- a file registers on one is published, and the mounts compose in [surface].
+sx_ex_target[surface](Y) :- sx_esc[surface](Y), ex_target[flow](Y).
+ex_target[flow](Y) :- sx_ex_target[surface](Y).
+sx_ex_app[surface](Y) :- ex_app[flow](Y).
+sx_ex_route[surface](Y, M, V, H, R) :- ex_route[flow](Y, M, V, H, R).
+sx_ex_mount[surface](Y, V, Y2) :- ex_mount[flow](Y, V, Y2).
+sx_ex_str[surface](V) :- ex_path[flow](_, V).
+
+ex_reach[surface](App, App, "/", 0) :- sx_ex_app[surface](App).
+ex_reach[surface](App, Y2, cat(P, V), D) :- ex_reach[surface](App, Y, P, D0), sx_ex_mount[surface](Y, V, Y2),
+                                            ex_depth(Max), D0 < Max, D is D0 + 1.
+serves[surface](App, M, cat(P, V), H, R) :- ex_reach[surface](App, Y, P, _), sx_ex_route[surface](Y, M, V, H, R).
