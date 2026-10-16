@@ -385,6 +385,8 @@ Declared as facts:
 
 `ast_attr` has one V for each N and K.
 
+`ast_child` has one C for each P, F and I.
+
 `lang_of_corpus` includes `js`.
 
 In the code:

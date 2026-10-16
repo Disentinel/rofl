@@ -86,6 +86,10 @@ Phrases this file defines in one step, each by the sentence it stands for:
 
 ## 1. Call sites
 
+`call_site` has one File for each C.
+
+`callee_of` has one N for each C.
+
 <a id="call_line"></a>The line of a node C is Line if C [is a call site](#call_site) in some file and C [is at line](js-model.rofl.md#ast_node) Line.
 
 <a id="callee_of"></a>The callee of a node C is a node N if C [is a call site](#call_site) in some file and the `callee` of C is N.

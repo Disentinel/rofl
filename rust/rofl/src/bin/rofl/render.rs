@@ -770,6 +770,10 @@ impl<'a> R<'a> {
         let v = c.head.args.last().map(|t| name(*t)).unwrap_or_default();
         let rel = match c.head.book { Book::Bare => h.name(c.head.rel).to_string(), b => format!("{}` in the `{}", h.name(c.head.rel), self.book_name(b)) };
         if let Some(st) = &c.structure {
+            if let Some(src) = st.source.as_ref().filter(|_| h.name(st.kind) == "alias") {
+                let of = |ts: &[Term]| { let v: Vec<String> = ts.iter().map(|t| name(*t)).collect(); match v.len() { 0 => String::new(), 1 => format!(" of {}", v[0]), k => format!(" of {} and {}", v[..k - 1].join(", "), v[k - 1]) } };
+                return format!("<a id=\"{}\"></a>`{rel}`{} is another name for `{}`{}.\n\n", h.name(c.head.rel), of(&c.head.args), h.name(src.rel), of(&src.args));
+            }
             if h.name(st.kind) == "tree" {
                 let closed = st.closure.filter(|_| !brk!("phrase_tree_closure_lost" => true; false)).map_or(String::new(), |cl| format!(", and `{}` holds of each node and every ancestor of it", h.name(cl)));
                 return format!("Each child of `{rel}` has one parent and no node is its own ancestor{closed}.\n\n");
@@ -1705,8 +1709,11 @@ pub fn main(mut args: Vec<String>) {
         for seg in &doc.segs {
             if let Seg::Code(cs) = seg {
                 for c in cs {
-                    // a declared structure defines no relation and lives in no book: it promises of the relation's data
-                    if c.structure.is_some() { continue; }
+                    // a declared structure defines no relation and lives in no book: it promises of the relation's data; an alias defines its relation
+                    if let Some(st) = &c.structure {
+                        if h.name(st.kind) == "alias" { defs.entry(c.head.rel).or_insert(fi); }
+                        continue;
+                    }
                     if c.head.rel == phrase_rel && c.head.args.len() == 2 {
                         if let (Some(rel), TermK::Str(t)) = (c.head.args[0].as_atom(), c.head.args[1].kind()) {
                             match parse_phrase(h.name(t)) { Ok(p) => phrases.entry(rel).or_default().push(p), Err(e) => bad_phrases.push(format!("{}: {e}", h.name(rel))) }

@@ -5,21 +5,22 @@
 // Name).` promises one Name for each N, in each book. TypeScript stores no
 // structure; it parses, reflects and checks.
 
-import { type Term, type Clause, mka, mki, canonTerm } from './unify.ts';
+import { type Term, type Lit, type Clause, mka, mki, canonTerm } from './unify.ts';
 import { type FactStore } from './store.ts';
 import { V, KERNEL_PERSP, RESERVED, canonClause } from './reflect.ts';
 import { Rejected } from './aggeval.ts';
 
-const srcTerm = (t: Term): string => (t.k === 'v' ? (t.name.startsWith('_$') ? '_' : t.name) : canonTerm(t));
+const srcTerm = (t: Term): string => (t.k === 'v' ? (t.name.startsWith('_$') ? '_' : t.name) : t.k === 'f' ? `${t.name}(${t.args.map(srcTerm).join(', ')})` : canonTerm(t));
+const litSrc = (l: Lit): string => `${l.rel}(${l.args.map(srcTerm).join(', ')})`;
 
-/** `function ast_name(N, to Name)` as a reader wrote it, and a tree's `closure` after it. */
+/** `function ast_name(N, to Name)` as a reader wrote it, a tree's `closure` after it, an alias's literal. */
 export function structureText(c: Clause): string {
   const s = c.structure!;
-  return `${s.kind} ${c.head.rel}(${c.head.args.map((t, k) => (s.roles[k] ? `${s.roles[k]} ` : '') + srcTerm(t)).join(', ')})${s.closure === undefined ? '' : ` closure ${s.closure}`}`;
+  return `${s.kind} ${c.head.rel}(${c.head.args.map((t, k) => (s.roles[k] ? `${s.roles[k]} ` : '') + srcTerm(t)).join(', ')})${s.closure === undefined ? '' : ` closure ${s.closure}`}${s.source ? ` is ${litSrc(s.source)}` : ''}`;
 }
 
 /** A STRUCTURE DECLARATION AT THE DOOR (`check_structure_decl`, rust/rofl/src/program.rs). */
-export function checkStructureDecl(c: Clause, arityOf: (rel: string) => number | undefined, declared: ReadonlySet<string>, concluded: (rel: string) => string | null = () => null): string | null {
+export function checkStructureDecl(c: Clause, arityOf: (rel: string) => number | undefined, declared: ReadonlySet<string>, concluded: (rel: string) => string | null = () => null, taken: ReadonlySet<string> = new Set()): string | null {
   const rel = c.head.rel, what = structureText(c), s = c.structure!;
   if (RESERVED.has(rel) || rel.startsWith('$') || arityOf(rel) !== undefined) return `${what}: '${rel}' is a kernel relation and cannot be declared ${s.kind}`;
   const seen: string[] = [];
@@ -34,6 +35,7 @@ export function checkStructureDecl(c: Clause, arityOf: (rel: string) => number |
     if (s.roles.slice(first).some((r) => !r)) return `${what}: the values a key determines come last, after the key: function ${rel}(N, to V)`;
   }
   if (s.kind === 'tree' && c.head.args.length !== 2) return `${what}: a tree has two arguments, the parent and the child: tree ${rel}(P, C)`;
+  if (s.kind === 'alias') return checkAlias(c, what, arityOf, concluded, taken);
   if (declared.has(rel)) return `${what}: '${rel}' is declared a structure twice`;
   const cl = s.closure;
   if (cl !== undefined) {
@@ -47,8 +49,26 @@ export function checkStructureDecl(c: Clause, arityOf: (rel: string) => number |
   return null;
 }
 
-/** THE CLOSURE OF A TREE IS THE DECLARATION'S, and nothing else concludes it: the refusal of a clause that does (`rule` or `fact`), or nothing. */
-export function checkClosureHead(c: Clause, closures: ReadonlyMap<string, string>): string | null {
+/** AN ALIAS AT THE DOOR (`check_alias`, rust/rofl/src/structure.rs): the relation is new (no rule or fact concludes it, no other alias or closure is `taken` by it), and the literal it reads is another relation's, each argument of the alias in it and nothing else named. */
+function checkAlias(c: Clause, what: string, arityOf: (rel: string) => number | undefined, concluded: (rel: string) => string | null, taken: ReadonlySet<string>): string | null {
+  const rel = c.head.rel, src = c.structure!.source!;
+  if (taken.has(rel)) return `${what}: '${rel}' is declared a structure twice`;
+  if (src.rel === rel) return `${what}: an alias reads another relation than itself`;
+  if (RESERVED.has(src.rel) || src.rel.startsWith('$') || arityOf(src.rel) !== undefined) return `${what}: '${src.rel}' is a kernel relation and an alias reads the program's relations`;
+  const head = c.head.args.flatMap((a) => (a.k === 'v' ? [a.name] : []));
+  for (const a of src.args) {
+    if (a.k === 'v' && !head.includes(a.name) && !a.name.startsWith('_$')) return `${what}: '${a.name}' is not an argument of the alias; a column it drops is written _`;
+    if (a.k === 'f') return `${what}: an alias reads a column, a constant or _, not a compound term`;
+  }
+  for (const x of head) if (!src.args.some((a) => a.k === 'v' && a.name === x)) return `${what}: '${x}' is not read from ${src.rel}; each argument of the alias is a column of it`;
+  const other = concluded(rel);
+  if (other) return `${what}: '${rel}' is also concluded by ${other}; an alias has no other conclusion`;
+  return null;
+}
+
+/** THE CLOSURE OF A TREE IS THE DECLARATION'S, and nothing else concludes it, nor an alias's: the refusal of a clause that does (`rule` or `fact`), or nothing. */
+export function checkClosureHead(c: Clause, closures: ReadonlyMap<string, string>, aliases: ReadonlySet<string> = new Set()): string | null {
+  if (aliases.has(c.head.rel)) return `${c.body.length === 0 ? 'fact' : 'rule'} rejected: '${c.head.rel}' is declared an alias and has no other conclusion: ${canonClause(c)}`;
   const tree = closures.get(c.head.rel);
   if (tree === undefined) return null;
   return `${c.body.length === 0 ? 'fact' : 'rule'} rejected: '${c.head.rel}' is the closure of the tree ${tree} and has no other conclusion: ${canonClause(c)}`;
@@ -67,6 +87,22 @@ export function lowerClosure(c: Clause): string[] {
   return [`${cl}[B](P, C) :- ${rel}[B](P, C).`, `${cl}[B](P, D) :- ${cl}[B](P, X), ${rel}[B](X, D).`];
 }
 
+/** THE LOWERING OF `alias` (`lower_alias`, rust/rofl/src/structure.rs): the rule the author would have written, in every book `B` (a name no argument of the alias takes). TypeScript evaluates it; the Rust engine reads the source in its place where no witness is kept. */
+export function lowerAlias(c: Clause): string {
+  const src = c.structure!.source!;
+  const names = [...c.head.args, ...src.args].flatMap((a) => (a.k === 'v' ? [a.name] : []));
+  let b = 'B';
+  while (names.includes(b)) b += 'B';
+  return `${c.head.rel}[${b}](${c.head.args.map(srcTerm).join(', ')}) :- ${src.rel}[${b}](${src.args.map(srcTerm).join(', ')}).`;
+}
+
+/** The relations declared an alias. */
+export function declaredAliases(store: FactStore): Set<string> {
+  const out = new Set<string>();
+  for (const f of store.relPersp(V.structure_decl, KERNEL_PERSP)) if (f.args[0].k === 'a' && f.args[2].k === 'a' && f.args[2].name === 'alias') out.add(f.args[0].name);
+  return out;
+}
+
 /** The rows a declaration is in the kernel's book: `structure_decl(Rel, Arity, Kind)` and a `structure_role(Rel, Pos, Role)` per marked argument, Pos from 1. */
 export function structureRows(c: Clause): [string, Term[]][] {
   const s = c.structure!, rel = c.head.rel;
@@ -76,10 +112,10 @@ export function structureRows(c: Clause): [string, Term[]][] {
   return rows;
 }
 
-/** The relations the program declares a structure of, and the closures of its trees. */
+/** The relations the program declares a structure of, and the closures of its trees; not an alias, of which a promise (a tree, a function) may be declared too. */
 export function declaredStructures(store: FactStore): Set<string> {
   const out = new Set<string>();
-  for (const f of store.relPersp(V.structure_decl, KERNEL_PERSP)) if (f.args[0].k === 'a') out.add(f.args[0].name);
+  for (const f of store.relPersp(V.structure_decl, KERNEL_PERSP)) if (f.args[0].k === 'a' && !(f.args[2].k === 'a' && f.args[2].name === 'alias')) out.add(f.args[0].name);
   for (const f of store.relPersp(V.structure_closure, KERNEL_PERSP)) if (f.args[1].k === 'a') out.add(f.args[1].name);
   return out;
 }

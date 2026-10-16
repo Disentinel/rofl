@@ -114,12 +114,20 @@ pub fn propose(store: &Store, h: &Heap, o: &Options) -> Report {
     // the trees the program already declares, each with its closure: reported as declared, never proposed
     let mut declared: BTreeMap<String, Option<String>> = BTreeMap::new();
     let mut closure_of: BTreeMap<String, String> = BTreeMap::new();
+    // a declared alias is read as its rows and proposed as nothing; a declared function is not proposed again
+    let (mut aliases_decl, mut functions_decl) = (BTreeSet::new(), BTreeSet::new());
     for id in store.all_facts() {
         let r = store.rec(id);
         let a = store.args(id);
         match (h.name(r.rel), a) {
             ("structure_decl", [t, _, k]) if k.as_atom().is_some_and(|k| h.name(k) == "tree") => {
                 declared.entry(h.canon(*t)).or_default();
+            }
+            ("structure_decl", [t, _, k]) if k.as_atom().is_some_and(|k| h.name(k) == "alias") => {
+                aliases_decl.insert(h.canon(*t));
+            }
+            ("structure_decl", [t, _, k]) if k.as_atom().is_some_and(|k| h.name(k) == "function") => {
+                functions_decl.insert(h.canon(*t));
             }
             ("structure_closure", [t, c]) => {
                 closure_of.insert(h.canon(*t), h.canon(*c));
@@ -134,7 +142,9 @@ pub fn propose(store: &Store, h: &Heap, o: &Options) -> Report {
     // a declared closure is the declaration's, stored or answered from its tree: no proposal and no near miss reads it
     let closures: BTreeSet<String> = declared.values().flatten().cloned().collect();
 
-    let mut groups: FxMap<(Sym, Sym, usize), Vec<FactId>> = FxMap::default();
+    // an alias read from its source has no row in the store: its rows are the source's, projected
+    let virt: Vec<(Sym, Sym, Vec<Term>)> = store.aliases.iter().flat_map(|a| store.alias_rows(h, a).into_iter().map(|(p, row)| (a.rel, p, row))).collect();
+    let mut groups: FxMap<(Sym, Sym, usize), (Vec<&[Term]>, usize, usize)> = FxMap::default();
     let mut facts = 0;
     for id in store.all_facts() {
         let r = store.rec(id);
@@ -142,20 +152,23 @@ pub fn propose(store: &Store, h: &Heap, o: &Options) -> Report {
         if h.name(r.persp).starts_with('$') || kernel.contains(h.name(r.rel)) || closures.contains(h.name(r.rel)) {
             continue;
         }
-        groups.entry((r.rel, r.persp, store.arity(id))).or_default().push(id);
+        let g = groups.entry((r.rel, r.persp, store.arity(id))).or_default();
+        g.0.push(store.args(id));
+        g.1 += r.base() as usize;
+        g.2 += store.support_count(id);
     }
-    let mut keyed: Vec<((String, String, usize), (Sym, Sym), Vec<FactId>)> = groups
+    for (rel, persp, row) in &virt {
+        groups.entry((*rel, *persp, row.len())).or_default().0.push(row);
+    }
+    let mut keyed: Vec<((String, String, usize), (Sym, Sym), (Vec<&[Term]>, usize, usize))> = groups
         .into_iter()
-        .filter(|(_, ids)| ids.len() >= o.min_rows)
-        .map(|((rel, persp, n), ids)| ((h.name(rel).to_string(), h.name(persp).to_string(), n), (rel, persp), ids))
+        .filter(|(_, g)| g.0.len() >= o.min_rows)
+        .map(|((rel, persp, n), g)| ((h.name(rel).to_string(), h.name(persp).to_string(), n), (rel, persp), g))
         .collect();
     keyed.sort_by(|a, b| a.0.cmp(&b.0));
     let rels: Vec<Rel> = keyed
         .into_iter()
-        .map(|((name, book, arity), (rel, persp), ids)| {
-            let rows: Vec<&[Term]> = ids.iter().map(|&i| store.args(i)).collect();
-            let base = ids.iter().filter(|&&i| store.rec(i).base()).count();
-            let firings = ids.iter().map(|&i| store.support_count(i)).sum();
+        .map(|((name, book, arity), (rel, persp), (rows, base, firings))| {
             let dc = if arity <= MAX_ALIAS {
                 (0..arity).map(|c| rows.iter().map(|r| r[c]).collect::<FxSet<Term>>().len()).collect()
             } else {
@@ -172,7 +185,8 @@ pub fn propose(store: &Store, h: &Heap, o: &Options) -> Report {
     let mut found = Vec::new();
     let trees = trees(&rels, h, &declared, &mut found, &mut proposals, &mut near);
     let closures: BTreeSet<usize> = proposals.iter().filter_map(|p| p.saved.map(|s| s.0)).collect();
-    let aliased = aliases(&rels, store, h, &closures, &mut proposals, &mut near);
+    let mut aliased = aliases(&rels, store, h, &closures, &aliases_decl, &mut found, &mut proposals, &mut near);
+    aliased.extend(rels.iter().enumerate().filter(|(_, r)| functions_decl.contains(&r.name)).map(|(i, _)| i));
     functions(&rels, h, &trees, &aliased, &mut proposals, &mut near);
 
     let order = |k: &str| match k { "function" => 0, "tree" => 1, _ => 2 };
@@ -709,9 +723,17 @@ fn invert(s: &[usize]) -> Vec<usize> {
     inv
 }
 
-fn aliases(rels: &[Rel], store: &Store, h: &Heap, closures: &BTreeSet<usize>, out: &mut Vec<Proposal>, near: &mut Vec<String>) -> BTreeSet<usize> {
+#[allow(clippy::too_many_arguments)]
+fn aliases(rels: &[Rel], store: &Store, h: &Heap, closures: &BTreeSet<usize>, declared: &BTreeSet<String>, found: &mut Vec<Proposal>, out: &mut Vec<Proposal>, near: &mut Vec<String>) -> BTreeSet<usize> {
     let mut misses: Vec<(usize, String)> = Vec::new();
-    let alias_ok = |r: &Rel| r.arity >= 1 && r.arity <= MAX_ALIAS;
+    // a declared alias is the declaration's: reported, and neither side of a proposal
+    let mut seen = BTreeSet::new();
+    for r in rels.iter().filter(|r| declared.contains(&r.name)) {
+        if seen.insert(&r.name) {
+            found.push(Proposal { kind: "alias", decl: format!("alias {}.", r.name), notes: vec![format!("{}: {}", r.label(), rows_word(r.rows.len()))], saved: None });
+        }
+    }
+    let alias_ok = |r: &Rel| r.arity >= 1 && r.arity <= MAX_ALIAS && !declared.contains(&r.name);
     // same arity: one verdict per unordered pair, either way round; sigma takes i's columns to j's
     let mut equal: BTreeMap<(usize, usize), Vec<usize>> = BTreeMap::new();
     for i in 0..rels.len() {

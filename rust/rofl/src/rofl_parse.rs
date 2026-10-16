@@ -121,6 +121,19 @@ pub fn src_term(h: &Heap, t: Term, out: &mut String) {
     }
 }
 
+/// A bare literal as source text: `ast_child(P, _, _, C)`.
+pub fn lit_src(h: &Heap, l: &Lit) -> String {
+    let mut o = format!("{}(", h.name(l.rel));
+    for (k, t) in l.args.iter().enumerate() {
+        if k > 0 {
+            o.push_str(", ");
+        }
+        src_term(h, *t, &mut o);
+    }
+    o.push(')');
+    o
+}
+
 /// A lattice declaration as source text: `lattice dist(A, C, min D)`, or a
 /// tag's, `tag cost(A, C, tropical T)`.
 pub fn decl_text(h: &Heap, c: &Clause) -> String {
@@ -140,6 +153,10 @@ pub fn decl_text(h: &Heap, c: &Clause) -> String {
         if let Some(cl) = st.closure {
             o.push_str(" closure ");
             o.push_str(h.name(cl));
+        }
+        if let Some(src) = &st.source {
+            o.push_str(" is ");
+            o.push_str(&lit_src(h, src));
         }
         return o;
     }
@@ -266,13 +283,13 @@ fn word_ops() -> &'static [&'static str] {
 
 /// The kinds of declared data structure (docs/data-structures.md) with the
 /// role words each marks its arguments by: words, names elsewhere.
-pub const STRUCTURE_KINDS: &[(&str, &[&str])] = &[("function", &["to"]), ("tree", &[])];
+pub const STRUCTURE_KINDS: &[(&str, &[&str])] = &[("function", &["to"]), ("tree", &[]), ("alias", &[])];
 
 /// A declared data structure: its kind, per head argument the role word that
-/// marks it (`None` for a key position), and for a tree the relation it is the
-/// closure of.
+/// marks it (`None` for a key position), for a tree the relation it is the
+/// closure of, and for an alias the literal it is (`alias ast_in(P, C) is ast_child(P, _, _, C)`).
 #[derive(Clone, Debug, PartialEq)]
-pub struct Structure { pub kind: Sym, pub roles: Vec<Option<Sym>>, pub closure: Option<Sym> }
+pub struct Structure { pub kind: Sym, pub roles: Vec<Option<Sym>>, pub closure: Option<Sym>, pub source: Option<Lit> }
 
 /// A clause, or a lattice declaration: `lattice dist(A, C, min D).` is the
 /// head `dist(A, C, D)` with no body and `lattice` the operation `min`;
@@ -953,10 +970,22 @@ impl<'a> Parser<'a> {
             let s = self.bump().ok_or("structure: end of input")?;
             closure = brk!("tree_closure_dropped" => None; Some(self.sym(&s)));
         }
+        let mut source = None;
+        if self.h.name(kind) == "alias" {
+            if !self.is_word(0, "is") {
+                return Err(format!("{what}: an alias names the relation it reads: alias {}(P, C) is ast_child(P, _, _, C)", self.h.name(rel)));
+            }
+            self.bump();
+            let l = self.lit().map_err(|e| format!("{what}: `is` is followed by the literal the alias reads ({e})"))?;
+            if l.book != Book::Bare || l.tense != Tense::Now {
+                return Err(format!("{what}: an alias reads a relation, not a book or a tick"));
+            }
+            source = Some(l);
+        }
         if !self.eat_punct("dot") {
             return Err(format!("{what}: the declaration has no closing dot"));
         }
-        Ok(Clause { head: Lit { rel, book, args, tense: Tense::Now }, body: Vec::new(), lattice: None, widen: None, tag: false, dom: None, ord: None, structure: Some(Structure { kind, roles, closure }) })
+        Ok(Clause { head: Lit { rel, book, args, tense: Tense::Now }, body: Vec::new(), lattice: None, widen: None, tag: false, dom: None, ord: None, structure: Some(Structure { kind, roles, closure, source }) })
     }
 
     /// `domrule := lit '<=' lit ':-' body '.'` (docs/aggregates.md,

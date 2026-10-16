@@ -1,0 +1,3 @@
+-- expect-refusal: each argument of the alias is a column of it
+edb(dar_e). dar_e(a, b, c).
+alias dar_lost(P, C) is dar_e(P, _, _).

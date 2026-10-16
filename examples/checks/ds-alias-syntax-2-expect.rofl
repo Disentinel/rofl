@@ -1,0 +1,17 @@
+-- examples/checks/ds-alias-syntax-2-expect.rofl — ds_alias_syntax. What each form of
+-- ds-alias-syntax-1-forms.rofl reads as: one `structure_decl` row (relation, arity, alias), no role, the one
+-- rule it lowers to, and the rows that rule makes; `alias` as a plain name.
+daxs_decl(dax_in). daxs_decl(dax_x). daxs_decl(dax_again).
+daxs_missing(Rel) :- daxs_decl(Rel), not structure_decl[$kernel](Rel, 2, alias).
+daxs_extra(Rel)   :- structure_role[$kernel](Rel, _, _), daxs_decl(Rel).
+daxs_rules_wrong(Rel) :- daxs_decl(Rel), not daxs_one(Rel).
+daxs_one(Rel) :- daxs_decl(Rel), N is count(R : concludes(R, Rel)), N = 1.
+alarm(daxs_missing).
+alarm(daxs_extra).
+alarm(daxs_rules_wrong).
+daxs_lost(in)    :- not dax_in(a, c).
+daxs_lost(x)     :- not dax_x(b, d).
+daxs_lost(x)     :- dax_x(a, c).
+daxs_lost(again) :- not dax_again(b, d).
+daxs_lost(name)  :- not dax_seen(dax_name).
+alarm(daxs_lost).

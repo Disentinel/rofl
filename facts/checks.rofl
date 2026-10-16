@@ -3292,6 +3292,30 @@ check_file("ds_tree_sealed", "examples/checks/ds-tree-holds.rofl").
 check_file("ds_tree_sealed", "examples/checks/ds-tree-holds-check.rofl").
 check_opt("ds_tree_sealed", together, 1).
 
+check_world("ds_alias_syntax").
+check_file("ds_alias_syntax", "examples/checks/ds-alias-syntax-1-forms.rofl").
+check_file("ds_alias_syntax", "examples/checks/ds-alias-syntax-2-expect.rofl").
+check_file("ds_alias_syntax", "examples/checks/ds-alias-syntax-3-refused-bare.rofl").
+check_file("ds_alias_syntax", "examples/checks/ds-alias-syntax-3-refused-concluded.rofl").
+check_file("ds_alias_syntax", "examples/checks/ds-alias-syntax-3-refused-func.rofl").
+check_file("ds_alias_syntax", "examples/checks/ds-alias-syntax-3-refused-kernel.rofl").
+check_file("ds_alias_syntax", "examples/checks/ds-alias-syntax-3-refused-lost.rofl").
+check_file("ds_alias_syntax", "examples/checks/ds-alias-syntax-3-refused-named.rofl").
+check_file("ds_alias_syntax", "examples/checks/ds-alias-syntax-3-refused-self.rofl").
+check_file("ds_alias_syntax", "examples/checks/ds-alias-syntax-3-refused-twice.rofl").
+check_opt("ds_alias_syntax", together, 1).
+
+check_world("ds_alias_holds").
+check_file("ds_alias_holds", "examples/checks/ds-alias-holds.rofl").
+check_file("ds_alias_holds", "examples/checks/ds-alias-holds-check.rofl").
+check_opt("ds_alias_holds", together, 1).
+
+check_world("ds_alias_sealed").
+check_file("ds_alias_sealed", "examples/checks/ds-alias-sealed.rofl").
+check_file("ds_alias_sealed", "examples/checks/ds-alias-holds.rofl").
+check_file("ds_alias_sealed", "examples/checks/ds-alias-holds-check.rofl").
+check_opt("ds_alias_sealed", together, 1).
+
 -- A RULE THAT READS THE CLOSURE'S `derived_by` ROWS, where witnesses are kept, needs them as rows while the world evaluates: the
 -- closure is then rows, as the stored closure is, and each lowered rule has made one of them.
 check_world("ds_tree_prov_read").

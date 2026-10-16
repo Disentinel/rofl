@@ -101,7 +101,7 @@ fn strings(r: &Value, k: &str) -> Result<Option<Vec<String>>, String> {
 }
 
 /// A world's facts, cells and rows answered from a structure, by key.
-type Keys = (HashMap<String, u32>, HashMap<String, u32>, HashMap<String, (u32, u32, rofl::term::Term, rofl::term::Term)>);
+type Keys = (HashMap<String, u32>, HashMap<String, u32>, HashMap<String, (u32, u32, Vec<rofl::term::Term>)>);
 
 struct Server {
     sessions: HashMap<u64, Session>,
@@ -225,9 +225,9 @@ impl Server {
                     .filter(|id| at.iter().all(|(k, v)| e.store.args(*id).get(*k).is_some_and(|a| e.h.canon(*a) == *v)))
                     .map(|id| rofl::seed::fact_json(&e.h, &e.store, id))
                     .collect();
-                for (rel, b, a, d) in e.store.virtual_pairs(Some(rel)) {
-                    if book.is_none_or(|x| x == b) && at.iter().all(|(k, v)| [a, d].get(*k).is_some_and(|t| e.h.canon(*t) == *v)) {
-                        facts.push(rofl::seed::virtual_json(&e.h, rel, b, a, d));
+                for (rel, b, args) in e.store.virtual_facts(&e.h, Some(rel)) {
+                    if book.is_none_or(|x| x == b) && at.iter().all(|(k, v)| args.get(*k).is_some_and(|t| e.h.canon(*t) == *v)) {
+                        facts.push(rofl::seed::virtual_json(&e.h, rel, b, &args));
                     }
                 }
                 Ok(json!({ "facts": facts }))
@@ -266,7 +266,7 @@ impl Server {
                 let e = &mut s.eval;
                 let rel = e.h.intern(rel);
                 let mut books: Vec<String> = Vec::new();
-                let virt: Vec<u32> = e.store.virtual_pairs(Some(rel)).into_iter().map(|x| x.1).collect();
+                let virt: Vec<u32> = e.store.virtual_facts(&e.h, Some(rel)).into_iter().map(|x| x.1).collect();
                 for b in e.store.rel_all(&e.h, rel).into_iter().map(|id| e.store.rec(id).persp).chain(virt) {
                     let b = e.h.name(b).to_string();
                     if !books.contains(&b) {
@@ -283,15 +283,15 @@ impl Server {
                 let (facts, cells, rows) = self.keys.entry(id).or_insert_with(|| {
                     let facts = e.store.live_ids().into_iter().map(|f| (e.store.key(&e.h, f), f)).collect();
                     let cells = e.store.cells_in_order(&e.h).into_iter().map(|(c, _)| { let mut k = String::new(); e.store.write_cell_key(&e.h, c, &mut k); (k, c) }).collect();
-                    let rows = e.store.virtual_pairs(None).into_iter().map(|r| { let mut k = String::new(); rofl::store::write_fact_key(&e.h, r.0, r.1, &[r.2, r.3], &mut k); (k, r) }).collect();
+                    let rows = e.store.virtual_facts(&e.h, None).into_iter().map(|r| { let mut k = String::new(); rofl::store::write_fact_key(&e.h, r.0, r.1, &r.2, &mut k); (k, r) }).collect();
                     (facts, cells, rows)
                 });
-                let row = rows.get(&key).copied();
+                let row = rows.get(&key).cloned();
                 Ok(match op {
-                    "fact" => json!({ "fact": facts.get(&key).map(|f| rofl::seed::fact_json(&e.h, &e.store, *f)).or_else(|| row.map(|(r, b, a, d)| rofl::seed::virtual_json(&e.h, r, b, a, d))) }),
+                    "fact" => json!({ "fact": facts.get(&key).map(|f| rofl::seed::fact_json(&e.h, &e.store, *f)).or_else(|| row.map(|(r, b, args)| rofl::seed::virtual_json(&e.h, r, b, &args))) }),
                     "firings" => json!({ "firings": match (facts.get(&key), row) {
                         (Some(f), _) => rofl::seed::firings_json(&e.h, &e.store, *f),
-                        (None, Some((r, b, a, d))) => e.store.virtual_firing(&e.h, r, b, a, d).map(|(rule, tick, prems)| {
+                        (None, Some((r, b, args))) if args.len() == 2 => e.store.virtual_firing(&e.h, r, b, args[0], args[1]).map(|(rule, tick, prems)| {
                             vec![json!({ "ruleId": e.h.name(rule), "tick": tick, "prems": prems.iter().map(|k| json!({ "t": "fact", "key": k })).collect::<Vec<_>>() })]
                         }).unwrap_or_default(),
                         _ => Vec::new(),
