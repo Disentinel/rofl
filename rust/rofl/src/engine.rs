@@ -6539,7 +6539,7 @@ impl Eval {
                     // where every unknown it rests on is a label and exists for certain, the group is decided by
                     // what each value the labels could be gives it ("Labeled unknowns")
                     let regions = if rk.is_none() && matches!(value, CellValue::Value(_) | CellValue::Empty) && brk!("label_regions_off" => false; true) {
-                        self.region_decide(plan.op, a, &gkey, &projs, &vals, &mine)
+                        self.region_decide(plan.op, param, a, &gkey, &projs, &vals, &mine)
                     } else {
                         labeled::Regions::No
                     };

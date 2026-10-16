@@ -7563,6 +7563,27 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "label_holistic_off",
+  "what": "a median, a quantile or a rank over a labeled member is never decided by regions: the value every completion gives is a shrug",
+  "expect": {
+   "agg_label_holes": "lhmed[main]"
+  }
+ },
+ {
+  "id": "ts_label_holistic_off",
+  "what": "the TypeScript engine never decides a median, a quantile or a rank over a labeled member by regions",
+  "edits": [
+   [
+    "src/labeled.ts",
+    " || HOLISTIC.includes(op)) || typeof param",
+    ") || typeof param"
+   ]
+  ],
+  "expect": {
+   "agg_label_holes": "lhmed[main]"
+  }
+ },
+ {
   "id": "ts_label_known_apart",
   "what": "the TypeScript engine tells a labeled member apart from every known member",
   "edits": [

@@ -15,9 +15,11 @@ are part of the semantics.
 
 The kernel is a *generic* inference machine: all semantics — including the
 schema of what a "rule" is and the rules that validate rules — live in the
-graph as data (`boot.rofl`). The kernel has zero runtime dependencies (the
-optional code scanner under `scanners/` is the only component with one,
-`@babel/parser`). TypeScript, runs under Bun or Node ≥ 22.
+graph as data (`boot.rofl`). The engine is Rust (the `rofl` binary under
+`rust/`, one native file); the TypeScript engine under `src/` is the parity
+reference, has zero runtime dependencies (the optional code scanner under
+`scanners/` is the only component with one, `@babel/parser`) and runs under
+Node ≥ 22.
 
 ## Using it
 
@@ -895,6 +897,19 @@ bit-identical state, tick log, and provenance regardless of insertion order
   design reasons are docs/aggregates.md, facts/agg.rofl and rules/agg.rofl.
   The amendment is `d_aggregates_in_the_kernel` in facts/spec.rofl, which
   retires `l_no_aggregation`.
+- **Rust is the engine, and START.md asked for TypeScript with zero runtime
+  dependencies under Bun or Node.** Decided 2026-10-02 by the owner
+  (f_rofl_moves_to_rust_first, f_rust_is_the_engine_ts_is_the_reference): the
+  `rofl` binary under `rust/` is the engine every measurement is taken on, and
+  it links crates (`serde_json`, `memmap2`) at build time. The two duties are
+  narrowed, not dropped, and each now says one thing per engine.
+  `s_zero_deps`: the TypeScript engine under `src/` still has no runtime
+  dependency (`package.json` has no `dependencies`); the Rust engine is one
+  static binary that needs nothing installed beside it, and its crates are
+  build-time. `s_two_runtimes`: the TypeScript engine runs under Node, which CI
+  holds (`goldens (node)`); Bun is no longer checked since the owner removed
+  its job on 2026-10-11; the Rust engine is native and runs under neither.
+  Both engines are held to one golden by `npm test`.
 
 <!-- END deviations -->
 

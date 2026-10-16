@@ -1763,7 +1763,9 @@ labeled, in `ph_wc` and `ph_pair`). A pattern with more than one open position,
 or with an open position that is not labeled, is as it was.
 
 **The correlation** (`region_decide`, `regionDecide`). A group of a count, a
-sum, a min, a max, an or or an and whose possibles all exist in every completion and rest on labels is decided
+sum, a min, a max, an or, an and, a median, a quantile or a rank (its percent
+or subject a value, a rank over a tuple aside) whose possibles all exist in
+every completion and rest on labels is decided
 by regions: the values a label can be told apart by are the constants the
 terms mention (the group key, the exclusion lists, the cases of a `$by`, and
 the projection of every known member or other possible a labeled projection
@@ -1781,9 +1783,12 @@ labels (`$by`, nested), so what reads the group (a total over all groups) reads
 one unknown and not one per group. This is how the sum and the count over all
 groups are exact when one member's group is unknown, and when two are: each
 member adds one to the group it joins or makes a group of its own, whatever it
-is. A group with a possible that may not exist, one that is not labeled, one
-of a holistic kind (median, quantile, rank), or a comparison over a table,
-is decided as before (the algebra of "Precise holes, as built").
+is. The holistic kinds fold the sorted values of the members present in each
+region as the algebra reads them: over the counts of `lwc`, {2, 1}, {1, 2} or
+{1, 1, 1}, the lower median, `quantile(0)` and `rank(1)` are 1 in every
+region and `quantile(100)` is a table. A group with a possible that may not
+exist, one that is not labeled, or a comparison over a table, is decided as
+before (the algebra of "Precise holes, as built").
 
 **The cap** (`LABEL_REGIONS` = 64). One label is linear (its constants plus
 one). Regions are counted before they are made (`count_regions`); more than 64
@@ -1825,10 +1830,9 @@ projection is held by a group already (`lvtot`, `$by(L, 3, [g1 -> 2])`), the
 total over a member that may not exist (`lutot`).
 
 **Not decided** (sound, not complete): the group the labeled unknown makes
-when several positions of the group are open; a holistic kind (median,
-quantile, rank) over a labeled member (the algebra of "Precise holes, as
-built" decides it, a labeled unknown only names it); a comparison over a `$by`
-value; an unknown
+when several positions of the group are open; a holistic kind over a new
+group the labeled unknown makes (its value is not tabled, `new_group_value`);
+a rank over a tuple; a comparison over a `$by` value; an unknown
 in the key of a lattice cell (`Unknown::Rel`); a `$by` over more than six
 labels for the count of a new group. These keep the anonymous unknown and its
 shrug.
@@ -1842,7 +1846,8 @@ the TypeScript surfaces of `scripts/goldens.ts`; the order kinds (min, max, or, 
 over all groups) in the same two worlds. The faults: `label_off`,
 `label_ex_ignored`, `label_by_values_ignored`, `label_regions_off`,
 `label_correlation_lost`, `label_cap_ignored`, `label_open_correlation`,
-`label_new_anonymous`, `label_sure_always` and their `ts_label_*` twins.
+`label_new_anonymous`, `label_sure_always`, `label_holistic_off` and their
+`ts_label_*` twins.
 `agg_label_sound` holds the four answers a brute-force completion oracle found
 decided where a completion contradicts them, each a shrug now
 (f_labeled_unknowns_four_unsound_answers; `label_known_apart`,

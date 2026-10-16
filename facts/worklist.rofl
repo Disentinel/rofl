@@ -3440,7 +3440,7 @@ work_needs(w_express_semantics, w_url_pack).
 
 work(w_service_graph,
   "The one join and its frontier: calls(Caller, H) :- requests(C, M, U), nearest_fn(Caller, C), serves(_, M, P, H), matches(P, U). Into calls itself, so may_throw, the effect layer, frontier_at and why see a cross-service edge with no change. Frontier both ways as positive relations: a request no service serves, a route no request reaches. Corpus: two services in test/fixtures scanned into one world as volumes; oracle: the services run and their access log is compared to calls_in across files, the same way V8 frames are compared today. A layer(service) and its cells, or unaccounted[audit] will say so.").
-work_state(w_service_graph, open).
+work_state(w_service_graph, done).
 work_needs(w_service_graph, w_fetch_semantics).
 work_needs(w_service_graph, w_express_semantics).
 work_spawned(w_service_graph, f_a_request_reaches_its_handler_by_segments_of_texts).
@@ -3450,6 +3450,12 @@ work_spawned(w_service_graph, f_a_request_reaches_its_handler_by_segments_of_tex
 -- 2026-10-16, later: the edge goes through the network now (rules/net/, f_a_request_walks_the_network_before_it_reaches_a_route);
 -- the path-only match and its suffix decision are gone.
 work_spawned(w_service_graph, f_a_request_walks_the_network_before_it_reaches_a_route).
+
+-- DONE 2026-10-16 (PR #40, PR #46): the join, the frontier and the walk through the network; what is left is below.
+work(w_service_graph_oracle,
+  "REMAINDER of w_service_graph: (1) THE ORACLE: the two services of examples/services run, their access log compared with the edges into calls[code] across files, as V8 frames are compared today; (2) layer(service) and its cells, the owner's declaration to make, until then unaccounted[audit] says so; (3) axios baseURL: an instance made by axios.create({baseURL}) names its base, which today goes under a base nothing traces (http_no_origin).").
+work_state(w_service_graph_oracle, open).
+work_needs(w_service_graph_oracle, w_service_graph).
 
 -- The translators of configs into the vocabulary of rules/net/ (zone files, nginx, haproxy, cluster templates, cloud
 -- groups) are written on site as scanners, not here (owner, 2026-10-16): the tree owes them the vocabulary only.
@@ -3519,7 +3525,9 @@ work_needs(w_wasm_playground, w_rust_rofl_md).
 
 work(w_amend_runtime_duties,
   "AMEND, DO NOT BREAK, the START.md duties s_zero_deps (zero runtime dependencies) and s_two_runtimes (runs under Bun or Node): Rust first with crates such as oxc contradicts both. Record the amendment in the decided book with its citation, state what each duty now means for each engine, and let speccheck show the pair as an amendment rather than a defect.").
-work_state(w_amend_runtime_duties, open).
+work_state(w_amend_runtime_duties, done).
+-- DONE 2026-10-16: deviation r_rust_is_the_engine (facts/deviations.rofl, rendered into README.md) qualifies s_zero_deps
+-- and s_two_runtimes in facts/spec.rofl; each now says what it means for each engine, guarded by c_ci_node.
 work_needs(w_rust_scanner_oxc, w_amend_runtime_duties).
 
 -- ===========================================================================
@@ -3697,6 +3705,8 @@ work_spawned(w_labeled_unknowns, f_a_type_error_leaves_no_value_so_its_tuple_may
 work(w_labeled_unknowns_tail,
   "THE TAIL OF w_labeled_unknowns (docs/aggregates.md, \"Labeled unknowns, as built\", Not decided), each bounded and pattern-mirroring: (1) the holistic kinds (median, quantile, rank) over a labeled member by regions, as count, sum, min, max, or and and are (region_value folds the sorted values of the members present, the percent or subject read as the algebra reads them); (2) a comparison over a `$by` value decided per value of the table, so a rule reading a conditional count can hold where every value passes (a conclusion from an unknown tuple is carried today, never derived: it needs the tuple to be matched by the firing path, the engine's rule-firing plan); (3) a group with more than one open position, whose new groups are tuples excluded as tuples; (4) a labeled unknown in the key of a lattice cell (Unknown::Rel); (5) the count of a new group with more than six other labels. ACCEPTANCE: each turns a shrug the completions oracles of agg-label-oracle.rofl say is decided into an answer in both engines, with a planted fault and its twin.").
 work_state(w_labeled_unknowns_tail, open).
+-- 2026-10-16 (f_a_median_over_a_labeled_member_is_decided_by_regions): (1) is done, by regions; 2 to 5 stay open.
+work_spawned(w_labeled_unknowns_tail, f_a_median_over_a_labeled_member_is_decided_by_regions).
 work_needs(w_labeled_unknowns_tail, w_labeled_unknowns).
 
 -- ===========================================================================
@@ -3906,10 +3916,16 @@ work_spawned(w_stage_hypotheses, f_the_owner_sets_staged_evaluation_as_the_engin
 
 work(w_derived_as_given,
   "THE KEYSTONE of staged evaluation: a frozen layer of derived facts is taken as complete, run_pass does not clear it and no rule whose head is in it fires. Proof: a world evaluated in two stages equals the world evaluated whole, byte for byte, on every world of npm test that splits. PROGRESS 2026-10-15 (f_two_stages_equal_the_whole_on_every_world_that_splits): the proof holds on all 167 worlds that split (scripts/addcheck.ts, the lower stage kept as a volume and opened in between), the upper stage by delta in 137; dominance and join lattices open evaluated. LEFT: an upper stage the addition path evaluates again (30 of 167, each reason one of w_add_full_reasons) evaluates the lower stage again too; a full pass that keeps the finished layer is what would stop that.").
-work_state(w_derived_as_given, open).
+work_state(w_derived_as_given, done).
+-- DONE 2026-10-16: the keystone holds on all 167 worlds that split (PR #34); the remainder is w_full_pass_keeps_frozen_layer.
 work_needs(w_derived_as_given, w_stage_hypotheses).
 work_spawned(w_derived_as_given, f_an_evaluated_world_kept_on_disk_opens_evaluated_and_takes_the_next_stage_by_delta).
 work_spawned(w_derived_as_given, f_two_stages_equal_the_whole_on_every_world_that_splits).
+
+work(w_full_pass_keeps_frozen_layer,
+  "REMAINDER of w_derived_as_given: an upper stage the addition path evaluates again (25 of 167 since f_a_late_rule_is_an_order_only_the_stock_evaluator_reads, each reason one of w_add_full_reasons) evaluates the lower stage again too. A full pass that keeps the finished layer (run_pass does not clear it, no rule whose head is in it fires) stops that. ACCEPTANCE: scripts/addcheck.ts reports no lower stage evaluated again on any world that splits, the stages still equal the whole byte for byte.").
+work_state(w_full_pass_keeps_frozen_layer, open).
+work_needs(w_full_pass_keeps_frozen_layer, w_derived_as_given).
 
 work(w_mapped_volume,
   "DONE 2026-10-11 (f_a_world_kept_as_a_volume_opens_mapped_in_a_fifteenth_of_the_time): Session::keep_volume / open_volume, rust/rofl/src/volume.rs, proved by rust/rofl/tests/volume.rs and tests/addition.rs. OPEN: the key by (program hash, input hashes) belongs to the cache of decision 1; a write below the mark copies the whole mapped arena it lands in (a flag, a witness chain head, a run absorbed), where an overlay would copy a page. The colfile of rust/storebench into the engine as the frozen base a fork reads: a kept stage or volume is a mapped columnar file, keyed by (program hash, input hashes).").

@@ -3762,7 +3762,7 @@ export class AggEval {
         if (us.length > 0) {
           // where every unknown it rests on is a label and exists for certain, the group is decided by what each
           // value the labels could be gives it ("Labeled unknowns")
-          const rg = this.rankKey(a, s) === null && (value.k === 'value' || value.k === 'empty') ? regionDecide(op, aggParams(a), gkey, reps.map((i) => cands[i].proj), reps.map((i) => values[i]), mine) : { k: 'no' as const };
+          const rg = this.rankKey(a, s) === null && (value.k === 'value' || value.k === 'empty') ? regionDecide(op, this.aggParam(a, s), rankTuple(a), gkey, reps.map((i) => cands[i].proj), reps.map((i) => values[i]), mine) : { k: 'no' as const };
           if (rg.k === 'decided') { value = { k: 'value', t: rg.v }; decided.set(sealed.length, rg.by); }
           else if (rg.k === 'cond') { value = { k: 'hole', reason: 'support_withdrawn' }; kept = [...order]; conds.set(sealed.length, rg.t); reached.set(sealed.length, us); }
           else if (rg.k === 'capped') { value = { k: 'hole', reason: 'regions_capped' }; kept = [...order]; capped.set(sealed.length, rg.n); }
