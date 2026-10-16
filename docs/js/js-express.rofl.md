@@ -12,6 +12,7 @@ default: flow
 >                                      on the pattern P, a text over the route's
 >                                      strings, with the function H, a `route`
 >                                      or a `middleware` that runs before one
+>   app_listens[surface](App, Port)     `app.listen(Port)`: App answers at Port
 > 
 > Knows nothing about clients. An app is a call of the module (`express()`), a
 > router a call of its `Router`; `app.get(p, h)`, `router.post(p, h)` and
@@ -27,7 +28,7 @@ Reads:
 - from js-dataflow, in the code: [external_import](js-dataflow.rofl.md#external_import)
 - from js-dataflow: [arg_at](js-dataflow.rofl.md#arg_at), [external_value](js-dataflow.rofl.md#external_value), [member_node_v](js-dataflow.rofl.md#member_node_v), [selects](js-dataflow.rofl.md#selects)
 - from js-model, in the code: [ast_node](js-model.rofl.md#ast_node)
-- from js-structure, in the code: [ast_name](js-structure.rofl.md#ast_name)
+- from js-structure, in the code: [ast_name](js-structure.rofl.md#ast_name), [ast_value](js-structure.rofl.md#ast_value)
 - from js-surface: [fn_value](js-surface.rofl.md#fn_value)
 - from js-surface, in the surface: [sx_esc](js-surface.rofl.md#sx_esc)
 - from the scanner, in the code:
@@ -40,6 +41,7 @@ What this file calls a node, and what each word stands for:
 | word | stands for |
 |---|---|
 | <a id="noun-call_expression"></a>a call expression | a node of kind `call_expression` |
+| <a id="noun-numeric_literal"></a>a numeric literal | a node of kind `numeric_literal` |
 | a member access | a node [`member_node_v`](js-dataflow.rofl.md#member_node_v) holds of |
 
 `express_module` includes "express".
@@ -155,6 +157,14 @@ In the flow:
    - [`ex_on`](#ex_on)(R, Y, "use");
 2. if [`ex_sub`](#ex_sub)(R, 0, Y2), [`ex_on`](#ex_on)(R, Y, "use"), and V is "/".
 
+<a id="ex_port_lit"></a>`ex_port_lit`(V) if a [numeric literal](#noun-numeric_literal) N [is written as](js-structure.rofl.md#ast_value) V.
+
+<a id="ex_listen"></a>`ex_listen`(Y, P) if all of:
+  - [`ex_on`](#ex_on)(R, Y, "listen");
+  - R [passes](js-dataflow.rofl.md#arg_at) a node X at 0;
+  - X [may be the literal](js-concat.rofl.md#may_be_lit) P;
+  - [`ex_port_lit`](#ex_port_lit)(P).
+
 ## 3. ACROSS FILES. A router is made in one file and mounted in another; what
 
 > a file registers on one is published, and the mounts compose in [surface].
@@ -176,6 +186,8 @@ In the surface:
 <a id="sx_ex_mount"></a>`sx_ex_mount`(Y, V, Y2) if [`ex_mount`](#ex_mount)(Y, V, Y2).
 
 <a id="sx_ex_str"></a>`sx_ex_str`(V) if [`ex_path`](#ex_path)(something, V).
+
+<a id="app_listens"></a>`app_listens`(App, P) if [`sx_ex_app`](#sx_ex_app)(App) and [`ex_listen`](#ex_listen)(App, P).
 
 <a id="ex_reach"></a>`ex_reach`(App, N, E, X) either:
 

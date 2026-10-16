@@ -1,0 +1,42 @@
+-- examples/checks/services-net.rofl — the network examples/services runs on, written by hand in the vocabulary of
+-- rules/net/ as a translator of a zone file, an nginx config and a cloud's security groups would write it.
+--
+--   web1 10.0.1.10 ── https api.shop.example ──▶ edge 10.0.0.5, nginx :443 (TLS *.shop.example)
+--                                                   /v1/ ──▶ http api.internal:3000/ ──▶ api1 10.0.2.20, the api
+-- The api's group lets in only the edge's group, on 3000; the edge's group lets in anyone on 443.
+
+-- what runs where
+iface(web1, "10.0.1.10").
+iface(api1, "10.0.2.20").
+iface(edge, "10.0.0.5").
+iface(edge, "203.0.113.5").
+own_net("203.0.113.0/24").
+runs(web1, web).
+runs(api1, api).
+runs(edge, nginx).
+code_of(web, "src/web").
+code_of(api, "src/api").
+
+-- the zone
+points("api.internal", "10.0.2.20").
+points("edge.internal", "10.0.0.5").
+points("api.shop.example", "edge.internal").
+points("payments.example.com", "198.51.100.7").
+
+-- nginx: server api.shop.example, location /v1/ { proxy_pass http://api.internal:3000/; }, location / to the front
+listens(nginx, "0.0.0.0", 443, tcp).
+layer(nginx, 7).
+tls_on(nginx, 443, shop_cert).
+cert(shop_cert, "*.shop.example").
+hop(v1, nginx, 443, "api.internal", 3000).
+hop_when(v1, host, "api.shop.example").
+hop_when(v1, path, "/v1/").
+hop_path(v1, "/").
+hop(front, nginx, 443, "front.internal", 8080).
+hop_when(front, host, "api.shop.example").
+
+-- security groups
+guard(sg_api, "10.0.2.0/24").
+allows_group(sg_api, sg_edge, 3000).
+guard(sg_edge, "10.0.0.0/24").
+allows(sg_edge, "0.0.0.0/0", 443).

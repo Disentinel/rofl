@@ -3136,7 +3136,14 @@ check_file("cost_shapes_model", "rules/js-ambient.rofl").
 check_file("cost_shapes_model", "rules/js-attrs.rofl").
 check_file("cost_shapes_model", "rules/js-modules.rofl").
 check_file("cost_shapes_model", "rules/js-surface.rofl").
-check_file("cost_shapes_model", "rules/url.rofl").
+check_file("cost_shapes_model", "rules/net/net-addr.rofl").
+check_file("cost_shapes_model", "rules/net/net-host.rofl").
+check_file("cost_shapes_model", "rules/net/net-dns.rofl").
+check_file("cost_shapes_model", "rules/net/net-proto.rofl").
+check_file("cost_shapes_model", "rules/net/net-tls.rofl").
+check_file("cost_shapes_model", "rules/net/net-access.rofl").
+check_file("cost_shapes_model", "rules/net/net-http.rofl").
+check_file("cost_shapes_model", "rules/net/net-hops.rofl").
 check_file("cost_shapes_model", "rules/js-fetch.rofl").
 check_file("cost_shapes_model", "rules/js-express.rofl").
 check_file("cost_shapes_model", "rules/js-service.rofl").
@@ -3163,7 +3170,14 @@ check_file("surface_model", "rules/js-attrs.rofl").
 check_file("surface_model", "rules/js-modules.rofl").
 check_file("surface_model", "rules/js-concat.rofl").
 check_file("surface_model", "rules/js-surface.rofl").
-check_file("surface_model", "rules/url.rofl").
+check_file("surface_model", "rules/net/net-addr.rofl").
+check_file("surface_model", "rules/net/net-host.rofl").
+check_file("surface_model", "rules/net/net-dns.rofl").
+check_file("surface_model", "rules/net/net-proto.rofl").
+check_file("surface_model", "rules/net/net-tls.rofl").
+check_file("surface_model", "rules/net/net-access.rofl").
+check_file("surface_model", "rules/net/net-http.rofl").
+check_file("surface_model", "rules/net/net-hops.rofl").
 check_file("surface_model", "rules/js-fetch.rofl").
 check_file("surface_model", "rules/js-express.rofl").
 check_file("surface_model", "rules/js-service.rofl").
@@ -3678,8 +3692,9 @@ check_file("concat_value", "rules/js-surface.rofl").
 check_file("concat_value", "examples/checks/concat-facts.rofl").
 check_file("concat_value", "examples/checks/concat-check.rofl").
 
--- w_service_graph: a request reaches a handler across services (rules/url.rofl, js-fetch, js-express, js-service) over
--- examples/services/src, a web client and an Express api with a router made in one file and mounted in another; every
+-- w_service_graph: a request reaches a handler across services (rules/net/, js-fetch, js-express, js-service) over
+-- examples/services/src, a web client and an Express api with a router made in one file and mounted in another, on the
+-- network of examples/checks/services-net.rofl; every
 -- edge from a client function to a handler and the frontier both ways named in the check
 check_world("services").
 check_file("services", "facts/js-kinds.rofl").
@@ -3708,11 +3723,33 @@ check_file("services", "rules/js-attrs.rofl").
 check_file("services", "rules/js-modules.rofl").
 check_file("services", "rules/js-concat.rofl").
 check_file("services", "rules/js-surface.rofl").
-check_file("services", "rules/url.rofl").
+check_file("services", "rules/net/net-addr.rofl").
+check_file("services", "rules/net/net-host.rofl").
+check_file("services", "rules/net/net-dns.rofl").
+check_file("services", "rules/net/net-proto.rofl").
+check_file("services", "rules/net/net-tls.rofl").
+check_file("services", "rules/net/net-access.rofl").
+check_file("services", "rules/net/net-http.rofl").
+check_file("services", "rules/net/net-hops.rofl").
 check_file("services", "rules/js-fetch.rofl").
 check_file("services", "rules/js-express.rofl").
 check_file("services", "rules/js-service.rofl").
 check_file("services", "examples/checks/services-facts.rofl").
+check_file("services", "examples/checks/services-net.rofl").
+
+-- w_service_graph, the net library alone (rules/net/): requests and routes written as facts over a cluster service
+-- that keeps the caller's address, an L5 balancer that routes TLS by name to a backend asking for a client
+-- certificate, split horizon, a hosts file, a CNAME loop, a v6-only name, an L4 rule blind to the path
+check_world("net").
+check_file("net", "rules/net/net-addr.rofl").
+check_file("net", "rules/net/net-host.rofl").
+check_file("net", "rules/net/net-dns.rofl").
+check_file("net", "rules/net/net-proto.rofl").
+check_file("net", "rules/net/net-tls.rofl").
+check_file("net", "rules/net/net-access.rofl").
+check_file("net", "rules/net/net-http.rofl").
+check_file("net", "rules/net/net-hops.rofl").
+check_file("net", "examples/checks/net-check.rofl").
 check_file("services", "examples/checks/services-check.rofl").
 
 -- w_next_version_cutoff, the surface split (docs/surface-split.md): the same question over mini + 10 hand-made files that
