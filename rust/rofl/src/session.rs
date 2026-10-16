@@ -290,12 +290,12 @@ impl Session {
             let n = self.assert(src)?;
             return Ok((n, Addition::Full("the world is not evaluated".into())));
         }
-        let requests: Vec<Term> = facts.iter().map(|(rel, persp, args)| {
-            let f = crate::reflect::fact_term(&mut self.eval.h, &self.eval.v, *rel, *persp, args);
-            self.eval.h.mkf_named("assert", &[f])
-        }).collect();
         let (n, a) = self.assert_facts_delta(&facts);
         if let Addition::Full(why) = &a {
+            let requests: Vec<Term> = facts.iter().map(|(rel, persp, args)| {
+                let f = crate::reflect::fact_term(&mut self.eval.h, &self.eval.v, *rel, *persp, args);
+                self.eval.h.mkf_named("assert", &[f])
+            }).collect();
             self.evaluated_again(&requests, why);
         }
         Ok((n, a))
@@ -339,20 +339,20 @@ impl Session {
         if !r.ok {
             return Err(r.diagnostics);
         }
-        // the request names what the program brought: each rule by its id, each fact of its own books
-        let mut requests = Vec::new();
-        for &f in &ids {
-            let (rel, persp) = (self.eval.store.rec(f).rel, self.eval.store.rec(f).persp);
-            if rel == self.eval.v.rule {
-                let rid = self.eval.store.args(f)[0];
-                requests.push(self.eval.h.mkf_named("rule", &[rid]));
-            } else if !self.eval.v.is_reserved(rel) && !is_kernel_ledger(&self.eval.h, persp) {
-                let t = self.fact_term(f);
-                requests.push(self.eval.h.mkf_named("assert", &[t]));
-            }
-        }
-        let a = self.loaded_delta(mark, ids);
+        let a = self.loaded_delta(mark, ids.clone());
         if let Addition::Full(why) = &a {
+            // the request names what the program brought: each rule by its id, each fact of its own books
+            let mut requests = Vec::new();
+            for &f in &ids {
+                let (rel, persp) = (self.eval.store.rec(f).rel, self.eval.store.rec(f).persp);
+                if rel == self.eval.v.rule {
+                    let rid = self.eval.store.args(f)[0];
+                    requests.push(self.eval.h.mkf_named("rule", &[rid]));
+                } else if !self.eval.v.is_reserved(rel) && !is_kernel_ledger(&self.eval.h, persp) {
+                    let t = self.fact_term(f);
+                    requests.push(self.eval.h.mkf_named("assert", &[t]));
+                }
+            }
             self.evaluated_again(&requests, why);
         }
         Ok((r.admitted, a))

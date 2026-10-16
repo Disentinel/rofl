@@ -342,12 +342,13 @@ impl Eval {
                     continue;
                 }
                 let head = r.clause.head.rel;
-                // answered at the call sites and never fired: its conclusions are the calls'
-                if !r.safe && self.demand_rels.iter().any(|(x, _)| *x == head) {
+                // answered at the call sites, or never fired: its conclusions are the calls'
+                if !r.safe {
                     continue;
                 }
-                if self.shrug_readers.contains(&r.id) || self.answer.late.contains(&r.id) || !r.safe {
-                    return Err("a rule late or unsafe reads what rests on the fact");
+                // late is an order only the stock evaluator reads its strata between
+                if self.shrug_readers.contains(&r.id) || self.answer.late.contains(&r.id) && self.mode == Mode::Strata {
+                    return Err("a rule that reads the shrugs, or one late under the stock evaluator, reads what rests on the fact");
                 }
                 if r.clause.head.temporal == Temporal::Next {
                     if !staging {

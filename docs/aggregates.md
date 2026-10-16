@@ -3574,8 +3574,8 @@ groups it had a value for: the cells there are depend on the first); **a staged 
 (which of them the evaluation kept is the schedule's: the first to arrive); a staged rule, a rule
 answered on demand, or a component stratified by its data in a world with a lattice, where a delta is not
 worked out (a lattice withdraws what a firing read, and a call made at a value it has since passed leaves
-a fact no fresh evaluation makes); a fact asserted into a relation answered on demand; a rule that is
-late or unsafe and reads what rests on the fact; a dominance rule that reads it; and a delta that would
+a fact no fresh evaluation makes); a fact asserted into a relation answered on demand; a rule that
+reads the shrugs, or one late under the stock evaluator, and reads what rests on the fact; a dominance rule that reads it; and a delta that would
 write a hole, seal a cell nothing indexes or meet a wall (a hole is written with its shrugs after a whole
 pass). Each is a named reason; none changes what a full evaluation answers.
 
