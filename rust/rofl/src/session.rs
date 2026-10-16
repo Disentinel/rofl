@@ -1666,6 +1666,10 @@ impl Session {
             let path = path.clone();
             std::thread::spawn(move || -> Result<String, String> {
                 let cmd = cmd.ok_or("no scanner(Kind, Command) for this kind")?;
+                let kept = scan_kept(&cmd, &path);
+                if let Some(out) = kept.as_deref().and_then(scan_fresh) {
+                    return Ok(out);
+                }
                 let mut argv = cmd.split_whitespace();
                 let prog = argv.next().ok_or("an empty command")?;
                 let o = std::process::Command::new(prog).args(argv).arg(&path).output().map_err(|e| format!("{prog}: {e}"))?;
@@ -1673,7 +1677,9 @@ impl Session {
                     let err = String::from_utf8_lossy(&o.stderr);
                     return Err(format!("{cmd} exited {}: {}", o.status.code().unwrap_or(-1), err.lines().last().unwrap_or("")));
                 }
-                String::from_utf8(o.stdout).map_err(|_| "the scanner printed bytes that are not UTF-8".into())
+                let out = String::from_utf8(o.stdout).map_err(|_| "the scanner printed bytes that are not UTF-8".to_string())?;
+                if let Some(k) = kept { scan_keep(&k, &out); }
+                Ok(out)
             })
         }).collect();
         let q = |s: &str| format!("\"{}\"", s.replace('\\', "\\\\").replace('"', "\\\""));
@@ -1681,7 +1687,7 @@ impl Session {
         for (((kind, path), _), run) in todo.iter().zip(runs) {
             match run.join().unwrap_or_else(|_| Err("the scanner's thread failed".into())) {
                 Ok(out) => {
-                    let n = out.lines().filter(|l| l.trim_end().ends_with('.')).count();
+                    let n = out.lines().filter(|l| !l.starts_with("--") && l.trim_end().ends_with('.')).count();
                     src.push_str(&out);
                     src.push_str(&format!("\nscan_done({kind}, {path}, {n}).\n"));
                 }
@@ -1789,4 +1795,50 @@ impl Session {
         crate::program::check_query_sets(h, v, &args)?;
         Ok((l.rel, persp, args))
     }
+}
+
+/// THE STOREROOM OF SCANS (docs/cli.md): a scanner that names what it read, a `-- reads: PATH` line for each file
+/// and directory, has its output kept under `$XDG_CACHE_HOME/rofl/scans` (else `~/.cache/rofl/scans`), each read
+/// stamped; the same command for the same path is answered from there while every stamp still holds, and runs again
+/// when one does not. A scanner that names nothing is always run. The world cannot tell the two apart.
+fn scan_kept(cmd: &str, path: &str) -> Option<std::path::PathBuf> {
+    let home = std::env::var_os("XDG_CACHE_HOME").map(std::path::PathBuf::from)
+        .or_else(|| std::env::var_os("HOME").map(|h| std::path::Path::new(&h).join(".cache")))?;
+    let cwd = std::env::current_dir().ok()?;
+    Some(home.join("rofl/scans").join(format!("{}.rofl", crate::store::fnv64(&format!("{}\0{cmd}\0{path}", cwd.display())))))
+}
+
+/// A file by its bytes, a directory by the names in it, nothing for a path that is gone.
+fn scan_stamp(p: &str) -> String {
+    let p = std::path::Path::new(p);
+    if let Ok(d) = std::fs::read_dir(p) {
+        let mut names: Vec<String> = d.flatten().map(|e| {
+            let dir = e.file_type().map_or(false, |t| t.is_dir());
+            format!("{}{}", e.file_name().to_string_lossy(), if dir { "/" } else { "" })
+        }).collect();
+        names.sort();
+        return crate::store::fnv64(&names.join("\n"));
+    }
+    std::fs::read(p).map_or_else(|_| "gone".into(), |b| crate::store::fnv64(&String::from_utf8_lossy(&b)))
+}
+
+fn scan_fresh(kept: &std::path::Path) -> Option<String> {
+    let text = std::fs::read_to_string(kept).ok()?;
+    let mut lines = text.lines();
+    for l in lines.by_ref() {
+        let Some(r) = l.strip_prefix("-- kept: ") else { break };
+        let (stamp, p) = r.split_once(' ')?;
+        if scan_stamp(p) != stamp { return None; }
+    }
+    Some(text)
+}
+
+fn scan_keep(kept: &std::path::Path, out: &str) {
+    let reads: Vec<&str> = out.lines().filter_map(|l| l.strip_prefix("-- reads: ")).collect();
+    if reads.is_empty() { return; }
+    let mut text: String = reads.iter().map(|p| format!("-- kept: {} {p}\n", scan_stamp(p))).collect();
+    text.push_str(out);
+    let tmp = kept.with_extension(format!("{}.tmp", std::process::id()));
+    let _ = kept.parent().map(std::fs::create_dir_all);
+    if std::fs::write(&tmp, text).is_ok() { let _ = std::fs::rename(&tmp, kept); }
 }
