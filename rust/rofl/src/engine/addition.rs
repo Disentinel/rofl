@@ -220,7 +220,7 @@ impl Eval {
         if was.lattices != now.lattices || was.subs != now.subs || was.carried != now.carried {
             out.push("a lattice, tag or dominance declaration changed");
         }
-        if was.late != now.late || was.shrugs != now.shrugs {
+        if was.late != now.late && self.mode == Mode::Strata || was.shrugs != now.shrugs {
             out.push("the rules fired late or after the shrugs changed");
         }
         if was.cone.is_none() && now.cone.is_some() {
@@ -934,7 +934,6 @@ impl Eval {
                 brk!("add_demand_unreached_dropped" => false; grown.contains(d) || fresh.iter().any(|f| self.rule_of(*f).is_some_and(|r| reads(&r, &one).0)) || self.rules.iter().any(|r| reads(r, &one).0 && reads(r, grown).0))
             }))
             .collect();
-        let called = |r: &ERule| !r.safe && demanded.contains(&r.clause.head.rel);
         // AN ORDER LATTICE THE CHANGE REACHES is derived again whole, as the retraction path derives its cone again:
         // an improved value withdraws what read the old one, and the history of a schedule is no delta's
         let lats: HashSet<Sym> = grown.iter().copied().filter(|r| self.lattices.contains_key(r)).collect();
@@ -957,7 +956,7 @@ impl Eval {
         let mut staged: Vec<Rc<ERule>> = Vec::new();
         for r in &self.rules {
             let (any, inner) = reads(r, grown);
-            if r.clause.head.temporal == Temporal::Next || called(r) {
+            if r.clause.head.temporal == Temporal::Next || !r.safe {
                 continue;
             }
             // a cell seals the rounds of what it reads: one over a relation whose round moved is sealed again
@@ -1025,7 +1024,7 @@ impl Eval {
         // a rule that reads what is derived again after the rest under a negation or an aggregate may withdraw too:
         // reset with it
         for r in &self.rules {
-            if r.clause.head.temporal == Temporal::Next || called(r) {
+            if r.clause.head.temporal == Temporal::Next || !r.safe {
                 continue;
             }
             let (any, inner) = reads(r, &dirty);
@@ -1038,7 +1037,7 @@ impl Eval {
         let again: Vec<Rc<ERule>> = self
             .rules
             .iter()
-            .filter(|r| r.clause.head.temporal != Temporal::Next && !called(r) && (reset_after.contains(&r.id) || dirty.contains(&r.clause.head.rel)))
+            .filter(|r| r.clause.head.temporal != Temporal::Next && r.safe && (reset_after.contains(&r.id) || dirty.contains(&r.clause.head.rel)))
             .cloned()
             .collect();
         mono.retain(|r| !dirty.contains(&r.clause.head.rel));
@@ -1079,8 +1078,9 @@ impl Eval {
             if (self.lattices.contains_key(&head) && !lats.contains(&head)) || self.tags.count_of.contains_key(&head) || self.v.is_reserved(head) {
                 return Err("a lattice, a tag or a ledger is concluded from what changed");
             }
-            if self.shrug_readers.contains(&r.id) || self.answer.late.contains(&r.id) || !r.safe {
-                return Err("a rule late or unsafe reads what changed");
+            // late is an order only the stock evaluator reads its strata between
+            if self.shrug_readers.contains(&r.id) || self.answer.late.contains(&r.id) && self.mode == Mode::Strata {
+                return Err("a rule that reads the shrugs, or one late under the stock evaluator, reads what changed");
             }
         }
         if self.subs.values().any(|x| x.reads.iter().any(|b| changed.contains(b))) {
