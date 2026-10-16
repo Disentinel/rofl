@@ -3422,17 +3422,20 @@ work_spawned(w_concat_value, f_a_string_built_from_parts_is_a_node_with_parts_an
 
 work(w_url_pack,
   "A URL library that knows nothing about JavaScript: a path as a sequence of segments (the kernel cuts strings with str_pre, str_seg, str_segs, str_sub, str_char and never builds one, so a URL in the model is segments, not text), prefix composition for app.use(prefix, router), and a matcher over patterns with :param and * that consumes parts(E, I, P) - a literal part is cut into segments, a dyn part covers exactly one segment between literal slashes. The unknown-prefix case (`${base}/users` with base untraced) is a DECISION written as a row, not a default: match every service (over-report, the safe direction for a may-set) or none. Testable in a world of one pack with no corpus.").
-work_state(w_url_pack, open).
+work_state(w_url_pack, done).
+work_spawned(w_url_pack, f_a_request_reaches_its_handler_by_segments_of_texts).
 work_needs(w_url_pack, w_concat_value).
 
 work(w_fetch_semantics,
   "Client-side semantics as a pack: fetch(u, {method}), axios/got/undici client.get(u) -> requests(Site, Method, UrlParts). Reads callee_of, selects, arg_at, may_be_node, parts. Knows nothing about servers.").
-work_state(w_fetch_semantics, open).
+work_state(w_fetch_semantics, done).
+work_spawned(w_fetch_semantics, f_a_request_reaches_its_handler_by_segments_of_texts).
 work_needs(w_fetch_semantics, w_url_pack).
 
 work(w_express_semantics,
   "Server-side semantics as a pack: app.get(p, h), router.post, app.use(prefix, router), app.use(middleware) -> serves(App, Method, PatternParts, Handler), prefixes composed through the url pack, middleware as an edge that precedes every handler. Reads passes_function (the handler is a passed function the call graph knows is passed and not called), may_be_node for what router denotes. Knows nothing about clients.").
-work_state(w_express_semantics, open).
+work_state(w_express_semantics, done).
+work_spawned(w_express_semantics, f_a_request_reaches_its_handler_by_segments_of_texts).
 work_needs(w_express_semantics, w_url_pack).
 
 work(w_service_graph,
@@ -3440,6 +3443,10 @@ work(w_service_graph,
 work_state(w_service_graph, open).
 work_needs(w_service_graph, w_fetch_semantics).
 work_needs(w_service_graph, w_express_semantics).
+work_spawned(w_service_graph, f_a_request_reaches_its_handler_by_segments_of_texts).
+-- PROGRESS 2026-10-16: the join, the frontier both ways and the two-service corpus are in (rules/js-service.rofl,
+-- examples/services, world services). LEFT, and why the item stays open: the oracle (run the two services, compare
+-- their access log with the edges), and `layer(service)` with its cells, which is the owner's declaration to make.
 
 -- ===========================================================================
 -- DOCUMENTATION DERIVED FROM THE LEDGER

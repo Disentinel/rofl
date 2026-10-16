@@ -1,0 +1,44 @@
+-- examples/checks/services-check.rofl — the service graph (w_service_graph) over examples/services/src: a web client
+-- (fetch, axios, an axios instance) and an Express api whose users router is made in one file and mounted in another.
+-- Every edge from a client function to a handler is named, and so is the frontier both ways. Red if one is missing
+-- or one more appears.
+sv_edge(A, B) :- svc_call(C, _, H, _), nearest_fn[code](F, C), fn_name[code](F, A), fn_name[code](H, B).
+sv_unserved(A) :- request_unserved(C, _), nearest_fn[code](F, C), fn_name[code](F, A).
+sv_unknown(A) :- request_unknown[flow](C), nearest_fn[code](F, C), fn_name[code](F, A).
+sv_unreached(B) :- route_unreached(H), fn_name[code](H, B).
+
+-- THE ANSWERS. `logger` is a middleware under every path, so every request reaches it. `listUsers` sends to
+-- `${base}/users` and `everyone` to an axios instance's `/users/`, both under a base nothing traces: their tail is
+-- matched against the end of every route, so `/users/:id` answers them too (the safe side of a may-set). `order`
+-- writes its host and a query, both cut off. `lost` reaches only the middleware, so it is unserved; `blind` has no
+-- address; `admin` is reached by nothing.
+sv_want_edge("ping", "logger").        sv_want_edge("ping", "health").
+sv_want_edge("loadUser", "logger").    sv_want_edge("loadUser", "getUser").
+sv_want_edge("order", "logger").       sv_want_edge("order", "createOrder").
+sv_want_edge("drop", "logger").        sv_want_edge("drop", "removeUser").
+sv_want_edge("listUsers", "logger").   sv_want_edge("listUsers", "list").   sv_want_edge("listUsers", "getUser").
+sv_want_edge("everyone", "logger").    sv_want_edge("everyone", "list").    sv_want_edge("everyone", "getUser").
+sv_want_edge("lost", "logger").
+sv_want_unserved("lost").
+sv_want_unknown("blind").
+sv_want_unreached("admin").
+
+sv_missing_edge(A, B) :- sv_want_edge(A, B), not sv_edge(A, B).
+sv_extra_edge(A, B)   :- sv_edge(A, B), not sv_want_edge(A, B).
+sv_missing_unserved(A) :- sv_want_unserved(A), not sv_unserved(A).
+sv_extra_unserved(A)   :- sv_unserved(A), not sv_want_unserved(A).
+sv_missing_unknown(A)  :- sv_want_unknown(A), not sv_unknown(A).
+sv_extra_unknown(A)    :- sv_unknown(A), not sv_want_unknown(A).
+sv_missing_unreached(B) :- sv_want_unreached(B), not sv_unreached(B).
+sv_extra_unreached(B)   :- sv_unreached(B), not sv_want_unreached(B).
+-- the edge is in `calls` itself, so the call graph's own reader names it
+sv_not_in_calls(A, B) :- sv_want_edge(A, B), not calls_named[code](A, B).
+alarm(sv_missing_edge).
+alarm(sv_extra_edge).
+alarm(sv_missing_unserved).
+alarm(sv_extra_unserved).
+alarm(sv_missing_unknown).
+alarm(sv_extra_unknown).
+alarm(sv_missing_unreached).
+alarm(sv_extra_unreached).
+alarm(sv_not_in_calls).
