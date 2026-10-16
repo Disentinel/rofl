@@ -1171,6 +1171,9 @@ pub struct Eval {
     answer: RuleAnswer,
     /// What a kept image holds of `safety_answer`, spent by the first `prepare`.
     known_answer: Option<RuleAnswer>,
+    /// The last judgment of `safety_answer`, by the facts it was judged from: a preparation over the same program
+    /// (an ask added, a kept world opened again) reads it instead of evaluating safety.rofl again.
+    safety_memo: Option<(Vec<Vec<Term>>, RuleAnswer, Option<String>)>,
     pub no_provenance: bool,
     /// A provenanced world no rule reads `derived_by` of writes its rows when
     /// something asks (prov.rs): firings noted, and whether to note them.
@@ -1587,6 +1590,7 @@ impl Eval {
             bootstrap,
             answer: RuleAnswer::default(),
             known_answer: known,
+            safety_memo: None,
             no_provenance: false,
             pending_prov: Vec::new(),
             pending_assert: Vec::new(),
@@ -1964,8 +1968,8 @@ impl Eval {
                 None => self.lazy_prov = false,
             }
         }
-        // a note stays a note while the rules still leave its row unread: an addition does not write a stage's rows
-        if !self.lazy_prov || self.pending_prov.iter().any(|n| self.prov_eager.contains(&self.store.rec(n.0).rel)) {
+        // the rows noted of firings so far are written where the program now reads them
+        if !self.lazy_prov || !self.prov_eager.is_empty() {
             self.settle_derived();
         }
         if self.no_provenance && self.answer.reads_provenance {
@@ -2401,9 +2405,7 @@ impl Eval {
     /// under the stock evaluator with `bootstrap` set — which is the rung that
     /// stops the tower: a bootstrap evaluation asks nothing of anybody.
     fn safety_answer(&mut self, rules: &[DRule]) -> RuleAnswer {
-        if let Some(a) = self.known_answer.take() {
-            return a;
-        }
+        let known = self.known_answer.take();
         if self.bootstrap || (rules.is_empty() && self.lattice_rows.is_empty() && self.dom_rels.is_empty()) {
             return RuleAnswer::default();
         }
@@ -2680,13 +2682,37 @@ impl Eval {
                 }
             }
         }
+        let mut judged: Vec<Vec<Term>> = pol
+            .all_facts()
+            .into_iter()
+            .map(|f| {
+                let r = pol.rec(f);
+                let mut k = vec![Term::atom(r.rel), Term::atom(r.persp)];
+                k.extend_from_slice(pol.args(f));
+                k
+            })
+            .collect();
+        judged.sort_unstable();
+        judged.push(self.tag_refused.iter().flat_map(|(a, b)| [Term::atom(*a), Term::atom(*b)]).collect());
+        if let Some(a) = known {
+            self.safety_memo = Some((judged, a.clone(), None));
+            self.h = h;
+            return a;
+        }
+        if let Some((_, answer, err)) = self.safety_memo.as_ref().filter(|m| m.0 == judged) {
+            if let Some(e) = err {
+                self.diags.push(e.clone());
+            }
+            self.h = h;
+            return answer.clone();
+        }
         let mut sub = Eval::new(h, pol, POLICY_BUDGET, Mode::Strata, true);
         let res = sub.run();
         let mut pol = std::mem::take(&mut sub.store);
         let mut h = std::mem::take(&mut sub.h);
-        if let Err(e) = res {
-            self.diags
-                .push(format!("safety.rofl did not settle: {e:?}"));
+        let err = res.err().map(|e| format!("safety.rofl did not settle: {e:?}"));
+        if let Some(e) = &err {
+            self.diags.push(e.clone());
         }
         let atoms = |h: &mut Heap, pol: &mut Store, rel: Sym| -> Vec<Sym> {
             let mut out = Vec::new();
@@ -2759,6 +2785,7 @@ impl Eval {
             reads_dominated: pol.rel_count(self.v.dominated_reader) > 0,
         };
         self.h = h;
+        self.safety_memo = Some((judged, answer.clone(), err));
         answer
     }
 
@@ -2975,7 +3002,7 @@ impl Eval {
             // `clear_derived` had just emptied, so every negation and every
             // aggregate ran in one final pass (src/engine.ts reads it after
             // the two waves; f_the_rust_stock_evaluator_read_its_table_before_deriving_it).
-            let peeled: Option<Vec<(i64, Vec<Rc<ERule>>)>> = match self.mode {
+            let peeled: Option<(HashSet<Sym>, Vec<(i64, Vec<Rc<ERule>>)>)> = match self.mode {
                 Mode::Rounds => Some({
                     let lats: Vec<Sym> = self.lattices.keys().copied().collect();
                     let dom_edges: Vec<(Sym, Sym)> = self.subs.iter().flat_map(|(p, x)| x.reads.iter().map(move |b| (*p, *b))).collect();
@@ -3044,7 +3071,14 @@ impl Eval {
                         ));
                     }
                     self.round_of = peel.round.iter().map(|(k, v)| (*k, *v as u32)).collect();
-                    level_split(&strat_rules, |r| {
+                    let lifted: Vec<Rc<ERule>> = if self.by_component() {
+                        mono.iter().filter(|r| r.clause.head.temporal != Temporal::Next && peel.round.get(&r.clause.head.rel).is_some_and(|k| *k > 0)).cloned().collect()
+                    } else {
+                        Vec::new()
+                    };
+                    let at_level: Vec<Rc<ERule>> = strat_rules.iter().chain(&lifted).cloned().collect();
+                    let lifted: HashSet<Sym> = lifted.iter().map(|r| r.id).collect();
+                    (lifted, level_split(&at_level, |r| {
                         if r.clause.head.temporal == Temporal::Next {
                             i64::MAX
                         } else {
@@ -3053,10 +3087,12 @@ impl Eval {
                                 .copied()
                                 .unwrap_or(i64::MAX)
                         }
-                    })
+                    }))
                 }),
                 Mode::Strata => None,
             };
+            let lifted: HashSet<Sym> = peeled.as_ref().map(|p| p.0.clone()).unwrap_or_default();
+            let peeled = peeled.map(|p| p.1);
             // Phase A, in the stock evaluator's two waves. Nothing is
             // consulted between them any more, but keeping the split keeps the
             // firing order and with it the canonical witness of every fact —
@@ -3064,12 +3100,12 @@ impl Eval {
             let late = self.answer.late.clone();
             let first: Vec<Rc<ERule>> = mono
                 .iter()
-                .filter(|r| !late.contains(&r.id))
+                .filter(|r| !late.contains(&r.id) && !lifted.contains(&r.id))
                 .cloned()
                 .collect();
             let second: Vec<Rc<ERule>> = mono
                 .iter()
-                .filter(|r| late.contains(&r.id))
+                .filter(|r| late.contains(&r.id) && !lifted.contains(&r.id))
                 .cloned()
                 .collect();
             if from.is_none_or(|p| p == 0) {
@@ -4565,11 +4601,19 @@ impl Eval {
         r
     }
 
+    /// THE ORDER RULES FIRE IN IS UNOBSERVABLE (`Store::unordered`) where nothing withdraws, no fact is staged twice
+    /// and no call stores what it unfolded: rules are then activated by component, each after the components it reads,
+    /// and a monotone rule at the level of its conclusion, so a rule that is not recursive fires once over what it
+    /// reads, complete, instead of on every round of a recursion below it.
+    fn by_component(&self) -> bool {
+        self.lattices.is_empty() && (self.no_witness || self.store.unordered && self.demand_rels.is_empty())
+    }
+
     fn activate(&mut self, rules: &[Rc<ERule>]) -> Result<(), Halt> {
         if rules.is_empty() {
             return Ok(());
         }
-        if self.no_witness && self.lattices.is_empty() && rules.len() > 1 {
+        if rules.len() > 1 && self.by_component() {
             let from = self.resume_at.as_ref().map_or(0, |c| c.comp);
             for (c, component) in components(rules).into_iter().enumerate().skip(from) {
                 let r = self.activate_batch(&component);
