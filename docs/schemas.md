@@ -81,8 +81,38 @@ Left button: pick a box or a line (the facts under it, each with a
 double click a box with `▸ N` to open it into a frame and its head to
 shut it. Right or middle button: move the view. Ctrl and the wheel: zoom.
 
-## An example
+## Choosing a viewpoint
 
-[`examples/visual/service-contracts.rofl.md`](../examples/visual/service-contracts.rofl.md):
-teams as frames, calls as lines that carry a protocol, a rate and a time,
-and a note on the risk.
+A picture answers one question. [`visual/viewpoints.rofl.md`](../visual/viewpoints.rofl.md)
+is a book of sixty viewpoints (who calls whom, what runs where, what
+changed, who owns what, what it costs...), each with the question it
+answers, the boxes and lines it draws and what they mean, how it frames
+and colours them, its layout, which facts come from sources and which
+from people, and how a person and an agent keep it true. An agent asked
+to draw something:
+
+1. finds the viewpoint: `? V answers Q`, `? V is recognised by the words W`
+   against the words of the ask; when two fit, `? V is chosen by asking Q`
+   is the question to put to the person;
+2. reads what it draws: `? V draws a box K meaning S`,
+   `? V joins boxes with a line K meaning S`, `? V frames its boxes by S`,
+   `? V is laid out as L`;
+3. writes, in the notebook, one rule per box kind, line kind and frame,
+   from the world's own sentences onto the words above (a box kind becomes
+   `is tagged`, a frame `is inside`, the layout `lays out its marks as`),
+   and a `never` for each rule the viewpoint keeps (`? V keeps the rule S`);
+4. draws it, and asks the person what the viewpoint says it needs from
+   people (`? V asks people for S`) rather than guessing it.
+
+## Examples
+
+| notebook | shows |
+|---|---|
+| [`service-contracts`](../examples/visual/service-contracts.rofl.md) | teams as frames, calls with a contract, a note on the risk |
+| [`rofl-draws-itself`](../examples/visual/rofl-draws-itself.rofl.md) | the drawing code read by the JS model, parts as frames, files that open into their functions |
+| [`who-knows-what`](../examples/visual/who-knows-what.rofl.md) | `matrix`: people by skills, warmth by level |
+| [`release-week`](../examples/visual/release-week.rofl.md) | `timeline`: a lane per team, events by day, a slip |
+| [`what-to-do-first`](../examples/visual/what-to-do-first.rofl.md) | `quadrant`: tasks by cost and worth |
+
+A `timeline` with no spec of its own takes a lane per `lane` value, a tick
+per time, and puts the closest two times a box apart.

@@ -36,8 +36,15 @@ const nd = (c: Pick<Ctx, 'node'>, id: string) => c.node(id) as Any;
   const GAP = 24, ROWGAP = 26, LANEGAP = 10;
   const esc = (s: unknown) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
   type Row = { end: number; ids: string[]; h: number };
+  // no spec: a lane per `lane` value as met, a tick per time, the closest two times a box and a gap apart
+  const guess = (ctx: Ctx): Any => {
+    const ids = ctx.ids.filter((id) => nd(ctx, id).t != null), ns = ids.map((id) => nd(ctx, id)), ts = [...new Set(ns.map((n) => Number(n.t)))].sort((a, b) => a - b);
+    const step = Math.min(...ts.slice(1).map((t, i) => t - ts[i]), Infinity), w = Math.max(0, ...ids.map((id) => ctx.size(id).w));
+    return { t0: ts[0] ?? 0, px: isFinite(step) ? (w + GAP) / step : 1, ticks: ts.map((t) => ({ t, label: String(t), major: true })),
+      lanes: [...new Set(ns.map((n) => n.lane).filter((l) => l != null))].map((l) => ({ id: l, label: String(l) })) };
+  };
   const build = (ctx: Ctx): Placed => {
-    const cfg: Any = (ctx.scope && nd(ctx, ctx.scope).timeline) || (ctx.data as Any).timeline || { px: 1, t0: 0, ticks: [], lanes: [] };
+    const cfg: Any = (ctx.scope && nd(ctx, ctx.scope).timeline) || (ctx.data as Any).timeline || guess(ctx);
     const bare = cfg.axis === false, HEADER = bare ? 0 : 24, AX = bare ? 0 : 40;
     const px = cfg.px ?? 1, t0 = cfg.t0 ?? 0, lanes: Any[] = cfg.lanes?.length ? cfg.lanes : [{ id: '', label: '' }];
     const X = (t: number) => Math.round((t - t0) * px);

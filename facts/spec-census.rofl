@@ -321,12 +321,17 @@ check[checks]("facts/goldens.rofl", "visual_outage-timeline", world).
 check[checks]("facts/goldens.rofl", "visual_paint-shop", world).
 check[checks]("facts/goldens.rofl", "visual_platform-whatif", world).
 check[checks]("facts/goldens.rofl", "visual_rail-map", world).
+check[checks]("facts/goldens.rofl", "visual_release-week", world).
+check[checks]("facts/goldens.rofl", "visual_rofl-draws-itself", world).
+check[checks]("facts/goldens.rofl", "visual_service-contracts", world).
 check[checks]("facts/goldens.rofl", "visual_shipping-decision", world).
 check[checks]("facts/goldens.rofl", "visual_shop-architecture", world).
 check[checks]("facts/goldens.rofl", "visual_spat-thursday", world).
 check[checks]("facts/goldens.rofl", "visual_spat-week", world).
 check[checks]("facts/goldens.rofl", "visual_suite-chart", world).
 check[checks]("facts/goldens.rofl", "visual_wardley", world).
+check[checks]("facts/goldens.rofl", "visual_what-to-do-first", world).
+check[checks]("facts/goldens.rofl", "visual_who-knows-what", world).
 check[checks]("facts/goldens.rofl", "voting", world).
 check[checks]("facts/goldens.rofl", "vscode", world).
 check[checks]("facts/goldens.rofl", "vscode_side-effects", world).

@@ -16,11 +16,12 @@ export function toSchema(v: View, el: HTMLElement, look: Look = {}) {
   const parent = new Map(is('inside').map((f) => [f.args[0], f.args[1]])), groups = new Set(parent.values());
   const placed = new Map(is('placed').map((f) => [f.args[0], { x: Number(f.args[1]), y: Number(f.args[2]) }]));
   const laidAs = new Map(is('laid_out').map((f) => [f.args[0], unquote(f.args[1])]));
+  const named = new Map(is('labelled').map((f) => [f.args[0], unquote(f.args[1])]));
   const sub = new Map(is('subtitled').map((f) => [f.args[0], unquote(f.args[1])])), heat = new Map(is('heat').map((f) => [f.args[0], Number(f.args[1]) / 100]));
   const c = (t: string) => colour(el, t), kindOf = (tags: string[]) => tags.map((t) => look.kinds?.[t]).find(Boolean);
   // a group is a frame whether or not it is a mark itself
   const nodes: Box[] = [...new Set([...Object.keys(v.marks), ...groups])].map((id) => {
-    const tags = tagsOf(v, id), label = v.marks[id]?.label ?? unquote(id), size = tags.includes('collapsed') ? undefined : tags.map((t) => look.sizes?.[t]).find(Boolean);
+    const tags = tagsOf(v, id), label = v.marks[id]?.label ?? named.get(id) ?? unquote(id), size = tags.includes('collapsed') ? undefined : tags.map((t) => look.sizes?.[t]).find(Boolean);
     const paint = colourOf(v, tags), i = v.marks[id]?.icon, text = i && v.icons?.[i], src = text && iconUri(text, paint ?? c('--p-fg'));
     return { id, label, parent: parent.get(id) ?? null, tags, kind: kindOf(tags) ?? 'box',
       ...(groups.has(id) && { open: true, layout: laidAs.get(id) ?? look.groups }), ...(paint && { paint }), ...(src && { icon: src }),
@@ -28,7 +29,7 @@ export function toSchema(v: View, el: HTMLElement, look: Look = {}) {
   });
   const box = new Map(nodes.map((n) => [n.id, n]));
   for (const f of is('level')) if (box.has(f.args[0])) box.get(f.args[0])!.level = Number(f.args[1]);
-  for (const f of is('sits')) if (box.has(f.args[0])) { const val = unquote(f.args[2]); box.get(f.args[0])![unquote(f.args[1])] = val !== '' && !isNaN(Number(val)) ? Number(val) : val; }
+  for (const f of is('sits')) if (box.has(f.args[0])) { const val = unquote(f.args[1]); box.get(f.args[0])![unquote(f.args[2])] = val !== '' && !isNaN(Number(val)) ? Number(val) : val; }
   // a placed mark keeps its place, its centre where it was; then the picture's own boxes are laid out beside it
   for (const [id, p] of placed) { const n = box.get(id); if (n && !n.parent) { n.x = p.x - (n.size?.w ?? 190) / 2; n.y = p.y - (n.size?.h ?? 46) / 2; } }
   const terms = new Map<string, [string, string][]>();
