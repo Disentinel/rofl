@@ -1967,6 +1967,70 @@ impl Store {
         hits(facts, &run.loose, by_val, vals, limit)
     }
 
+    /// A QUESTION'S CANDIDATES, a superset in no order and nothing merged: the
+    /// matches are sorted once they are found (`Eval::in_key_order`), so a
+    /// question pays for the rows it reads, not for putting a whole relation
+    /// in key order. An index of a narrower pattern serves a wider one; a
+    /// group no index can serve is read whole.
+    pub fn question_matches(&mut self, h: &Heap, rel: Sym, persp: Option<Sym>, arity: usize, pos: &[usize], vals: &[Term]) -> Vec<FactId> {
+        let Some(groups) = self.idx.get(&rel) else { return Vec::new() };
+        let ps: Vec<Sym> = match persp {
+            Some(p) => vec![p],
+            None => groups.iter().map(|(p, _)| *p).collect(),
+        };
+        let mut out = Vec::new();
+        for p in ps {
+            if self.run(rel, p).is_none() {
+                continue;
+            }
+            match self.question_hits(h, rel, p, arity, pos, vals) {
+                Some(part) => out.extend(part),
+                None => {
+                    let run = self.run(rel, p).unwrap();
+                    out.extend(run.canon.iter().chain(run.arrived.iter()).copied().filter(|&k| self.alive(k)));
+                }
+            }
+        }
+        out
+    }
+
+    fn question_hits(&mut self, h: &Heap, rel: Sym, p: Sym, arity: usize, pos: &[usize], vals: &[Term]) -> Option<Vec<FactId>> {
+        if pos.is_empty() || pos.iter().any(|&q| q > 30) {
+            return None;
+        }
+        if pos.len() == arity {
+            let hit = self.find(rel, p, vals);
+            let run = self.run(rel, p).unwrap();
+            return Some(hit.into_iter().chain(run.loose.iter().copied().filter(|&k| self.alive(k) && Some(k) != hit)).collect());
+        }
+        let mask = pos.iter().fold(0u32, |m, &q| m | 1 << q);
+        let run = self.run(rel, p).unwrap();
+        let rows = run.canon.len() + run.arrived.len();
+        let have = run.by_pat.as_ref().map(|bp| {
+            bp.keys().copied().filter(|m| m & mask == *m).max_by_key(|m| (m.count_ones(), *m))
+        });
+        let at = match have.flatten() {
+            Some(m) => m,
+            None if rows < MIN_INDEXED || run.by_pat.as_ref().is_some_and(|bp| bp.len() >= MAX_PATTERNS) => return None,
+            None => mask,
+        };
+        let run = self.run_mut(rel, p);
+        if run.by_pat.is_none() {
+            run.by_pat = Some(Rc::default());
+        }
+        self.fold_staged(h, rel, p);
+        let facts = &self.facts;
+        let run = run_in(&mut self.idx, rel, p);
+        let bp = Rc::make_mut(run.by_pat.as_mut().unwrap());
+        if !bp.contains_key(&at) {
+            let rows: Vec<FactId> = run.canon.iter().chain(run.arrived.iter()).copied().collect();
+            bp.insert(at, PatIndex::build(h, facts, pos, &rows));
+        }
+        let by_val = &bp[&at];
+        let sub: Vec<Term> = by_val.pos.iter().map(|q| vals[pos.iter().position(|x| x == q).unwrap()]).collect();
+        hits(facts, &run.loose, by_val, &sub, usize::MAX)
+    }
+
     fn run(&self, rel: Sym, persp: Sym) -> Option<&KeyRun> {
         self.idx.get(&rel)?.iter().find(|(q, _)| *q == persp).map(|(_, r)| r)
     }

@@ -816,6 +816,7 @@ check[checks]("facts/goldens.rofl", "wfs_unknown_negated", world).
 check[checks]("facts/goldens.rofl", "why_base", world).
 check[checks]("facts/goldens.rofl", "why_forest", world).
 check[checks]("facts/goldens.rofl", "why_height", world).
+check[checks]("facts/goldens.rofl", "whynot_near", world).
 check[checks]("facts/goldens.rofl", "whynot_unloaded", world).
 check[checks]("scripts/measurement_check.ts", "npm run measurecheck", gate).
 check[checks]("scripts/goldens.ts", "npm run test", gate).

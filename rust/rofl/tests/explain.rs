@@ -523,7 +523,7 @@ fn a_derivation_thousands_deep_is_explained_to_its_bottom() {
     assert!(why.ends_with(&format!("{n} is +({},1) [builtin]", n - 1)), "{}", &why[why.len() - 200..]);
     let (holds, whynot) = s.whynot(&format!("w({n})"), &WhynotBounds { max_depth: n + 10, max_nodes: 10 * n }).unwrap();
     assert!(!holds);
-    assert_eq!((whynot.len(), whynot.lines().count()), (36_585_121, 6021));
+    assert_eq!((whynot.len(), whynot.lines().count()), (36_597_181, 6022));
 }
 
 // ------------------------------------------- the reference's fresh evaluation
