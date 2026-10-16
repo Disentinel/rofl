@@ -3,6 +3,11 @@
 A ROFL notebook is a Markdown file ending in `.rofl.md` that answers
 questions about what it says. `rofl-nb` runs one.
 
+Only want to look at a notebook? https://disentinel.github.io/rofl/ opens one in the browser, on the TypeScript engine: drop the
+`.rofl.md` with the files its `reads:` and `code:` name (or the whole folder) on the page, or pass a link,
+`?gh=owner/repo/path@ref` or `?url=` a GitHub page or raw link. The files beside it are read from where it is. The
+playground is at `/playground/`.
+
 ## 1. Copy the examples
 
 Works from any folder:

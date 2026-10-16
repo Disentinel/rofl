@@ -1,6 +1,11 @@
 > **Using the notebook?** Start with [guide/QUICKSTART.md](guide/QUICKSTART.md):
 > install, the tutorial, a notebook of your own and one over your code.
 > The rest of this page is the language and the repository.
+>
+> **Nothing to install:** [disentinel.github.io/rofl](https://disentinel.github.io/rofl/) runs a notebook in the
+> browser. Drop a `.rofl.md` on it (with the files it reads, or its folder), or link one:
+> `?gh=owner/repo/path@ref` or `?url=<a GitHub or raw link>`, for example
+> [?gh=Disentinel/rofl/examples/visual/claim-proof.rofl.md](https://disentinel.github.io/rofl/?gh=Disentinel/rofl/examples/visual/claim-proof.rofl.md).
 
 # ROFL v1
 

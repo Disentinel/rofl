@@ -1,7 +1,7 @@
 // The workbench's notebook without a page: its cells as a `.rofl.md`, run by the notebook kernel over the files published with the page, what each
 // cell said as HTML, and a natural cell translated by whatever model the page reaches. The page (workbench/page.ts) and its check load this alone.
 import { Kernel, short, SIGN, VERDICT, type NbCellOut, type NbLine, type NbResult } from '../notebook/kernel.ts';
-import { builtin, cellsOf, libFiles, parseFront, translated, SHIPPED } from '../notebook/front.ts';
+import { builtin, cellsOf, codeNames, libFiles, normal, parseFront, translated, MODEL_FILES, PHRASE_FILES, SHIPPED } from '../notebook/front.ts';
 import { assemble, worldOf, type Inputs } from '../notebook/world.ts';
 import { homeOf, translatorVocab } from '../playground/host.ts';
 import { QUESTIONS, questionsOnly, sentenceOf, translateOne } from '../notebook/translate.ts';
@@ -36,7 +36,14 @@ export const addWhere = (row: 'top' | 'bottom', newest: boolean): 'start' | 'end
 export const keyAction = (e: { key: string; shiftKey: boolean; metaKey: boolean; ctrlKey: boolean }, kind: Kind): 'run' | 'translate' | null =>
   e.key !== 'Enter' ? null : e.metaKey || e.ctrlKey ? (kind === 'natural' ? 'translate' : 'run') : e.shiftKey && (kind === 'rofl' || kind === 'datalog') ? 'run' : null;
 /** Every file the page fetches besides its modules, by its path from the root of the tree. */
-export const FILES = ['boot.rofl', 'facts/phrases.rofl', ...SHIPPED];
+export const FILES = [...new Set([...MODEL_FILES, ...PHRASE_FILES, 'facts/kernel-phrases.rofl', 'facts/ring1-phrases.rofl', ...SHIPPED])];
+
+/** Where an opened notebook is and the files beside it, every path from one root: a repository's, a dropped folder's, a site's.
+ *  `list`: the files a glob from the root names, sorted. */
+export type Near = { path: string; read(path: string): Promise<string | undefined>; list(glob: string): Promise<string[]> };
+
+/** A glob of `code:`, `*`, `?` and `**`, as a pattern over paths. */
+export const globRe = (g: string) => new RegExp(`^${normal(g).split('/').map((s) => s === '**' ? '\u0000' : s.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '[^/]*').replace(/\?/g, '[^/]')).join('/').replace(/\u0000\//g, '(?:.*/)?').replace(/\u0000/g, '.*')}$`);
 
 /** A `.rofl.md` as the page's cells: the prose between fences one cell each, every rofl, datalog and natural fence a cell. */
 export function split(text: string): { kind: Kind; text: string }[] {
@@ -57,8 +64,8 @@ export function split(text: string): { kind: Kind; text: string }[] {
 }
 
 /** The cells as one `.rofl.md`, and the line each cell starts on. */
-export function join(cells: Cell[]): { text: string; starts: number[] } {
-  const own = cells[0]?.kind === 'prose' && /^\n*---\n/.test(cells[0].text);
+export function join(cells: Cell[], opened = false): { text: string; starts: number[] } {
+  const own = opened || cells[0]?.kind === 'prose' && /^\n*---\n/.test(cells[0].text);
   const parts: string[] = own ? [] : [READS], starts: number[] = [];
   let line = own ? 1 : READS.split('\n').length + 2;
   for (const c of cells) {
@@ -84,22 +91,33 @@ export class Bench {
   }
 
   /** The texts a run of `text` needs, fetched once each; what could not be is said. */
-  async inputs(text: string): Promise<{ input: Inputs; errors: string[] }> {
-    const front = parseFront(text), want = libFiles(PATH, front), errors: string[] = [], lib: Record<string, string> = {}, reads: Record<string, string> = {};
+  async inputs(text: string, near?: Near): Promise<{ input: Inputs; errors: string[] }> {
+    const front = parseFront(text), want = libFiles(near?.path ?? PATH, front), errors: string[] = [], lib: Record<string, string> = {}, reads: Record<string, string> = {}, code: Record<string, string> = {};
+    const beside = (p: string) => normal(`${(near?.path ?? '').replace(/[^/]*$/, '')}${p}`);
     for (const f of [...want.model, ...want.phrases]) { const t = await this.file(f); if (t === undefined) errors.push(`${f}: not published with the page`); else lib[f] = t; }
     for (const r of front.reads) {
       const b = builtin(r);
+      if (b === undefined && near) { const t = await near.read(beside(r)); if (t === undefined) errors.push(`${r}: not found beside the notebook, at ${beside(r)}`); else reads[r] = t; continue; }
       if (!b) { errors.push(b === null ? `${r}: not a vocabulary ROFL ships` : `${r}: a notebook here reads only what ROFL ships, ${SHIPPED.map((v) => `rofl:${v}`).join(', ')}`); continue; }
       const t = await this.file(b);
       if (t === undefined) errors.push(`${r}: not published with the page`); else reads[r] = t;
     }
-    return { input: { lib, reads, code: {} }, errors };
+    const found: string[] = [];
+    for (const g of front.code) {
+      const hits = near ? await near.list(beside(g)) : [];
+      if (!hits.length) errors.push(near ? `code: ${g} names no file` : `code: ${g}: code is read only from a notebook opened from a file or a link`);
+      found.push(...hits);
+    }
+    const names = codeNames(near?.path ?? PATH, found);
+    for (const p of found) { const t = await near!.read(p); if (t === undefined) errors.push(`code: ${p}: not found`); else code[names[p]] = t; }
+    return { input: { lib, reads, code, data: await dataOf(found, names, code, near) }, errors };
   }
 
   /** The whole notebook run; each kernel cell said under the page cell it came from, the prose's under `head`. */
-  async run(cells: Cell[]): Promise<Ran> {
-    const { text, starts } = join(cells), { input, errors } = await this.inputs(text);
-    const result = this.kernel.run(PATH, text, input);
+  /** `near`: the notebook was opened from a file or a link, its own front matter and the files beside it read as the command line reads them. */
+  async run(cells: Cell[], near?: Near): Promise<Ran> {
+    const { text, starts } = join(cells, !!near), { input, errors } = await this.inputs(text, near);
+    const result = this.kernel.run(near?.path ?? PATH, text, input);
     result.errors.unshift(...errors);
     if (errors.length) result.status = 'unread';
     const byCell = new Map<string, Said>(), head: Said = { errors: [...result.errors], notes: [], lines: [] };
@@ -204,3 +222,48 @@ export function state(s: Said | undefined): { text: string; cls: string } {
 }
 
 export type { NbCellOut, View };
+
+/** The files a relative specifier in the code names that are there and are not code, by their name in the notebook, as the command line finds them. */
+async function dataOf(found: string[], names: Record<string, string>, code: Record<string, string>, near?: Near): Promise<string[]> {
+  const out = new Set<string>();
+  for (const p of found) {
+    const root = p.slice(0, p.length - names[p].length);
+    for (const m of (code[names[p]] ?? '').matchAll(/(?:\brequire\s*\(\s*|\bimport\s*\(\s*|\bfrom\s+|\bimport\s+)(['"])(\.\.?(?:\/[^'"]*)?)\1/g)) {
+      const at = normal(`${p.replace(/[^/]*$/, '')}${m[2]}`);
+      for (const f of [at, `${at}.json`]) if (f.startsWith(root) && !/\.[cm]?[jt]sx?$/.test(f) && await near!.read(f) !== undefined) out.add(f.slice(root.length));
+    }
+  }
+  return [...out].sort();
+}
+
+/** A link to a notebook as the place it is opened from: a GitHub page of a file or its raw form read from its repository, so that the files
+ *  beside it and the globs of `code:` resolve there; any other address read from its site. */
+export function nearLink(link: string, get: (url: string) => Promise<string | undefined>): { url: string; near: Near } {
+  const u = new URL(/^\w+:\/\//.test(link) ? link : `https://${link}`);
+  const gh = u.hostname === 'github.com' ? /^\/([^/]+)\/([^/]+)\/(?:blob|raw)\/([^/]+)\/(.+)$/.exec(u.pathname)
+    : u.hostname === 'raw.githubusercontent.com' ? /^\/([^/]+)\/([^/]+)\/(?:refs\/heads\/)?([^/]+)\/(.+)$/.exec(u.pathname) : null;
+  if (!gh) {
+    const root = `${u.origin}/`, path = decodeURIComponent(u.pathname.slice(1));
+    return { url: u.href, near: { path, read: (p) => get(root + p), list: async (g) => /[*?]/.test(g) ? [] : [g] } };
+  }
+  const [, owner, repo, ref, path] = gh, root = `https://raw.githubusercontent.com/${owner}/${repo}/${ref}/`;
+  let tree: Promise<string[]> | undefined;
+  const files = () => tree ??= get(`https://api.github.com/repos/${owner}/${repo}/git/trees/${ref}?recursive=1`)
+    .then((t) => t ? (JSON.parse(t).tree as { path: string; type: string }[]).filter((e) => e.type === 'blob').map((e) => e.path) : []);
+  return { url: root + path, near: { path: decodeURIComponent(path), read: (p) => get(root + p), list: async (g) => { if (!/[*?]/.test(g)) return [g]; const re = globRe(g); return (await files()).filter((p) => re.test(p)).sort(); } } };
+}
+
+/** Files a viewer gave the page, by their path from what they dropped, as the place `path` is opened from. */
+export const nearFiles = (path: string, files: Map<string, string>): Near => ({
+  path, read: async (p) => files.get(p), list: async (g) => { const re = globRe(g); return [...files.keys()].filter((p) => re.test(p)).sort(); },
+});
+
+/** Of the files given, the notebook to open: a `.rofl.md` no other one given reads, the first by path. */
+export function notebookOf(files: Map<string, string>): string | undefined {
+  const nbs = [...files.keys()].filter((p) => p.endsWith('.rofl.md')).sort(), read = new Set<string>();
+  for (const p of nbs) for (const r of parseFront(files.get(p)!).reads) read.add(normal(`${p.replace(/[^/]*$/, '')}${r}`));
+  return nbs.find((p) => !read.has(p)) ?? nbs[0];
+}
+
+/** `owner/repo/path@ref`, the ref `main` when none is named, as the GitHub page of that file. */
+export const ghLink = (gh: string) => { const m = /^([^/]+)\/([^/]+)\/([^@]+)(?:@(.+))?$/.exec(gh); return m ? `https://github.com/${m[1]}/${m[2]}/blob/${m[4] ?? 'main'}/${m[3]}` : undefined; };
