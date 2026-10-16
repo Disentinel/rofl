@@ -1,0 +1,37 @@
+-- facts/stage-plan.rofl — a plan of stages for rules/stage-plan.rofl to check, written by hand with one mistake of
+-- each kind and one ring too heavy to place. At 700 bytes a fact a 100 Mb stage holds about 150 000 facts.
+plan_limit(100).
+
+plan_file("util.ts", 40000).
+plan_file("model.ts", 30000).
+plan_file("view.ts", 30000).
+plan_file("editor.ts", 90000).
+plan_file("panel.ts", 80000).
+plan_file("main.ts", 10000).
+plan_file("lost.ts", 5000).
+plan_file("services.ts", 200000).
+plan_file("registry.ts", 100000).
+
+-- model and view import each other: a ring; so do services and registry, 300 000 facts together
+plan_ring("model.ts", "model.ts").
+plan_ring("model.ts", "view.ts").
+plan_ring("services.ts", "services.ts").
+plan_ring("services.ts", "registry.ts").
+
+plan_import("model.ts", "util.ts").
+plan_import("model.ts", "view.ts").
+plan_import("view.ts", "model.ts").
+plan_import("editor.ts", "model.ts").
+plan_import("panel.ts", "util.ts").
+plan_import("main.ts", "editor.ts").
+plan_import("services.ts", "registry.ts").
+plan_import("registry.ts", "services.ts").
+
+plan_stage(1, "util.ts").
+plan_stage(1, "model.ts").
+plan_stage(1, "main.ts").      -- reads editor.ts, which comes later
+plan_stage(2, "view.ts").      -- its ring is in stage 1
+plan_stage(2, "editor.ts").
+plan_stage(2, "panel.ts").     -- stage 2 is now over the limit
+                               -- lost.ts is in no stage
+plan_refused("services.ts", 2, 200).

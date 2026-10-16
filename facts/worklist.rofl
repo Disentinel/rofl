@@ -3915,7 +3915,7 @@ work_state(w_resume_after_budget, done).
 work_needs(w_resume_after_budget, w_derived_as_given).
 
 work(w_stage_planner,
-  "Plan the evaluation as stages that each fit a stated memory limit (stage, stage_reads, stage_writes, stage_mem as facts, checked by rules); refuse a recursion through a foreign-capable column over an import cycle larger than the limit, naming the rule, the files and the reformulations.").
+  "PROGRESS 2026-10-16 (f_a_stage_plan_keeps_rings_whole_and_its_stages_equal_the_whole): scripts/stage_plan.ts plans and runs, rules/stage-plan.rofl checks the plan, a ring heavier than the limit is refused naming it; 100 files in 4 stages equal the whole. LEFT: a stage's own memory is still the whole world's (an argument index of the volume copied whole on its first write, the citer index built whole on each addition, a write below the mark copying its column); the whole vscode subset planned and run. Plan the evaluation as stages that each fit a stated memory limit (stage, stage_reads, stage_writes, stage_mem as facts, checked by rules); refuse a recursion through a foreign-capable column over an import cycle larger than the limit, naming the rule, the files and the reformulations.").
 work_state(w_stage_planner, open).
 work_needs(w_stage_planner, w_mapped_volume).
 work_needs(w_stage_planner, w_resume_after_budget).

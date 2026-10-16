@@ -114,7 +114,14 @@ from the store.
    (`f_a_step_wall_in_the_plain_path_is_a_continuation`). The place it stopped is kept in the volume, so another
    process opens it and goes on: `scripts/vscode_pieces.ts` evaluates vscode in pieces of a fixed time, each its own
    process, to the same state (`f_an_evaluation_goes_on_in_another_process_from_its_volume`).
-4. **The planner and its refusal** (decisions 3 and 6, H1, H3).
+4. **The planner and its refusal** (decisions 3 and 6, H1, H3). Built: `scripts/stage_plan.ts FACTS LIMIT_MB` takes
+   the imports from the model, keeps each ring of files importing one another by value whole, packs the rings under
+   the limit, imported first, and refuses a ring heavier than the limit, naming it; `rules/stage-plan.rofl` checks
+   the plan as facts. `--run` evaluates it stage by stage, a process each over the last volume, `--check` against the
+   whole: 100 vscode files in 4 stages equal the whole
+   (`f_a_stage_plan_keeps_rings_whole_and_its_stages_equal_the_whole`). Real rings: vscode 223 files, webpack 580 (6
+   counting only imports at the top of a module). Left: a stage's own memory is still the whole world's (an index of
+   the volume copied whole on its first write, the citer index built whole on each addition).
 5. **Workers by key** (decision 7).
 6. **The explanation by file**: the why of an absence as a table of files, each row expanded by lifting one volume.
    Built over the evaluated world: a whynot walk parted by file, a row a file with its answers and the premises it
