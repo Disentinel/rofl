@@ -1,0 +1,2 @@
+-- expect-refusal: is a kernel relation and an alias reads the program's relations
+alias dar_kernel(R, F) is concludes(R, F).

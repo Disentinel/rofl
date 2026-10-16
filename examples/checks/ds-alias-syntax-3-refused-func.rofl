@@ -1,0 +1,3 @@
+-- expect-refusal: not a compound term
+edb(dar_e). dar_e(a, b, c).
+alias dar_func(P, C) is dar_e(P, f(C), _).

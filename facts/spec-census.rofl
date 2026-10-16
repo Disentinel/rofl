@@ -753,6 +753,9 @@ check[checks]("facts/goldens.rofl", "demand_scc_rows", world).
 check[checks]("facts/goldens.rofl", "demand_scc_unknown", world).
 check[checks]("facts/goldens.rofl", "demand_shrug_read", world).
 check[checks]("facts/goldens.rofl", "destructor_hole", world).
+check[checks]("facts/goldens.rofl", "ds_alias_holds", world).
+check[checks]("facts/goldens.rofl", "ds_alias_sealed", world).
+check[checks]("facts/goldens.rofl", "ds_alias_syntax", world).
 check[checks]("facts/goldens.rofl", "ds_function_holds", world).
 check[checks]("facts/goldens.rofl", "ds_function_phrase", world).
 check[checks]("facts/goldens.rofl", "ds_function_retract", world).

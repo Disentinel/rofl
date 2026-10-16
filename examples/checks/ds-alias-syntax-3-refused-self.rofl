@@ -1,0 +1,2 @@
+-- expect-refusal: an alias reads another relation than itself
+alias dar_self(P, C) is dar_self(P, C).

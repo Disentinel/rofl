@@ -14,6 +14,9 @@ default: code
 >               renames that claim nothing (`name` on an Identifier and on a
 >               JSX attribute are one fact here)
 
+> THE THREE ARE ALIASES (docs/data-structures.md): each reads its source and
+> the Rust engine stores no row of one where no witness is kept.
+
 Reads:
 
 - from js-model: [ast_node](js-model.rofl.md#ast_node)
@@ -30,11 +33,7 @@ What this file calls a node, and what each word stands for:
 | <a id="noun-meta_property"></a>a meta property | a node of kind `meta_property` |
 | <a id="noun-string_literal"></a>a string literal | a node of kind `string_literal` |
 
-Phrases this file defines in one step, each by the sentence it stands for:
-
-- <a id="ast_in"></a>A node is under a node P if it [is a child of](#ast_child) P.
-- <a id="ast_name"></a>A node is named V if [the attribute](#ast_attr) `name` of it is V.
-- <a id="ast_value"></a>A node is written as V if [the attribute](#ast_attr) `value` of it is V.
+<a id="ast_in"></a>`ast_in` of P and C is another name for `ast_child` of P, _, _ and C.
 
 > THE EDGES ARE A FOREST (one parent for each node, no cycle), and `ast_within`
 > is their transitive closure, strict: the declaration promises the one and
@@ -44,7 +43,7 @@ Phrases this file defines in one step, each by the sentence it stands for:
 
 Each child of `ast_in` has one parent and no node is its own ancestor, and `ast_within` holds of each node and every ancestor of it.
 
-`ast_name` has one V for each N.
+<a id="ast_name"></a>`ast_name` of N and V is another name for `ast_attr` of N, name and V.
 
 > THE NAME A KEY STANDS FOR, wherever a key appears, written once: a name, or
 > a string written as the key (`{ "x-id": 1 }`, `{ ["x-id"]: 1 }`). A
@@ -53,6 +52,8 @@ Each child of `ast_in` has one parent and no node is its own ancestor, and `ast_
 > 
 > A NEGATION and not `computed, false`: `class_private_property` and
 > `class_private_method` carry no `computed` attribute at all.
+
+`key_name` has one N for each K.
 
 A node K spells N either:
 
@@ -65,7 +66,7 @@ A node K spells N either:
    - K is a [string literal](#noun-string_literal);
    - [the attribute](#ast_attr) `value` of K is N.
 
-`ast_value` has one V for each N.
+<a id="ast_value"></a>`ast_value` of N and V is another name for `ast_attr` of N, value and V.
 
 > ONE KIND, TWO CONSTRUCTS, AND THE DISCRIMINATOR IS A CHILD. `new.target` and
 > `import.meta` are both a `meta_property` with zero attributes; three layers

@@ -19,7 +19,7 @@ import { SHRUG, shrugsOf, shrugLine, shrugAtom, shown } from './shrug.ts';
 import { AggEval, DEFAULT_SPACE, Rejected, Wall, checkAggregatesDoor, checkSetPatternsDoor, checkOrderableAgg,
   checkNextInBody, checkLatticeDecl, checkDominance, lowerOrder, type Unknown, type WhynotFile } from './aggeval.ts';
 import { encodeDominance } from './reflect.ts';
-import { checkStructureDecl, structureRows, declaredStructures, checkFunctions, checkTrees, checkClosureHead, declaredClosures, concludedBy, lowerClosure } from './structure.ts';
+import { checkStructureDecl, structureRows, declaredStructures, checkFunctions, checkTrees, checkClosureHead, declaredClosures, concludedBy, lowerClosure, lowerAlias, declaredAliases } from './structure.ts';
 
 export interface LoadResult { ok: boolean; diagnostics: string[]; }
 export interface QueryRow { text: string; bindings: Record<string, string>; }
@@ -523,7 +523,7 @@ export class Rofl {
     if (c0.structure) return this.addStructure(c0);
     if (c0.lattice) return this.addDecl(c0);
     if (c0.dominator) return this.addDominance(c0, who);
-    const badClosure = lowered ? null : checkClosureHead(c0, declaredClosures(this.store));
+    const badClosure = lowered ? null : checkClosureHead(c0, declaredClosures(this.store), declaredAliases(this.store));
     if (badClosure) return badClosure;
     const badBook = this.checkKernelBook(c0);
     if (badBook) return badBook;
@@ -681,9 +681,15 @@ export class Rofl {
   /** A STRUCTURE DECLARATION IS ITS KERNEL ROWS, timeless: a promise about the
    *  relation's data (src/structure.ts), changing no fact. */
   private addStructure(c: Clause): string | null {
-    const bad = checkStructureDecl(c, (rel) => ARITY[rel], declaredStructures(this.store), (rel) => concludedBy(this.store, rel));
+    const taken = new Set([...declaredAliases(this.store), ...declaredClosures(this.store).keys()]);
+    const bad = checkStructureDecl(c, (rel) => ARITY[rel], declaredStructures(this.store), (rel) => concludedBy(this.store, rel), taken);
     if (bad) return bad;
     for (const [rel, args] of structureRows(c)) this.store.add(rel, KERNEL_PERSP, args, { scope: 'timeless', base: true });
+    // an alias is the rule it lowers to (src/structure.ts `lowerAlias`), read as any rule is
+    if (c.structure!.source) {
+      const bad2 = this.addClause(parseProgram(lowerAlias(c))[0], undefined, true, true);
+      if (bad2) return bad2;
+    }
     // a closure is the rules it lowers to (src/structure.ts `lowerClosure`), read as any rules are
     if (c.structure!.closure !== undefined) {
       for (const t of lowerClosure(c)) {

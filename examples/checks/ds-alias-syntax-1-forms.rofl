@@ -1,0 +1,10 @@
+-- examples/checks/ds-alias-syntax-1-forms.rofl — every form of a declared alias the grammar reads
+-- (docs/data-structures.md): columns dropped with `_`, a constant column, an alias of an alias, and
+-- `alias` still a name where no relation follows it. Read by both engines, whose rows must agree.
+edb(dax_e).
+dax_e(a, x, 0, b). dax_e(a, y, 1, c). dax_e(b, x, 0, d).
+alias dax_in(P, C) is dax_e(P, _, _, C).
+alias dax_x(P, C) is dax_e(P, x, _, C).
+alias dax_again(P, C) is dax_in(P, C).
+alias(dax_name, one).
+dax_seen(X) :- alias(X, _).

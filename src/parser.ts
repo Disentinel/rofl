@@ -45,7 +45,7 @@ export const ORDER_KINDS = new Set(['pareto', 'lex']);
 /** The declared data structures (docs/data-structures.md) and the role words
  *  each one marks its arguments with: words where a role stands, names
  *  elsewhere. `function` marks the values a key determines with `to`. */
-export const STRUCTURE_ROLES: ReadonlyMap<string, readonly string[]> = new Map([['function', ['to']], ['tree', []]]);
+export const STRUCTURE_ROLES: ReadonlyMap<string, readonly string[]> = new Map([['function', ['to']], ['tree', []], ['alias', []]]);
 
 class P {
   toks: Tok[];
@@ -446,8 +446,8 @@ class P {
     return { head: { rel, persp: mka('main'), perspExplicit: false, args, temporal: 'now' }, body: [], lattice: kind, ord };
   }
 
-  /**   structdecl := kind ident '(' [ role ] term [ ',' [ role ] term ]* ')' [ 'closure' ident ] '.'
-   *    kind       := 'function' | 'tree'
+  /**   structdecl := kind ident '(' [ role ] term [ ',' [ role ] term ]* ')' [ 'closure' ident | 'is' literal ] '.'
+   *    kind       := 'function' | 'tree' | 'alias'
    *    role       := 'to'
    *  Words, not keywords: one declares only when a second name follows. An
    *  argument without a role is part of the key. */
@@ -476,9 +476,16 @@ class P {
       if (this.peek().t !== 'ident') this.err(`${what}: \`closure\` names the relation that holds each node and every ancestor of it`);
       closure = this.next().v;
     }
+    let source: Lit | undefined;
+    if (kind === 'alias') {
+      if (this.peek().t !== 'ident' || this.peek().v !== 'is') this.err(`${what}: an alias names the relation it reads: alias ${rel}(P, C) is ast_child(P, _, _, C)`);
+      this.next();
+      source = this.literal();
+      if (source.perspExplicit || source.temporal !== 'now') this.err(`${what}: an alias reads a relation, not a book or a tick`);
+    }
     if (this.peek().t !== '.') this.noDot(`${what}: the declaration`);
     this.next();
-    return { head: { rel, persp: mka('main'), perspExplicit: false, args, temporal: 'now' }, body: [], structure: closure === undefined ? { kind, roles } : { kind, roles, closure } };
+    return { head: { rel, persp: mka('main'), perspExplicit: false, args, temporal: 'now' }, body: [], structure: { kind, roles, ...(closure === undefined ? {} : { closure }), ...(source ? { source } : {}) } };
   }
 
   clause(): Clause {

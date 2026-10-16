@@ -25,6 +25,7 @@ mod delta;
 mod labeled;
 mod joinplan;
 mod vclosure;
+mod alias;
 mod prov;
 mod resume;
 mod cost;
@@ -738,6 +739,13 @@ pub struct Eval {
     vrow_done: HashSet<Sym>,
     /// Why a declared closure is not answered from its tree, as the program stands.
     pub vclosure_reason: Vec<String>,
+    /// The rules the aliases read from their sources lower to (engine/alias.rs), not fired: before they are planned,
+    /// and planned; each rewritten reader's body as written; why an alias is rows; the dropped columns named so far.
+    alias_drules: Vec<DRule>,
+    alias_rules: Vec<Rc<ERule>>,
+    alias_orig: HashMap<Sym, Clause>,
+    pub alias_reason: Vec<String>,
+    alias_fresh: u32,
     /// Forests built, and rows read from them, by this engine.
     pub vbuilds: u64,
     pub vrows_read: u64,
@@ -1400,6 +1408,11 @@ impl Eval {
             vprov_stamp: None,
             vrow_done: HashSet::new(),
             vclosure_reason: Vec::new(),
+            alias_drules: Vec::new(),
+            alias_rules: Vec::new(),
+            alias_orig: HashMap::new(),
+            alias_reason: Vec::new(),
+            alias_fresh: 0,
             vbuilds: 0,
             vrows_read: 0,
             promise_broken: None,
@@ -1880,6 +1893,7 @@ impl Eval {
             .iter()
             .filter_map(|&(r, n, op)| self.v.op_of(op).map(|o| (r, (n, o))))
             .collect();
+        let rules = self.alias_lower(rules);
         // A SUBSUMPTIVE RELATION CLOSES AS A LATTICE DOES: it is one of
         // `lattices`, its algebra `Dominance`, unless a lattice or a tag
         // claims the relation too (refused: one algebra per predicate)
@@ -1989,6 +2003,7 @@ impl Eval {
             }
             kept.push(self.classify(r));
         }
+        self.alias_plan_rules();
         self.cone = self.asks_cone(&kept);
         self.pruned.clear();
         if let Some(cone) = &self.cone {
@@ -11512,6 +11527,9 @@ impl Eval {
         if l.temporal == Temporal::Init && self.store.tick != 0 {
             return Ok(Vec::new());
         }
+        if let Some(src) = self.alias_lit(l) {
+            return self.match_premise(&src, s, depth, only);
+        }
         if let Some(ci) = self.vclosure_for(l.rel) {
             let out = self.vmatch(ci, l, s);
             self.note_read(l, s, out.len());
@@ -12019,6 +12037,9 @@ impl Eval {
     fn match_exists(&mut self, l: &Lit, s: &Subst) -> Result<bool, Halt> {
         if l.temporal == Temporal::Init && self.store.tick != 0 {
             return Ok(true);
+        }
+        if let Some(src) = self.alias_lit(l) {
+            return self.match_exists(&src, s);
         }
         if let Some(ci) = self.vclosure_for(l.rel) {
             let found = self.vexists(ci, l, s);
@@ -16069,6 +16090,7 @@ impl Eval {
         let rules: Vec<Rc<ERule>> = self
             .rules
             .iter()
+            .chain(&self.alias_rules)
             .filter(|r| r.clause.head.rel == lit.rel)
             .cloned()
             .collect();
@@ -16089,7 +16111,9 @@ impl Eval {
     /// followed one level deeper.
     fn explain_rule(&mut self, lit: &Lit, r: &ERule, level: usize, next: &mut Vec<WnTask>) -> Result<(), Halt> {
         let pad = "  ".repeat(2 * level - 1);
-        let rn = self.rename_clause(&r.clause);
+        // a reader of an alias is explained as written: the alias is asked, and read from its source
+        let written = self.alias_orig.get(&r.id).cloned();
+        let rn = self.rename_clause(written.as_ref().unwrap_or(&r.clause));
         let mut s = Some(Subst::default());
         if let Some(cur) = s.take() {
             s = self.eval_builtin(self.v.op_eq, rn.head.persp, lit.persp, &cur, None);
@@ -16224,10 +16248,11 @@ impl Eval {
             }
         }
         let head = self.vol_of_lit(&walk, lit, &Subst::default());
-        let rules: Vec<Rc<ERule>> = self.rules.iter().filter(|r| r.clause.head.rel == lit.rel).cloned().collect();
+        let rules: Vec<Rc<ERule>> = self.rules.iter().chain(&self.alias_rules).filter(|r| r.clause.head.rel == lit.rel).cloned().collect();
         let mut walks: Vec<(Rc<ERule>, HashMap<String, HashMap<String, Option<Lit>>>, Option<String>)> = Vec::new();
         for r in rules {
-            let rn = self.rename_clause(&r.clause);
+            let written = self.alias_orig.get(&r.id).cloned();
+            let rn = self.rename_clause(written.as_ref().unwrap_or(&r.clause));
             let mut s = self.eval_builtin(self.v.op_eq, rn.head.persp, lit.persp, &Subst::default(), None);
             for i in 0..rn.head.args.len().min(lit.args.len()) {
                 let Some(cur) = s.take() else { break };

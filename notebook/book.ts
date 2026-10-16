@@ -61,6 +61,8 @@ export function homeOf(model: string): Record<string, string> {
   const home: Record<string, string> = { ast_node: 'code', ast_child: 'code', ast_attr: 'code', ast_file: 'code' };
   for (const [rel, bs] of booksOf(model)) if (bs.size === 1) home[rel] = [...bs][0];
   for (const m of model.matchAll(/^([a-z_]\w*)(?:\[(\w+)\])?\([^\n]*\)\.[ \t]*$/gm)) if (!m[0].includes(':-')) home[m[1]] ??= m[2] ?? 'main';
+  // an alias is read where its source is
+  for (const m of model.matchAll(/^alias ([a-z_]\w*)\([^)]*\) is ([a-z_]\w*)\(/gm)) if (home[m[2]]) home[m[1]] ??= home[m[2]];
   return home;
 }
 

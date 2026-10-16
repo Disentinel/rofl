@@ -1,0 +1,36 @@
+-- examples/checks/ds-alias-holds-check.rofl — ds_alias_holds and ds_alias_sealed. A declaration changes no fact: every
+-- alias and every reader of one holds exactly the rows of its twin, in each book; and each is named by a row it must hold,
+-- since a check comparing two empty relations would pass whatever the engine did.
+dahc_diff(in, A, B) :- dah_in[K](A, B), not dah_in_u[K](A, B).
+dahc_diff(in, A, B) :- dah_in_u[K](A, B), not dah_in[K](A, B).
+dahc_diff(body, A, B) :- dah_body[K](A, B), not dah_body_u[K](A, B).
+dahc_diff(body, A, B) :- dah_body_u[K](A, B), not dah_body[K](A, B).
+dahc_diff(up, A, B) :- dah_up[K](A, B), not dah_up_u[K](A, B).
+dahc_diff(up, A, B) :- dah_up_u[K](A, B), not dah_up[K](A, B).
+dahc_diff(within, A, B) :- dah_within[K](A, B), not dah_within_u[K](A, B).
+dahc_diff(within, A, B) :- dah_within_u[K](A, B), not dah_within[K](A, B).
+dahc_diff(kid, A, x) :- dah_kid(A), not dah_kid_u(A).
+dahc_diff(kid, A, x) :- dah_kid_u(A), not dah_kid(A).
+dahc_diff(par, A, x) :- dah_par(A), not dah_par_u(A).
+dahc_diff(par, A, x) :- dah_par_u(A), not dah_par(A).
+dahc_diff(nok, A, x) :- dah_nok(A), not dah_nok_u(A).
+dahc_diff(nok, A, x) :- dah_nok_u(A), not dah_nok(A).
+dahc_diff(cnt, A, x) :- dah_cnt(A), not dah_cnt_u(A).
+dahc_diff(cnt, A, x) :- dah_cnt_u(A), not dah_cnt(A).
+dahc_diff(deep, A, x) :- dah_deep(A), not dah_deep_u(A).
+dahc_diff(deep, A, x) :- dah_deep_u(A), not dah_deep(A).
+dahc_diff(bb, A, x) :- dah_bb(A), not dah_bb_u(A).
+dahc_diff(bb, A, x) :- dah_bb_u(A), not dah_bb(A).
+dahc_diff(back, A, x) :- dah_back(A), not dah_back_u(A).
+dahc_diff(back, A, x) :- dah_back_u(A), not dah_back(A).
+alarm(dahc_diff).
+dahc_lost(in)     :- not dah_in[code](b, d).
+dahc_lost(other)  :- not dah_in[other](x, y).
+dahc_lost(body)   :- not dah_body[code](r, b).
+dahc_lost(body)   :- dah_body[code](a, c).
+dahc_lost(up)     :- not dah_up[other](y, x).
+dahc_lost(within) :- not dah_within[code](r, d).
+dahc_lost(cnt)    :- not dah_cnt(4).
+dahc_lost(nok)    :- not dah_nok(d).
+dahc_lost(back)   :- not dah_back(x).
+alarm(dahc_lost).
