@@ -237,7 +237,6 @@ unit_concludes("rules/js-dataflow.rofl", merge_call).
 unit_concludes("rules/js-dataflow.rofl", sx_mwrite).
 unit_concludes("rules/js-dataflow.rofl", keyed_store).
 unit_concludes("rules/js-dataflow.rofl", keyed_obj).
-unit_concludes("rules/js-dataflow.rofl", keyed_key).
 unit_concludes("rules/js-dataflow.rofl", keyed_on).
 unit_concludes("rules/js-dataflow.rofl", sx_kput).
 unit_concludes("rules/js-dataflow.rofl", keyed_put).

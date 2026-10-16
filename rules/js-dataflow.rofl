@@ -728,9 +728,10 @@ sx_mwrite[surface](O, Key, V) :- merge_call[flow](C), arg_at[flow](C, 0, T), may
 -- table keyed by the RECEIVER's type, `keyed_store(Type, Put, Get)`, never by the
 -- method's name: `other.set(k, v)` on a plain object moves nothing. The collection
 -- is the site that made it: `new Map()` (`keyed_obj`), and an express app
--- (rules/js-express.rofl). A key is matched when it is written as a literal in
--- place on both sides; a key that is not (`m.get(name)`) is `any` and meets every
--- put, which may answer more and never less. `m.keys()`, `m.values()` and
+-- (rules/js-express.rofl). A key is matched by its value, however it got there
+-- (`const K = 'port'; m.get(K)`); a key with no known value matches nothing, which
+-- may be silent and is never wrong. Flow-insensitive, as the rest of this layer: a
+-- get sees every put, before or after it. `m.keys()`, `m.values()` and
 -- `m.entries()` are not read.
 edb(keyed_store).
 keyed_store(map, "set", "get").
@@ -738,22 +739,16 @@ keyed_store(weakmap, "set", "get").
 
 keyed_obj[flow](X, P) :- es_instance[flow](X, Name, _), lib_global_prototype(Name, P), keyed_store(P, _, _).
 
-keyed_key[code](C, K) :- ast_child[code](C, arguments, 0, A), literal_kind(Kd), ast_node[code](A, Kd, _, _),
-                         ast_value[code](A, K).
-keyed_key[code](C, any) :- ast_child[code](C, arguments, 0, A), ast_node[code](A, Kd, _, _), not literal_kind(Kd).
-
 keyed_on[flow](C, X, P, Key) :- keyed_obj[flow](X, P), may_be_node[flow](O, X), ast_child[code](N, object, 0, O),
                                 ast_child[code](C, callee, 0, N), ast_node[code](C, call_expression, _, _),
                                 selects[flow](N, Key).
-sx_kput[surface](X, K, V) :- keyed_on[flow](C, X, P, Put), keyed_store(P, Put, _), keyed_key[code](C, K),
-                             arg_at[flow](C, 1, V).
+sx_kput[surface](X, K, V) :- keyed_on[flow](C, X, P, Put), keyed_store(P, Put, _), arg_at[flow](C, 0, A),
+                             may_be_lit[flow](A, K), arg_at[flow](C, 1, V).
 keyed_put[flow](X, K, V) :- sx_kput[surface](X, K, V).
-keyed_get[flow](C, X, K) :- keyed_on[flow](C, X, P, Get), keyed_store(P, _, Get), keyed_key[code](C, K),
-                            not ast_child[code](C, arguments, 1, _).
+keyed_get[flow](C, X, K) :- keyed_on[flow](C, X, P, Get), keyed_store(P, _, Get), arg_at[flow](C, 0, A),
+                            may_be_lit[flow](A, K), not ast_child[code](C, arguments, 1, _).
 
 keyed_read[flow](C, V) :- keyed_get[flow](C, X, K), keyed_put[flow](X, K, V).
-keyed_read[flow](C, V) :- keyed_get[flow](C, X, _), keyed_put[flow](X, any, V).
-keyed_read[flow](C, V) :- keyed_get[flow](C, X, any), keyed_put[flow](X, _, V).
 may_be_node[flow](C, N) :- keyed_read[flow](C, V), may_be_node[flow](V, N).
 may_be_lit[flow](C, L)  :- keyed_read[flow](C, V), may_be_lit[flow](V, L).
 
@@ -766,7 +761,7 @@ may_be_node[flow](E, N) :- keyed_walk[flow](D, X), destructures_at[code](D, Loca
 may_be_lit[flow](E, L)  :- keyed_walk[flow](D, X), destructures_at[code](D, Local, 1, File), keyed_put[flow](X, _, V),
                            may_be_lit[flow](V, L), ident_in[code](E, Local, File), sees_binder[code](E, D).
 may_be_lit[flow](E, K)  :- keyed_walk[flow](D, X), destructures_at[code](D, Local, 0, File), keyed_put[flow](X, K, _),
-                           K != any, ident_in[code](E, Local, File), sees_binder[code](E, D).
+                           ident_in[code](E, Local, File), sees_binder[code](E, D).
 
 sx_keach[surface](F, X) :- keyed_on[flow](C, X, _, "forEach"), arg_at[flow](C, 0, A), may_be_node[flow](A, F),
                            fn_value[flow](F).
@@ -776,7 +771,7 @@ may_be_node[flow](U, N) :- keyed_each[flow](F, X), param_of[flow](F, 0, Name), k
 may_be_lit[flow](U, L)  :- keyed_each[flow](F, X), param_of[flow](F, 0, Name), keyed_put[flow](X, _, V),
                            may_be_lit[flow](V, L), param_use[flow](F, Name, U).
 may_be_lit[flow](U, K)  :- keyed_each[flow](F, X), param_of[flow](F, 1, Name), keyed_put[flow](X, K, _),
-                           K != any, param_use[flow](F, Name, U).
+                           param_use[flow](F, Name, U).
 
 -- =========================================================================
 -- 8. READING A PROPERTY OFF A VALUE

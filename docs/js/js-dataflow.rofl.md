@@ -1292,9 +1292,10 @@ Declared as facts:
 > table keyed by the RECEIVER's type, `keyed_store(Type, Put, Get)`, never by the
 > method's name: `other.set(k, v)` on a plain object moves nothing. The collection
 > is the site that made it: `new Map()` (`keyed_obj`), and an express app
-> (rules/js-express.rofl). A key is matched when it is written as a literal in
-> place on both sides; a key that is not (`m.get(name)`) is `any` and meets every
-> put, which may answer more and never less. `m.keys()`, `m.values()` and
+> (rules/js-express.rofl). A key is matched by its value, however it got there
+> (`const K = 'port'; m.get(K)`); a key with no known value matches nothing, which
+> may be silent and is never wrong. Flow-insensitive, as the rest of this layer: a
+> get sees every put, before or after it. `m.keys()`, `m.values()` and
 > `m.entries()` are not read.
 
 `keyed_store` lists:
@@ -1311,18 +1312,6 @@ In the flow:
   - Name [has the prototype](#lib_global_prototype) P;
   - [`keyed_store`](#keyed_store)(P, something, something).
 
-In the code:
-
-<a id="keyed_key"></a>`keyed_key`(C, K) either:
-
-1. if the `arguments` of a node C is a [literal](#noun-literal) X and X [is written as](js-structure.rofl.md#ast_value) K;
-2. if all of:
-   - the `arguments` of a node C [is of kind](js-model.rofl.md#ast_node) Kd;
-   - K is `any`;
-   - unless [`literal_kind`](#literal_kind)(Kd).
-
-In the flow:
-
 <a id="keyed_on"></a>`keyed_on`(a [call expression](#noun-call_expression) C, X, P, Key) if all of:
   - [`keyed_obj`](#keyed_obj)(X, P);
   - a node O [points to](js-concat.rofl.md#may_be_node) a node X;
@@ -1335,7 +1324,8 @@ In the surface:
 <a id="sx_kput"></a>`sx_kput`(X, K, V) if all of:
   - [`keyed_on`](#keyed_on)(C, X, P, Put);
   - [`keyed_store`](#keyed_store)(P, Put, something);
-  - [`keyed_key`](#keyed_key)(C, K);
+  - C [passes](#arg_at) a node Y at 0;
+  - Y [may be the literal](js-concat.rofl.md#may_be_lit) K;
   - C [passes](#arg_at) a node V at 1.
 
 In the flow:
@@ -1345,14 +1335,11 @@ In the flow:
 <a id="keyed_get"></a>`keyed_get`(C, X, K) if all of:
   - [`keyed_on`](#keyed_on)(C, X, P, Get);
   - [`keyed_store`](#keyed_store)(P, something, Get);
-  - [`keyed_key`](#keyed_key)(C, K);
-  - unless some node is the 1-th of the `arguments` of a node C.
+  - a node C [passes](#arg_at) a node Y at 0;
+  - Y [may be the literal](js-concat.rofl.md#may_be_lit) K;
+  - unless some node is the 1-th of the `arguments` of C.
 
-<a id="keyed_read"></a>`keyed_read`(C, V) either:
-
-1. if [`keyed_get`](#keyed_get)(C, X, K) and [`keyed_put`](#keyed_put)(X, K, V);
-2. if [`keyed_get`](#keyed_get)(C, X, something) and [`keyed_put`](#keyed_put)(X, `any`, V);
-3. if [`keyed_get`](#keyed_get)(C, X, `any`) and [`keyed_put`](#keyed_put)(X, something, V).
+<a id="keyed_read"></a>`keyed_read`(C, V) if [`keyed_get`](#keyed_get)(C, X, K) and [`keyed_put`](#keyed_put)(X, K, V).
 
 A node
 
@@ -1392,7 +1379,6 @@ A node E may be the literal L either:
    - [`keyed_walk`](#keyed_walk)(D, X);
    - D [destructures](#destructures_at) Local at 0 in File;
    - [`keyed_put`](#keyed_put)(X, L, something);
-   - L differs from `any`;
    - E [reads](#ident_in) Local in File;
    - E [sees](#sees_binder) D.
 
@@ -1427,7 +1413,6 @@ A node U may be the literal L either:
    - [`keyed_each`](#keyed_each)(F, X);
    - F [takes](#param_of) Name at 1;
    - [`keyed_put`](#keyed_put)(X, L, something);
-   - L differs from `any`;
    - F [uses](#param_use) Name at U.
 
 ## 8. Reading a property off a value

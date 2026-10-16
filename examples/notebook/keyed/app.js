@@ -10,6 +10,7 @@ use('reg.api', reg.byName.get('api'));
 
 const ports = new Map();
 ports.set('db', 5432);
+ports.set('cache', 6379);
 const which = 'db';
 use('ports.which', ports.get(which));
 for (const [name, port] of ports) { use('walk.name', name); use('walk.port', port); }
