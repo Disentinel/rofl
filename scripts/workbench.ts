@@ -11,8 +11,9 @@ const OUT = path.resolve(oi >= 0 ? argv[oi + 1] : `${ROOT}workbench/dist`);
 rmSync(OUT, { recursive: true, force: true });
 mkdirSync(`${OUT}/lib`, { recursive: true });
 
-// the host reads code with the JS scanner, which a notebook with no code never calls: it is not shipped, nor is babel
-emitAll(ROOT, `${OUT}/lib`, ['workbench/page.ts'], { 'scanners/js_ast.ts': 'export const scan = () => { throw new Error("no code in the workbench"); };\n' });
+// a notebook opened from a link or a folder reads its code with the JS scanner, and the scanner with babel
+copyFileSync(`${ROOT}node_modules/@babel/parser/lib/index.js`, `${OUT}/lib/babel-parser.js`);
+emitAll(ROOT, `${OUT}/lib`, ['workbench/page.ts']);
 const copy = (from: string, to: string) => { mkdirSync(path.dirname(`${OUT}/${to}`), { recursive: true }); copyFileSync(`${ROOT}${from}`, `${OUT}/${to}`); };
 for (const f of FILES) copy(f, f);
 const read = (f: string) => readFileSync(`${ROOT}${f}`, 'utf8');
