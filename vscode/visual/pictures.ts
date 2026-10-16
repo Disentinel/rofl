@@ -58,9 +58,9 @@ const spilt = (el: HTMLElement) => !el.isConnected ? [] : [...spills.get(el)?.()
   return [`drawn ${Math.round(b.x)}..${Math.round(b.x + b.width)} × ${Math.round(b.y)}..${Math.round(b.y + b.height)} in a viewBox ${v.x} ${v.y} ${v.width} ${v.height}${out ? `, past it a ${out.tagName} ${JSON.stringify(out.textContent?.slice(0, 40))}` : ''}`];
 })];
 
-/** Cytoscape from cdnjs and ELK from jsDelivr (cdnjs has no elkjs), into `doc`, once. */
-const CDN = ['https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.30.2/cytoscape.min.js', 'https://cdn.jsdelivr.net/npm/elkjs@0.9.3/lib/elk.bundled.js'];
+/** ELK from jsDelivr (cdnjs has no elkjs), into `doc`, once: the graph's layered layout. */
+const CDN = ['https://cdn.jsdelivr.net/npm/elkjs@0.9.3/lib/elk.bundled.js'];
 let loading: Promise<boolean> | undefined;
 export const graphLibs = (doc: Document, urls = CDN): Promise<boolean> => loading ??= Promise.all(urls.map((src) => new Promise<boolean>((ok) => {
   const s = doc.createElement('script'); s.src = src; s.onload = () => ok(true); s.onerror = () => ok(false); setTimeout(() => ok(false), 10000); doc.head.append(s);
-}))).then(() => 'cytoscape' in globalThis && 'ELK' in globalThis);
+}))).then(() => 'ELK' in globalThis);

@@ -1,118 +1,63 @@
-// A graph (and its dialects) as Cytoscape laid out by ELK; a placed mark stays where the pinned layout put it.
+// A graph (and its dialects) as a schema (schema.ts): a group is a frame that opens and shuts, a note an arrow of its own, a link's terms a
+// small table on it; a placed mark stays where the pinned layout put it.
 import { colourOf, linkTags, RESERVED, unquote, type View } from '../../notebook/draw.ts';
 import { iconUri } from '../../notebook/icons.ts';
+import type { Box, Line, Note } from './schema.ts';
+import { schema } from './schema-layouts.ts';
 import { colour, drawnTags, features, fits, layouts, looks, spills, tagsOf, type Hooks, type Picture } from './picture.ts';
 
-declare const cytoscape: (o: object) => { fit(e?: unknown, p?: number): void; resize(): void; elements(): { renderedBoundingBox(): { x1: number; y1: number; x2: number; y2: number } }; on(ev: string, sel: string, f: (e: { target: { id(): string; data(k: string): string } }) => void): void;
-  nodes(): { map<T>(f: (n: { id(): string; hasClass(c: string): boolean; data(k: string): string | undefined }) => T): T[]; filter(f: (n: { hasClass(c: string): boolean }) => boolean): { map<T>(f: (n: { id(): string; position(a: 'x' | 'y'): number }) => T): T[] } } };
-type Laid = { id: string; x: number; y: number; width: number; height: number; children?: Laid[] };
-declare const ELK: new () => { layout(g: object): Promise<{ children?: Laid[] }> };
+/** What a dialect changes: the layout of the picture and of its groups, the kind of box a tag makes (its colour and shape), a word for a link tag,
+ *  the size of a box a tag makes small (a shut group keeps its own), and an entry dot into the marks a tag names. */
+export type Look = { layout?: string; groups?: string; kinds?: Record<string, string>; sizes?: Record<string, { w: number; h: number }>; says?: Record<string, string>; entry?: string };
 
-/** What a dialect changes: the direction of flow, its tags' styles (drawn under the status tags), a word for a link tag, an entry dot into the marks a tag names,
- *  each outermost group a band of its own (swimlanes), or the marks on a ring in the order the links go round (loops). */
-export type Look = { direction?: string; style?: { selector: string; style: object }[]; says?: Record<string, string>; entry?: string; bands?: boolean; ring?: boolean;
-  layerGap?: number; scale?: (tags: string[]) => { w: number; h: number } | undefined };
-type At = Map<string, { x: number; y: number }>;
-
-function bands(at: At, parent: Map<string, string>): At {
-  // a band is a top-level group; the marks in no group are one band together, laid as ELK laid them (a band per mark stacked them 70 apart, whatever their height)
-  const top = (id: string): string | null => parent.has(id) ? top(parent.get(id)!) : null, of = new Map<string | null, string[]>();
-  for (const id of at.keys()) of.set(top(id), [...(of.get(top(id)) ?? []), id]);
-  const out: At = new Map();
-  let y0 = 0;
-  for (const ids of [...of.values()].sort((a, b) => Math.min(...a.map((i) => at.get(i)!.y)) - Math.min(...b.map((i) => at.get(i)!.y)))) {
-    const ys = ids.map((i) => at.get(i)!.y), lo = Math.min(...ys);
-    for (const i of ids) out.set(i, { x: at.get(i)!.x, y: y0 + at.get(i)!.y - lo });
-    y0 += Math.max(...ys) - lo + 70;
-  }
-  return out;
-}
-
-function ring(ids: string[], next: (id: string) => string[]): At {
-  const order: string[] = [], go = (id: string) => { if (order.includes(id)) return; order.push(id); next(id).forEach(go); };
-  [...ids].sort().forEach(go);
-  const r = Math.max(140, order.length * 42);
-  return new Map(order.map((id, i) => [id, { x: r * Math.cos(2 * Math.PI * i / order.length - Math.PI / 2), y: r * Math.sin(2 * Math.PI * i / order.length - Math.PI / 2) }]));
+/** The view's facts as a schema: its groups frames, its marks boxes, its links lines, its notes notes. */
+export function toSchema(v: View, el: HTMLElement, look: Look = {}) {
+  const is = (rel: string) => v.facts.filter((f) => f.rel === rel);
+  const parent = new Map(is('inside').map((f) => [f.args[0], f.args[1]])), groups = new Set(parent.values());
+  const placed = new Map(is('placed').map((f) => [f.args[0], { x: Number(f.args[1]), y: Number(f.args[2]) }]));
+  const laidAs = new Map(is('laid_out').map((f) => [f.args[0], unquote(f.args[1])]));
+  const sub = new Map(is('subtitled').map((f) => [f.args[0], unquote(f.args[1])])), heat = new Map(is('heat').map((f) => [f.args[0], Number(f.args[1]) / 100]));
+  const c = (t: string) => colour(el, t), kindOf = (tags: string[]) => tags.map((t) => look.kinds?.[t]).find(Boolean);
+  // a group is a frame whether or not it is a mark itself
+  const nodes: Box[] = [...new Set([...Object.keys(v.marks), ...groups])].map((id) => {
+    const tags = tagsOf(v, id), label = v.marks[id]?.label ?? unquote(id), size = tags.includes('collapsed') ? undefined : tags.map((t) => look.sizes?.[t]).find(Boolean);
+    const paint = colourOf(v, tags), i = v.marks[id]?.icon, text = i && v.icons?.[i], src = text && iconUri(text, paint ?? c('--p-fg'));
+    return { id, label, parent: parent.get(id) ?? null, tags, kind: kindOf(tags) ?? 'box',
+      ...(groups.has(id) && { open: true, layout: laidAs.get(id) ?? look.groups }), ...(paint && { paint }), ...(src && { icon: src }),
+      size: size ?? (src ? undefined : { w: Math.max(90, Math.min(260, (groups.has(id) ? 64 : 30) + 7.2 * label.length)), h: sub.has(id) ? 46 : 34 }), ...(sub.has(id) && { sub: sub.get(id) }), ...(heat.has(id) && { heat: heat.get(id) }) };
+  });
+  const box = new Map(nodes.map((n) => [n.id, n]));
+  for (const f of is('level')) if (box.has(f.args[0])) box.get(f.args[0])!.level = Number(f.args[1]);
+  for (const f of is('sits')) if (box.has(f.args[0])) { const val = unquote(f.args[2]); box.get(f.args[0])![unquote(f.args[1])] = val !== '' && !isNaN(Number(val)) ? Number(val) : val; }
+  // a placed mark keeps its place, its centre where it was; then the picture's own boxes are laid out beside it
+  for (const [id, p] of placed) { const n = box.get(id); if (n && !n.parent) { n.x = p.x - (n.size?.w ?? 190) / 2; n.y = p.y - (n.size?.h ?? 46) / 2; } }
+  const terms = new Map<string, [string, string][]>();
+  for (const f of is('contract')) { const k = f.args[0] + '\u0000' + f.args[1]; terms.set(k, [...terms.get(k) ?? [], [unquote(f.args[2]), unquote(f.args[3])]]); }
+  const links: Line[] = is('link').map((f) => { const ts = linkTags(v, f), paint = colourOf(v, ts), label = ts.filter((t) => !RESERVED.includes(t)).map((t) => look.says?.[t] ?? t).join(', ');
+    return { s: f.args[0], t: f.args[1], label, show: true, tags: ts, fact: f.literal, ...(paint && { paint }), ...(terms.has(f.args[0] + '\u0000' + f.args[1]) && { contract: terms.get(f.args[0] + '\u0000' + f.args[1]) }) }; });
+  const entries = look.entry ? nodes.filter((n) => n.tags!.includes(look.entry!)).map((n, i) => ({ id: `entry${i}`, to: n.id, parent: n.parent })) : [];
+  for (const e of entries) { nodes.push({ id: e.id, label: '', kind: 'entry', parent: e.parent, size: { w: 16, h: 16 } }); links.push({ s: e.id, t: e.to }); }
+  const said = new Map(is('note').map((f) => [f.args[0], { title: unquote(f.args[1]), body: unquote(f.args[2]) }]));
+  const notes: Note[] = [...said].map(([id, n]) => ({ id, ...n, to: is('points_at').filter((f) => f.args[0] === id).map((f) => f.args[1]), arrow: is('points_at').find((f) => f.args[0] === id)?.args[2] ?? '' }))
+    .map((n) => ({ ...n, arrow: unquote(n.arrow) }));
+  const top = laidAs.get('picture') ?? (placed.size ? 'placed' : look.layout ?? 'layered-right');
+  return { data: { nodes, links, notes, layout: top }, entries };
 }
 
 export async function mount(el: HTMLElement, v: View, h: Hooks, detail: (id: string, fact?: string) => void, toggle: (group: string) => void, look: Look = {}): Promise<void> {
   el.innerHTML = '<div class="cy"></div>';
-  const parent = new Map(v.facts.filter((f) => f.rel === 'inside').map((f) => [f.args[0], f.args[1]])), groups = new Set(parent.values());
-  const placed = new Map(v.facts.filter((f) => f.rel === 'placed').map((f) => [f.args[0], { x: Number(f.args[1]), y: Number(f.args[2]) }]));
-  const level = new Map(v.facts.filter((f) => f.rel === 'level').map((f) => [f.args[0], f.args[1]]));
-  const leaves = Object.keys(v.marks).filter((id) => !groups.has(id)), links = v.facts.filter((f) => f.rel === 'link');
-  const c = (t: string) => colour(el, t);
-  // a mark drawn as an icon is the icon, its label under it, painted its tag's colour or the theme's: an image, from a data: URI
-  const icon = new Map(leaves.flatMap((id) => { const i = v.marks[id]?.icon, text = i && v.icons?.[i], src = text && iconUri(text, colourOf(v, tagsOf(v, id)) ?? c('--p-fg')); return src ? [[id, src]] : []; }));
-  // a dialect may grow a shape its text sits inside of, a decision's diamond: `look.scale(tags)` gives the factor and the height
-  const size = (id: string) => { if (icon.has(id)) return { width: 52, height: 52 };
-    const w = Math.max(56, Math.min(240, 16 + 7.4 * (v.marks[id]?.label ?? id).length)), s = look.scale?.(tagsOf(v, id));
-    return s ? { width: Math.round(w * s.w), height: s.h, textw: Math.round(w * s.w * 0.6) } : { width: w, height: 30 }; };
-  const entries = look.entry ? leaves.filter((id) => tagsOf(v, id).includes(look.entry!)).map((id, i) => ({ id: `entry${i}`, to: id })) : [];
-  // groups go to ELK as nested nodes, so a group's box is laid around its members and nothing else: laid flat, a box drawn round its
-  // members afterwards also takes in whatever the layout put between them
-  const leaf = (id: string) => ({ id, ...size(id), ...(level.has(id) && { layoutOptions: { 'elk.partitioning.partition': level.get(id) } }) });
-  const inGroup = (g?: string) => [...leaves.filter((id) => parent.get(id) === g), ...[...groups].filter((x) => parent.get(x) === g && x !== g)].sort();
-  const node = (id: string, seen: Set<string>): object => !groups.has(id) ? leaf(id) : seen.has(id) ? { id, width: 20, height: 20 }
-    : { id, layoutOptions: { 'elk.padding': '[top=30,left=14,bottom=14,right=14]' }, children: inGroup(id).map((k) => node(k, new Set([...seen, id]))) };
-  const laidOut = new Set([...leaves, ...groups]);   // a group is a node to ELK, so a link from a box is laid out too
-  const laid = await new ELK().layout({ id: 'root', layoutOptions: { 'elk.algorithm': 'layered', 'elk.direction': look.direction ?? 'RIGHT', 'elk.hierarchyHandling': 'INCLUDE_CHILDREN', 'elk.spacing.nodeNode': '22', 'elk.layered.spacing.nodeNodeBetweenLayers': String(look.layerGap ?? 46), ...(level.size && { 'elk.partitioning.activate': 'true' }) },
-    children: [...inGroup(undefined).map((id) => node(id, new Set())), ...entries.map((e) => ({ id: e.id, width: 14, height: 14 }))],
-    edges: [...links.filter((f) => laidOut.has(f.args[0]) && laidOut.has(f.args[1])).map((f, i) => ({ id: `e${i}`, sources: [f.args[0]], targets: [f.args[1]] })), ...entries.map((e) => ({ id: `${e.id}e`, sources: [e.id], targets: [e.to] }))] });
-  // a nested node's place is its parent's: the centres are summed down the tree
-  const elk: At = new Map(), walk = (n: { children?: Laid[] }, x0: number, y0: number): void => { for (const c of n.children ?? []) {
-    const x = x0 + c.x, y = y0 + c.y;
-    if (c.children?.length) walk(c, x, y); else elk.set(c.id, { x: x + c.width / 2, y: y + c.height / 2 });
-  } };
-  walk(laid, 0, 0);
-  const auto = look.ring ? ring(leaves, (id) => links.filter((f) => f.args[0] === id).map((f) => f.args[1]).filter((n) => leaves.includes(n))) : look.bands ? bands(elk, parent) : elk;
-  const pos = new Map([...elk.keys()].map((id) => [id, placed.get(id) ?? auto.get(id) ?? elk.get(id)!]));
-  const hatch = `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="8" height="8"><path d="M-2 2L2 -2M0 8L8 0M6 10L10 6" stroke="${c('--p-warn')}" stroke-width="1.4"/></svg>`)}`;
-  const cy = cytoscape({
-    container: el.firstChild, layout: { name: 'preset' }, wheelSensitivity: 0.3,
-    elements: [
-      ...[...groups].map((g) => ({ data: { id: g, label: v.marks[g]?.label ?? unquote(g), parent: parent.get(g) }, classes: ['group', ...tagsOf(v, g)].join(' ') })),
-      ...leaves.map((id) => { const paint = colourOf(v, tagsOf(v, id)); return { data: { id, label: v.marks[id].label, parent: parent.get(id), ...size(id), ...(icon.has(id) && { icon: icon.get(id) }), ...(paint && { paint }) }, position: pos.get(id), classes: tagsOf(v, id).join(' ') }; }),
-      ...links.map((f, i) => { const ts = linkTags(v, f); const paint = colourOf(v, ts); return { data: { id: `l${i}`, source: f.args[0], target: f.args[1], fact: f.literal, label: ts.filter((t) => !RESERVED.includes(t)).map((t) => look.says?.[t] ?? t).join(', '), ...(paint && { paint }) }, classes: ts.join(' ') }; }),
-      ...entries.flatMap((e) => [{ data: { id: e.id, label: '' }, position: pos.get(e.id), classes: 'entry' }, { data: { id: `${e.id}e`, source: e.id, target: e.to, label: '' }, classes: 'entry' }]),
-    ],
-    style: [
-      { selector: 'node', style: { label: 'data(label)', 'text-valign': 'center', 'text-halign': 'center', shape: 'round-rectangle', 'background-color': c('--p-panel'), 'border-width': 1.5, 'border-color': c('--p-mute'), color: c('--p-fg'), 'font-size': 11, 'font-family': 'ui-monospace, Menlo, monospace' } },
-      { selector: 'node[width]', style: { width: 'data(width)', height: 'data(height)' } },
-      { selector: 'node.group', style: { 'text-valign': 'top', 'text-halign': 'center', 'background-color': c('--p-bg'), 'border-style': 'dashed', padding: 12, color: c('--p-mute') } },
-      { selector: 'edge', style: { width: 1.5, 'line-color': c('--p-mute'), 'target-arrow-color': c('--p-mute'), 'target-arrow-shape': 'triangle', 'curve-style': 'bezier', label: 'data(label)', 'font-size': 10, color: c('--p-mute'), 'text-background-color': c('--p-bg'), 'text-background-opacity': 1 } },
-      { selector: 'node[paint][^icon]', style: { 'background-color': 'data(paint)' } },
-      { selector: 'node[icon]', style: { 'background-image': 'data(icon)', 'background-width': '80%', 'background-height': '80%', 'text-valign': 'bottom', 'text-margin-y': 3 } },
-      { selector: 'edge[paint]', style: { 'line-color': 'data(paint)', 'target-arrow-color': 'data(paint)', width: 2.5 } },
-      ...look.style ?? [],
-      { selector: 'node.entry', style: { shape: 'ellipse', width: 14, height: 14, 'background-color': c('--p-fg'), 'border-width': 0 } },
-      { selector: '.failing, .dangling', style: { 'border-color': c('--p-fail'), 'border-width': 3, color: c('--p-fail'), 'line-color': c('--p-fail'), 'target-arrow-color': c('--p-fail') } },
-      { selector: '.dangling', style: { 'border-style': 'dashed', 'line-style': 'dashed' } },
-      { selector: 'node.blind', style: { 'background-image': hatch, 'background-repeat': 'repeat', 'background-fit': 'none', 'border-style': 'dashed', 'border-color': c('--p-warn') } },
-      { selector: 'edge.blind', style: { 'line-style': 'dashed', 'line-color': c('--p-warn') } },
-      { selector: '.unknown', style: { 'border-style': 'dotted', 'line-style': 'dotted', color: c('--p-mute') } },
-      { selector: '.gone', style: { opacity: 0.4, 'border-style': 'dashed', 'line-style': 'dashed' } },
-      { selector: '.new', style: { 'border-color': c('--p-pass'), 'border-width': 3, 'line-color': c('--p-pass'), 'target-arrow-color': c('--p-pass') } },
-      { selector: 'edge.attack', style: { 'line-color': c('--p-fail'), 'target-arrow-color': c('--p-fail'), 'target-arrow-shape': 'tee', 'line-style': 'dashed' } },
-      { selector: '.collapsed', style: { 'border-style': 'double', 'border-width': 4, 'font-weight': 'bold' } },
-      { selector: ':selected', style: { 'overlay-color': c('--p-accent'), 'overlay-opacity': 0.15 } },
-    ],
+  const { data, entries } = toSchema(v, el, look), host = el.firstChild as HTMLElement;
+  const s = await schema(host, data, {
+    pick: (what) => { if (!what) return; if ('box' in what) { if (v.marks[what.box] || data.notes.some((n) => n.id === what.box)) detail(what.box); } else if (what.line[0]?.fact) detail(what.line[0].s, what.line[0].fact); },
+    open: (id) => { if (!tagsOf(v, id).includes('collapsed')) return false; toggle(id); return true; },
   });
-  // the box narrows and widens with the editor, and may have no size yet when drawn: the drawing is fitted to it whenever it changes
-  const box = el.firstChild as HTMLElement, fit = () => { cy.resize(); cy.fit(undefined, 16); };
-  fit();
-  new ResizeObserver(fit).observe(box);
-  fits.set(el, fit);
-  spills.set(el, () => {
-    const b = cy.elements().renderedBoundingBox(), w = box.clientWidth, h = box.clientHeight;
-    return b.x1 < -1 || b.y1 < -1 || b.x2 > w + 1 || b.y2 > h + 1 ? [`laid ${Math.round(b.x1)}..${Math.round(b.x2)} × ${Math.round(b.y1)}..${Math.round(b.y2)} in a box ${w} × ${h}`] : [];
-  });
-  cy.on('tap', 'node[label != ""]', (e) => groups.has(e.target.id()) || tagsOf(v, e.target.id()).includes('collapsed') ? toggle(e.target.id()) : detail(e.target.id()));
-  cy.on('tap', 'edge[fact]', (e) => detail(e.target.data('source'), e.target.data('fact')));
+  fits.set(el, s.fit);
+  spills.set(el, s.spill);
+  layouts.set(el, () => s.placed().filter((f) => !/^placed\(entry\d+,/.test(f)));
   features.set(el, () => entries.map((e) => `entry(${e.to}).`));
-  looks.set(el, () => cy.nodes().map((n) => [n.data('icon') && `${n.id()} icon ${n.data('icon')}`, n.data('paint') && `${n.id()} colour ${n.data('paint')}`]).flat().filter((x): x is string => !!x));
-  drawnTags.set(el, () => cy.nodes().map((n) => RESERVED.filter((t) => n.hasClass(t)).map((t) => `tagged(${n.id()}, ${t}).`)).flat());
-  layouts.set(el, () => cy.nodes().filter((n) => !n.hasClass('group') && !n.hasClass('entry')).map((n) => `placed(${n.id()}, ${Math.round(n.position('x'))}, ${Math.round(n.position('y'))}).`).sort());
+  const id = (g: Element) => (g as SVGGElement).dataset.id!;
+  looks.set(el, () => s.boxes().flatMap((g) => { const n = data.nodes.find((x) => x.id === id(g)); return [n?.icon && `${n.id} icon ${n.icon}`, n?.paint && `${n.id} colour ${n.paint}`].filter((x): x is string => !!x); }));
+  drawnTags.set(el, () => s.boxes().flatMap((g) => RESERVED.filter((t) => g.classList.contains(t)).map((t) => `tagged(${id(g)}, ${t}).`)));
 }
 
 export const pictures: Picture[] = [{ kind: 'graph', mount }, { kind: 'argument', mount }];

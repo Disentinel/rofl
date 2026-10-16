@@ -173,7 +173,8 @@ The renderer reserves six tags adapters may not write: `unknown`, `blind`
 (status), `gone`, `new` (compare), `failing` (a `never` row), `dangling` (a
 link to a non-node). Backends: mermaid `flowchart` for GitHub and agents,
 DOT for large graphs, `architecture-beta` / Argdown / `stateDiagram` / BPMN
-for the dialects, Cytoscape.js with ELK layered in the notebook webview.
+for the dialects, and in the notebook webview a schema (vscode/visual/schema.ts): frames that open and shut, notes, a link's contract, ELK layered
+or a layout of its own per frame (docs/schemas.md).
 
 ### Time
 
@@ -268,7 +269,7 @@ and never carry meaning.**
   `placed(M, X, Y)` (and `sized(M, W, H)`) into a `layout` fact pack beside
   the world, and it is committed, as Grafema's hex atlas persists its
   layout.
-  - On the next render a placed mark is pinned: Cytoscape `preset`, `neato
+  - On the next render a placed mark is pinned: the schema's `placed` layout, `neato
     -n2`, or ELK layered with interactive crossing minimisation and
     `considerModelOrder`.
   - Only new marks are laid out.

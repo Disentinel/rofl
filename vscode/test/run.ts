@@ -195,13 +195,13 @@ const BREAKS: Record<string, [string, RegExp, string, typeof cases, RegExp]> = {
   lsp: ['lsp.ts', /else if \(m\.method === 'textDocument\/publishDiagnostics'\)/, "else if (m.method === 'none')", first, /the broken rule on line 3 is marked|the sentence not read is marked/],
   picture: ['extension.ts', /\.\.\.\(s\.views \?\? \[\]\)\.map\(/, '...[].map(', named('paint-shop'), /the pictures drawn are \[\], not/],
   why: ['extension.ts', /ask<string>\('why', nb\.fsPath, literal, \{\}, undefined, undefined, undefined, \{ stamp \}\)/, "Promise.resolve('')", named('paint-shop'), /a picture's why of .* does not say/],
-  placed: ['visual/out/pic-graph.js', /placed\.get\(id\) \?\? /, '', named('paint-pinned'), /the renderer laid .* elsewhere/],
+  placed: ['visual/out/pic-graph.js', /n\.x = p\.x - /, 'n.z = p.x - ', named('paint-pinned'), /the renderer laid .* elsewhere/],
   // a dialect's look, planted in the built renderer: each must turn its own case red
-  'd-arch': ['visual/out/pic-dialects.js', /direction: 'DOWN'/, "direction: 'RIGHT'", named('shop-architecture-whatif'), /is not drawn down/],
+  'd-arch': ['visual/out/pic-dialects.js', /architecture: \{ layout: 'layered-down'/, "architecture: { layout: 'layered-right'", named('shop-architecture-whatif'), /is not drawn down/],
   'd-state': ['visual/out/pic-dialects.js', /entry: 'initial'/, "entry: 'none'", named('order-states-whatif'), /is not drawn entry/],
-  'd-proc': ['visual/out/pic-dialects.js', /bands: true/, 'bands: false', named('claim-process-whatif'), /is not drawn bands/],
-  'd-loop': ['visual/out/pic-dialects.js', /ring: true/, 'ring: false', named('burnout-loop-whatif'), /is not drawn ring/],
-  'd-proof': ['visual/out/pic-dialects.js', /direction: 'UP'/, "direction: 'DOWN'", named('claim-proof-whatif'), /is not drawn up/],
+  'd-proc': ['visual/out/pic-dialects.js', /layout: 'lanes'/, "layout: 'layered-down'", named('claim-process-whatif'), /is not drawn bands/],
+  'd-loop': ['visual/out/pic-dialects.js', /layout: 'ring'/, "layout: 'layered-right'", named('burnout-loop-whatif'), /is not drawn ring/],
+  'd-proof': ['visual/out/pic-dialects.js', /layout: 'layered-up'/, "layout: 'layered-down'", named('claim-proof-whatif'), /is not drawn up/],
   'd-fold': ['visual/out/draw.js', /f\.rel === \(v\.kind === 'proof' \? 'link' : 'inside'\)/, "f.rel === 'inside'", named('claim-proof-whatif'), /the shut group .* is not drawn as|zoomed into .* the renderer does not draw/],
   space: ['visual/out/pic-space.js', /const up = proj !== 'plan';/, 'const up = proj === \'plan\';', named('rail-map'), /is not drawn below/],
   notation: ['extension.ts', /besideNotebook\(nb, `\.\$\{ext\.replace\(\/\\W\/g, ''\)\}`, text\)/, "besideNotebook(nb, '.txt', text)", named('family-tree'), /the notation did not open as ged/],
@@ -218,12 +218,12 @@ const BREAKS: Record<string, [string, RegExp, string, typeof cases, RegExp]> = {
   decision: ['visual/pic-charts.ts', /<th data-mark="\$\{esc\(r\)\}" class="\$\{esc\(tagsOf\(v, r\)\.join\(' '\)\)\}">/, '<th data-mark="${esc(r)}" class="">', of('decision'), /does not draw a decision with/],
   // a pedigree that draws lena without her status, or its generations across the page instead of down
   pedigree: ['visual/out/pic-notation.js', /tags: families\.has\(id\) \? \[\.\.\.m\.tags, 'family'\] : m\.tags/, "tags: families.has(id) ? [...m.tags, 'family'] : []", named('family-tree'), /the notation does not draw lena failing/],
-  'd-ped': ['visual/out/pic-notation.js', /direction: 'DOWN'/, "direction: 'RIGHT'", named('family-tree'), /the pedigree is not drawn down/],
+  'd-ped': ['visual/out/pic-notation.js', /layout: 'layered-down'/, "layout: 'layered-right'", named('family-tree'), /the pedigree is not drawn down/],
   // the verdicts all drawn in one colour; a picture's Open in editor gone, or its tab not opened; a graph not fitted again when its box narrows
   verdict: ['render.ts', /\{ holds: \['pass', '\\u2713'\], fails: \['fail',/, "{ holds: ['pass', '\\u2713'], fails: ['pass',", first, /the verdicts are not coloured by meaning/],
   show: ['visual/out/pictures.js', /\$\{h\.show \? '<button/, "${false ? '<button", named('paint-shop'), /Open in editor opened no picture in an editor tab/],
   panel: ['extension.ts', /w\.html = `/, 'w.html = `<!-- nothing -->` || `', named('paint-shop'), /Open in editor opened no picture in an editor tab/],
-  fit: ['visual/out/pic-graph.js', /new ResizeObserver\(fit\)\.observe\(box\);/, '', named('claim-proof-whatif'), /the proof reaches past its picture/],
+  fit: ['visual/out/schema.js', /new ResizeObserver\(\(\) => fit\(\)\)\.observe\(host\);/, '', named('claim-proof-whatif'), /the proof reaches past its picture/],
   // Cmd/Ctrl+Enter in a natural cell translates; a question's answers fold under it; what a modelling cell adds is said
   'key-translate': ['package.json', /"keybindings": \[\n[^\]]*\],\n/, '', first, /Cmd\/Ctrl\+Enter in a natural cell does not translate/],
   'fold-answers': ['render.ts', /l\.kind === 'answers' \? `<details>/, 'false ? `<details>', first, /a \? line's answers are not folded under it/],
