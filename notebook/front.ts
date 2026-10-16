@@ -12,7 +12,7 @@ export const PHRASE_FILES = ['facts/phrases.rofl', 'facts/js-phrases.rofl'];
 
 /** What ROFL ships for a notebook to read: the draw vocabularies and the inquiry rules. `reads:` names one as `rofl:visual/graph.rofl.md` or
  *  `rofl:rules/inquiry/epistemic.rofl`, which is that file of the tree or of the installed package. */
-export const SHIPPED = [...['graph', 'notation', 'space', 'table', 'time'].map((v) => `visual/${v}.rofl.md`),
+export const SHIPPED = [...['graph', 'notation', 'space', 'table', 'time', 'viewpoints'].map((v) => `visual/${v}.rofl.md`),
   ...['epistemic', 'intents', 'obligations', 'ontology', 'perspectives', 'terminology'].map((r) => `rules/inquiry/${r}.rofl`)];
 /** A `reads:` name's file from the root of the tree: undefined for a path, which the notebook's folder resolves; null for a `rofl:` name ROFL does not ship. */
 export const builtin = (name: string): string | null | undefined => name.startsWith('rofl:') ? SHIPPED.find((v) => name === `rofl:${v}`) ?? null : undefined;

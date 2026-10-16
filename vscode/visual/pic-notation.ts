@@ -1,7 +1,7 @@
 // A notation: a pedigree drawn from its facts with the graph's layout, generations down; and the domain's standard file, opened for its own tool.
 import { backendOf } from '../../notebook/draw-text.ts';
 import { unquote, type Fact, type View } from '../../notebook/draw.ts';
-import { mount } from './pic-graph.ts';
+import { mount, type Look } from './pic-graph.ts';
 import { esc, type Picture } from './picture.ts';
 
 /** The pedigree as a graph: each partner above the family, the family above each child. A person is named with the year of birth, a family is a small ring,
@@ -19,11 +19,7 @@ export function pedigree(v: View): View {
     marks: Object.fromEntries(Object.entries(v.marks).map(([id, m]) => [id, { ...m, label: label(id, m.tags, m.label), tags: families.has(id) ? [...m.tags, 'family'] : m.tags }])) };
 }
 
-const LOOK = { direction: 'DOWN', style: [
-  { selector: 'node.family', style: { shape: 'ellipse', width: 22, height: 22, 'font-size': 13 } },
-  { selector: 'node.family.collapsed', style: { shape: 'round-rectangle', width: 'data(width)', height: 30, 'font-size': 11 } },
-  { selector: 'edge', style: { 'curve-style': 'taxi', 'taxi-direction': 'downward', 'target-arrow-shape': 'none' } },
-] };
+const LOOK: Look = { layout: 'layered-down', kinds: { family: 'start' }, sizes: { family: { w: 26, h: 26 } } };
 
 export const pictures: Picture[] = [{ kind: 'notation', mount: async (el, v, h, detail, toggle) => {
   const b = backendOf(v), text = b.write(v), ext = b.fence === 'gedcom' ? 'ged' : b.format, p = pedigree(v);

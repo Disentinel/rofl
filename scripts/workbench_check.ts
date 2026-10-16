@@ -245,7 +245,7 @@ const pub = path.join(tmp, 'published'), skeleton = '<!doctype html><html><head>
 cpSync(built, pub, { recursive: true });
 writeFileSync(path.join(pub, 'index.html'), skeleton + readFileSync(path.join(built, 'index.html'), 'utf8').replace(/\n$/, '') + '\n\n</body></html>');
 const same = publishedDiff(pub, built);
-writeFileSync(path.join(pub, 'lib/pic-dialects.js'), readFileSync(path.join(pub, 'lib/pic-dialects.js'), 'utf8').replace("height: 40", "height: 41"));
+writeFileSync(path.join(pub, 'lib/pic-dialects.js'), readFileSync(path.join(pub, 'lib/pic-dialects.js'), 'utf8').replace("layout: 'ring'", "layout: 'radial'"));
 writeFileSync(path.join(pub, 'lib/draw.js'), readFileSync(path.join(pub, 'lib/draw.js'), 'utf8').replace(/\n/g, '\n  '));
 const edited = publishedDiff(pub, built).map((d) => `${d.file} ${d.how}`).join(', ');
 say(!same.length && edited === 'lib/draw.js whitespace, lib/pic-dialects.js differs', 'published-diff: the build in the artifact\'s skeleton is what the tree builds; a file edited in it is named, and one only re-indented is said to differ in whitespace', `${JSON.stringify(same)}; planted: ${edited}`);

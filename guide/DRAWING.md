@@ -61,9 +61,14 @@ one of these, and `--json` to get the view with its provenance.
 
 ## Graph
 
-A mark and the links between marks, laid out by ELK in VS Code. Each
-dialect is the graph's vocabulary plus tags the dialect gives a meaning and
-a look.
+A mark and the links between marks, drawn in VS Code as a schema: groups
+are frames that open and shut, a note points at a mark with a bright arrow,
+a link carries a small table of its terms, and a frame lays out its marks
+as layers, lanes, a matrix, a timeline, a quadrant and more
+([docs/schemas.md](../docs/schemas.md)). Which picture answers which
+question is the book [`visual/viewpoints.rofl.md`](../visual/viewpoints.rofl.md).
+Each dialect is the graph's vocabulary plus tags the dialect gives a
+meaning and a look.
 
 ### graph
 
