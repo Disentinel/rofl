@@ -3498,7 +3498,7 @@ work_state(w_rust_default_backend, open).
 work_needs(w_rust_default_backend, w_rust_cli).
 
 work(w_rust_rofl_md,
-  "`.rofl.md` NOTEBOOKS AND THE SENTENCE FORM IN RUST: the cell reader, the directives (? never unsure why whynot excise extends), the phrase layer that facts/phrases.rofl and facts/js-phrases.rofl feed, and the rendering of answers in sentences. ACCEPTANCE: every notebook world gives the same verdicts and the same text in both engines.").
+  "PART DONE 2026-10-16 (f_the_rofl_md_reader_is_native_and_reads_every_world_alike): the reader of worlds, rust/rofl/src/md/, read wherever the binary names a file and by rofl render --out DIR X.rofl.md; npm run mdcheck holds it to scripts/read.ts over every .rofl.md (132 of 132). LEFT: the directives answered and the answers in sentences. `.rofl.md` NOTEBOOKS AND THE SENTENCE FORM IN RUST: the cell reader, the directives (? never unsure why whynot excise extends), the phrase layer that facts/phrases.rofl and facts/js-phrases.rofl feed, and the rendering of answers in sentences. ACCEPTANCE: every notebook world gives the same verdicts and the same text in both engines.").
 work_state(w_rust_rofl_md, open).
 work_needs(w_rust_rofl_md, w_rust_cli).
 
