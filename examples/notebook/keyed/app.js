@@ -13,6 +13,7 @@ ports.set('db', 5432);
 ports.set('cache', 6379);
 const which = 'db';
 use('ports.which', ports.get(which));
+use('ports.arg', ports.get(process.argv[2]));
 for (const [name, port] of ports) { use('walk.name', name); use('walk.port', port); }
 ports.forEach((port, name) => { use('each.port', port); use('each.name', name); });
 

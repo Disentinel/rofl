@@ -1293,8 +1293,8 @@ Declared as facts:
 > method's name: `other.set(k, v)` on a plain object moves nothing. The collection
 > is the site that made it: `new Map()` (`keyed_obj`), and an express app
 > (rules/js-express.rofl). A key is matched by its value, however it got there
-> (`const K = 'port'; m.get(K)`); a key with no known value matches nothing, which
-> may be silent and is never wrong. Flow-insensitive, as the rest of this layer: a
+> (`const K = 'port'; m.get(K)`); a key with no known value matches nothing, and
+> the call is named in `keyed_key_unknown[audit]`: we do not know which. Flow-insensitive, as the rest of this layer: a
 > get sees every put, before or after it. `m.keys()`, `m.values()` and
 > `m.entries()` are not read.
 
@@ -1338,6 +1338,25 @@ In the flow:
   - a node C [passes](#arg_at) a node Y at 0;
   - Y [may be the literal](js-concat.rofl.md#may_be_lit) K;
   - unless some node is the 1-th of the `arguments` of C.
+
+<a id="keyed_key_at"></a>`keyed_key_at`(C, X) either:
+
+1. if all of:
+   - [`keyed_on`](#keyed_on)(C, something, P, Put);
+   - [`keyed_store`](#keyed_store)(P, Put, something);
+   - C [passes](#arg_at) a node X at 0;
+2. if all of:
+   - [`keyed_on`](#keyed_on)(C, something, P, Get);
+   - [`keyed_store`](#keyed_store)(P, something, Get);
+   - C [passes](#arg_at) a node X at 0.
+
+<a id="keyed_key_known"></a>`keyed_key_known`(C) if [`keyed_key_at`](#keyed_key_at)(C, X) and a node X [may be the literal](js-concat.rofl.md#may_be_lit) some text.
+
+In the audit:
+
+<a id="keyed_key_unknown"></a>`keyed_key_unknown`(C) if [`keyed_key_at`](#keyed_key_at)(C, something), unless [`keyed_key_known`](#keyed_key_known)(C).
+
+In the flow:
 
 <a id="keyed_read"></a>`keyed_read`(C, V) if [`keyed_get`](#keyed_get)(C, X, K) and [`keyed_put`](#keyed_put)(X, K, V).
 

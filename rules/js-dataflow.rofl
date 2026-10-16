@@ -729,8 +729,8 @@ sx_mwrite[surface](O, Key, V) :- merge_call[flow](C), arg_at[flow](C, 0, T), may
 -- method's name: `other.set(k, v)` on a plain object moves nothing. The collection
 -- is the site that made it: `new Map()` (`keyed_obj`), and an express app
 -- (rules/js-express.rofl). A key is matched by its value, however it got there
--- (`const K = 'port'; m.get(K)`); a key with no known value matches nothing, which
--- may be silent and is never wrong. Flow-insensitive, as the rest of this layer: a
+-- (`const K = 'port'; m.get(K)`); a key with no known value matches nothing, and
+-- the call is named in `keyed_key_unknown[audit]`: we do not know which. Flow-insensitive, as the rest of this layer: a
 -- get sees every put, before or after it. `m.keys()`, `m.values()` and
 -- `m.entries()` are not read.
 edb(keyed_store).
@@ -747,6 +747,11 @@ sx_kput[surface](X, K, V) :- keyed_on[flow](C, X, P, Put), keyed_store(P, Put, _
 keyed_put[flow](X, K, V) :- sx_kput[surface](X, K, V).
 keyed_get[flow](C, X, K) :- keyed_on[flow](C, X, P, Get), keyed_store(P, _, Get), arg_at[flow](C, 0, A),
                             may_be_lit[flow](A, K), not ast_child[code](C, arguments, 1, _).
+
+keyed_key_at[flow](C, A)    :- keyed_on[flow](C, _, P, Put), keyed_store(P, Put, _), arg_at[flow](C, 0, A).
+keyed_key_at[flow](C, A)    :- keyed_on[flow](C, _, P, Get), keyed_store(P, _, Get), arg_at[flow](C, 0, A).
+keyed_key_known[flow](C)    :- keyed_key_at[flow](C, A), may_be_lit[flow](A, _).
+keyed_key_unknown[audit](C) :- keyed_key_at[flow](C, _), not keyed_key_known[flow](C).
 
 keyed_read[flow](C, V) :- keyed_get[flow](C, X, K), keyed_put[flow](X, K, V).
 may_be_node[flow](C, N) :- keyed_read[flow](C, V), may_be_node[flow](V, N).

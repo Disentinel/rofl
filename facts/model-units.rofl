@@ -241,6 +241,9 @@ unit_concludes("rules/js-dataflow.rofl", keyed_on).
 unit_concludes("rules/js-dataflow.rofl", sx_kput).
 unit_concludes("rules/js-dataflow.rofl", keyed_put).
 unit_concludes("rules/js-dataflow.rofl", keyed_get).
+unit_concludes("rules/js-dataflow.rofl", keyed_key_at).
+unit_concludes("rules/js-dataflow.rofl", keyed_key_known).
+unit_concludes("rules/js-dataflow.rofl", keyed_key_unknown).
 unit_concludes("rules/js-dataflow.rofl", keyed_read).
 unit_concludes("rules/js-dataflow.rofl", keyed_walk).
 unit_concludes("rules/js-dataflow.rofl", sx_keach).

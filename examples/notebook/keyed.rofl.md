@@ -40,3 +40,11 @@ plain_as_library(C) :- stdlib_member[audit](C, _, _), callee_of[code](C, N), ast
                        ast_name[code](O, "plain").
 never plain_as_library(C)
 ```
+
+> A key nothing gives a value to matches nothing, and the model says so
+> instead of keeping quiet: `ports.get(process.argv[2])`, and `add(name, port)`
+> of the class, which no one calls, so `name` has no value.
+
+```datalog
+? keyed_key_unknown[audit](C)
+```
