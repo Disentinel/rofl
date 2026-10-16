@@ -93,6 +93,40 @@ impl<T: Pod> Arena<T> {
     }
 }
 
+/// Where each of `entries` (its hash, its value) goes in the open-addressed table `slots` (linear probing over a
+/// power-of-two length, `free` an empty slot), put in order as inserting it would put it, the table left as it is:
+/// the slots it changes, ascending. A layer's own entries are never in its base, so an entry takes the first free
+/// slot from its home.
+pub fn placed<T: Pod + PartialEq>(slots: &[T], free: T, entries: impl IntoIterator<Item = (u64, T)>) -> Vec<(usize, T)> {
+    let mask = slots.len() - 1;
+    let mut put: std::collections::HashMap<usize, T> = std::collections::HashMap::new();
+    for (h, v) in entries {
+        let mut i = h as usize & mask;
+        while put.get(&i).copied().unwrap_or(slots[i]) != free {
+            i = (i + 1) & mask;
+        }
+        put.insert(i, v);
+    }
+    let mut put: Vec<(usize, T)> = put.into_iter().collect();
+    put.sort_unstable_by_key(|p| p.0);
+    put
+}
+
+/// An open-addressed table of `cap` slots (a power of two, `free` an empty slot) with `entries` put in it in order,
+/// each at the first free slot from its home.
+pub fn table<T: Pod + PartialEq>(cap: usize, free: T, entries: impl IntoIterator<Item = (u64, T)>) -> Vec<T> {
+    let mask = cap - 1;
+    let mut slots = vec![free; cap];
+    for (h, v) in entries {
+        let mut i = h as usize & mask;
+        while slots[i] != free {
+            i = (i + 1) & mask;
+        }
+        slots[i] = v;
+    }
+    slots
+}
+
 /// The bytes of values, as written to a file.
 pub fn bytes_of<T: Pod>(a: &[T]) -> &[u8] {
     // SAFETY: T is Pod, so its bytes are initialized and padding-free.
@@ -128,9 +162,29 @@ impl VolW {
         self.arena(s.as_bytes());
     }
     pub fn arena<T: Pod>(&mut self, a: &[T]) {
-        self.u64(a.len() as u64);
+        self.arena_parts(&[a]);
+    }
+    /// One arena of the parts one after another, as their concatenation is written.
+    pub fn arena_parts<T: Pod>(&mut self, parts: &[&[T]]) {
+        self.u64(parts.iter().map(|p| p.len()).sum::<usize>() as u64);
         self.bytes(&[0; 8][..self.at.next_multiple_of(8) - self.at]);
-        self.bytes(bytes_of(a));
+        for p in parts {
+            self.bytes(bytes_of(p));
+        }
+    }
+    /// `base` with the values of `put` (ascending) written over it, then `tail`: a table or a column as the values
+    /// put in it leave it.
+    pub fn arena_placed<T: Pod>(&mut self, base: &[T], put: &[(usize, T)], tail: &[T]) {
+        self.u64((base.len() + tail.len()) as u64);
+        self.bytes(&[0; 8][..self.at.next_multiple_of(8) - self.at]);
+        let mut at = 0;
+        for (i, v) in put {
+            self.bytes(bytes_of(&base[at..*i]));
+            self.bytes(bytes_of(std::slice::from_ref(v)));
+            at = i + 1;
+        }
+        self.bytes(bytes_of(&base[at..]));
+        self.bytes(bytes_of(tail));
     }
     /// The bytes written, once they are all in the file.
     pub fn finish(mut self) -> std::io::Result<usize> {
