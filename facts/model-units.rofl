@@ -363,6 +363,7 @@ unit_concludes("rules/js-model.rofl", unearned_axis).
 unit_concludes("rules/js-model.rofl", imports).
 unit_concludes("rules/js-model.rofl", ast_node).
 unit_concludes("rules/js-model.rofl", ast_attr).
+unit_concludes("rules/js-model.rofl", ast_child).
 unit_concludes("rules/js-model.rofl", lang_of_corpus).
 unit_concludes("rules/js-model.rofl", kind_seen).
 unit_concludes("rules/js-model.rofl", vocabulary_gap).
@@ -379,9 +380,9 @@ unit_concludes("rules/js-model.rofl", kind_absent_undeclared).
 unit_concludes("rules/js-callgraph.rofl", edb).
 unit_concludes("rules/js-callgraph.rofl", call_kind).
 unit_concludes("rules/js-callgraph.rofl", call_site).
+unit_concludes("rules/js-callgraph.rofl", callee_of).
 unit_concludes("rules/js-callgraph.rofl", call_site_kind).
 unit_concludes("rules/js-callgraph.rofl", call_line).
-unit_concludes("rules/js-callgraph.rofl", callee_of).
 unit_concludes("rules/js-callgraph.rofl", callee_kind).
 unit_concludes("rules/js-callgraph.rofl", transfer_kind).
 unit_concludes("rules/js-callgraph.rofl", transfer_site).

@@ -1324,6 +1324,7 @@ pub fn decode_dominances(h: &mut Heap, v: &Vocab, store: &mut Store, refused: &m
 
 // ---------------------------------------------------------------- decoding
 
+#[derive(Clone)]
 pub struct DRule {
     pub id: Sym,
     pub clause: Clause,

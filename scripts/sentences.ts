@@ -92,7 +92,7 @@ export function said(md: string): string[] {
       });
       continue;
     }
-    const d = /^`(\w+)`(?: in the `\$?\w+`)? (?:keeps|is ordered|has one) |^Each `(\w+)` fact|^Each child of `(\w+)` has one parent|^A fact that \[[^\]]*\]\(#(\w+)\)/.exec(p.trim());
+    const d = /^`(\w+)`(?: in the `\$?\w+`)? (?:keeps|is ordered|has one|(?:of .+? )?is another name for) |^Each `(\w+)` fact|^Each child of `(\w+)` has one parent|^A fact that \[[^\]]*\]\(#(\w+)\)/.exec(p.trim());
     if (d) out.push(`sentence_of(${d[1] ?? d[2] ?? d[3] ?? d[4]}, "${plain(p)}").`);
   }
   return out;

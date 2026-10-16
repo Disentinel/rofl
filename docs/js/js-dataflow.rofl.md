@@ -146,6 +146,8 @@ Phrases this file defines in one step, each by the sentence it stands for:
 > store indexes; leading with `ast_node(E, identifier, …)` enumerated every
 > identifier in the corpus — 39 % of a fixpoint.
 
+`ident_in` has one Name and File for each N.
+
 In the code:
 
 ## 2. What a value is
@@ -378,7 +380,10 @@ A node
   - it [may find its name in](#name_cand) Name in File S;
   - it [may find its name in](#name_cand) Name in File a node S2;
   - S2 [is within](#ast_within) S.
-- <a id="name_scope"></a>finds its name in Name in File S if it [may find its name in](#name_cand) Name in File S, unless it [passes over](#name_outer) S.
+
+`name_scope` has one Name, File and S for each E.
+
+<a id="name_scope"></a>A node finds its name in Name in File S if it [may find its name in](#name_cand) Name in File S, unless it [passes over](#name_outer) S.
 
 > 3b. WHERE A NAME IS NOT A REFERENCE. Every property name, key, label and
 > type name is an `identifier` node too; these are the positions where an
@@ -439,6 +444,8 @@ A node is no reference if the `property` or `key` of a node P is it and [the att
 
 > 3c. WHAT IS DECLARED AT THE TOP OF A FILE. A name no scope around its
 > reading declares is the file's own top-level binding or import, else global.
+
+`top_read` has one Name and File for each E.
 
 <a id="top_read"></a>A node is read at the top of Name and File if it [reads](#ident_in) Name in File and it neither [is no reference](#not_a_ref) nor [may find its name in](#name_cand) some name in some file some scope.
 
@@ -658,6 +665,8 @@ Declared as facts:
 | `arrow_function_expression` | `function` |
 | `reg_exp_literal` | `regexp` |
 | `big_int_literal` | `bigint` |
+
+`kind_proto` has one P for each E.
 
 <a id="kind_proto"></a>`kind_proto`(E, P) if a kind K [has prototype](#kind_prototype) P and a node E [is of kind](js-model.rofl.md#ast_node) K.
 

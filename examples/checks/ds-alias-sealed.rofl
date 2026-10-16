@@ -1,0 +1,2 @@
+-- examples/checks/ds-alias-sealed.rofl — the ds_alias_sealed world keeps no witness (`sealed(provenance)`), which is where the Rust engine reads each alias from its source and stores none of its rows; the files of ds_alias_holds are its data.
+sealed(provenance).

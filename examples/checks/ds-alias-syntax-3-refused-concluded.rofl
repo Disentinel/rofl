@@ -1,0 +1,4 @@
+-- expect-refusal: is declared an alias and has no other conclusion
+edb(dar_e). dar_e(a, b, c).
+alias dar_more(P, C) is dar_e(P, _, C).
+dar_more(P, C) :- dar_e(C, _, P).

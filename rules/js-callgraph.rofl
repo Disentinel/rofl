@@ -16,6 +16,8 @@ edb(call_kind).
 call_kind(call_expression).
 call_kind(optional_call_expression).
 
+function call_site(C, to File).
+function callee_of(C, to N).
 call_site[code](C, File)      :- call_kind(K), ast_node[code](C, K, File, _).
 call_site_kind[code](C, K)    :- call_kind(K), ast_node[code](C, K, _, _).
 call_line[code](C, Line)      :- call_site[code](C, _), ast_node[code](C, _, _, Line).

@@ -1161,7 +1161,10 @@ impl Session {
             (rows, keys, n, false)
         } else {
             // A RELATION ANSWERED FROM A STRUCTURE (the closure of a declared tree) has no rows to find: its rows are read off the tree
-            let virt = self.eval.vclosure_query(rel, persp_opt, &args);
+            let virt: Option<Vec<(Sym, Vec<Term>)>> = match self.eval.alias_query(rel, persp_opt, &args) {
+                Some(rows) => Some(rows),
+                None => self.eval.vclosure_query(rel, persp_opt, &args).map(|v| v.into_iter().map(|(b, a, d)| (b, vec![a, d])).collect()),
+            };
             let cand = if virt.is_some() {
                 Some(Vec::new())
             } else {
@@ -1208,9 +1211,8 @@ impl Session {
                 rows.push(row);
                 keys.push(k);
             }
-            for (book, a, d) in virt.unwrap_or_default() {
-                let fa = [a, d];
-                if pos.iter().zip(&vals).any(|(&i, v)| fa[i] != *v) || same.iter().any(|&(x, y)| fa[x] != fa[y]) {
+            for (book, fa) in virt.unwrap_or_default() {
+                if fa.len() != args.len() || pos.iter().zip(&vals).any(|(&i, v)| fa[i] != *v) || same.iter().any(|&(x, y)| fa[x] != fa[y]) {
                     continue;
                 }
                 let row: Vec<String> = col
