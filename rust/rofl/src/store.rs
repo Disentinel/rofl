@@ -1804,6 +1804,8 @@ impl Store {
         rels.into_iter().any(|r| self.rel_persp(h, r, persp).into_iter().any(|f| f != but && self.rec(f).base()))
     }
 
+    pub fn perspectives_of(&self, h: &Heap, rel: Sym) -> Vec<Sym> { self.persps_sorted(h, rel) }
+
     fn persps_sorted(&self, h: &Heap, rel: Sym) -> Vec<Sym> {
         let mut ps: Vec<Sym> = self
             .idx

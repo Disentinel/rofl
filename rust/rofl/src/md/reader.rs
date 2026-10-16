@@ -434,12 +434,14 @@ fn canon(c: &Clause) -> String {
 
 // ------------------------------------------------------------- the reader
 #[derive(Clone, Debug)]
-pub struct Reading { t: T, pub said: String, pub lit: String, holes: Vec<(String, String)> }
+pub struct Reading { t: T, pub said: String, pub lit: String, holes: Vec<(String, String)>, odd: Option<(String, String)>, note: Option<String> }
 #[derive(Clone, Debug)]
 struct Cand { s: String, np: Option<String>, past: bool }
 /// An English asking line, as what it asks; `rules` when it says more than one sentence.
-#[derive(Clone, Debug)]
-pub struct Question { pub line: String, pub lit: String, pub noun: Option<String>, pub rules: Option<Vec<String>>, pub phrase: Option<String> }
+/// `count`: How many, the blank it counts. `blank`: a why with a blank in it. `also`: a second line the same English asks.
+#[derive(Clone, Debug, Default)]
+pub struct Question { pub kind: String, pub line: String, pub lit: String, pub noun: Option<String>, pub yesno: bool, pub count: Option<String>, pub note: Option<String>,
+    pub blank: Option<Blank>, pub rules: Option<Vec<String>>, pub phrase: Option<String>, pub also: Vec<(String, String)> }
 
 pub struct R {
     kind_noun: OMap<String>,
@@ -456,13 +458,13 @@ pub struct R {
     subject_var: Option<String>,
     fresh_n: usize,
     bad_term: Option<String>,
-    dropped: Vec<String>,
+    pub dropped: Vec<String>,
     promised: Vec<(String, String)>,
     plurals: HashMap<String, String>,
     plurals_of: usize,
-    ambiguous: Vec<String>,
+    pub ambiguous: Vec<String>,
     known: HashMap<String, String>,
-    unparsed: Vec<String>,
+    pub unparsed: Vec<String>,
     fresh_names: HashSet<String>,
     agg_why: Option<String>,
     rules: Vec<Rule>,
@@ -484,10 +486,13 @@ pub struct R {
     said_at: HashMap<String, i64>,
     md_lines: Vec<String>,
     cache: HashMap<usize, &'static Regex>,
-    loose: HashMap<(usize, bool), (&'static Regex, Vec<String>)>,
+    loose: HashMap<(usize, bool, i64), &'static Regex>,
     pub rofl: String,
     pub phrases: Vec<String>,
     pub report: String,
+    /// the relations the rules read that nothing defines, and the ones the text defines or declares
+    pub nowhere: Vec<String>,
+    pub defined: Vec<String>,
 }
 
 /// The reading of a text: its rules, its sentences, its report, and the reader for its questions.
@@ -533,7 +538,7 @@ impl R {
             rules: vec![], parsed_facts: vec![], declared: vec![], imported: HashSet::new(), bad_alternatives: vec![], head_book: HashMap::new(),
             home_book: HashMap::new(), home_books: home_books.clone(), default_book: "main".into(), cur_book: "main".into(), block_set: false,
             learned: vec![], learned_at: HashMap::new(), decls: vec![], dominances: vec![], refused_name: HashMap::new(), said_at: HashMap::new(),
-            md_lines: vec![], cache: HashMap::new(), loose: HashMap::new(), rofl: String::new(), phrases: vec![], report: String::new(),
+            md_lines: vec![], cache: HashMap::new(), loose: HashMap::new(), rofl: String::new(), phrases: vec![], report: String::new(), nowhere: vec![], defined: vec![],
         };
         r.index_nouns();
         r
@@ -1715,6 +1720,8 @@ impl R {
         }
         let nowhere: Vec<String> = uniq(self.rules.iter().flat_map(|r| r.body.iter().flat_map(rels_of)).collect()).into_iter().filter(|r| !linkable.contains(r) && !BUILTIN.contains(&r.as_str())).collect();
         report.push(format!("\nused with nowhere to link ({}): {}", nowhere.len(), nowhere.join(", ")));
+        self.defined = uniq(self.rules.iter().map(|r| r.head.rel.clone()).chain(self.declared.iter().cloned()).chain(self.parsed_facts.iter().map(|f| f.rel.clone())).collect());
+        self.nowhere = nowhere.clone();
         report.push(format!("alternatives not starting with if or unless ({}):{}", self.bad_alternatives.len(), if self.bad_alternatives.is_empty() { String::new() } else { format!("\n  {}", self.bad_alternatives.join("\n  ")) }));
         if !self.learned.is_empty() { report.push(format!("vocabulary the file declares: {} sentences", self.learned.len())); }
         report.push(format!("\nvocabulary collisions, two relations with one sentence ({}):", self.collisions.len()));
@@ -1768,26 +1775,27 @@ impl R {
 
     // ------------------------------------------------------------- English
     /// One sentence as the literal it names, read against this file's vocabulary.
-    fn literal(&mut self, text: &str) -> Option<String> {
+    pub fn literal(&mut self, text: &str) -> Option<String> {
         self.known = HashMap::new();
         self.subject_var = None;
         let t = rx::sub(r"[.?]$", text.trim(), false, "");
         let l = match self.positional(&t, &mut Vec::new()) { Some(l) => Some(l), None => self.match_lit(&t, &mut Vec::new(), false) }?;
         Some(format!("{}{}({})", l.rel, self.bk(&l.rel, l.book.as_deref()), l.args.iter().map(tstr).collect::<Vec<_>>().join(", ")))
     }
-    fn reading_of(&mut self, t: &T, parts: &[Part], key: Option<(usize, bool)>, s: &str, past: bool) -> Option<Reading> {
+    /// `s` against one template, each word in the forms the template's derives to; `skip`: that text word may be any word, the near miss.
+    fn reading_of(&mut self, t: &T, parts: &[Part], key: Option<usize>, s: &str, past: bool, skip: i64) -> Option<Reading> {
         let have: HashSet<String> = tokens(s).into_iter().collect();
         let words: Vec<String> = parts.iter().flat_map(|p| if let Part::Text(x) = p { x.split(' ').map(str::to_string).collect() } else { vec![] }).collect();
-        if words.iter().any(|x| !forms(x, past).iter().any(|f| have.contains(f))) { return None; }
-        let re = match key.and_then(|k| self.loose.get(&k).map(|e| e.0)) {
+        if words.iter().enumerate().any(|(k, x)| k as i64 != skip && !forms(x, past).iter().any(|f| have.contains(f))) { return None; }
+        let ck = key.map(|id| (id, past, skip));
+        let re = match ck.and_then(|k| self.loose.get(&k).copied()) {
             Some(r) => r,
             None => {
-                let mut src = String::from("^");
-                let mut first = true;
+                let (mut src, mut first, mut w) = (String::from("^"), true, 0i64);
                 for p in parts {
                     let piece = match p {
                         Part::Hole(..) => format!("({TERM}(?: or {TERM})*)"),
-                        Part::Text(x) => x.split(' ').map(|w| format!("(?:{})", forms(w, past).iter().map(|f| rx::esc(f)).collect::<Vec<_>>().join("|"))).collect::<Vec<_>>().join("\\s+"),
+                        Part::Text(x) => x.split(' ').map(|x| { let i = w; w += 1; if i == skip { "(\\S+)".to_string() } else { format!("(?:{})", forms(x, past).iter().map(|f| rx::esc(f)).collect::<Vec<_>>().join("|")) } }).collect::<Vec<_>>().join("\\s+"),
                         Part::Fix(..) => continue,
                     };
                     if !first && !matches!(p, Part::Text(x) if x.starts_with('-')) { src.push_str("\\s+"); }
@@ -1795,16 +1803,17 @@ impl R {
                     first = false;
                 }
                 let r = rx::re(&(src + "$"));
-                if let Some(k) = key { self.loose.insert(k, (r, vec![])); }
+                if let Some(k) = ck { self.loose.insert(k, r); }
                 r
             }
         };
         let c = re.captures(s)?;
-        let (mut said, mut gi, mut holes) = (String::new(), 0, Vec::new());
+        let (mut said, mut gi, mut holes, mut odd, mut w) = (String::new(), 0, Vec::new(), None, 0i64);
+        let cap = |i: usize| c.get(i).map(|m| m.as_str().to_string()).unwrap_or_default();
         for p in parts {
             let x = match p {
-                Part::Hole(_, n) => { gi += 1; let x = c.get(gi).map(|m| m.as_str().to_string()).unwrap_or_default(); holes.push((x.clone(), n.clone())); x }
-                Part::Text(x) => x.clone(),
+                Part::Hole(_, n) => { gi += 1; let x = cap(gi); holes.push((x.clone(), n.clone())); x }
+                Part::Text(x) => x.split(' ').map(|y| { let i = w; w += 1; if i == skip { gi += 1; odd = Some((cap(gi), y.to_string())); } y.to_string() }).collect::<Vec<_>>().join(" "),
                 Part::Fix(..) => String::new(),
             };
             if !x.is_empty() {
@@ -1812,13 +1821,13 @@ impl R {
                 said.push_str(&x);
             }
         }
-        Some(Reading { t: t.clone(), said, lit: String::new(), holes })
+        Some(Reading { t: t.clone(), said, lit: String::new(), holes, odd, note: None })
     }
     fn reads(&mut self, s: &str, past: bool) -> Vec<Reading> {
         let mut out: OMap<Reading> = OMap::default();
         for i in 0..self.templates.len() {
             let t = self.templates[i].clone();
-            let Some(mut r) = self.reading_of(&t, &t.parts, Some((t.id, past)), s, past) else { continue };
+            let Some(mut r) = self.reading_of(&t, &t.parts, Some(t.id), s, past, -1) else { continue };
             r.lit = self.literal(&r.said).unwrap_or_default();
             if !r.lit.is_empty() && !out.has(&r.lit) { out.set(&r.lit.clone(), r); }
         }
@@ -1832,10 +1841,10 @@ impl R {
             let mut k = t.parts.len();
             while k > 0 && matches!(t.parts[k - 1], Part::Hole(..)) { k -= 1; }
             if k == t.parts.len() || k == 0 { continue; }
-            let Some(r) = self.reading_of(&t, &t.parts[..k], None, s, false) else { continue };
+            let Some(r) = self.reading_of(&t, &t.parts[..k], None, s, false, -1) else { continue };
             let some = t.parts[k..].iter().map(|p| if let Part::Hole(_, n) = p { format!("some {n}") } else { String::new() }).collect::<Vec<_>>().join(" ");
             let said = format!("{} {some}", r.said);
-            if let Some(lit) = self.literal(&said) { out.push(Reading { t: t.clone(), said, lit, holes: r.holes }); }
+            if let Some(lit) = self.literal(&said) { out.push(Reading { t: t.clone(), said, lit, holes: r.holes, odd: None, note: Some(format!("what the question leaves out is read as \"{some}\"")) }); }
         }
         out
     }
@@ -1881,7 +1890,7 @@ impl R {
         }
         out
     }
-    fn settle(&mut self, cands: &[Cand]) -> Option<(Reading, Option<String>)> {
+    fn settle(&mut self, raw: &str, cands: &[Cand], then: &str) -> Result<(Reading, Option<String>), String> {
         let mut found: OMap<(Reading, Option<String>)> = OMap::default();
         for c in cands {
             let s = self.indefinite(&c.s);
@@ -1900,9 +1909,15 @@ impl R {
             for c in cands { let s = self.indefinite(&c.s); for r in self.filled(&s) { found.set(&r.lit.clone(), (r, c.np.clone())); } }
         }
         let all: Vec<(Reading, Option<String>)> = found.values().cloned().collect();
-        if all.iter().any(|x| x.0.holes.iter().any(|h| rx::sub(r#"`[^`]*`|"[^"]*""#, &h.0, true, "").contains(" or "))) { return None; }
-        if all.len() == 1 { return all.into_iter().next(); }
-        None
+        if let Some(either) = all.iter().find(|x| x.0.holes.iter().any(|h| rx::sub(r#"`[^`]*`|"[^"]*""#, &h.0, true, "").contains(" or "))) {
+            return Err(format!("\"or\" between names asks two questions, and an asking line asks one: ask \"{}\" as one line for each name", either.0.said));
+        }
+        if all.len() == 1 { return Ok(all.into_iter().next().unwrap()); }
+        if all.len() > 1 {
+            return Err(format!("this reads {} ways, {}: ask the one you mean with ?", all.len(), all.iter().map(|x| format!("\"{}\"", x.0.said)).collect::<Vec<_>>().join(" · ")));
+        }
+        let ss: Vec<Cand> = cands.iter().map(|c| Cand { s: self.indefinite(&c.s), ..c.clone() }).collect();
+        Err(self.unread(raw, &ss, then))
     }
     fn joined(&mut self, ss: &[Cand]) -> Option<(String, Reading, Reading, String, Option<String>)> {
         for c in ss {
@@ -1926,20 +1941,113 @@ impl R {
         let rel = format!("{}_{k}", words.replacen(' ', "_", 1));
         (bodies.iter().map(|b| format!("{} {noun} X {words} {k} if {b}.", cap_art(noun))).collect(), format!("phrase({rel}, \"<0:{noun}> {words} {k}\")."), format!("X {words} {k}"), format!("{rel}(X)"))
     }
+    /// Why an English line reads as no sentence, in the writer's terms, with a line that does read.
+    fn unread(&mut self, raw: &str, ss: &[Cand], then: &str) -> String {
+        if ss.is_empty() { return format!("no sentence reads \"{}\": the words after the question word must start with a name, a blank or \"some\" and a noun", raw.trim()); }
+        if let Some((op, l, r, subj, np)) = self.joined(ss) {
+            if op == "or" { return format!("\"or\" joins two sentences here, \"{}\" and \"{}\": ask each on a line of its own", l.said, r.said); }
+            let noun = self.singular(np.as_deref().unwrap_or("")).unwrap_or_else(|| l.holes[0].1.clone());
+            let ask = if then == "never" { format!("write: never {subj} is stuck") } else { format!("ask: Which {} are stuck?", plural(&noun)) };
+            return format!("an asking line holds one sentence, and this one holds two: \"{}\", \"{}\". Join them in a rule: {} {noun} {subj} is stuck if {} and {}. Then {ask}", l.said, r.said, cap_art(&noun), l.said, r.said);
+        }
+        for c in ss.iter().filter(|x| x.past) {
+            let tail = tokens(&c.s).iter().skip(2).cloned().collect::<Vec<_>>().join(" ");
+            let t = self.templates.iter().find(|x| matches!(x.parts[0], Part::Hole(..)) && text_words(x).iter().skip(1).cloned().collect::<Vec<_>>().join(" ") == tail).cloned();
+            return match t {
+                Some(t) => { let n = if let Part::Hole(_, n) = &t.parts[0] { n.clone() } else { String::new() }; format!("the sentence is in the past, \"{}\". Ask: Which {} {}?", lettered(&t), plural(&n), text_words(&t).join(" ")) }
+                None => "a question with \"did\" reads only a sentence that says it with -ed: ask in the sentence's own words".to_string(),
+            };
+        }
+        let worded: HashSet<String> = self.templates.iter().flat_map(|t| text_words(t).into_iter().flat_map(|w| forms(&w, false))).collect();
+        for c in ss {
+            let w = tokens(&c.s);
+            for i in 0..w.len() {
+                if !rx::test(r"^[a-z][\w-]*$", &w[i]) || worded.contains(&w[i]) || STOP.contains(&w[i].as_str()) { continue; }
+                let ticked: Vec<String> = w[..i].iter().cloned().chain(std::iter::once(format!("`{}`", w[i]))).chain(w[i + 1..].iter().cloned()).collect();
+                if !self.reads(&ticked.join(" "), c.past).is_empty() { return format!("{} is not a sentence word here: names go in backticks: `{}`", w[i], w[i]); }
+            }
+        }
+        for c in ss {
+            for ti in 0..self.templates.len() {
+                let t = self.templates[ti].clone();
+                for k in 0..text_words(&t).len() {
+                    let Some(r) = self.reading_of(&t, &t.parts, Some(t.id), &c.s, c.past, k as i64) else { continue };
+                    let Some((a, b)) = &r.odd else { continue };
+                    if forms(b, c.past).contains(a) || far(a, b) > if b.chars().count() >= 4 { 2 } else { 1 } { continue; }
+                    let fixed = rx::replace(&format!(r"\b{}\b", rx::esc(a)), raw.trim(), false, |_| b.clone());
+                    return format!("read \"{}\"; the nearest sentence is \"{}\". Did you mean: {fixed}", c.s, r.said);
+                }
+            }
+        }
+        let stem = |w: &str| if w.chars().count() > 4 { rx::sub("(?:ing|ed|es|s)$", w, false, "") } else { w.to_string() };
+        let content = |ws: &[String]| -> HashSet<String> { ws.iter().filter(|w| rx::test("^[a-z]", w) && !STOP.contains(&w.as_str()) && !aux(w)).map(|w| stem(w)).collect() };
+        let c = &ss[0];
+        let want = content(&tokens(&c.s));
+        let terms: Vec<String> = tokens(&c.s).into_iter().filter(|w| tm("^(?:TERM)$").is_match(w)).collect();
+        let noun = self.singular(c.np.as_deref().unwrap_or(""));
+        let many = c.np.as_ref().is_some_and(|n| !n.is_empty()) && noun.is_some() && c.np.as_deref() != noun.as_deref();
+        let said = rx::replace(r"^(X )(\S+)", &c.s, false, |m| {
+            let v = &m[2];
+            let to = match v { "are" => "is".to_string(), "have" => "has".to_string(), "do" => "does".to_string(), "were" => "was".to_string(),
+                v if many && rx::test("^[a-z]+$", v) && !aux(v) && !rx::test("(?:[^s]s|ed)$", v) && !PAST.contains(&v) => third(v), v => v.to_string() };
+            format!("{}{to}", &m[1])
+        });
+        let about = |ts: Vec<T>| -> Vec<T> { ts.into_iter().filter(|t| matches!(&t.parts[0], Part::Hole(_, n) if Some(n) == noun.as_ref())).collect() };
+        let mut close: Vec<T> = self.templates.iter().filter(|t| content(&text_words(t)).iter().any(|w| want.contains(w))).cloned().collect();
+        if !about(close.clone()).is_empty() { close = about(close); }
+        let fill = |t: &T| -> String {
+            let mut k = 0;
+            t.parts.iter().map(|p| match p { Part::Text(s) => s.clone(), Part::Hole(..) => { let i = k; k += 1; terms.get(i).cloned().unwrap_or_else(|| "XYZW".chars().nth(i).map(String::from).unwrap_or_default()) } _ => String::new() }).filter(|s| !s.is_empty()).collect::<Vec<_>>().join(" ")
+        };
+        if close.len() > 1 { return format!("no sentence reads \"{said}\". {} come close, say which: {}", ["Two", "Three", "Four"][close.len().min(4) - 2], close.iter().take(4).map(|t| format!("\"{}\"", fill(t))).collect::<Vec<_>>().join(" · ")); }
+        if let Some(t) = close.first() { return format!("no sentence reads \"{said}\"; the nearest is \"{}\"", fill(t)); }
+        let all = about(self.templates.clone());
+        if let (Some(n), false) = (&noun, all.is_empty()) {
+            let tail = rx::sub("^X ", &said, false, "");
+            return format!("no sentence says {} {n} {tail}. Sentences about {} {n}: {}. For example: Which {} {}?", art(n), art(n), all.iter().take(6).map(|t| format!("\"{}\"", lettered(t))).collect::<Vec<_>>().join(" · "), plural(n), plural_verb(&rx::sub("^X ", &lettered(&all[0]), false, "")));
+        }
+        format!("no sentence reads \"{said}\"")
+    }
+    /// What the writer's noun says against the hole the name or blank fills: a note, never an error, since a noun is not a type here.
+    fn noted(&mut self, r: &Reading, np: Option<&str>, seen: &[(String, String)]) -> Option<String> {
+        let said = r.t.parts.iter().filter_map(|p| if let Part::Text(s) = p { Some(s.clone()) } else { None }).collect::<Vec<_>>().join(" … ");
+        let mut out: Vec<String> = r.note.iter().cloned().collect();
+        let x = r.holes.iter().find(|h| h.0 == "X");
+        if let (Some(np), Some(x)) = (np.filter(|n| !n.is_empty()), x) {
+            if x.1 != "node" {
+                match self.singular(np) {
+                    None => out.push(format!("no sentence speaks of {np}; \"{said}\" is said of {} {}", art(&x.1), x.1)),
+                    Some(n) if n != x.1 => out.push(format!("\"{said}\" is said of {} {}, not {} {n}", art(&x.1), x.1, art(&n))),
+                    _ => {}
+                }
+            }
+        }
+        for (noun, name) in seen {
+            if let Some(h) = r.holes.iter().find(|y| &y.0 == name) {
+                if h.1 != "node" && &h.1 != noun { out.push(format!("\"{said}\" is said of {} {}, not {} {noun}", art(&h.1), h.1, art(noun))); }
+            }
+        }
+        let out: Vec<String> = out.into_iter().filter(|s| !s.is_empty()).collect();
+        (!out.is_empty()).then(|| out.join("; "))
+    }
     fn noun_of(&mut self, r: &Reading, np: Option<&str>) -> Option<String> {
         self.singular(np.unwrap_or("")).or_else(|| r.holes.iter().find(|h| h.0 == "X").map(|h| h.1.clone()))
     }
-    /// An English asking line in the file's own sentences: the line it reads as, or None when it reads as none.
-    pub fn question(&mut self, raw: &str, number: &mut dyn FnMut(&str) -> usize) -> Option<Question> {
+    /// The line as written first; a noun before a name (`the product \`truck\``) is dropped only when that does not read.
+    pub fn question(&mut self, raw: &str, number: &mut dyn FnMut(&str) -> usize) -> Result<Question, String> {
         let text = rx::sub(r"\s*[?.!]$", raw.trim(), false, "");
-        if tokens(&text).iter().skip(1).any(|w| rx::test("^[A-Z][A-Za-z0-9]*$", w) && !rx::test(r"^[A-Z]\d*$", w)) { return None; }
-        if let Some(q) = self.asked(&text, number) { return Some(q); }
-        let s = self.named(&text, &mut Vec::new());
-        if s == text { None } else { self.asked(&s, number) }
+        if let Some(cap) = tokens(&text).iter().skip(1).find(|w| rx::test("^[A-Z][A-Za-z0-9]*$", w) && !rx::test(r"^[A-Z]\d*$", w)) {
+            return Err(format!("\"{cap}\" is not a name: a name is in backticks, `{}`; a blank is one capital letter, X", cap.to_lowercase()));
+        }
+        let first = self.asked(raw, &text, &[], number);
+        if first.is_ok() { return first; }
+        let mut seen = Vec::new();
+        let s = self.named(&text, &mut seen);
+        if s == text { first } else { self.asked(raw, &s, &seen, number) }
     }
-    fn every(&mut self, q: &str, s: &str, number: &mut dyn FnMut(&str) -> usize) -> Option<Question> {
-        let _ = q;
-        if rx::test(r"\bnot\b|n['’]t\b", s) { return None; }
+    /// `Every product that is on the plan leaves the line`: a promise with its domain, as a rule that finds what breaks it and a never over that.
+    fn every(&mut self, raw: &str, q: &str, s: &str, seen: &[(String, String)], number: &mut dyn FnMut(&str) -> usize) -> Result<Question, String> {
+        if rx::test(r"\bnot\b|n['’]t\b", s) { return Err(format!("\"{} … not\" reads two ways. For none of them: No {}.", q.to_lowercase(), unnot(s))); }
         let w = tokens(s);
         for k in 1..=3.min(w.len().saturating_sub(2)) {
             if !rx::test("^(?:that|who|which)$", &w[k]) { continue; }
@@ -1957,16 +2065,39 @@ impl R {
                     for rp in self.reads(&ps, false) { found.set(&format!("{} {}", rc.lit, rp.lit), (rc.clone(), rp)); }
                 }
             }
-            if found.len() != 1 { return None; }
-            let (c, p) = found.values().next().unwrap().clone();
-            let noun = self.singular(&np).or_else(|| c.holes.iter().find(|h| h.0 == "X").map(|h| h.1.clone())).unwrap_or(np);
+            let both: Vec<(Reading, Reading)> = found.values().cloned().collect();
+            if both.len() > 1 {
+                return Err(format!("this reads {} ways, {}: put a comma after the condition", both.len(), both.iter().map(|(c, p)| format!("\"{}\" then \"{}\"", c.said, p.said)).collect::<Vec<_>>().join(" · ")));
+            }
+            if both.is_empty() {
+                let mut c = None;
+                for (a, b) in &splits { let cs = self.indefinite(&format!("X {a}")); if !self.reads(&cs, false).is_empty() { c = Some((a.clone(), b.clone())); break; } }
+                let why = match &c { Some((_, b)) => Some(self.settle(raw, &[Cand { s: format!("X {b}"), np: Some(np.clone()), past: false }], "never")), None => None };
+                return Err(match (c, why) {
+                    (Some((a, _)), Some(Err(e))) => format!("\"that {a}\" reads as the condition, and what must hold of it does not: {e}"),
+                    _ => format!("the condition \"that {rest}\" reads as no sentence: say it as Every {np} that <a sentence> <a sentence>, or put a comma after the condition"),
+                });
+            }
+            let (c, p) = both[0].clone();
+            let noun = self.singular(&np).or_else(|| c.holes.iter().find(|h| h.0 == "X").map(|h| h.1.clone())).unwrap_or(np.clone());
             let (rules, phrase, said, lit) = self.generated("promise", &noun, &[format!("{}, unless {}", c.said, p.said)], number);
-            return Some(Question { line: format!("never {said}"), lit, noun: Some(noun), rules: Some(rules), phrase: Some(phrase) });
+            let note = self.noted(&c, Some(&np), seen);
+            let _ = p;
+            return Ok(Question { kind: "never".into(), line: format!("never {said}"), lit, noun: Some(noun), rules: Some(rules), phrase: Some(phrase), note, ..Default::default() });
         }
-        None
+        let cands: Vec<Cand> = (0..3.min(w.len())).map(|k| Cand { s: format!("X {}", w[k + 1..].join(" ")), np: Some(w[..k + 1].join(" ")), past: false }).collect();
+        let (r, np) = self.settle(raw, &cands, "never")?;
+        let n = self.noun_of(&r, np.as_deref()).unwrap_or_else(|| "thing".into());
+        let rel = rx::exec(r"^(\w+)", &r.lit).map(|m| g(&m, 1).to_string()).unwrap_or_default();
+        let domain = self.templates.iter().find(|t| t.arity == 1 && t.rel != rel && matches!(&t.parts[0], Part::Hole(_, hn) if *hn == n)).cloned();
+        let tail = rx::sub("^X ", &r.said, false, "");
+        Err(match domain {
+            Some(d) => format!("\"{}\" needs the {} it ranges over, and no sentence lists every {n}: say which, as in {q} {n} that {} {tail}.", q.to_lowercase(), plural(&n), rx::sub("^X ", &lettered(&d), false, "")),
+            None => format!("\"{}\" needs the {} it ranges over, and no sentence lists every {n}: say which, as {q} {n} that <a sentence about {} {n}> {tail}.", q.to_lowercase(), plural(&n), art(&n)),
+        })
     }
-    fn asked(&mut self, s: &str, number: &mut dyn FnMut(&str) -> usize) -> Option<Question> {
-        if let Some(m) = rx::exec("^(Every|Each) (.+)$", s) { return self.every(g(&m, 1), g(&m, 2), number); }
+    fn asked(&mut self, raw: &str, s: &str, seen: &[(String, String)], number: &mut dyn FnMut(&str) -> usize) -> Result<Question, String> {
+        if let Some(m) = rx::exec("^(Every|Each) (.+)$", s) { return self.every(raw, g(&m, 1), g(&m, 2), seen, number); }
         if rx::test(r"^(?:No|Nothing|Nobody|None|There (?:is|are) no)\b", s) {
             let mut subj: Vec<(Option<String>, String)> = Vec::new();
             if let Some(m) = rx::exec("^There (?:is|are) no (.+?) that (.+)$", s) { subj.push((Some(g(&m, 1).into()), g(&m, 2).into())); }
@@ -1976,19 +2107,23 @@ impl R {
                 let mut k = 1;
                 while k <= 3.min(w.len().saturating_sub(1)) && w[k - 1] != "and" && w[k - 1] != "or" { subj.push((Some(w[..k].join(" ")), w[k..].join(" "))); k += 1; }
             }
-            if subj.iter().any(|x| rx::test(r"\bnot\b|n['’]t\b", &x.1)) { return None; }
+            if subj.iter().any(|x| rx::test(r"\bnot\b|n['’]t\b", &x.1)) { return Err("\"no … not\" reads two ways: say what must never happen without \"not\"".into()); }
             let cands: Vec<Cand> = subj.iter().map(|x| Cand { s: format!("X {}", x.1), np: x.0.clone(), past: false }).collect();
-            return match self.settle(&cands) {
-                Some((r, np)) => { let noun = self.noun_of(&r, np.as_deref()); Some(Question { line: format!("never {}", r.said), lit: r.lit, noun, rules: None, phrase: None }) }
-                None => {
+            return match self.settle(raw, &cands, "never") {
+                Ok((r, np)) => {
+                    let noun = self.noun_of(&r, np.as_deref());
+                    let note = self.noted(&r, np.as_deref(), seen);
+                    Ok(Question { kind: "never".into(), line: format!("never {}", r.said), lit: r.lit, noun, note, ..Default::default() })
+                }
+                Err(e) => {
                     let ic: Vec<Cand> = cands.iter().map(|c| Cand { s: self.indefinite(&c.s), ..c.clone() }).collect();
-                    let (op, l, r, sj, np) = self.joined(&ic)?;
-                    if sj != "X" { return None; }
+                    let Some((op, l, r, sj, np)) = self.joined(&ic) else { return Err(e) };
+                    if sj != "X" { return Err(e); }
                     let noun = self.noun_of(&l, np.as_deref());
-                    if op == "or" { return Some(Question { line: format!("never {}", l.said), lit: l.lit, noun, rules: None, phrase: None }); }
+                    if op == "or" { return Ok(Question { kind: "never".into(), line: format!("never {}", l.said), lit: l.lit, noun, also: vec![(format!("never {}", r.said), r.lit)], ..Default::default() }); }
                     let noun = noun.unwrap_or_else(|| "thing".into());
                     let (rules, phrase, said, lit) = self.generated("promise", &noun, &[format!("{} and {}", l.said, r.said)], number);
-                    Some(Question { line: format!("never {said}"), lit, noun: Some(noun), rules: Some(rules), phrase: Some(phrase) })
+                    Ok(Question { kind: "never".into(), line: format!("never {said}"), lit, noun: Some(noun), rules: Some(rules), phrase: Some(phrase), ..Default::default() })
                 }
             };
         }
@@ -2002,33 +2137,92 @@ impl R {
                 if k + 1 > w.len() || w[..k].iter().any(|x| x == "and" || x == "or") { continue; }
                 let np = Some(w[..k].join(" ")).filter(|x| !x.is_empty());
                 let rest0 = w[k..].join(" ");
-                let caps = rx::exec(r"\b(?:which|what) ([a-z][\w-]*)\b", &rest0);
-                let rest1 = match caps { Some(c) if self.singular(g(&c, 1)).is_some() => rx::sub(r"\b(?:which|what) ([a-z][\w-]*)\b", &rest0, false, "Y"), _ => rest0 };
+                let rest1 = rx::replace(r"\b(?:which|what) ([a-z][\w-]*)\b", &rest0, false, |c| if self.singular(&c[1]).is_some() { "Y".to_string() } else { c[0].to_string() });
                 let rest = rx::sub(r"\b(?:who|whom|what)\b", &rest1, false, "Y");
                 cands.push(Cand { s: format!("X {rest}"), np: np.clone(), past: false });
                 if let Some(a) = rx::exec(r"^(\S+) (.+)$", &rest) {
                     if aux(g(&a, 1)) { for c in self.inverted(g(&a, 1), g(&a, 2), Some("X")) { cands.push(Cand { s: c, np: np.clone(), past: g(&a, 1) == "did" }); } }
                 }
             }
-            if neg { return None; }
-            return match self.settle(&cands) {
-                Some((r, np)) => { let noun = self.noun_of(&r, np.as_deref()); Some(Question { line: format!("? {}", r.said), lit: r.lit, noun, rules: None, phrase: None }) }
-                None => {
+            if neg { return Err(self.not_said(&unnot(raw))); }
+            let count = (w0 == "how many").then(|| "X".to_string());
+            return match self.settle(raw, &cands, "answers") {
+                Ok((r, np)) => {
+                    let noun = self.noun_of(&r, np.as_deref());
+                    let note = self.noted(&r, np.as_deref(), seen);
+                    Ok(Question { kind: "answers".into(), line: format!("? {}", r.said), lit: r.lit, noun, note, count, ..Default::default() })
+                }
+                Err(e) => {
                     let ic: Vec<Cand> = cands.iter().map(|c| Cand { s: self.indefinite(&c.s), ..c.clone() }).collect();
-                    let (op, l, r, sj, np) = self.joined(&ic)?;
-                    if sj != "X" { return None; }
+                    let Some((op, l, r, sj, np)) = self.joined(&ic) else { return Err(e) };
+                    if sj != "X" { return Err(e); }
                     let noun = self.noun_of(&l, np.as_deref()).unwrap_or_else(|| "thing".into());
                     let bodies = if op == "and" { vec![format!("{} and {}", l.said, r.said)] } else { vec![l.said.clone(), r.said.clone()] };
                     let (rules, phrase, said, lit) = self.generated("question", &noun, &bodies, number);
-                    Some(Question { line: format!("? {said}"), lit, noun: Some(noun), rules: Some(rules), phrase: Some(phrase) })
+                    Ok(Question { kind: "answers".into(), line: format!("? {said}"), lit, noun: Some(noun), rules: Some(rules), phrase: Some(phrase), count, ..Default::default() })
                 }
             };
         }
-        None
+        if let Some(m) = rx::exec(r"^Why (\w+?)(n['’]t)? (.+)$", s) {
+            let aux_w = not_of(g(&m, 1));
+            if !aux(&aux_w) { return Err("a why question reads as \"Why is …\", \"Why does …\" or \"Why does … not …\"".into()); }
+            let (mut rest, mut neg) = (g(&m, 3).to_string(), has(&m, 2));
+            if rx::test(r"\bnot\b", &rest) { neg = true; rest = rx::sub(r"\bnot ", &rest, false, ""); }
+            let lead = tokens(&rest).first().cloned().unwrap_or_default();
+            let some = rx::exec(r"^(?:a|an|any|some) ([a-z][\w-]*)\b", &rest);
+            let pronoun: Option<String> = if PRONOUN.contains(&lead.as_str()) { Some(lead.clone()) } else { match &some { Some(sm) if self.singular(g(sm, 1)).is_some() => Some(g(sm, 0).to_string()), _ => None } };
+            if let Some(p) = &pronoun { rest = format!("X{}", &rest[p.len()..]); }
+            let cands: Vec<Cand> = self.inverted(&aux_w, &rest, None).into_iter().map(|c| Cand { s: c, np: None, past: aux_w == "did" }).collect();
+            let (r, _) = self.settle(raw, &cands, "answers")?;
+            let kind = if neg { "whynot" } else { "why" };
+            let said = r.said.clone();
+            let v = tokens(&said).into_iter().find(|w| rx::test(r"^[A-Z]\d*$", w));
+            let noun = self.noun_of(&r, None);
+            let note = self.noted(&r, None, seen);
+            let mut q = Question { kind: kind.into(), line: format!("{kind} {said}"), lit: r.lit.clone(), noun, note, ..Default::default() };
+            let Some(v) = v else { return Ok(q) };
+            let why = match &pronoun { Some(p) if PRONOUN.contains(&p.as_str()) => format!("\"{p}\" has nothing to refer to in a question."), _ => format!("{kind} explains one answer, and {} is a blank.", match &pronoun { Some(p) => format!("\"{p}\""), None => v.clone() }) };
+            let lit = self.literal(&said).unwrap_or(r.lit.clone());
+            q.blank = Some(Blank { lit, v: v.clone(), said, why, raw: raw.trim().to_string(), pat: pronoun.unwrap_or(v) });
+            return Ok(q);
+        }
+        if let Some(m) = rx::exec(r"^(\w+?)(n['’]t)? (.+)$", s) {
+            let aux_w = not_of(&g(&m, 1).to_lowercase());
+            if aux(&aux_w) {
+                let rest = g(&m, 3).to_string();
+                if has(&m, 2) || rx::test(r"\bnot\b", &rest) { return Err(format!("a yes-or-no question with \"not\" is not read: ask it without \"not\", {}, and read \"no\" as its answer", unnot(raw).trim())); }
+                let lead = tokens(&rest).first().cloned();
+                if let Some(l) = lead.filter(|l| PRONOUN.contains(&l.as_str())) { return Err(format!("\"{l}\" has nothing to refer to in a question: put a name in backticks in its place")); }
+                let (np, cands): (Option<String>, Vec<Cand>) = if let Some(t) = rx::exec(r"^there (?:(?:a|an|any) (.+?)|anything|anyone|anybody|something) that (.+)$", &rest) {
+                    let np = has(&t, 1).then(|| g(&t, 1).to_string());
+                    (np.clone(), vec![Cand { s: format!("X {}", g(&t, 2)), np, past: false }])
+                } else {
+                    let r2 = rx::sub(r"^(?:anything|anyone|anybody)\b", &rest, false, "X");
+                    (None, self.inverted(&aux_w, &r2, None).into_iter().map(|c| Cand { s: c, np: None, past: aux_w == "did" }).collect())
+                };
+                let (r, _) = self.settle(raw, &cands, "answers")?;
+                let noun = self.noun_of(&r, np.as_deref());
+                let note = self.noted(&r, np.as_deref(), seen);
+                return Ok(Question { kind: "answers".into(), line: format!("? {}", r.said), lit: r.lit, yesno: true, noun, note, ..Default::default() });
+            }
+        }
+        Err("not a question the reader knows: ask with Which, What, Who, How many or Why, or with is, does, can…; say a promise with No".into())
+    }
+    /// `Which products do not leave the line?`: a question with not needs the things it ranges over, which only a rule can name.
+    fn not_said(&mut self, positive: &str) -> String {
+        let q = match self.question(positive, &mut |_| 1) { Ok(q) if q.noun.is_some() => q, _ => return "a question with \"not\" needs the things it ranges over: write a rule that names them and ask its head".into() };
+        let n = q.noun.clone().unwrap();
+        let rel = rx::exec(r"^(\w+)", &q.lit).map(|m| g(&m, 1).to_string()).unwrap_or_default();
+        let domain = self.templates.iter().find(|t| t.arity == 1 && t.rel != rel && matches!(&t.parts[0], Part::Hole(_, hn) if *hn == n)).cloned();
+        let said = rx::sub(r"^\? ", &q.line, false, "");
+        match domain {
+            Some(d) => format!("a question with \"not\" needs the {} it ranges over. Name them in a rule: {} {n} X stays if {}, unless {said}. Then ask: Which {} stay?", plural(&n), cap_art(&n), lettered(&d), plural(&n)),
+            None => format!("a question with \"not\" needs the {} it ranges over, and no other sentence names {}: write a rule that names them and ask its head", plural(&n), plural(&n)),
+        }
     }
     /// `Nothing is late.` as a rule head: what it says as a promise.
     fn promise(&mut self, head: &str, q: &str) -> String {
-        let r = if q == "Every" || q == "Each" { None } else { self.question(head, &mut |_| 1) };
+        let r = if q == "Every" || q == "Each" { None } else { self.question(head, &mut |_| 1).ok() };
         match r {
             None => format!("\"{head}\" is a promise, not a rule: in a cell, say what must never happen as a never line"),
             Some(r) => {
@@ -2036,6 +2230,57 @@ impl R {
                 format!("\"{head}\" is a promise, not a rule: write it in a cell as \"{}\"{or}", r.line)
             }
         }
+    }
+}
+
+const STOP: [&str; 18] = ["a", "an", "the", "is", "are", "of", "in", "to", "by", "and", "at", "some", "on", "as", "with", "from", "something", "for"];
+const PAST: [&str; 22] = ["came", "ran", "took", "went", "got", "made", "had", "said", "saw", "gave", "found", "left", "kept", "held", "put", "set", "sent", "built", "bought", "sold", "told", "became"];
+const PRONOUN: [&str; 7] = ["it", "they", "them", "he", "she", "this", "that"];
+/// `wo`n't and `ca`n't: the auxiliary the contraction cuts, else the word in lower case.
+fn not_of(w: &str) -> String { match w { "wo" => "will".into(), "ca" => "can".into(), w => w.to_lowercase() } }
+fn text_words(t: &say::Tpl) -> Vec<String> { t.parts.iter().flat_map(|p| if let Part::Text(s) = p { s.split(' ').map(str::to_string).collect() } else { vec![] }).collect() }
+/// A sentence with its first hole X, the rest a noun and a letter: `X is short of a thing Y`.
+fn lettered(t: &say::Tpl) -> String {
+    let mut k = 0;
+    t.parts.iter().map(|p| match p {
+        Part::Text(s) => s.clone(),
+        Part::Hole(_, n) => { let i = k; k += 1; if i == 0 { "X".to_string() } else { format!("{} {n} {}", art(n), "XYZW".chars().nth(i).map(String::from).unwrap_or_else(|| "undefined".into())) } }
+        _ => String::new(),
+    }).filter(|s| !s.is_empty()).collect::<Vec<_>>().join(" ")
+}
+fn plural_verb(s: &str) -> String {
+    rx::replace(r"^\S+", s, false, |c| match &c[0] { "is" => "are".to_string(), "has" => "have".to_string(), "does" => "do".to_string(), "was" => "were".to_string(), v => forms(v, false).get(1).cloned().unwrap_or_else(|| v.to_string()) })
+}
+fn unnot(raw: &str) -> String {
+    let s = rx::sub(r"\b(?:do|does|did)(?: not|n['’]t)\b ?", raw, false, "");
+    let s = rx::sub(r"\bnot\b ?", &s, false, "");
+    rx::sub(r"n['’]t\b", &s, false, "")
+}
+/// The edit distance of two words.
+fn far(x: &str, y: &str) -> usize {
+    let (x, y): (Vec<char>, Vec<char>) = (x.chars().collect(), y.chars().collect());
+    let mut d: Vec<usize> = (0..=y.len()).collect();
+    for i in 1..=x.len() {
+        let mut p = d[0];
+        d[0] = i;
+        for j in 1..=y.len() {
+            let t = d[j];
+            d[j] = (d[j] + 1).min(d[j - 1] + 1).min(p + usize::from(x[i - 1] != y[j - 1]));
+            p = t;
+        }
+    }
+    d[y.len()]
+}
+
+/// A why with a blank in it, which the host answers with the names that fill it.
+#[derive(Clone, Debug)]
+pub struct Blank { pub lit: String, pub v: String, said: String, why: String, raw: String, pat: String }
+impl Blank {
+    pub fn say(&self, names: &[String]) -> String {
+        if names.is_empty() { return format!("{} \"{}\" has no answer, so there is nothing to explain", self.why, self.said); }
+        let again = rx::replace(&format!(r"\b{}\b", self.pat), &self.raw, false, |_| format!("`{}`", names[0]));
+        let shown = names.iter().take(5).map(|n| format!("`{n}`")).collect::<Vec<_>>().join(", ");
+        format!("{} {} for: {shown}{}. Ask: {again}", self.why, self.said, if names.len() > 5 { ", …" } else { "" })
     }
 }
 

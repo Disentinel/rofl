@@ -1294,6 +1294,30 @@ impl Session {
         Ok(Answer { vars, rows, keys, scanned, probed, micros: t0.elapsed().as_micros(), shrugs, partial })
     }
 
+    /// Whether nothing could ever put a row at this question (src/api.ts `query`'s `unpopulatable`): the relation is declared, concluded
+    /// and held by nothing, or asked at an arity or in a book no rule or fact of it uses. A small stored relation says its arities.
+    pub fn unpopulatable(&mut self, query: &str) -> Result<bool, String> {
+        let src = format!("{}.", query.trim().trim_end_matches('.'));
+        let cs = rofl_parse::parse(&mut self.eval.h, &src)?;
+        if cs.len() != 1 { return Err("ask takes exactly one literal".into()); }
+        let (rel, persp, args) = self.lit_terms(&cs[0].head)?;
+        let (mut arities, mut persps, mut any_persp) = (HashSet::new(), HashSet::new(), false);
+        for r in &self.eval.rules {
+            let head = &r.clause.head;
+            if head.rel != rel { continue; }
+            arities.insert(head.args.len());
+            match head.persp.as_atom() { Some(p) => { persps.insert(p); } None => any_persp = true }
+        }
+        persps.extend(self.eval.store.perspectives_of(&self.eval.h, rel));
+        if arities.is_empty() && self.eval.store.rel_count(rel) <= 64 {
+            for id in self.eval.store.rel_all(&self.eval.h, rel) { arities.insert(self.eval.store.args(id).len()); }
+        }
+        let declared = self.eval.store.has(self.eval.v.edb, self.eval.v.main, &[Term::atom(rel)]);
+        let wrong_book = !persps.is_empty() && !any_persp && !persps.contains(&persp);
+        let known = !arities.is_empty() || !persps.is_empty() || declared;
+        Ok(!known || (!arities.is_empty() && !arities.contains(&args.len())) || wrong_book)
+    }
+
     /// A parsed literal, in this world's vocabulary.
     ///
     /// The terms arrive finished: the parser interns into this same heap, so
