@@ -235,6 +235,7 @@ check[checks]("rust/rofl/tests/why_bins.rs", "load_prints_a_refusal_as_the_answe
 check[checks]("rust/rofl/tests/why_bins.rs", "serve_clamps_whynot_bounds_and_refuses_a_bound_that_is_not_an_integer", test).
 check[checks]("rust/rofl/tests/why_bins.rs", "load_bounds_every_whynot_and_refuses_a_bound_that_is_not_an_integer", test).
 check[checks]("rust/rofl/tests/why_bins.rs", "load_refuses_a_numeric_flag_that_does_not_parse", test).
+check[checks]("rust/rofl/tests/why_bins.rs", "the_question_verbs_answer_as_load_does", test).
 check[checks]("facts/goldens.rofl", "aka", world).
 check[checks]("facts/goldens.rofl", "atlas-launch", world).
 check[checks]("facts/goldens.rofl", "blam", world).
