@@ -22,6 +22,11 @@ shape_ok(eff_lacks, cross_product, "product_is_the_output: names x rows of the i
 shape_ok(ambient_effect, cross_product, "product_is_the_output: the head is names x effects, 0 ms").
 shape_ok(runtime_lib_unsupported, cross_product, "product_is_the_output: releases x library calls is the audited pair, 0 ms").
 shape_ok(eff_latent, cross_product, "product_is_the_output: an operand whose value is not traced may run any conversion the program defines, sites x conversions; the vscode 250 cone took 31 s as on main").
+shape_ok(in_net, cross_product, "product_is_the_output: addresses x subnets of one family, the membership every guard, view and scope reads (rules/net/), 0 ms on the four corpora, a config's addresses and nets are tens").
+shape_ok(acc_blocked, cross_product, "product_is_the_output: every source x every listening address behind a guard, decided before the walk because the walk cannot negate itself, 0 ms on the four corpora").
+shape_ok(acc_passes, cross_product, "product_is_the_output: every source x every listening address, the same pair space as acc_blocked, 0 ms on the four corpora").
+shape_ok(hop_class_of, cross_product, "product_is_the_output: every hop listener x every name a walk may carry, the class a rule is picked in, decided before the walk, 0 ms on the four corpora").
+shape_ok(http_strip_at, cross_product, "product_is_the_output: every path view x every prefix a hop rule takes, the fit the pick reads, decided before the walk, 0 ms on the four corpora").
 
 shape_ok(ambient_surface_unattributed, project_then_negate, "one_row_per_key: 3 ms sealed / 8 default").
 shape_ok(concrete_unmapped, project_then_negate, "one_row_per_key: 6 ms sealed / 11 default").

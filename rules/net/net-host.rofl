@@ -1,0 +1,53 @@
+-- net-host.rofl — MACHINES, WHAT RUNS ON THEM AND WHAT LISTENS (the net library, 2 of 8).
+--
+-- Needs net-addr. Input, one row per fact a config or an inventory states:
+--   iface(H, S)            the host H holds the address S
+--   v6only(H)              a socket bound to `::` on H takes no v4
+--   runs(H, X)             X, a process, runs on H
+--   listens(X, S, Port, T) X listens on S (an address, `0.0.0.0` or `::`) at
+--                          Port over T, tcp or udp. An X that runs on no host
+--                          is a virtual listener: a load balancer, a cluster
+--                          service, a NAT; its S is its own
+-- What it answers:
+--   holds(H, A)            H holds A, its loopbacks included
+--   bound(X, A, Port, T)   X takes a connection to A at Port: `0.0.0.0` is every
+--                          v4 address of its host, `::` every v6 one and the v4
+--                          ones too unless the host is v6only
+--   at_addr(A, Port, T, X) a connection to A from anywhere reaches X
+--   at_loop(H, A, Port, T, X)  a loopback A reaches X only from X's own host
+--   listen_unheld(X, S)    X listens on an address its host does not hold
+--   port_clash(H, A, Port, T)  two listeners on one address and port
+addr_text(S) :- iface(_, S).
+addr_text(S) :- listens(_, S, _, _).
+addr_text("127.0.0.1").
+addr_text("::1").
+
+net_host(H) :- iface(H, _).
+net_host(H) :- runs(H, _).
+holds(H, A) :- iface(H, S), ip(S, A).
+holds(H, v4(2130706433)) :- net_host(H).
+holds(H, v6(0, 0, 0, 1)) :- net_host(H).
+
+-- =========================================================================
+-- 1. WHAT A LISTENING ADDRESS BINDS.
+host_listen(X, H, A, P, T) :- listens(X, S, P, T), runs(H, X), ip(S, A).
+host_family(v4(W), v4) :- ip(_, v4(W)).
+host_family(v6(A, B, C, D), v6) :- ip(_, v6(A, B, C, D)).
+host_any(X, H, F, P, T) :- host_listen(X, H, A, P, T), scope(A, unspecified), host_family(A, F).
+bound(X, A, P, T) :- host_listen(X, H, A, P, T), holds(H, A).
+bound(X, A, P, T) :- host_any(X, H, F, P, T), holds(H, A), host_family(A, F).
+bound(X, A, P, T) :- host_any(X, H, v6, P, T), not v6only(H), holds(H, A), host_family(A, v4).
+
+host_listener(X) :- listens(X, _, _, _).
+host_virtual(X) :- host_listener(X), not runs(_, X).
+bound(X, A, P, T) :- host_virtual(X), listens(X, S, P, T), ip(S, A).
+
+listen_unheld(X, S) :- host_listen(X, H, A, _, _), listens(X, S, _, _), ip(S, A), not scope(A, unspecified), not holds(H, A).
+
+-- =========================================================================
+-- 2. WHO A CONNECTION REACHES.
+at_addr(A, P, T, X) :- bound(X, A, P, T), not scope(A, loopback).
+at_loop(H, A, P, T, X) :- bound(X, A, P, T), scope(A, loopback), runs(H, X).
+
+host_on(H, A, P, T, X) :- bound(X, A, P, T), runs(H, X).
+port_clash(H, A, P, T) :- host_on(H, A, P, T, X), host_on(H, A, P, T, Y), X != Y.

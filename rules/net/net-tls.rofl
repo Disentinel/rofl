@@ -1,0 +1,22 @@
+-- net-tls.rofl — WHO OPENS TLS, AND FOR WHICH NAMES (the net library, 5 of 8).
+--
+-- Input:
+--   tls_on(X, Port, Cert)   X ends TLS on Port with the certificate Cert
+--   cert(Cert, N)           Cert names N; `*.shop.example` names one label
+--                           under shop.example, not shop.example itself
+--   mtls(X, Port)           X asks the caller for a certificate there
+--   client_cert(X, Cert)    X shows Cert when it opens TLS
+--   tls_name(N)             a name some connection asks TLS for (net-hops)
+-- What it answers:
+--   cert_covers(Cert, N)         Cert is good for N
+--   tls_ok(X, Port, N)      a connection to X asking for N gets through the
+--                           handshake
+tls_ends(X, P) :- tls_on(X, P, _).
+
+-- `*.b` covers `a.b` when `a` holds no dot
+tls_wild(C, B) :- cert(C, W), N is str_segs(W, "*."), N = 2, P is str_pre(W, "*."), P = "", B is str_seg(W, "*.", 1).
+cert_covers(C, N) :- cert(C, N), tls_name(N).
+cert_covers(C, N) :- tls_name(N), D is str_segs(N, "."), D > 1, F is str_pre(N, "."), L is str_len(F), K is L + 1,
+                M is str_len(N), R is M - K, B is str_sub(N, K, R), tls_wild(C, B).
+
+tls_ok(X, P, N) :- tls_on(X, P, C), cert_covers(C, N).
