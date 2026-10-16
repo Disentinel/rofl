@@ -694,6 +694,33 @@ fn a_rule_reading_derived_by_is_derived_again_after_an_addition() {
     assert!(all.additions > 40 && all.full.is_empty(), "every addition to a world that reads derived_by is a delta: {all:?}");
 }
 
+fn fact_fault(r: &mut Rng) -> String {
+    match r.below(8) {
+        0 => format!("w({}, {})", r.pick(&ATOMS), if r.below(3) == 0 { "x".to_string() } else { (1 + r.below(5)).to_string() }),
+        1 | 2 => format!("n({})", r.pick(&ATOMS)),
+        _ => format!("e({}, {})", r.pick(&ATOMS), r.pick(&ATOMS)),
+    }
+}
+
+/// A world holding a rule's fault (an arithmetic type error, a hole and its shrugs) and a rule that reads the shrugs:
+/// an addition that reaches neither the rule nor what reads it is a delta, and the hole and the shrugs stand.
+#[test]
+fn a_fault_the_addition_does_not_reach_stands() {
+    let rules = [
+        "v(X, N) :- w(X, V), N is V + 1.",
+        "big(X) :- v(X, N), N > 3.",
+        "lone(X) :- n(X), not big(X).",
+        "hurt(T) :- shrug(T, fault, _).",
+        "p(X, Y) :- e(X, Y).",
+        "p(X, Z) :- p(X, Y), e(Y, Z).",
+        "q(X) :- n(X), not p(X, X).",
+        "c(X, N) :- n(X), N is count(Y : p(X, Y)).",
+    ];
+    let all = sweep("fault", "edb(e). edb(n). edb(w).\nw(z, x).", &rules, fact_fault, 1..=14, 10);
+    assert!(all.delta * 2 > all.additions, "most additions reach no fault: {all:?}");
+    assert!(all.full.keys().all(|k| k.contains("faulted") || k.contains("write a hole")), "{all:?}");
+}
+
 /// An aggregate the change reaches is sealed again at its level, and what reads it, plainly or under a negation, is
 /// kept and fed what the new seal changed, not fired again whole.
 #[test]

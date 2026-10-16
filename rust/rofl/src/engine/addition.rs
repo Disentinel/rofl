@@ -335,10 +335,16 @@ impl Eval {
         if self.store.tick != 0 {
             out.push("a later tick");
         }
-        // (the hole a seal of provenance writes says only that derived_by is sealed: no addition moves it)
+        // (the hole a seal of provenance writes says only that derived_by is sealed: no addition moves it; a rule's
+        // fault stands where nothing it reads changes, `hole_cone`)
         let sealed = self.h.atom("reflection_sealed");
-        let holes = self.store.rel_all(&self.h, self.v.hole).into_iter().filter(|id| self.store.args(*id).get(1) != Some(&sealed)).count();
-        if !self.shrug_readers.is_empty() || brk!("add_seal_hole_refused" => self.store.rel_count(self.v.hole); holes) > 0 {
+        let s_rule = self.v.s_rule_hole;
+        let h = &self.h;
+        let holes = self.store.rel_all(&self.h, self.v.hole).into_iter().filter(|id| {
+            let a = self.store.args(*id);
+            a.get(1) != Some(&sealed) && !matches!(a[0].kind(), TermK::Func(i) if h.fname(i) == s_rule && brk!("add_fault_hole_refused" => false; true))
+        }).count();
+        if brk!("add_seal_hole_refused" => self.store.rel_count(self.v.hole); holes) > 0 {
             out.push("the world holds a hole or reads a shrug");
         }
         if !self.demand_rels.is_empty() && !self.lattices.is_empty() {
@@ -349,7 +355,6 @@ impl Eval {
             self.v.agg_member,
             self.v.agg_member_prem,
             self.v.agg_sealed,
-            self.v.shrug,
             self.v.lattice_member,
             self.v.lattice_member_prem,
             self.v.dominated_by,
@@ -921,6 +926,27 @@ impl Eval {
         Ok(())
     }
 
+    /// WHAT A HOLE OR A SHRUG MAY MOVE: the heads of the rules a fault names, the shrugs and unknowns the kernel
+    /// writes of them, and every relation that reads one, through each other. An addition that reaches none of them
+    /// meets no fault it did not meet and leaves every shrug standing.
+    fn hole_cone(&mut self) -> HashSet<Sym> {
+        let s_rule = self.v.s_rule_hole;
+        let mut from: HashSet<Sym> = HashSet::new();
+        for id in self.store.rel_all(&self.h, self.v.hole) {
+            if let TermK::Func(i) = self.store.args(id)[0].kind() {
+                if self.h.fname(i) == s_rule {
+                    let r = self.h.fargs(i)[0].as_atom().and_then(|r| self.rule_of(r));
+                    from.extend(r.map(|r| r.clause.head.rel));
+                }
+            }
+        }
+        if from.is_empty() && self.shrug_readers.is_empty() {
+            return from;
+        }
+        from.extend([self.v.shrug, self.v.unknown]);
+        self.grow(&from, &HashSet::new())
+    }
+
     /// The relations that may grow: those added to, and the heads of every rule that reads one, through each other.
     fn grow(&self, from: &HashSet<Sym>, fresh: &HashSet<Sym>) -> HashSet<Sym> {
         let mut seen = from.clone();
@@ -1109,6 +1135,9 @@ impl Eval {
             if self.shrug_readers.contains(&r.id) || self.answer.late.contains(&r.id) && self.mode == Mode::Strata {
                 return Err("a rule that reads the shrugs, or one late under the stock evaluator, reads what changed");
             }
+        }
+        if self.hole_cone().iter().any(|r| changed.contains(r)) {
+            return Err("a rule that faulted, or what reads it or the shrugs, is reached by what changed");
         }
         if self.subs.values().any(|x| x.reads.iter().any(|b| changed.contains(b))) {
             return Err("a dominance rule reads what changed");
