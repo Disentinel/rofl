@@ -108,3 +108,13 @@ once and leaves `scan_done(Kind, Path, Clauses)`, or
 `scan_failed(Kind, Path, Message)` when there is no scanner for the kind or the
 command fails. It works wherever the world is evaluated: `rofl load`, the
 question verbs and `rofl serve`.
+
+**A scan is kept.** A scanner that names what it read, a `-- reads: PATH` line
+for each file and directory (`scanners/cli.ts` names the file it parsed and
+every directory it listed), has its output kept under
+`$XDG_CACHE_HOME/rofl/scans` (else `~/.cache/rofl/scans`), each read stamped:
+a file by its bytes, a directory by the names in it. The next run takes the
+same command for the same path from there while every stamp holds, and runs
+the scanner again when one does not. The world cannot tell the two apart. On
+`examples/checks/scan-world.rofl` the second run is 2.4 -> 1.7 s, the rest
+being the model's evaluation.
