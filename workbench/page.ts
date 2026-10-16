@@ -13,7 +13,7 @@
 //    text: "Declared as facts:\n\n- <a id=\"calls\"></a>A service A calls a service B\n\nThe calls:\n\n- `web` calls `api`.\n- `api` calls `db`.\n\nA mark X is a node if X calls something.\n\nA mark X is a node if something calls X.\n\nA mark X links to a mark Y if X calls Y.\n\nnever X calls X"}}
 //   {action: "write_db", db_op: "set", collection: "notebooks/shared/cells", doc_id: "c020", data: {kind: "rofl", order: 20, text: "draw graph"}}
 // A notebook whose first cell is not prose opening with front matter reads rofl:visual/graph.rofl.md, so `draw graph` works in bare cells.
-import { Bench, HINT, addWhere, answered, keyAction, shown, esc, prose, said, state, type Cell, type Kind, type Ran } from './bench.ts';
+import { Bench, HINT, addWhere, answered, ghLink, keyAction, nearFiles, nearLink, notebookOf, shown, split, esc, prose, said, state, type Cell, type Kind, type Near, type Ran } from './bench.ts';
 import { SAID } from '../notebook/kernel.ts';
 import { draw, graphLibs } from '../vscode/visual/pictures.ts';
 import { panZoom } from '../vscode/visual/pan.ts';
@@ -52,7 +52,7 @@ const KEY = 'rofl-workbench:v2';
 const blank = (): Pc[] => [{ id: newId(), kind: 'rofl', text: '', order: 1000 }];
 let cells: Pc[] = (() => { try { const s = JSON.parse(localStorage.getItem(KEY) ?? 'null'); if (Array.isArray(s) && s.length) return s; } catch {} return blank(); })();
 let saveT = 0;
-const saveLocal = () => { clearTimeout(saveT); saveT = window.setTimeout(() => { if (mode === 'local') try { localStorage.setItem(KEY, JSON.stringify(cells)); } catch {} }, 400); };
+const saveLocal = () => { clearTimeout(saveT); saveT = window.setTimeout(() => { if (mode === 'local' && !source) try { localStorage.setItem(KEY, JSON.stringify(cells)); } catch {} }, 400); };
 
 // ------------------------------------------------------------ cells on the page
 function cellEl(c: Pc): HTMLElement {
@@ -279,7 +279,7 @@ function run(delay: number) {
     if (running) { again = true; return; }
     running = true; again = false;
     $('runinfo').textContent = 'running…';
-    try { ran = await bench.run(cells); paintOuts(); $('runinfo').textContent = ''; }
+    try { ran = await bench.run(cells, source?.near); paintOuts(); $('runinfo').textContent = ''; }
     catch (err) { $('runinfo').textContent = ''; head.innerHTML = `<div class="err">The run failed: ${esc((err as Error).message)}</div>`; }
     finally { running = false; if (again) run(0); }
   }, delay);
@@ -357,6 +357,7 @@ function heard(docs: { id: string; data(): any }[]) {
   paint(); run(300);
 }
 function paintBar() {
+  if (source) { bar.innerHTML = `<span class="live">Opened</span>${source.href ? `<a href="${esc(source.href)}" target="_blank" rel="noopener">${esc(source.name)}</a>` : `<b>${esc(source.name)}</b>`}<span class="say mute">Changes stay in this tab.</span><button type="button" id="mine">Back to my notebook</button>`; return; }
   const n = peers.filter((p) => p.presence?.nb === mode).length;
   const who = n ? `<span class="mute">${n === 1 ? '1 other person' : `${n} other people`} here</span>` : '';
   bar.innerHTML = mode === 'shared' ? `<span class="live">Shared notebook</span>${who}<span class="say mute">${readOnly ? 'You can read it; editing is not allowed for you here.' : 'Everyone here edits it; a cell someone is in shows their initials.'}</span>`
@@ -384,6 +385,57 @@ function paintPeers() {
   }
 }
 
+// ------------------------------------------------------------ a notebook opened from files or a link: its cells, the files beside it read where it is
+let source: { name: string; href?: string; near: Near } | null = null;
+function openNotebook(text: string, near: Near, href?: string) {
+  source = { name: near.path.split('/').pop()!, href, near };
+  cells = split(text).map((c, i) => ({ id: newId(), kind: c.kind, text: c.text, order: (i + 1) * 1000 }));
+  document.title = `${source.name} · ROFL`;
+  ran = null; drawn.clear(); views.clear(); paint(); run(0);
+}
+const get = (url: string) => fetch(url).then((r) => r.ok ? r.text() : undefined, () => undefined);
+async function openLink(link: string) {
+  let at: ReturnType<typeof nearLink>;
+  try { at = nearLink(link, get); } catch { head.innerHTML = `<div class="err">Not a link: ${esc(link)}</div>`; return; }
+  head.innerHTML = `<span class="mute">fetching ${esc(at.url)}…</span>`;
+  const text = await get(at.url);
+  if (text === undefined) { head.innerHTML = `<div class="err">Could not fetch ${esc(at.url)}: a public file, or a site that lets other pages read it</div>`; return; }
+  openNotebook(text, at.near, link);
+}
+/** What was dropped or picked: every file by its path from there, a folder walked, its node_modules and .git left out. */
+type Given = { path: string; file: File };
+const entries = (d: FileSystemDirectoryEntry) => new Promise<FileSystemEntry[]>((ok, no) => {
+  const r = d.createReader(), all: FileSystemEntry[] = [];
+  const next = () => r.readEntries((es) => { if (!es.length) return ok(all); all.push(...es); next(); }, no);
+  next();
+});
+const walk = async (e: FileSystemEntry, at = ''): Promise<Given[]> => e.isFile ? [{ path: at + e.name, file: await new Promise<File>((ok, no) => (e as FileSystemFileEntry).file(ok, no)) }]
+  : /^(node_modules|\.git)$/.test(e.name) ? [] : (await Promise.all((await entries(e as FileSystemDirectoryEntry)).map((x) => walk(x, `${at}${e.name}/`)))).flat();
+async function openGiven(given: Given[]) {
+  const files = new Map(await Promise.all(given.filter((g) => g.file.size < 4_000_000).map(async (g) => [g.path, await g.file.text()] as const)));
+  const nb = notebookOf(files);
+  if (!nb) { head.innerHTML = '<div class="err">No .rofl.md among the files given</div>'; return; }
+  history.replaceState(null, '', location.pathname);
+  openNotebook(files.get(nb)!, nearFiles(nb, files));
+}
+const picker = $<HTMLInputElement>('file');
+$('open').addEventListener('click', () => picker.click());
+picker.addEventListener('change', () => { void openGiven([...picker.files ?? []].map((file) => ({ path: file.name, file }))); picker.value = ''; });
+addEventListener('dragover', (e) => { if (e.dataTransfer?.types.includes('Files')) { e.preventDefault(); document.body.classList.add('dropping'); } });
+addEventListener('dragleave', (e) => { if (!e.relatedTarget) document.body.classList.remove('dropping'); });
+addEventListener('drop', (e) => {
+  if (!e.dataTransfer?.types.includes('Files')) return;
+  e.preventDefault(); document.body.classList.remove('dropping');
+  const es = [...e.dataTransfer.items].map((i) => i.webkitGetAsEntry()).filter((x): x is FileSystemEntry => !!x);
+  void (es.length ? Promise.all(es.map((x) => walk(x))).then((g) => g.flat()) : Promise.resolve([...e.dataTransfer.files].map((file) => ({ path: file.name, file })))).then(openGiven);
+});
+bar.addEventListener('click', (e) => {
+  if (!(e.target as HTMLElement).closest('#mine')) return;
+  source = null; history.replaceState(null, '', location.pathname); document.title = 'ROFL Workbench';
+  try { const s = JSON.parse(localStorage.getItem(KEY) ?? 'null'); cells = Array.isArray(s) && s.length ? s : blank(); } catch { cells = blank(); }
+  ran = null; drawn.clear(); views.clear(); paint(); run(0);
+});
+
 // ------------------------------------------------------------ the page's own controls
 $('hint').innerHTML = `A sentences cell, its parts a blank line apart: ${HINT.split(/\n\n+/).map((p) => `<code>${esc(p)}</code>`).join(' ')}`;
 $('runall').addEventListener('click', () => run(0));
@@ -402,7 +454,10 @@ $('oclose').addEventListener('click', closeOverlay);
 $('ofit').addEventListener('click', () => pz?.fit());
 addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('overlay').hidden) closeOverlay(); });
 
-paint(); run(0);
+// `?url=` a link to a notebook, `?gh=owner/repo/path@ref` one on GitHub: it opens instead of the notebook kept here
+const q = new URLSearchParams(location.search), link = q.get('url') ?? (q.get('gh') ? ghLink(q.get('gh')!) : undefined);
+paint();
+if (link) void openLink(link); else run(0);
 
 // each capability as it resolves; the page above already works without any of them
 void use('sample').then((s) => { sample = s; paint(); if (ran) { drawn.clear(); paintOuts(); } });
@@ -414,7 +469,7 @@ void use('user').then(async (u) => {
 });
 void use('room').then((r) => { room = r; if (!r) return; r.onPeers((ch: { peers: Cap[] }) => void heardPeers([...ch.peers]), () => {}); presence(); });
 void use('db').then((d) => {
-  if (!d) return;
+  if (!d || source || link) return;
   db = d; mode = 'shared'; cells = blank(); drawn.clear(); presence(); paint();
   d.collection('notebooks/shared/cells').onSnapshot((snap: { docs: { id: string; data(): any }[] }) => heard(snap.docs), () => { db = null; mode = 'local'; paint(); });
 });

@@ -84,13 +84,18 @@ fn serve_answers_in_the_sessions_own_text() {
 }
 
 fn load(args: &[&str]) -> (String, i32) {
+    run("load", args)
+}
+
+/// `rofl VERB ARGS... W.rofl`.
+fn run(verb: &str, args: &[&str]) -> (String, i32) {
     static N: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
     let n = N.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
     let dir = std::env::temp_dir().join(format!("rofl-why-bins-{}", std::process::id()));
     std::fs::create_dir_all(&dir).unwrap();
     let f = dir.join(format!("w{n}.rofl"));
     std::fs::write(&f, W).unwrap();
-    let o = Command::new(env!("CARGO_BIN_EXE_rofl")).arg("load")
+    let o = Command::new(env!("CARGO_BIN_EXE_rofl")).arg(verb)
         .args(args)
         .arg(&f)
         .output()
@@ -201,4 +206,32 @@ fn load_refuses_a_numeric_flag_that_does_not_parse() {
         assert_eq!(o.status.code(), Some(1), "{flag} {v}: {err}");
         assert!(err.starts_with(&format!("{flag} takes ")) && err.contains(&format!("{v:?}")), "{flag} {v}: {err}");
     }
+}
+
+/// A QUESTION VERB IS `rofl load` WITH THAT ONE QUESTION (docs/cli.md): the same text, the same exit code; an ask in
+/// the REPL's words; `--json` in the protocol's shapes; a world the budget cut answers with exit 5.
+#[test]
+fn the_question_verbs_answer_as_load_does() {
+    let mut s = world();
+    assert_eq!(run("why", &["reaches(a, c)"]), load(&["--why", "reaches(a, c)"]));
+    assert_eq!(run("why", &["--all", "reaches(a, c)"]), load(&["--why-all", "reaches(a, c)"]));
+    assert_eq!(run("whynot", &["reaches(c, a)", "--depth", "1"]), load(&["--depth", "1", "--whynot", "reaches(c, a)"]));
+    assert_eq!(run("excise", &["down(c)"]), ("- down[main](c)\n+ live[main](c)\n\n".into(), 0));
+    assert_eq!(run("why", &["reaches(c, a)"]).1, 4);
+    assert_eq!(run("ask", &["reaches(a, X)"]), ("X = b\nX = c\n\n".into(), 0));
+    assert_eq!(run("ask", &["reaches(c, X)"]), ("(empty)\n\n".into(), 0));
+    assert_eq!(run("ask", &["reaches(a, c)"]), ("true\n\n".into(), 0));
+    let (out, code) = run("why", &["reaches(a, c)", "--json"]);
+    assert_eq!((serde_json::from_str::<Value>(&out).unwrap(), code), (json!({ "ok": true, "text": s.why("reaches(a, c)").unwrap() }), 0));
+    let (out, code) = run("ask", &["reaches(a, X)", "--json"]);
+    let a: Value = serde_json::from_str(&out).unwrap();
+    assert_eq!((a["rows"].clone(), a["vars"].clone(), code), (json!([["b"], ["c"]]), json!(["X"]), 0));
+    let (out, code) = run("whynot", &["reaches(c, a)", "--json"]);
+    assert_eq!(serde_json::from_str::<Value>(&out).unwrap()["holds"], json!(false));
+    assert_eq!(code, 0);
+    let (out, code) = run("excise", &["reaches(a, c)", "--json"]);
+    assert_eq!((serde_json::from_str::<Value>(&out).unwrap(), code), (json!({ "ok": false, "error": "reaches[main](a,c) is not a base fact" }), 4));
+    assert_eq!(run("why", &["reaches(a, c)", "--budget", "3"]).1, 5);
+    assert_eq!(load(&["--budget", "3"]).1, 0, "a dump of a cut world is whole: its holes are in it");
+    assert_eq!(Command::new(env!("CARGO_BIN_EXE_rofl")).arg("why").output().unwrap().status.code(), Some(1));
 }

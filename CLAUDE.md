@@ -18,7 +18,7 @@ in `docs/`. Everything ever learned here is in `facts/findings.rofl`.
     npm run findings         the ledger, rendered
     npm run features         what the system can do, which demo shows it, what promises it
     npm run repl             `? L`, `why L`, `whynot L`, `excise F`, `budget N { CMD }`; answers in sentences where a phrase exists, asks in them, loads a `.rofl.md` world
-    npm run scan             -- <dir>   turn TypeScript into facts under facts/generated
+    npm run scan             -- <dir> [--out F]   a directory of JS/TS in, the facts the JS model reads out; then `rofl why L @rules/js.files F` (docs/cli.md)
     npm run report           -- <files>   the epistemic report over a set of packs
     npm run depends          · cleanliness · layering · nullary — the models over the tree itself
     npm run speccheck        every duty in facts/spec.rofl, and which check stands for it; `-- --write` rewrites the [checks] book
@@ -47,7 +47,7 @@ verdict in docs/knobs.md.
 | `ROFL_JOBS` | env | worker processes of the pooled runs (`npm test`, `whycheck`); by default the cores less two. Set 3 on a shared machine |
 | `ROFL_PROFILE` | env | the cargo profile whose binaries the scripts run: `release` (default) or `fast`. `breaks` belongs to the fault harness, never set it by hand |
 | `--ticks` | rofl load | `--ticks N --budget N --space N [--strata] [--retain N]`: the ticks to run and the walls; then the state is printed |
-| `--why` | rofl load | `--why L`, `--why-all L`, `--whynot L [--depth N --nodes N]`, `--excise F`: the explanation verbs, in the order given, answered in the reference's text; `--state` puts the dump back before them. Exit 4: a refused question |
+| `ask` | rofl | `rofl ask L`, `rofl why [--all] L`, `rofl whynot L [--depth N --nodes N]`, `rofl excise F`, then the world's flags and files, `@rules/js.files` for the JS model: one question answered in the reference's text, `--json` as `rofl serve` answers it. Exit 0 whole, 2 a file refused, 3 the world, 4 the question, 5 partial, 70 a defect (docs/cli.md). `rofl load --ask L --why L --whynot L --excise F` asks several in one run |
 | `--retract` | rofl load | `--retract L`, repeated: take a base fact out after the first evaluation and print the state it leaves |
 | `--propose-structures` | rofl load | the read-only detection report instead of the state; `--structures-min-rows N`; `npm run structures` wraps it |
 | `--seed` | rofl load | `--seed SEED.json [--bytes] [--budget N] [--space N] [--ticks N]`: a snapshot evaluated, then the state; `--bytes` adds on stderr facts, time per phase, peak rows, bytes per table and the costliest rules (release build only); `--derivations` prints the derivations instead of the state |
