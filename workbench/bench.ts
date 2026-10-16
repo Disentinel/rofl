@@ -1,7 +1,7 @@
 // The workbench's notebook without a page: its cells as a `.rofl.md`, run by the notebook kernel over the files published with the page, what each
 // cell said as HTML, and a natural cell translated by whatever model the page reaches. The page (workbench/page.ts) and its check load this alone.
 import { Kernel, short, SIGN, VERDICT, type NbCellOut, type NbLine, type NbResult } from '../notebook/kernel.ts';
-import { builtin, cellsOf, codeNames, libFiles, normal, parseFront, translated, MODEL_FILES, PHRASE_FILES, SHIPPED } from '../notebook/front.ts';
+import { builtin, cellsOf, codeNames, libFiles, normal, parseFront, translated, unread, MODEL_FILES, PHRASE_FILES, SHIPPED } from '../notebook/front.ts';
 import { assemble, worldOf, type Inputs } from '../notebook/world.ts';
 import { homeOf, translatorVocab } from '../playground/host.ts';
 import { QUESTIONS, questionsOnly, sentenceOf, translateOne } from '../notebook/translate.ts';
@@ -95,7 +95,9 @@ export class Bench {
     const front = parseFront(text), want = libFiles(near?.path ?? PATH, front), errors: string[] = [], lib: Record<string, string> = {}, reads: Record<string, string> = {}, code: Record<string, string> = {};
     const beside = (p: string) => normal(`${(near?.path ?? '').replace(/[^/]*$/, '')}${p}`);
     for (const f of [...want.model, ...want.phrases]) { const t = await this.file(f); if (t === undefined) errors.push(`${f}: not published with the page`); else lib[f] = t; }
-    for (const r of front.reads) {
+    const tried = new Set<string>();
+    for (let need = unread(text, reads); need.length; need = unread(text, reads).filter((k) => !tried.has(k))) for (const r of need) {
+      tried.add(r);
       const b = builtin(r);
       if (b === undefined && near) { const t = await near.read(beside(r)); if (t === undefined) errors.push(`${r}: not found beside the notebook, at ${beside(r)}`); else reads[r] = t; continue; }
       if (!b) { errors.push(b === null ? `${r}: not a vocabulary ROFL ships` : `${r}: a notebook here reads only what ROFL ships, ${SHIPPED.map((v) => `rofl:${v}`).join(', ')}`); continue; }
