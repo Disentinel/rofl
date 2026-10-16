@@ -1069,6 +1069,8 @@ pub struct Eval {
     pub asking: bool,
     /// A whynot by file under way: the files, and what each has met (`whynot_files`).
     wn_vols: Option<VolWalk>,
+    /// A whynot's premises with more matches than it follows, and how many.
+    wn_unwalked: HashMap<String, usize>,
     /// What a question's unfolding read that a hole left unknown.
     asked: Vec<Unknown>,
     /// The relations answered on demand whose every answer is ground and
@@ -1556,6 +1558,7 @@ impl Eval {
             demand_rule_ids: Vec::new(),
             asking: false,
             wn_vols: None,
+            wn_unwalked: HashMap::new(),
             asked: Vec::new(),
             demand_closed: HashSet::new(),
             last_fault: None,
@@ -11381,6 +11384,20 @@ impl Eval {
         Ok(())
     }
 
+    /// `Store::question_matches` under the premise's bindings.
+    fn question_cands(&mut self, l: &Lit, s: &Subst, persp: Option<Sym>) -> Vec<FactId> {
+        let mut pos = Vec::new();
+        let mut vals = Vec::new();
+        for (i, a) in l.args.iter().enumerate() {
+            let t = resolve(&mut self.h, *a, s);
+            if self.h.is_ground(t) {
+                pos.push(i);
+                vals.push(t);
+            }
+        }
+        self.store.question_matches(&self.h, l.rel, persp, l.args.len(), &pos, &vals)
+    }
+
     /// The stored facts that match a premise, `only` among them when given.
     fn store_answers(&mut self, l: &Lit, s: &Subst, only: Option<&FxSet<FactId>>) -> Vec<(Subst, PremRef)> {
         let persp_t = walk(&self.h, l.persp, s);
@@ -11403,6 +11420,7 @@ impl Eval {
                         .collect(),
                 }
             }
+            None if self.asking && !self.firing && !self.store.unordered => self.question_cands(l, s, persp),
             None => match self.index_probe(l, s, persp, usize::MAX) {
                 Some(c) => c,
                 None => match persp {
@@ -13055,7 +13073,7 @@ pub fn plan_order(
     pre_bound: &[Sym],
     outside: &[Sym],
 ) -> (Vec<usize>, Option<usize>, bool, Vec<Sym>) {
-    plan_order_with(h, must_bind, body, pre_bound, outside, false)
+    plan_order_with(h, must_bind, body, pre_bound, outside, Hold::Nothing)
 }
 
 /// `plan_body` as src/engine.ts `planBody` runs a program WITHOUT
@@ -13073,8 +13091,19 @@ pub fn plan_body_plain(h: &Heap, c: &Clause) -> Vec<BodyElem> {
     for t in &must {
         h.vars_of(*t, &mut outside);
     }
-    let (order, _, _, _) = plan_order_with(h, &must, &c.body, &[], &outside, true);
+    let (order, _, _, _) = plan_order_with(h, &must, &c.body, &[], &outside, Hold::Cross);
     order.into_iter().map(|i| c.body[i].clone()).collect()
+}
+
+/// What a plan holds back: nothing; a positive sharing no variable with
+/// what is bound, until something binds one or a negation, builtin or
+/// aggregate comes (`plan_body_plain`); or such a positive past a negation
+/// too, which waits until what it reads is bound (`whynot_plan`).
+#[derive(Clone, Copy, PartialEq)]
+enum Hold {
+    Nothing,
+    Cross,
+    Near,
 }
 
 fn plan_order_with(
@@ -13083,7 +13112,7 @@ fn plan_order_with(
     body: &[BodyElem],
     pre_bound: &[Sym],
     outside: &[Sym],
-    hold: bool,
+    hold: Hold,
 ) -> (Vec<usize>, Option<usize>, bool, Vec<Sym>) {
     let mut seen_in: HashMap<Sym, Vec<i64>> = HashMap::new();
     for v in outside {
@@ -13176,7 +13205,7 @@ fn plan_order_with(
     };
     for (i, b) in body.iter().enumerate() {
         if let BodyElem::Pos(_) = b {
-            if hold && !bound.is_empty() && !shares(i, &bound) {
+            if hold != Hold::Nothing && !bound.is_empty() && !shares(i, &bound) {
                 held.push(i);
                 continue;
             }
@@ -13186,8 +13215,10 @@ fn plan_order_with(
             }
             continue;
         }
-        for j in std::mem::take(&mut held) {
-            take_pos(j, &mut plan, &mut pending, &mut bound);
+        if hold != Hold::Near || !matches!(b, BodyElem::Neg(_)) {
+            for j in std::mem::take(&mut held) {
+                take_pos(j, &mut plan, &mut pending, &mut bound);
+            }
         }
         match b {
             BodyElem::Neg(_) => pending.push(i),
@@ -16025,8 +16056,15 @@ impl Eval {
             next.push(WnTask::Line(format!("{pad}rule {}: head does not unify", self.h.name(r.id))));
             return Ok(());
         };
+        self.wn_unwalked.clear();
         let mut failures = self.failing_premises(&rn, &s0, r.id)?;
         next.push(WnTask::Line(format!("{pad}rule {}: {}", self.h.name(r.id), r.canon)));
+        let mut unwalked: Vec<(String, usize)> = self.wn_unwalked.drain().collect();
+        unwalked.sort_by(|a, b| cmp_js(&a.0, &b.0));
+        unwalked.truncate(12);
+        for (k, n) in unwalked {
+            next.push(WnTask::Line(format!("{pad}  followed 16 of {n} matches of {k}")));
+        }
         let mut keys: Vec<String> = failures.keys().cloned().collect();
         keys.sort_by(|a, b| cmp_js(a, b));
         keys.truncate(12);
@@ -16149,7 +16187,7 @@ impl Eval {
                 s = self.eval_builtin(self.v.op_eq, rn.head.args[i], lit.args[i], &cur, None);
             }
             let Some(s0) = s.filter(|_| rn.head.args.len() == lit.args.len()) else { continue };
-            let body = if self.plain { plan_body_plain(&self.h, &rn) } else { plan_body(&self.h, &rn).0 };
+            let body = self.whynot_plan(&rn, &s0);
             self.wn_vols = Some(walk.clone());
             let mut out = HashMap::new();
             let mut nodes = 0usize;
@@ -16276,6 +16314,32 @@ impl Eval {
         }
     }
 
+    /// THE ORDER A WHYNOT WALKS A BODY IN starts from what the question binds:
+    /// a premise sharing nothing bound waits until one does, so a constant of
+    /// the question narrows the walk instead of a premise ranging over the
+    /// whole corpus. Asked with nothing bound, the order the evaluator solves in.
+    fn whynot_plan(&mut self, rn: &Clause, s0: &Subst) -> Vec<BodyElem> {
+        let mut must: Vec<Term> = rn.head.args.clone();
+        must.push(rn.head.persp);
+        let mut outside = Vec::new();
+        for t in &must {
+            self.h.vars_of(*t, &mut outside);
+        }
+        let bound: Vec<Sym> = outside
+            .iter()
+            .copied()
+            .filter(|v| {
+                let t = resolve(&mut self.h, Term::var(*v), s0);
+                self.h.is_ground(t)
+            })
+            .collect();
+        if bound.is_empty() || brk!("whynot_far_plan" => true; false) {
+            return if self.plain { plan_body_plain(&self.h, rn) } else { plan_body(&self.h, rn).0 };
+        }
+        let (order, _, _, _) = plan_order_with(&self.h, &must, &rn.body, &bound, &outside, Hold::Near);
+        order.into_iter().map(|i| rn.body[i].clone()).collect()
+    }
+
     /// Single-step failure analysis of one body under a head substitution.
     ///
     /// IN THE ORDER THE EVALUATOR SOLVES IN, and the two engines' hosts once
@@ -16284,7 +16348,7 @@ impl Eval {
     /// bound, where the bottom-up run read the same negation with them free.
     fn failing_premises(&mut self, rn: &Clause, s0: &Subst, rid: Sym) -> Result<HashMap<String, Option<Lit>>, Halt> {
         let mut out: HashMap<String, Option<Lit>> = HashMap::new();
-        let body = if self.plain { plan_body_plain(&self.h, rn) } else { plan_body(&self.h, rn).0 };
+        let body = self.whynot_plan(rn, s0);
         let mut nodes = 0usize;
         self.explore_body(&body, 0, s0, &mut out, &mut nodes, Some(rid), true)?;
         Ok(out)
@@ -16320,6 +16384,11 @@ impl Eval {
                 } else if !parted && self.wn_vols.is_some() {
                     self.explore_split(body, k, s, l, mm.into_iter().map(|(s2, _)| s2).collect(), out, nodes, rule)?;
                 } else {
+                    if brk!("whynot_unwalked_silent" => false; mm.len() > 16) {
+                        let mut key = String::new();
+                        resolved_lit_key(&mut self.h, l.rel, l.persp, &l.args, s, &mut key);
+                        self.wn_unwalked.entry(key).or_insert(mm.len());
+                    }
                     for (s2, _) in mm.into_iter().take(16) {
                         self.explore_body(body, k + 1, &s2, out, nodes, rule, parted)?;
                     }

@@ -169,6 +169,13 @@ check_file("unstratifiable", "examples/checks/unstratifiable.rofl").
 check_world("whynot_unloaded").
 check_file("whynot_unloaded", "examples/checks/whynot-unloaded.rofl").
 
+-- A WHYNOT STAYS NEAR ITS TARGET: it walks from what the question names, and
+-- says how many matches it left (w_whynot_stays_near_its_target).
+check_world("whynot_near").
+check_file("whynot_near", "examples/checks/whynot-near.rofl").
+check_opt("whynot_near", together, 1).
+check_opt("whynot_near", explain, 1).
+
 -- PROVENANCE, JOINED RATHER THAN PRINTED. The third prohibition a world can
 -- carry: `Provenance as a log string` is refuted by joining a firing's rule
 -- column against the program, which is something no string supports.

@@ -3502,6 +3502,20 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "whynot_far_plan",
+  "what": "whynot walks a body in the evaluator's order, not from what the question binds",
+  "expect": {
+   "whynot_near": "wn_text_missing"
+  }
+ },
+ {
+  "id": "whynot_unwalked_silent",
+  "what": "whynot follows 16 matches of a premise and does not say how many it left",
+  "expect": {
+   "whynot_near": "wn_text_missing"
+  }
+ },
+ {
   "id": "whynot_dag_off",
   "what": "whynot demonstrates a ground literal it has demonstrated already again",
   "expect": {
@@ -5719,6 +5733,34 @@ export const BREAKS: Break[] = [
   ],
   "expect": {
    "agg_why_dag": "dg_text_missing"
+  }
+ },
+ {
+  "id": "ts_whynot_far_plan",
+  "what": "TypeScript whynot walks a body in the evaluator's order, not from what the question binds",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "if (bound.length === 0) return planBodyAgg(rn, this.plain).plan;",
+    "if (true) return planBodyAgg(rn, this.plain).plan;"
+   ]
+  ],
+  "expect": {
+   "whynot_near": "wn_text_missing"
+  }
+ },
+ {
+  "id": "ts_whynot_unwalked_silent",
+  "what": "TypeScript whynot follows 16 matches of a premise and does not say how many it left",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "if (mm.length > 16) {",
+    "if (false) {"
+   ]
+  ],
+  "expect": {
+   "whynot_near": "wn_text_missing"
   }
  },
  {
