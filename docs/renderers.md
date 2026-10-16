@@ -362,7 +362,8 @@ vs as coded" is one picture and one exit code.
    display only?
 4. **The first interactive target.** Should it be the VS Code notebook
    webview (Cytoscape + ELK, Vega-Lite) or the playground page? Text
-   backends (mermaid, Vega-Lite JSON) go first either way.
+   backends (mermaid, Vega-Lite JSON) go first either way. *Decided in 1.3:
+   the notebook webview draws a graph as a schema, docs/schemas.md.*
 5. **Notations.** Emit BPMN, SBGN or XMILE only when a real world asks, or
    commit to one dialect now? The argument dialect over `rules/inquiry`
    (supports/refutes with polarity → Argdown) is the cheapest proof.

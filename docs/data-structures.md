@@ -255,7 +255,8 @@ tree) is read by no proposal or near miss.
    2026-10-05**, first where no witness is kept and then, the same day, where
    witnesses are kept too (see "Tree, as built").
 3. **`alias`.** Mostly storage names and permuted indexes (~9%); independent
-   of the tree, but it touches the same read paths, so after it.
+   of the tree, but it touches the same read paths, so after it. **Built
+   2026-10-16** (see "Alias, as built").
 4. **`ordered`, then `sequence`.** A sorted index first (small), then
    sequences, which are an ordered column with a density promise.
 5. **`span`.** Interval index; laminar reuses the tree's intervals.

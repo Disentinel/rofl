@@ -50,7 +50,7 @@ export async function draw(el: HTMLElement, v: View, h: Hooks): Promise<Drawn> {
   return { toggle, report: () => report(), show: () => { const b = el.querySelector<HTMLButtonElement>('[data-show]'); b?.click(); return !!b && el.isConnected; } };
 }
 
-/** What of a drawn picture reaches past its box: a graph's as Cytoscape draws it, an SVG's past its viewBox. */
+/** What of a drawn picture reaches past its box: a graph's as the schema draws it, an SVG's past its viewBox. */
 const spilt = (el: HTMLElement) => !el.isConnected ? [] : [...spills.get(el)?.() ?? [], ...[...el.querySelectorAll('svg')].flatMap((svg) => {
   const v = svg.viewBox.baseVal, b = svg.getBBox(), r = svg.getBoundingClientRect();
   if (!v?.width || b.x >= v.x - 1 && b.y >= v.y - 1 && b.x + b.width <= v.x + v.width + 1 && b.y + b.height <= v.y + v.height + 1) return [];
