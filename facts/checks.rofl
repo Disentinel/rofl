@@ -3045,7 +3045,7 @@ check_world("agg_join_delta_first_steps").
 check_file("agg_join_delta_first_steps", "examples/checks/agg-join-delta-first-steps.rofl").
 check_opt("agg_join_delta_first_steps", together, 1).
 check_opt("agg_join_delta_first_steps", one_engine, rust).
-check_opt("agg_join_delta_first_steps", budget, 75).
+check_opt("agg_join_delta_first_steps", budget, 134).
 check_world("agg_join_delta_first_space").
 check_file("agg_join_delta_first_space", "examples/checks/agg-join-delta-first-space.rofl").
 check_opt("agg_join_delta_first_space", together, 1).

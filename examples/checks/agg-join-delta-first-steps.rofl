@@ -1,6 +1,6 @@
 -- examples/checks/agg-join-delta-first-steps.rofl — A STEPS WALL STOPS A PLANNED FIRING.
 --
--- p(Q, Y) :- h(X, Z), l(X, Y), trig(Y, Z, Q) over 40 + 40 + 10 rows, under a budget of 75 that
+-- p(Q, Y) :- h(X, Z), l(X, Y), trig(Y, Z, Q) over 40 + 40 + 10 rows, under a budget of 134 that
 -- runs out inside the firing: the world holes budget_exhausted and holds the conclusions that came
 -- before the cut. Which they are is the engine's (the plan concludes in its own order, and the cut
 -- moves as the engine improves), so the world is Rust's alone.
