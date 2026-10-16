@@ -371,6 +371,14 @@ check[checks]("facts/goldens.rofl", "rules_js-surface", world).
 check[checks]("facts/goldens.rofl", "rules_js-vocabulary", world).
 check[checks]("facts/goldens.rofl", "rules_kernel-policy", world).
 check[checks]("facts/goldens.rofl", "rules_layering", world).
+check[checks]("facts/goldens.rofl", "rules_net_net-access", world).
+check[checks]("facts/goldens.rofl", "rules_net_net-addr", world).
+check[checks]("facts/goldens.rofl", "rules_net_net-dns", world).
+check[checks]("facts/goldens.rofl", "rules_net_net-hops", world).
+check[checks]("facts/goldens.rofl", "rules_net_net-host", world).
+check[checks]("facts/goldens.rofl", "rules_net_net-http", world).
+check[checks]("facts/goldens.rofl", "rules_net_net-proto", world).
+check[checks]("facts/goldens.rofl", "rules_net_net-tls", world).
 check[checks]("facts/goldens.rofl", "rules_nullary", world).
 check[checks]("facts/goldens.rofl", "rules_parse-cost", world).
 check[checks]("facts/goldens.rofl", "rules_permission-model", world).
@@ -387,7 +395,6 @@ check[checks]("facts/goldens.rofl", "rules_stage-plan", world).
 check[checks]("facts/goldens.rofl", "rules_strata", world).
 check[checks]("facts/goldens.rofl", "rules_swarm", world).
 check[checks]("facts/goldens.rofl", "rules_untyped", world).
-check[checks]("facts/goldens.rofl", "rules_url", world).
 check[checks]("facts/goldens.rofl", "rules_worklist", world).
 check[checks]("facts/goldens.rofl", "rules_worlds", world).
 check[checks]("facts/goldens.rofl", "boot_only", world).
@@ -783,6 +790,7 @@ check[checks]("facts/goldens.rofl", "holes_negation_ticks", world).
 check[checks]("facts/goldens.rofl", "holes_negation_wfs", world).
 check[checks]("facts/goldens.rofl", "jodit_fixture", world).
 check[checks]("facts/goldens.rofl", "keyword_atom", world).
+check[checks]("facts/goldens.rofl", "net", world).
 check[checks]("facts/goldens.rofl", "not_as_a_name", world).
 check[checks]("facts/goldens.rofl", "operators", world).
 check[checks]("facts/goldens.rofl", "premise_arity", world).

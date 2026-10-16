@@ -1,0 +1,119 @@
+-- net-addr.rofl — ADDRESSES AND SUBNETS, v4 and v6 (the net library, 1 of 8).
+--
+-- Knows no configuration format. Its input is the strings other packs write:
+--   addr_text(S)   S may be an address: "10.0.2.20", "::1", "fe80::1"
+--   maybe_addr(S)  S may be an address or a name; read without complaint
+--   cidr_text(S)   S may be a subnet: "10.0.0.0/8", "fc00::/7"; a bare address
+--                  is the subnet of that one address
+--   own_net(S)     a subnet that is ours; what lies outside every one is not
+--   num_text(S)    S may be a decimal: `net_num(S, 10, V)`
+-- What it answers:
+--   ip(S, A)            S reads as the address A: v4(W) or v6(W0, W1, W2, W3),
+--                       32-bit words, so "::1" and "0:0:0:0:0:0:0:1" are one
+--   cidr(S, A, L)       S is the subnet of A's first L bits
+--   in_net(A, S)        A lies in the subnet S
+--   scope(A, K)         loopback, link, private, unspecified or public
+--   ours(A)             in a net of ours, or never routed from outside
+--   addr_unread(S)      a string given as an address that reads as none
+-- Text is cut by characters; the kernel has no string to number, so digits
+-- are read off a table.
+edb(net_digit).
+net_digit("0", 0).  net_digit("1", 1).  net_digit("2", 2).  net_digit("3", 3).  net_digit("4", 4).
+net_digit("5", 5).  net_digit("6", 6).  net_digit("7", 7).  net_digit("8", 8).  net_digit("9", 9).
+net_digit("a", 10).  net_digit("b", 11).  net_digit("c", 12).  net_digit("d", 13).  net_digit("e", 14).
+net_digit("f", 15).  net_digit("A", 10).  net_digit("B", 11).  net_digit("C", 12).  net_digit("D", 13).
+net_digit("E", 14).  net_digit("F", 15).
+
+-- the nets every host knows by their kind
+edb(scope_net).
+scope_net("127.0.0.0/8", loopback).  scope_net("::1/128", loopback).
+scope_net("10.0.0.0/8", private).  scope_net("172.16.0.0/12", private).  scope_net("192.168.0.0/16", private).
+scope_net("fc00::/7", private).  scope_net("100.64.0.0/10", private).
+scope_net("169.254.0.0/16", link).  scope_net("fe80::/10", link).
+scope_net("0.0.0.0/32", unspecified).  scope_net("::/128", unspecified).
+cidr_text(S) :- scope_net(S, _).
+
+net_pow2(0, 1).
+net_pow2(K, P) :- net_pow2(J, Q), J < 32, K is J + 1, P is Q * 2.
+
+-- =========================================================================
+-- 1. NUMBERS. `net_num(S, B, V)`: S is a number in base B, read digit by digit.
+net_word(S, 10) :- net_v4_part(_, _, S).
+net_word(S, 10) :- net_len_text(_, S).
+net_word(S, 10) :- num_text(S).
+net_word(S, 16) :- net_v6_group(_, _, S).
+net_read(S, B, 0, 0) :- net_word(S, B), L is str_len(S), L > 0, L < 9.
+net_read(S, B, I, V) :- net_read(S, B, H, U), L is str_len(S), H < L, C is str_char(S, H), net_digit(C, D), D < B,
+                        I is H + 1, V is U * B + D.
+net_num(S, B, V) :- net_read(S, B, I, V), L is str_len(S), I = L.
+
+-- =========================================================================
+-- 2. ADDRESSES. v4 is four decimals under 256; v6 eight hex groups, `::`
+-- standing for the zeros it leaves out.
+net_text(S) :- addr_text(S).
+net_text(S) :- maybe_addr(S).
+net_text(A) :- cidr_text(S), net_cidr_cut(S, A, _).
+
+net_v4_text(S) :- net_text(S), N is str_segs(S, "."), N = 4, M is str_segs(S, ":"), M = 1.
+net_v4_part(S, K, P) :- net_v4_text(S), net_v4_i(S, K), P is str_seg(S, ".", K).
+net_v4_i(S, 0) :- net_v4_text(S).
+net_v4_i(S, K) :- net_v4_i(S, J), J < 3, K is J + 1.
+net_v4_byte(S, K, V) :- net_v4_part(S, K, P), net_num(P, 10, V), V < 256.
+ip(S, v4(W)) :- net_v4_byte(S, 0, A), net_v4_byte(S, 1, B), net_v4_byte(S, 2, C), net_v4_byte(S, 3, D),
+                W is ((A * 256 + B) * 256 + C) * 256 + D.
+
+-- `L::R`: L's groups lead, R's end the eight, zeros between
+net_v6_text(S) :- net_text(S), N is str_segs(S, ":"), N > 2, N < 10.
+net_v6_side(S, S, "") :- net_v6_text(S), N is str_segs(S, "::"), N = 1.
+net_v6_side(S, L, R)  :- net_v6_text(S), N is str_segs(S, "::"), N = 2, L is str_seg(S, "::", 0), R is str_seg(S, "::", 1).
+net_v6_count(S, 0, 0) :- net_v6_side(S, "", "").
+net_v6_count(S, 0, NR) :- net_v6_side(S, "", R), R != "", NR is str_segs(R, ":").
+net_v6_count(S, NL, 0) :- net_v6_side(S, L, ""), L != "", NL is str_segs(L, ":").
+net_v6_count(S, NL, NR) :- net_v6_side(S, L, R), L != "", R != "", NL is str_segs(L, ":"), NR is str_segs(R, ":").
+net_v6_full(S) :- net_v6_side(S, S, _), net_v6_count(S, 8, 0).
+net_v6_full(S) :- net_v6_side(S, L, _), L != S, net_v6_count(S, NL, NR), T is NL + NR, T < 8.
+
+net_v6_i(S, 0) :- net_v6_full(S).
+net_v6_i(S, K) :- net_v6_i(S, J), J < 7, K is J + 1.
+net_v6_group(S, K, G) :- net_v6_i(S, K), net_v6_side(S, L, _), net_v6_count(S, NL, _), K < NL, G is str_seg(L, ":", K).
+net_v6_group(S, K, G) :- net_v6_i(S, K), net_v6_side(S, _, R), net_v6_count(S, _, NR), F is 8 - NR, K >= F,
+                         J is K - F, G is str_seg(R, ":", J).
+net_v6_at(S, K, V) :- net_v6_group(S, K, G), L is str_len(G), L < 5, net_num(G, 16, V).
+net_v6_at(S, K, 0) :- net_v6_i(S, K), net_v6_count(S, NL, NR), K >= NL, F is 8 - NR, K < F.
+ip(S, v6(W0, W1, W2, W3)) :- net_v6_at(S, 0, A), net_v6_at(S, 1, B), net_v6_at(S, 2, C), net_v6_at(S, 3, D),
+                             net_v6_at(S, 4, E), net_v6_at(S, 5, F), net_v6_at(S, 6, G), net_v6_at(S, 7, H),
+                             W0 is A * 65536 + B, W1 is C * 65536 + D, W2 is E * 65536 + F, W3 is G * 65536 + H.
+
+addr_unread(S) :- addr_text(S), not ip(S, _).
+
+-- =========================================================================
+-- 3. SUBNETS. An address is in one when its first L bits are the net's:
+-- word by word, each cut to the bits the prefix keeps of it.
+net_cidr_cut(S, A, L) :- cidr_text(S), N is str_segs(S, "/"), N = 2, A is str_seg(S, "/", 0), L is str_seg(S, "/", 1).
+net_cidr_cut(S, S, "") :- cidr_text(S), N is str_segs(S, "/"), N = 1.
+net_len_text(S, L) :- net_cidr_cut(S, _, L), L != "".
+cidr(S, v4(W), N) :- net_cidr_cut(S, A, T), ip(A, v4(W)), net_num(T, 10, N), N <= 32.
+cidr(S, v6(W0, W1, W2, W3), N) :- net_cidr_cut(S, A, T), ip(A, v6(W0, W1, W2, W3)), net_num(T, 10, N), N <= 128.
+cidr(S, v4(W), 32) :- net_cidr_cut(S, A, ""), ip(A, v4(W)).
+cidr(S, v6(W0, W1, W2, W3), 128) :- net_cidr_cut(S, A, ""), ip(A, v6(W0, W1, W2, W3)).
+cidr_unread(S) :- cidr_text(S), not cidr(S, _, _).
+
+net_keep(S, v4(B), P) :- cidr(S, v4(W), L), T is 32 - L, net_pow2(T, P), B is W / P.
+net_keep(S, v6(B0, B1, B2, B3), p(P0, P1, P2, P3)) :- cidr(S, v6(W0, W1, W2, W3), L),
+    X0 is 32 - L, X1 is 64 - L, X2 is 96 - L, X3 is 128 - L,
+    T0 is min(32, max(0, X0)), T1 is min(32, max(0, X1)), T2 is min(32, max(0, X2)), T3 is min(32, max(0, X3)),
+    net_pow2(T0, P0), net_pow2(T1, P1), net_pow2(T2, P2), net_pow2(T3, P3),
+    B0 is W0 / P0, B1 is W1 / P1, B2 is W2 / P2, B3 is W3 / P3.
+in_net(v4(W), S) :- ip(_, v4(W)), net_keep(S, v4(B), P), B is W / P.
+in_net(v6(A0, A1, A2, A3), S) :- ip(_, v6(A0, A1, A2, A3)), net_keep(S, v6(B0, B1, B2, B3), p(P0, P1, P2, P3)),
+                                 B0 is A0 / P0, B1 is A1 / P1, B2 is A2 / P2, B3 is A3 / P3.
+
+-- =========================================================================
+-- 4. WHOSE. An address no net of a kind holds is public.
+net_kind(A, K) :- in_net(A, S), scope_net(S, K).
+scope(A, K) :- net_kind(A, K).
+net_addr(A) :- ip(_, A).
+scope(A, public) :- net_addr(A), not net_kind(A, _).
+cidr_text(S) :- own_net(S).
+ours(A) :- in_net(A, S), own_net(S).
+ours(A) :- scope(A, K), K != public.

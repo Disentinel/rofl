@@ -1,0 +1,53 @@
+-- net-dns.rofl — A NAME LEADS TO AN ADDRESS (the net library, 3 of 8).
+--
+-- Needs net-addr and net-host. Input, whatever a zone file, a cloud's DNS or a
+-- cluster's services say, one row per record:
+--   points(N, T)           the name N leads to T, an address (A, AAAA) or
+--                          another name (CNAME)
+--   points_in(V, N, T)     the same, seen only in the view V; a view that
+--                          holds N hides every record of N outside views
+--   view(V, Cidr, Order)   a client with an address in Cidr asks in V; of the
+--                          views a client matches, the lowest Order wins
+--   hosts_file(H, N, S)    a line of H's hosts file: on H, N is S and DNS is
+--                          not asked; `localhost` is so on every host
+--   resolve_ask(H, N)      the host H asks for N; `none` asks from no host
+-- What it answers:
+--   dns_resolves(H, N, A)      on H, N may be the address A
+--   unresolved(H, N)       N leads to no address on H
+--   dns_too_deep(H, N)     the chain of names runs past `dns_depth`
+-- Names are compared as written: a translator lowers them and drops the dot.
+edb(dns_depth).
+dns_depth(8).
+
+edb(dns_local).
+dns_local("localhost", "127.0.0.1").
+dns_local("localhost", "::1").
+hosts_file(H, N, S) :- net_host(H), dns_local(N, S).
+
+maybe_addr(N) :- resolve_ask(_, N).
+maybe_addr(T) :- points(_, T).
+maybe_addr(T) :- points_in(_, _, T).
+addr_text(S) :- hosts_file(_, _, S).
+cidr_text(S) :- view(_, S, _).
+
+-- =========================================================================
+-- 1. WHICH VIEW A HOST ASKS IN.
+dns_matches(H, V, O) :- iface(H, S), ip(S, A), view(V, C, O), in_net(A, C).
+dns_better(H, O) :- dns_matches(H, _, O), dns_matches(H, _, P), P < O.
+view_of(H, V) :- dns_matches(H, V, O), not dns_better(H, O).
+dns_in_view(H, N) :- view_of(H, V), points_in(V, N, _).
+dns_in_file(H, N) :- hosts_file(H, N, _).
+
+-- =========================================================================
+-- 2. THE CHAIN, from the name asked to an address, one record a step.
+dns_at(H, N, N, 0) :- resolve_ask(H, N), not ip(N, _).
+dns_rec(H, C, T) :- dns_at(H, _, C, _), hosts_file(H, C, T).
+dns_rec(H, C, T) :- dns_at(H, _, C, _), not dns_in_file(H, C), view_of(H, V), points_in(V, C, T).
+dns_rec(H, C, T) :- dns_at(H, _, C, _), not dns_in_file(H, C), not dns_in_view(H, C), points(C, T).
+dns_at(H, N, T, E) :- dns_at(H, N, C, D), dns_rec(H, C, T), not ip(T, _), dns_depth(M), D < M, E is D + 1.
+
+dns_resolves(H, N, A) :- resolve_ask(H, N), ip(N, A).
+dns_resolves(H, N, A) :- dns_at(H, N, C, _), dns_rec(H, C, T), ip(T, A).
+dns_too_deep(H, N) :- dns_at(H, N, C, D), dns_depth(D), dns_rec(H, C, T), not ip(T, _).
+dns_found(H, N) :- dns_resolves(H, N, _).
+unresolved(H, N) :- resolve_ask(H, N), not dns_found(H, N), not dns_too_deep(H, N).

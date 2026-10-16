@@ -1,42 +1,44 @@
 -- js-service.rofl — THE SERVICE GRAPH: a request reaches a handler (w_service_graph).
 --
--- One join, into `calls` itself, so whatever reads the call graph sees an edge
--- that crosses a process like any other:
+-- The JS side of the net library (rules/net/): what the code sends and what it
+-- serves, put on the processes that run it, and the edge the walk finds put
+-- in `calls` itself, so whatever reads the call graph sees an edge that
+-- crosses processes like any other. Input, beside the network's own facts:
+--   code_of(X, Dir)          the process X runs the files under Dir
+-- What it answers:
 --   calls[code](Caller, H)   the function around a request, or the top of its
---                            file, may call the handler H of a route the
---                            request's method and address match (rules/url.rofl)
--- and its frontier both ways:
---   request_unserved(C, U)   a request no route answers (a middleware is not one)
+--                            file, may call the handler H the request reaches
+--   request_lost(C, Why)     the walk of a request stops: net-hops' `net_lost`
+--   request_no_origin(C)     a request whose address names no host
+--   request_unserved(C, X)   a request reaches X and no route of X answers it
 --   request_unknown[flow](C) a client call whose address nothing traces (js-fetch)
 --   route_unreached(H)       a handler no request reaches
+-- An app answers on `::`, as Node binds when no host is given.
 --
--- Needs rules/url.rofl, rules/js-fetch.rofl, rules/js-express.rofl and the JS
+-- Needs rules/net/*, rules/js-fetch.rofl, rules/js-express.rofl and the JS
 -- model with rules/js-concat.rofl and rules/js-surface.rofl.
 imports(main, flow).
 imports(main, surface).
 imports(code, main).
 imports(surface, main).
 
-url_request(U) :- requests[flow](_, _, U).
-url_pattern(P) :- serves[surface](_, _, P, _, _).
+svc_file(F) :- ast_file[code](_, F).
+svc_dir(F, X) :- svc_file(F), code_of(X, D), L is str_len(D), M is str_len(F), M > L, P is str_sub(F, 0, L), P = D,
+                 C is str_char(F, L), C = "/".
+svc_proc(N, X) :- ast_node[code](N, _, F, _), svc_dir(F, X).
+
+http_send(C, X, M, U) :- requests[flow](C, M, U), svc_proc(C, X).
+http_serves(X, P, M, R, H, K) :- serves[surface](App, M, R, H, K), app_listens[surface](App, P), svc_proc(App, X).
+listens(X, "::", P, tcp) :- app_listens[surface](App, P), svc_proc(App, X).
 url_str(V) :- url_term(V), str_value[flow](V).
 url_str(V) :- url_term(V), sx_ex_str[surface](V).
-url_str("/").
-url_str("*").
 
--- a method fits its own, and `any` fits every one; a GET route answers HEAD
-svc_fits(M, M)   :- http_verb_name(_, M).
-svc_fits(any, M) :- http_verb_name(_, M).
-svc_fits(M, any) :- http_verb_name(_, M).
-svc_fits(any, any).
-svc_fits(head, get).
+calls[code](Caller, H) :- http_reach(C, H, _), nearest_fn[code](Caller, C).
+calls[code](R, H)      :- http_reach(C, H, _), top_call[code](C, R).
 
-svc_call(C, U, H, R) :- requests[flow](C, M, U), url_match(P, U), serves[surface](_, N, P, H, R), svc_fits(M, N).
-calls[code](Caller, H) :- svc_call(C, _, H, _), nearest_fn[code](Caller, C).
-calls[code](R, H)      :- svc_call(C, _, H, _), top_call[code](C, R).
-
-svc_served(C, U) :- svc_call(C, U, _, route).
-request_unserved(C, U) :- requests[flow](C, _, U), not svc_served(C, U).
-sx_svc_hit[surface](H) :- svc_call(_, _, H, _).
+request_lost(C, Why) :- net_lost(C, Why).
+request_no_origin(C) :- http_no_origin(C).
+request_unserved(C, X) :- http_unserved(C, X).
+sx_svc_hit[surface](H) :- http_reach(_, H, _).
 svc_route(H) :- serves[surface](_, _, _, H, route).
 route_unreached(H) :- svc_route(H), not sx_svc_hit[surface](H).

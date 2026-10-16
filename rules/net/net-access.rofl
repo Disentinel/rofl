@@ -1,0 +1,35 @@
+-- net-access.rofl — WHO MAY CONNECT WHERE (the net library, 7 of 8).
+--
+-- Needs net-addr and net-host. A firewall's ACCEPT, a cloud security group,
+-- a network ACL, a cluster NetworkPolicy all come down to one shape: a guard
+-- over some addresses that lets in only what it allows. Input:
+--   guard(G, Cidr)            G stands before every address in Cidr
+--   allows(G, From, Port)     G lets in a connection from the subnet From to
+--                             Port, or to `any` port
+--   allows_group(G, G2, Port) the same from any address G2 stands before (a
+--                             security group that names a group)
+-- An address behind several guards needs each of them. A rewrite of the
+-- source or the target (SNAT, DNAT, a NAT gateway) is a hop, not a guard.
+-- What it answers, for every source the walk may use (a host: any of its
+-- addresses; a virtual listener: its own) and every address something listens on:
+--   acc_passes(Src, A, Port)      the connection is let in
+--   acc_blocked(G, Src, A, Port)  G stops it
+cidr_text(S) :- guard(_, S).
+cidr_text(S) :- allows(_, S, _).
+
+net_src(src(H)) :- net_host(H).
+net_src(src_at(A)) :- host_virtual(X), bound(X, A, _, _).
+net_src_at(src(H), A) :- holds(H, A).
+net_src_at(src_at(A), A) :- net_src(src_at(A)).
+acc_bound(A, P) :- bound(_, A, P, _).
+net_dst(A, P) :- acc_bound(A, P), not scope(A, loopback).
+
+acc_guarded(G, A) :- net_dst(A, _), in_net(A, C), guard(G, C).
+src_in(S, C) :- net_src_at(S, A), in_net(A, C).
+src_group(S, G) :- net_src_at(S, A), in_net(A, C), guard(G, C).
+let_in(G, S, P) :- allows(G, F, P), src_in(S, F).
+let_in(G, S, P) :- allows_group(G, G2, P), src_group(S, G2).
+
+acc_blocked(G, S, A, P) :- acc_guarded(G, A), net_dst(A, P), net_src(S), not let_in(G, S, P), not let_in(G, S, any).
+acc_stopped(S, A, P) :- acc_blocked(_, S, A, P).
+acc_passes(S, A, P) :- net_dst(A, P), net_src(S), not acc_stopped(S, A, P).
