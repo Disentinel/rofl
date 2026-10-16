@@ -42,3 +42,22 @@ scan_request(t, "twice(X) :- base(X).").
 "#);
     assert!(s.holds("twice(1)").unwrap());
 }
+
+#[test]
+fn a_scan_that_names_what_it_read_is_kept_until_that_changes() {
+    let dir = std::env::temp_dir().join(format!("rofl-scan-kept-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    std::env::set_var("XDG_CACHE_HOME", dir.join("cache"));
+    let (input, runs, script) = (dir.join("input"), dir.join("runs"), dir.join("scan.sh"));
+    std::fs::write(&input, "one").unwrap();
+    std::fs::write(&script, format!("echo run >> {}\necho '-- reads: {}'\necho \"seen($(cat {})).\"\n", runs.display(), input.display(), input.display())).unwrap();
+    let world = format!("scanner(t, \"sh {}\").\nscan_request(t, \"x\").", script.display());
+    let ran = || std::fs::read_to_string(&runs).unwrap_or_default().lines().count();
+    assert!(evaluated(&world).holds("seen(one)").unwrap());
+    assert!(evaluated(&world).holds("seen(one)").unwrap());
+    assert_eq!(ran(), 1);
+    std::fs::write(&input, "two").unwrap();
+    assert!(evaluated(&world).holds("seen(two)").unwrap());
+    assert_eq!(ran(), 2);
+    std::fs::remove_dir_all(&dir).unwrap();
+}
