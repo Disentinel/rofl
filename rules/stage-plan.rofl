@@ -1,0 +1,38 @@
+-- rules/stage-plan.rofl — A PLAN OF STAGES, CHECKED (docs/staged-evaluation.md, decisions 3 and 6).
+--
+-- scripts/stage_plan.ts cuts a corpus into stages and writes the plan as facts; these rules say whether it holds.
+-- A stage is a set of files evaluated in one engine process, over the volume the stage before it kept. A file
+-- weighs its base facts times what a fact costs in memory. Files that import one another by value (a RING: an
+-- `import type` carries no value) are evaluated together, so a ring is never split, and a ring heavier than the
+-- limit cannot be planned: the plan is refused, naming it, with what the author can do instead.
+
+edb(plan_limit).     -- plan_limit(Mb): the memory a stage may take
+edb(plan_file).      -- plan_file(File, Facts): a file and its base facts
+edb(plan_import).    -- plan_import(File, Imported): an import by value from one file of the corpus to another
+edb(plan_ring).      -- plan_ring(Ring, File): the files of a ring, the ring named by one of them
+edb(plan_stage).     -- plan_stage(Stage, File): where the plan puts a file
+edb(plan_refused).   -- plan_refused(Ring, Files, Mb): a ring the plan could not place
+
+-- What a base fact costs in the engine's memory, the model's derived facts and witnesses included: the peak of the
+-- witnessed side-effect world over vscode subset S at 250 files (Rust release, scripts/stage_plan.ts --run) over its
+-- base facts.
+plan_bytes_per_fact(700).
+
+plan_staged(F) :- plan_stage(_, F).
+plan_stage_facts(S, N) :- plan_stage(S, _), N is sum(C ; F : plan_stage(S, F), plan_file(F, C)).
+plan_stage_mb(S, M) :- plan_stage_facts(S, N), plan_bytes_per_fact(B), M is N * B / 1048576.
+
+-- each stage fits, reads only what a stage before it or itself holds, keeps its rings whole, and every file is placed
+plan_alarm(over_limit(S, M, L)) :- plan_stage_mb(S, M), plan_limit(L), M > L.
+plan_alarm(reads_later(F, G))   :- plan_import(F, G), plan_stage(S, F), plan_stage(S2, G), S2 > S.
+plan_alarm(ring_split(R, F))    :- plan_ring(R, F), plan_stage(S, R), plan_stage(S2, F), S != S2.
+plan_alarm(unplaced(F))         :- plan_file(F, _), not plan_staged(F), not plan_in_refused(F).
+plan_in_refused(F)              :- plan_refused(R, _, _), plan_ring(R, F).
+plan_in_refused(R)              :- plan_refused(R, _, _).
+
+-- A RING TOO HEAVY TO EVALUATE IN ONE STAGE. A rule that follows values across an import inside it has to see the
+-- whole ring at once. What can be done instead: summarise each function once and follow the summaries across files,
+-- bound how deep the rule follows imports, or break the ring in the code (a lazy `require` inside a function is
+-- already half a break: it loads late, and its values still flow when the function runs).
+plan_refusal(R, N, M, L, "a ring of files importing one another by value is heavier than a stage may be; summarise each function and follow the summaries, bound the depth the rule follows imports, or break the ring in the code") :-
+  plan_refused(R, N, M), plan_limit(L).
