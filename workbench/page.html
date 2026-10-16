@@ -4,6 +4,7 @@
   /* tokens */
   body { background: var(--bg); color: var(--fg); font: 14.5px/1.5 var(--sans); }
   body.lock { overflow: hidden; }
+  body.dropping .wrap { outline: 2px dashed var(--accent); outline-offset: -6px; }
   .wrap { padding-inline: 16px; padding-block: 14px 40px; max-width: 980px; margin: 0 auto; display: flex; flex-direction: column; gap: 10px; }
   header { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
   h1 { font: 600 19px/1.2 var(--sans); margin: 0; letter-spacing: -0.01em; }
@@ -130,6 +131,7 @@
     <div class="spacer"></div>
     <label class="ex" title="Show prose and pictures; fold the rest of each cell until you open it"><input type="checkbox" id="reading"> Reading view</label>
     <label class="ex"><input type="checkbox" id="newest"> Newest first</label>
+    <button type="button" id="open" title="Open a .rofl.md; pick the files it reads with it, or drop its folder on the page">Open…</button><input type="file" id="file" multiple hidden>
     <button type="button" class="primary" id="runall">Run all</button>
     <span id="runinfo" aria-live="polite"></span>
   </header>
@@ -139,7 +141,7 @@
   <div class="adds" data-row="top">Add a cell: <button type="button" data-add="rofl">sentences</button><button type="button" data-add="datalog">datalog</button><button type="button" data-add="natural">natural</button><button type="button" data-add="prose">prose</button></div>
   <main class="book" id="book"></main>
   <div class="adds" data-row="bottom">Add a cell: <button type="button" data-add="rofl">sentences</button><button type="button" data-add="datalog">datalog</button><button type="button" data-add="natural">natural</button><button type="button" data-add="prose">prose</button></div>
-  <p class="help">Facts and rules are sentences, in prose or in a <b>sentences</b> cell; a <b>datalog</b> cell takes plain ROFL; a <b>natural</b> cell is words Claude turns into a cell, on your own Claude account: Translate, or Cmd/Ctrl+Enter in a natural cell, translates. A cell asks with its lines: <code>? S</code> lists the answers, <code>never S</code> holds when nothing answers, <code>why S</code> and <code>whynot S</code> explain, <code>excise F</code> asks what moves without a fact, <code>draw graph</code> (or <code>time</code>, <code>table</code>, <code>architecture</code>, <code>heatmap</code>, …) draws. A notebook reads a vocabulary in the front matter of a first prose cell, <code>reads: - rofl:visual/time.rofl.md</code>; without one it reads the graph's. The notebook runs a moment after you stop typing; Cmd/Ctrl+Enter runs now, and so does Shift+Enter in a sentences or datalog cell (in prose and natural cells it is a new line).</p>
+  <p class="help">Facts and rules are sentences, in prose or in a <b>sentences</b> cell; a <b>datalog</b> cell takes plain ROFL; a <b>natural</b> cell is words Claude turns into a cell, on your own Claude account: Translate, or Cmd/Ctrl+Enter in a natural cell, translates. A cell asks with its lines: <code>? S</code> lists the answers, <code>never S</code> holds when nothing answers, <code>why S</code> and <code>whynot S</code> explain, <code>excise F</code> asks what moves without a fact, <code>draw graph</code> (or <code>time</code>, <code>table</code>, <code>architecture</code>, <code>heatmap</code>, …) draws. A notebook reads a vocabulary in the front matter of a first prose cell, <code>reads: - rofl:visual/time.rofl.md</code>; without one it reads the graph's. To open a notebook, drop it on the page with the files it reads (or its whole folder), pick them with Open…, or give a link: <code>?url=</code> a GitHub page or raw link of a <code>.rofl.md</code>, or <code>?gh=owner/repo/path@ref</code>; the files its <code>reads:</code> and <code>code:</code> name are read beside it. The notebook runs a moment after you stop typing; Cmd/Ctrl+Enter runs now, and so does Shift+Enter in a sentences or datalog cell (in prose and natural cells it is a new line).</p>
 </div>
 <div class="overlay" id="overlay" hidden role="dialog" aria-label="The picture, full screen">
   <div class="obar"><b>The picture</b><span class="mute">wheel zooms, drag pans</span><span class="spacer"></span><button type="button" id="ofit">Fit</button><button type="button" id="oclose">Close</button></div>
