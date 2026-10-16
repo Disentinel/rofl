@@ -330,36 +330,34 @@ A node I is resolved either:
   - N is K + 1;
   - [`str_segs`](#str_segs)(S, N).
 
+> A file is found by its name, not by holding each site against every file of
+> its folder: a file's stem is its name less the last extension.
+
+<a id="file_stem"></a>A folder has the stem Stem and E and T if all of:
+  - it [holds the file](#fs_file_in) Name being T;
+  - [the extension](#last_ext) of Name and L is E;
+  - Ln is the length of Name;
+  - K is Ln - L - 1;
+  - Stem is the substring of Name from 0 of length K.
+
 <a id="ts_candidate"></a>A site I may name under typescript T at a rank R either:
 
 1. if all of:
    - I [reaches](#site_last_seg) a directory D before a segment Seg;
-   - D [holds the file](#fs_file_in) Name being T;
-   - [the extension](#last_ext) of Name and Ln is En;
    - N is the number of segments of Seg split by ".";
    - N > 1;
    - K is N - 1;
    - Es is the segment K of Seg split by ".";
-   - Es [is written for](#ts_ext) En at R;
    - Ls is the length of Seg;
    - Les is the length of Es;
    - Stem is Ls - Les - 1;
-   - Lname is the length of Name;
-   - Stem2 is Lname - Ln - 1;
-   - Stem is Stem2;
-   - P is the substring of Seg from 0 of length Stem;
-   - P2 is the substring of Name from 0 of length Stem;
-   - P is P2;
+   - a text P is the substring of Seg from 0 of length Stem;
+   - D [has the stem](#file_stem) P and En and T;
+   - Es [is written for](#ts_ext) En at R;
 2. if all of:
    - I [reaches](#site_last_seg) a directory D before a segment Seg;
-   - D [holds the file](#fs_file_in) Name being T;
-   - [the extension](#last_ext) of Name and L [is probed](#probe_ext) at R;
-   - Ls is the length of Seg;
-   - Want is Ls + L + 1;
-   - Have is the length of Name;
-   - Want is Have;
-   - P is the substring of Name from 0 of length Ls;
-   - P is Seg;
+   - D [has the stem](#file_stem) Seg and E and T;
+   - E [is probed](#probe_ext) at R;
 3. if all of:
    - I [walks](#walk) at a step N to a directory D;
    - [the source text](#site_source) of I is S;
