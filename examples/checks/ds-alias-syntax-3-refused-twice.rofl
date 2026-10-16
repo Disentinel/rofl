@@ -1,0 +1,4 @@
+-- expect-refusal: declared a structure twice
+edb(dar_e). dar_e(a, b, c).
+alias dar_two(P, C) is dar_e(P, _, C).
+alias dar_two(P, C) is dar_e(C, _, P).

@@ -505,6 +505,30 @@ self, the closure's rows and witnesses generated into it), so it falls 2-5% only
 a measure of what the world holds. Over each of the four seeds the canonical state (2.5 to
 6.1 million lines) is the stored world's byte for byte.
 
+## Alias, as built
+
+Built 2026-10-16. `alias ast_in(P, C) is ast_child(P, _, _, C).` names a relation and the literal it reads: each
+argument of the alias is a column of the source, a dropped column is `_`, a constant column narrows the rows
+(`alias ast_name(N, V) is ast_attr(N, name, V).`), and an alias may read another alias. The declaration lowers to the
+one rule the author would have written, in every book (`ast_in[B](P, C) :- ast_child[B](P, _, _, C).`), which TypeScript
+evaluates as any rule.
+
+*Refused at the door*, both engines, same words: an alias of itself, of a kernel relation, a named column that is no
+argument (`_` drops one), a compound term, an argument the source does not read, a second declaration, and a fact or
+rule that also concludes the alias (`ds_alias_syntax`).
+
+*Answered* by the Rust engine, where no witness is kept, from the source: every rule that reads the alias, in a premise,
+a negation or an aggregate, reads the source in its place, the literal rewritten before the rule is planned
+(`rust/rofl/src/engine/alias.rs`), so no row of the alias is stored and no rule makes one. A question of the alias (the
+state, `ask`, `whynot`, a declared tree over it, the function and tree checks, serve and seed) reads the source and
+projects each row once (`Store::alias_rows`). `whynot` walks the lowered rule and each reader as written. Where
+witnesses are kept, the world is well-founded, or a lattice is read, the rows are stored, the lowered rule fired as any
+rule (`alias_reason` says which). `ds_alias_holds` and `ds_alias_sealed` compare every kind of reader with its twin over
+the rule written by hand.
+
+*Saves*, on vscode at 250 files sealed: ast_in and ast_name, about 560k rows (12% of the facts). A sealed cell over an
+alias records the source among its sealed relations; the census compares, the spelling differs from TypeScript.
+
 ## What serves the readers of the tree
 
 `facts/ast-within-readers.rofl` classifies every premise of `rules/js-*.rofl`

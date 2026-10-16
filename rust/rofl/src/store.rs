@@ -925,6 +925,45 @@ impl VirtualRel {
     }
 }
 
+/// One argument of the literal an alias reads: the alias's own argument at a position, a constant, or `_`.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum SrcArg {
+    Head(usize),
+    Const(Term),
+    Anon,
+}
+
+/// A RELATION THAT IS ANOTHER READ AGAIN (`alias ast_in(P, C) is ast_child(P, _, _, C)`, engine/alias.rs): no row of it is
+/// stored where no witness is kept; each is the row of the source it reads, projected, once however many source rows make it.
+#[derive(Clone, Debug)]
+pub struct AliasView {
+    pub rel: Sym,
+    pub arity: usize,
+    pub src: Sym,
+    pub pat: Vec<SrcArg>,
+}
+
+impl AliasView {
+    /// The alias's row a source row makes, if it makes one: its constants and repeated columns hold.
+    pub fn project(&self, args: &[Term]) -> Option<Vec<Term>> {
+        if args.len() != self.pat.len() {
+            return None;
+        }
+        let mut out: Vec<Option<Term>> = vec![None; self.arity];
+        for (a, p) in args.iter().zip(&self.pat) {
+            match p {
+                SrcArg::Head(i) => match out[*i] {
+                    Some(t) if t != *a => return None,
+                    _ => out[*i] = Some(*a),
+                },
+                SrcArg::Const(c) if c != a => return None,
+                _ => {}
+            }
+        }
+        out.into_iter().collect()
+    }
+}
+
 #[derive(Default)]
 #[derive(Clone)]
 pub struct Store {
@@ -943,6 +982,8 @@ pub struct Store {
     pub lat_regs: Vec<LatReg>,
     /// The relations answered from a structure, with the structure as the edges stand, by the closure's number.
     pub virtuals: Vec<VirtualRel>,
+    /// The aliases read from their sources, none of their rows stored (engine/alias.rs).
+    pub aliases: Vec<AliasView>,
     /// Whether the canonical state lists their rows: the last evaluation of this tick answered them.
     pub vlisted: bool,
     /// Whether the world keeps witnesses: a listed row is then a fact with one firing, written with its witness.
@@ -1730,6 +1771,41 @@ impl Store {
                     f(*p, k);
                 }
             }
+        }
+    }
+
+    /// The alias `rel` is, where its rows are read from its source.
+    pub fn alias_view(&self, rel: Sym) -> Option<&AliasView> {
+        self.aliases.iter().find(|a| a.rel == rel)
+    }
+
+    /// THE ROWS OF AN ALIAS, each once, with its book: the live rows of its source that make one, outside the kernel's books
+    /// (a book variable does not range over them), in the order the source holds them.
+    pub fn alias_rows(&self, h: &Heap, a: &AliasView) -> Vec<(Sym, Vec<Term>)> {
+        let mut seen: FxSet<(Sym, Vec<u64>)> = FxSet::default();
+        let mut out = Vec::new();
+        self.each_row(a.src, |p, id| {
+            if crate::reflect::is_kernel_ledger(h, p) {
+                return;
+            }
+            if let Some(row) = a.project(self.args(id)) {
+                if seen.insert((p, row.iter().map(|t| t.bits()).collect())) {
+                    out.push((p, row));
+                }
+            }
+        });
+        out
+    }
+
+    /// Every live row of `rel` as its book and arguments, an alias's read from its source.
+    pub fn each_args(&self, h: &Heap, rel: Sym, mut f: impl FnMut(Sym, &[Term])) {
+        match self.alias_view(rel) {
+            Some(a) => {
+                for (p, row) in self.alias_rows(h, a) {
+                    f(p, &row);
+                }
+            }
+            None => self.each_row(rel, |p, id| f(p, self.args(id))),
         }
     }
 
@@ -2926,17 +3002,21 @@ impl Store {
         Some((rule, self.tick, prems))
     }
 
-    /// The keys of those rows.
+    /// The keys of those rows, and of the rows of the aliases.
     pub fn virtual_keys(&self, h: &Heap) -> Vec<String> {
-        let mut out = Vec::with_capacity(self.virtual_rows());
-        for v in self.listed() {
-            for (book, f) in v.forests.iter() {
-                f.each_pair(|a, d| {
-                    let mut k = String::new();
-                    write_fact_key(h, v.rel, *book, &[a, d], &mut k);
-                    out.push(k);
-                });
-            }
+        self.virtual_facts(h, None).into_iter().map(|(r, b, args)| {
+            let mut k = String::new();
+            write_fact_key(h, r, b, &args, &mut k);
+            k
+        }).collect()
+    }
+
+    /// Every row no fact holds, as `(relation, book, arguments)`: a closure's answered from its tree, an alias's read from its
+    /// source; with `rel`, that relation's alone.
+    pub fn virtual_facts(&self, h: &Heap, rel: Option<Sym>) -> Vec<(Sym, Sym, Vec<Term>)> {
+        let mut out: Vec<(Sym, Sym, Vec<Term>)> = self.virtual_pairs(rel).into_iter().map(|(r, b, a, d)| (r, b, vec![a, d])).collect();
+        for a in self.aliases.iter().filter(|a| rel.is_none_or(|r| r == a.rel)) {
+            out.extend(self.alias_rows(h, a).into_iter().map(|(b, row)| (a.rel, b, row)));
         }
         out
     }
@@ -2967,6 +3047,13 @@ impl Store {
                     write_fact_key(h, v.rel, *book, &[a, d], &mut k);
                     keyed.push((k, None));
                 });
+            }
+        }
+        for a in &self.aliases {
+            for (book, row) in self.alias_rows(h, a) {
+                let mut k = String::new();
+                write_fact_key(h, a.rel, book, &row, &mut k);
+                keyed.push((k, None));
             }
         }
         keyed.sort_by(|a, b| cmp_js(&a.0, &b.0));

@@ -1,0 +1,31 @@
+-- examples/checks/ds-alias-holds.rofl — ds_alias_holds and ds_alias_sealed: aliases read by every kind of reader
+-- (a premise bound and free, a negation, an aggregate, a declared tree's edges and its closure, an alias of an alias, a
+-- constant column, a second book), each beside its twin over the rule the alias stands for, written by hand (`_u`).
+edb(dah_ch).
+dah_ch[code](r, body, 0, a). dah_ch[code](r, body, 1, b). dah_ch[code](a, id, 0, c). dah_ch[code](b, init, 0, d).
+dah_ch[code](b, init, 1, d).
+dah_ch[other](x, f, 0, y).
+alias dah_in(P, C) is dah_ch(P, _, _, C).
+alias dah_body(P, C) is dah_ch(P, body, _, C).
+alias dah_up(C, P) is dah_in(P, C).
+tree dah_in(P, C) closure dah_within.
+dah_in_u[B](P, C) :- dah_ch[B](P, _, _, C).
+dah_body_u[B](P, C) :- dah_ch[B](P, body, _, C).
+dah_up_u[B](C, P) :- dah_in_u[B](P, C).
+dah_within_u[B](P, C) :- dah_in_u[B](P, C).
+dah_within_u[B](P, C) :- dah_within_u[B](P, X), dah_in_u[B](X, C).
+
+dah_kid(C) :- dah_in[code](r, C).
+dah_kid_u(C) :- dah_in_u[code](r, C).
+dah_par(P) :- dah_in[code](P, d).
+dah_par_u(P) :- dah_in_u[code](P, d).
+dah_nok(C) :- dah_ch[code](_, _, _, C), not dah_in[code](a, C).
+dah_nok_u(C) :- dah_ch[code](_, _, _, C), not dah_in_u[code](a, C).
+dah_cnt(N) :- N is count(C : dah_in[code](_, C)).
+dah_cnt_u(N) :- N is count(C : dah_in_u[code](_, C)).
+dah_deep(D) :- dah_within[code](r, D).
+dah_deep_u(D) :- dah_within_u[code](r, D).
+dah_bb(C) :- dah_body[code](r, C).
+dah_bb_u(C) :- dah_body_u[code](r, C).
+dah_back(P) :- dah_up[other](y, P).
+dah_back_u(P) :- dah_up_u[other](y, P).

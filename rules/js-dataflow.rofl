@@ -19,6 +19,7 @@
 -- `ident_in` carries the file so a rule can lead with (Name, File), which the
 -- store indexes; leading with `ast_node(E, identifier, …)` enumerated every
 -- identifier in the corpus — 39 % of a fixpoint.
+function ident_in(N, to Name, to File).
 ident_in[code](N, Name, File) :- ast_node[code](N, identifier, File, _), ast_name[code](N, Name).
 ident[code](N, Name)        :- ident_in[code](N, Name, _).
 
@@ -188,6 +189,7 @@ name_cand[code](E, Name, File, S)  :- ident_in[code](E, Name, File), scoped_name
                                       ast_within[code](S, E), scope_declares[code](S, Name, File).
 name_outer[code](E, S)             :- name_cand[code](E, Name, File, S), name_cand[code](E, Name, File, S2),
                                       ast_within[code](S, S2).
+function name_scope(E, to Name, to File, to S).
 name_scope[code](E, Name, File, S) :- name_cand[code](E, Name, File, S), not name_outer[code](E, S).
 
 -- 3b. WHERE A NAME IS NOT A REFERENCE. Every property name, key, label and
@@ -231,6 +233,7 @@ not_a_ref[code](E) :- ast_child[code](P, key, 0, E), ast_attr[code](P, computed,
 
 -- 3c. WHAT IS DECLARED AT THE TOP OF A FILE. A name no scope around its
 -- reading declares is the file's own top-level binding or import, else global.
+function top_read(E, to Name, to File).
 top_read[code](E, Name, File)  :- ident_in[code](E, Name, File), not not_a_ref[code](E),
                                   not name_cand[code](E, _, _, _).
 top_declares[code](Name, File) :- binder_at_top[code](D), binds_name[code](D, Name, File).
@@ -368,6 +371,7 @@ kind_prototype(arrow_function_expression, function).
 kind_prototype(reg_exp_literal,           regexp).
 kind_prototype(big_int_literal,           bigint).
 
+function kind_proto(E, to P).
 kind_proto[flow](E, P)   :- kind_prototype(K, P), ast_node[code](E, K, _, _).
 prototype_of[flow](E, P) :- kind_proto[flow](E, P).
 prototype_of[flow](E, P) :- may_be_node[flow](E, N), kind_proto[flow](N, P).

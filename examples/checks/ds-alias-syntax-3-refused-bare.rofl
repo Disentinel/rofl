@@ -1,0 +1,3 @@
+-- expect-refusal: an alias names the relation it reads
+edb(dar_e). dar_e(a, b, c).
+alias dar_bare(P, C).

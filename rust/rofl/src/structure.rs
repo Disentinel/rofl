@@ -31,7 +31,7 @@ pub struct Tree {
 /// A STRUCTURE DECLARATION AT THE DOOR (`checkStructureDecl`, src/structure.ts):
 /// the refusal, or nothing. `concluded` says what already concludes a relation
 /// (a rule, or its facts).
-pub fn check_decl(h: &Heap, v: &Vocab, c: &Clause, declared: &HashSet<Sym>, concluded: &dyn Fn(Sym) -> Option<String>) -> Result<(), String> {
+pub fn check_decl(h: &Heap, v: &Vocab, c: &Clause, declared: &HashSet<Sym>, taken: &HashSet<Sym>, concluded: &dyn Fn(Sym) -> Option<String>) -> Result<(), String> {
     let st = c.structure.as_ref().expect("a structure");
     let (rel, what, kind) = (c.head.rel, decl_text(h, c), h.name(st.kind));
     if v.is_reserved(rel) || h.name(rel).starts_with('$') || v.arity_of(rel).is_some() {
@@ -55,6 +55,9 @@ pub fn check_decl(h: &Heap, v: &Vocab, c: &Clause, declared: &HashSet<Sym>, conc
     }
     if kind == "tree" && c.head.args.len() != 2 && !brk!("tree_arity_unchecked" => true; false) {
         return Err(format!("{what}: a tree has two arguments, the parent and the child: tree {}(P, C)", h.name(rel)));
+    }
+    if kind == "alias" {
+        return check_alias(h, v, c, &what, taken, concluded);
     }
     if brk!("function_twice_admitted" => false; declared.contains(&rel)) {
         return Err(format!("{what}: '{}' is declared a structure twice", h.name(rel)));
@@ -80,9 +83,59 @@ pub fn check_decl(h: &Heap, v: &Vocab, c: &Clause, declared: &HashSet<Sym>, conc
     Ok(())
 }
 
+/// AN ALIAS AT THE DOOR: the relation is new (no rule or fact concludes it, no other alias or closure is `taken` by it), and the
+/// literal it reads is another relation's, each argument of the alias in it and nothing else named.
+fn check_alias(h: &Heap, v: &Vocab, c: &Clause, what: &str, taken: &HashSet<Sym>, concluded: &dyn Fn(Sym) -> Option<String>) -> Result<(), String> {
+    let rel = c.head.rel;
+    let src = c.structure.as_ref().and_then(|s| s.source.as_ref()).expect("an alias reads a literal");
+    let sn = h.name(src.rel);
+    if taken.contains(&rel) {
+        return Err(format!("{what}: '{}' is declared a structure twice", h.name(rel)));
+    }
+    if src.rel == rel {
+        return Err(format!("{what}: an alias reads another relation than itself"));
+    }
+    if v.is_reserved(src.rel) || sn.starts_with('$') || v.arity_of(src.rel).is_some() {
+        return Err(format!("{what}: '{sn}' is a kernel relation and an alias reads the program's relations"));
+    }
+    let head: Vec<Sym> = c.head.args.iter().filter_map(var_of).collect();
+    for a in &src.args {
+        match a.kind() {
+            TermK::Var(x) if head.contains(&x) || h.name(x).starts_with("_$") => {}
+            TermK::Var(x) => return Err(format!("{what}: '{}' is not an argument of the alias; a column it drops is written _", h.name(x))),
+            TermK::Func(_) => return Err(format!("{what}: an alias reads a column, a constant or _, not a compound term")),
+            _ => {}
+        }
+    }
+    for x in &head {
+        if !src.args.iter().any(|a| var_of(a) == Some(*x)) {
+            return Err(format!("{what}: '{}' is not read from {sn}; each argument of the alias is a column of it", h.name(*x)));
+        }
+    }
+    if let Some(other) = concluded(rel) {
+        return Err(format!("{what}: '{}' is also concluded by {other}; an alias has no other conclusion", h.name(rel)));
+    }
+    Ok(())
+}
+
+fn var_of(t: &Term) -> Option<Sym> {
+    match t.kind() {
+        TermK::Var(x) => Some(x),
+        _ => None,
+    }
+}
+
 /// THE CLOSURE OF A TREE IS THE DECLARATION'S, and nothing else concludes it
 /// (`checkClosureHead`, src/structure.ts): the refusal of a clause that does.
-pub fn check_closure_head(h: &Heap, c: &crate::reflect::Clause, closures: &HashMap<Sym, Sym>) -> Option<String> {
+pub fn check_closure_head(h: &Heap, c: &crate::reflect::Clause, closures: &HashMap<Sym, Sym>, aliases: &HashSet<Sym>) -> Option<String> {
+    if aliases.contains(&c.head.rel) {
+        return Some(format!(
+            "{} rejected: '{}' is declared an alias and has no other conclusion: {}",
+            if c.body.is_empty() { "fact" } else { "rule" },
+            h.name(c.head.rel),
+            crate::reflect::canon_clause(h, c)
+        ));
+    }
     let tree = closures.get(&c.head.rel).filter(|_| !brk!("tree_closure_head_open" => true; false))?;
     Some(format!(
         "{} rejected: '{}' is the closure of the tree {} and has no other conclusion: {}",
@@ -115,6 +168,43 @@ pub fn lower_closure(h: &Heap, c: &Clause) -> Vec<String> {
     if brk!("tree_lowering_base_only" => true; false) { vec![base] } else { vec![base, step] }
 }
 
+/// THE LOWERING OF `alias` (`lowerAlias`, src/structure.ts): the rule the author would have written, in every book `B`
+/// (a name no argument of the alias takes). TypeScript evaluates it; this engine reads the source in its place where
+/// no witness is kept (engine/alias.rs).
+pub fn lower_alias(h: &Heap, c: &Clause) -> String {
+    let src = c.structure.as_ref().and_then(|s| s.source.as_ref()).expect("an alias reads a literal");
+    let names: Vec<String> = c.head.args.iter().chain(&src.args).filter_map(var_of).map(|x| h.name(x).to_string()).collect();
+    let mut b = String::from("B");
+    while names.contains(&b) {
+        b.push('B');
+    }
+    let mut head = format!("{}[{b}](", h.name(c.head.rel));
+    for (k, t) in c.head.args.iter().enumerate() {
+        if k > 0 {
+            head.push_str(", ");
+        }
+        crate::rofl_parse::src_term(h, *t, &mut head);
+    }
+    let body = crate::rofl_parse::lit_src(h, src);
+    let (rel, rest) = body.split_once('(').expect("a literal has arguments");
+    format!("{head}) :- {rel}[{b}]({rest}.")
+}
+
+/// The relations declared an alias.
+pub fn aliased(h: &Heap, v: &Vocab, store: &mut Store) -> HashSet<Sym> {
+    let mut out = HashSet::new();
+    for f in store.rel_persp(h, v.structure_decl, v.kernel_persp) {
+        if let [r, _, kind] = store.args(f) {
+            if let (Some(r), Some(kind)) = (r.as_atom(), kind.as_atom()) {
+                if h.name(kind) == "alias" {
+                    out.insert(r);
+                }
+            }
+        }
+    }
+    out
+}
+
 /// The closure each declared tree stands for, by the closure's name.
 pub fn closures(h: &Heap, v: &Vocab, store: &mut Store) -> HashMap<Sym, Sym> {
     let mut out = HashMap::new();
@@ -128,12 +218,17 @@ pub fn closures(h: &Heap, v: &Vocab, store: &mut Store) -> HashMap<Sym, Sym> {
     out
 }
 
-/// The relations the program declares a structure of.
+/// The relations the program declares a structure of, and the closures of its trees; not an alias, of which a promise
+/// (a tree, a function) may be declared too.
 pub fn declared(h: &Heap, v: &Vocab, store: &mut Store) -> HashSet<Sym> {
     let mut out = HashSet::new();
     for f in store.rel_persp(h, v.structure_decl, v.kernel_persp) {
-        if let Some(r) = store.args(f).first().and_then(|a| a.as_atom()) {
-            out.insert(r);
+        if let [r, _, kind] = store.args(f) {
+            if let (Some(r), Some(kind)) = (r.as_atom(), kind.as_atom()) {
+                if h.name(kind) != "alias" {
+                    out.insert(r);
+                }
+            }
         }
     }
     for f in store.rel_persp(h, v.structure_closure, v.kernel_persp) {
@@ -191,14 +286,24 @@ pub fn check_functions(h: &Heap, store: &Store, fs: &[Function]) -> Result<(), S
     fs.sort_by(|a, b| cmp_js(h.name(a.rel), h.name(b.rel)));
     for f in fs {
         let n = f.key.len() + f.to.len();
-        let mut first: FxMap<Key, u32> = FxMap::default();
-        let mut bad: Vec<(Sym, u32)> = Vec::new();
-        store.each_row(f.rel, |persp, id| {
-            let a = store.args(id);
+        // an alias's rows are read from its source (engine/alias.rs), each once
+        let owned: Vec<(Sym, Vec<Term>)> = match store.alias_view(f.rel) {
+            Some(a) => store.alias_rows(h, a),
+            None => Vec::new(),
+        };
+        let mut rows: Vec<(Sym, &[Term])> = Vec::new();
+        if store.alias_view(f.rel).is_some() {
+            rows.extend(owned.iter().map(|(p, a)| (*p, a.as_slice())));
+        } else {
+            store.each_row(f.rel, |persp, id| rows.push((persp, store.args(id))));
+        }
+        let mut first: FxMap<Key, usize> = FxMap::default();
+        let mut bad: Vec<(Sym, usize)> = Vec::new();
+        for (i, (persp, a)) in rows.iter().enumerate() {
             if a.len() != n {
-                return;
+                continue;
             }
-            let kp = brk!("function_book_ignored" => 0; persp);
+            let kp = brk!("function_book_ignored" => 0; *persp);
             let key = match f.key.as_slice() {
                 [i] => Key::One(kp, a[*i].bits()),
                 [i, j] => Key::Two(kp, a[*i].bits(), a[*j].bits()),
@@ -206,33 +311,31 @@ pub fn check_functions(h: &Heap, store: &Store, fs: &[Function]) -> Result<(), S
             };
             match first.get(&key) {
                 None => {
-                    first.insert(key, id);
+                    first.insert(key, i);
                 }
                 Some(&o) => {
-                    let b = store.args(o);
-                    if brk!("function_value_unread" => false; f.to.iter().any(|i| a[*i] != b[*i])) {
-                        bad.push((persp, id));
+                    let b = rows[o].1;
+                    if brk!("function_value_unread" => false; f.to.iter().any(|j| a[*j] != b[*j])) {
+                        bad.push((*persp, i));
                     }
                 }
             }
-        });
+        }
         if brk!("function_check_off" => true; bad.is_empty()) {
             continue;
         }
         // the first book, by name, with a break; in it the smallest key
         let book = bad.iter().map(|(p, _)| *p).min_by(|a, b| cmp_js(h.name(*a), h.name(*b))).unwrap();
-        let text = |id: u32, ps: &[usize]| ps.iter().map(|i| h.canon(store.args(id)[*i])).collect::<Vec<_>>().join(", ");
-        let mut keys: Vec<(String, u32)> = bad.iter().filter(|(p, _)| *p == book).map(|(_, id)| (text(*id, &f.key), *id)).collect();
+        let text = |a: &[Term], ps: &[usize]| ps.iter().map(|i| h.canon(a[*i])).collect::<Vec<_>>().join(", ");
+        let mut keys: Vec<(String, usize)> = bad.iter().filter(|(p, _)| *p == book).map(|(_, i)| (text(rows[*i].1, &f.key), *i)).collect();
         keys.sort_by(|a, b| cmp_js(&a.0, &b.0));
         keys.dedup_by(|a, b| a.0 == b.0);
-        let (k, id) = (&keys[0].0, keys[0].1);
-        let mut vals: Vec<String> = Vec::new();
-        store.each_row(f.rel, |persp, o| {
-            let a = store.args(o);
-            if persp == book && a.len() == n && f.key.iter().all(|i| a[*i] == store.args(id)[*i]) {
-                vals.push(text(o, &f.to));
-            }
-        });
+        let (k, at) = (&keys[0].0, rows[keys[0].1].1);
+        let mut vals: Vec<String> = rows
+            .iter()
+            .filter(|(persp, a)| *persp == book && a.len() == n && f.key.iter().all(|i| a[*i] == at[*i]))
+            .map(|(_, a)| text(a, &f.to))
+            .collect();
         vals.sort_by(|a, b| cmp_js(a, b));
         vals.dedup();
         let more = match keys.len() { 1 => String::new(), 2 => "; 1 more key breaks it too".to_string(), m => format!("; {} more keys break it too", m - 1) };
@@ -266,8 +369,8 @@ pub fn check_trees(h: &Heap, store: &Store, ts: &[Tree]) -> Result<(), String> {
     ts.sort_by(|a, b| cmp_js(h.name(a.rel), h.name(b.rel)));
     for t in ts {
         let mut books: FxMap<Sym, Vec<(Term, Term)>> = FxMap::default();
-        store.each_row(t.rel, |persp, id| {
-            if let [p, c] = store.args(id) {
+        store.each_args(h, t.rel, |persp, args| {
+            if let [p, c] = args {
                 books.entry(brk!("tree_book_ignored" => 0; persp)).or_default().push((*p, *c));
             }
         });

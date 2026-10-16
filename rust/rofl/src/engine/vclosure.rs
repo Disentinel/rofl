@@ -39,6 +39,9 @@ use crate::forest::Forest;
 pub struct VClosure {
     pub rel: Sym,
     pub edge: Sym,
+    /// The relation whose facts are the edges: the edge relation, or the source of an alias it is (engine/alias.rs).
+    pub src: Sym,
+    view: Option<crate::store::AliasView>,
     pub active: bool,
     /// Where witnesses are kept, a rule reads the closure's `derived_by` rows: it is rows then.
     prov_read: bool,
@@ -93,7 +96,7 @@ impl Eval {
                         break;
                     }
                 }
-                if reach.contains(&edge) {
+                if reach.contains(&edge) || reach.contains(&self.store.alias_view(edge).map_or(edge, |v| v.src)) {
                     why = "its edges are concluded from it".to_string();
                 }
             }
@@ -122,7 +125,9 @@ impl Eval {
             if prov_read {
                 self.vclosure_reason.push(format!("{}: a rule reads its derived_by rows, which a world that keeps witnesses stores", self.h.name(rel)));
             }
-            self.vclosures.push(VClosure { rel, edge, active: false, prov_read, built: None, rows: 0, mark: 0, pairs: 0, deep: 0, internal: 0 });
+            let view = self.store.alias_view(edge).cloned();
+            let src = view.as_ref().map_or(edge, |v| v.src);
+            self.vclosures.push(VClosure { rel, edge, src, view, active: false, prov_read, built: None, rows: 0, mark: 0, pairs: 0, deep: 0, internal: 0 });
             self.store.virtuals.push(crate::store::VirtualRel { rel, edge, base_rule: rule_ids.0, step_rule: rule_ids.1, forests: Rc::from(Vec::new()) });
             if !why.is_empty() {
                 self.vclosures[ci].built = Some(usize::MAX);
@@ -239,7 +244,7 @@ impl Eval {
     /// The forests of a closure, one for each book of its edge relation, as the edges stand: built again when the edge
     /// relation has changed since.
     fn vforests(&mut self, ci: usize) -> Rc<[(Sym, Rc<Forest>)]> {
-        let edge = self.vclosures[ci].edge;
+        let edge = self.vclosures[ci].src;
         let n = self.store.rel_len_est(edge, None);
         if self.vclosures[ci].built != Some(n) && !(self.vclosures[ci].built.is_some() && brk!("vclosure_stale_forest" => true; false)) {
             let forests = match self.vextended(ci) {
@@ -247,10 +252,13 @@ impl Eval {
                 None => {
                     let mut books: FxMap<Sym, Vec<(Term, Term)>> = FxMap::default();
                     let mut rows = 0;
+                    let mut seen: FxSet<(Sym, u64, u64)> = FxSet::default();
                     self.store.each_row(edge, |persp, id| {
-                        if let [p, c] = self.store.args(id) {
-                            books.entry(persp).or_default().push((*p, *c));
+                        if let Some((p, c)) = self.vedge(ci, id) {
                             rows += 1;
+                            if seen.insert((persp, p.bits(), c.bits())) {
+                                books.entry(persp).or_default().push((p, c));
+                            }
                         }
                     });
                     self.vclosures[ci].rows = rows;
@@ -271,20 +279,36 @@ impl Eval {
         self.store.virtuals[ci].forests.clone()
     }
 
+    /// The edge a fact of the closure's edge relation is, its parent and child; an alias's from the row of its source.
+    fn vedge(&self, ci: usize, id: FactId) -> Option<(Term, Term)> {
+        let args = self.store.args(id);
+        match &self.vclosures[ci].view {
+            Some(v) => match v.project(args)?.as_slice() {
+                [p, c] => Some((*p, *c)),
+                _ => None,
+            },
+            None => match args {
+                [p, c] => Some((*p, *c)),
+                _ => None,
+            },
+        }
+    }
+
     /// The forests of `ci` with the edges added since they were built, where every old edge stands and each new one
     /// adds a tree below the old ones (`Forest::extended`): a file added to a corpus, without numbering it all again.
     fn vextended(&mut self, ci: usize) -> Option<Vec<(Sym, Rc<Forest>)>> {
         let c = &self.vclosures[ci];
         c.built?;
-        let (edge, mark, rows) = (c.edge, c.mark, c.rows);
+        let (edge, mark, rows) = (c.src, c.mark, c.rows);
         let mut old = 0;
         let mut books: FxMap<Sym, Vec<(Term, Term)>> = FxMap::default();
+        let mut seen: FxSet<(Sym, u64, u64)> = FxSet::default();
         self.store.each_row(edge, |persp, id| {
-            if let [p, c] = self.store.args(id) {
+            if let Some((p, c)) = self.vedge(ci, id) {
                 if id < mark {
                     old += 1;
-                } else {
-                    books.entry(persp).or_default().push((*p, *c));
+                } else if seen.insert((persp, p.bits(), c.bits())) {
+                    books.entry(persp).or_default().push((p, c));
                 }
             }
         });
@@ -482,10 +506,10 @@ impl Eval {
         let mut due = false;
         for &ci in cis.clone().iter() {
             let c = &self.vclosures[ci];
-            if !c.active || !cur.by_rel.contains_key(&c.edge) {
+            if !c.active || !cur.by_rel.contains_key(&c.src) {
                 continue;
             }
-            let rows = self.store.rel_len_est(c.edge, None);
+            let rows = self.store.rel_len_est(c.src, None);
             if self.vreader_seen.get(&(r.id, ci)) != Some(&rows) {
                 due = true;
             }
@@ -499,11 +523,9 @@ impl Eval {
     /// read from the tree; the rest each as a row, once.
     fn vnews(&mut self, ci: usize, cur: &Front) -> (Vec<(Sym, Term)>, Vec<(Sym, Term, Term)>) {
         let forests = self.vforests(ci);
-        let mut edges: Vec<(Sym, Term, Term)> = cur.by_rel.get(&self.vclosures[ci].edge).into_iter().flatten().filter_map(|e| match self.store.args(*e) {
-            [p, c] => Some((self.store.rec(*e).persp, *p, *c)),
-            _ => None,
-        }).collect();
+        let mut edges: Vec<(Sym, Term, Term)> = cur.by_rel.get(&self.vclosures[ci].src).into_iter().flatten().filter_map(|e| self.vedge(ci, *e).map(|(p, c)| (self.store.rec(*e).persp, p, c))).collect();
         edges.sort_unstable_by_key(|(b, p, c)| (*b, p.bits(), c.bits()));
+        edges.dedup_by_key(|(b, p, c)| (*b, p.bits(), c.bits()));
         let ends: FxSet<(Sym, u64)> = edges.iter().map(|(b, _, c)| (*b, c.bits())).collect();
         let mut rows: Vec<(Sym, Term, Term)> = Vec::new();
         let mut seen: FxSet<(Sym, u64, u64)> = FxSet::default();
@@ -537,7 +559,7 @@ impl Eval {
         for b in r.plan.iter() {
             let BodyElem::Pos(l) = b else { continue };
             let Some(ci) = self.vclosure_for(l.rel) else { continue };
-            if !cur.by_rel.contains_key(&self.vclosures[ci].edge) {
+            if !cur.by_rel.contains_key(&self.vclosures[ci].src) {
                 continue;
             }
             let (mut end, mut pre) = (Vec::new(), Vec::new());
@@ -572,7 +594,7 @@ impl Eval {
         let Some(cis) = self.vreaders.get(&r.id) else { return };
         for &ci in cis.clone().iter() {
             if self.vclosures[ci].active {
-                let rows = self.store.rel_len_est(self.vclosures[ci].edge, None);
+                let rows = self.store.rel_len_est(self.vclosures[ci].src, None);
                 self.vreader_seen.insert((r.id, ci), rows);
             }
         }
@@ -626,7 +648,11 @@ impl Eval {
         self.vforests(ci);
         let v = &self.store.virtuals[ci];
         let (rule, parent, step) = v.firing(book, a, d)?;
-        let (edge, step_rule) = (self.store.get(v.edge, book, &[parent, d])?, v.step_rule);
+        let (rel, step_rule) = (v.edge, v.step_rule);
+        let edge = match self.store.get(rel, book, &[parent, d]) {
+            Some(e) => e,
+            None => self.alias_fact(rel, book, &[parent, d])?,
+        };
         if !brk!("vclosure_derive_always_step" => true; step) {
             return Some((rule, vec![PremRef::Fact(edge)]));
         }
@@ -662,7 +688,7 @@ impl Eval {
         if !self.vany {
             return false;
         }
-        let edges: HashSet<Sym> = self.vclosures.iter().filter(|c| c.active).map(|c| c.edge).collect();
+        let edges: HashSet<Sym> = self.vclosures.iter().filter(|c| c.active).map(|c| c.src).collect();
         let mut reach: HashSet<Sym> = HashSet::from([rel]);
         let reached = loop {
             if reach.iter().any(|r| edges.contains(r)) {

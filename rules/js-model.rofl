@@ -268,6 +268,7 @@ edb(ast_node).
 -- with its key and both values, never silently believed; the planner reads a bound id as one match.
 function ast_node(N, to Kind, to File, to Line).
 function ast_attr(N, K, to V).
+function ast_child(P, F, I, to C).
 edb(lang_of_corpus).
 lang_of_corpus(js).
 

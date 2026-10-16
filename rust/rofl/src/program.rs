@@ -1090,6 +1090,7 @@ pub fn load_program(e: &mut Eval, text: &str, who: Option<&str>) -> Loaded {
     let mut declared = crate::structure::declared(&e.h, &e.v, &mut e.store);
     // the closures of declared trees, and what a batch concludes before a declaration reads it
     let mut closure_of = crate::structure::closures(&e.h, &e.v, &mut e.store);
+    let mut aliased = crate::structure::aliased(&e.h, &e.v, &mut e.store);
     let (mut batch_rules, mut batch_facts): (std::collections::HashSet<Sym>, std::collections::HashSet<Sym>) = Default::default();
     let mut lowered: Vec<String> = Vec::new();
     let mut claimed_late = false;
@@ -1098,7 +1099,7 @@ pub fn load_program(e: &mut Eval, text: &str, who: Option<&str>) -> Loaded {
     for pc in std::mem::take(&mut clauses) {
         let pc = &pc;
         if let Some(st) = &pc.structure {
-            let stored = if st.closure.is_some() { crate::structure::concluded_by_rules(&e.h, &e.v, &mut e.store) } else { Default::default() };
+            let stored = if st.closure.is_some() || st.source.is_some() { crate::structure::concluded_by_rules(&e.h, &e.v, &mut e.store) } else { Default::default() };
             let concluded = |cl: Sym| -> Option<String> {
                 if stored.contains(&cl) || batch_rules.contains(&cl) {
                     Some("a rule".to_string())
@@ -1108,7 +1109,15 @@ pub fn load_program(e: &mut Eval, text: &str, who: Option<&str>) -> Loaded {
                     None
                 }
             };
-            match crate::structure::check_decl(&e.h, &e.v, pc, &declared, &concluded) {
+            // a name an alias cannot take: another alias's, or a tree's closure
+            let taken: std::collections::HashSet<Sym> = aliased.iter().chain(closure_of.keys()).copied().collect();
+            match crate::structure::check_decl(&e.h, &e.v, pc, &declared, &taken, &concluded) {
+                Ok(()) if st.source.is_some() => {
+                    aliased.insert(pc.head.rel);
+                    batch_rules.insert(pc.head.rel);
+                    lowered.push(crate::structure::lower_alias(&e.h, pc));
+                    structs.push(pc.clone());
+                }
                 Ok(()) => {
                     declared.insert(pc.head.rel);
                     if let Some(cl) = st.closure {
@@ -1156,7 +1165,7 @@ pub fn load_program(e: &mut Eval, text: &str, who: Option<&str>) -> Loaded {
         }
         match to_clause(&mut e.h, &e.v, pc) {
             Ok(c) => {
-                if let Some(d) = crate::structure::check_closure_head(&e.h, &c, &closure_of) {
+                if let Some(d) = crate::structure::check_closure_head(&e.h, &c, &closure_of, &aliased) {
                     diags.push(d);
                     continue;
                 }
@@ -1181,10 +1190,10 @@ pub fn load_program(e: &mut Eval, text: &str, who: Option<&str>) -> Loaded {
         return late_claim();
     }
     diags.extend(unready);
-    // THE RULES A CLOSURE LOWERS TO are the declaration's, trusted as the kernel's own writing is
+    // THE RULES A CLOSURE OR AN ALIAS LOWERS TO are the declaration's, trusted as the kernel's own writing is
     let mut low: Vec<Clause> = Vec::with_capacity(lowered.len());
     for t in &lowered {
-        let pcs = rofl_parse::parse(&mut e.h, t).expect("a lowered closure reads");
+        let pcs = rofl_parse::parse(&mut e.h, t).expect("a lowered declaration reads");
         match to_clause(&mut e.h, &e.v, &pcs[0]).and_then(|c| check_clause(&e.h, &e.v, &c, None, true)) {
             Ok(r) => low.push(r),
             Err(d) => diags.push(d),

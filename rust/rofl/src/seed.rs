@@ -660,10 +660,10 @@ pub fn cell_json(h: &Heap, s: &Store, c: CellId, like: Option<CellId>) -> Value 
 }
 
 /// A row a structure answers, as `fact_json` writes a stored one: derived, of its tick.
-pub fn virtual_json(h: &Heap, rel: Sym, book: Sym, a: Term, d: Term) -> Value {
+pub fn virtual_json(h: &Heap, rel: Sym, book: Sym, args: &[Term]) -> Value {
     let mut key = String::new();
-    crate::store::write_fact_key(h, rel, book, &[a, d], &mut key);
-    json!({ "key": key, "rel": h.name(rel), "persp": h.name(book), "args": [term_to_json(h, a), term_to_json(h, d)], "scope": "tick", "base": false, "frozen": false })
+    crate::store::write_fact_key(h, rel, book, args, &mut key);
+    json!({ "key": key, "rel": h.name(rel), "persp": h.name(book), "args": args.iter().map(|t| term_to_json(h, *t)).collect::<Vec<_>>(), "scope": "tick", "base": false, "frozen": false })
 }
 
 /// One fact as a snapshot's `facts` list writes it, with its key.
