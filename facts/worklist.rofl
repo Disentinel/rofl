@@ -3451,11 +3451,8 @@ work_spawned(w_service_graph, f_a_request_reaches_its_handler_by_segments_of_tex
 -- the path-only match and its suffix decision are gone.
 work_spawned(w_service_graph, f_a_request_walks_the_network_before_it_reaches_a_route).
 
-work(w_net_translators,
-  "Configs into the vocabulary of rules/net/, one translator per source, each a scanner that writes facts and knows only its own format: a DNS zone file and a cloud's DNS (points, points_in, view); nginx (server_name, location, proxy_pass with and without a URI, ssl_certificate, stream blocks) and haproxy (frontend, backend, mode tcp/http, acl host/path/sni) into hop, hop_when, hop_path, hop_host, layer, tls_on, cert; Kubernetes templates (Service ClusterIP and NodePort as a virtual listener with keeps_source, Ingress and the ALB/NLB annotations, NetworkPolicy as guard and allows); cloud security groups and ACLs (guard, allows, allows_group), NAT gateways (hop_from). The proof of each: a real config of the owner's kind, its translation checked against the requests it should and should not let through.").
-work_state(w_net_translators, open).
-work_needs(w_net_translators, w_service_graph).
-work_spawned(w_net_translators, f_a_request_walks_the_network_before_it_reaches_a_route).
+-- The translators of configs into the vocabulary of rules/net/ (zone files, nginx, haproxy, cluster templates, cloud
+-- groups) are written on site as scanners, not here (owner, 2026-10-16): the tree owes them the vocabulary only.
 
 -- ===========================================================================
 -- DOCUMENTATION DERIVED FROM THE LEDGER
