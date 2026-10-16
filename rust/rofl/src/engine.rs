@@ -1185,9 +1185,9 @@ pub struct Eval {
     pub no_provenance: bool,
     /// A provenanced world no rule reads `derived_by` of writes its rows when
     /// something asks (prov.rs): firings noted, and whether to note them.
-    pending_prov: Vec<(FactId, Sym, u32)>,
+    pending_prov: prov::Notes,
     /// The base facts whose `asserted_by` row is not written yet: the fact, who, the tick (prov.rs).
-    pub(crate) pending_assert: Vec<(FactId, Sym, u32)>,
+    pub(crate) pending_assert: prov::Notes,
     /// A rule of the program reads `asserted_by`: a load writes its rows as it asserts.
     pub(crate) reads_assertions: bool,
     pub lazy_prov: bool,
@@ -1605,8 +1605,8 @@ impl Eval {
             known_answer: known,
             safety_memo: None,
             no_provenance: false,
-            pending_prov: Vec::new(),
-            pending_assert: Vec::new(),
+            pending_prov: prov::Notes::default(),
+            pending_assert: prov::Notes::default(),
             reads_assertions: false,
             lazy_prov: false,
             prov_eager: HashSet::new(),

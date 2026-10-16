@@ -108,8 +108,8 @@ from the store.
 2. **The mapped volume.** Built: `Session::keep_volume` writes the world as the arenas it is, `open_volume` maps
    them and copies nothing (`rust/rofl/src/volume.rs`; at 250 vscode files it opens in 0.6 s against 9.2 s for the
    image, holding 0.36 GB against 1.6 GB, for twice the disk;
-   `f_a_world_kept_as_a_volume_opens_mapped_in_a_fifteenth_of_the_time`). Left: a write below the mark copies a
-   whole mapped arena.
+   `f_a_world_kept_as_a_volume_opens_mapped_in_a_fifteenth_of_the_time`). A write below the mark copies the value it
+   writes, not the arena (`f_a_kept_layer_streams_its_base_and_copies_none`).
 3. **Resume** (decision 4, H5). Built for the plain path: `Session::resume`
    (`f_a_step_wall_in_the_plain_path_is_a_continuation`). The place it stopped is kept in the volume, so another
    process opens it and goes on: `scripts/vscode_pieces.ts` evaluates vscode in pieces of a fixed time, each its own
@@ -122,7 +122,10 @@ from the store.
    (`f_a_stage_plan_keeps_rings_whole_and_its_stages_equal_the_whole`). Real rings: vscode 223 files, webpack 580 (6
    counting only imports at the top of a module). An index of the volume takes its writes in a layer over it and the
    citer index is kept in the volume, so a stage's own memory is near its plan
-   (`f_an_index_of_a_volume_takes_its_writes_in_a_layer_over_it`). Left: a write below the mark copies its column.
+   (`f_an_index_of_a_volume_takes_its_writes_in_a_layer_over_it`). Keeping a stage streams each column from the
+   volume under it and puts the new entries in its tables, so it copies nothing into the heap, and the provenance
+   notes are read where they lie (`f_a_kept_layer_streams_its_base_and_copies_none`). Left: the plan's weight per
+   fact underestimates a stage that derives much over what is kept.
 5. **Workers by key** (decision 7).
 6. **The explanation by file**: the why of an absence as a table of files, each row expanded by lifting one volume.
    Built over the evaluated world: a whynot walk parted by file, a row a file with its answers and the premises it

@@ -1,8 +1,9 @@
-//! The store as a volume holds it (`crate::volume`): every column and table frozen into one base and written as
-//! the arenas it is, so the store read back maps them and copies none; the small per-world fields and the cells
-//! between them, by id.
+//! The store as a volume holds it (`crate::volume`): every column and table written as the one base it would be
+//! frozen into, so the store read back maps them and copies none; the small per-world fields and the cells between
+//! them, by id. A layer over a mapped base is written as the base streamed from its file and the layer after it, a
+//! table as the base with the layer's slots put in it: keeping copies no mapped column into the heap.
 use super::*;
-use crate::arena::{VolR, VolW};
+use crate::arena::{placed, VolR, VolW};
 
 fn terms(w: &mut VolW, ts: &[Term]) {
     w.arena(ts);
@@ -46,6 +47,57 @@ fn read_patterns(r: &mut VolR) -> Result<Option<Rc<ArgIndex>>, String> {
     Ok(Some(Rc::new(by_pat)))
 }
 
+fn col<T: Pod>(w: &mut VolW, c: &Col<T>) {
+    w.arena_placed(&c.base, &c.lows(), &c.own);
+}
+
+impl Tuples {
+    /// As `freeze` would leave the base: the top's tuples after the base's, put in its table, or in the table it
+    /// grows to with all of them.
+    fn write(&self, w: &mut VolW) {
+        let (b, t) = (&*self.base, &self.top);
+        if b.len() == 0 || t.len() == 0 {
+            let a = if b.len() == 0 { t } else { b };
+            w.arena(&a.ends);
+            w.arena(&a.sks);
+            w.arena(&a.args);
+            return w.arena(&a.cons);
+        }
+        let at = b.args.len() as u32;
+        w.arena_parts(&[&b.ends, &t.ends.iter().map(|e| e + at).collect::<Vec<u32>>()]);
+        w.arena_parts(&[&b.sks, &t.sks]);
+        w.arena_parts(&[&b.args, &t.args]);
+        let mut cap = b.cons.len();
+        for len in b.len()..self.len() {
+            if (len + 1) * 4 >= cap * 3 {
+                cap = ((len + 1) * 2).next_power_of_two().max(64);
+            }
+        }
+        if cap == b.cons.len() {
+            let put = placed(&b.cons, TUP_EMPTY, (0..t.len() as TupId).map(|k| (tup_hash(t.args(k)), self.t0 + k)));
+            w.arena_placed(&b.cons, &put, &[]);
+        } else {
+            w.arena(&crate::arena::table(cap, TUP_EMPTY, (0..self.len() as TupId).map(|k| (tup_hash(self.args(k)), k))));
+        }
+    }
+}
+
+impl Fired {
+    fn write(&self, w: &mut VolW) {
+        let (b, own) = (&*self.base, &self.own);
+        let fresh = own.iter().filter(|h| **h != 0).count();
+        w.u64((b.n + fresh) as u64);
+        w.u32((b.zero || own.contains(&0)) as u32);
+        if ((b.n + own.len()) * 2).next_power_of_two().max(64) <= b.slots.len() {
+            w.arena_placed(&b.slots, &placed(&b.slots, 0, own.iter().filter(|h| **h != 0).map(|&h| (h, h))), &[]);
+        } else {
+            let mut all = self.clone();
+            all.freeze();
+            w.arena(&all.base.slots);
+        }
+    }
+}
+
 fn prem_tags_ok(words: &[u32]) -> bool {
     words.iter().step_by(2).all(|&t| t <= 4)
 }
@@ -53,7 +105,7 @@ fn prem_tags_ok(words: &[u32]) -> bool {
 impl Store {
     pub fn write_volume(&mut self, w: &mut VolW) {
         self.sweep();
-        self.freeze_as_is();
+        self.idx.freeze();
         for x in [self.unordered as u64, self.tick as u64, self.dirty as u64, self.partial_eval as u64, self.version, self.wits_live as u64, self.n_live as u64] {
             w.u64(x);
         }
@@ -79,14 +131,10 @@ impl Store {
             w.u32(e.partial as u32);
         }
         let f = &self.facts;
-        w.arena(&f.recs.base);
-        w.arena(&f.bflags);
-        let t = &f.tups.base;
-        w.arena(&t.ends);
-        w.arena(&t.sks);
-        w.arena(&t.args);
-        w.arena(&t.cons);
-        w.arena(&self.keys_base);
+        col(w, &f.recs);
+        w.arena_parts(&[&f.bflags, &f.recs.own.iter().map(|r| r.flags()).collect::<Vec<u8>>()]);
+        f.tups.write(w);
+        self.write_keys(w);
         let mut rels: Vec<(&Sym, &Vec<(Sym, KeyRun)>)> = self.idx.iter().collect();
         rels.sort_unstable_by_key(|(r, _)| **r);
         w.u32(rels.len() as u32);
@@ -102,13 +150,10 @@ impl Store {
                 write_patterns(w, &self.facts, k.by_pat.as_deref());
             }
         }
-        w.arena(&self.wit_head.base);
-        w.arena(&self.wits.base);
-        w.arena(&self.prem_arena.base);
-        let fired = &self.fired.base;
-        w.u64(fired.n as u64);
-        w.u32(fired.zero as u32);
-        w.arena(&fired.slots);
+        col(w, &self.wit_head);
+        col(w, &self.wits);
+        col(w, &self.prem_arena);
+        self.fired.write(w);
         let c = &self.cells;
         w.u32(c.recs.len() as u32);
         for r in &c.recs {
@@ -157,6 +202,25 @@ impl Store {
         }
     }
 
+    /// The key table as `freeze` would leave it: the layer's facts put in the base's table where it is the size a
+    /// table of them all is made, else that table made.
+    fn write_keys(&self, w: &mut VolW) {
+        let (n, mark) = (self.facts.len(), self.facts.recs.mark);
+        if mark == 0 {
+            w.arena(&self.keys);
+        } else if self.keys.is_empty() {
+            w.arena(&self.keys_base);
+        } else if ((n + 1) * 4).next_power_of_two().max(64) == self.keys_base.len() {
+            let put = placed(&self.keys_base, EMPTY, (mark as FactId..n as FactId).map(|id| {
+                let r = self.facts.recs[id as usize];
+                (hash_key(r.rel, r.persp, self.args(id)), id)
+            }));
+            w.arena_placed(&self.keys_base, &put, &[]);
+        } else {
+            w.arena(&self.key_table(0));
+        }
+    }
+
     /// The store a volume holds, its columns mapped.
     pub fn read_volume(r: &mut VolR) -> Result<Store, String> {
         let mut s = Store::new();
@@ -180,7 +244,7 @@ impl Store {
         }
         let recs: Arena<FactRec> = r.arena()?;
         let n = recs.len();
-        s.facts.recs = Col { mark: n, base: Rc::new(recs), own: Vec::new() };
+        s.facts.recs = Col { mark: n, base: Rc::new(recs), own: Vec::new(), ..Col::default() };
         s.facts.bflags = Rc::new(r.arena()?);
         let tups = TupSeg { ends: r.arena()?, sks: r.arena()?, args: r.arena()?, cons: r.arena()? };
         s.facts.tups = Tuples { t0: tups.len() as TupId, base: Rc::new(tups), top: TupSeg::default() };
@@ -203,12 +267,12 @@ impl Store {
             groups.insert(rel, v);
         }
         s.idx = Runs { base: Rc::new(groups), own: Groups::default() };
-        let col = |a: Arena<u32>| Col { mark: a.len(), base: Rc::new(a), own: Vec::new() };
+        let col = |a: Arena<u32>| Col { mark: a.len(), base: Rc::new(a), own: Vec::new(), ..Col::default() };
         s.wit_head = col(r.arena()?);
         let wits: Arena<WitNode> = r.arena()?;
-        s.wits = Col { mark: wits.len(), base: Rc::new(wits), own: Vec::new() };
+        s.wits = Col { mark: wits.len(), base: Rc::new(wits), own: Vec::new(), ..Col::default() };
         let prems: Arena<PremRef> = r.arena_checked(prem_tags_ok)?;
-        s.prem_arena = Col { mark: prems.len(), base: Rc::new(prems), own: Vec::new() };
+        s.prem_arena = Col { mark: prems.len(), base: Rc::new(prems), own: Vec::new(), ..Col::default() };
         let n = r.u64()? as usize;
         let zero = r.u32()? == 1;
         let slots: Arena<u64> = r.arena()?;
@@ -258,5 +322,47 @@ impl Store {
             s.citers = Some(Rc::new(Citers { offs, ids, ..Citers::default() }));
         }
         Ok(s)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::session::Session;
+
+    /// A world opened from a volume and added to is kept as the bytes it keeps frozen: the layer written over the
+    /// mapped base is the base `freeze` makes, its tables put in where they have room (a few facts more) and made
+    /// again where they grow (thousands).
+    #[test]
+    fn a_layer_is_kept_as_its_frozen_self() {
+        for more in [0, 3000] {
+            layer_kept_as_frozen(more);
+        }
+    }
+
+    fn layer_kept_as_frozen(more: usize) {
+        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+        let read = |p: &str| std::fs::read_to_string(root.join(p)).unwrap();
+        let dir = std::env::temp_dir().join(format!("rofl-layer-{}-{more}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let at = |n: &str| dir.join(n).to_str().unwrap().to_string();
+        let mut s = Session::fresh(200_000_000);
+        s.load(&read("boot.rofl"), None).unwrap();
+        s.load(&read("rules/stage-plan.rofl"), None).unwrap();
+        s.evaluate().unwrap();
+        s.keep_volume(&at("a.vol")).unwrap();
+        let mut o = Session::open_volume(&at("a.vol"), 200_000_000).unwrap();
+        let many: String = (0..more).map(|i| format!("plan_file(\"m{i}.ts\", {i}).\n")).collect();
+        o.load_delta(&(read("facts/stage-plan.rofl") + &many), None).unwrap();
+        let (st, h) = (&o.eval.store, &o.eval.h);
+        let layered = [!st.facts.recs.own.is_empty(), st.facts.tups.top.len() > 0, !st.keys.is_empty(), !st.wits.own.is_empty(), !st.fired.own.is_empty(), h.layered().0, h.layered().1];
+        assert_eq!(layered, [true; 7], "facts, tuples, keys, witnesses, firings, names, functors");
+        o.keep_volume(&at("b.vol")).unwrap();
+        o.eval.store.freeze_as_is();
+        o.eval.h.freeze();
+        o.keep_volume(&at("c.vol")).unwrap();
+        let (b, c) = (std::fs::read(at("b.vol")).unwrap(), std::fs::read(at("c.vol")).unwrap());
+        std::fs::remove_dir_all(&dir).unwrap();
+        let first = b.iter().zip(&c).position(|(x, y)| x != y);
+        assert!(b == c, "{more} more: {} and {} bytes, first differing at {first:?}", b.len(), c.len());
     }
 }

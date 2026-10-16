@@ -47,7 +47,7 @@ impl Eval {
             return;
         }
         let n = (id, rule, self.store.tick);
-        if self.pending_prov.last() != Some(&n) {
+        if self.pending_prov.last() != Some(n) {
             self.pending_prov.push(n);
         }
     }
@@ -62,7 +62,7 @@ impl Eval {
     /// The `asserted_by` rows of the base facts asserted since the last call, where no rule reads them: a quarter of
     /// a code world's stored facts, each naming its fact by a term as large as the fact.
     pub fn settle_assertions(&mut self) {
-        for (id, who, tick) in std::mem::take(&mut self.pending_assert) {
+        for (id, who, tick) in self.pending_assert.take() {
             if !self.store.alive(id) {
                 continue;
             }
@@ -80,7 +80,7 @@ impl Eval {
         if self.pending_prov.is_empty() {
             return;
         }
-        let mut notes = std::mem::take(&mut self.pending_prov);
+        let mut notes = self.pending_prov.take();
         notes.sort_unstable();
         notes.dedup();
         for (id, rule, tick) in notes {
@@ -109,25 +109,60 @@ impl Eval {
     }
 }
 
-fn triples(ns: &[(FactId, Sym, u32)]) -> Vec<u32> {
-    ns.iter().flat_map(|&(f, r, t)| [f, r, t]).collect()
+/// Rows noted and not written: those a volume held, read where they lie, and those noted since.
+#[derive(Default, Clone)]
+pub(crate) struct Notes {
+    kept: crate::arena::Arena<u32>,
+    own: Vec<(FactId, Sym, u32)>,
 }
 
-fn read_triples(r: &mut crate::arena::VolR) -> Result<Vec<(FactId, Sym, u32)>, String> {
-    Ok(r.arena::<u32>()?.chunks_exact(3).map(|x| (x[0], x[1], x[2])).collect())
+impl Notes {
+    pub(crate) fn push(&mut self, n: (FactId, Sym, u32)) {
+        self.own.push(n);
+    }
+    pub(crate) fn last(&self) -> Option<(FactId, Sym, u32)> {
+        self.own.last().copied().or_else(|| self.kept.chunks_exact(3).last().map(|x| (x[0], x[1], x[2])))
+    }
+    pub(crate) fn len(&self) -> usize {
+        self.kept.len() / 3 + self.own.len()
+    }
+    pub(crate) fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+    pub(crate) fn iter(&self) -> impl Iterator<Item = (FactId, Sym, u32)> + '_ {
+        self.kept.chunks_exact(3).map(|x| (x[0], x[1], x[2])).chain(self.own.iter().copied())
+    }
+    pub(crate) fn take(&mut self) -> Vec<(FactId, Sym, u32)> {
+        let all = self.iter().collect();
+        *self = Notes::default();
+        all
+    }
+    pub(crate) fn clear(&mut self) {
+        *self = Notes::default();
+    }
+    fn write(&self, w: &mut crate::arena::VolW) {
+        w.arena_parts(&[&self.kept, &self.own.iter().flat_map(|&(f, r, t)| [f, r, t]).collect::<Vec<u32>>()]);
+    }
+    fn read(r: &mut crate::arena::VolR) -> Result<Notes, String> {
+        let kept = r.arena::<u32>()?;
+        if kept.len() % 3 != 0 {
+            return Err("a volume's notes are not triples".into());
+        }
+        Ok(Notes { kept, own: Vec::new() })
+    }
 }
 
 impl Eval {
     /// The rows noted and not written, as a volume keeps them: the opened world writes them when asked, as this one
     /// would, and keeping writes none.
     pub(crate) fn write_notes(&self, w: &mut crate::arena::VolW) {
-        w.arena(&triples(&self.pending_prov));
-        w.arena(&triples(&self.pending_assert));
+        self.pending_prov.write(w);
+        self.pending_assert.write(w);
     }
 
     pub(crate) fn read_notes(&mut self, r: &mut crate::arena::VolR) -> Result<(), String> {
-        self.pending_prov = read_triples(r)?;
-        self.pending_assert = read_triples(r)?;
+        self.pending_prov = Notes::read(r)?;
+        self.pending_assert = Notes::read(r)?;
         Ok(())
     }
 }
