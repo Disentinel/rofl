@@ -3785,3 +3785,36 @@ check_file("vscode_surface_split", "rules/js-surface.rofl").
 check_file("vscode_surface_split", "examples/checks/vscode-split-facts.rofl").
 check_file("vscode_surface_split", "examples/vscode/side-effects.rofl").
 check_file("vscode_surface_split", "examples/checks/vscode-surface-split-check.rofl").
+
+-- A world that asks for its own input (docs/cli.md): from examples/scan/src/main.js the scanner is run for each file a
+-- scanned file depends on, and for no other. Rust only: the TypeScript engine runs no scanner.
+check_world("scan_requests").
+check_file("scan_requests", "facts/model-units.rofl").
+check_file("scan_requests", "facts/js-kinds.rofl").
+check_file("scan_requests", "facts/js-callgraph.rofl").
+check_file("scan_requests", "facts/js-dataflow.rofl").
+check_file("scan_requests", "facts/js-modules.rofl").
+check_file("scan_requests", "facts/js-shapes.rofl").
+check_file("scan_requests", "facts/js-statements.rofl").
+check_file("scan_requests", "facts/js-controlflow.rofl").
+check_file("scan_requests", "facts/js-effects.rofl").
+check_file("scan_requests", "facts/js-globals.rofl").
+check_file("scan_requests", "facts/js-host.rofl").
+check_file("scan_requests", "facts/js-host-surface.rofl").
+check_file("scan_requests", "facts/js-lib-surface.rofl").
+check_file("scan_requests", "facts/js-attrs.rofl").
+check_file("scan_requests", "rules/js-structure.rofl").
+check_file("scan_requests", "rules/js-dataflow.rofl").
+check_file("scan_requests", "rules/js-model.rofl").
+check_file("scan_requests", "rules/js-callgraph.rofl").
+check_file("scan_requests", "rules/js-controlflow.rofl").
+check_file("scan_requests", "rules/js-effects.rofl").
+check_file("scan_requests", "rules/js-globals.rofl").
+check_file("scan_requests", "rules/js-host.rofl").
+check_file("scan_requests", "rules/js-ambient.rofl").
+check_file("scan_requests", "rules/js-attrs.rofl").
+check_file("scan_requests", "rules/js-modules.rofl").
+check_file("scan_requests", "rules/js-concat.rofl").
+check_file("scan_requests", "rules/js-surface.rofl").
+check_file("scan_requests", "examples/checks/scan-world.rofl").
+check_opt("scan_requests", one_engine, rust).

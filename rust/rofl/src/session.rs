@@ -38,7 +38,7 @@
 //! What is deliberately NOT here: any way to mutate the world mid-evaluation,
 //! and any query that hides whether it probed or scanned.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use crate::describe;
 use crate::engine::{Eval, Halt, Mode, Outcome, TickOutcome, WhyOpts, WhynotBounds, WhynotFile, EXPLAIN_WHYNOT_BOUNDS};
@@ -535,7 +535,15 @@ impl Session {
     /// unfinished.
     pub fn evaluate(&mut self) -> Result<Evaluated, Halt> {
         let r = self.eval.run();
-        self.evaluated(r)
+        let mut e = self.evaluated(r)?;
+        // what the world asks to be scanned is scanned and loaded, until it asks for nothing more
+        while !e.partial && self.scan_requests().map_err(|m| Halt::Strat(m, String::new()))? > 0 {
+            if self.eval.store.dirty {
+                let r = self.eval.run();
+                e = self.evaluated(r)?;
+            }
+        }
+        Ok(e)
     }
 
     fn evaluated(&mut self, r: Result<Outcome, Halt>) -> Result<Evaluated, Halt> {
@@ -1627,6 +1635,61 @@ impl Session {
         }
         self.eval.store.dirty = true;
         Ok(asks.len())
+    }
+
+    /// THE WORLD ASKS FOR FACTS IT DOES NOT HAVE (docs/cli.md, "A world that asks for its own input"). Each
+    /// `scan_request(Kind, Path)` with a `scanner(Kind, Command)` and no `scan_done` or `scan_failed` row yet runs the
+    /// command with the path as its last argument, all of them at once; what each prints is loaded as ROFL by delta,
+    /// with `scan_done(Kind, Path, Clauses)` or `scan_failed(Kind, Path, Message)` beside it. The number of requests run:
+    /// none means the world asks for nothing more.
+    pub fn scan_requests(&mut self) -> Result<usize, String> {
+        let main = self.eval.v.main;
+        // each argument as written back (`js`, `"a.js"`) and as its text (`js`, `a.js`)
+        let rows = |s: &mut Self, rel: &str, n: usize| -> Vec<Vec<(String, String)>> {
+            let r = s.eval.h.intern(rel);
+            s.eval.store.rel_persp(&s.eval.h, r, main).into_iter().map(|f| s.eval.store.args(f).to_vec()).filter(|a| a.len() == n).map(|a| {
+                a.iter().map(|t| (s.eval.h.canon(*t), match t.kind() { TermK::Atom(x) | TermK::Str(x) => s.eval.h.name(x).to_string(), _ => s.eval.h.canon(*t) })).collect()
+            }).collect()
+        };
+        let scanners: HashMap<String, String> = rows(self, "scanner", 2).into_iter().map(|r| (r[0].0.clone(), r[1].1.clone())).collect();
+        let done: HashSet<(String, String)> = rows(self, "scan_done", 3).into_iter().chain(rows(self, "scan_failed", 3))
+            .map(|r| (r[0].0.clone(), r[1].0.clone())).collect();
+        let mut todo: Vec<((String, String), String)> = rows(self, "scan_request", 2).into_iter()
+            .map(|r| ((r[0].0.clone(), r[1].0.clone()), r[1].1.clone())).filter(|(k, _)| !done.contains(k)).collect();
+        todo.sort();
+        todo.dedup();
+        if todo.is_empty() {
+            return Ok(0);
+        }
+        let runs: Vec<_> = todo.iter().map(|((kind, _), path)| {
+            let cmd = scanners.get(kind).cloned();
+            let path = path.clone();
+            std::thread::spawn(move || -> Result<String, String> {
+                let cmd = cmd.ok_or("no scanner(Kind, Command) for this kind")?;
+                let mut argv = cmd.split_whitespace();
+                let prog = argv.next().ok_or("an empty command")?;
+                let o = std::process::Command::new(prog).args(argv).arg(&path).output().map_err(|e| format!("{prog}: {e}"))?;
+                if !o.status.success() {
+                    let err = String::from_utf8_lossy(&o.stderr);
+                    return Err(format!("{cmd} exited {}: {}", o.status.code().unwrap_or(-1), err.lines().last().unwrap_or("")));
+                }
+                String::from_utf8(o.stdout).map_err(|_| "the scanner printed bytes that are not UTF-8".into())
+            })
+        }).collect();
+        let q = |s: &str| format!("\"{}\"", s.replace('\\', "\\\\").replace('"', "\\\""));
+        let mut src = String::new();
+        for (((kind, path), _), run) in todo.iter().zip(runs) {
+            match run.join().unwrap_or_else(|_| Err("the scanner's thread failed".into())) {
+                Ok(out) => {
+                    let n = out.lines().filter(|l| l.trim_end().ends_with('.')).count();
+                    src.push_str(&out);
+                    src.push_str(&format!("\nscan_done({kind}, {path}, {n}).\n"));
+                }
+                Err(e) => src.push_str(&format!("scan_failed({kind}, {path}, {}).\n", q(&e))),
+            }
+        }
+        self.load_delta(&src, None).map_err(|d| format!("a scanner's facts were refused: {}", d.join("; ")))?;
+        Ok(todo.len())
     }
 
     /// `Rofl.whynot` (src/api.ts:927). `(holds, text)` — a literal that HOLDS

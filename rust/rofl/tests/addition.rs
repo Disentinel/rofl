@@ -393,7 +393,10 @@ fn differential(seed: u64, head: &str, rules: Vec<String>, gen: fn(&mut Rng) -> 
         if step % 3 == 2 {
             let before = s.eval.canonical_state();
             s = if step % 6 == 5 {
-                let path = std::env::temp_dir().join(format!("rofl-addition-{}-{seed}.vol", std::process::id()));
+                // tests run side by side and share seeds: a file of its own for each volume
+                static KEPT: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+                let k = KEPT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                let path = std::env::temp_dir().join(format!("rofl-addition-{}-{k}.vol", std::process::id()));
                 let path = path.to_str().unwrap();
                 s.keep_volume(path).unwrap();
                 let opened = Session::open_volume(path, BUDGET);

@@ -29,10 +29,12 @@ export async function draw(el: HTMLElement, v: View, h: Hooks): Promise<Drawn> {
     const z = zoom(v, shut), frames = framesOf(z);
     const as = [...new Set(backendsOf(z).map((b) => b.format))].map((f) => [f, backendOf(z, f).write(z)]);
     if (graphs && v.kind !== 'graph') as.push(['mermaid (as a graph)', backendOf({ ...z, kind: 'graph' }).write(z)]);
-    el.innerHTML = `<div class="pbar"><span>${esc(counted(z))}</span><span class="spacer"></span>${h.show ? `<button type="button" data-show title="${esc(h.showAs?.[1] ?? 'open this picture in an editor tab, to pan and zoom')}">\u2922 ${esc(h.showAs?.[0] ?? 'Open in editor')}</button>` : ''}${graphs && v.kind !== 'proof' && h.pin && !frames ? '<button type="button" data-pin title="write where every mark is as placed(M, X, Y) facts">Pin layout</button>' : ''}</div>`
+    el.innerHTML = `<div class="pbar"><span>${esc(counted(z))}</span><span class="spacer"></span>${h.show ? `<button type="button" data-show title="${esc(h.showAs?.[1] ?? 'open this picture in an editor tab, to pan and zoom')}">\u2922 ${esc(h.showAs?.[0] ?? 'Open in editor')}</button>` : `<button type="button" data-full title="the picture over the whole page; Esc leaves">\u2922 ${el.classList.contains('full') ? 'Close' : 'Full screen'}</button>`}${graphs && v.kind !== 'proof' && h.pin && !frames ? '<button type="button" data-pin title="write where every mark is as placed(M, X, Y) facts">Pin layout</button>' : ''}</div>`
       + `${v.notes.map((n) => `<div class="note">${esc(n)}</div>`).join('')}<div class="stage"></div><div class="detail" hidden></div>`
       + as.map(([f, t]) => `<details class="as"><summary>as ${esc(f)}</summary><pre>${esc(t)}</pre></details>`).join('');
     const stage = el.querySelector<HTMLElement>('.stage')!, box = el.querySelector<HTMLElement>('.detail')!;
+    // over the whole page, not the Fullscreen API, which a page in a frame is often not allowed
+    el.querySelector('[data-full]')?.addEventListener('click', () => { el.classList.toggle('full'); void paint(); });
     stage.addEventListener('click', (e) => { const t = (e.target as Element).closest<HTMLElement>('[data-mark], [data-group]'); if (t?.dataset.group) void toggle(t.dataset.group); else if (t) detail(box, z, h, t.dataset.mark!); });
     // one picture, or one per frame in order, small multiples, each mark new or gone against the frame before
     const stages = frames ? frames.map((f) => { const d = el.ownerDocument.createElement('div'); d.className = 'frame'; d.innerHTML = `<div class="mute frame-key">frame ${esc(f.key)}</div><div class="frame-stage"></div>`; stage.append(d); return { el: d.lastElementChild as HTMLElement, view: f.view }; }) : [{ el: stage, view: z }];
@@ -46,6 +48,7 @@ export async function draw(el: HTMLElement, v: View, h: Hooks): Promise<Drawn> {
   };
   // zoom: a group shut is one mark with its count; a click on it opens it, a click on an open group shuts it
   const toggle = async (g: string) => { if (!shut.delete(g)) shut.add(g); await paint(); };
+  el.ownerDocument.addEventListener('keydown', (e) => { if (e.key === 'Escape' && el.classList.contains('full')) { el.classList.remove('full'); void paint(); } });
   await paint();
   return { toggle, report: () => report(), show: () => { const b = el.querySelector<HTMLButtonElement>('[data-show]'); b?.click(); return !!b && el.isConnected; } };
 }

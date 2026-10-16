@@ -54,7 +54,7 @@ command_shown("repl", 10).
 command_note("repl", "`? L`, `why L`, `whynot L`, `excise F`, `budget N { CMD }`; answers in sentences where a phrase exists, asks in them, loads a `.rofl.md` world").
 
 command_shown("scan", 11).
-command_note("scan", "-- <dir>   turn TypeScript into facts under facts/generated").
+command_note("scan", "-- <dir> [--out F]   a directory of JS/TS in, the facts the JS model reads out; then `rofl why L @rules/js.files F` (docs/cli.md)").
 
 command_shown("report", 12).
 command_note("report", "-- <files>   the epistemic report over a set of packs").
@@ -109,8 +109,8 @@ knob_note("ROFL_PROFILE", "env", "the cargo profile whose binaries the scripts r
 knob_shown("--ticks", 2).
 knob_note("--ticks", "rofl load", "`--ticks N --budget N --space N [--strata] [--retain N]`: the ticks to run and the walls; then the state is printed").
 
-knob_shown("--why", 3).
-knob_note("--why", "rofl load", "`--why L`, `--why-all L`, `--whynot L [--depth N --nodes N]`, `--excise F`: the explanation verbs, in the order given, answered in the reference's text; `--state` puts the dump back before them. Exit 4: a refused question").
+knob_shown("ask", 3).
+knob_note("ask", "rofl", "`rofl ask L`, `rofl why [--all] L`, `rofl whynot L [--depth N --nodes N]`, `rofl excise F`, then the world's flags and files, `@rules/js.files` for the JS model: one question answered in the reference's text, `--json` as `rofl serve` answers it. Exit 0 whole, 2 a file refused, 3 the world, 4 the question, 5 partial, 70 a defect (docs/cli.md). `rofl load --ask L --why L --whynot L --excise F` asks several in one run").
 
 knob_shown("--retract", 4).
 knob_note("--retract", "rofl load", "`--retract L`, repeated: take a base fact out after the first evaluation and print the state it leaves").
