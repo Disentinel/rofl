@@ -869,6 +869,7 @@ unit_concludes("rules/js-modules.rofl", probe_ext).
 unit_concludes("rules/js-modules.rofl", index_file).
 unit_concludes("rules/js-modules.rofl", last_ext).
 unit_concludes("rules/js-modules.rofl", site_last_seg).
+unit_concludes("rules/js-modules.rofl", file_stem).
 unit_concludes("rules/js-modules.rofl", ts_candidate).
 unit_concludes("rules/js-modules.rofl", ts_passed_over).
 unit_concludes("rules/js-modules.rofl", ts_resolved).
