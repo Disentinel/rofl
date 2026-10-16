@@ -38,6 +38,7 @@ sx_esc[surface](C) :- sx_esc[surface](I), inst_of[flow](I, C).
 sx_esc[surface](M) :- sx_esc[surface](N), may_be_node[flow](N, M).
 sx_esc[surface](V) :- sx_esc[surface](O), member_value[flow](O, _, V).
 sx_esc[surface](E) :- sx_esc[surface](A), array_elem[flow](A, _, E).
+sx_esc[surface](V) :- sx_esc[surface](X), keyed_put[flow](X, _, V).
 sx_esc[surface](V) :- sx_esc[surface](G), thrown_by[flow](G, V).
 sx_esc[surface](E) :- sx_esc[surface](G), yields[flow](G, E).
 
@@ -167,6 +168,7 @@ sx_ret_pnode[surface](F, N) :- ret_param[flow](F, _, E), may_be_node[flow](E, N)
 sx_ret_plit[surface](F, V)  :- ret_param[flow](F, _, E), may_be_lit[flow](E, V).
 sx_ret_param[surface](F, I) :- ret_param[flow](F, I, _).
 sx_gen_ret[surface](F, N)   :- returns[flow](F, E), ast_attr[code](F, generator, true), may_be_node[flow](E, N).
+sx_gen_rlit[surface](F, V)  :- returns[flow](F, E), ast_attr[code](F, generator, true), may_be_lit[flow](E, V).
 
 -- every value the function's returns may be, whoever called it: the iterator protocol and `yield*` read this
 ret_node_any[flow](F, N) :- sx_ret_node[surface](F, N).

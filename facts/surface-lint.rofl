@@ -70,4 +70,8 @@ xl_ok(merge_call, merge_fn, "the library member is a node of the file that reads
 xl_ok(cl_api, http_client, "a library's specifier is the same string in every file: the table of its members is read by the string, not by a node").
 xl_ok(cl_how, http_client, "a library's specifier is the same string in every file: the table of its members is read by the string, not by a node").
 xl_ok(ex_app, express_module, "a library's specifier is the same string in every file: the table of its members is read by the string, not by a node").
+xl_ok(contract_call, contract_fn, "the library member is a node of the file that reads it; an alias exported to another file is not recognised there (declared)").
+xl_ok(coroutine_of, runs_coroutine, "a library's package is the same string in every file: its contract is read by the string, not by a node").
+xl_ok(may_be_node, returns_argument, "a library's package is the same string in every file: its contract is read by the string, not by a node").
+xl_ok(may_be_lit, returns_argument, "a library's package is the same string in every file: its contract is read by the string, not by a node").
 xl_ok(ex_router_fn, express_module, "a library's specifier is the same string in every file: the table of its members is read by the string, not by a node").
