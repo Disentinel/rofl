@@ -13,6 +13,7 @@ rofl excise 'calls(a, b)'        boot.rofl world.rofl    # what taking the base 
 rofl load                        boot.rofl world.rofl    # the whole state
 rofl serve                                               # one JSON request a line, one answer a line
 rofl render --out DIR            world.rofl ...          # the sentence form
+rofl render --out DIR            world.rofl.md           # back into rules: DIR/world.rofl, DIR/world.phrases.rofl, the report on stdout
 ```
 
 A question verb is `rofl load` with that one question, so every flag of
@@ -34,6 +35,12 @@ byte over every world `npm test` loads, refusals included.
 `{"ok":true,"removed","added"}` for an excise, `{"ok":false,"error"}` for a
 refused question. With no question it prints `{"ok":true,"state","partial"}`.
 A run that ends before answering prints `{"ok":false,"error","exit"}`.
+
+**A `.rofl.md` file** is a world written as executable Markdown: wherever a file is named, the
+binary reads it into rules natively, after the worlds its `reads:` names, as `scripts/read.ts` does
+(`npm run mdcheck` holds the two to the byte). Its vocabulary comes from the tree: the nearest directory
+above the file holding `boot.rofl` and `facts/phrases.rofl`, else the one above the binary. A plain `.md`
+is a document and is refused (exit 2).
 
 **`@LIST`** stands for the files LIST names, one a line, each read from LIST's
 directory. `@rules/js.files` is the JS model, the files the notebook host
