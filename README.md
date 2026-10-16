@@ -1,6 +1,11 @@
 > **Using the notebook?** Start with [guide/QUICKSTART.md](guide/QUICKSTART.md):
 > install, the tutorial, a notebook of your own and one over your code.
 > The rest of this page is the language and the repository.
+>
+> **Nothing to install:** [disentinel.github.io/rofl](https://disentinel.github.io/rofl/) runs a notebook in the
+> browser. Drop a `.rofl.md` on it (with the files it reads, or its folder), or link one:
+> `?gh=owner/repo/path@ref` or `?url=<a GitHub or raw link>`, for example
+> [?gh=Disentinel/rofl/examples/visual/claim-proof.rofl.md](https://disentinel.github.io/rofl/?gh=Disentinel/rofl/examples/visual/claim-proof.rofl.md).
 
 # ROFL v1
 
@@ -15,9 +20,11 @@ are part of the semantics.
 
 The kernel is a *generic* inference machine: all semantics — including the
 schema of what a "rule" is and the rules that validate rules — live in the
-graph as data (`boot.rofl`). The kernel has zero runtime dependencies (the
-optional code scanner under `scanners/` is the only component with one,
-`@babel/parser`). TypeScript, runs under Bun or Node ≥ 22.
+graph as data (`boot.rofl`). The engine is Rust (the `rofl` binary under
+`rust/`, one native file); the TypeScript engine under `src/` is the parity
+reference, has zero runtime dependencies (the optional code scanner under
+`scanners/` is the only component with one, `@babel/parser`) and runs under
+Node ≥ 22.
 
 ## Using it
 
@@ -259,30 +266,18 @@ asserted as program text.
 
 ## Code scanner
 
-`scanners/` turns a JS/TS source tree into materialized ROFL facts,
-incrementally: each source file becomes one `.rofl` fact file keyed by content
-hash (unchanged files are never re-parsed; deleted files lose their fact
-file; `manifest.json` tracks what is current). Not part of the kernel — it
-lives outside `src/` and the kernel grep test on purpose.
+`npm run scan -- DIR --out code.rofl` turns a JS/TS source tree into the
+facts the JS model reads: `scanners/js_ast.ts` over each file and the host's
+path and string facts, as the notebook host gives them. Not part of the
+kernel — it lives outside `src/` and the kernel grep test on purpose. The
+model then runs in the Rust engine:
 
 ```sh
-npm run scan -- src --out facts/generated            # (re)materialize
-npm run scan -- src --out facts/generated \
-  --rules deps.rofl \
-  --query 'dependency[code]("repl.ts", M)' \
-  --why 'dependency[code]("repl.ts", "node:fs")'     # load boot + facts + rules, then ask
+npm run scan -- path/to/src --out code.rofl
+rofl why 'flows[code]("api/server.js", "api/users.js")' @rules/js.files code.rofl
 ```
 
-Fact vocabulary (v0), all in the `[code]` perspective: `src_file(Path, Hash12)`,
-`src_func(Path, Name, Line)`, `src_class(Path, Name, Line)`,
-`src_method(Path, Class, Name, Line)`, `src_import(Path, Source)`,
-`src_export(Path, Name)`, `src_call(Path, Caller, Callee)`,
-`src_parse_error(Path, Message)`.
-
-Provenance rides on the kernel's own machinery: the materializer emits a
-preamble granting `authority(code, scanner)`, fact files are loaded with
-`who=scanner`, and anyone else asserting into `[code]` surfaces as
-`forged[audit]` — no scanner-specific enforcement code.
+The stages, the relations each writes and the exit codes are in docs/cli.md.
 
 ## Inquiry layer
 
@@ -898,6 +893,19 @@ bit-identical state, tick log, and provenance regardless of insertion order
   design reasons are docs/aggregates.md, facts/agg.rofl and rules/agg.rofl.
   The amendment is `d_aggregates_in_the_kernel` in facts/spec.rofl, which
   retires `l_no_aggregation`.
+- **Rust is the engine, and START.md asked for TypeScript with zero runtime
+  dependencies under Bun or Node.** Decided 2026-10-02 by the owner
+  (f_rofl_moves_to_rust_first, f_rust_is_the_engine_ts_is_the_reference): the
+  `rofl` binary under `rust/` is the engine every measurement is taken on, and
+  it links crates (`serde_json`, `memmap2`) at build time. The two duties are
+  narrowed, not dropped, and each now says one thing per engine.
+  `s_zero_deps`: the TypeScript engine under `src/` still has no runtime
+  dependency (`package.json` has no `dependencies`); the Rust engine is one
+  static binary that needs nothing installed beside it, and its crates are
+  build-time. `s_two_runtimes`: the TypeScript engine runs under Node, which CI
+  holds (`goldens (node)`); Bun is no longer checked since the owner removed
+  its job on 2026-10-11; the Rust engine is native and runs under neither.
+  Both engines are held to one golden by `npm test`.
 
 <!-- END deviations -->
 

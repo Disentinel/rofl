@@ -178,6 +178,25 @@ lo_split_missing(Q, none) :- lo_nans(Q, N), N > 1, not lo_sh(Q).
 -- expect-row: lo_nans[main](lfany,1)
 -- expect-row: lo_nans[main](lfall,2)
 
+-- THE HOLISTIC KINDS over all groups' counts (lh* of agg-label-data.rofl), through the same questions
+lo_q(lhmed). lo_q(lhq0). lo_q(lhq100). lo_q(lhrank).
+lo_a(lhmed, V, M) :- lo_v(V), M is median(N ; G : lo_c(V, G, N)).
+lo_a(lhq0, V, M) :- lo_v(V), M is quantile(0, N ; G : lo_c(V, G, N)).
+lo_a(lhq100, V, M) :- lo_v(V), M is quantile(100, N ; G : lo_c(V, G, N)).
+lo_a(lhrank, V, M) :- lo_v(V), M is rank(1, N : lo_c(V, _, N)).
+lo_eng(lhmed, M) :- lhmed(M).
+lo_eng(lhq0, M) :- lhq0(M).
+lo_eng(lhq100, M) :- lhq100(M).
+lo_eng(lhrank, M) :- lhrank(M).
+lo_sh(lhmed) :- shrug(lhmed(_), _, _).
+lo_sh(lhq0) :- shrug(lhq0(_), _, _).
+lo_sh(lhq100) :- shrug(lhq100(_), _, _).
+lo_sh(lhrank) :- shrug(lhrank(_), _, _).
+-- expect-row: lo_nans[main](lhmed,1)
+-- expect-row: lo_nans[main](lhq0,1)
+-- expect-row: lo_nans[main](lhq100,2)
+-- expect-row: lo_nans[main](lhrank,1)
+
 -- lzg: the members of a group read through lw(g2, X) and lw(G, _), per completion: g1 and g2 count 1, and 2 where
 -- the unknown is g2's; g3 is a group only where the unknown is g3's, and counts 1 there
 lo_zg(V, G, S) :- lo_v(V), S is count(X : lo_w(V, g2, X), lo_w(V, G, _)).

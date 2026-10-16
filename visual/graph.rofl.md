@@ -27,6 +27,29 @@ Declared as facts:
 - <a id="level"></a>A mark M is at the level I
 - <a id="placed"></a>A mark M is placed at X Y
 - <a id="reserved_tag"></a>A tag K is reserved
+- <a id="note"></a>A note N is titled T and says S
+- <a id="points_at"></a>The note N points at a mark M saying S
+- <a id="contract"></a>The link from a mark M to a mark N carries K as V
+- <a id="laid_out"></a>A mark G lays out its marks as L
+- <a id="sits"></a>A mark M sits at V on K
+- <a id="subtitled"></a>A mark M is subtitled S
+- <a id="heat"></a>A mark M is hot at H
+
+> A note is a yellow box with a title and a text, and a thick bright arrow
+> to each mark it points at, the arrow saying S: a risk, a decision, "we
+> want to plug in here". A link's contract is what it carries, a row K and
+> V per fact; the line shows a small mark and the table when it is
+> pointed at or picked. A group is a frame that opens and shuts on a double
+> click; `lays out its marks as` names how a frame places what is inside
+> it: `layered-right` (the default), `layered-down`, `layered-up`,
+> `columns`, `lanes`, `lane-steps`, `matrix`, `table`, `timeline`,
+> `treemap`, `quadrant`, `radial`, `tree`, `ring`; the mark `picture`
+> names the layout of the whole picture. `sits at V on K` gives a layout
+> what it places by: `row` and `col` (and `head` as `row` or `col`) in a
+> matrix or a table, `t` and `lane` on a timeline, `qx` and `qy` (0 to 1)
+> in a quadrant, `ring` round a centre, `weight` in a treemap, `order` in
+> a lane. `subtitled` is a second, smaller line; `hot at H` tints the
+> box, H from 0 to 100.
 
 > A mark drawn as an icon is that picture instead of a shape: the
 > renderer's own (car, van, truck, bike, scooter, engine, wheel, seat, frame,

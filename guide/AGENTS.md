@@ -32,3 +32,14 @@ has `kind` (`answers`, `never`, `why`, `whynot`, `unsure`, `extends`,
 `excise`), `text`, `verdict` (`answers`, `holds`, `fails`, `blind`,
 `explained`, `unasked`), `total`, and `answers[]` of
 `{ sentence, literal, at }`, where `at` is where in the code.
+
+## Drawing
+
+Asked for a picture, read `rofl:visual/viewpoints.rofl.md`: sixty
+viewpoints, each with the question it answers, what its boxes, lines and
+frames mean, and its layout. Pick one by the question (`? V answers Q`,
+`? V is recognised by the words W`), then write the rules that map the
+notebook's own sentences onto `rofl:visual/graph.rofl.md` and end the cell
+with `draw graph`. The words, the layouts and the steps are in
+[docs/schemas.md](../docs/schemas.md); every kind of picture is in
+[DRAWING.md](DRAWING.md).

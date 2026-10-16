@@ -183,6 +183,7 @@ duty[readme](r_edb_for_reserved, guaranteed, "facts/deviations.rofl", "deviation
 duty[readme](r_unstratifiable_is_budgeted, guaranteed, "facts/deviations.rofl", "deviation(r_unstratifiable_is_budgeted,").
 duty[readme](r_rounds_replace_strata, guaranteed, "facts/deviations.rofl", "deviation(r_rounds_replace_strata,").
 duty[readme](r_aggregates_exist, guaranteed, "facts/deviations.rofl", "deviation(r_aggregates_exist,").
+duty[readme](r_rust_is_the_engine, guaranteed, "facts/deviations.rofl", "deviation(r_rust_is_the_engine,").
 
 -- ======================================================= boot.rofl [boot] ===
 -- The meta-kernel's own required results, stated in a comment block at the
@@ -540,6 +541,15 @@ qualifies[map](r_optimizations_exist, l_no_aggregation).
 -- entry START.md asks for, and `d_aggregates_in_the_kernel` the decision.
 amends[map](d_aggregates_in_the_kernel, l_no_aggregation).
 amends[map](l_no_gpu, s8_out_of_scope).
+
+-- ---- RUST IS THE ENGINE, AND START.md ASKED FOR TYPESCRIPT ALONE ----------
+-- Decided 2026-10-02 (f_rofl_moves_to_rust_first). Both START.md sentences are
+-- still owed by the TypeScript engine, so they are QUALIFIED, not amended: the
+-- reference keeps zero runtime dependencies and runs under Node, CI holds it,
+-- and the deviation says what each duty means for the Rust engine.
+qualifies[map](r_rust_is_the_engine, s_zero_deps).
+qualifies[map](r_rust_is_the_engine, s_two_runtimes).
+guards[map](c_ci_node, r_rust_is_the_engine).
 
 -- ---- the same obligation, written twice -----------------------------------
 -- Seven of the eight prohibited shortcuts in §7 are a §3 or §4 guarantee

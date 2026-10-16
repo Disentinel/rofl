@@ -27,7 +27,8 @@ export type Mark = { label: string; tags: string[]; from: string[]; on: string[]
 export type View = { kind: DrawKind; facts: Fact[]; marks: Record<string, Mark>; notes: string[]; cells?: { row: string; column: string; tags: string[] }[]; icons?: Record<string, string>; colours?: Record<string, string> };
 
 const RELS: Record<Family, [string, number][]> = {
-  graph: [['node', 1], ['link', 2], ['inside', 2], ['tagged', 2], ['link_tagged', 3], ['labelled', 2], ['level', 2], ['placed', 3], ['frame', 2], ['collapsed', 1], ['icon', 2], ['icon_drawing', 2], ['tag_colour', 2]],
+  graph: [['node', 1], ['link', 2], ['inside', 2], ['tagged', 2], ['link_tagged', 3], ['labelled', 2], ['level', 2], ['placed', 3], ['frame', 2], ['collapsed', 1], ['icon', 2], ['icon_drawing', 2], ['tag_colour', 2],
+    ['note', 3], ['points_at', 3], ['contract', 4], ['laid_out', 2], ['sits', 3], ['subtitled', 2], ['heat', 2]],
   argument: [['node', 1], ['link', 2], ['inside', 2], ['tagged', 2], ['link_tagged', 3], ['labelled', 2], ['frame', 2], ['collapsed', 1], ['icon', 2], ['icon_drawing', 2], ['tag_colour', 2]],
   time: [['lane', 2], ['during', 3], ['happens', 2], ['message', 4], ['in_state', 2], ['tagged', 2], ['labelled', 2], ['frame', 2], ['lane_group', 2], ['collapsed', 1]],
   table: [['value', 3], ['draws', 1], ['shows', 3], ['tagged', 2], ['frame', 2]],
