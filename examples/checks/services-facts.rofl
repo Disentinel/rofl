@@ -528,7 +528,7 @@ ast_child[code](n203d8a7f19c029f1_15, key, 0, n203d8a7f19c029f1_16).
 ast_attr[code](n203d8a7f19c029f1_15, computed, false).
 ast_attr[code](n203d8a7f19c029f1_15, shorthand, false).
 ast_node[code](n203d8a7f19c029f1_17, string_literal, "src/web/client.js", 3).
-ast_attr[code](n203d8a7f19c029f1_17, value, "http://localhost:3000").
+ast_attr[code](n203d8a7f19c029f1_17, value, "https://api.shop.example/v1").
 ast_child[code](n203d8a7f19c029f1_15, value, 0, n203d8a7f19c029f1_17).
 ast_child[code](n203d8a7f19c029f1_14, properties, 0, n203d8a7f19c029f1_15).
 ast_child[code](n203d8a7f19c029f1_10, arguments, 0, n203d8a7f19c029f1_14).
@@ -551,7 +551,7 @@ ast_node[code](n203d8a7f19c029f1_24, identifier, "src/web/client.js", 6).
 ast_attr[code](n203d8a7f19c029f1_24, name, "fetch").
 ast_child[code](n203d8a7f19c029f1_23, callee, 0, n203d8a7f19c029f1_24).
 ast_node[code](n203d8a7f19c029f1_25, string_literal, "src/web/client.js", 6).
-ast_attr[code](n203d8a7f19c029f1_25, value, "/health").
+ast_attr[code](n203d8a7f19c029f1_25, value, "https://api.shop.example/v1/health").
 ast_child[code](n203d8a7f19c029f1_23, arguments, 0, n203d8a7f19c029f1_25).
 ast_child[code](n203d8a7f19c029f1_22, argument, 0, n203d8a7f19c029f1_23).
 ast_child[code](n203d8a7f19c029f1_21, body, 0, n203d8a7f19c029f1_22).
@@ -585,8 +585,8 @@ ast_node[code](n203d8a7f19c029f1_38, identifier, "src/web/client.js", 10).
 ast_attr[code](n203d8a7f19c029f1_38, name, "id").
 ast_child[code](n203d8a7f19c029f1_37, expressions, 0, n203d8a7f19c029f1_38).
 ast_node[code](n203d8a7f19c029f1_39, template_element, "src/web/client.js", 10).
-ast_attr[code](n203d8a7f19c029f1_39, value_raw, "/users/").
-ast_attr[code](n203d8a7f19c029f1_39, value_cooked, "/users/").
+ast_attr[code](n203d8a7f19c029f1_39, value_raw, "https://api.shop.example/v1/users/").
+ast_attr[code](n203d8a7f19c029f1_39, value_cooked, "https://api.shop.example/v1/users/").
 ast_attr[code](n203d8a7f19c029f1_39, tail, false).
 ast_child[code](n203d8a7f19c029f1_37, quasis, 0, n203d8a7f19c029f1_39).
 ast_node[code](n203d8a7f19c029f1_40, template_element, "src/web/client.js", 10).
@@ -634,7 +634,7 @@ ast_node[code](n203d8a7f19c029f1_53, identifier, "src/web/client.js", 15).
 ast_attr[code](n203d8a7f19c029f1_53, name, "fetch").
 ast_child[code](n203d8a7f19c029f1_52, callee, 0, n203d8a7f19c029f1_53).
 ast_node[code](n203d8a7f19c029f1_54, string_literal, "src/web/client.js", 15).
-ast_attr[code](n203d8a7f19c029f1_54, value, "http://localhost:3000/orders?src=web").
+ast_attr[code](n203d8a7f19c029f1_54, value, "http://api.internal:3000/orders?src=web").
 ast_child[code](n203d8a7f19c029f1_52, arguments, 0, n203d8a7f19c029f1_54).
 ast_node[code](n203d8a7f19c029f1_55, object_expression, "src/web/client.js", 15).
 ast_node[code](n203d8a7f19c029f1_56, object_property, "src/web/client.js", 15).
@@ -704,8 +704,8 @@ ast_node[code](n203d8a7f19c029f1_77, identifier, "src/web/client.js", 19).
 ast_attr[code](n203d8a7f19c029f1_77, name, "id").
 ast_child[code](n203d8a7f19c029f1_76, expressions, 0, n203d8a7f19c029f1_77).
 ast_node[code](n203d8a7f19c029f1_78, template_element, "src/web/client.js", 19).
-ast_attr[code](n203d8a7f19c029f1_78, value_raw, "/users/").
-ast_attr[code](n203d8a7f19c029f1_78, value_cooked, "/users/").
+ast_attr[code](n203d8a7f19c029f1_78, value_raw, "https://api.shop.example/v1/users/").
+ast_attr[code](n203d8a7f19c029f1_78, value_cooked, "https://api.shop.example/v1/users/").
 ast_attr[code](n203d8a7f19c029f1_78, tail, false).
 ast_child[code](n203d8a7f19c029f1_76, quasis, 0, n203d8a7f19c029f1_78).
 ast_node[code](n203d8a7f19c029f1_79, template_element, "src/web/client.js", 19).
@@ -799,7 +799,7 @@ ast_node[code](n203d8a7f19c029f1_108, identifier, "src/web/client.js", 31).
 ast_attr[code](n203d8a7f19c029f1_108, name, "fetch").
 ast_child[code](n203d8a7f19c029f1_107, callee, 0, n203d8a7f19c029f1_108).
 ast_node[code](n203d8a7f19c029f1_109, string_literal, "src/web/client.js", 31).
-ast_attr[code](n203d8a7f19c029f1_109, value, "/nowhere").
+ast_attr[code](n203d8a7f19c029f1_109, value, "https://api.shop.example/v1/nowhere").
 ast_child[code](n203d8a7f19c029f1_107, arguments, 0, n203d8a7f19c029f1_109).
 ast_child[code](n203d8a7f19c029f1_106, argument, 0, n203d8a7f19c029f1_107).
 ast_child[code](n203d8a7f19c029f1_105, body, 0, n203d8a7f19c029f1_106).
@@ -831,6 +831,110 @@ ast_child[code](n203d8a7f19c029f1_114, body, 0, n203d8a7f19c029f1_115).
 ast_child[code](n203d8a7f19c029f1_111, body, 0, n203d8a7f19c029f1_114).
 ast_child[code](n203d8a7f19c029f1_110, declaration, 0, n203d8a7f19c029f1_111).
 ast_child[code](n203d8a7f19c029f1_2, body, 9, n203d8a7f19c029f1_110).
+ast_node[code](n203d8a7f19c029f1_119, export_named_declaration, "src/web/client.js", 38).
+ast_attr[code](n203d8a7f19c029f1_119, export_kind, "value").
+ast_node[code](n203d8a7f19c029f1_120, function_declaration, "src/web/client.js", 38).
+ast_node[code](n203d8a7f19c029f1_121, identifier, "src/web/client.js", 38).
+ast_attr[code](n203d8a7f19c029f1_121, name, "pay").
+ast_child[code](n203d8a7f19c029f1_120, id, 0, n203d8a7f19c029f1_121).
+ast_attr[code](n203d8a7f19c029f1_120, generator, false).
+ast_attr[code](n203d8a7f19c029f1_120, async, true).
+ast_node[code](n203d8a7f19c029f1_122, identifier, "src/web/client.js", 38).
+ast_attr[code](n203d8a7f19c029f1_122, name, "item").
+ast_child[code](n203d8a7f19c029f1_120, params, 0, n203d8a7f19c029f1_122).
+ast_node[code](n203d8a7f19c029f1_123, block_statement, "src/web/client.js", 38).
+ast_node[code](n203d8a7f19c029f1_124, return_statement, "src/web/client.js", 39).
+ast_node[code](n203d8a7f19c029f1_125, call_expression, "src/web/client.js", 39).
+ast_node[code](n203d8a7f19c029f1_126, identifier, "src/web/client.js", 39).
+ast_attr[code](n203d8a7f19c029f1_126, name, "fetch").
+ast_child[code](n203d8a7f19c029f1_125, callee, 0, n203d8a7f19c029f1_126).
+ast_node[code](n203d8a7f19c029f1_127, string_literal, "src/web/client.js", 39).
+ast_attr[code](n203d8a7f19c029f1_127, value, "https://payments.example.com/orders").
+ast_child[code](n203d8a7f19c029f1_125, arguments, 0, n203d8a7f19c029f1_127).
+ast_node[code](n203d8a7f19c029f1_128, object_expression, "src/web/client.js", 39).
+ast_node[code](n203d8a7f19c029f1_129, object_property, "src/web/client.js", 39).
+ast_attr[code](n203d8a7f19c029f1_129, method, false).
+ast_node[code](n203d8a7f19c029f1_130, identifier, "src/web/client.js", 39).
+ast_attr[code](n203d8a7f19c029f1_130, name, "method").
+ast_child[code](n203d8a7f19c029f1_129, key, 0, n203d8a7f19c029f1_130).
+ast_attr[code](n203d8a7f19c029f1_129, computed, false).
+ast_attr[code](n203d8a7f19c029f1_129, shorthand, false).
+ast_node[code](n203d8a7f19c029f1_131, string_literal, "src/web/client.js", 39).
+ast_attr[code](n203d8a7f19c029f1_131, value, "POST").
+ast_child[code](n203d8a7f19c029f1_129, value, 0, n203d8a7f19c029f1_131).
+ast_child[code](n203d8a7f19c029f1_128, properties, 0, n203d8a7f19c029f1_129).
+ast_node[code](n203d8a7f19c029f1_132, object_property, "src/web/client.js", 39).
+ast_attr[code](n203d8a7f19c029f1_132, method, false).
+ast_node[code](n203d8a7f19c029f1_133, identifier, "src/web/client.js", 39).
+ast_attr[code](n203d8a7f19c029f1_133, name, "body").
+ast_child[code](n203d8a7f19c029f1_132, key, 0, n203d8a7f19c029f1_133).
+ast_attr[code](n203d8a7f19c029f1_132, computed, false).
+ast_attr[code](n203d8a7f19c029f1_132, shorthand, false).
+ast_node[code](n203d8a7f19c029f1_134, call_expression, "src/web/client.js", 39).
+ast_node[code](n203d8a7f19c029f1_135, member_expression, "src/web/client.js", 39).
+ast_node[code](n203d8a7f19c029f1_136, identifier, "src/web/client.js", 39).
+ast_attr[code](n203d8a7f19c029f1_136, name, "JSON").
+ast_child[code](n203d8a7f19c029f1_135, object, 0, n203d8a7f19c029f1_136).
+ast_attr[code](n203d8a7f19c029f1_135, computed, false).
+ast_node[code](n203d8a7f19c029f1_137, identifier, "src/web/client.js", 39).
+ast_attr[code](n203d8a7f19c029f1_137, name, "stringify").
+ast_child[code](n203d8a7f19c029f1_135, property, 0, n203d8a7f19c029f1_137).
+ast_child[code](n203d8a7f19c029f1_134, callee, 0, n203d8a7f19c029f1_135).
+ast_node[code](n203d8a7f19c029f1_138, identifier, "src/web/client.js", 39).
+ast_attr[code](n203d8a7f19c029f1_138, name, "item").
+ast_child[code](n203d8a7f19c029f1_134, arguments, 0, n203d8a7f19c029f1_138).
+ast_child[code](n203d8a7f19c029f1_132, value, 0, n203d8a7f19c029f1_134).
+ast_child[code](n203d8a7f19c029f1_128, properties, 1, n203d8a7f19c029f1_132).
+ast_child[code](n203d8a7f19c029f1_125, arguments, 1, n203d8a7f19c029f1_128).
+ast_child[code](n203d8a7f19c029f1_124, argument, 0, n203d8a7f19c029f1_125).
+ast_child[code](n203d8a7f19c029f1_123, body, 0, n203d8a7f19c029f1_124).
+ast_child[code](n203d8a7f19c029f1_120, body, 0, n203d8a7f19c029f1_123).
+ast_child[code](n203d8a7f19c029f1_119, declaration, 0, n203d8a7f19c029f1_120).
+ast_child[code](n203d8a7f19c029f1_2, body, 10, n203d8a7f19c029f1_119).
+ast_node[code](n203d8a7f19c029f1_139, export_named_declaration, "src/web/client.js", 42).
+ast_attr[code](n203d8a7f19c029f1_139, export_kind, "value").
+ast_node[code](n203d8a7f19c029f1_140, function_declaration, "src/web/client.js", 42).
+ast_node[code](n203d8a7f19c029f1_141, identifier, "src/web/client.js", 42).
+ast_attr[code](n203d8a7f19c029f1_141, name, "edge").
+ast_child[code](n203d8a7f19c029f1_140, id, 0, n203d8a7f19c029f1_141).
+ast_attr[code](n203d8a7f19c029f1_140, generator, false).
+ast_attr[code](n203d8a7f19c029f1_140, async, true).
+ast_node[code](n203d8a7f19c029f1_142, block_statement, "src/web/client.js", 42).
+ast_node[code](n203d8a7f19c029f1_143, return_statement, "src/web/client.js", 43).
+ast_node[code](n203d8a7f19c029f1_144, call_expression, "src/web/client.js", 43).
+ast_node[code](n203d8a7f19c029f1_145, identifier, "src/web/client.js", 43).
+ast_attr[code](n203d8a7f19c029f1_145, name, "fetch").
+ast_child[code](n203d8a7f19c029f1_144, callee, 0, n203d8a7f19c029f1_145).
+ast_node[code](n203d8a7f19c029f1_146, string_literal, "src/web/client.js", 43).
+ast_attr[code](n203d8a7f19c029f1_146, value, "https://edge.internal/v1/health").
+ast_child[code](n203d8a7f19c029f1_144, arguments, 0, n203d8a7f19c029f1_146).
+ast_child[code](n203d8a7f19c029f1_143, argument, 0, n203d8a7f19c029f1_144).
+ast_child[code](n203d8a7f19c029f1_142, body, 0, n203d8a7f19c029f1_143).
+ast_child[code](n203d8a7f19c029f1_140, body, 0, n203d8a7f19c029f1_142).
+ast_child[code](n203d8a7f19c029f1_139, declaration, 0, n203d8a7f19c029f1_140).
+ast_child[code](n203d8a7f19c029f1_2, body, 11, n203d8a7f19c029f1_139).
+ast_node[code](n203d8a7f19c029f1_147, export_named_declaration, "src/web/client.js", 46).
+ast_attr[code](n203d8a7f19c029f1_147, export_kind, "value").
+ast_node[code](n203d8a7f19c029f1_148, function_declaration, "src/web/client.js", 46).
+ast_node[code](n203d8a7f19c029f1_149, identifier, "src/web/client.js", 46).
+ast_attr[code](n203d8a7f19c029f1_149, name, "metrics").
+ast_child[code](n203d8a7f19c029f1_148, id, 0, n203d8a7f19c029f1_149).
+ast_attr[code](n203d8a7f19c029f1_148, generator, false).
+ast_attr[code](n203d8a7f19c029f1_148, async, true).
+ast_node[code](n203d8a7f19c029f1_150, block_statement, "src/web/client.js", 46).
+ast_node[code](n203d8a7f19c029f1_151, return_statement, "src/web/client.js", 47).
+ast_node[code](n203d8a7f19c029f1_152, call_expression, "src/web/client.js", 47).
+ast_node[code](n203d8a7f19c029f1_153, identifier, "src/web/client.js", 47).
+ast_attr[code](n203d8a7f19c029f1_153, name, "fetch").
+ast_child[code](n203d8a7f19c029f1_152, callee, 0, n203d8a7f19c029f1_153).
+ast_node[code](n203d8a7f19c029f1_154, string_literal, "src/web/client.js", 47).
+ast_attr[code](n203d8a7f19c029f1_154, value, "http://localhost:9100/metrics").
+ast_child[code](n203d8a7f19c029f1_152, arguments, 0, n203d8a7f19c029f1_154).
+ast_child[code](n203d8a7f19c029f1_151, argument, 0, n203d8a7f19c029f1_152).
+ast_child[code](n203d8a7f19c029f1_150, body, 0, n203d8a7f19c029f1_151).
+ast_child[code](n203d8a7f19c029f1_148, body, 0, n203d8a7f19c029f1_150).
+ast_child[code](n203d8a7f19c029f1_147, declaration, 0, n203d8a7f19c029f1_148).
+ast_child[code](n203d8a7f19c029f1_2, body, 12, n203d8a7f19c029f1_147).
 ast_child[code](n203d8a7f19c029f1_1, program, 0, n203d8a7f19c029f1_2).
 ast_file[code](n203d8a7f19c029f1_1, "src/web/client.js").
 fs_dir[code](".").
@@ -890,19 +994,28 @@ str_scheme[code]("/:id", "/").
 str_segs[code]("axios", 1).
 str_char0[code]("axios", "a").
 str_seg[code]("axios", 0, "axios").
-str_segs[code]("http://localhost:3000", 3).
-str_char0[code]("http://localhost:3000", "h").
-str_seg[code]("http://localhost:3000", 0, "http:").
-str_seg[code]("http://localhost:3000", 1, "").
-str_seg[code]("http://localhost:3000", 2, "localhost:3000").
-str_scheme[code]("http://localhost:3000", "http").
-str_segs[code]("http://localhost:3000/orders?src=web", 4).
-str_char0[code]("http://localhost:3000/orders?src=web", "h").
-str_seg[code]("http://localhost:3000/orders?src=web", 0, "http:").
-str_seg[code]("http://localhost:3000/orders?src=web", 1, "").
-str_seg[code]("http://localhost:3000/orders?src=web", 2, "localhost:3000").
-str_seg[code]("http://localhost:3000/orders?src=web", 3, "orders?src=web").
-str_scheme[code]("http://localhost:3000/orders?src=web", "http").
+str_segs[code]("https://api.shop.example/v1", 4).
+str_char0[code]("https://api.shop.example/v1", "h").
+str_seg[code]("https://api.shop.example/v1", 0, "https:").
+str_seg[code]("https://api.shop.example/v1", 1, "").
+str_seg[code]("https://api.shop.example/v1", 2, "api.shop.example").
+str_seg[code]("https://api.shop.example/v1", 3, "v1").
+str_scheme[code]("https://api.shop.example/v1", "https").
+str_segs[code]("https://api.shop.example/v1/health", 5).
+str_char0[code]("https://api.shop.example/v1/health", "h").
+str_seg[code]("https://api.shop.example/v1/health", 0, "https:").
+str_seg[code]("https://api.shop.example/v1/health", 1, "").
+str_seg[code]("https://api.shop.example/v1/health", 2, "api.shop.example").
+str_seg[code]("https://api.shop.example/v1/health", 3, "v1").
+str_seg[code]("https://api.shop.example/v1/health", 4, "health").
+str_scheme[code]("https://api.shop.example/v1/health", "https").
+str_segs[code]("http://api.internal:3000/orders?src=web", 4).
+str_char0[code]("http://api.internal:3000/orders?src=web", "h").
+str_seg[code]("http://api.internal:3000/orders?src=web", 0, "http:").
+str_seg[code]("http://api.internal:3000/orders?src=web", 1, "").
+str_seg[code]("http://api.internal:3000/orders?src=web", 2, "api.internal:3000").
+str_seg[code]("http://api.internal:3000/orders?src=web", 3, "orders?src=web").
+str_scheme[code]("http://api.internal:3000/orders?src=web", "http").
 str_segs[code]("POST", 1).
 str_char0[code]("POST", "P").
 str_seg[code]("POST", 0, "POST").
@@ -911,7 +1024,33 @@ str_char0[code]("/users/", "/").
 str_seg[code]("/users/", 0, "").
 str_seg[code]("/users/", 1, "users").
 str_seg[code]("/users/", 2, "").
-str_segs[code]("/nowhere", 2).
-str_char0[code]("/nowhere", "/").
-str_seg[code]("/nowhere", 0, "").
-str_seg[code]("/nowhere", 1, "nowhere").
+str_segs[code]("https://api.shop.example/v1/nowhere", 5).
+str_char0[code]("https://api.shop.example/v1/nowhere", "h").
+str_seg[code]("https://api.shop.example/v1/nowhere", 0, "https:").
+str_seg[code]("https://api.shop.example/v1/nowhere", 1, "").
+str_seg[code]("https://api.shop.example/v1/nowhere", 2, "api.shop.example").
+str_seg[code]("https://api.shop.example/v1/nowhere", 3, "v1").
+str_seg[code]("https://api.shop.example/v1/nowhere", 4, "nowhere").
+str_scheme[code]("https://api.shop.example/v1/nowhere", "https").
+str_segs[code]("https://payments.example.com/orders", 4).
+str_char0[code]("https://payments.example.com/orders", "h").
+str_seg[code]("https://payments.example.com/orders", 0, "https:").
+str_seg[code]("https://payments.example.com/orders", 1, "").
+str_seg[code]("https://payments.example.com/orders", 2, "payments.example.com").
+str_seg[code]("https://payments.example.com/orders", 3, "orders").
+str_scheme[code]("https://payments.example.com/orders", "https").
+str_segs[code]("https://edge.internal/v1/health", 5).
+str_char0[code]("https://edge.internal/v1/health", "h").
+str_seg[code]("https://edge.internal/v1/health", 0, "https:").
+str_seg[code]("https://edge.internal/v1/health", 1, "").
+str_seg[code]("https://edge.internal/v1/health", 2, "edge.internal").
+str_seg[code]("https://edge.internal/v1/health", 3, "v1").
+str_seg[code]("https://edge.internal/v1/health", 4, "health").
+str_scheme[code]("https://edge.internal/v1/health", "https").
+str_segs[code]("http://localhost:9100/metrics", 4).
+str_char0[code]("http://localhost:9100/metrics", "h").
+str_seg[code]("http://localhost:9100/metrics", 0, "http:").
+str_seg[code]("http://localhost:9100/metrics", 1, "").
+str_seg[code]("http://localhost:9100/metrics", 2, "localhost:9100").
+str_seg[code]("http://localhost:9100/metrics", 3, "metrics").
+str_scheme[code]("http://localhost:9100/metrics", "http").

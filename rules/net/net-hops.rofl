@@ -1,0 +1,136 @@
+-- net-hops.rofl — A CONNECTION WALKED FROM HOP TO HOP (the net library, 6 of 8).
+--
+-- Needs every other pack of the library. A proxy, a load balancer, a cluster
+-- service, a NAT rule all forward what reaches them; each is a listener X
+-- (net-host) with rules:
+--   hop(R, X, Port, To, ToPort)  the rule R of X sends what reaches X at Port
+--                                to To (a name or an address) at ToPort, or at
+--                                `same` port
+--   hop_when(R, F, V)            R takes only what has V in the field F: `net_host`,
+--                                `sni`, `path` (a prefix, net-http)
+--   layer(X, L)                  X reads up to the layer L (net-proto), 4 when
+--                                no row says; a rule that asks for a field
+--                                its listener does not see is `hop_blind`
+--   hop_tls(R)                   R opens TLS upstream
+--   keeps_source(X)              X passes the caller's address on (DNAT, a
+--                                balancer that keeps the client's IP); any
+--                                other X calls upstream from its own address
+--   hop_from(X, S)               ...or from S (SNAT, a NAT gateway)
+-- Of the rules a connection fits, those naming its host or server name win
+-- over those that name none, and of them the longest path prefix wins; what
+-- is left all may be taken (a pool).
+--
+-- A walk starts from a leg net-http hands it and answers:
+--   net_arrives(F, X, Port, Host, V)  F reaches X, which forwards nothing, at Port
+--                                with the host and the path view V
+--   net_lost(F, Why)                 where and why a walk of F stops before that
+--   hop_blind(R, F)              a rule that reads a field its layer hides
+edb(hop_depth).
+hop_depth(8).
+
+maybe_addr(T) :- hop(_, _, _, T, _).
+addr_text(S) :- hop_from(_, S).
+net_name(T) :- hop(_, _, _, T, _).
+tls_name(N) :- net_name(N).
+
+net_from(X, H) :- runs(H, X).
+hop_rule(R) :- hop(R, _, _, _, _).
+hop_x(X) :- hop(_, X, _, _, _).
+net_from(X, none) :- hop_x(X), not runs(_, X).
+resolve_ask(H, N) :- http_leg(_, X, N, _, _, _), net_from(X, H).
+resolve_ask(H, T) :- hop(_, X, _, T, _), net_from(X, H).
+net_src(src_at(A)) :- hop_from(_, S), ip(S, A).
+
+-- =========================================================================
+-- 1. WHICH RULE TAKES IT, decided ahead of the walk for every host a walk may
+-- carry and every view net-http made.
+hop_layer(X, L) :- layer(X, L).
+hop_layer(X, 4) :- hop_x(X), not layer(X, _).
+hop_node(X, P) :- hop(_, X, P, _, _).
+
+hop_blind(R, F) :- hop_when(R, F, _), hop(R, X, _, _, _), hop_layer(X, L), not layer_sees(L, F).
+hop_blind(R, path) :- hop_path(R, _), hop(R, X, _, _, _), hop_layer(X, L), not layer_sees(L, path).
+hop_blind_any(R) :- hop_blind(R, _).
+
+hop_named(R, N) :- hop_when(R, host, N).
+hop_named(R, N) :- hop_when(R, sni, N).
+hop_names(R) :- hop_named(R, _).
+hop_class(R, N) :- hop_named(R, N).
+hop_class(R, any) :- hop_rule(R), not hop_names(R).
+hop_x_names(X, P, N) :- hop(R, X, P, _, _), hop_named(R, N).
+hop_class_of(X, P, N, N) :- hop_x_names(X, P, N).
+hop_class_of(X, P, N, any) :- hop_node(X, P), net_name(N), not hop_x_names(X, P, N).
+
+hop_fit(X, P, N, V, R, Len) :- hop_class_of(X, P, N, K), hop_class(R, K), hop(R, X, P, _, _), not hop_blind_any(R),
+                               hop_prefix(R, L, Len), http_strip(V, L, _).
+hop_longer(X, P, N, V, Len) :- hop_fit(X, P, N, V, _, Len), hop_fit(X, P, N, V, _, Longer), Longer > Len.
+hop_pick(X, P, N, V, R) :- hop_fit(X, P, N, V, R, Len), not hop_longer(X, P, N, V, Len).
+hop_picked(X, P, N, V) :- hop_pick(X, P, N, V, _).
+
+-- what goes upstream: an L7 hop names the target as the host (or hop_host)
+-- and may rewrite the path; a lower one passes both on
+hop_up(X, P, N, V, R, N, V) :- hop_pick(X, P, N, V, R), hop_layer(X, L), L < 7.
+hop_up(X, P, N, V, R, H, W) :- hop_pick(X, P, N, V, R), hop_layer(X, 7), hop_up_host(R, H), hop_up_view(R, V, W).
+hop_up_host(R, H) :- hop_host(R, H).
+hop_up_host(R, T) :- hop(R, _, _, T, _), not hop_host(R, _).
+hop_up_view(R, V, W) :- hop_view(R, V, W).
+hop_up_view(R, V, V) :- hop_pick_view(R, V), not hop_path(R, _).
+hop_pick_view(R, V) :- hop_pick(_, _, _, V, R).
+
+-- =========================================================================
+-- 2. THE WALK. go(F, From, Name, Port, Tls, Host, View, Src, Depth): From
+-- dials Name at Port from the source Src, `plain` or in a TLS session tls(O)
+-- that O opened, whose certificate an mTLS listener asks for.
+go(F, X, N, P, plain, N, V, src(H), 0) :- http_leg(F, X, N, P, plain, V), runs(H, X).
+go(F, X, N, P, tls(X), N, V, src(H), 0) :- http_leg(F, X, N, P, tls, V), runs(H, X).
+net_lost(F, unplaced(X)) :- http_leg(F, X, _, _, _, _), not runs(_, X).
+
+dial(F, X, A, P, T, N, V, S, D) :- go(F, X, M, P, T, N, V, S, D), net_from(X, H), dns_resolves(H, M, A).
+net_lost(F, unresolved(M)) :- go(F, X, M, _, _, _, _, _, _), net_from(X, H), unresolved(H, M).
+net_lost(F, dns_loop(M)) :- go(F, X, M, _, _, _, _, _, _), net_from(X, H), dns_too_deep(H, M).
+
+hop_listened(A, P) :- at_addr(A, P, tcp, _).
+hop_listened_loop(H, A, P) :- at_loop(H, A, P, tcp, _).
+hit(F, X, Y, A, P, T, N, V, S, D) :- dial(F, X, A, P, T, N, V, S, D), not scope(A, loopback), at_addr(A, P, tcp, Y),
+                                     acc_passes(S, A, P).
+hit(F, X, Y, A, P, T, N, V, S, D) :- dial(F, X, A, P, T, N, V, S, D), scope(A, loopback), net_from(X, H),
+                                     at_loop(H, A, P, tcp, Y).
+net_lost(F, denied(G, A, P)) :- dial(F, _, A, P, _, _, _, S, _), acc_blocked(G, S, A, P).
+net_lost(F, outside(A, P)) :- dial(F, _, A, P, _, _, _, _, _), not hop_listened(A, P), not ours(A).
+net_lost(F, nothing_at(A, P)) :- dial(F, _, A, P, _, _, _, _, _), not scope(A, loopback), not hop_listened(A, P), ours(A).
+net_lost(F, nothing_at(A, P)) :- dial(F, X, A, P, _, _, _, _, _), scope(A, loopback), net_from(X, H),
+                             not hop_listened_loop(H, A, P).
+
+-- TLS at the listener: ended there, passed through by a hop below L7, or a
+-- mismatch
+opened(F, X, Y, A, P, plain, N, V, S, D) :- hit(F, X, Y, A, P, plain, N, V, S, D), not tls_ends(Y, P).
+opened(F, X, Y, A, P, plain, N, V, S, D) :- hit(F, X, Y, A, P, tls(_), N, V, S, D), tls_ok(Y, P, N), not mtls(Y, P).
+opened(F, X, Y, A, P, plain, N, V, S, D) :- hit(F, X, Y, A, P, tls(O), N, V, S, D), tls_ok(Y, P, N), mtls(Y, P),
+                                            client_cert(O, _).
+opened(F, X, Y, A, P, tls(O), N, V, S, D) :- hit(F, X, Y, A, P, tls(O), N, V, S, D), not tls_ends(Y, P),
+                                             hop_passes_tls(Y, P).
+hop_passes_tls(Y, P) :- hop_node(Y, P), hop_layer(Y, L), L < 7.
+net_lost(F, tls_name(Y, N)) :- hit(F, _, Y, _, P, tls(_), N, _, _, _), tls_ends(Y, P), not tls_ok(Y, P, N).
+net_lost(F, tls_plain(Y, P)) :- hit(F, _, Y, _, P, plain, _, _, _, _), tls_ends(Y, P).
+net_lost(F, tls_unread(Y, P)) :- hit(F, _, Y, _, P, tls(_), _, _, _, _), not tls_ends(Y, P), not hop_passes_tls(Y, P).
+net_lost(F, client_cert(Y, P)) :- hit(F, _, Y, _, P, tls(O), N, _, _, _), tls_ok(Y, P, N), mtls(Y, P), not client_cert(O, _).
+
+-- a hop forwards; a listener with no rules is where the walk arrives
+hop_at(Y, A, S) :- opened(_, _, Y, A, P, _, _, _, S, _), hop_node(Y, P).
+hop_src(Y, A, S, S) :- hop_at(Y, A, S), keeps_source(Y).
+hop_src(Y, A, S, src_at(B)) :- hop_at(Y, A, S), hop_from(Y, T), ip(T, B), not keeps_source(Y).
+hop_src(Y, A, S, src(H)) :- hop_at(Y, A, S), runs(H, Y), not keeps_source(Y), not hop_from(Y, _).
+hop_src(Y, A, S, src_at(A)) :- hop_at(Y, A, S), host_virtual(Y), not keeps_source(Y), not hop_from(Y, _).
+
+go(F, Y, To, Q, T, M, W, S2, E) :- opened(F, _, Y, A, P, T, N, V, S, D), hop_up(Y, P, N, V, R, M, W),
+                                   hop(R, Y, P, To, TP), hop_port(TP, P, Q), not hop_tls(R), hop_src(Y, A, S, S2),
+                                   hop_depth(Max), D < Max, E is D + 1.
+go(F, Y, To, Q, tls(Y), M, W, S2, E) :- opened(F, _, Y, A, P, _, N, V, S, D), hop_up(Y, P, N, V, R, M, W),
+                                        hop(R, Y, P, To, TP), hop_port(TP, P, Q), hop_tls(R), hop_src(Y, A, S, S2),
+                                        hop_depth(Max), D < Max, E is D + 1.
+hop_port(same, P, P) :- hop_node(_, P).
+hop_port(Q, P, Q) :- hop(_, _, P, _, Q), Q != same.
+
+net_lost(F, no_rule(Y, P)) :- opened(F, _, Y, _, P, _, N, V, _, _), hop_node(Y, P), not hop_picked(Y, P, N, V).
+net_lost(F, too_deep(Y)) :- opened(F, _, Y, _, P, _, _, _, _, D), hop_node(Y, P), hop_depth(D).
+net_arrives(F, Y, P, N, V) :- opened(F, _, Y, _, P, plain, N, V, _, _), not hop_node(Y, P).

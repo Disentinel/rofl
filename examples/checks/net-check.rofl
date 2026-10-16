@@ -1,0 +1,107 @@
+-- examples/checks/net-check.rofl — the net library (rules/net/) alone, with no language: requests and routes written
+-- as facts, over a network that exercises what the services world does not. Every request's end is named, a handler
+-- or the reason it stops. Red if one is missing or one more appears.
+--
+--   cluster: a pod calls a service address, which passes the caller's address on, so the policy on the pod behind
+--            lets in the cluster's own subnet and not a caller from another one
+--   edge2:   an L5 balancer routes TLS by its server name without opening it; the backend opens it and asks for a
+--            client certificate, which one caller has and one has not
+--   names:   split horizon, a hosts file line, a CNAME loop, an address only v6 where the server binds only v4
+--   blind:   an L4 rule that asks for a path it cannot see never fits
+
+iface(n1, "10.1.0.5").   runs(n1, pod_a).   client_cert(pod_a, a_cert).
+iface(n3, "10.2.0.9").   runs(n3, pod_b).
+iface(n2, "10.1.0.20").  runs(n2, users).  listens(users, "0.0.0.0", 8080, tcp).
+iface(n4, "10.1.0.30").  runs(n4, pay).    listens(pay, "0.0.0.0", 443, tcp).
+iface(n5, "10.1.0.70").  runs(n5, shop).   listens(shop, "::", 80, tcp).
+iface(n6, "10.1.0.80").  runs(n6, legacy). listens(legacy, "0.0.0.0", 80, tcp).
+iface(n7, "10.1.0.60").  iface(n7, "fd00::60").  runs(n7, v4srv).  listens(v4srv, "0.0.0.0", 80, tcp).
+iface(edge2, "10.1.0.2"). runs(edge2, haproxy).  listens(haproxy, "0.0.0.0", 443, tcp).  listens(haproxy, "0.0.0.0", 8000, tcp).
+
+-- the cluster service: a virtual listener
+listens(svc_users, "10.96.0.10", 80, tcp).
+keeps_source(svc_users).
+hop(su, svc_users, 80, "10.1.0.20", 8080).
+guard(np_users, "10.1.0.20/32").
+allows(np_users, "10.1.0.0/24", 8080).
+
+-- the balancer, mode tcp with SNI; and a rule that asks for a path
+layer(haproxy, 5).
+hop(sni_pay, haproxy, 443, "pay.internal.example", same).
+hop_when(sni_pay, sni, "pay.example").
+hop(by_path, haproxy, 8000, "10.1.0.20", 8080).
+hop_when(by_path, path, "/users/").
+tls_on(pay, 443, pay_cert).
+cert(pay_cert, "pay.example").
+mtls(pay, 443).
+
+points("users.svc", "10.96.0.10").
+points("pay.internal.example", "10.1.0.30").
+points("pay.example", "pay-edge.internal").
+points("pay-edge.internal", "10.1.0.2").
+points_in(inside, "shop.example", "10.1.0.70").
+points_in(outside, "shop.example", "203.0.113.70").
+view(inside, "10.1.0.0/16", 1).
+view(outside, "0.0.0.0/0", 2).
+hosts_file(n1, "legacy.example", "10.1.0.80").
+points("v4srv.example", "fd00::60").
+points("loop.a", "loop.b").
+points("loop.b", "loop.a").
+
+http_send(f_users, pod_a, get, "http://users.svc/users/7").
+http_send(f_users_far, pod_b, get, "http://users.svc/users/7").
+http_send(f_pay, pod_a, post, "https://pay.example/charge").
+http_send(f_pay_nocert, pod_b, post, "https://pay.example/charge").
+http_send(f_shop, pod_b, get, "http://shop.example/").
+http_send(f_legacy, pod_a, get, "http://legacy.example/old").
+http_send(f_legacy_far, pod_b, get, "http://legacy.example/old").
+http_send(f_v6, pod_a, get, "http://v4srv.example/").
+http_send(f_loop, pod_a, get, "http://loop.a/").
+http_send(f_blind, pod_a, get, "http://10.1.0.2:8000/users/7").
+http_serves(users, 8080, get, "/users/:id", get_user, route).
+http_serves(pay, 443, post, "/charge", charge, route).
+http_serves(shop, 80, get, "/", home, route).
+http_serves(legacy, 80, get, "/old", old, route).
+http_serves(v4srv, 80, get, "/", v4home, route).
+url_str("http://users.svc/users/7").  url_str("https://pay.example/charge").  url_str("http://shop.example/").
+url_str("http://legacy.example/old").  url_str("http://v4srv.example/").  url_str("http://loop.a/").
+url_str("http://10.1.0.2:8000/users/7").
+url_str("/users/:id").  url_str("/charge").  url_str("/old").
+
+nt_lost_as(F, denied) :- net_lost(F, denied(_, _, _)).
+nt_lost_as(F, client_cert) :- net_lost(F, client_cert(_, _)).
+nt_lost_as(F, unresolved) :- net_lost(F, unresolved(_)).
+nt_lost_as(F, dns_loop) :- net_lost(F, dns_loop(_)).
+nt_lost_as(F, nothing_at) :- net_lost(F, nothing_at(_, _)).
+nt_lost_as(F, outside) :- net_lost(F, outside(_, _)).
+nt_lost_as(F, no_rule) :- net_lost(F, no_rule(_, _)).
+nt_lost_as(F, tls_name) :- net_lost(F, tls_name(_, _)).
+
+-- THE ANSWERS. f_users passes the service with its own address, which the policy lets in; f_users_far comes from
+-- 10.2.0.9 and is stopped. f_pay goes through the balancer still encrypted, for the name the backend's certificate
+-- holds. f_shop is asked from 10.2.0.9, outside 10.1.0.0/16, so it reads the outside view and leaves the network.
+-- f_legacy_far's host has no hosts file line and DNS no record. v4srv.example is only v6, and its server binds v4.
+nt_want_reach(f_users, get_user).
+nt_want_reach(f_pay, charge).
+nt_want_reach(f_legacy, old).
+nt_want_lost(f_users_far, denied).
+nt_want_lost(f_pay_nocert, client_cert).
+nt_want_lost(f_shop, outside).
+nt_want_lost(f_legacy_far, unresolved).
+nt_want_lost(f_v6, nothing_at).
+nt_want_lost(f_loop, dns_loop).
+nt_want_lost(f_blind, no_rule).
+nt_want_blind(by_path, path).
+
+nt_missing_reach(F, H) :- nt_want_reach(F, H), not http_reach(F, H, route).
+nt_extra_reach(F, H) :- http_reach(F, H, _), not nt_want_reach(F, H).
+nt_missing_lost(F, K) :- nt_want_lost(F, K), not nt_lost_as(F, K).
+nt_extra_lost(F, K) :- nt_lost_as(F, K), not nt_want_lost(F, K).
+nt_missing_blind(R, F) :- nt_want_blind(R, F), not hop_blind(R, F).
+nt_extra_blind(R, F) :- hop_blind(R, F), not nt_want_blind(R, F).
+alarm(nt_missing_reach).
+alarm(nt_extra_reach).
+alarm(nt_missing_lost).
+alarm(nt_extra_lost).
+alarm(nt_missing_blind).
+alarm(nt_extra_blind).

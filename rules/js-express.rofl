@@ -4,6 +4,7 @@
 --                                      on the pattern P, a text over the route's
 --                                      strings, with the function H, a `route`
 --                                      or a `middleware` that runs before one
+--   app_listens[surface](App, Port)     `app.listen(Port)`: App answers at Port
 --
 -- Knows nothing about clients. An app is a call of the module (`express()`), a
 -- router a call of its `Router`; `app.get(p, h)`, `router.post(p, h)` and
@@ -51,6 +52,8 @@ ex_route[flow](Y, any, join(V, "*"), H, middleware) :- ex_on[flow](R, Y, "use"),
 ex_route[flow](Y, any, "*", H, middleware) :- ex_on[flow](R, Y, "use"), ex_fn[flow](R, 0, _), ex_fn[flow](R, _, H).
 ex_mount[flow](Y, V, Y2) :- ex_path[flow](R, V), ex_sub[flow](R, I, Y2), I > 0, ex_on[flow](R, Y, "use").
 ex_mount[flow](Y, "/", Y2) :- ex_sub[flow](R, 0, Y2), ex_on[flow](R, Y, "use").
+ex_port_lit[flow](V) :- ast_node[code](N, numeric_literal, _, _), ast_value[code](N, V).
+ex_listen[flow](Y, P) :- ex_on[flow](R, Y, "listen"), arg_at[flow](R, 0, A), may_be_lit[flow](A, P), ex_port_lit[flow](P).
 
 -- =========================================================================
 -- 3. ACROSS FILES. A router is made in one file and mounted in another; what
@@ -61,6 +64,7 @@ sx_ex_app[surface](Y) :- ex_app[flow](Y).
 sx_ex_route[surface](Y, M, V, H, R) :- ex_route[flow](Y, M, V, H, R).
 sx_ex_mount[surface](Y, V, Y2) :- ex_mount[flow](Y, V, Y2).
 sx_ex_str[surface](V) :- ex_path[flow](_, V).
+app_listens[surface](App, P) :- sx_ex_app[surface](App), ex_listen[flow](App, P).
 
 ex_reach[surface](App, App, "/", 0) :- sx_ex_app[surface](App).
 ex_reach[surface](App, Y2, cat(P, V), D) :- ex_reach[surface](App, Y, P, D0), sx_ex_mount[surface](Y, V, Y2),

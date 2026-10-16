@@ -1,27 +1,35 @@
 -- examples/checks/services-check.rofl — the service graph (w_service_graph) over examples/services/src: a web client
--- (fetch, axios, an axios instance) and an Express api whose users router is made in one file and mounted in another.
+-- (fetch, axios, an axios instance) and an Express api whose users router is made in one file and mounted in another,
+-- on the network of services-net.rofl, through an nginx that strips a prefix and a security group.
 -- Every edge from a client function to a handler is named, and so is the frontier both ways. Red if one is missing
 -- or one more appears.
-sv_edge(A, B) :- svc_call(C, _, H, _), nearest_fn[code](F, C), fn_name[code](F, A), fn_name[code](H, B).
+sv_edge(A, B) :- http_reach(C, H, _), nearest_fn[code](F, C), fn_name[code](F, A), fn_name[code](H, B).
 sv_unserved(A) :- request_unserved(C, _), nearest_fn[code](F, C), fn_name[code](F, A).
 sv_unknown(A) :- request_unknown[flow](C), nearest_fn[code](F, C), fn_name[code](F, A).
 sv_unreached(B) :- route_unreached(H), fn_name[code](H, B).
+sv_no_origin(A) :- request_no_origin(C), nearest_fn[code](F, C), fn_name[code](F, A).
+sv_lost_as(C, denied) :- request_lost(C, denied(_, _, _)).
+sv_lost_as(C, outside) :- request_lost(C, outside(_, _)).
+sv_lost_as(C, tls_name) :- request_lost(C, tls_name(_, _)).
+sv_lost_as(C, nothing_at) :- request_lost(C, nothing_at(_, _)).
+sv_lost(A, K) :- sv_lost_as(C, K), nearest_fn[code](F, C), fn_name[code](F, A).
 
--- THE ANSWERS. `logger` is a middleware under every path, so every request reaches it. `listUsers` sends to
--- `${base}/users` and `everyone` to an axios instance's `/users/`, both under a base nothing traces: their tail is
--- matched against the end of every route, so `/users/:id` answers them too (the safe side of a may-set). `order`
--- writes its host and a query, both cut off. `lost` reaches only the middleware, so it is unserved; `blind` has no
--- address; `admin` is reached by nothing.
+-- THE ANSWERS (examples/checks/services-net.rofl draws the network). `logger` is a middleware under every path, so
+-- every request that reaches the api reaches it. `ping`, `loadUser`, `drop` and `net_lost` go through the edge, which
+-- strips `/v1`; `net_lost` finds no route there. `order` goes straight to the api, whose group lets in only the edge.
+-- `pay` has the path of an api route, and leaves the network. `edge` asks TLS for a name the certificate does not
+-- hold. `metrics` asks for localhost on the web host, where nothing listens. `listUsers` and `everyone` send under a
+-- base nothing traces, so no host; `blind` has no address. `createOrder`, `list` and `admin` are reached by nothing.
 sv_want_edge("ping", "logger").        sv_want_edge("ping", "health").
 sv_want_edge("loadUser", "logger").    sv_want_edge("loadUser", "getUser").
-sv_want_edge("order", "logger").       sv_want_edge("order", "createOrder").
 sv_want_edge("drop", "logger").        sv_want_edge("drop", "removeUser").
-sv_want_edge("listUsers", "logger").   sv_want_edge("listUsers", "list").   sv_want_edge("listUsers", "getUser").
-sv_want_edge("everyone", "logger").    sv_want_edge("everyone", "list").    sv_want_edge("everyone", "getUser").
 sv_want_edge("lost", "logger").
 sv_want_unserved("lost").
 sv_want_unknown("blind").
-sv_want_unreached("admin").
+sv_want_no_origin("listUsers").        sv_want_no_origin("everyone").
+sv_want_lost("order", denied).         sv_want_lost("pay", outside).
+sv_want_lost("edge", tls_name).        sv_want_lost("metrics", nothing_at).
+sv_want_unreached("createOrder").      sv_want_unreached("list").           sv_want_unreached("admin").
 
 sv_missing_edge(A, B) :- sv_want_edge(A, B), not sv_edge(A, B).
 sv_extra_edge(A, B)   :- sv_edge(A, B), not sv_want_edge(A, B).
@@ -29,6 +37,10 @@ sv_missing_unserved(A) :- sv_want_unserved(A), not sv_unserved(A).
 sv_extra_unserved(A)   :- sv_unserved(A), not sv_want_unserved(A).
 sv_missing_unknown(A)  :- sv_want_unknown(A), not sv_unknown(A).
 sv_extra_unknown(A)    :- sv_unknown(A), not sv_want_unknown(A).
+sv_missing_no_origin(A) :- sv_want_no_origin(A), not sv_no_origin(A).
+sv_extra_no_origin(A)   :- sv_no_origin(A), not sv_want_no_origin(A).
+sv_missing_lost(A, K) :- sv_want_lost(A, K), not sv_lost(A, K).
+sv_extra_lost(A, K)   :- sv_lost(A, K), not sv_want_lost(A, K).
 sv_missing_unreached(B) :- sv_want_unreached(B), not sv_unreached(B).
 sv_extra_unreached(B)   :- sv_unreached(B), not sv_want_unreached(B).
 -- the edge is in `calls` itself, so the call graph's own reader names it
@@ -39,6 +51,10 @@ alarm(sv_missing_unserved).
 alarm(sv_extra_unserved).
 alarm(sv_missing_unknown).
 alarm(sv_extra_unknown).
+alarm(sv_missing_no_origin).
+alarm(sv_extra_no_origin).
+alarm(sv_missing_lost).
+alarm(sv_extra_lost).
 alarm(sv_missing_unreached).
 alarm(sv_extra_unreached).
 alarm(sv_not_in_calls).

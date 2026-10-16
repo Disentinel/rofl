@@ -1,0 +1,34 @@
+-- net-proto.rofl — WHAT RIDES ON WHAT, AND WHAT EACH LAYER SEES (the net library, 4 of 8).
+--
+-- Tables only; the layers are the OSI numbers configs use (an L4 balancer, an
+-- L7 proxy), TLS at 5:
+--   proto(P, Layer, Over)    P is carried over Over
+--   proto_uses(P, Q)               P rides on Q, any number of layers down
+--   layer_sees(Layer, F)           a hop at Layer can read the field F: an L4 hop the
+--                            address and the port, TLS the server name, L7 the
+--                            host, the path, the method and the headers too
+--   scheme(S, P, Tls, Port)  a URL's scheme: the protocol, `tls` or `plain`,
+--                            and the port when the URL writes none
+edb(proto).
+proto(ip, 3, none).
+proto(tcp, 4, ip).  proto(udp, 4, ip).  proto(quic, 4, udp).
+proto(tls, 5, tcp).
+proto(http1, 7, tcp).  proto(http2, 7, tcp).  proto(http3, 7, quic).
+proto(ws, 7, http1).  proto(grpc, 7, http2).  proto(dns, 7, udp).
+
+proto_uses(P, Q) :- proto(P, _, Q), Q != none.
+proto_uses(P, R) :- proto_uses(P, Q), proto(Q, _, R), R != none.
+transport(P, T) :- proto_uses(P, T), proto(T, 4, ip).
+transport(T, T) :- proto(T, 4, ip).
+
+edb(sees_first).
+sees_first(3, addr).  sees_first(4, port).  sees_first(5, sni).
+sees_first(7, host).  sees_first(7, path).  sees_first(7, method).  sees_first(7, header).
+edb(layer_next).
+layer_next(3, 4).  layer_next(4, 5).  layer_next(5, 7).
+layer_sees(L, F) :- sees_first(L, F).
+layer_sees(L, F) :- layer_sees(K, F), layer_next(K, L).
+
+edb(scheme).
+scheme("http", http1, plain, 80).  scheme("https", http1, tls, 443).
+scheme("ws", ws, plain, 80).  scheme("wss", ws, tls, 443).
