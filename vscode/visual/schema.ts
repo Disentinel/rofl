@@ -442,7 +442,7 @@ export async function schema(host: HTMLElement, data: Schema, opts: Opts = {}): 
     const r = svg.getBoundingClientRect(); let { x0, y0, x1, y1 } = bounds(shown());
     try { const b = gD.getBBox(); if (b.width) { x0 = Math.min(x0, b.x); y0 = Math.min(y0, b.y); x1 = Math.max(x1, b.x + b.width); y1 = Math.max(y1, b.y + b.height); } } catch { /* not drawn yet */ }
     if (!isFinite(x0) || !r.width) return;
-    const k = Math.min(r.width / (x1 - x0 + 40), r.height / (y1 - y0 + 40), 1.1);
+    const k = Math.min(r.width / (x1 - x0 + 40), r.height / (y1 - y0 + 40), host.closest('.full, #ostage') ? 3 : 1.1);
     view = { k, x: (r.width - (x1 - x0) * k) / 2 - x0 * k, y: (r.height - (y1 - y0) * k) / 2 - y0 * k }; applyView();
   }
 
