@@ -120,8 +120,9 @@ from the store.
    the plan as facts. `--run` evaluates it stage by stage, a process each over the last volume, `--check` against the
    whole: 100 vscode files in 4 stages equal the whole
    (`f_a_stage_plan_keeps_rings_whole_and_its_stages_equal_the_whole`). Real rings: vscode 223 files, webpack 580 (6
-   counting only imports at the top of a module). Left: a stage's own memory is still the whole world's (an index of
-   the volume copied whole on its first write, the citer index built whole on each addition).
+   counting only imports at the top of a module). An index of the volume takes its writes in a layer over it and the
+   citer index is kept in the volume, so a stage's own memory is near its plan
+   (`f_an_index_of_a_volume_takes_its_writes_in_a_layer_over_it`). Left: a write below the mark copies its column.
 5. **Workers by key** (decision 7).
 6. **The explanation by file**: the why of an absence as a table of files, each row expanded by lifting one volume.
    Built over the evaluated world: a whynot walk parted by file, a row a file with its answers and the premises it

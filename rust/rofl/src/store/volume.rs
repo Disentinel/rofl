@@ -9,7 +9,7 @@ fn terms(w: &mut VolW, ts: &[Term]) {
 }
 
 /// A run's argument indexes, so a world opened from a volume probes them where they lie instead of building them again.
-fn write_patterns(w: &mut VolW, by_pat: Option<&ArgIndex>) {
+fn write_patterns(w: &mut VolW, facts: &Facts, by_pat: Option<&ArgIndex>) {
     let Some(by_pat) = by_pat else {
         return w.u32(u32::MAX);
     };
@@ -17,7 +17,7 @@ fn write_patterns(w: &mut VolW, by_pat: Option<&ArgIndex>) {
     masks.sort_unstable();
     w.u32(masks.len() as u32);
     for m in masks {
-        let x = &by_pat[m];
+        let x = &by_pat[m].flat(facts);
         w.u32(*m);
         w.arena(&x.pos.iter().map(|&p| p as u32).collect::<Vec<u32>>());
         w.u64(x.values as u64);
@@ -41,7 +41,7 @@ fn read_patterns(r: &mut VolR) -> Result<Option<Rc<ArgIndex>>, String> {
         if !slots.len().is_power_of_two() || ids.len() != prev.len() || slots.iter().chain(prev.iter()).any(|&e| e != EMPTY && e as usize >= ids.len()) {
             return Err("a volume's argument index is not an index".into());
         }
-        by_pat.insert(mask, PatIndex { pos, slots, ids, prev, values });
+        by_pat.insert(mask, PatIndex { pos, slots, ids, prev, values, under: None });
     }
     Ok(Some(Rc::new(by_pat)))
 }
@@ -99,7 +99,7 @@ impl Store {
                 w.arena(&k.arrived);
                 w.arena(&k.loose);
                 w.arena(&k.staged);
-                write_patterns(w, k.by_pat.as_deref());
+                write_patterns(w, &self.facts, k.by_pat.as_deref());
             }
         }
         w.arena(&self.wit_head.base);
@@ -146,6 +146,15 @@ impl Store {
         w.arena(&alts);
         let seals: Vec<u32> = c.seals.iter().flat_map(|s| [s.rel, s.round]).collect();
         w.arena(&seals);
+        match &self.citers {
+            None => w.u32(0),
+            Some(ix) => {
+                let ix = ix.flat(self.facts.len());
+                w.u32(1);
+                w.arena(&ix.offs);
+                w.arena(&ix.ids);
+            }
+        }
     }
 
     /// The store a volume holds, its columns mapped.
@@ -240,6 +249,14 @@ impl Store {
             }
         }
         s.cells = Rc::new(c);
+        if r.u32()? == 1 {
+            let (offs, ids): (Arena<u32>, Arena<FactId>) = (r.arena()?, r.arena()?);
+            let n = s.facts.len();
+            if offs.len() != n + 1 || offs.windows(2).any(|w| w[0] > w[1]) || offs[n] as usize != ids.len() || ids.iter().any(|&i| i as usize >= n) {
+                return Err("a volume's citer index is not an index".into());
+            }
+            s.citers = Some(Rc::new(Citers { offs, ids, ..Citers::default() }));
+        }
         Ok(s)
     }
 }
