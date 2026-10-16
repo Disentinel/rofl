@@ -1850,7 +1850,6 @@ impl Eval {
     }
 
     fn prepare(&mut self) {
-        self.settle_derived();
         self.well_founded = well_founded_declared(&mut self.h, &self.v, &mut self.store);
         self.no_provenance = sealed_bodies(&mut self.h, &self.v, &mut self.store)
             .contains(&self.v.sealed_provenance);
@@ -1961,6 +1960,10 @@ impl Eval {
                 Some(rels) => self.prov_eager = rels,
                 None => self.lazy_prov = false,
             }
+        }
+        // a note stays a note while the rules still leave its row unread: an addition does not write a stage's rows
+        if !self.lazy_prov || self.pending_prov.iter().any(|n| self.prov_eager.contains(&self.store.rec(n.0).rel)) {
+            self.settle_derived();
         }
         if self.no_provenance && self.answer.reads_provenance {
             self.diags.push(format!(
