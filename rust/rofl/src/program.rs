@@ -41,6 +41,8 @@
 //! started from, so a rejected program leaves nothing behind. That is a
 //! `Store` clone, which is the same copy `fork` makes.
 
+use std::collections::HashMap;
+
 use crate::cell::AggOp;
 use crate::engine::{plan_body, plan_elems, plan_order, Eval};
 use crate::reflect::{
@@ -443,12 +445,82 @@ pub fn set_pattern_reason(set: &str) -> String {
 /// away the one thing that audit needs — a program that violates it and loads.
 fn check_orderable(h: &Heap, c: &Clause) -> Option<String> {
     let (_, stuck, head_ground, bound) = plan_body(h, c);
-    let i = stuck?;
-    if !head_ground {
-        return None;
+    if let (Some(i), true) = (stuck, head_ground) {
+        if let BodyElem::Neg(l) = &c.body[i] {
+            return Some(stuck_message(h, c, l, &bound));
+        }
     }
-    let BodyElem::Neg(l) = &c.body[i] else { return None };
-    Some(stuck_message(h, c, l, &bound))
+    loose_neg_message(h, c)
+}
+
+/// A named variable written once in the whole clause, inside a negation: it
+/// binds nothing and asks nothing, `_` is what it reads as.
+fn loose_neg_message(h: &Heap, c: &Clause) -> Option<String> {
+    fn count(h: &Heap, t: Term, seen: &mut HashMap<Sym, u32>) {
+        match t.kind() {
+            TermK::Var(v) => *seen.entry(v).or_default() += 1,
+            TermK::Func(i) => for a in h.fargs(i) { count(h, *a, seen) },
+            _ => {}
+        }
+    }
+    fn count_elem(h: &Heap, b: &BodyElem, seen: &mut HashMap<Sym, u32>) {
+        match b {
+            BodyElem::Pos(l) | BodyElem::Neg(l) => {
+                for a in &l.args {
+                    count(h, *a, seen);
+                }
+                count(h, l.persp, seen);
+            }
+            BodyElem::Bi { l, r, .. } => { count(h, *l, seen); count(h, *r, seen) }
+            BodyElem::Agg(a) => {
+                for t in std::iter::once(&a.result).chain(&a.vals).chain(&a.keys) {
+                    count(h, *t, seen);
+                }
+                for b in &a.body {
+                    count_elem(h, b, seen);
+                }
+            }
+        }
+    }
+    fn negs<'a>(b: &'a BodyElem, out: &mut Vec<&'a Lit>) {
+        match b {
+            BodyElem::Neg(l) => out.push(l),
+            BodyElem::Agg(a) => for b in &a.body { negs(b, out) },
+            _ => {}
+        }
+    }
+    let mut seen = HashMap::new();
+    for a in &c.head.args {
+        count(h, *a, &mut seen);
+    }
+    count(h, c.head.persp, &mut seen);
+    let mut ls = Vec::new();
+    for b in &c.body {
+        count_elem(h, b, &mut seen);
+        negs(b, &mut ls);
+    }
+    for l in ls {
+        let mut vs = Vec::new();
+        for a in &l.args {
+            h.vars_of(*a, &mut vs);
+        }
+        h.vars_of(l.persp, &mut vs);
+        let loose: Vec<&str> =
+            vs.iter().filter(|v| seen[*v] == 1).map(|v| h.name(*v)).filter(|n| !n.starts_with('_')).collect();
+        if loose.is_empty() {
+            continue;
+        }
+        let vars = loose.join(", ");
+        return Some(format!(
+            "rule {}: {vars} appears nowhere but inside 'not {}/{}', so it is bound to nothing and \
+             the negation asks whether ANY such fact exists. Bind {vars} in a positive premise or \
+             the head, or write '_' if that is what is meant.",
+            canon_clause(h, c),
+            h.name(l.rel),
+            l.args.len()
+        ));
+    }
+    None
 }
 
 fn stuck_message(h: &Heap, c: &Clause, l: &Lit, bound: &[Sym]) -> String {

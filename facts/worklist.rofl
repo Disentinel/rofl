@@ -1581,8 +1581,13 @@ work_spawned(w_vocabulary_home, f_the_duplication_that_makes_a_partial_world_pos
 -- rejected, it is made DEMAND-BACKED, so the check would move such a rule from
 -- one evaluation strategy to another and leave the wrong answer where it was.
 -- The diagnostic belongs where `unsafe/1` and `malformed/2` already live.
-work(w_negation_range_restriction, "a variable bound only inside a negation is accepted, and asks whether the relation is empty").
-work_state(w_negation_range_restriction, open).
+-- DONE 2026-10-16: the verdict went to the load door beside the stuck
+-- negation, not to `classify`, so it changes no strategy: a named variable
+-- written once in a clause, inside a negation, is refused in both engines
+-- with the advice to bind it or write `_`. A variable repeated inside one
+-- negation still loads, it asks what `_` cannot. No rule in the tree hit it.
+work(w_negation_range_restriction, "DONE 2026-10-16: a named variable written only once, inside a negation, is refused at load (src/aggeval.ts looseNegMessage, rust/rofl/src/program.rs loose_neg_message); `_` is the existential spelling").
+work_state(w_negation_range_restriction, done).
 work_spawned(w_negation_range_restriction, f_the_safe_flag_is_a_strategy_not_a_verdict).
 
 -- 40 — A COMPUTED KEY THAT IS A BARE IDENTIFIER IS NAMED BY ITS SPELLING.

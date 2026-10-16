@@ -170,18 +170,17 @@ last_ext[code](Name, E, L) :- fs_file_in[code](_, Name, _),
 site_last_seg[code](I, D, Seg) :- walk[code](I, K, D), site_source[code](I, S),
                                   str_seg[code](S, K, Seg), N is K + 1, str_segs[code](S, N).
 
-ts_candidate[code](I, T, R) :- site_last_seg[code](I, D, Seg), fs_file_in[code](D, Name, T),
-                           last_ext[code](Name, En, Ln),
-                           N is str_segs(Seg, "."), N > 1, K is N - 1,
-                           Es is str_seg(Seg, ".", K), ts_ext(Es, En, R),
-                           Ls is str_len(Seg), Les is str_len(Es), Stem is Ls - Les - 1,
-                           Lname is str_len(Name), Stem2 is Lname - Ln - 1, Stem = Stem2,
-                           P is str_sub(Seg, 0, Stem), P2 is str_sub(Name, 0, Stem), P = P2.
+-- A file is found by its name, not by holding each site against every file of
+-- its folder: a file's stem is its name less the last extension.
+file_stem[code](D, Stem, E, T) :- fs_file_in[code](D, Name, T), last_ext[code](Name, E, L),
+                                  Ln is str_len(Name), K is Ln - L - 1, Stem is str_sub(Name, 0, K).
 
-ts_candidate[code](I, T, R) :- site_last_seg[code](I, D, Seg), fs_file_in[code](D, Name, T),
-                           last_ext[code](Name, E, L), probe_ext(E, R),
-                           Ls is str_len(Seg), Want is Ls + L + 1, Have is str_len(Name), Want = Have,
-                           P is str_sub(Name, 0, Ls), P = Seg.
+ts_candidate[code](I, T, R) :- site_last_seg[code](I, D, Seg),
+                           N is str_segs(Seg, "."), N > 1, K is N - 1, Es is str_seg(Seg, ".", K),
+                           Ls is str_len(Seg), Les is str_len(Es), Stem is Ls - Les - 1,
+                           P is str_sub(Seg, 0, Stem), file_stem[code](D, P, En, T), ts_ext(Es, En, R).
+
+ts_candidate[code](I, T, R) :- site_last_seg[code](I, D, Seg), file_stem[code](D, Seg, E, T), probe_ext(E, R).
 
 ts_candidate[code](I, T, R) :- walk[code](I, N, D), site_source[code](I, S), str_segs[code](S, N),
                            index_file(Name, R), fs_file_in[code](D, Name, T).

@@ -35,7 +35,7 @@ import { type Tags, readTags, tagsAsLattices, lowerTags, declRows } from './tag.
 import { Store, type FactStore, type FactRec, type PremRef, type Witness, type LatReg, type CellRec, type CellMember, factKey, premText,
   cellKeyText, cellValueText, sameKeys } from './store.ts';
 import { parseLiteral } from './parser.ts';
-import { litsOf, canonLitSets, canonSets as canonSetsT, UNKNOWN_VALUE, holdsUnknown, bindUnknown, unifyUnknown, unkParts, mkUnk, mkList, isLabeled, sameLabel } from './unify.ts';
+import { litsOf, termsOf, canonLitSets, canonSets as canonSetsT, UNKNOWN_VALUE, holdsUnknown, bindUnknown, unifyUnknown, unkParts, mkUnk, mkList, isLabeled, sameLabel } from './unify.ts';
 import { regionDecide, newGroupValue, sureArgs, unsure, isUnsure, desure, LABEL_REGIONS } from './labeled.ts';
 import {
   V, IFACE, ARITY, RESERVED, decodeRules, type DRule, factTerm, canonClause, encodeRule,
@@ -8769,12 +8769,36 @@ function stuckMessage(c: Clause, l: Lit, bound: string[]): string {
   return `rule ${canonClause(c)}: no premise binds ${vars} before 'not ${l.rel}/${l.args.length}', so what the negation asks would depend on where it is written -- unbound it asks whether ANY such fact exists, bound it asks about that one. Bind ${vars} in a positive premise, or write '_' if the existential reading is what is meant.`;
 }
 
+/** A named variable written once in the whole clause, inside a negation: it binds nothing and asks nothing, `_` is what it reads as. */
+function looseNegMessage(c: Clause): string | null {
+  const seen = new Map<string, number>();
+  const count = (t: Term) => {
+    if (t.k === 'v') seen.set(t.name, (seen.get(t.name) ?? 0) + 1);
+    else if (t.k === 'f') t.args.forEach(count);
+  };
+  const lits = [c.head, ...c.body.flatMap(litsOf)];
+  for (const l of lits) count(l.persp);
+  c.head.args.forEach(count);
+  c.body.flatMap(termsOf).forEach(count);
+  for (const b of c.body.flatMap(negsOf)) {
+    const loose = [...elemVars(b)].filter((v) => !v.startsWith('_') && seen.get(v) === 1);
+    if (loose.length === 0) continue;
+    const vars = loose.join(', ');
+    return `rule ${canonClause(c)}: ${vars} appears nowhere but inside 'not ${b.lit.rel}/${b.lit.args.length}', so it is bound to nothing and the negation asks whether ANY such fact exists. Bind ${vars} in a positive premise or the head, or write '_' if that is what is meant.`;
+  }
+  return null;
+}
+
+function negsOf(b: BodyElem): (BodyElem & { t: 'neg' })[] {
+  return b.t === 'neg' ? [b] : b.t === 'agg' ? b.body.flatMap(negsOf) : [];
+}
+
 /** `checkOrderable` over the planner that knows aggregates. */
 export function checkOrderableAgg(c: Clause): string | null {
   const pb = planBodyAgg(c);
-  if (pb.stuck === null || !pb.ground) return null;
+  if (pb.stuck === null || !pb.ground) return looseNegMessage(c);
   const b = c.body[pb.stuck];
-  return b.t === 'neg' ? stuckMessage(c, b.lit, pb.bound) : null;
+  return b.t === 'neg' ? stuckMessage(c, b.lit, pb.bound) : looseNegMessage(c);
 }
 
 /** THE DOOR OF AN AGGREGATE. `c` is annotated (`annotateAggs`). */
