@@ -1,0 +1,8 @@
+-- A world that asks for its own input (docs/cli.md): it starts from main.js, and each file a scanned file
+-- depends on is asked for in turn, so the scanner reads the files main.js reaches and no other.
+edb(scanner).
+edb(scan_done).
+edb(scan_failed).
+scanner(js, "node --experimental-strip-types scanners/cli.ts examples/scan/src").
+scan_request(js, "main.js").
+scan_request(js, F) :- depends[code](_, F).

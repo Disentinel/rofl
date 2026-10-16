@@ -80,3 +80,24 @@ whys, a whynot and two asks: every answer the same text as the TypeScript
 engine's. The TypeScript engine took 12.4 s for the world and the five; the
 Rust release build 1.5 s for the world and the five in one `rofl load` run,
 and as much for each `rofl why` run alone, since each builds the world.
+
+## A world that asks for its own input
+
+A world can ask for facts it does not have yet. It names a scanner for a kind
+of input and asks for paths; each evaluation runs every new request at once,
+loads what the scanner prints, and evaluates again, until nothing new is asked.
+
+```
+scanner(js, "node --experimental-strip-types scanners/cli.ts examples/scan/src").
+scan_request(js, "main.js").
+scan_request(js, F) :- depends[code](_, F).
+```
+
+`rofl load @rules/js.files examples/checks/scan-world.rofl` scans `main.js`,
+then `lib/greet.js` that it imports, then `lib/shout.js`, and never
+`lib/unused.js`. A scanner is any command: the path is its last argument and
+what it prints is loaded as ROFL, rules as well as facts. Each request runs
+once and leaves `scan_done(Kind, Path, Clauses)`, or
+`scan_failed(Kind, Path, Message)` when there is no scanner for the kind or the
+command fails. It works wherever the world is evaluated: `rofl load`, the
+question verbs and `rofl serve`.

@@ -1,4 +1,7 @@
-// npm run scan -- DIR [--out FILE]   a directory of JS/TS in, the facts the JS model reads out (docs/cli.md)
+// npm run scan -- DIR [FILE] [--out OUT]   a directory of JS/TS in, the facts the JS model reads out (docs/cli.md)
+//
+// With FILE, a path from DIR, only that file is parsed and every path under DIR is still told: what a world's
+// `scanner(js, "node scanners/cli.ts DIR")` runs for each file it asks for.
 //
 // The facts are the notebook host's (playground/host.ts codeFacts): scanners/js_ast.ts over each file, named by its
 // path from DIR, and the host's path and string facts. Without --out they go to stdout. A file no parser reads is
@@ -22,13 +25,14 @@ function walk(root: string, dir: string, out: string[]): void {
 const argv = process.argv.slice(2);
 const at = argv.indexOf('--out');
 const out = at >= 0 ? argv.splice(at, 2)[1] : undefined;
-if (argv.length !== 1 || (at >= 0 && !out)) { console.error('usage: npm run scan -- DIR [--out FILE]'); process.exit(1); }
-const root = argv[0];
+if (argv.length < 1 || argv.length > 2 || (at >= 0 && !out)) { console.error('usage: npm run scan -- DIR [FILE] [--out OUT]'); process.exit(1); }
+const [root, one] = argv;
 const files: string[] = [];
 walk(root, '', files);
-const { facts, host, parseErrors } = codeFacts(Object.fromEntries(files.map((f) => [f, fs.readFileSync(path.join(root, f), 'utf8')])));
+const parsed = one === undefined ? files : [one];
+const { facts, host, parseErrors } = codeFacts(Object.fromEntries(parsed.map((f) => [f, fs.readFileSync(path.join(root, f), 'utf8')])), files.filter((f) => f !== one));
 const text = [...facts, ...host].join('\n') + '\n';
 if (out) fs.writeFileSync(out, text); else process.stdout.write(text);
 for (const [f, e] of Object.entries(parseErrors)) console.error(`${f}: ${e}`);
-console.error(`${files.length} files, ${facts.length + host.length} facts${out ? ` -> ${out}` : ''}`);
+console.error(`${parsed.length} files, ${facts.length + host.length} facts${out ? ` -> ${out}` : ''}`);
 if (Object.keys(parseErrors).length) process.exit(2);
