@@ -962,6 +962,7 @@ sig(ts_candidate, "may_name_under_typescript(site I, file T, at rank R)").
 sig(ts_passed_over, "passes_over_under_typescript(site I, rank R)").
 sig(site_last_seg, "reaches(site I, directory D, before segment Seg)").
 sig(last_ext, "the_extension(of name Name, is text E, of length L)").
+sig(file_stem, "has_the_stem(folder D, text Stem, extension E, file T)").
 sig(ts_ext, "is_written_for(text Js, text Ts, at rank R)").
 sig(probe_ext, "is_probed(text E, at rank R)").
 sig(index_file, "is_an_index_file(name Name, at rank R)").
