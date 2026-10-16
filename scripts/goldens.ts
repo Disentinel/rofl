@@ -48,6 +48,7 @@ import { worldFiles, prefetchMd } from './md_world.ts';
 import { materialize, readWorldMd, unreadOf } from './sentences.ts';
 import { runPool, jobs, type Task } from './pool.ts';
 import { parseSelector, select, NotAWorld, belowFiles } from './agg_select.ts';
+import { MODEL_FILES } from '../notebook/front.ts';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const GOLDEN = path.join(ROOT, 'facts/goldens.rofl');
@@ -1051,6 +1052,9 @@ function refuse(e: unknown): never {
 
 const isMain = process.argv[1] && path.basename(process.argv[1]) === 'goldens.ts';
 if (isMain) {
+  // `rofl why L @rules/js.files code.rofl` reads the model the notebook host reads (docs/cli.md)
+  const listed = fs.readFileSync(path.join(ROOT, 'rules/js.files'), 'utf8').split('\n').filter(Boolean).map((f) => path.relative(ROOT, path.join(ROOT, 'rules', f)));
+  if (listed.join('\n') !== MODEL_FILES.join('\n')) { console.error(`rules/js.files is not notebook/front.ts MODEL_FILES: ${listed.join(' ')}`); process.exit(1); }
   const { sel, rest } = parseSelector(process.argv.slice(2));
   const blessing = rest.includes('--bless'), hosts = rest.includes('--hosts');
   let engine: EngineChoice = 'both', engineWhy = '';

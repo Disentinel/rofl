@@ -41,7 +41,8 @@ Every flag has a consumer.
 | `--below F` | feed a lower world's conclusions in | `scripts/goldens.ts`, `scripts/whycheck.ts`, `rust/rofl/tests/agg_worlds.rs` | KEEP | |
 | `--retain N` | keep provenance of the last N ticks | `scripts/goldens.ts`, `scripts/whycheck.ts`, `rust/rofl/tests/why_bins.rs` | KEEP | |
 | `--retract L` | retract a base fact by delta | `scripts/goldens.ts`, `scripts/whycheck.ts`, `rust/rofl/tests/agg_worlds.rs` | KEEP | |
-| `--why L`, `--why-all L`, `--whynot L`, `--excise F` | the explanation verbs | `scripts/whycheck.ts`, `rust/rofl/tests/why_bins.rs`, example READMEs | KEEP | |
+| `--ask L`, `--why L`, `--why-all L`, `--whynot L`, `--excise F` | several questions in one run; `rofl ask`/`why`/`whynot`/`excise` is one of them (docs/cli.md) | `scripts/whycheck.ts`, `rust/rofl/tests/why_bins.rs`, example READMEs | KEEP | |
+| `--json` | each answer as `rofl serve` answers it | docs/cli.md, `rust/rofl/tests/why_bins.rs` | KEEP | |
 | `--depth N`, `--nodes N` | bounds of every `--whynot` | `scripts/whycheck.ts`, `rust/rofl/tests/why_bins.rs` | KEEP | |
 | `--state` | print the dump before the answers | `scripts/whycheck.ts`, `rust/rofl/tests/why_bins.rs` | KEEP | |
 | `--propose-structures`, `--structures-min-rows N` | the detection report in place of the state | `scripts/structures.ts`, `scripts/agg_breaks.ts` | KEEP | |

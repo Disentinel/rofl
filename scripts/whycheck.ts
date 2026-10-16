@@ -55,7 +55,7 @@ type Op = 'why' | 'whyall' | 'whynot' | 'excise' | 'ask';
 type Q = { op: Op; query: string; depth?: number; nodes?: number };
 /** An answer: refused or not, its text, and for a whynot whether the
  *  literal holds (the protocol's `holds`; rofl load prints text alone). */
-type A = { ok: boolean; text: string; holds?: boolean; files?: string };
+type A = { ok: boolean; text: string; holds?: boolean; files?: string; repl?: string };
 /** THE FILES OF A WHYNOT BY FILE, for every world: an atom's file is its first letter, so each world's candidates part as a corpus's
  *  nodes part by file (src/aggeval.ts `whynotFiles`). */
 const LETTERS: [string, string][] = [...'abcdefghijklmnopqrstuvwxyz'].map((c) => [c, c]);
@@ -177,6 +177,9 @@ function questions(r: Rofl, budget: number | undefined, first: boolean, excise =
     qs.push({ op: 'why', query: k }, { op: 'whynot', query: k });
     const off = k.includes('"') ? k : k.replace(/([(,])[^,()]+\)$/, '$1zz_nowhere)');
     if (off !== k) { qs.push({ op: 'why', query: off }, { op: 'whynot', query: off }); failing ||= off; }
+    // and its last argument open, as an ask: `rofl ask` against the REPL's text
+    const asked = k.includes('"') ? k : k.replace(/([(,])[^,()]+\)$/, '$1Last)');
+    if (asked !== k) qs.push({ op: 'ask', query: asked });
   }
   for (const k of digested) qs.push({ op: 'whyall', query: k });
   for (const k of shrugs) qs.push({ op: 'why', query: k }, { op: 'whynot', query: k });
@@ -233,9 +236,13 @@ function rustQuestions(w: World, rich = false): Q[] {
 
 /** AN ASK, as one text both engines can be held to: the rows as `V = x` (variables in name order) and the shrugs with their
  *  lines, each sorted, then whether the rows may be short of an answer. rofl serve's `ask` against src/api.ts `query`
- *  (f_ask_read_the_store_where_query_unfolded); rofl load has no ask, so it is asked over the protocol alone. */
+ *  (f_ask_read_the_store_where_query_unfolded). `rofl ask` prints the REPL's text instead (`replAsk`). */
 const askText = (rows: string[], shrugs: string[], partial: boolean): string =>
   [...[...rows].sort().map((r) => `row ${r}`), ...[...shrugs].sort().map((x) => `shrug ${x}`), `partial ${partial}`].join('\n');
+/** An ask as the REPL prints it with the sentences off (src/repl.ts `?`), which `rofl ask` prints byte for byte. */
+const replAsk = (a: { rows: { text: string }[]; shrugs?: { text: string; line: string }[]; partial: boolean }): string =>
+  [...(a.rows.length === 0 && !a.shrugs ? ['(empty)'] : []), ...a.rows.map((r) => r.text), ...(a.shrugs ?? []).map((x) => `? ${x.text}  ${x.line}`),
+    ...(a.partial ? ['[partial: budget exhausted, hole emitted]'] : [])].join('\n');
 const bound = (vars: string[], row: string[]): string => {
   const at = vars.map((_, i) => i).sort((a, b) => (vars[a] < vars[b] ? -1 : vars[a] > vars[b] ? 1 : 0));
   return vars.length === 0 ? 'true' : at.map((i) => `${vars[i]} = ${row[i]}`).join(', ');
@@ -261,7 +268,7 @@ function expected(r: Rofl, q: Q, budget?: number): A {
     if (q.op === 'ask') {
       const a = r.query(q.query, { budget });
       if (a.error !== undefined) return { ok: false, text: a.error };
-      return { ok: true, text: askText(a.rows.map((x) => x.text), (a.shrugs ?? []).map((x) => `${x.text} :: ${x.line}`), a.partial) };
+      return { ok: true, text: askText(a.rows.map((x) => x.text), (a.shrugs ?? []).map((x) => `${x.text} :: ${x.line}`), a.partial), repl: replAsk(a) };
     }
     if (q.op === 'whynot') {
       // the aggregate evaluator's whynot hands back the parser's refusal as its text
@@ -385,7 +392,7 @@ function cli(w: World, qs: Q[], want: A[], env: Record<string, string> = {}): { 
   const texts: (string | undefined)[] = new Array(qs.length).fill(undefined);
   const exits = new Map<string, number>(), problems: string[] = [];
   const groups = new Map<string, number[]>();
-  qs.forEach((q, i) => { if (q.op === 'ask') return; const g = groupOf(qs, want, i); groups.set(g, [...(groups.get(g) ?? []), i]); });
+  qs.forEach((q, i) => { const g = groupOf(qs, want, i); groups.set(g, [...(groups.get(g) ?? []), i]); });
   const opts = loadOpts(w);
   const flag = (op: Op) => (op === 'whyall' ? '--why-all' : `--${op}`);
   for (const [g, idx] of groups) {
@@ -393,7 +400,7 @@ function cli(w: World, qs: Q[], want: A[], env: Record<string, string> = {}): { 
     const bounds = b ? ['--depth', b.split('/')[0], '--nodes', b.split('/')[1]] : [];
     const args = [...opts, ...bounds, ...idx.flatMap((i) => [flag(qs[i].op), qs[i].query]), BOOT, ...w.files];
     const p = spawnSync(LOAD, ['load', ...args], { encoding: 'utf8', maxBuffer: 512 * 1024 * 1024, env: { ...process.env, ...env } });
-    if (p.status !== 0 && p.status !== 4) { problems.push(`rofl load exited ${p.status}${g ? ` (run ${g})` : ''}: ${p.stderr.trim().split('\n')[0]}`); continue; }
+    if (p.status !== 0 && p.status !== 4 && p.status !== 5) { problems.push(`rofl load exited ${p.status}${g ? ` (run ${g})` : ''}: ${p.stderr.trim().split('\n')[0]}`); continue; }
     exits.set(g, p.status);
     const got = p.stdout.replace(/\n\n$/, '').split('\n\n');
     idx.forEach((i, j) => { texts[i] = got[j]; });
@@ -517,12 +524,12 @@ async function check(ws: World[], firstName: string): Promise<Report> {
       const said = asksSaid(r, w);
       if (said) rep.bad.push(`${w.name}: ${said}`);
       qs.forEach((q, i) => {
-        if (q.op === 'ask') return;
         const at = `${w.name} load ${q.op} ${JSON.stringify(q.query)}${q.depth !== undefined ? ` depth=${q.depth} nodes=${q.nodes}` : ''}`;
         // a run that exited badly is reported once, above; any other missing answer is a fault of its own
         if (texts[i] === undefined) { if (exits.has(groupOf(qs, want, i))) rep.bad.push(`${at}: no answer`); return; }
         if (parseRefusal(want[i])) return;
-        if (texts[i] !== want[i].text) rep.bad.push(`${at}: ${firstDiff(want[i].text, texts[i]!)}`);
+        const text = q.op === 'ask' && want[i].ok ? want[i].repl! : q.op === 'ask' ? `error: ${want[i].text}` : want[i].text;
+        if (texts[i] !== text) rep.bad.push(`${at}: ${firstDiff(text, texts[i]!)}`);
       });
       // exit 4 exactly when some question in the run was refused; a run of a
       // question the parser refuses must exit 4, or rofl load answered it

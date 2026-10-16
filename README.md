@@ -259,30 +259,18 @@ asserted as program text.
 
 ## Code scanner
 
-`scanners/` turns a JS/TS source tree into materialized ROFL facts,
-incrementally: each source file becomes one `.rofl` fact file keyed by content
-hash (unchanged files are never re-parsed; deleted files lose their fact
-file; `manifest.json` tracks what is current). Not part of the kernel — it
-lives outside `src/` and the kernel grep test on purpose.
+`npm run scan -- DIR --out code.rofl` turns a JS/TS source tree into the
+facts the JS model reads: `scanners/js_ast.ts` over each file and the host's
+path and string facts, as the notebook host gives them. Not part of the
+kernel — it lives outside `src/` and the kernel grep test on purpose. The
+model then runs in the Rust engine:
 
 ```sh
-npm run scan -- src --out facts/generated            # (re)materialize
-npm run scan -- src --out facts/generated \
-  --rules deps.rofl \
-  --query 'dependency[code]("repl.ts", M)' \
-  --why 'dependency[code]("repl.ts", "node:fs")'     # load boot + facts + rules, then ask
+npm run scan -- path/to/src --out code.rofl
+rofl why 'flows[code]("api/server.js", "api/users.js")' @rules/js.files code.rofl
 ```
 
-Fact vocabulary (v0), all in the `[code]` perspective: `src_file(Path, Hash12)`,
-`src_func(Path, Name, Line)`, `src_class(Path, Name, Line)`,
-`src_method(Path, Class, Name, Line)`, `src_import(Path, Source)`,
-`src_export(Path, Name)`, `src_call(Path, Caller, Callee)`,
-`src_parse_error(Path, Message)`.
-
-Provenance rides on the kernel's own machinery: the materializer emits a
-preamble granting `authority(code, scanner)`, fact files are loaded with
-`who=scanner`, and anyone else asserting into `[code]` surfaces as
-`forged[audit]` — no scanner-specific enforcement code.
+The stages, the relations each writes and the exit codes are in docs/cli.md.
 
 ## Inquiry layer
 
