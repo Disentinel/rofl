@@ -123,7 +123,9 @@ from the store.
    counting only imports at the top of a module). An index of the volume takes its writes in a layer over it and the
    citer index is kept in the volume, so a stage's own memory is near its plan
    (`f_an_index_of_a_volume_takes_its_writes_in_a_layer_over_it`). Left: a write below the mark copies its column.
-5. **Workers by key** (decision 7).
+5. **Workers by key** (decision 7). Built for threads: a round's level split over threads and answered as one
+   thread, `engine/par.rs` (`f_a_rounds_level_splits_over_threads_and_answers_as_one_thread`). Left: processes, and
+   conclude and index building on the threads.
 6. **The explanation by file**: the why of an absence as a table of files, each row expanded by lifting one volume.
    Built over the evaluated world: a whynot walk parted by file, a row a file with its answers and the premises it
    stopped at, shown as the table in a notebook and answered by `rofl serve`
