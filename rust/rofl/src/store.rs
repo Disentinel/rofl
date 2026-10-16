@@ -709,20 +709,22 @@ impl Tuples {
 
 /// ONE COLUMN OF A LAYERED STORE. Ids below `mark` read `base`, which every
 /// fork of one world shares; ids from `mark` up are this layer's `own`, and
-/// `freeze` moves them under the mark. A write below the mark copies `base`
-/// first (`Rc::make_mut`): the append-only arenas never do that, and the
-/// provenance a layer changes on a record it shares (its firing chain head,
-/// a base firing's link) does it once.
+/// `freeze` moves them under the mark. A value written below the mark goes in
+/// `low` over the base when the base is shared or mapped, so a layer that
+/// changes the provenance of a record it shares (its firing chain head, a base
+/// firing's link) copies that value and not the column; a span written there
+/// copies the column once.
 #[derive(Clone)]
 struct Col<T: Pod> {
     mark: usize,
     base: Rc<Arena<T>>,
     own: Vec<T>,
+    low: HashMap<usize, T>,
 }
 
 impl<T: Pod> Default for Col<T> {
     fn default() -> Self {
-        Col { mark: 0, base: Rc::default(), own: Vec::new() }
+        Col { mark: 0, base: Rc::default(), own: Vec::new(), low: HashMap::new() }
     }
 }
 
@@ -744,18 +746,40 @@ impl<T: Pod> Col<T> {
     fn extend_from_slice(&mut self, xs: &[T]) {
         self.own.extend_from_slice(xs);
     }
+    #[inline]
+    fn below(&self, i: usize) -> &T {
+        if self.low.is_empty() {
+            &self.base[i]
+        } else {
+            self.low.get(&i).unwrap_or(&self.base[i])
+        }
+    }
     fn get(&self, i: usize) -> Option<&T> {
         if i < self.mark {
-            self.base.get(i)
+            Some(self.below(i))
         } else {
             self.own.get(i - self.mark)
         }
     }
     fn iter(&self) -> impl Iterator<Item = &T> {
-        self.base.iter().chain(self.own.iter())
+        (0..self.mark).map(|i| self.below(i)).chain(self.own.iter())
     }
     fn capacity(&self) -> usize {
-        self.base.capacity() + self.own.capacity()
+        self.base.capacity() + self.own.capacity() + self.low.capacity() * (std::mem::size_of::<T>() + 16)
+    }
+    /// The base, the values written below the mark put in it: copied once.
+    fn base_mut(&mut self) -> &mut Vec<T> {
+        let b = Rc::make_mut(&mut self.base).to_mut();
+        for (i, x) in self.low.drain() {
+            b[i] = x;
+        }
+        b
+    }
+    /// The values written below the mark, in order.
+    fn lows(&self) -> Vec<(usize, T)> {
+        let mut v: Vec<(usize, T)> = self.low.iter().map(|(i, x)| (*i, *x)).collect();
+        v.sort_unstable_by_key(|p| p.0);
+        v
     }
     fn freeze(&mut self) {
         if self.own.is_empty() {
@@ -764,7 +788,8 @@ impl<T: Pod> Col<T> {
         if self.mark == 0 {
             self.base = Rc::new(std::mem::take(&mut self.own).into());
         } else {
-            Rc::make_mut(&mut self.base).to_mut().append(&mut self.own);
+            let mut own = std::mem::take(&mut self.own);
+            self.base_mut().append(&mut own);
         }
         self.mark = self.base.len();
     }
@@ -778,7 +803,7 @@ impl<T: Pod> Index<usize> for Col<T> {
     fn index(&self, i: usize) -> &T {
         match self.own.get(i.wrapping_sub(self.mark)) {
             Some(x) => x,
-            None => &self.base[i],
+            None => self.below(i),
         }
     }
 }
@@ -786,20 +811,25 @@ impl<T: Pod> Index<usize> for Col<T> {
 impl<T: Pod> IndexMut<usize> for Col<T> {
     #[inline]
     fn index_mut(&mut self, i: usize) -> &mut T {
-        if i < self.mark {
-            &mut Rc::make_mut(&mut self.base).to_mut()[i]
-        } else {
-            &mut self.own[i - self.mark]
+        if i >= self.mark {
+            return &mut self.own[i - self.mark];
         }
+        if !self.low.contains_key(&i) && Rc::get_mut(&mut self.base).is_some_and(|b| !b.is_mapped()) {
+            return &mut Rc::get_mut(&mut self.base).unwrap().to_mut()[i];
+        }
+        let x = self.base[i];
+        self.low.entry(i).or_insert(x)
     }
 }
 
-/// A span never straddles the mark: it was appended in one piece.
+/// A span never straddles the mark: it was appended in one piece, and none of
+/// it is written value by value below the mark.
 impl<T: Pod> Index<Range<usize>> for Col<T> {
     type Output = [T];
     #[inline]
     fn index(&self, r: Range<usize>) -> &[T] {
         if r.start < self.mark {
+            assert!(self.low.is_empty() || !r.clone().any(|i| self.low.contains_key(&i)), "a span below the mark read after a value of it was written");
             &self.base[r]
         } else {
             &self.own[r.start - self.mark..r.end - self.mark]
@@ -810,7 +840,7 @@ impl<T: Pod> Index<Range<usize>> for Col<T> {
 impl<T: Pod> IndexMut<Range<usize>> for Col<T> {
     fn index_mut(&mut self, r: Range<usize>) -> &mut [T] {
         if r.start < self.mark {
-            &mut Rc::make_mut(&mut self.base).to_mut()[r]
+            &mut self.base_mut()[r]
         } else {
             &mut self.own[r.start - self.mark..r.end - self.mark]
         }
@@ -838,7 +868,7 @@ impl Facts {
         match self.recs.own.get(i.wrapping_sub(self.recs.mark)) {
             Some(r) => *r,
             None => {
-                let r = self.recs.base[i];
+                let r = *self.recs.below(i);
                 FactRec { packed: r.tup() | (self.bflags[i] as u32) << 28, ..r }
             }
         }

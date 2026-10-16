@@ -81,6 +81,36 @@ impl Interner {
     }
 }
 
+impl Interner {
+    /// As `freeze` would leave the base: the top's names after the base's, put in its table, or in the table it
+    /// grows to with all of them.
+    fn write(&self, w: &mut VolW) {
+        let (b, t) = (&*self.base, &self.top);
+        if b.is_empty() || t.is_empty() {
+            let n = if b.is_empty() { t } else { b };
+            w.arena(&n.buf);
+            w.arena(&n.ends);
+            return w.arena(&n.slots);
+        }
+        let at = b.buf.len() as u32;
+        w.arena_parts(&[&b.buf, &t.buf]);
+        w.arena_parts(&[&b.ends, &t.ends.iter().map(|e| e + at).collect::<Vec<u32>>()]);
+        let n = b.len() + t.len();
+        let mut cap = b.slots.len();
+        for k in b.len() + 1..=n {
+            if k * 10 >= cap * 7 {
+                cap *= 2;
+            }
+        }
+        if cap == b.slots.len() {
+            let put = crate::arena::placed(&b.slots, 0, (0..t.len() as Sym).map(|k| (name_hash(t.name(k).as_bytes()), self.n0 + k + 1)));
+            w.arena_placed(&b.slots, &put, &[]);
+        } else {
+            w.arena(&crate::arena::table(cap, 0, (0..n as Sym).map(|id| (name_hash(self.name(id).as_bytes()), id + 1))));
+        }
+    }
+}
+
 /// Interned names. One table for every kind of name — relation, perspective,
 /// atom, functor, variable — because the same string is all of those in
 /// different slots and a per-slot table would hold it several times.
@@ -449,17 +479,43 @@ impl Funcs {
 }
 
 impl Heap {
-    /// The names and functors, frozen, as a volume holds them (`crate::volume`).
-    pub fn write_volume(&mut self, w: &mut VolW) {
-        self.freeze();
-        let (n, f) = (&self.syms.base, &self.base);
-        w.arena(&n.buf);
-        w.arena(&n.ends);
-        w.arena(&n.slots);
-        w.arena(&f.funcs);
-        w.arena(&f.args);
-        w.arena(&f.cons);
-        w.u64(f.cons_n as u64);
+    /// Whether names and functors are held above the mark.
+    #[cfg(test)]
+    pub(crate) fn layered(&self) -> (bool, bool) {
+        (!self.syms.top.is_empty(), !self.top.funcs.is_empty())
+    }
+    /// The names and functors as a volume holds them (`crate::volume`): the base `freeze` would leave, the top
+    /// written after a base streamed from its file and put in its tables, so keeping copies no mapped table.
+    pub fn write_volume(&self, w: &mut VolW) {
+        self.syms.write(w);
+        let (b, t) = (&*self.base, &self.top);
+        if b.funcs.is_empty() || t.funcs.is_empty() {
+            let f = if b.funcs.is_empty() { t } else { b };
+            w.arena(&f.funcs);
+            w.arena(&f.args);
+            w.arena(&f.cons);
+            return w.u64(f.cons_n as u64);
+        }
+        let at = b.args.len() as u32;
+        w.arena_parts(&[&b.funcs, &t.funcs.iter().map(|f| FuncNode { start: f.start + at, ..*f }).collect::<Vec<_>>()]);
+        w.arena_parts(&[&b.args, &t.args]);
+        let (mut cap, mut cons_n) = (b.cons.len(), b.cons_n);
+        for len in b.funcs.len()..b.funcs.len() + t.funcs.len() {
+            if (cons_n + 1) * 4 >= cap * 3 {
+                (cap, cons_n) = (((len + 1) * 4).next_power_of_two().max(64), len);
+            }
+            cons_n += 1;
+        }
+        if cap == b.cons.len() {
+            let put = crate::arena::placed(&b.cons, CONS_EMPTY, (0..t.funcs.len() as u32).map(|k| (cons_hash(t.funcs[k as usize].name, t.args_of(k)), self.f0 + k)));
+            w.arena_placed(&b.cons, &put, &[]);
+        } else {
+            let n = (b.funcs.len() + t.funcs.len()) as u32;
+            w.arena(&crate::arena::table(cap, CONS_EMPTY, (0..n).map(|i| {
+                (cons_hash(self.fname(i), self.fargs(i)), i)
+            })));
+        }
+        w.u64(cons_n as u64);
     }
     /// The heap a volume holds, mapped; its names are checked to be text, cut where one ends.
     pub fn read_volume(r: &mut VolR) -> Result<Heap, String> {
