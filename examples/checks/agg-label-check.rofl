@@ -88,3 +88,11 @@ lb_ord(lkn(G)) :- shrug(lkn(G, _), _, _).
 -- expect-row: lb_ord[main](lfall)
 -- expect-row: lb_ord[main](lkn(g1))
 -- expect-row: lb_ord[main](lkn(g2))
+
+-- the holistic kinds over all groups, by regions: the counts are {2, 1}, {1, 2} or {1, 1, 1}
+-- expect-row: lhmed[main](1)
+-- expect-row: lhq0[main](1)
+-- expect-row: lhrank[main](1)
+-- expect-no-row: lhq100[main](
+lb_hol(lhq100) :- shrug(lhq100(_), _, _).
+-- expect-row: lb_hol[main](lhq100)

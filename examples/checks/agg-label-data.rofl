@@ -79,3 +79,11 @@ lfall(V) :- V is and(W : lfo(_, W)).
 -- only where its group is g2, so the second member lw(G, Z) of g1's count is there in one completion of the
 -- three and not the others: g1 counts 1, and 2 where the unknown is g2's
 lzg(G, S) :- S is count(X : lw(g2, X), lw(G, _)).
+
+-- the holistic kinds over all groups: the counts of lwc are 2 and 1 where the member joins g1 or g2, and
+-- 1, 1, 1 where it makes a group of its own, so the lower median, the least and the rank of 1 are the same
+-- under every value of its group, and the greatest is not
+lhmed(V) :- V is median(N ; G : lwc(G, N)).
+lhq0(V) :- V is quantile(0, N ; G : lwc(G, N)).
+lhq100(V) :- V is quantile(100, N ; G : lwc(G, N)).
+lhrank(R) :- R is rank(1, N : lwc(_, N)).

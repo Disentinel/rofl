@@ -236,7 +236,7 @@ impl Eval {
     /// The group's member count or total in one region, over its known
     /// members and the possibles present there; `None` where it has no member.
     #[allow(clippy::too_many_arguments)]
-    fn region_value(&mut self, op: AggOp, labels: &[Term], rg: &[Rv], gkey: &[Term], projs: &[&[Term]], vals: &[Term], mine: &[&Possible]) -> Option<Term> {
+    fn region_value(&mut self, op: AggOp, param: Option<Val>, labels: &[Term], rg: &[Rv], gkey: &[Term], projs: &[&[Term]], vals: &[Term], mine: &[&Possible]) -> Option<Term> {
         let count = op == AggOp::Count;
         let mut seen: Vec<Vec<Term>> = Vec::new();
         let mut xs: Vec<Term> = Vec::new();
@@ -281,11 +281,12 @@ impl Eval {
         if seen.is_empty() {
             return None;
         }
-        self.fold_values(op, &xs)
+        self.fold_values(op, param, &xs)
     }
 
-    /// The value of a group over its members' values: a count, a total, the least or greatest, any or all.
-    fn fold_values(&self, op: AggOp, xs: &[Term]) -> Option<Term> {
+    /// The value of a group over its members' values: a count, a total, the least or greatest, any or all, a
+    /// median, a quantile or a rank.
+    fn fold_values(&self, op: AggOp, param: Option<Val>, xs: &[Term]) -> Option<Term> {
         let ints = || xs.iter().map(|t| t.as_int().map(|n| n as i128)).collect::<Option<Vec<i128>>>();
         let int = |n: i128| (INT_MIN as i128..=INT_MAX as i128).contains(&n).then(|| Term::int(n as i64));
         match op {
@@ -305,16 +306,25 @@ impl Eval {
                 let b = if op == AggOp::Or { bs.iter().any(|b| *b) } else { bs.iter().all(|b| *b) };
                 Some(Term::atom(if b { self.v.a_true } else { self.v.a_false }))
             }
+            AggOp::Median | AggOp::Quantile | AggOp::Rank => {
+                let vals = xs.iter().map(|t| op.lift(&self.v, *t).ok()).collect::<Option<Vec<Val>>>()?;
+                match op.holistic(&self.v, param, &vals).ok()?? {
+                    Val::Int(n) => int(n),
+                    _ => None,
+                }
+            }
             _ => None,
         }
     }
 
     /// THE GROUP `gkey` BY REGIONS (docs/aggregates.md, "Labeled unknowns"),
-    /// of a count or a sum whose possibles `mine` all exist in every
-    /// completion and rest on labels alone.
+    /// of an aggregate whose possibles `mine` all exist in every completion
+    /// and rest on labels alone; `param` is a quantile's percent or a rank's subject.
     #[allow(clippy::too_many_arguments)]
-    pub(super) fn region_decide(&mut self, op: AggOp, a: &Agg, gkey: &[Term], projs: &[&[Term]], vals: &[Term], mine: &[&Possible]) -> Regions {
-        if !matches!(op, AggOp::Count | AggOp::Sum | AggOp::Min | AggOp::Max | AggOp::Or | AggOp::And) || a.params() != 0 || mine.is_empty() || !mine.iter().all(|p| self.region_ok(p)) {
+    pub(super) fn region_decide(&mut self, op: AggOp, param: Result<Option<Val>, Sym>, a: &Agg, gkey: &[Term], projs: &[&[Term]], vals: &[Term], mine: &[&Possible]) -> Regions {
+        let holistic = brk!("label_holistic_off" => false; matches!(op, AggOp::Median | AggOp::Quantile | AggOp::Rank));
+        let Ok(param) = param else { return Regions::No };
+        if !(matches!(op, AggOp::Count | AggOp::Sum | AggOp::Min | AggOp::Max | AggOp::Or | AggOp::And) || holistic) || a.rank_tuple() || mine.is_empty() || !mine.iter().all(|p| self.region_ok(p)) {
             return Regions::No;
         }
         let mut labels: Vec<Term> = Vec::new();
@@ -353,7 +363,7 @@ impl Eval {
         let regs = Self::region_list(labels.len(), &consts);
         let mut vs: Vec<Term> = Vec::with_capacity(regs.len());
         for rg in &regs {
-            let Some(v) = self.region_value(op, &labels, rg, gkey, projs, vals, mine) else { return Regions::No };
+            let Some(v) = self.region_value(op, param, &labels, rg, gkey, projs, vals, mine) else { return Regions::No };
             vs.push(v);
         }
         if vs.iter().all(|v| *v == vs[0]) {
@@ -453,7 +463,7 @@ impl Eval {
     fn new_group_node(&mut self, op: AggOp, own: Term, others: &[(Term, Vec<Vec<Term>>)], j: usize, acc: Vec<Vec<Term>>) -> Option<Term> {
         if j == others.len() {
             let xs: Option<Vec<Term>> = acc.iter().map(|p| if op == AggOp::Count { Some(Term::int(1)) } else { p.first().copied() }).collect();
-            return self.fold_values(op, &xs?);
+            return self.fold_values(op, None, &xs?);
         }
         let without = self.new_group_node(op, own, others, j + 1, acc.clone())?;
         let mut with = acc;

@@ -9,6 +9,7 @@
 // region, is a `$by`. More regions than `LABEL_REGIONS` and the group is not decided.
 
 import { labelText } from './shrug.ts';
+import { type AggOp, type Val, Refused, holisticSorted, sortedOf } from './cell.ts';
 import { unsure, isUnsure } from './unify.ts';
 import { type Term, canonTerm, mki, mka, mkf, unkParts, byParts, mkUnk, mkList, holdsUnknown, TERM_MIN, TERM_MAX } from './unify.ts';
 
@@ -190,7 +191,7 @@ function byNode(labels: Term[], regs: Rv[][], vs: Term[], consts: Term[], i: num
 
 /** The group's value in one region, over its known members and the possibles present there; `null` where it has no
  *  member. */
-function regionValue(op: string, labels: Term[], rg: Rv[], gkey: Term[], projs: Term[][], vals: Term[], mine: Poss[]): Term | null {
+function regionValue(op: string, param: Val | null, labels: Term[], rg: Rv[], gkey: Term[], projs: Term[][], vals: Term[], mine: Poss[]): Term | null {
   const count = op === 'count';
   const seen = new Set<string>();
   const xs: Term[] = [];
@@ -221,11 +222,14 @@ function regionValue(op: string, labels: Term[], rg: Rv[], gkey: Term[], projs: 
     if (count) xs.push(mki(1)); else { if (pr[0] === undefined) return null; xs.push(pr[0]); }
     seen.add(k);
   }
-  return seen.size > 0 ? foldValues(op, xs) : null;
+  return seen.size > 0 ? foldValues(op, param, xs) : null;
 }
 
-/** The value of a group over its members' values: a count, a total, the least or greatest, any or all. */
-function foldValues(op: string, xs: Term[]): Term | null {
+const HOLISTIC = ['median', 'quantile', 'rank'];
+
+/** The value of a group over its members' values: a count, a total, the least or greatest, any or all, a median, a
+ *  quantile or a rank. */
+function foldValues(op: string, param: Val | null, xs: Term[]): Term | null {
   const ints: bigint[] = [];
   if (op !== 'or' && op !== 'and') for (const t of xs) { const v = asInt(t); if (v === null) return null; ints.push(v); }
   const int = (n: bigint): Term | null => (inRange(n) ? mki(n) : null);
@@ -238,14 +242,20 @@ function foldValues(op: string, xs: Term[]): Term | null {
     for (const t of xs) { if (t.k !== 'a' || (t.name !== 'true' && t.name !== 'false')) return null; bs.push(t.name === 'true'); }
     return mka(op === 'or' ? (bs.some((b) => b) ? 'true' : 'false') : (bs.every((b) => b) ? 'true' : 'false'));
   }
+  if (HOLISTIC.includes(op)) {
+    try {
+      const x = holisticSorted(op as AggOp, param, sortedOf(ints.map((v) => ({ k: 'int', v }))));
+      return x !== null && x.k === 'int' ? int(x.v) : null;
+    } catch (e) { if (e instanceof Refused) return null; throw e; }
+  }
   return null;
 }
 
-/** THE GROUP `gkey` BY REGIONS, of a count or a sum whose possibles `mine` all exist in every completion and rest on
- *  labels alone (`region_decide`, Rust). */
-export function regionDecide(op: string, params: number, gkey: Term[], projs: Term[][], vals: Term[], mine: Poss[]): Regions {
+/** THE GROUP `gkey` BY REGIONS, of an aggregate whose possibles `mine` all exist in every completion and rest on labels
+ *  alone; `param` is a quantile's percent or a rank's subject, a string where it is no value (`region_decide`, Rust). */
+export function regionDecide(op: string, param: Val | null | string, rankTuple: boolean, gkey: Term[], projs: Term[][], vals: Term[], mine: Poss[]): Regions {
   const no: Regions = { k: 'no' };
-  if (!['count', 'sum', 'min', 'max', 'or', 'and'].includes(op) || params !== 0 || mine.length === 0 || !mine.every(regionOk)) return no;
+  if (!(['count', 'sum', 'min', 'max', 'or', 'and'].includes(op) || HOLISTIC.includes(op)) || typeof param === 'string' || rankTuple || mine.length === 0 || !mine.every(regionOk)) return no;
   const labelsAt = new Map<string, Term>();
   const constAt = new Map<string, Term>();
   for (const c of gkey) constAt.set(key(c), c);
@@ -265,7 +275,7 @@ export function regionDecide(op: string, params: number, gkey: Term[], projs: Te
   const regs = regionList(labels.length, consts);
   const vs: Term[] = [];
   for (const rg of regs) {
-    const v = regionValue(op, labels, rg, gkey, projs, vals, mine);
+    const v = regionValue(op, param, labels, rg, gkey, projs, vals, mine);
     if (v === null) return no;
     vs.push(v);
   }
@@ -308,7 +318,7 @@ export function newGroupValue(op: string, params: number, ps: Poss[], pat: (Term
   if (ownProjs.length === 0) return null;
   const sorted = [...others.entries()].sort((x, y) => cmp(x[0], y[0])).map(([, v]) => v);
   const node = (j: number, acc: Term[][]): Term | null => {
-    if (j === sorted.length) return foldValues(op, acc.map((p) => (op === 'count' ? mki(1) : p[0])));
+    if (j === sorted.length) return foldValues(op, null, acc.map((p) => (op === 'count' ? mki(1) : p[0])));
     const without = node(j + 1, acc);
     if (without === null) return null;
     const withP = [...acc];
