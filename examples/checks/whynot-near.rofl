@@ -1,0 +1,72 @@
+-- examples/checks/whynot-near.rofl — whynot_near, run with `rofl load --explain`.
+-- A WHYNOT STAYS NEAR ITS TARGET (w_whynot_stays_near_its_target). Forty call
+-- sites, none of them `listen`: asked why no site of the family `net` is, the
+-- walk starts from what the question names, the family's names, and fails at
+-- the one premise that says no call has that callee, not at sixteen calls
+-- picked from all forty. The same past a negation, from a text the question
+-- names. Asked with nothing bound, it says how many matches it left.
+edb(explain_request).
+edb(explained).
+edb(wn_call).
+edb(wn_callee).
+edb(wn_family_name).
+edb(wn_arg).
+edb(wn_text).
+edb(wn_clean).
+wn_family_name(net, "listen").
+wn_family_name(fs, "writeFile").
+wn_site(F) :- wn_call(C), wn_callee(C, N), wn_family_name(F, N).
+wn_leak(T) :- wn_call(C), wn_arg(C, A), not wn_clean(A), wn_text(A, T).
+wn_nowhere(x) :- wn_call(C), wn_callee(C, "spawn").
+explain_request(whynot, wn_site(net)).
+explain_request(whynot, wn_leak("secret")).
+explain_request(whynot, wn_nowhere(x)).
+wn_holds(K, A, T) :- explained[$explain](K, A, _, L), wn_want(K, A, T), N is str_segs(L, T), N > 1.
+wn_want(whynot, wn_site(net), "failed premise: wn_callee[main](?C#0,\"listen\")").
+wn_want(whynot, wn_leak("secret"), "failed premise: wn_text[main](?A#0,\"secret\")").
+wn_want(whynot, wn_nowhere(x), "followed 16 of 40 matches of wn_call[main](?C#0)").
+wn_text_missing(K, A, T) :- wn_want(K, A, T), not wn_holds(K, A, T).
+wn_refused(K, A) :- explained[$explain](K, A, 0, _).
+alarm(wn_text_missing).
+alarm(wn_refused).
+
+wn_call(c00). wn_callee(c00, "f0"). wn_arg(c00, a00). wn_text(a00, "t0").
+wn_call(c01). wn_callee(c01, "f1"). wn_arg(c01, a01). wn_text(a01, "t1").
+wn_call(c02). wn_callee(c02, "f2"). wn_arg(c02, a02). wn_text(a02, "t2").
+wn_call(c03). wn_callee(c03, "f3"). wn_arg(c03, a03). wn_text(a03, "t3").
+wn_call(c04). wn_callee(c04, "f4"). wn_arg(c04, a04). wn_text(a04, "t4").
+wn_call(c05). wn_callee(c05, "f5"). wn_arg(c05, a05). wn_text(a05, "t0").
+wn_call(c06). wn_callee(c06, "f6"). wn_arg(c06, a06). wn_text(a06, "t1").
+wn_call(c07). wn_callee(c07, "f0"). wn_arg(c07, a07). wn_text(a07, "t2").
+wn_call(c08). wn_callee(c08, "f1"). wn_arg(c08, a08). wn_text(a08, "t3").
+wn_call(c09). wn_callee(c09, "f2"). wn_arg(c09, a09). wn_text(a09, "t4").
+wn_call(c10). wn_callee(c10, "f3"). wn_arg(c10, a10). wn_text(a10, "t0").
+wn_call(c11). wn_callee(c11, "f4"). wn_arg(c11, a11). wn_text(a11, "t1").
+wn_call(c12). wn_callee(c12, "f5"). wn_arg(c12, a12). wn_text(a12, "t2").
+wn_call(c13). wn_callee(c13, "f6"). wn_arg(c13, a13). wn_text(a13, "t3").
+wn_call(c14). wn_callee(c14, "f0"). wn_arg(c14, a14). wn_text(a14, "t4").
+wn_call(c15). wn_callee(c15, "f1"). wn_arg(c15, a15). wn_text(a15, "t0").
+wn_call(c16). wn_callee(c16, "f2"). wn_arg(c16, a16). wn_text(a16, "t1").
+wn_call(c17). wn_callee(c17, "f3"). wn_arg(c17, a17). wn_text(a17, "t2").
+wn_call(c18). wn_callee(c18, "f4"). wn_arg(c18, a18). wn_text(a18, "t3").
+wn_call(c19). wn_callee(c19, "f5"). wn_arg(c19, a19). wn_text(a19, "t4").
+wn_call(c20). wn_callee(c20, "f6"). wn_arg(c20, a20). wn_text(a20, "t0").
+wn_call(c21). wn_callee(c21, "f0"). wn_arg(c21, a21). wn_text(a21, "t1").
+wn_call(c22). wn_callee(c22, "f1"). wn_arg(c22, a22). wn_text(a22, "t2").
+wn_call(c23). wn_callee(c23, "f2"). wn_arg(c23, a23). wn_text(a23, "t3").
+wn_call(c24). wn_callee(c24, "f3"). wn_arg(c24, a24). wn_text(a24, "t4").
+wn_call(c25). wn_callee(c25, "f4"). wn_arg(c25, a25). wn_text(a25, "t0").
+wn_call(c26). wn_callee(c26, "f5"). wn_arg(c26, a26). wn_text(a26, "t1").
+wn_call(c27). wn_callee(c27, "f6"). wn_arg(c27, a27). wn_text(a27, "t2").
+wn_call(c28). wn_callee(c28, "f0"). wn_arg(c28, a28). wn_text(a28, "t3").
+wn_call(c29). wn_callee(c29, "f1"). wn_arg(c29, a29). wn_text(a29, "t4").
+wn_call(c30). wn_callee(c30, "f2"). wn_arg(c30, a30). wn_text(a30, "t0").
+wn_call(c31). wn_callee(c31, "f3"). wn_arg(c31, a31). wn_text(a31, "t1").
+wn_call(c32). wn_callee(c32, "f4"). wn_arg(c32, a32). wn_text(a32, "t2").
+wn_call(c33). wn_callee(c33, "f5"). wn_arg(c33, a33). wn_text(a33, "t3").
+wn_call(c34). wn_callee(c34, "f6"). wn_arg(c34, a34). wn_text(a34, "t4").
+wn_call(c35). wn_callee(c35, "f0"). wn_arg(c35, a35). wn_text(a35, "t0").
+wn_call(c36). wn_callee(c36, "f1"). wn_arg(c36, a36). wn_text(a36, "t1").
+wn_call(c37). wn_callee(c37, "f2"). wn_arg(c37, a37). wn_text(a37, "t2").
+wn_call(c38). wn_callee(c38, "f3"). wn_arg(c38, a38). wn_text(a38, "t3").
+wn_call(c39). wn_callee(c39, "f4"). wn_arg(c39, a39). wn_text(a39, "t4").

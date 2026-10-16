@@ -1,0 +1,87 @@
+-- js-fetch.rofl — THE CLIENT SIDE OF A SERVICE CALL (w_fetch_semantics).
+--
+--   requests[flow](C, M, U)   the call C may send a request with method M
+--                             (get, post, ..., or `any` when nothing says which)
+--                             to the address U, a text of rules/js-concat.rofl
+--   request_unknown[flow](C)  a client call whose address nothing traces
+--
+-- Knows nothing about servers. Which call is a client is a TABLE, as the
+-- library members of js-concat are: `http_client(Surface, Member, How)`, the
+-- member `call` being the value itself (`fetch(u)`, `axios(u)`), How `verb(M)`
+-- for a method in the name and `opts(I)` for the method in argument I's
+-- `method` member, GET when there is no argument I.
+edb(http_client).
+http_client("fetch",      call,      opts(1)).
+http_client("node-fetch", call,      opts(1)).
+http_client("undici",     "fetch",   opts(1)).
+http_client("undici",     "request", opts(1)).
+http_client("axios",      call,      opts(1)).
+http_client("got",        call,      opts(1)).
+http_client(S, V, verb(M)) :- http_client_verbs(S), http_verb_name(V, M).
+
+edb(http_client_verbs).
+http_client_verbs("axios").
+http_client_verbs("got").
+
+edb(http_verb_name).
+http_verb_name("get", get).  http_verb_name("post", post).  http_verb_name("put", put).
+http_verb_name("delete", delete).  http_verb_name("patch", patch).  http_verb_name("head", head).
+http_verb_name("options", options).
+
+-- a method written as a string, in either case fetch accepts
+edb(http_method).
+http_method("GET", get).  http_method("POST", post).  http_method("PUT", put).  http_method("DELETE", delete).
+http_method("PATCH", patch).  http_method("HEAD", head).  http_method("OPTIONS", options).
+http_method(V, M) :- http_verb_name(V, M).
+
+-- =========================================================================
+-- 1. WHICH VALUE IS A CLIENT. The module itself, a member of it, a name
+-- imported from it, the global `fetch`; and a member of any other value the
+-- module made (`axios.create()`), whose base address is not traced: `inst`.
+-- A named import is read where it is written and published with the name.
+cl_api[flow](G, "fetch", call, root) :- free_global[code](G, "fetch", _).
+cl_api[flow](G, S, call, root) :- may_be_node[flow](G, S), external_value[flow](S, S), http_client(S, call, _).
+cl_api[flow](G, S, K, root) :- cl_member[flow](G, S, K), cl_rooted[flow](G).
+cl_api[flow](G, S, K, inst) :- cl_member[flow](G, S, K), not cl_rooted[flow](G).
+cl_api[flow](G, S, K, root) :- may_be_node[flow](G, Sp), cl_import[flow](Sp, S, K).
+cl_member[flow](G, S, K) :- member_node_v[flow](G), selects[flow](G, K), external_value[flow](G, S), http_client(S, K, _).
+cl_rooted[flow](G) :- cl_member[flow](G, _, _), ast_child[code](G, object, 0, O), may_be_node[flow](O, S),
+                       external_value[flow](S, S).
+cl_import[flow](Sp, S, K) :- external_import[code](Sp, _, S, _), ast_child[code](Sp, imported, 0, I), ast_name[code](I, K),
+                             http_client(S, K, _).
+sx_cl_import[surface](Sp, S, K) :- sx_esc[surface](Sp), cl_import[flow](Sp, S, K).
+cl_import[flow](Sp, S, K) :- sx_cl_import[surface](Sp, S, K).
+
+cl_how[flow](C, How, Base) :- ast_node[code](C, call_expression, _, _), ast_child[code](C, callee, 0, G),
+                              cl_api[flow](G, S, K, Base), http_client(S, K, How).
+
+-- =========================================================================
+-- 2. THE METHOD: the literal values of the options' `method`; `any` where it
+-- has another value, or where the options may be nothing the flow knows; GET
+-- where there are no options, or none of their values has a `method`.
+cl_method[flow](C, M) :- cl_how[flow](C, verb(M), _).
+cl_opts[flow](C, A) :- cl_how[flow](C, opts(I), _), arg_at[flow](C, I, A).
+cl_method[flow](C, get) :- cl_how[flow](C, opts(I), _), not ast_child[code](C, arguments, I, _).
+cl_known[flow](A) :- cl_opts[flow](_, A), may_be_node[flow](A, _).
+cl_method[flow](C, any) :- cl_opts[flow](C, A), not cl_known[flow](A).
+cl_method_at[flow](C, P) :- cl_opts[flow](C, A), may_be_node[flow](A, O), member_value[flow](O, "method", P).
+cl_has_method[flow](C) :- cl_method_at[flow](C, _).
+cl_method[flow](C, get) :- cl_opts[flow](C, A), cl_known[flow](A), not cl_has_method[flow](C).
+cl_method_lit[flow](C, P, M) :- cl_method_at[flow](C, P), may_be_lit[flow](P, V), http_method(V, M).
+cl_method[flow](C, M) :- cl_method_lit[flow](C, _, M).
+cl_named[flow](P) :- cl_method_lit[flow](_, P, _).
+cl_method[flow](C, any) :- cl_method_at[flow](C, P), not cl_named[flow](P).
+
+-- =========================================================================
+-- 3. THE ADDRESS: a string, or the text of a string built from parts, which
+-- this pack asks js-concat to unfold. An instance's request goes under a base
+-- nothing traced, a piece no one knows.
+cl_url_arg[flow](C, A) :- cl_how[flow](C, _, _), arg_at[flow](C, 0, A).
+concat_wanted[surface](X) :- cl_url_arg[flow](_, A), may_be_node[flow](A, X), composed[flow](X).
+cl_url[flow](C, V) :- cl_url_arg[flow](C, A), may_be_lit[flow](A, V), str_value[flow](V).
+cl_url[flow](C, T) :- cl_url_arg[flow](C, A), may_be_node[flow](A, X), concat_depth(D), text_at[flow](X, D, T, _).
+
+requests[flow](C, M, U) :- cl_how[flow](C, _, root), cl_method[flow](C, M), cl_url[flow](C, U).
+requests[flow](C, M, cat(base, U)) :- cl_how[flow](C, _, inst), cl_method[flow](C, M), cl_url[flow](C, U).
+cl_sent[flow](C) :- cl_url[flow](C, _).
+request_unknown[flow](C) :- cl_how[flow](C, _, _), not cl_sent[flow](C).

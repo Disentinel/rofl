@@ -972,6 +972,10 @@ brk("why_dag_off"). brk_kind("why_dag_off", switch).
 brk_expects("why_dag_off", "agg_why_dag").
 brk("why_dag_cell_off"). brk_kind("why_dag_cell_off", switch).
 brk_expects("why_dag_cell_off", "agg_why_dag").
+brk("whynot_far_plan"). brk_kind("whynot_far_plan", switch).
+brk_expects("whynot_far_plan", "whynot_near").
+brk("whynot_unwalked_silent"). brk_kind("whynot_unwalked_silent", switch).
+brk_expects("whynot_unwalked_silent", "whynot_near").
 brk("whynot_dag_off"). brk_kind("whynot_dag_off", switch).
 brk_expects("whynot_dag_off", "agg_why_dag").
 brk("count_why_plain"). brk_kind("count_why_plain", switch).
@@ -1462,6 +1466,10 @@ brk("ts_why_dag_off"). brk_kind("ts_why_dag_off", ts).
 brk_expects("ts_why_dag_off", "agg_why_dag").
 brk("ts_why_dag_cell_off"). brk_kind("ts_why_dag_cell_off", ts).
 brk_expects("ts_why_dag_cell_off", "agg_why_dag").
+brk("ts_whynot_far_plan"). brk_kind("ts_whynot_far_plan", ts).
+brk_expects("ts_whynot_far_plan", "whynot_near").
+brk("ts_whynot_unwalked_silent"). brk_kind("ts_whynot_unwalked_silent", ts).
+brk_expects("ts_whynot_unwalked_silent", "whynot_near").
 brk("ts_whynot_dag_off"). brk_kind("ts_whynot_dag_off", ts).
 brk_expects("ts_whynot_dag_off", "agg_why_dag").
 brk("ts_count_why_plain"). brk_kind("ts_count_why_plain", ts).
@@ -2674,8 +2682,10 @@ switch_site("why_depth_cut", "rust/rofl/src/engine.rs").
 switch_site("why_hint_missing", "rust/rofl/src/engine.rs").
 switch_site("why_unasked", "rust/rofl/src/engine.rs").
 switch_site("whynot_dag_off", "rust/rofl/src/engine.rs").
+switch_site("whynot_far_plan", "rust/rofl/src/engine.rs").
 switch_site("whynot_hole_empty", "rust/rofl/src/engine.rs").
 switch_site("whynot_unranked_empty", "rust/rofl/src/engine.rs").
+switch_site("whynot_unwalked_silent", "rust/rofl/src/engine.rs").
 switch_site("widen_both_ends", "rust/rofl/src/cell.rs").
 switch_site("widen_counts_base", "rust/rofl/src/engine.rs").
 switch_site("widen_cut_encloses", "rust/rofl/src/engine.rs").

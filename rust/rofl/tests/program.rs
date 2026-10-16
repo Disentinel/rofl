@@ -193,18 +193,21 @@ fn the_door_refuses_what_the_kernel_refuses() {
     refused(&mut fresh(), "stratum(a, b, c, d).", "arity");
     // Granting the kernel. A program electing itself into the ring.
     refused(&mut fresh(), "authority(mybook, $kernel).", "kernel principal");
-    // A negation nothing binds, under a range-restricted head — AND the form
-    // beside it that must still LOAD, because the two are one line apart in
-    // the grammar and a check that refuses both is a different check.
+    // A negation nothing binds, under a range-restricted head — AND the forms
+    // beside it that must still LOAD, because they are one line apart in the
+    // grammar and a check that refuses all of them is a different check.
     //
-    // Verified against the kernel itself, 2026-09-09: it ACCEPTS
-    // `q(X) :- p(X), not r(Y).` — a variable occurring only inside the
-    // negation IS the existential reading, and `_` is the same rule spelled
-    // differently — and REFUSES `not r(Y), not s(Y)`, where Y occurs twice and
-    // nothing positive ever binds it. The first version of this test asserted
-    // the refusal of the accepted form and was wrong about the language, not
-    // about the code.
-    fresh().load("q(X) :- p(X), not r(Y).", None).expect("the existential reading must load");
+    // A named variable written once, inside a negation, reads as `_`: the
+    // negation asks whether ANY such fact exists, which is rarely what a name
+    // was written for. It is refused and the existential reading is spelled
+    // `_` (or `_Y`); a variable repeated inside one negation still asks
+    // something `_` cannot say and loads.
+    refused(&mut fresh(), "q(X) :- p(X), not r(Y).", "appears nowhere but inside 'not r/1'");
+    refused(&mut fresh(), "q(X) :- p(X), not r(X, Y).", "appears nowhere but inside 'not r/2'");
+    refused(&mut fresh(), "q(X, N) :- p(X), N is count(Z : s(Z), not r(Z, W)).", "appears nowhere but inside 'not r/2'");
+    fresh().load("q(X) :- p(X), not r(_).", None).expect("the existential reading must load");
+    fresh().load("q(X) :- p(X), not r(X, _Y).", None).expect("a named wildcard must load");
+    fresh().load("q(X) :- p(X), not r(Y, Y).", None).expect("a repeated variable must load");
     refused(&mut fresh(), "q(X) :- p(X), not r(Y), not s(Y).", "no premise binds");
     refused(&mut fresh(), "q(X) :- p(X), not r(X, Y), not s(Y, Z).", "no premise binds");
     // A rule concluding into a write-protected kernel relation.

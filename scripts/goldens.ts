@@ -783,7 +783,7 @@ export function deepExplain(): string[] {
       if (!why.ok || why.text.length !== 27_268_619 || !why.text.endsWith(`${n} is +(${n - 1},1) [builtin]`)) out.push(`${what}: why of a chain ${n} deep is ${why.text.length} characters (${why.text.slice(0, 80)}), not the Rust engine's 27268619`);
       const wn = r.whynot(`w(${n})`, { depth: n + 10, nodes: 10 * n });
       const lines = wn.text.split('\n').length;
-      if (wn.holds || wn.text.length !== 36_585_121 || lines !== 6021) out.push(`${what}: whynot of a chain ${n} deep is ${wn.text.length} characters in ${lines} lines (${wn.text.slice(0, 80)}), not the Rust engine's 36585121 in 6021`);
+      if (wn.holds || wn.text.length !== 36_597_181 || lines !== 6022) out.push(`${what}: whynot of a chain ${n} deep is ${wn.text.length} characters in ${lines} lines (${wn.text.slice(0, 80)}), not the Rust engine's 36597181 in 6022`);
     } catch (e) { out.push(`${what}: ${(e as Error).message}`); }
   }
   return out;

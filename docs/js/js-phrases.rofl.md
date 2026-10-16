@@ -1004,6 +1004,7 @@ Declared as facts:
 | `ts_passed_over` | "passes_over_under_typescript(site I, rank R)" |
 | `site_last_seg` | "reaches(site I, directory D, before segment Seg)" |
 | `last_ext` | "the_extension(of name Name, is text E, of length L)" |
+| `file_stem` | "has_the_stem(folder D, text Stem, extension E, file T)" |
 | `ts_ext` | "is_written_for(text Js, text Ts, at rank R)" |
 | `probe_ext` | "is_probed(text E, at rank R)" |
 | `index_file` | "is_an_index_file(name Name, at rank R)" |

@@ -35,7 +35,7 @@ import { type Tags, readTags, tagsAsLattices, lowerTags, declRows } from './tag.
 import { Store, type FactStore, type FactRec, type PremRef, type Witness, type LatReg, type CellRec, type CellMember, factKey, premText,
   cellKeyText, cellValueText, sameKeys } from './store.ts';
 import { parseLiteral } from './parser.ts';
-import { litsOf, canonLitSets, canonSets as canonSetsT, UNKNOWN_VALUE, holdsUnknown, bindUnknown, unifyUnknown, unkParts, mkUnk, mkList, isLabeled, sameLabel } from './unify.ts';
+import { litsOf, termsOf, canonLitSets, canonSets as canonSetsT, UNKNOWN_VALUE, holdsUnknown, bindUnknown, unifyUnknown, unkParts, mkUnk, mkList, isLabeled, sameLabel } from './unify.ts';
 import { regionDecide, newGroupValue, sureArgs, unsure, isUnsure, desure, LABEL_REGIONS } from './labeled.ts';
 import {
   V, IFACE, ARITY, RESERVED, decodeRules, type DRule, factTerm, canonClause, encodeRule,
@@ -358,7 +358,7 @@ function planVars(b: BodyElem): string[] {
  *  held back until every variable it shares with the rest is bound. Returns
  *  the order, the first negation that never became ready, whether `mustBind`
  *  is ground under the plan, and what was bound. */
-export function planOrder(mustBind: Term[], body: BodyElem[], preBound: string[], outside: string[], hold = false):
+export function planOrder(mustBind: Term[], body: BodyElem[], preBound: string[], outside: string[], hold: boolean | 'near' = false):
   { order: number[]; stuck: number | null; ground: boolean; bound: string[] } {
   const seenIn = new Map<string, number[]>();
   const note = (vs: string[], where: number) => {
@@ -391,7 +391,8 @@ export function planOrder(mustBind: Term[], body: BodyElem[], preBound: string[]
   };
   // WITH `hold`, ONE POSITIVE MOVES: a literal sharing no variable with what is bound is a cross product where it stands,
   // and waits for something that binds one of its variables. A negation or a builtin is the barrier: what is held goes
-  // in ahead of it in written order. A program with no aggregate is planned so (`AggEval.plain`).
+  // in ahead of it in written order. A program with no aggregate is planned so (`AggEval.plain`). `near` holds one past a
+  // negation too, which waits until what it reads is bound (`whynotPlan`).
   const held: number[] = [];
   const shares = (i: number): boolean => {
     const b = body[i];
@@ -411,7 +412,7 @@ export function planOrder(mustBind: Term[], body: BodyElem[], preBound: string[]
       for (let at = held.findIndex(shares); at >= 0; at = held.findIndex(shares)) takePos(held.splice(at, 1)[0]);
       return;
     }
-    while (held.length > 0) takePos(held.shift()!);
+    if (hold !== 'near' || b.t !== 'neg') while (held.length > 0) takePos(held.shift()!);
     if (b.t === 'neg') pending.push(i);
     else if (b.t === 'bi') {
       if (b.op === '=') { if (groundIn(b.l)) bindAll(b.r); else if (groundIn(b.r)) bindAll(b.l); }
@@ -8280,8 +8281,10 @@ export class AggEval {
     const n = Math.min(rn.head.args.length, lit.args.length);
     for (let i = 0; s && i < n; i++) s = this.evalBuiltin('=', rn.head.args[i], lit.args[i], s, null);
     if (s === null || rn.head.args.length !== lit.args.length) { next.push({ t: 'line', line: `${pad}rule ${r.id}: head does not unify` }); return; }
+    this.wnUnwalked.clear();
     const failures = this.failingPremises(rn, s, r.id);
     next.push({ t: 'line', line: `${pad}rule ${r.id}: ${r.canon}` });
+    for (const [key, n] of [...this.wnUnwalked].sort((a, b) => cmpStr(a[0], b[0])).slice(0, 12)) next.push({ t: 'line', line: `${pad}  followed 16 of ${n} matches of ${key}` });
     const keys = [...failures.keys()].sort(cmpStr).slice(0, 12);
     if (keys.length === 0) next.push({ t: 'line', line: `${pad}  (no failing premise found within exploration bounds)` });
     for (const f of keys) {
@@ -8356,7 +8359,7 @@ export class AggEval {
       if (s === null || rn.head.args.length !== lit.args.length) continue;
       const outs = new Map<string, Map<string, Lit | null>>(), steps = new Map<string, { n: number }>();
       const vw: VolWalk = { of, out: (at = '') => outs.get(at) ?? outs.set(at, new Map()).get(at)!, nodes: (at = '') => steps.get(at) ?? steps.set(at, { n: 0 }).get(at)! };
-      this.exploreBody(planBodyAgg(rn, this.plain).plan, 0, s, new Map(), { n: 0 }, r.id, vw, head);
+      this.exploreBody(this.whynotPlan(rn, s), 0, s, new Map(), { n: 0 }, r.id, vw, head);
       walks.push({ r, outs, split: vw.split });
     }
     const k = this.resolvedLitKey(lit, new Map());
@@ -8391,9 +8394,24 @@ export class AggEval {
     }
   }
 
+  /** A whynot's premises with more matches than it follows, and how many. */
+  private wnUnwalked = new Map<string, number>();
+
+  /** THE ORDER A WHYNOT WALKS A BODY IN starts from what the question binds: a premise sharing nothing bound waits until one
+   *  does, so a constant of the question narrows the walk instead of a premise ranging over the whole corpus. Asked with
+   *  nothing bound, the order the evaluator solves in. */
+  private whynotPlan(rn: Clause, s0: Subst): BodyElem[] {
+    const must = [...rn.head.args, rn.head.persp];
+    const outside: string[] = [];
+    for (const t of must) for (const v of varsOf(t)) if (!outside.includes(v)) outside.push(v);
+    const bound = outside.filter((v) => isGround(resolve(mkv(v), s0)));
+    if (bound.length === 0) return planBodyAgg(rn, this.plain).plan;
+    return planOrder(must, rn.body, bound, outside, 'near').order.map((i) => rn.body[i]);
+  }
+
   private failingPremises(rn: Clause, s0: Subst, rid: string): Map<string, Lit | null> {
     const out = new Map<string, Lit | null>();
-    this.exploreBody(planBodyAgg(rn, this.plain).plan, 0, s0, out, { n: 0 }, rid);
+    this.exploreBody(this.whynotPlan(rn, s0), 0, s0, out, { n: 0 }, rid);
     return out;
   }
 
@@ -8409,7 +8427,10 @@ export class AggEval {
       if (mm.length === 0 && this.demandTrail.length > unknowns) put(`${this.resolvedLitKey(b.lit, s)} -- not known: it reads what a hole left unknown`, null);
       else if (mm.length === 0) put(this.resolvedLitKey(b.lit, s), this.instantiate(b.lit, s));
       else if (vw && at === undefined) this.exploreSplit(body, k, s, mm.map(([s2]) => s2), rule, vw);
-      else for (const [s2] of mm.slice(0, 16)) this.exploreBody(body, k + 1, s2, out, nodes, rule, vw, at);
+      else {
+        if (mm.length > 16) { const key = this.resolvedLitKey(b.lit, s); if (!this.wnUnwalked.has(key)) this.wnUnwalked.set(key, mm.length); }
+        for (const [s2] of mm.slice(0, 16)) this.exploreBody(body, k + 1, s2, out, nodes, rule, vw, at);
+      }
     } else if (b.t === 'neg') {
       const unknowns = this.demandTrail.length;
       const mm = this.matchPremise(b.lit, s, 0, null);
@@ -8748,12 +8769,36 @@ function stuckMessage(c: Clause, l: Lit, bound: string[]): string {
   return `rule ${canonClause(c)}: no premise binds ${vars} before 'not ${l.rel}/${l.args.length}', so what the negation asks would depend on where it is written -- unbound it asks whether ANY such fact exists, bound it asks about that one. Bind ${vars} in a positive premise, or write '_' if the existential reading is what is meant.`;
 }
 
+/** A named variable written once in the whole clause, inside a negation: it binds nothing and asks nothing, `_` is what it reads as. */
+function looseNegMessage(c: Clause): string | null {
+  const seen = new Map<string, number>();
+  const count = (t: Term) => {
+    if (t.k === 'v') seen.set(t.name, (seen.get(t.name) ?? 0) + 1);
+    else if (t.k === 'f') t.args.forEach(count);
+  };
+  const lits = [c.head, ...c.body.flatMap(litsOf)];
+  for (const l of lits) count(l.persp);
+  c.head.args.forEach(count);
+  c.body.flatMap(termsOf).forEach(count);
+  for (const b of c.body.flatMap(negsOf)) {
+    const loose = [...elemVars(b)].filter((v) => !v.startsWith('_') && seen.get(v) === 1);
+    if (loose.length === 0) continue;
+    const vars = loose.join(', ');
+    return `rule ${canonClause(c)}: ${vars} appears nowhere but inside 'not ${b.lit.rel}/${b.lit.args.length}', so it is bound to nothing and the negation asks whether ANY such fact exists. Bind ${vars} in a positive premise or the head, or write '_' if that is what is meant.`;
+  }
+  return null;
+}
+
+function negsOf(b: BodyElem): (BodyElem & { t: 'neg' })[] {
+  return b.t === 'neg' ? [b] : b.t === 'agg' ? b.body.flatMap(negsOf) : [];
+}
+
 /** `checkOrderable` over the planner that knows aggregates. */
 export function checkOrderableAgg(c: Clause): string | null {
   const pb = planBodyAgg(c);
-  if (pb.stuck === null || !pb.ground) return null;
+  if (pb.stuck === null || !pb.ground) return looseNegMessage(c);
   const b = c.body[pb.stuck];
-  return b.t === 'neg' ? stuckMessage(c, b.lit, pb.bound) : null;
+  return b.t === 'neg' ? stuckMessage(c, b.lit, pb.bound) : looseNegMessage(c);
 }
 
 /** THE DOOR OF AN AGGREGATE. `c` is annotated (`annotateAggs`). */

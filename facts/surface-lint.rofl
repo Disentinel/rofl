@@ -67,3 +67,7 @@ xl_ok(sx_name, ast_name, "the publication: the array's own volume names its elem
 -- exported and called from another file is not seen as a merge by the importing volume (declared); the common shape, the
 -- member or the module read in the calling file, is.
 xl_ok(merge_call, merge_fn, "the library member is a node of the file that reads it; an alias exported to another file is not recognised there (declared)").
+xl_ok(cl_api, http_client, "a library's specifier is the same string in every file: the table of its members is read by the string, not by a node").
+xl_ok(cl_how, http_client, "a library's specifier is the same string in every file: the table of its members is read by the string, not by a node").
+xl_ok(ex_app, express_module, "a library's specifier is the same string in every file: the table of its members is read by the string, not by a node").
+xl_ok(ex_router_fn, express_module, "a library's specifier is the same string in every file: the table of its members is read by the string, not by a node").

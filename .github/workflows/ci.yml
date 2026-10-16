@@ -45,8 +45,11 @@ jobs:
   # THE EXTENSION CARRIES THE RUST ENGINE. One `rofl` binary per platform VS Code
   # publishes for, then one VSIX per platform with its binary in rofl-nb/bin: the
   # extension evaluates on it by default (playground/rust.ts), and a platform
-  # without one falls back to the TypeScript engine.
+  # without one falls back to the TypeScript engine. Built on main and on a release
+  # tag only: a branch's binaries ship nowhere, and main still finds a platform's break
+  # before a release does.
   engine:
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/rofl-nb-'))
     strategy:
       matrix:
         include:
@@ -70,6 +73,7 @@ jobs:
 
   vsix:
     needs: engine
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/rofl-nb-'))
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

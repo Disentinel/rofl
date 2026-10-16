@@ -1581,8 +1581,13 @@ work_spawned(w_vocabulary_home, f_the_duplication_that_makes_a_partial_world_pos
 -- rejected, it is made DEMAND-BACKED, so the check would move such a rule from
 -- one evaluation strategy to another and leave the wrong answer where it was.
 -- The diagnostic belongs where `unsafe/1` and `malformed/2` already live.
-work(w_negation_range_restriction, "a variable bound only inside a negation is accepted, and asks whether the relation is empty").
-work_state(w_negation_range_restriction, open).
+-- DONE 2026-10-16: the verdict went to the load door beside the stuck
+-- negation, not to `classify`, so it changes no strategy: a named variable
+-- written once in a clause, inside a negation, is refused in both engines
+-- with the advice to bind it or write `_`. A variable repeated inside one
+-- negation still loads, it asks what `_` cannot. No rule in the tree hit it.
+work(w_negation_range_restriction, "DONE 2026-10-16: a named variable written only once, inside a negation, is refused at load (src/aggeval.ts looseNegMessage, rust/rofl/src/program.rs loose_neg_message); `_` is the existential spelling").
+work_state(w_negation_range_restriction, done).
 work_spawned(w_negation_range_restriction, f_the_safe_flag_is_a_strategy_not_a_verdict).
 
 -- 40 — A COMPUTED KEY THAT IS A BARE IDENTIFIER IS NAMED BY ITS SPELLING.
@@ -3417,17 +3422,20 @@ work_spawned(w_concat_value, f_a_string_built_from_parts_is_a_node_with_parts_an
 
 work(w_url_pack,
   "A URL library that knows nothing about JavaScript: a path as a sequence of segments (the kernel cuts strings with str_pre, str_seg, str_segs, str_sub, str_char and never builds one, so a URL in the model is segments, not text), prefix composition for app.use(prefix, router), and a matcher over patterns with :param and * that consumes parts(E, I, P) - a literal part is cut into segments, a dyn part covers exactly one segment between literal slashes. The unknown-prefix case (`${base}/users` with base untraced) is a DECISION written as a row, not a default: match every service (over-report, the safe direction for a may-set) or none. Testable in a world of one pack with no corpus.").
-work_state(w_url_pack, open).
+work_state(w_url_pack, done).
+work_spawned(w_url_pack, f_a_request_reaches_its_handler_by_segments_of_texts).
 work_needs(w_url_pack, w_concat_value).
 
 work(w_fetch_semantics,
   "Client-side semantics as a pack: fetch(u, {method}), axios/got/undici client.get(u) -> requests(Site, Method, UrlParts). Reads callee_of, selects, arg_at, may_be_node, parts. Knows nothing about servers.").
-work_state(w_fetch_semantics, open).
+work_state(w_fetch_semantics, done).
+work_spawned(w_fetch_semantics, f_a_request_reaches_its_handler_by_segments_of_texts).
 work_needs(w_fetch_semantics, w_url_pack).
 
 work(w_express_semantics,
   "Server-side semantics as a pack: app.get(p, h), router.post, app.use(prefix, router), app.use(middleware) -> serves(App, Method, PatternParts, Handler), prefixes composed through the url pack, middleware as an edge that precedes every handler. Reads passes_function (the handler is a passed function the call graph knows is passed and not called), may_be_node for what router denotes. Knows nothing about clients.").
-work_state(w_express_semantics, open).
+work_state(w_express_semantics, done).
+work_spawned(w_express_semantics, f_a_request_reaches_its_handler_by_segments_of_texts).
 work_needs(w_express_semantics, w_url_pack).
 
 work(w_service_graph,
@@ -3435,6 +3443,10 @@ work(w_service_graph,
 work_state(w_service_graph, open).
 work_needs(w_service_graph, w_fetch_semantics).
 work_needs(w_service_graph, w_express_semantics).
+work_spawned(w_service_graph, f_a_request_reaches_its_handler_by_segments_of_texts).
+-- PROGRESS 2026-10-16: the join, the frontier both ways and the two-service corpus are in (rules/js-service.rofl,
+-- examples/services, world services). LEFT, and why the item stays open: the oracle (run the two services, compare
+-- their access log with the edges), and `layer(service)` with its cells, which is the owner's declaration to make.
 
 -- ===========================================================================
 -- DOCUMENTATION DERIVED FROM THE LEDGER
@@ -3519,8 +3531,8 @@ work(w_why_is_a_dag,
 work_state(w_why_is_a_dag, done).
 
 work(w_whynot_stays_near_its_target,
-  "A WHYNOT WITH AN UNBOUND VARIABLE enumerates the whole corpus instead of the target's neighbourhood. Bind what the question's own constants and the failing premise's join can bind first, and say how many candidates were left unexplored rather than walking them. ACCEPTANCE: whynot of a literal with one open variable over a 5k-file world answers in the size of the target's cone.").
-work_state(w_whynot_stays_near_its_target, open).
+  "A WHYNOT WITH AN UNBOUND VARIABLE enumerates the whole corpus instead of the target's neighbourhood. Bind what the question's own constants and the failing premise's join can bind first, and say how many candidates were left unexplored rather than walking them. ACCEPTANCE: whynot of a literal with one open variable over a 5k-file world answers in the size of the target's cone. DONE 2026-10-16 (f_a_question_reads_its_rows_not_its_relations): each rule is walked from what the question binds (`whynot_plan`, `whynotPlan`: a positive sharing nothing bound waits until one does, past a negation too), a premise with more matches than the 16 followed says `followed 16 of N matches of K`, and a question no longer puts a whole relation in key order to read a few rows of it (`Store::question_matches`: its matches are sorted, not the relation). Both engines, the same text (whycheck); examples/checks/whynot-near.rofl and four planted faults. Over the side-effect question on vscode, 250 files: `whynot side_effect_value(S, process, V)` 935 ms to 508 ms the first time and 4 ms after, and it now ends at the family having no receiver module rather than at sixteen arbitrary calls; on a synthetic 5000-file world every question is 2-7 ms. NOT DONE: the first question that reads a relation by a column the evaluation never indexed builds that index, one pass over the relation (about 0.5 s at 250 vscode files, linear in the corpus); every later question is served by it.").
+work_state(w_whynot_stays_near_its_target, done).
 
 work(w_whynot_tells_absent_from_unloaded,
   "\"NO RULE CONCLUDES X\" READS THE SAME whether the model has no such rule or the session merely did not load the file that has it (13 of 24 MODEL_FILES loaded gave the wording of a real gap). whynot names the units loaded and, when a reference unit set is known (MODEL_FILES, a declared world), names the unloaded unit that concludes X. Both engines, same text. Makes trimmed digest worlds safe for searching a chain break. DONE 2026-10-09: the reference set is data, `unit_concludes(Unit, Rel)` rows a world carries; facts/model-units.rofl is the JS model's, generated from MODEL_FILES by `npm run docs` and loaded first of them. A relation with neither a rule nor a fact here then reads `no rule concludes 'X' and no matching base fact exists: rules/js-callgraph.rofl concludes it and is not loaded`, or `..., and no unit of the model concludes it` for a real gap; with no index the old text. Both engines (unloaded in engine.rs and src/aggeval.ts); examples/checks/whynot-unloaded.rofl, asked by whycheck, and rust/rofl/tests/explain.rs. NOT DONE: naming every unit loaded, which the engines do not know; the unit not loaded is what decides.").
