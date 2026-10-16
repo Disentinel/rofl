@@ -79,7 +79,7 @@ struct NegAt {
 pub struct PrepMark {
     rules: HashMap<Sym, (String, bool)>,
     lattices: Vec<Sym>,
-    subs: Vec<Sym>,
+    subs: Vec<(Sym, Vec<Sym>)>,
     demand: Vec<Sym>,
     late: Vec<Sym>,
     shrugs: Vec<Sym>,
@@ -195,7 +195,12 @@ impl Eval {
         PrepMark {
             rules: self.rules.iter().map(|r| (r.id, (r.canon.clone(), r.safe))).collect(),
             lattices: sorted(self.lattices.keys().copied().collect()),
-            subs: sorted(self.subs.keys().copied().collect()),
+            // (a dominance rule added to a relation already subsumptive is a declaration changed too)
+            subs: {
+                let mut v: Vec<(Sym, Vec<Sym>)> = self.subs.iter().map(|(r, x)| (*r, sorted(x.doms.iter().filter(|_| brk!("add_dominance_rule_unmarked" => false; true)).map(|(d, _)| d.id).collect()))).collect();
+                v.sort_unstable();
+                v
+            },
             demand: sorted(self.demand_rels.iter().map(|(r, _)| *r).collect()),
             late: sorted(self.answer.late.clone()),
             shrugs: sorted(self.shrug_readers.iter().copied().collect()),
@@ -984,7 +989,9 @@ impl Eval {
         let lats: HashSet<Sym> = grown.iter().copied().filter(|r| self.lattices.contains_key(r)).collect();
         for l in &lats {
             let op = self.lattices[l].1;
-            if !matches!(op.class(), Class::IdempotentOrder | Class::PartialOrder) || op == AggOp::Dominance || self.tags.count_of.contains_key(l) || self.widen.contains_key(l) {
+            // (a dominance is derived again whole by key as an order is, where its rules compare by the values alone)
+            let dom = op == AggOp::Dominance && brk!("add_dominance_refused" => true; self.subs.get(l).is_none_or(|x| !x.reads.is_empty()));
+            if !matches!(op.class(), Class::IdempotentOrder | Class::PartialOrder) || dom || self.tags.count_of.contains_key(l) || self.widen.contains_key(l) {
                 return Err("a join, a widening, a counting tag or a dominance is reached by what changed");
             }
         }
@@ -1202,6 +1209,19 @@ impl Eval {
         }
         for l in &lats {
             self.lat_closed.remove(l);
+        }
+        // what the evaluation kept of the values a subsumptive key was given goes with its facts
+        if lats.iter().any(|l| self.subs.contains_key(l)) {
+            self.sub_cur.retain(|k, _| !lats.contains(&k.0));
+            self.sub_seen.retain(|k, _| !lats.contains(&k.0));
+            self.sub_memo.retain(|k, _| !lats.contains(&k.0));
+            self.sub_parties.retain(|k, _| !lats.contains(&k.0));
+            self.sub_seen_set.retain(|(k, _), _| !lats.contains(&k.0));
+            self.sub_beaten.retain(|(k, _), _| !lats.contains(&k.0));
+            self.sub_prems.retain(|(k, _), _| !lats.contains(&k.0));
+            self.sub_by.retain(|(k, _), _| !lats.contains(&k.0));
+            let store = &self.store;
+            self.sub_by_of.retain(|f, _| store.alive(*f));
         }
         let store = &self.store;
         self.lat_cur.retain(|_, id| store.alive(*id));

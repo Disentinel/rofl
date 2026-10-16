@@ -721,6 +721,29 @@ fn a_fault_the_addition_does_not_reach_stands() {
     assert!(all.full.keys().all(|k| k.contains("faulted") || k.contains("write a hole")), "{all:?}");
 }
 
+fn fact_route(r: &mut Rng) -> String {
+    match r.below(6) {
+        0 => format!("n({})", r.pick(&ATOMS)),
+        _ => format!("e4({}, {}, {}, {})", r.pick(&ATOMS), r.pick(&ATOMS), 1 + r.below(4), 1 + r.below(4)),
+    }
+}
+
+/// A Pareto front kept by two dominance rules, and readers of it plainly and under a negation: the front the change
+/// reaches is derived again whole, its values given forgotten with it.
+#[test]
+fn a_dominance_the_change_reaches_is_derived_again() {
+    let rules = [
+        "route(A, B, C, T) :- e4(A, B, C, T).",
+        "route(A, C, C1, T1) :- route(A, B, C0, T0), e4(B, C, C2, T2), C1 is C0 + C2, T1 is T0 + T2, C1 < 12.",
+        "route(A, B, C1, T1) <= route(A, B, C2, T2) :- C2 <= C1, T2 <= T1, C2 < C1.",
+        "route(A, B, C1, T1) <= route(A, B, C2, T2) :- C2 <= C1, T2 <= T1, T2 < T1.",
+        "cheap(A, B) :- route(A, B, C, _), C < 3.",
+        "far(A) :- n(A), not cheap(A, A).",
+    ];
+    let all = sweep("dominance", "edb(e4). edb(n).", &rules, fact_route, 1..=12, 10);
+    assert!(all.additions > 40 && all.full.keys().all(|k| k.contains("declaration changed")), "every addition to the front but a dominance rule is a delta: {all:?}");
+}
+
 /// An aggregate the change reaches is sealed again at its level, and what reads it, plainly or under a negation, is
 /// kept and fed what the new seal changed, not fired again whole.
 #[test]
