@@ -1182,6 +1182,9 @@ pub struct Eval {
     /// The last judgment of `safety_answer`, by the facts it was judged from: a preparation over the same program
     /// (an ask added, a kept world opened again) reads it instead of evaluating safety.rofl again.
     safety_memo: Option<(Vec<Vec<Term>>, RuleAnswer, Option<String>)>,
+    /// The evaluated safety.rofl world of the last judgement and the rows it was judged over (its heap is this
+    /// world's): a program that only adds rows is judged by adding them to it.
+    safety_kept: Option<Rc<(Vec<Vec<Term>>, Eval)>>,
     pub no_provenance: bool,
     /// A provenanced world no rule reads `derived_by` of writes its rows when
     /// something asks (prov.rs): firings noted, and whether to note them.
@@ -1604,6 +1607,7 @@ impl Eval {
             answer: RuleAnswer::default(),
             known_answer: known,
             safety_memo: None,
+            safety_kept: None,
             no_provenance: false,
             pending_prov: prov::Notes::default(),
             pending_assert: prov::Notes::default(),
@@ -2721,10 +2725,20 @@ impl Eval {
             self.h = h;
             return answer.clone();
         }
-        let mut sub = Eval::new(h, pol, POLICY_BUDGET, Mode::Strata, true);
-        let res = sub.run();
-        let mut pol = std::mem::take(&mut sub.store);
+        let kept = match self.safety_kept.take() {
+            Some(k) => Self::safety_added(k, &judged, h),
+            None => Err(h),
+        };
+        let (mut sub, res) = match kept {
+            Ok(sub) => (sub, Ok(())),
+            Err(h) => {
+                let mut sub = Eval::new(h, pol, POLICY_BUDGET, Mode::Strata, true);
+                let res = sub.run().map(|_| ());
+                (sub, res)
+            }
+        };
         let mut h = std::mem::take(&mut sub.h);
+        let pol = &mut sub.store;
         let err = res.err().map(|e| format!("safety.rofl did not settle: {e:?}"));
         if let Some(e) = &err {
             self.diags.push(e.clone());
@@ -2786,10 +2800,10 @@ impl Eval {
             }
         }
         let answer = RuleAnswer {
-            unsafe_rules: atoms(&mut h, &mut pol, self.v.unsafe_rule),
-            demand_rels: atoms(&mut h, &mut pol, self.v.demand_rel),
+            unsafe_rules: atoms(&mut h, pol, self.v.unsafe_rule),
+            demand_rels: atoms(&mut h, pol, self.v.demand_rel),
             trigger,
-            late: atoms(&mut h, &mut pol, self.v.late_rule),
+            late: atoms(&mut h, pol, self.v.late_rule),
             reads_provenance: pol.rel_count(self.v.provenance_reader) > 0,
             agg_refused,
             empty_zero,
@@ -2800,8 +2814,57 @@ impl Eval {
             reads_dominated: pol.rel_count(self.v.dominated_reader) > 0,
         };
         self.h = h;
+        if err.is_none() {
+            self.safety_kept = Some(Rc::new((judged.clone(), sub)));
+        }
         self.safety_memo = Some((judged, answer.clone(), err));
         answer
+    }
+
+    /// The kept safety.rofl world brought to `judged` by adding the rows it lacks, where it lacks only rows and the
+    /// addition is a delta; else the heap back, for a judgement from the start.
+    fn safety_added(kept: Rc<(Vec<Vec<Term>>, Eval)>, judged: &[Vec<Term>], h: Heap) -> Result<Eval, Heap> {
+        let (was, _) = &*kept;
+        // the last row is the refusals `tag::lower` made, which no row adds to
+        let (Some((wt, wrows)), Some((jt, jrows))) = (was.split_last(), judged.split_last()) else { return Err(h) };
+        if wt != jt || brk!("safety_judged_whole" => true; false) {
+            return Err(h);
+        }
+        let mut added: Vec<&Vec<Term>> = Vec::new();
+        let mut i = 0;
+        for row in jrows {
+            match wrows.get(i) {
+                Some(w) if w == row => i += 1,
+                Some(w) if w < row => return Err(h),
+                _ => added.push(row),
+            }
+        }
+        if i < wrows.len() {
+            return Err(h);
+        }
+        let (_, mut sub) = Rc::try_unwrap(kept).unwrap_or_else(|k| (*k).clone());
+        sub.h = h;
+        let mark = sub.prep_mark();
+        let mut ids = Vec::new();
+        for row in added {
+            let (Some(rel), Some(persp)) = (row[0].as_atom(), row[1].as_atom()) else { return Err(std::mem::take(&mut sub.h)) };
+            let (id, new) = sub.store.put(&sub.h, rel, persp, &row[2..], F_BASE);
+            if new {
+                ids.push(id);
+            }
+        }
+        // a row the preparation reads (a lattice declared) moves the program, as a load does
+        if !sub.reprepare_keeping_trees() {
+            return Err(std::mem::take(&mut sub.h));
+        }
+        let (rules, called, moves) = sub.prep_moves(&mark);
+        if !rules.is_empty() || !moves.is_empty() {
+            return Err(std::mem::take(&mut sub.h));
+        }
+        match sub.add_delta(&ids, &[], &called) {
+            Ok(_) => Ok(sub),
+            Err(_) => Err(std::mem::take(&mut sub.h)),
+        }
     }
 
     /// `premise_var` and `slot_arity` rows for one slot, as `safety_answer`
@@ -5027,8 +5090,13 @@ impl Eval {
                         firings.push((c.step, if c.r_first { vec![r, e] } else { vec![e, r] }));
                     }
                 }
+                // (a row that stood before an addition, given a firing, may stand lower now)
+                let stood = self.adding && id < self.add_mark && !self.store.rec(id).base();
                 for (rule, prems) in firings {
                     if self.store.support(id, Witness { rule, tick, prems }) {
+                        if stood && brk!("add_closure_lowered_unnoted" => false; true) {
+                            self.add_refired.push(id);
+                        }
                         self.bump_steps()?;
                         self.charge_row(Some(rule), true)?;
                         if self.defers(c.rel) {
@@ -6693,7 +6761,7 @@ impl Eval {
     /// under every value of it, so it is sealed once and shared, keyed by
     /// the correlation less it. A rank asked per member of a group of n is
     /// then n cells over one stored group, each answered in O(log n).
-    fn hol_share_key(&self, rid: Sym, a: &Agg, plan: &AggPlan, corr: &[Term]) -> Option<(Sym, u32, Box<[Term]>)> {
+    pub(super) fn hol_share_key(&self, rid: Sym, a: &Agg, plan: &AggPlan, corr: &[Term]) -> Option<(Sym, u32, Box<[Term]>)> {
         if brk!("hol_unshared" => true; plan.op.class() != Class::Holistic || plan.op.params() == 0) {
             return None;
         }

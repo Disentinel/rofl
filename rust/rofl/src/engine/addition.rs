@@ -349,8 +349,6 @@ impl Eval {
             self.v.agg_member,
             self.v.agg_member_prem,
             self.v.agg_sealed,
-            self.v.derived_by,
-            self.v.hole,
             self.v.shrug,
             self.v.lattice_member,
             self.v.lattice_member_prem,
@@ -771,7 +769,7 @@ impl Eval {
     /// it matches leaves a variable of the key free), the key is not the head's, or a fact below may stand lower than it
     /// did (a cell lists its members' heights).
     fn agg_keys(&mut self, r: &ERule, lv: i64, news: &Front, changed: &HashSet<FactId>) -> Option<Vec<Subst>> {
-        if !self.ds_elems.is_empty() || !self.lattices.is_empty() || self.add_refired.iter().any(|f| !changed.contains(f) && self.rel_level(self.store.rec(*f).rel) < lv) {
+        if !self.ds_elems.is_empty() || self.add_refired.iter().any(|f| !changed.contains(f) && self.rel_level(self.store.rec(*f).rel) < lv) {
             return None;
         }
         let mut key: Option<Vec<Sym>> = None;
@@ -781,9 +779,14 @@ impl Eval {
                 BodyElem::Pos(l) | BodyElem::Neg(l) => lits.push(l),
                 BodyElem::Agg(a) => {
                     let plan = self.agg_plans.get(&(r.id, a.at))?;
-                    let mut vs: Vec<Sym> = plan.corr.iter().map(|i| a.shared[*i]).collect();
+                    // a holistic group shared across its percent or subject is asked again at the correlation less it
+                    let subject: Vec<Sym> = match self.hol_share_key(r.id, a, plan, &[]) {
+                        Some(_) => a.vals[..a.params()].iter().filter_map(|t| match t.kind() { TermK::Var(v) => Some(v), _ => None }).collect(),
+                        None => Vec::new(),
+                    };
+                    let mut vs: Vec<Sym> = plan.corr.iter().map(|i| a.shared[*i]).filter(|v| !subject.contains(v)).collect();
                     vs.sort_unstable();
-                    if plan.op.class() == Class::Holistic || vs.is_empty() || key.as_ref().is_some_and(|k| *k != vs) {
+                    if vs.is_empty() || key.as_ref().is_some_and(|k| *k != vs) {
                         return None;
                     }
                     key = Some(vs);
@@ -800,7 +803,7 @@ impl Eval {
         }
         let key = key?;
         let rels: HashSet<Sym> = lits.iter().map(|l| l.rel).collect();
-        if lits.iter().any(|l| l.temporal != Temporal::Now) || key.iter().any(|v| !r.clause.head.args.contains(&Term::var(*v))) || self.vclosures.iter().any(|c| rels.contains(&c.rel)) {
+        if lits.iter().any(|l| l.temporal != Temporal::Now || self.lattices.contains_key(&l.rel)) || key.iter().any(|v| !r.clause.head.args.contains(&Term::var(*v))) || self.vclosures.iter().any(|c| rels.contains(&c.rel)) {
             return None;
         }
         let mut facts: Vec<FactId> = news.by_rel.iter().filter(|(rel, _)| rels.contains(rel)).flat_map(|(_, ids)| ids.iter().copied()).collect();
@@ -865,12 +868,28 @@ impl Eval {
                 let BodyElem::Agg(a) = b else { continue };
                 let plan = self.agg_plans[&(r.id, a.at)].clone();
                 let corr: Box<[Term]> = plan.corr.iter().map(|i| resolve(&mut self.h, Term::var(a.shared[*i]), s)).collect();
-                let mk = (r.id, a.at, corr);
-                if let Some(cs) = self.agg_memo.remove(&mk) {
-                    cells.extend(cs.iter().copied());
+                if corr.iter().all(|t| self.h.is_ground(*t)) {
+                    let mk = (r.id, a.at, corr);
+                    if let Some(cs) = self.agg_memo.remove(&mk) {
+                        cells.extend(cs.iter().copied());
+                    }
+                    self.reach_memo.remove(&mk);
+                    self.agg_opened.remove(&mk);
+                    continue;
                 }
-                self.reach_memo.remove(&mk);
-                self.agg_opened.remove(&mk);
+                // a shared holistic group: every percent or subject of it, and the group
+                let h = &self.h;
+                let fits = |k: &(Sym, u32, Box<[Term]>)| k.0 == r.id && k.1 == a.at && k.2.len() == corr.len() && k.2.iter().zip(corr.iter()).all(|(x, p)| !h.is_ground(*p) || x == p);
+                let mine: Vec<(Sym, u32, Box<[Term]>)> = self.agg_memo.keys().filter(|k| fits(k)).cloned().collect();
+                for mk in mine {
+                    if let Some(cs) = self.agg_memo.remove(&mk) {
+                        cells.extend(cs.iter().copied());
+                    }
+                }
+                self.reach_memo.retain(|k, _| !fits(k));
+                self.agg_opened.retain(|k| !fits(k));
+                let base: Box<[Term]> = corr.iter().copied().filter(|t| h.is_ground(*t)).collect();
+                self.hol_shared.remove(&(r.id, a.at, base));
             }
         }
         self.kill_cells(&cells);
@@ -954,6 +973,7 @@ impl Eval {
         let mut negs: Vec<(Rc<ERule>, Vec<NegAt>)> = Vec::new();
         let mut new_plain: Vec<Rc<ERule>> = Vec::new();
         let mut staged: Vec<Rc<ERule>> = Vec::new();
+        let mut ledger_heads: HashSet<Sym> = HashSet::new();
         for r in &self.rules {
             let (any, inner) = reads(r, grown);
             if r.clause.head.temporal == Temporal::Next || !r.safe {
@@ -993,7 +1013,14 @@ impl Eval {
         }
         // WHAT IS DERIVED AGAIN AFTER THE REST, and what rests on it, through each other: a lattice the change reaches,
         // what calls made, a closure walked whole (a reset rule elsewhere is derived again at its level)
-        let mut dirty: HashSet<Sym> = self.rules.iter().filter(|r| reset.contains(&r.id) && (lats.contains(&r.clause.head.rel) || brk!("add_reset_after" => true; false))).map(|r| r.clause.head.rel).collect();
+        // A RULE THAT READS `derived_by` reads a row of every firing, which any change makes or withdraws: it is
+        // derived again after the rest, as a lattice is
+        let ledger = HashSet::from([self.v.derived_by]);
+        for r in self.rules.iter().filter(|r| r.clause.head.temporal != Temporal::Next && r.safe && reads(r, &ledger).0) {
+            reset.insert(r.id);
+            ledger_heads.insert(r.clause.head.rel);
+        }
+        let mut dirty: HashSet<Sym> = self.rules.iter().filter(|r| reset.contains(&r.id) && (lats.contains(&r.clause.head.rel) || ledger_heads.contains(&r.clause.head.rel) || brk!("add_reset_after" => true; false))).map(|r| r.clause.head.rel).collect();
         if brk!("add_demand_kept" => false; true) {
             dirty.extend(call_rels.iter().copied());
         }

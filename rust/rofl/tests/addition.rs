@@ -504,6 +504,8 @@ fn a_lattice_world_is_a_fresh_evaluation_after_every_addition() {
         "hop(A, B) :- e3(A, B, _).",
         "hop2(A, C) :- hop(A, B), hop(B, C).",
         "far(A, B) :- hop(A, B), not near(A, B).",
+        "fan(A, N) :- hop(A, _), N is count(B : hop(A, B)).",
+        "wide(A) :- fan(A, N), N > 2, not near(A, A).",
     ];
     let all = sweep("lattice", "edb(e3).\nlattice d(A, B, min W).", &rules, fact_edge, 1..=12, 10);
     assert!(all.additions > 50 && all.full.is_empty(), "every addition to the lattice is a delta: {all:?}");
@@ -647,6 +649,49 @@ fn random_negation_programs_keep_what_a_negation_still_allows() {
     report("negation", &all);
     assert!(all.sum.negated > 100 && all.sum.overdeleted > 20 && all.sum.rederived > 0, "the fine path is exercised: {all:?}");
     assert!(all.sum.stacked_rules == 0 && all.sum.refired == 0, "no rule of joins, recursion and negation is reset: {all:?}");
+}
+
+fn fact_hol(r: &mut Rng) -> String {
+    match r.below(5) {
+        0 => format!("ask({}, {})", r.pick(&ATOMS), 25 * r.below(5)),
+        1 => format!("n({})", r.pick(&ATOMS)),
+        _ => format!("w({}, {}, {})", r.pick(&ATOMS), r.pick(&ATOMS), 1 + r.below(9)),
+    }
+}
+
+/// A median, a quantile and a rank the change reaches are sealed again at the groups it falls in, a group shared
+/// across its percent or subject with every percent or subject of it, and so is what reads them.
+#[test]
+fn a_holistic_aggregate_is_sealed_again_at_the_groups_the_change_reaches() {
+    let rules = [
+        "med(G, M) :- n(G), M is median(V ; K : w(G, K, V)).",
+        "q(G, P, Q) :- ask(G, P), Q is quantile(P, V ; K : w(G, K, V)).",
+        "q90(G, Q) :- n(G), Q is quantile(90, V ; K : w(G, K, V)).",
+        "place(G, K, R) :- w(G, K, V), R is rank(V, K ; desc(V2), K2 : w(G, K2, V2)).",
+        "top(G, K) :- place(G, K, 1), not q90(G, 1).",
+        "high(G) :- med(G, M), M > 4.",
+    ];
+    let all = sweep("holistic", "edb(w). edb(n). edb(ask).", &rules, fact_hol, 1..=16, 10);
+    assert!(all.additions > 50 && all.full.is_empty(), "every addition to a holistic aggregate is a delta: {all:?}");
+    assert!(all.sum.stacked_cells > 0, "{all:?}");
+}
+
+/// Rules that read `derived_by`, plainly, joined and under a negation of what they conclude: every change makes or withdraws a row they read, so they
+/// are derived again after the rest.
+#[test]
+fn a_rule_reading_derived_by_is_derived_again_after_an_addition() {
+    let rules = [
+        "p(X, Y) :- e(X, Y).",
+        "p(X, Z) :- p(X, Y), e(Y, Z).",
+        "q(X) :- n(X), not p(X, X).",
+        "c(X, N) :- n(X), N is count(Y : p(X, Y)).",
+        "fired(R) :- derived_by(_, R, _).",
+        "seen(R, X) :- derived_by(_, R, _), q(X).",
+        "cold(X) :- n(X), not seen(X, X).",
+        "busy(X) :- n(X), fired(R), not q(X).",
+    ];
+    let all = sweep("derived_by", EDB, &rules, fact, 1..=12, 10);
+    assert!(all.additions > 40 && all.full.is_empty(), "every addition to a world that reads derived_by is a delta: {all:?}");
 }
 
 /// An aggregate the change reaches is sealed again at its level, and what reads it, plainly or under a negation, is
@@ -909,4 +954,11 @@ fn corpus_additions_are_a_fresh_evaluation() {
         );
         assert!(same);
     }
+}
+
+/// A closure walked again that gives a row it held a shorter path: the row stands lower, and so does a cell over it.
+#[test]
+fn a_closure_row_given_a_shorter_path_seals_its_aggregate_again() {
+    let program = "edb(e). edb(n).\np(X, Y) :- e(X, Y).\np(X, Z) :- p(X, Y), e(Y, Z).\nq(X) :- n(X), not p(X, X).\nc(X, N) :- n(X), N is count(Y : p(X, Y)).\nn(b). n(e). n(c). e(d, b). e(c, c). e(c, d). e(a, e). e(b, c).\n";
+    one_addition(program, Op::Assert("e(c, b). n(a).".into()));
 }
