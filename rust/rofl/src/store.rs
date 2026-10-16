@@ -331,6 +331,8 @@ struct PatIndex {
     ids: Arena<FactId>,
     prev: Arena<u32>,
     values: usize,
+    /// An index mapped from a volume, under this one: a write starts a top over it rather than copying it.
+    under: Option<Rc<PatIndex>>,
 }
 
 impl PatIndex {
@@ -364,6 +366,10 @@ impl PatIndex {
     }
 
     fn put(&mut self, facts: &Facts, sig: &[Term], k: FactId) {
+        if self.slots.is_mapped() {
+            let base = std::mem::replace(self, PatIndex::new(&self.pos));
+            self.under = Some(Rc::new(base));
+        }
         if (self.values + 1) * 4 > self.slots.len() * 3 {
             self.grow(facts);
         }
@@ -446,6 +452,12 @@ impl PatIndex {
     /// The facts holding `vals`, in the order they were put; false, the walk stopped, once there are more than `limit`.
     fn get(&self, facts: &Facts, vals: &[Term], out: &mut Vec<FactId>, limit: usize) -> bool {
         let at = out.len();
+        if let Some(u) = &self.under {
+            if !u.get(facts, vals, out, limit) {
+                return false;
+            }
+        }
+        let top = out.len();
         let mut e = self.slots[self.slot(facts, vals)];
         while e != EMPTY {
             let k = self.ids[e as usize];
@@ -457,12 +469,30 @@ impl PatIndex {
             }
             e = self.prev[e as usize];
         }
-        out[at..].reverse();
+        out[top..].reverse();
         true
     }
 
+    /// One index of the base's entries and the top's, in the order they were put: what a volume holds.
+    fn flat(&self, facts: &Facts) -> PatIndex {
+        let Some(u) = &self.under else {
+            return self.clone();
+        };
+        let mut ix = u.flat(facts);
+        ix.slots.to_mut();
+        ix.ids.to_mut();
+        ix.prev.to_mut();
+        let mut sig = Vec::new();
+        for &k in self.ids.iter() {
+            sig.clear();
+            sig.extend(self.pos.iter().map(|&p| facts.args(k)[p]));
+            ix.put(facts, &sig, k);
+        }
+        ix
+    }
+
     fn bytes(&self) -> usize {
-        self.slots.capacity() * 4 + self.ids.capacity() * 4 + self.prev.capacity() * 4
+        self.slots.capacity() * 4 + self.ids.capacity() * 4 + self.prev.capacity() * 4 + self.under.as_ref().map_or(0, |u| u.bytes())
     }
 }
 
@@ -1059,7 +1089,51 @@ pub struct Store {
     /// with a lattice evaluates (`track_citers`), so a withdrawal visits the
     /// firings it touches and not the store. An entry can outlive its firing;
     /// every reader checks the firing itself.
-    citers: Option<Rc<HashMap<FactId, Vec<FactId>>>>,
+    citers: Option<Rc<Citers>>,
+}
+
+/// The citer index: the facts citing each premise as one column by premise id (`offs`, `ids`), which a volume maps,
+/// and the citations made since in a map beside it.
+#[derive(Default, Clone)]
+pub(crate) struct Citers {
+    pub(crate) offs: Arena<u32>,
+    pub(crate) ids: Arena<FactId>,
+    more: HashMap<FactId, Vec<FactId>>,
+}
+
+impl Citers {
+    fn of(&self, g: FactId) -> impl Iterator<Item = &FactId> {
+        let g = g as usize;
+        let col: &[FactId] = if g + 1 < self.offs.len() { &self.ids[self.offs[g] as usize..self.offs[g + 1] as usize] } else { &[] };
+        col.iter().chain(self.more.get(&(g as FactId)).into_iter().flatten())
+    }
+
+    /// The column of `n` premises from (premise, citer) pairs, given twice: once to count, once to place.
+    fn column(n: usize, pairs: impl Fn(&mut dyn FnMut(FactId, FactId))) -> Citers {
+        let mut offs = vec![0u32; n + 1];
+        pairs(&mut |g, _| offs[g as usize + 1] += 1);
+        for i in 0..n {
+            offs[i + 1] += offs[i];
+        }
+        let mut at: Vec<u32> = offs[..n].to_vec();
+        let mut ids = vec![0; offs[n] as usize];
+        pairs(&mut |g, id| {
+            ids[at[g as usize] as usize] = id;
+            at[g as usize] += 1;
+        });
+        Citers { offs: offs.into(), ids: ids.into(), more: HashMap::new() }
+    }
+
+    /// One column of what the map and the column hold, for a volume.
+    pub(crate) fn flat(&self, n: usize) -> Citers {
+        Citers::column(n, |f| {
+            for g in 0..n as FactId {
+                for &id in self.of(g) {
+                    f(g, id);
+                }
+            }
+        })
+    }
 }
 
 type Groups = FxMap<Sym, Vec<(Sym, KeyRun)>>;
@@ -2135,16 +2209,18 @@ impl Store {
 
     /// The premise -> citing facts index, built from the firings the store holds.
     pub fn index_citers(&mut self) {
-        let mut ix: HashMap<FactId, Vec<FactId>> = HashMap::new();
-        for id in self.firing_keys() {
-            for (_, _, prems) in self.firings(id) {
-                for p in prems {
-                    if let PremRef::Fact(g) = p {
-                        ix.entry(g).or_default().push(id);
+        let keys = self.firing_keys();
+        let ix = Citers::column(self.facts.len(), |f| {
+            for &id in &keys {
+                for (_, _, prems) in self.firings(id) {
+                    for p in prems {
+                        if let PremRef::Fact(g) = p {
+                            f(g, id);
+                        }
                     }
                 }
             }
-        }
+        });
         self.citers = Some(Rc::new(ix));
     }
 
@@ -2405,7 +2481,7 @@ impl Store {
         if let Some(ix) = self.citers.as_mut().map(Rc::make_mut) {
             for p in &w.prems {
                 if let PremRef::Fact(g) = p {
-                    ix.entry(*g).or_default().push(id);
+                    ix.more.entry(*g).or_default().push(id);
                 }
             }
         }
@@ -2431,7 +2507,7 @@ impl Store {
     pub fn drop_firings_citing(&mut self, gone: &HashSet<FactId>) -> Vec<(FactId, Vec<Sym>, bool, FactId)> {
         let ids: Vec<FactId> = match &self.citers {
             Some(ix) => {
-                let mut v: Vec<FactId> = gone.iter().filter_map(|g| ix.get(g)).flatten().copied().collect();
+                let mut v: Vec<FactId> = gone.iter().flat_map(|g| ix.of(*g)).copied().collect();
                 v.sort_unstable();
                 v.dedup();
                 v
@@ -2482,13 +2558,13 @@ impl Store {
 
     /// The facts the citer index says cite `of`: a superset (a firing withdrawn since stays listed).
     pub fn citers_one(&self, of: FactId) -> Vec<FactId> {
-        self.citers.as_ref().and_then(|ix| ix.get(&of)).cloned().unwrap_or_default()
+        self.citers.as_ref().map(|ix| ix.of(of).copied().collect()).unwrap_or_default()
     }
 
     /// The facts with a firing that cites one of `of`, from the citer index.
     pub fn citers_of(&self, of: &HashSet<FactId>) -> Vec<FactId> {
         let Some(ix) = &self.citers else { return Vec::new() };
-        let mut v: Vec<FactId> = of.iter().filter_map(|g| ix.get(g)).flatten().copied().collect();
+        let mut v: Vec<FactId> = of.iter().flat_map(|g| ix.of(*g)).copied().collect();
         v.sort_unstable();
         v.dedup();
         v
