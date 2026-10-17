@@ -16,6 +16,11 @@ check[checks]("rust/rofl/tests/addition.rs", "an_added_rule_that_moves_a_round_s
 check[checks]("rust/rofl/tests/addition.rs", "a_base_fact_beside_a_reset_rule_keeps_only_the_firings_that_hold", test).
 check[checks]("rust/rofl/tests/addition.rs", "random_sealed_programs_take_additions_as_a_fresh_evaluation_does", test).
 check[checks]("rust/rofl/tests/addition.rs", "random_negation_programs_keep_what_a_negation_still_allows", test).
+check[checks]("rust/rofl/tests/addition.rs", "a_holistic_aggregate_is_sealed_again_at_the_groups_the_change_reaches", test).
+check[checks]("rust/rofl/tests/addition.rs", "a_rule_reading_derived_by_is_derived_again_after_an_addition", test).
+check[checks]("rust/rofl/tests/addition.rs", "a_fault_the_addition_does_not_reach_stands", test).
+check[checks]("rust/rofl/tests/addition.rs", "a_dominance_the_change_reaches_is_derived_again", test).
+check[checks]("rust/rofl/tests/addition.rs", "a_counting_tag_sums_the_derivations_an_addition_makes", test).
 check[checks]("rust/rofl/tests/addition.rs", "what_reads_an_aggregate_sealed_again_is_kept_and_fed_its_change", test).
 check[checks]("rust/rofl/tests/addition.rs", "a_fact_sealed_again_is_not_taken_out_for_what_it_cited_before", test).
 check[checks]("rust/rofl/tests/addition.rs", "a_closure_that_gains_a_fact_of_its_own_relation_is_walked_again", test).
@@ -26,6 +31,7 @@ check[checks]("rust/rofl/tests/addition.rs", "a_threshold_sealed_again_takes_the
 check[checks]("rust/rofl/tests/addition.rs", "a_world_with_a_relation_answered_on_demand_is_a_fresh_evaluation_after_every_addition", test).
 check[checks]("rust/rofl/tests/addition.rs", "an_ask_added_grows_the_cone_over_the_retained_store", test).
 check[checks]("rust/rofl/tests/addition.rs", "corpus_additions_are_a_fresh_evaluation", test).
+check[checks]("rust/rofl/tests/addition.rs", "a_closure_row_given_a_shorter_path_seals_its_aggregate_again", test).
 check[checks]("rust/rofl/tests/agg_worlds.rs", "every_world_loaded_together_holds_its_properties_and_its_state", test).
 check[checks]("rust/rofl/tests/agg_worlds.rs", "a_budget_cut_never_reads_as_an_empty_group", test).
 check[checks]("rust/rofl/tests/agg_worlds.rs", "a_budget_cut_never_seals_a_partial_group", test).

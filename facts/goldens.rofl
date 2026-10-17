@@ -43,7 +43,7 @@ golden_state("notebook_decorated", "9180c1059ca1c6f3", 839).
 golden_state("notebook_destructure", "012835ee5e5db182", 745).
 golden_state("notebook_external", "7124535c4063ddd5", 847).
 golden_state("notebook_guard", "012835ee5e5db182", 745).
-golden_state("notebook_ledger", "7205d069ee80bfec", 26792).
+golden_state("notebook_ledger", "aca9b5f6cbfc1b0b", 26792).
 golden_state("notebook_mcp", "00bb819c939c48e9", 1248).
 golden_state("notebook_review", "2674d8c778161bd6", 819).
 golden_state("notebook_scoped", "f38c229afb46a423", 750).
@@ -121,7 +121,7 @@ golden_state("rules_depends", "da781e363e7b7e4a", 25798).
 golden_state("rules_engine-split", "3eb29f3b3469919a", 865).
 golden_state("rules_eval-cost", "926ae5293965f29e", 5861).
 golden_state("rules_features", "42479c03a13bdf8e", 1034).
-golden_state("rules_findings", "231359777c31e14b", 22688).
+golden_state("rules_findings", "3a2a0bbdc71ac6c9", 22688).
 golden_state("rules_floor-census", "37683c2e256d421d", 2167).
 golden_state("rules_ingest", "f009d3a203cc72b9", 965).
 golden_state("rules_inquiry_epistemic", "1f270b34251e07ab", 994).
@@ -366,7 +366,7 @@ golden_state("agg_narrow_why", "848086f25921cd06", 1578).
 golden_state("agg_precise_holes", "23ea01ac7c61290a", 2701).
 golden_state("agg_precise_oracle", "25123bfaf704f221", 319091).
 golden_state("agg_precise_scale", "9662ffc9ce409dc4", 3169).
-golden_state("agg_proofs", "18470465160662b2", 34081).
+golden_state("agg_proofs", "48e1a23be95601e4", 34081).
 golden_state("agg_prose", "cf8a2b52b97913e0", 1151).
 golden_state("agg_quorum_demo", "85692a8a7b76c43c", 3431).
 golden_state("agg_rank_tuple_eval", "42af7358166e088f", 1747).
@@ -597,7 +597,7 @@ golden_state("sealed_provenance", "07ac0f81d4c501d8", 679).
 golden_state("sensors_t3", "6f8ba26864dbb4a3", 1015).
 golden_state("services", "ac6f06cf316854b8", 118968).
 golden_state("set_spelling", "1f5e72d34d2a08d3", 805).
-golden_state("spec_coverage", "5d18185d7cd51c09", 4793).
+golden_state("spec_coverage", "4cb24621e27e5028", 4805).
 golden_state("staged_neg_why", "30f8c759c0c75cdf", 996).
 golden_state("staged_neg_why_agg", "614ab0f6a05509dd", 1020).
 golden_state("staged_neg_why_nocarry", "cd48493312df4492", 1020).
@@ -31986,10 +31986,10 @@ golden_rel("spec_coverage", "accepted_shortcut[coverage]", 1).
 golden_rel("spec_coverage", "alarm[main]", 1).
 golden_rel("spec_coverage", "amends[map]", 17).
 golden_rel("spec_coverage", "artifact_present[checks]", 3).
-golden_rel("spec_coverage", "asserted_by[$kernel]", 1273).
+golden_rel("spec_coverage", "asserted_by[$kernel]", 1279).
 golden_rel("spec_coverage", "authority[main]", 35).
 golden_rel("spec_coverage", "boot_rank[main]", 10).
-golden_rel("spec_coverage", "check[checks]", 847).
+golden_rel("spec_coverage", "check[checks]", 853).
 golden_rel("spec_coverage", "check_stands[coverage]", 15).
 golden_rel("spec_coverage", "citation_ok[checks]", 137).
 golden_rel("spec_coverage", "cited_check[map]", 15).

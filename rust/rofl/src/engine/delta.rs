@@ -207,6 +207,9 @@ impl Eval {
         if self.store.tick != 0 {
             out.push("a later tick");
         }
+        if self.no_witness {
+            out.push("the world keeps no witness, so nothing says which facts lose their last support");
+        }
         // a rule's fault, and the shrugs, stand where nothing the fact reaches is read by the rule or by a reader of either
         let reached = self.grow(&HashSet::from([self.store.rec(f).rel]), &HashSet::new());
         if self.holes_beyond_faults() > 0 || brk!("retract_fault_hole_refused" => !self.hole_cone().is_empty(); self.hole_cone().iter().any(|r| reached.contains(r))) {
