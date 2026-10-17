@@ -20,7 +20,7 @@ export type Hooks = {
   showAs?: [string, string];
   /** a notation's standard file, opened for the domain's own tool: `ext` its file name's ending */
   open?(text: string, ext: string): void;
-  /** Cytoscape and ELK, loaded; false when they cannot be (offline, a blocked CDN) */
+  /** ELK, loaded; false when they cannot be (offline, a blocked CDN) */
   libs(): Promise<boolean>;
 };
 /** A kind's module: `mount` draws the view into `el`, calls `detail` when a mark is picked and `toggle` when a group is (zoom). */
@@ -36,7 +36,7 @@ export const looks = new WeakMap<HTMLElement, () => string[]>();
 export const drawnTags = new WeakMap<HTMLElement, () => string[]>();
 /** A graph's drawing fitted to its box again: what a Fit button does. */
 export const fits = new WeakMap<HTMLElement, () => void>();
-/** A graph's drawing against its box, as Cytoscape draws it: what reaches past the box's edges, said; nothing when all of it is in. */
+/** A graph's drawing against its box, as the schema draws it: what reaches past the box's edges, said; nothing when all of it is in. */
 export const spills = new WeakMap<HTMLElement, () => string[]>();
 
 export const esc = (s: string) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');

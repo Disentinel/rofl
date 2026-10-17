@@ -1,4 +1,4 @@
-// A drawn picture that pans and zooms, wherever it is shown full size: a graph as Cytoscape does, an SVG by its viewBox, a wheel zooms, a drag pans.
+// A drawn picture that pans and zooms, wherever it is shown full size: a graph's schema, an SVG by its viewBox, a wheel zooms, a drag pans.
 import { fits } from './picture.ts';
 
 /** `el` holds a drawn picture; `fit` puts every stage of it back as it was drawn. */

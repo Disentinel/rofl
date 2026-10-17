@@ -1,5 +1,5 @@
 // A picture in an editor tab of its own: the notebook output's picture drawn by the same modules, sized to the tab; a wheel zooms, a drag pans, Fit fits.
-// A graph pans and zooms as Cytoscape does; an SVG by its viewBox; a table scrolls. A why, a pin and a zoom work as in the notebook.
+// A graph's schema pans and zooms; an SVG by its viewBox; a table scrolls. A why, a pin and a zoom work as in the notebook.
 import { draw, graphLibs } from './pictures.ts';
 import { panZoom } from './pan.ts';
 import { talking } from './renderer.ts';

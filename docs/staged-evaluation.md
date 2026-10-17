@@ -126,7 +126,9 @@ from the store.
    volume under it and puts the new entries in its tables, so it copies nothing into the heap, and the provenance
    notes are read where they lie (`f_a_kept_layer_streams_its_base_and_copies_none`). Left: the plan's weight per
    fact underestimates a stage that derives much over what is kept.
-5. **Workers by key** (decision 7).
+5. **Workers by key** (decision 7). Built for threads: a round's level split over threads and answered as one
+   thread, `engine/par.rs` (`f_a_rounds_level_splits_over_threads_and_answers_as_one_thread`). Left: processes, and
+   conclude and index building on the threads.
 6. **The explanation by file**: the why of an absence as a table of files, each row expanded by lifting one volume.
    Built over the evaluated world: a whynot walk parted by file, a row a file with its answers and the premises it
    stopped at, shown as the table in a notebook and answered by `rofl serve`

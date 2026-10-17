@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.4.0 (preview, with ROFL 1.3.0)
+
+- A graph picture is drawn as a schema: a group is a frame that opens and
+  shuts on a double click, a dragged box pushes the others aside, lines meet
+  the nearest box in sight and merge as xN; notes, a line's contract, matrix,
+  timeline and quadrant pictures. Sixty viewpoints ship as
+  `rofl:visual/viewpoints.rofl.md`.
+- A notebook with a clock or memory limit, or with `excise`, stays on the Rust
+  engine; nothing falls back to TypeScript.
+- `whynot` over more than one code file answers a table, a row per file and
+  where each rule stopped in it; every `whynot` walks from what the question
+  names.
+- The kernel is ROFL 1.3.0. See docs/releases/1.3.md.
+
 ## 0.3.0 (preview, with ROFL 1.2.0)
 
 - Every notebook evaluates on the Rust engine by default, not only the layered
