@@ -2827,7 +2827,7 @@ impl Eval {
         let (was, _) = &*kept;
         // the last row is the refusals `tag::lower` made, which no row adds to
         let (Some((wt, wrows)), Some((jt, jrows))) = (was.split_last(), judged.split_last()) else { return Err(h) };
-        if wt != jt || brk!("safety_judged_whole" => true; false) {
+        if wt != jt {
             return Err(h);
         }
         let mut added: Vec<&Vec<Term>> = Vec::new();

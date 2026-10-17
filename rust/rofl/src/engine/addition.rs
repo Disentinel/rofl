@@ -340,16 +340,7 @@ impl Eval {
         if self.store.tick != 0 {
             out.push("a later tick");
         }
-        // (the hole a seal of provenance writes says only that derived_by is sealed: no addition moves it; a rule's
-        // fault stands where nothing it reads changes, `hole_cone`)
-        let sealed = self.h.atom("reflection_sealed");
-        let s_rule = self.v.s_rule_hole;
-        let h = &self.h;
-        let holes = self.store.rel_all(&self.h, self.v.hole).into_iter().filter(|id| {
-            let a = self.store.args(*id);
-            a.get(1) != Some(&sealed) && !matches!(a[0].kind(), TermK::Func(i) if h.fname(i) == s_rule && brk!("add_fault_hole_refused" => false; true))
-        }).count();
-        if brk!("add_seal_hole_refused" => self.store.rel_count(self.v.hole); holes) > 0 {
+        if brk!("add_seal_hole_refused" => self.store.rel_count(self.v.hole); self.holes_beyond_faults()) > 0 {
             out.push("the world holds a hole or reads a shrug");
         }
         if !self.demand_rels.is_empty() && !self.lattices.is_empty() {
@@ -899,7 +890,9 @@ impl Eval {
                 self.reach_memo.retain(|k, _| !fits(k));
                 self.agg_opened.retain(|k| !fits(k));
                 let base: Box<[Term]> = corr.iter().copied().filter(|t| h.is_ground(*t)).collect();
-                self.hol_shared.remove(&(r.id, a.at, base));
+                if brk!("add_hol_shared_kept" => false; true) {
+                    self.hol_shared.remove(&(r.id, a.at, base));
+                }
             }
         }
         self.kill_cells(&cells);
@@ -931,10 +924,22 @@ impl Eval {
         Ok(())
     }
 
+    /// The holes other than a rule's fault (`hole_cone`) and the one a seal of provenance writes, which says only that
+    /// derived_by is sealed and which no change moves.
+    pub(super) fn holes_beyond_faults(&mut self) -> usize {
+        let sealed = self.h.atom("reflection_sealed");
+        let s_rule = self.v.s_rule_hole;
+        let h = &self.h;
+        self.store.rel_all(h, self.v.hole).into_iter().filter(|id| {
+            let a = self.store.args(*id);
+            a.get(1) != Some(&sealed) && !matches!(a[0].kind(), TermK::Func(i) if h.fname(i) == s_rule && brk!("add_fault_hole_refused" => false; true))
+        }).count()
+    }
+
     /// WHAT A HOLE OR A SHRUG MAY MOVE: the heads of the rules a fault names, the shrugs and unknowns the kernel
     /// writes of them, and every relation that reads one, through each other. An addition that reaches none of them
     /// meets no fault it did not meet and leaves every shrug standing.
-    fn hole_cone(&mut self) -> HashSet<Sym> {
+    pub(super) fn hole_cone(&mut self) -> HashSet<Sym> {
         let s_rule = self.v.s_rule_hole;
         let mut from: HashSet<Sym> = HashSet::new();
         for id in self.store.rel_all(&self.h, self.v.hole) {
@@ -945,15 +950,15 @@ impl Eval {
                 }
             }
         }
-        if from.is_empty() && self.shrug_readers.is_empty() {
+        if from.is_empty() && self.shrug_readers.is_empty() && !self.reads_unknown {
             return from;
         }
-        from.extend([self.v.shrug, self.v.unknown]);
+        from.extend([self.v.shrug, self.v.unknown, self.v.hole]);
         self.grow(&from, &HashSet::new())
     }
 
     /// The relations that may grow: those added to, and the heads of every rule that reads one, through each other.
-    fn grow(&self, from: &HashSet<Sym>, fresh: &HashSet<Sym>) -> HashSet<Sym> {
+    pub(super) fn grow(&self, from: &HashSet<Sym>, fresh: &HashSet<Sym>) -> HashSet<Sym> {
         let mut seen = from.clone();
         loop {
             let n = seen.len();
@@ -1049,7 +1054,7 @@ impl Eval {
         // A RULE THAT READS `derived_by` reads a row of every firing, which any change makes or withdraws: it is
         // derived again after the rest, as a lattice is
         let ledger = HashSet::from([self.v.derived_by]);
-        for r in self.rules.iter().filter(|r| r.clause.head.temporal != Temporal::Next && r.safe && reads(r, &ledger).0) {
+        for r in self.rules.iter().filter(|r| r.clause.head.temporal != Temporal::Next && r.safe && reads(r, &ledger).0 && brk!("add_ledger_reader_kept" => false; true)) {
             reset.insert(r.id);
             ledger_heads.insert(r.clause.head.rel);
         }

@@ -8383,6 +8383,62 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "add_closure_lowered_unnoted",
+  "what": "a closure walked again gives a row it held a shorter path and does not say so: a cell over the row keeps its old height",
+  "expect": {
+   "addition_closure_row": "the addition to"
+  }
+ },
+ {
+  "id": "add_hol_shared_kept",
+  "what": "a holistic group shared across its percent or subject is asked again by key and keeps its old group",
+  "expect": {
+   "addition_holistic": "the delta state is not a fresh evaluation's"
+  }
+ },
+ {
+  "id": "add_ledger_reader_kept",
+  "what": "a rule that reads derived_by is neither refused nor derived again after the rest",
+  "expect": {
+   "addition_derived_by": "the delta state is not a fresh evaluation's"
+  }
+ },
+ {
+  "id": "add_fault_hole_refused",
+  "what": "a world that holds a rule's fault refuses every addition, reached or not",
+  "expect": {
+   "addition_fault": "most additions reach no fault"
+  }
+ },
+ {
+  "id": "retract_fault_hole_refused",
+  "what": "a world that holds a rule's fault refuses every retraction, reached or not",
+  "expect": {
+   "addition_fault": "most retractions reach no fault"
+  }
+ },
+ {
+  "id": "add_dominance_refused",
+  "what": "a dominance the change reaches is refused, not derived again",
+  "expect": {
+   "addition_dominance": "every addition to the front"
+  }
+ },
+ {
+  "id": "add_dominance_rule_unmarked",
+  "what": "a dominance rule added to a relation already subsumptive moves no declaration, and nothing is derived again",
+  "expect": {
+   "addition_dominance": "the delta state is not a fresh evaluation's"
+  }
+ },
+ {
+  "id": "add_tag_count_refused",
+  "what": "a rule into a counting tag's derivations refuses the addition",
+  "expect": {
+   "addition_tagc": "every addition to a counting tag is a delta"
+  }
+ },
+ {
   "id": "add_promoted_unnoted",
   "what": "a fact asserted where it was derived is no addition, and what rests on it keeps the derived fact's height",
   "expect": {
@@ -8661,6 +8717,12 @@ const TESTS: Record<string, string> = {
   addition_staged_agg: 'addition a_staged_aggregate_is_sealed_again',
   addition_promoted: 'addition a_fact_asserted_where_it_was_derived',
   addition_threshold: 'addition a_threshold_sealed_again_takes',
+  addition_closure_row: 'addition a_closure_row_given_a_shorter_path',
+  addition_holistic: 'addition a_holistic_aggregate_is_sealed_again',
+  addition_derived_by: 'addition a_rule_reading_derived_by',
+  addition_fault: 'addition a_fault_the_addition_does_not_reach',
+  addition_dominance: 'addition a_dominance_the_change_reaches',
+  addition_tagc: 'addition a_counting_tag_sums',
   incremental_staged_thr: 'incremental a_staged_threshold_whose_outer_premise',
   incremental_two_aggs: 'incremental a_fact_two_aggregates_conclude',
 };

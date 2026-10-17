@@ -190,7 +190,7 @@ impl Eval {
 
     /// WHY A DELTA IS NOT WORKED OUT for this world and this fact: every reason that holds, in a fixed order, none
     /// hiding another (empty where it is).
-    fn delta_refusals(&self, f: FactId) -> Vec<&'static str> {
+    fn delta_refusals(&mut self, f: FactId) -> Vec<&'static str> {
         let mut out = Vec::new();
         if self.vedges_reached(self.store.rec(f).rel) {
             out.push("the fact reaches the edges of a closure answered from its tree, which a retraction builds again");
@@ -207,7 +207,9 @@ impl Eval {
         if self.store.tick != 0 {
             out.push("a later tick");
         }
-        if !self.shrug_readers.is_empty() || self.store.rel_count(self.v.hole) > 0 {
+        // a rule's fault, and the shrugs, stand where nothing the fact reaches is read by the rule or by a reader of either
+        let reached = self.grow(&HashSet::from([self.store.rec(f).rel]), &HashSet::new());
+        if self.holes_beyond_faults() > 0 || brk!("retract_fault_hole_refused" => !self.hole_cone().is_empty(); self.hole_cone().iter().any(|r| reached.contains(r))) {
             out.push("the world holds a hole or reads a shrug");
         }
         let rec = self.store.rec(f);
@@ -225,8 +227,6 @@ impl Eval {
             self.v.agg_member_prem,
             self.v.agg_sealed,
             self.v.derived_by,
-            self.v.hole,
-            self.v.shrug,
             self.v.lattice_member,
             self.v.lattice_member_prem,
             self.v.dominated_by,

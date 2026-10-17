@@ -194,6 +194,8 @@ struct Stats {
     opened: usize,
     opened_clean: usize,
     sum: AddDelta,
+    /// retractions taken, and of them by delta
+    retracted: (usize, usize),
 }
 
 impl Stats {
@@ -230,6 +232,8 @@ impl Stats {
         self.skipped += o.skipped;
         self.opened += o.opened;
         self.opened_clean += o.opened_clean;
+        self.retracted.0 += o.retracted.0;
+        self.retracted.1 += o.retracted.1;
         for (k, v) in o.full {
             *self.full.entry(k).or_default() += v;
         }
@@ -293,6 +297,8 @@ fn differential(seed: u64, head: &str, rules: Vec<String>, gen: fn(&mut Rng) -> 
             asserted.remove(&f);
             present.remove(&f);
             let how = s.retract_delta(&f).unwrap_or_else(|e| panic!("{f}: {e}"));
+            st.retracted.0 += 1;
+            st.retracted.1 += matches!(how, Retraction::Delta(_)) as usize;
             if let Some(mut g) = replay(&ops) {
                 let gh = g.retract_delta(&f).unwrap();
                 let mut ops2 = ops.clone();
@@ -719,6 +725,7 @@ fn a_fault_the_addition_does_not_reach_stands() {
     let all = sweep("fault", "edb(e). edb(n). edb(w).\nw(z, x).", &rules, fact_fault, 1..=14, 10);
     assert!(all.delta * 2 > all.additions, "most additions reach no fault: {all:?}");
     assert!(all.full.keys().all(|k| k.contains("faulted") || k.contains("write a hole")), "{all:?}");
+    assert!(all.retracted.1 * 2 > all.retracted.0, "most retractions reach no fault: {all:?}");
 }
 
 fn fact_route(r: &mut Rng) -> String {
