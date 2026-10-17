@@ -712,6 +712,9 @@ pub struct Eval {
     add_fresh: Option<Vec<FactId>>,
     /// The facts an addition gave a firing while they stood: their heights, and those above them, may be lower now.
     add_refired: Vec<FactId>,
+    /// The relations under an aggregate an addition may ask again by key, through every rule into them: only where one
+    /// of their facts stands lower may a cell's heights move, so only theirs are noted in `add_refired`.
+    add_heights: HashSet<Sym>,
     /// The first id an addition's facts take: a fact below it stood before.
     add_mark: FactId,
     pub delta_ns: u64,
@@ -1394,6 +1397,7 @@ impl Eval {
             adding: false,
             add_fresh: None,
             add_refired: Vec::new(),
+            add_heights: HashSet::new(),
             add_mark: 0,
             delta_plans: HashMap::new(),
             delta_stats: HashMap::new(),
@@ -4883,18 +4887,28 @@ impl Eval {
                     merge_front(&mut self.cur_front, f);
                     return Ok(());
                 }
-                for (i, b) in r.plan.iter().enumerate().skip(at0.saturating_sub(1)) {
-                    let BodyElem::Pos(l) = b else { continue };
-                    let Some(keys) = cur.by_rel.get(&l.rel) else {
-                        continue;
-                    };
-                    let fire = |e: &mut Eval| match e.delta_pick(r, Some(i), keys.len()) {
-                        Some(p) => e.fire_planned(r, &p, Some(keys)),
-                        None => e.fire_rule(r, Some((i, keys))),
-                    };
-                    let f = self.fire_at(r, i + 1, fl.take(), fire)?;
-                    merge_front(&mut self.cur_front, f);
+                // a firing whose premises are news at two places is found once from each
+                let twice = r.plan.iter().filter(|b| matches!(b, BodyElem::Pos(l) if cur.by_rel.contains_key(&l.rel))).count() > 1;
+                let window = twice && self.store.open_dup_window();
+                let fired = (|| -> Result<(), Halt> {
+                    for (i, b) in r.plan.iter().enumerate().skip(at0.saturating_sub(1)) {
+                        let BodyElem::Pos(l) = b else { continue };
+                        let Some(keys) = cur.by_rel.get(&l.rel) else {
+                            continue;
+                        };
+                        let fire = |e: &mut Eval| match e.delta_pick(r, Some(i), keys.len()) {
+                            Some(p) => e.fire_planned(r, &p, Some(keys)),
+                            None => e.fire_rule(r, Some((i, keys))),
+                        };
+                        let f = self.fire_at(r, i + 1, fl.take(), fire)?;
+                        merge_front(&mut self.cur_front, f);
+                    }
+                    Ok(())
+                })();
+                if window {
+                    self.store.close_dup_window();
                 }
+                fired?;
                 // NEWS READ INSIDE A THRESHOLD: the rule fires again, and its
                 // thresholds solve only the groups the news reaches.
                 if brk!("thr_no_refire" => false; r.thr_rels.iter().any(|rel| cur.by_rel.contains_key(rel))) {
@@ -5091,7 +5105,7 @@ impl Eval {
                     }
                 }
                 // (a row that stood before an addition, given a firing, may stand lower now)
-                let stood = self.adding && id < self.add_mark && !self.store.rec(id).base();
+                let stood = self.adding && id < self.add_mark && !self.store.rec(id).base() && self.add_heights.contains(&c.rel);
                 for (rule, prems) in firings {
                     if self.store.support(id, Witness { rule, tick, prems }) {
                         if stood && brk!("add_closure_lowered_unnoted" => false; true) {
@@ -5246,7 +5260,7 @@ impl Eval {
             }
         }
         // a fact that stood before an addition, given a firing that may lower it
-        let stood = self.adding && !is_new && id < self.add_mark && !self.store.rec(id).base();
+        let stood = self.adding && !is_new && id < self.add_mark && !self.store.rec(id).base() && self.add_heights.contains(&head.rel);
         let was = if stood && self.store.heights(&[id], &mut self.height_memo).is_ok() { self.height_memo.get(&id).copied() } else { None };
         let tick = self.store.tick;
         let new_firing = if self.no_witness && self.lattices.is_empty() {
