@@ -12,7 +12,7 @@
 - `whynot` over more than one code file answers a table, a row per file and
   where each rule stopped in it; every `whynot` walks from what the question
   names.
-- The kernel is ROFL 1.3.0. See docs/releases/1.3.md.
+- The kernel is ROFL 1.3.1. See docs/releases/1.3.md.
 
 ## 0.3.0 (preview, with ROFL 1.2.0)
 
