@@ -236,6 +236,7 @@ the rest are run by hand.
 | `npm test` | a world whose hash or per-relation census moved against `facts/goldens.rofl`, on either engine (it prints how many worlds and how long; `npm run test:engine`, `test:library`, `test:mutants` run the `node --test` suites) |
 | `npm run grepcheck` | a relation name in `src/` outside the kernel vocabulary below |
 | `npm run whycheck` | a `why`, `why all`, `whynot` or `excise` of the Rust binaries that differs by a byte from `src/api.ts`, over every world `npm test` loads |
+| `npm run nbcheck` | a notebook that `rofl nb` prints other text or another exit code for than `npm run nb`, over every one in the tree that `rofl nb` runs (not `draw`, code or `model: js`); needs a build |
 | `npm run mdcheck` | a `.rofl.md` the Rust reader (`rofl render`, `rust/rofl/src/md/`) reads to other rules, sentences or report than `scripts/read.ts`, over every one in the tree; needs a release build |
 | `npm run test:agg:breaks` | a planted fault of the engine (`--features breaks`) that no world turns red |
 | `npm run test:split` | a file of the surface-split corpus that, alone with the others' `[surface]`, differs from the whole world by a fact (both engines, both orders) |
