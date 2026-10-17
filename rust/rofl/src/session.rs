@@ -345,7 +345,7 @@ impl Session {
             let mut requests = Vec::new();
             for &f in &ids {
                 let (rel, persp) = (self.eval.store.rec(f).rel, self.eval.store.rec(f).persp);
-                if rel == self.eval.v.rule {
+                if rel == self.eval.v.rule || rel == self.eval.v.dominance {
                     let rid = self.eval.store.args(f)[0];
                     requests.push(self.eval.h.mkf_named("rule", &[rid]));
                 } else if !self.eval.v.is_reserved(rel) && !is_kernel_ledger(&self.eval.h, persp) {

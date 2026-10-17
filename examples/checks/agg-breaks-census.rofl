@@ -2089,6 +2089,22 @@ brk("closure_base_walked"). brk_kind("closure_base_walked", switch).
 brk_expects("closure_base_walked", "closure_base_fact").
 brk("add_staged_cells_kept"). brk_kind("add_staged_cells_kept", switch).
 brk_expects("add_staged_cells_kept", "addition_staged_agg").
+brk("add_closure_lowered_unnoted"). brk_kind("add_closure_lowered_unnoted", switch).
+brk_expects("add_closure_lowered_unnoted", "addition_closure_row").
+brk("add_hol_shared_kept"). brk_kind("add_hol_shared_kept", switch).
+brk_expects("add_hol_shared_kept", "addition_holistic").
+brk("add_ledger_reader_kept"). brk_kind("add_ledger_reader_kept", switch).
+brk_expects("add_ledger_reader_kept", "addition_derived_by").
+brk("add_fault_hole_refused"). brk_kind("add_fault_hole_refused", switch).
+brk_expects("add_fault_hole_refused", "addition_fault").
+brk("retract_fault_hole_refused"). brk_kind("retract_fault_hole_refused", switch).
+brk_expects("retract_fault_hole_refused", "addition_fault").
+brk("add_dominance_refused"). brk_kind("add_dominance_refused", switch).
+brk_expects("add_dominance_refused", "addition_dominance").
+brk("add_dominance_rule_unmarked"). brk_kind("add_dominance_rule_unmarked", switch).
+brk_expects("add_dominance_rule_unmarked", "addition_dominance").
+brk("add_tag_count_refused"). brk_kind("add_tag_count_refused", switch).
+brk_expects("add_tag_count_refused", "addition_tagc").
 brk("add_promoted_unnoted"). brk_kind("add_promoted_unnoted", switch).
 brk_expects("add_promoted_unnoted", "addition_promoted").
 brk("add_threshold_closed_early"). brk_kind("add_threshold_closed_early", switch).
@@ -2129,11 +2145,17 @@ brk("concat_untextable_part"). brk_kind("concat_untextable_part", file).
 brk_expects("concat_untextable_part", "concat_value").
 
 switch_site("add_base_firings_kept", "rust/rofl/src/engine/addition.rs").
+switch_site("add_closure_lowered_unnoted", "rust/rofl/src/engine.rs").
 switch_site("add_closure_unpaired", "rust/rofl/src/engine/addition.rs").
 switch_site("add_demand_kept", "rust/rofl/src/engine/addition.rs").
 switch_site("add_demand_unreached_dropped", "rust/rofl/src/engine/addition.rs").
 switch_site("add_dirty_negation_kept", "rust/rofl/src/engine/addition.rs").
+switch_site("add_dominance_refused", "rust/rofl/src/engine/addition.rs").
+switch_site("add_dominance_rule_unmarked", "rust/rofl/src/engine/addition.rs").
+switch_site("add_fault_hole_refused", "rust/rofl/src/engine/addition.rs").
 switch_site("add_fresh_negation_reset", "rust/rofl/src/engine/addition.rs").
+switch_site("add_hol_shared_kept", "rust/rofl/src/engine/addition.rs").
+switch_site("add_ledger_reader_kept", "rust/rofl/src/engine/addition.rs").
 switch_site("add_lost_unseeded", "rust/rofl/src/engine/addition.rs").
 switch_site("add_negation_reset", "rust/rofl/src/engine/addition.rs").
 switch_site("add_promoted_unnoted", "rust/rofl/src/store.rs").
@@ -2141,6 +2163,7 @@ switch_site("add_reset_after", "rust/rofl/src/engine/addition.rs").
 switch_site("add_seal_hole_refused", "rust/rofl/src/engine/addition.rs").
 switch_site("add_staged_cells_kept", "rust/rofl/src/engine/addition.rs").
 switch_site("add_stale_citer_followed", "rust/rofl/src/engine/addition.rs").
+switch_site("add_tag_count_refused", "rust/rofl/src/engine/addition.rs").
 switch_site("add_threshold_closed_early", "rust/rofl/src/engine/addition.rs").
 switch_site("add_trees_dropped", "rust/rofl/src/engine/vclosure.rs").
 switch_site("agg_reach_alias_first", "rust/rofl/src/engine.rs").
@@ -2522,6 +2545,7 @@ switch_site("retract_deep_neg_unread", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_demand_kept", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_edb_unread", "rust/rofl/src/session.rs").
 switch_site("retract_empty_gone", "rust/rofl/src/engine/delta.rs").
+switch_site("retract_fault_hole_refused", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_gate_neg", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_gate_plain", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_hole_kept", "rust/rofl/src/engine/delta.rs").

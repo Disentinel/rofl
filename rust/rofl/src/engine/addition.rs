@@ -79,7 +79,7 @@ struct NegAt {
 pub struct PrepMark {
     rules: HashMap<Sym, (String, bool)>,
     lattices: Vec<Sym>,
-    subs: Vec<Sym>,
+    subs: Vec<(Sym, Vec<Sym>)>,
     demand: Vec<Sym>,
     late: Vec<Sym>,
     shrugs: Vec<Sym>,
@@ -195,7 +195,12 @@ impl Eval {
         PrepMark {
             rules: self.rules.iter().map(|r| (r.id, (r.canon.clone(), r.safe))).collect(),
             lattices: sorted(self.lattices.keys().copied().collect()),
-            subs: sorted(self.subs.keys().copied().collect()),
+            // (a dominance rule added to a relation already subsumptive is a declaration changed too)
+            subs: {
+                let mut v: Vec<(Sym, Vec<Sym>)> = self.subs.iter().map(|(r, x)| (*r, sorted(x.doms.iter().filter(|_| brk!("add_dominance_rule_unmarked" => false; true)).map(|(d, _)| d.id).collect()))).collect();
+                v.sort_unstable();
+                v
+            },
             demand: sorted(self.demand_rels.iter().map(|(r, _)| *r).collect()),
             late: sorted(self.answer.late.clone()),
             shrugs: sorted(self.shrug_readers.iter().copied().collect()),
@@ -335,10 +340,7 @@ impl Eval {
         if self.store.tick != 0 {
             out.push("a later tick");
         }
-        // (the hole a seal of provenance writes says only that derived_by is sealed: no addition moves it)
-        let sealed = self.h.atom("reflection_sealed");
-        let holes = self.store.rel_all(&self.h, self.v.hole).into_iter().filter(|id| self.store.args(*id).get(1) != Some(&sealed)).count();
-        if !self.shrug_readers.is_empty() || brk!("add_seal_hole_refused" => self.store.rel_count(self.v.hole); holes) > 0 {
+        if brk!("add_seal_hole_refused" => self.store.rel_count(self.v.hole); self.holes_beyond_faults()) > 0 {
             out.push("the world holds a hole or reads a shrug");
         }
         if !self.demand_rels.is_empty() && !self.lattices.is_empty() {
@@ -349,9 +351,6 @@ impl Eval {
             self.v.agg_member,
             self.v.agg_member_prem,
             self.v.agg_sealed,
-            self.v.derived_by,
-            self.v.hole,
-            self.v.shrug,
             self.v.lattice_member,
             self.v.lattice_member_prem,
             self.v.dominated_by,
@@ -771,7 +770,7 @@ impl Eval {
     /// it matches leaves a variable of the key free), the key is not the head's, or a fact below may stand lower than it
     /// did (a cell lists its members' heights).
     fn agg_keys(&mut self, r: &ERule, lv: i64, news: &Front, changed: &HashSet<FactId>) -> Option<Vec<Subst>> {
-        if !self.ds_elems.is_empty() || !self.lattices.is_empty() || self.add_refired.iter().any(|f| !changed.contains(f) && self.rel_level(self.store.rec(*f).rel) < lv) {
+        if !self.ds_elems.is_empty() || self.add_refired.iter().any(|f| !changed.contains(f) && self.rel_level(self.store.rec(*f).rel) < lv) {
             return None;
         }
         let mut key: Option<Vec<Sym>> = None;
@@ -781,9 +780,14 @@ impl Eval {
                 BodyElem::Pos(l) | BodyElem::Neg(l) => lits.push(l),
                 BodyElem::Agg(a) => {
                     let plan = self.agg_plans.get(&(r.id, a.at))?;
-                    let mut vs: Vec<Sym> = plan.corr.iter().map(|i| a.shared[*i]).collect();
+                    // a holistic group shared across its percent or subject is asked again at the correlation less it
+                    let subject: Vec<Sym> = match self.hol_share_key(r.id, a, plan, &[]) {
+                        Some(_) => a.vals[..a.params()].iter().filter_map(|t| match t.kind() { TermK::Var(v) => Some(v), _ => None }).collect(),
+                        None => Vec::new(),
+                    };
+                    let mut vs: Vec<Sym> = plan.corr.iter().map(|i| a.shared[*i]).filter(|v| !subject.contains(v)).collect();
                     vs.sort_unstable();
-                    if plan.op.class() == Class::Holistic || vs.is_empty() || key.as_ref().is_some_and(|k| *k != vs) {
+                    if vs.is_empty() || key.as_ref().is_some_and(|k| *k != vs) {
                         return None;
                     }
                     key = Some(vs);
@@ -800,7 +804,7 @@ impl Eval {
         }
         let key = key?;
         let rels: HashSet<Sym> = lits.iter().map(|l| l.rel).collect();
-        if lits.iter().any(|l| l.temporal != Temporal::Now) || key.iter().any(|v| !r.clause.head.args.contains(&Term::var(*v))) || self.vclosures.iter().any(|c| rels.contains(&c.rel)) {
+        if lits.iter().any(|l| l.temporal != Temporal::Now || self.lattices.contains_key(&l.rel)) || key.iter().any(|v| !r.clause.head.args.contains(&Term::var(*v))) || self.vclosures.iter().any(|c| rels.contains(&c.rel)) {
             return None;
         }
         let mut facts: Vec<FactId> = news.by_rel.iter().filter(|(rel, _)| rels.contains(rel)).flat_map(|(_, ids)| ids.iter().copied()).collect();
@@ -865,12 +869,30 @@ impl Eval {
                 let BodyElem::Agg(a) = b else { continue };
                 let plan = self.agg_plans[&(r.id, a.at)].clone();
                 let corr: Box<[Term]> = plan.corr.iter().map(|i| resolve(&mut self.h, Term::var(a.shared[*i]), s)).collect();
-                let mk = (r.id, a.at, corr);
-                if let Some(cs) = self.agg_memo.remove(&mk) {
-                    cells.extend(cs.iter().copied());
+                if corr.iter().all(|t| self.h.is_ground(*t)) {
+                    let mk = (r.id, a.at, corr);
+                    if let Some(cs) = self.agg_memo.remove(&mk) {
+                        cells.extend(cs.iter().copied());
+                    }
+                    self.reach_memo.remove(&mk);
+                    self.agg_opened.remove(&mk);
+                    continue;
                 }
-                self.reach_memo.remove(&mk);
-                self.agg_opened.remove(&mk);
+                // a shared holistic group: every percent or subject of it, and the group
+                let h = &self.h;
+                let fits = |k: &(Sym, u32, Box<[Term]>)| k.0 == r.id && k.1 == a.at && k.2.len() == corr.len() && k.2.iter().zip(corr.iter()).all(|(x, p)| !h.is_ground(*p) || x == p);
+                let mine: Vec<(Sym, u32, Box<[Term]>)> = self.agg_memo.keys().filter(|k| fits(k)).cloned().collect();
+                for mk in mine {
+                    if let Some(cs) = self.agg_memo.remove(&mk) {
+                        cells.extend(cs.iter().copied());
+                    }
+                }
+                self.reach_memo.retain(|k, _| !fits(k));
+                self.agg_opened.retain(|k| !fits(k));
+                let base: Box<[Term]> = corr.iter().copied().filter(|t| h.is_ground(*t)).collect();
+                if brk!("add_hol_shared_kept" => false; true) {
+                    self.hol_shared.remove(&(r.id, a.at, base));
+                }
             }
         }
         self.kill_cells(&cells);
@@ -902,8 +924,41 @@ impl Eval {
         Ok(())
     }
 
+    /// The holes other than a rule's fault (`hole_cone`) and the one a seal of provenance writes, which says only that
+    /// derived_by is sealed and which no change moves.
+    pub(super) fn holes_beyond_faults(&mut self) -> usize {
+        let sealed = self.h.atom("reflection_sealed");
+        let s_rule = self.v.s_rule_hole;
+        let h = &self.h;
+        self.store.rel_all(h, self.v.hole).into_iter().filter(|id| {
+            let a = self.store.args(*id);
+            a.get(1) != Some(&sealed) && !matches!(a[0].kind(), TermK::Func(i) if h.fname(i) == s_rule && brk!("add_fault_hole_refused" => false; true))
+        }).count()
+    }
+
+    /// WHAT A HOLE OR A SHRUG MAY MOVE: the heads of the rules a fault names, the shrugs and unknowns the kernel
+    /// writes of them, and every relation that reads one, through each other. An addition that reaches none of them
+    /// meets no fault it did not meet and leaves every shrug standing.
+    pub(super) fn hole_cone(&mut self) -> HashSet<Sym> {
+        let s_rule = self.v.s_rule_hole;
+        let mut from: HashSet<Sym> = HashSet::new();
+        for id in self.store.rel_all(&self.h, self.v.hole) {
+            if let TermK::Func(i) = self.store.args(id)[0].kind() {
+                if self.h.fname(i) == s_rule {
+                    let r = self.h.fargs(i)[0].as_atom().and_then(|r| self.rule_of(r));
+                    from.extend(r.map(|r| r.clause.head.rel));
+                }
+            }
+        }
+        if from.is_empty() && self.shrug_readers.is_empty() && !self.reads_unknown {
+            return from;
+        }
+        from.extend([self.v.shrug, self.v.unknown, self.v.hole]);
+        self.grow(&from, &HashSet::new())
+    }
+
     /// The relations that may grow: those added to, and the heads of every rule that reads one, through each other.
-    fn grow(&self, from: &HashSet<Sym>, fresh: &HashSet<Sym>) -> HashSet<Sym> {
+    pub(super) fn grow(&self, from: &HashSet<Sym>, fresh: &HashSet<Sym>) -> HashSet<Sym> {
         let mut seen = from.clone();
         loop {
             let n = seen.len();
@@ -939,7 +994,9 @@ impl Eval {
         let lats: HashSet<Sym> = grown.iter().copied().filter(|r| self.lattices.contains_key(r)).collect();
         for l in &lats {
             let op = self.lattices[l].1;
-            if !matches!(op.class(), Class::IdempotentOrder | Class::PartialOrder) || op == AggOp::Dominance || self.tags.count_of.contains_key(l) || self.widen.contains_key(l) {
+            // (a dominance is derived again whole by key as an order is, where its rules compare by the values alone)
+            let dom = op == AggOp::Dominance && brk!("add_dominance_refused" => true; self.subs.get(l).is_none_or(|x| !x.reads.is_empty()));
+            if !matches!(op.class(), Class::IdempotentOrder | Class::PartialOrder) || dom || self.tags.count_of.contains_key(l) || self.widen.contains_key(l) {
                 return Err("a join, a widening, a counting tag or a dominance is reached by what changed");
             }
         }
@@ -954,6 +1011,7 @@ impl Eval {
         let mut negs: Vec<(Rc<ERule>, Vec<NegAt>)> = Vec::new();
         let mut new_plain: Vec<Rc<ERule>> = Vec::new();
         let mut staged: Vec<Rc<ERule>> = Vec::new();
+        let mut ledger_heads: HashSet<Sym> = HashSet::new();
         for r in &self.rules {
             let (any, inner) = reads(r, grown);
             if r.clause.head.temporal == Temporal::Next || !r.safe {
@@ -993,7 +1051,14 @@ impl Eval {
         }
         // WHAT IS DERIVED AGAIN AFTER THE REST, and what rests on it, through each other: a lattice the change reaches,
         // what calls made, a closure walked whole (a reset rule elsewhere is derived again at its level)
-        let mut dirty: HashSet<Sym> = self.rules.iter().filter(|r| reset.contains(&r.id) && (lats.contains(&r.clause.head.rel) || brk!("add_reset_after" => true; false))).map(|r| r.clause.head.rel).collect();
+        // A RULE THAT READS `derived_by` reads a row of every firing, which any change makes or withdraws: it is
+        // derived again after the rest, as a lattice is
+        let ledger = HashSet::from([self.v.derived_by]);
+        for r in self.rules.iter().filter(|r| r.clause.head.temporal != Temporal::Next && r.safe && reads(r, &ledger).0 && brk!("add_ledger_reader_kept" => false; true)) {
+            reset.insert(r.id);
+            ledger_heads.insert(r.clause.head.rel);
+        }
+        let mut dirty: HashSet<Sym> = self.rules.iter().filter(|r| reset.contains(&r.id) && (lats.contains(&r.clause.head.rel) || ledger_heads.contains(&r.clause.head.rel) || brk!("add_reset_after" => true; false))).map(|r| r.clause.head.rel).collect();
         if brk!("add_demand_kept" => false; true) {
             dirty.extend(call_rels.iter().copied());
         }
@@ -1075,13 +1140,17 @@ impl Eval {
         }
         for r in mono.iter().chain(&new_plain).chain(&again).chain(&recompute).chain(negs.iter().map(|(r, _)| r)) {
             let head = r.clause.head.rel;
-            if (self.lattices.contains_key(&head) && !lats.contains(&head)) || self.tags.count_of.contains_key(&head) || self.v.is_reserved(head) {
+            // (a counting tag's derivations are facts of their own, one per firing, summed by the tag's rule as any sum)
+            if (self.lattices.contains_key(&head) && !lats.contains(&head)) || brk!("add_tag_count_refused" => self.tags.count_of.contains_key(&head); false) || self.v.is_reserved(head) {
                 return Err("a lattice, a tag or a ledger is concluded from what changed");
             }
             // late is an order only the stock evaluator reads its strata between
             if self.shrug_readers.contains(&r.id) || self.answer.late.contains(&r.id) && self.mode == Mode::Strata {
                 return Err("a rule that reads the shrugs, or one late under the stock evaluator, reads what changed");
             }
+        }
+        if self.hole_cone().iter().any(|r| changed.contains(r)) {
+            return Err("a rule that faulted, or what reads it or the shrugs, is reached by what changed");
         }
         if self.subs.values().any(|x| x.reads.iter().any(|b| changed.contains(b))) {
             return Err("a dominance rule reads what changed");
@@ -1146,6 +1215,19 @@ impl Eval {
         }
         for l in &lats {
             self.lat_closed.remove(l);
+        }
+        // what the evaluation kept of the values a subsumptive key was given goes with its facts
+        if lats.iter().any(|l| self.subs.contains_key(l)) {
+            self.sub_cur.retain(|k, _| !lats.contains(&k.0));
+            self.sub_seen.retain(|k, _| !lats.contains(&k.0));
+            self.sub_memo.retain(|k, _| !lats.contains(&k.0));
+            self.sub_parties.retain(|k, _| !lats.contains(&k.0));
+            self.sub_seen_set.retain(|(k, _), _| !lats.contains(&k.0));
+            self.sub_beaten.retain(|(k, _), _| !lats.contains(&k.0));
+            self.sub_prems.retain(|(k, _), _| !lats.contains(&k.0));
+            self.sub_by.retain(|(k, _), _| !lats.contains(&k.0));
+            let store = &self.store;
+            self.sub_by_of.retain(|f, _| store.alive(*f));
         }
         let store = &self.store;
         self.lat_cur.retain(|_, id| store.alive(*id));

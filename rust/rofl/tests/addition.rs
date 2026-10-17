@@ -194,6 +194,8 @@ struct Stats {
     opened: usize,
     opened_clean: usize,
     sum: AddDelta,
+    /// retractions taken, and of them by delta
+    retracted: (usize, usize),
 }
 
 impl Stats {
@@ -230,6 +232,8 @@ impl Stats {
         self.skipped += o.skipped;
         self.opened += o.opened;
         self.opened_clean += o.opened_clean;
+        self.retracted.0 += o.retracted.0;
+        self.retracted.1 += o.retracted.1;
         for (k, v) in o.full {
             *self.full.entry(k).or_default() += v;
         }
@@ -293,6 +297,8 @@ fn differential(seed: u64, head: &str, rules: Vec<String>, gen: fn(&mut Rng) -> 
             asserted.remove(&f);
             present.remove(&f);
             let how = s.retract_delta(&f).unwrap_or_else(|e| panic!("{f}: {e}"));
+            st.retracted.0 += 1;
+            st.retracted.1 += matches!(how, Retraction::Delta(_)) as usize;
             if let Some(mut g) = replay(&ops) {
                 let gh = g.retract_delta(&f).unwrap();
                 let mut ops2 = ops.clone();
@@ -504,6 +510,8 @@ fn a_lattice_world_is_a_fresh_evaluation_after_every_addition() {
         "hop(A, B) :- e3(A, B, _).",
         "hop2(A, C) :- hop(A, B), hop(B, C).",
         "far(A, B) :- hop(A, B), not near(A, B).",
+        "fan(A, N) :- hop(A, _), N is count(B : hop(A, B)).",
+        "wide(A) :- fan(A, N), N > 2, not near(A, A).",
     ];
     let all = sweep("lattice", "edb(e3).\nlattice d(A, B, min W).", &rules, fact_edge, 1..=12, 10);
     assert!(all.additions > 50 && all.full.is_empty(), "every addition to the lattice is a delta: {all:?}");
@@ -647,6 +655,114 @@ fn random_negation_programs_keep_what_a_negation_still_allows() {
     report("negation", &all);
     assert!(all.sum.negated > 100 && all.sum.overdeleted > 20 && all.sum.rederived > 0, "the fine path is exercised: {all:?}");
     assert!(all.sum.stacked_rules == 0 && all.sum.refired == 0, "no rule of joins, recursion and negation is reset: {all:?}");
+}
+
+fn fact_hol(r: &mut Rng) -> String {
+    match r.below(5) {
+        0 => format!("ask({}, {})", r.pick(&ATOMS), 25 * r.below(5)),
+        1 => format!("n({})", r.pick(&ATOMS)),
+        _ => format!("w({}, {}, {})", r.pick(&ATOMS), r.pick(&ATOMS), 1 + r.below(9)),
+    }
+}
+
+/// A median, a quantile and a rank the change reaches are sealed again at the groups it falls in, a group shared
+/// across its percent or subject with every percent or subject of it, and so is what reads them.
+#[test]
+fn a_holistic_aggregate_is_sealed_again_at_the_groups_the_change_reaches() {
+    let rules = [
+        "med(G, M) :- n(G), M is median(V ; K : w(G, K, V)).",
+        "q(G, P, Q) :- ask(G, P), Q is quantile(P, V ; K : w(G, K, V)).",
+        "q90(G, Q) :- n(G), Q is quantile(90, V ; K : w(G, K, V)).",
+        "place(G, K, R) :- w(G, K, V), R is rank(V, K ; desc(V2), K2 : w(G, K2, V2)).",
+        "top(G, K) :- place(G, K, 1), not q90(G, 1).",
+        "high(G) :- med(G, M), M > 4.",
+    ];
+    let all = sweep("holistic", "edb(w). edb(n). edb(ask).", &rules, fact_hol, 1..=16, 10);
+    assert!(all.additions > 50 && all.full.is_empty(), "every addition to a holistic aggregate is a delta: {all:?}");
+    assert!(all.sum.stacked_cells > 0, "{all:?}");
+}
+
+/// Rules that read `derived_by`, plainly, joined and under a negation of what they conclude: every change makes or withdraws a row they read, so they
+/// are derived again after the rest.
+#[test]
+fn a_rule_reading_derived_by_is_derived_again_after_an_addition() {
+    let rules = [
+        "p(X, Y) :- e(X, Y).",
+        "p(X, Z) :- p(X, Y), e(Y, Z).",
+        "q(X) :- n(X), not p(X, X).",
+        "c(X, N) :- n(X), N is count(Y : p(X, Y)).",
+        "fired(R) :- derived_by(_, R, _).",
+        "seen(R, X) :- derived_by(_, R, _), q(X).",
+        "cold(X) :- n(X), not seen(X, X).",
+        "busy(X) :- n(X), fired(R), not q(X).",
+    ];
+    let all = sweep("derived_by", EDB, &rules, fact, 1..=12, 10);
+    assert!(all.additions > 40 && all.full.is_empty(), "every addition to a world that reads derived_by is a delta: {all:?}");
+}
+
+fn fact_fault(r: &mut Rng) -> String {
+    match r.below(8) {
+        0 => format!("w({}, {})", r.pick(&ATOMS), if r.below(3) == 0 { "x".to_string() } else { (1 + r.below(5)).to_string() }),
+        1 | 2 => format!("n({})", r.pick(&ATOMS)),
+        _ => format!("e({}, {})", r.pick(&ATOMS), r.pick(&ATOMS)),
+    }
+}
+
+/// A world holding a rule's fault (an arithmetic type error, a hole and its shrugs) and a rule that reads the shrugs:
+/// an addition that reaches neither the rule nor what reads it is a delta, and the hole and the shrugs stand.
+#[test]
+fn a_fault_the_addition_does_not_reach_stands() {
+    let rules = [
+        "v(X, N) :- w(X, V), N is V + 1.",
+        "big(X) :- v(X, N), N > 3.",
+        "lone(X) :- n(X), not big(X).",
+        "hurt(T) :- shrug(T, fault, _).",
+        "p(X, Y) :- e(X, Y).",
+        "p(X, Z) :- p(X, Y), e(Y, Z).",
+        "q(X) :- n(X), not p(X, X).",
+        "c(X, N) :- n(X), N is count(Y : p(X, Y)).",
+    ];
+    let all = sweep("fault", "edb(e). edb(n). edb(w).\nw(z, x).", &rules, fact_fault, 1..=14, 10);
+    assert!(all.delta * 2 > all.additions, "most additions reach no fault: {all:?}");
+    assert!(all.full.keys().all(|k| k.contains("faulted") || k.contains("write a hole")), "{all:?}");
+    assert!(all.retracted.1 * 2 > all.retracted.0, "most retractions reach no fault: {all:?}");
+}
+
+fn fact_route(r: &mut Rng) -> String {
+    match r.below(6) {
+        0 => format!("n({})", r.pick(&ATOMS)),
+        _ => format!("e4({}, {}, {}, {})", r.pick(&ATOMS), r.pick(&ATOMS), 1 + r.below(4), 1 + r.below(4)),
+    }
+}
+
+/// A Pareto front kept by two dominance rules, and readers of it plainly and under a negation: the front the change
+/// reaches is derived again whole, its values given forgotten with it.
+#[test]
+fn a_dominance_the_change_reaches_is_derived_again() {
+    let rules = [
+        "route(A, B, C, T) :- e4(A, B, C, T).",
+        "route(A, C, C1, T1) :- route(A, B, C0, T0), e4(B, C, C2, T2), C1 is C0 + C2, T1 is T0 + T2, C1 < 12.",
+        "route(A, B, C1, T1) <= route(A, B, C2, T2) :- C2 <= C1, T2 <= T1, C2 < C1.",
+        "route(A, B, C1, T1) <= route(A, B, C2, T2) :- C2 <= C1, T2 <= T1, T2 < T1.",
+        "cheap(A, B) :- route(A, B, C, _), C < 3.",
+        "far(A) :- n(A), not cheap(A, A).",
+    ];
+    let all = sweep("dominance", "edb(e4). edb(n).", &rules, fact_route, 1..=12, 10);
+    assert!(all.additions > 40 && all.full.keys().all(|k| k.contains("declaration changed")), "every addition to the front but a dominance rule is a delta: {all:?}");
+}
+
+/// Counting tags, their sums read plainly and under a negation: what a change adds is new derivations, summed.
+#[test]
+fn a_counting_tag_sums_the_derivations_an_addition_makes() {
+    let rules = [
+        "walks(A, C, N) :- e(A, C).",
+        "walks(A, C, N) :- e(A, B), e(B, C).",
+        "tot(N) :- n(_).",
+        "many(A, C) :- walks(A, C, N), N > 1.",
+        "lone(X) :- n(X), not many(X, X).",
+    ];
+    let all = sweep("tagc", &format!("{EDB}\ntag walks(A, C, counting N).\ntag tot(counting N)."), &rules, fact, 1..=12, 10);
+    assert!(all.additions > 40 && all.full.is_empty(), "every addition to a counting tag is a delta: {all:?}");
 }
 
 /// An aggregate the change reaches is sealed again at its level, and what reads it, plainly or under a negation, is
@@ -909,4 +1025,11 @@ fn corpus_additions_are_a_fresh_evaluation() {
         );
         assert!(same);
     }
+}
+
+/// A closure walked again that gives a row it held a shorter path: the row stands lower, and so does a cell over it.
+#[test]
+fn a_closure_row_given_a_shorter_path_seals_its_aggregate_again() {
+    let program = "edb(e). edb(n).\np(X, Y) :- e(X, Y).\np(X, Z) :- p(X, Y), e(Y, Z).\nq(X) :- n(X), not p(X, X).\nc(X, N) :- n(X), N is count(Y : p(X, Y)).\nn(b). n(e). n(c). e(d, b). e(c, c). e(c, d). e(a, e). e(b, c).\n";
+    one_addition(program, Op::Assert("e(c, b). n(a).".into()));
 }
