@@ -139,8 +139,26 @@ pub fn main(args: Vec<String>) {
     if strata { s.eval.mode = rofl::engine::Mode::Strata; }
     if let Some(n) = space { s.eval.space = n; }
     s.eval.retain_ticks = retain;
+    // a world written as Markdown is read into rules here, after the worlds it reads; a plain `.md` is a document
+    let mut sources: Vec<(String, Option<String>)> = Vec::new();
     for f in &files {
-        if let Err(d) = s.load(&read(f), None) {
+        if f.ends_with(".rofl.md") {
+            for w in rofl::md::world_files(std::path::Path::new(f)).unwrap_or_else(|e| fail(json, USAGE, &e)) {
+                match w {
+                    rofl::md::Source::File(p) => sources.push((p.display().to_string(), None)),
+                    rofl::md::Source::Md(p) => {
+                        let r = rofl::md::read_world(&p).unwrap_or_else(|e| fail(json, USAGE, &e));
+                        if let Some(u) = rofl::md::unread(&r.report) { eprintln!("{}: {u}", p.display()); }
+                        sources.push((p.display().to_string(), Some(r.rofl)));
+                    }
+                }
+            }
+        } else if f.ends_with(".md") {
+            fail(json, FILE_REFUSED, &format!("{f} is a document, not a world: executable Markdown ends in .rofl.md"));
+        } else { sources.push((f.clone(), None)); }
+    }
+    for (f, text) in &sources {
+        if let Err(d) = s.load(&text.clone().unwrap_or_else(|| read(f)), None) {
             fail(json, FILE_REFUSED, &format!("{f} refused:\n  {}", d.join("\n  ")));
         }
     }
@@ -149,7 +167,7 @@ pub fn main(args: Vec<String>) {
         let mut b = rofl::session::Session::fresh(budget);
         if strata { b.eval.mode = rofl::engine::Mode::Strata; }
         if let Some(n) = space { b.eval.space = n; }
-        for f in files.iter().take(1).chain(below.iter()) {
+        for f in sources.iter().take(1).map(|s| &s.0).chain(below.iter()) {
             if let Err(d) = b.load(&read(f), None) {
                 fail(json, FILE_REFUSED, &format!("below: {f} refused:\n  {}", d.join("\n  ")));
             }

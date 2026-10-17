@@ -30,6 +30,8 @@ pub mod forest;
 pub mod image;
 /// The kernel's own program and its hash, as the build baked them.
 pub mod kernel;
+/// A world written as executable Markdown (`X.rofl.md`), read into rules: the port of scripts/read.ts.
+pub mod md;
 pub mod reflect;
 /// GENERATED from examples/ring1/ring1.rofl by scanners/ring1_lexgen.ts.
 pub mod ring1_lexer;

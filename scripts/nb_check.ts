@@ -82,6 +82,14 @@ const excised = planted('excise', 'review.rofl.md', withCell('excise `c1` is app
 const without = planted('without', 'review.rofl.md', (t) => t, [['examples/review.rofl.md', readFileSync(path.join(ROOT, 'examples/review.rofl.md'), 'utf8').replace('- `c1` is approved by `ben`.\n', '')]]);
 put(path.join(tmp, 'badread/examples/notebook/bad.rofl'), 'p(1).\np(2).\nq(`x`).\n');
 put(path.join(tmp, 'badread/examples/notebook/badread.rofl.md'), '---\nreads:\n  - bad.rofl\n---\n\n```datalog\n? p(X)\n```\n');
+// a world that reads a world that reads another, and the same middle world with the words of its rule never read
+const chain = path.join(tmp, 'chain');
+put(path.join(chain, 'teams.rofl.md'), 'Declared as facts:\n\n- <a id="owns"></a>A team T owns a service S\n\nThe teams:\n\n- `checkout` owns `payments`.\n');
+const services = 'Declared as facts:\n\n- <a id="runs"></a>A service S runs in production\n\nRunning:\n\n- `payments` runs in production.\n- `billing` runs in production.\n\n<a id="orphan"></a>A service S is an orphan if S runs in production, unless some team owns S.\n';
+put(path.join(chain, 'sub/services.rofl.md'), `---\nreads:\n  - ../teams.rofl.md\n---\n\n${services}`);
+put(path.join(chain, 'lone.rofl.md'), services);
+put(path.join(chain, 'asks.rofl.md'), '---\nreads:\n  - sub/services.rofl.md\n  - teams.rofl.md\n---\n\n```rofl\n? S is an orphan\n```\n');
+put(path.join(chain, 'asksLone.rofl.md'), '---\nreads:\n  - lone.rofl.md\n---\n\n```rofl\nwhynot `billing` is an orphan\n```\n');
 const slow = path.join(tmp, 'slow.sh'); writeFileSync(slow, '#!/bin/sh\ncat > /dev/null\nexec sleep 30\n'); chmodSync(slow, 0o755);
 // the barrel stops re-exporting one handler file: the never must name what the dispatcher no longer reaches
 const xdirRed = planted('xdir-red', 'xdir.rofl.md', (t) => t, [['examples/notebook/xdir/handlers/index.ts', "export { handleGet, handlePut } from './store-handlers.js';\n"]]);
@@ -131,6 +139,8 @@ const RUNS: Record<string, () => Promise<Out>> = {
   unparsedOut: () => cli([unparsed]),
   fr: () => cli([friction]),
   badRead: () => cli([path.join(tmp, 'badread/examples/notebook/badread.rofl.md')]),
+  chained: () => cli([path.join(chain, 'asks.rofl.md')]),
+  lone: () => cli([path.join(chain, 'asksLone.rofl.md')]),
   trSlow: () => cli(['translate', translateSlow], { ROFL_NB_CLAUDE: slow, ROFL_NB_MODEL_TIMEOUT: '2' }),
   spat: () => cli([path.join(NB, 'spat.rofl.md')]),
   ex: () => cli([excised, '--json']),
@@ -191,7 +201,7 @@ const RUNS: Record<string, () => Promise<Out>> = {
     return { code: differ.length, out: differ.length ? `not the same on the two engines: ${differ.join(', ')}` : 'the same on both engines', stdout: '' };
   },
 };
-let engines!: Out, review!: Out, small!: Out, self!: Out, reviewJson!: Out, fails!: Out, notRead!: Out, rewrite!: Out, extended!: Out, collided!: Out, recurse!: Out, red!: Out, blind!: Out, unpop!: Out, early!: Out, nat!: Out, trOk!: Out, trBad!: Out, trGone!: Out, unparsedOut!: Out, fr!: Out, badRead!: Out, trSlow!: Out, spat!: Out, ex!: Out, wo!: Out, hol!: Out, xdir!: Out, xdirFails!: Out, cjs!: Out, cjsBlind!: Out, external!: Out, decorated!: Out, scoped!: Out, scopedV8!: Out, assign!: Out, guard!: Out, destructure!: Out, destructureV8!: Out, climb!: Out, heavy!: Out, nmWorld!: Out, out!: Out, three!: Out, part!: Out, nothing!: Out, sides!: Out, sidesAll!: Out, sidesJson!: Out;
+let engines!: Out, review!: Out, small!: Out, self!: Out, reviewJson!: Out, fails!: Out, notRead!: Out, rewrite!: Out, extended!: Out, collided!: Out, recurse!: Out, red!: Out, blind!: Out, unpop!: Out, early!: Out, nat!: Out, trOk!: Out, trBad!: Out, trGone!: Out, unparsedOut!: Out, fr!: Out, badRead!: Out, chained!: Out, lone!: Out, trSlow!: Out, spat!: Out, ex!: Out, wo!: Out, hol!: Out, xdir!: Out, xdirFails!: Out, cjs!: Out, cjsBlind!: Out, external!: Out, decorated!: Out, scoped!: Out, scopedV8!: Out, assign!: Out, guard!: Out, destructure!: Out, destructureV8!: Out, climb!: Out, heavy!: Out, nmWorld!: Out, out!: Out, three!: Out, part!: Out, nothing!: Out, sides!: Out, sidesAll!: Out, sidesJson!: Out;
 type Test = { name: string; needs: string[]; ok: () => boolean; o?: () => Out };
 const TESTS: Test[] = [];
 /** A check, by the runs it reads; it is judged once they are done. */
@@ -305,6 +315,8 @@ test('F2 a positional never works in a rofl cell', ['fr'], () => has(fr, 'never 
 test('F4 a datalog cell under a natural cell answers it', ['fr'], () => has(fr, 'note: answered by the cell below it') && !has(fr, 'not translated yet'), () => fr);
 test('F5 a conjunctive question is refused with what to write instead', ['fr'], () => is(fr, 2) && has(fr, 'a question is one literal; write a rule that joins these'), () => fr);
 test('M1 a notebook that reads a file outside its folder says so; one reading only inside does not', ['review', 'small', 'badRead'], () => has(review, "review.rofl.md: note: reads files outside this notebook's folder: ../review.rofl.md") && !has(small, 'outside this notebook') && !has(badRead, 'outside this notebook'), () => review);
+test('M2 a read world\'s own reads are read, from its folder, each file once', ['chained'], () => is(chained, 0) && has(chained, '? S is an orphan  ->  1 answer\n    - `billing` is an orphan'), () => chained);
+test('M2 a rule a read world leaves out is said, and whynot names it rather than calling it a gap', ['lone'], () => is(lone, 2) && has(lone, 'lone.rofl.md: left out: A service S is an orphan: a condition was not read') && has(lone, 'the rule left out of lone.rofl.md concludes it'), () => lone);
 test('F3 an error in a read file is at that file\'s line', ['badRead'], () => is(badRead, 2) && has(badRead, 'bad.rofl:3: unexpected character'), () => badRead);
 test('F6 a model that does not answer is stopped in bounded time and said', ['trSlow'], () => trSlow.code === 2 && has(trSlow, 'gave no answer in 2 s'), () => trSlow);
 const argv = () => { try { return readFileSync(path.join(tmp, 'argv'), 'utf8').trim().split('\n'); } catch { return []; } };
@@ -342,7 +354,7 @@ if (shard) {
 }
 if (only) chosen = chosen.filter((t) => new RegExp(only).test(t.name));
 const got: Record<string, Out> = Object.fromEntries(await Promise.all([...new Set(chosen.flatMap((t) => t.needs))].map(async (r) => [r, await RUNS[r]()])));
-({ engines, review, small, self, reviewJson, fails, notRead, rewrite, extended, collided, recurse, red, blind, unpop, early, nat, trOk, trBad, trGone, unparsedOut, fr, badRead, trSlow, spat, ex, wo, hol, xdir, xdirFails, cjs, cjsBlind, external, decorated, scoped, scopedV8, assign, guard, destructure, destructureV8, climb, heavy, nmWorld, out, three, part, nothing, sides, sidesAll, sidesJson } = got);
+({ engines, review, small, self, reviewJson, fails, notRead, rewrite, extended, collided, recurse, red, blind, unpop, early, nat, trOk, trBad, trGone, unparsedOut, fr, badRead, chained, lone, trSlow, spat, ex, wo, hol, xdir, xdirFails, cjs, cjsBlind, external, decorated, scoped, scopedV8, assign, guard, destructure, destructureV8, climb, heavy, nmWorld, out, three, part, nothing, sides, sidesAll, sidesJson } = got);
 for (const t of chosen) {
   let ok = false, o: Out | undefined;
   try { ok = t.ok(); o = t.o?.(); } catch (e) { o = { code: -1, out: `the check threw, a run it reads not named among its needs? ${(e as Error).stack}` }; }

@@ -76,6 +76,29 @@ export function libFiles(path: string, front: Front): { model: string[]; phrases
   return { model: front.model === 'js' ? MODEL_FILES : ['boot.rofl'], phrases };
 }
 
+/** A `reads:` name of the file read as `from` (a key itself; '' for the notebook) as a key of Inputs.reads: a `rofl:` name as is, a path from the
+ *  notebook's folder; a name in a shipped file is shipped beside it. */
+export function readKey(from: string, name: string): string {
+  if (name.startsWith('rofl:') || name.startsWith('/') || name.startsWith('~')) return name;
+  const dir = from.replace(/[^/]*$/, '');
+  return dir.startsWith('rofl:') ? `rofl:${normal(dir.slice(5) + name)}` : normal(dir + name);
+}
+
+/** The keys a notebook reads, and every `.rofl.md` it reads reads in turn, that `have` lacks: fetch them and ask again until none is left. */
+export function unread(text: string, have: Record<string, string>): string[] {
+  const seen = new Set<string>(), out: string[] = [];
+  const walk = (from: string, t: string) => {
+    for (const r of parseFront(t).reads) {
+      const k = readKey(from, r);
+      if (seen.has(k)) continue;
+      seen.add(k);
+      if (have[k] === undefined) out.push(k); else if (k.endsWith('.rofl.md')) walk(k, have[k]);
+    }
+  };
+  walk('', text);
+  return out;
+}
+
 /** `a/b/../c` -> `a/c`. */
 export function normal(p: string): string {
   const out: string[] = [];

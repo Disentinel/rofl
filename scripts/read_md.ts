@@ -30,6 +30,8 @@ export type ReadResult = {
   problems: { unparsed: string[]; dropped: string[]; ambiguous: string[]; nowhere: string[]; badAlternatives: string[]; collisions: string[] };
   /** the relations the text defines or declares */
   defined: string[];
+  /** the relations of the rules left out (problems.dropped), which a rule of the text concludes and no loaded one does */
+  leftOut: string[];
   /** the lines, [from, to) from 0, of every block read as sentences: a rule, a list of facts with its line, a declaration */
   spans: [number, number][];
   /** the line, from 0, of the block a problem was found in */
@@ -146,7 +148,7 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
     return { a: text };
   }
   let badTerm: string | null = null;
-  const dropped: string[] = [];
+  const dropped: string[] = [], leftOut: string[] = [];
   const promised: [string, string][] = [];   // said as E13 once the English reader below is defined
   const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   // a plural is made forward from the nouns the vocabulary declares, never by stripping the writer's word
@@ -564,9 +566,9 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
       for (const c of conds) whole = condition(c, intros, rule) && whole;
       for (const it of intros) if (!known.has(it.v)) known.set(it.v, it.noun);
       if (pass === 0) { ambiguous.length = savedAmb; unparsed.length = savedUn; continue; }
-      if (badTerm) { dropped.push(`${headText}: a term the sentence form cannot carry, ${badTerm}`); continue; }
+      if (badTerm) { dropped.push(`${headText}: a term the sentence form cannot carry, ${badTerm}`); leftOut.push(head.rel); continue; }
       // a rule missing a condition it could not read would answer more than the sentence says: it is not loaded, and the condition is reported
-      if (!whole) { dropped.push(`${headText}: a condition was not read`); continue; }
+      if (!whole) { dropped.push(`${headText}: a condition was not read`); leftOut.push(head.rel); continue; }
       // the opening `A`/`An` was read as an article, so a variable of that name in the conditions lost its place in the head
       const art = /^(An?) (?!(?:is|are|has|have|was|were|does|do)\b)[a-z][\w-]*(?: [a-z][\w-]*){0,2} [A-Z]/.test(headText) ? undefined : /^(An?) /.exec(headText)?.[1];
       if (art && conds.some((c) => new RegExp(`\\b${art}\\b`).test(c))) { unparsed.push(`${headText}: "${art}" opens the sentence and is read as an article, but the conditions use a variable ${art}; write it typed (\`a number ${art}\`) or name it otherwise`); continue; }
@@ -1546,6 +1548,7 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
     report: report.join('\n'),
     traced,
     problems: { unparsed: [...new Set(unparsed)], dropped, ambiguous: [...new Set(ambiguous)], nowhere, badAlternatives, collisions },
+    leftOut: [...new Set(leftOut)],
     defined: [...new Set([...rules.map((r) => r.head.rel), ...declared, ...parsedFacts.map((f) => f.rel)])],
     spans, lineOf, roflAt,
     literal,
