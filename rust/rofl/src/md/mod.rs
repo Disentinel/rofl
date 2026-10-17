@@ -321,7 +321,10 @@ pub fn read_book(parts: &mut [PartC], phrases: &str, home: &HashMap<String, Stri
 }
 
 /// A world written as Markdown, read the way a notebook's cells are (notebook/world.ts `worldOf`).
-fn world_of(text: &str, phrases: &str, home: &HashMap<String, String>) -> (String, Vec<String>, Vec<String>) {
+/// What a world written as Markdown reads to: its rules, the sentences it learned, the reader's reports, what it could not read, and the
+/// relations of the rules it left out (notebook/world.ts `worldOf`).
+#[allow(clippy::type_complexity)]
+fn world_of(text: &str, phrases: &str, home: &HashMap<String, String>) -> (String, Vec<String>, Vec<String>, Vec<String>, Vec<String>) {
     let mut parts: Vec<PartC> = cells_of(text).into_iter().filter(|c| c.kind != Kind::Natural).map(|c| match c.kind {
         Kind::Prose => prose_split(&c.text),
         Kind::Rofl | Kind::Natural => split(&c.text, true),
@@ -330,7 +333,9 @@ fn world_of(text: &str, phrases: &str, home: &HashMap<String, String>) -> (Strin
     let b = read_book(&mut parts, phrases, home, false);
     let rofl = parts.iter().zip(&b.read).map(|(p, r)| r.as_ref().map(|r| r.rofl.clone()).unwrap_or_else(|| p.clauses.clone())).collect::<Vec<_>>().join("\n");
     let reports = b.read.iter().flatten().map(|r| r.report.clone()).collect();
-    (rofl, b.learned, reports)
+    let problems = b.read.iter().flatten().flat_map(|r| r.unparsed.iter().map(|u| format!("not read: {}", rx::sub("^(LIST|HEAD) ", u, false, ""))).chain(r.dropped.iter().map(|d| format!("left out: {d}")))).collect();
+    let left_out = b.read.iter().flatten().flat_map(|r| r.left_out.clone()).collect();
+    (rofl, b.learned, reports, problems, left_out)
 }
 
 /// The books a model's relations live in (notebook/book.ts `homeOf`).
@@ -384,7 +389,7 @@ fn read_file(p: &Path) -> Result<String, String> { std::fs::read_to_string(p).ma
 pub struct Read { pub rofl: String, pub phrases: Vec<String>, pub report: String, pub root: PathBuf }
 
 /// What a notebook is read over: the model and the words it is read in (notebook/world.ts `assemble`).
-pub struct Assembled { pub text: String, pub front: Front, pub root: PathBuf, pub model: String, pub phrases: String, pub home: HashMap<String, String>, pub parts: Vec<(String, String)> }
+pub struct Assembled { pub text: String, pub front: Front, pub root: PathBuf, pub model: String, pub phrases: String, pub home: HashMap<String, String>, pub parts: Vec<(String, String)>, pub errors: Vec<String> }
 
 impl Assembled {
     /// A line of the model as the file it came from and its line there.
@@ -408,27 +413,57 @@ pub fn assemble(file: &Path) -> Result<Assembled, String> {
     let mut parts = model.iter().map(|f| Ok((relative(&root, f), read_file(f)?))).collect::<Result<Vec<_>, String>>()?;
     let mut phrases = phrase_files.iter().map(|f| read_file(f)).collect::<Result<Vec<_>, _>>()?.join("\n");
     let home = home_of(&parts.iter().map(|p| p.1.clone()).collect::<Vec<_>>().join("\n"));
-    for r in &front.reads {
-        let t = read_file(&reads_path(&root, &path, r)?)?;
-        if r.ends_with(".rofl.md") {
-            let (rofl, learned, _) = world_of(&t, &phrases, &home);
-            parts.push((format!("the rules read from {r}"), rofl));
-            phrases.push_str(&format!("\n-- read: {r}\n{}", learned.join("\n")));
-        } else {
-            parts.push((r.clone(), t.clone()));
-            phrases.push_str(&format!("\n-- read: {r}\n{t}"));
-        }
-    }
+    let mut errors = Vec::new();
+    read_before(&root, &path, "", &text, &home, &mut HashSet::new(), &mut parts, &mut phrases, &mut errors)?;
     let model = parts.iter().map(|p| p.1.clone()).collect::<Vec<_>>().join("\n");
     let home = home_of(&model);
-    Ok(Assembled { text, front, root, model, phrases, home, parts })
+    Ok(Assembled { text, front, root, model, phrases, home, parts, errors })
 }
 
 /// The reading of a world written as Markdown, as `scripts/read.ts FILE --out OUT` reads it.
 pub fn read_world(file: &Path) -> Result<Read, String> {
     let a = assemble(file)?;
-    let (rofl, learned, reports) = world_of(&a.text, &a.phrases, &a.home);
+    let (rofl, learned, reports, _, _) = world_of(&a.text, &a.phrases, &a.home);
     Ok(Read { rofl, phrases: learned, report: reports.join("\n"), root: a.root })
+}
+
+/// What `text`, read as `from`, reads, each file once and before the file that reads it (notebook/world.ts `assemble`).
+#[allow(clippy::too_many_arguments)]
+fn read_before(root: &Path, md: &Path, from: &str, text: &str, home: &HashMap<String, String>, seen: &mut HashSet<String>, parts: &mut Vec<(String, String)>, phrases: &mut String, errors: &mut Vec<String>) -> Result<(), String> {
+    for r in parse_front(text).reads {
+        let k = read_key(from, &r);
+        if !seen.insert(k.clone()) { continue; }
+        let t = read_file(&reads_path(root, md, &k)?)?;
+        if k.ends_with(".rofl.md") {
+            read_before(root, md, &k, &t, home, seen, parts, phrases, errors)?;
+            let (rofl, learned, _, problems, left_out) = world_of(&t, phrases, home);
+            errors.extend(problems.iter().map(|p| format!("{k}: {p}")));
+            // a rule left out is said where its conclusion is asked why not, rather than taken for one no file has
+            let left = left_out.iter().map(|rel| format!("unit_concludes({:?}, {rel}).", format!("the rule left out of {k}")));
+            parts.push((format!("the rules read from {k}"), std::iter::once(rofl).chain(left).collect::<Vec<_>>().join("\n")));
+            phrases.push_str(&format!("\n-- read: {k}\n{}", learned.join("\n")));
+        } else {
+            parts.push((k.clone(), t.clone()));
+            phrases.push_str(&format!("\n-- read: {k}\n{t}"));
+        }
+    }
+    Ok(())
+}
+
+/// A `reads:` name of the file read as `from` as a path from the notebook's folder (notebook/front.ts `readKey`).
+fn read_key(from: &str, name: &str) -> String {
+    if name.starts_with("rofl:") || name.starts_with('/') || name.starts_with('~') { return name.to_string(); }
+    let dir = &from[..from.rfind('/').map_or(0, |i| i + 1)];
+    match dir.strip_prefix("rofl:") { Some(d) => format!("rofl:{}", normal_str(&format!("{d}{name}"))), None => normal_str(&format!("{dir}{name}")) }
+}
+
+/// `a/b/../c` -> `a/c`, as notebook/front.ts `normal`.
+fn normal_str(p: &str) -> String {
+    let mut out: Vec<&str> = Vec::new();
+    for s in p.split('/') {
+        if s == ".." && out.last().is_some_and(|l| *l != "..") { out.pop(); } else if s != "." && !s.is_empty() { out.push(s); }
+    }
+    format!("{}{}", if p.starts_with('/') { "/" } else { "" }, out.join("/"))
 }
 
 fn reads_path(root: &Path, md: &Path, r: &str) -> Result<PathBuf, String> {

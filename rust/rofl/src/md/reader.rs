@@ -459,6 +459,8 @@ pub struct R {
     fresh_n: usize,
     bad_term: Option<String>,
     pub dropped: Vec<String>,
+    /// the relations of the rules left out, which a rule of the text concludes and no loaded one does
+    pub left_out: Vec<String>,
     promised: Vec<(String, String)>,
     plurals: HashMap<String, String>,
     plurals_of: usize,
@@ -533,7 +535,7 @@ impl R {
         let set_rels = rx::each(r"(?m)^kind_set\((\w+)\)", vocab).iter().map(|m| g(m, 1).to_string()).collect();
         let mut r = R {
             kind_noun, guard_of, noun_guards: OMap::default(), nouns, templates, fun_templates, collisions, set_rels, used_here: HashSet::new(),
-            noun_atoms: OMap::default(), noun_sets: OMap::default(), subject_var: None, fresh_n: 0, bad_term: None, dropped: vec![], promised: vec![],
+            noun_atoms: OMap::default(), noun_sets: OMap::default(), subject_var: None, fresh_n: 0, bad_term: None, dropped: vec![], left_out: vec![], promised: vec![],
             plurals: HashMap::new(), plurals_of: usize::MAX, ambiguous: vec![], known: HashMap::new(), unparsed: vec![], fresh_names: HashSet::new(), agg_why: None,
             rules: vec![], parsed_facts: vec![], declared: vec![], imported: HashSet::new(), bad_alternatives: vec![], head_book: HashMap::new(),
             home_book: HashMap::new(), home_books: home_books.clone(), default_book: "main".into(), cur_book: "main".into(), block_set: false,
@@ -1212,8 +1214,8 @@ impl R {
             for c in conds { whole = self.condition(c, &mut intros, &mut rule) && whole; }
             for it in &intros { if !self.known.contains_key(&it.v) { self.known.insert(it.v.clone(), it.noun.clone()); } }
             if pass == 0 { self.ambiguous.truncate(saved_amb); self.unparsed.truncate(saved_un); continue; }
-            if let Some(b) = &self.bad_term { self.dropped.push(format!("{head_text}: a term the sentence form cannot carry, {b}")); continue; }
-            if !whole { self.dropped.push(format!("{head_text}: a condition was not read")); continue; }
+            if let Some(b) = &self.bad_term { self.dropped.push(format!("{head_text}: a term the sentence form cannot carry, {b}")); if !self.left_out.contains(&rule.head.rel) { self.left_out.push(rule.head.rel.clone()); } continue; }
+            if !whole { self.dropped.push(format!("{head_text}: a condition was not read")); if !self.left_out.contains(&rule.head.rel) { self.left_out.push(rule.head.rel.clone()); } continue; }
             let art = match rx::exec("^(An?) ", &head_text) {
                 None => None,
                 Some(m) => {

@@ -422,7 +422,7 @@ pub fn run(file: &Path, all_rows: bool) -> Result<NbResult, String> {
     let mut core = Session::fresh(BUDGET);
     core.eval.space = SPACE;
     if let Err(d) = core.load(&a.model, None) {
-        let errors = d.iter().take(5).map(|d| rx::replace(r"^line (\d+)", d, false, |c| a.source(c[1].parse().unwrap_or(0)))).collect();
+        let errors = a.errors.iter().cloned().chain(d.iter().take(5).map(|d| rx::replace(r"^line (\d+)", d, false, |c| a.source(c[1].parse().unwrap_or(0))))).collect();
         return Ok(NbResult { status: "unread", cut: None, cells: vec![], errors });
     }
     let said: HashSet<String> = rx::each(r"(?m)^phrase\((\w+),", &a.phrases).iter().map(|m| g(m, 1).to_string()).collect();
@@ -728,10 +728,10 @@ pub fn run(file: &Path, all_rows: bool) -> Result<NbResult, String> {
     } else { None };
     let mut vocab_cache: Option<Vec<String>> = None;
     let cells_out = result_cells(&cells, &runs, outs, &a, &mut vocab_cache, &book.learned, partial);
-    let status = if partial { "cut" } else if cells_out.iter().any(|c| !c.errors.is_empty() || c.lines.iter().any(|l| l.verdict == "unasked")) { "unread" }
+    let status = if partial { "cut" } else if !a.errors.is_empty() || cells_out.iter().any(|c| !c.errors.is_empty() || c.lines.iter().any(|l| l.verdict == "unasked")) { "unread" }
         else if cells_out.iter().any(|c| c.lines.iter().any(|l| l.verdict == "fails")) { "fails" }
         else if cells_out.iter().any(|c| c.lines.iter().any(|l| l.verdict == "blind")) { "blind" } else { "ok" };
-    Ok(NbResult { status, cut: if status == "cut" { cut } else { None }, cells: cells_out, errors: Vec::new() })
+    Ok(NbResult { status, cut: if status == "cut" { cut } else { None }, cells: cells_out, errors: a.errors.clone() })
 }
 
 fn not_ours(rel: &str, home: &HashMap<String, String>) -> String {
