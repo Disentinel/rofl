@@ -4,7 +4,7 @@ import { Rofl } from '../src/api.ts';
 import { parseProgram } from '../src/parser.ts';
 import { tokenize, type Tok } from '../src/tokens.ts';
 import { Vocabulary } from '../src/say.ts';
-import { cellsOf, libFiles, parseFront, type Front } from '../notebook/front.ts';
+import { cellsOf, libFiles, parseFront, unread, type Front } from '../notebook/front.ts';
 import { asCell, assemble } from '../notebook/world.ts';
 import { readBook } from '../notebook/book.ts';
 import { nearest } from '../notebook/kernel.ts';
@@ -48,7 +48,9 @@ function knowMd(file: string, text: string, lib: Get, reads: Get, load: boolean)
   const input = { lib: {} as Record<string, string>, reads: {} as Record<string, string>, code: {} };
   for (const f of [...want.model, ...want.phrases]) { const t = lib(f); if (typeof t === 'string') input.lib[f] = t; }
   const kept = new Set<string>();
-  for (const r of front.reads) { const t = reads(r); if (typeof t === 'string') input.reads[r] = t; else if (t === null) kept.add(r); }
+  const tried = new Set<string>();
+  for (let want = unread(text, input.reads); want.length; want = unread(text, input.reads).filter((k) => !tried.has(k)))
+    for (const r of want) { tried.add(r); const t = reads(r); if (typeof t === 'string') input.reads[r] = t; else if (t === null) kept.add(r); }
   const world = assemble(file, text, input);
   for (const e of world.errors) {
     const name = e.replace(/: not given$/, ''), at = lines.findIndex((l, i) => i < 40 && l.includes(name));
