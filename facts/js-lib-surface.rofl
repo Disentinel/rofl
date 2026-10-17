@@ -90,6 +90,16 @@ lib_member(function, "length", es5).
 lib_member(function, "name", es2015).
 lib_member(function, "prototype", es5).
 lib_member(function, "toString", es5).
+lib_member(map, "clear", es2015).
+lib_member(map, "delete", es2015).
+lib_member(map, "entries", es2015).
+lib_member(map, "forEach", es2015).
+lib_member(map, "get", es2015).
+lib_member(map, "has", es2015).
+lib_member(map, "keys", es2015).
+lib_member(map, "set", es2015).
+lib_member(map, "size", es2015).
+lib_member(map, "values", es2015).
 lib_member(number, "toExponential", es5).
 lib_member(number, "toFixed", es5).
 lib_member(number, "toLocaleString", es5).
@@ -120,6 +130,15 @@ lib_member(regexp, "sticky", es2015).
 lib_member(regexp, "test", es5).
 lib_member(regexp, "unicode", es2015).
 lib_member(regexp, "unicodeSets", es2024).
+lib_member(set, "add", es2015).
+lib_member(set, "clear", es2015).
+lib_member(set, "delete", es2015).
+lib_member(set, "entries", es2015).
+lib_member(set, "forEach", es2015).
+lib_member(set, "has", es2015).
+lib_member(set, "keys", es2015).
+lib_member(set, "size", es2015).
+lib_member(set, "values", es2015).
 lib_member(string, "anchor", es2015).
 lib_member(string, "at", es2022).
 lib_member(string, "big", es2015).
@@ -171,6 +190,13 @@ lib_member(string, "trimLeft", es2019).
 lib_member(string, "trimRight", es2019).
 lib_member(string, "trimStart", es2019).
 lib_member(string, "valueOf", es5).
+lib_member(weakmap, "delete", es2015).
+lib_member(weakmap, "get", es2015).
+lib_member(weakmap, "has", es2015).
+lib_member(weakmap, "set", es2015).
+lib_member(weakset, "add", es2015).
+lib_member(weakset, "delete", es2015).
+lib_member(weakset, "has", es2015).
 
 -- `lib_deprecated(Prototype, Method)` — the member carries `@deprecated` in
 -- TypeScript`s own declaration. `lib_replaced_by` is the half the source can
@@ -219,6 +245,8 @@ edb(lib_readonly_view).
 edb(lib_readonly_member).
 
 lib_readonly_view(array, "ReadonlyArray").
+lib_readonly_view(map, "ReadonlyMap").
+lib_readonly_view(set, "ReadonlySet").
 
 lib_readonly_member(array, "at").
 lib_readonly_member(array, "concat").
@@ -250,3 +278,16 @@ lib_readonly_member(array, "toSpliced").
 lib_readonly_member(array, "toString").
 lib_readonly_member(array, "values").
 lib_readonly_member(array, "with").
+lib_readonly_member(map, "entries").
+lib_readonly_member(map, "forEach").
+lib_readonly_member(map, "get").
+lib_readonly_member(map, "has").
+lib_readonly_member(map, "keys").
+lib_readonly_member(map, "size").
+lib_readonly_member(map, "values").
+lib_readonly_member(set, "entries").
+lib_readonly_member(set, "forEach").
+lib_readonly_member(set, "has").
+lib_readonly_member(set, "keys").
+lib_readonly_member(set, "size").
+lib_readonly_member(set, "values").

@@ -21,11 +21,10 @@
 -- KEYS rather than as calls without anybody asserting that they are.
 -- `lib_global_prototype(Name, Proto)` — THE BRIDGE to the third surface,
 -- the instance one, which facts/js-lib-surface.rofl already carries under a
--- lower-case prototype atom. It is PARTIAL BY CONSTRUCTION: nine globals
--- have a row, because nine is what `prototype_of` in
--- rules/js-dataflow.rofl can name a receiver for. `Map` and
--- `Set` have an instance surface this model does not carry, and the missing
--- bridge row is where that is visible.
+-- lower-case prototype atom. It is PARTIAL BY CONSTRUCTION: a global
+-- has a row when `prototype_of` in rules/js-dataflow.rofl can name a
+-- receiver for it; `Date` has an instance surface this model does not
+-- carry, and the missing bridge row is where that is visible.
 --
 -- `globalThis` IS ABSENT AND THAT IS A FACT ABOUT THE SOURCE: no
 -- lib.es*.d.ts declares it, so nothing here can date it. It is not omitted
@@ -91,17 +90,21 @@ lib_global("WeakMap", es2015, constructor_binding).
 lib_global("WeakRef", es2021, constructor_binding).
 lib_global("WeakSet", es2015, constructor_binding).
 
--- the bridge to the prototype surface, for the nine prototypes
--- `kind_prototype` can name a receiver for.
+-- the bridge to the prototype surface, for the prototypes
+-- `prototype_of` can name a receiver for.
 lib_global_prototype("Array", array).
 lib_global_prototype("BigInt", bigint).
 lib_global_prototype("Boolean", boolean).
 lib_global_prototype("Function", function).
+lib_global_prototype("Map", map).
 lib_global_prototype("Number", number).
 lib_global_prototype("Object", object).
 lib_global_prototype("Promise", promise).
 lib_global_prototype("RegExp", regexp).
+lib_global_prototype("Set", set).
 lib_global_prototype("String", string).
+lib_global_prototype("WeakMap", weakmap).
+lib_global_prototype("WeakSet", weakset).
 
 lib_static("AggregateError", "prototype", es2021).
 lib_static("Array", "from", es2015).
@@ -559,5 +562,5 @@ lib_static_shape("WeakSet", "prototype", data).
 
 -- NO STATIC IN THE ECMASCRIPT LIB FILES CARRIES `@deprecated`, measured
 -- over all 226 of them. `lib_deprecated` has seventeen rows on the
--- nine prototypes; the static surface has none. No relation is declared
+-- prototypes; the static surface has none. No relation is declared
 -- for a set that is empty in the SOURCE rather than empty here.

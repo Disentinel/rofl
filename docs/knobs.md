@@ -94,6 +94,11 @@ why none is removed here. Clients in the tree: `runtime/port.ts` (used by
 | `op: cool_many` | cool several volumes in one pass | `runtime/ingest.ts` | KEEP | |
 | `op: cool` | cool one volume, by book with `books` and `keep` | `runtime/split.ts` (since the audit); `cool_many` does not cool by book | KEEP: the decision to merge it predates its caller | |
 | `op: cool_trail`, `reheat_trail` | park and fetch the assertion trail | `runtime/port.ts` methods only; no caller. `Session::cool_trail` stays, `rust/rofl/tests/cool.rs` calls it | REMOVE | done |
+| `open` with `keptPath`, `volumePath`; `op: keep` (`path`, `volume`) | a world kept as an image or a mapped volume, opened evaluated where it was (docs/staged-evaluation.md) | `scripts/stage_by_asks.ts`, `scripts/stage_plan.ts`, `scripts/vscode_pieces.ts`, `scripts/addcheck.ts`, `runtime/port.ts` | KEEP; two kept formats, the image and the volume, both live; whether the image retires is the owner's call | |
+| `op: resume` with `steps` | go on from where a step budget stopped (`Session::resume`) | `scripts/vscode_pieces.ts` | KEEP | |
+| `limit` with `ms`, `bytes` (any op) | the clock and heap walls of a notebook run; the answer says `stopped` | `notebook/cli.ts` through `playground/rust.ts` | KEEP (`ROFL_NB_LIMIT`, `ROFL_NB_MEMORY`) | |
+| `whynot` with `files` | a whynot row a file (docs/md-world.md) | `runtime/port.ts`, `scripts/whycheck.ts` | KEEP | |
+| `op: rows`, `fact`, `firings`, `cell`, `books`, `holding` | the store read piece by piece by a host that keeps the world in the engine | `playground/rust.ts` | KEEP | |
 | `op: facts` | fact count and tick | `runtime/port.ts` `factCount`, called by `runtime/ingest.ts` and `scripts/vscode_curve.ts` (the audit missed them) | REMOVE once its callers have another way to count | open: no other verb counts without evaluating again |
 
 ## rofl render (`rust/rofl/src/bin/rofl/render.rs`)

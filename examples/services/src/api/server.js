@@ -14,4 +14,5 @@ app.post('/orders', createOrder);
 app.get('/admin', admin);
 app.use('/users', users);
 
-app.listen(3000);
+app.set('port', 3000);
+app.listen(app.get('port'));

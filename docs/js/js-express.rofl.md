@@ -12,7 +12,8 @@ default: flow
 >                                      on the pattern P, a text over the route's
 >                                      strings, with the function H, a `route`
 >                                      or a `middleware` that runs before one
->   app_listens[surface](App, Port)     `app.listen(Port)`: App answers at Port
+>   app_listens[surface](App, Port)     `app.listen(Port)`: App answers at Port,
+>                                      also `app.listen(app.get('port'))`
 > 
 > Knows nothing about clients. An app is a call of the module (`express()`), a
 > router a call of its `Router`; `app.get(p, h)`, `router.post(p, h)` and
@@ -164,6 +165,18 @@ In the flow:
   - R [passes](js-dataflow.rofl.md#arg_at) a node X at 0;
   - X [may be the literal](js-concat.rofl.md#may_be_lit) P;
   - [`ex_port_lit`](#ex_port_lit)(P).
+
+> An app keeps its settings by key, `app.set('port', p)` and `app.get('port')`:
+> a keyed collection of rules/js-dataflow.rofl section 7c. A `get` with a
+> handler is a route, and section 7c reads only a `get` with one argument.
+
+`keyed_store` lists:
+
+| arg 1 | arg 2 | arg 3 |
+|---|---|---|
+| `express_app` | "set" | "get" |
+
+`keyed_obj`(Y, `express_app`) if [`sx_ex_app`](#sx_ex_app)(Y).
 
 ## 3. ACROSS FILES. A router is made in one file and mounted in another; what
 

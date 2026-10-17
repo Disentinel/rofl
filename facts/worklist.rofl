@@ -3080,8 +3080,8 @@ work_state(w_prototype_of_a_constructed_value, done).
 work_spawned(w_prototype_of_a_constructed_value, f_a_namespaced_constructor_is_outside_the_reference_position_table).
 work_spawned(w_prototype_of_a_constructed_value, f_both_cost_gates_refuse_the_pack_they_would_have_priced).
 work_spawned(w_prototype_of_a_constructed_value, f_a_relation_sweep_needs_the_arity_that_answers_not_the_one_that_does_not_error).
-work(w_prototype_of_a_constructed_value, "`new Map()` reaches no prototype, so a call on the instance is outside both halves of the library; the join exists and the decision does not").
-work_state(w_prototype_of_a_constructed_value, open).
+work(w_prototype_of_a_constructed_value, "`new Map()` reaches no prototype, so a call on the instance is outside both halves of the library; the join exists and the decision does not. DONE 2026-10-16: Map, Set, WeakMap and WeakSet have bridge rows and an instance surface (w_js_receiver_typed_catalogues).").
+work_state(w_prototype_of_a_constructed_value, done).
 
 -- ===========================================================================
 -- 70-73. WHAT THE AMBIENT SURFACE OWES, entered 2026-09-09 by
@@ -3495,6 +3495,9 @@ work_state(w_rust_cli, done).
 work(w_rust_default_backend,
   "RUST AS THE DEFAULT BACKEND of the notebook kernel (notebook/kernel.ts, playground/host.ts Host) and of the VS Code extension, over rofl serve with fork reuse; the TS evaluator stays selectable. Builds on the pluggable-backend seam of the demo item kernel-backend. ACCEPTANCE: the two-file corpus that took 30 s+ in the TS kernel answers cold in the Rust timings and warm in milliseconds, with the rendered answers and witnesses unchanged; test:nb and test:vscode green on both backends.").
 work_state(w_rust_default_backend, open).
+-- PROGRESS 2026-10-16 (release 1.3 audit): every notebook evaluates on Rust, the clock, the heap and excise
+-- included (#23, f_a_rust_evaluation_stops_at_the_clock_and_the_heap); cells and rendering still run in
+-- playground/host.ts.
 work_needs(w_rust_default_backend, w_rust_cli).
 
 work(w_rust_rofl_md,
@@ -3595,12 +3598,24 @@ work_state(w_js_call_site_context, open).
 work_needs(w_js_call_site_context, w_dataflow_pruning).
 
 work(w_js_framework_contracts,
-  "A GENERAL HOOK FOR FRAMEWORK CONTRACTS, declared as facts rather than special-cased: (1) injected parameters -- etask._class methods are written *m(_this, a, b) and called o.m(a, b), so param_of must shift by the contract (the demo's injects_this); (2) coroutine runners -- `x = yield p` under etask/co is transparent (x gets p's value), etask._class(c) is c, etask(function*(){ ... return v }) is v; (3) the same shape for other runner libraries. ACCEPTANCE: the demo's send_to_queue('q', msg) binds msg to the message, and a co-style yield carries its value.").
-work_state(w_js_framework_contracts, open).
+  "A GENERAL HOOK FOR FRAMEWORK CONTRACTS, declared as facts rather than special-cased: (1) injected parameters -- etask._class methods are written *m(_this, a, b) and called o.m(a, b), so param_of must shift by the contract (the demo's injects_this); (2) coroutine runners -- `x = yield p` under etask/co is transparent (x gets p's value), etask._class(c) is c, etask(function*(){ ... return v }) is v; (3) the same shape for other runner libraries. ACCEPTANCE: the demo's send_to_queue('q', msg) binds msg to the message, and a co-style yield carries its value. DONE 2026-10-16 for (2) and (3): `runs_coroutine(Pkg, Key, I)` and `returns_argument(Pkg, Key, I)` (rules/js-dataflow.rofl, after the external values) are rows of a package; a `yield p` in a generator a runner runs is p's value and the call is what it returns; `co` ships, a company's runner (etask) is declared in the world that loads it. Proof: examples/notebook/packages.rofl.md declares `@acme/etask` there. (1), the injected parameter, is w_js_injected_params.").
+work_state(w_js_framework_contracts, done).
+
+work(w_js_injected_params,
+  "AN INJECTED PARAMETER: etask._class methods are written *m(_this, a, b) and called o.m(a, b), so argument I binds parameter I + 1 (the demo's injects_this). Adding the shifted binding beside the plain one makes `a` both a and b, a value that never occurs; removing the plain one for such a method is a negation of a flow fact (whether the class reached the runner) inside the flow recursion, which the program is refused for. Needs the contract decided where it is not a value: a declaration naming the method, or the runner's call written in place with a [code] arm. ACCEPTANCE: the demo's send_to_queue('q', msg) binds msg to the message and nothing else.").
+work_state(w_js_injected_params, open).
+
+work(w_js_call_of_a_missing_member,
+  "A CALL OF A MEMBER THE RECEIVER HAS NOT GOT throws a TypeError (`plain.sett(k)` on `const plain = { set() {} }`), and the model should say so (Vadim, 2026-10-16). Sound only where the receiver is seen whole: an object literal, a class instance (its prototype chain in the corpus), a Map or another builtin by its lib_member surface, and no member written onto it under a computed key, by Object.assign of an unknown source, or from outside the corpus. Two answers, never one: `missing_member_call[audit](C, Recv, Key)` where every value the receiver may be is closed and none has Key, and `member_unknown(C)` where some value is open; an external value or a parameter nobody calls is open. Beside it: `es_construct_not_constructor` (new Math()) and the default notebook's missing-field sentence, which already counts library members as present. ACCEPTANCE: a notebook whose V8 run throws at each `missing_member_call` site and at no other, and a never over an external receiver.").
+work_state(w_js_call_of_a_missing_member, open).
+
+work(w_js_keyed_in_order,
+  "WHAT A COLLECTION HOLDS AT THE MOMENT OF A READ (Vadim, 2026-10-16). `m.get(k)` now sees every `m.set(k, v)` of the program, before or after it, and `m.delete(k)` is not read: the keyed layer is flow-insensitive like the rest of the value layer. The call graph and the order of statements say which puts can have run before a get: a put after the get in the same function, or in a function called only after it, cannot be its value, and a delete between them removes it. Where an await, a callback, a timer or an event lies between the put and the get, the order is not known and the answer stays every put that may have run. ACCEPTANCE: a notebook whose V8 run prints the value of each get, the model gives exactly those values where the order is known, and `keyed_key_unknown` style rows say where it is not.").
+work_state(w_js_keyed_in_order, open).
 
 work(w_js_new_of_an_imported_class,
-  "`new C()` OF A CLASS FROM ANOTHER FILE: the class is found only by a name declared in the same file (the declared limit covers `extends` of an imported class only). Follow the callee by dataflow (the demo's js-construct.rofl), and read instance fields back: `this.f = v` in a constructor is stored on the class node but `inst.f` reads only static members, so fields are never read (beside f_a_member_assigned_to_a_class_or_to_this_has_no_half, which is about methods).").
-work_state(w_js_new_of_an_imported_class, open).
+  "`new C()` OF A CLASS FROM ANOTHER FILE: the class is found only by a name declared in the same file (the declared limit covers `extends` of an imported class only). Follow the callee by dataflow (the demo's js-construct.rofl), and read instance fields back: `this.f = v` in a constructor is stored on the class node but `inst.f` reads only static members, so fields are never read (beside f_a_member_assigned_to_a_class_or_to_this_has_no_half, which is about methods). DONE before 2026-10-16 (PR #35 resolves `new` by value; `this.f = v` in a constructor is a member write onto the instance body node, which `inst.f` reads): checked and given a proof, examples/notebook/keyed.rofl.md (`reg.owner`, a class from another file).").
+work_state(w_js_new_of_an_imported_class, done).
 
 work(w_js_destructuring_claims_are_true,
   "THE MATRIX CLAIMS WHAT THE RULES DO NOT DO: handled(js, object_pattern, dataflow, r_destructure) and handled(js, assignment_pattern, dataflow, r_param_default) are claimed, yet object-pattern PARAMETERS (`({port, host}) =>`) bind nothing any rule reads, `const {PORT = 1343} = env` binds nothing, `const {PORT} = require('./config')` has only the node arm and no literal arm, and `(port = 80) =>` / `({port = 80}) =>` give no literal. Either the rules do it or the claims become unknown_because cells; plus parseInt / Number / parseFloat keep their argument's value. The over-claim is the defect: a handled cell must be proven by its oracle on these shapes. DONE 2026-10-11: the rules do it: a property's default and a literal arm for `destructures` (rules/js-dataflow.rofl section 6), object-pattern parameters through `param_prop` and `param_bound`, a literal arm for `param_default`, and parseInt / parseFloat / Number / Number.parseInt keeping their argument through the table `keeps_argument`; the cells are checked, not asserted: examples/notebook/destructure.rofl.md runs destructure/shapes.js under V8 and scripts/nb_check.ts finds nothing observed missing from the model. A string that is no number is kept where V8 has NaN, and a nested pattern or a rest in a parameter is not read.").
@@ -3611,17 +3626,17 @@ work(w_js_object_assign,
 work_state(w_js_object_assign, done).
 
 work(w_js_keyed_collections,
-  "KEYED COLLECTIONS: .set(k, v) / .get(k) pairing on a Map or an Express app has no edge (the demo matched by method name), and iteration of a Map as [key, value] pairs (`for (const [k, w] of m)`) is not modelled. Needs the receiver's type (w_js_receiver_typed_catalogues, w_prototype_of_a_constructed_value).").
-work_state(w_js_keyed_collections, open).
+  "KEYED COLLECTIONS: .set(k, v) / .get(k) pairing on a Map or an Express app has no edge (the demo matched by method name), and iteration of a Map as [key, value] pairs (`for (const [k, w] of m)`) is not modelled. Needs the receiver's type (w_js_receiver_typed_catalogues, w_prototype_of_a_constructed_value). DONE 2026-10-16: `keyed_store(Type, Put, Get)` (rules/js-dataflow.rofl section 7c) keyed by the receiver's type: a Map, a WeakMap and an express app (rules/js-express.rofl); `get` is what `set` put under a key of the same value (a key with no known value matches nothing), and for-of `[k, v]` and `forEach((v, k) => ...)` see every key and value; across files through `sx_kput`. `app.listen(app.get('port'))` now listens (examples/services). Proof: examples/notebook/keyed.rofl.md. Not read: `keys()`, `values()`, `entries()`; flow-insensitive, a get sees every put.").
+work_state(w_js_keyed_collections, done).
 work_needs(w_js_keyed_collections, w_js_receiver_typed_catalogues).
 
 work(w_js_external_packages,
-  "VALUES FROM OUTSIDE THE CORPUS, TOLD APART: an npm package and a repo file merely left out of the slice are one thing today (import_outside_corpus; the demo's external_module); give each its package name and provenance, and make member reads on an external value external too (the demo's ext_pkg / from_pkg). Coordinates with the ExternalModule work on the JS-model branch.").
-work_state(w_js_external_packages, open).
+  "VALUES FROM OUTSIDE THE CORPUS, TOLD APART: an npm package and a repo file merely left out of the slice are one thing today (import_outside_corpus; the demo's external_module); give each its package name and provenance, and make member reads on an external value external too (the demo's ext_pkg / from_pkg). Coordinates with the ExternalModule work on the JS-model branch. DONE 2026-10-16: a relative import the slice left out was already no external value (`external_site` takes bare and builtin specifiers only, the rest is `dangling_import`), and member reads off an external value were external (`ext_member`). Added `external_package[code](Spec, Pkg, npm|node_builtin)`: `@scope/pkg/sub` is `@scope/pkg`, `lodash/fp` is `lodash`, a builtin its `node:` name. Proof: examples/notebook/packages.rofl.md.").
+work_state(w_js_external_packages, done).
 
 work(w_js_receiver_typed_catalogues,
-  "METHOD CATALOGUES ARE KEYED BY METHOD NAME, NOT RECEIVER TYPE: listen, bind, set, get, assign match any receiver, and `.bind(` is Function.prototype.bind in about 170 files of the demo repo. Key the catalogues by the receiver's type where the model knows it, and by name only as a declared fallback that says so.").
-work_state(w_js_receiver_typed_catalogues, open).
+  "METHOD CATALOGUES ARE KEYED BY METHOD NAME, NOT RECEIVER TYPE: listen, bind, set, get, assign match any receiver, and `.bind(` is Function.prototype.bind in about 170 files of the demo repo. Key the catalogues by the receiver's type where the model knows it, and by name only as a declared fallback that says so. DONE 2026-10-16: in this tree no catalogue matched by name alone (express goes by the app, fetch by the package, Object.assign by the library member, the host tables by prototype); what was missing was a type for a keyed collection's receiver. `new Map()`, `Set`, `WeakMap`, `WeakSet` now have their instance surface (scanners/ts_lib.ts PROTOTYPES, `builtin_prototype`), so `m.set` is a library call of `map` and `plain.set` stays the program's. Proof: examples/notebook/keyed.rofl.md.").
+work_state(w_js_receiver_typed_catalogues, done).
 work(w_df_external_member_identity,
   "TWO READS OF ONE MEMBER OF AN EXTERNAL VALUE ARE TWO VALUES (f_a_value_with_no_source_is_still_an_object): `app.locals.a = 1` and a later `app.locals.a` hold different access-site identities, so the write is not read back. BOUNDED: the identity wanted is (owner, key), which this model cannot spell as a node without a term; the candidate is to key the member's identity on the owner's identity and a key literal through the aggregates kernel's lattice relations, or to share one identity per (owner, key) by a canonical-site rule once a first-site aggregate exists. ACCEPTANCE: examples/notebook/external.rofl.md gains a `app.locals.x = v` and a read in a second function and read_back pairs them; no may_be_node row is invented for a key never written.").
 work_state(w_df_external_member_identity, open).
@@ -3732,6 +3747,8 @@ work_needs(w_cmp_provenance_on_demand, w_cmp_remeasure_after_engine_fast).
 work(w_cmp_provenance_rest,
   "THE REST OF w_cmp_provenance_on_demand, each bounded (f_derived_by_is_written_when_asked): (1) asserted_by, 5.7-6.7% of a default world and the next largest ledger, is written per asserted fact at load and read by rules and by cool_trail; the same note-and-settle shape applies where no rule reads asserted_by (`reads_assertions`?: the policy has no such reader relation yet, so the first step is the analysis, as provenance_reader is for derived_by). (2) The witness itself: a default world keeps one per firing (1.0-1.9 per derived fact, 1.3M on self) for `why`; sealed(provenance) keeps none and answers `why` by re-finding the firings (engine-fast's re-solve, height-ranked), so a provenanced world could drop a witness it can re-find, which is the other half of the owner's bridge and not done here. (3) A rule that reads `derived_by(_, R, T)` with the fact unbound needs every row; narrowing it by what R is joined to (a `rule(R)` of one pack) is a rule analysis of its own. (4) The tick boundary settles everything: the frozen rows are what `why` reads of a past tick, so a world that ticks gets the saving within a tick and not across; a past tick's rows could be re-found from its witnesses, which the boundary drops. (5) the engine's own order and activation by component stay sealed-only, by f_the_engines_own_order_is_another_answer_wherever_the_semantics_names_an_order: a provenanced world keeps the canonical first witness, so it cannot take them; sealed is still 2.4-3.3x faster than lazy on the four corpora, and that gap is the witnesses plus that order.").
 work_state(w_cmp_provenance_rest, open).
+-- PROGRESS 2026-10-16 (release 1.3 audit): (1) is done by #28 (f_asserted_by_is_written_when_asked); (5) is overtaken:
+-- a witnessed world takes the engine's own order (#25) and fires by component (#44). (2)-(4) stay open.
 work_spawned(w_cmp_provenance_rest, f_a_witnessed_world_takes_the_engines_own_order_where_no_fact_is_staged_twice).
 work_needs(w_cmp_provenance_rest, w_cmp_provenance_on_demand).
 -- 2026-10-17, read again for what is left: (1) DONE by #28 (f_asserted_by_is_written_when_asked's item, asserted_by noted and settled as derived_by is); (5) DONE where it can be, f_a_witnessed_world_takes_the_engines_own_order_where_no_fact_is_staged_twice. LEFT, each needing the owner: (2) dropping a witness the world can re-find conflicts with the deltas, which find what a fact rests on through the witnesses (a world without them takes only the monotone part of an addition); (3) narrowing a reader of derived_by with an unbound fact by what its rule is joined to is a reading of data, which a fact asserted later moves while the reader fires; (4) a past tick's rows re-found from its witnesses is the same bridge as (2). The worlds that read derived_by with an unbound fact are cram and loot, a few hundred facts each: nothing measured waits on (3).
@@ -3955,6 +3972,9 @@ work_needs(w_workers_by_key, w_stage_planner).
 work(w_why_by_file,
   "The explanation of an absence as a table of files (each: zero, its hash, the program's), a row expanded by lifting one volume.").
 work_state(w_why_by_file, open).
+-- PROGRESS 2026-10-16 (release 1.3 audit): the parted walk and the table are built (#33,
+-- f_whynot_by_file_parts_the_walk_where_a_candidate_first_names_a_file); left: a row's zero read from the
+-- file's kept stage, and a row opened by lifting one volume.
 work_needs(w_why_by_file, w_stage_planner).
 work_spawned(w_why_by_file, f_whynot_by_file_parts_the_walk_where_a_candidate_first_names_a_file).
 
