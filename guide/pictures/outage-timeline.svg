@@ -10,6 +10,9 @@
 .rofl-pic .pbar .spacer { flex: 1; }
 .rofl-pic button { font: 12px/1 inherit; padding: 4px 8px; color: var(--p-fg); background: var(--p-panel); border: 1px solid var(--p-line); border-radius: 4px; cursor: pointer; }
 .rofl-pic .stage { overflow-x: auto; }
+.rofl-pic.full { position: fixed; inset: 0; z-index: 1000; overflow: auto; border: 0; border-radius: 0; }
+.rofl-pic.full .stage > svg { width: 100%; height: auto; max-height: calc(100vh - 60px); }
+.rofl-pic.full .cy { height: calc(100vh - 60px); }
 .rofl-pic .cy { height: 380px; }
 .rofl-pic .frame { border-top: 1px dashed var(--p-line); }
 .rofl-pic .frame-key { padding: 4px 8px; font: 12px var(--p-mono); }
