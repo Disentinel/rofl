@@ -235,6 +235,19 @@ unit_concludes("rules/js-dataflow.rofl", merge_member).
 unit_concludes("rules/js-dataflow.rofl", merge_fn).
 unit_concludes("rules/js-dataflow.rofl", merge_call).
 unit_concludes("rules/js-dataflow.rofl", sx_mwrite).
+unit_concludes("rules/js-dataflow.rofl", keyed_store).
+unit_concludes("rules/js-dataflow.rofl", keyed_obj).
+unit_concludes("rules/js-dataflow.rofl", keyed_on).
+unit_concludes("rules/js-dataflow.rofl", sx_kput).
+unit_concludes("rules/js-dataflow.rofl", keyed_put).
+unit_concludes("rules/js-dataflow.rofl", keyed_get).
+unit_concludes("rules/js-dataflow.rofl", keyed_key_at).
+unit_concludes("rules/js-dataflow.rofl", keyed_key_known).
+unit_concludes("rules/js-dataflow.rofl", keyed_key_unknown).
+unit_concludes("rules/js-dataflow.rofl", keyed_read).
+unit_concludes("rules/js-dataflow.rofl", keyed_walk).
+unit_concludes("rules/js-dataflow.rofl", sx_keach).
+unit_concludes("rules/js-dataflow.rofl", keyed_each).
 unit_concludes("rules/js-dataflow.rofl", obj_like).
 unit_concludes("rules/js-dataflow.rofl", class_like).
 unit_concludes("rules/js-dataflow.rofl", inst_of).
@@ -292,6 +305,15 @@ unit_concludes("rules/js-dataflow.rofl", external_import).
 unit_concludes("rules/js-dataflow.rofl", ext_call).
 unit_concludes("rules/js-dataflow.rofl", ext_member).
 unit_concludes("rules/js-dataflow.rofl", external_destructured).
+unit_concludes("rules/js-dataflow.rofl", external_package).
+unit_concludes("rules/js-dataflow.rofl", runs_coroutine).
+unit_concludes("rules/js-dataflow.rofl", contract_key).
+unit_concludes("rules/js-dataflow.rofl", sx_contract_pkg).
+unit_concludes("rules/js-dataflow.rofl", contract_fn).
+unit_concludes("rules/js-dataflow.rofl", contract_call).
+unit_concludes("rules/js-dataflow.rofl", coroutine_of).
+unit_concludes("rules/js-dataflow.rofl", sx_coroutine).
+unit_concludes("rules/js-dataflow.rofl", coroutine_yield).
 unit_concludes("rules/js-dataflow.rofl", callback_param).
 unit_concludes("rules/js-dataflow.rofl", super_of).
 unit_concludes("rules/js-dataflow.rofl", own_ctor).
@@ -1130,6 +1152,7 @@ unit_concludes("rules/js-surface.rofl", sx_ret_pnode).
 unit_concludes("rules/js-surface.rofl", sx_ret_plit).
 unit_concludes("rules/js-surface.rofl", sx_ret_param).
 unit_concludes("rules/js-surface.rofl", sx_gen_ret).
+unit_concludes("rules/js-surface.rofl", sx_gen_rlit).
 unit_concludes("rules/js-surface.rofl", ret_node_any).
 unit_concludes("rules/js-surface.rofl", imports).
 

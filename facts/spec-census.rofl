@@ -271,8 +271,10 @@ check[checks]("facts/goldens.rofl", "notebook_decorated", world).
 check[checks]("facts/goldens.rofl", "notebook_destructure", world).
 check[checks]("facts/goldens.rofl", "notebook_external", world).
 check[checks]("facts/goldens.rofl", "notebook_guard", world).
+check[checks]("facts/goldens.rofl", "notebook_keyed", world).
 check[checks]("facts/goldens.rofl", "notebook_ledger", world).
 check[checks]("facts/goldens.rofl", "notebook_mcp", world).
+check[checks]("facts/goldens.rofl", "notebook_packages", world).
 check[checks]("facts/goldens.rofl", "notebook_review", world).
 check[checks]("facts/goldens.rofl", "notebook_scoped", world).
 check[checks]("facts/goldens.rofl", "notebook_self", world).
