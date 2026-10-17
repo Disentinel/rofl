@@ -399,6 +399,18 @@ impl Eval {
         sols
     }
 
+    /// The relations `rules` read, at any depth, and what every rule into one of them reads, through each other.
+    fn rels_below<'a>(&self, rules: impl Iterator<Item = &'a Rc<ERule>>) -> HashSet<Sym> {
+        let mut out: HashSet<Sym> = HashSet::new();
+        let mut todo: Vec<Sym> = rules.flat_map(|r| r.clause.body.iter().flat_map(|b| b.lits_deep()).map(|l| l.rel)).collect();
+        while let Some(rel) = todo.pop() {
+            if out.insert(rel) {
+                todo.extend(self.rules.iter().filter(|r| r.clause.head.rel == rel).flat_map(|r| r.clause.body.iter().flat_map(|b| b.lits_deep()).map(|l| l.rel)));
+            }
+        }
+        out
+    }
+
     /// The variables a fact binds in a negated premise of the fine path (`bind_neg`).
     fn neg_vars(&self, n: &NegAt) -> Vec<Sym> {
         let mut vs = Vec::new();
@@ -536,6 +548,7 @@ impl Eval {
             news.note(self.store.rec(*f).rel, *f);
         }
         // a base fact put over a derived one stands lower now, and so may what rests on it
+        self.add_heights = self.rels_below(self.rules.iter().filter(|r| keyable.contains(&r.id)));
         self.add_refired = added.iter().copied().filter(|f| self.store.support_count(*f) > 0).collect();
         self.add_mark = self.store.len_ids();
         // the facts withdrawn and made again at a level, which a cell above may list
@@ -671,6 +684,10 @@ impl Eval {
                 touched.extend(held.iter().copied());
             }
             self.store.arrivals = Some(Vec::new());
+            // (what this level withdrew is withdrawn: a fact derived again begins its chain anew, a level concludes
+            // only into its own relations)
+            self.store.close_dup_window();
+            self.store.open_dup_window();
             let r = (|| -> Result<(), Halt> {
                 // each fact gone at this level, derived again from what holds
                 let mut again: Vec<FactId> = over.iter().chain(over_base.iter()).copied().filter(|x| {
@@ -1278,6 +1295,7 @@ impl Eval {
             }
             Ok(())
         })();
+        self.store.close_dup_window();
         self.adding = false;
         self.active = active;
         self.cur_front = Front::default();

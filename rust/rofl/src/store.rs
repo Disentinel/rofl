@@ -1145,6 +1145,9 @@ pub struct Store {
     /// `firing_hash` of every node on a chain, and of some that left one: a
     /// firing whose hash is absent is new without walking its fact's chain.
     fired: Fired,
+    /// While open (`open_dup_window`), the firings put on a chain since: a firing found again, or found anew on a
+    /// chain begun since, is known without walking the chain. Any cut of a chain closes it.
+    dup_window: Option<DupWindow>,
     wits_live: usize,
     n_live: usize,
     /// A number no other state of any store has had: it moves whenever a fact
@@ -1264,6 +1267,15 @@ impl Runs {
             Rc::make_mut(&mut self.base).extend(self.own.drain());
         }
     }
+}
+
+/// `Store::dup_window`: the node of each firing put on a chain while it is open, by its `firing_hash`, with its
+/// fact; and the facts whose chain was empty when it was first given a firing, so that every node of their chain is
+/// here (a hash met twice takes its facts out, and they walk their chains again).
+#[derive(Default, Clone)]
+struct DupWindow {
+    nodes: FxMap<u64, (FactId, u32)>,
+    begun: FxSet<FactId>,
 }
 
 /// `Store::fired`, layered as `Runs` is: a hash is in the shared base or in
@@ -2259,6 +2271,7 @@ impl Store {
     /// until `sweep`: every reader already skips a dead id, and a lattice cell
     /// that improves retires its old fact many times a round.
     pub fn retire(&mut self, id: FactId) {
+        self.chains_cut();
         let r = self.facts.rec(id);
         if r.dead() {
             return;
@@ -2302,6 +2315,7 @@ impl Store {
 
     /// Drop every firing of a record, live or dead.
     pub fn drop_firings(&mut self, id: FactId) {
+        self.chains_cut();
         let mut c = self.wit_head[id as usize];
         while c != EMPTY {
             self.wits_live -= 1;
@@ -2368,6 +2382,7 @@ impl Store {
     /// provenance row they were recorded with stays too. `row_of` reads a
     /// record as that row; without it no row stands.
     pub fn clear_derived(&mut self, row_of: Option<RowOf<'_>>) {
+        self.chains_cut();
         self.vlisted = false;
         let drop: Vec<FactId> = (0..self.facts.len() as FactId)
             .filter(|&i| {
@@ -2439,6 +2454,7 @@ impl Store {
         staged: &[StagedHead<'_>],
         keep_frozen: Option<KeepFrozen<'_>>,
     ) {
+        self.chains_cut();
         self.eval_holes.clear();
         // the rows a structure answers are derived rows of the tick that ends
         self.vlisted = false;
@@ -2523,6 +2539,7 @@ impl Store {
     /// derived layer once per round, so without this the arena would carry
     /// every round's provenance for the life of the evaluation.
     fn compact_wits(&mut self) {
+        self.chains_cut();
         if self.wits.len() <= 2 * self.wits_live + 1024 {
             return;
         }
@@ -2570,10 +2587,20 @@ impl Store {
     /// candidates of a fact that has more than one (measured at 1.0 to 1.9 per
     /// fact on the JS side, src/store.ts:693).
     pub fn support(&mut self, id: FactId, w: Witness) -> bool {
-        let mut c = if self.fired.insert(firing_hash(id, w.rule, &w.prems)) {
+        let h = firing_hash(id, w.rule, &w.prems);
+        let head = self.wit_head[id as usize];
+        let mut c = if self.fired.insert(h) {
             EMPTY
+        } else if let Some(d) = &self.dup_window {
+            if let Some(&(f, at)) = d.nodes.get(&h) {
+                let n = self.wits[at as usize];
+                if f == id && n.rule == w.rule && self.prem_arena[n.prems_at as usize..(n.prems_at + n.prems_len) as usize] == w.prems[..] {
+                    return false;
+                }
+            }
+            if d.begun.contains(&id) { EMPTY } else { head }
         } else {
-            self.wit_head[id as usize]
+            head
         };
         while c != EMPTY {
             let n = self.wits[c as usize];
@@ -2604,7 +2631,32 @@ impl Store {
         });
         self.wit_head[id as usize] = self.wits.len() as u32 - 1;
         self.wits_live += 1;
+        if let Some(d) = self.dup_window.as_mut() {
+            if head == EMPTY {
+                d.begun.insert(id);
+            }
+            if let Some((f, _)) = d.nodes.insert(h, (id, self.wits.len() as u32 - 1)) {
+                d.begun.remove(&f);
+                d.begun.remove(&id);
+            }
+        }
         true
+    }
+
+    /// Open the window of `support`; false if one is open already.
+    pub fn open_dup_window(&mut self) -> bool {
+        self.dup_window.is_none() && {
+            self.dup_window = Some(DupWindow::default());
+            true
+        }
+    }
+
+    pub fn close_dup_window(&mut self) {
+        self.dup_window = None;
+    }
+
+    fn chains_cut(&mut self) {
+        self.dup_window = None;
     }
 
     /// Remove every firing that cites one of `gone`, on a live fact or on a
@@ -2613,6 +2665,7 @@ impl Store {
     /// least of `gone` a removed firing cited. With the citer index
     /// (`track_citers`) only the citing facts are visited.
     pub fn drop_firings_citing(&mut self, gone: &HashSet<FactId>) -> Vec<(FactId, Vec<Sym>, bool, FactId)> {
+        self.chains_cut();
         let ids: Vec<FactId> = match &self.citers {
             Some(ix) => {
                 let mut v: Vec<FactId> = gone.iter().flat_map(|g| ix.of(*g)).copied().collect();
@@ -2696,6 +2749,7 @@ impl Store {
 
     /// Drop the firings of `id` that cite one of `stale`; their rules.
     pub fn drop_firings_of_citing(&mut self, id: FactId, stale: &HashSet<FactId>) -> Vec<Sym> {
+        self.chains_cut();
         let id = id as usize;
         let mut prev = EMPTY;
         let mut c = self.wit_head[id];
@@ -2750,6 +2804,7 @@ impl Store {
 
     /// Remove one firing, named by its rule and premises. True if it was there.
     pub fn remove_firing(&mut self, id: FactId, rule: Sym, prems: &[PremRef]) -> bool {
+        self.chains_cut();
         let mut prev = EMPTY;
         let mut c = self.wit_head[id as usize];
         while c != EMPTY {
