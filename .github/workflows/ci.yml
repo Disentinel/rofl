@@ -119,3 +119,10 @@ jobs:
           for d in artifacts/rofl-*; do t=${d#artifacts/rofl-}; for f in "$d"/*; do b=$(basename "$f"); mv "$f" "out/${b%.exe}-$t${b#rofl}"; done; done
           (cd out && sha256sum * > SHA256SUMS)
           gh release create "$GITHUB_REF_NAME" out/* --prerelease --title "ROFL $v (preview)" --notes-file "docs/releases/${v%.*}.md"
+      # the same VSIX files to the VS Code Marketplace (VSCE_PAT) and Open VSX (OVSX_PAT), each only when its token is set; a version already there is skipped
+      - name: marketplace
+        env: { VSCE_PAT: '${{ secrets.VSCE_PAT }}', OVSX_PAT: '${{ secrets.OVSX_PAT }}' }
+        run: |
+          set -- out/*-*-*.vsix
+          [ -z "$VSCE_PAT" ] || npx -y @vscode/vsce@4 publish --skip-duplicate --packagePath "$@"
+          [ -z "$OVSX_PAT" ] || npx -y ovsx@1 publish --skip-duplicate --packagePath "$@"
