@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.4.0 (preview, with ROFL 1.3.0)
+## 1.3.0 (preview; the extension now carries ROFL's version)
 
 - A graph picture is drawn as a schema: a group is a frame that opens and
   shuts on a double click, a dragged box pushes the others aside, lines meet

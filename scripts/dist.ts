@@ -1,5 +1,5 @@
 // npm run dist — the notebook without a checkout: dist/rofl-nb-<v>.tgz (the `rofl-nb` command and the `rofl-lsp` language server, ROFL's version) and
-// dist/rofl-<ext>.vsix (the editor, the extension's own version from vscode/package.json), both plain JS.
+// dist/rofl-<v>.vsix (the editor, also at ROFL's version), both plain JS.
 // One tree serves both: the modules the command line and the extension import, transpiled in place, the model's .rofl files beside them, @babel/parser vendored.
 // The extension is that tree under rofl-nb/, entered through a CommonJS main, so an editor that loads extensions with require runs it too.
 // `-- --target <vsce target>` (linux-x64, darwin-arm64, win32-x64, ...): the VSIX for that platform, carrying the Rust engine built for it
@@ -14,7 +14,7 @@ import { buildRenderer } from './renderer.ts';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url)), OUT = path.join(ROOT, 'dist');
 const root = JSON.parse(readFileSync(path.join(ROOT, 'package.json'), 'utf8')), version: string = root.version;
-const ext = JSON.parse(readFileSync(path.join(ROOT, 'vscode/package.json'), 'utf8')), vsix = `${ext.name}-${ext.version}.vsix`;
+const ext = JSON.parse(readFileSync(path.join(ROOT, 'vscode/package.json'), 'utf8')), vsix = `${ext.name}-${version}.vsix`;
 const NODE = '>=22.0.0', VSCODE = '^1.101.0';   // fs.globSync is Node 22; VS Code 1.101 is the first on Node 22 (Electron 35)
 const PKG = path.join(OUT, 'rofl-nb'), VSIX = path.join(OUT, 'vsix');
 // ROFL_DIST_BREAK, for vscode/test/dist.ts --break: `vocab` leaves out what `rofl:` names, `resolver` makes a `rofl:` name read as a path
@@ -113,7 +113,7 @@ if (TARGET) {
 writeFileSync(path.join(VSIX, 'main.js'), "exports.activate = async (ctx) => (await import('./rofl-nb/vscode/extension.js')).activate(ctx);\n");
 const { type: _, devDependencies: __, ...manifest } = ext;
 manifest.contributes.notebookRenderer = manifest.contributes.notebookRenderer.map((r: { entrypoint: string }) => ({ ...r, entrypoint: r.entrypoint.replace(/^\.\//, './rofl-nb/vscode/') }));
-writeFileSync(path.join(VSIX, 'package.json'), JSON.stringify({ ...manifest,
+writeFileSync(path.join(VSIX, 'package.json'), JSON.stringify({ ...manifest, version,
   main: './main.js', files: ['main.js', 'rofl-nb', '*.tmLanguage.json', 'language-configuration.json', '*.png', 'CHANGELOG.md', 'LICENSE', 'THIRD_PARTY_NOTICES'], engines: { vscode: VSCODE } }, null, 2) + '\n');
 execFileSync(path.join(ROOT, 'vscode/node_modules/.bin/vsce'), ['package', '--no-dependencies', ...(TARGET ? ['--target', TARGET] : []), '--out', path.join(OUT, vsix)], { cwd: VSIX, stdio: ['ignore', 'ignore', 'inherit'] });
 
