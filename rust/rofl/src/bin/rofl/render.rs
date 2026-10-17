@@ -1660,6 +1660,7 @@ pub fn main(mut args: Vec<String>) {
     let facts_mode = if let Some(i) = args.iter().position(|a| a == "--facts") { args.remove(i); true } else { false };
     let tables: Vec<String> = if let Some(i) = args.iter().position(|a| a == "--tables") { args.split_off(i)[1..].to_vec() } else { Vec::new() };
     if args.is_empty() { eprintln!("usage: rofl render [--out DIR] FILE... [--tables PACK...]"); std::process::exit(2); }
+    if args.iter().any(|a| a.ends_with(".rofl.md")) { return read_back(&args, out_dir.as_deref()); }
 
     let mut h = Heap::default();
     let fresh: Vec<Sym> = ["N", "E", "X", "Y", "Z", "W", "U", "V", "X1", "X2", "X3", "X4"].iter().map(|s| h.intern(s)).collect();
@@ -1926,4 +1927,22 @@ fn dump_facts(h: &Heap, docs: &[FileDoc]) {
         if w.ends_with('s') && w.len() > 3 { let _ = writeln!(out, "word_shape({w:?}, s)."); }
     }
     print!("{out}");
+}
+
+/// The other way: a world written as Markdown back into rules, as `scripts/read.ts FILE --out DIR/X.rofl` reads it.
+/// The reader's report on stdout; with `--out DIR`, `DIR/X.rofl` and, when the file declares sentences, `DIR/X.phrases.rofl`.
+fn read_back(files: &[String], out_dir: Option<&str>) {
+    if let Some(f) = files.iter().find(|f| !f.ends_with(".rofl.md")) { eprintln!("{f}: rofl render reads .rofl.md files back alone, not with other files"); std::process::exit(2); }
+    for f in files {
+        let r = rofl::md::read_world(Path::new(f)).unwrap_or_else(|e| { eprintln!("{e}"); std::process::exit(1) });
+        println!("{}", r.report);
+        let Some(dir) = out_dir else { continue };
+        let stem = Path::new(f).file_name().map(|s| s.to_string_lossy().trim_end_matches(".rofl.md").to_string()).unwrap_or_default();
+        let write = |name: String, text: String| std::fs::write(Path::new(dir).join(&name), text).unwrap_or_else(|e| { eprintln!("{dir}/{name}: {e}"); std::process::exit(1) });
+        write(format!("{stem}.rofl"), r.rofl);
+        if !r.phrases.is_empty() {
+            let root = format!("{}/", r.root.display());
+            write(format!("{stem}.phrases.rofl"), rofl::md::phrases_file(&f.replacen(&root, "", 1), &r.phrases));
+        }
+    }
 }

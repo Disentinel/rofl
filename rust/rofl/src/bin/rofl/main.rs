@@ -8,15 +8,17 @@
 //!   rofl excise F [flags] FILE...               what taking the base fact F out changes
 //!   rofl serve                                  one JSON request per line in, one answer out
 //!   rofl render [--out DIR] FILE...             the sentence form of the files
+//!   rofl nb FILE.rofl.md [--cell N] [--all]     a notebook run, printed as `npm run nb` prints it
 //!
 //! A question verb is `rofl load` with that one question; `--json` prints each answer as `rofl serve` does.
 //! `@LIST` stands for the files LIST names, one a line, each from LIST's directory (`@rules/js.files`, the JS model).
 mod load;
+mod nb;
 mod render;
 mod seed;
 mod serve;
 
-const USAGE: &str = "usage: rofl load|ask|why|whynot|excise ... FILE... | rofl serve | rofl render ...";
+const USAGE: &str = "usage: rofl load|ask|why|whynot|excise ... FILE... | rofl serve | rofl render ... | rofl nb FILE.rofl.md";
 
 /// `@LIST` replaced by the files it names.
 fn listed(args: Vec<String>) -> Vec<String> {
@@ -60,6 +62,7 @@ fn run(args: Vec<String>) {
         }
         "serve" => serve::main(),
         "render" => render::main(args),
+        "nb" => nb::main(args),
         _ => {
             eprintln!("{USAGE}");
             std::process::exit(load::USAGE);
