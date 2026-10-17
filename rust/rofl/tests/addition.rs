@@ -751,6 +751,25 @@ fn a_dominance_the_change_reaches_is_derived_again() {
     assert!(all.additions > 40 && all.full.keys().all(|k| k.contains("declaration changed")), "every addition to the front but a dominance rule is a delta: {all:?}");
 }
 
+/// Joins, a union of members and a hull of values over edges, and readers of them plainly and under a negation:
+/// what a change adds only grows them, in any order, so the joins it reaches are derived again with the rest.
+#[test]
+fn a_join_the_change_reaches_is_derived_again() {
+    let rules = [
+        "comp(X, set(X)) :- n(X).",
+        "comp(X, S) :- e(X, Y), comp(Y, S).",
+        "span(X, iv(V, V)) :- w(X, V).",
+        "span(Y, I) :- e(X, Y), span(X, I).",
+        "bits(X, V) :- w(X, V).",
+        "bits(Y, B) :- e(X, Y), bits(X, B).",
+        "joined(X, Y) :- comp(X, S), Y in S, X != Y.",
+        "alone(X) :- n(X), not joined(X, _).",
+        "wide(X) :- span(X, iv(L, H)), H - L > 2.",
+    ];
+    let all = sweep("join", &format!("{EDB}\nlattice comp(X, union S).\nlattice span(X, hull I).\nlattice bits(X, bitor B)."), &rules, fact, 1..=12, 10);
+    assert!(all.additions > 40 && all.full.is_empty(), "every addition to a join is a delta: {all:?}");
+}
+
 /// Counting tags, their sums read plainly and under a negation: what a change adds is new derivations, summed.
 #[test]
 fn a_counting_tag_sums_the_derivations_an_addition_makes() {

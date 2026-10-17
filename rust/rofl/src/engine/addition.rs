@@ -996,11 +996,14 @@ impl Eval {
             let op = self.lattices[l].1;
             // (a dominance is derived again whole by key as an order is, where its rules compare by the values alone)
             let dom = op == AggOp::Dominance && brk!("add_dominance_refused" => true; self.subs.get(l).is_none_or(|x| !x.reads.is_empty()));
-            if !matches!(op.class(), Class::IdempotentOrder | Class::PartialOrder) || dom || self.tags.count_of.contains_key(l) || self.widen.contains_key(l) {
+            let join = brk!("add_join_refused" => false; op.class() == Class::IdempotentJoin);
+            if !(matches!(op.class(), Class::IdempotentOrder | Class::PartialOrder) || join) || dom || self.tags.count_of.contains_key(l) || self.widen.contains_key(l) {
                 return Err("a join, a widening, a counting tag or a dominance is reached by what changed");
             }
         }
-        if !lats.is_empty() && self.store.firing_keys().into_iter().any(|g| !self.store.alive(g) && lats.contains(&self.store.rec(g).rel)) {
+        // a join's history is what its retraction reads, and a join derived again whole writes its own
+        let joins: HashSet<Sym> = lats.iter().copied().filter(|l| self.lattices[l].1.class() == Class::IdempotentJoin).collect();
+        if self.store.firing_keys().into_iter().any(|g| !self.store.alive(g) && lats.contains(&self.store.rec(g).rel) && !joins.contains(&self.store.rec(g).rel)) {
             return Err("a lattice keeps the history of a superseded value");
         }
         // THE RESET: a rule that may withdraw what it concluded
@@ -1059,6 +1062,7 @@ impl Eval {
             ledger_heads.insert(r.clause.head.rel);
         }
         let mut dirty: HashSet<Sym> = self.rules.iter().filter(|r| reset.contains(&r.id) && (lats.contains(&r.clause.head.rel) || ledger_heads.contains(&r.clause.head.rel) || brk!("add_reset_after" => true; false))).map(|r| r.clause.head.rel).collect();
+        dirty.extend(joins.iter().copied());
         if brk!("add_demand_kept" => false; true) {
             dirty.extend(call_rels.iter().copied());
         }
@@ -1173,6 +1177,21 @@ impl Eval {
             }
         }
         forced.sort_unstable();
+        let mut ghosts: Vec<FactId> = self.lat_superseded.iter().copied().filter(|g| joins.contains(&self.store.rec(*g).rel)).collect();
+        ghosts.sort_unstable();
+        for g in ghosts {
+            self.lat_superseded.remove(&g);
+            self.store.drop_firings(g);
+        }
+        self.lat_history.retain(|k, _| !joins.contains(&k.0));
+        self.join_contribs.retain(|k, _| !joins.contains(&k.0));
+        for rel in joins.iter().filter_map(|l| self.join_rels.get(l).copied()).collect::<Vec<_>>() {
+            for id in self.store.rel_all(&self.h, rel) {
+                if brk!("add_join_contribs_kept" => false; self.store.alive(id)) {
+                    self.retire_fact(id);
+                }
+            }
+        }
         // a base fact of a relation that changed stays, and its firings are made again by the rules fired again
         let mut based: Vec<FactId> = Vec::new();
         for rel in &dirty {
@@ -1254,7 +1273,7 @@ impl Eval {
             if self.store.rel_count(self.v.hole) > holes0 || !self.lat_pending.is_empty() {
                 return Err(Halt::Bug("an addition wrote a hole".into()));
             }
-            if self.lat_superseded.iter().any(|g| lats.contains(&self.store.rec(*g).rel)) {
+            if self.lat_superseded.iter().any(|g| lats.contains(&self.store.rec(*g).rel) && !joins.contains(&self.store.rec(*g).rel)) {
                 return Err(Halt::Bug("a lattice delta kept a history".into()));
             }
             Ok(())

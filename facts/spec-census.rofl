@@ -20,6 +20,7 @@ check[checks]("rust/rofl/tests/addition.rs", "a_holistic_aggregate_is_sealed_aga
 check[checks]("rust/rofl/tests/addition.rs", "a_rule_reading_derived_by_is_derived_again_after_an_addition", test).
 check[checks]("rust/rofl/tests/addition.rs", "a_fault_the_addition_does_not_reach_stands", test).
 check[checks]("rust/rofl/tests/addition.rs", "a_dominance_the_change_reaches_is_derived_again", test).
+check[checks]("rust/rofl/tests/addition.rs", "a_join_the_change_reaches_is_derived_again", test).
 check[checks]("rust/rofl/tests/addition.rs", "a_counting_tag_sums_the_derivations_an_addition_makes", test).
 check[checks]("rust/rofl/tests/addition.rs", "what_reads_an_aggregate_sealed_again_is_kept_and_fed_its_change", test).
 check[checks]("rust/rofl/tests/addition.rs", "a_fact_sealed_again_is_not_taken_out_for_what_it_cited_before", test).

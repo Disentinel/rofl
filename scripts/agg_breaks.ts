@@ -8432,6 +8432,20 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "add_join_refused",
+  "what": "a join the change reaches is refused, not derived again",
+  "expect": {
+   "addition_join": "every addition to a join is a delta"
+  }
+ },
+ {
+  "id": "add_join_contribs_kept",
+  "what": "a join derived again keeps the contributions it held, and folds none of them again",
+  "expect": {
+   "addition_join": "the delta state is not a fresh evaluation's"
+  }
+ },
+ {
   "id": "add_tag_count_refused",
   "what": "a rule into a counting tag's derivations refuses the addition",
   "expect": {
@@ -8723,6 +8737,7 @@ const TESTS: Record<string, string> = {
   addition_fault: 'addition a_fault_the_addition_does_not_reach',
   addition_dominance: 'addition a_dominance_the_change_reaches',
   addition_tagc: 'addition a_counting_tag_sums',
+  addition_join: 'addition a_join_the_change_reaches',
   incremental_staged_thr: 'incremental a_staged_threshold_whose_outer_premise',
   incremental_two_aggs: 'incremental a_fact_two_aggregates_conclude',
 };

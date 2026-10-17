@@ -2103,6 +2103,10 @@ brk("add_dominance_refused"). brk_kind("add_dominance_refused", switch).
 brk_expects("add_dominance_refused", "addition_dominance").
 brk("add_dominance_rule_unmarked"). brk_kind("add_dominance_rule_unmarked", switch).
 brk_expects("add_dominance_rule_unmarked", "addition_dominance").
+brk("add_join_refused"). brk_kind("add_join_refused", switch).
+brk_expects("add_join_refused", "addition_join").
+brk("add_join_contribs_kept"). brk_kind("add_join_contribs_kept", switch).
+brk_expects("add_join_contribs_kept", "addition_join").
 brk("add_tag_count_refused"). brk_kind("add_tag_count_refused", switch).
 brk_expects("add_tag_count_refused", "addition_tagc").
 brk("add_promoted_unnoted"). brk_kind("add_promoted_unnoted", switch).
@@ -2155,6 +2159,8 @@ switch_site("add_dominance_rule_unmarked", "rust/rofl/src/engine/addition.rs").
 switch_site("add_fault_hole_refused", "rust/rofl/src/engine/addition.rs").
 switch_site("add_fresh_negation_reset", "rust/rofl/src/engine/addition.rs").
 switch_site("add_hol_shared_kept", "rust/rofl/src/engine/addition.rs").
+switch_site("add_join_contribs_kept", "rust/rofl/src/engine/addition.rs").
+switch_site("add_join_refused", "rust/rofl/src/engine/addition.rs").
 switch_site("add_ledger_reader_kept", "rust/rofl/src/engine/addition.rs").
 switch_site("add_lost_unseeded", "rust/rofl/src/engine/addition.rs").
 switch_site("add_negation_reset", "rust/rofl/src/engine/addition.rs").
