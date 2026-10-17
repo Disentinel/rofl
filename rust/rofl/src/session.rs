@@ -1661,6 +1661,25 @@ impl Session {
         Ok(asks.len())
     }
 
+    /// BETWEEN TWO ROUNDS OF A WALK THE WORLD GOES COLD (docs/cli.md): the evaluated world is kept as a volume and
+    /// mapped back, so what the rounds before brought in lies in the file and not on the heap, and the heap it held
+    /// is given back. The world is the same fact for fact; only where it lives changes.
+    fn cool_round(&mut self) -> Result<(), String> {
+        static N: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+        let n = N.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        let path = std::env::temp_dir().join(format!("rofl-round-{}-{n}.vol", std::process::id())).to_string_lossy().to_string();
+        self.keep_volume(&path).map_err(|e| format!("{path}: {e}"))?;
+        let opened = Session::open_volume(&path, self.eval.budget);
+        let _ = std::fs::remove_file(&path);
+        let mut s = opened?;
+        let e = &self.eval;
+        (s.eval.space, s.eval.mode, s.eval.retain_ticks, s.eval.on_hot) = (e.space, e.mode, e.retain_ticks, e.on_hot);
+        (s.dangling, s.asks) = (self.dangling, self.asks);
+        *self = s;
+        trim_heap();
+        Ok(())
+    }
+
     /// THE WORLD ASKS FOR FACTS IT DOES NOT HAVE (docs/cli.md, "A world that asks for its own input"). Each
     /// `scan_request(Kind, Path)` with a `scanner(Kind, Command)` and no `scan_done` or `scan_failed` row yet runs the
     /// command with the path as its last argument, all of them at once; what each prints is loaded as ROFL by delta,
@@ -1706,6 +1725,8 @@ impl Session {
                 Ok(out)
             })
         }).collect();
+        // while the scanners run, the world goes cold
+        self.cool_round()?;
         let q = |s: &str| format!("\"{}\"", s.replace('\\', "\\\\").replace('"', "\\\""));
         let mut src = String::new();
         for (((kind, path), _), run) in todo.iter().zip(runs) {
@@ -1866,3 +1887,14 @@ fn scan_keep(kept: &std::path::Path, out: &str) {
     let _ = kept.parent().map(std::fs::create_dir_all);
     if std::fs::write(&tmp, text).is_ok() { let _ = std::fs::rename(&tmp, kept); }
 }
+
+#[cfg(all(target_os = "linux", target_env = "gnu"))]
+fn trim_heap() {
+    extern "C" {
+        fn malloc_trim(pad: usize) -> i32;
+    }
+    unsafe { malloc_trim(0) };
+}
+
+#[cfg(not(all(target_os = "linux", target_env = "gnu")))]
+fn trim_heap() {}

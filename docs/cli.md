@@ -124,3 +124,14 @@ same command for the same path from there while every stamp holds, and runs
 the scanner again when one does not. The world cannot tell the two apart. On
 `examples/checks/scan-world.rofl` the second run is 2.4 -> 1.7 s, the rest
 being the model's evaluation.
+
+**Between two rounds the world goes cold.** While the scanners of a round run,
+the evaluated world is kept as a volume in the temporary directory and mapped
+back: what the rounds before brought in lies in the file, not on the heap, and
+the heap it held is given back. The state is the same fact for fact. Measured
+on a walk over this repository's `src/` from `repl.ts` (18 files, 4 rounds,
+fast build): 75 -> 78 s, and the heap held between rounds falls from 0.6-0.8 GB
+to about 0.15 GB. The peak, 2.9 GB, is not lowered: it is the round that adds
+14 files at once. Adding them one a round lowers it to 1.4 GB, the largest file
+alone, but each small file added to that world costs about 15 s
+(`f_a_walk_goes_cold_between_rounds`).
