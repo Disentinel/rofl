@@ -179,7 +179,7 @@ golden_state("rules_stage-plan", "be623800d36815a9", 951).
 golden_state("rules_strata", "a366d372f37910d8", 1900).
 golden_state("rules_swarm", "4cdf8e702992bd8f", 769).
 golden_state("rules_untyped", "58722dc3d17835c2", 1032).
-golden_state("rules_worklist", "78bbb2f5ac89c142", 4819).
+golden_state("rules_worklist", "60dc7d54a7a238f7", 4819).
 golden_state("rules_worlds", "11316227b3cf0025", 1386).
 golden_state("boot_only", "f4c6c2be7a0dffcd", 661).
 golden_state("agg_breaks_census", "2677b16771e14c1e", 12204).
@@ -589,7 +589,7 @@ golden_state("prov_lazy_retract", "3855155723639efe", 780).
 golden_state("provenance_relational", "9997b0faa578cb91", 865).
 golden_state("readiness_atlas", "420c6fa41910700f", 1992).
 golden_state("readiness_rofl", "2206292c68ce7613", 2349).
-golden_state("refactoring_queue", "7433b17cb0adb415", 4903).
+golden_state("refactoring_queue", "c1f4728510237162", 4903).
 golden_state("refused", "8fc17f482876f7ef", 661).
 golden_state("retract_again", "ff1d69782eb7a276", 698).
 golden_state("retract_last", "2795ce91e90f2bac", 680).
