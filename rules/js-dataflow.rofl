@@ -384,6 +384,10 @@ builtin_prototype(boolean).
 builtin_prototype(regexp).
 builtin_prototype(bigint).
 builtin_prototype(promise).
+builtin_prototype(map).
+builtin_prototype(set).
+builtin_prototype(weakmap).
+builtin_prototype(weakset).
 
 -- A promise has no node to be: it is made by calling an async function, by
 -- `new Promise`, by a static of `Promise`, and by `then`, `catch` or `finally`
@@ -715,6 +719,64 @@ may_be_node[flow](C, O) :- merge_call[flow](C), arg_at[flow](C, 0, T), may_be_no
 sx_mwrite[surface](O, Key, V) :- merge_call[flow](C), arg_at[flow](C, 0, T), may_be_node[flow](T, O),
                                  arg_at[flow](C, I, S), I > 0, may_be_node[flow](S, Src),
                                  member_value[flow](Src, Key, V).
+
+-- =========================================================================
+-- 7c. KEYED COLLECTIONS. A collection keeps a value under a key: `m.set(k, v)`
+-- puts v under k on the collection m may be, `m.get(k)` is what was put under k
+-- there, and for-of over it (`for (const [k, v] of m)`) and its `forEach((v, k)
+-- => ...)` see every key and value. Which collections and which methods is a
+-- table keyed by the RECEIVER's type, `keyed_store(Type, Put, Get)`, never by the
+-- method's name: `other.set(k, v)` on a plain object moves nothing. The collection
+-- is the site that made it: `new Map()` (`keyed_obj`), and an express app
+-- (rules/js-express.rofl). A key is matched by its value, however it got there
+-- (`const K = 'port'; m.get(K)`); a key with no known value matches nothing, and
+-- the call is named in `keyed_key_unknown[audit]`: we do not know which. Flow-insensitive, as the rest of this layer: a
+-- get sees every put, before or after it. `m.keys()`, `m.values()` and
+-- `m.entries()` are not read.
+edb(keyed_store).
+keyed_store(map, "set", "get").
+keyed_store(weakmap, "set", "get").
+
+keyed_obj[flow](X, P) :- es_instance[flow](X, Name, _), lib_global_prototype(Name, P), keyed_store(P, _, _).
+
+keyed_on[flow](C, X, P, Key) :- keyed_obj[flow](X, P), may_be_node[flow](O, X), ast_child[code](N, object, 0, O),
+                                ast_child[code](C, callee, 0, N), ast_node[code](C, call_expression, _, _),
+                                selects[flow](N, Key).
+sx_kput[surface](X, K, V) :- keyed_on[flow](C, X, P, Put), keyed_store(P, Put, _), arg_at[flow](C, 0, A),
+                             may_be_lit[flow](A, K), arg_at[flow](C, 1, V).
+keyed_put[flow](X, K, V) :- sx_kput[surface](X, K, V).
+keyed_get[flow](C, X, K) :- keyed_on[flow](C, X, P, Get), keyed_store(P, _, Get), arg_at[flow](C, 0, A),
+                            may_be_lit[flow](A, K), not ast_child[code](C, arguments, 1, _).
+
+keyed_key_at[flow](C, A)    :- keyed_on[flow](C, _, P, Put), keyed_store(P, Put, _), arg_at[flow](C, 0, A).
+keyed_key_at[flow](C, A)    :- keyed_on[flow](C, _, P, Get), keyed_store(P, _, Get), arg_at[flow](C, 0, A).
+keyed_key_known[flow](C)    :- keyed_key_at[flow](C, A), may_be_lit[flow](A, _).
+keyed_key_unknown[audit](C) :- keyed_key_at[flow](C, _), not keyed_key_known[flow](C).
+
+keyed_read[flow](C, V) :- keyed_get[flow](C, X, K), keyed_put[flow](X, K, V).
+may_be_node[flow](C, N) :- keyed_read[flow](C, V), may_be_node[flow](V, N).
+may_be_lit[flow](C, L)  :- keyed_read[flow](C, V), may_be_lit[flow](V, L).
+
+-- the walk: position 0 of the head's pattern is a key, position 1 a value
+keyed_walk[flow](D, X) :- ast_node[code](S, for_of_statement, _, _), ast_child[code](S, left, 0, H),
+                          ast_child[code](H, declarations, 0, D), ast_child[code](S, right, 0, R),
+                          may_be_node[flow](R, X), keyed_obj[flow](X, _).
+may_be_node[flow](E, N) :- keyed_walk[flow](D, X), destructures_at[code](D, Local, 1, File), keyed_put[flow](X, _, V),
+                           may_be_node[flow](V, N), ident_in[code](E, Local, File), sees_binder[code](E, D).
+may_be_lit[flow](E, L)  :- keyed_walk[flow](D, X), destructures_at[code](D, Local, 1, File), keyed_put[flow](X, _, V),
+                           may_be_lit[flow](V, L), ident_in[code](E, Local, File), sees_binder[code](E, D).
+may_be_lit[flow](E, K)  :- keyed_walk[flow](D, X), destructures_at[code](D, Local, 0, File), keyed_put[flow](X, K, _),
+                           ident_in[code](E, Local, File), sees_binder[code](E, D).
+
+sx_keach[surface](F, X) :- keyed_on[flow](C, X, _, "forEach"), arg_at[flow](C, 0, A), may_be_node[flow](A, F),
+                           fn_value[flow](F).
+keyed_each[flow](F, X)  :- sx_keach[surface](F, X).
+may_be_node[flow](U, N) :- keyed_each[flow](F, X), param_of[flow](F, 0, Name), keyed_put[flow](X, _, V),
+                           may_be_node[flow](V, N), param_use[flow](F, Name, U).
+may_be_lit[flow](U, L)  :- keyed_each[flow](F, X), param_of[flow](F, 0, Name), keyed_put[flow](X, _, V),
+                           may_be_lit[flow](V, L), param_use[flow](F, Name, U).
+may_be_lit[flow](U, K)  :- keyed_each[flow](F, X), param_of[flow](F, 1, Name), keyed_put[flow](X, K, _),
+                           param_use[flow](F, Name, U).
 
 -- =========================================================================
 -- 8. READING A PROPERTY OFF A VALUE
@@ -1197,6 +1259,64 @@ may_be_node[flow](E, Prop)       :- external_destructured[code](D, Prop, Local, 
 external_value[flow](R, Spec)    :- rest_in_pattern[code](D, R, _),
                                     decl_value[flow](D, Init), may_be_node[flow](Init, X),
                                     external_value[flow](X, Spec).
+
+-- WHICH PACKAGE an external value came from: a bare specifier's first segment,
+-- its first two for a scoped one (`@scope/pkg/sub` is `@scope/pkg`), and a
+-- builtin by node's canonical name; the origin says which. A relative import
+-- of a file the slice left out is no package: it is `dangling_import`
+-- (rules/js-modules.rofl), it gives no value, and nothing read off it is
+-- external. `external_value(N, Spec)` joins this on Spec.
+external_package[code](Spec, Pkg, npm) :- external_site[code](I, Spec), site_shape[code](I, bare),
+                                          str_char0[code](Spec, C), C != "@", str_seg[code](Spec, 0, Pkg).
+external_package[code](Spec, Pkg, npm) :- external_site[code](I, Spec), site_shape[code](I, bare),
+                                          str_char0[code](Spec, "@"), str_seg[code](Spec, 0, A),
+                                          str_seg[code](Spec, 1, B), LA is str_len(A), LB is str_len(B), N is LA + LB + 1,
+                                          Pkg is str_sub(Spec, 0, N).
+external_package[code](Spec, C, node_builtin) :- external_site[code](I, Spec), site_shape[code](I, node_builtin),
+                                                 builtin_canonical[code](Spec, C).
+
+-- A LIBRARY CONTRACT, declared as a row of the package rather than read off a
+-- method's name: `runs_coroutine(Pkg, Key, I)` runs the generator function at
+-- argument I as a coroutine, so a `yield p` in it is p's value, as an `await`
+-- is, and the call is what the generator returns; `returns_argument(Pkg, Key,
+-- I)` is the argument I itself. Key `call` is the package called as it is,
+-- another a member of it, read off it or imported by name. A package used on
+-- one site only (a company's runner) gets its rows there, in the world that
+-- loads it.
+edb(runs_coroutine).
+runs_coroutine("co", call, 0).
+edb(returns_argument).
+
+contract_key(Pkg, Key) :- runs_coroutine(Pkg, Key, _).
+contract_key(Pkg, Key) :- returns_argument(Pkg, Key, _).
+sx_contract_pkg[surface](Spec, Pkg) :- external_package[code](Spec, Pkg, _), contract_key(Pkg, _).
+
+contract_fn[flow](Spec, Pkg, call) :- sx_contract_pkg[surface](Spec, Pkg), contract_key(Pkg, call),
+                                      external_value[flow](Spec, Spec).
+contract_fn[flow](M, Pkg, Key)     :- sx_contract_pkg[surface](Spec, Pkg), external_value[flow](Spec, Spec),
+                                      may_be_node[flow](O, Spec), ast_child[code](M, object, 0, O),
+                                      member_node_v[flow](M), selects[flow](M, Key), contract_key(Pkg, Key).
+contract_fn[flow](Sp, Pkg, Key)    :- external_import[code](Sp, _, Spec, _), sx_contract_pkg[surface](Spec, Pkg),
+                                      ast_child[code](Sp, imported, 0, I), ast_name[code](I, Key),
+                                      contract_key(Pkg, Key).
+contract_call[flow](C, Pkg, Key)   :- contract_fn[flow](X, Pkg, Key), may_be_node[flow](G, X),
+                                      ast_child[code](C, callee, 0, G), ast_node[code](C, call_expression, _, _).
+
+coroutine_of[flow](C, F) :- contract_call[flow](C, Pkg, Key), runs_coroutine(Pkg, Key, I),
+                            arg_at[flow](C, I, A), may_be_node[flow](A, F), gen_fn[flow](F).
+sx_coroutine[surface](F) :- coroutine_of[flow](_, F).
+coroutine_yield[flow](Y, A) :- sx_coroutine[surface](F), nearest_v[flow](F, Y),
+                               ast_node[code](Y, yield_expression, _, _), ast_attr[code](Y, delegate, false),
+                               ast_child[code](Y, argument, 0, A).
+may_be_node[flow](Y, N) :- coroutine_yield[flow](Y, A), may_be_node[flow](A, N).
+may_be_lit[flow](Y, V)  :- coroutine_yield[flow](Y, A), may_be_lit[flow](A, V).
+may_be_node[flow](C, N) :- coroutine_of[flow](C, F), sx_gen_ret[surface](F, N).
+may_be_lit[flow](C, V)  :- coroutine_of[flow](C, F), sx_gen_rlit[surface](F, V).
+
+may_be_node[flow](C, N) :- contract_call[flow](C, Pkg, Key), returns_argument(Pkg, Key, I),
+                           arg_at[flow](C, I, A), may_be_node[flow](A, N).
+may_be_lit[flow](C, V)  :- contract_call[flow](C, Pkg, Key), returns_argument(Pkg, Key, I),
+                           arg_at[flow](C, I, A), may_be_lit[flow](A, V).
 
 -- A function handed to an external call as an argument is called back with
 -- values the corpus does not build: each plain parameter is an external value

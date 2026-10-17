@@ -317,6 +317,8 @@ host_no_effects(browser, a_surface_scanned_and_not_yet_attributed).
 edb(host_calls_back).
 
 host_calls_back(array,  "forEach",       0, at_once).
+host_calls_back(map,    "forEach",       0, at_once).
+host_calls_back(set,    "forEach",       0, at_once).
 host_calls_back(array,  "map",           0, at_once).
 host_calls_back(array,  "filter",        0, at_once).
 host_calls_back(array,  "some",          0, at_once).

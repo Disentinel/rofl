@@ -23,17 +23,20 @@ default: flow
 
 Reads:
 
+- from facts/js-globals.rofl, in the main:
+  - <a id="lib_global_prototype"></a>A name Name has the prototype P (`lib_global_prototype`)
 - from js-callgraph, in the code: [call_site](js-callgraph.rofl.md#call_site), [callee_of](js-callgraph.rofl.md#callee_of), [decorates](js-callgraph.rofl.md#decorates), [fn_node](js-callgraph.rofl.md#fn_node), [resolves](js-callgraph.rofl.md#resolves)
 - from js-concat: [may_be_lit](js-concat.rofl.md#may_be_lit), [may_be_node](js-concat.rofl.md#may_be_node)
 - from js-concat, in the surface: [sx_mwrite](js-concat.rofl.md#sx_mwrite)
 - from js-controlflow, in the code: [async_body](js-controlflow.rofl.md#async_body)
 - from js-controlflow: [caught_value](js-controlflow.rofl.md#caught_value)
 - from js-globals, in the code: [es_static](js-globals.rofl.md#es_static), [es_static_call](js-globals.rofl.md#es_static_call)
+- from js-globals: [es_instance](js-globals.rofl.md#es_instance)
 - from js-model, in the code: [ast_node](js-model.rofl.md#ast_node)
-- from js-modules, in the code: [import_site](js-modules.rofl.md#import_site), [module_target](js-modules.rofl.md#module_target), [reexport_offers](js-modules.rofl.md#reexport_offers), [require_site](js-modules.rofl.md#require_site), [site_file](js-modules.rofl.md#site_file), [site_shape](js-modules.rofl.md#site_shape), [site_source](js-modules.rofl.md#site_source)
+- from js-modules, in the code: [builtin_canonical](js-modules.rofl.md#builtin_canonical), [import_site](js-modules.rofl.md#import_site), [module_target](js-modules.rofl.md#module_target), [reexport_offers](js-modules.rofl.md#reexport_offers), [require_site](js-modules.rofl.md#require_site), [site_file](js-modules.rofl.md#site_file), [site_shape](js-modules.rofl.md#site_shape), [site_source](js-modules.rofl.md#site_source), [str_char0](js-modules.rofl.md#str_char0), [str_seg](js-modules.rofl.md#str_seg)
 - from js-structure, in the code: [ast_in](js-structure.rofl.md#ast_in), [ast_name](js-structure.rofl.md#ast_name), [ast_value](js-structure.rofl.md#ast_value)
-- from js-surface: [ret_node_any](js-surface.rofl.md#ret_node_any)
-- from js-surface, in the surface: [sx_arg_lit](js-surface.rofl.md#sx_arg_lit), [sx_arg_node](js-surface.rofl.md#sx_arg_node), [sx_cb](js-surface.rofl.md#sx_cb), [sx_cjs](js-surface.rofl.md#sx_cjs), [sx_default](js-surface.rofl.md#sx_default), [sx_export_lit](js-surface.rofl.md#sx_export_lit), [sx_export_node](js-surface.rofl.md#sx_export_node), [sx_export_val](js-surface.rofl.md#sx_export_val), [sx_module](js-surface.rofl.md#sx_module), [sx_ret_lit](js-surface.rofl.md#sx_ret_lit), [sx_ret_node](js-surface.rofl.md#sx_ret_node), [sx_ret_param](js-surface.rofl.md#sx_ret_param)
+- from js-surface: [fn_value](js-surface.rofl.md#fn_value), [ret_node_any](js-surface.rofl.md#ret_node_any)
+- from js-surface, in the surface: [sx_arg_lit](js-surface.rofl.md#sx_arg_lit), [sx_arg_node](js-surface.rofl.md#sx_arg_node), [sx_cb](js-surface.rofl.md#sx_cb), [sx_cjs](js-surface.rofl.md#sx_cjs), [sx_default](js-surface.rofl.md#sx_default), [sx_export_lit](js-surface.rofl.md#sx_export_lit), [sx_export_node](js-surface.rofl.md#sx_export_node), [sx_export_val](js-surface.rofl.md#sx_export_val), [sx_gen_ret](js-surface.rofl.md#sx_gen_ret), [sx_gen_rlit](js-surface.rofl.md#sx_gen_rlit), [sx_module](js-surface.rofl.md#sx_module), [sx_ret_lit](js-surface.rofl.md#sx_ret_lit), [sx_ret_node](js-surface.rofl.md#sx_ret_node), [sx_ret_param](js-surface.rofl.md#sx_ret_param)
 - from outside these files, in the code:
   - <a id="ast_within"></a>A node is within a node (`ast_within`)
 - from the scanner, in the code:
@@ -675,7 +678,7 @@ Declared as facts:
 1. if [`kind_proto`](#kind_proto)(E, P);
 2. if E [points to](js-concat.rofl.md#may_be_node) a node N and [`kind_proto`](#kind_proto)(N, P).
 
-`builtin_prototype` includes `array`, `string`, `number`, `boolean`, `regexp`, `bigint`, `promise`.
+`builtin_prototype` includes `array`, `string`, `number`, `boolean`, `regexp`, `bigint`, `promise`, `map`, `set`, `weakmap`, `weakset`.
 
 Declared as facts:
 
@@ -1281,13 +1284,161 @@ Declared as facts:
 - <a id="merges_into_first"></a>`merges_into_first` — rows in this file
 - <a id="merges_into_first_module"></a>`merges_into_first_module` — rows in this file
 
+## 7c. KEYED COLLECTIONS. A collection keeps a value under a key: `m.set(k, v)`
+
+> puts v under k on the collection m may be, `m.get(k)` is what was put under k
+> there, and for-of over it (`for (const [k, v] of m)`) and its `forEach((v, k)
+> => ...)` see every key and value. Which collections and which methods is a
+> table keyed by the RECEIVER's type, `keyed_store(Type, Put, Get)`, never by the
+> method's name: `other.set(k, v)` on a plain object moves nothing. The collection
+> is the site that made it: `new Map()` (`keyed_obj`), and an express app
+> (rules/js-express.rofl). A key is matched by its value, however it got there
+> (`const K = 'port'; m.get(K)`); a key with no known value matches nothing, and
+> the call is named in `keyed_key_unknown[audit]`: we do not know which. Flow-insensitive, as the rest of this layer: a
+> get sees every put, before or after it. `m.keys()`, `m.values()` and
+> `m.entries()` are not read.
+
+`keyed_store` lists:
+
+| arg 1 | arg 2 | arg 3 |
+|---|---|---|
+| `map` | "set" | "get" |
+| `weakmap` | "set" | "get" |
+
+In the flow:
+
+<a id="keyed_obj"></a>`keyed_obj`(X, P) if all of:
+  - X [is an instance](js-globals.rofl.md#es_instance) of Name from some release;
+  - Name [has the prototype](#lib_global_prototype) P;
+  - [`keyed_store`](#keyed_store)(P, something, something).
+
+<a id="keyed_on"></a>`keyed_on`(a [call expression](#noun-call_expression) C, X, P, Key) if all of:
+  - [`keyed_obj`](#keyed_obj)(X, P);
+  - a node O [points to](js-concat.rofl.md#may_be_node) a node X;
+  - the `object` of a node N is O;
+  - the `callee` of C is N;
+  - N [selects](#selects) Key.
+
+In the surface:
+
+<a id="sx_kput"></a>`sx_kput`(X, K, V) if all of:
+  - [`keyed_on`](#keyed_on)(C, X, P, Put);
+  - [`keyed_store`](#keyed_store)(P, Put, something);
+  - C [passes](#arg_at) a node Y at 0;
+  - Y [may be the literal](js-concat.rofl.md#may_be_lit) K;
+  - C [passes](#arg_at) a node V at 1.
+
+In the flow:
+
+<a id="keyed_put"></a>`keyed_put`(X, K, V) if [`sx_kput`](#sx_kput)(X, K, V).
+
+<a id="keyed_get"></a>`keyed_get`(C, X, K) if all of:
+  - [`keyed_on`](#keyed_on)(C, X, P, Get);
+  - [`keyed_store`](#keyed_store)(P, something, Get);
+  - a node C [passes](#arg_at) a node Y at 0;
+  - Y [may be the literal](js-concat.rofl.md#may_be_lit) K;
+  - unless some node is the 1-th of the `arguments` of C.
+
+<a id="keyed_key_at"></a>`keyed_key_at`(C, X) either:
+
+1. if all of:
+   - [`keyed_on`](#keyed_on)(C, something, P, Put);
+   - [`keyed_store`](#keyed_store)(P, Put, something);
+   - C [passes](#arg_at) a node X at 0;
+2. if all of:
+   - [`keyed_on`](#keyed_on)(C, something, P, Get);
+   - [`keyed_store`](#keyed_store)(P, something, Get);
+   - C [passes](#arg_at) a node X at 0.
+
+<a id="keyed_key_known"></a>`keyed_key_known`(C) if [`keyed_key_at`](#keyed_key_at)(C, X) and a node X [may be the literal](js-concat.rofl.md#may_be_lit) some text.
+
+In the audit:
+
+<a id="keyed_key_unknown"></a>`keyed_key_unknown`(C) if [`keyed_key_at`](#keyed_key_at)(C, something), unless [`keyed_key_known`](#keyed_key_known)(C).
+
+In the flow:
+
+<a id="keyed_read"></a>`keyed_read`(C, V) if [`keyed_get`](#keyed_get)(C, X, K) and [`keyed_put`](#keyed_put)(X, K, V).
+
+A node
+
+- points to a node N if [`keyed_read`](#keyed_read)(it, V) and a node V [points to](js-concat.rofl.md#may_be_node) N.
+- may be the literal L if [`keyed_read`](#keyed_read)(it, V) and a node V [may be the literal](js-concat.rofl.md#may_be_lit) L.
+
+Declared as facts:
+
+- <a id="keyed_store"></a>`keyed_store` — rows in this file
+
+> the walk: position 0 of the head's pattern is a key, position 1 a value
+
+<a id="keyed_walk"></a>`keyed_walk`(D, X) if all of:
+  - the `left` of a [for-of](#noun-for-of) S is a node H;
+  - the `declarations` of H is a node D;
+  - the `right` of S [points to](js-concat.rofl.md#may_be_node) a node X;
+  - [`keyed_obj`](#keyed_obj)(X, something).
+
+A node points to a node N if all of:
+  - [`keyed_walk`](#keyed_walk)(D, X);
+  - D [destructures](#destructures_at) Local at 1 in File;
+  - [`keyed_put`](#keyed_put)(X, something, V);
+  - a node V [points to](js-concat.rofl.md#may_be_node) N;
+  - it [reads](#ident_in) Local in File;
+  - it [sees](#sees_binder) D.
+
+A node E may be the literal L either:
+
+1. if all of:
+   - [`keyed_walk`](#keyed_walk)(D, X);
+   - D [destructures](#destructures_at) Local at 1 in File;
+   - [`keyed_put`](#keyed_put)(X, something, V);
+   - a node V [may be the literal](js-concat.rofl.md#may_be_lit) L;
+   - E [reads](#ident_in) Local in File;
+   - E [sees](#sees_binder) D;
+2. if all of:
+   - [`keyed_walk`](#keyed_walk)(D, X);
+   - D [destructures](#destructures_at) Local at 0 in File;
+   - [`keyed_put`](#keyed_put)(X, L, something);
+   - E [reads](#ident_in) Local in File;
+   - E [sees](#sees_binder) D.
+
+In the surface:
+
+<a id="sx_keach"></a>`sx_keach`(F, X) if all of:
+  - [`keyed_on`](#keyed_on)(C, X, something, "forEach");
+  - C [passes](#arg_at) a node Y at 0;
+  - Y [points to](js-concat.rofl.md#may_be_node) a node F;
+  - [`fn_value`](js-surface.rofl.md#fn_value)(F).
+
+In the flow:
+
+<a id="keyed_each"></a>`keyed_each`(F, X) if [`sx_keach`](#sx_keach)(F, X).
+
+A node points to a node N if all of:
+  - [`keyed_each`](#keyed_each)(F, X);
+  - F [takes](#param_of) Name at 0;
+  - [`keyed_put`](#keyed_put)(X, something, V);
+  - a node V [points to](js-concat.rofl.md#may_be_node) N;
+  - F [uses](#param_use) Name at it.
+
+A node U may be the literal L either:
+
+1. if all of:
+   - [`keyed_each`](#keyed_each)(F, X);
+   - F [takes](#param_of) Name at 0;
+   - [`keyed_put`](#keyed_put)(X, something, V);
+   - a node V [may be the literal](js-concat.rofl.md#may_be_lit) L;
+   - F [uses](#param_use) Name at U;
+2. if all of:
+   - [`keyed_each`](#keyed_each)(F, X);
+   - F [takes](#param_of) Name at 1;
+   - [`keyed_put`](#keyed_put)(X, L, something);
+   - F [uses](#param_use) Name at U.
+
 ## 8. Reading a property off a value
 
 > An object literal and a class are identical to the question "can it answer
 > `.k`". `member_value` names the node a member HOLDS and judges nothing about
 > it; what that node may be is `may_be_lit`/`may_be_node`, one step later.
-
-In the flow:
 
 <a id="obj_like"></a>O is object like if O is an [object literal](#noun-object_literal) or a [class declaration](#noun-class_declaration) or a [class expression](#noun-class_expression).
 
@@ -1928,6 +2079,134 @@ A node
   - D [takes its value from](#decl_value) a node Init;
   - Init [points to](js-concat.rofl.md#may_be_node) a node X;
   - X [comes out of](#external_value) Spec.
+
+> WHICH PACKAGE an external value came from: a bare specifier's first segment,
+> its first two for a scoped one (`@scope/pkg/sub` is `@scope/pkg`), and a
+> builtin by node's canonical name; the origin says which. A relative import
+> of a file the slice left out is no package: it is `dangling_import`
+> (rules/js-modules.rofl), it gives no value, and nothing read off it is
+> external. `external_value(N, Spec)` joins this on Spec.
+
+In the code:
+
+<a id="external_package"></a>`external_package`(Spec, Pkg, E) either:
+
+1. if all of:
+   - a node I [is an external site](#external_site) of a module Spec;
+   - [the site shape](js-modules.rofl.md#site_shape) of I is `bare`;
+   - Spec [starts with](js-modules.rofl.md#str_char0) a text C;
+   - C differs from "@";
+   - [`str_seg`](js-modules.rofl.md#str_seg)(Spec, 0, Pkg);
+   - E is `npm`;
+2. if all of:
+   - a node I [is an external site](#external_site) of a module Spec;
+   - [the site shape](js-modules.rofl.md#site_shape) of I is `bare`;
+   - Spec [starts with](js-modules.rofl.md#str_char0) "@";
+   - [`str_seg`](js-modules.rofl.md#str_seg)(Spec, 0, X);
+   - [`str_seg`](js-modules.rofl.md#str_seg)(Spec, 1, B);
+   - LA is the length of X;
+   - LB is the length of B;
+   - N is LA + LB + 1;
+   - Pkg is the substring of Spec from 0 of length N;
+   - E is `npm`;
+3. if all of:
+   - a node I [is an external site](#external_site) of a module Spec;
+   - [the site shape](js-modules.rofl.md#site_shape) of I is `node_builtin`;
+   - [the canonical builtin](js-modules.rofl.md#builtin_canonical) of Spec is Pkg;
+   - E is `node_builtin`.
+
+> A LIBRARY CONTRACT, declared as a row of the package rather than read off a
+> method's name: `runs_coroutine(Pkg, Key, I)` runs the generator function at
+> argument I as a coroutine, so a `yield p` in it is p's value, as an `await`
+> is, and the call is what the generator returns; `returns_argument(Pkg, Key,
+> I)` is the argument I itself. Key `call` is the package called as it is,
+> another a member of it, read off it or imported by name. A package used on
+> one site only (a company's runner) gets its rows there, in the world that
+> loads it.
+
+`runs_coroutine` lists:
+
+| arg 1 | arg 2 | arg 3 |
+|---|---|---|
+| "co" | `call` | 0 |
+
+In the main:
+
+<a id="contract_key"></a>`contract_key`(Pkg, Key) either:
+
+1. if [`runs_coroutine`](#runs_coroutine)(Pkg, Key, something);
+2. if [`returns_argument`](#returns_argument)(Pkg, Key, something).
+
+In the surface:
+
+<a id="sx_contract_pkg"></a>`sx_contract_pkg`(Spec, Pkg) if [`external_package`](#external_package)(Spec, Pkg, something) and [`contract_key`](#contract_key)(Pkg, something).
+
+In the flow:
+
+<a id="contract_fn"></a>`contract_fn`(Spec, Pkg, `call`) if all of:
+  - [`sx_contract_pkg`](#sx_contract_pkg)(Spec, Pkg);
+  - [`contract_key`](#contract_key)(Pkg, `call`);
+  - a node Spec [comes out of](#external_value) Spec.
+
+`contract_fn`(a [member access](#member_node_v) M, Pkg, Key) if all of:
+  - [`sx_contract_pkg`](#sx_contract_pkg)(Spec, Pkg);
+  - a node Spec [comes out of](#external_value) Spec;
+  - a node O [points to](js-concat.rofl.md#may_be_node) Spec;
+  - the `object` of M is O;
+  - M [selects](#selects) Key;
+  - [`contract_key`](#contract_key)(Pkg, Key).
+
+`contract_fn`(Sp, Pkg, Key) if all of:
+  - a node Sp [imports from outside](#external_import) some name from a module Spec in some file;
+  - [`sx_contract_pkg`](#sx_contract_pkg)(Spec, Pkg);
+  - the `imported` of Sp [is named](js-structure.rofl.md#ast_name) Key;
+  - [`contract_key`](#contract_key)(Pkg, Key).
+
+<a id="contract_call"></a>`contract_call`(a [call expression](#noun-call_expression) C, Pkg, Key) if all of:
+  - [`contract_fn`](#contract_fn)(X, Pkg, Key);
+  - a node G [points to](js-concat.rofl.md#may_be_node) a node X;
+  - the `callee` of C is G.
+
+<a id="coroutine_of"></a>`coroutine_of`(C, F) if all of:
+  - [`contract_call`](#contract_call)(C, Pkg, Key);
+  - [`runs_coroutine`](#runs_coroutine)(Pkg, Key, I);
+  - C [passes](#arg_at) a node X at an index I;
+  - X [points to](js-concat.rofl.md#may_be_node) a node F;
+  - F [is a generator function](#gen_fn).
+
+In the surface:
+
+<a id="sx_coroutine"></a>`sx_coroutine`(F) if [`coroutine_of`](#coroutine_of)(something, F).
+
+In the flow:
+
+<a id="coroutine_yield"></a>`coroutine_yield`(a [yield](#noun-yield) Y, X) if all of:
+  - [`sx_coroutine`](#sx_coroutine)(F);
+  - F [is nearest to](#nearest_v) Y;
+  - [the attribute](#ast_attr) `delegate` of Y is `false`;
+  - the `argument` of Y is a node X.
+
+A node
+
+- points to a node N if [`coroutine_yield`](#coroutine_yield)(it, X) and a node X [points to](js-concat.rofl.md#may_be_node) N.
+- may be the literal V if [`coroutine_yield`](#coroutine_yield)(it, X) and a node X [may be the literal](js-concat.rofl.md#may_be_lit) V.
+- points to a node N if [`coroutine_of`](#coroutine_of)(it, F) and [`sx_gen_ret`](js-surface.rofl.md#sx_gen_ret)(F, N).
+- may be the literal V if [`coroutine_of`](#coroutine_of)(it, F) and [`sx_gen_rlit`](js-surface.rofl.md#sx_gen_rlit)(F, V).
+- points to a node N if all of:
+  - [`contract_call`](#contract_call)(it, Pkg, Key);
+  - [`returns_argument`](#returns_argument)(Pkg, Key, I);
+  - it [passes](#arg_at) a node X at an index I;
+  - X [points to](js-concat.rofl.md#may_be_node) N.
+- may be the literal V if all of:
+  - [`contract_call`](#contract_call)(it, Pkg, Key);
+  - [`returns_argument`](#returns_argument)(Pkg, Key, I);
+  - it [passes](#arg_at) a node X at an index I;
+  - X [may be the literal](js-concat.rofl.md#may_be_lit) V.
+
+Declared as facts:
+
+- <a id="runs_coroutine"></a>`runs_coroutine` — rows in this file
+- <a id="returns_argument"></a>`returns_argument` — no rows: declared so a rule may read it
 
 > A function handed to an external call as an argument is called back with
 > values the corpus does not build: each plain parameter is an external value
