@@ -14,6 +14,7 @@ rofl load                        boot.rofl world.rofl    # the whole state
 rofl serve                                               # one JSON request a line, one answer a line
 rofl render --out DIR            world.rofl ...          # the sentence form
 rofl render --out DIR            world.rofl.md           # back into rules: DIR/world.rofl, DIR/world.phrases.rofl, the report on stdout
+rofl nb [--cell N] [--all]       notebook.rofl.md        # run a notebook, printed as `npm run nb` prints it
 ```
 
 A question verb is `rofl load` with that one question, so every flag of
@@ -41,6 +42,11 @@ binary reads it into rules natively, after the worlds its `reads:` names, as `sc
 (`npm run mdcheck` holds the two to the byte). Its vocabulary comes from the tree: the nearest directory
 above the file holding `boot.rofl` and `facts/phrases.rofl`, else the one above the binary. A plain `.md`
 is a document and is refused (exit 2).
+
+**`rofl nb`** runs a notebook the way `npm run nb -- FILE` does and prints the same text and exit code
+(0 ok, 1 a never fails, 2 not everything was read, 3 blind or cut), with `--cell N` and `--all`. `draw`, a
+notebook over code (`code:`, `model: js`) and `--json` are not native yet: it says so on stderr and exits 2.
+`npm run nbcheck` holds it to the TypeScript kernel byte for byte over every notebook in its slice.
 
 **`@LIST`** stands for the files LIST names, one a line, each read from LIST's
 directory. `@rules/js.files` is the JS model, the files the notebook host
