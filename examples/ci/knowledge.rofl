@@ -1,0 +1,10 @@
+-- knowledge.rofl — what the scanner cannot read from a workflow, written by hand.
+
+-- what a tool does when it is run again: the same thing (local) or maybe something else (network)
+ci_tool_kind("node --check", "local").
+ci_tool_kind("npm test", "local").
+ci_tool_kind("gh release", "network").
+
+-- the order environments go in
+ci_env_rank("staging", 1).
+ci_env_rank("production", 2).

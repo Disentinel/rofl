@@ -1,0 +1,104 @@
+-- ci.rofl — what a set of GitHub Actions workflows does, read from the facts
+-- of scanners/gh_actions.py: which run starts which, who waits for whom, and
+-- the places where the waiting is wrong.
+
+edb(ci_repo). edb(ci_workflow). edb(ci_on). edb(ci_paths). edb(ci_job). edb(ci_needs).
+edb(ci_job_if). edb(ci_status_if). edb(ci_env). edb(ci_step). edb(ci_guard). edb(ci_uploads). edb(ci_downloads).
+edb(ci_holds). edb(ci_releases). edb(ci_undrafts). edb(ci_fetches). edb(ci_tries).
+edb(ci_retries). edb(ci_tool). edb(ci_sleeps). edb(ci_dispatches). edb(ci_matches).
+edb(ci_tool_kind). edb(ci_env_rank).
+
+step_in(S, J, W) :- ci_step(S, J, _), ci_job(J, W).
+like(P, N) :- ci_matches(P, N).
+like(N, N) :- ci_uploads(_, N).
+like(N, N) :- ci_holds(_, N).
+
+-- one run starts another: a dispatch the other listens for, or the end of a workflow it follows
+fires(W1, W2, T) :- ci_dispatches(S, R, T), step_in(S, _, W1), ci_on(W2, "repository_dispatch", T), ci_workflow(W2, R, _).
+fires(W1, W2, "workflow_run") :- ci_workflow(W1, R, N), ci_on(W2, "workflow_run", N), ci_workflow(W2, R, _).
+guarded_fire(W1, W2) :- ci_dispatches(S, R, T), ci_guard(S, _), step_in(S, _, W1), ci_on(W2, "repository_dispatch", T), ci_workflow(W2, R, _).
+open_fire(W1, W2) :- fires(W1, W2, _), not guarded_fire(W1, W2).
+
+cascade(W1, W2) :- fires(W1, W2, _).
+cascade(W1, W3) :- fires(W1, W2, _), cascade(W2, W3).
+open_cascade(W1, W2) :- open_fire(W1, W2).
+open_cascade(W1, W3) :- open_fire(W1, W2), open_cascade(W2, W3).
+
+-- a ring of runs: each turn starts the next one again; it stops only where a step decides not to fire
+trigger_ring(W) :- cascade(W, W).
+endless_ring(W) :- open_cascade(W, W).
+
+-- inside a run: a job starts after the jobs it needs
+after(J, J2) :- ci_needs(J, J2).
+after(J, J3) :- ci_needs(J, J2), after(J2, J3).
+
+-- a job with a condition of its own may be skipped, and then every job below it is skipped
+-- too, unless that job's condition asks how its needs ended
+may_skip(J) :- ci_job_if(J, _), not ci_status_if(J).
+skipped_by_ancestor(J, J0) :- after(J, J0), may_skip(J0), not ci_status_if(J).
+
+-- an artifact a job takes from a job of the same run
+takes(J, J2, A) :- ci_downloads(S, P, "run"), step_in(S, J, W), ci_uploads(S2, A), step_in(S2, J2, W), like(P, A), J != J2.
+takes_any(J, P) :- ci_downloads(S, P, "run"), step_in(S, J, W), ci_uploads(S2, A), step_in(S2, _, W), like(P, A).
+-- one from the run that started this one
+takes_back(J, J2, A) :- ci_downloads(S, P, "triggering_run"), step_in(S, J, W), fires(W1, W, "workflow_run"), ci_uploads(S2, A), step_in(S2, J2, W1), like(P, A).
+takes_back_any(J, P) :- takes_back(J, _, P).
+takes_back_any(J, P) :- ci_downloads(S, P, "triggering_run"), step_in(S, J, W), fires(W1, W, "workflow_run"), ci_uploads(S2, A), step_in(S2, _, W1), like(P, A).
+
+-- an artifact nobody in the run uploads: the download fails
+orphan_download(J, P) :- ci_downloads(S, P, "run"), step_in(S, J, _), not takes_any(J, P).
+orphan_download(J, P) :- ci_downloads(S, P, "triggering_run"), step_in(S, J, _), not takes_back_any(J, P).
+-- a job taking what a job it does not wait for makes: it works when the other one happens to be first
+artifact_race(J, J2, A) :- takes(J, J2, A), not after(J, J2).
+
+-- what a job holds: what it makes and what it takes
+has(J, F) :- ci_holds(S, F), step_in(S, J, _).
+has(J, F) :- takes(J, J2, _), has(J2, F).
+
+-- a release: who makes it, what is in it, and when the world sees it
+release(W, J, R, P, V) :- ci_releases(S, R, P, V), step_in(S, J, W).
+release_file(R, P, F, W) :- release(W, J, R, P, _), has(J, F).
+shown_by(W, R, P, J) :- release(W, _, R, P, "public"), ci_undrafts(S, R, P), step_in(S, J, W).
+shown_by(W, R, P, J) :- release(W, J, R, P, "public").
+shown_by(W, R, P, J) :- release(W, _, R, P, "draft"), ci_undrafts(S, R, P), step_in(S, J, W).
+held_back(W, R, P, Secs) :- release(W, _, R, P, "draft"), shown_by(W, R, P, J), ci_sleeps(S, Secs), step_in(S, J, W).
+
+-- a job asks another repository for a file of its releases
+fetch(J, R, T, Pat) :- ci_fetches(S, R, T, Pat), step_in(S, J, _).
+answered(J, R, Pat) :- fetch(J, R, _, Pat), release_file(R, _, F, _), like(Pat, F).
+consumes(Wc, Wp, Pat) :- fetch(J, R, _, Pat), ci_job(J, Wc), release_file(R, _, F, Wp), like(Pat, F).
+orphan_fetch(J, R, Pat) :- fetch(J, R, _, Pat), not answered(J, R, Pat).
+
+-- a workflow that reads what another one releases but is never started by it: it builds against an old one
+stale_consumer(Wc, Wp) :- consumes(Wc, Wp, _), Wc != Wp, not cascade(Wp, Wc).
+
+-- a run that tells another one before its release can be seen
+told_by(J, W, Wc) :- ci_dispatches(S, R, T), step_in(S, J, W), ci_on(Wc, "repository_dispatch", T), ci_workflow(Wc, R, _).
+told_early(W, Wc, P) :- told_by(J, W, Wc), shown_by(W, _, P, Js), J != Js, not after(J, Js).
+-- and how long the told one asks before it gives up
+patience(Wc, R, X) :- fetch(J, R, "payload", _), ci_job(J, Wc), ci_fetches(S, R, _, _), step_in(S, J, _), ci_tries(S, N, D), X is N * D.
+patience(Wc, R, X) :- fetch(J, R, "payload_or_latest", _), ci_job(J, Wc), ci_fetches(S, R, _, _), step_in(S, J, _), ci_tries(S, N, D), X is N * D.
+gives_up_early(W, Wc, Secs, Wait) :- told_early(W, Wc, P), release(W, _, R, P, _), held_back(W, R, P, Secs), patience(Wc, R, Wait), Wait < Secs.
+
+-- a retry around a command that does the same thing every time
+useless_retry(J, Cmd) :- ci_retries(S, _, Cmd), step_in(S, J, _), ci_tool(Cmd, T), ci_tool_kind(T, "local").
+
+-- a deployment: a job of an environment fetching a release
+deploys(J, R, Pat, E) :- ci_env(J, E), fetch(J, R, _, Pat).
+went_through(J, R, Pat, E) :- deploys(J, R, Pat, E2), after(J, J2), deploys(J2, R, Pat, E), ci_env_rank(E, K), ci_env_rank(E2, K2), K < K2.
+skips_stage(J, Pat, E) :- deploys(J, R, Pat, E2), ci_env_rank(E2, K2), ci_env_rank(E, K), K < K2, not went_through(J, R, Pat, E).
+
+-- a release fetched whatever is newest, when the run was not told which
+takes_newest(J, R) :- fetch(J, R, "latest", _).
+takes_newest(J, R) :- fetch(J, R, "payload_or_latest", _).
+
+problem(endless_ring, W, "") :- endless_ring(W).
+problem(orphan_download, J, P) :- orphan_download(J, P).
+problem(artifact_race, J, A) :- artifact_race(J, _, A).
+problem(orphan_fetch, J, Pat) :- orphan_fetch(J, _, Pat).
+problem(stale_consumer, Wc, Wp) :- stale_consumer(Wc, Wp).
+problem(told_early, Wc, P) :- told_early(_, Wc, P).
+problem(gives_up_early, Wc, W) :- gives_up_early(W, Wc, _, _).
+problem(useless_retry, J, Cmd) :- useless_retry(J, Cmd).
+problem(skipped_by_ancestor, J, J0) :- skipped_by_ancestor(J, J0).
+problem(skips_stage, J, E) :- skips_stage(J, _, E).
