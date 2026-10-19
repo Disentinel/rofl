@@ -1,0 +1,218 @@
+<title>CI-зоопарк под ROFL</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: one reading column; the timeline breaks out wide and scrolls inside its own box. */
+:root {
+  --bg: #f3f5f7; --panel: #ffffff; --fg: #18212b; --muted: #5d6b7a; --line: #d5dce3;
+  --crit: #d9822b; --crit-soft: #f7e3cc; --job: #b9c5d1; --ok: #2f8a57; --bad: #c2413a; --wait: #8a6fd1;
+  --body: "Golos Text", "Segoe UI", system-ui, sans-serif; --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #12171d; --panel: #1a2129; --fg: #e3e9ef; --muted: #93a1b0; --line: #2c3742;
+  --crit: #f0a050; --crit-soft: #4a3520; --job: #3e4b59; --ok: #5cc28a; --bad: #ef7a72; --wait: #a995ec; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #12171d; --panel: #1a2129; --fg: #e3e9ef; --muted: #93a1b0; --line: #2c3742;
+  --crit: #f0a050; --crit-soft: #4a3520; --job: #3e4b59; --ok: #5cc28a; --bad: #ef7a72; --wait: #a995ec; color-scheme: dark }
+body { background: var(--bg); color: var(--fg); font: 16px/1.55 var(--body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 32px 64px; }
+main { max-width: 1080px; margin: 0 auto; display: grid; gap: 56px; }
+h1, h2 { text-wrap: balance; line-height: 1.2; margin: 0; }
+h1 { font-size: clamp(28px, 4vw, 40px); font-weight: 700; }
+h2 { font-size: 24px; font-weight: 700; }
+p { margin: 0; max-width: 68ch; }
+.lead { color: var(--muted); font-size: 18px; }
+section { display: grid; gap: 18px; min-width: 0; }
+.eyebrow { font: 600 12px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+code, .mono { font-family: var(--mono); font-size: 13px; }
+.facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.fact { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; display: grid; gap: 4px; }
+.fact b { font: 700 26px/1.1 var(--mono); font-variant-numeric: tabular-nums; }
+.fact.crit b { color: var(--crit); } .fact.wait b { color: var(--wait); }
+.fact span { color: var(--muted); font-size: 14px; }
+.scroll { overflow-x: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; }
+svg text { fill: var(--fg); font: 12px var(--mono); }
+svg .muted { fill: var(--muted); }
+.legend { display: flex; flex-wrap: wrap; gap: 16px; color: var(--muted); font-size: 14px; }
+.legend i { display: inline-block; width: 22px; height: 10px; border-radius: 2px; vertical-align: middle; margin-right: 6px; }
+.map { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; }
+.edge { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; font-size: 14px; }
+.edge .mono { color: var(--muted); font-size: 12px; }
+.muts { display: grid; gap: 14px; }
+.mut { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 16px; display: grid; gap: 10px; min-width: 0; }
+.mut header { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: baseline; justify-content: space-between; }
+.mut h3 { margin: 0; font-size: 17px; }
+.pill { font: 600 12px/1 var(--mono); padding: 5px 8px; border-radius: 99px; color: var(--panel); background: var(--ok); }
+.pill.no { background: var(--bad); }
+.diff { overflow-x: auto; font: 12.5px/1.5 var(--mono); border-radius: 6px; background: var(--bg); padding: 8px 10px; }
+.diff div { white-space: pre; } .del { color: var(--bad); } .add { color: var(--ok); }
+.said { display: grid; gap: 6px; }
+.said div { display: grid; grid-template-columns: auto 1fr; gap: 10px; font-size: 14px; }
+.said .k { font: 600 12px var(--mono); padding: 3px 6px; border-radius: 4px; background: var(--crit-soft); color: var(--fg); align-self: start; }
+.said .gone .k { background: var(--bg); text-decoration: line-through; }
+.said .where { font: 12px var(--mono); color: var(--muted); overflow-wrap: anywhere; }
+.live { display: grid; gap: 12px; }
+.live div { background: var(--panel); border-left: 4px solid var(--crit); border-radius: 4px; padding: 12px 16px; display: grid; gap: 4px; }
+</style>
+
+<main>
+  <header style="display:grid;gap:12px">
+    <div class="eyebrow">ROFL · полигон CI · 4 репозитория на GitHub</div>
+    <h1>Поменяли один контракт. Что сделал CI за <span id="total"></span></h1>
+    <p class="lead">В репозитории backend у сервиса orders появился новый метод. Дальше всё случилось само: четыре репозитория будили друг друга, собирали, выпускали и выкатывали. Ниже настоящий прогон на GitHub, разобранный моделью ROFL, и десять с лишним поломок, которые модель должна была заметить.</p>
+  </header>
+
+  <section>
+    <div class="eyebrow">Что видно сразу</div>
+    <div class="facts" id="facts"></div>
+  </section>
+
+  <section>
+    <h2>Прогоны на оси времени</h2>
+    <p>Каждая строка это один прогон workflow, полоски внутри это его job. Оранжевым отмечена цепочка, которая и задала общую длину: ускорять имеет смысл только её. Стрелка показывает, кто кого разбудил.</p>
+    <div class="legend">
+      <span><i style="background:var(--crit)"></i>критическая цепочка</span>
+      <span><i style="background:var(--job)"></i>остальные job</span>
+      <span><i style="background:repeating-linear-gradient(45deg,var(--wait) 0 3px,transparent 3px 6px)"></i>ждал в очереди</span>
+    </div>
+    <div class="scroll"><svg id="tl" role="img" aria-label="Прогоны и job на оси времени"></svg></div>
+  </section>
+
+  <section>
+    <h2>Кто кого будит</h2>
+    <p>Это модель прочитала прямо из файлов workflow, без запуска. Те же связи видны стрелками на оси выше.</p>
+    <div class="map" id="map"></div>
+  </section>
+
+  <section>
+    <h2>Ломаем по одной вещи</h2>
+    <p>Каждая поломка это одна правка в файлах CI. Справа то, что сказала модель: какая проблема появилась или пропала. Зелёная метка значит, что модель назвала ровно ожидаемое и ничего лишнего. На целом зоопарке модель видит одну проблему, оставленную нарочно: <span id="clean"></span>.</p>
+    <div class="muts" id="muts"></div>
+  </section>
+
+  <section>
+    <h2>Чему научил живой GitHub</h2>
+    <p>Две вещи модель не знала, пока CI не запустился по-настоящему. Обе теперь в модели.</p>
+    <div class="live">
+      <div><b>Пропущенный job глушит всех ниже.</b><span>Job <code>contract</code> работает только по событию от backend. На обычном push он пропускается, и GitHub молча пропустил publish, index и notify, хотя всё нужное им собралось. Модель называет это <code>skipped_by_ancestor</code>.</span></div>
+      <div><b>Очередь выкидывает ожидающий запуск.</b><span>Раскатка разрешает один прогон за раз. Когда пришёл третий сигнал, GitHub отменил ждущий прогон от web. Здесь это безвредно, потому что раскатка всегда берёт свежие релизы. Если бы она брала то, что ей назвали в сигнале, работа бы потерялась: модель называет это <code>lost_trigger</code>.</span></div>
+    </div>
+  </section>
+</main>
+
+<script>
+const D = /*DATA*/null;
+const KIND = {
+  endless_ring: "Кольцо без тормоза: прогоны будят друг друга бесконечно",
+  orphan_download: "Скачивает артефакт, который в прогоне никто не загружает",
+  artifact_race: "Берёт артефакт у job, которого не ждёт: сработает, только если тот успел",
+  orphan_fetch: "Просит из релиза файл, которого там не бывает",
+  stale_consumer: "Читает чужой релиз, но о новом его не будят: соберёт со старым",
+  told_early: "Будит соседа раньше, чем релиз стал виден",
+  gives_up_early: "Сосед сдаётся раньше, чем релиз появится",
+  useless_retry: "Повтор команды, которая каждый раз делает одно и то же",
+  skips_stage: "В прод мимо staging",
+  skipped_by_ancestor: "Job молча пропустится, потому что пропущен job выше",
+  lost_trigger: "Очередь выкинет ждущий запуск, а он собирал то, что ему назвали",
+};
+const MUT = {
+  "artifact renamed on upload": "Переименовали артефакт при загрузке",
+  "contract dispatch without its check": "Убрали проверку перед сигналом о новом контракте",
+  "notify before the release is seen": "Сигнал соседям раньше, чем релиз опубликован",
+  "notify early and backend asks only twice": "Сигнал раньше времени, и backend спрашивает всего дважды",
+  "production auth right after the gate": "Прод auth сразу после проверки, без staging",
+  "web asks for a package nobody makes": "web просит пакет, которого никто не делает",
+  "web no longer told about new packages": "web больше не будят о новых пакетах",
+  "billing does not wait for the build": "billing не ждёт сборки",
+  "lint without the retry": "Убрали бессмысленный повтор lint",
+  "publish without its status check": "У publish убрали проверку статуса",
+  "staging auth deploys what the trigger named": "Раскатка берёт версию из сигнала, а не свежую",
+};
+const short = (w) => w.replace(/^ci-zoo-/, "");
+const fmt = (s) => s >= 60 ? `${Math.floor(s / 60)} мин ${s % 60} с` : `${s} с`;
+const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
+const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c]);
+
+document.getElementById("total").textContent = fmt(D.total);
+const rollouts = D.runs.filter((r) => r.wf.endsWith("/rollout") && r.status === "success").length;
+const cancelled = D.runs.filter((r) => r.status === "cancelled").length;
+const poll = D.steps.filter(([j]) => D.polled.some(([pj]) => pj === j)).reduce((m, s) => Math.max(m, s[2]), 0);
+const sleep = D.steps.filter(([, n]) => /sleep/.test(n)).reduce((m, s) => Math.max(m, s[2]), 0);
+const facts = [
+  ["crit", rollouts, "раза выкатили прод: каждый пересобранный backend запускает свою раскатку"],
+  ["wait", fmt(D.queued.reduce((m, q) => Math.max(m, q[1]), 0)), "вторая раскатка стояла в очереди за первой"],
+  ["crit", fmt(poll), "проверка перед раскаткой ждала, пока web соберётся с новым клиентом"],
+  ["", fmt(sleep), "чистое ожидание: релиз пакетов держат черновиком минуту"],
+  ["", cancelled, "запуск раскатки отменён очередью"],
+];
+for (const [c, n, t] of facts) document.getElementById("facts").append(el("div", "fact " + c, `<b>${esc(n)}</b><span>${esc(t)}</span>`));
+
+// timeline
+(() => {
+  const runs = [...D.runs].sort((a, b) => a.start - b.start), crit = new Set(D.crit);
+  const left = 230, W = 1000, row = 34, top = 30, sx = (t) => left + (t / D.total) * (W - left - 20);
+  const H = top + runs.length * row + 10, svg = document.getElementById("tl");
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`); svg.setAttribute("width", W); svg.setAttribute("height", H);
+  const ns = "http://www.w3.org/2000/svg", add = (t, a, txt) => { const e = document.createElementNS(ns, t); for (const k in a) e.setAttribute(k, a[k]); if (txt != null) e.textContent = txt; svg.append(e); return e; };
+  const defs = add("defs", {});
+  defs.innerHTML = `<pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="3" height="6" style="fill:var(--wait)"/></pattern>
+    <marker id="arr" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L8 4L0 8z" style="fill:var(--muted)"/></marker>`;
+  for (let t = 0; t <= D.total; t += 60) {
+    add("line", { x1: sx(t), x2: sx(t), y1: top - 8, y2: H - 6, style: "stroke:var(--line)" });
+    add("text", { x: sx(t), y: top - 14, "text-anchor": "middle", class: "muted" }, `${t / 60} мин`);
+  }
+  const y = {};
+  runs.forEach((r, i) => {
+    const yy = top + i * row; y[r.id] = yy;
+    add("text", { x: 8, y: yy + 15 }, short(r.wf));
+    add("text", { x: 8, y: yy + 28, class: "muted", style: "font-size:10px" }, r.status === "cancelled" ? "отменён очередью" : r.event === "push" ? "push" : "разбужен");
+    const end = r.end >= 0 ? r.end : r.start + 6;
+    add("rect", { x: sx(r.start), y: yy + 4, width: Math.max(2, sx(end) - sx(r.start)), height: 22, rx: 3,
+      style: `fill:none;stroke:var(--line);${r.status === "cancelled" ? "stroke-dasharray:4 3;stroke:var(--bad)" : ""}` });
+    const q = D.queued.find(([id]) => id === r.id);
+    if (q) add("rect", { x: sx(r.start), y: yy + 8, width: sx(r.start + q[1]) - sx(r.start), height: 14, fill: "url(#hatch)", opacity: 0.7 });
+    for (const j of D.jobs.filter((j) => j.run === r.id && j.start >= 0)) {
+      const c = crit.has(j.id);
+      add("rect", { x: sx(j.start), y: yy + 8, width: Math.max(2, sx(j.end) - sx(j.start)), height: 14, rx: 2, style: `fill:var(${c ? "--crit" : "--job"})` })
+        .append(Object.assign(document.createElementNS(ns, "title"), { textContent: `${j.name}: ${j.start}–${j.end} с` }));
+    }
+  });
+  for (const r of runs) if (r.cause && y[r.cause] != null) {
+    const x = sx(r.start), y0 = y[r.cause] + 22, y1 = y[r.id] + 6;
+    add("path", { d: `M${x - 6} ${y0} C ${x - 6} ${(y0 + y1) / 2}, ${x - 6} ${(y0 + y1) / 2}, ${x} ${y1}`, style: "fill:none;stroke:var(--muted)", "marker-end": "url(#arr)" });
+  }
+})();
+
+// who wakes whom
+const seen = new Set();
+for (const [a, b, t] of D.fires) {
+  const k = a + b; if (seen.has(k) || a === b) continue; seen.add(k);
+  const why = t === "workflow_run" ? "по окончании" : `сигнал ${t}`;
+  const drop = D.drops.some(([w, w1]) => w === b && w1 === a) ? " · в очереди может пропасть" : "";
+  document.getElementById("map").append(el("div", "edge", `<b>${esc(short(a))}</b> → <b>${esc(short(b))}</b><br><span class="mono">${esc(why)}${drop}</span>`));
+}
+
+// mutations
+document.getElementById("clean").innerHTML = D.clean.map(([k]) => `<code>${k}</code>`).join(", ");
+for (const m of D.mutations) {
+  const card = el("article", "mut");
+  card.append(el("header", null, `<h3>${esc(MUT[m.name] || m.name)}</h3><span class="pill ${m.ok ? "" : "no"}">${m.ok ? "модель права" : "модель ошиблась"}</span>`));
+  for (const e of m.edits) {
+    const d = el("div", "diff");
+    d.append(el("div", "mono", esc(short(e.file))));
+    for (const l of e.old.split("\n")) d.append(el("div", "del", "- " + esc(l)));
+    for (const l of e.new.split("\n")) d.append(el("div", "add", "+ " + esc(l)));
+    card.append(d);
+  }
+  const said = el("div", "said");
+  const kinds = new Map();
+  for (const [k, w] of m.added) (kinds.get("+" + k) || kinds.set("+" + k, []).get("+" + k)).push(w);
+  for (const [k, w] of m.gone) (kinds.get("-" + k) || kinds.set("-" + k, []).get("-" + k)).push(w);
+  for (const [key, ws] of kinds) {
+    const gone = key[0] === "-", k = key.slice(1);
+    said.append(el("div", gone ? "gone" : "", `<span class="k">${gone ? "ушло" : "нашла"} · ${esc(k)}</span><span>${esc(KIND[k] || k)}<br><span class="where">${ws.map((w) => esc(short(w))).join(" · ")}</span></span>`));
+  }
+  card.append(said);
+  document.getElementById("muts").append(card);
+}
+</script>

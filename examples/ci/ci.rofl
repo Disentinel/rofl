@@ -3,7 +3,7 @@
 -- the places where the waiting is wrong.
 
 edb(ci_repo). edb(ci_workflow). edb(ci_on). edb(ci_paths). edb(ci_job). edb(ci_needs).
-edb(ci_job_if). edb(ci_status_if). edb(ci_env). edb(ci_step). edb(ci_guard). edb(ci_uploads). edb(ci_downloads).
+edb(ci_job_if). edb(ci_status_if). edb(ci_concurrency). edb(ci_env). edb(ci_step). edb(ci_guard). edb(ci_uploads). edb(ci_downloads).
 edb(ci_holds). edb(ci_releases). edb(ci_undrafts). edb(ci_fetches). edb(ci_tries).
 edb(ci_retries). edb(ci_tool). edb(ci_sleeps). edb(ci_dispatches). edb(ci_matches).
 edb(ci_tool_kind). edb(ci_env_rank).
@@ -88,6 +88,11 @@ deploys(J, R, Pat, E) :- ci_env(J, E), fetch(J, R, _, Pat).
 went_through(J, R, Pat, E) :- deploys(J, R, Pat, E2), after(J, J2), deploys(J2, R, Pat, E), ci_env_rank(E, K), ci_env_rank(E2, K2), K < K2.
 skips_stage(J, Pat, E) :- deploys(J, R, Pat, E2), ci_env_rank(E2, K2), ci_env_rank(E, K), K < K2, not went_through(J, R, Pat, E).
 
+-- one run of a workflow at a time, one more waiting: a third start drops the waiting one; harmless when every run
+-- builds what is newest, lost work when a run builds what its trigger named
+queue_drops(W, W1) :- ci_concurrency(W, _, "false"), fires(W1, W, _), fires(W2, W, _), W1 != W2.
+lost_trigger(W, W1) :- queue_drops(W, W1), ci_job(J, W), fetch(J, _, "payload", _).
+
 -- a release fetched whatever is newest, when the run was not told which
 takes_newest(J, R) :- fetch(J, R, "latest", _).
 takes_newest(J, R) :- fetch(J, R, "payload_or_latest", _).
@@ -101,4 +106,5 @@ problem(told_early, Wc, P) :- told_early(_, Wc, P).
 problem(gives_up_early, Wc, W) :- gives_up_early(W, Wc, _, _).
 problem(useless_retry, J, Cmd) :- useless_retry(J, Cmd).
 problem(skipped_by_ancestor, J, J0) :- skipped_by_ancestor(J, J0).
+problem(lost_trigger, W, W1) :- lost_trigger(W, W1).
 problem(skips_stage, J, E) :- skips_stage(J, _, E).
