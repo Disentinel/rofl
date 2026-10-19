@@ -71,8 +71,8 @@ stale_consumer(Wc, Wp) :- consumes(Wc, Wp, _), Wc != Wp, not cascade(Wp, Wc).
 told_by(J, W, Wc) :- ci_dispatches(S, R, T), step_in(S, J, W), ci_on(Wc, "repository_dispatch", T), ci_workflow(Wc, R, _).
 told_early(W, Wc, P) :- told_by(J, W, Wc), shown_by(W, _, P, Js), J != Js, not after(J, Js).
 -- and how long the told one asks before it gives up
-patience(Wc, R, N * D) :- fetch(J, R, "payload", _), ci_job(J, Wc), ci_fetches(S, R, _, _), step_in(S, J, _), ci_tries(S, N, D).
-patience(Wc, R, N * D) :- fetch(J, R, "payload_or_latest", _), ci_job(J, Wc), ci_fetches(S, R, _, _), step_in(S, J, _), ci_tries(S, N, D).
+patience(Wc, R, X) :- fetch(J, R, "payload", _), ci_job(J, Wc), ci_fetches(S, R, _, _), step_in(S, J, _), ci_tries(S, N, D), X is N * D.
+patience(Wc, R, X) :- fetch(J, R, "payload_or_latest", _), ci_job(J, Wc), ci_fetches(S, R, _, _), step_in(S, J, _), ci_tries(S, N, D), X is N * D.
 gives_up_early(W, Wc, Secs, Wait) :- told_early(W, Wc, P), release(W, _, R, P, _), held_back(W, R, P, Secs), patience(Wc, R, Wait), Wait < Secs.
 
 -- a retry around a command that does the same thing every time
