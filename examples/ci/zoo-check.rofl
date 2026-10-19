@@ -1,0 +1,10 @@
+-- zoo-check.rofl — the CI zoo as it stands, clean: the one problem it has on purpose is a retry around lint,
+-- which does the same thing every time. Red if that one is missing or one more appears.
+-- What each kind of break looks like to the model: examples/ci/mutate.py.
+
+cz_want(useless_retry, "ci-zoo-web/web#build", "node --check src/app.js").
+
+cz_missing(K, W, X) :- cz_want(K, W, X), not problem(K, W, X).
+cz_extra(K, W, X) :- problem(K, W, X), not cz_want(K, W, X).
+alarm(cz_missing).
+alarm(cz_extra).

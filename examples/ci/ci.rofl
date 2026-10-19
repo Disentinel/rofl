@@ -3,7 +3,7 @@
 -- the places where the waiting is wrong.
 
 edb(ci_repo). edb(ci_workflow). edb(ci_on). edb(ci_paths). edb(ci_job). edb(ci_needs).
-edb(ci_job_if). edb(ci_env). edb(ci_step). edb(ci_guard). edb(ci_uploads). edb(ci_downloads).
+edb(ci_job_if). edb(ci_status_if). edb(ci_env). edb(ci_step). edb(ci_guard). edb(ci_uploads). edb(ci_downloads).
 edb(ci_holds). edb(ci_releases). edb(ci_undrafts). edb(ci_fetches). edb(ci_tries).
 edb(ci_retries). edb(ci_tool). edb(ci_sleeps). edb(ci_dispatches). edb(ci_matches).
 edb(ci_tool_kind). edb(ci_env_rank).
@@ -31,6 +31,11 @@ endless_ring(W) :- open_cascade(W, W).
 -- inside a run: a job starts after the jobs it needs
 after(J, J2) :- ci_needs(J, J2).
 after(J, J3) :- ci_needs(J, J2), after(J2, J3).
+
+-- a job with a condition of its own may be skipped, and then every job below it is skipped
+-- too, unless that job's condition asks how its needs ended
+may_skip(J) :- ci_job_if(J, _), not ci_status_if(J).
+skipped_by_ancestor(J, J0) :- after(J, J0), may_skip(J0), not ci_status_if(J).
 
 -- an artifact a job takes from a job of the same run
 takes(J, J2, A) :- ci_downloads(S, P, "run"), step_in(S, J, W), ci_uploads(S2, A), step_in(S2, J2, W), like(P, A), J != J2.
@@ -95,4 +100,5 @@ problem(stale_consumer, Wc, Wp) :- stale_consumer(Wc, Wp).
 problem(told_early, Wc, P) :- told_early(_, Wc, P).
 problem(gives_up_early, Wc, W) :- gives_up_early(W, Wc, _, _).
 problem(useless_retry, J, Cmd) :- useless_retry(J, Cmd).
+problem(skipped_by_ancestor, J, J0) :- skipped_by_ancestor(J, J0).
 problem(skips_stage, J, E) :- skips_stage(J, _, E).

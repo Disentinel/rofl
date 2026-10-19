@@ -12,6 +12,7 @@ a matrix value are kept or dropped; any other `if:` is a guard, kept as text.
   ci_repo(R)                         ci_workflow(W, R, Name)
   ci_on(W, Event, Type)              ci_paths(W, Glob)
   ci_job(J, W)                       ci_needs(J, J2)          ci_job_if(J, Text)
+  ci_status_if(J)                    the job's `if:` asks how its needs ended, so a skipped one does not skip it
   ci_env(J, Env)                     ci_step(S, J, Index)     ci_guard(S, Text)
   ci_uploads(S, Artifact)            ci_downloads(S, Artifact, From)   From: run | triggering_run
   ci_holds(S, File)                  a file the step makes or puts in an artifact
@@ -135,6 +136,8 @@ class Repo:
                     fact("ci_needs", j, self.jname(w, n, c))
             if "if" in job:
                 fact("ci_job_if", j, job["if"])
+                if re.search(r"\b(success|failure|always|cancelled)\(\)", str(job["if"])):
+                    fact("ci_status_if", j)
             uses = job.get("uses")
             if uses and uses.startswith("./"):
                 callee = self.workflows[pathlib.Path(uses).name]

@@ -1,0 +1,290 @@
+-- facts read by scanners/gh_actions.py from the four repositories of the CI zoo (github.com/Disentinel/ci-zoo-*)
+ci_repo("ci-zoo-platform").
+ci_workflow("ci-zoo-platform/node-lib", "ci-zoo-platform", "node-lib").
+ci_on("ci-zoo-platform/node-lib", "workflow_call", "").
+ci_workflow("ci-zoo-platform/packages", "ci-zoo-platform", "packages").
+ci_on("ci-zoo-platform/packages", "push", "main").
+ci_paths("ci-zoo-platform/packages", "packages/**").
+ci_paths("ci-zoo-platform/packages", "contracts/**").
+ci_paths("ci-zoo-platform/packages", ".github/**").
+ci_on("ci-zoo-platform/packages", "repository_dispatch", "openapi-changed").
+ci_on("ci-zoo-platform/packages", "workflow_dispatch", "").
+ci_job("ci-zoo-platform/packages#contract", "ci-zoo-platform/packages").
+ci_job_if("ci-zoo-platform/packages#contract", "github.event_name == 'repository_dispatch'").
+ci_step("ci-zoo-platform/packages#contract/0", "ci-zoo-platform/packages#contract", 0).
+ci_step("ci-zoo-platform/packages#contract/1", "ci-zoo-platform/packages#contract", 1).
+ci_tries("ci-zoo-platform/packages#contract/1", 5, 15).
+ci_fetches("ci-zoo-platform/packages#contract/1", "ci-zoo-backend", "payload", "openapi.json").
+ci_step("ci-zoo-platform/packages#contract/2", "ci-zoo-platform/packages#contract", 2).
+ci_uploads("ci-zoo-platform/packages#contract/2", "contract").
+ci_holds("ci-zoo-platform/packages#contract/2", "openapi.json").
+ci_job("ci-zoo-platform/packages#utils", "ci-zoo-platform/packages").
+ci_step("ci-zoo-platform/packages#utils/0", "ci-zoo-platform/packages#utils", 0).
+ci_step("ci-zoo-platform/packages#utils/1", "ci-zoo-platform/packages#utils", 1).
+ci_step("ci-zoo-platform/packages#utils/4", "ci-zoo-platform/packages#utils", 4).
+ci_holds("ci-zoo-platform/packages#utils/4", "zoo-utils-*.tgz").
+ci_step("ci-zoo-platform/packages#utils/5", "ci-zoo-platform/packages#utils", 5).
+ci_uploads("ci-zoo-platform/packages#utils/5", "lib-utils").
+ci_job("ci-zoo-platform/packages#api-client", "ci-zoo-platform/packages").
+ci_needs("ci-zoo-platform/packages#api-client", "ci-zoo-platform/packages#utils").
+ci_needs("ci-zoo-platform/packages#api-client", "ci-zoo-platform/packages#contract").
+ci_job_if("ci-zoo-platform/packages#api-client", "${{ !failure() && !cancelled() }}").
+ci_status_if("ci-zoo-platform/packages#api-client").
+ci_step("ci-zoo-platform/packages#api-client/0", "ci-zoo-platform/packages#api-client", 0).
+ci_step("ci-zoo-platform/packages#api-client/1", "ci-zoo-platform/packages#api-client", 1).
+ci_step("ci-zoo-platform/packages#api-client/2", "ci-zoo-platform/packages#api-client", 2).
+ci_downloads("ci-zoo-platform/packages#api-client/2", "lib-utils", "run").
+ci_step("ci-zoo-platform/packages#api-client/3", "ci-zoo-platform/packages#api-client", 3).
+ci_guard("ci-zoo-platform/packages#api-client/3", "${{ github.event_name == 'repository_dispatch' }}").
+ci_downloads("ci-zoo-platform/packages#api-client/3", "contract", "run").
+ci_step("ci-zoo-platform/packages#api-client/4", "ci-zoo-platform/packages#api-client", 4).
+ci_holds("ci-zoo-platform/packages#api-client/4", "zoo-api-client-*.tgz").
+ci_step("ci-zoo-platform/packages#api-client/5", "ci-zoo-platform/packages#api-client", 5).
+ci_uploads("ci-zoo-platform/packages#api-client/5", "lib-api-client").
+ci_job("ci-zoo-platform/packages#publish", "ci-zoo-platform/packages").
+ci_needs("ci-zoo-platform/packages#publish", "ci-zoo-platform/packages#utils").
+ci_needs("ci-zoo-platform/packages#publish", "ci-zoo-platform/packages#api-client").
+ci_job_if("ci-zoo-platform/packages#publish", "${{ !failure() && !cancelled() }}").
+ci_status_if("ci-zoo-platform/packages#publish").
+ci_step("ci-zoo-platform/packages#publish/0", "ci-zoo-platform/packages#publish", 0).
+ci_downloads("ci-zoo-platform/packages#publish/0", "lib-*", "run").
+ci_step("ci-zoo-platform/packages#publish/1", "ci-zoo-platform/packages#publish", 1).
+ci_releases("ci-zoo-platform/packages#publish/1", "ci-zoo-platform", "pkgs-", "draft").
+ci_job("ci-zoo-platform/packages#index", "ci-zoo-platform/packages").
+ci_needs("ci-zoo-platform/packages#index", "ci-zoo-platform/packages#publish").
+ci_job_if("ci-zoo-platform/packages#index", "${{ !failure() && !cancelled() }}").
+ci_status_if("ci-zoo-platform/packages#index").
+ci_step("ci-zoo-platform/packages#index/0", "ci-zoo-platform/packages#index", 0).
+ci_sleeps("ci-zoo-platform/packages#index/0", 60).
+ci_step("ci-zoo-platform/packages#index/1", "ci-zoo-platform/packages#index", 1).
+ci_undrafts("ci-zoo-platform/packages#index/1", "ci-zoo-platform", "pkgs-").
+ci_job("ci-zoo-platform/packages#notify[Disentinel/ci-zoo-backend]", "ci-zoo-platform/packages").
+ci_needs("ci-zoo-platform/packages#notify[Disentinel/ci-zoo-backend]", "ci-zoo-platform/packages#index").
+ci_job_if("ci-zoo-platform/packages#notify[Disentinel/ci-zoo-backend]", "${{ !failure() && !cancelled() }}").
+ci_status_if("ci-zoo-platform/packages#notify[Disentinel/ci-zoo-backend]").
+ci_step("ci-zoo-platform/packages#notify[Disentinel/ci-zoo-backend]/0", "ci-zoo-platform/packages#notify[Disentinel/ci-zoo-backend]", 0).
+ci_dispatches("ci-zoo-platform/packages#notify[Disentinel/ci-zoo-backend]/0", "ci-zoo-backend", "packages-published").
+ci_job("ci-zoo-platform/packages#notify[Disentinel/ci-zoo-web]", "ci-zoo-platform/packages").
+ci_needs("ci-zoo-platform/packages#notify[Disentinel/ci-zoo-web]", "ci-zoo-platform/packages#index").
+ci_job_if("ci-zoo-platform/packages#notify[Disentinel/ci-zoo-web]", "${{ !failure() && !cancelled() }}").
+ci_status_if("ci-zoo-platform/packages#notify[Disentinel/ci-zoo-web]").
+ci_step("ci-zoo-platform/packages#notify[Disentinel/ci-zoo-web]/0", "ci-zoo-platform/packages#notify[Disentinel/ci-zoo-web]", 0).
+ci_dispatches("ci-zoo-platform/packages#notify[Disentinel/ci-zoo-web]/0", "ci-zoo-web", "packages-published").
+ci_repo("ci-zoo-backend").
+ci_workflow("ci-zoo-backend/ci", "ci-zoo-backend", "ci").
+ci_on("ci-zoo-backend/ci", "push", "main").
+ci_paths("ci-zoo-backend/ci", "services/**").
+ci_paths("ci-zoo-backend/ci", ".github/**").
+ci_on("ci-zoo-backend/ci", "repository_dispatch", "packages-published").
+ci_on("ci-zoo-backend/ci", "workflow_dispatch", "").
+ci_job("ci-zoo-backend/ci#utils", "ci-zoo-backend/ci").
+ci_step("ci-zoo-backend/ci#utils/0", "ci-zoo-backend/ci#utils", 0).
+ci_step("ci-zoo-backend/ci#utils/1", "ci-zoo-backend/ci#utils", 1).
+ci_tries("ci-zoo-backend/ci#utils/1", 5, 15).
+ci_fetches("ci-zoo-backend/ci#utils/1", "ci-zoo-platform", "payload_or_latest", "zoo-utils-*.tgz").
+ci_step("ci-zoo-backend/ci#utils/2", "ci-zoo-backend/ci#utils", 2).
+ci_uploads("ci-zoo-backend/ci#utils/2", "utils-tgz").
+ci_job("ci-zoo-backend/ci#build[auth]", "ci-zoo-backend/ci").
+ci_needs("ci-zoo-backend/ci#build[auth]", "ci-zoo-backend/ci#utils").
+ci_step("ci-zoo-backend/ci#build[auth]/0", "ci-zoo-backend/ci#build[auth]", 0).
+ci_step("ci-zoo-backend/ci#build[auth]/1", "ci-zoo-backend/ci#build[auth]", 1).
+ci_step("ci-zoo-backend/ci#build[auth]/2", "ci-zoo-backend/ci#build[auth]", 2).
+ci_downloads("ci-zoo-backend/ci#build[auth]/2", "utils-tgz", "run").
+ci_step("ci-zoo-backend/ci#build[auth]/3", "ci-zoo-backend/ci#build[auth]", 3).
+ci_holds("ci-zoo-backend/ci#build[auth]/3", "zoo-auth-*.tgz").
+ci_step("ci-zoo-backend/ci#build[auth]/4", "ci-zoo-backend/ci#build[auth]", 4).
+ci_uploads("ci-zoo-backend/ci#build[auth]/4", "bundle-auth").
+ci_job("ci-zoo-backend/ci#build[orders]", "ci-zoo-backend/ci").
+ci_needs("ci-zoo-backend/ci#build[orders]", "ci-zoo-backend/ci#utils").
+ci_step("ci-zoo-backend/ci#build[orders]/0", "ci-zoo-backend/ci#build[orders]", 0).
+ci_step("ci-zoo-backend/ci#build[orders]/1", "ci-zoo-backend/ci#build[orders]", 1).
+ci_step("ci-zoo-backend/ci#build[orders]/2", "ci-zoo-backend/ci#build[orders]", 2).
+ci_downloads("ci-zoo-backend/ci#build[orders]/2", "utils-tgz", "run").
+ci_step("ci-zoo-backend/ci#build[orders]/3", "ci-zoo-backend/ci#build[orders]", 3).
+ci_holds("ci-zoo-backend/ci#build[orders]/3", "zoo-orders-*.tgz").
+ci_step("ci-zoo-backend/ci#build[orders]/4", "ci-zoo-backend/ci#build[orders]", 4).
+ci_uploads("ci-zoo-backend/ci#build[orders]/4", "bundle-orders").
+ci_step("ci-zoo-backend/ci#build[orders]/5", "ci-zoo-backend/ci#build[orders]", 5).
+ci_uploads("ci-zoo-backend/ci#build[orders]/5", "openapi").
+ci_holds("ci-zoo-backend/ci#build[orders]/5", "openapi.json").
+ci_job("ci-zoo-backend/ci#billing", "ci-zoo-backend/ci").
+ci_needs("ci-zoo-backend/ci#billing", "ci-zoo-backend/ci#utils").
+ci_needs("ci-zoo-backend/ci#billing", "ci-zoo-backend/ci#build[auth]").
+ci_needs("ci-zoo-backend/ci#billing", "ci-zoo-backend/ci#build[orders]").
+ci_step("ci-zoo-backend/ci#billing/0", "ci-zoo-backend/ci#billing", 0).
+ci_step("ci-zoo-backend/ci#billing/1", "ci-zoo-backend/ci#billing", 1).
+ci_step("ci-zoo-backend/ci#billing/2", "ci-zoo-backend/ci#billing", 2).
+ci_downloads("ci-zoo-backend/ci#billing/2", "utils-tgz", "run").
+ci_step("ci-zoo-backend/ci#billing/3", "ci-zoo-backend/ci#billing", 3).
+ci_downloads("ci-zoo-backend/ci#billing/3", "bundle-auth", "run").
+ci_step("ci-zoo-backend/ci#billing/4", "ci-zoo-backend/ci#billing", 4).
+ci_holds("ci-zoo-backend/ci#billing/4", "zoo-billing-*.tgz").
+ci_step("ci-zoo-backend/ci#billing/5", "ci-zoo-backend/ci#billing", 5).
+ci_uploads("ci-zoo-backend/ci#billing/5", "bundle-billing").
+ci_job("ci-zoo-backend/ci#release", "ci-zoo-backend/ci").
+ci_needs("ci-zoo-backend/ci#release", "ci-zoo-backend/ci#build[auth]").
+ci_needs("ci-zoo-backend/ci#release", "ci-zoo-backend/ci#build[orders]").
+ci_needs("ci-zoo-backend/ci#release", "ci-zoo-backend/ci#billing").
+ci_step("ci-zoo-backend/ci#release/0", "ci-zoo-backend/ci#release", 0).
+ci_downloads("ci-zoo-backend/ci#release/0", "bundle-*", "run").
+ci_step("ci-zoo-backend/ci#release/1", "ci-zoo-backend/ci#release", 1).
+ci_downloads("ci-zoo-backend/ci#release/1", "openapi", "run").
+ci_step("ci-zoo-backend/ci#release/2", "ci-zoo-backend/ci#release", 2).
+ci_releases("ci-zoo-backend/ci#release/2", "ci-zoo-backend", "svc-", "public").
+ci_step("ci-zoo-backend/ci#release/3", "ci-zoo-backend/ci#release", 3).
+ci_dispatches("ci-zoo-backend/ci#release/3", "ci-zoo-deploy", "backend-released").
+ci_workflow("ci-zoo-backend/contract", "ci-zoo-backend", "contract").
+ci_on("ci-zoo-backend/contract", "workflow_run", "ci").
+ci_job("ci-zoo-backend/contract#changed", "ci-zoo-backend/contract").
+ci_job_if("ci-zoo-backend/contract#changed", "github.event.workflow_run.conclusion == 'success'").
+ci_step("ci-zoo-backend/contract#changed/0", "ci-zoo-backend/contract#changed", 0).
+ci_step("ci-zoo-backend/contract#changed/1", "ci-zoo-backend/contract#changed", 1).
+ci_downloads("ci-zoo-backend/contract#changed/1", "openapi", "triggering_run").
+ci_step("ci-zoo-backend/contract#changed/2", "ci-zoo-backend/contract#changed", 2).
+ci_step("ci-zoo-backend/contract#changed/3", "ci-zoo-backend/contract#changed", 3).
+ci_guard("ci-zoo-backend/contract#changed/3", "steps.diff.outputs.same == 'false'").
+ci_step("ci-zoo-backend/contract#changed/4", "ci-zoo-backend/contract#changed", 4).
+ci_guard("ci-zoo-backend/contract#changed/4", "steps.diff.outputs.same == 'false'").
+ci_dispatches("ci-zoo-backend/contract#changed/4", "ci-zoo-platform", "openapi-changed").
+ci_repo("ci-zoo-web").
+ci_workflow("ci-zoo-web/web", "ci-zoo-web", "web").
+ci_on("ci-zoo-web/web", "push", "main").
+ci_on("ci-zoo-web/web", "repository_dispatch", "packages-published").
+ci_on("ci-zoo-web/web", "workflow_dispatch", "").
+ci_job("ci-zoo-web/web#build", "ci-zoo-web/web").
+ci_step("ci-zoo-web/web#build/0", "ci-zoo-web/web#build", 0).
+ci_step("ci-zoo-web/web#build/1", "ci-zoo-web/web#build", 1).
+ci_step("ci-zoo-web/web#build/2", "ci-zoo-web/web#build", 2).
+ci_tries("ci-zoo-web/web#build/2", 10, 15).
+ci_fetches("ci-zoo-web/web#build/2", "ci-zoo-platform", "payload_or_latest", "zoo-*.tgz").
+ci_step("ci-zoo-web/web#build/3", "ci-zoo-web/web#build", 3).
+ci_step("ci-zoo-web/web#build/4", "ci-zoo-web/web#build", 4).
+ci_retries("ci-zoo-web/web#build/4", 3, "node --check src/app.js").
+ci_tool("node --check src/app.js", "node --check").
+ci_step("ci-zoo-web/web#build/5", "ci-zoo-web/web#build", 5).
+ci_step("ci-zoo-web/web#build/6", "ci-zoo-web/web#build", 6).
+ci_holds("ci-zoo-web/web#build/6", "web-dist.tgz").
+ci_step("ci-zoo-web/web#build/7", "ci-zoo-web/web#build", 7).
+ci_uploads("ci-zoo-web/web#build/7", "web-dist").
+ci_holds("ci-zoo-web/web#build/7", "web-dist.tgz").
+ci_job("ci-zoo-web/web#ship", "ci-zoo-web/web").
+ci_needs("ci-zoo-web/web#ship", "ci-zoo-web/web#build").
+ci_step("ci-zoo-web/web#ship/0", "ci-zoo-web/web#ship", 0).
+ci_downloads("ci-zoo-web/web#ship/0", "web-dist", "run").
+ci_step("ci-zoo-web/web#ship/1", "ci-zoo-web/web#ship", 1).
+ci_releases("ci-zoo-web/web#ship/1", "ci-zoo-web", "web-", "public").
+ci_step("ci-zoo-web/web#ship/2", "ci-zoo-web/web#ship", 2).
+ci_dispatches("ci-zoo-web/web#ship/2", "ci-zoo-deploy", "web-built").
+ci_repo("ci-zoo-deploy").
+ci_workflow("ci-zoo-deploy/deploy-one", "ci-zoo-deploy", "deploy-one").
+ci_on("ci-zoo-deploy/deploy-one", "workflow_call", "").
+ci_workflow("ci-zoo-deploy/rollout", "ci-zoo-deploy", "rollout").
+ci_on("ci-zoo-deploy/rollout", "repository_dispatch", "backend-released").
+ci_on("ci-zoo-deploy/rollout", "repository_dispatch", "web-built").
+ci_on("ci-zoo-deploy/rollout", "workflow_dispatch", "").
+ci_job("ci-zoo-deploy/rollout#gate", "ci-zoo-deploy/rollout").
+ci_step("ci-zoo-deploy/rollout#gate/0", "ci-zoo-deploy/rollout#gate", 0).
+ci_tries("ci-zoo-deploy/rollout#gate/0", 10, 30).
+ci_fetches("ci-zoo-deploy/rollout#gate/0", "ci-zoo-backend", "latest", "openapi.json").
+ci_fetches("ci-zoo-deploy/rollout#gate/0", "ci-zoo-web", "latest", "web-dist.tgz").
+ci_job("ci-zoo-deploy/rollout#staging-auth", "ci-zoo-deploy/rollout").
+ci_needs("ci-zoo-deploy/rollout#staging-auth", "ci-zoo-deploy/rollout#gate").
+ci_env("ci-zoo-deploy/rollout#staging-auth", "staging").
+ci_step("ci-zoo-deploy/rollout#staging-auth/0", "ci-zoo-deploy/rollout#staging-auth", 0).
+ci_step("ci-zoo-deploy/rollout#staging-auth/1", "ci-zoo-deploy/rollout#staging-auth", 1).
+ci_tries("ci-zoo-deploy/rollout#staging-auth/1", 3, 15).
+ci_fetches("ci-zoo-deploy/rollout#staging-auth/1", "ci-zoo-backend", "output", "zoo-auth-*.tgz").
+ci_step("ci-zoo-deploy/rollout#staging-auth/2", "ci-zoo-deploy/rollout#staging-auth", 2).
+ci_sleeps("ci-zoo-deploy/rollout#staging-auth/2", 10).
+ci_job("ci-zoo-deploy/rollout#staging-orders", "ci-zoo-deploy/rollout").
+ci_needs("ci-zoo-deploy/rollout#staging-orders", "ci-zoo-deploy/rollout#gate").
+ci_needs("ci-zoo-deploy/rollout#staging-orders", "ci-zoo-deploy/rollout#staging-auth").
+ci_env("ci-zoo-deploy/rollout#staging-orders", "staging").
+ci_step("ci-zoo-deploy/rollout#staging-orders/0", "ci-zoo-deploy/rollout#staging-orders", 0).
+ci_step("ci-zoo-deploy/rollout#staging-orders/1", "ci-zoo-deploy/rollout#staging-orders", 1).
+ci_tries("ci-zoo-deploy/rollout#staging-orders/1", 3, 15).
+ci_fetches("ci-zoo-deploy/rollout#staging-orders/1", "ci-zoo-backend", "output", "zoo-orders-*.tgz").
+ci_step("ci-zoo-deploy/rollout#staging-orders/2", "ci-zoo-deploy/rollout#staging-orders", 2).
+ci_sleeps("ci-zoo-deploy/rollout#staging-orders/2", 10).
+ci_job("ci-zoo-deploy/rollout#staging-billing", "ci-zoo-deploy/rollout").
+ci_needs("ci-zoo-deploy/rollout#staging-billing", "ci-zoo-deploy/rollout#gate").
+ci_needs("ci-zoo-deploy/rollout#staging-billing", "ci-zoo-deploy/rollout#staging-orders").
+ci_env("ci-zoo-deploy/rollout#staging-billing", "staging").
+ci_step("ci-zoo-deploy/rollout#staging-billing/0", "ci-zoo-deploy/rollout#staging-billing", 0).
+ci_step("ci-zoo-deploy/rollout#staging-billing/1", "ci-zoo-deploy/rollout#staging-billing", 1).
+ci_tries("ci-zoo-deploy/rollout#staging-billing/1", 3, 15).
+ci_fetches("ci-zoo-deploy/rollout#staging-billing/1", "ci-zoo-backend", "output", "zoo-billing-*.tgz").
+ci_step("ci-zoo-deploy/rollout#staging-billing/2", "ci-zoo-deploy/rollout#staging-billing", 2).
+ci_sleeps("ci-zoo-deploy/rollout#staging-billing/2", 10).
+ci_job("ci-zoo-deploy/rollout#staging-web", "ci-zoo-deploy/rollout").
+ci_needs("ci-zoo-deploy/rollout#staging-web", "ci-zoo-deploy/rollout#gate").
+ci_needs("ci-zoo-deploy/rollout#staging-web", "ci-zoo-deploy/rollout#staging-billing").
+ci_env("ci-zoo-deploy/rollout#staging-web", "staging").
+ci_step("ci-zoo-deploy/rollout#staging-web/0", "ci-zoo-deploy/rollout#staging-web", 0).
+ci_step("ci-zoo-deploy/rollout#staging-web/1", "ci-zoo-deploy/rollout#staging-web", 1).
+ci_tries("ci-zoo-deploy/rollout#staging-web/1", 3, 15).
+ci_fetches("ci-zoo-deploy/rollout#staging-web/1", "ci-zoo-web", "output", "web-dist.tgz").
+ci_step("ci-zoo-deploy/rollout#staging-web/2", "ci-zoo-deploy/rollout#staging-web", 2).
+ci_sleeps("ci-zoo-deploy/rollout#staging-web/2", 10).
+ci_job("ci-zoo-deploy/rollout#prod-auth", "ci-zoo-deploy/rollout").
+ci_needs("ci-zoo-deploy/rollout#prod-auth", "ci-zoo-deploy/rollout#gate").
+ci_needs("ci-zoo-deploy/rollout#prod-auth", "ci-zoo-deploy/rollout#staging-web").
+ci_env("ci-zoo-deploy/rollout#prod-auth", "production").
+ci_step("ci-zoo-deploy/rollout#prod-auth/0", "ci-zoo-deploy/rollout#prod-auth", 0).
+ci_step("ci-zoo-deploy/rollout#prod-auth/1", "ci-zoo-deploy/rollout#prod-auth", 1).
+ci_tries("ci-zoo-deploy/rollout#prod-auth/1", 3, 15).
+ci_fetches("ci-zoo-deploy/rollout#prod-auth/1", "ci-zoo-backend", "output", "zoo-auth-*.tgz").
+ci_step("ci-zoo-deploy/rollout#prod-auth/2", "ci-zoo-deploy/rollout#prod-auth", 2).
+ci_sleeps("ci-zoo-deploy/rollout#prod-auth/2", 10).
+ci_job("ci-zoo-deploy/rollout#prod-orders", "ci-zoo-deploy/rollout").
+ci_needs("ci-zoo-deploy/rollout#prod-orders", "ci-zoo-deploy/rollout#gate").
+ci_needs("ci-zoo-deploy/rollout#prod-orders", "ci-zoo-deploy/rollout#prod-auth").
+ci_env("ci-zoo-deploy/rollout#prod-orders", "production").
+ci_step("ci-zoo-deploy/rollout#prod-orders/0", "ci-zoo-deploy/rollout#prod-orders", 0).
+ci_step("ci-zoo-deploy/rollout#prod-orders/1", "ci-zoo-deploy/rollout#prod-orders", 1).
+ci_tries("ci-zoo-deploy/rollout#prod-orders/1", 3, 15).
+ci_fetches("ci-zoo-deploy/rollout#prod-orders/1", "ci-zoo-backend", "output", "zoo-orders-*.tgz").
+ci_step("ci-zoo-deploy/rollout#prod-orders/2", "ci-zoo-deploy/rollout#prod-orders", 2).
+ci_sleeps("ci-zoo-deploy/rollout#prod-orders/2", 10).
+ci_job("ci-zoo-deploy/rollout#prod-billing", "ci-zoo-deploy/rollout").
+ci_needs("ci-zoo-deploy/rollout#prod-billing", "ci-zoo-deploy/rollout#gate").
+ci_needs("ci-zoo-deploy/rollout#prod-billing", "ci-zoo-deploy/rollout#prod-orders").
+ci_env("ci-zoo-deploy/rollout#prod-billing", "production").
+ci_step("ci-zoo-deploy/rollout#prod-billing/0", "ci-zoo-deploy/rollout#prod-billing", 0).
+ci_step("ci-zoo-deploy/rollout#prod-billing/1", "ci-zoo-deploy/rollout#prod-billing", 1).
+ci_tries("ci-zoo-deploy/rollout#prod-billing/1", 3, 15).
+ci_fetches("ci-zoo-deploy/rollout#prod-billing/1", "ci-zoo-backend", "output", "zoo-billing-*.tgz").
+ci_step("ci-zoo-deploy/rollout#prod-billing/2", "ci-zoo-deploy/rollout#prod-billing", 2).
+ci_sleeps("ci-zoo-deploy/rollout#prod-billing/2", 10).
+ci_job("ci-zoo-deploy/rollout#prod-web", "ci-zoo-deploy/rollout").
+ci_needs("ci-zoo-deploy/rollout#prod-web", "ci-zoo-deploy/rollout#gate").
+ci_needs("ci-zoo-deploy/rollout#prod-web", "ci-zoo-deploy/rollout#prod-billing").
+ci_env("ci-zoo-deploy/rollout#prod-web", "production").
+ci_step("ci-zoo-deploy/rollout#prod-web/0", "ci-zoo-deploy/rollout#prod-web", 0).
+ci_step("ci-zoo-deploy/rollout#prod-web/1", "ci-zoo-deploy/rollout#prod-web", 1).
+ci_tries("ci-zoo-deploy/rollout#prod-web/1", 3, 15).
+ci_fetches("ci-zoo-deploy/rollout#prod-web/1", "ci-zoo-web", "output", "web-dist.tgz").
+ci_step("ci-zoo-deploy/rollout#prod-web/2", "ci-zoo-deploy/rollout#prod-web", 2).
+ci_sleeps("ci-zoo-deploy/rollout#prod-web/2", 10).
+ci_matches("bundle-*", "bundle-auth").
+ci_matches("bundle-*", "bundle-billing").
+ci_matches("bundle-*", "bundle-orders").
+ci_matches("bundle-auth", "bundle-auth").
+ci_matches("contract", "contract").
+ci_matches("lib-*", "lib-api-client").
+ci_matches("lib-*", "lib-utils").
+ci_matches("lib-utils", "lib-utils").
+ci_matches("openapi", "openapi").
+ci_matches("openapi.json", "openapi.json").
+ci_matches("utils-tgz", "utils-tgz").
+ci_matches("web-dist", "web-dist").
+ci_matches("web-dist.tgz", "web-dist.tgz").
+ci_matches("zoo-*.tgz", "zoo-api-client-*.tgz").
+ci_matches("zoo-*.tgz", "zoo-auth-*.tgz").
+ci_matches("zoo-*.tgz", "zoo-billing-*.tgz").
+ci_matches("zoo-*.tgz", "zoo-orders-*.tgz").
+ci_matches("zoo-*.tgz", "zoo-utils-*.tgz").
+ci_matches("zoo-auth-*.tgz", "zoo-auth-*.tgz").
+ci_matches("zoo-billing-*.tgz", "zoo-billing-*.tgz").
+ci_matches("zoo-orders-*.tgz", "zoo-orders-*.tgz").
+ci_matches("zoo-utils-*.tgz", "zoo-utils-*.tgz").
