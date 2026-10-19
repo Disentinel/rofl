@@ -104,9 +104,9 @@ class Repo:
                 conc = {"group": conc} if isinstance(conc, str) else conc
                 fact("ci_concurrency", w, conc["group"], str(conc.get("cancel-in-progress", False)).lower())
             on = wf.get("on", {})
-            on = {on: {}} if isinstance(on, str) else on
+            on = {on: {}} if isinstance(on, str) else {e: {} for e in on} if isinstance(on, list) else on
             for event, spec in on.items():
-                spec = spec or {}
+                spec = spec if isinstance(spec, dict) else {}
                 types = spec.get("types") if event == "repository_dispatch" else spec.get("workflows") if event == "workflow_run" else spec.get("branches")
                 for t in types or [""]:
                     fact("ci_on", w, event, t)
@@ -121,8 +121,9 @@ class Repo:
     @staticmethod
     def combos(job: dict) -> list[dict]:
         matrix = (job.get("strategy") or {}).get("matrix") or {}
-        keys = [k for k in matrix if isinstance(matrix[k], list)]
-        return [dict(zip(keys, vals)) for vals in itertools.product(*(matrix[k] for k in keys))] or [{}]
+        keys = [k for k in matrix if isinstance(matrix[k], list) and k not in ("include", "exclude")]
+        base = [dict(zip(keys, vals)) for vals in itertools.product(*(matrix[k] for k in keys))] if keys else []
+        return base + [{k: str(v) for k, v in c.items()} for c in matrix.get("include") or []] or [{}]
 
     @staticmethod
     def jname(w: str, jid: str, combo: dict) -> str:
@@ -183,8 +184,8 @@ class Repo:
             return
         name = uses.split("@")[0]
         if name == "actions/upload-artifact":
-            fact("ci_uploads", s, w["name"])
-            held.add(w["name"])
+            fact("ci_uploads", s, w.get("name", "artifact"))
+            held.add(w.get("name", "artifact"))
             for p in w.get("path", "").split():
                 if "*" not in p:
                     self.hold(s, pathlib.Path(p).name)
@@ -192,7 +193,7 @@ class Repo:
             fact("ci_downloads", s, w.get("name") or w.get("pattern"), "triggering_run" if "run-id" in w else "run")
             patterns.add(w.get("name") or w.get("pattern"))
         elif name == "softprops/action-gh-release":
-            fact("ci_releases", s, self.name, re.sub(r"\$\{\{.*?\}\}", "", w["tag_name"]), "draft" if w.get("draft") == "true" else "public")
+            fact("ci_releases", s, self.name, re.sub(r"\$\{\{.*?\}\}", "", w.get("tag_name", "")), "draft" if w.get("draft") == "true" else "public")
         elif name == "peter-evans/repository-dispatch":
             fact("ci_dispatches", s, self.repo(w["repository"]), w["event-type"])
         run = sub(sub(step.get("run", ""), env), {"github.repository": self.name})
@@ -211,6 +212,8 @@ class Repo:
             fact("ci_tries", s, int(loop.group(1)), pause[-1] if pause else 0)
         elif pause:
             fact("ci_sleeps", s, pause[0])
+        for m in re.finditer(r"api\.github\.com/repos/([\w.-]+/[\w.-]+)/dispatches[^\n]*?\"event_type\":\s*\"([^\"]+)\"", run):
+            fact("ci_dispatches", s, self.repo(m.group(1)), m.group(2))
         for m in re.finditer(r"gh release (download)\s+(\S+)?[^\n]*?-R\s+\"?([\w./${}-]+)\"?(?:[^\n]*?-p\s+\"?([^\s\"]+)\"?)?", run):
             tag = m.group(2) if m.group(2) and not m.group(2).startswith("-") else "latest"
             var = re.fullmatch(r'"?\$(\w+)"?', tag)
