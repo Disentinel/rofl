@@ -179,6 +179,7 @@ ci_repo("ci-zoo-deploy").
 ci_workflow("ci-zoo-deploy/deploy-one", "ci-zoo-deploy", "deploy-one").
 ci_on("ci-zoo-deploy/deploy-one", "workflow_call", "").
 ci_workflow("ci-zoo-deploy/rollout", "ci-zoo-deploy", "rollout").
+ci_concurrency("ci-zoo-deploy/rollout", "rollout", "false").
 ci_on("ci-zoo-deploy/rollout", "repository_dispatch", "backend-released").
 ci_on("ci-zoo-deploy/rollout", "repository_dispatch", "web-built").
 ci_on("ci-zoo-deploy/rollout", "workflow_dispatch", "").

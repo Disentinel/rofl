@@ -11,6 +11,7 @@ a matrix value are kept or dropped; any other `if:` is a guard, kept as text.
 
   ci_repo(R)                         ci_workflow(W, R, Name)
   ci_on(W, Event, Type)              ci_paths(W, Glob)
+  ci_concurrency(W, Group, Cancel)   one run at a time; Cancel "true" stops the running one, else a newer start drops the waiting one
   ci_job(J, W)                       ci_needs(J, J2)          ci_job_if(J, Text)
   ci_status_if(J)                    the job's `if:` asks how its needs ended, so a skipped one does not skip it
   ci_env(J, Env)                     ci_step(S, J, Index)     ci_guard(S, Text)
@@ -98,6 +99,10 @@ class Repo:
         for file, wf in self.workflows.items():
             w = f"{self.name}/{file[:-4]}"
             fact("ci_workflow", w, self.name, wf.get("name", file))
+            conc = wf.get("concurrency")
+            if conc:
+                conc = {"group": conc} if isinstance(conc, str) else conc
+                fact("ci_concurrency", w, conc["group"], str(conc.get("cancel-in-progress", False)).lower())
             on = wf.get("on", {})
             on = {on: {}} if isinstance(on, str) else on
             for event, spec in on.items():

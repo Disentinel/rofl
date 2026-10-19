@@ -1,0 +1,50 @@
+-- runs.rofl — what the zoo's CI actually did, read from scanners/gh_runs.py: which run started which, and the
+-- one chain of jobs that made the whole cascade as long as it was. Times are seconds after the first run started.
+
+edb(run). edb(run_time). edb(run_end). edb(run_cause).
+edb(job_run). edb(job_time). edb(job_end). edb(step_time). edb(step_end).
+
+lattice last_end(max E).
+lattice job_last(R, max E).
+lattice prev_end(J, max E).
+lattice handed_at(R, max E).
+lattice first_job(R, min S).
+lattice polled_until(J, max E).
+
+last_end(E) :- run_time(_, _, E).
+cascade_time(E) :- last_end(E).
+
+-- the run that ends last, and back through what started each run
+on_chain(R) :- run_time(R, _, E), last_end(E).
+on_chain(C) :- on_chain(R), run_cause(R, C), not queue_wait(R, _).
+
+-- a run that waited for its turn: the run of the same workflow that ended just before its first job began
+first_job(R, S) :- job_run(J, R, _), job_time(J, S, _), S >= 0.
+queue_wait(R, D) :- run_time(R, S0, _), first_job(R, S), D is S - S0, D >= 20.
+held_by(R, R2) :- queue_wait(R, _), first_job(R, S), run(R, _, W, _), run(R2, _, W, _), R != R2, run_time(R2, _, E), E <= S, E >= S - 15.
+on_chain(R2) :- on_chain(R), held_by(R, R2).
+
+-- in a run, a job waits for the job of its run that ended last before it started
+job_last(R, E) :- job_run(J, R, _), job_time(J, _, E).
+prev_end(J, E) :- job_run(J, R, _), job_run(J2, R, _), J != J2, job_time(J, S, _), job_time(J2, _, E), E <= S, E >= 0.
+-- the job of a run that told the next run: the last of its jobs to end before the next one started
+handed_at(R, E) :- run_cause(R, C), run_time(R, S, _), job_run(J, C, _), job_time(J, _, E), E <= S, E >= 0.
+handoff(C, R, J) :- run_cause(R, C), handed_at(R, E), job_run(J, C, _), job_time(J, _, E).
+
+crit_job(J) :- on_chain(R), run_time(R, _, E), last_end(E), job_last(R, E), job_run(J, R, _), job_time(J, _, E).
+crit_job(J) :- on_chain(R), not queue_wait(R, _), handoff(_, R, J).
+crit_job(J) :- on_chain(R), held_by(_, R), job_last(R, E), job_run(J, R, _), job_time(J, _, E).
+crit_job(J2) :- crit_job(J), job_run(J, R, _), prev_end(J, E), job_run(J2, R, _), job_time(J2, _, E).
+
+-- a job that asked and asked again: what it waited for is the run of another workflow that ended
+-- last while it was asking
+polled_until(J, E) :- job_run(J, R, _), step_time(J, _, _, S, E0), E0 - S >= 30, run_time(R2, _, E), R2 != R, E > S, E <= E0.
+polled(J, R2) :- polled_until(J, E), run_time(R2, _, E).
+on_chain(R) :- crit_job(J), polled(J, R).
+crit_job(J2) :- crit_job(J), polled(J, R), job_last(R, E), job_run(J2, R, _), job_time(J2, _, E).
+
+-- where the chain's time went: each of its jobs, the steps that took a while, and the waits between runs
+crit_span(R, J, Name, S, E) :- crit_job(J), job_run(J, R, Name), job_time(J, S, E).
+crit_step(J, Step, D) :- crit_job(J), step_time(J, _, Step, S, E), D is E - S, D >= 5.
+handoff_wait(C, R, D) :- on_chain(R), not queue_wait(R, _), run_cause(R, C), handed_at(R, E), run_time(R, S, _), D is S - E.
+failed(R, J, Name) :- job_run(J, R, Name), job_end(J, "failure").

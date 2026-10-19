@@ -51,6 +51,9 @@ MUTATIONS = [
     ("publish without its status check",
      [("ci-zoo-platform/.github/workflows/packages.yml", "  publish:\n    if: ${{ !failure() && !cancelled() }}\n", "  publish:\n")],
      {"skipped_by_ancestor"}, set()),
+ ("staging auth deploys what the trigger named",
+     [("ci-zoo-deploy/.github/workflows/rollout.yml", "with: { service: auth, env: staging, repo: Disentinel/ci-zoo-backend, tag: '${{ needs.gate.outputs.svc }}'", "with: { service: auth, env: staging, repo: Disentinel/ci-zoo-backend, tag: '${{ github.event.client_payload.tag }}'")],
+     {"lost_trigger"}, set()),
 ]
 
 
@@ -71,17 +74,15 @@ def problems(zoo: pathlib.Path, rofl: str) -> set[tuple[str, ...]]:
     return rows
 
 
-def main(zoo_dir: str, rofl: str) -> None:
+def results(zoo_dir: str, rofl: str):
+    """The clean zoo's problems, then for each mutation: name, edits, rows that appeared, rows that went, ok."""
     src = pathlib.Path(zoo_dir)
     with tempfile.TemporaryDirectory() as tmp:
         clean_dir = pathlib.Path(tmp) / "clean"
         for r in REPOS:
             shutil.copytree(src / r, clean_dir / r, ignore=shutil.ignore_patterns(".git"))
         clean = problems(clean_dir, rofl)
-        print("clean zoo:")
-        for p in sorted(clean):
-            print("  ", *p)
-        failed = 0
+        out = []
         for name, edits, appears, goes in MUTATIONS:
             d = pathlib.Path(tmp) / "m"
             shutil.rmtree(d, ignore_errors=True)
@@ -92,16 +93,26 @@ def main(zoo_dir: str, rofl: str) -> None:
                     sys.exit(f"{name}: edit not found once in {f}")
                 (d / f).write_text(text.replace(old, new))
             got = problems(d, rofl)
-            new_rows, gone_rows = got - clean, clean - got
+            new_rows, gone_rows = sorted(got - clean), sorted(clean - got)
             ok = {r[0] for r in new_rows} == appears and {r[0] for r in gone_rows} == goes
-            failed += not ok
-            print(f"\n{'ok  ' if ok else 'FAIL'} {name}")
-            for r in sorted(new_rows):
-                print("   +", *r)
-            for r in sorted(gone_rows):
-                print("   -", *r)
-        print(f"\n{len(MUTATIONS) - failed} of {len(MUTATIONS)} mutations seen as expected")
-        sys.exit(1 if failed else 0)
+            out.append((name, edits, new_rows, gone_rows, ok))
+        return sorted(clean), out
+
+
+def main(zoo_dir: str, rofl: str) -> None:
+    clean, out = results(zoo_dir, rofl)
+    print("clean zoo:")
+    for p in clean:
+        print("  ", *p)
+    for name, _, new_rows, gone_rows, ok in out:
+        print(f"\n{'ok  ' if ok else 'FAIL'} {name}")
+        for r in new_rows:
+            print("   +", *r)
+        for r in gone_rows:
+            print("   -", *r)
+    failed = sum(not o[4] for o in out)
+    print(f"\n{len(out) - failed} of {len(out)} mutations seen as expected")
+    sys.exit(1 if failed else 0)
 
 
 if __name__ == "__main__":
