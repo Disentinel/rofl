@@ -1,7 +1,9 @@
-// The workbench's two GitHub sign-ins (workbench/github.ts, as built) and their worker (workbench/oauth-worker.js), against a GitHub played here:
-// storages, location and fetch are fakes, nothing reaches the network. `node --experimental-strip-types scripts/workbench_auth.ts GITHUB_JS WORKER_JS`
-// prints, as JSON, every wrong thing it saw; test:workbench runs it on the build and on copies with a planted defect.
+// The workbench's two GitHub sign-ins (workbench/github.ts, as built), the links it reads with them (nearLink of workbench/bench.ts) and their
+// worker (workbench/oauth-worker.js), against a GitHub played here: storages, location, beacons and fetch are fakes, nothing reaches the network.
+// `node --experimental-strip-types scripts/workbench_auth.ts GITHUB_JS WORKER_JS` prints, as JSON, every wrong thing it saw; test:workbench runs it
+// on the build and on copies with a planted defect.
 import { copyFileSync, readFileSync, writeFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import * as path from 'node:path';
 
 const [lib, workerSrc] = process.argv.slice(2);
@@ -27,11 +29,12 @@ type Sent = { url: string; method: string; auth?: string; body?: any };
 type Answer = { status: number; body?: unknown };
 /** One browser tab over a played GitHub: `route` answers each request, every request is kept in `sent`, and after 200 the network is gone. */
 function tab(route: (s: Sent) => Answer | undefined, local = new Store()) {
-  const t = { local, session: new Store(), sent: [] as Sent[], went: [] as string[], prompted: 0, pasted: null as string | null };
+  const t = { local, session: new Store(), sent: [] as Sent[], went: [] as string[], beacons: [] as { url: string; type: string; body: Promise<string> }[], prompted: 0, pasted: null as string | null };
   const g = globalThis as any;
   g.localStorage = t.local; g.sessionStorage = t.session;
   g.location = { search: '?gh=me/priv/a.rofl.md', origin: 'https://disentinel.github.io', pathname: '/rofl/', set href(u: string) { t.went.push(u); } };
   g.prompt = () => { t.prompted++; return t.pasted; };
+  Object.defineProperty(g, 'navigator', { configurable: true, value: { sendBeacon: (url: string, b: Blob) => { t.beacons.push({ url, type: b.type, body: b.text() }); return true; } } });
   g.fetch = async (url: string, init: any = {}) => {
     const s: Sent = { url, method: init.method ?? 'GET', auth: init.headers?.authorization, body: init.body ? JSON.parse(init.body) : undefined };
     t.sent.push(s);
@@ -45,6 +48,7 @@ let n = 0;
 const fresh = (file: string) => import(`${file}?${n++}`);
 const worker = (s: Sent) => s.url === EXCHANGE;
 const authorize = (t: { went: string[]; sent: Sent[] }) => [...t.went, ...t.sent.map((s) => s.url)].filter((u) => u.startsWith('https://github.com/login/oauth/authorize'));
+const s256 = (v: string) => createHash('sha256').update(v).digest('base64url');
 /** A played GitHub where `me` owns `me/priv`, `other/priv` is someone else's, and tokens are known by `logins`. */
 const github = (logins: Record<string, string>, more: (s: Sent) => Answer | undefined = () => undefined) => (s: Sent): Answer | undefined => {
   const tok = s.auth?.replace('Bearer ', '') ?? '';
@@ -54,75 +58,114 @@ const github = (logins: Record<string, string>, more: (s: Sent) => Answer | unde
 };
 const said = async (what: string, f: () => Promise<void>) => { try { await f(); } catch (e) { bad.push(`${what}: threw ${(e as Error).message}`); } };
 
-/** Signed in with the app through the played sign-in: the module and the tab. */
+/** Signed in with the app through the played sign-in, the link of `me/priv` opened: the module and the tab. */
 async function appSignIn(route: (s: Sent) => Answer | undefined, local?: Store) {
   const t = tab(route, local), gh = await fresh(configured);
   await gh.signIn();
   const u = new URL(t.went.at(-1) ?? 'https://x/');
   const q = new URLSearchParams({ code: 'app-code', state: u.searchParams.get('state') ?? '' });
-  return { t, gh, u, q, back: gh.back(q), who: await gh.finish(q) };
+  const back = gh.back(q), who = await gh.finish(q);
+  gh.scope('me/priv');
+  return { t, gh, u, q, back, who };
 }
-const appTokens = (s: Sent): Answer | undefined => worker(s) && s.body?.kind === 'app' && s.body.code === 'app-code' ? { status: 200, body: { access_token: 'ghu_1', refresh_token: 'ghr_1', expires_in: 28800 } } : undefined;
+const appTokens = (s: Sent): Answer | undefined => worker(s) && s.body?.kind === 'app' && s.body.code === 'app-code' && s.body.code_verifier ? { status: 200, body: { access_token: 'ghu_1' } } : undefined;
+const OWN = 'https://api.github.com/repos/me/priv/contents/a.rofl.md?ref=main';
 
-// the way it ships: no worker yet, so Sign in takes a pasted token, keeps it in this browser, reads with it and says the old sentences
+// the way it ships until the worker is deployed: Sign in takes a pasted token, keeps it in this browser, reads with it and says the old sentences
 await said('pasted token', async () => {
   const t = tab(github({ ghp_pasted: 'me' })), gh = await fresh(pasted);
   t.pasted = 'ghp_pasted';
   const who = await gh.signIn();
+  gh.scope('me/priv');
   want(t.prompted === 1 && who?.token === 'ghp_pasted' && !t.went.length, `pasted token: Sign in did not ask for a token and keep it (prompted ${t.prompted}, went to ${t.went.join(' ')})`);
   want(t.local.has('ghp_pasted'), 'pasted token: not kept in this browser');
-  want(await gh.read('https://api.github.com/repos/me/priv/contents/a.rofl.md?ref=main') === 'Declared as facts:', 'pasted token: the own private repository was not read with it');
+  want(await gh.read(OWN) === 'Declared as facts:', 'pasted token: the own private repository was not read with it');
   const why = await gh.whyNot('other/priv', 'main', 'a.rofl.md');
   want(why.say === '@me cannot read other/priv: it does not exist, or this account has no access to it. Ask its owner for access, or sign in with another account.' && !why.full, `pasted token: a repository it cannot read said ${JSON.stringify(why)}`);
   await gh.signOut();
   want(!t.local.has('ghp_pasted') && !t.sent.some(worker), 'pasted token: sign out did not just forget it');
 });
 
-// happy path: the app's sign-in, the own private repository read with the app's token, nothing offering more
+// happy path: the app's sign-in with PKCE, the own private repository read with the app's token, nothing offering more
 await said('app sign-in', async () => {
   const { t, gh, u, back, who } = await appSignIn(github({ ghu_1: 'me' }, appTokens));
   want(u.origin + u.pathname === 'https://github.com/login/oauth/authorize' && u.searchParams.get('client_id') === 'Iv23lihoSE5hsdbSbtXb' && !u.searchParams.get('scope'), `app sign-in: went to ${u}`);
+  const traded = t.sent.find(worker)?.body;
+  want(u.searchParams.get('code_challenge_method') === 'S256' && traded?.code_verifier?.length >= 43 && u.searchParams.get('code_challenge') === s256(traded.code_verifier),
+    `app sign-in: no PKCE: challenge ${u.searchParams.get('code_challenge')} by ${u.searchParams.get('code_challenge_method')}, verifier ${traded?.code_verifier}`);
   want(back === '?gh=me/priv/a.rofl.md', `app sign-in: came back to ${back}`);
   want(who?.login === 'me' && who.kind === 'app' && !who.full, `app sign-in: signed in as ${JSON.stringify(who)}`);
-  const text = await gh.read('https://api.github.com/repos/me/priv/contents/a.rofl.md?ref=main');
+  const text = await gh.read(OWN);
   want(text === 'Declared as facts:' && t.sent.at(-1)?.auth === 'Bearer ghu_1', `app sign-in: the own private repository read ${text} with ${t.sent.at(-1)?.auth}`);
-  want(t.local.has('ghr_1') && !t.session.has('ghu_1'), 'app sign-in: the token and its refresh are not kept in this browser');
+  want(t.local.has('ghu_1') && !t.session.has('ghu_1') && !t.local.has('refresh'), 'app sign-in: the token is not kept in this browser alone, or a refresh token is');
   const why = await gh.whyNot('me/priv', 'main', 'gone.rofl.md');
   want(!why.full && !authorize(t).slice(1).length, `app sign-in: a missing file offered full access: ${JSON.stringify(why)}`);
 });
 
-// 1. someone else's repository the app is not installed on: why, the install link and a button; nothing elevated without the click
+// the token goes to the repository the page opened, and nowhere else: not up and out of it, not to a ?url= link at GitHub's API
+await said('token scope', async () => {
+  const { t, gh } = await appSignIn(github({ ghu_1: 'me' }, appTokens));
+  const authed = () => t.sent.filter((s) => s.auth && !worker(s)).map((s) => s.url);
+  const before = authed().length;
+  for (const u of ['https://api.github.com/repos/me/priv/contents/../../../../user/installations', 'https://api.github.com/repos/me/priv/contents/%2e%2e/%2e%2e/%2e%2e/%2e%2e/repos/victim/secret/contents/x',
+    'https://api.github.com/repos/me/priv/contents/..%2f..%2f..%2f..%2fuser', 'https://api.github.com/repos/me/privy/contents/x', 'https://api.github.com/user/installations', 'https://evil.example/repos/me/priv/contents/x'])
+    await gh.read(u);
+  gh.scope();   // a ?url= link
+  await gh.read('https://api.github.com/user'); await gh.read('https://api.github.com/repos/me/priv/contents/a.rofl.md');
+  want(authed().length === before, `token scope: the token went to ${authed().slice(before).join(', ')}`);
+  gh.scope('ME/Priv');
+  want(await gh.read(OWN) === 'Declared as facts:' && authed().length === before + 1, 'token scope: the opened repository, named in another case, is not read with the token');
+  // the paths a notebook names, made into addresses inside the repository or none at all
+  const { nearLink } = await import(path.join(path.dirname(lib), 'bench.js'));
+  const asked: string[] = [];
+  const at = nearLink('https://github.com/me/priv/blob/a%26b/dir/a.rofl.md', async (u: string) => { asked.push(u); return 'x'; }, true);
+  for (const p of ['../../../../user/installations', '../../../../repos/victim/secret/contents/x', '%2e%2e/%2e%2e/user', 'dir/./a', 'dir//a', '..', 'dir/%2E%2E/%2e%2E/x', 'dir/a b#c?.md'])
+    await at.near.read(p);
+  const out = asked.filter((u) => { const x = new URL(u); return !x.pathname.startsWith('/repos/me/priv/contents/') || /%2e|%2f/i.test(x.pathname) || [...x.searchParams.keys()].join() !== 'ref'; });
+  want(!out.length && asked.length === 1 && asked[0] === 'https://api.github.com/repos/me/priv/contents/dir/a%20b%23c%3F.md?ref=a%26b', `a notebook's paths: asked for ${asked.join(', ')}`);
+  want(at.url === 'https://api.github.com/repos/me/priv/contents/dir/a.rofl.md?ref=a%26b' && at.ref === 'a&b', `a ref with & in it: ${at.url}, ref ${at.ref}`);
+});
+
+// someone else's repository the app is not installed on: why, the install link and a button; nothing elevated without the click
 await said('not installed', async () => {
   const installed: string[] = ['me'];
   const { t, gh } = await appSignIn(github({ ghu_1: 'me' }, (s) => appTokens(s)
     ?? (s.url.startsWith('https://api.github.com/user/installations') ? { status: 200, body: { installations: installed.map((login) => ({ account: { login } })) } } : undefined)));
   const before = authorize(t).length;
+  gh.scope('other/priv');
   want(await gh.read('https://api.github.com/repos/other/priv/contents/a.rofl.md?ref=main') === undefined, 'not installed: someone else\'s repository was read');
   const why = await gh.whyNot('other/priv', 'main', 'a.rofl.md');
   want(why.say === 'other has not installed ROFL Workbench. Ask them to install it (https://github.com/apps/rofl-workbench/installations/new), or sign in with full access.' && why.full === true,
     `not installed, someone else's: said ${JSON.stringify(why)}`);
   want(authorize(t).length === before, `not installed, someone else's: elevated without a click, to ${authorize(t).slice(before).join(' ')}`);
-  gh.elevate();
+  await gh.elevate();
   const up = new URL(authorize(t).at(-1) ?? 'https://x/');
-  want(authorize(t).length === before + 1 && up.searchParams.get('client_id') === OAUTH && up.searchParams.get('scope') === 'repo', `the click on full access went to ${up}`);
+  want(authorize(t).length === before + 1 && up.searchParams.get('client_id') === OAUTH && up.searchParams.get('scope') === 'repo' && up.searchParams.get('code_challenge_method') === 'S256', `the click on full access went to ${up}`);
   const mine = await gh.whyNot('me/other', 'main', 'a.rofl.md');
   installed.length = 0;
   const own = await gh.whyNot('me/other', 'main', 'a.rofl.md');
   want(own.say === 'ROFL Workbench cannot read me/other until it is installed on your account. Install ROFL Workbench on your account: https://github.com/apps/rofl-workbench/installations/new' && !own.full, `not installed, the own account: said ${JSON.stringify(own)}`);
   want(mine.say.startsWith('@me cannot read me/other: it does not exist, or this account has no access to it. Ask its owner for access') && mine.full === true, `installed and still unreadable: said ${JSON.stringify(mine)}`);
+  // the install page is a link, and only that address: another app's, named in a path, stays text
+  const html = gh.linked('me/x has no file https://github.com/apps/evil/installations/new at main. Install: https://github.com/apps/rofl-workbench/installations/new');
+  want((html.match(/<a /g) ?? []).length === 1 && html.includes('<a href="https://github.com/apps/rofl-workbench/installations/new">'), `the install link: ${html}`);
 });
 
-// 2. full access: kept in this tab alone, gone with it, and both tokens revoked on sign out
+// full access: kept in this tab alone, gone with it and revoked on the way out, and both tokens revoked before sign out forgets them
 await said('full access', async () => {
+  let revokes = true;
   const route = github({ ghu_1: 'me', gho_F: 'me' }, (s) => appTokens(s)
-    ?? (worker(s) && s.body?.kind === 'oauth' && s.body.code === 'full-code' ? { status: 200, body: { access_token: 'gho_F' } } : undefined)
-    ?? (worker(s) && s.body?.revoke ? { status: 200, body: { revoked: true } } : undefined));
+    ?? (worker(s) && s.body?.kind === 'oauth' && s.body.code === 'full-code' && s.body.code_verifier ? { status: 200, body: { access_token: 'gho_F' } } : undefined)
+    ?? (worker(s) && s.body?.revoke ? { status: 200, body: { revoked: revokes } } : undefined));
   const { t, gh } = await appSignIn(route);
-  gh.elevate();
-  const state = new URL(t.went.at(-1)!).searchParams.get('state')!;
-  const who = await gh.finish(new URLSearchParams({ code: 'full-code', state }));
+  const full = async () => {
+    await gh.elevate();
+    const state = new URL(t.went.at(-1)!).searchParams.get('state')!;
+    return gh.finish(new URLSearchParams({ code: 'full-code', state }));
+  };
+  const who = await full();
   want(who?.full && gh.signedIn()?.token === 'gho_F', `full access: signed in as ${JSON.stringify(who)}`);
-  await gh.read('https://api.github.com/repos/me/priv/contents/a.rofl.md?ref=main');
+  await gh.read(OWN);
   want(t.sent.at(-1)?.auth === 'Bearer gho_F', 'full access: reads do not use the full-access token');
   want(!t.local.has('gho_F'), 'full access: the token reached localStorage');
   want(t.session.has('gho_F'), 'full access: the token is not kept in this tab');
@@ -130,13 +173,28 @@ await said('full access', async () => {
   want(gh2.signedIn()?.token === 'ghu_1' && !reloaded.local.has('gho_F') && !reloaded.session.has('gho_F'), `full access: a new tab still holds the token: ${gh2.signedIn()?.token}`);
   const t2 = tab(route, t.local);   // back in the first tab
   (globalThis as any).sessionStorage = t.session;
+  // GitHub does not confirm the revoke: both tokens kept, and the sign out says so
+  revokes = false;
+  const failed = await gh.signOut().then(() => 'signed out', (e: Error) => e.message);
+  want(failed === 'Could not revoke the token at GitHub; it is still valid. Try Sign out again, or revoke it at github.com/settings/applications.', `a revoke refused: sign out said ${failed}`);
+  want(t.local.has('ghu_1') && t.session.has('gho_F'), 'a revoke refused: a token GitHub still takes was forgotten');
+  revokes = true; t2.sent.length = 0;
   await gh.signOut();
   const revoked = t2.sent.filter((s) => worker(s) && s.body?.revoke).map((s) => `${s.body.kind}:${s.body.revoke}`).sort();
   want(revoked.join(' ') === 'app:ghu_1 oauth:gho_F', `sign out revoked ${revoked.join(' ') || 'nothing'}`);
   want(!t.local.has('ghu_1') && !t.session.has('gho_F') && !gh.signedIn(), 'sign out left a token in a storage');
+  // the tab closing with full access held: one beacon revokes it, and the tab forgets it
+  const again = await appSignIn(route);
+  const gh3 = again.gh;
+  await gh3.elevate();
+  await gh3.finish(new URLSearchParams({ code: 'full-code', state: new URL(again.t.went.at(-1)!).searchParams.get('state')! }));
+  gh3.leaving();
+  const b = again.t.beacons;
+  want(b.length === 1 && b[0].url === EXCHANGE && b[0].type === 'text/plain' && JSON.stringify(JSON.parse(await b[0].body)) === '{"kind":"oauth","revoke":"gho_F"}' && !again.t.session.has('gho_F'),
+    `the tab closing: ${b.length} beacons, ${b[0] ? `${b[0].type} ${await b[0].body}` : ''}; token kept ${again.t.session.has('gho_F')}`);
 });
 
-// 3. a code that came back to a sign-in this tab did not start, or with no state, is refused before anything is traded
+// a code that came back to a sign-in this tab did not start, or with no state, is refused before anything is traded
 await said('foreign state', async () => {
   const t = tab(github({}, appTokens)), gh = await fresh(configured);
   await gh.signIn();
@@ -147,58 +205,54 @@ await said('foreign state', async () => {
   want(!t.sent.some(worker), `a foreign state: ${t.sent.filter(worker).length} codes traded`);
 });
 
-// 4. an expired app token: refreshed once and tried again; when that fails too, signed out with a sentence, no loop
+// an expired token: one request, then signed out with a sentence; no refresh, no retry
 await said('expired', async () => {
-  let refreshes = 0, renewed = true;
-  const route = github({ ghu_1: 'me', ghu_r1: 'me', ghu_r2: 'me' }, (s) => appTokens(s) ?? (worker(s) && s.body?.refresh_token ? (refreshes++, renewed
-    ? { status: 200, body: { access_token: `ghu_r${refreshes}`, refresh_token: `ghr_r${refreshes}` } } : { status: 401, body: { error: 'bad_refresh_token' } }) : undefined));
-  const live = new Set(['ghu_1']);
-  const { t, gh } = await appSignIn((s) => s.url.startsWith('https://api.github.com/repos/') && !live.has(s.auth?.replace('Bearer ', '') ?? '') ? { status: 401 } : route(s));
-  live.clear(); live.add('ghu_r1');
-  const [a, b] = await Promise.all([1, 2].map(() => gh.read('https://api.github.com/repos/me/priv/contents/a.rofl.md?ref=main')));
-  want(a === 'Declared as facts:' && b === a && refreshes === 1, `expired: two reads gave ${a}, ${b} after ${refreshes} refreshes, not one`);
-  want(gh.signedIn()?.token === 'ghu_r1' && t.local.has('ghr_r1'), 'expired: the refreshed token is not kept');
-  live.clear();
+  const { t, gh } = await appSignIn((s) => s.url.startsWith('https://api.github.com/repos/') ? { status: 401 } : github({ ghu_1: 'me' }, appTokens)(s));
   const before = t.sent.length;
-  const c = await gh.read('https://api.github.com/repos/me/priv/contents/a.rofl.md?ref=main');
-  want(c === undefined && refreshes === 2 && t.sent.length - before === 3, `refreshed and still refused: ${refreshes - 1} refreshes, ${t.sent.length - before} requests, not 1 and 3`);
-  want(!gh.signedIn(), 'refreshed and still refused: still signed in');
+  const c = await gh.read(OWN);
+  want(c === undefined && t.sent.length - before === 1, `expired: ${t.sent.length - before} requests, not 1: ${t.sent.slice(before, before + 4).map((s) => s.url).join(', ')}`);
+  want(!gh.signedIn() && !t.local.has('ghu_1'), 'expired: still signed in');
   const why = await gh.whyNot('me/priv', 'main', 'a.rofl.md');
-  want(why.say === 'Your GitHub sign-in has expired or was revoked. Sign in again.', `refreshed and still refused: said ${JSON.stringify(why)}`);
-  // the refresh itself refused
-  const second = await appSignIn((s) => s.url.startsWith('https://api.github.com/repos/') ? { status: 401 } : route(s));
-  renewed = false; refreshes = 0;
-  const d = await second.gh.read('https://api.github.com/repos/me/priv/contents/a.rofl.md?ref=main');
-  want(d === undefined && refreshes === 1 && !second.gh.signedIn() && !second.t.local.has('ghu_1'), `the refresh refused: ${refreshes} refreshes, signed in ${JSON.stringify(second.gh.signedIn())}`);
-  want((await second.gh.whyNot('me/priv', 'main', 'a.rofl.md')).say === 'Your GitHub sign-in has expired or was revoked. Sign in again.', 'the refresh refused: no sentence saying sign in again');
+  want(why.say === 'Your GitHub sign-in has expired. Sign in again.', `expired: said ${JSON.stringify(why)}`);
 });
 
-// the worker: only 'app' or 'oauth', and one whole request, reach GitHub, each with its own app's secret
+// the worker: only 'app' or 'oauth', a code with its verifier or a revoke, reach GitHub, each with its own app's secret; no refresh token passes
 await said('worker', async () => {
   const w = path.join(path.dirname(lib), 'oauth-worker.mjs');
   copyFileSync(workerSrc, w);
   const { default: wk } = await fresh(w);
   const env = { APP_CLIENT_ID: 'app-id', APP_CLIENT_SECRET: 'app-secret', OAUTH_CLIENT_ID: 'oauth-id', OAUTH_CLIENT_SECRET: 'oauth-secret' };
   const t = tab((s) => s.url === 'https://github.com/login/oauth/access_token' ? { status: 200, body: { access_token: 'tok', refresh_token: 'ref', expires_in: 1 } } : { status: 204 });
-  const ask = (body: unknown, e: object = env, method = 'POST') => wk.fetch(new Request('https://w/', { method, ...method === 'POST' ? { body: typeof body === 'string' ? body : JSON.stringify(body) } : {} }), e)
+  const ask = (body: unknown, e: object = env, method = 'POST', type = 'application/json') => wk.fetch(new Request('https://w/', { method, headers: { 'content-type': type }, ...method === 'POST' ? { body: typeof body === 'string' ? body : JSON.stringify(body) } : {} }), e)
     .catch((x: Error) => Response.json({ threw: x.message }, { status: 599 })) as Promise<Response>;
-  for (const [body, why] of [[{ kind: 'evil', code: 'c' }, 'kind evil'], [{ code: 'c' }, 'no kind'], [{ kind: 'app' }, 'no code'], [{ kind: '__proto__', code: 'c' }, 'kind __proto__'],
-    [{ kind: 'constructor', code: 'c' }, 'kind constructor'], [{ kind: 'toString', code: 'c' }, 'kind toString'], [{ kind: ['app'], code: 'c' }, 'kind [app]'],
-    [{ kind: ['oauth'], revoke: 't' }, 'kind [oauth]'], [{ kind: 1, code: 'c' }, 'kind 1'],
-    [{ kind: 'oauth', refresh_token: 'r' }, 'a refresh for the full-access app'], [{ kind: 'app', code: 'c', revoke: 't' }, 'a code and a revoke at once'], ['not json', 'not JSON'], [null, 'null']] as const) {
+  for (const [body, why] of [[{ kind: 'evil', code: 'c', code_verifier: 'v' }, 'kind evil'], [{ code: 'c', code_verifier: 'v' }, 'no kind'], [{ kind: 'app' }, 'no code'],
+    [{ kind: '__proto__', code: 'c', code_verifier: 'v' }, 'kind __proto__'], [{ kind: 'constructor', code: 'c', code_verifier: 'v' }, 'kind constructor'], [{ kind: 'toString', code: 'c', code_verifier: 'v' }, 'kind toString'],
+    [{ kind: ['app'], code: 'c', code_verifier: 'v' }, 'kind [app]'], [{ kind: ['oauth'], revoke: 't' }, 'kind [oauth]'], [{ kind: 1, code: 'c', code_verifier: 'v' }, 'kind 1'],
+    [{ kind: 'app', code: 'c' }, 'a code with no code_verifier'], [{ kind: 'app', refresh_token: 'r' }, 'a refresh'],
+    [{ kind: 'app', code: 'c', code_verifier: 'v', revoke: 't' }, 'a code and a revoke at once'], ['not json', 'not JSON'], [null, 'null']] as const) {
     const r = await ask(body);
     want(r.status === 400, `worker, ${why}: answered ${r.status}, not 400`);
   }
   want((await ask(null, env, 'GET')).status === 405, 'worker: a GET was not refused');
-  want((await ask({ kind: 'oauth', code: 'c' }, { APP_CLIENT_ID: 'app-id', APP_CLIENT_SECRET: 'app-secret' })).status === 500, 'worker: an app with no secrets set was not refused');
+  want((await ask({ kind: 'oauth', code: 'c', code_verifier: 'v' }, { APP_CLIENT_ID: 'app-id', APP_CLIENT_SECRET: 'app-secret' })).status === 500, 'worker: an app with no secrets set was not refused');
   want(!t.sent.length, `worker: a refused request reached GitHub: ${t.sent.map((s) => `${s.url} ${JSON.stringify(s.body)}`).join(', ')}`);
-  const code = await (await ask({ kind: 'app', code: 'c' })).json();
-  want(code.access_token === 'tok' && code.refresh_token === 'ref' && t.sent[0]?.body?.client_id === 'app-id' && t.sent[0]?.body?.client_secret === 'app-secret', `worker: a code for the app traded as ${JSON.stringify(t.sent[0]?.body)}`);
-  await ask({ kind: 'app', refresh_token: 'r' });
-  want(t.sent[1]?.body?.grant_type === 'refresh_token' && t.sent[1]?.body?.refresh_token === 'r' && t.sent[1]?.body?.client_id === 'app-id', `worker: a refresh went as ${JSON.stringify(t.sent[1]?.body)}`);
-  const rv = await (await ask({ kind: 'oauth', revoke: 'gho' })).json();
-  want(rv.revoked && t.sent[2]?.method === 'DELETE' && t.sent[2]?.url === 'https://api.github.com/applications/oauth-id/token' && t.sent[2]?.auth === `Basic ${btoa('oauth-id:oauth-secret')}` && t.sent[2]?.body?.access_token === 'gho',
-    `worker: a revoke went as ${JSON.stringify(t.sent[2])}`);
+  const code = await (await ask({ kind: 'app', code: 'c', code_verifier: 'v' })).json();
+  want(code.access_token === 'tok' && !('refresh_token' in code) && JSON.stringify(t.sent[0]?.body) === '{"client_id":"app-id","client_secret":"app-secret","code":"c","code_verifier":"v"}',
+    `worker: a code for the app traded as ${JSON.stringify(t.sent[0]?.body)}, answered ${JSON.stringify(code)}`);
+  const rv = await (await ask({ kind: 'oauth', revoke: 'gho' }, env, 'POST', 'text/plain')).json();
+  want(rv.revoked && t.sent[1]?.method === 'DELETE' && t.sent[1]?.url === 'https://api.github.com/applications/oauth-id/token' && t.sent[1]?.auth === `Basic ${btoa('oauth-id:oauth-secret')}` && t.sent[1]?.body?.access_token === 'gho',
+    `worker: a revoke sent as text/plain went as ${JSON.stringify(t.sent[1])}`);
+});
+
+// the page runs no script but its own and ELK pinned by its hash, and fetches only from its own files, GitHub and the worker
+await said('policy', async () => {
+  const root = path.dirname(path.dirname(lib));
+  const csp = /<meta http-equiv="Content-Security-Policy" content="([^"]*)">/.exec(readFileSync(path.join(root, 'index.html'), 'utf8'))?.[1] ?? '';
+  const d: Record<string, string> = Object.fromEntries(csp.split(';').map((x) => x.trim().split(/\s+/)).map(([k, ...v]) => [k, v.join(' ')]));
+  const pic = readFileSync(path.join(root, 'lib/pictures.js'), 'utf8'), elk = /export const ELK = '([^']+)'/.exec(pic)?.[1];
+  want(elk && d['script-src'] === `'self' ${elk}` && d['object-src'] === "'none'" && d['base-uri'] === "'none'" && d['img-src'] === "'self' data:"
+    && /^'self' https:\/\/api\.github\.com https:\/\/raw\.githubusercontent\.com https:\/\/[^\s/]+$/.test(d['connect-src'] ?? ''), `policy: the page's Content-Security-Policy is "${csp}"`);
+  want(pic.includes('s.integrity = CDN[src];') && /sha384-[A-Za-z0-9+/]{64}/.test(pic) && pic.includes("s.crossOrigin = 'anonymous';"), 'policy: ELK is loaded without its hash');
 });
 
 console.log(JSON.stringify(bad));
