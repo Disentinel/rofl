@@ -1,5 +1,5 @@
 // The workbench's two GitHub sign-ins (workbench/github.ts, as built), the links it reads with them (nearLink of workbench/bench.ts) and their
-// worker (workbench/oauth-worker.js), against a GitHub played here: storages, location, beacons and fetch are fakes, nothing reaches the network.
+// worker (workbench/oauth-worker.js), against a GitHub played here: storages, location, the clock and fetch are fakes, nothing reaches the network.
 // `node --experimental-strip-types scripts/workbench_auth.ts GITHUB_JS WORKER_JS` prints, as JSON, every wrong thing it saw; test:workbench runs it
 // on the build and on copies with a planted defect.
 import { copyFileSync, readFileSync, writeFileSync } from 'node:fs';
@@ -9,6 +9,8 @@ import * as path from 'node:path';
 const [lib, workerSrc] = process.argv.slice(2);
 const EXCHANGE = 'https://rofl-oauth.example.workers.dev/', OAUTH = 'Ov23-full-access';
 const bad: string[] = [];
+let clock = Date.parse('2026-10-20T12:00:00Z');   // the page's clock, moved by the test
+Date.now = () => clock;
 const want = (ok: unknown, what: string) => { if (!ok) bad.push(what); };
 
 // two copies of the module, whatever the source holds: one with no worker (the pasted token), one with the worker and the full-access app set up
@@ -29,12 +31,11 @@ type Sent = { url: string; method: string; auth?: string; body?: any };
 type Answer = { status: number; body?: unknown };
 /** One browser tab over a played GitHub: `route` answers each request, every request is kept in `sent`, and after 200 the network is gone. */
 function tab(route: (s: Sent) => Answer | undefined, local = new Store()) {
-  const t = { local, session: new Store(), sent: [] as Sent[], went: [] as string[], beacons: [] as { url: string; type: string; body: Promise<string> }[], prompted: 0, pasted: null as string | null };
+  const t = { local, session: new Store(), sent: [] as Sent[], went: [] as string[], prompted: 0, pasted: null as string | null };
   const g = globalThis as any;
   g.localStorage = t.local; g.sessionStorage = t.session;
   g.location = { search: '?gh=me/priv/a.rofl.md', origin: 'https://disentinel.github.io', pathname: '/rofl/', set href(u: string) { t.went.push(u); } };
   g.prompt = () => { t.prompted++; return t.pasted; };
-  Object.defineProperty(g, 'navigator', { configurable: true, value: { sendBeacon: (url: string, b: Blob) => { t.beacons.push({ url, type: b.type, body: b.text() }); return true; } } });
   g.fetch = async (url: string, init: any = {}) => {
     const s: Sent = { url, method: init.method ?? 'GET', auth: init.headers?.authorization, body: init.body ? JSON.parse(init.body) : undefined };
     t.sent.push(s);
@@ -124,6 +125,13 @@ await said('token scope', async () => {
   const out = asked.filter((u) => { const x = new URL(u); return !x.pathname.startsWith('/repos/me/priv/contents/') || /%2e|%2f/i.test(x.pathname) || [...x.searchParams.keys()].join() !== 'ref'; });
   want(!out.length && asked.length === 1 && asked[0] === 'https://api.github.com/repos/me/priv/contents/dir/a%20b%23c%3F.md?ref=a%26b', `a notebook's paths: asked for ${asked.join(', ')}`);
   want(at.url === 'https://api.github.com/repos/me/priv/contents/dir/a.rofl.md?ref=a%26b' && at.ref === 'a&b', `a ref with & in it: ${at.url}, ref ${at.ref}`);
+  // a link outside GitHub is refused before anything is fetched, with a sentence saying what opens
+  for (const l of ['https://evil.example/n.rofl.md', 'http://github.com/me/priv/blob/main/a.rofl.md', 'https://github.com.evil.example/me/priv/blob/main/a.rofl.md', 'evil.example/n.rofl.md']) {
+    const got = (() => { try { return `opened ${nearLink(l, async () => undefined).url}`; } catch (e) { return (e as Error).message; } })();
+    want(got === 'Only GitHub links open here: github.com/owner/repo/blob/…', `a link outside GitHub, ${l}: ${got}`);
+  }
+  want(nearLink('https://raw.githubusercontent.com/me/priv/main/a.rofl.md', async () => undefined).repo === 'me/priv', 'a raw GitHub link is refused');
+  want(!readFileSync(path.join(path.dirname(lib), 'page.js'), 'utf8').includes('a site that lets other pages read it'), 'the page still offers to read other sites');
 });
 
 // someone else's repository the app is not installed on: why, the install link and a button; nothing elevated without the click
@@ -151,19 +159,18 @@ await said('not installed', async () => {
   want((html.match(/<a /g) ?? []).length === 1 && html.includes('<a href="https://github.com/apps/rofl-workbench/installations/new">'), `the install link: ${html}`);
 });
 
-// full access: kept in this tab alone, gone with it and revoked on the way out, and both tokens revoked before sign out forgets them
+// full access: kept in this tab alone, through a reload, until sign out or two hours after it was issued; both tokens revoked before sign out forgets them
 await said('full access', async () => {
   let revokes = true;
   const route = github({ ghu_1: 'me', gho_F: 'me' }, (s) => appTokens(s)
     ?? (worker(s) && s.body?.kind === 'oauth' && s.body.code === 'full-code' && s.body.code_verifier ? { status: 200, body: { access_token: 'gho_F' } } : undefined)
     ?? (worker(s) && s.body?.revoke ? { status: 200, body: { revoked: revokes } } : undefined));
-  const { t, gh } = await appSignIn(route);
-  const full = async () => {
-    await gh.elevate();
-    const state = new URL(t.went.at(-1)!).searchParams.get('state')!;
-    return gh.finish(new URLSearchParams({ code: 'full-code', state }));
+  const full = async (g: any, tt: { went: string[] }) => {
+    await g.elevate();
+    return g.finish(new URLSearchParams({ code: 'full-code', state: new URL(tt.went.at(-1)!).searchParams.get('state')! }));
   };
-  const who = await full();
+  const { t, gh } = await appSignIn(route);
+  const who = await full(gh, t);
   want(who?.full && gh.signedIn()?.token === 'gho_F', `full access: signed in as ${JSON.stringify(who)}`);
   await gh.read(OWN);
   want(t.sent.at(-1)?.auth === 'Bearer gho_F', 'full access: reads do not use the full-access token');
@@ -171,8 +178,9 @@ await said('full access', async () => {
   want(t.session.has('gho_F'), 'full access: the token is not kept in this tab');
   const reloaded = tab(route, t.local), gh2 = await fresh(configured);
   want(gh2.signedIn()?.token === 'ghu_1' && !reloaded.local.has('gho_F') && !reloaded.session.has('gho_F'), `full access: a new tab still holds the token: ${gh2.signedIn()?.token}`);
-  const t2 = tab(route, t.local);   // back in the first tab
+  const t2 = tab(route, t.local);   // back in the first tab, reloaded: its storage, a fresh page
   (globalThis as any).sessionStorage = t.session;
+  want((await fresh(configured)).signedIn()?.token === 'gho_F', 'full access: a reload of the tab lost the token');
   // GitHub does not confirm the revoke: both tokens kept, and the sign out says so
   revokes = false;
   const failed = await gh.signOut().then(() => 'signed out', (e: Error) => e.message);
@@ -183,15 +191,34 @@ await said('full access', async () => {
   const revoked = t2.sent.filter((s) => worker(s) && s.body?.revoke).map((s) => `${s.body.kind}:${s.body.revoke}`).sort();
   want(revoked.join(' ') === 'app:ghu_1 oauth:gho_F', `sign out revoked ${revoked.join(' ') || 'nothing'}`);
   want(!t.local.has('ghu_1') && !t.session.has('gho_F') && !gh.signedIn(), 'sign out left a token in a storage');
-  // the tab closing with full access held: one beacon revokes it, and the tab forgets it
-  const again = await appSignIn(route);
-  const gh3 = again.gh;
-  await gh3.elevate();
-  await gh3.finish(new URLSearchParams({ code: 'full-code', state: new URL(again.t.went.at(-1)!).searchParams.get('state')! }));
-  gh3.leaving();
-  const b = again.t.beacons;
-  want(b.length === 1 && b[0].url === EXCHANGE && b[0].type === 'text/plain' && JSON.stringify(JSON.parse(await b[0].body)) === '{"kind":"oauth","revoke":"gho_F"}' && !again.t.session.has('gho_F'),
-    `the tab closing: ${b.length} beacons, ${b[0] ? `${b[0].type} ${await b[0].body}` : ''}; token kept ${again.t.session.has('gho_F')}`);
+  // two hours after it was issued: its timer is armed for then, and the first use after revokes it although the timer never fired
+  const realTimeout = globalThis.setTimeout, H2 = 2 * 60 * 60 * 1000;
+  try {
+    const a = await appSignIn(route);
+    await full(a.gh, a.t);
+    let armed = -1, fire: () => Promise<void> = async () => {};
+    (globalThis as any).setTimeout = (f: () => Promise<void>, ms: number) => { armed = ms; fire = f; return 0; };
+    a.gh.armFull(() => {});
+    want(armed === H2, `the full-access timer is armed for ${armed} ms, not two hours`);
+    clock += H2 - 1;
+    await a.gh.read(OWN);
+    want(a.t.sent.at(-1)?.auth === 'Bearer gho_F', 'a moment before two hours the full-access token is not used');
+    clock += 1;
+    const n0 = a.t.sent.length;
+    await a.gh.read(OWN);
+    const after = a.t.sent.slice(n0);
+    want(after.some((s) => worker(s) && s.body?.revoke === 'gho_F') && after.at(-1)?.auth === 'Bearer ghu_1' && !a.t.session.has('gho_F') && await a.gh.checkFull() === '',
+      `at two hours the full-access token is not revoked before use: ${after.map((s) => `${s.url} ${s.auth ?? JSON.stringify(s.body)}`).join(', ')}`);
+    // the timer firing at two hours, GitHub not confirming the revoke: forgotten anyway, and said once
+    const b = await appSignIn(route);
+    await full(b.gh, b.t);
+    const told: string[] = [];
+    b.gh.armFull((n: string) => told.push(n));
+    clock += H2; revokes = false;
+    await fire();
+    want(told.join('|') === 'The full-access token expired but GitHub did not confirm it revoked; revoke it at github.com/settings/applications.' && !b.t.session.has('gho_F') && await b.gh.checkFull() === '',
+      `the timer at two hours, the revoke refused: said ${JSON.stringify(told)}, token kept ${b.t.session.has('gho_F')}`);
+  } finally { globalThis.setTimeout = realTimeout; revokes = true; }
 });
 
 // a code that came back to a sign-in this tab did not start, or with no state, is refused before anything is traded
@@ -222,7 +249,8 @@ await said('worker', async () => {
   copyFileSync(workerSrc, w);
   const { default: wk } = await fresh(w);
   const env = { APP_CLIENT_ID: 'app-id', APP_CLIENT_SECRET: 'app-secret', OAUTH_CLIENT_ID: 'oauth-id', OAUTH_CLIENT_SECRET: 'oauth-secret' };
-  const t = tab((s) => s.url === 'https://github.com/login/oauth/access_token' ? { status: 200, body: { access_token: 'tok', refresh_token: 'ref', expires_in: 1 } } : { status: 204 });
+  let gone = 204;
+  const t = tab((s) => s.url === 'https://github.com/login/oauth/access_token' ? { status: 200, body: { access_token: 'tok', refresh_token: 'ref', expires_in: 1 } } : { status: gone });
   const ask = (body: unknown, e: object = env, method = 'POST', type = 'application/json') => wk.fetch(new Request('https://w/', { method, headers: { 'content-type': type }, ...method === 'POST' ? { body: typeof body === 'string' ? body : JSON.stringify(body) } : {} }), e)
     .catch((x: Error) => Response.json({ threw: x.message }, { status: 599 })) as Promise<Response>;
   for (const [body, why] of [[{ kind: 'evil', code: 'c', code_verifier: 'v' }, 'kind evil'], [{ code: 'c', code_verifier: 'v' }, 'no kind'], [{ kind: 'app' }, 'no code'],
@@ -239,9 +267,11 @@ await said('worker', async () => {
   const code = await (await ask({ kind: 'app', code: 'c', code_verifier: 'v' })).json();
   want(code.access_token === 'tok' && !('refresh_token' in code) && JSON.stringify(t.sent[0]?.body) === '{"client_id":"app-id","client_secret":"app-secret","code":"c","code_verifier":"v"}',
     `worker: a code for the app traded as ${JSON.stringify(t.sent[0]?.body)}, answered ${JSON.stringify(code)}`);
-  const rv = await (await ask({ kind: 'oauth', revoke: 'gho' }, env, 'POST', 'text/plain')).json();
+  const rv = await (await ask({ kind: 'oauth', revoke: 'gho' })).json();
   want(rv.revoked && t.sent[1]?.method === 'DELETE' && t.sent[1]?.url === 'https://api.github.com/applications/oauth-id/token' && t.sent[1]?.auth === `Basic ${btoa('oauth-id:oauth-secret')}` && t.sent[1]?.body?.access_token === 'gho',
-    `worker: a revoke sent as text/plain went as ${JSON.stringify(t.sent[1])}`);
+    `worker: a revoke went as ${JSON.stringify(t.sent[1])}`);
+  gone = 404;
+  want((await (await ask({ kind: 'oauth', revoke: 'gho' })).json()).revoked === false, 'worker: a revoke GitHub answered 404 was said to be revoked');
 });
 
 // the page runs no script but its own and ELK pinned by its hash, and fetches only from its own files, GitHub and the worker

@@ -310,6 +310,9 @@ const AUTH_PLANTS: [string, string, [string, string], RegExp][] = [
   ['a token forgotten before GitHub revokes it', 'lib/github.js', ['.j.revoked !== true)', '.j.revoked === 0)'], /a revoke refused/],
   ['the worker trading a code without its verifier', 'oauth-worker.js', [' || (code && !text(code_verifier))', ''], /a code with no code_verifier: answered 200/],
   ['any GitHub app\'s install page linked', 'lib/github.js', ['html.split(INSTALL).join(`<a href="${INSTALL}">${INSTALL}</a>`)', 'html.replace(/https:\\/\\/github\\.com\\/apps\\/[\\w-]+\\/installations\\/new/g, (u) => `<a href="${u}">${u}</a>`)'], /the install link/],
+  ['the full-access token used past its two hours', 'lib/github.js', ['Date.now() - (w.at ?? 0) < FULL_FOR', 'true'], /at two hours the full-access token is not revoked before use/],
+  ['a link outside GitHub opened', 'lib/bench.js', ["u.protocol !== 'https:' || !['github.com', 'raw.githubusercontent.com', 'api.github.com'].includes(u.hostname)", 'false'], /a link outside GitHub/],
+  ['a 404 taken as revoked', 'oauth-worker.js', ['revoked: r.status === 204 }', 'revoked: r.status === 204 || r.status === 404 }'], /a revoke GitHub answered 404 was said to be revoked/],
   ['ELK loaded without its hash', 'lib/pictures.js', ['s.integrity = CDN[src];', ''], /ELK is loaded without its hash/],
   ['the policy left out of the page', 'index.html', ['<meta http-equiv="Content-Security-Policy"', '<meta http-equiv="x-none"'], /the page.s Content-Security-Policy is/],
 ];
@@ -322,7 +325,7 @@ const signing = (['', ...AUTH_PLANTS] as const).map((plant) => {
   const r = spawnSync(process.execPath, ['--experimental-strip-types', path.join(ROOT, 'scripts/workbench_auth.ts'), path.join(dir, 'lib/github.js'), path.join(dir, 'oauth-worker.js')], { encoding: 'utf8', timeout: 60_000 });
   try { return JSON.parse(r.stdout) as string[]; } catch { return [`crashed: ${r.stderr.split('\n').slice(0, 3).join(' ')}`]; }
 });
-say(!signing[0].length, 'signing in: with no worker a pasted token; the app signs in with PKCE and reads the own private repository with its token, which goes to that repository alone; a repository the app is not on says why, links only its install page and offers full access only on a click; full access lives in this tab alone, is revoked when it closes, and both tokens are revoked before sign out forgets them; a foreign state is refused; an expired token signs out after one request; the worker asks GitHub nothing for any other kind or a partial request; the page runs only its own scripts and ELK by its hash', signing[0].join('\n     '));
+say(!signing[0].length, 'signing in: with no worker a pasted token; the app signs in with PKCE and reads the own private repository with its token, which goes to that repository alone; a repository the app is not on says why, links only its install page and offers full access only on a click; full access lives in this tab alone, through a reload, until sign out or two hours, checked before each use; both tokens are revoked before sign out forgets them, and only a 204 counts as revoked; a link outside GitHub is refused; a foreign state is refused; an expired token signs out after one request; the worker asks GitHub nothing for any other kind or a partial request; the page runs only its own scripts and ELK by its hash', signing[0].join('\n     '));
 AUTH_PLANTS.forEach(([name, , , why], k) => say(signing[k + 1].some((x) => why.test(x)), `planted, ${name}: red, because ${why.source.replace(/\\/g, '')}`, signing[k + 1].join('\n     ') || 'green'));
 (await browsed)();
 rmSync(tmp, { recursive: true, force: true });

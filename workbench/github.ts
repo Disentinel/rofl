@@ -4,7 +4,8 @@
 //   which GitHub grants without asking); "Request user authorization (OAuth) during installation" on; installable by any account;
 //   callback https://disentinel.github.io/rofl/. It reads only where its owner installed it.
 // - OAUTH_CLIENT_ID: the OAuth App "ROFL Workbench (full access)", scope `repo`, same callback. Asked for only by a click, when the app cannot read a
-//   repository; its token can write to every private repository of the account, so this page keeps it in the tab alone and revokes it on sign out.
+//   repository; its token can write to every private repository of the account, so this page keeps it in the tab alone and revokes it on sign out
+//   or two hours after it was issued, whichever comes first.
 // Both flows carry a state and PKCE. EXCHANGE is the address of workbench/oauth-worker.js, which holds both secrets: it trades codes for tokens and
 // revokes them. Until EXCHANGE is set there is no sign-in to trade a code with, and Sign in takes a pasted token instead.
 // A token goes only to the repository the page opened (and to /user, /user/installations, which this module asks itself).
@@ -16,7 +17,7 @@ const KEY = 'rofl-workbench:github', FULL = `${KEY}:full`, STATE = `${KEY}:state
 
 type Kind = 'app' | 'oauth';
 /** `kind` names the app a token came from, for revoking it; a pasted token has none. `full`: the full-access one. */
-export type Who = { token: string; login: string; kind?: Kind; full?: boolean };
+export type Who = { token: string; login: string; kind?: Kind; full?: boolean; at?: number };
 const load = (s: Storage, k: string): Who | null => { try { return JSON.parse(s.getItem(k) ?? 'null'); } catch { return null; } };
 const app = () => load(localStorage, KEY);
 export const signedIn = (): Who | null => load(sessionStorage, FULL) ?? app();
@@ -38,12 +39,25 @@ export async function signOut() {
   if (kept) throw new Error('Could not revoke the token at GitHub; it is still valid. Try Sign out again, or revoke it at github.com/settings/applications.');
 }
 
-/** The tab going away: the full-access token revoked on the way out and forgotten. */
-export function leaving() {
+// the full-access token, two hours after it was issued: revoked and forgotten, on its timer while the tab is awake and before any use, as a timer
+// sleeps in a background tab
+const FULL_FOR = 2 * 60 * 60 * 1000;
+let notice = '';
+async function expire() {
   const w = load(sessionStorage, FULL);
-  if (!w) return;
-  if (w.kind && EXCHANGE) navigator.sendBeacon(EXCHANGE, new Blob([JSON.stringify({ kind: w.kind, revoke: w.token })], { type: 'text/plain' }));
+  if (!w || Date.now() - (w.at ?? 0) < FULL_FOR) return;
   drop(w);
+  if (w.kind && EXCHANGE && (await trade({ kind: w.kind, revoke: w.token })).j.revoked !== true)
+    notice = 'The full-access token expired but GitHub did not confirm it revoked; revoke it at github.com/settings/applications.';
+}
+/** The full-access token's lifetime checked: what to tell the viewer about it, once, or ''. */
+export async function checkFull() { await expire(); const n = notice; notice = ''; return n; }
+let timer: ReturnType<typeof setTimeout> | undefined;
+/** `then` called when the full-access token held now runs out, with what checkFull says. */
+export function armFull(then: (notice: string) => void) {
+  clearTimeout(timer);
+  const w = load(sessionStorage, FULL);
+  if (w) timer = setTimeout(async () => then(await checkFull()), Math.max(0, (w.at ?? 0) + FULL_FOR - Date.now()));
 }
 
 async function keep(token: string, more: Partial<Who> = {}): Promise<Who> {
@@ -94,7 +108,7 @@ export async function finish(q: URLSearchParams): Promise<Who | null> {
   if (!saved || !saved.kind || saved.state !== q.get('state')) throw new Error('The sign-in came back to a page that did not start it. Sign in again.');
   const { r, j } = await trade({ kind: saved.kind, code: q.get('code'), code_verifier: saved.verifier });
   if (!j.access_token) throw new Error(`GitHub gave no token: ${j.error_description ?? j.error ?? (r ? r.status : 'the sign-in service could not be reached')}`);
-  return keep(j.access_token, saved.kind === 'app' ? { kind: 'app' } : { kind: 'oauth', full: true });
+  return keep(j.access_token, saved.kind === 'app' ? { kind: 'app' } : { kind: 'oauth', full: true, at: Date.now() });
 }
 
 let opened = '';
@@ -109,6 +123,7 @@ const ours = (url: string) => {
 let lapsed = false;
 /** `url` fetched as the viewer when `auth`. A token GitHub no longer accepts ends that sign-in: no retry. */
 async function call(url: string, init: RequestInit = {}, auth = false): Promise<Response | null> {
+  if (auth) await expire();
   const who = auth ? signedIn() : null;
   const r = await fetch(url, who ? { ...init, headers: { ...init.headers as object, authorization: `Bearer ${who.token}` } } : init).catch(() => null);
   if (r?.status === 401 && who) { drop(who); lapsed = true; }

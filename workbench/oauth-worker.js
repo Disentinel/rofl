@@ -1,6 +1,6 @@
 // A Cloudflare Worker holding the secrets of the workbench's two GitHub sign-ins (workbench/github.ts), which the page cannot hold.
-// POST JSON {kind, code, code_verifier} trades a code (PKCE) for a token; {kind, revoke: token} revokes one, `revoked` when GitHub no longer takes it.
-// A body sent as text/plain is read alike, for the beacon a closing tab sends. No refresh token is ever passed on.
+// POST JSON {kind, code, code_verifier} trades a code (PKCE) for a token; {kind, revoke: token} revokes one, `revoked` only when GitHub said so (204).
+// No refresh token is ever passed on.
 // `kind` is 'app', the GitHub App "ROFL Workbench", or 'oauth', the OAuth App "ROFL Workbench (full access)"; anything else is refused unasked.
 // Deploy: `npx wrangler deploy workbench/oauth-worker.js --name rofl-oauth --compatibility-date 2026-10-01`, then `npx wrangler secret put` each of
 // APP_CLIENT_ID, APP_CLIENT_SECRET, OAUTH_CLIENT_ID, OAUTH_CLIENT_SECRET; its address goes in EXCHANGE of workbench/github.ts.
@@ -24,7 +24,7 @@ export default {
         method: 'DELETE', body: JSON.stringify({ access_token: revoke }),
         headers: { authorization: `Basic ${btoa(`${id}:${secret}`)}`, accept: 'application/vnd.github+json', 'user-agent': 'rofl-workbench' },
       });
-      return Response.json({ revoked: r.status === 204 || r.status === 404 }, { headers: cors });
+      return Response.json({ revoked: r.status === 204 }, { headers: cors });
     }
     const r = await fetch('https://github.com/login/oauth/access_token', {
       method: 'POST', headers: { accept: 'application/json', 'content-type': 'application/json' },
