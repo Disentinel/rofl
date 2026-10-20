@@ -15,6 +15,7 @@
 // A notebook whose first cell is not prose opening with front matter reads rofl:visual/graph.rofl.md, so `draw graph` works in bare cells.
 import { Bench, HINT, addWhere, answered, ghLink, keyAction, nearFiles, nearLink, notebookOf, shown, split, esc, prose, said, state, type Cell, type Kind, type Near, type Ran } from './bench.ts';
 import { SAID } from '../notebook/kernel.ts';
+import { back, finish, read, signIn, signOut, signedIn, whyNot, type Who } from './github.ts';
 import { draw, graphLibs } from '../vscode/visual/pictures.ts';
 import { panZoom } from '../vscode/visual/pan.ts';
 import type { View } from '../notebook/draw.ts';
@@ -393,13 +394,26 @@ function openNotebook(text: string, near: Near, href?: string) {
   document.title = `${source.name} · ROFL`;
   ran = null; drawn.clear(); views.clear(); paint(); run(0);
 }
-const get = (url: string) => fetch(url).then((r) => r.ok ? r.text() : undefined, () => undefined);
+// signed in to GitHub, a link reads what the viewer's account can read
+let who: Who | null = signedIn();
+const ghBtn = $<HTMLButtonElement>('gh');
+const paintWho = () => { ghBtn.textContent = who ? `@${who.login} · Sign out` : 'Sign in with GitHub'; };
+ghBtn.addEventListener('click', async () => {
+  if (who) { signOut(); who = null; return paintWho(); }
+  try { who = await signIn(); } catch (err) { head.innerHTML = `<div class="err">${esc((err as Error).message)}</div>`; }
+  paintWho(); if (who && link) void openLink(link);
+});
+const get = (url: string) => read(url, who);
 async function openLink(link: string) {
   let at: ReturnType<typeof nearLink>;
-  try { at = nearLink(link, get); } catch { head.innerHTML = `<div class="err">Not a link: ${esc(link)}</div>`; return; }
+  try { at = nearLink(link, get, !!who); } catch { head.innerHTML = `<div class="err">Not a link: ${esc(link)}</div>`; return; }
   head.innerHTML = `<span class="mute">fetching ${esc(at.url)}…</span>`;
   const text = await get(at.url);
-  if (text === undefined) { head.innerHTML = `<div class="err">Could not fetch ${esc(at.url)}: a public file, or a site that lets other pages read it</div>`; return; }
+  if (text === undefined) {
+    const why = at.repo ? await whyNot(at.repo, at.ref!, at.path!, who) : `Could not fetch ${at.url}: a public file, or a site that lets other pages read it`;
+    who = signedIn(); paintWho();
+    head.innerHTML = `<div class="err">${esc(why)}</div>`; return;
+  }
   openNotebook(text, at.near, link);
 }
 /** What was dropped or picked: every file by its path from there, a folder walked, its node_modules and .git left out. */
@@ -455,9 +469,15 @@ $('ofit').addEventListener('click', () => pz?.fit());
 addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('overlay').hidden) closeOverlay(); });
 
 // `?url=` a link to a notebook, `?gh=owner/repo/path@ref` one on GitHub: it opens instead of the notebook kept here
-const q = new URLSearchParams(location.search), link = q.get('url') ?? (q.get('gh') ? ghLink(q.get('gh')!) : undefined);
-paint();
-if (link) void openLink(link); else run(0);
+// back from signing in to GitHub, the query the page left with is the one it opens
+const q0 = new URLSearchParams(location.search), returning = back(q0), q = returning === null ? q0 : new URLSearchParams(returning);
+const link = q.get('url') ?? (q.get('gh') ? ghLink(q.get('gh')!) : undefined);
+paint(); paintWho();
+if (returning !== null) {
+  history.replaceState(null, '', location.pathname + returning);
+  void finish(q0).then((w) => { who = w; paintWho(); if (link) void openLink(link); else run(0); },
+    (err) => { head.innerHTML = `<div class="err">${esc((err as Error).message)}</div>`; if (!link) run(0); });
+} else if (link) void openLink(link); else run(0);
 
 // each capability as it resolves; the page above already works without any of them
 void use('sample').then((s) => { sample = s; paint(); if (ran) { drawn.clear(); paintOuts(); } });
