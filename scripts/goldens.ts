@@ -388,6 +388,7 @@ function rowProblems(files: string[], state: string): string[] {
 /** The TypeScript engine's answer; `Engine` is another build of `Rofl`, which
  *  scripts/agg_breaks.ts loads from a copy of src/ with a fault planted. */
 export function answerTS(w0: World, Engine: typeof Rofl = Rofl): Answer {
+  if (w0.oneEngine === 'rust') throw new Error(`${w0.name} is answered by the Rust engine alone, and was handed to the TypeScript engine`);
   const w = placed(w0);
   return keptAnswer('ts', w, Engine === Rofl, () => w.together ? answerTSTogether(w, Engine) : answerTSAlone(w, Engine));
 }
@@ -1090,8 +1091,9 @@ function judgeWorld(w: World, g: { hash: string; census: Map<string, number> } |
 
 /** The answer a world is blessed from, and what a person must read about it. */
 export function blessAnswer(w: World): { a: Answer; said: string[] } {
-  const { state: _, ...ts } = answerTS(w);
-  if (w.oneEngine !== 'rust') { return { a: ts, said: [...ts.problems, ...ts.alarms.map((a) => `ALARM ${a}`)].map((p) => `  !! ${w.name}: ${p}`) }; }
+  // a Rust-only world is never given to the TypeScript engine, here either: bless asked it of all 25 and threw the
+  // answer away, and on cost_shapes_model a worker was killed before it came back
+  if (w.oneEngine !== 'rust') { const { state: _, ...ts } = answerTS(w); return { a: ts, said: [...ts.problems, ...ts.alarms.map((a) => `ALARM ${a}`)].map((p) => `  !! ${w.name}: ${p}`) }; }
   const got = answerRust(w);
   if (!got) throw new Error(`${w.name}: rust-only world and no Rust binary`);
   const { state: __, ...rs } = got;

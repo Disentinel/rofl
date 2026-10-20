@@ -7,7 +7,7 @@
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { answerKey, type World } from './goldens.ts';
+import { answerKey, answerTS, blessAnswer, type World } from './goldens.ts';
 import { readingKey, worldFiles } from './md_world.ts';
 import { omitted } from './keep.ts';
 
@@ -74,6 +74,17 @@ for (const c of cases) {
     if (holds(c)) bad.push(`BROKEN ${c.what}: still holds with '${c.part}' left out of the key, so it checks nothing`);
     else console.log(`  red   ${c.what}, '${c.part}' left out`);
   } finally { omitted.delete(c.part); }
+}
+// A RUST-ONLY WORLD NEVER REACHES THE TYPESCRIPT ENGINE (facts/checks.rofl, "RUST ONLY"): bless handed every one to it
+// and threw the answer away. Honest: blessing one asks TypeScript nothing. Planted: handing one to it is refused.
+{
+  const w = world([put('kc-data.rofl', 'edb(kc_p).\nkc_p(1).\n')], { oneEngine: 'rust' });
+  const asked = (f: () => unknown): string | null => { try { f(); return null; } catch (e) { return (e as Error).message; } };
+  const honest = asked(() => blessAnswer(w));
+  if (honest !== null && !/no Rust binary/.test(honest)) bad.push(`BROKEN a Rust-only world blessed: ${honest}`);
+  else console.log(`  ok    a Rust-only world is blessed without the TypeScript engine${honest ? ' (no Rust binary: not asked)' : ''}`);
+  if (asked(() => answerTS(w)) === null) bad.push('BROKEN a Rust-only world handed to the TypeScript engine was answered, not refused');
+  else console.log('  red   a Rust-only world handed to the TypeScript engine is refused');
 }
 for (const b of bad) console.log(b);
 process.exit(bad.length ? 1 : 0);
