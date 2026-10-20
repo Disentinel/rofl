@@ -6,7 +6,7 @@ import { cpSync, existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, wri
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { RESERVED } from '../src/reflect.ts';
-import { chrome, drift, reading, type Drift } from './workbench_browser.ts';
+import { chrome, drift, panned, reading, type Drift } from './workbench_browser.ts';
 import { publishedDiff } from './published_diff.ts';
 
 const ROOT = new URL('..', import.meta.url).pathname;
@@ -55,6 +55,28 @@ const said: (() => void)[] = [];
   })]);
   said.push(() => say(!read.length, 'in a browser: the reading view folds each sentences and datalog cell to its head and pictures, keeps prose, opens a cell to its answers and then its source on a click, and turned off shows every cell whole', read.join('\n     ')));
   READING_PLANTS.forEach(([name, , , why], k) => said.push(() => say(readPlanted[k].some((x) => why.test(x)), `planted in a browser, ${name}: red, because ${why.source}`, readPlanted[k].join('\n     ') || 'green')));
+  // full screen, every kind of picture in the workbench's overlay and in VS Code's panel: wheeled, pinched, dragged and fitted, it stays drawn
+  const pan = await panned(built);
+  said.push(() => say(!pan.bad.length, `in a browser: every kind of picture full screen, in the workbench and in VS Code's panel, zooms about the pointer, keeps a drawable view within 1/50..50 through wheels, ±1000, pinches, lines, pages and a drag, Fit gives back the view as drawn, and it fills its height; ${pan.numbers.join('; ')}`, pan.bad.join('\n     ')));
+  // each planted in pan.js, in the workbench's copy and the panel's alike, or where it says
+  const PAN_PLANTS: [string, string, [string, string], string[], RegExp][] = [
+    ['the schema not left to its own view', 'pan.js', ["return s?.closest('.sch') ? null : s;", 'return s;'], ['graph'], /graph, workbench: .*(outside 1\/50\.\.50|point under the pointer|Fit gives|did not zoom in)/],
+    ['no view made for an SVG drawn without a viewBox', 'pan.js', ['return usable(b) ? b : [0, 0, r.width, r.height];', 'return b;'], ['bare'], /did not zoom in/],
+    ['no bound on the zoom', 'pan.js', ['Math.min(w0 * ZOOM, Math.max(w0 / ZOOM, ', '(('], ['sequence'], /outside 1\/50\.\.50/],
+    ['a picture moved while it is not shown', 'pan.js', ['if (!r.width || !r.height || !m?.a || !m.d)', 'if (!m?.a || !m.d)'], ['sequence', 'bare'], /sequence, \w+: a wheel on the picture while it was not shown moved it/],
+    ['Fit not giving back a drawn viewBox', 'pan.js', ["svg.setAttribute('viewBox', svg.dataset.fit);", ';'], ['sequence'], /Fit gives the viewBox/],
+    ['Fit giving an empty viewBox for none', 'pan.js', ["svg.removeAttribute('viewBox');", "svg.setAttribute('viewBox', '');"], ['bare'], /Fit gives the viewBox ""/],
+    ['the schema deaf to a plain wheel full screen', 'schema.js', [" && !host.closest('.pans')", ''], ['graph'], /did not zoom in/],
+    ['the overlay not filling its height', 'index.html', ['#ostage .rofl-pic > .stage > svg { flex: 1; min-height: 0;', '#ostage .rofl-pic > .stage > svg {'], ['sequence'], /workbench: the picture fills/],
+  ];
+  const panPlanted: string[][] = [];
+  for (let i = 0; i < PAN_PLANTS.length; i += 3) panPlanted.push(...await Promise.all(PAN_PLANTS.slice(i, i + 3).map(async ([name, file, [from, to], kinds]) => {
+    const dir = path.join(tmp, `pan-${name.replace(/\W+/g, '-')}`);
+    cpSync(built, dir, { recursive: true });
+    for (const f of file === 'index.html' ? [file] : [`lib/${file}`, `panel/${file}`]) spoil(dir, f, from, to);
+    return (await panned(dir, kinds)).bad;
+  })));
+  PAN_PLANTS.forEach(([name, , , , why], k) => said.push(() => say(panPlanted[k].some((x) => why.test(x)), `planted in a browser, ${name}: red, because ${why.source}`, panPlanted[k].join('\n     ') || 'green')));
   return () => said.forEach((f) => f());
 })();
 
