@@ -248,12 +248,19 @@ export function nearLink(link: string, get: (url: string) => Promise<string | un
     const root = `${u.origin}/`, path = decodeURIComponent(u.pathname.slice(1));
     return { url: u.href, near: { path, read: (p) => get(root + p), list: async (g) => /[*?]/.test(g) ? [] : [g] } };
   }
-  const [, owner, repo, ref, path] = gh;
-  const at = (p: string) => api ? `https://api.github.com/repos/${owner}/${repo}/contents/${p}?ref=${ref}` : `https://raw.githubusercontent.com/${owner}/${repo}/${ref}/${p}`;
+  const [, owner, repo, r, file] = gh, ref = decodeURIComponent(r), path = decodeURIComponent(file);
+  // a path of the repository, segment by segment; one that would step out of it (`..`, `.`, empty, or what decodes to them) reads nothing
+  const seg = (s: string) => { try { return ['', '.', '..'].includes(decodeURIComponent(s)) ? undefined : encodeURIComponent(s); } catch { return encodeURIComponent(s); } };
+  const at = (p: string) => {
+    const ss = p.split('/').map(seg);
+    if (ss.includes(undefined)) return undefined;
+    return api ? `https://api.github.com/repos/${owner}/${repo}/contents/${ss.join('/')}?ref=${encodeURIComponent(ref)}` : `https://raw.githubusercontent.com/${owner}/${repo}/${encodeURIComponent(ref)}/${ss.join('/')}`;
+  };
   let tree: Promise<string[]> | undefined;
-  const files = () => tree ??= get(`https://api.github.com/repos/${owner}/${repo}/git/trees/${ref}?recursive=1`)
+  const files = () => tree ??= get(`https://api.github.com/repos/${owner}/${repo}/git/trees/${encodeURIComponent(ref)}?recursive=1`)
     .then((t) => t ? (JSON.parse(t).tree as { path: string; type: string }[]).filter((e) => e.type === 'blob').map((e) => e.path) : []);
-  return { url: at(path), repo: `${owner}/${repo}`, ref, path: decodeURIComponent(path), near: { path: decodeURIComponent(path), read: (p) => get(at(p)), list: async (g) => { if (!/[*?]/.test(g)) return [g]; const re = globRe(g); return (await files()).filter((p) => re.test(p)).sort(); } } };
+  const read = (p: string) => { const u = at(p); return u ? get(u) : Promise.resolve(undefined); };
+  return { url: at(path) ?? '', repo: `${owner}/${repo}`, ref, path, near: { path, read, list: async (g) => { if (!/[*?]/.test(g)) return [g]; const re = globRe(g); return (await files()).filter((p) => re.test(p)).sort(); } } };
 }
 
 /** Files a viewer gave the page, by their path from what they dropped, as the place `path` is opened from. */

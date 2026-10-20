@@ -1,11 +1,13 @@
 // Signing in to GitHub, so that a link opens whatever the viewer's account can read, and a link it cannot read says why. Two sign-ins, the safer first:
 // - APP_CLIENT_ID, APP_SLUG: the GitHub App "ROFL Workbench". Repository permissions Contents and Metadata read-only, nothing else; webhook off;
-//   "Expire user authorization tokens" on (a token lasts 8 hours and comes with a refresh token); "Request user authorization (OAuth) during
-//   installation" on; installable by any account; callback https://disentinel.github.io/rofl/. It reads only where its owner installed it.
+//   "Expire user authorization tokens" on (a token lasts 8 hours; its refresh token is never kept, and an expired sign-in is simply made again,
+//   which GitHub grants without asking); "Request user authorization (OAuth) during installation" on; installable by any account;
+//   callback https://disentinel.github.io/rofl/. It reads only where its owner installed it.
 // - OAUTH_CLIENT_ID: the OAuth App "ROFL Workbench (full access)", scope `repo`, same callback. Asked for only by a click, when the app cannot read a
-//   repository; its token can write to every private repository of the account, so it is kept in this tab alone and revoked on sign out.
-// EXCHANGE is the address of workbench/oauth-worker.js, which holds both secrets: it trades codes for tokens, refreshes and revokes them.
-// Until EXCHANGE is set there is no sign-in to trade a code with, and Sign in takes a pasted token instead.
+//   repository; its token can write to every private repository of the account, so this page keeps it in the tab alone and revokes it on sign out.
+// Both flows carry a state and PKCE. EXCHANGE is the address of workbench/oauth-worker.js, which holds both secrets: it trades codes for tokens and
+// revokes them. Until EXCHANGE is set there is no sign-in to trade a code with, and Sign in takes a pasted token instead.
+// A token goes only to the repository the page opened (and to /user, /user/installations, which this module asks itself).
 export const APP_CLIENT_ID = 'Iv23lihoSE5hsdbSbtXb';
 export const APP_SLUG = 'rofl-workbench';
 export const OAUTH_CLIENT_ID = 'Ov23liOts5dq6uxKHKad';
@@ -13,8 +15,8 @@ export const EXCHANGE = '';
 const KEY = 'rofl-workbench:github', FULL = `${KEY}:full`, STATE = `${KEY}:state`;
 
 type Kind = 'app' | 'oauth';
-/** `kind` names the app a token came from, for refreshing and revoking it; a pasted token has none. `full`: the full-access one. */
-export type Who = { token: string; login: string; kind?: Kind; refresh?: string; full?: boolean };
+/** `kind` names the app a token came from, for revoking it; a pasted token has none. `full`: the full-access one. */
+export type Who = { token: string; login: string; kind?: Kind; full?: boolean };
 const load = (s: Storage, k: string): Who | null => { try { return JSON.parse(s.getItem(k) ?? 'null'); } catch { return null; } };
 const app = () => load(localStorage, KEY);
 export const signedIn = (): Who | null => load(sessionStorage, FULL) ?? app();
@@ -25,11 +27,23 @@ const trade = async (body: object) => {
   return { r, j: await r?.json().catch(() => ({})) ?? {} };
 };
 
-/** Both sign-ins ended here and at GitHub: each token revoked through the worker, both storages cleared. */
+/** Both sign-ins ended at GitHub, then here. A token GitHub did not confirm revoked is kept, and the sign out fails saying so. */
 export async function signOut() {
-  const ws = [load(sessionStorage, FULL), app()].filter((w): w is Who => !!w);
-  try { sessionStorage.removeItem(FULL); localStorage.removeItem(KEY); } catch {}
-  if (EXCHANGE) await Promise.all(ws.filter((w) => w.kind).map((w) => trade({ kind: w.kind, revoke: w.token })));
+  let kept = false;
+  for (const w of [load(sessionStorage, FULL), app()]) {
+    if (!w) continue;
+    if (w.kind && EXCHANGE && (await trade({ kind: w.kind, revoke: w.token })).j.revoked !== true) { kept = true; continue; }
+    drop(w);
+  }
+  if (kept) throw new Error('Could not revoke the token at GitHub; it is still valid. Try Sign out again, or revoke it at github.com/settings/applications.');
+}
+
+/** The tab going away: the full-access token revoked on the way out and forgotten. */
+export function leaving() {
+  const w = load(sessionStorage, FULL);
+  if (!w) return;
+  if (w.kind && EXCHANGE) navigator.sendBeacon(EXCHANGE, new Blob([JSON.stringify({ kind: w.kind, revoke: w.token })], { type: 'text/plain' }));
+  drop(w);
 }
 
 async function keep(token: string, more: Partial<Who> = {}): Promise<Who> {
@@ -40,11 +54,13 @@ async function keep(token: string, more: Partial<Who> = {}): Promise<Who> {
   return who;
 }
 
-const go = (kind: Kind, params: Record<string, string>) => {
-  const state = crypto.randomUUID();
-  sessionStorage.setItem(STATE, JSON.stringify({ state, kind, back: location.search }));
-  location.href = `https://github.com/login/oauth/authorize?${new URLSearchParams({ ...params, state, redirect_uri: location.origin + location.pathname })}`;
-};
+const b64url = (b: ArrayBuffer | Uint8Array) => btoa(String.fromCharCode(...new Uint8Array(b))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+async function go(kind: Kind, params: Record<string, string>) {
+  const state = crypto.randomUUID(), verifier = b64url(crypto.getRandomValues(new Uint8Array(32)));
+  const challenge = b64url(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier)));
+  sessionStorage.setItem(STATE, JSON.stringify({ state, kind, verifier, back: location.search }));
+  location.href = `https://github.com/login/oauth/authorize?${new URLSearchParams({ ...params, state, code_challenge: challenge, code_challenge_method: 'S256', redirect_uri: location.origin + location.pathname })}`;
+}
 
 /** Off to GitHub to sign in with the app, the page's query kept to come back to; with no app set up, a pasted token. */
 export async function signIn(): Promise<Who | null> {
@@ -52,12 +68,12 @@ export async function signIn(): Promise<Who | null> {
     const t = prompt('A GitHub token that can read the repository (GitHub → Settings → Developer settings → Personal access tokens). It stays in this browser.');
     return t?.trim() ? keep(t.trim()) : null;
   }
-  go('app', { client_id: APP_CLIENT_ID });
+  await go('app', { client_id: APP_CLIENT_ID });
   return null;
 }
 
 /** Off to GitHub for the full-access token. Only ever called from the click on its button. */
-export const elevate = () => { if (OAUTH_CLIENT_ID && EXCHANGE) go('oauth', { client_id: OAUTH_CLIENT_ID, scope: 'repo' }); };
+export const elevate = async () => { if (OAUTH_CLIENT_ID && EXCHANGE) await go('oauth', { client_id: OAUTH_CLIENT_ID, scope: 'repo' }); };
 
 /** Back from GitHub with `?code`: the query the page had before it left, or null when this is not a return. */
 export function back(q: URLSearchParams): string | null {
@@ -67,7 +83,7 @@ export function back(q: URLSearchParams): string | null {
 
 /** The token GitHub's code trades for: the app's kept in this browser, the full-access one in this tab. */
 export async function finish(q: URLSearchParams): Promise<Who | null> {
-  let saved: { state?: string; kind?: Kind } | null = null;
+  let saved: { state?: string; kind?: Kind; verifier?: string } | null = null;
   try { saved = JSON.parse(sessionStorage.getItem(STATE) ?? 'null'); sessionStorage.removeItem(STATE); } catch {}
   if (q.get('error')) throw new Error(`GitHub did not sign you in: ${q.get('error_description') ?? q.get('error')}`);
   // back from installing the app, which no state of this page started: a token already held reads what was just installed, and with none, one sign-in
@@ -76,43 +92,42 @@ export async function finish(q: URLSearchParams): Promise<Who | null> {
     throw new Error('ROFL Workbench is installed. Sign in with GitHub to open what it can read.');
   }
   if (!saved || !saved.kind || saved.state !== q.get('state')) throw new Error('The sign-in came back to a page that did not start it. Sign in again.');
-  const { r, j } = await trade({ kind: saved.kind, code: q.get('code') });
+  const { r, j } = await trade({ kind: saved.kind, code: q.get('code'), code_verifier: saved.verifier });
   if (!j.access_token) throw new Error(`GitHub gave no token: ${j.error_description ?? j.error ?? (r ? r.status : 'the sign-in service could not be reached')}`);
-  return keep(j.access_token, saved.kind === 'app' ? { kind: 'app', refresh: j.refresh_token } : { kind: 'oauth', full: true });
+  return keep(j.access_token, saved.kind === 'app' ? { kind: 'app' } : { kind: 'oauth', full: true });
 }
 
-// a refresh token is good once: requests that meet an expired token together share one refresh
-let renewing: Promise<Who | null> | undefined;
-const renew = (w: Who) => renewing ??= (async () => {
-  if (w.kind !== 'app' || !w.refresh || !EXCHANGE) return null;
-  const { j } = await trade({ kind: 'app', refresh_token: w.refresh });
-  return j.access_token ? { ...w, token: j.access_token, refresh: j.refresh_token ?? w.refresh } : null;
-})().then((n) => { if (n) try { localStorage.setItem(KEY, JSON.stringify(n)); } catch {} return n; }).finally(() => { renewing = undefined; });
+let opened = '';
+/** The repository a link opened, `owner/repo`; the token goes to it alone. None for any other link. */
+export const scope = (repo?: string) => { opened = repo?.toLowerCase() ?? ''; };
+const ours = (url: string) => {
+  let u: URL;
+  try { u = new URL(url); } catch { return false; }
+  return u.origin === 'https://api.github.com' && !!opened && !/%2e|%2f|%5c/i.test(u.pathname) && u.pathname.toLowerCase().startsWith(`/repos/${opened}/`);
+};
 
 let lapsed = false;
-/** `url` fetched as the viewer. A token GitHub no longer accepts is refreshed once and the request tried once more; failing that, that sign-in ends. */
-async function call(url: string, init: RequestInit = {}): Promise<Response | null> {
-  const who = url.startsWith('https://api.github.com/') ? signedIn() : null;
-  const as = (w: Who | null) => fetch(url, w ? { ...init, headers: { ...init.headers as object, authorization: `Bearer ${w.token}` } } : init).catch(() => null);
-  let r = await as(who);
-  if (r?.status !== 401 || !who) return r;
-  const now = signedIn(), again = now && now.token !== who.token ? now : who.full ? null : await renew(who);
-  if (again) r = await as(again);
-  if (!again || r?.status === 401) { drop(again ?? who); lapsed = true; }
+/** `url` fetched as the viewer when `auth`. A token GitHub no longer accepts ends that sign-in: no retry. */
+async function call(url: string, init: RequestInit = {}, auth = false): Promise<Response | null> {
+  const who = auth ? signedIn() : null;
+  const r = await fetch(url, who ? { ...init, headers: { ...init.headers as object, authorization: `Bearer ${who.token}` } } : init).catch(() => null);
+  if (r?.status === 401 && who) { drop(who); lapsed = true; }
   return r;
 }
 
-/** A file read as the viewer: its contents through GitHub's API with their token, anything else as it is. */
-export const read = (url: string) => call(url, url.includes('/contents/') ? { headers: { accept: 'application/vnd.github.raw' } } : {})
+/** A file read as the viewer: through GitHub's API with their token when it is of the repository opened, anything else as it is. */
+export const read = (url: string) => call(url, url.includes('/contents/') ? { headers: { accept: 'application/vnd.github.raw' } } : {}, ours(url))
   .then((r) => r?.ok ? r.text() : undefined, () => undefined);
 
-const installs = () => `https://github.com/apps/${APP_SLUG}/installations/new`;
+const INSTALL = `https://github.com/apps/${APP_SLUG}/installations/new`;
+/** A sentence of whyNot, already escaped, with the app's install page as a link, and no other. */
+export const linked = (html: string) => html.split(INSTALL).join(`<a href="${INSTALL}">${INSTALL}</a>`);
 
 /** Why `path` of `repo` at `ref` could not be read, in a sentence that says what to do; `full`: offer the full-access sign-in, on a click. */
 export async function whyNot(repo: string, ref: string, path: string): Promise<{ say: string; full?: boolean }> {
   const said = (say: string, full = false) => ({ say, ...full ? { full } : {} });
-  const r = lapsed ? null : await call(`https://api.github.com/repos/${repo}`);
-  if (lapsed) { lapsed = false; return said('Your GitHub sign-in has expired or was revoked. Sign in again.'); }
+  const r = lapsed ? null : await call(`https://api.github.com/repos/${repo}`, {}, true);
+  if (lapsed) { lapsed = false; return said('Your GitHub sign-in has expired. Sign in again.'); }
   const who = signedIn();
   if (!r) return said('GitHub could not be reached.');
   if (r.status === 403 || r.status === 429) {
@@ -126,18 +141,18 @@ export async function whyNot(repo: string, ref: string, path: string): Promise<{
     const owner = repo.split('/')[0], full = !!OAUTH_CLIENT_ID && !!EXCHANGE;
     const noAccess = `@${who.login} cannot read ${repo}: it does not exist, or this account has no access to it. Ask its owner for access, or sign in with another account.`;
     if (who.kind !== 'app' || !APP_SLUG) return said(noAccess);
-    const i = await call('https://api.github.com/user/installations?per_page=100');
+    const i = await call('https://api.github.com/user/installations?per_page=100', {}, true);
     const on: { account?: { login?: string } }[] = i?.ok ? (await i.json().catch(() => ({}))).installations ?? [] : [];
     if (on.some((x) => x.account?.login?.toLowerCase() === owner.toLowerCase()))
       return said(`${noAccess}${full ? ` If you can read it on GitHub, ROFL Workbench may not be given this repository: ask its owner to add it, or sign in with full access.` : ''}`, full);
     if (who.login.toLowerCase() === owner.toLowerCase()) {
       try { sessionStorage.setItem(STATE, JSON.stringify({ back: location.search })); } catch {}   // back from installing, this link opens again
-      return said(`ROFL Workbench cannot read ${repo} until it is installed on your account. Install ROFL Workbench on your account: ${installs()}`);
+      return said(`ROFL Workbench cannot read ${repo} until it is installed on your account. Install ROFL Workbench on your account: ${INSTALL}`);
     }
-    return said(`${owner} has not installed ROFL Workbench. Ask them to install it (${installs()})${full ? ', or sign in with full access' : ''}.`, full);
+    return said(`${owner} has not installed ROFL Workbench. Ask them to install it (${INSTALL})${full ? ', or sign in with full access' : ''}.`, full);
   }
   if (!r.ok) return said(`GitHub answered ${r.status} for ${repo}.`);
-  const b = await call(`https://api.github.com/repos/${repo}/commits/${encodeURIComponent(ref)}`, { method: 'HEAD' });
+  const b = await call(`https://api.github.com/repos/${repo}/commits/${encodeURIComponent(ref)}`, { method: 'HEAD' }, true);
   if (b?.status === 404 || b?.status === 422) return said(`${repo} has no branch, tag or commit ${ref}.`);
   return said(`${repo} has no file ${path} at ${ref}.`);
 }
