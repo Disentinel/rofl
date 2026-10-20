@@ -17,12 +17,13 @@ import * as path from 'node:path';
 import { parseProgram } from '../src/parser.ts';
 import { ruleIdOf } from '../src/reflect.ts';
 import { canonClauseSets, type BodyElem, type Clause, type Term } from '../src/unify.ts';
-import { libFiles, parseFront } from '../notebook/front.ts';
+import { builtin, libFiles, parseFront, unread } from '../notebook/front.ts';
+import { closure, fileHash, filesHash } from './keep.ts';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
 export const THROUGH = '-- through-sentences';
-/** This file's own text is in every cache key: what it writes beside a reading changes with it. */
-const SELF = fs.readFileSync(new URL(import.meta.url), 'utf8');
+/** This file and every file it imports are in every cache key: what it writes beside a reading changes with them (`written` is src/'s parser). */
+const SELF = filesHash(closure(import.meta.filename));
 const reader = (): string => process.env.ROFL_READER || path.join(ROOT, 'scripts/read.ts');
 const renderer = (): string => path.join(ROOT, 'rust/target', process.env.ROFL_PROFILE || 'release', 'rofl');
 
@@ -128,7 +129,7 @@ function readerLib(): string {
   readerLibs.set(r, text);
   return text;
 }
-const rendererStamp = (): string => { const st = fs.statSync(renderer()); return `${renderer()}:${st.size}:${st.mtimeMs}`; };
+const rendererStamp = (): string => fileHash(renderer());
 
 const cacheDir = (key: string): string => {
   const d = path.join(os.tmpdir(), 'rofl-sentences', createHash('sha256').update(key).digest('hex').slice(0, 16));
@@ -155,7 +156,10 @@ const UNREAD = /^unparsed \((\d+)\):\n((?:  .*\n?)*)/m;
 /** A `.rofl.md` file read into rules, with the expectations it states in comments. */
 export function readWorldMd(md: string): { rofl: string; phrases: string | null } {
   const text = fs.readFileSync(md, 'utf8');
-  const reads = parseFront(text).reads.map((f) => fs.readFileSync(path.resolve(path.dirname(md), f), 'utf8'));
+  // every file it reads, and every file those read, as the reader follows them
+  const have: Record<string, string> = {};
+  for (let u = unread(text, have); u.length; u = unread(text, have)) for (const f of u) have[f] = fs.readFileSync(builtin(f) ? path.join(ROOT, builtin(f)!) : path.resolve(path.dirname(md), f), 'utf8');
+  const reads = Object.entries(have).sort().flat();
   const dir = cacheDir(['md', SELF, ROOT, readerText(), readerLib(), md, text, ...reads].join('\0'));
   const out = path.join(dir, path.basename(md).replace(/\.rofl\.md$/, '.rofl'));
   const phrases = out.replace(/\.rofl$/, '.phrases.rofl');

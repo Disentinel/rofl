@@ -144,6 +144,7 @@ their sources, their `[[bin]]` entries in `rust/rofl/Cargo.toml` and their rows 
 | `ROFL_READER` | a copy of the sentence reader a planted fault names | `scripts/agg_breaks.ts`, `scripts/sentences.ts`, `scripts/goldens.ts` | INTERNAL | |
 | `ROFL_TREE` | the tree the reader reads | `scripts/agg_breaks.ts`, `scripts/read.ts` | INTERNAL | |
 | `ROFL_KERNEL_HASH` | set by `rust/rofl/build.rs` at compile time; not settable | `rust/rofl/src/kernel.rs` | INTERNAL | |
+| `ROFL_KEEP_TALLY` | the file a pool worker says each answer was read back or computed in | set and read back by `scripts/goldens.ts` for its own workers (`scripts/keep.ts`); nobody sets it by hand | INTERNAL | |
 | `ROFL_TIMES` | append a line per world (times, facts) to a file, to pick the scale cap | `scripts/goldens.ts`; the recipe is in `facts/checks.rofl` | INTERNAL | |
 | `ROFL_NO_DELTA_FIRST` | plan joins in written order | `rust/rofl/src/engine.rs` reads it; documents (`docs/optimising-a-world.md` names it as the baseline of one measurement); no script or test sets it | REMOVE | done |
 | `ROFL_COOL_PHASES` | print the phases of a cool on stderr | `rust/rofl/src/session.rs` prints; `runtime/port.ts` forwards the stderr; nobody sets it | REMOVE | done |

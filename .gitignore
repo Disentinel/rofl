@@ -44,3 +44,6 @@ vscode/visual/out/
 
 # VS Code the extension tests download (@vscode/test-electron)
 .vscode-test
+
+# answers and readings kept under the hash of what they are a function of (scripts/keep.ts)
+.cache/
