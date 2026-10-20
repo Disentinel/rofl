@@ -15,7 +15,7 @@
 // A notebook whose first cell is not prose opening with front matter reads rofl:visual/graph.rofl.md, so `draw graph` works in bare cells.
 import { Bench, HINT, addWhere, answered, ghLink, keyAction, nearFiles, nearLink, notebookOf, shown, split, esc, prose, said, state, type Cell, type Kind, type Near, type Ran } from './bench.ts';
 import { SAID } from '../notebook/kernel.ts';
-import { back, finish, read, signIn, signOut, signedIn, whyNot, type Who } from './github.ts';
+import { armFull, back, checkFull, elevate, finish, linked, read, scope, signIn, signOut, signedIn, whyNot, type Who } from './github.ts';
 import { draw, graphLibs } from '../vscode/visual/pictures.ts';
 import { panZoom } from '../vscode/visual/pan.ts';
 import type { View } from '../notebook/draw.ts';
@@ -397,24 +397,30 @@ function openNotebook(text: string, near: Near, href?: string) {
 // signed in to GitHub, a link reads what the viewer's account can read
 let who: Who | null = signedIn();
 const ghBtn = $<HTMLButtonElement>('gh');
-const paintWho = () => { ghBtn.textContent = who ? `@${who.login} · Sign out` : 'Sign in with GitHub'; };
+const paintWho = () => { ghBtn.textContent = who ? `@${who.login}${who.full ? ' · full access' : ''} · Sign out` : 'Sign in with GitHub'; };
 ghBtn.addEventListener('click', async () => {
-  if (who) { signOut(); who = null; return paintWho(); }
+  if (who) { try { await signOut(); } catch (err) { head.innerHTML = `<div class="err">${esc((err as Error).message)}</div>`; } who = signedIn(); return paintWho(); }
   try { who = await signIn(); } catch (err) { head.innerHTML = `<div class="err">${esc((err as Error).message)}</div>`; }
   paintWho(); if (who && link) void openLink(link);
 });
-const get = (url: string) => read(url, who);
+const get = read;
+// the full-access token ran out: the button repainted, and what GitHub did not confirm, said
+const onFull = (n: string) => { who = signedIn(); paintWho(); if (n) head.insertAdjacentHTML('beforeend', `<div class="note">${esc(n)}</div>`); };
 async function openLink(link: string) {
   let at: ReturnType<typeof nearLink>;
-  try { at = nearLink(link, get, !!who); } catch { head.innerHTML = `<div class="err">Not a link: ${esc(link)}</div>`; return; }
+  try { at = nearLink(link, get, !!who); } catch (e) { head.innerHTML = `<div class="err">${esc(e instanceof TypeError ? `Not a link: ${link}` : (e as Error).message)}</div>`; return; }
+  scope(at.repo);
   head.innerHTML = `<span class="mute">fetching ${esc(at.url)}…</span>`;
-  const text = await get(at.url);
+  const text = at.url ? await get(at.url) : undefined;
   if (text === undefined) {
-    const why = at.repo ? await whyNot(at.repo, at.ref!, at.path!, who) : `Could not fetch ${at.url}: a public file, or a site that lets other pages read it`;
+    const why = at.repo ? await whyNot(at.repo, at.ref!, at.path!) : { say: `Could not fetch ${at.url}.` };
     who = signedIn(); paintWho();
-    head.innerHTML = `<div class="err">${esc(why)}</div>`; return;
+    head.innerHTML = `<div class="err">${linked(esc(why.say))}</div>`
+      + (why.full ? '<div class="note"><button type="button" id="full">Sign in with full access</button> this token can write to all your private repositories; it is revoked when you sign out or after 2 hours. If you close this tab before that, revoke it at github.com/settings/applications.</div>' : '');
+    $('full')?.addEventListener('click', () => void elevate()); onFull(await checkFull()); return;
   }
   openNotebook(text, at.near, link);
+  onFull(await checkFull());
 }
 /** What was dropped or picked: every file by its path from there, a folder walked, its node_modules and .git left out. */
 type Given = { path: string; file: File };
@@ -445,7 +451,7 @@ addEventListener('drop', (e) => {
 });
 bar.addEventListener('click', (e) => {
   if (!(e.target as HTMLElement).closest('#mine')) return;
-  source = null; history.replaceState(null, '', location.pathname); document.title = 'ROFL Workbench';
+  source = null; scope(); history.replaceState(null, '', location.pathname); document.title = 'ROFL Workbench';
   try { const s = JSON.parse(localStorage.getItem(KEY) ?? 'null'); cells = Array.isArray(s) && s.length ? s : blank(); } catch { cells = blank(); }
   ran = null; drawn.clear(); views.clear(); paint(); run(0);
 });
@@ -468,16 +474,16 @@ $('oclose').addEventListener('click', closeOverlay);
 $('ofit').addEventListener('click', () => pz?.fit());
 addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('overlay').hidden) closeOverlay(); });
 
-// `?url=` a link to a notebook, `?gh=owner/repo/path@ref` one on GitHub: it opens instead of the notebook kept here
+// `?url=` a GitHub link to a notebook, `?gh=owner/repo/path@ref` the same in short: it opens instead of the notebook kept here
 // back from signing in to GitHub, the query the page left with is the one it opens
 const q0 = new URLSearchParams(location.search), returning = back(q0), q = returning === null ? q0 : new URLSearchParams(returning);
 const link = q.get('url') ?? (q.get('gh') ? ghLink(q.get('gh')!) : undefined);
 paint(); paintWho();
 if (returning !== null) {
   history.replaceState(null, '', location.pathname + returning);
-  void finish(q0).then((w) => { who = w; paintWho(); if (link) void openLink(link); else run(0); },
+  void finish(q0).then((w) => { who = w; paintWho(); armFull(onFull); if (link) void openLink(link); else run(0); },
     (err) => { head.innerHTML = `<div class="err">${esc((err as Error).message)}</div>`; if (!link) run(0); });
-} else if (link) void openLink(link); else run(0);
+} else { armFull(onFull); void checkFull().then(onFull); if (link) void openLink(link); else run(0); }
 
 // each capability as it resolves; the page above already works without any of them
 void use('sample').then((s) => { sample = s; paint(); if (ran) { drawn.clear(); paintOuts(); } });

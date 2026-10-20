@@ -4,6 +4,7 @@ import { copyFileSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync,
 import * as path from 'node:path';
 import { emitAll } from './emit.ts';
 import { FILES } from '../workbench/bench.ts';
+import { EXCHANGE } from '../workbench/github.ts';
 
 const ROOT = new URL('..', import.meta.url).pathname;
 const argv = process.argv.slice(2), oi = argv.indexOf('--out');
@@ -17,7 +18,8 @@ emitAll(ROOT, `${OUT}/lib`, ['workbench/page.ts']);
 const copy = (from: string, to: string) => { mkdirSync(path.dirname(`${OUT}/${to}`), { recursive: true }); copyFileSync(`${ROOT}${from}`, `${OUT}/${to}`); };
 for (const f of FILES) copy(f, f);
 const read = (f: string) => readFileSync(`${ROOT}${f}`, 'utf8');
-const page = read('workbench/page.html').replace('  /* tokens */\n', () => read('playground/tokens.css'));
+// the page talks to its sign-in worker alone: once EXCHANGE is set, its origin stands in the policy for any workers.dev
+const page = read('workbench/page.html').replace('  /* tokens */\n', () => read('playground/tokens.css')).replace('https://*.workers.dev', () => EXCHANGE ? new URL(EXCHANGE).origin : 'https://*.workers.dev');
 // `--standalone`: the head an artifact's skeleton otherwise gives it, for any web server
 writeFileSync(`${OUT}/index.html`, argv.includes('--standalone') ? `<!doctype html>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1">\n${page}` : page);
 

@@ -61,9 +61,11 @@ const spilt = (el: HTMLElement) => !el.isConnected ? [] : [...spills.get(el)?.()
   return [`drawn ${Math.round(b.x)}..${Math.round(b.x + b.width)} × ${Math.round(b.y)}..${Math.round(b.y + b.height)} in a viewBox ${v.x} ${v.y} ${v.width} ${v.height}${out ? `, past it a ${out.tagName} ${JSON.stringify(out.textContent?.slice(0, 40))}` : ''}`];
 })];
 
-/** ELK from jsDelivr (cdnjs has no elkjs), into `doc`, once: the graph's layered layout. */
-const CDN = ['https://cdn.jsdelivr.net/npm/elkjs@0.9.3/lib/elk.bundled.js'];
+/** ELK from jsDelivr (cdnjs has no elkjs), into `doc`, once: the graph's layered layout. Pinned by its hash: a changed file does not run.
+ *  The workbench's page names the same address in its Content-Security-Policy. */
+export const ELK = 'https://cdn.jsdelivr.net/npm/elkjs@0.9.3/lib/elk.bundled.js';
+const CDN: Record<string, string> = { [ELK]: 'sha384-KO35c6PFq7tFxAEx6FtATwL9vOBOmCzQYr7GM0iTr3oO22s7Jc9OkclOH4AV7jwK' };
 let loading: Promise<boolean> | undefined;
-export const graphLibs = (doc: Document, urls = CDN): Promise<boolean> => loading ??= Promise.all(urls.map((src) => new Promise<boolean>((ok) => {
-  const s = doc.createElement('script'); s.src = src; s.onload = () => ok(true); s.onerror = () => ok(false); setTimeout(() => ok(false), 10000); doc.head.append(s);
+export const graphLibs = (doc: Document, urls = Object.keys(CDN)): Promise<boolean> => loading ??= Promise.all(urls.map((src) => new Promise<boolean>((ok) => {
+  const s = doc.createElement('script'); s.src = src; if (CDN[src]) { s.integrity = CDN[src]; s.crossOrigin = 'anonymous'; } s.onload = () => ok(true); s.onerror = () => ok(false); setTimeout(() => ok(false), 10000); doc.head.append(s);
 }))).then(() => 'ELK' in globalThis);

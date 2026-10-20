@@ -239,21 +239,29 @@ async function dataOf(found: string[], names: Record<string, string>, code: Reco
 }
 
 /** A link to a notebook as the place it is opened from: a GitHub page of a file or its raw form read from its repository, so that the files
- *  beside it and the globs of `code:` resolve there; any other address read from its site. */
+ *  beside it and the globs of `code:` resolve there; an api.github.com address read from there. Nothing outside GitHub opens. */
 export function nearLink(link: string, get: (url: string) => Promise<string | undefined>, api = false): { url: string; near: Near; repo?: string; ref?: string; path?: string } {
   const u = new URL(/^\w+:\/\//.test(link) ? link : `https://${link}`);
+  if (u.protocol !== 'https:' || !['github.com', 'raw.githubusercontent.com', 'api.github.com'].includes(u.hostname)) throw new Error('Only GitHub links open here: github.com/owner/repo/blob/…');
   const gh = u.hostname === 'github.com' ? /^\/([^/]+)\/([^/]+)\/(?:blob|raw)\/([^/]+)\/(.+)$/.exec(u.pathname)
     : u.hostname === 'raw.githubusercontent.com' ? /^\/([^/]+)\/([^/]+)\/(?:refs\/heads\/)?([^/]+)\/(.+)$/.exec(u.pathname) : null;
   if (!gh) {
     const root = `${u.origin}/`, path = decodeURIComponent(u.pathname.slice(1));
     return { url: u.href, near: { path, read: (p) => get(root + p), list: async (g) => /[*?]/.test(g) ? [] : [g] } };
   }
-  const [, owner, repo, ref, path] = gh;
-  const at = (p: string) => api ? `https://api.github.com/repos/${owner}/${repo}/contents/${p}?ref=${ref}` : `https://raw.githubusercontent.com/${owner}/${repo}/${ref}/${p}`;
+  const [, owner, repo, r, file] = gh, ref = decodeURIComponent(r), path = decodeURIComponent(file);
+  // a path of the repository, segment by segment; one that would step out of it (`..`, `.`, empty, or what decodes to them) reads nothing
+  const seg = (s: string) => { try { return ['', '.', '..'].includes(decodeURIComponent(s)) ? undefined : encodeURIComponent(s); } catch { return encodeURIComponent(s); } };
+  const at = (p: string) => {
+    const ss = p.split('/').map(seg);
+    if (ss.includes(undefined)) return undefined;
+    return api ? `https://api.github.com/repos/${owner}/${repo}/contents/${ss.join('/')}?ref=${encodeURIComponent(ref)}` : `https://raw.githubusercontent.com/${owner}/${repo}/${encodeURIComponent(ref)}/${ss.join('/')}`;
+  };
   let tree: Promise<string[]> | undefined;
-  const files = () => tree ??= get(`https://api.github.com/repos/${owner}/${repo}/git/trees/${ref}?recursive=1`)
+  const files = () => tree ??= get(`https://api.github.com/repos/${owner}/${repo}/git/trees/${encodeURIComponent(ref)}?recursive=1`)
     .then((t) => t ? (JSON.parse(t).tree as { path: string; type: string }[]).filter((e) => e.type === 'blob').map((e) => e.path) : []);
-  return { url: at(path), repo: `${owner}/${repo}`, ref, path: decodeURIComponent(path), near: { path: decodeURIComponent(path), read: (p) => get(at(p)), list: async (g) => { if (!/[*?]/.test(g)) return [g]; const re = globRe(g); return (await files()).filter((p) => re.test(p)).sort(); } } };
+  const read = (p: string) => { const u = at(p); return u ? get(u) : Promise.resolve(undefined); };
+  return { url: at(path) ?? '', repo: `${owner}/${repo}`, ref, path, near: { path, read, list: async (g) => { if (!/[*?]/.test(g)) return [g]; const re = globRe(g); return (await files()).filter((p) => re.test(p)).sort(); } } };
 }
 
 /** Files a viewer gave the page, by their path from what they dropped, as the place `path` is opened from. */
