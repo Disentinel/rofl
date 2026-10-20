@@ -12,7 +12,7 @@
 export const APP_CLIENT_ID = 'Iv23lihoSE5hsdbSbtXb';
 export const APP_SLUG = 'rofl-workbench';
 export const OAUTH_CLIENT_ID = 'Ov23liOts5dq6uxKHKad';
-export const EXCHANGE = '';
+export const EXCHANGE = 'https://rofl-oauth.vadimrimych.workers.dev/';
 const KEY = 'rofl-workbench:github', FULL = `${KEY}:full`, STATE = `${KEY}:state`;
 
 type Kind = 'app' | 'oauth';
