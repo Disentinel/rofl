@@ -239,9 +239,10 @@ async function dataOf(found: string[], names: Record<string, string>, code: Reco
 }
 
 /** A link to a notebook as the place it is opened from: a GitHub page of a file or its raw form read from its repository, so that the files
- *  beside it and the globs of `code:` resolve there; any other address read from its site. */
+ *  beside it and the globs of `code:` resolve there; an api.github.com address read from there. Nothing outside GitHub opens. */
 export function nearLink(link: string, get: (url: string) => Promise<string | undefined>, api = false): { url: string; near: Near; repo?: string; ref?: string; path?: string } {
   const u = new URL(/^\w+:\/\//.test(link) ? link : `https://${link}`);
+  if (u.protocol !== 'https:' || !['github.com', 'raw.githubusercontent.com', 'api.github.com'].includes(u.hostname)) throw new Error('Only GitHub links open here: github.com/owner/repo/blob/…');
   const gh = u.hostname === 'github.com' ? /^\/([^/]+)\/([^/]+)\/(?:blob|raw)\/([^/]+)\/(.+)$/.exec(u.pathname)
     : u.hostname === 'raw.githubusercontent.com' ? /^\/([^/]+)\/([^/]+)\/(?:refs\/heads\/)?([^/]+)\/(.+)$/.exec(u.pathname) : null;
   if (!gh) {
