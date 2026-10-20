@@ -14,7 +14,7 @@ export default {
     if (req.method === 'OPTIONS') return new Response(null, { headers: cors });
     if (req.method !== 'POST') return no('POST {kind, code | refresh_token | revoke}', 405);
     const { kind, code, refresh_token, revoke } = await req.json().catch(() => ({})) ?? {};
-    const pair = Object.hasOwn(APPS, kind) ? APPS[kind] : null;
+    const pair = typeof kind === 'string' && Object.hasOwn(APPS, kind) ? APPS[kind] : null;
     if (!pair || [code, refresh_token, revoke].filter(text).length !== 1 || (refresh_token && kind !== 'app')) return no('kind app or oauth, and one of code, refresh_token (app) or revoke');
     const [id, secret] = pair.map((k) => env[k]);
     if (!text(id) || !text(secret)) return no(`the ${kind} app's secrets are not set`, 500);

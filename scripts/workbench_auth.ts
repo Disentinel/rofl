@@ -9,11 +9,12 @@ const EXCHANGE = 'https://rofl-oauth.example.workers.dev/', OAUTH = 'Ov23-full-a
 const bad: string[] = [];
 const want = (ok: unknown, what: string) => { if (!ok) bad.push(what); };
 
-// a copy of the module with the worker and the full-access app set up, as they will be once deployed
+// two copies of the module, whatever the source holds: one with no worker (the pasted token), one with the worker and the full-access app set up
 const text = readFileSync(lib, 'utf8');
-for (const k of ['EXCHANGE', 'OAUTH_CLIENT_ID']) if (!text.includes(`export const ${k} = '';`)) bad.push(`${k} is not empty in the build, so the pasted-token sign-in is not what ships`);
-const configured = path.join(path.dirname(lib), 'github-configured.js');
-writeFileSync(configured, text.replace("export const EXCHANGE = '';", `export const EXCHANGE = '${EXCHANGE}';`).replace("export const OAUTH_CLIENT_ID = '';", `export const OAUTH_CLIENT_ID = '${OAUTH}';`));
+const set = (k: string, v: string, t: string) => { if (!new RegExp(`export const ${k} = '[^']*';`).test(t)) bad.push(`no ${k} constant in the build`); return t.replace(new RegExp(`export const ${k} = '[^']*';`), `export const ${k} = '${v}';`); };
+const pasted = path.join(path.dirname(lib), 'github-pasted.js'), configured = path.join(path.dirname(lib), 'github-configured.js');
+writeFileSync(pasted, set('EXCHANGE', '', text));
+writeFileSync(configured, set('OAUTH_CLIENT_ID', OAUTH, set('EXCHANGE', EXCHANGE, text)));
 
 class Store {
   m = new Map<string, string>();
@@ -65,7 +66,7 @@ const appTokens = (s: Sent): Answer | undefined => worker(s) && s.body?.kind ===
 
 // the way it ships: no worker yet, so Sign in takes a pasted token, keeps it in this browser, reads with it and says the old sentences
 await said('pasted token', async () => {
-  const t = tab(github({ ghp_pasted: 'me' })), gh = await fresh(lib);
+  const t = tab(github({ ghp_pasted: 'me' })), gh = await fresh(pasted);
   t.pasted = 'ghp_pasted';
   const who = await gh.signIn();
   want(t.prompted === 1 && who?.token === 'ghp_pasted' && !t.went.length, `pasted token: Sign in did not ask for a token and keep it (prompted ${t.prompted}, went to ${t.went.join(' ')})`);
@@ -182,6 +183,8 @@ await said('worker', async () => {
   const ask = (body: unknown, e: object = env, method = 'POST') => wk.fetch(new Request('https://w/', { method, ...method === 'POST' ? { body: typeof body === 'string' ? body : JSON.stringify(body) } : {} }), e)
     .catch((x: Error) => Response.json({ threw: x.message }, { status: 599 })) as Promise<Response>;
   for (const [body, why] of [[{ kind: 'evil', code: 'c' }, 'kind evil'], [{ code: 'c' }, 'no kind'], [{ kind: 'app' }, 'no code'], [{ kind: '__proto__', code: 'c' }, 'kind __proto__'],
+    [{ kind: 'constructor', code: 'c' }, 'kind constructor'], [{ kind: 'toString', code: 'c' }, 'kind toString'], [{ kind: ['app'], code: 'c' }, 'kind [app]'],
+    [{ kind: ['oauth'], revoke: 't' }, 'kind [oauth]'], [{ kind: 1, code: 'c' }, 'kind 1'],
     [{ kind: 'oauth', refresh_token: 'r' }, 'a refresh for the full-access app'], [{ kind: 'app', code: 'c', revoke: 't' }, 'a code and a revoke at once'], ['not json', 'not JSON'], [null, 'null']] as const) {
     const r = await ask(body);
     want(r.status === 400, `worker, ${why}: answered ${r.status}, not 400`);

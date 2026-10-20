@@ -8,7 +8,7 @@
 // Until EXCHANGE is set there is no sign-in to trade a code with, and Sign in takes a pasted token instead.
 export const APP_CLIENT_ID = 'Iv23lihoSE5hsdbSbtXb';
 export const APP_SLUG = 'rofl-workbench';
-export const OAUTH_CLIENT_ID = '';
+export const OAUTH_CLIENT_ID = 'Ov23liOts5dq6uxKHKad';
 export const EXCHANGE = '';
 const KEY = 'rofl-workbench:github', FULL = `${KEY}:full`, STATE = `${KEY}:state`;
 

@@ -300,7 +300,8 @@ for (const [name, plant, why] of PLANTS) {
 const AUTH_PLANTS: [string, string, [string, string], RegExp][] = [
   ['full access taken without the click', 'lib/github.js', ['return said(`${owner} has not installed', 'elevate(); return said(`${owner} has not installed'], /elevated without a click/],
   ['the full-access token kept in localStorage', 'lib/github.js', ['sessionStorage.setItem(FULL, JSON.stringify(who))', 'localStorage.setItem(FULL, JSON.stringify(who))'], /the token reached localStorage/],
-  ['the worker taking the full-access secret for any kind', 'oauth-worker.js', ['Object.hasOwn(APPS, kind) ? APPS[kind] : null', 'APPS[kind] ?? APPS.oauth'], /a refused request reached GitHub/],
+  ['the worker taking the full-access secret for any kind', 'oauth-worker.js', ['Object.hasOwn(APPS, kind) ? APPS[kind] : null', '(APPS[kind] ?? APPS.oauth)'], /a refused request reached GitHub/],
+  ['the worker taking a kind that is not a string', 'oauth-worker.js', ["typeof kind === 'string' && Object.hasOwn", 'Object.hasOwn'], /worker, kind \[app\]: answered 200/],
   ['the state not checked', 'lib/github.js', ["saved.state !== q.get('state'))", 'false)'], /a foreign state/],
   ['a refused token retried without end', 'lib/github.js', ['r = await as(again);', 'return call(url, init);'], /refreshed and still refused: \d+ refreshes/],
 ];
