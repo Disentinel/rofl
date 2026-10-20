@@ -15,7 +15,7 @@
 // A notebook whose first cell is not prose opening with front matter reads rofl:visual/graph.rofl.md, so `draw graph` works in bare cells.
 import { Bench, HINT, addWhere, answered, ghLink, keyAction, nearFiles, nearLink, notebookOf, shown, split, esc, prose, said, state, type Cell, type Kind, type Near, type Ran } from './bench.ts';
 import { SAID } from '../notebook/kernel.ts';
-import { back, finish, read, signIn, signOut, signedIn, whyNot, type Who } from './github.ts';
+import { back, elevate, finish, read, signIn, signOut, signedIn, whyNot, type Who } from './github.ts';
 import { draw, graphLibs } from '../vscode/visual/pictures.ts';
 import { panZoom } from '../vscode/visual/pan.ts';
 import type { View } from '../notebook/draw.ts';
@@ -397,22 +397,24 @@ function openNotebook(text: string, near: Near, href?: string) {
 // signed in to GitHub, a link reads what the viewer's account can read
 let who: Who | null = signedIn();
 const ghBtn = $<HTMLButtonElement>('gh');
-const paintWho = () => { ghBtn.textContent = who ? `@${who.login} · Sign out` : 'Sign in with GitHub'; };
+const paintWho = () => { ghBtn.textContent = who ? `@${who.login}${who.full ? ' · full access' : ''} · Sign out` : 'Sign in with GitHub'; };
 ghBtn.addEventListener('click', async () => {
-  if (who) { signOut(); who = null; return paintWho(); }
+  if (who) { await signOut(); who = null; return paintWho(); }
   try { who = await signIn(); } catch (err) { head.innerHTML = `<div class="err">${esc((err as Error).message)}</div>`; }
   paintWho(); if (who && link) void openLink(link);
 });
-const get = (url: string) => read(url, who);
+const get = read;
 async function openLink(link: string) {
   let at: ReturnType<typeof nearLink>;
   try { at = nearLink(link, get, !!who); } catch { head.innerHTML = `<div class="err">Not a link: ${esc(link)}</div>`; return; }
   head.innerHTML = `<span class="mute">fetching ${esc(at.url)}…</span>`;
   const text = await get(at.url);
   if (text === undefined) {
-    const why = at.repo ? await whyNot(at.repo, at.ref!, at.path!, who) : `Could not fetch ${at.url}: a public file, or a site that lets other pages read it`;
+    const why = at.repo ? await whyNot(at.repo, at.ref!, at.path!) : { say: `Could not fetch ${at.url}: a public file, or a site that lets other pages read it` };
     who = signedIn(); paintWho();
-    head.innerHTML = `<div class="err">${esc(why)}</div>`; return;
+    head.innerHTML = `<div class="err">${esc(why.say).replace(/https:\/\/github\.com\/apps\/[\w-]+\/installations\/new/g, (u) => `<a href="${u}">${u}</a>`)}</div>`
+      + (why.full ? '<div class="note"><button type="button" id="full">Sign in with full access</button> this token can write to all your private repositories; it lives until this tab closes and is revoked when you sign out</div>' : '');
+    $('full')?.addEventListener('click', elevate); return;
   }
   openNotebook(text, at.near, link);
 }

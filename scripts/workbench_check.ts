@@ -295,6 +295,26 @@ for (const [name, plant, why] of PLANTS) {
   const p = await problems(dir, name === 'ownership off').catch((e) => [`crashed: ${(e as Error).stack?.split("\n").slice(0, 2).join(" ")}`]);
   say(p.some((x) => why.test(x)), `planted, ${name}: red, because ${why.source.replace(/\\/g, '')}`, p.length ? p.join('\n     ') : 'green');
 }
+
+// signing in to GitHub, against a played GitHub (scripts/workbench_auth.ts), on a copy of the build with the worker beside it
+const AUTH_PLANTS: [string, string, [string, string], RegExp][] = [
+  ['full access taken without the click', 'lib/github.js', ['return said(`${owner} has not installed', 'elevate(); return said(`${owner} has not installed'], /elevated without a click/],
+  ['the full-access token kept in localStorage', 'lib/github.js', ['sessionStorage.setItem(FULL, JSON.stringify(who))', 'localStorage.setItem(FULL, JSON.stringify(who))'], /the token reached localStorage/],
+  ['the worker taking the full-access secret for any kind', 'oauth-worker.js', ['Object.hasOwn(APPS, kind) ? APPS[kind] : null', 'APPS[kind] ?? APPS.oauth'], /a refused request reached GitHub/],
+  ['the state not checked', 'lib/github.js', ["saved.state !== q.get('state'))", 'false)'], /a foreign state/],
+  ['a refused token retried without end', 'lib/github.js', ['r = await as(again);', 'return call(url, init);'], /refreshed and still refused: \d+ refreshes/],
+];
+const signing = (['', ...AUTH_PLANTS] as const).map((plant) => {
+  const dir = path.join(tmp, `auth-${plant ? plant[0].replace(/\W+/g, '-') : 'as-built'}`);
+  cpSync(built, dir, { recursive: true });
+  cpSync(path.join(ROOT, 'workbench/oauth-worker.js'), path.join(dir, 'oauth-worker.js'));
+  if (plant) spoil(dir, plant[1], ...plant[2]);
+  writeFileSync(path.join(dir, 'lib/package.json'), '{"type":"module"}');
+  const r = spawnSync(process.execPath, ['--experimental-strip-types', path.join(ROOT, 'scripts/workbench_auth.ts'), path.join(dir, 'lib/github.js'), path.join(dir, 'oauth-worker.js')], { encoding: 'utf8', timeout: 60_000 });
+  try { return JSON.parse(r.stdout) as string[]; } catch { return [`crashed: ${r.stderr.split('\n').slice(0, 3).join(' ')}`]; }
+});
+say(!signing[0].length, 'signing in: with no worker a pasted token; the app reads the own private repository with its token; a repository the app is not on says why and offers full access only on a click; full access lives in this tab alone and both tokens are revoked on sign out; a foreign state is refused; an expired token is refreshed once, then signed out; the worker asks GitHub nothing for any other kind or a partial request', signing[0].join('\n     '));
+AUTH_PLANTS.forEach(([name, , , why], k) => say(signing[k + 1].some((x) => why.test(x)), `planted, ${name}: red, because ${why.source.replace(/\\/g, '')}`, signing[k + 1].join('\n     ') || 'green'));
 (await browsed)();
 rmSync(tmp, { recursive: true, force: true });
 console.log(`${red ? `${red} red` : 'all green'} in ${((performance.now() - t0) / 1000).toFixed(1)} s`);
