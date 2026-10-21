@@ -160,13 +160,16 @@ impl Session {
         eval.vclosure_restore();
         eval.stage_kept(o.staged);
         eval.after_open(o.lattices);
+        if !eval.store.dirty && crate::brk!("volume_unknowns_dropped" => false; true) {
+            eval.unknowns_from(o.unknowns)?;
+        }
         Ok(Session { eval, dangling: o.dangling, asks: 0 })
     }
 
     /// This world as a kept image, which `open_kept` reads back.
     pub fn keep(&mut self) -> Vec<u8> {
         self.eval.settle_provenance();
-        crate::image::keep(&self.eval.h, &self.eval.store, &self.eval.staged_kept(), self.eval.safety(), &self.eval.lattices_kept())
+        crate::image::keep(&self.eval.h, &self.eval.store, &self.eval.staged_kept(), self.eval.safety(), &self.eval.lattices_kept(), &self.eval.unknowns_kept())
     }
 
     /// This world kept as a volume at `path`, which `open_volume` maps back. It freezes the world, as a fork does.

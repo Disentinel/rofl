@@ -328,6 +328,28 @@ fn case(name: &str) -> Case {
     CASES.iter().find(|c| c.0 == name).unwrap().1
 }
 
+/// What a hole left unknown is kept by an image as by a volume: a negation unfolded at a call reads it after opening.
+#[test]
+fn a_holes_unknowns_survive_an_image_and_a_volume() {
+    use rofl::session::Session;
+    let text = std::fs::read_to_string(root().join("examples/checks/demand-neg-hole.rofl")).unwrap();
+    let mut s = Session::fresh(200_000_000);
+    s.load(&std::fs::read_to_string(root().join("boot.rofl")).unwrap(), None).unwrap();
+    s.load(&text, None).unwrap();
+    s.evaluate().unwrap();
+    let rows = |s: &mut Session| s.ask("dh_h(X, Y)").unwrap().rows;
+    let want = rows(&mut s);
+    assert!(!want.iter().any(|r| r[0] == "c"), "dh_h(c, _) is a shrug, never a row: {want:?}");
+    let image = s.keep();
+    let path = std::env::temp_dir().join(format!("rofl-kept-holes-{}.vol", std::process::id()));
+    s.keep_volume(path.to_str().unwrap()).unwrap();
+    let mut from_image = Session::open_kept(&image, 200_000_000).unwrap();
+    let mut from_volume = Session::open_volume(path.to_str().unwrap(), 200_000_000).unwrap();
+    std::fs::remove_file(&path).unwrap();
+    assert_eq!(rows(&mut from_image), want, "from a kept image");
+    assert_eq!(rows(&mut from_volume), want, "from a volume");
+}
+
 #[test]
 fn a_kept_world_answers_and_refuses_as_docs_cli_says() {
     let bad: Vec<String> = CASES.iter().filter_map(|(name, f)| f(None).err().map(|e| format!("{name}: {e}"))).collect();
