@@ -496,9 +496,37 @@ fn a_missing_source_is_said_missing(brk: Option<&str>) -> Result<(), String> {
     ensure(r.code != 0 && r.err.contains("other.rofl is missing") && !r.err.contains("computed anew"), || format!("a source gone: {} {:?}", r.code, r.err))
 }
 
+/// Edits one after another, each taken by delta from the world the one before kept, each the fresh world: a fact
+/// taken out of a file, a fact put back, the same file again, a file gone, a file come.
+fn edits_by_delta_are_the_fresh_world(brk: Option<&str>) -> Result<(), String> {
+    let d = Dir::new("implicit-series");
+    d.write("more.rofl", "edb(calls).\ncalls(zebra, yak).\n");
+    let files = |more: bool| -> Vec<&str> { if more { vec!["boot.rofl", "rules.rofl", "more.rofl"] } else { vec!["boot.rofl", "rules.rofl"] } };
+    let check = |what: &str, more: bool, took: &str| -> Result<(), String> {
+        let args: Vec<&str> = ["ask", "reaches(a, X)", "--state"].into_iter().chain(files(more)).collect();
+        let got = rofl(&d, brk, &args);
+        let want = fresh(&d, brk, &["load", "--ask", "reaches(a, X)", "--state"].into_iter().chain(files(more)).collect::<Vec<_>>());
+        ensure(got.out == want.out && got.code == want.code, || format!("{what}: by delta {} lines, fresh {} lines; {:?}", got.out.lines().count(), want.out.lines().count(), got.err))?;
+        ensure(took.is_empty() || got.err.contains(&format!("took 1 file by delta: {took}")), || format!("{what}: wanted one file taken, {took:?}; {:?}", got.err))
+    };
+    check("kept", false, "")?;
+    d.write("rules.rofl", &RULES.replace("calls(b, c).\n", ""));
+    check("a fact taken out", false, "rules.rofl")?;
+    d.write("rules.rofl", &RULES.replace("calls(c, zebra).\n", ""));
+    check("one put back, another taken out", false, "rules.rofl")?;
+    d.write("rules.rofl", &format!("{RULES}calls(zebra, gnu).\n"));
+    check("a fact added", false, "rules.rofl")?;
+    d.write("rules.rofl", &RULES.replace("calls(c, zebra).\n", ""));
+    check("the fact added taken out", false, "rules.rofl")?;
+    check("a file come", true, "more.rofl")?;
+    d.write("rules.rofl", RULES);
+    check("the file edited back", true, "rules.rofl")?;
+    check("a file gone", false, "more.rofl (gone)")
+}
+
 type Case = fn(Option<&str>) -> Result<(), String>;
 
-const CASES: [(&str, Case); 21] = [
+const CASES: [(&str, Case); 22] = [
     ("answers_as_fresh", answers_as_fresh),
     ("a_rule_file_edited", a_rule_file_edited),
     ("boot_edited", boot_edited),
@@ -520,6 +548,7 @@ const CASES: [(&str, Case); 21] = [
     ("concurrent_cold_runs_keep_one_world", concurrent_cold_runs_keep_one_world),
     ("the_writer_stops_at_the_cap", the_writer_stops_at_the_cap),
     ("a_missing_source_is_said_missing", a_missing_source_is_said_missing),
+    ("edits_by_delta_are_the_fresh_world", edits_by_delta_are_the_fresh_world),
 ];
 
 /// What a hole left unknown is kept by an image as by a volume: a negation unfolded at a call reads it after opening.

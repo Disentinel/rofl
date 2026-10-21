@@ -23,12 +23,13 @@ impl Rng {
 }
 
 /// The programs, and how to make one random base fact of each.
-const PROGRAMS: [(&str, &str); 5] = [
+const PROGRAMS: [(&str, &str); 6] = [
     ("plain and recursive", "edb(e).\nr(A, B) :- e(A, B).\nr(A, C) :- r(A, B), e(B, C).\ntwo(A) :- e(A, B), e(B, _).\n"),
     ("negation", "edb(e). edb(down).\nnode(X) :- e(X, _).\nnode(Y) :- e(_, Y).\nr(A, B) :- e(A, B), not down(B).\nr(A, C) :- r(A, B), e(B, C), not down(C).\nlone(X) :- node(X), not r(_, X).\nup(X) :- node(X), not down(X).\n"),
     ("aggregates", "edb(sale). edb(grp).\ngrp(a). grp(b). grp(c).\ntotal(G, S) :- grp(G), S is sum(V ; K : sale(K, G, V)).\nn(G, N) :- grp(G), N is count(J : sale(J, G, _)).\nhi(G, M) :- grp(G), M is max(V : sale(_, G, V)).\nbig(G) :- total(G, S), S > 6.\n"),
     ("negation over derived", "edb(e). edb(mark).\nr(A, B) :- e(A, B).\nr(A, C) :- r(A, B), e(B, C).\nfree(A, B) :- r(A, B), not hit(B).\nhit(X) :- mark(X).\nhit(Y) :- mark(X), e(X, Y).\n"),
     ("books", "edb(e).\nv[audit](X) :- e(X, _), not w(X).\nw(X) :- e(_, X).\nw(z).\n"),
+    ("a tree", "edb(t).\ntree t(P, C) closure w.\ntop(D) :- w(r, D).\nfar(A, D) :- w(A, D), not t(A, D).\nn(A, N) :- t(_, A), N is count(D : w(A, D)).\n"),
 ];
 
 fn fact(r: &mut Rng, program: usize) -> String {
@@ -40,6 +41,18 @@ fn fact(r: &mut Rng, program: usize) -> String {
         3 if r.below(4) == 0 => format!("mark({}).", pick(r)),
         _ => format!("e({}, {}).", pick(r), pick(r)),
     }
+}
+
+/// A random tree's edges: each of five nodes below `r` or an earlier node, or not in the tree.
+fn tree_facts(r: &mut Rng) -> Vec<String> {
+    let nodes = ["r", "a", "b", "c", "d", "e"];
+    let mut out = Vec::new();
+    for i in 1..nodes.len() {
+        if r.below(5) != 0 {
+            out.push(format!("t({}, {}).", nodes[r.below(i)], nodes[i]));
+        }
+    }
+    out
 }
 
 fn world(rules: &str, facts: &[String]) -> Session {
@@ -67,7 +80,7 @@ fn a_set_taken_out_in_one_pass_is_the_fresh_world() {
     for (p, (name, rules)) in PROGRAMS.iter().enumerate() {
         for seed in 1..=40u64 {
             let mut r = Rng(seed * 7919 + p as u64);
-            let mut facts: Vec<String> = (0..4 + r.below(10)).map(|_| fact(&mut r, p)).collect();
+            let mut facts: Vec<String> = if p == 5 { tree_facts(&mut r) } else { (0..4 + r.below(10)).map(|_| fact(&mut r, p)).collect() };
             facts.sort();
             facts.dedup();
             let k = 1 + r.below(facts.len().min(4));
@@ -238,6 +251,48 @@ fn random_js_steps_3() { random_js_steps(&[3]) }
 fn random_js_steps_4() { random_js_steps(&[4]) }
 #[test]
 fn random_js_steps_5() { random_js_steps(&[5]) }
+
+/// A TREE EDITED IN SEQUENCE: edges taken out (the trees they are in built again), edges added by delta, and those taken
+/// out again, each step the fresh world. A rule that reads only the closure rests on no fact of the edges, so what goes
+/// with a row is found through the index of what cites the rows alone, which every firing an addition makes must keep.
+#[test]
+fn a_tree_edited_in_sequence_is_the_fresh_world() {
+    let rules = PROGRAMS[5].1;
+    let steps: [(&[&str], &[&str]); 4] = [
+        (&["t(r, a).", "t(a, b).", "t(b, c).", "t(r, d).", "t(d, e)."], &[]),
+        (&["t(r, a).", "t(r, d).", "t(d, e)."], &["t(a, b).", "t(b, c)."]),
+        (&["t(r, a).", "t(a, b).", "t(b, c).", "t(r, d).", "t(d, e)."], &[]),
+        (&["t(r, a).", "t(r, d)."], &["t(a, b).", "t(b, c).", "t(d, e)."]),
+    ];
+    let mut s = world(rules, &steps[0].0.iter().map(|x| x.to_string()).collect::<Vec<_>>());
+    let mut held: Vec<&str> = steps[0].0.to_vec();
+    for (i, (now, _)) in steps.iter().enumerate().skip(1) {
+        let gone: Vec<String> = held.iter().filter(|f| !now.contains(f)).map(|x| x.to_string()).collect();
+        let came: Vec<&str> = now.iter().filter(|f| !held.contains(f)).copied().collect();
+        let ids = ids_of(&mut s, &gone);
+        match s.retract_set_delta(&ids).unwrap() {
+            Ok(_) => {}
+            Err(why) => panic!("step {i}: refused: {why}"),
+        }
+        if !came.is_empty() {
+            s.load_delta(&came.join("\n"), None).unwrap();
+            assert!(!s.eval.store.dirty, "step {i}: the edges added were not taken by delta");
+        }
+        held = now.to_vec();
+        let want = world(rules, &held.iter().map(|x| x.to_string()).collect::<Vec<_>>()).eval.canonical_state();
+        let got = s.eval.canonical_state();
+        assert!(got == want, "step {i}: {}", first_diff(&want, &got));
+        // the index of what cites a row of the tree, kept by every firing, holds what one built now would
+        let kept = s.eval.store.vciters.take().expect("the index of the tree's rows is kept");
+        s.eval.index_for_retraction();
+        let now = s.eval.store.vciters.clone().unwrap();
+        for (d, cites) in now.iter() {
+            for c in cites {
+                assert!(kept.get(d).is_some_and(|k| k.contains(c)), "step {i}: the kept index lacks {c:?}");
+            }
+        }
+    }
+}
 
 /// A JS file's facts taken out of the JS model: the world a fresh evaluation without the file gives.
 #[test]

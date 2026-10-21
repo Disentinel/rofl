@@ -54,9 +54,6 @@ impl Record {
         }
         (self.env != env_now()).then(|| format!("the environment the engine reads changed since it was kept: [{}] then, [{}] now", self.env.join(" "), env_now().join(" ")))
     }
-    pub fn scanned(&self) -> bool {
-        self.cwd.is_some()
-    }
     /// The directory the world's scanners ran in, where it has any.
     pub fn scanned_in(&self) -> Option<&str> {
         self.cwd.as_deref()

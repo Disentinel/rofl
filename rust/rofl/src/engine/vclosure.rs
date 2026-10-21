@@ -426,6 +426,10 @@ impl Eval {
             c.deep = forests.iter().map(|f| f.1.deep as u64).sum();
             c.internal = forests.iter().map(|f| f.1.internal as u64).sum();
         }
+        // what a reader saw is a count of edges, which an addition of as many as were taken out would give again
+        if brk!("vclosure_reader_seen_kept" => false; true) {
+            self.vreader_seen.retain(|(_, ci), _| !touched.contains(ci));
+        }
         // the trees changed: the rows' provenance is written again when next it is read (`vsettle`)
         if !touched.is_empty() && brk!("vclosure_prov_unbuilt" => false; true) {
             self.vbuilds += 1;

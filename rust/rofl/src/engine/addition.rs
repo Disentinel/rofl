@@ -571,7 +571,7 @@ impl Eval {
             // left whose premises are facts of lower levels that stand, the fact keeps it and nothing above it moves.
             // (A premise of its own level may rest on the fact through a cycle, and a cell or a row may be replaced: the
             // fact goes whole then, and is derived again.)
-            if self.store.alive(x) && !brk!("overdelete_supported_too" => true; false) {
+            if self.store.alive(x) {
                 let store = &self.store;
                 let gone = |p: &PremRef| matches!(p, PremRef::Fact(g) if over.contains(g) || over_base.contains(g) || !store.alive(*g));
                 let firings = store.firings(x);
@@ -818,7 +818,7 @@ impl Eval {
                     v.sort_unstable();
                     v
                 };
-                if (brk!("rederive_firings_short" => false; again.len() > 1) || !kept_here.is_empty()) && !brk!("retract_unrederived" => !removed.is_empty(); false) {
+                if (again.len() > 1 || !kept_here.is_empty()) && !brk!("retract_unrederived" => !removed.is_empty(); false) {
                     for x in again.iter().copied().filter(|x| self.store.alive(*x)).chain(kept_here).collect::<Vec<_>>() {
                         self.rederive_one(x, &by_head, &mut orders, &mut out)?;
                     }
