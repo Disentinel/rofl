@@ -1809,6 +1809,22 @@ impl Store {
     }
 
     /// Whether a base fact other than `but` stands in the book `persp`, of any relation.
+    /// Whether a live base fact of `rel` (in the book `persp`, or any) stands outside `but`, found without listing the
+    /// relation: the first such fact ends the walk.
+    pub fn base_outside(&self, rel: Sym, persp: Option<Sym>, but: &HashSet<FactId>) -> bool {
+        self.idx.get(&rel).is_some_and(|v| {
+            v.iter().filter(|(p, _)| persp.is_none_or(|q| q == *p)).any(|(_, r)| {
+                r.canon.iter().chain(r.arrived.iter()).any(|&i| self.alive(i) && self.rec(i).base() && !but.contains(&i))
+            })
+        })
+    }
+
+    /// Whether the book `persp` holds a live base fact outside `but`, of any relation.
+    pub fn book_base_outside(&self, persp: Sym, but: &HashSet<FactId>) -> bool {
+        let rels: Vec<Sym> = self.idx.own.iter().chain(self.idx.base.iter()).filter(|(_, ps)| ps.iter().any(|(p, _)| *p == persp)).map(|(r, _)| *r).collect();
+        rels.into_iter().any(|r| self.base_outside(r, Some(persp), but))
+    }
+
     pub fn book_holds_base(&mut self, h: &Heap, persp: Sym, but: FactId) -> bool {
         let mut rels: Vec<Sym> = self.idx.own.iter().chain(self.idx.base.iter()).filter(|(_, ps)| ps.iter().any(|(p, _)| *p == persp)).map(|(r, _)| *r).collect();
         rels.sort_unstable();

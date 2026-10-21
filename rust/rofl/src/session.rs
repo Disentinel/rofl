@@ -437,6 +437,43 @@ impl Session {
     pub fn retract_facts_delta(&mut self, ids: &[FactId]) -> Result<Retraction, String> {
         self.eval.settle_assertions();
         self.settle()?;
+        let facts: Vec<FactId> = {
+            let mut seen = HashSet::new();
+            ids.iter().copied().filter(|&f| self.eval.store.alive(f) && self.eval.store.rec(f).base() && seen.insert(f)).collect()
+        };
+        if facts.is_empty() {
+            return Ok(Retraction::Delta(Default::default()));
+        }
+        if facts.iter().any(|&f| [self.eval.v.asks, self.eval.v.explain_request].contains(&self.eval.store.rec(f).rel)) {
+            self.eval.store.dirty = true;
+            return Ok(Retraction::Full("asks names the rules the world runs".into()));
+        }
+        let doomed = self.doomed_of_set(&facts);
+        let marks: Vec<Sym> = doomed.iter().map(|&f| self.eval.store.rec(f).rel).filter(|r| [self.eval.v.edb, self.eval.v.authority].contains(r)).collect();
+        if self.eval.rules.iter().any(|r| r.clause.body.iter().any(|b| b.lits_deep().iter().any(|l| marks.contains(&l.rel)))) {
+            self.eval.store.dirty = true;
+            return Ok(Retraction::Full("the retraction takes an edb or authority row a rule reads".into()));
+        }
+        match self.eval.retract_set(&facts, &doomed) {
+            Ok(_) => match self.eval.check_promises() {
+                Ok(_) => Ok(Retraction::Delta(Default::default())),
+                Err(e) => {
+                    self.eval.store.dirty = true;
+                    Err(crate::describe(&e))
+                }
+            },
+            Err(why) => {
+                self.eval.store.dirty = true;
+                Ok(Retraction::Full(why))
+            }
+        }
+    }
+
+    /// The base facts `ids` taken out one after another by the engine's one-fact delta (`retract_delta`): the
+    /// reference `retract_facts_delta` is held to. `Full` as there.
+    pub fn retract_facts_one_by_one(&mut self, ids: &[FactId]) -> Result<Retraction, String> {
+        self.eval.settle_assertions();
+        self.settle()?;
         let mut last = Retraction::Delta(Default::default());
         for &id in ids {
             if !self.eval.store.alive(id) || !self.eval.store.rec(id).base() {
@@ -1629,6 +1666,59 @@ impl Session {
             if !named {
                 for w in [kernel_who, anon_who] {
                     marks.extend(self.eval.store.get(authority, main, &[Term::atom(persp), Term::atom(w)]));
+                }
+            }
+        }
+        for m in marks {
+            let mt = self.fact_term(m);
+            if self.eval.store.alive(m) && !declared.iter().any(|(_, t)| *t == mt) {
+                out.push(m);
+            }
+        }
+        out
+    }
+
+    /// `doomed` of a set of base facts taken out together, the facts themselves left out: the `asserted_by` rows
+    /// written of them, and the kernel's marks a load wrote for the set alone (`edb(R)` where no base fact of R
+    /// stands outside the set, a book's `authority` rows where none of the book does). Each relation and book is
+    /// asked once, and each answer stops at the first fact outside the set: no relation is listed.
+    fn doomed_of_set(&mut self, facts: &[FactId]) -> Vec<FactId> {
+        let set: HashSet<FactId> = facts.iter().copied().collect();
+        let v = &self.eval.v;
+        let (ab, edb, authority, main, kernel_who, anon_who, writes_to, reads_from) =
+            (v.asserted_by, v.edb, v.authority, v.main, v.kernel_who, v.anon_who, v.writes_to, v.reads_from);
+        let mut out: Vec<FactId> = Vec::new();
+        // the rows already written: the pending ones are written of live facts only (`settle_assertions`)
+        let mut declared: Vec<(FactId, Term)> = Vec::new();
+        if self.eval.store.rel_count(ab) > 0 {
+            let terms: HashSet<Term> = facts.iter().map(|&f| self.fact_term(f)).collect();
+            for g in self.eval.store.rel_all(&self.eval.h, ab) {
+                let t = self.eval.store.args(g)[0];
+                if terms.contains(&t) {
+                    out.push(g);
+                }
+                declared.push((g, t));
+            }
+        }
+        let withheld = crate::program::sealed_rels(&mut self.eval);
+        if brk!("retract_keeps_edb" => true; withheld.contains(&ab)) {
+            return out;
+        }
+        let mut marks: Vec<FactId> = Vec::new();
+        let rels: std::collections::BTreeSet<Sym> = facts.iter().map(|&f| self.eval.store.rec(f).rel).collect();
+        for rel in rels {
+            if !self.eval.v.is_reserved(rel) && !self.eval.store.base_outside(rel, None, &set) {
+                marks.extend(self.eval.store.get(edb, main, &[Term::atom(rel)]));
+            }
+        }
+        let books: std::collections::BTreeSet<Sym> = facts.iter().map(|&f| self.eval.store.rec(f).persp).collect();
+        for persp in books {
+            if persp != main && !self.eval.h.name(persp).starts_with('$') && !withheld.contains(&writes_to) && !self.eval.store.book_base_outside(persp, &set) {
+                let named = [writes_to, reads_from].into_iter().any(|r| self.eval.store.rel_all(&self.eval.h, r).into_iter().any(|f| self.eval.store.args(f)[1] == Term::atom(persp)));
+                if !named {
+                    for w in [kernel_who, anon_who] {
+                        marks.extend(self.eval.store.get(authority, main, &[Term::atom(persp), Term::atom(w)]));
+                    }
                 }
             }
         }

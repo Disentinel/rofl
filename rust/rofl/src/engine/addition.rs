@@ -381,7 +381,45 @@ impl Eval {
             self.closures_engage();
         }
         let moved = if new_rules.is_empty() { HashSet::new() } else { self.rerank()? };
-        self.add_worked_out(added, &fresh, &grown, &moved, called).map_err(String::from)
+        self.add_worked_out(added, &[], &fresh, &grown, &moved, called).map_err(String::from)
+    }
+
+    /// TAKE OUT OF AN EVALUATED WORLD the base facts `facts`, with `doomed` the kernel rows their loads wrote for them
+    /// alone, and bring it to the state a fresh evaluation without them holds: DRed in one pass over the set, by the
+    /// addition path's levels (`fine_levels`). What rests on a fact goes through the citer index, kept with every
+    /// firing; each fact gone is derived again at its level where a rule still makes it; a fact gone for good makes a
+    /// negation over it hold; a cell a member of which went is asked again at its key. Nothing is fired whole that
+    /// the change does not reach. `Err(reason)` leaves the store dirty or untouched; the caller evaluates again.
+    pub fn retract_set(&mut self, facts: &[FactId], doomed: &[FactId]) -> Result<AddDelta, String> {
+        if facts.is_empty() {
+            return Ok(AddDelta::default());
+        }
+        let mut why = self.addition_refusals();
+        if facts.iter().any(|f| !self.store.alive(*f) || !self.store.rec(*f).base()) {
+            why.push("not a base fact");
+        }
+        let from: HashSet<Sym> = facts.iter().map(|f| self.store.rec(*f).rel).collect();
+        if from.iter().any(|r| self.vedges_reached(*r)) {
+            why.push("the fact reaches the edges of a closure answered from its tree, which a retraction builds again");
+        }
+        if from.iter().any(|r| self.demand_rels.iter().any(|(d, _)| d == r)) {
+            why.push("read on demand");
+        }
+        if self.no_witness {
+            why.push("the world keeps no witness, so nothing says which facts lose their last support");
+        }
+        if !why.is_empty() {
+            why.dedup();
+            return Err(why.join("; "));
+        }
+        let grown = self.grow(&from, &HashSet::new());
+        let mut all: Vec<FactId> = facts.to_vec();
+        all.extend(doomed.iter().copied().filter(|g| !facts.contains(g)));
+        if !self.store.has_citers() {
+            self.store.index_citers();
+        }
+        self.store.remove_many(&all);
+        self.add_worked_out(&[], facts, &HashSet::new(), &grown, &HashSet::new(), &[]).map_err(String::from)
     }
 
     /// `plan` solved as rule `r` solves its body, from `s0`.
@@ -532,7 +570,7 @@ impl Eval {
     /// fact gone for good below makes a negation over it hold (the rule solved with it bound to the premise); and the
     /// news of every level below, and what this level made, fires the rules of the level semi-naively.
     #[allow(clippy::too_many_arguments)]
-    fn fine_levels(&mut self, added: &[FactId], mono: &[Rc<ERule>], negs: &[(Rc<ERule>, Vec<NegAt>)], fresh: &[Rc<ERule>], recompute: &[Rc<ERule>], keyable: &HashSet<Sym>, grown: &HashSet<Sym>, dirty: &HashSet<Sym>, skip: &HashSet<Sym>, d: &mut AddDelta) -> Result<(), Halt> {
+    fn fine_levels(&mut self, added: &[FactId], removed: &[FactId], mono: &[Rc<ERule>], negs: &[(Rc<ERule>, Vec<NegAt>)], fresh: &[Rc<ERule>], recompute: &[Rc<ERule>], keyable: &HashSet<Sym>, grown: &HashSet<Sym>, dirty: &HashSet<Sym>, skip: &HashSet<Sym>, d: &mut AddDelta) -> Result<(), Halt> {
         let mut levels: std::collections::BTreeSet<i64> = mono.iter().chain(fresh).chain(recompute).chain(negs.iter().map(|(r, _)| r)).map(|r| self.rule_level(r)).collect();
         levels.extend(grown.iter().filter(|r| !dirty.contains(r)).map(|r| self.rel_level(*r)));
         let mut by_head: HashMap<Sym, Vec<Rc<ERule>>> = HashMap::new();
@@ -540,7 +578,7 @@ impl Eval {
             by_head.entry(r.clause.head.rel).or_default().push(r.clone());
         }
         // the citer index, made once and kept by every firing added since
-        if !(negs.is_empty() && recompute.is_empty()) && !self.store.has_citers() {
+        if (!(negs.is_empty() && recompute.is_empty()) || !removed.is_empty()) && !self.store.has_citers() {
             self.store.index_citers();
         }
         let mut news = Front::default();
@@ -556,6 +594,18 @@ impl Eval {
         let mut over: HashSet<FactId> = HashSet::new();
         let mut over_base: HashSet<FactId> = HashSet::new();
         let mut gone: HashMap<Sym, Vec<FactId>> = HashMap::new();
+        // A RETRACTION is the base facts `removed` gone (the caller took them out): each is overdeleted, and what rests
+        // on it through each other, and at its level derived again where a rule still makes it
+        if !removed.is_empty() {
+            let mut seeds: Vec<FactId> = Vec::new();
+            for &f in removed {
+                over.insert(f);
+                if brk!("retract_set_unpropagated" => false; true) {
+                    seeds.extend(self.store.citers_one(f).into_iter().filter(|y| self.store.alive(*y) && self.store.firings(*y).iter().any(|(_, _, ps)| ps.contains(&PremRef::Fact(f)))));
+                }
+            }
+            self.overdelete(seeds, &mut over, &mut over_base, d);
+        }
         let derived_by = self.v.derived_by;
         let lvl: HashMap<Sym, i64> = mono.iter().chain(fresh).chain(recompute).chain(negs.iter().map(|(r, _)| r)).map(|r| (r.id, self.rule_level(r))).collect();
         for lv in levels {
@@ -697,28 +747,29 @@ impl Eval {
                 again.sort_unstable();
                 let mut out = Front::default();
                 let mut orders: HashMap<Sym, Option<Vec<usize>>> = HashMap::new();
-                for x in again {
-                    let (rel, persp) = (self.store.rec(x).rel, self.store.rec(x).persp);
-                    let args = self.store.args(x).to_vec();
-                    for r in by_head.get(&rel).cloned().unwrap_or_default() {
-                        let mut s0 = Some(Subst::new());
-                        s0 = s0.and_then(|s| unify(&self.h, r.clause.head.persp, Term::atom(persp), &s));
-                        for (a, b) in r.clause.head.args.iter().zip(&args) {
-                            s0 = s0.and_then(|s| unify(&self.h, *a, *b, &s));
+                // until nothing more comes back: a fact of a recursion may rest on one derived again after it
+                let mut pending = again.clone();
+                loop {
+                    let mut still: Vec<FactId> = Vec::new();
+                    let mut came = false;
+                    for x in pending {
+                        let was = self.store.alive(x) && !self.store.rec(x).base();
+                        self.rederive_one(x, &by_head, &mut orders, &mut out)?;
+                        if !self.store.alive(x) {
+                            still.push(x);
+                        } else if !was && !self.store.rec(x).base() {
+                            came = true;
                         }
-                        let Some(s0) = s0.filter(|_| r.clause.head.args.len() == args.len()) else { continue };
-                        let all: Vec<usize> = (0..r.plan.len()).collect();
-                        if !orders.contains_key(&r.id) {
-                            let mut pre = Vec::new();
-                            for a in r.clause.head.args.iter().chain([&r.clause.head.persp]) {
-                                self.h.vars_of(*a, &mut pre);
-                            }
-                            let o = self.bound_order(&r, &all, &pre);
-                            orders.insert(r.id, o);
-                        }
-                        for sol in self.solve_bound(&r, &all, orders[&r.id].clone().as_deref(), vec![s0])? {
-                            self.conclude(&r, sol, &mut out)?;
-                        }
+                    }
+                    pending = still;
+                    if !came || pending.is_empty() || brk!("rederive_once" => true; false) {
+                        break;
+                    }
+                }
+                // and each that stands takes every firing it has, now that all that came back stands
+                if brk!("rederive_firings_short" => false; again.len() > 1) {
+                    for x in again.iter().copied().filter(|x| self.store.alive(*x)).collect::<Vec<_>>() {
+                        self.rederive_one(x, &by_head, &mut orders, &mut out)?;
                     }
                 }
                 // a fact gone for good below makes a negation over it hold
@@ -777,6 +828,34 @@ impl Eval {
             self.close_thresholds_below(i64::MAX, true)?;
             if self.thr_open.len() >= open {
                 break;
+            }
+        }
+        Ok(())
+    }
+
+    /// A fact gone (or a base fact that lost its firings) derived again from what holds: every rule into its relation
+    /// solved with it bound to the head, each solution concluded.
+    fn rederive_one(&mut self, x: FactId, by_head: &HashMap<Sym, Vec<Rc<ERule>>>, orders: &mut HashMap<Sym, Option<Vec<usize>>>, out: &mut Front) -> Result<(), Halt> {
+        let (rel, persp) = (self.store.rec(x).rel, self.store.rec(x).persp);
+        let args = self.store.args(x).to_vec();
+        for r in by_head.get(&rel).cloned().unwrap_or_default() {
+            let mut s0 = Some(Subst::new());
+            s0 = s0.and_then(|s| unify(&self.h, r.clause.head.persp, Term::atom(persp), &s));
+            for (a, b) in r.clause.head.args.iter().zip(&args) {
+                s0 = s0.and_then(|s| unify(&self.h, *a, *b, &s));
+            }
+            let Some(s0) = s0.filter(|_| r.clause.head.args.len() == args.len()) else { continue };
+            let all: Vec<usize> = (0..r.plan.len()).collect();
+            if !orders.contains_key(&r.id) {
+                let mut pre = Vec::new();
+                for a in r.clause.head.args.iter().chain([&r.clause.head.persp]) {
+                    self.h.vars_of(*a, &mut pre);
+                }
+                let o = self.bound_order(&r, &all, &pre);
+                orders.insert(r.id, o);
+            }
+            for sol in self.solve_bound(&r, &all, orders[&r.id].clone().as_deref(), vec![s0])? {
+                self.conclude(&r, sol, out)?;
             }
         }
         Ok(())
@@ -990,7 +1069,7 @@ impl Eval {
         }
     }
 
-    fn add_worked_out(&mut self, added: &[FactId], fresh: &HashSet<Sym>, grown: &HashSet<Sym>, moved: &HashSet<Sym>, called: &[Sym]) -> Result<AddDelta, &'static str> {
+    fn add_worked_out(&mut self, added: &[FactId], removed: &[FactId], fresh: &HashSet<Sym>, grown: &HashSet<Sym>, moved: &HashSet<Sym>, called: &[Sym]) -> Result<AddDelta, &'static str> {
         let stratified = |r: &ERule| r.has_neg || r.has_agg || r.has_thr || !r.lattice_outer.is_empty() || r.demand_strict;
         // A RELATION ANSWERED ON DEMAND makes a fact for every call, which no firing cites: every such fact goes and
         // every rule that reads one fires again, so the calls are made again over what stands (as a retraction does)
@@ -1278,7 +1357,7 @@ impl Eval {
             // the part kept, level by level: the news through the rules that read it, the added plain rules whole, and
             // under a negation the firings a new fact blocks withdrawn, what rested on them derived again
             let skip: HashSet<Sym> = again.iter().map(|r| r.id).collect();
-            self.fine_levels(added, &mono, &negs, &new_plain, &recompute, &keyable, grown, &dirty, &skip, &mut d)?;
+            self.fine_levels(added, removed, &mono, &negs, &new_plain, &recompute, &keyable, grown, &dirty, &skip, &mut d)?;
             self.active.clear();
             // the rest, as a full evaluation fires it
             self.refire(&again, &[])?;
