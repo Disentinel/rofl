@@ -720,6 +720,8 @@ pub struct Eval {
     add_heights: HashSet<Sym>,
     /// The first id an addition's facts take: a fact below it stood before.
     add_mark: FactId,
+    /// What a retraction overdeletes besides the citers of its facts: the facts that cited a row of a tree it took out (`vretract_edges`).
+    retract_seeds: Vec<FactId>,
     pub delta_ns: u64,
     delta_plans: HashMap<(Sym, usize), joinplan::Slot>,
     delta_stats: HashMap<Vec<u64>, (usize, usize, usize)>,
@@ -1403,6 +1405,7 @@ impl Eval {
             add_refired: Vec::new(),
             add_heights: HashSet::new(),
             add_mark: 0,
+            retract_seeds: Vec::new(),
             delta_plans: HashMap::new(),
             delta_stats: HashMap::new(),
             functions: Vec::new(),

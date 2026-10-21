@@ -329,6 +329,105 @@ impl Eval {
         Some(forests)
     }
 
+    /// What cites a row of a tree, by the row's descendant (`Store::vciters`), from every firing the store keeps.
+    pub(super) fn vindex_citers(&mut self) {
+        let mut cited: Vec<(FactId, Sym)> = Vec::new();
+        for id in self.store.firing_keys() {
+            for (_, _, prems) in self.store.firings(id) {
+                for p in prems {
+                    if let PremRef::VRow(k) = p {
+                        if k != 0 {
+                            cited.push((id, k));
+                        }
+                    }
+                }
+            }
+        }
+        let mut m: FxMap<u64, Vec<(FactId, Sym)>> = FxMap::default();
+        for (id, k) in cited {
+            if let Some((_, _, _, d)) = self.vrow_entry(k) {
+                m.entry(d.bits()).or_default().push((id, k));
+            }
+        }
+        self.store.vciters = Some(Rc::new(m));
+    }
+
+    /// THE EDGES OF A TREE A RETRACTION TAKES OUT (`retract_set`), before they go: each tree an edge of `facts` is in
+    /// is built again from its edges that stand (`Forest::rebuild_trees`), the rest of the forest as it was, and the
+    /// facts that cited a row of a tree built again that no longer holds are what the retraction overdeletes besides.
+    /// The closures touched, for `vretract_done` once the edges are gone from the store.
+    pub(super) fn vretract_edges(&mut self, facts: &[FactId]) -> (Vec<FactId>, Vec<usize>) {
+        let (mut out, mut touched) = (Vec::new(), Vec::new());
+        if !self.vany {
+            return (out, touched);
+        }
+        for ci in 0..self.vclosures.len() {
+            if !self.vclosures[ci].active {
+                continue;
+            }
+            let src = self.vclosures[ci].src;
+            let mut by_book: FxMap<Sym, Vec<(Term, Term)>> = FxMap::default();
+            let mut old = 0;
+            for &f in facts {
+                if self.store.rec(f).rel != src {
+                    continue;
+                }
+                if let Some(e) = self.vedge(ci, f) {
+                    by_book.entry(self.store.rec(f).persp).or_default().push(e);
+                    old += (f < self.vclosures[ci].mark) as usize;
+                }
+            }
+            if by_book.is_empty() {
+                continue;
+            }
+            // the forest as it stood before the retraction: the edges it took out are found in it
+            if self.vclosures[ci].built.is_none() {
+                continue;
+            }
+            if self.store.vciters.is_none() {
+                self.vindex_citers();
+            }
+            let held = std::mem::replace(&mut self.store.virtuals[ci].forests, Rc::from(Vec::new()));
+            let mut forests: Vec<(Sym, Rc<Forest>)> = held.to_vec();
+            drop(held);
+            for (book, es) in by_book {
+                let Some(slot) = forests.iter_mut().find(|f| f.0 == book) else { continue };
+                let forest = Rc::make_mut(&mut slot.1);
+                let dropped = forest.rebuild_trees(&es);
+                for d in dropped {
+                    let cites: Vec<(FactId, Sym)> = self.store.vciters.as_ref().and_then(|m| m.get(&d.bits())).cloned().unwrap_or_default();
+                    for (y, k) in cites {
+                        if !self.store.alive(y) || !self.store.firings(y).iter().any(|(_, _, ps)| ps.contains(&PremRef::VRow(k))) {
+                            continue;
+                        }
+                        let Some((c, b, a, dd)) = self.vrow_entry(k) else { continue };
+                        if c == ci && b == book && brk!("vclosure_gone_rows_kept" => false; !forest.is_ancestor(a, dd)) {
+                            out.push(y);
+                        }
+                    }
+                }
+            }
+            self.store.virtuals[ci].forests = Rc::from(forests);
+            let c = &mut self.vclosures[ci];
+            c.rows -= old;
+            touched.push(ci);
+        }
+        (out, touched)
+    }
+
+    /// The closures `vretract_edges` built again, told the edge relation as it now stands: no rebuild follows.
+    pub(super) fn vretract_done(&mut self, touched: &[usize]) {
+        for &ci in touched {
+            let n = self.store.rel_len_est(self.vclosures[ci].src, None);
+            let forests = self.store.virtuals[ci].forests.clone();
+            let c = &mut self.vclosures[ci];
+            c.built = Some(n);
+            c.pairs = forests.iter().map(|f| f.1.pairs).sum();
+            c.deep = forests.iter().map(|f| f.1.deep as u64).sum();
+            c.internal = forests.iter().map(|f| f.1.internal as u64).sum();
+        }
+    }
+
     /// The forests of every active closure, built as the edges stand: the planner's estimates read them.
     pub(super) fn vrefresh(&mut self) {
         if !self.vany {

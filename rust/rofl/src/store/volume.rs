@@ -200,6 +200,15 @@ impl Store {
                 w.arena(&ix.ids);
             }
         }
+        match &self.vciters {
+            None => w.u32(0),
+            Some(m) => {
+                w.u32(1);
+                let mut rows: Vec<[u32; 4]> = m.iter().flat_map(|(d, v)| v.iter().map(move |(f, k)| [*d as u32, (*d >> 32) as u32, *f, *k])).collect();
+                rows.sort_unstable();
+                w.arena(&rows.concat());
+            }
+        }
     }
 
     /// The key table as `freeze` would leave it: the layer's facts put in the base's table where it is the size a
@@ -320,6 +329,17 @@ impl Store {
                 return Err("a volume's citer index is not an index".into());
             }
             s.citers = Some(Rc::new(Citers { offs, ids, ..Citers::default() }));
+        }
+        if r.u32()? == 1 {
+            let words: Arena<u32> = r.arena()?;
+            if words.len() % 4 != 0 || words.chunks_exact(4).any(|x| x[2] as usize >= s.facts.len()) {
+                return Err("a volume's index of the rows of a tree is not an index".into());
+            }
+            let mut m: FxMap<u64, Vec<(FactId, Sym)>> = FxMap::default();
+            for x in words.chunks_exact(4) {
+                m.entry(x[0] as u64 | (x[1] as u64) << 32).or_default().push((x[2], x[3]));
+            }
+            s.vciters = Some(Rc::new(m));
         }
         Ok(s)
     }

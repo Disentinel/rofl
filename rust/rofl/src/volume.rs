@@ -10,7 +10,7 @@ use crate::engine::{Eval, RuleAnswer, StagedFact, Tok};
 use crate::store::{PremRef, Store};
 use crate::term::{Heap, Sym, Term};
 
-const MAGIC: &[u8; 16] = b"ROFL-VOLUME-2\n\0\0";
+const MAGIC: &[u8; 16] = b"ROFL-VOLUME-3\n\0\0";
 
 fn build_id() -> String {
     format!("{} {} {:x}", env!("CARGO_PKG_VERSION"), crate::kernel::KERNEL_HASH, 0x0102_0304u32)

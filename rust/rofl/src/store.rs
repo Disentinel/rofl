@@ -1164,6 +1164,10 @@ pub struct Store {
     /// firings it touches and not the store. An entry can outlive its firing;
     /// every reader checks the firing itself.
     citers: Option<Rc<Citers>>,
+    /// The facts with a firing that cites a row of a closure answered from its tree, by the row's descendant: what a
+    /// retraction that takes an edge out of the tree looks at (`Eval::retract_set`). Kept beside `citers` by every
+    /// firing put since; dropped (to be built again) when a firing cites a row whose ends this store does not know.
+    pub vciters: Option<Rc<FxMap<u64, Vec<(FactId, Sym)>>>>,
 }
 
 /// The citer index: the facts citing each premise as one column by premise id (`offs`, `ids`), which a volume maps,
@@ -2633,6 +2637,18 @@ impl Store {
             for p in &w.prems {
                 if let PremRef::Fact(g) = p {
                     ix.more.entry(*g).or_default().push(id);
+                }
+            }
+        }
+        if self.vciters.is_some() && brk!("vciters_unkept" => false; true) {
+            for p in &w.prems {
+                let PremRef::VRow(k) = p else { continue };
+                match self.vrow_of.get(k) {
+                    Some(&(_, _, _, d)) => Rc::make_mut(self.vciters.as_mut().unwrap()).entry(d.bits()).or_default().push((id, *k)),
+                    None => {
+                        self.vciters = None;
+                        break;
+                    }
                 }
             }
         }

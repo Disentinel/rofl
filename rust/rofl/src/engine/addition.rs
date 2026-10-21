@@ -399,7 +399,8 @@ impl Eval {
             why.push("not a base fact");
         }
         let from: HashSet<Sym> = facts.iter().map(|f| self.store.rec(*f).rel).collect();
-        if from.iter().any(|r| self.vedges_reached(*r)) {
+        // an edge of a tree that goes is taken out of the tree at its level (`vretract_edges`)
+        if brk!("retract_tree_refused" => from.iter().any(|r| self.vedges_reached(*r)); false) {
             why.push("the fact reaches the edges of a closure answered from its tree, which a retraction builds again");
         }
         if from.iter().any(|r| self.demand_rels.iter().any(|(d, _)| d == r)) {
@@ -417,6 +418,9 @@ impl Eval {
         all.extend(doomed.iter().copied().filter(|g| !facts.contains(g)));
         if !self.store.has_citers() {
             self.store.index_citers();
+        }
+        if self.vany && self.store.vciters.is_none() {
+            self.vindex_citers();
         }
         self.store.remove_many(&all);
         self.add_worked_out(&[], facts, &HashSet::new(), &grown, &HashSet::new(), &[]).map_err(String::from)
@@ -597,7 +601,7 @@ impl Eval {
         // A RETRACTION is the base facts `removed` gone (the caller took them out): each is overdeleted, and what rests
         // on it through each other, and at its level derived again where a rule still makes it
         if !removed.is_empty() {
-            let mut seeds: Vec<FactId> = Vec::new();
+            let mut seeds: Vec<FactId> = std::mem::take(&mut self.retract_seeds);
             for &f in removed {
                 over.insert(f);
                 if brk!("retract_set_unpropagated" => false; true) {
@@ -814,11 +818,21 @@ impl Eval {
                     news.note(rel, id);
                 }
             }
+            let mut edges_gone: Vec<FactId> = Vec::new();
             for x in &over {
                 let rel = self.store.rec(*x).rel;
                 if self.rel_level(rel) == lv && !self.store.alive(*x) {
                     gone.entry(rel).or_default().push(*x);
+                    edges_gone.push(*x);
                 }
+            }
+            // an edge of a tree gone for good leaves the tree: its tree is built again, and what cited a row of it that
+            // no longer holds goes, at the levels above
+            if !removed.is_empty() && self.vany {
+                edges_gone.sort_unstable();
+                let (seeds, touched) = self.vretract_edges(&edges_gone);
+                self.vretract_done(&touched);
+                self.overdelete(seeds, &mut over, &mut over_base, d);
             }
         }
         // (a threshold closed after the levels makes facts the news does not hold)
