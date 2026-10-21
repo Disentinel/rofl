@@ -132,3 +132,6 @@ knob_note("ROFL_NB_DAEMON", "env", "`0` runs a notebook in the calling process i
 
 knob_shown("ROFL_NO_BROWSER", 10).
 knob_note("ROFL_NO_BROWSER", "env", "`1` lets `test:workbench` go without Chrome; without it a missing Chrome is a red").
+
+knob_shown("--kept", 11).
+knob_note("--kept", "rofl load", "`--kept F [--anew]`, with any verb: the world evaluated once and kept at F; later runs answer from F without evaluating, with or without the files, and refuse it (exit 2) naming what changed since; `--anew` evaluates it again (docs/cli.md)").

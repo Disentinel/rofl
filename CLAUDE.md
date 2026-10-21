@@ -95,6 +95,7 @@ verdict in docs/knobs.md.
 | `ROFL_NB_LIMIT` | env | seconds a notebook run evaluates before it stops and answers what it found (exit 3); `ROFL_NB_MEMORY=<GB>` bounds the heap likewise |
 | `ROFL_NB_DAEMON` | env | `0` runs a notebook in the calling process instead of the kept kernel |
 | `ROFL_NO_BROWSER` | env | `1` lets `test:workbench` go without Chrome; without it a missing Chrome is a red |
+| `--kept` | rofl load | `--kept F [--anew]`, with any verb: the world evaluated once and kept at F; later runs answer from F without evaluating, with or without the files, and refuse it (exit 2) naming what changed since; `--anew` evaluates it again (docs/cli.md) |
 
 <!-- END knobs -->
 

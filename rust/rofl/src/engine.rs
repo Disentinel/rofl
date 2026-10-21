@@ -700,6 +700,9 @@ pub struct Eval {
     /// Told each hot rule as it is found, as the sentence `hot_said` keeps.
     pub on_hot: Option<fn(&str)>,
     pub hot_said: Vec<String>,
+    /// Each scan this world loaded (`Session::scan_requests`): its command and path, and the paths the scanner
+    /// named as read, none when it named nothing. What a kept world is stale by besides its files (docs/cli.md).
+    pub scans: Vec<(String, Vec<String>)>,
     /// Firings solved delta-first.
     pub delta_by_rule: HashMap<Sym, u64>,
     /// Delta-first join plans (`joinplan.rs`), per rule and news position, and
@@ -1391,6 +1394,7 @@ impl Eval {
             hot_read: cost::HOT_READ,
             on_hot: None,
             hot_said: Vec::new(),
+            scans: Vec::new(),
             delta_by_rule: HashMap::new(),
             delta_ns: 0,
             plan_trial: false,

@@ -171,8 +171,13 @@ impl Session {
 
     /// This world kept as a volume at `path`, which `open_volume` maps back. It freezes the world, as a fork does.
     pub fn keep_volume(&mut self, path: &str) -> std::io::Result<usize> {
+        self.keep_volume_noted(path, "")
+    }
+
+    /// `keep_volume` with a note in the volume's header, which `volume::check` reads back without opening the world.
+    pub fn keep_volume_noted(&mut self, path: &str, note: &str) -> std::io::Result<usize> {
         let tmp = format!("{path}.part");
-        let n = crate::volume::keep(&tmp, &mut self.eval)?;
+        let n = crate::volume::keep(&tmp, &mut self.eval, note)?;
         std::fs::rename(&tmp, path)?;
         Ok(n)
     }
@@ -1674,6 +1679,7 @@ impl Session {
         let mut s = opened?;
         let e = &self.eval;
         (s.eval.space, s.eval.mode, s.eval.retain_ticks, s.eval.on_hot) = (e.space, e.mode, e.retain_ticks, e.on_hot);
+        s.eval.scans = std::mem::take(&mut self.eval.scans);
         (s.dangling, s.asks) = (self.dangling, self.asks);
         *self = s;
         trim_heap();
@@ -1729,8 +1735,13 @@ impl Session {
         self.cool_round()?;
         let q = |s: &str| format!("\"{}\"", s.replace('\\', "\\\\").replace('"', "\\\""));
         let mut src = String::new();
-        for (((kind, path), _), run) in todo.iter().zip(runs) {
-            match run.join().unwrap_or_else(|_| Err("the scanner's thread failed".into())) {
+        for (((kind, path), text), run) in todo.iter().zip(runs) {
+            let ran = run.join().unwrap_or_else(|_| Err("the scanner's thread failed".into()));
+            if let Some(cmd) = scanners.get(kind) {
+                let read = ran.as_ref().map_or(Vec::new(), |out| out.lines().filter_map(|l| l.strip_prefix("-- reads: ")).map(|p| scan_path(p)).collect());
+                self.eval.scans.push((format!("{cmd} {text}"), read));
+            }
+            match ran {
                 Ok(out) => {
                     let n = out.lines().filter(|l| !l.starts_with("--") && l.trim_end().ends_with('.')).count();
                     src.push_str(&out);
@@ -1851,6 +1862,11 @@ fn scan_kept(cmd: &str, path: &str) -> Option<std::path::PathBuf> {
         .or_else(|| std::env::var_os("HOME").map(|h| std::path::Path::new(&h).join(".cache")))?;
     let cwd = std::env::current_dir().ok()?;
     Some(home.join("rofl/scans").join(format!("{}.rofl", crate::store::fnv64(&format!("{}\0{cmd}\0{path}", cwd.display())))))
+}
+
+/// A path a scanner named, from the directory the scan ran in.
+fn scan_path(p: &str) -> String {
+    std::env::current_dir().map_or_else(|_| p.to_string(), |d| d.join(p).to_string_lossy().into_owned())
 }
 
 /// A file by its bytes, a directory by the names in it, nothing for a path that is gone.

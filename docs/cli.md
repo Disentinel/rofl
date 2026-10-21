@@ -19,7 +19,7 @@ rofl nb [--cell N] [--all]       notebook.rofl.md        # run a notebook, print
 
 A question verb is `rofl load` with that one question, so every flag of
 `rofl load` applies to it (`--ticks`, `--budget`, `--space`, `--strata`,
-`--retract`, `--below`). `rofl load --ask L --why L --whynot L --excise F`
+`--retract`, `--below`, `--kept`). `rofl load --ask L --why L --whynot L --excise F`
 asks several in one run, the answers in that order with an empty line after
 each.
 
@@ -52,13 +52,63 @@ notebook over code (`code:`, `model: js`) and `--json` are not native yet: it sa
 directory. `@rules/js.files` is the JS model, the files the notebook host
 loads (`notebook/front.ts` `MODEL_FILES`; `npm test` fails when the two differ).
 
+## A world kept on disk
+
+`--kept F` with any verb keeps the world on disk: computed once, asked many
+times, each question a new process that does not evaluate again.
+
+```sh
+rofl ask 'reaches(a, X)' --kept world.vol boot.rofl world.rofl   # no world.vol: evaluated, kept there, answered
+rofl why 'reaches(a, c)' --kept world.vol                        # answered from world.vol, files and walls as kept
+rofl whynot 'reaches(c, a)' --kept world.vol boot.rofl world.rofl  # the same, the files named must be the ones kept
+rofl ask 'reaches(a, X)' --kept world.vol --anew                 # evaluated again from its files and kept over it
+```
+
+F is a volume (docs/staged-evaluation.md, decision 2): opening it maps the
+file, the facts, names and witnesses are read where they lie, and nothing is
+evaluated. Every verb answers from it exactly as from the files: `why`,
+`whynot` and `excise` keep their witnesses, a `sealed(provenance)` world
+refuses a `why` as it does fresh, and a world that declares `asks(R)` refuses
+outside its cone as it does fresh.
+
+**A kept world is refused when it is stale** (the owner, 2026-10-21): when
+anything it was computed from has changed since it was kept, the run exits 2,
+answers nothing, and names what changed:
+
+```
+world.vol is stale: rules/x.rofl changed since it was kept; run again with --anew to compute it anew
+```
+
+What it was computed from: the files named and every file read on the way to
+the rules (a `.rofl.md`, what its `reads:` names, the vocabulary of its tree),
+each by its bytes; every path a scanner named as read (`-- reads:`), a file by
+its bytes and a directory by its names, and the directory the scanners ran in;
+the walls (`--budget`, `--space`, `--strata`, `--ticks`, `--explain`,
+`--retain`, `--retract`, `--below` and its files); the engine, by the bytes of
+the binary; and `ROFL_KERNEL_OVERRIDE`, `ROFL_NO_VCLOSURE`. A file touched but
+not changed, or a file the world never read, leaves it fresh. A run that names
+files or walls must name the ones it was kept from; a run that names none takes
+them from F. Nothing stale is ever loaded, and nothing is evaluated again
+unless `--anew` says so.
+
+A world one of whose scanners named nothing it read is not kept (exit 2):
+whether it went stale could not be told. A world refused when evaluated is not
+kept either. A file at F that is cut short, changed after it was written or not
+a kept world is refused with a sentence (exit 2): the volume ends in the sum of
+its bytes, read whole before it is opened.
+
+Measured on `cost_shapes_model` (the JS model over `examples/shapes`, 310 368
+facts, release build, three runs each, a loaded machine): a `why` takes 2.9-3.1 s
+from the files and 0.12-0.14 s from the kept world (a 27.7 MB volume), the same
+448 bytes of answer; the run that keeps it, 3.0 s.
+
 ## Exit codes
 
 | code | meaning |
 |---|---|
 | 0 | answered, whole |
 | 1 | the call is wrong: a flag, a value, a file that cannot be read |
-| 2 | a file is refused: it does not parse or does not load |
+| 2 | a file is refused: it does not parse or does not load; or the kept world (`--kept F`) is stale, damaged, or cannot be kept |
 | 3 | the world is refused when evaluated: a broken promise, a negation through a cycle |
 | 4 | a question is refused: not ground for a why, not a base fact for an excise, outside the cone |
 | 5 | answered from a world the budget or the space cut short, or an ask whose rows may be short |

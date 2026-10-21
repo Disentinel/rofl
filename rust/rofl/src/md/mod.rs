@@ -383,7 +383,18 @@ pub fn tree_of(file: &Path) -> Option<PathBuf> {
     up(absolute(file)).or_else(|| std::env::current_exe().ok().and_then(up))
 }
 
-fn read_file(p: &Path) -> Result<String, String> { std::fs::read_to_string(p).map_err(|e| format!("{}: {e}", p.display())) }
+thread_local! { static READ: std::cell::RefCell<Vec<PathBuf>> = const { std::cell::RefCell::new(Vec::new()) }; }
+
+fn read_file(p: &Path) -> Result<String, String> {
+    READ.with(|r| r.borrow_mut().push(p.to_path_buf()));
+    std::fs::read_to_string(p).map_err(|e| format!("{}: {e}", p.display()))
+}
+
+/// Every file the reader read on this thread since it was last asked: what a world read from Markdown depends on,
+/// the vocabulary of its tree included (a kept world is stale by them, docs/cli.md).
+pub fn files_read() -> Vec<PathBuf> {
+    READ.with(|r| std::mem::take(&mut *r.borrow_mut()))
+}
 
 /// What a `.rofl.md` reads to: its rules, the sentences it declares as phrase facts, and the reader's report.
 pub struct Read { pub rofl: String, pub phrases: Vec<String>, pub report: String, pub root: PathBuf }

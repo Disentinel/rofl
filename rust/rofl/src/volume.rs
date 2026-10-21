@@ -2,12 +2,15 @@
 //! written as the arenas the heap and the store are, so opening it maps the file and reads, parses and copies
 //! nothing. A page of it is brought in when something reads it and can be dropped again by the system; a write to
 //! a mapped arena copies that arena into the heap first. Read by the build that wrote it.
+//!
+//! After the build a volume carries a note, text its keeper wrote (what `rofl --kept` kept it from), and it ends in
+//! the sum of every byte before it (`arena::Sum`), which `check` reads the whole file to compare.
 use crate::arena::{map_file, VolR, VolW};
 use crate::engine::{Eval, RuleAnswer, StagedFact, Tok};
 use crate::store::{PremRef, Store};
 use crate::term::{Heap, Sym, Term};
 
-const MAGIC: &[u8; 16] = b"ROFL-VOLUME-1\n\0\0";
+const MAGIC: &[u8; 16] = b"ROFL-VOLUME-2\n\0\0";
 
 fn build_id() -> String {
     format!("{} {} {:x}", env!("CARGO_PKG_VERSION"), crate::kernel::KERNEL_HASH, 0x0102_0304u32)
@@ -16,13 +19,14 @@ fn build_id() -> String {
 pub type Staged = Vec<(StagedFact, Vec<(Sym, Vec<PremRef>)>)>;
 
 /// The world `e` evaluated, frozen, what its evaluation staged and where a step wall cut it, as a volume at
-/// `path`; its size.
-pub fn keep(path: &str, e: &mut Eval) -> std::io::Result<usize> {
+/// `path` with `note`; its size.
+pub fn keep(path: &str, e: &mut Eval, note: &str) -> std::io::Result<usize> {
     let (staged, answer) = (e.staged_kept(), e.safety().clone());
     let (h, s) = (&mut e.h, &mut e.store);
     let mut w = VolW::create(path)?;
     w.bytes(MAGIC);
     w.text(&build_id());
+    w.text(note);
     s.write_volume(&mut w);
     h.write_volume(&mut w);
     w.u32(staged.len() as u32);
@@ -101,16 +105,40 @@ fn prems(r: &mut VolR) -> Result<Vec<PremRef>, String> {
     Ok(r.arena_checked::<PremRef>(|w| w.iter().step_by(2).all(|&t| t <= 4))?.to_vec())
 }
 
-/// The world a volume at `path` holds, mapped.
-pub fn open(path: &str) -> Result<Opened, String> {
+/// What `check` reads of a volume before its world: whether this build wrote it, and its note.
+pub struct Checked {
+    pub this_build: bool,
+    pub note: String,
+}
+
+fn header(path: &str) -> Result<VolR, String> {
     let map = map_file(path).map_err(|e| format!("{path}: {e}"))?;
     if !map.starts_with(MAGIC) {
-        return Err(format!("{path}: not a volume"));
+        let other = map.starts_with(&MAGIC[..12]);
+        return Err(format!("{path}: {}", if other { "a volume of another format" } else { "not a volume" }));
     }
-    let mut r = VolR::new(map, MAGIC.len());
+    Ok(VolR::new(map, MAGIC.len()))
+}
+
+/// The header of the volume at `path`, once the sum that ends it is found to be the sum of its bytes; a file cut
+/// short or changed after it was written is refused.
+pub fn check(path: &str) -> Result<Checked, String> {
+    let mut r = header(path)?;
+    if !crate::brk!("kept_unsummed" => true; r.sum_holds()) {
+        return Err(format!("{path}: the file is damaged: its bytes are not the ones written"));
+    }
+    let this_build = r.text()? == build_id();
+    let note = r.text()?;
+    Ok(Checked { this_build, note })
+}
+
+/// The world a volume at `path` holds, mapped.
+pub fn open(path: &str) -> Result<Opened, String> {
+    let mut r = header(path)?;
     if r.text()? != build_id() {
         return Err(format!("{path}: a volume of another build"));
     }
+    r.text()?;
     let store = Store::read_volume(&mut r)?;
     let heap = Heap::read_volume(&mut r)?;
     let mut staged = Vec::new();
