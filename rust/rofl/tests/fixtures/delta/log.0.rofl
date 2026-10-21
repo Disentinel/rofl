@@ -1,0 +1,55 @@
+ast_node[code](n844f08fdb2c34b16_1, file, "log.js", 1).
+ast_node[code](n844f08fdb2c34b16_2, program, "log.js", 1).
+ast_attr[code](n844f08fdb2c34b16_2, source_type, "module").
+ast_node[code](n844f08fdb2c34b16_3, export_named_declaration, "log.js", 1).
+ast_attr[code](n844f08fdb2c34b16_3, export_kind, "value").
+ast_node[code](n844f08fdb2c34b16_4, function_declaration, "log.js", 1).
+ast_node[code](n844f08fdb2c34b16_5, identifier, "log.js", 1).
+ast_attr[code](n844f08fdb2c34b16_5, name, "log").
+ast_child[code](n844f08fdb2c34b16_4, id, 0, n844f08fdb2c34b16_5).
+ast_attr[code](n844f08fdb2c34b16_4, generator, false).
+ast_attr[code](n844f08fdb2c34b16_4, async, false).
+ast_node[code](n844f08fdb2c34b16_6, identifier, "log.js", 1).
+ast_attr[code](n844f08fdb2c34b16_6, name, "msg").
+ast_child[code](n844f08fdb2c34b16_4, params, 0, n844f08fdb2c34b16_6).
+ast_node[code](n844f08fdb2c34b16_7, block_statement, "log.js", 1).
+ast_node[code](n844f08fdb2c34b16_8, expression_statement, "log.js", 1).
+ast_node[code](n844f08fdb2c34b16_9, call_expression, "log.js", 1).
+ast_node[code](n844f08fdb2c34b16_10, member_expression, "log.js", 1).
+ast_node[code](n844f08fdb2c34b16_11, identifier, "log.js", 1).
+ast_attr[code](n844f08fdb2c34b16_11, name, "console").
+ast_child[code](n844f08fdb2c34b16_10, object, 0, n844f08fdb2c34b16_11).
+ast_attr[code](n844f08fdb2c34b16_10, computed, false).
+ast_node[code](n844f08fdb2c34b16_12, identifier, "log.js", 1).
+ast_attr[code](n844f08fdb2c34b16_12, name, "log").
+ast_child[code](n844f08fdb2c34b16_10, property, 0, n844f08fdb2c34b16_12).
+ast_child[code](n844f08fdb2c34b16_9, callee, 0, n844f08fdb2c34b16_10).
+ast_node[code](n844f08fdb2c34b16_13, identifier, "log.js", 1).
+ast_attr[code](n844f08fdb2c34b16_13, name, "msg").
+ast_child[code](n844f08fdb2c34b16_9, arguments, 0, n844f08fdb2c34b16_13).
+ast_child[code](n844f08fdb2c34b16_8, expression, 0, n844f08fdb2c34b16_9).
+ast_child[code](n844f08fdb2c34b16_7, body, 0, n844f08fdb2c34b16_8).
+ast_child[code](n844f08fdb2c34b16_4, body, 0, n844f08fdb2c34b16_7).
+ast_child[code](n844f08fdb2c34b16_3, declaration, 0, n844f08fdb2c34b16_4).
+ast_child[code](n844f08fdb2c34b16_2, body, 0, n844f08fdb2c34b16_3).
+ast_child[code](n844f08fdb2c34b16_1, program, 0, n844f08fdb2c34b16_2).
+ast_file[code](n844f08fdb2c34b16_1, "log.js").
+fs_dir[code](".").
+fs_file[code]("log.js").
+fs_dir_of[code]("log.js", ".").
+fs_file_in[code](".", "log.js", "log.js").
+fs_file[code]("db.js").
+fs_dir_of[code]("db.js", ".").
+fs_file_in[code](".", "db.js", "db.js").
+fs_file[code]("orders.js").
+fs_dir_of[code]("orders.js", ".").
+fs_file_in[code](".", "orders.js", "orders.js").
+fs_file[code]("server.js").
+fs_dir_of[code]("server.js", ".").
+fs_file_in[code](".", "server.js", "server.js").
+fs_file[code]("users.js").
+fs_dir_of[code]("users.js", ".").
+fs_file_in[code](".", "users.js", "users.js").
+fs_file[code]("util.js").
+fs_dir_of[code]("util.js", ".").
+fs_file_in[code](".", "util.js", "util.js").

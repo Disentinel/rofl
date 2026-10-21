@@ -1,0 +1,78 @@
+ast_node[code](ne92f63f5acde594e_1, file, "util.js", 1).
+ast_node[code](ne92f63f5acde594e_2, program, "util.js", 1).
+ast_attr[code](ne92f63f5acde594e_2, source_type, "module").
+ast_node[code](ne92f63f5acde594e_3, import_declaration, "util.js", 1).
+ast_attr[code](ne92f63f5acde594e_3, import_kind, "value").
+ast_node[code](ne92f63f5acde594e_4, import_specifier, "util.js", 1).
+ast_node[code](ne92f63f5acde594e_5, identifier, "util.js", 1).
+ast_attr[code](ne92f63f5acde594e_5, name, "log").
+ast_child[code](ne92f63f5acde594e_4, imported, 0, ne92f63f5acde594e_5).
+ast_attr[code](ne92f63f5acde594e_4, import_kind, "value").
+ast_node[code](ne92f63f5acde594e_6, identifier, "util.js", 1).
+ast_attr[code](ne92f63f5acde594e_6, name, "log").
+ast_child[code](ne92f63f5acde594e_4, local, 0, ne92f63f5acde594e_6).
+ast_child[code](ne92f63f5acde594e_3, specifiers, 0, ne92f63f5acde594e_4).
+ast_node[code](ne92f63f5acde594e_7, string_literal, "util.js", 1).
+ast_attr[code](ne92f63f5acde594e_7, value, "./log.js").
+ast_child[code](ne92f63f5acde594e_3, source, 0, ne92f63f5acde594e_7).
+ast_child[code](ne92f63f5acde594e_2, body, 0, ne92f63f5acde594e_3).
+ast_node[code](ne92f63f5acde594e_8, export_named_declaration, "util.js", 2).
+ast_attr[code](ne92f63f5acde594e_8, export_kind, "value").
+ast_node[code](ne92f63f5acde594e_9, function_declaration, "util.js", 2).
+ast_node[code](ne92f63f5acde594e_10, identifier, "util.js", 2).
+ast_attr[code](ne92f63f5acde594e_10, name, "trace").
+ast_child[code](ne92f63f5acde594e_9, id, 0, ne92f63f5acde594e_10).
+ast_attr[code](ne92f63f5acde594e_9, generator, false).
+ast_attr[code](ne92f63f5acde594e_9, async, false).
+ast_node[code](ne92f63f5acde594e_11, identifier, "util.js", 2).
+ast_attr[code](ne92f63f5acde594e_11, name, "x").
+ast_child[code](ne92f63f5acde594e_9, params, 0, ne92f63f5acde594e_11).
+ast_node[code](ne92f63f5acde594e_12, block_statement, "util.js", 2).
+ast_node[code](ne92f63f5acde594e_13, expression_statement, "util.js", 2).
+ast_node[code](ne92f63f5acde594e_14, call_expression, "util.js", 2).
+ast_node[code](ne92f63f5acde594e_15, identifier, "util.js", 2).
+ast_attr[code](ne92f63f5acde594e_15, name, "log").
+ast_child[code](ne92f63f5acde594e_14, callee, 0, ne92f63f5acde594e_15).
+ast_node[code](ne92f63f5acde594e_16, call_expression, "util.js", 2).
+ast_node[code](ne92f63f5acde594e_17, identifier, "util.js", 2).
+ast_attr[code](ne92f63f5acde594e_17, name, "String").
+ast_child[code](ne92f63f5acde594e_16, callee, 0, ne92f63f5acde594e_17).
+ast_node[code](ne92f63f5acde594e_18, identifier, "util.js", 2).
+ast_attr[code](ne92f63f5acde594e_18, name, "x").
+ast_child[code](ne92f63f5acde594e_16, arguments, 0, ne92f63f5acde594e_18).
+ast_child[code](ne92f63f5acde594e_14, arguments, 0, ne92f63f5acde594e_16).
+ast_child[code](ne92f63f5acde594e_13, expression, 0, ne92f63f5acde594e_14).
+ast_child[code](ne92f63f5acde594e_12, body, 0, ne92f63f5acde594e_13).
+ast_node[code](ne92f63f5acde594e_19, return_statement, "util.js", 2).
+ast_node[code](ne92f63f5acde594e_20, identifier, "util.js", 2).
+ast_attr[code](ne92f63f5acde594e_20, name, "x").
+ast_child[code](ne92f63f5acde594e_19, argument, 0, ne92f63f5acde594e_20).
+ast_child[code](ne92f63f5acde594e_12, body, 1, ne92f63f5acde594e_19).
+ast_child[code](ne92f63f5acde594e_9, body, 0, ne92f63f5acde594e_12).
+ast_child[code](ne92f63f5acde594e_8, declaration, 0, ne92f63f5acde594e_9).
+ast_child[code](ne92f63f5acde594e_2, body, 1, ne92f63f5acde594e_8).
+ast_child[code](ne92f63f5acde594e_1, program, 0, ne92f63f5acde594e_2).
+ast_file[code](ne92f63f5acde594e_1, "util.js").
+fs_dir[code](".").
+fs_file[code]("util.js").
+fs_dir_of[code]("util.js", ".").
+fs_file_in[code](".", "util.js", "util.js").
+fs_file[code]("db.js").
+fs_dir_of[code]("db.js", ".").
+fs_file_in[code](".", "db.js", "db.js").
+fs_file[code]("log.js").
+fs_dir_of[code]("log.js", ".").
+fs_file_in[code](".", "log.js", "log.js").
+fs_file[code]("orders.js").
+fs_dir_of[code]("orders.js", ".").
+fs_file_in[code](".", "orders.js", "orders.js").
+fs_file[code]("server.js").
+fs_dir_of[code]("server.js", ".").
+fs_file_in[code](".", "server.js", "server.js").
+fs_file[code]("users.js").
+fs_dir_of[code]("users.js", ".").
+fs_file_in[code](".", "users.js", "users.js").
+str_segs[code]("./log.js", 2).
+str_char0[code]("./log.js", ".").
+str_seg[code]("./log.js", 0, ".").
+str_seg[code]("./log.js", 1, "log.js").

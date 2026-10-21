@@ -430,14 +430,14 @@ impl Session {
         Ok((ids, rules, absent))
     }
 
-    /// The base facts `ids` taken out of an evaluated world by delta, with what a load wrote for each alone
-    /// (`doomed`), as `retract_delta` takes one. `Full` says why the delta is not worked out, and then the world is
-    /// left dirty, not evaluated again here: the caller evaluates the files instead.
+    /// The base facts `ids` taken out of an evaluated world by delta, one after another as `retract_delta` takes
+    /// one (the engine's delta takes one fact and what a load wrote for it alone, `doomed`). `Full` says why a delta
+    /// is not worked out, and then the world is left dirty and not evaluated again here, nor marked as evaluated
+    /// again: the caller evaluates the files instead.
     pub fn retract_facts_delta(&mut self, ids: &[FactId]) -> Result<Retraction, String> {
         self.eval.settle_assertions();
         self.settle()?;
-        let mut doomed: Vec<FactId> = Vec::new();
-        let mut seen = HashSet::new();
+        let mut last = Retraction::Delta(Default::default());
         for &id in ids {
             if !self.eval.store.alive(id) || !self.eval.store.rec(id).base() {
                 continue;
@@ -447,29 +447,25 @@ impl Session {
                 self.eval.store.dirty = true;
                 return Ok(Retraction::Full("asks names the rules the world runs".into()));
             }
-            for f in self.doomed(id) {
-                if seen.insert(f) { doomed.push(f); }
-            }
-        }
-        if doomed.is_empty() {
-            return Ok(Retraction::Delta(Default::default()));
-        }
-        let marks: Vec<Sym> = doomed.iter().map(|&f| self.eval.store.rec(f).rel).filter(|r| [self.eval.v.edb, self.eval.v.authority].contains(r)).collect();
-        let read = self.eval.rules.iter().any(|r| r.clause.body.iter().any(|b| b.lits_deep().iter().any(|l| marks.contains(&l.rel))));
-        let delta = if read { Err("the retraction takes an edb or authority row a rule reads".to_string()) } else { self.eval.retract_delta(&doomed) };
-        match delta {
-            Ok(d) => match self.eval.check_promises() {
-                Ok(_) => Ok(Retraction::Delta(d)),
-                Err(e) => {
-                    self.eval.store.dirty = true;
-                    Err(crate::describe(&e))
+            let doomed = self.doomed(id);
+            let marks: Vec<Sym> = doomed.iter().map(|&f| self.eval.store.rec(f).rel).filter(|r| [self.eval.v.edb, self.eval.v.authority].contains(r)).collect();
+            let read = self.eval.rules.iter().any(|r| r.clause.body.iter().any(|b| b.lits_deep().iter().any(|l| marks.contains(&l.rel))));
+            let delta = if read { Err("the retraction takes an edb or authority row a rule reads".to_string()) } else { self.eval.retract_delta(&doomed) };
+            match delta {
+                Ok(d) => {
+                    if let Err(e) = self.eval.check_promises() {
+                        self.eval.store.dirty = true;
+                        return Err(crate::describe(&e));
+                    }
+                    last = Retraction::Delta(d);
                 }
-            },
-            Err(why) => {
-                self.eval.store.dirty = true;
-                Ok(Retraction::Full(why))
+                Err(why) => {
+                    self.eval.store.dirty = true;
+                    return Ok(Retraction::Full(why));
+                }
             }
         }
+        Ok(last)
     }
 
     fn evaluated_again(&mut self, requests: &[Term], why: &str) {

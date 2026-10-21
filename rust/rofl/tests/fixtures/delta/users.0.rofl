@@ -1,0 +1,77 @@
+ast_node[code](n9a3339f2e3bec851_1, file, "users.js", 1).
+ast_node[code](n9a3339f2e3bec851_2, program, "users.js", 1).
+ast_attr[code](n9a3339f2e3bec851_2, source_type, "module").
+ast_node[code](n9a3339f2e3bec851_3, import_declaration, "users.js", 1).
+ast_attr[code](n9a3339f2e3bec851_3, import_kind, "value").
+ast_node[code](n9a3339f2e3bec851_4, import_specifier, "users.js", 1).
+ast_node[code](n9a3339f2e3bec851_5, identifier, "users.js", 1).
+ast_attr[code](n9a3339f2e3bec851_5, name, "query").
+ast_child[code](n9a3339f2e3bec851_4, imported, 0, n9a3339f2e3bec851_5).
+ast_attr[code](n9a3339f2e3bec851_4, import_kind, "value").
+ast_node[code](n9a3339f2e3bec851_6, identifier, "users.js", 1).
+ast_attr[code](n9a3339f2e3bec851_6, name, "query").
+ast_child[code](n9a3339f2e3bec851_4, local, 0, n9a3339f2e3bec851_6).
+ast_child[code](n9a3339f2e3bec851_3, specifiers, 0, n9a3339f2e3bec851_4).
+ast_node[code](n9a3339f2e3bec851_7, string_literal, "users.js", 1).
+ast_attr[code](n9a3339f2e3bec851_7, value, "./db.js").
+ast_child[code](n9a3339f2e3bec851_3, source, 0, n9a3339f2e3bec851_7).
+ast_child[code](n9a3339f2e3bec851_2, body, 0, n9a3339f2e3bec851_3).
+ast_node[code](n9a3339f2e3bec851_8, export_named_declaration, "users.js", 2).
+ast_attr[code](n9a3339f2e3bec851_8, export_kind, "value").
+ast_node[code](n9a3339f2e3bec851_9, function_declaration, "users.js", 2).
+ast_node[code](n9a3339f2e3bec851_10, identifier, "users.js", 2).
+ast_attr[code](n9a3339f2e3bec851_10, name, "getUser").
+ast_child[code](n9a3339f2e3bec851_9, id, 0, n9a3339f2e3bec851_10).
+ast_attr[code](n9a3339f2e3bec851_9, generator, false).
+ast_attr[code](n9a3339f2e3bec851_9, async, false).
+ast_node[code](n9a3339f2e3bec851_11, identifier, "users.js", 2).
+ast_attr[code](n9a3339f2e3bec851_11, name, "id").
+ast_child[code](n9a3339f2e3bec851_9, params, 0, n9a3339f2e3bec851_11).
+ast_node[code](n9a3339f2e3bec851_12, block_statement, "users.js", 2).
+ast_node[code](n9a3339f2e3bec851_13, return_statement, "users.js", 2).
+ast_node[code](n9a3339f2e3bec851_14, call_expression, "users.js", 2).
+ast_node[code](n9a3339f2e3bec851_15, identifier, "users.js", 2).
+ast_attr[code](n9a3339f2e3bec851_15, name, "query").
+ast_child[code](n9a3339f2e3bec851_14, callee, 0, n9a3339f2e3bec851_15).
+ast_node[code](n9a3339f2e3bec851_16, binary_expression, "users.js", 2).
+ast_node[code](n9a3339f2e3bec851_17, string_literal, "users.js", 2).
+ast_attr[code](n9a3339f2e3bec851_17, value, "select * from users where id=").
+ast_child[code](n9a3339f2e3bec851_16, left, 0, n9a3339f2e3bec851_17).
+ast_attr[code](n9a3339f2e3bec851_16, operator, "+").
+ast_node[code](n9a3339f2e3bec851_18, identifier, "users.js", 2).
+ast_attr[code](n9a3339f2e3bec851_18, name, "id").
+ast_child[code](n9a3339f2e3bec851_16, right, 0, n9a3339f2e3bec851_18).
+ast_child[code](n9a3339f2e3bec851_14, arguments, 0, n9a3339f2e3bec851_16).
+ast_child[code](n9a3339f2e3bec851_13, argument, 0, n9a3339f2e3bec851_14).
+ast_child[code](n9a3339f2e3bec851_12, body, 0, n9a3339f2e3bec851_13).
+ast_child[code](n9a3339f2e3bec851_9, body, 0, n9a3339f2e3bec851_12).
+ast_child[code](n9a3339f2e3bec851_8, declaration, 0, n9a3339f2e3bec851_9).
+ast_child[code](n9a3339f2e3bec851_2, body, 1, n9a3339f2e3bec851_8).
+ast_child[code](n9a3339f2e3bec851_1, program, 0, n9a3339f2e3bec851_2).
+ast_file[code](n9a3339f2e3bec851_1, "users.js").
+fs_dir[code](".").
+fs_file[code]("users.js").
+fs_dir_of[code]("users.js", ".").
+fs_file_in[code](".", "users.js", "users.js").
+fs_file[code]("db.js").
+fs_dir_of[code]("db.js", ".").
+fs_file_in[code](".", "db.js", "db.js").
+fs_file[code]("log.js").
+fs_dir_of[code]("log.js", ".").
+fs_file_in[code](".", "log.js", "log.js").
+fs_file[code]("orders.js").
+fs_dir_of[code]("orders.js", ".").
+fs_file_in[code](".", "orders.js", "orders.js").
+fs_file[code]("server.js").
+fs_dir_of[code]("server.js", ".").
+fs_file_in[code](".", "server.js", "server.js").
+fs_file[code]("util.js").
+fs_dir_of[code]("util.js", ".").
+fs_file_in[code](".", "util.js", "util.js").
+str_segs[code]("./db.js", 2).
+str_char0[code]("./db.js", ".").
+str_seg[code]("./db.js", 0, ".").
+str_seg[code]("./db.js", 1, "db.js").
+str_segs[code]("select * from users where id=", 1).
+str_char0[code]("select * from users where id=", "s").
+str_seg[code]("select * from users where id=", 0, "select * from users where id=").

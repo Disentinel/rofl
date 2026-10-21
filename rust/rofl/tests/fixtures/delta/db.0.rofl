@@ -1,0 +1,86 @@
+ast_node[code](nd7c9c4e37c37bdbf_1, file, "db.js", 1).
+ast_node[code](nd7c9c4e37c37bdbf_2, program, "db.js", 1).
+ast_attr[code](nd7c9c4e37c37bdbf_2, source_type, "module").
+ast_node[code](nd7c9c4e37c37bdbf_3, export_named_declaration, "db.js", 1).
+ast_attr[code](nd7c9c4e37c37bdbf_3, export_kind, "value").
+ast_node[code](nd7c9c4e37c37bdbf_4, function_declaration, "db.js", 1).
+ast_node[code](nd7c9c4e37c37bdbf_5, identifier, "db.js", 1).
+ast_attr[code](nd7c9c4e37c37bdbf_5, name, "query").
+ast_child[code](nd7c9c4e37c37bdbf_4, id, 0, nd7c9c4e37c37bdbf_5).
+ast_attr[code](nd7c9c4e37c37bdbf_4, generator, false).
+ast_attr[code](nd7c9c4e37c37bdbf_4, async, false).
+ast_node[code](nd7c9c4e37c37bdbf_6, identifier, "db.js", 1).
+ast_attr[code](nd7c9c4e37c37bdbf_6, name, "sql").
+ast_child[code](nd7c9c4e37c37bdbf_4, params, 0, nd7c9c4e37c37bdbf_6).
+ast_node[code](nd7c9c4e37c37bdbf_7, block_statement, "db.js", 1).
+ast_node[code](nd7c9c4e37c37bdbf_8, return_statement, "db.js", 1).
+ast_node[code](nd7c9c4e37c37bdbf_9, call_expression, "db.js", 1).
+ast_node[code](nd7c9c4e37c37bdbf_10, identifier, "db.js", 1).
+ast_attr[code](nd7c9c4e37c37bdbf_10, name, "fetch").
+ast_child[code](nd7c9c4e37c37bdbf_9, callee, 0, nd7c9c4e37c37bdbf_10).
+ast_node[code](nd7c9c4e37c37bdbf_11, binary_expression, "db.js", 1).
+ast_node[code](nd7c9c4e37c37bdbf_12, string_literal, "db.js", 1).
+ast_attr[code](nd7c9c4e37c37bdbf_12, value, "http://db.internal/q?").
+ast_child[code](nd7c9c4e37c37bdbf_11, left, 0, nd7c9c4e37c37bdbf_12).
+ast_attr[code](nd7c9c4e37c37bdbf_11, operator, "+").
+ast_node[code](nd7c9c4e37c37bdbf_13, identifier, "db.js", 1).
+ast_attr[code](nd7c9c4e37c37bdbf_13, name, "sql").
+ast_child[code](nd7c9c4e37c37bdbf_11, right, 0, nd7c9c4e37c37bdbf_13).
+ast_child[code](nd7c9c4e37c37bdbf_9, arguments, 0, nd7c9c4e37c37bdbf_11).
+ast_child[code](nd7c9c4e37c37bdbf_8, argument, 0, nd7c9c4e37c37bdbf_9).
+ast_child[code](nd7c9c4e37c37bdbf_7, body, 0, nd7c9c4e37c37bdbf_8).
+ast_child[code](nd7c9c4e37c37bdbf_4, body, 0, nd7c9c4e37c37bdbf_7).
+ast_child[code](nd7c9c4e37c37bdbf_3, declaration, 0, nd7c9c4e37c37bdbf_4).
+ast_child[code](nd7c9c4e37c37bdbf_2, body, 0, nd7c9c4e37c37bdbf_3).
+ast_node[code](nd7c9c4e37c37bdbf_14, export_named_declaration, "db.js", 2).
+ast_attr[code](nd7c9c4e37c37bdbf_14, export_kind, "value").
+ast_node[code](nd7c9c4e37c37bdbf_15, variable_declaration, "db.js", 2).
+ast_node[code](nd7c9c4e37c37bdbf_16, variable_declarator, "db.js", 2).
+ast_node[code](nd7c9c4e37c37bdbf_17, identifier, "db.js", 2).
+ast_attr[code](nd7c9c4e37c37bdbf_17, name, "pool").
+ast_child[code](nd7c9c4e37c37bdbf_16, id, 0, nd7c9c4e37c37bdbf_17).
+ast_node[code](nd7c9c4e37c37bdbf_18, object_expression, "db.js", 2).
+ast_node[code](nd7c9c4e37c37bdbf_19, object_property, "db.js", 2).
+ast_attr[code](nd7c9c4e37c37bdbf_19, method, false).
+ast_node[code](nd7c9c4e37c37bdbf_20, identifier, "db.js", 2).
+ast_attr[code](nd7c9c4e37c37bdbf_20, name, "size").
+ast_child[code](nd7c9c4e37c37bdbf_19, key, 0, nd7c9c4e37c37bdbf_20).
+ast_attr[code](nd7c9c4e37c37bdbf_19, computed, false).
+ast_attr[code](nd7c9c4e37c37bdbf_19, shorthand, false).
+ast_node[code](nd7c9c4e37c37bdbf_21, numeric_literal, "db.js", 2).
+ast_attr[code](nd7c9c4e37c37bdbf_21, value, 4).
+ast_child[code](nd7c9c4e37c37bdbf_19, value, 0, nd7c9c4e37c37bdbf_21).
+ast_child[code](nd7c9c4e37c37bdbf_18, properties, 0, nd7c9c4e37c37bdbf_19).
+ast_child[code](nd7c9c4e37c37bdbf_16, init, 0, nd7c9c4e37c37bdbf_18).
+ast_child[code](nd7c9c4e37c37bdbf_15, declarations, 0, nd7c9c4e37c37bdbf_16).
+ast_attr[code](nd7c9c4e37c37bdbf_15, kind, "const").
+ast_child[code](nd7c9c4e37c37bdbf_14, declaration, 0, nd7c9c4e37c37bdbf_15).
+ast_child[code](nd7c9c4e37c37bdbf_2, body, 1, nd7c9c4e37c37bdbf_14).
+ast_child[code](nd7c9c4e37c37bdbf_1, program, 0, nd7c9c4e37c37bdbf_2).
+ast_file[code](nd7c9c4e37c37bdbf_1, "db.js").
+fs_dir[code](".").
+fs_file[code]("db.js").
+fs_dir_of[code]("db.js", ".").
+fs_file_in[code](".", "db.js", "db.js").
+fs_file[code]("log.js").
+fs_dir_of[code]("log.js", ".").
+fs_file_in[code](".", "log.js", "log.js").
+fs_file[code]("orders.js").
+fs_dir_of[code]("orders.js", ".").
+fs_file_in[code](".", "orders.js", "orders.js").
+fs_file[code]("server.js").
+fs_dir_of[code]("server.js", ".").
+fs_file_in[code](".", "server.js", "server.js").
+fs_file[code]("users.js").
+fs_dir_of[code]("users.js", ".").
+fs_file_in[code](".", "users.js", "users.js").
+fs_file[code]("util.js").
+fs_dir_of[code]("util.js", ".").
+fs_file_in[code](".", "util.js", "util.js").
+str_segs[code]("http://db.internal/q?", 4).
+str_char0[code]("http://db.internal/q?", "h").
+str_seg[code]("http://db.internal/q?", 0, "http:").
+str_seg[code]("http://db.internal/q?", 1, "").
+str_seg[code]("http://db.internal/q?", 2, "db.internal").
+str_seg[code]("http://db.internal/q?", 3, "q?").
+str_scheme[code]("http://db.internal/q?", "http").

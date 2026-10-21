@@ -1,0 +1,106 @@
+ast_node[code](na4c65ede64197e1a_1, file, "server.js", 1).
+ast_node[code](na4c65ede64197e1a_2, program, "server.js", 1).
+ast_attr[code](na4c65ede64197e1a_2, source_type, "module").
+ast_node[code](na4c65ede64197e1a_3, import_declaration, "server.js", 1).
+ast_attr[code](na4c65ede64197e1a_3, import_kind, "value").
+ast_node[code](na4c65ede64197e1a_4, import_specifier, "server.js", 1).
+ast_node[code](na4c65ede64197e1a_5, identifier, "server.js", 1).
+ast_attr[code](na4c65ede64197e1a_5, name, "getUser").
+ast_child[code](na4c65ede64197e1a_4, imported, 0, na4c65ede64197e1a_5).
+ast_attr[code](na4c65ede64197e1a_4, import_kind, "value").
+ast_node[code](na4c65ede64197e1a_6, identifier, "server.js", 1).
+ast_attr[code](na4c65ede64197e1a_6, name, "getUser").
+ast_child[code](na4c65ede64197e1a_4, local, 0, na4c65ede64197e1a_6).
+ast_child[code](na4c65ede64197e1a_3, specifiers, 0, na4c65ede64197e1a_4).
+ast_node[code](na4c65ede64197e1a_7, string_literal, "server.js", 1).
+ast_attr[code](na4c65ede64197e1a_7, value, "./users.js").
+ast_child[code](na4c65ede64197e1a_3, source, 0, na4c65ede64197e1a_7).
+ast_child[code](na4c65ede64197e1a_2, body, 0, na4c65ede64197e1a_3).
+ast_node[code](na4c65ede64197e1a_8, import_declaration, "server.js", 2).
+ast_attr[code](na4c65ede64197e1a_8, import_kind, "value").
+ast_node[code](na4c65ede64197e1a_9, import_specifier, "server.js", 2).
+ast_node[code](na4c65ede64197e1a_10, identifier, "server.js", 2).
+ast_attr[code](na4c65ede64197e1a_10, name, "log").
+ast_child[code](na4c65ede64197e1a_9, imported, 0, na4c65ede64197e1a_10).
+ast_attr[code](na4c65ede64197e1a_9, import_kind, "value").
+ast_node[code](na4c65ede64197e1a_11, identifier, "server.js", 2).
+ast_attr[code](na4c65ede64197e1a_11, name, "log").
+ast_child[code](na4c65ede64197e1a_9, local, 0, na4c65ede64197e1a_11).
+ast_child[code](na4c65ede64197e1a_8, specifiers, 0, na4c65ede64197e1a_9).
+ast_node[code](na4c65ede64197e1a_12, string_literal, "server.js", 2).
+ast_attr[code](na4c65ede64197e1a_12, value, "./log.js").
+ast_child[code](na4c65ede64197e1a_8, source, 0, na4c65ede64197e1a_12).
+ast_child[code](na4c65ede64197e1a_2, body, 1, na4c65ede64197e1a_8).
+ast_node[code](na4c65ede64197e1a_13, export_named_declaration, "server.js", 3).
+ast_attr[code](na4c65ede64197e1a_13, export_kind, "value").
+ast_node[code](na4c65ede64197e1a_14, function_declaration, "server.js", 3).
+ast_node[code](na4c65ede64197e1a_15, identifier, "server.js", 3).
+ast_attr[code](na4c65ede64197e1a_15, name, "handle").
+ast_child[code](na4c65ede64197e1a_14, id, 0, na4c65ede64197e1a_15).
+ast_attr[code](na4c65ede64197e1a_14, generator, false).
+ast_attr[code](na4c65ede64197e1a_14, async, false).
+ast_node[code](na4c65ede64197e1a_16, identifier, "server.js", 3).
+ast_attr[code](na4c65ede64197e1a_16, name, "req").
+ast_child[code](na4c65ede64197e1a_14, params, 0, na4c65ede64197e1a_16).
+ast_node[code](na4c65ede64197e1a_17, block_statement, "server.js", 3).
+ast_node[code](na4c65ede64197e1a_18, expression_statement, "server.js", 3).
+ast_node[code](na4c65ede64197e1a_19, call_expression, "server.js", 3).
+ast_node[code](na4c65ede64197e1a_20, identifier, "server.js", 3).
+ast_attr[code](na4c65ede64197e1a_20, name, "log").
+ast_child[code](na4c65ede64197e1a_19, callee, 0, na4c65ede64197e1a_20).
+ast_node[code](na4c65ede64197e1a_21, string_literal, "server.js", 3).
+ast_attr[code](na4c65ede64197e1a_21, value, "u").
+ast_child[code](na4c65ede64197e1a_19, arguments, 0, na4c65ede64197e1a_21).
+ast_child[code](na4c65ede64197e1a_18, expression, 0, na4c65ede64197e1a_19).
+ast_child[code](na4c65ede64197e1a_17, body, 0, na4c65ede64197e1a_18).
+ast_node[code](na4c65ede64197e1a_22, return_statement, "server.js", 3).
+ast_node[code](na4c65ede64197e1a_23, call_expression, "server.js", 3).
+ast_node[code](na4c65ede64197e1a_24, identifier, "server.js", 3).
+ast_attr[code](na4c65ede64197e1a_24, name, "getUser").
+ast_child[code](na4c65ede64197e1a_23, callee, 0, na4c65ede64197e1a_24).
+ast_node[code](na4c65ede64197e1a_25, member_expression, "server.js", 3).
+ast_node[code](na4c65ede64197e1a_26, identifier, "server.js", 3).
+ast_attr[code](na4c65ede64197e1a_26, name, "req").
+ast_child[code](na4c65ede64197e1a_25, object, 0, na4c65ede64197e1a_26).
+ast_attr[code](na4c65ede64197e1a_25, computed, false).
+ast_node[code](na4c65ede64197e1a_27, identifier, "server.js", 3).
+ast_attr[code](na4c65ede64197e1a_27, name, "id").
+ast_child[code](na4c65ede64197e1a_25, property, 0, na4c65ede64197e1a_27).
+ast_child[code](na4c65ede64197e1a_23, arguments, 0, na4c65ede64197e1a_25).
+ast_child[code](na4c65ede64197e1a_22, argument, 0, na4c65ede64197e1a_23).
+ast_child[code](na4c65ede64197e1a_17, body, 1, na4c65ede64197e1a_22).
+ast_child[code](na4c65ede64197e1a_14, body, 0, na4c65ede64197e1a_17).
+ast_child[code](na4c65ede64197e1a_13, declaration, 0, na4c65ede64197e1a_14).
+ast_child[code](na4c65ede64197e1a_2, body, 2, na4c65ede64197e1a_13).
+ast_child[code](na4c65ede64197e1a_1, program, 0, na4c65ede64197e1a_2).
+ast_file[code](na4c65ede64197e1a_1, "server.js").
+fs_dir[code](".").
+fs_file[code]("server.js").
+fs_dir_of[code]("server.js", ".").
+fs_file_in[code](".", "server.js", "server.js").
+fs_file[code]("db.js").
+fs_dir_of[code]("db.js", ".").
+fs_file_in[code](".", "db.js", "db.js").
+fs_file[code]("log.js").
+fs_dir_of[code]("log.js", ".").
+fs_file_in[code](".", "log.js", "log.js").
+fs_file[code]("orders.js").
+fs_dir_of[code]("orders.js", ".").
+fs_file_in[code](".", "orders.js", "orders.js").
+fs_file[code]("users.js").
+fs_dir_of[code]("users.js", ".").
+fs_file_in[code](".", "users.js", "users.js").
+fs_file[code]("util.js").
+fs_dir_of[code]("util.js", ".").
+fs_file_in[code](".", "util.js", "util.js").
+str_segs[code]("./users.js", 2).
+str_char0[code]("./users.js", ".").
+str_seg[code]("./users.js", 0, ".").
+str_seg[code]("./users.js", 1, "users.js").
+str_segs[code]("./log.js", 2).
+str_char0[code]("./log.js", ".").
+str_seg[code]("./log.js", 0, ".").
+str_seg[code]("./log.js", 1, "log.js").
+str_segs[code]("u", 1).
+str_char0[code]("u", "u").
+str_seg[code]("u", 0, "u").

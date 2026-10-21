@@ -1,0 +1,112 @@
+ast_node[code](n2b70869555e396cd_1, file, "orders.js", 1).
+ast_node[code](n2b70869555e396cd_2, program, "orders.js", 1).
+ast_attr[code](n2b70869555e396cd_2, source_type, "module").
+ast_node[code](n2b70869555e396cd_3, import_declaration, "orders.js", 1).
+ast_attr[code](n2b70869555e396cd_3, import_kind, "value").
+ast_node[code](n2b70869555e396cd_4, import_specifier, "orders.js", 1).
+ast_node[code](n2b70869555e396cd_5, identifier, "orders.js", 1).
+ast_attr[code](n2b70869555e396cd_5, name, "query").
+ast_child[code](n2b70869555e396cd_4, imported, 0, n2b70869555e396cd_5).
+ast_attr[code](n2b70869555e396cd_4, import_kind, "value").
+ast_node[code](n2b70869555e396cd_6, identifier, "orders.js", 1).
+ast_attr[code](n2b70869555e396cd_6, name, "query").
+ast_child[code](n2b70869555e396cd_4, local, 0, n2b70869555e396cd_6).
+ast_child[code](n2b70869555e396cd_3, specifiers, 0, n2b70869555e396cd_4).
+ast_node[code](n2b70869555e396cd_7, string_literal, "orders.js", 1).
+ast_attr[code](n2b70869555e396cd_7, value, "./db.js").
+ast_child[code](n2b70869555e396cd_3, source, 0, n2b70869555e396cd_7).
+ast_child[code](n2b70869555e396cd_2, body, 0, n2b70869555e396cd_3).
+ast_node[code](n2b70869555e396cd_8, import_declaration, "orders.js", 2).
+ast_attr[code](n2b70869555e396cd_8, import_kind, "value").
+ast_node[code](n2b70869555e396cd_9, import_specifier, "orders.js", 2).
+ast_node[code](n2b70869555e396cd_10, identifier, "orders.js", 2).
+ast_attr[code](n2b70869555e396cd_10, name, "getUser").
+ast_child[code](n2b70869555e396cd_9, imported, 0, n2b70869555e396cd_10).
+ast_attr[code](n2b70869555e396cd_9, import_kind, "value").
+ast_node[code](n2b70869555e396cd_11, identifier, "orders.js", 2).
+ast_attr[code](n2b70869555e396cd_11, name, "getUser").
+ast_child[code](n2b70869555e396cd_9, local, 0, n2b70869555e396cd_11).
+ast_child[code](n2b70869555e396cd_8, specifiers, 0, n2b70869555e396cd_9).
+ast_node[code](n2b70869555e396cd_12, string_literal, "orders.js", 2).
+ast_attr[code](n2b70869555e396cd_12, value, "./users.js").
+ast_child[code](n2b70869555e396cd_8, source, 0, n2b70869555e396cd_12).
+ast_child[code](n2b70869555e396cd_2, body, 1, n2b70869555e396cd_8).
+ast_node[code](n2b70869555e396cd_13, export_named_declaration, "orders.js", 3).
+ast_attr[code](n2b70869555e396cd_13, export_kind, "value").
+ast_node[code](n2b70869555e396cd_14, function_declaration, "orders.js", 3).
+ast_node[code](n2b70869555e396cd_15, identifier, "orders.js", 3).
+ast_attr[code](n2b70869555e396cd_15, name, "orderFor").
+ast_child[code](n2b70869555e396cd_14, id, 0, n2b70869555e396cd_15).
+ast_attr[code](n2b70869555e396cd_14, generator, false).
+ast_attr[code](n2b70869555e396cd_14, async, false).
+ast_node[code](n2b70869555e396cd_16, identifier, "orders.js", 3).
+ast_attr[code](n2b70869555e396cd_16, name, "id").
+ast_child[code](n2b70869555e396cd_14, params, 0, n2b70869555e396cd_16).
+ast_node[code](n2b70869555e396cd_17, block_statement, "orders.js", 3).
+ast_node[code](n2b70869555e396cd_18, variable_declaration, "orders.js", 3).
+ast_node[code](n2b70869555e396cd_19, variable_declarator, "orders.js", 3).
+ast_node[code](n2b70869555e396cd_20, identifier, "orders.js", 3).
+ast_attr[code](n2b70869555e396cd_20, name, "u").
+ast_child[code](n2b70869555e396cd_19, id, 0, n2b70869555e396cd_20).
+ast_node[code](n2b70869555e396cd_21, call_expression, "orders.js", 3).
+ast_node[code](n2b70869555e396cd_22, identifier, "orders.js", 3).
+ast_attr[code](n2b70869555e396cd_22, name, "getUser").
+ast_child[code](n2b70869555e396cd_21, callee, 0, n2b70869555e396cd_22).
+ast_node[code](n2b70869555e396cd_23, identifier, "orders.js", 3).
+ast_attr[code](n2b70869555e396cd_23, name, "id").
+ast_child[code](n2b70869555e396cd_21, arguments, 0, n2b70869555e396cd_23).
+ast_child[code](n2b70869555e396cd_19, init, 0, n2b70869555e396cd_21).
+ast_child[code](n2b70869555e396cd_18, declarations, 0, n2b70869555e396cd_19).
+ast_attr[code](n2b70869555e396cd_18, kind, "const").
+ast_child[code](n2b70869555e396cd_17, body, 0, n2b70869555e396cd_18).
+ast_node[code](n2b70869555e396cd_24, return_statement, "orders.js", 3).
+ast_node[code](n2b70869555e396cd_25, call_expression, "orders.js", 3).
+ast_node[code](n2b70869555e396cd_26, identifier, "orders.js", 3).
+ast_attr[code](n2b70869555e396cd_26, name, "query").
+ast_child[code](n2b70869555e396cd_25, callee, 0, n2b70869555e396cd_26).
+ast_node[code](n2b70869555e396cd_27, binary_expression, "orders.js", 3).
+ast_node[code](n2b70869555e396cd_28, string_literal, "orders.js", 3).
+ast_attr[code](n2b70869555e396cd_28, value, "orders ").
+ast_child[code](n2b70869555e396cd_27, left, 0, n2b70869555e396cd_28).
+ast_attr[code](n2b70869555e396cd_27, operator, "+").
+ast_node[code](n2b70869555e396cd_29, identifier, "orders.js", 3).
+ast_attr[code](n2b70869555e396cd_29, name, "u").
+ast_child[code](n2b70869555e396cd_27, right, 0, n2b70869555e396cd_29).
+ast_child[code](n2b70869555e396cd_25, arguments, 0, n2b70869555e396cd_27).
+ast_child[code](n2b70869555e396cd_24, argument, 0, n2b70869555e396cd_25).
+ast_child[code](n2b70869555e396cd_17, body, 1, n2b70869555e396cd_24).
+ast_child[code](n2b70869555e396cd_14, body, 0, n2b70869555e396cd_17).
+ast_child[code](n2b70869555e396cd_13, declaration, 0, n2b70869555e396cd_14).
+ast_child[code](n2b70869555e396cd_2, body, 2, n2b70869555e396cd_13).
+ast_child[code](n2b70869555e396cd_1, program, 0, n2b70869555e396cd_2).
+ast_file[code](n2b70869555e396cd_1, "orders.js").
+fs_dir[code](".").
+fs_file[code]("orders.js").
+fs_dir_of[code]("orders.js", ".").
+fs_file_in[code](".", "orders.js", "orders.js").
+fs_file[code]("db.js").
+fs_dir_of[code]("db.js", ".").
+fs_file_in[code](".", "db.js", "db.js").
+fs_file[code]("log.js").
+fs_dir_of[code]("log.js", ".").
+fs_file_in[code](".", "log.js", "log.js").
+fs_file[code]("server.js").
+fs_dir_of[code]("server.js", ".").
+fs_file_in[code](".", "server.js", "server.js").
+fs_file[code]("users.js").
+fs_dir_of[code]("users.js", ".").
+fs_file_in[code](".", "users.js", "users.js").
+fs_file[code]("util.js").
+fs_dir_of[code]("util.js", ".").
+fs_file_in[code](".", "util.js", "util.js").
+str_segs[code]("./db.js", 2).
+str_char0[code]("./db.js", ".").
+str_seg[code]("./db.js", 0, ".").
+str_seg[code]("./db.js", 1, "db.js").
+str_segs[code]("./users.js", 2).
+str_char0[code]("./users.js", ".").
+str_seg[code]("./users.js", 0, ".").
+str_seg[code]("./users.js", 1, "users.js").
+str_segs[code]("orders ", 1).
+str_char0[code]("orders ", "o").
+str_seg[code]("orders ", 0, "orders ").
