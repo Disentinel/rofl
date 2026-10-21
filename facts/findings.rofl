@@ -11775,3 +11775,19 @@ recorded(f_a_kept_world_is_written_whole_by_each_edit, "2026-10-22").
 demands(f_a_kept_world_is_written_whole_by_each_edit, code).
 finding_note(f_a_kept_world_is_written_whole_by_each_edit,
   "MEASURED 2026-10-22, OPEN. An edit by delta touches facts in proportion to the edit (f_a_set_of_base_facts_goes_in_one_dred_pass) but its time keeps three costs of the world, measured on the vscode 250 subset (1 175 546 base facts, release): opening the volume about 3.7 s, 1.4 s of it vclosure_restore parsing the key of every cited tree row back from its text (vrow_entry, parse_lit); writing it again 1.2-1.9 s, the whole volume every time (1.20 GB for a 38-fact edit: bytes written per edit = the volume, not the edit); and about 3.5 s of the addition's planning and support (delta_pick, probe_stats; kind_seen's rule 406 ms adding firings to long chains), whatever the edit (a file put back with 0 facts out took 7.4 s against 3.7 s to open). The volume also grows by edits, dead ids kept: 1.117 GB to 1.238 GB over three edits, 9.18 to 9.47 MB at 484 facts. Wanted: a journal or overlay written per edit, the row keys kept typed in the volume, and the planner's statistics kept rather than probed.").
+
+finding(f_a_gone_file_took_its_facts_and_left_its_rules, defect).
+recorded(f_a_gone_file_took_its_facts_and_left_its_rules, "2026-10-22").
+demands(f_a_gone_file_took_its_facts_and_left_its_rules, code).
+addressed_by(f_a_gone_file_took_its_facts_and_left_its_rules, "rust/rofl/src/bin/rofl/delta.rs").
+addressed_by(f_a_gone_file_took_its_facts_and_left_its_rules, "rust/rofl/tests/kept.rs").
+finding_note(f_a_gone_file_took_its_facts_and_left_its_rules,
+  "FOUND BY THE COORDINATOR'S ACCEPTANCE 2026-10-22, FIXED. A kept world asked with a file that held rules removed (e.rofl with edges, r.rofl with reach rules; asked again with e.rofl alone) went by delta with 0 facts out and kept the rules: reach(a, X) answered b, c where a fresh evaluation answers nothing; likewise r.rofl removed and r2.rofl with another rule added. An edited rule file was refused (its rules compared), a gone one was not looked at. NOW a gone file whose record holds rules evaluates the world whole, said on stderr (planted kept_delta_gone_rules_kept). The random steps had missed it because no step changed a file of rules: tests/kept.rs mixed_files_at_random edits, removes and adds files of facts and rules mixed, 40 steps, each against a fresh run.").
+
+finding(f_writers_killed_mid_write_left_worlds_the_cap_did_not_count, defect).
+recorded(f_writers_killed_mid_write_left_worlds_the_cap_did_not_count, "2026-10-22").
+demands(f_writers_killed_mid_write_left_worlds_the_cap_did_not_count, code).
+addressed_by(f_writers_killed_mid_write_left_worlds_the_cap_did_not_count, "rust/rofl/src/bin/rofl/kept.rs").
+addressed_by(f_writers_killed_mid_write_left_worlds_the_cap_did_not_count, "rust/rofl/tests/kept.rs").
+finding_note(f_writers_killed_mid_write_left_worlds_the_cap_did_not_count,
+  "FOUND BY THE COORDINATOR'S ACCEPTANCE 2026-10-22, FIXED. kill -9 at 12 points of a run that keeps a world left 4 files <key>.vol.<pid>.new.<pid>.part in the cache that nothing removed, and the cap summed only .vol files: each up to a world's size, and harnesses kill on timeout. NOW the run that keeps a world first removes every .new and .part whose writer pid is not alive, and the cap counts every file of the directory, a world being written by a live process too (a world that would put the cache over the cap with them is not kept, said). tests/kept.rs orphans_of_killed_writers_are_swept kills three writers mid-write, then the next run leaves none and a cap between the kept worlds and the kept worlds with an orphan holds (planted kept_orphans_ignored).").

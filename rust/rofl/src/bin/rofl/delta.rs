@@ -108,6 +108,10 @@ pub fn apply(s: &mut Session, r: &Record, files: &[String]) -> Result<Done, Stri
     }
     let now: HashSet<&str> = files.iter().map(String::as_str).collect();
     for u in r.units.iter().filter(|u| !now.contains(u.path.as_str())) {
+        // a rule is taken out of a world by evaluating it again
+        if u.rules != kept::rules_sum("") && !rofl::brk!("kept_delta_gone_rules_kept" => true; false) {
+            return Err(format!("{} is gone and held rules", kept::shown(&u.path)));
+        }
         if rofl::brk!("kept_delta_keeps_removed" => false; true) {
             goes.extend(&u.facts);
         }

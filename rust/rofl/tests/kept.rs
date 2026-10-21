@@ -524,9 +524,126 @@ fn edits_by_delta_are_the_fresh_world(brk: Option<&str>) -> Result<(), String> {
     check("a file gone", false, "more.rofl (gone)")
 }
 
+/// Files that hold facts and rules mixed, edited, removed and added at random, each step asked of the kept world and
+/// of a fresh one: a file gone with its rules, a rule file renamed, a rule added in a new file.
+fn mixed_files_at_random(brk: Option<&str>) -> Result<(), String> {
+    const RULE: [&str; 5] = [
+        "reach(X, Y) :- edge(X, Y).\n",
+        "reach(X, Z) :- reach(X, Y), edge(Y, Z).\n",
+        "reach(X, Y) :- edge(Y, X).\n",
+        "node(X) :- edge(X, _).\nfar(X) :- node(X), not reach(a, X).\n",
+        "node(X) :- edge(X, _).\ndeg(X, N) :- node(X), N is count(Y : edge(X, Y)).\n",
+    ];
+    let mut seed: u64 = 0x9e37_79b9_7f4a_7c15;
+    let mut below = move |n: u64| { seed ^= seed << 13; seed ^= seed >> 7; seed ^= seed << 17; seed % n };
+    let d = Dir::new("mixed");
+    let text = |below: &mut dyn FnMut(u64) -> u64| {
+        let n = ["a", "b", "c", "d", "e"];
+        let mut t = String::new();
+        for _ in 0..1 + below(4) {
+            t.push_str(&format!("edge({}, {}).\n", n[below(5) as usize], n[below(5) as usize]));
+        }
+        if below(3) == 0 {
+            t.push_str(RULE[below(RULE.len() as u64) as usize]);
+        }
+        t
+    };
+    let mut held: Vec<Option<String>> = vec![None; 4];
+    held[0] = Some(format!("edge(a, b).\nedge(b, c).\n{}", RULE[0]));
+    held[1] = Some(RULE[1].to_string());
+    let mut gone_rules = 0;
+    for step in 0..40 {
+        let i = below(4) as usize;
+        held[i] = match (&held[i], below(4)) {
+            (Some(_), 0) => None,
+            _ => Some(text(&mut below)),
+        };
+        let mut files = vec!["boot.rofl".to_string()];
+        for (k, h) in held.iter().enumerate() {
+            let f = format!("m{k}.rofl");
+            match h {
+                Some(t) => { d.write(&f, t); files.push(f); }
+                None => { let _ = std::fs::remove_file(d.0.join(&f)); }
+            }
+        }
+        let names: Vec<&str> = files.iter().map(String::as_str).collect();
+        let got = rofl(&d, brk, &["ask", "reach(a, X)", "--state"].into_iter().chain(names.iter().copied()).collect::<Vec<_>>());
+        let want = fresh(&d, brk, &["load", "--ask", "reach(a, X)", "--state"].into_iter().chain(names.iter().copied()).collect::<Vec<_>>());
+        gone_rules += got.err.contains("is gone and held rules") as usize;
+        ensure(got.out == want.out && got.code == want.code, || format!("step {step}: by delta {} lines, fresh {} lines; {:?}", got.out.lines().count(), want.out.lines().count(), got.err))?;
+    }
+    ensure(gone_rules > 0 || brk.is_some(), || "no step took a file with rules away".into())
+}
+
+/// Writers killed while they write leave their half-written worlds; the next run that keeps a world removes them,
+/// and the cap counts every file of the cache.
+fn orphans_of_killed_writers_are_swept(brk: Option<&str>) -> Result<(), String> {
+    let d = Dir::new("orphans");
+    let mut big = String::new();
+    for i in 0..60_000 {
+        big.push_str(&format!("edge(n{i}, n{}).\n", i + 1));
+    }
+    d.write("big.rofl", &format!("{big}reach(X, Y) :- edge(X, Y).\n"));
+    let worlds = d.0.join("cache/rofl/worlds");
+    let temps = || -> Vec<String> {
+        std::fs::read_dir(&worlds).map(|rd| rd.flatten().map(|e| e.file_name().to_string_lossy().into_owned()).filter(|n| !n.ends_with(".vol")).collect()).unwrap_or_default()
+    };
+    let mut killed = 0;
+    for tries in 0..40 {
+        if killed == 3 {
+            break;
+        }
+        // a world of its own each time (other walls), so each run writes
+        let b = format!("{}", 300_000_000 + tries);
+        let mut c = Command::new(BIN);
+        c.args(["ask", "reach(n1, X)", "--budget", &b, "big.rofl"]).current_dir(&d.0).env("XDG_CACHE_HOME", d.0.join("cache")).env_remove("ROFL_BREAK").env_remove("ROFL_CACHE_GB");
+        if let Some(b) = brk { c.env("ROFL_BREAK", b); }
+        let mut child = c.stdout(std::process::Stdio::null()).stderr(std::process::Stdio::null()).spawn().unwrap();
+        let t0 = std::time::Instant::now();
+        let before = temps().len();
+        loop {
+            if temps().len() > before {
+                let _ = child.kill();
+                let _ = child.wait();
+                killed += 1;
+                break;
+            }
+            if child.try_wait().ok().flatten().is_some() || t0.elapsed().as_secs() > 60 {
+                break;
+            }
+            std::thread::sleep(std::time::Duration::from_micros(200));
+        }
+    }
+    ensure(killed == 3, || format!("killed {killed} writers mid-write"))?;
+    ensure(!temps().is_empty(), || "the killed writers left nothing".into())?;
+    let all = |w: &Path| -> u64 { std::fs::read_dir(w).map(|rd| rd.flatten().filter_map(|e| e.metadata().ok()).map(|m| m.len()).sum()).unwrap_or(0) };
+    let r = rofl(&d, brk, &["ask", "reach(n1, X)", "--budget", "300000099", "big.rofl"]);
+    ensure(r.code == 0, || format!("the next run: {} {:?}", r.code, r.err))?;
+    ensure(temps().is_empty(), || format!("left after the next run: {:?}", temps()))?;
+    // a cap the kept worlds fit and the kept worlds and orphans together do not
+    let vols = all(&worlds);
+    for tries in 100..110 {
+        if !temps().is_empty() { break; }
+        let mut c = Command::new(BIN);
+        c.args(["ask", "reach(n1, X)", "--budget", &format!("{}", 300_000_000 + tries), "big.rofl"]).current_dir(&d.0).env("XDG_CACHE_HOME", d.0.join("cache")).env_remove("ROFL_BREAK").env_remove("ROFL_CACHE_GB");
+        if let Some(b) = brk { c.env("ROFL_BREAK", b); }
+        let mut child = c.stdout(std::process::Stdio::null()).stderr(std::process::Stdio::null()).spawn().unwrap();
+        loop {
+            if !temps().is_empty() { let _ = child.kill(); let _ = child.wait(); break; }
+            if child.try_wait().ok().flatten().is_some() { break; }
+            std::thread::sleep(std::time::Duration::from_micros(200));
+        }
+    }
+    let cap = (vols + all(&worlds)) / 2 + 1;
+    let gb = format!("{}", cap as f64 / (1u64 << 30) as f64);
+    let r = rofl_env(BIN, &d, &d.0.join("cache"), &[("ROFL_CACHE_GB", gb)], brk, &["ask", "reach(n1, X)", "--budget", "300000199", "big.rofl"]);
+    ensure(r.code == 0, || format!("the run under the cap: {} {:?}", r.code, r.err))?;
+    ensure(all(&worlds) <= cap, || format!("the cache holds {} over a cap of {cap}: {:?}", all(&worlds), temps()))
+}
+
 type Case = fn(Option<&str>) -> Result<(), String>;
 
-const CASES: [(&str, Case); 22] = [
+const CASES: [(&str, Case); 24] = [
     ("answers_as_fresh", answers_as_fresh),
     ("a_rule_file_edited", a_rule_file_edited),
     ("boot_edited", boot_edited),
@@ -549,6 +666,8 @@ const CASES: [(&str, Case); 22] = [
     ("the_writer_stops_at_the_cap", the_writer_stops_at_the_cap),
     ("a_missing_source_is_said_missing", a_missing_source_is_said_missing),
     ("edits_by_delta_are_the_fresh_world", edits_by_delta_are_the_fresh_world),
+    ("mixed_files_at_random", mixed_files_at_random),
+    ("orphans_of_killed_writers_are_swept", orphans_of_killed_writers_are_swept),
 ];
 
 /// What a hole left unknown is kept by an image as by a volume: a negation unfolded at a call reads it after opening.

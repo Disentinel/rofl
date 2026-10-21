@@ -1,66 +1,88 @@
-ast_node[code](ne92f63f5acde594e_1, file, "util.js", 1).
-ast_node[code](ne92f63f5acde594e_2, program, "util.js", 1).
-ast_attr[code](ne92f63f5acde594e_2, source_type, "module").
-ast_node[code](ne92f63f5acde594e_3, export_named_declaration, "util.js", 1).
-ast_attr[code](ne92f63f5acde594e_3, export_kind, "value").
-ast_node[code](ne92f63f5acde594e_4, variable_declaration, "util.js", 1).
-ast_node[code](ne92f63f5acde594e_5, variable_declarator, "util.js", 1).
-ast_node[code](ne92f63f5acde594e_6, identifier, "util.js", 1).
-ast_attr[code](ne92f63f5acde594e_6, name, "id").
-ast_child[code](ne92f63f5acde594e_5, id, 0, ne92f63f5acde594e_6).
-ast_node[code](ne92f63f5acde594e_7, arrow_function_expression, "util.js", 1).
-ast_attr[code](ne92f63f5acde594e_7, generator, false).
-ast_attr[code](ne92f63f5acde594e_7, async, false).
-ast_node[code](ne92f63f5acde594e_8, identifier, "util.js", 1).
-ast_attr[code](ne92f63f5acde594e_8, name, "x").
-ast_child[code](ne92f63f5acde594e_7, params, 0, ne92f63f5acde594e_8).
-ast_node[code](ne92f63f5acde594e_9, identifier, "util.js", 1).
-ast_attr[code](ne92f63f5acde594e_9, name, "x").
-ast_child[code](ne92f63f5acde594e_7, body, 0, ne92f63f5acde594e_9).
-ast_child[code](ne92f63f5acde594e_5, init, 0, ne92f63f5acde594e_7).
-ast_child[code](ne92f63f5acde594e_4, declarations, 0, ne92f63f5acde594e_5).
-ast_attr[code](ne92f63f5acde594e_4, kind, "const").
-ast_child[code](ne92f63f5acde594e_3, declaration, 0, ne92f63f5acde594e_4).
-ast_child[code](ne92f63f5acde594e_2, body, 0, ne92f63f5acde594e_3).
-ast_node[code](ne92f63f5acde594e_10, export_named_declaration, "util.js", 2).
-ast_attr[code](ne92f63f5acde594e_10, export_kind, "value").
-ast_node[code](ne92f63f5acde594e_11, function_declaration, "util.js", 2).
-ast_node[code](ne92f63f5acde594e_12, identifier, "util.js", 2).
-ast_attr[code](ne92f63f5acde594e_12, name, "twice").
-ast_child[code](ne92f63f5acde594e_11, id, 0, ne92f63f5acde594e_12).
-ast_attr[code](ne92f63f5acde594e_11, generator, false).
-ast_attr[code](ne92f63f5acde594e_11, async, false).
-ast_node[code](ne92f63f5acde594e_13, identifier, "util.js", 2).
-ast_attr[code](ne92f63f5acde594e_13, name, "f").
-ast_child[code](ne92f63f5acde594e_11, params, 0, ne92f63f5acde594e_13).
-ast_node[code](ne92f63f5acde594e_14, block_statement, "util.js", 2).
-ast_node[code](ne92f63f5acde594e_15, return_statement, "util.js", 2).
-ast_node[code](ne92f63f5acde594e_16, arrow_function_expression, "util.js", 2).
-ast_attr[code](ne92f63f5acde594e_16, generator, false).
-ast_attr[code](ne92f63f5acde594e_16, async, false).
-ast_node[code](ne92f63f5acde594e_17, identifier, "util.js", 2).
-ast_attr[code](ne92f63f5acde594e_17, name, "x").
-ast_child[code](ne92f63f5acde594e_16, params, 0, ne92f63f5acde594e_17).
-ast_node[code](ne92f63f5acde594e_18, call_expression, "util.js", 2).
-ast_node[code](ne92f63f5acde594e_19, identifier, "util.js", 2).
-ast_attr[code](ne92f63f5acde594e_19, name, "f").
-ast_child[code](ne92f63f5acde594e_18, callee, 0, ne92f63f5acde594e_19).
-ast_node[code](ne92f63f5acde594e_20, call_expression, "util.js", 2).
-ast_node[code](ne92f63f5acde594e_21, identifier, "util.js", 2).
-ast_attr[code](ne92f63f5acde594e_21, name, "f").
-ast_child[code](ne92f63f5acde594e_20, callee, 0, ne92f63f5acde594e_21).
-ast_node[code](ne92f63f5acde594e_22, identifier, "util.js", 2).
-ast_attr[code](ne92f63f5acde594e_22, name, "x").
-ast_child[code](ne92f63f5acde594e_20, arguments, 0, ne92f63f5acde594e_22).
-ast_child[code](ne92f63f5acde594e_18, arguments, 0, ne92f63f5acde594e_20).
-ast_child[code](ne92f63f5acde594e_16, body, 0, ne92f63f5acde594e_18).
-ast_child[code](ne92f63f5acde594e_15, argument, 0, ne92f63f5acde594e_16).
-ast_child[code](ne92f63f5acde594e_14, body, 0, ne92f63f5acde594e_15).
-ast_child[code](ne92f63f5acde594e_11, body, 0, ne92f63f5acde594e_14).
-ast_child[code](ne92f63f5acde594e_10, declaration, 0, ne92f63f5acde594e_11).
-ast_child[code](ne92f63f5acde594e_2, body, 1, ne92f63f5acde594e_10).
-ast_child[code](ne92f63f5acde594e_1, program, 0, ne92f63f5acde594e_2).
-ast_file[code](ne92f63f5acde594e_1, "util.js").
+ast_node[code](ne92f63f5acde594e_3c3ted0nsu2, file, "util.js").
+ast_line[code](ne92f63f5acde594e_3c3ted0nsu2, 1).
+ast_node[code](ne92f63f5acde594e_12undirbnh3, program, "util.js").
+ast_line[code](ne92f63f5acde594e_12undirbnh3, 1).
+ast_attr[code](ne92f63f5acde594e_12undirbnh3, source_type, "module").
+ast_node[code](ne92f63f5acde594e_0f30ea5ukj6, export_named_declaration, "util.js").
+ast_line[code](ne92f63f5acde594e_0f30ea5ukj6, 1).
+ast_attr[code](ne92f63f5acde594e_0f30ea5ukj6, export_kind, "value").
+ast_node[code](ne92f63f5acde594e_94j5a33dth4, variable_declaration, "util.js").
+ast_line[code](ne92f63f5acde594e_94j5a33dth4, 1).
+ast_node[code](ne92f63f5acde594e_blfqrh8viu, variable_declarator, "util.js").
+ast_line[code](ne92f63f5acde594e_blfqrh8viu, 1).
+ast_node[code](ne92f63f5acde594e_apv43e85e96, identifier, "util.js").
+ast_line[code](ne92f63f5acde594e_apv43e85e96, 1).
+ast_attr[code](ne92f63f5acde594e_apv43e85e96, name, "id").
+ast_child[code](ne92f63f5acde594e_blfqrh8viu, id, 0, ne92f63f5acde594e_apv43e85e96).
+ast_node[code](ne92f63f5acde594e_o13dacv66h1, arrow_function_expression, "util.js").
+ast_line[code](ne92f63f5acde594e_o13dacv66h1, 1).
+ast_attr[code](ne92f63f5acde594e_o13dacv66h1, generator, false).
+ast_attr[code](ne92f63f5acde594e_o13dacv66h1, async, false).
+ast_node[code](ne92f63f5acde594e_uvdecv8hdr2, identifier, "util.js").
+ast_line[code](ne92f63f5acde594e_uvdecv8hdr2, 1).
+ast_attr[code](ne92f63f5acde594e_uvdecv8hdr2, name, "x").
+ast_child[code](ne92f63f5acde594e_o13dacv66h1, params, 0, ne92f63f5acde594e_uvdecv8hdr2).
+ast_node[code](ne92f63f5acde594e_qr1jbg3o3r, identifier, "util.js").
+ast_line[code](ne92f63f5acde594e_qr1jbg3o3r, 1).
+ast_attr[code](ne92f63f5acde594e_qr1jbg3o3r, name, "x").
+ast_child[code](ne92f63f5acde594e_o13dacv66h1, body, 0, ne92f63f5acde594e_qr1jbg3o3r).
+ast_child[code](ne92f63f5acde594e_blfqrh8viu, init, 0, ne92f63f5acde594e_o13dacv66h1).
+ast_child[code](ne92f63f5acde594e_94j5a33dth4, declarations, 0, ne92f63f5acde594e_blfqrh8viu).
+ast_attr[code](ne92f63f5acde594e_94j5a33dth4, kind, "const").
+ast_child[code](ne92f63f5acde594e_0f30ea5ukj6, declaration, 0, ne92f63f5acde594e_94j5a33dth4).
+ast_child[code](ne92f63f5acde594e_12undirbnh3, body, 0, ne92f63f5acde594e_0f30ea5ukj6).
+ast_node[code](ne92f63f5acde594e_9l7lmkrrho2, export_named_declaration, "util.js").
+ast_line[code](ne92f63f5acde594e_9l7lmkrrho2, 2).
+ast_attr[code](ne92f63f5acde594e_9l7lmkrrho2, export_kind, "value").
+ast_node[code](ne92f63f5acde594e_76pm0d09i35, function_declaration, "util.js").
+ast_line[code](ne92f63f5acde594e_76pm0d09i35, 2).
+ast_node[code](ne92f63f5acde594e_o72crftmf61, identifier, "util.js").
+ast_line[code](ne92f63f5acde594e_o72crftmf61, 2).
+ast_attr[code](ne92f63f5acde594e_o72crftmf61, name, "twice").
+ast_child[code](ne92f63f5acde594e_76pm0d09i35, id, 0, ne92f63f5acde594e_o72crftmf61).
+ast_attr[code](ne92f63f5acde594e_76pm0d09i35, generator, false).
+ast_attr[code](ne92f63f5acde594e_76pm0d09i35, async, false).
+ast_node[code](ne92f63f5acde594e_cv2h23nc0m, identifier, "util.js").
+ast_line[code](ne92f63f5acde594e_cv2h23nc0m, 2).
+ast_attr[code](ne92f63f5acde594e_cv2h23nc0m, name, "f").
+ast_child[code](ne92f63f5acde594e_76pm0d09i35, params, 0, ne92f63f5acde594e_cv2h23nc0m).
+ast_node[code](ne92f63f5acde594e_0j5unv5bln3, block_statement, "util.js").
+ast_line[code](ne92f63f5acde594e_0j5unv5bln3, 2).
+ast_node[code](ne92f63f5acde594e_29chbbtjic, return_statement, "util.js").
+ast_line[code](ne92f63f5acde594e_29chbbtjic, 2).
+ast_node[code](ne92f63f5acde594e_fq7pt9qdrq1, arrow_function_expression, "util.js").
+ast_line[code](ne92f63f5acde594e_fq7pt9qdrq1, 2).
+ast_attr[code](ne92f63f5acde594e_fq7pt9qdrq1, generator, false).
+ast_attr[code](ne92f63f5acde594e_fq7pt9qdrq1, async, false).
+ast_node[code](ne92f63f5acde594e_i6eom6mq2p4, identifier, "util.js").
+ast_line[code](ne92f63f5acde594e_i6eom6mq2p4, 2).
+ast_attr[code](ne92f63f5acde594e_i6eom6mq2p4, name, "x").
+ast_child[code](ne92f63f5acde594e_fq7pt9qdrq1, params, 0, ne92f63f5acde594e_i6eom6mq2p4).
+ast_node[code](ne92f63f5acde594e_eg8koou91m7, call_expression, "util.js").
+ast_line[code](ne92f63f5acde594e_eg8koou91m7, 2).
+ast_node[code](ne92f63f5acde594e_gh0p3kotb87, identifier, "util.js").
+ast_line[code](ne92f63f5acde594e_gh0p3kotb87, 2).
+ast_attr[code](ne92f63f5acde594e_gh0p3kotb87, name, "f").
+ast_child[code](ne92f63f5acde594e_eg8koou91m7, callee, 0, ne92f63f5acde594e_gh0p3kotb87).
+ast_node[code](ne92f63f5acde594e_sds6odbi3c7, call_expression, "util.js").
+ast_line[code](ne92f63f5acde594e_sds6odbi3c7, 2).
+ast_node[code](ne92f63f5acde594e_hqmt4nte7n2, identifier, "util.js").
+ast_line[code](ne92f63f5acde594e_hqmt4nte7n2, 2).
+ast_attr[code](ne92f63f5acde594e_hqmt4nte7n2, name, "f").
+ast_child[code](ne92f63f5acde594e_sds6odbi3c7, callee, 0, ne92f63f5acde594e_hqmt4nte7n2).
+ast_node[code](ne92f63f5acde594e_bmrpm642jf2, identifier, "util.js").
+ast_line[code](ne92f63f5acde594e_bmrpm642jf2, 2).
+ast_attr[code](ne92f63f5acde594e_bmrpm642jf2, name, "x").
+ast_child[code](ne92f63f5acde594e_sds6odbi3c7, arguments, 0, ne92f63f5acde594e_bmrpm642jf2).
+ast_child[code](ne92f63f5acde594e_eg8koou91m7, arguments, 0, ne92f63f5acde594e_sds6odbi3c7).
+ast_child[code](ne92f63f5acde594e_fq7pt9qdrq1, body, 0, ne92f63f5acde594e_eg8koou91m7).
+ast_child[code](ne92f63f5acde594e_29chbbtjic, argument, 0, ne92f63f5acde594e_fq7pt9qdrq1).
+ast_child[code](ne92f63f5acde594e_0j5unv5bln3, body, 0, ne92f63f5acde594e_29chbbtjic).
+ast_child[code](ne92f63f5acde594e_76pm0d09i35, body, 0, ne92f63f5acde594e_0j5unv5bln3).
+ast_child[code](ne92f63f5acde594e_9l7lmkrrho2, declaration, 0, ne92f63f5acde594e_76pm0d09i35).
+ast_child[code](ne92f63f5acde594e_12undirbnh3, body, 1, ne92f63f5acde594e_9l7lmkrrho2).
+ast_child[code](ne92f63f5acde594e_3c3ted0nsu2, program, 0, ne92f63f5acde594e_12undirbnh3).
+ast_file[code](ne92f63f5acde594e_3c3ted0nsu2, "util.js").
 fs_dir[code](".").
 fs_file[code]("util.js").
 fs_dir_of[code]("util.js", ".").

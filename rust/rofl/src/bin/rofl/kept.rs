@@ -144,18 +144,54 @@ pub fn keep_capped(s: &mut rofl::session::Session, kept: &str, note: &str) -> Re
         let _ = std::fs::remove_file(&new);
         return Err(format!("the world is larger than {}, the most it may take: the cap is {} (ROFL_CACHE_GB)", size(most), size(cap)));
     }
-    let mut older: Vec<(std::time::SystemTime, u64, PathBuf)> = std::fs::read_dir(dir).map_err(|e| e.to_string())?.flatten()
-        .filter(|e| e.path().extension().is_some_and(|x| x == "vol") && e.path() != Path::new(kept))
-        .filter_map(|e| e.metadata().ok().map(|m| (m.modified().unwrap_or(std::time::UNIX_EPOCH), m.len(), e.path())))
-        .collect();
+    let orphans = rofl::brk!("kept_orphans_ignored" => false; true);
+    if orphans {
+        sweep_orphans(dir);
+    }
+    // every file of the directory counts, a world another process is writing too
+    let (mut older, mut others): (Vec<(std::time::SystemTime, u64, PathBuf)>, u64) = (Vec::new(), 0);
+    for e in std::fs::read_dir(dir).map_err(|e| e.to_string())?.flatten() {
+        let (p, Ok(m)) = (e.path(), e.metadata()) else { continue };
+        if p == Path::new(kept) || p == Path::new(&new) || !m.is_file() {
+            continue;
+        }
+        if p.extension().is_some_and(|x| x == "vol") {
+            older.push((m.modified().unwrap_or(std::time::UNIX_EPOCH), m.len(), p));
+        } else if orphans {
+            others += m.len();
+        }
+    }
     older.sort();
-    let mut total: u64 = older.iter().map(|o| o.1).sum::<u64>() + bytes;
+    let mut total: u64 = older.iter().map(|o| o.1).sum::<u64>() + others + bytes;
     for (_, len, p) in older {
         if total <= cap || ignored { break; }
         if std::fs::remove_file(&p).is_ok() { total -= len; }
     }
+    if total > cap && !ignored {
+        let _ = std::fs::remove_file(&new);
+        return Err(format!("with what other processes are writing the cache would hold {}, over the cap of {} (ROFL_CACHE_GB)", size(total), size(cap)));
+    }
     std::fs::rename(&new, kept).map_err(|e| format!("{kept}: {e}"))?;
     Ok(bytes)
+}
+
+/// A world half written by a process that is gone (killed while it wrote): `<key>.vol.<pid>.new`, and the `.part`
+/// its volume was written under. Nothing else removes it, and each may be a world's size.
+fn sweep_orphans(dir: &Path) {
+    let Ok(rd) = std::fs::read_dir(dir) else { return };
+    for e in rd.flatten() {
+        let name = e.file_name().to_string_lossy().into_owned();
+        let Some((_, rest)) = name.split_once(".vol.") else { continue };
+        let Some(pid) = rest.split('.').next().and_then(|p| p.parse::<i32>().ok()) else { continue };
+        if !(name.ends_with(".new") || name.ends_with(".part")) || pid == std::process::id() as i32 {
+            continue;
+        }
+        // SAFETY: signal 0 only asks whether the process exists
+        let alive = unsafe { libc::kill(pid, 0) } == 0 || std::io::Error::last_os_error().raw_os_error() == Some(libc::EPERM);
+        if !alive {
+            let _ = std::fs::remove_file(e.path());
+        }
+    }
 }
 
 /// Where a question verb keeps the world of `world` (the canonical walls and files) by itself: a file named by

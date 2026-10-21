@@ -2229,6 +2229,10 @@ brk("kept_delta_keeps_removed"). brk_kind("kept_delta_keeps_removed", switch).
 brk_expects("kept_delta_keeps_removed", "kept_series").
 brk("kept_delta_stale_index"). brk_kind("kept_delta_stale_index", switch).
 brk_expects("kept_delta_stale_index", "kept_series").
+brk("kept_delta_gone_rules_kept"). brk_kind("kept_delta_gone_rules_kept", switch).
+brk_expects("kept_delta_gone_rules_kept", "kept_series").
+brk("kept_orphans_ignored"). brk_kind("kept_orphans_ignored", switch).
+brk_expects("kept_orphans_ignored", "kept_series").
 brk("kept_delta_unasked_kept"). brk_kind("kept_delta_unasked_kept", switch).
 brk_expects("kept_delta_unasked_kept", "kept_js_sources").
 
@@ -2481,6 +2485,7 @@ switch_site("keep_first_derivation", "rust/rofl/src/engine.rs").
 switch_site("kept_blind_scans", "rust/rofl/src/bin/rofl/kept.rs").
 switch_site("kept_cap_ignored", "rust/rofl/src/bin/rofl/kept.rs").
 switch_site("kept_delta_all_files", "rust/rofl/src/bin/rofl/delta.rs").
+switch_site("kept_delta_gone_rules_kept", "rust/rofl/src/bin/rofl/delta.rs").
 switch_site("kept_delta_keeps_old", "rust/rofl/src/bin/rofl/delta.rs").
 switch_site("kept_delta_keeps_removed", "rust/rofl/src/bin/rofl/delta.rs").
 switch_site("kept_delta_stale_index", "rust/rofl/src/bin/rofl/delta.rs").
@@ -2488,6 +2493,7 @@ switch_site("kept_delta_unasked_kept", "rust/rofl/src/bin/rofl/delta.rs").
 switch_site("kept_key_ignores_walls", "rust/rofl/src/bin/rofl/kept.rs").
 switch_site("kept_load_reads_cache", "rust/rofl/src/bin/rofl/load.rs").
 switch_site("kept_md_unread", "rust/rofl/src/bin/rofl/kept.rs").
+switch_site("kept_orphans_ignored", "rust/rofl/src/bin/rofl/kept.rs").
 switch_site("kept_scans_unread", "rust/rofl/src/bin/rofl/kept.rs").
 switch_site("kept_shared_temp", "rust/rofl/src/bin/rofl/kept.rs").
 switch_site("kept_stale_args", "rust/rofl/src/bin/rofl/load.rs").

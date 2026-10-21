@@ -8961,6 +8961,20 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "kept_delta_gone_rules_kept",
+  "what": "a file gone that held rules goes by delta, its facts out and its rules left in the world",
+  "expect": {
+   "kept_series": "mixed_files_at_random:"
+  }
+ },
+ {
+  "id": "kept_orphans_ignored",
+  "what": "the worlds half written by killed writers are left in the cache and the cap counts only kept worlds",
+  "expect": {
+   "kept_series": "orphans_of_killed_writers_are_swept:"
+  }
+ },
+ {
   "id": "kept_delta_unasked_kept",
   "what": "a scan the world no longer asks for keeps the facts it brought",
   "expect": {

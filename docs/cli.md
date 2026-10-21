@@ -74,7 +74,9 @@ a 5 GB floor, so a world larger than that stops its writer there, is answered,
 and is not kept, said in one line on stderr (`the world is not kept: the world
 is larger than 1.00 GB, the most it may take: the cap is 1.00 GB
 (ROFL_CACHE_GB)`). Each process writes under a name of its own and renames it
-into place, so cold runs of one question at once keep one world. Writing the volume costs about 5% of the evaluation it
+into place, so cold runs of one question at once keep one world; what a process
+killed while it wrote leaves is removed by the next run that keeps a world, and
+the cap counts every file of the directory. Writing the volume costs about 5% of the evaluation it
 saves (agg_minmax_strata: 0.83 s on 16.9 s). `rofl load`, `rofl serve` and every harness never read nor
 write them: a gate computes. Nothing to turn on or off; the cap is the one knob.
 
@@ -144,7 +146,8 @@ the kept world took 1 file by delta: db.rofl (35 facts out, 409 overdeleted or d
 ```
 
 It evaluates whole instead, the reason after `not by delta:` in the stale line,
-when the rules changed (a file that changed holds a rule), the world was not
+when the rules changed (a file that changed holds a rule, or a file gone held
+one), the world was not
 read from its files alone (a `.rofl.md`, a world `--below`), a scanner ran in
 another directory, a file changed that is neither named nor read by a scanner,
 or the engine refuses the delta (a fact read on demand, a base fact a rule
