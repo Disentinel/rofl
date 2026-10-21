@@ -210,6 +210,7 @@ fn run(json: bool, args: Vec<String>, mut pre: Option<(bool, crate::kept::Record
                 }
                 Err(e) => eprintln!("{p} is damaged: {e}; computed anew"),
             },
+            Ok(Some(m)) if crate::kept::missing(&m) => eprintln!("the kept world {p} is stale: {m}"),
             Ok(Some(m)) => eprintln!("the kept world {p} is stale: {m}; computed anew"),
             Err(e) => eprintln!("{e}; computed anew"),
         }

@@ -2183,6 +2183,10 @@ brk("kept_load_reads_cache"). brk_kind("kept_load_reads_cache", switch).
 brk_expects("kept_load_reads_cache", "kept_implicit_load").
 brk("kept_cap_ignored"). brk_kind("kept_cap_ignored", switch).
 brk_expects("kept_cap_ignored", "kept_cap").
+brk("kept_write_unbounded"). brk_kind("kept_write_unbounded", switch).
+brk_expects("kept_write_unbounded", "kept_bound").
+brk("kept_shared_temp"). brk_kind("kept_shared_temp", switch).
+brk_expects("kept_shared_temp", "kept_concurrent").
 
 switch_site("add_base_firings_kept", "rust/rofl/src/engine/addition.rs").
 switch_site("add_closure_lowered_unnoted", "rust/rofl/src/engine.rs").
@@ -2435,12 +2439,14 @@ switch_site("kept_key_ignores_walls", "rust/rofl/src/bin/rofl/kept.rs").
 switch_site("kept_load_reads_cache", "rust/rofl/src/bin/rofl/load.rs").
 switch_site("kept_md_unread", "rust/rofl/src/bin/rofl/kept.rs").
 switch_site("kept_scans_unread", "rust/rofl/src/bin/rofl/kept.rs").
+switch_site("kept_shared_temp", "rust/rofl/src/bin/rofl/kept.rs").
 switch_site("kept_stale_args", "rust/rofl/src/bin/rofl/load.rs").
 switch_site("kept_stale_engine", "rust/rofl/src/bin/rofl/kept.rs").
 switch_site("kept_stale_files", "rust/rofl/src/bin/rofl/kept.rs").
 switch_site("kept_stamp_mtime", "rust/rofl/src/bin/rofl/kept.rs").
 switch_site("kept_unsummed", "rust/rofl/src/volume.rs").
 switch_site("kept_verbs_compute", "rust/rofl/src/bin/rofl/load.rs").
+switch_site("kept_write_unbounded", "rust/rofl/src/bin/rofl/kept.rs").
 switch_site("label_by_values_ignored", "rust/rofl/src/engine.rs").
 switch_site("label_cap_ignored", "rust/rofl/src/engine/labeled.rs").
 switch_site("label_correlation_lost", "rust/rofl/src/engine/labeled.rs").

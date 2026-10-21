@@ -19,11 +19,12 @@ fn build_id() -> String {
 pub type Staged = Vec<(StagedFact, Vec<(Sym, Vec<PremRef>)>)>;
 
 /// The world `e` evaluated, frozen, what its evaluation staged and where a step wall cut it, as a volume at
-/// `path` with `note`; its size.
-pub fn keep(path: &str, e: &mut Eval, note: &str) -> std::io::Result<usize> {
+/// `path` with `note`; its size. With a `bound` the file never grows past it: the volume fails instead
+/// (`arena::TOO_LARGE`), and the caller removes what was written.
+pub fn keep(path: &str, e: &mut Eval, note: &str, bound: Option<usize>) -> std::io::Result<usize> {
     let (staged, answer) = (e.staged_kept(), e.safety().clone());
     let (h, s) = (&mut e.h, &mut e.store);
-    let mut w = VolW::create(path)?;
+    let mut w = VolW::bounded(path, bound)?;
     w.bytes(MAGIC);
     w.text(&build_id());
     w.text(note);

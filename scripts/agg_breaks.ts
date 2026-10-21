@@ -8799,6 +8799,20 @@ export const BREAKS: Break[] = [
    "kept_cap": "the_cache_cap_is_hard:"
   }
  },
+ {
+  "id": "kept_write_unbounded",
+  "what": "a world over the cap is written whole and only then found too large and removed: the disk takes it first",
+  "expect": {
+   "kept_bound": "the_writer_stops_at_the_cap:"
+  }
+ },
+ {
+  "id": "kept_shared_temp",
+  "what": "every process keeping a world writes it under one temporary name, so concurrent cold runs take each other's file",
+  "expect": {
+   "kept_concurrent": "concurrent_cold_runs_keep_one_world:"
+  }
+ },
 ];
 
 /** A proof that is no world: the report `rofl load --propose-structures` prints over a fixture (rust/rofl/src/structures.rs),
@@ -8873,6 +8887,8 @@ const TESTS: Record<string, string> = {
   kept_implicit_walls: 'kept a_kept_world_answers_and_refuses_as_docs_cli_says',
   kept_implicit_load: 'kept a_kept_world_answers_and_refuses_as_docs_cli_says',
   kept_cap: 'kept a_kept_world_answers_and_refuses_as_docs_cli_says',
+  kept_bound: 'kept a_kept_world_answers_and_refuses_as_docs_cli_says',
+  kept_concurrent: 'kept a_kept_world_answers_and_refuses_as_docs_cli_says',
 };
 
 function proofTests(b: Break, profile: string, control: boolean): Verdict {

@@ -70,30 +70,32 @@ fn free(dir: &Path) -> Option<u64> {
     (unsafe { libc::statvfs(c.as_ptr(), &mut s) } == 0).then(|| s.f_bavail as u64 * s.f_frsize as u64)
 }
 
-fn floor_holds(dir: &Path) -> Result<(), String> {
-    match free(dir) {
-        Some(f) if f < FLOOR => Err(format!("the disk has {:.1} GB free, and a kept world never leaves it less than {:.0} GB", f as f64 / GB, FLOOR as f64 / GB)),
-        _ => Ok(()),
-    }
-}
-
-/// The world of `s` kept at `kept` as a question verb keeps it: within the cap, the older kept worlds going first,
-/// least recently used first, and never below the disk's floor. Why it was not kept, otherwise.
+/// The world of `s` kept at `kept` as a question verb keeps it: written no further than the cap and than the disk
+/// can give above its floor, so a world too large stops the writer at that size and is not kept; then the older
+/// kept worlds go, least recently used first, until all fit the cap. Why it was not kept, otherwise.
 pub fn keep_capped(s: &mut rofl::session::Session, kept: &str, note: &str) -> Result<(), String> {
     let dir = Path::new(kept).parent().ok_or("no directory")?;
     std::fs::create_dir_all(dir).map_err(|e| format!("{}: {e}", dir.display()))?;
-    floor_holds(dir)?;
-    let new = format!("{kept}.new");
-    let bytes = s.keep_volume_noted(&new, note).map_err(|e| format!("{e}"))? as u64;
     let (cap, ignored) = (cap(), rofl::brk!("kept_cap_ignored" => true; false));
-    let refused = if bytes > cap && !ignored {
-        Some(format!("the world is {:.2} GB, more than the cap of {:.2} GB (ROFL_CACHE_GB)", bytes as f64 / GB, cap as f64 / GB))
-    } else {
-        floor_holds(dir).err()
+    let room = free(dir).map(|f| f.saturating_sub(FLOOR));
+    if room == Some(0) {
+        return Err(format!("the disk has less than the {:.0} GB free a kept world never takes", FLOOR as f64 / GB));
+    }
+    let most = cap.min(room.unwrap_or(u64::MAX));
+    let bound = rofl::brk!("kept_write_unbounded" => None; (!ignored).then_some(most as usize));
+    let new = rofl::brk!("kept_shared_temp" => format!("{kept}.new"); format!("{kept}.{}.new", std::process::id()));
+    let bytes = match s.keep_volume_bounded(&new, note, bound) {
+        Ok(n) => n as u64,
+        Err(e) if e.to_string() == rofl::arena::TOO_LARGE || (bound.is_none() && !ignored) => {
+            let _ = std::fs::remove_file(&new);
+            return Err(format!("the world is larger than {:.2} GB, the most it may take: the cap is {:.2} GB (ROFL_CACHE_GB){}",
+                most as f64 / GB, cap as f64 / GB, room.filter(|r| *r < cap).map_or(String::new(), |r| format!(" and the disk gives {:.2} GB above its {:.0} GB floor", r as f64 / GB, FLOOR as f64 / GB))));
+        }
+        Err(e) => return Err(e.to_string()),
     };
-    if let Some(why) = refused {
+    if bound.is_none() && !ignored && bytes > most {
         let _ = std::fs::remove_file(&new);
-        return Err(why);
+        return Err(format!("the world is larger than {:.2} GB, the most it may take: the cap is {:.2} GB (ROFL_CACHE_GB)", most as f64 / GB, cap as f64 / GB));
     }
     let mut older: Vec<(std::time::SystemTime, u64, PathBuf)> = std::fs::read_dir(dir).map_err(|e| e.to_string())?.flatten()
         .filter(|e| e.path().extension().is_some_and(|x| x == "vol") && e.path() != Path::new(kept))
@@ -183,9 +185,17 @@ pub fn moved(r: &Record, this_build: bool) -> Option<String> {
             return Some(format!("its scanners ran in {cwd}, and this run is in another directory"));
         }
     }
-    let changed: Vec<String> = r.read.iter().filter(|(p, s)| rofl::brk!("kept_stale_files" => false; stamp(Path::new(p)) != *s))
-        .map(|(p, _)| shown(p)).collect();
-    let n = changed.len();
-    let named = if n > 5 { format!("{} and {} more", changed[..5].join(", "), n - 5) } else { changed.join(", ") };
-    (n > 0).then(|| format!("{named} changed since it was kept"))
+    let now: Vec<(String, String)> = r.read.iter().map(|(p, s)| (p.clone(), if rofl::brk!("kept_stale_files" => s.clone(); stamp(Path::new(p))) == *s { String::new() } else { stamp(Path::new(p)) })).collect();
+    let said = |gone: bool| -> Vec<String> { now.iter().filter(|(_, s)| !s.is_empty() && (s == "gone") == gone).map(|(p, _)| shown(p)).collect() };
+    let list = |v: Vec<String>| if v.len() > 5 { format!("{} and {} more", v[..5].join(", "), v.len() - 5) } else { v.join(", ") };
+    let (missing, changed) = (said(true), said(false));
+    if !missing.is_empty() {
+        return Some(format!("{} {} missing", list(missing.clone()), if missing.len() == 1 { "is" } else { "are" }));
+    }
+    (!changed.is_empty()).then(|| format!("{} changed since it was kept", list(changed)))
+}
+
+/// Whether what `moved` said is a file gone: a run computing anew would only fail to read it.
+pub fn missing(said: &str) -> bool {
+    said.ends_with(" missing")
 }

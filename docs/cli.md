@@ -69,10 +69,12 @@ gigabytes (50 by default, two worlds of the reference scale: a volume measured
 at 0.36 and 0.80 of the evaluation's peak memory, 89 and 76 bytes a fact on
 cost_shapes_model and agg_minmax_strata, so up to ~23 GB for a world evaluated
 in ~23 GB): a world kept pushes out the older ones, least recently used first;
-a world larger than the cap alone is answered and not kept, and so is any world
-when the disk would be left with less than 5 GB free, each said in one line on
-stderr (`the world is not kept: the world is 1.20 GB, more than the cap of 1.00
-GB (ROFL_CACHE_GB)`). Writing the volume costs about 5% of the evaluation it
+the volume is written no further than the cap and than the disk can give above
+a 5 GB floor, so a world larger than that stops its writer there, is answered,
+and is not kept, said in one line on stderr (`the world is not kept: the world
+is larger than 1.00 GB, the most it may take: the cap is 1.00 GB
+(ROFL_CACHE_GB)`). Each process writes under a name of its own and renames it
+into place, so cold runs of one question at once keep one world. Writing the volume costs about 5% of the evaluation it
 saves (agg_minmax_strata: 0.83 s on 16.9 s). `rofl load`, `rofl serve` and every harness never read nor
 write them: a gate computes. Nothing to turn on or off; the cap is the one knob.
 

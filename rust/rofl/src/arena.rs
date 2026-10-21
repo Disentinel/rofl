@@ -198,14 +198,26 @@ pub struct VolW {
     at: usize,
     err: Option<std::io::Error>,
     sum: Sum,
+    /// the most bytes the file may reach: past it nothing more is written and the volume fails as `TooLarge`
+    bound: Option<usize>,
 }
+
+/// What a bounded volume fails with when it would pass its bound.
+pub const TOO_LARGE: &str = "the volume would pass its bound";
 
 impl VolW {
     pub fn create(path: &str) -> std::io::Result<VolW> {
-        Ok(VolW { out: std::io::BufWriter::with_capacity(1 << 20, std::fs::File::create(path)?), at: 0, err: None, sum: Sum::default() })
+        Self::bounded(path, None)
+    }
+    /// A volume that never grows past `bound` bytes on disk: written up to it, then failed.
+    pub fn bounded(path: &str, bound: Option<usize>) -> std::io::Result<VolW> {
+        Ok(VolW { out: std::io::BufWriter::with_capacity(1 << 20, std::fs::File::create(path)?), at: 0, err: None, sum: Sum::default(), bound })
     }
     pub fn bytes(&mut self, b: &[u8]) {
         use std::io::Write;
+        if self.err.is_none() && self.bound.is_some_and(|n| self.at + b.len() > n) {
+            self.err = Some(std::io::Error::other(TOO_LARGE));
+        }
         if self.err.is_none() {
             self.err = self.out.write_all(b).err();
         }

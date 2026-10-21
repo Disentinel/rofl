@@ -420,7 +420,7 @@ fn the_cache_cap_is_hard(brk: Option<&str>) -> Result<(), String> {
     let gb = |bytes: f64| vec![("ROFL_CACHE_GB", format!("{}", bytes / (1u64 << 30) as f64))];
     let ask = |file: &str, env: &[(&str, String)]| rofl_env(BIN, &d, &cache, env, brk, &["ask", "reaches(a, X)", "boot.rofl", file]);
     let tiny = ask("rules.rofl", &gb(1000.0));
-    ensure(tiny.code == 0 && tiny.out.contains("X = zebra") && tiny.err.contains("more than the cap") && implicit(&cache).is_empty(),
+    ensure(tiny.code == 0 && tiny.out.contains("X = zebra") && tiny.err.contains("larger than") && implicit(&cache).is_empty(),
         || format!("a cap smaller than the world: {} {:?} {:?}, kept {:?}", tiny.code, tiny.out, tiny.err, implicit(&cache)))?;
     let first = ask("rules.rofl", &[]);
     let kept = implicit(&cache);
@@ -433,9 +433,72 @@ fn the_cache_cap_is_hard(brk: Option<&str>) -> Result<(), String> {
         || format!("two worlds over the cap, wanted the older gone: {:?}, kept {now:?}", second.err))
 }
 
+/// Every file in the directory the verbs keep their worlds in, with its size.
+fn files_in(cache: &Path) -> Vec<(String, u64)> {
+    let Ok(rd) = std::fs::read_dir(cache.join("rofl/worlds")) else { return Vec::new() };
+    let mut v: Vec<(String, u64)> = rd.flatten().map(|e| (e.file_name().to_string_lossy().into_owned(), e.metadata().map_or(0, |m| m.len()))).collect();
+    v.sort();
+    v
+}
+
+/// Cold runs of one question at once each write under a name of their own: all answer alike and quietly, one world
+/// is kept and nothing else is left, and the next run is answered from it.
+fn concurrent_cold_runs_keep_one_world(brk: Option<&str>) -> Result<(), String> {
+    let d = Dir::new("implicit-concurrent");
+    let cache = d.0.join("cache");
+    let runs: Vec<Ran> = std::thread::scope(|sc| {
+        let hs: Vec<_> = (0..8).map(|_| sc.spawn(|| rofl(&d, brk, &["ask", "reaches(a, X)", "boot.rofl", "rules.rofl"]))).collect();
+        hs.into_iter().map(|h| h.join().unwrap()).collect()
+    });
+    for r in &runs {
+        ensure(r.code == 0 && r.out == runs[0].out && r.err.is_empty(), || format!("a cold run among eight: {} {:?} {:?}", r.code, r.out, r.err))?;
+    }
+    let left = files_in(&cache);
+    ensure(left.len() == 1 && left[0].0.ends_with(".vol"), || format!("eight cold runs left {left:?}"))?;
+    let kept = implicit(&cache);
+    let next = rofl(&d, brk, &["ask", "reaches(a, X)", "boot.rofl", "rules.rofl"]);
+    ensure(next.out == runs[0].out && next.err.is_empty() && implicit(&cache) == kept, || format!("the run after: {:?} {:?}", next.out, next.err))
+}
+
+/// A world over the cap is never written past the cap: the writer stops at it, watched while the run writes.
+fn the_writer_stops_at_the_cap(brk: Option<&str>) -> Result<(), String> {
+    let d = Dir::new("implicit-bound");
+    let cache = d.0.join("cache");
+    let facts: String = (0..60_000).map(|i| format!("big({i}, \"a fact of some length to fill the volume {i}\").\n")).collect();
+    d.write("big.rofl", &format!("edb(big).\n{facts}"));
+    let cap: u64 = 1 << 20;
+    let done = std::sync::atomic::AtomicBool::new(false);
+    let (r, most) = std::thread::scope(|sc| {
+        let watch = sc.spawn(|| {
+            let mut most = 0u64;
+            while !done.load(std::sync::atomic::Ordering::Relaxed) {
+                most = most.max(files_in(&cache).iter().map(|f| f.1).max().unwrap_or(0));
+                std::thread::sleep(std::time::Duration::from_micros(200));
+            }
+            most
+        });
+        let env = [("ROFL_CACHE_GB", format!("{}", cap as f64 / (1u64 << 30) as f64))];
+        let r = rofl_env(BIN, &d, &cache, &env, brk, &["ask", "big(1, X)", "boot.rofl", "big.rofl"]);
+        done.store(true, std::sync::atomic::Ordering::Relaxed);
+        (r, watch.join().unwrap())
+    });
+    ensure(r.code == 0 && r.out.contains("X = ") && r.err.contains("larger than") && files_in(&cache).is_empty() && most <= cap,
+        || format!("a world over a 1 MB cap: {} {:?} {:?}, the largest file seen {most} bytes, left {:?}", r.code, r.out, r.err, files_in(&cache)))
+}
+
+/// A source gone since the world was kept is said missing, not computed anew.
+fn a_missing_source_is_said_missing(brk: Option<&str>) -> Result<(), String> {
+    let d = Dir::new("implicit-missing");
+    d.write("other.rofl", RULES);
+    rofl(&d, brk, &["ask", "reaches(a, X)", "boot.rofl", "other.rofl"]);
+    std::fs::remove_file(d.0.join("other.rofl")).unwrap();
+    let r = rofl(&d, brk, &["ask", "reaches(a, X)", "boot.rofl", "other.rofl"]);
+    ensure(r.code != 0 && r.err.contains("other.rofl is missing") && !r.err.contains("computed anew"), || format!("a source gone: {} {:?}", r.code, r.err))
+}
+
 type Case = fn(Option<&str>) -> Result<(), String>;
 
-const CASES: [(&str, Case); 18] = [
+const CASES: [(&str, Case); 21] = [
     ("answers_as_fresh", answers_as_fresh),
     ("a_rule_file_edited", a_rule_file_edited),
     ("boot_edited", boot_edited),
@@ -454,6 +517,9 @@ const CASES: [(&str, Case); 18] = [
     ("an_unwritable_cache_still_answers", an_unwritable_cache_still_answers),
     ("load_and_serve_keep_nothing", load_and_serve_keep_nothing),
     ("the_cache_cap_is_hard", the_cache_cap_is_hard),
+    ("concurrent_cold_runs_keep_one_world", concurrent_cold_runs_keep_one_world),
+    ("the_writer_stops_at_the_cap", the_writer_stops_at_the_cap),
+    ("a_missing_source_is_said_missing", a_missing_source_is_said_missing),
 ];
 
 /// What a hole left unknown is kept by an image as by a volume: a negation unfolded at a call reads it after opening.

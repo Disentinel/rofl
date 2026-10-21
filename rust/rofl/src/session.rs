@@ -179,10 +179,21 @@ impl Session {
 
     /// `keep_volume` with a note in the volume's header, which `volume::check` reads back without opening the world.
     pub fn keep_volume_noted(&mut self, path: &str, note: &str) -> std::io::Result<usize> {
-        let tmp = format!("{path}.part");
-        let n = crate::volume::keep(&tmp, &mut self.eval, note)?;
-        std::fs::rename(&tmp, path)?;
-        Ok(n)
+        self.keep_volume_bounded(path, note, None)
+    }
+
+    /// `keep_volume_noted` that never writes more than `bound` bytes: past it nothing is kept and the error is
+    /// `arena::TOO_LARGE`. Written under a name of this process's beside `path` and renamed over it, so two
+    /// processes keeping the same world never write into one file.
+    pub fn keep_volume_bounded(&mut self, path: &str, note: &str, bound: Option<usize>) -> std::io::Result<usize> {
+        let tmp = format!("{path}.{}.part", std::process::id());
+        match crate::volume::keep(&tmp, &mut self.eval, note, bound) {
+            Ok(n) => std::fs::rename(&tmp, path).map(|_| n).inspect_err(|_| { let _ = std::fs::remove_file(&tmp); }),
+            Err(e) => {
+                let _ = std::fs::remove_file(&tmp);
+                Err(e)
+            }
+        }
     }
 
     /// The world a volume holds, its facts, names and witnesses read from the file where they lie.
