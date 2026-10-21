@@ -8683,6 +8683,27 @@ export const BREAKS: Break[] = [
    "concat_value": "ct_missing_form"
   }
  },
+ {
+  "id": "snapshot_drops_a_fact",
+  "what": "a snapshot is written without the first of its facts",
+  "expect": {
+   "snapshot_round_trip": "the snapshot does not read back whole: opened it is another world"
+  }
+ },
+ {
+  "id": "snapshot_drops_ghosts",
+  "what": "a snapshot is written without the dead facts a firing names",
+  "expect": {
+   "snapshot_round_trip": "the snapshot does not read back whole"
+  }
+ },
+ {
+  "id": "snapshot_reads_no_tick",
+  "what": "a snapshot's firings are read as of tick 0 whatever tick they name",
+  "expect": {
+   "snapshot_round_trip": "the snapshot does not read back whole: saved again it is another text"
+  }
+ },
 ];
 
 /** A proof that is no world: the report `rofl load --propose-structures` prints over a fixture (rust/rofl/src/structures.rs),
@@ -8740,6 +8761,7 @@ const TESTS: Record<string, string> = {
   addition_join: 'addition a_join_the_change_reaches',
   incremental_staged_thr: 'incremental a_staged_threshold_whose_outer_premise',
   incremental_two_aggs: 'incremental a_fact_two_aggregates_conclude',
+  snapshot_round_trip: 'agg_worlds every_world_loaded_together',
 };
 
 function proofTests(b: Break, profile: string, control: boolean): Verdict {
