@@ -2,6 +2,7 @@
 // a small table of terms on a link, and a layout per frame. A box with children opens into a frame on a double click and shuts again;
 // a dragged box pushes the others aside. The graph pictures draw with it (pic-graph.ts); its layouts beyond ELK's are schema-layouts.ts.
 // Runs in a browser: no node, no VS Code API.
+import { wheelPx } from './pan.ts';
 
 export type Box = {
   id: string; parent?: string | null; label: string; kind?: string; sub?: string; by?: string; open?: boolean; layout?: string;
@@ -447,8 +448,8 @@ export async function schema(host: HTMLElement, data: Schema, opts: Opts = {}): 
   }
 
   // the left button picks and moves boxes, a double click opens and shuts them; the right or middle button moves the view; the wheel zooms
-  svg.addEventListener('wheel', (e) => { if (!e.ctrlKey && !e.metaKey && !host.matches(':focus-within')) return; e.preventDefault(); const r = svg.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top, k = Math.min(3, Math.max(0.1, view.k * Math.exp(-e.deltaY * 0.0015)));
-    view.x = mx - (mx - view.x) * (k / view.k); view.y = my - (my - view.y) * (k / view.k); view.k = k; applyView(); }, { passive: false });
+  svg.addEventListener('wheel', (e) => { if (!e.ctrlKey && !e.metaKey && !host.matches(':focus-within') && !host.closest('.pans')) return; e.preventDefault(); const r = svg.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top, k = Math.min(3, Math.max(0.1, view.k * Math.exp(-wheelPx(e, r.height) * (e.ctrlKey ? 0.0075 : 0.0015))));
+    if (r.width) { view.x = mx - (mx - view.x) * (k / view.k); view.y = my - (my - view.y) * (k / view.k); view.k = k; applyView(); } }, { passive: false });
   let drag: { x: number; y: number; vx: number; vy: number; moved: boolean; pick: boolean; on?: string; pid: number } | null = null, tap = { id: '', t: 0 };
   svg.tabIndex = 0;
   svg.addEventListener('mouseleave', () => { if (!boxDrag && !drag) apply(sel); });
