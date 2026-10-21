@@ -128,6 +128,50 @@ facts, release build, three runs each, a loaded machine): a `why` takes 2.9-3.1 
 from the files and 0.12-0.14 s from the kept world (a 27.7 MB volume), the same
 448 bytes of answer; the run that keeps it, 3.0 s.
 
+**An edit goes by delta.** When the files a question verb's kept world was
+computed from have changed (no `--kept`), the run opens that world and takes the
+change by delta instead of evaluating again: the base facts of each file
+changed or gone are taken out in one pass (DRed: what rests on them is
+overdeleted and what another firing still makes is derived again), the facts of
+the new texts are added, and the world is kept again. A file the world was kept
+from with other files beside it (one added or removed) is found by the same
+rules and walls. A scanned source changed is scanned again alone; a scan the
+rules newly ask for is run; one no longer asked for has its facts taken out.
+The run says so in one line on stderr:
+
+```
+the kept world took 1 file by delta: db.rofl (35 facts out, 409 overdeleted or derived again; opened and taken in 201 ms, kept again in 12 ms, 9367080 bytes written)
+```
+
+It evaluates whole instead, the reason after `not by delta:` in the stale line,
+when the rules changed (a file that changed holds a rule), the world was not
+read from its files alone (a `.rofl.md`, a world `--below`), a scanner ran in
+another directory, a file changed that is neither named nor read by a scanner,
+or the engine refuses the delta (a fact read on demand, a base fact a rule
+reads as an `edb` or authority row, a world kept with no witnesses). The
+answer is the fresh evaluation's either way (rust/rofl/tests/retract_set.rs:
+200 random edit, add and remove steps over a JS corpus, each equal to a fresh
+evaluation byte for byte, and one in ten to the same step taken a fact at a
+time; tests/kept.rs for the command line).
+
+Measured (release build, the JS model; worlds of the delta fixture with
+scanned files beside it, and the bench's vscode subset, 250 files of
+vscode's base directory, each its own facts file):
+
+| world | whole | an edit by delta | facts touched |
+|---|---|---|---|
+| 6 files, 484 base facts | 2.2 s | 0.23 s | 409 |
+| 14 files, 12 171 | 2.0 s | 0.34 s | 413 |
+| 30 files, 82 618 | 4.7 s | 1.03 s | 424 |
+| vscode 250 files, 1 175 546: one file edited | 48.0 s (57.0 s keeping it) | 11.1 s | 38 |
+| the same, the file gone | | 13.8 s | 6 983 |
+| the same, the file back | | 9.2 s | 0 |
+
+What an edit touches stays flat with the world; its time does not yet: at the
+vscode scale opening the volume is about 3.7 s, writing it again 1.2-1.9 s
+(the whole volume is written, 1.2 GB), and the addition's planning about as
+much again, whatever the edit.
+
 ## Exit codes
 
 | code | meaning |
