@@ -13,6 +13,7 @@
 //! A question verb is `rofl load` with that one question; `--json` prints each answer as `rofl serve` does.
 //! `--kept F [--anew]` keeps the world evaluated at F, and later runs answer from F until it is stale (kept.rs).
 //! `@LIST` stands for the files LIST names, one a line, each from LIST's directory (`@rules/js.files`, the JS model).
+mod delta;
 mod kept;
 mod load;
 mod nb;

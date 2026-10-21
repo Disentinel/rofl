@@ -18,10 +18,48 @@ const ENV: [&str; 2] = ["ROFL_KERNEL_OVERRIDE", "ROFL_NO_VCLOSURE"];
 pub struct Record {
     /// the world's walls and files, canonical (`load::world_args`)
     pub args: Vec<String>,
+    /// of `args`, the files
+    pub files: Vec<String>,
     engine: String,
     env: Vec<String>,
     cwd: Option<String>,
-    read: Vec<(String, String)>,
+    pub read: Vec<(String, String)>,
+    /// each file loaded, in order: its path, the sum of its rules and declarations, and the base facts it asserted
+    /// (`Session::facts_of`), what a delta takes out when the file changes
+    pub units: Vec<Unit>,
+}
+
+#[derive(Clone)]
+pub struct Unit {
+    pub path: String,
+    pub rules: String,
+    pub facts: Vec<u32>,
+}
+
+/// The sum `Record` keeps of a file's rules.
+pub fn rules_sum(rules: &str) -> String {
+    Sum::of(rules.as_bytes())
+}
+
+impl Record {
+    /// Of `args`, what is not a file: the walls.
+    pub fn walls(&self) -> &[String] {
+        &self.args[..self.args.len() - self.files.len()]
+    }
+    pub fn engine_env_hold(&self, this_build: bool) -> Option<String> {
+        if rofl::brk!("kept_stale_engine" => false; !this_build || self.engine != engine()) {
+            return Some("the engine changed since it was kept: this rofl binary is not the one that kept it".into());
+        }
+        (self.env != env_now()).then(|| format!("the environment the engine reads changed since it was kept: [{}] then, [{}] now", self.env.join(" "), env_now().join(" ")))
+    }
+    pub fn scanned(&self) -> bool {
+        self.cwd.is_some()
+    }
+}
+
+/// Whether `p` holds what was stamped `s`.
+pub fn holds(p: &str, s: &str) -> bool {
+    rofl::brk!("kept_stale_files" => true; stamp(Path::new(p)) == s)
 }
 
 /// A file by its bytes, a directory by the names in it, a path that is gone as gone.
@@ -150,7 +188,7 @@ pub fn shown(p: &str) -> String {
 
 /// The record of a world evaluated from `args` that read `files` and whose scans are `scans`: refused when a scan
 /// named nothing it read, since whether the world it brought in is stale could not be told.
-pub fn record(args: &[String], files: &[String], scans: &[(String, Vec<String>)]) -> Result<String, String> {
+pub fn record(args: &[String], world_files: &[String], units: &[Unit], files: &[String], scans: &[(String, Vec<String>)]) -> Result<String, String> {
     if let Some((cmd, _)) = scans.iter().find(|(_, read)| rofl::brk!("kept_blind_scans" => false; read.is_empty())) {
         return Err(format!("the scan `{cmd}` named nothing it read (`-- reads: PATH`), so whether a kept world is stale could not be told"));
     }
@@ -167,31 +205,41 @@ pub fn record(args: &[String], files: &[String], scans: &[(String, Vec<String>)]
     paths.dedup();
     let read: Vec<Value> = paths.iter().map(|p| json!([p.to_string_lossy(), stamp(p)])).collect();
     let cwd = (!scans.is_empty()).then(|| std::env::current_dir().map(|d| d.to_string_lossy().into_owned()).unwrap_or_default());
-    Ok(json!({ "kept": 1, "args": args, "engine": engine(), "env": env_now(), "cwd": cwd, "read": read }).to_string())
+    let units: Vec<Value> = units.iter().map(|u| json!([u.path, u.rules, u.facts])).collect();
+    Ok(json!({ "kept": 2, "args": args, "files": world_files, "engine": engine(), "env": env_now(), "cwd": cwd, "read": read, "units": units }).to_string())
 }
 
 pub fn parse(note: &str) -> Option<Record> {
     let v: Value = serde_json::from_str(note).ok()?;
-    if v.get("kept")? != 1 { return None; }
+    if v.get("kept")? != 2 { return None; }
     let strs = |k: &str| -> Option<Vec<String>> { v.get(k)?.as_array()?.iter().map(|x| x.as_str().map(str::to_string)).collect() };
     let read = v.get("read")?.as_array()?.iter().map(|r| Some((r.get(0)?.as_str()?.to_string(), r.get(1)?.as_str()?.to_string()))).collect::<Option<Vec<_>>>()?;
-    Some(Record { args: strs("args")?, engine: v.get("engine")?.as_str()?.to_string(), env: strs("env")?, cwd: v.get("cwd")?.as_str().map(str::to_string), read })
+    let units = v.get("units")?.as_array()?.iter().map(|u| Some(Unit {
+        path: u.get(0)?.as_str()?.to_string(),
+        rules: u.get(1)?.as_str()?.to_string(),
+        facts: u.get(2)?.as_array()?.iter().map(|x| x.as_u64().map(|n| n as u32)).collect::<Option<Vec<u32>>>()?,
+    })).collect::<Option<Vec<_>>>()?;
+    let (args, files) = (strs("args")?, strs("files")?);
+    if files.len() > args.len() { return None; }
+    Some(Record { args, files, engine: v.get("engine")?.as_str()?.to_string(), env: strs("env")?, cwd: v.get("cwd")?.as_str().map(str::to_string), read, units })
+}
+
+/// The header of the kept world at `p`, its sum not read: to choose among kept worlds before opening one.
+pub fn peek(p: &str) -> Option<Record> {
+    parse(&rofl::volume::note(p).ok()?)
 }
 
 /// What moved since the world was kept, as a sentence; None when nothing did.
 pub fn moved(r: &Record, this_build: bool) -> Option<String> {
-    if rofl::brk!("kept_stale_engine" => false; !this_build || r.engine != engine()) {
-        return Some("the engine changed since it was kept: this rofl binary is not the one that kept it".into());
-    }
-    if r.env != env_now() {
-        return Some(format!("the environment the engine reads changed since it was kept: [{}] then, [{}] now", r.env.join(" "), env_now().join(" ")));
+    if let Some(m) = r.engine_env_hold(this_build) {
+        return Some(m);
     }
     if let Some(cwd) = &r.cwd {
         if std::env::current_dir().map(|d| d.to_string_lossy().into_owned()).unwrap_or_default() != *cwd {
             return Some(format!("its scanners ran in {cwd}, and this run is in another directory"));
         }
     }
-    let now: Vec<(String, String)> = r.read.iter().map(|(p, s)| (p.clone(), if rofl::brk!("kept_stale_files" => s.clone(); stamp(Path::new(p))) == *s { String::new() } else { stamp(Path::new(p)) })).collect();
+    let now: Vec<(String, String)> = r.read.iter().map(|(p, s)| (p.clone(), if holds(p, s) { String::new() } else { stamp(Path::new(p)) })).collect();
     let said = |gone: bool| -> Vec<String> { now.iter().filter(|(_, s)| !s.is_empty() && (s == "gone") == gone).map(|(p, _)| shown(p)).collect() };
     let list = |v: Vec<String>| if v.len() > 5 { format!("{} and {} more", v[..5].join(", "), v.len() - 5) } else { v.join(", ") };
     let (missing, changed) = (said(true), said(false));

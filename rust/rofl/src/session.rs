@@ -400,6 +400,78 @@ impl Session {
 
     /// `evaluated_again(Request, Reason)` in the kernel's book, a row for each request and each reason: a world that
     /// was asked for a delta and is evaluated again says so where a rule or a notebook reads it.
+    /// What the program text `src` asserts, read against this world: the base facts the store holds for its facts,
+    /// in order (a fact said twice, once); its rules and declarations, each as written back, one a line; and its
+    /// facts the store does not hold as base facts, likewise. A kept world records the first two of each of its
+    /// files (docs/cli.md), to take a file's facts in and out by delta when the file changes and its rules did not.
+    pub fn facts_of(&mut self, src: &str) -> Result<(Vec<FactId>, String, String), String> {
+        let cs = rofl_parse::parse(&mut self.eval.h, src)?;
+        let (mut ids, mut rules, mut absent, mut seen) = (Vec::new(), String::new(), String::new(), HashSet::new());
+        for c in &cs {
+            let ground = || c.head.args.iter().all(|t| self.eval.h.is_ground(*t));
+            let fact = c.body.is_empty() && c.lattice.is_none() && c.head.tense == Tense::Now && ground();
+            let text = rofl_parse::show(&self.eval.h, c);
+            if !fact {
+                rules.push_str(&text);
+                rules.push('\n');
+                continue;
+            }
+            let id = self.lit_terms(&c.head).ok().and_then(|(r, p, a)| self.eval.store.get(r, p, &a));
+            match id.filter(|&f| self.eval.store.alive(f) && self.eval.store.rec(f).base()) {
+                Some(f) => {
+                    if seen.insert(f) { ids.push(f); }
+                }
+                None => {
+                    absent.push_str(&text);
+                    absent.push('\n');
+                }
+            }
+        }
+        Ok((ids, rules, absent))
+    }
+
+    /// The base facts `ids` taken out of an evaluated world by delta, with what a load wrote for each alone
+    /// (`doomed`), as `retract_delta` takes one. `Full` says why the delta is not worked out, and then the world is
+    /// left dirty, not evaluated again here: the caller evaluates the files instead.
+    pub fn retract_facts_delta(&mut self, ids: &[FactId]) -> Result<Retraction, String> {
+        self.eval.settle_assertions();
+        self.settle()?;
+        let mut doomed: Vec<FactId> = Vec::new();
+        let mut seen = HashSet::new();
+        for &id in ids {
+            if !self.eval.store.alive(id) || !self.eval.store.rec(id).base() {
+                continue;
+            }
+            let rel = self.eval.store.rec(id).rel;
+            if rel == self.eval.v.asks || rel == self.eval.v.explain_request {
+                self.eval.store.dirty = true;
+                return Ok(Retraction::Full("asks names the rules the world runs".into()));
+            }
+            for f in self.doomed(id) {
+                if seen.insert(f) { doomed.push(f); }
+            }
+        }
+        if doomed.is_empty() {
+            return Ok(Retraction::Delta(Default::default()));
+        }
+        let marks: Vec<Sym> = doomed.iter().map(|&f| self.eval.store.rec(f).rel).filter(|r| [self.eval.v.edb, self.eval.v.authority].contains(r)).collect();
+        let read = self.eval.rules.iter().any(|r| r.clause.body.iter().any(|b| b.lits_deep().iter().any(|l| marks.contains(&l.rel))));
+        let delta = if read { Err("the retraction takes an edb or authority row a rule reads".to_string()) } else { self.eval.retract_delta(&doomed) };
+        match delta {
+            Ok(d) => match self.eval.check_promises() {
+                Ok(_) => Ok(Retraction::Delta(d)),
+                Err(e) => {
+                    self.eval.store.dirty = true;
+                    Err(crate::describe(&e))
+                }
+            },
+            Err(why) => {
+                self.eval.store.dirty = true;
+                Ok(Retraction::Full(why))
+            }
+        }
+    }
+
     fn evaluated_again(&mut self, requests: &[Term], why: &str) {
         let (rel, book) = (self.eval.v.evaluated_again, self.eval.v.kernel_persp);
         for reason in why.split("; ") {

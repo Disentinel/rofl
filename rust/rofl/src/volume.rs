@@ -153,6 +153,16 @@ pub fn check(path: &str) -> Result<Checked, String> {
     Ok(Checked { this_build, note })
 }
 
+/// The note of the volume at `path`, read from its header alone (its sum is not checked): what a keeper reads to
+/// choose among volumes before it checks and opens one.
+pub fn note(path: &str) -> Result<String, String> {
+    let mut r = header(path)?;
+    if r.text()? != build_id() {
+        return Err(format!("{path}: a volume of another build"));
+    }
+    r.text()
+}
+
 /// The world a volume at `path` holds, mapped.
 pub fn open(path: &str) -> Result<Opened, String> {
     let mut r = header(path)?;
