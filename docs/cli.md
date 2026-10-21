@@ -163,15 +163,16 @@ vscode's base directory, each its own facts file):
 
 | world | whole | an edit by delta | facts touched |
 |---|---|---|---|
-| 6 files, 484 base facts | 2.2 s | 0.23 s | 409 |
-| 14 files, 12 171 | 2.0 s | 0.34 s | 413 |
-| 30 files, 82 618 | 4.7 s | 1.03 s | 424 |
-| vscode 250 files, 1 175 546: one file edited | 48.0 s (57.0 s keeping it) | 11.1 s | 38 |
-| the same, the file gone | | 13.8 s | 6 983 |
-| the same, the file back | | 9.2 s | 0 |
+| 6 files, 603 base facts | 1.4 s | 0.24 s | 434 |
+| 14 files, 15 807 | 2.0 s | 0.33 s | 438 |
+| 30 files, 109 194 | 5.9 s | 1.08 s | 449 |
+| vscode 250 files, 1 588 642: a function added to one file | 49.1 s (60.1 s keeping it) | 9.7 s | 0 (no fact out) |
+| the same, the file gone | | 15.8 s | 6 983 |
+| the same, the file back | | 11.9 s | 0 |
 
-What an edit touches stays flat with the world; its time does not yet: at the
-vscode scale opening the volume is about 3.7 s, writing it again 1.2-1.9 s
+A node's id is its place in the tree, so a function added at the end of a file
+takes no fact out. What an edit touches stays flat with the world; its time
+does not yet: at the vscode scale opening the volume is about 4-6 s, writing it again 1.3-2.6 s
 (the whole volume is written, 1.2 GB), and the addition's planning about as
 much again, whatever the edit.
 
