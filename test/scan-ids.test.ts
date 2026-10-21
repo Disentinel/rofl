@@ -25,3 +25,14 @@ test('a label under the prefix of another is refused with both names', () => {
   claim('ntest_collide_', 'one.js');
   assert.throws(() => claim('ntest_collide_', 'two.js'), /"one\.js" and "two\.js" share the node id prefix ntest_collide_/);
 });
+
+const ids = (src: string): Set<string> => new Set(scan(src, { file: 'cart.js' }).facts.filter((f) => !f.startsWith('ast_line')));
+
+test('an id is a place in the tree: code added above, a blank line or an edit of one statement moves that and the order of its siblings', () => {
+  const base = 'const a = 1;\nfunction f(x) { return g(x, 2); }\nit("adds", () => { add(1); });\n';
+  const moved = (src: string) => { const b = ids(base), e = ids(src); return [...b].filter((f) => !e.has(f)).length + [...e].filter((f) => !b.has(f)).length; };
+  assert.equal(moved('\n\n' + base), 0);
+  assert.ok(moved('function top() {}\n' + base) <= 15);
+  assert.ok(moved('it("first", () => { one(); });\n' + base) <= 29);
+  assert.ok(moved(base.replace('add(1)', 'add(2)')) <= 20);
+});

@@ -260,7 +260,7 @@ fn nearest(s: &str, vocab: &[String]) -> Vec<String> {
 fn translator_vocab(model: &str, phrases: &str) -> Vec<String> {
     let mut v = Vocabulary::new();
     v.add_text(phrases);
-    let mut rels: Vec<String> = vec!["ast_node".into(), "ast_child".into(), "ast_attr".into()];
+    let mut rels: Vec<String> = vec!["ast_node".into(), "ast_line".into(), "ast_child".into(), "ast_attr".into()];
     for m in rx::each(r"(?m)^([a-z_]\w*)(?:\[(\w+)\])?\([^\n]*?:-", model) { if !rels.iter().any(|r| r == g(&m, 1)) { rels.push(g(&m, 1).to_string()); } }
     rels.sort_by(|a, b| crate::term::cmp_js(a, b));
     const VALUE: [&str; 12] = ["key", "name", "file", "index", "text", "kind", "line", "attribute", "number", "score", "value", "child"];

@@ -31,10 +31,10 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { EngineRefusal, type Evaluated, type RoflPort, type RoflSession } from './port.ts';
 
-export const NODE = /\bn([0-9a-f]{16})_\d+/g;
-const NODE_KEY = /^n([0-9a-f]{16})_\d+$/;
+export const NODE = /\bn([0-9a-f]{16})_[0-9a-z]+/g;
+const NODE_KEY = /^n([0-9a-f]{16})_[0-9a-z]+$/;
 /** a node id or a string, as a fact key writes them */
-const TERM = /\bn[0-9a-f]{16}_\d+|"(?:[^"\\]|\\.)*"/g;
+const TERM = /\bn[0-9a-f]{16}_[0-9a-z]+|"(?:[^"\\]|\\.)*"/g;
 /** the question's answers, read from the resident world */
 export const ANSWER_RELS = ['side_effect_value', 'side_effect_site', 'side_effect_env'];
 
@@ -107,7 +107,7 @@ export function argsOf(fact: string): string[] {
 }
 /** A volume subscribes by a node id, a string or an atom, the names a world holds; a key of any other shape (an
  *  integer, a compound) could never be named, so the fact is refused rather than published to nobody. */
-const NAMEABLE = /^(?:n[0-9a-f]{16}_\d+|"(?:[^"\\]|\\.)*"|[a-z_]\w*)$/;
+const NAMEABLE = /^(?:n[0-9a-f]{16}_[0-9a-z]+|"(?:[^"\\]|\\.)*"|[a-z_]\w*)$/;
 /** The keys a surface fact is read by: its first argument, and the later joined arguments (`positions`) whose value a
  *  world can name. A joined value no world names (an integer, a compound) cannot be subscribed to, so the fact is
  *  BROADCAST: every volume reads it. Over-delivery costs time only. */

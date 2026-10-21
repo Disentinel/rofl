@@ -3,8 +3,8 @@
 -- Red if a text, a form or a cut literal is missing or one more appears.
 ct_bound(Name, C) :- binder[code](_, Name, Init, "src/entry.ts"), may_be_node[flow](Init, C), composed[flow](C),
                      not summarized[flow](C).
-ct_bound(grown, A) :- ast_node[code](A, assignment_expression, "src/entry.ts", 14), composed[flow](A).
-ct_bound(unknown, T) :- ast_node[code](T, template_literal, "src/entry.ts", 25), composed[flow](T).
+ct_bound(grown, A) :- ast_node[code](A, assignment_expression, "src/entry.ts"), ast_line[code](A, 14), composed[flow](A).
+ct_bound(unknown, T) :- ast_node[code](T, template_literal, "src/entry.ts"), ast_line[code](T, 25), composed[flow](T).
 
 -- src/mypath.ts stands for node's path, as vscode's own path module does in examples/vscode/side-effects.rofl
 ambient_module("src/mypath.ts", "node:path").
@@ -51,10 +51,10 @@ alarm(ct_sum_composed).
 
 ct_want_cut("base","z").
 ct_want_cut("cut","/x/y").
-ct_want_form("emptyJoin",cat(node(nf85e80d35f2c16b6_305),"/z")).
-ct_want_form("looped",cat(cat(cat(cat(node(nf85e80d35f2c16b6_233),"x"),"x"),"x"),"x")).
-ct_want_form(grown,cat(cat(cat(cat(node(nf85e80d35f2c16b6_71),"/c"),"/c"),"/c"),"/c")).
-ct_want_form(unknown,cat(ref(nf85e80d35f2c16b6_185),"/x")).
+ct_want_form("emptyJoin",cat(node(nf85e80d35f2c16b6_mjtdhglm476),"/z")).
+ct_want_form("looped",cat(cat(cat(cat(node(nf85e80d35f2c16b6_qncjmpd2b2),"x"),"x"),"x"),"x")).
+ct_want_form(grown,cat(cat(cat(cat(node(nf85e80d35f2c16b6_n9m1ro3unk1),"/c"),"/c"),"/c"),"/c")).
+ct_want_form(unknown,cat(ref(nf85e80d35f2c16b6_faedih0ll31),"/x")).
 ct_want_text("address",url("https://h","/api")).
 ct_want_text("atCap",cat(cat(cat("x","x"),"x"),"x")).
 ct_want_text("atCap",cat(cat(cat("x","x"),"x"),"y")).

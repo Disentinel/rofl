@@ -853,7 +853,7 @@ impl<'a> R<'a> {
                     }
                     continue;
                 }
-                if l.rel != self.ast_node || l.args.len() != 4 { continue; }
+                if l.rel != self.ast_node || l.args.len() != 3 { continue; }
                 let v = match l.args[0].kind() { TermK::Var(v) if !h.name(v).starts_with("_$") => v, _ => continue };
                 let (noun, extra) = match l.args[1].kind() {
                     TermK::Atom(a) => (self.kind_nouns.get(&a).cloned().unwrap_or_else(|| format!("{} node", h.name(a))), None),
@@ -862,7 +862,7 @@ impl<'a> R<'a> {
                     _ => continue,
                 };
                 if grouped && head_vars.contains(&v) {
-                    if is_wild(h, l.args[3]) && (is_wild(h, l.args[2]) || l.args[2].is_var()) {
+                    if is_wild(h, l.args[2]) || l.args[2].is_var() {
                         absorbed.insert(i);
                         kind_conds.insert(i, noun);
                         if !is_wild(h, l.args[2]) { residual.insert(i, l.args[2]); }
@@ -871,7 +871,7 @@ impl<'a> R<'a> {
                     continue;
                 }
                 nouns.entry(v).or_insert(noun);
-                if is_wild(h, l.args[3]) && (is_wild(h, l.args[2]) || l.args[2].is_var()) {
+                if is_wild(h, l.args[2]) || l.args[2].is_var() {
                     absorbed.insert(i);
                     if !is_wild(h, l.args[2]) { residual.insert(i, l.args[2]); }
                     if let Some(j) = extra { absorbed.insert(j); }
@@ -919,7 +919,7 @@ impl<'a> R<'a> {
                 },
                 Elem::Neg(l) => {
                     // a negated guard names its variable bare: `unless Y is a function`, `unless X is a spread`
-                    let kind = if l.rel == self.ast_node && l.args.len() == 4 && is_wild(self.h, l.args[2]) && is_wild(self.h, l.args[3]) { l.args[1].as_atom().map(|k| self.kind_phrase(Term::atom(k))) }
+                    let kind = if l.rel == self.ast_node && l.args.len() == 3 && is_wild(self.h, l.args[2]) { l.args[1].as_atom().map(|k| self.kind_phrase(Term::atom(k))) }
                         else if l.args.len() == 1 && self.guard_bound(l.rel) { self.noun_guards.get(&l.rel).map(|n| self.a_noun(n)) } else { None };
                     match (kind, l.args.first().map(|a| a.kind())) {
                         (Some(k), Some(TermK::Var(v))) if !is_wild(self.h, l.args[0]) => { let n = ctx.display.get(&v).cloned().unwrap_or_else(|| self.h.name(v).to_string()); let n = if ctx.subject == Some(v) && ctx.intro.contains(&v) { "it".to_string() } else { n }; neg.push((format!("{n} is {k}"), Some(n))); }
@@ -1227,7 +1227,7 @@ impl<'a> R<'a> {
         for e in &c.body {
             match e {
                 Elem::Pos(l) => {
-                    let guard = (self.h.name(l.rel) == "ast_node" && l.args.len() == 4 && l.args[1].as_atom().is_some())
+                    let guard = (self.h.name(l.rel) == "ast_node" && l.args.len() == 3 && l.args[1].as_atom().is_some())
                         || (l.args.len() == 1 && (self.kind_nouns.contains_key(&l.rel) || self.noun_guards.contains_key(&l.rel)));
                     if !guard { real += 1; }
                 }

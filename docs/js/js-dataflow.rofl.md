@@ -32,7 +32,7 @@ Reads:
 - from js-controlflow: [caught_value](js-controlflow.rofl.md#caught_value)
 - from js-globals, in the code: [es_static](js-globals.rofl.md#es_static), [es_static_call](js-globals.rofl.md#es_static_call)
 - from js-globals: [es_instance](js-globals.rofl.md#es_instance)
-- from js-model, in the code: [ast_node](js-model.rofl.md#ast_node)
+- from js-model, in the code: [ast_line](js-model.rofl.md#ast_line), [ast_node](js-model.rofl.md#ast_node)
 - from js-modules, in the code: [builtin_canonical](js-modules.rofl.md#builtin_canonical), [import_site](js-modules.rofl.md#import_site), [module_target](js-modules.rofl.md#module_target), [reexport_offers](js-modules.rofl.md#reexport_offers), [require_site](js-modules.rofl.md#require_site), [site_file](js-modules.rofl.md#site_file), [site_shape](js-modules.rofl.md#site_shape), [site_source](js-modules.rofl.md#site_source), [str_char0](js-modules.rofl.md#str_char0), [str_seg](js-modules.rofl.md#str_seg)
 - from js-structure, in the code: [ast_in](js-structure.rofl.md#ast_in), [ast_name](js-structure.rofl.md#ast_name), [ast_value](js-structure.rofl.md#ast_value)
 - from js-surface: [fn_value](js-surface.rofl.md#fn_value), [ret_node_any](js-surface.rofl.md#ret_node_any)
@@ -509,8 +509,8 @@ A node
   - D [introduces](#binds_name) Name in File;
   - it [reads](#ident_in) Name in File;
   - it [is within](#ast_within) R;
-  - D [is at line](js-model.rofl.md#ast_node) LD;
-  - it [is at line](js-model.rofl.md#ast_node) LE;
+  - D [is at line](js-model.rofl.md#ast_line) LD;
+  - it [is at line](js-model.rofl.md#ast_line) LE;
   - LE < LD.
 - <a id="tdz_deferred"></a>is deferred for D if all of:
   - it [is a dead zone candidate of](#tdz_cand) D;
@@ -1746,7 +1746,7 @@ In the code:
   - the `local` of Sp [is named](js-structure.rofl.md#ast_name) Local;
   - the `imported` of Sp [is named](js-structure.rofl.md#ast_name) Name.
 
-> one row per file, from `program`; `ast_node(_, _, File, _)` would enumerate
+> one row per file, from `program`; `ast_node(_, _, File)` would enumerate
 > the corpus to learn three strings
 
 <a id="exports_name"></a>A [function](js-callgraph.rofl.md#fn_node) is exported as Name from File if all of:

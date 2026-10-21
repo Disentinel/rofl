@@ -20,7 +20,7 @@ Reads:
 - from js-concat, in the flow: [may_be_lit](js-concat.rofl.md#may_be_lit), [may_be_node](js-concat.rofl.md#may_be_node)
 - from js-dataflow: [export_local](js-dataflow.rofl.md#export_local), [pattern_takes](js-dataflow.rofl.md#pattern_takes), [private_binds](js-dataflow.rofl.md#private_binds), [rest_in_pattern](js-dataflow.rofl.md#rest_in_pattern)
 - from js-dataflow, in the flow: [catch_of](js-dataflow.rofl.md#catch_of), [catch_param](js-dataflow.rofl.md#catch_param), [decl_value](js-dataflow.rofl.md#decl_value), [member_node_v](js-dataflow.rofl.md#member_node_v), [member_value](js-dataflow.rofl.md#member_value), [nearest_v](js-dataflow.rofl.md#nearest_v), [plain_assign](js-dataflow.rofl.md#plain_assign), [selects](js-dataflow.rofl.md#selects)
-- from js-model: [ast_node](js-model.rofl.md#ast_node)
+- from js-model: [ast_line](js-model.rofl.md#ast_line), [ast_node](js-model.rofl.md#ast_node)
 - from js-structure: [ast_in](js-structure.rofl.md#ast_in)
 - from js-surface, in the flow: [fn_nested](js-surface.rofl.md#fn_nested), [fn_value](js-surface.rofl.md#fn_value), [ret_node_any](js-surface.rofl.md#ret_node_any)
 - from js-surface, in the surface: [sx_called](js-surface.rofl.md#sx_called), [sx_reach](js-surface.rofl.md#sx_reach), [sx_reached](js-surface.rofl.md#sx_reached)
@@ -958,7 +958,10 @@ In the audit:
 
 In the code:
 
-<a id="guarded_at"></a>File has a guarded call at Line if a node C [is a guarded call](#guarded_call) and C [is of kind](js-model.rofl.md#ast_node) some kind in file File at line Line.
+<a id="guarded_at"></a>File has a guarded call at Line if all of:
+  - a node C [is a guarded call](#guarded_call);
+  - C [is in file](js-model.rofl.md#ast_node) File;
+  - C [is at line](js-model.rofl.md#ast_line) Line.
 
 > the callee-keyed verdicts read the callers through rules/js-surface.rofl
 

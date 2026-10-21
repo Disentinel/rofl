@@ -11,7 +11,7 @@ default: main
 >
 > A letter is not the smell; a letter that pretends to be a type is. `F` reads
 > as a function to whoever wrote it, and the rule says so only when a guard
-> names F (`ast_node(F, K, _, _)`, `fn_node(F)`) or a signature types the
+> names F (`ast_node(F, K, _)`, `fn_node(F)`) or a signature types the
 > position F stands in. A variable with neither is typed in the author's head
 > and nowhere else, and the renderer shows it as the bare letter it is.
 >

@@ -8,23 +8,26 @@
 // exactly the four in the contract, so a fifth relation cannot appear here
 // without somebody having decided to add it.
 //
-// THE CONTRACT (v1), all into the [code] ledger:
+// THE CONTRACT (v2), all into the [code] ledger:
 //
-//   ast_node[code](Id, Kind, File, Line)          one per babel node
+//   ast_node[code](Id, Kind, File)                one per babel node
+//   ast_line[code](Id, Line)                      the line it starts on
 //   ast_child[code](Parent, Field, Index, Child)  the tree, ordered
 //   ast_attr[code](Id, Key, Value)                every scalar own property
 //   ast_file[code](RootId, File)                  one per parsed file
 //
-// `Index` is what v0 did not have. v0 walked an array field passing the same
-// field name to every member and no position, so `f(a, b)` and `f(b, a)`
-// produced the SAME fact set: argument order, element order and parameter
-// order were all destroyed at the scanner. Index is 0 for a singular field and
-// 0..n-1 for array members, counted over the RAW array so that a hole in
-// `[1, , 3]` keeps `3` at index 2 rather than sliding it to 1.
+// `Index` is 0 for a singular field and 0..n-1 for array members, counted over
+// the RAW array so that a hole in `[1, , 3]` keeps `3` at index 2.
 //
-// `Id` is unique ACROSS FILES: every id carries a per-file prefix derived from
-// the file path, so two files scanned into one store cannot collide. Without
-// it both files start at n1 and their trees silently graft onto each other.
+// `Id` is the file's prefix and a hash of the parent's id and the child's
+// step, so it names a place in the tree, not a place in the walk: a node keeps
+// its id when code is added above it (w_stable_node_ids). The step of a named
+// child (function, class, method, property, declarator, a declaration whose
+// declarators are all named) is its name; of an element of an array field, its
+// kind and a shallow hash of its tree down to the first block, function or
+// class; of a single child, its field. Equal steps under one parent count #n.
+// The line is its own fact for the same reason: a blank line moves ast_line
+// below it and nothing else.
 
 import * as crypto from 'node:crypto';
 import { parse } from '@babel/parser';
@@ -48,21 +51,21 @@ export interface AstFacts {
   prefix: string;
 }
 
-/** The four relation names this scanner is allowed to emit. Anything else is
+/** The relation names this scanner is allowed to emit. Anything else is
  *  a judgement wearing a relation's clothes. */
-export const AST_RELATIONS = ['ast_node', 'ast_child', 'ast_attr', 'ast_file'] as const;
+export const AST_RELATIONS = ['ast_node', 'ast_line', 'ast_child', 'ast_attr', 'ast_file'] as const;
 
 /** The relation a REFUSAL emits, and it is deliberately NOT in the list above.
  *  The contract is two disjoint sets rather than one of five: a scan emits the
- *  four, or it emits this one, and never both. Keeping them apart is what lets
- *  `the scanner emits EXACTLY the four contract relations` stay the assertion
- *  it was — a fifth relation on the success path really would be a judgement
+ *  five, or it emits this one, and never both. Keeping them apart is what lets
+ *  `the scanner emits EXACTLY the contract relations` stay the assertion
+ *  it was — another relation on the success path really would be a judgement
  *  wearing a relation name. */
 export const AST_REFUSAL = 'ast_parse_error' as const;
 
 /** Position and identity properties: recorded elsewhere in the contract, or
  *  not recorded at all. `type` is the Kind argument of ast_node, `loc`/`start`/
- *  `end`/`range` are collapsed to Line, and the *Comments back-references
+ *  `end`/`range` are collapsed to ast_line, and the *Comments back-references
  *  (leadingComments / trailingComments / innerComments) are babel's duplicate
  *  view of nodes already reachable through `File.comments`. */
 // `extra` IS DECLARED HERE RATHER THAN DROPPED BY ACCIDENT, 2026-09-08. It was
@@ -129,8 +132,12 @@ const q = (s: string): string => {
 let lostSurrogates = 0;
 
 /** babel's CamelCase → the lower_snake this language's atoms use */
-export const atomise = (k: string): string =>
-  k.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase();
+const atoms = new Map<string, string>();
+export const atomise = (k: string): string => {
+  let a = atoms.get(k);
+  if (a === undefined) { a = k.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase(); atoms.set(k, a); }
+  return a;
+};
 
 /** A scalar property value as a ROFL term. Strings quoted; booleans and
  *  integers bare, because `computed`, `async`, `static` and `optional` are
@@ -220,6 +227,95 @@ export const LEGACY_PLUGINS = ['typescript', 'decorators-legacy', 'decoratorAuto
 const parseModule = (src: string, file: string, plugins: readonly string[]) =>
   parse(src, { sourceType: 'module', plugins: (/\.[jt]sx$/.test(file) ? [...plugins, 'jsx'] : [...plugins]) as never });
 
+type Node = Record<string, unknown>;
+
+const unique = (hs: Float64Array): boolean => {
+  const s = Float64Array.from(hs).sort();
+  for (let i = 1; i < s.length; i++) if (s[i] === s[i - 1]) return false;
+  return true;
+};
+
+/** Two 32-bit lanes of multiply-xor (cyrb53), fed whole words, 53 bits out. No key: a collision costs a refusal,
+ *  never a wrong answer. */
+let h1 = 0, h2 = 0;
+const start = (seed: number): void => { h1 = 0xdeadbeef ^ seed; h2 = 0x41c6ce57 ^ seed; };
+const feed = (x: number): void => { h1 = Math.imul(h1 ^ x, 2654435761); h2 = Math.imul(h2 ^ x, 1597334677); };
+const feed52 = (x: number): void => { feed(x >>> 0); feed((x / 4294967296) >>> 0); };
+const done = (): number => {
+  const a = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+  const b = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(a ^ (a >>> 13), 3266489909);
+  return 4294967296 * (2097151 & b) + (a >>> 0);
+};
+const strHash = (s: string): number => {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619);
+  return h >>> 0;
+};
+const words = new Map<string, number>();
+const word = (s: string): number => { let h = words.get(s); if (h === undefined) { h = strHash(s); words.set(s, h); } return h; };
+
+/** The kinds a shallow hash stops at: an edit inside a body leaves the ids of the statements around it alone. */
+const BODY = new Set(['BlockStatement', 'StaticBlock', 'ClassBody', 'TSModuleBlock', 'FunctionDeclaration',
+  'FunctionExpression', 'ArrowFunctionExpression', 'ObjectMethod', 'ClassMethod', 'ClassPrivateMethod',
+  'ClassDeclaration', 'ClassExpression']);
+
+const identName = (v: unknown): string | undefined =>
+  isNode(v) && typeof (v as Node).name === 'string' ? (v as Node).name as string : undefined;
+
+/** The name a node is known by in its parent, if it has one. */
+const nameOf = (c: Node): string | undefined => {
+  if (c.type === 'VariableDeclaration') {
+    const ns = (c.declarations as Node[]).map((d) => identName(d.id));
+    return ns.length > 0 && ns.every((x) => x !== undefined) ? ns.join(',') : undefined;
+  }
+  if (c.computed === true) return undefined;
+  return identName(c.id) ?? identName(c.key);
+};
+
+/** Each node's kind, scalars and children, the children cut at a BODY to their kind: one pass, bottom-up, the
+ *  hashes in the order `emit` meets the nodes. */
+function shallowHashes(root: Node): Float64Array {
+  let out = new Float64Array(1024);
+  const parts: number[] = [];
+  let n = 0;
+  const visit = (node: Node): number => {
+    const at = n++;
+    const base = parts.length;
+    parts.push(word(node.type as string));
+    for (const k of Object.keys(node)) {
+      if (skipKey(k)) continue;
+      const v = node[k];
+      if (v === null || v === undefined) continue;
+      if (Array.isArray(v)) {
+        for (const c of v) {
+          if (isNode(c)) { const h = visit(c as Node); parts.push(word(k), BODY.has((c as Node).type as string) ? word((c as Node).type as string) : h); }
+          else if (isScalar(c)) parts.push(word(k), typeof c === 'string' ? strHash(c) : word(String(c)));
+        }
+      } else if (isNode(v)) { const h = visit(v as Node); parts.push(word(k), BODY.has((v as Node).type as string) ? word((v as Node).type as string) : h); }
+      else if (isScalar(v)) parts.push(word(k), typeof v === 'string' ? strHash(v) : word(String(v)));
+    }
+    start(0);
+    for (let i = base; i < parts.length; i++) feed52(parts[i]);
+    parts.length = base;
+    const h = done();
+    if (at >= out.length) { const o = new Float64Array(out.length * 2); o.set(out); out = o; }
+    out[at] = h;
+    return h;
+  };
+  visit(root);
+  return out.subarray(0, n);
+}
+
+const DIGITS = '0123456789abcdefghijklmnopqrstuv';
+/** 53 bits in base 32, low digits first. */
+const b32 = (x: number): string => {
+  let lo = x >>> 0, hi = (x / 4294967296) >>> 0, s = '';
+  for (let i = 0; i < 6; i++) { s += DIGITS[lo & 31]; lo >>>= 5; }
+  s += DIGITS[lo | ((hi & 7) << 2)]; hi >>>= 3;
+  while (hi > 0) { s += DIGITS[hi & 31]; hi >>>= 5; }
+  return s;
+};
+
 export function scan(src: string, opts: ScanOpts = {}): AstFacts {
   const file = opts.file ?? '<anonymous>';
   const persp = opts.persp ?? 'code';
@@ -278,14 +374,36 @@ export function scan(src: string, opts: ScanOpts = {}): AstFacts {
   const facts: string[] = [];
   const kinds = new Set<string>();
   const qFile = q(file);
+  const shallow = shallowHashes(ast as unknown as Node);
   let n = 0;
+  let salt = 0;
+  const hashes = new Float64Array(shallow.length);
 
-  const emit = (node: Record<string, unknown>): string => {
-    const me = prefix + ++n;
+  const emit = (node: Node, me: string, hash: number): void => {
+    hashes[n++] = hash;
     const kind = atomise(node.type as string);
     kinds.add(kind);
     const loc = node.loc as { start?: { line?: number } } | null | undefined;
-    facts.push(`ast_node[${persp}](${me}, ${kind}, ${qFile}, ${loc?.start?.line ?? 0}).`);
+    facts.push(`ast_node[${persp}](${me}, ${kind}, ${qFile}).`);
+    facts.push(`ast_line[${persp}](${me}, ${loc?.start?.line ?? 0}).`);
+    let equal: Map<number, number> | undefined;
+    let ch = 0;
+    const child = (field: string, c: Node, listed: boolean): string => {
+      const nm = nameOf(c);
+      const f = word(field);
+      let disc = 0, k = 0;
+      if (nm !== undefined || listed) {
+        disc = nm !== undefined ? strHash(nm) : shallow[n];
+        start(0); feed(f); feed(nm !== undefined ? 1 : 2); feed52(disc);
+        const key = done();
+        equal ??= new Map();
+        k = (equal.get(key) ?? 0) + 1;
+        equal.set(key, k);
+      }
+      start(salt); feed52(hash); feed(f); feed(nm !== undefined ? 1 : listed ? 2 : 0); feed52(disc); feed(k);
+      ch = done();
+      return prefix + b32(ch);
+    };
 
     for (const k of Object.keys(node)) {
       if (skipKey(k)) continue;
@@ -297,12 +415,14 @@ export function scan(src: string, opts: ScanOpts = {}): AstFacts {
         // still consumes its position.
         for (let i = 0; i < v.length; i++) {
           if (!isNode(v[i])) continue;
-          const child = emit(v[i] as Record<string, unknown>);
-          facts.push(`ast_child[${persp}](${me}, ${field}, ${i}, ${child}).`);
+          const id = child(field, v[i] as Node, true);
+          emit(v[i] as Node, id, ch);
+          facts.push(`ast_child[${persp}](${me}, ${field}, ${i}, ${id}).`);
         }
       } else if (isNode(v)) {
-        const child = emit(v as Record<string, unknown>);
-        facts.push(`ast_child[${persp}](${me}, ${field}, 0, ${child}).`);
+        const id = child(field, v as Node, false);
+        emit(v as Node, id, ch);
+        facts.push(`ast_child[${persp}](${me}, ${field}, 0, ${id}).`);
       } else if (isScalar(v)) {
         facts.push(`ast_attr[${persp}](${me}, ${field}, ${scalarTerm(v)}).`);
       } else if (typeof v === 'object' && !Array.isArray(v)) {
@@ -334,10 +454,18 @@ export function scan(src: string, opts: ScanOpts = {}): AstFacts {
         }
       }
     }
-    return me;
   };
 
-  const root = emit(ast as unknown as Record<string, unknown>);
+  // A collision in this file is refused and the file scanned again under the next salt; every id moves with it.
+  let root: string;
+  for (;;) {
+    start(salt);
+    const rh = done();
+    root = prefix + b32(rh);
+    emit(ast as unknown as Node, root, rh);
+    if (unique(hashes)) break;
+    facts.length = 0; kinds.clear(); n = 0; lostSurrogates = 0; salt++;
+  }
   facts.push(`ast_file[${persp}](${root}, ${qFile}).`);
   // THE LOSS IS RECORDED BESIDE THE DATA. Replacing a character silently would
   // make a question about that value answerable and wrong; this makes it

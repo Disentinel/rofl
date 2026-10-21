@@ -144,7 +144,7 @@ sx_rest_elem[surface](R, K, A) :- sx_rest[surface](F, J, R), resolves[code](C, F
                                   I >= J, K is I - J.
 -- a function handed to an external call is called back by code the corpus cannot see
 sx_cb[surface](F, Spec)       :- external_value[flow](X, Spec), may_be_node[flow](G, X),
-                                 ast_child[code](C, callee, 0, G), ast_node[code](C, K, _, _), call_like_v(K),
+                                 ast_child[code](C, callee, 0, G), ast_node[code](C, K, _), call_like_v(K),
                                  ast_child[code](C, arguments, _, A), may_be_node[flow](A, F), fn_value[flow](F).
 
 next_send[flow](G, V) :- sx_next[surface](G, V).
@@ -158,7 +158,7 @@ param_assigned[flow](F, Name) :- assign_param[flow](A, F), assigned[code](A, _, 
 -- what the call is.
 call_returns[flow](F, E) :- returns[flow](F, E), not ast_attr[code](F, generator, true).
 ret_param[flow](F, I, E) :- call_returns[flow](F, E), param_use[flow](F, Name, E), param_of[flow](F, I, Name),
-                            ast_child[code](F, params, I, P), ast_node[code](P, identifier, _, _),
+                            ast_child[code](F, params, I, P), ast_node[code](P, identifier, _),
                             not param_assigned[flow](F, Name), not sees_binder[code](E, _).
 ret_plain[flow](F, E) :- call_returns[flow](F, E), not ret_param[flow](F, _, E).
 

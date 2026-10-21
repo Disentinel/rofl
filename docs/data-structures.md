@@ -55,7 +55,7 @@ variable they mark, as `min` and `max` do in `pareto p(K, min C, max T).`
 | span | `span src_range(N, from S, to E).` `span src_range(N, from S, to E) laminar.` | `` Each `src_range` of N runs from S to E. `` and `` ... and any two are nested or apart. `` |
 | equivalence | `equivalence same(A, B) of copy_edge(A, B).` | `` `same` is the equivalence that `copy_edge` generates. `` |
 | sequence | `sequence ast_child(P, F, at I, C).` | `` The `ast_child` of each P and F are numbered 0, 1, 2, ... by I. `` |
-| ordered | `ordered ast_node(N, _, _, by L).` | `` `ast_node` is ordered by its integer L. `` |
+| ordered | `ordered ast_line(N, by L).` | `` `ast_line` is ordered by its integer L. `` |
 | dag | `dag calls(F, G).` `dag calls(F, G) closure reaches.` | `` No `calls` path returns to where it began. `` `` `reaches` holds of each node and every node a path leads to. `` |
 
 The reader reads each sentence into its line and rofl render writes it back,

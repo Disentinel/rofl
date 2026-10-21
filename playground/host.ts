@@ -96,8 +96,10 @@ export function codeFacts(files: Record<string, string>, data: string[] = []): {
   for (const [path, src] of Object.entries(files)) {
     for (const fact of scan(src, { file: path }).facts) {
       facts.push(fact);
-      const m = /^ast_node\[code\]\((\w+), (\w+), "([^"]*)", (\d+)\)/.exec(fact);
-      if (m) nodes[m[1]] = { kind: m[2], file: m[3], line: Number(m[4]), label: '' };
+      const m = /^ast_node\[code\]\((\w+), (\w+), "([^"]*)"\)/.exec(fact);
+      if (m) nodes[m[1]] = { kind: m[2], file: m[3], line: 0, label: '' };
+      const l = /^ast_line\[code\]\((\w+), (\d+)\)/.exec(fact);
+      if (l) nodes[l[1]].line = Number(l[2]);
       const e = /^ast_parse_error\[code\]\("[^"]*", "(.*)"\)\.$/.exec(fact);
       if (e) parseErrors[path] = e[1];
       const v = /^ast_attr\[code\]\(\w+, value, (".*")\)\.$/.exec(fact);
@@ -169,7 +171,7 @@ const NOT_OURS = (rel: string, home: Record<string, string>) => `${rel} is the k
 const plain = (s: string) => s.replace(/\bnb__/g, '');
 /** What a notebook writes without introducing a relation: the kernel's tables a program writes by hand (reflect.ts KERNEL_BOOK), and phrases. */
 const WRITTEN = new Set([...[...RESERVED].filter((r) => !KERNEL_BOOK.has(r)), 'phrase', 'sig', 'fun_phrase']);
-const NODE = /\bn[0-9a-f]{16}_\d+\b/g;
+const NODE = /\bn[0-9a-f]{16}_[0-9a-z]+\b/g;
 type Concerns = { rules: Record<string, string>; rels: Record<string, string> };
 type Scanned = { key: string; facts: string[]; nodes: Record<string, Node>; parseErrors: Record<string, string>; text: string; rels: Set<string> };
 
@@ -759,7 +761,7 @@ function unreadSaid(u: string, vocab: Vocabulary): string {
  *  and the functions a condition may compute with, `L is the length of T`. `rels`: the relation of each sentence. */
 export function translatorVocab(model: string, phrases: string): { vocab: string[]; functions: string[]; rels: string[] } {
   const v = new Vocabulary(); v.addText(phrases);
-  const rels = new Set(['ast_node', 'ast_child', 'ast_attr', ...booksOf(model).keys()]);
+  const rels = new Set(['ast_node', 'ast_line', 'ast_child', 'ast_attr', ...booksOf(model).keys()]);
   const VALUE = new Set(['key', 'name', 'file', 'index', 'text', 'kind', 'line', 'attribute', 'number', 'score', 'value', 'child']);
   const vocab: string[] = [], of: string[] = [];
   for (const rel of [...rels].sort()) {

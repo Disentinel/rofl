@@ -265,7 +265,7 @@ test('E1 a legible proof keeps every line and every fact of the engine\'s', ['re
     && !/@tick|\?_\$|\?\d|#\d|\[main\]/.test(l?.why ?? '');
 })(), () => reviewJson);
 test('W1 a why of a value says first the steps the value took, one line each, where it changes file, and the whole proof is --all', ['sides'], () => is(sides, 0)
-  && has(sides, `why side_effect_value(nd100d8f9c1968a85_25, fs_mutation, "/tmp/settings.json")
+  && has(sides, `why side_effect_value(nd100d8f9c1968a85_to76001thh6, fs_mutation, "/tmp/settings.json")
     the value's steps, from where it is written:
       mini/node/main.ts:14  "/tmp/settings.json"  the literal
       mini/node/main.ts:14  writeAtomic()         argument 0 of function writeAtomic() at mini/node/pfs.ts:4
@@ -284,7 +284,7 @@ test('R1 the Rust engine and the TypeScript one say the same, answers, whys and 
 test('W2 the proof under a chain counts its side conditions instead of writing them and names a node by its code and place', ['sidesJson'], () => (() => {
   const ws = whys(sidesJson);
   return ws.length === 3 && ws.every((l) => l.chain!.length >= 3 && l.brief!.split('\n').length < l.why!.split('\n').length && /side conditions? holds?/.test(l.brief!)
-    && !/\(nothing says so\)|n[0-9a-f]{8,16}_\d+/.test(l.brief!) && /\(nothing says so\)/.test(l.why!));
+    && !/\(nothing says so\)|n[0-9a-f]{8,16}_[0-9a-z]+/.test(l.brief!) && /\(nothing says so\)/.test(l.why!));
 })(), () => sidesJson);
 test('W3 --all prints each why whole, the proof as it was before the chain, and no chain', ['sidesAll', 'sidesJson'], () => is(sidesAll, 0) && !has(sidesAll, "the value's steps")
   && whys(sidesJson).every((l) => sidesAll.stdout!.includes(`: ${l.text}\n${l.why!.split('\n').map((x) => `    ${x}`).join('\n')}\n`)), () => sidesAll);

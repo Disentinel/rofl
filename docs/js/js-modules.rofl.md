@@ -32,7 +32,7 @@ Reads:
 - from js-callgraph, in the audit: [shape_verdict](js-callgraph.rofl.md#shape_verdict)
 - from js-callgraph: [has_shape](js-callgraph.rofl.md#has_shape), [resolved_site](js-callgraph.rofl.md#resolved_site)
 - from js-dataflow: [free_global](js-dataflow.rofl.md#free_global)
-- from js-model: [ast_node](js-model.rofl.md#ast_node)
+- from js-model: [ast_line](js-model.rofl.md#ast_line), [ast_node](js-model.rofl.md#ast_node)
 - from js-model, in the main: [unknown_because](js-model.rofl.md#unknown_because)
 - from js-structure: [ast_name](js-structure.rofl.md#ast_name), [ast_value](js-structure.rofl.md#ast_value), [meta_form](js-structure.rofl.md#meta_form)
 - from the scanner:
@@ -151,7 +151,7 @@ Declared as facts:
 A site
 
 - <a id="site_file"></a>sits in a file F if it [is a module site](#module_site) of some form and it [is in file](js-model.rofl.md#ast_node) F.
-- <a id="site_line"></a>sits at line L if it [is a module site](#module_site) of some form and it [is at line](js-model.rofl.md#ast_node) L.
+- <a id="site_line"></a>sits at line L if it [is a module site](#module_site) of some form and it [is at line](js-model.rofl.md#ast_line) L.
 
 <a id="site_source_node"></a>The source node of a site I is a node Src either:
 

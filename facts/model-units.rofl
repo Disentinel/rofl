@@ -384,6 +384,7 @@ unit_concludes("rules/js-model.rofl", axis_earns).
 unit_concludes("rules/js-model.rofl", unearned_axis).
 unit_concludes("rules/js-model.rofl", imports).
 unit_concludes("rules/js-model.rofl", ast_node).
+unit_concludes("rules/js-model.rofl", ast_line).
 unit_concludes("rules/js-model.rofl", ast_attr).
 unit_concludes("rules/js-model.rofl", ast_child).
 unit_concludes("rules/js-model.rofl", lang_of_corpus).

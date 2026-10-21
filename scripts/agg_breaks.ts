@@ -8549,7 +8549,7 @@ export const BREAKS: Break[] = [
   "edits": [
    [
     "rules/js-concat.rofl",
-    "composed[flow](T) :- interpolated[code](T), ast_node[code](T, template_literal, _, _), not tagged_quasi[code](T).",
+    "composed[flow](T) :- interpolated[code](T), ast_node[code](T, template_literal, _), not tagged_quasi[code](T).",
     ""
    ]
   ],

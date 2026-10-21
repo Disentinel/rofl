@@ -30,7 +30,7 @@ function factsOf(raw: string): { top: string; facts: Map<string, Fact> } {
 const relOf = (k: string) => k.slice(0, k.indexOf('(')).replace(/^nb__/, '').replace(/\[\w+\]$/, '');
 const argsOf = (k: string): string[] => k.slice(k.indexOf('(') + 1, -1).match(/"(?:[^"\\]|\\.)*"|[^,]+/g) ?? [];
 const VALUE = /^(may_be_|sx_)/;
-const NODE = /^n[0-9a-f]{8,16}_\d+$/;
+const NODE = /^n[0-9a-f]{8,16}_[0-9a-z]+$/;
 const unq = (s: string) => s.startsWith('"') ? JSON.parse(s) as string : s;
 
 /** What a step of the value layer stands for, by what its rule joined: the first premise relation named here. */
@@ -110,7 +110,7 @@ export function chainOf(raw: string, nodes: Record<string, Node>, say: (key: str
   const node = (t?: string) => t && NODE.test(t) && nodes[t] ? nodes[t] : undefined;
   const label = (t = '') => { const n = node(t); return n ? `${n.label} at ${n.file}:${n.line}` : unq(t); };
   // a fact as a sentence, the node the line is about as `it`
-  const said = (k: string, at?: string) => say(k).replace(/, in the \w+$/, '').replace(/`?(n[0-9a-f]{8,16}_\d+)`?/g, (m, id) => id === at ? 'it' : nodes[id] ? `[${label(id)}]` : m);
+  const said = (k: string, at?: string) => say(k).replace(/, in the \w+$/, '').replace(/`?(n[0-9a-f]{8,16}_[0-9a-z]+)`?/g, (m, id) => id === at ? 'it' : nodes[id] ? `[${label(id)}]` : m);
   const kid = (k: string, rel: string) => facts.get(k)?.kids.find((x) => relOf(x) === rel);
   const lines: { file: string; where: string; code: string; what: string }[] = [];
   let last: string | undefined;

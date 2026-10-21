@@ -58,7 +58,7 @@ function anchored(md: string, heads: string[], prefix = ''): string {
 
 /** The books a model's relations live in: `ast_node` in code, a relation one book's rules conclude in that book, one given by facts alone where its facts are. */
 export function homeOf(model: string): Record<string, string> {
-  const home: Record<string, string> = { ast_node: 'code', ast_child: 'code', ast_attr: 'code', ast_file: 'code' };
+  const home: Record<string, string> = { ast_node: 'code', ast_line: 'code', ast_child: 'code', ast_attr: 'code', ast_file: 'code' };
   for (const [rel, bs] of booksOf(model)) if (bs.size === 1) home[rel] = [...bs][0];
   for (const m of model.matchAll(/^([a-z_]\w*)(?:\[(\w+)\])?\([^\n]*\)\.[ \t]*$/gm)) if (!m[0].includes(':-')) home[m[1]] ??= m[2] ?? 'main';
   // an alias is read where its source is

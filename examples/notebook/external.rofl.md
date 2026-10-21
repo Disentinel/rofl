@@ -52,7 +52,7 @@ never read_back(C, 9090)
 
 ```datalog
 resolved_external(F) :- resolves[code](_, F), external_value[flow](F, _).
-local_made_external(N) :- external_value[flow](N, _), ast_node[code](N, object_expression, _, _).
+local_made_external(N) :- external_value[flow](N, _), ast_node[code](N, object_expression, _).
 
 never resolved_external(F)
 never local_made_external(N)

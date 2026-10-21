@@ -340,7 +340,7 @@ fn world_of(text: &str, phrases: &str, home: &HashMap<String, String>) -> (Strin
 
 /// The books a model's relations live in (notebook/book.ts `homeOf`).
 fn home_of(model: &str) -> HashMap<String, String> {
-    let mut home: HashMap<String, String> = ["ast_node", "ast_child", "ast_attr", "ast_file"].iter().map(|r| (r.to_string(), "code".to_string())).collect();
+    let mut home: HashMap<String, String> = ["ast_node", "ast_line", "ast_child", "ast_attr", "ast_file"].iter().map(|r| (r.to_string(), "code".to_string())).collect();
     let mut books: omap::OMap<Vec<String>> = omap::OMap::default();
     for m in rx::each(r"(?m)^([a-z_]\w*)(?:\[(\w+)\])?\([^\n]*?:-", model) {
         let b = if rx::has(&m, 2) { rx::g(&m, 2) } else { "main" }.to_string();

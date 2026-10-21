@@ -52,7 +52,7 @@ cl_import[flow](Sp, S, K) :- external_import[code](Sp, _, S, _), ast_child[code]
 sx_cl_import[surface](Sp, S, K) :- sx_esc[surface](Sp), cl_import[flow](Sp, S, K).
 cl_import[flow](Sp, S, K) :- sx_cl_import[surface](Sp, S, K).
 
-cl_how[flow](C, How, Base) :- ast_node[code](C, call_expression, _, _), ast_child[code](C, callee, 0, G),
+cl_how[flow](C, How, Base) :- ast_node[code](C, call_expression, _), ast_child[code](C, callee, 0, G),
                               cl_api[flow](G, S, K, Base), http_client(S, K, How).
 
 -- =========================================================================
