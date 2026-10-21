@@ -11,7 +11,7 @@
 import { fork, type ChildProcess } from 'node:child_process';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { own } from './own.ts';
+import { own, watched } from './own.ts';
 
 export interface Task { mod: string; fn: string; args: unknown[] }
 
@@ -47,6 +47,7 @@ export async function runPool<R>(tasks: Task[], opts: { width?: number; env?: No
           env: { ...process.env, ...opts.env },
           serialization: 'advanced',
           stdio: ['ignore', 'inherit', 'inherit', 'ipc'],
+          detached: true,   // a group of its own, which its watcher kills whole when this run is gone (scripts/own.ts)
         });
         kids.push(kid);
         kid.on('message', (m: { i: number; ok: boolean; value?: R; error?: string }) => {
@@ -72,6 +73,7 @@ export async function runPool<R>(tasks: Task[], opts: { width?: number; env?: No
 }
 
 if (process.argv.includes('--pool-worker')) {
+  watched();
   const mods = new Map<string, Record<string, (...a: unknown[]) => unknown>>();
   // a worker whose run was killed by SIGKILL has nobody to answer, and ends there
   const answer = (r: object): void => { process.send!(r, (e: Error | null) => { if (e) process.exit(1); }); };

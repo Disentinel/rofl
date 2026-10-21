@@ -1002,12 +1002,16 @@ function engineFromChanges(ref: string): { engine: EngineChoice; why: string } {
   return { engine: 'both', why: `${other} changed since ${ref}` };
 }
 
-/** A world that loads a file that is not there, its own or one of the world below, is said in a sentence: every reader
- *  after this one would throw ENOENT from inside a worker and the run would end on a stack. */
+/** A world that loads a file it cannot read, its own or one the world below names, is said in a sentence: every reader
+ *  after this one would throw (ENOENT, EACCES, EISDIR) from inside a worker and the run would end on a stack. */
 export function absent(w: World): string | null {
-  const here = w.files.filter((f) => fs.existsSync(f));
-  const gone = [...w.files.filter((f) => !here.includes(f)), ...belowFiles(here).filter((f) => !fs.existsSync(f))];
-  return gone.length ? `${w.name}: it loads ${gone.map((f) => path.relative(ROOT, f)).join(', ')}, which ${gone.length > 1 ? 'are' : 'is'} not there` : null;
+  const why = (f: string): string | null => {
+    try { if (!fs.statSync(f).isFile()) return 'is no file'; fs.accessSync(f, fs.constants.R_OK); return null; }
+    catch (e) { const c = (e as NodeJS.ErrnoException).code; return c === 'ENOENT' ? 'is not there' : c === 'EACCES' ? 'may not be read' : `cannot be read (${c ?? (e as Error).message})`; }
+  };
+  const read = w.files.filter((f) => !why(f));
+  const bad = [...w.files.filter((f) => !read.includes(f)), ...belowFiles(read).filter((f) => why(f))];
+  return bad.length ? `${w.name}: ${bad.map((f) => `it loads ${path.relative(ROOT, f)}, which ${why(f)}`).join('; ')}` : null;
 }
 
 let refusalsOk: Set<string> | undefined;

@@ -4,13 +4,14 @@
 // group of its own, and 16 of them, 130 processes, ran on for a day at a load average of 272.
 //
 // A run killed by SIGKILL runs nothing: its browsers are left to their parent, init, and `reap` kills them on the next
-// start; a pool worker finishes the task it is in and exits when it finds its parent gone.
-import { spawnSync } from 'node:child_process';
+// start; a pool worker's watcher kills the worker's group, it and what it started (`watched`).
+import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 
-/** Faults scripts/own_check.ts plants to see its check go red: `none`, nothing stopped; `direct`, only the children. */
+/** Faults scripts/own_check.ts plants to see its check go red: `none`, nothing stopped; `direct`, only the children;
+ *  `mute`, an uncaught error not said; `killed`, the run ended by a signal after it. */
 export const broken = new Set<string>();
 
 const dirs = new Set<string>();
@@ -45,10 +46,28 @@ export function own(dir?: string): () => void {
   if (!armed) {
     armed = true;
     process.on('exit', stop);
-    process.on('uncaughtExceptionMonitor', stop);
+    // an uncaught error is said before anything is stopped, and written at once: on macOS a pipe's stderr is
+    // asynchronous, and a run that dies after its last write has said nothing
+    process.on('uncaughtException', (e) => {
+      if (!broken.has('mute')) fs.writeSync(2, `${e instanceof Error && e.stack || String(e)}\n`);
+      stop();
+      if (broken.has('killed')) process.kill(process.pid, 'SIGKILL');
+      process.exit(1);
+    });
     for (const s of ['SIGTERM', 'SIGINT', 'SIGHUP'] as const) process.on(s, () => { stop(); process.exit(128 + os.constants.signals[s]); });
   }
   return () => { if (dir) dirs.delete(dir); };
+}
+
+/** A pool worker watched: when the run that forked it is gone (killed by SIGKILL, which it cannot see while it waits
+ *  on a child), its whole group, the worker and what it started, is killed within half a second. The worker is
+ *  forked in a group of its own for this. */
+export const watchers: ChildProcess[] = [];
+export function watched(): void {
+  const run = process.ppid, me = process.pid;
+  const w = spawn('sh', ['-c', `while kill -0 ${run} 2>/dev/null; do kill -0 ${me} 2>/dev/null || exit 0; sleep 0.5; done; kill -9 -- -${me}`], { stdio: 'ignore' });
+  w.unref();
+  watchers.push(w);
 }
 
 /** A browser of an earlier run whose owner is gone (killed by SIGKILL, so its parent is now init) is killed with its
