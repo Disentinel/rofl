@@ -435,28 +435,36 @@ impl Session {
     /// is not worked out, and then the world is left dirty and not evaluated again here, nor marked as evaluated
     /// again: the caller evaluates the files instead.
     pub fn retract_facts_delta(&mut self, ids: &[FactId]) -> Result<Retraction, String> {
-        self.eval.settle_assertions();
+        Ok(match self.retract_set_delta(ids)? {
+            Ok(_) => Retraction::Delta(Default::default()),
+            Err(why) => Retraction::Full(why),
+        })
+    }
+
+    /// `retract_facts_delta` with what the pass did (`AddDelta`: what it overdeleted and derived again), or why it
+    /// was not worked out (the world left dirty).
+    pub fn retract_set_delta(&mut self, ids: &[FactId]) -> Result<Result<crate::engine::AddDelta, String>, String> {
         self.settle()?;
         let facts: Vec<FactId> = {
             let mut seen = HashSet::new();
             ids.iter().copied().filter(|&f| self.eval.store.alive(f) && self.eval.store.rec(f).base() && seen.insert(f)).collect()
         };
         if facts.is_empty() {
-            return Ok(Retraction::Delta(Default::default()));
+            return Ok(Ok(Default::default()));
         }
         if facts.iter().any(|&f| [self.eval.v.asks, self.eval.v.explain_request].contains(&self.eval.store.rec(f).rel)) {
             self.eval.store.dirty = true;
-            return Ok(Retraction::Full("asks names the rules the world runs".into()));
+            return Ok(Err("asks names the rules the world runs".into()));
         }
         let doomed = self.doomed_of_set(&facts);
         let marks: Vec<Sym> = doomed.iter().map(|&f| self.eval.store.rec(f).rel).filter(|r| [self.eval.v.edb, self.eval.v.authority].contains(r)).collect();
         if self.eval.rules.iter().any(|r| r.clause.body.iter().any(|b| b.lits_deep().iter().any(|l| marks.contains(&l.rel)))) {
             self.eval.store.dirty = true;
-            return Ok(Retraction::Full("the retraction takes an edb or authority row a rule reads".into()));
+            return Ok(Err("the retraction takes an edb or authority row a rule reads".into()));
         }
         match self.eval.retract_set(&facts, &doomed) {
-            Ok(_) => match self.eval.check_promises() {
-                Ok(_) => Ok(Retraction::Delta(Default::default())),
+            Ok(d) => match self.eval.check_promises() {
+                Ok(_) => Ok(Ok(d)),
                 Err(e) => {
                     self.eval.store.dirty = true;
                     Err(crate::describe(&e))
@@ -464,7 +472,7 @@ impl Session {
             },
             Err(why) => {
                 self.eval.store.dirty = true;
-                Ok(Retraction::Full(why))
+                Ok(Err(why))
             }
         }
     }
@@ -497,8 +505,14 @@ impl Session {
                     last = Retraction::Delta(d);
                 }
                 Err(why) => {
+                    // the rest go without a delta, and the world is evaluated again
+                    if self.eval.store.alive(id) {
+                        self.eval.store.remove_many(&doomed);
+                    }
                     self.eval.store.dirty = true;
-                    return Ok(Retraction::Full(why));
+                    if !matches!(last, Retraction::Full(_)) {
+                        last = Retraction::Full(why);
+                    }
                 }
             }
         }

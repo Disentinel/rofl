@@ -384,6 +384,17 @@ impl Eval {
         self.add_worked_out(added, &[], &fresh, &grown, &moved, called).map_err(String::from)
     }
 
+    /// The indexes a retraction reads (`retract_set`): what cites each fact, and each row of a tree. Built once, kept
+    /// by every firing since, and kept with a volume, so a world kept on disk is not indexed again by each delta.
+    pub fn index_for_retraction(&mut self) {
+        if !self.store.has_citers() {
+            self.store.index_citers();
+        }
+        if self.vany && self.store.vciters.is_none() {
+            self.vindex_citers();
+        }
+    }
+
     /// TAKE OUT OF AN EVALUATED WORLD the base facts `facts`, with `doomed` the kernel rows their loads wrote for them
     /// alone, and bring it to the state a fresh evaluation without them holds: DRed in one pass over the set, by the
     /// addition path's levels (`fine_levels`). What rests on a fact goes through the citer index, kept with every
@@ -608,6 +619,9 @@ impl Eval {
                     seeds.extend(self.store.citers_one(f).into_iter().filter(|y| self.store.alive(*y) && self.store.firings(*y).iter().any(|(_, _, ps)| ps.contains(&PremRef::Fact(f)))));
                 }
             }
+            if brk!("retract_rederive_all" => true; false) {
+                seeds.extend(self.store.live_ids().into_iter().filter(|f| !self.store.rec(*f).base()));
+            }
             self.overdelete(seeds, &mut over, &mut over_base, d);
         }
         let derived_by = self.v.derived_by;
@@ -752,7 +766,7 @@ impl Eval {
                 let mut out = Front::default();
                 let mut orders: HashMap<Sym, Option<Vec<usize>>> = HashMap::new();
                 // until nothing more comes back: a fact of a recursion may rest on one derived again after it
-                let mut pending = again.clone();
+                let mut pending = if brk!("retract_unrederived" => !removed.is_empty(); false) { Vec::new() } else { again.clone() };
                 loop {
                     let mut still: Vec<FactId> = Vec::new();
                     let mut came = false;
@@ -771,7 +785,7 @@ impl Eval {
                     }
                 }
                 // and each that stands takes every firing it has, now that all that came back stands
-                if brk!("rederive_firings_short" => false; again.len() > 1) {
+                if brk!("rederive_firings_short" => false; again.len() > 1) && !brk!("retract_unrederived" => !removed.is_empty(); false) {
                     for x in again.iter().copied().filter(|x| self.store.alive(*x)).collect::<Vec<_>>() {
                         self.rederive_one(x, &by_head, &mut orders, &mut out)?;
                     }

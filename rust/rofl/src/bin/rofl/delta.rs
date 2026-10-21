@@ -5,7 +5,7 @@
 //! evaluation of the files gives. Anything else that moved, or a delta the engine has not worked out, evaluates the
 //! files whole, the reason said on stderr.
 use crate::kept::{self, Record, Unit};
-use rofl::session::{Addition, Retraction, Session};
+use rofl::session::{Addition, Session};
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
 
@@ -35,6 +35,9 @@ pub fn base_beside(slot: &str, walls: &[String]) -> Option<(String, Record)> {
 pub struct Done {
     pub units: Vec<Unit>,
     pub took: Vec<String>,
+    /// facts the retraction overdeleted and derived again, and the base facts it took out
+    pub touched: usize,
+    pub out: usize,
 }
 
 fn read(p: &str) -> Result<String, String> {
@@ -65,7 +68,7 @@ pub fn apply(s: &mut Session, r: &Record, files: &[String]) -> Result<Done, Stri
             Some(u) if !all && stamps.get(f.as_str()).is_some_and(|st| kept::holds(f, st)) => stays.extend(&u.facts),
             Some(u) => {
                 let text = read(f)?;
-                let (ids, rules, absent) = s.facts_of(&text)?;
+                let (ids, rules, _) = s.facts_of(&text)?;
                 if kept::rules_sum(&rules) != u.rules {
                     return Err(format!("the rules of {} changed", kept::shown(f)));
                 }
@@ -73,16 +76,17 @@ pub fn apply(s: &mut Session, r: &Record, files: &[String]) -> Result<Done, Stri
                 if rofl::brk!("kept_delta_keeps_old" => false; true) {
                     goes.extend(&u.facts);
                 }
-                add.push_str(&absent);
+                add.push_str(&text);
+                add.push('\n');
                 took.push(kept::shown(f));
                 texts.insert(f, text);
             }
             None => {
                 let text = read(f)?;
-                let (ids, rules, absent) = s.facts_of(&text)?;
+                let (ids, _, _) = s.facts_of(&text)?;
                 stays.extend(ids.iter().copied());
-                add.push_str(&rules);
-                add.push_str(&absent);
+                add.push_str(&text);
+                add.push('\n');
                 took.push(kept::shown(f));
                 texts.insert(f, text);
             }
@@ -99,10 +103,10 @@ pub fn apply(s: &mut Session, r: &Record, files: &[String]) -> Result<Done, Stri
         let mut seen = HashSet::new();
         goes.into_iter().filter(|f| !stays.contains(f) && seen.insert(*f)).collect()
     };
-    match s.retract_facts_delta(&out)? {
-        Retraction::Full(why) => return Err(why),
-        Retraction::Delta(_) => {}
-    }
+    let touched = match s.retract_set_delta(&out)? {
+        Err(why) => return Err(why),
+        Ok(d) => d.overdeleted + d.rederived,
+    };
     if !add.is_empty() {
         match s.load_delta(&add, None) {
             Err(d) => return Err(d.join("; ")),
@@ -123,5 +127,5 @@ pub fn apply(s: &mut Session, r: &Record, files: &[String]) -> Result<Done, Stri
             (None, None) => unreachable!("a file neither kept nor read"),
         }
     }
-    Ok(Done { units, took })
+    Ok(Done { units, took, touched, out: out.len() })
 }

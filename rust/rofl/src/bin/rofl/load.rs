@@ -236,7 +236,7 @@ fn run(json: bool, args: Vec<String>, mut pre: Option<(bool, crate::kept::Record
         });
         match done {
             Ok((t, d)) => {
-                eprintln!("the kept world took {} by delta: {}", if d.took.len() == 1 { "1 file".to_string() } else { format!("{} files", d.took.len()) }, d.took.join(", "));
+                eprintln!("the kept world took {} by delta: {} ({} facts out, {} overdeleted or derived again)", if d.took.len() == 1 { "1 file".to_string() } else { format!("{} files", d.took.len()) }, d.took.join(", "), d.out, d.touched);
                 if q != *slot.as_ref().unwrap() { let _ = std::fs::remove_file(&q); }
                 opened = Some(t);
                 by_delta = Some(d.units);
@@ -346,6 +346,8 @@ fn run(json: bool, args: Vec<String>, mut pre: Option<(bool, crate::kept::Record
             match crate::kept::record(&world, files_now, &units, &read, &s.eval.scans) {
                 Err(e) => eprintln!("the world is not kept: {e}"),
                 Ok(note) => {
+                    // kept with what a delta reads, so no later run indexes the world again
+                    s.eval.index_for_retraction();
                     if let Err(e) = crate::kept::keep_capped(&mut s, p, &note) {
                         eprintln!("the world is not kept: {e}");
                     }

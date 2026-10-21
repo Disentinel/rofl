@@ -2633,7 +2633,7 @@ impl Store {
             }
             c = n.next;
         }
-        if let Some(ix) = self.citers.as_mut().map(Rc::make_mut) {
+        if let Some(ix) = self.citers.as_mut().map(Rc::make_mut).filter(|_| brk!("citers_unkept" => false; true)) {
             for p in &w.prems {
                 if let PremRef::Fact(g) = p {
                     ix.more.entry(*g).or_default().push(id);

@@ -105,6 +105,140 @@ fn a_set_taken_out_in_one_pass_is_the_fresh_world() {
     assert!(taken > 150, "the pass took only {taken} sets: {refused:?}");
 }
 
+fn js_model() -> Vec<String> {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let list = std::fs::read_to_string(root.join("rules/js.files")).unwrap();
+    list.lines().filter(|l| !l.trim().is_empty()).map(|l| std::fs::read_to_string(root.join("rules").join(l.trim())).unwrap()).collect()
+}
+
+fn js_version(m: &str, v: usize) -> String {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    std::fs::read_to_string(root.join(format!("rust/rofl/tests/fixtures/delta/{m}.{v}.rofl"))).unwrap()
+}
+
+const MODS: [&str; 6] = ["db", "users", "orders", "log", "server", "util"];
+
+/// The JS world of the modules present at their versions (None: absent), evaluated from nothing.
+fn js_fresh(model: &[String], at: &[Option<usize>]) -> Session {
+    let mut s = Session::fresh(BUDGET);
+    for t in model { s.load(t, None).unwrap(); }
+    for (m, v) in MODS.iter().zip(at) {
+        if let Some(v) = v { s.load(&js_version(m, *v), None).unwrap(); }
+    }
+    s.evaluate().unwrap();
+    s
+}
+
+/// One step by delta: `m` goes from version `was` to `now` (None: absent). Its facts that no other file of the world
+/// asserts go out as a set, the new version's come in. What the pass did (overdeleted, derived again) and the file's
+/// own facts, for the measure of what an edit touches.
+fn js_step(s: &mut Session, model: &[rofl::store::FactId], at: &[Option<usize>], i: usize, now: Option<usize>, one_by_one: bool) -> Result<(usize, usize), String> {
+    let mut stays: std::collections::HashSet<rofl::store::FactId> = model.iter().copied().collect();
+    for (j, (m, v)) in MODS.iter().zip(at).enumerate() {
+        if let Some(v) = v.filter(|_| j != i) { stays.extend(s.facts_of(&js_version(m, v)).unwrap().0); }
+    }
+    let new_text = now.map(|v| js_version(MODS[i], v)).unwrap_or_default();
+    stays.extend(s.facts_of(&new_text).unwrap().0);
+    let (old, _, _) = at[i].map(|v| s.facts_of(&js_version(MODS[i], v)).unwrap()).unwrap_or_default();
+    let own = old.len();
+    let out: Vec<_> = old.into_iter().filter(|f| !stays.contains(f)).collect();
+    let touched = if one_by_one {
+        if let Retraction::Full(_) = s.retract_facts_one_by_one(&out)? { s.evaluate().map_err(|e| rofl::describe(&e))?; }
+        if s.eval.store.dirty { s.evaluate().map_err(|e| rofl::describe(&e))?; }
+        0
+    } else {
+        match s.retract_set_delta(&out)? {
+            Ok(d) => d.overdeleted + d.rederived,
+            Err(why) => return Err(format!("refused: {why}")),
+        }
+    };
+    if !new_text.is_empty() {
+        s.load_delta(&new_text, None).map_err(|d| d.join("; "))?;
+        if s.eval.store.dirty { s.evaluate().map_err(|e| rofl::describe(&e))?; }
+    }
+    Ok((touched, own.max(new_text.lines().count())))
+}
+
+/// RANDOM EDITS, REMOVALS AND ADDITIONS OF JS FILES, each taken by delta, held at every step to a fresh evaluation and
+/// every tenth step to the same step taken one fact at a time: 5 seeded sequences of 40 steps over the fixture's six
+/// modules in three versions, run at once.
+fn random_js_steps(seeds: &[u64]) {
+    let steps = if cfg!(debug_assertions) { 3 } else { 40 };
+    let model = js_model();
+    let results: Vec<Result<(usize, Vec<(usize, usize)>), String>> = std::thread::scope(|sc| {
+        let hs: Vec<_> = seeds.iter().copied().map(|seed| {
+            let model = &model;
+            sc.spawn(move || -> Result<(usize, Vec<(usize, usize)>), String> {
+                let mut r = Rng(seed * 104_729);
+                let mut at: Vec<Option<usize>> = vec![Some(0); MODS.len()];
+                let mut s = js_fresh(model, &at);
+                // the model's own facts, which no step takes out
+                let held: Vec<rofl::store::FactId> = model.iter().flat_map(|t| s.facts_of(t).unwrap().0).collect();
+                let mut ratios = Vec::new();
+                for step in 0..steps {
+                    let i = r.below(MODS.len());
+                    let now = match (at[i], r.below(5)) {
+                        (Some(_), 0) => None,
+                        (Some(v), _) => Some((v + 1 + r.below(2)) % 3),
+                        (None, _) => Some(r.below(3)),
+                    };
+                    let (touched, own) = js_step(&mut s, &held, &at, i, now, false).map_err(|e| format!("seed {seed} step {step}: {e}"))?;
+                    // the pass touches the file's layer and what reads it, never the world
+                    if touched > 30 * own + 100 {
+                        return Err(format!("seed {seed} step {step}: the pass touched {touched} facts for a file of {own}"));
+                    }
+                    // every tenth step, the same step taken one fact at a time from the world before it
+                    let check_ref = step % 10 == 9;
+                    let mut o = None;
+                    if check_ref {
+                        let mut w = js_fresh(model, &at);
+                        let held: Vec<rofl::store::FactId> = model.iter().flat_map(|t| w.facts_of(t).unwrap().0).collect();
+                        js_step(&mut w, &held, &at, i, now, true).map_err(|e| format!("seed {seed} step {step}, one by one: {e}"))?;
+                        o = Some(w);
+                    }
+                    at[i] = now;
+                    ratios.push((touched, own));
+                    let want = js_fresh(model, &at).eval.canonical_state();
+                    let got = s.eval.canonical_state();
+                    if got != want {
+                        return Err(format!("seed {seed} step {step} ({} -> {now:?}): {}", MODS[i], first_diff(&want, &got)));
+                    }
+                    if let Some(mut o) = o {
+                        let one = o.eval.canonical_state();
+                        if one != want {
+                            return Err(format!("seed {seed} step {step}, one at a time: {}", first_diff(&want, &one)));
+                        }
+                    }
+                }
+                Ok((steps, ratios))
+            })
+        }).collect();
+        hs.into_iter().map(|h| h.join().unwrap()).collect()
+    });
+    let mut all: Vec<(usize, usize)> = Vec::new();
+    for r in &results {
+        match r {
+            Ok((_, rs)) => all.extend(rs),
+            Err(e) => panic!("{e}"),
+        }
+    }
+    let (t, o): (usize, usize) = all.iter().fold((0, 0), |a, x| (a.0 + x.0, a.1 + x.1));
+    let worst = all.iter().map(|(t, o)| *t as f64 / (*o).max(1) as f64).fold(0.0, f64::max);
+    eprintln!("{} steps by delta, each the fresh world; facts the pass touched {t} against the edited files' own {o} (ratio {:.2}, worst step {:.2})", all.len(), t as f64 / o.max(1) as f64, worst);
+}
+
+// one sequence a test, each under two minutes alone (`--test-threads 1`); the five together are the 200 steps
+#[test]
+fn random_js_steps_1() { random_js_steps(&[1]) }
+#[test]
+fn random_js_steps_2() { random_js_steps(&[2]) }
+#[test]
+fn random_js_steps_3() { random_js_steps(&[3]) }
+#[test]
+fn random_js_steps_4() { random_js_steps(&[4]) }
+#[test]
+fn random_js_steps_5() { random_js_steps(&[5]) }
+
 /// A JS file's facts taken out of the JS model: the world a fresh evaluation without the file gives.
 #[test]
 fn a_js_files_facts_taken_out_are_the_fresh_world() {
