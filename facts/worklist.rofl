@@ -3986,3 +3986,28 @@ work(w_bench_legacy_full,
   "AFTER THE PILOT (w_bench_legacy_pilot): arm C, the weak model writes the project layer the scanner cannot see (invariants, intent, infrastructure facts) itself, the cost of building it counted beside the answers: the measure of whether a model built by an LLM pays for itself; real bugs from JS projects (BugsJS, 453 bugs with tests and patches, to be checked), the owner's work corpus; then a study with people.").
 work_state(w_bench_legacy_full, open).
 work_needs(w_bench_legacy_full, w_bench_legacy_pilot).
+
+-- ===========================================================================
+-- THE REFERENCE SCALE (CLAUDE.md, "The goal", the owner 2026-10-21): 11 100 JS/TS
+-- files on a Mac M4 Pro, 20 minutes and ~23 GB today; a first whole evaluation
+-- within 5 minutes, a repeated question in about a second, an edit costing in
+-- proportion to the edit.
+
+work(w_reference_scale_in_five_minutes,
+  "The owner's work codebase (11 100 JS/TS files, NDA: only numbers enter this repository) evaluated whole with the JS model within 5 minutes on a Mac M4 Pro, so that it runs in CI. MEASURED by the owner 2026-10-21: 20 minutes on 6 workers, parsing about 16 seconds of it, ~23 GB peak: the time is the engine's, not the scanner's. The owner expects it to scale with cores; not measured. ACCEPTANCE: the owner's run, phases and peak reported; until then a public corpus of the same order stands in for it in npm run bench.").
+work_state(w_reference_scale_in_five_minutes, open).
+
+work(w_kept_by_default,
+  "IN PROGRESS 2026-10-21 (branch kept-world): rofl ask, why, whynot and excise keep the world they evaluate in a user cache, keyed by everything it was computed from, and answer the next question from it; a changed input is a miss that evaluates again and says why on stderr. The cache is capped in GB (one knob, ROFL_CACHE_GB) with a free-disk floor; older worlds are evicted first; for now a world over the cap is not kept and the answer is given. `--kept F` keeps the owner's stale-refuses semantics. rofl load, serve and every gate never read it.").
+work_state(w_kept_by_default, open).
+
+work(w_kept_world_by_delta,
+  "The owner, 2026-10-21: an edit of one file of 11 100 must not evaluate the world again (20 minutes at the reference scale). The kept world records which base facts came from which source file; a miss whose changed inputs are files opens the kept world, takes out the facts of the changed and removed files, adds those of their new versions, rescanning only them (per-file independence: npm run test:split), by the engine's delta both ways (f_an_evaluated_world_takes_facts_and_rules_by_delta), falling back to a whole evaluation with the reason named. ACCEPTANCE: random sequences of edits, removals and additions of files give, byte for byte, the world a fresh evaluation gives; the time of one edit measured against the whole on the largest corpus at hand, scan and engine apart.").
+work_state(w_kept_world_by_delta, open).
+work_needs(w_kept_world_by_delta, w_kept_by_default).
+
+work(w_disk_wall,
+  "The owner, 2026-10-21: when a world grows past the cache's size, the evaluation stops there, the world is kept with holes whose reason is the disk wall (budget disk SIZE), answers from it are partial, and raising the cap goes on from where it stopped rather than from scratch. MEASURED by the kept-world agent: the world lives on the heap while it evaluates and is written as a volume once at the end, so a disk wall needs a running byte measure of the store and heap arenas (the space wall counts rows) checked where the step and space walls are, and a hole reason in both engines. Going on from a cut world exists for the budget wall (w_resume_after_budget, tests/resume.rs) and is reused. A kept volume is 76-89 bytes per fact, 36-81% of the peak heap. ACCEPTANCE: a cap reached gives partial answers and the disk hole; a cap raised goes on and equals, byte for byte, a run with the larger cap from the start; planted, a continuation from scratch and an ignored wall are each red.").
+work_state(w_disk_wall, open).
+work_needs(w_disk_wall, w_kept_by_default).
+work_needs(w_disk_wall, w_resume_after_budget).
