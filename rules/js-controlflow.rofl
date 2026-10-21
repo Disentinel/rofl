@@ -31,7 +31,7 @@ guard_kind(switch_case,                consequent).
 guard_kind(try_statement,              handler).
 
 -- ANY index: `switch_case`'s `consequent` is an array, one arm per statement.
-guard_arm[code](P, A) :- guard_kind(K, Field), ast_node[code](P, K, _, _),
+guard_arm[code](P, A) :- guard_kind(K, Field), ast_node[code](P, K, _),
                          ast_child[code](P, Field, _, A).
 
 -- `x ??= f()`, `x ||= f()`, `x &&= f()` short-circuit as their operators do;
@@ -41,13 +41,13 @@ short_circuit_assign("??=").
 short_circuit_assign("||=").
 short_circuit_assign("&&=").
 guard_arm[code](P, A) :- short_circuit_assign(Op), ast_attr[code](P, operator, Op),
-                         ast_node[code](P, assignment_expression, _, _), ast_child[code](P, right, 0, A).
+                         ast_node[code](P, assignment_expression, _), ast_child[code](P, right, 0, A).
 
 -- A non-static field initialiser runs once per construction and never if the
 -- class is never constructed; a static one runs with the definition. Derived
 -- from `transfer_mechanism(K, per_construction)`, not a second list.
 field_init[code](P, V) :- transfer_mechanism(K, per_construction),
-                          ast_node[code](P, K, _, _), ast_attr[code](P, static, false),
+                          ast_node[code](P, K, _), ast_attr[code](P, static, false),
                           ast_child[code](P, value, 0, V).
 guard_arm[code](P, V)  :- field_init[code](P, V).
 
@@ -78,7 +78,7 @@ after_abrupt[code](S) :- abrupt_at[code](B, F, I), ast_child[code](B, F, J, S), 
 -- a MAY and is deliberately not an `abrupt_at` arm. Confined to the suspending
 -- function: without `nearest_v` an `await` inside a function would guard
 -- everything after that function's declaration at module level.
-suspend_at[code](B, F, I) :- transfer_mechanism(K, suspend), ast_node[code](X, K, _, _),
+suspend_at[code](B, F, I) :- transfer_mechanism(K, suspend), ast_node[code](X, K, _),
                              nearest_v[flow](G, X), ast_within[code](S, X),
                              ast_within[code](G, S),
                              ast_child[code](B, F, I, S), stmt_seq_field(F).
@@ -96,9 +96,9 @@ stmt_seq_unseen[audit](F) :- stmt_seq_field(F), not ast_child[code](_, F, 0, _).
 -- between reference and target and the walking arms then say NEVER where the
 -- honest word is MAY (f_after_abrupt_says_never_and_the_walking_arms_say_may);
 -- harmless, because both consumers read through `guarded`.
-label_name[code](LS, N)   :- ast_node[code](LS, labeled_statement, _, _),
+label_name[code](LS, N)   :- ast_node[code](LS, labeled_statement, _),
                              ast_child[code](LS, label, 0, I), ast_attr[code](I, name, N).
-label_ref[code](X, N)     :- abrupt_kind(K), ast_node[code](X, K, _, _),
+label_ref[code](X, N)     :- abrupt_kind(K), ast_node[code](X, K, _),
                              ast_child[code](X, label, 0, I), ast_attr[code](I, name, N).
 label_target[code](X, LS) :- label_ref[code](X, N), label_name[code](LS, N),
                              ast_within[code](LS, X).
@@ -122,18 +122,18 @@ completion_kind(block_statement).
 completion_kind(if_statement).
 completion_kind(labeled_statement).
 
-completes_abruptly[code](S) :- abrupt_kind(K), ast_node[code](S, K, _, _).
+completes_abruptly[code](S) :- abrupt_kind(K), ast_node[code](S, K, _).
 
 completes_abruptly[code](B) :- completes_abruptly[code](S), ast_child[code](B, body, _, S),
-                               ast_node[code](B, block_statement, _, _).
+                               ast_node[code](B, block_statement, _).
 
 completes_abruptly[code](S) :- completes_abruptly[code](C), ast_child[code](S, consequent, 0, C),
-                               ast_node[code](S, if_statement, _, _),
+                               ast_node[code](S, if_statement, _),
                                ast_child[code](S, alternate, 0, A), completes_abruptly[code](A).
 
 label_escaped[code](LS)      :- label_target[code](_, LS).
 completes_abruptly[code](LS) :- completes_abruptly[code](S), ast_child[code](LS, body, 0, S),
-                                ast_node[code](LS, labeled_statement, _, _),
+                                ast_node[code](LS, labeled_statement, _),
                                 not label_escaped[code](LS).
 
 -- the consumer: it replaces the old four-kind arm rather than sitting beside
@@ -143,8 +143,8 @@ abrupt_at[code](B, F, I) :- completes_abruptly[code](S), ast_child[code](B, F, I
 
 -- a kind this closure claims and never decides — misspelled, deleted or
 -- unexercised all read as "the closure is smaller than it says"
-completion_decided[code](K)    :- completes_abruptly[code](S), ast_node[code](S, K, _, _).
-completion_unreached[audit](K) :- completion_kind(K), ast_node[code](_, K, _, _),
+completion_decided[code](K)    :- completes_abruptly[code](S), ast_node[code](S, K, _).
+completion_unreached[audit](K) :- completion_kind(K), ast_node[code](_, K, _),
                                   not completion_decided[code](K).
 
 -- Seven kinds can hold a `return` and still complete normally, declared rather
@@ -173,12 +173,12 @@ completion_known(K) :- abrupt_kind(K).
 -- the candidate and the boundary asked of it; the other order crossed every
 -- function with every abrupt completion, 8.8 s to 21.7 s for one rule.
 completion_outer[code](P, S)      :- completes_abruptly[code](S), ast_within[code](P, S),
-                                     ast_node[code](P, K, _, _), not completion_known(K),
+                                     ast_node[code](P, K, _), not completion_known(K),
                                      not fn_node[code](P),
                                      ast_child[code](_, F, _, P), stmt_seq_field(F).
 completion_fn_between[code](P, S) :- completion_outer[code](P, S), ast_within[code](G, S),
                                      fn_node[code](G), ast_within[code](P, G).
-completion_unaccounted[audit](K)  :- completion_outer[code](P, S), ast_node[code](P, K, _, _),
+completion_unaccounted[audit](K)  :- completion_outer[code](P, S), ast_node[code](P, K, _),
                                      not completion_fn_between[code](P, S).
 
 -- =========================================================================
@@ -194,10 +194,10 @@ deferred_body[code](F) :- fn_node[code](F), ast_attr[code](F, A, true), deferred
 async_body[code](F)    :- deferred_body[code](F), not ast_attr[code](F, generator, true).
 sync_body[code](F)     :- fn_node[code](F), not deferred_body[code](F).
 
-has_return[code](F)    :- ast_node[code](R, return_statement, _, _), nearest_v[flow](F, R).
+has_return[code](F)    :- ast_node[code](R, return_statement, _), nearest_v[flow](F, R).
 top_throw[code](F)     :- fn_node[code](F), ast_child[code](F, body, 0, B),
                           ast_child[code](B, body, _, S),
-                          ast_node[code](S, throw_statement, _, _).
+                          ast_node[code](S, throw_statement, _).
 always_throws[code](F) :- top_throw[code](F), not has_return[code](F), not deferred_body[code](F).
 
 throwing_call[code](C) :- always_throws[code](F), resolves[code](C, F),
@@ -230,8 +230,8 @@ accessor_read[code](N, M) :- accessor_recv[flow](N, Obj), accessor_as[flow](Obj,
                              selects[flow](N, Key), written_member[code](N).
 accessor_read[code](N, M) :- private_binds[code](N, M), ast_attr[code](M, kind, "get"), not only_written[code](N).
 accessor_read[code](N, M) :- private_binds[code](N, M), ast_attr[code](M, kind, "set"), written_member[code](N).
-written_member[code](N)   :- ast_node[code](A, assignment_expression, _, _), ast_child[code](A, left, 0, N).
-written_member[code](N)   :- ast_node[code](U, update_expression, _, _), ast_child[code](U, argument, 0, N).
+written_member[code](N)   :- ast_node[code](A, assignment_expression, _), ast_child[code](A, left, 0, N).
+written_member[code](N)   :- ast_node[code](U, update_expression, _), ast_child[code](U, argument, 0, N).
 only_written[code](N)     :- plain_assign[flow](A), ast_child[code](A, left, 0, N).
 
 throwing_call[code](N) :- accessor_read[code](N, M), always_throws[code](M).
@@ -249,30 +249,30 @@ site[code](N) :- accessor_read[code](N, _).
 -- `accessor_of` and `member_value(Obj, symbol_iterator, M)` already decide. Only
 -- the declarator form: a pattern in a parameter reads the argument, a
 -- call-site question, so it is silent here rather than wrong.
-pattern_source[code](P, Init) :- ast_node[code](D, variable_declarator, _, _),
+pattern_source[code](P, Init) :- ast_node[code](D, variable_declarator, _),
                                  ast_child[code](D, id, 0, P),
                                  decl_value[flow](D, Init).
 
 pattern_accessor[code](P, M) :- accessor_of[flow](Obj, Key, M), may_be_node[flow](Init, Obj),
-                                pattern_source[code](P, Init), ast_node[code](P, object_pattern, _, _),
+                                pattern_source[code](P, Init), ast_node[code](P, object_pattern, _),
                                 pattern_takes[code](P, Key).
 pattern_accessor[code](R, M) :- rest_in_pattern[code](D, R, _),
                                 ast_child[code](D, id, 0, P),
                                 decl_value[flow](D, Init), may_be_node[flow](Init, Obj),
                                 accessor_of[flow](Obj, Key, M), not pattern_takes[code](P, Key).
 pattern_accessor[code](S, M) :- accessor_of[flow](Obj, Key, M), may_be_node[flow](A, Obj),
-                                ast_child[code](S, argument, 0, A), ast_node[code](S, spread_element, _, _),
-                                ast_child[code](O, properties, _, S), ast_node[code](O, object_expression, _, _).
+                                ast_child[code](S, argument, 0, A), ast_node[code](S, spread_element, _),
+                                ast_child[code](O, properties, _, S), ast_node[code](O, object_expression, _).
 
 -- `spread_element` is one kind doing two things: in `properties` it copies
 -- keys, in `elements`/`arguments` it exhausts an iterator — keyed by FIELD.
 edb(spread_iterable_field).
 spread_iterable_field(elements).
 spread_iterable_field(arguments).
-spread_iterated[code](S) :- ast_node[code](S, spread_element, _, _),
+spread_iterated[code](S) :- ast_node[code](S, spread_element, _),
                             spread_iterable_field(F), ast_child[code](_, F, _, S).
 
-pattern_iterates[code](P, M) :- ast_node[code](P, array_pattern, _, _),
+pattern_iterates[code](P, M) :- ast_node[code](P, array_pattern, _),
                                 pattern_source[code](P, Init), may_be_node[flow](Init, Obj),
                                 member_value[flow](Obj, symbol_iterator, M), fn_value[flow](M).
 pattern_iterates[code](S, M) :- spread_iterated[code](S),
@@ -312,27 +312,27 @@ calls[code](Caller, Next) :- pattern_next[code](X, Next), nearest_fn[code](Calle
 -- the hand-written mechanism column against `transfer_mechanism`; it is blind
 -- to `spread_element`, which carries both mechanisms — mutant d9 reads the
 -- edges instead.
-hidden_call_pos[code](N, accessor_call) :- ast_node[code](N, object_pattern, _, _).
-hidden_call_pos[code](R, accessor_call) :- ast_node[code](R, rest_element, _, _),
+hidden_call_pos[code](N, accessor_call) :- ast_node[code](N, object_pattern, _).
+hidden_call_pos[code](R, accessor_call) :- ast_node[code](R, rest_element, _),
                                            ast_child[code](P, properties, _, R),
-                                           ast_node[code](P, object_pattern, _, _).
-hidden_call_pos[code](S, accessor_call) :- ast_node[code](O, object_expression, _, _),
+                                           ast_node[code](P, object_pattern, _).
+hidden_call_pos[code](S, accessor_call) :- ast_node[code](O, object_expression, _),
                                            ast_child[code](O, properties, _, S),
-                                           ast_node[code](S, spread_element, _, _).
-hidden_call_pos[code](N, iterator_call) :- ast_node[code](N, array_pattern, _, _).
+                                           ast_node[code](S, spread_element, _).
+hidden_call_pos[code](N, iterator_call) :- ast_node[code](N, array_pattern, _).
 hidden_call_pos[code](S, iterator_call) :- spread_iterated[code](S).
-hidden_call_pos[code](X, iterator_call) :- ast_node[code](X, for_of_statement, _, _).
+hidden_call_pos[code](X, iterator_call) :- ast_node[code](X, for_of_statement, _).
 
-hidden_call_src[code](P, Init) :- ast_node[code](P, object_pattern, _, _),
+hidden_call_src[code](P, Init) :- ast_node[code](P, object_pattern, _),
                                   pattern_source[code](P, Init).
-hidden_call_src[code](P, Init) :- ast_node[code](P, array_pattern, _, _),
+hidden_call_src[code](P, Init) :- ast_node[code](P, array_pattern, _),
                                   pattern_source[code](P, Init).
 hidden_call_src[code](R, Init) :- rest_in_pattern[code](D, R, _),
                                   decl_value[flow](D, Init).
-hidden_call_src[code](S, A)    :- ast_node[code](S, spread_element, _, _),
+hidden_call_src[code](S, A)    :- ast_node[code](S, spread_element, _),
                                   hidden_call_pos[code](S, _),
                                   ast_child[code](S, argument, 0, A).
-hidden_call_src[code](X, R)    :- ast_node[code](X, for_of_statement, _, _),
+hidden_call_src[code](X, R)    :- ast_node[code](X, for_of_statement, _),
                                   ast_child[code](X, right, 0, R).
 
 hidden_call_user[flow](N, M) :- pattern_accessor[code](N, M).
@@ -353,7 +353,7 @@ hidden_call_untraced[flow](N, Src) :- hidden_call_src[code](N, Src),
 hidden_call_sourced[code](N)       :- hidden_call_src[code](N, _).
 hidden_call_unsourced[flow](N, K)  :- hidden_call_pos[code](N, _),
                                       not hidden_call_sourced[code](N),
-                                      ast_node[code](N, K, _, _).
+                                      ast_node[code](N, K, _).
 
 hidden_call_accounted[audit](N)   :- hidden_call_fires[code](N).
 hidden_call_accounted[audit](N)   :- hidden_call_builtin[flow](N, _).
@@ -364,7 +364,7 @@ hidden_call_unaccounted[audit](N) :- hidden_call_pos[code](N, _),
                                      not hidden_call_accounted[audit](N).
 
 hidden_call_off_table[audit](K, M) :- hidden_call_pos[code](N, M),
-                                      ast_node[code](N, K, _, _),
+                                      ast_node[code](N, K, _),
                                       not transfer_mechanism(K, M).
 
 -- =========================================================================
@@ -372,7 +372,7 @@ hidden_call_off_table[audit](K, M) :- hidden_call_pos[code](N, M),
 -- `try { const f = () => g() } catch {}` has `g()` inside the block textually
 -- and it runs later, elsewhere. A throw in a HANDLER is not caught by its own
 -- clause: `block`, not the whole try.
-in_try_block[code](TS, N)  :- ast_node[code](TS, try_statement, _, _),
+in_try_block[code](TS, N)  :- ast_node[code](TS, try_statement, _),
                               ast_child[code](TS, block, 0, B), ast_within[code](B, N).
 
 -- A try discharges through its `handler`; a finalizer alone catches nothing —
@@ -381,7 +381,7 @@ in_try_block[code](TS, N)  :- ast_node[code](TS, try_statement, _, _),
 -- (f_a_try_with_no_handler_catches_nothing_and_caught_here_says_it_does).
 edb(catches_via).
 catches_via(try_statement, handler).
-try_catches[code](TS)      :- catches_via(K, Field), ast_node[code](TS, K, _, _),
+try_catches[code](TS)      :- catches_via(K, Field), ast_node[code](TS, K, _),
                               ast_child[code](TS, Field, 0, _).
 -- The block walked down to the first function boundary, as `nearest_v` walks:
 -- the whole subtree joined back to its function was 1.4 M probes.
@@ -390,7 +390,7 @@ try_walk[code](TS, X)      :- try_catches[code](TS),
 try_walk[code](TS, X)      :- try_walk[code](TS, P), not fn_node[code](P), ast_in[code](P, X).
 caught_here[code](N)       :- try_walk[code](_, N).
 
-throws_outright[code](F) :- ast_node[code](T, throw_statement, _, _),
+throws_outright[code](F) :- ast_node[code](T, throw_statement, _),
                             nearest_v[flow](F, T), not caught_here[code](T).
 
 -- `may_throw` is a handful of rows and binds G, so `resolves` is probed by
@@ -403,7 +403,7 @@ may_throw[code](F) :- may_throw[code](G), sync_body[code](G), resolves[code](C, 
 may_throw[code](F) :- may_throw[code](G), async_body[code](G), resolves[code](C, G),
                       await_arg[code](A, C), nearest_v[flow](F, A), not caught_here[code](A).
 
-thrown_by[flow](F, V) :- ast_node[code](T, throw_statement, _, _), nearest_v[flow](F, T),
+thrown_by[flow](F, V) :- ast_node[code](T, throw_statement, _), nearest_v[flow](F, T),
                          not caught_here[code](T), ast_child[code](T, argument, 0, V).
 thrown_by[flow](F, V) :- thrown_by[flow](G, V), sync_body[code](G), resolves[code](C, G),
                          nearest_fn[code](F, C), not caught_here[code](C).
@@ -462,7 +462,7 @@ export_kind(export_named_declaration).
 export_kind(export_default_declaration).
 
 exported_fn[code](F) :- fn_node[code](F), not in_fn[code](F), ast_within[code](E, F),
-                        ast_node[code](E, K, _, _), export_kind(K).
+                        ast_node[code](E, K, _), export_kind(K).
 
 -- `export { f }` may hand on a function of another file: the exporting file publishes it, the function's file reads it
 sx_entry[surface](F) :- export_local[code](L, _, _), may_be_node[flow](L, F),
@@ -480,12 +480,12 @@ may_not_be_reached[code](F) :- sx_called[surface](F), not reachable[code](F).
 
 -- the typo hole again: a misspelling shrinks the entry surface and reports
 -- live functions as maybe-dead, the dangerous direction
-export_kind_unseen[audit](K) :- export_kind(K), not ast_node[code](_, K, _, _).
+export_kind_unseen[audit](K) :- export_kind(K), not ast_node[code](_, K, _).
 
 -- A file with functions and no entry point reports every function dead — an
 -- artefact of the seed, named. `has_entry` is [code]: a denominator, not a gate.
-has_entry[code](File)       :- entry_point[code](F), ast_node[code](F, _, File, _).
-no_entry_point[audit](File) :- fn_node[code](F), ast_node[code](F, _, File, _),
+has_entry[code](File)       :- entry_point[code](F), ast_node[code](F, _, File).
+no_entry_point[audit](File) :- fn_node[code](F), ast_node[code](F, _, File),
                                not has_entry[code](File).
 
 -- =========================================================================
@@ -580,7 +580,7 @@ guard_named[code](rest_element).
 guard_named[code](spread_element).
 guard_named[code](K)       :- transfer_mechanism(K, iterator_call).
 guard_unmodelled[audit](K) :- transfer_mechanism(K, M), mechanism_modelled(M),
-                              ast_node[code](_, K, _, _), not guard_named[code](K).
+                              ast_node[code](_, K, _), not guard_named[code](K).
 
 -- SHORT-CIRCUIT: `a?.b()` stops the whole chain, so the site and everything
 -- further along it is conditional.
@@ -588,19 +588,19 @@ edb(short_circuit_kind).
 short_circuit_kind(optional_call_expression).
 short_circuit_kind(optional_member_expression).
 
-guarded[code](N) :- short_circuit_kind(K), ast_node[code](N, K, _, _).
-guarded[code](N) :- short_circuit_kind(K), ast_node[code](P, K, _, _),
+guarded[code](N) :- short_circuit_kind(K), ast_node[code](N, K, _).
+guarded[code](N) :- short_circuit_kind(K), ast_node[code](P, K, _),
                     ast_within[code](P, N).
 
 -- an arm declared for a field the scanner never emits under that kind: a typo
 -- makes the guarded set quietly smaller
-guard_arm_seen[code](K, Field) :- guard_kind(K, Field), ast_node[code](P, K, _, _),
+guard_arm_seen[code](K, Field) :- guard_kind(K, Field), ast_node[code](P, K, _),
                                   ast_child[code](P, Field, 0, _).
-guard_arm_unseen[audit](K, F)  :- guard_kind(K, F), ast_node[code](_, K, _, _),
+guard_arm_unseen[audit](K, F)  :- guard_kind(K, F), ast_node[code](_, K, _),
                                   not guard_arm_seen[code](K, F).
 
 -- a guarded site at a coordinate, for the report and the runtime comparison
-guarded_at[code](File, Line) :- guarded_call[code](C), ast_node[code](C, _, File, Line).
+guarded_at[code](File, Line) :- guarded_call[code](C), ast_node[code](C, _, File), ast_line[code](C, Line).
 
 -- the callee-keyed verdicts read the callers through rules/js-surface.rofl
 imports(code, surface).

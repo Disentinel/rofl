@@ -286,7 +286,7 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
         if (neg) {
           // `unless X is a spread`: one kind, one negated guard; a set has no single literal to negate
           const atoms = ns.flatMap((n) => n.startsWith('`') ? [n.slice(1)] : nounAtoms.get(n) ?? []);
-          if (atoms.length === ns.length) { for (const a of atoms) rule.body.push({ rel: 'ast_node', args: [{ v: subj }, { a }, { w: true }, { w: true }], neg: true }); return true; }
+          if (atoms.length === ns.length) { for (const a of atoms) rule.body.push({ rel: 'ast_node', args: [{ v: subj }, { a }, { w: true }], neg: true }); return true; }
           unparsed.push(`unless ${text}`); return false;
         }
         rule.guards.set(subj, { noun: ns[0], nouns: ns, file: rule.guards.get(subj)?.file }); known.set(subj, ns[0]); return true;
@@ -1035,11 +1035,11 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
       let opts: { rel: string; neg: boolean; args: string[] }[][] = [];
       for (const file of (g.file ? alternatives(g.file).map(tstr) : ['_'])) for (const noun of (g.nouns ?? [g.noun])) {
         const sets = nounSets.get(noun), atoms = noun.startsWith('`') ? [noun.slice(1)] : nounAtoms.get(noun);
-        if (noun === 'node') opts.push([{ rel: 'ast_node', neg: false, args: [v, '_', file, '_'] }]);
-        else if (nounGuards.has(noun)) opts.push([{ rel: nounGuards.get(noun)!, neg: false, args: [v] }, ...(file === '_' ? [] : [{ rel: 'ast_node', neg: false, args: [v, '_', file, '_'] }])]);
-        else if (sets && sets.length) opts.push([{ rel: 'ast_node', neg: false, args: [v, `K_${v}`, file, '_'] }, { rel: sets[0], neg: false, args: [`K_${v}`] }]);
-        else if (atoms && atoms.length) for (const a of atoms) opts.push([{ rel: 'ast_node', neg: false, args: [v, a, file, '_'] }]);
-        else opts.push(file === '_' ? [] : [{ rel: 'ast_node', neg: false, args: [v, '_', file, '_'] }]);   // a type with a file: the file alone is the guard
+        if (noun === 'node') opts.push([{ rel: 'ast_node', neg: false, args: [v, '_', file] }]);
+        else if (nounGuards.has(noun)) opts.push([{ rel: nounGuards.get(noun)!, neg: false, args: [v] }, ...(file === '_' ? [] : [{ rel: 'ast_node', neg: false, args: [v, '_', file] }])]);
+        else if (sets && sets.length) opts.push([{ rel: 'ast_node', neg: false, args: [v, `K_${v}`, file] }, { rel: sets[0], neg: false, args: [`K_${v}`] }]);
+        else if (atoms && atoms.length) for (const a of atoms) opts.push([{ rel: 'ast_node', neg: false, args: [v, a, file] }]);
+        else opts.push(file === '_' ? [] : [{ rel: 'ast_node', neg: false, args: [v, '_', file] }]);   // a type with a file: the file alone is the guard
       }
       variants = variants.flatMap((vs) => opts.map((o) => [...vs, ...o]));
     }

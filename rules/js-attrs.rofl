@@ -102,10 +102,10 @@ attr_guard_kind(R, K, S, Kind) :- rule_prem(R, L), attr_test_lit(L, S, K), attr_
 attr_guard_pinned(R, K, S)     :- attr_guard_kind(R, K, S, _).
 
 attr_slot_gap(K, F, Kind) :- attr_guard_slot(R, K, S, F), not attr_guard_pinned(R, K, S),
-                             ast_child[code](P, F, _, _), ast_node[code](P, Kind, _, _),
+                             ast_child[code](P, F, _, _), ast_node[code](P, Kind, _),
                              not ast_attr[code](P, K, _).
 attr_slot_gap(K, F, Kind) :- attr_guard_slot(R, K, S, F), attr_guard_kind(R, K, S, Kind),
-                             ast_child[code](P, F, _, _), ast_node[code](P, Kind, _, _),
+                             ast_child[code](P, F, _, _), ast_node[code](P, Kind, _),
                              not ast_attr[code](P, K, _).
 
 -- THE POLARITY IS THE GATE. A gap under a NEGATED test is harmless:
@@ -118,10 +118,10 @@ attr_guard_slot_pos(R, K, S, F) :- pos_prem(R, L), attr_test_lit(L, S, K), attr_
                                    rule_prem(R, L2), child_lit(L2, S, F), child_lit_svar(L2, S),
                                    not child_lit_fvar(L2, F).
 attr_pos_slot_gap(K, F, Kind) :- attr_guard_slot_pos(R, K, S, F), not attr_guard_pinned(R, K, S),
-                                 ast_child[code](P, F, _, _), ast_node[code](P, Kind, _, _),
+                                 ast_child[code](P, F, _, _), ast_node[code](P, Kind, _),
                                  not ast_attr[code](P, K, _).
 attr_pos_slot_gap(K, F, Kind) :- attr_guard_slot_pos(R, K, S, F), attr_guard_kind(R, K, S, Kind),
-                                 ast_child[code](P, F, _, _), ast_node[code](P, Kind, _, _),
+                                 ast_child[code](P, F, _, _), ast_node[code](P, Kind, _),
                                  not ast_attr[code](P, K, _).
 
 edb(attr_slot_gap_ok).    -- attr_slot_gap_ok(Key, Field, Kind, Reason)
@@ -138,8 +138,8 @@ attr_slot_gap_ok_unseen[audit](K, F, Kind) :- attr_slot_gap_ok(K, F, Kind, _),
 -- of an attribute can depend on ANOTHER attribute of the same node. A split
 -- kind is present in the slot, so `attr_slot_gap` finds nothing, and the
 -- guard is blind to exactly the nodes that lack it.
-attr_kind_has(Kind, K)   :- ast_node[code](P, Kind, _, _), ast_attr[code](P, K, _).
-attr_kind_lacks(Kind, K) :- attr_kind_has(Kind, K), ast_node[code](P, Kind, _, _),
+attr_kind_has(Kind, K)   :- ast_node[code](P, Kind, _), ast_attr[code](P, K, _).
+attr_kind_lacks(Kind, K) :- attr_kind_has(Kind, K), ast_node[code](P, Kind, _),
                             not ast_attr[code](P, K, _).
 
 edb(attr_split_ok).       -- attr_split_ok(Key, Kind, Reason)

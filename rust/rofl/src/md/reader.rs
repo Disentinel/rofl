@@ -833,7 +833,7 @@ impl R {
                 if neg {
                     let atoms: Vec<String> = ns.iter().flat_map(|n| if let Some(a) = n.strip_prefix('`') { vec![a.to_string()] } else { self.noun_atoms.get(n).cloned().unwrap_or_default() }).collect();
                     if atoms.len() == ns.len() {
-                        for a in atoms { rule.body.push(Lit { neg: true, ..lit("ast_node", vec![V(subj.clone()), A(a), W, W]) }); }
+                        for a in atoms { rule.body.push(Lit { neg: true, ..lit("ast_node", vec![V(subj.clone()), A(a), W]) }); }
                         return true;
                     }
                     self.unparsed.push(format!("unless {text}"));
@@ -1672,7 +1672,7 @@ impl R {
                 for noun in &nouns {
                     let sets = self.noun_sets.get(noun).cloned();
                     let atoms = if let Some(a) = noun.strip_prefix('`') { Some(vec![a.to_string()]) } else { self.noun_atoms.get(noun).cloned() };
-                    let ast = |k: &str| clit("ast_node", vec![v.clone(), k.into(), file.clone(), "_".into()]);
+                    let ast = |k: &str| clit("ast_node", vec![v.clone(), k.into(), file.clone()]);
                     if noun == "node" { opts.push(vec![ast("_")]); }
                     else if let Some(rel) = self.noun_guards.get(noun) {
                         let mut o = vec![clit(rel, vec![v.clone()])];

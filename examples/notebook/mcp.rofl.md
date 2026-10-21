@@ -187,7 +187,7 @@ A call C calls ensureAnalyzed if C resolves to a function F and F answers to "en
 > function, the one MCP actually invokes per request.
 
 ```rofl
-A node F is the request dispatcher if F is of kind `arrow_function_expression` in file "grafema/packages/mcp/src/server.ts" at line 251.
+A node F is the request dispatcher if F is of kind `arrow_function_expression` in file "grafema/packages/mcp/src/server.ts" and F is at line 251.
 
 A node F throws to the client if F is the request dispatcher and F may throw.
 

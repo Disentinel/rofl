@@ -24,7 +24,7 @@ code:
 > root, and this never failed on all three handlers.
 
 ```datalog
-handler(F, N) :- exports_name[code](F, N, File), ast_node[code](F, _, File, _), D is str_pre(File, "/handlers/"), D = "xdir".
+handler(F, N) :- exports_name[code](F, N, File), ast_node[code](F, _, File), D is str_pre(File, "/handlers/"), D = "xdir".
 dispatched(F) :- calls[code](D, F), ast_child[code](D, id, 0, I), ast_name[code](I, "dispatch").
 undispatched(N) :- handler(F, N), not dispatched(F).
 

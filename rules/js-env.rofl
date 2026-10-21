@@ -37,12 +37,12 @@ env_has[audit](E, F)  :- environment(E), has_feature[audit](E, F).
 -- A `meta_property` carries no `ast_attr` at all, so only its `meta` child
 -- can tell ES2015 from ES2020. Top-level `await` is decided by an ancestor:
 -- `ast_attr(F, async, true)` marks every function form the scanner emits.
-uses[audit](N, F) :- ast_node[code](N, K, _, _), env_lang(L), kind_needs(L, K, F).
+uses[audit](N, F) :- ast_node[code](N, K, _), env_lang(L), kind_needs(L, K, F).
 
-uses[audit](N, F) :- ast_node[code](N, K, _, _), env_lang(L),
+uses[audit](N, F) :- ast_node[code](N, K, _), env_lang(L),
                      attr_needs(L, K, Key, V, F), ast_attr[code](N, Key, V).
 
-uses[audit](N, F) :- ast_node[code](N, K, _, _), env_lang(L),
+uses[audit](N, F) :- ast_node[code](N, K, _), env_lang(L),
                      child_needs(L, K, Field, Name, F),
                      ast_child[code](N, Field, 0, C), ast_name[code](C, Name).
 
@@ -51,7 +51,7 @@ uses[audit](N, F) :- ast_node[code](N, K, _, _), env_lang(L),
 -- negation goes last with N bound.
 within_attr[audit](N, Key, V) :- outside_attr_needs(_, _, Key, V, _),
                                  ast_attr[code](A, Key, V), ast_within[code](A, N).
-uses[audit](N, F) :- ast_node[code](N, K, _, _), env_lang(L),
+uses[audit](N, F) :- ast_node[code](N, K, _), env_lang(L),
                      outside_attr_needs(L, K, Key, V, F),
                      not within_attr[audit](N, Key, V).
 
@@ -64,16 +64,16 @@ used_feature[audit](F)  :- uses[audit](_, F).
 unsupported[audit](E, N, F) :- environment(E), uses[audit](N, F), not env_has[audit](E, F).
 
 unsupported_at[audit](E, File, Line, F) :- unsupported[audit](E, N, F),
-                                           ast_node[code](N, _, File, Line).
+                                           ast_node[code](N, _, File), ast_line[code](N, Line).
 
-uses_at[audit](File, Line, F)  :- uses[audit](N, F), ast_node[code](N, _, File, Line).
-uses_kind[audit](K, F)         :- uses[audit](N, F), ast_node[code](N, K, _, _).
+uses_at[audit](File, Line, F)  :- uses[audit](N, F), ast_node[code](N, _, File), ast_line[code](N, Line).
+uses_kind[audit](K, F)         :- uses[audit](N, F), ast_node[code](N, K, _).
 unsupported_in[audit](E, File, F) :- unsupported_at[audit](E, File, _, F).
 
 -- «Валидна ли эта программа в окружении X?» — total over the files scanned,
 -- so a clean file produces a POSITIVE row: a silence cannot be told from a
 -- model that did not run.
-file_broken[audit](E, File) :- unsupported[audit](E, N, _), ast_node[code](N, _, File, _).
+file_broken[audit](E, File) :- unsupported[audit](E, N, _), ast_node[code](N, _, File).
 
 -- A FILE THE SCANNER REFUSED is neither valid nor invalid unless the host
 -- says so; the denominator is every file the scanner reported on, and a
@@ -100,7 +100,7 @@ lost[audit](From, To, N, F) :- unsupported[audit](To, N, F), environment(From),
 
 lost_feature[audit](From, To, F) :- lost[audit](From, To, _, F).
 lost_at[audit](From, To, File, Line, F) :- lost[audit](From, To, N, F),
-                                           ast_node[code](N, _, File, Line).
+                                           ast_node[code](N, _, File), ast_line[code](N, Line).
 
 -- =========================================================================
 -- 5. THE GATES. Each is a statement this layer makes about itself, and
@@ -146,7 +146,7 @@ unscannable_seen[audit](F) :- unscannable(F), used_feature[audit](F).
 -- THE FRONTIER, expected non-zero: `node_kind` is authored and babel has 252
 -- concrete types. `kind_unaccounted` asks the same of the DECLARED
 -- vocabulary, where the answer must be zero.
-kind_ungoverned[audit](K) :- ast_node[code](_, K, _, _), env_lang(L),
+kind_ungoverned[audit](K) :- ast_node[code](_, K, _), env_lang(L),
                              not kind_gated(L, K), not kind_baseline(L, K).
 
 -- an environment with no place on the scale looks very old rather than broken

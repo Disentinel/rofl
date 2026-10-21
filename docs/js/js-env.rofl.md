@@ -37,7 +37,7 @@ Reads:
   - <a id="kind_needs"></a>A kind K needs a feature F in a language L (`kind_needs`)
   - <a id="provides"></a>A release P provides the feature F (`provides`)
   - <a id="release"></a>A release R is a release (`release`)
-- from js-model, in the code: [ast_node](js-model.rofl.md#ast_node)
+- from js-model, in the code: [ast_line](js-model.rofl.md#ast_line), [ast_node](js-model.rofl.md#ast_node)
 - from js-structure, in the code: [ast_name](js-structure.rofl.md#ast_name)
 - from outside these files, in the code:
   - <a id="ast_file"></a>`ast_file`
@@ -139,9 +139,15 @@ A node
   - it [uses the feature](#uses) F;
   - unless E [supports](#env_has) F.
 
-<a id="unsupported_at"></a>File fails at Line in an environment E for a feature F if a node N [fails](#unsupported) in E for F and N [is of kind](js-model.rofl.md#ast_node) some kind in file File at line Line.
+<a id="unsupported_at"></a>File fails at Line in an environment E for a feature F if all of:
+  - a node N [fails](#unsupported) in E for F;
+  - N [is in file](js-model.rofl.md#ast_node) File;
+  - N [is at line](js-model.rofl.md#ast_line) Line.
 
-<a id="uses_at"></a>File uses the feature F at Line if a node N [uses the feature](#uses) F and N [is of kind](js-model.rofl.md#ast_node) some kind in file File at line Line.
+<a id="uses_at"></a>File uses the feature F at Line if all of:
+  - a node N [uses the feature](#uses) F;
+  - N [is in file](js-model.rofl.md#ast_node) File;
+  - N [is at line](js-model.rofl.md#ast_line) Line.
 
 <a id="uses_kind"></a>A kind K is seen using a feature F if a node N [uses the feature](#uses) F and N [is of kind](js-model.rofl.md#ast_node) K.
 
@@ -190,7 +196,10 @@ Declared as facts:
   - From differs from To;
   - unless it [fails](#unsupported) in From for F.
 
-<a id="lost_at"></a>File loses the feature F at Line from an environment From to an environment To if a node N [is lost](#lost) from From to To by F and N [is of kind](js-model.rofl.md#ast_node) some kind in file File at line Line.
+<a id="lost_at"></a>File loses the feature F at Line from an environment From to an environment To if all of:
+  - a node N [is lost](#lost) from From to To by F;
+  - N [is in file](js-model.rofl.md#ast_node) File;
+  - N [is at line](js-model.rofl.md#ast_line) Line.
 
 ## 5. THE GATES. Each is a statement this layer makes about itself, and
 

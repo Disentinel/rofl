@@ -22,7 +22,7 @@ Declared as facts:
 
 > nouns for node kinds, and for the fact sets that name a family of kinds
 
-> a kind noun that names a SET of kinds, not one kind: the guard is `ast_node(X, K, _, _), set(K)`
+> a kind noun that names a SET of kinds, not one kind: the guard is `ast_node(X, K, _), set(K)`
 
 Declared as facts:
 

@@ -40,7 +40,7 @@
 
 -- =========================================================================
 -- 1. THE STRINGS THE PROGRAM HOLDS — what makes a `+` a concatenation.
-str_value[flow](V) :- ast_node[code](N, string_literal, _, _), ast_value[code](N, V).
+str_value[flow](V) :- ast_node[code](N, string_literal, _), ast_value[code](N, V).
 str_value[flow](V) :- ast_attr[code](Q, value_cooked, V).
 str_value[flow](V) :- path_cut[flow](_, V).
 
@@ -49,14 +49,14 @@ str_value[flow](V) :- path_cut[flow](_, V).
 --
 -- An interpolated template is a string. The quasi of a TAGGED template is not
 -- evaluated as one: the tag's return is.
-tagged_quasi[code](T) :- ast_node[code](G, tagged_template_expression, _, _), ast_child[code](G, quasi, 0, T).
-composed[flow](T) :- interpolated[code](T), ast_node[code](T, template_literal, _, _), not tagged_quasi[code](T).
+tagged_quasi[code](T) :- ast_node[code](G, tagged_template_expression, _), ast_child[code](G, quasi, 0, T).
+composed[flow](T) :- interpolated[code](T), ast_node[code](T, template_literal, _), not tagged_quasi[code](T).
 
 -- `a + b` and `x += v` are a concatenation where a side may be a string; a sum
 -- of two numbers stays silent.
-plus_site[code](C, L, R) :- ast_node[code](C, binary_expression, _, _), ast_attr[code](C, operator, "+"),
+plus_site[code](C, L, R) :- ast_node[code](C, binary_expression, _), ast_attr[code](C, operator, "+"),
                             ast_child[code](C, left, 0, L), ast_child[code](C, right, 0, R).
-plus_site[code](A, L, R) :- ast_node[code](A, assignment_expression, _, _), ast_attr[code](A, operator, "+="),
+plus_site[code](A, L, R) :- ast_node[code](A, assignment_expression, _), ast_attr[code](A, operator, "+="),
                             ast_child[code](A, left, 0, L), ast_child[code](A, right, 0, R).
 plus_operand[code](C, X) :- plus_site[code](C, X, _).
 plus_operand[code](C, X) :- plus_site[code](C, _, X).
@@ -69,7 +69,7 @@ may_be_node[flow](C, C) :- composed[flow](C).
 -- `x += v` writes the binding, as `x = x + v` would: every read of the binding
 -- may be the composed value at the assignment. Scoped as section 4 of
 -- js-dataflow scopes `=`; a target no binder or parameter owns stays silent.
-plus_assign[code](A, L, Name, File) :- ast_node[code](A, assignment_expression, File, _),
+plus_assign[code](A, L, Name, File) :- ast_node[code](A, assignment_expression, File),
                                        ast_attr[code](A, operator, "+="),
                                        ast_child[code](A, left, 0, L), ast_name[code](L, Name).
 may_be_node[flow](E, A) :- composed[flow](A), plus_assign[code](A, L, Name, File),
@@ -127,8 +127,8 @@ vlib_fn[flow](M, Surface, K) :- ambient_module(File, Surface), exports_name[code
                               member_value[flow](O, K, M), ambient_value(Surface, K, _, _).
 
 vlib_call[flow](C, Surface, K) :- vlib_fn[flow](X, Surface, K), may_be_node[flow](G, X), ast_child[code](C, callee, 0, G),
-                                  ast_node[code](C, T, _, _), call_like_v(T).
-vlib_call[flow](C, S, construct) :- ast_node[code](C, new_expression, _, _), ast_child[code](C, callee, 0, G),
+                                  ast_node[code](C, T, _), call_like_v(T).
+vlib_call[flow](C, S, construct) :- ast_node[code](C, new_expression, _), ast_child[code](C, callee, 0, G),
                                     free_global[code](G, S, _), ambient_value(S, construct, _, _).
 
 -- A method of a prototype: the receiver decides the surface.
@@ -137,7 +137,7 @@ str_recv[flow](O) :- proto_call[flow](_, O, _), may_be_node[flow](O, D), compose
 str_recv[flow](O) :- proto_call[flow](_, O, _), prototype_of[flow](O, string).
 proto_call[flow](C, O, K) :- ambient_value(P, K, _, _), builtin_prototype(P), selects[flow](M, K),
                              member_node_v[flow](M), ast_child[code](C, callee, 0, M), ast_child[code](M, object, 0, O),
-                             ast_node[code](C, T, _, _), call_like_v(T).
+                             ast_node[code](C, T, _), call_like_v(T).
 vlib_call[flow](C, string, K) :- ambient_value(string, K, _, _), proto_call[flow](C, O, K), str_recv[flow](O).
 vlib_call[flow](C, array, K)  :- ambient_value(array, K, _, _), proto_call[flow](C, O, K),
                                 may_be_node[flow](O, A), kind_proto[flow](A, array).
@@ -175,7 +175,7 @@ may_be_lit[flow](C, V) :- path_cut[flow](C, V).
 -- 4. THE PARTS AND THE JOIN. Read by the texts below and by a question; the
 -- flow above never reads them, so they may count.
 cshape[flow](C, plus)  :- composed[flow](C), plus_site[code](C, _, _).
-cshape[flow](C, raw)   :- composed[flow](C), ast_node[code](C, template_literal, _, _).
+cshape[flow](C, raw)   :- composed[flow](C), ast_node[code](C, template_literal, _).
 cshape[flow](C, Sh)    :- vlib_op[flow](C, Op, Kind), op_shape(Op, Kind, Sh).
 
 edb(op_shape).
@@ -195,9 +195,9 @@ joined[flow](C, Kind) :- vlib_op[flow](C, _, Kind).
 parts[flow](C, 0, L) :- cshape[flow](C, plus), plus_site[code](C, L, _).
 parts[flow](C, 1, R) :- cshape[flow](C, plus), plus_site[code](C, _, R).
 
-parts[flow](T, I, X) :- cshape[flow](T, raw), ast_node[code](T, template_literal, _, _),
+parts[flow](T, I, X) :- cshape[flow](T, raw), ast_node[code](T, template_literal, _),
                         ast_child[code](T, expressions, K, X), I is 2 * K + 1.
-part_lit[flow](T, I, V) :- cshape[flow](T, raw), ast_node[code](T, template_literal, _, _),
+part_lit[flow](T, I, V) :- cshape[flow](T, raw), ast_node[code](T, template_literal, _),
                            ast_child[code](T, quasis, K, Q), ast_attr[code](Q, value_cooked, V), I is 2 * K.
 
 -- Every argument or none: a spread hides where the rest are.
@@ -249,7 +249,7 @@ textable[flow](C) :- last_slot[flow](C, L), N is count(I : slot[flow](C, I)), M 
 -- function's own body composes is `summarized`: a part reads past it, to the
 -- summary of the call.
 edb(ambient_module).
-summarized[flow](X) :- composed[flow](X), ast_node[code](X, _, File, _), ambient_module(File, _).
+summarized[flow](X) :- composed[flow](X), ast_node[code](X, _, File), ambient_module(File, _).
 plain_valued[flow](P) :- parts[flow](_, _, P), may_be_lit[flow](P, _).
 plain_valued[flow](P) :- parts[flow](_, _, P), may_be_node[flow](P, X), not summarized[flow](X).
 

@@ -30,7 +30,7 @@ Reads:
 - from js-dataflow, in the main: [builtin_prototype](js-dataflow.rofl.md#builtin_prototype), [class_field_kind](js-dataflow.rofl.md#class_field_kind), [lib_member](js-dataflow.rofl.md#lib_member)
 - from js-host: [host_site](js-host.rofl.md#host_site)
 - from js-model, in the audit: [verdict](js-model.rofl.md#verdict)
-- from js-model: [ast_node](js-model.rofl.md#ast_node)
+- from js-model: [ast_line](js-model.rofl.md#ast_line), [ast_node](js-model.rofl.md#ast_node)
 - from js-model, in the main: [shape_of](js-model.rofl.md#shape_of), [unknown_type](js-model.rofl.md#unknown_type)
 - from js-structure: [ast_name](js-structure.rofl.md#ast_name)
 - from js-surface, in the flow: [fn_label](js-surface.rofl.md#fn_label), [fn_value](js-surface.rofl.md#fn_value), [ret_node_any](js-surface.rofl.md#ret_node_any)
@@ -90,7 +90,7 @@ Phrases this file defines in one step, each by the sentence it stands for:
 
 `callee_of` has one N for each C.
 
-<a id="call_line"></a>The line of a node C is Line if C [is a call site](#call_site) in some file and C [is at line](js-model.rofl.md#ast_node) Line.
+<a id="call_line"></a>The line of a node C is Line if C [is a call site](#call_site) in some file and C [is at line](js-model.rofl.md#ast_line) Line.
 
 <a id="callee_of"></a>The callee of a node C is a node N if C [is a call site](#call_site) in some file and the `callee` of C is N.
 
@@ -670,10 +670,14 @@ In the code:
 
 <a id="frontier_line"></a>File shows the frontier S at Line either:
 
-1. if a node C [is unresolved](#unresolved_call) with S and C [is of kind](js-model.rofl.md#ast_node) some kind in file File at line Line;
+1. if all of:
+   - a node C [is unresolved](#unresolved_call) with S;
+   - C [is in file](js-model.rofl.md#ast_node) File;
+   - C [is at line](js-model.rofl.md#ast_line) Line;
 2. if all of:
    - a node X [is a transfer site](#transfer_site) of S;
-   - X [is of kind](js-model.rofl.md#ast_node) some kind in file File at line Line;
+   - X [is in file](js-model.rofl.md#ast_node) File;
+   - X [is at line](js-model.rofl.md#ast_line) Line;
    - unless X [is resolved](#resolved_site).
 
 > The closed vocabulary of shapes, read off the tables: the denominator is the

@@ -7,9 +7,9 @@ fx_cp(X, Y)    :- fx_big[data](X), fx_big2[data](Y), fx_link[data](X, Y).
 fx_cp_ok(X, Y) :- fx_big[data](X), fx_link[data](X, Y), fx_big2[data](Y).
 
 -- closure_wide_end: every descendant of B, then the throw statements among them
-fx_cw(T, V)    :- fx_try[data](T, B), ast_within[code](B, Th), ast_node[code](Th, throw_statement, _, _),
+fx_cw(T, V)    :- fx_try[data](T, B), ast_within[code](B, Th), ast_node[code](Th, throw_statement, _),
                   ast_child[code](Th, argument, 0, V).
-fx_cw_ok(T, V) :- ast_node[code](Th, throw_statement, _, _), ast_within[code](B, Th), fx_try[data](T, B),
+fx_cw_ok(T, V) :- ast_node[code](Th, throw_statement, _), ast_within[code](B, Th), fx_try[data](T, B),
                   ast_child[code](Th, argument, 0, V).
 
 -- project_then_negate: once per attribute row, not per key
@@ -18,7 +18,7 @@ fx_key[data](K) :- ast_attr[code](_, K, _).
 fx_pn_ok(K)    :- fx_key[data](K), not fx_read[data](K).
 
 -- existence_scan: one solution per node
-fx_ex()        :- ast_node[code](_, _, _, _).
+fx_ex()        :- ast_node[code](_, _, _).
 fx_ex_ok()     :- fx_seen[data](_).
 
 -- not_closer: every encloser against every other

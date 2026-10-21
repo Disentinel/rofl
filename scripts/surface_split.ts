@@ -45,7 +45,7 @@ const QUESTION = 'examples/vscode/side-effects.rofl';
 /** the model before the [surface] book, for the planted break */
 const NAIVE_BASE = '8538c41';
 const BUDGET = 4_000_000_000, SPACE = 40_000_000;
-const PREF = /\bn([0-9a-f]{16})_\d+/g;
+const PREF = /\bn([0-9a-f]{16})_[0-9a-z]+/g;
 
 const argv = process.argv.slice(2);
 const opt = (k: string): string | undefined => { const i = argv.indexOf(k); return i < 0 ? undefined : argv[i + 1]; };
@@ -79,7 +79,7 @@ for (const line of fs.readFileSync(path.join(ROOT, FACTS), 'utf8').split('\n')) 
   const p = [...ps][0]!;
   if (!volumes.has(p)) volumes.set(p, []);
   volumes.get(p)!.push(line);
-  const m = /^ast_node\[code\]\(n[0-9a-f]{16}_\d+, file, "([^"]+)"/.exec(line);
+  const m = /^ast_node\[code\]\(n[0-9a-f]{16}_[0-9a-z]+, file, "([^"]+)"/.exec(line);
   if (m) fileOf.set(p, m[1]!);
 }
 const prefixOf = new Map([...fileOf].map(([p, f]) => [f, p]));
@@ -138,7 +138,7 @@ const namesOf = (f: string): string[] => {
   for (const m of f.matchAll(/"([^"]+)"/g)) { const p = prefixOf.get(m[1]!); if (p) out.add(p); }
   return [...out];
 };
-const firstNode = (f: string): string | null => /^[^(]*\((n([0-9a-f]{16})_\d+)[,)]/.exec(f)?.[2] ?? null;
+const firstNode = (f: string): string | null => /^[^(]*\((n([0-9a-f]{16})_[0-9a-z]+)[,)]/.exec(f)?.[2] ?? null;
 /** the facts of one file (naming it alone), the facts naming two or more, and the [surface] book */
 interface Read { single: Map<string, Set<string>>; cross: Set<string>; surface: Set<string> }
 function readState(text: string): Read {

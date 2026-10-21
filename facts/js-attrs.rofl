@@ -171,7 +171,7 @@ attr_slot_gap_ok(computed, property, meta_property,
 attr_slot_gap_ok(static, value, directive,        a_the_rules_population_is_a_mechanism_table).
 attr_slot_gap_ok(static, value, object_property,  a_the_rules_population_is_a_mechanism_table).
 -- `field_init[code]` binds P through `transfer_mechanism(K, per_construction)`
--- and `ast_node(P, K, _, _)` with K a VARIABLE, so the kind arm cannot pin it
+-- and `ast_node(P, K, _)` with K a VARIABLE, so the kind arm cannot pin it
 -- the way it pins `delegates[flow]` to `yield_expression`. The two kinds here
 -- have a `value` child and no `static`, and neither is a per-construction
 -- member.

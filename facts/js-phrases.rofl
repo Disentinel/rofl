@@ -8,11 +8,11 @@ edb(kind_noun).
 edb(sig).
 
 -- what the scanner seeds, in the code
-phrase(ast_node, "<node> is of kind <kind> in file <file> at line <line>").
-phrase(ast_node, "<0:node> is of kind <1:kind> <2=_> <3=_>").
-phrase(ast_node, "<0:node> is in file <2:file> <1=_> <3=_>").
-phrase(ast_node, "<0:node> is at line <3:line> <1=_> <2=_>").
-phrase(ast_node, "<0:node> is of kind <1:kind> in file <2:file> <3=_>").
+phrase(ast_node, "<node> is of kind <kind> in file <file>").
+phrase(ast_node, "<0:node> is of kind <1:kind> <2=_>").
+phrase(ast_node, "<0:node> is in file <2:file> <1=_>").
+phrase(ast_line, "<node> is at line <line>").
+phrase(ast_line, "<0:node> is at line <1:line>").
 phrase(ast_child, "the <1:child> of <0:node> is <3:node> <2=0>").
 phrase(ast_child, "<3:node> is among the <1:child> of <0:node> <2=_>").
 phrase(ast_child, "<3:node> is a child of <0:node> <1=_> <2=_>").
@@ -111,7 +111,7 @@ kind_noun(assign_value_op, "value assignment operator").
 kind_noun(external_shape, "external shape").
 kind_noun(call_kind, "call").
 
--- a kind noun that names a SET of kinds, not one kind: the guard is `ast_node(X, K, _, _), set(K)`
+-- a kind noun that names a SET of kinds, not one kind: the guard is `ast_node(X, K, _), set(K)`
 edb(kind_set).
 -- a noun bound to a unary relation: `a function F` is `fn_node(F)`, the relation is
 -- the guard and the kind set behind it is a table (`K is a function kind`)
@@ -1114,6 +1114,7 @@ sig(shape_in, "is_a_shape_in(shape S, layer Lay)").
 -- table with rows in a fact pack names the pack by itself.
 edb(rows_from).
 rows_from(ast_node, "the scanner").
+rows_from(ast_line, "the scanner").
 rows_from(ast_attr, "the scanner").
 rows_from(ast_child, "the scanner").
 rows_from(ast_file, "the scanner").

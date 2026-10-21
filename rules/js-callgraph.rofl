@@ -18,12 +18,12 @@ call_kind(optional_call_expression).
 
 function call_site(C, to File).
 function callee_of(C, to N).
-call_site[code](C, File)      :- call_kind(K), ast_node[code](C, K, File, _).
-call_site_kind[code](C, K)    :- call_kind(K), ast_node[code](C, K, _, _).
-call_line[code](C, Line)      :- call_site[code](C, _), ast_node[code](C, _, _, Line).
+call_site[code](C, File)      :- call_kind(K), ast_node[code](C, K, File).
+call_site_kind[code](C, K)    :- call_kind(K), ast_node[code](C, K, _).
+call_line[code](C, Line)      :- call_site[code](C, _), ast_line[code](C, Line).
 
 callee_of[code](C, N)         :- call_site[code](C, _), ast_child[code](C, callee, 0, N).
-callee_kind[code](C, K)       :- callee_of[code](C, N), ast_node[code](N, K, _, _).
+callee_kind[code](C, K)       :- callee_of[code](C, N), ast_node[code](N, K, _).
 
 -- Calls the grammar gives no CallExpression: `new C()`, `` tag`x` ``, the
 -- iterator protocol of `for-of`, and a decorator. Naming them TRANSFER SITES
@@ -33,7 +33,7 @@ transfer_kind(new_expression).
 transfer_kind(tagged_template_expression).
 transfer_kind(for_of_statement).
 transfer_kind(decorator).
-transfer_site[code](X, K) :- transfer_kind(K), ast_node[code](X, K, _, _).
+transfer_site[code](X, K) :- transfer_kind(K), ast_node[code](X, K, _).
 
 site[code](X) :- call_site[code](X, _).
 site[code](X) :- transfer_site[code](X, _).
@@ -68,13 +68,13 @@ edb(member_kind).
 member_kind(member_expression).
 member_kind(optional_member_expression).
 
-member_like[code](C, N)     :- callee_of[code](C, N), ast_node[code](N, K, _, _), member_kind(K).
-optional_member[code](C)    :- callee_of[code](C, N), ast_node[code](N, optional_member_expression, _, _).
+member_like[code](C, N)     :- callee_of[code](C, N), ast_node[code](N, K, _), member_kind(K).
+optional_member[code](C)    :- callee_of[code](C, N), ast_node[code](N, optional_member_expression, _).
 computed_member[code](C, N) :- member_like[code](C, N), ast_attr[code](N, computed, true).
 static_member[code](C, N)   :- member_like[code](C, N), ast_attr[code](N, computed, false).
 
 callee_obj[code](C, O)      :- member_like[code](C, N), ast_child[code](N, object, 0, O).
-callee_obj_kind[code](C, K) :- callee_obj[code](C, O), ast_node[code](O, K, _, _).
+callee_obj_kind[code](C, K) :- callee_obj[code](C, O), ast_node[code](O, K, _).
 callee_prop[code](C, P)     :- member_like[code](C, N), ast_child[code](N, property, 0, P).
 
 -- A member callee needs two more bits: `computed`, and the object's kind.
@@ -145,10 +145,10 @@ static_key_kind(string_literal).
 static_key_kind(numeric_literal).
 
 computed_key_static[code](C) :- computed_member[code](C, _), callee_prop[code](C, P),
-                                ast_node[code](P, K, _, _), static_key_kind(K).
+                                ast_node[code](P, K, _), static_key_kind(K).
 
 computed_key_template[code](C) :- computed_member[code](C, _), callee_prop[code](C, P),
-                                  ast_node[code](P, template_literal, _, _).
+                                  ast_node[code](P, template_literal, _).
 
 shape_known[code](C, S) :- callee_kind[code](C, K), callee_shape(K, S).
 shape_known[code](C, s_computed_literal_key) :- computed_member[code](C, _),
@@ -188,8 +188,8 @@ fn_kind(object_method).
 fn_kind(class_method).
 fn_kind(class_private_method).
 
-fn_node[code](F)     :- fn_kind(K), ast_node[code](F, K, _, _).
-fn_file[code](F, File) :- fn_node[code](F), ast_node[code](F, _, File, _).
+fn_node[code](F)     :- fn_kind(K), ast_node[code](F, K, _).
+fn_file[code](F, File) :- fn_node[code](F), ast_node[code](F, _, File).
 
 -- A function's name is whatever binds it — several arms, and a node may hold
 -- more than one name. `key_name` rather than `ast_name` on a key, so a computed
@@ -200,27 +200,27 @@ fn_file[code](F, File) :- fn_node[code](F), ast_node[code](F, _, File, _).
 -- laid every function beside every declarator (271 982 accumulator rows on
 -- sixteen eslint files). A PRIVATE method gets no name: V8 says `#rim`, the
 -- store holds `rim`, and the kernel has no operation that builds a string.
-fn_name[code](F, N) :- ast_node[code](F, function_declaration, _, _),
+fn_name[code](F, N) :- ast_node[code](F, function_declaration, _),
                        ast_child[code](F, id, 0, I), ast_name[code](I, N).
-fn_name[code](F, N) :- ast_node[code](F, function_expression, _, _),
+fn_name[code](F, N) :- ast_node[code](F, function_expression, _),
                        ast_child[code](F, id, 0, I), ast_name[code](I, N).
-fn_name[code](F, N) :- ast_node[code](F, object_method, _, _),
+fn_name[code](F, N) :- ast_node[code](F, object_method, _),
                        ast_child[code](F, key, 0, K), key_name[code](K, N).
-ctor_method[code](F)   :- ast_node[code](F, class_method, _, _),
+ctor_method[code](F)   :- ast_node[code](F, class_method, _),
                           ast_attr[code](F, kind, "constructor").
-fn_name[code](F, N) :- ast_node[code](F, class_method, _, _), not ctor_method[code](F),
+fn_name[code](F, N) :- ast_node[code](F, class_method, _), not ctor_method[code](F),
                        ast_child[code](F, key, 0, K), key_name[code](K, N).
-fn_name[code](F, N) :- ast_node[code](D, variable_declarator, _, _),
+fn_name[code](F, N) :- ast_node[code](D, variable_declarator, _),
                        ast_child[code](D, init, 0, F), fn_node[code](F),
                        ast_child[code](D, id, 0, I), ast_name[code](I, N).
 fn_name[code](F, N) :- key_name[code](K, N), ast_child[code](P, key, 0, K),
-                       ast_node[code](P, object_property, _, _),
+                       ast_node[code](P, object_property, _),
                        ast_child[code](P, value, 0, F), fn_node[code](F).
-fn_name[code](F, N) :- ast_node[code](F, class_method, _, _),
+fn_name[code](F, N) :- ast_node[code](F, class_method, _),
                        ast_attr[code](F, kind, "constructor"),
                        ast_child[code](B, body, _, F), ast_child[code](CD, body, 0, B),
                        ast_child[code](CD, id, 0, I), ast_name[code](I, N).
-fn_name[code](F, N) :- class_field_kind(K), ast_node[code](P, K, _, _),
+fn_name[code](F, N) :- class_field_kind(K), ast_node[code](P, K, _),
                        ast_child[code](P, value, 0, F), fn_node[code](F),
                        ast_child[code](P, key, 0, KN), key_name[code](KN, N).
 
@@ -228,16 +228,16 @@ fn_name[code](F, N) :- class_field_kind(K), ast_node[code](P, K, _, _),
 -- inference: `const A = class {}` has `A.name === "A"`, but
 -- `const W = class Hoist {}` has `"Hoist"`. The arm carries the negation so
 -- the two constructor arms never both fire.
-class_has_id[code](CD) :- ast_node[code](CD, class_expression, _, _),
+class_has_id[code](CD) :- ast_node[code](CD, class_expression, _),
                           ast_child[code](CD, id, 0, _).
-anon_class[code](CD)   :- ast_node[code](CD, class_expression, _, _),
+anon_class[code](CD)   :- ast_node[code](CD, class_expression, _),
                           not class_has_id[code](CD).
-fn_name[code](F, N) :- ast_node[code](F, class_method, _, _),
+fn_name[code](F, N) :- ast_node[code](F, class_method, _),
                        ast_attr[code](F, kind, "constructor"),
                        ast_child[code](B, body, _, F), ast_child[code](CD, body, 0, B),
                        anon_class[code](CD),
                        ast_child[code](D, init, 0, CD),
-                       ast_node[code](D, variable_declarator, _, _),
+                       ast_node[code](D, variable_declarator, _),
                        ast_child[code](D, id, 0, I), ast_name[code](I, N).
 
 -- A decorator is INSIDE the thing it decorates and does not run there:
@@ -252,7 +252,7 @@ fn_name[code](F, N) :- ast_node[code](F, class_method, _, _),
 -- for transfer sites while `top_call` still read `call_site`; the 2026-09-08
 -- repair made them one rule and 2026-09-11 made them one name.)
 decorates[code](Owner, D)     :- ast_child[code](Owner, decorators, _, D),
-                                 ast_node[code](D, decorator, _, _).
+                                 ast_node[code](D, decorator, _).
 in_own_decorator[code](F, C)  :- decorates[code](F, D), ast_within[code](D, C).
 in_own_decorator[code](F, D)  :- decorates[code](F, D).
 dec_up[code](C, G)     :- in_own_decorator[code](G, C), site[code](C), nearest_v[flow](G, C).
@@ -261,7 +261,7 @@ nearest_fn[code](F, C) :- site[code](C), nearest_v[flow](F, C), not in_own_decor
 nearest_fn[code](F, C) :- dec_up[code](C, G), nearest_v[flow](F, G), not in_own_decorator[code](F, C).
 
 enclosed[code](C)      :- nearest_fn[code](_, C).
-top_call[code](C, R)   :- site[code](C), ast_node[code](C, _, File, _),
+top_call[code](C, R)   :- site[code](C), ast_node[code](C, _, File),
                           ast_file[code](R, File), not enclosed[code](C).
 
 -- =========================================================================
@@ -276,15 +276,15 @@ top_call[code](C, R)   :- site[code](C), ast_node[code](C, _, File, _),
 -- `key_name`'s 105 rows bind K so every later literal is an indexed lookup.
 obj_member_fn[code](O, Key, M) :- key_name[code](K, Key),
                                   ast_child[code](M, key, 0, K),
-                                  ast_node[code](M, object_method, _, _),
+                                  ast_node[code](M, object_method, _),
                                   ast_child[code](O, properties, _, M),
-                                  ast_node[code](O, object_expression, _, _).
+                                  ast_node[code](O, object_expression, _).
 obj_member_fn[code](O, Key, F) :- key_name[code](K, Key),
                                   ast_child[code](P, key, 0, K),
-                                  ast_node[code](P, object_property, _, _),
+                                  ast_node[code](P, object_property, _),
                                   ast_child[code](P, value, 0, F), fn_node[code](F),
                                   ast_child[code](O, properties, _, P),
-                                  ast_node[code](O, object_expression, _, _).
+                                  ast_node[code](O, object_expression, _).
 
 -- The constructor edge is not a CallExpression at all; it needed the value
 -- question "which class does this expression construct". `super()` walks
@@ -297,7 +297,7 @@ class_ctor[code](CD, M) :- class_method_of[flow](CD, M),
 resolves[code](X, M) :- transfer_site[code](X, new_expression),
                         may_be_node[flow](X, I), inst_of[flow](I, CD), class_ctor[code](CD, M).
 
-resolves[code](C, M) :- ast_node[code](N, super, _, _), callee_of[code](C, N),
+resolves[code](C, M) :- ast_node[code](N, super, _), callee_of[code](C, N),
                         may_be_node[flow](N, SD), ctor_of[flow](SD, M).
 
 -- A tag is a callee in every sense but the grammar's (the field is `tag`, not
@@ -345,7 +345,7 @@ calls[code](R, Callee)      :- resolves[code](C, Callee), top_call[code](C, R).
 calls_named[code](A, B)   :- calls[code](X, Y), fn_name[code](X, A), fn_label[flow](Y, B).
 calls_named[code](top, B) :- calls[code](R, Y), ast_file[code](R, _), fn_label[flow](Y, B).
 
-calls_in[code](File, A, B)   :- calls[code](X, Y), ast_node[code](X, _, File, _),
+calls_in[code](File, A, B)   :- calls[code](X, Y), ast_node[code](X, _, File),
                                 fn_name[code](X, A), fn_label[flow](Y, B).
 calls_in[code](File, top, B) :- calls[code](R, Y), ast_file[code](R, File),
                                 fn_label[flow](Y, B).
@@ -407,9 +407,9 @@ frontier_at[code](R, K) :- top_call[code](X, R), transfer_site[code](X, K),
 frontier_named[code](Name, Item) :- frontier_at[code](F, Item), fn_name[code](F, Name).
 frontier_named[code](top, Item)  :- frontier_at[code](R, Item), ast_file[code](R, _).
 
-frontier_line[code](File, Line, S) :- unresolved_call[code](C, S), ast_node[code](C, _, File, Line).
+frontier_line[code](File, Line, S) :- unresolved_call[code](C, S), ast_node[code](C, _, File), ast_line[code](C, Line).
 frontier_line[code](File, Line, K) :- transfer_site[code](X, K), not resolved_site[code](X),
-                                      ast_node[code](X, _, File, Line).
+                                      ast_node[code](X, _, File), ast_line[code](X, Line).
 
 -- The closed vocabulary of shapes, read off the tables: the denominator is the
 -- grammar, so a shape the corpus never produces still wants an answer.
@@ -446,18 +446,18 @@ shape_ours[audit](S)          :- shape_reason[audit](S, R), unknown_type(R, ours
 
 -- What modelling this layer dragged in: every kind its rules touch must be a
 -- declared `node_kind`, or the matrix has a cell it does not know exists.
-fn_binder[code](D, F) :- ast_node[code](D, variable_declarator, _, _),
+fn_binder[code](D, F) :- ast_node[code](D, variable_declarator, _),
                          ast_child[code](D, init, 0, F), fn_node[code](F).
-fn_binder[code](P, F) :- ast_node[code](P, object_property, _, _),
+fn_binder[code](P, F) :- ast_node[code](P, object_property, _),
                          ast_child[code](P, value, 0, F), fn_node[code](F).
 fn_binder[code](O, M) :- obj_member_fn[code](O, _, M).
 
 callgraph_kind[audit](K)  :- call_site_kind[code](_, K).
 callgraph_kind[audit](K)  :- callee_kind[code](_, K).
 callgraph_kind[audit](K)  :- callee_obj_kind[code](_, K).
-callgraph_kind[audit](K)  :- callee_prop[code](_, P), ast_node[code](P, K, _, _).
-callgraph_kind[audit](K)  :- fn_node[code](F), ast_node[code](F, K, _, _).
-callgraph_kind[audit](K)  :- fn_binder[code](B, _), ast_node[code](B, K, _, _).
+callgraph_kind[audit](K)  :- callee_prop[code](_, P), ast_node[code](P, K, _).
+callgraph_kind[audit](K)  :- fn_node[code](F), ast_node[code](F, K, _).
+callgraph_kind[audit](K)  :- fn_binder[code](B, _), ast_node[code](B, K, _).
 kind_undeclared[audit](K) :- callgraph_kind[audit](K), not node_kind(js, K).
 
 -- =========================================================================
@@ -475,7 +475,7 @@ kind_undeclared[audit](K) :- callgraph_kind[audit](K), not node_kind(js, K).
 -- So `performed_call` is one column short of `calls` on purpose and never
 -- reaches `calls_named`/`calls_in`. The two `may_be_node` hops are the same
 -- last step the iterator protocol takes: `member_value` names the identifier.
-await_arg[code](A, X) :- ast_node[code](A, await_expression, _, _),
+await_arg[code](A, X) :- ast_node[code](A, await_expression, _),
                          ast_child[code](A, argument, 0, X).
 
 awaited_then[code](A, F) :- await_arg[code](A, X), may_be_node[flow](X, O),

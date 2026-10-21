@@ -18,7 +18,7 @@ default: main
 > variables as `$var("Name")`, so "which kinds does a rule name" is a query.
 
 > the walk, one argument at a time: a cons chain cannot be indexed. `$not`
-> gets its own arm because `not ast_node(X, with_statement, _, _)` is an
+> gets its own arm because `not ast_node(X, with_statement, _)` is an
 > opinion about `with_statement`.
 
 Reads:

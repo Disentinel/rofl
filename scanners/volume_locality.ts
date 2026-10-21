@@ -54,7 +54,7 @@ export function packs(): string {
   return named.filter((p) => fs.existsSync(path.join(REPO, p))).map(read).join('\n');
 }
 
-const PREF = /\bn([0-9a-f]{16})_\d+/g;
+const PREF = /\bn([0-9a-f]{16})_[0-9a-z]+/g;
 const BUDGET = 4_000_000_000;
 
 /** Facts naming exactly one file, grouped by that file's id prefix. */

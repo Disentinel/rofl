@@ -80,7 +80,7 @@ sx_param_sink[surface](Fn, I, F) :- se_param(Fn, I, F).
 
 -- what leaves a file takes its contents with it (found by the prototype, section 3)
 sx_esc[surface](N) :- sx_arg_node[surface](_, _, N).   -- also sx_ret_node, sx_export_fn, and the elements/members of an escaped node
-sx_elem[surface](A, I, E) :- sx_esc[surface](A), ast_node[code](A, array_expression, _, _), ast_child[code](A, elements, I, E).
+sx_elem[surface](A, I, E) :- sx_esc[surface](A), ast_node[code](A, array_expression, _), ast_child[code](A, elements, I, E).
 elem_at[flow](X, I, E) :- may_be_node[flow](X, A), sx_elem[surface](A, I, E).
 may_be_lit[flow](E, V) :- sx_lit[surface](E, V).      -- the value set of a foreign node, mirrored
 

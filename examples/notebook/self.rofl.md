@@ -298,11 +298,11 @@ unsure I is out of the kernel's sight at S
 io_key(K) :- member_effect[code](_, K, io).
 imported_callee(C) :- callee_of[code](C, N), ident_in[code](N, Local, File), imports_name[code](Local, _, _, File).
 member_call(C) :- callee_of[code](C, N), ast_child[code](N, object, 0, _).
-unseen(C, K) :- ast_node[code](C, _, F, _), kernel_file(F), eff_call_unattributed[flow](C), not resolves[code](C, _), callee_of[code](C, N), selects[flow](N, K), io_key(K).
-unseen(C, "()") :- ast_node[code](C, _, F, _), kernel_file(F), eff_call_unattributed[flow](C), not resolves[code](C, _), not imported_callee(C), not member_call(C).
-unseen(I, "import()") :- ast_node[code](I, import_expression, F, _), kernel_file(F).
+unseen(C, K) :- ast_node[code](C, _, F), kernel_file(F), eff_call_unattributed[flow](C), not resolves[code](C, _), callee_of[code](C, N), selects[flow](N, K), io_key(K).
+unseen(C, "()") :- ast_node[code](C, _, F), kernel_file(F), eff_call_unattributed[flow](C), not resolves[code](C, _), not imported_callee(C), not member_call(C).
+unseen(I, "import()") :- ast_node[code](I, import_expression, F), kernel_file(F).
 phrase(unseen, "<0:node> is out of the kernel's sight, a call of <1:key>").
-kernel_io(C) :- host_call_effect[audit](C, io, _), ast_node[code](C, _, F, _), kernel_file(F).
+kernel_io(C) :- host_call_effect[audit](C, io, _), ast_node[code](C, _, F), kernel_file(F).
 
 never kernel_io(C)
 unsure unseen(C, K)

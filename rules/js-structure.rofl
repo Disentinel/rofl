@@ -30,7 +30,7 @@ function key_name(K, to N).
 key_name[code](K, N)   :- ast_child[code](P, key, 0, K),
                           not ast_attr[code](P, computed, true),
                           ast_name[code](K, N).
-key_name[code](K, N)   :- ast_child[code](_, key, 0, K), ast_node[code](K, string_literal, _, _),
+key_name[code](K, N)   :- ast_child[code](_, key, 0, K), ast_node[code](K, string_literal, _),
                           ast_attr[code](K, value, N).
 alias ast_value(N, V) is ast_attr(N, value, V).
 
@@ -38,14 +38,14 @@ alias ast_value(N, V) is ast_attr(N, value, V).
 -- `import.meta` are both a `meta_property` with zero attributes; three layers
 -- need the form and none owns it. Keyed on `meta`, the reserved word the
 -- grammar switches on: a future `import.defer` is still (meta="import").
-meta_form[code](M, new_target)  :- ast_node[code](M, meta_property, _, _),
+meta_form[code](M, new_target)  :- ast_node[code](M, meta_property, _),
                                    ast_child[code](M, meta, 0, C), ast_name[code](C, "new").
-meta_form[code](M, import_meta) :- ast_node[code](M, meta_property, _, _),
+meta_form[code](M, import_meta) :- ast_node[code](M, meta_property, _),
                                    ast_child[code](M, meta, 0, C), ast_name[code](C, "import").
 
 -- a third form nothing classifies, and a node answering as both (the mutant
 -- keying the first arm on the wrong word gives every `import.meta` two forms)
-meta_unformed[audit](M) :- ast_node[code](M, meta_property, _, _),
+meta_unformed[audit](M) :- ast_node[code](M, meta_property, _),
                            not meta_form[code](M, _).
 
 meta_form_conflict[audit](M, A, B) :- meta_form[code](M, A), meta_form[code](M, B), A != B.

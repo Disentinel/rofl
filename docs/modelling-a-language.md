@@ -345,7 +345,7 @@ function call and the file import — watch what they drag in, and make
 **The scanner was rewritten to judge nothing, completely.** Four relations and
 no fifth:
 
-    ast_node[code](Id, Kind, File, Line)
+    ast_node[code](Id, Kind, File), ast_line[code](Id, Line)
     ast_child[code](Parent, Field, Index, Child)
     ast_attr[code](Id, Key, Value)
     ast_file[code](RootId, File)

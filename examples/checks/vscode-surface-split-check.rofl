@@ -27,65 +27,65 @@
 --                                    with the texts and nodes of examples/checks/vscode-side-effects-check.rofl
 --   no value                         lib.ts Registry.open: `new Registry()` of an imported class does not resolve (the
 --                                    model's `new` reads a class of the same file); main.ts remove(this.storage.dir)
-vsp_want(n1684850c959c2a12_29, fs_mutation, "/etc/x").
-vsp_want(n1684850c959c2a12_38, fs_mutation, "/var/log/app").
-vsp_want(n1684850c959c2a12_42, fs_mutation, "/tmp/app-cache").
-vsp_want(n1684850c959c2a12_52, fs_mutation, "/var/c").
-vsp_want(n1684850c959c2a12_63, fs_mutation, "/var/log/app").
-vsp_want(n1757fbf66a95b84a_28, fs_mutation, "/tmp/guard").
-vsp_want(n2cab440d5303505d_14, fs_mutation, "/tmp/lib").
-vsp_want(n303f3c0ccfb1010a_28, fs_mutation, "/tmp/a1").
-vsp_want(n303f3c0ccfb1010a_28, fs_mutation, "/tmp/a2").
-vsp_want(n346d69f15eaf6d53_15, fs_mutation, "/var/a").
-vsp_want(n346d69f15eaf6d53_23, fs_mutation, "/var/b").
-vsp_want(n346d69f15eaf6d53_31, fs_mutation, "/home/app").
-vsp_want(n34efd0fd49e79fa1_34, listen, 8080).
-vsp_want(n34efd0fd49e79fa1_34, listen, n34efd0fd49e79fa1_54).
-vsp_want(n34efd0fd49e79fa1_48, listen, 8080).
-vsp_want(n34efd0fd49e79fa1_52, listen, n34efd0fd49e79fa1_54).
-vsp_want(n4eee02055dfecceb_20, fs_mutation, "/tmp/a1").
-vsp_want(n4eee02055dfecceb_20, fs_mutation, "/tmp/a2").
-vsp_want(n6ce3b3e159e9764b_102, process, "code").
-vsp_want(n6ce3b3e159e9764b_108, process, "git").
-vsp_want(n6ce3b3e159e9764b_114, ipc, "vscode:hello").
-vsp_want(n6ce3b3e159e9764b_122, request, "https://update.code.visualstudio.com/api/update").
-vsp_want(n6ce3b3e159e9764b_81, fs_mutation, "/tmp/settings.json").
-vsp_want(n6ce3b3e159e9764b_86, fs_mutation, "/tmp/cache").
-vsp_want(nd100d8f9c1968a85_25, fs_mutation, "/tmp/settings.json").
-vsp_want(nd100d8f9c1968a85_45, fs_mutation, "/tmp/cache").
-vsp_want(nd31751746bbd649e_28, fs_mutation, "/var/log/app").
-vsp_want(nd31751746bbd649e_58, fs_mutation, "fast").
-vsp_want(nd31751746bbd649e_58, fs_mutation, "slow").
-vsp_want(ndbdc6130c943fdee_129,fs_mutation,"/opt/app").
-vsp_want(ndbdc6130c943fdee_129,fs_mutation,ndbdc6130c943fdee_123).
-vsp_want(ndbdc6130c943fdee_141,request,ndbdc6130c943fdee_145).
-vsp_want(ndbdc6130c943fdee_141,request,url("https://update.code.visualstudio.com","/api/update")).
-vsp_want(ndbdc6130c943fdee_44,fs_mutation,join(join("/opt/app","out"),"settings.json")).
-vsp_want(ndbdc6130c943fdee_44,fs_mutation,ndbdc6130c943fdee_48).
-vsp_want(ndbdc6130c943fdee_66,fs_mutation,cat(cat(cat("/opt/app","/logs/"),"main"),".log")).
-vsp_want(ndbdc6130c943fdee_66,fs_mutation,cat(cat(cat("/opt/app","/logs/"),"shared"),".log")).
-vsp_want(ndbdc6130c943fdee_66,fs_mutation,ndbdc6130c943fdee_70).
-vsp_want(ndbdc6130c943fdee_84,fs_mutation,ndbdc6130c943fdee_88).
-vsp_want(ndbdc6130c943fdee_95,fs_mutation,"/opt/app/tmp").
-vsp_want(ndbdc6130c943fdee_95,fs_mutation,ndbdc6130c943fdee_99).
-vsp_want(ndc27e34f71d5ff1f_19,fs_mutation,cat("/srv/app","/logs")).
-vsp_want(ndc27e34f71d5ff1f_19,fs_mutation,n3ea02c0aa5d7188d_16).
-vsp_want(ndc27e34f71d5ff1f_25,fs_mutation,join(join("/srv/app","cache"),"index.json")).
-vsp_want(ndc27e34f71d5ff1f_25,fs_mutation,n3ea02c0aa5d7188d_30).
-vsp_want(ndc27e34f71d5ff1f_34,fs_mutation,cat(cat(cat("/srv/app","/logs"),"/today"),".json")).
-vsp_want(ndc27e34f71d5ff1f_34,fs_mutation,n3ea02c0aa5d7188d_47).
-vsp_want(ndc27e34f71d5ff1f_46,fs_mutation,cat(cat("/srv/app","/logs"),"/all.log")).
-vsp_want(ndc27e34f71d5ff1f_46,fs_mutation,ndc27e34f71d5ff1f_50).
-vsp_want_site(n2cab440d5303505d_32, fs_mutation).
-vsp_want_site(n6ce3b3e159e9764b_90, fs_mutation).
+vsp_want(n1684850c959c2a12_e8sn1juk9s5, fs_mutation, "/etc/x").
+vsp_want(n1684850c959c2a12_gj7sod9qvq7, fs_mutation, "/var/log/app").
+vsp_want(n1684850c959c2a12_84uenqgksg4, fs_mutation, "/tmp/app-cache").
+vsp_want(n1684850c959c2a12_bdiub3jd1e1, fs_mutation, "/var/c").
+vsp_want(n1684850c959c2a12_vt58k6aukj1, fs_mutation, "/var/log/app").
+vsp_want(n1757fbf66a95b84a_v6q28gvhji2, fs_mutation, "/tmp/guard").
+vsp_want(n2cab440d5303505d_n3uinsppr25, fs_mutation, "/tmp/lib").
+vsp_want(n303f3c0ccfb1010a_u8sg49gh9a2, fs_mutation, "/tmp/a1").
+vsp_want(n303f3c0ccfb1010a_u8sg49gh9a2, fs_mutation, "/tmp/a2").
+vsp_want(n346d69f15eaf6d53_8s5nppjece5, fs_mutation, "/var/a").
+vsp_want(n346d69f15eaf6d53_tkharsqbob6, fs_mutation, "/var/b").
+vsp_want(n346d69f15eaf6d53_fg0nar20in4, fs_mutation, "/home/app").
+vsp_want(n34efd0fd49e79fa1_r7jcjg1pls5, listen, 8080).
+vsp_want(n34efd0fd49e79fa1_r7jcjg1pls5, listen, n34efd0fd49e79fa1_3ji3d81e6n).
+vsp_want(n34efd0fd49e79fa1_qk5id7fv0b1, listen, 8080).
+vsp_want(n34efd0fd49e79fa1_j8599nf69r7, listen, n34efd0fd49e79fa1_3ji3d81e6n).
+vsp_want(n4eee02055dfecceb_uak7ebg1s63, fs_mutation, "/tmp/a1").
+vsp_want(n4eee02055dfecceb_uak7ebg1s63, fs_mutation, "/tmp/a2").
+vsp_want(n6ce3b3e159e9764b_7i05qirimu2, process, "code").
+vsp_want(n6ce3b3e159e9764b_m0tkjs22tt1, process, "git").
+vsp_want(n6ce3b3e159e9764b_aig8h69pkt2, ipc, "vscode:hello").
+vsp_want(n6ce3b3e159e9764b_jpjp892vgr1, request, "https://update.code.visualstudio.com/api/update").
+vsp_want(n6ce3b3e159e9764b_gk5hs3rc903, fs_mutation, "/tmp/settings.json").
+vsp_want(n6ce3b3e159e9764b_nuu0h9bo98, fs_mutation, "/tmp/cache").
+vsp_want(nd100d8f9c1968a85_to76001thh6, fs_mutation, "/tmp/settings.json").
+vsp_want(nd100d8f9c1968a85_bhm3cv4bvn4, fs_mutation, "/tmp/cache").
+vsp_want(nd31751746bbd649e_vduo7sfoj81, fs_mutation, "/var/log/app").
+vsp_want(nd31751746bbd649e_8qlf0q96po, fs_mutation, "fast").
+vsp_want(nd31751746bbd649e_8qlf0q96po, fs_mutation, "slow").
+vsp_want(ndbdc6130c943fdee_18bs8n5b6m,fs_mutation,"/opt/app").
+vsp_want(ndbdc6130c943fdee_18bs8n5b6m,fs_mutation,ndbdc6130c943fdee_dp3492it4h7).
+vsp_want(ndbdc6130c943fdee_o13jg7f3n72,request,ndbdc6130c943fdee_6f9hm7qemu3).
+vsp_want(ndbdc6130c943fdee_o13jg7f3n72,request,url("https://update.code.visualstudio.com","/api/update")).
+vsp_want(ndbdc6130c943fdee_dlqog2mm806,fs_mutation,join(join("/opt/app","out"),"settings.json")).
+vsp_want(ndbdc6130c943fdee_dlqog2mm806,fs_mutation,ndbdc6130c943fdee_ukl8remh2t6).
+vsp_want(ndbdc6130c943fdee_717kubascm2,fs_mutation,cat(cat(cat("/opt/app","/logs/"),"main"),".log")).
+vsp_want(ndbdc6130c943fdee_717kubascm2,fs_mutation,cat(cat(cat("/opt/app","/logs/"),"shared"),".log")).
+vsp_want(ndbdc6130c943fdee_717kubascm2,fs_mutation,ndbdc6130c943fdee_5phhoasnio7).
+vsp_want(ndbdc6130c943fdee_lckrchp74h7,fs_mutation,ndbdc6130c943fdee_4qk1ollihu3).
+vsp_want(ndbdc6130c943fdee_2babfsu3532,fs_mutation,"/opt/app/tmp").
+vsp_want(ndbdc6130c943fdee_2babfsu3532,fs_mutation,ndbdc6130c943fdee_s45pk6hn1c4).
+vsp_want(ndc27e34f71d5ff1f_gj3a8o1qu3,fs_mutation,cat("/srv/app","/logs")).
+vsp_want(ndc27e34f71d5ff1f_gj3a8o1qu3,fs_mutation,n3ea02c0aa5d7188d_hama7m7bsm7).
+vsp_want(ndc27e34f71d5ff1f_ue2bq3j8gc2,fs_mutation,join(join("/srv/app","cache"),"index.json")).
+vsp_want(ndc27e34f71d5ff1f_ue2bq3j8gc2,fs_mutation,n3ea02c0aa5d7188d_bq8jktetbo5).
+vsp_want(ndc27e34f71d5ff1f_84mifg2evs6,fs_mutation,cat(cat(cat("/srv/app","/logs"),"/today"),".json")).
+vsp_want(ndc27e34f71d5ff1f_84mifg2evs6,fs_mutation,n3ea02c0aa5d7188d_lkhdh3johv2).
+vsp_want(ndc27e34f71d5ff1f_3jvg6j62uh6,fs_mutation,cat(cat("/srv/app","/logs"),"/all.log")).
+vsp_want(ndc27e34f71d5ff1f_3jvg6j62uh6,fs_mutation,ndc27e34f71d5ff1f_k9l85qv4706).
+vsp_want_site(n2cab440d5303505d_59a44hct9p7, fs_mutation).
+vsp_want_site(n6ce3b3e159e9764b_vdu008tnjk6, fs_mutation).
 vsp_want_site(S, F) :- vsp_want(S, F, _).
 vsp_want_count(fs_mutation, 29, 27).
 vsp_want_count(listen, 3, 3).
 vsp_want_count(process, 2, 2).
 vsp_want_count(ipc, 1, 1).
 vsp_want_count(request, 2, 2).
-vsp_want_not_run(n4eee02055dfecceb_18).
-vsp_want_caught(n1757fbf66a95b84a_25, n02a978cc9a4fd53e_13).
+vsp_want_not_run(n4eee02055dfecceb_hvb3bob2l57).
+vsp_want_caught(n1757fbf66a95b84a_kf6pok5q4, n02a978cc9a4fd53e_blmefh4mta4).
 
 vsp_missing(S, F, V)   :- vsp_want(S, F, V), not side_effect_value(S, F, V).
 vsp_extra(S, F, V)     :- side_effect_value(S, F, V), not vsp_want(S, F, V).

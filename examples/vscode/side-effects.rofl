@@ -42,7 +42,7 @@ se_api(P, S, N)    :- external_destructured[code](D, P, _, _), external_value[fl
 -- A receiver: the API value itself (`ipcMain`), or what calling it made (`net.createServer()`, `express()`).
 se_recv(Y, S, R) :- se_api(Y, S, R).
 se_recv(C, S, R) :- se_called(C, X), se_api(X, S, R).
-se_called(C, X)  :- call_like_v(K), ast_node[code](C, K, _, _), ast_child[code](C, callee, 0, G), may_be_node[flow](G, X),
+se_called(C, X)  :- call_like_v(K), ast_node[code](C, K, _), ast_child[code](C, callee, 0, G), may_be_node[flow](G, X),
                     external_value[flow](X, _).
 
 -- 3. THE FAMILIES. A function family is its modules times its names; a method family adds the receiver.
@@ -97,7 +97,7 @@ se_method_name(ipc, "postMessage").
 -- an external function of a family (argument 0); a WRAPPER site is a call of a corpus function whose parameter I
 -- is read as the asked argument of another site, so `writeAtomic(p)` is a site when its body is `fs.writeFileSync(p)`.
 se_site(C, F, 0) :- se_called(C, X), se_api(X, S, N), se_fn(F, S, N).
-se_site(C, F, 0) :- call_like_v(K), ast_node[code](C, K, _, _), ast_child[code](C, callee, 0, M),
+se_site(C, F, 0) :- call_like_v(K), ast_node[code](C, K, _), ast_child[code](C, callee, 0, M),
                     member_node_v[flow](M), selects[flow](M, N), se_method(F, S, R, N),
                     ast_child[code](M, object, 0, O), may_be_node[flow](O, Y), se_recv(Y, S, R).
 

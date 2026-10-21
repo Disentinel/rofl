@@ -375,13 +375,17 @@ A kind K
 Declared as facts:
 
 - <a id="ast_node"></a>`ast_node` — rows from the scanner
+- <a id="ast_line"></a>`ast_line` — rows from the scanner
 
 > THE SCANNER'S ROWS ARE FUNCTIONS (docs/data-structures.md), and the scanner keeps the promise (scanners/js_ast.ts
-> `emit`): a node has a fresh id (`prefix + ++n`), so one kind, file and line; an own property is written once,
-> under a key of its own (`field`, or `field_member` for a record of scalars). A fact that breaks it is refused
-> with its key and both values, never silently believed; the planner reads a bound id as one match.
+> `emit`): a node has an id of its own (the scanner refuses a collision in a file), so one kind, file and line; an
+> own property is written once, under a key of its own (`field`, or `field_member` for a record of scalars). A fact
+> that breaks it is refused with its key and both values, never silently believed; the planner reads a bound id as
+> one match.
 
-`ast_node` has one Kind, File and Line for each N.
+`ast_node` has one Kind and File for each N.
+
+`ast_line` has one Line for each N.
 
 `ast_attr` has one V for each N and K.
 

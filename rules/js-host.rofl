@@ -76,7 +76,7 @@ host_site[code](C, node, Spec, Key) :- host_module_call[code](C, Spec, Key).
 host_site[code](C, H, Name, Key)    :- host_member_call[code](C, H, Name, Key).
 host_site[code](C, H, Name, itself) :- host_global_call[code](C, H, Name).
 host_site_at[code](H, File, Line, Origin, Key) :- host_site[code](C, H, Origin, Key),
-                                                  ast_node[code](C, _, File, Line).
+                                                  ast_node[code](C, _, File), ast_line[code](C, Line).
 
 -- =========================================================================
 -- 4. THE EFFECT ROW the effect layer joins against, at a call site, with the
@@ -101,7 +101,7 @@ host_call_effect[audit](C, E, by_global) :- host_member_call[code](C, H, Name, _
 
 -- at a coordinate, and the set of effects the corpus exercises
 host_effect_at[audit](E, File, Line, Why) :- host_call_effect[audit](C, E, Why),
-                                             ast_node[code](C, _, File, Line).
+                                             ast_node[code](C, _, File), ast_line[code](C, Line).
 host_effect_used[audit](E) :- host_call_effect[audit](_, E, _).
 
 -- The FRONTIER, expected non-zero: a site here is one the effect layer sees
@@ -172,7 +172,7 @@ host_member_absent[audit](R, Spec, Key) :- runtime_version(R, F, _),
 host_call_absent[audit](R, C, Spec, Key) :- host_module_call[code](C, Spec, Key),
                                             host_member_absent[audit](R, Spec, Key).
 host_call_absent_at[audit](R, File, Line, Spec, Key) :- host_call_absent[audit](R, C, Spec, Key),
-                                                        ast_node[code](C, _, File, Line).
+                                                        ast_node[code](C, _, File), ast_line[code](C, Line).
 
 -- The set difference between two runtimes, WITHIN ONE FAMILY (a browser did
 -- not LOSE `fs`), and with no ordering premise, as `lost[audit]` in js-env.

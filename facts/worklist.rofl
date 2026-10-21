@@ -4016,3 +4016,8 @@ work(w_disk_wall,
 work_state(w_disk_wall, open).
 work_needs(w_disk_wall, w_kept_by_default).
 work_needs(w_disk_wall, w_resume_after_budget).
+
+work(w_stable_node_ids,
+  "The owner, 2026-10-21 (thread on caching): a JS node id is its place in the tree, not its place in the walk. scanners/js_ast.ts gave `prefix + ++n` in walk order and put the line in ast_node, so a function added at the top of a file renamed every node below it and a blank line moved every ast_node under it. The id becomes the file's prefix and a hash of (parent id, step), top-down, one hash per node, no key: a named child (function, class, method, property, a variable declaration whose declarators are all named) steps by its name; an element of a list field by its kind and a shallow hash of its tree down to the first block, function or class, #n among equals; a single child by its role. The line leaves ast_node for ast_line; rules that read a line read it there, as a projection for people. A collision in a file is refused by the scanner and the file is scanned again under a salt; across files the prefix is claimed. A rename moves the renamed subtree (the owner accepts it). Toy numbers (cart.js, facts moved of ~1 600): a function added at the top 202 against 1 980, an it() added at the top 388 against 2 072, a line edited inside a callback 111 against 1 531, a rename 1 006 against 36. ACCEPTANCE: facts moved per edit measured on a multi-file corpus against the walk-order ids, with the per-node cost of the scanner at the reference scale.").
+work_state(w_stable_node_ids, done).
+work_needs(w_kept_world_by_delta, w_stable_node_ids).

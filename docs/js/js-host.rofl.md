@@ -48,7 +48,7 @@ Reads:
 - from js-dataflow, in the flow: [decl_value](js-dataflow.rofl.md#decl_value), [external_value](js-dataflow.rofl.md#external_value), [member_node_v](js-dataflow.rofl.md#member_node_v), [selects](js-dataflow.rofl.md#selects)
 - from js-env: [reaches](js-env.rofl.md#reaches)
 - from js-env-api, in the code: [lib_call](js-env-api.rofl.md#lib_call)
-- from js-model, in the code: [ast_node](js-model.rofl.md#ast_node)
+- from js-model, in the code: [ast_line](js-model.rofl.md#ast_line), [ast_node](js-model.rofl.md#ast_node)
 - from js-modules, in the code: [builtin_canonical](js-modules.rofl.md#builtin_canonical)
 - from js-modules, in the main: [host_module](js-modules.rofl.md#host_module)
 - from js-structure, in the code: [ast_name](js-structure.rofl.md#ast_name)
@@ -168,7 +168,10 @@ In the code:
 2. if C [calls the host member](#host_member_call) Key of Spec in N;
 3. if C [calls the host global](#host_global_call) Spec of N and Key is `itself`.
 
-<a id="host_site_at"></a>File has a host site at Line of a host H from an origin Origin at Key if a node C [is a host site](#host_site) of H from Origin at Key and C [is of kind](js-model.rofl.md#ast_node) some kind in file File at line Line.
+<a id="host_site_at"></a>File has a host site at Line of a host H from an origin Origin at Key if all of:
+  - a node C [is a host site](#host_site) of H from Origin at Key;
+  - C [is in file](js-model.rofl.md#ast_node) File;
+  - C [is at line](js-model.rofl.md#ast_line) Line.
 
 ## 4. THE EFFECT ROW the effect layer joins against, at a call site, with the
 
@@ -209,7 +212,10 @@ In the audit:
 
 > at a coordinate, and the set of effects the corpus exercises
 
-<a id="host_effect_at"></a>File has the host effect E at Line by a route Why if a node C [has the host effect](#host_call_effect) E by Why and C [is of kind](js-model.rofl.md#ast_node) some kind in file File at line Line.
+<a id="host_effect_at"></a>File has the host effect E at Line by a route Why if all of:
+  - a node C [has the host effect](#host_call_effect) E by Why;
+  - C [is in file](js-model.rofl.md#ast_node) File;
+  - C [is at line](js-model.rofl.md#ast_line) Line.
 
 > The FRONTIER, expected non-zero: a site here is one the effect layer sees
 > as silent, which it must not mistake for `total`.
@@ -306,7 +312,10 @@ In the audit:
 
 <a id="host_call_absent"></a>C is absent on a runtime R at Key of a spec Spec if C [calls the module member](#host_module_call) Key of Spec and R [lacks the member](#host_member_absent) Key of Spec.
 
-<a id="host_call_absent_at"></a>File has an absent call at Line on a runtime R at Key of a spec Spec if a node C [is absent on](#host_call_absent) R at Key of Spec and C [is of kind](js-model.rofl.md#ast_node) some kind in file File at line Line.
+<a id="host_call_absent_at"></a>File has an absent call at Line on a runtime R at Key of a spec Spec if all of:
+  - a node C [is absent on](#host_call_absent) R at Key of Spec;
+  - C [is in file](js-model.rofl.md#ast_node) File;
+  - C [is at line](js-model.rofl.md#ast_line) Line.
 
 > The set difference between two runtimes, WITHIN ONE FAMILY (a browser did
 > not LOSE `fs`), and with no ordering premise, as `lost[audit]` in js-env.
