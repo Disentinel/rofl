@@ -7,7 +7,7 @@
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { answerKey, answerTS, blessAnswer, type World } from './goldens.ts';
+import { answerKey, answerTS, blessAnswer, checkWorld, type World } from './goldens.ts';
 import { readingKey, worldFiles } from './md_world.ts';
 import { omitted } from './keep.ts';
 
@@ -86,5 +86,20 @@ for (const c of cases) {
   if (asked(() => answerTS(w)) === null) bad.push('BROKEN a Rust-only world handed to the TypeScript engine was answered, not refused');
   else console.log('  red   a Rust-only world handed to the TypeScript engine is refused');
 }
+// A WORLD WHOSE FILE CANNOT BE READ IS A SENTENCE that names the world, the file and why, not a stack from inside a
+// worker: its own file moved away, a file of the world below that is not there, a file it may not read, a directory
+const locked = put('kc-locked.rofl', 'edb(kc_p).\n');
+fs.chmodSync(locked, 0o000);
+fs.mkdirSync(at('kc-dir.rofl'), { recursive: true });
+try {
+  for (const [what, w, why] of [['its own file', world([at('kc-gone.rofl')]), 'is not there'],
+    ['a file of the world below', world([put('kc-above.rofl', '-- below: kc-nowhere/below.rofl\nedb(kc_p).\n')]), 'is not there'],
+    ['a file it may read', world([locked]), 'may not be read'], ['a file, given a directory', world([at('kc-dir.rofl')]), 'is no file']] as const) {
+    let said: string | null;
+    try { said = checkWorld(w, { hash: '', census: new Map() }, true, 'ts'); } catch (e) { said = `threw ${(e as Error).message.split('\n')[0]}`; }
+    if (!said || !said.startsWith('keep_check: it loads ') || !said.endsWith(`, which ${why}`)) bad.push(`BROKEN a world without ${what}: ${said ?? 'passed'}`);
+    else console.log(`  ok    a world without ${what}: ${said}`);
+  }
+} finally { fs.chmodSync(locked, 0o644); }
 for (const b of bad) console.log(b);
 process.exit(bad.length ? 1 : 0);

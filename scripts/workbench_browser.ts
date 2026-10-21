@@ -6,6 +6,7 @@ import { createServer } from 'node:http';
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
+import { own as owning, reap } from './own.ts';
 
 /** Chrome, where it is: CHROME names it, else the usual places; undefined when there is none. */
 export function chrome(): string | undefined {
@@ -42,14 +43,15 @@ type Js = (expression: string) => Promise<any>;
 type Send = (method: string, params?: object) => Promise<any>;
 /** The build in `dir` opened in headless Chrome, `script` run before the page's own, the page's cells loaded; `fn` drives it. `own`: no page
  *  opened and nothing waited for, `fn` goes where it needs. */
-async function opened<T>(dir: string, script: string, fn: (js: Js, send: Send, at: (page: string) => Promise<void>) => Promise<T>, bin: string, own = false): Promise<T> {
+export async function opened<T>(dir: string, script: string, fn: (js: Js, send: Send, at: (page: string) => Promise<void>) => Promise<T>, bin: string, own = false): Promise<T> {
   const server = createServer((req, res) => {
     const f = path.join(dir, decodeURIComponent(new URL(req.url!, 'http://x').pathname).replace(/^\/$/, '/index.html'));
     try { const body = readFileSync(f); res.writeHead(200, { 'content-type': f.endsWith('.js') ? 'text/javascript' : f.endsWith('.html') ? 'text/html; charset=utf-8' : 'text/plain; charset=utf-8' }); res.end(f.endsWith('index.html') ? `<!doctype html><meta charset="utf-8">${body}` : body); }
     catch { res.writeHead(404); res.end(); }
   });
   await new Promise<void>((r) => server.listen(0, '127.0.0.1', r));
-  const port = (server.address() as { port: number }).port, profile = mkdtempSync(path.join(os.tmpdir(), 'wb-chrome-'));
+  reap();
+  const port = (server.address() as { port: number }).port, profile = mkdtempSync(path.join(os.tmpdir(), 'wb-chrome-')), release = owning(profile);
   const cdp = 9200 + Math.floor(Math.random() * 700);
   const proc = spawn(bin, ['--headless=new', '--disable-gpu', '--hide-scrollbars', `--remote-debugging-port=${cdp}`, `--user-data-dir=${profile}`, 'about:blank'], { stdio: 'ignore', detached: true });   // a group of its own: its helpers go with it
   try {
@@ -74,6 +76,7 @@ async function opened<T>(dir: string, script: string, fn: (js: Js, send: Send, a
     const gone = new Promise((r) => proc.once('exit', r)); try { process.kill(-proc.pid!, 'SIGKILL'); } catch { proc.kill('SIGKILL'); } server.close();
     await Promise.race([gone, sleep(3000)]); await sleep(300);
     try { rmSync(profile, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 }); } catch {}   // a helper process may still hold it: a temporary directory left behind
+    release();
   }
 }
 

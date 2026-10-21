@@ -48,6 +48,7 @@ import { worldFiles, prefetchMd } from './md_world.ts';
 import { materialize, readWorldMd, unreadOf } from './sentences.ts';
 import { runPool, jobs, type Task } from './pool.ts';
 import { parseSelector, select, NotAWorld, belowFiles, inputs } from './agg_select.ts';
+import { own } from './own.ts';
 import { closure, fileHash, filesHash, forget, KEEP, keyOf, keptOr, planted, sha, tallied } from './keep.ts';
 import { MODEL_FILES } from '../notebook/front.ts';
 
@@ -125,7 +126,7 @@ export function answerKey(engine: 'ts' | 'rust', w: World, given: { rust?: strin
   const ins = inputs(w);
   if (ins.some((f) => { const h = fileHash(f); if (!scans.has(h)) scans.set(h, h !== 'gone' && /^scanner\(/m.test(fs.readFileSync(f, 'utf8'))); return scans.get(h); })) return null;
   return keyOf('answer 1', [['engine', [engine, engine === 'ts' ? stamps().ts : fileHash(at.rust)]], ['harness', [stamps().harness, process.version]],
-    ['boot', fileHash(at.boot)], ['options', JSON.stringify({ ...w, files: null })], ['files', ins.flatMap((f) => [f, fileHash(f), fileHash(`${f}.unread`)])]]);
+    ['boot', fileHash(at.boot)], ['options', JSON.stringify({ ...w, files: null })], ['files', ins.flatMap((f) => [path.relative(ROOT, f), fileHash(f), fileHash(`${f}.unread`)])]]);
 }
 
 /** A host contract, kept as a world's answer is: under this harness, the TypeScript sources, the Rust binary, boot and
@@ -1001,9 +1002,23 @@ function engineFromChanges(ref: string): { engine: EngineChoice; why: string } {
   return { engine: 'both', why: `${other} changed since ${ref}` };
 }
 
+/** A world that loads a file it cannot read, its own or one the world below names, is said in a sentence: every reader
+ *  after this one would throw (ENOENT, EACCES, EISDIR) from inside a worker and the run would end on a stack. */
+export function absent(w: World): string | null {
+  const why = (f: string): string | null => {
+    try { if (!fs.statSync(f).isFile()) return 'is no file'; fs.accessSync(f, fs.constants.R_OK); return null; }
+    catch (e) { const c = (e as NodeJS.ErrnoException).code; return c === 'ENOENT' ? 'is not there' : c === 'EACCES' ? 'may not be read' : `cannot be read (${c ?? (e as Error).message})`; }
+  };
+  const read = w.files.filter((f) => !why(f));
+  const bad = [...w.files.filter((f) => !read.includes(f)), ...belowFiles(read).filter((f) => why(f))];
+  return bad.length ? `${w.name}: ${bad.map((f) => `it loads ${path.relative(ROOT, f)}, which ${why(f)}`).join('; ')}` : null;
+}
+
 let refusalsOk: Set<string> | undefined;
 /** One world against its golden: null when it passes, else its FAIL line. */
 export function checkWorld(w: World, g: { hash: string; census: Map<string, number> } | undefined, rustMissing: boolean, engine: EngineChoice = 'both'): string | null {
+  const gone = absent(w);
+  if (gone) return gone;
   let v = judgeWorld(w, g, rustMissing, engine);
   // A RED IS NEVER KEPT: its answers are dropped, so a red on a warm run was computed on that run, and an answer that came
   // out wrong once (an engine that is not deterministic under load, f_a_kept_answer_must_not_keep_a_red) is asked again
@@ -1122,6 +1137,7 @@ function refuse(e: unknown): never {
 
 const isMain = process.argv[1] && path.basename(process.argv[1]) === 'goldens.ts';
 if (isMain) {
+  own();
   // `rofl why L @rules/js.files code.rofl` reads the model the notebook host reads (docs/cli.md)
   const listed = fs.readFileSync(path.join(ROOT, 'rules/js.files'), 'utf8').split('\n').filter(Boolean).map((f) => path.relative(ROOT, path.join(ROOT, 'rules', f)));
   if (listed.join('\n') !== MODEL_FILES.join('\n')) { console.error(`rules/js.files is not notebook/front.ts MODEL_FILES: ${listed.join(' ')}`); process.exit(1); }
@@ -1202,6 +1218,8 @@ if (isMain) {
     // A RUST-ONLY WORLD IS BLESSED FROM THE RUST ANSWER, which is the only one
     // it has; its problems and parity are printed, and a bless over them is a
     // decision a person reads in the output.
+    const gone = ws.map(absent).filter((x) => x !== null);
+    if (gone.length) refuse(new Error(`not blessed: ${gone.join('; ')}`));
     const answers = await runPool<{ a: Answer; said: string[] }>(ws.map((w) => ({ mod: SELF, fn: 'blessAnswer', args: [w] })), { env: { ROFL_KEEP_TALLY: TALLY } });
     const rows: [World, Answer][] = ws.map((w, i) => [w, answers[i].a]);
     for (const { said } of answers) for (const l of said) console.log(l);

@@ -11,6 +11,7 @@
 import { fork, type ChildProcess } from 'node:child_process';
 import * as os from 'node:os';
 import * as path from 'node:path';
+import { own, watched } from './own.ts';
 
 export interface Task { mod: string; fn: string; args: unknown[] }
 
@@ -25,6 +26,7 @@ const WORKER = path.join(import.meta.dirname, 'pool.ts');
  *  that throws rejects the whole run, with the task named: a harness that
  *  swallowed one would report a check it never made. */
 export async function runPool<R>(tasks: Task[], opts: { width?: number; env?: NodeJS.ProcessEnv } = {}): Promise<R[]> {
+  own();
   const out = new Array<R>(tasks.length);
   if (tasks.length === 0) return out;
   const width = Math.min(opts.width ?? jobs(), tasks.length);
@@ -45,6 +47,7 @@ export async function runPool<R>(tasks: Task[], opts: { width?: number; env?: No
           env: { ...process.env, ...opts.env },
           serialization: 'advanced',
           stdio: ['ignore', 'inherit', 'inherit', 'ipc'],
+          detached: true,   // a group of its own, which its watcher kills whole when this run is gone (scripts/own.ts)
         });
         kids.push(kid);
         kid.on('message', (m: { i: number; ok: boolean; value?: R; error?: string }) => {
@@ -70,16 +73,19 @@ export async function runPool<R>(tasks: Task[], opts: { width?: number; env?: No
 }
 
 if (process.argv.includes('--pool-worker')) {
+  watched();
   const mods = new Map<string, Record<string, (...a: unknown[]) => unknown>>();
+  // a worker whose run was killed by SIGKILL has nobody to answer, and ends there
+  const answer = (r: object): void => { process.send!(r, (e: Error | null) => { if (e) process.exit(1); }); };
   process.on('message', async (m: { stop?: boolean; i: number; task: Task }) => {
     if (m.stop) { process.disconnect(); return; }
     try {
       if (!mods.has(m.task.mod)) mods.set(m.task.mod, await import(m.task.mod));
       const f = mods.get(m.task.mod)![m.task.fn];
       if (typeof f !== 'function') throw new Error(`${m.task.mod} exports no function ${m.task.fn}`);
-      process.send!({ i: m.i, ok: true, value: await f(...m.task.args) });
+      answer({ i: m.i, ok: true, value: await f(...m.task.args) });
     } catch (e) {
-      process.send!({ i: m.i, ok: false, error: (e as Error).stack ?? String(e) });
+      answer({ i: m.i, ok: false, error: (e as Error).stack ?? String(e) });
     }
   });
 }
