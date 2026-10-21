@@ -133,23 +133,95 @@ pub fn bytes_of<T: Pod>(a: &[T]) -> &[u8] {
     unsafe { std::slice::from_raw_parts(a.as_ptr() as *const u8, std::mem::size_of_val(a)) }
 }
 
+/// A sum of bytes, eight at a time, each step a bijection of the sum so far: two files that differ in one word never
+/// have the same sum. What finds a volume damaged (`volume::check`); not a defence against a file made to collide.
+#[derive(Clone, Copy)]
+pub struct Sum {
+    h: u64,
+    word: u64,
+    n: u32,
+    len: u64,
+}
+
+impl Default for Sum {
+    fn default() -> Self {
+        Sum { h: 0x6a09_e667_f3bc_c908, word: 0, n: 0, len: 0 }
+    }
+}
+
+impl Sum {
+    pub fn add(&mut self, mut b: &[u8]) {
+        self.len += b.len() as u64;
+        while self.n != 0 && !b.is_empty() {
+            self.byte(b[0]);
+            b = &b[1..];
+        }
+        let mut words = b.chunks_exact(8);
+        for w in &mut words {
+            self.mix(u64::from_le_bytes(w.try_into().unwrap()));
+        }
+        for &x in words.remainder() {
+            self.byte(x);
+        }
+    }
+    fn byte(&mut self, x: u8) {
+        self.word |= (x as u64) << (8 * self.n);
+        self.n += 1;
+        if self.n == 8 {
+            let w = std::mem::take(&mut self.word);
+            self.n = 0;
+            self.mix(w);
+        }
+    }
+    #[inline(always)]
+    fn mix(&mut self, w: u64) {
+        self.h = (self.h ^ w).wrapping_mul(0x9e37_79b9_7f4a_7c15).rotate_left(29);
+    }
+    pub fn value(&self) -> u64 {
+        let mut s = *self;
+        s.mix(s.word);
+        s.mix(s.len);
+        s.h ^ (s.h >> 31)
+    }
+    /// The sum of `b`, as sixteen hex digits.
+    pub fn of(b: &[u8]) -> String {
+        let mut s = Sum::default();
+        s.add(b);
+        format!("{:016x}", s.value())
+    }
+}
+
 /// A volume as it is written: numbers in sequence, each arena at an eight-byte boundary after its length, streamed
-/// to the file.
+/// to the file, and last the sum of every byte before it.
 pub struct VolW {
     out: std::io::BufWriter<std::fs::File>,
     at: usize,
     err: Option<std::io::Error>,
+    sum: Sum,
+    /// the most bytes the file may reach: past it nothing more is written and the volume fails as `TooLarge`
+    bound: Option<usize>,
 }
+
+/// What a bounded volume fails with when it would pass its bound.
+pub const TOO_LARGE: &str = "the volume would pass its bound";
 
 impl VolW {
     pub fn create(path: &str) -> std::io::Result<VolW> {
-        Ok(VolW { out: std::io::BufWriter::with_capacity(1 << 20, std::fs::File::create(path)?), at: 0, err: None })
+        Self::bounded(path, None)
+    }
+    /// A volume that never grows past `bound` bytes on disk: written up to it, then failed.
+    pub fn bounded(path: &str, bound: Option<usize>) -> std::io::Result<VolW> {
+        Ok(VolW { out: std::io::BufWriter::with_capacity(1 << 20, std::fs::File::create(path)?), at: 0, err: None, sum: Sum::default(), bound })
     }
     pub fn bytes(&mut self, b: &[u8]) {
         use std::io::Write;
+        if self.err.is_none() && self.bound.is_some_and(|n| self.at + b.len() > n) {
+            self.err = Some(std::io::Error::other(TOO_LARGE));
+        }
         if self.err.is_none() {
             self.err = self.out.write_all(b).err();
         }
+        self.sum.add(b);
         self.at += b.len();
     }
     pub fn u32(&mut self, x: u32) {
@@ -186,9 +258,11 @@ impl VolW {
         self.bytes(bytes_of(&base[at..]));
         self.bytes(bytes_of(tail));
     }
-    /// The bytes written, once they are all in the file.
+    /// The bytes written, the sum last, once they are all in the file.
     pub fn finish(mut self) -> std::io::Result<usize> {
         use std::io::Write;
+        let sum = self.sum.value();
+        self.bytes(&sum.to_le_bytes());
         match self.err.take() {
             Some(e) => Err(e),
             None => self.out.flush().map(|_| self.at),
@@ -196,21 +270,32 @@ impl VolW {
     }
 }
 
-/// A volume as it is read, in the order it was written. Every read is checked against the file's length.
+/// A volume as it is read, in the order it was written, up to the sum that ends it. Every read is checked against
+/// that end.
 pub struct VolR {
     map: Rc<memmap2::Mmap>,
     i: usize,
+    end: usize,
 }
 
 impl VolR {
     pub fn new(map: Rc<memmap2::Mmap>, from: usize) -> VolR {
-        VolR { map, i: from }
+        let end = map.len().saturating_sub(8);
+        VolR { map, i: from, end }
     }
     pub fn at_end(&self) -> bool {
-        self.i == self.map.len()
+        self.i == self.end
+    }
+    /// Whether the sum that ends the volume is the sum of the bytes before it: a read of the whole file.
+    pub fn sum_holds(&self) -> bool {
+        let Some(kept) = self.map.get(self.end..) else { return false };
+        let mut s = Sum::default();
+        s.add(&self.map[..self.end]);
+        kept.len() == 8 && s.value().to_le_bytes() == kept
     }
     fn take(&mut self, n: usize) -> Result<&[u8], String> {
-        let b = self.map.get(self.i..self.i.checked_add(n).ok_or("a volume ends early")?).ok_or("a volume ends early")?;
+        let to = self.i.checked_add(n).filter(|&t| t <= self.end).ok_or("a volume ends early")?;
+        let b = &self.map[self.i..to];
         self.i += n;
         Ok(b)
     }
@@ -232,6 +317,9 @@ impl VolR {
         let len = self.u64()? as usize;
         self.i = self.i.next_multiple_of(8);
         let at = self.i;
+        if len.checked_mul(std::mem::size_of::<T>()).and_then(|n| n.checked_add(at)).map_or(true, |to| to > self.end) {
+            return Err("a volume ends early".into());
+        }
         let words = Arena::<u32>::mapped(&self.map, at, len.checked_mul(std::mem::size_of::<T>()).ok_or("a volume ends early")? / 4);
         let a = Arena::<T>::mapped(&self.map, at, len).ok_or("a volume ends early")?;
         if std::mem::size_of::<T>() % 4 == 0 && !ok(&words.ok_or("a volume ends early")?) {

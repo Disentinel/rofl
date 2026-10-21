@@ -11,7 +11,9 @@
 //!   rofl nb FILE.rofl.md [--cell N] [--all]     a notebook run, printed as `npm run nb` prints it
 //!
 //! A question verb is `rofl load` with that one question; `--json` prints each answer as `rofl serve` does.
+//! `--kept F [--anew]` keeps the world evaluated at F, and later runs answer from F until it is stale (kept.rs).
 //! `@LIST` stands for the files LIST names, one a line, each from LIST's directory (`@rules/js.files`, the JS model).
+mod kept;
 mod load;
 mod nb;
 mod render;
@@ -58,7 +60,7 @@ fn run(args: Vec<String>) {
             }
             let flag = if all { "--why-all".to_string() } else { format!("--{cmd}") };
             args.insert(0, flag);
-            load::main(args)
+            load::verb(args)
         }
         "serve" => serve::main(),
         "render" => render::main(args),

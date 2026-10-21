@@ -9,6 +9,8 @@ serde = "1"
 serde_json = "1"
 memmap2 = "0.9"
 regex = "1"
+# the free space of a disk, before a question verb keeps its world on it (src/bin/rofl/kept.rs)
+libc = "0.2"
 
 # planted faults for scripts/agg_breaks.ts (src/breaks.rs); never in a normal build
 [features]

@@ -8704,6 +8704,115 @@ export const BREAKS: Break[] = [
    "snapshot_round_trip": "the snapshot does not read back whole: saved again it is another text"
   }
  },
+ {
+  "id": "kept_stale_files",
+  "what": "a kept world is answered whatever happened to the files it was computed from",
+  "expect": {
+   "kept_rule": "a_rule_file_edited:",
+   "kept_boot": "boot_edited:",
+   "kept_md": "markdown_and_what_it_reads:",
+   "kept_scan": "a_scan_read_edited:"
+  }
+ },
+ {
+  "id": "kept_md_unread",
+  "what": "a kept .rofl.md world records the files named and not what the Markdown reader read, the tree's vocabulary",
+  "expect": {
+   "kept_md": "markdown_and_what_it_reads:"
+  }
+ },
+ {
+  "id": "kept_scans_unread",
+  "what": "a kept world records its files and not the paths its scanners named as read",
+  "expect": {
+   "kept_scan": "a_scan_read_edited:"
+  }
+ },
+ {
+  "id": "kept_blind_scans",
+  "what": "a world one of whose scanners named nothing it read is kept, though its staleness cannot be told",
+  "expect": {
+   "kept_blind": "a_blind_scan_is_not_kept:"
+  }
+ },
+ {
+  "id": "kept_stale_args",
+  "what": "a kept world is answered for a run that names other files or walls",
+  "expect": {
+   "kept_walls": "walls_changed:"
+  }
+ },
+ {
+  "id": "kept_stale_engine",
+  "what": "a kept world is answered by a binary that is not the one that kept it",
+  "expect": {
+   "kept_engine": "the_engine_changed:"
+  }
+ },
+ {
+  "id": "kept_unsummed",
+  "what": "a volume's sum is not compared, so a kept file changed after it was written is answered",
+  "expect": {
+   "kept_damaged": "a_damaged_file:"
+  }
+ },
+ {
+  "id": "kept_stamp_mtime",
+  "what": "a kept world's files are stamped by their time and not their bytes, so a file touched and unchanged makes it stale",
+  "expect": {
+   "kept_touched": "touched_is_not_stale:"
+  }
+ },
+ {
+  "id": "volume_unknowns_dropped",
+  "what": "a world opened from a volume or a kept image has none of what its holes left unknown, so a negation unfolded at a call reads a hole as absence",
+  "expect": {
+   "kept_holes": "sealed_cone_and_holes_as_fresh:",
+   "kept_image_holes": "from a kept image"
+  }
+ },
+ {
+  "id": "kept_key_ignores_walls",
+  "what": "a question verb names the world it keeps by its files alone, so the same files under another budget are answered from the world kept under the first",
+  "expect": {
+   "kept_implicit_walls": "walls_name_another_world:"
+  }
+ },
+ {
+  "id": "kept_verbs_compute",
+  "what": "a question verb keeps nothing and computes every time",
+  "expect": {
+   "kept_implicit": "a_verb_keeps_its_world_by_itself:"
+  }
+ },
+ {
+  "id": "kept_load_reads_cache",
+  "what": "rofl load reads and writes the worlds the question verbs keep, so a gate need not compute",
+  "expect": {
+   "kept_implicit_load": "load_and_serve_keep_nothing:"
+  }
+ },
+ {
+  "id": "kept_cap_ignored",
+  "what": "the cache's cap is ignored: a world larger than it is kept, and older worlds are never pushed out",
+  "expect": {
+   "kept_cap": "the_cache_cap_is_hard:"
+  }
+ },
+ {
+  "id": "kept_write_unbounded",
+  "what": "a world over the cap is written whole and only then found too large and removed: the disk takes it first",
+  "expect": {
+   "kept_bound": "the_writer_stops_at_the_cap:"
+  }
+ },
+ {
+  "id": "kept_shared_temp",
+  "what": "every process keeping a world writes it under one temporary name, so concurrent cold runs take each other's file",
+  "expect": {
+   "kept_concurrent": "concurrent_cold_runs_keep_one_world:"
+  }
+ },
 ];
 
 /** A proof that is no world: the report `rofl load --propose-structures` prints over a fixture (rust/rofl/src/structures.rs),
@@ -8762,6 +8871,24 @@ const TESTS: Record<string, string> = {
   incremental_staged_thr: 'incremental a_staged_threshold_whose_outer_premise',
   incremental_two_aggs: 'incremental a_fact_two_aggregates_conclude',
   snapshot_round_trip: 'agg_worlds every_world_loaded_together',
+  // a world kept on disk (docs/cli.md): each case of tests/kept.rs names itself where it fails
+  kept_rule: 'kept a_kept_world_answers_and_refuses_as_docs_cli_says',
+  kept_boot: 'kept a_kept_world_answers_and_refuses_as_docs_cli_says',
+  kept_md: 'kept a_kept_world_answers_and_refuses_as_docs_cli_says',
+  kept_scan: 'kept a_kept_world_answers_and_refuses_as_docs_cli_says',
+  kept_blind: 'kept a_kept_world_answers_and_refuses_as_docs_cli_says',
+  kept_walls: 'kept a_kept_world_answers_and_refuses_as_docs_cli_says',
+  kept_engine: 'kept a_kept_world_answers_and_refuses_as_docs_cli_says',
+  kept_damaged: 'kept a_kept_world_answers_and_refuses_as_docs_cli_says',
+  kept_touched: 'kept a_kept_world_answers_and_refuses_as_docs_cli_says',
+  kept_holes: 'kept a_kept_world_answers_and_refuses_as_docs_cli_says',
+  kept_image_holes: 'kept a_holes_unknowns_survive_an_image_and_a_volume',
+  kept_implicit: 'kept a_kept_world_answers_and_refuses_as_docs_cli_says',
+  kept_implicit_walls: 'kept a_kept_world_answers_and_refuses_as_docs_cli_says',
+  kept_implicit_load: 'kept a_kept_world_answers_and_refuses_as_docs_cli_says',
+  kept_cap: 'kept a_kept_world_answers_and_refuses_as_docs_cli_says',
+  kept_bound: 'kept a_kept_world_answers_and_refuses_as_docs_cli_says',
+  kept_concurrent: 'kept a_kept_world_answers_and_refuses_as_docs_cli_says',
 };
 
 function proofTests(b: Break, profile: string, control: boolean): Verdict {

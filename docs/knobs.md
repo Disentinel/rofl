@@ -46,6 +46,8 @@ Every flag has a consumer.
 | `--depth N`, `--nodes N` | bounds of every `--whynot` | `scripts/whycheck.ts`, `rust/rofl/tests/why_bins.rs` | KEEP | |
 | `--state` | print the dump before the answers | `scripts/whycheck.ts`, `rust/rofl/tests/why_bins.rs` | KEEP | |
 | `--propose-structures`, `--structures-min-rows N` | the detection report in place of the state | `scripts/structures.ts`, `scripts/agg_breaks.ts` | KEEP | |
+| `--kept F`, `--anew` | the world kept on disk at F, evaluated once and answered from F by every verb in later runs, refused when stale; `--anew` evaluates it again over F (docs/cli.md, "A world kept on disk") | the owner's request of 2026-10-21, `rust/rofl/tests/kept.rs`, docs/cli.md | KEEP: one name for a kept world for every verb and one reset, nothing else. Without them a question verb keeps its world by itself in the cache directory (docs/cli.md), with no knob to turn that on or off; `rofl load` and `rofl serve` never do | |
+| `ROFL_CACHE_GB` | the hard cap, in GB, on the worlds the question verbs keep by themselves (default 50, two worlds of the reference scale); a world over it is answered and not kept (docs/cli.md) | the owner's decision of 2026-10-21, `rust/rofl/tests/kept.rs` | KEEP: a user knob, the one way to size the cache | |
 | `ROFL_VSTATS` | print the virtual closure's counters on stderr | none: the definition only | REMOVE | done |
 
 ## rofl load --seed (`rust/rofl/src/bin/rofl/seed.rs`)

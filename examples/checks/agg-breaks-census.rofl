@@ -2153,6 +2153,40 @@ brk("snapshot_drops_ghosts"). brk_kind("snapshot_drops_ghosts", switch).
 brk_expects("snapshot_drops_ghosts", "snapshot_round_trip").
 brk("snapshot_reads_no_tick"). brk_kind("snapshot_reads_no_tick", switch).
 brk_expects("snapshot_reads_no_tick", "snapshot_round_trip").
+brk("kept_stale_files"). brk_kind("kept_stale_files", switch).
+brk_expects("kept_stale_files", "kept_rule").
+brk_expects("kept_stale_files", "kept_boot").
+brk_expects("kept_stale_files", "kept_md").
+brk_expects("kept_stale_files", "kept_scan").
+brk("kept_md_unread"). brk_kind("kept_md_unread", switch).
+brk_expects("kept_md_unread", "kept_md").
+brk("kept_scans_unread"). brk_kind("kept_scans_unread", switch).
+brk_expects("kept_scans_unread", "kept_scan").
+brk("kept_blind_scans"). brk_kind("kept_blind_scans", switch).
+brk_expects("kept_blind_scans", "kept_blind").
+brk("kept_stale_args"). brk_kind("kept_stale_args", switch).
+brk_expects("kept_stale_args", "kept_walls").
+brk("kept_stale_engine"). brk_kind("kept_stale_engine", switch).
+brk_expects("kept_stale_engine", "kept_engine").
+brk("kept_unsummed"). brk_kind("kept_unsummed", switch).
+brk_expects("kept_unsummed", "kept_damaged").
+brk("kept_stamp_mtime"). brk_kind("kept_stamp_mtime", switch).
+brk_expects("kept_stamp_mtime", "kept_touched").
+brk("volume_unknowns_dropped"). brk_kind("volume_unknowns_dropped", switch).
+brk_expects("volume_unknowns_dropped", "kept_holes").
+brk_expects("volume_unknowns_dropped", "kept_image_holes").
+brk("kept_key_ignores_walls"). brk_kind("kept_key_ignores_walls", switch).
+brk_expects("kept_key_ignores_walls", "kept_implicit_walls").
+brk("kept_verbs_compute"). brk_kind("kept_verbs_compute", switch).
+brk_expects("kept_verbs_compute", "kept_implicit").
+brk("kept_load_reads_cache"). brk_kind("kept_load_reads_cache", switch).
+brk_expects("kept_load_reads_cache", "kept_implicit_load").
+brk("kept_cap_ignored"). brk_kind("kept_cap_ignored", switch).
+brk_expects("kept_cap_ignored", "kept_cap").
+brk("kept_write_unbounded"). brk_kind("kept_write_unbounded", switch).
+brk_expects("kept_write_unbounded", "kept_bound").
+brk("kept_shared_temp"). brk_kind("kept_shared_temp", switch).
+brk_expects("kept_shared_temp", "kept_concurrent").
 
 switch_site("add_base_firings_kept", "rust/rofl/src/engine/addition.rs").
 switch_site("add_closure_lowered_unnoted", "rust/rofl/src/engine.rs").
@@ -2399,6 +2433,20 @@ switch_site("join_why_ghost_unmarked", "rust/rofl/src/engine.rs").
 switch_site("join_why_one_member", "rust/rofl/src/engine.rs").
 switch_site("join_whynot_below", "rust/rofl/src/engine.rs").
 switch_site("keep_first_derivation", "rust/rofl/src/engine.rs").
+switch_site("kept_blind_scans", "rust/rofl/src/bin/rofl/kept.rs").
+switch_site("kept_cap_ignored", "rust/rofl/src/bin/rofl/kept.rs").
+switch_site("kept_key_ignores_walls", "rust/rofl/src/bin/rofl/kept.rs").
+switch_site("kept_load_reads_cache", "rust/rofl/src/bin/rofl/load.rs").
+switch_site("kept_md_unread", "rust/rofl/src/bin/rofl/kept.rs").
+switch_site("kept_scans_unread", "rust/rofl/src/bin/rofl/kept.rs").
+switch_site("kept_shared_temp", "rust/rofl/src/bin/rofl/kept.rs").
+switch_site("kept_stale_args", "rust/rofl/src/bin/rofl/load.rs").
+switch_site("kept_stale_engine", "rust/rofl/src/bin/rofl/kept.rs").
+switch_site("kept_stale_files", "rust/rofl/src/bin/rofl/kept.rs").
+switch_site("kept_stamp_mtime", "rust/rofl/src/bin/rofl/kept.rs").
+switch_site("kept_unsummed", "rust/rofl/src/volume.rs").
+switch_site("kept_verbs_compute", "rust/rofl/src/bin/rofl/load.rs").
+switch_site("kept_write_unbounded", "rust/rofl/src/bin/rofl/kept.rs").
 switch_site("label_by_values_ignored", "rust/rofl/src/engine.rs").
 switch_site("label_cap_ignored", "rust/rofl/src/engine/labeled.rs").
 switch_site("label_correlation_lost", "rust/rofl/src/engine/labeled.rs").
@@ -2709,6 +2757,7 @@ switch_site("vclosure_unknown_row_absent", "rust/rofl/src/engine/vclosure.rs").
 switch_site("vclosure_why_absent", "rust/rofl/src/engine/vclosure.rs").
 switch_site("vclosure_wit_unwritten", "rust/rofl/src/store.rs").
 switch_site("viterbi_rounds_up", "rust/rofl/src/cell.rs").
+switch_site("volume_unknowns_dropped", "rust/rofl/src/session.rs").
 switch_site("wfs_admits_body_aggregate", "rust/rofl/src/engine.rs").
 switch_site("wfs_admits_lattice", "rust/rofl/src/engine.rs").
 switch_site("wfs_admits_subsumption", "rust/rofl/src/engine.rs").
