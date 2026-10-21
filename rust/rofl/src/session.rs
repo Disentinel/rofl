@@ -457,12 +457,13 @@ impl Session {
             return Ok(Err("asks names the rules the world runs".into()));
         }
         let doomed = self.doomed_of_set(&facts);
-        let marks: Vec<Sym> = doomed.iter().map(|&f| self.eval.store.rec(f).rel).filter(|r| [self.eval.v.edb, self.eval.v.authority].contains(r)).collect();
-        if self.eval.rules.iter().any(|r| r.clause.body.iter().any(|b| b.lits_deep().iter().any(|l| marks.contains(&l.rel)))) {
-            self.eval.store.dirty = true;
-            return Ok(Err("the retraction takes an edb or authority row a rule reads".into()));
-        }
-        match self.eval.retract_set(&facts, &doomed) {
+        // a mark a rule reads goes as a fact of the set, and what rests on it with it
+        let (edb, authority) = (self.eval.v.edb, self.eval.v.authority);
+        let read: HashSet<Sym> = [edb, authority].into_iter().filter(|m| self.eval.rules.iter().any(|r| r.clause.body.iter().any(|b| b.lits_deep().iter().any(|l| l.rel == *m)))).collect();
+        let (marks, rows): (Vec<FactId>, Vec<FactId>) = doomed.into_iter().partition(|&f| read.contains(&self.eval.store.rec(f).rel));
+        let mut facts = facts;
+        facts.extend(marks);
+        match self.eval.retract_set(&facts, &rows) {
             Ok(d) => match self.eval.check_promises() {
                 Ok(_) => Ok(Ok(d)),
                 Err(e) => {
@@ -1736,9 +1737,11 @@ impl Session {
                 }
             }
         }
+        // a mark the program also declared itself (its assertion written, or noted to be) stays
+        let noted: HashSet<FactId> = if marks.is_empty() { HashSet::new() } else { self.eval.pending_assert.iter().map(|n| n.0).collect() };
         for m in marks {
             let mt = self.fact_term(m);
-            if self.eval.store.alive(m) && !declared.iter().any(|(_, t)| *t == mt) {
+            if self.eval.store.alive(m) && !declared.iter().any(|(_, t)| *t == mt) && !noted.contains(&m) {
                 out.push(m);
             }
         }
@@ -1902,45 +1905,34 @@ impl Session {
         let runs: Vec<_> = todo.iter().map(|((kind, _), path)| {
             let cmd = scanners.get(kind).cloned();
             let path = path.clone();
-            std::thread::spawn(move || -> Result<String, String> {
-                let cmd = cmd.ok_or("no scanner(Kind, Command) for this kind")?;
-                let kept = scan_kept(&cmd, &path);
-                if let Some(out) = kept.as_deref().and_then(scan_fresh) {
-                    return Ok(out);
-                }
-                let mut argv = cmd.split_whitespace();
-                let prog = argv.next().ok_or("an empty command")?;
-                let o = std::process::Command::new(prog).args(argv).arg(&path).output().map_err(|e| format!("{prog}: {e}"))?;
-                if !o.status.success() {
-                    let err = String::from_utf8_lossy(&o.stderr);
-                    return Err(format!("{cmd} exited {}: {}", o.status.code().unwrap_or(-1), err.lines().last().unwrap_or("")));
-                }
-                let out = String::from_utf8(o.stdout).map_err(|_| "the scanner printed bytes that are not UTF-8".to_string())?;
-                if let Some(k) = kept { scan_keep(&k, &out); }
-                Ok(out)
-            })
+            std::thread::spawn(move || run_scan(cmd.as_deref(), &path))
         }).collect();
         // while the scanners run, the world goes cold
         self.cool_round()?;
-        let q = |s: &str| format!("\"{}\"", s.replace('\\', "\\\\").replace('"', "\\\""));
         let mut src = String::new();
         for (((kind, path), text), run) in todo.iter().zip(runs) {
             let ran = run.join().unwrap_or_else(|_| Err("the scanner's thread failed".into()));
-            if let Some(cmd) = scanners.get(kind) {
-                let read = ran.as_ref().map_or(Vec::new(), |out| out.lines().filter_map(|l| l.strip_prefix("-- reads: ")).map(|p| scan_path(p)).collect());
-                self.eval.scans.push((format!("{cmd} {text}"), read));
-            }
-            match ran {
-                Ok(out) => {
-                    let n = out.lines().filter(|l| !l.starts_with("--") && l.trim_end().ends_with('.')).count();
-                    src.push_str(&out);
-                    src.push_str(&format!("\nscan_done({kind}, {path}, {n}).\n"));
-                }
-                Err(e) => src.push_str(&format!("scan_failed({kind}, {path}, {}).\n", q(&e))),
-            }
+            let rec = scan_rec(kind, path, text, scanners.get(kind).cloned(), ran);
+            src.push_str(&rec.unit);
+            self.eval.scans.push(rec);
         }
         self.load_delta(&src, None).map_err(|d| format!("a scanner's facts were refused: {}", d.join("; ")))?;
         Ok(todo.len())
+    }
+
+    /// The scan requests that hold, each as its kind and path written back.
+    pub fn scan_requests_held(&mut self) -> HashSet<(String, String)> {
+        let main = self.eval.v.main;
+        let r = self.eval.h.intern("scan_request");
+        let rows: Vec<Vec<Term>> = self.eval.store.rel_persp(&self.eval.h, r, main).into_iter().map(|f| self.eval.store.args(f).to_vec()).filter(|a| a.len() == 2).collect();
+        rows.into_iter().map(|a| (self.eval.h.canon(a[0]), self.eval.h.canon(a[1]))).collect()
+    }
+
+    /// The scan of `text` (its path, written back as `path`) for `kind` run again with `cmd`, the storeroom
+    /// answering while what it read holds: what it brings, as `scan_requests` loads it.
+    pub fn rescan(kind: &str, path: &str, text: &str, cmd: Option<String>) -> crate::engine::ScanRec {
+        let ran = run_scan(cmd.as_deref(), text);
+        scan_rec(kind, path, text, cmd, ran)
     }
 
     /// `Rofl.whynot` (src/api.ts:927). `(holds, text)` — a literal that HOLDS
@@ -2051,6 +2043,41 @@ fn scan_kept(cmd: &str, path: &str) -> Option<std::path::PathBuf> {
         .or_else(|| std::env::var_os("HOME").map(|h| std::path::Path::new(&h).join(".cache")))?;
     let cwd = std::env::current_dir().ok()?;
     Some(home.join("rofl/scans").join(format!("{}.rofl", crate::store::fnv64(&format!("{}\0{cmd}\0{path}", cwd.display())))))
+}
+
+/// One scan run: the storeroom's answer while every stamp holds, else the command run with the path last.
+fn run_scan(cmd: Option<&str>, path: &str) -> Result<String, String> {
+    let cmd = cmd.ok_or("no scanner(Kind, Command) for this kind")?;
+    let kept = scan_kept(cmd, path);
+    if let Some(out) = kept.as_deref().and_then(scan_fresh) {
+        return Ok(out);
+    }
+    let mut argv = cmd.split_whitespace();
+    let prog = argv.next().ok_or("an empty command")?;
+    let o = std::process::Command::new(prog).args(argv).arg(path).output().map_err(|e| format!("{prog}: {e}"))?;
+    if !o.status.success() {
+        let err = String::from_utf8_lossy(&o.stderr);
+        return Err(format!("{cmd} exited {}: {}", o.status.code().unwrap_or(-1), err.lines().last().unwrap_or("")));
+    }
+    let out = String::from_utf8(o.stdout).map_err(|_| "the scanner printed bytes that are not UTF-8".to_string())?;
+    if let Some(k) = kept {
+        scan_keep(&k, &out);
+    }
+    Ok(out)
+}
+
+/// What one scan brings, its `scan_done` or `scan_failed` row last, and what it read.
+fn scan_rec(kind: &str, path: &str, text: &str, cmd: Option<String>, ran: Result<String, String>) -> crate::engine::ScanRec {
+    let q = |s: &str| format!("\"{}\"", s.replace('\\', "\\\\").replace('"', "\\\""));
+    let read = ran.as_ref().map_or(Vec::new(), |out| out.lines().filter_map(|l| l.strip_prefix("-- reads: ")).map(scan_path).collect());
+    let unit = match ran {
+        Ok(out) => {
+            let n = out.lines().filter(|l| !l.starts_with("--") && l.trim_end().ends_with('.')).count();
+            format!("{out}\nscan_done({kind}, {path}, {n}).\n")
+        }
+        Err(e) => format!("scan_failed({kind}, {path}, {}).\n", q(&e)),
+    };
+    crate::engine::ScanRec { kind: kind.into(), path: path.into(), text: text.into(), cmd, read, unit }
 }
 
 /// A path a scanner named, from the directory the scan ran in.

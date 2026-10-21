@@ -27,6 +27,8 @@ pub struct Record {
     /// each file loaded, in order: its path, the sum of its rules and declarations, and the base facts it asserted
     /// (`Session::facts_of`), what a delta takes out when the file changes
     pub units: Vec<Unit>,
+    /// each scan the world loaded, and what it brought
+    pub scans: Vec<ScanUnit>,
 }
 
 #[derive(Clone)]
@@ -54,6 +56,10 @@ impl Record {
     }
     pub fn scanned(&self) -> bool {
         self.cwd.is_some()
+    }
+    /// The directory the world's scanners ran in, where it has any.
+    pub fn scanned_in(&self) -> Option<&str> {
+        self.cwd.as_deref()
     }
 }
 
@@ -117,7 +123,7 @@ fn free(dir: &Path) -> Option<u64> {
 /// The world of `s` kept at `kept` as a question verb keeps it: written no further than the cap and than the disk
 /// can give above its floor, so a world too large stops the writer at that size and is not kept; then the older
 /// kept worlds go, least recently used first, until all fit the cap. Why it was not kept, otherwise.
-pub fn keep_capped(s: &mut rofl::session::Session, kept: &str, note: &str) -> Result<(), String> {
+pub fn keep_capped(s: &mut rofl::session::Session, kept: &str, note: &str) -> Result<u64, String> {
     let dir = Path::new(kept).parent().ok_or("no directory")?;
     std::fs::create_dir_all(dir).map_err(|e| format!("{}: {e}", dir.display()))?;
     let (cap, ignored) = (cap(), rofl::brk!("kept_cap_ignored" => true; false));
@@ -151,7 +157,8 @@ pub fn keep_capped(s: &mut rofl::session::Session, kept: &str, note: &str) -> Re
         if total <= cap || ignored { break; }
         if std::fs::remove_file(&p).is_ok() { total -= len; }
     }
-    std::fs::rename(&new, kept).map_err(|e| format!("{kept}: {e}"))
+    std::fs::rename(&new, kept).map_err(|e| format!("{kept}: {e}"))?;
+    Ok(bytes)
 }
 
 /// Where a question verb keeps the world of `world` (the canonical walls and files) by itself: a file named by
@@ -188,15 +195,15 @@ pub fn shown(p: &str) -> String {
 
 /// The record of a world evaluated from `args` that read `files` and whose scans are `scans`: refused when a scan
 /// named nothing it read, since whether the world it brought in is stale could not be told.
-pub fn record(args: &[String], world_files: &[String], units: &[Unit], files: &[String], scans: &[(String, Vec<String>)]) -> Result<String, String> {
-    if let Some((cmd, _)) = scans.iter().find(|(_, read)| rofl::brk!("kept_blind_scans" => false; read.is_empty())) {
-        return Err(format!("the scan `{cmd}` named nothing it read (`-- reads: PATH`), so whether a kept world is stale could not be told"));
+pub fn record(args: &[String], world_files: &[String], units: &[Unit], files: &[String], scans: &[ScanUnit]) -> Result<String, String> {
+    if let Some(s) = scans.iter().find(|s| s.cmd.is_some() && rofl::brk!("kept_blind_scans" => false; s.read.is_empty())) {
+        return Err(format!("the scan `{} {}` named nothing it read (`-- reads: PATH`), so whether a kept world is stale could not be told", s.cmd.as_deref().unwrap_or(""), s.text));
     }
     let mut paths: Vec<PathBuf> = files.iter().map(|f| PathBuf::from(absolute(f))).collect();
     paths.extend(rofl::md::files_read().into_iter().map(|p| PathBuf::from(absolute(&p.to_string_lossy())))
         .filter(|_| rofl::brk!("kept_md_unread" => false; true)));
     if rofl::brk!("kept_scans_unread" => false; true) {
-        paths.extend(scans.iter().flat_map(|(_, read)| read.iter().map(PathBuf::from)));
+        paths.extend(scans.iter().flat_map(|s| s.read.iter().map(PathBuf::from)));
     }
     if let Ok(k) = std::env::var("ROFL_KERNEL_OVERRIDE") {
         if !k.is_empty() { paths.push(PathBuf::from(absolute(&k))); }
@@ -206,7 +213,28 @@ pub fn record(args: &[String], world_files: &[String], units: &[Unit], files: &[
     let read: Vec<Value> = paths.iter().map(|p| json!([p.to_string_lossy(), stamp(p)])).collect();
     let cwd = (!scans.is_empty()).then(|| std::env::current_dir().map(|d| d.to_string_lossy().into_owned()).unwrap_or_default());
     let units: Vec<Value> = units.iter().map(|u| json!([u.path, u.rules, u.facts])).collect();
-    Ok(json!({ "kept": 2, "args": args, "files": world_files, "engine": engine(), "env": env_now(), "cwd": cwd, "read": read, "units": units }).to_string())
+    let scans: Vec<Value> = scans.iter().map(|s| json!([s.kind, s.path, s.text, s.cmd, s.read, s.facts])).collect();
+    Ok(json!({ "kept": 2, "args": args, "files": world_files, "engine": engine(), "env": env_now(), "cwd": cwd, "read": read, "units": units, "scans": scans }).to_string())
+}
+
+/// What a kept world records of a scan it loaded: the request, the command, what it read, and the base facts it
+/// brought (its `scan_done` row among them).
+#[derive(Clone)]
+pub struct ScanUnit {
+    pub kind: String,
+    pub path: String,
+    pub text: String,
+    pub cmd: Option<String>,
+    pub read: Vec<String>,
+    pub facts: Vec<u32>,
+}
+
+impl ScanUnit {
+    /// What the session's scan `r` brought, read against it.
+    pub fn of(s: &mut rofl::session::Session, r: &rofl::engine::ScanRec) -> ScanUnit {
+        let facts = s.facts_of(&r.unit).map(|f| f.0).unwrap_or_default();
+        ScanUnit { kind: r.kind.clone(), path: r.path.clone(), text: r.text.clone(), cmd: r.cmd.clone(), read: r.read.clone(), facts }
+    }
 }
 
 pub fn parse(note: &str) -> Option<Record> {
@@ -221,7 +249,15 @@ pub fn parse(note: &str) -> Option<Record> {
     })).collect::<Option<Vec<_>>>()?;
     let (args, files) = (strs("args")?, strs("files")?);
     if files.len() > args.len() { return None; }
-    Some(Record { args, files, engine: v.get("engine")?.as_str()?.to_string(), env: strs("env")?, cwd: v.get("cwd")?.as_str().map(str::to_string), read, units })
+    let scans = v.get("scans")?.as_array()?.iter().map(|s| Some(ScanUnit {
+        kind: s.get(0)?.as_str()?.to_string(),
+        path: s.get(1)?.as_str()?.to_string(),
+        text: s.get(2)?.as_str()?.to_string(),
+        cmd: s.get(3)?.as_str().map(str::to_string),
+        read: s.get(4)?.as_array()?.iter().map(|x| x.as_str().map(str::to_string)).collect::<Option<Vec<_>>>()?,
+        facts: s.get(5)?.as_array()?.iter().map(|x| x.as_u64().map(|n| n as u32)).collect::<Option<Vec<u32>>>()?,
+    })).collect::<Option<Vec<_>>>()?;
+    Some(Record { args, files, engine: v.get("engine")?.as_str()?.to_string(), env: strs("env")?, cwd: v.get("cwd")?.as_str().map(str::to_string), read, units, scans })
 }
 
 /// The header of the kept world at `p`, its sum not read: to choose among kept worlds before opening one.

@@ -64,6 +64,8 @@ pub struct AddDelta {
     pub overdeleted: usize,
     /// of those, derived again from what holds
     pub rederived: usize,
+    /// facts that lost a firing and kept another standing on what stays: not overdeleted
+    pub kept: usize,
 }
 
 /// A negated premise over a relation that grew, as the fine path reads it: its place in the plan, and the places of
@@ -548,9 +550,12 @@ impl Eval {
     /// DRed's overdeletion: each of `seeds` (which lost a firing, and may have gone with it) goes whole, and so does
     /// every fact with a firing that cites one gone, through each other; a base fact stays and loses its firings, to
     /// be given them again.
-    fn overdelete(&mut self, mut seeds: Vec<FactId>, over: &mut HashSet<FactId>, over_base: &mut HashSet<FactId>, d: &mut AddDelta) {
+    fn overdelete(&mut self, seeds: Vec<FactId>, over: &mut HashSet<FactId>, over_base: &mut HashSet<FactId>, d: &mut AddDelta) {
         let lost: HashSet<FactId> = seeds.iter().copied().collect();
-        while let Some(x) = seeds.pop() {
+        // lowest level first: a fact is judged once everything below it that goes has gone
+        let mut queue: std::collections::BinaryHeap<std::cmp::Reverse<(i64, FactId)>> =
+            seeds.into_iter().map(|x| std::cmp::Reverse((self.rel_level(self.store.rec(x).rel), x))).collect();
+        while let Some(std::cmp::Reverse((lv, x))) = queue.pop() {
             if over.contains(&x) || over_base.contains(&x) {
                 continue;
             }
@@ -562,6 +567,27 @@ impl Eval {
             if !self.store.alive(x) && !brk!("add_lost_unseeded" => false; lost.contains(&x)) {
                 continue;
             }
+            // A FACT A FIRING STILL HOLDS UP STAYS: the firings that cite what went are withdrawn, and where one is
+            // left whose premises are facts of lower levels that stand, the fact keeps it and nothing above it moves.
+            // (A premise of its own level may rest on the fact through a cycle, and a cell or a row may be replaced: the
+            // fact goes whole then, and is derived again.)
+            if self.store.alive(x) && !brk!("overdelete_supported_too" => true; false) {
+                let store = &self.store;
+                let gone = |p: &PremRef| matches!(p, PremRef::Fact(g) if over.contains(g) || over_base.contains(g) || !store.alive(*g));
+                let firings = store.firings(x);
+                let stands = |ps: &[PremRef]| ps.iter().all(|p| match p {
+                    PremRef::Fact(g) => store.alive(*g) && !over.contains(g) && !over_base.contains(g) && self.rel_level(store.rec(*g).rel) < lv,
+                    PremRef::Neg(_) | PremRef::Bi(_) => true,
+                    _ => false,
+                });
+                if firings.iter().any(|(_, _, ps)| !ps.iter().any(gone) && stands(ps)) {
+                    let dead: HashSet<FactId> = firings.iter().flat_map(|(_, _, ps)| ps.iter()).filter(|p| gone(p)).filter_map(|p| if let PremRef::Fact(g) = p { Some(*g) } else { None }).collect();
+                    self.withdraw_firings(&[x], |_, ps| ps.iter().any(|p| matches!(p, PremRef::Fact(g) if dead.contains(g))));
+                    d.kept += 1;
+                    self.add_kept.insert(x);
+                    continue;
+                }
+            }
             self.withdraw_firings(&[x], |_, _| true);
             if self.store.alive(x) {
                 self.store.remove_many(&[x]);
@@ -571,7 +597,7 @@ impl Eval {
             // (the index lists a firing withdrawn since: a citer is followed where a firing of it still cites the fact)
             for y in self.store.citers_one(x) {
                 if self.store.alive(y) && !over.contains(&y) && brk!("add_stale_citer_followed" => true; self.store.firings(y).iter().any(|(_, _, ps)| ps.contains(&PremRef::Fact(x)))) {
-                    seeds.push(y);
+                    queue.push(std::cmp::Reverse((self.rel_level(self.store.rec(y).rel), y)));
                 }
             }
         }
@@ -586,6 +612,7 @@ impl Eval {
     /// news of every level below, and what this level made, fires the rules of the level semi-naively.
     #[allow(clippy::too_many_arguments)]
     fn fine_levels(&mut self, added: &[FactId], removed: &[FactId], mono: &[Rc<ERule>], negs: &[(Rc<ERule>, Vec<NegAt>)], fresh: &[Rc<ERule>], recompute: &[Rc<ERule>], keyable: &HashSet<Sym>, grown: &HashSet<Sym>, dirty: &HashSet<Sym>, skip: &HashSet<Sym>, d: &mut AddDelta) -> Result<(), Halt> {
+        self.add_kept.clear();
         let mut levels: std::collections::BTreeSet<i64> = mono.iter().chain(fresh).chain(recompute).chain(negs.iter().map(|(r, _)| r)).map(|r| self.rule_level(r)).collect();
         levels.extend(grown.iter().filter(|r| !dirty.contains(r)).map(|r| self.rel_level(*r)));
         let mut by_head: HashMap<Sym, Vec<Rc<ERule>>> = HashMap::new();
@@ -785,8 +812,14 @@ impl Eval {
                     }
                 }
                 // and each that stands takes every firing it has, now that all that came back stands
-                if brk!("rederive_firings_short" => false; again.len() > 1) && !brk!("retract_unrederived" => !removed.is_empty(); false) {
-                    for x in again.iter().copied().filter(|x| self.store.alive(*x)).collect::<Vec<_>>() {
+                // (and each kept for a firing that stood: what came back may give it more)
+                let kept_here: Vec<FactId> = {
+                    let mut v: Vec<FactId> = self.add_kept.iter().copied().filter(|x| self.store.alive(*x) && self.rel_level(self.store.rec(*x).rel) == lv).collect();
+                    v.sort_unstable();
+                    v
+                };
+                if (brk!("rederive_firings_short" => false; again.len() > 1) || !kept_here.is_empty()) && !brk!("retract_unrederived" => !removed.is_empty(); false) {
+                    for x in again.iter().copied().filter(|x| self.store.alive(*x)).chain(kept_here).collect::<Vec<_>>() {
                         self.rederive_one(x, &by_head, &mut orders, &mut out)?;
                     }
                 }

@@ -426,6 +426,10 @@ impl Eval {
             c.deep = forests.iter().map(|f| f.1.deep as u64).sum();
             c.internal = forests.iter().map(|f| f.1.internal as u64).sum();
         }
+        // the trees changed: the rows' provenance is written again when next it is read (`vsettle`)
+        if !touched.is_empty() && brk!("vclosure_prov_unbuilt" => false; true) {
+            self.vbuilds += 1;
+        }
     }
 
     /// The forests of every active closure, built as the edges stand: the planner's estimates read them.

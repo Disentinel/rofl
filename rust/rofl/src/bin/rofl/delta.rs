@@ -1,10 +1,11 @@
 //! A KEPT WORLD TAKES ITS FILES BY DELTA (w_kept_world_by_delta, docs/cli.md): when what moved since a question verb
-//! kept its world is files of facts and rules named on the command line, the kept world is opened, the facts of the
-//! files that changed or went are taken out and those of the files that changed or came are put in, by the engine's
-//! delta both ways (`Session::retract_facts_delta`, `Session::load_delta`); the world is then the one a fresh
-//! evaluation of the files gives. Anything else that moved, or a delta the engine has not worked out, evaluates the
-//! files whole, the reason said on stderr.
-use crate::kept::{self, Record, Unit};
+//! kept its world is files named on the command line, or what a scanner read, the kept world is opened; the facts of
+//! the files and scans that changed or went are taken out in one pass (`Session::retract_set_delta`) and those of the
+//! files and scans that changed or came are put in (`Session::load_delta`), a scan that changed run again alone (the
+//! storeroom of scans answers every other); the scans the world then asks for are run, and those it no longer asks
+//! for are taken out. The world is then the one a fresh evaluation of the files gives. Anything else that moved, or a
+//! delta the engine has not worked out, evaluates the files whole, the reason said on stderr.
+use crate::kept::{self, Record, ScanUnit, Unit};
 use rofl::session::{Addition, Session};
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
@@ -20,7 +21,7 @@ pub fn base_beside(slot: &str, walls: &[String]) -> Option<(String, Record)> {
             continue;
         }
         let Some(r) = kept::peek(&p.to_string_lossy()) else { continue };
-        if r.walls() != walls || r.engine_env_hold(true).is_some() || r.scanned() {
+        if r.walls() != walls || r.engine_env_hold(true).is_some() {
             continue;
         }
         let at = e.metadata().and_then(|m| m.modified()).unwrap_or(std::time::UNIX_EPOCH);
@@ -31,9 +32,10 @@ pub fn base_beside(slot: &str, walls: &[String]) -> Option<(String, Record)> {
     best.map(|(_, p, r)| (p, r))
 }
 
-/// What a delta did: the world's files as it now records them, and the files it took.
+/// What a delta did: the world's files and scans as it now records them, and the files and scans it took.
 pub struct Done {
     pub units: Vec<Unit>,
+    pub scans: Vec<ScanUnit>,
     pub took: Vec<String>,
     /// facts the retraction overdeleted and derived again, and the base facts it took out
     pub touched: usize,
@@ -42,6 +44,12 @@ pub struct Done {
 
 fn read(p: &str) -> Result<String, String> {
     std::fs::read_to_string(p).map_err(|e| format!("{}: {e}", kept::shown(p)))
+}
+
+/// `ids` less `stays`, each once.
+fn going(ids: Vec<u32>, stays: &HashSet<u32>) -> Vec<rofl::store::FactId> {
+    let mut seen = HashSet::new();
+    ids.into_iter().filter(|f| !stays.contains(f) && seen.insert(*f)).collect()
 }
 
 /// `s`, opened from the kept world `r`, brought by delta to the world of the files `files` (absolute, as the run
@@ -53,10 +61,16 @@ pub fn apply(s: &mut Session, r: &Record, files: &[String]) -> Result<Done, Stri
     if let Some(f) = files.iter().find(|f| f.ends_with(".md")) {
         return Err(format!("{} is Markdown", kept::shown(f)));
     }
+    if let Some(cwd) = r.scanned_in() {
+        if std::env::current_dir().map(|d| d.to_string_lossy().into_owned()).unwrap_or_default() != cwd {
+            return Err(format!("its scanners ran in {cwd}, and this run is in another directory"));
+        }
+    }
     let stamps: HashMap<&str, &str> = r.read.iter().map(|(p, s)| (p.as_str(), s.as_str())).collect();
     let named: HashSet<&str> = r.files.iter().map(String::as_str).collect();
-    if let Some((p, _)) = r.read.iter().find(|(p, st)| !named.contains(p.as_str()) && !kept::holds(p, st)) {
-        return Err(format!("{} changed, and it is not a file named on the command line", kept::shown(p)));
+    let scanned: HashSet<&str> = r.scans.iter().flat_map(|s| s.read.iter().map(String::as_str)).collect();
+    if let Some((p, _)) = r.read.iter().find(|(p, st)| !named.contains(p.as_str()) && !scanned.contains(p.as_str()) && !kept::holds(p, st)) {
+        return Err(format!("{} changed, and it is neither a file named on the command line nor one a scanner read", kept::shown(p)));
     }
     let old: HashMap<&str, &Unit> = r.units.iter().map(|u| (u.path.as_str(), u)).collect();
     let all = rofl::brk!("kept_delta_all_files" => true; false);
@@ -99,11 +113,25 @@ pub fn apply(s: &mut Session, r: &Record, files: &[String]) -> Result<Done, Stri
         }
         took.push(format!("{} (gone)", kept::shown(&u.path)));
     }
-    let out: Vec<rofl::store::FactId> = {
-        let mut seen = HashSet::new();
-        goes.into_iter().filter(|f| !stays.contains(f) && seen.insert(*f)).collect()
-    };
-    let touched = match s.retract_set_delta(&out)? {
+    // a scan whose reads changed runs again, alone; the rest stand as they were
+    let mut scans: Vec<ScanUnit> = Vec::new();
+    let mut again: Vec<rofl::engine::ScanRec> = Vec::new();
+    for sc in &r.scans {
+        if all || sc.read.iter().any(|p| stamps.get(p.as_str()).is_none_or(|st| !kept::holds(p, st))) {
+            let rec = Session::rescan(&sc.kind, &sc.path, &sc.text, sc.cmd.clone());
+            stays.extend(s.facts_of(&rec.unit)?.0);
+            goes.extend(&sc.facts);
+            add.push_str(&rec.unit);
+            took.push(format!("{} (scanned again)", sc.text));
+            again.push(rec);
+        } else {
+            stays.extend(&sc.facts);
+            scans.push(sc.clone());
+        }
+    }
+    let out = going(goes, &stays);
+    let mut n_out = out.len();
+    let mut touched = match s.retract_set_delta(&out)? {
         Err(why) => return Err(why),
         Ok(d) => d.overdeleted + d.rederived,
     };
@@ -112,6 +140,46 @@ pub fn apply(s: &mut Session, r: &Record, files: &[String]) -> Result<Done, Stri
             Err(d) => return Err(d.join("; ")),
             Ok((_, Addition::Full(why))) => return Err(why),
             Ok(_) => {}
+        }
+    }
+    for rec in &again {
+        scans.push(ScanUnit::of(s, rec));
+    }
+    // the scans the world asks for now: the new ones run (each by delta), those it no longer asks for taken out,
+    // until it asks for nothing more and holds nothing it does not ask for
+    loop {
+        s.eval.scans.clear();
+        let ran = s.scan_requests()?;
+        if s.eval.store.dirty {
+            return Err("a scan's facts were not taken by delta".into());
+        }
+        for rec in std::mem::take(&mut s.eval.scans) {
+            took.push(format!("{} (scanned)", rec.text));
+            scans.push(ScanUnit::of(s, &rec));
+        }
+        let held = s.scan_requests_held();
+        let (kept_scans, dropped): (Vec<ScanUnit>, Vec<ScanUnit>) = scans.into_iter().partition(|sc| held.contains(&(sc.kind.clone(), sc.path.clone())) || rofl::brk!("kept_delta_unasked_kept" => true; false));
+        scans = kept_scans;
+        if ran == 0 && dropped.is_empty() {
+            break;
+        }
+        if !dropped.is_empty() {
+            let mut stays: HashSet<u32> = scans.iter().flat_map(|sc| sc.facts.iter().copied()).collect();
+            for f in files {
+                match texts.get(f.as_str()) {
+                    Some(t) => stays.extend(s.facts_of(t)?.0),
+                    None => stays.extend(&old[f.as_str()].facts),
+                }
+            }
+            let out = going(dropped.iter().flat_map(|sc| sc.facts.iter().copied()).collect(), &stays);
+            n_out += out.len();
+            for sc in &dropped {
+                took.push(format!("{} (no longer asked)", sc.text));
+            }
+            match s.retract_set_delta(&out)? {
+                Err(why) => return Err(why),
+                Ok(d) => touched += d.overdeleted + d.rederived,
+            }
         }
     }
     let stale_index = rofl::brk!("kept_delta_stale_index" => true; false);
@@ -127,5 +195,5 @@ pub fn apply(s: &mut Session, r: &Record, files: &[String]) -> Result<Done, Stri
             (None, None) => unreachable!("a file neither kept nor read"),
         }
     }
-    Ok(Done { units, took, touched, out: out.len() })
+    Ok(Done { units, scans, took, touched, out: n_out })
 }

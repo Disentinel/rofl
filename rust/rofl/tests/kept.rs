@@ -345,7 +345,7 @@ fn a_verb_keeps_its_world_by_itself(brk: Option<&str>) -> Result<(), String> {
         || format!("second run, wanted the kept world as it was: {} {:?} {:?}, kept {:?} then {kept:?}", second.code, second.out, second.err, implicit(&cache)))?;
     d.append("rules.rofl", "calls(zebra, yak).\n");
     let third = ask(brk);
-    ensure(third.code == 0 && third.out.contains("X = yak") && third.err.contains("rules.rofl changed since it was kept") && third.err.contains("computed anew") && implicit(&cache) != kept,
+    ensure(third.code == 0 && third.out.contains("X = yak") && third.err.contains("took 1 file by delta: rules.rofl") && implicit(&cache) != kept,
         || format!("after an edit: {} {:?} {:?}", third.code, third.out, third.err))?;
     let fourth = ask(brk);
     ensure(fourth.out == third.out && fourth.err.is_empty(), || format!("after the edit, again: {:?} {:?}", fourth.out, fourth.err))
@@ -542,6 +542,47 @@ fn a_holes_unknowns_survive_an_image_and_a_volume() {
     std::fs::remove_file(&path).unwrap();
     assert_eq!(rows(&mut from_image), want, "from a kept image");
     assert_eq!(rows(&mut from_volume), want, "from a volume");
+}
+
+/// JS SOURCES BY DELTA: a world that scans its JS (the scanner of scanners/cli.ts, the model of rules/js.files) kept
+/// by a question; an edit of one source scans that file again alone and the world takes it by delta; an import
+/// added asks for a file no scan had, scanned and taken; the import taken away again lets that scan go. Each step's
+/// answer and state are a fresh run's. (The JS model in a debug build is too slow for a test: optimised builds only.)
+#[test]
+fn js_sources_edited_go_by_delta() {
+    if cfg!(debug_assertions) {
+        return;
+    }
+    let planted = std::env::var("ROFL_BREAK").ok().filter(|b| !b.is_empty());
+    let brk = planted.as_deref();
+    let d = Dir::new("js-sources");
+    std::fs::create_dir_all(d.0.join("src/lib")).unwrap();
+    for f in ["main.js", "lib/greet.js", "lib/shout.js", "lib/unused.js"] {
+        std::fs::copy(root().join("examples/scan/src").join(f), d.0.join("src").join(f)).unwrap();
+    }
+    let cli = root().join("scanners/cli.ts");
+    d.write("scan.rofl", &format!("edb(scanner).\nedb(scan_done).\nedb(scan_failed).\nscanner(js, \"node --experimental-strip-types {} src\").\nscan_request(js, \"main.js\").\nscan_request(js, F) :- depends[code](_, F).\n", cli.display()));
+    let model = format!("@{}", root().join("rules/js.files").display());
+    let q = ["ask", "calls(A, B)", "--state", &model, "scan.rofl"];
+    let step = |what: &str, want_delta: Option<&str>| -> Result<(), String> {
+        let got = rofl(&d, brk, &q);
+        let fresh = fresh(&d, brk, &["load", "--ask", "calls(A, B)", "--state", &model, "scan.rofl"]);
+        ensure(got.code == fresh.code && got.out == fresh.out, || format!("{what}: from the kept world {} lines, fresh {} lines, exit {} and {}; {:?}", got.out.lines().count(), fresh.out.lines().count(), got.code, fresh.code, got.err))?;
+        if let Some(w) = want_delta {
+            ensure(got.err.contains("by delta") && got.err.contains(w), || format!("{what}: wanted a delta taking {w:?}, got {:?}", got.err))?;
+        }
+        Ok(())
+    };
+    step("kept", None).and_then(|_| {
+        d.append("src/lib/shout.js", "export function whisper(s) { return s.toLowerCase(); }\n");
+        step("shout.js edited", Some("lib/shout.js (scanned again)"))
+    }).and_then(|_| {
+        d.write("src/lib/greet.js", "import { shout } from './shout.js';\nimport { quiet } from './unused.js';\nexport function greet(name) { return quiet(shout(`hello ${name}`)); }\n");
+        step("an import of unused.js added", Some("lib/unused.js (scanned)"))
+    }).and_then(|_| {
+        std::fs::copy(root().join("examples/scan/src/lib/greet.js"), d.0.join("src/lib/greet.js")).unwrap();
+        step("the import taken away", Some("lib/unused.js (no longer asked)"))
+    }).unwrap_or_else(|e| panic!("{e}"));
 }
 
 #[test]
