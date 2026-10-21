@@ -409,7 +409,13 @@ impl Eval {
     fn reset_facts(&mut self, rd: &Readers) -> Result<Vec<FactId>, &'static str> {
         let mut out: Vec<FactId> = Vec::new();
         for r in rd.rules.iter().filter(|r| rd.reset.contains(&r.id)) {
+            // a base fact of the relation in a book the rule does not conclude into is not the rule's to take
+            let book = r.clause.head.persp.as_atom();
             for id in self.store.rel_all(&self.h, r.clause.head.rel) {
+                let elsewhere = brk!("retract_reset_any_book" => false; book.is_some_and(|b| self.store.rec(id).persp != b));
+                if elsewhere && self.store.rec(id).base() {
+                    continue;
+                }
                 if self.store.rec(id).base() {
                     return Err("a rule that negates or aggregates what changed concludes a base fact");
                 }
@@ -574,6 +580,17 @@ impl Eval {
     /// either untouched or removed-from and dirty: the caller removes the
     /// facts if they are still there, and the next `ensure` evaluates.
     pub fn retract_delta(&mut self, doomed: &[FactId]) -> Result<Delta, String> {
+        // THE DELTA TAKES ONE FACT: `doomed[0]`, with the rows a load wrote for it alone after it. A second fact of
+        // the program among them would be removed with nothing that rests on it taken out (measured: a file's facts
+        // passed at once left 783 lines a fresh evaluation does not hold), so it is refused, never answered.
+        if let Some(&g) = doomed.iter().skip(1).find(|&&g| {
+            let r = self.store.rec(g);
+            r.base() && !self.v.is_reserved(r.rel) && !crate::reflect::is_kernel_ledger(&self.h, r.persp)
+        }) {
+            if brk!("retract_many_silent" => false; true) {
+                return Err(format!("the delta takes one fact at a time, and {} was given beside {}", self.store.key(&self.h, g), self.store.key(&self.h, doomed[0])));
+            }
+        }
         let why = self.delta_refusals(doomed[0]);
         if !why.is_empty() {
             return Err(why.join("; "));

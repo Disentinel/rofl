@@ -197,6 +197,9 @@ check[checks]("rust/rofl/tests/prov_lazy.rs", "a_reader_whose_fact_is_a_variable
 check[checks]("rust/rofl/tests/prov_lazy.rs", "a_sealed_world_notes_nothing", test).
 check[checks]("rust/rofl/tests/prov_lazy.rs", "why_of_a_derived_by_row_and_a_fork_see_the_rows", test).
 check[checks]("rust/rofl/tests/resume.rs", "a_resumed_evaluation_is_a_whole_one", test).
+check[checks]("rust/rofl/tests/retract_refuse.rs", "a_base_fact_in_another_book_does_not_stop_the_delta", test).
+check[checks]("rust/rofl/tests/retract_refuse.rs", "a_base_fact_in_the_same_book_still_refuses", test).
+check[checks]("rust/rofl/tests/retract_refuse.rs", "the_engine_delta_refuses_two_facts_at_once", test).
 check[checks]("rust/rofl/tests/ring1_agg.rs", "ring1_reads_every_aggregate_and_lattice_declaration_the_parser_reads_and_as_the_same_tree", test).
 check[checks]("rust/rofl/tests/ring1_agg.rs", "what_the_parser_refuses_ring1_does_not_cover", test).
 check[checks]("rust/rofl/tests/scan.rs", "what_a_scan_brings_in_asks_for_the_next", test).
@@ -883,6 +886,7 @@ test_file[checks]("rust/rofl/tests/par.rs").
 test_file[checks]("rust/rofl/tests/program.rs").
 test_file[checks]("rust/rofl/tests/prov_lazy.rs").
 test_file[checks]("rust/rofl/tests/resume.rs").
+test_file[checks]("rust/rofl/tests/retract_refuse.rs").
 test_file[checks]("rust/rofl/tests/ring1_agg.rs").
 test_file[checks]("rust/rofl/tests/scan.rs").
 test_file[checks]("rust/rofl/tests/session.rs").

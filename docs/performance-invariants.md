@@ -207,6 +207,17 @@ again with the reason named. Measured on the corpus seeds (Rust release, one
 file held out and added): 1.2 s against 4.6 s for 37 facts, 4.8 s against 5.9
 s for 6.6% of the corpus (f_an_evaluated_world_takes_facts_and_rules_by_delta):
 the crossover of this invariant is visible already.
+**Corrected 2026-10-21:** "every change held byte for byte" overstated what is
+held. What is held: an addition of facts and rules, and a retraction of ONE base
+fact (with the kernel rows its load wrote), each against a fresh evaluation by
+the differentials (tests/addition.rs, tests/incremental.rs). What is not: the
+engine's retraction took a set of facts as if it were its first, and a file's
+facts passed at once left 783 lines a fresh evaluation does not hold; it now
+refuses a set (tests/retract_refuse.rs). Nor is the cost proportional to the
+change: retracting one leaf fact of the JS model cost 38 ms in a world of 484
+base facts and 306 ms in one of 12 171 (the citer map is rebuilt and the readers
+fired again whole each time), and an edge of a declared tree closure is not
+taken by delta at all (f_retraction_takes_one_fact_and_grows_with_the_world).
 
 **I6 — Nobody spills to disk; the field OOMs instead.** Soufflé, RecStep, DDlog
 and the GPU engines all report out-of-memory rather than degrading. BigDatalog
