@@ -2147,6 +2147,12 @@ brk("concat_summary_leaks"). brk_kind("concat_summary_leaks", file).
 brk_expects("concat_summary_leaks", "concat_value").
 brk("concat_untextable_part"). brk_kind("concat_untextable_part", file).
 brk_expects("concat_untextable_part", "concat_value").
+brk("snapshot_drops_a_fact"). brk_kind("snapshot_drops_a_fact", switch).
+brk_expects("snapshot_drops_a_fact", "snapshot_round_trip").
+brk("snapshot_drops_ghosts"). brk_kind("snapshot_drops_ghosts", switch).
+brk_expects("snapshot_drops_ghosts", "snapshot_round_trip").
+brk("snapshot_reads_no_tick"). brk_kind("snapshot_reads_no_tick", switch).
+brk_expects("snapshot_reads_no_tick", "snapshot_round_trip").
 
 switch_site("add_base_firings_kept", "rust/rofl/src/engine/addition.rs").
 switch_site("add_closure_lowered_unnoted", "rust/rofl/src/engine.rs").
@@ -2616,6 +2622,9 @@ switch_site("shrug_wfs_one_level", "rust/rofl/src/engine.rs").
 switch_site("shrug_wfs_upper_unrefused", "rust/rofl/src/engine.rs").
 switch_site("shrug_whynot_as_failure", "rust/rofl/src/engine.rs").
 switch_site("shrug_withdrawn_unrefused", "rust/rofl/src/engine.rs").
+switch_site("snapshot_drops_a_fact", "rust/rofl/src/seed.rs").
+switch_site("snapshot_drops_ghosts", "rust/rofl/src/seed.rs").
+switch_site("snapshot_reads_no_tick", "rust/rofl/src/seed.rs").
 switch_site("solutions", "rust/rofl/src/engine.rs").
 switch_site("space_uncut_world", "rust/rofl/src/engine.rs").
 switch_site("staged_keeps_withdrawn", "rust/rofl/src/engine.rs").

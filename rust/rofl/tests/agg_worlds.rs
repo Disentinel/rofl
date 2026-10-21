@@ -303,7 +303,30 @@ fn check_world(w: &World) -> Vec<String> {
             }
         }
     }
-    let mut back = Session::open(&s.save(), s.eval.budget).unwrap_or_else(|e| panic!("{}: {e}", w.name));
+    // A SNAPSHOT READS BACK WHOLE: opened and saved again it is the same text,
+    // so the reader drops no field, and opened it is the same world, so the
+    // writer drops none the state shows. One that does not is not evaluated.
+    let whole = "the snapshot does not read back whole";
+    let saved = s.save();
+    let mut back = match Session::open(&saved, s.eval.budget) {
+        Ok(b) => b,
+        Err(e) => {
+            bad.push(format!("{}: {whole}: it is refused: {e}", w.name));
+            return bad;
+        }
+    };
+    let again = back.save();
+    if again != saved {
+        let at = saved.bytes().zip(again.bytes()).take_while(|(a, b)| a == b).count();
+        let near = |t: &str| String::from_utf8_lossy(&t.as_bytes()[at.saturating_sub(40)..(at + 40).min(t.len())]).into_owned();
+        bad.push(format!("{}: {whole}: saved again it is another text from byte {at}: {:?} against {:?}", w.name, near(&saved), near(&again)));
+    }
+    if state(&back) != first {
+        bad.push(format!("{}: {whole}: opened it is another world", w.name));
+    }
+    if bad.iter().any(|b| b.contains(whole)) {
+        return bad;
+    }
     back.eval.mode = s.eval.mode;
     back.eval.space = s.eval.space;
     back.eval.retain_ticks = s.eval.retain_ticks;

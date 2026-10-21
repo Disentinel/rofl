@@ -91,6 +91,7 @@ version = "0.1.0"
 dependencies = [
  "memmap2",
  "regex",
+ "serde",
  "serde_json",
 ]
 

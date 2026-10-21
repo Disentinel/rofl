@@ -5,6 +5,7 @@ edition = "2021"
 build = "build.rs"
 
 [dependencies]
+serde = "1"
 serde_json = "1"
 memmap2 = "0.9"
 regex = "1"
