@@ -92,7 +92,7 @@ fn main() {
         let mut held: Vec<Session> = vols
             .iter()
             .map(|v| {
-                let f = if layer { cl.fork() } else { Session { eval: cc.eval.fork(), dangling: cc.dangling } };
+                let f = if layer { cl.fork() } else { Session { eval: cc.eval.fork(), dangling: cc.dangling, asks: cc.asks } };
                 volume(f, v)
             })
             .collect();
