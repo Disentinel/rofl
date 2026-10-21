@@ -552,15 +552,18 @@ impl Eval {
     /// be given them again.
     fn overdelete(&mut self, seeds: Vec<FactId>, over: &mut HashSet<FactId>, over_base: &mut HashSet<FactId>, d: &mut AddDelta) {
         let lost: HashSet<FactId> = seeds.iter().copied().collect();
+        let comp = self.rel_components();
+        // (kept, and queued since by nothing: a copy queued before it was judged)
+        let mut judged: HashSet<FactId> = HashSet::new();
         // lowest level first: a fact is judged once everything below it that goes has gone
         let mut queue: std::collections::BinaryHeap<std::cmp::Reverse<(i64, FactId)>> =
             seeds.into_iter().map(|x| std::cmp::Reverse((self.rel_level(self.store.rec(x).rel), x))).collect();
         while let Some(std::cmp::Reverse((lv, x))) = queue.pop() {
-            if over.contains(&x) || over_base.contains(&x) {
+            if over.contains(&x) || over_base.contains(&x) || judged.contains(&x) {
                 continue;
             }
             if self.store.rec(x).base() {
-                self.withdraw_firings(&[x], |_, _| true);
+                self.withdraw_unswept(&[x], |_, _| true);
                 over_base.insert(x);
                 continue;
             }
@@ -568,39 +571,118 @@ impl Eval {
                 continue;
             }
             // A FACT A FIRING STILL HOLDS UP STAYS: the firings that cite what went are withdrawn, and where one is
-            // left whose premises are facts of lower levels that stand, the fact keeps it and nothing above it moves.
-            // (A premise of its own level may rest on the fact through a cycle, and a cell or a row may be replaced: the
-            // fact goes whole then, and is derived again.)
+            // left whose premises are facts that stand, none of a relation recursive with the fact's, the fact keeps
+            // it and nothing above it moves. (A premise recursive with it may rest on the fact through a cycle, and a
+            // cell or a row may be replaced: the fact goes whole then, and is derived again. A premise that goes after
+            // this, of the same level, brings the fact back here: `judged` lets it be judged again.)
             if self.store.alive(x) {
                 let store = &self.store;
                 let gone = |p: &PremRef| matches!(p, PremRef::Fact(g) if over.contains(g) || over_base.contains(g) || !store.alive(*g));
                 let firings = store.firings(x);
+                let own = comp.get(&store.rec(x).rel);
+                let below = |g: FactId| {
+                    let rel = store.rec(g).rel;
+                    self.rel_level(rel) < lv || brk!("overdelete_kept_by_own_component" => true; comp.get(&rel) != own || own.is_none())
+                };
                 let stands = |ps: &[PremRef]| ps.iter().all(|p| match p {
-                    PremRef::Fact(g) => store.alive(*g) && !over.contains(g) && !over_base.contains(g) && self.rel_level(store.rec(*g).rel) < lv,
+                    PremRef::Fact(g) => store.alive(*g) && !over.contains(g) && !over_base.contains(g) && below(*g),
                     PremRef::Neg(_) | PremRef::Bi(_) => true,
                     _ => false,
                 });
                 if firings.iter().any(|(_, _, ps)| !ps.iter().any(gone) && stands(ps)) {
                     let dead: HashSet<FactId> = firings.iter().flat_map(|(_, _, ps)| ps.iter()).filter(|p| gone(p)).filter_map(|p| if let PremRef::Fact(g) = p { Some(*g) } else { None }).collect();
-                    self.withdraw_firings(&[x], |_, ps| ps.iter().any(|p| matches!(p, PremRef::Fact(g) if dead.contains(g))));
+                    self.withdraw_unswept(&[x], |_, ps| ps.iter().any(|p| matches!(p, PremRef::Fact(g) if dead.contains(g))));
                     d.kept += 1;
                     self.add_kept.insert(x);
+                    judged.insert(x);
                     continue;
                 }
             }
-            self.withdraw_firings(&[x], |_, _| true);
+            self.withdraw_unswept(&[x], |_, _| true);
             if self.store.alive(x) {
-                self.store.remove_many(&[x]);
+                // (its id leaves the runs once all have gone: a sweep for each fact reads its relation's runs whole)
+                self.store.retire(x);
             }
             over.insert(x);
             d.overdeleted += 1;
             // (the index lists a firing withdrawn since: a citer is followed where a firing of it still cites the fact)
             for y in self.store.citers_one(x) {
-                if self.store.alive(y) && !over.contains(&y) && brk!("add_stale_citer_followed" => true; self.store.firings(y).iter().any(|(_, _, ps)| ps.contains(&PremRef::Fact(x)))) {
+                if self.store.alive(y) && !over.contains(&y) && brk!("add_stale_citer_followed" => true; self.store.cites(y, PremRef::Fact(x))) {
+                    if brk!("overdelete_judged_kept" => false; true) {
+                        judged.remove(&y);
+                    }
                     queue.push(std::cmp::Reverse((self.rel_level(self.store.rec(y).rel), y)));
                 }
             }
         }
+        self.store.sweep();
+    }
+
+    /// The strongly connected components of the relations, each relation's by the rules that conclude it reading
+    /// another (under a negation and an aggregate too): two relations in one may rest on each other.
+    fn rel_components(&self) -> HashMap<Sym, u32> {
+        let mut next: HashMap<Sym, Vec<Sym>> = HashMap::new();
+        for r in self.rules.iter() {
+            let reads = next.entry(r.clause.head.rel).or_default();
+            for l in r.clause.body.iter().flat_map(|b| b.lits_deep()) {
+                reads.push(l.rel);
+            }
+        }
+        // Tarjan's, without recursion: (node, index of its next edge)
+        let mut index: HashMap<Sym, (u32, u32)> = HashMap::new();
+        let mut comp: HashMap<Sym, u32> = HashMap::new();
+        let (mut stack, mut on, mut n, mut c) = (Vec::new(), HashSet::new(), 0u32, 0u32);
+        let mut nodes: Vec<Sym> = next.keys().copied().collect();
+        nodes.sort_unstable();
+        for root in nodes {
+            if index.contains_key(&root) {
+                continue;
+            }
+            let mut work: Vec<(Sym, usize)> = vec![(root, 0)];
+            index.insert(root, (n, n));
+            n += 1;
+            stack.push(root);
+            on.insert(root);
+            while let Some(&mut (v, ref mut i)) = work.last_mut() {
+                let out = next.get(&v).map(|e| e.as_slice()).unwrap_or(&[]);
+                if *i < out.len() {
+                    let w = out[*i];
+                    *i += 1;
+                    match index.get(&w) {
+                        None => {
+                            index.insert(w, (n, n));
+                            n += 1;
+                            stack.push(w);
+                            on.insert(w);
+                            work.push((w, 0));
+                        }
+                        Some(&(wi, _)) if on.contains(&w) => {
+                            let e = index.get_mut(&v).unwrap();
+                            e.1 = e.1.min(wi);
+                        }
+                        _ => {}
+                    }
+                    continue;
+                }
+                work.pop();
+                let (vi, vl) = index[&v];
+                if let Some(&(u, _)) = work.last() {
+                    let e = index.get_mut(&u).unwrap();
+                    e.1 = e.1.min(vl);
+                }
+                if vl == vi {
+                    while let Some(w) = stack.pop() {
+                        on.remove(&w);
+                        comp.insert(w, c);
+                        if w == v {
+                            break;
+                        }
+                    }
+                    c += 1;
+                }
+            }
+        }
+        comp
     }
 
     /// THE PART OF AN ADDITION THAT IS KEPT, level by level (DRed over the levels of a stratified program): at each
@@ -643,7 +725,7 @@ impl Eval {
             for &f in removed {
                 over.insert(f);
                 if brk!("retract_set_unpropagated" => false; true) {
-                    seeds.extend(self.store.citers_one(f).into_iter().filter(|y| self.store.alive(*y) && self.store.firings(*y).iter().any(|(_, _, ps)| ps.contains(&PremRef::Fact(f)))));
+                    seeds.extend(self.store.citers_one(f).into_iter().filter(|y| self.store.alive(*y) && self.store.cites(*y, PremRef::Fact(f))));
                 }
             }
             if brk!("retract_rederive_all" => true; false) {

@@ -8849,6 +8849,27 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "overdelete_judged_kept",
+  "what": "a fact kept by a firing that stood is not judged again when a premise of another of its firings goes after it, so that firing stays",
+  "expect": {
+   "set_random": "sets differ from the fresh world"
+  }
+ },
+ {
+  "id": "overdelete_kept_by_own_component",
+  "what": "a fact is kept by a firing whose premise is of a relation recursive with its own, which may rest on the fact itself",
+  "expect": {
+   "set_random": "sets differ from the fresh world"
+  }
+ },
+ {
+  "id": "withdraw_all_rows_kept",
+  "what": "a fact all of whose firings are withdrawn at once keeps the provenance rows of its rules",
+  "expect": {
+   "set_tree": "step 2:"
+  }
+ },
+ {
   "id": "retract_set_unpropagated",
   "what": "the facts a retraction takes out go, and nothing that rests on them",
   "expect": {

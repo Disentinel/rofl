@@ -1254,15 +1254,37 @@ impl Eval {
     /// its last firing goes unless it is base, and its provenance rows with it
     /// (every row of a rule none of whose firings is left). The facts gone.
     pub(super) fn withdraw_firings(&mut self, ids: &[FactId], cited: impl Fn(Sym, &[PremRef]) -> bool) -> Vec<FactId> {
+        let retire = self.withdraw_unswept(ids, cited);
+        self.store.sweep();
+        retire
+    }
+
+    /// `withdraw_firings`, the ids gone left in the runs for one sweep after many (`Store::sweep`). A fact all of
+    /// whose firings go loses its chain at once, not a firing at a time.
+    pub(super) fn withdraw_unswept(&mut self, ids: &[FactId], cited: impl Fn(Sym, &[PremRef]) -> bool) -> Vec<FactId> {
         let mut retire: Vec<FactId> = Vec::new();
         let mut rows: Vec<[Term; 3]> = Vec::new();
         for &id in ids {
             let (rel, persp) = (self.store.rec(id).rel, self.store.rec(id).persp);
             let args = self.store.args(id).to_vec();
             let ft = fact_term(&mut self.h, &self.v, rel, persp, &args);
-            for (r, tick, prems) in self.store.firings(id) {
-                if cited(r, &prems) && self.store.remove_firing(id, r, &prems) && !self.store.fired_by(id, r) {
-                    rows.push([ft, Term::atom(r), Term::int(tick as i64)]);
+            let firings = self.store.firings(id);
+            if firings.iter().all(|(r, _, ps)| cited(*r, ps)) {
+                // each rule's row goes with the last of its firings, as removing them one at a time from the head says
+                let mut last: Vec<(Sym, u32)> = Vec::new();
+                for (r, tick, _) in &firings {
+                    match last.iter_mut().find(|(q, _)| q == r) {
+                        Some(x) => x.1 = *tick,
+                        None => last.push((*r, *tick)),
+                    }
+                }
+                self.store.drop_firings(id);
+                rows.extend(brk!("withdraw_all_rows_kept" => Vec::new(); last).into_iter().map(|(r, tick)| [ft, Term::atom(r), Term::int(tick as i64)]));
+            } else {
+                for (r, tick, prems) in firings {
+                    if cited(r, &prems) && self.store.remove_firing(id, r, &prems) && !self.store.fired_by(id, r) {
+                        rows.push([ft, Term::atom(r), Term::int(tick as i64)]);
+                    }
                 }
             }
             if self.store.support_count(id) == 0 && !self.store.rec(id).base() {
@@ -1275,7 +1297,9 @@ impl Eval {
                 gone.push(r);
             }
         }
-        self.store.remove_many(&gone);
+        for g in gone {
+            self.store.retire(g);
+        }
         retire
     }
 

@@ -2780,6 +2780,19 @@ impl Store {
         self.citers.as_ref().map(|ix| ix.of(of).copied().collect()).unwrap_or_default()
     }
 
+    /// Does a firing of `id` cite `p`? Walked in place: a fact with a long chain is asked once for each premise gone.
+    pub fn cites(&self, id: FactId, p: PremRef) -> bool {
+        let mut c = self.wit_head[id as usize];
+        while c != EMPTY {
+            let n = self.wits[c as usize];
+            if self.prem_arena[n.prems_at as usize..(n.prems_at + n.prems_len) as usize].contains(&p) {
+                return true;
+            }
+            c = n.next;
+        }
+        false
+    }
+
     /// The facts with a firing that cites one of `of`, from the citer index.
     pub fn citers_of(&self, of: &HashSet<FactId>) -> Vec<FactId> {
         let Some(ix) = &self.citers else { return Vec::new() };

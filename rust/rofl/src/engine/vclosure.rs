@@ -397,7 +397,7 @@ impl Eval {
                 for d in dropped {
                     let cites: Vec<(FactId, Sym)> = self.store.vciters.as_ref().and_then(|m| m.get(&d.bits())).cloned().unwrap_or_default();
                     for (y, k) in cites {
-                        if !self.store.alive(y) || !self.store.firings(y).iter().any(|(_, _, ps)| ps.contains(&PremRef::VRow(k))) {
+                        if !self.store.alive(y) || !self.store.cites(y, PremRef::VRow(k)) {
                             continue;
                         }
                         let Some((c, b, a, dd)) = self.vrow_entry(k) else { continue };
