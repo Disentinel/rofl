@@ -1001,9 +1001,19 @@ function engineFromChanges(ref: string): { engine: EngineChoice; why: string } {
   return { engine: 'both', why: `${other} changed since ${ref}` };
 }
 
+/** A world that loads a file that is not there, its own or one of the world below, is said in a sentence: every reader
+ *  after this one would throw ENOENT from inside a worker and the run would end on a stack. */
+export function absent(w: World): string | null {
+  const here = w.files.filter((f) => fs.existsSync(f));
+  const gone = [...w.files.filter((f) => !here.includes(f)), ...belowFiles(here).filter((f) => !fs.existsSync(f))];
+  return gone.length ? `${w.name}: it loads ${gone.map((f) => path.relative(ROOT, f)).join(', ')}, which ${gone.length > 1 ? 'are' : 'is'} not there` : null;
+}
+
 let refusalsOk: Set<string> | undefined;
 /** One world against its golden: null when it passes, else its FAIL line. */
 export function checkWorld(w: World, g: { hash: string; census: Map<string, number> } | undefined, rustMissing: boolean, engine: EngineChoice = 'both'): string | null {
+  const gone = absent(w);
+  if (gone) return gone;
   let v = judgeWorld(w, g, rustMissing, engine);
   // A RED IS NEVER KEPT: its answers are dropped, so a red on a warm run was computed on that run, and an answer that came
   // out wrong once (an engine that is not deterministic under load, f_a_kept_answer_must_not_keep_a_red) is asked again
@@ -1202,6 +1212,8 @@ if (isMain) {
     // A RUST-ONLY WORLD IS BLESSED FROM THE RUST ANSWER, which is the only one
     // it has; its problems and parity are printed, and a bless over them is a
     // decision a person reads in the output.
+    const gone = ws.map(absent).filter((x) => x !== null);
+    if (gone.length) refuse(new Error(`not blessed: ${gone.join('; ')}`));
     const answers = await runPool<{ a: Answer; said: string[] }>(ws.map((w) => ({ mod: SELF, fn: 'blessAnswer', args: [w] })), { env: { ROFL_KEEP_TALLY: TALLY } });
     const rows: [World, Answer][] = ws.map((w, i) => [w, answers[i].a]);
     for (const { said } of answers) for (const l of said) console.log(l);

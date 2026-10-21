@@ -7,7 +7,7 @@
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { answerKey, answerTS, blessAnswer, type World } from './goldens.ts';
+import { answerKey, answerTS, blessAnswer, checkWorld, type World } from './goldens.ts';
 import { readingKey, worldFiles } from './md_world.ts';
 import { omitted } from './keep.ts';
 
@@ -85,6 +85,14 @@ for (const c of cases) {
   else console.log(`  ok    a Rust-only world is blessed without the TypeScript engine${honest ? ' (no Rust binary: not asked)' : ''}`);
   if (asked(() => answerTS(w)) === null) bad.push('BROKEN a Rust-only world handed to the TypeScript engine was answered, not refused');
   else console.log('  red   a Rust-only world handed to the TypeScript engine is refused');
+}
+// A WORLD WHOSE FILE IS GONE IS A SENTENCE that names the world and the file, not a stack from inside a worker: its
+// own file moved away, and a file of the world below it that is not there
+for (const [what, w] of [['its own file', world([at('kc-gone.rofl')])], ['a file of the world below', world([put('kc-above.rofl', '-- below: kc-nowhere/below.rofl\nedb(kc_p).\n')])]] as const) {
+  let said: string | null;
+  try { said = checkWorld(w, { hash: '', census: new Map() }, true, 'ts'); } catch (e) { said = `threw ${(e as Error).message.split('\n')[0]}`; }
+  if (!said || !/^keep_check: it loads \S+, which is not there$/.test(said)) bad.push(`BROKEN a world without ${what}: ${said ?? 'passed'}`);
+  else console.log(`  ok    a world without ${what}: ${said}`);
 }
 for (const b of bad) console.log(b);
 process.exit(bad.length ? 1 : 0);
