@@ -719,12 +719,12 @@ struct Col<T: Pod> {
     mark: usize,
     base: Rc<Arena<T>>,
     own: Vec<T>,
-    low: HashMap<usize, T>,
+    low: FxMap<usize, T>,
 }
 
 impl<T: Pod> Default for Col<T> {
     fn default() -> Self {
-        Col { mark: 0, base: Rc::default(), own: Vec::new(), low: HashMap::new() }
+        Col { mark: 0, base: Rc::default(), own: Vec::new(), low: FxMap::default() }
     }
 }
 
@@ -2685,6 +2685,32 @@ impl Store {
 
     pub fn close_dup_window(&mut self) {
         self.dup_window = None;
+    }
+
+    /// Put the chain of `id` in the window, opened if a change of a chain closed it, so that a firing of it found
+    /// again is told by its hash, not by a walk of the chain: a fact derived again with many firings would walk it
+    /// once for each.
+    pub fn window_chain(&mut self, id: FactId) {
+        let d = self.dup_window.get_or_insert_with(DupWindow::default);
+        if d.begun.contains(&id) {
+            return;
+        }
+        let mut whole = true;
+        let mut c = self.wit_head[id as usize];
+        while c != EMPTY {
+            let n = self.wits[c as usize];
+            let h = firing_hash(id, n.rule, &self.prem_arena[n.prems_at as usize..(n.prems_at + n.prems_len) as usize]);
+            if brk!("window_chain_unlisted" => false; true) {
+                if let Some((f, _)) = d.nodes.insert(h, (id, c)) {
+                    d.begun.remove(&f);
+                    whole = false;
+                }
+            }
+            c = n.next;
+        }
+        if whole {
+            d.begun.insert(id);
+        }
     }
 
     fn chains_cut(&mut self) {

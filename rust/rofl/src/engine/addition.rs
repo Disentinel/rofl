@@ -916,6 +916,8 @@ impl Eval {
                 orders.insert(r.id, o);
             }
             for sol in self.solve_bound(&r, &all, orders[&r.id].clone().as_deref(), vec![s0])? {
+                // (a fact brought back cuts the window as it begins its chain anew)
+                self.store.window_chain(x);
                 self.conclude(&r, sol, out)?;
             }
         }

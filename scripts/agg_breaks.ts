@@ -8842,6 +8842,13 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "window_chain_unlisted",
+  "what": "a fact derived again is told to the window of firings as whole while its chain is not listed in it, so a firing it had is put on it again",
+  "expect": {
+   "set_random": "sets differ from the fresh world"
+  }
+ },
+ {
   "id": "retract_set_unpropagated",
   "what": "the facts a retraction takes out go, and nothing that rests on them",
   "expect": {
