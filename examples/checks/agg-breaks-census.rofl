@@ -2187,6 +2187,10 @@ brk("kept_write_unbounded"). brk_kind("kept_write_unbounded", switch).
 brk_expects("kept_write_unbounded", "kept_bound").
 brk("kept_shared_temp"). brk_kind("kept_shared_temp", switch).
 brk_expects("kept_shared_temp", "kept_concurrent").
+brk("retract_reset_any_book"). brk_kind("retract_reset_any_book", switch).
+brk_expects("retract_reset_any_book", "retract_other_book").
+brk("retract_many_silent"). brk_kind("retract_many_silent", switch).
+brk_expects("retract_many_silent", "retract_two_facts").
 
 switch_site("add_base_firings_kept", "rust/rofl/src/engine/addition.rs").
 switch_site("add_closure_lowered_unnoted", "rust/rofl/src/engine.rs").
@@ -2613,12 +2617,14 @@ switch_site("retract_index_off", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_keeps_edb", "rust/rofl/src/session.rs").
 switch_site("retract_lattice_hole_kept", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_lattice_precise", "rust/rofl/src/engine/delta.rs").
+switch_site("retract_many_silent", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_memo_stale", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_no_readers", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_no_rederive", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_no_refire", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_no_subtract", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_partial_gate_off", "rust/rofl/src/engine/delta.rs").
+switch_site("retract_reset_any_book", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_seed_rules_unfired", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_stacked_cells_kept", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_stacked_facts_kept", "rust/rofl/src/engine/delta.rs").

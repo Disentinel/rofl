@@ -8813,6 +8813,20 @@ export const BREAKS: Break[] = [
    "kept_concurrent": "concurrent_cold_runs_keep_one_world:"
   }
  },
+ {
+  "id": "retract_reset_any_book",
+  "what": "a negating rule read again whole is refused by a base fact of its relation in any book, not only the book it concludes into",
+  "expect": {
+   "retract_other_book": "refused:"
+  }
+ },
+ {
+  "id": "retract_many_silent",
+  "what": "the engine's retraction delta takes a set of the program's facts as if it were one, removing the rest with nothing that rests on them",
+  "expect": {
+   "retract_two_facts": "two facts taken as one"
+  }
+ },
 ];
 
 /** A proof that is no world: the report `rofl load --propose-structures` prints over a fixture (rust/rofl/src/structures.rs),
@@ -8883,6 +8897,8 @@ const TESTS: Record<string, string> = {
   kept_touched: 'kept a_kept_world_answers_and_refuses_as_docs_cli_says',
   kept_holes: 'kept a_kept_world_answers_and_refuses_as_docs_cli_says',
   kept_image_holes: 'kept a_holes_unknowns_survive_an_image_and_a_volume',
+  retract_other_book: 'retract_refuse a_base_fact_in_another_book_does_not_stop_the_delta',
+  retract_two_facts: 'retract_refuse the_engine_delta_refuses_two_facts_at_once',
   kept_implicit: 'kept a_kept_world_answers_and_refuses_as_docs_cli_says',
   kept_implicit_walls: 'kept a_kept_world_answers_and_refuses_as_docs_cli_says',
   kept_implicit_load: 'kept a_kept_world_answers_and_refuses_as_docs_cli_says',

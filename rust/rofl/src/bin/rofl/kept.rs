@@ -56,6 +56,12 @@ const FLOOR: u64 = 5 << 30;
 
 const GB: f64 = (1u64 << 30) as f64;
 
+/// A size as a reader reads it: in GB from 1 GB up, else in MB, else in KB.
+fn size(bytes: u64) -> String {
+    let b = bytes as f64;
+    if b >= GB { format!("{:.2} GB", b / GB) } else if b >= (1u64 << 20) as f64 { format!("{:.1} MB", b / (1u64 << 20) as f64) } else { format!("{:.0} KB", b / 1024.0) }
+}
+
 fn cap() -> u64 {
     let gb = std::env::var("ROFL_CACHE_GB").ok().and_then(|v| v.parse::<f64>().ok()).filter(|g| *g >= 0.0).unwrap_or(CACHE_GB);
     (gb * GB) as u64
@@ -79,7 +85,7 @@ pub fn keep_capped(s: &mut rofl::session::Session, kept: &str, note: &str) -> Re
     let (cap, ignored) = (cap(), rofl::brk!("kept_cap_ignored" => true; false));
     let room = free(dir).map(|f| f.saturating_sub(FLOOR));
     if room == Some(0) {
-        return Err(format!("the disk has less than the {:.0} GB free a kept world never takes", FLOOR as f64 / GB));
+        return Err(format!("the disk has less than the {} free a kept world never takes", size(FLOOR)));
     }
     let most = cap.min(room.unwrap_or(u64::MAX));
     let bound = rofl::brk!("kept_write_unbounded" => None; (!ignored).then_some(most as usize));
@@ -88,14 +94,14 @@ pub fn keep_capped(s: &mut rofl::session::Session, kept: &str, note: &str) -> Re
         Ok(n) => n as u64,
         Err(e) if e.to_string() == rofl::arena::TOO_LARGE || (bound.is_none() && !ignored) => {
             let _ = std::fs::remove_file(&new);
-            return Err(format!("the world is larger than {:.2} GB, the most it may take: the cap is {:.2} GB (ROFL_CACHE_GB){}",
-                most as f64 / GB, cap as f64 / GB, room.filter(|r| *r < cap).map_or(String::new(), |r| format!(" and the disk gives {:.2} GB above its {:.0} GB floor", r as f64 / GB, FLOOR as f64 / GB))));
+            return Err(format!("the world is larger than {}, the most it may take: the cap is {} (ROFL_CACHE_GB){}",
+                size(most), size(cap), room.filter(|r| *r < cap).map_or(String::new(), |r| format!(" and the disk gives {} above its {} floor", size(r), size(FLOOR)))));
         }
         Err(e) => return Err(e.to_string()),
     };
     if bound.is_none() && !ignored && bytes > most {
         let _ = std::fs::remove_file(&new);
-        return Err(format!("the world is larger than {:.2} GB, the most it may take: the cap is {:.2} GB (ROFL_CACHE_GB)", most as f64 / GB, cap as f64 / GB));
+        return Err(format!("the world is larger than {}, the most it may take: the cap is {} (ROFL_CACHE_GB)", size(most), size(cap)));
     }
     let mut older: Vec<(std::time::SystemTime, u64, PathBuf)> = std::fs::read_dir(dir).map_err(|e| e.to_string())?.flatten()
         .filter(|e| e.path().extension().is_some_and(|x| x == "vol") && e.path() != Path::new(kept))
