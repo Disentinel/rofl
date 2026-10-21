@@ -65,6 +65,8 @@ export function theVariable(s: string, reads: (s: string) => boolean): string | 
 }
 const IRREGULAR = new Map([['person', 'people'], ['child', 'children'], ['index', 'indices'], ['axis', 'axes']]);
 const QUANTIFIER = /^(Nothing|Nobody|None|No|Every|Each)\b/;
+/** `a/b`: the sentence reads as two, once with each side. */
+export const twin = (text: string) => /`[^`]*`\/`[^`]*`/.test(text) || /(^|[\s\[(])[A-Za-z_-]+\/[A-Za-z_-]+([\s\].,;:)]|$)/.test(text.replace(/"[^"]*"|`[^`]*`/g, ''));
 const BE = new Map([['is', ['is', 'are', 'am']], ['are', ['are', 'is']], ['was', ['was', 'were']], ['were', ['were', 'was']], ['has', ['has', 'have']], ['have', ['have', 'has']], ['does', ['does', 'do']], ['do', ['do', 'does']]]);
 const MODAL = new Set(['can', 'could', 'must', 'may', 'will', 'should', 'would']);
 const AUX = new Set([...BE.keys(), 'did', ...MODAL]);
@@ -584,11 +586,25 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
       return m ? m[1] + (side === 0 ? m[2] : m[3]) + m[4] : tok;
     });
   }
-  const twin = (text: string) => /`[^`]*`\/`[^`]*`/.test(text) || /(^|[\s\[(])[A-Za-z_-]+\/[A-Za-z_-]+([\s\].,;:)]|$)/.test(text.replace(/"[^"]*"|`[^`]*`/g, ''));
+  // a sentence read once for each side of its `a/b` is said once and as written: what both sides said alike, the halves joined back
+  function bothSides(texts: string[], run: (side: 0 | 1) => void) {
+    const lists = [unparsed, dropped, ambiguous], from = lists.map((l) => l.length);
+    run(0);
+    const mid = lists.map((l) => l.length);
+    run(1);
+    const back = new Map<string, string>(), runs = (s: string) => s.match(/\s+|\S+/g) ?? [];
+    for (const w of texts.join(' ').match(/\S+/g) ?? []) for (const t of [w, w.replace(/[.;:]$/, '')]) back.set(`${halves(t, 0)}\0${halves(t, 1)}`, t);
+    lists.forEach((l, k) => {
+      const a = l.slice(from[k], mid[k]), b = l.slice(mid[k]);
+      if (!a.length || a.length !== b.length) return;
+      const joined = a.map((x, i) => { const xs = runs(x), ys = runs(b[i]); return xs.length === ys.length ? xs.map((t, j) => t === ys[j] ? t : back.get(`${t}\0${ys[j]}`)) : [undefined]; });
+      if (joined.every((x) => x.every((t) => t !== undefined))) l.splice(from[k], l.length - from[k], ...joined.map((x) => x.join('')));
+    });
+  }
   function ruleText(text: string, where: string, listItems: string[] | null) {
     text = text.trim();
     if (twin(text) || (listItems && listItems.some(twin))) {
-      for (const side of [0, 1] as const) ruleText(halves(text, side), where, listItems && listItems.map((x) => halves(x, side)));
+      bothSides([text, ...listItems ?? []], (side) => ruleText(halves(text, side), where, listItems && listItems.map((x) => halves(x, side))));
       return;
     }
     if (listItems && / if all of:$/.test(text)) { sentence(text.replace(/ if all of:$/, ''), listItems, where); return; }
@@ -845,7 +861,7 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
     if ((m = /^`(\w+)`(?:, (?:a|an) [\w -]+,)? lists:$/.exec(fact)) && next && next.type === 'table') { homeBook.set(m[1], 'main'); for (const r of next.rows!) parsedFacts.push({ rel: m[1], args: r.map((c) => term(c, [])), tense }); i++; continue; }
     if (/ either:$/.test(text) && next && next.type === 'ol') {
       if (twin(text) || next.items!.some((it) => twin(it.text) || it.sub.some(twin))) {
-        for (const side of [0, 1] as const) {
+        bothSides([text, ...next.items!.flatMap((it) => [it.text, ...it.sub])], (side) => {
           const head = halves(text.replace(/ either:$/, ''), side);
           for (const it of next.items!) {
             const t = halves(it.text.replace(/[;.]$/, ''), side);
@@ -853,7 +869,7 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
             else if (t === 'always') sentence(head, [], section);
             else ruleText(`${head} ${t}.`, section, null);
           }
-        }
+        });
         i++; continue;
       }
       const head = text.replace(/ either:$/, '');

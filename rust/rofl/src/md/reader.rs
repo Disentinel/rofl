@@ -1234,13 +1234,38 @@ impl R {
         }
     }
 
+    /// A sentence read once for each side of its `a/b` is said once and as written: what both sides said alike, the halves joined back.
+    fn both_sides(&mut self, texts: &[&str], run: impl Fn(&mut Self, usize)) {
+        let lens = |r: &Self| [r.unparsed.len(), r.dropped.len(), r.ambiguous.len()];
+        let from = lens(self);
+        run(self, 0);
+        let mid = lens(self);
+        run(self, 1);
+        let mut back = HashMap::new();
+        for w in rx::all(r"\S+", &texts.join(" ")) {
+            for t in [w.clone(), rx::sub(r"[.;:]$", &w, false, "")] { back.insert(format!("{}\0{}", halves(&t, 0), halves(&t, 1)), t); }
+        }
+        let runs = |s: &str| rx::all(r"\s+|\S+", s);
+        for (k, l) in [&mut self.unparsed, &mut self.dropped, &mut self.ambiguous].into_iter().enumerate() {
+            let (a, b) = (&l[from[k]..mid[k]], &l[mid[k]..]);
+            if a.is_empty() || a.len() != b.len() { continue; }
+            let joined: Option<Vec<String>> = a.iter().zip(b).map(|(x, y)| {
+                let (xs, ys) = (runs(x), runs(y));
+                if xs.len() != ys.len() { return None; }
+                xs.iter().zip(&ys).map(|(t, u)| if t == u { Some(t.clone()) } else { back.get(&format!("{t}\0{u}")).cloned() }).collect::<Option<String>>()
+            }).collect();
+            if let Some(j) = joined { l.truncate(from[k]); l.extend(j); }
+        }
+    }
+
     fn rule_text(&mut self, text0: &str, list_items: Option<&[String]>) {
         let text = text0.trim();
         if twin(text) || list_items.is_some_and(|l| l.iter().any(|x| twin(x))) {
-            for side in [0, 1] {
+            let texts: Vec<&str> = std::iter::once(text).chain(list_items.unwrap_or(&[]).iter().map(String::as_str)).collect();
+            self.both_sides(&texts, |r, side| {
                 let items: Option<Vec<String>> = list_items.map(|l| l.iter().map(|x| halves(x, side)).collect());
-                self.rule_text(&halves(text, side), items.as_deref());
-            }
+                r.rule_text(&halves(text, side), items.as_deref());
+            });
             return;
         }
         if let Some(items) = list_items { if text.ends_with(" if all of:") { self.sentence(&rx::sub(" if all of:$", text, false, ""), items); return; } }
@@ -1570,15 +1595,16 @@ impl R {
             }
             if text.ends_with(" either:") && nty == Some(Ty::Ol) {
                 if twin(&text) || items.iter().any(|it| twin(&it.text) || it.sub.iter().any(|s| twin(s))) {
-                    for side in [0, 1] {
+                    let texts: Vec<&str> = std::iter::once(text.as_str()).chain(items.iter().flat_map(|it| std::iter::once(it.text.as_str()).chain(it.sub.iter().map(String::as_str)))).collect();
+                    self.both_sides(&texts, |r, side| {
                         let head = halves(&rx::sub(" either:$", &text, false, ""), side);
                         for it in &items {
                             let t = halves(&rx::sub("[;.]$", &it.text, false, ""), side);
-                            if t == "if all of:" { let subs: Vec<String> = it.sub.iter().map(|x| halves(x, side)).collect(); self.sentence(&head, &subs); }
-                            else if t == "always" { self.sentence(&head, &[]); }
-                            else { self.rule_text(&format!("{head} {t}."), None); }
+                            if t == "if all of:" { let subs: Vec<String> = it.sub.iter().map(|x| halves(x, side)).collect(); r.sentence(&head, &subs); }
+                            else if t == "always" { r.sentence(&head, &[]); }
+                            else { r.rule_text(&format!("{head} {t}."), None); }
                         }
-                    }
+                    });
                     i += 1;
                     continue;
                 }
@@ -1772,8 +1798,8 @@ impl R {
         if c.body.is_empty() { format!("{head}.") } else { format!("{head} :- {body}.") }
     }
 
-    /// The heads no sentence read (`HEAD ...` among the unparsed), each said once.
-    pub fn heads(&self) -> Vec<String> { uniq(self.unparsed.clone()).into_iter().filter_map(|u| u.strip_prefix("HEAD ").map(str::to_string)).collect() }
+    /// The heads no sentence read (`HEAD ...` among the unparsed), each said once; a head with an `a/b` in it is two sentences, and none is learned for it.
+    pub fn heads(&self) -> Vec<String> { uniq(self.unparsed.clone()).into_iter().filter(|u| !twin(u)).filter_map(|u| u.strip_prefix("HEAD ").map(str::to_string)).collect() }
 
     // ------------------------------------------------------------- English
     /// One sentence as the literal it names, read against this file's vocabulary.

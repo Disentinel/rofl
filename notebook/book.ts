@@ -1,6 +1,6 @@
 // A book as the reader reads it: cells of sentences or of plain ROFL, the lines in them that ask, and the heads that name themselves.
 // Pure: the page, the notebook kernel and the reader of worlds share it.
-import { asking, english, proseAsks, proseLooks, readMd, slug, type ReadOptions, type ReadResult } from '../scripts/read_md.ts';
+import { asking, english, proseAsks, proseLooks, readMd, slug, twin, type ReadOptions, type ReadResult } from '../scripts/read_md.ts';
 
 export type Kind = 'answers' | 'never' | 'why' | 'whynot' | 'unsure' | 'extends' | 'excise' | 'draw';
 /** A cell in the Markdown sentence form, as a `.rofl.md` is written, or in plain ROFL. */
@@ -117,7 +117,8 @@ export function readBook(cells: Cell[], phrases: string, home: Record<string, st
   const md = parts.map(({ clauses }, i) => {
     if (!first[i]) return null;
     // a head another cell declares the sentence of is that cell's relation, not a new one named from its words
-    const heads = (r: ReadResult) => r.problems.unparsed.filter((u) => u.startsWith('HEAD ')).map((u) => u.slice(5));
+    // a head with an `a/b` in it is two sentences: no one sentence is learned for it
+    const heads = (r: ReadResult) => r.problems.unparsed.filter((u) => u.startsWith('HEAD ') && !twin(u)).map((u) => u.slice(5));
     const others = first.flatMap((f, j) => j !== i && f ? f.phrases : []), known = new Set(others.map((p) => skeleton(p)));
     const again = heads(first[i]!).some((h) => known.has(skeleton(h.replace(/^(?:An?|The) /, (m) => m.toLowerCase()).replace(/\$?[a-z_]\w*\([^()]*\)|\b[A-Z][A-Za-z0-9]*\b/g, '_')).replace(/\b(?:an?|the|some) [a-z][\w-]*(?: [a-z][\w-]*)? _/g, '_')));
     const unread = again ? heads(readMd(clauses, { vocab: phrases + '\n' + others.join('\n'), homeBooks: home })) : heads(first[i]!);
