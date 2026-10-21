@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.3.2 (preview, ROFL 1.3.2)
+
+- Full screen zooms and pans every picture: a graph no longer vanishes on the
+  first wheel (its svg has no viewBox, and a 0×0 one was written onto it), a
+  picture without a viewBox gets the one it was drawn with, zoom stays within
+  1/50–50×, Fit puts back the drawn view, and the picture fills the panel's
+  height. The same in the web workbench.
+
 ## 1.3.1 (preview, ROFL 1.3.1: the extension carries ROFL's version, published to the Marketplace by the release tag)
 
 - A graph picture is drawn as a schema: a group is a frame that opens and
