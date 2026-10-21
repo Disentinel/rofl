@@ -95,7 +95,9 @@ fn run(verb: &str, args: &[&str]) -> (String, i32) {
     std::fs::create_dir_all(&dir).unwrap();
     let f = dir.join(format!("w{n}.rofl"));
     std::fs::write(&f, W).unwrap();
+    // a cache of its own, so each run computes (a verb keeps its world by itself, docs/cli.md)
     let o = Command::new(env!("CARGO_BIN_EXE_rofl")).arg(verb)
+        .env("XDG_CACHE_HOME", dir.join(format!("cache{n}")))
         .args(args)
         .arg(&f)
         .output()

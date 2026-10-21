@@ -82,7 +82,14 @@ fn ask_text(a: &rofl::session::Answer) -> String {
 pub fn main(args: Vec<String>) {
     let json = args.iter().any(|a| a == "--json");
     let args: Vec<String> = args.into_iter().filter(|a| a != "--json").collect();
-    run(json, args, None)
+    run(json, args, None, rofl::brk!("kept_load_reads_cache" => true; false))
+}
+
+/// A question verb (`rofl ask|why|whynot|excise`): `rofl load` with its question, keeping its world by itself.
+pub fn verb(args: Vec<String>) {
+    let json = args.iter().any(|a| a == "--json");
+    let args: Vec<String> = args.into_iter().filter(|a| a != "--json").collect();
+    run(json, args, None, rofl::brk!("kept_verbs_compute" => false; true))
 }
 
 /// The words of a kept world's record as a reader of a message knows them.
@@ -90,8 +97,8 @@ fn said(args: &[String]) -> String {
     args.iter().map(|a| crate::kept::shown(a)).collect::<Vec<_>>().join(" ")
 }
 
-/// A run; `pre` is the kept world's record when the run took its files from it.
-fn run(json: bool, args: Vec<String>, mut pre: Option<(bool, crate::kept::Record)>) {
+/// A run; `pre` is the kept world's record when the run took its files from it; `implicit`, a question verb's.
+fn run(json: bool, args: Vec<String>, mut pre: Option<(bool, crate::kept::Record)>, implicit: bool) {
     let mut ticks = 0u32;
     // `Session::fresh` has always taken the budget; this binary hard-coded one
     // and so could not answer about a world that runs out. A world with a
@@ -172,7 +179,7 @@ fn run(json: bool, args: Vec<String>, mut pre: Option<(bool, crate::kept::Record
             let (this_build, r) = check().unwrap_or_else(|e| fail(json, FILE_REFUSED, &(if anew { format!("{e}; name the files of the world to compute it anew") } else { e })));
             let mut args = args.clone();
             args.extend(r.args.iter().cloned());
-            return run(json, args, Some((this_build, r)));
+            return run(json, args, Some((this_build, r)), implicit);
         }
         if exists && !anew {
             let (this_build, r) = pre.take().map_or_else(check, Ok).unwrap_or_else(|e| fail(json, FILE_REFUSED, &e));
@@ -183,6 +190,28 @@ fn run(json: bool, args: Vec<String>, mut pre: Option<(bool, crate::kept::Record
                 fail(json, FILE_REFUSED, &format!("{k} is stale: {m}; run again with --anew to compute it anew"));
             }
             opened = Some(rofl::session::Session::open_volume(k, budget).unwrap_or_else(|e| fail(json, FILE_REFUSED, &format!("{k} is damaged: {e}"))));
+        }
+    }
+    // A QUESTION VERB KEEPS ITS WORLD BY ITSELF (docs/cli.md): under a name made of its walls and files, the
+    // environment and the engine, opened while nothing else it read has moved, else computed anew and kept over
+    // it, said in one line. Never `rofl load`, `rofl serve` or a harness: a gate computes.
+    let slot = if implicit && kept.is_none() && save.is_none() && !files.is_empty() {
+        crate::kept::slot(&world, &world[world.len() - files.len()..])
+    } else {
+        None
+    };
+    if let Some(p) = slot.as_ref().filter(|p| std::path::Path::new(p).exists()) {
+        let checked = rofl::volume::check(p).and_then(|c| crate::kept::parse(&c.note).map(|r| (c.this_build, r)).ok_or_else(|| format!("{p}: not a kept world")));
+        match checked.map(|(b, r)| crate::kept::moved(&r, b)) {
+            Ok(None) => match rofl::session::Session::open_volume(p, budget) {
+                Ok(s) => {
+                    crate::kept::touch(p);
+                    opened = Some(s);
+                }
+                Err(e) => eprintln!("{p} is damaged: {e}; computed anew"),
+            },
+            Ok(Some(m)) => eprintln!("the kept world {p} is stale: {m}; computed anew"),
+            Err(e) => eprintln!("{e}; computed anew"),
         }
     }
     let read = |f: &String| std::fs::read_to_string(f).unwrap_or_else(|e| fail(json, USAGE, &format!("{f}: {e}")));
@@ -264,6 +293,17 @@ fn run(json: bool, args: Vec<String>, mut pre: Option<(bool, crate::kept::Record
             let note = crate::kept::record(&world, &read, &s.eval.scans).unwrap_or_else(|e| fail(json, FILE_REFUSED, &format!("{k} is not kept: {e}")));
             let n = s.keep_volume_noted(k, &note).unwrap_or_else(|e| fail(json, USAGE, &format!("{k}: {e}")));
             eprintln!("kept {k}: {n} bytes");
+        } else if let Some(p) = &slot {
+            // keeping is a convenience of the question: a world that cannot be kept is answered all the same
+            let read: Vec<String> = sources.iter().map(|s| s.0.clone()).chain(below.iter().cloned()).collect();
+            match crate::kept::record(&world, &read, &s.eval.scans) {
+                Err(e) => eprintln!("the world is not kept: {e}"),
+                Ok(note) => {
+                    if let Err(e) = crate::kept::keep_capped(&mut s, p, &note) {
+                        eprintln!("the world is not kept: {e}");
+                    }
+                }
+            }
         }
     }
     if let Some(f) = save {

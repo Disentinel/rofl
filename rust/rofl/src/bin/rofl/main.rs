@@ -60,7 +60,7 @@ fn run(args: Vec<String>) {
             }
             let flag = if all { "--why-all".to_string() } else { format!("--{cmd}") };
             args.insert(0, flag);
-            load::main(args)
+            load::verb(args)
         }
         "serve" => serve::main(),
         "render" => render::main(args),

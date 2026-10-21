@@ -110,7 +110,7 @@ knob_shown("--ticks", 2).
 knob_note("--ticks", "rofl load", "`--ticks N --budget N --space N [--strata] [--retain N]`: the ticks to run and the walls; then the state is printed").
 
 knob_shown("ask", 3).
-knob_note("ask", "rofl", "`rofl ask L`, `rofl why [--all] L`, `rofl whynot L [--depth N --nodes N]`, `rofl excise F`, then the world's flags and files, `@rules/js.files` for the JS model: one question answered in the reference's text, `--json` as `rofl serve` answers it. Exit 0 whole, 2 a file refused, 3 the world, 4 the question, 5 partial, 70 a defect (docs/cli.md). `rofl load --ask L --why L --whynot L --excise F` asks several in one run").
+knob_note("ask", "rofl", "`rofl ask L`, `rofl why [--all] L`, `rofl whynot L [--depth N --nodes N]`, `rofl excise F`, then the world's flags and files, `@rules/js.files` for the JS model: one question answered in the reference's text, `--json` as `rofl serve` answers it. The world is kept by itself (under ~/.cache/rofl/worlds) and the next question over the same files is answered from it without evaluating; an edited file is said on stderr and computed anew. Exit 0 whole, 2 a file refused, 3 the world, 4 the question, 5 partial, 70 a defect (docs/cli.md). `rofl load --ask L --why L --whynot L --excise F` asks several in one run").
 
 knob_shown("--retract", 4).
 knob_note("--retract", "rofl load", "`--retract L`, repeated: take a base fact out after the first evaluation and print the state it leaves").
@@ -132,6 +132,9 @@ knob_note("ROFL_NB_DAEMON", "env", "`0` runs a notebook in the calling process i
 
 knob_shown("ROFL_NO_BROWSER", 10).
 knob_note("ROFL_NO_BROWSER", "env", "`1` lets `test:workbench` go without Chrome; without it a missing Chrome is a red").
+
+knob_shown("ROFL_CACHE_GB", 12).
+knob_note("ROFL_CACHE_GB", "env", "the hard cap in GB (default 50) on the worlds `rofl ask|why|whynot|excise` keep by themselves under ~/.cache/rofl/worlds; a world over it is answered and not kept, said on stderr").
 
 knob_shown("--kept", 11).
 knob_note("--kept", "rofl load", "`--kept F [--anew]`, with any verb: the world evaluated once and kept at F; later runs answer from F without evaluating, with or without the files, and refuse it (exit 2) naming what changed since; `--anew` evaluates it again (docs/cli.md)").

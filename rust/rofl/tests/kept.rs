@@ -71,8 +71,17 @@ struct Ran {
 
 /// The binary `bin` in `dir` with `args`, the fault `brk` switched on.
 fn rofl_with(bin: &str, dir: &Dir, brk: Option<&str>, args: &[&str]) -> Ran {
+    rofl_in(bin, dir, &dir.0.join("cache"), brk, args)
+}
+
+/// The binary `bin` in `dir` with `args`, its cache under `cache`.
+fn rofl_in(bin: &str, dir: &Dir, cache: &Path, brk: Option<&str>, args: &[&str]) -> Ran {
+    rofl_env(bin, dir, cache, &[], brk, args)
+}
+
+fn rofl_env(bin: &str, dir: &Dir, cache: &Path, env: &[(&str, String)], brk: Option<&str>, args: &[&str]) -> Ran {
     let mut c = Command::new(bin);
-    c.args(args).current_dir(&dir.0).env("XDG_CACHE_HOME", dir.0.join("cache")).env_remove("ROFL_BREAK");
+    c.args(args).current_dir(&dir.0).env("XDG_CACHE_HOME", cache).env_remove("ROFL_BREAK").env_remove("ROFL_CACHE_GB").envs(env.iter().map(|(k, v)| (*k, v)));
     if let Some(b) = brk { c.env("ROFL_BREAK", b); }
     let o = c.output().unwrap();
     Ran { out: String::from_utf8_lossy(&o.stdout).into(), err: String::from_utf8_lossy(&o.stderr).into(), code: o.status.code().unwrap_or(-1) }
@@ -80,6 +89,22 @@ fn rofl_with(bin: &str, dir: &Dir, brk: Option<&str>, args: &[&str]) -> Ran {
 
 fn rofl(dir: &Dir, brk: Option<&str>, args: &[&str]) -> Ran {
     rofl_with(BIN, dir, brk, args)
+}
+
+/// The run computed from the files: a cache of its own, empty.
+fn fresh(dir: &Dir, brk: Option<&str>, args: &[&str]) -> Ran {
+    static N: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+    let n = N.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    rofl_in(BIN, dir, &dir.0.join(format!("fresh-{n}")), brk, args)
+}
+
+/// The kept worlds the question verbs keep by themselves under `cache`, each by its file's identity.
+fn implicit(cache: &Path) -> Vec<(PathBuf, u64)> {
+    use std::os::unix::fs::MetadataExt;
+    let Ok(rd) = std::fs::read_dir(cache.join("rofl/worlds")) else { return Vec::new() };
+    let mut v: Vec<(PathBuf, u64)> = rd.flatten().filter(|e| e.path().extension().is_some_and(|x| x == "vol")).map(|e| (e.path(), e.metadata().unwrap().ino())).collect();
+    v.sort();
+    v
 }
 
 fn ensure(ok: bool, what: impl FnOnce() -> String) -> Result<(), String> {
@@ -122,7 +147,7 @@ fn answers_as_fresh(brk: Option<&str>) -> Result<(), String> {
     ];
     keep(&d, brk, &["rules.rofl"])?;
     for q in qs {
-        let fresh = rofl(&d, brk, &[q, &["boot.rofl", "rules.rofl"]].concat());
+        let fresh = fresh(&d, brk, &[q, &["boot.rofl", "rules.rofl"]].concat());
         for named in [true, false] {
             let mut args = [q, &["--kept", "w.vol"]].concat();
             if named { args.extend(["boot.rofl", "rules.rofl"]); }
@@ -295,7 +320,7 @@ fn sealed_cone_and_holes_as_fresh(brk: Option<&str>) -> Result<(), String> {
     ] {
         let vol = format!("{file}.vol");
         for q in qs {
-            let fresh = rofl(&d, brk, &[&q[..], &["boot.rofl", file]].concat());
+            let fresh = fresh(&d, brk, &[&q[..], &["boot.rofl", file]].concat());
             let kept = rofl(&d, brk, &[&q[..], &["--kept", &vol, "boot.rofl", file]].concat());
             let again = rofl(&d, brk, &[&q[..], &["--kept", &vol]].concat());
             for (k, which) in [(&kept, "keeping"), (&again, "from disk")] {
@@ -306,9 +331,111 @@ fn sealed_cone_and_holes_as_fresh(brk: Option<&str>) -> Result<(), String> {
     Ok(())
 }
 
+/// A question verb keeps its world by itself: the second run of a question is answered from it, the file kept by the
+/// first untouched; an edited source is said in one line and computed anew, the answer the new one.
+fn a_verb_keeps_its_world_by_itself(brk: Option<&str>) -> Result<(), String> {
+    let d = Dir::new("implicit");
+    let cache = d.0.join("cache");
+    let ask = |brk| rofl(&d, brk, &["ask", "reaches(a, X)", "boot.rofl", "rules.rofl"]);
+    let first = ask(brk);
+    let kept = implicit(&cache);
+    ensure(first.code == 0 && first.out.contains("X = zebra") && kept.len() == 1, || format!("first run: {} {:?} {:?}, kept {kept:?}", first.code, first.out, first.err))?;
+    let second = ask(brk);
+    ensure(second.out == first.out && second.code == 0 && second.err.is_empty() && implicit(&cache) == kept,
+        || format!("second run, wanted the kept world as it was: {} {:?} {:?}, kept {:?} then {kept:?}", second.code, second.out, second.err, implicit(&cache)))?;
+    d.append("rules.rofl", "calls(zebra, yak).\n");
+    let third = ask(brk);
+    ensure(third.code == 0 && third.out.contains("X = yak") && third.err.contains("rules.rofl changed since it was kept") && third.err.contains("computed anew") && implicit(&cache) != kept,
+        || format!("after an edit: {} {:?} {:?}", third.code, third.out, third.err))?;
+    let fourth = ask(brk);
+    ensure(fourth.out == third.out && fourth.err.is_empty(), || format!("after the edit, again: {:?} {:?}", fourth.out, fourth.err))
+}
+
+/// Walls are part of a kept world's name: the same files under another budget are another world, computed as such.
+fn walls_name_another_world(brk: Option<&str>) -> Result<(), String> {
+    let d = Dir::new("implicit-walls");
+    let q = |b: &str| ["ask", "reaches(a, X)", "--budget", b, "boot.rofl", "rules.rofl"].map(String::from);
+    let cut = ["10", "50", "200", "1000"].into_iter().find(|b| fresh(&d, brk, &q(b).iter().map(String::as_str).collect::<Vec<_>>()).code == 5)
+        .ok_or("no budget cuts this world, so the test could not tell walls apart")?;
+    rofl(&d, brk, &["ask", "reaches(a, X)", "boot.rofl", "rules.rofl"]);
+    let args = q(cut);
+    let args: Vec<&str> = args.iter().map(String::as_str).collect();
+    let (want, got) = (fresh(&d, brk, &args), rofl(&d, brk, &args));
+    ensure(got.code == want.code && got.out == want.out, || format!("--budget {cut} after the default budget: fresh {} {:?}, got {} {:?}", want.code, want.out, got.code, got.out))
+}
+
+/// A sealed world kept by itself answers a why from disk as it does fresh: a firing solved again, or a refusal.
+fn a_sealed_world_kept_by_itself_whys_as_fresh(brk: Option<&str>) -> Result<(), String> {
+    let d = Dir::new("implicit-sealed");
+    d.write("sealed.rofl", &format!("sealed(provenance).\n{RULES}"));
+    let args = ["why", "reaches(a, c)", "boot.rofl", "sealed.rofl"];
+    let want = fresh(&d, brk, &args);
+    rofl(&d, brk, &args);
+    let got = rofl(&d, brk, &args);
+    ensure(got.code == want.code && got.out == want.out && implicit(&d.0.join("cache")).len() == 1,
+        || format!("sealed why: fresh {} {:?}, from the kept world {} {:?}", want.code, want.out, got.code, got.out))
+}
+
+/// A cache that cannot be written is said on stderr and the question answered all the same.
+fn an_unwritable_cache_still_answers(brk: Option<&str>) -> Result<(), String> {
+    use std::os::unix::fs::PermissionsExt;
+    let d = Dir::new("implicit-ro");
+    let cache = d.0.join("ro");
+    std::fs::create_dir_all(&cache).unwrap();
+    std::fs::set_permissions(&cache, std::fs::Permissions::from_mode(0o500)).unwrap();
+    let r = rofl_in(BIN, &d, &cache, brk, &["ask", "reaches(a, X)", "boot.rofl", "rules.rofl"]);
+    std::fs::set_permissions(&cache, std::fs::Permissions::from_mode(0o700)).unwrap();
+    ensure(r.code == 0 && r.out.contains("X = zebra") && r.err.contains("the world is not kept"), || format!("unwritable cache: {} {:?} {:?}", r.code, r.out, r.err))
+}
+
+/// `rofl load` and `rofl serve` never read nor write what the verbs keep: a gate computes.
+fn load_and_serve_keep_nothing(brk: Option<&str>) -> Result<(), String> {
+    let d = Dir::new("implicit-load");
+    let cache = d.0.join("cache");
+    rofl(&d, brk, &["ask", "reaches(a, X)", "boot.rofl", "rules.rofl"]);
+    let kept = implicit(&cache);
+    d.append("rules.rofl", "calls(zebra, yak).\n");
+    let r = rofl(&d, brk, &["load", "--ask", "reaches(a, X)", "boot.rofl", "rules.rofl"]);
+    ensure(r.code == 0 && r.out.contains("X = yak") && r.err.is_empty() && implicit(&cache) == kept, || format!("rofl load: {} {:?} {:?}", r.code, r.out, r.err))?;
+    let mut c = Command::new(BIN);
+    c.arg("serve").current_dir(&d.0).env("XDG_CACHE_HOME", d.0.join("serve-cache")).env_remove("ROFL_BREAK");
+    if let Some(b) = brk { c.env("ROFL_BREAK", b); }
+    let mut p = c.stdin(std::process::Stdio::piped()).stdout(std::process::Stdio::piped()).spawn().unwrap();
+    {
+        use std::io::Write;
+        let mut i = p.stdin.take().unwrap();
+        for l in [r#"{"op":"fresh"}"#.to_string(), format!(r#"{{"op":"load","session":1,"path":"{}"}}"#, d.p("rules.rofl")), r#"{"op":"evaluate","session":1}"#.into(), r#"{"op":"ask","session":1,"query":"reaches(a, X)"}"#.into()] {
+            writeln!(i, "{l}").unwrap();
+        }
+    }
+    let o = p.wait_with_output().unwrap();
+    ensure(String::from_utf8_lossy(&o.stdout).contains("yak") && !d.0.join("serve-cache").exists(), || "rofl serve kept a world, or did not answer".into())
+}
+
+/// The cap (`ROFL_CACHE_GB`) is hard: a world larger than it is answered and not kept, said on stderr; a world that
+/// fits takes the place of the older ones it pushes over.
+fn the_cache_cap_is_hard(brk: Option<&str>) -> Result<(), String> {
+    let d = Dir::new("implicit-cap");
+    let cache = d.0.join("cache");
+    let gb = |bytes: f64| vec![("ROFL_CACHE_GB", format!("{}", bytes / (1u64 << 30) as f64))];
+    let ask = |file: &str, env: &[(&str, String)]| rofl_env(BIN, &d, &cache, env, brk, &["ask", "reaches(a, X)", "boot.rofl", file]);
+    let tiny = ask("rules.rofl", &gb(1000.0));
+    ensure(tiny.code == 0 && tiny.out.contains("X = zebra") && tiny.err.contains("more than the cap") && implicit(&cache).is_empty(),
+        || format!("a cap smaller than the world: {} {:?} {:?}, kept {:?}", tiny.code, tiny.out, tiny.err, implicit(&cache)))?;
+    let first = ask("rules.rofl", &[]);
+    let kept = implicit(&cache);
+    ensure(first.code == 0 && kept.len() == 1, || format!("the default cap: {:?} kept {kept:?}", first.err))?;
+    let size = std::fs::metadata(&kept[0].0).unwrap().len() as f64;
+    d.write("other.rofl", &format!("{RULES}calls(zebra, yak).\n"));
+    let second = ask("other.rofl", &gb(size * 1.5));
+    let now = implicit(&cache);
+    ensure(second.code == 0 && second.out.contains("X = yak") && now.len() == 1 && now[0].0 != kept[0].0,
+        || format!("two worlds over the cap, wanted the older gone: {:?}, kept {now:?}", second.err))
+}
+
 type Case = fn(Option<&str>) -> Result<(), String>;
 
-const CASES: [(&str, Case); 12] = [
+const CASES: [(&str, Case); 18] = [
     ("answers_as_fresh", answers_as_fresh),
     ("a_rule_file_edited", a_rule_file_edited),
     ("boot_edited", boot_edited),
@@ -321,6 +448,12 @@ const CASES: [(&str, Case); 12] = [
     ("touched_is_not_stale", touched_is_not_stale),
     ("anew_recomputes", anew_recomputes),
     ("sealed_cone_and_holes_as_fresh", sealed_cone_and_holes_as_fresh),
+    ("a_verb_keeps_its_world_by_itself", a_verb_keeps_its_world_by_itself),
+    ("walls_name_another_world", walls_name_another_world),
+    ("a_sealed_world_kept_by_itself_whys_as_fresh", a_sealed_world_kept_by_itself_whys_as_fresh),
+    ("an_unwritable_cache_still_answers", an_unwritable_cache_still_answers),
+    ("load_and_serve_keep_nothing", load_and_serve_keep_nothing),
+    ("the_cache_cap_is_hard", the_cache_cap_is_hard),
 ];
 
 /// What a hole left unknown is kept by an image as by a volume: a negation unfolded at a call reads it after opening.

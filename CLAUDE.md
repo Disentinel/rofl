@@ -87,7 +87,7 @@ verdict in docs/knobs.md.
 | `ROFL_JOBS` | env | worker processes of the pooled runs (`npm test`, `whycheck`); by default the cores less two. Set 3 on a shared machine |
 | `ROFL_PROFILE` | env | the cargo profile whose binaries the scripts run: `release` (default) or `fast`. `breaks` belongs to the fault harness, never set it by hand |
 | `--ticks` | rofl load | `--ticks N --budget N --space N [--strata] [--retain N]`: the ticks to run and the walls; then the state is printed |
-| `ask` | rofl | `rofl ask L`, `rofl why [--all] L`, `rofl whynot L [--depth N --nodes N]`, `rofl excise F`, then the world's flags and files, `@rules/js.files` for the JS model: one question answered in the reference's text, `--json` as `rofl serve` answers it. Exit 0 whole, 2 a file refused, 3 the world, 4 the question, 5 partial, 70 a defect (docs/cli.md). `rofl load --ask L --why L --whynot L --excise F` asks several in one run |
+| `ask` | rofl | `rofl ask L`, `rofl why [--all] L`, `rofl whynot L [--depth N --nodes N]`, `rofl excise F`, then the world's flags and files, `@rules/js.files` for the JS model: one question answered in the reference's text, `--json` as `rofl serve` answers it. The world is kept by itself (under ~/.cache/rofl/worlds) and the next question over the same files is answered from it without evaluating; an edited file is said on stderr and computed anew. Exit 0 whole, 2 a file refused, 3 the world, 4 the question, 5 partial, 70 a defect (docs/cli.md). `rofl load --ask L --why L --whynot L --excise F` asks several in one run |
 | `--retract` | rofl load | `--retract L`, repeated: take a base fact out after the first evaluation and print the state it leaves |
 | `--propose-structures` | rofl load | the read-only detection report instead of the state; `--structures-min-rows N`; `npm run structures` wraps it |
 | `--seed` | rofl load | `--seed SEED.json [--bytes] [--budget N] [--space N] [--ticks N]`: a snapshot evaluated, then the state; `--bytes` adds on stderr facts, time per phase, peak rows, bytes per table and the costliest rules (release build only); `--derivations` prints the derivations instead of the state |
@@ -96,6 +96,7 @@ verdict in docs/knobs.md.
 | `ROFL_NB_DAEMON` | env | `0` runs a notebook in the calling process instead of the kept kernel |
 | `ROFL_NO_BROWSER` | env | `1` lets `test:workbench` go without Chrome; without it a missing Chrome is a red |
 | `--kept` | rofl load | `--kept F [--anew]`, with any verb: the world evaluated once and kept at F; later runs answer from F without evaluating, with or without the files, and refuse it (exit 2) naming what changed since; `--anew` evaluates it again (docs/cli.md) |
+| `ROFL_CACHE_GB` | env | the hard cap in GB (default 50) on the worlds `rofl ask\|why\|whynot\|excise` keep by themselves under ~/.cache/rofl/worlds; a world over it is answered and not kept, said on stderr |
 
 <!-- END knobs -->
 

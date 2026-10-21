@@ -8771,6 +8771,34 @@ export const BREAKS: Break[] = [
    "kept_image_holes": "from a kept image"
   }
  },
+ {
+  "id": "kept_key_ignores_walls",
+  "what": "a question verb names the world it keeps by its files alone, so the same files under another budget are answered from the world kept under the first",
+  "expect": {
+   "kept_implicit_walls": "walls_name_another_world:"
+  }
+ },
+ {
+  "id": "kept_verbs_compute",
+  "what": "a question verb keeps nothing and computes every time",
+  "expect": {
+   "kept_implicit": "a_verb_keeps_its_world_by_itself:"
+  }
+ },
+ {
+  "id": "kept_load_reads_cache",
+  "what": "rofl load reads and writes the worlds the question verbs keep, so a gate need not compute",
+  "expect": {
+   "kept_implicit_load": "load_and_serve_keep_nothing:"
+  }
+ },
+ {
+  "id": "kept_cap_ignored",
+  "what": "the cache's cap is ignored: a world larger than it is kept, and older worlds are never pushed out",
+  "expect": {
+   "kept_cap": "the_cache_cap_is_hard:"
+  }
+ },
 ];
 
 /** A proof that is no world: the report `rofl load --propose-structures` prints over a fixture (rust/rofl/src/structures.rs),
@@ -8841,6 +8869,10 @@ const TESTS: Record<string, string> = {
   kept_touched: 'kept a_kept_world_answers_and_refuses_as_docs_cli_says',
   kept_holes: 'kept a_kept_world_answers_and_refuses_as_docs_cli_says',
   kept_image_holes: 'kept a_holes_unknowns_survive_an_image_and_a_volume',
+  kept_implicit: 'kept a_kept_world_answers_and_refuses_as_docs_cli_says',
+  kept_implicit_walls: 'kept a_kept_world_answers_and_refuses_as_docs_cli_says',
+  kept_implicit_load: 'kept a_kept_world_answers_and_refuses_as_docs_cli_says',
+  kept_cap: 'kept a_kept_world_answers_and_refuses_as_docs_cli_says',
 };
 
 function proofTests(b: Break, profile: string, control: boolean): Verdict {

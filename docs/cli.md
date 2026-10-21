@@ -54,8 +54,31 @@ loads (`notebook/front.ts` `MODEL_FILES`; `npm test` fails when the two differ).
 
 ## A world kept on disk
 
-`--kept F` with any verb keeps the world on disk: computed once, asked many
-times, each question a new process that does not evaluate again.
+**A question verb keeps its world by itself.** `rofl ask`, `why`, `whynot`
+and `excise` with no `--kept` keep the world they evaluated under
+`$XDG_CACHE_HOME/rofl/worlds` (else `~/.cache/rofl/worlds`, beside the kept
+scans), named by its walls and files, the environment the engine reads and the
+engine. The same question, or another, over the same files is answered from it
+without evaluating; when something it was computed from has changed, the run
+says so in one line on stderr (`the kept world ... is stale: rules/x.rofl
+changed since it was kept; computed anew`), evaluates, answers, and keeps the
+new world over the old. A world that cannot be kept (a cache that cannot be
+written, a scanner that named nothing it read) is answered all the same, with a
+line on stderr. The kept worlds together never hold more than `ROFL_CACHE_GB`
+gigabytes (50 by default, two worlds of the reference scale: a volume measured
+at 0.36 and 0.80 of the evaluation's peak memory, 89 and 76 bytes a fact on
+cost_shapes_model and agg_minmax_strata, so up to ~23 GB for a world evaluated
+in ~23 GB): a world kept pushes out the older ones, least recently used first;
+a world larger than the cap alone is answered and not kept, and so is any world
+when the disk would be left with less than 5 GB free, each said in one line on
+stderr (`the world is not kept: the world is 1.20 GB, more than the cap of 1.00
+GB (ROFL_CACHE_GB)`). Writing the volume costs about 5% of the evaluation it
+saves (agg_minmax_strata: 0.83 s on 16.9 s). `rofl load`, `rofl serve` and every harness never read nor
+write them: a gate computes. Nothing to turn on or off; the cap is the one knob.
+
+`--kept F` with any verb names the kept world yourself, under the owner's
+stricter rule: computed once, asked many times, each question a new process that
+does not evaluate again, and refused, never recomputed, once stale.
 
 ```sh
 rofl ask 'reaches(a, X)' --kept world.vol boot.rofl world.rofl   # no world.vol: evaluated, kept there, answered
@@ -68,8 +91,9 @@ F is a volume (docs/staged-evaluation.md, decision 2): opening it maps the
 file, the facts, names and witnesses are read where they lie, and nothing is
 evaluated. Every verb answers from it exactly as from the files: `why`,
 `whynot` and `excise` keep their witnesses, a `sealed(provenance)` world
-refuses a `why` as it does fresh, and a world that declares `asks(R)` refuses
-outside its cone as it does fresh.
+answers a `why` as it does fresh (by solving the firing again, or by the same
+refusal where it cannot), and a world that declares `asks(R)` refuses outside
+its cone as it does fresh.
 
 **A kept world is refused when it is stale** (the owner, 2026-10-21): when
 anything it was computed from has changed since it was kept, the run exits 2,
