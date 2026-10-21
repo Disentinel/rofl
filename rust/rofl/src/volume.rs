@@ -63,9 +63,16 @@ pub fn keep(path: &str, e: &mut Eval, note: &str) -> std::io::Result<usize> {
             w.arena(&m[&k]);
         }
     }
-    let lattices = e.lattices_kept();
-    w.u32(lattices.len() as u32);
-    for t in &lattices {
+    write_toks(&mut w, &e.lattices_kept());
+    write_toks(&mut w, &e.unknowns_kept());
+    e.write_notes(&mut w);
+    e.write_cut(&mut w);
+    w.finish()
+}
+
+fn write_toks(w: &mut VolW, toks: &[Tok]) {
+    w.u32(toks.len() as u32);
+    for t in toks {
         match t {
             Tok::N(x) => [0, *x].iter().for_each(|x| w.u32(*x)),
             Tok::T(x) => {
@@ -80,9 +87,20 @@ pub fn keep(path: &str, e: &mut Eval, note: &str) -> std::io::Result<usize> {
             }
         }
     }
-    e.write_notes(&mut w);
-    e.write_cut(&mut w);
-    w.finish()
+}
+
+fn read_toks(r: &mut VolR) -> Result<Vec<Tok>, String> {
+    let mut toks = Vec::new();
+    for _ in 0..r.u32()? {
+        toks.push(match r.u32()? {
+            0 => Tok::N(r.u32()?),
+            1 => Tok::T(*r.arena::<Term>()?.first().ok_or("a kept lattice term is empty")?),
+            2 => Tok::F(r.u32()?),
+            3 => Tok::S(r.u32()?),
+            _ => Tok::P(prems(r)?),
+        });
+    }
+    Ok(toks)
 }
 
 pub struct Opened {
@@ -92,6 +110,8 @@ pub struct Opened {
     pub answer: RuleAnswer,
     /// what its dominance and join lattices knew (`Eval::lattices_kept`)
     pub lattices: Vec<Tok>,
+    /// what its holes left unknown (`Eval::unknowns_kept`)
+    pub unknowns: Vec<Tok>,
     /// the rest of the volume: the provenance notes and the cut, which the evaluation reads (`Eval::read_notes`,
     /// `Eval::read_cut`)
     pub cut: VolR,
@@ -166,15 +186,7 @@ pub fn open(path: &str) -> Result<Opened, String> {
             if which == 0 { a.trigger.insert(k, v) } else { a.lattice_outer.insert(k, v) };
         }
     }
-    let mut lattices = Vec::new();
-    for _ in 0..r.u32()? {
-        lattices.push(match r.u32()? {
-            0 => Tok::N(r.u32()?),
-            1 => Tok::T(*r.arena::<Term>()?.first().ok_or("a kept lattice term is empty")?),
-            2 => Tok::F(r.u32()?),
-            3 => Tok::S(r.u32()?),
-            _ => Tok::P(prems(&mut r)?),
-        });
-    }
-    Ok(Opened { heap, store, staged, answer: a, lattices, cut: r })
+    let lattices = read_toks(&mut r)?;
+    let unknowns = read_toks(&mut r)?;
+    Ok(Opened { heap, store, staged, answer: a, lattices, unknowns, cut: r })
 }

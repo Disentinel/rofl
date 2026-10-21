@@ -35,7 +35,9 @@ struct Dir(PathBuf);
 
 impl Dir {
     fn new(name: &str) -> Dir {
-        let d = std::env::temp_dir().join(format!("rofl-kept-{name}-{}", std::process::id()));
+        static N: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+        let n = N.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        let d = std::env::temp_dir().join(format!("rofl-kept-{name}-{}-{n}", std::process::id()));
         let _ = std::fs::remove_dir_all(&d);
         std::fs::create_dir_all(d.join("facts")).unwrap();
         std::fs::copy(root().join("boot.rofl"), d.join("boot.rofl")).unwrap();
@@ -279,14 +281,17 @@ fn anew_recomputes(brk: Option<&str>) -> Result<(), String> {
     ensure(r.code == 0 && r.out.contains("X = gnu"), || format!("--anew, no files: {} {:?} {:?}", r.code, r.out, r.err))
 }
 
-/// A world that keeps no witness refuses a why from disk as it does fresh; a world with a cone refuses outside it.
-fn sealed_and_cone_as_fresh(brk: Option<&str>) -> Result<(), String> {
+/// A world that keeps no witness refuses a why from disk as it does fresh; a world with a cone refuses outside it;
+/// a negation unfolded at a call reads what a hole left unknown from disk as it does fresh.
+fn sealed_cone_and_holes_as_fresh(brk: Option<&str>) -> Result<(), String> {
     let d = Dir::new("sealed");
     d.write("sealed.rofl", &format!("sealed(provenance).\n{RULES}"));
     d.write("cone.rofl", &std::fs::read_to_string(root().join("examples/checks/asks-outside.rofl")).unwrap());
+    d.write("holes.rofl", &std::fs::read_to_string(root().join("examples/checks/demand-neg-hole.rofl")).unwrap());
     for (file, qs) in [
         ("sealed.rofl", vec![["why", "reaches(a, c)"], ["ask", "reaches(a, X)"], ["whynot", "live(c)"]]),
         ("cone.rofl", vec![["ask", "ot_a(X, N)"], ["ask", "ot_b(X)"], ["whynot", "ot_b(1)"], ["excise", "ot_src(1)"]]),
+        ("holes.rofl", vec![["ask", "dh_h(X, Y)"], ["ask", "dh_r(X)"], ["whynot", "dh_r(c)"]]),
     ] {
         let vol = format!("{file}.vol");
         for q in qs {
@@ -315,7 +320,7 @@ const CASES: [(&str, Case); 12] = [
     ("a_damaged_file", a_damaged_file),
     ("touched_is_not_stale", touched_is_not_stale),
     ("anew_recomputes", anew_recomputes),
-    ("sealed_and_cone_as_fresh", sealed_and_cone_as_fresh),
+    ("sealed_cone_and_holes_as_fresh", sealed_cone_and_holes_as_fresh),
 ];
 
 #[cfg(feature = "breaks")]
@@ -333,7 +338,8 @@ fn a_kept_world_answers_and_refuses_as_docs_cli_says() {
 #[cfg(feature = "breaks")]
 #[test]
 fn every_planted_fault_is_seen() {
-    let plants: [(&str, &[&str]); 8] = [
+    let plants: [(&str, &[&str]); 9] = [
+        ("volume_unknowns_dropped", &["sealed_cone_and_holes_as_fresh"]),
         ("kept_stale_files", &["a_rule_file_edited", "boot_edited", "markdown_and_what_it_reads", "a_scan_read_edited"]),
         ("kept_md_unread", &["markdown_and_what_it_reads"]),
         ("kept_scans_unread", &["a_scan_read_edited"]),

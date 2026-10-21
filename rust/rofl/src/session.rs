@@ -195,6 +195,9 @@ impl Session {
         eval.vclosure_restore();
         eval.stage_kept(std::mem::take(&mut o.staged));
         eval.after_open(std::mem::take(&mut o.lattices));
+        if !eval.store.dirty && crate::brk!("volume_unknowns_dropped" => false; true) {
+            eval.unknowns_from(std::mem::take(&mut o.unknowns))?;
+        }
         eval.read_notes(&mut o.cut)?;
         eval.read_cut(&mut o.cut)?;
         if !o.cut.at_end() {
