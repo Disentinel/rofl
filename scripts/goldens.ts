@@ -126,7 +126,7 @@ export function answerKey(engine: 'ts' | 'rust', w: World, given: { rust?: strin
   const ins = inputs(w);
   if (ins.some((f) => { const h = fileHash(f); if (!scans.has(h)) scans.set(h, h !== 'gone' && /^scanner\(/m.test(fs.readFileSync(f, 'utf8'))); return scans.get(h); })) return null;
   return keyOf('answer 1', [['engine', [engine, engine === 'ts' ? stamps().ts : fileHash(at.rust)]], ['harness', [stamps().harness, process.version]],
-    ['boot', fileHash(at.boot)], ['options', JSON.stringify({ ...w, files: null })], ['files', ins.flatMap((f) => [f, fileHash(f), fileHash(`${f}.unread`)])]]);
+    ['boot', fileHash(at.boot)], ['options', JSON.stringify({ ...w, files: null })], ['files', ins.flatMap((f) => [path.relative(ROOT, f), fileHash(f), fileHash(`${f}.unread`)])]]);
 }
 
 /** A host contract, kept as a world's answer is: under this harness, the TypeScript sources, the Rust binary, boot and
