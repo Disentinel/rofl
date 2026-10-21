@@ -2,12 +2,12 @@
 //! a new process, answers from F without evaluating, and refuses F, naming what moved, once anything it was kept
 //! from has moved (the owner, 2026-10-21: stale is refused, never loaded and never silently evaluated again).
 //!
-//! Each case is a function that is Ok when the binary does what docs/cli.md says. Built with `--features breaks`,
-//! `every_planted_fault_is_seen` switches on each fault planted in the kept path (`brk!("kept_...")`) and requires
-//! the cases it names to fail: a check that cannot fail is not one.
+//! Each case is a function that is Ok when the binary does what docs/cli.md says, and names itself where it fails.
+//! The faults planted in the kept path (`brk!("kept_...")`, `volume_unknowns_dropped`) are switched on one at a
+//! time by scripts/agg_breaks.ts, which requires the cases it names to fail: a check that cannot fail is not one.
 //!
-//!   cargo test --test kept                      the cases
-//!   cargo test --features breaks --test kept    the cases, and each planted fault seen to turn its cases red
+//!   cargo test --test kept                                    the cases
+//!   npm run test:agg:breaks -- kept_stale_files ...           each planted fault seen to turn its cases red
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -323,11 +323,6 @@ const CASES: [(&str, Case); 12] = [
     ("sealed_cone_and_holes_as_fresh", sealed_cone_and_holes_as_fresh),
 ];
 
-#[cfg(feature = "breaks")]
-fn case(name: &str) -> Case {
-    CASES.iter().find(|c| c.0 == name).unwrap().1
-}
-
 /// What a hole left unknown is kept by an image as by a volume: a negation unfolded at a call reads it after opening.
 #[test]
 fn a_holes_unknowns_survive_an_image_and_a_volume() {
@@ -352,30 +347,9 @@ fn a_holes_unknowns_survive_an_image_and_a_volume() {
 
 #[test]
 fn a_kept_world_answers_and_refuses_as_docs_cli_says() {
-    let bad: Vec<String> = CASES.iter().filter_map(|(name, f)| f(None).err().map(|e| format!("{name}: {e}"))).collect();
+    // a fault planted by scripts/agg_breaks.ts reaches every binary a case runs
+    let planted = std::env::var("ROFL_BREAK").ok().filter(|b| !b.is_empty());
+    let bad: Vec<String> = CASES.iter().filter_map(|(name, f)| f(planted.as_deref()).err().map(|e| format!("{name}: {e}"))).collect();
     assert!(bad.is_empty(), "{}", bad.join("\n"));
 }
 
-/// Each planted fault, and the cases that must fail under it.
-#[cfg(feature = "breaks")]
-#[test]
-fn every_planted_fault_is_seen() {
-    let plants: [(&str, &[&str]); 9] = [
-        ("volume_unknowns_dropped", &["sealed_cone_and_holes_as_fresh"]),
-        ("kept_stale_files", &["a_rule_file_edited", "boot_edited", "markdown_and_what_it_reads", "a_scan_read_edited"]),
-        ("kept_md_unread", &["markdown_and_what_it_reads"]),
-        ("kept_scans_unread", &["a_scan_read_edited"]),
-        ("kept_stale_args", &["walls_changed"]),
-        ("kept_stale_engine", &["the_engine_changed"]),
-        ("kept_unsummed", &["a_damaged_file"]),
-        ("kept_stamp_mtime", &["touched_is_not_stale"]),
-        ("kept_blind_scans", &["a_blind_scan_is_not_kept"]),
-    ];
-    let mut unseen = Vec::new();
-    for (id, cases) in plants {
-        for c in cases {
-            if case(c)(Some(id)).is_ok() { unseen.push(format!("{id}: {c} stayed green")); }
-        }
-    }
-    assert!(unseen.is_empty(), "planted faults no case saw:\n{}", unseen.join("\n"));
-}
