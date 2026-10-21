@@ -3,6 +3,46 @@
 The map of the tree is README.md, *What is in the tree*. Design decisions are
 in `docs/`. Everything ever learned here is in `facts/findings.rofl`.
 
+## The goal
+
+Decided by the owner, 2026-10-21. Every brief and every acceptance is checked
+against it.
+
+ROFL keeps a model of a large codebase and answers questions about it with
+proof: `why`, `whynot`, `excise`, and an honest "unknown, and why" where the
+data stops. **The engine is for agents** (`rofl ask` and its verbs, `--json`,
+kept worlds); **the notebook is for people** (rules written almost as
+sentences, answers with their explanation), over the same model.
+
+**Scale is part of the goal, not an optimisation.** The reference is the
+owner's work codebase: 11 100 JS/TS files under NDA (never in this repository;
+the owner shares numbers), on a Mac M4 Pro. Measured 2026-10-21: 20 minutes on
+6 workers to parse it and apply the JS model, of which parsing about 16
+seconds; about 23 GB at peak. The targets:
+
+- the first whole evaluation within 5 minutes on that machine, so that it runs
+  in CI (the owner expects it to scale with cores; not yet measured);
+- a repeated question answered from the kept world in about a second;
+- an edit of one file costs in proportion to the edit, not to the world;
+- where memory or time runs out, the engine says so; it does not die.
+
+A feature that works on 250 files and was never asked what it does at 11 100
+is not done.
+
+## Briefs
+
+Before a brief goes to a worker, the coordinator answers these in it:
+
+1. Which part of the goal does it move, and by what number?
+2. The use and how its inputs change between runs: what changes, how much,
+   how often (an agent edits one file of 11 100 and asks again).
+3. What does it do at the reference scale: time, memory, disk? A limit or cap
+   it sets must hold a world of that size.
+4. Which of its constraints blocks something the system already can do, and
+   at what cost? The worker is asked to name any such constraint it meets.
+5. Does its acceptance measure the goal, or only that the code does what the
+   brief says?
+
 ## Commands
 
 <!-- BEGIN commands: generated from package.json + facts/commands.rofl -->
