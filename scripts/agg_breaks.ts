@@ -8975,6 +8975,13 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "kept_orphans_swept_late",
+  "what": "the worlds killed writers left are removed only by a run that finishes its own write, so writers killed one after another pile them up",
+  "expect": {
+   "kept_series": "orphans_of_killed_writers_are_swept: after kill"
+  }
+ },
+ {
   "id": "kept_delta_unasked_kept",
   "what": "a scan the world no longer asks for keeps the facts it brought",
   "expect": {

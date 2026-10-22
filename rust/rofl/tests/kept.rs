@@ -590,7 +590,7 @@ fn orphans_of_killed_writers_are_swept(brk: Option<&str>) -> Result<(), String> 
     };
     let mut killed = 0;
     for tries in 0..40 {
-        if killed == 3 {
+        if killed == 5 {
             break;
         }
         // a world of its own each time (other walls), so each run writes
@@ -600,12 +600,17 @@ fn orphans_of_killed_writers_are_swept(brk: Option<&str>) -> Result<(), String> 
         if let Some(b) = brk { c.env("ROFL_BREAK", b); }
         let mut child = c.stdout(std::process::Stdio::null()).stderr(std::process::Stdio::null()).spawn().unwrap();
         let t0 = std::time::Instant::now();
-        let before = temps().len();
+        let mine = format!(".vol.{}.", child.id());
         loop {
-            if temps().len() > before {
+            if temps().iter().any(|n| n.contains(&mine)) {
                 let _ = child.kill();
                 let _ = child.wait();
                 killed += 1;
+                // a writer sweeps what dead ones left before it writes: only its own is left
+                let left = temps();
+                if left.len() > 1 {
+                    return Err(format!("after kill {killed}: {} temp files {left:?}", left.len()));
+                }
                 break;
             }
             if child.try_wait().ok().flatten().is_some() || t0.elapsed().as_secs() > 60 {
@@ -614,7 +619,7 @@ fn orphans_of_killed_writers_are_swept(brk: Option<&str>) -> Result<(), String> 
             std::thread::sleep(std::time::Duration::from_micros(200));
         }
     }
-    ensure(killed == 3, || format!("killed {killed} writers mid-write"))?;
+    ensure(killed == 5, || format!("killed {killed} writers mid-write"))?;
     ensure(!temps().is_empty(), || "the killed writers left nothing".into())?;
     let all = |w: &Path| -> u64 { std::fs::read_dir(w).map(|rd| rd.flatten().filter_map(|e| e.metadata().ok()).map(|m| m.len()).sum()).unwrap_or(0) };
     let r = rofl(&d, brk, &["ask", "reach(n1, X)", "--budget", "300000099", "big.rofl"]);

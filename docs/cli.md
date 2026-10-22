@@ -75,8 +75,8 @@ and is not kept, said in one line on stderr (`the world is not kept: the world
 is larger than 1.00 GB, the most it may take: the cap is 1.00 GB
 (ROFL_CACHE_GB)`). Each process writes under a name of its own and renames it
 into place, so cold runs of one question at once keep one world; what a process
-killed while it wrote leaves is removed by the next run that keeps a world, and
-the cap counts every file of the directory. Writing the volume costs about 5% of the evaluation it
+killed while it wrote leaves is removed by the next run that keeps a world,
+before it starts to write, and the cap counts every file of the directory. Writing the volume costs about 5% of the evaluation it
 saves (agg_minmax_strata: 0.83 s on 16.9 s). `rofl load`, `rofl serve` and every harness never read nor
 write them: a gate computes. Nothing to turn on or off; the cap is the one knob.
 

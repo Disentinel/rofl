@@ -2233,6 +2233,8 @@ brk("kept_delta_gone_rules_kept"). brk_kind("kept_delta_gone_rules_kept", switch
 brk_expects("kept_delta_gone_rules_kept", "kept_series").
 brk("kept_orphans_ignored"). brk_kind("kept_orphans_ignored", switch).
 brk_expects("kept_orphans_ignored", "kept_series").
+brk("kept_orphans_swept_late"). brk_kind("kept_orphans_swept_late", switch).
+brk_expects("kept_orphans_swept_late", "kept_series").
 brk("kept_delta_unasked_kept"). brk_kind("kept_delta_unasked_kept", switch).
 brk_expects("kept_delta_unasked_kept", "kept_js_sources").
 
@@ -2494,6 +2496,7 @@ switch_site("kept_key_ignores_walls", "rust/rofl/src/bin/rofl/kept.rs").
 switch_site("kept_load_reads_cache", "rust/rofl/src/bin/rofl/load.rs").
 switch_site("kept_md_unread", "rust/rofl/src/bin/rofl/kept.rs").
 switch_site("kept_orphans_ignored", "rust/rofl/src/bin/rofl/kept.rs").
+switch_site("kept_orphans_swept_late", "rust/rofl/src/bin/rofl/kept.rs").
 switch_site("kept_scans_unread", "rust/rofl/src/bin/rofl/kept.rs").
 switch_site("kept_shared_temp", "rust/rofl/src/bin/rofl/kept.rs").
 switch_site("kept_stale_args", "rust/rofl/src/bin/rofl/load.rs").

@@ -123,12 +123,24 @@ fn free(dir: &Path) -> Option<u64> {
 pub fn keep_capped(s: &mut rofl::session::Session, kept: &str, note: &str) -> Result<u64, String> {
     let dir = Path::new(kept).parent().ok_or("no directory")?;
     std::fs::create_dir_all(dir).map_err(|e| format!("{}: {e}", dir.display()))?;
+    // what writers killed before this one left goes before this one writes: it may be killed too
+    let orphans = rofl::brk!("kept_orphans_ignored" => false; true);
+    let late = rofl::brk!("kept_orphans_swept_late" => true; false);
+    if orphans && !late {
+        sweep_orphans(dir);
+    }
     let (cap, ignored) = (cap(), rofl::brk!("kept_cap_ignored" => true; false));
     let room = free(dir).map(|f| f.saturating_sub(FLOOR));
     if room == Some(0) {
         return Err(format!("the disk has less than the {} free a kept world never takes", size(FLOOR)));
     }
-    let most = cap.min(room.unwrap_or(u64::MAX));
+    // what live writers have written so far is taken from the cap before this one writes
+    let writing: u64 = if orphans {
+        std::fs::read_dir(dir).map(|rd| rd.flatten().filter(|e| !e.path().extension().is_some_and(|x| x == "vol")).filter_map(|e| e.metadata().ok()).filter(|m| m.is_file()).map(|m| m.len()).sum()).unwrap_or(0)
+    } else {
+        0
+    };
+    let most = cap.saturating_sub(writing).min(room.unwrap_or(u64::MAX));
     let bound = rofl::brk!("kept_write_unbounded" => None; (!ignored).then_some(most as usize));
     let new = rofl::brk!("kept_shared_temp" => format!("{kept}.new"); format!("{kept}.{}.new", std::process::id()));
     let bytes = match s.keep_volume_bounded(&new, note, bound) {
@@ -144,8 +156,7 @@ pub fn keep_capped(s: &mut rofl::session::Session, kept: &str, note: &str) -> Re
         let _ = std::fs::remove_file(&new);
         return Err(format!("the world is larger than {}, the most it may take: the cap is {} (ROFL_CACHE_GB)", size(most), size(cap)));
     }
-    let orphans = rofl::brk!("kept_orphans_ignored" => false; true);
-    if orphans {
+    if orphans && late {
         sweep_orphans(dir);
     }
     // every file of the directory counts, a world another process is writing too
