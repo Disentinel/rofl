@@ -392,6 +392,10 @@ fn run(json: bool, args: Vec<String>, mut pre: Option<(bool, crate::kept::Record
         if json { println!("{}", serde_json::json!({ "ok": true, "state": s.eval.canonical_state(), "partial": cut })) } else { print!("{}", s.eval.canonical_state()) }
     }
     let (mut refused, mut partial) = (false, cut);
+    // an answer that rests on a snapshot says when it was taken
+    if !qs.is_empty() {
+        for l in s.as_of_said() { eprintln!("{l}"); }
+    }
     for q in &qs {
         // each answer as plain text, or as `rofl serve` answers it
         let (text, js) = match q {

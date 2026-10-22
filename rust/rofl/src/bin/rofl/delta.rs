@@ -127,8 +127,8 @@ pub fn apply(s: &mut Session, r: &Record, files: &[String]) -> Result<Done, Stri
     let mut scans: Vec<ScanUnit> = Vec::new();
     let mut again: Vec<rofl::engine::ScanRec> = Vec::new();
     for sc in &r.scans {
-        if all || sc.read.iter().any(|p| stamps.get(p.as_str()).is_none_or(|st| !kept::holds(p, st))) {
-            let rec = Session::rescan(&sc.kind, &sc.path, &sc.text, sc.cmd.clone())?;
+        if all || sc.read.iter().any(|p| stamps.get(p.as_str()).is_none_or(|st| !kept::holds(p, st))) || (!sc.sources.is_empty() && kept::sources_moved(sc).is_some()) {
+            let rec = Session::rescan(&sc.kind, &sc.path, &sc.text, sc.cmd.clone(), sc.ttl)?;
             stays.extend(s.facts_of(&rec.unit)?.0);
             goes.extend(&sc.facts);
             took.push(format!("{} (scanned again)", sc.text));
@@ -156,6 +156,7 @@ pub fn apply(s: &mut Session, r: &Record, files: &[String]) -> Result<Done, Stri
     kept::signed(s, &standing)?;
     for rec in &again {
         s.signed(rec)?;
+        s.as_of(rec);
     }
     if let Some(why) = s.load_scans(&again)? {
         return Err(why);

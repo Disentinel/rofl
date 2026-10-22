@@ -1875,6 +1875,7 @@ impl Session {
         (s.eval.space, s.eval.mode, s.eval.retain_ticks, s.eval.on_hot) = (e.space, e.mode, e.retain_ticks, e.on_hot);
         s.eval.scans = std::mem::take(&mut self.eval.scans);
         s.eval.scan_signs = std::mem::take(&mut self.eval.scan_signs);
+        s.eval.scan_asof = std::mem::take(&mut self.eval.scan_asof);
         (s.dangling, s.asks) = (self.dangling, self.asks);
         *self = s;
         trim_heap();
@@ -1896,6 +1897,8 @@ impl Session {
             }).collect()
         };
         let scanners: HashMap<String, String> = rows(self, "scanner", 2).into_iter().map(|r| (r[0].0.clone(), r[1].1.clone())).collect();
+        // how long a kind's snapshot sources are kept, where the world says (else the scanner's `-- ttl:`)
+        let ttls: HashMap<String, u64> = rows(self, "scan_ttl", 2).into_iter().filter_map(|r| Some((r[0].0.clone(), r[1].1.parse().ok()?))).collect();
         let done: HashSet<(String, String)> = rows(self, "scan_done", 3).into_iter().chain(rows(self, "scan_failed", 3))
             .map(|r| (r[0].0.clone(), r[1].0.clone())).collect();
         let mut todo: Vec<((String, String), String)> = rows(self, "scan_request", 2).into_iter()
@@ -1910,19 +1913,23 @@ impl Session {
         let runs: Vec<_> = todo.iter().map(|((kind, _), path)| {
             let cmd = scanners.get(kind).cloned();
             let (path, stamps) = (path.clone(), stamps.clone());
-            std::thread::spawn(move || run_scan(cmd.as_deref(), &path, &stamps))
+            let ttl = ttls.get(kind).copied();
+            std::thread::spawn(move || run_scan(cmd.as_deref(), &path, &stamps, ttl))
         }).collect();
         // while the scanners run, the world goes cold
         self.cool_round()?;
         let mut recs = Vec::with_capacity(todo.len());
         for (((kind, path), text), run) in todo.iter().zip(runs) {
             let ran = run.join().unwrap_or_else(|_| Err("the scanner's thread failed".into()));
-            recs.push(scan_rec(kind, path, text, scanners.get(kind).cloned(), ran, &stamps)?);
+            recs.push(scan_rec(kind, path, text, scanners.get(kind).cloned(), ran, &stamps, ttls.get(kind).copied())?);
         }
         for rec in &recs {
             self.signed(rec)?;
         }
         self.load_scans(&recs)?;
+        for rec in &recs {
+            self.as_of(rec);
+        }
         self.eval.scans.extend(recs);
         Ok(todo.len())
     }
@@ -1943,6 +1950,19 @@ impl Session {
             }
         }
         Ok(whole)
+    }
+
+    /// A scan whose facts rest on a snapshot: the world's answers about its kind are as of the oldest time taken.
+    pub fn as_of(&mut self, rec: &crate::engine::ScanRec) {
+        if let Some(t) = snapshot_time(&rec.sources).filter(|_| crate::brk!("scan_asof_dropped" => false; true)) {
+            let e = self.eval.scan_asof.entry(rec.kind.clone()).or_insert_with(|| t.clone());
+            if t < *e { *e = t; }
+        }
+    }
+
+    /// What the world's answers rest on that is a snapshot: a sentence for each kind of scan, as of when.
+    pub fn as_of_said(&self) -> Vec<String> {
+        self.eval.scan_asof.iter().map(|(k, t)| format!("the facts of the scanner `{k}` are as of {t}: a snapshot of a source with no version")).collect()
     }
 
     /// THE SCAN HELD TO THE WORLD'S OTHER SCANS OF ITS KIND: a world holds the facts of one version of a scanner's
@@ -2038,7 +2058,8 @@ impl Session {
             let kind = who.strip_prefix("scanner:")?;
             let (sign, code) = self.eval.scan_signs.get(kind)?;
             let files: Vec<String> = code.iter().map(|(p, _)| shown_path(p)).collect();
-            Some(format!("  brought in by the scanner `{kind}`, code {sign} ({})", files.join(", ")))
+            let asof = self.eval.scan_asof.get(kind).map_or(String::new(), |t| format!(", as of {t}"));
+            Some(format!("  brought in by the scanner `{kind}`, code {sign} ({}){asof}", files.join(", ")))
         }).collect();
         lines.dedup();
         (!lines.is_empty()).then(|| lines.join("\n"))
@@ -2054,10 +2075,10 @@ impl Session {
 
     /// The scan of `text` (its path, written back as `path`) for `kind` run again with `cmd`, the storeroom
     /// answering while what it read holds: what it brings, as `scan_requests` loads it.
-    pub fn rescan(kind: &str, path: &str, text: &str, cmd: Option<String>) -> Result<crate::engine::ScanRec, String> {
+    pub fn rescan(kind: &str, path: &str, text: &str, cmd: Option<String>, ttl: Option<u64>) -> Result<crate::engine::ScanRec, String> {
         let stamps = Stamps::default();
-        let ran = run_scan(cmd.as_deref(), text, &stamps);
-        scan_rec(kind, path, text, cmd, ran, &stamps)
+        let ran = run_scan(cmd.as_deref(), text, &stamps, ttl);
+        scan_rec(kind, path, text, cmd, ran, &stamps, ttl)
     }
 
     /// `Rofl.whynot` (src/api.ts:927). `(holds, text)` — a literal that HOLDS
@@ -2187,25 +2208,110 @@ impl Stamps {
     }
 }
 
-/// One scan run: the storeroom's answer while every stamp holds, else the command run with the path last.
-fn run_scan(cmd: Option<&str>, path: &str, stamps: &Stamps) -> Result<String, String> {
+/// One scan run: the storeroom's answer while every stamp and every source holds, else the command run with the
+/// path last. A kept scan whose sources could not be checked is never answered: the scanner runs, and if it fails
+/// too, the scan fails saying both.
+fn run_scan(cmd: Option<&str>, path: &str, stamps: &Stamps, ttl: Option<u64>) -> Result<String, String> {
     let cmd = cmd.ok_or("no scanner(Kind, Command) for this kind")?;
     let kept = scan_kept(cmd, path);
-    if let Some(out) = kept.as_deref().filter(|_| crate::brk!("scan_storeroom_bypassed" => false; true)).and_then(|k| scan_fresh(k, stamps)) {
-        return Ok(out);
+    let mut unchecked = None;
+    if let Some(k) = kept.as_deref().filter(|_| crate::brk!("scan_storeroom_bypassed" => false; true)) {
+        match scan_fresh(k, stamps, cmd, path, ttl) {
+            Fresh::Kept(out) => return Ok(out),
+            Fresh::Unchecked(why) => unchecked = Some(why),
+            Fresh::Stale => {}
+        }
     }
-    let mut argv = cmd.split_whitespace();
-    let prog = argv.next().ok_or("an empty command")?;
-    let o = std::process::Command::new(prog).args(argv).arg(path).output().map_err(|e| format!("{prog}: {e}"))?;
-    if !o.status.success() {
-        let err = String::from_utf8_lossy(&o.stderr);
-        return Err(format!("{cmd} exited {}: {}", o.status.code().unwrap_or(-1), err.lines().last().unwrap_or("")));
-    }
-    let out = String::from_utf8(o.stdout).map_err(|_| "the scanner printed bytes that are not UTF-8".to_string())?;
+    let ran = scan_command(cmd, path, false).and_then(|o| String::from_utf8(o).map_err(|_| "the scanner printed bytes that are not UTF-8".to_string()));
+    let out = ran.map_err(|e| unchecked.map_or(e.clone(), |u| format!("{u}; and the scan itself failed: {e}")))?;
     if let Some(k) = kept {
         scan_keep(&k, &out, stamps);
     }
     Ok(out)
+}
+
+/// The scanner's command run with `path` last, its stdout; in the check mode (`ROFL_SCAN_CHECK=1`) the scanner
+/// prints only its sources' tokens, without drawing their data.
+fn scan_command(cmd: &str, path: &str, check: bool) -> Result<Vec<u8>, String> {
+    let mut argv = cmd.split_whitespace();
+    let prog = argv.next().ok_or("an empty command")?;
+    let mut c = std::process::Command::new(prog);
+    c.args(argv).arg(path);
+    if check {
+        c.env("ROFL_SCAN_CHECK", "1");
+    }
+    let o = c.output().map_err(|e| format!("{prog}: {e}"))?;
+    if !o.status.success() {
+        let err = String::from_utf8_lossy(&o.stderr);
+        return Err(format!("{cmd} exited {}: {}", o.status.code().unwrap_or(-1), err.lines().last().unwrap_or("")));
+    }
+    Ok(o.stdout)
+}
+
+/// The sources a scan's output names that are not files: `-- source: URI TOKEN` (versioned) or `-- source: URI
+/// @TIME` (a snapshot taken at TIME), each as `URI TOKEN`.
+pub fn sources_of(out: &str) -> Vec<String> {
+    out.lines().filter_map(|l| l.strip_prefix("-- source: ")).map(str::to_string).collect()
+}
+
+/// The seconds a scan's snapshot sources may be kept, as its `-- ttl: SECONDS` line says.
+pub fn ttl_of(out: &str) -> Option<u64> {
+    out.lines().find_map(|l| l.strip_prefix("-- ttl: ")).and_then(|t| t.trim().parse().ok())
+}
+
+/// `YYYY-MM-DDTHH:MM:SSZ` as seconds since 1970.
+fn epoch(t: &str) -> Option<i64> {
+    let n = |a: usize, b: usize| t.get(a..b)?.parse::<i64>().ok();
+    if t.len() < 20 || !t.ends_with('Z') { return None; }
+    let (y, m, d) = (n(0, 4)?, n(5, 7)?, n(8, 10)?);
+    let (y, m) = if m <= 2 { (y - 1, m + 9) } else { (y, m - 3) };
+    let days = 365 * y + y / 4 - y / 100 + y / 400 + (153 * m + 2) / 5 + d - 1 - 719_468;
+    Some(days * 86_400 + n(11, 13)? * 3600 + n(14, 16)? * 60 + n(17, 19)?)
+}
+
+/// The oldest snapshot time among `sources`, as written.
+pub fn snapshot_time(sources: &[String]) -> Option<String> {
+    sources.iter().filter_map(|s| s.rsplit_once(" @").map(|(_, t)| t.to_string())).min()
+}
+
+/// WHETHER THE SOURCES A KEPT SCAN DREW FROM STILL HOLD (docs/cli.md, "A scan names its sources"): a snapshot while
+/// it is younger than `ttl` (none: never); a versioned source while the scanner, asked in its check mode, gives the
+/// same token. Why not, otherwise, and whether the check itself failed.
+pub fn sources_hold(cmd: &str, path: &str, sources: &[String], ttl: Option<u64>) -> Result<(), (bool, String)> {
+    let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0, |d| d.as_secs() as i64);
+    let mut versioned: Vec<(&str, &str)> = Vec::new();
+    for s in sources {
+        let Some((uri, tok)) = s.rsplit_once(' ') else { return Err((false, format!("`-- source: {s}` names no token"))) };
+        match tok.strip_prefix('@') {
+            Some(t) if crate::brk!("scan_source_ttl_ignored" => false; true) => match ttl {
+                None => {
+                    static SAID: std::sync::Once = std::sync::Once::new();
+                    SAID.call_once(|| eprintln!("the scan `{cmd}` draws from {uri}, a snapshot, and no TTL is declared (`-- ttl: SECONDS`, or scan_ttl(Kind, Seconds)): it runs every time"));
+                    return Err((false, format!("{uri} is a snapshot with no TTL")));
+                }
+                Some(ttl) => {
+                    let age = epoch(t).map(|t| now - t).ok_or((false, format!("{uri}: `@{t}` is not a time")))?;
+                    if age > ttl as i64 { return Err((false, format!("{uri} was taken at {t}, past its TTL of {ttl} s"))); }
+                }
+            },
+            Some(_) => {}
+            None => versioned.push((uri, tok)),
+        }
+    }
+    if versioned.is_empty() || crate::brk!("scan_source_token_ignored" => true; false) {
+        return Ok(());
+    }
+    let out = scan_command(cmd, path, true).map_err(|e| (true, format!("the check of its sources failed ({e}), so the kept scan is not known to be current")))?;
+    let out = String::from_utf8_lossy(&out);
+    let now: HashMap<&str, &str> = out.lines().filter_map(|l| l.strip_prefix("-- source: ")).filter_map(|s| s.rsplit_once(' ')).collect();
+    for (uri, tok) in versioned {
+        match now.get(uri) {
+            Some(t) if *t == tok => {}
+            Some(t) => return Err((false, format!("{uri} moved: {tok} then, {t} now"))),
+            None => return Err((true, format!("the check of its sources did not name {uri}, so the kept scan is not known to be current"))),
+        }
+    }
+    Ok(())
 }
 
 /// The paths a scan's output names on its `-- PREFIX PATH` lines, from the directory the scan ran in; a code line's
@@ -2237,9 +2343,9 @@ fn scanner_who(kind: &str) -> String {
 /// What one scan brings, its `scan_done` or `scan_failed` row last, what it read and the code that read it.
 /// A SCAN NAMES ITS CODE, OR IT IS REFUSED: a scanner's output that names no file of its code, or a file that is not
 /// there, could outlive the code that made it.
-fn scan_rec(kind: &str, path: &str, text: &str, cmd: Option<String>, ran: Result<String, String>, stamps: &Stamps) -> Result<crate::engine::ScanRec, String> {
+fn scan_rec(kind: &str, path: &str, text: &str, cmd: Option<String>, ran: Result<String, String>, stamps: &Stamps, mut ttl: Option<u64>) -> Result<crate::engine::ScanRec, String> {
     let q = |s: &str| format!("\"{}\"", s.replace('\\', "\\\\").replace('"', "\\\""));
-    let (mut read, mut code, mut sign) = (Vec::new(), Vec::new(), String::new());
+    let (mut read, mut code, mut sign, mut sources) = (Vec::new(), Vec::new(), String::new(), Vec::new());
     if let Ok(out) = &ran {
         let paths = named(out, "-- code: ");
         let said = cmd.as_deref().unwrap_or("");
@@ -2253,6 +2359,8 @@ fn scan_rec(kind: &str, path: &str, text: &str, cmd: Option<String>, ran: Result
             return Err(format!("the scanner `{said}` names {} as its code, and there is no such file", shown_path(p)));
         }
         sign = code_sign(&code);
+        sources = sources_of(out);
+        ttl = ttl.or(ttl_of(out));
         read = named(out, "-- reads: ");
         // what the scan is stale by: what it read, and its code
         if crate::brk!("scan_code_unstamped" => false; true) {
@@ -2266,7 +2374,7 @@ fn scan_rec(kind: &str, path: &str, text: &str, cmd: Option<String>, ran: Result
         }
         Err(e) => format!("scan_failed({kind}, {path}, {}).\n", q(&e)),
     };
-    Ok(crate::engine::ScanRec { kind: kind.into(), path: path.into(), text: text.into(), cmd, read, code, sign, unit })
+    Ok(crate::engine::ScanRec { kind: kind.into(), path: path.into(), text: text.into(), cmd, read, code, sign, sources, ttl, unit })
 }
 
 /// A path a scanner named, from the directory the scan ran in.
@@ -2294,23 +2402,38 @@ fn scan_stamp(p: &str) -> String {
     std::fs::read(p).map_or_else(|_| "gone".into(), |b| crate::arena::Sum::of(&b))
 }
 
-fn scan_fresh(kept: &std::path::Path, stamps: &Stamps) -> Option<String> {
-    let text = std::fs::read_to_string(kept).ok()?;
-    let mut lines = text.lines();
-    for l in lines.by_ref() {
-        let Some(r) = l.strip_prefix("-- kept: ") else { break };
-        let (stamp, p) = r.split_once(' ')?;
-        if stamps.of(p) != stamp && crate::brk!("scan_kept_stale_answered" => false; true) { return None; }
-    }
-    // kept before scans named their code: not known to be this code's
-    text.contains("\n-- code: ").then_some(text)
+/// What the storeroom holds for a scan: an answer while it holds, nothing it holds, or a kept answer whose sources
+/// could not be checked.
+enum Fresh {
+    Kept(String),
+    Stale,
+    Unchecked(String),
 }
 
-/// The output kept with a stamp of every path it is stale by: what it read and its code. Not kept when it names
-/// nothing it read, since whether it is stale could not be told.
+fn scan_fresh(kept: &std::path::Path, stamps: &Stamps, cmd: &str, path: &str, ttl: Option<u64>) -> Fresh {
+    let Ok(text) = std::fs::read_to_string(kept) else { return Fresh::Stale };
+    for l in text.lines() {
+        let Some(r) = l.strip_prefix("-- kept: ") else { break };
+        let Some((stamp, p)) = r.split_once(' ') else { return Fresh::Stale };
+        if stamps.of(p) != stamp && crate::brk!("scan_kept_stale_answered" => false; true) { return Fresh::Stale; }
+    }
+    // kept before scans named their code: not known to be this code's
+    if !text.contains("\n-- code: ") {
+        return Fresh::Stale;
+    }
+    let sources = sources_of(&text);
+    match if sources.is_empty() { Ok(()) } else { sources_hold(cmd, path, &sources, ttl.or(ttl_of(&text))) } {
+        Ok(()) => Fresh::Kept(text),
+        Err((true, why)) => Fresh::Unchecked(why),
+        Err((false, _)) => Fresh::Stale,
+    }
+}
+
+/// The output kept with a stamp of every path it is stale by: what it read and its code; its sources are in it.
+/// Not kept when it names nothing it read and no source, since whether it is stale could not be told.
 fn scan_keep(kept: &std::path::Path, out: &str, stamps: &Stamps) {
     let reads = named(out, "-- reads: ");
-    if reads.is_empty() { return; }
+    if reads.is_empty() && sources_of(out).is_empty() { return; }
     let code = named(out, "-- code: ").into_iter().filter(|_| crate::brk!("scan_code_unstamped" => false; true));
     let mut text: String = reads.into_iter().chain(code).map(|p| format!("-- kept: {} {p}\n", stamps.of(&p))).collect();
     text.push_str(out);

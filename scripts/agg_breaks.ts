@@ -8779,6 +8779,27 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "scan_source_token_ignored",
+  "what": "a kept scan over a versioned source is answered without asking the scanner whether the source's token moved",
+  "expect": {
+   "scan_sources": "a_token_moved_is_scanned_again:"
+  }
+ },
+ {
+  "id": "scan_source_ttl_ignored",
+  "what": "a kept scan over a snapshot is answered whatever its age and its TTL",
+  "expect": {
+   "scan_sources": "a_snapshot_past_its_ttl_is_scanned_again:"
+  }
+ },
+ {
+  "id": "scan_asof_dropped",
+  "what": "an answer resting on a snapshot does not say as of when it was taken",
+  "expect": {
+   "scan_sources": "a_snapshot_within_its_ttl_is_kept_as_of:"
+  }
+ },
+ {
   "id": "scan_why_unsigned",
   "what": "why of a scanned fact names no scanner and no sum of its code",
   "expect": {
@@ -9106,6 +9127,7 @@ const TESTS: Record<string, string> = {
   kept_scan_code: 'kept a_kept_world_answers_and_refuses_as_docs_cli_says',
   // a scan names its code (docs/cli.md): each case of tests/scan.rs names itself where it fails
   scan_code: 'scan the_storeroom_of_scans_holds_to_the_scanners_code',
+  scan_sources: 'sources a_kept_scan_holds_to_its_sources',
   kept_walls: 'kept a_kept_world_answers_and_refuses_as_docs_cli_says',
   kept_engine: 'kept a_kept_world_answers_and_refuses_as_docs_cli_says',
   kept_damaged: 'kept a_kept_world_answers_and_refuses_as_docs_cli_says',

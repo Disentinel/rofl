@@ -276,6 +276,36 @@ version of the scanner's code that every fact of the scan was made by.
   no sums (written before scans were signed) is refused as unsigned. A kept
   world over such a file stamps the code too.
 
+**A scan names its sources.** Not everything a scanner draws from is a file.
+Beside `-- reads: PATH` (a file by its bytes, a directory by its names) it
+names each other source it drew from, one of two kinds:
+
+| line | the source | a kept scan holds while |
+|---|---|---|
+| `-- source: URI TOKEN` | versioned: the API gives a version (an ETag, a commit, an `updated_at`, a sum of them) | the scanner, run in its check mode, prints the same `TOKEN` for `URI` |
+| `-- source: URI @TIME` | a snapshot taken at `TIME` (`YYYY-MM-DDTHH:MM:SSZ`), no version | it is younger than its TTL: `scan_ttl(Kind, Seconds)` in the world, else the scanner's `-- ttl: SECONDS` |
+
+The check mode is the scanner's command with the path last and
+`ROFL_SCAN_CHECK=1` in its environment: it prints its `-- source:` lines and
+nothing else, asking each source for its version without drawing its data (one
+request a source; `scanners/gh_runs.py` asks a repository's run list, where a
+scan asks besides for each run's jobs). A snapshot with no TTL runs every time,
+said once on stderr. An answer that rests on a snapshot says when it was
+taken: `why` of such a fact ends `, as of TIME`, and the question verbs print
+`` the facts of the scanner `K` are as of TIME `` on stderr.
+
+When the check itself fails (the source is down, the scanner exits non-zero,
+a source it names is missing) the kept scan is never answered: the scanner
+runs, and when it fails too the scan fails with both said, `scan_failed(K, P,
+"the check of its sources failed (...), so the kept scan is not known to be
+current; and the scan itself failed: ...")`, and the world holds none of its
+facts. A kept answer of unknown currency is what this exists to stop; the
+failure is a fact the world can ask about, not a halt of the whole world. A
+world kept on disk holds to its scans' sources the same way: with `--kept` it
+is refused when one moved, and a question verb's world takes that scan again
+by delta. A scanner that names neither reads nor sources runs every time and
+is never kept.
+
 **A scan is kept.** A scanner that names what it read, a `-- reads: PATH` line
 for each file and directory (`scanners/cli.ts` names the file it parsed and
 every directory it listed), has its output kept under

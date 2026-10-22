@@ -2177,6 +2177,12 @@ brk("scan_mixed_signs"). brk_kind("scan_mixed_signs", switch).
 brk_expects("scan_mixed_signs", "scan_code").
 brk("scan_file_signature_ignored"). brk_kind("scan_file_signature_ignored", switch).
 brk_expects("scan_file_signature_ignored", "scan_code").
+brk("scan_source_token_ignored"). brk_kind("scan_source_token_ignored", switch).
+brk_expects("scan_source_token_ignored", "scan_sources").
+brk("scan_source_ttl_ignored"). brk_kind("scan_source_ttl_ignored", switch).
+brk_expects("scan_source_ttl_ignored", "scan_sources").
+brk("scan_asof_dropped"). brk_kind("scan_asof_dropped", switch).
+brk_expects("scan_asof_dropped", "scan_sources").
 brk("scan_why_unsigned"). brk_kind("scan_why_unsigned", switch).
 brk_expects("scan_why_unsigned", "scan_code").
 brk_expects("scan_why_unsigned", "kept_scan_code").
@@ -2717,11 +2723,14 @@ switch_site("retract_thr_unclosed", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_tree_refused", "rust/rofl/src/engine/addition.rs").
 switch_site("retract_unrederived", "rust/rofl/src/engine/addition.rs").
 switch_site("roots_of_cycle_off", "rust/rofl/src/engine.rs").
+switch_site("scan_asof_dropped", "rust/rofl/src/session.rs").
 switch_site("scan_code_optional", "rust/rofl/src/session.rs").
 switch_site("scan_code_unstamped", "rust/rofl/src/session.rs").
 switch_site("scan_file_signature_ignored", "rust/rofl/src/session.rs").
 switch_site("scan_kept_stale_answered", "rust/rofl/src/session.rs").
 switch_site("scan_mixed_signs", "rust/rofl/src/session.rs").
+switch_site("scan_source_token_ignored", "rust/rofl/src/session.rs").
+switch_site("scan_source_ttl_ignored", "rust/rofl/src/session.rs").
 switch_site("scan_storeroom_bypassed", "rust/rofl/src/session.rs").
 switch_site("scan_why_unsigned", "rust/rofl/src/session.rs").
 switch_site("scc_member_reads_free", "rust/rofl/src/engine.rs").

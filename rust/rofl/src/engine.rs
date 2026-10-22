@@ -334,6 +334,9 @@ pub struct ScanRec {
     pub read: Vec<String>,
     pub code: Vec<(String, String)>,
     pub sign: String,
+    /// the sources it drew from that are not files, `URI TOKEN` or `URI @TIME`, and how long a snapshot is kept
+    pub sources: Vec<String>,
+    pub ttl: Option<u64>,
     pub unit: String,
 }
 
@@ -722,6 +725,8 @@ pub struct Eval {
     /// Of each kind of scan this world holds facts of, the sum of its scanner's code and the files it is over: one
     /// for a kind, or the world is refused (`Session::scan_requests`).
     pub scan_signs: std::collections::BTreeMap<String, (String, Vec<(String, String)>)>,
+    /// Of each kind of scan whose facts rest on a snapshot, the oldest time it was taken: what an answer is as of.
+    pub scan_asof: std::collections::BTreeMap<String, String>,
     /// Firings solved delta-first.
     pub delta_by_rule: HashMap<Sym, u64>,
     /// Delta-first join plans (`joinplan.rs`), per rule and news position, and
@@ -1421,6 +1426,7 @@ impl Eval {
             hot_said: Vec::new(),
             scans: Vec::new(),
             scan_signs: Default::default(),
+            scan_asof: Default::default(),
             delta_by_rule: HashMap::new(),
             delta_ns: 0,
             plan_trial: false,

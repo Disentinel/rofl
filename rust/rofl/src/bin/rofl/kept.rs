@@ -312,7 +312,7 @@ pub fn record(args: &[String], world_files: &[String], units: &[Unit], files: &[
     let read: Vec<Value> = paths.iter().map(|p| json!([p.to_string_lossy(), stamp(p)])).collect();
     let cwd = (!scans.is_empty()).then(|| std::env::current_dir().map(|d| d.to_string_lossy().into_owned()).unwrap_or_default());
     let units: Vec<Value> = units.iter().map(|u| json!([u.path, u.rules, u.facts])).collect();
-    let scans: Vec<Value> = scans.iter().map(|s| json!([s.kind, s.path, s.text, s.cmd, s.read, s.facts, s.code, s.sign])).collect();
+    let scans: Vec<Value> = scans.iter().map(|s| json!([s.kind, s.path, s.text, s.cmd, s.read, s.facts, s.code, s.sign, s.sources, s.ttl])).collect();
     Ok(json!({ "kept": 2, "args": args, "files": world_files, "engine": engine(), "env": env_now(), "cwd": cwd, "read": read, "units": units, "scans": scans }).to_string())
 }
 
@@ -329,18 +329,21 @@ pub struct ScanUnit {
     /// the files of the scanner's code, each with its stamp, and their sum
     pub code: Vec<(String, String)>,
     pub sign: String,
+    /// the sources not files it drew from (`URI TOKEN`, `URI @TIME`), and how long a snapshot of them is kept
+    pub sources: Vec<String>,
+    pub ttl: Option<u64>,
 }
 
 impl ScanUnit {
     /// What the session's scan `r` brought, read against it.
     pub fn of(s: &mut rofl::session::Session, r: &rofl::engine::ScanRec) -> ScanUnit {
         let facts = s.facts_of(&r.unit).map(|f| f.0).unwrap_or_default();
-        ScanUnit { kind: r.kind.clone(), path: r.path.clone(), text: r.text.clone(), cmd: r.cmd.clone(), read: r.read.clone(), facts, code: r.code.clone(), sign: r.sign.clone() }
+        ScanUnit { kind: r.kind.clone(), path: r.path.clone(), text: r.text.clone(), cmd: r.cmd.clone(), read: r.read.clone(), facts, code: r.code.clone(), sign: r.sign.clone(), sources: r.sources.clone(), ttl: r.ttl }
     }
 
     /// The scan as the session holds one, to hold the scans after it to the same code (`Session::signed`).
     pub fn rec(&self) -> rofl::engine::ScanRec {
-        rofl::engine::ScanRec { kind: self.kind.clone(), path: self.path.clone(), text: self.text.clone(), cmd: self.cmd.clone(), read: self.read.clone(), code: self.code.clone(), sign: self.sign.clone(), unit: String::new() }
+        rofl::engine::ScanRec { kind: self.kind.clone(), path: self.path.clone(), text: self.text.clone(), cmd: self.cmd.clone(), read: self.read.clone(), code: self.code.clone(), sign: self.sign.clone(), sources: self.sources.clone(), ttl: self.ttl, unit: String::new() }
     }
 }
 
@@ -348,7 +351,12 @@ impl ScanUnit {
 /// takes their signs, or the first that differs is refused.
 pub fn signed(s: &mut rofl::session::Session, scans: &[ScanUnit]) -> Result<(), String> {
     s.eval.scan_signs.clear();
-    scans.iter().try_for_each(|sc| s.signed(&sc.rec()))
+    s.eval.scan_asof.clear();
+    scans.iter().try_for_each(|sc| {
+        let rec = sc.rec();
+        s.as_of(&rec);
+        s.signed(&rec)
+    })
 }
 
 pub fn parse(note: &str) -> Option<Record> {
@@ -372,6 +380,8 @@ pub fn parse(note: &str) -> Option<Record> {
         facts: s.get(5)?.as_array()?.iter().map(|x| x.as_u64().map(|n| n as u32)).collect::<Option<Vec<u32>>>()?,
         code: s.get(6)?.as_array()?.iter().map(|c| Some((c.get(0)?.as_str()?.to_string(), c.get(1)?.as_str()?.to_string()))).collect::<Option<Vec<_>>>()?,
         sign: s.get(7)?.as_str()?.to_string(),
+        sources: s.get(8)?.as_array()?.iter().map(|x| x.as_str().map(str::to_string)).collect::<Option<Vec<_>>>()?,
+        ttl: s.get(9)?.as_u64(),
     })).collect::<Option<Vec<_>>>()?;
     Some(Record { args, files, engine: v.get("engine")?.as_str()?.to_string(), env: strs("env")?, cwd: v.get("cwd")?.as_str().map(str::to_string), read, units, scans })
 }
@@ -398,6 +408,10 @@ pub fn moved(r: &Record, this_build: bool) -> Option<String> {
     if !missing.is_empty() {
         return Some(format!("{} {} missing", list(missing.clone()), if missing.len() == 1 { "is" } else { "are" }));
     }
+    // a source not a file, asked as the storeroom asks it
+    if let Some(m) = r.scans.iter().filter(|s| !s.sources.is_empty()).find_map(|s| sources_moved(s)) {
+        return Some(m);
+    }
     // a scanner's code is named as such
     let moved_now: std::collections::HashSet<&str> = now.iter().filter(|(_, s)| !s.is_empty()).map(|(p, _)| p.as_str()).collect();
     if let Some(sc) = r.scans.iter().find(|s| s.code.iter().any(|(p, _)| moved_now.contains(p.as_str()))) {
@@ -405,6 +419,12 @@ pub fn moved(r: &Record, this_build: bool) -> Option<String> {
         return Some(format!("the code of the scanner `{}` changed since it was kept: {}", sc.kind, list(files)));
     }
     (!changed.is_empty()).then(|| format!("{} changed since it was kept", list(changed)))
+}
+
+/// Why the sources the scan `s` drew from no longer hold, as a sentence; None while they hold.
+pub fn sources_moved(s: &ScanUnit) -> Option<String> {
+    let cmd = s.cmd.as_deref()?;
+    rofl::session::sources_hold(cmd, &s.text, &s.sources, s.ttl).err().map(|(_, why)| format!("the scan `{cmd} {}`: {why}", s.text))
 }
 
 /// Whether what `moved` said is a file gone: a run computing anew would only fail to read it.
