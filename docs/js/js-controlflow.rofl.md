@@ -103,20 +103,20 @@ Declared as facts:
 
 > ANY index: `switch_case`'s `consequent` is an array, one arm per statement.
 
-<a id="guard_arm"></a>A node guards the arm X if all of:
+<a id="guard_arm"></a>A node is conditional on a node P if all of:
   - a kind K [guards the field](#guard_kind) Field;
-  - it [is of kind](js-model.rofl.md#ast_node) K;
-  - X [is among the](#ast_child) Field of it.
+  - P [is of kind](js-model.rofl.md#ast_node) K;
+  - it [is among the](#ast_child) Field of P.
 
 > `x ??= f()`, `x ||= f()`, `x &&= f()` short-circuit as their operators do;
 > the branching is in the operator, not the kind.
 
 `short_circuit_assign` includes "??=", "||=", "&&=".
 
-An [assignment](#noun-assignment) guards the arm X if all of:
+A node is conditional on an [assignment](#noun-assignment) P if all of:
   - an operator Op [short circuits](#short_circuit_assign);
-  - [the attribute](#ast_attr) `operator` of it is Op;
-  - the `right` of it is X.
+  - [the attribute](#ast_attr) `operator` of P is Op;
+  - the `right` of P is it.
 
 Declared as facts:
 
@@ -133,9 +133,9 @@ A node
   - it [is of kind](js-model.rofl.md#ast_node) K;
   - [the attribute](#ast_attr) `static` of it is `false`;
   - the `value` of it is V.
-- guards the arm V if it [has the field initialiser](#field_init) V.
-- <a id="guarded"></a>is guarded if some node [guards the arm](#guard_arm) it.
-- is guarded if some node [guards the arm](#guard_arm) X and it [is within](#ast_within) X.
+- is conditional on a node P if P [has the field initialiser](#field_init) it.
+- <a id="guarded"></a>is guarded if it [is conditional on](#guard_arm) some node.
+- is guarded if a node X [is conditional on](#guard_arm) some node and it [is within](#ast_within) X.
 
 ## 2. STATEMENT ORDER. After a return/throw/break/continue the rest of the list
 
