@@ -9,7 +9,7 @@ import { chainOf } from './chain.ts';
 import { proofView, type Proven } from '../notebook/draw-proof.ts';
 import { collect, diff, scoped, status, KINDS, VIEW_RELS, unquote as termText, type DrawKind, type View, type World } from '../notebook/draw.ts';
 import { Vocabulary } from '../src/say.ts';
-import { scan } from '../scanners/js_ast.ts';
+import { codeFacts, type Node } from '../scanners/code_facts.ts';
 import { readBook, homeOf, booksOf, OWN, type Ask, type Cell, type Kind } from '../notebook/book.ts';
 import { plural, theVariable, type Question } from '../scripts/read_md.ts';
 import { ARITH_OPS, varsOf, canonTerm, mka, litsOf, termsOf, type Clause, type Lit, type Term } from '../src/unify.ts';
@@ -21,6 +21,7 @@ const BUDGET = 4_000_000_000, SPACE = 40_000_000;
 export const FILE = 'play.js';
 
 export { MODEL_FILES, PHRASE_FILES } from '../notebook/front.ts';
+export { codeFacts, type Node } from '../scanners/code_facts.ts';
 export { readBook, homeOf, booksOf, type Cell } from '../notebook/book.ts';
 
 export type Row = { sentence: string; literal: string };
@@ -41,7 +42,6 @@ export type Line = { kind: Kind; text: string; lit: string; rows: Row[]; total: 
   english?: { line: string; note?: string; headline?: string } };
 /** `at`: the line, from 0 in the cell, an error or a note of a Markdown cell was found on, where the reader knows it. */
 export type CellOut = { id: string; errors: string[]; notes: string[]; lines: Line[]; rofl?: string; at?: Record<string, number> };
-export type Node = { kind: string; file: string; line: number; label: string };
 /** `unresolved`: a relative import or require that names no file of the code, as `file:line 'spec'`; a never holds only as far as these. */
 export type RunOut = { parseErrors: Record<string, string>; facts: number; ms: number; phases: Record<string, number>; learned: string[]; cells: CellOut[]; nodes: Record<string, Node>; unresolved: string[]; error?: string; /** an evaluation was stopped */ partial?: boolean; /** what stopped it and the setting that raises it, in a sentence */ cut?: string; /** the model over the code: evaluated by this run, or kept from one before */ model?: 'evaluated' | 'kept' };
 
@@ -86,48 +86,6 @@ function labelNodes(facts: string[], nodes: Record<string, Node>): void {
     }
   };
   for (const id of Object.keys(nodes)) { const l = lab(id); nodes[id].label = l.length > 40 ? l.slice(0, 39) + '…' : l; }
-}
-
-/** The facts of the code: the scanner's of each file, and the host's of the paths and of every string a file holds. */
-export function codeFacts(files: Record<string, string>, data: string[] = []): { facts: string[]; nodes: Record<string, Node>; parseErrors: Record<string, string>; host: string[] } {
-  const nodes: Record<string, Node> = {};
-  const parseErrors: Record<string, string> = {};
-  const facts: string[] = [], strings = new Set<string>();
-  for (const [path, src] of Object.entries(files)) {
-    for (const fact of scan(src, { file: path }).facts) {
-      facts.push(fact);
-      const m = /^ast_node\[code\]\((\w+), (\w+), "([^"]*)"\)/.exec(fact);
-      if (m) nodes[m[1]] = { kind: m[2], file: m[3], line: 0, label: '' };
-      const l = /^ast_line\[code\]\((\w+), (\d+)\)/.exec(fact);
-      if (l) nodes[l[1]].line = Number(l[2]);
-      const e = /^ast_parse_error\[code\]\("[^"]*", "(.*)"\)\.$/.exec(fact);
-      if (e) parseErrors[path] = e[1];
-      const v = /^ast_attr\[code\]\(\w+, value, (".*")\)\.$/.exec(fact);
-      if (v) strings.add(unquote(v[1]));
-    }
-  }
-  return { facts, nodes, parseErrors, host: hostFacts([...Object.keys(files), ...data], strings) };
-}
-
-/** What the host tells the module graph and a scanner cannot: the files and directories there are, and each string cut the way a specifier is read. */
-function hostFacts(paths: string[], strings: Set<string>): string[] {
-  // quoted the way the scanner quotes: ROFL has five escapes, and JSON's `\u0000` for a control character refuses the whole batch
-  const q = (x: string) => '"' + x.replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"', out: string[] = [], dirs = new Set(['.']);
-  const dirOf = (p: string) => { const i = p.lastIndexOf('/'); return i < 0 ? '.' : p.slice(0, i); };
-  for (const p of paths) for (let d = dirOf(p); d !== '.'; d = dirOf(d)) dirs.add(d);
-  for (const d of dirs) {
-    out.push(`fs_dir[code](${q(d)}).`);
-    if (d !== '.') out.push(`fs_parent[code](${q(d)}, ${q(dirOf(d))}).`, `fs_dir_in[code](${q(dirOf(d))}, ${q(d.slice(d.lastIndexOf('/') + 1))}, ${q(d)}).`);
-  }
-  for (const p of paths) out.push(`fs_file[code](${q(p)}).`, `fs_dir_of[code](${q(p)}, ${q(dirOf(p))}).`, `fs_file_in[code](${q(dirOf(p))}, ${q(p.slice(p.lastIndexOf('/') + 1))}, ${q(p)}).`);
-  for (const s of strings) {
-    if (!s || s.includes('\n')) continue;
-    const segs = s.split('/');
-    out.push(`str_segs[code](${q(s)}, ${segs.length}).`, `str_char0[code](${q(s)}, ${q(String.fromCodePoint(s.codePointAt(0)!))}).`);
-    segs.forEach((g, k) => out.push(`str_seg[code](${q(s)}, ${k}, ${q(g)}).`));
-    if (s.indexOf(':') > 0) out.push(`str_scheme[code](${q(s)}, ${q(s.slice(0, s.indexOf(':')))}).`);
-  }
-  return out;
 }
 
 /** The head's variables that nothing in the body gives a value. */

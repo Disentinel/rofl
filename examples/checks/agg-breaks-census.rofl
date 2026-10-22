@@ -2164,6 +2164,20 @@ brk("kept_scans_unread"). brk_kind("kept_scans_unread", switch).
 brk_expects("kept_scans_unread", "kept_scan").
 brk("kept_blind_scans"). brk_kind("kept_blind_scans", switch).
 brk_expects("kept_blind_scans", "kept_blind").
+brk("scan_code_optional"). brk_kind("scan_code_optional", switch).
+brk_expects("scan_code_optional", "scan_code").
+brk("scan_code_unstamped"). brk_kind("scan_code_unstamped", switch).
+brk_expects("scan_code_unstamped", "scan_code").
+brk_expects("scan_code_unstamped", "kept_scan_code").
+brk("scan_kept_stale_answered"). brk_kind("scan_kept_stale_answered", switch).
+brk_expects("scan_kept_stale_answered", "scan_code").
+brk("scan_storeroom_bypassed"). brk_kind("scan_storeroom_bypassed", switch).
+brk_expects("scan_storeroom_bypassed", "scan_code").
+brk("scan_mixed_signs"). brk_kind("scan_mixed_signs", switch).
+brk_expects("scan_mixed_signs", "scan_code").
+brk("scan_why_unsigned"). brk_kind("scan_why_unsigned", switch).
+brk_expects("scan_why_unsigned", "scan_code").
+brk_expects("scan_why_unsigned", "kept_scan_code").
 brk("kept_stale_args"). brk_kind("kept_stale_args", switch).
 brk_expects("kept_stale_args", "kept_walls").
 brk("kept_stale_engine"). brk_kind("kept_stale_engine", switch).
@@ -2701,6 +2715,12 @@ switch_site("retract_thr_unclosed", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_tree_refused", "rust/rofl/src/engine/addition.rs").
 switch_site("retract_unrederived", "rust/rofl/src/engine/addition.rs").
 switch_site("roots_of_cycle_off", "rust/rofl/src/engine.rs").
+switch_site("scan_code_optional", "rust/rofl/src/session.rs").
+switch_site("scan_code_unstamped", "rust/rofl/src/session.rs").
+switch_site("scan_kept_stale_answered", "rust/rofl/src/session.rs").
+switch_site("scan_mixed_signs", "rust/rofl/src/session.rs").
+switch_site("scan_storeroom_bypassed", "rust/rofl/src/session.rs").
+switch_site("scan_why_unsigned", "rust/rofl/src/session.rs").
 switch_site("scc_member_reads_free", "rust/rofl/src/engine.rs").
 switch_site("scc_off", "rust/rofl/src/engine.rs").
 switch_site("scc_unit_gone", "rust/rofl/src/engine.rs").

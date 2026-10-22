@@ -9,7 +9,9 @@
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { codeFacts } from '../playground/host.ts';
+import { fileURLToPath } from 'node:url';
+import { codeFacts } from './code_facts.ts';
+import { codeLines } from './own_code.ts';
 
 const CODE = /\.(js|ts|tsx|mjs|cjs|jsx|mts|cts)$/;
 const NOT_CODE = /\.d\.[mc]?ts$|\.min\.js$/;
@@ -32,9 +34,10 @@ const files: string[] = [], dirs: string[] = [];
 walk(root, '', files, dirs);
 const parsed = one === undefined ? files : [one];
 const { facts, host, parseErrors } = codeFacts(Object.fromEntries(parsed.map((f) => [f, fs.readFileSync(path.join(root, f), 'utf8')])), files.filter((f) => f !== one));
-// what was read, for the engine's storeroom of scans (docs/cli.md): the parsed files and every directory listed
+// for the engine's storeroom of scans (docs/cli.md): this scanner's own code, and what it read (the parsed files and
+// every directory listed)
 const reads = [...parsed, ...dirs].map((f) => `-- reads: ${path.resolve(root, f)}`);
-const text = [...reads, ...facts, ...host].join('\n') + '\n';
+const text = [...codeLines(fileURLToPath(import.meta.url)), ...reads, ...facts, ...host].join('\n') + '\n';
 if (out) fs.writeFileSync(out, text); else process.stdout.write(text);
 for (const [f, e] of Object.entries(parseErrors)) console.error(`${f}: ${e}`);
 console.error(`${parsed.length} files, ${facts.length + host.length} facts${out ? ` -> ${out}` : ''}`);

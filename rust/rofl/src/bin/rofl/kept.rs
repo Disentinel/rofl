@@ -288,8 +288,15 @@ pub fn shown(p: &str) -> String {
 /// The record of a world evaluated from `args` that read `files` and whose scans are `scans`: refused when a scan
 /// named nothing it read, since whether the world it brought in is stale could not be told.
 pub fn record(args: &[String], world_files: &[String], units: &[Unit], files: &[String], scans: &[ScanUnit]) -> Result<String, String> {
-    if let Some(s) = scans.iter().find(|s| s.cmd.is_some() && rofl::brk!("kept_blind_scans" => false; s.read.is_empty())) {
+    if let Some(s) = scans.iter().find(|s| s.cmd.is_some() && rofl::brk!("kept_blind_scans" => false; s.read.iter().all(|p| s.code.iter().any(|(c, _)| c == p)))) {
         return Err(format!("the scan `{} {}` named nothing it read (`-- reads: PATH`), so whether a kept world is stale could not be told", s.cmd.as_deref().unwrap_or(""), s.text));
+    }
+    let mut sign: std::collections::HashMap<&str, &str> = std::collections::HashMap::new();
+    for a in scans.iter().filter(|s| !s.sign.is_empty()) {
+        let b = *sign.entry(&a.kind).or_insert(&a.sign);
+        if b != a.sign {
+            return Err(format!("its scans of `{}` were made by two versions of the scanner, code {b} and code {}", a.kind, a.sign));
+        }
     }
     let mut paths: Vec<PathBuf> = files.iter().map(|f| PathBuf::from(absolute(f))).collect();
     paths.extend(rofl::md::files_read().into_iter().map(|p| PathBuf::from(absolute(&p.to_string_lossy())))
@@ -305,7 +312,7 @@ pub fn record(args: &[String], world_files: &[String], units: &[Unit], files: &[
     let read: Vec<Value> = paths.iter().map(|p| json!([p.to_string_lossy(), stamp(p)])).collect();
     let cwd = (!scans.is_empty()).then(|| std::env::current_dir().map(|d| d.to_string_lossy().into_owned()).unwrap_or_default());
     let units: Vec<Value> = units.iter().map(|u| json!([u.path, u.rules, u.facts])).collect();
-    let scans: Vec<Value> = scans.iter().map(|s| json!([s.kind, s.path, s.text, s.cmd, s.read, s.facts])).collect();
+    let scans: Vec<Value> = scans.iter().map(|s| json!([s.kind, s.path, s.text, s.cmd, s.read, s.facts, s.code, s.sign])).collect();
     Ok(json!({ "kept": 2, "args": args, "files": world_files, "engine": engine(), "env": env_now(), "cwd": cwd, "read": read, "units": units, "scans": scans }).to_string())
 }
 
@@ -319,14 +326,29 @@ pub struct ScanUnit {
     pub cmd: Option<String>,
     pub read: Vec<String>,
     pub facts: Vec<u32>,
+    /// the files of the scanner's code, each with its stamp, and their sum
+    pub code: Vec<(String, String)>,
+    pub sign: String,
 }
 
 impl ScanUnit {
     /// What the session's scan `r` brought, read against it.
     pub fn of(s: &mut rofl::session::Session, r: &rofl::engine::ScanRec) -> ScanUnit {
         let facts = s.facts_of(&r.unit).map(|f| f.0).unwrap_or_default();
-        ScanUnit { kind: r.kind.clone(), path: r.path.clone(), text: r.text.clone(), cmd: r.cmd.clone(), read: r.read.clone(), facts }
+        ScanUnit { kind: r.kind.clone(), path: r.path.clone(), text: r.text.clone(), cmd: r.cmd.clone(), read: r.read.clone(), facts, code: r.code.clone(), sign: r.sign.clone() }
     }
+
+    /// The scan as the session holds one, to hold the scans after it to the same code (`Session::signed`).
+    pub fn rec(&self) -> rofl::engine::ScanRec {
+        rofl::engine::ScanRec { kind: self.kind.clone(), path: self.path.clone(), text: self.text.clone(), cmd: self.cmd.clone(), read: self.read.clone(), code: self.code.clone(), sign: self.sign.clone(), unit: String::new() }
+    }
+}
+
+/// A world's scans held to one version of each scanner's code, as `Session::signed` holds them: the session `s`
+/// takes their signs, or the first that differs is refused.
+pub fn signed(s: &mut rofl::session::Session, scans: &[ScanUnit]) -> Result<(), String> {
+    s.eval.scan_signs.clear();
+    scans.iter().try_for_each(|sc| s.signed(&sc.rec()))
 }
 
 pub fn parse(note: &str) -> Option<Record> {
@@ -348,6 +370,8 @@ pub fn parse(note: &str) -> Option<Record> {
         cmd: s.get(3)?.as_str().map(str::to_string),
         read: s.get(4)?.as_array()?.iter().map(|x| x.as_str().map(str::to_string)).collect::<Option<Vec<_>>>()?,
         facts: s.get(5)?.as_array()?.iter().map(|x| x.as_u64().map(|n| n as u32)).collect::<Option<Vec<u32>>>()?,
+        code: s.get(6)?.as_array()?.iter().map(|c| Some((c.get(0)?.as_str()?.to_string(), c.get(1)?.as_str()?.to_string()))).collect::<Option<Vec<_>>>()?,
+        sign: s.get(7)?.as_str()?.to_string(),
     })).collect::<Option<Vec<_>>>()?;
     Some(Record { args, files, engine: v.get("engine")?.as_str()?.to_string(), env: strs("env")?, cwd: v.get("cwd")?.as_str().map(str::to_string), read, units, scans })
 }
@@ -373,6 +397,12 @@ pub fn moved(r: &Record, this_build: bool) -> Option<String> {
     let (missing, changed) = (said(true), said(false));
     if !missing.is_empty() {
         return Some(format!("{} {} missing", list(missing.clone()), if missing.len() == 1 { "is" } else { "are" }));
+    }
+    // a scanner's code is named as such
+    let moved_now: std::collections::HashSet<&str> = now.iter().filter(|(_, s)| !s.is_empty()).map(|(p, _)| p.as_str()).collect();
+    if let Some(sc) = r.scans.iter().find(|s| s.code.iter().any(|(p, _)| moved_now.contains(p.as_str()))) {
+        let files: Vec<String> = sc.code.iter().filter(|(p, _)| moved_now.contains(p.as_str())).map(|(p, _)| shown(p)).collect();
+        return Some(format!("the code of the scanner `{}` changed since it was kept: {}", sc.kind, list(files)));
     }
     (!changed.is_empty()).then(|| format!("{} changed since it was kept", list(changed)))
 }

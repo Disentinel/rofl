@@ -1764,7 +1764,8 @@ impl Session {
         self.explaining()?;
         self.cone_holds(&lit)?;
         self.settle_if_provenance(&lit);
-        self.eval.why_text(&lit, Some(query))
+        let text = self.eval.why_text(&lit, Some(query))?;
+        Ok(match self.scanned_by(&lit) { Some(by) => format!("{text}\n{by}"), None => text })
     }
 
     /// `why`, with every member of every aggregate cell it passes through,
@@ -1775,7 +1776,8 @@ impl Session {
         self.explaining()?;
         self.cone_holds(&lit)?;
         self.settle_if_provenance(&lit);
-        self.eval.why_text_with(&lit, &WhyOpts { members: usize::MAX, query: String::new() }, Some(query))
+        let text = self.eval.why_text_with(&lit, &WhyOpts { members: usize::MAX, query: String::new() }, Some(query))?;
+        Ok(match self.scanned_by(&lit) { Some(by) => format!("{text}\n{by}"), None => text })
     }
 
     /// THE EXPLAIN BRIDGE, and why it exists: `why` and `whynot` are host
@@ -1872,6 +1874,7 @@ impl Session {
         let e = &self.eval;
         (s.eval.space, s.eval.mode, s.eval.retain_ticks, s.eval.on_hot) = (e.space, e.mode, e.retain_ticks, e.on_hot);
         s.eval.scans = std::mem::take(&mut self.eval.scans);
+        s.eval.scan_signs = std::mem::take(&mut self.eval.scan_signs);
         (s.dangling, s.asks) = (self.dangling, self.asks);
         *self = s;
         trim_heap();
@@ -1902,22 +1905,94 @@ impl Session {
         if todo.is_empty() {
             return Ok(0);
         }
+        // the stamps of a round are taken once: the scanner's code, which every scan of a kind shares, is read once
+        let stamps = Stamps::default();
         let runs: Vec<_> = todo.iter().map(|((kind, _), path)| {
             let cmd = scanners.get(kind).cloned();
-            let path = path.clone();
-            std::thread::spawn(move || run_scan(cmd.as_deref(), &path))
+            let (path, stamps) = (path.clone(), stamps.clone());
+            std::thread::spawn(move || run_scan(cmd.as_deref(), &path, &stamps))
         }).collect();
         // while the scanners run, the world goes cold
         self.cool_round()?;
-        let mut src = String::new();
+        let mut recs = Vec::with_capacity(todo.len());
         for (((kind, path), text), run) in todo.iter().zip(runs) {
             let ran = run.join().unwrap_or_else(|_| Err("the scanner's thread failed".into()));
-            let rec = scan_rec(kind, path, text, scanners.get(kind).cloned(), ran);
-            src.push_str(&rec.unit);
-            self.eval.scans.push(rec);
+            recs.push(scan_rec(kind, path, text, scanners.get(kind).cloned(), ran, &stamps)?);
         }
-        self.load_delta(&src, None).map_err(|d| format!("a scanner's facts were refused: {}", d.join("; ")))?;
+        for rec in &recs {
+            self.signed(rec)?;
+        }
+        self.load_scans(&recs)?;
+        self.eval.scans.extend(recs);
         Ok(todo.len())
+    }
+
+    /// What the scans `recs` brought, loaded by delta, each kind's facts asserted by its scanner (`asserted_by`,
+    /// which is how `why` names it). Why an addition went whole, where one did.
+    pub fn load_scans(&mut self, recs: &[crate::engine::ScanRec]) -> Result<Option<String>, String> {
+        let mut kinds: Vec<&str> = recs.iter().map(|r| r.kind.as_str()).collect();
+        kinds.sort();
+        kinds.dedup();
+        let mut whole = None;
+        for kind in kinds {
+            let src: String = recs.iter().filter(|r| r.kind == kind).map(|r| r.unit.as_str()).collect();
+            match self.load_delta(&src, Some(&scanner_who(kind))) {
+                Err(d) => return Err(format!("a scanner's facts were refused: {}", d.join("; "))),
+                Ok((_, Addition::Full(why))) => whole = whole.or(Some(why)),
+                Ok(_) => {}
+            }
+        }
+        Ok(whole)
+    }
+
+    /// THE SCAN HELD TO THE WORLD'S OTHER SCANS OF ITS KIND: a world holds the facts of one version of a scanner's
+    /// code. A scan by code that changed while the world was scanned is refused, naming the files that changed.
+    pub fn signed(&mut self, rec: &crate::engine::ScanRec) -> Result<(), String> {
+        if rec.sign.is_empty() {
+            return Ok(());
+        }
+        match self.eval.scan_signs.get(&rec.kind) {
+            Some((sign, code)) if *sign != rec.sign && crate::brk!("scan_mixed_signs" => false; true) => {
+                let was: HashMap<&str, &str> = code.iter().map(|(p, s)| (p.as_str(), s.as_str())).collect();
+                let mut moved: Vec<String> = rec.code.iter().filter(|(p, s)| was.get(p.as_str()) != Some(&s.as_str())).map(|(p, _)| shown_path(p))
+                    .chain(code.iter().filter(|(p, _)| !rec.code.iter().any(|(q, _)| q == p)).map(|(p, _)| shown_path(p))).collect();
+                moved.dedup();
+                Err(format!("the world would hold the facts of two versions of the scanner `{}`, code {sign} and code {}: {} changed while it was scanned; evaluate it again",
+                    rec.kind, rec.sign, moved.join(", ")))
+            }
+            Some(_) => Ok(()),
+            None => {
+                self.eval.scan_signs.insert(rec.kind.clone(), (rec.sign.clone(), rec.code.clone()));
+                Ok(())
+            }
+        }
+    }
+
+    /// The scanner whose code brought the base fact `lit` into the world, as `why` names it: its kind, the sum of
+    /// its code and the files that sum is over. None for a fact no scan brought.
+    fn scanned_by(&mut self, lit: &reflect::Lit) -> Option<String> {
+        if self.eval.scan_signs.is_empty() || crate::brk!("scan_why_unsigned" => true; false) {
+            return None;
+        }
+        let p = self.eval.why_ground(lit).ok()?;
+        let id = self.eval.store.get(lit.rel, p, &lit.args)?;
+        if !self.eval.store.rec(id).base() {
+            return None;
+        }
+        self.eval.settle_assertions();
+        let f = self.fact_term(id);
+        let (ab, kp) = (self.eval.v.asserted_by, self.eval.v.kernel_persp);
+        let whos: Vec<Term> = self.eval.store.rel_persp(&self.eval.h, ab, kp).into_iter().map(|r| self.eval.store.args(r).to_vec())
+            .filter(|a| a.len() == 3 && a[0] == f).map(|a| a[1]).collect();
+        let mut lines: Vec<String> = whos.iter().filter_map(|w| {
+            let who = match w.kind() { TermK::Atom(x) | TermK::Str(x) => self.eval.h.name(x).to_string(), _ => return None };
+            let kind = who.strip_prefix("scanner:")?;
+            let (sign, code) = self.eval.scan_signs.get(kind)?;
+            let files: Vec<String> = code.iter().map(|(p, _)| shown_path(p)).collect();
+            Some(format!("  brought in by the scanner `{kind}`, code {sign} ({})", files.join(", ")))
+        }).collect();
+        lines.dedup();
+        (!lines.is_empty()).then(|| lines.join("\n"))
     }
 
     /// The scan requests that hold, each as its kind and path written back.
@@ -1930,9 +2005,10 @@ impl Session {
 
     /// The scan of `text` (its path, written back as `path`) for `kind` run again with `cmd`, the storeroom
     /// answering while what it read holds: what it brings, as `scan_requests` loads it.
-    pub fn rescan(kind: &str, path: &str, text: &str, cmd: Option<String>) -> crate::engine::ScanRec {
-        let ran = run_scan(cmd.as_deref(), text);
-        scan_rec(kind, path, text, cmd, ran)
+    pub fn rescan(kind: &str, path: &str, text: &str, cmd: Option<String>) -> Result<crate::engine::ScanRec, String> {
+        let stamps = Stamps::default();
+        let ran = run_scan(cmd.as_deref(), text, &stamps);
+        scan_rec(kind, path, text, cmd, ran, &stamps)
     }
 
     /// `Rofl.whynot` (src/api.ts:927). `(holds, text)` — a literal that HOLDS
@@ -2034,10 +2110,11 @@ impl Session {
     }
 }
 
-/// THE STOREROOM OF SCANS (docs/cli.md): a scanner that names what it read, a `-- reads: PATH` line for each file
-/// and directory, has its output kept under `$XDG_CACHE_HOME/rofl/scans` (else `~/.cache/rofl/scans`), each read
-/// stamped; the same command for the same path is answered from there while every stamp still holds, and runs again
-/// when one does not. A scanner that names nothing is always run. The world cannot tell the two apart.
+/// THE STOREROOM OF SCANS (docs/cli.md): a scanner names its own code, a `-- code: PATH` line for each file of it,
+/// and what it read, a `-- reads: PATH` line for each file and directory. Its output is kept under
+/// `$XDG_CACHE_HOME/rofl/scans` (else `~/.cache/rofl/scans`), each of those paths stamped; the same command for the
+/// same path is answered from there while every stamp still holds, and runs again when one does not, so a byte of
+/// the scanner's code changed runs every scan again. A scanner that names nothing it read is always run.
 fn scan_kept(cmd: &str, path: &str) -> Option<std::path::PathBuf> {
     let home = std::env::var_os("XDG_CACHE_HOME").map(std::path::PathBuf::from)
         .or_else(|| std::env::var_os("HOME").map(|h| std::path::Path::new(&h).join(".cache")))?;
@@ -2045,11 +2122,27 @@ fn scan_kept(cmd: &str, path: &str) -> Option<std::path::PathBuf> {
     Some(home.join("rofl/scans").join(format!("{}.rofl", crate::store::fnv64(&format!("{}\0{cmd}\0{path}", cwd.display())))))
 }
 
+/// The stamps of one round of scans, each path stamped once: the scanner's code is shared by every scan of a kind,
+/// and a directory a scanner lists by every scan of it.
+#[derive(Clone, Default)]
+struct Stamps(std::sync::Arc<std::sync::Mutex<HashMap<String, String>>>);
+
+impl Stamps {
+    fn of(&self, p: &str) -> String {
+        if let Some(s) = self.0.lock().unwrap().get(p) {
+            return s.clone();
+        }
+        let s = scan_stamp(p);
+        self.0.lock().unwrap().insert(p.to_string(), s.clone());
+        s
+    }
+}
+
 /// One scan run: the storeroom's answer while every stamp holds, else the command run with the path last.
-fn run_scan(cmd: Option<&str>, path: &str) -> Result<String, String> {
+fn run_scan(cmd: Option<&str>, path: &str, stamps: &Stamps) -> Result<String, String> {
     let cmd = cmd.ok_or("no scanner(Kind, Command) for this kind")?;
     let kept = scan_kept(cmd, path);
-    if let Some(out) = kept.as_deref().and_then(scan_fresh) {
+    if let Some(out) = kept.as_deref().filter(|_| crate::brk!("scan_storeroom_bypassed" => false; true)).and_then(|k| scan_fresh(k, stamps)) {
         return Ok(out);
     }
     let mut argv = cmd.split_whitespace();
@@ -2061,15 +2154,46 @@ fn run_scan(cmd: Option<&str>, path: &str) -> Result<String, String> {
     }
     let out = String::from_utf8(o.stdout).map_err(|_| "the scanner printed bytes that are not UTF-8".to_string())?;
     if let Some(k) = kept {
-        scan_keep(&k, &out);
+        scan_keep(&k, &out, stamps);
     }
     Ok(out)
 }
 
-/// What one scan brings, its `scan_done` or `scan_failed` row last, and what it read.
-fn scan_rec(kind: &str, path: &str, text: &str, cmd: Option<String>, ran: Result<String, String>) -> crate::engine::ScanRec {
+/// The paths a scan's output names on its `-- PREFIX PATH` lines, from the directory the scan ran in.
+fn named(out: &str, prefix: &str) -> Vec<String> {
+    out.lines().filter_map(|l| l.strip_prefix(prefix)).map(scan_path).collect()
+}
+
+/// The asserter of a kind's scanned facts, as `asserted_by` names it.
+fn scanner_who(kind: &str) -> String {
+    format!("scanner:{kind}")
+}
+
+/// What one scan brings, its `scan_done` or `scan_failed` row last, what it read and the code that read it.
+/// A SCAN NAMES ITS CODE, OR IT IS REFUSED: a scanner's output that names no file of its code, or a file that is not
+/// there, could outlive the code that made it.
+fn scan_rec(kind: &str, path: &str, text: &str, cmd: Option<String>, ran: Result<String, String>, stamps: &Stamps) -> Result<crate::engine::ScanRec, String> {
     let q = |s: &str| format!("\"{}\"", s.replace('\\', "\\\\").replace('"', "\\\""));
-    let read = ran.as_ref().map_or(Vec::new(), |out| out.lines().filter_map(|l| l.strip_prefix("-- reads: ")).map(scan_path).collect());
+    let (mut read, mut code, mut sign) = (Vec::new(), Vec::new(), String::new());
+    if let Ok(out) = &ran {
+        let paths = named(out, "-- code: ");
+        let said = cmd.as_deref().unwrap_or("");
+        if paths.is_empty() && crate::brk!("scan_code_optional" => false; true) {
+            return Err(format!("the scanner `{said}` named none of its own code (a `-- code: PATH` line for each file of it), so what it brought could outlive it: its scan of {text} is refused (docs/cli.md, \"A scan names its code\")"));
+        }
+        code = paths.iter().map(|p| (p.clone(), stamps.of(p))).collect();
+        code.sort();
+        code.dedup();
+        if let Some((p, _)) = code.iter().find(|(_, s)| s == "gone") {
+            return Err(format!("the scanner `{said}` names {} as its code, and there is no such file", shown_path(p)));
+        }
+        sign = crate::arena::Sum::of(code.iter().map(|(p, s)| format!("{s} {p}\n")).collect::<String>().as_bytes());
+        read = named(out, "-- reads: ");
+        // what the scan is stale by: what it read, and its code
+        if crate::brk!("scan_code_unstamped" => false; true) {
+            read.extend(code.iter().map(|(p, _)| p.clone()));
+        }
+    }
     let unit = match ran {
         Ok(out) => {
             let n = out.lines().filter(|l| !l.starts_with("--") && l.trim_end().ends_with('.')).count();
@@ -2077,12 +2201,18 @@ fn scan_rec(kind: &str, path: &str, text: &str, cmd: Option<String>, ran: Result
         }
         Err(e) => format!("scan_failed({kind}, {path}, {}).\n", q(&e)),
     };
-    crate::engine::ScanRec { kind: kind.into(), path: path.into(), text: text.into(), cmd, read, unit }
+    Ok(crate::engine::ScanRec { kind: kind.into(), path: path.into(), text: text.into(), cmd, read, code, sign, unit })
 }
 
 /// A path a scanner named, from the directory the scan ran in.
 fn scan_path(p: &str) -> String {
     std::env::current_dir().map_or_else(|_| p.to_string(), |d| d.join(p).to_string_lossy().into_owned())
+}
+
+/// A path as the reader of a message knows it: from the working directory when it lies below it.
+fn shown_path(p: &str) -> String {
+    let cwd = std::env::current_dir().unwrap_or_default();
+    std::path::Path::new(p).strip_prefix(&cwd).map_or_else(|_| p.to_string(), |r| r.to_string_lossy().into_owned())
 }
 
 /// A file by its bytes, a directory by the names in it, nothing for a path that is gone.
@@ -2096,24 +2226,28 @@ fn scan_stamp(p: &str) -> String {
         names.sort();
         return crate::store::fnv64(&names.join("\n"));
     }
-    std::fs::read(p).map_or_else(|_| "gone".into(), |b| crate::store::fnv64(&String::from_utf8_lossy(&b)))
+    std::fs::read(p).map_or_else(|_| "gone".into(), |b| crate::arena::Sum::of(&b))
 }
 
-fn scan_fresh(kept: &std::path::Path) -> Option<String> {
+fn scan_fresh(kept: &std::path::Path, stamps: &Stamps) -> Option<String> {
     let text = std::fs::read_to_string(kept).ok()?;
     let mut lines = text.lines();
     for l in lines.by_ref() {
         let Some(r) = l.strip_prefix("-- kept: ") else { break };
         let (stamp, p) = r.split_once(' ')?;
-        if scan_stamp(p) != stamp { return None; }
+        if stamps.of(p) != stamp && crate::brk!("scan_kept_stale_answered" => false; true) { return None; }
     }
-    Some(text)
+    // kept before scans named their code: not known to be this code's
+    text.contains("\n-- code: ").then_some(text)
 }
 
-fn scan_keep(kept: &std::path::Path, out: &str) {
-    let reads: Vec<&str> = out.lines().filter_map(|l| l.strip_prefix("-- reads: ")).collect();
+/// The output kept with a stamp of every path it is stale by: what it read and its code. Not kept when it names
+/// nothing it read, since whether it is stale could not be told.
+fn scan_keep(kept: &std::path::Path, out: &str, stamps: &Stamps) {
+    let reads = named(out, "-- reads: ");
     if reads.is_empty() { return; }
-    let mut text: String = reads.iter().map(|p| format!("-- kept: {} {p}\n", scan_stamp(p))).collect();
+    let code = named(out, "-- code: ").into_iter().filter(|_| crate::brk!("scan_code_unstamped" => false; true));
+    let mut text: String = reads.into_iter().chain(code).map(|p| format!("-- kept: {} {p}\n", stamps.of(&p))).collect();
     text.push_str(out);
     let tmp = kept.with_extension(format!("{}.tmp", std::process::id()));
     let _ = kept.parent().map(std::fs::create_dir_all);

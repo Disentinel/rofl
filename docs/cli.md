@@ -239,15 +239,48 @@ once and leaves `scan_done(Kind, Path, Clauses)`, or
 command fails. It works wherever the world is evaluated: `rofl load`, the
 question verbs and `rofl serve`.
 
+**A scan names its code.** A scanner prints a `-- code: PATH` line for each
+file of its own code before its facts; the engine refuses a scan that names
+none, or names a file that is not there, and the world with it:
+
+```
+the scanner `sh scan.sh` named none of its own code (a `-- code: PATH` line for each file of it), so what it brought could outlive it: its scan of x is refused (docs/cli.md, "A scan names its code")
+```
+
+`scanners/cli.ts` names the module it was started from and every module it
+imports, followed through relative imports, and a package by the file its name
+resolves to and its `package.json` (`scanners/own_code.ts`): today
+`scanners/cli.ts`, `code_facts.ts`, `js_ast.ts`, `own_code.ts` and
+`@babel/parser`. A scanner in another language names its files the same way.
+The engine stamps each file by its bytes and sums the stamps: the sum is the
+version of the scanner's code that every fact of the scan was made by.
+
+- A world holds the facts of one version of a scanner. A scan whose code sum
+  differs from that of the world's other scans of its kind (the code changed
+  while the world was scanned, in a session that asks again) is refused,
+  naming the files that changed.
+- The facts a scan brings are asserted by `scanner:KIND` (`asserted_by`), and
+  `rofl why` of one names the scanner and its code:
+  `` brought in by the scanner `js`, code c68aabe7c7a97b11 (scanners/cli.ts, ...) ``.
+- Its code is what a scan is stale by, as much as what it read: below.
+
 **A scan is kept.** A scanner that names what it read, a `-- reads: PATH` line
 for each file and directory (`scanners/cli.ts` names the file it parsed and
 every directory it listed), has its output kept under
-`$XDG_CACHE_HOME/rofl/scans` (else `~/.cache/rofl/scans`), each read stamped:
-a file by its bytes, a directory by the names in it. The next run takes the
-same command for the same path from there while every stamp holds, and runs
-the scanner again when one does not. The world cannot tell the two apart. On
-`examples/checks/scan-world.rofl` the second run is 2.4 -> 1.7 s, the rest
-being the model's evaluation.
+`$XDG_CACHE_HOME/rofl/scans` (else `~/.cache/rofl/scans`), each read and each
+file of its code stamped: a file by its bytes, a directory by the names in it.
+The next run takes the same command for the same path from there while every
+stamp holds, and runs the scanner again when one does not, so a byte of the
+scanner's code changed, a comment included, runs every scan of it again. Each
+path is stamped once a round of scans, the code shared by all of them. A scan
+kept before scans named their code is run again. A scanner that names nothing
+it read is always run, and a world it scanned is not kept. The world cannot
+tell a kept scan from a run one. On `examples/checks/scan-world.rofl` the
+second run is 2.4 -> 1.7 s, the rest being the model's evaluation. A world
+kept on disk stamps the same paths: after the scanner's code changed it is
+refused with `--kept` (`` the code of the scanner `js` changed since it was
+kept: scanners/js_ast.ts ``), and a question verb's world takes every scan of
+that scanner again by delta.
 
 **Between two rounds the world goes cold.** While the scanners of a round run,
 the evaluated world is kept as a volume in the temporary directory and mapped

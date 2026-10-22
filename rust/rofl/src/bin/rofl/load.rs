@@ -175,6 +175,8 @@ fn run(json: bool, args: Vec<String>, mut pre: Option<(bool, crate::kept::Record
     world.extend(files.iter().map(|f| crate::kept::absolute(f)));
     if anew && kept.is_none() { fail(json, USAGE, "--anew computes a kept world anew: name it with --kept F"); }
     let mut opened = None;
+    // the scans of a world opened from disk, whose signs `why` names
+    let mut scans_kept: Vec<crate::kept::ScanUnit> = Vec::new();
     if let Some(k) = &kept {
         if save.is_some() { fail(json, USAGE, "--kept and --save are two ways to keep a world: give one"); }
         let exists = std::path::Path::new(k).exists();
@@ -196,6 +198,7 @@ fn run(json: bool, args: Vec<String>, mut pre: Option<(bool, crate::kept::Record
                 fail(json, FILE_REFUSED, &format!("{k} is stale: {m}; run again with --anew to compute it anew"));
             }
             opened = Some(rofl::session::Session::open_volume(k, budget).unwrap_or_else(|e| fail(json, FILE_REFUSED, &format!("{k} is damaged: {e}"))));
+            scans_kept = r.scans;
         }
     }
     // A QUESTION VERB KEEPS ITS WORLD BY ITSELF (docs/cli.md): under a name made of its walls and files, the
@@ -211,10 +214,11 @@ fn run(json: bool, args: Vec<String>, mut pre: Option<(bool, crate::kept::Record
     if let Some(p) = slot.as_ref().filter(|p| std::path::Path::new(p).exists()) {
         let checked = rofl::volume::check(p).and_then(|c| crate::kept::parse(&c.note).map(|r| (c.this_build, r)).ok_or_else(|| format!("{p}: not a kept world")));
         match checked.map(|(b, r)| (crate::kept::moved(&r, b), r)) {
-            Ok((None, _)) => match rofl::session::Session::open_volume(p, budget) {
+            Ok((None, r)) => match rofl::session::Session::open_volume(p, budget) {
                 Ok(s) => {
                     crate::kept::touch(p);
                     opened = Some(s);
+                    scans_kept = r.scans;
                 }
                 Err(e) => eprintln!("{p} is damaged: {e}; computed anew"),
             },
@@ -255,6 +259,9 @@ fn run(json: bool, args: Vec<String>, mut pre: Option<(bool, crate::kept::Record
     let from_disk = opened.is_some();
     let mut s = opened.unwrap_or_else(|| rofl::session::Session::fresh(budget));
     walls(&mut s);
+    if let Err(e) = if scans_kept.is_empty() { Ok(()) } else { crate::kept::signed(&mut s, &scans_kept) } {
+        fail(json, FILE_REFUSED, &e);
+    }
     if let (Some((units, scans)), Some(p)) = (&by_delta, &slot) {
         let files_now = &world[world.len() - files.len()..];
         match crate::kept::record(&world, files_now, units, files_now, scans) {

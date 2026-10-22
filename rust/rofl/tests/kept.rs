@@ -201,7 +201,7 @@ fn markdown_and_what_it_reads(brk: Option<&str>) -> Result<(), String> {
 fn a_scan_read_edited(brk: Option<&str>) -> Result<(), String> {
     let d = Dir::new("scan");
     d.write("input", "one");
-    d.write("scan.sh", &format!("echo run >> {}\necho '-- reads: input'\necho \"seen($(cat input)).\"\n", d.p("runs")));
+    d.write("scan.sh", &format!("echo run >> {}\necho '-- code: scan.sh'\necho '-- reads: input'\necho \"seen($(cat input)).\"\n", d.p("runs")));
     d.write("scan.rofl", "edb(scanner).\nedb(scan_done).\nedb(scan_failed).\nscanner(t, \"sh scan.sh\").\nscan_request(t, \"x\").\n");
     let ask = |brk| rofl(&d, brk, &["ask", "seen(X)", "--kept", "w.vol", "boot.rofl", "scan.rofl"]);
     let runs = || std::fs::read_to_string(d.0.join("runs")).unwrap_or_default().lines().count();
@@ -216,9 +216,33 @@ fn a_scan_read_edited(brk: Option<&str>) -> Result<(), String> {
 /// A scanner that names nothing it read leaves a world that could not be told stale: it is not kept.
 fn a_blind_scan_is_not_kept(brk: Option<&str>) -> Result<(), String> {
     let d = Dir::new("blind");
-    d.write("scan.rofl", "edb(scanner).\nedb(scan_done).\nedb(scan_failed).\nscanner(t, \"echo\").\nscan_request(t, \"seen(a).\").\n");
+    d.write("echo.sh", "echo '-- code: echo.sh'\necho \"$1\"\n");
+    d.write("scan.rofl", "edb(scanner).\nedb(scan_done).\nedb(scan_failed).\nscanner(t, \"sh echo.sh\").\nscan_request(t, \"seen(a).\").\n");
     let r = rofl(&d, brk, &["ask", "seen(X)", "--kept", "w.vol", "boot.rofl", "scan.rofl"]);
     ensure(r.code == 2 && r.err.contains("named nothing it read") && !d.0.join("w.vol").exists(), || format!("a blind scan: {} {:?}", r.code, r.err))
+}
+
+/// A SCAN NAMES ITS CODE: the scanner's code edited (here `lib.sh`, which its entry reads in) makes a world kept
+/// with `--kept` stale, naming the scanner and the file; a question verb's world kept by itself takes the scans
+/// again by delta and answers the new code's facts; `why` from a kept world names the scanner and its code's sum.
+fn the_scanners_code_edited(brk: Option<&str>) -> Result<(), String> {
+    let d = Dir::new("scan-code");
+    d.write("input", "one");
+    d.write("lib.sh", "VERSION=v1\n");
+    d.write("scan.sh", "echo '-- code: scan.sh'\necho '-- code: lib.sh'\necho '-- reads: input'\n. ./lib.sh\necho \"seen($(cat input), $VERSION).\"\n");
+    d.write("scan.rofl", "edb(scanner).\nedb(scan_done).\nedb(scan_failed).\nscanner(t, \"sh scan.sh\").\nscan_request(t, \"x\").\n");
+    let r = rofl(&d, brk, &["ask", "seen(X, V)", "--kept", "w.vol", "boot.rofl", "scan.rofl"]);
+    ensure(r.code == 0 && r.out.contains("V = v1"), || format!("keeping a scanned world: {} {:?} {:?}", r.code, r.out, r.err))?;
+    let w = rofl(&d, brk, &["why", "seen(one, v1)", "--kept", "w.vol"]);
+    ensure(w.code == 0 && w.out.contains("brought in by the scanner `t`, code ") && w.out.contains("lib.sh"), || format!("why from the kept world: {} {:?} {:?}", w.code, w.out, w.err))?;
+    // a world kept by a question verb, then the code edited
+    let verb = |brk| rofl(&d, brk, &["ask", "seen(X, V)", "boot.rofl", "scan.rofl"]);
+    let first = verb(brk);
+    ensure(first.code == 0 && first.out.contains("V = v1"), || format!("a verb's first run: {} {:?} {:?}", first.code, first.out, first.err))?;
+    d.write("lib.sh", "VERSION=v2\n");
+    stale(&rofl(&d, brk, &["ask", "seen(X, V)", "--kept", "w.vol", "boot.rofl", "scan.rofl"]), "the code of the scanner `t` changed since it was kept: lib.sh", "the scanner's code")?;
+    let second = verb(brk);
+    ensure(second.code == 0 && second.out.contains("V = v2") && !second.out.contains("V = v1"), || format!("a verb after the scanner's code changed: {} {:?} {:?}", second.code, second.out, second.err))
 }
 
 fn walls_changed(brk: Option<&str>) -> Result<(), String> {
@@ -648,13 +672,14 @@ fn orphans_of_killed_writers_are_swept(brk: Option<&str>) -> Result<(), String> 
 
 type Case = fn(Option<&str>) -> Result<(), String>;
 
-const CASES: [(&str, Case); 24] = [
+const CASES: [(&str, Case); 25] = [
     ("answers_as_fresh", answers_as_fresh),
     ("a_rule_file_edited", a_rule_file_edited),
     ("boot_edited", boot_edited),
     ("markdown_and_what_it_reads", markdown_and_what_it_reads),
     ("a_scan_read_edited", a_scan_read_edited),
     ("a_blind_scan_is_not_kept", a_blind_scan_is_not_kept),
+    ("the_scanners_code_edited", the_scanners_code_edited),
     ("walls_changed", walls_changed),
     ("the_engine_changed", the_engine_changed),
     ("a_damaged_file", a_damaged_file),

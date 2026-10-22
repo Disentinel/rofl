@@ -322,8 +322,9 @@ fn components(rules: &[Rc<ERule>]) -> Vec<Vec<Rc<ERule>>> {
 }
 
 /// One scan a world loaded: the request's kind and path (as written back, and the path's text), the command that
-/// ran (none: no scanner for the kind), the paths the scanner named as read (none when it named nothing), and the
-/// program text it brought, its `scan_done` or `scan_failed` row last.
+/// ran (none: no scanner for the kind), the paths it is stale by (what the scanner named as read and the files of its
+/// own code), the files of its code and their sum (`sign`), and the program text it brought, its `scan_done` or
+/// `scan_failed` row last.
 #[derive(Clone, Debug, Default)]
 pub struct ScanRec {
     pub kind: String,
@@ -331,6 +332,8 @@ pub struct ScanRec {
     pub text: String,
     pub cmd: Option<String>,
     pub read: Vec<String>,
+    pub code: Vec<(String, String)>,
+    pub sign: String,
     pub unit: String,
 }
 
@@ -716,6 +719,9 @@ pub struct Eval {
     /// Each scan this world loaded (`Session::scan_requests`). What a kept world is stale by besides its files, and
     /// what a delta takes again when one of them moves (docs/cli.md).
     pub scans: Vec<ScanRec>,
+    /// Of each kind of scan this world holds facts of, the sum of its scanner's code and the files it is over: one
+    /// for a kind, or the world is refused (`Session::scan_requests`).
+    pub scan_signs: std::collections::BTreeMap<String, (String, Vec<(String, String)>)>,
     /// Firings solved delta-first.
     pub delta_by_rule: HashMap<Sym, u64>,
     /// Delta-first join plans (`joinplan.rs`), per rule and news position, and
@@ -1414,6 +1420,7 @@ impl Eval {
             on_hot: None,
             hot_said: Vec::new(),
             scans: Vec::new(),
+            scan_signs: Default::default(),
             delta_by_rule: HashMap::new(),
             delta_ns: 0,
             plan_trial: false,

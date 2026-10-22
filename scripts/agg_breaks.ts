@@ -8736,6 +8736,50 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "scan_code_optional",
+  "what": "a scan that names none of its scanner's code is loaded, as before scans named their code",
+  "expect": {
+   "scan_code": "no_code_is_refused:"
+  }
+ },
+ {
+  "id": "scan_code_unstamped",
+  "what": "the storeroom of scans and a kept world stamp what a scanner read and not its code (f_a_kept_scan_outlives_its_scanner)",
+  "expect": {
+   "scan_code": "the_85_incident:",
+   "kept_scan_code": "the_scanners_code_edited:"
+  }
+ },
+ {
+  "id": "scan_kept_stale_answered",
+  "what": "the storeroom answers a kept scan whose stamps no longer hold",
+  "expect": {
+   "scan_code": "kept_until_what_it_read_changes:"
+  }
+ },
+ {
+  "id": "scan_storeroom_bypassed",
+  "what": "the storeroom is never read: every scan runs again, its stamps holding or not",
+  "expect": {
+   "scan_code": "unchanged_is_a_hit:"
+  }
+ },
+ {
+  "id": "scan_mixed_signs",
+  "what": "a world takes a scan made by another version of a scanner's code than its other scans of that kind",
+  "expect": {
+   "scan_code": "two_versions_in_one_world:"
+  }
+ },
+ {
+  "id": "scan_why_unsigned",
+  "what": "why of a scanned fact names no scanner and no sum of its code",
+  "expect": {
+   "scan_code": "why_names_the_scanner:",
+   "kept_scan_code": "the_scanners_code_edited:"
+  }
+ },
+ {
   "id": "kept_stale_args",
   "what": "a kept world is answered for a run that names other files or walls",
   "expect": {
@@ -9052,6 +9096,9 @@ const TESTS: Record<string, string> = {
   kept_md: 'kept a_kept_world_answers_and_refuses_as_docs_cli_says',
   kept_scan: 'kept a_kept_world_answers_and_refuses_as_docs_cli_says',
   kept_blind: 'kept a_kept_world_answers_and_refuses_as_docs_cli_says',
+  kept_scan_code: 'kept a_kept_world_answers_and_refuses_as_docs_cli_says',
+  // a scan names its code (docs/cli.md): each case of tests/scan.rs names itself where it fails
+  scan_code: 'scan the_storeroom_of_scans_holds_to_the_scanners_code',
   kept_walls: 'kept a_kept_world_answers_and_refuses_as_docs_cli_says',
   kept_engine: 'kept a_kept_world_answers_and_refuses_as_docs_cli_says',
   kept_damaged: 'kept a_kept_world_answers_and_refuses_as_docs_cli_says',

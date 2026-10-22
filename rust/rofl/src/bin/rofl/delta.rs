@@ -122,10 +122,9 @@ pub fn apply(s: &mut Session, r: &Record, files: &[String]) -> Result<Done, Stri
     let mut again: Vec<rofl::engine::ScanRec> = Vec::new();
     for sc in &r.scans {
         if all || sc.read.iter().any(|p| stamps.get(p.as_str()).is_none_or(|st| !kept::holds(p, st))) {
-            let rec = Session::rescan(&sc.kind, &sc.path, &sc.text, sc.cmd.clone());
+            let rec = Session::rescan(&sc.kind, &sc.path, &sc.text, sc.cmd.clone())?;
             stays.extend(s.facts_of(&rec.unit)?.0);
             goes.extend(&sc.facts);
-            add.push_str(&rec.unit);
             took.push(format!("{} (scanned again)", sc.text));
             again.push(rec);
         } else {
@@ -145,6 +144,15 @@ pub fn apply(s: &mut Session, r: &Record, files: &[String]) -> Result<Done, Stri
             Ok((_, Addition::Full(why))) => return Err(why),
             Ok(_) => {}
         }
+    }
+    // the scans that stand and those run again, held to one version of each scanner's code, then loaded
+    let standing = scans.clone();
+    kept::signed(s, &standing)?;
+    for rec in &again {
+        s.signed(rec)?;
+    }
+    if let Some(why) = s.load_scans(&again)? {
+        return Err(why);
     }
     for rec in &again {
         scans.push(ScanUnit::of(s, rec));
