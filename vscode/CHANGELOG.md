@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.4.0 (preview, ROFL 1.4.0)
+
+- A sentence with `a/b` in it that the reader cannot read is reported once,
+  as written, instead of twice cut at the slash (`scanners/gh_actions.py` no
+  longer comes out as "scanners.py" and "gh_actions.py").
+- A notebook over JS code reads the 1.4 model: a node's id is its place in
+  the tree, and its line is its own fact, `ast_line(Id, Line)`, beside
+  `ast_node(Id, Kind, File)`. A rule of your own that reads `ast_node` with
+  four arguments must be rewritten.
+- The `rofl` binary it carries keeps the world of `rofl ask`, `why`, `whynot`
+  and `excise` on disk and takes an edited file by delta (`ROFL_CACHE_GB`
+  caps it, default 50).
+- The kernel is ROFL 1.4.0. See docs/releases/1.4.md.
+
 ## 1.3.2 (preview, ROFL 1.3.2)
 
 - Full screen zooms and pans every picture: a graph no longer vanishes on the
