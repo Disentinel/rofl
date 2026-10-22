@@ -74,7 +74,9 @@ a 5 GB floor, so a world larger than that stops its writer there, is answered,
 and is not kept, said in one line on stderr (`the world is not kept: the world
 is larger than 1.00 GB, the most it may take: the cap is 1.00 GB
 (ROFL_CACHE_GB)`). Each process writes under a name of its own and renames it
-into place, so cold runs of one question at once keep one world. Writing the volume costs about 5% of the evaluation it
+into place, so cold runs of one question at once keep one world; what a process
+killed while it wrote leaves is removed by the next run that keeps a world,
+before it starts to write, and the cap counts every file of the directory. Writing the volume costs about 5% of the evaluation it
 saves (agg_minmax_strata: 0.83 s on 16.9 s). `rofl load`, `rofl serve` and every harness never read nor
 write them: a gate computes. Nothing to turn on or off; the cap is the one knob.
 
@@ -127,6 +129,52 @@ Measured on `cost_shapes_model` (the JS model over `examples/shapes`, 310 368
 facts, release build, three runs each, a loaded machine): a `why` takes 2.9-3.1 s
 from the files and 0.12-0.14 s from the kept world (a 27.7 MB volume), the same
 448 bytes of answer; the run that keeps it, 3.0 s.
+
+**An edit goes by delta.** When the files a question verb's kept world was
+computed from have changed (no `--kept`), the run opens that world and takes the
+change by delta instead of evaluating again: the base facts of each file
+changed or gone are taken out in one pass (DRed: what rests on them is
+overdeleted and what another firing still makes is derived again), the facts of
+the new texts are added, and the world is kept again. A file the world was kept
+from with other files beside it (one added or removed) is found by the same
+rules and walls. A scanned source changed is scanned again alone; a scan the
+rules newly ask for is run; one no longer asked for has its facts taken out.
+The run says so in one line on stderr:
+
+```
+the kept world took 1 file by delta: db.rofl (35 facts out, 409 overdeleted or derived again; opened and taken in 201 ms, kept again in 12 ms, 9367080 bytes written)
+```
+
+It evaluates whole instead, the reason after `not by delta:` in the stale line,
+when the rules changed (a file that changed holds a rule, or a file gone held
+one), the world was not
+read from its files alone (a `.rofl.md`, a world `--below`), a scanner ran in
+another directory, a file changed that is neither named nor read by a scanner,
+or the engine refuses the delta (a fact read on demand, a base fact a rule
+reads as an `edb` or authority row, a world kept with no witnesses). The
+answer is the fresh evaluation's either way (rust/rofl/tests/retract_set.rs:
+200 random edit, add and remove steps over a JS corpus, each equal to a fresh
+evaluation byte for byte, and one in ten to the same step taken a fact at a
+time; tests/kept.rs for the command line).
+
+Measured (release build, the JS model; worlds of the delta fixture with
+scanned files beside it, and the bench's vscode subset, 250 files of
+vscode's base directory, each its own facts file):
+
+| world | whole | an edit by delta | facts touched |
+|---|---|---|---|
+| 6 files, 603 base facts | 1.4 s | 0.24 s | 434 |
+| 14 files, 15 807 | 2.0 s | 0.33 s | 438 |
+| 30 files, 109 194 | 5.9 s | 1.08 s | 449 |
+| vscode 250 files, 1 588 642: a function added to one file | 49.1 s (60.1 s keeping it) | 9.7 s | 0 (no fact out) |
+| the same, the file gone | | 15.8 s | 6 983 |
+| the same, the file back | | 11.9 s | 0 |
+
+A node's id is its place in the tree, so a function added at the end of a file
+takes no fact out. What an edit touches stays flat with the world; its time
+does not yet: at the vscode scale opening the volume is about 4-6 s, writing it again 1.3-2.6 s
+(the whole volume is written, 1.2 GB), and the addition's planning about as
+much again, whatever the edit.
 
 ## Exit codes
 

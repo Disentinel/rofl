@@ -345,7 +345,7 @@ fn a_verb_keeps_its_world_by_itself(brk: Option<&str>) -> Result<(), String> {
         || format!("second run, wanted the kept world as it was: {} {:?} {:?}, kept {:?} then {kept:?}", second.code, second.out, second.err, implicit(&cache)))?;
     d.append("rules.rofl", "calls(zebra, yak).\n");
     let third = ask(brk);
-    ensure(third.code == 0 && third.out.contains("X = yak") && third.err.contains("rules.rofl changed since it was kept") && third.err.contains("computed anew") && implicit(&cache) != kept,
+    ensure(third.code == 0 && third.out.contains("X = yak") && third.err.contains("took 1 file by delta: rules.rofl") && implicit(&cache) != kept,
         || format!("after an edit: {} {:?} {:?}", third.code, third.out, third.err))?;
     let fourth = ask(brk);
     ensure(fourth.out == third.out && fourth.err.is_empty(), || format!("after the edit, again: {:?} {:?}", fourth.out, fourth.err))
@@ -496,9 +496,159 @@ fn a_missing_source_is_said_missing(brk: Option<&str>) -> Result<(), String> {
     ensure(r.code != 0 && r.err.contains("other.rofl is missing") && !r.err.contains("computed anew"), || format!("a source gone: {} {:?}", r.code, r.err))
 }
 
+/// Edits one after another, each taken by delta from the world the one before kept, each the fresh world: a fact
+/// taken out of a file, a fact put back, the same file again, a file gone, a file come.
+fn edits_by_delta_are_the_fresh_world(brk: Option<&str>) -> Result<(), String> {
+    let d = Dir::new("implicit-series");
+    d.write("more.rofl", "edb(calls).\ncalls(zebra, yak).\n");
+    let files = |more: bool| -> Vec<&str> { if more { vec!["boot.rofl", "rules.rofl", "more.rofl"] } else { vec!["boot.rofl", "rules.rofl"] } };
+    let check = |what: &str, more: bool, took: &str| -> Result<(), String> {
+        let args: Vec<&str> = ["ask", "reaches(a, X)", "--state"].into_iter().chain(files(more)).collect();
+        let got = rofl(&d, brk, &args);
+        let want = fresh(&d, brk, &["load", "--ask", "reaches(a, X)", "--state"].into_iter().chain(files(more)).collect::<Vec<_>>());
+        ensure(got.out == want.out && got.code == want.code, || format!("{what}: by delta {} lines, fresh {} lines; {:?}", got.out.lines().count(), want.out.lines().count(), got.err))?;
+        ensure(took.is_empty() || got.err.contains(&format!("took 1 file by delta: {took}")), || format!("{what}: wanted one file taken, {took:?}; {:?}", got.err))
+    };
+    check("kept", false, "")?;
+    d.write("rules.rofl", &RULES.replace("calls(b, c).\n", ""));
+    check("a fact taken out", false, "rules.rofl")?;
+    d.write("rules.rofl", &RULES.replace("calls(c, zebra).\n", ""));
+    check("one put back, another taken out", false, "rules.rofl")?;
+    d.write("rules.rofl", &format!("{RULES}calls(zebra, gnu).\n"));
+    check("a fact added", false, "rules.rofl")?;
+    d.write("rules.rofl", &RULES.replace("calls(c, zebra).\n", ""));
+    check("the fact added taken out", false, "rules.rofl")?;
+    check("a file come", true, "more.rofl")?;
+    d.write("rules.rofl", RULES);
+    check("the file edited back", true, "rules.rofl")?;
+    check("a file gone", false, "more.rofl (gone)")
+}
+
+/// Files that hold facts and rules mixed, edited, removed and added at random, each step asked of the kept world and
+/// of a fresh one: a file gone with its rules, a rule file renamed, a rule added in a new file.
+fn mixed_files_at_random(brk: Option<&str>) -> Result<(), String> {
+    const RULE: [&str; 5] = [
+        "reach(X, Y) :- edge(X, Y).\n",
+        "reach(X, Z) :- reach(X, Y), edge(Y, Z).\n",
+        "reach(X, Y) :- edge(Y, X).\n",
+        "node(X) :- edge(X, _).\nfar(X) :- node(X), not reach(a, X).\n",
+        "node(X) :- edge(X, _).\ndeg(X, N) :- node(X), N is count(Y : edge(X, Y)).\n",
+    ];
+    let mut seed: u64 = 0x9e37_79b9_7f4a_7c15;
+    let mut below = move |n: u64| { seed ^= seed << 13; seed ^= seed >> 7; seed ^= seed << 17; seed % n };
+    let d = Dir::new("mixed");
+    let text = |below: &mut dyn FnMut(u64) -> u64| {
+        let n = ["a", "b", "c", "d", "e"];
+        let mut t = String::new();
+        for _ in 0..1 + below(4) {
+            t.push_str(&format!("edge({}, {}).\n", n[below(5) as usize], n[below(5) as usize]));
+        }
+        if below(3) == 0 {
+            t.push_str(RULE[below(RULE.len() as u64) as usize]);
+        }
+        t
+    };
+    let mut held: Vec<Option<String>> = vec![None; 4];
+    held[0] = Some(format!("edge(a, b).\nedge(b, c).\n{}", RULE[0]));
+    held[1] = Some(RULE[1].to_string());
+    let mut gone_rules = 0;
+    for step in 0..40 {
+        let i = below(4) as usize;
+        held[i] = match (&held[i], below(4)) {
+            (Some(_), 0) => None,
+            _ => Some(text(&mut below)),
+        };
+        let mut files = vec!["boot.rofl".to_string()];
+        for (k, h) in held.iter().enumerate() {
+            let f = format!("m{k}.rofl");
+            match h {
+                Some(t) => { d.write(&f, t); files.push(f); }
+                None => { let _ = std::fs::remove_file(d.0.join(&f)); }
+            }
+        }
+        let names: Vec<&str> = files.iter().map(String::as_str).collect();
+        let got = rofl(&d, brk, &["ask", "reach(a, X)", "--state"].into_iter().chain(names.iter().copied()).collect::<Vec<_>>());
+        let want = fresh(&d, brk, &["load", "--ask", "reach(a, X)", "--state"].into_iter().chain(names.iter().copied()).collect::<Vec<_>>());
+        gone_rules += got.err.contains("is gone and held rules") as usize;
+        ensure(got.out == want.out && got.code == want.code, || format!("step {step}: by delta {} lines, fresh {} lines; {:?}", got.out.lines().count(), want.out.lines().count(), got.err))?;
+    }
+    ensure(gone_rules > 0 || brk.is_some(), || "no step took a file with rules away".into())
+}
+
+/// Writers killed while they write leave their half-written worlds; the next run that keeps a world removes them,
+/// and the cap counts every file of the cache.
+fn orphans_of_killed_writers_are_swept(brk: Option<&str>) -> Result<(), String> {
+    let d = Dir::new("orphans");
+    let mut big = String::new();
+    for i in 0..60_000 {
+        big.push_str(&format!("edge(n{i}, n{}).\n", i + 1));
+    }
+    d.write("big.rofl", &format!("{big}reach(X, Y) :- edge(X, Y).\n"));
+    let worlds = d.0.join("cache/rofl/worlds");
+    let temps = || -> Vec<String> {
+        std::fs::read_dir(&worlds).map(|rd| rd.flatten().map(|e| e.file_name().to_string_lossy().into_owned()).filter(|n| !n.ends_with(".vol")).collect()).unwrap_or_default()
+    };
+    let mut killed = 0;
+    for tries in 0..40 {
+        if killed == 5 {
+            break;
+        }
+        // a world of its own each time (other walls), so each run writes
+        let b = format!("{}", 300_000_000 + tries);
+        let mut c = Command::new(BIN);
+        c.args(["ask", "reach(n1, X)", "--budget", &b, "big.rofl"]).current_dir(&d.0).env("XDG_CACHE_HOME", d.0.join("cache")).env_remove("ROFL_BREAK").env_remove("ROFL_CACHE_GB");
+        if let Some(b) = brk { c.env("ROFL_BREAK", b); }
+        let mut child = c.stdout(std::process::Stdio::null()).stderr(std::process::Stdio::null()).spawn().unwrap();
+        let t0 = std::time::Instant::now();
+        let mine = format!(".vol.{}.", child.id());
+        loop {
+            if temps().iter().any(|n| n.contains(&mine)) {
+                let _ = child.kill();
+                let _ = child.wait();
+                killed += 1;
+                // a writer sweeps what dead ones left before it writes: only its own is left
+                let left = temps();
+                if left.len() > 1 {
+                    return Err(format!("after kill {killed}: {} temp files {left:?}", left.len()));
+                }
+                break;
+            }
+            if child.try_wait().ok().flatten().is_some() || t0.elapsed().as_secs() > 60 {
+                break;
+            }
+            std::thread::sleep(std::time::Duration::from_micros(200));
+        }
+    }
+    ensure(killed == 5, || format!("killed {killed} writers mid-write"))?;
+    ensure(!temps().is_empty(), || "the killed writers left nothing".into())?;
+    let all = |w: &Path| -> u64 { std::fs::read_dir(w).map(|rd| rd.flatten().filter_map(|e| e.metadata().ok()).map(|m| m.len()).sum()).unwrap_or(0) };
+    let r = rofl(&d, brk, &["ask", "reach(n1, X)", "--budget", "300000099", "big.rofl"]);
+    ensure(r.code == 0, || format!("the next run: {} {:?}", r.code, r.err))?;
+    ensure(temps().is_empty(), || format!("left after the next run: {:?}", temps()))?;
+    // a cap the kept worlds fit and the kept worlds and orphans together do not
+    let vols = all(&worlds);
+    for tries in 100..110 {
+        if !temps().is_empty() { break; }
+        let mut c = Command::new(BIN);
+        c.args(["ask", "reach(n1, X)", "--budget", &format!("{}", 300_000_000 + tries), "big.rofl"]).current_dir(&d.0).env("XDG_CACHE_HOME", d.0.join("cache")).env_remove("ROFL_BREAK").env_remove("ROFL_CACHE_GB");
+        if let Some(b) = brk { c.env("ROFL_BREAK", b); }
+        let mut child = c.stdout(std::process::Stdio::null()).stderr(std::process::Stdio::null()).spawn().unwrap();
+        loop {
+            if !temps().is_empty() { let _ = child.kill(); let _ = child.wait(); break; }
+            if child.try_wait().ok().flatten().is_some() { break; }
+            std::thread::sleep(std::time::Duration::from_micros(200));
+        }
+    }
+    let cap = (vols + all(&worlds)) / 2 + 1;
+    let gb = format!("{}", cap as f64 / (1u64 << 30) as f64);
+    let r = rofl_env(BIN, &d, &d.0.join("cache"), &[("ROFL_CACHE_GB", gb)], brk, &["ask", "reach(n1, X)", "--budget", "300000199", "big.rofl"]);
+    ensure(r.code == 0, || format!("the run under the cap: {} {:?}", r.code, r.err))?;
+    ensure(all(&worlds) <= cap, || format!("the cache holds {} over a cap of {cap}: {:?}", all(&worlds), temps()))
+}
+
 type Case = fn(Option<&str>) -> Result<(), String>;
 
-const CASES: [(&str, Case); 21] = [
+const CASES: [(&str, Case); 24] = [
     ("answers_as_fresh", answers_as_fresh),
     ("a_rule_file_edited", a_rule_file_edited),
     ("boot_edited", boot_edited),
@@ -520,6 +670,9 @@ const CASES: [(&str, Case); 21] = [
     ("concurrent_cold_runs_keep_one_world", concurrent_cold_runs_keep_one_world),
     ("the_writer_stops_at_the_cap", the_writer_stops_at_the_cap),
     ("a_missing_source_is_said_missing", a_missing_source_is_said_missing),
+    ("edits_by_delta_are_the_fresh_world", edits_by_delta_are_the_fresh_world),
+    ("mixed_files_at_random", mixed_files_at_random),
+    ("orphans_of_killed_writers_are_swept", orphans_of_killed_writers_are_swept),
 ];
 
 /// What a hole left unknown is kept by an image as by a volume: a negation unfolded at a call reads it after opening.
@@ -542,6 +695,47 @@ fn a_holes_unknowns_survive_an_image_and_a_volume() {
     std::fs::remove_file(&path).unwrap();
     assert_eq!(rows(&mut from_image), want, "from a kept image");
     assert_eq!(rows(&mut from_volume), want, "from a volume");
+}
+
+/// JS SOURCES BY DELTA: a world that scans its JS (the scanner of scanners/cli.ts, the model of rules/js.files) kept
+/// by a question; an edit of one source scans that file again alone and the world takes it by delta; an import
+/// added asks for a file no scan had, scanned and taken; the import taken away again lets that scan go. Each step's
+/// answer and state are a fresh run's. (The JS model in a debug build is too slow for a test: optimised builds only.)
+#[test]
+fn js_sources_edited_go_by_delta() {
+    if cfg!(debug_assertions) {
+        return;
+    }
+    let planted = std::env::var("ROFL_BREAK").ok().filter(|b| !b.is_empty());
+    let brk = planted.as_deref();
+    let d = Dir::new("js-sources");
+    std::fs::create_dir_all(d.0.join("src/lib")).unwrap();
+    for f in ["main.js", "lib/greet.js", "lib/shout.js", "lib/unused.js"] {
+        std::fs::copy(root().join("examples/scan/src").join(f), d.0.join("src").join(f)).unwrap();
+    }
+    let cli = root().join("scanners/cli.ts");
+    d.write("scan.rofl", &format!("edb(scanner).\nedb(scan_done).\nedb(scan_failed).\nscanner(js, \"node --experimental-strip-types {} src\").\nscan_request(js, \"main.js\").\nscan_request(js, F) :- depends[code](_, F).\n", cli.display()));
+    let model = format!("@{}", root().join("rules/js.files").display());
+    let q = ["ask", "calls(A, B)", "--state", &model, "scan.rofl"];
+    let step = |what: &str, want_delta: Option<&str>| -> Result<(), String> {
+        let got = rofl(&d, brk, &q);
+        let fresh = fresh(&d, brk, &["load", "--ask", "calls(A, B)", "--state", &model, "scan.rofl"]);
+        ensure(got.code == fresh.code && got.out == fresh.out, || format!("{what}: from the kept world {} lines, fresh {} lines, exit {} and {}; {:?}", got.out.lines().count(), fresh.out.lines().count(), got.code, fresh.code, got.err))?;
+        if let Some(w) = want_delta {
+            ensure(got.err.contains("by delta") && got.err.contains(w), || format!("{what}: wanted a delta taking {w:?}, got {:?}", got.err))?;
+        }
+        Ok(())
+    };
+    step("kept", None).and_then(|_| {
+        d.append("src/lib/shout.js", "export function whisper(s) { return s.toLowerCase(); }\n");
+        step("shout.js edited", Some("lib/shout.js (scanned again)"))
+    }).and_then(|_| {
+        d.write("src/lib/greet.js", "import { shout } from './shout.js';\nimport { quiet } from './unused.js';\nexport function greet(name) { return quiet(shout(`hello ${name}`)); }\n");
+        step("an import of unused.js added", Some("lib/unused.js (scanned)"))
+    }).and_then(|_| {
+        std::fs::copy(root().join("examples/scan/src/lib/greet.js"), d.0.join("src/lib/greet.js")).unwrap();
+        step("the import taken away", Some("lib/unused.js (no longer asked)"))
+    }).unwrap_or_else(|e| panic!("{e}"));
 }
 
 #[test]

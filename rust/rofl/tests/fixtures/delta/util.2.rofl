@@ -1,0 +1,98 @@
+ast_node[code](ne92f63f5acde594e_3c3ted0nsu2, file, "util.js").
+ast_line[code](ne92f63f5acde594e_3c3ted0nsu2, 1).
+ast_node[code](ne92f63f5acde594e_12undirbnh3, program, "util.js").
+ast_line[code](ne92f63f5acde594e_12undirbnh3, 1).
+ast_attr[code](ne92f63f5acde594e_12undirbnh3, source_type, "module").
+ast_node[code](ne92f63f5acde594e_n059nn8cf22, import_declaration, "util.js").
+ast_line[code](ne92f63f5acde594e_n059nn8cf22, 1).
+ast_attr[code](ne92f63f5acde594e_n059nn8cf22, import_kind, "value").
+ast_node[code](ne92f63f5acde594e_qbrtbc4hgq6, import_specifier, "util.js").
+ast_line[code](ne92f63f5acde594e_qbrtbc4hgq6, 1).
+ast_node[code](ne92f63f5acde594e_9gujo3a9v97, identifier, "util.js").
+ast_line[code](ne92f63f5acde594e_9gujo3a9v97, 1).
+ast_attr[code](ne92f63f5acde594e_9gujo3a9v97, name, "log").
+ast_child[code](ne92f63f5acde594e_qbrtbc4hgq6, imported, 0, ne92f63f5acde594e_9gujo3a9v97).
+ast_attr[code](ne92f63f5acde594e_qbrtbc4hgq6, import_kind, "value").
+ast_node[code](ne92f63f5acde594e_lk22ln84hq1, identifier, "util.js").
+ast_line[code](ne92f63f5acde594e_lk22ln84hq1, 1).
+ast_attr[code](ne92f63f5acde594e_lk22ln84hq1, name, "log").
+ast_child[code](ne92f63f5acde594e_qbrtbc4hgq6, local, 0, ne92f63f5acde594e_lk22ln84hq1).
+ast_child[code](ne92f63f5acde594e_n059nn8cf22, specifiers, 0, ne92f63f5acde594e_qbrtbc4hgq6).
+ast_node[code](ne92f63f5acde594e_7hafp0m7jj6, string_literal, "util.js").
+ast_line[code](ne92f63f5acde594e_7hafp0m7jj6, 1).
+ast_attr[code](ne92f63f5acde594e_7hafp0m7jj6, value, "./log.js").
+ast_child[code](ne92f63f5acde594e_n059nn8cf22, source, 0, ne92f63f5acde594e_7hafp0m7jj6).
+ast_child[code](ne92f63f5acde594e_12undirbnh3, body, 0, ne92f63f5acde594e_n059nn8cf22).
+ast_node[code](ne92f63f5acde594e_9l7lmkrrho2, export_named_declaration, "util.js").
+ast_line[code](ne92f63f5acde594e_9l7lmkrrho2, 2).
+ast_attr[code](ne92f63f5acde594e_9l7lmkrrho2, export_kind, "value").
+ast_node[code](ne92f63f5acde594e_ngadjs3agt5, function_declaration, "util.js").
+ast_line[code](ne92f63f5acde594e_ngadjs3agt5, 2).
+ast_node[code](ne92f63f5acde594e_e6qbao15qr5, identifier, "util.js").
+ast_line[code](ne92f63f5acde594e_e6qbao15qr5, 2).
+ast_attr[code](ne92f63f5acde594e_e6qbao15qr5, name, "trace").
+ast_child[code](ne92f63f5acde594e_ngadjs3agt5, id, 0, ne92f63f5acde594e_e6qbao15qr5).
+ast_attr[code](ne92f63f5acde594e_ngadjs3agt5, generator, false).
+ast_attr[code](ne92f63f5acde594e_ngadjs3agt5, async, false).
+ast_node[code](ne92f63f5acde594e_c6s1g50e487, identifier, "util.js").
+ast_line[code](ne92f63f5acde594e_c6s1g50e487, 2).
+ast_attr[code](ne92f63f5acde594e_c6s1g50e487, name, "x").
+ast_child[code](ne92f63f5acde594e_ngadjs3agt5, params, 0, ne92f63f5acde594e_c6s1g50e487).
+ast_node[code](ne92f63f5acde594e_bgfa7s99do3, block_statement, "util.js").
+ast_line[code](ne92f63f5acde594e_bgfa7s99do3, 2).
+ast_node[code](ne92f63f5acde594e_fa8j4t3l1j, expression_statement, "util.js").
+ast_line[code](ne92f63f5acde594e_fa8j4t3l1j, 2).
+ast_node[code](ne92f63f5acde594e_arbedpiqmf7, call_expression, "util.js").
+ast_line[code](ne92f63f5acde594e_arbedpiqmf7, 2).
+ast_node[code](ne92f63f5acde594e_ptghrjjdkt2, identifier, "util.js").
+ast_line[code](ne92f63f5acde594e_ptghrjjdkt2, 2).
+ast_attr[code](ne92f63f5acde594e_ptghrjjdkt2, name, "log").
+ast_child[code](ne92f63f5acde594e_arbedpiqmf7, callee, 0, ne92f63f5acde594e_ptghrjjdkt2).
+ast_node[code](ne92f63f5acde594e_fv2am8tlft7, call_expression, "util.js").
+ast_line[code](ne92f63f5acde594e_fv2am8tlft7, 2).
+ast_node[code](ne92f63f5acde594e_3bf23emp3l, identifier, "util.js").
+ast_line[code](ne92f63f5acde594e_3bf23emp3l, 2).
+ast_attr[code](ne92f63f5acde594e_3bf23emp3l, name, "String").
+ast_child[code](ne92f63f5acde594e_fv2am8tlft7, callee, 0, ne92f63f5acde594e_3bf23emp3l).
+ast_node[code](ne92f63f5acde594e_pfok6pjrnq2, identifier, "util.js").
+ast_line[code](ne92f63f5acde594e_pfok6pjrnq2, 2).
+ast_attr[code](ne92f63f5acde594e_pfok6pjrnq2, name, "x").
+ast_child[code](ne92f63f5acde594e_fv2am8tlft7, arguments, 0, ne92f63f5acde594e_pfok6pjrnq2).
+ast_child[code](ne92f63f5acde594e_arbedpiqmf7, arguments, 0, ne92f63f5acde594e_fv2am8tlft7).
+ast_child[code](ne92f63f5acde594e_fa8j4t3l1j, expression, 0, ne92f63f5acde594e_arbedpiqmf7).
+ast_child[code](ne92f63f5acde594e_bgfa7s99do3, body, 0, ne92f63f5acde594e_fa8j4t3l1j).
+ast_node[code](ne92f63f5acde594e_0ekh0dbl6k, return_statement, "util.js").
+ast_line[code](ne92f63f5acde594e_0ekh0dbl6k, 2).
+ast_node[code](ne92f63f5acde594e_0bthk6ma3v7, identifier, "util.js").
+ast_line[code](ne92f63f5acde594e_0bthk6ma3v7, 2).
+ast_attr[code](ne92f63f5acde594e_0bthk6ma3v7, name, "x").
+ast_child[code](ne92f63f5acde594e_0ekh0dbl6k, argument, 0, ne92f63f5acde594e_0bthk6ma3v7).
+ast_child[code](ne92f63f5acde594e_bgfa7s99do3, body, 1, ne92f63f5acde594e_0ekh0dbl6k).
+ast_child[code](ne92f63f5acde594e_ngadjs3agt5, body, 0, ne92f63f5acde594e_bgfa7s99do3).
+ast_child[code](ne92f63f5acde594e_9l7lmkrrho2, declaration, 0, ne92f63f5acde594e_ngadjs3agt5).
+ast_child[code](ne92f63f5acde594e_12undirbnh3, body, 1, ne92f63f5acde594e_9l7lmkrrho2).
+ast_child[code](ne92f63f5acde594e_3c3ted0nsu2, program, 0, ne92f63f5acde594e_12undirbnh3).
+ast_file[code](ne92f63f5acde594e_3c3ted0nsu2, "util.js").
+fs_dir[code](".").
+fs_file[code]("util.js").
+fs_dir_of[code]("util.js", ".").
+fs_file_in[code](".", "util.js", "util.js").
+fs_file[code]("db.js").
+fs_dir_of[code]("db.js", ".").
+fs_file_in[code](".", "db.js", "db.js").
+fs_file[code]("log.js").
+fs_dir_of[code]("log.js", ".").
+fs_file_in[code](".", "log.js", "log.js").
+fs_file[code]("orders.js").
+fs_dir_of[code]("orders.js", ".").
+fs_file_in[code](".", "orders.js", "orders.js").
+fs_file[code]("server.js").
+fs_dir_of[code]("server.js", ".").
+fs_file_in[code](".", "server.js", "server.js").
+fs_file[code]("users.js").
+fs_dir_of[code]("users.js", ".").
+fs_file_in[code](".", "users.js", "users.js").
+str_segs[code]("./log.js", 2).
+str_char0[code]("./log.js", ".").
+str_seg[code]("./log.js", 0, ".").
+str_seg[code]("./log.js", 1, "log.js").

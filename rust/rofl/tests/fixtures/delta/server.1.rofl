@@ -1,0 +1,114 @@
+ast_node[code](na4c65ede64197e1a_3c3ted0nsu2, file, "server.js").
+ast_line[code](na4c65ede64197e1a_3c3ted0nsu2, 1).
+ast_node[code](na4c65ede64197e1a_12undirbnh3, program, "server.js").
+ast_line[code](na4c65ede64197e1a_12undirbnh3, 1).
+ast_attr[code](na4c65ede64197e1a_12undirbnh3, source_type, "module").
+ast_node[code](na4c65ede64197e1a_ndadeln77p4, import_declaration, "server.js").
+ast_line[code](na4c65ede64197e1a_ndadeln77p4, 1).
+ast_attr[code](na4c65ede64197e1a_ndadeln77p4, import_kind, "value").
+ast_node[code](na4c65ede64197e1a_i22mnmevr6, import_specifier, "server.js").
+ast_line[code](na4c65ede64197e1a_i22mnmevr6, 1).
+ast_node[code](na4c65ede64197e1a_jo46vdvrjb6, identifier, "server.js").
+ast_line[code](na4c65ede64197e1a_jo46vdvrjb6, 1).
+ast_attr[code](na4c65ede64197e1a_jo46vdvrjb6, name, "orderFor").
+ast_child[code](na4c65ede64197e1a_i22mnmevr6, imported, 0, na4c65ede64197e1a_jo46vdvrjb6).
+ast_attr[code](na4c65ede64197e1a_i22mnmevr6, import_kind, "value").
+ast_node[code](na4c65ede64197e1a_kr68ij2hsj, identifier, "server.js").
+ast_line[code](na4c65ede64197e1a_kr68ij2hsj, 1).
+ast_attr[code](na4c65ede64197e1a_kr68ij2hsj, name, "orderFor").
+ast_child[code](na4c65ede64197e1a_i22mnmevr6, local, 0, na4c65ede64197e1a_kr68ij2hsj).
+ast_child[code](na4c65ede64197e1a_ndadeln77p4, specifiers, 0, na4c65ede64197e1a_i22mnmevr6).
+ast_node[code](na4c65ede64197e1a_f2hu204piq5, import_specifier, "server.js").
+ast_line[code](na4c65ede64197e1a_f2hu204piq5, 1).
+ast_node[code](na4c65ede64197e1a_7luvniggk36, identifier, "server.js").
+ast_line[code](na4c65ede64197e1a_7luvniggk36, 1).
+ast_attr[code](na4c65ede64197e1a_7luvniggk36, name, "total").
+ast_child[code](na4c65ede64197e1a_f2hu204piq5, imported, 0, na4c65ede64197e1a_7luvniggk36).
+ast_attr[code](na4c65ede64197e1a_f2hu204piq5, import_kind, "value").
+ast_node[code](na4c65ede64197e1a_a64due368g7, identifier, "server.js").
+ast_line[code](na4c65ede64197e1a_a64due368g7, 1).
+ast_attr[code](na4c65ede64197e1a_a64due368g7, name, "total").
+ast_child[code](na4c65ede64197e1a_f2hu204piq5, local, 0, na4c65ede64197e1a_a64due368g7).
+ast_child[code](na4c65ede64197e1a_ndadeln77p4, specifiers, 1, na4c65ede64197e1a_f2hu204piq5).
+ast_node[code](na4c65ede64197e1a_n6trp1b1vn1, string_literal, "server.js").
+ast_line[code](na4c65ede64197e1a_n6trp1b1vn1, 1).
+ast_attr[code](na4c65ede64197e1a_n6trp1b1vn1, value, "./orders.js").
+ast_child[code](na4c65ede64197e1a_ndadeln77p4, source, 0, na4c65ede64197e1a_n6trp1b1vn1).
+ast_child[code](na4c65ede64197e1a_12undirbnh3, body, 0, na4c65ede64197e1a_ndadeln77p4).
+ast_node[code](na4c65ede64197e1a_9l7lmkrrho2, export_named_declaration, "server.js").
+ast_line[code](na4c65ede64197e1a_9l7lmkrrho2, 2).
+ast_attr[code](na4c65ede64197e1a_9l7lmkrrho2, export_kind, "value").
+ast_node[code](na4c65ede64197e1a_af1l5r5nen7, function_declaration, "server.js").
+ast_line[code](na4c65ede64197e1a_af1l5r5nen7, 2).
+ast_node[code](na4c65ede64197e1a_fgcdg0ehhh2, identifier, "server.js").
+ast_line[code](na4c65ede64197e1a_fgcdg0ehhh2, 2).
+ast_attr[code](na4c65ede64197e1a_fgcdg0ehhh2, name, "handle").
+ast_child[code](na4c65ede64197e1a_af1l5r5nen7, id, 0, na4c65ede64197e1a_fgcdg0ehhh2).
+ast_attr[code](na4c65ede64197e1a_af1l5r5nen7, generator, false).
+ast_attr[code](na4c65ede64197e1a_af1l5r5nen7, async, false).
+ast_node[code](na4c65ede64197e1a_h15f51tstb2, identifier, "server.js").
+ast_line[code](na4c65ede64197e1a_h15f51tstb2, 2).
+ast_attr[code](na4c65ede64197e1a_h15f51tstb2, name, "req").
+ast_child[code](na4c65ede64197e1a_af1l5r5nen7, params, 0, na4c65ede64197e1a_h15f51tstb2).
+ast_node[code](na4c65ede64197e1a_6gj986vkgj7, block_statement, "server.js").
+ast_line[code](na4c65ede64197e1a_6gj986vkgj7, 2).
+ast_node[code](na4c65ede64197e1a_67mfjrgvdo2, return_statement, "server.js").
+ast_line[code](na4c65ede64197e1a_67mfjrgvdo2, 2).
+ast_node[code](na4c65ede64197e1a_rgo1j5kihd1, call_expression, "server.js").
+ast_line[code](na4c65ede64197e1a_rgo1j5kihd1, 2).
+ast_node[code](na4c65ede64197e1a_0ut9ehue7a, identifier, "server.js").
+ast_line[code](na4c65ede64197e1a_0ut9ehue7a, 2).
+ast_attr[code](na4c65ede64197e1a_0ut9ehue7a, name, "total").
+ast_child[code](na4c65ede64197e1a_rgo1j5kihd1, callee, 0, na4c65ede64197e1a_0ut9ehue7a).
+ast_node[code](na4c65ede64197e1a_1er9acui2e3, array_expression, "server.js").
+ast_line[code](na4c65ede64197e1a_1er9acui2e3, 2).
+ast_node[code](na4c65ede64197e1a_pa8ro66nn31, call_expression, "server.js").
+ast_line[code](na4c65ede64197e1a_pa8ro66nn31, 2).
+ast_node[code](na4c65ede64197e1a_d0ob11sugd4, identifier, "server.js").
+ast_line[code](na4c65ede64197e1a_d0ob11sugd4, 2).
+ast_attr[code](na4c65ede64197e1a_d0ob11sugd4, name, "orderFor").
+ast_child[code](na4c65ede64197e1a_pa8ro66nn31, callee, 0, na4c65ede64197e1a_d0ob11sugd4).
+ast_node[code](na4c65ede64197e1a_p974m8pbcj4, member_expression, "server.js").
+ast_line[code](na4c65ede64197e1a_p974m8pbcj4, 2).
+ast_node[code](na4c65ede64197e1a_0hc9471ke34, identifier, "server.js").
+ast_line[code](na4c65ede64197e1a_0hc9471ke34, 2).
+ast_attr[code](na4c65ede64197e1a_0hc9471ke34, name, "req").
+ast_child[code](na4c65ede64197e1a_p974m8pbcj4, object, 0, na4c65ede64197e1a_0hc9471ke34).
+ast_attr[code](na4c65ede64197e1a_p974m8pbcj4, computed, false).
+ast_node[code](na4c65ede64197e1a_27um6f9te77, identifier, "server.js").
+ast_line[code](na4c65ede64197e1a_27um6f9te77, 2).
+ast_attr[code](na4c65ede64197e1a_27um6f9te77, name, "id").
+ast_child[code](na4c65ede64197e1a_p974m8pbcj4, property, 0, na4c65ede64197e1a_27um6f9te77).
+ast_child[code](na4c65ede64197e1a_pa8ro66nn31, arguments, 0, na4c65ede64197e1a_p974m8pbcj4).
+ast_child[code](na4c65ede64197e1a_1er9acui2e3, elements, 0, na4c65ede64197e1a_pa8ro66nn31).
+ast_child[code](na4c65ede64197e1a_rgo1j5kihd1, arguments, 0, na4c65ede64197e1a_1er9acui2e3).
+ast_child[code](na4c65ede64197e1a_67mfjrgvdo2, argument, 0, na4c65ede64197e1a_rgo1j5kihd1).
+ast_child[code](na4c65ede64197e1a_6gj986vkgj7, body, 0, na4c65ede64197e1a_67mfjrgvdo2).
+ast_child[code](na4c65ede64197e1a_af1l5r5nen7, body, 0, na4c65ede64197e1a_6gj986vkgj7).
+ast_child[code](na4c65ede64197e1a_9l7lmkrrho2, declaration, 0, na4c65ede64197e1a_af1l5r5nen7).
+ast_child[code](na4c65ede64197e1a_12undirbnh3, body, 1, na4c65ede64197e1a_9l7lmkrrho2).
+ast_child[code](na4c65ede64197e1a_3c3ted0nsu2, program, 0, na4c65ede64197e1a_12undirbnh3).
+ast_file[code](na4c65ede64197e1a_3c3ted0nsu2, "server.js").
+fs_dir[code](".").
+fs_file[code]("server.js").
+fs_dir_of[code]("server.js", ".").
+fs_file_in[code](".", "server.js", "server.js").
+fs_file[code]("db.js").
+fs_dir_of[code]("db.js", ".").
+fs_file_in[code](".", "db.js", "db.js").
+fs_file[code]("log.js").
+fs_dir_of[code]("log.js", ".").
+fs_file_in[code](".", "log.js", "log.js").
+fs_file[code]("orders.js").
+fs_dir_of[code]("orders.js", ".").
+fs_file_in[code](".", "orders.js", "orders.js").
+fs_file[code]("users.js").
+fs_dir_of[code]("users.js", ".").
+fs_file_in[code](".", "users.js", "users.js").
+fs_file[code]("util.js").
+fs_dir_of[code]("util.js", ".").
+fs_file_in[code](".", "util.js", "util.js").
+str_segs[code]("./orders.js", 2).
+str_char0[code]("./orders.js", ".").
+str_seg[code]("./orders.js", 0, ".").
+str_seg[code]("./orders.js", 1, "orders.js").

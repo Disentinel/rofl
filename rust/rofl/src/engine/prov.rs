@@ -63,7 +63,8 @@ impl Eval {
     /// a code world's stored facts, each naming its fact by a term as large as the fact.
     pub fn settle_assertions(&mut self) {
         for (id, who, tick) in self.pending_assert.take() {
-            if !self.store.alive(id) {
+            // (a fact taken out, or one taken out and derived again since, is no assertion)
+            if !self.store.alive(id) || !self.store.rec(id).base() {
                 continue;
             }
             let rec = self.store.rec(id);

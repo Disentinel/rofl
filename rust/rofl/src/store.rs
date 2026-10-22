@@ -719,12 +719,12 @@ struct Col<T: Pod> {
     mark: usize,
     base: Rc<Arena<T>>,
     own: Vec<T>,
-    low: HashMap<usize, T>,
+    low: FxMap<usize, T>,
 }
 
 impl<T: Pod> Default for Col<T> {
     fn default() -> Self {
-        Col { mark: 0, base: Rc::default(), own: Vec::new(), low: HashMap::new() }
+        Col { mark: 0, base: Rc::default(), own: Vec::new(), low: FxMap::default() }
     }
 }
 
@@ -1164,6 +1164,10 @@ pub struct Store {
     /// firings it touches and not the store. An entry can outlive its firing;
     /// every reader checks the firing itself.
     citers: Option<Rc<Citers>>,
+    /// The facts with a firing that cites a row of a closure answered from its tree, by the row's descendant: what a
+    /// retraction that takes an edge out of the tree looks at (`Eval::retract_set`). Kept beside `citers` by every
+    /// firing put since; dropped (to be built again) when a firing cites a row whose ends this store does not know.
+    pub vciters: Option<Rc<FxMap<u64, Vec<(FactId, Sym)>>>>,
 }
 
 /// The citer index: the facts citing each premise as one column by premise id (`offs`, `ids`), which a volume maps,
@@ -1809,6 +1813,22 @@ impl Store {
     }
 
     /// Whether a base fact other than `but` stands in the book `persp`, of any relation.
+    /// Whether a live base fact of `rel` (in the book `persp`, or any) stands outside `but`, found without listing the
+    /// relation: the first such fact ends the walk.
+    pub fn base_outside(&self, rel: Sym, persp: Option<Sym>, but: &HashSet<FactId>) -> bool {
+        self.idx.get(&rel).is_some_and(|v| {
+            v.iter().filter(|(p, _)| persp.is_none_or(|q| q == *p)).any(|(_, r)| {
+                r.canon.iter().chain(r.arrived.iter()).any(|&i| self.alive(i) && self.rec(i).base() && !but.contains(&i))
+            })
+        })
+    }
+
+    /// Whether the book `persp` holds a live base fact outside `but`, of any relation.
+    pub fn book_base_outside(&self, persp: Sym, but: &HashSet<FactId>) -> bool {
+        let rels: Vec<Sym> = self.idx.own.iter().chain(self.idx.base.iter()).filter(|(_, ps)| ps.iter().any(|(p, _)| *p == persp)).map(|(r, _)| *r).collect();
+        rels.into_iter().any(|r| self.base_outside(r, Some(persp), but))
+    }
+
     pub fn book_holds_base(&mut self, h: &Heap, persp: Sym, but: FactId) -> bool {
         let mut rels: Vec<Sym> = self.idx.own.iter().chain(self.idx.base.iter()).filter(|(_, ps)| ps.iter().any(|(p, _)| *p == persp)).map(|(r, _)| *r).collect();
         rels.sort_unstable();
@@ -2613,10 +2633,22 @@ impl Store {
             }
             c = n.next;
         }
-        if let Some(ix) = self.citers.as_mut().map(Rc::make_mut) {
+        if let Some(ix) = self.citers.as_mut().map(Rc::make_mut).filter(|_| brk!("citers_unkept" => false; true)) {
             for p in &w.prems {
                 if let PremRef::Fact(g) = p {
                     ix.more.entry(*g).or_default().push(id);
+                }
+            }
+        }
+        if self.vciters.is_some() && brk!("vciters_unkept" => false; true) {
+            for p in &w.prems {
+                let PremRef::VRow(k) = p else { continue };
+                match self.vrow_of.get(k) {
+                    Some(&(_, _, _, d)) => Rc::make_mut(self.vciters.as_mut().unwrap()).entry(d.bits()).or_default().push((id, *k)),
+                    None => {
+                        self.vciters = None;
+                        break;
+                    }
                 }
             }
         }
@@ -2653,6 +2685,32 @@ impl Store {
 
     pub fn close_dup_window(&mut self) {
         self.dup_window = None;
+    }
+
+    /// Put the chain of `id` in the window, opened if a change of a chain closed it, so that a firing of it found
+    /// again is told by its hash, not by a walk of the chain: a fact derived again with many firings would walk it
+    /// once for each.
+    pub fn window_chain(&mut self, id: FactId) {
+        let d = self.dup_window.get_or_insert_with(DupWindow::default);
+        if d.begun.contains(&id) {
+            return;
+        }
+        let mut whole = true;
+        let mut c = self.wit_head[id as usize];
+        while c != EMPTY {
+            let n = self.wits[c as usize];
+            let h = firing_hash(id, n.rule, &self.prem_arena[n.prems_at as usize..(n.prems_at + n.prems_len) as usize]);
+            if brk!("window_chain_unlisted" => false; true) {
+                if let Some((f, _)) = d.nodes.insert(h, (id, c)) {
+                    d.begun.remove(&f);
+                    whole = false;
+                }
+            }
+            c = n.next;
+        }
+        if whole {
+            d.begun.insert(id);
+        }
     }
 
     fn chains_cut(&mut self) {
@@ -2720,6 +2778,19 @@ impl Store {
     /// The facts the citer index says cite `of`: a superset (a firing withdrawn since stays listed).
     pub fn citers_one(&self, of: FactId) -> Vec<FactId> {
         self.citers.as_ref().map(|ix| ix.of(of).copied().collect()).unwrap_or_default()
+    }
+
+    /// Does a firing of `id` cite `p`? Walked in place: a fact with a long chain is asked once for each premise gone.
+    pub fn cites(&self, id: FactId, p: PremRef) -> bool {
+        let mut c = self.wit_head[id as usize];
+        while c != EMPTY {
+            let n = self.wits[c as usize];
+            if self.prem_arena[n.prems_at as usize..(n.prems_at + n.prems_len) as usize].contains(&p) {
+                return true;
+            }
+            c = n.next;
+        }
+        false
     }
 
     /// The facts with a firing that cites one of `of`, from the citer index.

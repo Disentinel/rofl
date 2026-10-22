@@ -126,22 +126,71 @@ impl Forest {
         if edges.iter().any(|(p, c)| self.idx.contains_key(&p.bits()) || self.idx.contains_key(&c.bits())) {
             return None;
         }
-        let add = Forest::build(edges);
+        let mut f = self.clone();
+        f.append(Forest::build(edges));
+        Some(f)
+    }
+
+    /// `add`'s trees after this forest's, the numbering of both kept.
+    fn append(&mut self, add: Forest) {
         let (n, o) = (self.nodes.len() as u32, self.order.len() as u32);
         let shift = |v: u32, by: u32| if v == NONE { NONE } else { v + by };
-        let mut f = self.clone();
-        f.nodes.extend_from_slice(&add.nodes);
-        f.idx.extend(add.idx.iter().map(|(k, v)| (*k, v + n)));
-        f.parent.extend(add.parent.iter().map(|&v| shift(v, n)));
-        f.pre.extend(add.pre.iter().map(|&v| shift(v, o)));
-        f.order.extend(add.order.iter().map(|&v| v + n));
-        f.end.extend(add.end.iter().map(|&v| v + o));
-        f.depth.extend_from_slice(&add.depth);
-        f.pairs += add.pairs;
-        f.deep += add.deep;
-        f.internal += add.internal;
-        f.broken |= add.broken;
-        Some(f)
+        self.nodes.extend_from_slice(&add.nodes);
+        self.idx.extend(add.idx.iter().map(|(k, v)| (*k, v + n)));
+        self.parent.extend(add.parent.iter().map(|&v| shift(v, n)));
+        self.pre.extend(add.pre.iter().map(|&v| shift(v, o)));
+        self.order.extend(add.order.iter().map(|&v| v + n));
+        self.end.extend(add.end.iter().map(|&v| v + o));
+        self.depth.extend_from_slice(&add.depth);
+        self.pairs += add.pairs;
+        self.deep += add.deep;
+        self.internal += add.internal;
+        self.broken |= add.broken;
+    }
+
+    /// THE TREES AN EDGE TAKEN OUT REACHES, BUILT AGAIN: each tree holding the child of an edge of `removed` is dropped
+    /// (its nodes keep their slots, unreachable), and the edges of it that stand are built into trees again after the
+    /// rest, whose numbering is kept. The cost is the trees the edges are in, not the forest. The nodes of the trees
+    /// dropped, each once, for the rows that ended at one are what a retraction looks at.
+    pub fn rebuild_trees(&mut self, removed: &[(Term, Term)]) -> Vec<Term> {
+        let out: crate::store::FxSet<(u64, u64)> = removed.iter().map(|(p, c)| (p.bits(), c.bits())).collect();
+        let mut roots: Vec<u32> = Vec::new();
+        for (_, c) in removed {
+            let Some(mut v) = self.at(*c) else { continue };
+            for _ in 0..self.depth[v as usize] {
+                v = self.parent[v as usize];
+            }
+            if !roots.contains(&v) {
+                roots.push(v);
+            }
+        }
+        let (mut stand, mut dropped): (Vec<(Term, Term)>, Vec<Term>) = (Vec::new(), Vec::new());
+        let mut parents: crate::store::FxSet<u32> = crate::store::FxSet::default();
+        for r in roots {
+            let (lo, hi) = (self.pre[r as usize], self.end[r as usize]);
+            for k in lo..hi {
+                let v = self.order[k as usize];
+                dropped.push(self.nodes[v as usize]);
+                if v != r {
+                    let p = self.parent[v as usize];
+                    parents.insert(p);
+                    let e = (self.nodes[p as usize], self.nodes[v as usize]);
+                    if !out.contains(&(e.0.bits(), e.1.bits())) || brk!("vclosure_removed_edge_kept" => true; false) {
+                        stand.push(e);
+                    }
+                }
+                self.pairs -= self.depth[v as usize] as u64;
+                self.deep -= (self.depth[v as usize] > 0) as u32;
+            }
+            for k in lo..hi {
+                let v = self.order[k as usize];
+                self.pre[v as usize] = NONE;
+                self.idx.remove(&self.nodes[v as usize].bits());
+            }
+        }
+        self.internal -= parents.len() as u32;
+        self.append(Forest::build(&stand));
+        dropped
     }
 
     fn at(&self, t: Term) -> Option<u32> {
@@ -184,6 +233,9 @@ impl Forest {
     /// Every pair, ancestor first: the ancestors of each node.
     pub fn each_pair(&self, mut f: impl FnMut(Term, Term)) {
         for &v in &self.order {
+            if self.pre[v as usize] == NONE {
+                continue;
+            }
             let mut u = v;
             for _ in 0..self.depth[v as usize] {
                 u = self.parent[u as usize];

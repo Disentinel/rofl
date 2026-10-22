@@ -321,6 +321,19 @@ fn components(rules: &[Rc<ERule>]) -> Vec<Vec<Rc<ERule>>> {
     out
 }
 
+/// One scan a world loaded: the request's kind and path (as written back, and the path's text), the command that
+/// ran (none: no scanner for the kind), the paths the scanner named as read (none when it named nothing), and the
+/// program text it brought, its `scan_done` or `scan_failed` row last.
+#[derive(Clone, Debug, Default)]
+pub struct ScanRec {
+    pub kind: String,
+    pub path: String,
+    pub text: String,
+    pub cmd: Option<String>,
+    pub read: Vec<String>,
+    pub unit: String,
+}
+
 #[derive(Default)]
 #[derive(Clone)]
 pub struct Front {
@@ -700,9 +713,9 @@ pub struct Eval {
     /// Told each hot rule as it is found, as the sentence `hot_said` keeps.
     pub on_hot: Option<fn(&str)>,
     pub hot_said: Vec<String>,
-    /// Each scan this world loaded (`Session::scan_requests`): its command and path, and the paths the scanner
-    /// named as read, none when it named nothing. What a kept world is stale by besides its files (docs/cli.md).
-    pub scans: Vec<(String, Vec<String>)>,
+    /// Each scan this world loaded (`Session::scan_requests`). What a kept world is stale by besides its files, and
+    /// what a delta takes again when one of them moves (docs/cli.md).
+    pub scans: Vec<ScanRec>,
     /// Firings solved delta-first.
     pub delta_by_rule: HashMap<Sym, u64>,
     /// Delta-first join plans (`joinplan.rs`), per rule and news position, and
@@ -720,6 +733,10 @@ pub struct Eval {
     add_heights: HashSet<Sym>,
     /// The first id an addition's facts take: a fact below it stood before.
     add_mark: FactId,
+    /// What a retraction overdeletes besides the citers of its facts: the facts that cited a row of a tree it took out (`vretract_edges`).
+    retract_seeds: Vec<FactId>,
+    /// Facts the overdeletion kept for a firing that stands (`overdelete`): each takes again, at its level, every firing it has.
+    add_kept: HashSet<FactId>,
     pub delta_ns: u64,
     delta_plans: HashMap<(Sym, usize), joinplan::Slot>,
     delta_stats: HashMap<Vec<u64>, (usize, usize, usize)>,
@@ -1403,6 +1420,8 @@ impl Eval {
             add_refired: Vec::new(),
             add_heights: HashSet::new(),
             add_mark: 0,
+            retract_seeds: Vec::new(),
+            add_kept: HashSet::new(),
             delta_plans: HashMap::new(),
             delta_stats: HashMap::new(),
             functions: Vec::new(),

@@ -8827,6 +8827,167 @@ export const BREAKS: Break[] = [
    "retract_two_facts": "two facts taken as one"
   }
  },
+ {
+  "id": "retract_unrederived",
+  "what": "a retraction overdeletes what rests on the facts and derives none of it again",
+  "expect": {
+   "set_random": "sets differ from the fresh world"
+  }
+ },
+ {
+  "id": "rederive_once",
+  "what": "what a retraction overdeleted is derived again once, not until nothing more comes back: a fact of a recursion that rests on one derived after it stays out",
+  "expect": {
+   "set_random": "sets differ from the fresh world"
+  }
+ },
+ {
+  "id": "window_chain_unlisted",
+  "what": "a fact derived again is told to the window of firings as whole while its chain is not listed in it, so a firing it had is put on it again",
+  "expect": {
+   "set_random": "sets differ from the fresh world"
+  }
+ },
+ {
+  "id": "overdelete_judged_kept",
+  "what": "a fact kept by a firing that stood is not judged again when a premise of another of its firings goes after it, so that firing stays",
+  "expect": {
+   "set_random": "sets differ from the fresh world"
+  }
+ },
+ {
+  "id": "overdelete_kept_by_own_component",
+  "what": "a fact is kept by a firing whose premise is of a relation recursive with its own, which may rest on the fact itself",
+  "expect": {
+   "set_random": "sets differ from the fresh world"
+  }
+ },
+ {
+  "id": "withdraw_all_rows_kept",
+  "what": "a fact all of whose firings are withdrawn at once keeps the provenance rows of its rules",
+  "expect": {
+   "set_tree": "step 2:"
+  }
+ },
+ {
+  "id": "retract_set_unpropagated",
+  "what": "the facts a retraction takes out go, and nothing that rests on them",
+  "expect": {
+   "set_random": "sets differ from the fresh world"
+  }
+ },
+ {
+  "id": "retract_rederive_all",
+  "what": "a retraction overdeletes every derived fact of the world and derives it again: the right world, at the world's cost",
+  "expect": {
+   "set_js_steps": "the pass touched"
+  }
+ },
+ {
+  "id": "citers_unkept",
+  "what": "the citer index is not kept by the firings an edit adds, so the next retraction misses what rests on them",
+  "expect": {
+   "set_js_steps": "seed 1 step"
+  }
+ },
+ {
+  "id": "vciters_unkept",
+  "what": "the index of what cites a row of a tree is not kept by the firings an edit adds",
+  "expect": {
+   "set_tree": "the kept index lacks"
+  }
+ },
+ {
+  "id": "vclosure_prov_unbuilt",
+  "what": "a tree built again by a retraction is not told to the provenance of its rows, which keeps the rows of the nodes gone",
+  "expect": {
+   "set_js_steps": "seed 1 step"
+  }
+ },
+ {
+  "id": "vclosure_gone_rows_kept",
+  "what": "what cited a row of a tree that no longer holds after a retraction is kept",
+  "expect": {
+   "set_tree": "step 1:"
+  }
+ },
+ {
+  "id": "vclosure_removed_edge_kept",
+  "what": "a tree built again by a retraction keeps the edges the retraction took out",
+  "expect": {
+   "set_tree": "step 1:"
+  }
+ },
+ {
+  "id": "vclosure_reader_seen_kept",
+  "what": "a rule that reads a tree keeps what it saw of the edges across a retraction, a count an addition of as many edges gives again, and is not fired on their rows",
+  "expect": {
+   "set_tree": "step 2:"
+  }
+ },
+ {
+  "id": "retract_tree_refused",
+  "what": "a retraction that reaches the edges of a tree is refused and the world evaluated again",
+  "expect": {
+   "set_js": "was refused"
+  }
+ },
+ {
+  "id": "kept_delta_all_files",
+  "what": "a kept world takes by delta every file it was kept from, not only the one that changed",
+  "expect": {
+   "kept_series": "wanted one file taken"
+  }
+ },
+ {
+  "id": "kept_delta_keeps_old",
+  "what": "a file that changed keeps the facts its old text asserted",
+  "expect": {
+   "kept_series": "edits_by_delta_are_the_fresh_world:"
+  }
+ },
+ {
+  "id": "kept_delta_keeps_removed",
+  "what": "a file gone keeps its facts",
+  "expect": {
+   "kept_series": "edits_by_delta_are_the_fresh_world:"
+  }
+ },
+ {
+  "id": "kept_delta_stale_index",
+  "what": "the kept world records a changed file with the facts of its old text, so the next edit takes out the wrong ones",
+  "expect": {
+   "kept_series": "edits_by_delta_are_the_fresh_world:"
+  }
+ },
+ {
+  "id": "kept_delta_gone_rules_kept",
+  "what": "a file gone that held rules goes by delta, its facts out and its rules left in the world",
+  "expect": {
+   "kept_series": "mixed_files_at_random:"
+  }
+ },
+ {
+  "id": "kept_orphans_ignored",
+  "what": "the worlds half written by killed writers are left in the cache and the cap counts only kept worlds",
+  "expect": {
+   "kept_series": "orphans_of_killed_writers_are_swept:"
+  }
+ },
+ {
+  "id": "kept_orphans_swept_late",
+  "what": "the worlds killed writers left are removed only by a run that finishes its own write, so writers killed one after another pile them up",
+  "expect": {
+   "kept_series": "orphans_of_killed_writers_are_swept: after kill"
+  }
+ },
+ {
+  "id": "kept_delta_unasked_kept",
+  "what": "a scan the world no longer asks for keeps the facts it brought",
+  "expect": {
+   "kept_js_sources": "the import taken away"
+  }
+ },
 ];
 
 /** A proof that is no world: the report `rofl load --propose-structures` prints over a fixture (rust/rofl/src/structures.rs),
@@ -8898,6 +9059,13 @@ const TESTS: Record<string, string> = {
   kept_holes: 'kept a_kept_world_answers_and_refuses_as_docs_cli_says',
   kept_image_holes: 'kept a_holes_unknowns_survive_an_image_and_a_volume',
   retract_other_book: 'retract_refuse a_base_fact_in_another_book_does_not_stop_the_delta',
+  // a set of base facts taken out in one pass (w_incremental_retraction)
+  set_random: 'retract_set a_set_taken_out_in_one_pass_is_the_fresh_world',
+  set_js: 'retract_set a_js_files_facts_taken_out_are_the_fresh_world',
+  set_tree: 'retract_set a_tree_edited_in_sequence_is_the_fresh_world',
+  set_js_steps: 'retract_set random_js_steps_1',
+  kept_series: 'kept a_kept_world_answers_and_refuses_as_docs_cli_says',
+  kept_js_sources: 'kept js_sources_edited_go_by_delta',
   retract_two_facts: 'retract_refuse the_engine_delta_refuses_two_facts_at_once',
   kept_implicit: 'kept a_kept_world_answers_and_refuses_as_docs_cli_says',
   kept_implicit_walls: 'kept a_kept_world_answers_and_refuses_as_docs_cli_says',

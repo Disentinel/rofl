@@ -2191,6 +2191,52 @@ brk("retract_reset_any_book"). brk_kind("retract_reset_any_book", switch).
 brk_expects("retract_reset_any_book", "retract_other_book").
 brk("retract_many_silent"). brk_kind("retract_many_silent", switch).
 brk_expects("retract_many_silent", "retract_two_facts").
+brk("retract_unrederived"). brk_kind("retract_unrederived", switch).
+brk_expects("retract_unrederived", "set_random").
+brk("rederive_once"). brk_kind("rederive_once", switch).
+brk_expects("rederive_once", "set_random").
+brk("window_chain_unlisted"). brk_kind("window_chain_unlisted", switch).
+brk_expects("window_chain_unlisted", "set_random").
+brk("overdelete_judged_kept"). brk_kind("overdelete_judged_kept", switch).
+brk_expects("overdelete_judged_kept", "set_random").
+brk("overdelete_kept_by_own_component"). brk_kind("overdelete_kept_by_own_component", switch).
+brk_expects("overdelete_kept_by_own_component", "set_random").
+brk("withdraw_all_rows_kept"). brk_kind("withdraw_all_rows_kept", switch).
+brk_expects("withdraw_all_rows_kept", "set_tree").
+brk("retract_set_unpropagated"). brk_kind("retract_set_unpropagated", switch).
+brk_expects("retract_set_unpropagated", "set_random").
+brk("retract_rederive_all"). brk_kind("retract_rederive_all", switch).
+brk_expects("retract_rederive_all", "set_js_steps").
+brk("citers_unkept"). brk_kind("citers_unkept", switch).
+brk_expects("citers_unkept", "set_js_steps").
+brk("vciters_unkept"). brk_kind("vciters_unkept", switch).
+brk_expects("vciters_unkept", "set_tree").
+brk("vclosure_prov_unbuilt"). brk_kind("vclosure_prov_unbuilt", switch).
+brk_expects("vclosure_prov_unbuilt", "set_js_steps").
+brk("vclosure_gone_rows_kept"). brk_kind("vclosure_gone_rows_kept", switch).
+brk_expects("vclosure_gone_rows_kept", "set_tree").
+brk("vclosure_removed_edge_kept"). brk_kind("vclosure_removed_edge_kept", switch).
+brk_expects("vclosure_removed_edge_kept", "set_tree").
+brk("vclosure_reader_seen_kept"). brk_kind("vclosure_reader_seen_kept", switch).
+brk_expects("vclosure_reader_seen_kept", "set_tree").
+brk("retract_tree_refused"). brk_kind("retract_tree_refused", switch).
+brk_expects("retract_tree_refused", "set_js").
+brk("kept_delta_all_files"). brk_kind("kept_delta_all_files", switch).
+brk_expects("kept_delta_all_files", "kept_series").
+brk("kept_delta_keeps_old"). brk_kind("kept_delta_keeps_old", switch).
+brk_expects("kept_delta_keeps_old", "kept_series").
+brk("kept_delta_keeps_removed"). brk_kind("kept_delta_keeps_removed", switch).
+brk_expects("kept_delta_keeps_removed", "kept_series").
+brk("kept_delta_stale_index"). brk_kind("kept_delta_stale_index", switch).
+brk_expects("kept_delta_stale_index", "kept_series").
+brk("kept_delta_gone_rules_kept"). brk_kind("kept_delta_gone_rules_kept", switch).
+brk_expects("kept_delta_gone_rules_kept", "kept_series").
+brk("kept_orphans_ignored"). brk_kind("kept_orphans_ignored", switch).
+brk_expects("kept_orphans_ignored", "kept_series").
+brk("kept_orphans_swept_late"). brk_kind("kept_orphans_swept_late", switch).
+brk_expects("kept_orphans_swept_late", "kept_series").
+brk("kept_delta_unasked_kept"). brk_kind("kept_delta_unasked_kept", switch).
+brk_expects("kept_delta_unasked_kept", "kept_js_sources").
 
 switch_site("add_base_firings_kept", "rust/rofl/src/engine/addition.rs").
 switch_site("add_closure_lowered_unnoted", "rust/rofl/src/engine.rs").
@@ -2278,6 +2324,7 @@ switch_site("cell_untimed", "rust/rofl/src/store.rs").
 switch_site("cell_why_present", "rust/rofl/src/engine.rs").
 switch_site("cited_past_canonical_only", "rust/rofl/src/engine.rs").
 switch_site("cited_past_vrow_skipped", "rust/rofl/src/engine.rs").
+switch_site("citers_unkept", "rust/rofl/src/store.rs").
 switch_site("closure_base_walked", "rust/rofl/src/engine.rs").
 switch_site("closure_one_book", "rust/rofl/src/engine.rs").
 switch_site("count_carrier_open", "rust/rofl/src/cell.rs").
@@ -2439,9 +2486,17 @@ switch_site("join_whynot_below", "rust/rofl/src/engine.rs").
 switch_site("keep_first_derivation", "rust/rofl/src/engine.rs").
 switch_site("kept_blind_scans", "rust/rofl/src/bin/rofl/kept.rs").
 switch_site("kept_cap_ignored", "rust/rofl/src/bin/rofl/kept.rs").
+switch_site("kept_delta_all_files", "rust/rofl/src/bin/rofl/delta.rs").
+switch_site("kept_delta_gone_rules_kept", "rust/rofl/src/bin/rofl/delta.rs").
+switch_site("kept_delta_keeps_old", "rust/rofl/src/bin/rofl/delta.rs").
+switch_site("kept_delta_keeps_removed", "rust/rofl/src/bin/rofl/delta.rs").
+switch_site("kept_delta_stale_index", "rust/rofl/src/bin/rofl/delta.rs").
+switch_site("kept_delta_unasked_kept", "rust/rofl/src/bin/rofl/delta.rs").
 switch_site("kept_key_ignores_walls", "rust/rofl/src/bin/rofl/kept.rs").
 switch_site("kept_load_reads_cache", "rust/rofl/src/bin/rofl/load.rs").
 switch_site("kept_md_unread", "rust/rofl/src/bin/rofl/kept.rs").
+switch_site("kept_orphans_ignored", "rust/rofl/src/bin/rofl/kept.rs").
+switch_site("kept_orphans_swept_late", "rust/rofl/src/bin/rofl/kept.rs").
 switch_site("kept_scans_unread", "rust/rofl/src/bin/rofl/kept.rs").
 switch_site("kept_shared_temp", "rust/rofl/src/bin/rofl/kept.rs").
 switch_site("kept_stale_args", "rust/rofl/src/bin/rofl/load.rs").
@@ -2536,6 +2591,8 @@ switch_site("order_proj", "rust/rofl/src/engine.rs").
 switch_site("order_row_rule_first", "rust/rofl/src/program.rs").
 switch_site("order_row_unread", "rust/rofl/src/engine.rs").
 switch_site("order_unread", "rust/rofl/src/rofl_parse.rs").
+switch_site("overdelete_judged_kept", "rust/rofl/src/engine/addition.rs").
+switch_site("overdelete_kept_by_own_component", "rust/rofl/src/engine/addition.rs").
 switch_site("partial_check", "rust/rofl/src/cell.rs").
 switch_site("phantom", "rust/rofl/src/engine.rs").
 switch_site("phrase_apart_copy_bound", "rust/rofl/src/bin/rofl/render.rs").
@@ -2593,6 +2650,7 @@ switch_site("rank_members_unordered", "rust/rofl/src/engine.rs").
 switch_site("rank_reach_blind", "rust/rofl/src/engine.rs").
 switch_site("rank_share_coarse", "rust/rofl/src/engine.rs").
 switch_site("rank_tuple_insertion", "rust/rofl/src/cell.rs").
+switch_site("rederive_once", "rust/rofl/src/engine/addition.rs").
 switch_site("refire_fault_unexcused", "rust/rofl/src/engine.rs").
 switch_site("refire_lattice_unclosed", "rust/rofl/src/engine/delta.rs").
 switch_site("refl_neg", "rust/rofl/src/reflect.rs").
@@ -2624,8 +2682,10 @@ switch_site("retract_no_rederive", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_no_refire", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_no_subtract", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_partial_gate_off", "rust/rofl/src/engine/delta.rs").
+switch_site("retract_rederive_all", "rust/rofl/src/engine/addition.rs").
 switch_site("retract_reset_any_book", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_seed_rules_unfired", "rust/rofl/src/engine/delta.rs").
+switch_site("retract_set_unpropagated", "rust/rofl/src/engine/addition.rs").
 switch_site("retract_stacked_cells_kept", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_stacked_facts_kept", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_stacked_one_level", "rust/rofl/src/engine/delta.rs").
@@ -2638,6 +2698,8 @@ switch_site("retract_thr_cells_kept", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_thr_no_close", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_thr_outer_plain", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_thr_unclosed", "rust/rofl/src/engine/delta.rs").
+switch_site("retract_tree_refused", "rust/rofl/src/engine/addition.rs").
+switch_site("retract_unrederived", "rust/rofl/src/engine/addition.rs").
 switch_site("roots_of_cycle_off", "rust/rofl/src/engine.rs").
 switch_site("scc_member_reads_free", "rust/rofl/src/engine.rs").
 switch_site("scc_off", "rust/rofl/src/engine.rs").
@@ -2739,19 +2801,24 @@ switch_site("unify_no_occurs_check", "rust/rofl/src/term.rs").
 switch_site("union_left", "rust/rofl/src/cell.rs").
 switch_site("unknown_scan", "rust/rofl/src/engine.rs").
 switch_site("unranked_negation_runs", "rust/rofl/src/engine.rs").
+switch_site("vciters_unkept", "rust/rofl/src/store.rs").
 switch_site("vclosure_ancestors_short", "rust/rofl/src/forest.rs").
 switch_site("vclosure_book_merged", "rust/rofl/src/engine/vclosure.rs").
 switch_site("vclosure_demand_unread", "rust/rofl/src/engine/vclosure.rs").
 switch_site("vclosure_derive_always_step", "rust/rofl/src/engine/vclosure.rs").
 switch_site("vclosure_descendants_short", "rust/rofl/src/forest.rs").
+switch_site("vclosure_gone_rows_kept", "rust/rofl/src/engine/vclosure.rs").
 switch_site("vclosure_height_zero", "rust/rofl/src/store.rs").
 switch_site("vclosure_neg_inverted", "rust/rofl/src/engine.rs").
 switch_site("vclosure_nonstrict", "rust/rofl/src/forest.rs").
 switch_site("vclosure_past_row_present", "rust/rofl/src/engine.rs").
 switch_site("vclosure_premise_untagged", "rust/rofl/src/engine/vclosure.rs").
 switch_site("vclosure_prov_read_ignored", "rust/rofl/src/engine/vclosure.rs").
+switch_site("vclosure_prov_unbuilt", "rust/rofl/src/engine/vclosure.rs").
 switch_site("vclosure_prov_unsettled", "rust/rofl/src/engine/vclosure.rs").
+switch_site("vclosure_reader_seen_kept", "rust/rofl/src/engine/vclosure.rs").
 switch_site("vclosure_reader_stale", "rust/rofl/src/engine.rs").
+switch_site("vclosure_removed_edge_kept", "rust/rofl/src/forest.rs").
 switch_site("vclosure_restore_keys_unread", "rust/rofl/src/engine/vclosure.rs").
 switch_site("vclosure_restore_unengaged", "rust/rofl/src/engine/vclosure.rs").
 switch_site("vclosure_retract_edge_delta", "rust/rofl/src/engine/vclosure.rs").
@@ -2801,6 +2868,8 @@ switch_site("widen_why_one_step", "rust/rofl/src/engine.rs").
 switch_site("widen_why_root_bare", "rust/rofl/src/engine.rs").
 switch_site("widen_whynot_bare", "rust/rofl/src/engine.rs").
 switch_site("widening_flag_off", "rust/rofl/src/engine.rs").
+switch_site("window_chain_unlisted", "rust/rofl/src/store.rs").
+switch_site("withdraw_all_rows_kept", "rust/rofl/src/engine/delta.rs").
 switch_site("withdrawn_cell_stale_src", "rust/rofl/src/engine.rs").
 switch_site("witness_by_signature", "rust/rofl/src/store.rs").
 switch_site("word_ops_is_only", "rust/rofl/src/rofl_parse.rs").

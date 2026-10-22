@@ -400,6 +400,126 @@ impl Session {
 
     /// `evaluated_again(Request, Reason)` in the kernel's book, a row for each request and each reason: a world that
     /// was asked for a delta and is evaluated again says so where a rule or a notebook reads it.
+    /// What the program text `src` asserts, read against this world: the base facts the store holds for its facts,
+    /// in order (a fact said twice, once); its rules and declarations, each as written back, one a line; and its
+    /// facts the store does not hold as base facts, likewise. A kept world records the first two of each of its
+    /// files (docs/cli.md), to take a file's facts in and out by delta when the file changes and its rules did not.
+    pub fn facts_of(&mut self, src: &str) -> Result<(Vec<FactId>, String, String), String> {
+        let cs = rofl_parse::parse(&mut self.eval.h, src)?;
+        let (mut ids, mut rules, mut absent, mut seen) = (Vec::new(), String::new(), String::new(), HashSet::new());
+        for c in &cs {
+            let ground = || c.head.args.iter().all(|t| self.eval.h.is_ground(*t));
+            let fact = c.body.is_empty() && c.lattice.is_none() && c.head.tense == Tense::Now && ground();
+            let text = rofl_parse::show(&self.eval.h, c);
+            if !fact {
+                rules.push_str(&text);
+                rules.push('\n');
+                continue;
+            }
+            let id = self.lit_terms(&c.head).ok().and_then(|(r, p, a)| self.eval.store.get(r, p, &a));
+            match id.filter(|&f| self.eval.store.alive(f) && self.eval.store.rec(f).base()) {
+                Some(f) => {
+                    if seen.insert(f) { ids.push(f); }
+                }
+                None => {
+                    absent.push_str(&text);
+                    absent.push('\n');
+                }
+            }
+        }
+        Ok((ids, rules, absent))
+    }
+
+    /// The base facts `ids` taken out of an evaluated world by delta, one after another as `retract_delta` takes
+    /// one (the engine's delta takes one fact and what a load wrote for it alone, `doomed`). `Full` says why a delta
+    /// is not worked out, and then the world is left dirty and not evaluated again here, nor marked as evaluated
+    /// again: the caller evaluates the files instead.
+    pub fn retract_facts_delta(&mut self, ids: &[FactId]) -> Result<Retraction, String> {
+        Ok(match self.retract_set_delta(ids)? {
+            Ok(_) => Retraction::Delta(Default::default()),
+            Err(why) => Retraction::Full(why),
+        })
+    }
+
+    /// `retract_facts_delta` with what the pass did (`AddDelta`: what it overdeleted and derived again), or why it
+    /// was not worked out (the world left dirty).
+    pub fn retract_set_delta(&mut self, ids: &[FactId]) -> Result<Result<crate::engine::AddDelta, String>, String> {
+        self.settle()?;
+        let facts: Vec<FactId> = {
+            let mut seen = HashSet::new();
+            ids.iter().copied().filter(|&f| self.eval.store.alive(f) && self.eval.store.rec(f).base() && seen.insert(f)).collect()
+        };
+        if facts.is_empty() {
+            return Ok(Ok(Default::default()));
+        }
+        if facts.iter().any(|&f| [self.eval.v.asks, self.eval.v.explain_request].contains(&self.eval.store.rec(f).rel)) {
+            self.eval.store.dirty = true;
+            return Ok(Err("asks names the rules the world runs".into()));
+        }
+        let doomed = self.doomed_of_set(&facts);
+        // a mark a rule reads goes as a fact of the set, and what rests on it with it
+        let (edb, authority) = (self.eval.v.edb, self.eval.v.authority);
+        let read: HashSet<Sym> = [edb, authority].into_iter().filter(|m| self.eval.rules.iter().any(|r| r.clause.body.iter().any(|b| b.lits_deep().iter().any(|l| l.rel == *m)))).collect();
+        let (marks, rows): (Vec<FactId>, Vec<FactId>) = doomed.into_iter().partition(|&f| read.contains(&self.eval.store.rec(f).rel));
+        let mut facts = facts;
+        facts.extend(marks);
+        match self.eval.retract_set(&facts, &rows) {
+            Ok(d) => match self.eval.check_promises() {
+                Ok(_) => Ok(Ok(d)),
+                Err(e) => {
+                    self.eval.store.dirty = true;
+                    Err(crate::describe(&e))
+                }
+            },
+            Err(why) => {
+                self.eval.store.dirty = true;
+                Ok(Err(why))
+            }
+        }
+    }
+
+    /// The base facts `ids` taken out one after another by the engine's one-fact delta (`retract_delta`): the
+    /// reference `retract_facts_delta` is held to. `Full` as there.
+    pub fn retract_facts_one_by_one(&mut self, ids: &[FactId]) -> Result<Retraction, String> {
+        self.eval.settle_assertions();
+        self.settle()?;
+        let mut last = Retraction::Delta(Default::default());
+        for &id in ids {
+            if !self.eval.store.alive(id) || !self.eval.store.rec(id).base() {
+                continue;
+            }
+            let rel = self.eval.store.rec(id).rel;
+            if rel == self.eval.v.asks || rel == self.eval.v.explain_request {
+                self.eval.store.dirty = true;
+                return Ok(Retraction::Full("asks names the rules the world runs".into()));
+            }
+            let doomed = self.doomed(id);
+            let marks: Vec<Sym> = doomed.iter().map(|&f| self.eval.store.rec(f).rel).filter(|r| [self.eval.v.edb, self.eval.v.authority].contains(r)).collect();
+            let read = self.eval.rules.iter().any(|r| r.clause.body.iter().any(|b| b.lits_deep().iter().any(|l| marks.contains(&l.rel))));
+            let delta = if read { Err("the retraction takes an edb or authority row a rule reads".to_string()) } else { self.eval.retract_delta(&doomed) };
+            match delta {
+                Ok(d) => {
+                    if let Err(e) = self.eval.check_promises() {
+                        self.eval.store.dirty = true;
+                        return Err(crate::describe(&e));
+                    }
+                    last = Retraction::Delta(d);
+                }
+                Err(why) => {
+                    // the rest go without a delta, and the world is evaluated again
+                    if self.eval.store.alive(id) {
+                        self.eval.store.remove_many(&doomed);
+                    }
+                    self.eval.store.dirty = true;
+                    if !matches!(last, Retraction::Full(_)) {
+                        last = Retraction::Full(why);
+                    }
+                }
+            }
+        }
+        Ok(last)
+    }
+
     fn evaluated_again(&mut self, requests: &[Term], why: &str) {
         let (rel, book) = (self.eval.v.evaluated_again, self.eval.v.kernel_persp);
         for reason in why.split("; ") {
@@ -1573,6 +1693,61 @@ impl Session {
         out
     }
 
+    /// `doomed` of a set of base facts taken out together, the facts themselves left out: the `asserted_by` rows
+    /// written of them, and the kernel's marks a load wrote for the set alone (`edb(R)` where no base fact of R
+    /// stands outside the set, a book's `authority` rows where none of the book does). Each relation and book is
+    /// asked once, and each answer stops at the first fact outside the set: no relation is listed.
+    fn doomed_of_set(&mut self, facts: &[FactId]) -> Vec<FactId> {
+        let set: HashSet<FactId> = facts.iter().copied().collect();
+        let v = &self.eval.v;
+        let (ab, edb, authority, main, kernel_who, anon_who, writes_to, reads_from) =
+            (v.asserted_by, v.edb, v.authority, v.main, v.kernel_who, v.anon_who, v.writes_to, v.reads_from);
+        let mut out: Vec<FactId> = Vec::new();
+        // the rows already written: the pending ones are written of live facts only (`settle_assertions`)
+        let mut declared: Vec<(FactId, Term)> = Vec::new();
+        if self.eval.store.rel_count(ab) > 0 {
+            let terms: HashSet<Term> = facts.iter().map(|&f| self.fact_term(f)).collect();
+            for g in self.eval.store.rel_all(&self.eval.h, ab) {
+                let t = self.eval.store.args(g)[0];
+                if terms.contains(&t) {
+                    out.push(g);
+                }
+                declared.push((g, t));
+            }
+        }
+        let withheld = crate::program::sealed_rels(&mut self.eval);
+        if brk!("retract_keeps_edb" => true; withheld.contains(&ab)) {
+            return out;
+        }
+        let mut marks: Vec<FactId> = Vec::new();
+        let rels: std::collections::BTreeSet<Sym> = facts.iter().map(|&f| self.eval.store.rec(f).rel).collect();
+        for rel in rels {
+            if !self.eval.v.is_reserved(rel) && !self.eval.store.base_outside(rel, None, &set) {
+                marks.extend(self.eval.store.get(edb, main, &[Term::atom(rel)]));
+            }
+        }
+        let books: std::collections::BTreeSet<Sym> = facts.iter().map(|&f| self.eval.store.rec(f).persp).collect();
+        for persp in books {
+            if persp != main && !self.eval.h.name(persp).starts_with('$') && !withheld.contains(&writes_to) && !self.eval.store.book_base_outside(persp, &set) {
+                let named = [writes_to, reads_from].into_iter().any(|r| self.eval.store.rel_all(&self.eval.h, r).into_iter().any(|f| self.eval.store.args(f)[1] == Term::atom(persp)));
+                if !named {
+                    for w in [kernel_who, anon_who] {
+                        marks.extend(self.eval.store.get(authority, main, &[Term::atom(persp), Term::atom(w)]));
+                    }
+                }
+            }
+        }
+        // a mark the program also declared itself (its assertion written, or noted to be) stays
+        let noted: HashSet<FactId> = if marks.is_empty() { HashSet::new() } else { self.eval.pending_assert.iter().map(|n| n.0).collect() };
+        for m in marks {
+            let mt = self.fact_term(m);
+            if self.eval.store.alive(m) && !declared.iter().any(|(_, t)| *t == mt) && !noted.contains(&m) {
+                out.push(m);
+            }
+        }
+        out
+    }
+
     /// `$fact(rel, persp, args)` — how `asserted_by` names the fact it is about.
     fn fact_term(&mut self, id: FactId) -> Term {
         let r = self.eval.store.rec(id);
@@ -1730,45 +1905,34 @@ impl Session {
         let runs: Vec<_> = todo.iter().map(|((kind, _), path)| {
             let cmd = scanners.get(kind).cloned();
             let path = path.clone();
-            std::thread::spawn(move || -> Result<String, String> {
-                let cmd = cmd.ok_or("no scanner(Kind, Command) for this kind")?;
-                let kept = scan_kept(&cmd, &path);
-                if let Some(out) = kept.as_deref().and_then(scan_fresh) {
-                    return Ok(out);
-                }
-                let mut argv = cmd.split_whitespace();
-                let prog = argv.next().ok_or("an empty command")?;
-                let o = std::process::Command::new(prog).args(argv).arg(&path).output().map_err(|e| format!("{prog}: {e}"))?;
-                if !o.status.success() {
-                    let err = String::from_utf8_lossy(&o.stderr);
-                    return Err(format!("{cmd} exited {}: {}", o.status.code().unwrap_or(-1), err.lines().last().unwrap_or("")));
-                }
-                let out = String::from_utf8(o.stdout).map_err(|_| "the scanner printed bytes that are not UTF-8".to_string())?;
-                if let Some(k) = kept { scan_keep(&k, &out); }
-                Ok(out)
-            })
+            std::thread::spawn(move || run_scan(cmd.as_deref(), &path))
         }).collect();
         // while the scanners run, the world goes cold
         self.cool_round()?;
-        let q = |s: &str| format!("\"{}\"", s.replace('\\', "\\\\").replace('"', "\\\""));
         let mut src = String::new();
         for (((kind, path), text), run) in todo.iter().zip(runs) {
             let ran = run.join().unwrap_or_else(|_| Err("the scanner's thread failed".into()));
-            if let Some(cmd) = scanners.get(kind) {
-                let read = ran.as_ref().map_or(Vec::new(), |out| out.lines().filter_map(|l| l.strip_prefix("-- reads: ")).map(|p| scan_path(p)).collect());
-                self.eval.scans.push((format!("{cmd} {text}"), read));
-            }
-            match ran {
-                Ok(out) => {
-                    let n = out.lines().filter(|l| !l.starts_with("--") && l.trim_end().ends_with('.')).count();
-                    src.push_str(&out);
-                    src.push_str(&format!("\nscan_done({kind}, {path}, {n}).\n"));
-                }
-                Err(e) => src.push_str(&format!("scan_failed({kind}, {path}, {}).\n", q(&e))),
-            }
+            let rec = scan_rec(kind, path, text, scanners.get(kind).cloned(), ran);
+            src.push_str(&rec.unit);
+            self.eval.scans.push(rec);
         }
         self.load_delta(&src, None).map_err(|d| format!("a scanner's facts were refused: {}", d.join("; ")))?;
         Ok(todo.len())
+    }
+
+    /// The scan requests that hold, each as its kind and path written back.
+    pub fn scan_requests_held(&mut self) -> HashSet<(String, String)> {
+        let main = self.eval.v.main;
+        let r = self.eval.h.intern("scan_request");
+        let rows: Vec<Vec<Term>> = self.eval.store.rel_persp(&self.eval.h, r, main).into_iter().map(|f| self.eval.store.args(f).to_vec()).filter(|a| a.len() == 2).collect();
+        rows.into_iter().map(|a| (self.eval.h.canon(a[0]), self.eval.h.canon(a[1]))).collect()
+    }
+
+    /// The scan of `text` (its path, written back as `path`) for `kind` run again with `cmd`, the storeroom
+    /// answering while what it read holds: what it brings, as `scan_requests` loads it.
+    pub fn rescan(kind: &str, path: &str, text: &str, cmd: Option<String>) -> crate::engine::ScanRec {
+        let ran = run_scan(cmd.as_deref(), text);
+        scan_rec(kind, path, text, cmd, ran)
     }
 
     /// `Rofl.whynot` (src/api.ts:927). `(holds, text)` — a literal that HOLDS
@@ -1879,6 +2043,41 @@ fn scan_kept(cmd: &str, path: &str) -> Option<std::path::PathBuf> {
         .or_else(|| std::env::var_os("HOME").map(|h| std::path::Path::new(&h).join(".cache")))?;
     let cwd = std::env::current_dir().ok()?;
     Some(home.join("rofl/scans").join(format!("{}.rofl", crate::store::fnv64(&format!("{}\0{cmd}\0{path}", cwd.display())))))
+}
+
+/// One scan run: the storeroom's answer while every stamp holds, else the command run with the path last.
+fn run_scan(cmd: Option<&str>, path: &str) -> Result<String, String> {
+    let cmd = cmd.ok_or("no scanner(Kind, Command) for this kind")?;
+    let kept = scan_kept(cmd, path);
+    if let Some(out) = kept.as_deref().and_then(scan_fresh) {
+        return Ok(out);
+    }
+    let mut argv = cmd.split_whitespace();
+    let prog = argv.next().ok_or("an empty command")?;
+    let o = std::process::Command::new(prog).args(argv).arg(path).output().map_err(|e| format!("{prog}: {e}"))?;
+    if !o.status.success() {
+        let err = String::from_utf8_lossy(&o.stderr);
+        return Err(format!("{cmd} exited {}: {}", o.status.code().unwrap_or(-1), err.lines().last().unwrap_or("")));
+    }
+    let out = String::from_utf8(o.stdout).map_err(|_| "the scanner printed bytes that are not UTF-8".to_string())?;
+    if let Some(k) = kept {
+        scan_keep(&k, &out);
+    }
+    Ok(out)
+}
+
+/// What one scan brings, its `scan_done` or `scan_failed` row last, and what it read.
+fn scan_rec(kind: &str, path: &str, text: &str, cmd: Option<String>, ran: Result<String, String>) -> crate::engine::ScanRec {
+    let q = |s: &str| format!("\"{}\"", s.replace('\\', "\\\\").replace('"', "\\\""));
+    let read = ran.as_ref().map_or(Vec::new(), |out| out.lines().filter_map(|l| l.strip_prefix("-- reads: ")).map(scan_path).collect());
+    let unit = match ran {
+        Ok(out) => {
+            let n = out.lines().filter(|l| !l.starts_with("--") && l.trim_end().ends_with('.')).count();
+            format!("{out}\nscan_done({kind}, {path}, {n}).\n")
+        }
+        Err(e) => format!("scan_failed({kind}, {path}, {}).\n", q(&e)),
+    };
+    crate::engine::ScanRec { kind: kind.into(), path: path.into(), text: text.into(), cmd, read, unit }
 }
 
 /// A path a scanner named, from the directory the scan ran in.
