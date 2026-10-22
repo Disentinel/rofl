@@ -561,7 +561,7 @@ kind_set(export_kind).
 kind_noun(export_kind, "export declaration").
 kind_set(short_circuit_kind).
 kind_noun(short_circuit_kind, "short circuit").
-sig(guard_arm, "guards_the_arm(node P, node X)").
+phrase(guard_arm, "<1:node> is conditional on <0:node>").
 sig(short_circuit_assign, "short_circuits(operator Op)").
 sig(field_init, "has_the_field_initialiser(node P, node V)").
 sig(guarded, "is_guarded(node X)").

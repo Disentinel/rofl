@@ -563,7 +563,6 @@ Declared as facts:
 
 | arg 1 | arg 2 |
 |---|---|
-| `guard_arm` | "guards_the_arm(node P, node X)" |
 | `short_circuit_assign` | "short_circuits(operator Op)" |
 | `field_init` | "has_the_field_initialiser(node P, node V)" |
 | `guarded` | "is_guarded(node X)" |

@@ -457,7 +457,6 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `gen_fn` | `is_a_generator_function` |
 | `gen_of` | `makes_a_generator_of` |
 | `global_unattributed` | `refers_to_an_unattributed_global` |
-| `guard_arm` | `guards_the_arm` |
 | `guard_arm_seen` | `is_seen_guarding` |
 | `guard_arm_unseen` | `is_unseen_guarding` |
 | `guard_kind` | `guards_the_field` |
