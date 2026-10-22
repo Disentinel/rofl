@@ -10,7 +10,7 @@ use crate::engine::{Eval, RuleAnswer, StagedFact, Tok};
 use crate::store::{PremRef, Store};
 use crate::term::{Heap, Sym, Term};
 
-const MAGIC: &[u8; 16] = b"ROFL-VOLUME-3\n\0\0";
+const MAGIC: &[u8; 16] = b"ROFL-VOLUME-4\n\0\0";
 
 fn build_id() -> String {
     format!("{} {} {:x}", env!("CARGO_PKG_VERSION"), crate::kernel::KERNEL_HASH, 0x0102_0304u32)
@@ -22,14 +22,20 @@ pub type Staged = Vec<(StagedFact, Vec<(Sym, Vec<PremRef>)>)>;
 /// `path` with `note`; its size. With a `bound` the file never grows past it: the volume fails instead
 /// (`arena::TOO_LARGE`), and the caller removes what was written.
 pub fn keep(path: &str, e: &mut Eval, note: &str, bound: Option<usize>) -> std::io::Result<usize> {
-    let (staged, answer) = (e.staged_kept(), e.safety().clone());
-    let (h, s) = (&mut e.h, &mut e.store);
     let mut w = VolW::bounded(path, bound)?;
     w.bytes(MAGIC);
     w.text(&build_id());
     w.text(note);
-    s.write_volume(&mut w);
-    h.write_volume(&mut w);
+    body(&mut w, e);
+    w.finish()
+}
+
+/// The world: what a volume and an overlay hold after their headers.
+fn body(w: &mut VolW, e: &mut Eval) {
+    let (staged, answer) = (e.staged_kept(), e.safety().clone());
+    let (h, s) = (&mut e.h, &mut e.store);
+    s.write_volume(w);
+    h.write_volume(w);
     w.u32(staged.len() as u32);
     for (f, alts) in &staged {
         w.u32(f.rel);
@@ -64,11 +70,110 @@ pub fn keep(path: &str, e: &mut Eval, note: &str, bound: Option<usize>) -> std::
             w.arena(&m[&k]);
         }
     }
-    write_toks(&mut w, &e.lattices_kept());
-    write_toks(&mut w, &e.unknowns_kept());
-    e.write_notes(&mut w);
-    e.write_cut(&mut w);
+    write_toks(w, &e.lattices_kept());
+    write_toks(w, &e.unknowns_kept());
+    e.write_notes(w);
+    e.write_cut(w);
+    e.write_stats(w);
+    e.write_vprov(w);
+}
+
+/// A WORLD KEPT AS AN OVERLAY (docs/cli.md, "An edit goes by delta"): the world `e`, opened from the volume at
+/// `base` and changed since, written as what changed: every arena that still lies in the base as where it lies, a
+/// column as what was put over it and appended. The base stays as it was; the overlay names it by its length, its
+/// sum and the stamp of its file, and is refused over any other.
+pub fn keep_over(path: &str, e: &mut Eval, note: &str, base: &str, bound: Option<usize>) -> std::io::Result<usize> {
+    let map = e.store.base_map.clone().ok_or_else(|| std::io::Error::other("the world was not opened from a volume"))?;
+    let st = stamp(base)?;
+    if st.len != map.len() as u64 || st.sum != trailing(&map) {
+        return Err(std::io::Error::other(format!("{base} is not the volume the world was opened from")));
+    }
+    let mut w = VolW::bounded(path, bound)?;
+    w.bytes(OVER_MAGIC);
+    w.text(&build_id());
+    for x in [st.len, st.sum, st.mtime, st.ino] {
+        w.u64(x);
+    }
+    w.text(note);
+    w.over(map);
+    body(&mut w, e);
     w.finish()
+}
+
+const OVER_MAGIC: &[u8; 16] = b"ROFL-OVERLAY-1\n\0";
+
+/// A volume's file as an overlay names it: its length and the sum that ends it, and when and where it was written.
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+struct Stamp {
+    len: u64,
+    sum: u64,
+    mtime: u64,
+    ino: u64,
+}
+
+fn trailing(map: &[u8]) -> u64 {
+    map.len().checked_sub(8).map_or(0, |i| u64::from_le_bytes(map[i..].try_into().unwrap()))
+}
+
+fn stamp(path: &str) -> std::io::Result<Stamp> {
+    use std::io::{Read, Seek};
+    let mut f = std::fs::File::open(path)?;
+    let m = f.metadata()?;
+    let mut sum = [0u8; 8];
+    if m.len() >= 8 {
+        f.seek(std::io::SeekFrom::End(-8))?;
+        f.read_exact(&mut sum)?;
+    }
+    let mtime = m.modified().ok().and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok()).map_or(0, |d| d.as_nanos() as u64);
+    #[cfg(unix)]
+    let ino = std::os::unix::fs::MetadataExt::ino(&m);
+    #[cfg(not(unix))]
+    let ino = 0;
+    Ok(Stamp { len: m.len(), sum: u64::from_le_bytes(sum), mtime, ino })
+}
+
+/// The overlay at `path` over the volume at `base`, its header read once its own sum holds and the base is the one
+/// it names: by its length and sum, and, where its file is not the one stamped (written again, copied, touched),
+/// by the sum of every byte of it. Its note, and the reader positioned at its world.
+fn over_header(base: &str, path: &str) -> Result<(String, VolR), String> {
+    let map = map_file(path).map_err(|e| format!("{path}: {e}"))?;
+    if !map.starts_with(OVER_MAGIC) {
+        return Err(format!("{path}: not an overlay"));
+    }
+    let mut r = VolR::new(map.clone(), OVER_MAGIC.len());
+    if !crate::brk!("overlay_unsummed" => true; r.sum_holds()) {
+        return Err(format!("{path}: the overlay is damaged: its bytes are not the ones written"));
+    }
+    if r.text()? != build_id() {
+        return Err(format!("{path}: an overlay of another build"));
+    }
+    let [len, sum, mtime, ino] = [(); 4].map(|_| r.u64());
+    let named = Stamp { len: len?, sum: sum?, mtime: mtime?, ino: ino? };
+    let now = stamp(base).map_err(|e| format!("{base}: {e}"))?;
+    if (now.len, now.sum) != (named.len, named.sum) {
+        return Err(format!("{path} lies over another volume than {base}"));
+    }
+    if now != named && crate::brk!("overlay_base_unchecked" => false; true) {
+        check(base)?;
+    }
+    let note = r.text()?;
+    let mut b = header(base)?;
+    if b.text()? != build_id() {
+        return Err(format!("{base}: a volume of another build"));
+    }
+    let at = r.at();
+    Ok((note, VolR::over(map, at, b.base_map())))
+}
+
+/// The note of the overlay at `path` over the volume at `base`: what the world it holds was kept from.
+pub fn check_over(base: &str, path: &str) -> Result<String, String> {
+    over_header(base, path).map(|(n, _)| n)
+}
+
+/// The world the volume at `base` and the overlay at `path` over it hold, the base's arenas mapped where they lie.
+pub fn open_over(base: &str, path: &str) -> Result<Opened, String> {
+    let (_, r) = over_header(base, path)?;
+    world(r)
 }
 
 fn write_toks(w: &mut VolW, toks: &[Tok]) {
@@ -170,6 +275,10 @@ pub fn open(path: &str) -> Result<Opened, String> {
         return Err(format!("{path}: a volume of another build"));
     }
     r.text()?;
+    world(r)
+}
+
+fn world(mut r: VolR) -> Result<Opened, String> {
     let store = Store::read_volume(&mut r)?;
     let heap = Heap::read_volume(&mut r)?;
     let mut staged = Vec::new();

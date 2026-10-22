@@ -94,6 +94,32 @@ fn stale(now: usize, then: usize) -> bool {
 }
 
 impl Eval {
+    /// The planner's counts kept with a volume: a world opened from one plans as the world that kept it did, without
+    /// a pass over each relation it reads. A count is taken again where its relation's size moved (`stale`).
+    pub(crate) fn write_stats(&self, w: &mut crate::arena::VolW) {
+        let mut all: Vec<(&Vec<u64>, &(usize, usize, usize))> = self.delta_stats.iter().collect();
+        all.sort_unstable();
+        let mut words: Vec<u64> = Vec::new();
+        for (k, &(then, rows, d)) in all.into_iter().filter(|_| brk!("stats_unkept" => false; true)) {
+            words.push(k.len() as u64);
+            words.extend(k);
+            words.extend([then as u64, rows as u64, d as u64]);
+        }
+        w.arena(&words);
+    }
+
+    pub(crate) fn read_stats(&mut self, r: &mut crate::arena::VolR) -> Result<(), String> {
+        let words = r.arena::<u64>()?;
+        let mut i = 0;
+        while i < words.len() {
+            let n = words[i] as usize;
+            let e = words.get(i + 1..i + 1 + n + 3).ok_or("a volume's planner counts end early")?;
+            self.delta_stats.insert(e[..n].to_vec(), (e[n] as usize, e[n + 1] as usize, e[n + 2] as usize));
+            i += 1 + n + 3;
+        }
+        Ok(())
+    }
+
     /// The plan for news at plan position `at` (None: a firing over the whole
     /// store, no news) when it is cheaper than the written order for `n` news
     /// rows; None keeps the written order.
@@ -223,8 +249,9 @@ impl Eval {
         key.extend(vpos.iter().map(|&p| p as u64));
         let size = self.len_est(l.rel, persp);
         let (rows, distinct) = match self.delta_stats.get(&key) {
-            Some(&(then, rows, d)) if !stale(size, then) => (rows, d),
+            Some(&(then, rows, d)) if brk!("stats_never_stale" => true; !stale(size, then)) => (rows, d),
             _ => {
+                self.probes += 1;
                 let t = std::time::Instant::now();
                 let (rows, d) = self.store.probe_stats(&self.h, l.rel, persp, &cpos, &cvals, &vpos);
                 self.delta_ns += t.elapsed().as_nanos() as u64;

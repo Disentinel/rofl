@@ -207,9 +207,15 @@ impl Eval {
         if crate::structure::closures(&self.h, &self.v, &mut self.store).is_empty() {
             return;
         }
+        // the rows a volume names by key, as it kept them: read where they lie, the program's closures being the same
+        let kept = std::mem::take(&mut self.store.vrow_of);
         if !brk!("vclosure_restore_unengaged" => true; false) {
             self.vclosure_engage();
             self.vpublish();
+            if !kept.is_empty() && kept.values().all(|r| r.0 < self.vclosures.len()) {
+                self.store.vrow_of = kept;
+                return;
+            }
             // the rows the snapshot's witnesses and members cite are named by their keys: read now, for their heights
             let mut keys: Vec<Sym> = Vec::new();
             for id in self.store.firing_keys() {
@@ -574,6 +580,21 @@ impl Eval {
     /// PROVENANCE ON DEMAND OF A CLOSURE ANSWERED FROM ITS TREE, where witnesses are kept: the `derived_by` row of each
     /// row of the closure, its one firing at the tick evaluated, written when something observes the rows
     /// (`settle_provenance`) as the noted firings' are, and taken out again when the trees have changed since.
+    /// The provenance rows of the trees' rows written so far, kept with a volume: a world opened from one takes out
+    /// those of rows a retraction ends, as the world that wrote them would.
+    pub(crate) fn write_vprov(&self, w: &mut crate::arena::VolW) {
+        w.arena(&self.vprov_ids);
+    }
+
+    pub(crate) fn read_vprov(&mut self, r: &mut crate::arena::VolR) -> Result<(), String> {
+        let ids = r.arena::<FactId>()?;
+        if ids.iter().any(|&i| i >= self.store.len_ids()) {
+            return Err("a volume's provenance of a tree names no fact".into());
+        }
+        self.vprov_ids = if brk!("vclosure_prov_ids_unread" => true; false) { Vec::new() } else { ids.to_vec() };
+        Ok(())
+    }
+
     pub(super) fn vsettle(&mut self) {
         if !self.vany || self.no_provenance || !self.store.vlisted || brk!("vclosure_prov_unsettled" => true; false) {
             return;

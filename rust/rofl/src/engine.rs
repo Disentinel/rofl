@@ -738,6 +738,8 @@ pub struct Eval {
     /// Facts the overdeletion kept for a firing that stands (`overdelete`): each takes again, at its level, every firing it has.
     add_kept: HashSet<FactId>,
     pub delta_ns: u64,
+    /// the passes over a relation the planner made to count it (`probe_stats`), its cache missed
+    pub probes: u64,
     delta_plans: HashMap<(Sym, usize), joinplan::Slot>,
     delta_stats: HashMap<Vec<u64>, (usize, usize, usize)>,
     /// The declared functions (`function p(K, to V).`): promises checked after
@@ -1416,6 +1418,7 @@ impl Eval {
             scans: Vec::new(),
             delta_by_rule: HashMap::new(),
             delta_ns: 0,
+            probes: 0,
             plan_trial: false,
             adding: false,
             add_fresh: None,

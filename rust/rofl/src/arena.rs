@@ -200,7 +200,16 @@ pub struct VolW {
     sum: Sum,
     /// the most bytes the file may reach: past it nothing more is written and the volume fails as `TooLarge`
     bound: Option<usize>,
+    /// AN OVERLAY (`volume::keep_over`): the volume it lies over. An arena that lies in that file is written as where
+    /// it lies there, one put over such an arena as its puts and its tail; every other arena as its bytes.
+    base: Option<Rc<memmap2::Mmap>>,
 }
+
+/// How an arena of an overlay is held: its bytes, where it lies in the base, or a span of the base with values put
+/// over it and a tail after it.
+const INLINE: u32 = 0;
+const IN_BASE: u32 = 1;
+const OVER_BASE: u32 = 2;
 
 /// What a bounded volume fails with when it would pass its bound.
 pub const TOO_LARGE: &str = "the volume would pass its bound";
@@ -211,7 +220,24 @@ impl VolW {
     }
     /// A volume that never grows past `bound` bytes on disk: written up to it, then failed.
     pub fn bounded(path: &str, bound: Option<usize>) -> std::io::Result<VolW> {
-        Ok(VolW { out: std::io::BufWriter::with_capacity(1 << 20, std::fs::File::create(path)?), at: 0, err: None, sum: Sum::default(), bound })
+        Ok(VolW { out: std::io::BufWriter::with_capacity(1 << 20, std::fs::File::create(path)?), at: 0, err: None, sum: Sum::default(), bound, base: None })
+    }
+    /// From here on, an overlay over the volume mapped as `base`: what follows its header.
+    pub fn over(&mut self, base: Rc<memmap2::Mmap>) {
+        self.base = Some(base);
+    }
+    /// Whether `a` lies in the base of this overlay.
+    pub fn lies_in_base<T: Pod>(&self, a: &[T]) -> bool {
+        self.in_base(a).is_some()
+    }
+    /// Where `a` lies in the base, in bytes, when it does.
+    fn in_base<T: Pod>(&self, a: &[T]) -> Option<usize> {
+        let b = self.base.as_ref()?;
+        let (start, p) = (b.as_ptr() as usize, a.as_ptr() as usize);
+        (!a.is_empty() && p >= start && p + std::mem::size_of_val(a) <= start + b.len()).then(|| p - start)
+    }
+    fn pad(&mut self) {
+        self.bytes(&[0; 8][..self.at.next_multiple_of(8) - self.at]);
     }
     pub fn bytes(&mut self, b: &[u8]) {
         use std::io::Write;
@@ -238,17 +264,60 @@ impl VolW {
     }
     /// One arena of the parts one after another, as their concatenation is written.
     pub fn arena_parts<T: Pod>(&mut self, parts: &[&[T]]) {
-        self.u64(parts.iter().map(|p| p.len()).sum::<usize>() as u64);
-        self.bytes(&[0; 8][..self.at.next_multiple_of(8) - self.at]);
+        let n = parts.iter().map(|p| p.len()).sum::<usize>();
+        if self.base.is_some() {
+            match parts.first().and_then(|p| self.in_base(p)) {
+                Some(off) if parts.len() == 1 => {
+                    self.u64(n as u64);
+                    self.u32(IN_BASE);
+                    return self.u64(off as u64);
+                }
+                Some(_) => return self.over_base(parts[0], &[], &parts[1..]),
+                None => {
+                    self.u64(n as u64);
+                    self.u32(INLINE);
+                }
+            }
+        } else {
+            self.u64(n as u64);
+        }
+        self.pad();
         for p in parts {
             self.bytes(bytes_of(p));
+        }
+    }
+    /// An arena that lies in the base with `put` written over it and the parts of `tail` after it.
+    fn over_base<T: Pod>(&mut self, base: &[T], put: &[(usize, T)], tail: &[&[T]]) {
+        let off = self.in_base(base).expect("a span of the base");
+        self.u64((base.len() + tail.iter().map(|t| t.len()).sum::<usize>()) as u64);
+        self.u32(OVER_BASE);
+        self.u64(off as u64);
+        self.u64(base.len() as u64);
+        self.u64(put.len() as u64);
+        self.pad();
+        for (i, _) in put {
+            self.u64(*i as u64);
+        }
+        self.pad();
+        for (_, v) in put {
+            self.bytes(bytes_of(std::slice::from_ref(v)));
+        }
+        self.pad();
+        for t in tail {
+            self.bytes(bytes_of(t));
         }
     }
     /// `base` with the values of `put` (ascending) written over it, then `tail`: a table or a column as the values
     /// put in it leave it.
     pub fn arena_placed<T: Pod>(&mut self, base: &[T], put: &[(usize, T)], tail: &[T]) {
+        if self.in_base(base).is_some() {
+            return self.over_base(base, put, &[tail]);
+        }
         self.u64((base.len() + tail.len()) as u64);
-        self.bytes(&[0; 8][..self.at.next_multiple_of(8) - self.at]);
+        if self.base.is_some() {
+            self.u32(INLINE);
+        }
+        self.pad();
         let mut at = 0;
         for (i, v) in put {
             self.bytes(bytes_of(&base[at..*i]));
@@ -276,12 +345,79 @@ pub struct VolR {
     map: Rc<memmap2::Mmap>,
     i: usize,
     end: usize,
+    /// reading an overlay: the volume it lies over
+    base: Option<Rc<memmap2::Mmap>>,
+}
+
+/// An arena read from an overlay as it lies: a span of the base, the values put over it, and the tail after it. A
+/// column is opened as these layers (`Store::read_volume`); anything else is put together in the heap.
+pub struct Layers<T: Pod> {
+    pub base: Arena<T>,
+    pub put: Vec<(usize, T)>,
+    pub tail: Vec<T>,
 }
 
 impl VolR {
     pub fn new(map: Rc<memmap2::Mmap>, from: usize) -> VolR {
         let end = map.len().saturating_sub(8);
-        VolR { map, i: from, end }
+        VolR { map, i: from, end, base: None }
+    }
+    /// An overlay mapped as `map`, over the volume mapped as `base`.
+    pub fn over(map: Rc<memmap2::Mmap>, from: usize, base: Rc<memmap2::Mmap>) -> VolR {
+        VolR { base: Some(base), ..Self::new(map, from) }
+    }
+    /// The volume the arenas read lie in that an overlay written from this world may name as its base: the base of
+    /// an overlay, else this volume.
+    pub fn base_map(&self) -> Rc<memmap2::Mmap> {
+        self.base.clone().unwrap_or_else(|| self.map.clone())
+    }
+    fn pad(&mut self) {
+        self.i = self.i.next_multiple_of(8);
+    }
+    /// The next arena as layers: one with no layers over its base where the volume holds it whole.
+    pub fn layers<T: Pod>(&mut self, ok: impl Fn(&[u32]) -> bool) -> Result<Layers<T>, String> {
+        let Some(base) = self.base.clone() else { return Ok(Layers { base: self.arena_checked(ok)?, put: Vec::new(), tail: Vec::new() }) };
+        let at = self.i;
+        let len = self.u64()? as usize;
+        if self.u32()? != OVER_BASE {
+            self.i = at;
+            return Ok(Layers { base: self.arena_checked(ok)?, put: Vec::new(), tail: Vec::new() });
+        }
+        let (off, n, puts) = (self.u64()? as usize, self.u64()? as usize, self.u64()? as usize);
+        if n > len || puts > n {
+            return Err("an overlay's arena is longer than it says".into());
+        }
+        let b = Arena::<T>::mapped(&base, off, n).ok_or("an overlay names bytes its base does not hold")?;
+        self.pad();
+        let idx: Vec<u64> = self.take(puts.checked_mul(8).ok_or("an overlay ends early")?)?.chunks_exact(8).map(|x| u64::from_ne_bytes(x.try_into().unwrap())).collect();
+        self.pad();
+        let vals = self.values::<T>(puts)?;
+        self.pad();
+        let tail = self.values::<T>(len - n)?;
+        if idx.iter().any(|&i| i as usize >= n) || idx.windows(2).any(|w| w[0] >= w[1]) {
+            return Err("an overlay puts a value outside its base".into());
+        }
+        let words = |v: &[T]| -> Vec<u32> { bytes_of(v).chunks_exact(4).map(|x| u32::from_ne_bytes(x.try_into().unwrap())).collect() };
+        if std::mem::size_of::<T>() % 4 == 0 && !(ok(&words(&b)) && ok(&words(&vals)) && ok(&words(&tail))) {
+            return Err("a volume holds a value of no kind".into());
+        }
+        let put = idx.into_iter().map(|i| i as usize).zip(vals).collect();
+        Ok(Layers { base: b, put, tail: crate::brk!("overlay_tail_twice" => [tail.clone(), tail].concat(); tail) })
+    }
+    /// `n` values of T copied out of the file.
+    fn values<T: Pod>(&mut self, n: usize) -> Result<Vec<T>, String> {
+        let bytes = self.take(n.checked_mul(std::mem::size_of::<T>()).ok_or("an overlay ends early")?)?;
+        let mut v: Vec<T> = Vec::with_capacity(n);
+        // SAFETY: T is Pod and the bytes are n of its size; the vector's capacity holds them
+        unsafe {
+            std::ptr::copy_nonoverlapping(bytes.as_ptr(), v.as_mut_ptr() as *mut u8, bytes.len());
+            v.set_len(n);
+        }
+        Ok(v)
+    }
+    /// Where the next read starts.
+    pub fn at(&self) -> usize {
+        self.i
     }
     pub fn at_end(&self) -> bool {
         self.i == self.end
@@ -314,7 +450,40 @@ impl VolR {
     }
     /// An arena of T, after `ok` approved its words: for a T not every bit pattern of which is a value.
     pub fn arena_checked<T: Pod>(&mut self, ok: impl Fn(&[u32]) -> bool) -> Result<Arena<T>, String> {
+        if let Some(base) = self.base.clone() {
+            let at = self.i;
+            let len = self.u64()? as usize;
+            match self.u32()? {
+                INLINE => {}
+                IN_BASE => {
+                    let off = self.u64()? as usize;
+                    let a = Arena::<T>::mapped(&base, off, len).ok_or("an overlay names bytes its base does not hold")?;
+                    let words = Arena::<u32>::mapped(&base, off, std::mem::size_of_val::<[T]>(&a) / 4);
+                    if std::mem::size_of::<T>() % 4 == 0 && !ok(&words.ok_or("an overlay names bytes its base does not hold")?) {
+                        return Err("a volume holds a value of no kind".into());
+                    }
+                    return Ok(a);
+                }
+                OVER_BASE => {
+                    self.i = at;
+                    let l = self.layers::<T>(ok)?;
+                    let mut v = l.base.to_vec();
+                    for (i, x) in l.put {
+                        v[i] = x;
+                    }
+                    v.extend(l.tail);
+                    return Ok(Arena::Heap(v));
+                }
+                _ => return Err("an overlay holds an arena of no kind".into()),
+            }
+            return self.inline(len, ok);
+        }
         let len = self.u64()? as usize;
+        self.inline(len, ok)
+    }
+
+    /// `len` values of T where they lie in this file.
+    fn inline<T: Pod>(&mut self, len: usize, ok: impl Fn(&[u32]) -> bool) -> Result<Arena<T>, String> {
         self.i = self.i.next_multiple_of(8);
         let at = self.i;
         if len.checked_mul(std::mem::size_of::<T>()).and_then(|n| n.checked_add(at)).map_or(true, |to| to > self.end) {

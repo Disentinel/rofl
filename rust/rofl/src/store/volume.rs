@@ -17,14 +17,28 @@ fn write_patterns(w: &mut VolW, facts: &Facts, by_pat: Option<&ArgIndex>) {
     let mut masks: Vec<&u32> = by_pat.keys().collect();
     masks.sort_unstable();
     w.u32(masks.len() as u32);
-    for m in masks {
-        let x = &by_pat[m].flat(facts);
-        w.u32(*m);
+    let one = |w: &mut VolW, x: &PatIndex| {
         w.arena(&x.pos.iter().map(|&p| p as u32).collect::<Vec<u32>>());
         w.u64(x.values as u64);
         w.arena(&x.slots);
         w.arena(&x.ids);
         w.arena(&x.prev);
+    };
+    for m in masks {
+        let x = &by_pat[m];
+        w.u32(*m);
+        // in an overlay, an index over one in the base: that one where it lies, and the top over it
+        match &x.under {
+            Some(u) if u.under.is_none() && w.lies_in_base(&u.slots) => {
+                w.u32(1);
+                one(w, u);
+                one(w, x);
+            }
+            _ => {
+                w.u32(0);
+                one(w, &x.flat(facts));
+            }
+        }
     }
 }
 
@@ -34,21 +48,50 @@ fn read_patterns(r: &mut VolR) -> Result<Option<Rc<ArgIndex>>, String> {
         return Ok(None);
     }
     let mut by_pat = ArgIndex::default();
-    for _ in 0..n {
-        let mask = r.u32()?;
+    let one = |r: &mut VolR| -> Result<PatIndex, String> {
         let pos: Box<[usize]> = r.arena::<u32>()?.iter().map(|&p| p as usize).collect();
         let values = r.u64()? as usize;
         let (slots, ids, prev): (Arena<u32>, Arena<FactId>, Arena<u32>) = (r.arena()?, r.arena()?, r.arena()?);
         if !slots.len().is_power_of_two() || ids.len() != prev.len() || slots.iter().chain(prev.iter()).any(|&e| e != EMPTY && e as usize >= ids.len()) {
             return Err("a volume's argument index is not an index".into());
         }
-        by_pat.insert(mask, PatIndex { pos, slots, ids, prev, values, under: None });
+        Ok(PatIndex { pos, slots, ids, prev, values, under: None })
+    };
+    for _ in 0..n {
+        let mask = r.u32()?;
+        let ix = match r.u32()? {
+            0 => one(r)?,
+            1 => {
+                let under = one(r)?;
+                PatIndex { under: Some(Rc::new(under)), ..one(r)? }
+            }
+            _ => return Err("a volume's argument index is not an index".into()),
+        };
+        by_pat.insert(mask, ix);
     }
     Ok(Some(Rc::new(by_pat)))
 }
 
 fn col<T: Pod>(w: &mut VolW, c: &Col<T>) {
     w.arena_placed(&c.base, &c.lows(), &c.own);
+}
+
+/// Rows of `N` words: in an overlay over a volume that holds `base`, those rows where they lie and the rest after
+/// them; else all of them.
+fn rows_since<const N: usize>(w: &mut VolW, base: Option<&Arena<u32>>, rows: Vec<[u32; N]>) {
+    match base.filter(|b| w.lies_in_base(b) && crate::brk!("overlay_rows_whole" => false; true)) {
+        Some(b) => {
+            let held: FxSet<[u32; N]> = b.chunks_exact(N).map(|x| <[u32; N]>::try_from(x).unwrap()).collect();
+            let since: Vec<u32> = rows.into_iter().filter(|r| !held.contains(r)).flatten().collect();
+            w.arena_parts(&[&b[..], &since]);
+        }
+        None => w.arena(&rows.concat()),
+    }
+}
+
+/// A column as an overlay holds it: the base where it lies, what was put over it below the mark, the rest its own.
+fn layered<T: Pod>(l: crate::arena::Layers<T>) -> Col<T> {
+    Col { mark: l.base.len(), base: Rc::new(l.base), own: l.tail, low: l.put.into_iter().collect() }
 }
 
 impl Tuples {
@@ -138,13 +181,31 @@ impl Store {
         let mut rels: Vec<(&Sym, &Vec<(Sym, KeyRun)>)> = self.idx.iter().collect();
         rels.sort_unstable_by_key(|(r, _)| **r);
         w.u32(rels.len() as u32);
+        let mut seen: Vec<u64> = Vec::new();
         for (rel, v) in rels {
             w.u32(*rel);
             w.u32(v.len() as u32);
             for (p, k) in v {
                 w.u32(*p);
-                w.arena(&k.canon);
-                w.arena(&k.arrived);
+                // in an overlay, a run that merged arrivals since is its run in the base and what came since
+                match &k.canon_base {
+                    Some(b) if w.lies_in_base(b) && !w.lies_in_base(&k.canon) && crate::brk!("overlay_runs_whole" => false; true) => {
+                        seen.resize(seen.len().max(self.facts.len().div_ceil(64)), 0);
+                        for &i in b.iter() {
+                            seen[i as usize / 64] |= 1 << (i % 64);
+                        }
+                        let since: Vec<FactId> = k.canon.iter().chain(k.arrived.iter()).copied().filter(|&i| seen[i as usize / 64] & 1 << (i % 64) == 0).collect();
+                        for &i in b.iter() {
+                            seen[i as usize / 64] = 0;
+                        }
+                        w.arena(b);
+                        w.arena(&since);
+                    }
+                    _ => {
+                        w.arena(&k.canon);
+                        w.arena(&k.arrived);
+                    }
+                }
                 w.arena(&k.loose);
                 w.arena(&k.staged);
                 write_patterns(w, &self.facts, k.by_pat.as_deref());
@@ -193,6 +254,16 @@ impl Store {
         w.arena(&seals);
         match &self.citers {
             None => w.u32(0),
+            // in an overlay, the column where it lies in the base and the citations since beside it
+            Some(ix) if w.lies_in_base(&ix.offs) && w.lies_in_base(&ix.ids) => {
+                w.u32(2);
+                w.arena(&ix.offs);
+                w.arena(&ix.ids);
+                let mut gs: Vec<&FactId> = ix.more.keys().collect();
+                gs.sort_unstable();
+                let pairs: Vec<u32> = gs.into_iter().flat_map(|g| ix.more[g].iter().flat_map(move |id| [*g, *id])).collect();
+                w.arena(&pairs);
+            }
             Some(ix) => {
                 let ix = ix.flat(self.facts.len());
                 w.u32(1);
@@ -206,24 +277,27 @@ impl Store {
                 w.u32(1);
                 let mut rows: Vec<[u32; 4]> = m.iter().flat_map(|(d, v)| v.iter().map(move |(f, k)| [*d as u32, (*d >> 32) as u32, *f, *k])).collect();
                 rows.sort_unstable();
-                w.arena(&rows.concat());
+                rows_since(w, self.vciters_base.as_ref(), rows);
             }
         }
+        // the rows of a tree a firing cites, by key: what opening reads instead of the key's text
+        let mut rows: Vec<[u32; 7]> = self.vrow_of.iter().map(|(k, &(ci, b, a, d))| {
+            let (a, d) = (a.bits(), d.bits());
+            [*k, ci as u32, b, a as u32, (a >> 32) as u32, d as u32, (d >> 32) as u32]
+        }).collect();
+        rows.sort_unstable();
+        rows_since(w, self.vrow_base.as_ref(), rows);
     }
 
     /// The key table as `freeze` would leave it: the layer's facts put in the base's table where it is the size a
     /// table of them all is made, else that table made.
     fn write_keys(&self, w: &mut VolW) {
-        let (n, mark) = (self.facts.len(), self.facts.recs.mark);
+        let mark = self.facts.recs.mark;
         if mark == 0 {
             w.arena(&self.keys);
         } else if self.keys.is_empty() {
             w.arena(&self.keys_base);
-        } else if ((n + 1) * 4).next_power_of_two().max(64) == self.keys_base.len() {
-            let put = placed(&self.keys_base, EMPTY, (mark as FactId..n as FactId).map(|id| {
-                let r = self.facts.recs[id as usize];
-                (hash_key(r.rel, r.persp, self.args(id)), id)
-            }));
+        } else if let Some(put) = self.keys_placed() {
             w.arena_placed(&self.keys_base, &put, &[]);
         } else {
             w.arena(&self.key_table(0));
@@ -271,17 +345,15 @@ impl Store {
                 let loose = r.arena::<FactId>()?.to_vec();
                 let staged = r.arena::<FactId>()?.to_vec();
                 let by_pat = read_patterns(r)?;
-                v.push((p, KeyRun { canon, arrived, loose, staged, by_pat, by_tup: true }));
+                v.push((p, KeyRun { canon_base: Some(canon.clone()), canon, arrived, loose, staged, by_pat, by_tup: true }));
             }
             groups.insert(rel, v);
         }
         s.idx = Runs { base: Rc::new(groups), own: Groups::default() };
-        let col = |a: Arena<u32>| Col { mark: a.len(), base: Rc::new(a), own: Vec::new(), ..Col::default() };
-        s.wit_head = col(r.arena()?);
-        let wits: Arena<WitNode> = r.arena()?;
-        s.wits = Col { mark: wits.len(), base: Rc::new(wits), own: Vec::new(), ..Col::default() };
-        let prems: Arena<PremRef> = r.arena_checked(prem_tags_ok)?;
-        s.prem_arena = Col { mark: prems.len(), base: Rc::new(prems), own: Vec::new(), ..Col::default() };
+        s.wit_head = layered(r.layers(|_| true)?);
+        s.wits = layered(r.layers(|_| true)?);
+        s.prem_arena = layered(r.layers(prem_tags_ok)?);
+        s.base_map = Some(r.base_map());
         let n = r.u64()? as usize;
         let zero = r.u32()? == 1;
         let slots: Arena<u64> = r.arena()?;
@@ -322,25 +394,41 @@ impl Store {
             }
         }
         s.cells = Rc::new(c);
-        if r.u32()? == 1 {
+        let layered = r.u32()?;
+        if layered != 0 {
             let (offs, ids): (Arena<u32>, Arena<FactId>) = (r.arena()?, r.arena()?);
             let n = s.facts.len();
-            if offs.len() != n + 1 || offs.windows(2).any(|w| w[0] > w[1]) || offs[n] as usize != ids.len() || ids.iter().any(|&i| i as usize >= n) {
+            let more: Arena<u32> = if layered == 2 { r.arena()? } else { Arena::default() };
+            let whole = layered == 1 && offs.len() == n + 1;
+            let below = layered == 2 && offs.len() <= n + 1 && !offs.is_empty();
+            if !(whole || below) || offs.windows(2).any(|w| w[0] > w[1]) || offs[offs.len() - 1] as usize != ids.len() || ids.iter().chain(more.iter()).any(|&i| i as usize >= n) || more.len() % 2 != 0 {
                 return Err("a volume's citer index is not an index".into());
             }
-            s.citers = Some(Rc::new(Citers { offs, ids, ..Citers::default() }));
+            let mut m: HashMap<FactId, Vec<FactId>> = HashMap::new();
+            for x in more.chunks_exact(2) {
+                m.entry(x[0]).or_default().push(x[1]);
+            }
+            s.citers = Some(Rc::new(Citers { offs, ids, more: m }));
         }
         if r.u32()? == 1 {
-            let words: Arena<u32> = r.arena()?;
-            if words.len() % 4 != 0 || words.chunks_exact(4).any(|x| x[2] as usize >= s.facts.len()) {
+            let l = r.layers::<u32>(|_| true)?;
+            if l.base.len() % 4 != 0 || l.tail.len() % 4 != 0 || l.base.chunks_exact(4).chain(l.tail.chunks_exact(4)).any(|x| x[2] as usize >= s.facts.len()) {
                 return Err("a volume's index of the rows of a tree is not an index".into());
             }
             let mut m: FxMap<u64, Vec<(FactId, Sym)>> = FxMap::default();
-            for x in words.chunks_exact(4) {
+            for x in l.base.chunks_exact(4).chain(l.tail.chunks_exact(4)) {
                 m.entry(x[0] as u64 | (x[1] as u64) << 32).or_default().push((x[2], x[3]));
             }
             s.vciters = Some(Rc::new(m));
+            s.vciters_base = Some(l.base);
         }
+        let l = r.layers::<u32>(|_| true)?;
+        if l.base.len() % 7 != 0 || l.tail.len() % 7 != 0 {
+            return Err("a volume's rows of a tree are not rows".into());
+        }
+        let both = |lo: u32, hi: u32| Term::from_bits(lo as u64 | (hi as u64) << 32);
+        s.vrow_of = l.base.chunks_exact(7).chain(l.tail.chunks_exact(7)).map(|x| (x[0], (x[1] as usize, x[2], both(x[3], x[4]), both(x[5], x[6])))).collect();
+        s.vrow_base = Some(l.base);
         Ok(s)
     }
 }

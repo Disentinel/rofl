@@ -345,7 +345,7 @@ fn a_verb_keeps_its_world_by_itself(brk: Option<&str>) -> Result<(), String> {
         || format!("second run, wanted the kept world as it was: {} {:?} {:?}, kept {:?} then {kept:?}", second.code, second.out, second.err, implicit(&cache)))?;
     d.append("rules.rofl", "calls(zebra, yak).\n");
     let third = ask(brk);
-    ensure(third.code == 0 && third.out.contains("X = yak") && third.err.contains("took 1 file by delta: rules.rofl") && implicit(&cache) != kept,
+    ensure(third.code == 0 && third.out.contains("X = yak") && third.err.contains("took 1 file by delta: rules.rofl") && third.err.contains("kept again") && implicit(&cache).len() == 1,
         || format!("after an edit: {} {:?} {:?}", third.code, third.out, third.err))?;
     let fourth = ask(brk);
     ensure(fourth.out == third.out && fourth.err.is_empty(), || format!("after the edit, again: {:?} {:?}", fourth.out, fourth.err))

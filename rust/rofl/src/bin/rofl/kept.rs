@@ -167,10 +167,64 @@ mod win {
     }
 }
 
+/// A KEPT WORLD ON DISK: the volume at `base`, and over it the overlay of what the edits taken by delta since changed
+/// (`Session::keep_overlay`), when there is one.
+pub struct Kept {
+    pub base: String,
+    pub over: Option<String>,
+}
+
+/// Where the overlay over the kept world at `base` lies.
+pub fn over_of(base: &str) -> String {
+    format!("{base}.over")
+}
+
+impl Kept {
+    /// The kept world at `base`, whether this build wrote it, and its record: read from the overlay over it where one
+    /// holds, else from the volume alone. An overlay refused is said so and removed: the volume under it is a world
+    /// its own record describes.
+    pub fn read(base: &str) -> Result<(Kept, bool, Record), String> {
+        let o = over_of(base);
+        if Path::new(&o).exists() {
+            match rofl::volume::check_over(base, &o) {
+                Ok(note) => {
+                    let r = parse(&note).ok_or_else(|| format!("{o}: not a kept world"))?;
+                    return Ok((Kept { base: base.into(), over: Some(o) }, true, r));
+                }
+                Err(e) => {
+                    eprintln!("{e}; the kept world under it is read alone");
+                    let _ = std::fs::remove_file(&o);
+                }
+            }
+        }
+        let c = rofl::volume::check(base)?;
+        let r = parse(&c.note).ok_or_else(|| format!("{base}: not a kept world"))?;
+        Ok((Kept { base: base.into(), over: None }, c.this_build, r))
+    }
+
+    pub fn open(&self, budget: i64) -> Result<rofl::session::Session, String> {
+        match &self.over {
+            Some(o) => rofl::session::Session::open_overlay(&self.base, o, budget),
+            None => rofl::session::Session::open_volume(&self.base, budget),
+        }
+    }
+}
+
 /// The world of `s` kept at `kept` as a question verb keeps it: written no further than the cap and than the disk
 /// can give above its floor, so a world too large stops the writer at that size and is not kept; then the older
-/// kept worlds go, least recently used first, until all fit the cap. Why it was not kept, otherwise.
+/// kept worlds go, least recently used first, until all fit the cap. Why it was not kept, otherwise. Written whole,
+/// the overlay over the world it replaces goes with it.
 pub fn keep_capped(s: &mut rofl::session::Session, kept: &str, note: &str) -> Result<u64, String> {
+    keep_as(s, kept, note, false)
+}
+
+/// The world of `s`, opened from the kept world at `kept` and changed by delta since, kept as the overlay over it:
+/// the cap and the floor hold as for a world written whole, the overlay counted with its base.
+pub fn keep_over_capped(s: &mut rofl::session::Session, kept: &str, note: &str) -> Result<u64, String> {
+    keep_as(s, kept, note, true)
+}
+
+fn keep_as(s: &mut rofl::session::Session, kept: &str, note: &str, over: bool) -> Result<u64, String> {
     let dir = Path::new(kept).parent().ok_or("no directory")?;
     std::fs::create_dir_all(dir).map_err(|e| format!("{}: {e}", dir.display()))?;
     // what writers killed before this one left goes before this one writes: it may be killed too
@@ -192,8 +246,10 @@ pub fn keep_capped(s: &mut rofl::session::Session, kept: &str, note: &str) -> Re
     };
     let most = cap.saturating_sub(writing).min(room.unwrap_or(u64::MAX));
     let bound = rofl::brk!("kept_write_unbounded" => None; (!ignored).then_some(most as usize));
-    let new = rofl::brk!("kept_shared_temp" => format!("{kept}.new"); format!("{kept}.{}.new", std::process::id()));
-    let bytes = match s.keep_volume_bounded(&new, note, bound) {
+    let new = rofl::brk!("kept_shared_temp" => format!("{kept}.new"); format!("{kept}.{}.{}new", std::process::id(), if over { "over." } else { "" }));
+    let target = if over { over_of(kept) } else { kept.to_string() };
+    let written = if over { s.keep_overlay(&new, note, kept, bound) } else { s.keep_volume_bounded(&new, note, bound) };
+    let bytes = match written {
         Ok(n) => n as u64,
         Err(e) if e.to_string() == rofl::arena::TOO_LARGE || (bound.is_none() && !ignored) => {
             let _ = std::fs::remove_file(&new);
@@ -209,30 +265,43 @@ pub fn keep_capped(s: &mut rofl::session::Session, kept: &str, note: &str) -> Re
     if orphans && late {
         sweep_orphans(dir);
     }
-    // every file of the directory counts, a world another process is writing too
+    // every file of the directory counts, a world another process is writing too; a kept world is its volume and
+    // the overlay over it, used last when either was
+    let ours = if over { std::fs::metadata(kept).map_or(0, |m| m.len()) } else { 0 };
     let (mut older, mut others): (Vec<(std::time::SystemTime, u64, PathBuf)>, u64) = (Vec::new(), 0);
     for e in std::fs::read_dir(dir).map_err(|e| e.to_string())?.flatten() {
         let (p, Ok(m)) = (e.path(), e.metadata()) else { continue };
-        if p == Path::new(kept) || p == Path::new(&new) || !m.is_file() {
+        let name = p.to_string_lossy().into_owned();
+        if p == Path::new(kept) || name == over_of(kept) || p == Path::new(&new) || !m.is_file() {
             continue;
         }
         if p.extension().is_some_and(|x| x == "vol") {
-            older.push((m.modified().unwrap_or(std::time::UNIX_EPOCH), m.len(), p));
+            let o = std::fs::metadata(over_of(&name)).ok();
+            let at = m.modified().unwrap_or(std::time::UNIX_EPOCH).max(o.as_ref().and_then(|o| o.modified().ok()).unwrap_or(std::time::UNIX_EPOCH));
+            older.push((at, m.len() + o.map_or(0, |o| o.len()), p));
+        } else if name.ends_with(".vol.over") && Path::new(&name[..name.len() - 5]).exists() {
+            // counted with its volume
         } else if orphans {
             others += m.len();
         }
     }
     older.sort();
-    let mut total: u64 = older.iter().map(|o| o.1).sum::<u64>() + others + bytes;
+    let mut total: u64 = older.iter().map(|o| o.1).sum::<u64>() + others + bytes + ours;
     for (_, len, p) in older {
         if total <= cap || ignored { break; }
-        if std::fs::remove_file(&p).is_ok() { total -= len; }
+        if std::fs::remove_file(&p).is_ok() {
+            let _ = std::fs::remove_file(over_of(&p.to_string_lossy()));
+            total -= len;
+        }
     }
     if total > cap && !ignored {
         let _ = std::fs::remove_file(&new);
         return Err(format!("with what other processes are writing the cache would hold {}, over the cap of {} (ROFL_CACHE_GB)", size(total), size(cap)));
     }
-    std::fs::rename(&new, kept).map_err(|e| format!("{kept}: {e}"))?;
+    std::fs::rename(&new, &target).map_err(|e| format!("{target}: {e}"))?;
+    if !over {
+        let _ = std::fs::remove_file(over_of(kept));
+    }
     Ok(bytes)
 }
 
@@ -264,9 +333,12 @@ pub fn slot(world: &[String], _files: &[String]) -> Option<String> {
     Some(home.join("rofl/worlds").join(format!("{}.vol", Sum::of(named.as_bytes()))).to_string_lossy().into_owned())
 }
 
-/// A kept world used again is the most recently used.
+/// A kept world used again is the most recently used: its overlay touched where it has one, the volume under it
+/// left as the overlay stamped it.
 pub fn touch(kept: &str) {
-    if let Ok(f) = std::fs::OpenOptions::new().write(true).open(kept) {
+    let o = over_of(kept);
+    let at = if Path::new(&o).exists() { o } else { kept.to_string() };
+    if let Ok(f) = std::fs::OpenOptions::new().write(true).open(at) {
         let _ = f.set_modified(std::time::SystemTime::now());
     }
 }
@@ -304,8 +376,8 @@ pub fn record(args: &[String], world_files: &[String], units: &[Unit], files: &[
     paths.dedup();
     let read: Vec<Value> = paths.iter().map(|p| json!([p.to_string_lossy(), stamp(p)])).collect();
     let cwd = (!scans.is_empty()).then(|| std::env::current_dir().map(|d| d.to_string_lossy().into_owned()).unwrap_or_default());
-    let units: Vec<Value> = units.iter().map(|u| json!([u.path, u.rules, u.facts])).collect();
-    let scans: Vec<Value> = scans.iter().map(|s| json!([s.kind, s.path, s.text, s.cmd, s.read, s.facts])).collect();
+    let units: Vec<Value> = units.iter().map(|u| json!([u.path, u.rules, spans(&u.facts)])).collect();
+    let scans: Vec<Value> = scans.iter().map(|s| json!([s.kind, s.path, s.text, s.cmd, s.read, spans(&s.facts)])).collect();
     Ok(json!({ "kept": 2, "args": args, "files": world_files, "engine": engine(), "env": env_now(), "cwd": cwd, "read": read, "units": units, "scans": scans }).to_string())
 }
 
@@ -329,6 +401,33 @@ impl ScanUnit {
     }
 }
 
+/// Fact ids as a record holds them: a run of consecutive ids as its first and last, `[a, b]`, any other alone. A
+/// file's facts are mostly one run, and its record is written with every edit kept as an overlay.
+fn spans(ids: &[u32]) -> Vec<Value> {
+    let mut out = Vec::new();
+    let mut i = 0;
+    while i < ids.len() {
+        let mut j = i;
+        while j + 1 < ids.len() && ids[j + 1] == ids[j].wrapping_add(1) {
+            j += 1;
+        }
+        out.push(if j > i { json!([ids[i], ids[j]]) } else { json!(ids[i]) });
+        i = j + 1;
+    }
+    out
+}
+
+fn ids(v: &Value) -> Option<Vec<u32>> {
+    let mut out = Vec::new();
+    for x in v.as_array()? {
+        match x.as_array() {
+            Some(r) => out.extend(r.first()?.as_u64()? as u32..=r.get(1)?.as_u64()? as u32),
+            None => out.push(x.as_u64()? as u32),
+        }
+    }
+    Some(out)
+}
+
 pub fn parse(note: &str) -> Option<Record> {
     let v: Value = serde_json::from_str(note).ok()?;
     if v.get("kept")? != 2 { return None; }
@@ -337,7 +436,7 @@ pub fn parse(note: &str) -> Option<Record> {
     let units = v.get("units")?.as_array()?.iter().map(|u| Some(Unit {
         path: u.get(0)?.as_str()?.to_string(),
         rules: u.get(1)?.as_str()?.to_string(),
-        facts: u.get(2)?.as_array()?.iter().map(|x| x.as_u64().map(|n| n as u32)).collect::<Option<Vec<u32>>>()?,
+        facts: ids(u.get(2)?)?,
     })).collect::<Option<Vec<_>>>()?;
     let (args, files) = (strs("args")?, strs("files")?);
     if files.len() > args.len() { return None; }
@@ -347,13 +446,17 @@ pub fn parse(note: &str) -> Option<Record> {
         text: s.get(2)?.as_str()?.to_string(),
         cmd: s.get(3)?.as_str().map(str::to_string),
         read: s.get(4)?.as_array()?.iter().map(|x| x.as_str().map(str::to_string)).collect::<Option<Vec<_>>>()?,
-        facts: s.get(5)?.as_array()?.iter().map(|x| x.as_u64().map(|n| n as u32)).collect::<Option<Vec<u32>>>()?,
+        facts: ids(s.get(5)?)?,
     })).collect::<Option<Vec<_>>>()?;
     Some(Record { args, files, engine: v.get("engine")?.as_str()?.to_string(), env: strs("env")?, cwd: v.get("cwd")?.as_str().map(str::to_string), read, units, scans })
 }
 
 /// The header of the kept world at `p`, its sum not read: to choose among kept worlds before opening one.
 pub fn peek(p: &str) -> Option<Record> {
+    let o = over_of(p);
+    if let Some(note) = Path::new(&o).exists().then(|| rofl::volume::check_over(p, &o).ok()).flatten() {
+        return parse(&note);
+    }
     parse(&rofl::volume::note(p).ok()?)
 }
 

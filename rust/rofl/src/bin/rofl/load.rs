@@ -207,23 +207,24 @@ fn run(json: bool, args: Vec<String>, mut pre: Option<(bool, crate::kept::Record
         None
     };
     // what a kept world that is not this one, or no longer, is: where it lies, its record, and what moved
-    let mut stale: Option<(String, crate::kept::Record, String)> = None;
+    let mut stale: Option<(crate::kept::Kept, crate::kept::Record, String)> = None;
     if let Some(p) = slot.as_ref().filter(|p| std::path::Path::new(p).exists()) {
-        let checked = rofl::volume::check(p).and_then(|c| crate::kept::parse(&c.note).map(|r| (c.this_build, r)).ok_or_else(|| format!("{p}: not a kept world")));
-        match checked.map(|(b, r)| (crate::kept::moved(&r, b), r)) {
-            Ok((None, _)) => match rofl::session::Session::open_volume(p, budget) {
+        match crate::kept::Kept::read(p).map(|(k, b, r)| (crate::kept::moved(&r, b), k, r)) {
+            Ok((None, k, _)) => match k.open(budget) {
                 Ok(s) => {
                     crate::kept::touch(p);
                     opened = Some(s);
                 }
                 Err(e) => eprintln!("{p} is damaged: {e}; computed anew"),
             },
-            Ok((Some(m), _)) if crate::kept::missing(&m) => eprintln!("the kept world {p} is stale: {m}"),
-            Ok((Some(m), r)) => stale = Some((p.clone(), r, m)),
+            Ok((Some(m), _, _)) if crate::kept::missing(&m) => eprintln!("the kept world {p} is stale: {m}"),
+            Ok((Some(m), k, r)) => stale = Some((k, r, m)),
             Err(e) => eprintln!("{e}; computed anew"),
         }
     } else if let Some(p) = &slot {
-        stale = crate::delta::base_beside(p, &world[..world.len() - files.len()]).map(|(q, r)| (q, r, "the files named are others".into()));
+        stale = crate::delta::base_beside(p, &world[..world.len() - files.len()])
+            .and_then(|(q, _)| crate::kept::Kept::read(&q).map_err(|e| eprintln!("{e}; computed anew")).ok())
+            .map(|(k, _, r)| (k, r, "the files named are others".into()));
     }
     let read = |f: &String| std::fs::read_to_string(f).unwrap_or_else(|e| fail(json, USAGE, &format!("{f}: {e}")));
     let walls = |s: &mut rofl::session::Session| {
@@ -235,21 +236,28 @@ fn run(json: bool, args: Vec<String>, mut pre: Option<(bool, crate::kept::Record
     // A KEPT WORLD TAKES ITS FILES BY DELTA (delta.rs): the files that changed, came or went, and nothing else
     let mut by_delta: Option<(Vec<crate::kept::Unit>, Vec<crate::kept::ScanUnit>)> = None;
     let mut said = String::new();
-    if let Some((q, r, m)) = stale {
+    // the kept world taken by delta lies at the slot (another slot's moved there): the edits are kept over it
+    let mut over_base = false;
+    if let Some((k, r, m)) = stale {
         let t0 = std::time::Instant::now();
-        let opened_q = rofl::volume::check(&q).map_err(|e| e.to_string()).and_then(|_| rofl::session::Session::open_volume(&q, budget));
-        let done = opened_q.and_then(|mut t| {
+        let done = k.open(budget).and_then(|mut t| {
+            let opened_in = t0.elapsed().as_millis();
             walls(&mut t);
-            crate::delta::apply(&mut t, &r, &world[world.len() - files.len()..]).map(|d| (t, d))
+            crate::delta::apply(&mut t, &r, &world[world.len() - files.len()..]).map(|d| (t, d, opened_in))
         });
         match done {
-            Ok((t, d)) => {
-                said = format!("the kept world took {} by delta: {} ({} facts out, {} overdeleted or derived again; opened and taken in {} ms", if d.took.len() == 1 { "1 file".to_string() } else { format!("{} files", d.took.len()) }, d.took.join(", "), d.out, d.touched, t0.elapsed().as_millis());
-                if q != *slot.as_ref().unwrap() { let _ = std::fs::remove_file(&q); }
+            Ok((t, d, opened_in)) => {
+                said = format!("the kept world took {} by delta: {} ({} facts out, {} overdeleted or derived again; opened in {opened_in} ms, taken in {} ms", if d.took.len() == 1 { "1 file".to_string() } else { format!("{} files", d.took.len()) }, d.took.join(", "), d.out, d.touched, t0.elapsed().as_millis() - opened_in);
+                let p = slot.as_ref().unwrap();
+                over_base = k.base == *p || std::fs::rename(&k.base, p).is_ok();
+                if k.base != *p {
+                    let _ = std::fs::remove_file(&k.base);
+                    let _ = std::fs::remove_file(crate::kept::over_of(&k.base));
+                }
                 opened = Some(t);
                 by_delta = Some((d.units, d.scans));
             }
-            Err(why) => eprintln!("the kept world {q} is stale: {m}; computed anew, not by delta: {why}"),
+            Err(why) => eprintln!("the kept world {} is stale: {m}; computed anew, not by delta: {why}", k.base),
         }
     }
     let from_disk = opened.is_some();
@@ -261,9 +269,22 @@ fn run(json: bool, args: Vec<String>, mut pre: Option<(bool, crate::kept::Record
             Err(e) => eprintln!("the world is not kept: {e}"),
             Ok(note) => {
                 let t1 = std::time::Instant::now();
-                match crate::kept::keep_capped(&mut s, p, &note) {
-                    Ok(n) => eprintln!("{said}, kept again in {} ms, {n} bytes written)", t1.elapsed().as_millis()),
-                    Err(e) => eprintln!("{said}); the world is not kept: {e}"),
+                // the edits are kept as the overlay over the volume they were taken from, and that volume is written
+                // again whole once the overlay passes a quarter of it
+                let base = std::fs::metadata(p).map_or(0, |m| m.len());
+                let over = if over_base { Some(crate::kept::keep_over_capped(&mut s, p, &note)) } else { None };
+                match over {
+                    Some(Ok(n)) if n.saturating_mul(4) <= base || rofl::brk!("overlay_never_compacted" => true; false) => {
+                        eprintln!("{said}, kept again in {} ms as an overlay of {n} bytes)", t1.elapsed().as_millis())
+                    }
+                    _ if over_base && rofl::brk!("overlay_compacted_from_base" => true; false) => {
+                        let mut b = rofl::session::Session::open_volume(p, budget).unwrap_or_else(|e| fail(json, USAGE, &e));
+                        let _ = crate::kept::keep_capped(&mut b, p, &note);
+                    }
+                    _ => match crate::kept::keep_capped(&mut s, p, &note) {
+                        Ok(n) => eprintln!("{said}, kept again whole in {} ms, {n} bytes written)", t1.elapsed().as_millis()),
+                        Err(e) => eprintln!("{said}); the world is not kept: {e}"),
+                    },
                 }
             }
         }

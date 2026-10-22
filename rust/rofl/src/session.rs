@@ -198,14 +198,37 @@ impl Session {
 
     /// The world a volume holds, its facts, names and witnesses read from the file where they lie.
     pub fn open_volume(path: &str, budget: i64) -> Result<Session, String> {
-        let mut o = crate::volume::open(path)?;
+        Self::opened(crate::volume::open(path)?, path, budget)
+    }
+
+    /// The world the volume at `base` and the overlay at `over` over it hold (`volume::keep_over`).
+    pub fn open_overlay(base: &str, over: &str, budget: i64) -> Result<Session, String> {
+        Self::opened(crate::volume::open_over(base, over)?, over, budget)
+    }
+
+    /// This world, opened from the volume at `base` and changed since, kept as an overlay at `path` over it: what
+    /// changed and no more. Written under a name of this process's and renamed over `path`, as a volume is.
+    pub fn keep_overlay(&mut self, path: &str, note: &str, base: &str, bound: Option<usize>) -> std::io::Result<usize> {
+        let tmp = format!("{base}.{}.over.part", std::process::id());
+        match crate::volume::keep_over(&tmp, &mut self.eval, note, base, bound) {
+            Ok(n) => std::fs::rename(&tmp, path).map(|_| n).inspect_err(|_| { let _ = std::fs::remove_file(&tmp); }),
+            Err(e) => {
+                let _ = std::fs::remove_file(&tmp);
+                Err(e)
+            }
+        }
+    }
+
+    fn opened(mut o: crate::volume::Opened, path: &str, budget: i64) -> Result<Session, String> {
         let evaluated = !o.store.dirty && !o.store.partial_eval;
         let cut_short = !o.store.dirty && o.store.partial_eval;
         o.store.dirty = !evaluated && !cut_short;
         let mut h = o.heap;
         let v = Vocab::new(&mut h);
         bootstrap_kernel(&mut h, &v, &mut o.store);
+        let rows = std::mem::take(&mut o.store.vrow_of);
         let mut eval = Eval::with_answer(h, o.store, budget, Mode::Rounds, false, evaluated.then_some(o.answer));
+        eval.store.vrow_of = rows;
         eval.vclosure_restore();
         eval.stage_kept(std::mem::take(&mut o.staged));
         eval.after_open(std::mem::take(&mut o.lattices));
@@ -214,6 +237,8 @@ impl Session {
         }
         eval.read_notes(&mut o.cut)?;
         eval.read_cut(&mut o.cut)?;
+        eval.read_stats(&mut o.cut)?;
+        eval.read_vprov(&mut o.cut)?;
         if !o.cut.at_end() {
             return Err(format!("{path}: a volume has bytes after its end"));
         }

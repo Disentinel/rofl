@@ -304,6 +304,9 @@ pub struct Witness {
 #[derive(Default, Clone)]
 struct KeyRun {
     canon: Arena<FactId>,
+    /// The run as the volume this store was opened from holds it, while `canon` merges arrivals into a copy: an
+    /// overlay writes it where it lies and the facts come since as arrivals (`Store::write_volume`).
+    canon_base: Option<Arena<FactId>>,
     arrived: Arena<FactId>,
     /// Facts holding a non-ground argument: they belong to no bucket and to
     /// every answer (`KeyRun.loose`, src/store.ts:68).
@@ -366,7 +369,10 @@ impl PatIndex {
     }
 
     fn put(&mut self, facts: &Facts, sig: &[Term], k: FactId) {
-        if self.slots.is_mapped() {
+        if self.slots.is_mapped() && self.under.is_some() {
+            // a top an overlay held over its base: written to as the heap's
+            (self.slots.to_mut(), self.ids.to_mut(), self.prev.to_mut());
+        } else if self.slots.is_mapped() {
             let base = std::mem::replace(self, PatIndex::new(&self.pos));
             self.under = Some(Rc::new(base));
         }
@@ -1050,6 +1056,13 @@ pub struct Store {
     pub vwit: bool,
     /// The row a `PremRef::VRow` key names: the closure's number, the book and the two ends.
     pub vrow_of: HashMap<Sym, (usize, Sym, Term, Term)>,
+    /// The volume this store's mapped arenas lie in, when it was opened from one: what an overlay of it names as its
+    /// base (`volume::keep_over`).
+    pub base_map: Option<Rc<memmap2::Mmap>>,
+    /// The rows of `vciters` and `vrow_of` as the volume opened held them: an overlay writes them where they lie and
+    /// the rows come since after them (both are kept as supersets, so a row the base holds may stay).
+    vciters_base: Option<Arena<u32>>,
+    vrow_base: Option<Arena<u32>>,
     /// The rules whose cells are a counting tag's (the engine's sum over the
     /// derivations `p@count`): their cells carry the `tag` flag.
     pub tag_rules: HashSet<Sym>,
@@ -1482,7 +1495,15 @@ impl Store {
         if !layered {
             self.keys_base = Rc::new(std::mem::take(&mut self.keys).into());
         } else if !self.keys.is_empty() {
-            self.keys_base = Rc::new(self.key_table(0).into());
+            match self.keys_placed() {
+                Some(put) => {
+                    let b = Rc::make_mut(&mut self.keys_base).to_mut();
+                    for (i, id) in put {
+                        b[i] = id;
+                    }
+                }
+                None => self.keys_base = Rc::new(self.key_table(0).into()),
+            }
             self.keys = Vec::new();
         }
         self.keys_n = 0;
@@ -1630,6 +1651,18 @@ impl Store {
     fn key_grow(&mut self) {
         self.keys = self.key_table(self.facts.recs.mark);
         self.keys_n = self.facts.len() - self.facts.recs.mark;
+    }
+
+    /// The layer's keys put in the base's table where it has room for them, three quarters full at most: what
+    /// `freeze` and a volume make of a layer, so an overlay writes the slots that changed and not the table.
+    fn keys_placed(&self) -> Option<Vec<(usize, u32)>> {
+        let (n, mark) = (self.facts.len(), self.facts.recs.mark);
+        ((n + 1) * 4 <= self.keys_base.len() * 3).then(|| {
+            crate::arena::placed(&self.keys_base, EMPTY, (mark as FactId..n as FactId).map(|id| {
+                let r = self.facts.recs[id as usize];
+                (hash_key(r.rel, r.persp, self.args(id)), id)
+            }))
+        })
     }
 
     fn key_table(&self, from: usize) -> Vec<u32> {
