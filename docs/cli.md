@@ -210,7 +210,9 @@ rofl why 'flows[code]("api/server.js", "api/users.js")' @rules/js.files code.rof
 `npm run scan` prints the facts to stdout without `--out`, names every file no
 parser read on stderr and then exits 2. The facts are the ones the notebook
 host gives a `.rofl.md` with `model: js` (`npm run nb`), so a question has the
-same answer in a notebook and here.
+same answer in a notebook and here. `code.rofl` is signed by the scanner's
+code: after `scanners/` changes, `rofl` refuses it until it is scanned again
+("A scan names its code", below).
 
 Measured on `examples/services/src` (3 files, 1051 facts), five questions, two
 whys, a whynot and two asks: every answer the same text as the TypeScript
@@ -263,6 +265,16 @@ version of the scanner's code that every fact of the scan was made by.
   `rofl why` of one names the scanner and its code:
   `` brought in by the scanner `js`, code c68aabe7c7a97b11 (scanners/cli.ts, ...) ``.
 - Its code is what a scan is stale by, as much as what it read: below.
+- **A file of scanned facts is signed.** Each `-- code:` line carries the
+  file's sum (`-- code: PATH SUM`), and one `-- scanner: NAME SUM` line the sum
+  of them all; `npm run scan -- DIR --out F` writes them, the paths from F's
+  directory when F lies in this tree, and a `-- again:` line with the command.
+  When `rofl` loads a file carrying them (`rofl load`, the question verbs,
+  `rofl serve`'s `load`, a kept world taking a file by delta) it stamps that
+  code again and refuses the file when a byte of it moved, naming the file of
+  the scanner and how to scan again; a scanner's output whose code lines carry
+  no sums (written before scans were signed) is refused as unsigned. A kept
+  world over such a file stamps the code too.
 
 **A scan is kept.** A scanner that names what it read, a `-- reads: PATH` line
 for each file and directory (`scanners/cli.ts` names the file it parsed and

@@ -37,7 +37,12 @@ const { facts, host, parseErrors } = codeFacts(Object.fromEntries(parsed.map((f)
 // for the engine's storeroom of scans (docs/cli.md): this scanner's own code, and what it read (the parsed files and
 // every directory listed)
 const reads = [...parsed, ...dirs].map((f) => `-- reads: ${path.resolve(root, f)}`);
-const text = [...codeLines(fileURLToPath(import.meta.url)), ...reads, ...facts, ...host].join('\n') + '\n';
+// signed by this scanner's code: a file of them written inside this tree names its code from its own directory, so
+// the file reads the same in another checkout; and how to write it again
+const tree = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..'), outDir = out && path.dirname(path.resolve(out));
+const shown = outDir && !path.relative(tree, outDir).startsWith('..') ? (f: string) => path.relative(outDir, f) : (f: string) => f;
+const again = out ? [`-- again: npm run scan -- ${process.argv.slice(2).join(' ')}`] : [];
+const text = [...codeLines('js', fileURLToPath(import.meta.url), shown), ...again, ...reads, ...facts, ...host].join('\n') + '\n';
 if (out) fs.writeFileSync(out, text); else process.stdout.write(text);
 for (const [f, e] of Object.entries(parseErrors)) console.error(`${f}: ${e}`);
 console.error(`${parsed.length} files, ${facts.length + host.length} facts${out ? ` -> ${out}` : ''}`);

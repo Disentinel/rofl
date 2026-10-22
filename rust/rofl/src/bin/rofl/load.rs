@@ -237,7 +237,7 @@ fn run(json: bool, args: Vec<String>, mut pre: Option<(bool, crate::kept::Record
         s.eval.retain_ticks = retain;
     };
     // A KEPT WORLD TAKES ITS FILES BY DELTA (delta.rs): the files that changed, came or went, and nothing else
-    let mut by_delta: Option<(Vec<crate::kept::Unit>, Vec<crate::kept::ScanUnit>)> = None;
+    let mut by_delta: Option<(Vec<crate::kept::Unit>, Vec<crate::kept::ScanUnit>, Vec<String>)> = None;
     let mut said = String::new();
     if let Some((q, r, m)) = stale {
         let t0 = std::time::Instant::now();
@@ -251,7 +251,7 @@ fn run(json: bool, args: Vec<String>, mut pre: Option<(bool, crate::kept::Record
                 said = format!("the kept world took {} by delta: {} ({} facts out, {} overdeleted or derived again; opened and taken in {} ms", if d.took.len() == 1 { "1 file".to_string() } else { format!("{} files", d.took.len()) }, d.took.join(", "), d.out, d.touched, t0.elapsed().as_millis());
                 if q != *slot.as_ref().unwrap() { let _ = std::fs::remove_file(&q); }
                 opened = Some(t);
-                by_delta = Some((d.units, d.scans));
+                by_delta = Some((d.units, d.scans, d.code));
             }
             Err(why) => eprintln!("the kept world {q} is stale: {m}; computed anew, not by delta: {why}"),
         }
@@ -262,9 +262,10 @@ fn run(json: bool, args: Vec<String>, mut pre: Option<(bool, crate::kept::Record
     if let Err(e) = if scans_kept.is_empty() { Ok(()) } else { crate::kept::signed(&mut s, &scans_kept) } {
         fail(json, FILE_REFUSED, &e);
     }
-    if let (Some((units, scans)), Some(p)) = (&by_delta, &slot) {
+    if let (Some((units, scans, code)), Some(p)) = (&by_delta, &slot) {
         let files_now = &world[world.len() - files.len()..];
-        match crate::kept::record(&world, files_now, units, files_now, scans) {
+        let read: Vec<String> = files_now.iter().chain(code).cloned().collect();
+        match crate::kept::record(&world, files_now, units, &read, scans) {
             Err(e) => eprintln!("the world is not kept: {e}"),
             Ok(note) => {
                 let t1 = std::time::Instant::now();
@@ -295,8 +296,11 @@ fn run(json: bool, args: Vec<String>, mut pre: Option<(bool, crate::kept::Record
             } else { sources.push((f.clone(), None)); }
         }
         let mut loaded: Vec<(String, String)> = Vec::new();
+        // the code a file of scanned facts is signed by, which a kept world stamps beside the files
+        let mut code: Vec<String> = Vec::new();
         for (f, text) in &sources {
             let t = text.clone().unwrap_or_else(|| read(f));
+            code.extend(s.signed_file(&t, f).unwrap_or_else(|e| fail(json, FILE_REFUSED, &e)));
             if let Err(d) = s.load(&t, None) {
                 fail(json, FILE_REFUSED, &format!("{f} refused:\n  {}", d.join("\n  ")));
             }
@@ -308,7 +312,9 @@ fn run(json: bool, args: Vec<String>, mut pre: Option<(bool, crate::kept::Record
             if strata { b.eval.mode = rofl::engine::Mode::Strata; }
             if let Some(n) = space { b.eval.space = n; }
             for f in sources.iter().take(1).map(|s| &s.0).chain(below.iter()) {
-                if let Err(d) = b.load(&read(f), None) {
+                let t = read(f);
+                code.extend(b.signed_file(&t, f).unwrap_or_else(|e| fail(json, FILE_REFUSED, &format!("below: {e}"))));
+                if let Err(d) = b.load(&t, None) {
                     fail(json, FILE_REFUSED, &format!("below: {f} refused:\n  {}", d.join("\n  ")));
                 }
             }
@@ -351,14 +357,14 @@ fn run(json: bool, args: Vec<String>, mut pre: Option<(bool, crate::kept::Record
         };
         let files_now = &world[world.len() - files.len()..];
         if let Some(k) = &kept {
-            let read: Vec<String> = sources.iter().map(|s| s.0.clone()).chain(below.iter().cloned()).collect();
+            let read: Vec<String> = sources.iter().map(|s| s.0.clone()).chain(below.iter().cloned()).chain(code.iter().cloned()).collect();
             let units = units();
             let note = crate::kept::record(&world, files_now, &units, &read, &scan_units(&mut s)).unwrap_or_else(|e| fail(json, FILE_REFUSED, &format!("{k} is not kept: {e}")));
             let n = s.keep_volume_noted(k, &note).unwrap_or_else(|e| fail(json, USAGE, &format!("{k}: {e}")));
             eprintln!("kept {k}: {n} bytes");
         } else if let Some(p) = &slot {
             // keeping is a convenience of the question: a world that cannot be kept is answered all the same
-            let read: Vec<String> = sources.iter().map(|s| s.0.clone()).chain(below.iter().cloned()).collect();
+            let read: Vec<String> = sources.iter().map(|s| s.0.clone()).chain(below.iter().cloned()).chain(code.iter().cloned()).collect();
             let units = units();
             match crate::kept::record(&world, files_now, &units, &read, &scan_units(&mut s)) {
                 Err(e) => eprintln!("the world is not kept: {e}"),

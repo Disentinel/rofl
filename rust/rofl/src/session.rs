@@ -1968,6 +1968,55 @@ impl Session {
         }
     }
 
+    /// A FILE OF FACTS A SCAN WROTE IS SIGNED BY THE SCANNER'S CODE (docs/cli.md, "A scan names its code"): its
+    /// `-- scanner: NAME SUM` and `-- code: PATH SUM` lines, PATH from the file's directory, are held to the code as it
+    /// is now. A file whose code changed since it was written, or a scanner's output that is not signed, is refused
+    /// with how to scan it again; so is a world that would hold files of two versions of one scanner. The files of
+    /// the code, absolute, for a kept world to stamp; none for a file no scanner wrote.
+    pub fn signed_file(&mut self, text: &str, file: &str) -> Result<Vec<String>, String> {
+        let (mut scanner, mut code, mut reads, mut again) = (None, Vec::new(), false, None);
+        for l in text.lines().take_while(|l| l.is_empty() || l.starts_with("--")) {
+            if let Some(r) = l.strip_prefix("-- scanner: ") {
+                scanner = r.rsplit_once(' ');
+            } else if let Some(r) = l.strip_prefix("-- code: ") {
+                code.push(code_line(r));
+            } else if l.starts_with("-- reads: ") {
+                reads = true;
+            } else if let Some(r) = l.strip_prefix("-- again: ") {
+                again = Some(r);
+            }
+        }
+        if scanner.is_none() && code.is_empty() && !reads {
+            return Ok(Vec::new());
+        }
+        let shown = shown_path(file);
+        let again = again.map_or_else(|| "run its scanner again".to_string(), |a| format!("scan again: {a}"));
+        let Some((name, sign)) = scanner.filter(|_| !code.is_empty() && code.iter().all(|(_, s)| s.is_some())) else {
+            return Err(format!("{shown} is a scanner's output not signed by its code (`-- scanner: NAME SUM` and `-- code: PATH SUM`, docs/cli.md \"A scan names its code\"), written before scans were signed, so its facts may be an older scanner's; {again}"));
+        };
+        let dir = std::path::Path::new(file).parent().map(std::path::Path::to_path_buf).unwrap_or_default();
+        let mut now: Vec<(String, String)> = Vec::new();
+        let mut moved: Vec<String> = Vec::new();
+        for (p, s) in &code {
+            let at = scan_path(&dir.join(p).to_string_lossy());
+            let st = scan_stamp(&at);
+            if Some(st.as_str()) != *s {
+                moved.push(shown_path(&at));
+            }
+            now.push((at, st));
+        }
+        if !moved.is_empty() && crate::brk!("scan_file_signature_ignored" => false; true) {
+            return Err(format!("{shown} was written by the scanner `{name}` from code that has changed since: {}; its facts would outlive that code. {again}", moved.join(", ")));
+        }
+        if code_sign(&now) != sign && crate::brk!("scan_file_signature_ignored" => false; true) {
+            return Err(format!("{shown}: its `-- scanner: {name} {sign}` is not the sum of the code it names; {again}"));
+        }
+        now.sort();
+        let rec = crate::engine::ScanRec { kind: name.to_string(), sign: sign.to_string(), code: now.clone(), ..Default::default() };
+        self.signed(&rec).map_err(|e| format!("{shown}: {e}"))?;
+        Ok(now.into_iter().map(|(p, _)| p).collect())
+    }
+
     /// The scanner whose code brought the base fact `lit` into the world, as `why` names it: its kind, the sum of
     /// its code and the files that sum is over. None for a fact no scan brought.
     fn scanned_by(&mut self, lit: &reflect::Lit) -> Option<String> {
@@ -2159,9 +2208,25 @@ fn run_scan(cmd: Option<&str>, path: &str, stamps: &Stamps) -> Result<String, St
     Ok(out)
 }
 
-/// The paths a scan's output names on its `-- PREFIX PATH` lines, from the directory the scan ran in.
+/// The paths a scan's output names on its `-- PREFIX PATH` lines, from the directory the scan ran in; a code line's
+/// sum left out.
 fn named(out: &str, prefix: &str) -> Vec<String> {
-    out.lines().filter_map(|l| l.strip_prefix(prefix)).map(scan_path).collect()
+    out.lines().filter_map(|l| l.strip_prefix(prefix)).map(|r| scan_path(code_line(r).0)).collect()
+}
+
+/// `PATH SUM` of a `-- code:` line, or `PATH` alone: the path and the sum it says.
+fn code_line(r: &str) -> (&str, Option<&str>) {
+    match r.rsplit_once(' ') {
+        Some((p, s)) if s.len() == 16 && s.bytes().all(|c| c.is_ascii_hexdigit()) => (p, Some(s)),
+        _ => (r, None),
+    }
+}
+
+/// The sum of a scanner's code: of its files' sums, sorted, each on its line (scanners/own_code.ts `codeLines`).
+fn code_sign(code: &[(String, String)]) -> String {
+    let mut sums: Vec<&str> = code.iter().map(|(_, s)| s.as_str()).collect();
+    sums.sort();
+    crate::arena::Sum::of(sums.iter().map(|s| format!("{s}\n")).collect::<String>().as_bytes())
 }
 
 /// The asserter of a kind's scanned facts, as `asserted_by` names it.
@@ -2187,7 +2252,7 @@ fn scan_rec(kind: &str, path: &str, text: &str, cmd: Option<String>, ran: Result
         if let Some((p, _)) = code.iter().find(|(_, s)| s == "gone") {
             return Err(format!("the scanner `{said}` names {} as its code, and there is no such file", shown_path(p)));
         }
-        sign = crate::arena::Sum::of(code.iter().map(|(p, s)| format!("{s} {p}\n")).collect::<String>().as_bytes());
+        sign = code_sign(&code);
         read = named(out, "-- reads: ");
         // what the scan is stale by: what it read, and its code
         if crate::brk!("scan_code_unstamped" => false; true) {

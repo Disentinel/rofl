@@ -1,8 +1,9 @@
-// A SCAN NAMES ITS CODE (docs/cli.md): a scanner the engine runs prints `-- code: PATH` for each file of its own code,
-// and the engine refuses a scan that names none. This is the list for a scanner written in TypeScript: the file it
-// was started from and every module that file imports, followed through relative imports; a package it imports by
-// name is named by the file the name resolves to and the package's package.json, and not followed further.
-// An import that names no file is left out: it cannot have run.
+// A SCAN NAMES ITS CODE (docs/cli.md): a scanner prints `-- code: PATH SUM` for each file of its own code and one
+// `-- scanner: NAME SUM` over them, and the engine refuses a scan, or a file of facts a scan wrote, whose code is not
+// what it says. This is the list for a scanner written in TypeScript: the file it was started from and every module
+// that file imports, followed through relative imports; a package it imports by name is named by the file the name
+// resolves to and the package's package.json, and not followed further. An import that names no file is left out:
+// it cannot have run.
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';
@@ -40,5 +41,24 @@ export function ownCode(entry: string): string[] {
   return [...seen].sort();
 }
 
-/** The lines a scanner prints for its code: `-- code: PATH` each. */
-export const codeLines = (entry: string): string[] => ownCode(entry).map((f) => `-- code: ${f}`);
+const M64 = (1n << 64n) - 1n;
+/** The engine's sum of bytes (rust/rofl/src/arena.rs `Sum::of`): eight bytes at a time, as sixteen hex digits. */
+export function sum(b: Uint8Array): string {
+  let h = 0x6a09e667f3bcc908n;
+  const mix = (w: bigint): void => { h = ((h ^ w) * 0x9e3779b97f4a7c15n) & M64; h = ((h << 29n) | (h >> 35n)) & M64; };
+  const view = new DataView(b.buffer, b.byteOffset, b.byteLength), whole = b.length - (b.length % 8);
+  for (let i = 0; i < whole; i += 8) mix(view.getBigUint64(i, true));
+  let w = 0n;
+  for (let i = whole; i < b.length; i++) w |= BigInt(b[i]) << BigInt(8 * (i - whole));
+  mix(w);
+  mix(BigInt(b.length));
+  return (h ^ (h >> 31n)).toString(16).padStart(16, '0');
+}
+
+/** The lines a scanner prints of its code: `-- scanner: NAME SUM`, the sum of its files' sums, sorted, each on its
+ *  line; then `-- code: PATH SUM` for each file, its path as `shown` writes it. */
+export function codeLines(name: string, entry: string, shown: (f: string) => string = (f) => f): string[] {
+  const files = ownCode(entry).map((f) => [f, sum(fs.readFileSync(f))] as const);
+  const all = files.map(([, s]) => s).sort().map((s) => `${s}\n`).join('');
+  return [`-- scanner: ${name} ${sum(new TextEncoder().encode(all))}`, ...files.map(([f, s]) => `-- code: ${shown(f)} ${s}`)];
+}

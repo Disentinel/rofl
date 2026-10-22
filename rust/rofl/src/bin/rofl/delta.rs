@@ -40,6 +40,8 @@ pub struct Done {
     /// facts the retraction overdeleted and derived again, and the base facts it took out
     pub touched: usize,
     pub out: usize,
+    /// the code the world's files of scanned facts are signed by (`Session::signed_file`), for the record to stamp
+    pub code: Vec<String>,
 }
 
 fn read(p: &str) -> Result<String, String> {
@@ -73,6 +75,8 @@ pub fn apply(s: &mut Session, r: &Record, files: &[String]) -> Result<Done, Stri
         return Err(format!("{} changed, and it is neither a file named on the command line nor one a scanner read", kept::shown(p)));
     }
     let old: HashMap<&str, &Unit> = r.units.iter().map(|u| (u.path.as_str(), u)).collect();
+    // what else the record stamped, and still holds: the code its files of scanned facts are signed by
+    let mut code: Vec<String> = r.read.iter().map(|(p, _)| p.clone()).filter(|p| !named.contains(p.as_str()) && !scanned.contains(p.as_str())).collect();
     let all = rofl::brk!("kept_delta_all_files" => true; false);
     // what stays, what goes, what comes
     let (mut stays, mut goes): (HashSet<u32>, Vec<u32>) = (HashSet::new(), Vec::new());
@@ -82,6 +86,7 @@ pub fn apply(s: &mut Session, r: &Record, files: &[String]) -> Result<Done, Stri
             Some(u) if !all && stamps.get(f.as_str()).is_some_and(|st| kept::holds(f, st)) => stays.extend(&u.facts),
             Some(u) => {
                 let text = read(f)?;
+                code.extend(s.signed_file(&text, f)?);
                 let (ids, rules, _) = s.facts_of(&text)?;
                 if kept::rules_sum(&rules) != u.rules {
                     return Err(format!("the rules of {} changed", kept::shown(f)));
@@ -97,6 +102,7 @@ pub fn apply(s: &mut Session, r: &Record, files: &[String]) -> Result<Done, Stri
             }
             None => {
                 let text = read(f)?;
+                code.extend(s.signed_file(&text, f)?);
                 let (ids, _, _) = s.facts_of(&text)?;
                 stays.extend(ids.iter().copied());
                 add.push_str(&text);
@@ -207,5 +213,7 @@ pub fn apply(s: &mut Session, r: &Record, files: &[String]) -> Result<Done, Stri
             (None, None) => unreachable!("a file neither kept nor read"),
         }
     }
-    Ok(Done { units, scans, took, touched, out: n_out })
+    code.sort();
+    code.dedup();
+    Ok(Done { units, scans, took, touched, out: n_out, code })
 }

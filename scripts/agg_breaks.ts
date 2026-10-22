@@ -8772,6 +8772,13 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "scan_file_signature_ignored",
+  "what": "a file of facts a scan wrote is loaded though the scanner's code it is signed by has changed since",
+  "expect": {
+   "scan_code": "a_file_of_scanned_facts_is_signed:"
+  }
+ },
+ {
   "id": "scan_why_unsigned",
   "what": "why of a scanned fact names no scanner and no sum of its code",
   "expect": {

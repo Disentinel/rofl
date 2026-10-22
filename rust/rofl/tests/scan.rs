@@ -251,9 +251,50 @@ fn the_85_incident(cache: &Path) -> Result<(), String> {
     ensure(after == fresh, || format!("after js_ast.ts was swapped the storeroom answered {} rows of the old scanner's, a fresh scan gives {}", after.len(), fresh.len()))
 }
 
+/// A FILE OF SCANNED FACTS IS SIGNED (docs/cli.md, "JS code, through the Rust engine"): `npm run scan -- DIR --out
+/// F` by a scratch copy of the scanner, `rofl ask` over F answers; a comment appended to the copy's js_ast.ts (a
+/// module, not the entry) and F is refused, naming js_ast.ts and how to scan again; scanned again, it answers; a
+/// file whose code lines carry no sums (written before scans were signed) is refused as unsigned.
+fn a_file_of_scanned_facts_is_signed() -> Result<(), String> {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..").canonicalize().unwrap();
+    let d = Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!("scan-file-{}", std::process::id()));
+    let sc = d.join("scanners");
+    std::fs::create_dir_all(&sc).unwrap();
+    for f in ["cli.ts", "code_facts.ts", "own_code.ts", "js_ast.ts"] {
+        std::fs::copy(root.join("scanners").join(f), sc.join(f)).unwrap();
+    }
+    let out = d.join("code.rofl");
+    let scan = || std::process::Command::new("node").args(["--experimental-strip-types", &sc.join("cli.ts").to_string_lossy(), &root.join("examples/scan/src").to_string_lossy(), "--out", &out.to_string_lossy()]).output();
+    let ask = || std::process::Command::new(env!("CARGO_BIN_EXE_rofl")).args(["ask", "ast_file[code](R, \"main.js\")", &root.join("boot.rofl").to_string_lossy(), &out.to_string_lossy()]).output().unwrap();
+    let text = |o: &std::process::Output| format!("exit {:?} out {:?} err {:?}", o.status.code(), String::from_utf8_lossy(&o.stdout), String::from_utf8_lossy(&o.stderr));
+    let r = (|| {
+        scan().map_err(|e| e.to_string())?;
+        let a = ask();
+        ensure(a.status.success() && String::from_utf8_lossy(&a.stdout).contains("R = "), || format!("the file as scanned: {}", text(&a)))?;
+        let js = std::fs::read_to_string(sc.join("js_ast.ts")).unwrap();
+        std::fs::write(sc.join("js_ast.ts"), format!("{js}// a comment\n")).unwrap();
+        let a = ask();
+        let err = String::from_utf8_lossy(&a.stderr).to_string();
+        ensure(a.status.code() == Some(2) && err.contains("changed since") && err.contains("js_ast.ts") && err.contains("npm run scan --") && a.stdout.is_empty(),
+            || format!("the old file after its scanner changed: {}", text(&a)))?;
+        scan().map_err(|e| e.to_string())?;
+        let a = ask();
+        ensure(a.status.success(), || format!("scanned again: {}", text(&a)))?;
+        let unsigned: String = std::fs::read_to_string(&out).unwrap().lines().map(|l| match l.strip_prefix("-- code: ") {
+            Some(r) => format!("-- code: {}\n", r.rsplit_once(' ').map_or(r, |(p, _)| p)),
+            None => format!("{l}\n"),
+        }).collect();
+        std::fs::write(&out, unsigned).unwrap();
+        let a = ask();
+        ensure(a.status.code() == Some(2) && String::from_utf8_lossy(&a.stderr).contains("not signed by its code"), || format!("an unsigned file: {}", text(&a)))
+    })();
+    let _ = std::fs::remove_dir_all(&d);
+    r
+}
+
 type Case = fn() -> Result<(), String>;
 
-const CASES: [(&str, Case); 7] = [
+const CASES: [(&str, Case); 8] = [
     ("kept_until_what_it_read_changes", kept_until_what_it_read_changes),
     ("unchanged_is_a_hit", unchanged_is_a_hit),
     ("the_entry_edited", the_entry_edited),
@@ -261,6 +302,7 @@ const CASES: [(&str, Case); 7] = [
     ("no_code_is_refused", no_code_is_refused),
     ("two_versions_in_one_world", two_versions_in_one_world),
     ("why_names_the_scanner", why_names_the_scanner),
+    ("a_file_of_scanned_facts_is_signed", a_file_of_scanned_facts_is_signed),
 ];
 
 /// One test, the cases in turn: they share the process's storeroom (`XDG_CACHE_HOME`).
