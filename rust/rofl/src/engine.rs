@@ -1098,6 +1098,8 @@ pub struct Eval {
     /// A question is being answered (why, whynot): below a call, what a hole
     /// left unknown is read as unknown, as in a firing, and noted in `asked`.
     pub asking: bool,
+    /// Firings of a fact are being found again (`firings_again`): a premise reads the store as a question does.
+    refinding: bool,
     /// A whynot by file under way: the files, and what each has met (`whynot_files`).
     wn_vols: Option<VolWalk>,
     /// A whynot's premises with more matches than it follows, and how many.
@@ -1603,6 +1605,7 @@ impl Eval {
             asked_made: Vec::new(),
             demand_rule_ids: Vec::new(),
             asking: false,
+            refinding: false,
             wn_vols: None,
             wn_unwalked: HashMap::new(),
             asked: Vec::new(),
@@ -11587,7 +11590,7 @@ impl Eval {
                         .collect(),
                 }
             }
-            None if self.asking && !self.firing && !self.store.unordered => self.question_cands(l, s, persp),
+            None if (self.asking || self.refinding) && !self.firing && !self.store.unordered => self.question_cands(l, s, persp),
             None => match self.index_probe(l, s, persp, usize::MAX) {
                 Some(c) => c,
                 None => match persp {
@@ -14960,6 +14963,7 @@ impl Eval {
             .collect();
         let saved = (self.steps, self.rows, self.peak_rows, self.budget, self.space);
         (self.budget, self.space) = (i64::MAX, i64::MAX);
+        self.refinding = true;
         let tick = self.store.tick;
         let mut out = Vec::new();
         for r in rules {
@@ -15003,6 +15007,7 @@ impl Eval {
             }
         }
         (self.steps, self.rows, self.peak_rows, self.budget, self.space) = saved;
+        self.refinding = false;
         out
     }
 
