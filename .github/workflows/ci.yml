@@ -52,6 +52,22 @@ jobs:
         uses: actions/cache/save@v4
         with: { path: .cache/rofl, key: 'rofl-keep-${{ github.sha }}-${{ github.run_attempt }}' }
 
+  # EVERY PLATFORM COMPILES BEFORE A MERGE. The engine job below builds each platform on main and on a tag only, so
+  # a pull request that breaks one is green until it lands: bin/rofl/kept.rs called statvfs and kill, and win32 was
+  # red on main for five merges and blocked the 1.4.0 release. A cargo check per target on one Linux runner, on every
+  # push and pull request, says so first.
+  platforms:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with: { targets: 'x86_64-pc-windows-msvc,x86_64-pc-windows-gnu,x86_64-apple-darwin' }
+      - uses: Swatinem/rust-cache@v2
+        with: { workspaces: rust, key: platforms }
+      - run: cd rust && cargo check --release --target x86_64-pc-windows-msvc --bins
+      - run: cd rust && cargo check --release --target x86_64-pc-windows-gnu --bins
+      - run: cd rust && cargo check --release --target x86_64-apple-darwin --bins
+
   # THE EXTENSION CARRIES THE RUST ENGINE. One `rofl` binary per platform VS Code
   # publishes for, then one VSIX per platform with its binary in rofl-nb/bin: the
   # extension evaluates on it by default (playground/rust.ts), and a platform

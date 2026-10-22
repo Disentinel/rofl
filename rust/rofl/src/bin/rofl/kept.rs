@@ -109,12 +109,62 @@ fn cap() -> u64 {
 }
 
 /// The bytes free to this process on the disk holding `dir`.
+#[cfg(unix)]
 fn free(dir: &Path) -> Option<u64> {
     use std::os::unix::ffi::OsStrExt;
     let c = std::ffi::CString::new(dir.as_os_str().as_bytes()).ok()?;
     let mut s: libc::statvfs = unsafe { std::mem::zeroed() };
     // SAFETY: a NUL-terminated path and a struct statvfs fills
     (unsafe { libc::statvfs(c.as_ptr(), &mut s) } == 0).then(|| s.f_bavail as u64 * s.f_frsize as u64)
+}
+
+#[cfg(windows)]
+fn free(dir: &Path) -> Option<u64> {
+    use std::os::windows::ffi::OsStrExt;
+    let wide: Vec<u16> = dir.as_os_str().encode_wide().chain([0]).collect();
+    let (mut avail, mut total, mut all) = (0u64, 0u64, 0u64);
+    // SAFETY: a NUL-terminated wide path and three counters the call fills
+    (unsafe { win::GetDiskFreeSpaceExW(wide.as_ptr(), &mut avail, &mut total, &mut all) } != 0).then_some(avail)
+}
+
+/// Is the process `pid` alive (a writer whose temp file is not to be taken from under it)?
+#[cfg(unix)]
+fn alive(pid: u32) -> bool {
+    // SAFETY: signal 0 only asks whether the process exists
+    let r = unsafe { libc::kill(pid as libc::pid_t, 0) };
+    r == 0 || std::io::Error::last_os_error().raw_os_error() == Some(libc::EPERM)
+}
+
+#[cfg(windows)]
+fn alive(pid: u32) -> bool {
+    const QUERY: u32 = 0x1000; // PROCESS_QUERY_LIMITED_INFORMATION
+    const STILL_ACTIVE: u32 = 259;
+    const ACCESS_DENIED: i32 = 5;
+    // SAFETY: a handle opened here is closed here; the exit code is a u32 the call fills
+    unsafe {
+        let h = win::OpenProcess(QUERY, 0, pid);
+        if h.is_null() {
+            // a process that exists and is not ours to ask is alive; one that does not exist is not
+            return std::io::Error::last_os_error().raw_os_error() == Some(ACCESS_DENIED);
+        }
+        let mut code = 0u32;
+        let ok = win::GetExitCodeProcess(h, &mut code) != 0;
+        win::CloseHandle(h);
+        !ok || code == STILL_ACTIVE
+    }
+}
+
+/// The three kernel32 calls the cache needs, declared here rather than through a crate.
+#[cfg(windows)]
+mod win {
+    use std::ffi::c_void;
+    #[link(name = "kernel32")]
+    extern "system" {
+        pub fn GetDiskFreeSpaceExW(dir: *const u16, avail: *mut u64, total: *mut u64, free: *mut u64) -> i32;
+        pub fn OpenProcess(access: u32, inherit: i32, pid: u32) -> *mut c_void;
+        pub fn GetExitCodeProcess(h: *mut c_void, code: *mut u32) -> i32;
+        pub fn CloseHandle(h: *mut c_void) -> i32;
+    }
 }
 
 /// The world of `s` kept at `kept` as a question verb keeps it: written no further than the cap and than the disk
@@ -193,13 +243,11 @@ fn sweep_orphans(dir: &Path) {
     for e in rd.flatten() {
         let name = e.file_name().to_string_lossy().into_owned();
         let Some((_, rest)) = name.split_once(".vol.") else { continue };
-        let Some(pid) = rest.split('.').next().and_then(|p| p.parse::<i32>().ok()) else { continue };
-        if !(name.ends_with(".new") || name.ends_with(".part")) || pid == std::process::id() as i32 {
+        let Some(pid) = rest.split('.').next().and_then(|p| p.parse::<u32>().ok()) else { continue };
+        if !(name.ends_with(".new") || name.ends_with(".part")) || pid == std::process::id() {
             continue;
         }
-        // SAFETY: signal 0 only asks whether the process exists
-        let alive = unsafe { libc::kill(pid, 0) } == 0 || std::io::Error::last_os_error().raw_os_error() == Some(libc::EPERM);
-        if !alive {
+        if !alive(pid) {
             let _ = std::fs::remove_file(e.path());
         }
     }
