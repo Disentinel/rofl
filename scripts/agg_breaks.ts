@@ -8800,6 +8800,20 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "scan_file_sources_ignored",
+  "what": "a file of scanned facts is loaded without holding it to its sources: a versioned one moved, a snapshot past its TTL",
+  "expect": {
+   "scan_sources": "a_file_is_held_to_its_sources:"
+  }
+ },
+ {
+  "id": "scan_file_asof_dropped",
+  "what": "the facts of a file holding a snapshot are answered without saying as of when",
+  "expect": {
+   "scan_sources": "a_file_is_held_to_its_sources:"
+  }
+ },
+ {
   "id": "scan_why_unsigned",
   "what": "why of a scanned fact names no scanner and no sum of its code",
   "expect": {

@@ -27,7 +27,7 @@ export type NbCellOut = { index: number; kind: CellKind; line: number; errors: s
  *  `cut`: the wall stopped the run, so what it found is a part and a never that found nothing is not known. */
 export type Status = 'ok' | 'blind' | 'fails' | 'unread' | 'cut';
 /** `unresolved`, only when there is one: the relative imports and requires that name no file of the code, which every never is blind to. */
-export type NbResult = { status: Status; /** a run cut short: what cut it and the setting that raises it, in a sentence */ cut?: string; front: Front; cells: NbCellOut[]; errors: string[]; unresolved?: string[]; ms: { load: number; run: number; phases?: Record<string, number>; loaded?: boolean; model?: 'evaluated' | 'kept' } };
+export type NbResult = { status: Status; /** a run cut short: what cut it and the setting that raises it, in a sentence */ cut?: string; front: Front; cells: NbCellOut[]; errors: string[]; /** what the run says beside its answers: a file of scanned facts as of when, or not checked here */ notes?: string[]; unresolved?: string[]; ms: { load: number; run: number; phases?: Record<string, number>; loaded?: boolean; model?: 'evaluated' | 'kept' } };
 
 export class Kernel {
   private host: Host;
@@ -61,7 +61,7 @@ export class Kernel {
       const rules = libFiles(path, front).model.filter((f) => f.startsWith('rules/'));
       const l = this.host.init(model, phrases, front.model === 'js' ? concernsOf(rules.map((f) => [f, input.lib[f] ?? ''])) : undefined, this.whole ? undefined : input.lib['boot.rofl'], input.lib['boot.rofl']);
       load = l.ms;
-      if (!l.ok) { errors.push(...l.diagnostics.map((d) => d.replace(/^line (\d+)/, (_, n) => world.source(Number(n))))); this.loaded = ''; return { status: 'unread', front, cells: [], errors, ms: { load, run: 0 } }; }
+      if (!l.ok) { errors.push(...l.diagnostics.map((d) => d.replace(/^line (\d+)/, (_, n) => world.source(Number(n))))); this.loaded = ''; return { status: 'unread', front, cells: [], errors, ...(world.notes.length ? { notes: world.notes } : {}), ms: { load, run: 0 } }; }
       this.loaded = key; loaded = true;
     }
     const cells = cellsOf(text);
@@ -99,7 +99,7 @@ export class Kernel {
       }) };
     });
     const status: Status = out.partial ? 'cut' : errors.length || result.some((c) => c.errors.length || c.lines.some((l) => l.verdict === 'unasked')) ? 'unread' : result.some((c) => c.lines.some((l) => l.verdict === 'fails')) ? 'fails' : out.partial || result.some((c) => c.lines.some((l) => l.verdict === 'blind')) ? 'blind' : 'ok';
-    return { status, front, ...(out.cut && status === 'cut' ? { cut: out.cut } : {}), cells: result, errors, ...(out.unresolved.length ? { unresolved: out.unresolved } : {}), ms: { load, run: out.ms, phases: out.phases, loaded, model: out.model } };
+    return { status, front, ...(out.cut && status === 'cut' ? { cut: out.cut } : {}), cells: result, errors, ...(world.notes.length ? { notes: world.notes } : {}), ...(out.unresolved.length ? { unresolved: out.unresolved } : {}), ms: { load, run: out.ms, phases: out.phases, loaded, model: out.model } };
   }
 }
 

@@ -1988,13 +1988,22 @@ impl Session {
         }
     }
 
+    /// The seconds the world keeps a snapshot of the scanner `kind`, as its `scan_ttl(Kind, Seconds)` says.
+    fn scan_ttl(&mut self, kind: &str) -> Option<u64> {
+        let r = self.eval.h.intern("scan_ttl");
+        let main = self.eval.v.main;
+        let rows: Vec<Vec<Term>> = self.eval.store.rel_persp(&self.eval.h, r, main).into_iter().map(|f| self.eval.store.args(f).to_vec()).filter(|a| a.len() == 2).collect();
+        rows.into_iter().find(|a| matches!(a[0].kind(), TermK::Atom(x) | TermK::Str(x) if self.eval.h.name(x) == kind)).and_then(|a| self.eval.h.canon(a[1]).parse().ok())
+    }
+
     /// A FILE OF FACTS A SCAN WROTE IS SIGNED BY THE SCANNER'S CODE (docs/cli.md, "A scan names its code"): its
     /// `-- scanner: NAME SUM` and `-- code: PATH SUM` lines, PATH from the file's directory, are held to the code as it
     /// is now. A file whose code changed since it was written, or a scanner's output that is not signed, is refused
     /// with how to scan it again; so is a world that would hold files of two versions of one scanner. The files of
     /// the code, absolute, for a kept world to stamp; none for a file no scanner wrote.
-    pub fn signed_file(&mut self, text: &str, file: &str) -> Result<Vec<String>, String> {
+    pub fn signed_file(&mut self, text: &str, file: &str) -> Result<Signed, String> {
         let (mut scanner, mut code, mut reads, mut again) = (None, Vec::new(), false, None);
+        let (mut sources, mut ttl) = (Vec::new(), None);
         for l in text.lines().take_while(|l| l.is_empty() || l.starts_with("--")) {
             if let Some(r) = l.strip_prefix("-- scanner: ") {
                 scanner = r.rsplit_once(' ');
@@ -2004,12 +2013,17 @@ impl Session {
                 reads = true;
             } else if let Some(r) = l.strip_prefix("-- again: ") {
                 again = Some(r);
+            } else if let Some(r) = l.strip_prefix("-- source: ") {
+                sources.push(r.to_string());
+            } else if let Some(r) = l.strip_prefix("-- ttl: ") {
+                ttl = r.trim().parse::<u64>().ok();
             }
         }
-        if scanner.is_none() && code.is_empty() && !reads {
-            return Ok(Vec::new());
+        if scanner.is_none() && code.is_empty() && !reads && sources.is_empty() {
+            return Ok(Signed::default());
         }
         let shown = shown_path(file);
+        let command = again;
         let again = again.map_or_else(|| "run its scanner again".to_string(), |a| format!("scan again: {a}"));
         let Some((name, sign)) = scanner.filter(|_| !code.is_empty() && code.iter().all(|(_, s)| s.is_some())) else {
             return Err(format!("{shown} is a scanner's output not signed by its code (`-- scanner: NAME SUM` and `-- code: PATH SUM`, docs/cli.md \"A scan names its code\"), written before scans were signed, so its facts may be an older scanner's; {again}"));
@@ -2032,9 +2046,29 @@ impl Session {
             return Err(format!("{shown}: its `-- scanner: {name} {sign}` is not the sum of the code it names; {again}"));
         }
         now.sort();
-        let rec = crate::engine::ScanRec { kind: name.to_string(), sign: sign.to_string(), code: now.clone(), ..Default::default() };
+        // ITS SOURCES, AS A SCAN'S: a snapshot past its TTL (the file's `-- ttl:`, else the world's scan_ttl) is refused,
+        // one within it or with none is answered as of when it was taken; a versioned source is asked through the
+        // command that wrote the file, in the check mode, and a file whose source moved, or whose check fails, is refused
+        if !sources.is_empty() && crate::brk!("scan_file_sources_ignored" => false; true) {
+            let ttl = ttl.or_else(|| self.scan_ttl(name));
+            let check = || -> Result<Vec<u8>, String> {
+                let cmd = command.ok_or("the file names no command to ask it with (`-- again:`)")?;
+                let mut c = std::process::Command::new("sh");
+                c.arg("-c").arg(cmd).env("ROFL_SCAN_CHECK", "1");
+                let o = c.output().map_err(|e| format!("sh: {e}"))?;
+                if !o.status.success() {
+                    return Err(format!("`{cmd}` exited {}: {}", o.status.code().unwrap_or(-1), String::from_utf8_lossy(&o.stderr).lines().last().unwrap_or("")));
+                }
+                Ok(o.stdout)
+            };
+            holds_with(name, &sources, ttl, true, &check).map_err(|(_, why)| format!("{shown}: {why}; {again}"))?;
+        }
+        let rec = crate::engine::ScanRec { kind: name.to_string(), sign: sign.to_string(), code: now.clone(), sources, ..Default::default() };
         self.signed(&rec).map_err(|e| format!("{shown}: {e}"))?;
-        Ok(now.into_iter().map(|(p, _)| p).collect())
+        if crate::brk!("scan_file_asof_dropped" => false; true) {
+            self.as_of(&rec);
+        }
+        Ok(Signed { code: now.into_iter().map(|(p, _)| p).collect(), who: Some(scanner_who(name)) })
     }
 
     /// The scanner whose code brought the base fact `lit` into the world, as `why` names it: its kind, the sum of
@@ -2208,6 +2242,14 @@ impl Stamps {
     }
 }
 
+/// What a file of scanned facts is signed by: the files of its scanner's code, absolute, for a kept world to stamp,
+/// and the scanner its facts are asserted by; nothing for a file no scanner wrote.
+#[derive(Default)]
+pub struct Signed {
+    pub code: Vec<String>,
+    pub who: Option<String>,
+}
+
 /// One scan run: the storeroom's answer while every stamp and every source holds, else the command run with the
 /// path last. A kept scan whose sources could not be checked is never answered: the scanner runs, and if it fails
 /// too, the scan fails saying both.
@@ -2278,12 +2320,19 @@ pub fn snapshot_time(sources: &[String]) -> Option<String> {
 /// it is younger than `ttl` (none: never); a versioned source while the scanner, asked in its check mode, gives the
 /// same token. Why not, otherwise, and whether the check itself failed.
 pub fn sources_hold(cmd: &str, path: &str, sources: &[String], ttl: Option<u64>) -> Result<(), (bool, String)> {
+    holds_with(cmd, sources, ttl, false, &|| scan_command(cmd, path, true))
+}
+
+/// `sources_hold` with the check mode `check` run by the caller; `untimed`: a snapshot with no TTL holds (a file,
+/// which nothing can take again here) rather than running every time (a scan).
+fn holds_with(cmd: &str, sources: &[String], ttl: Option<u64>, untimed: bool, check: &dyn Fn() -> Result<Vec<u8>, String>) -> Result<(), (bool, String)> {
     let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0, |d| d.as_secs() as i64);
     let mut versioned: Vec<(&str, &str)> = Vec::new();
     for s in sources {
         let Some((uri, tok)) = s.rsplit_once(' ') else { return Err((false, format!("`-- source: {s}` names no token"))) };
         match tok.strip_prefix('@') {
             Some(t) if crate::brk!("scan_source_ttl_ignored" => false; true) => match ttl {
+                None if untimed => {}
                 None => {
                     static SAID: std::sync::Once = std::sync::Once::new();
                     SAID.call_once(|| eprintln!("the scan `{cmd}` draws from {uri}, a snapshot, and no TTL is declared (`-- ttl: SECONDS`, or scan_ttl(Kind, Seconds)): it runs every time"));
@@ -2301,14 +2350,14 @@ pub fn sources_hold(cmd: &str, path: &str, sources: &[String], ttl: Option<u64>)
     if versioned.is_empty() || crate::brk!("scan_source_token_ignored" => true; false) {
         return Ok(());
     }
-    let out = scan_command(cmd, path, true).map_err(|e| (true, format!("the check of its sources failed ({e}), so the kept scan is not known to be current")))?;
+    let out = check().map_err(|e| (true, format!("the check of its sources failed ({e}), so what was kept is not known to be current")))?;
     let out = String::from_utf8_lossy(&out);
     let now: HashMap<&str, &str> = out.lines().filter_map(|l| l.strip_prefix("-- source: ")).filter_map(|s| s.rsplit_once(' ')).collect();
     for (uri, tok) in versioned {
         match now.get(uri) {
             Some(t) if *t == tok => {}
             Some(t) => return Err((false, format!("{uri} moved: {tok} then, {t} now"))),
-            None => return Err((true, format!("the check of its sources did not name {uri}, so the kept scan is not known to be current"))),
+            None => return Err((true, format!("the check of its sources did not name {uri}, so what was kept is not known to be current"))),
         }
     }
     Ok(())

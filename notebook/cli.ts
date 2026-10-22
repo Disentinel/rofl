@@ -7,12 +7,14 @@
 // A run goes to the kept kernel of notebook/serve.ts, started on first use; ROFL_NB_DAEMON=0 runs in this process.
 import { existsSync, globSync, readFileSync, realpathSync, renameSync, statSync, writeFileSync } from 'node:fs';
 import { getHeapStatistics } from 'node:v8';
+import { execSync } from 'node:child_process';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Kernel, nearest, short, unresolvedSaid, VERDICT, type NbLine, type NbResult } from './kernel.ts';
 import { builtin, cellsOf, codeNames, libFiles, NOT_BUILTIN, parseFront, translated, unread, type NbCell } from './front.ts';
 import { worldOf, type Inputs } from './world.ts';
+import { checkSigned, headOf, type SignHost } from '../src/signed.ts';
 import { concernsOf, homeOf, translatorVocab, type Stop } from '../playground/host.ts';
 import { viaDaemon } from './serve.ts';
 import { engineOf } from '../playground/rust.ts';
@@ -52,6 +54,12 @@ export const wall = wallOf(limits());
 
 /** A path the front matter names, from the notebook's directory `dir`: relative to it, or absolute, or from home. */
 export const from = (dir: string) => (p: string) => path.resolve(dir, p.replace(/^~(?=\/|$)/, os.homedir()));
+/** The Node host of a signature check: the scanner's code read from disk, its check mode run through a shell. */
+export const nodeSignHost: SignHost = {
+  read: (p) => { try { return readFileSync(p); } catch { return undefined; } },
+  check: (command) => execSync(command, { encoding: 'utf8', env: { ...process.env, ROFL_SCAN_CHECK: '1' }, stdio: ['ignore', 'pipe', 'pipe'] }),
+};
+
 /** What a `reads:` name is: a vocabulary shipped with ROFL (front.ts builtin), else a path from `dir`; null for a `rofl:` name that is none. */
 export const readAt = (dir: string) => (r: string): string | null => { const b = builtin(r); return b === undefined ? from(dir)(r) : b && path.join(ROOT, b); };
 
@@ -61,12 +69,21 @@ export function inputs(file: string, text: string, unsaved: Record<string, strin
   const front = parseFront(text), dir = path.dirname(file), errors: string[] = [];
   const at = from(dir);
   const read = (p: string) => { try { return unsaved[path.resolve(p)] ?? readFileSync(p, 'utf8'); } catch (e) { errors.push(`${path.relative(ROOT, p) || p}: ${(e as Error).message}`); return undefined; } };
-  const lib: Record<string, string> = {}, reads: Record<string, string> = {}, code: Record<string, string> = {};
+  const lib: Record<string, string> = {}, reads: Record<string, string> = {}, code: Record<string, string> = {}, checked: Record<string, string> = {};
   const want = libFiles(path.relative(ROOT, path.resolve(file)), front);
   for (const f of [...want.model, ...want.phrases]) { const t = read(path.join(ROOT, f)); if (t !== undefined) lib[f] = t; }
   const tried = new Set<string>();
   for (let want = unread(text, reads); want.length; want = unread(text, reads).filter((k) => !tried.has(k)))
-    for (const r of want) { tried.add(r); const p = readAt(dir)(r); if (p === null) { errors.push(NOT_BUILTIN(r)); continue; } const t = read(p); if (t !== undefined) reads[r] = t; }
+    for (const r of want) {
+      tried.add(r); const p = readAt(dir)(r); if (p === null) { errors.push(NOT_BUILTIN(r)); continue; } const t = read(p); if (t === undefined) continue;
+      // a file of scanned facts is held to its scanner's code and its sources here, as the Rust engine holds it
+      if (!r.endsWith('.rofl.md') && headOf(t)) {
+        const c = checkSigned(t, path.relative(ROOT, p) || p, (q) => path.resolve(path.dirname(p), q), nodeSignHost);
+        if (c.refused) { errors.push(c.refused); continue; }
+        checked[r] = c.asOf ?? '';
+      }
+      reads[r] = t;
+    }
   const found: string[] = [];
   for (const g of front.code) {
     const hits = globSync(at(g)).sort();
@@ -77,7 +94,7 @@ export function inputs(file: string, text: string, unsaved: Record<string, strin
   const paths: Record<string, string> = {};
   for (const p of found) { const t = read(p); if (t !== undefined) code[names[path.resolve(p)]] = t; paths[names[path.resolve(p)]] = path.resolve(p); }
   const outside = [...[...tried].filter((r) => builtin(r) === undefined), ...front.code].filter((p) => { const r = path.relative(dir, at(p)); return r === '..' || r.startsWith(`..${path.sep}`) || path.isAbsolute(r); });
-  return { input: { lib, reads, code, data: dataFiles(paths, code) }, errors, paths, outside };
+  return { input: { lib, reads, code, data: dataFiles(paths, code), checked }, errors, paths, outside };
 }
 
 export const OUTSIDE = (outside: string[]) => `reads files outside this notebook's folder: ${outside.join(', ')}`;
@@ -116,6 +133,7 @@ export { SAID, said, VERDICT } from './kernel.ts';
 export function print(file: string, r: NbResult, only?: number, shown = SHOWN, format?: string, full = shown === Infinity): string {
   const out: string[] = [];
   for (const e of r.errors) out.push(`${file}: error: ${e}`);
+  for (const n of r.notes ?? []) out.push(`${file}: note: ${n}`);
   if (r.unresolved) out.push(`${file}: note: ${unresolvedSaid(r.unresolved)}, so a never holds only as far as the model sees:`, ...r.unresolved.map((u) => `  ${u}`));
   for (const c of r.cells) {
     if (only !== undefined && c.index !== only) continue;

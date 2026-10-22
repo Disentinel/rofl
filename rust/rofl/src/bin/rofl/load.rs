@@ -92,6 +92,13 @@ pub fn verb(args: Vec<String>) {
     run(json, args, None, rofl::brk!("kept_verbs_compute" => false; true))
 }
 
+/// The lines a file opens with that are comments: where a scanner signs what it wrote.
+fn head(f: &str) -> String {
+    use std::io::BufRead;
+    let Ok(file) = std::fs::File::open(f) else { return String::new() };
+    std::io::BufReader::new(file).lines().map_while(Result::ok).take_while(|l| l.is_empty() || l.starts_with("--")).map(|l| l + "\n").collect()
+}
+
 /// The scans the world loaded, each with the base facts it brought.
 fn scan_units(s: &mut rofl::session::Session) -> Vec<crate::kept::ScanUnit> {
     let recs = s.eval.scans.clone();
@@ -262,6 +269,14 @@ fn run(json: bool, args: Vec<String>, mut pre: Option<(bool, crate::kept::Record
     if let Err(e) = if scans_kept.is_empty() { Ok(()) } else { crate::kept::signed(&mut s, &scans_kept) } {
         fail(json, FILE_REFUSED, &e);
     }
+    // a world from disk holds its files of scanned facts to their sources again, as time has passed: by their heads
+    if from_disk {
+        for f in &world[world.len() - files.len()..] {
+            if let Err(e) = s.signed_file(&head(f), f) {
+                fail(json, FILE_REFUSED, &e);
+            }
+        }
+    }
     if let (Some((units, scans, code)), Some(p)) = (&by_delta, &slot) {
         let files_now = &world[world.len() - files.len()..];
         let read: Vec<String> = files_now.iter().chain(code).cloned().collect();
@@ -300,8 +315,9 @@ fn run(json: bool, args: Vec<String>, mut pre: Option<(bool, crate::kept::Record
         let mut code: Vec<String> = Vec::new();
         for (f, text) in &sources {
             let t = text.clone().unwrap_or_else(|| read(f));
-            code.extend(s.signed_file(&t, f).unwrap_or_else(|e| fail(json, FILE_REFUSED, &e)));
-            if let Err(d) = s.load(&t, None) {
+            let sg = s.signed_file(&t, f).unwrap_or_else(|e| fail(json, FILE_REFUSED, &e));
+            code.extend(sg.code);
+            if let Err(d) = s.load(&t, sg.who.as_deref()) {
                 fail(json, FILE_REFUSED, &format!("{f} refused:\n  {}", d.join("\n  ")));
             }
             loaded.push((f.clone(), t));
@@ -313,8 +329,9 @@ fn run(json: bool, args: Vec<String>, mut pre: Option<(bool, crate::kept::Record
             if let Some(n) = space { b.eval.space = n; }
             for f in sources.iter().take(1).map(|s| &s.0).chain(below.iter()) {
                 let t = read(f);
-                code.extend(b.signed_file(&t, f).unwrap_or_else(|e| fail(json, FILE_REFUSED, &format!("below: {e}"))));
-                if let Err(d) = b.load(&t, None) {
+                let sg = b.signed_file(&t, f).unwrap_or_else(|e| fail(json, FILE_REFUSED, &format!("below: {e}")));
+                code.extend(sg.code);
+                if let Err(d) = b.load(&t, sg.who.as_deref()) {
                     fail(json, FILE_REFUSED, &format!("below: {f} refused:\n  {}", d.join("\n  ")));
                 }
             }

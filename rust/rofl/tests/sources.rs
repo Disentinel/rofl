@@ -197,6 +197,52 @@ fn a_kept_world_holds_to_its_sources(root: &Path) -> Result<(), String> {
     ensure(a.0.contains("V = 2") && a.1.contains("are as of 20"), || format!("a kept world over a snapshot: {a:?}"))
 }
 
+/// A FILE OF SCANNED FACTS IS HELD TO ITS SOURCES as a scan is: a file signed by the test's scanner (its code
+/// `api.py`, summed here as the engine sums it), with `-- again:` the command that wrote it, loaded by `rofl ask`.
+fn a_file_is_held_to_its_sources(root: &Path) -> Result<(), String> {
+    let c = Case::new("file", "thing");
+    let code = std::fs::read(c.0.join("api.py")).unwrap();
+    let sum = rofl::arena::Sum::of(&code);
+    let sign = rofl::arena::Sum::of(format!("{sum}\n").as_bytes());
+    let file = c.0.join("facts.rofl");
+    let write = |source: &str, ttl: &str| std::fs::write(&file, format!("-- scanner: t {sign}\n-- code: api.py {sum}\n-- again: python3 {} x\n-- source: {source}\n{ttl}thing(1).\n", c.0.join("api.py").display())).unwrap();
+    let boot = root.join("boot.rofl");
+    let rofl = |args: &[&str]| {
+        let o = std::process::Command::new(env!("CARGO_BIN_EXE_rofl")).args(args).current_dir(&c.0).output().unwrap();
+        (o.status.code(), String::from_utf8_lossy(&o.stdout).to_string(), String::from_utf8_lossy(&o.stderr).to_string())
+    };
+    let (b, f) = (boot.to_string_lossy().to_string(), file.to_string_lossy().to_string());
+    let ask = || rofl(&["load", &b, &f, "--ask", "thing(V)"]);
+    let url = std::fs::read_to_string(c.0.join("url")).unwrap();
+    // versioned: the token the source gives now
+    write(&format!("{url} \"v1\""), "");
+    let a = ask();
+    ensure(a.0 == Some(0) && a.1.contains("V = 1"), || format!("a versioned file, unchanged: {a:?}"))?;
+    c.1.v.store(2, Ordering::SeqCst);
+    let a = ask();
+    ensure(a.0 == Some(2) && a.2.contains("moved") && a.2.contains("scan again: python3") && a.1.is_empty(), || format!("a versioned file whose source moved: {a:?}"))?;
+    c.1.down.store(true, Ordering::SeqCst);
+    let a = ask();
+    ensure(a.0 == Some(2) && a.2.contains("the check of its sources failed"), || format!("a versioned file, its source down: {a:?}"))?;
+    c.1.down.store(false, Ordering::SeqCst);
+    // a snapshot: within its TTL, and with none, answered as of when; past it, refused
+    write(&format!("{url} @2099-01-01T00:00:00Z"), "-- ttl: 3600\n");
+    let a = ask();
+    ensure(a.0 == Some(0) && a.2.contains("are as of 2099-01-01T00:00:00Z"), || format!("a snapshot within its TTL: {a:?}"))?;
+    let w = rofl(&["why", "thing(1)", &b, &f]);
+    ensure(w.1.contains("brought in by the scanner `t`") && w.1.contains(", as of 2099"), || format!("why of a fact of a snapshot file: {w:?}"))?;
+    write(&format!("{url} @2020-01-01T00:00:00Z"), "-- ttl: 3600\n");
+    let a = ask();
+    ensure(a.0 == Some(2) && a.2.contains("past its TTL of 3600 s") && a.2.contains("scan again: python3"), || format!("a snapshot past its TTL: {a:?}"))?;
+    write(&format!("{url} @2020-01-01T00:00:00Z"), "");
+    let a = ask();
+    ensure(a.0 == Some(0) && a.2.contains("are as of 2020-01-01T00:00:00Z"), || format!("a snapshot with no TTL: {a:?}"))?;
+    std::fs::write(c.0.join("ttl.rofl"), "edb(scan_ttl).\nscan_ttl(t, 60).\n").unwrap();
+    let t = c.0.join("ttl.rofl").to_string_lossy().to_string();
+    let a = rofl(&["load", &b, &t, &f, "--ask", "thing(V)"]);
+    ensure(a.0 == Some(2) && a.2.contains("past its TTL of 60 s"), || format!("a snapshot past the world's scan_ttl: {a:?}"))
+}
+
 /// A fake `gh`: `gh api PATH` answers the run list from `runs.json` and every run's jobs as none, and logs PATH.
 const GH: &str = r#"#!/usr/bin/env python3
 import json, os, sys
@@ -255,6 +301,16 @@ const CASES: [(&str, F); 5] = [
     ("a_snapshot_past_its_ttl_is_scanned_again", a_snapshot_past_its_ttl_is_scanned_again),
 ];
 
+/// The sum a file is signed by is the engine's in every language a scanner or a host writes it in: TypeScript
+/// (src/signed.ts, test/signed-file.test.ts holds the same value) and Python (scanners/own_code.py).
+#[test]
+fn the_sum_is_one_in_three_languages() {
+    assert_eq!(rofl::arena::Sum::of(b"a scan names its code"), "4cd791393f0d9793");
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..").canonicalize().unwrap();
+    let py = std::process::Command::new("python3").args(["-c", "import sys; sys.path.insert(0, 'scanners'); import own_code; print(own_code.sum_of(b'a scan names its code'))"]).current_dir(&root).output().unwrap();
+    assert_eq!(String::from_utf8_lossy(&py.stdout).trim(), "4cd791393f0d9793");
+}
+
 /// One test, the cases in turn: they share the process's storeroom (`XDG_CACHE_HOME`).
 #[test]
 fn a_kept_scan_holds_to_its_sources() {
@@ -265,6 +321,9 @@ fn a_kept_scan_holds_to_its_sources() {
     let mut bad: Vec<String> = CASES.iter().filter_map(|(name, f)| f().err().map(|e| format!("{name}: {e}"))).collect();
     if let Err(e) = a_kept_world_holds_to_its_sources(&root) {
         bad.push(format!("a_kept_world_holds_to_its_sources: {e}"));
+    }
+    if let Err(e) = a_file_is_held_to_its_sources(&root) {
+        bad.push(format!("a_file_is_held_to_its_sources: {e}"));
     }
     if let Err(e) = gh_runs_holds_to_the_run_list(&root) {
         bad.push(format!("gh_runs_holds_to_the_run_list: {e}"));

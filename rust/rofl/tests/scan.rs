@@ -222,6 +222,8 @@ fn the_85_incident(cache: &Path) -> Result<(), String> {
     let d = Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!("scan-85-{}", std::process::id()));
     let sc = d.join("scanners");
     std::fs::create_dir_all(&sc).unwrap();
+    std::fs::create_dir_all(d.join("src")).unwrap();
+    std::fs::copy(root.join("src/signed.ts"), d.join("src/signed.ts")).unwrap();
     for f in ["cli.ts", "code_facts.ts", "own_code.ts"] {
         std::fs::copy(root.join("scanners").join(f), sc.join(f)).unwrap();
     }
@@ -260,6 +262,8 @@ fn a_file_of_scanned_facts_is_signed() -> Result<(), String> {
     let d = Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!("scan-file-{}", std::process::id()));
     let sc = d.join("scanners");
     std::fs::create_dir_all(&sc).unwrap();
+    std::fs::create_dir_all(d.join("src")).unwrap();
+    std::fs::copy(root.join("src/signed.ts"), d.join("src/signed.ts")).unwrap();
     for f in ["cli.ts", "code_facts.ts", "own_code.ts", "js_ast.ts"] {
         std::fs::copy(root.join("scanners").join(f), sc.join(f)).unwrap();
     }

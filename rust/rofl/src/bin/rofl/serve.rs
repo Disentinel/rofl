@@ -338,8 +338,8 @@ impl Server {
                 };
                 let who = r.get("who").and_then(|v| v.as_str()).map(|s| s.to_string());
                 let file = r.get("path").and_then(|v| v.as_str()).unwrap_or("./-").to_string();
-                self.get(r)?.signed_file(&text, &file)?;
-                match self.get(r)?.load_delta(&text, who.as_deref()) {
+                let sg = self.get(r)?.signed_file(&text, &file)?;
+                match self.get(r)?.load_delta(&text, who.as_deref().or(sg.who.as_deref())) {
                     Ok((n, a)) => Ok(json!({ "admitted": n, "full": full(a) })),
                     Err(d) => Err(d.join("\n")),
                 }

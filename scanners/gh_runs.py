@@ -65,7 +65,9 @@ def main(args: list[str]) -> None:
     t0 = min((stamp(r["run_started_at"]) for r in runs), default=0)
     rel = lambda t: round(stamp(t) - t0) if t else -1
     by_id = {str(r["id"]): r for r in runs}
-    print("\n".join(code_lines("gh") + sources))
+    # how to write it again, which a file of these facts is checked through (ROFL_SCAN_CHECK=1)
+    again = " ".join(["python3", str(pathlib.Path(__file__).resolve()), *sys.argv[1:]])
+    print("\n".join(code_lines("gh") + [f"-- again: {again}"] + sources))
     print(f"-- runs read by scanners/gh_runs.py from {', '.join(args)}")
     for r in sorted(runs, key=lambda r: r["run_started_at"]):
         run, repo = str(r["id"]), r["repository"]["name"]

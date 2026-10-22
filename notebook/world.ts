@@ -2,10 +2,13 @@
 import { readBook, homeOf, type Cell } from './book.ts';
 import type { ReadOptions } from '../scripts/read_md.ts';
 import { cellsOf, libFiles, parseFront, readKey, type NbCell } from './front.ts';
+import { headOf, notChecked } from '../src/signed.ts';
 
 /** The texts a run needs: `lib` by their path from the root of the tree (libFiles), `reads` and `code` by their name in the notebook; `data`, the files a
  *  relative specifier in the code names that exist and are not code (`../package.json`), which it reaches rather than loses sight of. */
-export type Inputs = { lib: Record<string, string>; reads: Record<string, string>; code: Record<string, string>; data?: string[] };
+export type Inputs = { lib: Record<string, string>; reads: Record<string, string>; code: Record<string, string>; data?: string[];
+  /** a read file of scanned facts the host held to its signature (src/signed.ts), and what it said of it ('' nothing) */
+  checked?: Record<string, string> };
 
 export const asCell = (c: NbCell): Cell => ({ id: `c${c.index}`, text: c.text, form: c.kind === 'datalog' ? 'rofl' : 'md', prose: c.kind === 'prose' });
 
@@ -17,8 +20,8 @@ export function worldOf(text: string, phrases: string, home: Record<string, stri
 }
 
 /** The model a notebook runs over and the words it is read in: the tree's files its front matter names, then the worlds it reads. */
-export function assemble(path: string, text: string, input: Inputs): { model: string; phrases: string; home: Record<string, string>; errors: string[]; source(line: number): string } {
-  const front = parseFront(text), files = libFiles(path, front), errors: string[] = [];
+export function assemble(path: string, text: string, input: Inputs): { model: string; phrases: string; home: Record<string, string>; errors: string[]; notes: string[]; source(line: number): string } {
+  const front = parseFront(text), files = libFiles(path, front), errors: string[] = [], notes: string[] = [];
   const lib = (f: string) => { const t = input.lib[f]; if (t === undefined) errors.push(`${f}: not given`); return t ?? ''; };
   const parts: [string, string][] = files.model.map((f) => [f, lib(f)]);
   let phrases = files.phrases.map(lib).join('\n');
@@ -31,7 +34,12 @@ export function assemble(path: string, text: string, input: Inputs): { model: st
       if (seen.has(k)) continue;
       seen.add(k);
       if (t === undefined) { errors.push(`${k}: not given`); continue; }
-      if (!k.endsWith('.rofl.md')) { parts.push([k, t]); phrases += `\n-- read: ${k}\n` + t; continue; }
+      if (!k.endsWith('.rofl.md')) {
+        // a file of scanned facts: what the host found of its signature, or that it could not look
+        const said = input.checked?.[k];
+        if (said) notes.push(said); else if (said === undefined && headOf(t)) notes.push(notChecked(k));
+        parts.push([k, t]); phrases += `\n-- read: ${k}\n` + t; continue;
+      }
       read(k, t);
       // a vocabulary the notebook reads is marked, so a head about other things than its sentences say is not read as one of them (book.ts misbound)
       const w = worldOf(t, phrases, home);
@@ -48,5 +56,5 @@ export function assemble(path: string, text: string, input: Inputs): { model: st
     for (const [name, t] of parts) { const n = t.split('\n').length; if (line <= n) return `${name}:${line}`; line -= n; }
     return `line ${line}`;
   };
-  return { model, phrases, home: homeOf(model), errors, source };
+  return { model, phrases, home: homeOf(model), errors, notes, source };
 }

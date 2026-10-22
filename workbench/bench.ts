@@ -122,7 +122,7 @@ export class Bench {
     const result = this.kernel.run(near?.path ?? PATH, text, input);
     result.errors.unshift(...errors);
     if (errors.length) result.status = 'unread';
-    const byCell = new Map<string, Said>(), head: Said = { errors: [...result.errors], notes: [], lines: [] };
+    const byCell = new Map<string, Said>(), head: Said = { errors: [...result.errors], notes: [...result.notes ?? []], lines: [] };
     const owner = (line: number) => { let k = 0; for (let i = 0; i < starts.length; i++) if (starts[i] <= line) k = i; return cells[k]; };
     for (const o of result.cells) {
       if (o.kind === 'prose') { head.errors.push(...o.errors); head.notes.push(...o.notes); continue; }

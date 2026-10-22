@@ -81,12 +81,14 @@ pub fn apply(s: &mut Session, r: &Record, files: &[String]) -> Result<Done, Stri
     // what stays, what goes, what comes
     let (mut stays, mut goes): (HashSet<u32>, Vec<u32>) = (HashSet::new(), Vec::new());
     let (mut add, mut took, mut texts): (String, Vec<String>, HashMap<&str, String>) = (String::new(), Vec::new(), HashMap::new());
+    let mut signed_add: Vec<(String, String)> = Vec::new();
     for f in files {
         match old.get(f.as_str()) {
             Some(u) if !all && stamps.get(f.as_str()).is_some_and(|st| kept::holds(f, st)) => stays.extend(&u.facts),
             Some(u) => {
                 let text = read(f)?;
-                code.extend(s.signed_file(&text, f)?);
+                let sg = s.signed_file(&text, f)?;
+                code.extend(sg.code);
                 let (ids, rules, _) = s.facts_of(&text)?;
                 if kept::rules_sum(&rules) != u.rules {
                     return Err(format!("the rules of {} changed", kept::shown(f)));
@@ -95,18 +97,29 @@ pub fn apply(s: &mut Session, r: &Record, files: &[String]) -> Result<Done, Stri
                 if rofl::brk!("kept_delta_keeps_old" => false; true) {
                     goes.extend(&u.facts);
                 }
-                add.push_str(&text);
-                add.push('\n');
+                match sg.who {
+                    Some(who) => signed_add.push((text.clone(), who)),
+                    None => {
+                        add.push_str(&text);
+                        add.push('\n');
+                    }
+                }
                 took.push(kept::shown(f));
                 texts.insert(f, text);
             }
             None => {
                 let text = read(f)?;
-                code.extend(s.signed_file(&text, f)?);
+                let sg = s.signed_file(&text, f)?;
+                code.extend(sg.code);
                 let (ids, _, _) = s.facts_of(&text)?;
                 stays.extend(ids.iter().copied());
-                add.push_str(&text);
-                add.push('\n');
+                match sg.who {
+                    Some(who) => signed_add.push((text.clone(), who)),
+                    None => {
+                        add.push_str(&text);
+                        add.push('\n');
+                    }
+                }
                 took.push(kept::shown(f));
                 texts.insert(f, text);
             }
@@ -144,8 +157,12 @@ pub fn apply(s: &mut Session, r: &Record, files: &[String]) -> Result<Done, Stri
         Err(why) => return Err(why),
         Ok(d) => d.overdeleted + d.rederived,
     };
-    if !add.is_empty() {
-        match s.load_delta(&add, None) {
+    // a file of scanned facts is asserted by its scanner, as a scan's facts are
+    for (text, who) in std::iter::once((add, None)).chain(signed_add.into_iter().map(|(t, w)| (t, Some(w)))) {
+        if text.is_empty() {
+            continue;
+        }
+        match s.load_delta(&text, who.as_deref()) {
             Err(d) => return Err(d.join("; ")),
             Ok((_, Addition::Full(why))) => return Err(why),
             Ok(_) => {}

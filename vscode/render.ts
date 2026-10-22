@@ -55,7 +55,7 @@ export function render(r: Run, run = ''): { head: Shown; cells: Shown[] } {
   });
   const prose = r.cells[0] ? cell(r.cells[0]) : { md: '', err: '', ok: true };
   return {
-    head: { md: [`*${said(r, (cell, line) => `[cell ${cell}, line ${line}](<rofl-cell:${cell}>)`)}* · load ${r.ms.load} ms, run ${r.ms.run} ms`, r.outside?.length ? `**warning**: ${OUTSIDE(r.outside.map((p) => `\`${p}\``))}` : '', prose.md].filter(Boolean).join('\n\n'), err: [...r.errors, prose.err].filter(Boolean).join('\n'), ok: r.status === 'ok' },
+    head: { md: [`*${said(r, (cell, line) => `[cell ${cell}, line ${line}](<rofl-cell:${cell}>)`)}* · load ${r.ms.load} ms, run ${r.ms.run} ms`, r.outside?.length ? `**warning**: ${OUTSIDE(r.outside.map((p) => `\`${p}\``))}` : '', ...(r.notes ?? []).map((n) => `**note**: ${n}`), prose.md].filter(Boolean).join('\n\n'), err: [...r.errors, prose.err].filter(Boolean).join('\n'), ok: r.status === 'ok' },
     cells: r.cells.slice(1).map(cell),
   };
 }
