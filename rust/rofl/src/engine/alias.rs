@@ -211,7 +211,7 @@ impl Eval {
                 SrcArg::Anon => {}
             }
         }
-        let ids = self.store.arg_matches(&self.h, v.src, Some(book), v.pat.len(), &pos, &vals).unwrap_or_else(|| self.store.rel_persp(&self.h, v.src, book));
+        let ids = self.store.question_matches(&self.h, v.src, Some(book), v.pat.len(), &pos, &vals);
         ids.into_iter().filter(|&id| self.store.alive(id) && self.store.rec(id).persp == book).find(|&id| v.project(self.store.args(id)).as_deref() == Some(args))
     }
 
