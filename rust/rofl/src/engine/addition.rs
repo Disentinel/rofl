@@ -1294,7 +1294,9 @@ impl Eval {
                 }
             } else if any {
                 let fine = || !r.has_agg && !r.has_thr && r.lattice_outer.is_empty() && !r.demand_strict && brk!("add_negation_reset" => false; true);
-                if !inner && !r.has_agg && !r.has_thr {
+                // (an aggregate over what did not change is a value of the firing; a holistic one's group is shared across firings)
+                let held = r.clause.body.iter().all(|b| !matches!(b, BodyElem::Agg(a) if a.op.class() == Class::Holistic));
+                if !inner && !r.has_thr && (!r.has_agg || held) {
                     mono.push(r.clone());
                 } else if let Some(ns) = negs_of(&self.h, r, grown).filter(|_| inner && fine()) {
                     negs.push((r.clone(), ns));
