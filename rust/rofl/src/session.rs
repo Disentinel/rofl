@@ -2071,7 +2071,7 @@ impl Session {
         let runs: Vec<_> = todo.iter().map(|((kind, _), path)| {
             let cmd = scanners.get(kind).cloned();
             let path = path.clone();
-            std::thread::spawn(move || run_scan(cmd.as_deref(), &path))
+            std::thread::spawn(move || run_scan(cmd.as_deref(), &path, false))
         }).collect();
         // while the scanners run, the world goes cold
         self.cool_round()?;
@@ -2097,7 +2097,7 @@ impl Session {
     /// The scan of `text` (its path, written back as `path`) for `kind` run again with `cmd`, the storeroom
     /// answering while what it read holds: what it brings, as `scan_requests` loads it.
     pub fn rescan(kind: &str, path: &str, text: &str, cmd: Option<String>) -> crate::engine::ScanRec {
-        let ran = run_scan(cmd.as_deref(), text);
+        let ran = run_scan(cmd.as_deref(), text, true);
         scan_rec(kind, path, text, cmd, ran)
     }
 
@@ -2204,6 +2204,11 @@ impl Session {
 /// and directory, has its output kept under `$XDG_CACHE_HOME/rofl/scans` (else `~/.cache/rofl/scans`), each read
 /// stamped; the same command for the same path is answered from there while every stamp still holds, and runs again
 /// when one does not. A scanner that names nothing is always run. The world cannot tell the two apart.
+///
+/// A scan run again for a kept world (`rescan`) is told its stale output in `ROFL_SCAN_PREVIOUS`, a protocol between
+/// the engine and a scanner, and may keep what it can of it (scanners/js_ast.ts keeps the ids of the nodes it
+/// matches); what it prints then is kept marked `-- inherited` and answers only another `rescan`, so a world
+/// evaluated from its files is the same whatever ran before it.
 fn scan_kept(cmd: &str, path: &str) -> Option<std::path::PathBuf> {
     let home = std::env::var_os("XDG_CACHE_HOME").map(std::path::PathBuf::from)
         .or_else(|| std::env::var_os("HOME").map(|h| std::path::Path::new(&h).join(".cache")))?;
@@ -2212,23 +2217,28 @@ fn scan_kept(cmd: &str, path: &str) -> Option<std::path::PathBuf> {
 }
 
 /// One scan run: the storeroom's answer while every stamp holds, else the command run with the path last.
-fn run_scan(cmd: Option<&str>, path: &str) -> Result<String, String> {
-    run_program(cmd.ok_or("no scanner(Kind, Command) for this kind")?, Some(path), None)
+fn run_scan(cmd: Option<&str>, path: &str, inherit: bool) -> Result<String, String> {
+    run_program(cmd.ok_or("no scanner(Kind, Command) for this kind")?, Some(path), None, inherit)
 }
 
 /// ONE RUN OF A PROGRAM THE WORLD NAMES (docs/intents.md, phase 3): a scanner, the request its last argument, or an
 /// exec adapter (src/adapter.rs), its batch on its standard input. Either is answered from the storeroom while every
 /// stamp of what it said it read holds, and kept there when it said what it read.
-pub(crate) fn run_program(cmd: &str, arg: Option<&str>, input: Option<&str>) -> Result<String, String> {
+pub(crate) fn run_program(cmd: &str, arg: Option<&str>, input: Option<&str>, inherit: bool) -> Result<String, String> {
     use std::io::Write;
     use std::process::{Command, Stdio};
     let kept = scan_kept(cmd, arg.or(input).unwrap_or(""));
-    if let Some(out) = kept.as_deref().and_then(scan_fresh) {
+    if let Some(out) = kept.as_deref().and_then(|k| scan_fresh(k, inherit)) {
         return Ok(out);
     }
+    let previous = kept.as_deref().filter(|k| inherit && k.exists() && crate::brk!("scan_previous_ignored" => false; true));
     let mut argv = cmd.split_whitespace();
     let prog = argv.next().ok_or("an empty command")?;
     let mut c = Command::new(prog);
+    match previous {
+        Some(p) => c.env("ROFL_SCAN_PREVIOUS", p),
+        None => c.env_remove("ROFL_SCAN_PREVIOUS"),
+    };
     c.args(argv).args(arg).stdin(if input.is_some() { Stdio::piped() } else { Stdio::null() }).stdout(Stdio::piped()).stderr(Stdio::piped());
     let mut child = c.spawn().map_err(|e| format!("{prog}: {e}"))?;
     let feed = child.stdin.take().zip(input.map(str::to_string)).map(|(mut i, text)| std::thread::spawn(move || {
@@ -2244,8 +2254,8 @@ pub(crate) fn run_program(cmd: &str, arg: Option<&str>, input: Option<&str>) -> 
         return Err(format!("{cmd} {how}: {}", err.lines().last().unwrap_or("")));
     }
     let out = String::from_utf8(o.stdout).map_err(|_| format!("{prog} printed bytes that are not UTF-8"))?;
-    if let Some(k) = kept {
-        scan_keep(&k, &out);
+    if let Some(k) = &kept {
+        scan_keep(k, &out, previous.is_some());
     }
     Ok(out)
 }
@@ -2283,10 +2293,14 @@ fn scan_stamp(p: &str) -> String {
     std::fs::read(p).map_or_else(|_| "gone".into(), |b| crate::store::fnv64(&String::from_utf8_lossy(&b)))
 }
 
-fn scan_fresh(kept: &std::path::Path) -> Option<String> {
+fn scan_fresh(kept: &std::path::Path, inherit: bool) -> Option<String> {
     let text = std::fs::read_to_string(kept).ok()?;
     let mut lines = text.lines();
     for l in lines.by_ref() {
+        if l == "-- inherited" {
+            if inherit || crate::brk!("scan_inherited_answers_fresh" => true; false) { continue }
+            return None;
+        }
         let Some(r) = l.strip_prefix("-- kept: ") else { break };
         let (stamp, p) = r.split_once(' ')?;
         if scan_stamp(p) != stamp { return None; }
@@ -2294,10 +2308,11 @@ fn scan_fresh(kept: &std::path::Path) -> Option<String> {
     Some(text)
 }
 
-fn scan_keep(kept: &std::path::Path, out: &str) {
+fn scan_keep(kept: &std::path::Path, out: &str, inherited: bool) {
     let reads: Vec<&str> = out.lines().filter_map(|l| l.strip_prefix("-- reads: ")).collect();
     if reads.is_empty() { return; }
-    let mut text: String = reads.iter().map(|p| format!("-- kept: {} {p}\n", scan_stamp(p))).collect();
+    let mut text: String = if inherited { "-- inherited\n".into() } else { String::new() };
+    text.extend(reads.iter().map(|p| format!("-- kept: {} {p}\n", scan_stamp(p))));
     text.push_str(out);
     let tmp = kept.with_extension(format!("{}.tmp", std::process::id()));
     let _ = kept.parent().map(std::fs::create_dir_all);

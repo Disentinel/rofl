@@ -9,7 +9,8 @@ import { chainOf } from './chain.ts';
 import { proofView, type Proven } from '../notebook/draw-proof.ts';
 import { collect, diff, scoped, status, KINDS, VIEW_RELS, unquote as termText, type DrawKind, type View, type World } from '../notebook/draw.ts';
 import { Vocabulary } from '../src/say.ts';
-import { scan } from '../scanners/js_ast.ts';
+import { idPrefix, scan } from '../scanners/js_ast.ts';
+import { inherit } from '../scanners/js_inherit.ts';
 import { readBook, homeOf, booksOf, OWN, type Ask, type Cell, type Kind } from '../notebook/book.ts';
 import { plural, theVariable, type Question } from '../scripts/read_md.ts';
 import { ARITH_OPS, varsOf, canonTerm, mka, litsOf, termsOf, type Clause, type Lit, type Term } from '../src/unify.ts';
@@ -89,12 +90,13 @@ function labelNodes(facts: string[], nodes: Record<string, Node>): void {
 }
 
 /** The facts of the code: the scanner's of each file, and the host's of the paths and of every string a file holds. */
-export function codeFacts(files: Record<string, string>, data: string[] = []): { facts: string[]; nodes: Record<string, Node>; parseErrors: Record<string, string>; host: string[] } {
+export function codeFacts(files: Record<string, string>, data: string[] = [], previous?: Map<string, string[]>): { facts: string[]; nodes: Record<string, Node>; parseErrors: Record<string, string>; host: string[] } {
   const nodes: Record<string, Node> = {};
   const parseErrors: Record<string, string> = {};
   const facts: string[] = [], strings = new Set<string>();
   for (const [path, src] of Object.entries(files)) {
-    for (const fact of scan(src, { file: path }).facts) {
+    const scanned = scan(src, { file: path }).facts;
+    for (const fact of previous ? inherit(scanned, previous.get(idPrefix(path)) ?? []) : scanned) {
       facts.push(fact);
       const m = /^ast_node\[code\]\((\w+), (\w+), "([^"]*)"\)/.exec(fact);
       if (m) nodes[m[1]] = { kind: m[2], file: m[3], line: 0, label: '' };

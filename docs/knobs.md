@@ -147,6 +147,7 @@ their sources, their `[[bin]]` entries in `rust/rofl/Cargo.toml` and their rows 
 | `ROFL_TREE` | the tree the reader reads | `scripts/agg_breaks.ts`, `scripts/read.ts` | INTERNAL | |
 | `ROFL_KERNEL_HASH` | set by `rust/rofl/build.rs` at compile time; not settable | `rust/rofl/src/kernel.rs` | INTERNAL | |
 | `ROFL_KEEP_TALLY` | the file a pool worker says each answer was read back or computed in | set and read back by `scripts/goldens.ts` for its own workers (`scripts/keep.ts`); nobody sets it by hand | INTERNAL | |
+| `ROFL_SCAN_PREVIOUS` | the stale kept output of a scan, handed to the scanner that runs it again for a kept world, whose node ids it may keep (docs/cli.md) | set by `rust/rofl/src/session.rs` `run_program` for its child alone; read by `scanners/cli.ts`; nobody sets it by hand | INTERNAL: a protocol between the engine and a scanner | |
 | `ROFL_TIMES` | append a line per world (times, facts) to a file, to pick the scale cap | `scripts/goldens.ts`; the recipe is in `facts/checks.rofl` | INTERNAL | |
 | `ROFL_NO_DELTA_FIRST` | plan joins in written order | `rust/rofl/src/engine.rs` reads it; documents (`docs/optimising-a-world.md` names it as the baseline of one measurement); no script or test sets it | REMOVE | done |
 | `ROFL_COOL_PHASES` | print the phases of a cool on stderr | `rust/rofl/src/session.rs` prints; `runtime/port.ts` forwards the stderr; nobody sets it | REMOVE | done |

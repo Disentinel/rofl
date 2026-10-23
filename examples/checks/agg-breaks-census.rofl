@@ -2274,6 +2274,10 @@ brk("kept_orphans_swept_late"). brk_kind("kept_orphans_swept_late", switch).
 brk_expects("kept_orphans_swept_late", "kept_series").
 brk("kept_delta_unasked_kept"). brk_kind("kept_delta_unasked_kept", switch).
 brk_expects("kept_delta_unasked_kept", "kept_js_sources").
+brk("scan_previous_ignored"). brk_kind("scan_previous_ignored", switch).
+brk_expects("scan_previous_ignored", "kept_rename").
+brk("scan_inherited_answers_fresh"). brk_kind("scan_inherited_answers_fresh", switch).
+brk_expects("scan_inherited_answers_fresh", "kept_rename").
 
 switch_site("adapter_lost_answered", "rust/rofl/src/adapter.rs").
 switch_site("adapter_one_call_per_want", "rust/rofl/src/adapter.rs").
@@ -2749,6 +2753,8 @@ switch_site("retract_thr_unclosed", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_tree_refused", "rust/rofl/src/engine/addition.rs").
 switch_site("retract_unrederived", "rust/rofl/src/engine/addition.rs").
 switch_site("roots_of_cycle_off", "rust/rofl/src/engine.rs").
+switch_site("scan_inherited_answers_fresh", "rust/rofl/src/session.rs").
+switch_site("scan_previous_ignored", "rust/rofl/src/session.rs").
 switch_site("scc_member_reads_free", "rust/rofl/src/engine.rs").
 switch_site("scc_off", "rust/rofl/src/engine.rs").
 switch_site("scc_unit_gone", "rust/rofl/src/engine.rs").

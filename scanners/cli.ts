@@ -5,11 +5,14 @@
 //
 // The facts are the notebook host's (playground/host.ts codeFacts): scanners/js_ast.ts over each file, named by its
 // path from DIR, and the host's path and string facts. Without --out they go to stdout. A file no parser reads is
-// named on stderr and the exit code is 2. Then: `rofl why L @rules/js.files FILE`.
+// named on stderr and the exit code is 2. Then: `rofl why L @rules/js.files FILE`. When the engine scans a file again
+// for a kept world it names the previous output in ROFL_SCAN_PREVIOUS, and a node matched there keeps its id
+// (scanners/js_inherit.ts).
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { codeFacts } from '../playground/host.ts';
+import { previousByPrefix } from './js_inherit.ts';
 
 const CODE = /\.(js|ts|tsx|mjs|cjs|jsx|mts|cts)$/;
 const NOT_CODE = /\.d\.[mc]?ts$|\.min\.js$/;
@@ -31,7 +34,9 @@ const [root, one] = argv;
 const files: string[] = [], dirs: string[] = [];
 walk(root, '', files, dirs);
 const parsed = one === undefined ? files : [one];
-const { facts, host, parseErrors } = codeFacts(Object.fromEntries(parsed.map((f) => [f, fs.readFileSync(path.join(root, f), 'utf8')])), files.filter((f) => f !== one));
+const prev = process.env.ROFL_SCAN_PREVIOUS;
+const previous = prev && fs.existsSync(prev) ? previousByPrefix(fs.readFileSync(prev, 'utf8')) : undefined;
+const { facts, host, parseErrors } = codeFacts(Object.fromEntries(parsed.map((f) => [f, fs.readFileSync(path.join(root, f), 'utf8')])), files.filter((f) => f !== one), previous);
 // what was read, for the engine's storeroom of scans (docs/cli.md): the parsed files and every directory listed
 const reads = [...parsed, ...dirs].map((f) => `-- reads: ${path.resolve(root, f)}`);
 const text = [...reads, ...facts, ...host].join('\n') + '\n';
