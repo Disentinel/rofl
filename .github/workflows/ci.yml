@@ -54,19 +54,26 @@ jobs:
 
   # EVERY PLATFORM COMPILES BEFORE A MERGE. The engine job below builds each platform on main and on a tag only, so
   # a pull request that breaks one is green until it lands: bin/rofl/kept.rs called statvfs and kill, and win32 was
-  # red on main for five merges and blocked the 1.4.0 release. A cargo check per target on one Linux runner, on every
-  # push and pull request, says so first.
+  # red on main for five merges and blocked the 1.4.0 release. A cargo check per target, on every push and pull
+  # request, says so first. Each runs where its C compiler is, since the bundled SQLite of the sql adapter is C:
+  # msvc on Windows, darwin on macOS, windows-gnu on Linux with mingw.
   platforms:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - { triple: x86_64-pc-windows-msvc, os: windows-latest }
+          - { triple: x86_64-pc-windows-gnu, os: ubuntu-latest, apt: gcc-mingw-w64-x86-64 }
+          - { triple: x86_64-apple-darwin, os: macos-14 }
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-        with: { targets: 'x86_64-pc-windows-msvc,x86_64-pc-windows-gnu,x86_64-apple-darwin' }
+        with: { targets: '${{ matrix.triple }}' }
       - uses: Swatinem/rust-cache@v2
-        with: { workspaces: rust, key: platforms }
-      - run: cd rust && cargo check --release --target x86_64-pc-windows-msvc --bins
-      - run: cd rust && cargo check --release --target x86_64-pc-windows-gnu --bins
-      - run: cd rust && cargo check --release --target x86_64-apple-darwin --bins
+        with: { workspaces: rust, key: 'platforms-${{ matrix.triple }}' }
+      - if: matrix.apt
+        run: sudo apt-get install -y ${{ matrix.apt }}
+      - run: cd rust && cargo check --release --target ${{ matrix.triple }} --bins
 
   # THE EXTENSION CARRIES THE RUST ENGINE. One `rofl` binary per platform VS Code
   # publishes for, then one VSIX per platform with its binary in rofl-nb/bin: the
