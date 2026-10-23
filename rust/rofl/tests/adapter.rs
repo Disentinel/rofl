@@ -102,3 +102,24 @@ fn an_answer_outside_the_capability_fails_its_batch() {
     assert!(a.rows.len() == 1 && a.rows[0][0].contains("stray/1"), "{:?}", a.rows);
     std::fs::remove_dir_all(&d).ok();
 }
+
+#[test]
+fn an_adapter_that_names_what_it_read_is_answered_from_the_storeroom() {
+    let d = dir("kept");
+    std::env::set_var("XDG_CACHE_HOME", d.join("cache"));
+    let (input, script) = (d.join("input"), d.join("kept.sh"));
+    std::fs::write(&input, "one").unwrap();
+    std::fs::write(&script, format!(
+        "cat > /dev/null\necho 1 >> {}\necho '-- reads: {}'\necho \"next(\\$want(next_of, a), $(cat {})).\"\n",
+        d.join("runs").display(), input.display(), input.display()
+    )).unwrap();
+    let src = world(&d, "a").replace(&format!("node {} {}", d.join("graph.js").display(), d.join("runs").display()), &format!("sh {}", script.display()))
+        .replace("reach(Y) :- next[graph](_, Y).", "got(Y) :- next[graph](_, Y).");
+    assert!(evaluated(&src).holds("got(one)").unwrap());
+    assert!(evaluated(&src).holds("got(one)").unwrap());
+    assert_eq!(runs(&d).len(), 1, "the second world is answered from the storeroom");
+    std::fs::write(&input, "two").unwrap();
+    assert!(evaluated(&src).holds("got(two)").unwrap());
+    assert_eq!(runs(&d).len(), 2, "what it read changed: it runs again");
+    std::fs::remove_dir_all(&d).ok();
+}

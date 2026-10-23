@@ -11,6 +11,7 @@ check[checks]("rust/rofl/tests/adapter.rs", "a_recursive_rule_through_an_adapter
 check[checks]("rust/rofl/tests/adapter.rs", "a_killed_adapter_is_failed_and_a_lost_answer_unknown", test).
 check[checks]("rust/rofl/tests/adapter.rs", "a_want_no_adapter_runs_is_held", test).
 check[checks]("rust/rofl/tests/adapter.rs", "an_answer_outside_the_capability_fails_its_batch", test).
+check[checks]("rust/rofl/tests/adapter.rs", "an_adapter_that_names_what_it_read_is_answered_from_the_storeroom", test).
 check[checks]("rust/rofl/tests/addition.rs", "random_programs_take_additions_as_a_fresh_evaluation_does", test).
 check[checks]("rust/rofl/tests/addition.rs", "random_large_programs_take_additions_as_a_fresh_evaluation_does", test).
 check[checks]("rust/rofl/tests/addition.rs", "a_lattice_world_is_a_fresh_evaluation_after_every_addition", test).

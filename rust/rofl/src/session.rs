@@ -2210,19 +2210,37 @@ fn scan_kept(cmd: &str, path: &str) -> Option<std::path::PathBuf> {
 
 /// One scan run: the storeroom's answer while every stamp holds, else the command run with the path last.
 fn run_scan(cmd: Option<&str>, path: &str) -> Result<String, String> {
-    let cmd = cmd.ok_or("no scanner(Kind, Command) for this kind")?;
-    let kept = scan_kept(cmd, path);
+    run_program(cmd.ok_or("no scanner(Kind, Command) for this kind")?, Some(path), None)
+}
+
+/// ONE RUN OF A PROGRAM THE WORLD NAMES (docs/intents.md, phase 3): a scanner, the request its last argument, or an
+/// exec adapter (src/adapter.rs), its batch on its standard input. Either is answered from the storeroom while every
+/// stamp of what it said it read holds, and kept there when it said what it read.
+pub(crate) fn run_program(cmd: &str, arg: Option<&str>, input: Option<&str>) -> Result<String, String> {
+    use std::io::Write;
+    use std::process::{Command, Stdio};
+    let kept = scan_kept(cmd, arg.or(input).unwrap_or(""));
     if let Some(out) = kept.as_deref().and_then(scan_fresh) {
         return Ok(out);
     }
     let mut argv = cmd.split_whitespace();
     let prog = argv.next().ok_or("an empty command")?;
-    let o = std::process::Command::new(prog).args(argv).arg(path).output().map_err(|e| format!("{prog}: {e}"))?;
+    let mut c = Command::new(prog);
+    c.args(argv).args(arg).stdin(if input.is_some() { Stdio::piped() } else { Stdio::null() }).stdout(Stdio::piped()).stderr(Stdio::piped());
+    let mut child = c.spawn().map_err(|e| format!("{prog}: {e}"))?;
+    let feed = child.stdin.take().zip(input.map(str::to_string)).map(|(mut i, text)| std::thread::spawn(move || {
+        let _ = i.write_all(text.as_bytes());
+    }));
+    let o = child.wait_with_output().map_err(|e| format!("{prog}: {e}"))?;
+    if let Some(f) = feed {
+        let _ = f.join();
+    }
     if !o.status.success() {
         let err = String::from_utf8_lossy(&o.stderr);
-        return Err(format!("{cmd} exited {}: {}", o.status.code().unwrap_or(-1), err.lines().last().unwrap_or("")));
+        let how = o.status.code().map_or_else(|| "was killed".to_string(), |c| format!("exited {c}"));
+        return Err(format!("{cmd} {how}: {}", err.lines().last().unwrap_or("")));
     }
-    let out = String::from_utf8(o.stdout).map_err(|_| "the scanner printed bytes that are not UTF-8".to_string())?;
+    let out = String::from_utf8(o.stdout).map_err(|_| format!("{prog} printed bytes that are not UTF-8"))?;
     if let Some(k) = kept {
         scan_keep(&k, &out);
     }

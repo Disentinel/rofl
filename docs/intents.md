@@ -507,3 +507,26 @@ rule says; the TypeScript engine checks wants (phase 1) and sends none.
 - **Not done.** The kinds other than `exec`; a cap on a batch and on wants a
   tick (open question 2); `adapter_auth`; the kept-world delta path of
   `rofl ask` (`rust/rofl/src/bin/rofl/delta.rs` runs scans only); `-- reads:` stamps.
+
+### Phase 3, as built (2026-10-23)
+
+`run_program` in `rust/rofl/src/session.rs`, the one runner of a scanner and
+an exec adapter.
+
+- **One runner.** A scanner is run with its request as the last argument; an
+  exec adapter with its batch on its standard input. Everything else is the
+  same code: how the program is started, what a bad exit or a kill says, the
+  storeroom.
+- **The storeroom is the adapter's cache.** An adapter that prints
+  `-- reads: PATH` for what it read has its answer to that batch kept under
+  `~/.cache/rofl/scans`, as a scan's is, and the same batch is answered from
+  there while every stamp holds. A tick that sends its wants again (phase 2)
+  then costs no run of the program.
+- **The world's words stay.** `scanner`, `scan_request`, `scan_done` and
+  `scan_failed` are kept as the scan form. Written as wants, they would move
+  the golden of every world that scans, and the kept-world delta path of
+  `rofl ask`, which follows each scan's facts in and out; the acceptance
+  forbids both, and nothing a world can say is gained.
+- **Acceptance.** The scan worlds' goldens, `tests/scan.rs` and the kept-world
+  cases unchanged; an adapter that names what it read runs once for two
+  worlds, and again when what it read changes.

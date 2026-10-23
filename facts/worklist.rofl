@@ -4046,8 +4046,8 @@ work_state(w_intent_adapter_book, done).
 work_needs(w_intent_adapter_book, w_intent_want_syntax).
 
 work(w_intent_scanner_as_adapter,
-  "docs/intents.md phase 3: scanner/scan_request become the exec adapter's reading capability, the storeroom of scans its cache. ACCEPTANCE: every world using them today gives the same golden; kept-world and storeroom tests unchanged.").
-work_state(w_intent_scanner_as_adapter, open).
+  "DONE 2026-10-23 (branch claude/project-thread-2b3jv0): a scanner and an exec adapter are one runner, rust/rofl/src/session.rs run_program (the request as the last argument, or the batch on stdin), and the storeroom of scans answers both while the stamps of what they read hold; tests/adapter.rs an_adapter_that_names_what_it_read_is_answered_from_the_storeroom. The world's words for scans (scanner, scan_request, scan_done, scan_failed) stay as they are: written as wants they would move every scan world's golden and the kept-world delta path, which the acceptance forbids. Scan worlds, tests/scan.rs and the kept-world cases unchanged (an_unwritable_cache_still_answers red as root only). docs/intents.md *Phase 3, as built*. WAS: docs/intents.md phase 3: scanner/scan_request become the exec adapter's reading capability, the storeroom of scans its cache. ACCEPTANCE: every world using them today gives the same golden; kept-world and storeroom tests unchanged.").
+work_state(w_intent_scanner_as_adapter, done).
 work_needs(w_intent_scanner_as_adapter, w_intent_adapter_book).
 
 work(w_intent_sql_adapter,
