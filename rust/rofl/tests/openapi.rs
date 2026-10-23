@@ -2,7 +2,8 @@
 //! HTTP service with an OpenAPI document, and for an MCP server on its streamable HTTP transport, and logs every
 //! request it is sent. Version b of the document changed one operation, `listPets`.
 //! Planted: `openapi_book_digest` prints a digest of the whole document in the book, and the regenerated book moves
-//! outside the changed operation; `openapi_does_get` makes every operation `reads`, and evaluation sends a POST.
+//! outside the changed operation; `openapi_does_get` makes every operation `reads`, and evaluation sends a POST;
+//! `http_key_ignored` takes no key from the environment, and the vault is never opened.
 use rofl::session::Session;
 use std::path::PathBuf;
 use std::process::{Child, Command};
@@ -23,6 +24,8 @@ const server = http.createServer((req, res) => {
     const m = url.pathname.match(/^\/v1\/pets\/(\d+)$/);
     if (req.method === 'GET' && m) return pets[m[1]] ? json(res, 200, pets[m[1]]) : json(res, 404, 'no such pet', 'text/plain');
     if (req.method === 'GET' && url.pathname === '/v1/pets') return json(res, 200, Object.values(pets).filter(p => !url.searchParams.get('tag') || p.tag === url.searchParams.get('tag')));
+    if (url.pathname === '/v2/vault') return req.headers['x-api-key'] === 'k-1' && url.searchParams.get('sig') === 's&1' ? json(res, 200, { gold: 7 }) : json(res, 401, 'no key', 'text/plain');
+    if (url.pathname === '/v2/mine') return req.headers.authorization === 'Bearer t-1' ? json(res, 200, { gold: 3 }) : json(res, 401, 'no token', 'text/plain');
     if (req.method === 'POST' && url.pathname === '/v1/pets') { const p = JSON.parse(body); return json(res, 201, `made ${p.name}`, 'text/plain'); }
     json(res, 404, 'not here', 'text/plain');
   });
@@ -175,4 +178,48 @@ fn an_mcp_server_over_http_is_read_and_called() {
     let book = book.replace("capability(pet_desk_find_pet, pet_desk, does).", "capability(pet_desk_find_pet, pet_desk, reads).");
     let s = &mut evaluated(&format!("{book}\npet(\"Rex\").\nwant pet_desk_find_pet(P) :- pet(P).\nsaid(T) :- mcp_text[pet_desk](_, T).\n"));
     assert!(s.holds("said(\"found Rex\")").unwrap(), "the argument goes by its own name, the answer comes as an event: {:?}", shop.log());
+}
+
+const VAULT: &str = r##"
+openapi: 3.0.3
+info: {title: Vault, version: "1"}
+servers: [{url: "BASE/v2"}]
+security: [{key: [], sig: []}]
+components:
+  securitySchemes:
+    key: {type: apiKey, in: header, name: X-Api-Key}
+    sig: {type: apiKey, in: query, name: sig}
+    token: {type: http, scheme: bearer}
+  schemas:
+    Gold: {type: object, properties: {gold: {type: integer}}}
+paths:
+  /vault:
+    get:
+      operationId: openVault
+      responses: {"200": {description: gold, content: {application/json: {schema: {$ref: "#/components/schemas/Gold"}}}}}
+  /mine:
+    get:
+      operationId: myGold
+      security: [{token: []}]
+      responses: {"200": {description: gold, content: {application/json: {schema: {$ref: "#/components/schemas/Gold"}}}}}
+"##;
+
+#[test]
+fn a_key_comes_from_the_environment_and_a_missing_one_holds_the_want() {
+    let shop = shop("keys");
+    let spec = shop.dir.join("vault.yaml");
+    std::fs::write(&spec, VAULT.replace("BASE", &shop.base)).unwrap();
+    let book = rofl::openapi::book(&spec.display().to_string()).unwrap();
+    assert!(book.contains("http_auth(vault, key, header, \"X-Api-Key\", \"VAULT_KEY\").\nhttp_auth(vault, sig, query, \"sig\", \"VAULT_SIG\").\nhttp_auth(vault, token, bearer, \"Authorization\", \"VAULT_TOKEN\")."), "{book}");
+    assert!(book.contains("http_needs(vault_mygold, token)."), "{book}");
+    std::env::set_var("VAULT_KEY", "k-1");
+    std::env::set_var("VAULT_SIG", "s&1");
+    std::env::remove_var("VAULT_TOKEN");
+    let src = format!("{book}\nask(1).\nwant vault_openvault() :- ask(1).\nwant vault_mygold() :- ask(1).\ngold(G) :- openvault[vault](_, G).\n");
+    let mut s = evaluated(&src);
+    assert!(s.holds("gold(7)").unwrap(), "the key goes in its header, the signature in the query: {:?}", shop.log());
+    assert!(s.holds("want_held($want(vault_mygold), \"declared, not connected: the environment has no VAULT_TOKEN (the key of token for vault)\")").unwrap());
+    assert!(shop.log().iter().all(|l| !l.contains("/v2/mine")), "a want without its key is not sent: {:?}", shop.log());
+    let state = s.fact_keys(None).join("\n");
+    assert!(!state.contains("k-1") && !state.contains("s&1"), "a key never enters a fact");
 }

@@ -11,6 +11,8 @@ memmap2 = "0.9"
 regex = "1"
 # the free space of a disk, before a question verb keeps its world on it (src/bin/rofl/kept.rs)
 libc = "0.2"
+# an OpenAPI document written in YAML (src/openapi.rs)
+serde_yaml = "0.9"
 # the sql adapter (src/adapter.rs `run_sql`); `cargo build --no-default-features` builds the engine without it
 rusqlite = { version = "0.32", features = ["bundled"], optional = true }
 # the http adapters (src/net.rs: openapi, mcp over http); blocking, on the adapter's own thread, so the engine never sees tokio

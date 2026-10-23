@@ -744,5 +744,17 @@ want of a sql adapter in it is `want_held(W, "this build has no sql adapter
   dispatch with permit, its body and key on the wire; an MCP server over HTTP
   answering in an event stream. Planted `openapi_book_digest` and
   `openapi_does_get` are red.
-- **Open.** YAML documents; credentials (`securitySchemes`: a key the
-  environment gives, put in a header by the adapter, never in the book).
+- **Credentials** (2026-10-23, `w_intent_http_credentials`). The book names
+  a key, never holds it: `http_auth(Adapter, Scheme, How, Name, Env)` from
+  `components.securitySchemes` (an apiKey in a `header` or the `query`,
+  `bearer` for http bearer, oauth2 and OpenID Connect, `basic` with
+  `user:password` in the variable), `http_needs(Cap, Scheme)` from the
+  operation's or the document's first `security` requirement. The adapter
+  reads the variable when it sends; a want whose key the environment does
+  not give is `want_held(W, "declared, not connected: the environment has
+  no ENV ...")` and is not sent. An mcp adapter over HTTP carries every
+  `http_auth` row of its adapter, written by hand. A key never enters a fact:
+  an error that would quote it is masked. YAML documents are read too.
+  Planted `http_key_ignored` is red.
+- **Open.** `rofl adapter mcp URL` against a server that wants a key for
+  `tools/list`.
