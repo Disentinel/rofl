@@ -379,6 +379,10 @@ impl Eval {
         if !why.is_empty() {
             return Err(why.join("; "));
         }
+        if let Err(h) = self.check_wants() {
+            self.store.dirty = true;
+            return Err(crate::describe(&h));
+        }
         // a base fact of a closure walked whole: the two rules fire as written from now on, over the rows it walked
         if added.iter().any(|f| self.closures.iter().any(|c| c.rel == self.store.rec(*f).rel)) {
             self.closures_engage();

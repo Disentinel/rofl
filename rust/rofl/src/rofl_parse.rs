@@ -298,7 +298,7 @@ pub struct Structure { pub kind: Sym, pub roles: Vec<Option<Sym>>, pub closure: 
 /// shape with `lattice` the kind (`pareto` or `lex`) and `ord` the direction
 /// of each of the last arguments.
 #[derive(Clone, Debug, PartialEq)]
-pub struct Clause { pub head: Lit, pub body: Vec<Elem>, pub lattice: Option<Sym>, pub widen: Option<i64>, pub tag: bool, pub dom: Option<Lit>, pub ord: Option<Vec<Sym>>, pub structure: Option<Structure> }
+pub struct Clause { pub head: Lit, pub body: Vec<Elem>, pub lattice: Option<Sym>, pub widen: Option<i64>, pub tag: bool, pub dom: Option<Lit>, pub ord: Option<Vec<Sym>>, pub structure: Option<Structure>, pub want: bool }
 
 pub struct Parser<'a> {
     src: &'a [char],
@@ -842,7 +842,7 @@ impl<'a> Parser<'a> {
         if !self.eat_punct("dot") {
             return Err(format!("lattice {}: the declaration has no closing dot", self.h.name(rel)));
         }
-        Ok(Clause { head: Lit { rel, book, args, tense: Tense::Now }, body: Vec::new(), lattice: Some(op), widen, tag: false, dom: None, ord: None, structure: None })
+        Ok(Clause { head: Lit { rel, book, args, tense: Tense::Now }, body: Vec::new(), lattice: Some(op), widen, tag: false, dom: None, ord: None, structure: None, want: false })
     }
 
     /// `tagdecl := 'tag' ident '(' [ term ',' ]* tagalg term ')' '.'`
@@ -882,7 +882,7 @@ impl<'a> Parser<'a> {
         if !self.eat_punct("dot") {
             return Err(format!("tag {}: the declaration has no closing dot", self.h.name(rel)));
         }
-        Ok(Clause { head: Lit { rel, book, args, tense: Tense::Now }, body: Vec::new(), lattice: Some(alg), widen: None, tag: true, dom: None, ord: None, structure: None })
+        Ok(Clause { head: Lit { rel, book, args, tense: Tense::Now }, body: Vec::new(), lattice: Some(alg), widen: None, tag: true, dom: None, ord: None, structure: None, want: false })
     }
 
     /// `orderdecl := ('pareto' | 'lex') ident '(' [ term ',' ]* dir term [ ',' dir term ]* ')' '.'`
@@ -928,7 +928,7 @@ impl<'a> Parser<'a> {
         if !self.eat_punct("dot") {
             return Err(format!("{what}: the declaration has no closing dot"));
         }
-        Ok(Clause { head: Lit { rel, book, args, tense: Tense::Now }, body: Vec::new(), lattice: Some(kind), widen: None, tag: false, dom: None, ord: Some(dirs), structure: None })
+        Ok(Clause { head: Lit { rel, book, args, tense: Tense::Now }, body: Vec::new(), lattice: Some(kind), widen: None, tag: false, dom: None, ord: Some(dirs), structure: None, want: false })
     }
 
     /// `structdecl := 'function' ident '(' [ role ] term [ ',' [ role ] term ]* ')' '.'`
@@ -985,7 +985,7 @@ impl<'a> Parser<'a> {
         if !self.eat_punct("dot") {
             return Err(format!("{what}: the declaration has no closing dot"));
         }
-        Ok(Clause { head: Lit { rel, book, args, tense: Tense::Now }, body: Vec::new(), lattice: None, widen: None, tag: false, dom: None, ord: None, structure: Some(Structure { kind, roles, closure, source }) })
+        Ok(Clause { head: Lit { rel, book, args, tense: Tense::Now }, body: Vec::new(), lattice: None, widen: None, tag: false, dom: None, ord: None, structure: Some(Structure { kind, roles, closure, source }), want: false })
     }
 
     /// `domrule := lit '<=' lit ':-' body '.'` (docs/aggregates.md,
@@ -1007,7 +1007,7 @@ impl<'a> Parser<'a> {
         if !self.eat_punct("dot") {
             return Err(format!("dominance {what}: the rule has no closing dot"));
         }
-        Ok(Clause { head, body, lattice: None, widen: None, tag: false, dom: Some(dom), ord: None, structure: None })
+        Ok(Clause { head, body, lattice: None, widen: None, tag: false, dom: Some(dom), ord: None, structure: None, want: false })
     }
 
     /// `clause_at(I, D, L, nil) :- lit(I, C, L), p(D, dot).`
@@ -1028,7 +1028,23 @@ impl<'a> Parser<'a> {
                 return self.structure_decl(words);
             }
         }
+        // `want Cap(Args) :- Body.` (docs/intents.md 4.1): a rule whose head is a request
+        let want = self.is_word(0, "want") && matches!(self.peek_at(1), Some(s) if s.tok == Tok::Word && self.word_kind(s) == WordKind::Ident);
+        if want {
+            self.at += 1;
+        }
         let head = self.lit()?;
+        if want {
+            if !matches!(self.peek(), Some(s) if s.tok == Tok::Neck) {
+                return Err(format!("want {}: a want has a body", self.h.name(head.rel)));
+            }
+            self.at += 1;
+            let body = self.body()?;
+            if !self.eat_punct("dot") {
+                return Err(format!("want {}: the rule has no closing dot", self.h.name(head.rel)));
+            }
+            return Ok(Clause { head, body, lattice: None, widen: None, tag: false, dom: None, ord: None, structure: None, want: true });
+        }
         if brk!("dominance_unread" => false; matches!(self.peek(), Some(s) if s.tok == Tok::Op("le"))) {
             return self.dominance(head);
         }
@@ -1040,7 +1056,7 @@ impl<'a> Parser<'a> {
         if !self.eat_punct("dot") {
             return Err(format!("clause: `{}` has no closing dot", self.h.name(head.rel)));
         }
-        Ok(Clause { head, body, lattice: None, widen: None, tag: false, dom: None, ord: None, structure: None })
+        Ok(Clause { head, body, lattice: None, widen: None, tag: false, dom: None, ord: None, structure: None, want: false })
     }
 }
 
@@ -1186,7 +1202,7 @@ pub fn show(h: &Heap, c: &Clause) -> String {
     if let Some(d) = &c.dom {
         return format!("(dominance {} {} {})", show_lit(h, &c.head), show_lit(h, d), body);
     }
-    format!("(clause {}{}{})", show_lit(h, &c.head), if body.is_empty() { "" } else { " " }, body)
+    format!("({} {}{}{})", if c.want { "want" } else { "clause" }, show_lit(h, &c.head), if body.is_empty() { "" } else { " " }, body)
 }
 
 #[cfg(test)]

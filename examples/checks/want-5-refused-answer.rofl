@@ -1,0 +1,6 @@
+-- expect-refusal: it concludes found, which 'lookup' answers in
+-- examples/checks/want-5-refused-answer.rofl — a rule concluding what a capability answers: an answer is its adapter's, at a later tick.
+capability(note, pad, shows). arg(note, 1, who, atom). answers(note, noted, 2).
+capability(lookup, db, reads). arg(lookup, 1, key, atom). answers(lookup, found, 2).
+stage_done(w1). owner(w1, ann). owner(w2, bob).
+found(k, ann) :- owner(_, ann).

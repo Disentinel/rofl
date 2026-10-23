@@ -65,6 +65,41 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "want_capability_unchecked",
+  "what": "a want of a capability no adapter book declares is let through to the arity check",
+  "expect": {
+   "want_no_capability": "not \"want nope(P): no capability 'nope' is declared\""
+  }
+ },
+ {
+  "id": "want_arity_off_by_one",
+  "what": "a want is counted against one argument more than its capability's `arg` rows",
+  "expect": {
+   "want_arity": "not refused: want note(P, Q) :- owner(P, Q)."
+  }
+ },
+ {
+  "id": "want_types_unchecked",
+  "what": "a constant of a want is not held against the type of its capability's argument",
+  "expect": {
+   "want_types": "not refused: want note(\"ann\") :- stage_done(_)."
+  }
+ },
+ {
+  "id": "want_answer_concluded",
+  "what": "a rule concluding a relation a capability answers in is let through",
+  "expect": {
+   "want_answer_concluded": "not refused: found(k, ann) :- owner(_, ann)."
+  }
+ },
+ {
+  "id": "want_shows_read",
+  "what": "a rule reading what a `shows` capability answers is let through",
+  "expect": {
+   "want_shows_read": "not refused: seen(K) :- noted(K, _)."
+  }
+ },
+ {
   "id": "prov_settle_keeps_dead",
   "what": "a note written as a derived_by row whether or not its fact is alive and a firing of that rule still stands",
   "expect": {
@@ -9098,6 +9133,11 @@ const TESTS: Record<string, string> = {
   disk_go_on: 'disk a_cap_raised_goes_on_from_the_cut',
   kept_concurrent: 'kept a_kept_world_answers_and_refuses_as_docs_cli_says',
   journal_replay: 'journal a_past_tick_replayed_is_the_state_the_world_had',
+  want_no_capability: 'want a_want_of_no_capability_is_refused',
+  want_arity: 'want a_want_of_the_wrong_arity_is_refused',
+  want_types: 'want a_constant_of_the_wrong_type_is_refused',
+  want_answer_concluded: 'want an_answer_concluded_by_a_rule_is_refused',
+  want_shows_read: 'want what_shows_answers_is_read_by_no_rule',
 };
 
 function proofTests(b: Break, profile: string, control: boolean): Verdict {

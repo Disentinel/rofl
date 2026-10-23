@@ -462,7 +462,9 @@ export type PlainElem = Exclude<BodyElem, { t: 'agg' }>;
  *  semiring is in `lattice` with `tag` set), or a dominance rule (`dominator`). */
 export interface Clause { head: Lit; body: BodyElem[]; lattice?: string; widen?: number; tag?: boolean; dominator?: Lit; ord?: string[];
   /** A declared data structure (docs/data-structures.md): its kind, per head argument the role word ('' for a key position), for a tree the relation it is the closure of, and for an alias the literal it reads. */
-  structure?: { kind: string; roles: string[]; closure?: string; source?: Lit }; }
+  structure?: { kind: string; roles: string[]; closure?: string; source?: Lit };
+  /** `want Cap(Args) :- Body.` (docs/intents.md 4.1): the head is a request to an adapter, lowered to the kernel's want rows. */
+  want?: boolean; }
 
 /** The variables of a body element, in the order they are written: a
  *  literal's arguments then its book, a builtin's two sides, an aggregate's

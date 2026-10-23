@@ -48,6 +48,7 @@ import { tarjan } from './scc.ts';
 import { readFunctions, readTrees } from './structure.ts';
 import { policyStore, planReuse, noReuse, reusedRec, digest53, type ReusePlan } from './reuse.ts';
 import { SAFETY_DENSE } from './kernel-dense.ts';
+import { checkWants } from './want.ts';
 
 // ---------------------------------------------------------------- halting
 
@@ -1659,6 +1660,8 @@ export class AggEval {
 
   /** An evaluation, and for a world whose widened cells settled, the descending pass that narrows them and the evaluation again with what it found. */
   run(): Outcome {
+    const badWant = checkWants(this.store, this.rules);
+    if (badWant) throw new Rejected(badWant);
     this.peelCache = null;
     const plan = this.planReuse();
     // the hole rows the last evaluation of this tick wrote go with it (a hole is a base, frozen row, which clearDerived keeps)

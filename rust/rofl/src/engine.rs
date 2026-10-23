@@ -31,6 +31,7 @@ mod resume;
 mod cost;
 mod par;
 mod latkept;
+mod want;
 pub use latkept::Tok;
 pub use cost::{Hot, PremCost};
 use resume::{Cut, CutAt, InFlight, Tail};
@@ -2953,6 +2954,7 @@ impl Eval {
     /// descending pass that narrows them (`narrow_descend`) and the
     /// evaluation again with what it found.
     pub fn run(&mut self) -> Result<Outcome, Halt> {
+        self.check_wants()?;
         brk!("stale_holes_kept" => (); self.store.drop_eval_holes());
         self.narrow_out.clear();
         let out = self.run_pass()?;

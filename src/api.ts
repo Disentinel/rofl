@@ -19,6 +19,7 @@ import { SHRUG, shrugsOf, shrugLine, shrugAtom, shown } from './shrug.ts';
 import { AggEval, DEFAULT_SPACE, Rejected, Wall, checkAggregatesDoor, checkSetPatternsDoor, checkOrderableAgg,
   checkNextInBody, checkLatticeDecl, checkDominance, lowerOrder, type Unknown, type WhynotFile } from './aggeval.ts';
 import { encodeDominance } from './reflect.ts';
+import { lowerWant, WANT_ROWS } from './want.ts';
 import { checkStructureDecl, structureRows, declaredStructures, checkFunctions, checkTrees, checkClosureHead, declaredClosures, concludedBy, lowerClosure, lowerAlias, declaredAliases } from './structure.ts';
 
 export interface LoadResult { ok: boolean; diagnostics: string[]; }
@@ -523,6 +524,16 @@ export class Rofl {
     if (c0.structure) return this.addStructure(c0);
     if (c0.lattice) return this.addDecl(c0);
     if (c0.dominator) return this.addDominance(c0, who);
+    if (c0.want) {
+      const low = lowerWant(c0);
+      if (typeof low === 'string') return low;
+      for (const c of [low.rule, ...low.texts.map((t) => parseProgram(t)[0])]) {
+        const bad = this.addClause(c, who, true, true);
+        if (bad) return bad;
+      }
+      return null;
+    }
+    if (!trusted && WANT_ROWS.has(c0.head.rel)) return `${canonClause(c0)}: '${c0.head.rel}' is written only by a want head (\`want Cap(Args) :- Body.\`)`;
     const badClosure = lowered ? null : checkClosureHead(c0, declaredClosures(this.store), declaredAliases(this.store));
     if (badClosure) return badClosure;
     const badBook = this.checkKernelBook(c0);
