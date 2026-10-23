@@ -3014,6 +3014,7 @@ check_file("want_checks", "examples/checks/want-4-refused-type.rofl").
 check_file("want_checks", "examples/checks/want-5-refused-answer.rofl").
 check_file("want_checks", "examples/checks/want-6-refused-shows.rofl").
 check_file("want_checks", "examples/checks/want-7-refused-forged.rofl").
+check_file("want_checks", "examples/checks/want-8-refused-query.rofl").
 check_opt("want_checks", together, 1).
 
 -- ================================================================== RUST ONLY

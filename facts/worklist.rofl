@@ -4051,8 +4051,8 @@ work_state(w_intent_scanner_as_adapter, done).
 work_needs(w_intent_scanner_as_adapter, w_intent_adapter_book).
 
 work(w_intent_sql_adapter,
-  "docs/intents.md phase 4: the sql kind, parameterised templates only, answers stamped with the transaction snapshot, wants batched per tick. ACCEPTANCE: on a database of the reference corpus's order, a question answered from wants loads only the rows it needs (counted) against importing the table whole; a planted raw SQL argument refused at load.").
-work_state(w_intent_sql_adapter, open).
+  "DONE 2026-10-23 (branch claude/project-thread-2b3jv0): the sql kind on SQLite (rusqlite, bundled), rust/rofl/src/adapter.rs run_sql; tests/sql.rs; check 5 of want.rs (no rule concludes query/2), both engines, fixture want-8-refused-query. Each want's arguments bound to the parameters of query(Cap, Template), the batch one read-only transaction on a connection kept for the process, each want stamped sql_snapshot(K, data_version). On 11 100 orders the question of three tenants loads 30 rows, the same answer as the table imported whole. Planted sql_arguments_spliced, sql_query_from_rule red. Not done: PostgreSQL and other databases, a batch as one IN query, the kept connection closed when its world is. docs/intents.md *Phase 4, as built*. WAS: docs/intents.md phase 4: the sql kind, parameterised templates only, answers stamped with the transaction snapshot, wants batched per tick. ACCEPTANCE: on a database of the reference corpus's order, a question answered from wants loads only the rows it needs (counted) against importing the table whole; a planted raw SQL argument refused at load.").
+work_state(w_intent_sql_adapter, done).
 work_needs(w_intent_sql_adapter, w_intent_adapter_book).
 
 work(w_intent_mcp_adapter,

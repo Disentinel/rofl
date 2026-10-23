@@ -52,6 +52,8 @@ export function checkWants(store: FactStore, rules: { id: string; clause: Clause
       if (!fits(ty, given[k])) return refuse(`${shown}: argument ${k + 1} is ${srcTerm(given[k])}, and '${cap}' takes a ${canonTerm(ty)} there`);
     }
   }
+  const q = rules.find((r) => r.clause.head.rel === 'query' && r.clause.head.args.length === 2);
+  if (q && caps.length > 0) return refuse(`rule ${q.id}: it concludes query, the template of a sql capability; a template is its adapter book's, never a string a rule builds`);
   for (const a of rows('answers', 3)) {
     if (a[0].k !== 'a' || a[1].k !== 'a' || !isCap(a[0].name)) continue;
     const [cap, rel] = [a[0].name, a[1].name];
