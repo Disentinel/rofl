@@ -15,6 +15,7 @@ rofl serve                                               # one JSON request a li
 rofl render --out DIR            world.rofl ...          # the sentence form
 rofl render --out DIR            world.rofl.md           # back into rules: DIR/world.rofl, DIR/world.phrases.rofl, the report on stdout
 rofl nb [--cell N] [--all]       notebook.rofl.md        # run a notebook, printed as `npm run nb` prints it
+rofl adapter mcp COMMAND...                              # the adapter book of an MCP server over stdio (docs/intents.md, phase 5)
 ```
 
 A question verb is `rofl load` with that one question, so every flag of

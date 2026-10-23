@@ -65,6 +65,62 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "post_resends_flying",
+  "what": "a want still in flight in the post sent again by the next evaluation",
+  "expect": {
+   "post_once": "a want in flight is sent once"
+  }
+ },
+ {
+  "id": "does_unpermitted_sent",
+  "what": "a does want sent by the dispatcher without permit(W)",
+  "expect": {
+   "does_permit": "only the approved want is sent"
+  }
+ },
+ {
+  "id": "does_journal_ignored",
+  "what": "the dispatcher sends again a does want its journal already holds",
+  "expect": {
+   "does_once": "the world evaluated anew sends nothing again"
+  }
+ },
+ {
+  "id": "permit_unguarded",
+  "what": "a running world lets a rule or fact read by permit in, an approval typed instead of brought by an adapter",
+  "expect": {
+   "does_guard": "an approval typed in is refused"
+  }
+ },
+ {
+  "id": "mcp_book_digest",
+  "what": "the generated mcp adapter book carries a digest of the whole tools/list, so a changed tool moves a line outside its own block",
+  "expect": {
+   "mcp_book": "only the search tool moved"
+  }
+ },
+ {
+  "id": "mcp_does_sent",
+  "what": "a does want sent to its mcp server during evaluation, before any dispatcher permits it",
+  "expect": {
+   "mcp_does": "a does want waits for the dispatcher"
+  }
+ },
+ {
+  "id": "sql_arguments_spliced",
+  "what": "a want's arguments written into its sql template instead of bound to its parameters",
+  "expect": {
+   "sql_bound": "no tenant is named so"
+  }
+ },
+ {
+  "id": "sql_query_from_rule",
+  "what": "a rule concluding query(Cap, Template) let through, the sql template a string a rule builds",
+  "expect": {
+   "sql_template_rule": "the template a rule builds is refused"
+  }
+ },
+ {
   "id": "adapter_one_call_per_want",
   "what": "each want sent to its adapter alone, one call per want instead of one batch per capability a round",
   "expect": {
@@ -9147,6 +9203,14 @@ const TESTS: Record<string, string> = {
   disk_go_on: 'disk a_cap_raised_goes_on_from_the_cut',
   kept_concurrent: 'kept a_kept_world_answers_and_refuses_as_docs_cli_says',
   journal_replay: 'journal a_past_tick_replayed_is_the_state_the_world_had',
+  sql_bound: 'sql an_argument_is_bound_never_written_into_the_query',
+  mcp_book: 'mcp a_regenerated_book_differs_by_exactly_the_changed_tool',
+  does_permit: 'dispatch a_does_want_without_permit_is_never_sent',
+  post_once: 'post a_world_that_does_not_wait_goes_on_and_takes_its_answers_when_they_come',
+  does_once: 'dispatch a_does_want_runs_once_across_a_dispatch_the_world_anew_and_a_replay',
+  does_guard: 'dispatch a_running_world_cannot_change_what_grants_permission',
+  mcp_does: 'mcp a_does_tool_is_not_sent_by_evaluation',
+  sql_template_rule: 'sql a_template_a_rule_builds_is_refused',
   adapter_batches: 'adapter a_recursive_rule_through_an_adapter_sends_one_batch_a_round',
   adapter_outcomes: 'adapter a_killed_adapter_is_failed_and_a_lost_answer_unknown',
   want_no_capability: 'want a_want_of_no_capability_is_refused',

@@ -7,7 +7,8 @@
 //!    is of its type (text, number, atom; time and json are text);
 //! 3. no rule concludes a relation a declared capability answers in (`answers(Cap, Rel, Arity)`): an answer is the adapter's
 //!    word, which arrives at a later tick, never a conclusion of the evaluation that wanted it;
-//! 4. no rule reads what a `shows` capability answers.
+//! 4. no rule reads what a `shows` capability answers;
+//! 5. no rule concludes `query(Cap, Template)`: a sql template is the adapter book's (docs/intents.md 4.1).
 
 use super::*;
 use crate::rofl_parse;
@@ -66,6 +67,10 @@ impl Eval {
                     return refuse(format!("{shown}: argument {} is {t}, and '{}' takes a {} there", k + 1, self.h.name(*cap), self.shown(*ty)));
                 }
             }
+        }
+        let query = self.h.intern("query");
+        if let Some(r) = self.rules.iter().find(|r| r.clause.head.rel == query && r.clause.head.args.len() == 2).filter(|_| !caps.is_empty() && brk!("sql_query_from_rule" => false; true)) {
+            return refuse(format!("rule {}: it concludes query, the template of a sql capability; a template is its adapter book's, never a string a rule builds", self.h.name(r.id)));
         }
         for a in &answers {
             let (Some(cap), Some(rel)) = (a[0].as_atom(), a[1].as_atom()) else { continue };
