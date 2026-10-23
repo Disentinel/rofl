@@ -219,14 +219,9 @@ impl Store {
                 w.arena(&rows.concat());
             }
         }
-        let row = |k: Sym, &(ci, book, a, d): &(usize, Sym, Term, Term)| [k as u64, ci as u64, book as u64, a.bits(), d.bits()];
-        let same = self.vrow_kept.len() == 5 * self.vrow_of.len() && self.vrow_kept.chunks_exact(5).all(|x| self.vrow_of.get(&(x[0] as Sym)).is_some_and(|v| row(x[0] as Sym, v)[..] == *x));
-        if same {
-            w.arena(&self.vrow_kept);
-        } else {
-            let mut vrows: Vec<[u64; 5]> = self.vrow_of.iter().map(|(k, v)| row(*k, v)).collect();
-            vrows.sort_unstable();
-            w.arena(&vrows.concat());
+        match self.vrow_of.grown() {
+            None => w.arena(&self.vrow_of.kept),
+            Some(rows) => w.arena(&rows),
         }
     }
 
@@ -372,8 +367,7 @@ impl Store {
         if vrows.len() % 5 != 0 {
             return Err("a volume's rows of a tree are not rows".into());
         }
-        s.vrow_of = vrows.chunks_exact(5).map(|x| (x[0] as Sym, (x[1] as usize, x[2] as Sym, Term::from_bits(x[3]), Term::from_bits(x[4])))).collect();
-        s.vrow_kept = vrows;
+        s.vrow_of.kept = vrows;
         Ok(s)
     }
 }

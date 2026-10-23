@@ -12,7 +12,7 @@ use crate::term::{Heap, Sym, Term};
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-const MAGIC: &[u8; 16] = b"ROFL-VOLUME-4\n\0\0";
+const MAGIC: &[u8; 16] = b"ROFL-VOLUME-5\n\0\0";
 /// An overlay: a volume that names its base and writes only what the world holds that the base does not.
 const OVER: &[u8; 16] = b"ROFL-OVERLAY-1\n\0";
 
@@ -100,6 +100,7 @@ fn write_world(mut w: VolW, e: &mut Eval) -> std::io::Result<usize> {
     e.write_notes(&mut w);
     e.write_cut(&mut w);
     e.write_stats(&mut w);
+    e.write_forests(&mut w);
     w.finish()
 }
 
@@ -218,6 +219,7 @@ pub fn check_seen(path: &str, seen: Option<&Path>) -> Result<Checked, String> {
             note_seen(&m, &l);
         }
     }
+    WHOLE.with(|w| w.borrow_mut().insert(path.to_string()));
     if over {
         let (k, _) = base_of(path, &mut r)?;
         check_seen(&k.path, seen).map_err(|e| format!("{path}: the volume it was kept over is refused: {e}"))?;
@@ -241,18 +243,21 @@ fn note_seen(mark: &Path, line: &str) {
     }
 }
 
-/// The volume at `path` marked as used now (its change time orders its keeper's volumes by use); a note under
-/// `seen` that it was found whole goes with it.
+/// The volume at `path` marked as used now (its change time orders its keeper's volumes by use); one this process
+/// found whole is noted so at the time set, which no later write gives it.
 pub fn touch(path: &str, seen: Option<&Path>) {
     let Ok(f) = std::fs::OpenOptions::new().write(true).open(path) else { return };
-    let id = header(path).map(|h| h.r.id()).ok();
-    let line = |d| id.and_then(|id| seen_line(path, id, d));
-    let was = seen.and_then(line).filter(|(m, l, _)| std::fs::read_to_string(m).is_ok_and(|x| x == *l));
-    if f.set_modified(SystemTime::now()).is_ok() {
-        if let Some((m, l, _)) = was.and(seen.and_then(line)) {
-            note_seen(&m, &l);
-        }
+    if f.set_modified(SystemTime::now()).is_err() || !WHOLE.with(|w| w.borrow().contains(path)) {
+        return;
     }
+    if let Some((m, l, _)) = header(path).ok().zip(seen).and_then(|(h, d)| seen_line(path, h.r.id(), d)) {
+        note_seen(&m, &l);
+    }
+}
+
+thread_local! {
+    /// The volumes this process found whole.
+    static WHOLE: std::cell::RefCell<std::collections::HashSet<String>> = Default::default();
 }
 
 /// The note of the volume at `path`, read from its header alone (its sum is not checked): what a keeper reads to

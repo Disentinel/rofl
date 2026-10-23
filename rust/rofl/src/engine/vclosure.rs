@@ -49,6 +49,10 @@ pub struct VClosure {
     /// The edges the forests were built from, and the first fact id after them: an edge of a later id is one added since.
     rows: usize,
     mark: FactId,
+    /// the edges retired, and put back, when the forests were last brought up to date (`Store::deaths`,
+    /// `Store::revived`)
+    deaths: u64,
+    revived: usize,
     pairs: u64,
     deep: u64,
     internal: u64,
@@ -127,7 +131,7 @@ impl Eval {
             }
             let view = self.store.alias_view(edge).cloned();
             let src = view.as_ref().map_or(edge, |v| v.src);
-            self.vclosures.push(VClosure { rel, edge, src, view, active: false, prov_read, built: None, rows: 0, mark: 0, pairs: 0, deep: 0, internal: 0 });
+            self.vclosures.push(VClosure { rel, edge, src, view, active: false, prov_read, built: None, rows: 0, mark: 0, deaths: 0, revived: 0, pairs: 0, deep: 0, internal: 0 });
             self.store.virtuals.push(crate::store::VirtualRel { rel, edge, base_rule: rule_ids.0, step_rule: rule_ids.1, forests: Rc::from(Vec::new()) });
             if !why.is_empty() {
                 self.vclosures[ci].built = Some(usize::MAX);
@@ -232,6 +236,49 @@ impl Eval {
         }
     }
 
+    /// The forests the closures answered from their trees were built to, as a volume keeps them: a world opened is
+    /// asked without building them again from every edge.
+    pub(crate) fn write_forests(&self, w: &mut crate::arena::VolW) {
+        w.u32(self.vclosures.len() as u32);
+        for (ci, c) in self.vclosures.iter().enumerate() {
+            let Some(n) = c.built.filter(|_| c.active) else {
+                w.u32(0);
+                continue;
+            };
+            w.u32(1);
+            for x in [n as u64, c.rows as u64, c.mark as u64, c.pairs, c.deep, c.internal] {
+                w.u64(x);
+            }
+            let fs = &self.store.virtuals[ci].forests;
+            w.u32(fs.len() as u32);
+            for (b, f) in fs.iter() {
+                w.u32(*b);
+                f.write(w);
+            }
+        }
+    }
+
+    pub(crate) fn read_forests(&mut self, r: &mut crate::arena::VolR) -> Result<(), String> {
+        for ci in 0..r.u32()? as usize {
+            if r.u32()? == 0 {
+                continue;
+            }
+            let [n, rows, mark, pairs, deep, internal] = [(); 6].map(|_| r.u64());
+            let mut fs: Vec<(Sym, Rc<Forest>)> = Vec::new();
+            for _ in 0..r.u32()? {
+                let b = r.u32()?;
+                fs.push((b, Rc::new(Forest::read(r)?)));
+            }
+            if let Some(c) = self.vclosures.get_mut(ci).filter(|c| c.active && c.built.is_none()) {
+                (c.built, c.rows, c.mark, c.pairs, c.deep, c.internal) = (Some(n? as usize), rows? as usize, mark? as FactId, pairs?, deep?, internal?);
+                c.deaths = self.store.deaths.get(&c.src).copied().unwrap_or(0);
+                c.revived = self.store.revived.get(&c.src).map_or(0, Vec::len);
+                self.store.virtuals[ci].forests = Rc::from(fs);
+            }
+        }
+        Ok(())
+    }
+
     /// The declared closures and whether each is answered from its tree.
     pub fn vclosure_info(&self) -> Vec<(String, bool)> {
         self.vclosures.iter().map(|c| (self.h.name(c.rel).to_string(), c.active)).collect()
@@ -272,6 +319,8 @@ impl Eval {
                 }
             };
             self.vclosures[ci].mark = self.store.len_ids();
+            self.vclosures[ci].deaths = self.store.deaths.get(&edge).copied().unwrap_or(0);
+            self.vclosures[ci].revived = self.store.revived.get(&edge).map_or(0, Vec::len);
             let c = &mut self.vclosures[ci];
             c.pairs = forests.iter().map(|f| f.1.pairs).sum();
             c.deep = forests.iter().map(|f| f.1.deep as u64).sum();
@@ -298,38 +347,44 @@ impl Eval {
         }
     }
 
-    /// The forests of `ci` with the edges added since they were built, where every old edge stands and each new one
-    /// adds a tree below the old ones (`Forest::extended`): a file added to a corpus, without numbering it all again.
+    /// The forests of `ci` with the edges added since they were built (a fact past `mark`, or one taken out and put
+    /// back): a tree no new edge reaches stands as it is numbered, one an edge reaches is built again with it, and the
+    /// rest come after (`Forest::rebuild_trees`). What it costs is the edges added and the trees they reach.
     fn vextended(&mut self, ci: usize) -> Option<Vec<(Sym, Rc<Forest>)>> {
         let c = &self.vclosures[ci];
         c.built?;
-        let (edge, mark, rows) = (c.src, c.mark, c.rows);
-        let mut old = 0;
+        let (src, mark) = (c.src, c.mark);
+        // an edge retired by a path that did not take it out of its tree: the forest no longer stands for the edges
+        if self.store.deaths.get(&src).copied().unwrap_or(0) != c.deaths {
+            return None;
+        }
+        let back: Vec<FactId> = self.store.revived.get(&src).map_or(&[][..], |v| &v[c.revived.min(v.len())..]).iter().copied().filter(|&id| id < mark).collect();
         let mut books: FxMap<Sym, Vec<(Term, Term)>> = FxMap::default();
         let mut seen: FxSet<(Sym, u64, u64)> = FxSet::default();
-        self.store.each_row(edge, |persp, id| {
+        let mut added = 0;
+        for id in back.into_iter().chain(mark..self.store.len_ids()) {
+            if !self.store.alive(id) || self.store.rec(id).rel != src {
+                continue;
+            }
+            let persp = self.store.rec(id).persp;
             if let Some((p, c)) = self.vedge(ci, id) {
-                if id < mark {
-                    old += 1;
-                } else if seen.insert((persp, p.bits(), c.bits())) {
+                added += 1;
+                if seen.insert((persp, p.bits(), c.bits())) {
                     books.entry(persp).or_default().push((p, c));
                 }
             }
-        });
-        if old != rows {
-            return None;
         }
         let mut forests: Vec<(Sym, Rc<Forest>)> = self.store.virtuals[ci].forests.to_vec();
-        let mut added = 0;
         for (b, es) in books {
-            added += es.len();
             match forests.iter_mut().find(|f| f.0 == b) {
-                Some(f) => f.1 = Rc::new(f.1.extended(&es)?),
+                Some(f) => {
+                    Rc::make_mut(&mut f.1).rebuild_trees(&[], &es);
+                }
                 None => forests.push((b, Rc::new(Forest::build(&es)))),
             }
         }
         forests.sort_by_key(|b| b.0);
-        self.vclosures[ci].rows = rows + added;
+        self.vclosures[ci].rows += added;
         Some(forests)
     }
 
@@ -397,7 +452,7 @@ impl Eval {
             for (book, es) in by_book {
                 let Some(slot) = forests.iter_mut().find(|f| f.0 == book) else { continue };
                 let forest = Rc::make_mut(&mut slot.1);
-                let dropped = forest.rebuild_trees(&es);
+                let dropped = forest.rebuild_trees(&es, &[]);
                 for d in dropped {
                     let cites: Vec<(FactId, Sym)> = self.store.vciters.as_ref().and_then(|m| m.get(&d.bits())).cloned().unwrap_or_default();
                     for (y, k) in cites {
@@ -424,8 +479,11 @@ impl Eval {
         for &ci in touched {
             let n = self.store.rel_len_est(self.vclosures[ci].src, None);
             let forests = self.store.virtuals[ci].forests.clone();
+            let src = self.vclosures[ci].src;
+            let (deaths, revived) = (self.store.deaths.get(&src).copied().unwrap_or(0), self.store.revived.get(&src).map_or(0, Vec::len));
             let c = &mut self.vclosures[ci];
             c.built = Some(n);
+            (c.deaths, c.revived) = (deaths, revived);
             c.pairs = forests.iter().map(|f| f.1.pairs).sum();
             c.deep = forests.iter().map(|f| f.1.deep as u64).sum();
             c.internal = forests.iter().map(|f| f.1.internal as u64).sum();
@@ -724,12 +782,12 @@ impl Eval {
     /// The row a premise's key names: as it was cited in this engine, or read back from the key where the premise came from a snapshot.
     pub(super) fn vrow_entry(&mut self, k: Sym) -> Option<(usize, Sym, Term, Term)> {
         if let Some(e) = self.store.vrow_of.get(&k) {
-            return Some(*e);
+            return Some(e);
         }
         let lit = self.parse_lit(&self.h.name(k).to_string()).ok()?;
         let (book, ci) = (walk(&self.h, lit.persp, &Subst::default()).as_atom()?, *self.vclosure_of.get(&lit.rel)?);
         let [a, d] = lit.args[..] else { return None };
-        self.store.vrow_of.insert(k, (ci, book, a, d));
+        self.store.vrow_of.name(k, (ci, book, a, d));
         Some((ci, book, a, d))
     }
 
@@ -737,7 +795,7 @@ impl Eval {
         let mut key = String::new();
         write_fact_key(&self.h, self.vclosures[ci].rel, book, &[a, d], &mut key);
         let k = self.h.intern(&key);
-        self.store.vrow_of.entry(k).or_insert((ci, book, a, d));
+        self.store.vrow_of.name(k, (ci, book, a, d));
         k
     }
 

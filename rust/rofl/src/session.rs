@@ -230,6 +230,7 @@ impl Session {
         eval.read_notes(&mut o.cut)?;
         eval.read_cut(&mut o.cut)?;
         eval.read_stats(&mut o.cut)?;
+        eval.read_forests(&mut o.cut)?;
         if !o.cut.at_end() {
             return Err(format!("{path}: a volume has bytes after its end"));
         }
