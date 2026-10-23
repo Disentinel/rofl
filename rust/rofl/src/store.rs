@@ -513,6 +513,8 @@ impl PatIndex {
 }
 
 const MIN_INDEXED: usize = 16;
+/// What the indexes of a kept volume take for one fact: its place in its relation's runs and in a pattern's table.
+const IDX_PER_FACT: usize = 40;
 const MAX_PATTERNS: usize = 8;
 
 pub type TupId = u32;
@@ -1533,6 +1535,27 @@ impl Store {
     }
     pub fn fact_count(&self) -> usize {
         self.n_live
+    }
+    /// What a volume of this store takes, from the lengths of what it holds rather than from what it has
+    /// allocated: so the same world measures the same however it was reached, cut and kept and opened or not.
+    /// The indexes are taken at what they cost a fact (`IDX_PER_FACT`), not walked.
+    pub fn kept_bytes(&self) -> u64 {
+        let t = &self.facts.tups;
+        let tup_args = t.base.args.len() + t.top.args.len();
+        let fired = self.fired.base.n + self.fired.own.len();
+        let cells = &self.cells;
+        (self.facts.len() * (std::mem::size_of::<FactRec>() + 1 + 4 + IDX_PER_FACT)
+            + t.len() * (4 + 8 + 16)
+            + tup_args * 8
+            + self.wit_head.len() * 4
+            + self.wits.len() * std::mem::size_of::<WitNode>()
+            + self.prem_arena.len() * std::mem::size_of::<PremRef>()
+            + fired * 16
+            + self.facts.len() * 4
+            + self.prem_arena.len() * 4
+            + cells.recs.len() * 96
+            + cells.members.len() * 48
+            + cells.prems.len() * std::mem::size_of::<PremRef>()) as u64
     }
     /// Distinct argument tuples. Beside `fact_count` this is the SHARING the
     /// pool actually found, which is the number that decides whether it paid.

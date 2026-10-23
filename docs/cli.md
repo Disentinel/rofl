@@ -70,10 +70,30 @@ at 0.36 and 0.80 of the evaluation's peak memory, 89 and 76 bytes a fact on
 cost_shapes_model and agg_minmax_strata, so up to ~23 GB for a world evaluated
 in ~23 GB): a world kept pushes out the older ones, least recently used first;
 the volume is written no further than the cap and than the disk can give above
-a 5 GB floor, so a world larger than that stops its writer there, is answered,
-and is not kept, said in one line on stderr (`the world is not kept: the world
-is larger than 1.00 GB, the most it may take: the cap is 1.00 GB
-(ROFL_CACHE_GB)`). Each process writes under a name of its own and renames it
+a 5 GB floor.
+
+**A world larger than its cache stops there** (w_disk_wall). While a question
+verb's world evaluates, the bytes its volume would take are counted (from the
+lengths of what the store and the heap hold, never less than the volume: 0.76
+to 0.99 of it over the 96 worlds of the tree, tests/disk.rs) and checked at
+every step beside the step budget. Where they would pass eight ninths of what
+the cache gives it (the ninth is room for what the cut keeps of the evaluation
+in flight), the evaluation stops as at a step wall, with
+`hole($adhoc, disk_exhausted)`: its answers are partial (exit 5), the world is
+kept as it stood, and asked again it answers from there, saying on stderr that
+it stopped at the disk cap (`the world reached the disk cap of its cache, 4.0 GB
+(ROFL_CACHE_GB), and stopped there: its answers are partial; a larger cap goes
+on from where it stopped`). Asked under a larger cap, it goes on from where it
+stopped, not from the start, and reaches byte for byte the world a run under
+that cap from the start reaches; where the wall fell in a place no step wall can
+be gone on from (a lattice, a threshold, a closure kernel, an unfolding on
+demand: docs/staged-evaluation.md) it is evaluated again, said so. A world
+whose given facts already take more than the cache gives is evaluated whole and
+not kept, as is a cut world whose cut does not fit after all: then it goes on
+to its end and is answered whole (`... it was evaluated to its end, and is not
+kept`). A world that ticks, retracts or explains is evaluated whole as before.
+A kept world that stopped at the cap is never taken by delta: an edit computes
+it anew. Each process writes under a name of its own and renames it
 into place, so cold runs of one question at once keep one world; what a process
 killed while it wrote leaves is removed by the next run that keeps a world,
 before it starts to write, and the cap counts every file of the directory. Writing the volume costs about 5% of the evaluation it
