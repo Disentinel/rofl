@@ -1797,6 +1797,7 @@ impl Store {
         let v = self.idx.get_mut(&rel).unwrap();
         let i = v.iter().position(|(p, _)| *p == persp).unwrap();
         let t_absorb = std::time::Instant::now();
+        let from = v[i].1.canon.origin();
         let mut canon = v[i].1.canon.take();
         let mut fresh = v[i].1.arrived.take();
         self.absorb_calls += 1;
@@ -1841,7 +1842,7 @@ impl Store {
         }
         let v = self.idx.get_mut(&rel).unwrap();
         let i = v.iter().position(|(p, _)| *p == persp).unwrap();
-        v[i].1.canon = canon.into();
+        v[i].1.canon = Arena::derived(canon, from);
         v[i].1.by_tup = unordered;
         self.absorb_ns += t_absorb.elapsed().as_nanos();
     }
@@ -2423,6 +2424,7 @@ impl Store {
             let v = self.idx.get_mut(&rel).unwrap();
             let i = v.iter().position(|(p, _)| *p == persp).unwrap();
             let run = &mut v[i].1;
+            let from = (run.canon.origin(), run.arrived.origin());
             let dead: Vec<FactId> = run.canon.take();
             let dead2: Vec<FactId> = run.arrived.take();
             let loose: Vec<FactId> = std::mem::take(&mut run.loose);
@@ -2454,8 +2456,8 @@ impl Store {
                     run.by_pat = None;
                 }
             }
-            run.canon = alive.into();
-            run.arrived = alive2.into();
+            run.canon = Arena::derived(alive, from.0);
+            run.arrived = Arena::derived(alive2, from.1);
             run.loose = loose;
             run.staged = if run.by_pat.is_some() { staged } else { Vec::new() };
         }
