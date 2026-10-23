@@ -509,29 +509,55 @@ impl VolW {
         if v.len() < REF_MIN || from.bytes % sz != 0 {
             return false;
         }
-        let (b, n) = (file.chunks_exact(sz).collect::<Vec<&[u8]>>(), v.len() / sz);
-        let wanted: std::collections::HashSet<&[u8]> = v.chunks_exact(sz).collect();
+        let (bn, n) = (file.len() / sz, v.len() / sz);
+        let (b, x) = (|i: usize| &file[i * sz..(i + 1) * sz], |j: usize| &v[j * sz..(j + 1) * sz]);
+        // what an edit changes lies between a prefix and a suffix both keep, found a block at a time
+        let (k, blk) = (bn.min(n), 512 * sz);
+        let mut head = 0;
+        while head + 512 <= k && file[head * sz..head * sz + blk] == v[head * sz..head * sz + blk] {
+            head += 512;
+        }
+        while head < k && b(head) == x(head) {
+            head += 1;
+        }
+        let mut tail = 0;
+        while head + tail + 512 <= k && file[(bn - tail) * sz - blk..(bn - tail) * sz] == v[(n - tail) * sz - blk..(n - tail) * sz] {
+            tail += 512;
+        }
+        while head + tail < k && b(bn - 1 - tail) == x(n - 1 - tail) {
+            tail += 1;
+        }
+        // a value's key: the value itself up to eight bytes; two values of one key only make the splice longer
+        let key = |e: &[u8]| e.chunks(8).fold(0u64, |h, c| h.rotate_left(5) ^ c.iter().rev().fold(0u64, |k, &y| k << 8 | y as u64));
+        let mut wanted = crate::store::FxSet::default();
+        wanted.reserve(n - head - tail);
+        wanted.extend((head..n - tail).map(|j| key(x(j))));
         let (mut segs, mut lits): (Vec<u64>, Vec<u8>) = (Vec::new(), Vec::new());
-        let (mut i, mut j) = (0, 0);
+        if head > 0 {
+            segs.extend([0, head as u64]);
+        }
+        let (mut i, mut j) = (head, head);
         let push = |segs: &mut Vec<u64>, start: u64, lit: bool| match segs.len() {
             l if l >= 2 && (segs[l - 2] & LIT != 0) == lit && (lit || segs[l - 2] + segs[l - 1] == start) => segs[l - 1] += 1,
             _ => segs.extend([start | if lit { LIT } else { 0 }, 1]),
         };
-        while j < n {
-            let x = &v[j * sz..(j + 1) * sz];
-            if i < b.len() && b[i] == x {
+        while j < n - tail {
+            if i < bn - tail && b(i) == x(j) {
                 push(&mut segs, i as u64, false);
                 (i, j) = (i + 1, j + 1);
-            } else if i < b.len() && !wanted.contains(b[i]) {
+            } else if i < bn - tail && !wanted.contains(&key(b(i))) {
                 i += 1;
             } else {
                 push(&mut segs, 0, true);
-                lits.extend_from_slice(x);
+                lits.extend_from_slice(x(j));
                 j += 1;
             }
             if lits.len() * 4 > v.len() || segs.len() * 32 > v.len() {
                 return false;
             }
+        }
+        if tail > 0 {
+            segs.extend([(bn - tail) as u64, tail as u64]);
         }
         for p in rest.iter().filter(|p| !p.is_empty()) {
             segs.extend([LIT, p.len() as u64]);
