@@ -233,7 +233,7 @@ fn run(json: bool, args: Vec<String>, mut pre: Option<(bool, crate::kept::Record
         s.eval.retain_ticks = retain;
     };
     // A KEPT WORLD TAKES ITS FILES BY DELTA (delta.rs): the files that changed, came or went, and nothing else
-    let mut by_delta: Option<(Vec<crate::kept::Unit>, Vec<crate::kept::ScanUnit>)> = None;
+    let mut by_delta: Option<(Vec<crate::kept::Unit>, Vec<crate::kept::ScanUnit>, String)> = None;
     let mut said = String::new();
     if let Some((q, r, m)) = stale {
         let t0 = std::time::Instant::now();
@@ -245,9 +245,8 @@ fn run(json: bool, args: Vec<String>, mut pre: Option<(bool, crate::kept::Record
         match done {
             Ok((t, d)) => {
                 said = format!("the kept world took {} by delta: {} ({} facts out, {} overdeleted or derived again; opened and taken in {} ms", if d.took.len() == 1 { "1 file".to_string() } else { format!("{} files", d.took.len()) }, d.took.join(", "), d.out, d.touched, t0.elapsed().as_millis());
-                if q != *slot.as_ref().unwrap() { let _ = std::fs::remove_file(&q); }
                 opened = Some(t);
-                by_delta = Some((d.units, d.scans));
+                by_delta = Some((d.units, d.scans, q));
             }
             Err(why) => eprintln!("the kept world {q} is stale: {m}; computed anew, not by delta: {why}"),
         }
@@ -255,17 +254,25 @@ fn run(json: bool, args: Vec<String>, mut pre: Option<(bool, crate::kept::Record
     let from_disk = opened.is_some();
     let mut s = opened.unwrap_or_else(|| rofl::session::Session::fresh(budget));
     walls(&mut s);
-    if let (Some((units, scans)), Some(p)) = (&by_delta, &slot) {
+    if let (Some((units, scans, q)), Some(p)) = (&by_delta, &slot) {
         let files_now = &world[world.len() - files.len()..];
+        // the world it went on from: gone once this one is kept, unless this one is kept over it
+        let mut gone = q != p;
         match crate::kept::record(&world, files_now, units, files_now, scans) {
             Err(e) => eprintln!("the world is not kept: {e}"),
             Ok(note) => {
                 let t1 = std::time::Instant::now();
-                match crate::kept::keep_capped(&mut s, p, &note) {
-                    Ok(n) => eprintln!("{said}, kept again in {} ms, {n} bytes written)", t1.elapsed().as_millis()),
+                match crate::kept::keep_capped_over(&mut s, p, &note, true) {
+                    Ok((n, over)) => {
+                        gone &= !over || s.kept.as_ref().is_none_or(|b| b.path != *q);
+                        eprintln!("{said}, kept again in {} ms, {n} bytes written{})", t1.elapsed().as_millis(), if over { " over the world it was kept from" } else { "" });
+                    }
                     Err(e) => eprintln!("{said}); the world is not kept: {e}"),
                 }
             }
+        }
+        if gone {
+            let _ = std::fs::remove_file(q);
         }
     }
     if !from_disk {
