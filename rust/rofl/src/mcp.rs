@@ -1,9 +1,10 @@
 //! THE MCP ADAPTER (docs/intents.md, phase 5): a server of the Model Context Protocol, spoken to over its stdio
-//! transport (one JSON-RPC message a line), with nothing but the standard library.
+//! transport (one JSON-RPC message a line) or, when its address is a URL, its streamable HTTP transport (src/net.rs).
 //!
 //! `book` is `rofl adapter mcp COMMAND`: the server's `tools/list` printed as an adapter book (D1), a block per tool,
 //! sorted by name, so a book regenerated after the server changed one tool differs by that tool's block alone. Every
 //! tool is `does` (D2: `readOnlyHint` is the server's word): a person changes the line to `reads`.
+//! A property whose name is not an atom is sent under its own name, `mcp_arg(Cap, Pos, Name)`.
 //!
 //! `call` is the `mcp` kind: one server per batch, one `tools/call` per want. A tool with an output schema answers by
 //! its `structuredContent`, a property a column (`mcp_field(Cap, Pos, Name)`); one without answers its text in
@@ -16,22 +17,32 @@ use std::process::{Child, ChildStdin, ChildStdout, Command, Stdio};
 const PROTOCOL: &str = "2025-06-18";
 
 struct Server {
-    child: Child,
-    to: ChildStdin,
-    from: BufReader<ChildStdout>,
+    wire: Wire,
     next: u64,
     info: Value,
 }
 
+/// The transport: a child process spoken to a line a message, or a URL a message is POSTed to (streamable HTTP),
+/// its answer one JSON message or an event stream of them.
+enum Wire {
+    Stdio { child: Child, to: ChildStdin, from: BufReader<ChildStdout> },
+    Http { url: String, session: Option<String>, inbox: Vec<Value> },
+}
+
 impl Server {
     fn start(cmd: &str) -> Result<Self, String> {
-        let mut argv = cmd.split_whitespace();
-        let prog = argv.next().ok_or("an empty command")?;
-        let mut child = Command::new(prog).args(argv).stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::null())
-            .spawn().map_err(|e| format!("{prog}: {e}"))?;
-        let to = child.stdin.take().expect("piped");
-        let from = BufReader::new(child.stdout.take().expect("piped"));
-        let mut s = Server { child, to, from, next: 0, info: Value::Null };
+        let wire = if cmd.starts_with("http://") || cmd.starts_with("https://") {
+            Wire::Http { url: cmd.to_string(), session: None, inbox: Vec::new() }
+        } else {
+            let mut argv = cmd.split_whitespace();
+            let prog = argv.next().ok_or("an empty command")?;
+            let mut child = Command::new(prog).args(argv).stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::null())
+                .spawn().map_err(|e| format!("{prog}: {e}"))?;
+            let to = child.stdin.take().expect("piped");
+            let from = BufReader::new(child.stdout.take().expect("piped"));
+            Wire::Stdio { child, to, from }
+        };
+        let mut s = Server { wire, next: 0, info: Value::Null };
         let hello = json!({"protocolVersion": PROTOCOL, "capabilities": {}, "clientInfo": {"name": "rofl", "version": env!("CARGO_PKG_VERSION")}});
         s.info = s.request("initialize", hello)?.get("serverInfo").cloned().unwrap_or(Value::Null);
         s.send(&json!({"jsonrpc": "2.0", "method": "notifications/initialized"}))?;
@@ -39,7 +50,51 @@ impl Server {
     }
 
     fn send(&mut self, m: &Value) -> Result<(), String> {
-        writeln!(self.to, "{m}").and_then(|_| self.to.flush()).map_err(|e| format!("the server: {e}"))
+        match &mut self.wire {
+            Wire::Stdio { to, .. } => writeln!(to, "{m}").and_then(|_| to.flush()).map_err(|e| format!("the server: {e}")),
+            Wire::Http { url, session, inbox } => {
+                let mut headers = vec![("accept", "application/json, text/event-stream".to_string()), ("mcp-protocol-version", PROTOCOL.to_string())];
+                if let Some(id) = session.clone() {
+                    headers.push(("mcp-session-id", id));
+                }
+                let r = crate::net::send("POST", url, &headers, Some(m))?;
+                if r.status / 100 != 2 {
+                    return Err(format!("the server: HTTP {}: {}", r.status, r.body.chars().take(200).collect::<String>()));
+                }
+                if r.session.is_some() {
+                    *session = r.session;
+                }
+                if r.kind.starts_with("text/event-stream") {
+                    let mut data = String::new();
+                    for line in r.body.lines().chain([""]) {
+                        match line.strip_prefix("data:") {
+                            Some(d) => data.push_str(d.trim_start()),
+                            None if line.is_empty() && !data.is_empty() => inbox.extend(serde_json::from_str(&std::mem::take(&mut data)).ok()),
+                            None => {}
+                        }
+                    }
+                } else if !r.body.trim().is_empty() {
+                    inbox.extend(serde_json::from_str(&r.body).ok());
+                }
+                Ok(())
+            }
+        }
+    }
+
+    /// The next message from the server, or None when it has nothing more to say.
+    fn receive(&mut self) -> Result<Option<Value>, String> {
+        match &mut self.wire {
+            Wire::Stdio { from, .. } => loop {
+                let mut line = String::new();
+                if from.read_line(&mut line).map_err(|e| format!("the server: {e}"))? == 0 {
+                    return Ok(None);
+                }
+                if let Ok(m) = serde_json::from_str::<Value>(&line) {
+                    return Ok(Some(m));
+                }
+            },
+            Wire::Http { inbox, .. } => Ok((!inbox.is_empty()).then(|| inbox.remove(0))),
+        }
     }
 
     /// The result of one request; a request of the server's own is refused, a notification passed over.
@@ -48,11 +103,9 @@ impl Server {
         let id = json!(self.next);
         self.send(&json!({"jsonrpc": "2.0", "id": id, "method": method, "params": params}))?;
         loop {
-            let mut line = String::new();
-            if self.from.read_line(&mut line).map_err(|e| format!("the server: {e}"))? == 0 {
+            let Some(m) = self.receive()? else {
                 return Err(format!("the server closed before answering {method}"));
-            }
-            let Ok(m) = serde_json::from_str::<Value>(&line) else { continue };
+            };
             if m.get("method").is_some() {
                 if let Some(i) = m.get("id") {
                     self.send(&json!({"jsonrpc": "2.0", "id": i, "error": {"code": -32601, "message": "rofl answers no requests"}}))?;
@@ -72,8 +125,10 @@ impl Server {
 
 impl Drop for Server {
     fn drop(&mut self) {
-        let _ = self.child.kill();
-        let _ = self.child.wait();
+        if let Wire::Stdio { child, .. } = &mut self.wire {
+            let _ = child.kill();
+            let _ = child.wait();
+        }
     }
 }
 
@@ -122,6 +177,9 @@ fn tool_block(adapter: &str, t: &Value) -> String {
                 _ => "json",
             };
             out.push_str(&format!("arg({cap}, {}, {}, {ty}).\n", i + 1, ident(p)));
+            if ident(p) != *p {
+                out.push_str(&format!("mcp_arg({cap}, {}, {}).\n", i + 1, quote(p)));
+            }
         }
     }
     match t.get("outputSchema") {
@@ -172,7 +230,7 @@ pub(crate) fn call(cmd: &str, tool: &str, rel: &str, fields: &[String], text: bo
     Ok(out)
 }
 
-fn fact_value(v: &Value) -> String {
+pub(crate) fn fact_value(v: &Value) -> String {
     match v {
         Value::Number(n) => n.as_i64().map_or_else(|| quote(&n.to_string()), |i| i.to_string()),
         Value::Bool(b) => b.to_string(),
@@ -183,7 +241,7 @@ fn fact_value(v: &Value) -> String {
 }
 
 /// A name of the server as a ROFL atom: lower case, every other character `_`.
-fn ident(s: &str) -> String {
+pub(crate) fn ident(s: &str) -> String {
     let mut out: String = s.chars().map(|c| if c.is_ascii_alphanumeric() { c.to_ascii_lowercase() } else { '_' }).collect();
     if !out.starts_with(|c: char| c.is_ascii_lowercase()) {
         out.insert(0, 'm');
@@ -191,6 +249,6 @@ fn ident(s: &str) -> String {
     out
 }
 
-fn quote(s: &str) -> String {
+pub(crate) fn quote(s: &str) -> String {
     format!("\"{}\"", s.replace('\\', "\\\\").replace('"', "\\\"").replace('\n', "\\n"))
 }

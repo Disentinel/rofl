@@ -13,7 +13,7 @@
 //! nothing of it; `want_held(W, Why)` for a want no adapter it can run is declared for. A want with any of them is
 //! not sent again.
 //!
-//! The kinds: `exec` above, `sql` (`run_sql`), `mcp` (src/mcp.rs), `rofl` (`run_rofl`). Evaluation sends only `reads` wants; a `does`
+//! The kinds: `exec` above, `sql` (`run_sql`), `mcp` (src/mcp.rs), `openapi` (src/openapi.rs), `rofl` (`run_rofl`). Evaluation sends only `reads` wants; a `does`
 //! want goes only through `dispatch`, which `rofl serve` runs on request (phase 6).
 
 use std::collections::{BTreeMap, HashMap, HashSet};
@@ -25,6 +25,7 @@ use crate::session::Session;
 use crate::term::{Term, TermK};
 
 /// One batch: the capability, its adapter, the program, the wants by key text.
+#[cfg_attr(not(feature = "sql"), allow(dead_code))]
 struct Batch {
     cap: String,
     adapter: String,
@@ -34,6 +35,7 @@ struct Batch {
     params: Vec<Vec<serde_json::Value>>,
     template: Option<String>,
     tool: Option<String>,
+    op: Option<crate::openapi::Op>,
     fields: Vec<String>,
     named: Vec<serde_json::Value>,
     idem: Vec<Option<String>>,
@@ -91,8 +93,22 @@ impl Session {
             }
         }
         let tools: HashMap<String, String> = rows(self, "mcp_tool", 2).into_iter().map(|t| (name(self, t[0]), name(self, t[1]))).collect();
+        let mut wire: HashMap<(String, i64), String> = HashMap::new();
+        for a in rows(self, "mcp_arg", 3) {
+            if let Some(p) = a[1].as_int() {
+                wire.insert((name(self, a[0]), p), name(self, a[2]));
+            }
+        }
+        let mut places: HashMap<String, Vec<(i64, String, String)>> = HashMap::new();
+        for a in rows(self, "http_in", 4) {
+            if let Some(p) = a[1].as_int() {
+                wire.insert((name(self, a[0]), p), name(self, a[3]));
+                places.entry(name(self, a[0])).or_default().push((p, name(self, a[2]), name(self, a[3])));
+            }
+        }
+        let ops: HashMap<String, (String, String)> = rows(self, "http_op", 3).into_iter().map(|o| (name(self, o[0]), (name(self, o[1]), name(self, o[2])))).collect();
         let mut fields: HashMap<String, Vec<(i64, String)>> = HashMap::new();
-        for f in rows(self, "mcp_field", 3) {
+        for f in rows(self, "mcp_field", 3).into_iter().chain(rows(self, "http_field", 3)) {
             if let Some(p) = f[1].as_int() {
                 fields.entry(name(self, f[0])).or_default().push((p, name(self, f[2])));
             }
@@ -141,7 +157,10 @@ impl Session {
                 Some("sql") if !cfg!(feature = "sql") => {
                     held.push_str(&format!("want_held({text}, \"this build has no sql adapter (cargo feature `sql`)\").\n"));
                 }
-                Some("exec" | "sql" | "mcp" | "rofl") => {
+                Some("openapi") if !cfg!(feature = "net") => {
+                    held.push_str(&format!("want_held({text}, \"this build has no http (cargo feature `net`)\").\n"));
+                }
+                Some("exec" | "sql" | "mcp" | "rofl" | "openapi") => {
                     if let (Some(j), Some(idem)) = (book.as_mut(), idems.get(&key)) {
                         j.write(serde_json::json!({"sent": idem, "want": text}))?;
                     }
@@ -170,7 +189,8 @@ impl Session {
                 a.sort_by_key(|x| x.0);
                 params.push(a.iter().map(|(_, v)| self.json(*v)).collect());
                 let arg = |i: i64| arg_names.get(&(cap.clone(), i)).cloned().unwrap_or_else(|| (i.to_string(), String::new()));
-                named.push(a.iter().map(|(i, v)| (arg(*i).0, typed(self.json(*v), &arg(*i).1))).collect());
+                let on_wire = |i: i64| wire.get(&(cap.clone(), i)).cloned().unwrap_or_else(|| arg(i).0);
+                named.push(a.iter().map(|(i, v)| (on_wire(*i), typed(self.json(*v), &arg(*i).1))).collect());
                 let by_name: serde_json::Map<String, serde_json::Value> = a.iter().map(|(i, v)| (arg(*i).0, self.json(*v))).collect();
                 match idem {
                     Some(i) => serde_json::json!({"key": text, "args": by_name, "idempotency_key": i}),
@@ -181,8 +201,13 @@ impl Session {
             let input = serde_json::json!({"capability": cap, "book_version": version, "wants": json_wants}).to_string();
             let mut f = fields.get(&cap).cloned().unwrap_or_default();
             f.sort();
+            let op = ops.get(&cap).map(|(method, path)| {
+                let mut p = places.get(&cap).cloned().unwrap_or_default();
+                p.sort();
+                crate::openapi::Op { method: method.clone(), path: path.clone(), places: p.into_iter().map(|(_, at, n)| (at, n)).collect() }
+            });
             Batch {
-                answers: answers.get(&cap).cloned().unwrap_or_default(), template: templates.get(&cap).cloned(), tool: tools.get(&cap).cloned(),
+                answers: answers.get(&cap).cloned().unwrap_or_default(), template: templates.get(&cap).cloned(), tool: tools.get(&cap).cloned(), op,
                 fields: f.into_iter().map(|x| x.1).collect(), cap, adapter, kind, cmd, input, params, named, idem, wants,
             }
         }).collect();
@@ -201,6 +226,17 @@ impl Session {
                     let fields = b.fields.clone();
                     let wants: Vec<(String, serde_json::Value, Option<String>)> = b.wants.iter().zip(&b.named).zip(&b.idem).map(|((w, a), i)| (w.0.clone(), a.clone(), i.clone())).collect();
                     Some(Box::new(move || crate::mcp::call(&cmd, &tool, &rel, &fields, text, &wants)))
+                }
+                "openapi" => {
+                    let op = b.op.clone();
+                    let rel = b.answers.iter().map(|a| a.0.clone()).find(|r| r != "http_body").unwrap_or_else(|| "http_body".into());
+                    let fields = b.fields.clone();
+                    let wants: Vec<(String, serde_json::Value, Option<String>)> = b.wants.iter().zip(&b.named).zip(&b.idem).map(|((w, a), i)| (w.0.clone(), a.clone(), i.clone())).collect();
+                    let cap = b.cap.clone();
+                    Some(Box::new(move || match op {
+                        Some(op) => crate::openapi::call(&cmd, &op, &rel, &fields, &wants),
+                        None => Err(format!("'{cap}' has no `http_op({cap}, Method, Path)`")),
+                    }))
                 }
                 _ => None,
             };
@@ -426,7 +462,8 @@ impl Session {
     fn book_version(&mut self, adapter: &str, cap: &str) -> String {
         let main = self.eval.v.main;
         let mut lines = Vec::new();
-        for (rel, n, of) in [("adapter", 3, adapter), ("capability", 3, cap), ("arg", 4, cap), ("answers", 3, cap), ("idempotent", 2, cap)] {
+        for (rel, n, of) in [("adapter", 3, adapter), ("capability", 3, cap), ("arg", 4, cap), ("answers", 3, cap), ("idempotent", 2, cap),
+            ("mcp_tool", 2, cap), ("mcp_arg", 3, cap), ("mcp_field", 3, cap), ("http_op", 3, cap), ("http_in", 4, cap), ("http_field", 3, cap)] {
             let r = self.eval.h.intern(rel);
             for f in self.eval.store.rel_persp(&self.eval.h, r, main) {
                 let a = self.eval.store.args(f).to_vec();

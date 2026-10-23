@@ -706,4 +706,43 @@ evaluation went on, which D3 rules out for an adapter that answers in an hour.
 **Build features.** `sql` (SQLite) is a cargo feature, on by default;
 `cargo build --no-default-features` builds the engine with no C code, and a
 want of a sql adapter in it is `want_held(W, "this build has no sql adapter
-(cargo feature `sql`)")`. The HTTP client will come as the feature `net`.
+(cargo feature `sql`)")`. The HTTP client is the feature `net`, below.
+
+### Scenario 6 and mcp over HTTP, as built (2026-10-23)
+
+`rust/rofl/src/openapi.rs`, `rust/rofl/src/net.rs`, the HTTP transport in
+`rust/rofl/src/mcp.rs`; `rust/rofl/tests/openapi.rs`.
+
+- **`rofl adapter openapi SPEC`** prints the book of an OpenAPI document (JSON,
+  a file or a URL): `adapter(Name, openapi, BaseUrl)` from `info.title` and
+  `servers[0]`, then a block per operation sorted by capability. GET and HEAD
+  are `reads`, every other method `does` until a person changes the line.
+  Each parameter (path, query, header) and each property of a JSON request
+  body is an `arg`, placed by `http_in(Cap, Pos, Where, Name)` with its name on
+  the wire; `http_op(Cap, Method, PathTemplate)`. The first 2xx JSON answer,
+  an object or an array of objects (`$ref`s followed), answers a column a
+  property (`http_field(Cap, Pos, Name)`); any other answer is
+  `http_body(K, Text)`.
+- **The `openapi` kind** sends one request per want; an array answers a row
+  per element, an empty one `answered(K)`, a status outside 2xx
+  `failed(K, "HTTP N: ...")`. A dispatched `does` want carries its key in
+  `Idempotency-Key`. It runs in the post like exec and mcp.
+- **mcp over HTTP**: an mcp adapter whose address is a URL is spoken to over
+  the streamable HTTP transport: each message POSTed, the answer one JSON
+  message or an event stream, `Mcp-Session-Id` kept from `initialize`.
+  `rofl adapter mcp URL` generates its book. A tool property whose name is not
+  an atom (`petName`) is sent under that name, `mcp_arg(Cap, Pos, Name)`.
+- **Book version** now covers the kind's own rows (`mcp_tool`, `mcp_arg`,
+  `mcp_field`, `http_*`), so a changed path or field changes a does want's key.
+- **The feature `net`** (reqwest, blocking, rustls with ring; on by default)
+  holds the HTTP. The calls block on the adapter's own thread; reqwest keeps
+  its tokio inside and the engine never sees it. Without it an openapi want is
+  `want_held(W, "this build has no http (cargo feature `net`)")`.
+- **Acceptance.** A node service with a document: the book regenerated after
+  one operation changed differs by that block alone; a GET want answered by
+  the service, an array as rows, a 404 as failed; the POST sent only by
+  dispatch with permit, its body and key on the wire; an MCP server over HTTP
+  answering in an event stream. Planted `openapi_book_digest` and
+  `openapi_does_get` are red.
+- **Open.** YAML documents; credentials (`securitySchemes`: a key the
+  environment gives, put in a header by the adapter, never in the book).
