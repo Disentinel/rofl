@@ -202,6 +202,7 @@ check[checks]("rust/rofl/tests/mcp.rs", "a_reads_tool_is_called_once_per_want_an
 check[checks]("rust/rofl/tests/mcp.rs", "a_does_tool_is_not_sent_by_evaluation", test).
 check[checks]("rust/rofl/tests/mcp.rs", "a_server_that_is_not_there_is_said", test).
 check[checks]("rust/rofl/tests/par.rs", "the_threads_answer_as_one_thread_does", test).
+check[checks]("rust/rofl/tests/post.rs", "a_world_that_does_not_wait_goes_on_and_takes_its_answers_when_they_come", test).
 check[checks]("rust/rofl/tests/program.rs", "a_program_loaded_in_rust_is_the_world_the_kernel_builds", test).
 check[checks]("rust/rofl/tests/program.rs", "a_loaded_program_ticks_the_way_the_kernel_ticks", test).
 check[checks]("rust/rofl/tests/program.rs", "the_door_refuses_what_the_kernel_refuses", test).
@@ -934,6 +935,7 @@ test_file[checks]("rust/rofl/tests/kept.rs").
 test_file[checks]("rust/rofl/tests/lattice_scale.rs").
 test_file[checks]("rust/rofl/tests/mcp.rs").
 test_file[checks]("rust/rofl/tests/par.rs").
+test_file[checks]("rust/rofl/tests/post.rs").
 test_file[checks]("rust/rofl/tests/program.rs").
 test_file[checks]("rust/rofl/tests/prov_lazy.rs").
 test_file[checks]("rust/rofl/tests/resume.rs").

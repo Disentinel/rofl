@@ -673,3 +673,37 @@ database, which the TypeScript engine never does.
 Scenario 4 (`render`, a UI) and scenario 6 (`openapi`, and mcp over HTTP)
 are the open items `w_intent_render` and `w_intent_openapi`; the second waits
 on the choice of an HTTP client.
+
+### The post, as built (2026-10-23)
+
+Phases 2 to 7 sent a round's batches and waited for their answers before the
+evaluation went on, which D3 rules out for an adapter that answers in an hour.
+`Post` in `rust/rofl/src/adapter.rs`, `Session::collect`; `rust/rofl/tests/post.rs`.
+
+- **A world with a post does not wait.** A batch for a program or a server
+  (exec, mcp) goes on a thread of its own and the evaluation goes on; the
+  answer comes back to the post's inbox, and `Session::collect` loads it by
+  delta whenever it has come, then sends what the world wants next. A want in
+  flight is neither sent again nor settled, so `pending(W) :- want_key(W), not
+  answered(W)` holds while it flies. A database and another world in the same
+  process are answered at once, as before.
+- **`rofl serve` gives every session a post.** Each request first loads what
+  came back since; `{"op":"inbox","waitMs":n}` waits up to n ms for a first
+  answer and says how many wants are still in flight; `{"op":"evaluate",
+  "wait":false}` answers as soon as the world is evaluated. Without
+  `"wait":false` an evaluate waits for its answers, as a one-shot verb does,
+  so the hosts that read a finished world (the notebook, the playground) are
+  unchanged.
+- **One-shot verbs wait**, as their question asks: `rofl load`, `ask`, `why`
+  have no post.
+- **Acceptance.** A program that answers after 0.6 s: the evaluation returns
+  in under 0.4 s with the want pending, two evaluations while it flies send it
+  once, and the tree comes in by delta over three rounds. Planted
+  `post_resends_flying` is red.
+- **The HTTP client** (the owner's choice: reqwest + tokio) belongs to this
+  layer and never to the engine's core.
+
+**Build features.** `sql` (SQLite) is a cargo feature, on by default;
+`cargo build --no-default-features` builds the engine with no C code, and a
+want of a sql adapter in it is `want_held(W, "this build has no sql adapter
+(cargo feature `sql`)")`. The HTTP client will come as the feature `net`.

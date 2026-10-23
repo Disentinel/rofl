@@ -37,7 +37,8 @@
 //!   {"op":"assert","session":2,"rofl":"p(a)."}     -> {"added":n,"full":null|"why"}: into an evaluated
 //!                                                        world by delta (Session::assert_delta), else evaluated again
 //!   {"op":"load","session":2,"path":"pack.rofl"}      -> {"admitted":n,"full":null|"why"}: the same for facts and rules
-//!   {"op":"evaluate","session":2}
+//!   {"op":"evaluate","session":2}                  -> waits for the world's adapters; with "wait":false it answers at
+//!                                                        once, "flying":k wants in flight, their answers loaded later
 //!   {"op":"resume","session":2,"steps":n}            -> as evaluate, and "resumed": went on from where the budget
 //!                                                        stopped the last evaluation, or evaluated again
 //!   {"op":"ask","session":2,"query":"p(X)"}
@@ -55,6 +56,10 @@
 //!                                                        append-only journal dir/does.journal, never twice
 //!                                                        (docs/intents.md D6); `assert` and `load` refuse what
 //!                                                        `permit` reads
+//!   {"op":"inbox","session":2,"waitMs":n}   -> {"loaded":n,"flying":k}: what the world's adapters answered since,
+//!                                                        loaded by delta, waiting up to n ms for a first answer;
+//!                                                        every other request loads it too before it is answered
+//!                                                        (src/adapter.rs `Post`)
 //!   {"op":"tick","session":2}
 //!   {"op":"state","session":2,"path":"out.txt"}
 //!   {"op":"keep","session":2,"path":"w.kept"}  -> {"path":...,"bytes":n}: the world as a kept image; an evaluated
@@ -122,6 +127,7 @@ impl Server {
 
     fn keep(&mut self, mut s: Session) -> u64 {
         s.eval.on_hot = Some(|t| eprintln!("hot: {t}"));
+        s.post = Some(Default::default());
         let id = self.next;
         self.next += 1;
         self.sessions.insert(id, s);
@@ -197,6 +203,14 @@ impl Server {
             return self.limited(r, limit);
         }
         let op = r.get("op").and_then(|v| v.as_str()).ok_or("`op` is required")?;
+        // what came back to the post since the last request is loaded before this one is answered
+        if op != "close" && op != "inbox" {
+            if let Ok(s) = self.get(r) {
+                if s.collect(None)? > 0 {
+                    self.keys.clear();
+                }
+            }
+        }
         if !matches!(op, "rows" | "fact" | "firings" | "cell" | "books" | "holding" | "ask" | "why" | "whynot" | "state" | "facts") {
             self.keys.clear();
         }
@@ -410,6 +424,14 @@ impl Server {
                 let (n, a) = self.get(r)?.assert_delta(&text)?;
                 Ok(json!({ "added": n, "full": full(a) }))
             }
+            "inbox" => {
+                let wait = r.get("waitMs").and_then(|v| v.as_u64()).map(std::time::Duration::from_millis);
+                let s = self.get(r)?;
+                let n = s.collect(wait)?;
+                let flying = s.post.as_ref().map_or(0, |p| p.flying());
+                self.keys.clear();
+                Ok(json!({ "loaded": n, "flying": flying }))
+            }
             "dispatch" => {
                 let dir = r.get("journal").and_then(|v| v.as_str()).ok_or("dispatch needs `journal`, the directory of its journal")?.to_string();
                 let n = self.get(r)?.dispatch(std::path::Path::new(&dir))?;
@@ -419,12 +441,20 @@ impl Server {
             // back true with a `hole` in the store naming the unfinished part,
             // and `ok` stays true. Only a defect or a stratification refusal
             // is an error here.
+            // `"wait":false` answers as soon as the world is evaluated, its wants in flight; else the answers are
+            // waited for, as a one-shot verb waits, until none is in flight or the request's limit stops it
             "evaluate" => {
+                let wait = r.get("wait").and_then(|v| v.as_bool()).unwrap_or(true);
                 let s = self.get(r)?;
                 let o = s.evaluate().map_err(|e| rofl::describe(&e))?;
+                let halted = |s: &Session| s.eval.halt.as_ref().is_some_and(|h| h.load(std::sync::atomic::Ordering::Relaxed));
+                while wait && s.post.as_ref().is_some_and(|p| p.flying() > 0) && !halted(s) {
+                    s.collect(Some(std::time::Duration::from_millis(50)))?;
+                }
+                let flying = s.post.as_ref().map_or(0, |p| p.flying());
                 Ok(json!({
                     "partial": o.partial, "staged": o.staged, "steps": o.steps,
-                    "peakRows": o.peak_rows, "space": o.space,
+                    "peakRows": o.peak_rows, "space": o.space, "flying": flying,
                     "hot": s.eval.too_hot().iter().map(|h| h.sentence()).collect::<Vec<_>>(),
                 }))
             }

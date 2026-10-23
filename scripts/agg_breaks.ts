@@ -65,6 +65,13 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "post_resends_flying",
+  "what": "a want still in flight in the post sent again by the next evaluation",
+  "expect": {
+   "post_once": "a want in flight is sent once"
+  }
+ },
+ {
   "id": "does_unpermitted_sent",
   "what": "a does want sent by the dispatcher without permit(W)",
   "expect": {
@@ -9199,6 +9206,7 @@ const TESTS: Record<string, string> = {
   sql_bound: 'sql an_argument_is_bound_never_written_into_the_query',
   mcp_book: 'mcp a_regenerated_book_differs_by_exactly_the_changed_tool',
   does_permit: 'dispatch a_does_want_without_permit_is_never_sent',
+  post_once: 'post a_world_that_does_not_wait_goes_on_and_takes_its_answers_when_they_come',
   does_once: 'dispatch a_does_want_runs_once_across_a_dispatch_the_world_anew_and_a_replay',
   does_guard: 'dispatch a_running_world_cannot_change_what_grants_permission',
   mcp_does: 'mcp a_does_tool_is_not_sent_by_evaluation',
