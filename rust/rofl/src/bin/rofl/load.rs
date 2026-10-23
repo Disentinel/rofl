@@ -98,6 +98,20 @@ fn scan_units(s: &mut rofl::session::Session) -> Vec<crate::kept::ScanUnit> {
     recs.iter().map(|r| crate::kept::ScanUnit::of(s, r)).collect()
 }
 
+/// The disk wall for a world its cache gives `most` bytes: room left for what a cut keeps beyond the wall.
+fn wall(most: u64) -> i64 {
+    let m = most.min(i64::MAX as u64) as i64;
+    m - m / (rofl::engine::CUT_ROOM + 1)
+}
+
+/// A world that stopped at the disk wall and could not be kept there (what its cut held did not fit): its answers
+/// are not left partial for a world nobody keeps, it goes on to its end, `said` first.
+fn to_the_end(s: &mut rofl::session::Session, budget: i64, json: bool, said: &str) {
+    eprintln!("{said}; it was evaluated to its end, and is not kept");
+    s.eval.disk = i64::MAX;
+    if let Err(e) = s.resume(budget - s.eval.steps) { refuse(s, json, rofl::describe(&e)); }
+}
+
 /// The words of a kept world's record as a reader of a message knows them.
 fn said(args: &[String]) -> String {
     args.iter().map(|a| crate::kept::shown(a)).collect::<Vec<_>>().join(" ")
@@ -178,7 +192,7 @@ fn run(json: bool, args: Vec<String>, mut pre: Option<(bool, crate::kept::Record
     if let Some(k) = &kept {
         if save.is_some() { fail(json, USAGE, "--kept and --save are two ways to keep a world: give one"); }
         let exists = std::path::Path::new(k).exists();
-        let check = || rofl::volume::check(k).and_then(|c| crate::kept::parse(&c.note).map(|r| (c.this_build, r)).ok_or_else(|| format!("{k}: not a world kept by `rofl --kept`")));
+        let check = || rofl::volume::check_seen(k, crate::kept::seen().as_deref()).and_then(|c| crate::kept::parse(&c.note).map(|r| (c.this_build, r)).ok_or_else(|| format!("{k}: not a world kept by `rofl --kept`")));
         if !world_given {
             // no files and no walls: the world is the one the kept file was kept from
             if !exists { fail(json, USAGE, &format!("{k}: no world is kept there; name the files of the world to keep it")); }
@@ -208,22 +222,26 @@ fn run(json: bool, args: Vec<String>, mut pre: Option<(bool, crate::kept::Record
     };
     // what a kept world that is not this one, or no longer, is: where it lies, its record, and what moved
     let mut stale: Option<(String, crate::kept::Record, String)> = None;
+    // a kept world that stopped at the disk wall, and its note
+    let mut cut_kept: Option<(u64, String, crate::kept::Record)> = None;
     if let Some(p) = slot.as_ref().filter(|p| std::path::Path::new(p).exists()) {
-        let checked = rofl::volume::check(p).and_then(|c| crate::kept::parse(&c.note).map(|r| (c.this_build, r)).ok_or_else(|| format!("{p}: not a kept world")));
-        match checked.map(|(b, r)| (crate::kept::moved(&r, b), r)) {
-            Ok((None, _)) => match rofl::session::Session::open_volume(p, budget) {
+        let checked = rofl::volume::check_seen(p, crate::kept::seen().as_deref()).and_then(|c| crate::kept::parse(&c.note).map(|r| (c.this_build, r, c.note)).ok_or_else(|| format!("{p}: not a kept world")));
+        match checked.map(|(b, r, n)| (crate::kept::moved(&r, b), r, n)) {
+            Ok((None, r, note)) => match rofl::session::Session::open_volume(p, budget) {
                 Ok(s) => {
                     crate::kept::touch(p);
                     opened = Some(s);
+                    cut_kept = r.cut.map(|c| (c, note, r));
                 }
                 Err(e) => eprintln!("{p} is damaged: {e}; computed anew"),
             },
-            Ok((Some(m), _)) if crate::kept::missing(&m) => eprintln!("the kept world {p} is stale: {m}"),
-            Ok((Some(m), r)) => stale = Some((p.clone(), r, m)),
+            Ok((Some(m), _, _)) if crate::kept::missing(&m) => eprintln!("the kept world {p} is stale: {m}"),
+            Ok((Some(m), r, _)) if r.cut.is_some() => eprintln!("the kept world {p} is stale: {m}; computed anew, not by delta: it stopped at the disk cap"),
+            Ok((Some(m), r, _)) => stale = Some((p.clone(), r, m)),
             Err(e) => eprintln!("{e}; computed anew"),
         }
     } else if let Some(p) = &slot {
-        stale = crate::delta::base_beside(p, &world[..world.len() - files.len()]).map(|(q, r)| (q, r, "the files named are others".into()));
+        stale = crate::delta::base_beside(p, &world[..world.len() - files.len()], &world[world.len() - files.len()..]).filter(|(_, r)| r.cut.is_none()).map(|(q, r)| (q, r, "the files named are others".into()));
     }
     let read = |f: &String| std::fs::read_to_string(f).unwrap_or_else(|e| fail(json, USAGE, &format!("{f}: {e}")));
     let walls = |s: &mut rofl::session::Session| {
@@ -233,11 +251,11 @@ fn run(json: bool, args: Vec<String>, mut pre: Option<(bool, crate::kept::Record
         s.eval.retain_ticks = retain;
     };
     // A KEPT WORLD TAKES ITS FILES BY DELTA (delta.rs): the files that changed, came or went, and nothing else
-    let mut by_delta: Option<(Vec<crate::kept::Unit>, Vec<crate::kept::ScanUnit>)> = None;
+    let mut by_delta: Option<(Vec<crate::kept::Unit>, Vec<crate::kept::ScanUnit>, String)> = None;
     let mut said = String::new();
     if let Some((q, r, m)) = stale {
         let t0 = std::time::Instant::now();
-        let opened_q = rofl::volume::check(&q).map_err(|e| e.to_string()).and_then(|_| rofl::session::Session::open_volume(&q, budget));
+        let opened_q = rofl::volume::check_seen(&q, crate::kept::seen().as_deref()).map_err(|e| e.to_string()).and_then(|_| rofl::session::Session::open_volume(&q, budget));
         let done = opened_q.and_then(|mut t| {
             walls(&mut t);
             crate::delta::apply(&mut t, &r, &world[world.len() - files.len()..]).map(|d| (t, d))
@@ -245,9 +263,8 @@ fn run(json: bool, args: Vec<String>, mut pre: Option<(bool, crate::kept::Record
         match done {
             Ok((t, d)) => {
                 said = format!("the kept world took {} by delta: {} ({} facts out, {} overdeleted or derived again; opened and taken in {} ms", if d.took.len() == 1 { "1 file".to_string() } else { format!("{} files", d.took.len()) }, d.took.join(", "), d.out, d.touched, t0.elapsed().as_millis());
-                if q != *slot.as_ref().unwrap() { let _ = std::fs::remove_file(&q); }
                 opened = Some(t);
-                by_delta = Some((d.units, d.scans));
+                by_delta = Some((d.units, d.scans, q));
             }
             Err(why) => eprintln!("the kept world {q} is stale: {m}; computed anew, not by delta: {why}"),
         }
@@ -255,17 +272,49 @@ fn run(json: bool, args: Vec<String>, mut pre: Option<(bool, crate::kept::Record
     let from_disk = opened.is_some();
     let mut s = opened.unwrap_or_else(|| rofl::session::Session::fresh(budget));
     walls(&mut s);
-    if let (Some((units, scans)), Some(p)) = (&by_delta, &slot) {
+    // A WORLD THAT STOPPED AT THE DISK WALL GOES ON FROM WHERE IT STOPPED when its cache now gives it more (w_disk_wall)
+    if let (Some((cut, note, r)), Some(p)) = (cut_kept, &slot) {
+        match crate::kept::most(p) {
+            Ok(most) if most > cut => {
+                let t0 = std::time::Instant::now();
+                s.eval.disk = wall(most);
+                let more = budget - s.eval.steps;
+                let on = match s.resume(more) { Ok((_, on)) => on, Err(e) => refuse(&mut s, json, rofl::describe(&e)) };
+                let now = s.eval.disk_cut().then_some(most);
+                let read: Vec<String> = r.read.iter().map(|x| x.0.clone()).collect();
+                let note = crate::kept::record(&world, &r.files, &r.units, &read, &scan_units(&mut s), now).unwrap_or_else(|_| crate::kept::recut(&note, now));
+                s.eval.index_for_retraction();
+                let kept = crate::kept::keep_capped(&mut s, p, &note);
+                if let (Err(e), Some(_)) = (&kept, now) {
+                    to_the_end(&mut s, budget, json, &format!("the kept world went on from where it stopped to the disk cap of its cache, {}, and was not kept there: {e}", crate::kept::said_size(most)));
+                } else { eprintln!("the kept world had stopped at {} and the cache now gives {}: {} in {} ms{}; {}",
+                    crate::kept::said_size(cut), crate::kept::said_size(most),
+                    if on { "it went on from where it stopped" } else { "where it stopped could not be gone on from, so it was evaluated again" }, t0.elapsed().as_millis(),
+                    if now.is_some() { " and stopped again" } else { " to its end" },
+                    kept.map_or_else(|e| format!("not kept: {e}"), |n| format!("kept again, {n} bytes"))); }
+            }
+            _ => eprintln!("the kept world stopped at the disk cap of its cache, {} (ROFL_CACHE_GB): its answers are partial; a larger cap goes on from where it stopped", crate::kept::said_size(cut)),
+        }
+    }
+    if let (Some((units, scans, q)), Some(p)) = (&by_delta, &slot) {
         let files_now = &world[world.len() - files.len()..];
-        match crate::kept::record(&world, files_now, units, files_now, scans) {
+        // the world it went on from: gone once this one is kept, unless this one is kept over it
+        let mut gone = q != p;
+        match crate::kept::record(&world, files_now, units, files_now, scans, None) {
             Err(e) => eprintln!("the world is not kept: {e}"),
             Ok(note) => {
                 let t1 = std::time::Instant::now();
-                match crate::kept::keep_capped(&mut s, p, &note) {
-                    Ok(n) => eprintln!("{said}, kept again in {} ms, {n} bytes written)", t1.elapsed().as_millis()),
+                match crate::kept::keep_capped_over(&mut s, p, &note, true) {
+                    Ok((n, over)) => {
+                        gone &= !over || s.kept.as_ref().is_none_or(|b| b.path != *q);
+                        eprintln!("{said}, kept again in {} ms, {n} bytes written{})", t1.elapsed().as_millis(), if over { " over the world it was kept from" } else { "" });
+                    }
                     Err(e) => eprintln!("{said}); the world is not kept: {e}"),
                 }
             }
+        }
+        if gone {
+            let _ = std::fs::remove_file(q);
         }
     }
     if !from_disk {
@@ -308,6 +357,11 @@ fn run(json: bool, args: Vec<String>, mut pre: Option<(bool, crate::kept::Record
             if let Err(e) = b.evaluate() { refuse(&mut b, json, format!("below: {}", rofl::describe(&e))); }
             if let Err(e) = s.feed_below(&mut b) { fail(json, WORLD_REFUSED, &format!("below: {e}")); }
         }
+        // the disk wall: a question verb's world stops where its volume would pass what the cache gives it, when
+        // what it is given already fits; a world that ticks, retracts or explains is evaluated whole as before
+        let disk = slot.as_ref().filter(|_| ticks == 0 && retracts.is_empty() && !explain && below.is_empty())
+            .and_then(|p| crate::kept::most(p).ok()).filter(|m| wall(*m) > s.eval.disk_bytes());
+        if let Some(m) = disk { s.eval.disk = wall(m); }
         if ticks == 0 || !retracts.is_empty() {
             if let Err(e) = s.evaluate() { refuse(&mut s, json, rofl::describe(&e)); }
             for f in &retracts {
@@ -346,22 +400,24 @@ fn run(json: bool, args: Vec<String>, mut pre: Option<(bool, crate::kept::Record
         if let Some(k) = &kept {
             let read: Vec<String> = sources.iter().map(|s| s.0.clone()).chain(below.iter().cloned()).collect();
             let units = units();
-            let note = crate::kept::record(&world, files_now, &units, &read, &scan_units(&mut s)).unwrap_or_else(|e| fail(json, FILE_REFUSED, &format!("{k} is not kept: {e}")));
+            let note = crate::kept::record(&world, files_now, &units, &read, &scan_units(&mut s), None).unwrap_or_else(|e| fail(json, FILE_REFUSED, &format!("{k} is not kept: {e}")));
             let n = s.keep_volume_noted(k, &note).unwrap_or_else(|e| fail(json, USAGE, &format!("{k}: {e}")));
             eprintln!("kept {k}: {n} bytes");
         } else if let Some(p) = &slot {
             // keeping is a convenience of the question: a world that cannot be kept is answered all the same
             let read: Vec<String> = sources.iter().map(|s| s.0.clone()).chain(below.iter().cloned()).collect();
             let units = units();
-            match crate::kept::record(&world, files_now, &units, &read, &scan_units(&mut s)) {
-                Err(e) => eprintln!("the world is not kept: {e}"),
-                Ok(note) => {
-                    // kept with what a delta reads, so no later run indexes the world again
-                    s.eval.index_for_retraction();
-                    if let Err(e) = crate::kept::keep_capped(&mut s, p, &note) {
-                        eprintln!("the world is not kept: {e}");
-                    }
-                }
+            let cut = disk.filter(|_| s.eval.disk_cut());
+            let kept = crate::kept::record(&world, files_now, &units, &read, &scan_units(&mut s), cut).and_then(|note| {
+                // kept with what a delta reads, so no later run indexes the world again
+                s.eval.index_for_retraction();
+                crate::kept::keep_capped(&mut s, p, &note)
+            });
+            match (kept, cut) {
+                (Ok(_), Some(m)) => eprintln!("the world reached the disk cap of its cache, {} (ROFL_CACHE_GB), and stopped there: its answers are partial; a larger cap goes on from where it stopped", crate::kept::said_size(m)),
+                (Ok(_), None) => {}
+                (Err(e), None) => eprintln!("the world is not kept: {e}"),
+                (Err(e), Some(m)) => to_the_end(&mut s, budget, json, &format!("the world reached the disk cap of its cache, {}, and was not kept where it stopped: {e}", crate::kept::said_size(m))),
             }
         }
     }

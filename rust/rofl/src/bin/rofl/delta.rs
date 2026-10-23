@@ -10,18 +10,26 @@ use rofl::session::{Addition, Session};
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
 
-/// The kept world beside `slot` to go on from when there is none at it: the most recently used whose walls,
-/// environment and engine are this run's, whatever its files.
-pub fn base_beside(slot: &str, walls: &[String]) -> Option<(String, Record)> {
+/// The kept world beside `slot` to go on from when there is none at it: of those whose walls, environment and
+/// engine are this run's, the most recently used; none more than `FAR` files away from `files` and farther than one
+/// file in `FAR` of the world, which is cheaper evaluated whole than taken out and put in by delta (vscode 250 files, 125 of them taken out by delta: past 115 s, against 44 s whole).
+pub fn base_beside(slot: &str, walls: &[String], files: &[String]) -> Option<(String, Record)> {
     let dir = Path::new(slot).parent()?;
+    let now: HashSet<&str> = files.iter().map(String::as_str).collect();
     let mut best: Option<(std::time::SystemTime, String, Record)> = None;
     for e in std::fs::read_dir(dir).ok()?.flatten() {
         let p = e.path();
-        if p.extension().is_none_or(|x| x != "vol") {
+        // the slot itself, kept by another run since this one looked, is that run's world, not a base
+        if p.extension().is_none_or(|x| x != "vol") || p == Path::new(slot) {
             continue;
         }
         let Some(r) = kept::peek(&p.to_string_lossy()) else { continue };
         if r.walls() != walls || r.engine_env_hold(true).is_some() {
+            continue;
+        }
+        let was: HashSet<&str> = r.files.iter().map(String::as_str).collect();
+        let away = now.symmetric_difference(&was).count();
+        if away > FAR && away * FAR > now.len().max(was.len()) {
             continue;
         }
         let at = e.metadata().and_then(|m| m.modified()).unwrap_or(std::time::UNIX_EPOCH);
@@ -31,6 +39,9 @@ pub fn base_beside(slot: &str, walls: &[String]) -> Option<(String, Record)> {
     }
     best.map(|(_, p, r)| (p, r))
 }
+
+/// A kept world more than one file in this many away from a run's files is not its base.
+const FAR: usize = 8;
 
 /// What a delta did: the world's files and scans as it now records them, and the files and scans it took.
 pub struct Done {
@@ -46,10 +57,12 @@ fn read(p: &str) -> Result<String, String> {
     std::fs::read_to_string(p).map_err(|e| format!("{}: {e}", kept::shown(p)))
 }
 
-/// `ids` less `stays`, each once.
-fn going(ids: Vec<u32>, stays: &HashSet<u32>) -> Vec<rofl::store::FactId> {
+/// `ids` less `stays`, each once: the few that go are looked for among the many that stay.
+fn going(ids: Vec<u32>, stays: &[u32]) -> Vec<rofl::store::FactId> {
+    let go: HashSet<u32> = ids.iter().copied().collect();
+    let held: HashSet<u32> = stays.iter().copied().filter(|f| go.contains(f)).collect();
     let mut seen = HashSet::new();
-    ids.into_iter().filter(|f| !stays.contains(f) && seen.insert(*f)).collect()
+    ids.into_iter().filter(|f| !held.contains(f) && seen.insert(*f)).collect()
 }
 
 /// `s`, opened from the kept world `r`, brought by delta to the world of the files `files` (absolute, as the run
@@ -75,7 +88,7 @@ pub fn apply(s: &mut Session, r: &Record, files: &[String]) -> Result<Done, Stri
     let old: HashMap<&str, &Unit> = r.units.iter().map(|u| (u.path.as_str(), u)).collect();
     let all = rofl::brk!("kept_delta_all_files" => true; false);
     // what stays, what goes, what comes
-    let (mut stays, mut goes): (HashSet<u32>, Vec<u32>) = (HashSet::new(), Vec::new());
+    let (mut stays, mut goes): (Vec<u32>, Vec<u32>) = (Vec::new(), Vec::new());
     let (mut add, mut took, mut texts): (String, Vec<String>, HashMap<&str, String>) = (String::new(), Vec::new(), HashMap::new());
     for f in files {
         match old.get(f.as_str()) {
@@ -168,7 +181,7 @@ pub fn apply(s: &mut Session, r: &Record, files: &[String]) -> Result<Done, Stri
             break;
         }
         if !dropped.is_empty() {
-            let mut stays: HashSet<u32> = scans.iter().flat_map(|sc| sc.facts.iter().copied()).collect();
+            let mut stays: Vec<u32> = scans.iter().flat_map(|sc| sc.facts.iter().copied()).collect();
             for f in files {
                 match texts.get(f.as_str()) {
                     Some(t) => stays.extend(s.facts_of(t)?.0),

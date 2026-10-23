@@ -70,10 +70,30 @@ at 0.36 and 0.80 of the evaluation's peak memory, 89 and 76 bytes a fact on
 cost_shapes_model and agg_minmax_strata, so up to ~23 GB for a world evaluated
 in ~23 GB): a world kept pushes out the older ones, least recently used first;
 the volume is written no further than the cap and than the disk can give above
-a 5 GB floor, so a world larger than that stops its writer there, is answered,
-and is not kept, said in one line on stderr (`the world is not kept: the world
-is larger than 1.00 GB, the most it may take: the cap is 1.00 GB
-(ROFL_CACHE_GB)`). Each process writes under a name of its own and renames it
+a 5 GB floor.
+
+**A world larger than its cache stops there** (w_disk_wall). While a question
+verb's world evaluates, the bytes its volume would take are counted (from the
+lengths of what the store and the heap hold, never less than the volume: 0.76
+to 0.99 of it over the 96 worlds of the tree, tests/disk.rs) and checked at
+every step beside the step budget. Where they would pass eight ninths of what
+the cache gives it (the ninth is room for what the cut keeps of the evaluation
+in flight), the evaluation stops as at a step wall, with
+`hole($adhoc, disk_exhausted)`: its answers are partial (exit 5), the world is
+kept as it stood, and asked again it answers from there, saying on stderr that
+it stopped at the disk cap (`the world reached the disk cap of its cache, 4.0 GB
+(ROFL_CACHE_GB), and stopped there: its answers are partial; a larger cap goes
+on from where it stopped`). Asked under a larger cap, it goes on from where it
+stopped, not from the start, and reaches byte for byte the world a run under
+that cap from the start reaches; where the wall fell in a place no step wall can
+be gone on from (a lattice, a threshold, a closure kernel, an unfolding on
+demand: docs/staged-evaluation.md) it is evaluated again, said so. A world
+whose given facts already take more than the cache gives is evaluated whole and
+not kept, as is a cut world whose cut does not fit after all: then it goes on
+to its end and is answered whole (`... it was evaluated to its end, and is not
+kept`). A world that ticks, retracts or explains is evaluated whole as before.
+A kept world that stopped at the cap is never taken by delta: an edit computes
+it anew. Each process writes under a name of its own and renames it
 into place, so cold runs of one question at once keep one world; what a process
 killed while it wrote leaves is removed by the next run that keeps a world,
 before it starts to write, and the cap counts every file of the directory. Writing the volume costs about 5% of the evaluation it
@@ -123,7 +143,13 @@ A world one of whose scanners named nothing it read is not kept (exit 2):
 whether it went stale could not be told. A world refused when evaluated is not
 kept either. A file at F that is cut short, changed after it was written or not
 a kept world is refused with a sentence (exit 2): the volume ends in the sum of
-its bytes, read whole before it is opened.
+its bytes, read whole before it is opened. Once a volume settled (a second after
+it was last changed) has been found whole, its sum, length and change time are
+noted under `$XDG_CACHE_HOME/rofl/seen`, and while all three are as noted it is
+opened without being read whole again; the files a world was kept from are
+stamped by the sum of their bytes, noted there the same way. A run whose files
+are more than eight away from every kept world's, and more than one in eight of
+the world, is evaluated whole rather than taken by delta from the nearest.
 
 Measured on `cost_shapes_model` (the JS model over `examples/shapes`, 310 368
 facts, release build, three runs each, a loaded machine): a `why` takes 2.9-3.1 s
@@ -144,6 +170,22 @@ The run says so in one line on stderr:
 ```
 the kept world took 1 file by delta: db.rofl (35 facts out, 409 overdeleted or derived again; opened and taken in 201 ms, kept again in 12 ms, 9367080 bytes written)
 ```
+
+**The world kept again is an overlay** (f_a_kept_world_is_written_whole_by_each_edit).
+The whole volume the world was opened from stays on disk as its base, beside
+the slot under its sum (`<slot>.<sum>.vol`), and the slot gets an overlay: a
+file that names the base and writes only what the world holds that the base
+does not. An arena the edit did not change is a reference into the base; one
+it wrote a few values into is the reference and those values; one it appended
+to is the reference and what came after (a copy of a mapped arena is compared
+with the base to find them). Opening an overlay maps the base as before and
+maps each changed span privately, the overlay's values written into its pages,
+so the pages nothing changed are the file's. Each edit writes its overlay over
+the same base, every change since the base in it; once it would pass a quarter
+of the base, the world is written whole again and that is the new base (the
+line ends `bytes written over the world it was kept from` while it is an
+overlay). A base pushed out of the cache takes its overlays with it; an overlay
+whose base is gone or changed is refused and computed anew.
 
 It evaluates whole instead, the reason after `not by delta:` in the stale line,
 when the rules changed (a file that changed holds a rule, or a file gone held
@@ -172,9 +214,19 @@ vscode's base directory, each its own facts file):
 
 A node's id is its place in the tree, so a function added at the end of a file
 takes no fact out. What an edit touches stays flat with the world; its time
-does not yet: at the vscode scale opening the volume is about 4-6 s, writing it again 1.3-2.6 s
-(the whole volume is written, 1.2 GB), and the addition's planning about as
-much again, whatever the edit.
+does not yet. At vscode 250 (1 595 714 base facts, each file scanned alone) a
+function added and taken out again is opened and taken in 0.77-0.97 s (whole
+run 1.2-1.9 s), and the same question asked again of the kept world takes
+0.47-0.53 s, now that a volume and the files found whole are not read whole
+again (f_an_edit_by_delta_paid_for_the_world_in_six_places,
+f_opening_a_kept_world_read_every_byte_it_was_kept_from).
+Writing it again took 5.4 s for the
+whole 1.25 GB volume; as an overlay (release, 2026-10-23, the same subset, four
+edits in a row over a 1.17 GB base) it takes 0.17 s and 49 MB for a function
+added (nothing out), 0.33-0.39 s and 193-201 MB once an edit has taken facts out:
+a relation a fact went out of has its runs written whole (they are compacted),
+and the record of the world's files is written whole (12 MB), so what is
+written grows with the relations an edit touches, not with the edit.
 
 ## Exit codes
 

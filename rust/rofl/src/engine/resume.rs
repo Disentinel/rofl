@@ -81,8 +81,14 @@ impl Eval {
     /// is no way the cell was reached (agg_lattice_witness, docs/aggregates.md,
     /// "The order lattice, as built").
     pub(super) fn conclude_all(&mut self, r: &Rc<ERule>, sols: Vec<Sol>, mut out: Front, stale: bool) -> Result<Front, Halt> {
+        // what a cut would keep of the firing counts against the disk wall, as the store does
+        let held = |s: &Sol| (16 + s.s.len() * 12 + s.prems.len() * 8) as i64;
+        self.disk_held = if self.disk == i64::MAX { 0 } else { sols.iter().map(held).sum() };
         let mut it = sols.into_iter();
         while let Some(sol) = it.next() {
+            if self.disk_held > 0 {
+                self.disk_held -= held(&sol);
+            }
             if stale
                 && !self.lattices.is_empty()
                 && brk!("lattice_stale_solution" => false; sol.prems.iter().any(|p| matches!(p, PremRef::Fact(f) if !self.store.alive(*f))))
@@ -99,6 +105,7 @@ impl Eval {
                 return Err(e);
             }
         }
+        self.disk_held = 0;
         Ok(out)
     }
 
@@ -171,7 +178,7 @@ impl Eval {
     /// steps; a world with no cut to go on from is evaluated again whole
     /// under the steps spent and `more`. True when it went on.
     pub fn resume(&mut self, more: i64) -> Result<(Outcome, bool), Halt> {
-        let cut = self.cut.take().filter(|c| {
+        let cut = self.cut.take().filter(|_| brk!("disk_resume_from_scratch" => !self.disk_cut(); true)).filter(|c| {
             !self.store.dirty && self.store.partial_eval && c.facts == self.store.len_ids() as usize && c.tick == self.store.tick
         });
         let Some(cut) = cut else {
@@ -179,7 +186,7 @@ impl Eval {
             return Ok((self.run()?, false));
         };
         if let Some(id) = cut.hole {
-            let why = self.v.budget_reason;
+            let why = self.store.args(id).get(1).and_then(|t| t.as_atom()).unwrap_or(self.v.budget_reason);
             let target = self.hole_id;
             self.holes_met.remove(&(target, why));
             if let Some(i) = self.holes_now.iter().rposition(|x| *x == (target, why)) {
@@ -194,6 +201,7 @@ impl Eval {
         self.wall_spent.set(None);
         self.store.vlisted = false;
         self.budget = self.steps + more;
+        self.disk_held = 0;
         self.resume_at = Some(cut);
         let out = self.run_pass_from();
         self.resume_at = None;

@@ -39,7 +39,8 @@ fn read_patterns(r: &mut VolR) -> Result<Option<Rc<ArgIndex>>, String> {
         let pos: Box<[usize]> = r.arena::<u32>()?.iter().map(|&p| p as usize).collect();
         let values = r.u64()? as usize;
         let (slots, ids, prev): (Arena<u32>, Arena<FactId>, Arena<u32>) = (r.arena()?, r.arena()?, r.arena()?);
-        if !slots.len().is_power_of_two() || ids.len() != prev.len() || slots.iter().chain(prev.iter()).any(|&e| e != EMPTY && e as usize >= ids.len()) {
+        // its entries are not walked: the sum the volume ends in held, so one out of range is the writer's defect
+        if !slots.len().is_power_of_two() || ids.len() != prev.len() {
             return Err("a volume's argument index is not an index".into());
         }
         by_pat.insert(mask, PatIndex { pos, slots, ids, prev, values, under: None });
@@ -64,9 +65,9 @@ impl Tuples {
             return w.arena(&a.cons);
         }
         let at = b.args.len() as u32;
-        w.arena_parts(&[&b.ends, &t.ends.iter().map(|e| e + at).collect::<Vec<u32>>()]);
-        w.arena_parts(&[&b.sks, &t.sks]);
-        w.arena_parts(&[&b.args, &t.args]);
+        w.arena_parts(&b.ends, &[&t.ends.iter().map(|e| e + at).collect::<Vec<u32>>()]);
+        w.arena_parts(&b.sks, &[&t.sks]);
+        w.arena_parts(&b.args, &[&t.args]);
         let mut cap = b.cons.len();
         for len in b.len()..self.len() {
             if (len + 1) * 4 >= cap * 3 {
@@ -132,7 +133,7 @@ impl Store {
         }
         let f = &self.facts;
         col(w, &f.recs);
-        w.arena_parts(&[&f.bflags, &f.recs.own.iter().map(|r| r.flags()).collect::<Vec<u8>>()]);
+        w.arena_parts(&f.bflags, &[&f.recs.own.iter().map(|r| r.flags()).collect::<Vec<u8>>()]);
         f.tups.write(w);
         self.write_keys(w);
         let mut rels: Vec<(&Sym, &Vec<(Sym, KeyRun)>)> = self.idx.iter().collect();
@@ -193,6 +194,15 @@ impl Store {
         w.arena(&seals);
         match &self.citers {
             None => w.u32(0),
+            // over a base the column stays as the base holds it, and the citers since come after it
+            Some(ix) if w.is_over() => {
+                w.u32(2);
+                w.arena(&ix.offs);
+                w.arena(&ix.ids);
+                let mut more: Vec<(&FactId, &Vec<FactId>)> = ix.more.iter().collect();
+                more.sort_unstable_by_key(|m| *m.0);
+                w.arena(&more.iter().flat_map(|(g, v)| v.iter().flat_map(move |id| [**g, *id])).collect::<Vec<u32>>());
+            }
             Some(ix) => {
                 let ix = ix.flat(self.facts.len());
                 w.u32(1);
@@ -209,17 +219,26 @@ impl Store {
                 w.arena(&rows.concat());
             }
         }
+        let row = |k: Sym, &(ci, book, a, d): &(usize, Sym, Term, Term)| [k as u64, ci as u64, book as u64, a.bits(), d.bits()];
+        let same = self.vrow_kept.len() == 5 * self.vrow_of.len() && self.vrow_kept.chunks_exact(5).all(|x| self.vrow_of.get(&(x[0] as Sym)).is_some_and(|v| row(x[0] as Sym, v)[..] == *x));
+        if same {
+            w.arena(&self.vrow_kept);
+        } else {
+            let mut vrows: Vec<[u64; 5]> = self.vrow_of.iter().map(|(k, v)| row(*k, v)).collect();
+            vrows.sort_unstable();
+            w.arena(&vrows.concat());
+        }
     }
 
-    /// The key table as `freeze` would leave it: the layer's facts put in the base's table where it is the size a
-    /// table of them all is made, else that table made.
+    /// The key table: the layer's facts put in the base's table while it has room for them as `key_insert` leaves
+    /// room, else a table of them all made.
     fn write_keys(&self, w: &mut VolW) {
         let (n, mark) = (self.facts.len(), self.facts.recs.mark);
         if mark == 0 {
             w.arena(&self.keys);
         } else if self.keys.is_empty() {
             w.arena(&self.keys_base);
-        } else if ((n + 1) * 4).next_power_of_two().max(64) == self.keys_base.len() {
+        } else if (n + 1) * 4 < self.keys_base.len() * 3 {
             let put = placed(&self.keys_base, EMPTY, (mark as FactId..n as FactId).map(|id| {
                 let r = self.facts.recs[id as usize];
                 (hash_key(r.rel, r.persp, self.args(id)), id)
@@ -322,13 +341,21 @@ impl Store {
             }
         }
         s.cells = Rc::new(c);
-        if r.u32()? == 1 {
+        let layered = r.u32()?;
+        if layered != 0 {
             let (offs, ids): (Arena<u32>, Arena<FactId>) = (r.arena()?, r.arena()?);
             let n = s.facts.len();
-            if offs.len() != n + 1 || offs.windows(2).any(|w| w[0] > w[1]) || offs[n] as usize != ids.len() || ids.iter().any(|&i| i as usize >= n) {
+            let mut more: HashMap<FactId, Vec<FactId>> = HashMap::new();
+            if layered == 2 {
+                for p in r.arena::<u32>()?.chunks_exact(2) {
+                    more.entry(p[0]).or_default().push(p[1]);
+                }
+            }
+            let to = offs.len().saturating_sub(1);
+            if offs.is_empty() || to > n || offs[to] as usize != ids.len() || (layered == 1 && to != n) {
                 return Err("a volume's citer index is not an index".into());
             }
-            s.citers = Some(Rc::new(Citers { offs, ids, ..Citers::default() }));
+            s.citers = Some(Rc::new(Citers { offs, ids, more }));
         }
         if r.u32()? == 1 {
             let words: Arena<u32> = r.arena()?;
@@ -341,6 +368,12 @@ impl Store {
             }
             s.vciters = Some(Rc::new(m));
         }
+        let vrows: Arena<u64> = r.arena()?;
+        if vrows.len() % 5 != 0 {
+            return Err("a volume's rows of a tree are not rows".into());
+        }
+        s.vrow_of = vrows.chunks_exact(5).map(|x| (x[0] as Sym, (x[1] as usize, x[2] as Sym, Term::from_bits(x[3]), Term::from_bits(x[4])))).collect();
+        s.vrow_kept = vrows;
         Ok(s)
     }
 }

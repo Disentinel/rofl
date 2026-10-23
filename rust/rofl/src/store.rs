@@ -365,6 +365,22 @@ impl PatIndex {
         }
     }
 
+    /// `k` is in the chain of `vals`: a fact taken out stays in the index until it is put again.
+    fn holds(&self, facts: &Facts, vals: &[Term], k: FactId) -> bool {
+        let mut e = self.slots[self.slot(facts, vals)];
+        while e != EMPTY {
+            if self.ids[e as usize] == k {
+                return true;
+            }
+            e = self.prev[e as usize];
+        }
+        self.under.as_ref().is_some_and(|u| u.holds(facts, vals, k))
+    }
+
+    fn entries(&self) -> usize {
+        self.ids.len() + self.under.as_ref().map_or(0, |u| u.entries())
+    }
+
     fn put(&mut self, facts: &Facts, sig: &[Term], k: FactId) {
         if self.slots.is_mapped() {
             let base = std::mem::replace(self, PatIndex::new(&self.pos));
@@ -497,6 +513,8 @@ impl PatIndex {
 }
 
 const MIN_INDEXED: usize = 16;
+/// What the indexes of a kept volume take for one fact: its place in its relation's runs and in a pattern's table.
+const IDX_PER_FACT: usize = 40;
 const MAX_PATTERNS: usize = 8;
 
 pub type TupId = u32;
@@ -1050,6 +1068,8 @@ pub struct Store {
     pub vwit: bool,
     /// The row a `PremRef::VRow` key names: the closure's number, the book and the two ends.
     pub vrow_of: HashMap<Sym, (usize, Sym, Term, Term)>,
+    /// `vrow_of` as the volume it was read from held it: written again by reference while it holds the same rows.
+    pub(crate) vrow_kept: Arena<u64>,
     /// The rules whose cells are a counting tag's (the engine's sum over the
     /// derivations `p@count`): their cells carry the `tag` flag.
     pub tag_rules: HashSet<Sym>,
@@ -1516,6 +1536,27 @@ impl Store {
     pub fn fact_count(&self) -> usize {
         self.n_live
     }
+    /// What a volume of this store takes, from the lengths of what it holds rather than from what it has
+    /// allocated: so the same world measures the same however it was reached, cut and kept and opened or not.
+    /// The indexes are taken at what they cost a fact (`IDX_PER_FACT`), not walked.
+    pub fn kept_bytes(&self) -> u64 {
+        let t = &self.facts.tups;
+        let tup_args = t.base.args.len() + t.top.args.len();
+        let fired = self.fired.base.n + self.fired.own.len();
+        let cells = &self.cells;
+        (self.facts.len() * (std::mem::size_of::<FactRec>() + 1 + 4 + IDX_PER_FACT)
+            + t.len() * (4 + 8 + 16)
+            + tup_args * 8
+            + self.wit_head.len() * 4
+            + self.wits.len() * std::mem::size_of::<WitNode>()
+            + self.prem_arena.len() * std::mem::size_of::<PremRef>()
+            + fired * 16
+            + self.facts.len() * 4
+            + self.prem_arena.len() * 4
+            + cells.recs.len() * 96
+            + cells.members.len() * 48
+            + cells.prems.len() * std::mem::size_of::<PremRef>()) as u64
+    }
     /// Distinct argument tuples. Beside `fact_count` this is the SHARING the
     /// pool actually found, which is the number that decides whether it paid.
     pub fn tuple_count(&self) -> usize {
@@ -1672,6 +1713,7 @@ impl Store {
 
     /// `add`, and the fact's id whether it was new or not.
     pub fn put(&mut self, h: &Heap, rel: Sym, persp: Sym, args: &[Term], flags: u8) -> (FactId, bool) {
+        let mut revived = false;
         let id = match self.find_rec(rel, persp, args) {
             Some(id) if self.alive(id) => {
                 // a base fact put over a derived one is the fact a load would have made, scoped as it is: a
@@ -1694,6 +1736,7 @@ impl Store {
                     self.sweep();
                 }
                 self.facts.set_flags(id, flags);
+                revived = true;
                 id
             }
             None => {
@@ -1718,6 +1761,17 @@ impl Store {
         run.arrived.to_mut().push(id);
         if !ground {
             run.loose.push(id);
+        } else if revived && run.by_pat.is_some() {
+            // a fact put again may still be in an index (`sweep` keeps them): put where it is not
+            let facts = &self.facts;
+            let run = run_in(&mut self.idx, rel, persp);
+            let mut sig = Vec::new();
+            for ix in Rc::make_mut(run.by_pat.as_mut().unwrap()).values_mut() {
+                let pos = ix.pos.clone();
+                if pat_sig(h, &pos, facts.args(id), &mut sig) && !ix.holds(facts, &sig, id) {
+                    ix.put(facts, &sig, id);
+                }
+            }
         } else if run.by_pat.is_some() {
             run.staged.push(id);
         }
@@ -2272,10 +2326,6 @@ impl Store {
 
     // ------------------------------------------------------------ removals
 
-    fn drop_patterns(run: &mut KeyRun) {
-        run.by_pat = None;
-        run.staged.clear();
-    }
 
     pub fn remove_many(&mut self, ids: &[FactId]) {
         if ids.is_empty() {
@@ -2376,7 +2426,7 @@ impl Store {
             let dead: Vec<FactId> = run.canon.take();
             let dead2: Vec<FactId> = run.arrived.take();
             let loose: Vec<FactId> = std::mem::take(&mut run.loose);
-            Self::drop_patterns(run);
+            let staged: Vec<FactId> = std::mem::take(&mut run.staged);
             let alive: Vec<FactId> = dead
                 .into_iter()
                 .filter(|&i| self.facts.alive(i))
@@ -2389,11 +2439,25 @@ impl Store {
                 .into_iter()
                 .filter(|&i| self.facts.alive(i))
                 .collect();
+            let staged: Vec<FactId> = staged.into_iter().filter(|&i| self.facts.alive(i)).collect();
+            // an index keeps the facts taken out, which no probe answers, while they are not most of it: it is not
+            // built again, whole, for each fact a delta takes out
+            let live = alive.len() + alive2.len();
             let v = self.idx.get_mut(&rel).unwrap();
             let i = v.iter().position(|(p, _)| *p == persp).unwrap();
-            v[i].1.canon = alive.into();
-            v[i].1.arrived = alive2.into();
-            v[i].1.loose = loose;
+            let run = &mut v[i].1;
+            if let Some(bp) = run.by_pat.as_mut() {
+                if bp.values().any(|ix| ix.entries() > 2 * live + MIN_INDEXED) {
+                    Rc::make_mut(bp).retain(|_, ix| ix.entries() <= 2 * live + MIN_INDEXED);
+                }
+                if bp.is_empty() {
+                    run.by_pat = None;
+                }
+            }
+            run.canon = alive.into();
+            run.arrived = alive2.into();
+            run.loose = loose;
+            run.staged = if run.by_pat.is_some() { staged } else { Vec::new() };
         }
     }
 

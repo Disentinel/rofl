@@ -93,8 +93,8 @@ impl Interner {
             return w.arena(&n.slots);
         }
         let at = b.buf.len() as u32;
-        w.arena_parts(&[&b.buf, &t.buf]);
-        w.arena_parts(&[&b.ends, &t.ends.iter().map(|e| e + at).collect::<Vec<u32>>()]);
+        w.arena_parts(&b.buf, &[&t.buf]);
+        w.arena_parts(&b.ends, &[&t.ends.iter().map(|e| e + at).collect::<Vec<u32>>()]);
         let n = b.len() + t.len();
         let mut cap = b.slots.len();
         for k in b.len() + 1..=n {
@@ -497,8 +497,8 @@ impl Heap {
             return w.u64(f.cons_n as u64);
         }
         let at = b.args.len() as u32;
-        w.arena_parts(&[&b.funcs, &t.funcs.iter().map(|f| FuncNode { start: f.start + at, ..*f }).collect::<Vec<_>>()]);
-        w.arena_parts(&[&b.args, &t.args]);
+        w.arena_parts(&b.funcs, &[&t.funcs.iter().map(|f| FuncNode { start: f.start + at, ..*f }).collect::<Vec<_>>()]);
+        w.arena_parts(&b.args, &[&t.args]);
         let (mut cap, mut cons_n) = (b.cons.len(), b.cons_n);
         for len in b.funcs.len()..b.funcs.len() + t.funcs.len() {
             if (cons_n + 1) * 4 >= cap * 3 {
@@ -654,6 +654,13 @@ impl Heap {
 
     pub fn bytes(&self) -> usize {
         self.parts().iter().map(|(_, b)| b).sum()
+    }
+    /// What a volume of this heap takes, from lengths (`Store::kept_bytes`).
+    pub fn kept_bytes(&self) -> u64 {
+        // a hash table at the size its count asks, not the size a layer's own table has grown to
+        let n = |x: &Names| x.buf.len() + x.ends.len() * (4 + 16);
+        let f = |x: &Funcs| x.funcs.len() * (std::mem::size_of::<FuncNode>() + 16) + x.args.len() * 8;
+        (n(&self.syms.base) + n(&self.syms.top) + f(&self.base) + f(&self.top)) as u64
     }
     pub fn parts(&self) -> Vec<(&'static str, usize)> {
         vec![

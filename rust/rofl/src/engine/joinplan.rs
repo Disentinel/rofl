@@ -236,6 +236,33 @@ impl Eval {
         Stat { rows: rows as f64, fan: if rows == 0 { 0.0 } else { fan.max(1.0) } }
     }
 
+    /// The counts `delta_stat` took, kept with a volume: an edit to a world opened from disk plans from them instead
+    /// of counting each relation it reaches again, whole.
+    pub(crate) fn write_stats(&self, w: &mut crate::arena::VolW) {
+        let mut ks: Vec<&Vec<u64>> = self.delta_stats.keys().collect();
+        ks.sort_unstable();
+        let mut flat: Vec<u64> = Vec::new();
+        for k in ks {
+            let (then, rows, d) = self.delta_stats[k];
+            flat.push(k.len() as u64);
+            flat.extend(k);
+            flat.extend([then as u64, rows as u64, d as u64]);
+        }
+        w.arena(&flat);
+    }
+
+    pub(crate) fn read_stats(&mut self, r: &mut crate::arena::VolR) -> Result<(), String> {
+        let flat = r.arena::<u64>()?;
+        let mut i = 0;
+        while i < flat.len() {
+            let n = flat[i] as usize;
+            let k = flat.get(i + 1..i + 1 + n + 3).ok_or("a volume's planner counts are cut short")?;
+            self.delta_stats.insert(k[..n].to_vec(), (k[n] as usize, k[n + 1] as usize, k[n + 2] as usize));
+            i += 1 + n + 3;
+        }
+        Ok(())
+    }
+
     fn delta_build(&mut self, r: &Rc<ERule>, at: Option<usize>) -> Option<DeltaPlan> {
         if !self.delta_eligible(r) {
             return None;

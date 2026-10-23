@@ -81,6 +81,8 @@ check[checks]("rust/rofl/tests/demand_query.rs", "an_ask_of_a_sealed_body_refuse
 check[checks]("rust/rofl/tests/demand_query.rs", "a_question_that_runs_out_of_rows_writes_only_its_own_hole", test).
 check[checks]("rust/rofl/tests/demand_query.rs", "a_question_leaves_the_world_its_peak", test).
 check[checks]("rust/rofl/tests/demand_scale.rs", "a_recursion_through_a_closed_demand_relation_is_linear", test).
+check[checks]("rust/rofl/tests/disk.rs", "the_measure_bounds_the_volume", test).
+check[checks]("rust/rofl/tests/disk.rs", "a_cap_raised_goes_on_from_the_cut", test).
 check[checks]("rust/rofl/tests/explain.rs", "why_walks_the_derivation_to_its_axioms", test).
 check[checks]("rust/rofl/tests/explain.rs", "a_negated_premise_renders_as_finite_failure_with_its_demonstration", test).
 check[checks]("rust/rofl/tests/explain.rs", "a_builtin_premise_keeps_its_own_spelling", test).
@@ -253,6 +255,7 @@ check[checks]("rust/rofl/tests/tree.rs", "an_edge_relation_the_closure_is_conclu
 check[checks]("rust/rofl/tests/tree.rs", "a_retraction_where_no_witness_is_kept_evaluates_again", test).
 check[checks]("rust/rofl/tests/tree.rs", "a_snapshot_opened_and_not_evaluated_answers_the_closure_from_its_tree", test).
 check[checks]("rust/rofl/tests/volume.rs", "a_world_kept_as_a_volume_opens_as_itself", test).
+check[checks]("rust/rofl/tests/volume.rs", "edits_kept_as_overlays_open_as_the_fresh_world", test).
 check[checks]("rust/rofl/tests/why_bins.rs", "serve_answers_in_the_sessions_own_text", test).
 check[checks]("rust/rofl/tests/why_bins.rs", "load_prints_the_answers_in_flag_order_instead_of_the_state", test).
 check[checks]("rust/rofl/tests/why_bins.rs", "load_keeps_the_state_without_a_question_and_with_state", test).
@@ -886,6 +889,7 @@ test_file[checks]("rust/rofl/tests/datastrat_scale.rs").
 test_file[checks]("rust/rofl/tests/demand_fixpoint.rs").
 test_file[checks]("rust/rofl/tests/demand_query.rs").
 test_file[checks]("rust/rofl/tests/demand_scale.rs").
+test_file[checks]("rust/rofl/tests/disk.rs").
 test_file[checks]("rust/rofl/tests/explain.rs").
 test_file[checks]("rust/rofl/tests/incremental.rs").
 test_file[checks]("rust/rofl/tests/join_scale.rs").

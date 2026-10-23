@@ -29,6 +29,8 @@ pub struct Record {
     pub units: Vec<Unit>,
     /// each scan the world loaded, and what it brought
     pub scans: Vec<ScanUnit>,
+    /// the bytes it was given when it stopped at the disk wall (`rofl::engine::Eval::disk`), if it did
+    pub cut: Option<u64>,
 }
 
 #[derive(Clone)]
@@ -60,6 +62,13 @@ impl Record {
     }
 }
 
+/// The note `note` with the bytes its world was cut at (`Record::cut`) set to `cut`.
+pub fn recut(note: &str, cut: Option<u64>) -> String {
+    let mut v: Value = serde_json::from_str(note).unwrap_or_default();
+    v["cut"] = json!(cut);
+    v.to_string()
+}
+
 /// Whether `p` holds what was stamped `s`.
 pub fn holds(p: &str, s: &str) -> bool {
     rofl::brk!("kept_stale_files" => true; stamp(Path::new(p)) == s)
@@ -76,13 +85,36 @@ fn stamp(p: &Path) -> String {
         return format!("dir {}", Sum::of(names.join("\n").as_bytes()));
     }
     rofl::brk!("kept_stamp_mtime" => std::fs::metadata(p).and_then(|m| m.modified()).map_or_else(|_| "gone".into(), |t| format!("{t:?}"));
-        std::fs::read(p).map_or_else(|_| "gone".into(), |b| Sum::of(&b)))
+        summed(p))
+}
+
+/// The sum of a file's bytes, read again only when its length or change time moved since the sum was noted under
+/// `seen()`; a file changed less than a second ago is not noted, as a volume is not (`volume::check_seen`).
+fn summed(p: &Path) -> String {
+    let Ok(m) = std::fs::metadata(p) else { return "gone".into() };
+    let at = m.modified().ok();
+    let key = at.and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok()).map(|d| format!("{} {}", m.len(), d.as_nanos()));
+    let mark = key.as_ref().and(seen()).map(|d| d.join("files").join(Sum::of(p.as_os_str().as_encoded_bytes())));
+    if let (Some(k), Some(f)) = (&key, &mark) {
+        if let Some(sum) = std::fs::read_to_string(f).ok().and_then(|x| x.strip_prefix(&format!("{k} ")).map(str::to_string)) {
+            return sum;
+        }
+    }
+    let Ok(b) = std::fs::read(p) else { return "gone".into() };
+    let sum = Sum::of(&b);
+    if let (Some(k), Some(f), true) = (&key, &mark, at.is_some_and(|t| t.elapsed().is_ok_and(|e| e.as_secs() >= 1))) {
+        let tmp = f.with_extension(format!("{}.new", std::process::id()));
+        if f.parent().is_some_and(|d| std::fs::create_dir_all(d).is_ok()) && std::fs::write(&tmp, format!("{k} {sum}")).is_ok() && std::fs::rename(&tmp, f).is_err() {
+            let _ = std::fs::remove_file(&tmp);
+        }
+    }
+    sum
 }
 
 /// The binary answering, by its bytes.
 fn engine() -> String {
     static E: std::sync::OnceLock<String> = std::sync::OnceLock::new();
-    E.get_or_init(|| std::env::current_exe().and_then(std::fs::read).map_or_else(|_| "unknown".into(), |b| Sum::of(&b))).clone()
+    E.get_or_init(|| std::env::current_exe().map_or_else(|_| "unknown".into(), |p| summed(&p))).clone()
 }
 
 /// What the kept worlds of the question verbs may hold on disk together, in GB, unless `ROFL_CACHE_GB` says
@@ -167,10 +199,79 @@ mod win {
     }
 }
 
+/// The most a world kept at `kept` may take: the cap less what live writers are writing, and no more than the disk
+/// gives above its floor. Older kept worlds are not counted: they go to make room.
+pub fn most(kept: &str) -> Result<u64, String> {
+    let dir = Path::new(kept).parent().ok_or("no directory")?;
+    let room = free(dir).map(|f| f.saturating_sub(FLOOR));
+    if room == Some(0) {
+        return Err(format!("the disk has less than the {} free a kept world never takes", size(FLOOR)));
+    }
+    Ok(cap().saturating_sub(writing(dir, true)).min(room.unwrap_or(u64::MAX)))
+}
+
+/// What processes writing a kept world beside `dir`'s worlds have written so far; `live`, only those still alive
+/// (what a dead one left goes before a world is written: `sweep_orphans`).
+fn writing(dir: &Path, live: bool) -> u64 {
+    let dead = |name: &str| name.split_once(".vol.").and_then(|(_, r)| r.split('.').next()?.parse::<u32>().ok()).is_some_and(|pid| pid != std::process::id() && !alive(pid));
+    std::fs::read_dir(dir).map(|rd| rd.flatten().filter(|e| !e.path().extension().is_some_and(|x| x == "vol"))
+        .filter(|e| !live || !dead(&e.file_name().to_string_lossy())).filter_map(|e| e.metadata().ok()).filter(|m| m.is_file()).map(|m| m.len()).sum()).unwrap_or(0)
+}
+
+/// A size as `size` says it, for a message of another module.
+pub fn said_size(bytes: u64) -> String {
+    size(bytes)
+}
+
 /// The world of `s` kept at `kept` as a question verb keeps it: written no further than the cap and than the disk
 /// can give above its floor, so a world too large stops the writer at that size and is not kept; then the older
 /// kept worlds go, least recently used first, until all fit the cap. Why it was not kept, otherwise.
+/// A world kept by delta is written as an overlay over the whole volume it was opened from while the overlay is at
+/// most this part of it; past it the world is written whole again, and the overlay's dead weight with it.
+const OVER_PART: u64 = 4;
+
+/// `keep_capped`; with `over`, as an overlay over the whole volume the world was opened from, while it is there and
+/// the overlay stays small beside it. Whether it was written as one.
+pub fn keep_capped_over(s: &mut rofl::session::Session, kept: &str, note: &str, over: bool) -> Result<(u64, bool), String> {
+    let mut base = s.kept.clone().filter(|b| over && Path::new(&b.path).exists());
+    // the world's own slot holds its base: the base goes beside it under its sum, and the overlay takes the slot
+    if let Some(b) = base.as_mut().filter(|b| b.path == kept) {
+        let aside = format!("{}.{:016x}.vol", kept.trim_end_matches(".vol"), b.id);
+        match std::fs::rename(kept, &aside) {
+            Ok(()) => b.path = aside,
+            Err(_) => base = None,
+        }
+    }
+    if let Some(b) = &base {
+        s.kept = Some(b.clone());
+        match keep_bounded(s, kept, note, Some(b), Some(b.size / OVER_PART)) {
+            Err(e) if e == rofl::arena::TOO_LARGE => {}
+            r => return r.map(|n| (n, true)),
+        }
+    }
+    let n = keep_bounded(s, kept, note, None, None)?;
+    // a base no overlay is kept over any more is the world it was kept from, which this one replaces
+    if let Some(b) = base.filter(|b| b.path != kept) {
+        let p = Path::new(&b.path);
+        if p.parent().is_some_and(|d| overlays_of(d, p).is_empty()) {
+            let _ = std::fs::remove_file(p);
+        }
+    }
+    Ok((n, false))
+}
+
 pub fn keep_capped(s: &mut rofl::session::Session, kept: &str, note: &str) -> Result<u64, String> {
+    keep_bounded(s, kept, note, None, None)
+}
+
+/// The volumes beside `p` kept as overlays over it.
+fn overlays_of(dir: &Path, p: &Path) -> Vec<PathBuf> {
+    let Ok(rd) = std::fs::read_dir(dir) else { return Vec::new() };
+    rd.flatten().map(|e| e.path()).filter(|q| q.extension().is_some_and(|x| x == "vol") && rofl::volume::base_named(&q.to_string_lossy()).is_some_and(|b| Path::new(&b) == p)).collect()
+}
+
+/// `keep_capped` over `base`; with `part`, an overlay larger than it is not kept (`arena::TOO_LARGE`, said as is).
+fn keep_bounded(s: &mut rofl::session::Session, kept: &str, note: &str, base: Option<&rofl::volume::Kept>, part: Option<u64>) -> Result<u64, String> {
     let dir = Path::new(kept).parent().ok_or("no directory")?;
     std::fs::create_dir_all(dir).map_err(|e| format!("{}: {e}", dir.display()))?;
     // what writers killed before this one left goes before this one writes: it may be killed too
@@ -185,16 +286,17 @@ pub fn keep_capped(s: &mut rofl::session::Session, kept: &str, note: &str) -> Re
         return Err(format!("the disk has less than the {} free a kept world never takes", size(FLOOR)));
     }
     // what live writers have written so far is taken from the cap before this one writes
-    let writing: u64 = if orphans {
-        std::fs::read_dir(dir).map(|rd| rd.flatten().filter(|e| !e.path().extension().is_some_and(|x| x == "vol")).filter_map(|e| e.metadata().ok()).filter(|m| m.is_file()).map(|m| m.len()).sum()).unwrap_or(0)
-    } else {
-        0
-    };
+    let writing: u64 = if orphans { writing(dir, false) } else { 0 };
     let most = cap.saturating_sub(writing).min(room.unwrap_or(u64::MAX));
     let bound = rofl::brk!("kept_write_unbounded" => None; (!ignored).then_some(most as usize));
+    let bound = match (bound, part) {
+        (Some(b), Some(p)) => Some(b.min(p as usize)),
+        (b, p) => b.or(p.map(|p| p as usize)),
+    };
     let new = rofl::brk!("kept_shared_temp" => format!("{kept}.new"); format!("{kept}.{}.new", std::process::id()));
-    let bytes = match s.keep_volume_bounded(&new, note, bound) {
+    let bytes = match s.keep_volume_as(&new, note, bound, base) {
         Ok(n) => n as u64,
+        Err(e) if part.is_some() && e.to_string() == rofl::arena::TOO_LARGE => return Err(rofl::arena::TOO_LARGE.into()),
         Err(e) if e.to_string() == rofl::arena::TOO_LARGE || (bound.is_none() && !ignored) => {
             let _ = std::fs::remove_file(&new);
             return Err(format!("the world is larger than {}, the most it may take: the cap is {} (ROFL_CACHE_GB){}",
@@ -213,6 +315,10 @@ pub fn keep_capped(s: &mut rofl::session::Session, kept: &str, note: &str) -> Re
     let (mut older, mut others): (Vec<(std::time::SystemTime, u64, PathBuf)>, u64) = (Vec::new(), 0);
     for e in std::fs::read_dir(dir).map_err(|e| e.to_string())?.flatten() {
         let (p, Ok(m)) = (e.path(), e.metadata()) else { continue };
+        if base.is_some_and(|b| p == Path::new(&b.path)) {
+            others += m.len();
+            continue;
+        }
         if p == Path::new(kept) || p == Path::new(&new) || !m.is_file() {
             continue;
         }
@@ -226,6 +332,12 @@ pub fn keep_capped(s: &mut rofl::session::Session, kept: &str, note: &str) -> Re
     let mut total: u64 = older.iter().map(|o| o.1).sum::<u64>() + others + bytes;
     for (_, len, p) in older {
         if total <= cap || ignored { break; }
+        if !p.exists() { continue; }
+        // an overlay is read with its base: a base pushed out takes them
+        for o in overlays_of(dir, &p) {
+            let n = std::fs::metadata(&o).map(|m| m.len()).unwrap_or(0);
+            if std::fs::remove_file(&o).is_ok() { total = total.saturating_sub(n); }
+        }
         if std::fs::remove_file(&p).is_ok() { total -= len; }
     }
     if total > cap && !ignored {
@@ -258,7 +370,7 @@ fn sweep_orphans(dir: &Path) {
 /// `~/.cache/rofl/worlds`), beside the storeroom of scans. What else the world read is in the file's record,
 /// compared when it is opened (`moved`).
 pub fn slot(world: &[String], _files: &[String]) -> Option<String> {
-    let home = std::env::var_os("XDG_CACHE_HOME").map(PathBuf::from).or_else(|| std::env::var_os("HOME").map(|h| Path::new(&h).join(".cache")))?;
+    let home = cache_home()?;
     let key: &[String] = rofl::brk!("kept_key_ignores_walls" => _files; world);
     let named = format!("{}\0{}\0{}", key.join("\0"), env_now().join("\0"), engine());
     Some(home.join("rofl/worlds").join(format!("{}.vol", Sum::of(named.as_bytes()))).to_string_lossy().into_owned())
@@ -266,9 +378,16 @@ pub fn slot(world: &[String], _files: &[String]) -> Option<String> {
 
 /// A kept world used again is the most recently used.
 pub fn touch(kept: &str) {
-    if let Ok(f) = std::fs::OpenOptions::new().write(true).open(kept) {
-        let _ = f.set_modified(std::time::SystemTime::now());
-    }
+    rofl::volume::touch(kept, seen().as_deref());
+}
+
+/// Where the volumes found whole are noted (`volume::check_seen`): beside the kept worlds.
+pub fn seen() -> Option<PathBuf> {
+    Some(cache_home()?.join("rofl/seen"))
+}
+
+fn cache_home() -> Option<PathBuf> {
+    std::env::var_os("XDG_CACHE_HOME").map(PathBuf::from).or_else(|| std::env::var_os("HOME").map(|h| Path::new(&h).join(".cache")))
 }
 
 fn env_now() -> Vec<String> {
@@ -287,7 +406,7 @@ pub fn shown(p: &str) -> String {
 
 /// The record of a world evaluated from `args` that read `files` and whose scans are `scans`: refused when a scan
 /// named nothing it read, since whether the world it brought in is stale could not be told.
-pub fn record(args: &[String], world_files: &[String], units: &[Unit], files: &[String], scans: &[ScanUnit]) -> Result<String, String> {
+pub fn record(args: &[String], world_files: &[String], units: &[Unit], files: &[String], scans: &[ScanUnit], cut: Option<u64>) -> Result<String, String> {
     if let Some(s) = scans.iter().find(|s| s.cmd.is_some() && rofl::brk!("kept_blind_scans" => false; s.read.is_empty())) {
         return Err(format!("the scan `{} {}` named nothing it read (`-- reads: PATH`), so whether a kept world is stale could not be told", s.cmd.as_deref().unwrap_or(""), s.text));
     }
@@ -306,7 +425,7 @@ pub fn record(args: &[String], world_files: &[String], units: &[Unit], files: &[
     let cwd = (!scans.is_empty()).then(|| std::env::current_dir().map(|d| d.to_string_lossy().into_owned()).unwrap_or_default());
     let units: Vec<Value> = units.iter().map(|u| json!([u.path, u.rules, u.facts])).collect();
     let scans: Vec<Value> = scans.iter().map(|s| json!([s.kind, s.path, s.text, s.cmd, s.read, s.facts])).collect();
-    Ok(json!({ "kept": 2, "args": args, "files": world_files, "engine": engine(), "env": env_now(), "cwd": cwd, "read": read, "units": units, "scans": scans }).to_string())
+    Ok(json!({ "kept": 2, "args": args, "files": world_files, "engine": engine(), "env": env_now(), "cwd": cwd, "read": read, "units": units, "scans": scans, "cut": cut }).to_string())
 }
 
 /// What a kept world records of a scan it loaded: the request, the command, what it read, and the base facts it
@@ -349,7 +468,8 @@ pub fn parse(note: &str) -> Option<Record> {
         read: s.get(4)?.as_array()?.iter().map(|x| x.as_str().map(str::to_string)).collect::<Option<Vec<_>>>()?,
         facts: s.get(5)?.as_array()?.iter().map(|x| x.as_u64().map(|n| n as u32)).collect::<Option<Vec<u32>>>()?,
     })).collect::<Option<Vec<_>>>()?;
-    Some(Record { args, files, engine: v.get("engine")?.as_str()?.to_string(), env: strs("env")?, cwd: v.get("cwd")?.as_str().map(str::to_string), read, units, scans })
+    let cut = v.get("cut").and_then(|c| c.as_u64());
+    Some(Record { args, files, engine: v.get("engine")?.as_str()?.to_string(), env: strs("env")?, cwd: v.get("cwd")?.as_str().map(str::to_string), read, units, scans, cut })
 }
 
 /// The header of the kept world at `p`, its sum not read: to choose among kept worlds before opening one.

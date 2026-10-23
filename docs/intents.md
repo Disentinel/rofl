@@ -1,0 +1,393 @@
+# Intents: a world that wants, and adapters that do
+
+PRD, decisions and spec in one file. Designed with the owner on 2026-10-23;
+every decision below is his or was accepted by him in that conversation, and
+the open questions at the end are not decided. Nothing here is built yet. The
+phases and their order are in `facts/worklist.rofl` (`w_intent_*`).
+
+## 1. Why
+
+A ROFL world today reads what it is given, plus one kind of request it can
+make itself: `scan_request(Kind, Path)` runs a scanner and loads what it
+prints (docs/cli.md, *A world that asks for its own input*). Everything else a
+world might need from outside — a row of a database, the state of an issue in
+a tracker, a page of a remote API — has to be pulled in whole beforehand by a
+script the world knows nothing about. And a world never acts: what it
+concludes an agent or a person should do stays a relation somebody else must
+read and carry out by hand, without the world knowing whether it happened.
+
+**The goal (CLAUDE.md) this serves.** The engine is for agents. An agent that
+can ask a world "what should be done, and why" and then cannot let the world
+do it — or cannot let the world fetch the one fact it is missing — has to
+rebuild that loop outside, where nothing explains it. With intents:
+
+- a world fetches only what its question needs (a query to a database instead
+  of the database imported), which is the cone of docs/demand-cones.md carried
+  past the edge of the store;
+- a world's conclusion that something should be done becomes a request with a
+  why-tree, executed by an adapter, and the outcome comes back as facts the
+  world reasons about, failure and "we do not know if it happened" included;
+- every external call is explained (which rule, which facts asked for it) and
+  every fact that came back says where from and when.
+
+**What it is not.** Not a scripting layer, not a call stack, not a way for a
+rule to write into the world directly. A rule declares a need; whether and
+when the need is met is visible as facts, never assumed.
+
+## 2. The words
+
+Four things are easily read as one ("a plugin", "an effect", "a library", "an
+external call"). They are four, and three of them get names:
+
+| what | name |
+|---|---|
+| a derived row: "the world wants X with these arguments" | **want** |
+| a declared form of something the world can want: its arguments, what comes back, its class | **capability** |
+| what executes capabilities: a remote server, a program, a database connection, a renderer | **adapter** |
+| what comes back | **facts** — ordinary facts whose provenance names the adapter and the want |
+
+- **Effect** is not a name: it is the *class* of a capability, one of
+  `reads`, `shows`, `does`.
+- **Library** stays the word for rules (`rules/net/`, ...). A library may
+  require capabilities; it never executes anything.
+- **A scanner is an adapter** whose capabilities all read. Nothing new is
+  added beside `scanner`/`scan_request`; they become the first case of the
+  general form (phase 3).
+
+Rejected names, with the reason: `invoke` (a rule invokes nothing: between it
+and the call stand permission, deduplication and possibly a missing adapter;
+"invoked" is the word of the execution journal, where it is true); `receipt`
+(what returns is facts, not a separate entity); `ask` and `demand` (taken by
+`rofl ask` and by demand cones).
+
+## 3. Decisions
+
+### D1. An adapter's manifest is a ROFL book, and using it is importing it
+
+To call a capability the world must know it exists, which is a fact read from
+somewhere; reading it is importing the adapter's book. So the manifest is that
+book, written in ROFL, versioned in git like any rule.
+
+```
+-- adapters/tracker.rofl — generated from the server's tools/list, 2026-10-23
+adapter(tracker, mcp, "https://mcp.tracker.example").
+adapter_auth(tracker, env, "TRACKER_TOKEN").
+capability(tracker_transition, tracker, does).
+arg(tracker_transition, 1, issue_key, text).
+arg(tracker_transition, 2, to, text).
+idempotent(tracker_transition, engine).
+```
+
+Discovery is not a runtime mechanism but **an engine feature that generates
+the book**: `rofl adapter mcp URL` (and `openapi URL`, `exec CMD --describe`)
+prints it. Pinning a version is git; a server that changed its schema is a
+diff in a PR after regeneration. Books of adapters that cannot describe
+themselves (a program, a database, a renderer) are written by hand.
+
+*Alternatives:* a declaration written only by hand beside the rules (drifts
+from the adapter); a manifest file in a foreign format (only for adapters we
+ship); live discovery at connect time (the world depends on whatever the
+server answers today). The book subsumes all three.
+
+**Declared is not connected.** The book says a capability exists. If the
+secret is missing or the server is down, a want is refused with *declared, not
+connected*, not *no such capability*. A world never holds a secret: only its
+name (`env`, a secret store key).
+
+### D2. Three classes, and only one of them may change the world outside
+
+| class | examples | where it runs |
+|---|---|---|
+| `reads` | a scanner, a database query, GET on an API, another ROFL world | as part of evaluation: wants of a tick are sent, answers arrive, evaluation goes on until nothing new is asked (as `scan_request` today) |
+| `shows` | a UI card, a chart, a notification draft | after the fixpoint; never feeds back |
+| `does` | an issue transition, a merge, a message sent | only through the dispatcher, only if permitted (D6), never inside a fixpoint |
+
+A capability whose class an adapter cannot prove is `does`. MCP's
+`readOnlyHint` is the server's word, not ours: a generated book marks such
+tools `does` and a person changes the line to `reads`.
+
+### D3. An adapter is a standing book: a small world of its own
+
+A want is a message into the adapter's inbox; the adapter's book changes as it
+works; the main world reads that book like any other (`issue_state[tracker](K, S)`).
+The main world never waits. It may run 300 ticks before an answer arrives;
+"waiting" is a fact:
+
+```
+pending(W) :- want(W), not answered(W).
+```
+
+and the continuation of a want is an ordinary rule that reads the answer,
+fired when the answer's facts arrive by delta. There is no call stack and no
+suspended evaluation. *Rejected:* requests pinned with `@next` and kept on a
+stack until answered — it brings control flow into the language, makes answers
+depend on who waited for whom, and cannot live in a kept world.
+
+This is a federation of books, the same shape as Roflenox's signed per-owner
+books and as Erlang/Elixir processes with mailboxes, with one difference from
+the latter: the state of the process is not hidden, it is facts with a why.
+One mechanism serves an adapter in the process, a remote service and a
+colleague's ROFL world.
+
+### D4. Negation across a book boundary is about the current tick
+
+docs/time-and-continuity.md decided on 2026-08-30 that `not p` means "p is
+not derivable in the current tick's store". That is exactly the closed
+snapshot a federation needs: `pending(W)` at tick 300 means "at tick 300 no
+answer had arrived", and its why says so. Monotonic rules over an adapter's
+book give the same answer whatever order its facts arrive in (the CALM
+theorem); a rule that negates an adapter's book is a statement about a tick,
+and the journal (D5) makes that tick reproducible.
+
+### D5. Bitemporal journal: when the world learned it, when it happened
+
+The engine runs ticks continuously; each tick has a wall-clock stamp. A fact
+of an adapter's book is journaled as an interval of ticks — *appeared at tick
+253, gone at tick 752* — with `tick_at(253, "2026-10-23T11:40:07Z")`. That is
+transaction time. A source that knows when something happened says so in the
+fact itself (a deploy at 11:38 learned at 11:40): valid time.
+
+- A past moment is replayed from the journal: the state at tick t is the
+  world's own inputs plus every adapter book's facts whose interval covers t.
+  Determinism makes the replay the same state, not an approximation (the OOPS
+  measurement in docs/time-and-continuity.md).
+- **The journal of `does` is history, not cache.** A scan's output can be
+  thrown away and rebuilt (the storeroom of scans); the outcome of a call with
+  an effect cannot be obtained again by calling again. It is append-only and
+  `--anew`, a re-evaluation or a replay never executes a `does` want again.
+
+### D6. A want is executed only if permitted, and the permission is a rule
+
+```
+permit(W) :- want(W), capability_class(W, reads).
+permit(W) :- want(W), approved(W).          -- approved: a fact from a person, via an adapter
+```
+
+A veto the model can express belongs in the model (docs/time-and-continuity.md,
+*Where a veto belongs*), so the dispatcher sends only wants with `permit`, and
+"why was this not done" has an answer. A person's approval is itself a fact
+arriving from an adapter (a UI, a tracker), never typed into the world. The
+rules that grant permission are protected: an agent that proposes rules may
+not change `permit` or anything it reads (phase 6).
+
+### D7. The idempotency key is part of the adapter's contract
+
+The engine computes the key: a hash of the want's row and the version of the
+adapter's book. An adapter honours it (an `Idempotency-Key` header, a
+transaction keyed by it) or declares `idempotent(Cap, engine)`, and then the
+engine's journal deduplicates and a lost answer is the outcome *unknown* until
+a read of the world settles it. A want that disappears before it is sent is
+cancelled; after it is sent nothing is undone — compensation is a new want.
+
+### D8. The unit of exchange is a batch
+
+Each tick the engine hands an adapter all permitted wants of one capability at
+once; the adapter answers per key, and a partial answer is allowed (some
+answered, some failed, some still in flight). How the adapter executes a batch
+is its own business: one `IN (...)` query, N HTTP calls, one MCP call each.
+This is what keeps a recursive rule through a database from being N+1 round
+trips, and what lets thousands of reads at the reference scale go as a few
+calls.
+
+### D9. Outcomes are facts, and there are five
+
+| outcome | fact |
+|---|---|
+| not sent: no adapter, not permitted, awaiting approval, declined, duplicate of a sent want | `want_held(W, Why)` |
+| sent, no answer yet | `pending(W)` (derived) |
+| failed: error, refused by the far side, timeout before sending | `failed(W, Reason)` |
+| answered | the capability's answer facts, keyed by W, plus `answered(W)` |
+| unknown: sent, the answer lost | `outcome_unknown(W)`, settled only by a later read of the world |
+
+An adapter's answer is a fact about **the call** ("sent, 200, issue id X").
+What the world became ("the issue is done") comes from the source's ordinary
+reading adapter when it sees it — an adapter does not declare the world's
+state, just as an agent does not close a stage by saying it did. `whynot` on
+anything downstream walks into these: *the want was sent, the adapter answered
+`failed(W, "no permission on project")`*.
+
+### D10. Where answers go is declared by the capability, not by the want
+
+Each adapter's facts live in its own book and volume; the capability declares
+the relations it answers with. A want carries only arguments and its key. A
+rule that could choose where an answer is written could write into the world
+anywhere, past its sources.
+
+## 4. Spec
+
+### 4.1 Syntax
+
+```
+-- in an adapter's book (D1)
+adapter(Name, Kind, Address).                 -- Kind: mcp | openapi | exec | sql | render | rofl
+adapter_auth(Name, Store, Key).               -- Store: env | secret
+capability(Cap, Adapter, Class).              -- Class: reads | shows | does
+arg(Cap, Position, Name, Type).               -- Type: text | number | atom | time | json
+answers(Cap, Relation, Arity).                -- the relation its facts arrive in, first column the want's key
+idempotent(Cap, adapter | engine).
+query(Cap, Template).                         -- sql: a parameterised template; never a string from a rule
+returns_schema(Cap, Json).                    -- mcp/openapi: the output schema the book was generated from
+
+-- in a world
+want tracker_transition(K, done) :- stage_done(W, N), issue_of(W, K).
+```
+
+`want Cap(Args) :- Body.` is a rule whose head is a request, not a fact. The
+engine gives every want a key and the rows `want(W)`, `want_of(W, Cap)`,
+`want_arg(W, I, V)` in the kernel book, so other rules can read *that* a want
+exists — never in the same stratum as the rule that derived it.
+
+### 4.2 Checks at load, each a refusal naming the place
+
+1. Every `want Cap(...)` names a capability of an imported adapter book.
+2. Arity and types match `arg`.
+3. No rule reads an adapter's `answers` relation and also derives a want it
+   depends on within one tick's stratum (a want's answer is always a later
+   tick).
+4. A `shows` capability's answers are read by no rule.
+5. No rule an agent submitted (phase 6) defines `permit` or a relation `permit`
+   reads.
+
+### 4.3 The adapter protocol
+
+The common form of all kinds, local or remote:
+
+- **in**: a batch `{capability, book_version, wants: [{key, args}]}`;
+- **out**: ROFL facts (the same text a scanner prints), each answer fact
+  carrying the want's key, plus `failed(Key, Reason)` rows; `-- reads: PATH`
+  lines as scanners print them today, for the storeroom's stamps.
+
+Built-in kinds translate this form: `mcp` (one `tools/call` per want, answers
+by `outputSchema` when the tool has one, otherwise the book names a parse rule
+and without one the answer is `failed(K, "no way to read the answer")`),
+`openapi` (operation per capability, GET `reads`, the rest `does`), `exec` (a
+command; `scanner(...)` today), `sql` (a long-lived connection; answers stamped
+with the transaction's snapshot), `rofl` (another world's `serve`), `render`
+(in process).
+
+### 4.4 CLI
+
+- `rofl adapter mcp|openapi|exec ADDRESS` prints a generated adapter book.
+- Every verb that evaluates (`load`, `ask`, `why`, `whynot`, `serve`) runs
+  `reads` wants as `scan_request` runs today.
+- `does` wants are sent only by a long-running `rofl serve` with a journal
+  directory; a one-shot verb lists them (`--json` included) and sends nothing.
+- No new knob: the journal directory is the kept world's place.
+
+## 5. Scale (the five questions of a brief, CLAUDE.md)
+
+1. **What it moves.** "A repeated question answered in about a second" and
+   "an edit costs in proportion to the edit" extended to inputs that are not
+   files: a world asks for the rows a question needs instead of loading a
+   source whole. Measured as facts loaded and seconds against importing the
+   same source whole, on the same question.
+2. **How inputs change.** An agent edits one file of 11 100 and asks again;
+   wants derived from unchanged facts are unchanged rows and are not sent
+   again (D7); only the delta's new wants go out.
+3. **At the reference scale.** A want per file is 11 100 rows and, batched per
+   capability per tick (D8), a few calls; the journal is append-only and grows
+   with calls, not with the world. A world must not hold an adapter's whole
+   source; the cap on a batch and on wants per tick holds the reference scale.
+4. **What it blocks.** Nothing that works today: `scanner`/`scan_request` keep
+   their behaviour and become the first adapter kind (phase 3), checked against
+   their current tests byte for byte.
+5. **Acceptance measures the goal.** Each phase's acceptance below is a number
+   on a corpus, or a planted fault that must turn red, not "the code does what
+   this file says".
+
+## 6. Phases
+
+Each is an item in `facts/worklist.rofl`, in this order; each needs the ones
+before it.
+
+0. **`w_intent_tick_journal`** — the journal of D5 in the Rust engine: base
+   facts carry the tick they appeared and the tick they went (`asserted_by`
+   already carries the first, engine.rs), `tick_at(T, Time)`, and a past tick
+   rebuilt from the journal. *Acceptance:* a sequence of ticks with assertions
+   and retractions replayed to any tick equals, byte for byte, the state the
+   live run had there; planted: an interval closed one tick late is red.
+1. **`w_intent_want_syntax`** — `want` heads, the kernel rows, the load checks
+   of 4.2 in both engines (TS checks wants; executing is Rust only, per the
+   engine rule). *Acceptance:* each check refuses its planted program with the
+   place named; worlds without wants are unchanged in every golden.
+2. **`w_intent_adapter_book`** — the vocabulary of 4.1 and the protocol of
+   4.3 with the `exec` kind; `reads` wants run per tick in batches; outcomes of
+   D9 as facts. *Acceptance:* a recursive rule through an `exec` adapter sends
+   one batch per tick, not one call per want (counted); a killed adapter gives
+   `failed`, a lost answer `outcome_unknown`.
+3. **`w_intent_scanner_as_adapter`** — `scanner`/`scan_request` become the
+   `exec` adapter's reading capability, the storeroom of scans its cache.
+   *Acceptance:* every world that uses them today gives the same golden; the
+   kept-world and storeroom tests unchanged.
+4. **`w_intent_sql_adapter`** — the `sql` kind: parameterised templates,
+   snapshot-stamped answers, batched wants. *Acceptance:* on a database of
+   the order of the reference corpus, a question answered from wants loads the
+   rows it needs (counted) against importing the table whole; a planted raw
+   SQL argument is refused at load.
+5. **`w_intent_mcp_adapter`** — `rofl adapter mcp URL` generates a book;
+   the `mcp` kind executes it. *Acceptance:* a book generated from a test MCP
+   server, regenerated after the server changed a tool, differs by exactly that
+   tool; a `does` tool runs once per key across a re-evaluation and a replay.
+6. **`w_intent_does_dispatch`** — the dispatcher of D2 and D6 in `rofl serve`:
+   `permit`, approvals as adapter facts, the append-only `does` journal, the
+   protection of permission rules. *Acceptance:* `--anew` and a replay execute
+   no `does` want again (planted re-execution is red); a want without `permit`
+   is never sent (planted bypass is red).
+7. **`w_intent_scenarios`** — the examples of section 7 as worlds in
+   a new directory `intents` under `examples`, each checked by `npm test`.
+
+**Blocker of all of it:** phase 0. Without dated inputs and intervals neither
+replay nor the negation of D4 is reproducible.
+
+## 7. Scenarios the design must carry
+
+Chosen to be as unlike each other as possible; each becomes a world in
+a new directory `intents` under `examples` (phase 7).
+
+1. **A database queried on demand** (`sql`, `reads`): which tenants' orders
+   break an invariant, asking only for the orders of tenants the question
+   reaches; recursion through the database batched per tick.
+2. **A remote MCP server** (`mcp`, `does`): a tracker issue moved when a rule
+   says its stage is done; once per key; failure and unknown outcome visible
+   to whynot.
+3. **A local program** (`exec`, `reads`): today's scanners, unchanged in
+   behaviour.
+4. **A UI** (`render`, `shows`): a screen as `show`/`fill`/`click` rows over a
+   kit whose components are capabilities with slots; a click is a fact from the
+   UI adapter (the slot form is sketched outside this repository).
+5. **Another ROFL world** (`rofl`, `reads`): a colleague's world served by
+   `rofl serve`, its answers facts of a signed book; why stops at the boundary
+   unless that world grants its own why.
+6. **An HTTP API without MCP** (`openapi`): a book generated from a spec, GET
+   capabilities `reads`, the rest `does`.
+
+## 8. Prior art
+
+- **Dedalus and Bloom** (Alvaro, Hellerstein et al., Berkeley): Datalog in time;
+  an `@async` rule's conclusion arrives at some later tick. D3 and D4.
+- **The CALM theorem** (Hellerstein, Alvaro): monotonic programs need no
+  coordination. D4.
+- **Algebraic effects and handlers** (Eff, Koka, OCaml 5): an operation's
+  signature (capability), its handler (adapter), an unhandled effect refused
+  before running (4.2, check 1).
+- **Erlang/Elixir processes**: a mailbox, no shared waiting, a crash is a
+  message to whoever watches. D3, with the process state as facts.
+- **Bitemporal stores** (XTDB, Datomic's history): valid and transaction time.
+  D5.
+- **MCP**: `tools/list` with input and output schemas, tool annotations as
+  hints. D1, D2, 4.3.
+
+## 9. Open questions
+
+1. The `want` syntax: a keyword before the head (as above), or a head in an
+   adapter's book (`tracker_transition(...)` written as a rule head, the book
+   making it a want)?
+2. A cap on wants per tick and per batch: a world's budget like `--budget`, or
+   declared per capability in the adapter's book?
+3. Valid time: a convention for answer facts (`at(Fact, Time)`), or a column
+   each capability declares?
+4. An adapter's book signed (Roflenox) from the start, or plain until a second
+   owner appears?
+5. Recursion through an adapter: allowed and measured (the owner, 2026-10-23:
+   try it and see where it spoils things and where it opens new ways of
+   programming), with the per-want call count in the cost report.
