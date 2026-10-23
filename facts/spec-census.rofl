@@ -230,6 +230,10 @@ check[checks]("rust/rofl/tests/session.rs", "ask_agrees_with_the_stores_own_cens
 check[checks]("rust/rofl/tests/session.rs", "a_bound_ask_finds_exactly_its_fact", test).
 check[checks]("rust/rofl/tests/session.rs", "a_repeated_variable_constrains_and_wildcards_are_columns", test).
 check[checks]("rust/rofl/tests/session.rs", "assert_refuses_a_rule_and_a_variable", test).
+check[checks]("rust/rofl/tests/sql.rs", "a_question_loads_only_the_rows_it_reaches", test).
+check[checks]("rust/rofl/tests/sql.rs", "an_argument_is_bound_never_written_into_the_query", test).
+check[checks]("rust/rofl/tests/sql.rs", "a_template_a_rule_builds_is_refused", test).
+check[checks]("rust/rofl/tests/sql.rs", "a_database_that_is_not_there_fails_its_wants", test).
 check[checks]("rust/rofl/tests/structure.rs", "a_declaration_changes_no_fact_and_the_planner_reads_its_promise", test).
 check[checks]("rust/rofl/tests/structure.rs", "a_broken_promise_is_refused_naming_the_key_and_both_values", test).
 check[checks]("rust/rofl/tests/structure.rs", "the_promise_is_judged_at_every_tick", test).
@@ -923,6 +927,7 @@ test_file[checks]("rust/rofl/tests/retract_set.rs").
 test_file[checks]("rust/rofl/tests/ring1_agg.rs").
 test_file[checks]("rust/rofl/tests/scan.rs").
 test_file[checks]("rust/rofl/tests/session.rs").
+test_file[checks]("rust/rofl/tests/sql.rs").
 test_file[checks]("rust/rofl/tests/structure.rs").
 test_file[checks]("rust/rofl/tests/structures.rs").
 test_file[checks]("rust/rofl/tests/sub_scale.rs").

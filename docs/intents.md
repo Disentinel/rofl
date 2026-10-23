@@ -530,3 +530,37 @@ an exec adapter.
 - **Acceptance.** The scan worlds' goldens, `tests/scan.rs` and the kept-world
   cases unchanged; an adapter that names what it read runs once for two
   worlds, and again when what it read changes.
+
+### Phase 4, as built (2026-10-23)
+
+`run_sql` in `rust/rofl/src/adapter.rs`, on SQLite (the `rusqlite` crate with
+SQLite built in, so nothing to install and nothing to start for a test);
+`rust/rofl/tests/sql.rs`.
+
+```
+adapter(shop, sql, "shop.db").
+capability(orders_of, shop, reads).
+arg(orders_of, 1, tenant, text).
+answers(orders_of, order, 3).
+query(orders_of, "SELECT id, amount FROM orders WHERE tenant = ?1").
+want orders_of(T) :- asked(T).
+```
+
+- **A template, never a string from a rule.** A want's arguments are bound to
+  the template's parameters, in the order of its `arg` rows; nothing a rule
+  derives is written into the SQL. A rule that concludes `query(Cap, T)` is
+  refused when the world is evaluated (check 5 of `engine/want.rs`, and in
+  `src/want.ts`), so a template is always a line of the adapter's book.
+- **A batch is one read transaction** on a connection opened read-only and
+  kept for the process; every query of the batch sees one snapshot, and each
+  want is stamped `sql_snapshot(W, N)` with the database's `data_version`
+  there. A row is `order[shop](W, Id, Amount)`; a want with no row is
+  `answered(W)`; a query that fails, a database that is not there, a column
+  count that does not match the `answers` arity fail the batch.
+- **Acceptance.** 11 100 orders of 1 110 tenants; a question about three
+  tenants loads 30 rows and gives the answer the same rules give over the
+  table imported whole (11 100 facts). A tenant named like an injection
+  (`t1' OR '1'='1`) reads nothing. Planted `sql_arguments_spliced` (the
+  arguments written into the template) and `sql_query_from_rule` are red.
+- **Not done.** PostgreSQL and other databases; a batch as one `IN (...)`
+  query; closing a kept connection with its world.

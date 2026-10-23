@@ -23,8 +23,11 @@ use crate::term::{Term, TermK};
 struct Batch {
     cap: String,
     adapter: String,
+    kind: String,
     cmd: String,
     input: String,
+    params: Vec<Vec<serde_json::Value>>,
+    template: Option<String>,
     wants: Vec<(String, Term)>,
     answers: HashSet<(String, usize)>,
 }
@@ -70,6 +73,7 @@ impl Session {
                 args.entry(a[0]).or_default().push((i, a[2]));
             }
         }
+        let templates: HashMap<String, String> = rows(self, "query", 2).into_iter().map(|q| (name(self, q[0]), name(self, q[1]))).collect();
         let mut held = String::new();
         let mut by_cap: BTreeMap<String, Vec<Term>> = BTreeMap::new();
         for w in wants {
@@ -79,7 +83,7 @@ impl Session {
                 continue;
             }
             match adapters.get(adapter).map(|a| a.0.as_str()) {
-                Some("exec") => by_cap.entry(cap).or_default().push(key),
+                Some("exec" | "sql") => by_cap.entry(cap).or_default().push(key),
                 kind => {
                     let why = kind.map_or(format!("no adapter '{adapter}' is declared (`adapter({adapter}, Kind, Address)`)"), |k| format!("an adapter of kind {k} is not built yet"));
                     held.push_str(&format!("want_held({}, {}).\n", self.src(key), quote(&why)));
@@ -94,11 +98,13 @@ impl Session {
         let batches: Vec<Batch> = by_cap.into_iter().map(|(cap, mut keys)| {
             keys.sort_by_key(|k| self.src(*k));
             let adapter = caps[&cap].0.clone();
-            let cmd = adapters[&adapter].1.clone();
+            let (kind, cmd) = adapters[&adapter].clone();
             let wants: Vec<(String, Term)> = keys.iter().map(|k| (self.src(*k), *k)).collect();
+            let mut params = Vec::new();
             let json_wants: Vec<serde_json::Value> = wants.iter().map(|(text, k)| {
                 let mut a = args.get(k).cloned().unwrap_or_default();
                 a.sort_by_key(|x| x.0);
+                params.push(a.iter().map(|(_, v)| self.json(*v)).collect());
                 let named: serde_json::Map<String, serde_json::Value> = a.iter().map(|(i, v)| {
                     (arg_names.get(&(cap.clone(), *i)).cloned().unwrap_or_else(|| i.to_string()), self.json(*v))
                 }).collect();
@@ -106,18 +112,21 @@ impl Session {
             }).collect();
             let version = self.book_version(&adapter, &cap);
             let input = serde_json::json!({"capability": cap, "book_version": version, "wants": json_wants}).to_string();
-            Batch { answers: answers.get(&cap).cloned().unwrap_or_default(), cap, adapter, cmd, input, wants }
+            Batch { answers: answers.get(&cap).cloned().unwrap_or_default(), template: templates.get(&cap).cloned(), cap, adapter, kind, cmd, input, params, wants }
         }).collect();
         if batches.is_empty() && held.is_empty() {
             return Ok(0);
         }
         let runs: Vec<_> = batches.iter().map(|b| {
             let (cmd, input) = (b.cmd.clone(), b.input.clone());
-            std::thread::spawn(move || crate::session::run_program(&cmd, None, Some(&input)))
+            (b.kind == "exec").then(|| std::thread::spawn(move || crate::session::run_program(&cmd, None, Some(&input))))
         }).collect();
         let mut src = held;
         for (b, run) in batches.iter().zip(runs) {
-            let ran = run.join().unwrap_or_else(|_| Err("the adapter's thread failed".into()));
+            let ran = match run {
+                Some(t) => t.join().unwrap_or_else(|_| Err("the adapter's thread failed".into())),
+                None => run_sql(b),
+            };
             src.push_str(&self.answer(b, ran));
         }
         let n = src.lines().count();
@@ -143,7 +152,7 @@ impl Session {
             let key = c.head.args.first().copied().filter(|k| keys.contains(k));
             let plain = c.body.is_empty() && !c.want && c.lattice.is_none() && c.structure.is_none() && c.dom.is_none() && c.head.book == rofl_parse::Book::Bare;
             match (key, plain) {
-                (Some(k), true) if (rel == "answered" && n == 1) || (rel == "failed" && n == 2) => {
+                (Some(k), true) if (rel == "answered" && n == 1) || (rel == "failed" && n == 2) || (rel == "sql_snapshot" && n == 2) => {
                     done.insert(k);
                     said.push_str(&format!("{}.\n", rofl_parse::lit_src(&self.eval.h, &c.head)));
                 }
@@ -194,6 +203,69 @@ impl Session {
         let h = lines.join("\n").bytes().fold(0xcbf29ce484222325u64, |h, b| (h ^ b as u64).wrapping_mul(0x100000001b3));
         format!("{h:016x}")
     }
+}
+
+/// A sql batch (docs/intents.md 4.3): each want's arguments bound to the parameters of its capability's `query`
+/// template, never written into it, every query of the batch in one read transaction on the adapter's kept
+/// connection, read-only, and each want stamped with the database's `data_version` there (`sql_snapshot(K, N)`).
+/// Answered in the text an exec program prints.
+fn run_sql(b: &Batch) -> Result<String, String> {
+    use rusqlite::types::{Value, ValueRef};
+    use std::sync::{Mutex, OnceLock};
+    static KEPT: OnceLock<Mutex<HashMap<String, rusqlite::Connection>>> = OnceLock::new();
+    let template = b.template.as_deref().ok_or_else(|| format!("'{}' has no `query({}, Template)`", b.cap, b.cap))?;
+    let mut rels = b.answers.iter();
+    let (Some((rel, arity)), None) = (rels.next(), rels.next()) else {
+        return Err(format!("a sql capability answers in one relation; '{}' declares {}", b.cap, b.answers.len()));
+    };
+    let mut kept = KEPT.get_or_init(Default::default).lock().map_err(|_| "the kept connections are poisoned".to_string())?;
+    if !kept.contains_key(&b.cmd) {
+        let c = rusqlite::Connection::open_with_flags(&b.cmd, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY).map_err(|e| format!("{}: {e}", b.cmd))?;
+        kept.insert(b.cmd.clone(), c);
+    }
+    let conn = kept.get_mut(&b.cmd).expect("just kept");
+    let tx = conn.transaction().map_err(|e| e.to_string())?;
+    let version: i64 = tx.query_row("PRAGMA data_version", [], |r| r.get(0)).map_err(|e| e.to_string())?;
+    let mut out = String::new();
+    for ((key, _), params) in b.wants.iter().zip(&b.params) {
+        let bound: Vec<Value> = params.iter().map(|v| match v {
+            serde_json::Value::Number(n) => n.as_i64().map_or(Value::Text(n.to_string()), Value::Integer),
+            serde_json::Value::String(s) => Value::Text(s.clone()),
+            v => Value::Text(v.to_string()),
+        }).collect();
+        let text = crate::brk!("sql_arguments_spliced" => bound.iter().enumerate().rev().fold(template.to_string(), |t, (i, v)| {
+            t.replace(&format!("?{}", i + 1), &format!("'{}'", match v { Value::Text(s) => s.clone(), Value::Integer(n) => n.to_string(), _ => String::new() }))
+        }); template.to_string());
+        let mut st = tx.prepare(&text).map_err(|e| format!("the query of '{}': {e}", b.cap))?;
+        let cols = st.column_count();
+        if cols + 1 != *arity {
+            return Err(format!("the query of '{}' gives {cols} column(s), {rel}/{arity} takes {}", b.cap, arity - 1));
+        }
+        let bound: &[Value] = if text == template { &bound } else { &[] };
+        let mut rows = st.query(rusqlite::params_from_iter(bound.iter())).map_err(|e| format!("the query of '{}': {e}", b.cap))?;
+        let mut any = false;
+        while let Some(row) = rows.next().map_err(|e| e.to_string())? {
+            any = true;
+            let mut line = format!("{rel}({key}");
+            for i in 0..cols {
+                line.push_str(", ");
+                match row.get_ref(i).map_err(|e| e.to_string())? {
+                    ValueRef::Integer(n) => line.push_str(&n.to_string()),
+                    ValueRef::Real(f) => line.push_str(&quote(&f.to_string())),
+                    ValueRef::Text(t) => line.push_str(&quote(&String::from_utf8_lossy(t))),
+                    ValueRef::Null => line.push_str("null"),
+                    ValueRef::Blob(_) => return Err(format!("the query of '{}' gave a blob, which no fact holds", b.cap)),
+                }
+            }
+            out.push_str(&line);
+            out.push_str(").\n");
+        }
+        if !any {
+            out.push_str(&format!("answered({key}).\n"));
+        }
+        out.push_str(&format!("sql_snapshot({key}, {version}).\n"));
+    }
+    Ok(out)
 }
 
 fn quote(s: &str) -> String {
