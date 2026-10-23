@@ -1,0 +1,4 @@
+-- The colleague's world of scenario 5: who owns which service, and who is on call this week.
+owns(ana, billing). owns(ana, ledger). owns(bo, search).
+on_call(bo).
+owner(S, P) :- owns(P, S).

@@ -113,3 +113,21 @@ fn a_running_world_cannot_change_what_grants_permission() {
     s.guard_permit("want move_issue(K) :- urgent(K).").unwrap();
     std::fs::remove_dir_all(&d).ok();
 }
+
+#[test]
+fn the_mcp_scenario_moves_the_approved_issue_once() {
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let src = std::fs::read_to_string(root.join("examples/intents/mcp.rofl")).unwrap()
+        .replace("node examples/intents/tracker.cjs", &format!("node {}", root.join("examples/intents/tracker.cjs").display()));
+    let d = dir("scenario");
+    let mut s = Session::fresh(1_000_000);
+    s.load(&src, None).expect("load");
+    s.evaluate().expect("evaluate");
+    s.dispatch(&d.join("journal")).unwrap();
+    s.dispatch(&d.join("journal")).unwrap();
+    assert!(s.holds("mcp_text[tracker]($want(tracker_transition, \"K-1\", \"done\"), \"K-1 moved to done\")").unwrap());
+    assert!(!s.holds("answered($want(tracker_transition, \"K-2\", \"done\"))").unwrap(), "K-2 waits for its approval");
+    let journal = std::fs::read_to_string(d.join("journal/does.journal")).unwrap();
+    assert_eq!(journal.lines().filter(|l| l.contains("\"sent\"")).count(), 1, "{journal}");
+    std::fs::remove_dir_all(&d).ok();
+}

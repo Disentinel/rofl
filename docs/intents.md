@@ -647,3 +647,29 @@ the `dispatch` request of `rofl serve`; `rust/rofl/tests/dispatch.rs`.
 - **Not done.** A one-shot verb listing the wants it would send (they are
   `want_key` rows a question can ask); cancelling a want that disappears
   before dispatch; the journal kept beside a kept world by default.
+
+### Phase 7, as built (2026-10-23)
+
+Four of the six scenarios of section 7 are worlds in `examples/intents/`,
+checked by `npm test` on the Rust engine (`intents_sql`, `intents_exec`,
+`intents_mcp`, `intents_rofl`): an adapter runs a program or opens a
+database, which the TypeScript engine never does.
+
+1. `sql.rofl` over `shop.db` (built from `shop.sql`): acme's resellers whose
+   orders break their cap. The subtree is asked a level a round; globex,
+   whose order breaks its cap too, is never read.
+2. `mcp.rofl` with `tracker.cjs`: a does tool and `permit`; the world shows
+   which wants wait for approval. `rofl load` sends nothing; the dispatch of
+   the approved one, once, is in `rust/rofl/tests/dispatch.rs`.
+3. `exec.rofl` with `deps.cjs`: the imports `main.js` reaches, a file a
+   round, as the scan world asks them, the program naming what it read.
+5. `rofl.rofl` over `colleague.rofl`: the `rofl` kind, built for it. The
+   colleague's world is evaluated in the process once while its files are
+   unchanged; a want binds the first columns of the relation its capability
+   answers in, and the rows come back as facts of the colleague's book, so a
+   why stops at that boundary. Served by `rofl serve` across processes is not
+   built.
+
+Scenario 4 (`render`, a UI) and scenario 6 (`openapi`, and mcp over HTTP)
+are the open items `w_intent_render` and `w_intent_openapi`; the second waits
+on the choice of an HTTP client.

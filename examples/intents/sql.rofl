@@ -1,0 +1,19 @@
+-- SCENARIO 1 (docs/intents.md 7): a database queried on demand. Which orders of acme's resellers break their
+-- tenant's cap, asking the database only for the tenants the question reaches: acme's subtree, a level a round
+-- (one batch per capability per round), never globex, whose order breaks its cap too but is not asked about.
+imports(main, shop).
+adapter(shop, sql, "examples/intents/shop.db").
+capability(children_of, shop, reads).
+arg(children_of, 1, tenant, text).
+answers(children_of, child, 2).
+query(children_of, "SELECT id FROM tenants WHERE parent = ?1").
+capability(orders_of, shop, reads).
+arg(orders_of, 1, tenant, text).
+answers(orders_of, order, 4).
+query(orders_of, "SELECT orders.id, amount, cap FROM orders JOIN tenants ON tenants.id = orders.tenant WHERE tenant = ?1").
+
+reaches("acme").
+reaches(T) :- want_arg(W, 1, _), child[shop](W, T).
+want children_of(T) :- reaches(T).
+want orders_of(T) :- reaches(T).
+over_cap(T, O) :- want_arg(W, 1, T), order[shop](W, O, A, C), A > C.

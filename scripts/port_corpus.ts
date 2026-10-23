@@ -93,7 +93,7 @@ function worlds(): [string, string[]][] {
     // itself (scripts/goldens.ts `worlds`): loaded together its members answer
     // about their union, which is nobody's question, and every load of it
     // evaluates all that came before (f_the_port_corpus_loaded_every_check_as_one_world)
-    if (e === 'checks') continue;
+    if (e === 'checks' || e === 'intents') continue;
     if (fs.statSync(p).isDirectory()) {
       walked(p, '.rofl');
       const files = fs.readdirSync(p).sort().filter((x) => x.endsWith('.rofl')).map((x) => path.join(p, x));

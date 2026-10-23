@@ -1,0 +1,11 @@
+-- SCENARIO 5 (docs/intents.md 7): another ROFL world. A colleague keeps who owns what; this world asks it only
+-- about the services its incidents name, and the answers are facts of the colleague's book: why stops there.
+imports(main, team).
+adapter(team, rofl, "examples/intents/colleague.rofl").
+capability(owner_of, team, reads).
+arg(owner_of, 1, service, atom).
+answers(owner_of, owner, 3).
+
+incident(i1, billing). incident(i2, search). incident(i3, payroll).
+want owner_of(S) :- incident(_, S).
+page(I, P) :- incident(I, S), want_arg(W, 1, S), owner[team](W, S, P).
