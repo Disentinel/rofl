@@ -443,10 +443,18 @@ impl Server {
             // is an error here.
             // `"wait":false` answers as soon as the world is evaluated, its wants in flight; else the answers are
             // waited for, as a one-shot verb waits, until none is in flight or the request's limit stops it
-            "evaluate" => {
+            "evaluate" | "evaluate_on" => {
                 let wait = r.get("wait").and_then(|v| v.as_bool()).unwrap_or(true);
+                let wall = r.get("wall").and_then(|v| v.as_i64());
+                let on = r.get("op").and_then(|v| v.as_str()) == Some("evaluate_on");
+                let walled = r.get("wall").is_some();
                 let s = self.get(r)?;
-                let o = s.evaluate().map_err(|e| rofl::describe(&e))?;
+                let o = match (on, walled) {
+                    (true, _) => s.evaluate_on(wall),
+                    (false, true) => s.evaluate_to(wall),
+                    (false, false) => s.evaluate(),
+                }
+                .map_err(|e| rofl::describe(&e))?;
                 let halted = |s: &Session| s.eval.halt.as_ref().is_some_and(|h| h.load(std::sync::atomic::Ordering::Relaxed));
                 while wait && s.post.as_ref().is_some_and(|p| p.flying() > 0) && !halted(s) {
                     s.collect(Some(std::time::Duration::from_millis(50)))?;
@@ -454,9 +462,14 @@ impl Server {
                 let flying = s.post.as_ref().map_or(0, |p| p.flying());
                 Ok(json!({
                     "partial": o.partial, "staged": o.staged, "steps": o.steps,
-                    "peakRows": o.peak_rows, "space": o.space, "flying": flying,
+                    "peakRows": o.peak_rows, "space": o.space, "flying": flying, "next": s.eval.next_level(),
                     "hot": s.eval.too_hot().iter().map(|h| h.sentence()).collect::<Vec<_>>(),
                 }))
+            }
+            "admit" => {
+                let text = r.get("rofl").and_then(|v| v.as_str()).ok_or("admit needs `rofl`")?.to_string();
+                let n = self.get(r)?.admit(&text)?;
+                Ok(json!({ "admitted": n }))
             }
             "resume" => {
                 let more = r.get("steps").and_then(|v| v.as_i64()).ok_or("resume needs `steps`")?;
