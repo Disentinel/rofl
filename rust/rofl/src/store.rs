@@ -1066,6 +1066,8 @@ pub struct Store {
     pub vwit: bool,
     /// The row a `PremRef::VRow` key names: the closure's number, the book and the two ends.
     pub vrow_of: HashMap<Sym, (usize, Sym, Term, Term)>,
+    /// `vrow_of` as the volume it was read from held it: written again by reference while it holds the same rows.
+    pub(crate) vrow_kept: Arena<u64>,
     /// The rules whose cells are a counting tag's (the engine's sum over the
     /// derivations `p@count`): their cells carry the `tag` flag.
     pub tag_rules: HashSet<Sym>,
