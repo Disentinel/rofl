@@ -1086,8 +1086,21 @@ pub fn pieces(src: &str, size: usize) -> Vec<&str> {
 }
 
 pub fn parse(h: &mut Heap, src: &str) -> Result<Vec<Clause>, String> {
-    let ch: Vec<char> = src.chars().collect();
-    let toks = tokens(src);
+    parse_lexed(h, lex(src))
+}
+
+/// A text's characters and tokens: what `parse` reads, made without the heap, so on any thread.
+pub struct Lexed {
+    ch: Vec<char>,
+    toks: Vec<Span>,
+}
+
+pub fn lex(src: &str) -> Lexed {
+    Lexed { ch: src.chars().collect(), toks: tokens(src) }
+}
+
+pub fn parse_lexed(h: &mut Heap, lexed: Lexed) -> Result<Vec<Clause>, String> {
+    let Lexed { ch, toks } = lexed;
     // A STRAY CHARACTER REFUSES THE FILE, before any clause is read, which is
     // where src/tokens.ts refuses it: the lexis fails first.
     for (k, s) in toks.iter().enumerate() {

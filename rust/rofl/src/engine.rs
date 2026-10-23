@@ -5448,7 +5448,18 @@ impl Eval {
         let mut acc: Vec<Sol> = seeds.into_iter().map(|s| Sol { s, prems: Vec::new() }).collect();
         let mut held: i64 = 0;
         let res = (|| -> Result<Vec<Sol>, Halt> {
-            for (i, b) in body.iter().enumerate() {
+            let mut i = 0;
+            while i < body.len() {
+                if let Some((made, j, grew)) = self.par_rest(body, i, &acc, depth, front_at, rule_id) {
+                    held += grew;
+                    acc = made;
+                    i = j;
+                    if acc.is_empty() {
+                        break;
+                    }
+                    continue;
+                }
+                let b = &body[i];
                 let mut next: Vec<Sol> = Vec::new();
                 let mark = self.cost_mark(rule_id, b);
                 let left = match self.par_level(b, i, &acc, depth, front_at, rule_id) {
@@ -5515,6 +5526,7 @@ impl Eval {
                 if acc.is_empty() {
                     break;
                 }
+                i += 1;
             }
             Ok(std::mem::take(&mut acc))
         })();
