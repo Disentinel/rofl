@@ -138,14 +138,18 @@ fn tool_block(adapter: &str, t: &Value) -> String {
     out
 }
 
-/// One batch of the `mcp` kind: each want `(key, arguments)` called once, answered in the text an exec program
+/// One batch of the `mcp` kind: each want `(key, arguments, idempotency key)` called once, answered in the text an exec program
 /// prints. `rel` is the relation of the tool's structured answer, `fields` its columns after the key; `text` whether
 /// the book reads a text answer.
-pub(crate) fn call(cmd: &str, tool: &str, rel: &str, fields: &[String], text: bool, wants: &[(String, Value)]) -> Result<String, String> {
+pub(crate) fn call(cmd: &str, tool: &str, rel: &str, fields: &[String], text: bool, wants: &[(String, Value, Option<String>)]) -> Result<String, String> {
     let mut s = Server::start(cmd)?;
     let mut out = String::new();
-    for (key, args) in wants {
-        let r = match s.request("tools/call", json!({"name": tool, "arguments": args})) {
+    for (key, args, idem) in wants {
+        let params = match idem {
+            Some(i) => json!({"name": tool, "arguments": args, "_meta": {"rofl/idempotency_key": i}}),
+            None => json!({"name": tool, "arguments": args}),
+        };
+        let r = match s.request("tools/call", params) {
             Ok(r) => r,
             Err(e) => {
                 out.push_str(&format!("failed({key}, {}).\n", quote(&e)));
