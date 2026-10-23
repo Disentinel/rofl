@@ -655,6 +655,13 @@ impl Heap {
     pub fn bytes(&self) -> usize {
         self.parts().iter().map(|(_, b)| b).sum()
     }
+    /// What a volume of this heap takes, from lengths (`Store::kept_bytes`).
+    pub fn kept_bytes(&self) -> u64 {
+        // a hash table at the size its count asks, not the size a layer's own table has grown to
+        let n = |x: &Names| x.buf.len() + x.ends.len() * (4 + 16);
+        let f = |x: &Funcs| x.funcs.len() * (std::mem::size_of::<FuncNode>() + 16) + x.args.len() * 8;
+        (n(&self.syms.base) + n(&self.syms.top) + f(&self.base) + f(&self.top)) as u64
+    }
     pub fn parts(&self) -> Vec<(&'static str, usize)> {
         vec![
             ("h.syms", self.syms.bytes()),

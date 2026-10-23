@@ -642,13 +642,40 @@ fn orphans_of_killed_writers_are_swept(brk: Option<&str>) -> Result<(), String> 
     let cap = (vols + all(&worlds)) / 2 + 1;
     let gb = format!("{}", cap as f64 / (1u64 << 30) as f64);
     let r = rofl_env(BIN, &d, &d.0.join("cache"), &[("ROFL_CACHE_GB", gb)], brk, &["ask", "reach(n1, X)", "--budget", "300000199", "big.rofl"]);
-    ensure(r.code == 0, || format!("the run under the cap: {} {:?}", r.code, r.err))?;
+    // the world may stop at the disk wall under this cap (w_disk_wall): what is asked of it is that the cap holds
+    ensure(r.code == 0 || r.code == 5, || format!("the run under the cap: {} {:?}", r.code, r.err))?;
     ensure(all(&worlds) <= cap, || format!("the cache holds {} over a cap of {cap}: {:?}", all(&worlds), temps()))
+}
+
+/// The disk cap stops a world where its volume would pass what the cache gives it (w_disk_wall): the answers are
+/// partial (exit 5), the world is kept with its disk hole and asked again from it; a larger cap goes on from where it
+/// stopped, to the answer a world never stopped gives, and is kept.
+fn the_disk_cap_stops_and_a_larger_one_goes_on(brk: Option<&str>) -> Result<(), String> {
+    let d = Dir::new("implicit-disk");
+    // a recursion the closure kernel does not take (it counts), so the wall falls where it can be gone on from
+    let edges: String = (1..200).map(|i| format!("e(n{i}, n{}).\n", i + 1)).collect();
+    d.write("chain.rofl", &format!("edb(e).\n{edges}start(X) :- e(X, _).\ndist(X, X, 0) :- start(X).\ndist(X, Z, M) :- dist(X, Y, N), e(Y, Z), M = N + 1.\n"));
+    let ask = |cache: &str, env: &[(&str, String)]| rofl_env(BIN, &d, &d.0.join(cache), env, brk, &["ask", "dist(n1, X, N)", "boot.rofl", "chain.rofl"]);
+    let whole = ask("whole", &[]);
+    let size = files_in(&d.0.join("whole")).first().map(|k| k.1).ok_or("the whole world was not kept")?;
+    let cap = size / 2;
+    let gb = vec![("ROFL_CACHE_GB", format!("{}", cap as f64 / (1u64 << 30) as f64))];
+    let cut = ask("cache", &gb);
+    let kept = files_in(&d.0.join("cache"));
+    ensure(cut.code == 5 && cut.err.contains("stopped there") && kept.len() == 1 && kept[0].1 <= cap && cut.out.contains("X = n2") && !cut.out.contains("X = n200") && whole.out.contains("X = n200"),
+        || format!("a cap of half the world: {} {:?}, kept {kept:?} under {cap}", cut.code, cut.err))?;
+    let again = ask("cache", &gb);
+    ensure(again.code == 5 && again.out == cut.out && again.err.contains("its answers are partial"), || format!("the same cap again: {} {:?}", again.code, again.err))?;
+    let on = ask("cache", &[]);
+    ensure(on.code == 0 && on.out == whole.out && on.err.contains("went on from where it stopped") && on.err.contains("to its end"),
+        || format!("a larger cap: {} {:?}", on.code, on.err))?;
+    let after = ask("cache", &[]);
+    ensure(after.code == 0 && after.out == whole.out && after.err.is_empty(), || format!("the run after: {} {:?}", after.code, after.err))
 }
 
 type Case = fn(Option<&str>) -> Result<(), String>;
 
-const CASES: [(&str, Case); 24] = [
+const CASES: [(&str, Case); 25] = [
     ("answers_as_fresh", answers_as_fresh),
     ("a_rule_file_edited", a_rule_file_edited),
     ("boot_edited", boot_edited),
@@ -673,6 +700,7 @@ const CASES: [(&str, Case); 24] = [
     ("edits_by_delta_are_the_fresh_world", edits_by_delta_are_the_fresh_world),
     ("mixed_files_at_random", mixed_files_at_random),
     ("orphans_of_killed_writers_are_swept", orphans_of_killed_writers_are_swept),
+    ("the_disk_cap_stops_and_a_larger_one_goes_on", the_disk_cap_stops_and_a_larger_one_goes_on),
 ];
 
 /// What a hole left unknown is kept by an image as by a volume: a negation unfolded at a call reads it after opening.
