@@ -64,9 +64,9 @@ impl Tuples {
             return w.arena(&a.cons);
         }
         let at = b.args.len() as u32;
-        w.arena_parts(&[&b.ends, &t.ends.iter().map(|e| e + at).collect::<Vec<u32>>()]);
-        w.arena_parts(&[&b.sks, &t.sks]);
-        w.arena_parts(&[&b.args, &t.args]);
+        w.arena_parts(&b.ends, &[&t.ends.iter().map(|e| e + at).collect::<Vec<u32>>()]);
+        w.arena_parts(&b.sks, &[&t.sks]);
+        w.arena_parts(&b.args, &[&t.args]);
         let mut cap = b.cons.len();
         for len in b.len()..self.len() {
             if (len + 1) * 4 >= cap * 3 {
@@ -132,7 +132,7 @@ impl Store {
         }
         let f = &self.facts;
         col(w, &f.recs);
-        w.arena_parts(&[&f.bflags, &f.recs.own.iter().map(|r| r.flags()).collect::<Vec<u8>>()]);
+        w.arena_parts(&f.bflags, &[&f.recs.own.iter().map(|r| r.flags()).collect::<Vec<u8>>()]);
         f.tups.write(w);
         self.write_keys(w);
         let mut rels: Vec<(&Sym, &Vec<(Sym, KeyRun)>)> = self.idx.iter().collect();
@@ -193,6 +193,15 @@ impl Store {
         w.arena(&seals);
         match &self.citers {
             None => w.u32(0),
+            // over a base the column stays as the base holds it, and the citers since come after it
+            Some(ix) if w.is_over() => {
+                w.u32(2);
+                w.arena(&ix.offs);
+                w.arena(&ix.ids);
+                let mut more: Vec<(&FactId, &Vec<FactId>)> = ix.more.iter().collect();
+                more.sort_unstable_by_key(|m| *m.0);
+                w.arena(&more.iter().flat_map(|(g, v)| v.iter().flat_map(move |id| [**g, *id])).collect::<Vec<u32>>());
+            }
             Some(ix) => {
                 let ix = ix.flat(self.facts.len());
                 w.u32(1);
@@ -211,15 +220,15 @@ impl Store {
         }
     }
 
-    /// The key table as `freeze` would leave it: the layer's facts put in the base's table where it is the size a
-    /// table of them all is made, else that table made.
+    /// The key table: the layer's facts put in the base's table while it has room for them as `key_insert` leaves
+    /// room, else a table of them all made.
     fn write_keys(&self, w: &mut VolW) {
         let (n, mark) = (self.facts.len(), self.facts.recs.mark);
         if mark == 0 {
             w.arena(&self.keys);
         } else if self.keys.is_empty() {
             w.arena(&self.keys_base);
-        } else if ((n + 1) * 4).next_power_of_two().max(64) == self.keys_base.len() {
+        } else if (n + 1) * 4 < self.keys_base.len() * 3 {
             let put = placed(&self.keys_base, EMPTY, (mark as FactId..n as FactId).map(|id| {
                 let r = self.facts.recs[id as usize];
                 (hash_key(r.rel, r.persp, self.args(id)), id)
@@ -322,13 +331,21 @@ impl Store {
             }
         }
         s.cells = Rc::new(c);
-        if r.u32()? == 1 {
+        let layered = r.u32()?;
+        if layered != 0 {
             let (offs, ids): (Arena<u32>, Arena<FactId>) = (r.arena()?, r.arena()?);
             let n = s.facts.len();
-            if offs.len() != n + 1 || offs.windows(2).any(|w| w[0] > w[1]) || offs[n] as usize != ids.len() || ids.iter().any(|&i| i as usize >= n) {
+            let mut more: HashMap<FactId, Vec<FactId>> = HashMap::new();
+            if layered == 2 {
+                for p in r.arena::<u32>()?.chunks_exact(2) {
+                    more.entry(p[0]).or_default().push(p[1]);
+                }
+            }
+            let to = offs.len().saturating_sub(1);
+            if offs.is_empty() || to > n || offs.windows(2).any(|w| w[0] > w[1]) || offs[to] as usize != ids.len() || ids.iter().chain(more.keys()).chain(more.values().flatten()).any(|&i| i as usize >= n) || (layered == 1 && to != n) {
                 return Err("a volume's citer index is not an index".into());
             }
-            s.citers = Some(Rc::new(Citers { offs, ids, ..Citers::default() }));
+            s.citers = Some(Rc::new(Citers { offs, ids, more }));
         }
         if r.u32()? == 1 {
             let words: Arena<u32> = r.arena()?;

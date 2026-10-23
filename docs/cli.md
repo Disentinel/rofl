@@ -145,6 +145,22 @@ The run says so in one line on stderr:
 the kept world took 1 file by delta: db.rofl (35 facts out, 409 overdeleted or derived again; opened and taken in 201 ms, kept again in 12 ms, 9367080 bytes written)
 ```
 
+**The world kept again is an overlay** (f_a_kept_world_is_written_whole_by_each_edit).
+The whole volume the world was opened from stays on disk as its base, beside
+the slot under its sum (`<slot>.<sum>.vol`), and the slot gets an overlay: a
+file that names the base and writes only what the world holds that the base
+does not. An arena the edit did not change is a reference into the base; one
+it wrote a few values into is the reference and those values; one it appended
+to is the reference and what came after (a copy of a mapped arena is compared
+with the base to find them). Opening an overlay maps the base as before and
+maps each changed span privately, the overlay's values written into its pages,
+so the pages nothing changed are the file's. Each edit writes its overlay over
+the same base, every change since the base in it; once it would pass a quarter
+of the base, the world is written whole again and that is the new base (the
+line ends `bytes written over the world it was kept from` while it is an
+overlay). A base pushed out of the cache takes its overlays with it; an overlay
+whose base is gone or changed is refused and computed anew.
+
 It evaluates whole instead, the reason after `not by delta:` in the stale line,
 when the rules changed (a file that changed holds a rule, or a file gone held
 one), the world was not
@@ -172,9 +188,14 @@ vscode's base directory, each its own facts file):
 
 A node's id is its place in the tree, so a function added at the end of a file
 takes no fact out. What an edit touches stays flat with the world; its time
-does not yet: at the vscode scale opening the volume is about 4-6 s, writing it again 1.3-2.6 s
-(the whole volume is written, 1.2 GB), and the addition's planning about as
-much again, whatever the edit.
+does not yet: at the vscode scale opening the volume and the addition's
+planning take 5-10 s whatever the edit. Writing it again took 5.4 s for the
+whole 1.25 GB volume; as an overlay (release, 2026-10-23, the same subset, four
+edits in a row over a 1.17 GB base) it takes 0.17 s and 49 MB for a function
+added (nothing out), 0.33-0.39 s and 193-201 MB once an edit has taken facts out:
+a relation a fact went out of has its runs written whole (they are compacted),
+and the record of the world's files is written whole (12 MB), so what is
+written grows with the relations an edit touches, not with the edit.
 
 ## Exit codes
 

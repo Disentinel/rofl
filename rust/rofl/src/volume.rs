@@ -5,12 +5,24 @@
 //!
 //! After the build a volume carries a note, text its keeper wrote (what `rofl --kept` kept it from), and it ends in
 //! the sum of every byte before it (`arena::Sum`), which `check` reads the whole file to compare.
-use crate::arena::{map_file, VolR, VolW};
+use crate::arena::{map_base, map_file, Base, VolR, VolW};
 use crate::engine::{Eval, RuleAnswer, StagedFact, Tok};
 use crate::store::{PremRef, Store};
 use crate::term::{Heap, Sym, Term};
 
 const MAGIC: &[u8; 16] = b"ROFL-VOLUME-3\n\0\0";
+/// An overlay: a volume that names its base and writes only what the world holds that the base does not.
+const OVER: &[u8; 16] = b"ROFL-OVERLAY-1\n\0";
+
+/// The whole volume a world was opened from, or that an overlay it was opened from names: what a world kept again
+/// after an edit is written over.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Kept {
+    pub path: String,
+    pub size: u64,
+    /// its sum
+    pub id: u64,
+}
 
 fn build_id() -> String {
     format!("{} {} {:x}", env!("CARGO_PKG_VERSION"), crate::kernel::KERNEL_HASH, 0x0102_0304u32)
@@ -22,12 +34,29 @@ pub type Staged = Vec<(StagedFact, Vec<(Sym, Vec<PremRef>)>)>;
 /// `path` with `note`; its size. With a `bound` the file never grows past it: the volume fails instead
 /// (`arena::TOO_LARGE`), and the caller removes what was written.
 pub fn keep(path: &str, e: &mut Eval, note: &str, bound: Option<usize>) -> std::io::Result<usize> {
-    let (staged, answer) = (e.staged_kept(), e.safety().clone());
-    let (h, s) = (&mut e.h, &mut e.store);
     let mut w = VolW::bounded(path, bound)?;
     w.bytes(MAGIC);
     w.text(&build_id());
     w.text(note);
+    write_world(w, e)
+}
+
+/// `keep` as an overlay over the whole volume `base`, which the world was opened from (or from an overlay over it):
+/// every arena still mapped from `base` is named there, not written. Read back while `base` is where it was.
+pub fn keep_over(path: &str, e: &mut Eval, note: &str, bound: Option<usize>, base: &Kept) -> std::io::Result<usize> {
+    let mut w = VolW::over(path, bound, base.id)?;
+    w.bytes(OVER);
+    w.text(&build_id());
+    w.text(note);
+    w.text(&base.path);
+    w.u64(base.size);
+    w.u64(base.id);
+    write_world(w, e)
+}
+
+fn write_world(mut w: VolW, e: &mut Eval) -> std::io::Result<usize> {
+    let (staged, answer) = (e.staged_kept(), e.safety().clone());
+    let (h, s) = (&mut e.h, &mut e.store);
     s.write_volume(&mut w);
     h.write_volume(&mut w);
     w.u32(staged.len() as u32);
@@ -113,6 +142,8 @@ pub struct Opened {
     pub lattices: Vec<Tok>,
     /// what its holes left unknown (`Eval::unknowns_kept`)
     pub unknowns: Vec<Tok>,
+    /// the whole volume it lies in, or that it is an overlay over
+    pub base: Kept,
     /// the rest of the volume: the provenance notes and the cut, which the evaluation reads (`Eval::read_notes`,
     /// `Eval::read_cut`)
     pub cut: VolR,
@@ -132,44 +163,81 @@ pub struct Checked {
     pub note: String,
 }
 
-fn header(path: &str) -> Result<VolR, String> {
-    let map = map_file(path).map_err(|e| format!("{path}: {e}"))?;
-    if !map.starts_with(MAGIC) {
-        let other = map.starts_with(&MAGIC[..12]);
-        return Err(format!("{path}: {}", if other { "a volume of another format" } else { "not a volume" }));
-    }
-    Ok(VolR::new(map, MAGIC.len()))
+/// A volume's header read: the reader after it, whether it is an overlay, its build and its note.
+struct Header {
+    r: VolR,
+    over: bool,
+    build: String,
+    note: String,
 }
 
-/// The header of the volume at `path`, once the sum that ends it is found to be the sum of its bytes; a file cut
-/// short or changed after it was written is refused.
+fn header(path: &str) -> Result<Header, String> {
+    let map = map_file(path).map_err(|e| format!("{path}: {e}"))?;
+    let over = map.starts_with(OVER);
+    if !map.starts_with(MAGIC) && !over {
+        let other = map.starts_with(&MAGIC[..12]) || map.starts_with(&OVER[..13]);
+        return Err(format!("{path}: {}", if other { "a volume of another format" } else { "not a volume" }));
+    }
+    let mut r = VolR::new(map, MAGIC.len());
+    let (build, note) = (r.text()?, r.text()?);
+    Ok(Header { r, over, build, note })
+}
+
+/// The base an overlay's header names, once it is found where it was, as it was.
+fn base_of(path: &str, r: &mut VolR) -> Result<(Kept, std::rc::Rc<Base>), String> {
+    let k = Kept { path: r.text()?, size: r.u64()?, id: r.u64()? };
+    let gone = || format!("{path}: the volume it was kept over, {}, is gone or changed", k.path);
+    let b = map_base(&k.path).map_err(|_| gone())?;
+    if b.region.len() as u64 != k.size || b.id != k.id || !b.region.starts_with(MAGIC) {
+        return Err(gone());
+    }
+    Ok((k, b))
+}
+
+/// The header of the volume at `path`, once the sum that ends it is found to be the sum of its bytes, and an
+/// overlay's base likewise; a file cut short or changed after it was written is refused.
 pub fn check(path: &str) -> Result<Checked, String> {
-    let mut r = header(path)?;
+    let Header { mut r, over, build, note } = header(path)?;
     if !crate::brk!("kept_unsummed" => true; r.sum_holds()) {
         return Err(format!("{path}: the file is damaged: its bytes are not the ones written"));
     }
-    let this_build = r.text()? == build_id();
-    let note = r.text()?;
-    Ok(Checked { this_build, note })
+    if over {
+        let (k, _) = base_of(path, &mut r)?;
+        check(&k.path).map_err(|e| format!("{path}: the volume it was kept over is refused: {e}"))?;
+    }
+    Ok(Checked { this_build: build == build_id(), note })
 }
 
 /// The note of the volume at `path`, read from its header alone (its sum is not checked): what a keeper reads to
 /// choose among volumes before it checks and opens one.
 pub fn note(path: &str) -> Result<String, String> {
-    let mut r = header(path)?;
-    if r.text()? != build_id() {
+    let h = header(path)?;
+    if h.build != build_id() {
         return Err(format!("{path}: a volume of another build"));
     }
-    r.text()
+    Ok(h.note)
+}
+
+/// The whole volume an overlay at `path` was kept over, from its header alone; None for a whole volume.
+pub fn base_named(path: &str) -> Option<String> {
+    let mut h = header(path).ok().filter(|h| h.over)?;
+    h.r.text().ok()
 }
 
 /// The world a volume at `path` holds, mapped.
 pub fn open(path: &str) -> Result<Opened, String> {
-    let mut r = header(path)?;
-    if r.text()? != build_id() {
+    let Header { mut r, over, build, .. } = header(path)?;
+    if build != build_id() {
         return Err(format!("{path}: a volume of another build"));
     }
-    r.text()?;
+    let base = if over {
+        let (k, b) = base_of(path, &mut r)?;
+        r = r.with_base(b);
+        k
+    } else {
+        let size = std::fs::metadata(path).map_err(|e| format!("{path}: {e}"))?.len();
+        Kept { path: path.to_string(), size, id: r.id() }
+    };
     let store = Store::read_volume(&mut r)?;
     let heap = Heap::read_volume(&mut r)?;
     let mut staged = Vec::new();
@@ -199,5 +267,5 @@ pub fn open(path: &str) -> Result<Opened, String> {
     }
     let lattices = read_toks(&mut r)?;
     let unknowns = read_toks(&mut r)?;
-    Ok(Opened { heap, store, staged, answer: a, lattices, unknowns, cut: r })
+    Ok(Opened { heap, store, staged, answer: a, lattices, unknowns, cut: r, base })
 }
