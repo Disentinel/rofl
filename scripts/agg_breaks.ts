@@ -58,6 +58,13 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "journal_closed_late",
+  "what": "the journal writes a base fact taken out at the boundary after the tick it went, its interval closed one tick late",
+  "expect": {
+   "journal_replay": "replayed to tick 0: not the live state"
+  }
+ },
+ {
   "id": "prov_settle_keeps_dead",
   "what": "a note written as a derived_by row whether or not its fact is alive and a firing of that rule still stands",
   "expect": {
@@ -9090,6 +9097,7 @@ const TESTS: Record<string, string> = {
   kept_disk: 'kept a_kept_world_answers_and_refuses_as_docs_cli_says',
   disk_go_on: 'disk a_cap_raised_goes_on_from_the_cut',
   kept_concurrent: 'kept a_kept_world_answers_and_refuses_as_docs_cli_says',
+  journal_replay: 'journal a_past_tick_replayed_is_the_state_the_world_had',
 };
 
 function proofTests(b: Break, profile: string, control: boolean): Verdict {

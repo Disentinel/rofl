@@ -339,6 +339,45 @@ before it.
 **Blocker of all of it:** phase 0. Without dated inputs and intervals neither
 replay nor the negation of D4 is reproducible.
 
+### Phase 0, as built (2026-10-23)
+
+`rust/rofl/src/journal.rs`, `Session::replay`, `rust/rofl/tests/journal.rs`.
+
+- **What is journaled.** Every call that tells a world something (`load`,
+  `load_delta`, `assert`, `assert_delta`, `retract`, `retract_delta`, a set
+  taken out, one by one), with whether the world was evaluated when it came;
+  the base facts it brought, by id (a fact keeps its id when it dies and gets
+  it back when it comes again, so one word each); the base facts it took out;
+  every tick boundary, with its wall-clock time. A load that brings rules or
+  declarations is kept whole as text. Derived facts are not in it. The
+  journal is kept with the world's volume and goes on when the world is
+  opened again; an overlay writes only what it gained.
+- **The calls, not only the facts.** A delta verb that falls back writes
+  `evaluated_again(Request, Why)` into the world, and what it does depends on
+  whether the world was evaluated; so a replay makes the same calls in the
+  same state, and then the rows are the same.
+- **The interval of a fact.** It appeared in the tick of its entry
+  (`asserted_by(F, Who, T)` says so in the world). It went at its `Gone`
+  entry, or, for a fact of the tick (every fact a program asserts except the
+  kernel's declarations), at the next boundary: the boundary drops it, so the
+  journal does not repeat it.
+- **`tick_at` is the journal's, not a fact of the world.** A wall-clock time
+  in the state would make every ticking world's golden move on every run and
+  the replay of a tick differ from its live run by the time. A rule that
+  needs the time reads it from a clock adapter (phase 2).
+- **A world opened from a seed or an image** holds facts the journal was not
+  told: its replay is refused, saying so.
+- **Cost.** 4 bytes per base fact told, plus a few words per call and 8
+  bytes per tick.
+- **Acceptance.** Five ticks with loads, asserts, plain and delta
+  retractions, a delta that falls back, `@next` carries, negation and an
+  aggregate, the world kept and opened again after the third: replayed to
+  each tick it equals the live state there byte for byte. Planted
+  `journal_closed_late` (a retraction written one boundary late) is red.
+- **Not done.** A fact of an adapter's book that stays from tick 253 to 752
+  is, today, either timeless or told again each tick: which one is phase 2's
+  question. The TypeScript engine has no journal (Rust first).
+
 ## 7. Scenarios the design must carry
 
 Chosen to be as unlike each other as possible; each becomes a world in

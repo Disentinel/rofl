@@ -4031,8 +4031,8 @@ work_needs(w_kept_world_by_delta, w_stable_node_ids).
 -- are its section 6 in order. The tick journal blocks all of it.
 
 work(w_intent_tick_journal,
-  "docs/intents.md phase 0 (D5): base facts carry the tick they appeared and the tick they went (asserted_by already carries the first), tick_at(T, Time), a past tick rebuilt from the journal, in the Rust engine. ACCEPTANCE: a sequence of ticks with assertions and retractions replayed to any tick equals, byte for byte, the live run's state there; planted: an interval closed one tick late is red.").
-work_state(w_intent_tick_journal, open).
+  "DONE 2026-10-23 (branch claude/project-thread-2b3jv0): rust/rofl/src/journal.rs, Session::replay, tests/journal.rs; docs/intents.md *Phase 0, as built*. The journal holds every call that tells a world something with whether it was evaluated, the base facts told (one word each, by id) and taken out, the boundaries with tick_at (engine-side, not a fact), a load with rules as text; kept in the volume. Five ticks replayed to each equal the live state byte for byte, kept and opened again halfway; planted journal_closed_late red. 4 bytes per base fact told. Open: a fact that stays across ticks (an adapter's book) is timeless or told again each tick, phase 2's question. WAS: docs/intents.md phase 0 (D5): base facts carry the tick they appeared and the tick they went (asserted_by already carries the first), tick_at(T, Time), a past tick rebuilt from the journal, in the Rust engine. ACCEPTANCE: a sequence of ticks with assertions and retractions replayed to any tick equals, byte for byte, the live run's state there; planted: an interval closed one tick late is red.").
+work_state(w_intent_tick_journal, done).
 
 work(w_intent_want_syntax,
   "docs/intents.md phase 1: `want Cap(Args) :- Body.` heads, the kernel rows want/want_of/want_arg, the load checks of section 4.2 in both engines (TS checks wants, executing is Rust only). ACCEPTANCE: each check refuses its planted program naming the place; worlds without wants unchanged in every golden.").
