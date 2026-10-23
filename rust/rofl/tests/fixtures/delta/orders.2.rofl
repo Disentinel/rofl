@@ -3,26 +3,26 @@ ast_line[code](n2b70869555e396cd_3c3ted0nsu2, 1).
 ast_node[code](n2b70869555e396cd_12undirbnh3, program, "orders.js").
 ast_line[code](n2b70869555e396cd_12undirbnh3, 1).
 ast_attr[code](n2b70869555e396cd_12undirbnh3, source_type, "module").
-ast_node[code](n2b70869555e396cd_12d602ild62, import_declaration, "orders.js").
-ast_line[code](n2b70869555e396cd_12d602ild62, 1).
-ast_attr[code](n2b70869555e396cd_12d602ild62, import_kind, "value").
-ast_node[code](n2b70869555e396cd_msjlfgltrf, import_specifier, "orders.js").
-ast_line[code](n2b70869555e396cd_msjlfgltrf, 1).
-ast_node[code](n2b70869555e396cd_vidsabgivi6, identifier, "orders.js").
-ast_line[code](n2b70869555e396cd_vidsabgivi6, 1).
-ast_attr[code](n2b70869555e396cd_vidsabgivi6, name, "getUser").
-ast_child[code](n2b70869555e396cd_msjlfgltrf, imported, 0, n2b70869555e396cd_vidsabgivi6).
-ast_attr[code](n2b70869555e396cd_msjlfgltrf, import_kind, "value").
-ast_node[code](n2b70869555e396cd_ahi23fp6t61, identifier, "orders.js").
-ast_line[code](n2b70869555e396cd_ahi23fp6t61, 1).
-ast_attr[code](n2b70869555e396cd_ahi23fp6t61, name, "getUser").
-ast_child[code](n2b70869555e396cd_msjlfgltrf, local, 0, n2b70869555e396cd_ahi23fp6t61).
-ast_child[code](n2b70869555e396cd_12d602ild62, specifiers, 0, n2b70869555e396cd_msjlfgltrf).
-ast_node[code](n2b70869555e396cd_n414l9k8ve4, string_literal, "orders.js").
-ast_line[code](n2b70869555e396cd_n414l9k8ve4, 1).
-ast_attr[code](n2b70869555e396cd_n414l9k8ve4, value, "./users.js").
-ast_child[code](n2b70869555e396cd_12d602ild62, source, 0, n2b70869555e396cd_n414l9k8ve4).
-ast_child[code](n2b70869555e396cd_12undirbnh3, body, 0, n2b70869555e396cd_12d602ild62).
+ast_node[code](n2b70869555e396cd_0qm8tbc5vf2, import_declaration, "orders.js").
+ast_line[code](n2b70869555e396cd_0qm8tbc5vf2, 1).
+ast_attr[code](n2b70869555e396cd_0qm8tbc5vf2, import_kind, "value").
+ast_node[code](n2b70869555e396cd_uj6durosef, import_specifier, "orders.js").
+ast_line[code](n2b70869555e396cd_uj6durosef, 1).
+ast_node[code](n2b70869555e396cd_k9af59gs8f4, identifier, "orders.js").
+ast_line[code](n2b70869555e396cd_k9af59gs8f4, 1).
+ast_attr[code](n2b70869555e396cd_k9af59gs8f4, name, "getUser").
+ast_child[code](n2b70869555e396cd_uj6durosef, imported, 0, n2b70869555e396cd_k9af59gs8f4).
+ast_attr[code](n2b70869555e396cd_uj6durosef, import_kind, "value").
+ast_node[code](n2b70869555e396cd_7s6ofib9u6, identifier, "orders.js").
+ast_line[code](n2b70869555e396cd_7s6ofib9u6, 1).
+ast_attr[code](n2b70869555e396cd_7s6ofib9u6, name, "getUser").
+ast_child[code](n2b70869555e396cd_uj6durosef, local, 0, n2b70869555e396cd_7s6ofib9u6).
+ast_child[code](n2b70869555e396cd_0qm8tbc5vf2, specifiers, 0, n2b70869555e396cd_uj6durosef).
+ast_node[code](n2b70869555e396cd_laqv72crlu7, string_literal, "orders.js").
+ast_line[code](n2b70869555e396cd_laqv72crlu7, 1).
+ast_attr[code](n2b70869555e396cd_laqv72crlu7, value, "./users.js").
+ast_child[code](n2b70869555e396cd_0qm8tbc5vf2, source, 0, n2b70869555e396cd_laqv72crlu7).
+ast_child[code](n2b70869555e396cd_12undirbnh3, body, 0, n2b70869555e396cd_0qm8tbc5vf2).
 ast_node[code](n2b70869555e396cd_9l7lmkrrho2, export_named_declaration, "orders.js").
 ast_line[code](n2b70869555e396cd_9l7lmkrrho2, 2).
 ast_attr[code](n2b70869555e396cd_9l7lmkrrho2, export_kind, "value").
@@ -34,26 +34,26 @@ ast_attr[code](n2b70869555e396cd_ecdk143nto1, name, "orderFor").
 ast_child[code](n2b70869555e396cd_jq5s9nhdvt2, id, 0, n2b70869555e396cd_ecdk143nto1).
 ast_attr[code](n2b70869555e396cd_jq5s9nhdvt2, generator, false).
 ast_attr[code](n2b70869555e396cd_jq5s9nhdvt2, async, false).
-ast_node[code](n2b70869555e396cd_rg1j1uk8pj3, identifier, "orders.js").
-ast_line[code](n2b70869555e396cd_rg1j1uk8pj3, 2).
-ast_attr[code](n2b70869555e396cd_rg1j1uk8pj3, name, "id").
-ast_child[code](n2b70869555e396cd_jq5s9nhdvt2, params, 0, n2b70869555e396cd_rg1j1uk8pj3).
+ast_node[code](n2b70869555e396cd_6tntbbr1ef6, identifier, "orders.js").
+ast_line[code](n2b70869555e396cd_6tntbbr1ef6, 2).
+ast_attr[code](n2b70869555e396cd_6tntbbr1ef6, name, "id").
+ast_child[code](n2b70869555e396cd_jq5s9nhdvt2, params, 0, n2b70869555e396cd_6tntbbr1ef6).
 ast_node[code](n2b70869555e396cd_doaurnbkac7, block_statement, "orders.js").
 ast_line[code](n2b70869555e396cd_doaurnbkac7, 2).
-ast_node[code](n2b70869555e396cd_3hb1ru189v7, return_statement, "orders.js").
-ast_line[code](n2b70869555e396cd_3hb1ru189v7, 2).
-ast_node[code](n2b70869555e396cd_dco5m8fleh2, call_expression, "orders.js").
-ast_line[code](n2b70869555e396cd_dco5m8fleh2, 2).
-ast_node[code](n2b70869555e396cd_rg7j4pl7oe6, identifier, "orders.js").
-ast_line[code](n2b70869555e396cd_rg7j4pl7oe6, 2).
-ast_attr[code](n2b70869555e396cd_rg7j4pl7oe6, name, "getUser").
-ast_child[code](n2b70869555e396cd_dco5m8fleh2, callee, 0, n2b70869555e396cd_rg7j4pl7oe6).
-ast_node[code](n2b70869555e396cd_a1anthi7o12, identifier, "orders.js").
-ast_line[code](n2b70869555e396cd_a1anthi7o12, 2).
-ast_attr[code](n2b70869555e396cd_a1anthi7o12, name, "id").
-ast_child[code](n2b70869555e396cd_dco5m8fleh2, arguments, 0, n2b70869555e396cd_a1anthi7o12).
-ast_child[code](n2b70869555e396cd_3hb1ru189v7, argument, 0, n2b70869555e396cd_dco5m8fleh2).
-ast_child[code](n2b70869555e396cd_doaurnbkac7, body, 0, n2b70869555e396cd_3hb1ru189v7).
+ast_node[code](n2b70869555e396cd_342s9j5lfv7, return_statement, "orders.js").
+ast_line[code](n2b70869555e396cd_342s9j5lfv7, 2).
+ast_node[code](n2b70869555e396cd_grehr08tms5, call_expression, "orders.js").
+ast_line[code](n2b70869555e396cd_grehr08tms5, 2).
+ast_node[code](n2b70869555e396cd_q429vu0btn2, identifier, "orders.js").
+ast_line[code](n2b70869555e396cd_q429vu0btn2, 2).
+ast_attr[code](n2b70869555e396cd_q429vu0btn2, name, "getUser").
+ast_child[code](n2b70869555e396cd_grehr08tms5, callee, 0, n2b70869555e396cd_q429vu0btn2).
+ast_node[code](n2b70869555e396cd_4f7q1hgot06, identifier, "orders.js").
+ast_line[code](n2b70869555e396cd_4f7q1hgot06, 2).
+ast_attr[code](n2b70869555e396cd_4f7q1hgot06, name, "id").
+ast_child[code](n2b70869555e396cd_grehr08tms5, arguments, 0, n2b70869555e396cd_4f7q1hgot06).
+ast_child[code](n2b70869555e396cd_342s9j5lfv7, argument, 0, n2b70869555e396cd_grehr08tms5).
+ast_child[code](n2b70869555e396cd_doaurnbkac7, body, 0, n2b70869555e396cd_342s9j5lfv7).
 ast_child[code](n2b70869555e396cd_jq5s9nhdvt2, body, 0, n2b70869555e396cd_doaurnbkac7).
 ast_child[code](n2b70869555e396cd_9l7lmkrrho2, declaration, 0, n2b70869555e396cd_jq5s9nhdvt2).
 ast_child[code](n2b70869555e396cd_12undirbnh3, body, 1, n2b70869555e396cd_9l7lmkrrho2).

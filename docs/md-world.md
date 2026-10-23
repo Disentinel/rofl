@@ -184,7 +184,7 @@ steps; `--json` has the three:
 `chain`, `brief` and `why` (playground/chain.ts reads the engine's text, so
 both engines give one chain). A `why` of no value prints its proof whole.
 
-    examples/vscode/side-effects.rofl.md:52: why side_effect_value(nd100d8f9c1968a85_to76001thh6, fs_mutation, "/tmp/settings.json")
+    examples/vscode/side-effects.rofl.md:52: why side_effect_value(nd100d8f9c1968a85_vrukhc1b4n1, fs_mutation, "/tmp/settings.json")
       the value's steps, from where it is written:
         mini/node/main.ts:14  "/tmp/settings.json"  the literal
         mini/node/main.ts:14  writeAtomic()         argument 0 of function writeAtomic() at mini/node/pfs.ts:4

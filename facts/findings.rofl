@@ -11893,6 +11893,7 @@ finding_note(f_an_edit_stops_at_a_function_summary_and_a_constant_at_the_values,
 finding(f_a_rename_gives_new_ids_to_every_statement_naming_it, defect).
 recorded(f_a_rename_gives_new_ids_to_every_statement_naming_it, "2026-10-23").
 demands(f_a_rename_gives_new_ids_to_every_statement_naming_it, decision).
+addressed_by(f_a_rename_gives_new_ids_to_every_statement_naming_it, "scanners/js_ast.ts").
 finding_note(f_a_rename_gives_new_ids_to_every_statement_naming_it,
   "MEASURED 2026-10-23 (same corpus as f_an_edit_stops_at_a_function_summary_and_a_constant_at_the_values). Renaming a local `d` to `base` in one function: 24 of 206 nodes of the file get new ids, 186 base facts and 498 facts of the contract model move, ten times a change of meaning (a constant: 46) and nothing outside the function changes. Two causes in scanners/js_ast.ts: a named declaration steps by its name (w_stable_node_ids, rename accepted by the owner 2026-10-21), and the shallow hash that steps a list element hashes every scalar, identifier names included, so every statement that mentions the name (its uses) and its subtree is renamed too. The second was not part of the accepted cost. OPEN, a decision of the owner: whether identity may be independent of names (resolution of a use to its declaration stays by name, which is the language's).").
 
