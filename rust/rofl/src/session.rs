@@ -745,6 +745,33 @@ impl Session {
         Ok(e)
     }
 
+    /// The world evaluated to the level `wall` and stopped before the next (`None`: whole); `evaluate_on` goes on, and
+    /// `admit` takes facts of the level it stopped after.
+    pub fn evaluate_to(&mut self, wall: Option<i64>) -> Result<Evaluated, Halt> {
+        self.eval.level_wall = wall;
+        let r = self.eval.run();
+        self.evaluated(r)
+    }
+
+    pub fn evaluate_on(&mut self, wall: Option<i64>) -> Result<Evaluated, Halt> {
+        self.eval.level_wall = wall;
+        let r = self.eval.run_on();
+        self.evaluated(r)
+    }
+
+    /// The facts of `src` into a world stopped at a level wall, and fired on by every rule active so far.
+    pub fn admit(&mut self, src: &str) -> Result<usize, String> {
+        self.eval.store.arrivals = Some(Vec::new());
+        let r = crate::program::load_program(&mut self.eval, src, None);
+        let ids = self.eval.store.arrivals.take().unwrap_or_default();
+        if !r.ok {
+            return Err(r.diagnostics.join("\n"));
+        }
+        self.eval.admit(&ids).map_err(|e| crate::describe(&e))?;
+        self.eval.store.dirty = false;
+        Ok(ids.len())
+    }
+
     fn evaluated(&mut self, r: Result<Outcome, Halt>) -> Result<Evaluated, Halt> {
         let o = match r {
             Ok(o) => o,

@@ -199,6 +199,8 @@ check[checks]("rust/rofl/tests/lattice_scale.rs", "a_hole_reaches_what_reads_it_
 check[checks]("rust/rofl/tests/lattice_scale.rs", "a_wall_holes_an_improving_cycle_and_what_it_reaches", test).
 check[checks]("rust/rofl/tests/lattice_scale.rs", "a_wall_names_no_cell_that_improved_only_through_others", test).
 check[checks]("rust/rofl/tests/lattice_scale.rs", "a_wall_before_a_cycle_came_round_names_none_of_it", test).
+check[checks]("rust/rofl/tests/level_wall.rs", "a_world_stopped_at_every_level_ends_as_the_whole_evaluation", test).
+check[checks]("rust/rofl/tests/level_wall.rs", "facts_admitted_after_their_level_end_the_world_as_if_loaded_before", test).
 check[checks]("rust/rofl/tests/mcp.rs", "a_regenerated_book_differs_by_exactly_the_changed_tool", test).
 check[checks]("rust/rofl/tests/mcp.rs", "a_reads_tool_is_called_once_per_want_and_answered_by_its_output_schema", test).
 check[checks]("rust/rofl/tests/mcp.rs", "a_does_tool_is_not_sent_by_evaluation", test).
@@ -938,6 +940,7 @@ test_file[checks]("rust/rofl/tests/join_scale.rs").
 test_file[checks]("rust/rofl/tests/journal.rs").
 test_file[checks]("rust/rofl/tests/kept.rs").
 test_file[checks]("rust/rofl/tests/lattice_scale.rs").
+test_file[checks]("rust/rofl/tests/level_wall.rs").
 test_file[checks]("rust/rofl/tests/mcp.rs").
 test_file[checks]("rust/rofl/tests/openapi.rs").
 test_file[checks]("rust/rofl/tests/par.rs").

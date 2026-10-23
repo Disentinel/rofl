@@ -677,6 +677,9 @@ pub struct Eval {
     cutting: Option<Box<Cut>>,
     cut_tail: Option<Tail>,
     resume_at: Option<Box<Cut>>,
+    /// the last level an evaluation runs to (`run_on` goes on), and the levels left with the phase of the first
+    pub level_wall: Option<i64>,
+    level_rest: Option<(Vec<(i64, Vec<Rc<ERule>>)>, usize)>,
     round_resume: Option<(Front, usize, usize, Front, Option<InFlight>)>,
     pub h: Heap,
     pub v: Vocab,
@@ -1555,6 +1558,8 @@ impl Eval {
             cutting: None,
             cut_tail: None,
             resume_at: None,
+            level_wall: None,
+            level_rest: None,
             round_resume: None,
             lat_unknown: HashMap::new(),
             lat_withdrawn: Vec::new(),
@@ -3103,7 +3108,6 @@ impl Eval {
 
     /// The pass after its preparation: from the start, or from `resume_at`.
     fn run_pass_from(&mut self) -> Result<Outcome, Halt> {
-        let mut partial = false;
         self.cutting = Some(Box::default());
         let from = self.resume_at.as_ref().and_then(|c| c.phase);
         let safe_rules: Vec<Rc<ERule>> = self.rules.iter().filter(|r| r.safe).cloned().collect();
@@ -3119,6 +3123,8 @@ impl Eval {
         let mono: Vec<Rc<ERule>> = safe_rules.iter().filter(|r| !stratified(r)).cloned().collect();
         let strat_rules: Vec<Rc<ERule>> = safe_rules.iter().filter(|r| stratified(r)).cloned().collect();
 
+        let mut walled = false;
+        self.level_rest = None;
         let outcome = (|| -> Result<(), Halt> {
             // THE ROUNDS ARE PEELED BEFORE ANYTHING FIRES; THE STOCK
             // EVALUATOR'S TABLE IS READ AFTER PHASE A, which derives it. Read
@@ -3261,50 +3267,60 @@ impl Eval {
                     })
                 }
             };
-            for (n, (lv, rs)) in levels.into_iter().enumerate() {
-                let ph = n + 2;
-                if from.is_some_and(|p| p > ph) {
-                    continue;
-                }
-                if from != Some(ph) {
-                    self.close_plain_rules(lv)?;
-                    self.plain_flush(lv)?;
-                    self.close_thresholds_below(lv, true)?;
-                    self.close_lattices_below(lv)?;
-                }
-                // the rules that own an element a stratification by data took run
-                // last at their level, a layer at a time (`datastrat.rs`)
-                let (ds, rs): (Vec<Rc<ERule>>, Vec<Rc<ERule>>) = rs.into_iter().partition(|r| self.ds_owner(r));
-                if brk!("shrug_snapshot_off" => false; self.shrug_snap.is_none() && rs.iter().any(|r| self.shrug_readers.contains(&r.id))) {
-                    // what reads shrug fires after the rest of its level (a
-                    // rule concluding `@next` shares the last one) and the rows
-                    let (late, early): (Vec<Rc<ERule>>, Vec<Rc<ERule>>) = rs.iter().cloned().partition(|r| self.shrug_readers.contains(&r.id));
-                    self.activate(&early)?;
-                    self.poison_readers(&early)?;
-                    self.shrug_snapshot()?;
-                    self.activate(&late)?;
-                    self.poison_readers(&late)?;
-                    self.run_data_levels(lv, &ds)?;
-                    continue;
-                }
-                self.activate_phase(&rs, ph)?;
-                self.poison_readers(&rs)?;
-                self.run_data_levels(lv, &ds)?;
-            }
-            self.close_plain_rules(i64::MAX)?;
-            self.plain_flush(i64::MAX)?;
-            // what a lattice's close writes can reach a threshold, and the
-            // reverse: the last closes run until neither has work
-            loop {
-                self.close_thresholds_below(i64::MAX, true)?;
-                self.close_lattices_below(i64::MAX)?;
-                if self.thr_open.is_empty() {
-                    break;
-                }
-            }
+            walled = self.run_levels(levels, 2, from)?;
             Ok(())
         })();
 
+        if walled && outcome.is_ok() {
+            self.cutting = None;
+            self.store.dirty = false;
+            return Ok(Outcome { partial: false, staged: 0 });
+        }
+        self.end_pass(outcome, &strat_rules)
+    }
+
+    /// What an evaluation that stopped at `level_wall` left, run on to the wall now set.
+    pub fn run_on(&mut self) -> Result<Outcome, Halt> {
+        let Some((rest, ph0)) = self.level_rest.take() else { return self.run() };
+        self.cutting = Some(Box::default());
+        let mut walled = false;
+        let outcome = self.run_levels(rest, ph0, None).map(|w| walled = w);
+        if walled && outcome.is_ok() {
+            self.cutting = None;
+            self.store.dirty = false;
+            return Ok(Outcome { partial: false, staged: 0 });
+        }
+        let strat: Vec<Rc<ERule>> = self.rules.iter().filter(|r| r.safe && r.has_agg).cloned().collect();
+        self.end_pass(outcome, &strat)
+    }
+
+    /// The level an evaluation stopped before, at its level wall.
+    pub fn next_level(&self) -> Option<i64> {
+        self.level_rest.as_ref().and_then(|(l, _)| l.first()).map(|(lv, _)| *lv)
+    }
+
+    /// Facts `ids` admitted into a world stopped at a level wall: news to every rule active so far. Facts of the wall's
+    /// own level only, which no rule run yet negates or counts.
+    pub fn admit(&mut self, ids: &[FactId]) -> Result<(), Halt> {
+        if self.level_rest.is_none() || !self.lattices.is_empty() {
+            return Err(Halt::Strat("admit takes a world stopped at a level wall, with no lattice".into(), String::new()));
+        }
+        let mut front = Front::default();
+        for &id in ids {
+            front.note(self.store.rec(id).rel, id);
+        }
+        // a closure already walked takes what follows as its two rules fire, written
+        let next = self.next_level().unwrap_or(i64::MAX);
+        let walked: Vec<bool> = self.closures.iter().map(|c| self.rel_level(c.rel) < next).collect();
+        self.closure_of.retain(|_, (i, _)| !walked[*i]);
+        self.cutting = Some(Box::default());
+        let r = self.propagate(front);
+        self.cutting = None;
+        r
+    }
+
+    fn end_pass(&mut self, outcome: Result<(), Halt>, strat_rules: &[Rc<ERule>]) -> Result<Outcome, Halt> {
+        let mut partial = false;
         self.ds_elems.clear();
         self.ds_done.clear();
         match outcome {
@@ -3361,6 +3377,56 @@ impl Eval {
             partial,
             staged: self.staged.len(),
         })
+    }
+
+    /// The levels from phase `ph0` on, each closing what is below it; true when the level wall stopped them.
+    fn run_levels(&mut self, levels: Vec<(i64, Vec<Rc<ERule>>)>, ph0: usize, from: Option<usize>) -> Result<bool, Halt> {
+        for (n, (lv, rs)) in levels.iter().cloned().enumerate() {
+            let ph = n + ph0;
+            if self.level_wall.is_some_and(|w| lv > w) {
+                self.level_rest = Some((levels[n..].to_vec(), ph));
+                return Ok(true);
+            }
+            if from.is_some_and(|p| p > ph) {
+                continue;
+            }
+            if from != Some(ph) {
+                self.close_plain_rules(lv)?;
+                self.plain_flush(lv)?;
+                self.close_thresholds_below(lv, true)?;
+                self.close_lattices_below(lv)?;
+            }
+            // the rules that own an element a stratification by data took run
+            // last at their level, a layer at a time (`datastrat.rs`)
+            let (ds, rs): (Vec<Rc<ERule>>, Vec<Rc<ERule>>) = rs.into_iter().partition(|r| self.ds_owner(r));
+            if brk!("shrug_snapshot_off" => false; self.shrug_snap.is_none() && rs.iter().any(|r| self.shrug_readers.contains(&r.id))) {
+                // what reads shrug fires after the rest of its level (a
+                // rule concluding `@next` shares the last one) and the rows
+                let (late, early): (Vec<Rc<ERule>>, Vec<Rc<ERule>>) = rs.iter().cloned().partition(|r| self.shrug_readers.contains(&r.id));
+                self.activate(&early)?;
+                self.poison_readers(&early)?;
+                self.shrug_snapshot()?;
+                self.activate(&late)?;
+                self.poison_readers(&late)?;
+                self.run_data_levels(lv, &ds)?;
+                continue;
+            }
+            self.activate_phase(&rs, ph)?;
+            self.poison_readers(&rs)?;
+            self.run_data_levels(lv, &ds)?;
+        }
+        self.close_plain_rules(i64::MAX)?;
+        self.plain_flush(i64::MAX)?;
+        // what a lattice's close writes can reach a threshold, and the
+        // reverse: the last closes run until neither has work
+        loop {
+            self.close_thresholds_below(i64::MAX, true)?;
+            self.close_lattices_below(i64::MAX)?;
+            if self.thr_open.is_empty() {
+                break;
+            }
+        }
+        Ok(false)
     }
 
     /// THE DECLARED STRUCTURES' PROMISES (docs/data-structures.md), judged over
@@ -8774,7 +8840,7 @@ impl Eval {
     /// The level a relation is complete after: the round (or stratum) its
     /// rules run in, `i64::MAX` for a relation a rule concludes that no
     /// round orders, 0 for one no rule concludes.
-    fn rel_level(&self, rel: Sym) -> i64 {
+    pub fn rel_level(&self, rel: Sym) -> i64 {
         match self.round_of.get(&rel) {
             Some(r) => *r as i64,
             None if self.derived_rels.contains(&rel) => i64::MAX,
