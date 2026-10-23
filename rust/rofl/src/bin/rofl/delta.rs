@@ -130,6 +130,10 @@ pub fn apply(s: &mut Session, r: &Record, files: &[String]) -> Result<Done, Stri
         }
         took.push(format!("{} (gone)", kept::shown(&u.path)));
     }
+    let (ids, live) = (s.eval.store.len_ids() as usize, s.eval.store.fact_count());
+    if (ids - live) * 4 > ids {
+        return Err(format!("{} of its {ids} fact records are of facts gone: it is evaluated whole to drop them", ids - live));
+    }
     // a scan whose reads changed runs again, alone; the rest stand as they were
     let mut scans: Vec<ScanUnit> = Vec::new();
     let mut again: Vec<rofl::engine::ScanRec> = Vec::new();

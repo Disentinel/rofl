@@ -102,7 +102,7 @@ fn edits_kept_as_overlays_open_as_the_fresh_world() {
         facts.extend(more);
         let path = at(&format!("over{step}.vol"));
         let bytes = o.keep_volume_as(&path, "", None, Some(&base)).unwrap();
-        assert!(bytes * 8 < base_bytes, "step {step}: an overlay of {bytes} bytes over a base of {base_bytes}");
+        assert!(bytes * 32 < base_bytes, "step {step}: an overlay of {bytes} bytes over a base of {base_bytes}");
         let mut back = Session::open_volume(&path, BUDGET).unwrap_or_else(|e| panic!("step {step}: {e}"));
         let (got, want) = (state(&mut back), fresh(&facts));
         assert!(got == want, "step {step}: the overlay opens as another world, {}", first_diff(&want, &got));
