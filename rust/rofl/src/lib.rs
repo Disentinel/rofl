@@ -54,6 +54,7 @@ pub mod seed;
 /// The five verbs the port offers a caller, derived in docs/port-surface.md.
 pub mod session;
 pub mod adapter;
+pub mod mcp;
 pub mod shrug;
 pub mod store;
 pub mod structure;

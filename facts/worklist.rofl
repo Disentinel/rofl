@@ -4056,8 +4056,8 @@ work_state(w_intent_sql_adapter, done).
 work_needs(w_intent_sql_adapter, w_intent_adapter_book).
 
 work(w_intent_mcp_adapter,
-  "docs/intents.md phase 5: `rofl adapter mcp URL` generates an adapter book from tools/list; the mcp kind executes it, answers by outputSchema or a named parse rule. ACCEPTANCE: a book regenerated after a test server changed one tool differs by exactly that tool; a does tool runs once per key across a re-evaluation and a replay.").
-work_state(w_intent_mcp_adapter, open).
+  "DONE 2026-10-23 (docs/intents.md, Phase 5 as built): rust/rofl/src/mcp.rs, stdio transport on the standard library; `rofl adapter mcp COMMAND` prints a book from every page of tools/list, a block per tool sorted by name; the mcp kind calls one tools/call per want, answers by structuredContent (mcp_field columns) or mcp_text for a parse rule. tests/mcp.rs: a regenerated book differs by exactly the changed tool; planted mcp_book_digest and mcp_does_sent red. The does-once acceptance moves to w_intent_does_dispatch (no evaluation sends a does want). Open: streamable HTTP transport (needs a dependency), adapter_auth. WAS: docs/intents.md phase 5: `rofl adapter mcp URL` generates an adapter book from tools/list; the mcp kind executes it, answers by outputSchema or a named parse rule. ACCEPTANCE: a book regenerated after a test server changed one tool differs by exactly that tool; a does tool runs once per key across a re-evaluation and a replay.").
+work_state(w_intent_mcp_adapter, done).
 work_needs(w_intent_mcp_adapter, w_intent_adapter_book).
 
 work(w_intent_does_dispatch,
