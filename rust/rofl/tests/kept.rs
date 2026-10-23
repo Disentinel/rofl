@@ -567,13 +567,7 @@ fn mixed_files_at_random(brk: Option<&str>) -> Result<(), String> {
     let mut held: Vec<Option<String>> = vec![None; 4];
     held[0] = Some(format!("edge(a, b).\nedge(b, c).\n{}", RULE[0]));
     held[1] = Some(RULE[1].to_string());
-    let mut gone_rules = 0;
-    for step in 0..40 {
-        let i = below(4) as usize;
-        held[i] = match (&held[i], below(4)) {
-            (Some(_), 0) => None,
-            _ => Some(text(&mut below)),
-        };
+    let ask = |held: &[Option<String>], step: usize| -> Result<String, String> {
         let mut files = vec!["boot.rofl".to_string()];
         for (k, h) in held.iter().enumerate() {
             let f = format!("m{k}.rofl");
@@ -585,19 +579,32 @@ fn mixed_files_at_random(brk: Option<&str>) -> Result<(), String> {
         let names: Vec<&str> = files.iter().map(String::as_str).collect();
         let got = rofl(&d, brk, &["ask", "reach(a, X)", "--state"].into_iter().chain(names.iter().copied()).collect::<Vec<_>>());
         let want = fresh(&d, brk, &["load", "--ask", "reach(a, X)", "--state"].into_iter().chain(names.iter().copied()).collect::<Vec<_>>());
-        gone_rules += got.err.contains("is gone and held rules") as usize;
         ensure(got.out == want.out && got.code == want.code, || format!("step {step}: by delta {} lines, fresh {} lines; {:?}", got.out.lines().count(), want.out.lines().count(), got.err))?;
+        Ok(got.err)
+    };
+    let (mut gone_rules, mut dead) = (0, 0);
+    for step in 0..40 {
+        let i = below(4) as usize;
+        held[i] = match (&held[i], below(4)) {
+            (Some(_), 0) => None,
+            _ => Some(text(&mut below)),
+        };
+        let err = ask(&held, step)?;
+        gone_rules += err.contains("is gone and held rules") as usize;
+        dead += err.contains("are of facts gone") as usize;
     }
-    // and, whatever sizes the series kept its worlds at, a file with rules taken away from the world just kept
-    d.write("n0.rofl", &format!("edge(a, d).\n{}", RULE[0]));
-    d.write("n1.rofl", RULE[1]);
-    for (step, names) in [(40, vec!["boot.rofl", "n0.rofl", "n1.rofl"]), (41, vec!["boot.rofl", "n0.rofl"])] {
-        let got = rofl(&d, brk, &["ask", "reach(a, X)", "--state"].into_iter().chain(names.iter().copied()).collect::<Vec<_>>());
-        let want = fresh(&d, brk, &["load", "--ask", "reach(a, X)", "--state"].into_iter().chain(names.iter().copied()).collect::<Vec<_>>());
-        gone_rules += got.err.contains("is gone and held rules") as usize;
-        ensure(got.out == want.out && got.code == want.code, || format!("step {step}: by delta {} lines, fresh {} lines; {:?}", got.out.lines().count(), want.out.lines().count(), got.err))?;
+    // and once for certain, whichever kept world the random steps left beside
+    held[0] = Some(format!("edge(a, d).\n{}", RULE[3]));
+    ask(&held, 40)?;
+    held[0] = None;
+    gone_rules += ask(&held, 41)?.contains("is gone and held rules") as usize;
+    // a file of many facts rewritten again and again leaves its old records dead, until the world is evaluated whole
+    for round in 0..4 {
+        held[0] = Some((0..300).map(|k| format!("edge(p{round}_{k}, q{k}).\n")).collect());
+        dead += ask(&held, 42 + round)?.contains("are of facts gone") as usize;
     }
-    ensure(gone_rules > 0 || brk.is_some(), || "no step took a file with rules away".into())
+    ensure(gone_rules > 0 || brk.is_some(), || "no step took a file with rules away".into())?;
+    ensure(dead > 0 || brk.is_some(), || "no world was evaluated whole for the records of facts gone".into())
 }
 
 /// Writers killed while they write leave their half-written worlds; the next run that keeps a world removes them,

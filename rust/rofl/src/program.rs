@@ -1019,9 +1019,24 @@ pub fn load_program(e: &mut Eval, text: &str, who: Option<&str>) -> Loaded {
     // A LARGE TEXT IS READ A PIECE AT A TIME: the parser holds four bytes a character and forty a token, ten times
     // the text, so a pack is cut between clauses and each piece parsed and checked before the next. A piece the
     // parser refuses is refused as the whole text is, with the whole text's line.
-    let mut pieces = rofl_parse::pieces(text, 1 << 20).into_iter();
+    // The pieces are lexed a window at a time on threads; parsing names them in the heap, so it stays on this one.
+    let all = rofl_parse::pieces(text, 1 << 20);
+    let threads = e.par.threads.max(1);
+    let mut lexed: std::collections::VecDeque<rofl_parse::Lexed> = Default::default();
+    let mut at = 0;
+    let mut next_lexed = |lexed: &mut std::collections::VecDeque<rofl_parse::Lexed>| -> Option<rofl_parse::Lexed> {
+        if lexed.is_empty() && at < all.len() {
+            let window = &all[at..(at + threads).min(all.len())];
+            at += window.len();
+            if let [one] = window {
+                return Some(rofl_parse::lex(one));
+            }
+            lexed.extend(std::thread::scope(|sc| window.iter().map(|p| sc.spawn(move || rofl_parse::lex(p))).collect::<Vec<_>>().into_iter().map(|t| t.join().unwrap()).collect::<Vec<_>>()));
+        }
+        lexed.pop_front()
+    };
     let refused = |e: &mut Eval, d: String| Loaded { ok: false, diagnostics: vec![rofl_parse::parse(&mut e.h, text).err().unwrap_or(d)], admitted: 0 };
-    let mut clauses = match rofl_parse::parse(&mut e.h, pieces.next().unwrap_or("")) {
+    let mut clauses = match rofl_parse::parse_lexed(&mut e.h, next_lexed(&mut lexed).unwrap_or_else(|| rofl_parse::lex(""))) {
         Ok(cs) => cs,
         Err(d) => return refused(e, d),
     };
@@ -1182,8 +1197,8 @@ pub fn load_program(e: &mut Eval, text: &str, who: Option<&str>) -> Loaded {
             Err(d) => diags.push(d),
         }
     }
-    let Some(piece) = pieces.next() else { break };
-    clauses = match rofl_parse::parse(&mut e.h, piece) {
+    let Some(piece) = next_lexed(&mut lexed) else { break };
+    clauses = match rofl_parse::parse_lexed(&mut e.h, piece) {
         Ok(cs) => cs,
         Err(d) => return refused(e, d),
     };

@@ -215,18 +215,24 @@ vscode's base directory, each its own facts file):
 A node's id is its place in the tree, so a function added at the end of a file
 takes no fact out. What an edit touches stays flat with the world; its time
 does not yet. At vscode 250 (1 595 714 base facts, each file scanned alone) a
-function added and taken out again is opened and taken in 0.77-0.97 s (whole
-run 1.2-1.9 s), and the same question asked again of the kept world takes
-0.47-0.53 s, now that a volume and the files found whole are not read whole
-again (f_an_edit_by_delta_paid_for_the_world_in_six_places,
+function added and taken out again is opened and taken in 0.63-0.98 s (whole
+run 0.93-1.7 s), and the same question asked again of the kept world takes
+0.27-0.35 s: a volume and the files found whole are not read whole again, and
+a declared tree's forest is kept in the volume and built again only in the
+trees an edit reaches (f_an_edit_by_delta_paid_for_the_world_in_six_places,
 f_opening_a_kept_world_read_every_byte_it_was_kept_from).
 Writing it again took 5.4 s for the
 whole 1.25 GB volume; as an overlay (release, 2026-10-23, the same subset, four
 edits in a row over a 1.17 GB base) it takes 0.17 s and 49 MB for a function
-added (nothing out), 0.33-0.39 s and 193-201 MB once an edit has taken facts out:
-a relation a fact went out of has its runs written whole (they are compacted),
-and the record of the world's files is written whole (12 MB), so what is
-written grows with the relations an edit touches, not with the edit.
+added (nothing out), 0.33-0.39 s and 193-201 MB once an edit had taken facts out.
+Now a relation a fact went out of is written as the base's runs spliced with
+what changed, and the record names each file's facts as runs of ids: 0.16-0.5 s
+and 35-56 MB for the same four edits, the answer the same.
+
+Records of facts gone stay in the world (a reader skips them) until it is
+evaluated whole: once they are more than a quarter of its records, the next
+edit says `of facts gone: it is evaluated whole to drop them` and is not taken
+by delta.
 
 ## Exit codes
 

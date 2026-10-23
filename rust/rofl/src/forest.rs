@@ -16,23 +16,62 @@
 //! says so. What a broken forest answers is never read, for the world is
 //! refused (`structure::check_trees`).
 
+use crate::arena::{Arena, VolR, VolW};
 use crate::store::FxMap;
 use crate::term::Term;
 
 const NONE: u32 = u32::MAX;
 
+/// The node a term is: an open table of node numbers by the term's hash, which a volume keeps as it is, and the nodes
+/// put in since, which the table does not hold.
+#[derive(Clone, Default)]
+struct Idx {
+    table: Arena<u32>,
+    over: FxMap<u64, u32>,
+}
+
+fn slot_hash(k: u64) -> u64 {
+    (k ^ (k >> 29)).wrapping_mul(0x9e37_79b9_7f4a_7c15)
+}
+
+impl Idx {
+    /// The table of the nodes `held` holds, each term once.
+    fn of(nodes: &[Term], held: impl Fn(usize) -> bool) -> Idx {
+        let cap = (nodes.len() * 2).next_power_of_two().max(8);
+        let at = nodes.iter().enumerate().filter(|(i, _)| held(*i)).map(|(i, t)| (slot_hash(t.bits()), i as u32));
+        Idx { table: crate::arena::table(cap, NONE, at).into(), over: FxMap::default() }
+    }
+    fn get(&self, nodes: &[Term], k: u64) -> Option<u32> {
+        if let Some(v) = self.over.get(&k) {
+            return Some(*v);
+        }
+        let mask = self.table.len().checked_sub(1)?;
+        let mut i = slot_hash(k) as usize & mask;
+        loop {
+            let v = self.table[i];
+            if v == NONE {
+                return None;
+            }
+            if nodes[v as usize].bits() == k {
+                return Some(v);
+            }
+            i = (i + 1) & mask;
+        }
+    }
+}
+
 #[derive(Clone)]
 pub struct Forest {
-    nodes: Vec<Term>,
-    idx: FxMap<u64, u32>,
-    parent: Vec<u32>,
+    nodes: Arena<Term>,
+    idx: Idx,
+    parent: Arena<u32>,
     /// pre-order number of a node, `NONE` for one no root reaches
-    pre: Vec<u32>,
+    pre: Arena<u32>,
     /// the node at each pre-order number
-    order: Vec<u32>,
+    order: Arena<u32>,
     /// one past the last pre-order number in the subtree of a node
-    end: Vec<u32>,
-    depth: Vec<u32>,
+    end: Arena<u32>,
+    depth: Arena<u32>,
     /// rows of the strict closure: the sum of the depths
     pub pairs: u64,
     /// nodes with a parent, and nodes with a child
@@ -45,8 +84,8 @@ impl Forest {
     /// The forest of `(parent, child)` edges.
     pub fn build(edges: &[(Term, Term)]) -> Forest {
         let mut nodes: Vec<Term> = Vec::new();
-        let mut idx: FxMap<u64, u32> = FxMap::default();
-        let mut node = |t: Term, nodes: &mut Vec<Term>| *idx.entry(t.bits()).or_insert_with(|| { nodes.push(t); nodes.len() as u32 - 1 });
+        let mut seen: FxMap<u64, u32> = FxMap::default();
+        let mut node = |t: Term, nodes: &mut Vec<Term>| *seen.entry(t.bits()).or_insert_with(|| { nodes.push(t); nodes.len() as u32 - 1 });
         let mut es: Vec<(u32, u32)> = Vec::with_capacity(edges.len());
         for (p, c) in edges {
             let (p, c) = (node(*p, &mut nodes), node(*c, &mut nodes));
@@ -117,50 +156,67 @@ impl Forest {
             deep += (depth[v] > 0) as u32;
             internal += (start[v + 1] > start[v]) as u32;
         }
-        Forest { nodes, idx, parent, pre, order, end, depth, pairs, deep, internal, broken }
+        let idx = Idx::of(&nodes, |_| true);
+        Forest { nodes: nodes.into(), idx, parent: parent.into(), pre: pre.into(), order: order.into(), end: end.into(), depth: depth.into(), pairs, deep, internal, broken }
     }
 
-    /// This forest with `edges` added, where each adds a node it does not hold below a node an earlier one added:
-    /// the new trees after the old ones, the old numbering kept. None where an edge reaches a node it holds.
-    pub fn extended(&self, edges: &[(Term, Term)]) -> Option<Forest> {
-        if edges.iter().any(|(p, c)| self.idx.contains_key(&p.bits()) || self.idx.contains_key(&c.bits())) {
-            return None;
+    /// The forest as a volume keeps it: its arrays and its table as they are, mapped back when read.
+    pub(crate) fn write(&self, w: &mut VolW) {
+        // nodes put in since the table was made, or a tree built again, are put in a new one, the live node of each term
+        let idx = if self.idx.over.is_empty() { self.idx.clone() } else { Idx::of(&self.nodes, |i| self.pre[i] != NONE) };
+        w.arena(&self.nodes);
+        w.arena(&idx.table);
+        for a in [&self.parent, &self.pre, &self.order, &self.end, &self.depth] {
+            w.arena(a);
         }
-        let mut f = self.clone();
-        f.append(Forest::build(edges));
-        Some(f)
+        w.u64(self.pairs);
+        w.u32(self.deep);
+        w.u32(self.internal);
+        w.u32(self.broken as u32);
+    }
+
+    pub(crate) fn read(r: &mut VolR) -> Result<Forest, String> {
+        let (nodes, table): (Arena<Term>, Arena<u32>) = (r.arena()?, r.arena()?);
+        let [parent, pre, order, end, depth] = [(); 5].map(|_| r.arena::<u32>());
+        let f = Forest { idx: Idx { table, over: FxMap::default() }, parent: parent?, pre: pre?, order: order?, end: end?, depth: depth?, pairs: r.u64()?, deep: r.u32()?, internal: r.u32()?, broken: r.u32()? == 1, nodes };
+        let n = f.nodes.len();
+        if !f.idx.table.len().is_power_of_two() || [&f.parent, &f.pre, &f.end, &f.depth].iter().any(|a| a.len() != n) || f.order.len() > n {
+            return Err("a volume's forest is not a forest".into());
+        }
+        Ok(f)
     }
 
     /// `add`'s trees after this forest's, the numbering of both kept.
     fn append(&mut self, add: Forest) {
         let (n, o) = (self.nodes.len() as u32, self.order.len() as u32);
         let shift = |v: u32, by: u32| if v == NONE { NONE } else { v + by };
-        self.nodes.extend_from_slice(&add.nodes);
-        self.idx.extend(add.idx.iter().map(|(k, v)| (*k, v + n)));
-        self.parent.extend(add.parent.iter().map(|&v| shift(v, n)));
-        self.pre.extend(add.pre.iter().map(|&v| shift(v, o)));
-        self.order.extend(add.order.iter().map(|&v| v + n));
-        self.end.extend(add.end.iter().map(|&v| v + o));
-        self.depth.extend_from_slice(&add.depth);
+        self.idx.over.extend(add.nodes.iter().enumerate().map(|(i, t)| (t.bits(), i as u32 + n)));
+        self.nodes.to_mut().extend_from_slice(&add.nodes);
+        self.parent.to_mut().extend(add.parent.iter().map(|&v| shift(v, n)));
+        self.pre.to_mut().extend(add.pre.iter().map(|&v| shift(v, o)));
+        self.order.to_mut().extend(add.order.iter().map(|&v| v + n));
+        self.end.to_mut().extend(add.end.iter().map(|&v| v + o));
+        self.depth.to_mut().extend_from_slice(&add.depth);
         self.pairs += add.pairs;
         self.deep += add.deep;
         self.internal += add.internal;
         self.broken |= add.broken;
     }
 
-    /// THE TREES AN EDGE TAKEN OUT REACHES, BUILT AGAIN: each tree holding the child of an edge of `removed` is dropped
-    /// (its nodes keep their slots, unreachable), and the edges of it that stand are built into trees again after the
-    /// rest, whose numbering is kept. The cost is the trees the edges are in, not the forest. The nodes of the trees
-    /// dropped, each once, for the rows that ended at one are what a retraction looks at.
-    pub fn rebuild_trees(&mut self, removed: &[(Term, Term)]) -> Vec<Term> {
+    /// THE TREES AN EDGE TAKEN OUT OR PUT IN REACHES, BUILT AGAIN: each tree holding the child of an edge of `removed`,
+    /// or either end of an edge of `added`, is dropped (its nodes keep their slots, unreachable), and the edges of it
+    /// that stand are built into trees again with those added, after the rest, whose numbering is kept. The cost is the
+    /// trees the edges are in, not the forest. The nodes of the trees dropped, each once, for the rows that ended at one
+    /// are what a retraction looks at.
+    pub fn rebuild_trees(&mut self, removed: &[(Term, Term)], added: &[(Term, Term)]) -> Vec<Term> {
         let out: crate::store::FxSet<(u64, u64)> = removed.iter().map(|(p, c)| (p.bits(), c.bits())).collect();
-        let mut roots: Vec<u32> = Vec::new();
-        for (_, c) in removed {
-            let Some(mut v) = self.at(*c) else { continue };
+        let (mut roots, mut rooted): (Vec<u32>, crate::store::FxSet<u32>) = Default::default();
+        for t in removed.iter().map(|e| e.1).chain(added.iter().flat_map(|(p, c)| [*p, *c])) {
+            let Some(mut v) = self.at(t) else { continue };
             for _ in 0..self.depth[v as usize] {
                 v = self.parent[v as usize];
             }
-            if !roots.contains(&v) {
+            if rooted.insert(v) {
                 roots.push(v);
             }
         }
@@ -184,17 +240,17 @@ impl Forest {
             }
             for k in lo..hi {
                 let v = self.order[k as usize];
-                self.pre[v as usize] = NONE;
-                self.idx.remove(&self.nodes[v as usize].bits());
+                self.pre.to_mut()[v as usize] = NONE;
             }
         }
         self.internal -= parents.len() as u32;
+        stand.extend_from_slice(added);
         self.append(Forest::build(&stand));
         dropped
     }
 
     fn at(&self, t: Term) -> Option<u32> {
-        self.idx.get(&t.bits()).copied().filter(|v| self.pre[*v as usize] != NONE)
+        self.idx.get(&self.nodes, t.bits()).filter(|v| self.pre[*v as usize] != NONE)
     }
 
     /// `a` is a strict ancestor of `d`: containment of intervals.
@@ -232,7 +288,7 @@ impl Forest {
 
     /// Every pair, ancestor first: the ancestors of each node.
     pub fn each_pair(&self, mut f: impl FnMut(Term, Term)) {
-        for &v in &self.order {
+        for &v in self.order.iter() {
             if self.pre[v as usize] == NONE {
                 continue;
             }

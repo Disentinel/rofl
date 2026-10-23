@@ -40,7 +40,7 @@ other_channel(S, V) :- side_effect_value(S, ipc, V), V != "vscode:hello".
 
 ? port_from_env(S)
 never other_channel(S, V)
-why side_effect_value(n6ce3b3e159e9764b_aig8h69pkt2, ipc, "vscode:hello")
+why side_effect_value(n6ce3b3e159e9764b_jn80tseuu4, ipc, "vscode:hello")
 ```
 
 > Why a value reaches a site: first the steps the value took, one line each, where the value changes file said so;
@@ -49,8 +49,8 @@ why side_effect_value(n6ce3b3e159e9764b_aig8h69pkt2, ipc, "vscode:hello")
 > crosses from the caller's file into `pfs.ts`; the port crosses twice, as an export and as an argument.
 
 ```datalog
-why side_effect_value(nd100d8f9c1968a85_to76001thh6, fs_mutation, "/tmp/settings.json")
-why side_effect_value(n34efd0fd49e79fa1_r7jcjg1pls5, listen, 8080)
+why side_effect_value(nd100d8f9c1968a85_vrukhc1b4n1, fs_mutation, "/tmp/settings.json")
+why side_effect_value(n34efd0fd49e79fa1_9atl92avtk7, listen, 8080)
 ```
 
 > A path built from parts (`paths.ts`, rules/js-concat.rofl): a `path.join`, a template, a `dirname` and a `+=` in a
@@ -61,5 +61,5 @@ why side_effect_value(n34efd0fd49e79fa1_r7jcjg1pls5, listen, 8080)
 
 ```datalog
 ? side_effect_form(S, F, T)
-? part_value[flow](ndbdc6130c943fdee_5phhoasnio7, I, V)
+? part_value[flow](ndbdc6130c943fdee_99vc46l7h86, I, V)
 ```

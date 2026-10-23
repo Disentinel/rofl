@@ -1069,9 +1069,12 @@ pub struct Store {
     /// Whether the world keeps witnesses: a listed row is then a fact with one firing, written with its witness.
     pub vwit: bool,
     /// The row a `PremRef::VRow` key names: the closure's number, the book and the two ends.
-    pub vrow_of: HashMap<Sym, (usize, Sym, Term, Term)>,
-    /// `vrow_of` as the volume it was read from held it: written again by reference while it holds the same rows.
-    pub(crate) vrow_kept: Arena<u64>,
+    pub vrow_of: VRows,
+    /// Facts of each relation retired since the store was made or opened: what tells a tree its edges went by a
+    /// path that did not say so (`Eval::vextended`).
+    pub deaths: FxMap<Sym, u64>,
+    /// Facts of each relation put back under the id they had, in the order they came back.
+    pub revived: FxMap<Sym, Vec<FactId>>,
     /// The rules whose cells are a counting tag's (the engine's sum over the
     /// derivations `p@count`): their cells carry the `tag` flag.
     pub tag_rules: HashSet<Sym>,
@@ -1472,6 +1475,54 @@ fn hash_key(rel: Sym, persp: Sym, args: &[Term]) -> u64 {
     h
 }
 
+/// A tree row a `PremRef::VRow` key names: the closure's number, the book and the two ends.
+pub type VRow = (usize, Sym, Term, Term);
+
+/// The rows `PremRef::VRow` keys name: those the volume a world was opened from held, five words a row sorted by key
+/// and searched there, and those named since.
+#[derive(Clone, Default)]
+pub struct VRows {
+    pub(crate) kept: Arena<u64>,
+    own: HashMap<Sym, VRow>,
+}
+
+impl VRows {
+    pub fn get(&self, k: &Sym) -> Option<VRow> {
+        if let Some(v) = self.own.get(k) {
+            return Some(*v);
+        }
+        let (mut lo, mut hi) = (0, self.kept.len() / 5);
+        while lo < hi {
+            let mid = (lo + hi) / 2;
+            if self.kept[5 * mid] < *k as u64 { lo = mid + 1 } else { hi = mid }
+        }
+        let x = self.kept.get(5 * lo..5 * lo + 5).filter(|x| x[0] == *k as u64)?;
+        Some((x[1] as usize, x[2] as Sym, Term::from_bits(x[3]), Term::from_bits(x[4])))
+    }
+    /// `k` naming `v`, unless it names a row already.
+    pub fn name(&mut self, k: Sym, v: VRow) {
+        if self.get(&k).is_none() {
+            self.own.insert(k, v);
+        }
+    }
+    pub fn clear(&mut self) {
+        *self = VRows::default();
+    }
+    pub fn is_empty(&self) -> bool {
+        self.kept.is_empty() && self.own.is_empty()
+    }
+    /// The rows those named since were added to, sorted by key, five words a row; None while there are none.
+    pub(crate) fn grown(&self) -> Option<Vec<u64>> {
+        if self.own.is_empty() {
+            return None;
+        }
+        let mut rows: Vec<[u64; 5]> = self.kept.chunks_exact(5).map(|x| [x[0], x[1], x[2], x[3], x[4]]).collect();
+        rows.extend(self.own.iter().map(|(k, &(ci, book, a, d))| [*k as u64, ci as u64, book as u64, a.bits(), d.bits()]));
+        rows.sort_unstable();
+        Some(rows.concat())
+    }
+}
+
 impl Store {
     pub fn new() -> Store {
         Store {
@@ -1738,6 +1789,7 @@ impl Store {
                     self.sweep();
                 }
                 self.facts.set_flags(id, flags);
+                self.revived.entry(rel).or_default().push(id);
                 revived = true;
                 id
             }
@@ -1799,6 +1851,7 @@ impl Store {
         let v = self.idx.get_mut(&rel).unwrap();
         let i = v.iter().position(|(p, _)| *p == persp).unwrap();
         let t_absorb = std::time::Instant::now();
+        let from = v[i].1.canon.origin();
         let mut canon = v[i].1.canon.take();
         let mut fresh = v[i].1.arrived.take();
         self.absorb_calls += 1;
@@ -1843,7 +1896,7 @@ impl Store {
         }
         let v = self.idx.get_mut(&rel).unwrap();
         let i = v.iter().position(|(p, _)| *p == persp).unwrap();
-        v[i].1.canon = canon.into();
+        v[i].1.canon = Arena::derived(canon, from);
         v[i].1.by_tup = unordered;
         self.absorb_ns += t_absorb.elapsed().as_nanos();
     }
@@ -2350,6 +2403,7 @@ impl Store {
         }
         self.facts.add_flags(id, F_DEAD);
         self.n_live -= 1;
+        *self.deaths.entry(r.rel).or_default() += 1;
         self.bump();
         if self.wit_head[id as usize] != EMPTY {
             let mut c = self.wit_head[id as usize];
@@ -2374,6 +2428,7 @@ impl Store {
         }
         self.facts.add_flags(id, F_DEAD);
         self.n_live -= 1;
+        *self.deaths.entry(r.rel).or_default() += 1;
         self.bump();
         if !self.unswept.contains(&(r.rel, r.persp)) {
             self.unswept.push((r.rel, r.persp));
@@ -2425,6 +2480,7 @@ impl Store {
             let v = self.idx.get_mut(&rel).unwrap();
             let i = v.iter().position(|(p, _)| *p == persp).unwrap();
             let run = &mut v[i].1;
+            let from = (run.canon.origin(), run.arrived.origin());
             let dead: Vec<FactId> = run.canon.take();
             let dead2: Vec<FactId> = run.arrived.take();
             let loose: Vec<FactId> = std::mem::take(&mut run.loose);
@@ -2456,8 +2512,8 @@ impl Store {
                     run.by_pat = None;
                 }
             }
-            run.canon = alive.into();
-            run.arrived = alive2.into();
+            run.canon = Arena::derived(alive, from.0);
+            run.arrived = Arena::derived(alive2, from.1);
             run.loose = loose;
             run.staged = if run.by_pat.is_some() { staged } else { Vec::new() };
         }
@@ -2711,7 +2767,7 @@ impl Store {
             for p in &w.prems {
                 let PremRef::VRow(k) = p else { continue };
                 match self.vrow_of.get(k) {
-                    Some(&(_, _, _, d)) => Rc::make_mut(self.vciters.as_mut().unwrap()).entry(d.bits()).or_default().push((id, *k)),
+                    Some((_, _, _, d)) => Rc::make_mut(self.vciters.as_mut().unwrap()).entry(d.bits()).or_default().push((id, *k)),
                     None => {
                         self.vciters = None;
                         break;
@@ -3245,7 +3301,7 @@ impl Store {
     /// edge into the descendant and the row of the parent, so down the chain from the ancestor each row is 1 + the
     /// higher of the row above and its edge. A row that does not hold (cited in a past tick) is 0, as a fact gone is.
     pub fn vrow_height(&self, k: Sym, memo: &mut HashMap<FactId, u32>) -> u32 {
-        let Some(&(ci, book, a, d)) = self.vrow_of.get(&k).filter(|_| self.vwit && !brk!("vclosure_height_zero" => true; false)) else { return 0 };
+        let Some((ci, book, a, d)) = self.vrow_of.get(&k).filter(|_| self.vwit && !brk!("vclosure_height_zero" => true; false)) else { return 0 };
         let Some(v) = self.virtuals.get(ci) else { return 0 };
         let Some(f) = v.forests.iter().find(|(b, _)| *b == book).map(|x| x.1.clone()) else { return 0 };
         if !f.is_ancestor(a, d) {
