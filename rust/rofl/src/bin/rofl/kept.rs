@@ -238,7 +238,10 @@ pub fn keep_capped_over(s: &mut rofl::session::Session, kept: &str, note: &str, 
     if let Some(b) = base.as_mut().filter(|b| b.path == kept) {
         let aside = format!("{}.{:016x}.vol", kept.trim_end_matches(".vol"), b.id);
         match std::fs::rename(kept, &aside) {
-            Ok(()) => b.path = aside,
+            Ok(()) => {
+                rofl::volume::moved(kept, &aside, seen().as_deref());
+                b.path = aside;
+            }
             Err(_) => base = None,
         }
     }

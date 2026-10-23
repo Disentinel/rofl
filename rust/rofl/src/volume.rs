@@ -255,6 +255,17 @@ pub fn touch(path: &str, seen: Option<&Path>) {
     }
 }
 
+/// The volume this process found whole at `from`, moved to `to`: noted there as it was, so it is not summed again.
+pub fn moved(from: &str, to: &str, seen: Option<&Path>) {
+    if !WHOLE.with(|w| w.borrow().contains(from)) {
+        return;
+    }
+    WHOLE.with(|w| w.borrow_mut().insert(to.to_string()));
+    if let Some((m, l, _)) = header(to).ok().zip(seen).and_then(|(h, d)| seen_line(to, h.r.id(), d)).filter(|(_, _, at)| at.elapsed().is_ok_and(|e| e.as_secs() >= 1)) {
+        note_seen(&m, &l);
+    }
+}
+
 thread_local! {
     /// The volumes this process found whole.
     static WHOLE: std::cell::RefCell<std::collections::HashSet<String>> = Default::default();
