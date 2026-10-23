@@ -4071,3 +4071,12 @@ work_state(w_intent_scenarios, open).
 work_needs(w_intent_scenarios, w_intent_does_dispatch).
 work_needs(w_intent_scenarios, w_intent_sql_adapter).
 work_needs(w_intent_scenarios, w_intent_scanner_as_adapter).
+
+work(w_rename_keeps_ids,
+  "From f_a_rename_gives_new_ids_to_every_statement_naming_it, waiting on the owner's decision. Renaming a local renames the ids of every statement that mentions it, through the shallow hash that steps a list element. Candidates to measure with scripts/edit_waves.ts and the contract corpus: the shallow hash leaves identifier names out (statements alike in shape then count #n among equals); a named declaration steps by its kind and #n among named siblings of that kind. ACCEPTANCE: facts moved per edit (rename, statement added at the top, constant, line edited inside a callback) against the ids of w_stable_node_ids, on a multi-file corpus, no edit worse by more than the owner accepts.").
+work_state(w_rename_keeps_ids, open).
+work_needs(w_rename_keeps_ids, w_stable_node_ids).
+
+work(w_join_through_constants,
+  "From f_a_join_on_a_table_of_constants_read_past_the_index: a premise bound by a variable from a small table of constant facts is looked up by both columns, not read for each row of the other bound column. ACCEPTANCE: the operand rule of that finding, as written there, reads in proportion to its answers on 100 vscode files, no hot line; planted, the old plan red.").
+work_state(w_join_through_constants, open).
