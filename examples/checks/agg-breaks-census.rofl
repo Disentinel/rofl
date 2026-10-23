@@ -11,6 +11,8 @@ edb(proof_world).
 brk("prov_state_unsettled"). brk_kind("prov_state_unsettled", switch).
 brk_expects("prov_state_unsettled", "prov_lazy_reader").
 brk_expects("prov_state_unsettled", "prov_lazy_retract").
+brk("journal_closed_late"). brk_kind("journal_closed_late", switch).
+brk_expects("journal_closed_late", "journal_replay").
 brk("prov_settle_keeps_dead"). brk_kind("prov_settle_keeps_dead", switch).
 brk_expects("prov_settle_keeps_dead", "prov_lazy_lattice").
 brk("prov_tick_unsettled"). brk_kind("prov_tick_unsettled", switch).
@@ -2490,6 +2492,7 @@ switch_site("join_value_unchecked", "rust/rofl/src/engine.rs").
 switch_site("join_why_ghost_unmarked", "rust/rofl/src/engine.rs").
 switch_site("join_why_one_member", "rust/rofl/src/engine.rs").
 switch_site("join_whynot_below", "rust/rofl/src/engine.rs").
+switch_site("journal_closed_late", "rust/rofl/src/journal.rs").
 switch_site("keep_first_derivation", "rust/rofl/src/engine.rs").
 switch_site("kept_blind_scans", "rust/rofl/src/bin/rofl/kept.rs").
 switch_site("kept_cap_ignored", "rust/rofl/src/bin/rofl/kept.rs").

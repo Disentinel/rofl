@@ -148,7 +148,8 @@ impl Session {
     /// Build a core from a snapshot. Expensive — 383 ms for the 20 630-fact
     /// packs — and meant to happen once per process. Fork it after that.
     pub fn open(seed_json: &str, budget: i64) -> Result<Session, String> {
-        let l = crate::load(seed_json, budget)?;
+        let mut l = crate::load(seed_json, budget)?;
+        l.eval.store.journal.seeded();
         Ok(Session { eval: l.eval, dangling: l.dangling, asks: 0, kept: None })
     }
 
@@ -159,6 +160,7 @@ impl Session {
         let mut o = crate::image::open(&mut h, bytes)?;
         bootstrap_kernel(&mut h, &v, &mut o.store);
         let mut eval = Eval::with_answer(h, o.store, budget, Mode::Rounds, false, o.answer);
+        eval.store.journal.seeded();
         eval.vclosure_restore();
         eval.stage_kept(o.staged);
         eval.after_open(o.lattices);
@@ -271,6 +273,10 @@ impl Session {
     /// packs — accepting one here would let a caller change what the world
     /// means without saying so.
     pub fn assert(&mut self, src: &str) -> Result<usize, String> {
+        self.told(crate::journal::Verb::Assert, |s| s.assert_untold(src))
+    }
+
+    fn assert_untold(&mut self, src: &str) -> Result<usize, String> {
         let facts = self.parse_facts(src)?;
         let (n, asked, ids) = self.put_facts(&facts);
         if !ids.is_empty() {
@@ -317,6 +323,9 @@ impl Session {
             }
         }
         let ids = self.eval.store.arrivals.take().unwrap_or_default();
+        for &id in &ids {
+            self.eval.store.journal.put(id);
+        }
         (n, asked, ids)
     }
 
@@ -325,6 +334,10 @@ impl Session {
     /// addition the path is not worked out for leaves the world dirty: `Full` says why, the next evaluation answers.
     /// An ask is a new program (the cone of the rules it runs grows), added as `load_delta` adds rules.
     pub fn assert_delta(&mut self, src: &str) -> Result<(usize, Addition), String> {
+        self.told(crate::journal::Verb::AssertDelta, |s| s.assert_delta_untold(src))
+    }
+
+    fn assert_delta_untold(&mut self, src: &str) -> Result<(usize, Addition), String> {
         let facts = self.parse_facts(src)?;
         if self.eval.store.dirty {
             let n = self.assert(src)?;
@@ -368,6 +381,10 @@ impl Session {
     /// facts it adds and the rules it adds fire over what the world holds (`Eval::add_delta`). A world not evaluated
     /// loads as `load` does; a program the path is not worked out for leaves the world dirty and `Full` says why.
     pub fn load_delta(&mut self, src: &str, who: Option<&str>) -> Result<(usize, Addition), Vec<String>> {
+        self.told(crate::journal::Verb::LoadDelta, |s| s.load_delta_untold(src, who))
+    }
+
+    fn load_delta_untold(&mut self, src: &str, who: Option<&str>) -> Result<(usize, Addition), Vec<String>> {
         if self.eval.store.dirty {
             let n = self.load(src, who)?;
             return Ok((n, Addition::Full("the world is not evaluated".into())));
@@ -462,6 +479,13 @@ impl Session {
     /// `retract_facts_delta` with what the pass did (`AddDelta`: what it overdeleted and derived again), or why it
     /// was not worked out (the world left dirty).
     pub fn retract_set_delta(&mut self, ids: &[FactId]) -> Result<Result<crate::engine::AddDelta, String>, String> {
+        let before = self.base_alive(ids);
+        let r = self.told(crate::journal::Verb::RetractSet, |s| s.retract_set_delta_unjournaled(ids));
+        self.journal_gone(&before);
+        r
+    }
+
+    fn retract_set_delta_unjournaled(&mut self, ids: &[FactId]) -> Result<Result<crate::engine::AddDelta, String>, String> {
         self.settle()?;
         let facts: Vec<FactId> = {
             let mut seen = HashSet::new();
@@ -499,6 +523,13 @@ impl Session {
     /// The base facts `ids` taken out one after another by the engine's one-fact delta (`retract_delta`): the
     /// reference `retract_facts_delta` is held to. `Full` as there.
     pub fn retract_facts_one_by_one(&mut self, ids: &[FactId]) -> Result<Retraction, String> {
+        let before = self.base_alive(ids);
+        let r = self.told(crate::journal::Verb::OneByOne, |s| s.retract_facts_one_by_one_unjournaled(ids));
+        self.journal_gone(&before);
+        r
+    }
+
+    fn retract_facts_one_by_one_unjournaled(&mut self, ids: &[FactId]) -> Result<Retraction, String> {
         self.eval.settle_assertions();
         self.settle()?;
         let mut last = Retraction::Delta(Default::default());
@@ -584,6 +615,10 @@ impl Session {
     /// added rules and left `self.rules` alone would evaluate the OLD program
     /// against the NEW facts, silently.
     pub fn load(&mut self, src: &str, who: Option<&str>) -> Result<usize, Vec<String>> {
+        self.told(crate::journal::Verb::Load, |s| s.load_untold(src, who))
+    }
+
+    fn load_untold(&mut self, src: &str, who: Option<&str>) -> Result<usize, Vec<String>> {
         let r = crate::program::load_program(&mut self.eval, src, who);
         if !r.ok {
             return Err(r.diagnostics);
@@ -1547,6 +1582,14 @@ impl Session {
     /// it would leave the rule that concluded it still concluding it — the
     /// caller wants `excise` and is told so.
     pub fn retract(&mut self, query: &str) -> Result<(), String> {
+        let ids: Vec<FactId> = self.ground_fact(query, "retract").ok().and_then(|(id, _)| id).into_iter().collect();
+        let before = self.base_alive(&ids);
+        let r = self.told(crate::journal::Verb::Retract, |s| s.retract_unjournaled(query));
+        self.journal_gone(&before);
+        r
+    }
+
+    fn retract_unjournaled(&mut self, query: &str) -> Result<(), String> {
         self.eval.settle_assertions();
         let (id, key) = self.ground_fact(query, "retract")?;
         let Some(id) = id else { return Err(format!("no such fact: {key}")) };
@@ -1570,6 +1613,14 @@ impl Session {
     /// world or a fact the path is not worked out for is retracted as
     /// `retract` does, and `Full` says why: the next evaluation answers.
     pub fn retract_delta(&mut self, query: &str) -> Result<Retraction, String> {
+        let ids: Vec<FactId> = self.ground_fact(query, "retract").ok().and_then(|(id, _)| id).into_iter().collect();
+        let before = self.base_alive(&ids);
+        let r = self.told(crate::journal::Verb::RetractDelta, |s| s.retract_delta_unjournaled(query));
+        self.journal_gone(&before);
+        r
+    }
+
+    fn retract_delta_unjournaled(&mut self, query: &str) -> Result<Retraction, String> {
         self.eval.settle_assertions();
         let (id, key) = self.ground_fact(query, "retract")?;
         let Some(id) = id else { return Err(format!("no such fact: {key}")) };
@@ -1580,7 +1631,7 @@ impl Session {
         let ft = self.fact_term(id);
         let request = [self.eval.h.mkf_named("retract", &[ft])];
         if rel == self.eval.v.asks || (rel == self.eval.v.explain_request && self.eval.cone.is_some()) {
-            self.retract(query)?;
+            self.retract_unjournaled(query)?;
             let why = "asks names the rules the world runs";
             self.evaluated_again(&request, why);
             return Ok(Retraction::Full(why.to_string()));
@@ -1605,6 +1656,99 @@ impl Session {
                 self.eval.store.dirty = true;
                 self.evaluated_again(&request, &why);
                 Ok(Retraction::Full(why))
+            }
+        }
+    }
+
+    /// THE WORLD AS IT STOOD AT THE END OF TICK `upto`, rebuilt from the journal (docs/intents.md, D5): a fresh
+    /// world told the same things in the same ticks, evaluated. Determinism makes it the state this world had
+    /// there, not an approximation. Refused where the journal does not start from a fresh world (one opened from a
+    /// seed), or where the rebuilt world does not take what this one took.
+    pub fn replay(&self, upto: u32) -> Result<Session, String> {
+        use crate::journal::{Entry, Verb};
+        let (h, j) = (&self.eval.h, &self.eval.store.journal);
+        let key = |id: FactId| self.eval.store.key(h, id);
+        let mut s = Session::fresh(self.eval.budget);
+        let mut who: Option<String> = None;
+        let entries = j.entries();
+        let mut i = 0;
+        while i < entries.len() {
+            let e = entries[i];
+            i += 1;
+            let (verb, evaluated) = match e {
+                Entry::Call(v, ev) => (v, ev),
+                Entry::Who(w) => {
+                    who = w.map(|w| h.name(w).to_string());
+                    continue;
+                }
+                Entry::Tick(t) if t > upto => break,
+                Entry::Tick(t) => {
+                    s.tick().map_err(|e| describe(&e))?;
+                    if s.eval.store.tick != t {
+                        return Err(format!("the journal enters tick {t} and the rebuilt world is at tick {}", s.eval.store.tick));
+                    }
+                    continue;
+                }
+                Entry::Seeded => return Err("the world was opened from a seed or an image, which its journal does not hold".into()),
+                _ => return Err(format!("the journal holds {e:?} outside a call")),
+            };
+            // what the call told: the entries up to the next call or tick
+            let (mut text, mut gone) = (String::new(), Vec::new());
+            while let Some(&e) = entries.get(i).filter(|e| !matches!(e, Entry::Call(..) | Entry::Tick(_) | Entry::Seeded)) {
+                i += 1;
+                match e {
+                    Entry::Loaded(id) | Entry::Put(id) => {
+                        text.push_str(&key(id));
+                        text.push_str(".\n");
+                    }
+                    Entry::Text(off, len) => text.push_str(&j.text_of(off, len)),
+                    Entry::Gone(id) => gone.push(key(id)),
+                    Entry::Who(w) => who = w.map(|w| h.name(w).to_string()),
+                    _ => unreachable!(),
+                }
+            }
+            if evaluated && s.eval.store.dirty {
+                s.evaluate().map_err(|e| describe(&e))?;
+            }
+            let ids = |s: &mut Session| -> Result<Vec<FactId>, String> { gone.iter().map(|k| s.ground_fact(k, "retract").and_then(|(id, _)| id.ok_or(format!("no such fact: {k}")))).collect() };
+            let joined = |d: Vec<String>| d.join("; ");
+            let r: Result<(), String> = match verb {
+                Verb::Load => s.load(&text, who.as_deref()).map(drop).map_err(joined),
+                Verb::LoadDelta => s.load_delta(&text, who.as_deref()).map(drop).map_err(joined),
+                Verb::Assert => s.assert(&text).map(drop),
+                Verb::AssertDelta => s.assert_delta(&text).map(drop),
+                Verb::Retract => gone.iter().try_for_each(|k| s.retract(k)),
+                Verb::RetractDelta => gone.iter().try_for_each(|k| s.retract_delta(k).map(drop)),
+                Verb::RetractSet => ids(&mut s).and_then(|ids| s.retract_set_delta(&ids)).map(drop),
+                Verb::OneByOne => ids(&mut s).and_then(|ids| s.retract_facts_one_by_one(&ids)).map(drop),
+            };
+            r.map_err(|d| format!("the rebuilt world refuses a call the world took ({verb:?}): {d}"))?;
+        }
+        if s.eval.store.tick != upto {
+            return Err(format!("the journal never enters tick {upto}: the world went to tick {}", self.eval.store.tick));
+        }
+        s.evaluate().map_err(|e| describe(&e))?;
+        Ok(s)
+    }
+
+    /// A call that tells the world something, journaled as one.
+    fn told<T>(&mut self, verb: crate::journal::Verb, f: impl FnOnce(&mut Session) -> T) -> T {
+        let evaluated = !self.eval.store.dirty;
+        self.eval.store.journal.begin(verb, evaluated);
+        let r = f(self);
+        self.eval.store.journal.end();
+        r
+    }
+
+    fn base_alive(&self, ids: &[FactId]) -> Vec<FactId> {
+        ids.iter().copied().filter(|&f| self.eval.store.alive(f) && self.eval.store.rec(f).base()).collect()
+    }
+
+    /// The journal's word that the base facts of `ids` that are base no more went.
+    fn journal_gone(&mut self, ids: &[FactId]) {
+        for &f in ids {
+            if !self.eval.store.alive(f) || !self.eval.store.rec(f).base() {
+                self.eval.store.journal.gone(f);
             }
         }
     }

@@ -272,6 +272,9 @@ const nameOf = (c: Node): string | undefined => {
   return identName(c.id) ?? identName(c.key);
 };
 
+/** Kinds whose name a shallow hash leaves out: a statement keeps its id when a name it mentions is renamed. */
+const IDENT = new Set(['Identifier', 'JSXIdentifier']);
+
 /** Each node's kind, scalars and children, the children cut at a BODY to their kind: one pass, bottom-up, the
  *  hashes in the order `emit` meets the nodes. */
 function shallowHashes(root: Node): Float64Array {
@@ -283,7 +286,7 @@ function shallowHashes(root: Node): Float64Array {
     const base = parts.length;
     parts.push(word(node.type as string));
     for (const k of Object.keys(node)) {
-      if (skipKey(k)) continue;
+      if (skipKey(k) || (k === 'name' && IDENT.has(node.type as string))) continue;
       const v = node[k];
       if (v === null || v === undefined) continue;
       if (Array.isArray(v)) {

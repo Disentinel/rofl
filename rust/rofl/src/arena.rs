@@ -464,6 +464,10 @@ impl VolW {
         parts.extend_from_slice(rest);
         self.inline(&parts);
     }
+    /// Whether `a` lies in the base, or is a copy of what lies there that a reference writes.
+    pub fn in_base<T: Pod>(&self, a: &(impl Src<T> + ?Sized)) -> bool {
+        self.ref_of(a).is_some()
+    }
     /// Whether this volume is an overlay over a base.
     pub fn is_over(&self) -> bool {
         self.base.is_some()
