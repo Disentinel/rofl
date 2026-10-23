@@ -12,6 +12,9 @@
 //! answered outside its capability's relations; `outcome_unknown(W)` for a want of a batch that ended well and said
 //! nothing of it; `want_held(W, Why)` for a want no adapter it can run is declared for. A want with any of them is
 //! not sent again.
+//!
+//! The kinds: `exec` above, `sql` (`run_sql`), `mcp` (src/mcp.rs). Only `reads` wants are sent here; `does` waits for
+//! the dispatcher (phase 6).
 
 use std::collections::{BTreeMap, HashMap, HashSet};
 
@@ -28,6 +31,9 @@ struct Batch {
     input: String,
     params: Vec<Vec<serde_json::Value>>,
     template: Option<String>,
+    tool: Option<String>,
+    fields: Vec<String>,
+    named: Vec<serde_json::Value>,
     wants: Vec<(String, Term)>,
     answers: HashSet<(String, usize)>,
 }
@@ -55,10 +61,17 @@ impl Session {
         };
         let caps: HashMap<String, (String, String)> = rows(self, "capability", 3).into_iter().map(|c| (name(self, c[0]), (name(self, c[1]), name(self, c[2])))).collect();
         let adapters: HashMap<String, (String, String)> = rows(self, "adapter", 3).into_iter().map(|a| (name(self, a[0]), (name(self, a[1]), name(self, a[2])))).collect();
-        let mut arg_names: HashMap<(String, i64), String> = HashMap::new();
+        let mut arg_names: HashMap<(String, i64), (String, String)> = HashMap::new();
         for a in rows(self, "arg", 4) {
             if let Some(p) = a[1].as_int() {
-                arg_names.insert((name(self, a[0]), p), name(self, a[2]));
+                arg_names.insert((name(self, a[0]), p), (name(self, a[2]), name(self, a[3])));
+            }
+        }
+        let tools: HashMap<String, String> = rows(self, "mcp_tool", 2).into_iter().map(|t| (name(self, t[0]), name(self, t[1]))).collect();
+        let mut fields: HashMap<String, Vec<(i64, String)>> = HashMap::new();
+        for f in rows(self, "mcp_field", 3) {
+            if let Some(p) = f[1].as_int() {
+                fields.entry(name(self, f[0])).or_default().push((p, name(self, f[2])));
             }
         }
         let mut answers: HashMap<String, HashSet<(String, usize)>> = HashMap::new();
@@ -79,11 +92,11 @@ impl Session {
         for w in wants {
             let (key, cap) = (w[0], name(self, w[1]));
             let Some((adapter, class)) = caps.get(&cap) else { continue };
-            if settled.contains(&key) || class != "reads" {
+            if settled.contains(&key) || (class != "reads" && !crate::brk!("mcp_does_sent" => class == "does"; false)) {
                 continue;
             }
             match adapters.get(adapter).map(|a| a.0.as_str()) {
-                Some("exec" | "sql") => by_cap.entry(cap).or_default().push(key),
+                Some("exec" | "sql" | "mcp") => by_cap.entry(cap).or_default().push(key),
                 kind => {
                     let why = kind.map_or(format!("no adapter '{adapter}' is declared (`adapter({adapter}, Kind, Address)`)"), |k| format!("an adapter of kind {k} is not built yet"));
                     held.push_str(&format!("want_held({}, {}).\n", self.src(key), quote(&why)));
@@ -100,26 +113,41 @@ impl Session {
             let adapter = caps[&cap].0.clone();
             let (kind, cmd) = adapters[&adapter].clone();
             let wants: Vec<(String, Term)> = keys.iter().map(|k| (self.src(*k), *k)).collect();
-            let mut params = Vec::new();
+            let (mut params, mut named) = (Vec::new(), Vec::new());
             let json_wants: Vec<serde_json::Value> = wants.iter().map(|(text, k)| {
                 let mut a = args.get(k).cloned().unwrap_or_default();
                 a.sort_by_key(|x| x.0);
                 params.push(a.iter().map(|(_, v)| self.json(*v)).collect());
-                let named: serde_json::Map<String, serde_json::Value> = a.iter().map(|(i, v)| {
-                    (arg_names.get(&(cap.clone(), *i)).cloned().unwrap_or_else(|| i.to_string()), self.json(*v))
-                }).collect();
-                serde_json::json!({"key": text, "args": named})
+                let arg = |i: i64| arg_names.get(&(cap.clone(), i)).cloned().unwrap_or_else(|| (i.to_string(), String::new()));
+                named.push(a.iter().map(|(i, v)| (arg(*i).0, typed(self.json(*v), &arg(*i).1))).collect());
+                let by_name: serde_json::Map<String, serde_json::Value> = a.iter().map(|(i, v)| (arg(*i).0, self.json(*v))).collect();
+                serde_json::json!({"key": text, "args": by_name})
             }).collect();
             let version = self.book_version(&adapter, &cap);
             let input = serde_json::json!({"capability": cap, "book_version": version, "wants": json_wants}).to_string();
-            Batch { answers: answers.get(&cap).cloned().unwrap_or_default(), template: templates.get(&cap).cloned(), cap, adapter, kind, cmd, input, params, wants }
+            let mut f = fields.get(&cap).cloned().unwrap_or_default();
+            f.sort();
+            Batch {
+                answers: answers.get(&cap).cloned().unwrap_or_default(), template: templates.get(&cap).cloned(), tool: tools.get(&cap).cloned(),
+                fields: f.into_iter().map(|x| x.1).collect(), cap, adapter, kind, cmd, input, params, named, wants,
+            }
         }).collect();
         if batches.is_empty() && held.is_empty() {
             return Ok(0);
         }
         let runs: Vec<_> = batches.iter().map(|b| {
             let (cmd, input) = (b.cmd.clone(), b.input.clone());
-            (b.kind == "exec").then(|| std::thread::spawn(move || crate::session::run_program(&cmd, None, Some(&input))))
+            match b.kind.as_str() {
+                "exec" => Some(std::thread::spawn(move || crate::session::run_program(&cmd, None, Some(&input)))),
+                "mcp" => {
+                    let tool = b.tool.clone().unwrap_or_else(|| b.cap.clone());
+                    let text = b.answers.contains(&("mcp_text".to_string(), 2));
+                    let rel = b.answers.iter().map(|a| a.0.clone()).find(|r| r != "mcp_text").unwrap_or_else(|| "mcp_text".into());
+                    let (fields, wants): (Vec<String>, Vec<(String, serde_json::Value)>) = (b.fields.clone(), b.wants.iter().map(|w| w.0.clone()).zip(b.named.clone()).collect());
+                    Some(std::thread::spawn(move || crate::mcp::call(&cmd, &tool, &rel, &fields, text, &wants)))
+                }
+                _ => None,
+            }
         }).collect();
         let mut src = held;
         for (b, run) in batches.iter().zip(runs) {
@@ -266,6 +294,16 @@ fn run_sql(b: &Batch) -> Result<String, String> {
         out.push_str(&format!("sql_snapshot({key}, {version}).\n"));
     }
     Ok(out)
+}
+
+/// An argument as its declared type sends it to an mcp tool: `json` parsed, an `atom` true or false a boolean.
+fn typed(v: serde_json::Value, ty: &str) -> serde_json::Value {
+    match (ty, v.as_str()) {
+        ("json", Some(s)) => serde_json::from_str(s).unwrap_or(v),
+        ("atom", Some("true")) => true.into(),
+        ("atom", Some("false")) => false.into(),
+        _ => v,
+    }
 }
 
 fn quote(s: &str) -> String {
