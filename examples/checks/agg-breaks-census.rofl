@@ -13,6 +13,14 @@ brk_expects("prov_state_unsettled", "prov_lazy_reader").
 brk_expects("prov_state_unsettled", "prov_lazy_retract").
 brk("journal_closed_late"). brk_kind("journal_closed_late", switch).
 brk_expects("journal_closed_late", "journal_replay").
+brk("mcp_book_digest"). brk_kind("mcp_book_digest", switch).
+brk_expects("mcp_book_digest", "mcp_book").
+brk("mcp_does_sent"). brk_kind("mcp_does_sent", switch).
+brk_expects("mcp_does_sent", "mcp_does").
+brk("sql_arguments_spliced"). brk_kind("sql_arguments_spliced", switch).
+brk_expects("sql_arguments_spliced", "sql_bound").
+brk("sql_query_from_rule"). brk_kind("sql_query_from_rule", switch).
+brk_expects("sql_query_from_rule", "sql_template_rule").
 brk("adapter_one_call_per_want"). brk_kind("adapter_one_call_per_want", switch).
 brk_expects("adapter_one_call_per_want", "adapter_batches").
 brk("adapter_lost_answered"). brk_kind("adapter_lost_answered", switch).
@@ -2591,6 +2599,8 @@ switch_site("lattice_whynot_tuple_plain", "rust/rofl/src/engine.rs").
 switch_site("lattice_withdrawn_unspread", "rust/rofl/src/engine.rs").
 switch_site("max", "rust/rofl/src/cell.rs").
 switch_site("max_tie_last", "rust/rofl/src/cell.rs").
+switch_site("mcp_book_digest", "rust/rofl/src/mcp.rs").
+switch_site("mcp_does_sent", "rust/rofl/src/adapter.rs").
 switch_site("median_upper", "rust/rofl/src/cell.rs").
 switch_site("member_id_position", "rust/rofl/src/store.rs").
 switch_site("memo", "rust/rofl/src/engine.rs").
@@ -2775,6 +2785,8 @@ switch_site("snapshot_drops_ghosts", "rust/rofl/src/seed.rs").
 switch_site("snapshot_reads_no_tick", "rust/rofl/src/seed.rs").
 switch_site("solutions", "rust/rofl/src/engine.rs").
 switch_site("space_uncut_world", "rust/rofl/src/engine.rs").
+switch_site("sql_arguments_spliced", "rust/rofl/src/adapter.rs").
+switch_site("sql_query_from_rule", "rust/rofl/src/engine/want.rs").
 switch_site("staged_keeps_withdrawn", "rust/rofl/src/engine.rs").
 switch_site("staged_neg_arrival", "rust/rofl/src/engine.rs").
 switch_site("stale_holes_kept", "rust/rofl/src/engine.rs").
