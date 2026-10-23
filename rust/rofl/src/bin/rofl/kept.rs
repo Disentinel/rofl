@@ -423,8 +423,8 @@ pub fn record(args: &[String], world_files: &[String], units: &[Unit], files: &[
     paths.dedup();
     let read: Vec<Value> = paths.iter().map(|p| json!([p.to_string_lossy(), stamp(p)])).collect();
     let cwd = (!scans.is_empty()).then(|| std::env::current_dir().map(|d| d.to_string_lossy().into_owned()).unwrap_or_default());
-    let units: Vec<Value> = units.iter().map(|u| json!([u.path, u.rules, ids_text(&u.facts)])).collect();
-    let scans: Vec<Value> = scans.iter().map(|s| json!([s.kind, s.path, s.text, s.cmd, s.read, ids_text(&s.facts)])).collect();
+    let units: Vec<Value> = units.iter().map(|u| json!([u.path, u.rules, runs(&u.facts)])).collect();
+    let scans: Vec<Value> = scans.iter().map(|s| json!([s.kind, s.path, s.text, s.cmd, s.read, runs(&s.facts)])).collect();
     Ok(json!({ "kept": 3, "args": args, "files": world_files, "engine": engine(), "env": env_now(), "cwd": cwd, "read": read, "units": units, "scans": scans, "cut": cut }).to_string())
 }
 
@@ -448,32 +448,23 @@ impl ScanUnit {
     }
 }
 
-/// Fact ids as text, each run of consecutive ids as its first and last: a file's facts are mostly one run, so the
-/// record of a world stays the size of its files' names, not of its facts.
-fn ids_text(ids: &[u32]) -> String {
-    let mut t = String::new();
-    let mut i = 0;
-    while i < ids.len() {
-        let mut j = i;
-        while j + 1 < ids.len() && ids[j + 1] == ids[j].wrapping_add(1) {
-            j += 1;
+/// Fact ids as runs of consecutive ids, each its first id and its length: a file's facts are mostly one run, so a
+/// world's record grows with its files, not with its facts.
+fn runs(ids: &[u32]) -> Vec<u32> {
+    let mut out: Vec<u32> = Vec::new();
+    for &id in ids {
+        match out.len() {
+            l if l >= 2 && out[l - 2].checked_add(out[l - 1]) == Some(id) => out[l - 1] += 1,
+            _ => out.extend([id, 1]),
         }
-        if !t.is_empty() { t.push(','); }
-        t.push_str(&if j > i { format!("{}-{}", ids[i], ids[j]) } else { ids[i].to_string() });
-        i = j + 1;
     }
-    t
+    out
 }
 
-fn ids_of(t: &str) -> Option<Vec<u32>> {
-    let mut ids = Vec::new();
-    for run in t.split(',').filter(|r| !r.is_empty()) {
-        match run.split_once('-') {
-            Some((a, b)) => ids.extend(a.parse::<u32>().ok()?..=b.parse::<u32>().ok()?),
-            None => ids.push(run.parse().ok()?),
-        }
-    }
-    Some(ids)
+fn unruns(v: &Value) -> Option<Vec<u32>> {
+    let w = v.as_array()?.iter().map(|x| x.as_u64().and_then(|n| u32::try_from(n).ok())).collect::<Option<Vec<u32>>>()?;
+    if w.len() % 2 != 0 { return None; }
+    Some(w.chunks_exact(2).flat_map(|r| r[0]..r[0].saturating_add(r[1])).collect())
 }
 
 pub fn parse(note: &str) -> Option<Record> {
@@ -484,7 +475,7 @@ pub fn parse(note: &str) -> Option<Record> {
     let units = v.get("units")?.as_array()?.iter().map(|u| Some(Unit {
         path: u.get(0)?.as_str()?.to_string(),
         rules: u.get(1)?.as_str()?.to_string(),
-        facts: ids_of(u.get(2)?.as_str()?)?,
+        facts: unruns(u.get(2)?)?,
     })).collect::<Option<Vec<_>>>()?;
     let (args, files) = (strs("args")?, strs("files")?);
     if files.len() > args.len() { return None; }
@@ -494,7 +485,7 @@ pub fn parse(note: &str) -> Option<Record> {
         text: s.get(2)?.as_str()?.to_string(),
         cmd: s.get(3)?.as_str().map(str::to_string),
         read: s.get(4)?.as_array()?.iter().map(|x| x.as_str().map(str::to_string)).collect::<Option<Vec<_>>>()?,
-        facts: ids_of(s.get(5)?.as_str()?)?,
+        facts: unruns(s.get(5)?)?,
     })).collect::<Option<Vec<_>>>()?;
     let cut = v.get("cut").and_then(|c| c.as_u64());
     Some(Record { args, files, engine: v.get("engine")?.as_str()?.to_string(), env: strs("env")?, cwd: v.get("cwd")?.as_str().map(str::to_string), read, units, scans, cut })
