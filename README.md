@@ -142,7 +142,9 @@ belongs), `choosing-perspectives.md` (perspective = ledger, never status or
 modality), `books-and-permission.md` (every relation with who may write it,
 derived from `boot.rofl` and gated by test/permission-doc.test.ts (gate removed 2026-09-11)),
 `inquiry-kinds.md` (typed inquiry roots), `three-valued-answers.md` (the
-alternating fixpoint and what `unknown` means).
+alternating fixpoint and what `unknown` means), `intents.md` (a world that
+wants: `want` heads, capabilities declared in an adapter's book, adapters as
+federated books; designed, not built).
 
 **A run** — `scaling-a-corpus.md` (the incremental ingest loop over the whole
 of eslint, and the four defects the run found that reading did not),
