@@ -67,8 +67,11 @@ impl Session {
         if wants.is_empty() {
             return Ok(0);
         }
-        let settled: HashSet<Term> = [("answered", 1), ("failed", 2), ("outcome_unknown", 1), ("want_held", 2)]
+        let mut settled: HashSet<Term> = [("answered", 1), ("failed", 2), ("outcome_unknown", 1), ("want_held", 2)]
             .into_iter().flat_map(|(r, n)| rows(self, r, n)).map(|a| a[0]).collect();
+        if let Some(p) = self.post.as_ref().filter(|_| crate::brk!("post_resends_flying" => false; true)) {
+            settled.extend(p.keys.iter().copied());
+        }
         let permitted: HashSet<Term> = rows(self, "permit", 1).into_iter().map(|a| a[0]).collect();
         let mut book = journal.map(Journal::open).transpose()?;
         let trust = crate::brk!("does_journal_ignored" => false; true);
@@ -135,6 +138,9 @@ impl Session {
                 idems.insert(key, idem);
             }
             match adapters.get(adapter).map(|a| a.0.as_str()) {
+                Some("sql") if !cfg!(feature = "sql") => {
+                    held.push_str(&format!("want_held({text}, \"this build has no sql adapter (cargo feature `sql`)\").\n"));
+                }
                 Some("exec" | "sql" | "mcp" | "rofl") => {
                     if let (Some(j), Some(idem)) = (book.as_mut(), idems.get(&key)) {
                         j.write(serde_json::json!({"sent": idem, "want": text}))?;
@@ -183,28 +189,47 @@ impl Session {
         if batches.is_empty() && held.is_empty() {
             return Ok(0);
         }
+        let posted = self.post.is_some() && journal.is_none();
         let runs: Vec<_> = batches.iter().map(|b| {
             let (cmd, input) = (b.cmd.clone(), b.input.clone());
-            match b.kind.as_str() {
-                "exec" => Some(std::thread::spawn(move || crate::session::run_program(&cmd, None, Some(&input)))),
+            let ran: Option<Box<dyn FnOnce() -> Result<String, String> + Send>> = match b.kind.as_str() {
+                "exec" => Some(Box::new(move || crate::session::run_program(&cmd, None, Some(&input)))),
                 "mcp" => {
                     let tool = b.tool.clone().unwrap_or_else(|| b.cap.clone());
                     let text = b.answers.contains(&("mcp_text".to_string(), 2));
                     let rel = b.answers.iter().map(|a| a.0.clone()).find(|r| r != "mcp_text").unwrap_or_else(|| "mcp_text".into());
                     let fields = b.fields.clone();
                     let wants: Vec<(String, serde_json::Value, Option<String>)> = b.wants.iter().zip(&b.named).zip(&b.idem).map(|((w, a), i)| (w.0.clone(), a.clone(), i.clone())).collect();
-                    Some(std::thread::spawn(move || crate::mcp::call(&cmd, &tool, &rel, &fields, text, &wants)))
+                    Some(Box::new(move || crate::mcp::call(&cmd, &tool, &rel, &fields, text, &wants)))
                 }
                 _ => None,
-            }
+            };
+            ran.map(|f| match self.post.as_mut().filter(|_| posted) {
+                Some(p) => {
+                    let (id, tx) = (p.next, p.tx.clone());
+                    p.next += 1;
+                    std::thread::spawn(move || {
+                        let _ = tx.send((id, f()));
+                    });
+                    Err(id)
+                }
+                None => Ok(std::thread::spawn(f)),
+            })
         }).collect();
         let mut src = held;
-        for (b, run) in batches.iter().zip(runs) {
+        for (b, run) in batches.into_iter().zip(runs) {
             let ran = match run {
-                Some(t) => t.join().unwrap_or_else(|_| Err("the adapter's thread failed".into())),
-                None if b.kind == "rofl" => self.run_rofl(b),
-                None => run_sql(b),
+                Some(Ok(t)) => t.join().unwrap_or_else(|_| Err("the adapter's thread failed".into())),
+                Some(Err(id)) => {
+                    let p = self.post.as_mut().expect("posted");
+                    p.keys.extend(b.wants.iter().map(|w| w.1));
+                    p.flying.insert(id, b);
+                    continue;
+                }
+                None if b.kind == "rofl" => self.run_rofl(&b),
+                None => run_sql(&b),
             };
+            let b = &b;
             let out = self.answer(b, ran);
             if let Some(j) = book.as_mut() {
                 for ((k, _), idem) in b.wants.iter().zip(&b.idem) {
@@ -218,6 +243,41 @@ impl Session {
         }
         let n = src.lines().count();
         self.load_delta(&src, None).map_err(|d| format!("an adapter's answer was refused: {}", d.join("; ")))?;
+        Ok(n)
+    }
+
+    /// What has come back to the post since: each answer loaded by delta, as an evaluation would have loaded it, and
+    /// what the world then wants sent. With `wait`, the first answer is waited for that long while any is in flight.
+    pub fn collect(&mut self, wait: Option<std::time::Duration>) -> Result<usize, String> {
+        let Some(p) = self.post.as_mut() else { return Ok(0) };
+        let mut got = Vec::new();
+        if let Some(w) = wait.filter(|_| !p.flying.is_empty()) {
+            got.extend(p.rx.recv_timeout(w).ok());
+        }
+        got.extend(p.rx.try_iter());
+        let mut src = String::new();
+        for (id, ran) in got {
+            let p = self.post.as_mut().expect("a post");
+            let Some(b) = p.flying.remove(&id) else { continue };
+            for w in &b.wants {
+                p.keys.remove(&w.1);
+            }
+            src.push_str(&self.answer(&b, ran));
+        }
+        if src.is_empty() {
+            return Ok(0);
+        }
+        let n = src.lines().count();
+        self.load_delta(&src, None).map_err(|d| format!("an adapter's answer was refused: {}", d.join("; ")))?;
+        loop {
+            if self.eval.store.dirty {
+                self.evaluate().map_err(|e| crate::describe(&e))?;
+                break;
+            }
+            if self.adapter_wants()? == 0 {
+                break;
+            }
+        }
         Ok(n)
     }
 
@@ -385,6 +445,12 @@ impl Session {
 /// template, never written into it, every query of the batch in one read transaction on the adapter's kept
 /// connection, read-only, and each want stamped with the database's `data_version` there (`sql_snapshot(K, N)`).
 /// Answered in the text an exec program prints.
+#[cfg(not(feature = "sql"))]
+fn run_sql(_: &Batch) -> Result<String, String> {
+    Err("this build has no sql adapter (cargo feature `sql`)".into())
+}
+
+#[cfg(feature = "sql")]
 fn run_sql(b: &Batch) -> Result<String, String> {
     use rusqlite::types::{Value, ValueRef};
     use std::sync::{Mutex, OnceLock};
@@ -442,6 +508,32 @@ fn run_sql(b: &Batch) -> Result<String, String> {
         out.push_str(&format!("sql_snapshot({key}, {version}).\n"));
     }
     Ok(out)
+}
+
+/// THE POST (D3): where a world's wants go when its caller does not wait for them. A batch for a program or a server
+/// is sent on a thread of its own and the evaluation goes on; what it brings comes back to the inbox, and `collect`
+/// loads it by delta whenever it has come. A want in flight is neither sent again nor settled: `pending(W)` holds.
+/// A database and another world in this process are answered at once, as without a post.
+pub struct Post {
+    tx: std::sync::mpsc::Sender<(u64, Result<String, String>)>,
+    rx: std::sync::mpsc::Receiver<(u64, Result<String, String>)>,
+    next: u64,
+    flying: HashMap<u64, Batch>,
+    keys: HashSet<Term>,
+}
+
+impl Default for Post {
+    fn default() -> Self {
+        let (tx, rx) = std::sync::mpsc::channel();
+        Post { tx, rx, next: 0, flying: HashMap::new(), keys: HashSet::new() }
+    }
+}
+
+impl Post {
+    /// How many wants are in flight.
+    pub fn flying(&self) -> usize {
+        self.keys.len()
+    }
 }
 
 /// The journal of `does` (D5): history, not cache. One JSON object a line, `{"sent": K, "want": W}` before a want
