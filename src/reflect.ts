@@ -220,7 +220,7 @@ export const ARITY: Readonly<Record<string, number>> = {
   premise_agg: 2, agg_cell: 3, agg_member: 4, agg_member_prem: 3, agg_sealed: 3,
   lattice_decl: 3, lattice_widen: 2, lattice_member: 4, lattice_member_prem: 3,
   tag_decl: 3, order_comp: 5, structure_decl: 3, structure_role: 3, structure_closure: 2,
-  dominance: 4, dominance_lit: 3, dominated_by: 3, evaluated_again: 2,
+  dominance: 4, dominance_lit: 3, dominated_by: 3, evaluated_again: 2, want_key: 1, want_of: 2, want_arg: 3,
 };
 
 /** The one value `semantics/1` is read for. Any other argument is a fact the

@@ -114,7 +114,7 @@ The main world never waits. It may run 300 ticks before an answer arrives;
 "waiting" is a fact:
 
 ```
-pending(W) :- want(W), not answered(W).
+pending(W) :- want_key(W), not answered(W).
 ```
 
 and the continuation of a want is an ordinary rule that reads the answer,
@@ -159,8 +159,8 @@ fact itself (a deploy at 11:38 learned at 11:40): valid time.
 ### D6. A want is executed only if permitted, and the permission is a rule
 
 ```
-permit(W) :- want(W), capability_class(W, reads).
-permit(W) :- want(W), approved(W).          -- approved: a fact from a person, via an adapter
+permit(W) :- want_key(W), capability_class(W, reads).
+permit(W) :- want_key(W), approved(W).          -- approved: a fact from a person, via an adapter
 ```
 
 A veto the model can express belongs in the model (docs/time-and-continuity.md,
@@ -233,8 +233,8 @@ want tracker_transition(K, done) :- stage_done(W, N), issue_of(W, K).
 ```
 
 `want Cap(Args) :- Body.` is a rule whose head is a request, not a fact. The
-engine gives every want a key and the rows `want(W)`, `want_of(W, Cap)`,
-`want_arg(W, I, V)` in the kernel book, so other rules can read *that* a want
+engine gives every want a key and the rows `want_key(W)`, `want_of(W, Cap)`,
+`want_arg(W, I, V)`, written by nothing but a want head, so other rules can read *that* a want
 exists — never in the same stratum as the rule that derived it.
 
 ### 4.2 Checks at load, each a refusal naming the place
@@ -430,3 +430,41 @@ a new directory `intents` under `examples` (phase 7).
 5. Recursion through an adapter: allowed and measured (the owner, 2026-10-23:
    try it and see where it spoils things and where it opens new ways of
    programming), with the per-want call count in the cost report.
+
+### Phase 1, as built (2026-10-23)
+
+`rust/rofl/src/program.rs` (`lower_want`), `rust/rofl/src/engine/want.rs`,
+`src/want.ts`, `rust/rofl/tests/want.rs`, the world `want_checks`
+(`examples/checks/want-*.rofl`), both engines.
+
+- **A want is three rules.** `want note(P) :- stage_done(W), owner(W, P).`
+  is `want_key($want(note, P)) :- stage_done(W), owner(W, P).`, with
+  `want_of(W, note)` and `want_arg(W, 1, P)` read from the key. The key is the
+  term `$want(Cap, Args)`; the hash and the book version of D7 come with the
+  adapters (phase 2).
+- **The rows are in the main book, not the kernel's.** A rule of the world
+  writing the kernel's book is a walk `main -> $kernel` that boot.rofl's
+  `leak[audit]` reports, in every world with a want. They are protected by name
+  instead: a clause or a fact that writes `want_key`, `want_of` or `want_arg`
+  and is not a want head is refused at the door. `want_key` and not `want`,
+  because `want/4` is a relation of examples/spat.
+- **The checks run when the world is evaluated** (and when a program is added
+  by delta), not per file: a world may load the adapter's book after the rule
+  that wants from it. Each refuses the world, naming the want or the rule:
+  1. the capability is declared (`capability(Cap, Adapter, Class)`);
+  2. the want has as many arguments as the capability has `arg` rows, the
+     positions run from 1 without a gap, and a constant is of its type
+     (`number`, `atom`; `text`, `time` and `json` are strings);
+  3. no rule concludes a relation a declared capability answers in: an answer
+     is the adapter's, at a later tick, so no want can depend on its own
+     answer inside one tick;
+  4. no rule reads what a `shows` capability answers.
+  Check 5 (rules an agent submitted) is phase 6's.
+- **Acceptance.** Seven fixtures, one world each engine agrees on: a world of
+  two wants and its rows, and six programs each refused with its place named.
+  Planted `want_capability_unchecked`, `want_arity_off_by_one`,
+  `want_types_unchecked`, `want_answer_concluded`, `want_shows_read`, each
+  red. No world without a want moved.
+- **Cost.** One pass over the rules and the `capability`, `arg`, `answers`
+  rows per evaluation; a world with none of them pays a look at two
+  relations.

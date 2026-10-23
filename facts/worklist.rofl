@@ -4036,8 +4036,8 @@ work(w_intent_tick_journal,
 work_state(w_intent_tick_journal, done).
 
 work(w_intent_want_syntax,
-  "docs/intents.md phase 1: `want Cap(Args) :- Body.` heads, the kernel rows want/want_of/want_arg, the load checks of section 4.2 in both engines (TS checks wants, executing is Rust only). ACCEPTANCE: each check refuses its planted program naming the place; worlds without wants unchanged in every golden.").
-work_state(w_intent_want_syntax, open).
+  "DONE 2026-10-23 (branch claude/project-thread-2b3jv0): rust/rofl/src/engine/want.rs and program.rs lower_want, src/want.ts; tests/want.rs; world want_checks (examples/checks/want-*.rofl), both engines; docs/intents.md *Phase 1, as built*. A want is the rule want_key($want(Cap, Args)) :- Body with want_of and want_arg read from the key, in the main book (in the kernel's book every want tripped boot.rofl's leak audit, main -> $kernel); only a want head writes them. The checks run at evaluation and on addition, not per file, so the order files load in does not matter; check 3 is read as: no rule concludes a relation a declared capability answers in. Five planted faults, each red. WAS: docs/intents.md phase 1: `want Cap(Args) :- Body.` heads, the kernel rows want/want_of/want_arg, the load checks of section 4.2 in both engines (TS checks wants, executing is Rust only). ACCEPTANCE: each check refuses its planted program naming the place; worlds without wants unchanged in every golden.").
+work_state(w_intent_want_syntax, done).
 work_needs(w_intent_want_syntax, w_intent_tick_journal).
 
 work(w_intent_adapter_book,

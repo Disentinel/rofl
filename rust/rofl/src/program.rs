@@ -607,6 +607,9 @@ fn check_clause(h: &Heap, v: &Vocab, c0: &Clause, who: Option<&str>, trusted: bo
             return Err(d);
         }
     }
+    if !trusted && [v.want, v.want_of, v.want_arg].contains(&c.head.rel) {
+        return Err(format!("{}: '{}' is written only by a want head (`want Cap(Args) :- Body.`)", canon_clause(h, &c), h.name(c.head.rel)));
+    }
     if let Some(d) = check_arity(h, v, &c) {
         return Err(d);
     }
@@ -764,6 +767,31 @@ fn add_fact(e: &mut Eval, c: &Clause, who: Option<&str>) {
         }
     }
     e.store.dirty = true;
+}
+
+/// A WANT IS ITS ROWS (docs/intents.md 4.1): `want Cap(A1..An) :- Body.` is the rule
+/// `want_key($want(Cap, A1..An)) :- Body.`, its key the want's row, and `want_of(W, Cap)` and a `want_arg(W, I, Ai)`
+/// for each argument read from the key; written by these rules alone, in the main book.
+fn lower_want(h: &mut Heap, v: &Vocab, c: &rofl_parse::Clause) -> Result<(rofl_parse::Clause, Vec<String>), String> {
+    let cap = c.head.rel;
+    if c.head.book != rofl_parse::Book::Bare || c.head.tense != rofl_parse::Tense::Now {
+        return Err(format!("want {}: a want names no book and no tense", h.name(cap)));
+    }
+    let mut key_args = vec![Term::atom(cap)];
+    key_args.extend(c.head.args.iter().copied());
+    let key = h.mkf_named("$want", &key_args);
+    let mut w = String::new();
+    rofl_parse::src_term(h, key, &mut w);
+    let (rk, ro, ra) = (h.name(v.want).to_string(), h.name(v.want_of).to_string(), h.name(v.want_arg).to_string());
+    let mut texts = vec![format!("{ro}({w}, {}) :- {rk}({w}).", h.name(cap))];
+    for (i, a) in c.head.args.iter().enumerate() {
+        let mut t = String::new();
+        rofl_parse::src_term(h, *a, &mut t);
+        texts.push(format!("{ra}({w}, {}, {t}) :- {rk}({w}).", i + 1));
+    }
+    let head = rofl_parse::Lit { rel: v.want, book: rofl_parse::Book::Bare, args: vec![key], tense: rofl_parse::Tense::Now };
+    let rule = rofl_parse::Clause { head, body: c.body.clone(), lattice: None, widen: None, tag: false, dom: None, ord: None, structure: None, want: false };
+    Ok((rule, texts))
 }
 
 /// A LATTICE DECLARATION AT THE DOOR: `lattice dist(A, C, min D).` names a
@@ -1115,6 +1143,19 @@ pub fn load_program(e: &mut Eval, text: &str, who: Option<&str>) -> Loaded {
     claimed_late |= !trusted && clauses.iter().any(|c| c.head.rel == claim);
     for pc in std::mem::take(&mut clauses) {
         let pc = &pc;
+        if pc.want {
+            match lower_want(&mut e.h, &e.v, pc) {
+                Ok((rule, texts)) => {
+                    match to_clause(&mut e.h, &e.v, &rule).and_then(|c| check_clause(&e.h, &e.v, &c, None, true)) {
+                        Ok(r) => ready.push(r),
+                        Err(d) => diags.push(d),
+                    }
+                    lowered.extend(texts);
+                }
+                Err(d) => diags.push(d),
+            }
+            continue;
+        }
         if let Some(st) = &pc.structure {
             let stored = if st.closure.is_some() || st.source.is_some() { crate::structure::concluded_by_rules(&e.h, &e.v, &mut e.store) } else { Default::default() };
             let concluded = |cl: Sym| -> Option<String> {

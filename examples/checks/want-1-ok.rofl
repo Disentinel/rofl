@@ -1,0 +1,6 @@
+-- examples/checks/want-1-ok.rofl — two wants, each its want_key, want_of and want_arg rows in the kernel's book; bob's stage is not done.
+capability(note, pad, shows). arg(note, 1, who, atom). answers(note, noted, 2).
+capability(lookup, db, reads). arg(lookup, 1, key, atom). answers(lookup, found, 2).
+stage_done(w1). owner(w1, ann). owner(w2, bob).
+want note(P) :- stage_done(W), owner(W, P).
+want lookup(P) :- owner(_, P), not found(_, P).
