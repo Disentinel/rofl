@@ -588,6 +588,15 @@ fn mixed_files_at_random(brk: Option<&str>) -> Result<(), String> {
         gone_rules += got.err.contains("is gone and held rules") as usize;
         ensure(got.out == want.out && got.code == want.code, || format!("step {step}: by delta {} lines, fresh {} lines; {:?}", got.out.lines().count(), want.out.lines().count(), got.err))?;
     }
+    // and, whatever sizes the series kept its worlds at, a file with rules taken away from the world just kept
+    d.write("n0.rofl", &format!("edge(a, d).\n{}", RULE[0]));
+    d.write("n1.rofl", RULE[1]);
+    for (step, names) in [(40, vec!["boot.rofl", "n0.rofl", "n1.rofl"]), (41, vec!["boot.rofl", "n0.rofl"])] {
+        let got = rofl(&d, brk, &["ask", "reach(a, X)", "--state"].into_iter().chain(names.iter().copied()).collect::<Vec<_>>());
+        let want = fresh(&d, brk, &["load", "--ask", "reach(a, X)", "--state"].into_iter().chain(names.iter().copied()).collect::<Vec<_>>());
+        gone_rules += got.err.contains("is gone and held rules") as usize;
+        ensure(got.out == want.out && got.code == want.code, || format!("step {step}: by delta {} lines, fresh {} lines; {:?}", got.out.lines().count(), want.out.lines().count(), got.err))?;
+    }
     ensure(gone_rules > 0 || brk.is_some(), || "no step took a file with rules away".into())
 }
 
