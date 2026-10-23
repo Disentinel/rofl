@@ -93,8 +93,8 @@ impl Interner {
             return w.arena(&n.slots);
         }
         let at = b.buf.len() as u32;
-        w.arena_parts(&[&b.buf, &t.buf]);
-        w.arena_parts(&[&b.ends, &t.ends.iter().map(|e| e + at).collect::<Vec<u32>>()]);
+        w.arena_parts(&b.buf, &[&t.buf]);
+        w.arena_parts(&b.ends, &[&t.ends.iter().map(|e| e + at).collect::<Vec<u32>>()]);
         let n = b.len() + t.len();
         let mut cap = b.slots.len();
         for k in b.len() + 1..=n {
@@ -497,8 +497,8 @@ impl Heap {
             return w.u64(f.cons_n as u64);
         }
         let at = b.args.len() as u32;
-        w.arena_parts(&[&b.funcs, &t.funcs.iter().map(|f| FuncNode { start: f.start + at, ..*f }).collect::<Vec<_>>()]);
-        w.arena_parts(&[&b.args, &t.args]);
+        w.arena_parts(&b.funcs, &[&t.funcs.iter().map(|f| FuncNode { start: f.start + at, ..*f }).collect::<Vec<_>>()]);
+        w.arena_parts(&b.args, &[&t.args]);
         let (mut cap, mut cons_n) = (b.cons.len(), b.cons_n);
         for len in b.funcs.len()..b.funcs.len() + t.funcs.len() {
             if (cons_n + 1) * 4 >= cap * 3 {

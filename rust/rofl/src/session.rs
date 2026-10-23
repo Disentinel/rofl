@@ -57,6 +57,8 @@ pub struct Session {
     /// The questions asked so far: a hole a question writes is `$q(N)`, the
     /// reference's `qn` (src/api.ts `query`).
     pub asks: i64,
+    /// the whole volume this world was opened from, or that the overlay it was opened from names
+    pub kept: Option<crate::volume::Kept>,
 }
 
 /// What [`Session::retract_delta`] did: the cells brought to their new state,
@@ -147,7 +149,7 @@ impl Session {
     /// packs — and meant to happen once per process. Fork it after that.
     pub fn open(seed_json: &str, budget: i64) -> Result<Session, String> {
         let l = crate::load(seed_json, budget)?;
-        Ok(Session { eval: l.eval, dangling: l.dangling, asks: 0 })
+        Ok(Session { eval: l.eval, dangling: l.dangling, asks: 0, kept: None })
     }
 
     /// A world from a kept image (`crate::image`): an evaluated world opens evaluated.
@@ -163,7 +165,7 @@ impl Session {
         if !eval.store.dirty && crate::brk!("volume_unknowns_dropped" => false; true) {
             eval.unknowns_from(o.unknowns)?;
         }
-        Ok(Session { eval, dangling: o.dangling, asks: 0 })
+        Ok(Session { eval, dangling: o.dangling, asks: 0, kept: None })
     }
 
     /// This world as a kept image, which `open_kept` reads back.
@@ -186,8 +188,18 @@ impl Session {
     /// `arena::TOO_LARGE`. Written under a name of this process's beside `path` and renamed over it, so two
     /// processes keeping the same world never write into one file.
     pub fn keep_volume_bounded(&mut self, path: &str, note: &str, bound: Option<usize>) -> std::io::Result<usize> {
+        self.keep_volume_as(path, note, bound, None)
+    }
+
+    /// `keep_volume_bounded`, as an overlay over `base` when it is given: the volume this world was opened from
+    /// (`kept`), still where it was. What the world still reads from it is named, not written.
+    pub fn keep_volume_as(&mut self, path: &str, note: &str, bound: Option<usize>, base: Option<&crate::volume::Kept>) -> std::io::Result<usize> {
         let tmp = format!("{path}.{}.part", std::process::id());
-        match crate::volume::keep(&tmp, &mut self.eval, note, bound) {
+        let kept = match base {
+            Some(b) => crate::volume::keep_over(&tmp, &mut self.eval, note, bound, b),
+            None => crate::volume::keep(&tmp, &mut self.eval, note, bound),
+        };
+        match kept {
             Ok(n) => std::fs::rename(&tmp, path).map(|_| n).inspect_err(|_| { let _ = std::fs::remove_file(&tmp); }),
             Err(e) => {
                 let _ = std::fs::remove_file(&tmp);
@@ -217,7 +229,7 @@ impl Session {
         if !o.cut.at_end() {
             return Err(format!("{path}: a volume has bytes after its end"));
         }
-        Ok(Session { eval, dangling: 0, asks: 0 })
+        Ok(Session { eval, dangling: 0, asks: 0, kept: Some(o.base) })
     }
 
     /// AN EMPTY WORLD with the kernel's bootstrap tables and nothing else —
@@ -229,7 +241,7 @@ impl Session {
         let v = Vocab::new(&mut h);
         let mut store = Store::new();
         bootstrap_kernel(&mut h, &v, &mut store);
-        Session { eval: Eval::new(h, store, budget, Mode::Rounds, false), dangling: 0, asks: 0 }
+        Session { eval: Eval::new(h, store, budget, Mode::Rounds, false), dangling: 0, asks: 0, kept: None }
     }
 
     /// A world of one's own, as a LAYER over this one. The first fork freezes
@@ -241,7 +253,7 @@ impl Session {
         self.eval.settle_provenance();
         self.eval.h.freeze();
         self.eval.store.freeze(&self.eval.h);
-        Session { eval: self.eval.fork(), dangling: self.dangling, asks: self.asks }
+        Session { eval: self.eval.fork(), dangling: self.dangling, asks: self.asks, kept: None }
     }
 
     /// Add base facts, written as ROFL. What they add is not visible to a
