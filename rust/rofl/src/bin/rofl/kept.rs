@@ -29,6 +29,8 @@ pub struct Record {
     pub units: Vec<Unit>,
     /// each scan the world loaded, and what it brought
     pub scans: Vec<ScanUnit>,
+    /// the bytes it was given when it stopped at the disk wall (`rofl::engine::Eval::disk`), if it did
+    pub cut: Option<u64>,
 }
 
 #[derive(Clone)]
@@ -58,6 +60,13 @@ impl Record {
     pub fn scanned_in(&self) -> Option<&str> {
         self.cwd.as_deref()
     }
+}
+
+/// The note `note` with the bytes its world was cut at (`Record::cut`) set to `cut`.
+pub fn recut(note: &str, cut: Option<u64>) -> String {
+    let mut v: Value = serde_json::from_str(note).unwrap_or_default();
+    v["cut"] = json!(cut);
+    v.to_string()
 }
 
 /// Whether `p` holds what was stamped `s`.
@@ -167,6 +176,30 @@ mod win {
     }
 }
 
+/// The most a world kept at `kept` may take: the cap less what live writers are writing, and no more than the disk
+/// gives above its floor. Older kept worlds are not counted: they go to make room.
+pub fn most(kept: &str) -> Result<u64, String> {
+    let dir = Path::new(kept).parent().ok_or("no directory")?;
+    let room = free(dir).map(|f| f.saturating_sub(FLOOR));
+    if room == Some(0) {
+        return Err(format!("the disk has less than the {} free a kept world never takes", size(FLOOR)));
+    }
+    Ok(cap().saturating_sub(writing(dir, true)).min(room.unwrap_or(u64::MAX)))
+}
+
+/// What processes writing a kept world beside `dir`'s worlds have written so far; `live`, only those still alive
+/// (what a dead one left goes before a world is written: `sweep_orphans`).
+fn writing(dir: &Path, live: bool) -> u64 {
+    let dead = |name: &str| name.split_once(".vol.").and_then(|(_, r)| r.split('.').next()?.parse::<u32>().ok()).is_some_and(|pid| pid != std::process::id() && !alive(pid));
+    std::fs::read_dir(dir).map(|rd| rd.flatten().filter(|e| !e.path().extension().is_some_and(|x| x == "vol"))
+        .filter(|e| !live || !dead(&e.file_name().to_string_lossy())).filter_map(|e| e.metadata().ok()).filter(|m| m.is_file()).map(|m| m.len()).sum()).unwrap_or(0)
+}
+
+/// A size as `size` says it, for a message of another module.
+pub fn said_size(bytes: u64) -> String {
+    size(bytes)
+}
+
 /// The world of `s` kept at `kept` as a question verb keeps it: written no further than the cap and than the disk
 /// can give above its floor, so a world too large stops the writer at that size and is not kept; then the older
 /// kept worlds go, least recently used first, until all fit the cap. Why it was not kept, otherwise.
@@ -185,11 +218,7 @@ pub fn keep_capped(s: &mut rofl::session::Session, kept: &str, note: &str) -> Re
         return Err(format!("the disk has less than the {} free a kept world never takes", size(FLOOR)));
     }
     // what live writers have written so far is taken from the cap before this one writes
-    let writing: u64 = if orphans {
-        std::fs::read_dir(dir).map(|rd| rd.flatten().filter(|e| !e.path().extension().is_some_and(|x| x == "vol")).filter_map(|e| e.metadata().ok()).filter(|m| m.is_file()).map(|m| m.len()).sum()).unwrap_or(0)
-    } else {
-        0
-    };
+    let writing: u64 = if orphans { writing(dir, false) } else { 0 };
     let most = cap.saturating_sub(writing).min(room.unwrap_or(u64::MAX));
     let bound = rofl::brk!("kept_write_unbounded" => None; (!ignored).then_some(most as usize));
     let new = rofl::brk!("kept_shared_temp" => format!("{kept}.new"); format!("{kept}.{}.new", std::process::id()));
@@ -287,7 +316,7 @@ pub fn shown(p: &str) -> String {
 
 /// The record of a world evaluated from `args` that read `files` and whose scans are `scans`: refused when a scan
 /// named nothing it read, since whether the world it brought in is stale could not be told.
-pub fn record(args: &[String], world_files: &[String], units: &[Unit], files: &[String], scans: &[ScanUnit]) -> Result<String, String> {
+pub fn record(args: &[String], world_files: &[String], units: &[Unit], files: &[String], scans: &[ScanUnit], cut: Option<u64>) -> Result<String, String> {
     if let Some(s) = scans.iter().find(|s| s.cmd.is_some() && rofl::brk!("kept_blind_scans" => false; s.read.is_empty())) {
         return Err(format!("the scan `{} {}` named nothing it read (`-- reads: PATH`), so whether a kept world is stale could not be told", s.cmd.as_deref().unwrap_or(""), s.text));
     }
@@ -306,7 +335,7 @@ pub fn record(args: &[String], world_files: &[String], units: &[Unit], files: &[
     let cwd = (!scans.is_empty()).then(|| std::env::current_dir().map(|d| d.to_string_lossy().into_owned()).unwrap_or_default());
     let units: Vec<Value> = units.iter().map(|u| json!([u.path, u.rules, u.facts])).collect();
     let scans: Vec<Value> = scans.iter().map(|s| json!([s.kind, s.path, s.text, s.cmd, s.read, s.facts])).collect();
-    Ok(json!({ "kept": 2, "args": args, "files": world_files, "engine": engine(), "env": env_now(), "cwd": cwd, "read": read, "units": units, "scans": scans }).to_string())
+    Ok(json!({ "kept": 2, "args": args, "files": world_files, "engine": engine(), "env": env_now(), "cwd": cwd, "read": read, "units": units, "scans": scans, "cut": cut }).to_string())
 }
 
 /// What a kept world records of a scan it loaded: the request, the command, what it read, and the base facts it
@@ -349,7 +378,8 @@ pub fn parse(note: &str) -> Option<Record> {
         read: s.get(4)?.as_array()?.iter().map(|x| x.as_str().map(str::to_string)).collect::<Option<Vec<_>>>()?,
         facts: s.get(5)?.as_array()?.iter().map(|x| x.as_u64().map(|n| n as u32)).collect::<Option<Vec<u32>>>()?,
     })).collect::<Option<Vec<_>>>()?;
-    Some(Record { args, files, engine: v.get("engine")?.as_str()?.to_string(), env: strs("env")?, cwd: v.get("cwd")?.as_str().map(str::to_string), read, units, scans })
+    let cut = v.get("cut").and_then(|c| c.as_u64());
+    Some(Record { args, files, engine: v.get("engine")?.as_str()?.to_string(), env: strs("env")?, cwd: v.get("cwd")?.as_str().map(str::to_string), read, units, scans, cut })
 }
 
 /// The header of the kept world at `p`, its sum not read: to choose among kept worlds before opening one.

@@ -8807,6 +8807,21 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "disk_wall_ignored",
+  "what": "the disk wall is never checked: a question verb's world over its cache's cap is evaluated whole and not kept, and nothing stops where the cap is",
+  "expect": {
+   "kept_disk": "the_disk_cap_stops_and_a_larger_one_goes_on:"
+  }
+ },
+ {
+  "id": "disk_resume_from_scratch",
+  "what": "a world cut at the disk wall and given a larger cap is evaluated again from the start rather than gone on from the cut",
+  "expect": {
+   "kept_disk": "the_disk_cap_stops_and_a_larger_one_goes_on:",
+   "disk_go_on": "most cuts must be gone on from"
+  }
+ },
+ {
   "id": "kept_shared_temp",
   "what": "every process keeping a world writes it under one temporary name, so concurrent cold runs take each other's file",
   "expect": {
@@ -9072,6 +9087,8 @@ const TESTS: Record<string, string> = {
   kept_implicit_load: 'kept a_kept_world_answers_and_refuses_as_docs_cli_says',
   kept_cap: 'kept a_kept_world_answers_and_refuses_as_docs_cli_says',
   kept_bound: 'kept a_kept_world_answers_and_refuses_as_docs_cli_says',
+  kept_disk: 'kept a_kept_world_answers_and_refuses_as_docs_cli_says',
+  disk_go_on: 'disk a_cap_raised_goes_on_from_the_cut',
   kept_concurrent: 'kept a_kept_world_answers_and_refuses_as_docs_cli_says',
 };
 

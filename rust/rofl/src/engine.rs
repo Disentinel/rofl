@@ -41,6 +41,9 @@ pub use par::Split;
 const MAX_DEPTH: usize = 512;
 const MAX_ALTERNATIONS: usize = 256;
 const DEFAULT_SPACE: i64 = 500_000;
+/// What a world cut by the disk wall may keep beyond it (the evaluation in flight, its cut): an eighth of the wall,
+/// which a question verb leaves free (tests/disk.rs).
+pub const CUT_ROOM: i64 = 8;
 const POLICY_BUDGET: i64 = 20_000_000;
 /// the most descending passes narrowing makes after a widening
 const NARROW_PASSES: usize = 4;
@@ -679,6 +682,12 @@ pub struct Eval {
     pub store: Store,
     pub budget: i64,
     pub space: i64,
+    /// The disk wall: the bytes a volume of the world may take (`disk_bytes`), checked with the steps, so it falls
+    /// where a step wall falls and is gone on from as one is (`resume.rs`); `disk_hit` says the last wall was it.
+    pub disk: i64,
+    disk_hit: bool,
+    /// the bytes of the solutions of the firing being concluded not yet concluded, which a cut keeps
+    disk_held: i64,
     /// Set from outside while an evaluation runs (the clock or the heap of a caller's limit): the evaluation stops as at its step budget.
     pub halt: Option<std::sync::Arc<std::sync::atomic::AtomicBool>>,
     /// WHICH RULE IS FIRING, and how many index probes each one has asked for.
@@ -1399,6 +1408,9 @@ impl Eval {
             budget,
             halt: None,
             space: DEFAULT_SPACE,
+            disk: i64::MAX,
+            disk_hit: false,
+            disk_held: 0,
             cur_rule: None,
             argm_by_rule: HashMap::new(),
             ns_by_rule: HashMap::new(),
@@ -2986,6 +2998,8 @@ impl Eval {
         self.steps = 0;
         self.rows = 0;
         self.peak_rows = 0;
+        self.disk_hit = false;
+        self.disk_held = 0;
         self.demand_done.clear();
         self.demand_done_rows = 0;
         self.carry_wall = (self.budget, self.space);
@@ -3851,6 +3865,8 @@ impl Eval {
                 "budget" => {
                     let (kind, spent, limit) = self.wall_spent.get().unwrap_or(if cname == "space_exhausted" {
                         ("rows", self.space + 1, self.space)
+                    } else if cname == "disk_exhausted" {
+                        ("bytes", self.disk.saturating_add(1), self.disk)
                     } else {
                         ("steps", self.budget + 1, self.budget)
                     });
@@ -4142,9 +4158,13 @@ impl Eval {
     }
 
     /// The world hole a wall writes: `hole($adhoc, budget_exhausted)`, or
-    /// `space_exhausted`.
+    /// `disk_exhausted`, or `space_exhausted`.
     fn wall_hole(&mut self, reason: &str) -> Result<(), Halt> {
-        let why = Term::atom(if reason == "budget_exhausted" { self.v.budget_reason } else { self.v.space_reason });
+        let why = Term::atom(match reason {
+            "budget_exhausted" if self.disk_hit => self.v.disk_reason,
+            "budget_exhausted" => self.v.budget_reason,
+            _ => self.v.space_reason,
+        });
         self.hole_met(self.hole_id, why.as_atom().unwrap());
         if self.eval_hole(&[self.hole_id, why]) {
             self.charge_row(None, false)?;
@@ -5350,7 +5370,26 @@ impl Eval {
             self.wall_spent.set(Some(("steps", self.steps, self.budget.min(self.steps))));
             return Err(Halt::Budget("budget_exhausted", None));
         }
+        if self.disk != i64::MAX && self.budget != i64::MAX && brk!("disk_wall_ignored" => false; true) {
+            let b = self.disk_bytes();
+            if b > self.disk {
+                self.disk_hit = true;
+                self.wall_spent.set(Some(("bytes", b, self.disk)));
+                return Err(Halt::Budget("budget_exhausted", None));
+            }
+        }
         Ok(())
+    }
+
+    /// What a volume of the world would take now, a firing's solutions not yet concluded among it: never less than
+    /// the volume (tests/disk.rs).
+    pub fn disk_bytes(&self) -> i64 {
+        (self.store.kept_bytes() + self.h.kept_bytes()) as i64 + self.disk_held
+    }
+
+    /// Whether the last evaluation stopped at the disk wall: its hole is in the store.
+    pub fn disk_cut(&self) -> bool {
+        self.store.eval_holes.iter().any(|&id| self.store.alive(id) && self.store.args(id).get(1).and_then(|t| t.as_atom()) == Some(self.v.disk_reason))
     }
 
     /// The rows held while a premise is matched, `now`, against the space: the wall a body solved meets.

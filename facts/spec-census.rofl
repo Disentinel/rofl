@@ -81,6 +81,8 @@ check[checks]("rust/rofl/tests/demand_query.rs", "an_ask_of_a_sealed_body_refuse
 check[checks]("rust/rofl/tests/demand_query.rs", "a_question_that_runs_out_of_rows_writes_only_its_own_hole", test).
 check[checks]("rust/rofl/tests/demand_query.rs", "a_question_leaves_the_world_its_peak", test).
 check[checks]("rust/rofl/tests/demand_scale.rs", "a_recursion_through_a_closed_demand_relation_is_linear", test).
+check[checks]("rust/rofl/tests/disk.rs", "the_measure_bounds_the_volume", test).
+check[checks]("rust/rofl/tests/disk.rs", "a_cap_raised_goes_on_from_the_cut", test).
 check[checks]("rust/rofl/tests/explain.rs", "why_walks_the_derivation_to_its_axioms", test).
 check[checks]("rust/rofl/tests/explain.rs", "a_negated_premise_renders_as_finite_failure_with_its_demonstration", test).
 check[checks]("rust/rofl/tests/explain.rs", "a_builtin_premise_keeps_its_own_spelling", test).
@@ -886,6 +888,7 @@ test_file[checks]("rust/rofl/tests/datastrat_scale.rs").
 test_file[checks]("rust/rofl/tests/demand_fixpoint.rs").
 test_file[checks]("rust/rofl/tests/demand_query.rs").
 test_file[checks]("rust/rofl/tests/demand_scale.rs").
+test_file[checks]("rust/rofl/tests/disk.rs").
 test_file[checks]("rust/rofl/tests/explain.rs").
 test_file[checks]("rust/rofl/tests/incremental.rs").
 test_file[checks]("rust/rofl/tests/join_scale.rs").

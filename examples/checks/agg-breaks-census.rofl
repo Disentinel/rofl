@@ -2185,6 +2185,11 @@ brk("kept_cap_ignored"). brk_kind("kept_cap_ignored", switch).
 brk_expects("kept_cap_ignored", "kept_cap").
 brk("kept_write_unbounded"). brk_kind("kept_write_unbounded", switch).
 brk_expects("kept_write_unbounded", "kept_bound").
+brk("disk_wall_ignored"). brk_kind("disk_wall_ignored", switch).
+brk_expects("disk_wall_ignored", "kept_disk").
+brk("disk_resume_from_scratch"). brk_kind("disk_resume_from_scratch", switch).
+brk_expects("disk_resume_from_scratch", "kept_disk").
+brk_expects("disk_resume_from_scratch", "disk_go_on").
 brk("kept_shared_temp"). brk_kind("kept_shared_temp", switch).
 brk_expects("kept_shared_temp", "kept_concurrent").
 brk("retract_reset_any_book"). brk_kind("retract_reset_any_book", switch).
@@ -2377,6 +2382,8 @@ switch_site("descent_closes_other", "rust/rofl/src/engine.rs").
 switch_site("descent_fatal", "rust/rofl/src/engine.rs").
 switch_site("descent_wall", "rust/rofl/src/engine.rs").
 switch_site("digest_off", "rust/rofl/src/engine.rs").
+switch_site("disk_resume_from_scratch", "rust/rofl/src/engine/resume.rs").
+switch_site("disk_wall_ignored", "rust/rofl/src/engine.rs").
 switch_site("div_floor", "rust/rofl/src/engine.rs").
 switch_site("dominance_as_rule", "rust/rofl/src/reflect.rs").
 switch_site("dominance_body_unordered", "rust/rofl/src/program.rs").
