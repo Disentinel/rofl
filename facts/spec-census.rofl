@@ -7,6 +7,10 @@
 --
 -- @who census
 
+check[checks]("rust/rofl/tests/adapter.rs", "a_recursive_rule_through_an_adapter_sends_one_batch_a_round", test).
+check[checks]("rust/rofl/tests/adapter.rs", "a_killed_adapter_is_failed_and_a_lost_answer_unknown", test).
+check[checks]("rust/rofl/tests/adapter.rs", "a_want_no_adapter_runs_is_held", test).
+check[checks]("rust/rofl/tests/adapter.rs", "an_answer_outside_the_capability_fails_its_batch", test).
 check[checks]("rust/rofl/tests/addition.rs", "random_programs_take_additions_as_a_fresh_evaluation_does", test).
 check[checks]("rust/rofl/tests/addition.rs", "random_large_programs_take_additions_as_a_fresh_evaluation_does", test).
 check[checks]("rust/rofl/tests/addition.rs", "a_lattice_world_is_a_fresh_evaluation_after_every_addition", test).
@@ -893,6 +897,7 @@ check[checks](".github/workflows/ci.yml", "typecheck", ci).
 check[checks](".github/workflows/ci.yml", "goldens (node)", ci).
 check[checks](".github/workflows/ci.yml", "one VSIX per platform", ci).
 check[checks](".github/workflows/ci.yml", "publish", ci).
+test_file[checks]("rust/rofl/tests/adapter.rs").
 test_file[checks]("rust/rofl/tests/addition.rs").
 test_file[checks]("rust/rofl/tests/agg_worlds.rs").
 test_file[checks]("rust/rofl/tests/asks_cone.rs").

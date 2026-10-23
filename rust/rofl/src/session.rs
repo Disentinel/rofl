@@ -731,8 +731,9 @@ impl Session {
     pub fn evaluate(&mut self) -> Result<Evaluated, Halt> {
         let r = self.eval.run();
         let mut e = self.evaluated(r)?;
-        // what the world asks to be scanned is scanned and loaded, until it asks for nothing more
-        while !e.partial && self.scan_requests().map_err(|m| Halt::Strat(m, String::new()))? > 0 {
+        // what the world asks to be scanned is scanned, and what it wants of an adapter sent (src/adapter.rs), and what
+        // comes back loaded, until it asks for nothing more
+        while !e.partial && self.scan_requests().and_then(|n| Ok(n + self.adapter_wants()?)).map_err(|m| Halt::Strat(m, String::new()))? > 0 {
             if self.eval.store.dirty {
                 let r = self.eval.run();
                 e = self.evaluated(r)?;

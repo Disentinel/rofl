@@ -65,6 +65,20 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "adapter_one_call_per_want",
+  "what": "each want sent to its adapter alone, one call per want instead of one batch per capability a round",
+  "expect": {
+   "adapter_batches": "a batch a round"
+  }
+ },
+ {
+  "id": "adapter_lost_answered",
+  "what": "a want its adapter's batch said nothing of taken as answered, not as an unknown outcome",
+  "expect": {
+   "adapter_outcomes": "outcome_unknown($want(next_of, lost))"
+  }
+ },
+ {
   "id": "want_capability_unchecked",
   "what": "a want of a capability no adapter book declares is let through to the arity check",
   "expect": {
@@ -9133,6 +9147,8 @@ const TESTS: Record<string, string> = {
   disk_go_on: 'disk a_cap_raised_goes_on_from_the_cut',
   kept_concurrent: 'kept a_kept_world_answers_and_refuses_as_docs_cli_says',
   journal_replay: 'journal a_past_tick_replayed_is_the_state_the_world_had',
+  adapter_batches: 'adapter a_recursive_rule_through_an_adapter_sends_one_batch_a_round',
+  adapter_outcomes: 'adapter a_killed_adapter_is_failed_and_a_lost_answer_unknown',
   want_no_capability: 'want a_want_of_no_capability_is_refused',
   want_arity: 'want a_want_of_the_wrong_arity_is_refused',
   want_types: 'want a_constant_of_the_wrong_type_is_refused',
