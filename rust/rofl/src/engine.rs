@@ -736,7 +736,7 @@ pub struct Eval {
     /// What a retraction overdeletes besides the citers of its facts: the facts that cited a row of a tree it took out (`vretract_edges`).
     retract_seeds: Vec<FactId>,
     /// Facts the overdeletion kept for a firing that stands (`overdelete`): each takes again, at its level, every firing it has.
-    add_kept: HashSet<FactId>,
+    add_kept: HashMap<FactId, HashSet<FactId>>,
     pub delta_ns: u64,
     delta_plans: HashMap<(Sym, usize), joinplan::Slot>,
     delta_stats: HashMap<Vec<u64>, (usize, usize, usize)>,
@@ -1423,7 +1423,7 @@ impl Eval {
             add_heights: HashSet::new(),
             add_mark: 0,
             retract_seeds: Vec::new(),
-            add_kept: HashSet::new(),
+            add_kept: HashMap::new(),
             delta_plans: HashMap::new(),
             delta_stats: HashMap::new(),
             functions: Vec::new(),

@@ -10,7 +10,7 @@ use crate::engine::{Eval, RuleAnswer, StagedFact, Tok};
 use crate::store::{PremRef, Store};
 use crate::term::{Heap, Sym, Term};
 
-const MAGIC: &[u8; 16] = b"ROFL-VOLUME-3\n\0\0";
+const MAGIC: &[u8; 16] = b"ROFL-VOLUME-4\n\0\0";
 
 fn build_id() -> String {
     format!("{} {} {:x}", env!("CARGO_PKG_VERSION"), crate::kernel::KERNEL_HASH, 0x0102_0304u32)
@@ -68,6 +68,7 @@ pub fn keep(path: &str, e: &mut Eval, note: &str, bound: Option<usize>) -> std::
     write_toks(&mut w, &e.unknowns_kept());
     e.write_notes(&mut w);
     e.write_cut(&mut w);
+    e.write_stats(&mut w);
     w.finish()
 }
 

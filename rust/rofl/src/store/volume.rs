@@ -209,6 +209,9 @@ impl Store {
                 w.arena(&rows.concat());
             }
         }
+        let mut vrows: Vec<[u64; 5]> = self.vrow_of.iter().map(|(k, &(ci, book, a, d))| [*k as u64, ci as u64, book as u64, a.bits(), d.bits()]).collect();
+        vrows.sort_unstable();
+        w.arena(&vrows.concat());
     }
 
     /// The key table as `freeze` would leave it: the layer's facts put in the base's table where it is the size a
@@ -341,6 +344,11 @@ impl Store {
             }
             s.vciters = Some(Rc::new(m));
         }
+        let vrows: Arena<u64> = r.arena()?;
+        if vrows.len() % 5 != 0 {
+            return Err("a volume's rows of a tree are not rows".into());
+        }
+        s.vrow_of = vrows.chunks_exact(5).map(|x| (x[0] as Sym, (x[1] as usize, x[2] as Sym, Term::from_bits(x[3]), Term::from_bits(x[4])))).collect();
         Ok(s)
     }
 }
