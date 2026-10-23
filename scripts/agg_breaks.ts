@@ -65,6 +65,27 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "does_unpermitted_sent",
+  "what": "a does want sent by the dispatcher without permit(W)",
+  "expect": {
+   "does_permit": "only the approved want is sent"
+  }
+ },
+ {
+  "id": "does_journal_ignored",
+  "what": "the dispatcher sends again a does want its journal already holds",
+  "expect": {
+   "does_once": "the world evaluated anew sends nothing again"
+  }
+ },
+ {
+  "id": "permit_unguarded",
+  "what": "a running world lets a rule or fact read by permit in, an approval typed instead of brought by an adapter",
+  "expect": {
+   "does_guard": "an approval typed in is refused"
+  }
+ },
+ {
   "id": "mcp_book_digest",
   "what": "the generated mcp adapter book carries a digest of the whole tools/list, so a changed tool moves a line outside its own block",
   "expect": {
@@ -9177,6 +9198,9 @@ const TESTS: Record<string, string> = {
   journal_replay: 'journal a_past_tick_replayed_is_the_state_the_world_had',
   sql_bound: 'sql an_argument_is_bound_never_written_into_the_query',
   mcp_book: 'mcp a_regenerated_book_differs_by_exactly_the_changed_tool',
+  does_permit: 'dispatch a_does_want_without_permit_is_never_sent',
+  does_once: 'dispatch a_does_want_runs_once_across_a_dispatch_the_world_anew_and_a_replay',
+  does_guard: 'dispatch a_running_world_cannot_change_what_grants_permission',
   mcp_does: 'mcp a_does_tool_is_not_sent_by_evaluation',
   sql_template_rule: 'sql a_template_a_rule_builds_is_refused',
   adapter_batches: 'adapter a_recursive_rule_through_an_adapter_sends_one_batch_a_round',

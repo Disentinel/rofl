@@ -612,3 +612,38 @@ returns_schema(test_tracker_get_user, "{...}").
 - **Not done.** The streamable HTTP transport (it needs an HTTP and TLS
   client, a dependency to choose); `adapter_auth`; a server kept between
   batches; optional arguments, which are positional like the rest.
+
+### Phase 6, as built (2026-10-23)
+
+`Session::dispatch` and `Session::guard_permit` in `rust/rofl/src/adapter.rs`,
+the `dispatch` request of `rofl serve`; `rust/rofl/tests/dispatch.rs`.
+
+```
+{"op":"dispatch","session":1,"journal":"world.d"}   -> {"loaded":n}
+```
+
+- **Only by request, only with `permit`.** Evaluation never sends a `does`
+  want; `dispatch` sends those with `permit(W)` in the main book, in batches
+  as `reads` wants go, through any kind (exec, mcp). A want without `permit`
+  stays as it is, and `whynot` on its outcome walks into the missing permit.
+- **The journal of `does`** is `does.journal` in the given directory, one
+  JSON line `{"sent": K, "want": W}` written and synced before a want goes,
+  and `{"done": K, "out": Text}` with the facts of its outcome after. `K` is
+  the idempotency key of D7, a digest of the want's row and its adapter's book
+  version, and goes with the want (`idempotency_key` in an exec batch, `_meta`
+  `rofl/idempotency_key` in an mcp call). A want whose key the journal holds is
+  never sent again: its outcome is loaded from the journal. One sent with no
+  outcome (the process died between) is `outcome_unknown(W)`.
+- **Permission is protected.** `assert` and `load` on a running world refuse a
+  fact or rule that concludes `permit` or anything a `permit` rule reads, near
+  or far (the rows of a want head aside), once the world has a `permit` rule:
+  an approval comes in through an adapter, never typed in (D6).
+- **Acceptance.** Two wants, one approved: one call. A second dispatch, the
+  world evaluated anew over the same journal, and a replay of it send nothing
+  again, and the world anew reads the outcome back from the journal. A journal
+  cut after the `sent` line gives `outcome_unknown`. An approval typed into the
+  running world is refused. Planted `does_unpermitted_sent`,
+  `does_journal_ignored` and `permit_unguarded` are red.
+- **Not done.** A one-shot verb listing the wants it would send (they are
+  `want_key` rows a question can ask); cancelling a want that disappears
+  before dispatch; the journal kept beside a kept world by default.

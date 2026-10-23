@@ -88,6 +88,10 @@ check[checks]("rust/rofl/tests/demand_query.rs", "a_question_leaves_the_world_it
 check[checks]("rust/rofl/tests/demand_scale.rs", "a_recursion_through_a_closed_demand_relation_is_linear", test).
 check[checks]("rust/rofl/tests/disk.rs", "the_measure_bounds_the_volume", test).
 check[checks]("rust/rofl/tests/disk.rs", "a_cap_raised_goes_on_from_the_cut", test).
+check[checks]("rust/rofl/tests/dispatch.rs", "a_does_want_without_permit_is_never_sent", test).
+check[checks]("rust/rofl/tests/dispatch.rs", "a_does_want_runs_once_across_a_dispatch_the_world_anew_and_a_replay", test).
+check[checks]("rust/rofl/tests/dispatch.rs", "a_want_sent_with_no_outcome_recorded_is_unknown", test).
+check[checks]("rust/rofl/tests/dispatch.rs", "a_running_world_cannot_change_what_grants_permission", test).
 check[checks]("rust/rofl/tests/explain.rs", "why_walks_the_derivation_to_its_axioms", test).
 check[checks]("rust/rofl/tests/explain.rs", "a_negated_premise_renders_as_finite_failure_with_its_demonstration", test).
 check[checks]("rust/rofl/tests/explain.rs", "a_builtin_premise_keeps_its_own_spelling", test).
@@ -916,6 +920,7 @@ test_file[checks]("rust/rofl/tests/demand_fixpoint.rs").
 test_file[checks]("rust/rofl/tests/demand_query.rs").
 test_file[checks]("rust/rofl/tests/demand_scale.rs").
 test_file[checks]("rust/rofl/tests/disk.rs").
+test_file[checks]("rust/rofl/tests/dispatch.rs").
 test_file[checks]("rust/rofl/tests/explain.rs").
 test_file[checks]("rust/rofl/tests/incremental.rs").
 test_file[checks]("rust/rofl/tests/join_scale.rs").

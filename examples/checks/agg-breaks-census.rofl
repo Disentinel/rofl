@@ -13,6 +13,12 @@ brk_expects("prov_state_unsettled", "prov_lazy_reader").
 brk_expects("prov_state_unsettled", "prov_lazy_retract").
 brk("journal_closed_late"). brk_kind("journal_closed_late", switch).
 brk_expects("journal_closed_late", "journal_replay").
+brk("does_unpermitted_sent"). brk_kind("does_unpermitted_sent", switch).
+brk_expects("does_unpermitted_sent", "does_permit").
+brk("does_journal_ignored"). brk_kind("does_journal_ignored", switch).
+brk_expects("does_journal_ignored", "does_once").
+brk("permit_unguarded"). brk_kind("permit_unguarded", switch).
+brk_expects("permit_unguarded", "does_guard").
 brk("mcp_book_digest"). brk_kind("mcp_book_digest", switch).
 brk_expects("mcp_book_digest", "mcp_book").
 brk("mcp_does_sent"). brk_kind("mcp_does_sent", switch).
@@ -2411,6 +2417,8 @@ switch_site("digest_off", "rust/rofl/src/engine.rs").
 switch_site("disk_resume_from_scratch", "rust/rofl/src/engine/resume.rs").
 switch_site("disk_wall_ignored", "rust/rofl/src/engine.rs").
 switch_site("div_floor", "rust/rofl/src/engine.rs").
+switch_site("does_journal_ignored", "rust/rofl/src/adapter.rs").
+switch_site("does_unpermitted_sent", "rust/rofl/src/adapter.rs").
 switch_site("dominance_as_rule", "rust/rofl/src/reflect.rs").
 switch_site("dominance_body_unordered", "rust/rofl/src/program.rs").
 switch_site("dominance_by_last", "rust/rofl/src/engine.rs").
@@ -2630,6 +2638,7 @@ switch_site("order_unread", "rust/rofl/src/rofl_parse.rs").
 switch_site("overdelete_judged_kept", "rust/rofl/src/engine/addition.rs").
 switch_site("overdelete_kept_by_own_component", "rust/rofl/src/engine/addition.rs").
 switch_site("partial_check", "rust/rofl/src/cell.rs").
+switch_site("permit_unguarded", "rust/rofl/src/adapter.rs").
 switch_site("phantom", "rust/rofl/src/engine.rs").
 switch_site("phrase_apart_copy_bound", "rust/rofl/src/bin/rofl/render.rs").
 switch_site("phrase_apart_first_bound", "rust/rofl/src/bin/rofl/render.rs").

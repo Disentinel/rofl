@@ -51,6 +51,10 @@
 //!   {"op":"excise","session":2,"query":"q(a)"}         -> {"removed":[...],"added":[...]}
 //!   {"op":"retract","session":2,"query":"q(a)"}       -> {"full":null|"why"}: the base fact out, the
 //!                                                        cells updated by delta, evaluated again if not
+//!   {"op":"dispatch","session":2,"journal":"dir"}  -> {"loaded":n}: the permitted `does` wants sent, each in the
+//!                                                        append-only journal dir/does.journal, never twice
+//!                                                        (docs/intents.md D6); `assert` and `load` refuse what
+//!                                                        `permit` reads
 //!   {"op":"tick","session":2}
 //!   {"op":"state","session":2,"path":"out.txt"}
 //!   {"op":"keep","session":2,"path":"w.kept"}  -> {"path":...,"bytes":n}: the world as a kept image; an evaluated
@@ -337,6 +341,7 @@ impl Server {
                     (None, None) => return Err("load needs `path` or `rofl`".into()),
                 };
                 let who = r.get("who").and_then(|v| v.as_str()).map(|s| s.to_string());
+                self.get(r)?.guard_permit(&text)?;
                 match self.get(r)?.load_delta(&text, who.as_deref()) {
                     Ok((n, a)) => Ok(json!({ "admitted": n, "full": full(a) })),
                     Err(d) => Err(d.join("\n")),
@@ -401,8 +406,14 @@ impl Server {
             }
             "assert" => {
                 let text = r.get("rofl").and_then(|v| v.as_str()).ok_or("assert needs `rofl`")?.to_string();
+                self.get(r)?.guard_permit(&text)?;
                 let (n, a) = self.get(r)?.assert_delta(&text)?;
                 Ok(json!({ "added": n, "full": full(a) }))
+            }
+            "dispatch" => {
+                let dir = r.get("journal").and_then(|v| v.as_str()).ok_or("dispatch needs `journal`, the directory of its journal")?.to_string();
+                let n = self.get(r)?.dispatch(std::path::Path::new(&dir))?;
+                Ok(json!({ "loaded": n }))
             }
             // A wall is a FACT, not an error (measurement 4): `partial` comes
             // back true with a `hole` in the store naming the unfinished part,

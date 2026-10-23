@@ -4061,8 +4061,8 @@ work_state(w_intent_mcp_adapter, done).
 work_needs(w_intent_mcp_adapter, w_intent_adapter_book).
 
 work(w_intent_does_dispatch,
-  "docs/intents.md phase 6 (D2, D6, D7): the dispatcher in rofl serve; permit as a rule, approvals as adapter facts, the append-only does journal, permission rules protected from agent-submitted rules. ACCEPTANCE: --anew and a replay execute no does want again (planted re-execution red); a want without permit never sent (planted bypass red).").
-work_state(w_intent_does_dispatch, open).
+  "DONE 2026-10-23 (docs/intents.md, Phase 6 as built): Session::dispatch sends does wants with permit(W) only, on request ({\"op\":\"dispatch\",\"journal\":DIR} in rofl serve), each in the append-only DIR/does.journal (sent before, outcome after, synced) under the idempotency key of D7, which goes with the want; a key the journal holds is never sent again (dispatch again, the world anew, a replay), a sent line with no outcome is outcome_unknown. guard_permit: assert/load on a running world refuse what permit reads. tests/dispatch.rs; planted does_unpermitted_sent, does_journal_ignored, permit_unguarded red. Also carries the does-once acceptance moved from w_intent_mcp_adapter. WAS: docs/intents.md phase 6 (D2, D6, D7): the dispatcher in rofl serve; permit as a rule, approvals as adapter facts, the append-only does journal, permission rules protected from agent-submitted rules. ACCEPTANCE: --anew and a replay execute no does want again (planted re-execution red); a want without permit never sent (planted bypass red).").
+work_state(w_intent_does_dispatch, done).
 work_needs(w_intent_does_dispatch, w_intent_mcp_adapter).
 work_needs(w_intent_does_dispatch, w_intent_tick_journal).
 
