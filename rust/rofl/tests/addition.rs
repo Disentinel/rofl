@@ -604,6 +604,17 @@ fn a_base_fact_beside_a_reset_rule_keeps_only_the_firings_that_hold() {
     assert!(d.stacked_rules > 0 && d.withdrawn > 0, "{d:?}");
 }
 
+/// A rule whose aggregate reads only what did not change is monotone in the premise that grew outside it: it fires on
+/// the new facts and is not sealed again, also where no witness is kept.
+#[test]
+fn an_aggregate_over_what_did_not_change_fires_on_what_grew() {
+    for seal in ["", "sealed(provenance).\n"] {
+        let program = format!("{seal}edb(e). edb(c).\nc(s, 0). c(s, 1). e(a).\np(X) :- e(X).\nt(X, I) :- p(X), I is max(J : c(s, J)).\n");
+        let d = one_addition(&program, Op::Assert("e(b).".into()));
+        assert!(d.monotone > 0 && d.stacked_rules == 0, "{seal}{d:?}");
+    }
+}
+
 /// Programs of joins, recursion and negation only: every negation the fine path keeps, its withdrawals and what they
 /// take with them through recursion derived again.
 fn program_neg(r: &mut Rng) -> Vec<String> {

@@ -758,10 +758,34 @@ fn a_holes_unknowns_survive_an_image_and_a_volume() {
     assert_eq!(rows(&mut from_volume), want, "from a volume");
 }
 
+/// The facts of a state, sorted, each node id of the JS scanner written `#`: a file scanned again for a kept world
+/// keeps the ids of its previous scan where its nodes match (scanners/js_inherit.ts), so its facts are a fresh run's
+/// but for the ids, and its memo cells and witnesses, named and chosen by those ids, are not compared.
+fn but_ids(state: &str) -> Vec<String> {
+    let mut v: Vec<String> = state.lines().filter(|l| !l.starts_with("mem ") && !l.starts_with("wit ")).map(|l| {
+        let (b, mut out, mut i) = (l.as_bytes(), Vec::new(), 0);
+        while i < b.len() {
+            let hex = b.len() > i + 18 && b[i] == b'n' && b[i + 1..i + 17].iter().all(u8::is_ascii_hexdigit) && b[i + 17] == b'_';
+            if hex && (i == 0 || !b[i - 1].is_ascii_alphanumeric()) {
+                i += 18;
+                while i < b.len() && b[i].is_ascii_alphanumeric() { i += 1; }
+                out.push(b'#');
+            } else {
+                out.push(b[i]);
+                i += 1;
+            }
+        }
+        String::from_utf8_lossy(&out).into_owned()
+    }).collect();
+    v.sort();
+    v
+}
+
 /// JS SOURCES BY DELTA: a world that scans its JS (the scanner of scanners/cli.ts, the model of rules/js.files) kept
 /// by a question; an edit of one source scans that file again alone and the world takes it by delta; an import
 /// added asks for a file no scan had, scanned and taken; the import taken away again lets that scan go. Each step's
-/// answer and state are a fresh run's. (The JS model in a debug build is too slow for a test: optimised builds only.)
+/// answer and state are a fresh run's, but for the ids of nodes kept from a file's previous scan. (The JS model in a
+/// debug build is too slow for a test: optimised builds only.)
 #[test]
 fn js_sources_edited_go_by_delta() {
     if cfg!(debug_assertions) {
@@ -781,7 +805,7 @@ fn js_sources_edited_go_by_delta() {
     let step = |what: &str, want_delta: Option<&str>| -> Result<(), String> {
         let got = rofl(&d, brk, &q);
         let fresh = fresh(&d, brk, &["load", "--ask", "calls(A, B)", "--state", &model, "scan.rofl"]);
-        ensure(got.code == fresh.code && got.out == fresh.out, || format!("{what}: from the kept world {} lines, fresh {} lines, exit {} and {}; {:?}", got.out.lines().count(), fresh.out.lines().count(), got.code, fresh.code, got.err))?;
+        ensure(got.code == fresh.code && but_ids(&got.out) == but_ids(&fresh.out), || format!("{what}: from the kept world {} lines, fresh {} lines, exit {} and {}; {:?}", got.out.lines().count(), fresh.out.lines().count(), got.code, fresh.code, got.err))?;
         if let Some(w) = want_delta {
             ensure(got.err.contains("by delta") && got.err.contains(w), || format!("{what}: wanted a delta taking {w:?}, got {:?}", got.err))?;
         }
@@ -797,6 +821,38 @@ fn js_sources_edited_go_by_delta() {
         std::fs::copy(root().join("examples/scan/src/lib/greet.js"), d.0.join("src/lib/greet.js")).unwrap();
         step("the import taken away", Some("lib/unused.js (no longer asked)"))
     }).unwrap_or_else(|e| panic!("{e}"));
+}
+
+/// A LOCAL RENAMED KEEPS ITS IDS (f_a_rename_gives_new_ids_to_every_statement_naming_it): the file scanned again for
+/// a kept world is matched to its previous scan and its declaration keeps its id, where a scan from nothing gives it a
+/// new one; the answers are a fresh run's but for ids, and a world evaluated from its files after it is still the
+/// fresh one, whatever the storeroom holds.
+#[test]
+fn a_renamed_local_keeps_its_ids() {
+    let planted = std::env::var("ROFL_BREAK").ok().filter(|b| !b.is_empty());
+    let brk = planted.as_deref();
+    let d = Dir::new("rename");
+    std::fs::create_dir_all(d.0.join("src")).unwrap();
+    let cli = root().join("scanners/cli.ts");
+    d.write("scan.rofl", &format!("edb(scanner).\nedb(scan_done).\nedb(scan_failed).\nscanner(js, \"node --experimental-strip-types {} src\").\nscan_request(js, \"a.js\").\ndecl(I) :- ast_node[code](I, variable_declarator, _).\nnamed(N) :- ast_node[code](I, identifier, _), ast_attr[code](I, name, N).\n", cli.display()));
+    let a = |local: &str| d.write("src/a.js", &format!("export function f(s) {{\n  const {local} = s * 2;\n  return {local} + 1;\n}}\n"));
+    let files = ["boot.rofl", "scan.rofl"];
+    let ask = |q: &str| rofl(&d, brk, &["ask", q, files[0], files[1]]);
+    let load = |cache: &Path, q: &str| rofl_in(BIN, &d, cache, brk, &["load", "--ask", q, files[0], files[1]]).out;
+    a("d");
+    let before = ask("decl(I)");
+    a("e");
+    let after = ask("decl(I)");
+    let cold = d.0.join("cold");
+    let check = || -> Result<(), String> {
+        ensure(before.code == 0 && after.err.contains("a.js (scanned again)"), || format!("wanted the kept world to scan a.js again: {} {:?} {:?}", before.code, before.err, after.err))?;
+        ensure(after.out == before.out, || format!("the declaration's id moved: {:?} -> {:?}", before.out, after.out))?;
+        let fresh = load(&cold, "decl(I)");
+        ensure(fresh != before.out, || format!("a scan from nothing kept the id too, so the case proves nothing: {fresh:?}"))?;
+        ensure(ask("named(N)").out == load(&cold, "named(N)"), || "the names answered from the kept world are not the fresh ones".into())?;
+        ensure(load(&d.0.join("cache"), "decl(I)") == fresh, || "a fresh load read the inherited scan of the storeroom".into())
+    };
+    check().unwrap_or_else(|e| panic!("{e}"));
 }
 
 #[test]
