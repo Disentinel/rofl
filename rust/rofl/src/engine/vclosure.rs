@@ -213,12 +213,12 @@ impl Eval {
         }
         if !brk!("vclosure_restore_unengaged" => true; false) {
             self.vclosure_engage();
-            self.vpublish();
-            // the rows the snapshot's witnesses and members cite are named by their keys: read now, for their heights (a
-            // volume brings them read)
+            // a volume brings the rows read and the forests built, published once they are read (`read_forests`)
             if !self.store.vrow_of.is_empty() {
                 return;
             }
+            self.vpublish();
+            // the rows the snapshot's witnesses and members cite are named by their keys: read now, for their heights
             let mut keys: Vec<Sym> = Vec::new();
             for id in self.store.firing_keys() {
                 for (_, _, ps) in self.store.firings(id) {
@@ -630,7 +630,7 @@ impl Eval {
 
     /// WHAT THE STORE LISTS ON OUTPUT: the rows of every active closure, generated from the trees as the last evaluation
     /// left them, each with its firing where the world keeps witnesses.
-    pub(super) fn vpublish(&mut self) {
+    pub(crate) fn vpublish(&mut self) {
         self.vrefresh();
         self.store.vlisted = self.vany && !brk!("vclosure_rows_unpublished" => true; false);
     }
