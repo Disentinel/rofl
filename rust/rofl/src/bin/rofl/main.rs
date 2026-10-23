@@ -9,7 +9,8 @@
 //!   rofl serve                                  one JSON request per line in, one answer out
 //!   rofl render [--out DIR] FILE...             the sentence form of the files
 //!   rofl nb FILE.rofl.md [--cell N] [--all]     a notebook run, printed as `npm run nb` prints it
-//!   rofl adapter mcp COMMAND...                 the adapter book of the MCP server COMMAND runs (docs/intents.md)
+//!   rofl adapter mcp COMMAND...                 the adapter book of the MCP server COMMAND runs, or the one at a URL (docs/intents.md)
+//!   rofl adapter openapi SPEC                   the adapter book of an OpenAPI document, a JSON file or URL
 //!
 //! A question verb is `rofl load` with that one question; `--json` prints each answer as `rofl serve` does.
 //! `--kept F [--anew]` keeps the world evaluated at F, and later runs answer from F until it is stale (kept.rs).
@@ -22,7 +23,7 @@ mod render;
 mod seed;
 mod serve;
 
-const USAGE: &str = "usage: rofl load|ask|why|whynot|excise ... FILE... | rofl serve | rofl render ... | rofl nb FILE.rofl.md | rofl adapter mcp COMMAND...";
+const USAGE: &str = "usage: rofl load|ask|why|whynot|excise ... FILE... | rofl serve | rofl render ... | rofl nb FILE.rofl.md | rofl adapter mcp COMMAND... | rofl adapter openapi SPEC";
 
 /// `@LIST` replaced by the files it names.
 fn listed(args: Vec<String>) -> Vec<String> {
@@ -67,13 +68,16 @@ fn run(args: Vec<String>) {
         "serve" => serve::main(),
         "render" => render::main(args),
         "nb" => nb::main(args),
-        "adapter" if args.first().is_some_and(|k| k == "mcp") && args.len() > 1 => match rofl::mcp::book(&args[1..].join(" ")) {
-            Ok(book) => print!("{book}"),
-            Err(e) => {
-                eprintln!("rofl adapter mcp: {e}");
-                std::process::exit(load::FILE_REFUSED);
+        "adapter" if args.len() > 1 && matches!(args[0].as_str(), "mcp" | "openapi") => {
+            let rest = args[1..].join(" ");
+            match if args[0] == "mcp" { rofl::mcp::book(&rest) } else { rofl::openapi::book(&rest) } {
+                Ok(book) => print!("{book}"),
+                Err(e) => {
+                    eprintln!("rofl adapter {}: {e}", args[0]);
+                    std::process::exit(load::FILE_REFUSED);
+                }
             }
-        },
+        }
         _ => {
             eprintln!("{USAGE}");
             std::process::exit(load::USAGE);

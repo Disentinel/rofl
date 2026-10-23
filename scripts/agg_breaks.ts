@@ -65,6 +65,20 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "openapi_book_digest",
+  "what": "a digest of the whole OpenAPI document printed in the book it generates",
+  "expect": {
+   "openapi_book": "only listPets moved"
+  }
+ },
+ {
+  "id": "openapi_does_get",
+  "what": "every operation of an OpenAPI document generated as a reads capability, POST included",
+  "expect": {
+   "openapi_get": "evaluation sends no does want"
+  }
+ },
+ {
   "id": "post_resends_flying",
   "what": "a want still in flight in the post sent again by the next evaluation",
   "expect": {
@@ -9222,6 +9236,8 @@ const TESTS: Record<string, string> = {
   mcp_book: 'mcp a_regenerated_book_differs_by_exactly_the_changed_tool',
   does_permit: 'dispatch a_does_want_without_permit_is_never_sent',
   post_once: 'post a_world_that_does_not_wait_goes_on_and_takes_its_answers_when_they_come',
+  openapi_book: 'openapi a_regenerated_book_differs_by_exactly_the_changed_operation',
+  openapi_get: 'openapi a_get_want_is_answered_from_the_service_and_a_post_waits_for_its_permit',
   does_once: 'dispatch a_does_want_runs_once_across_a_dispatch_the_world_anew_and_a_replay',
   does_guard: 'dispatch a_running_world_cannot_change_what_grants_permission',
   mcp_does: 'mcp a_does_tool_is_not_sent_by_evaluation',

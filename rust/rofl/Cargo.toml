@@ -13,11 +13,14 @@ regex = "1"
 libc = "0.2"
 # the sql adapter (src/adapter.rs `run_sql`); `cargo build --no-default-features` builds the engine without it
 rusqlite = { version = "0.32", features = ["bundled"], optional = true }
+# the http adapters (src/net.rs: openapi, mcp over http); blocking, on the adapter's own thread, so the engine never sees tokio
+reqwest = { version = "0.12", default-features = false, features = ["blocking", "rustls-tls"], optional = true }
 
 # planted faults for scripts/agg_breaks.ts (src/breaks.rs); never in a normal build
 [features]
-default = ["sql"]
+default = ["sql", "net"]
 sql = ["dep:rusqlite"]
+net = ["dep:reqwest"]
 breaks = []
 
 [lib]

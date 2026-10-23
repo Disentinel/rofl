@@ -13,6 +13,10 @@ brk_expects("prov_state_unsettled", "prov_lazy_reader").
 brk_expects("prov_state_unsettled", "prov_lazy_retract").
 brk("journal_closed_late"). brk_kind("journal_closed_late", switch).
 brk_expects("journal_closed_late", "journal_replay").
+brk("openapi_book_digest"). brk_kind("openapi_book_digest", switch).
+brk_expects("openapi_book_digest", "openapi_book").
+brk("openapi_does_get"). brk_kind("openapi_does_get", switch).
+brk_expects("openapi_does_get", "openapi_get").
 brk("post_resends_flying"). brk_kind("post_resends_flying", switch).
 brk_expects("post_resends_flying", "post_once").
 brk("does_unpermitted_sent"). brk_kind("does_unpermitted_sent", switch).
@@ -2632,6 +2636,8 @@ switch_site("no_seal", "rust/rofl/src/engine.rs").
 switch_site("no_sealed_text", "rust/rofl/src/engine.rs").
 switch_site("nullary_compound_term", "rust/rofl/src/rofl_parse.rs").
 switch_site("one_member", "rust/rofl/src/engine.rs").
+switch_site("openapi_book_digest", "rust/rofl/src/openapi.rs").
+switch_site("openapi_does_get", "rust/rofl/src/openapi.rs").
 switch_site("or_tie_last", "rust/rofl/src/cell.rs").
 switch_site("order_head_unseeded", "rust/rofl/src/engine.rs").
 switch_site("order_lex_as_pareto", "rust/rofl/src/program.rs").
