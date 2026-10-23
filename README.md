@@ -29,15 +29,20 @@ Node ≥ 22.
 ## Using it
 
 ```bash
-npm i rofl
+npm i @grafema/rofl        # `npm i -g` for the commands: rofl, rofl-nb, rofl-lsp
 ```
+
+The npm package `rofl` is someone else's; this one is `@grafema/rofl`. The
+`rofl` command is the native engine for agents (`rofl ask`, `why`, `whynot`,
+`excise`, `--json`; [docs/cli.md](docs/cli.md)), from a package of its own per
+platform that npm picks by itself ([docs/npm.md](docs/npm.md)).
 
 ```js
 import { readFileSync } from 'node:fs';
-import { Rofl } from 'rofl';
+import { Rofl } from '@grafema/rofl';
 
 const r = new Rofl();
-r.load(readFileSync('node_modules/rofl/boot.rofl', 'utf8'), 'boot.rofl');
+r.load(readFileSync('node_modules/@grafema/rofl/boot.rofl', 'utf8'), 'boot.rofl');
 r.load(`
   edge(a, b). edge(b, c).
   path(X, Y) :- edge(X, Y).
@@ -56,8 +61,9 @@ path[main](a,c)  <= rd2f1f53d @tick 0
   edge[main](b,c) [axiom]
 ```
 
-Plain `node`, no flags, no dependencies — the published tarball is the compiled
-engine and nothing else. `boot.rofl` is the semantics as data and carries the
+Plain `node`, no flags, no dependencies — the library is the compiled
+TypeScript engine; the Rust engine comes as an optional dependency for the
+`rofl` command. `boot.rofl` is the semantics as data and carries the
 audits; a program loads without it and answers less about itself.
 
 ### The libraries that ship with it
@@ -80,7 +86,7 @@ for (const f of ['inquiry/ontology.rofl', 'inquiry/terminology.rofl',
                  'inquiry/intents.rofl', 'inquiry/perspectives.rofl',
                  'policies/evidence.rofl', 'policies/authority.rofl',
                  'decisions/production-readiness.rofl']) {
-  r.load(readFileSync(at(`rofl/${f}`), 'utf8'), f);
+  r.load(readFileSync(at(`@grafema/rofl/${f}`), 'utf8'), f);
 }
 r.load(`
   inquiry(ship_it, decide).
@@ -102,11 +108,12 @@ recommendation[main](ship_it,no_go)  <= r989a9b8b @tick 0
     blocks_on[main](ship_it,tests_pass)  <= r6e89f9d7 @tick 0
 ```
 
-The other forty rule packs in this repository are models OF this repository —
-its JavaScript, its ledger, its own layering — and do not ship.
+The JS model (`rules/js-*.rofl`, listed by `rules/js.files`) ships for
+`rofl ... @rules/js.files`. The other rule packs in this repository are models
+OF this repository — its ledger, its own layering — and do not ship.
 
 **Large worlds are the other engine's.** `src/` is built for small ones; the
-Rust engine is reached through the same JSON protocol from `rofl/port`, and the
+Rust engine is reached through the same JSON protocol from `@grafema/rofl/port`, and the
 division is deliberate rather than a staging post — see `docs/port-surface.md`.
 
 Everything below this line is for working ON the engine rather than with it.

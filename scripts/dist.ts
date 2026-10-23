@@ -1,16 +1,20 @@
-// npm run dist — the notebook without a checkout: dist/rofl-nb-<v>.tgz (the `rofl-nb` command and the `rofl-lsp` language server, ROFL's version) and
-// dist/rofl-<v>.vsix (the editor, also at ROFL's version), both plain JS.
+// npm run dist — ROFL without a checkout, all at ROFL's version (package.json):
+// dist/grafema-rofl-<v>.tgz, the npm package @grafema/rofl: the `rofl` command (npm/rofl.ts, which runs the engine of its platform package), `rofl-nb`,
+// the `rofl-lsp` language server and the library; dist/grafema-rofl-<os>-<cpu>-<v>.tgz, each platform package @grafema/rofl-<os>-<cpu>, the engine binary
+// alone, one for each binary found (rust/target/rofl-<os>-<cpu>/, as CI lays them out, else this machine's rust/target/release for its own platform);
+// and dist/rofl-<v>.vsix (the editor), all plain JS.
 // One tree serves both: the modules the command line and the extension import, transpiled in place, the model's .rofl files beside them, @babel/parser vendored.
 // The extension is that tree under rofl-nb/, entered through a CommonJS main, so an editor that loads extensions with require runs it too.
 // `-- --target <vsce target>` (linux-x64, darwin-arm64, win32-x64, ...): the VSIX for that platform, carrying the Rust engine built for it
 // (rust/target/rofl-<target>/rofl, else this machine's rust/target/release/rofl) in rofl-nb/bin; without one, the VSIX for every platform, which evaluates on the TypeScript engine.
-import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import ts from 'typescript';
 import { MODEL_FILES, PHRASE_FILES, SHIPPED } from '../notebook/front.ts';
 import { buildRenderer } from './renderer.ts';
+import { PLATFORMS } from '../npm/platform.ts';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url)), OUT = path.join(ROOT, 'dist');
 const root = JSON.parse(readFileSync(path.join(ROOT, 'package.json'), 'utf8')), version: string = root.version;
@@ -25,7 +29,7 @@ rmSync(OUT, { recursive: true, force: true });
 execFileSync(process.execPath, ['--experimental-strip-types', path.join(ROOT, 'scripts/guide.ts'), '--check'], { stdio: 'inherit' });
 
 // every module the command line, the kept kernel and the extension reach by relative imports
-const ENTRIES = ['notebook/cli.ts', 'notebook/serve.ts', 'lsp/server.ts', 'vscode/extension.ts', 'vscode/worker.ts'];
+const ENTRIES = ['notebook/cli.ts', 'notebook/serve.ts', 'lsp/server.ts', 'vscode/extension.ts', 'vscode/worker.ts', 'npm/rofl.ts', 'scanners/cli.ts'];
 const seen = new Set<string>();
 for (const q = [...ENTRIES]; q.length;) {
   const f = q.pop()!;
@@ -37,7 +41,7 @@ for (const f of seen) {
   let js = ts.transpileModule(readFileSync(path.join(ROOT, f), 'utf8'), { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext } }).outputText
     .replace(/'(\.\.?\/[^']*)\.ts'/g, "'$1.js'")
     .replace(/from '@babel\/parser'/g, `from '${path.relative(path.dirname(f), 'vendor/babel-parser.js').replace(/^(?!\.)/, './')}'`)
-    .replace(/npm run nb -- /g, 'rofl-nb ');
+    .replace(/npm run nb -- /g, 'rofl-nb ').replace(/npm run scan -- /g, 'rofl scan ');
   // an extension host that predates ES module extensions resolves `vscode` only for require
   if (f === 'vscode/extension.ts' || f === 'vscode/lsp.ts') js = js.replace("import * as vscode from 'vscode';", "import { createRequire } from 'node:module';\nconst vscode = createRequire(import.meta.url)('vscode');");
   if (f === 'notebook/cli.ts') {
@@ -87,13 +91,40 @@ writeFileSync(path.join(PKG, 'DRAWING.md'), guide('DRAWING.md').replace(/\]\(\.\
 cpSync(path.join(ROOT, 'guide/pictures'), path.join(PKG, 'pictures'), { recursive: true });
 writeFileSync(path.join(PKG, 'README.md'), guide('README-npm.md'));
 writeFileSync(path.join(OUT, 'INSTALL.md'), guide('INSTALL.md'));
+// the engine a platform package carries: one exact version, so the package and its engine never disagree (npm/platform.ts refuses them when they do)
+const optionalDependencies = Object.fromEntries(PLATFORMS.map((p) => [`@grafema/rofl-${p}`, version]));
 writeFileSync(path.join(PKG, 'package.json'), JSON.stringify({
-  name: 'rofl-nb', version, description: 'The ROFL notebook: run a .rofl.md notebook from the command line; rofl-lsp, a language server for .rofl and .rofl.md', license: root.license, type: 'module',
-  bin: { 'rofl-nb': 'notebook/rofl-nb.js', 'rofl-lsp': 'lsp/rofl-lsp.js' }, engines: { node: NODE }, repository: root.repository,
+  name: '@grafema/rofl', version, description: root.description, license: root.license, type: 'module',
+  bin: { rofl: 'npm/rofl.js', 'rofl-nb': 'notebook/rofl-nb.js', 'rofl-lsp': 'lsp/rofl-lsp.js' },
+  exports: root.exports, main: root.main, types: root.types, engines: { node: NODE }, optionalDependencies,
+  repository: root.repository, homepage: root.homepage, bugs: root.bugs,
 }, null, 2) + '\n');
-execFileSync('npm', ['pack', '--silent', '--pack-destination', OUT], { cwd: PKG, stdio: ['ignore', 'ignore', 'inherit'] });
 
 cpSync(PKG, path.join(VSIX, 'rofl-nb'), { recursive: true });
+
+// the library and what the engine reads from its tree: rules/js.files names the model from rules/
+execFileSync(process.execPath, [path.join(ROOT, 'node_modules/typescript/bin/tsc'), '-p', path.join(ROOT, 'tsconfig.build.json'), '--outDir', path.join(PKG, 'dist')], { stdio: 'inherit' });
+for (const f of [...root.files.filter((f: string) => f !== 'dist/' && f !== 'README.md'), 'rules/js.files']) cpSync(path.join(ROOT, f), path.join(PKG, f), { recursive: true });
+for (const f of readFileSync(path.join(ROOT, 'rules/js.files'), 'utf8').split('\n').filter(Boolean)) if (!existsSync(path.join(PKG, 'rules', f))) throw new Error(`rules/js.files names ${f}, which the package does not carry`);
+execFileSync('npm', ['pack', '--silent', '--pack-destination', OUT], { cwd: PKG, stdio: ['ignore', 'ignore', 'inherit'] });
+const packed = [`grafema-rofl-${version}.tgz`];
+for (const p of PLATFORMS) {
+  const exe = `rofl${p.startsWith('win32') ? '.exe' : ''}`, own = p === `${process.platform}-${process.arch}`;
+  const built = [path.join(ROOT, 'rust/target', `rofl-${p}`, exe), ...(own ? [path.join(ROOT, 'rust/target/release', exe)] : [])].find(existsSync);
+  if (!built) continue;
+  const dir = path.join(OUT, 'platform', p), [os, cpu] = p.split('-');
+  mkdirSync(path.join(dir, 'bin'), { recursive: true });
+  cpSync(built, path.join(dir, 'bin', exe));
+  chmodSync(path.join(dir, 'bin', exe), 0o755);
+  cpSync(path.join(ROOT, 'LICENSE'), path.join(dir, 'LICENSE'));
+  writeFileSync(path.join(dir, 'README.md'), `# @grafema/rofl-${p}\n\nThe ROFL engine for ${p}, installed by [@grafema/rofl](https://www.npmjs.com/package/@grafema/rofl), whose \`rofl\` command runs it.\n`);
+  writeFileSync(path.join(dir, 'package.json'), JSON.stringify({
+    name: `@grafema/rofl-${p}`, version, description: `The ROFL engine binary for ${p}; install @grafema/rofl`, license: root.license,
+    os: [os], cpu: [cpu], files: ['bin/'], repository: root.repository, homepage: root.homepage,
+  }, null, 2) + '\n');
+  execFileSync('npm', ['pack', '--silent', '--pack-destination', OUT], { cwd: dir, stdio: ['ignore', 'ignore', 'inherit'] });
+  packed.push(`grafema-rofl-${p}-${version}.tgz`);
+}
 for (const f of ['rofl.tmLanguage.json', 'datalog.tmLanguage.json', 'language-configuration.json', 'icon.png', 'file-light.png', 'file-dark.png', 'CHANGELOG.md']) cpSync(path.join(ROOT, 'vscode', f), path.join(VSIX, f));
 for (const f of ['LICENSE', 'THIRD_PARTY_NOTICES']) cpSync(path.join(PKG, f), path.join(VSIX, f));
 writeFileSync(path.join(VSIX, 'README.md'), guide('README-marketplace.md'));
@@ -117,4 +148,4 @@ writeFileSync(path.join(VSIX, 'package.json'), JSON.stringify({ ...manifest, ver
   main: './main.js', files: ['main.js', 'rofl-nb', '*.tmLanguage.json', 'language-configuration.json', '*.png', 'CHANGELOG.md', 'LICENSE', 'THIRD_PARTY_NOTICES'], engines: { vscode: VSCODE } }, null, 2) + '\n');
 execFileSync(path.join(ROOT, 'vscode/node_modules/.bin/vsce'), ['package', '--no-dependencies', ...(TARGET ? ['--target', TARGET] : []), '--out', path.join(OUT, vsix)], { cwd: VSIX, stdio: ['ignore', 'ignore', 'inherit'] });
 
-for (const f of [`rofl-nb-${version}.tgz`, vsix]) console.log(`dist/${f}: ${Math.round(readFileSync(path.join(OUT, f)).length / 1024)} KB`);
+for (const f of [...packed, vsix]) console.log(`dist/${f}: ${Math.round(readFileSync(path.join(OUT, f)).length / 1024)} KB`);

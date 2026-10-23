@@ -4,6 +4,14 @@ One native binary, `rust/target/release/rofl` (built by `cargo build --release` 
 `rust/`, shipped with every release). A world is the files named after the
 flags, `boot.rofl` first.
 
+**Install** with no checkout and no Rust: `npm i -g @grafema/rofl` (or
+`npx @grafema/rofl ask ...`). Its `rofl` runs the binary of the package
+`@grafema/rofl-<os>-<cpu>` npm installed for this machine (`npm/rofl.ts`):
+the same arguments, streams, directory, environment and exit, so a world
+it keeps is the one the bare binary keeps (`docs/npm.md`). Exit 127:
+no engine of this package's version is installed for this platform, said on
+stderr with the package to install.
+
 ```sh
 rofl ask    'reaches(a, X)'      boot.rofl world.rofl    # the rows, one per line
 rofl why    'reaches(a, c)'      boot.rofl world.rofl    # what proves it
@@ -43,7 +51,7 @@ A run that ends before answering prints `{"ok":false,"error","exit"}`.
 **A `.rofl.md` file** is a world written as executable Markdown: wherever a file is named, the
 binary reads it into rules natively, after the worlds its `reads:` names, as `scripts/read.ts` does
 (`npm run mdcheck` holds the two to the byte). Its vocabulary comes from the tree: the nearest directory
-above the file holding `boot.rofl` and `facts/phrases.rofl`, else the one above the binary. A plain `.md`
+above the file holding `boot.rofl` and `facts/phrases.rofl`, else the tree the command came with (below). A plain `.md`
 is a document and is refused (exit 2).
 
 **`rofl nb`** runs a notebook the way `npm run nb -- FILE` does and prints the same text and exit code
@@ -54,6 +62,11 @@ notebook over code (`code:`, `model: js`) and `--json` are not native yet: it sa
 **`@LIST`** stands for the files LIST names, one a line, each read from LIST's
 directory. `@rules/js.files` is the JS model, the files the notebook host
 loads (`notebook/front.ts` `MODEL_FILES`; `npm test` fails when the two differ).
+A LIST that is no file from the current directory is read from the tree the
+command came with: the tree above the path the binary was called by (the npm
+package calls it by a path inside itself), else the one above the binary. So
+`@rules/js.files` works from any directory, and a `.rofl.md`'s vocabulary is
+found the same way.
 
 ## A world kept on disk
 
@@ -261,9 +274,12 @@ A state dump of a cut world exits 0; its holes are in the dump.
 Two commands, a directory of JS or TS in, an answer out:
 
 ```sh
-npm run scan -- path/to/src --out code.rofl
+npm run scan -- path/to/src --out code.rofl          # installed from npm: rofl scan path/to/src --out code.rofl
 rofl why 'flows[code]("api/server.js", "api/users.js")' @rules/js.files code.rofl
 ```
+
+From the npm package `rofl scan` is `npm run scan --`, and a world that asks for
+its own input names it as its scanner: `scanner(js, "rofl scan path/to/src")`.
 
 | stage | runs on | reads | writes |
 |---|---|---|---|

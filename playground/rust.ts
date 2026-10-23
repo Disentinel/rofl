@@ -6,14 +6,16 @@ import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { MessageChannel, receiveMessageOnPort, Worker } from 'node:worker_threads';
 import { Rofl } from '../src/api.ts';
+import { engine as installedEngine } from '../npm/platform.ts';
 import { typescript, type Engine, type EngineName, type Holding, type Stop, type Walls } from './engine.ts';
 import type { CellRec, FactRec, PremRef, Store, Witness } from '../src/store.ts';
 import { termFromJson } from '../src/unify.ts';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url)), EXE = process.platform === 'win32' ? '.exe' : '';
-/** The Rust engine: the one a package carries in bin/, made executable if unpacking lost the bit, else this tree's build. */
+/** The Rust engine: the one a VSIX carries in bin/, made executable if unpacking lost the bit, else the npm package's platform package, else this tree's build. */
 export function rustBin(): string | undefined {
-  const bin = [path.join(ROOT, 'bin', `rofl${EXE}`), path.join(ROOT, 'rust/target', process.env.ROFL_PROFILE || 'release', `rofl${EXE}`)].find(existsSync);
+  const installed = installedEngine();
+  const bin = [path.join(ROOT, 'bin', `rofl${EXE}`), 'bin' in installed ? installed.bin : '', path.join(ROOT, 'rust/target', process.env.ROFL_PROFILE || 'release', `rofl${EXE}`)].find((f) => f && existsSync(f));
   if (bin && !EXE) try { accessSync(bin, constants.X_OK); } catch { try { chmodSync(bin, 0o755); } catch { return undefined; } }
   return bin;
 }
