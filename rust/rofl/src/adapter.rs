@@ -14,7 +14,6 @@
 //! not sent again.
 
 use std::collections::{BTreeMap, HashMap, HashSet};
-use std::io::Write;
 
 use crate::rofl_parse;
 use crate::session::Session;
@@ -114,7 +113,7 @@ impl Session {
         }
         let runs: Vec<_> = batches.iter().map(|b| {
             let (cmd, input) = (b.cmd.clone(), b.input.clone());
-            std::thread::spawn(move || run_exec(&cmd, &input))
+            std::thread::spawn(move || crate::session::run_program(&cmd, None, Some(&input)))
         }).collect();
         let mut src = held;
         for (b, run) in batches.iter().zip(runs) {
@@ -195,27 +194,6 @@ impl Session {
         let h = lines.join("\n").bytes().fold(0xcbf29ce484222325u64, |h, b| (h ^ b as u64).wrapping_mul(0x100000001b3));
         format!("{h:016x}")
     }
-}
-
-/// The program run with the batch on its standard input: what it printed, or why it gave nothing to read.
-fn run_exec(cmd: &str, input: &str) -> Result<String, String> {
-    use std::process::{Command, Stdio};
-    let mut argv = cmd.split_whitespace();
-    let prog = argv.next().ok_or("an empty command")?;
-    let mut child = Command::new(prog).args(argv).stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped()).spawn().map_err(|e| format!("{prog}: {e}"))?;
-    let mut stdin = child.stdin.take().ok_or("no standard input")?;
-    let input = input.to_string();
-    let feed = std::thread::spawn(move || {
-        let _ = stdin.write_all(input.as_bytes());
-    });
-    let o = child.wait_with_output().map_err(|e| format!("{prog}: {e}"))?;
-    let _ = feed.join();
-    if !o.status.success() {
-        let err = String::from_utf8_lossy(&o.stderr);
-        let how = o.status.code().map_or_else(|| "was killed".to_string(), |c| format!("exited {c}"));
-        return Err(format!("{cmd} {how}{}", err.lines().last().map_or(String::new(), |l| format!(": {l}"))));
-    }
-    String::from_utf8(o.stdout).map_err(|_| "the adapter printed bytes that are not UTF-8".to_string())
 }
 
 fn quote(s: &str) -> String {
