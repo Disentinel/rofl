@@ -311,6 +311,14 @@ the scanner again when one does not. The world cannot tell the two apart. On
 `examples/checks/scan-world.rofl` the second run is 2.4 -> 1.7 s, the rest
 being the model's evaluation.
 
+A file scanned again for a kept world (`rofl ask` after an edit) is handed
+its previous output, the stale kept one, in `ROFL_SCAN_PREVIOUS`, and
+`scanners/cli.ts` gives a node it matches there its old id: a local renamed
+moves the facts that hold its name, not those of every statement naming it.
+What it prints then is kept marked `-- inherited` and answers only such a
+rescan; a world evaluated from its files (`rofl load`, `npm test`) scans from
+nothing and gets the same ids whatever ran before it.
+
 **Between two rounds the world goes cold.** While the scanners of a round run,
 the evaluated world is kept as a volume in the temporary directory and mapped
 back: what the rounds before brought in lies in the file, not on the heap, and

@@ -9059,6 +9059,20 @@ export const BREAKS: Break[] = [
    "kept_js_sources": "the import taken away"
   }
  },
+ {
+  "id": "scan_previous_ignored",
+  "what": "a scan run again for a kept world is not told its previous output, so a renamed local's declaration takes a new id",
+  "expect": {
+   "kept_rename": "the declaration's id moved"
+  }
+ },
+ {
+  "id": "scan_inherited_answers_fresh",
+  "what": "the storeroom answers a world evaluated from its files with a scan whose ids were inherited",
+  "expect": {
+   "kept_rename": "a fresh load read the inherited scan"
+  }
+ },
 ];
 
 /** A proof that is no world: the report `rofl load --propose-structures` prints over a fixture (rust/rofl/src/structures.rs),
@@ -9137,6 +9151,7 @@ const TESTS: Record<string, string> = {
   set_js_steps: 'retract_set random_js_steps_1',
   kept_series: 'kept a_kept_world_answers_and_refuses_as_docs_cli_says',
   kept_js_sources: 'kept js_sources_edited_go_by_delta',
+  kept_rename: 'kept a_renamed_local_keeps_its_ids',
   retract_two_facts: 'retract_refuse the_engine_delta_refuses_two_facts_at_once',
   kept_implicit: 'kept a_kept_world_answers_and_refuses_as_docs_cli_says',
   kept_implicit_walls: 'kept a_kept_world_answers_and_refuses_as_docs_cli_says',

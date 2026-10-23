@@ -180,6 +180,7 @@ check[checks]("rust/rofl/tests/journal.rs", "a_past_tick_replayed_is_the_state_t
 check[checks]("rust/rofl/tests/journal.rs", "a_journal_from_a_seed_is_no_replay", test).
 check[checks]("rust/rofl/tests/kept.rs", "a_holes_unknowns_survive_an_image_and_a_volume", test).
 check[checks]("rust/rofl/tests/kept.rs", "js_sources_edited_go_by_delta", test).
+check[checks]("rust/rofl/tests/kept.rs", "a_renamed_local_keeps_its_ids", test).
 check[checks]("rust/rofl/tests/kept.rs", "a_kept_world_answers_and_refuses_as_docs_cli_says", test).
 check[checks]("rust/rofl/tests/lattice_scale.rs", "single_source_shortest_paths_are_dijkstras_with_one_fact_per_node", test).
 check[checks]("rust/rofl/tests/lattice_scale.rs", "all_pairs_shortest_and_widest_paths_are_floyds", test).

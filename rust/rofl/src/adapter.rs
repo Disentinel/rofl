@@ -113,7 +113,7 @@ impl Session {
         }
         let runs: Vec<_> = batches.iter().map(|b| {
             let (cmd, input) = (b.cmd.clone(), b.input.clone());
-            std::thread::spawn(move || crate::session::run_program(&cmd, None, Some(&input)))
+            std::thread::spawn(move || crate::session::run_program(&cmd, None, Some(&input), false))
         }).collect();
         let mut src = held;
         for (b, run) in batches.iter().zip(runs) {
