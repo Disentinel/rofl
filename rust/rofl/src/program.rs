@@ -726,6 +726,8 @@ fn add_fact(e: &mut Eval, c: &Clause, who: Option<&str>) {
     let args = h_.args.clone();
     e.store.add(&e.h, h_.rel, persp, &args, flags);
     let id = e.store.get(h_.rel, persp, &args).expect("just added");
+    let author = who.map(|w| e.h.intern(w));
+    e.store.journal.loaded(id, author);
     if !e.v.is_reserved(h_.rel) {
         let (edb, main, rel) = (e.v.edb, e.v.main, Term::atom(h_.rel));
         e.store.add(&e.h, edb, main, &[rel], F_BASE);
@@ -1217,8 +1219,14 @@ pub fn load_program(e: &mut Eval, text: &str, who: Option<&str>) -> Loaded {
     if !diags.is_empty() {
         return Loaded { ok: false, diagnostics: diags, admitted: 0 };
     }
+    let mark = e.store.journal.mark();
     for c in ready.iter().chain(low.iter()) {
         admit_clause(e, c, who_owned.as_deref());
+    }
+    // a load that brings a program is kept whole, its facts in it
+    if trusted || !(low.is_empty() && decls.is_empty() && tags.is_empty() && doms.is_empty() && structs.is_empty()) || ready.iter().any(|c| !c.body.is_empty()) {
+        let author = who.map(|w| e.h.intern(w));
+        e.store.journal.text(mark, text, author);
     }
     // THE DECLARATION IS ONE KERNEL ROW, timeless like the semantics
     // declaration: which algebra a relation has is a property of the program.

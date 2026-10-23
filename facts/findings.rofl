@@ -11903,6 +11903,12 @@ demands(f_the_contract_question_keeps_the_whole_js_model, none).
 finding_note(f_the_contract_question_keeps_the_whole_js_model,
   "MEASURED 2026-10-23, fast build. The contract model asked by asks(ct_*) over vscode: diag `'ct_flows' is asked ... so every rule is kept`; the cone is the JS model whole. 20 files 7 s, 50 files 14 s, 100 files 31 s (0.9 GB), of which the JS model alone 27 s; one asked relation alone 17-22 s; 250 files past 110 s at 6.5 GB without asks. A repeated question from the kept world ~2 s at 100 files. At ~0.3 s a file the reference scale is about an hour: the time is the JS model's, the contract adds ~15%.").
 
+finding(f_a_replay_makes_the_calls_the_world_took, insight).
+recorded(f_a_replay_makes_the_calls_the_world_took, "2026-10-23").
+demands(f_a_replay_makes_the_calls_the_world_took, none).
+finding_note(f_a_replay_makes_the_calls_the_world_took,
+  "MEASURED 2026-10-23 building the tick journal (w_intent_tick_journal, tests/journal.rs). Replaying only the base facts of each tick (load what came, retract what went, evaluate) gave tick 0 byte for byte and missed tick 1 by one row: evaluated_again[$kernel](assert($fact(down,main,..)), \"a later tick\"), which a load_delta that fell back wrote into the world. The way a world was told is part of its state: a delta verb's fallback is a fact, and what it does depends on whether the world was evaluated when the call came. So the journal keeps the calls (verb, evaluated or not) and the facts each told, and a replay makes the same calls. Also: tick_at is kept by the journal and not written as a fact, since a wall-clock time in the state moves every ticking world's golden on every run; a rule that needs the time is to read a clock adapter (docs/intents.md phase 2).").
+
 finding(f_the_first_evaluation_runs_on_one_thread, insight).
 recorded(f_the_first_evaluation_runs_on_one_thread, "2026-10-23").
 addressed_by(f_the_first_evaluation_runs_on_one_thread, "rust/rofl/src/engine/par.rs").

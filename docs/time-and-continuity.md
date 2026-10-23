@@ -104,6 +104,9 @@ Roadmapped, in order of weight:
    the moment of the call. Until inputs are dated, a past state cannot be
    reconstructed: replaying would apply an assertion made at tick 9 while
    rebuilding tick 5. This is the prerequisite for everything below.
+   **Built 2026-10-23** in the Rust engine: `asserted_by(F, Who, T)` carries
+   the tick, and the journal of inputs (docs/intents.md, phase 0) carries the
+   tick a fact went and `tick_at`; `Session::replay(T)` rebuilds tick T.
 4. **Real concurrency** — several threads, simultaneous writes. Deliberately
    NOT taken. The fixpoint queue gives continuity without a second thread, and
    concurrency becomes necessary only when one tick's computation stops fitting
