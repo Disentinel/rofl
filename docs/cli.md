@@ -230,7 +230,8 @@ what changed, and the record names each file's facts as runs of ids: 0.16-0.5 s
 and 35-56 MB for the same four edits, the answer the same. The rows of trees
 and their citers are spliced likewise, and a large argument index the base
 does not hold (built for the edit since) is not written: it is built again
-where a later edit asks for it. 5-8 MB for the same edits.
+where a later edit asks for it; likewise a forest of a declared tree built
+again whole. 5-8 MB for the same edits.
 
 Records of facts gone stay in the world (a reader skips them) until it is
 evaluated whole: once they are more than a quarter of its records, the next

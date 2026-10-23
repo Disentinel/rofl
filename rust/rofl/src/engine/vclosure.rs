@@ -241,7 +241,9 @@ impl Eval {
     pub(crate) fn write_forests(&self, w: &mut crate::arena::VolW) {
         w.u32(self.vclosures.len() as u32);
         for (ci, c) in self.vclosures.iter().enumerate() {
-            let Some(n) = c.built.filter(|_| c.active) else {
+            // over a base, a forest built again whole is not written: an opening builds it from the edges
+            let fs = &self.store.virtuals[ci].forests;
+            let Some(n) = c.built.filter(|_| c.active && (!w.is_over() || fs.iter().all(|f| f.1.kept_by(w)))) else {
                 w.u32(0);
                 continue;
             };
@@ -249,7 +251,6 @@ impl Eval {
             for x in [n as u64, c.rows as u64, c.mark as u64, c.pairs, c.deep, c.internal] {
                 w.u64(x);
             }
-            let fs = &self.store.virtuals[ci].forests;
             w.u32(fs.len() as u32);
             for (b, f) in fs.iter() {
                 w.u32(*b);
@@ -269,7 +270,8 @@ impl Eval {
                 let b = r.u32()?;
                 fs.push((b, Rc::new(Forest::read(r)?)));
             }
-            if let Some(c) = self.vclosures.get_mut(ci).filter(|c| c.active && c.built.is_none()) {
+            // one built at the opening for as many edges is the same forest: the one read lies in the volume
+            if let Some(c) = self.vclosures.get_mut(ci).filter(|c| c.active && c.built.is_none_or(|b| Some(b as u64) == n.as_ref().ok().copied())) {
                 (c.built, c.rows, c.mark, c.pairs, c.deep, c.internal) = (Some(n? as usize), rows? as usize, mark? as FactId, pairs?, deep?, internal?);
                 c.deaths = self.store.deaths.get(&c.src).copied().unwrap_or(0);
                 c.revived = self.store.revived.get(&c.src).map_or(0, Vec::len);
