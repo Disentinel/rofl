@@ -4025,3 +4025,59 @@ work(w_stable_node_ids,
   "The owner, 2026-10-21 (thread on caching): a JS node id is its place in the tree, not its place in the walk. scanners/js_ast.ts gave `prefix + ++n` in walk order and put the line in ast_node, so a function added at the top of a file renamed every node below it and a blank line moved every ast_node under it. The id becomes the file's prefix and a hash of (parent id, step), top-down, one hash per node, no key: a named child (function, class, method, property, a variable declaration whose declarators are all named) steps by its name; an element of a list field by its kind and a shallow hash of its tree down to the first block, function or class, #n among equals; a single child by its role. The line leaves ast_node for ast_line; rules that read a line read it there, as a projection for people. A collision in a file is refused by the scanner and the file is scanned again under a salt; across files the prefix is claimed. A rename moves the renamed subtree (the owner accepts it). Toy numbers (cart.js, facts moved of ~1 600): a function added at the top 202 against 1 980, an it() added at the top 388 against 2 072, a line edited inside a callback 111 against 1 531, a rename 1 006 against 36. ACCEPTANCE: facts moved per edit measured on a multi-file corpus against the walk-order ids, with the per-node cost of the scanner at the reference scale.").
 work_state(w_stable_node_ids, done).
 work_needs(w_kept_world_by_delta, w_stable_node_ids).
+
+-- ===========================================================================
+-- INTENTS — a world that wants, and adapters that do. Designed with the owner
+-- 2026-10-23; the PRD, decisions and spec are docs/intents.md, the phases below
+-- are its section 6 in order. The tick journal blocks all of it.
+
+work(w_intent_tick_journal,
+  "docs/intents.md phase 0 (D5): base facts carry the tick they appeared and the tick they went (asserted_by already carries the first), tick_at(T, Time), a past tick rebuilt from the journal, in the Rust engine. ACCEPTANCE: a sequence of ticks with assertions and retractions replayed to any tick equals, byte for byte, the live run's state there; planted: an interval closed one tick late is red.").
+work_state(w_intent_tick_journal, open).
+
+work(w_intent_want_syntax,
+  "docs/intents.md phase 1: `want Cap(Args) :- Body.` heads, the kernel rows want/want_of/want_arg, the load checks of section 4.2 in both engines (TS checks wants, executing is Rust only). ACCEPTANCE: each check refuses its planted program naming the place; worlds without wants unchanged in every golden.").
+work_state(w_intent_want_syntax, open).
+work_needs(w_intent_want_syntax, w_intent_tick_journal).
+
+work(w_intent_adapter_book,
+  "docs/intents.md phase 2: the adapter-book vocabulary (adapter, adapter_auth, capability, arg, answers, idempotent) and the batch protocol with the exec kind; reads wants run per tick in batches; the five outcomes of D9 as facts. ACCEPTANCE: a recursive rule through an exec adapter sends one batch per tick, not one call per want (counted); a killed adapter gives failed, a lost answer outcome_unknown.").
+work_state(w_intent_adapter_book, open).
+work_needs(w_intent_adapter_book, w_intent_want_syntax).
+
+work(w_intent_scanner_as_adapter,
+  "docs/intents.md phase 3: scanner/scan_request become the exec adapter's reading capability, the storeroom of scans its cache. ACCEPTANCE: every world using them today gives the same golden; kept-world and storeroom tests unchanged.").
+work_state(w_intent_scanner_as_adapter, open).
+work_needs(w_intent_scanner_as_adapter, w_intent_adapter_book).
+
+work(w_intent_sql_adapter,
+  "docs/intents.md phase 4: the sql kind, parameterised templates only, answers stamped with the transaction snapshot, wants batched per tick. ACCEPTANCE: on a database of the reference corpus's order, a question answered from wants loads only the rows it needs (counted) against importing the table whole; a planted raw SQL argument refused at load.").
+work_state(w_intent_sql_adapter, open).
+work_needs(w_intent_sql_adapter, w_intent_adapter_book).
+
+work(w_intent_mcp_adapter,
+  "docs/intents.md phase 5: `rofl adapter mcp URL` generates an adapter book from tools/list; the mcp kind executes it, answers by outputSchema or a named parse rule. ACCEPTANCE: a book regenerated after a test server changed one tool differs by exactly that tool; a does tool runs once per key across a re-evaluation and a replay.").
+work_state(w_intent_mcp_adapter, open).
+work_needs(w_intent_mcp_adapter, w_intent_adapter_book).
+
+work(w_intent_does_dispatch,
+  "docs/intents.md phase 6 (D2, D6, D7): the dispatcher in rofl serve; permit as a rule, approvals as adapter facts, the append-only does journal, permission rules protected from agent-submitted rules. ACCEPTANCE: --anew and a replay execute no does want again (planted re-execution red); a want without permit never sent (planted bypass red).").
+work_state(w_intent_does_dispatch, open).
+work_needs(w_intent_does_dispatch, w_intent_mcp_adapter).
+work_needs(w_intent_does_dispatch, w_intent_tick_journal).
+
+work(w_intent_scenarios,
+  "docs/intents.md phase 7: the six scenarios of its section 7 (sql on demand, remote MCP does, local exec, UI shows, another ROFL world, OpenAPI) as worlds in examples/intents/, each checked by npm test.").
+work_state(w_intent_scenarios, open).
+work_needs(w_intent_scenarios, w_intent_does_dispatch).
+work_needs(w_intent_scenarios, w_intent_sql_adapter).
+work_needs(w_intent_scenarios, w_intent_scanner_as_adapter).
+
+work(w_rename_keeps_ids,
+  "From f_a_rename_gives_new_ids_to_every_statement_naming_it, waiting on the owner's decision. Renaming a local renames the ids of every statement that mentions it, through the shallow hash that steps a list element. Candidates to measure with scripts/edit_waves.ts and the contract corpus: the shallow hash leaves identifier names out (statements alike in shape then count #n among equals); a named declaration steps by its kind and #n among named siblings of that kind. ACCEPTANCE: facts moved per edit (rename, statement added at the top, constant, line edited inside a callback) against the ids of w_stable_node_ids, on a multi-file corpus, no edit worse by more than the owner accepts.").
+work_state(w_rename_keeps_ids, open).
+work_needs(w_rename_keeps_ids, w_stable_node_ids).
+
+work(w_join_through_constants,
+  "From f_a_join_on_a_table_of_constants_read_past_the_index: a premise bound by a variable from a small table of constant facts is looked up by both columns, not read for each row of the other bound column. ACCEPTANCE: the operand rule of that finding, as written there, reads in proportion to its answers on 100 vscode files, no hot line; planted, the old plan red.").
+work_state(w_join_through_constants, open).
