@@ -1,6 +1,6 @@
 -- expect-refusal: it reads noted, which 'note' answers in
 -- examples/checks/want-6-refused-shows.rofl — a rule reading what a shows capability answers.
 capability(note, pad, shows). arg(note, 1, who, atom). answers(note, noted, 2).
-capability(lookup, db, reads). arg(lookup, 1, key, atom). answers(lookup, found, 2).
+capability(lookup, db, does). arg(lookup, 1, key, atom). answers(lookup, found, 2).
 stage_done(w1). owner(w1, ann). owner(w2, bob).
 seen(K) :- noted(K, _).

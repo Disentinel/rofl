@@ -1,6 +1,6 @@
 -- expect-refusal: 'note' takes 1 argument(s) by its `arg` rows, the want gives 2
 -- examples/checks/want-3-refused-arity.rofl — a want of more arguments than its capability takes.
 capability(note, pad, shows). arg(note, 1, who, atom). answers(note, noted, 2).
-capability(lookup, db, reads). arg(lookup, 1, key, atom). answers(lookup, found, 2).
+capability(lookup, db, does). arg(lookup, 1, key, atom). answers(lookup, found, 2).
 stage_done(w1). owner(w1, ann). owner(w2, bob).
 want note(P, Q) :- owner(P, Q).

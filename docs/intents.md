@@ -468,3 +468,42 @@ a new directory `intents` under `examples` (phase 7).
 - **Cost.** One pass over the rules and the `capability`, `arg`, `answers`
   rows per evaluation; a world with none of them pays a look at two
   relations.
+
+### Phase 2, as built (2026-10-23)
+
+`rust/rofl/src/adapter.rs` (`Session::adapter_wants`), `rust/rofl/tests/adapter.rs`. Rust only, as the engine
+rule says; the TypeScript engine checks wants (phase 1) and sends none.
+
+- **When.** `Session::evaluate` runs the world to its fixpoint, then sends the
+  `reads` wants not yet settled, loads what comes back by delta and evaluates
+  again, until nothing new is wanted: the loop `scan_request` already had, and
+  both run in it.
+- **A batch.** Per capability per round, one run of the program
+  `adapter(Name, exec, Command)` names, all capabilities at once. On its
+  standard input: `{"capability", "book_version", "wants": [{"key", "args"}]}`,
+  the key the want's row as ROFL text (`$want(next_of, a)`), the arguments by
+  the names of their `arg` rows, `book_version` a digest of the adapter's rows
+  for that capability. It prints ROFL facts: its answers, the key first;
+  `answered(K)` for a want answered with no fact; `failed(K, Reason)`.
+- **Where answers go (D10).** An answer `next(K, b)` is loaded as
+  `next[graph](K, b)`, in the adapter's book; a world that reads it imports
+  that book (`imports(main, graph)`) or boot.rofl's leak audit names the walk.
+  Only a relation the capability `answers` with, at its arity, keyed by a want
+  of the batch, is taken; anything else fails the batch.
+- **Outcomes (D9)**, rows of the main book, each settling its want for the
+  tick: `answered(W)`; `failed(W, Reason)` (refused by the program, or each
+  want of a batch whose program exited badly, was killed, printed what does
+  not parse or answered outside its relations); `outcome_unknown(W)` (the
+  program ended well and said nothing of it); `want_held(W, Why)` (no adapter,
+  or a kind not built yet). `pending(W)` is the world's own rule.
+- **Phase 0's question.** Answers and outcomes are facts of the tick, as a
+  scan's are: the next tick sends its wants again. Keeping them across ticks
+  is the storeroom's work, phase 3.
+- **Acceptance.** A tree of six nodes reached by a recursive rule through the
+  adapter: three runs of 1, 2 and 3 wants, every want answered, nothing sent
+  when evaluated again. A program killed mid-batch fails its wants; a want it
+  says nothing of is `outcome_unknown`; a world with no adapter holds its want.
+  Planted `adapter_one_call_per_want` and `adapter_lost_answered` are red.
+- **Not done.** The kinds other than `exec`; a cap on a batch and on wants a
+  tick (open question 2); `adapter_auth`; the kept-world delta path of
+  `rofl ask` (`rust/rofl/src/bin/rofl/delta.rs` runs scans only); `-- reads:` stamps.

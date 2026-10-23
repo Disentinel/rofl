@@ -4041,8 +4041,8 @@ work_state(w_intent_want_syntax, done).
 work_needs(w_intent_want_syntax, w_intent_tick_journal).
 
 work(w_intent_adapter_book,
-  "docs/intents.md phase 2: the adapter-book vocabulary (adapter, adapter_auth, capability, arg, answers, idempotent) and the batch protocol with the exec kind; reads wants run per tick in batches; the five outcomes of D9 as facts. ACCEPTANCE: a recursive rule through an exec adapter sends one batch per tick, not one call per want (counted); a killed adapter gives failed, a lost answer outcome_unknown.").
-work_state(w_intent_adapter_book, open).
+  "DONE 2026-10-23 (branch claude/project-thread-2b3jv0): rust/rofl/src/adapter.rs (Session::adapter_wants, run in Session::evaluate's loop beside scan_requests), tests/adapter.rs; docs/intents.md *Phase 2, as built*. The reads wants of a capability whose adapter is exec go to its program as one JSON batch a round on stdin; it prints ROFL facts keyed by the want's row; answers land in the adapter's book, outcomes answered/failed/outcome_unknown/want_held in main. A tree of 6 wants through a recursive rule: 3 runs of 1, 2, 3 wants; a killed program fails its batch, a want it says nothing of is unknown. Planted adapter_one_call_per_want, adapter_lost_answered red. Not done: the kinds other than exec, the cap on a batch, the kept-world delta path of rofl ask (rust/rofl/src/bin/rofl/delta.rs runs scans only), adapter_auth; answers are facts of the tick, so the next tick sends its wants again (scans do the same; a storeroom for answers is phase 3). WAS: docs/intents.md phase 2: the adapter-book vocabulary (adapter, adapter_auth, capability, arg, answers, idempotent) and the batch protocol with the exec kind; reads wants run per tick in batches; the five outcomes of D9 as facts. ACCEPTANCE: a recursive rule through an exec adapter sends one batch per tick, not one call per want (counted); a killed adapter gives failed, a lost answer outcome_unknown.").
+work_state(w_intent_adapter_book, done).
 work_needs(w_intent_adapter_book, w_intent_want_syntax).
 
 work(w_intent_scanner_as_adapter,

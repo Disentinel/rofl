@@ -1,6 +1,6 @@
 -- expect-refusal: 'want_key' is written only by a want head
 -- examples/checks/want-7-refused-forged.rofl — a want's row written by a plain rule.
 capability(note, pad, shows). arg(note, 1, who, atom). answers(note, noted, 2).
-capability(lookup, db, reads). arg(lookup, 1, key, atom). answers(lookup, found, 2).
+capability(lookup, db, does). arg(lookup, 1, key, atom). answers(lookup, found, 2).
 stage_done(w1). owner(w1, ann). owner(w2, bob).
 want_key(x) :- stage_done(x).

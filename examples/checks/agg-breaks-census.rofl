@@ -13,6 +13,10 @@ brk_expects("prov_state_unsettled", "prov_lazy_reader").
 brk_expects("prov_state_unsettled", "prov_lazy_retract").
 brk("journal_closed_late"). brk_kind("journal_closed_late", switch).
 brk_expects("journal_closed_late", "journal_replay").
+brk("adapter_one_call_per_want"). brk_kind("adapter_one_call_per_want", switch).
+brk_expects("adapter_one_call_per_want", "adapter_batches").
+brk("adapter_lost_answered"). brk_kind("adapter_lost_answered", switch).
+brk_expects("adapter_lost_answered", "adapter_outcomes").
 brk("want_capability_unchecked"). brk_kind("want_capability_unchecked", switch).
 brk_expects("want_capability_unchecked", "want_no_capability").
 brk("want_arity_off_by_one"). brk_kind("want_arity_off_by_one", switch).
@@ -2255,6 +2259,8 @@ brk_expects("kept_orphans_swept_late", "kept_series").
 brk("kept_delta_unasked_kept"). brk_kind("kept_delta_unasked_kept", switch).
 brk_expects("kept_delta_unasked_kept", "kept_js_sources").
 
+switch_site("adapter_lost_answered", "rust/rofl/src/adapter.rs").
+switch_site("adapter_one_call_per_want", "rust/rofl/src/adapter.rs").
 switch_site("add_base_firings_kept", "rust/rofl/src/engine/addition.rs").
 switch_site("add_closure_lowered_unnoted", "rust/rofl/src/engine.rs").
 switch_site("add_closure_unpaired", "rust/rofl/src/engine/addition.rs").
