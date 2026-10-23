@@ -36,6 +36,7 @@ struct Batch {
     template: Option<String>,
     tool: Option<String>,
     op: Option<crate::openapi::Op>,
+    auth: Vec<(String, String, String)>,
     fields: Vec<String>,
     named: Vec<serde_json::Value>,
     idem: Vec<Option<String>>,
@@ -106,6 +107,16 @@ impl Session {
                 places.entry(name(self, a[0])).or_default().push((p, name(self, a[2]), name(self, a[3])));
             }
         }
+        let mut keys_of: HashMap<String, Vec<(String, String, String, String)>> = HashMap::new();
+        for a in rows(self, "http_auth", 5) {
+            keys_of.entry(name(self, a[0])).or_default().push((name(self, a[1]), name(self, a[2]), name(self, a[3]), name(self, a[4])));
+        }
+        let mut needs: HashMap<String, Vec<String>> = HashMap::new();
+        for n in rows(self, "http_needs", 2) {
+            needs.entry(name(self, n[0])).or_default().push(name(self, n[1]));
+        }
+        // the credentials a capability's calls carry, read from the environment, never from the world
+        let mut creds: HashMap<String, Result<Vec<(String, String, String)>, String>> = HashMap::new();
         let ops: HashMap<String, (String, String)> = rows(self, "http_op", 3).into_iter().map(|o| (name(self, o[0]), (name(self, o[1]), name(self, o[2])))).collect();
         let mut fields: HashMap<String, Vec<(i64, String)>> = HashMap::new();
         for f in rows(self, "mcp_field", 3).into_iter().chain(rows(self, "http_field", 3)) {
@@ -153,7 +164,25 @@ impl Session {
                 }
                 idems.insert(key, idem);
             }
-            match adapters.get(adapter).map(|a| a.0.as_str()) {
+            let kind = adapters.get(adapter).map(|a| a.0.as_str());
+            if matches!(kind, Some("openapi" | "mcp")) && !creds.contains_key(&cap) {
+                let declared = keys_of.get(adapter).cloned().unwrap_or_default();
+                let wanted: Vec<_> = match needs.get(&cap) {
+                    Some(n) => declared.into_iter().filter(|d| n.contains(&d.0)).collect(),
+                    None if kind == Some("mcp") => declared,
+                    None => Vec::new(),
+                };
+                let got = wanted.into_iter().map(|(scheme, how, n, env)| match std::env::var(&env).ok().filter(|v| !v.is_empty() && crate::brk!("http_key_ignored" => false; true)) {
+                    Some(v) => Ok((how, n, v)),
+                    None => Err(format!("declared, not connected: the environment has no {env} (the key of {scheme} for {adapter})")),
+                }).collect();
+                creds.insert(cap.clone(), got);
+            }
+            match kind {
+                Some("openapi" | "mcp") if creds[&cap].is_err() => {
+                    let why = creds[&cap].clone().unwrap_err();
+                    held.push_str(&format!("want_held({text}, {}).\n", quote(&why)));
+                }
                 Some("sql") if !cfg!(feature = "sql") => {
                     held.push_str(&format!("want_held({text}, \"this build has no sql adapter (cargo feature `sql`)\").\n"));
                 }
@@ -204,10 +233,12 @@ impl Session {
             let op = ops.get(&cap).map(|(method, path)| {
                 let mut p = places.get(&cap).cloned().unwrap_or_default();
                 p.sort();
-                crate::openapi::Op { method: method.clone(), path: path.clone(), places: p.into_iter().map(|(_, at, n)| (at, n)).collect() }
+                crate::openapi::Op { method: method.clone(), path: path.clone(), places: p.into_iter().map(|(_, at, n)| (at, n)).collect(), auth: Vec::new() }
             });
+            let auth = creds.get(&cap).and_then(|c| c.clone().ok()).unwrap_or_default();
+            let op = op.map(|o| crate::openapi::Op { auth: auth.clone(), ..o });
             Batch {
-                answers: answers.get(&cap).cloned().unwrap_or_default(), template: templates.get(&cap).cloned(), tool: tools.get(&cap).cloned(), op,
+                answers: answers.get(&cap).cloned().unwrap_or_default(), template: templates.get(&cap).cloned(), tool: tools.get(&cap).cloned(), op, auth,
                 fields: f.into_iter().map(|x| x.1).collect(), cap, adapter, kind, cmd, input, params, named, idem, wants,
             }
         }).collect();
@@ -225,7 +256,8 @@ impl Session {
                     let rel = b.answers.iter().map(|a| a.0.clone()).find(|r| r != "mcp_text").unwrap_or_else(|| "mcp_text".into());
                     let fields = b.fields.clone();
                     let wants: Vec<(String, serde_json::Value, Option<String>)> = b.wants.iter().zip(&b.named).zip(&b.idem).map(|((w, a), i)| (w.0.clone(), a.clone(), i.clone())).collect();
-                    Some(Box::new(move || crate::mcp::call(&cmd, &tool, &rel, &fields, text, &wants)))
+                    let auth = b.auth.clone();
+                    Some(Box::new(move || crate::mcp::call(&cmd, &auth, &tool, &rel, &fields, text, &wants)))
                 }
                 "openapi" => {
                     let op = b.op.clone();
@@ -463,7 +495,7 @@ impl Session {
         let main = self.eval.v.main;
         let mut lines = Vec::new();
         for (rel, n, of) in [("adapter", 3, adapter), ("capability", 3, cap), ("arg", 4, cap), ("answers", 3, cap), ("idempotent", 2, cap),
-            ("mcp_tool", 2, cap), ("mcp_arg", 3, cap), ("mcp_field", 3, cap), ("http_op", 3, cap), ("http_in", 4, cap), ("http_field", 3, cap)] {
+            ("mcp_tool", 2, cap), ("mcp_arg", 3, cap), ("mcp_field", 3, cap), ("http_op", 3, cap), ("http_in", 4, cap), ("http_field", 3, cap), ("http_needs", 2, cap), ("http_auth", 5, adapter)] {
             let r = self.eval.h.intern(rel);
             for f in self.eval.store.rel_persp(&self.eval.h, r, main) {
                 let a = self.eval.store.args(f).to_vec();

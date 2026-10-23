@@ -65,6 +65,13 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "http_key_ignored",
+  "what": "the key an HTTP adapter's book names never read from the environment",
+  "expect": {
+   "openapi_keys": "the key goes in its header"
+  }
+ },
+ {
   "id": "openapi_book_digest",
   "what": "a digest of the whole OpenAPI document printed in the book it generates",
   "expect": {
@@ -9238,6 +9245,7 @@ const TESTS: Record<string, string> = {
   post_once: 'post a_world_that_does_not_wait_goes_on_and_takes_its_answers_when_they_come',
   openapi_book: 'openapi a_regenerated_book_differs_by_exactly_the_changed_operation',
   openapi_get: 'openapi a_get_want_is_answered_from_the_service_and_a_post_waits_for_its_permit',
+  openapi_keys: 'openapi a_key_comes_from_the_environment_and_a_missing_one_holds_the_want',
   does_once: 'dispatch a_does_want_runs_once_across_a_dispatch_the_world_anew_and_a_replay',
   does_guard: 'dispatch a_running_world_cannot_change_what_grants_permission',
   mcp_does: 'mcp a_does_tool_is_not_sent_by_evaluation',

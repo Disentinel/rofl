@@ -4085,8 +4085,8 @@ work_needs(w_intent_openapi, w_intent_scenarios).
 work_needs(w_intent_openapi, w_intent_mailbox).
 
 work(w_intent_http_credentials,
-  "From w_intent_openapi: an HTTP adapter (openapi, mcp over HTTP) sends no credentials yet. The document's securitySchemes say what a call needs (a bearer token, an API key in a header or query); the secret comes from the environment of the adapter, never from the book or a want, and a want of an adapter whose secret is missing is want_held (declared, not connected). Also YAML documents. ACCEPTANCE: a local service that refuses without the key answers a want when the environment gives it, and want_held names the missing variable when it does not.").
-work_state(w_intent_http_credentials, open).
+  "DONE 2026-10-23 (docs/intents.md, Credentials): http_auth(Adapter, Scheme, How, Name, Env) and http_needs(Cap, Scheme) generated from securitySchemes and security; the key read from the environment when the want is sent, want_held naming the variable when missing, masked in errors; mcp over HTTP carries http_auth rows; YAML documents read (serde_yaml). tests/openapi.rs; planted http_key_ignored red. WAS: From w_intent_openapi: an HTTP adapter (openapi, mcp over HTTP) sends no credentials yet. The document's securitySchemes say what a call needs (a bearer token, an API key in a header or query); the secret comes from the environment of the adapter, never from the book or a want, and a want of an adapter whose secret is missing is want_held (declared, not connected). Also YAML documents. ACCEPTANCE: a local service that refuses without the key answers a want when the environment gives it, and want_held names the missing variable when it does not.").
+work_state(w_intent_http_credentials, done).
 work_needs(w_intent_http_credentials, w_intent_openapi).
 
 work(w_intent_mailbox,

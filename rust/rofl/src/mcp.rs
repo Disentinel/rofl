@@ -26,13 +26,23 @@ struct Server {
 /// its answer one JSON message or an event stream of them.
 enum Wire {
     Stdio { child: Child, to: ChildStdin, from: BufReader<ChildStdout> },
-    Http { url: String, session: Option<String>, inbox: Vec<Value> },
+    Http { url: String, auth: Vec<(String, String)>, session: Option<String>, inbox: Vec<Value> },
 }
 
 impl Server {
-    fn start(cmd: &str) -> Result<Self, String> {
+    /// The server `cmd` names, spoken to with the credentials `(how, name, key)` when it is a URL.
+    fn start(cmd: &str, creds: &[(String, String, String)]) -> Result<Self, String> {
         let wire = if cmd.starts_with("http://") || cmd.starts_with("https://") {
-            Wire::Http { url: cmd.to_string(), session: None, inbox: Vec::new() }
+            let (mut url, mut auth) = (cmd.to_string(), Vec::new());
+            for (how, n, v) in creds {
+                let (h, q) = crate::net::credential(how, n, v);
+                auth.extend(h);
+                if let Some(q) = q {
+                    url.push(if url.contains('?') { '&' } else { '?' });
+                    url.push_str(&q);
+                }
+            }
+            Wire::Http { url, auth, session: None, inbox: Vec::new() }
         } else {
             let mut argv = cmd.split_whitespace();
             let prog = argv.next().ok_or("an empty command")?;
@@ -52,8 +62,9 @@ impl Server {
     fn send(&mut self, m: &Value) -> Result<(), String> {
         match &mut self.wire {
             Wire::Stdio { to, .. } => writeln!(to, "{m}").and_then(|_| to.flush()).map_err(|e| format!("the server: {e}")),
-            Wire::Http { url, session, inbox } => {
+            Wire::Http { url, auth, session, inbox } => {
                 let mut headers = vec![("accept", "application/json, text/event-stream".to_string()), ("mcp-protocol-version", PROTOCOL.to_string())];
+                headers.extend(auth.iter().map(|(k, v)| (k.as_str(), v.clone())));
                 if let Some(id) = session.clone() {
                     headers.push(("mcp-session-id", id));
                 }
@@ -134,7 +145,7 @@ impl Drop for Server {
 
 /// The adapter book of the server `cmd` runs.
 pub fn book(cmd: &str) -> Result<String, String> {
-    let mut s = Server::start(cmd)?;
+    let mut s = Server::start(cmd, &[])?;
     let mut tools = Vec::new();
     let mut cursor: Option<String> = None;
     loop {
@@ -199,8 +210,9 @@ fn tool_block(adapter: &str, t: &Value) -> String {
 /// One batch of the `mcp` kind: each want `(key, arguments, idempotency key)` called once, answered in the text an exec program
 /// prints. `rel` is the relation of the tool's structured answer, `fields` its columns after the key; `text` whether
 /// the book reads a text answer.
-pub(crate) fn call(cmd: &str, tool: &str, rel: &str, fields: &[String], text: bool, wants: &[(String, Value, Option<String>)]) -> Result<String, String> {
-    let mut s = Server::start(cmd)?;
+pub(crate) fn call(cmd: &str, creds: &[(String, String, String)], tool: &str, rel: &str, fields: &[String], text: bool, wants: &[(String, Value, Option<String>)]) -> Result<String, String> {
+    let hide = |e: String| creds.iter().fold(e, |e, (_, _, v)| e.replace(&crate::net::escape(v), "***").replace(v.as_str(), "***"));
+    let mut s = Server::start(cmd, creds).map_err(hide)?;
     let mut out = String::new();
     for (key, args, idem) in wants {
         let params = match idem {
@@ -210,7 +222,7 @@ pub(crate) fn call(cmd: &str, tool: &str, rel: &str, fields: &[String], text: bo
         let r = match s.request("tools/call", params) {
             Ok(r) => r,
             Err(e) => {
-                out.push_str(&format!("failed({key}, {}).\n", quote(&e)));
+                out.push_str(&format!("failed({key}, {}).\n", quote(&hide(e))));
                 continue;
             }
         };

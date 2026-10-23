@@ -13,6 +13,8 @@ brk_expects("prov_state_unsettled", "prov_lazy_reader").
 brk_expects("prov_state_unsettled", "prov_lazy_retract").
 brk("journal_closed_late"). brk_kind("journal_closed_late", switch).
 brk_expects("journal_closed_late", "journal_replay").
+brk("http_key_ignored"). brk_kind("http_key_ignored", switch).
+brk_expects("http_key_ignored", "openapi_keys").
 brk("openapi_book_digest"). brk_kind("openapi_book_digest", switch).
 brk_expects("openapi_book_digest", "openapi_book").
 brk("openapi_does_get"). brk_kind("openapi_does_get", switch).
@@ -2506,6 +2508,7 @@ switch_site("hol_share_body", "rust/rofl/src/engine.rs").
 switch_site("hol_shared_bare", "rust/rofl/src/engine.rs").
 switch_site("hol_unshared", "rust/rofl/src/engine.rs").
 switch_site("holistic_unsorted", "rust/rofl/src/cell.rs").
+switch_site("http_key_ignored", "rust/rofl/src/adapter.rs").
 switch_site("hull_low_only", "rust/rofl/src/cell.rs").
 switch_site("in_first_only", "rust/rofl/src/engine.rs").
 switch_site("in_iv_open_high", "rust/rofl/src/engine.rs").

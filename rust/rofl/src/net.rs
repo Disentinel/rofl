@@ -35,6 +35,29 @@ pub(crate) fn send(_: &str, url: &str, _: &[(&str, String)], _: Option<&serde_js
     Err(format!("{url}: this build has no http (cargo feature `net`)"))
 }
 
+/// The standard base64 of `s`, for a basic credential.
+pub(crate) fn base64(s: &str) -> String {
+    const A: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    let mut out = String::new();
+    for c in s.as_bytes().chunks(3) {
+        let n = c.iter().enumerate().fold(0u32, |n, (i, b)| n | (*b as u32) << (16 - 8 * i));
+        for i in 0..4 {
+            out.push(if i <= c.len() { A[(n >> (18 - 6 * i) & 63) as usize] as char } else { '=' });
+        }
+    }
+    out
+}
+
+/// What a credential adds to a request: a header, or a pair in the query.
+pub(crate) fn credential(how: &str, name: &str, value: &str) -> (Option<(String, String)>, Option<String>) {
+    match how {
+        "bearer" => (Some(("authorization".into(), format!("Bearer {value}"))), None),
+        "basic" => (Some(("authorization".into(), format!("Basic {}", base64(value)))), None),
+        "query" => (None, Some(format!("{}={}", escape(name), escape(value)))),
+        _ => (Some((name.to_string(), value.to_string())), None),
+    }
+}
+
 /// A value in a URL: every byte but the unreserved ones percent-encoded.
 pub(crate) fn escape(s: &str) -> String {
     s.bytes().map(|b| match b {

@@ -208,6 +208,7 @@ check[checks]("rust/rofl/tests/mcp.rs", "a_server_that_is_not_there_is_said", te
 check[checks]("rust/rofl/tests/openapi.rs", "a_regenerated_book_differs_by_exactly_the_changed_operation", test).
 check[checks]("rust/rofl/tests/openapi.rs", "a_get_want_is_answered_from_the_service_and_a_post_waits_for_its_permit", test).
 check[checks]("rust/rofl/tests/openapi.rs", "an_mcp_server_over_http_is_read_and_called", test).
+check[checks]("rust/rofl/tests/openapi.rs", "a_key_comes_from_the_environment_and_a_missing_one_holds_the_want", test).
 check[checks]("rust/rofl/tests/par.rs", "the_threads_answer_as_one_thread_does", test).
 check[checks]("rust/rofl/tests/post.rs", "a_world_that_does_not_wait_goes_on_and_takes_its_answers_when_they_come", test).
 check[checks]("rust/rofl/tests/program.rs", "a_program_loaded_in_rust_is_the_world_the_kernel_builds", test).
