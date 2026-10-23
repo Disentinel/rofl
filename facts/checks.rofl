@@ -3015,7 +3015,6 @@ check_file("want_checks", "examples/checks/want-5-refused-answer.rofl").
 check_file("want_checks", "examples/checks/want-6-refused-shows.rofl").
 check_file("want_checks", "examples/checks/want-7-refused-forged.rofl").
 check_opt("want_checks", together, 1).
-proves_work("want_checks", w_intent_want_syntax).
 
 -- ================================================================== RUST ONLY
 -- Rust is the engine and TypeScript is the parity reference only up to a bounded scale, and not for what only Rust
