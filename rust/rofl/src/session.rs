@@ -217,7 +217,10 @@ impl Session {
         let mut h = o.heap;
         let v = Vocab::new(&mut h);
         bootstrap_kernel(&mut h, &v, &mut o.store);
+        // (preparing the program clears the rows of the trees the volume brings)
+        let vrows = std::mem::take(&mut o.store.vrow_of);
         let mut eval = Eval::with_answer(h, o.store, budget, Mode::Rounds, false, evaluated.then_some(o.answer));
+        eval.store.vrow_of = vrows;
         eval.vclosure_restore();
         eval.stage_kept(std::mem::take(&mut o.staged));
         eval.after_open(std::mem::take(&mut o.lattices));
@@ -226,6 +229,7 @@ impl Session {
         }
         eval.read_notes(&mut o.cut)?;
         eval.read_cut(&mut o.cut)?;
+        eval.read_stats(&mut o.cut)?;
         if !o.cut.at_end() {
             return Err(format!("{path}: a volume has bytes after its end"));
         }
@@ -476,7 +480,7 @@ impl Session {
         let mut facts = facts;
         facts.extend(marks);
         match self.eval.retract_set(&facts, &rows) {
-            Ok(d) => match self.eval.check_promises() {
+            Ok(d) => match self.eval.check_promises_added() {
                 Ok(_) => Ok(Ok(d)),
                 Err(e) => {
                     self.eval.store.dirty = true;

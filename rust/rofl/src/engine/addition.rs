@@ -316,7 +316,8 @@ impl Eval {
             }
             self.lat_closed.insert(rel);
         }
-        for id in self.store.firing_keys().into_iter().filter(|id| !self.store.alive(*id)) {
+        let ids = if self.lattices.is_empty() { Vec::new() } else { self.store.firing_keys() };
+        for id in ids.into_iter().filter(|id| !self.store.alive(*id)) {
             let r = self.store.rec(id);
             if let Some(&(n, _)) = self.lattices.get(&r.rel).filter(|(n, _)| self.store.arity(id) == *n) {
                 self.lat_superseded.insert(id);
@@ -593,7 +594,7 @@ impl Eval {
                     let dead: HashSet<FactId> = firings.iter().flat_map(|(_, _, ps)| ps.iter()).filter(|p| gone(p)).filter_map(|p| if let PremRef::Fact(g) = p { Some(*g) } else { None }).collect();
                     self.withdraw_unswept(&[x], |_, ps| ps.iter().any(|p| matches!(p, PremRef::Fact(g) if dead.contains(g))));
                     d.kept += 1;
-                    self.add_kept.insert(x);
+                    self.add_kept.entry(x).or_default().extend(dead);
                     judged.insert(x);
                     continue;
                 }
@@ -894,9 +895,15 @@ impl Eval {
                     }
                 }
                 // and each that stands takes every firing it has, now that all that came back stands
-                // (and each kept for a firing that stood: what came back may give it more)
+                // (and each kept for a firing that stood, where a premise of a firing it lost came back)
                 let kept_here: Vec<FactId> = {
-                    let mut v: Vec<FactId> = self.add_kept.iter().copied().filter(|x| self.store.alive(*x) && self.rel_level(self.store.rec(*x).rel) == lv).collect();
+                    let store = &self.store;
+                    let mut v: Vec<FactId> = self
+                        .add_kept
+                        .iter()
+                        .filter(|(x, lost)| store.alive(**x) && self.rel_level(store.rec(**x).rel) == lv && lost.iter().any(|g| store.alive(*g)))
+                        .map(|(x, _)| *x)
+                        .collect();
                     v.sort_unstable();
                     v
                 };
@@ -1244,7 +1251,7 @@ impl Eval {
         }
         // a join's history is what its retraction reads, and a join derived again whole writes its own
         let joins: HashSet<Sym> = lats.iter().copied().filter(|l| self.lattices[l].1.class() == Class::IdempotentJoin).collect();
-        if self.store.firing_keys().into_iter().any(|g| !self.store.alive(g) && lats.contains(&self.store.rec(g).rel) && !joins.contains(&self.store.rec(g).rel)) {
+        if !lats.is_empty() && self.store.firing_keys().into_iter().any(|g| !self.store.alive(g) && lats.contains(&self.store.rec(g).rel) && !joins.contains(&self.store.rec(g).rel)) {
             return Err("a lattice keeps the history of a superseded value");
         }
         // THE RESET: a rule that may withdraw what it concluded

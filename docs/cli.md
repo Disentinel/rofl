@@ -208,8 +208,11 @@ vscode's base directory, each its own facts file):
 
 A node's id is its place in the tree, so a function added at the end of a file
 takes no fact out. What an edit touches stays flat with the world; its time
-does not yet: at the vscode scale opening the volume and the addition's
-planning take 5-10 s whatever the edit. Writing it again took 5.4 s for the
+does not yet. At vscode 250 (1 595 714 base facts, each file scanned alone) a
+function added and taken out again is opened and taken in 1.5-1.8 s (0.95 s at
+125 files): opening 0.35-0.5 s after the checksum read of 0.45 s, the facts out
+0.15-0.5 s, the facts in 0.5 s (f_an_edit_by_delta_paid_for_the_world_in_six_places).
+Writing it again took 5.4 s for the
 whole 1.25 GB volume; as an overlay (release, 2026-10-23, the same subset, four
 edits in a row over a 1.17 GB base) it takes 0.17 s and 49 MB for a function
 added (nothing out), 0.33-0.39 s and 193-201 MB once an edit has taken facts out:

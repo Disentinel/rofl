@@ -210,7 +210,11 @@ impl Eval {
         if !brk!("vclosure_restore_unengaged" => true; false) {
             self.vclosure_engage();
             self.vpublish();
-            // the rows the snapshot's witnesses and members cite are named by their keys: read now, for their heights
+            // the rows the snapshot's witnesses and members cite are named by their keys: read now, for their heights (a
+            // volume brings them read)
+            if !self.store.vrow_of.is_empty() {
+                return;
+            }
             let mut keys: Vec<Sym> = Vec::new();
             for id in self.store.firing_keys() {
                 for (_, _, ps) in self.store.firings(id) {

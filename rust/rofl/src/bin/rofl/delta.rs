@@ -46,10 +46,12 @@ fn read(p: &str) -> Result<String, String> {
     std::fs::read_to_string(p).map_err(|e| format!("{}: {e}", kept::shown(p)))
 }
 
-/// `ids` less `stays`, each once.
-fn going(ids: Vec<u32>, stays: &HashSet<u32>) -> Vec<rofl::store::FactId> {
+/// `ids` less `stays`, each once: the few that go are looked for among the many that stay.
+fn going(ids: Vec<u32>, stays: &[u32]) -> Vec<rofl::store::FactId> {
+    let go: HashSet<u32> = ids.iter().copied().collect();
+    let held: HashSet<u32> = stays.iter().copied().filter(|f| go.contains(f)).collect();
     let mut seen = HashSet::new();
-    ids.into_iter().filter(|f| !stays.contains(f) && seen.insert(*f)).collect()
+    ids.into_iter().filter(|f| !held.contains(f) && seen.insert(*f)).collect()
 }
 
 /// `s`, opened from the kept world `r`, brought by delta to the world of the files `files` (absolute, as the run
@@ -75,7 +77,7 @@ pub fn apply(s: &mut Session, r: &Record, files: &[String]) -> Result<Done, Stri
     let old: HashMap<&str, &Unit> = r.units.iter().map(|u| (u.path.as_str(), u)).collect();
     let all = rofl::brk!("kept_delta_all_files" => true; false);
     // what stays, what goes, what comes
-    let (mut stays, mut goes): (HashSet<u32>, Vec<u32>) = (HashSet::new(), Vec::new());
+    let (mut stays, mut goes): (Vec<u32>, Vec<u32>) = (Vec::new(), Vec::new());
     let (mut add, mut took, mut texts): (String, Vec<String>, HashMap<&str, String>) = (String::new(), Vec::new(), HashMap::new());
     for f in files {
         match old.get(f.as_str()) {
@@ -168,7 +170,7 @@ pub fn apply(s: &mut Session, r: &Record, files: &[String]) -> Result<Done, Stri
             break;
         }
         if !dropped.is_empty() {
-            let mut stays: HashSet<u32> = scans.iter().flat_map(|sc| sc.facts.iter().copied()).collect();
+            let mut stays: Vec<u32> = scans.iter().flat_map(|sc| sc.facts.iter().copied()).collect();
             for f in files {
                 match texts.get(f.as_str()) {
                     Some(t) => stays.extend(s.facts_of(t)?.0),

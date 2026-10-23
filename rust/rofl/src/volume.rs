@@ -10,7 +10,7 @@ use crate::engine::{Eval, RuleAnswer, StagedFact, Tok};
 use crate::store::{PremRef, Store};
 use crate::term::{Heap, Sym, Term};
 
-const MAGIC: &[u8; 16] = b"ROFL-VOLUME-3\n\0\0";
+const MAGIC: &[u8; 16] = b"ROFL-VOLUME-4\n\0\0";
 /// An overlay: a volume that names its base and writes only what the world holds that the base does not.
 const OVER: &[u8; 16] = b"ROFL-OVERLAY-1\n\0";
 
@@ -97,6 +97,7 @@ fn write_world(mut w: VolW, e: &mut Eval) -> std::io::Result<usize> {
     write_toks(&mut w, &e.unknowns_kept());
     e.write_notes(&mut w);
     e.write_cut(&mut w);
+    e.write_stats(&mut w);
     w.finish()
 }
 
