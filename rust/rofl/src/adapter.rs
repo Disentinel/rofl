@@ -13,10 +13,12 @@
 //! nothing of it; `want_held(W, Why)` for a want no adapter it can run is declared for. A want with any of them is
 //! not sent again.
 //!
-//! The kinds: `exec` above, `sql` (`run_sql`), `mcp` (src/mcp.rs). Only `reads` wants are sent here; `does` waits for
-//! the dispatcher (phase 6).
+//! The kinds: `exec` above, `sql` (`run_sql`), `mcp` (src/mcp.rs), `rofl` (`run_rofl`). Evaluation sends only `reads` wants; a `does`
+//! want goes only through `dispatch`, which `rofl serve` runs on request (phase 6).
 
 use std::collections::{BTreeMap, HashMap, HashSet};
+use std::io::Write;
+use std::path::Path;
 
 use crate::rofl_parse;
 use crate::session::Session;
@@ -34,6 +36,7 @@ struct Batch {
     tool: Option<String>,
     fields: Vec<String>,
     named: Vec<serde_json::Value>,
+    idem: Vec<Option<String>>,
     wants: Vec<(String, Term)>,
     answers: HashSet<(String, usize)>,
 }
@@ -42,6 +45,19 @@ impl Session {
     /// The `reads` wants not yet sent, sent: a batch per capability, all at once, the answers loaded by delta. How many
     /// rows it loaded: none means the world wants nothing more.
     pub fn adapter_wants(&mut self) -> Result<usize, String> {
+        self.send(None)
+    }
+
+    /// THE DISPATCHER (D2, D6, D7): the `does` wants with `permit(W)`, sent as `reads` wants are, each recorded in
+    /// the append-only journal `does.journal` of `dir` before it goes and its outcome after. A want the journal holds
+    /// is never sent again: its outcome is read back from there, and one sent with no outcome recorded (the process
+    /// died between) is `outcome_unknown(W)`. The key the journal goes by, a digest of the want's row and its
+    /// adapter's book version, is sent with it for the far side to honour (`idempotency_key`; an mcp `_meta`).
+    pub fn dispatch(&mut self, dir: &Path) -> Result<usize, String> {
+        self.send(Some(dir))
+    }
+
+    fn send(&mut self, journal: Option<&Path>) -> Result<usize, String> {
         let main = self.eval.v.main;
         let rows = |s: &mut Self, rel: &str, n: usize| -> Vec<Vec<Term>> {
             let r = s.eval.h.intern(rel);
@@ -51,8 +67,15 @@ impl Session {
         if wants.is_empty() {
             return Ok(0);
         }
-        let settled: HashSet<Term> = [("answered", 1), ("failed", 2), ("outcome_unknown", 1), ("want_held", 2)]
+        let mut settled: HashSet<Term> = [("answered", 1), ("failed", 2), ("outcome_unknown", 1), ("want_held", 2)]
             .into_iter().flat_map(|(r, n)| rows(self, r, n)).map(|a| a[0]).collect();
+        if let Some(p) = self.post.as_ref().filter(|_| crate::brk!("post_resends_flying" => false; true)) {
+            settled.extend(p.keys.iter().copied());
+        }
+        let permitted: HashSet<Term> = rows(self, "permit", 1).into_iter().map(|a| a[0]).collect();
+        let mut book = journal.map(Journal::open).transpose()?;
+        let trust = crate::brk!("does_journal_ignored" => false; true);
+        let mut idems: HashMap<Term, String> = HashMap::new();
         let name = |s: &Self, t: Term| -> String {
             match t.kind() {
                 TermK::Atom(x) | TermK::Str(x) => s.eval.h.name(x).to_string(),
@@ -92,11 +115,38 @@ impl Session {
         for w in wants {
             let (key, cap) = (w[0], name(self, w[1]));
             let Some((adapter, class)) = caps.get(&cap) else { continue };
-            if settled.contains(&key) || (class != "reads" && !crate::brk!("mcp_does_sent" => class == "does"; false)) {
+            let wanted = match journal {
+                None => class == "reads" || crate::brk!("mcp_does_sent" => class == "does"; false),
+                Some(_) => class == "does" && (permitted.contains(&key) || crate::brk!("does_unpermitted_sent" => true; false)),
+            };
+            if settled.contains(&key) || !wanted {
                 continue;
             }
+            let text = self.src(key);
+            if let Some(j) = book.as_mut() {
+                let idem = idem_key(&text, &self.book_version(adapter, &cap));
+                if let Some(out) = j.done.get(&idem).filter(|_| trust) {
+                    held.push_str(out);
+                    continue;
+                }
+                if trust && j.sent.contains(&idem) {
+                    let out = format!("outcome_unknown({text}).\n");
+                    j.write(serde_json::json!({"done": idem, "out": out}))?;
+                    held.push_str(&out);
+                    continue;
+                }
+                idems.insert(key, idem);
+            }
             match adapters.get(adapter).map(|a| a.0.as_str()) {
-                Some("exec" | "sql" | "mcp") => by_cap.entry(cap).or_default().push(key),
+                Some("sql") if !cfg!(feature = "sql") => {
+                    held.push_str(&format!("want_held({text}, \"this build has no sql adapter (cargo feature `sql`)\").\n"));
+                }
+                Some("exec" | "sql" | "mcp" | "rofl") => {
+                    if let (Some(j), Some(idem)) = (book.as_mut(), idems.get(&key)) {
+                        j.write(serde_json::json!({"sent": idem, "want": text}))?;
+                    }
+                    by_cap.entry(cap).or_default().push(key)
+                }
                 kind => {
                     let why = kind.map_or(format!("no adapter '{adapter}' is declared (`adapter({adapter}, Kind, Address)`)"), |k| format!("an adapter of kind {k} is not built yet"));
                     held.push_str(&format!("want_held({}, {}).\n", self.src(key), quote(&why)));
@@ -114,14 +164,18 @@ impl Session {
             let (kind, cmd) = adapters[&adapter].clone();
             let wants: Vec<(String, Term)> = keys.iter().map(|k| (self.src(*k), *k)).collect();
             let (mut params, mut named) = (Vec::new(), Vec::new());
-            let json_wants: Vec<serde_json::Value> = wants.iter().map(|(text, k)| {
+            let idem: Vec<Option<String>> = keys.iter().map(|k| idems.get(k).cloned()).collect();
+            let json_wants: Vec<serde_json::Value> = wants.iter().zip(&idem).map(|((text, k), idem)| {
                 let mut a = args.get(k).cloned().unwrap_or_default();
                 a.sort_by_key(|x| x.0);
                 params.push(a.iter().map(|(_, v)| self.json(*v)).collect());
                 let arg = |i: i64| arg_names.get(&(cap.clone(), i)).cloned().unwrap_or_else(|| (i.to_string(), String::new()));
                 named.push(a.iter().map(|(i, v)| (arg(*i).0, typed(self.json(*v), &arg(*i).1))).collect());
                 let by_name: serde_json::Map<String, serde_json::Value> = a.iter().map(|(i, v)| (arg(*i).0, self.json(*v))).collect();
-                serde_json::json!({"key": text, "args": by_name})
+                match idem {
+                    Some(i) => serde_json::json!({"key": text, "args": by_name, "idempotency_key": i}),
+                    None => serde_json::json!({"key": text, "args": by_name}),
+                }
             }).collect();
             let version = self.book_version(&adapter, &cap);
             let input = serde_json::json!({"capability": cap, "book_version": version, "wants": json_wants}).to_string();
@@ -129,37 +183,134 @@ impl Session {
             f.sort();
             Batch {
                 answers: answers.get(&cap).cloned().unwrap_or_default(), template: templates.get(&cap).cloned(), tool: tools.get(&cap).cloned(),
-                fields: f.into_iter().map(|x| x.1).collect(), cap, adapter, kind, cmd, input, params, named, wants,
+                fields: f.into_iter().map(|x| x.1).collect(), cap, adapter, kind, cmd, input, params, named, idem, wants,
             }
         }).collect();
         if batches.is_empty() && held.is_empty() {
             return Ok(0);
         }
+        let posted = self.post.is_some() && journal.is_none();
         let runs: Vec<_> = batches.iter().map(|b| {
             let (cmd, input) = (b.cmd.clone(), b.input.clone());
-            match b.kind.as_str() {
-                "exec" => Some(std::thread::spawn(move || crate::session::run_program(&cmd, None, Some(&input), false))),
+            let ran: Option<Box<dyn FnOnce() -> Result<String, String> + Send>> = match b.kind.as_str() {
+                "exec" => Some(Box::new(move || crate::session::run_program(&cmd, None, Some(&input), false))),
                 "mcp" => {
                     let tool = b.tool.clone().unwrap_or_else(|| b.cap.clone());
                     let text = b.answers.contains(&("mcp_text".to_string(), 2));
                     let rel = b.answers.iter().map(|a| a.0.clone()).find(|r| r != "mcp_text").unwrap_or_else(|| "mcp_text".into());
-                    let (fields, wants): (Vec<String>, Vec<(String, serde_json::Value)>) = (b.fields.clone(), b.wants.iter().map(|w| w.0.clone()).zip(b.named.clone()).collect());
-                    Some(std::thread::spawn(move || crate::mcp::call(&cmd, &tool, &rel, &fields, text, &wants)))
+                    let fields = b.fields.clone();
+                    let wants: Vec<(String, serde_json::Value, Option<String>)> = b.wants.iter().zip(&b.named).zip(&b.idem).map(|((w, a), i)| (w.0.clone(), a.clone(), i.clone())).collect();
+                    Some(Box::new(move || crate::mcp::call(&cmd, &tool, &rel, &fields, text, &wants)))
                 }
                 _ => None,
-            }
+            };
+            ran.map(|f| match self.post.as_mut().filter(|_| posted) {
+                Some(p) => {
+                    let (id, tx) = (p.next, p.tx.clone());
+                    p.next += 1;
+                    std::thread::spawn(move || {
+                        let _ = tx.send((id, f()));
+                    });
+                    Err(id)
+                }
+                None => Ok(std::thread::spawn(f)),
+            })
         }).collect();
         let mut src = held;
-        for (b, run) in batches.iter().zip(runs) {
+        for (b, run) in batches.into_iter().zip(runs) {
             let ran = match run {
-                Some(t) => t.join().unwrap_or_else(|_| Err("the adapter's thread failed".into())),
-                None => run_sql(b),
+                Some(Ok(t)) => t.join().unwrap_or_else(|_| Err("the adapter's thread failed".into())),
+                Some(Err(id)) => {
+                    let p = self.post.as_mut().expect("posted");
+                    p.keys.extend(b.wants.iter().map(|w| w.1));
+                    p.flying.insert(id, b);
+                    continue;
+                }
+                None if b.kind == "rofl" => self.run_rofl(&b),
+                None => run_sql(&b),
             };
-            src.push_str(&self.answer(b, ran));
+            let b = &b;
+            let out = self.answer(b, ran);
+            if let Some(j) = book.as_mut() {
+                for ((k, _), idem) in b.wants.iter().zip(&b.idem) {
+                    let mine: String = out.lines().filter(|l| l.contains(&format!("({k},")) || l.contains(&format!("({k})"))).map(|l| format!("{l}\n")).collect();
+                    if let Some(i) = idem {
+                        j.write(serde_json::json!({"done": i, "out": mine}))?;
+                    }
+                }
+            }
+            src.push_str(&out);
         }
         let n = src.lines().count();
         self.load_delta(&src, None).map_err(|d| format!("an adapter's answer was refused: {}", d.join("; ")))?;
         Ok(n)
+    }
+
+    /// What has come back to the post since: each answer loaded by delta, as an evaluation would have loaded it, and
+    /// what the world then wants sent. With `wait`, the first answer is waited for that long while any is in flight.
+    pub fn collect(&mut self, wait: Option<std::time::Duration>) -> Result<usize, String> {
+        let Some(p) = self.post.as_mut() else { return Ok(0) };
+        let mut got = Vec::new();
+        if let Some(w) = wait.filter(|_| !p.flying.is_empty()) {
+            got.extend(p.rx.recv_timeout(w).ok());
+        }
+        got.extend(p.rx.try_iter());
+        let mut src = String::new();
+        for (id, ran) in got {
+            let p = self.post.as_mut().expect("a post");
+            let Some(b) = p.flying.remove(&id) else { continue };
+            for w in &b.wants {
+                p.keys.remove(&w.1);
+            }
+            src.push_str(&self.answer(&b, ran));
+        }
+        if src.is_empty() {
+            return Ok(0);
+        }
+        let n = src.lines().count();
+        self.load_delta(&src, None).map_err(|d| format!("an adapter's answer was refused: {}", d.join("; ")))?;
+        loop {
+            if self.eval.store.dirty {
+                self.evaluate().map_err(|e| crate::describe(&e))?;
+                break;
+            }
+            if self.adapter_wants()? == 0 {
+                break;
+            }
+        }
+        Ok(n)
+    }
+
+    /// D6: what grants permission is protected from rules and facts added to a running world (an agent's, through
+    /// `rofl serve`): nothing new may conclude `permit` or a relation a `permit` rule reads, near or far, the rows of
+    /// a want head aside. A person's approval arrives through an adapter, never as a fact typed into the world.
+    pub fn guard_permit(&mut self, text: &str) -> Result<(), String> {
+        let permit = self.eval.h.intern("permit");
+        if !self.eval.rules.iter().any(|r| r.clause.head.rel == permit) {
+            return Ok(());
+        }
+        let free: HashSet<crate::term::Sym> = ["want_key", "want_of", "want_arg"].into_iter().map(|r| self.eval.h.intern(r)).collect();
+        let mut cone: HashSet<crate::term::Sym> = HashSet::from([permit]);
+        loop {
+            let mut more = Vec::new();
+            for r in self.eval.rules.iter().filter(|r| cone.contains(&r.clause.head.rel)) {
+                more.extend(r.clause.body.iter().flat_map(|b| b.lits_deep()).map(|l| l.rel));
+            }
+            let before = cone.len();
+            cone.extend(more.into_iter().filter(|r| !free.contains(r)));
+            if cone.len() == before {
+                break;
+            }
+        }
+        let clauses = rofl_parse::parse(&mut self.eval.h, text)?;
+        match clauses.iter().find(|c| cone.contains(&c.head.rel) && crate::brk!("permit_unguarded" => false; true)) {
+            Some(c) => Err(format!(
+                "{}: what grants permission to send a does want is not changed in a running world; `{}` is read by `permit` (docs/intents.md D6)",
+                rofl_parse::lit_src(&self.eval.h, &c.head),
+                self.eval.h.name(c.head.rel)
+            )),
+            None => Ok(()),
+        }
     }
 
     /// What a batch brings: its facts in the adapter's book and the outcome of each want.
@@ -200,6 +351,63 @@ impl Session {
         format!("{facts}{}\n{lost}", said.join("\n"))
     }
 
+    /// A `rofl` batch (scenario 5): the adapter is another world, its files the address, evaluated once a process
+    /// while they are unchanged. A want of a capability answering in `Rel/N` asks that world `Rel` with the want's
+    /// arguments as its first columns, and each row comes back as `Rel(K, Columns...)` in the adapter's book: the why
+    /// of an answer stops at that boundary.
+    fn run_rofl(&mut self, b: &Batch) -> Result<String, String> {
+        thread_local! {
+            static WORLDS: std::cell::RefCell<HashMap<String, Session>> = Default::default();
+        }
+        let mut rels = b.answers.iter();
+        let (Some((rel, arity)), None) = (rels.next(), rels.next()) else {
+            return Err(format!("a rofl capability answers in one relation; '{}' declares {}", b.cap, b.answers.len()));
+        };
+        let mut text = String::new();
+        for f in b.cmd.split_whitespace() {
+            text.push_str(&std::fs::read_to_string(f).map_err(|e| format!("{f}: {e}"))?);
+            text.push('\n');
+        }
+        let stamp = format!("{}\n{:016x}", b.cmd, text.bytes().fold(0xcbf29ce484222325u64, |h, c| (h ^ c as u64).wrapping_mul(0x100000001b3)));
+        let mut queries = Vec::new();
+        for (key, k) in &b.wants {
+            let given: Vec<String> = match k.kind() {
+                TermK::Func(i) => self.eval.h.fargs(i)[1..].iter().map(|a| self.src(*a)).collect(),
+                _ => Vec::new(),
+            };
+            if given.len() + 1 > *arity {
+                return Err(format!("'{}' gives {} argument(s), {rel}/{arity} has {} column(s) after the key", b.cap, given.len(), arity - 1));
+            }
+            let free: Vec<String> = (given.len() + 1..*arity).map(|i| format!("V{i}")).collect();
+            queries.push((key.clone(), given.clone(), format!("{rel}({})", given.iter().chain(&free).cloned().collect::<Vec<_>>().join(", "))));
+        }
+        WORLDS.with(|w| {
+            let mut w = w.borrow_mut();
+            if !w.contains_key(&stamp) {
+                let mut s = Session::fresh(self.eval.budget);
+                s.load(&text, None).map_err(|d| format!("the world of {}: {}", b.adapter, d.join("; ")))?;
+                s.evaluate().map_err(|e| format!("the world of {}: {}", b.adapter, crate::describe(&e)))?;
+                w.insert(stamp.clone(), s);
+            }
+            let s = w.get_mut(&stamp).expect("just kept");
+            let mut out = String::new();
+            for (key, given, q) in &queries {
+                let a = s.ask(q)?;
+                if a.partial {
+                    out.push_str(&format!("failed({key}, {}).\n", quote(&format!("the world of {} answers {q} only in part", b.adapter))));
+                    continue;
+                }
+                for row in &a.rows {
+                    out.push_str(&format!("{rel}({key}, {}).\n", given.iter().chain(row).cloned().collect::<Vec<_>>().join(", ")));
+                }
+                if a.rows.is_empty() {
+                    out.push_str(&format!("answered({key}).\n"));
+                }
+            }
+            Ok(out)
+        })
+    }
+
     fn src(&self, t: Term) -> String {
         let mut s = String::new();
         rofl_parse::src_term(&self.eval.h, t, &mut s);
@@ -237,6 +445,12 @@ impl Session {
 /// template, never written into it, every query of the batch in one read transaction on the adapter's kept
 /// connection, read-only, and each want stamped with the database's `data_version` there (`sql_snapshot(K, N)`).
 /// Answered in the text an exec program prints.
+#[cfg(not(feature = "sql"))]
+fn run_sql(_: &Batch) -> Result<String, String> {
+    Err("this build has no sql adapter (cargo feature `sql`)".into())
+}
+
+#[cfg(feature = "sql")]
 fn run_sql(b: &Batch) -> Result<String, String> {
     use rusqlite::types::{Value, ValueRef};
     use std::sync::{Mutex, OnceLock};
@@ -294,6 +508,69 @@ fn run_sql(b: &Batch) -> Result<String, String> {
         out.push_str(&format!("sql_snapshot({key}, {version}).\n"));
     }
     Ok(out)
+}
+
+/// THE POST (D3): where a world's wants go when its caller does not wait for them. A batch for a program or a server
+/// is sent on a thread of its own and the evaluation goes on; what it brings comes back to the inbox, and `collect`
+/// loads it by delta whenever it has come. A want in flight is neither sent again nor settled: `pending(W)` holds.
+/// A database and another world in this process are answered at once, as without a post.
+pub struct Post {
+    tx: std::sync::mpsc::Sender<(u64, Result<String, String>)>,
+    rx: std::sync::mpsc::Receiver<(u64, Result<String, String>)>,
+    next: u64,
+    flying: HashMap<u64, Batch>,
+    keys: HashSet<Term>,
+}
+
+impl Default for Post {
+    fn default() -> Self {
+        let (tx, rx) = std::sync::mpsc::channel();
+        Post { tx, rx, next: 0, flying: HashMap::new(), keys: HashSet::new() }
+    }
+}
+
+impl Post {
+    /// How many wants are in flight.
+    pub fn flying(&self) -> usize {
+        self.keys.len()
+    }
+}
+
+/// The journal of `does` (D5): history, not cache. One JSON object a line, `{"sent": K, "want": W}` before a want
+/// goes and `{"done": K, "out": Text}` after, the text the facts its outcome loaded; each line on the disk before
+/// anything follows it.
+struct Journal {
+    file: std::fs::File,
+    sent: HashSet<String>,
+    done: HashMap<String, String>,
+}
+
+impl Journal {
+    fn open(dir: &Path) -> Result<Self, String> {
+        std::fs::create_dir_all(dir).map_err(|e| format!("{}: {e}", dir.display()))?;
+        let path = dir.join("does.journal");
+        let (mut sent, mut done) = (HashSet::new(), HashMap::new());
+        for line in std::fs::read_to_string(&path).unwrap_or_default().lines() {
+            let v: serde_json::Value = serde_json::from_str(line).map_err(|e| format!("{}: a line that is not JSON: {e}", path.display()))?;
+            if let Some(k) = v.get("sent").and_then(|k| k.as_str()) {
+                sent.insert(k.to_string());
+            }
+            if let (Some(k), Some(out)) = (v.get("done").and_then(|k| k.as_str()), v.get("out").and_then(|o| o.as_str())) {
+                done.insert(k.to_string(), out.to_string());
+            }
+        }
+        let file = std::fs::OpenOptions::new().create(true).append(true).open(&path).map_err(|e| format!("{}: {e}", path.display()))?;
+        Ok(Journal { file, sent, done })
+    }
+
+    fn write(&mut self, v: serde_json::Value) -> Result<(), String> {
+        writeln!(self.file, "{v}").and_then(|_| self.file.sync_data()).map_err(|e| format!("the journal of does: {e}"))
+    }
+}
+
+fn idem_key(want: &str, version: &str) -> String {
+    let h = format!("{want}\n{version}").bytes().fold(0xcbf29ce484222325u64, |h, b| (h ^ b as u64).wrapping_mul(0x100000001b3));
+    format!("{h:016x}")
 }
 
 /// An argument as its declared type sends it to an mcp tool: `json` parsed, an `atom` true or false a boolean.

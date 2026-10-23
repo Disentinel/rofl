@@ -1,0 +1,21 @@
+-- SCENARIO 2 (docs/intents.md 7): a remote MCP server whose tool changes the world. A tracker issue is to move
+-- when a rule says its stage is done; the tool is `does`, so evaluation never sends it: only the dispatcher of
+-- `rofl serve` does, once per key, and only with `permit` (rust/rofl/tests/dispatch.rs runs that part). Here the
+-- world shows what it wants and why each want waits: K-1 is approved, K-2 is not, and K-3's stage is not done.
+-- The book below is what `rofl adapter mcp` prints for such a server, cut to the one tool.
+imports(main, tracker).
+imports(main, ui).
+adapter(tracker, mcp, "node examples/intents/tracker.cjs").
+capability(tracker_transition, tracker, does).
+mcp_tool(tracker_transition, "transition").
+arg(tracker_transition, 1, issue, text).
+arg(tracker_transition, 2, to, text).
+answers(tracker_transition, mcp_text, 2).
+
+permit(W) :- want_of(W, C), capability(C, _, reads).
+permit(W) :- approved[ui](W).
+approved[ui]($want(tracker_transition, "K-1", "done")).
+
+stage(s1, "K-1", done). stage(s2, "K-2", done). stage(s3, "K-3", open).
+want tracker_transition(K, "done") :- stage(_, K, done).
+waits_for_approval(W) :- want_key(W), not permit(W).

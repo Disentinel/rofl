@@ -612,3 +612,98 @@ returns_schema(test_tracker_get_user, "{...}").
 - **Not done.** The streamable HTTP transport (it needs an HTTP and TLS
   client, a dependency to choose); `adapter_auth`; a server kept between
   batches; optional arguments, which are positional like the rest.
+
+### Phase 6, as built (2026-10-23)
+
+`Session::dispatch` and `Session::guard_permit` in `rust/rofl/src/adapter.rs`,
+the `dispatch` request of `rofl serve`; `rust/rofl/tests/dispatch.rs`.
+
+```
+{"op":"dispatch","session":1,"journal":"world.d"}   -> {"loaded":n}
+```
+
+- **Only by request, only with `permit`.** Evaluation never sends a `does`
+  want; `dispatch` sends those with `permit(W)` in the main book, in batches
+  as `reads` wants go, through any kind (exec, mcp). A want without `permit`
+  stays as it is, and `whynot` on its outcome walks into the missing permit.
+- **The journal of `does`** is `does.journal` in the given directory, one
+  JSON line `{"sent": K, "want": W}` written and synced before a want goes,
+  and `{"done": K, "out": Text}` with the facts of its outcome after. `K` is
+  the idempotency key of D7, a digest of the want's row and its adapter's book
+  version, and goes with the want (`idempotency_key` in an exec batch, `_meta`
+  `rofl/idempotency_key` in an mcp call). A want whose key the journal holds is
+  never sent again: its outcome is loaded from the journal. One sent with no
+  outcome (the process died between) is `outcome_unknown(W)`.
+- **Permission is protected.** `assert` and `load` on a running world refuse a
+  fact or rule that concludes `permit` or anything a `permit` rule reads, near
+  or far (the rows of a want head aside), once the world has a `permit` rule:
+  an approval comes in through an adapter, never typed in (D6).
+- **Acceptance.** Two wants, one approved: one call. A second dispatch, the
+  world evaluated anew over the same journal, and a replay of it send nothing
+  again, and the world anew reads the outcome back from the journal. A journal
+  cut after the `sent` line gives `outcome_unknown`. An approval typed into the
+  running world is refused. Planted `does_unpermitted_sent`,
+  `does_journal_ignored` and `permit_unguarded` are red.
+- **Not done.** A one-shot verb listing the wants it would send (they are
+  `want_key` rows a question can ask); cancelling a want that disappears
+  before dispatch; the journal kept beside a kept world by default.
+
+### Phase 7, as built (2026-10-23)
+
+Four of the six scenarios of section 7 are worlds in `examples/intents/`,
+checked by `npm test` on the Rust engine (`intents_sql`, `intents_exec`,
+`intents_mcp`, `intents_rofl`): an adapter runs a program or opens a
+database, which the TypeScript engine never does.
+
+1. `sql.rofl` over `shop.db` (built from `shop.sql`): acme's resellers whose
+   orders break their cap. The subtree is asked a level a round; globex,
+   whose order breaks its cap too, is never read.
+2. `mcp.rofl` with `tracker.cjs`: a does tool and `permit`; the world shows
+   which wants wait for approval. `rofl load` sends nothing; the dispatch of
+   the approved one, once, is in `rust/rofl/tests/dispatch.rs`.
+3. `exec.rofl` with `deps.cjs`: the imports `main.js` reaches, a file a
+   round, as the scan world asks them, the program naming what it read.
+5. `rofl.rofl` over `colleague.rofl`: the `rofl` kind, built for it. The
+   colleague's world is evaluated in the process once while its files are
+   unchanged; a want binds the first columns of the relation its capability
+   answers in, and the rows come back as facts of the colleague's book, so a
+   why stops at that boundary. Served by `rofl serve` across processes is not
+   built.
+
+Scenario 4 (`render`, a UI) and scenario 6 (`openapi`, and mcp over HTTP)
+are the open items `w_intent_render` and `w_intent_openapi`; the second waits
+on the choice of an HTTP client.
+
+### The post, as built (2026-10-23)
+
+Phases 2 to 7 sent a round's batches and waited for their answers before the
+evaluation went on, which D3 rules out for an adapter that answers in an hour.
+`Post` in `rust/rofl/src/adapter.rs`, `Session::collect`; `rust/rofl/tests/post.rs`.
+
+- **A world with a post does not wait.** A batch for a program or a server
+  (exec, mcp) goes on a thread of its own and the evaluation goes on; the
+  answer comes back to the post's inbox, and `Session::collect` loads it by
+  delta whenever it has come, then sends what the world wants next. A want in
+  flight is neither sent again nor settled, so `pending(W) :- want_key(W), not
+  answered(W)` holds while it flies. A database and another world in the same
+  process are answered at once, as before.
+- **`rofl serve` gives every session a post.** Each request first loads what
+  came back since; `{"op":"inbox","waitMs":n}` waits up to n ms for a first
+  answer and says how many wants are still in flight; `{"op":"evaluate",
+  "wait":false}` answers as soon as the world is evaluated. Without
+  `"wait":false` an evaluate waits for its answers, as a one-shot verb does,
+  so the hosts that read a finished world (the notebook, the playground) are
+  unchanged.
+- **One-shot verbs wait**, as their question asks: `rofl load`, `ask`, `why`
+  have no post.
+- **Acceptance.** A program that answers after 0.6 s: the evaluation returns
+  in under 0.4 s with the want pending, two evaluations while it flies send it
+  once, and the tree comes in by delta over three rounds. Planted
+  `post_resends_flying` is red.
+- **The HTTP client** (the owner's choice: reqwest + tokio) belongs to this
+  layer and never to the engine's core.
+
+**Build features.** `sql` (SQLite) is a cargo feature, on by default;
+`cargo build --no-default-features` builds the engine with no C code, and a
+want of a sql adapter in it is `want_held(W, "this build has no sql adapter
+(cargo feature `sql`)")`. The HTTP client will come as the feature `net`.

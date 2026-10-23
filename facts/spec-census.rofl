@@ -88,6 +88,11 @@ check[checks]("rust/rofl/tests/demand_query.rs", "a_question_leaves_the_world_it
 check[checks]("rust/rofl/tests/demand_scale.rs", "a_recursion_through_a_closed_demand_relation_is_linear", test).
 check[checks]("rust/rofl/tests/disk.rs", "the_measure_bounds_the_volume", test).
 check[checks]("rust/rofl/tests/disk.rs", "a_cap_raised_goes_on_from_the_cut", test).
+check[checks]("rust/rofl/tests/dispatch.rs", "a_does_want_without_permit_is_never_sent", test).
+check[checks]("rust/rofl/tests/dispatch.rs", "a_does_want_runs_once_across_a_dispatch_the_world_anew_and_a_replay", test).
+check[checks]("rust/rofl/tests/dispatch.rs", "a_want_sent_with_no_outcome_recorded_is_unknown", test).
+check[checks]("rust/rofl/tests/dispatch.rs", "a_running_world_cannot_change_what_grants_permission", test).
+check[checks]("rust/rofl/tests/dispatch.rs", "the_mcp_scenario_moves_the_approved_issue_once", test).
 check[checks]("rust/rofl/tests/explain.rs", "why_walks_the_derivation_to_its_axioms", test).
 check[checks]("rust/rofl/tests/explain.rs", "a_negated_premise_renders_as_finite_failure_with_its_demonstration", test).
 check[checks]("rust/rofl/tests/explain.rs", "a_builtin_premise_keeps_its_own_spelling", test).
@@ -198,6 +203,7 @@ check[checks]("rust/rofl/tests/mcp.rs", "a_reads_tool_is_called_once_per_want_an
 check[checks]("rust/rofl/tests/mcp.rs", "a_does_tool_is_not_sent_by_evaluation", test).
 check[checks]("rust/rofl/tests/mcp.rs", "a_server_that_is_not_there_is_said", test).
 check[checks]("rust/rofl/tests/par.rs", "the_threads_answer_as_one_thread_does", test).
+check[checks]("rust/rofl/tests/post.rs", "a_world_that_does_not_wait_goes_on_and_takes_its_answers_when_they_come", test).
 check[checks]("rust/rofl/tests/program.rs", "a_program_loaded_in_rust_is_the_world_the_kernel_builds", test).
 check[checks]("rust/rofl/tests/program.rs", "a_loaded_program_ticks_the_way_the_kernel_ticks", test).
 check[checks]("rust/rofl/tests/program.rs", "the_door_refuses_what_the_kernel_refuses", test).
@@ -853,6 +859,10 @@ check[checks]("facts/goldens.rofl", "holes_negation", world).
 check[checks]("facts/goldens.rofl", "holes_negation_scale", world).
 check[checks]("facts/goldens.rofl", "holes_negation_ticks", world).
 check[checks]("facts/goldens.rofl", "holes_negation_wfs", world).
+check[checks]("facts/goldens.rofl", "intents_exec", world).
+check[checks]("facts/goldens.rofl", "intents_mcp", world).
+check[checks]("facts/goldens.rofl", "intents_rofl", world).
+check[checks]("facts/goldens.rofl", "intents_sql", world).
 check[checks]("facts/goldens.rofl", "jodit_fixture", world).
 check[checks]("facts/goldens.rofl", "keyword_atom", world).
 check[checks]("facts/goldens.rofl", "net", world).
@@ -917,6 +927,7 @@ test_file[checks]("rust/rofl/tests/demand_fixpoint.rs").
 test_file[checks]("rust/rofl/tests/demand_query.rs").
 test_file[checks]("rust/rofl/tests/demand_scale.rs").
 test_file[checks]("rust/rofl/tests/disk.rs").
+test_file[checks]("rust/rofl/tests/dispatch.rs").
 test_file[checks]("rust/rofl/tests/explain.rs").
 test_file[checks]("rust/rofl/tests/incremental.rs").
 test_file[checks]("rust/rofl/tests/join_scale.rs").
@@ -925,6 +936,7 @@ test_file[checks]("rust/rofl/tests/kept.rs").
 test_file[checks]("rust/rofl/tests/lattice_scale.rs").
 test_file[checks]("rust/rofl/tests/mcp.rs").
 test_file[checks]("rust/rofl/tests/par.rs").
+test_file[checks]("rust/rofl/tests/post.rs").
 test_file[checks]("rust/rofl/tests/program.rs").
 test_file[checks]("rust/rofl/tests/prov_lazy.rs").
 test_file[checks]("rust/rofl/tests/resume.rs").

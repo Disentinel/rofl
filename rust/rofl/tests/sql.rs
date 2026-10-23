@@ -1,3 +1,4 @@
+#![cfg(feature = "sql")]
 //! THE SQL ADAPTER (docs/intents.md, phase 4): a world asks a database for the rows a question reaches, by the
 //! parameterised template of its adapter's book, instead of importing the table. The table is of the reference
 //! corpus's order (11 100 rows); the question reaches three tenants of 1 110.
