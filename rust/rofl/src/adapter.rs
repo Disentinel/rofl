@@ -193,7 +193,7 @@ impl Session {
         let runs: Vec<_> = batches.iter().map(|b| {
             let (cmd, input) = (b.cmd.clone(), b.input.clone());
             let ran: Option<Box<dyn FnOnce() -> Result<String, String> + Send>> = match b.kind.as_str() {
-                "exec" => Some(Box::new(move || crate::session::run_program(&cmd, None, Some(&input)))),
+                "exec" => Some(Box::new(move || crate::session::run_program(&cmd, None, Some(&input), false))),
                 "mcp" => {
                     let tool = b.tool.clone().unwrap_or_else(|| b.cap.clone());
                     let text = b.answers.contains(&("mcp_text".to_string(), 2));
