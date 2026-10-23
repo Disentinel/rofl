@@ -251,6 +251,21 @@ impl<T: Pod> Arena<T> {
             Arena::Mapped { .. } => unreachable!(),
         }
     }
+    /// Where this arena's values lie in a volume file, or were copied from.
+    pub fn origin(&self) -> Option<Span> {
+        match self {
+            Arena::Mapped { .. } => span_of(bytes_of(self)),
+            Arena::Copied { from, .. } => Some(*from),
+            Arena::Heap(_) => None,
+        }
+    }
+    /// `v`, made from the arena that lay at `from`: what an overlay compares with that span.
+    pub fn derived(v: Vec<T>, from: Option<Span>) -> Self {
+        match from {
+            Some(from) => Arena::Copied { v, from },
+            None => Arena::Heap(v),
+        }
+    }
     pub fn take(&mut self) -> Vec<T> {
         match std::mem::take(self) {
             Arena::Heap(v) | Arena::Copied { v, .. } => v,
@@ -389,6 +404,10 @@ pub struct VolW {
 
 /// The high bit of an arena's length: what follows is a reference into the base volume (`VolW::over`).
 const REF: u64 = 1 << 63;
+/// The next bit: what follows is a splice of the base, spans of it and values between them (`VolW::splice`).
+const SPLICE: u64 = 1 << 62;
+/// A splice's span that is values written in it, not a span of the base.
+const LIT: u64 = 1 << 63;
 /// An arena smaller than this is written whole, never as a reference.
 const REF_MIN: usize = 256;
 /// A reference read back with values over it or after it, smaller than this, is copied into the heap; larger, it
@@ -438,6 +457,9 @@ impl VolW {
         if let Some(r) = self.ref_of(first) {
             return self.reference(r, first.vals(), rest, &[]);
         }
+        if self.splice(first, rest) {
+            return;
+        }
         let mut parts = vec![first.vals()];
         parts.extend_from_slice(rest);
         self.inline(&parts);
@@ -472,6 +494,52 @@ impl VolW {
             }
         }
         Some(Ref { at: from.at, bytes: from.bytes, patched: patched.into(), tail: b.len() - from.bytes })
+    }
+    /// A copy of the base's `first` with values taken out of it and put in it, the order of the rest kept (a run swept
+    /// or merged), then `rest`, as the spans of the base it keeps and the values between them; false, writing nothing,
+    /// when it is not one or they are not few.
+    fn splice<T: Pod>(&mut self, first: &(impl Src<T> + ?Sized), rest: &[&[T]]) -> bool {
+        let (Some(f), Some(from)) = (self.base, first.copied()) else { return false };
+        let Some(file) = span_bytes(&from).filter(|_| from.file == f) else { return false };
+        let (v, sz) = (bytes_of(first.vals()), std::mem::size_of::<T>());
+        if v.len() < REF_MIN || from.bytes % sz != 0 {
+            return false;
+        }
+        let (b, n) = (file.chunks_exact(sz).collect::<Vec<&[u8]>>(), v.len() / sz);
+        let wanted: std::collections::HashSet<&[u8]> = v.chunks_exact(sz).collect();
+        let (mut segs, mut lits): (Vec<u64>, Vec<u8>) = (Vec::new(), Vec::new());
+        let (mut i, mut j) = (0, 0);
+        let push = |segs: &mut Vec<u64>, start: u64, lit: bool| match segs.len() {
+            l if l >= 2 && (segs[l - 2] & LIT != 0) == lit && (lit || segs[l - 2] + segs[l - 1] == start) => segs[l - 1] += 1,
+            _ => segs.extend([start | if lit { LIT } else { 0 }, 1]),
+        };
+        while j < n {
+            let x = &v[j * sz..(j + 1) * sz];
+            if i < b.len() && b[i] == x {
+                push(&mut segs, i as u64, false);
+                (i, j) = (i + 1, j + 1);
+            } else if i < b.len() && !wanted.contains(b[i]) {
+                i += 1;
+            } else {
+                push(&mut segs, 0, true);
+                lits.extend_from_slice(x);
+                j += 1;
+            }
+            if lits.len() * 4 > v.len() || segs.len() * 32 > v.len() {
+                return false;
+            }
+        }
+        for p in rest.iter().filter(|p| !p.is_empty()) {
+            segs.extend([LIT, p.len() as u64]);
+            lits.extend_from_slice(bytes_of(p));
+        }
+        let len = n + rest.iter().map(|p| p.len()).sum::<usize>();
+        self.u64(len as u64 | REF | SPLICE);
+        self.u64(from.at as u64);
+        self.u64(from.bytes as u64);
+        self.inline(&[&segs[..]]);
+        self.inline(&[&lits[..]]);
+        true
     }
     /// `first`, which lies in the base as `r` says, with `put` over it and `rest` after it, as a reference: the span
     /// of the base, the values written over it (those an earlier overlay wrote, as they now are, and `put`), and the
@@ -606,7 +674,7 @@ impl VolR {
     pub fn arena_checked<T: Pod>(&mut self, ok: impl Fn(&[u32]) -> bool) -> Result<Arena<T>, String> {
         let len = self.u64()?;
         if len & REF != 0 {
-            let a = self.reference::<T>((len & !REF) as usize)?;
+            let a = if len & SPLICE != 0 { self.spliced::<T>((len & !(REF | SPLICE)) as usize)? } else { self.reference::<T>((len & !REF) as usize)? };
             let b = bytes_of(&a);
             // SAFETY: checked aligned for u32, and u32 is Pod.
             let words = (b.as_ptr() as usize % 4 == 0).then(|| unsafe { std::slice::from_raw_parts(b.as_ptr() as *const u32, b.len() / 4) });
@@ -675,7 +743,40 @@ impl VolR {
             }
             v.set_len(len);
         }
-        Ok(Arena::Heap(v))
+        Ok(Arena::Copied { v, from: Span { file: base.id, at, bytes } })
+    }
+    /// An arena of `len` values the overlay writes as spans of the base and values between them, copied into the heap
+    /// as a copy of that span of the base, which the next overlay compares with it again.
+    fn spliced<T: Pod>(&mut self, len: usize) -> Result<Arena<T>, String> {
+        let bad = || "a volume's splice does not lie in its base".to_string();
+        let (at, bytes) = (self.u64()? as usize, self.u64()? as usize);
+        let (segs, lits): (Arena<u64>, Arena<u8>) = (self.inline_of()?, self.inline_of()?);
+        let base = self.base.clone().ok_or("a volume refers to a base it was not opened with")?;
+        let sz = std::mem::size_of::<T>();
+        if !at.checked_add(bytes).is_some_and(|e| e <= base.region.len()) || bytes % sz != 0 || segs.len() % 2 != 0 || (base.region.ptr as usize + at) % std::mem::align_of::<T>() != 0 {
+            return Err(bad());
+        }
+        let (src, mut out, mut l) = (&base.region[at..at + bytes], Vec::<u8>::with_capacity(len * sz), 0);
+        for s in segs.chunks_exact(2) {
+            let n = (s[1] as usize).checked_mul(sz).ok_or_else(bad)?;
+            if s[0] & LIT != 0 {
+                out.extend_from_slice(lits.get(l..l + n).ok_or_else(bad)?);
+                l += n;
+            } else {
+                let from = (s[0] as usize).checked_mul(sz).ok_or_else(bad)?;
+                out.extend_from_slice(src.get(from..from + n).ok_or_else(bad)?);
+            }
+        }
+        if out.len() != len * sz || l != lits.len() {
+            return Err(bad());
+        }
+        let mut v: Vec<T> = Vec::with_capacity(len);
+        // SAFETY: T is Pod, and `out` holds exactly `len` of them.
+        unsafe {
+            std::ptr::copy_nonoverlapping(out.as_ptr(), v.as_mut_ptr() as *mut u8, out.len());
+            v.set_len(len);
+        }
+        Ok(Arena::Copied { v, from: Span { file: base.id, at, bytes } })
     }
 }
 
