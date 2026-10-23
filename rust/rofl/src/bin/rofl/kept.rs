@@ -85,13 +85,36 @@ fn stamp(p: &Path) -> String {
         return format!("dir {}", Sum::of(names.join("\n").as_bytes()));
     }
     rofl::brk!("kept_stamp_mtime" => std::fs::metadata(p).and_then(|m| m.modified()).map_or_else(|_| "gone".into(), |t| format!("{t:?}"));
-        std::fs::read(p).map_or_else(|_| "gone".into(), |b| Sum::of(&b)))
+        summed(p))
+}
+
+/// The sum of a file's bytes, read again only when its length or change time moved since the sum was noted under
+/// `seen()`; a file changed less than a second ago is not noted, as a volume is not (`volume::check_seen`).
+fn summed(p: &Path) -> String {
+    let Ok(m) = std::fs::metadata(p) else { return "gone".into() };
+    let at = m.modified().ok();
+    let key = at.and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok()).map(|d| format!("{} {}", m.len(), d.as_nanos()));
+    let mark = key.as_ref().and(seen()).map(|d| d.join("files").join(Sum::of(p.as_os_str().as_encoded_bytes())));
+    if let (Some(k), Some(f)) = (&key, &mark) {
+        if let Some(sum) = std::fs::read_to_string(f).ok().and_then(|x| x.strip_prefix(&format!("{k} ")).map(str::to_string)) {
+            return sum;
+        }
+    }
+    let Ok(b) = std::fs::read(p) else { return "gone".into() };
+    let sum = Sum::of(&b);
+    if let (Some(k), Some(f), true) = (&key, &mark, at.is_some_and(|t| t.elapsed().is_ok_and(|e| e.as_secs() >= 1))) {
+        let tmp = f.with_extension(format!("{}.new", std::process::id()));
+        if f.parent().is_some_and(|d| std::fs::create_dir_all(d).is_ok()) && std::fs::write(&tmp, format!("{k} {sum}")).is_ok() && std::fs::rename(&tmp, f).is_err() {
+            let _ = std::fs::remove_file(&tmp);
+        }
+    }
+    sum
 }
 
 /// The binary answering, by its bytes.
 fn engine() -> String {
     static E: std::sync::OnceLock<String> = std::sync::OnceLock::new();
-    E.get_or_init(|| std::env::current_exe().and_then(std::fs::read).map_or_else(|_| "unknown".into(), |b| Sum::of(&b))).clone()
+    E.get_or_init(|| std::env::current_exe().map_or_else(|_| "unknown".into(), |p| summed(&p))).clone()
 }
 
 /// What the kept worlds of the question verbs may hold on disk together, in GB, unless `ROFL_CACHE_GB` says
@@ -347,7 +370,7 @@ fn sweep_orphans(dir: &Path) {
 /// `~/.cache/rofl/worlds`), beside the storeroom of scans. What else the world read is in the file's record,
 /// compared when it is opened (`moved`).
 pub fn slot(world: &[String], _files: &[String]) -> Option<String> {
-    let home = std::env::var_os("XDG_CACHE_HOME").map(PathBuf::from).or_else(|| std::env::var_os("HOME").map(|h| Path::new(&h).join(".cache")))?;
+    let home = cache_home()?;
     let key: &[String] = rofl::brk!("kept_key_ignores_walls" => _files; world);
     let named = format!("{}\0{}\0{}", key.join("\0"), env_now().join("\0"), engine());
     Some(home.join("rofl/worlds").join(format!("{}.vol", Sum::of(named.as_bytes()))).to_string_lossy().into_owned())
@@ -355,9 +378,16 @@ pub fn slot(world: &[String], _files: &[String]) -> Option<String> {
 
 /// A kept world used again is the most recently used.
 pub fn touch(kept: &str) {
-    if let Ok(f) = std::fs::OpenOptions::new().write(true).open(kept) {
-        let _ = f.set_modified(std::time::SystemTime::now());
-    }
+    rofl::volume::touch(kept, seen().as_deref());
+}
+
+/// Where the volumes found whole are noted (`volume::check_seen`): beside the kept worlds.
+pub fn seen() -> Option<PathBuf> {
+    Some(cache_home()?.join("rofl/seen"))
+}
+
+fn cache_home() -> Option<PathBuf> {
+    std::env::var_os("XDG_CACHE_HOME").map(PathBuf::from).or_else(|| std::env::var_os("HOME").map(|h| Path::new(&h).join(".cache")))
 }
 
 fn env_now() -> Vec<String> {

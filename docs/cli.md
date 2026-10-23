@@ -143,7 +143,13 @@ A world one of whose scanners named nothing it read is not kept (exit 2):
 whether it went stale could not be told. A world refused when evaluated is not
 kept either. A file at F that is cut short, changed after it was written or not
 a kept world is refused with a sentence (exit 2): the volume ends in the sum of
-its bytes, read whole before it is opened.
+its bytes, read whole before it is opened. Once a volume settled (a second after
+it was last changed) has been found whole, its sum, length and change time are
+noted under `$XDG_CACHE_HOME/rofl/seen`, and while all three are as noted it is
+opened without being read whole again; the files a world was kept from are
+stamped by the sum of their bytes, noted there the same way. A run whose files
+are more than eight away from every kept world's, and more than one in eight of
+the world, is evaluated whole rather than taken by delta from the nearest.
 
 Measured on `cost_shapes_model` (the JS model over `examples/shapes`, 310 368
 facts, release build, three runs each, a loaded machine): a `why` takes 2.9-3.1 s
@@ -209,9 +215,11 @@ vscode's base directory, each its own facts file):
 A node's id is its place in the tree, so a function added at the end of a file
 takes no fact out. What an edit touches stays flat with the world; its time
 does not yet. At vscode 250 (1 595 714 base facts, each file scanned alone) a
-function added and taken out again is opened and taken in 1.5-1.8 s (0.95 s at
-125 files): opening 0.35-0.5 s after the checksum read of 0.45 s, the facts out
-0.15-0.5 s, the facts in 0.5 s (f_an_edit_by_delta_paid_for_the_world_in_six_places).
+function added and taken out again is opened and taken in 0.77-0.97 s (whole
+run 1.2-1.9 s), and the same question asked again of the kept world takes
+0.47-0.53 s, now that a volume and the files found whole are not read whole
+again (f_an_edit_by_delta_paid_for_the_world_in_six_places,
+f_opening_a_kept_world_read_every_byte_it_was_kept_from).
 Writing it again took 5.4 s for the
 whole 1.25 GB volume; as an overlay (release, 2026-10-23, the same subset, four
 edits in a row over a 1.17 GB base) it takes 0.17 s and 49 MB for a function

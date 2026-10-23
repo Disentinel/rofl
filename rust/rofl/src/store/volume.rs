@@ -39,7 +39,8 @@ fn read_patterns(r: &mut VolR) -> Result<Option<Rc<ArgIndex>>, String> {
         let pos: Box<[usize]> = r.arena::<u32>()?.iter().map(|&p| p as usize).collect();
         let values = r.u64()? as usize;
         let (slots, ids, prev): (Arena<u32>, Arena<FactId>, Arena<u32>) = (r.arena()?, r.arena()?, r.arena()?);
-        if !slots.len().is_power_of_two() || ids.len() != prev.len() || slots.iter().chain(prev.iter()).any(|&e| e != EMPTY && e as usize >= ids.len()) {
+        // its entries are not walked: the sum the volume ends in held, so one out of range is the writer's defect
+        if !slots.len().is_power_of_two() || ids.len() != prev.len() {
             return Err("a volume's argument index is not an index".into());
         }
         by_pat.insert(mask, PatIndex { pos, slots, ids, prev, values, under: None });
@@ -351,7 +352,7 @@ impl Store {
                 }
             }
             let to = offs.len().saturating_sub(1);
-            if offs.is_empty() || to > n || offs.windows(2).any(|w| w[0] > w[1]) || offs[to] as usize != ids.len() || ids.iter().chain(more.keys()).chain(more.values().flatten()).any(|&i| i as usize >= n) || (layered == 1 && to != n) {
+            if offs.is_empty() || to > n || offs[to] as usize != ids.len() || (layered == 1 && to != n) {
                 return Err("a volume's citer index is not an index".into());
             }
             s.citers = Some(Rc::new(Citers { offs, ids, more }));

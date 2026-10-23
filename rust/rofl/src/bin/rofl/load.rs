@@ -192,7 +192,7 @@ fn run(json: bool, args: Vec<String>, mut pre: Option<(bool, crate::kept::Record
     if let Some(k) = &kept {
         if save.is_some() { fail(json, USAGE, "--kept and --save are two ways to keep a world: give one"); }
         let exists = std::path::Path::new(k).exists();
-        let check = || rofl::volume::check(k).and_then(|c| crate::kept::parse(&c.note).map(|r| (c.this_build, r)).ok_or_else(|| format!("{k}: not a world kept by `rofl --kept`")));
+        let check = || rofl::volume::check_seen(k, crate::kept::seen().as_deref()).and_then(|c| crate::kept::parse(&c.note).map(|r| (c.this_build, r)).ok_or_else(|| format!("{k}: not a world kept by `rofl --kept`")));
         if !world_given {
             // no files and no walls: the world is the one the kept file was kept from
             if !exists { fail(json, USAGE, &format!("{k}: no world is kept there; name the files of the world to keep it")); }
@@ -225,7 +225,7 @@ fn run(json: bool, args: Vec<String>, mut pre: Option<(bool, crate::kept::Record
     // a kept world that stopped at the disk wall, and its note
     let mut cut_kept: Option<(u64, String, crate::kept::Record)> = None;
     if let Some(p) = slot.as_ref().filter(|p| std::path::Path::new(p).exists()) {
-        let checked = rofl::volume::check(p).and_then(|c| crate::kept::parse(&c.note).map(|r| (c.this_build, r, c.note)).ok_or_else(|| format!("{p}: not a kept world")));
+        let checked = rofl::volume::check_seen(p, crate::kept::seen().as_deref()).and_then(|c| crate::kept::parse(&c.note).map(|r| (c.this_build, r, c.note)).ok_or_else(|| format!("{p}: not a kept world")));
         match checked.map(|(b, r, n)| (crate::kept::moved(&r, b), r, n)) {
             Ok((None, r, note)) => match rofl::session::Session::open_volume(p, budget) {
                 Ok(s) => {
@@ -241,7 +241,7 @@ fn run(json: bool, args: Vec<String>, mut pre: Option<(bool, crate::kept::Record
             Err(e) => eprintln!("{e}; computed anew"),
         }
     } else if let Some(p) = &slot {
-        stale = crate::delta::base_beside(p, &world[..world.len() - files.len()]).filter(|(_, r)| r.cut.is_none()).map(|(q, r)| (q, r, "the files named are others".into()));
+        stale = crate::delta::base_beside(p, &world[..world.len() - files.len()], &world[world.len() - files.len()..]).filter(|(_, r)| r.cut.is_none()).map(|(q, r)| (q, r, "the files named are others".into()));
     }
     let read = |f: &String| std::fs::read_to_string(f).unwrap_or_else(|e| fail(json, USAGE, &format!("{f}: {e}")));
     let walls = |s: &mut rofl::session::Session| {
@@ -255,7 +255,7 @@ fn run(json: bool, args: Vec<String>, mut pre: Option<(bool, crate::kept::Record
     let mut said = String::new();
     if let Some((q, r, m)) = stale {
         let t0 = std::time::Instant::now();
-        let opened_q = rofl::volume::check(&q).map_err(|e| e.to_string()).and_then(|_| rofl::session::Session::open_volume(&q, budget));
+        let opened_q = rofl::volume::check_seen(&q, crate::kept::seen().as_deref()).map_err(|e| e.to_string()).and_then(|_| rofl::session::Session::open_volume(&q, budget));
         let done = opened_q.and_then(|mut t| {
             walls(&mut t);
             crate::delta::apply(&mut t, &r, &world[world.len() - files.len()..]).map(|d| (t, d))
