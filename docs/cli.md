@@ -226,7 +226,10 @@ edits in a row over a 1.17 GB base) it takes 0.17 s and 49 MB for a function
 added (nothing out), 0.33-0.39 s and 193-201 MB once an edit had taken facts out.
 Now a relation a fact went out of is written as the base's runs spliced with
 what changed, and the record names each file's facts as runs of ids: 0.16-0.5 s
-and 35-56 MB for the same four edits, the answer the same.
+and 35-56 MB for the same four edits, the answer the same. The rows of trees
+and their citers are spliced likewise, and a large argument index the base
+does not hold (built for the edit since) is not written: it is built again
+where a later edit asks for it. 5-8 MB for the same edits.
 
 Records of facts gone stay in the world (a reader skips them) until it is
 evaluated whole: once they are more than a quarter of its records, the next

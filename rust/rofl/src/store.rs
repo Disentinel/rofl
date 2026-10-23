@@ -1188,6 +1188,8 @@ pub struct Store {
     /// retraction that takes an edge out of the tree looks at (`Eval::retract_set`). Kept beside `citers` by every
     /// firing put since; dropped (to be built again) when a firing cites a row whose ends this store does not know.
     pub vciters: Option<Rc<FxMap<u64, Vec<(FactId, Sym)>>>>,
+    /// Where the volume this store was read from holds `vciters`: written again as a splice of it.
+    pub(crate) vciters_from: Option<crate::arena::Span>,
 }
 
 /// The citer index: the facts citing each premise as one column by premise id (`offs`, `ids`), which a volume maps,

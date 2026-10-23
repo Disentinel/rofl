@@ -14,7 +14,9 @@ fn write_patterns(w: &mut VolW, facts: &Facts, by_pat: Option<&ArgIndex>) {
     let Some(by_pat) = by_pat else {
         return w.u32(u32::MAX);
     };
-    let mut masks: Vec<&u32> = by_pat.keys().collect();
+    // over a base, a large index the base does not hold is not written: built since, it is built again where asked
+    let keep = |ix: &PatIndex| !w.is_over() || ix.entries() < 1 << 14 || w.in_base(&ix.under.as_deref().unwrap_or(ix).ids);
+    let mut masks: Vec<&u32> = by_pat.iter().filter(|(_, ix)| keep(ix)).map(|(m, _)| m).collect();
     masks.sort_unstable();
     w.u32(masks.len() as u32);
     for m in masks {
@@ -216,7 +218,7 @@ impl Store {
                 w.u32(1);
                 let mut rows: Vec<[u32; 4]> = m.iter().flat_map(|(d, v)| v.iter().map(move |(f, k)| [*d as u32, (*d >> 32) as u32, *f, *k])).collect();
                 rows.sort_unstable();
-                w.arena(&rows.concat());
+                w.arena(&Arena::derived(rows.concat(), self.vciters_from));
             }
         }
         let row = |k: Sym, &(ci, book, a, d): &(usize, Sym, Term, Term)| [k as u64, ci as u64, book as u64, a.bits(), d.bits()];
@@ -226,7 +228,7 @@ impl Store {
         } else {
             let mut vrows: Vec<[u64; 5]> = self.vrow_of.iter().map(|(k, v)| row(*k, v)).collect();
             vrows.sort_unstable();
-            w.arena(&vrows.concat());
+            w.arena(&Arena::derived(vrows.concat(), self.vrow_kept.origin()));
         }
     }
 
@@ -367,6 +369,7 @@ impl Store {
                 m.entry(x[0] as u64 | (x[1] as u64) << 32).or_default().push((x[2], x[3]));
             }
             s.vciters = Some(Rc::new(m));
+            s.vciters_from = words.origin();
         }
         let vrows: Arena<u64> = r.arena()?;
         if vrows.len() % 5 != 0 {
