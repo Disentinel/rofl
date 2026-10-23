@@ -263,7 +263,7 @@ by delta.
 | 2 | a file is refused: it does not parse or does not load; or the kept world (`--kept F`) is stale, damaged, or cannot be kept |
 | 3 | the world is refused when evaluated: a broken promise, a negation through a cycle |
 | 4 | a question is refused: not ground for a why, not a base fact for an excise, outside the cone |
-| 5 | answered from a world the budget or the space cut short, or an ask whose rows may be short |
+| 5 | answered from a world the budget or the space cut short, or a scan failed, or an ask whose rows may be short |
 | 70 | a defect: the engine failed (a panic, or an evaluation that says `defect:`) |
 
 A refusal wins over a partial answer: a run with a refused question exits 4.
@@ -318,7 +318,11 @@ what it prints is loaded as ROFL, rules as well as facts. Each request runs
 once and leaves `scan_done(Kind, Path, Clauses)`, or
 `scan_failed(Kind, Path, Message)` when there is no scanner for the kind or the
 command fails. It works wherever the world is evaluated: `rofl load`, the
-question verbs and `rofl serve`.
+question verbs and `rofl serve`. A scan that failed (no scanner for the kind,
+a command that cannot be started or that exits non-zero) leaves out the facts
+it would have brought, so a question verb answers partial: each failure said
+on stderr, `[partial: a scan failed ...]` under the rows (`"partial":true` in
+`--json`), exit 5. The world itself holds `scan_failed` to ask about.
 
 **A scan is kept.** A scanner that names what it read, a `-- reads: PATH` line
 for each file and directory (`scanners/cli.ts` names the file it parsed and

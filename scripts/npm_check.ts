@@ -103,6 +103,16 @@ said(first.status === 0 && first.stdout === rows, `rofl ${jsq.map((a) => a.inclu
 said(second.status === 0 && second.stdout === first.stdout && kept !== '' && after === kept && second.ms < first.ms / 2 && third.ms > 2 * second.ms && third.stdout === first.stdout, 'the same question again, answered from the kept world under ~/.cache/rofl/worlds',
   `${(second.ms / 1000).toFixed(2)} s against ${(first.ms / 1000).toFixed(2)} s, and ${(third.ms / 1000).toFixed(2)} s once the kept world is deleted; the kept worlds ${kept ? (after === kept ? `the same ${kept.split(',').length} .vol, none added` : `${kept} then ${after}`) : 'absent'}`);
 
+// a world that scans for itself, `scanner(js, "rofl scan src")` as docs/cli.md says: with rofl on PATH it answers; called by its full path
+// with no rofl on PATH, the scanner cannot be started, and the answer is partial with the failure said, never whole and empty
+writeFileSync(path.join(work, 'w.rofl'), 'scanner(js, "rofl scan src").\nscan_request(js, "main.js").\nscan_request(js, F) :- depends[code](_, F).\n');
+const selfScan = run('rofl', ['ask', 'depends[code](F, G)', '@rules/js.files', 'w.rofl'], work, env);
+said(selfScan.status === 0 && selfScan.stdout === rows, 'a world that scans with `rofl scan src` answers', `exit ${selfScan.status}, ${JSON.stringify(selfScan.stdout)}${selfScan.stderr ? ` stderr ${JSON.stringify(selfScan.stderr.slice(0, 300))}` : ''}`);
+const noPath = { ...user(prefix, path.join(tmp, 'home-nopath')), PATH: [tools, '/usr/bin', '/bin'].join(path.delimiter) };
+const unstarted = run(rofl, ['ask', 'depends[code](F, G)', '@rules/js.files', 'w.rofl'], work, noPath);
+said(unstarted.status === 5 && unstarted.stdout.includes('[partial: a scan failed') && unstarted.stderr.includes('a scan failed') && unstarted.stderr.includes('rofl: '),
+  'FAULT the same world with no rofl on PATH: its scanner cannot start, the answer is partial (exit 5), the failure said', `exit ${unstarted.status}, ${JSON.stringify(unstarted.stdout)}, stderr ${JSON.stringify(unstarted.stderr.slice(0, 300))}`);
+
 // what the command costs in front of the engine: one question from the kept world, ten times through it and ten times to the binary itself
 const pkgDir = path.join(prefix, 'lib/node_modules/@grafema/rofl'), engineBin = path.join(prefix, `lib/node_modules/@grafema/rofl-${own}/bin/rofl`);
 const same = ['ask', 'depends[code](F, G)', `@${path.join(pkgDir, 'rules/js.files')}`, 'code.rofl'];
