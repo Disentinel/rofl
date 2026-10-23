@@ -41,6 +41,27 @@ impl Idx {
         let at = nodes.iter().enumerate().filter(|(i, _)| held(*i)).map(|(i, t)| (slot_hash(t.bits()), i as u32));
         Idx { table: crate::arena::table(cap, NONE, at).into(), over: FxMap::default() }
     }
+    /// The slots `over` takes in the table: a term's own slot, or the free one where it would go.
+    fn placed(&self, nodes: &[Term]) -> Vec<(usize, u32)> {
+        let mask = self.table.len() - 1;
+        let mut over: Vec<(&u64, &u32)> = self.over.iter().collect();
+        over.sort_unstable();
+        let mut put: FxMap<usize, u32> = FxMap::default();
+        for (&k, &v) in over {
+            let mut i = slot_hash(k) as usize & mask;
+            loop {
+                let e = put.get(&i).copied().unwrap_or(self.table[i]);
+                if e == NONE || nodes[e as usize].bits() == k {
+                    break;
+                }
+                i = (i + 1) & mask;
+            }
+            put.insert(i, v);
+        }
+        let mut put: Vec<(usize, u32)> = put.into_iter().collect();
+        put.sort_unstable();
+        put
+    }
     fn get(&self, nodes: &[Term], k: u64) -> Option<u32> {
         if let Some(v) = self.over.get(&k) {
             return Some(*v);
@@ -162,10 +183,16 @@ impl Forest {
 
     /// The forest as a volume keeps it: its arrays and its table as they are, mapped back when read.
     pub(crate) fn write(&self, w: &mut VolW) {
-        // nodes put in since the table was made, or a tree built again, are put in a new one, the live node of each term
-        let idx = if self.idx.over.is_empty() { self.idx.clone() } else { Idx::of(&self.nodes, |i| self.pre[i] != NONE) };
         w.arena(&self.nodes);
-        w.arena(&idx.table);
+        // nodes put in since the table was made go in its free slots while it has room as `of` leaves it, else in a
+        // new table of the live node of each term
+        if self.idx.over.is_empty() {
+            w.arena(&self.idx.table);
+        } else if self.nodes.len() * 2 <= self.idx.table.len() {
+            w.arena_placed(&self.idx.table, &self.idx.placed(&self.nodes), &[]);
+        } else {
+            w.arena(&Idx::of(&self.nodes, |i| self.pre[i] != NONE).table);
+        }
         for a in [&self.parent, &self.pre, &self.order, &self.end, &self.depth] {
             w.arena(a);
         }
@@ -173,6 +200,11 @@ impl Forest {
         w.u32(self.deep);
         w.u32(self.internal);
         w.u32(self.broken as u32);
+    }
+
+    /// Whether a volume over a base writes this forest by reference: small, or its columns lie in the base.
+    pub(crate) fn kept_by(&self, w: &VolW) -> bool {
+        self.nodes.len() < 1 << 14 || (w.in_base(&self.nodes) && [&self.parent, &self.pre, &self.order, &self.end, &self.depth].iter().all(|a| w.in_base(*a)))
     }
 
     pub(crate) fn read(r: &mut VolR) -> Result<Forest, String> {
