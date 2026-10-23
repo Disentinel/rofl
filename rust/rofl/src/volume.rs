@@ -9,6 +9,8 @@ use crate::arena::{map_base, map_file, Base, VolR, VolW};
 use crate::engine::{Eval, RuleAnswer, StagedFact, Tok};
 use crate::store::{PremRef, Store};
 use crate::term::{Heap, Sym, Term};
+use std::path::{Path, PathBuf};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 const MAGIC: &[u8; 16] = b"ROFL-VOLUME-4\n\0\0";
 /// An overlay: a volume that names its base and writes only what the world holds that the base does not.
@@ -198,15 +200,59 @@ fn base_of(path: &str, r: &mut VolR) -> Result<(Kept, std::rc::Rc<Base>), String
 /// The header of the volume at `path`, once the sum that ends it is found to be the sum of its bytes, and an
 /// overlay's base likewise; a file cut short or changed after it was written is refused.
 pub fn check(path: &str) -> Result<Checked, String> {
+    check_seen(path, None)
+}
+
+/// `check`, where a volume found whole before is not read whole again while it is as it was then: its sum, its
+/// length and the time it was last changed are noted under `seen` once the sum held, and a later check that finds
+/// all three as noted reads only its header. A volume changed less than a second ago is not noted: a write within
+/// the clock's tick would keep its time.
+pub fn check_seen(path: &str, seen: Option<&Path>) -> Result<Checked, String> {
     let Header { mut r, over, build, note } = header(path)?;
-    if !crate::brk!("kept_unsummed" => true; r.sum_holds()) {
-        return Err(format!("{path}: the file is damaged: its bytes are not the ones written"));
+    let line = seen.and_then(|d| seen_line(path, r.id(), d));
+    if !line.as_ref().is_some_and(|(m, l, _)| std::fs::read_to_string(m).is_ok_and(|x| x == *l)) {
+        if !crate::brk!("kept_unsummed" => true; r.sum_holds()) {
+            return Err(format!("{path}: the file is damaged: its bytes are not the ones written"));
+        }
+        if let Some((m, l, _)) = line.filter(|(_, _, at)| at.elapsed().is_ok_and(|e| e.as_secs() >= 1)) {
+            note_seen(&m, &l);
+        }
     }
     if over {
         let (k, _) = base_of(path, &mut r)?;
-        check(&k.path).map_err(|e| format!("{path}: the volume it was kept over is refused: {e}"))?;
+        check_seen(&k.path, seen).map_err(|e| format!("{path}: the volume it was kept over is refused: {e}"))?;
     }
     Ok(Checked { this_build: build == build_id(), note })
+}
+
+/// Where `seen` notes the volume at `path` whose sum is `id`, the line it notes (the sum, the length, the change
+/// time) and that time.
+fn seen_line(path: &str, id: u64, seen: &Path) -> Option<(PathBuf, String, SystemTime)> {
+    let m = std::fs::metadata(path).ok()?;
+    let at = m.modified().ok()?;
+    let ns = at.duration_since(UNIX_EPOCH).ok()?.as_nanos();
+    Some((seen.join(crate::arena::Sum::of(path.as_bytes())), format!("{id:016x} {} {ns}", m.len()), at))
+}
+
+fn note_seen(mark: &Path, line: &str) {
+    let tmp = mark.with_extension(format!("{}.new", std::process::id()));
+    if mark.parent().is_some_and(|d| std::fs::create_dir_all(d).is_ok()) && std::fs::write(&tmp, line).is_ok() && std::fs::rename(&tmp, mark).is_err() {
+        let _ = std::fs::remove_file(&tmp);
+    }
+}
+
+/// The volume at `path` marked as used now (its change time orders its keeper's volumes by use); a note under
+/// `seen` that it was found whole goes with it.
+pub fn touch(path: &str, seen: Option<&Path>) {
+    let Ok(f) = std::fs::OpenOptions::new().write(true).open(path) else { return };
+    let id = header(path).map(|h| h.r.id()).ok();
+    let line = |d| id.and_then(|id| seen_line(path, id, d));
+    let was = seen.and_then(line).filter(|(m, l, _)| std::fs::read_to_string(m).is_ok_and(|x| x == *l));
+    if f.set_modified(SystemTime::now()).is_ok() {
+        if let Some((m, l, _)) = was.and(seen.and_then(line)) {
+            note_seen(&m, &l);
+        }
+    }
 }
 
 /// The note of the volume at `path`, read from its header alone (its sum is not checked): what a keeper reads to

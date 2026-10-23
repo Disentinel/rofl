@@ -10,18 +10,26 @@ use rofl::session::{Addition, Session};
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
 
-/// The kept world beside `slot` to go on from when there is none at it: the most recently used whose walls,
-/// environment and engine are this run's, whatever its files.
-pub fn base_beside(slot: &str, walls: &[String]) -> Option<(String, Record)> {
+/// The kept world beside `slot` to go on from when there is none at it: of those whose walls, environment and
+/// engine are this run's, the most recently used; none more than `FAR` files away from `files` and farther than one
+/// file in `FAR` of the world, which is cheaper evaluated whole than taken out and put in by delta (vscode 250 files, 125 of them taken out by delta: past 115 s, against 44 s whole).
+pub fn base_beside(slot: &str, walls: &[String], files: &[String]) -> Option<(String, Record)> {
     let dir = Path::new(slot).parent()?;
+    let now: HashSet<&str> = files.iter().map(String::as_str).collect();
     let mut best: Option<(std::time::SystemTime, String, Record)> = None;
     for e in std::fs::read_dir(dir).ok()?.flatten() {
         let p = e.path();
-        if p.extension().is_none_or(|x| x != "vol") {
+        // the slot itself, kept by another run since this one looked, is that run's world, not a base
+        if p.extension().is_none_or(|x| x != "vol") || p == Path::new(slot) {
             continue;
         }
         let Some(r) = kept::peek(&p.to_string_lossy()) else { continue };
         if r.walls() != walls || r.engine_env_hold(true).is_some() {
+            continue;
+        }
+        let was: HashSet<&str> = r.files.iter().map(String::as_str).collect();
+        let away = now.symmetric_difference(&was).count();
+        if away > FAR && away * FAR > now.len().max(was.len()) {
             continue;
         }
         let at = e.metadata().and_then(|m| m.modified()).unwrap_or(std::time::UNIX_EPOCH);
@@ -31,6 +39,9 @@ pub fn base_beside(slot: &str, walls: &[String]) -> Option<(String, Record)> {
     }
     best.map(|(_, p, r)| (p, r))
 }
+
+/// A kept world more than one file in this many away from a run's files is not its base.
+const FAR: usize = 8;
 
 /// What a delta did: the world's files and scans as it now records them, and the files and scans it took.
 pub struct Done {

@@ -261,6 +261,9 @@ fn the_engine_changed(brk: Option<&str>) -> Result<(), String> {
 fn a_damaged_file(brk: Option<&str>) -> Result<(), String> {
     let d = Dir::new("damaged");
     keep(&d, brk, &["rules.rofl"])?;
+    // found whole once it has settled, it is noted so and not read whole again while it is as it was
+    std::thread::sleep(std::time::Duration::from_millis(1100));
+    answered(&ask_kept(&d, brk, &["rules.rofl"]), "X = b", "settled and found whole")?;
     let w = d.0.join("w.vol");
     let whole = std::fs::read(&w).unwrap();
     let damaged = |r: &Ran, what: &str| ensure(r.code == 2 && r.err.contains("w.vol") && r.out.is_empty(), || format!("{what}: exit {} out {:?} err {:?}", r.code, r.out, r.err));
@@ -275,6 +278,19 @@ fn a_damaged_file(brk: Option<&str>) -> Result<(), String> {
     damaged(&ask_kept(&d, brk, &["rules.rofl"]), "a name changed")?;
     std::fs::write(&w, b"not a volume at all").unwrap();
     damaged(&ask_kept(&d, brk, &["rules.rofl"]), "not a volume")
+}
+
+/// A run whose files are far from every kept world's is evaluated whole, not taken by delta from the nearest.
+fn a_far_world_is_no_base(brk: Option<&str>) -> Result<(), String> {
+    let d = Dir::new("far");
+    for i in 0..10 {
+        d.write(&format!("f{i}.rofl"), &format!("edb(calls).\ncalls(zebra, n{i}).\n"));
+    }
+    answered(&rofl(&d, brk, &["ask", "reaches(a, X)", "boot.rofl", "rules.rofl", "f0.rofl"]), "X = b", "kept")?;
+    let far: Vec<String> = (1..10).map(|i| format!("f{i}.rofl")).collect();
+    let args: Vec<&str> = ["ask", "reaches(a, X)", "boot.rofl", "rules.rofl"].into_iter().chain(far.iter().map(String::as_str)).collect();
+    let (got, want) = (rofl(&d, brk, &args), fresh(&d, brk, &args));
+    ensure(got.out == want.out && got.code == want.code && !got.err.contains("by delta"), || format!("ten files away: {} {:?}", got.code, got.err))
 }
 
 /// Touched without a change, or beside a file that changed and was never read, the world is not stale.
@@ -675,7 +691,7 @@ fn the_disk_cap_stops_and_a_larger_one_goes_on(brk: Option<&str>) -> Result<(), 
 
 type Case = fn(Option<&str>) -> Result<(), String>;
 
-const CASES: [(&str, Case); 25] = [
+const CASES: [(&str, Case); 26] = [
     ("answers_as_fresh", answers_as_fresh),
     ("a_rule_file_edited", a_rule_file_edited),
     ("boot_edited", boot_edited),
@@ -701,6 +717,7 @@ const CASES: [(&str, Case); 25] = [
     ("mixed_files_at_random", mixed_files_at_random),
     ("orphans_of_killed_writers_are_swept", orphans_of_killed_writers_are_swept),
     ("the_disk_cap_stops_and_a_larger_one_goes_on", the_disk_cap_stops_and_a_larger_one_goes_on),
+    ("a_far_world_is_no_base", a_far_world_is_no_base),
 ];
 
 /// What a hole left unknown is kept by an image as by a volume: a negation unfolded at a call reads it after opening.
