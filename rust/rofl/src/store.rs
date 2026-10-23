@@ -1054,6 +1054,8 @@ pub struct Store {
     pub arrivals: Option<Vec<FactId>>,
     pub partial_eval: bool,
     pub tick_log: Vec<String>,
+    /// what the world was told and when (`crate::journal`)
+    pub journal: crate::journal::Journal,
     /// THE RELATIONS WHOSE FACTS ARE LATTICE CELLS, registered by the engine
     /// when it prepares a program (`Eval::prepare`): what `canonical_state`
     /// prints their algebra and every firing of their facts from.
@@ -2662,6 +2664,7 @@ impl Store {
             self.remove_many(&stale);
         }
         self.tick += 1;
+        self.journal.tick(self.tick);
         for s in staged {
             self.add(h, s.rel, s.persp, s.args, F_BASE | F_TICK);
         }

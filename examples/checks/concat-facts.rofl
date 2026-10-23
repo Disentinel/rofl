@@ -5,61 +5,61 @@ ast_line[code](nf85e80d35f2c16b6_3c3ted0nsu2, 1).
 ast_node[code](nf85e80d35f2c16b6_12undirbnh3, program, "src/entry.ts").
 ast_line[code](nf85e80d35f2c16b6_12undirbnh3, 1).
 ast_attr[code](nf85e80d35f2c16b6_12undirbnh3, source_type, "module").
-ast_node[code](nf85e80d35f2c16b6_kkhn4535oc, import_declaration, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_kkhn4535oc, 1).
-ast_attr[code](nf85e80d35f2c16b6_kkhn4535oc, import_kind, "value").
-ast_node[code](nf85e80d35f2c16b6_9lkigmg1e92, import_namespace_specifier, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_9lkigmg1e92, 1).
-ast_node[code](nf85e80d35f2c16b6_076vtb21ad7, identifier, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_076vtb21ad7, 1).
-ast_attr[code](nf85e80d35f2c16b6_076vtb21ad7, name, "path").
-ast_child[code](nf85e80d35f2c16b6_9lkigmg1e92, local, 0, nf85e80d35f2c16b6_076vtb21ad7).
-ast_child[code](nf85e80d35f2c16b6_kkhn4535oc, specifiers, 0, nf85e80d35f2c16b6_9lkigmg1e92).
-ast_node[code](nf85e80d35f2c16b6_4ebf8bqt6b, string_literal, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_4ebf8bqt6b, 1).
-ast_attr[code](nf85e80d35f2c16b6_4ebf8bqt6b, value, "path").
-ast_child[code](nf85e80d35f2c16b6_kkhn4535oc, source, 0, nf85e80d35f2c16b6_4ebf8bqt6b).
-ast_child[code](nf85e80d35f2c16b6_12undirbnh3, body, 0, nf85e80d35f2c16b6_kkhn4535oc).
-ast_node[code](nf85e80d35f2c16b6_713oovt9co4, import_declaration, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_713oovt9co4, 2).
-ast_attr[code](nf85e80d35f2c16b6_713oovt9co4, import_kind, "value").
-ast_node[code](nf85e80d35f2c16b6_6vl2341lnb2, import_specifier, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_6vl2341lnb2, 2).
-ast_node[code](nf85e80d35f2c16b6_9brib7vdrb6, identifier, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_9brib7vdrb6, 2).
-ast_attr[code](nf85e80d35f2c16b6_9brib7vdrb6, name, "dirname").
-ast_child[code](nf85e80d35f2c16b6_6vl2341lnb2, imported, 0, nf85e80d35f2c16b6_9brib7vdrb6).
-ast_attr[code](nf85e80d35f2c16b6_6vl2341lnb2, import_kind, "value").
-ast_node[code](nf85e80d35f2c16b6_922o7hmq8q6, identifier, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_922o7hmq8q6, 2).
-ast_attr[code](nf85e80d35f2c16b6_922o7hmq8q6, name, "dir").
-ast_child[code](nf85e80d35f2c16b6_6vl2341lnb2, local, 0, nf85e80d35f2c16b6_922o7hmq8q6).
-ast_child[code](nf85e80d35f2c16b6_713oovt9co4, specifiers, 0, nf85e80d35f2c16b6_6vl2341lnb2).
-ast_node[code](nf85e80d35f2c16b6_ss5lu8jscd3, string_literal, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_ss5lu8jscd3, 2).
-ast_attr[code](nf85e80d35f2c16b6_ss5lu8jscd3, value, "node:path").
-ast_child[code](nf85e80d35f2c16b6_713oovt9co4, source, 0, nf85e80d35f2c16b6_ss5lu8jscd3).
-ast_child[code](nf85e80d35f2c16b6_12undirbnh3, body, 1, nf85e80d35f2c16b6_713oovt9co4).
-ast_node[code](nf85e80d35f2c16b6_mldn0f1qvb7, import_declaration, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_mldn0f1qvb7, 3).
-ast_attr[code](nf85e80d35f2c16b6_mldn0f1qvb7, import_kind, "value").
-ast_node[code](nf85e80d35f2c16b6_mh034q1iqm7, import_specifier, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_mh034q1iqm7, 3).
-ast_node[code](nf85e80d35f2c16b6_a8sf6h1r016, identifier, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_a8sf6h1r016, 3).
-ast_attr[code](nf85e80d35f2c16b6_a8sf6h1r016, name, "posix").
-ast_child[code](nf85e80d35f2c16b6_mh034q1iqm7, imported, 0, nf85e80d35f2c16b6_a8sf6h1r016).
-ast_attr[code](nf85e80d35f2c16b6_mh034q1iqm7, import_kind, "value").
-ast_node[code](nf85e80d35f2c16b6_cr285a3o8n2, identifier, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_cr285a3o8n2, 3).
-ast_attr[code](nf85e80d35f2c16b6_cr285a3o8n2, name, "posix").
-ast_child[code](nf85e80d35f2c16b6_mh034q1iqm7, local, 0, nf85e80d35f2c16b6_cr285a3o8n2).
-ast_child[code](nf85e80d35f2c16b6_mldn0f1qvb7, specifiers, 0, nf85e80d35f2c16b6_mh034q1iqm7).
-ast_node[code](nf85e80d35f2c16b6_ojhr0jnu8s1, string_literal, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_ojhr0jnu8s1, 3).
-ast_attr[code](nf85e80d35f2c16b6_ojhr0jnu8s1, value, "./mypath.js").
-ast_child[code](nf85e80d35f2c16b6_mldn0f1qvb7, source, 0, nf85e80d35f2c16b6_ojhr0jnu8s1).
-ast_child[code](nf85e80d35f2c16b6_12undirbnh3, body, 2, nf85e80d35f2c16b6_mldn0f1qvb7).
+ast_node[code](nf85e80d35f2c16b6_j1lh0n1ppk3, import_declaration, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_j1lh0n1ppk3, 1).
+ast_attr[code](nf85e80d35f2c16b6_j1lh0n1ppk3, import_kind, "value").
+ast_node[code](nf85e80d35f2c16b6_ap3bsai47g2, import_namespace_specifier, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_ap3bsai47g2, 1).
+ast_node[code](nf85e80d35f2c16b6_ev2qqd2ag23, identifier, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_ev2qqd2ag23, 1).
+ast_attr[code](nf85e80d35f2c16b6_ev2qqd2ag23, name, "path").
+ast_child[code](nf85e80d35f2c16b6_ap3bsai47g2, local, 0, nf85e80d35f2c16b6_ev2qqd2ag23).
+ast_child[code](nf85e80d35f2c16b6_j1lh0n1ppk3, specifiers, 0, nf85e80d35f2c16b6_ap3bsai47g2).
+ast_node[code](nf85e80d35f2c16b6_vie55c3h1k3, string_literal, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_vie55c3h1k3, 1).
+ast_attr[code](nf85e80d35f2c16b6_vie55c3h1k3, value, "path").
+ast_child[code](nf85e80d35f2c16b6_j1lh0n1ppk3, source, 0, nf85e80d35f2c16b6_vie55c3h1k3).
+ast_child[code](nf85e80d35f2c16b6_12undirbnh3, body, 0, nf85e80d35f2c16b6_j1lh0n1ppk3).
+ast_node[code](nf85e80d35f2c16b6_2et39coehh4, import_declaration, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_2et39coehh4, 2).
+ast_attr[code](nf85e80d35f2c16b6_2et39coehh4, import_kind, "value").
+ast_node[code](nf85e80d35f2c16b6_jc9388tibh1, import_specifier, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_jc9388tibh1, 2).
+ast_node[code](nf85e80d35f2c16b6_cjkcasd8tg5, identifier, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_cjkcasd8tg5, 2).
+ast_attr[code](nf85e80d35f2c16b6_cjkcasd8tg5, name, "dirname").
+ast_child[code](nf85e80d35f2c16b6_jc9388tibh1, imported, 0, nf85e80d35f2c16b6_cjkcasd8tg5).
+ast_attr[code](nf85e80d35f2c16b6_jc9388tibh1, import_kind, "value").
+ast_node[code](nf85e80d35f2c16b6_5ofmfir5cn3, identifier, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_5ofmfir5cn3, 2).
+ast_attr[code](nf85e80d35f2c16b6_5ofmfir5cn3, name, "dir").
+ast_child[code](nf85e80d35f2c16b6_jc9388tibh1, local, 0, nf85e80d35f2c16b6_5ofmfir5cn3).
+ast_child[code](nf85e80d35f2c16b6_2et39coehh4, specifiers, 0, nf85e80d35f2c16b6_jc9388tibh1).
+ast_node[code](nf85e80d35f2c16b6_c0apjll8mh3, string_literal, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_c0apjll8mh3, 2).
+ast_attr[code](nf85e80d35f2c16b6_c0apjll8mh3, value, "node:path").
+ast_child[code](nf85e80d35f2c16b6_2et39coehh4, source, 0, nf85e80d35f2c16b6_c0apjll8mh3).
+ast_child[code](nf85e80d35f2c16b6_12undirbnh3, body, 1, nf85e80d35f2c16b6_2et39coehh4).
+ast_node[code](nf85e80d35f2c16b6_81qsji1k756, import_declaration, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_81qsji1k756, 3).
+ast_attr[code](nf85e80d35f2c16b6_81qsji1k756, import_kind, "value").
+ast_node[code](nf85e80d35f2c16b6_9h78jma3ie, import_specifier, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_9h78jma3ie, 3).
+ast_node[code](nf85e80d35f2c16b6_j7f902hccs3, identifier, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_j7f902hccs3, 3).
+ast_attr[code](nf85e80d35f2c16b6_j7f902hccs3, name, "posix").
+ast_child[code](nf85e80d35f2c16b6_9h78jma3ie, imported, 0, nf85e80d35f2c16b6_j7f902hccs3).
+ast_attr[code](nf85e80d35f2c16b6_9h78jma3ie, import_kind, "value").
+ast_node[code](nf85e80d35f2c16b6_ndkidecns62, identifier, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_ndkidecns62, 3).
+ast_attr[code](nf85e80d35f2c16b6_ndkidecns62, name, "posix").
+ast_child[code](nf85e80d35f2c16b6_9h78jma3ie, local, 0, nf85e80d35f2c16b6_ndkidecns62).
+ast_child[code](nf85e80d35f2c16b6_81qsji1k756, specifiers, 0, nf85e80d35f2c16b6_9h78jma3ie).
+ast_node[code](nf85e80d35f2c16b6_f3b155hdj25, string_literal, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_f3b155hdj25, 3).
+ast_attr[code](nf85e80d35f2c16b6_f3b155hdj25, value, "./mypath.js").
+ast_child[code](nf85e80d35f2c16b6_81qsji1k756, source, 0, nf85e80d35f2c16b6_f3b155hdj25).
+ast_child[code](nf85e80d35f2c16b6_12undirbnh3, body, 2, nf85e80d35f2c16b6_81qsji1k756).
 ast_node[code](nf85e80d35f2c16b6_ntuqgfjbs76, variable_declaration, "src/entry.ts").
 ast_line[code](nf85e80d35f2c16b6_ntuqgfjbs76, 5).
 ast_node[code](nf85e80d35f2c16b6_ogesob5kmd7, variable_declarator, "src/entry.ts").
@@ -135,121 +135,121 @@ ast_child[code](nf85e80d35f2c16b6_g8hmullkuq1, init, 0, nf85e80d35f2c16b6_l70c3r
 ast_child[code](nf85e80d35f2c16b6_lb20oon4vd1, declarations, 0, nf85e80d35f2c16b6_g8hmullkuq1).
 ast_attr[code](nf85e80d35f2c16b6_lb20oon4vd1, kind, "const").
 ast_child[code](nf85e80d35f2c16b6_12undirbnh3, body, 5, nf85e80d35f2c16b6_lb20oon4vd1).
-ast_node[code](nf85e80d35f2c16b6_qnttng22v11, export_named_declaration, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_qnttng22v11, 9).
-ast_attr[code](nf85e80d35f2c16b6_qnttng22v11, export_kind, "value").
-ast_node[code](nf85e80d35f2c16b6_sasvfai2c84, variable_declaration, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_sasvfai2c84, 9).
-ast_node[code](nf85e80d35f2c16b6_qdu4rjco4t5, variable_declarator, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_qdu4rjco4t5, 9).
-ast_node[code](nf85e80d35f2c16b6_g23v4c8imf5, identifier, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_g23v4c8imf5, 9).
-ast_attr[code](nf85e80d35f2c16b6_g23v4c8imf5, name, "template").
-ast_child[code](nf85e80d35f2c16b6_qdu4rjco4t5, id, 0, nf85e80d35f2c16b6_g23v4c8imf5).
-ast_node[code](nf85e80d35f2c16b6_mi6cmrugia7, template_literal, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_mi6cmrugia7, 9).
-ast_node[code](nf85e80d35f2c16b6_h7389jfq874, identifier, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_h7389jfq874, 9).
-ast_attr[code](nf85e80d35f2c16b6_h7389jfq874, name, "root").
-ast_child[code](nf85e80d35f2c16b6_mi6cmrugia7, expressions, 0, nf85e80d35f2c16b6_h7389jfq874).
-ast_node[code](nf85e80d35f2c16b6_af2a6ullaf1, template_element, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_af2a6ullaf1, 9).
-ast_attr[code](nf85e80d35f2c16b6_af2a6ullaf1, value_raw, "").
-ast_attr[code](nf85e80d35f2c16b6_af2a6ullaf1, value_cooked, "").
-ast_attr[code](nf85e80d35f2c16b6_af2a6ullaf1, tail, false).
-ast_child[code](nf85e80d35f2c16b6_mi6cmrugia7, quasis, 0, nf85e80d35f2c16b6_af2a6ullaf1).
-ast_node[code](nf85e80d35f2c16b6_eaif11fiq12, template_element, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_eaif11fiq12, 9).
-ast_attr[code](nf85e80d35f2c16b6_eaif11fiq12, value_raw, "/a").
-ast_attr[code](nf85e80d35f2c16b6_eaif11fiq12, value_cooked, "/a").
-ast_attr[code](nf85e80d35f2c16b6_eaif11fiq12, tail, true).
-ast_child[code](nf85e80d35f2c16b6_mi6cmrugia7, quasis, 1, nf85e80d35f2c16b6_eaif11fiq12).
-ast_child[code](nf85e80d35f2c16b6_qdu4rjco4t5, init, 0, nf85e80d35f2c16b6_mi6cmrugia7).
-ast_child[code](nf85e80d35f2c16b6_sasvfai2c84, declarations, 0, nf85e80d35f2c16b6_qdu4rjco4t5).
-ast_attr[code](nf85e80d35f2c16b6_sasvfai2c84, kind, "const").
-ast_child[code](nf85e80d35f2c16b6_qnttng22v11, declaration, 0, nf85e80d35f2c16b6_sasvfai2c84).
-ast_child[code](nf85e80d35f2c16b6_12undirbnh3, body, 6, nf85e80d35f2c16b6_qnttng22v11).
-ast_node[code](nf85e80d35f2c16b6_q69j84i9ft5, export_named_declaration, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_q69j84i9ft5, 10).
-ast_attr[code](nf85e80d35f2c16b6_q69j84i9ft5, export_kind, "value").
-ast_node[code](nf85e80d35f2c16b6_j0g996686g, variable_declaration, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_j0g996686g, 10).
-ast_node[code](nf85e80d35f2c16b6_b7k0d7q8705, variable_declarator, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_b7k0d7q8705, 10).
-ast_node[code](nf85e80d35f2c16b6_intkqnu54n5, identifier, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_intkqnu54n5, 10).
-ast_attr[code](nf85e80d35f2c16b6_intkqnu54n5, name, "plus").
-ast_child[code](nf85e80d35f2c16b6_b7k0d7q8705, id, 0, nf85e80d35f2c16b6_intkqnu54n5).
-ast_node[code](nf85e80d35f2c16b6_8rij7sdcr71, binary_expression, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_8rij7sdcr71, 10).
-ast_node[code](nf85e80d35f2c16b6_c8n7k9hgul5, identifier, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_c8n7k9hgul5, 10).
-ast_attr[code](nf85e80d35f2c16b6_c8n7k9hgul5, name, "root").
-ast_child[code](nf85e80d35f2c16b6_8rij7sdcr71, left, 0, nf85e80d35f2c16b6_c8n7k9hgul5).
-ast_attr[code](nf85e80d35f2c16b6_8rij7sdcr71, operator, "+").
-ast_node[code](nf85e80d35f2c16b6_5ehqn2nasu5, string_literal, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_5ehqn2nasu5, 10).
-ast_attr[code](nf85e80d35f2c16b6_5ehqn2nasu5, value, "/b").
-ast_child[code](nf85e80d35f2c16b6_8rij7sdcr71, right, 0, nf85e80d35f2c16b6_5ehqn2nasu5).
-ast_child[code](nf85e80d35f2c16b6_b7k0d7q8705, init, 0, nf85e80d35f2c16b6_8rij7sdcr71).
-ast_child[code](nf85e80d35f2c16b6_j0g996686g, declarations, 0, nf85e80d35f2c16b6_b7k0d7q8705).
-ast_attr[code](nf85e80d35f2c16b6_j0g996686g, kind, "const").
-ast_child[code](nf85e80d35f2c16b6_q69j84i9ft5, declaration, 0, nf85e80d35f2c16b6_j0g996686g).
-ast_child[code](nf85e80d35f2c16b6_12undirbnh3, body, 7, nf85e80d35f2c16b6_q69j84i9ft5).
-ast_node[code](nf85e80d35f2c16b6_mqp36glr173, export_named_declaration, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_mqp36glr173, 11).
-ast_attr[code](nf85e80d35f2c16b6_mqp36glr173, export_kind, "value").
-ast_node[code](nf85e80d35f2c16b6_lobgrji8is1, variable_declaration, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_lobgrji8is1, 11).
-ast_node[code](nf85e80d35f2c16b6_f5pi2e9ud2, variable_declarator, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_f5pi2e9ud2, 11).
-ast_node[code](nf85e80d35f2c16b6_vevc6fjr071, identifier, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_vevc6fjr071, 11).
-ast_attr[code](nf85e80d35f2c16b6_vevc6fjr071, name, "sum").
-ast_child[code](nf85e80d35f2c16b6_f5pi2e9ud2, id, 0, nf85e80d35f2c16b6_vevc6fjr071).
-ast_node[code](nf85e80d35f2c16b6_oh14j3bpvu1, binary_expression, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_oh14j3bpvu1, 11).
-ast_node[code](nf85e80d35f2c16b6_4hokk4g2n33, numeric_literal, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_4hokk4g2n33, 11).
-ast_attr[code](nf85e80d35f2c16b6_4hokk4g2n33, value, 1).
-ast_child[code](nf85e80d35f2c16b6_oh14j3bpvu1, left, 0, nf85e80d35f2c16b6_4hokk4g2n33).
-ast_attr[code](nf85e80d35f2c16b6_oh14j3bpvu1, operator, "+").
-ast_node[code](nf85e80d35f2c16b6_86n0mh6e671, numeric_literal, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_86n0mh6e671, 11).
-ast_attr[code](nf85e80d35f2c16b6_86n0mh6e671, value, 2).
-ast_child[code](nf85e80d35f2c16b6_oh14j3bpvu1, right, 0, nf85e80d35f2c16b6_86n0mh6e671).
-ast_child[code](nf85e80d35f2c16b6_f5pi2e9ud2, init, 0, nf85e80d35f2c16b6_oh14j3bpvu1).
-ast_child[code](nf85e80d35f2c16b6_lobgrji8is1, declarations, 0, nf85e80d35f2c16b6_f5pi2e9ud2).
-ast_attr[code](nf85e80d35f2c16b6_lobgrji8is1, kind, "const").
-ast_child[code](nf85e80d35f2c16b6_mqp36glr173, declaration, 0, nf85e80d35f2c16b6_lobgrji8is1).
-ast_child[code](nf85e80d35f2c16b6_12undirbnh3, body, 8, nf85e80d35f2c16b6_mqp36glr173).
-ast_node[code](nf85e80d35f2c16b6_vk9tuk36bb4, export_named_declaration, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_vk9tuk36bb4, 12).
-ast_attr[code](nf85e80d35f2c16b6_vk9tuk36bb4, export_kind, "value").
-ast_node[code](nf85e80d35f2c16b6_58ovbnqnbd3, variable_declaration, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_58ovbnqnbd3, 12).
-ast_node[code](nf85e80d35f2c16b6_ui9vua7c0a6, variable_declarator, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_ui9vua7c0a6, 12).
-ast_node[code](nf85e80d35f2c16b6_9ljtvnohgk4, identifier, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_9ljtvnohgk4, 12).
-ast_attr[code](nf85e80d35f2c16b6_9ljtvnohgk4, name, "mixed").
-ast_child[code](nf85e80d35f2c16b6_ui9vua7c0a6, id, 0, nf85e80d35f2c16b6_9ljtvnohgk4).
-ast_node[code](nf85e80d35f2c16b6_bucd9l0djs7, binary_expression, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_bucd9l0djs7, 12).
-ast_node[code](nf85e80d35f2c16b6_j6v6gnal8c7, identifier, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_j6v6gnal8c7, 12).
-ast_attr[code](nf85e80d35f2c16b6_j6v6gnal8c7, name, "n").
-ast_child[code](nf85e80d35f2c16b6_bucd9l0djs7, left, 0, nf85e80d35f2c16b6_j6v6gnal8c7).
-ast_attr[code](nf85e80d35f2c16b6_bucd9l0djs7, operator, "+").
-ast_node[code](nf85e80d35f2c16b6_cenmmsdq8u3, string_literal, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_cenmmsdq8u3, 12).
-ast_attr[code](nf85e80d35f2c16b6_cenmmsdq8u3, value, "x").
-ast_child[code](nf85e80d35f2c16b6_bucd9l0djs7, right, 0, nf85e80d35f2c16b6_cenmmsdq8u3).
-ast_child[code](nf85e80d35f2c16b6_ui9vua7c0a6, init, 0, nf85e80d35f2c16b6_bucd9l0djs7).
-ast_child[code](nf85e80d35f2c16b6_58ovbnqnbd3, declarations, 0, nf85e80d35f2c16b6_ui9vua7c0a6).
-ast_attr[code](nf85e80d35f2c16b6_58ovbnqnbd3, kind, "const").
-ast_child[code](nf85e80d35f2c16b6_vk9tuk36bb4, declaration, 0, nf85e80d35f2c16b6_58ovbnqnbd3).
-ast_child[code](nf85e80d35f2c16b6_12undirbnh3, body, 9, nf85e80d35f2c16b6_vk9tuk36bb4).
+ast_node[code](nf85e80d35f2c16b6_a5r5qom0cl, export_named_declaration, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_a5r5qom0cl, 9).
+ast_attr[code](nf85e80d35f2c16b6_a5r5qom0cl, export_kind, "value").
+ast_node[code](nf85e80d35f2c16b6_pv517o72322, variable_declaration, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_pv517o72322, 9).
+ast_node[code](nf85e80d35f2c16b6_lpv5glg4ca2, variable_declarator, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_lpv5glg4ca2, 9).
+ast_node[code](nf85e80d35f2c16b6_k5va5fqoqd3, identifier, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_k5va5fqoqd3, 9).
+ast_attr[code](nf85e80d35f2c16b6_k5va5fqoqd3, name, "template").
+ast_child[code](nf85e80d35f2c16b6_lpv5glg4ca2, id, 0, nf85e80d35f2c16b6_k5va5fqoqd3).
+ast_node[code](nf85e80d35f2c16b6_46it94fh0h2, template_literal, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_46it94fh0h2, 9).
+ast_node[code](nf85e80d35f2c16b6_fcueald1ta, identifier, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_fcueald1ta, 9).
+ast_attr[code](nf85e80d35f2c16b6_fcueald1ta, name, "root").
+ast_child[code](nf85e80d35f2c16b6_46it94fh0h2, expressions, 0, nf85e80d35f2c16b6_fcueald1ta).
+ast_node[code](nf85e80d35f2c16b6_op6u2gn8cm4, template_element, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_op6u2gn8cm4, 9).
+ast_attr[code](nf85e80d35f2c16b6_op6u2gn8cm4, value_raw, "").
+ast_attr[code](nf85e80d35f2c16b6_op6u2gn8cm4, value_cooked, "").
+ast_attr[code](nf85e80d35f2c16b6_op6u2gn8cm4, tail, false).
+ast_child[code](nf85e80d35f2c16b6_46it94fh0h2, quasis, 0, nf85e80d35f2c16b6_op6u2gn8cm4).
+ast_node[code](nf85e80d35f2c16b6_d4t7fgcgbc6, template_element, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_d4t7fgcgbc6, 9).
+ast_attr[code](nf85e80d35f2c16b6_d4t7fgcgbc6, value_raw, "/a").
+ast_attr[code](nf85e80d35f2c16b6_d4t7fgcgbc6, value_cooked, "/a").
+ast_attr[code](nf85e80d35f2c16b6_d4t7fgcgbc6, tail, true).
+ast_child[code](nf85e80d35f2c16b6_46it94fh0h2, quasis, 1, nf85e80d35f2c16b6_d4t7fgcgbc6).
+ast_child[code](nf85e80d35f2c16b6_lpv5glg4ca2, init, 0, nf85e80d35f2c16b6_46it94fh0h2).
+ast_child[code](nf85e80d35f2c16b6_pv517o72322, declarations, 0, nf85e80d35f2c16b6_lpv5glg4ca2).
+ast_attr[code](nf85e80d35f2c16b6_pv517o72322, kind, "const").
+ast_child[code](nf85e80d35f2c16b6_a5r5qom0cl, declaration, 0, nf85e80d35f2c16b6_pv517o72322).
+ast_child[code](nf85e80d35f2c16b6_12undirbnh3, body, 6, nf85e80d35f2c16b6_a5r5qom0cl).
+ast_node[code](nf85e80d35f2c16b6_2mb5po3kn53, export_named_declaration, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_2mb5po3kn53, 10).
+ast_attr[code](nf85e80d35f2c16b6_2mb5po3kn53, export_kind, "value").
+ast_node[code](nf85e80d35f2c16b6_1jg0kv1pu03, variable_declaration, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_1jg0kv1pu03, 10).
+ast_node[code](nf85e80d35f2c16b6_nisds06vjr4, variable_declarator, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_nisds06vjr4, 10).
+ast_node[code](nf85e80d35f2c16b6_vv2rj5b3pu2, identifier, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_vv2rj5b3pu2, 10).
+ast_attr[code](nf85e80d35f2c16b6_vv2rj5b3pu2, name, "plus").
+ast_child[code](nf85e80d35f2c16b6_nisds06vjr4, id, 0, nf85e80d35f2c16b6_vv2rj5b3pu2).
+ast_node[code](nf85e80d35f2c16b6_tjb8rl253j1, binary_expression, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_tjb8rl253j1, 10).
+ast_node[code](nf85e80d35f2c16b6_tkvc3no6ph5, identifier, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_tkvc3no6ph5, 10).
+ast_attr[code](nf85e80d35f2c16b6_tkvc3no6ph5, name, "root").
+ast_child[code](nf85e80d35f2c16b6_tjb8rl253j1, left, 0, nf85e80d35f2c16b6_tkvc3no6ph5).
+ast_attr[code](nf85e80d35f2c16b6_tjb8rl253j1, operator, "+").
+ast_node[code](nf85e80d35f2c16b6_genmr5kuq51, string_literal, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_genmr5kuq51, 10).
+ast_attr[code](nf85e80d35f2c16b6_genmr5kuq51, value, "/b").
+ast_child[code](nf85e80d35f2c16b6_tjb8rl253j1, right, 0, nf85e80d35f2c16b6_genmr5kuq51).
+ast_child[code](nf85e80d35f2c16b6_nisds06vjr4, init, 0, nf85e80d35f2c16b6_tjb8rl253j1).
+ast_child[code](nf85e80d35f2c16b6_1jg0kv1pu03, declarations, 0, nf85e80d35f2c16b6_nisds06vjr4).
+ast_attr[code](nf85e80d35f2c16b6_1jg0kv1pu03, kind, "const").
+ast_child[code](nf85e80d35f2c16b6_2mb5po3kn53, declaration, 0, nf85e80d35f2c16b6_1jg0kv1pu03).
+ast_child[code](nf85e80d35f2c16b6_12undirbnh3, body, 7, nf85e80d35f2c16b6_2mb5po3kn53).
+ast_node[code](nf85e80d35f2c16b6_l7toeele635, export_named_declaration, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_l7toeele635, 11).
+ast_attr[code](nf85e80d35f2c16b6_l7toeele635, export_kind, "value").
+ast_node[code](nf85e80d35f2c16b6_olaasds9mn5, variable_declaration, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_olaasds9mn5, 11).
+ast_node[code](nf85e80d35f2c16b6_9qiei8h44s6, variable_declarator, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_9qiei8h44s6, 11).
+ast_node[code](nf85e80d35f2c16b6_4c3afcqdt5, identifier, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_4c3afcqdt5, 11).
+ast_attr[code](nf85e80d35f2c16b6_4c3afcqdt5, name, "sum").
+ast_child[code](nf85e80d35f2c16b6_9qiei8h44s6, id, 0, nf85e80d35f2c16b6_4c3afcqdt5).
+ast_node[code](nf85e80d35f2c16b6_7nisrj6v7g4, binary_expression, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_7nisrj6v7g4, 11).
+ast_node[code](nf85e80d35f2c16b6_vhhvve7vil7, numeric_literal, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_vhhvve7vil7, 11).
+ast_attr[code](nf85e80d35f2c16b6_vhhvve7vil7, value, 1).
+ast_child[code](nf85e80d35f2c16b6_7nisrj6v7g4, left, 0, nf85e80d35f2c16b6_vhhvve7vil7).
+ast_attr[code](nf85e80d35f2c16b6_7nisrj6v7g4, operator, "+").
+ast_node[code](nf85e80d35f2c16b6_dapoed42q3, numeric_literal, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_dapoed42q3, 11).
+ast_attr[code](nf85e80d35f2c16b6_dapoed42q3, value, 2).
+ast_child[code](nf85e80d35f2c16b6_7nisrj6v7g4, right, 0, nf85e80d35f2c16b6_dapoed42q3).
+ast_child[code](nf85e80d35f2c16b6_9qiei8h44s6, init, 0, nf85e80d35f2c16b6_7nisrj6v7g4).
+ast_child[code](nf85e80d35f2c16b6_olaasds9mn5, declarations, 0, nf85e80d35f2c16b6_9qiei8h44s6).
+ast_attr[code](nf85e80d35f2c16b6_olaasds9mn5, kind, "const").
+ast_child[code](nf85e80d35f2c16b6_l7toeele635, declaration, 0, nf85e80d35f2c16b6_olaasds9mn5).
+ast_child[code](nf85e80d35f2c16b6_12undirbnh3, body, 8, nf85e80d35f2c16b6_l7toeele635).
+ast_node[code](nf85e80d35f2c16b6_lj693dqo4j6, export_named_declaration, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_lj693dqo4j6, 12).
+ast_attr[code](nf85e80d35f2c16b6_lj693dqo4j6, export_kind, "value").
+ast_node[code](nf85e80d35f2c16b6_ssd8dn4kq51, variable_declaration, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_ssd8dn4kq51, 12).
+ast_node[code](nf85e80d35f2c16b6_s0eu85bm0t6, variable_declarator, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_s0eu85bm0t6, 12).
+ast_node[code](nf85e80d35f2c16b6_qqln0p8gtm1, identifier, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_qqln0p8gtm1, 12).
+ast_attr[code](nf85e80d35f2c16b6_qqln0p8gtm1, name, "mixed").
+ast_child[code](nf85e80d35f2c16b6_s0eu85bm0t6, id, 0, nf85e80d35f2c16b6_qqln0p8gtm1).
+ast_node[code](nf85e80d35f2c16b6_9qcniejtn94, binary_expression, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_9qcniejtn94, 12).
+ast_node[code](nf85e80d35f2c16b6_uk8s4d28ba3, identifier, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_uk8s4d28ba3, 12).
+ast_attr[code](nf85e80d35f2c16b6_uk8s4d28ba3, name, "n").
+ast_child[code](nf85e80d35f2c16b6_9qcniejtn94, left, 0, nf85e80d35f2c16b6_uk8s4d28ba3).
+ast_attr[code](nf85e80d35f2c16b6_9qcniejtn94, operator, "+").
+ast_node[code](nf85e80d35f2c16b6_hst7d8229u7, string_literal, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_hst7d8229u7, 12).
+ast_attr[code](nf85e80d35f2c16b6_hst7d8229u7, value, "x").
+ast_child[code](nf85e80d35f2c16b6_9qcniejtn94, right, 0, nf85e80d35f2c16b6_hst7d8229u7).
+ast_child[code](nf85e80d35f2c16b6_s0eu85bm0t6, init, 0, nf85e80d35f2c16b6_9qcniejtn94).
+ast_child[code](nf85e80d35f2c16b6_ssd8dn4kq51, declarations, 0, nf85e80d35f2c16b6_s0eu85bm0t6).
+ast_attr[code](nf85e80d35f2c16b6_ssd8dn4kq51, kind, "const").
+ast_child[code](nf85e80d35f2c16b6_lj693dqo4j6, declaration, 0, nf85e80d35f2c16b6_ssd8dn4kq51).
+ast_child[code](nf85e80d35f2c16b6_12undirbnh3, body, 9, nf85e80d35f2c16b6_lj693dqo4j6).
 ast_node[code](nf85e80d35f2c16b6_6nsrfcpjbq6, variable_declaration, "src/entry.ts").
 ast_line[code](nf85e80d35f2c16b6_6nsrfcpjbq6, 13).
 ast_node[code](nf85e80d35f2c16b6_7he92m4rc01, variable_declarator, "src/entry.ts").
@@ -265,398 +265,398 @@ ast_child[code](nf85e80d35f2c16b6_7he92m4rc01, init, 0, nf85e80d35f2c16b6_qj5i0h
 ast_child[code](nf85e80d35f2c16b6_6nsrfcpjbq6, declarations, 0, nf85e80d35f2c16b6_7he92m4rc01).
 ast_attr[code](nf85e80d35f2c16b6_6nsrfcpjbq6, kind, "let").
 ast_child[code](nf85e80d35f2c16b6_12undirbnh3, body, 10, nf85e80d35f2c16b6_6nsrfcpjbq6).
-ast_node[code](nf85e80d35f2c16b6_jfdrj4o8ei1, expression_statement, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_jfdrj4o8ei1, 14).
-ast_node[code](nf85e80d35f2c16b6_n9m1ro3unk1, assignment_expression, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_n9m1ro3unk1, 14).
-ast_attr[code](nf85e80d35f2c16b6_n9m1ro3unk1, operator, "+=").
-ast_node[code](nf85e80d35f2c16b6_c83pte04d02, identifier, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_c83pte04d02, 14).
-ast_attr[code](nf85e80d35f2c16b6_c83pte04d02, name, "grown").
-ast_child[code](nf85e80d35f2c16b6_n9m1ro3unk1, left, 0, nf85e80d35f2c16b6_c83pte04d02).
-ast_node[code](nf85e80d35f2c16b6_7jnteriajv5, string_literal, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_7jnteriajv5, 14).
-ast_attr[code](nf85e80d35f2c16b6_7jnteriajv5, value, "/c").
-ast_child[code](nf85e80d35f2c16b6_n9m1ro3unk1, right, 0, nf85e80d35f2c16b6_7jnteriajv5).
-ast_child[code](nf85e80d35f2c16b6_jfdrj4o8ei1, expression, 0, nf85e80d35f2c16b6_n9m1ro3unk1).
-ast_child[code](nf85e80d35f2c16b6_12undirbnh3, body, 11, nf85e80d35f2c16b6_jfdrj4o8ei1).
-ast_node[code](nf85e80d35f2c16b6_kl99j6rpdc3, export_named_declaration, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_kl99j6rpdc3, 15).
-ast_attr[code](nf85e80d35f2c16b6_kl99j6rpdc3, export_kind, "value").
-ast_node[code](nf85e80d35f2c16b6_vbd0rko94f3, variable_declaration, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_vbd0rko94f3, 15).
-ast_node[code](nf85e80d35f2c16b6_gfrqhh53uh3, variable_declarator, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_gfrqhh53uh3, 15).
-ast_node[code](nf85e80d35f2c16b6_6351r7hqtb7, identifier, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_6351r7hqtb7, 15).
-ast_attr[code](nf85e80d35f2c16b6_6351r7hqtb7, name, "joined").
-ast_child[code](nf85e80d35f2c16b6_gfrqhh53uh3, id, 0, nf85e80d35f2c16b6_6351r7hqtb7).
-ast_node[code](nf85e80d35f2c16b6_qg9ufnpqru3, call_expression, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_qg9ufnpqru3, 15).
-ast_node[code](nf85e80d35f2c16b6_9m5d1madfb4, member_expression, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_9m5d1madfb4, 15).
-ast_node[code](nf85e80d35f2c16b6_j7jpftp5ce5, identifier, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_j7jpftp5ce5, 15).
-ast_attr[code](nf85e80d35f2c16b6_j7jpftp5ce5, name, "path").
-ast_child[code](nf85e80d35f2c16b6_9m5d1madfb4, object, 0, nf85e80d35f2c16b6_j7jpftp5ce5).
-ast_attr[code](nf85e80d35f2c16b6_9m5d1madfb4, computed, false).
-ast_node[code](nf85e80d35f2c16b6_3p790r9dro7, identifier, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_3p790r9dro7, 15).
-ast_attr[code](nf85e80d35f2c16b6_3p790r9dro7, name, "join").
-ast_child[code](nf85e80d35f2c16b6_9m5d1madfb4, property, 0, nf85e80d35f2c16b6_3p790r9dro7).
-ast_child[code](nf85e80d35f2c16b6_qg9ufnpqru3, callee, 0, nf85e80d35f2c16b6_9m5d1madfb4).
-ast_node[code](nf85e80d35f2c16b6_ocbmotchm3, identifier, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_ocbmotchm3, 15).
-ast_attr[code](nf85e80d35f2c16b6_ocbmotchm3, name, "root").
-ast_child[code](nf85e80d35f2c16b6_qg9ufnpqru3, arguments, 0, nf85e80d35f2c16b6_ocbmotchm3).
-ast_node[code](nf85e80d35f2c16b6_tk79tk1dg21, string_literal, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_tk79tk1dg21, 15).
-ast_attr[code](nf85e80d35f2c16b6_tk79tk1dg21, value, "d").
-ast_child[code](nf85e80d35f2c16b6_qg9ufnpqru3, arguments, 1, nf85e80d35f2c16b6_tk79tk1dg21).
-ast_node[code](nf85e80d35f2c16b6_rhqnptp6bs4, string_literal, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_rhqnptp6bs4, 15).
-ast_attr[code](nf85e80d35f2c16b6_rhqnptp6bs4, value, "e").
-ast_child[code](nf85e80d35f2c16b6_qg9ufnpqru3, arguments, 2, nf85e80d35f2c16b6_rhqnptp6bs4).
-ast_child[code](nf85e80d35f2c16b6_gfrqhh53uh3, init, 0, nf85e80d35f2c16b6_qg9ufnpqru3).
-ast_child[code](nf85e80d35f2c16b6_vbd0rko94f3, declarations, 0, nf85e80d35f2c16b6_gfrqhh53uh3).
-ast_attr[code](nf85e80d35f2c16b6_vbd0rko94f3, kind, "const").
-ast_child[code](nf85e80d35f2c16b6_kl99j6rpdc3, declaration, 0, nf85e80d35f2c16b6_vbd0rko94f3).
-ast_child[code](nf85e80d35f2c16b6_12undirbnh3, body, 12, nf85e80d35f2c16b6_kl99j6rpdc3).
-ast_node[code](nf85e80d35f2c16b6_17b5tih2ka1, export_named_declaration, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_17b5tih2ka1, 16).
-ast_attr[code](nf85e80d35f2c16b6_17b5tih2ka1, export_kind, "value").
-ast_node[code](nf85e80d35f2c16b6_cbvco512413, variable_declaration, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_cbvco512413, 16).
-ast_node[code](nf85e80d35f2c16b6_5vb4aj3j621, variable_declarator, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_5vb4aj3j621, 16).
-ast_node[code](nf85e80d35f2c16b6_k0pvffm4vh3, identifier, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_k0pvffm4vh3, 16).
-ast_attr[code](nf85e80d35f2c16b6_k0pvffm4vh3, name, "resolved").
-ast_child[code](nf85e80d35f2c16b6_5vb4aj3j621, id, 0, nf85e80d35f2c16b6_k0pvffm4vh3).
-ast_node[code](nf85e80d35f2c16b6_4gkd6l5rd06, call_expression, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_4gkd6l5rd06, 16).
-ast_node[code](nf85e80d35f2c16b6_r8sh9hblqm7, member_expression, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_r8sh9hblqm7, 16).
-ast_node[code](nf85e80d35f2c16b6_crq8pk5hiv, identifier, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_crq8pk5hiv, 16).
-ast_attr[code](nf85e80d35f2c16b6_crq8pk5hiv, name, "path").
-ast_child[code](nf85e80d35f2c16b6_r8sh9hblqm7, object, 0, nf85e80d35f2c16b6_crq8pk5hiv).
-ast_attr[code](nf85e80d35f2c16b6_r8sh9hblqm7, computed, false).
-ast_node[code](nf85e80d35f2c16b6_cl0cdig2e3, identifier, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_cl0cdig2e3, 16).
-ast_attr[code](nf85e80d35f2c16b6_cl0cdig2e3, name, "resolve").
-ast_child[code](nf85e80d35f2c16b6_r8sh9hblqm7, property, 0, nf85e80d35f2c16b6_cl0cdig2e3).
-ast_child[code](nf85e80d35f2c16b6_4gkd6l5rd06, callee, 0, nf85e80d35f2c16b6_r8sh9hblqm7).
-ast_node[code](nf85e80d35f2c16b6_2anc07onli1, identifier, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_2anc07onli1, 16).
-ast_attr[code](nf85e80d35f2c16b6_2anc07onli1, name, "root").
-ast_child[code](nf85e80d35f2c16b6_4gkd6l5rd06, arguments, 0, nf85e80d35f2c16b6_2anc07onli1).
-ast_node[code](nf85e80d35f2c16b6_0n0j161n5a4, string_literal, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_0n0j161n5a4, 16).
-ast_attr[code](nf85e80d35f2c16b6_0n0j161n5a4, value, "f").
-ast_child[code](nf85e80d35f2c16b6_4gkd6l5rd06, arguments, 1, nf85e80d35f2c16b6_0n0j161n5a4).
-ast_child[code](nf85e80d35f2c16b6_5vb4aj3j621, init, 0, nf85e80d35f2c16b6_4gkd6l5rd06).
-ast_child[code](nf85e80d35f2c16b6_cbvco512413, declarations, 0, nf85e80d35f2c16b6_5vb4aj3j621).
-ast_attr[code](nf85e80d35f2c16b6_cbvco512413, kind, "const").
-ast_child[code](nf85e80d35f2c16b6_17b5tih2ka1, declaration, 0, nf85e80d35f2c16b6_cbvco512413).
-ast_child[code](nf85e80d35f2c16b6_12undirbnh3, body, 13, nf85e80d35f2c16b6_17b5tih2ka1).
-ast_node[code](nf85e80d35f2c16b6_ln9bsutcd17, export_named_declaration, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_ln9bsutcd17, 17).
-ast_attr[code](nf85e80d35f2c16b6_ln9bsutcd17, export_kind, "value").
-ast_node[code](nf85e80d35f2c16b6_es5b7gmhpe1, variable_declaration, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_es5b7gmhpe1, 17).
-ast_node[code](nf85e80d35f2c16b6_obal27tber4, variable_declarator, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_obal27tber4, 17).
-ast_node[code](nf85e80d35f2c16b6_k7ff29fld91, identifier, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_k7ff29fld91, 17).
-ast_attr[code](nf85e80d35f2c16b6_k7ff29fld91, name, "normal").
-ast_child[code](nf85e80d35f2c16b6_obal27tber4, id, 0, nf85e80d35f2c16b6_k7ff29fld91).
-ast_node[code](nf85e80d35f2c16b6_l7e932u7ct4, call_expression, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_l7e932u7ct4, 17).
-ast_node[code](nf85e80d35f2c16b6_fj12tvnhn91, member_expression, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_fj12tvnhn91, 17).
-ast_node[code](nf85e80d35f2c16b6_utpfu8op0l4, identifier, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_utpfu8op0l4, 17).
-ast_attr[code](nf85e80d35f2c16b6_utpfu8op0l4, name, "path").
-ast_child[code](nf85e80d35f2c16b6_fj12tvnhn91, object, 0, nf85e80d35f2c16b6_utpfu8op0l4).
-ast_attr[code](nf85e80d35f2c16b6_fj12tvnhn91, computed, false).
-ast_node[code](nf85e80d35f2c16b6_5d3spgir3j, identifier, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_5d3spgir3j, 17).
-ast_attr[code](nf85e80d35f2c16b6_5d3spgir3j, name, "normalize").
-ast_child[code](nf85e80d35f2c16b6_fj12tvnhn91, property, 0, nf85e80d35f2c16b6_5d3spgir3j).
-ast_child[code](nf85e80d35f2c16b6_l7e932u7ct4, callee, 0, nf85e80d35f2c16b6_fj12tvnhn91).
-ast_node[code](nf85e80d35f2c16b6_h36b338cs93, string_literal, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_h36b338cs93, 17).
-ast_attr[code](nf85e80d35f2c16b6_h36b338cs93, value, "/a/../b").
-ast_child[code](nf85e80d35f2c16b6_l7e932u7ct4, arguments, 0, nf85e80d35f2c16b6_h36b338cs93).
-ast_child[code](nf85e80d35f2c16b6_obal27tber4, init, 0, nf85e80d35f2c16b6_l7e932u7ct4).
-ast_child[code](nf85e80d35f2c16b6_es5b7gmhpe1, declarations, 0, nf85e80d35f2c16b6_obal27tber4).
-ast_attr[code](nf85e80d35f2c16b6_es5b7gmhpe1, kind, "const").
-ast_child[code](nf85e80d35f2c16b6_ln9bsutcd17, declaration, 0, nf85e80d35f2c16b6_es5b7gmhpe1).
-ast_child[code](nf85e80d35f2c16b6_12undirbnh3, body, 14, nf85e80d35f2c16b6_ln9bsutcd17).
-ast_node[code](nf85e80d35f2c16b6_68molmpb465, export_named_declaration, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_68molmpb465, 18).
-ast_attr[code](nf85e80d35f2c16b6_68molmpb465, export_kind, "value").
-ast_node[code](nf85e80d35f2c16b6_c1bdeqf6qo2, variable_declaration, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_c1bdeqf6qo2, 18).
-ast_node[code](nf85e80d35f2c16b6_in405d6np23, variable_declarator, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_in405d6np23, 18).
-ast_node[code](nf85e80d35f2c16b6_e5faga5f674, identifier, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_e5faga5f674, 18).
-ast_attr[code](nf85e80d35f2c16b6_e5faga5f674, name, "cut").
-ast_child[code](nf85e80d35f2c16b6_in405d6np23, id, 0, nf85e80d35f2c16b6_e5faga5f674).
-ast_node[code](nf85e80d35f2c16b6_5lj74oo5i76, call_expression, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_5lj74oo5i76, 18).
-ast_node[code](nf85e80d35f2c16b6_gam7cam3er, member_expression, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_gam7cam3er, 18).
-ast_node[code](nf85e80d35f2c16b6_jne0c5fpif4, identifier, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_jne0c5fpif4, 18).
-ast_attr[code](nf85e80d35f2c16b6_jne0c5fpif4, name, "path").
-ast_child[code](nf85e80d35f2c16b6_gam7cam3er, object, 0, nf85e80d35f2c16b6_jne0c5fpif4).
-ast_attr[code](nf85e80d35f2c16b6_gam7cam3er, computed, false).
-ast_node[code](nf85e80d35f2c16b6_cf4neiqe0t2, identifier, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_cf4neiqe0t2, 18).
-ast_attr[code](nf85e80d35f2c16b6_cf4neiqe0t2, name, "dirname").
-ast_child[code](nf85e80d35f2c16b6_gam7cam3er, property, 0, nf85e80d35f2c16b6_cf4neiqe0t2).
-ast_child[code](nf85e80d35f2c16b6_5lj74oo5i76, callee, 0, nf85e80d35f2c16b6_gam7cam3er).
-ast_node[code](nf85e80d35f2c16b6_et5pniajeo7, string_literal, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_et5pniajeo7, 18).
-ast_attr[code](nf85e80d35f2c16b6_et5pniajeo7, value, "/x/y/z").
-ast_child[code](nf85e80d35f2c16b6_5lj74oo5i76, arguments, 0, nf85e80d35f2c16b6_et5pniajeo7).
-ast_child[code](nf85e80d35f2c16b6_in405d6np23, init, 0, nf85e80d35f2c16b6_5lj74oo5i76).
-ast_child[code](nf85e80d35f2c16b6_c1bdeqf6qo2, declarations, 0, nf85e80d35f2c16b6_in405d6np23).
-ast_attr[code](nf85e80d35f2c16b6_c1bdeqf6qo2, kind, "const").
-ast_child[code](nf85e80d35f2c16b6_68molmpb465, declaration, 0, nf85e80d35f2c16b6_c1bdeqf6qo2).
-ast_child[code](nf85e80d35f2c16b6_12undirbnh3, body, 15, nf85e80d35f2c16b6_68molmpb465).
-ast_node[code](nf85e80d35f2c16b6_vi9ss74shm2, export_named_declaration, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_vi9ss74shm2, 19).
-ast_attr[code](nf85e80d35f2c16b6_vi9ss74shm2, export_kind, "value").
-ast_node[code](nf85e80d35f2c16b6_g4pf4d4hij6, variable_declaration, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_g4pf4d4hij6, 19).
-ast_node[code](nf85e80d35f2c16b6_5t6d4eipb4, variable_declarator, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_5t6d4eipb4, 19).
-ast_node[code](nf85e80d35f2c16b6_m1olcr9a896, identifier, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_m1olcr9a896, 19).
-ast_attr[code](nf85e80d35f2c16b6_m1olcr9a896, name, "base").
-ast_child[code](nf85e80d35f2c16b6_5t6d4eipb4, id, 0, nf85e80d35f2c16b6_m1olcr9a896).
-ast_node[code](nf85e80d35f2c16b6_kfoinq4cca5, call_expression, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_kfoinq4cca5, 19).
-ast_node[code](nf85e80d35f2c16b6_jr49l8e4ua7, member_expression, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_jr49l8e4ua7, 19).
-ast_node[code](nf85e80d35f2c16b6_khb0frv3731, identifier, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_khb0frv3731, 19).
-ast_attr[code](nf85e80d35f2c16b6_khb0frv3731, name, "path").
-ast_child[code](nf85e80d35f2c16b6_jr49l8e4ua7, object, 0, nf85e80d35f2c16b6_khb0frv3731).
-ast_attr[code](nf85e80d35f2c16b6_jr49l8e4ua7, computed, false).
-ast_node[code](nf85e80d35f2c16b6_u7hmoovcdj2, identifier, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_u7hmoovcdj2, 19).
-ast_attr[code](nf85e80d35f2c16b6_u7hmoovcdj2, name, "basename").
-ast_child[code](nf85e80d35f2c16b6_jr49l8e4ua7, property, 0, nf85e80d35f2c16b6_u7hmoovcdj2).
-ast_child[code](nf85e80d35f2c16b6_kfoinq4cca5, callee, 0, nf85e80d35f2c16b6_jr49l8e4ua7).
-ast_node[code](nf85e80d35f2c16b6_kbff1fb21i7, string_literal, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_kbff1fb21i7, 19).
-ast_attr[code](nf85e80d35f2c16b6_kbff1fb21i7, value, "/x/y/z.ts").
-ast_child[code](nf85e80d35f2c16b6_kfoinq4cca5, arguments, 0, nf85e80d35f2c16b6_kbff1fb21i7).
-ast_node[code](nf85e80d35f2c16b6_ntuim67hgu3, string_literal, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_ntuim67hgu3, 19).
-ast_attr[code](nf85e80d35f2c16b6_ntuim67hgu3, value, ".ts").
-ast_child[code](nf85e80d35f2c16b6_kfoinq4cca5, arguments, 1, nf85e80d35f2c16b6_ntuim67hgu3).
-ast_child[code](nf85e80d35f2c16b6_5t6d4eipb4, init, 0, nf85e80d35f2c16b6_kfoinq4cca5).
-ast_child[code](nf85e80d35f2c16b6_g4pf4d4hij6, declarations, 0, nf85e80d35f2c16b6_5t6d4eipb4).
-ast_attr[code](nf85e80d35f2c16b6_g4pf4d4hij6, kind, "const").
-ast_child[code](nf85e80d35f2c16b6_vi9ss74shm2, declaration, 0, nf85e80d35f2c16b6_g4pf4d4hij6).
-ast_child[code](nf85e80d35f2c16b6_12undirbnh3, body, 16, nf85e80d35f2c16b6_vi9ss74shm2).
-ast_node[code](nf85e80d35f2c16b6_0v9vreltql4, export_named_declaration, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_0v9vreltql4, 20).
-ast_attr[code](nf85e80d35f2c16b6_0v9vreltql4, export_kind, "value").
-ast_node[code](nf85e80d35f2c16b6_5dkmo92aoa3, variable_declaration, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_5dkmo92aoa3, 20).
-ast_node[code](nf85e80d35f2c16b6_7jbnd71lkq1, variable_declarator, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_7jbnd71lkq1, 20).
-ast_node[code](nf85e80d35f2c16b6_i7tvdic0gj, identifier, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_i7tvdic0gj, 20).
-ast_attr[code](nf85e80d35f2c16b6_i7tvdic0gj, name, "nested").
-ast_child[code](nf85e80d35f2c16b6_7jbnd71lkq1, id, 0, nf85e80d35f2c16b6_i7tvdic0gj).
-ast_node[code](nf85e80d35f2c16b6_v4cl6m6pcq3, call_expression, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_v4cl6m6pcq3, 20).
-ast_node[code](nf85e80d35f2c16b6_e5g9quqgms7, identifier, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_e5g9quqgms7, 20).
-ast_attr[code](nf85e80d35f2c16b6_e5g9quqgms7, name, "dir").
-ast_child[code](nf85e80d35f2c16b6_v4cl6m6pcq3, callee, 0, nf85e80d35f2c16b6_e5g9quqgms7).
-ast_node[code](nf85e80d35f2c16b6_fr2fadbiod5, call_expression, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_fr2fadbiod5, 20).
-ast_node[code](nf85e80d35f2c16b6_7mfop2gdeu7, member_expression, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_7mfop2gdeu7, 20).
-ast_node[code](nf85e80d35f2c16b6_s321v1jk454, identifier, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_s321v1jk454, 20).
-ast_attr[code](nf85e80d35f2c16b6_s321v1jk454, name, "path").
-ast_child[code](nf85e80d35f2c16b6_7mfop2gdeu7, object, 0, nf85e80d35f2c16b6_s321v1jk454).
-ast_attr[code](nf85e80d35f2c16b6_7mfop2gdeu7, computed, false).
-ast_node[code](nf85e80d35f2c16b6_1ujahr56vd5, identifier, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_1ujahr56vd5, 20).
-ast_attr[code](nf85e80d35f2c16b6_1ujahr56vd5, name, "join").
-ast_child[code](nf85e80d35f2c16b6_7mfop2gdeu7, property, 0, nf85e80d35f2c16b6_1ujahr56vd5).
-ast_child[code](nf85e80d35f2c16b6_fr2fadbiod5, callee, 0, nf85e80d35f2c16b6_7mfop2gdeu7).
-ast_node[code](nf85e80d35f2c16b6_iru52lesep2, identifier, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_iru52lesep2, 20).
-ast_attr[code](nf85e80d35f2c16b6_iru52lesep2, name, "root").
-ast_child[code](nf85e80d35f2c16b6_fr2fadbiod5, arguments, 0, nf85e80d35f2c16b6_iru52lesep2).
-ast_node[code](nf85e80d35f2c16b6_t62p4ufl111, string_literal, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_t62p4ufl111, 20).
-ast_attr[code](nf85e80d35f2c16b6_t62p4ufl111, value, "g").
-ast_child[code](nf85e80d35f2c16b6_fr2fadbiod5, arguments, 1, nf85e80d35f2c16b6_t62p4ufl111).
-ast_child[code](nf85e80d35f2c16b6_v4cl6m6pcq3, arguments, 0, nf85e80d35f2c16b6_fr2fadbiod5).
-ast_child[code](nf85e80d35f2c16b6_7jbnd71lkq1, init, 0, nf85e80d35f2c16b6_v4cl6m6pcq3).
-ast_child[code](nf85e80d35f2c16b6_5dkmo92aoa3, declarations, 0, nf85e80d35f2c16b6_7jbnd71lkq1).
-ast_attr[code](nf85e80d35f2c16b6_5dkmo92aoa3, kind, "const").
-ast_child[code](nf85e80d35f2c16b6_0v9vreltql4, declaration, 0, nf85e80d35f2c16b6_5dkmo92aoa3).
-ast_child[code](nf85e80d35f2c16b6_12undirbnh3, body, 17, nf85e80d35f2c16b6_0v9vreltql4).
-ast_node[code](nf85e80d35f2c16b6_gl8lspe26v1, export_named_declaration, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_gl8lspe26v1, 21).
-ast_attr[code](nf85e80d35f2c16b6_gl8lspe26v1, export_kind, "value").
-ast_node[code](nf85e80d35f2c16b6_tm3amb7hrm1, variable_declaration, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_tm3amb7hrm1, 21).
-ast_node[code](nf85e80d35f2c16b6_975lgn0s7p5, variable_declarator, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_975lgn0s7p5, 21).
-ast_node[code](nf85e80d35f2c16b6_in0jvn7c8g6, identifier, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_in0jvn7c8g6, 21).
-ast_attr[code](nf85e80d35f2c16b6_in0jvn7c8g6, name, "method").
-ast_child[code](nf85e80d35f2c16b6_975lgn0s7p5, id, 0, nf85e80d35f2c16b6_in0jvn7c8g6).
-ast_node[code](nf85e80d35f2c16b6_ntj1qis9ch, call_expression, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_ntj1qis9ch, 21).
-ast_node[code](nf85e80d35f2c16b6_j19rfeg6se2, member_expression, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_j19rfeg6se2, 21).
-ast_node[code](nf85e80d35f2c16b6_mfdc1u5cij6, string_literal, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_mfdc1u5cij6, 21).
-ast_attr[code](nf85e80d35f2c16b6_mfdc1u5cij6, value, "a").
-ast_child[code](nf85e80d35f2c16b6_j19rfeg6se2, object, 0, nf85e80d35f2c16b6_mfdc1u5cij6).
-ast_attr[code](nf85e80d35f2c16b6_j19rfeg6se2, computed, false).
-ast_node[code](nf85e80d35f2c16b6_6oo56envr1, identifier, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_6oo56envr1, 21).
-ast_attr[code](nf85e80d35f2c16b6_6oo56envr1, name, "concat").
-ast_child[code](nf85e80d35f2c16b6_j19rfeg6se2, property, 0, nf85e80d35f2c16b6_6oo56envr1).
-ast_child[code](nf85e80d35f2c16b6_ntj1qis9ch, callee, 0, nf85e80d35f2c16b6_j19rfeg6se2).
-ast_node[code](nf85e80d35f2c16b6_hk6b6akc7u2, identifier, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_hk6b6akc7u2, 21).
-ast_attr[code](nf85e80d35f2c16b6_hk6b6akc7u2, name, "root").
-ast_child[code](nf85e80d35f2c16b6_ntj1qis9ch, arguments, 0, nf85e80d35f2c16b6_hk6b6akc7u2).
-ast_node[code](nf85e80d35f2c16b6_jk38oshp9t2, string_literal, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_jk38oshp9t2, 21).
-ast_attr[code](nf85e80d35f2c16b6_jk38oshp9t2, value, "h").
-ast_child[code](nf85e80d35f2c16b6_ntj1qis9ch, arguments, 1, nf85e80d35f2c16b6_jk38oshp9t2).
-ast_child[code](nf85e80d35f2c16b6_975lgn0s7p5, init, 0, nf85e80d35f2c16b6_ntj1qis9ch).
-ast_child[code](nf85e80d35f2c16b6_tm3amb7hrm1, declarations, 0, nf85e80d35f2c16b6_975lgn0s7p5).
-ast_attr[code](nf85e80d35f2c16b6_tm3amb7hrm1, kind, "const").
-ast_child[code](nf85e80d35f2c16b6_gl8lspe26v1, declaration, 0, nf85e80d35f2c16b6_tm3amb7hrm1).
-ast_child[code](nf85e80d35f2c16b6_12undirbnh3, body, 18, nf85e80d35f2c16b6_gl8lspe26v1).
-ast_node[code](nf85e80d35f2c16b6_q8g2geovhg3, export_named_declaration, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_q8g2geovhg3, 22).
-ast_attr[code](nf85e80d35f2c16b6_q8g2geovhg3, export_kind, "value").
-ast_node[code](nf85e80d35f2c16b6_srt56a0jte3, variable_declaration, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_srt56a0jte3, 22).
-ast_node[code](nf85e80d35f2c16b6_jtt4ekasno6, variable_declarator, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_jtt4ekasno6, 22).
-ast_node[code](nf85e80d35f2c16b6_4q4hthrsl17, identifier, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_4q4hthrsl17, 22).
-ast_attr[code](nf85e80d35f2c16b6_4q4hthrsl17, name, "elems").
-ast_child[code](nf85e80d35f2c16b6_jtt4ekasno6, id, 0, nf85e80d35f2c16b6_4q4hthrsl17).
-ast_node[code](nf85e80d35f2c16b6_882fhkqvgl4, call_expression, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_882fhkqvgl4, 22).
-ast_node[code](nf85e80d35f2c16b6_b08adg3hmk4, member_expression, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_b08adg3hmk4, 22).
-ast_node[code](nf85e80d35f2c16b6_309ih2dkqk5, array_expression, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_309ih2dkqk5, 22).
-ast_node[code](nf85e80d35f2c16b6_8jldsvd8on3, identifier, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_8jldsvd8on3, 22).
-ast_attr[code](nf85e80d35f2c16b6_8jldsvd8on3, name, "root").
-ast_child[code](nf85e80d35f2c16b6_309ih2dkqk5, elements, 0, nf85e80d35f2c16b6_8jldsvd8on3).
-ast_node[code](nf85e80d35f2c16b6_kfkmabpmso3, string_literal, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_kfkmabpmso3, 22).
-ast_attr[code](nf85e80d35f2c16b6_kfkmabpmso3, value, "i").
-ast_child[code](nf85e80d35f2c16b6_309ih2dkqk5, elements, 1, nf85e80d35f2c16b6_kfkmabpmso3).
-ast_child[code](nf85e80d35f2c16b6_b08adg3hmk4, object, 0, nf85e80d35f2c16b6_309ih2dkqk5).
-ast_attr[code](nf85e80d35f2c16b6_b08adg3hmk4, computed, false).
-ast_node[code](nf85e80d35f2c16b6_khnn9do23i, identifier, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_khnn9do23i, 22).
-ast_attr[code](nf85e80d35f2c16b6_khnn9do23i, name, "join").
-ast_child[code](nf85e80d35f2c16b6_b08adg3hmk4, property, 0, nf85e80d35f2c16b6_khnn9do23i).
-ast_child[code](nf85e80d35f2c16b6_882fhkqvgl4, callee, 0, nf85e80d35f2c16b6_b08adg3hmk4).
-ast_node[code](nf85e80d35f2c16b6_f7vvfktfc, string_literal, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_f7vvfktfc, 22).
-ast_attr[code](nf85e80d35f2c16b6_f7vvfktfc, value, "/").
-ast_child[code](nf85e80d35f2c16b6_882fhkqvgl4, arguments, 0, nf85e80d35f2c16b6_f7vvfktfc).
-ast_child[code](nf85e80d35f2c16b6_jtt4ekasno6, init, 0, nf85e80d35f2c16b6_882fhkqvgl4).
-ast_child[code](nf85e80d35f2c16b6_srt56a0jte3, declarations, 0, nf85e80d35f2c16b6_jtt4ekasno6).
-ast_attr[code](nf85e80d35f2c16b6_srt56a0jte3, kind, "const").
-ast_child[code](nf85e80d35f2c16b6_q8g2geovhg3, declaration, 0, nf85e80d35f2c16b6_srt56a0jte3).
-ast_child[code](nf85e80d35f2c16b6_12undirbnh3, body, 19, nf85e80d35f2c16b6_q8g2geovhg3).
-ast_node[code](nf85e80d35f2c16b6_0ubijtbgbv7, export_named_declaration, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_0ubijtbgbv7, 23).
-ast_attr[code](nf85e80d35f2c16b6_0ubijtbgbv7, export_kind, "value").
-ast_node[code](nf85e80d35f2c16b6_1tq0ccpkgc7, variable_declaration, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_1tq0ccpkgc7, 23).
-ast_node[code](nf85e80d35f2c16b6_e30bh16del3, variable_declarator, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_e30bh16del3, 23).
-ast_node[code](nf85e80d35f2c16b6_f28q97ms08, identifier, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_f28q97ms08, 23).
-ast_attr[code](nf85e80d35f2c16b6_f28q97ms08, name, "commas").
-ast_child[code](nf85e80d35f2c16b6_e30bh16del3, id, 0, nf85e80d35f2c16b6_f28q97ms08).
-ast_node[code](nf85e80d35f2c16b6_j4f57hi52t7, call_expression, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_j4f57hi52t7, 23).
-ast_node[code](nf85e80d35f2c16b6_1nupe231kr1, member_expression, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_1nupe231kr1, 23).
-ast_node[code](nf85e80d35f2c16b6_8opb63fa0n7, array_expression, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_8opb63fa0n7, 23).
-ast_node[code](nf85e80d35f2c16b6_38u531pglo5, string_literal, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_38u531pglo5, 23).
-ast_attr[code](nf85e80d35f2c16b6_38u531pglo5, value, "j").
-ast_child[code](nf85e80d35f2c16b6_8opb63fa0n7, elements, 0, nf85e80d35f2c16b6_38u531pglo5).
-ast_node[code](nf85e80d35f2c16b6_pd28cdt3p93, string_literal, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_pd28cdt3p93, 23).
-ast_attr[code](nf85e80d35f2c16b6_pd28cdt3p93, value, "k").
-ast_child[code](nf85e80d35f2c16b6_8opb63fa0n7, elements, 1, nf85e80d35f2c16b6_pd28cdt3p93).
-ast_child[code](nf85e80d35f2c16b6_1nupe231kr1, object, 0, nf85e80d35f2c16b6_8opb63fa0n7).
-ast_attr[code](nf85e80d35f2c16b6_1nupe231kr1, computed, false).
-ast_node[code](nf85e80d35f2c16b6_qtj198rf9t3, identifier, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_qtj198rf9t3, 23).
-ast_attr[code](nf85e80d35f2c16b6_qtj198rf9t3, name, "join").
-ast_child[code](nf85e80d35f2c16b6_1nupe231kr1, property, 0, nf85e80d35f2c16b6_qtj198rf9t3).
-ast_child[code](nf85e80d35f2c16b6_j4f57hi52t7, callee, 0, nf85e80d35f2c16b6_1nupe231kr1).
-ast_child[code](nf85e80d35f2c16b6_e30bh16del3, init, 0, nf85e80d35f2c16b6_j4f57hi52t7).
-ast_child[code](nf85e80d35f2c16b6_1tq0ccpkgc7, declarations, 0, nf85e80d35f2c16b6_e30bh16del3).
-ast_attr[code](nf85e80d35f2c16b6_1tq0ccpkgc7, kind, "const").
-ast_child[code](nf85e80d35f2c16b6_0ubijtbgbv7, declaration, 0, nf85e80d35f2c16b6_1tq0ccpkgc7).
-ast_child[code](nf85e80d35f2c16b6_12undirbnh3, body, 20, nf85e80d35f2c16b6_0ubijtbgbv7).
-ast_node[code](nf85e80d35f2c16b6_4hctpf2il5, export_named_declaration, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_4hctpf2il5, 24).
-ast_attr[code](nf85e80d35f2c16b6_4hctpf2il5, export_kind, "value").
-ast_node[code](nf85e80d35f2c16b6_v6grjbqv2p2, variable_declaration, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_v6grjbqv2p2, 24).
-ast_node[code](nf85e80d35f2c16b6_eekicigt057, variable_declarator, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_eekicigt057, 24).
-ast_node[code](nf85e80d35f2c16b6_ggme2fjbiq4, identifier, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_ggme2fjbiq4, 24).
-ast_attr[code](nf85e80d35f2c16b6_ggme2fjbiq4, name, "address").
-ast_child[code](nf85e80d35f2c16b6_eekicigt057, id, 0, nf85e80d35f2c16b6_ggme2fjbiq4).
-ast_node[code](nf85e80d35f2c16b6_fe593jhk02, new_expression, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_fe593jhk02, 24).
-ast_node[code](nf85e80d35f2c16b6_jr85onrerf3, identifier, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_jr85onrerf3, 24).
-ast_attr[code](nf85e80d35f2c16b6_jr85onrerf3, name, "URL").
-ast_child[code](nf85e80d35f2c16b6_fe593jhk02, callee, 0, nf85e80d35f2c16b6_jr85onrerf3).
-ast_node[code](nf85e80d35f2c16b6_hibthmrf7r3, string_literal, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_hibthmrf7r3, 24).
-ast_attr[code](nf85e80d35f2c16b6_hibthmrf7r3, value, "/api").
-ast_child[code](nf85e80d35f2c16b6_fe593jhk02, arguments, 0, nf85e80d35f2c16b6_hibthmrf7r3).
-ast_node[code](nf85e80d35f2c16b6_5uv8m7nqbs3, string_literal, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_5uv8m7nqbs3, 24).
-ast_attr[code](nf85e80d35f2c16b6_5uv8m7nqbs3, value, "https://h").
-ast_child[code](nf85e80d35f2c16b6_fe593jhk02, arguments, 1, nf85e80d35f2c16b6_5uv8m7nqbs3).
-ast_child[code](nf85e80d35f2c16b6_eekicigt057, init, 0, nf85e80d35f2c16b6_fe593jhk02).
-ast_child[code](nf85e80d35f2c16b6_v6grjbqv2p2, declarations, 0, nf85e80d35f2c16b6_eekicigt057).
-ast_attr[code](nf85e80d35f2c16b6_v6grjbqv2p2, kind, "const").
-ast_child[code](nf85e80d35f2c16b6_4hctpf2il5, declaration, 0, nf85e80d35f2c16b6_v6grjbqv2p2).
-ast_child[code](nf85e80d35f2c16b6_12undirbnh3, body, 21, nf85e80d35f2c16b6_4hctpf2il5).
+ast_node[code](nf85e80d35f2c16b6_dko4n98u7a7, expression_statement, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_dko4n98u7a7, 14).
+ast_node[code](nf85e80d35f2c16b6_22psfa21i9, assignment_expression, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_22psfa21i9, 14).
+ast_attr[code](nf85e80d35f2c16b6_22psfa21i9, operator, "+=").
+ast_node[code](nf85e80d35f2c16b6_9njfeg891a, identifier, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_9njfeg891a, 14).
+ast_attr[code](nf85e80d35f2c16b6_9njfeg891a, name, "grown").
+ast_child[code](nf85e80d35f2c16b6_22psfa21i9, left, 0, nf85e80d35f2c16b6_9njfeg891a).
+ast_node[code](nf85e80d35f2c16b6_q71csvr5qo6, string_literal, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_q71csvr5qo6, 14).
+ast_attr[code](nf85e80d35f2c16b6_q71csvr5qo6, value, "/c").
+ast_child[code](nf85e80d35f2c16b6_22psfa21i9, right, 0, nf85e80d35f2c16b6_q71csvr5qo6).
+ast_child[code](nf85e80d35f2c16b6_dko4n98u7a7, expression, 0, nf85e80d35f2c16b6_22psfa21i9).
+ast_child[code](nf85e80d35f2c16b6_12undirbnh3, body, 11, nf85e80d35f2c16b6_dko4n98u7a7).
+ast_node[code](nf85e80d35f2c16b6_40f76ev0fq, export_named_declaration, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_40f76ev0fq, 15).
+ast_attr[code](nf85e80d35f2c16b6_40f76ev0fq, export_kind, "value").
+ast_node[code](nf85e80d35f2c16b6_mplthl2e477, variable_declaration, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_mplthl2e477, 15).
+ast_node[code](nf85e80d35f2c16b6_c3t5ioa8mi2, variable_declarator, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_c3t5ioa8mi2, 15).
+ast_node[code](nf85e80d35f2c16b6_np7cpf2qmb6, identifier, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_np7cpf2qmb6, 15).
+ast_attr[code](nf85e80d35f2c16b6_np7cpf2qmb6, name, "joined").
+ast_child[code](nf85e80d35f2c16b6_c3t5ioa8mi2, id, 0, nf85e80d35f2c16b6_np7cpf2qmb6).
+ast_node[code](nf85e80d35f2c16b6_fme2tjq3pp2, call_expression, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_fme2tjq3pp2, 15).
+ast_node[code](nf85e80d35f2c16b6_kmlipcfd076, member_expression, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_kmlipcfd076, 15).
+ast_node[code](nf85e80d35f2c16b6_vbr8monn5c3, identifier, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_vbr8monn5c3, 15).
+ast_attr[code](nf85e80d35f2c16b6_vbr8monn5c3, name, "path").
+ast_child[code](nf85e80d35f2c16b6_kmlipcfd076, object, 0, nf85e80d35f2c16b6_vbr8monn5c3).
+ast_attr[code](nf85e80d35f2c16b6_kmlipcfd076, computed, false).
+ast_node[code](nf85e80d35f2c16b6_6lqgoptrgq6, identifier, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_6lqgoptrgq6, 15).
+ast_attr[code](nf85e80d35f2c16b6_6lqgoptrgq6, name, "join").
+ast_child[code](nf85e80d35f2c16b6_kmlipcfd076, property, 0, nf85e80d35f2c16b6_6lqgoptrgq6).
+ast_child[code](nf85e80d35f2c16b6_fme2tjq3pp2, callee, 0, nf85e80d35f2c16b6_kmlipcfd076).
+ast_node[code](nf85e80d35f2c16b6_1v6bot2609, identifier, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_1v6bot2609, 15).
+ast_attr[code](nf85e80d35f2c16b6_1v6bot2609, name, "root").
+ast_child[code](nf85e80d35f2c16b6_fme2tjq3pp2, arguments, 0, nf85e80d35f2c16b6_1v6bot2609).
+ast_node[code](nf85e80d35f2c16b6_9qjnvf8jol3, string_literal, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_9qjnvf8jol3, 15).
+ast_attr[code](nf85e80d35f2c16b6_9qjnvf8jol3, value, "d").
+ast_child[code](nf85e80d35f2c16b6_fme2tjq3pp2, arguments, 1, nf85e80d35f2c16b6_9qjnvf8jol3).
+ast_node[code](nf85e80d35f2c16b6_vtg04lh33l, string_literal, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_vtg04lh33l, 15).
+ast_attr[code](nf85e80d35f2c16b6_vtg04lh33l, value, "e").
+ast_child[code](nf85e80d35f2c16b6_fme2tjq3pp2, arguments, 2, nf85e80d35f2c16b6_vtg04lh33l).
+ast_child[code](nf85e80d35f2c16b6_c3t5ioa8mi2, init, 0, nf85e80d35f2c16b6_fme2tjq3pp2).
+ast_child[code](nf85e80d35f2c16b6_mplthl2e477, declarations, 0, nf85e80d35f2c16b6_c3t5ioa8mi2).
+ast_attr[code](nf85e80d35f2c16b6_mplthl2e477, kind, "const").
+ast_child[code](nf85e80d35f2c16b6_40f76ev0fq, declaration, 0, nf85e80d35f2c16b6_mplthl2e477).
+ast_child[code](nf85e80d35f2c16b6_12undirbnh3, body, 12, nf85e80d35f2c16b6_40f76ev0fq).
+ast_node[code](nf85e80d35f2c16b6_u7g7lddlot3, export_named_declaration, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_u7g7lddlot3, 16).
+ast_attr[code](nf85e80d35f2c16b6_u7g7lddlot3, export_kind, "value").
+ast_node[code](nf85e80d35f2c16b6_g76qu0jjio2, variable_declaration, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_g76qu0jjio2, 16).
+ast_node[code](nf85e80d35f2c16b6_2prtfmdhqk7, variable_declarator, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_2prtfmdhqk7, 16).
+ast_node[code](nf85e80d35f2c16b6_k7hd8n1j021, identifier, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_k7hd8n1j021, 16).
+ast_attr[code](nf85e80d35f2c16b6_k7hd8n1j021, name, "resolved").
+ast_child[code](nf85e80d35f2c16b6_2prtfmdhqk7, id, 0, nf85e80d35f2c16b6_k7hd8n1j021).
+ast_node[code](nf85e80d35f2c16b6_8u0ohh40pl7, call_expression, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_8u0ohh40pl7, 16).
+ast_node[code](nf85e80d35f2c16b6_qefec8ev306, member_expression, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_qefec8ev306, 16).
+ast_node[code](nf85e80d35f2c16b6_kju319mate, identifier, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_kju319mate, 16).
+ast_attr[code](nf85e80d35f2c16b6_kju319mate, name, "path").
+ast_child[code](nf85e80d35f2c16b6_qefec8ev306, object, 0, nf85e80d35f2c16b6_kju319mate).
+ast_attr[code](nf85e80d35f2c16b6_qefec8ev306, computed, false).
+ast_node[code](nf85e80d35f2c16b6_cpef5ku41p5, identifier, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_cpef5ku41p5, 16).
+ast_attr[code](nf85e80d35f2c16b6_cpef5ku41p5, name, "resolve").
+ast_child[code](nf85e80d35f2c16b6_qefec8ev306, property, 0, nf85e80d35f2c16b6_cpef5ku41p5).
+ast_child[code](nf85e80d35f2c16b6_8u0ohh40pl7, callee, 0, nf85e80d35f2c16b6_qefec8ev306).
+ast_node[code](nf85e80d35f2c16b6_abhercsilm, identifier, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_abhercsilm, 16).
+ast_attr[code](nf85e80d35f2c16b6_abhercsilm, name, "root").
+ast_child[code](nf85e80d35f2c16b6_8u0ohh40pl7, arguments, 0, nf85e80d35f2c16b6_abhercsilm).
+ast_node[code](nf85e80d35f2c16b6_lubj50uii41, string_literal, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_lubj50uii41, 16).
+ast_attr[code](nf85e80d35f2c16b6_lubj50uii41, value, "f").
+ast_child[code](nf85e80d35f2c16b6_8u0ohh40pl7, arguments, 1, nf85e80d35f2c16b6_lubj50uii41).
+ast_child[code](nf85e80d35f2c16b6_2prtfmdhqk7, init, 0, nf85e80d35f2c16b6_8u0ohh40pl7).
+ast_child[code](nf85e80d35f2c16b6_g76qu0jjio2, declarations, 0, nf85e80d35f2c16b6_2prtfmdhqk7).
+ast_attr[code](nf85e80d35f2c16b6_g76qu0jjio2, kind, "const").
+ast_child[code](nf85e80d35f2c16b6_u7g7lddlot3, declaration, 0, nf85e80d35f2c16b6_g76qu0jjio2).
+ast_child[code](nf85e80d35f2c16b6_12undirbnh3, body, 13, nf85e80d35f2c16b6_u7g7lddlot3).
+ast_node[code](nf85e80d35f2c16b6_nqgnru9pns2, export_named_declaration, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_nqgnru9pns2, 17).
+ast_attr[code](nf85e80d35f2c16b6_nqgnru9pns2, export_kind, "value").
+ast_node[code](nf85e80d35f2c16b6_f3mmdlanu64, variable_declaration, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_f3mmdlanu64, 17).
+ast_node[code](nf85e80d35f2c16b6_hnlae46grn7, variable_declarator, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_hnlae46grn7, 17).
+ast_node[code](nf85e80d35f2c16b6_mer49gd6vt4, identifier, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_mer49gd6vt4, 17).
+ast_attr[code](nf85e80d35f2c16b6_mer49gd6vt4, name, "normal").
+ast_child[code](nf85e80d35f2c16b6_hnlae46grn7, id, 0, nf85e80d35f2c16b6_mer49gd6vt4).
+ast_node[code](nf85e80d35f2c16b6_a7s3n8p3ll, call_expression, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_a7s3n8p3ll, 17).
+ast_node[code](nf85e80d35f2c16b6_jrbb2vgj2c1, member_expression, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_jrbb2vgj2c1, 17).
+ast_node[code](nf85e80d35f2c16b6_qjmbqpgjf85, identifier, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_qjmbqpgjf85, 17).
+ast_attr[code](nf85e80d35f2c16b6_qjmbqpgjf85, name, "path").
+ast_child[code](nf85e80d35f2c16b6_jrbb2vgj2c1, object, 0, nf85e80d35f2c16b6_qjmbqpgjf85).
+ast_attr[code](nf85e80d35f2c16b6_jrbb2vgj2c1, computed, false).
+ast_node[code](nf85e80d35f2c16b6_htkqi02clr2, identifier, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_htkqi02clr2, 17).
+ast_attr[code](nf85e80d35f2c16b6_htkqi02clr2, name, "normalize").
+ast_child[code](nf85e80d35f2c16b6_jrbb2vgj2c1, property, 0, nf85e80d35f2c16b6_htkqi02clr2).
+ast_child[code](nf85e80d35f2c16b6_a7s3n8p3ll, callee, 0, nf85e80d35f2c16b6_jrbb2vgj2c1).
+ast_node[code](nf85e80d35f2c16b6_u60m0l9vo65, string_literal, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_u60m0l9vo65, 17).
+ast_attr[code](nf85e80d35f2c16b6_u60m0l9vo65, value, "/a/../b").
+ast_child[code](nf85e80d35f2c16b6_a7s3n8p3ll, arguments, 0, nf85e80d35f2c16b6_u60m0l9vo65).
+ast_child[code](nf85e80d35f2c16b6_hnlae46grn7, init, 0, nf85e80d35f2c16b6_a7s3n8p3ll).
+ast_child[code](nf85e80d35f2c16b6_f3mmdlanu64, declarations, 0, nf85e80d35f2c16b6_hnlae46grn7).
+ast_attr[code](nf85e80d35f2c16b6_f3mmdlanu64, kind, "const").
+ast_child[code](nf85e80d35f2c16b6_nqgnru9pns2, declaration, 0, nf85e80d35f2c16b6_f3mmdlanu64).
+ast_child[code](nf85e80d35f2c16b6_12undirbnh3, body, 14, nf85e80d35f2c16b6_nqgnru9pns2).
+ast_node[code](nf85e80d35f2c16b6_ujj6hqlsvu2, export_named_declaration, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_ujj6hqlsvu2, 18).
+ast_attr[code](nf85e80d35f2c16b6_ujj6hqlsvu2, export_kind, "value").
+ast_node[code](nf85e80d35f2c16b6_pivn7piibe3, variable_declaration, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_pivn7piibe3, 18).
+ast_node[code](nf85e80d35f2c16b6_60rmbof6s16, variable_declarator, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_60rmbof6s16, 18).
+ast_node[code](nf85e80d35f2c16b6_206j7b9jrr, identifier, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_206j7b9jrr, 18).
+ast_attr[code](nf85e80d35f2c16b6_206j7b9jrr, name, "cut").
+ast_child[code](nf85e80d35f2c16b6_60rmbof6s16, id, 0, nf85e80d35f2c16b6_206j7b9jrr).
+ast_node[code](nf85e80d35f2c16b6_6iuq01loru5, call_expression, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_6iuq01loru5, 18).
+ast_node[code](nf85e80d35f2c16b6_56u7ihabp54, member_expression, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_56u7ihabp54, 18).
+ast_node[code](nf85e80d35f2c16b6_9pirjealaj5, identifier, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_9pirjealaj5, 18).
+ast_attr[code](nf85e80d35f2c16b6_9pirjealaj5, name, "path").
+ast_child[code](nf85e80d35f2c16b6_56u7ihabp54, object, 0, nf85e80d35f2c16b6_9pirjealaj5).
+ast_attr[code](nf85e80d35f2c16b6_56u7ihabp54, computed, false).
+ast_node[code](nf85e80d35f2c16b6_bjds7ck6ao5, identifier, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_bjds7ck6ao5, 18).
+ast_attr[code](nf85e80d35f2c16b6_bjds7ck6ao5, name, "dirname").
+ast_child[code](nf85e80d35f2c16b6_56u7ihabp54, property, 0, nf85e80d35f2c16b6_bjds7ck6ao5).
+ast_child[code](nf85e80d35f2c16b6_6iuq01loru5, callee, 0, nf85e80d35f2c16b6_56u7ihabp54).
+ast_node[code](nf85e80d35f2c16b6_g5qmm4ur4j4, string_literal, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_g5qmm4ur4j4, 18).
+ast_attr[code](nf85e80d35f2c16b6_g5qmm4ur4j4, value, "/x/y/z").
+ast_child[code](nf85e80d35f2c16b6_6iuq01loru5, arguments, 0, nf85e80d35f2c16b6_g5qmm4ur4j4).
+ast_child[code](nf85e80d35f2c16b6_60rmbof6s16, init, 0, nf85e80d35f2c16b6_6iuq01loru5).
+ast_child[code](nf85e80d35f2c16b6_pivn7piibe3, declarations, 0, nf85e80d35f2c16b6_60rmbof6s16).
+ast_attr[code](nf85e80d35f2c16b6_pivn7piibe3, kind, "const").
+ast_child[code](nf85e80d35f2c16b6_ujj6hqlsvu2, declaration, 0, nf85e80d35f2c16b6_pivn7piibe3).
+ast_child[code](nf85e80d35f2c16b6_12undirbnh3, body, 15, nf85e80d35f2c16b6_ujj6hqlsvu2).
+ast_node[code](nf85e80d35f2c16b6_p3jhm9822m3, export_named_declaration, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_p3jhm9822m3, 19).
+ast_attr[code](nf85e80d35f2c16b6_p3jhm9822m3, export_kind, "value").
+ast_node[code](nf85e80d35f2c16b6_mvdqg4ijo13, variable_declaration, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_mvdqg4ijo13, 19).
+ast_node[code](nf85e80d35f2c16b6_sa22tkmams6, variable_declarator, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_sa22tkmams6, 19).
+ast_node[code](nf85e80d35f2c16b6_odig69et891, identifier, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_odig69et891, 19).
+ast_attr[code](nf85e80d35f2c16b6_odig69et891, name, "base").
+ast_child[code](nf85e80d35f2c16b6_sa22tkmams6, id, 0, nf85e80d35f2c16b6_odig69et891).
+ast_node[code](nf85e80d35f2c16b6_c28a8j7s6q3, call_expression, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_c28a8j7s6q3, 19).
+ast_node[code](nf85e80d35f2c16b6_cpvh6ib78a4, member_expression, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_cpvh6ib78a4, 19).
+ast_node[code](nf85e80d35f2c16b6_5l5rmtr8p93, identifier, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_5l5rmtr8p93, 19).
+ast_attr[code](nf85e80d35f2c16b6_5l5rmtr8p93, name, "path").
+ast_child[code](nf85e80d35f2c16b6_cpvh6ib78a4, object, 0, nf85e80d35f2c16b6_5l5rmtr8p93).
+ast_attr[code](nf85e80d35f2c16b6_cpvh6ib78a4, computed, false).
+ast_node[code](nf85e80d35f2c16b6_47qakis9hs5, identifier, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_47qakis9hs5, 19).
+ast_attr[code](nf85e80d35f2c16b6_47qakis9hs5, name, "basename").
+ast_child[code](nf85e80d35f2c16b6_cpvh6ib78a4, property, 0, nf85e80d35f2c16b6_47qakis9hs5).
+ast_child[code](nf85e80d35f2c16b6_c28a8j7s6q3, callee, 0, nf85e80d35f2c16b6_cpvh6ib78a4).
+ast_node[code](nf85e80d35f2c16b6_flrrnr4lr82, string_literal, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_flrrnr4lr82, 19).
+ast_attr[code](nf85e80d35f2c16b6_flrrnr4lr82, value, "/x/y/z.ts").
+ast_child[code](nf85e80d35f2c16b6_c28a8j7s6q3, arguments, 0, nf85e80d35f2c16b6_flrrnr4lr82).
+ast_node[code](nf85e80d35f2c16b6_sv4hg1trgd5, string_literal, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_sv4hg1trgd5, 19).
+ast_attr[code](nf85e80d35f2c16b6_sv4hg1trgd5, value, ".ts").
+ast_child[code](nf85e80d35f2c16b6_c28a8j7s6q3, arguments, 1, nf85e80d35f2c16b6_sv4hg1trgd5).
+ast_child[code](nf85e80d35f2c16b6_sa22tkmams6, init, 0, nf85e80d35f2c16b6_c28a8j7s6q3).
+ast_child[code](nf85e80d35f2c16b6_mvdqg4ijo13, declarations, 0, nf85e80d35f2c16b6_sa22tkmams6).
+ast_attr[code](nf85e80d35f2c16b6_mvdqg4ijo13, kind, "const").
+ast_child[code](nf85e80d35f2c16b6_p3jhm9822m3, declaration, 0, nf85e80d35f2c16b6_mvdqg4ijo13).
+ast_child[code](nf85e80d35f2c16b6_12undirbnh3, body, 16, nf85e80d35f2c16b6_p3jhm9822m3).
+ast_node[code](nf85e80d35f2c16b6_7gko09lnge, export_named_declaration, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_7gko09lnge, 20).
+ast_attr[code](nf85e80d35f2c16b6_7gko09lnge, export_kind, "value").
+ast_node[code](nf85e80d35f2c16b6_3370jkktvl3, variable_declaration, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_3370jkktvl3, 20).
+ast_node[code](nf85e80d35f2c16b6_lpvm0t94g76, variable_declarator, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_lpvm0t94g76, 20).
+ast_node[code](nf85e80d35f2c16b6_ji8l1kh10i7, identifier, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_ji8l1kh10i7, 20).
+ast_attr[code](nf85e80d35f2c16b6_ji8l1kh10i7, name, "nested").
+ast_child[code](nf85e80d35f2c16b6_lpvm0t94g76, id, 0, nf85e80d35f2c16b6_ji8l1kh10i7).
+ast_node[code](nf85e80d35f2c16b6_jsamihej3m3, call_expression, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_jsamihej3m3, 20).
+ast_node[code](nf85e80d35f2c16b6_kjmdhkuj9b3, identifier, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_kjmdhkuj9b3, 20).
+ast_attr[code](nf85e80d35f2c16b6_kjmdhkuj9b3, name, "dir").
+ast_child[code](nf85e80d35f2c16b6_jsamihej3m3, callee, 0, nf85e80d35f2c16b6_kjmdhkuj9b3).
+ast_node[code](nf85e80d35f2c16b6_sep4agsje34, call_expression, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_sep4agsje34, 20).
+ast_node[code](nf85e80d35f2c16b6_jduu5fqj846, member_expression, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_jduu5fqj846, 20).
+ast_node[code](nf85e80d35f2c16b6_ik0hhg8mal7, identifier, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_ik0hhg8mal7, 20).
+ast_attr[code](nf85e80d35f2c16b6_ik0hhg8mal7, name, "path").
+ast_child[code](nf85e80d35f2c16b6_jduu5fqj846, object, 0, nf85e80d35f2c16b6_ik0hhg8mal7).
+ast_attr[code](nf85e80d35f2c16b6_jduu5fqj846, computed, false).
+ast_node[code](nf85e80d35f2c16b6_ea5g57pqr41, identifier, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_ea5g57pqr41, 20).
+ast_attr[code](nf85e80d35f2c16b6_ea5g57pqr41, name, "join").
+ast_child[code](nf85e80d35f2c16b6_jduu5fqj846, property, 0, nf85e80d35f2c16b6_ea5g57pqr41).
+ast_child[code](nf85e80d35f2c16b6_sep4agsje34, callee, 0, nf85e80d35f2c16b6_jduu5fqj846).
+ast_node[code](nf85e80d35f2c16b6_f2p8uaascq6, identifier, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_f2p8uaascq6, 20).
+ast_attr[code](nf85e80d35f2c16b6_f2p8uaascq6, name, "root").
+ast_child[code](nf85e80d35f2c16b6_sep4agsje34, arguments, 0, nf85e80d35f2c16b6_f2p8uaascq6).
+ast_node[code](nf85e80d35f2c16b6_jl29cdvu8v4, string_literal, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_jl29cdvu8v4, 20).
+ast_attr[code](nf85e80d35f2c16b6_jl29cdvu8v4, value, "g").
+ast_child[code](nf85e80d35f2c16b6_sep4agsje34, arguments, 1, nf85e80d35f2c16b6_jl29cdvu8v4).
+ast_child[code](nf85e80d35f2c16b6_jsamihej3m3, arguments, 0, nf85e80d35f2c16b6_sep4agsje34).
+ast_child[code](nf85e80d35f2c16b6_lpvm0t94g76, init, 0, nf85e80d35f2c16b6_jsamihej3m3).
+ast_child[code](nf85e80d35f2c16b6_3370jkktvl3, declarations, 0, nf85e80d35f2c16b6_lpvm0t94g76).
+ast_attr[code](nf85e80d35f2c16b6_3370jkktvl3, kind, "const").
+ast_child[code](nf85e80d35f2c16b6_7gko09lnge, declaration, 0, nf85e80d35f2c16b6_3370jkktvl3).
+ast_child[code](nf85e80d35f2c16b6_12undirbnh3, body, 17, nf85e80d35f2c16b6_7gko09lnge).
+ast_node[code](nf85e80d35f2c16b6_93go3r0vag1, export_named_declaration, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_93go3r0vag1, 21).
+ast_attr[code](nf85e80d35f2c16b6_93go3r0vag1, export_kind, "value").
+ast_node[code](nf85e80d35f2c16b6_ft2m91rdgg, variable_declaration, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_ft2m91rdgg, 21).
+ast_node[code](nf85e80d35f2c16b6_2ul1s69mbe3, variable_declarator, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_2ul1s69mbe3, 21).
+ast_node[code](nf85e80d35f2c16b6_irnkuvsqvm6, identifier, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_irnkuvsqvm6, 21).
+ast_attr[code](nf85e80d35f2c16b6_irnkuvsqvm6, name, "method").
+ast_child[code](nf85e80d35f2c16b6_2ul1s69mbe3, id, 0, nf85e80d35f2c16b6_irnkuvsqvm6).
+ast_node[code](nf85e80d35f2c16b6_0inb8a0fkc2, call_expression, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_0inb8a0fkc2, 21).
+ast_node[code](nf85e80d35f2c16b6_b08vnapa777, member_expression, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_b08vnapa777, 21).
+ast_node[code](nf85e80d35f2c16b6_pn00shbg691, string_literal, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_pn00shbg691, 21).
+ast_attr[code](nf85e80d35f2c16b6_pn00shbg691, value, "a").
+ast_child[code](nf85e80d35f2c16b6_b08vnapa777, object, 0, nf85e80d35f2c16b6_pn00shbg691).
+ast_attr[code](nf85e80d35f2c16b6_b08vnapa777, computed, false).
+ast_node[code](nf85e80d35f2c16b6_spgj0ufu992, identifier, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_spgj0ufu992, 21).
+ast_attr[code](nf85e80d35f2c16b6_spgj0ufu992, name, "concat").
+ast_child[code](nf85e80d35f2c16b6_b08vnapa777, property, 0, nf85e80d35f2c16b6_spgj0ufu992).
+ast_child[code](nf85e80d35f2c16b6_0inb8a0fkc2, callee, 0, nf85e80d35f2c16b6_b08vnapa777).
+ast_node[code](nf85e80d35f2c16b6_83v80mr74i7, identifier, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_83v80mr74i7, 21).
+ast_attr[code](nf85e80d35f2c16b6_83v80mr74i7, name, "root").
+ast_child[code](nf85e80d35f2c16b6_0inb8a0fkc2, arguments, 0, nf85e80d35f2c16b6_83v80mr74i7).
+ast_node[code](nf85e80d35f2c16b6_4si1v6ljqa3, string_literal, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_4si1v6ljqa3, 21).
+ast_attr[code](nf85e80d35f2c16b6_4si1v6ljqa3, value, "h").
+ast_child[code](nf85e80d35f2c16b6_0inb8a0fkc2, arguments, 1, nf85e80d35f2c16b6_4si1v6ljqa3).
+ast_child[code](nf85e80d35f2c16b6_2ul1s69mbe3, init, 0, nf85e80d35f2c16b6_0inb8a0fkc2).
+ast_child[code](nf85e80d35f2c16b6_ft2m91rdgg, declarations, 0, nf85e80d35f2c16b6_2ul1s69mbe3).
+ast_attr[code](nf85e80d35f2c16b6_ft2m91rdgg, kind, "const").
+ast_child[code](nf85e80d35f2c16b6_93go3r0vag1, declaration, 0, nf85e80d35f2c16b6_ft2m91rdgg).
+ast_child[code](nf85e80d35f2c16b6_12undirbnh3, body, 18, nf85e80d35f2c16b6_93go3r0vag1).
+ast_node[code](nf85e80d35f2c16b6_3hu4i104fa3, export_named_declaration, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_3hu4i104fa3, 22).
+ast_attr[code](nf85e80d35f2c16b6_3hu4i104fa3, export_kind, "value").
+ast_node[code](nf85e80d35f2c16b6_tt0pdvairv, variable_declaration, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_tt0pdvairv, 22).
+ast_node[code](nf85e80d35f2c16b6_dkkrqn90j6, variable_declarator, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_dkkrqn90j6, 22).
+ast_node[code](nf85e80d35f2c16b6_21ocovc0781, identifier, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_21ocovc0781, 22).
+ast_attr[code](nf85e80d35f2c16b6_21ocovc0781, name, "elems").
+ast_child[code](nf85e80d35f2c16b6_dkkrqn90j6, id, 0, nf85e80d35f2c16b6_21ocovc0781).
+ast_node[code](nf85e80d35f2c16b6_mvl8mkusg33, call_expression, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_mvl8mkusg33, 22).
+ast_node[code](nf85e80d35f2c16b6_ii3qgifmvr3, member_expression, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_ii3qgifmvr3, 22).
+ast_node[code](nf85e80d35f2c16b6_mpcbu70a5f5, array_expression, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_mpcbu70a5f5, 22).
+ast_node[code](nf85e80d35f2c16b6_e6m53r249v1, identifier, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_e6m53r249v1, 22).
+ast_attr[code](nf85e80d35f2c16b6_e6m53r249v1, name, "root").
+ast_child[code](nf85e80d35f2c16b6_mpcbu70a5f5, elements, 0, nf85e80d35f2c16b6_e6m53r249v1).
+ast_node[code](nf85e80d35f2c16b6_5h1p2gc3n26, string_literal, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_5h1p2gc3n26, 22).
+ast_attr[code](nf85e80d35f2c16b6_5h1p2gc3n26, value, "i").
+ast_child[code](nf85e80d35f2c16b6_mpcbu70a5f5, elements, 1, nf85e80d35f2c16b6_5h1p2gc3n26).
+ast_child[code](nf85e80d35f2c16b6_ii3qgifmvr3, object, 0, nf85e80d35f2c16b6_mpcbu70a5f5).
+ast_attr[code](nf85e80d35f2c16b6_ii3qgifmvr3, computed, false).
+ast_node[code](nf85e80d35f2c16b6_ccpof66vdg, identifier, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_ccpof66vdg, 22).
+ast_attr[code](nf85e80d35f2c16b6_ccpof66vdg, name, "join").
+ast_child[code](nf85e80d35f2c16b6_ii3qgifmvr3, property, 0, nf85e80d35f2c16b6_ccpof66vdg).
+ast_child[code](nf85e80d35f2c16b6_mvl8mkusg33, callee, 0, nf85e80d35f2c16b6_ii3qgifmvr3).
+ast_node[code](nf85e80d35f2c16b6_tk90h2j4ca3, string_literal, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_tk90h2j4ca3, 22).
+ast_attr[code](nf85e80d35f2c16b6_tk90h2j4ca3, value, "/").
+ast_child[code](nf85e80d35f2c16b6_mvl8mkusg33, arguments, 0, nf85e80d35f2c16b6_tk90h2j4ca3).
+ast_child[code](nf85e80d35f2c16b6_dkkrqn90j6, init, 0, nf85e80d35f2c16b6_mvl8mkusg33).
+ast_child[code](nf85e80d35f2c16b6_tt0pdvairv, declarations, 0, nf85e80d35f2c16b6_dkkrqn90j6).
+ast_attr[code](nf85e80d35f2c16b6_tt0pdvairv, kind, "const").
+ast_child[code](nf85e80d35f2c16b6_3hu4i104fa3, declaration, 0, nf85e80d35f2c16b6_tt0pdvairv).
+ast_child[code](nf85e80d35f2c16b6_12undirbnh3, body, 19, nf85e80d35f2c16b6_3hu4i104fa3).
+ast_node[code](nf85e80d35f2c16b6_tnahuk906o3, export_named_declaration, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_tnahuk906o3, 23).
+ast_attr[code](nf85e80d35f2c16b6_tnahuk906o3, export_kind, "value").
+ast_node[code](nf85e80d35f2c16b6_03ge10eju73, variable_declaration, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_03ge10eju73, 23).
+ast_node[code](nf85e80d35f2c16b6_vso2a22rqv6, variable_declarator, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_vso2a22rqv6, 23).
+ast_node[code](nf85e80d35f2c16b6_o59fs7dh0o, identifier, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_o59fs7dh0o, 23).
+ast_attr[code](nf85e80d35f2c16b6_o59fs7dh0o, name, "commas").
+ast_child[code](nf85e80d35f2c16b6_vso2a22rqv6, id, 0, nf85e80d35f2c16b6_o59fs7dh0o).
+ast_node[code](nf85e80d35f2c16b6_pufdi86lrm1, call_expression, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_pufdi86lrm1, 23).
+ast_node[code](nf85e80d35f2c16b6_a7onhe6q6q6, member_expression, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_a7onhe6q6q6, 23).
+ast_node[code](nf85e80d35f2c16b6_o1spsqlf6p3, array_expression, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_o1spsqlf6p3, 23).
+ast_node[code](nf85e80d35f2c16b6_hiji55sd2p3, string_literal, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_hiji55sd2p3, 23).
+ast_attr[code](nf85e80d35f2c16b6_hiji55sd2p3, value, "j").
+ast_child[code](nf85e80d35f2c16b6_o1spsqlf6p3, elements, 0, nf85e80d35f2c16b6_hiji55sd2p3).
+ast_node[code](nf85e80d35f2c16b6_0pth98kqg06, string_literal, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_0pth98kqg06, 23).
+ast_attr[code](nf85e80d35f2c16b6_0pth98kqg06, value, "k").
+ast_child[code](nf85e80d35f2c16b6_o1spsqlf6p3, elements, 1, nf85e80d35f2c16b6_0pth98kqg06).
+ast_child[code](nf85e80d35f2c16b6_a7onhe6q6q6, object, 0, nf85e80d35f2c16b6_o1spsqlf6p3).
+ast_attr[code](nf85e80d35f2c16b6_a7onhe6q6q6, computed, false).
+ast_node[code](nf85e80d35f2c16b6_e9oq70v1l05, identifier, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_e9oq70v1l05, 23).
+ast_attr[code](nf85e80d35f2c16b6_e9oq70v1l05, name, "join").
+ast_child[code](nf85e80d35f2c16b6_a7onhe6q6q6, property, 0, nf85e80d35f2c16b6_e9oq70v1l05).
+ast_child[code](nf85e80d35f2c16b6_pufdi86lrm1, callee, 0, nf85e80d35f2c16b6_a7onhe6q6q6).
+ast_child[code](nf85e80d35f2c16b6_vso2a22rqv6, init, 0, nf85e80d35f2c16b6_pufdi86lrm1).
+ast_child[code](nf85e80d35f2c16b6_03ge10eju73, declarations, 0, nf85e80d35f2c16b6_vso2a22rqv6).
+ast_attr[code](nf85e80d35f2c16b6_03ge10eju73, kind, "const").
+ast_child[code](nf85e80d35f2c16b6_tnahuk906o3, declaration, 0, nf85e80d35f2c16b6_03ge10eju73).
+ast_child[code](nf85e80d35f2c16b6_12undirbnh3, body, 20, nf85e80d35f2c16b6_tnahuk906o3).
+ast_node[code](nf85e80d35f2c16b6_gkh00hl76f, export_named_declaration, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_gkh00hl76f, 24).
+ast_attr[code](nf85e80d35f2c16b6_gkh00hl76f, export_kind, "value").
+ast_node[code](nf85e80d35f2c16b6_gh3sd1p1uk1, variable_declaration, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_gh3sd1p1uk1, 24).
+ast_node[code](nf85e80d35f2c16b6_te5mhekv216, variable_declarator, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_te5mhekv216, 24).
+ast_node[code](nf85e80d35f2c16b6_ghn6npd1fb, identifier, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_ghn6npd1fb, 24).
+ast_attr[code](nf85e80d35f2c16b6_ghn6npd1fb, name, "address").
+ast_child[code](nf85e80d35f2c16b6_te5mhekv216, id, 0, nf85e80d35f2c16b6_ghn6npd1fb).
+ast_node[code](nf85e80d35f2c16b6_unksr0ojd64, new_expression, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_unksr0ojd64, 24).
+ast_node[code](nf85e80d35f2c16b6_m0bsl8r47t6, identifier, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_m0bsl8r47t6, 24).
+ast_attr[code](nf85e80d35f2c16b6_m0bsl8r47t6, name, "URL").
+ast_child[code](nf85e80d35f2c16b6_unksr0ojd64, callee, 0, nf85e80d35f2c16b6_m0bsl8r47t6).
+ast_node[code](nf85e80d35f2c16b6_96cqtjqecl2, string_literal, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_96cqtjqecl2, 24).
+ast_attr[code](nf85e80d35f2c16b6_96cqtjqecl2, value, "/api").
+ast_child[code](nf85e80d35f2c16b6_unksr0ojd64, arguments, 0, nf85e80d35f2c16b6_96cqtjqecl2).
+ast_node[code](nf85e80d35f2c16b6_18ottmnpq05, string_literal, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_18ottmnpq05, 24).
+ast_attr[code](nf85e80d35f2c16b6_18ottmnpq05, value, "https://h").
+ast_child[code](nf85e80d35f2c16b6_unksr0ojd64, arguments, 1, nf85e80d35f2c16b6_18ottmnpq05).
+ast_child[code](nf85e80d35f2c16b6_te5mhekv216, init, 0, nf85e80d35f2c16b6_unksr0ojd64).
+ast_child[code](nf85e80d35f2c16b6_gh3sd1p1uk1, declarations, 0, nf85e80d35f2c16b6_te5mhekv216).
+ast_attr[code](nf85e80d35f2c16b6_gh3sd1p1uk1, kind, "const").
+ast_child[code](nf85e80d35f2c16b6_gkh00hl76f, declaration, 0, nf85e80d35f2c16b6_gh3sd1p1uk1).
+ast_child[code](nf85e80d35f2c16b6_12undirbnh3, body, 21, nf85e80d35f2c16b6_gkh00hl76f).
 ast_node[code](nf85e80d35f2c16b6_9l7lmkrrho2, export_named_declaration, "src/entry.ts").
 ast_line[code](nf85e80d35f2c16b6_9l7lmkrrho2, 25).
 ast_attr[code](nf85e80d35f2c16b6_9l7lmkrrho2, export_kind, "value").
@@ -668,16 +668,16 @@ ast_attr[code](nf85e80d35f2c16b6_31n72r9p38, name, "unknown").
 ast_child[code](nf85e80d35f2c16b6_18drtd9e1l6, id, 0, nf85e80d35f2c16b6_31n72r9p38).
 ast_attr[code](nf85e80d35f2c16b6_18drtd9e1l6, generator, false).
 ast_attr[code](nf85e80d35f2c16b6_18drtd9e1l6, async, false).
-ast_node[code](nf85e80d35f2c16b6_fu17dekhhb2, identifier, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_fu17dekhhb2, 25).
-ast_attr[code](nf85e80d35f2c16b6_fu17dekhhb2, name, "u").
-ast_node[code](nf85e80d35f2c16b6_7lnh2cnar21, tstype_annotation, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_7lnh2cnar21, 25).
-ast_node[code](nf85e80d35f2c16b6_jialbd4e3v1, tsstring_keyword, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_jialbd4e3v1, 25).
-ast_child[code](nf85e80d35f2c16b6_7lnh2cnar21, type_annotation, 0, nf85e80d35f2c16b6_jialbd4e3v1).
-ast_child[code](nf85e80d35f2c16b6_fu17dekhhb2, type_annotation, 0, nf85e80d35f2c16b6_7lnh2cnar21).
-ast_child[code](nf85e80d35f2c16b6_18drtd9e1l6, params, 0, nf85e80d35f2c16b6_fu17dekhhb2).
+ast_node[code](nf85e80d35f2c16b6_oms7jjgqo65, identifier, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_oms7jjgqo65, 25).
+ast_attr[code](nf85e80d35f2c16b6_oms7jjgqo65, name, "u").
+ast_node[code](nf85e80d35f2c16b6_a6shjdik3r5, tstype_annotation, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_a6shjdik3r5, 25).
+ast_node[code](nf85e80d35f2c16b6_1bgi8rlo9t5, tsstring_keyword, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_1bgi8rlo9t5, 25).
+ast_child[code](nf85e80d35f2c16b6_a6shjdik3r5, type_annotation, 0, nf85e80d35f2c16b6_1bgi8rlo9t5).
+ast_child[code](nf85e80d35f2c16b6_oms7jjgqo65, type_annotation, 0, nf85e80d35f2c16b6_a6shjdik3r5).
+ast_child[code](nf85e80d35f2c16b6_18drtd9e1l6, params, 0, nf85e80d35f2c16b6_oms7jjgqo65).
 ast_node[code](nf85e80d35f2c16b6_2pckj7p9ub2, tstype_annotation, "src/entry.ts").
 ast_line[code](nf85e80d35f2c16b6_2pckj7p9ub2, 25).
 ast_node[code](nf85e80d35f2c16b6_rl7vh4s8kb6, tsstring_keyword, "src/entry.ts").
@@ -686,169 +686,169 @@ ast_child[code](nf85e80d35f2c16b6_2pckj7p9ub2, type_annotation, 0, nf85e80d35f2c
 ast_child[code](nf85e80d35f2c16b6_18drtd9e1l6, return_type, 0, nf85e80d35f2c16b6_2pckj7p9ub2).
 ast_node[code](nf85e80d35f2c16b6_9nvlsd61qt4, block_statement, "src/entry.ts").
 ast_line[code](nf85e80d35f2c16b6_9nvlsd61qt4, 25).
-ast_node[code](nf85e80d35f2c16b6_4bf1ea6j3u1, return_statement, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_4bf1ea6j3u1, 25).
-ast_node[code](nf85e80d35f2c16b6_v6211c707c4, template_literal, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_v6211c707c4, 25).
-ast_node[code](nf85e80d35f2c16b6_faedih0ll31, identifier, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_faedih0ll31, 25).
-ast_attr[code](nf85e80d35f2c16b6_faedih0ll31, name, "u").
-ast_child[code](nf85e80d35f2c16b6_v6211c707c4, expressions, 0, nf85e80d35f2c16b6_faedih0ll31).
-ast_node[code](nf85e80d35f2c16b6_vh3gpj6tec1, template_element, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_vh3gpj6tec1, 25).
-ast_attr[code](nf85e80d35f2c16b6_vh3gpj6tec1, value_raw, "").
-ast_attr[code](nf85e80d35f2c16b6_vh3gpj6tec1, value_cooked, "").
-ast_attr[code](nf85e80d35f2c16b6_vh3gpj6tec1, tail, false).
-ast_child[code](nf85e80d35f2c16b6_v6211c707c4, quasis, 0, nf85e80d35f2c16b6_vh3gpj6tec1).
-ast_node[code](nf85e80d35f2c16b6_eg1o3s5ehu1, template_element, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_eg1o3s5ehu1, 25).
-ast_attr[code](nf85e80d35f2c16b6_eg1o3s5ehu1, value_raw, "/x").
-ast_attr[code](nf85e80d35f2c16b6_eg1o3s5ehu1, value_cooked, "/x").
-ast_attr[code](nf85e80d35f2c16b6_eg1o3s5ehu1, tail, true).
-ast_child[code](nf85e80d35f2c16b6_v6211c707c4, quasis, 1, nf85e80d35f2c16b6_eg1o3s5ehu1).
-ast_child[code](nf85e80d35f2c16b6_4bf1ea6j3u1, argument, 0, nf85e80d35f2c16b6_v6211c707c4).
-ast_child[code](nf85e80d35f2c16b6_9nvlsd61qt4, body, 0, nf85e80d35f2c16b6_4bf1ea6j3u1).
+ast_node[code](nf85e80d35f2c16b6_ntqv0nc5tf, return_statement, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_ntqv0nc5tf, 25).
+ast_node[code](nf85e80d35f2c16b6_feh07v40so, template_literal, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_feh07v40so, 25).
+ast_node[code](nf85e80d35f2c16b6_ubocgtr6m07, identifier, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_ubocgtr6m07, 25).
+ast_attr[code](nf85e80d35f2c16b6_ubocgtr6m07, name, "u").
+ast_child[code](nf85e80d35f2c16b6_feh07v40so, expressions, 0, nf85e80d35f2c16b6_ubocgtr6m07).
+ast_node[code](nf85e80d35f2c16b6_7kt7ooml7l7, template_element, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_7kt7ooml7l7, 25).
+ast_attr[code](nf85e80d35f2c16b6_7kt7ooml7l7, value_raw, "").
+ast_attr[code](nf85e80d35f2c16b6_7kt7ooml7l7, value_cooked, "").
+ast_attr[code](nf85e80d35f2c16b6_7kt7ooml7l7, tail, false).
+ast_child[code](nf85e80d35f2c16b6_feh07v40so, quasis, 0, nf85e80d35f2c16b6_7kt7ooml7l7).
+ast_node[code](nf85e80d35f2c16b6_ar9unhv0hk, template_element, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_ar9unhv0hk, 25).
+ast_attr[code](nf85e80d35f2c16b6_ar9unhv0hk, value_raw, "/x").
+ast_attr[code](nf85e80d35f2c16b6_ar9unhv0hk, value_cooked, "/x").
+ast_attr[code](nf85e80d35f2c16b6_ar9unhv0hk, tail, true).
+ast_child[code](nf85e80d35f2c16b6_feh07v40so, quasis, 1, nf85e80d35f2c16b6_ar9unhv0hk).
+ast_child[code](nf85e80d35f2c16b6_ntqv0nc5tf, argument, 0, nf85e80d35f2c16b6_feh07v40so).
+ast_child[code](nf85e80d35f2c16b6_9nvlsd61qt4, body, 0, nf85e80d35f2c16b6_ntqv0nc5tf).
 ast_child[code](nf85e80d35f2c16b6_18drtd9e1l6, body, 0, nf85e80d35f2c16b6_9nvlsd61qt4).
 ast_child[code](nf85e80d35f2c16b6_9l7lmkrrho2, declaration, 0, nf85e80d35f2c16b6_18drtd9e1l6).
 ast_child[code](nf85e80d35f2c16b6_12undirbnh3, body, 22, nf85e80d35f2c16b6_9l7lmkrrho2).
-ast_node[code](nf85e80d35f2c16b6_oig766ah925, export_named_declaration, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_oig766ah925, 26).
-ast_attr[code](nf85e80d35f2c16b6_oig766ah925, export_kind, "value").
-ast_node[code](nf85e80d35f2c16b6_4t8rkmr6u6, variable_declaration, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_4t8rkmr6u6, 26).
-ast_node[code](nf85e80d35f2c16b6_9q3qe8tsnt3, variable_declarator, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_9q3qe8tsnt3, 26).
-ast_node[code](nf85e80d35f2c16b6_clbg9v271g6, identifier, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_clbg9v271g6, 26).
-ast_attr[code](nf85e80d35f2c16b6_clbg9v271g6, name, "atCap").
-ast_child[code](nf85e80d35f2c16b6_9q3qe8tsnt3, id, 0, nf85e80d35f2c16b6_clbg9v271g6).
-ast_node[code](nf85e80d35f2c16b6_f47mscf6nf4, template_literal, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_f47mscf6nf4, 26).
-ast_node[code](nf85e80d35f2c16b6_3ulp0uaeuk2, identifier, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_3ulp0uaeuk2, 26).
-ast_attr[code](nf85e80d35f2c16b6_3ulp0uaeuk2, name, "v").
-ast_child[code](nf85e80d35f2c16b6_f47mscf6nf4, expressions, 0, nf85e80d35f2c16b6_3ulp0uaeuk2).
-ast_node[code](nf85e80d35f2c16b6_4lmlml1sjt1, identifier, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_4lmlml1sjt1, 26).
-ast_attr[code](nf85e80d35f2c16b6_4lmlml1sjt1, name, "v").
-ast_child[code](nf85e80d35f2c16b6_f47mscf6nf4, expressions, 1, nf85e80d35f2c16b6_4lmlml1sjt1).
-ast_node[code](nf85e80d35f2c16b6_kh2t69buo66, identifier, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_kh2t69buo66, 26).
-ast_attr[code](nf85e80d35f2c16b6_kh2t69buo66, name, "v").
-ast_child[code](nf85e80d35f2c16b6_f47mscf6nf4, expressions, 2, nf85e80d35f2c16b6_kh2t69buo66).
-ast_node[code](nf85e80d35f2c16b6_kk1mi6il7c, identifier, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_kk1mi6il7c, 26).
-ast_attr[code](nf85e80d35f2c16b6_kk1mi6il7c, name, "v").
-ast_child[code](nf85e80d35f2c16b6_f47mscf6nf4, expressions, 3, nf85e80d35f2c16b6_kk1mi6il7c).
-ast_node[code](nf85e80d35f2c16b6_pk6lh13t9j6, template_element, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_pk6lh13t9j6, 26).
-ast_attr[code](nf85e80d35f2c16b6_pk6lh13t9j6, value_raw, "").
-ast_attr[code](nf85e80d35f2c16b6_pk6lh13t9j6, value_cooked, "").
-ast_attr[code](nf85e80d35f2c16b6_pk6lh13t9j6, tail, false).
-ast_child[code](nf85e80d35f2c16b6_f47mscf6nf4, quasis, 0, nf85e80d35f2c16b6_pk6lh13t9j6).
-ast_node[code](nf85e80d35f2c16b6_676aeub06h2, template_element, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_676aeub06h2, 26).
-ast_attr[code](nf85e80d35f2c16b6_676aeub06h2, value_raw, "").
-ast_attr[code](nf85e80d35f2c16b6_676aeub06h2, value_cooked, "").
-ast_attr[code](nf85e80d35f2c16b6_676aeub06h2, tail, false).
-ast_child[code](nf85e80d35f2c16b6_f47mscf6nf4, quasis, 1, nf85e80d35f2c16b6_676aeub06h2).
-ast_node[code](nf85e80d35f2c16b6_c91a2c1npi2, template_element, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_c91a2c1npi2, 26).
-ast_attr[code](nf85e80d35f2c16b6_c91a2c1npi2, value_raw, "").
-ast_attr[code](nf85e80d35f2c16b6_c91a2c1npi2, value_cooked, "").
-ast_attr[code](nf85e80d35f2c16b6_c91a2c1npi2, tail, false).
-ast_child[code](nf85e80d35f2c16b6_f47mscf6nf4, quasis, 2, nf85e80d35f2c16b6_c91a2c1npi2).
-ast_node[code](nf85e80d35f2c16b6_6mmvc8kqqt6, template_element, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_6mmvc8kqqt6, 26).
-ast_attr[code](nf85e80d35f2c16b6_6mmvc8kqqt6, value_raw, "").
-ast_attr[code](nf85e80d35f2c16b6_6mmvc8kqqt6, value_cooked, "").
-ast_attr[code](nf85e80d35f2c16b6_6mmvc8kqqt6, tail, false).
-ast_child[code](nf85e80d35f2c16b6_f47mscf6nf4, quasis, 3, nf85e80d35f2c16b6_6mmvc8kqqt6).
-ast_node[code](nf85e80d35f2c16b6_5p9a85j6jo1, template_element, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_5p9a85j6jo1, 26).
-ast_attr[code](nf85e80d35f2c16b6_5p9a85j6jo1, value_raw, "").
-ast_attr[code](nf85e80d35f2c16b6_5p9a85j6jo1, value_cooked, "").
-ast_attr[code](nf85e80d35f2c16b6_5p9a85j6jo1, tail, true).
-ast_child[code](nf85e80d35f2c16b6_f47mscf6nf4, quasis, 4, nf85e80d35f2c16b6_5p9a85j6jo1).
-ast_child[code](nf85e80d35f2c16b6_9q3qe8tsnt3, init, 0, nf85e80d35f2c16b6_f47mscf6nf4).
-ast_child[code](nf85e80d35f2c16b6_4t8rkmr6u6, declarations, 0, nf85e80d35f2c16b6_9q3qe8tsnt3).
-ast_attr[code](nf85e80d35f2c16b6_4t8rkmr6u6, kind, "const").
-ast_child[code](nf85e80d35f2c16b6_oig766ah925, declaration, 0, nf85e80d35f2c16b6_4t8rkmr6u6).
-ast_child[code](nf85e80d35f2c16b6_12undirbnh3, body, 23, nf85e80d35f2c16b6_oig766ah925).
-ast_node[code](nf85e80d35f2c16b6_kbuuks5tg35, export_named_declaration, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_kbuuks5tg35, 27).
-ast_attr[code](nf85e80d35f2c16b6_kbuuks5tg35, export_kind, "value").
-ast_node[code](nf85e80d35f2c16b6_va1epe26h27, variable_declaration, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_va1epe26h27, 27).
-ast_node[code](nf85e80d35f2c16b6_qrjhvm5q3t, variable_declarator, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_qrjhvm5q3t, 27).
-ast_node[code](nf85e80d35f2c16b6_b18q5jam2f, identifier, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_b18q5jam2f, 27).
-ast_attr[code](nf85e80d35f2c16b6_b18q5jam2f, name, "overCap").
-ast_child[code](nf85e80d35f2c16b6_qrjhvm5q3t, id, 0, nf85e80d35f2c16b6_b18q5jam2f).
-ast_node[code](nf85e80d35f2c16b6_tpi2jo0kv15, template_literal, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_tpi2jo0kv15, 27).
-ast_node[code](nf85e80d35f2c16b6_dk9fpn8c5b5, identifier, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_dk9fpn8c5b5, 27).
-ast_attr[code](nf85e80d35f2c16b6_dk9fpn8c5b5, name, "v").
-ast_child[code](nf85e80d35f2c16b6_tpi2jo0kv15, expressions, 0, nf85e80d35f2c16b6_dk9fpn8c5b5).
-ast_node[code](nf85e80d35f2c16b6_f3tfug4vri5, identifier, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_f3tfug4vri5, 27).
-ast_attr[code](nf85e80d35f2c16b6_f3tfug4vri5, name, "v").
-ast_child[code](nf85e80d35f2c16b6_tpi2jo0kv15, expressions, 1, nf85e80d35f2c16b6_f3tfug4vri5).
-ast_node[code](nf85e80d35f2c16b6_ujo62ob9as3, identifier, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_ujo62ob9as3, 27).
-ast_attr[code](nf85e80d35f2c16b6_ujo62ob9as3, name, "v").
-ast_child[code](nf85e80d35f2c16b6_tpi2jo0kv15, expressions, 2, nf85e80d35f2c16b6_ujo62ob9as3).
-ast_node[code](nf85e80d35f2c16b6_2hg32g7gjs6, identifier, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_2hg32g7gjs6, 27).
-ast_attr[code](nf85e80d35f2c16b6_2hg32g7gjs6, name, "v").
-ast_child[code](nf85e80d35f2c16b6_tpi2jo0kv15, expressions, 3, nf85e80d35f2c16b6_2hg32g7gjs6).
-ast_node[code](nf85e80d35f2c16b6_s0e90ek8r82, identifier, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_s0e90ek8r82, 27).
-ast_attr[code](nf85e80d35f2c16b6_s0e90ek8r82, name, "v").
-ast_child[code](nf85e80d35f2c16b6_tpi2jo0kv15, expressions, 4, nf85e80d35f2c16b6_s0e90ek8r82).
-ast_node[code](nf85e80d35f2c16b6_milfh7tqpr1, template_element, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_milfh7tqpr1, 27).
-ast_attr[code](nf85e80d35f2c16b6_milfh7tqpr1, value_raw, "").
-ast_attr[code](nf85e80d35f2c16b6_milfh7tqpr1, value_cooked, "").
-ast_attr[code](nf85e80d35f2c16b6_milfh7tqpr1, tail, false).
-ast_child[code](nf85e80d35f2c16b6_tpi2jo0kv15, quasis, 0, nf85e80d35f2c16b6_milfh7tqpr1).
-ast_node[code](nf85e80d35f2c16b6_qt890lqe4c, template_element, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_qt890lqe4c, 27).
-ast_attr[code](nf85e80d35f2c16b6_qt890lqe4c, value_raw, "").
-ast_attr[code](nf85e80d35f2c16b6_qt890lqe4c, value_cooked, "").
-ast_attr[code](nf85e80d35f2c16b6_qt890lqe4c, tail, false).
-ast_child[code](nf85e80d35f2c16b6_tpi2jo0kv15, quasis, 1, nf85e80d35f2c16b6_qt890lqe4c).
-ast_node[code](nf85e80d35f2c16b6_4r3odr0u2b3, template_element, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_4r3odr0u2b3, 27).
-ast_attr[code](nf85e80d35f2c16b6_4r3odr0u2b3, value_raw, "").
-ast_attr[code](nf85e80d35f2c16b6_4r3odr0u2b3, value_cooked, "").
-ast_attr[code](nf85e80d35f2c16b6_4r3odr0u2b3, tail, false).
-ast_child[code](nf85e80d35f2c16b6_tpi2jo0kv15, quasis, 2, nf85e80d35f2c16b6_4r3odr0u2b3).
-ast_node[code](nf85e80d35f2c16b6_dia6n4u7ld4, template_element, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_dia6n4u7ld4, 27).
-ast_attr[code](nf85e80d35f2c16b6_dia6n4u7ld4, value_raw, "").
-ast_attr[code](nf85e80d35f2c16b6_dia6n4u7ld4, value_cooked, "").
-ast_attr[code](nf85e80d35f2c16b6_dia6n4u7ld4, tail, false).
-ast_child[code](nf85e80d35f2c16b6_tpi2jo0kv15, quasis, 3, nf85e80d35f2c16b6_dia6n4u7ld4).
-ast_node[code](nf85e80d35f2c16b6_kg0d1t7ed7, template_element, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_kg0d1t7ed7, 27).
-ast_attr[code](nf85e80d35f2c16b6_kg0d1t7ed7, value_raw, "").
-ast_attr[code](nf85e80d35f2c16b6_kg0d1t7ed7, value_cooked, "").
-ast_attr[code](nf85e80d35f2c16b6_kg0d1t7ed7, tail, false).
-ast_child[code](nf85e80d35f2c16b6_tpi2jo0kv15, quasis, 4, nf85e80d35f2c16b6_kg0d1t7ed7).
-ast_node[code](nf85e80d35f2c16b6_mnav4v6ult5, template_element, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_mnav4v6ult5, 27).
-ast_attr[code](nf85e80d35f2c16b6_mnav4v6ult5, value_raw, "").
-ast_attr[code](nf85e80d35f2c16b6_mnav4v6ult5, value_cooked, "").
-ast_attr[code](nf85e80d35f2c16b6_mnav4v6ult5, tail, true).
-ast_child[code](nf85e80d35f2c16b6_tpi2jo0kv15, quasis, 5, nf85e80d35f2c16b6_mnav4v6ult5).
-ast_child[code](nf85e80d35f2c16b6_qrjhvm5q3t, init, 0, nf85e80d35f2c16b6_tpi2jo0kv15).
-ast_child[code](nf85e80d35f2c16b6_va1epe26h27, declarations, 0, nf85e80d35f2c16b6_qrjhvm5q3t).
-ast_attr[code](nf85e80d35f2c16b6_va1epe26h27, kind, "const").
-ast_child[code](nf85e80d35f2c16b6_kbuuks5tg35, declaration, 0, nf85e80d35f2c16b6_va1epe26h27).
-ast_child[code](nf85e80d35f2c16b6_12undirbnh3, body, 24, nf85e80d35f2c16b6_kbuuks5tg35).
+ast_node[code](nf85e80d35f2c16b6_48h4vh08s95, export_named_declaration, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_48h4vh08s95, 26).
+ast_attr[code](nf85e80d35f2c16b6_48h4vh08s95, export_kind, "value").
+ast_node[code](nf85e80d35f2c16b6_c7q6fnhcgi3, variable_declaration, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_c7q6fnhcgi3, 26).
+ast_node[code](nf85e80d35f2c16b6_ph3n41ov6h1, variable_declarator, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_ph3n41ov6h1, 26).
+ast_node[code](nf85e80d35f2c16b6_mtb7g5dapu7, identifier, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_mtb7g5dapu7, 26).
+ast_attr[code](nf85e80d35f2c16b6_mtb7g5dapu7, name, "atCap").
+ast_child[code](nf85e80d35f2c16b6_ph3n41ov6h1, id, 0, nf85e80d35f2c16b6_mtb7g5dapu7).
+ast_node[code](nf85e80d35f2c16b6_gvaa7nsbu95, template_literal, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_gvaa7nsbu95, 26).
+ast_node[code](nf85e80d35f2c16b6_flc6fn426g2, identifier, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_flc6fn426g2, 26).
+ast_attr[code](nf85e80d35f2c16b6_flc6fn426g2, name, "v").
+ast_child[code](nf85e80d35f2c16b6_gvaa7nsbu95, expressions, 0, nf85e80d35f2c16b6_flc6fn426g2).
+ast_node[code](nf85e80d35f2c16b6_p7qi9nost96, identifier, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_p7qi9nost96, 26).
+ast_attr[code](nf85e80d35f2c16b6_p7qi9nost96, name, "v").
+ast_child[code](nf85e80d35f2c16b6_gvaa7nsbu95, expressions, 1, nf85e80d35f2c16b6_p7qi9nost96).
+ast_node[code](nf85e80d35f2c16b6_em5s889ue76, identifier, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_em5s889ue76, 26).
+ast_attr[code](nf85e80d35f2c16b6_em5s889ue76, name, "v").
+ast_child[code](nf85e80d35f2c16b6_gvaa7nsbu95, expressions, 2, nf85e80d35f2c16b6_em5s889ue76).
+ast_node[code](nf85e80d35f2c16b6_a8lt9kt2293, identifier, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_a8lt9kt2293, 26).
+ast_attr[code](nf85e80d35f2c16b6_a8lt9kt2293, name, "v").
+ast_child[code](nf85e80d35f2c16b6_gvaa7nsbu95, expressions, 3, nf85e80d35f2c16b6_a8lt9kt2293).
+ast_node[code](nf85e80d35f2c16b6_db9u7ndc042, template_element, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_db9u7ndc042, 26).
+ast_attr[code](nf85e80d35f2c16b6_db9u7ndc042, value_raw, "").
+ast_attr[code](nf85e80d35f2c16b6_db9u7ndc042, value_cooked, "").
+ast_attr[code](nf85e80d35f2c16b6_db9u7ndc042, tail, false).
+ast_child[code](nf85e80d35f2c16b6_gvaa7nsbu95, quasis, 0, nf85e80d35f2c16b6_db9u7ndc042).
+ast_node[code](nf85e80d35f2c16b6_minh71ou162, template_element, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_minh71ou162, 26).
+ast_attr[code](nf85e80d35f2c16b6_minh71ou162, value_raw, "").
+ast_attr[code](nf85e80d35f2c16b6_minh71ou162, value_cooked, "").
+ast_attr[code](nf85e80d35f2c16b6_minh71ou162, tail, false).
+ast_child[code](nf85e80d35f2c16b6_gvaa7nsbu95, quasis, 1, nf85e80d35f2c16b6_minh71ou162).
+ast_node[code](nf85e80d35f2c16b6_5hdos28ub6, template_element, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_5hdos28ub6, 26).
+ast_attr[code](nf85e80d35f2c16b6_5hdos28ub6, value_raw, "").
+ast_attr[code](nf85e80d35f2c16b6_5hdos28ub6, value_cooked, "").
+ast_attr[code](nf85e80d35f2c16b6_5hdos28ub6, tail, false).
+ast_child[code](nf85e80d35f2c16b6_gvaa7nsbu95, quasis, 2, nf85e80d35f2c16b6_5hdos28ub6).
+ast_node[code](nf85e80d35f2c16b6_qagv9439hp, template_element, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_qagv9439hp, 26).
+ast_attr[code](nf85e80d35f2c16b6_qagv9439hp, value_raw, "").
+ast_attr[code](nf85e80d35f2c16b6_qagv9439hp, value_cooked, "").
+ast_attr[code](nf85e80d35f2c16b6_qagv9439hp, tail, false).
+ast_child[code](nf85e80d35f2c16b6_gvaa7nsbu95, quasis, 3, nf85e80d35f2c16b6_qagv9439hp).
+ast_node[code](nf85e80d35f2c16b6_7ribt4mkui4, template_element, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_7ribt4mkui4, 26).
+ast_attr[code](nf85e80d35f2c16b6_7ribt4mkui4, value_raw, "").
+ast_attr[code](nf85e80d35f2c16b6_7ribt4mkui4, value_cooked, "").
+ast_attr[code](nf85e80d35f2c16b6_7ribt4mkui4, tail, true).
+ast_child[code](nf85e80d35f2c16b6_gvaa7nsbu95, quasis, 4, nf85e80d35f2c16b6_7ribt4mkui4).
+ast_child[code](nf85e80d35f2c16b6_ph3n41ov6h1, init, 0, nf85e80d35f2c16b6_gvaa7nsbu95).
+ast_child[code](nf85e80d35f2c16b6_c7q6fnhcgi3, declarations, 0, nf85e80d35f2c16b6_ph3n41ov6h1).
+ast_attr[code](nf85e80d35f2c16b6_c7q6fnhcgi3, kind, "const").
+ast_child[code](nf85e80d35f2c16b6_48h4vh08s95, declaration, 0, nf85e80d35f2c16b6_c7q6fnhcgi3).
+ast_child[code](nf85e80d35f2c16b6_12undirbnh3, body, 23, nf85e80d35f2c16b6_48h4vh08s95).
+ast_node[code](nf85e80d35f2c16b6_qhauvkh7vv2, export_named_declaration, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_qhauvkh7vv2, 27).
+ast_attr[code](nf85e80d35f2c16b6_qhauvkh7vv2, export_kind, "value").
+ast_node[code](nf85e80d35f2c16b6_gb15e3pc8d3, variable_declaration, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_gb15e3pc8d3, 27).
+ast_node[code](nf85e80d35f2c16b6_2mq0v6ro7e5, variable_declarator, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_2mq0v6ro7e5, 27).
+ast_node[code](nf85e80d35f2c16b6_eldi466b851, identifier, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_eldi466b851, 27).
+ast_attr[code](nf85e80d35f2c16b6_eldi466b851, name, "overCap").
+ast_child[code](nf85e80d35f2c16b6_2mq0v6ro7e5, id, 0, nf85e80d35f2c16b6_eldi466b851).
+ast_node[code](nf85e80d35f2c16b6_rmc96kc2315, template_literal, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_rmc96kc2315, 27).
+ast_node[code](nf85e80d35f2c16b6_8b02pu7qfn2, identifier, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_8b02pu7qfn2, 27).
+ast_attr[code](nf85e80d35f2c16b6_8b02pu7qfn2, name, "v").
+ast_child[code](nf85e80d35f2c16b6_rmc96kc2315, expressions, 0, nf85e80d35f2c16b6_8b02pu7qfn2).
+ast_node[code](nf85e80d35f2c16b6_5c8eobvunc, identifier, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_5c8eobvunc, 27).
+ast_attr[code](nf85e80d35f2c16b6_5c8eobvunc, name, "v").
+ast_child[code](nf85e80d35f2c16b6_rmc96kc2315, expressions, 1, nf85e80d35f2c16b6_5c8eobvunc).
+ast_node[code](nf85e80d35f2c16b6_j45dqjpld43, identifier, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_j45dqjpld43, 27).
+ast_attr[code](nf85e80d35f2c16b6_j45dqjpld43, name, "v").
+ast_child[code](nf85e80d35f2c16b6_rmc96kc2315, expressions, 2, nf85e80d35f2c16b6_j45dqjpld43).
+ast_node[code](nf85e80d35f2c16b6_vmqbqqmq953, identifier, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_vmqbqqmq953, 27).
+ast_attr[code](nf85e80d35f2c16b6_vmqbqqmq953, name, "v").
+ast_child[code](nf85e80d35f2c16b6_rmc96kc2315, expressions, 3, nf85e80d35f2c16b6_vmqbqqmq953).
+ast_node[code](nf85e80d35f2c16b6_akr3um8umd, identifier, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_akr3um8umd, 27).
+ast_attr[code](nf85e80d35f2c16b6_akr3um8umd, name, "v").
+ast_child[code](nf85e80d35f2c16b6_rmc96kc2315, expressions, 4, nf85e80d35f2c16b6_akr3um8umd).
+ast_node[code](nf85e80d35f2c16b6_1mjea2knh57, template_element, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_1mjea2knh57, 27).
+ast_attr[code](nf85e80d35f2c16b6_1mjea2knh57, value_raw, "").
+ast_attr[code](nf85e80d35f2c16b6_1mjea2knh57, value_cooked, "").
+ast_attr[code](nf85e80d35f2c16b6_1mjea2knh57, tail, false).
+ast_child[code](nf85e80d35f2c16b6_rmc96kc2315, quasis, 0, nf85e80d35f2c16b6_1mjea2knh57).
+ast_node[code](nf85e80d35f2c16b6_rrbeqc99of6, template_element, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_rrbeqc99of6, 27).
+ast_attr[code](nf85e80d35f2c16b6_rrbeqc99of6, value_raw, "").
+ast_attr[code](nf85e80d35f2c16b6_rrbeqc99of6, value_cooked, "").
+ast_attr[code](nf85e80d35f2c16b6_rrbeqc99of6, tail, false).
+ast_child[code](nf85e80d35f2c16b6_rmc96kc2315, quasis, 1, nf85e80d35f2c16b6_rrbeqc99of6).
+ast_node[code](nf85e80d35f2c16b6_p161ka3s8g2, template_element, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_p161ka3s8g2, 27).
+ast_attr[code](nf85e80d35f2c16b6_p161ka3s8g2, value_raw, "").
+ast_attr[code](nf85e80d35f2c16b6_p161ka3s8g2, value_cooked, "").
+ast_attr[code](nf85e80d35f2c16b6_p161ka3s8g2, tail, false).
+ast_child[code](nf85e80d35f2c16b6_rmc96kc2315, quasis, 2, nf85e80d35f2c16b6_p161ka3s8g2).
+ast_node[code](nf85e80d35f2c16b6_iro9jcihad7, template_element, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_iro9jcihad7, 27).
+ast_attr[code](nf85e80d35f2c16b6_iro9jcihad7, value_raw, "").
+ast_attr[code](nf85e80d35f2c16b6_iro9jcihad7, value_cooked, "").
+ast_attr[code](nf85e80d35f2c16b6_iro9jcihad7, tail, false).
+ast_child[code](nf85e80d35f2c16b6_rmc96kc2315, quasis, 3, nf85e80d35f2c16b6_iro9jcihad7).
+ast_node[code](nf85e80d35f2c16b6_7kls5bqdma7, template_element, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_7kls5bqdma7, 27).
+ast_attr[code](nf85e80d35f2c16b6_7kls5bqdma7, value_raw, "").
+ast_attr[code](nf85e80d35f2c16b6_7kls5bqdma7, value_cooked, "").
+ast_attr[code](nf85e80d35f2c16b6_7kls5bqdma7, tail, false).
+ast_child[code](nf85e80d35f2c16b6_rmc96kc2315, quasis, 4, nf85e80d35f2c16b6_7kls5bqdma7).
+ast_node[code](nf85e80d35f2c16b6_1tdudf1c886, template_element, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_1tdudf1c886, 27).
+ast_attr[code](nf85e80d35f2c16b6_1tdudf1c886, value_raw, "").
+ast_attr[code](nf85e80d35f2c16b6_1tdudf1c886, value_cooked, "").
+ast_attr[code](nf85e80d35f2c16b6_1tdudf1c886, tail, true).
+ast_child[code](nf85e80d35f2c16b6_rmc96kc2315, quasis, 5, nf85e80d35f2c16b6_1tdudf1c886).
+ast_child[code](nf85e80d35f2c16b6_2mq0v6ro7e5, init, 0, nf85e80d35f2c16b6_rmc96kc2315).
+ast_child[code](nf85e80d35f2c16b6_gb15e3pc8d3, declarations, 0, nf85e80d35f2c16b6_2mq0v6ro7e5).
+ast_attr[code](nf85e80d35f2c16b6_gb15e3pc8d3, kind, "const").
+ast_child[code](nf85e80d35f2c16b6_qhauvkh7vv2, declaration, 0, nf85e80d35f2c16b6_gb15e3pc8d3).
+ast_child[code](nf85e80d35f2c16b6_12undirbnh3, body, 24, nf85e80d35f2c16b6_qhauvkh7vv2).
 ast_node[code](nf85e80d35f2c16b6_bi0rjuma1u, variable_declaration, "src/entry.ts").
 ast_line[code](nf85e80d35f2c16b6_bi0rjuma1u, 28).
 ast_node[code](nf85e80d35f2c16b6_a2fo31hjd3, variable_declarator, "src/entry.ts").
@@ -864,77 +864,77 @@ ast_child[code](nf85e80d35f2c16b6_a2fo31hjd3, init, 0, nf85e80d35f2c16b6_4diqjcc
 ast_child[code](nf85e80d35f2c16b6_bi0rjuma1u, declarations, 0, nf85e80d35f2c16b6_a2fo31hjd3).
 ast_attr[code](nf85e80d35f2c16b6_bi0rjuma1u, kind, "let").
 ast_child[code](nf85e80d35f2c16b6_12undirbnh3, body, 25, nf85e80d35f2c16b6_bi0rjuma1u).
-ast_node[code](nf85e80d35f2c16b6_24431293ki2, for_of_statement, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_24431293ki2, 29).
-ast_attr[code](nf85e80d35f2c16b6_24431293ki2, await, false).
-ast_node[code](nf85e80d35f2c16b6_ceafn00uuf, variable_declaration, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_ceafn00uuf, 29).
-ast_node[code](nf85e80d35f2c16b6_7sbvhv3uke2, variable_declarator, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_7sbvhv3uke2, 29).
-ast_node[code](nf85e80d35f2c16b6_r5ihui0a842, identifier, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_r5ihui0a842, 29).
-ast_attr[code](nf85e80d35f2c16b6_r5ihui0a842, name, "_").
-ast_child[code](nf85e80d35f2c16b6_7sbvhv3uke2, id, 0, nf85e80d35f2c16b6_r5ihui0a842).
-ast_child[code](nf85e80d35f2c16b6_ceafn00uuf, declarations, 0, nf85e80d35f2c16b6_7sbvhv3uke2).
-ast_attr[code](nf85e80d35f2c16b6_ceafn00uuf, kind, "const").
-ast_child[code](nf85e80d35f2c16b6_24431293ki2, left, 0, nf85e80d35f2c16b6_ceafn00uuf).
-ast_node[code](nf85e80d35f2c16b6_5ljtbspk933, array_expression, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_5ljtbspk933, 29).
-ast_node[code](nf85e80d35f2c16b6_ns5c30gqp51, numeric_literal, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_ns5c30gqp51, 29).
-ast_attr[code](nf85e80d35f2c16b6_ns5c30gqp51, value, 1).
-ast_child[code](nf85e80d35f2c16b6_5ljtbspk933, elements, 0, nf85e80d35f2c16b6_ns5c30gqp51).
-ast_node[code](nf85e80d35f2c16b6_83uaj2lj1j4, numeric_literal, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_83uaj2lj1j4, 29).
-ast_attr[code](nf85e80d35f2c16b6_83uaj2lj1j4, value, 2).
-ast_child[code](nf85e80d35f2c16b6_5ljtbspk933, elements, 1, nf85e80d35f2c16b6_83uaj2lj1j4).
-ast_child[code](nf85e80d35f2c16b6_24431293ki2, right, 0, nf85e80d35f2c16b6_5ljtbspk933).
-ast_node[code](nf85e80d35f2c16b6_4c8he4hspd3, block_statement, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_4c8he4hspd3, 29).
-ast_node[code](nf85e80d35f2c16b6_cv9cog9ova, expression_statement, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_cv9cog9ova, 29).
-ast_node[code](nf85e80d35f2c16b6_s2m5g0alpe, assignment_expression, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_s2m5g0alpe, 29).
-ast_attr[code](nf85e80d35f2c16b6_s2m5g0alpe, operator, "=").
-ast_node[code](nf85e80d35f2c16b6_ocb48gqu2p6, identifier, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_ocb48gqu2p6, 29).
-ast_attr[code](nf85e80d35f2c16b6_ocb48gqu2p6, name, "s").
-ast_child[code](nf85e80d35f2c16b6_s2m5g0alpe, left, 0, nf85e80d35f2c16b6_ocb48gqu2p6).
-ast_node[code](nf85e80d35f2c16b6_qncjmpd2b2, binary_expression, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_qncjmpd2b2, 29).
-ast_node[code](nf85e80d35f2c16b6_sstmd6dekr7, identifier, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_sstmd6dekr7, 29).
-ast_attr[code](nf85e80d35f2c16b6_sstmd6dekr7, name, "s").
-ast_child[code](nf85e80d35f2c16b6_qncjmpd2b2, left, 0, nf85e80d35f2c16b6_sstmd6dekr7).
-ast_attr[code](nf85e80d35f2c16b6_qncjmpd2b2, operator, "+").
-ast_node[code](nf85e80d35f2c16b6_i53blm7vhd7, string_literal, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_i53blm7vhd7, 29).
-ast_attr[code](nf85e80d35f2c16b6_i53blm7vhd7, value, "x").
-ast_child[code](nf85e80d35f2c16b6_qncjmpd2b2, right, 0, nf85e80d35f2c16b6_i53blm7vhd7).
-ast_child[code](nf85e80d35f2c16b6_s2m5g0alpe, right, 0, nf85e80d35f2c16b6_qncjmpd2b2).
-ast_child[code](nf85e80d35f2c16b6_cv9cog9ova, expression, 0, nf85e80d35f2c16b6_s2m5g0alpe).
-ast_child[code](nf85e80d35f2c16b6_4c8he4hspd3, body, 0, nf85e80d35f2c16b6_cv9cog9ova).
-ast_child[code](nf85e80d35f2c16b6_24431293ki2, body, 0, nf85e80d35f2c16b6_4c8he4hspd3).
-ast_child[code](nf85e80d35f2c16b6_12undirbnh3, body, 26, nf85e80d35f2c16b6_24431293ki2).
-ast_node[code](nf85e80d35f2c16b6_2v7ft8aem9, export_named_declaration, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_2v7ft8aem9, 30).
-ast_attr[code](nf85e80d35f2c16b6_2v7ft8aem9, export_kind, "value").
-ast_node[code](nf85e80d35f2c16b6_flq2j7hlo41, variable_declaration, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_flq2j7hlo41, 30).
-ast_node[code](nf85e80d35f2c16b6_mgotuvop6n5, variable_declarator, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_mgotuvop6n5, 30).
-ast_node[code](nf85e80d35f2c16b6_u0qceshsll5, identifier, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_u0qceshsll5, 30).
-ast_attr[code](nf85e80d35f2c16b6_u0qceshsll5, name, "looped").
-ast_child[code](nf85e80d35f2c16b6_mgotuvop6n5, id, 0, nf85e80d35f2c16b6_u0qceshsll5).
-ast_node[code](nf85e80d35f2c16b6_72pqhqr1j1, identifier, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_72pqhqr1j1, 30).
-ast_attr[code](nf85e80d35f2c16b6_72pqhqr1j1, name, "s").
-ast_child[code](nf85e80d35f2c16b6_mgotuvop6n5, init, 0, nf85e80d35f2c16b6_72pqhqr1j1).
-ast_child[code](nf85e80d35f2c16b6_flq2j7hlo41, declarations, 0, nf85e80d35f2c16b6_mgotuvop6n5).
-ast_attr[code](nf85e80d35f2c16b6_flq2j7hlo41, kind, "const").
-ast_child[code](nf85e80d35f2c16b6_2v7ft8aem9, declaration, 0, nf85e80d35f2c16b6_flq2j7hlo41).
-ast_child[code](nf85e80d35f2c16b6_12undirbnh3, body, 27, nf85e80d35f2c16b6_2v7ft8aem9).
+ast_node[code](nf85e80d35f2c16b6_e1pfgjqsk22, for_of_statement, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_e1pfgjqsk22, 29).
+ast_attr[code](nf85e80d35f2c16b6_e1pfgjqsk22, await, false).
+ast_node[code](nf85e80d35f2c16b6_lvjqtf84dc1, variable_declaration, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_lvjqtf84dc1, 29).
+ast_node[code](nf85e80d35f2c16b6_h0nm6d5fb41, variable_declarator, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_h0nm6d5fb41, 29).
+ast_node[code](nf85e80d35f2c16b6_41sc1433ti2, identifier, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_41sc1433ti2, 29).
+ast_attr[code](nf85e80d35f2c16b6_41sc1433ti2, name, "_").
+ast_child[code](nf85e80d35f2c16b6_h0nm6d5fb41, id, 0, nf85e80d35f2c16b6_41sc1433ti2).
+ast_child[code](nf85e80d35f2c16b6_lvjqtf84dc1, declarations, 0, nf85e80d35f2c16b6_h0nm6d5fb41).
+ast_attr[code](nf85e80d35f2c16b6_lvjqtf84dc1, kind, "const").
+ast_child[code](nf85e80d35f2c16b6_e1pfgjqsk22, left, 0, nf85e80d35f2c16b6_lvjqtf84dc1).
+ast_node[code](nf85e80d35f2c16b6_vipbhfknj42, array_expression, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_vipbhfknj42, 29).
+ast_node[code](nf85e80d35f2c16b6_u4n95eh8fs4, numeric_literal, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_u4n95eh8fs4, 29).
+ast_attr[code](nf85e80d35f2c16b6_u4n95eh8fs4, value, 1).
+ast_child[code](nf85e80d35f2c16b6_vipbhfknj42, elements, 0, nf85e80d35f2c16b6_u4n95eh8fs4).
+ast_node[code](nf85e80d35f2c16b6_8qf41gbplv5, numeric_literal, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_8qf41gbplv5, 29).
+ast_attr[code](nf85e80d35f2c16b6_8qf41gbplv5, value, 2).
+ast_child[code](nf85e80d35f2c16b6_vipbhfknj42, elements, 1, nf85e80d35f2c16b6_8qf41gbplv5).
+ast_child[code](nf85e80d35f2c16b6_e1pfgjqsk22, right, 0, nf85e80d35f2c16b6_vipbhfknj42).
+ast_node[code](nf85e80d35f2c16b6_9476nvsign1, block_statement, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_9476nvsign1, 29).
+ast_node[code](nf85e80d35f2c16b6_otmbvn16cs5, expression_statement, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_otmbvn16cs5, 29).
+ast_node[code](nf85e80d35f2c16b6_ah64asieri1, assignment_expression, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_ah64asieri1, 29).
+ast_attr[code](nf85e80d35f2c16b6_ah64asieri1, operator, "=").
+ast_node[code](nf85e80d35f2c16b6_9ahoqjutim3, identifier, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_9ahoqjutim3, 29).
+ast_attr[code](nf85e80d35f2c16b6_9ahoqjutim3, name, "s").
+ast_child[code](nf85e80d35f2c16b6_ah64asieri1, left, 0, nf85e80d35f2c16b6_9ahoqjutim3).
+ast_node[code](nf85e80d35f2c16b6_d5rs235pdu4, binary_expression, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_d5rs235pdu4, 29).
+ast_node[code](nf85e80d35f2c16b6_k6k55el93p4, identifier, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_k6k55el93p4, 29).
+ast_attr[code](nf85e80d35f2c16b6_k6k55el93p4, name, "s").
+ast_child[code](nf85e80d35f2c16b6_d5rs235pdu4, left, 0, nf85e80d35f2c16b6_k6k55el93p4).
+ast_attr[code](nf85e80d35f2c16b6_d5rs235pdu4, operator, "+").
+ast_node[code](nf85e80d35f2c16b6_245bub4hkr5, string_literal, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_245bub4hkr5, 29).
+ast_attr[code](nf85e80d35f2c16b6_245bub4hkr5, value, "x").
+ast_child[code](nf85e80d35f2c16b6_d5rs235pdu4, right, 0, nf85e80d35f2c16b6_245bub4hkr5).
+ast_child[code](nf85e80d35f2c16b6_ah64asieri1, right, 0, nf85e80d35f2c16b6_d5rs235pdu4).
+ast_child[code](nf85e80d35f2c16b6_otmbvn16cs5, expression, 0, nf85e80d35f2c16b6_ah64asieri1).
+ast_child[code](nf85e80d35f2c16b6_9476nvsign1, body, 0, nf85e80d35f2c16b6_otmbvn16cs5).
+ast_child[code](nf85e80d35f2c16b6_e1pfgjqsk22, body, 0, nf85e80d35f2c16b6_9476nvsign1).
+ast_child[code](nf85e80d35f2c16b6_12undirbnh3, body, 26, nf85e80d35f2c16b6_e1pfgjqsk22).
+ast_node[code](nf85e80d35f2c16b6_0kjkvuqo1f6, export_named_declaration, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_0kjkvuqo1f6, 30).
+ast_attr[code](nf85e80d35f2c16b6_0kjkvuqo1f6, export_kind, "value").
+ast_node[code](nf85e80d35f2c16b6_62l85a3pf51, variable_declaration, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_62l85a3pf51, 30).
+ast_node[code](nf85e80d35f2c16b6_ornn1nd28l5, variable_declarator, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_ornn1nd28l5, 30).
+ast_node[code](nf85e80d35f2c16b6_khj6se31s95, identifier, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_khj6se31s95, 30).
+ast_attr[code](nf85e80d35f2c16b6_khj6se31s95, name, "looped").
+ast_child[code](nf85e80d35f2c16b6_ornn1nd28l5, id, 0, nf85e80d35f2c16b6_khj6se31s95).
+ast_node[code](nf85e80d35f2c16b6_4e7jdsneb31, identifier, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_4e7jdsneb31, 30).
+ast_attr[code](nf85e80d35f2c16b6_4e7jdsneb31, name, "s").
+ast_child[code](nf85e80d35f2c16b6_ornn1nd28l5, init, 0, nf85e80d35f2c16b6_4e7jdsneb31).
+ast_child[code](nf85e80d35f2c16b6_62l85a3pf51, declarations, 0, nf85e80d35f2c16b6_ornn1nd28l5).
+ast_attr[code](nf85e80d35f2c16b6_62l85a3pf51, kind, "const").
+ast_child[code](nf85e80d35f2c16b6_0kjkvuqo1f6, declaration, 0, nf85e80d35f2c16b6_62l85a3pf51).
+ast_child[code](nf85e80d35f2c16b6_12undirbnh3, body, 27, nf85e80d35f2c16b6_0kjkvuqo1f6).
 ast_node[code](nf85e80d35f2c16b6_n2j1bjk2dq5, variable_declaration, "src/entry.ts").
 ast_line[code](nf85e80d35f2c16b6_n2j1bjk2dq5, 31).
 ast_node[code](nf85e80d35f2c16b6_2flvngkr3e2, variable_declarator, "src/entry.ts").
@@ -980,67 +980,67 @@ ast_child[code](nf85e80d35f2c16b6_2flvngkr3e2, init, 0, nf85e80d35f2c16b6_ne7tqm
 ast_child[code](nf85e80d35f2c16b6_n2j1bjk2dq5, declarations, 0, nf85e80d35f2c16b6_2flvngkr3e2).
 ast_attr[code](nf85e80d35f2c16b6_n2j1bjk2dq5, kind, "const").
 ast_child[code](nf85e80d35f2c16b6_12undirbnh3, body, 28, nf85e80d35f2c16b6_n2j1bjk2dq5).
-ast_node[code](nf85e80d35f2c16b6_do34jkefgl4, export_named_declaration, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_do34jkefgl4, 32).
-ast_attr[code](nf85e80d35f2c16b6_do34jkefgl4, export_kind, "value").
-ast_node[code](nf85e80d35f2c16b6_f270it22sm3, variable_declaration, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_f270it22sm3, 32).
-ast_node[code](nf85e80d35f2c16b6_64uprhha303, variable_declarator, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_64uprhha303, 32).
-ast_node[code](nf85e80d35f2c16b6_attoe47qhd3, identifier, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_attoe47qhd3, 32).
-ast_attr[code](nf85e80d35f2c16b6_attoe47qhd3, name, "either").
-ast_child[code](nf85e80d35f2c16b6_64uprhha303, id, 0, nf85e80d35f2c16b6_attoe47qhd3).
-ast_node[code](nf85e80d35f2c16b6_lq98ecdfbm3, binary_expression, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_lq98ecdfbm3, 32).
-ast_node[code](nf85e80d35f2c16b6_vtof7qmd0n6, identifier, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_vtof7qmd0n6, 32).
-ast_attr[code](nf85e80d35f2c16b6_vtof7qmd0n6, name, "w").
-ast_child[code](nf85e80d35f2c16b6_lq98ecdfbm3, left, 0, nf85e80d35f2c16b6_vtof7qmd0n6).
-ast_attr[code](nf85e80d35f2c16b6_lq98ecdfbm3, operator, "+").
-ast_node[code](nf85e80d35f2c16b6_9lunusvn6i5, numeric_literal, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_9lunusvn6i5, 32).
-ast_attr[code](nf85e80d35f2c16b6_9lunusvn6i5, value, 2).
-ast_child[code](nf85e80d35f2c16b6_lq98ecdfbm3, right, 0, nf85e80d35f2c16b6_9lunusvn6i5).
-ast_child[code](nf85e80d35f2c16b6_64uprhha303, init, 0, nf85e80d35f2c16b6_lq98ecdfbm3).
-ast_child[code](nf85e80d35f2c16b6_f270it22sm3, declarations, 0, nf85e80d35f2c16b6_64uprhha303).
-ast_attr[code](nf85e80d35f2c16b6_f270it22sm3, kind, "const").
-ast_child[code](nf85e80d35f2c16b6_do34jkefgl4, declaration, 0, nf85e80d35f2c16b6_f270it22sm3).
-ast_child[code](nf85e80d35f2c16b6_12undirbnh3, body, 29, nf85e80d35f2c16b6_do34jkefgl4).
-ast_node[code](nf85e80d35f2c16b6_p8n903ndd83, export_named_declaration, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_p8n903ndd83, 33).
-ast_attr[code](nf85e80d35f2c16b6_p8n903ndd83, export_kind, "value").
-ast_node[code](nf85e80d35f2c16b6_14sl1eutrq5, variable_declaration, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_14sl1eutrq5, 33).
-ast_node[code](nf85e80d35f2c16b6_a3rvjqkc1j2, variable_declarator, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_a3rvjqkc1j2, 33).
-ast_node[code](nf85e80d35f2c16b6_l4j5dpfc191, identifier, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_l4j5dpfc191, 33).
-ast_attr[code](nf85e80d35f2c16b6_l4j5dpfc191, name, "doubled").
-ast_child[code](nf85e80d35f2c16b6_a3rvjqkc1j2, id, 0, nf85e80d35f2c16b6_l4j5dpfc191).
-ast_node[code](nf85e80d35f2c16b6_80tipudge2, call_expression, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_80tipudge2, 33).
-ast_node[code](nf85e80d35f2c16b6_cd8ug8eh8l2, member_expression, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_cd8ug8eh8l2, 33).
-ast_node[code](nf85e80d35f2c16b6_c2h44bu51s7, identifier, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_c2h44bu51s7, 33).
-ast_attr[code](nf85e80d35f2c16b6_c2h44bu51s7, name, "path").
-ast_child[code](nf85e80d35f2c16b6_cd8ug8eh8l2, object, 0, nf85e80d35f2c16b6_c2h44bu51s7).
-ast_attr[code](nf85e80d35f2c16b6_cd8ug8eh8l2, computed, false).
-ast_node[code](nf85e80d35f2c16b6_tnbkul2a6n6, identifier, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_tnbkul2a6n6, 33).
-ast_attr[code](nf85e80d35f2c16b6_tnbkul2a6n6, name, "dirname").
-ast_child[code](nf85e80d35f2c16b6_cd8ug8eh8l2, property, 0, nf85e80d35f2c16b6_tnbkul2a6n6).
-ast_child[code](nf85e80d35f2c16b6_80tipudge2, callee, 0, nf85e80d35f2c16b6_cd8ug8eh8l2).
-ast_node[code](nf85e80d35f2c16b6_8781afm6m14, string_literal, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_8781afm6m14, 33).
-ast_attr[code](nf85e80d35f2c16b6_8781afm6m14, value, "//x").
-ast_child[code](nf85e80d35f2c16b6_80tipudge2, arguments, 0, nf85e80d35f2c16b6_8781afm6m14).
-ast_child[code](nf85e80d35f2c16b6_a3rvjqkc1j2, init, 0, nf85e80d35f2c16b6_80tipudge2).
-ast_child[code](nf85e80d35f2c16b6_14sl1eutrq5, declarations, 0, nf85e80d35f2c16b6_a3rvjqkc1j2).
-ast_attr[code](nf85e80d35f2c16b6_14sl1eutrq5, kind, "const").
-ast_child[code](nf85e80d35f2c16b6_p8n903ndd83, declaration, 0, nf85e80d35f2c16b6_14sl1eutrq5).
-ast_child[code](nf85e80d35f2c16b6_12undirbnh3, body, 30, nf85e80d35f2c16b6_p8n903ndd83).
+ast_node[code](nf85e80d35f2c16b6_24q6lpvrvh1, export_named_declaration, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_24q6lpvrvh1, 32).
+ast_attr[code](nf85e80d35f2c16b6_24q6lpvrvh1, export_kind, "value").
+ast_node[code](nf85e80d35f2c16b6_0o1ubmbjgv2, variable_declaration, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_0o1ubmbjgv2, 32).
+ast_node[code](nf85e80d35f2c16b6_lhg6qbfqfa5, variable_declarator, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_lhg6qbfqfa5, 32).
+ast_node[code](nf85e80d35f2c16b6_sg5kcrggph7, identifier, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_sg5kcrggph7, 32).
+ast_attr[code](nf85e80d35f2c16b6_sg5kcrggph7, name, "either").
+ast_child[code](nf85e80d35f2c16b6_lhg6qbfqfa5, id, 0, nf85e80d35f2c16b6_sg5kcrggph7).
+ast_node[code](nf85e80d35f2c16b6_c7t983h4c4, binary_expression, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_c7t983h4c4, 32).
+ast_node[code](nf85e80d35f2c16b6_u9gm923ll66, identifier, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_u9gm923ll66, 32).
+ast_attr[code](nf85e80d35f2c16b6_u9gm923ll66, name, "w").
+ast_child[code](nf85e80d35f2c16b6_c7t983h4c4, left, 0, nf85e80d35f2c16b6_u9gm923ll66).
+ast_attr[code](nf85e80d35f2c16b6_c7t983h4c4, operator, "+").
+ast_node[code](nf85e80d35f2c16b6_05677bs1ui5, numeric_literal, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_05677bs1ui5, 32).
+ast_attr[code](nf85e80d35f2c16b6_05677bs1ui5, value, 2).
+ast_child[code](nf85e80d35f2c16b6_c7t983h4c4, right, 0, nf85e80d35f2c16b6_05677bs1ui5).
+ast_child[code](nf85e80d35f2c16b6_lhg6qbfqfa5, init, 0, nf85e80d35f2c16b6_c7t983h4c4).
+ast_child[code](nf85e80d35f2c16b6_0o1ubmbjgv2, declarations, 0, nf85e80d35f2c16b6_lhg6qbfqfa5).
+ast_attr[code](nf85e80d35f2c16b6_0o1ubmbjgv2, kind, "const").
+ast_child[code](nf85e80d35f2c16b6_24q6lpvrvh1, declaration, 0, nf85e80d35f2c16b6_0o1ubmbjgv2).
+ast_child[code](nf85e80d35f2c16b6_12undirbnh3, body, 29, nf85e80d35f2c16b6_24q6lpvrvh1).
+ast_node[code](nf85e80d35f2c16b6_ia4sj37trd3, export_named_declaration, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_ia4sj37trd3, 33).
+ast_attr[code](nf85e80d35f2c16b6_ia4sj37trd3, export_kind, "value").
+ast_node[code](nf85e80d35f2c16b6_6tl9r85nim, variable_declaration, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_6tl9r85nim, 33).
+ast_node[code](nf85e80d35f2c16b6_41kcnftqi07, variable_declarator, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_41kcnftqi07, 33).
+ast_node[code](nf85e80d35f2c16b6_l8fc3g78bi4, identifier, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_l8fc3g78bi4, 33).
+ast_attr[code](nf85e80d35f2c16b6_l8fc3g78bi4, name, "doubled").
+ast_child[code](nf85e80d35f2c16b6_41kcnftqi07, id, 0, nf85e80d35f2c16b6_l8fc3g78bi4).
+ast_node[code](nf85e80d35f2c16b6_35883vrslb3, call_expression, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_35883vrslb3, 33).
+ast_node[code](nf85e80d35f2c16b6_v3552cdhpe4, member_expression, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_v3552cdhpe4, 33).
+ast_node[code](nf85e80d35f2c16b6_tm9m48a8ob2, identifier, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_tm9m48a8ob2, 33).
+ast_attr[code](nf85e80d35f2c16b6_tm9m48a8ob2, name, "path").
+ast_child[code](nf85e80d35f2c16b6_v3552cdhpe4, object, 0, nf85e80d35f2c16b6_tm9m48a8ob2).
+ast_attr[code](nf85e80d35f2c16b6_v3552cdhpe4, computed, false).
+ast_node[code](nf85e80d35f2c16b6_nf7goh35j32, identifier, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_nf7goh35j32, 33).
+ast_attr[code](nf85e80d35f2c16b6_nf7goh35j32, name, "dirname").
+ast_child[code](nf85e80d35f2c16b6_v3552cdhpe4, property, 0, nf85e80d35f2c16b6_nf7goh35j32).
+ast_child[code](nf85e80d35f2c16b6_35883vrslb3, callee, 0, nf85e80d35f2c16b6_v3552cdhpe4).
+ast_node[code](nf85e80d35f2c16b6_58kf4ahms34, string_literal, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_58kf4ahms34, 33).
+ast_attr[code](nf85e80d35f2c16b6_58kf4ahms34, value, "//x").
+ast_child[code](nf85e80d35f2c16b6_35883vrslb3, arguments, 0, nf85e80d35f2c16b6_58kf4ahms34).
+ast_child[code](nf85e80d35f2c16b6_41kcnftqi07, init, 0, nf85e80d35f2c16b6_35883vrslb3).
+ast_child[code](nf85e80d35f2c16b6_6tl9r85nim, declarations, 0, nf85e80d35f2c16b6_41kcnftqi07).
+ast_attr[code](nf85e80d35f2c16b6_6tl9r85nim, kind, "const").
+ast_child[code](nf85e80d35f2c16b6_ia4sj37trd3, declaration, 0, nf85e80d35f2c16b6_6tl9r85nim).
+ast_child[code](nf85e80d35f2c16b6_12undirbnh3, body, 30, nf85e80d35f2c16b6_ia4sj37trd3).
 ast_node[code](nf85e80d35f2c16b6_a7ilvnr31u6, variable_declaration, "src/entry.ts").
 ast_line[code](nf85e80d35f2c16b6_a7ilvnr31u6, 34).
 ast_node[code](nf85e80d35f2c16b6_s3r5o0cqut6, variable_declarator, "src/entry.ts").
@@ -1064,144 +1064,144 @@ ast_child[code](nf85e80d35f2c16b6_s3r5o0cqut6, init, 0, nf85e80d35f2c16b6_c0vg12
 ast_child[code](nf85e80d35f2c16b6_a7ilvnr31u6, declarations, 0, nf85e80d35f2c16b6_s3r5o0cqut6).
 ast_attr[code](nf85e80d35f2c16b6_a7ilvnr31u6, kind, "const").
 ast_child[code](nf85e80d35f2c16b6_12undirbnh3, body, 31, nf85e80d35f2c16b6_a7ilvnr31u6).
-ast_node[code](nf85e80d35f2c16b6_qmi6po5ff82, export_named_declaration, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_qmi6po5ff82, 35).
-ast_attr[code](nf85e80d35f2c16b6_qmi6po5ff82, export_kind, "value").
-ast_node[code](nf85e80d35f2c16b6_rn7jgovd7g7, variable_declaration, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_rn7jgovd7g7, 35).
-ast_node[code](nf85e80d35f2c16b6_v2eh3vq4ra5, variable_declarator, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_v2eh3vq4ra5, 35).
-ast_node[code](nf85e80d35f2c16b6_dv5nmuk4571, identifier, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_dv5nmuk4571, 35).
-ast_attr[code](nf85e80d35f2c16b6_dv5nmuk4571, name, "spread").
-ast_child[code](nf85e80d35f2c16b6_v2eh3vq4ra5, id, 0, nf85e80d35f2c16b6_dv5nmuk4571).
-ast_node[code](nf85e80d35f2c16b6_b20r22da1r7, call_expression, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_b20r22da1r7, 35).
-ast_node[code](nf85e80d35f2c16b6_j17baev7us3, member_expression, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_j17baev7us3, 35).
-ast_node[code](nf85e80d35f2c16b6_fev93f3b5v, identifier, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_fev93f3b5v, 35).
-ast_attr[code](nf85e80d35f2c16b6_fev93f3b5v, name, "path").
-ast_child[code](nf85e80d35f2c16b6_j17baev7us3, object, 0, nf85e80d35f2c16b6_fev93f3b5v).
-ast_attr[code](nf85e80d35f2c16b6_j17baev7us3, computed, false).
-ast_node[code](nf85e80d35f2c16b6_qhmirks6h76, identifier, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_qhmirks6h76, 35).
-ast_attr[code](nf85e80d35f2c16b6_qhmirks6h76, name, "join").
-ast_child[code](nf85e80d35f2c16b6_j17baev7us3, property, 0, nf85e80d35f2c16b6_qhmirks6h76).
-ast_child[code](nf85e80d35f2c16b6_b20r22da1r7, callee, 0, nf85e80d35f2c16b6_j17baev7us3).
-ast_node[code](nf85e80d35f2c16b6_4h282uguih5, identifier, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_4h282uguih5, 35).
-ast_attr[code](nf85e80d35f2c16b6_4h282uguih5, name, "root").
-ast_child[code](nf85e80d35f2c16b6_b20r22da1r7, arguments, 0, nf85e80d35f2c16b6_4h282uguih5).
-ast_node[code](nf85e80d35f2c16b6_nih7r1ncid4, spread_element, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_nih7r1ncid4, 35).
-ast_node[code](nf85e80d35f2c16b6_qtliu2tnkg5, identifier, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_qtliu2tnkg5, 35).
-ast_attr[code](nf85e80d35f2c16b6_qtliu2tnkg5, name, "rest").
-ast_child[code](nf85e80d35f2c16b6_nih7r1ncid4, argument, 0, nf85e80d35f2c16b6_qtliu2tnkg5).
-ast_child[code](nf85e80d35f2c16b6_b20r22da1r7, arguments, 1, nf85e80d35f2c16b6_nih7r1ncid4).
-ast_child[code](nf85e80d35f2c16b6_v2eh3vq4ra5, init, 0, nf85e80d35f2c16b6_b20r22da1r7).
-ast_child[code](nf85e80d35f2c16b6_rn7jgovd7g7, declarations, 0, nf85e80d35f2c16b6_v2eh3vq4ra5).
-ast_attr[code](nf85e80d35f2c16b6_rn7jgovd7g7, kind, "const").
-ast_child[code](nf85e80d35f2c16b6_qmi6po5ff82, declaration, 0, nf85e80d35f2c16b6_rn7jgovd7g7).
-ast_child[code](nf85e80d35f2c16b6_12undirbnh3, body, 32, nf85e80d35f2c16b6_qmi6po5ff82).
-ast_node[code](nf85e80d35f2c16b6_m5rrng7on33, export_named_declaration, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_m5rrng7on33, 36).
-ast_attr[code](nf85e80d35f2c16b6_m5rrng7on33, export_kind, "value").
-ast_node[code](nf85e80d35f2c16b6_luii5degh51, variable_declaration, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_luii5degh51, 36).
-ast_node[code](nf85e80d35f2c16b6_e1dgtr2ae43, variable_declarator, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_e1dgtr2ae43, 36).
-ast_node[code](nf85e80d35f2c16b6_0uhodtl1507, identifier, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_0uhodtl1507, 36).
-ast_attr[code](nf85e80d35f2c16b6_0uhodtl1507, name, "wrapped").
-ast_child[code](nf85e80d35f2c16b6_e1dgtr2ae43, id, 0, nf85e80d35f2c16b6_0uhodtl1507).
-ast_node[code](nf85e80d35f2c16b6_98crvk8i1v3, template_literal, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_98crvk8i1v3, 36).
-ast_node[code](nf85e80d35f2c16b6_tpnlb74q741, call_expression, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_tpnlb74q741, 36).
-ast_node[code](nf85e80d35f2c16b6_k93gs6rudb2, member_expression, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_k93gs6rudb2, 36).
-ast_node[code](nf85e80d35f2c16b6_ked6tsja8o, identifier, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_ked6tsja8o, 36).
-ast_attr[code](nf85e80d35f2c16b6_ked6tsja8o, name, "posix").
-ast_child[code](nf85e80d35f2c16b6_k93gs6rudb2, object, 0, nf85e80d35f2c16b6_ked6tsja8o).
-ast_attr[code](nf85e80d35f2c16b6_k93gs6rudb2, computed, false).
-ast_node[code](nf85e80d35f2c16b6_g661ri4tlj, identifier, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_g661ri4tlj, 36).
-ast_attr[code](nf85e80d35f2c16b6_g661ri4tlj, name, "join").
-ast_child[code](nf85e80d35f2c16b6_k93gs6rudb2, property, 0, nf85e80d35f2c16b6_g661ri4tlj).
-ast_child[code](nf85e80d35f2c16b6_tpnlb74q741, callee, 0, nf85e80d35f2c16b6_k93gs6rudb2).
-ast_node[code](nf85e80d35f2c16b6_d3tv78ehdp4, identifier, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_d3tv78ehdp4, 36).
-ast_attr[code](nf85e80d35f2c16b6_d3tv78ehdp4, name, "root").
-ast_child[code](nf85e80d35f2c16b6_tpnlb74q741, arguments, 0, nf85e80d35f2c16b6_d3tv78ehdp4).
-ast_node[code](nf85e80d35f2c16b6_d6b5qtdjdf3, string_literal, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_d6b5qtdjdf3, 36).
-ast_attr[code](nf85e80d35f2c16b6_d6b5qtdjdf3, value, "m").
-ast_child[code](nf85e80d35f2c16b6_tpnlb74q741, arguments, 1, nf85e80d35f2c16b6_d6b5qtdjdf3).
-ast_child[code](nf85e80d35f2c16b6_98crvk8i1v3, expressions, 0, nf85e80d35f2c16b6_tpnlb74q741).
-ast_node[code](nf85e80d35f2c16b6_qsfh7a7r8e4, template_element, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_qsfh7a7r8e4, 36).
-ast_attr[code](nf85e80d35f2c16b6_qsfh7a7r8e4, value_raw, "").
-ast_attr[code](nf85e80d35f2c16b6_qsfh7a7r8e4, value_cooked, "").
-ast_attr[code](nf85e80d35f2c16b6_qsfh7a7r8e4, tail, false).
-ast_child[code](nf85e80d35f2c16b6_98crvk8i1v3, quasis, 0, nf85e80d35f2c16b6_qsfh7a7r8e4).
-ast_node[code](nf85e80d35f2c16b6_a8r0q28kj94, template_element, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_a8r0q28kj94, 36).
-ast_attr[code](nf85e80d35f2c16b6_a8r0q28kj94, value_raw, "!").
-ast_attr[code](nf85e80d35f2c16b6_a8r0q28kj94, value_cooked, "!").
-ast_attr[code](nf85e80d35f2c16b6_a8r0q28kj94, tail, true).
-ast_child[code](nf85e80d35f2c16b6_98crvk8i1v3, quasis, 1, nf85e80d35f2c16b6_a8r0q28kj94).
-ast_child[code](nf85e80d35f2c16b6_e1dgtr2ae43, init, 0, nf85e80d35f2c16b6_98crvk8i1v3).
-ast_child[code](nf85e80d35f2c16b6_luii5degh51, declarations, 0, nf85e80d35f2c16b6_e1dgtr2ae43).
-ast_attr[code](nf85e80d35f2c16b6_luii5degh51, kind, "const").
-ast_child[code](nf85e80d35f2c16b6_m5rrng7on33, declaration, 0, nf85e80d35f2c16b6_luii5degh51).
-ast_child[code](nf85e80d35f2c16b6_12undirbnh3, body, 33, nf85e80d35f2c16b6_m5rrng7on33).
-ast_node[code](nf85e80d35f2c16b6_redvcm6foj1, export_named_declaration, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_redvcm6foj1, 37).
-ast_attr[code](nf85e80d35f2c16b6_redvcm6foj1, export_kind, "value").
-ast_node[code](nf85e80d35f2c16b6_6uv30jiija4, variable_declaration, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_6uv30jiija4, 37).
-ast_node[code](nf85e80d35f2c16b6_erfcmq4k2r1, variable_declarator, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_erfcmq4k2r1, 37).
-ast_node[code](nf85e80d35f2c16b6_b8h9ln5nch3, identifier, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_b8h9ln5nch3, 37).
-ast_attr[code](nf85e80d35f2c16b6_b8h9ln5nch3, name, "emptyJoin").
-ast_child[code](nf85e80d35f2c16b6_erfcmq4k2r1, id, 0, nf85e80d35f2c16b6_b8h9ln5nch3).
-ast_node[code](nf85e80d35f2c16b6_f5hv6hitr11, template_literal, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_f5hv6hitr11, 37).
-ast_node[code](nf85e80d35f2c16b6_mjtdhglm476, call_expression, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_mjtdhglm476, 37).
-ast_node[code](nf85e80d35f2c16b6_msq5obdfe85, member_expression, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_msq5obdfe85, 37).
-ast_node[code](nf85e80d35f2c16b6_22k9n51o106, array_expression, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_22k9n51o106, 37).
-ast_child[code](nf85e80d35f2c16b6_msq5obdfe85, object, 0, nf85e80d35f2c16b6_22k9n51o106).
-ast_attr[code](nf85e80d35f2c16b6_msq5obdfe85, computed, false).
-ast_node[code](nf85e80d35f2c16b6_nskc6ds59l3, identifier, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_nskc6ds59l3, 37).
-ast_attr[code](nf85e80d35f2c16b6_nskc6ds59l3, name, "join").
-ast_child[code](nf85e80d35f2c16b6_msq5obdfe85, property, 0, nf85e80d35f2c16b6_nskc6ds59l3).
-ast_child[code](nf85e80d35f2c16b6_mjtdhglm476, callee, 0, nf85e80d35f2c16b6_msq5obdfe85).
-ast_child[code](nf85e80d35f2c16b6_f5hv6hitr11, expressions, 0, nf85e80d35f2c16b6_mjtdhglm476).
-ast_node[code](nf85e80d35f2c16b6_2fvap6sa6t3, template_element, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_2fvap6sa6t3, 37).
-ast_attr[code](nf85e80d35f2c16b6_2fvap6sa6t3, value_raw, "").
-ast_attr[code](nf85e80d35f2c16b6_2fvap6sa6t3, value_cooked, "").
-ast_attr[code](nf85e80d35f2c16b6_2fvap6sa6t3, tail, false).
-ast_child[code](nf85e80d35f2c16b6_f5hv6hitr11, quasis, 0, nf85e80d35f2c16b6_2fvap6sa6t3).
-ast_node[code](nf85e80d35f2c16b6_83b4j5i6sg5, template_element, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_83b4j5i6sg5, 37).
-ast_attr[code](nf85e80d35f2c16b6_83b4j5i6sg5, value_raw, "/z").
-ast_attr[code](nf85e80d35f2c16b6_83b4j5i6sg5, value_cooked, "/z").
-ast_attr[code](nf85e80d35f2c16b6_83b4j5i6sg5, tail, true).
-ast_child[code](nf85e80d35f2c16b6_f5hv6hitr11, quasis, 1, nf85e80d35f2c16b6_83b4j5i6sg5).
-ast_child[code](nf85e80d35f2c16b6_erfcmq4k2r1, init, 0, nf85e80d35f2c16b6_f5hv6hitr11).
-ast_child[code](nf85e80d35f2c16b6_6uv30jiija4, declarations, 0, nf85e80d35f2c16b6_erfcmq4k2r1).
-ast_attr[code](nf85e80d35f2c16b6_6uv30jiija4, kind, "const").
-ast_child[code](nf85e80d35f2c16b6_redvcm6foj1, declaration, 0, nf85e80d35f2c16b6_6uv30jiija4).
-ast_child[code](nf85e80d35f2c16b6_12undirbnh3, body, 34, nf85e80d35f2c16b6_redvcm6foj1).
+ast_node[code](nf85e80d35f2c16b6_85o17l0k412, export_named_declaration, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_85o17l0k412, 35).
+ast_attr[code](nf85e80d35f2c16b6_85o17l0k412, export_kind, "value").
+ast_node[code](nf85e80d35f2c16b6_orsnpmpnkv2, variable_declaration, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_orsnpmpnkv2, 35).
+ast_node[code](nf85e80d35f2c16b6_4uaeiun6oj5, variable_declarator, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_4uaeiun6oj5, 35).
+ast_node[code](nf85e80d35f2c16b6_et5fhd5lvt5, identifier, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_et5fhd5lvt5, 35).
+ast_attr[code](nf85e80d35f2c16b6_et5fhd5lvt5, name, "spread").
+ast_child[code](nf85e80d35f2c16b6_4uaeiun6oj5, id, 0, nf85e80d35f2c16b6_et5fhd5lvt5).
+ast_node[code](nf85e80d35f2c16b6_8b2mo8pdpv3, call_expression, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_8b2mo8pdpv3, 35).
+ast_node[code](nf85e80d35f2c16b6_qads9qcqo82, member_expression, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_qads9qcqo82, 35).
+ast_node[code](nf85e80d35f2c16b6_h89mkgu3c37, identifier, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_h89mkgu3c37, 35).
+ast_attr[code](nf85e80d35f2c16b6_h89mkgu3c37, name, "path").
+ast_child[code](nf85e80d35f2c16b6_qads9qcqo82, object, 0, nf85e80d35f2c16b6_h89mkgu3c37).
+ast_attr[code](nf85e80d35f2c16b6_qads9qcqo82, computed, false).
+ast_node[code](nf85e80d35f2c16b6_vh7l5ho1mk6, identifier, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_vh7l5ho1mk6, 35).
+ast_attr[code](nf85e80d35f2c16b6_vh7l5ho1mk6, name, "join").
+ast_child[code](nf85e80d35f2c16b6_qads9qcqo82, property, 0, nf85e80d35f2c16b6_vh7l5ho1mk6).
+ast_child[code](nf85e80d35f2c16b6_8b2mo8pdpv3, callee, 0, nf85e80d35f2c16b6_qads9qcqo82).
+ast_node[code](nf85e80d35f2c16b6_1f89fog65c3, identifier, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_1f89fog65c3, 35).
+ast_attr[code](nf85e80d35f2c16b6_1f89fog65c3, name, "root").
+ast_child[code](nf85e80d35f2c16b6_8b2mo8pdpv3, arguments, 0, nf85e80d35f2c16b6_1f89fog65c3).
+ast_node[code](nf85e80d35f2c16b6_ev02cccvdb2, spread_element, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_ev02cccvdb2, 35).
+ast_node[code](nf85e80d35f2c16b6_vv0tir6u6p5, identifier, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_vv0tir6u6p5, 35).
+ast_attr[code](nf85e80d35f2c16b6_vv0tir6u6p5, name, "rest").
+ast_child[code](nf85e80d35f2c16b6_ev02cccvdb2, argument, 0, nf85e80d35f2c16b6_vv0tir6u6p5).
+ast_child[code](nf85e80d35f2c16b6_8b2mo8pdpv3, arguments, 1, nf85e80d35f2c16b6_ev02cccvdb2).
+ast_child[code](nf85e80d35f2c16b6_4uaeiun6oj5, init, 0, nf85e80d35f2c16b6_8b2mo8pdpv3).
+ast_child[code](nf85e80d35f2c16b6_orsnpmpnkv2, declarations, 0, nf85e80d35f2c16b6_4uaeiun6oj5).
+ast_attr[code](nf85e80d35f2c16b6_orsnpmpnkv2, kind, "const").
+ast_child[code](nf85e80d35f2c16b6_85o17l0k412, declaration, 0, nf85e80d35f2c16b6_orsnpmpnkv2).
+ast_child[code](nf85e80d35f2c16b6_12undirbnh3, body, 32, nf85e80d35f2c16b6_85o17l0k412).
+ast_node[code](nf85e80d35f2c16b6_eq5ue6fkki3, export_named_declaration, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_eq5ue6fkki3, 36).
+ast_attr[code](nf85e80d35f2c16b6_eq5ue6fkki3, export_kind, "value").
+ast_node[code](nf85e80d35f2c16b6_cht14rc0ht, variable_declaration, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_cht14rc0ht, 36).
+ast_node[code](nf85e80d35f2c16b6_fookvscgnk2, variable_declarator, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_fookvscgnk2, 36).
+ast_node[code](nf85e80d35f2c16b6_56rt9m5ot27, identifier, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_56rt9m5ot27, 36).
+ast_attr[code](nf85e80d35f2c16b6_56rt9m5ot27, name, "wrapped").
+ast_child[code](nf85e80d35f2c16b6_fookvscgnk2, id, 0, nf85e80d35f2c16b6_56rt9m5ot27).
+ast_node[code](nf85e80d35f2c16b6_dv4aalcpbt1, template_literal, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_dv4aalcpbt1, 36).
+ast_node[code](nf85e80d35f2c16b6_epl5tq0ql7, call_expression, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_epl5tq0ql7, 36).
+ast_node[code](nf85e80d35f2c16b6_l969bn7a941, member_expression, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_l969bn7a941, 36).
+ast_node[code](nf85e80d35f2c16b6_c4sc6ir6sj6, identifier, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_c4sc6ir6sj6, 36).
+ast_attr[code](nf85e80d35f2c16b6_c4sc6ir6sj6, name, "posix").
+ast_child[code](nf85e80d35f2c16b6_l969bn7a941, object, 0, nf85e80d35f2c16b6_c4sc6ir6sj6).
+ast_attr[code](nf85e80d35f2c16b6_l969bn7a941, computed, false).
+ast_node[code](nf85e80d35f2c16b6_qjds6nbk697, identifier, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_qjds6nbk697, 36).
+ast_attr[code](nf85e80d35f2c16b6_qjds6nbk697, name, "join").
+ast_child[code](nf85e80d35f2c16b6_l969bn7a941, property, 0, nf85e80d35f2c16b6_qjds6nbk697).
+ast_child[code](nf85e80d35f2c16b6_epl5tq0ql7, callee, 0, nf85e80d35f2c16b6_l969bn7a941).
+ast_node[code](nf85e80d35f2c16b6_6per0t5ev33, identifier, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_6per0t5ev33, 36).
+ast_attr[code](nf85e80d35f2c16b6_6per0t5ev33, name, "root").
+ast_child[code](nf85e80d35f2c16b6_epl5tq0ql7, arguments, 0, nf85e80d35f2c16b6_6per0t5ev33).
+ast_node[code](nf85e80d35f2c16b6_ri870tq05d1, string_literal, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_ri870tq05d1, 36).
+ast_attr[code](nf85e80d35f2c16b6_ri870tq05d1, value, "m").
+ast_child[code](nf85e80d35f2c16b6_epl5tq0ql7, arguments, 1, nf85e80d35f2c16b6_ri870tq05d1).
+ast_child[code](nf85e80d35f2c16b6_dv4aalcpbt1, expressions, 0, nf85e80d35f2c16b6_epl5tq0ql7).
+ast_node[code](nf85e80d35f2c16b6_db00nv4lku1, template_element, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_db00nv4lku1, 36).
+ast_attr[code](nf85e80d35f2c16b6_db00nv4lku1, value_raw, "").
+ast_attr[code](nf85e80d35f2c16b6_db00nv4lku1, value_cooked, "").
+ast_attr[code](nf85e80d35f2c16b6_db00nv4lku1, tail, false).
+ast_child[code](nf85e80d35f2c16b6_dv4aalcpbt1, quasis, 0, nf85e80d35f2c16b6_db00nv4lku1).
+ast_node[code](nf85e80d35f2c16b6_7ep7djrsuk2, template_element, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_7ep7djrsuk2, 36).
+ast_attr[code](nf85e80d35f2c16b6_7ep7djrsuk2, value_raw, "!").
+ast_attr[code](nf85e80d35f2c16b6_7ep7djrsuk2, value_cooked, "!").
+ast_attr[code](nf85e80d35f2c16b6_7ep7djrsuk2, tail, true).
+ast_child[code](nf85e80d35f2c16b6_dv4aalcpbt1, quasis, 1, nf85e80d35f2c16b6_7ep7djrsuk2).
+ast_child[code](nf85e80d35f2c16b6_fookvscgnk2, init, 0, nf85e80d35f2c16b6_dv4aalcpbt1).
+ast_child[code](nf85e80d35f2c16b6_cht14rc0ht, declarations, 0, nf85e80d35f2c16b6_fookvscgnk2).
+ast_attr[code](nf85e80d35f2c16b6_cht14rc0ht, kind, "const").
+ast_child[code](nf85e80d35f2c16b6_eq5ue6fkki3, declaration, 0, nf85e80d35f2c16b6_cht14rc0ht).
+ast_child[code](nf85e80d35f2c16b6_12undirbnh3, body, 33, nf85e80d35f2c16b6_eq5ue6fkki3).
+ast_node[code](nf85e80d35f2c16b6_8klkh13qj42, export_named_declaration, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_8klkh13qj42, 37).
+ast_attr[code](nf85e80d35f2c16b6_8klkh13qj42, export_kind, "value").
+ast_node[code](nf85e80d35f2c16b6_8s1frngb8v, variable_declaration, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_8s1frngb8v, 37).
+ast_node[code](nf85e80d35f2c16b6_lcotdte12d7, variable_declarator, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_lcotdte12d7, 37).
+ast_node[code](nf85e80d35f2c16b6_2hdmf47v6c6, identifier, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_2hdmf47v6c6, 37).
+ast_attr[code](nf85e80d35f2c16b6_2hdmf47v6c6, name, "emptyJoin").
+ast_child[code](nf85e80d35f2c16b6_lcotdte12d7, id, 0, nf85e80d35f2c16b6_2hdmf47v6c6).
+ast_node[code](nf85e80d35f2c16b6_k93o7n5b8a6, template_literal, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_k93o7n5b8a6, 37).
+ast_node[code](nf85e80d35f2c16b6_qetjq9v0uh1, call_expression, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_qetjq9v0uh1, 37).
+ast_node[code](nf85e80d35f2c16b6_8q6rgo8rbk4, member_expression, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_8q6rgo8rbk4, 37).
+ast_node[code](nf85e80d35f2c16b6_q90mecjl135, array_expression, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_q90mecjl135, 37).
+ast_child[code](nf85e80d35f2c16b6_8q6rgo8rbk4, object, 0, nf85e80d35f2c16b6_q90mecjl135).
+ast_attr[code](nf85e80d35f2c16b6_8q6rgo8rbk4, computed, false).
+ast_node[code](nf85e80d35f2c16b6_cp79ocof0r4, identifier, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_cp79ocof0r4, 37).
+ast_attr[code](nf85e80d35f2c16b6_cp79ocof0r4, name, "join").
+ast_child[code](nf85e80d35f2c16b6_8q6rgo8rbk4, property, 0, nf85e80d35f2c16b6_cp79ocof0r4).
+ast_child[code](nf85e80d35f2c16b6_qetjq9v0uh1, callee, 0, nf85e80d35f2c16b6_8q6rgo8rbk4).
+ast_child[code](nf85e80d35f2c16b6_k93o7n5b8a6, expressions, 0, nf85e80d35f2c16b6_qetjq9v0uh1).
+ast_node[code](nf85e80d35f2c16b6_jfpqkcnfbb3, template_element, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_jfpqkcnfbb3, 37).
+ast_attr[code](nf85e80d35f2c16b6_jfpqkcnfbb3, value_raw, "").
+ast_attr[code](nf85e80d35f2c16b6_jfpqkcnfbb3, value_cooked, "").
+ast_attr[code](nf85e80d35f2c16b6_jfpqkcnfbb3, tail, false).
+ast_child[code](nf85e80d35f2c16b6_k93o7n5b8a6, quasis, 0, nf85e80d35f2c16b6_jfpqkcnfbb3).
+ast_node[code](nf85e80d35f2c16b6_at5ebtd0kn1, template_element, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_at5ebtd0kn1, 37).
+ast_attr[code](nf85e80d35f2c16b6_at5ebtd0kn1, value_raw, "/z").
+ast_attr[code](nf85e80d35f2c16b6_at5ebtd0kn1, value_cooked, "/z").
+ast_attr[code](nf85e80d35f2c16b6_at5ebtd0kn1, tail, true).
+ast_child[code](nf85e80d35f2c16b6_k93o7n5b8a6, quasis, 1, nf85e80d35f2c16b6_at5ebtd0kn1).
+ast_child[code](nf85e80d35f2c16b6_lcotdte12d7, init, 0, nf85e80d35f2c16b6_k93o7n5b8a6).
+ast_child[code](nf85e80d35f2c16b6_8s1frngb8v, declarations, 0, nf85e80d35f2c16b6_lcotdte12d7).
+ast_attr[code](nf85e80d35f2c16b6_8s1frngb8v, kind, "const").
+ast_child[code](nf85e80d35f2c16b6_8klkh13qj42, declaration, 0, nf85e80d35f2c16b6_8s1frngb8v).
+ast_child[code](nf85e80d35f2c16b6_12undirbnh3, body, 34, nf85e80d35f2c16b6_8klkh13qj42).
 ast_node[code](nf85e80d35f2c16b6_ucj8d5q2pu5, variable_declaration, "src/entry.ts").
 ast_line[code](nf85e80d35f2c16b6_ucj8d5q2pu5, 38).
 ast_node[code](nf85e80d35f2c16b6_iomf3eejur4, variable_declarator, "src/entry.ts").
@@ -1217,77 +1217,77 @@ ast_child[code](nf85e80d35f2c16b6_iomf3eejur4, init, 0, nf85e80d35f2c16b6_4fclo9
 ast_child[code](nf85e80d35f2c16b6_ucj8d5q2pu5, declarations, 0, nf85e80d35f2c16b6_iomf3eejur4).
 ast_attr[code](nf85e80d35f2c16b6_ucj8d5q2pu5, kind, "let").
 ast_child[code](nf85e80d35f2c16b6_12undirbnh3, body, 35, nf85e80d35f2c16b6_ucj8d5q2pu5).
-ast_node[code](nf85e80d35f2c16b6_rsqfgbk89b, for_of_statement, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_rsqfgbk89b, 39).
-ast_attr[code](nf85e80d35f2c16b6_rsqfgbk89b, await, false).
-ast_node[code](nf85e80d35f2c16b6_g9p4nssj5l4, variable_declaration, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_g9p4nssj5l4, 39).
-ast_node[code](nf85e80d35f2c16b6_df4nvkf8me6, variable_declarator, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_df4nvkf8me6, 39).
-ast_node[code](nf85e80d35f2c16b6_9a5j3ooa0b6, identifier, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_9a5j3ooa0b6, 39).
-ast_attr[code](nf85e80d35f2c16b6_9a5j3ooa0b6, name, "_").
-ast_child[code](nf85e80d35f2c16b6_df4nvkf8me6, id, 0, nf85e80d35f2c16b6_9a5j3ooa0b6).
-ast_child[code](nf85e80d35f2c16b6_g9p4nssj5l4, declarations, 0, nf85e80d35f2c16b6_df4nvkf8me6).
-ast_attr[code](nf85e80d35f2c16b6_g9p4nssj5l4, kind, "const").
-ast_child[code](nf85e80d35f2c16b6_rsqfgbk89b, left, 0, nf85e80d35f2c16b6_g9p4nssj5l4).
-ast_node[code](nf85e80d35f2c16b6_sj6gieujn55, array_expression, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_sj6gieujn55, 39).
-ast_node[code](nf85e80d35f2c16b6_97a2ckg03t7, numeric_literal, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_97a2ckg03t7, 39).
-ast_attr[code](nf85e80d35f2c16b6_97a2ckg03t7, value, 1).
-ast_child[code](nf85e80d35f2c16b6_sj6gieujn55, elements, 0, nf85e80d35f2c16b6_97a2ckg03t7).
-ast_node[code](nf85e80d35f2c16b6_dki0mqndc86, numeric_literal, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_dki0mqndc86, 39).
-ast_attr[code](nf85e80d35f2c16b6_dki0mqndc86, value, 2).
-ast_child[code](nf85e80d35f2c16b6_sj6gieujn55, elements, 1, nf85e80d35f2c16b6_dki0mqndc86).
-ast_child[code](nf85e80d35f2c16b6_rsqfgbk89b, right, 0, nf85e80d35f2c16b6_sj6gieujn55).
-ast_node[code](nf85e80d35f2c16b6_dp1gkb00v62, block_statement, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_dp1gkb00v62, 39).
-ast_node[code](nf85e80d35f2c16b6_ha2verca4c3, expression_statement, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_ha2verca4c3, 39).
-ast_node[code](nf85e80d35f2c16b6_n390vtdbva2, assignment_expression, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_n390vtdbva2, 39).
-ast_attr[code](nf85e80d35f2c16b6_n390vtdbva2, operator, "=").
-ast_node[code](nf85e80d35f2c16b6_bqq6cne9382, identifier, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_bqq6cne9382, 39).
-ast_attr[code](nf85e80d35f2c16b6_bqq6cne9382, name, "forked").
-ast_child[code](nf85e80d35f2c16b6_n390vtdbva2, left, 0, nf85e80d35f2c16b6_bqq6cne9382).
-ast_node[code](nf85e80d35f2c16b6_q2bb9u337d6, binary_expression, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_q2bb9u337d6, 39).
-ast_node[code](nf85e80d35f2c16b6_sv63ecpctl, identifier, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_sv63ecpctl, 39).
-ast_attr[code](nf85e80d35f2c16b6_sv63ecpctl, name, "forked").
-ast_child[code](nf85e80d35f2c16b6_q2bb9u337d6, left, 0, nf85e80d35f2c16b6_sv63ecpctl).
-ast_attr[code](nf85e80d35f2c16b6_q2bb9u337d6, operator, "+").
-ast_node[code](nf85e80d35f2c16b6_7nk6gcrq2k5, identifier, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_7nk6gcrq2k5, 39).
-ast_attr[code](nf85e80d35f2c16b6_7nk6gcrq2k5, name, "v").
-ast_child[code](nf85e80d35f2c16b6_q2bb9u337d6, right, 0, nf85e80d35f2c16b6_7nk6gcrq2k5).
-ast_child[code](nf85e80d35f2c16b6_n390vtdbva2, right, 0, nf85e80d35f2c16b6_q2bb9u337d6).
-ast_child[code](nf85e80d35f2c16b6_ha2verca4c3, expression, 0, nf85e80d35f2c16b6_n390vtdbva2).
-ast_child[code](nf85e80d35f2c16b6_dp1gkb00v62, body, 0, nf85e80d35f2c16b6_ha2verca4c3).
-ast_child[code](nf85e80d35f2c16b6_rsqfgbk89b, body, 0, nf85e80d35f2c16b6_dp1gkb00v62).
-ast_child[code](nf85e80d35f2c16b6_12undirbnh3, body, 36, nf85e80d35f2c16b6_rsqfgbk89b).
-ast_node[code](nf85e80d35f2c16b6_22qm83vpfe1, export_named_declaration, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_22qm83vpfe1, 40).
-ast_attr[code](nf85e80d35f2c16b6_22qm83vpfe1, export_kind, "value").
-ast_node[code](nf85e80d35f2c16b6_pkcqdt2vhg4, variable_declaration, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_pkcqdt2vhg4, 40).
-ast_node[code](nf85e80d35f2c16b6_ql8tmbin3o1, variable_declarator, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_ql8tmbin3o1, 40).
-ast_node[code](nf85e80d35f2c16b6_g9taocn8cu7, identifier, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_g9taocn8cu7, 40).
-ast_attr[code](nf85e80d35f2c16b6_g9taocn8cu7, name, "branched").
-ast_child[code](nf85e80d35f2c16b6_ql8tmbin3o1, id, 0, nf85e80d35f2c16b6_g9taocn8cu7).
-ast_node[code](nf85e80d35f2c16b6_l6lmkigef51, identifier, "src/entry.ts").
-ast_line[code](nf85e80d35f2c16b6_l6lmkigef51, 40).
-ast_attr[code](nf85e80d35f2c16b6_l6lmkigef51, name, "forked").
-ast_child[code](nf85e80d35f2c16b6_ql8tmbin3o1, init, 0, nf85e80d35f2c16b6_l6lmkigef51).
-ast_child[code](nf85e80d35f2c16b6_pkcqdt2vhg4, declarations, 0, nf85e80d35f2c16b6_ql8tmbin3o1).
-ast_attr[code](nf85e80d35f2c16b6_pkcqdt2vhg4, kind, "const").
-ast_child[code](nf85e80d35f2c16b6_22qm83vpfe1, declaration, 0, nf85e80d35f2c16b6_pkcqdt2vhg4).
-ast_child[code](nf85e80d35f2c16b6_12undirbnh3, body, 37, nf85e80d35f2c16b6_22qm83vpfe1).
+ast_node[code](nf85e80d35f2c16b6_cambmqkcvq2, for_of_statement, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_cambmqkcvq2, 39).
+ast_attr[code](nf85e80d35f2c16b6_cambmqkcvq2, await, false).
+ast_node[code](nf85e80d35f2c16b6_34r5lot4637, variable_declaration, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_34r5lot4637, 39).
+ast_node[code](nf85e80d35f2c16b6_lb43l3ejch7, variable_declarator, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_lb43l3ejch7, 39).
+ast_node[code](nf85e80d35f2c16b6_s3d5fjk3dn1, identifier, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_s3d5fjk3dn1, 39).
+ast_attr[code](nf85e80d35f2c16b6_s3d5fjk3dn1, name, "_").
+ast_child[code](nf85e80d35f2c16b6_lb43l3ejch7, id, 0, nf85e80d35f2c16b6_s3d5fjk3dn1).
+ast_child[code](nf85e80d35f2c16b6_34r5lot4637, declarations, 0, nf85e80d35f2c16b6_lb43l3ejch7).
+ast_attr[code](nf85e80d35f2c16b6_34r5lot4637, kind, "const").
+ast_child[code](nf85e80d35f2c16b6_cambmqkcvq2, left, 0, nf85e80d35f2c16b6_34r5lot4637).
+ast_node[code](nf85e80d35f2c16b6_g3in974cfi1, array_expression, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_g3in974cfi1, 39).
+ast_node[code](nf85e80d35f2c16b6_oqrfsio0025, numeric_literal, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_oqrfsio0025, 39).
+ast_attr[code](nf85e80d35f2c16b6_oqrfsio0025, value, 1).
+ast_child[code](nf85e80d35f2c16b6_g3in974cfi1, elements, 0, nf85e80d35f2c16b6_oqrfsio0025).
+ast_node[code](nf85e80d35f2c16b6_1uqbr8id1q, numeric_literal, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_1uqbr8id1q, 39).
+ast_attr[code](nf85e80d35f2c16b6_1uqbr8id1q, value, 2).
+ast_child[code](nf85e80d35f2c16b6_g3in974cfi1, elements, 1, nf85e80d35f2c16b6_1uqbr8id1q).
+ast_child[code](nf85e80d35f2c16b6_cambmqkcvq2, right, 0, nf85e80d35f2c16b6_g3in974cfi1).
+ast_node[code](nf85e80d35f2c16b6_v7mh7bb2sb6, block_statement, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_v7mh7bb2sb6, 39).
+ast_node[code](nf85e80d35f2c16b6_caa2mk203n5, expression_statement, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_caa2mk203n5, 39).
+ast_node[code](nf85e80d35f2c16b6_gal3sarse87, assignment_expression, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_gal3sarse87, 39).
+ast_attr[code](nf85e80d35f2c16b6_gal3sarse87, operator, "=").
+ast_node[code](nf85e80d35f2c16b6_skph5d80j62, identifier, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_skph5d80j62, 39).
+ast_attr[code](nf85e80d35f2c16b6_skph5d80j62, name, "forked").
+ast_child[code](nf85e80d35f2c16b6_gal3sarse87, left, 0, nf85e80d35f2c16b6_skph5d80j62).
+ast_node[code](nf85e80d35f2c16b6_kafjoac9u77, binary_expression, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_kafjoac9u77, 39).
+ast_node[code](nf85e80d35f2c16b6_4o4un8iqh54, identifier, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_4o4un8iqh54, 39).
+ast_attr[code](nf85e80d35f2c16b6_4o4un8iqh54, name, "forked").
+ast_child[code](nf85e80d35f2c16b6_kafjoac9u77, left, 0, nf85e80d35f2c16b6_4o4un8iqh54).
+ast_attr[code](nf85e80d35f2c16b6_kafjoac9u77, operator, "+").
+ast_node[code](nf85e80d35f2c16b6_fdfj6blvd02, identifier, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_fdfj6blvd02, 39).
+ast_attr[code](nf85e80d35f2c16b6_fdfj6blvd02, name, "v").
+ast_child[code](nf85e80d35f2c16b6_kafjoac9u77, right, 0, nf85e80d35f2c16b6_fdfj6blvd02).
+ast_child[code](nf85e80d35f2c16b6_gal3sarse87, right, 0, nf85e80d35f2c16b6_kafjoac9u77).
+ast_child[code](nf85e80d35f2c16b6_caa2mk203n5, expression, 0, nf85e80d35f2c16b6_gal3sarse87).
+ast_child[code](nf85e80d35f2c16b6_v7mh7bb2sb6, body, 0, nf85e80d35f2c16b6_caa2mk203n5).
+ast_child[code](nf85e80d35f2c16b6_cambmqkcvq2, body, 0, nf85e80d35f2c16b6_v7mh7bb2sb6).
+ast_child[code](nf85e80d35f2c16b6_12undirbnh3, body, 36, nf85e80d35f2c16b6_cambmqkcvq2).
+ast_node[code](nf85e80d35f2c16b6_ksasj0oa8o, export_named_declaration, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_ksasj0oa8o, 40).
+ast_attr[code](nf85e80d35f2c16b6_ksasj0oa8o, export_kind, "value").
+ast_node[code](nf85e80d35f2c16b6_qmgtpso4us4, variable_declaration, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_qmgtpso4us4, 40).
+ast_node[code](nf85e80d35f2c16b6_9b7unpai6v5, variable_declarator, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_9b7unpai6v5, 40).
+ast_node[code](nf85e80d35f2c16b6_lm09ibkb185, identifier, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_lm09ibkb185, 40).
+ast_attr[code](nf85e80d35f2c16b6_lm09ibkb185, name, "branched").
+ast_child[code](nf85e80d35f2c16b6_9b7unpai6v5, id, 0, nf85e80d35f2c16b6_lm09ibkb185).
+ast_node[code](nf85e80d35f2c16b6_jrr0tu2c151, identifier, "src/entry.ts").
+ast_line[code](nf85e80d35f2c16b6_jrr0tu2c151, 40).
+ast_attr[code](nf85e80d35f2c16b6_jrr0tu2c151, name, "forked").
+ast_child[code](nf85e80d35f2c16b6_9b7unpai6v5, init, 0, nf85e80d35f2c16b6_jrr0tu2c151).
+ast_child[code](nf85e80d35f2c16b6_qmgtpso4us4, declarations, 0, nf85e80d35f2c16b6_9b7unpai6v5).
+ast_attr[code](nf85e80d35f2c16b6_qmgtpso4us4, kind, "const").
+ast_child[code](nf85e80d35f2c16b6_ksasj0oa8o, declaration, 0, nf85e80d35f2c16b6_qmgtpso4us4).
+ast_child[code](nf85e80d35f2c16b6_12undirbnh3, body, 37, nf85e80d35f2c16b6_ksasj0oa8o).
 ast_child[code](nf85e80d35f2c16b6_3c3ted0nsu2, program, 0, nf85e80d35f2c16b6_12undirbnh3).
 ast_file[code](nf85e80d35f2c16b6_3c3ted0nsu2, "src/entry.ts").
 ast_node[code](nfb3ebe8b34f12aa0_3c3ted0nsu2, file, "src/mypath.ts").
@@ -1295,88 +1295,88 @@ ast_line[code](nfb3ebe8b34f12aa0_3c3ted0nsu2, 1).
 ast_node[code](nfb3ebe8b34f12aa0_12undirbnh3, program, "src/mypath.ts").
 ast_line[code](nfb3ebe8b34f12aa0_12undirbnh3, 1).
 ast_attr[code](nfb3ebe8b34f12aa0_12undirbnh3, source_type, "module").
-ast_node[code](nfb3ebe8b34f12aa0_h60qrjetf83, export_named_declaration, "src/mypath.ts").
-ast_line[code](nfb3ebe8b34f12aa0_h60qrjetf83, 1).
-ast_attr[code](nfb3ebe8b34f12aa0_h60qrjetf83, export_kind, "value").
-ast_node[code](nfb3ebe8b34f12aa0_lbh2rcqvf1, variable_declaration, "src/mypath.ts").
-ast_line[code](nfb3ebe8b34f12aa0_lbh2rcqvf1, 1).
-ast_node[code](nfb3ebe8b34f12aa0_ie445qt1p63, variable_declarator, "src/mypath.ts").
-ast_line[code](nfb3ebe8b34f12aa0_ie445qt1p63, 1).
-ast_node[code](nfb3ebe8b34f12aa0_i7f4pfa4cp6, identifier, "src/mypath.ts").
-ast_line[code](nfb3ebe8b34f12aa0_i7f4pfa4cp6, 1).
-ast_attr[code](nfb3ebe8b34f12aa0_i7f4pfa4cp6, name, "posix").
-ast_child[code](nfb3ebe8b34f12aa0_ie445qt1p63, id, 0, nfb3ebe8b34f12aa0_i7f4pfa4cp6).
-ast_node[code](nfb3ebe8b34f12aa0_ln629f2jrp4, object_expression, "src/mypath.ts").
-ast_line[code](nfb3ebe8b34f12aa0_ln629f2jrp4, 1).
-ast_node[code](nfb3ebe8b34f12aa0_0s6q47ghie, object_method, "src/mypath.ts").
-ast_line[code](nfb3ebe8b34f12aa0_0s6q47ghie, 2).
-ast_attr[code](nfb3ebe8b34f12aa0_0s6q47ghie, method, true).
-ast_node[code](nfb3ebe8b34f12aa0_9phqd4bqo26, identifier, "src/mypath.ts").
-ast_line[code](nfb3ebe8b34f12aa0_9phqd4bqo26, 2).
-ast_attr[code](nfb3ebe8b34f12aa0_9phqd4bqo26, name, "join").
-ast_child[code](nfb3ebe8b34f12aa0_0s6q47ghie, key, 0, nfb3ebe8b34f12aa0_9phqd4bqo26).
-ast_attr[code](nfb3ebe8b34f12aa0_0s6q47ghie, computed, false).
-ast_attr[code](nfb3ebe8b34f12aa0_0s6q47ghie, kind, "method").
-ast_attr[code](nfb3ebe8b34f12aa0_0s6q47ghie, generator, false).
-ast_attr[code](nfb3ebe8b34f12aa0_0s6q47ghie, async, false).
-ast_node[code](nfb3ebe8b34f12aa0_u6jufanio91, identifier, "src/mypath.ts").
-ast_line[code](nfb3ebe8b34f12aa0_u6jufanio91, 2).
-ast_attr[code](nfb3ebe8b34f12aa0_u6jufanio91, name, "a").
-ast_node[code](nfb3ebe8b34f12aa0_o0nkj0d1jn2, tstype_annotation, "src/mypath.ts").
-ast_line[code](nfb3ebe8b34f12aa0_o0nkj0d1jn2, 2).
-ast_node[code](nfb3ebe8b34f12aa0_q44ej604di6, tsstring_keyword, "src/mypath.ts").
-ast_line[code](nfb3ebe8b34f12aa0_q44ej604di6, 2).
-ast_child[code](nfb3ebe8b34f12aa0_o0nkj0d1jn2, type_annotation, 0, nfb3ebe8b34f12aa0_q44ej604di6).
-ast_child[code](nfb3ebe8b34f12aa0_u6jufanio91, type_annotation, 0, nfb3ebe8b34f12aa0_o0nkj0d1jn2).
-ast_child[code](nfb3ebe8b34f12aa0_0s6q47ghie, params, 0, nfb3ebe8b34f12aa0_u6jufanio91).
-ast_node[code](nfb3ebe8b34f12aa0_qcudsip1sg2, identifier, "src/mypath.ts").
-ast_line[code](nfb3ebe8b34f12aa0_qcudsip1sg2, 2).
-ast_attr[code](nfb3ebe8b34f12aa0_qcudsip1sg2, name, "b").
-ast_node[code](nfb3ebe8b34f12aa0_k17aht2dgn3, tstype_annotation, "src/mypath.ts").
-ast_line[code](nfb3ebe8b34f12aa0_k17aht2dgn3, 2).
-ast_node[code](nfb3ebe8b34f12aa0_5pntitaqi84, tsstring_keyword, "src/mypath.ts").
-ast_line[code](nfb3ebe8b34f12aa0_5pntitaqi84, 2).
-ast_child[code](nfb3ebe8b34f12aa0_k17aht2dgn3, type_annotation, 0, nfb3ebe8b34f12aa0_5pntitaqi84).
-ast_child[code](nfb3ebe8b34f12aa0_qcudsip1sg2, type_annotation, 0, nfb3ebe8b34f12aa0_k17aht2dgn3).
-ast_child[code](nfb3ebe8b34f12aa0_0s6q47ghie, params, 1, nfb3ebe8b34f12aa0_qcudsip1sg2).
-ast_node[code](nfb3ebe8b34f12aa0_j8otiauijs7, tstype_annotation, "src/mypath.ts").
-ast_line[code](nfb3ebe8b34f12aa0_j8otiauijs7, 2).
-ast_node[code](nfb3ebe8b34f12aa0_a56j5t66r15, tsstring_keyword, "src/mypath.ts").
-ast_line[code](nfb3ebe8b34f12aa0_a56j5t66r15, 2).
-ast_child[code](nfb3ebe8b34f12aa0_j8otiauijs7, type_annotation, 0, nfb3ebe8b34f12aa0_a56j5t66r15).
-ast_child[code](nfb3ebe8b34f12aa0_0s6q47ghie, return_type, 0, nfb3ebe8b34f12aa0_j8otiauijs7).
-ast_node[code](nfb3ebe8b34f12aa0_dfj4t7crd63, block_statement, "src/mypath.ts").
-ast_line[code](nfb3ebe8b34f12aa0_dfj4t7crd63, 2).
-ast_node[code](nfb3ebe8b34f12aa0_r4j7hsokgu4, return_statement, "src/mypath.ts").
-ast_line[code](nfb3ebe8b34f12aa0_r4j7hsokgu4, 2).
-ast_node[code](nfb3ebe8b34f12aa0_0juejrd6vp7, binary_expression, "src/mypath.ts").
-ast_line[code](nfb3ebe8b34f12aa0_0juejrd6vp7, 2).
-ast_node[code](nfb3ebe8b34f12aa0_shrdu4uofs1, binary_expression, "src/mypath.ts").
-ast_line[code](nfb3ebe8b34f12aa0_shrdu4uofs1, 2).
-ast_node[code](nfb3ebe8b34f12aa0_q4mnr8p7g7, identifier, "src/mypath.ts").
-ast_line[code](nfb3ebe8b34f12aa0_q4mnr8p7g7, 2).
-ast_attr[code](nfb3ebe8b34f12aa0_q4mnr8p7g7, name, "a").
-ast_child[code](nfb3ebe8b34f12aa0_shrdu4uofs1, left, 0, nfb3ebe8b34f12aa0_q4mnr8p7g7).
-ast_attr[code](nfb3ebe8b34f12aa0_shrdu4uofs1, operator, "+").
-ast_node[code](nfb3ebe8b34f12aa0_rbhiej9kdb4, string_literal, "src/mypath.ts").
-ast_line[code](nfb3ebe8b34f12aa0_rbhiej9kdb4, 2).
-ast_attr[code](nfb3ebe8b34f12aa0_rbhiej9kdb4, value, "/").
-ast_child[code](nfb3ebe8b34f12aa0_shrdu4uofs1, right, 0, nfb3ebe8b34f12aa0_rbhiej9kdb4).
-ast_child[code](nfb3ebe8b34f12aa0_0juejrd6vp7, left, 0, nfb3ebe8b34f12aa0_shrdu4uofs1).
-ast_attr[code](nfb3ebe8b34f12aa0_0juejrd6vp7, operator, "+").
-ast_node[code](nfb3ebe8b34f12aa0_n4qi8mp3aj4, identifier, "src/mypath.ts").
-ast_line[code](nfb3ebe8b34f12aa0_n4qi8mp3aj4, 2).
-ast_attr[code](nfb3ebe8b34f12aa0_n4qi8mp3aj4, name, "b").
-ast_child[code](nfb3ebe8b34f12aa0_0juejrd6vp7, right, 0, nfb3ebe8b34f12aa0_n4qi8mp3aj4).
-ast_child[code](nfb3ebe8b34f12aa0_r4j7hsokgu4, argument, 0, nfb3ebe8b34f12aa0_0juejrd6vp7).
-ast_child[code](nfb3ebe8b34f12aa0_dfj4t7crd63, body, 0, nfb3ebe8b34f12aa0_r4j7hsokgu4).
-ast_child[code](nfb3ebe8b34f12aa0_0s6q47ghie, body, 0, nfb3ebe8b34f12aa0_dfj4t7crd63).
-ast_child[code](nfb3ebe8b34f12aa0_ln629f2jrp4, properties, 0, nfb3ebe8b34f12aa0_0s6q47ghie).
-ast_child[code](nfb3ebe8b34f12aa0_ie445qt1p63, init, 0, nfb3ebe8b34f12aa0_ln629f2jrp4).
-ast_child[code](nfb3ebe8b34f12aa0_lbh2rcqvf1, declarations, 0, nfb3ebe8b34f12aa0_ie445qt1p63).
-ast_attr[code](nfb3ebe8b34f12aa0_lbh2rcqvf1, kind, "const").
-ast_child[code](nfb3ebe8b34f12aa0_h60qrjetf83, declaration, 0, nfb3ebe8b34f12aa0_lbh2rcqvf1).
-ast_child[code](nfb3ebe8b34f12aa0_12undirbnh3, body, 0, nfb3ebe8b34f12aa0_h60qrjetf83).
+ast_node[code](nfb3ebe8b34f12aa0_cnkjcpr3ml, export_named_declaration, "src/mypath.ts").
+ast_line[code](nfb3ebe8b34f12aa0_cnkjcpr3ml, 1).
+ast_attr[code](nfb3ebe8b34f12aa0_cnkjcpr3ml, export_kind, "value").
+ast_node[code](nfb3ebe8b34f12aa0_gr43qs3k7h5, variable_declaration, "src/mypath.ts").
+ast_line[code](nfb3ebe8b34f12aa0_gr43qs3k7h5, 1).
+ast_node[code](nfb3ebe8b34f12aa0_qc2tak5k731, variable_declarator, "src/mypath.ts").
+ast_line[code](nfb3ebe8b34f12aa0_qc2tak5k731, 1).
+ast_node[code](nfb3ebe8b34f12aa0_bthtv681g31, identifier, "src/mypath.ts").
+ast_line[code](nfb3ebe8b34f12aa0_bthtv681g31, 1).
+ast_attr[code](nfb3ebe8b34f12aa0_bthtv681g31, name, "posix").
+ast_child[code](nfb3ebe8b34f12aa0_qc2tak5k731, id, 0, nfb3ebe8b34f12aa0_bthtv681g31).
+ast_node[code](nfb3ebe8b34f12aa0_ftp7e79qsn3, object_expression, "src/mypath.ts").
+ast_line[code](nfb3ebe8b34f12aa0_ftp7e79qsn3, 1).
+ast_node[code](nfb3ebe8b34f12aa0_93fo9ie9p93, object_method, "src/mypath.ts").
+ast_line[code](nfb3ebe8b34f12aa0_93fo9ie9p93, 2).
+ast_attr[code](nfb3ebe8b34f12aa0_93fo9ie9p93, method, true).
+ast_node[code](nfb3ebe8b34f12aa0_53btu79bpc7, identifier, "src/mypath.ts").
+ast_line[code](nfb3ebe8b34f12aa0_53btu79bpc7, 2).
+ast_attr[code](nfb3ebe8b34f12aa0_53btu79bpc7, name, "join").
+ast_child[code](nfb3ebe8b34f12aa0_93fo9ie9p93, key, 0, nfb3ebe8b34f12aa0_53btu79bpc7).
+ast_attr[code](nfb3ebe8b34f12aa0_93fo9ie9p93, computed, false).
+ast_attr[code](nfb3ebe8b34f12aa0_93fo9ie9p93, kind, "method").
+ast_attr[code](nfb3ebe8b34f12aa0_93fo9ie9p93, generator, false).
+ast_attr[code](nfb3ebe8b34f12aa0_93fo9ie9p93, async, false).
+ast_node[code](nfb3ebe8b34f12aa0_8hup56f1tk6, identifier, "src/mypath.ts").
+ast_line[code](nfb3ebe8b34f12aa0_8hup56f1tk6, 2).
+ast_attr[code](nfb3ebe8b34f12aa0_8hup56f1tk6, name, "a").
+ast_node[code](nfb3ebe8b34f12aa0_svjn99puhf7, tstype_annotation, "src/mypath.ts").
+ast_line[code](nfb3ebe8b34f12aa0_svjn99puhf7, 2).
+ast_node[code](nfb3ebe8b34f12aa0_uu05th2hu42, tsstring_keyword, "src/mypath.ts").
+ast_line[code](nfb3ebe8b34f12aa0_uu05th2hu42, 2).
+ast_child[code](nfb3ebe8b34f12aa0_svjn99puhf7, type_annotation, 0, nfb3ebe8b34f12aa0_uu05th2hu42).
+ast_child[code](nfb3ebe8b34f12aa0_8hup56f1tk6, type_annotation, 0, nfb3ebe8b34f12aa0_svjn99puhf7).
+ast_child[code](nfb3ebe8b34f12aa0_93fo9ie9p93, params, 0, nfb3ebe8b34f12aa0_8hup56f1tk6).
+ast_node[code](nfb3ebe8b34f12aa0_qb1t37ds7i1, identifier, "src/mypath.ts").
+ast_line[code](nfb3ebe8b34f12aa0_qb1t37ds7i1, 2).
+ast_attr[code](nfb3ebe8b34f12aa0_qb1t37ds7i1, name, "b").
+ast_node[code](nfb3ebe8b34f12aa0_fatgr74efg4, tstype_annotation, "src/mypath.ts").
+ast_line[code](nfb3ebe8b34f12aa0_fatgr74efg4, 2).
+ast_node[code](nfb3ebe8b34f12aa0_59amlve9aq4, tsstring_keyword, "src/mypath.ts").
+ast_line[code](nfb3ebe8b34f12aa0_59amlve9aq4, 2).
+ast_child[code](nfb3ebe8b34f12aa0_fatgr74efg4, type_annotation, 0, nfb3ebe8b34f12aa0_59amlve9aq4).
+ast_child[code](nfb3ebe8b34f12aa0_qb1t37ds7i1, type_annotation, 0, nfb3ebe8b34f12aa0_fatgr74efg4).
+ast_child[code](nfb3ebe8b34f12aa0_93fo9ie9p93, params, 1, nfb3ebe8b34f12aa0_qb1t37ds7i1).
+ast_node[code](nfb3ebe8b34f12aa0_hc3jkd1buk, tstype_annotation, "src/mypath.ts").
+ast_line[code](nfb3ebe8b34f12aa0_hc3jkd1buk, 2).
+ast_node[code](nfb3ebe8b34f12aa0_5bjqk22tpv3, tsstring_keyword, "src/mypath.ts").
+ast_line[code](nfb3ebe8b34f12aa0_5bjqk22tpv3, 2).
+ast_child[code](nfb3ebe8b34f12aa0_hc3jkd1buk, type_annotation, 0, nfb3ebe8b34f12aa0_5bjqk22tpv3).
+ast_child[code](nfb3ebe8b34f12aa0_93fo9ie9p93, return_type, 0, nfb3ebe8b34f12aa0_hc3jkd1buk).
+ast_node[code](nfb3ebe8b34f12aa0_mufpt1cju32, block_statement, "src/mypath.ts").
+ast_line[code](nfb3ebe8b34f12aa0_mufpt1cju32, 2).
+ast_node[code](nfb3ebe8b34f12aa0_ua824a0tnu, return_statement, "src/mypath.ts").
+ast_line[code](nfb3ebe8b34f12aa0_ua824a0tnu, 2).
+ast_node[code](nfb3ebe8b34f12aa0_rv3sev10pd, binary_expression, "src/mypath.ts").
+ast_line[code](nfb3ebe8b34f12aa0_rv3sev10pd, 2).
+ast_node[code](nfb3ebe8b34f12aa0_2bsq7g6lar, binary_expression, "src/mypath.ts").
+ast_line[code](nfb3ebe8b34f12aa0_2bsq7g6lar, 2).
+ast_node[code](nfb3ebe8b34f12aa0_05o4lo0lid1, identifier, "src/mypath.ts").
+ast_line[code](nfb3ebe8b34f12aa0_05o4lo0lid1, 2).
+ast_attr[code](nfb3ebe8b34f12aa0_05o4lo0lid1, name, "a").
+ast_child[code](nfb3ebe8b34f12aa0_2bsq7g6lar, left, 0, nfb3ebe8b34f12aa0_05o4lo0lid1).
+ast_attr[code](nfb3ebe8b34f12aa0_2bsq7g6lar, operator, "+").
+ast_node[code](nfb3ebe8b34f12aa0_hterr1arhm3, string_literal, "src/mypath.ts").
+ast_line[code](nfb3ebe8b34f12aa0_hterr1arhm3, 2).
+ast_attr[code](nfb3ebe8b34f12aa0_hterr1arhm3, value, "/").
+ast_child[code](nfb3ebe8b34f12aa0_2bsq7g6lar, right, 0, nfb3ebe8b34f12aa0_hterr1arhm3).
+ast_child[code](nfb3ebe8b34f12aa0_rv3sev10pd, left, 0, nfb3ebe8b34f12aa0_2bsq7g6lar).
+ast_attr[code](nfb3ebe8b34f12aa0_rv3sev10pd, operator, "+").
+ast_node[code](nfb3ebe8b34f12aa0_1u9uuu5eai2, identifier, "src/mypath.ts").
+ast_line[code](nfb3ebe8b34f12aa0_1u9uuu5eai2, 2).
+ast_attr[code](nfb3ebe8b34f12aa0_1u9uuu5eai2, name, "b").
+ast_child[code](nfb3ebe8b34f12aa0_rv3sev10pd, right, 0, nfb3ebe8b34f12aa0_1u9uuu5eai2).
+ast_child[code](nfb3ebe8b34f12aa0_ua824a0tnu, argument, 0, nfb3ebe8b34f12aa0_rv3sev10pd).
+ast_child[code](nfb3ebe8b34f12aa0_mufpt1cju32, body, 0, nfb3ebe8b34f12aa0_ua824a0tnu).
+ast_child[code](nfb3ebe8b34f12aa0_93fo9ie9p93, body, 0, nfb3ebe8b34f12aa0_mufpt1cju32).
+ast_child[code](nfb3ebe8b34f12aa0_ftp7e79qsn3, properties, 0, nfb3ebe8b34f12aa0_93fo9ie9p93).
+ast_child[code](nfb3ebe8b34f12aa0_qc2tak5k731, init, 0, nfb3ebe8b34f12aa0_ftp7e79qsn3).
+ast_child[code](nfb3ebe8b34f12aa0_gr43qs3k7h5, declarations, 0, nfb3ebe8b34f12aa0_qc2tak5k731).
+ast_attr[code](nfb3ebe8b34f12aa0_gr43qs3k7h5, kind, "const").
+ast_child[code](nfb3ebe8b34f12aa0_cnkjcpr3ml, declaration, 0, nfb3ebe8b34f12aa0_gr43qs3k7h5).
+ast_child[code](nfb3ebe8b34f12aa0_12undirbnh3, body, 0, nfb3ebe8b34f12aa0_cnkjcpr3ml).
 ast_child[code](nfb3ebe8b34f12aa0_3c3ted0nsu2, program, 0, nfb3ebe8b34f12aa0_12undirbnh3).
 ast_file[code](nfb3ebe8b34f12aa0_3c3ted0nsu2, "src/mypath.ts").
 fs_dir[code](".").

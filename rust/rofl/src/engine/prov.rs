@@ -159,11 +159,13 @@ impl Eval {
     pub(crate) fn write_notes(&self, w: &mut crate::arena::VolW) {
         self.pending_prov.write(w);
         self.pending_assert.write(w);
+        self.store.journal.write(w);
     }
 
     pub(crate) fn read_notes(&mut self, r: &mut crate::arena::VolR) -> Result<(), String> {
         self.pending_prov = Notes::read(r)?;
         self.pending_assert = Notes::read(r)?;
+        self.store.journal = crate::journal::Journal::read(r)?;
         Ok(())
     }
 }

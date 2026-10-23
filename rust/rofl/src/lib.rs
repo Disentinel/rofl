@@ -20,6 +20,7 @@
 #[macro_use]
 pub mod breaks;
 pub mod arena;
+pub mod journal;
 pub mod volume;
 /// Where the oracle is, refused when it no longer matches the tree.
 pub mod cell;
