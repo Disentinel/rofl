@@ -279,6 +279,88 @@ impl<'a> Frozen<'a> {
     }
 }
 
+/// One premise over one run: the partial solutions it was solved from and left, the matches of the run's last
+/// solution, the rows read, the widest read and the solution it was read under, the index probes.
+#[derive(Default)]
+struct Level {
+    ins: usize,
+    outs: usize,
+    last: usize,
+    read: usize,
+    wide: usize,
+    at: Option<Subst>,
+    probes: u64,
+}
+
+fn frs_off(l: &Lit, tick: u32) -> bool {
+    l.temporal == Temporal::Init && tick != 0
+}
+
+/// A run of partial solutions through the premises `frs`, on one thread, as `par_level` and its assembly solve each
+/// premise; None where a read would write.
+fn solve_run(frs: &[Frozen], acc: &[Sol], sort: bool) -> Option<(Vec<Sol>, Vec<Level>)> {
+    let mut levels = Vec::with_capacity(frs.len());
+    let mut cur: Vec<Sol> = Vec::new();
+    for (k, fr) in frs.iter().enumerate() {
+        let input: &[Sol] = if k == 0 { acc } else { &cur };
+        let mut lv = Level { ins: input.len(), ..Level::default() };
+        let mut next: Vec<Sol> = Vec::new();
+        let mut scratch = Subst::new();
+        for a in input {
+            let from = next.len();
+            match fr.find(a, &mut lv.probes)? {
+                Found::Neg(holds) => {
+                    if holds {
+                        let mut prems = a.prems.clone();
+                        prems.push(PremRef::Neg(0));
+                        next.push(Sol { s: a.s.clone(), prems });
+                    }
+                }
+                Found::Off => {}
+                Found::Pos(c) => {
+                    let mut read = 0;
+                    for rows in c.rows() {
+                        for &f in rows {
+                            if !fr.kept(&c, f) {
+                                continue;
+                            }
+                            read += 1;
+                            if fr.unifies(&c, a, f, &mut scratch) {
+                                let mut prems = Vec::with_capacity(a.prems.len() + 1);
+                                prems.extend_from_slice(&a.prems);
+                                prems.push(PremRef::Fact(f));
+                                next.push(Sol { s: scratch.clone(), prems });
+                            }
+                        }
+                    }
+                    lv.read += read;
+                    if read > lv.wide {
+                        lv.wide = read;
+                        lv.at = Some(a.s.clone());
+                    }
+                    if c.segs.is_empty() {
+                        let mut seen: HashSet<FactId> = HashSet::new();
+                        let mine: Vec<Sol> = next.drain(from..).filter(|s| seen.insert(last_fact(s))).collect();
+                        next.extend(mine);
+                    }
+                    if sort {
+                        let (store, h) = (fr.store, fr.h);
+                        next[from..].sort_by(|x, y| store.cmp_key(h, last_fact(x), last_fact(y)));
+                    }
+                }
+            }
+            lv.last = next.len() - from;
+        }
+        lv.outs = next.len();
+        levels.push(lv);
+        cur = next;
+        if cur.is_empty() {
+            break;
+        }
+    }
+    Some((cur, levels))
+}
+
 fn last_fact(s: &Sol) -> FactId {
     match s.prems.last() {
         Some(PremRef::Fact(f)) => *f,
@@ -291,27 +373,7 @@ impl Eval {
     /// order, or the wall it would have met. None: the premise is not one the threads take, or they found a read
     /// that would write, and the written path matches it.
     pub(super) fn par_level(&mut self, b: &BodyElem, i: usize, acc: &[Sol], depth: usize, front_at: Option<(usize, &FxSet<FactId>)>, rule_id: Option<Sym>) -> Option<Result<Vec<Sol>, Halt>> {
-        let (l, neg) = match b {
-            BodyElem::Pos(l) => (l, false),
-            BodyElem::Neg(l) => (l, true),
-            _ => return None,
-        };
-        let plain = |t: &Term| !matches!(t.kind(), TermK::Func(_));
-        if depth != 0
-            || !self.firing
-            || self.asking
-            || rule_id.is_none()
-            || !self.lattices.is_empty()
-            || !self.lat_spread.is_empty()
-            || self.assume.is_some()
-            || self.demand_rels.iter().any(|(r, _)| *r == l.rel)
-            || self.vclosure_for(l.rel).is_some()
-            || neg && self.carry_check(0).is_err()
-            || !plain(&l.persp)
-            || !l.args.iter().all(plain)
-        {
-            return None;
-        }
+        let (l, neg) = self.frozen_lit(b, depth, rule_id)?;
         let off = l.temporal == Temporal::Init && self.store.tick != 0;
         let news: Option<(&FxSet<FactId>, Vec<FactId>)> = match front_at {
             Some((p, keys)) if p == i && !neg => Some((keys, keys.iter().copied().collect())),
@@ -406,6 +468,161 @@ impl Eval {
             *self.argm_by_rule.entry(rid).or_insert(0) += probes;
         }
         Some(Ok(next))
+    }
+
+    /// The premise `b` as the threads read it, and whether it is negated; None where the written path must match it.
+    fn frozen_lit<'b>(&self, b: &'b BodyElem, depth: usize, rule_id: Option<Sym>) -> Option<(&'b Lit, bool)> {
+        let (l, neg) = match b {
+            BodyElem::Pos(l) => (l, false),
+            BodyElem::Neg(l) => (l, true),
+            _ => return None,
+        };
+        let plain = |t: &Term| !matches!(t.kind(), TermK::Func(_));
+        if depth != 0
+            || !self.firing
+            || self.asking
+            || rule_id.is_none()
+            || !self.lattices.is_empty()
+            || !self.lat_spread.is_empty()
+            || self.assume.is_some()
+            || self.demand_rels.iter().any(|(r, _)| *r == l.rel)
+            || self.vclosure_for(l.rel).is_some()
+            || neg && self.carry_check(0).is_err()
+            || !plain(&l.persp)
+            || !l.args.iter().all(plain)
+        {
+            return None;
+        }
+        Some((l, neg))
+    }
+
+    /// THE PREMISES FROM `i` ON, AS FAR AS THE THREADS TAKE THEM, SOLVED A RUN OF PARTIAL SOLUTIONS AT A TIME: each run
+    /// of `acc` goes through every premise on one thread, and the runs' solutions put end to end are those one thread
+    /// finds premise by premise, in its order, since what a premise makes of a partial solution depends on that
+    /// solution alone. What the written path counts as it goes (the rows held, the reads, the widest read, the
+    /// probes) is counted from each run's totals; where a wall or the watcher would speak inside these premises, or a
+    /// read would write, nothing is kept and the written path solves them. Some: the solutions, the premise after
+    /// the last one solved, and the rows the premises added to those held.
+    pub(super) fn par_rest(&mut self, body: &[BodyElem], i: usize, acc: &[Sol], depth: usize, front_at: Option<(usize, &FxSet<FactId>)>, rule_id: Option<Sym>) -> Option<(Vec<Sol>, usize, i64)> {
+        if acc.len() < self.par.sols.max(2) {
+            return None;
+        }
+        let mut lits: Vec<(&Lit, bool)> = Vec::new();
+        for b in &body[i..] {
+            match self.frozen_lit(b, depth, rule_id) {
+                Some(x) => lits.push(x),
+                None => break,
+            }
+        }
+        if lits.is_empty() {
+            return None;
+        }
+        let news_at = front_at.map(|(p, keys)| (p, keys.len().saturating_sub(1)));
+        let tick = self.store.tick;
+        for (k, &(l, neg)) in lits.iter().enumerate() {
+            match news_at {
+                _ if frs_off(l, tick) => {}
+                Some((p, limit)) if p == i && k == 0 && !neg => self.par_prepare(l, acc, limit),
+                _ if k == 0 => self.par_prepare(l, acc, usize::MAX),
+                _ => self.store.absorb_for_read(&self.h, l.rel, l.persp.as_atom()),
+            }
+        }
+        let frs: Vec<Frozen> = lits
+            .iter()
+            .enumerate()
+            .map(|(k, &(l, neg))| {
+                let news = match front_at {
+                    Some((p, keys)) if p == i + k && !neg => Some((keys, keys.iter().copied().collect())),
+                    _ => None,
+                };
+                Frozen { store: &self.store, h: &self.h, l, neg, news, off: frs_off(l, tick) }
+            })
+            .collect();
+        let sort = !self.store.unordered;
+        let run = (self.par.sols / 4).max(1);
+        let runs: Vec<Option<(Vec<Sol>, Vec<Level>)>> =
+            spread(self.par.threads, acc.len().div_ceil(run), true, |k| solve_run(&frs, &acc[k * run..((k + 1) * run).min(acc.len())], sort));
+        drop(frs);
+        let Some(runs) = runs.into_iter().collect::<Option<Vec<_>>>() else {
+            self.par_given_back += 1;
+            return None;
+        };
+
+        // each premise's totals over the runs, in order, up to the first that left nothing
+        let mut levels: Vec<Level> = Vec::new();
+        for k in 0..lits.len() {
+            let mut t = Level::default();
+            for (_, lv) in &runs {
+                let Some(x) = lv.get(k) else { continue };
+                t.ins += x.ins;
+                t.outs += x.outs;
+                t.read += x.read;
+                t.probes += x.probes;
+                if x.ins > 0 {
+                    t.last = x.last;
+                }
+                if x.wide > t.wide {
+                    t.wide = x.wide;
+                    t.at = x.at.clone();
+                }
+            }
+            let empty = t.outs == 0;
+            levels.push(t);
+            if empty {
+                break;
+            }
+        }
+        // a wall the written path would meet, or a rule it would name as hot, is the written path's to meet
+        let mut rows = self.rows;
+        let (mut read, hot) = match self.cur_rule.and_then(|r| self.read_by_rule.get(&r)) {
+            Some(&(n, next)) => (n, next),
+            None => (0, self.hot_read),
+        };
+        for (k, t) in levels.iter().enumerate() {
+            read += t.read as u64;
+            if rows + (t.outs - t.last) as i64 > self.space || read >= hot {
+                self.par_given_back += 1;
+                return None;
+            }
+            rows += t.outs as i64 - if i + k == 0 { 0 } else { t.ins as i64 };
+        }
+
+        let mut grew = 0;
+        for (k, t) in levels.iter().enumerate() {
+            let (l, neg) = lits[k];
+            let mark = self.cost_mark(rule_id, &body[i + k]);
+            let now = self.rows + (t.outs - t.last) as i64;
+            if now > self.peak_rows {
+                self.peak_rows = now;
+            }
+            if !neg && !frs_off(l, tick) {
+                self.read_rows += t.read as u64;
+                if let Some(rid) = self.cur_rule {
+                    let first = self.hot_read;
+                    self.read_by_rule.entry(rid).or_insert((0, first)).0 += t.read as u64;
+                }
+                if t.wide > self.wide_floor && t.wide > self.widest.n {
+                    let s = t.at.as_ref().unwrap();
+                    let at = l.args.iter().map(|a| resolve(&mut self.h, *a, s)).collect();
+                    self.widest = super::cost::Widest { n: t.wide, at };
+                }
+            }
+            if let Some(m) = mark {
+                self.note_cost(m, t.ins, t.outs);
+            }
+            if let Some(rid) = self.cur_rule {
+                *self.argm_by_rule.entry(rid).or_insert(0) += t.probes;
+            }
+            self.par_levels += 1;
+            let g = t.outs as i64 - if i + k == 0 { 0 } else { t.ins as i64 };
+            self.rows += g;
+            grew += g;
+            if self.rows > self.peak_rows {
+                self.peak_rows = self.rows;
+            }
+        }
+        let made: Vec<Sol> = runs.into_iter().flat_map(|(sols, _)| sols).collect();
+        Some((made, i + levels.len(), grew))
     }
 
     /// The groups `l` reads merged and the index its bound arguments probe built, as the first read of each partial
