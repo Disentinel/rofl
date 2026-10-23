@@ -150,10 +150,10 @@ export function worlds(): World[] {
   const ex = path.join(ROOT, 'examples');
   for (const e of fs.readdirSync(ex).sort()) {
     const p = path.join(ex, e);
-    // `examples/checks/` holds one file per declared world and is never a world
-    // itself: loading its members together would answer about their union,
+    // `examples/checks/` and `examples/intents/` hold one file per declared world and are never a world
+    // themselves: loading their members together would answer about their union,
     // which is nobody's question.
-    if (e === 'checks') continue;
+    if (e === 'checks' || e === 'intents') continue;
     if (fs.statSync(p).isDirectory()) {
       const files = fs.readdirSync(p).sort().filter((x) => x.endsWith('.rofl')).map((x) => path.join(p, x));
       if (files.length > 0) out.push({ name: e, files });

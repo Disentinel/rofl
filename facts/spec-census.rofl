@@ -92,6 +92,7 @@ check[checks]("rust/rofl/tests/dispatch.rs", "a_does_want_without_permit_is_neve
 check[checks]("rust/rofl/tests/dispatch.rs", "a_does_want_runs_once_across_a_dispatch_the_world_anew_and_a_replay", test).
 check[checks]("rust/rofl/tests/dispatch.rs", "a_want_sent_with_no_outcome_recorded_is_unknown", test).
 check[checks]("rust/rofl/tests/dispatch.rs", "a_running_world_cannot_change_what_grants_permission", test).
+check[checks]("rust/rofl/tests/dispatch.rs", "the_mcp_scenario_moves_the_approved_issue_once", test).
 check[checks]("rust/rofl/tests/explain.rs", "why_walks_the_derivation_to_its_axioms", test).
 check[checks]("rust/rofl/tests/explain.rs", "a_negated_premise_renders_as_finite_failure_with_its_demonstration", test).
 check[checks]("rust/rofl/tests/explain.rs", "a_builtin_premise_keeps_its_own_spelling", test).
@@ -856,6 +857,10 @@ check[checks]("facts/goldens.rofl", "holes_negation", world).
 check[checks]("facts/goldens.rofl", "holes_negation_scale", world).
 check[checks]("facts/goldens.rofl", "holes_negation_ticks", world).
 check[checks]("facts/goldens.rofl", "holes_negation_wfs", world).
+check[checks]("facts/goldens.rofl", "intents_exec", world).
+check[checks]("facts/goldens.rofl", "intents_mcp", world).
+check[checks]("facts/goldens.rofl", "intents_rofl", world).
+check[checks]("facts/goldens.rofl", "intents_sql", world).
 check[checks]("facts/goldens.rofl", "jodit_fixture", world).
 check[checks]("facts/goldens.rofl", "keyword_atom", world).
 check[checks]("facts/goldens.rofl", "net", world).

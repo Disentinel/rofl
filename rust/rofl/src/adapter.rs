@@ -13,7 +13,7 @@
 //! nothing of it; `want_held(W, Why)` for a want no adapter it can run is declared for. A want with any of them is
 //! not sent again.
 //!
-//! The kinds: `exec` above, `sql` (`run_sql`), `mcp` (src/mcp.rs). Evaluation sends only `reads` wants; a `does`
+//! The kinds: `exec` above, `sql` (`run_sql`), `mcp` (src/mcp.rs), `rofl` (`run_rofl`). Evaluation sends only `reads` wants; a `does`
 //! want goes only through `dispatch`, which `rofl serve` runs on request (phase 6).
 
 use std::collections::{BTreeMap, HashMap, HashSet};
@@ -135,7 +135,7 @@ impl Session {
                 idems.insert(key, idem);
             }
             match adapters.get(adapter).map(|a| a.0.as_str()) {
-                Some("exec" | "sql" | "mcp") => {
+                Some("exec" | "sql" | "mcp" | "rofl") => {
                     if let (Some(j), Some(idem)) = (book.as_mut(), idems.get(&key)) {
                         j.write(serde_json::json!({"sent": idem, "want": text}))?;
                     }
@@ -202,6 +202,7 @@ impl Session {
         for (b, run) in batches.iter().zip(runs) {
             let ran = match run {
                 Some(t) => t.join().unwrap_or_else(|_| Err("the adapter's thread failed".into())),
+                None if b.kind == "rofl" => self.run_rofl(b),
                 None => run_sql(b),
             };
             let out = self.answer(b, ran);
@@ -288,6 +289,63 @@ impl Session {
         said.sort();
         said.dedup();
         format!("{facts}{}\n{lost}", said.join("\n"))
+    }
+
+    /// A `rofl` batch (scenario 5): the adapter is another world, its files the address, evaluated once a process
+    /// while they are unchanged. A want of a capability answering in `Rel/N` asks that world `Rel` with the want's
+    /// arguments as its first columns, and each row comes back as `Rel(K, Columns...)` in the adapter's book: the why
+    /// of an answer stops at that boundary.
+    fn run_rofl(&mut self, b: &Batch) -> Result<String, String> {
+        thread_local! {
+            static WORLDS: std::cell::RefCell<HashMap<String, Session>> = Default::default();
+        }
+        let mut rels = b.answers.iter();
+        let (Some((rel, arity)), None) = (rels.next(), rels.next()) else {
+            return Err(format!("a rofl capability answers in one relation; '{}' declares {}", b.cap, b.answers.len()));
+        };
+        let mut text = String::new();
+        for f in b.cmd.split_whitespace() {
+            text.push_str(&std::fs::read_to_string(f).map_err(|e| format!("{f}: {e}"))?);
+            text.push('\n');
+        }
+        let stamp = format!("{}\n{:016x}", b.cmd, text.bytes().fold(0xcbf29ce484222325u64, |h, c| (h ^ c as u64).wrapping_mul(0x100000001b3)));
+        let mut queries = Vec::new();
+        for (key, k) in &b.wants {
+            let given: Vec<String> = match k.kind() {
+                TermK::Func(i) => self.eval.h.fargs(i)[1..].iter().map(|a| self.src(*a)).collect(),
+                _ => Vec::new(),
+            };
+            if given.len() + 1 > *arity {
+                return Err(format!("'{}' gives {} argument(s), {rel}/{arity} has {} column(s) after the key", b.cap, given.len(), arity - 1));
+            }
+            let free: Vec<String> = (given.len() + 1..*arity).map(|i| format!("V{i}")).collect();
+            queries.push((key.clone(), given.clone(), format!("{rel}({})", given.iter().chain(&free).cloned().collect::<Vec<_>>().join(", "))));
+        }
+        WORLDS.with(|w| {
+            let mut w = w.borrow_mut();
+            if !w.contains_key(&stamp) {
+                let mut s = Session::fresh(self.eval.budget);
+                s.load(&text, None).map_err(|d| format!("the world of {}: {}", b.adapter, d.join("; ")))?;
+                s.evaluate().map_err(|e| format!("the world of {}: {}", b.adapter, crate::describe(&e)))?;
+                w.insert(stamp.clone(), s);
+            }
+            let s = w.get_mut(&stamp).expect("just kept");
+            let mut out = String::new();
+            for (key, given, q) in &queries {
+                let a = s.ask(q)?;
+                if a.partial {
+                    out.push_str(&format!("failed({key}, {}).\n", quote(&format!("the world of {} answers {q} only in part", b.adapter))));
+                    continue;
+                }
+                for row in &a.rows {
+                    out.push_str(&format!("{rel}({key}, {}).\n", given.iter().chain(row).cloned().collect::<Vec<_>>().join(", ")));
+                }
+                if a.rows.is_empty() {
+                    out.push_str(&format!("answered({key}).\n"));
+                }
+            }
+            Ok(out)
+        })
     }
 
     fn src(&self, t: Term) -> String {

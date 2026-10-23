@@ -3830,3 +3830,19 @@ check_file("scan_requests", "rules/js-concat.rofl").
 check_file("scan_requests", "rules/js-surface.rofl").
 check_file("scan_requests", "examples/checks/scan-world.rofl").
 check_opt("scan_requests", one_engine, rust).
+
+check_world("intents_sql").
+check_file("intents_sql", "examples/intents/sql.rofl").
+check_opt("intents_sql", one_engine, rust).
+
+check_world("intents_exec").
+check_file("intents_exec", "examples/intents/exec.rofl").
+check_opt("intents_exec", one_engine, rust).
+
+check_world("intents_mcp").
+check_file("intents_mcp", "examples/intents/mcp.rofl").
+check_opt("intents_mcp", one_engine, rust).
+
+check_world("intents_rofl").
+check_file("intents_rofl", "examples/intents/rofl.rofl").
+check_opt("intents_rofl", one_engine, rust).
