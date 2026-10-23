@@ -623,7 +623,7 @@ impl<'a> R<'a> {
     /// An aggregate's own body, as the conditions of a rule, inline and in
     /// parentheses; the positions it absorbs and pairs are its own.
     fn inner(&self, c: &Clause, body: &[Elem], ctx: &mut Ctx, stats: &mut Stats) -> String {
-        let tmp = Clause { head: c.head.clone(), body: body.to_vec(), lattice: None, widen: None, tag: false, dom: None, ord: None, structure: None };
+        let tmp = Clause { head: c.head.clone(), body: body.to_vec(), lattice: None, widen: None, tag: false, dom: None, ord: None, structure: None, want: false };
         let saved = (std::mem::take(&mut ctx.absorbed), std::mem::take(&mut ctx.residual), std::mem::take(&mut ctx.kind_conds), std::mem::take(&mut ctx.rel_pairs), std::mem::take(&mut ctx.consumed), ctx.or_at.take(), ctx.cur_k, std::mem::take(&mut ctx.deferred));
         let (pos, neg) = brk!("phrase_inner_unread" => (Vec::new(), Vec::new()); self.conditions(&tmp, &[], ctx, stats));
         (ctx.absorbed, ctx.residual, ctx.kind_conds, ctx.rel_pairs, ctx.consumed, ctx.or_at, ctx.cur_k, ctx.deferred) = saved;
@@ -1025,6 +1025,7 @@ impl<'a> R<'a> {
             dom: c.dom.as_ref().map(l),
             ord: c.ord.clone(),
             structure: c.structure.clone(),
+            want: c.want,
         }
     }
 

@@ -1,0 +1,6 @@
+-- expect-refusal: no capability 'nope' is declared
+-- examples/checks/want-2-refused-capability.rofl — a want of a capability no adapter book declares.
+capability(note, pad, shows). arg(note, 1, who, atom). answers(note, noted, 2).
+capability(lookup, db, reads). arg(lookup, 1, key, atom). answers(lookup, found, 2).
+stage_done(w1). owner(w1, ann). owner(w2, bob).
+want nope(P) :- owner(_, P).

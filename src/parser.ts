@@ -502,6 +502,18 @@ class P {
     if (this.peek().t === 'ident' && STRUCTURE_ROLES.has(this.peek().v) && this.toks[this.pos + 1].t === 'ident') {
       return this.structureDecl();
     }
+    // `want Cap(Args) :- Body.` (docs/intents.md 4.1): a rule whose head is a request
+    if (this.peek().t === 'ident' && this.peek().v === 'want' && this.toks[this.pos + 1].t === 'ident') {
+      this.next();
+      const head = this.literal();
+      if (this.peek().t !== ':-') this.err(`want ${head.rel}: a want has a body`);
+      this.next();
+      const body: BodyElem[] = [this.bodyElem()];
+      while (this.peek().t === ',') { this.next(); body.push(this.bodyElem()); }
+      if (this.peek().t !== '.') this.noDot(`want ${head.rel}: the rule`);
+      this.next();
+      return { head, body, want: true };
+    }
     const head = this.literal();
     // `domrule := lit '<=' lit ':-' body '.'` (docs/aggregates.md,
     // "Subsumption, as built"): read, and refused with the aggregates

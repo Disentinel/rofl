@@ -302,6 +302,10 @@ pub struct Vocab {
     pub kernel_who: Sym,
     pub anon_who: Sym,
     pub any_persp: Sym,
+    /// the rows of a want (docs/intents.md 4.1), written only by a `want` head
+    pub want: Sym,
+    pub want_of: Sym,
+    pub want_arg: Sym,
 
     pub reserved_set: Vec<Sym>,
     pub kernel_book: Vec<Sym>,
@@ -458,6 +462,9 @@ const KERNEL_BOOK_NAMES: &[&str] = &[
 
 const ARITY_TABLE: &[(&str, usize)] = &[
     ("asserted_by", 3),
+    ("want_key", 1),
+    ("want_of", 2),
+    ("want_arg", 3),
     ("authority", 2),
     ("bridge_decl", 3),
     ("concludes", 2),
@@ -594,6 +601,9 @@ impl Vocab {
             kernel_who: i("$kernel"),
             anon_who: i("user"),
             any_persp: i("$any"),
+            want: i("want_key"),
+            want_of: i("want_of"),
+            want_arg: i("want_arg"),
             reserved_set: RESERVED_NAMES.iter().map(|s| i(s)).collect(),
             kernel_book: KERNEL_BOOK_NAMES.iter().map(|s| i(s)).collect(),
             arity: ARITY_TABLE.iter().map(|(s, n)| (i(s), *n)).collect(),
