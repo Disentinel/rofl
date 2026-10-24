@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.5.0 (preview, ROFL 1.5.0)
+
+- A notebook can hold a want: the rows of an adapter's book (`adapter`,
+  `capability`, `arg`, `answers`, `component`, `query`) and the heads of wants
+  are no longer given the notebook's `nb__` prefix, which refused a want before
+  (#123).
+- The `rofl` binary it carries keeps a world again after an edit as an overlay
+  over its base and opens it reading only what it needs: on a 250-file
+  vscode subset an edit costs about a second where it cost five or more
+  (#92–#104).
+- The command line is now the npm package `@grafema/rofl`
+  (`npm i -g @grafema/rofl`); the release no longer carries `rofl-nb-<version>.tgz`.
+  Uninstall the old one first: `npm uninstall -g rofl-nb`.
+- The kernel is ROFL 1.5.0. See docs/releases/1.5.md.
+
 ## 1.4.0 (preview, ROFL 1.4.0)
 
 - A sentence with `a/b` in it that the reader cannot read is reported once,
