@@ -250,7 +250,7 @@ host_family_mismatch[audit](F) :- runtime(F), not host(F).
 env_member[flow](M) :- host_global_ref[code](P, node, "process"), ast_child[code](M, object, 0, P),
                        member_node_v[flow](M), selects[flow](M, "env").
 sx_env[surface](M)  :- env_member[flow](M).
-env_object[flow](M) :- env_member[flow](M).
+env_object[flow](M) :- sx_env[surface](M).
 env_object[flow](E) :- may_be_node[flow](E, M), sx_env[surface](M).
 env_object[flow](E) :- sees_binder[code](E, D), binder[code](D, _, Init, _), env_object[flow](Init).
 

@@ -26,7 +26,7 @@ Reads:
   - <a id="host_calls_back"></a>An origin Origin calls back its argument Key and an argument Arg and a when When (`host_calls_back`)
 - from js-concat, in the flow: [may_be_node](js-concat.rofl.md#may_be_node)
 - from js-dataflow: [key_name](js-dataflow.rofl.md#key_name)
-- from js-dataflow, in the flow: [arg_at](js-dataflow.rofl.md#arg_at), [class_method_of](js-dataflow.rofl.md#class_method_of), [ctor_of](js-dataflow.rofl.md#ctor_of), [inst_of](js-dataflow.rofl.md#inst_of), [member_value](js-dataflow.rofl.md#member_value), [nearest_v](js-dataflow.rofl.md#nearest_v), [prototype_of](js-dataflow.rofl.md#prototype_of), [selects](js-dataflow.rofl.md#selects)
+- from js-dataflow, in the flow: [arg_at](js-dataflow.rofl.md#arg_at), [class_method_of](js-dataflow.rofl.md#class_method_of), [ctor_of](js-dataflow.rofl.md#ctor_of), [inst_of](js-dataflow.rofl.md#inst_of), [member_value](js-dataflow.rofl.md#member_value), [nearest_v](js-dataflow.rofl.md#nearest_v), [param_of](js-dataflow.rofl.md#param_of), [param_use](js-dataflow.rofl.md#param_use), [prototype_of](js-dataflow.rofl.md#prototype_of), [selects](js-dataflow.rofl.md#selects)
 - from js-dataflow, in the main: [builtin_prototype](js-dataflow.rofl.md#builtin_prototype), [class_field_kind](js-dataflow.rofl.md#class_field_kind), [lib_member](js-dataflow.rofl.md#lib_member)
 - from js-host: [host_site](js-host.rofl.md#host_site)
 - from js-model, in the audit: [verdict](js-model.rofl.md#verdict)
@@ -48,6 +48,7 @@ What this file calls a node, and what each word stands for:
 
 | word | stands for |
 |---|---|
+| <a id="noun-assignment_pattern"></a>an assignment pattern | a node of kind `assignment_pattern` |
 | <a id="noun-await"></a>an await | a node of kind `await_expression` |
 | <a id="noun-call"></a>a call | a node of one of the kinds `call_expression`, `optional_call_expression` (`call_kind`) |
 | <a id="noun-class_expression"></a>a class expression | a node of kind `class_expression` |
@@ -56,11 +57,13 @@ What this file calls a node, and what each word stands for:
 | <a id="noun-decorator"></a>a decorator | a node of kind `decorator` |
 | <a id="noun-function_declaration"></a>a function declaration | a node of kind `function_declaration` |
 | <a id="noun-function_expression"></a>a function expression | a node of kind `function_expression` |
+| <a id="noun-member_expression"></a>a member expression | a node of kind `member_expression` |
 | <a id="noun-method"></a>a method | a node of kind `class_method` |
 | <a id="noun-object_literal"></a>an object literal | a node of kind `object_expression` |
 | <a id="noun-object_method"></a>an object method | a node of kind `object_method` |
 | <a id="noun-optional_member_expression"></a>an optional member expression | a node of kind `optional_member_expression` |
 | <a id="noun-property"></a>a property | a node of kind `object_property` |
+| <a id="noun-spread"></a>a spread | a node of kind `spread_element` |
 | <a id="noun-super"></a>a super | a node of kind `super` |
 | <a id="noun-template"></a>a template | a node of kind `template_literal` |
 | a function | a node [`fn_node`](#fn_node) holds of |
@@ -816,4 +819,53 @@ In the audit:
 | `code` | `flow` |
 | `audit` | `flow` |
 | `code` | `surface` |
+
+## A CALL SHORT OF ITS CALLEE: `requestLog(logger)` against
+
+> `function requestLog(req, res, next) { res.on(...) }`. The parameter the call
+> does not pass is `undefined` in the body, and the body reads a member of it
+> without ever testing it (`res && ...`, `res ? ... : ...`, `if (!res)`): a
+> TypeError when that line runs. A call with a spread passes what it cannot
+> count, and a parameter with a default is never `undefined`; neither is asked.
+
+In the code:
+
+<a id="call_spreads"></a>`call_spreads`(C) if a [spread](#noun-spread) S [is among the](#ast_child) `arguments` of a node C.
+
+<a id="call_passes"></a>`call_passes`(C, I) if some node is the I-th of the `arguments` of a node C.
+
+<a id="param_defaulted"></a>`param_defaulted`(F, I) if an [assignment pattern](#noun-assignment_pattern) P is the I-th of the `params` of a node F.
+
+<a id="param_test"></a>`param_test`(B, T) either:
+
+1. if the `left` of a node B is a node T and [the attribute](#ast_attr) `operator` of B is "&&" or "||" or "??";
+2. if the `argument` of a node B is a node T and [the attribute](#ast_attr) `operator` of B is "!";
+3. if the `test` of a node B is a node T.
+
+In the flow:
+
+<a id="param_tested"></a>`param_tested`(F, Name) if F [uses](js-dataflow.rofl.md#param_use) Name at a node T and [`param_test`](#param_test)(something, T).
+
+> the callee's side, published: parameter I of F is read through, untested, at DefFile:DefLine
+
+In the surface:
+
+<a id="sx_param_deref"></a>`sx_param_deref`(F, I, Name, DefFile, DefLine) if all of:
+  - F [takes](js-dataflow.rofl.md#param_of) Name at an index I;
+  - F [uses](js-dataflow.rofl.md#param_use) Name at a node U;
+  - the `object` of a [member expression](#noun-member_expression) M is U;
+  - U [is in file](js-model.rofl.md#ast_node) DefFile;
+  - U [is at line](js-model.rofl.md#ast_line) DefLine;
+  - unless [`param_defaulted`](#param_defaulted)(F, I);
+  - unless [`param_tested`](#param_tested)(F, Name).
+
+In the flow:
+
+<a id="unpassed_deref_at"></a>`unpassed_deref_at`(File, Line, Name, DefFile, DefLine) if all of:
+  - a node C [resolves to](#resolves) F;
+  - [`sx_param_deref`](#sx_param_deref)(F, I, Name, DefFile, DefLine);
+  - C [is in file](js-model.rofl.md#ast_node) File;
+  - C [is at line](js-model.rofl.md#ast_line) Line;
+  - unless [`call_passes`](#call_passes)(C, I);
+  - unless [`call_spreads`](#call_spreads)(C).
 
