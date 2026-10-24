@@ -9,13 +9,13 @@ const SCRIPT: &str = r#"
 const fs = require('fs');
 const batch = JSON.parse(fs.readFileSync(0, 'utf8'));
 fs.appendFileSync(process.argv[2], batch.wants.length + '\n');
-const edges = { a: ['b', 'c'], b: ['d', 'e'], c: ['f'] };
+const edges = { a: ['b', 'c'], b: ['d', 'e'], c: ['f'], x: ['y'], y: ['x'] };
 for (const w of batch.wants) {
   const from = w.args.from;
   if (from === 'boom') process.kill(process.pid, 'SIGKILL');
   if (from === 'lost') continue;
   if (from === 'refused') { console.log(`failed(${w.key}, "no such node").`); continue; }
-  const next = edges[from] || [];
+  const next = /^n\d+$/.test(from) ? (Number(from.slice(1)) < 300 ? ['n' + (Number(from.slice(1)) + 1)] : []) : edges[from] || [];
   for (const y of next) console.log(`next(${w.key}, ${y}).`);
   if (next.length === 0) console.log(`answered(${w.key}).`);
 }
@@ -69,6 +69,25 @@ fn a_recursive_rule_through_an_adapter_sends_one_batch_a_round() {
     assert_eq!(s.adapter_wants().unwrap(), 0);
     assert_eq!(runs(&d).len(), 3);
     std::fs::remove_dir_all(&d).ok();
+}
+
+#[test]
+fn a_cycle_through_an_adapter_ends_each_want_sent_once() {
+    let d = dir("cycle");
+    evaluated(&world(&d, "x"));
+    assert_eq!(runs(&d), vec![1, 1]);
+}
+
+#[test]
+fn a_recursion_through_an_adapter_that_never_ends_stops_at_the_budget() {
+    // n0, n1, ... one want a round; the script stops at n300, far past where the budget the rounds share cuts it
+    let d = dir("endless");
+    let mut s = Session::fresh(400);
+    s.load(&world(&d, "n0"), None).expect("load");
+    let e = s.evaluate().expect("evaluate");
+    let n = runs(&d).len();
+    assert!(e.partial && s.eval.store.partial_eval, "the endless recursion was not cut: {n} rounds");
+    assert!((2..300).contains(&n), "the budget shared by the rounds allowed {n} rounds");
 }
 
 #[test]

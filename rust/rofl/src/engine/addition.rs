@@ -1536,6 +1536,7 @@ impl Eval {
         self.adding = false;
         self.active = active;
         self.cur_front = Front::default();
+        self.added_steps += self.steps;
         (self.steps, self.rows) = outer;
         match r {
             Ok(()) if ambiguous => {

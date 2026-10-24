@@ -685,6 +685,8 @@ pub struct Eval {
     pub v: Vocab,
     pub store: Store,
     pub budget: i64,
+    /// The steps the additions by delta spent since the caller zeroed it, which `steps` (the last evaluation's) does not count.
+    pub added_steps: i64,
     pub space: i64,
     /// The disk wall: the bytes a volume of the world may take (`disk_bytes`), checked with the steps, so it falls
     /// where a step wall falls and is gone on from as one is (`resume.rs`); `disk_hit` says the last wall was it.
@@ -1410,6 +1412,7 @@ impl Eval {
             v,
             store,
             budget,
+            added_steps: 0,
             halt: None,
             space: DEFAULT_SPACE,
             disk: i64::MAX,
