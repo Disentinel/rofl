@@ -62,6 +62,9 @@ pub struct Session {
     /// where wants go when the caller does not wait for them (`rofl serve`, src/adapter.rs `Post`); none, and an
     /// evaluation waits for every answer
     pub post: Option<crate::adapter::Post>,
+    /// The wants sent to each capability since the evaluation began, against its `max_wants`, and whether one was held
+    /// for being over it
+    pub sent: (std::collections::HashMap<String, i64>, bool),
 }
 
 /// What [`Session::retract_delta`] did: the cells brought to their new state,
@@ -153,7 +156,7 @@ impl Session {
     pub fn open(seed_json: &str, budget: i64) -> Result<Session, String> {
         let mut l = crate::load(seed_json, budget)?;
         l.eval.store.journal.seeded();
-        Ok(Session { eval: l.eval, dangling: l.dangling, asks: 0, kept: None, post: None })
+        Ok(Session { eval: l.eval, dangling: l.dangling, asks: 0, kept: None, post: None, sent: Default::default() })
     }
 
     /// A world from a kept image (`crate::image`): an evaluated world opens evaluated.
@@ -170,7 +173,7 @@ impl Session {
         if !eval.store.dirty && crate::brk!("volume_unknowns_dropped" => false; true) {
             eval.unknowns_from(o.unknowns)?;
         }
-        Ok(Session { eval, dangling: o.dangling, asks: 0, kept: None, post: None })
+        Ok(Session { eval, dangling: o.dangling, asks: 0, kept: None, post: None, sent: Default::default() })
     }
 
     /// This world as a kept image, which `open_kept` reads back.
@@ -240,7 +243,7 @@ impl Session {
         if !o.cut.at_end() {
             return Err(format!("{path}: a volume has bytes after its end"));
         }
-        Ok(Session { eval, dangling: 0, asks: 0, kept: Some(o.base), post: None })
+        Ok(Session { eval, dangling: 0, asks: 0, kept: Some(o.base), post: None, sent: Default::default() })
     }
 
     /// AN EMPTY WORLD with the kernel's bootstrap tables and nothing else —
@@ -252,7 +255,7 @@ impl Session {
         let v = Vocab::new(&mut h);
         let mut store = Store::new();
         bootstrap_kernel(&mut h, &v, &mut store);
-        Session { eval: Eval::new(h, store, budget, Mode::Rounds, false), dangling: 0, asks: 0, kept: None, post: None }
+        Session { eval: Eval::new(h, store, budget, Mode::Rounds, false), dangling: 0, asks: 0, kept: None, post: None, sent: Default::default() }
     }
 
     /// A world of one's own, as a LAYER over this one. The first fork freezes
@@ -264,7 +267,7 @@ impl Session {
         self.eval.settle_provenance();
         self.eval.h.freeze();
         self.eval.store.freeze(&self.eval.h);
-        Session { eval: self.eval.fork(), dangling: self.dangling, asks: self.asks, kept: None, post: None }
+        Session { eval: self.eval.fork(), dangling: self.dangling, asks: self.asks, kept: None, post: None, sent: Default::default() }
     }
 
     /// Add base facts, written as ROFL. What they add is not visible to a
@@ -732,6 +735,7 @@ impl Session {
     /// comes back as `partial` with a `hole` in the store naming what is
     /// unfinished.
     pub fn evaluate(&mut self) -> Result<Evaluated, Halt> {
+        self.sent = Default::default();
         let r = self.eval.run();
         let mut e = self.evaluated(r)?;
         // what the world asks to be scanned is scanned, and what it wants of an adapter sent (src/adapter.rs), and what
@@ -755,6 +759,11 @@ impl Session {
                 break;
             }
             e.partial |= self.eval.store.partial_eval;
+        }
+        // a want held over its capability's limit leaves out what its answer would have brought
+        if self.sent.1 {
+            self.eval.store.partial_eval = true;
+            e.partial = true;
         }
         Ok(e)
     }

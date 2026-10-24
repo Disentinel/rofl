@@ -425,7 +425,10 @@ a new directory `intents` under `examples` (phase 7).
    adapter's book (`tracker_transition(...)` written as a rule head, the book
    making it a want)?
 2. A cap on wants per tick and per batch: a world's budget like `--budget`, or
-   declared per capability in the adapter's book?
+   declared per capability in the adapter's book? DECIDED 2026-10-24 by the
+   owner, after recursion through an adapter was tried: per capability in the book,
+   `max_wants(Cap, N)`, 1000 an evaluation when not said; a want over it is
+   held and the world partial (guide/ADAPTERS.md).
 3. Valid time: a convention for answer facts (`at(Fact, Time)`), or a column
    each capability declares? DECIDED by the owner, 2026-10-24: a column,
    `event_time(Cap, Column)` in the book (guide/ADAPTERS.md); the engine does
@@ -437,7 +440,7 @@ a new directory `intents` under `examples` (phase 7).
    programming), with the per-want call count in the cost report. TRIED
    2026-10-24 (f_a_recursion_through_an_adapter_never_met_the_budget): cycles
    end, a doubling tree meets the space wall, and an endless chain now meets
-   the budget the rounds share; the owner's question 2 (a cap) waits.
+   the budget the rounds share; question 2 gave the cap.
 
 ### Phase 1, as built (2026-10-23)
 

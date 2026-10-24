@@ -13,6 +13,8 @@ brk_expects("prov_state_unsettled", "prov_lazy_reader").
 brk_expects("prov_state_unsettled", "prov_lazy_retract").
 brk("journal_closed_late"). brk_kind("journal_closed_late", switch).
 brk_expects("journal_closed_late", "journal_replay").
+brk("max_wants_ignored"). brk_kind("max_wants_ignored", switch).
+brk_expects("max_wants_ignored", "adapter_capped").
 brk("rounds_budget_each"). brk_kind("rounds_budget_each", switch).
 brk_expects("rounds_budget_each", "adapter_endless").
 brk("token_kept_refused"). brk_kind("token_kept_refused", switch).
@@ -2620,6 +2622,7 @@ switch_site("lattice_whynot_tuple_plain", "rust/rofl/src/engine.rs").
 switch_site("lattice_withdrawn_unspread", "rust/rofl/src/engine.rs").
 switch_site("max", "rust/rofl/src/cell.rs").
 switch_site("max_tie_last", "rust/rofl/src/cell.rs").
+switch_site("max_wants_ignored", "rust/rofl/src/adapter.rs").
 switch_site("mcp_book_digest", "rust/rofl/src/mcp.rs").
 switch_site("mcp_does_sent", "rust/rofl/src/adapter.rs").
 switch_site("median_upper", "rust/rofl/src/cell.rs").

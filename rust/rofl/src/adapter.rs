@@ -24,6 +24,9 @@ use crate::rofl_parse;
 use crate::session::Session;
 use crate::term::{Term, TermK};
 
+/// The wants of one capability an evaluation sends when its book declares no `max_wants(Cap, N)`.
+pub const MAX_WANTS: i64 = 1000;
+
 /// One batch: the capability, its adapter, the program, the wants by key text.
 #[cfg_attr(not(feature = "sql"), allow(dead_code))]
 struct Batch {
@@ -136,6 +139,7 @@ impl Session {
                 args.entry(a[0]).or_default().push((i, a[2]));
             }
         }
+        let limits: HashMap<String, i64> = rows(self, "max_wants", 2).into_iter().filter_map(|m| Some((name(self, m[0]), m[1].as_int()?))).collect();
         let templates: HashMap<String, String> = rows(self, "query", 2).into_iter().map(|q| (name(self, q[0]), name(self, q[1]))).collect();
         let mut held = String::new();
         let mut by_cap: BTreeMap<String, Vec<Term>> = BTreeMap::new();
@@ -190,6 +194,14 @@ impl Session {
                     held.push_str(&format!("want_held({text}, \"this build has no http (cargo feature `net`)\").\n"));
                 }
                 Some("exec" | "sql" | "mcp" | "rofl" | "openapi") => {
+                    let limit = limits.get(&cap).copied().unwrap_or(MAX_WANTS);
+                    let sent = self.sent.0.entry(cap.clone()).or_default();
+                    if *sent >= limit && crate::brk!("max_wants_ignored" => false; true) {
+                        held.push_str(&format!("want_held({text}, {}).\n", quote(&format!("over the limit of {limit} wants of {cap} an evaluation: raise it in the adapter's book, max_wants({cap}, N)"))));
+                        self.sent.1 = true;
+                        continue;
+                    }
+                    *sent += 1;
                     if let (Some(j), Some(idem)) = (book.as_mut(), idems.get(&key)) {
                         j.write(serde_json::json!({"sent": idem, "want": text}))?;
                     }

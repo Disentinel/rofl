@@ -15,6 +15,7 @@ An adapter is a book of facts. A world uses it by importing it.
     capability(imports_of, deps, reads).          -- what it can do: reads, shows or does
     arg(imports_of, 1, file, text).               -- its arguments: position, name, type
     answers(imports_of, file_import, 2).          -- where answers arrive; the first column is the want
+    max_wants(imports_of, 20000).                 -- at most this many wants an evaluation (1000 if not said)
 
 The argument types are `text`, `number`, `atom`, `time` and `json`.
 
@@ -72,7 +73,7 @@ and `answered(K)`. A `-- reads: PATH` line names a file the answer depends on,
 so the answer is kept until that file changes.
 
 <!-- BEGIN file examples/intents/exec.rofl -->
-```
+```rofl
 -- SCENARIO 3 (docs/intents.md 7): a local program. The scanner of today, unchanged, beside an exec adapter that
 -- answers the same kind of question as wants: what main.js imports, a file a round, as the scan world asks.
 imports(main, deps).
@@ -160,6 +161,11 @@ capability, until no new want appears:
 - Each level of the tree is one round, and each round is one query or call per
   capability, never one per node.
 - A want is sent once per evaluation, by its key, so a cycle in the data ends.
-- The rounds share the evaluation's budget. A recursion that never ends, an
-  answer that always asks one more question, stops at the budget with a hole,
-  as an endless rule does. So does one that grows too wide, at the space wall.
+- A capability sends at most 1000 wants an evaluation, or as many as its book
+  says: `max_wants(Cap, N)`. A want over the limit is held,
+  `want_held(W, "over the limit of N wants of Cap an evaluation: ...")`, and
+  the world's answers are partial (exit 5). This is what stops an answer that
+  always asks one more question: each round costs a call, and the limit is the
+  number of calls the book's author will pay for.
+- The rounds also share the evaluation's budget and its space wall, so one that
+  grows too wide stops there with a hole, as a rule does.
