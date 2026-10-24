@@ -26,4 +26,12 @@ function use(p: IFoo, i: IIdx, m: Map<string, number>, s: Svc, t: Svc) {
   t.extra();
   p.toString();
 }
-export { Svc, use };
+function more(s: string, xs: number[], o: IFoo | undefined) {
+  s.trim();
+  s.trimm();
+  xs.push(1);
+  xs.pushh(1);
+  o?.run();
+  o.runn();
+}
+export { Svc, use, more };

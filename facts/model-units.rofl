@@ -524,11 +524,15 @@ unit_concludes("rules/js-callgraph.rofl", sx_global_open).
 unit_concludes("rules/js-callgraph.rofl", missing_member_call).
 unit_concludes("rules/js-callgraph.rofl", member_unknown).
 unit_concludes("rules/js-callgraph.rofl", type_decl).
+unit_concludes("rules/js-callgraph.rofl", nullish_type).
+unit_concludes("rules/js-callgraph.rofl", type_at).
+unit_concludes("rules/js-callgraph.rofl", union_part).
+unit_concludes("rules/js-callgraph.rofl", union_parts).
 unit_concludes("rules/js-callgraph.rofl", type_name_at).
 unit_concludes("rules/js-callgraph.rofl", sx_export_type).
 unit_concludes("rules/js-callgraph.rofl", names_type).
 unit_concludes("rules/js-callgraph.rofl", names_lib).
-unit_concludes("rules/js-callgraph.rofl", type_named).
+unit_concludes("rules/js-callgraph.rofl", keyword_prototype).
 unit_concludes("rules/js-callgraph.rofl", type_member).
 unit_concludes("rules/js-callgraph.rofl", param_property).
 unit_concludes("rules/js-callgraph.rofl", type_base).

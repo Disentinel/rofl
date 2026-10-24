@@ -47,7 +47,7 @@ Reads:
   - <a id="ast_attr"></a>The attribute of a node is a value (`ast_attr`)
   - <a id="ast_child"></a>A node is a child of a node (`ast_child`)
 
-Kinds without a noun: tsindex_signature, tsinterface_declaration, tsinterface_heritage, tsparameter_property, tsproperty_signature, tstype_annotation, tstype_reference.
+Kinds without a noun: tsindex_signature, tsinterface_declaration, tsinterface_heritage, tsparameter_property, tsproperty_signature, tstype_annotation, tstype_reference, tsunion_type.
 
 ## Words
 
@@ -1244,14 +1244,36 @@ In the code:
   - T is in file File;
   - the `id` of T [is named](js-structure.rofl.md#ast_name) Name.
 
+> the type an annotation states: itself, or the one part of a union that is not `undefined`
+> or `null` (`IFoo | undefined`: a member call throws on either)
+
+`nullish_type` includes `tsundefined_keyword`, `tsnull_keyword`.
+
+<a id="type_at"></a>`type_at`(a tstype_annotation node Y, X) if the `type_annotation` of Y is a node X, unless X is a tsunion_type node.
+
+<a id="union_part"></a>`union_part`(a tsunion_type node U, Y) if all of:
+  - a node Y [is among the](#ast_child) `types` of U;
+  - Y [is of kind](js-model.rofl.md#ast_node) K;
+  - unless [`nullish_type`](#nullish_type)(K).
+
+<a id="union_parts"></a>`union_parts`(U) if [`union_part`](#union_part)(U, Y1), [`union_part`](#union_part)(U, Y2), and Y1 differs from Y2.
+
+`type_at`(a tstype_annotation node X, Y) if all of:
+  - the `type_annotation` of X is a node U;
+  - [`union_part`](#union_part)(U, Y);
+  - unless [`union_parts`](#union_parts)(U).
+
+Declared as facts:
+
+- <a id="nullish_type"></a>`nullish_type` — rows in this file
+
 > a name in type position: a type reference, and an interface's `extends`
 
 <a id="type_name_at"></a>`type_name_at`(Y, Name, File) either:
 
 1. if all of:
-   - Y is a tstype_annotation node;
-   - Y is in file File;
-   - the `type_annotation` of Y is a tstype_reference node X;
+   - [`type_at`](#type_at)(Y, a tstype_reference node X);
+   - X is in file File;
    - the `type_name` of X is an [identifier](#noun-identifier) N;
    - N [is named](js-structure.rofl.md#ast_name) Name;
 2. if all of:
@@ -1292,10 +1314,26 @@ In the flow:
   - unless [`type_decl`](#type_decl)(something, Name, File);
   - unless Name [imports](js-dataflow.rofl.md#imports_name) some name at some site in File.
 
-<a id="type_named"></a>`type_named`(X) either:
+> a keyword and an array type
 
-1. if [`names_type`](#names_type)(X, something);
-2. if [`names_lib`](#names_lib)(X, something).
+`keyword_prototype` lists:
+
+| arg 1 | arg 2 |
+|---|---|
+| `tsstring_keyword` | `string` |
+| `tsnumber_keyword` | `number` |
+| `tsboolean_keyword` | `boolean` |
+| `tsbigint_keyword` | `bigint` |
+| `tsarray_type` | `array` |
+
+`names_lib`(Y, P) if all of:
+  - [`type_at`](#type_at)(Y, X);
+  - a node X [is of kind](js-model.rofl.md#ast_node) K;
+  - [`keyword_prototype`](#keyword_prototype)(K, P).
+
+Declared as facts:
+
+- <a id="keyword_prototype"></a>`keyword_prototype` — rows in this file
 
 > what a type has, and where it cannot be known whole
 

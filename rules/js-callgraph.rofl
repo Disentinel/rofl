@@ -701,9 +701,21 @@ type_decl[code](T, Name, File) :- ast_node[code](T, tsinterface_declaration, Fil
                                   ast_name[code](I, Name).
 type_decl[code](T, Name, File) :- ast_node[code](T, class_declaration, File), ast_child[code](T, id, 0, I),
                                   ast_name[code](I, Name).
+-- the type an annotation states: itself, or the one part of a union that is not `undefined`
+-- or `null` (`IFoo | undefined`: a member call throws on either)
+edb(nullish_type).
+nullish_type(tsundefined_keyword).
+nullish_type(tsnull_keyword).
+type_at[code](A, X)        :- ast_node[code](A, tstype_annotation, _), ast_child[code](A, type_annotation, 0, X),
+                              not ast_node[code](X, tsunion_type, _).
+union_part[code](U, Y)     :- ast_node[code](U, tsunion_type, _), ast_child[code](U, types, _, Y),
+                              ast_node[code](Y, K, _), not nullish_type(K).
+union_parts[code](U)       :- union_part[code](U, Y1), union_part[code](U, Y2), Y1 != Y2.
+type_at[code](A, Y)        :- ast_node[code](A, tstype_annotation, _), ast_child[code](A, type_annotation, 0, U),
+                              union_part[code](U, Y), not union_parts[code](U).
 -- a name in type position: a type reference, and an interface's `extends`
-type_name_at[code](A, Name, File) :- ast_node[code](A, tstype_annotation, File), ast_child[code](A, type_annotation, 0, X),
-                                     ast_node[code](X, tstype_reference, _), ast_child[code](X, type_name, 0, N),
+type_name_at[code](A, Name, File) :- type_at[code](A, X), ast_node[code](X, tstype_reference, File),
+                                     ast_child[code](X, type_name, 0, N),
                                      ast_node[code](N, identifier, _), ast_name[code](N, Name).
 type_name_at[code](H, Name, File) :- ast_node[code](H, tsinterface_heritage, File), ast_child[code](H, expression, 0, N),
                                      ast_node[code](N, identifier, _), ast_name[code](N, Name).
@@ -717,8 +729,14 @@ names_type[flow](A, T) :- type_name_at[code](A, Name, File), imports_name[code](
 -- a library type by its prototype (`m: Map<K, V>`), where the corpus declares no such name
 names_lib[flow](A, P)  :- type_name_at[code](A, Name, File), lib_global_prototype(Name, P),
                           not type_decl[code](_, Name, File), not imports_name[code](Name, _, _, File).
-type_named[flow](A)    :- names_type[flow](A, _).
-type_named[flow](A)    :- names_lib[flow](A, _).
+-- a keyword and an array type
+edb(keyword_prototype).
+keyword_prototype(tsstring_keyword, string).
+keyword_prototype(tsnumber_keyword, number).
+keyword_prototype(tsboolean_keyword, boolean).
+keyword_prototype(tsbigint_keyword, bigint).
+keyword_prototype(tsarray_type, array).
+names_lib[flow](A, P)  :- type_at[code](A, X), ast_node[code](X, K, _), keyword_prototype(K, P).
 
 -- what a type has, and where it cannot be known whole
 type_member[flow](T, Key) :- ast_node[code](T, tsinterface_declaration, _), ast_child[code](T, body, 0, B),
