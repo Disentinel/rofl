@@ -173,8 +173,10 @@ retract; the readers of it are given the retraction deltas **enumerated from
 the structure before the edge goes**: the pairs (ancestors of P and P) x
 (subtree of C and C). Their own retractions then go the existing way.
 
-As built, a retraction that reaches a tree's edges is a full evaluation instead (see
-"Tree, as built"); this paragraph is the design.
+As built, a set of facts taken out by delta (a file edited in a kept world) rebuilds only the
+trees it touches and overdeletes the facts that cited a row gone from them (`vretract_edges`);
+one base fact retracted alone (`--retract`) whose change reaches a tree's edges is still a full
+evaluation (see "Tree, as built").
 
 **incremental.** An added edge enumerates the same two sets after it lands. (As built,
 an addition that reaches the edges builds the forest again and keeps what was derived,
@@ -368,9 +370,11 @@ bound is the ancestors of every node (what a reader that wants every pair asks f
 costs every row, as the stored rows would). A negation asks the same. The forest is
 built whole from the edge relation's rows and again when that relation has more rows than
 when it was built (a rebuild of the touched book, the note's first choice for
-maintenance: an edge added or retracted is a rebuild). A retraction whose fact reaches the
-edges through the rules is a full evaluation (`retract_delta` refuses it: the forest is built
-again and what reads it read again whole); one that does not reach them leaves every forest
+maintenance: an edge added or retracted is a rebuild). A set taken out by delta, a file
+edited in a kept world, rebuilds only the trees of its edges (`Forest::rebuild_trees`) and
+overdeletes the facts that cited a row gone from them (`vretract_edges`). One fact retracted
+alone whose change reaches the edges through the rules is a full evaluation (`retract_delta`
+refuses it: the forest is built again and what reads it read again whole); one that does not reach them leaves every forest
 as it is and is the delta it is in any world (`ds_tree_retract_other`). A rule that
 reads the closure is fired whole when news of the edges reaches it and it has not fired
 since they last changed, since the closure has no news of its own (the case: the edges a
