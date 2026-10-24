@@ -507,3 +507,33 @@ performed_as_edge[audit](Fn, F) :- performed_call[code](A, F),
 imports(code, flow).
 imports(audit, flow).
 imports(code, surface).
+
+-- =========================================================================
+-- A CALL SHORT OF ITS CALLEE: `requestLog(logger)` against
+-- `function requestLog(req, res, next) { res.on(...) }`. The parameter the call
+-- does not pass is `undefined` in the body, and the body reads a member of it
+-- without ever testing it (`res && ...`, `res ? ... : ...`, `if (!res)`): a
+-- TypeError when that line runs. A call with a spread passes what it cannot
+-- count, and a parameter with a default is never `undefined`; neither is asked.
+call_spreads[code](C) :- ast_child[code](C, arguments, _, S), ast_node[code](S, spread_element, _).
+call_passes[code](C, I) :- ast_child[code](C, arguments, I, _).
+param_defaulted[code](F, I) :- ast_child[code](F, params, I, P), ast_node[code](P, assignment_pattern, _).
+
+param_test[code](B, T) :- ast_child[code](B, left, 0, T), ast_attr[code](B, operator, "&&").
+param_test[code](B, T) :- ast_child[code](B, left, 0, T), ast_attr[code](B, operator, "||").
+param_test[code](B, T) :- ast_child[code](B, left, 0, T), ast_attr[code](B, operator, "??").
+param_test[code](B, T) :- ast_child[code](B, argument, 0, T), ast_attr[code](B, operator, "!").
+param_test[code](B, T) :- ast_child[code](B, test, 0, T).
+param_tested[flow](F, Name) :- param_use[flow](F, Name, T), param_test[code](_, T).
+
+-- the callee's side, published: parameter I of F is read through, untested, at DefFile:DefLine
+sx_param_deref[surface](F, I, Name, DefFile, DefLine) :- param_of[flow](F, I, Name), not param_defaulted[code](F, I),
+                                        not param_tested[flow](F, Name),
+                                        param_use[flow](F, Name, U), ast_child[code](M, object, 0, U),
+                                        ast_node[code](M, member_expression, _),
+                                        ast_node[code](U, _, DefFile), ast_line[code](U, DefLine).
+
+unpassed_deref_at[flow](File, Line, Name, DefFile, DefLine) :- resolves[code](C, F),
+                                        sx_param_deref[surface](F, I, Name, DefFile, DefLine),
+                                        not call_passes[code](C, I), not call_spreads[code](C),
+                                        ast_node[code](C, _, File), ast_line[code](C, Line).
