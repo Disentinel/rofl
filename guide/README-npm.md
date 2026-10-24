@@ -1,19 +1,44 @@
-# rofl-nb: the ROFL notebook on the command line
+# @grafema/rofl
 
-A ROFL notebook is a Markdown file (`.rofl.md`) of sentences, rules and
-questions, over facts you write or facts read from your JavaScript and
-TypeScript. `rofl-nb` runs it: every question gets its answers, and every
-`never` is an invariant that holds or fails, with the exit code to match.
+ROFL keeps a model of a codebase and answers questions about it with proof.
+The package has three commands and a library:
+
+- `rofl`, the engine (native, Rust): `ask`, `why`, `whynot`, `excise`
+  over a world of `.rofl` files, `--json` for an agent, and `rofl scan` to
+  read a directory of JavaScript and TypeScript into facts;
+- `rofl-nb`, the notebook: runs a `.rofl.md` notebook of sentences, rules
+  and questions, every `never` an invariant with the exit code to match;
+- `rofl-lsp`, a language server for `.rofl` and `.rofl.md`;
+- `import { Rofl } from '@grafema/rofl'`, the TypeScript engine as a
+  library, and `boot.rofl` and the rule packs beside it.
 
 ## Install
 
 Needs Node 22 or later.
 
-    npm install -g ./rofl-nb-*.tgz
+    npm install -g @grafema/rofl          # or once: npx @grafema/rofl ask ...
+    npm install -g @grafema/rofl@latest   # later, to update
 
-## Start
+The engine comes in a package of its own for each platform
+(`@grafema/rofl-linux-x64`, `-linux-arm64`, `-darwin-x64`,
+`-darwin-arm64`, `-win32-x64`); npm downloads only this machine's.
+`rofl --version` says the version and the engine it runs.
 
-    cp -r "$(npm root -g)/rofl-nb/examples" ~/rofl-examples
+## The engine, for an agent
+
+    rofl scan src --out code.rofl                                     # a directory of JS/TS in, facts out
+    rofl ask 'depends[code](F, G)' @rules/js.files code.rofl         # the rows, one a line; --json for one JSON line
+    rofl why 'flows[code]("api/server.js", "api/users.js")' @rules/js.files code.rofl
+
+`@rules/js.files` is the JS model this package carries, from any directory.
+A world is kept under `~/.cache/rofl/worlds`: the same files asked again
+are answered from it without evaluating. Exit 0 whole, 2 a file refused,
+3 the world, 4 the question, 5 partial, 70 a defect; 127 when the engine for
+this platform is not installed (the message says which package to install).
+
+## The notebook
+
+    cp -r "$(npm root -g)/@grafema/rofl/examples" ~/rofl-examples
     cd ~/rofl-examples/tutorial && rofl-nb 1-what-ships.rofl.md
 
 The tutorial is a game in six short levels, one new word each. Then:

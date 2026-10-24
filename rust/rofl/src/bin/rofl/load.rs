@@ -92,6 +92,18 @@ pub fn verb(args: Vec<String>) {
     run(json, args, None, rofl::brk!("kept_verbs_compute" => false; true))
 }
 
+/// Each `scan_failed(Kind, Path, Message)` the world holds, written out: from this run's scans, and from the world
+/// itself for one answered from a kept world.
+fn failed_scans(s: &mut rofl::session::Session) -> Vec<String> {
+    let mut out: Vec<String> = s.eval.scans.iter().filter(|r| r.unit.starts_with("scan_failed(")).map(|r| r.unit.trim().trim_end_matches('.').to_string()).collect();
+    if let Ok(a) = s.ask("scan_failed(K, P, M)") {
+        out.extend(a.rows.iter().map(|r| format!("scan_failed({})", r.join(", "))));
+    }
+    out.sort();
+    out.dedup();
+    out
+}
+
 /// The scans the world loaded, each with the base facts it brought.
 fn scan_units(s: &mut rofl::session::Session) -> Vec<crate::kept::ScanUnit> {
     let recs = s.eval.scans.clone();
@@ -435,6 +447,10 @@ fn run(json: bool, args: Vec<String>, mut pre: Option<(bool, crate::kept::Record
         if json { println!("{}", serde_json::json!({ "ok": true, "state": s.eval.canonical_state(), "partial": cut })) } else { print!("{}", s.eval.canonical_state()) }
     }
     let (mut refused, mut partial) = (false, cut);
+    // a scan that failed left out the facts it would have brought: every answer may be short of them (docs/cli.md)
+    let failed = if qs.is_empty() { Vec::new() } else { failed_scans(&mut s) };
+    for f in &failed { eprintln!("a scan failed, so the answers may be short of what it would have brought: {f}"); }
+    partial |= !failed.is_empty();
     for q in &qs {
         // each answer as plain text, or as `rofl serve` answers it
         let (text, js) = match q {
@@ -442,7 +458,8 @@ fn run(json: bool, args: Vec<String>, mut pre: Option<(bool, crate::kept::Record
                 Ok(a) => {
                     partial |= a.partial;
                     let shrugs: Vec<_> = a.shrugs.iter().map(|(row, line)| serde_json::json!({ "row": row, "line": line })).collect();
-                    (ask_text(&a), serde_json::json!({ "ok": true, "vars": a.vars, "rows": a.rows, "keys": a.keys, "shrugs": shrugs, "partial": a.partial }))
+                    let text = if failed.is_empty() { ask_text(&a) } else { format!("{}\n[partial: a scan failed, its facts are not in the world]", ask_text(&a)) };
+                    (text, serde_json::json!({ "ok": true, "vars": a.vars, "rows": a.rows, "keys": a.keys, "shrugs": shrugs, "partial": a.partial || !failed.is_empty() }))
                 }
                 Err(e) => { refused = true; (format!("error: {e}"), serde_json::json!({ "ok": false, "error": e })) }
             },

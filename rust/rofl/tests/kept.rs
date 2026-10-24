@@ -221,6 +221,23 @@ fn a_blind_scan_is_not_kept(brk: Option<&str>) -> Result<(), String> {
     ensure(r.code == 2 && r.err.contains("named nothing it read") && !d.0.join("w.vol").exists(), || format!("a blind scan: {} {:?}", r.code, r.err))
 }
 
+/// A scanner that cannot be started, or exits non-zero, leaves the world without the facts it would have brought: a
+/// question over it is answered partial (exit 5) with the failure said, never whole with exit 0, and the world is not
+/// kept for want of what the scan would have read, which is said as the failure it is.
+fn a_failed_scan_answers_partial(brk: Option<&str>) -> Result<(), String> {
+    let d = Dir::new("failed");
+    d.write("fail.sh", "echo 'it broke' >&2\nexit 3\n");
+    for (scanner, said) in [("rofl-no-such-scanner", "rofl-no-such-scanner: "), ("sh fail.sh", "exited 3: it broke")] {
+        d.write("scan.rofl", &format!("edb(scanner).\nedb(scan_done).\nedb(scan_failed).\nedb(seen).\nseen(z).\nscanner(t, \"{scanner}\").\nscan_request(t, \"x\").\n"));
+        let r = rofl(&d, brk, &["ask", "seen(X)", "boot.rofl", "scan.rofl"]);
+        ensure(r.code == 5 && r.out.contains("X = z") && r.out.contains("[partial: a scan failed") && r.err.contains(said) && r.err.contains("failed") && !r.err.contains("named nothing it read"),
+            || format!("{scanner}: {} {:?} {:?}", r.code, r.out, r.err))?;
+        let j = rofl(&d, brk, &["ask", "seen(X)", "--json", "boot.rofl", "scan.rofl"]);
+        ensure(j.code == 5 && j.out.contains("\"partial\":true"), || format!("{scanner} --json: {} {:?}", j.code, j.out))?;
+    }
+    Ok(())
+}
+
 fn walls_changed(brk: Option<&str>) -> Result<(), String> {
     let d = Dir::new("walls");
     d.write("other.rofl", "edb(x).\nx(1).\n");
@@ -707,13 +724,14 @@ fn the_disk_cap_stops_and_a_larger_one_goes_on(brk: Option<&str>) -> Result<(), 
 
 type Case = fn(Option<&str>) -> Result<(), String>;
 
-const CASES: [(&str, Case); 26] = [
+const CASES: [(&str, Case); 27] = [
     ("answers_as_fresh", answers_as_fresh),
     ("a_rule_file_edited", a_rule_file_edited),
     ("boot_edited", boot_edited),
     ("markdown_and_what_it_reads", markdown_and_what_it_reads),
     ("a_scan_read_edited", a_scan_read_edited),
     ("a_blind_scan_is_not_kept", a_blind_scan_is_not_kept),
+    ("a_failed_scan_answers_partial", a_failed_scan_answers_partial),
     ("walls_changed", walls_changed),
     ("the_engine_changed", the_engine_changed),
     ("a_damaged_file", a_damaged_file),

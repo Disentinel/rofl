@@ -12,7 +12,7 @@ playground is at `/playground/`.
 
 Works from any folder:
 
-    cp -r "$(npm root -g)/rofl-nb/examples" ~/rofl-examples
+    cp -r "$(npm root -g)/@grafema/rofl/examples" ~/rofl-examples
     cd ~/rofl-examples/tutorial
 
 ## 2. Play level 1 of the tutorial

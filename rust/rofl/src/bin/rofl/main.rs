@@ -15,7 +15,8 @@
 //!
 //! A question verb is `rofl load` with that one question; `--json` prints each answer as `rofl serve` does.
 //! `--kept F [--anew]` keeps the world evaluated at F, and later runs answer from F until it is stale (kept.rs).
-//! `@LIST` stands for the files LIST names, one a line, each from LIST's directory (`@rules/js.files`, the JS model).
+//! `@LIST` stands for the files LIST names, one a line, each from LIST's directory (`@rules/js.files`, the JS model);
+//! a LIST that is no file from the current directory is read from the tree the command came with (md::installed_tree).
 mod delta;
 mod kept;
 mod load;
@@ -31,8 +32,14 @@ fn listed(args: Vec<String>) -> Vec<String> {
     args.into_iter().flat_map(|a| match a.strip_prefix('@') {
         None => vec![a],
         Some(list) => {
-            let text = std::fs::read_to_string(list).unwrap_or_else(|e| { eprintln!("{list}: {e}"); std::process::exit(load::USAGE) });
-            let dir = std::path::Path::new(list).parent().unwrap_or(std::path::Path::new("")).to_path_buf();
+            // a list that is no file from here is the installed tree's: `@rules/js.files` from any directory
+            let here = std::path::PathBuf::from(list);
+            let list = match rofl::md::installed_tree().map(|t| t.join(list)) {
+                Some(t) if !here.is_file() && t.is_file() => t,
+                _ => here,
+            };
+            let text = std::fs::read_to_string(&list).unwrap_or_else(|e| { eprintln!("{}: {e}", list.display()); std::process::exit(load::USAGE) });
+            let dir = list.parent().unwrap_or(std::path::Path::new("")).to_path_buf();
             text.lines().map(str::trim).filter(|l| !l.is_empty()).map(|l| dir.join(l).to_string_lossy().into_owned()).collect()
         }
     }).collect()

@@ -410,6 +410,9 @@ pub fn shown(p: &str) -> String {
 /// The record of a world evaluated from `args` that read `files` and whose scans are `scans`: refused when a scan
 /// named nothing it read, since whether the world it brought in is stale could not be told.
 pub fn record(args: &[String], world_files: &[String], units: &[Unit], files: &[String], scans: &[ScanUnit], cut: Option<u64>) -> Result<String, String> {
+    if let Some(s) = scans.iter().find(|s| s.cmd.is_some() && s.failed) {
+        return Err(format!("the scan `{} {}` failed, so what it would have read is not known", s.cmd.as_deref().unwrap_or(""), s.text));
+    }
     if let Some(s) = scans.iter().find(|s| s.cmd.is_some() && rofl::brk!("kept_blind_scans" => false; s.read.is_empty())) {
         return Err(format!("the scan `{} {}` named nothing it read (`-- reads: PATH`), so whether a kept world is stale could not be told", s.cmd.as_deref().unwrap_or(""), s.text));
     }
@@ -441,13 +444,15 @@ pub struct ScanUnit {
     pub cmd: Option<String>,
     pub read: Vec<String>,
     pub facts: Vec<u32>,
+    /// the scan failed, and brought no facts
+    pub failed: bool,
 }
 
 impl ScanUnit {
     /// What the session's scan `r` brought, read against it.
     pub fn of(s: &mut rofl::session::Session, r: &rofl::engine::ScanRec) -> ScanUnit {
         let facts = s.facts_of(&r.unit).map(|f| f.0).unwrap_or_default();
-        ScanUnit { kind: r.kind.clone(), path: r.path.clone(), text: r.text.clone(), cmd: r.cmd.clone(), read: r.read.clone(), facts }
+        ScanUnit { kind: r.kind.clone(), path: r.path.clone(), text: r.text.clone(), cmd: r.cmd.clone(), read: r.read.clone(), facts, failed: r.unit.starts_with("scan_failed(") }
     }
 }
 
@@ -489,6 +494,7 @@ pub fn parse(note: &str) -> Option<Record> {
         cmd: s.get(3)?.as_str().map(str::to_string),
         read: s.get(4)?.as_array()?.iter().map(|x| x.as_str().map(str::to_string)).collect::<Option<Vec<_>>>()?,
         facts: unruns(s.get(5)?)?,
+        failed: false,
     })).collect::<Option<Vec<_>>>()?;
     let cut = v.get("cut").and_then(|c| c.as_u64());
     Some(Record { args, files, engine: v.get("engine")?.as_str()?.to_string(), env: strs("env")?, cwd: v.get("cwd")?.as_str().map(str::to_string), read, units, scans, cut })

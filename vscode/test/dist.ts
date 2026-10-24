@@ -27,7 +27,7 @@ if (fresh) console.log(`dist/${vsixAt} was built from these files, none since ch
 const built = fresh ? { status: 0, stdout: '', stderr: '' } : spawnSync(process.execPath, ['--experimental-strip-types', path.join(ROOT, 'scripts/dist.ts')], { encoding: 'utf8', timeout: 60_000, env: { ...process.env, ROFL_DIST_BREAK: arg('--break') ?? '' } });
 if (!fresh && built.status === 0 && !arg('--break')) writeFileSync(TREE, tree);
 if (built.status !== 0) { console.error(built.stdout + built.stderr); process.exit(1); }
-const vsix = readdirSync(DIST).find((f) => f.endsWith('.vsix'))!, tgz = readdirSync(DIST).find((f) => f.endsWith('.tgz'))!;
+const vsix = readdirSync(DIST).find((f) => f.endsWith('.vsix'))!, tgz = readdirSync(DIST).find((f) => /^grafema-rofl-\d.*\.tgz$/.test(f))!;
 const manifest = JSON.parse(readFileSync(path.join(DIST, 'vsix/package.json'), 'utf8')), id = `${manifest.publisher}.${manifest.name}`;
 
 type Out = { code: number | null; stdout: string };
@@ -94,7 +94,7 @@ if (!init?.capabilities?.hoverProvider || marked.length !== 1 || marked[0].range
 else console.log(`rofl-lsp from ${tgz}: initialize answered, the broken rule marked on line ${marked[0].range.start.line + 1}`);
 // every example of examples/visual the package carries, copied out of the installed package and run by it, draws what the tree draws, and has marks;
 // a `rofl:` name that is no vocabulary is refused
-const home = path.join(prefix, 'node_modules/rofl-nb'), drawn = path.join(tmp, 'drawn');
+const home = path.join(prefix, 'node_modules/@grafema/rofl'), drawn = path.join(tmp, 'drawn');
 cpSync(path.join(home, 'examples'), drawn, { recursive: true });
 const views = (s: string): number[] => { try { return JSON.parse(s).cells.flatMap((c: { lines: { view?: { marks: object } }[] }) => c.lines.flatMap((l) => l.view ? [Object.keys(l.view.marks).length] : [])); } catch { return []; } };
 const t1 = performance.now(), runs = await Promise.all(pictures.map((f) => Promise.all([node([path.join(home, 'notebook/rofl-nb.js'), f, '--json'], path.join(drawn, 'visual')),
@@ -111,7 +111,7 @@ const refused = escape.code === 2 && strip(escape.stdout).includes('rofl:visual/
 if (!refused) bad.push(`rofl:visual/../package.json was not refused: exit ${escape.code}, ${strip(escape.stdout).slice(0, 300)}`);
 console.log(`examples/visual from ${tgz}: ${drew} of ${pictures.length} drawn as the tree draws, rofl:visual/../package.json ${refused ? 'refused' : 'NOT refused'}, ${((performance.now() - t1) / 1000).toFixed(1)} s`);
 const ver = spawnSync(path.join(prefix, 'node_modules/.bin/rofl-nb'), ['--version'], { encoding: 'utf8', timeout: 20_000 });
-if (ver.status !== 0 || ver.stdout !== `rofl-nb ${tgz.replace(/^rofl-nb-(.*)\.tgz$/, '$1')}\n`) bad.push(`rofl-nb --version from ${tgz}: exit ${ver.status}, ${JSON.stringify(ver.stdout + ver.stderr)}`);
+if (ver.status !== 0 || ver.stdout !== `rofl-nb ${tgz.replace(/^grafema-rofl-(.*)\.tgz$/, '$1')}\n`) bad.push(`rofl-nb --version from ${tgz}: exit ${ver.status}, ${JSON.stringify(ver.stdout + ver.stderr)}`);
 }
 console.log(`command line: ${bad.length ? `FAIL\n  ${bad.join('\n  ')}\n` : 'ok'}, ${((performance.now() - t0) / 1000).toFixed(1)} s`);
 if (process.argv.includes('--cli')) process.exit(bad.length ? 1 : 0);

@@ -375,12 +375,23 @@ fn relative(from: &Path, to: &Path) -> String {
     std::iter::repeat_n("..".to_string(), a.len() - k).chain(b[k..].iter().map(|c| c.as_os_str().to_string_lossy().into_owned())).collect::<Vec<_>>().join("/")
 }
 
-/// The tree whose vocabulary a file is read in: the nearest directory above it with `boot.rofl` and
-/// `facts/phrases.rofl`, else the one above this binary.
-pub fn tree_of(file: &Path) -> Option<PathBuf> {
+fn tree_above(p: &Path) -> Option<PathBuf> {
     let is_tree = |d: &Path| d.join("boot.rofl").is_file() && d.join("facts/phrases.rofl").is_file();
-    let up = |p: PathBuf| p.ancestors().find(|d| is_tree(d)).map(Path::to_path_buf);
-    up(absolute(file)).or_else(|| std::env::current_exe().ok().and_then(up))
+    p.ancestors().find(|d| is_tree(d)).map(Path::to_path_buf)
+}
+
+/// The tree this command came with: the one above the path it was called by, else the one above the binary.
+/// The npm package's `rofl` runs its platform package's binary by a path inside the package, so the binary
+/// finds the package's tree the way git finds its runtime prefix.
+pub fn installed_tree() -> Option<PathBuf> {
+    let called = std::env::args_os().next().map(PathBuf::from).filter(|p| p.components().count() > 1);
+    called.and_then(|p| tree_above(&absolute(&p))).or_else(|| std::env::current_exe().ok().and_then(|p| tree_above(&p)))
+}
+
+/// The tree whose vocabulary a file is read in: the nearest directory above it with `boot.rofl` and
+/// `facts/phrases.rofl`, else the tree this command came with.
+pub fn tree_of(file: &Path) -> Option<PathBuf> {
+    tree_above(&absolute(file)).or_else(installed_tree)
 }
 
 thread_local! { static READ: std::cell::RefCell<Vec<PathBuf>> = const { std::cell::RefCell::new(Vec::new()) }; }
