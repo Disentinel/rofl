@@ -25,6 +25,14 @@
   .bar .live::before { content: '\25CF  '; }
   .nbhead { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; font-size: 13px; padding: 8px 12px; background: var(--panel); border: 1px solid var(--line); border-radius: 7px; }
   .nbhead .err, .nbhead .note { flex-basis: 100%; }
+  .screen { display: grid; gap: 10px; padding: 14px 16px; background: var(--panel); border: 1px solid var(--line); border-radius: 7px; }
+  .screen h2 { margin: 0; font: 600 18px/1.3 var(--sans); }
+  .screen .ui-card { border: 1px solid var(--line); border-radius: 6px; padding: 8px 12px; }
+  .screen .ui-card b { display: block; }
+  .screen label { display: grid; gap: 4px; font-size: 13px; }
+  .screen input { font: 14px var(--sans); padding: 7px 9px; border: 1px solid var(--line); border-radius: 5px; background: var(--panel); color: var(--fg); }
+  .screen .ui-button { justify-self: start; }
+  .screen .ui-foot { font-size: 12px; }
   .verdict { font: 600 12.5px/1.4 var(--mono); white-space: nowrap; }
   .verdict.pass { color: var(--pass); }
   .verdict.fail { color: var(--fail); }
@@ -141,6 +149,7 @@
   </header>
   <div class="bar" id="bar" aria-live="polite"></div>
   <div class="nbhead" id="head" aria-live="polite"><span class="mute">loading the kernel…</span></div>
+  <section class="screen" id="screen" hidden aria-live="polite"></section>
   <p class="hint" id="hint"></p>
   <div class="adds" data-row="top">Add a cell: <button type="button" data-add="rofl">sentences</button><button type="button" data-add="datalog">datalog</button><button type="button" data-add="natural">natural</button><button type="button" data-add="prose">prose</button></div>
   <main class="book" id="book"></main>

@@ -19,6 +19,7 @@ import { armFull, back, checkFull, elevate, finish, linked, read, scope, signIn,
 import { draw, graphLibs } from '../vscode/visual/pictures.ts';
 import { panZoom } from '../vscode/visual/pan.ts';
 import type { View } from '../notebook/draw.ts';
+import { clicked, done, filled, type Part } from '../notebook/screen.ts';
 
 type Pc = Cell & { order: number };
 type Cap = any;   // a capability's namespace, as claude.use resolves it (artifact contract 0.2.56)
@@ -155,6 +156,7 @@ function paintAnswers(): (() => Promise<unknown>)[] {
     const pics = [...out.querySelectorAll<HTMLElement>('.pic[data-view]')];
     later.push(async () => { await Promise.all(pics.map((p) => picture(p, vs[Number(p.dataset.view)]))); out.style.minHeight = ''; });
   }
+  paintScreen(ran.screen);
   const r = ran.result, sign = r.status === 'ok' ? 'pass' : r.status === 'fails' ? 'fail' : 'warn';
   head.innerHTML = `<span class="verdict ${sign}">${r.status === 'ok' ? '✓' : r.status === 'fails' ? '✗' : '⚠'} ${esc(SAID[r.status])}</span><span class="mute">ran in ${r.ms.run} ms, in this page</span>`
     + [...ran.head.errors.map((e) => `<div class="err">${esc(e)}</div>`), ...ran.head.notes.map((n) => `<div class="note">${esc(n)}</div>`)].join('');
@@ -272,6 +274,26 @@ book.addEventListener('keydown', (e) => {
   if (e.key === 'Enter' && (e.target as HTMLElement).classList.contains('md')) { e.preventDefault(); startProse((e.target as HTMLElement).closest<HTMLElement>('article')!.dataset.id!); }
 });
 
+// ------------------------------------------------------------ the screen: the wants of a render adapter, drawn; a press or a typed field is a fact of its book, and the notebook runs again
+let events: string[] = [];
+const typed = new Map<string, string>();
+function paintScreen(parts: Part[]) {
+  const el = $('screen');
+  el.hidden = !parts.length && !events.length;
+  if (el.contains(document.activeElement) && document.activeElement?.tagName === 'INPUT') return;
+  const slot = (p: Part, k: string) => esc(p.slots[k] ?? Object.values(p.slots)[0] ?? '');
+  el.innerHTML = parts.map((p, i) => p.kind === 'heading' ? `<h2>${slot(p, 'text')}</h2>`
+    : p.kind === 'card' ? `<div class="ui-card"><b>${slot(p, 'title')}</b>${esc(p.slots.body ?? '')}</div>`
+    : p.kind === 'button' ? `<button type="button" class="ui-button" data-part="${i}">${slot(p, 'label')}</button>`
+    : p.kind === 'field' ? `<label>${slot(p, 'label')}<input data-part="${i}" value="${esc(typed.get(p.key) ?? '')}"></label>`
+    : `<div>${esc(Object.values(p.slots).join(' '))}</div>`).join('')
+    + (events.length ? `<div class="ui-foot mute">${events.length} thing${events.length === 1 ? '' : 's'} done on this screen · <button type="button" data-undo>start over</button></div>` : '');
+  const at = (t: EventTarget | null) => parts[Number((t as HTMLElement).dataset.part)];
+  for (const b of el.querySelectorAll<HTMLButtonElement>('button[data-part]')) b.onclick = () => { events = done(events, clicked(at(b))); run(0); };
+  for (const f of el.querySelectorAll<HTMLInputElement>('input[data-part]')) f.onchange = () => { const p = at(f); typed.set(p.key, f.value); events = done(events, filled(p, f.value)); run(0); };
+  el.querySelector<HTMLButtonElement>('[data-undo]')?.addEventListener('click', () => { events = []; typed.clear(); run(0); });
+}
+
 // ------------------------------------------------------------ running
 let runT = 0, running = false, again = false;
 function run(delay: number) {
@@ -280,7 +302,7 @@ function run(delay: number) {
     if (running) { again = true; return; }
     running = true; again = false;
     $('runinfo').textContent = 'running…';
-    try { ran = await bench.run(cells, source?.near); paintOuts(); $('runinfo').textContent = ''; }
+    try { ran = await bench.run(cells, source?.near, events); paintOuts(); $('runinfo').textContent = ''; }
     catch (err) { $('runinfo').textContent = ''; head.innerHTML = `<div class="err">The run failed: ${esc((err as Error).message)}</div>`; }
     finally { running = false; if (again) run(0); }
   }, delay);

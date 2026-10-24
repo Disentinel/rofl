@@ -133,6 +133,19 @@ async function problems(dir: string, every = true): Promise<string[]> {
     }
     if (want.moves && !lines.some((l) => l.kind === 'excise' && html(l).includes(want.moves!))) bad.push(`${name}: the what-if does not say ${want.moves}`);
   }
+  // a screen (examples/intents/screen.rofl): the wants of its render adapter drawn as their components; a press and a typed field run again as facts of its book
+  const screen = [{ id: 's', kind: 'datalog', text: readFileSync(path.join(ROOT, 'examples/intents/screen.rofl'), 'utf8').split('\n').filter((l) => !/^(clicked|filled)\[/.test(l)).join('\n') }];
+  const shownOf = (r: { screen: { kind: string; slots: Record<string, string> }[] }) => r.screen.map((p) => `${p.kind} ${Object.values(p.slots).join('/')}`).join('; ');
+  const s0 = await bench.run(screen), parts = s0.screen as { kind: string }[];
+  const SHOWN = 'heading Release 1.5; card build/done; card deploy/waits for approval; button Approve deploy; field Why this release';
+  if (shownOf(s0) !== SHOWN) bad.push(`the screen is not drawn from its wants: ${shownOf(s0) || JSON.stringify([...s0.head.errors, ...s0.byCell.get('s')?.errors ?? []])}`);
+  else {
+    const sc = await import(path.join(dir, 'lib/screen.js'));
+    let ev = sc.done([], sc.clicked(parts.find((p) => p.kind === 'button')));
+    ev = sc.done(sc.done(ev, sc.filled(parts.find((p) => p.kind === 'field'), 'first')), sc.filled(parts.find((p) => p.kind === 'field'), 'the "disk" wall'));
+    const s1 = shownOf(await bench.run(screen, undefined, ev)), WANT1 = 'heading Release 1.5; card build/done; card deploy/approved; card why/the "disk" wall; field Why this release';
+    if (s1 !== WANT1) bad.push(`a press and a typed field do not run the screen again: ${s1}`);
+  }
   // a tutorial scene as the page draws it: each car an icon, painted its colour
   const scene = (await bench.run(cellsOf(readFileSync(path.join(ROOT, 'examples/tutorial/2-paint-shop.rofl.md'), 'utf8')))).result.cells.flatMap((c: { lines: { view?: { marks: Record<string, { icon?: string }>; icons?: Record<string, string>; colours?: Record<string, string> } }[] }) => c.lines).find((l: { view?: object }) => l.view)?.view;
   if (scene?.marks.c1?.icon !== 'car' || !scene.icons?.car || scene.colours?.blue !== 'blue') bad.push(`the paint shop's scene does not carry its icons and colours: ${JSON.stringify({ c1: scene?.marks.c1, colours: scene?.colours })}`);
@@ -303,6 +316,8 @@ const PLANTS: [string, (dir: string) => void, RegExp][] = [
   ['a link across frames drawn in the frame of its near end', (d) => spoil(d, 'lib/draw.js', '(!PAIRS.includes(f.rel) || mine(f.args[1]))', 'true'), /`draw K in F` drew "draw graph in q1: a b; links a>b a>d b>c;/],
   ['a mark in its last frame only', (d) => spoil(d, 'lib/draw.js', '(of.get(f.args[0]) ?? of.set(f.args[0], new Set()).get(f.args[0])).add(', 'of.set(f.args[0], new Set()).get(f.args[0]).add('), /`draw K in F` drew "draw graph in q1: a;/],
   ['`draw K in the frame F` not read', (d) => spoil(d, 'lib/host.js', '(?:the frame\\s+)?', ''), /`draw K in F` did not draw "draw graph in the frame `q2`"/],
+  ['the screen\'s events not run', (d) => spoil(d, 'lib/bench.js', 'if (events.length)', 'if (false)'), /a press and a typed field do not run the screen again/],
+  ['a want\'s capability taken as the notebook\'s own', (d) => spoil(d, 'lib/host.js', '!cl.want && ', ''), /the screen is not drawn from its wants/],
   ['the vacuous-cell gate off', (d) => spoil(d, 'lib/translate.js', ', ...silent, ...vacuous]', ', ...silent]'), /a first cell that checks nothing was not refused/],
 ];
 function spoil(dir: string, file: string, from: string, to: string) {

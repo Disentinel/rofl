@@ -670,9 +670,29 @@ database, which the TypeScript engine never does.
    why stops at that boundary. Served by `rofl serve` across processes is not
    built.
 
-Scenario 4 (`render`, a UI) and scenario 6 (`openapi`, and mcp over HTTP)
-are the open items `w_intent_render` and `w_intent_openapi`; the second waits
-on the choice of an HTTP client.
+Scenario 4 and scenario 6 were built after, below.
+
+### Scenario 4, a screen, as built (2026-10-24)
+
+`examples/intents/screen.rofl`, world `intents_screen`, both engines. A
+`render` adapter's `shows` capabilities are the components of its kit, each
+named by `component(Cap, Kind)`: heading, text, card, button, field. A
+capability's `arg` names are the component's slots. A `want` of one is a
+component on the screen, and evaluation never sends it.
+
+The web workbench draws the screen of the last run above the cells
+(`notebook/screen.ts` reads it, `workbench/page.ts` draws it). What a person
+does on it comes back as a fact of the adapter's book, and the notebook runs
+again with it:
+
+- a press of a button is `clicked[A](W)`;
+- a field typed in is `filled[A](W, Text)`, and only the last text is kept.
+
+`W` is the want's key, so a rule reads the press of one button:
+`approved("deploy") :- clicked[ui]($want(ui_button, "Approve deploy")).` These
+facts are kept for the visit until "start over". `npm run test:workbench`
+checks the screen, a press and a typed field, with two planted faults: the
+events not run, and a want's capability taken as the notebook's own.
 
 ### The post, as built (2026-10-23)
 

@@ -8,14 +8,17 @@ import { QUESTIONS, questionsOnly, sentenceOf, translateOne } from '../notebook/
 import { parseMd } from '../scripts/md_blocks.ts';
 import type { Ask } from '../notebook/model.ts';
 import type { View } from '../notebook/draw.ts';
+import type { Part } from '../notebook/screen.ts';
 
 export type Kind = 'prose' | 'rofl' | 'datalog' | 'natural';
 export type Cell = { id: string; kind: Kind; text: string };
 /** What the kernel said of one cell of the page; `views` its pictures, in the order its lines draw them. */
 export type Said = { errors: string[]; notes: string[]; lines: NbLine[] };
-export type Ran = { result: NbResult; byCell: Map<string, Said>; head: Said };
+export type Ran = { result: NbResult; byCell: Map<string, Said>; head: Said; screen: Part[] };
 
 const PATH = 'workbench.rofl.md';
+/** The cell the screen's events run in, which the page never shows. */
+export const SCREEN = '\u0000screen';
 const FENCED = new Set(['rofl', 'datalog', 'natural']);
 /** A run stops after this long: a rule that climbs for ever ends there, and the page answers what it found. */
 const WALL = 20_000;
@@ -116,8 +119,10 @@ export class Bench {
   }
 
   /** The whole notebook run; each kernel cell said under the page cell it came from, the prose's under `head`. */
-  /** `near`: the notebook was opened from a file or a link, its own front matter and the files beside it read as the command line reads them. */
-  async run(cells: Cell[], near?: Near): Promise<Ran> {
+  /** `near`: the notebook was opened from a file or a link, its own front matter and the files beside it read as the command line reads them.
+   *  `events`: what the person did on the screen, facts of its adapter's book, run as one more datalog cell. */
+  async run(cells: Cell[], near?: Near, events: string[] = []): Promise<Ran> {
+    if (events.length) cells = [...cells, { id: SCREEN, kind: 'datalog', text: events.join('\n') }];
     const { text, starts } = join(cells, !!near), { input, errors } = await this.inputs(text, near);
     const result = this.kernel.run(near?.path ?? PATH, text, input);
     result.errors.unshift(...errors);
@@ -130,7 +135,7 @@ export class Bench {
       s.errors.push(...o.errors); s.lines.push(...o.lines);
       if (o.kind !== 'natural') s.notes.push(...o.notes);
     }
-    return { result, byCell, head };
+    return { result, byCell, head, screen: this.kernel.screen() };
   }
 
   /** The proof of one answer of the last run, as a person reads it. */

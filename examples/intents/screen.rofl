@@ -1,0 +1,24 @@
+-- SCENARIO 4 (docs/intents.md 7): a UI. The kit is a render adapter whose components are shows capabilities, their
+-- slots the arguments; the world wants a screen, the workbench draws each want as its component, and a click comes
+-- back as a fact of the adapter's book, `clicked[ui](W)`, the want of the button pressed (a field typed in,
+-- `filled[ui](W, Text)`). A shows want is never sent by evaluation and nothing reads its answers: the click is
+-- the person's, a later tick. Below, the click on "Approve deploy" is written as the workbench adds it.
+imports(main, ui).
+adapter(ui, render, "workbench").
+capability(ui_heading, ui, shows). arg(ui_heading, 1, text, text). component(ui_heading, heading).
+capability(ui_card, ui, shows). arg(ui_card, 1, title, text). arg(ui_card, 2, body, text). component(ui_card, card).
+capability(ui_button, ui, shows). arg(ui_button, 1, label, text). component(ui_button, button).
+capability(ui_field, ui, shows). arg(ui_field, 1, label, text). component(ui_field, field).
+
+stage("build", "done"). stage("deploy", "waits for approval").
+want ui_heading("Release 1.5") :- stage(_, _).
+want ui_card(S, St) :- stage(S, St), not approved(S).
+want ui_card(S, "approved") :- approved(S).
+want ui_button("Approve deploy") :- stage("deploy", _), not approved("deploy").
+want ui_field("Why this release") :- stage(_, _).
+approved("deploy") :- clicked[ui]($want(ui_button, "Approve deploy")).
+reason(T) :- filled[ui]($want(ui_field, "Why this release"), T).
+want ui_card("why", T) :- reason(T).
+
+clicked[ui]($want(ui_button, "Approve deploy")).
+filled[ui]($want(ui_field, "Why this release"), "the disk wall").
