@@ -79,8 +79,11 @@ const prefix = path.join(tmp, 'prefix'), env = user(prefix), work = path.join(tm
 mkdirSync(work);
 const inst = install(prefix, [main, plat]);
 said(inst.status === 0 && existsSync(rofl), `npm install -g --offline ${main} ${plat}, no registry`, `exit ${inst.status}, ${inst.s} s${inst.status ? `: ${(inst.stdout + inst.stderr).trim().split('\n').slice(-3).join(' | ')}` : ''}`);
-const which = run('sh', ['-c', 'command -v rofl rofl-nb rofl-lsp cargo rustc'], work, env).stdout.trim().split('\n');
-said(which.length === 3 && which.every((w) => w.startsWith(prefix)), 'rofl, rofl-nb and rofl-lsp are the installed ones, and there is no cargo or rustc', which.join(' '));
+// one name a lookup: dash, Ubuntu's sh, says only the first of several; and a name not found is said, not left out
+const where = (c: string) => run('sh', ['-c', `command -v ${c} || echo none`], work, env).stdout.trim();
+const found = Object.fromEntries(['rofl', 'rofl-nb', 'rofl-lsp', 'cargo', 'rustc'].map((c) => [c, where(c)]));
+said(['rofl', 'rofl-nb', 'rofl-lsp'].every((c) => found[c] === path.join(prefix, 'bin', c)) && found.cargo === 'none' && found.rustc === 'none',
+  'rofl, rofl-nb and rofl-lsp are the installed ones, and there is no cargo or rustc', Object.entries(found).map(([c, w]) => `${c}: ${w}`).join(', '));
 
 // a small world
 writeFileSync(path.join(work, 'world.rofl'), 'edge(a, b). edge(b, c).\npath(X, Y) :- edge(X, Y).\npath(X, Z) :- path(X, Y), edge(Y, Z).\n');
