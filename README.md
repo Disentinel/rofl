@@ -1,3 +1,8 @@
+> **New here?** [guide/WHAT.md](guide/WHAT.md) says what ROFL answers, on one
+> small example: an answer with its proof, where a "no" stops, and what the
+> model could not see; [guide/ASKING.md](guide/ASKING.md) asks the same from the
+> command line, for a person or an agent. The whole guide is published at
+> [disentinel.github.io/rofl/guide](https://disentinel.github.io/rofl/guide/).
 > **Using the notebook?** Start with [guide/QUICKSTART.md](guide/QUICKSTART.md):
 > install, the tutorial, a notebook of your own and one over your code.
 > The rest of this page is the language and the repository.

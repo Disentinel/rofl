@@ -1,6 +1,6 @@
 name: Pages
 
-# The notebook page and the playground as one static site: built on every push and pull request, so a break shows
+# The notebook page, the playground and the guide as one static site: built on every push and pull request, so a break shows
 # before a merge; published from main to GitHub Pages (Settings, Pages, Source: GitHub Actions).
 on:
   push:
@@ -23,6 +23,7 @@ jobs:
       - run: |
           node --experimental-strip-types scripts/workbench.ts --out _site --standalone
           node --experimental-strip-types scripts/playground.ts --out _site/playground --standalone
+          node --experimental-strip-types scripts/guide_site.ts --out _site/guide
       - uses: actions/upload-pages-artifact@v3
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
         with: { path: _site }

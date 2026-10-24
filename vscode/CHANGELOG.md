@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.5.1 (preview, ROFL 1.5.1)
+
+- The rounds of one evaluation share its budget: a world whose adapter answer
+  always asks one more question now stops at the budget (#127).
+- The kernel is ROFL 1.5.1. See docs/releases/1.5.md.
+
 ## 1.5.0 (preview, ROFL 1.5.0)
 
 - A notebook can hold a want: the rows of an adapter's book (`adapter`,

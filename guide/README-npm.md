@@ -43,6 +43,8 @@ this platform is not installed (the message says which package to install).
 
 The tutorial is a game in six short levels, one new word each. Then:
 
+- [WHAT.md](WHAT.md): what ROFL answers, on one small example, and
+  [ASKING.md](ASKING.md): the same from the command line, with `rofl`.
 - [QUICKSTART.md](QUICKSTART.md): the tutorial, a notebook of your own,
   and one over your code, each with its output.
 - [CONCEPTS.md](CONCEPTS.md): cells, sentences, rules, asking lines,

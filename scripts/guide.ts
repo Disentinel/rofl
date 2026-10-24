@@ -2,10 +2,12 @@
 // `<!-- BEGIN run DIR: rofl-nb ARGS -->` runs the command line in DIR and writes what it printed on stdout;
 // `run+exit` adds the exit code; `| head -N` keeps the first N lines. `<!-- BEGIN file PATH -->` writes the file.
 // `<!-- BEGIN draw DIR: F.rofl.md -->` draws each `draw` line of the notebook as a page on GitHub can show it: the renderer's own SVG, written
-// to guide/pictures; else the view's mermaid, which GitHub draws; else its Markdown table; else its text.
+// to guide/pictures; else the view's mermaid, which GitHub draws; else its Markdown table; else its text. The view itself goes to
+// guide/pictures/NAME.json and is named in a `<!-- view -->` marker, for the guide's site to draw live (scripts/guide_site.ts).
 // `-- --check` fails if a block or a picture differs from its render; `npm run dist` runs it.
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { GRAPHS, zoom, type View } from '../notebook/draw.ts';
@@ -25,27 +27,44 @@ let css = '';
 style({ getElementById: () => null, createElement: () => ({}), head: { append: (s: { textContent: string }) => { css = s.textContent; } } } as unknown as Document);
 css = css.replace(/\.rofl-pic svg /g, '.rofl-pic ').replace(/\.rofl-pic svg\b/g, '.rofl-pic');
 
-async function draw(where: string, file: string): Promise<string> {
+async function draw(where: string, file: string, pics = 'pictures'): Promise<string> {
   const r = spawnSync(process.execPath, ['--experimental-strip-types', path.join(ROOT, 'notebook/cli.ts'), file, '--json'], { cwd: path.join(ROOT, where), encoding: 'utf8', timeout: 120_000, env: { ...process.env, ROFL_NB_DAEMON: '0' } });
   const views: { text: string; view: View }[] = JSON.parse(r.stdout).cells.flatMap((c: { lines: { text: string; view?: View }[] }) => c.lines.filter((l) => l.view));
   const out: string[] = [];
   for (const [k, { text, view }] of views.entries()) {
     const v = zoom(view), b = backendsOf(v), name = `${path.basename(file, '.rofl.md')}${k ? `-${k}` : ''}`;
+    // the view itself, for the guide's site to draw live (scripts/guide_site.ts); the marker before the still picture names it
+    keep(path.join(GUIDE, 'pictures', `${name}.json`), JSON.stringify(v) + '\n');
+    out.push(`<!-- view ${pics}/${name}.json -->`);
     const el = { innerHTML: '', querySelector: () => null, querySelectorAll: () => [] };
     if (!GRAPHS.includes(v.kind)) await pictureOf(v)?.mount(el as unknown as HTMLElement, v, { libs: async () => false } as Hooks, () => {}, () => {});
     if (/^<svg[\s\S]*<\/svg>$/.test(el.innerHTML)) {
-      const svg = el.innerHTML.replace(/^<svg /, '<svg xmlns="http://www.w3.org/2000/svg" class="rofl-pic" ').replace('>', `><style>${css}</style>`) + '\n', at = path.join(GUIDE, 'pictures', `${name}.svg`);
-      if (!existsSync(at) || readFileSync(at, 'utf8') !== svg) {
-        if (check) { console.error(`STALE guide/pictures/${name}.svg: run \`npm run guide\``); stale++; }
-        else { mkdirSync(path.dirname(at), { recursive: true }); writeFileSync(at, svg); }
-      }
-      out.push(`![${text}: ${file}](pictures/${name}.svg)`);
+      keep(path.join(GUIDE, 'pictures', `${name}.svg`), el.innerHTML.replace(/^<svg /, '<svg xmlns="http://www.w3.org/2000/svg" class="rofl-pic" ').replace('>', `><style>${css}</style>`) + '\n');
+      out.push(`![${text}: ${file}](${pics}/${name}.svg)`);
       continue;
     }
     const w = b.find((x) => x.fence === 'mermaid') ?? b.find((x) => x.format === 'markdown') ?? b[0];
     out.push(w.format === 'markdown' ? w.write(v) : `\`\`\`${w.fence}\n${w.write(v).trimEnd()}\n\`\`\``);
   }
-  return out.join('\n\n');
+  return out.join('\n\n').replace(/ -->\n\n/g, ' -->\n');
+}
+
+/** A generated file under guide/, written where it differs; under `--check`, a difference is stale. */
+function keep(at: string, text: string): void {
+  if (existsSync(at) && readFileSync(at, 'utf8') === text) return;
+  if (check) { console.error(`STALE ${path.relative(ROOT, at)}: run \`npm run guide\``); stale++; }
+  else { mkdirSync(path.dirname(at), { recursive: true }); writeFileSync(at, text); }
+}
+
+// `rofl` as the npm package gives it: the engine binary of this tree, and `rofl scan` the scanner (npm/rofl.ts); on PATH, so a
+// world's `scanner(js, "rofl scan .")` finds it too
+let shimDir = '';
+function shim(): string {
+  if (shimDir) return shimDir;
+  shimDir = mkdtempSync(path.join(tmpdir(), 'rofl-guide-'));
+  const engine = path.join(ROOT, 'rust/target', process.env.ROFL_PROFILE ?? 'release', 'rofl');
+  writeFileSync(path.join(shimDir, 'rofl'), `#!/bin/sh\nif [ "$1" = scan ]; then shift; exec ${JSON.stringify(process.execPath)} --experimental-strip-types ${JSON.stringify(path.join(ROOT, 'scanners/cli.ts'))} "$@"; fi\nexec ${JSON.stringify(engine)} "$@"\n`, { mode: 0o755 });
+  return shimDir;
 }
 
 function render(kind: string, where: string, cmd?: string): string {
@@ -53,22 +72,27 @@ function render(kind: string, where: string, cmd?: string): string {
     // as npm run dist ships it
     const text = readFileSync(path.join(ROOT, where), 'utf8').replace(/npm run nb -- (translate )?examples\/(notebook|tutorial)\//g, 'rofl-nb $1').trimEnd();
     const fence = text.includes('```') ? '````' : '```';
-    return `${fence}${where.endsWith('.md') ? 'markdown' : where.endsWith('.js') ? 'js' : ''}\n${text}\n${fence}`;
+    return `${fence}${where.endsWith('.md') ? 'markdown' : where.endsWith('.js') ? 'js' : where.endsWith('.rofl') ? 'rofl' : ''}\n${text}\n${fence}`;
   }
   const [line, head] = cmd!.split(' | head -');
-  const args = line.split(' ').slice(1);
-  const r = spawnSync(process.execPath, ['--experimental-strip-types', CLI, ...args],
-    { cwd: path.join(ROOT, where), encoding: 'utf8', timeout: 120_000, env: { ...process.env, ROFL_NB_DAEMON: '0', ROFL_NB_LIMIT: '120' } });
+  // the line as a shell reads it, near enough: words split on spaces, a word's surrounding quotes taken off
+  const [tool, ...args] = line.split(' ').map((a) => a.replace(/^'(.*)'$/, '$1').replace(/^"(.*)"$/, '$1'));
+  const r = tool === 'rofl'
+    ? spawnSync('rofl', args, { cwd: path.join(ROOT, where), encoding: 'utf8', timeout: 120_000, env: { ...process.env, PATH: `${shim()}${path.delimiter}${process.env.PATH}` } })
+    : spawnSync(process.execPath, ['--experimental-strip-types', CLI, ...args],
+      { cwd: path.join(ROOT, where), encoding: 'utf8', timeout: 120_000, env: { ...process.env, ROFL_NB_DAEMON: '0', ROFL_NB_LIMIT: '120' } });
   if (r.error || r.status === null) throw new Error(`${where}: ${line}: ${r.error?.message ?? 'killed'}`);
   let out = r.stdout.replace(/npm run nb -- /g, 'rofl-nb ').trimEnd().split('\n');
   if (head) out = out.slice(0, Number(head));
   return ['```', `$ ${cmd}`, ...out, ...(kind === 'run+exit' ? ['$ echo $?', String(r.status)] : []), '```'].join('\n');
 }
 
-for (const f of readdirSync(GUIDE).filter((f) => f.endsWith('.md'))) {
+// the chapters, and their translations under guide/ru, whose blocks are the same runs
+const pages = (dir: string) => readdirSync(path.join(GUIDE, dir)).filter((f) => f.endsWith('.md')).map((f) => path.join(dir, f));
+for (const f of [...pages(''), ...pages('ru')]) {
   const p = path.join(GUIDE, f), doc = readFileSync(p, 'utf8');
   const drawn = new Map<string, string>();
-  for (const [, , kind, where, cmd] of doc.matchAll(BLOCK)) if (kind === 'draw') drawn.set(`${where.trim()}:${cmd}`, await draw(where.trim(), cmd!));
+  for (const [, , kind, where, cmd] of doc.matchAll(BLOCK)) if (kind === 'draw') drawn.set(`${where.trim()}:${cmd}`, await draw(where.trim(), cmd!, f.includes('/') ? '../pictures' : 'pictures'));
   let n = 0;
   const out = doc.replace(BLOCK, (_, begin, kind, where, cmd, end) => (n++, begin + (kind === 'draw' ? drawn.get(`${where.trim()}:${cmd}`)! : render(kind, where.trim(), cmd)) + '\n' + end));
   if (n !== (doc.match(/<!-- BEGIN /g) ?? []).length) { console.error(`guide/${f}: a BEGIN marker without its END, or not run, file, run+exit or draw`); stale++; continue; }
@@ -76,4 +100,14 @@ for (const f of readdirSync(GUIDE).filter((f) => f.endsWith('.md'))) {
   if (check) { console.error(`STALE guide/${f}: run \`npm run guide\``); stale++; }
   else { writeFileSync(p, out); console.log(`wrote guide/${f}`); }
 }
+// every word of `rofl-nb --help` and `--help env` a reader may need (a subcommand, a flag, an asking word, a variable) is named
+// somewhere in the guide; a new flag with no page is a build error, like a stale block
+const help = (...a: string[]) => spawnSync(process.execPath, ['--experimental-strip-types', CLI, '--help', ...a], { encoding: 'utf8', env: { ...process.env, ROFL_NB_DAEMON: '0' } }).stdout;
+const text = help() + help('env'), words = new Set<string>();
+for (const m of text.matchAll(/--[a-z][\w-]*/g)) words.add(m[0]);
+for (const m of text.matchAll(/\bROFL_NB_[A-Z_]+\b/g)) words.add(m[0]);
+for (const m of text.matchAll(/^npm run nb -- (\w+) /gm)) words.add(m[1]);
+for (const m of text.matchAll(/^  (\?|[a-z]+) [A-Z] {2,}/gm)) words.add(m[1]);
+const guide = pages('').map((f) => readFileSync(path.join(GUIDE, f), 'utf8')).join('\n');
+for (const w of [...words].sort()) if (!guide.includes(w)) { console.error(`guide: \`${w}\` of rofl-nb --help is named on no page of guide/`); stale++; }
 process.exit(stale ? 1 : 0);

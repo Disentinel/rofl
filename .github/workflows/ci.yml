@@ -143,6 +143,27 @@ jobs:
       - uses: actions/upload-artifact@v4
         with: { name: vsix, path: vsix }
 
+  # THE RELEASE, REHEARSED ON MAIN. The release job runs only on a tag, so nothing else ran its publishing: the 1.5.0 tag
+  # failed on `mkdir out npm` against the tree's own npm/ (#126). This runs scripts/release_publish.sh, the release job's
+  # own, over this run's artifacts with --dry-run: no GitHub release, `npm stage publish --dry-run`; and, in the release's
+  # environment with an id token, npm's sign-in by trusted publishing for each package (scripts/npm_oidc.ts), which the
+  # 1.5.1 tag failed on (ENEEDAUTH). Only a push to main and a tag may use that environment (docs/npm.md: its branch policy).
+  release-dry:
+    needs: vsix
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions: { contents: read, id-token: write }
+    environment: marketplace-publish
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/download-artifact@v4
+        with: { path: artifacts }
+      - run: npm install -g npm@12.2.1
+      - run: bash scripts/release_publish.sh --dry-run "rofl-nb-$(node -p "require('./package.json').version")"
+
   # A TAG rofl-nb-<version> IS A RELEASE, made only when every gate is green on it:
   # the engine per platform, a VSIX per platform, their sha256, and
   # docs/releases/<major.minor>.md as the notes; and the npm packages
@@ -164,30 +185,13 @@ jobs:
           node-version: '22'
       - uses: actions/download-artifact@v4
         with: { path: artifacts }
+      # the GitHub release, then the npm packages staged on the registry, each platform's first and @grafema/rofl last, for the owner to
+      # approve in that order; signed in by trusted publishing (OIDC, no token kept), with provenance. The npm packages only when the
+      # repository variable NPM_PUBLISH is true (docs/npm.md). release-dry runs the same script on main.
+      - run: npm install -g npm@12.2.1
       - name: publish
-        env: { GH_TOKEN: '${{ github.token }}' }
-        run: |
-          v=${GITHUB_REF_NAME#rofl-nb-}
-          mkdir out npm-dist
-          mv artifacts/vsix/grafema-rofl-*.tgz npm-dist/
-          mv artifacts/vsix/* out/
-          node --experimental-strip-types scripts/npm_check.ts --dist npm-dist --tag "$GITHUB_REF_NAME"
-          for d in artifacts/rofl-*; do t=${d#artifacts/rofl-}; for f in "$d"/*; do b=$(basename "$f"); mv "$f" "out/${b%.exe}-$t${b#rofl}"; done; done
-          (cd out && sha256sum * > SHA256SUMS)
-          gh release create "$GITHUB_REF_NAME" out/* --prerelease --title "ROFL $v (preview)" --notes-file "docs/releases/${v%.*}.md"
-      # the npm packages to the registry, each platform's first and @grafema/rofl last, so no version of it names an engine
-      # that is not there; on the dist-tag latest, which the GitHub release's prerelease mark does not reach, so
-      # `npm i -g @grafema/rofl` and `npm update -g` take it; signed in by trusted publishing (OIDC, no token kept), with provenance. Only when the repository
-      # variable NPM_PUBLISH is true (docs/npm.md: what the owner sets up on npmjs.com first); a version already there is skipped.
-      - if: vars.NPM_PUBLISH == 'true'
-        run: |
-          npm install -g npm@11
-          v=${GITHUB_REF_NAME#rofl-nb-}
-          for p in linux-x64 linux-arm64 darwin-x64 darwin-arm64 win32-x64 ''; do
-            name=@grafema/rofl${p:+-$p}; f=npm-dist/grafema-rofl${p:+-$p}-$v.tgz
-            if [ "$(npm view "$name@$v" version 2>/dev/null)" = "$v" ]; then echo "$name@$v is on the registry already: skipped"; continue; fi
-            npm publish "$f" --provenance --access public --tag latest
-          done
+        env: { GH_TOKEN: '${{ github.token }}', NPM_PUBLISH: '${{ vars.NPM_PUBLISH }}' }
+        run: bash scripts/release_publish.sh "$GITHUB_REF_NAME"
       # the same VSIX files to the VS Code Marketplace, signed in as the managed identity of AZURE_CLIENT_ID (Entra ID, no token kept), and to Open VSX with OVSX_PAT; each only when its secret is set, and a version already there is skipped
       - if: env.AZURE_CLIENT_ID != ''
         uses: azure/login@v2
