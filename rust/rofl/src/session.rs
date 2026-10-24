@@ -735,12 +735,26 @@ impl Session {
         let r = self.eval.run();
         let mut e = self.evaluated(r)?;
         // what the world asks to be scanned is scanned, and what it wants of an adapter sent (src/adapter.rs), and what
-        // comes back loaded, until it asks for nothing more
-        while !e.partial && self.scan_requests().and_then(|n| Ok(n + self.adapter_wants()?)).map_err(|m| Halt::Strat(m, String::new()))? > 0 {
-            if self.eval.store.dirty {
+        // comes back loaded, until it asks for nothing more. The rounds share the evaluation's budget: a recursion
+        // through an adapter that never ends meets the wall as a rule that never ends does
+        let budget = self.eval.budget;
+        let mut spent = self.eval.steps;
+        while !e.partial {
+            self.eval.budget = crate::brk!("rounds_budget_each" => budget; budget.saturating_sub(spent).max(0));
+            (self.eval.steps, self.eval.added_steps) = (0, 0);
+            let n = self.scan_requests().and_then(|n| Ok(n + self.adapter_wants()?));
+            spent = spent.saturating_add(self.eval.steps).saturating_add(self.eval.added_steps);
+            if n.as_ref().is_ok_and(|n| *n > 0) && self.eval.store.dirty {
+                self.eval.budget = budget.saturating_sub(spent).max(0);
                 let r = self.eval.run();
                 e = self.evaluated(r)?;
+                spent = spent.saturating_add(self.eval.steps);
             }
+            self.eval.budget = budget;
+            if n.map_err(|m| Halt::Strat(m, String::new()))? == 0 {
+                break;
+            }
+            e.partial |= self.eval.store.partial_eval;
         }
         Ok(e)
     }

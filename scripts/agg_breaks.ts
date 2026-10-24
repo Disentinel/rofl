@@ -65,6 +65,13 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "rounds_budget_each",
+  "what": "each round of adapter wants given the whole budget again, so a recursion through an adapter that never ends is never cut",
+  "expect": {
+   "adapter_endless": "was not cut"
+  }
+ },
+ {
   "id": "token_kept_refused",
   "what": "a client-credentials token the service refused kept and sent again",
   "expect": {
@@ -9254,6 +9261,7 @@ const TESTS: Record<string, string> = {
   openapi_get: 'openapi a_get_want_is_answered_from_the_service_and_a_post_waits_for_its_permit',
   openapi_keys: 'openapi a_key_comes_from_the_environment_and_a_missing_one_holds_the_want',
   openapi_token: 'openapi client_credentials_get_a_token_once_and_again_when_it_is_refused',
+  adapter_endless: 'adapter a_recursion_through_an_adapter_that_never_ends_stops_at_the_budget',
   does_once: 'dispatch a_does_want_runs_once_across_a_dispatch_the_world_anew_and_a_replay',
   does_guard: 'dispatch a_running_world_cannot_change_what_grants_permission',
   mcp_does: 'mcp a_does_tool_is_not_sent_by_evaluation',

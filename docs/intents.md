@@ -215,6 +215,9 @@ anywhere, past its sources.
 
 ## 4. Spec
 
+How to write an adapter, for its author rather than its designer, is
+[guide/ADAPTERS.md](../guide/ADAPTERS.md).
+
 ### 4.1 Syntax
 
 ```
@@ -424,12 +427,17 @@ a new directory `intents` under `examples` (phase 7).
 2. A cap on wants per tick and per batch: a world's budget like `--budget`, or
    declared per capability in the adapter's book?
 3. Valid time: a convention for answer facts (`at(Fact, Time)`), or a column
-   each capability declares?
+   each capability declares? DECIDED by the owner, 2026-10-24: a column,
+   `event_time(Cap, Column)` in the book (guide/ADAPTERS.md); the engine does
+   not read it yet.
 4. An adapter's book signed (Roflenox) from the start, or plain until a second
    owner appears?
 5. Recursion through an adapter: allowed and measured (the owner, 2026-10-23:
    try it and see where it spoils things and where it opens new ways of
-   programming), with the per-want call count in the cost report.
+   programming), with the per-want call count in the cost report. TRIED
+   2026-10-24 (f_a_recursion_through_an_adapter_never_met_the_budget): cycles
+   end, a doubling tree meets the space wall, and an endless chain now meets
+   the budget the rounds share; the owner's question 2 (a cap) waits.
 
 ### Phase 1, as built (2026-10-23)
 
