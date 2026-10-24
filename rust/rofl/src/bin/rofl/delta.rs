@@ -12,7 +12,8 @@ use std::path::Path;
 
 /// The kept world beside `slot` to go on from when there is none at it: of those whose walls, environment and
 /// engine are this run's, the most recently used; none more than `FAR` files away from `files` and farther than one
-/// file in `FAR` of the world, which is cheaper evaluated whole than taken out and put in by delta (vscode 250 files, 125 of them taken out by delta: past 115 s, against 44 s whole).
+/// file in `FAR` of the world, nor one whose files gone from `files` asserted more than one base fact in `FAR` of its
+/// own (one facts file of a large scan traded for another's: past 100 s, against 4 s whole), which is cheaper evaluated whole than taken out and put in by delta (vscode 250 files, 125 of them taken out by delta: past 115 s, against 44 s whole).
 pub fn base_beside(slot: &str, walls: &[String], files: &[String]) -> Option<(String, Record)> {
     let dir = Path::new(slot).parent()?;
     let now: HashSet<&str> = files.iter().map(String::as_str).collect();
@@ -30,6 +31,10 @@ pub fn base_beside(slot: &str, walls: &[String], files: &[String]) -> Option<(St
         let was: HashSet<&str> = r.files.iter().map(String::as_str).collect();
         let away = now.symmetric_difference(&was).count();
         if away > FAR && away * FAR > now.len().max(was.len()) {
+            continue;
+        }
+        let gone: usize = r.units.iter().filter(|u| !now.contains(u.path.as_str())).map(|u| u.facts.len()).sum();
+        if gone * FAR > r.units.iter().map(|u| u.facts.len()).sum::<usize>() {
             continue;
         }
         let at = e.metadata().and_then(|m| m.modified()).unwrap_or(std::time::UNIX_EPOCH);
