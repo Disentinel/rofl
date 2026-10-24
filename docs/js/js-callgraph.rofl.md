@@ -53,7 +53,7 @@ Reads:
   - <a id="ast_attr"></a>The attribute of a node is a value (`ast_attr`)
   - <a id="ast_child"></a>A node is a child of a node (`ast_child`)
 
-Kinds without a noun: tsimport_equals_declaration, tsindex_signature, tsinterface_declaration, tsinterface_heritage, tsmethod_signature, tsparameter_property, tsproperty_signature, tstype_annotation, tstype_reference, tsunion_type.
+Kinds without a noun: tsimport_equals_declaration, tsindex_signature, tsinterface_declaration, tsinterface_heritage, tsmethod_signature, tsparameter_property, tsproperty_signature, tstype_reference, tsunion_type.
 
 ## Words
 
@@ -62,6 +62,7 @@ What this file calls a node, and what each word stands for:
 | word | stands for |
 |---|---|
 | <a id="noun-array_literal"></a>an array literal | a node of kind `array_expression` |
+| <a id="noun-as_expression"></a>an as expression | a node of kind `tsas_expression` |
 | <a id="noun-assignment"></a>an assignment | a node of kind `assignment_expression` |
 | <a id="noun-assignment_pattern"></a>an assignment pattern | a node of kind `assignment_pattern` |
 | <a id="noun-await"></a>an await | a node of kind `await_expression` |
@@ -83,10 +84,12 @@ What this file calls a node, and what each word stands for:
 | <a id="noun-method"></a>a method | a node of kind `class_method` |
 | <a id="noun-named_export"></a>a named export | a node of kind `export_named_declaration` |
 | <a id="noun-new"></a>a new | a node of kind `new_expression` |
+| <a id="noun-non-null_expression"></a>a non-null expression | a node of kind `tsnon_null_expression` |
 | <a id="noun-object_literal"></a>an object literal | a node of kind `object_expression` |
 | <a id="noun-object_method"></a>an object method | a node of kind `object_method` |
 | <a id="noun-object_pattern"></a>an object pattern | a node of kind `object_pattern` |
 | <a id="noun-optional_member_expression"></a>an optional member expression | a node of kind `optional_member_expression` |
+| <a id="noun-parenthesized_expression"></a>a parenthesized expression | a node of kind `parenthesized_expression` |
 | <a id="noun-property"></a>a property | a node of kind `object_property` |
 | <a id="noun-spread"></a>a spread | a node of kind `spread_element` |
 | <a id="noun-super"></a>a super | a node of kind `super` |
@@ -1446,7 +1449,20 @@ In the code:
 
 `nullish_type` includes `tsundefined_keyword`, `tsnull_keyword`.
 
-<a id="type_at"></a>`type_at`(a tstype_annotation node Y, X) if the `type_annotation` of Y is a node X, unless X is a tsunion_type node.
+Declared as facts:
+
+- <a id="nullish_type"></a>`nullish_type` — rows in this file
+
+> an annotation, and a cast (`x as IFoo`, `<IFoo>x`), which states its type the same way
+
+`annotating_kind` includes `tstype_annotation`, `tsas_expression`, `tstype_assertion`.
+
+<a id="annotated"></a>`annotated`(Y, X) if all of:
+  - [`annotating_kind`](#annotating_kind)(K);
+  - a node Y [is of kind](js-model.rofl.md#ast_node) K;
+  - the `type_annotation` of Y is a node X.
+
+<a id="type_at"></a>`type_at`(Y, X) if [`annotated`](#annotated)(Y, X), unless X is a tsunion_type node.
 
 <a id="union_part"></a>`union_part`(a tsunion_type node U, Y) if all of:
   - a node Y [is among the](#ast_child) `types` of U;
@@ -1455,14 +1471,14 @@ In the code:
 
 <a id="union_parts"></a>`union_parts`(U) if [`union_part`](#union_part)(U, Y1), [`union_part`](#union_part)(U, Y2), and Y1 differs from Y2.
 
-`type_at`(a tstype_annotation node X, Y) if all of:
-  - the `type_annotation` of X is a node U;
+`type_at`(X, Y) if all of:
+  - [`annotated`](#annotated)(X, U);
   - [`union_part`](#union_part)(U, Y);
   - unless [`union_parts`](#union_parts)(U).
 
 Declared as facts:
 
-- <a id="nullish_type"></a>`nullish_type` — rows in this file
+- <a id="annotating_kind"></a>`annotating_kind` — rows in this file
 
 > a name in type position: a type reference, and an interface's `extends`
 
@@ -1808,7 +1824,37 @@ In the code:
 
 In the flow:
 
-`declared`(C, T2) if [`declared_call`](#declared_call)(C, T, Key) and [`method_type`](#method_type)(T, Key, T2).
+`declared`(E, T) if [`cast`](#cast)(E) and [`names_type`](#names_type)(E, T).
+
+`declared_lib`(E, P) if [`cast`](#cast)(E) and [`names_lib`](#names_lib)(E, P).
+
+In the code:
+
+<a id="cast"></a>`cast`(E) if E is an [as expression](#noun-as_expression) or a tstype_assertion node.
+
+In the flow:
+
+`declared`(E, T) if [`see_through`](#see_through)(E, X) and [`declared`](#declared)(X, T).
+
+`declared_lib`(E, P) if [`see_through`](#see_through)(E, X) and [`declared_lib`](#declared_lib)(X, P).
+
+In the code:
+
+<a id="see_through"></a>`see_through`(E, X) if E is a [non-null expression](#noun-non-null_expression) or a [parenthesized expression](#noun-parenthesized_expression) and the `expression` of E is a node X.
+
+> `super` in an instance method is declared as the base class
+
+In the flow:
+
+`declared`(S, B) either:
+
+1. if all of:
+   - S is a [super](#noun-super);
+   - S [is within](#ast_within) a node M;
+   - a class CD [has the method](js-dataflow.rofl.md#class_method_of) M;
+   - [the attribute](#ast_attr) `static` of M is `false`;
+   - [the super](js-dataflow.rofl.md#super_of) of CD is a class B;
+2. if [`declared_call`](#declared_call)(S, T, Key) and [`method_type`](#method_type)(T, Key, B).
 
 `declared_lib`(C, P) if [`declared_call`](#declared_call)(C, T, Key) and [`method_lib`](#method_lib)(T, Key, P).
 
@@ -1823,7 +1869,35 @@ In the flow:
 
 `declared`(C, T) if [`fn_ret_at`](#fn_ret_at)(C, X) and [`names_type`](#names_type)(X, T).
 
-`declared_lib`(C, P) if [`fn_ret_at`](#fn_ret_at)(C, X) and [`names_lib`](#names_lib)(X, P).
+> a function another module exports, by what its declaration returns
+
+In the surface:
+
+<a id="sx_fn_ret"></a>`sx_fn_ret`(File, Name, T) if [`export_fn_ret`](#export_fn_ret)(File, Name, X) and [`names_type`](#names_type)(X, T).
+
+<a id="sx_fn_ret_lib"></a>`sx_fn_ret_lib`(File, Name, P) if [`export_fn_ret`](#export_fn_ret)(File, Name, X) and [`names_lib`](#names_lib)(X, P).
+
+In the code:
+
+<a id="export_fn_ret"></a>`export_fn_ret`(File, Name, X) if all of:
+  - [`module_export`](js-dataflow.rofl.md#module_export)(E, File);
+  - the `declaration` of a node E is a node F;
+  - F [carries its own name](js-dataflow.rofl.md#own_name) Name and File and `around`;
+  - the `return_type` of F is a node X.
+
+<a id="imported_call"></a>`imported_call`(a [call expression](#noun-call_expression) C, Orig, Target) if all of:
+  - the `callee` of C [is read at the top of](js-dataflow.rofl.md#top_read) Name and File;
+  - Name [imports](js-dataflow.rofl.md#imports_name) Orig at a site D in File;
+  - D [means the file](js-modules.rofl.md#module_target) Target.
+
+In the flow:
+
+`declared`(C, T) if [`imported_call`](#imported_call)(C, Orig, Target) and [`sx_fn_ret`](#sx_fn_ret)(Target, Orig, T).
+
+`declared_lib`(C, P) either:
+
+1. if [`imported_call`](#imported_call)(C, Orig, Target) and [`sx_fn_ret_lib`](#sx_fn_ret_lib)(Target, Orig, P);
+2. if [`fn_ret_at`](#fn_ret_at)(C, X) and [`names_lib`](#names_lib)(X, P).
 
 In the code:
 

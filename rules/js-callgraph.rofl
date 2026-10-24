@@ -782,13 +782,17 @@ type_decl[code](T, Name, File) :- ast_node[code](T, class_declaration, File), as
 edb(nullish_type).
 nullish_type(tsundefined_keyword).
 nullish_type(tsnull_keyword).
-type_at[code](A, X)        :- ast_node[code](A, tstype_annotation, _), ast_child[code](A, type_annotation, 0, X),
-                              not ast_node[code](X, tsunion_type, _).
+-- an annotation, and a cast (`x as IFoo`, `<IFoo>x`), which states its type the same way
+edb(annotating_kind).
+annotating_kind(tstype_annotation).
+annotating_kind(tsas_expression).
+annotating_kind(tstype_assertion).
+annotated[code](A, X)      :- annotating_kind(K), ast_node[code](A, K, _), ast_child[code](A, type_annotation, 0, X).
+type_at[code](A, X)        :- annotated[code](A, X), not ast_node[code](X, tsunion_type, _).
 union_part[code](U, Y)     :- ast_node[code](U, tsunion_type, _), ast_child[code](U, types, _, Y),
                               ast_node[code](Y, K, _), not nullish_type(K).
 union_parts[code](U)       :- union_part[code](U, Y1), union_part[code](U, Y2), Y1 != Y2.
-type_at[code](A, Y)        :- ast_node[code](A, tstype_annotation, _), ast_child[code](A, type_annotation, 0, U),
-                              union_part[code](U, Y), not union_parts[code](U).
+type_at[code](A, Y)        :- annotated[code](A, U), union_part[code](U, Y), not union_parts[code](U).
 -- a name in type position: a type reference, and an interface's `extends`
 type_name_at[code](A, Name, File) :- type_at[code](A, X), ast_node[code](X, tstype_reference, File),
                                      ast_child[code](X, type_name, 0, N),
@@ -917,11 +921,32 @@ declared[flow](E, T)     :- new_of[code](E, Name, File), imports_name[code](Name
                             module_target[code](D, Target), sx_export_type[surface](Target, Orig, T).
 new_of[code](E, Name, File) :- ast_node[code](E, new_expression, File), ast_child[code](E, callee, 0, N),
                                ast_node[code](N, identifier, _), ast_name[code](N, Name).
+declared[flow](E, T)     :- cast[code](E), names_type[flow](E, T).
+declared_lib[flow](E, P) :- cast[code](E), names_lib[flow](E, P).
+cast[code](E)            :- ast_node[code](E, tsas_expression, _).
+cast[code](E)            :- ast_node[code](E, tstype_assertion, _).
+declared[flow](E, T)     :- see_through[code](E, X), declared[flow](X, T).
+declared_lib[flow](E, P) :- see_through[code](E, X), declared_lib[flow](X, P).
+see_through[code](E, X)  :- ast_node[code](E, tsnon_null_expression, _), ast_child[code](E, expression, 0, X).
+see_through[code](E, X)  :- ast_node[code](E, parenthesized_expression, _), ast_child[code](E, expression, 0, X).
+-- `super` in an instance method is declared as the base class
+declared[flow](S, B)     :- ast_node[code](S, super, _), ast_within[code](M, S), class_method_of[flow](CD, M),
+                            ast_attr[code](M, static, false), super_of[flow](CD, B).
 declared[flow](C, T2)    :- declared_call[flow](C, T, Key), method_type[flow](T, Key, T2).
 declared_lib[flow](C, P) :- declared_call[flow](C, T, Key), method_lib[flow](T, Key, P).
 fn_ret_at[code](C, A)    :- ast_node[code](C, call_expression, _), ast_child[code](C, callee, 0, N),
                             ast_node[code](N, identifier, _), sees_decl[code](N, F), ast_child[code](F, return_type, 0, A).
 declared[flow](C, T)     :- fn_ret_at[code](C, A), names_type[flow](A, T).
+-- a function another module exports, by what its declaration returns
+sx_fn_ret[surface](File, Name, T)     :- export_fn_ret[code](File, Name, A), names_type[flow](A, T).
+sx_fn_ret_lib[surface](File, Name, P) :- export_fn_ret[code](File, Name, A), names_lib[flow](A, P).
+export_fn_ret[code](File, Name, A)    :- module_export[code](E, File), ast_child[code](E, declaration, 0, F),
+                                         own_name[code](F, Name, File, around), ast_child[code](F, return_type, 0, A).
+imported_call[code](C, Orig, Target)  :- ast_node[code](C, call_expression, _), ast_child[code](C, callee, 0, N),
+                                         top_read[code](N, Name, File), imports_name[code](Name, Orig, D, File),
+                                         module_target[code](D, Target).
+declared[flow](C, T)     :- imported_call[code](C, Orig, Target), sx_fn_ret[surface](Target, Orig, T).
+declared_lib[flow](C, P) :- imported_call[code](C, Orig, Target), sx_fn_ret_lib[surface](Target, Orig, P).
 declared_lib[flow](C, P) :- fn_ret_at[code](C, A), names_lib[flow](A, P).
 inferred_init[code](D, X) :- ast_node[code](D, variable_declarator, _), ast_child[code](D, id, 0, I),
                              not ast_child[code](I, type_annotation, 0, _), ast_child[code](D, init, 0, X).

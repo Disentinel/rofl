@@ -1,4 +1,4 @@
-import { IBar } from './bar';
+import { IBar, makeBaz } from './bar';
 
 export interface IFoo extends IBar { run(): void; name: string; opt?(): void }
 interface IIdx { [k: string]: () => void }
@@ -70,4 +70,19 @@ class Holder {
     this.inner.buildd();
   }
 }
-export { Svc, use, more, dom, infer, Holder };
+class Kid extends Maker {
+  build(): IFoo {
+    super.build();
+    super.buildd();
+    return null as any;
+  }
+}
+function more2(x: unknown, y: IFoo | undefined) {
+  (x as IFoo).run();
+  (x as IFoo).runn();
+  y!.run();
+  y!.runn();
+  makeBaz().go();
+  makeBaz().goo();
+}
+export { Svc, use, more, dom, infer, Holder, Kid, more2 };

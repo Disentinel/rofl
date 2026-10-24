@@ -545,6 +545,8 @@ unit_concludes("rules/js-callgraph.rofl", missing_member_call).
 unit_concludes("rules/js-callgraph.rofl", member_unknown).
 unit_concludes("rules/js-callgraph.rofl", type_decl).
 unit_concludes("rules/js-callgraph.rofl", nullish_type).
+unit_concludes("rules/js-callgraph.rofl", annotating_kind).
+unit_concludes("rules/js-callgraph.rofl", annotated).
 unit_concludes("rules/js-callgraph.rofl", type_at).
 unit_concludes("rules/js-callgraph.rofl", union_part).
 unit_concludes("rules/js-callgraph.rofl", union_parts).
@@ -574,7 +576,13 @@ unit_concludes("rules/js-callgraph.rofl", declared).
 unit_concludes("rules/js-callgraph.rofl", declared_lib).
 unit_concludes("rules/js-callgraph.rofl", param_annotation).
 unit_concludes("rules/js-callgraph.rofl", new_of).
+unit_concludes("rules/js-callgraph.rofl", cast).
+unit_concludes("rules/js-callgraph.rofl", see_through).
 unit_concludes("rules/js-callgraph.rofl", fn_ret_at).
+unit_concludes("rules/js-callgraph.rofl", sx_fn_ret).
+unit_concludes("rules/js-callgraph.rofl", sx_fn_ret_lib).
+unit_concludes("rules/js-callgraph.rofl", export_fn_ret).
+unit_concludes("rules/js-callgraph.rofl", imported_call).
 unit_concludes("rules/js-callgraph.rofl", inferred_init).
 unit_concludes("rules/js-callgraph.rofl", host_up).
 unit_concludes("rules/js-callgraph.rofl", declared_call).
