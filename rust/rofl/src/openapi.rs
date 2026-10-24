@@ -17,10 +17,23 @@
 use crate::mcp::{fact_value, ident, quote};
 use serde_json::Value;
 
-/// The adapter book of the document at `spec`.
-pub fn book(spec: &str) -> Result<String, String> {
+/// The adapter book of the document at `spec`, a URL fetched with the keys `declared` names (`crate::net::declared`).
+pub fn book(spec: &str, declared: &[(String, String, String)]) -> Result<String, String> {
     let text = if spec.starts_with("http://") || spec.starts_with("https://") {
-        let r = crate::net::send("GET", spec, &[], None)?;
+        let (mut url, mut headers) = (spec.to_string(), Vec::new());
+        for (how, n, v) in crate::net::from_env(declared)? {
+            let (h, q) = crate::net::credential(&how, &n, &v)?;
+            headers.extend(h);
+            if let Some(q) = q {
+                url.push(if url.contains('?') { '&' } else { '?' });
+                url.push_str(&q);
+            }
+        }
+        let hs: Vec<(&str, String)> = headers.iter().map(|(k, v)| (k.as_str(), v.clone())).collect();
+        let r = crate::net::send("GET", &url, &hs, None)?;
+        if r.status == 401 {
+            return Err(format!("{spec}: HTTP 401: {}", crate::net::wanted(&r)));
+        }
         if r.status / 100 != 2 {
             return Err(format!("{spec}: HTTP {}", r.status));
         }
@@ -54,6 +67,7 @@ pub fn book(spec: &str) -> Result<String, String> {
         let (how, name) = match (s.get("type").and_then(Value::as_str), s.get("scheme").and_then(Value::as_str), s.get("in").and_then(Value::as_str)) {
             (Some("apiKey"), _, Some(at @ ("header" | "query"))) => (at, s.get("name").and_then(Value::as_str).unwrap_or(n.as_str())),
             (Some("http"), Some(b), _) if b.eq_ignore_ascii_case("basic") => ("basic", "Authorization"),
+            (Some("oauth2"), _, _) if s.pointer("/flows/clientCredentials/tokenUrl").is_some() => ("client_credentials", s.pointer("/flows/clientCredentials/tokenUrl").and_then(Value::as_str).unwrap_or("")),
             (Some("http" | "oauth2" | "openIdConnect"), _, _) => ("bearer", "Authorization"),
             _ => continue,
         };
@@ -172,20 +186,39 @@ pub(crate) fn call(base: &str, op: &Op, rel: &str, fields: &[String], wants: &[(
         if let Some(i) = idem {
             headers.push(("idempotency-key", i.clone()));
         }
-        let mut owned = Vec::new();
-        for (how, n, v) in &op.auth {
-            let (h, q) = crate::net::credential(how, n, v);
-            owned.extend(h);
-            query.extend(q);
-        }
-        headers.extend(owned.iter().map(|(k, v)| (k.as_str(), v.clone())));
-        let url = format!("{}{path}{}{}", base.trim_end_matches('/'), if query.is_empty() { "" } else { "?" }, query.join("&"));
+        let base_url = format!("{}{path}", base.trim_end_matches('/'));
         let sent = (!body.is_empty()).then(|| Value::Object(body));
-        let r = match crate::net::send(&op.method, &url, &headers, sent.as_ref()) {
+        let hide = |e: String| op.auth.iter().fold(e, |e, (_, _, v)| e.replace(&crate::net::escape(v), "***").replace(v.as_str(), "***"));
+        let fresh = op.auth.iter().any(|a| a.0 == "client_credentials");
+        // a refused token is fetched again once: it may have been revoked before it expired
+        let mut tries = if fresh { 2 } else { 1 };
+        let r = loop {
+            tries -= 1;
+            let sent_with = (|| -> Result<crate::net::Reply, String> {
+                let (mut q, mut owned) = (query.clone(), Vec::new());
+                for (how, n, v) in &op.auth {
+                    let (h, more) = crate::net::credential(how, n, v)?;
+                    owned.extend(h);
+                    q.extend(more);
+                }
+                let mut hs = headers.clone();
+                hs.extend(owned.iter().map(|(k, v)| (k.as_str(), v.clone())));
+                let url = format!("{base_url}{}{}", if q.is_empty() { "" } else { "?" }, q.join("&"));
+                crate::net::send(&op.method, &url, &hs, sent.as_ref())
+            })();
+            match sent_with {
+                Ok(r) if r.status == 401 && tries > 0 => {
+                    if crate::brk!("token_kept_refused" => false; true) {
+                        crate::net::forget_tokens();
+                    }
+                }
+                other => break other,
+            }
+        };
+        let r = match r {
             Ok(r) => r,
             Err(e) => {
-                let e = op.auth.iter().fold(e, |e, (_, _, v)| e.replace(&crate::net::escape(v), "***").replace(v.as_str(), "***"));
-                out.push_str(&format!("failed({key}, {}).\n", quote(&e)));
+                out.push_str(&format!("failed({key}, {}).\n", quote(&hide(e))));
                 continue;
             }
         };

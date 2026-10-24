@@ -756,5 +756,19 @@ want of a sql adapter in it is `want_held(W, "this build has no sql adapter
   `http_auth` row of its adapter, written by hand. A key never enters a fact:
   an error that would quote it is masked. YAML documents are read too.
   Planted `http_key_ignored` is red.
-- **Open.** `rofl adapter mcp URL` against a server that wants a key for
-  `tools/list`.
+- **OAuth2 and keys on the command line** (2026-10-24, the owner: «Авторизацию
+  докручивай»). `client_credentials` is a fifth way (`http_auth(A, S,
+  client_credentials, TokenUrl, Env)`, Env holding `id:secret`, scopes after a
+  space in TokenUrl): the adapter gets the token (RFC 6749 4.4, client secret
+  basic), keeps it until a minute before it expires, and fetches it again once
+  when a service refuses it (401). A document's oauth2 clientCredentials flow
+  generates it. A 401 from an MCP server is read as its authorization spec
+  says: `WWW-Authenticate` names the resource metadata (RFC 9728), that names
+  the authorization server, whose metadata (RFC 8414) names the token
+  endpoint, and the error gives the line to write. `rofl adapter mcp URL KEY...`
+  and `rofl adapter openapi SPEC KEY...` take keys as `HOW[:NAME]=ENV`
+  (bearer, basic, header, query, client_credentials), read from the
+  environment; an mcp book gets an `http_auth` row for each. Planted
+  `token_kept_refused` is red.
+- **Open.** The authorization code flow with a person at a browser (PKCE,
+  dynamic client registration): a token a person got goes in as `bearer=ENV`.

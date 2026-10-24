@@ -13,6 +13,8 @@ brk_expects("prov_state_unsettled", "prov_lazy_reader").
 brk_expects("prov_state_unsettled", "prov_lazy_retract").
 brk("journal_closed_late"). brk_kind("journal_closed_late", switch).
 brk_expects("journal_closed_late", "journal_replay").
+brk("token_kept_refused"). brk_kind("token_kept_refused", switch).
+brk_expects("token_kept_refused", "openapi_token").
 brk("http_key_ignored"). brk_kind("http_key_ignored", switch).
 brk_expects("http_key_ignored", "openapi_keys").
 brk("openapi_book_digest"). brk_kind("openapi_book_digest", switch).
@@ -2846,6 +2848,7 @@ switch_site("thr_peel_cells", "rust/rofl/src/engine.rs").
 switch_site("thr_reflect_agg", "rust/rofl/src/reflect.rs").
 switch_site("thr_text_order", "rust/rofl/src/cell.rs").
 switch_site("thr_whynot_reached", "rust/rofl/src/engine.rs").
+switch_site("token_kept_refused", "rust/rofl/src/openapi.rs").
 switch_site("tree_arity_unchecked", "rust/rofl/src/structure.rs").
 switch_site("tree_book_ignored", "rust/rofl/src/structure.rs").
 switch_site("tree_check_off", "rust/rofl/src/engine.rs").

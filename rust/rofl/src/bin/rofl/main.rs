@@ -9,8 +9,9 @@
 //!   rofl serve                                  one JSON request per line in, one answer out
 //!   rofl render [--out DIR] FILE...             the sentence form of the files
 //!   rofl nb FILE.rofl.md [--cell N] [--all]     a notebook run, printed as `npm run nb` prints it
-//!   rofl adapter mcp COMMAND...                 the adapter book of the MCP server COMMAND runs, or the one at a URL (docs/intents.md)
-//!   rofl adapter openapi SPEC                   the adapter book of an OpenAPI document, a JSON file or URL
+//!   rofl adapter mcp COMMAND... | URL [KEY...]  the adapter book of the MCP server COMMAND runs, or the one at a URL (docs/intents.md)
+//!   rofl adapter openapi SPEC [KEY...]          the adapter book of an OpenAPI document, a JSON or YAML file or URL;
+//!                                               a KEY is HOW[:NAME]=ENV, read from the environment
 //!
 //! A question verb is `rofl load` with that one question; `--json` prints each answer as `rofl serve` does.
 //! `--kept F [--anew]` keeps the world evaluated at F, and later runs answer from F until it is stale (kept.rs).
@@ -23,7 +24,7 @@ mod render;
 mod seed;
 mod serve;
 
-const USAGE: &str = "usage: rofl load|ask|why|whynot|excise ... FILE... | rofl serve | rofl render ... | rofl nb FILE.rofl.md | rofl adapter mcp COMMAND... | rofl adapter openapi SPEC";
+const USAGE: &str = "usage: rofl load|ask|why|whynot|excise ... FILE... | rofl serve | rofl render ... | rofl nb FILE.rofl.md | rofl adapter mcp COMMAND...|URL [KEY...] | rofl adapter openapi SPEC [KEY...]";
 
 /// `@LIST` replaced by the files it names.
 fn listed(args: Vec<String>) -> Vec<String> {
@@ -69,8 +70,11 @@ fn run(args: Vec<String>) {
         "render" => render::main(args),
         "nb" => nb::main(args),
         "adapter" if args.len() > 1 && matches!(args[0].as_str(), "mcp" | "openapi") => {
-            let rest = args[1..].join(" ");
-            match if args[0] == "mcp" { rofl::mcp::book(&rest) } else { rofl::openapi::book(&rest) } {
+            let url = args[1].starts_with("http://") || args[1].starts_with("https://");
+            let (target, keys) = if args[0] == "openapi" || url { (args[1].clone(), &args[2..]) } else { (args[1..].join(" "), &args[args.len()..]) };
+            let made = keys.iter().map(|k| rofl::net::declared(k)).collect::<Result<Vec<_>, _>>()
+                .and_then(|keys| if args[0] == "mcp" { rofl::mcp::book(&target, &keys) } else { rofl::openapi::book(&target, &keys) });
+            match made {
                 Ok(book) => print!("{book}"),
                 Err(e) => {
                     eprintln!("rofl adapter {}: {e}", args[0]);
