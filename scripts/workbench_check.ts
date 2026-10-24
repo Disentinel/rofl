@@ -133,12 +133,12 @@ async function problems(dir: string, every = true): Promise<string[]> {
     }
     if (want.moves && !lines.some((l) => l.kind === 'excise' && html(l).includes(want.moves!))) bad.push(`${name}: the what-if does not say ${want.moves}`);
   }
-  // a screen (examples/intents/screen.rofl): the wants of its render adapter drawn as their components; a press and a typed field run again as facts of its book
-  const screen = [{ id: 's', kind: 'datalog', text: readFileSync(path.join(ROOT, 'examples/intents/screen.rofl'), 'utf8').split('\n').filter((l) => !/^(clicked|filled)\[/.test(l)).join('\n') }];
+  // a screen (examples/intents/screen.rofl.md): the wants of its render adapter drawn as their components; a press and a typed field run again as facts of its book
+  const screen = cellsOf(readFileSync(path.join(ROOT, 'examples/intents/screen.rofl.md'), 'utf8'));
   const shownOf = (r: { screen: { kind: string; slots: Record<string, string> }[] }) => r.screen.map((p) => `${p.kind} ${Object.values(p.slots).join('/')}`).join('; ');
   const s0 = await bench.run(screen), parts = s0.screen as { kind: string }[];
   const SHOWN = 'heading Release 1.5; card build/done; card deploy/waits for approval; button Approve deploy; field Why this release';
-  if (shownOf(s0) !== SHOWN) bad.push(`the screen is not drawn from its wants: ${shownOf(s0) || JSON.stringify([...s0.head.errors, ...s0.byCell.get('s')?.errors ?? []])}`);
+  if (shownOf(s0) !== SHOWN) bad.push(`the screen is not drawn from its wants: ${shownOf(s0) || JSON.stringify([...s0.head.errors, ...[...s0.byCell.values()].flatMap((c: { errors: string[] }) => c.errors)])}`);
   else {
     const sc = await import(path.join(dir, 'lib/screen.js'));
     let ev = sc.done([], sc.clicked(parts.find((p) => p.kind === 'button')));
