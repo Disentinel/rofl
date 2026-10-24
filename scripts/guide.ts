@@ -91,4 +91,14 @@ for (const f of readdirSync(GUIDE).filter((f) => f.endsWith('.md'))) {
   if (check) { console.error(`STALE guide/${f}: run \`npm run guide\``); stale++; }
   else { writeFileSync(p, out); console.log(`wrote guide/${f}`); }
 }
+// every word of `rofl-nb --help` and `--help env` a reader may need (a subcommand, a flag, an asking word, a variable) is named
+// somewhere in the guide; a new flag with no page is a build error, like a stale block
+const help = (...a: string[]) => spawnSync(process.execPath, ['--experimental-strip-types', CLI, '--help', ...a], { encoding: 'utf8', env: { ...process.env, ROFL_NB_DAEMON: '0' } }).stdout;
+const text = help() + help('env'), words = new Set<string>();
+for (const m of text.matchAll(/--[a-z][\w-]*/g)) words.add(m[0]);
+for (const m of text.matchAll(/\bROFL_NB_[A-Z_]+\b/g)) words.add(m[0]);
+for (const m of text.matchAll(/^npm run nb -- (\w+) /gm)) words.add(m[1]);
+for (const m of text.matchAll(/^  (\?|[a-z]+) [A-Z] {2,}/gm)) words.add(m[1]);
+const guide = readdirSync(GUIDE).filter((f) => f.endsWith('.md')).map((f) => readFileSync(path.join(GUIDE, f), 'utf8')).join('\n');
+for (const w of [...words].sort()) if (!guide.includes(w)) { console.error(`guide: \`${w}\` of rofl-nb --help is named on no page of guide/`); stale++; }
 process.exit(stale ? 1 : 0);
