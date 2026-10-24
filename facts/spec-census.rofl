@@ -871,6 +871,7 @@ check[checks]("facts/goldens.rofl", "holes_negation_wfs", world).
 check[checks]("facts/goldens.rofl", "intents_exec", world).
 check[checks]("facts/goldens.rofl", "intents_mcp", world).
 check[checks]("facts/goldens.rofl", "intents_rofl", world).
+check[checks]("facts/goldens.rofl", "intents_screen", world).
 check[checks]("facts/goldens.rofl", "intents_sql", world).
 check[checks]("facts/goldens.rofl", "jodit_fixture", world).
 check[checks]("facts/goldens.rofl", "keyword_atom", world).

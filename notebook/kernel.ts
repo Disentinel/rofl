@@ -4,6 +4,7 @@ import { Host, concernsOf, type Stop, translatorVocab, type Line, type Node, typ
 import { cellsOf, libFiles, parseFront, translated, type CellKind, type Front } from './front.ts';
 import { asCell, assemble, type Inputs } from './world.ts';
 import { counted, type View } from './draw.ts';
+import { screenOf, type Part } from './screen.ts';
 import { folded } from '../playground/chain.ts';
 import type { Engine, EngineName } from '../playground/engine.ts';
 
@@ -51,6 +52,9 @@ export class Kernel {
     return full || !y.chain.length ? text : short(y.chain, brief(text, this.nodes));
   }
   private nodes: Record<string, Node> = {};
+
+  /** The screen the last run wants drawn (notebook/screen.ts). */
+  screen(): Part[] { return screenOf((lit) => this.host.query(lit)); }
 
   run(path: string, text: string, input: Inputs): NbResult {
     const front = parseFront(text);

@@ -4074,8 +4074,8 @@ work_needs(w_intent_scenarios, w_intent_sql_adapter).
 work_needs(w_intent_scenarios, w_intent_scanner_as_adapter).
 
 work(w_intent_render,
-  "docs/intents.md 7, scenario 4: the render kind and shows capabilities: a screen as show/fill/click rows over a kit whose components are capabilities with slots, a click a fact from the UI adapter; needs a host that draws: the owner chose the web workbench (2026-10-24). ACCEPTANCE: a world in examples/intents whose screen is checked by npm test and whose click comes back as a fact.").
-work_state(w_intent_render, open).
+  "DONE 2026-10-24 (docs/intents.md, Scenario 4, a screen, as built): examples/intents/screen.rofl (world intents_screen, both engines), component(Cap, Kind) over a render adapter's shows capabilities, the workbench draws the screen and runs again with clicked[A](W) and filled[A](W, Text); npm run test:workbench checks it with two planted faults. WAS: docs/intents.md 7, scenario 4: the render kind and shows capabilities: a screen as show/fill/click rows over a kit whose components are capabilities with slots, a click a fact from the UI adapter; needs a host that draws: the owner chose the web workbench (2026-10-24). ACCEPTANCE: a world in examples/intents whose screen is checked by npm test and whose click comes back as a fact.").
+work_state(w_intent_render, done).
 work_needs(w_intent_render, w_intent_scenarios).
 
 work(w_intent_openapi,

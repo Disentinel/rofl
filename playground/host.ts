@@ -9,6 +9,7 @@ import { chainOf } from './chain.ts';
 import { proofView, type Proven } from '../notebook/draw-proof.ts';
 import { collect, diff, scoped, status, KINDS, VIEW_RELS, unquote as termText, type DrawKind, type View, type World } from '../notebook/draw.ts';
 import { Vocabulary } from '../src/say.ts';
+import { BOOK_ROWS } from '../src/want.ts';
 import { idPrefix, scan } from '../scanners/js_ast.ts';
 import { inherit } from '../scanners/js_inherit.ts';
 import { readBook, homeOf, booksOf, OWN, type Ask, type Cell, type Kind } from '../notebook/book.ts';
@@ -172,7 +173,7 @@ const NOT_OURS = (rel: string, home: Record<string, string>) => `${rel} is the k
 /** A sentence or a literal as the writer wrote it: a relation the notebook introduced without the prefix that makes it its own. */
 const plain = (s: string) => s.replace(/\bnb__/g, '');
 /** What a notebook writes without introducing a relation: the kernel's tables a program writes by hand (reflect.ts KERNEL_BOOK), and phrases. */
-const WRITTEN = new Set([...[...RESERVED].filter((r) => !KERNEL_BOOK.has(r)), 'phrase', 'sig', 'fun_phrase']);
+const WRITTEN = new Set([...[...RESERVED].filter((r) => !KERNEL_BOOK.has(r)), ...BOOK_ROWS, 'phrase', 'sig', 'fun_phrase']);
 const NODE = /\bn[0-9a-f]{16}_[0-9a-z]+\b/g;
 type Concerns = { rules: Record<string, string>; rels: Record<string, string> };
 type Scanned = { key: string; facts: string[]; nodes: Record<string, Node>; parseErrors: Record<string, string>; text: string; rels: Set<string> };
@@ -304,7 +305,7 @@ export class Host {
     // what the notebook introduces is its own: every sentence it declares or names from its words, and every datalog head no sentence says
     // an anchor that names a relation of a world the notebook reads (`<a id="uncovered">` over spat.rofl) gives it a sentence: that one stays the world's
     const own = new Set(learned.flatMap((l) => /^phrase\((\w+),/.exec(l)?.[1] ?? []).filter((r) => !DRAWN.has(r) && (this.foreign.has(r) || !this.worldRels.has(r))));
-    for (const p of parts) if (p.c.form !== 'md' && !p.c.prose) { try { for (const cl of parseProgram(p.clauses)) if (!cl.head.perspExplicit && !this.said.has(cl.head.rel) && !WRITTEN.has(cl.head.rel) && !DRAWN.has(cl.head.rel) && (this.foreign.has(cl.head.rel) || !this.worldRels.has(cl.head.rel))) own.add(cl.head.rel); } catch {} }
+    for (const p of parts) if (p.c.form !== 'md' && !p.c.prose) { try { for (const cl of parseProgram(p.clauses)) if (!(cl as { want?: boolean }).want && !cl.head.perspExplicit && !this.said.has(cl.head.rel) && !WRITTEN.has(cl.head.rel) && !DRAWN.has(cl.head.rel) && (this.foreign.has(cl.head.rel) || !this.worldRels.has(cl.head.rel))) own.add(cl.head.rel); } catch {} }
     const names = [...own].map((r) => r.startsWith(OWN) ? r.slice(OWN.length) : r).join('|');   // a datalog cell names a sentence's relation by its words
     const owned = (t: string) => !names ? t : t.replace(new RegExp(`(?<![\\w$])(${names})(?=\\()`, 'g'), `${OWN}$1`).replace(new RegExp(`\\b(phrase|edb)\\((${names})([,)])`, 'g'), `$1(${OWN}$2$3`);
     this.reown = owned;
@@ -725,6 +726,13 @@ export class Host {
       entities: NODE,
       own: (c) => c.startsWith('notebook'),
     });
+  }
+
+  /** The rows of a literal over the last run, null where nothing can put a row there. */
+  query(literal: string): Record<string, string>[] | null {
+    if (!this.last) return null;
+    const q = this.last.query(this.reown(literal));
+    return q.error || q.unpopulatable ? null : q.rows.map((r) => r.bindings);
   }
 
   /** `why` over the last run, without running again. */

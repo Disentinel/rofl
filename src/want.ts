@@ -9,6 +9,8 @@ import type { FactStore } from './store.ts';
 
 /** The rows a want lowers to, which a want's rules alone write. */
 export const WANT_ROWS: ReadonlySet<string> = new Set(['want_key', 'want_of', 'want_arg']);
+/** The rows of an adapter's book the checks and the post read, whichever book or cell writes them. */
+export const BOOK_ROWS: ReadonlySet<string> = new Set(['adapter', 'capability', 'arg', 'answers', 'component', 'query']);
 
 const srcTerm = (t: Term): string => (t.k === 'v' ? (t.name.startsWith('_$') ? '_' : t.name) : t.k === 'f' ? `${t.name}(${t.args.map(srcTerm).join(', ')})` : canonTerm(t));
 

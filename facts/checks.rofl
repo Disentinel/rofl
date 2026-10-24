@@ -3846,3 +3846,6 @@ check_opt("intents_mcp", one_engine, rust).
 check_world("intents_rofl").
 check_file("intents_rofl", "examples/intents/rofl.rofl").
 check_opt("intents_rofl", one_engine, rust).
+
+check_world("intents_screen").
+check_file("intents_screen", "examples/intents/screen.rofl").
