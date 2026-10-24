@@ -519,6 +519,6 @@ impl Eval {
                 sol
             })
             .collect();
-        self.conclude_all(r, sols, Front::default(), false)
+        self.conclude_owned(r, sols, false)
     }
 }

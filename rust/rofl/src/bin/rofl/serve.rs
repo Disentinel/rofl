@@ -468,6 +468,10 @@ impl Server {
             }
             "admit" => {
                 let text = r.get("rofl").and_then(|v| v.as_str()).ok_or("admit needs `rofl`")?.to_string();
+                if r.get("joinable").and_then(|v| v.as_bool()) == Some(true) {
+                    let (n, held) = self.get(r)?.admit_joinable(&text)?;
+                    return Ok(json!({ "admitted": n, "held": held }));
+                }
                 let n = self.get(r)?.admit(&text)?;
                 Ok(json!({ "admitted": n }))
             }

@@ -760,6 +760,37 @@ impl Session {
     }
 
     /// The facts of `src` into a world stopped at a level wall, and fired on by every rule active so far.
+    /// The facts of `src` this world can join now are admitted; the indices of the rest, in order, are given back.
+    pub fn admit_joinable(&mut self, src: &str) -> Result<(usize, Vec<usize>), String> {
+        let cs = rofl_parse::parse(&mut self.eval.h, src)?;
+        let lines: Vec<&str> = src.lines().filter(|l| !l.trim().is_empty()).collect();
+        if lines.len() != cs.len() {
+            return Err("admit by keys takes one fact a line".into());
+        }
+        let (mut take, mut held) = (String::new(), Vec::new());
+        if let Some(f) = std::env::var_os("ROFL_XNEED") {
+            if !std::path::Path::new(&f).exists() {
+                let mut t = String::new();
+                let mut done = std::collections::HashSet::new();
+                for c in &cs {
+                    let (rel, persp, _) = self.lit_terms(&c.head)?;
+                    if done.insert((rel, persp)) { t.push_str(&self.eval.need_text(rel, persp, 0)); }
+                }
+                let _ = std::fs::write(&f, t);
+            }
+        }
+        for (i, c) in cs.iter().enumerate() {
+            let (rel, persp, args) = self.lit_terms(&c.head)?;
+            if self.eval.joinable(rel, persp, &|k| args.get(k).copied(), 0) {
+                take.push_str(lines[i]);
+                take.push('\n');
+            } else {
+                held.push(i);
+            }
+        }
+        Ok((self.admit(&take)?, held))
+    }
+
     pub fn admit(&mut self, src: &str) -> Result<usize, String> {
         self.eval.store.arrivals = Some(Vec::new());
         let r = crate::program::load_program(&mut self.eval, src, None);

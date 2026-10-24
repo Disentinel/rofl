@@ -32,6 +32,7 @@ mod cost;
 mod par;
 mod latkept;
 mod want;
+mod keys;
 pub use latkept::Tok;
 pub use cost::{Hot, PremCost};
 use resume::{Cut, CutAt, InFlight, Tail};
@@ -680,6 +681,9 @@ pub struct Eval {
     /// the last level an evaluation runs to (`run_on` goes on), and the levels left with the phase of the first
     pub level_wall: Option<i64>,
     level_rest: Option<(Vec<(i64, Vec<Rc<ERule>>)>, usize)>,
+    needs: FxMap<(Sym, Sym), keys::Need>,
+    /// facts admitted from other workers, and what was copied from them alone
+    pub(crate) foreign: FxSet<FactId>,
     round_resume: Option<(Front, usize, usize, Front, Option<InFlight>)>,
     pub h: Heap,
     pub v: Vocab,
@@ -1560,6 +1564,8 @@ impl Eval {
             resume_at: None,
             level_wall: None,
             level_rest: None,
+            needs: FxMap::default(),
+            foreign: FxSet::default(),
             round_resume: None,
             lat_unknown: HashMap::new(),
             lat_withdrawn: Vec::new(),
@@ -3308,6 +3314,9 @@ impl Eval {
         let mut front = Front::default();
         for &id in ids {
             front.note(self.store.rec(id).rel, id);
+            if std::env::var_os("ROFL_XOWN").is_some() {
+                self.foreign.insert(id);
+            }
         }
         // a closure already walked takes what follows as its two rules fire, written
         let next = self.next_level().unwrap_or(i64::MAX);
@@ -5080,7 +5089,41 @@ impl Eval {
         self.cur_rule = outer;
         let sols = self.solved(r, sols, before)?;
         *self.sols_by_rule.entry(r.id).or_insert(0) += sols.len() as u64;
-        self.conclude_all(r, sols, Front::default(), true)
+        self.conclude_owned(r, sols, true)
+    }
+
+    /// A firing on other workers' facts alone is theirs: it is made only as a copy (one fact premise), and what it
+    /// copies is theirs too.
+    pub(super) fn conclude_owned(&mut self, r: &Rc<ERule>, sols: Vec<Sol>, stale: bool) -> Result<Front, Halt> {
+        if self.foreign.is_empty() {
+            return self.conclude_all(r, sols, Front::default(), stale);
+        }
+        let (mut own, mut copied) = (Vec::new(), Vec::new());
+        for sol in sols {
+            let (mut n, mut mine) = (0, false);
+            for p in &sol.prems {
+                if let PremRef::Fact(id) = p {
+                    n += 1;
+                    mine |= !self.foreign.contains(id);
+                }
+            }
+            if n == 0 || mine {
+                own.push(sol);
+            } else if n == 1 {
+                copied.push(sol);
+            }
+        }
+        let mut out = self.conclude_all(r, own, Front::default(), stale)?;
+        if !copied.is_empty() {
+            let c = self.conclude_all(r, copied, Front::default(), stale)?;
+            for (&rel, ids) in &c.by_rel {
+                for &id in ids {
+                    self.foreign.insert(id);
+                    out.note(rel, id);
+                }
+            }
+        }
+        Ok(out)
     }
 
     /// THE CLOSURES WALKED WHOLE: those whose relation holds no base fact. The walk starts from the edges, so a base
