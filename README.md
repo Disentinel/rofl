@@ -190,9 +190,9 @@ a check harness or leftovers).
 **The plan** — `roadmap.md` (what the next version commits to, each item naming
 the finding that holds its evidence). `sentence-form.md` closes one question of the plan: the
 Markdown sentence form as a source after 1.1, what the round trip established,
-what the form is now, and what is open. `releases/1.4.md` is what changed since
-1.3.2, what an agent must do differently and the known gaps; `releases/1.3.md`,
-`1.2.md` and `1.1.md` (since 1.0.5) before it.
+what the form is now, and what is open. `releases/1.5.md` is what changed since
+1.4.0, what an agent must do differently and the known gaps; `releases/1.4.md`,
+`1.3.md`, `1.2.md` and `1.1.md` (since 1.0.5) before it.
 
 **The programme** — `formal-reasoning-landscape.md` (ROFL among the formal
 reasoning systems, and why the projection is ROFL-centric by construction).
