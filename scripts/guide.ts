@@ -27,7 +27,7 @@ let css = '';
 style({ getElementById: () => null, createElement: () => ({}), head: { append: (s: { textContent: string }) => { css = s.textContent; } } } as unknown as Document);
 css = css.replace(/\.rofl-pic svg /g, '.rofl-pic ').replace(/\.rofl-pic svg\b/g, '.rofl-pic');
 
-async function draw(where: string, file: string): Promise<string> {
+async function draw(where: string, file: string, pics = 'pictures'): Promise<string> {
   const r = spawnSync(process.execPath, ['--experimental-strip-types', path.join(ROOT, 'notebook/cli.ts'), file, '--json'], { cwd: path.join(ROOT, where), encoding: 'utf8', timeout: 120_000, env: { ...process.env, ROFL_NB_DAEMON: '0' } });
   const views: { text: string; view: View }[] = JSON.parse(r.stdout).cells.flatMap((c: { lines: { text: string; view?: View }[] }) => c.lines.filter((l) => l.view));
   const out: string[] = [];
@@ -35,12 +35,12 @@ async function draw(where: string, file: string): Promise<string> {
     const v = zoom(view), b = backendsOf(v), name = `${path.basename(file, '.rofl.md')}${k ? `-${k}` : ''}`;
     // the view itself, for the guide's site to draw live (scripts/guide_site.ts); the marker before the still picture names it
     keep(path.join(GUIDE, 'pictures', `${name}.json`), JSON.stringify(v) + '\n');
-    out.push(`<!-- view pictures/${name}.json -->`);
+    out.push(`<!-- view ${pics}/${name}.json -->`);
     const el = { innerHTML: '', querySelector: () => null, querySelectorAll: () => [] };
     if (!GRAPHS.includes(v.kind)) await pictureOf(v)?.mount(el as unknown as HTMLElement, v, { libs: async () => false } as Hooks, () => {}, () => {});
     if (/^<svg[\s\S]*<\/svg>$/.test(el.innerHTML)) {
       keep(path.join(GUIDE, 'pictures', `${name}.svg`), el.innerHTML.replace(/^<svg /, '<svg xmlns="http://www.w3.org/2000/svg" class="rofl-pic" ').replace('>', `><style>${css}</style>`) + '\n');
-      out.push(`![${text}: ${file}](pictures/${name}.svg)`);
+      out.push(`![${text}: ${file}](${pics}/${name}.svg)`);
       continue;
     }
     const w = b.find((x) => x.fence === 'mermaid') ?? b.find((x) => x.format === 'markdown') ?? b[0];
@@ -87,10 +87,12 @@ function render(kind: string, where: string, cmd?: string): string {
   return ['```', `$ ${cmd}`, ...out, ...(kind === 'run+exit' ? ['$ echo $?', String(r.status)] : []), '```'].join('\n');
 }
 
-for (const f of readdirSync(GUIDE).filter((f) => f.endsWith('.md'))) {
+// the chapters, and their translations under guide/ru, whose blocks are the same runs
+const pages = (dir: string) => readdirSync(path.join(GUIDE, dir)).filter((f) => f.endsWith('.md')).map((f) => path.join(dir, f));
+for (const f of [...pages(''), ...pages('ru')]) {
   const p = path.join(GUIDE, f), doc = readFileSync(p, 'utf8');
   const drawn = new Map<string, string>();
-  for (const [, , kind, where, cmd] of doc.matchAll(BLOCK)) if (kind === 'draw') drawn.set(`${where.trim()}:${cmd}`, await draw(where.trim(), cmd!));
+  for (const [, , kind, where, cmd] of doc.matchAll(BLOCK)) if (kind === 'draw') drawn.set(`${where.trim()}:${cmd}`, await draw(where.trim(), cmd!, f.includes('/') ? '../pictures' : 'pictures'));
   let n = 0;
   const out = doc.replace(BLOCK, (_, begin, kind, where, cmd, end) => (n++, begin + (kind === 'draw' ? drawn.get(`${where.trim()}:${cmd}`)! : render(kind, where.trim(), cmd)) + '\n' + end));
   if (n !== (doc.match(/<!-- BEGIN /g) ?? []).length) { console.error(`guide/${f}: a BEGIN marker without its END, or not run, file, run+exit or draw`); stale++; continue; }
@@ -106,6 +108,6 @@ for (const m of text.matchAll(/--[a-z][\w-]*/g)) words.add(m[0]);
 for (const m of text.matchAll(/\bROFL_NB_[A-Z_]+\b/g)) words.add(m[0]);
 for (const m of text.matchAll(/^npm run nb -- (\w+) /gm)) words.add(m[1]);
 for (const m of text.matchAll(/^  (\?|[a-z]+) [A-Z] {2,}/gm)) words.add(m[1]);
-const guide = readdirSync(GUIDE).filter((f) => f.endsWith('.md')).map((f) => readFileSync(path.join(GUIDE, f), 'utf8')).join('\n');
+const guide = pages('').map((f) => readFileSync(path.join(GUIDE, f), 'utf8')).join('\n');
 for (const w of [...words].sort()) if (!guide.includes(w)) { console.error(`guide: \`${w}\` of rofl-nb --help is named on no page of guide/`); stale++; }
 process.exit(stale ? 1 : 0);

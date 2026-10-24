@@ -5,7 +5,7 @@
 // (`rofl` rules and questions, `js`, and the `$` sessions). A picture scripts/guide.ts drew is marked `<!-- view pictures/x.json -->`:
 // the page keeps the still form and, once loaded, draws the view with the modules VS Code and the workbench draw with (lib/), zoom and
 // full screen included; without the script, or offline, the still form stands.
-import { copyFileSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import * as path from 'node:path';
 import { emitAll, finish } from './emit.ts';
 
@@ -20,13 +20,20 @@ const stems = [...ORDER, ...readdirSync(GUIDE).filter((f) => f.endsWith('.md')).
 const page = (s: string) => (s === 'README' ? 'index' : s) + '.html';
 
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-const title = (stem: string) => /^# (.*)$/m.exec(readFileSync(path.join(GUIDE, `${stem}.md`), 'utf8'))?.[1] ?? stem;
+const title = (stem: string, l: Lang = lang) => /^# (.*)$/m.exec(readFileSync(path.join(GUIDE, has(l, stem) ? l : '', `${stem}.md`), 'utf8'))?.[1] ?? stem;
+
+// the translations: guide/ru/X.md beside guide/X.md, published under ru/; a chapter not yet translated links to the English one
+const LANGS_OF = { '': { name: 'English', top: 'ROFL guide', index: 'The guide' }, ru: { name: 'Русский', top: 'Руководство ROFL', index: 'Руководство' } };
+type Lang = keyof typeof LANGS_OF;
+const has = (lang: Lang, stem: string) => existsSync(path.join(GUIDE, lang, `${stem}.md`));
+let lang: Lang = '';
 
 // a link in the guide: another chapter (`X.md`, `X.md#a`), a path into the tree (`../docs/...`, `pictures/x.svg`), or a URL
 function href(target: string): string {
   const m = /^([\w-]+)\.md(#.*)?$/.exec(target);
-  if (m) return page(m[1]) + (m[2] ?? '');
-  if (/^\.\.\//.test(target)) return `https://github.com/Disentinel/rofl/blob/main/${target.replace(/^\.\.\//, '')}`;
+  if (m) return (lang && !has(lang, m[1]) ? '../' : '') + page(m[1]) + (m[2] ?? '');
+  const up = lang ? /^\.\.\/\.\.\//.test(target) : /^\.\.\//.test(target);
+  if (up) return `https://github.com/Disentinel/rofl/blob/main/${target.replace(/^(\.\.\/)+/, '')}`;
   return target;
 }
 
@@ -149,7 +156,8 @@ const CSS = readFileSync(path.join(ROOT, 'playground/tokens.css'), 'utf8') + `
   nav a { display: block; color: var(--mute); text-decoration: none; padding: 0.15rem 0; }
   nav a[aria-current] { color: var(--fg); font-weight: 600; }
   nav a:hover { color: var(--accent); }
-  nav .top { font-weight: 600; color: var(--fg); margin-bottom: 0.6rem; }
+  nav .top { font-weight: 600; color: var(--fg); margin-bottom: 0.3rem; }
+  nav .langs { font-size: 0.8rem; color: var(--mute); margin-bottom: 0.6rem; } nav .langs a { display: inline; } nav small { color: var(--mute); font-weight: 400; }
   main { flex: 1 1 auto; min-width: 0; max-width: 46rem; }
   h1 { font-size: 1.8rem; line-height: 1.2; margin: 0 0 1rem; }
   h2 { font-size: 1.25rem; margin: 2.2rem 0 0.6rem; }
@@ -193,26 +201,35 @@ for (const f of readdirSync(path.join(GUIDE, 'pictures'))) copyFileSync(path.joi
 emitAll(ROOT, path.join(OUT, 'lib'), ['vscode/visual/pictures.ts']);
 finish(path.join(OUT, 'lib'));
 writeFileSync(path.join(OUT, 'guide.js'), SCRIPT);
-for (const stem of stems) {
-  const md = readFileSync(path.join(GUIDE, `${stem}.md`), 'utf8');
-  const nav = stems.map((s) => `<a href="${page(s)}"${s === stem ? ' aria-current="page"' : ''}>${esc(s === 'README' ? 'The guide' : title(s))}</a>`).join('\n');
-  const html = `<!doctype html>
-<html lang="en">
+let pages = 0;
+for (lang of Object.keys(LANGS_OF) as Lang[]) {
+  if (lang) mkdirSync(path.join(OUT, lang), { recursive: true });
+  const up = lang ? '../' : '', L = LANGS_OF[lang];
+  for (const stem of stems) {
+    if (lang && !has(lang, stem)) continue;
+    const md = readFileSync(path.join(GUIDE, lang, `${stem}.md`), 'utf8');
+    const nav = stems.map((s) => `<a href="${href(`${s}.md`)}"${s === stem ? ' aria-current="page"' : ''}>${esc(s === 'README' ? L.index : title(s))}${lang && !has(lang, s) ? ' <small>(en)</small>' : ''}</a>`).join('\n');
+    const other = (Object.keys(LANGS_OF) as Lang[]).map((l) => l === lang ? `<b>${LANGS_OF[l].name}</b>` : `<a href="${up}${l ? `${l}/` : ''}${page(has(l, stem) ? stem : 'README')}">${LANGS_OF[l].name}</a>`).join(' · ');
+    const html = `<!doctype html>
+<html lang="${lang || 'en'}">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${esc(title(stem))} · ROFL</title>
 <style>${CSS}</style>
-<script type="module" src="guide.js"></script>
+<script type="module" src="${up}guide.js"></script>
 <div class="wrap">
-<nav><div class="top"><a href="index.html">ROFL guide</a></div>
+<nav><div class="top"><a href="index.html">${L.top}</a></div>
+<div class="langs">${other}</div>
 ${nav}
-<div style="margin-top:1rem"><a href="https://github.com/Disentinel/rofl">GitHub</a><a href="../">Workbench</a><a href="../playground/">Playground</a></div></nav>
+<div style="margin-top:1rem"><a href="https://github.com/Disentinel/rofl">GitHub</a><a href="${up}../">Workbench</a><a href="${up}../playground/">Playground</a></div></nav>
 <main>
 ${render(md)}
 </main>
 </div>
 </html>
 `;
-  writeFileSync(path.join(OUT, page(stem)), html);
+    writeFileSync(path.join(OUT, lang, page(stem)), html);
+    pages++;
+  }
 }
-console.log(`${OUT}: ${stems.length} pages`);
+console.log(`${OUT}: ${pages} pages`);
