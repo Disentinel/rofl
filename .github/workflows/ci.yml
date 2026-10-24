@@ -168,8 +168,10 @@ jobs:
         env: { GH_TOKEN: '${{ github.token }}' }
         run: |
           v=${GITHUB_REF_NAME#rofl-nb-}
-          mkdir out npm && mv artifacts/vsix/grafema-rofl-*.tgz npm/ && mv artifacts/vsix/* out/
-          node --experimental-strip-types scripts/npm_check.ts --dist npm --tag "$GITHUB_REF_NAME"
+          mkdir out npm-dist
+          mv artifacts/vsix/grafema-rofl-*.tgz npm-dist/
+          mv artifacts/vsix/* out/
+          node --experimental-strip-types scripts/npm_check.ts --dist npm-dist --tag "$GITHUB_REF_NAME"
           for d in artifacts/rofl-*; do t=${d#artifacts/rofl-}; for f in "$d"/*; do b=$(basename "$f"); mv "$f" "out/${b%.exe}-$t${b#rofl}"; done; done
           (cd out && sha256sum * > SHA256SUMS)
           gh release create "$GITHUB_REF_NAME" out/* --prerelease --title "ROFL $v (preview)" --notes-file "docs/releases/${v%.*}.md"
@@ -182,7 +184,7 @@ jobs:
           npm install -g npm@11
           v=${GITHUB_REF_NAME#rofl-nb-}
           for p in linux-x64 linux-arm64 darwin-x64 darwin-arm64 win32-x64 ''; do
-            name=@grafema/rofl${p:+-$p}; f=npm/grafema-rofl${p:+-$p}-$v.tgz
+            name=@grafema/rofl${p:+-$p}; f=npm-dist/grafema-rofl${p:+-$p}-$v.tgz
             if [ "$(npm view "$name@$v" version 2>/dev/null)" = "$v" ]; then echo "$name@$v is on the registry already: skipped"; continue; fi
             npm publish "$f" --provenance --access public --tag latest
           done
