@@ -1770,8 +1770,13 @@ In the code:
 2. if all of:
    - [`module_export`](#module_export)(E, File);
    - the `declaration` of a node E is F;
-   - [`ts_namespace`](#ts_namespace)(F);
+   - [`class_or_namespace`](#class_or_namespace)(F);
    - F [carries its own name](#own_name) Name and File and `around`.
+
+<a id="class_or_namespace"></a>`class_or_namespace`(D) either:
+
+1. if D is a [class declaration](#noun-class_declaration);
+2. if [`ts_namespace`](#ts_namespace)(D).
 
 > `export * from` re-exports every NAME (not the default), recursively. The
 > kind guard is not redundant with `module_site`, which holds of imports too.

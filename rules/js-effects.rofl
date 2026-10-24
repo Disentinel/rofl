@@ -100,8 +100,16 @@ eff_loop_kind(for_of_statement).
 eff_here[flow](N, div, none) :- eff_loop_kind(K), ast_node[code](N, K, _).
 
 eff_calls[code](F, G)   :- resolves[code](C, G), nearest_fn[code](F, C), fn_value[flow](G).
-eff_reaches[code](F, G) :- eff_calls[code](F, G).
-eff_reaches[code](F, H) :- eff_reaches[code](F, G), eff_calls[code](G, H).
+-- A cycle is asked of the edges that can lie on one: a function nothing calls or that calls
+-- nothing is on no cycle, and peeling such ends four times over leaves the cycles whole and
+-- the closure a seventeenth of the call graph's (vscode 250). `eff_reaches` is reach inside
+-- what is left, which is all the recursion test reads.
+eff_ring1[code](F, G) :- eff_calls[code](F, G), eff_calls[code](G, _), eff_calls[code](_, F).
+eff_ring2[code](F, G) :- eff_ring1[code](F, G), eff_ring1[code](G, _), eff_ring1[code](_, F).
+eff_ring3[code](F, G) :- eff_ring2[code](F, G), eff_ring2[code](G, _), eff_ring2[code](_, F).
+eff_ring[code](F, G)  :- eff_ring3[code](F, G), eff_ring3[code](G, _), eff_ring3[code](_, F).
+eff_reaches[code](F, G) :- eff_ring[code](F, G).
+eff_reaches[code](F, H) :- eff_reaches[code](F, G), eff_ring[code](G, H).
 
 eff_here[flow](C, div, none) :- resolves[code](C, G), nearest_fn[code](F, C),
                                 eff_reaches[code](G, F).

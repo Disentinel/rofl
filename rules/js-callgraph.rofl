@@ -531,8 +531,7 @@ whole_expr[flow](E) :- sees_binder[code](E, D), binder[code](D, _, Init, _), who
 whole_expr[flow](E) :- sees_decl[code](E, F), whole_decl[flow](F),
                        not many_binders[flow](E), not assign_reaches_unscoped[flow](E, _).
 whole_decl[flow](F)   :- ast_node[code](F, function_declaration, _).
-whole_decl[flow](F)   :- ast_node[code](F, class_declaration, _).
-whole_decl[flow](F)   :- ts_namespace[code](F).
+whole_decl[flow](F)   :- class_or_namespace[code](F).
 many_binders[flow](E)   :- sees_binder[code](E, A), sees_binder[code](E, B), A != B.
 many_binders[flow](E)   :- sees_decl[code](E, A), sees_decl[code](E, B), A != B.
 many_binders[flow](E)   :- sees_binder[code](E, _), sees_decl[code](E, _).

@@ -1032,7 +1032,9 @@ exports_name[code](F, Name, File) :- module_export[code](E, File),
                                      fn_node[code](F),
                                      ast_child[code](F, id, 0, I), ast_name[code](I, Name).
 exports_name[code](D, Name, File) :- module_export[code](E, File), ast_child[code](E, declaration, 0, D),
-                                     ts_namespace[code](D), own_name[code](D, Name, File, around).
+                                     class_or_namespace[code](D), own_name[code](D, Name, File, around).
+class_or_namespace[code](D) :- ast_node[code](D, class_declaration, _).
+class_or_namespace[code](D) :- ts_namespace[code](D).
 
 -- `export * from` re-exports every NAME (not the default), recursively. The
 -- kind guard is not redundant with `module_site`, which holds of imports too.

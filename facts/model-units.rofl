@@ -287,6 +287,7 @@ unit_concludes("rules/js-dataflow.rofl", imports_name).
 unit_concludes("rules/js-dataflow.rofl", corpus_file).
 unit_concludes("rules/js-dataflow.rofl", module_export).
 unit_concludes("rules/js-dataflow.rofl", exports_name).
+unit_concludes("rules/js-dataflow.rofl", class_or_namespace).
 unit_concludes("rules/js-dataflow.rofl", reexport_decl).
 unit_concludes("rules/js-dataflow.rofl", export_list_erased).
 unit_concludes("rules/js-dataflow.rofl", export_item_erased).
@@ -728,6 +729,10 @@ unit_concludes("rules/js-effects.rofl", eff_here).
 unit_concludes("rules/js-effects.rofl", edb).
 unit_concludes("rules/js-effects.rofl", eff_loop_kind).
 unit_concludes("rules/js-effects.rofl", eff_calls).
+unit_concludes("rules/js-effects.rofl", eff_ring1).
+unit_concludes("rules/js-effects.rofl", eff_ring2).
+unit_concludes("rules/js-effects.rofl", eff_ring3).
+unit_concludes("rules/js-effects.rofl", eff_ring).
 unit_concludes("rules/js-effects.rofl", eff_reaches).
 unit_concludes("rules/js-effects.rofl", eff_alloc_kind).
 unit_concludes("rules/js-effects.rofl", eff_obj_traced).
