@@ -28,8 +28,8 @@ rmSync(OUT, { recursive: true, force: true });
 // the guide shows the tool's own output; a stale block is a build error, not a doc that lies
 execFileSync(process.execPath, ['--experimental-strip-types', path.join(ROOT, 'scripts/guide.ts'), '--check'], { stdio: 'inherit' });
 
-// every module the command line, the kept kernel and the extension reach by relative imports
-const ENTRIES = ['notebook/cli.ts', 'notebook/serve.ts', 'lsp/server.ts', 'vscode/extension.ts', 'vscode/worker.ts', 'npm/rofl.ts', 'scanners/cli.ts'];
+// every module the command line, the kept kernel, the extension and the library's exports reach by relative imports
+const ENTRIES = ['notebook/cli.ts', 'notebook/serve.ts', 'lsp/server.ts', 'vscode/extension.ts', 'vscode/worker.ts', 'npm/rofl.ts', 'scanners/cli.ts', 'src/api.ts', 'runtime/port.ts'];
 const seen = new Set<string>();
 for (const q = [...ENTRIES]; q.length;) {
   const f = q.pop()!;
@@ -101,8 +101,10 @@ writeFileSync(path.join(PKG, 'package.json'), JSON.stringify({
 }, null, 2) + '\n');
 
 cpSync(PKG, path.join(VSIX, 'rofl-nb'), { recursive: true });
+// the editor's modules ship in the VSIX alone: no command of the npm package reaches them
+rmSync(path.join(PKG, 'vscode'), { recursive: true });
 
-// the library and what the engine reads from its tree: rules/js.files names the model from rules/
+// the library's types (its JavaScript is the commands' own, above) and what the engine reads from its tree: rules/js.files names the model from rules/
 execFileSync(process.execPath, [path.join(ROOT, 'node_modules/typescript/bin/tsc'), '-p', path.join(ROOT, 'tsconfig.build.json'), '--outDir', path.join(PKG, 'dist')], { stdio: 'inherit' });
 for (const f of [...root.files.filter((f: string) => f !== 'dist/' && f !== 'README.md'), 'rules/js.files']) cpSync(path.join(ROOT, f), path.join(PKG, f), { recursive: true });
 for (const f of readFileSync(path.join(ROOT, 'rules/js.files'), 'utf8').split('\n').filter(Boolean)) if (!existsSync(path.join(PKG, 'rules', f))) throw new Error(`rules/js.files names ${f}, which the package does not carry`);

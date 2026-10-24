@@ -48,6 +48,19 @@ with `npm install --offline`: the package names the other four engines as
 optional dependencies, and without the flag npm asks the registry for each,
 retrying for minutes where nothing answers (over 250 s measured).
 
+## The release, rehearsed on main
+
+The release job's publishing is `scripts/release_publish.sh`, and the
+`release-dry` job runs the same script on every push to main with
+`--dry-run`, over that run's artifacts: the files laid out as for the GitHub
+release, the tag's version checked against package.json and every tarball, the
+release notes found, npm 11.5.1 or later, and each package to
+`npm publish --dry-run` unless its version is on the registry already (npm 11
+refuses a dry run over a published version), so the packages go through it
+whole on the push that bumps the version, the one before the tag. It cannot see
+the sign-in (OIDC, provenance), the registry's verdict on the upload, the
+GitHub release itself or the VSIX publishing after it.
+
 ## Publishing: what the owner sets up once
 
 The release job publishes by npm's trusted publishing: GitHub's OIDC token,
