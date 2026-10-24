@@ -2,7 +2,8 @@
 // `<!-- BEGIN run DIR: rofl-nb ARGS -->` runs the command line in DIR and writes what it printed on stdout;
 // `run+exit` adds the exit code; `| head -N` keeps the first N lines. `<!-- BEGIN file PATH -->` writes the file.
 // `<!-- BEGIN draw DIR: F.rofl.md -->` draws each `draw` line of the notebook as a page on GitHub can show it: the renderer's own SVG, written
-// to guide/pictures; else the view's mermaid, which GitHub draws; else its Markdown table; else its text.
+// to guide/pictures; else the view's mermaid, which GitHub draws; else its Markdown table; else its text. The view itself goes to
+// guide/pictures/NAME.json and is named in a `<!-- view -->` marker, for the guide's site to draw live (scripts/guide_site.ts).
 // `-- --check` fails if a block or a picture differs from its render; `npm run dist` runs it.
 import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -32,21 +33,27 @@ async function draw(where: string, file: string): Promise<string> {
   const out: string[] = [];
   for (const [k, { text, view }] of views.entries()) {
     const v = zoom(view), b = backendsOf(v), name = `${path.basename(file, '.rofl.md')}${k ? `-${k}` : ''}`;
+    // the view itself, for the guide's site to draw live (scripts/guide_site.ts); the marker before the still picture names it
+    keep(path.join(GUIDE, 'pictures', `${name}.json`), JSON.stringify(v) + '\n');
+    out.push(`<!-- view pictures/${name}.json -->`);
     const el = { innerHTML: '', querySelector: () => null, querySelectorAll: () => [] };
     if (!GRAPHS.includes(v.kind)) await pictureOf(v)?.mount(el as unknown as HTMLElement, v, { libs: async () => false } as Hooks, () => {}, () => {});
     if (/^<svg[\s\S]*<\/svg>$/.test(el.innerHTML)) {
-      const svg = el.innerHTML.replace(/^<svg /, '<svg xmlns="http://www.w3.org/2000/svg" class="rofl-pic" ').replace('>', `><style>${css}</style>`) + '\n', at = path.join(GUIDE, 'pictures', `${name}.svg`);
-      if (!existsSync(at) || readFileSync(at, 'utf8') !== svg) {
-        if (check) { console.error(`STALE guide/pictures/${name}.svg: run \`npm run guide\``); stale++; }
-        else { mkdirSync(path.dirname(at), { recursive: true }); writeFileSync(at, svg); }
-      }
+      keep(path.join(GUIDE, 'pictures', `${name}.svg`), el.innerHTML.replace(/^<svg /, '<svg xmlns="http://www.w3.org/2000/svg" class="rofl-pic" ').replace('>', `><style>${css}</style>`) + '\n');
       out.push(`![${text}: ${file}](pictures/${name}.svg)`);
       continue;
     }
     const w = b.find((x) => x.fence === 'mermaid') ?? b.find((x) => x.format === 'markdown') ?? b[0];
     out.push(w.format === 'markdown' ? w.write(v) : `\`\`\`${w.fence}\n${w.write(v).trimEnd()}\n\`\`\``);
   }
-  return out.join('\n\n');
+  return out.join('\n\n').replace(/ -->\n\n/g, ' -->\n');
+}
+
+/** A generated file under guide/, written where it differs; under `--check`, a difference is stale. */
+function keep(at: string, text: string): void {
+  if (existsSync(at) && readFileSync(at, 'utf8') === text) return;
+  if (check) { console.error(`STALE ${path.relative(ROOT, at)}: run \`npm run guide\``); stale++; }
+  else { mkdirSync(path.dirname(at), { recursive: true }); writeFileSync(at, text); }
 }
 
 // `rofl` as the npm package gives it: the engine binary of this tree, and `rofl scan` the scanner (npm/rofl.ts); on PATH, so a
@@ -65,7 +72,7 @@ function render(kind: string, where: string, cmd?: string): string {
     // as npm run dist ships it
     const text = readFileSync(path.join(ROOT, where), 'utf8').replace(/npm run nb -- (translate )?examples\/(notebook|tutorial)\//g, 'rofl-nb $1').trimEnd();
     const fence = text.includes('```') ? '````' : '```';
-    return `${fence}${where.endsWith('.md') ? 'markdown' : where.endsWith('.js') ? 'js' : ''}\n${text}\n${fence}`;
+    return `${fence}${where.endsWith('.md') ? 'markdown' : where.endsWith('.js') ? 'js' : where.endsWith('.rofl') ? 'rofl' : ''}\n${text}\n${fence}`;
   }
   const [line, head] = cmd!.split(' | head -');
   // the line as a shell reads it, near enough: words split on spaces, a word's surrounding quotes taken off

@@ -73,7 +73,7 @@ and `answered(K)`. A `-- reads: PATH` line names a file the answer depends on,
 so the answer is kept until that file changes.
 
 <!-- BEGIN file examples/intents/exec.rofl -->
-```
+```rofl
 -- SCENARIO 3 (docs/intents.md 7): a local program. The scanner of today, unchanged, beside an exec adapter that
 -- answers the same kind of question as wants: what main.js imports, a file a round, as the scan world asks.
 imports(main, deps).

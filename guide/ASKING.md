@@ -27,7 +27,7 @@ The command line reads a world: a file of facts and rules. This one names the
 code to scan and defines the question:
 
 <!-- BEGIN file guide/examples/first/shop.rofl -->
-```
+```rofl
 -- The shop, for the command line. The scanner reads checkout.js and every file it imports.
 scanner(js, "rofl scan .").
 scan_request(js, "checkout.js").
