@@ -1,0 +1,7 @@
+-- The shop, for the command line. The scanner reads checkout.js and every file it imports.
+scanner(js, "rofl scan .").
+scan_request(js, "checkout.js").
+scan_request(js, F) :- depends[code](_, F).
+
+-- an exported function that may throw at its caller
+risky(N) :- fn_name[code](F, N), exported_fn[code](F), may_throw[code](F).

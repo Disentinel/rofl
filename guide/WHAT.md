@@ -220,7 +220,7 @@ The same model answers in four places, over the same files:
 
 | | |
 |---|---|
-| `rofl ask`, `rofl why`, `rofl whynot`, `rofl excise` | one question from the command line, for a person or an agent; `--json` for a program. The world is kept, so the second question over the same files is answered in about a second ([docs/cli.md](../docs/cli.md)) |
+| `rofl ask`, `rofl why`, `rofl whynot`, `rofl excise` | one question from the command line, for a person or an agent; `--json` for a program. The world is kept, so the second question over the same files is answered in about a second ([ASKING.md](ASKING.md)) |
 | `rofl-nb file.rofl.md` | a notebook of questions and invariants, run in CI; exit 1 when an invariant fails, 3 when it holds only as far as the model sees ([QUICKSTART.md](QUICKSTART.md)) |
 | VS Code | the same notebook, cell by cell, with pictures ([INSTALL.md](INSTALL.md)) |
 | [disentinel.github.io/rofl](https://disentinel.github.io/rofl/) | a notebook in the browser, nothing to install |

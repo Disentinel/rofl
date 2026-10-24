@@ -174,3 +174,4 @@ effects: the join over a body
 
 Next: [CONCEPTS.md](CONCEPTS.md), or [CHEATSHEET.md](CHEATSHEET.md) for one
 screen of everything. [DRAWING.md](DRAWING.md) draws what a notebook concludes.
+[ASKING.md](ASKING.md) asks the same questions from a shell, with `rofl`.
