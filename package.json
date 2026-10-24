@@ -1,7 +1,7 @@
 {
   "name": "@grafema/rofl",
   "private": true,
-  "version": "1.5.0",
+  "version": "1.5.1",
   "description": "ROFL \u2014 Relation-Oriented Fixpoint Language: a Datalog-family engine with perspectives, explicit time, kernel-emitted provenance and budgets-as-semantics",
   "license": "MIT",
   "type": "module",
@@ -11,11 +11,11 @@
   "exports": {
     ".": {
       "types": "./dist/src/api.d.ts",
-      "default": "./dist/src/api.js"
+      "default": "./src/api.js"
     },
     "./port": {
       "types": "./dist/runtime/port.d.ts",
-      "default": "./dist/runtime/port.js"
+      "default": "./runtime/port.js"
     },
     "./boot.rofl": "./boot.rofl",
     "./package.json": "./package.json",
@@ -26,8 +26,6 @@
   "types": "./dist/src/api.d.ts",
   "files": [
     "dist/",
-    "src/",
-    "runtime/port.ts",
     "rules/inquiry/",
     "rules/policies/",
     "rules/decisions/",
@@ -61,6 +59,7 @@
     "features": "node --experimental-strip-types scanners/features.ts",
     "dist": "node --experimental-strip-types scripts/dist.ts",
     "guide": "node --experimental-strip-types scripts/guide.ts",
+    "guide:site": "node --experimental-strip-types scripts/guide_site.ts",
     "nb": "node --max-semi-space-size=256 --max-old-space-size=8192 --experimental-strip-types notebook/cli.ts",
     "lint": "node --experimental-strip-types scripts/lint.ts",
     "untyped": "node --experimental-strip-types scripts/untyped.ts",
@@ -139,5 +138,5 @@
     "@types/node": "^22.20.1",
     "typescript": "^5.9.3"
   },
-  "main": "./dist/src/api.js"
+  "main": "./src/api.js"
 }

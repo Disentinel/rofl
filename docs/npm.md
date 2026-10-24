@@ -5,8 +5,9 @@ someone else's package): `npm install -g @grafema/rofl`, and
 `npm install -g @grafema/rofl@latest` (or `npm update -g`) for each new release.
 `scripts/dist.ts` packs it, `npm run test:npm` (`scripts/npm_check.ts`) installs
 the tarballs and runs them as a user would before anything is published, and the
-release job of `.github/workflows/ci.yml` publishes them from a
-`rofl-nb-<version>` tag to the dist-tag `latest`.
+release job of `.github/workflows/ci.yml` stages them from a
+`rofl-nb-<version>` tag on the dist-tag `latest`, for the owner to approve
+(*Each release: what the owner clicks*).
 
 ## What is in them
 
@@ -48,12 +49,80 @@ with `npm install --offline`: the package names the other four engines as
 optional dependencies, and without the flag npm asks the registry for each,
 retrying for minutes where nothing answers (over 250 s measured).
 
+## The release, rehearsed on main
+
+The release job's publishing is `scripts/release_publish.sh`, and the
+`release-dry` job runs the same script on every push to main with
+`--dry-run`, over that run's artifacts, in the release's environment
+(`marketplace-publish`) with an id token: npm 12 (it has `npm stage`), npm's
+sign-in by trusted publishing for each of the six packages
+(`scripts/npm_oidc.ts`: what the registry answers each token exchange), the
+files laid out as for the GitHub release, the tag's version checked against
+package.json and every tarball, the release notes found, and each package to
+`npm stage publish --dry-run` unless its version is on the registry already
+(npm refuses a dry run over a published version), so the packages go through
+it whole on the push that bumps the version, the one before the tag. No pull
+request runs the sign-in: a job in that environment gets an id token the
+trusted publisher accepts, so only main and a release tag may run one
+(*Publishing: what the owner sets up once*, step 6). Not rehearsed: the staging itself (the registry's verdict on the upload, the
+provenance), the GitHub release, the owner's approval and the VSIX publishing.
+
+## Each release: what the owner clicks
+
+The release job stages the six packages, each platform's first and
+`@grafema/rofl` last: `npm stage publish ./npm-dist/<file>.tgz --provenance
+--access public --tag latest`. A staged version is on the registry but nobody
+can install it. To publish them, signed in to npmjs.com with the second factor,
+approve the six staged versions in the same order, the five platforms first and
+`@grafema/rofl` last, so that no published `@grafema/rofl` names an engine that
+is not there yet (from a terminal: `npm stage list`, then
+`npm stage approve <stage-id>` for each, in that order). Approved, a version
+is `latest`; `npm stage reject <stage-id>` removes one.
+
+A re-run of the release job is safe: the GitHub release already there gets its
+assets uploaded again (`--clobber`), and a version already published is
+skipped. A version staged and not yet approved cannot be seen by the job
+(`npm stage list` needs a person's sign-in, not the trusted publisher's
+token), so a re-run stops at the first such package with npm's refusal:
+approve or reject what is staged, then run it again.
+
+## When npm says ENEEDAUTH
+
+npm signs in by trusted publishing inside `npm publish` and `npm stage publish`
+(npm's `lib/utils/oidc.js`), and it swallows every failure of that sign-in: the
+command goes on with no credentials and stops at
+`ENEEDAUTH ... requires you to be logged in`. The causes, each said by
+`scripts/npm_oidc.ts` before anything is published, and by npm's own
+`oidc` lines under `--loglevel verbose`:
+
+- **no id token**: the job lacks `permissions: id-token: write`
+  (`ACTIONS_ID_TOKEN_REQUEST_URL` absent), or the run is a fork's pull request;
+- **npm too old**: trusted publishing needs npm 11.5.1, `npm stage` npm 12
+  (npm 12 needs Node 22.22.2 or later);
+- **the registry refuses the exchange** (POST
+  `/-/npm/v1/oidc/token/exchange/package/<name>`, 4xx): no trusted publisher
+  for that package matches the token's claims. The registry says so as
+  `404 OIDC token exchange error - package not found`, of a package that is
+  there; it was the answer for all six on 2026-10-24, with the token saying
+  repository `Disentinel/rofl`, workflow `.github/workflows/ci.yml`,
+  environment `marketplace-publish`. npm's documentation says all its
+  fields are case-sensitive and must be exact: the organization or user
+  (`Disentinel`, as GitHub spells it in the token, not `disentinel`), the
+  repository (`rofl`), the workflow file (`ci.yml`), the environment
+  (`marketplace-publish`); the package's `repository.url` must name the same
+  repository; a trusted publisher not validated by a publish within two days of
+  its creation expires. Which commands it allows is set apart from the claims:
+  `npm publish` and `npm stage publish` independently (npm 12's
+  `npm trust --allow-publish`, `--allow-stage-publish`); npmjs.com's form
+  allows `npm stage publish` always;
+- **a self-hosted runner**: not supported by npm's trusted publishing.
+
 ## Publishing: what the owner sets up once
 
-The release job publishes by npm's trusted publishing: GitHub's OIDC token,
-no npm token stored anywhere, provenance attached. It needs npm 11.5.1 or
-later and Node 22.14 or later (the job installs npm 11), and it cannot be set up
-for a package that was never published. So, once:
+The release job stages by npm's trusted publishing: GitHub's OIDC token,
+no npm token stored anywhere, provenance attached. It needs npm 12 (the job
+installs npm 12.2.1) and Node 22.22.2 or later, and it cannot be set up for a
+package that was never published. So, once:
 
 1. Make a release as usual (`rofl-nb-<version>` tag). With the repository
    variable `NPM_PUBLISH` unset, the job publishes nothing to npm.
@@ -71,12 +140,21 @@ for a package that was never published. So, once:
 
 3. On npmjs.com, for each of the six packages: Settings, Trusted Publisher,
    GitHub Actions, with organization or user `Disentinel`, repository `rofl`,
-   workflow filename `ci.yml`, environment `marketplace-publish`. A new
-   trusted publisher that no publish uses within two days expires, so do this
-   step when the next release is due within two days.
+   workflow filename `ci.yml`, environment `marketplace-publish`, each
+   spelled exactly so. Leave "Allow npm publish" unchecked: staging is always
+   allowed, so even a token that matches can only stage, and nothing is
+   released without the owner's approval. A new trusted publisher that no
+   publish uses within two days expires, so do this step when the next release
+   is due within two days.
 4. Optionally, in each package's Settings, require two-factor authentication
    and disallow tokens, so that only the workflow publishes.
 5. In GitHub, Settings, Secrets and variables, Actions, Variables: set
-   `NPM_PUBLISH` to `true`. From the next tag on, the release job publishes
-   the six itself to `latest`, skipping any version already on the registry,
-   so re-running a tag is safe.
+   `NPM_PUBLISH` to `true`. From the next tag on, the release job stages
+   the six itself on `latest`, skipping any version already on the registry,
+   and the owner approves them (*Each release: what the owner clicks*).
+6. In GitHub, Settings, Environments, `marketplace-publish`, Deployment
+   branches and tags: selected branches and tags, the branch `main` and the
+   tag pattern `rofl-nb-*`, nothing else. Without it any branch pushed to the
+   repository can run a job in that environment and get an id token the
+   trusted publisher accepts. With it, a pull request's job that names the
+   environment is refused before it starts: that is intended.
