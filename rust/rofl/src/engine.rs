@@ -32,7 +32,7 @@ mod cost;
 mod par;
 mod latkept;
 mod want;
-mod keys;
+pub(crate) mod keys;
 pub use latkept::Tok;
 pub use cost::{Hot, PremCost};
 use resume::{Cut, CutAt, InFlight, Tail};
@@ -682,6 +682,10 @@ pub struct Eval {
     pub level_wall: Option<i64>,
     level_rest: Option<(Vec<(i64, Vec<Rc<ERule>>)>, usize)>,
     needs: FxMap<(Sym, Sym), keys::Need>,
+    held: Vec<keys::Held>,
+    wake: FxMap<(Sym, usize, Term), Vec<u32>>,
+    wake_at: FxMap<Sym, Vec<usize>>,
+    woke_from: FactId,
     /// facts admitted from other workers, and what was copied from them alone
     pub(crate) foreign: FxSet<FactId>,
     round_resume: Option<(Front, usize, usize, Front, Option<InFlight>)>,
@@ -1565,6 +1569,10 @@ impl Eval {
             level_wall: None,
             level_rest: None,
             needs: FxMap::default(),
+            held: Vec::new(),
+            wake: FxMap::default(),
+            wake_at: FxMap::default(),
+            woke_from: 0,
             foreign: FxSet::default(),
             round_resume: None,
             lat_unknown: HashMap::new(),

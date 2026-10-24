@@ -761,34 +761,30 @@ impl Session {
 
     /// The facts of `src` into a world stopped at a level wall, and fired on by every rule active so far.
     /// The facts of `src` this world can join now are admitted; the indices of the rest, in order, are given back.
-    pub fn admit_joinable(&mut self, src: &str) -> Result<(usize, Vec<usize>), String> {
+    /// The facts of `src` this world can join now are admitted, and what they and the held facts wake, until nothing
+    /// more is; the rest stay held. How many were admitted, and how many are held.
+    pub fn admit_joinable(&mut self, src: &str) -> Result<(usize, usize), String> {
         let cs = rofl_parse::parse(&mut self.eval.h, src)?;
         let lines: Vec<&str> = src.lines().filter(|l| !l.trim().is_empty()).collect();
         if lines.len() != cs.len() {
             return Err("admit by keys takes one fact a line".into());
         }
-        let (mut take, mut held) = (String::new(), Vec::new());
-        if let Some(f) = std::env::var_os("ROFL_XNEED") {
-            if !std::path::Path::new(&f).exists() {
-                let mut t = String::new();
-                let mut done = std::collections::HashSet::new();
-                for c in &cs {
-                    let (rel, persp, _) = self.lit_terms(&c.head)?;
-                    if done.insert((rel, persp)) { t.push_str(&self.eval.need_text(rel, persp, 0)); }
-                }
-                let _ = std::fs::write(&f, t);
-            }
-        }
-        for (i, c) in cs.iter().enumerate() {
+        let mut cands = Vec::with_capacity(cs.len());
+        for (c, line) in cs.iter().zip(lines) {
             let (rel, persp, args) = self.lit_terms(&c.head)?;
-            if self.eval.joinable(rel, persp, &|k| args.get(k).copied(), 0) {
-                take.push_str(lines[i]);
-                take.push('\n');
-            } else {
-                held.push(i);
-            }
+            cands.push(crate::engine::keys::Held { rel, persp, args, line: line.to_string(), taken: false });
         }
-        Ok((self.admit(&take)?, held))
+        cands.extend(self.eval.woken());
+        let mut n = 0;
+        while !cands.is_empty() {
+            let take = self.eval.take_joinable(cands);
+            if take.is_empty() {
+                break;
+            }
+            n += self.admit(&take)?;
+            cands = self.eval.woken();
+        }
+        Ok((n, self.eval.held_count()))
     }
 
     pub fn admit(&mut self, src: &str) -> Result<usize, String> {

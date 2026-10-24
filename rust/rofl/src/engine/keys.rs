@@ -91,7 +91,7 @@ impl Eval {
     }
 
     /// Whether some rule could fire now on a fact of `rel` whose known arguments are `arg(k)`.
-    pub(crate) fn joinable(&mut self, rel: Sym, persp: Sym, arg: &dyn Fn(usize) -> Option<Term>, depth: usize) -> bool {
+    pub(crate) fn joinable(&mut self, rel: Sym, persp: Sym, arg: &dyn Fn(usize) -> Option<Term>, depth: usize, wake: &mut Vec<(Sym, usize, Term)>) -> bool {
         let Need::Alts(alts) = self.need(rel, persp) else { return true };
         if depth > 8 {
             return true;
@@ -100,6 +100,7 @@ impl Eval {
             let ok = match a {
                 Alt::Join(checks) => {
                     let (mut all, mut mine, mut partners) = (true, false, false);
+                    let mut keys = Vec::new();
                     for c in checks {
                         match *c {
                             Check::Const(k, t) => all &= arg(k).is_none_or(|v| v == t),
@@ -113,7 +114,14 @@ impl Eval {
                                 }
                                 partners = true;
                                 let (any, own) = if ps.is_empty() { (true, true) } else { self.holds_at(rel, persp, arity, &ps, &vs) };
-                                all &= any;
+                                if !ps.is_empty() {
+                                    keys.push((rel, ps[0], vs[0]));
+                                }
+                                if !any {
+                                    all = false;
+                                    wake.extend(keys.pop());
+                                    keys.clear();
+                                }
                                 mine |= own;
                             }
                         }
@@ -121,11 +129,15 @@ impl Eval {
                             break;
                         }
                     }
-                    all && (mine || !partners || self.foreign.is_empty())
+                    let ok = all && (mine || !partners || self.foreign.is_empty());
+                    if all && !ok {
+                        wake.extend(keys);
+                    }
+                    ok
                 }
                 Alt::Copy { map, rel: hr, persp: hp } => {
                     let inner = |j: usize| map.get(j).copied().flatten().and_then(arg);
-                    self.joinable(*hr, hp.unwrap_or(persp), &inner, depth + 1)
+                    self.joinable(*hr, hp.unwrap_or(persp), &inner, depth + 1, wake)
                 }
             };
             if ok {
@@ -179,5 +191,74 @@ impl Eval {
             }
         }
         out
+    }
+}
+
+/// A fact held until something it could join with arrives: the keys it waits on are in `Eval::wake`.
+#[derive(Clone)]
+pub(crate) struct Held {
+    pub rel: Sym,
+    pub persp: Sym,
+    pub args: Vec<Term>,
+    pub line: String,
+    pub taken: bool,
+}
+
+impl Eval {
+    /// The facts of `cands` some rule could fire on now, as lines; the rest are held, each under the keys it waits on.
+    pub(crate) fn take_joinable(&mut self, cands: Vec<Held>) -> String {
+        let mut take = String::new();
+        for c in cands {
+            let mut wake = Vec::new();
+            if self.joinable(c.rel, c.persp, &|k| c.args.get(k).copied(), 0, &mut wake) {
+                take.push_str(&c.line);
+                take.push('\n');
+            } else if !wake.is_empty() {
+                let i = self.held.len() as u32;
+                for (rel, at, v) in wake {
+                    let ps = self.wake_at.entry(rel).or_default();
+                    if !ps.contains(&at) {
+                        ps.push(at);
+                    }
+                    self.wake.entry((rel, at, v)).or_default().push(i);
+                }
+                self.held.push(c);
+            }
+        }
+        take
+    }
+
+    /// The held facts something since `self.woke_from` could wake.
+    pub(crate) fn woken(&mut self) -> Vec<Held> {
+        let (from, to) = (self.woke_from, self.store.len_ids());
+        self.woke_from = to;
+        let mut out = Vec::new();
+        if self.wake.is_empty() {
+            return out;
+        }
+        for id in from..to {
+            if !self.store.alive(id) {
+                continue;
+            }
+            let rel = self.store.rec(id).rel;
+            let Some(ps) = self.wake_at.get(&rel) else { continue };
+            for &at in ps.clone().iter() {
+                let Some(&v) = self.store.args(id).get(at) else { continue };
+                for i in self.wake.remove(&(rel, at, v)).unwrap_or_default() {
+                    let h = &mut self.held[i as usize];
+                    if !h.taken {
+                        h.taken = true;
+                        out.push(Held { rel: h.rel, persp: h.persp, args: std::mem::take(&mut h.args), line: std::mem::take(&mut h.line), taken: false });
+                    }
+                }
+            }
+        }
+        out
+    }
+}
+
+impl Eval {
+    pub fn held_count(&self) -> usize {
+        self.held.iter().filter(|h| !h.taken).count()
     }
 }
