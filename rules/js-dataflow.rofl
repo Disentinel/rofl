@@ -669,6 +669,8 @@ may_be_node[flow](U, N) :- sx_arg_node[surface](F, I, N), param_of[flow](F, I, N
 -- function's own parameter, THIS call's argument (`sx_ret_param`, rules/js-surface.rofl).
 returns[flow](F, E) :- ast_node[code](R, return_statement, _), nearest_v[flow](F, R),
                        ast_child[code](R, argument, 0, E).
+returns[flow](F, E) :- ast_node[code](F, arrow_function_expression, _), ast_child[code](F, body, 0, E),
+                       not ast_node[code](E, block_statement, _).
 
 may_be_lit[flow](C, V)  :- resolves[code](C, F), sx_ret_lit[surface](F, V).
 may_be_node[flow](C, N) :- resolves[code](C, F), sx_ret_node[surface](F, N).
