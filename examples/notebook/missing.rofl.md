@@ -11,9 +11,10 @@ code:
 
 > `plain.sett(k)` on `const plain = { set() {} }` throws a TypeError. The model
 > says so where it sees the receiver whole: a name bound once to an object
-> literal, an array, a class instance or a Map, and nothing writes onto it out
-> of sight. Out of sight is a computed key it cannot read (`bag["g" + "o"]`),
+> literal, an array, a class instance or a Map, or an ES global by its statics
+> (`Math.maxx`), and nothing writes onto it out of sight. Out of sight is a computed key it cannot read (`bag["g" + "o"]`),
 > a call it does not follow (`Object.defineProperty(reg, ...)`, `[listed]`),
+> a global the host extends (`Error.captureStackTrace` is V8's),
 > a class whose prototype is read (`Old.prototype.legacy = ...`), a parameter,
 > a value from a package. There the answer is "unknown", never "missing".
 > Each call runs inside `probe`; `npm run test:nb` runs the file under V8 and
@@ -36,4 +37,5 @@ never missing("path.nosuch")
 never missing("param.ping")
 never missing("bag.go")
 never missing("old.legacy")
+never missing("Error.captureStackTrace")
 ```

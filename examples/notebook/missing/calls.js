@@ -82,3 +82,14 @@ ping(plain);
 
 const path = require("path");
 probe("path.nosuch", () => path.nosuch());
+
+// an ES global is seen whole by its statics
+probe("Math.max", () => Math.max(1, 2));
+probe("Math.maxx", () => Math.maxx(1, 2));
+probe("JSON.parse", () => JSON.parse("1"));
+probe("Object.keyz", () => Object.keyz({}));
+probe("Array.of", () => Array.of(1));
+probe("Array.call", () => Array.call(null));
+Number.clamp = (x) => x;
+probe("Number.clamp", () => Number.clamp(1));
+probe("Error.captureStackTrace", () => Error.captureStackTrace({}));

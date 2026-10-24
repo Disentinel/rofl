@@ -30,6 +30,7 @@ Reads:
 - from js-dataflow: [assign_binder](js-dataflow.rofl.md#assign_binder), [assigned](js-dataflow.rofl.md#assigned), [binder](js-dataflow.rofl.md#binder), [key_name](js-dataflow.rofl.md#key_name), [sees_binder](js-dataflow.rofl.md#sees_binder), [sees_decl](js-dataflow.rofl.md#sees_decl)
 - from js-dataflow, in the flow: [arg_at](js-dataflow.rofl.md#arg_at), [assign_reaches_unscoped](js-dataflow.rofl.md#assign_reaches_unscoped), [class_like](js-dataflow.rofl.md#class_like), [class_method_of](js-dataflow.rofl.md#class_method_of), [ctor_of](js-dataflow.rofl.md#ctor_of), [inst_of](js-dataflow.rofl.md#inst_of), [kind_proto](js-dataflow.rofl.md#kind_proto), [member_at](js-dataflow.rofl.md#member_at), [member_node_v](js-dataflow.rofl.md#member_node_v), [member_obj](js-dataflow.rofl.md#member_obj), [member_value](js-dataflow.rofl.md#member_value), [nearest_v](js-dataflow.rofl.md#nearest_v), [prototype_of](js-dataflow.rofl.md#prototype_of), [returns](js-dataflow.rofl.md#returns), [selects](js-dataflow.rofl.md#selects), [super_of](js-dataflow.rofl.md#super_of), [this_host](js-dataflow.rofl.md#this_host)
 - from js-dataflow, in the main: [builtin_prototype](js-dataflow.rofl.md#builtin_prototype), [class_field_kind](js-dataflow.rofl.md#class_field_kind), [lib_member](js-dataflow.rofl.md#lib_member), [value_transparent](js-dataflow.rofl.md#value_transparent)
+- from js-globals: [es_global](js-globals.rofl.md#es_global), [es_static](js-globals.rofl.md#es_static)
 - from js-globals, in the flow: [es_instance](js-globals.rofl.md#es_instance)
 - from js-host: [host_site](js-host.rofl.md#host_site)
 - from js-model, in the audit: [verdict](js-model.rofl.md#verdict)
@@ -1138,11 +1139,68 @@ In the flow:
 
 <a id="call_open"></a>`call_open`(C) either:
 
-1. if [`member_call`](#member_call)(C, R, something), unless [`whole_expr`](#whole_expr)(R);
-2. if [`member_call`](#member_call)(C, R, something), unless a node R [points to](js-concat.rofl.md#may_be_node) some node;
+1. if all of:
+   - [`member_call`](#member_call)(C, R, something);
+   - unless [`whole_expr`](#whole_expr)(R);
+   - unless [`whole_global`](#whole_global)(R);
+2. if all of:
+   - [`member_call`](#member_call)(C, R, something);
+   - [`whole_expr`](#whole_expr)(R);
+   - unless a node R [points to](js-concat.rofl.md#may_be_node) some node;
 3. if [`member_call`](#member_call)(C, R, something) and a node R [may be the literal](js-concat.rofl.md#may_be_lit) some text;
 4. if [`call_on`](#call_on)(C, O, something), unless [`receivable`](#receivable)(O);
 5. if [`call_on`](#call_on)(C, O, something) and [`sx_open`](#sx_open)(O).
+
+> An ES global (`Math`, `JSON`, `Object`) has no node: its members are its statics, what
+> every function or object inherits, and what the corpus writes onto it by name. It is
+> open where it is rebound, written under a key the model cannot read, or handed on, and
+> where the host adds statics TypeScript does not declare (`host_extends_global`).
+
+`host_extends_global` includes "Error".
+
+<a id="whole_global"></a>`whole_global`(R) if all of:
+  - a node R [is the global](js-globals.rofl.md#es_global) Name of some release with a form Form;
+  - Form differs from `plain_value`;
+  - unless [`host_extends_global`](#host_extends_global)(Name);
+  - unless R [may hold by name alone](js-dataflow.rofl.md#assign_reaches_unscoped) what node some Src;
+  - unless [`sx_global_open`](#sx_global_open)(Name).
+
+In the surface:
+
+<a id="sx_global_key"></a>`sx_global_key`(Name, Key) if all of:
+  - [`member_written`](#member_written)(N);
+  - the `object` of a node N [is the global](js-globals.rofl.md#es_global) Name of some release with some form;
+  - N [selects](js-dataflow.rofl.md#selects) Key.
+
+<a id="sx_global_open"></a>`sx_global_open`(Name) either:
+
+1. if all of:
+   - [`member_written`](#member_written)(N);
+   - the `object` of a node N [is the global](js-globals.rofl.md#es_global) Name of some release with some form;
+   - unless N [selects](js-dataflow.rofl.md#selects) some key;
+2. if all of:
+   - a node G [is the global](js-globals.rofl.md#es_global) Name of some release with some form;
+   - G [is among the](#ast_child) F of a node P;
+   - P [is of kind](js-model.rofl.md#ast_node) PK;
+   - unless [`holds_in_place`](#holds_in_place)(PK, F).
+
+In the flow:
+
+`call_finds`(C) either:
+
+1. if the `callee` of a node C [selects the static](js-globals.rofl.md#es_static) some key of some name from some release;
+2. if all of:
+   - [`member_call`](#member_call)(C, R, Key);
+   - a node R [is the global](js-globals.rofl.md#es_global) Name of some release with some form;
+   - [`sx_global_key`](#sx_global_key)(Name, Key);
+3. if all of:
+   - [`member_call`](#member_call)(C, R, Key);
+   - a node R [is the global](js-globals.rofl.md#es_global) some name of some release with `constructor_binding`;
+   - `function` [has the member](js-dataflow.rofl.md#lib_member) Key since some release;
+4. if all of:
+   - [`member_call`](#member_call)(C, R, Key);
+   - a node R [is the global](js-globals.rofl.md#es_global) some name of some release with some form;
+   - `object` [has the member](js-dataflow.rofl.md#lib_member) Key since some release.
 
 In the audit:
 
@@ -1155,6 +1213,10 @@ In the audit:
   - [`member_call`](#member_call)(C, something, something);
   - [`call_open`](#call_open)(C);
   - unless [`call_finds`](#call_finds)(C).
+
+Declared as facts:
+
+- <a id="host_extends_global"></a>`host_extends_global` — rows in this file
 
 > The call graph reads the value layer; declared by the reader.
 

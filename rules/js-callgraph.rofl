@@ -655,11 +655,33 @@ call_finds[flow](C) :- call_on[flow](C, O, Key), receivable[flow](O), lib_member
 call_finds[flow](C) :- call_on[flow](C, O, Key), kind_proto[flow](O, P), lib_member(P, Key, _).
 call_finds[flow](C) :- call_on[flow](C, O, Key), es_instance[flow](O, Name, _), lib_global_prototype(Name, P),
                        lib_member(P, Key, _).
-call_open[flow](C)    :- member_call[flow](C, R, _), not whole_expr[flow](R).
-call_open[flow](C)    :- member_call[flow](C, R, _), not may_be_node[flow](R, _).
+call_open[flow](C)    :- member_call[flow](C, R, _), not whole_expr[flow](R), not whole_global[flow](R).
+call_open[flow](C)    :- member_call[flow](C, R, _), whole_expr[flow](R), not may_be_node[flow](R, _).
 call_open[flow](C)    :- member_call[flow](C, R, _), may_be_lit[flow](R, _).
 call_open[flow](C)    :- call_on[flow](C, O, _), not receivable[flow](O).
 call_open[flow](C)    :- call_on[flow](C, O, _), sx_open[surface](O).
+
+-- An ES global (`Math`, `JSON`, `Object`) has no node: its members are its statics, what
+-- every function or object inherits, and what the corpus writes onto it by name. It is
+-- open where it is rebound, written under a key the model cannot read, or handed on, and
+-- where the host adds statics TypeScript does not declare (`host_extends_global`).
+edb(host_extends_global).
+host_extends_global("Error").
+
+whole_global[flow](R) :- es_global[code](R, Name, _, Form), Form != plain_value,
+                         not host_extends_global(Name), not assign_reaches_unscoped[flow](R, _),
+                         not sx_global_open[surface](Name).
+sx_global_key[surface](Name, Key) :- member_written[flow](N), ast_child[code](N, object, 0, G),
+                                     es_global[code](G, Name, _, _), selects[flow](N, Key).
+sx_global_open[surface](Name) :- member_written[flow](N), ast_child[code](N, object, 0, G),
+                                 es_global[code](G, Name, _, _), not selects[flow](N, _).
+sx_global_open[surface](Name) :- es_global[code](G, Name, _, _), ast_child[code](P, F, _, G),
+                                 ast_node[code](P, PK, _), not holds_in_place(PK, F).
+call_finds[flow](C) :- ast_child[code](C, callee, 0, N), es_static[code](N, _, _, _).
+call_finds[flow](C) :- member_call[flow](C, R, Key), es_global[code](R, Name, _, _), sx_global_key[surface](Name, Key).
+call_finds[flow](C) :- member_call[flow](C, R, Key), es_global[code](R, _, _, constructor_binding),
+                       lib_member(function, Key, _).
+call_finds[flow](C) :- member_call[flow](C, R, Key), es_global[code](R, _, _, _), lib_member(object, Key, _).
 
 missing_member_call[audit](C, R, Key) :- member_call[flow](C, R, Key), not call_finds[flow](C), not call_open[flow](C).
 member_unknown[audit](C) :- member_call[flow](C, _, _), not call_finds[flow](C), call_open[flow](C).
