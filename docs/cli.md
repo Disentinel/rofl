@@ -15,8 +15,9 @@ rofl serve                                               # one JSON request a li
 rofl render --out DIR            world.rofl ...          # the sentence form
 rofl render --out DIR            world.rofl.md           # back into rules: DIR/world.rofl, DIR/world.phrases.rofl, the report on stdout
 rofl nb [--cell N] [--all]       notebook.rofl.md        # run a notebook, printed as `npm run nb` prints it
-rofl adapter mcp COMMAND... | URL                        # the adapter book of an MCP server, over stdio or HTTP (docs/intents.md, phase 5)
-rofl adapter openapi SPEC                                # the adapter book of an OpenAPI document, a JSON file or URL (docs/intents.md, scenario 6)
+rofl adapter mcp COMMAND... | URL [KEY...]               # the adapter book of an MCP server, over stdio or HTTP (docs/intents.md, phase 5)
+rofl adapter openapi SPEC [KEY...]                       # the adapter book of an OpenAPI document, JSON or YAML, a file or URL (scenario 6)
+                                                         # a KEY is HOW[:NAME]=ENV: bearer, basic, header:NAME, query:NAME, client_credentials:TOKEN_URL
 ```
 
 A question verb is `rofl load` with that one question, so every flag of

@@ -4074,7 +4074,7 @@ work_needs(w_intent_scenarios, w_intent_sql_adapter).
 work_needs(w_intent_scenarios, w_intent_scanner_as_adapter).
 
 work(w_intent_render,
-  "docs/intents.md 7, scenario 4: the render kind and shows capabilities: a screen as show/fill/click rows over a kit whose components are capabilities with slots, a click a fact from the UI adapter; needs a host that draws (the workbench or VS Code). ACCEPTANCE: a world in examples/intents whose screen is checked by npm test and whose click comes back as a fact.").
+  "docs/intents.md 7, scenario 4: the render kind and shows capabilities: a screen as show/fill/click rows over a kit whose components are capabilities with slots, a click a fact from the UI adapter; needs a host that draws: the owner chose the web workbench (2026-10-24). ACCEPTANCE: a world in examples/intents whose screen is checked by npm test and whose click comes back as a fact.").
 work_state(w_intent_render, open).
 work_needs(w_intent_render, w_intent_scenarios).
 
@@ -4088,6 +4088,11 @@ work(w_intent_http_credentials,
   "DONE 2026-10-23 (docs/intents.md, Credentials): http_auth(Adapter, Scheme, How, Name, Env) and http_needs(Cap, Scheme) generated from securitySchemes and security; the key read from the environment when the want is sent, want_held naming the variable when missing, masked in errors; mcp over HTTP carries http_auth rows; YAML documents read (serde_yaml). tests/openapi.rs; planted http_key_ignored red. WAS: From w_intent_openapi: an HTTP adapter (openapi, mcp over HTTP) sends no credentials yet. The document's securitySchemes say what a call needs (a bearer token, an API key in a header or query); the secret comes from the environment of the adapter, never from the book or a want, and a want of an adapter whose secret is missing is want_held (declared, not connected). Also YAML documents. ACCEPTANCE: a local service that refuses without the key answers a want when the environment gives it, and want_held names the missing variable when it does not.").
 work_state(w_intent_http_credentials, done).
 work_needs(w_intent_http_credentials, w_intent_openapi).
+
+work(w_intent_oauth,
+  "DONE 2026-10-24 (the owner: «Авторизацию докручивай»; docs/intents.md, OAuth2 and keys on the command line): client_credentials in http_auth (token fetched, kept until a minute before expiry, fetched again once on a 401), generated from an oauth2 clientCredentials flow; an MCP server's 401 read through RFC 9728 resource metadata and RFC 8414 server metadata to its token endpoint, the error naming the line to write; rofl adapter mcp URL KEY... and openapi SPEC KEY... with keys HOW[:NAME]=ENV. tests/openapi.rs; planted token_kept_refused red. Open: authorization code flow with PKCE and a browser.").
+work_state(w_intent_oauth, done).
+work_needs(w_intent_oauth, w_intent_http_credentials).
 
 work(w_intent_mailbox,
   "DONE 2026-10-23 (docs/intents.md, The post as built): rust/rofl/src/adapter.rs Post and Session::collect; rofl serve gives every session a post, loads what came back before each request, {\"op\":\"inbox\",\"waitMs\":n}, {\"op\":\"evaluate\",\"wait\":false}; an evaluate without it still waits, as hosts expect. tests/post.rs; planted post_resends_flying red. Also: SQLite behind the cargo feature sql (default on). WAS: docs/intents.md D3, as built it is not: since phase 2 an evaluation round sends a batch and WAITS for its answer before it goes on. Fine for a database or a local program, wrong for another instance that answers in an hour. The post: rofl serve sends a batch and evaluates on; answers land in an inbox and are loaded by delta at the next request or tick, whenever they come; a want in flight is neither resent nor settled (pending(W) holds). One-shot verbs keep waiting until quiet, which is their question. Found 2026-10-23 when the owner asked whether a synchronous engine copes with answers that come at any time. ACCEPTANCE: in rofl serve a slow adapter (seconds) does not delay an ask on the same world; its answer arrives by delta later; a want in flight is sent once; one-shot verbs give the same goldens.").

@@ -73,9 +73,9 @@ fn block_of(book: &str, line: &str) -> String {
 #[test]
 fn a_regenerated_book_differs_by_exactly_the_changed_tool() {
     let d = dir("book");
-    let (a, b) = (rofl::mcp::book(&server(&d, "a")).unwrap(), rofl::mcp::book(&server(&d, "a")).unwrap());
+    let (a, b) = (rofl::mcp::book(&server(&d, "a"), &[]).unwrap(), rofl::mcp::book(&server(&d, "a"), &[]).unwrap());
     assert_eq!(a, b, "the same server, the same book");
-    let b = rofl::mcp::book(&server(&d, "b")).unwrap();
+    let b = rofl::mcp::book(&server(&d, "b"), &[]).unwrap();
     assert!(a.contains("capability(test_tracker_get_user, test_tracker, does).\nmcp_tool(test_tracker_get_user, \"get-user\")."), "{a}");
     assert!(a.contains("capability(test_tracker_close_issue, test_tracker, does)."), "readOnlyHint is the server's word: {a}");
     assert!(a.contains("answers(test_tracker_get_user, get_user, 3).\nmcp_field(test_tracker_get_user, 2, \"admin\").\nmcp_field(test_tracker_get_user, 3, \"name\")."), "{a}");
@@ -90,7 +90,7 @@ fn a_regenerated_book_differs_by_exactly_the_changed_tool() {
 #[test]
 fn a_reads_tool_is_called_once_per_want_and_answered_by_its_output_schema() {
     let d = dir("reads");
-    let book = rofl::mcp::book(&server(&d, "a")).unwrap()
+    let book = rofl::mcp::book(&server(&d, "a"), &[]).unwrap()
         .replace("capability(test_tracker_get_user, test_tracker, does).", "capability(test_tracker_get_user, test_tracker, reads).")
         .replace("capability(test_tracker_search, test_tracker, does).", "capability(test_tracker_search, test_tracker, reads).")
         .replace("capability(test_tracker_stats, test_tracker, does).", "capability(test_tracker_stats, test_tracker, reads).");
@@ -122,7 +122,7 @@ want test_tracker_stats(\"{{\\\"label\\\": \\\"bug\\\"}}\", \"open\") :- user(1)
 #[test]
 fn a_does_tool_is_not_sent_by_evaluation() {
     let d = dir("does");
-    let book = rofl::mcp::book(&server(&d, "a")).unwrap();
+    let book = rofl::mcp::book(&server(&d, "a"), &[]).unwrap();
     std::fs::write(d.join("log"), "").unwrap();
     let mut s = evaluated(&format!("{book}\nissue(\"K-1\").\nwant test_tracker_close_issue(K) :- issue(K).\n"));
     assert!(s.holds("want_key($want(test_tracker_close_issue, \"K-1\"))").unwrap());
@@ -132,6 +132,6 @@ fn a_does_tool_is_not_sent_by_evaluation() {
 
 #[test]
 fn a_server_that_is_not_there_is_said() {
-    let e = rofl::mcp::book("/nonexistent/server").unwrap_err();
+    let e = rofl::mcp::book("/nonexistent/server", &[]).unwrap_err();
     assert!(e.contains("/nonexistent/server"), "{e}");
 }
