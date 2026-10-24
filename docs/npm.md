@@ -61,9 +61,10 @@ files laid out as for the GitHub release, the tag's version checked against
 package.json and every tarball, the release notes found, and each package to
 `npm stage publish --dry-run` unless its version is on the registry already
 (npm refuses a dry run over a published version), so the packages go through
-it whole on the push that bumps the version, the one before the tag. A pull
-request of this repository runs the sign-in alone (the `npm-signin` job). Not
-rehearsed: the staging itself (the registry's verdict on the upload, the
+it whole on the push that bumps the version, the one before the tag. No pull
+request runs the sign-in: a job in that environment gets an id token the
+trusted publisher accepts, so only main and a release tag may run one
+(*Publishing: what the owner sets up once*, step 6). Not rehearsed: the staging itself (the registry's verdict on the upload, the
 provenance), the GitHub release, the owner's approval and the VSIX publishing.
 
 ## Each release: what the owner clicks
@@ -139,12 +140,21 @@ package that was never published. So, once:
 
 3. On npmjs.com, for each of the six packages: Settings, Trusted Publisher,
    GitHub Actions, with organization or user `Disentinel`, repository `rofl`,
-   workflow filename `ci.yml`, environment `marketplace-publish`. A new
-   trusted publisher that no publish uses within two days expires, so do this
-   step when the next release is due within two days.
+   workflow filename `ci.yml`, environment `marketplace-publish`, each
+   spelled exactly so. Leave "Allow npm publish" unchecked: staging is always
+   allowed, so even a token that matches can only stage, and nothing is
+   released without the owner's approval. A new trusted publisher that no
+   publish uses within two days expires, so do this step when the next release
+   is due within two days.
 4. Optionally, in each package's Settings, require two-factor authentication
    and disallow tokens, so that only the workflow publishes.
 5. In GitHub, Settings, Secrets and variables, Actions, Variables: set
    `NPM_PUBLISH` to `true`. From the next tag on, the release job stages
    the six itself on `latest`, skipping any version already on the registry,
    and the owner approves them (*Each release: what the owner clicks*).
+6. In GitHub, Settings, Environments, `marketplace-publish`, Deployment
+   branches and tags: selected branches and tags, the branch `main` and the
+   tag pattern `rofl-nb-*`, nothing else. Without it any branch pushed to the
+   repository can run a job in that environment and get an id token the
+   trusted publisher accepts. With it, a pull request's job that names the
+   environment is refused before it starts: that is intended.
