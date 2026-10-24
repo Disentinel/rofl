@@ -145,11 +145,15 @@ jobs:
 
   # THE RELEASE, REHEARSED ON MAIN. The release job runs only on a tag, so nothing else ran its publishing: the 1.5.0 tag
   # failed on `mkdir out npm` against the tree's own npm/ (#126). This runs scripts/release_publish.sh, the release job's
-  # own, over this run's artifacts with --dry-run: no GitHub release, `npm publish --dry-run`. It cannot see the sign-in.
+  # own, over this run's artifacts with --dry-run: no GitHub release, `npm stage publish --dry-run`; and, in the release's
+  # environment with an id token, npm's sign-in by trusted publishing for each package (scripts/npm_oidc.ts), which the
+  # 1.5.1 tag failed on (ENEEDAUTH).
   release-dry:
     needs: vsix
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    permissions: { contents: read, id-token: write }
+    environment: marketplace-publish
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -157,8 +161,22 @@ jobs:
           node-version: '22'
       - uses: actions/download-artifact@v4
         with: { path: artifacts }
-      - run: npm install -g npm@11
+      - run: npm install -g npm@12.2.1
       - run: bash scripts/release_publish.sh --dry-run "rofl-nb-$(node -p "require('./package.json').version")"
+
+  # npm's sign-in by trusted publishing, on a pull request of this repository too (a fork's gets no id token): what the
+  # registry answers each package's token exchange, before a tag finds out.
+  npm-signin:
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    permissions: { contents: read, id-token: write }
+    environment: marketplace-publish
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --experimental-strip-types scripts/npm_oidc.ts @grafema/rofl-linux-x64 @grafema/rofl-linux-arm64 @grafema/rofl-darwin-x64 @grafema/rofl-darwin-arm64 @grafema/rofl-win32-x64 @grafema/rofl
 
   # A TAG rofl-nb-<version> IS A RELEASE, made only when every gate is green on it:
   # the engine per platform, a VSIX per platform, their sha256, and
@@ -181,10 +199,10 @@ jobs:
           node-version: '22'
       - uses: actions/download-artifact@v4
         with: { path: artifacts }
-      # the GitHub release, then the npm packages to the registry, each platform's first and @grafema/rofl last, so no version of it names
-      # an engine that is not there; signed in by trusted publishing (OIDC, no token kept), with provenance. The npm packages only when the
-      # repository variable NPM_PUBLISH is true (docs/npm.md: what the owner sets up on npmjs.com first). release-dry runs the same script on main.
-      - run: npm install -g npm@11
+      # the GitHub release, then the npm packages staged on the registry, each platform's first and @grafema/rofl last, for the owner to
+      # approve in that order; signed in by trusted publishing (OIDC, no token kept), with provenance. The npm packages only when the
+      # repository variable NPM_PUBLISH is true (docs/npm.md). release-dry runs the same script on main.
+      - run: npm install -g npm@12.2.1
       - name: publish
         env: { GH_TOKEN: '${{ github.token }}', NPM_PUBLISH: '${{ vars.NPM_PUBLISH }}' }
         run: bash scripts/release_publish.sh "$GITHUB_REF_NAME"
