@@ -729,6 +729,10 @@ names_type[flow](A, T) :- type_name_at[code](A, Name, File), imports_name[code](
 -- a library type by its prototype (`m: Map<K, V>`), where the corpus declares no such name
 names_lib[flow](A, P)  :- type_name_at[code](A, Name, File), lib_global_prototype(Name, P),
                           not type_decl[code](_, Name, File), not imports_name[code](Name, _, _, File).
+-- a browser type (`el: HTMLElement`), from facts/js-host-surface.rofl
+names_lib[flow](A, Name) :- type_name_at[code](A, Name, File), host_type_member(_, Name, _),
+                            not lib_global_prototype(Name, _), not type_decl[code](_, Name, File),
+                            not imports_name[code](Name, _, _, File).
 -- a keyword and an array type
 edb(keyword_prototype).
 keyword_prototype(tsstring_keyword, string).
@@ -805,11 +809,24 @@ declared[flow](N, T2)  :- member_node_v[flow](N), ast_child[code](N, object, 0, 
 declared_lib[flow](N, L) :- member_node_v[flow](N), ast_child[code](N, object, 0, O), declared[flow](O, T),
                           selects[flow](N, Key), member_lib[flow](T, Key, L).
 
+-- a browser global by the interface it is declared as (`document: Document`), and a
+-- member of a browser type by the interface the member is declared as
+declared_lib[flow](R, N) :- free_global[code](R, Name, _), host_global_type(_, Name, N).
+declared_lib[flow](N, M) :- member_node_v[flow](N), ast_child[code](N, object, 0, O), declared_lib[flow](O, P),
+                            selects[flow](N, Key), host_up[flow](P, B), host_type_prop(_, B, Key, M).
+-- a browser type and what it extends, walked only from a type a program names
+host_up[flow](P, P)  :- declared_lib[flow](_, P).
+host_up[flow](P, B2) :- host_up[flow](P, B), host_type_extends(_, B, B2).
+
 declared_call[flow](C, T, Key) :- member_call[flow](C, R, Key), declared[flow](R, T).
 member_declared[audit](C, T)   :- declared_call[flow](C, T, Key), type_member[flow](T, Key).
 member_declared[audit](C, T)   :- declared_call[flow](C, T, Key), lib_member(object, Key, _).
 member_declared[audit](C, P)   :- member_call[flow](C, R, Key), declared_lib[flow](R, P), lib_member(P, Key, _).
 member_declared[audit](C, P)   :- member_call[flow](C, R, Key), declared_lib[flow](R, P), lib_member(object, Key, _).
+member_declared[audit](C, P)   :- member_call[flow](C, R, Key), declared_lib[flow](R, P), host_up[flow](P, B),
+                                  host_type_member(_, B, Key).
+declared_open[flow](C)         :- member_call[flow](C, R, _), declared_lib[flow](R, P), host_up[flow](P, B),
+                                  host_type_open(_, B).
 declared_has[flow](C)          :- member_declared[audit](C, _).
 declared_open[flow](C)         :- declared_call[flow](C, T, _), type_open[flow](T).
 -- TypeScript narrows a declared type where the code tests it (`x instanceof Sub`, `'k' in x`,
@@ -829,16 +846,16 @@ narrows_at[code](O) :- ast_node[code](P, logical_expression, _), ast_child[code]
 narrowed_name[code](File, Name) :- narrows_at[code](O), ast_node[code](O, identifier, File), ast_name[code](O, Name).
 narrowed_key[flow](File, Key)   :- narrows_at[code](O), member_node_v[flow](O), ast_node[code](O, _, File),
                                    selects[flow](O, Key).
-declared_open[flow](C) :- declared_call[flow](C, _, _), member_call[flow](C, R, _), ast_node[code](R, identifier, File),
+declared_open[flow](C) :- declared_any[flow](C), member_call[flow](C, R, _), ast_node[code](R, identifier, File),
                           ast_name[code](R, Name), narrowed_name[code](File, Name).
-declared_open[flow](C) :- declared_call[flow](C, _, _), member_call[flow](C, R, _), member_node_v[flow](R),
+declared_open[flow](C) :- declared_any[flow](C), member_call[flow](C, R, _), member_node_v[flow](R),
                           ast_node[code](R, _, File), selects[flow](R, Key), narrowed_key[flow](File, Key).
 declared_any[flow](C)          :- declared_call[flow](C, _, _).
 declared_any[flow](C)          :- member_call[flow](C, R, _), declared_lib[flow](R, _).
 missing_declared_member[audit](C, T, Key) :- declared_call[flow](C, T, Key), not declared_has[flow](C),
                                              not declared_open[flow](C).
 missing_declared_member[audit](C, P, Key) :- member_call[flow](C, R, Key), declared_lib[flow](R, P),
-                                             not declared_has[flow](C).
+                                             not declared_has[flow](C), not declared_open[flow](C).
 member_undeclared[audit](C) :- member_unknown[audit](C), not declared_any[flow](C).
 
 -- The call graph reads the value layer; declared by the reader.

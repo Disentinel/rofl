@@ -26,12 +26,24 @@ function use(p: IFoo, i: IIdx, m: Map<string, number>, s: Svc, t: Svc) {
   t.extra();
   p.toString();
 }
-function more(s: string, xs: number[], o: IFoo | undefined) {
-  s.trim();
-  s.trimm();
+function more(str: string, xs: number[], o: IFoo | undefined) {
+  str.trim();
+  str.trimm();
   xs.push(1);
   xs.pushh(1);
   o?.run();
   o.runn();
 }
-export { Svc, use, more };
+function dom(el: HTMLElement, input: HTMLInputElement | null) {
+  el.focus();
+  el.focuss();
+  el.style.setProperty("color", "red");
+  el.style.setPropertyy("color", "red");
+  input.select();
+  input.selectt();
+  document.createElement("div");
+  document.createElementt("div");
+  console.log(el);
+  console.logg(el);
+}
+export { Svc, use, more, dom };

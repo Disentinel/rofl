@@ -27,7 +27,7 @@ Reads:
 - from facts/js-host.rofl, in the main:
   - <a id="host_calls_back"></a>An origin Origin calls back its argument Key and an argument Arg and a when When (`host_calls_back`)
 - from js-concat, in the flow: [may_be_lit](js-concat.rofl.md#may_be_lit), [may_be_node](js-concat.rofl.md#may_be_node)
-- from js-dataflow: [assign_binder](js-dataflow.rofl.md#assign_binder), [assigned](js-dataflow.rofl.md#assigned), [binder](js-dataflow.rofl.md#binder), [export_local](js-dataflow.rofl.md#export_local), [imports_name](js-dataflow.rofl.md#imports_name), [key_name](js-dataflow.rofl.md#key_name), [sees_binder](js-dataflow.rofl.md#sees_binder), [sees_decl](js-dataflow.rofl.md#sees_decl)
+- from js-dataflow: [assign_binder](js-dataflow.rofl.md#assign_binder), [assigned](js-dataflow.rofl.md#assigned), [binder](js-dataflow.rofl.md#binder), [export_local](js-dataflow.rofl.md#export_local), [free_global](js-dataflow.rofl.md#free_global), [imports_name](js-dataflow.rofl.md#imports_name), [key_name](js-dataflow.rofl.md#key_name), [sees_binder](js-dataflow.rofl.md#sees_binder), [sees_decl](js-dataflow.rofl.md#sees_decl)
 - from js-dataflow, in the flow: [arg_at](js-dataflow.rofl.md#arg_at), [assign_reaches_unscoped](js-dataflow.rofl.md#assign_reaches_unscoped), [class_like](js-dataflow.rofl.md#class_like), [class_method_of](js-dataflow.rofl.md#class_method_of), [ctor_of](js-dataflow.rofl.md#ctor_of), [inst_of](js-dataflow.rofl.md#inst_of), [kind_proto](js-dataflow.rofl.md#kind_proto), [member_at](js-dataflow.rofl.md#member_at), [member_node_v](js-dataflow.rofl.md#member_node_v), [member_obj](js-dataflow.rofl.md#member_obj), [member_value](js-dataflow.rofl.md#member_value), [nearest_v](js-dataflow.rofl.md#nearest_v), [param_of](js-dataflow.rofl.md#param_of), [param_use](js-dataflow.rofl.md#param_use), [prototype_of](js-dataflow.rofl.md#prototype_of), [returns](js-dataflow.rofl.md#returns), [selects](js-dataflow.rofl.md#selects), [super_of](js-dataflow.rofl.md#super_of), [this_host](js-dataflow.rofl.md#this_host)
 - from js-dataflow, in the main: [builtin_prototype](js-dataflow.rofl.md#builtin_prototype), [class_field_kind](js-dataflow.rofl.md#class_field_kind), [lib_member](js-dataflow.rofl.md#lib_member), [value_transparent](js-dataflow.rofl.md#value_transparent)
 - from js-globals: [es_global](js-globals.rofl.md#es_global), [es_static](js-globals.rofl.md#es_static)
@@ -43,6 +43,12 @@ Reads:
 - from outside these files:
   - <a id="ast_file"></a>`ast_file`
   - <a id="ast_within"></a>A node is within a node (`ast_within`)
+- from outside these files, in the main:
+  - <a id="host_global_type"></a>`host_global_type`
+  - <a id="host_type_extends"></a>`host_type_extends`
+  - <a id="host_type_member"></a>`host_type_member`
+  - <a id="host_type_open"></a>`host_type_open`
+  - <a id="host_type_prop"></a>`host_type_prop`
 - from the scanner:
   - <a id="ast_attr"></a>The attribute of a node is a value (`ast_attr`)
   - <a id="ast_child"></a>A node is a child of a node (`ast_child`)
@@ -1314,6 +1320,14 @@ In the flow:
   - unless [`type_decl`](#type_decl)(something, Name, File);
   - unless Name [imports](js-dataflow.rofl.md#imports_name) some name at some site in File.
 
+> a browser type (`el: HTMLElement`), from facts/js-host-surface.rofl
+
+`names_lib`(X, Name) if all of:
+  - [`type_name_at`](#type_name_at)(X, Name, File);
+  - [`host_type_member`](#host_type_member)(something, Name, something);
+  - Name neither [has the prototype](#lib_global_prototype) some prototype nor [imports](js-dataflow.rofl.md#imports_name) some name at some site in File;
+  - unless [`type_decl`](#type_decl)(something, Name, File).
+
 > a keyword and an array type
 
 `keyword_prototype` lists:
@@ -1521,6 +1535,27 @@ In the flow:
   - N [selects](js-dataflow.rofl.md#selects) Key;
   - [`member_lib`](#member_lib)(T, Key, L).
 
+> a browser global by the interface it is declared as (`document: Document`), and a
+> member of a browser type by the interface the member is declared as
+
+`declared_lib`(R, N) either:
+
+1. if a node R [refers to the free](js-dataflow.rofl.md#free_global) Name in some file and [`host_global_type`](#host_global_type)(something, Name, N);
+2. if all of:
+   - R is a [member access](js-dataflow.rofl.md#member_node_v);
+   - the `object` of R is a node O;
+   - [`declared_lib`](#declared_lib)(O, P);
+   - R [selects](js-dataflow.rofl.md#selects) Key;
+   - [`host_up`](#host_up)(P, B);
+   - [`host_type_prop`](#host_type_prop)(something, B, Key, N).
+
+> a browser type and what it extends, walked only from a type a program names
+
+<a id="host_up"></a>`host_up`(P, N) either:
+
+1. if [`declared_lib`](#declared_lib)(something, P) and N is P;
+2. if [`host_up`](#host_up)(P, B) and [`host_type_extends`](#host_type_extends)(something, B, N).
+
 <a id="declared_call"></a>`declared_call`(C, T, Key) if [`member_call`](#member_call)(C, R, Key) and [`declared`](#declared)(R, T).
 
 In the audit:
@@ -1536,13 +1571,24 @@ In the audit:
 4. if all of:
    - [`member_call`](#member_call)(C, R, Key);
    - [`declared_lib`](#declared_lib)(R, T);
-   - `object` [has the member](js-dataflow.rofl.md#lib_member) Key since some release.
+   - `object` [has the member](js-dataflow.rofl.md#lib_member) Key since some release;
+5. if all of:
+   - [`member_call`](#member_call)(C, R, Key);
+   - [`declared_lib`](#declared_lib)(R, T);
+   - [`host_up`](#host_up)(T, B);
+   - [`host_type_member`](#host_type_member)(something, B, Key).
 
 In the flow:
 
+<a id="declared_open"></a>`declared_open`(C) if all of:
+  - [`member_call`](#member_call)(C, R, something);
+  - [`declared_lib`](#declared_lib)(R, P);
+  - [`host_up`](#host_up)(P, B);
+  - [`host_type_open`](#host_type_open)(something, B).
+
 <a id="declared_has"></a>`declared_has`(C) if [`member_declared`](#member_declared)(C, something).
 
-<a id="declared_open"></a>`declared_open`(C) if [`declared_call`](#declared_call)(C, T, something) and [`type_open`](#type_open)(T).
+`declared_open`(C) if [`declared_call`](#declared_call)(C, T, something) and [`type_open`](#type_open)(T).
 
 > TypeScript narrows a declared type where the code tests it (`x instanceof Sub`, `'k' in x`,
 > a guard `isSub(x)` in a test): a receiver of that name or key anywhere in the file is not
@@ -1573,13 +1619,13 @@ In the flow:
 `declared_open`(C) either:
 
 1. if all of:
-   - [`declared_call`](#declared_call)(C, something, something);
+   - [`declared_any`](#declared_any)(C);
    - [`member_call`](#member_call)(C, an [identifier](#noun-identifier) R, something);
    - R is in file File;
    - R [is named](js-structure.rofl.md#ast_name) Name;
    - [`narrowed_name`](#narrowed_name)(File, Name);
 2. if all of:
-   - [`declared_call`](#declared_call)(C, something, something);
+   - [`declared_any`](#declared_any)(C);
    - [`member_call`](#member_call)(C, a [member access](js-dataflow.rofl.md#member_node_v) R, something);
    - R [is in file](js-model.rofl.md#ast_node) File;
    - R [selects](js-dataflow.rofl.md#selects) Key;
@@ -1601,7 +1647,8 @@ In the audit:
 2. if all of:
    - [`member_call`](#member_call)(C, R, Key);
    - [`declared_lib`](#declared_lib)(R, T);
-   - unless [`declared_has`](#declared_has)(C).
+   - unless [`declared_has`](#declared_has)(C);
+   - unless [`declared_open`](#declared_open)(C).
 
 <a id="member_undeclared"></a>`member_undeclared`(C) if [`member_unknown`](#member_unknown)(C), unless [`declared_any`](#declared_any)(C).
 

@@ -103,6 +103,11 @@ unit_concludes("facts/js-host-surface.rofl", host_member_since).
 unit_concludes("facts/js-host-surface.rofl", host_member_deprecated).
 unit_concludes("facts/js-host-surface.rofl", host_member_deprecated_since).
 unit_concludes("facts/js-host-surface.rofl", host_member_replaced_by).
+unit_concludes("facts/js-host-surface.rofl", host_type_member).
+unit_concludes("facts/js-host-surface.rofl", host_type_extends).
+unit_concludes("facts/js-host-surface.rofl", host_type_prop).
+unit_concludes("facts/js-host-surface.rofl", host_type_open).
+unit_concludes("facts/js-host-surface.rofl", host_global_type).
 unit_concludes("facts/js-lib-surface.rofl", edb).
 unit_concludes("facts/js-lib-surface.rofl", release).
 unit_concludes("facts/js-lib-surface.rofl", includes).
@@ -547,10 +552,11 @@ unit_concludes("rules/js-callgraph.rofl", sx_member_lib).
 unit_concludes("rules/js-callgraph.rofl", declared).
 unit_concludes("rules/js-callgraph.rofl", declared_lib).
 unit_concludes("rules/js-callgraph.rofl", param_annotation).
+unit_concludes("rules/js-callgraph.rofl", host_up).
 unit_concludes("rules/js-callgraph.rofl", declared_call).
 unit_concludes("rules/js-callgraph.rofl", member_declared).
-unit_concludes("rules/js-callgraph.rofl", declared_has).
 unit_concludes("rules/js-callgraph.rofl", declared_open).
+unit_concludes("rules/js-callgraph.rofl", declared_has).
 unit_concludes("rules/js-callgraph.rofl", narrows_at).
 unit_concludes("rules/js-callgraph.rofl", narrowed_name).
 unit_concludes("rules/js-callgraph.rofl", narrowed_key).
