@@ -466,6 +466,11 @@ impl Server {
                     "hot": s.eval.too_hot().iter().map(|h| h.sentence()).collect::<Vec<_>>(),
                 }))
             }
+            "published" => {
+                let s = self.get(r)?;
+                let book = s.eval.h.intern(r.get("book").and_then(|v| v.as_str()).unwrap_or("surface"));
+                Ok(json!({ "rofl": s.eval.published(book) }))
+            }
             "admit" => {
                 let text = r.get("rofl").and_then(|v| v.as_str()).ok_or("admit needs `rofl`")?.to_string();
                 if r.get("joinable").and_then(|v| v.as_bool()) == Some(true) {

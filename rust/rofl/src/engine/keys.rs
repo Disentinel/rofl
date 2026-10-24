@@ -262,3 +262,33 @@ impl Eval {
         self.held.iter().filter(|h| !h.taken).count()
     }
 }
+
+impl Eval {
+    /// The facts of `book` this world made since it was last asked, one a line; what it admitted is not its to give.
+    pub fn published(&mut self, book: Sym) -> String {
+        let (from, to) = (self.published_to, self.store.len_ids());
+        self.published_to = to;
+        let mut out = String::new();
+        for id in from..to {
+            if !self.store.alive(id) || self.admitted.contains(&id) {
+                continue;
+            }
+            let r = self.store.rec(id);
+            if r.persp != book {
+                continue;
+            }
+            out.push_str(self.h.name(r.rel));
+            out.push('[');
+            out.push_str(self.h.name(book));
+            out.push_str("](");
+            for (i, t) in self.store.args(id).iter().enumerate() {
+                if i > 0 {
+                    out.push_str(", ");
+                }
+                self.h.canon_term(*t, &mut out);
+            }
+            out.push_str(").\n");
+        }
+        out
+    }
+}

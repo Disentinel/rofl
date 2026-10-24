@@ -686,6 +686,8 @@ pub struct Eval {
     wake: FxMap<(Sym, usize, Term), Vec<u32>>,
     wake_at: FxMap<Sym, Vec<usize>>,
     woke_from: FactId,
+    published_to: FactId,
+    admitted: FxSet<FactId>,
     /// facts admitted from other workers, and what was copied from them alone
     pub(crate) foreign: FxSet<FactId>,
     round_resume: Option<(Front, usize, usize, Front, Option<InFlight>)>,
@@ -1573,6 +1575,8 @@ impl Eval {
             wake: FxMap::default(),
             wake_at: FxMap::default(),
             woke_from: 0,
+            published_to: 0,
+            admitted: FxSet::default(),
             foreign: FxSet::default(),
             round_resume: None,
             lat_unknown: HashMap::new(),
@@ -3322,6 +3326,7 @@ impl Eval {
         let mut front = Front::default();
         for &id in ids {
             front.note(self.store.rec(id).rel, id);
+            self.admitted.insert(id);
             if std::env::var_os("ROFL_XOWN").is_some() {
                 self.foreign.insert(id);
             }

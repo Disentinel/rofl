@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 # How the level-barrier split grows with cores, on a clean Ubuntu VM (sudo, internet):
 #   curl -fsSL https://raw.githubusercontent.com/Disentinel/rofl/claude/project-thread-8httz5/scripts/bsp/kit.sh | bash
-# Sizes and worker counts: SIZES="1000 all" WORKERS="1 2 4 8 16 32" (the defaults). Prints one table; logs in ~/bsp.
+# Sizes and worker counts: SIZES="1000 all" WORKERS="1 2 4 8 16" (the defaults). Prints one table; logs, answers and
+# any difference from one worker (diff-N-K.txt) in ~/bsp.
 set -euo pipefail
 SIZES=${SIZES:-"1000 all"}
-WORKERS=${WORKERS:-"1 2 4 8 16 32"}
+WORKERS=${WORKERS:-"1 2 4 8 16"}
 BRANCH=claude/project-thread-8httz5
 VSCODE=eef761e9628e777317a554114f0202a070e98f0b
 W=${W:-~/bsp}
@@ -38,9 +39,13 @@ for n in $SIZES; do
   for k in $WORKERS; do
     d=$W/groups-$n-$k
     [ -d $d ] || python3 scripts/bsp/split.py $k $d f.rofl $(chunks $n) > /dev/null
-    node scripts/bsp/xwall.ts $d $k $W/out-$n > $W/log-$n-$k.txt 2>&1 || { echo "$n $k FAILED (see $W/log-$n-$k.txt)"; continue; }
-    same=$( [ $k = 1 ] && echo - || python3 scripts/bsp/cmp.py $W/out-$n/union-1.txt $W/out-$n/union-$k.txt | cut -d' ' -f1 )
-    tail -1 $W/log-$n-$k.txt | python3 -c "import json,sys; o=json.load(sys.stdin); print($n, o['K'], *[round(o[k]/1000,1) for k in ('loadMs','workMs','readMs','wallMs')], o['barriers'], o['passed'], round(o['peakMbMax']/1024,1), round(o['peakMbSum']/1024,1), o['answers'], '$same')"
+    node --max-old-space-size=16384 scripts/bsp/xwall.ts $d $k $W/out-$n > $W/log-$n-$k.txt 2>&1 || { echo "$n $k FAILED (see $W/log-$n-$k.txt)"; rm -rf $d; continue; }
+    same=-
+    if [ $k != 1 ]; then
+      python3 scripts/bsp/cmp.py $W/out-$n/union-1.txt $W/out-$n/union-$k.txt $W/diff-$n-$k.txt >> $W/log-$n-$k.txt
+      same=$(tail -1 $W/log-$n-$k.txt | cut -d' ' -f1)
+    fi
+    grep '"K"' $W/log-$n-$k.txt | tail -1 | python3 -c "import json,sys; o=json.load(sys.stdin); print('$n', o['K'], *[round(o[k]/1000,1) for k in ('loadMs','workMs','readMs','wallMs')], o['barriers'], o['passed'], round(o['peakMbMax']/1024,1), round(o['peakMbSum']/1024,1), o['answers'], '$same')"
     rm -rf $d
   done
 done
