@@ -1361,14 +1361,18 @@ Declared as facts:
 
 - <a id="keyed_store"></a>`keyed_store` — rows in this file
 
-> WHAT IS IN IT AT THE READ. Order is known in one shape: a `const` binds a new
-> collection, and the get and the put are on that name in the same statement
-> list as the declaration, outside any function written inside it. Each run of
-> the list makes its own collection, so a put in a later statement is not yet
-> in it, and a put of the same literal key, a delete of it, or a clear, in a
-> statement of its own between them, takes it out. Every other pair keeps the
-> put, and `keyed_order_unknown[audit]` names it: a put in a function, another
-> file, or a loop around the declaration may have run before the get.
+> WHAT IS IN IT AT THE READ. A `const` that binds a new collection makes one
+> per run of its statement list, so a get on that name in the list, outside any
+> function written there, has an order with each put on it:
+>   - a put in a later statement has not run yet, also inside a function
+>     written in that statement: the function does not exist before it. A
+>     function DECLARATION is hoisted to the top of the list and gets no order.
+>   - a put in an earlier statement outside any function has run, unless a put
+>     of the same literal key, a delete of it or a clear, in a statement of its
+>     own between them, took it out.
+> Every other put may have run before the get or not (a function called at
+> some time, an await, another file, a loop around the declaration): it is
+> kept, as `keyed_read_unordered`, and a proof says so.
 
 In the code:
 
@@ -1402,6 +1406,13 @@ In the code:
 
 <a id="keyed_local_call"></a>`keyed_local_call`(C, D, Meth, I) if [`keyed_local_seen`](#keyed_local_seen)(C, D, Meth, S, I), unless [`keyed_fn_between`](#keyed_fn_between)(S, C).
 
+<a id="keyed_hoisted"></a>`keyed_hoisted`(S) either:
+
+1. if [`keyed_local_seen`](#keyed_local_seen)(something, something, something, S, something) and S is a [function](js-callgraph.rofl.md#fn_node);
+2. if [`keyed_local_seen`](#keyed_local_seen)(something, something, something, S, something) and the `declaration` of S is a [function](js-callgraph.rofl.md#fn_node) G.
+
+<a id="keyed_local_later"></a>`keyed_local_later`(C, D, Meth, I) if [`keyed_local_seen`](#keyed_local_seen)(C, D, Meth, S, I), unless [`keyed_hoisted`](#keyed_hoisted)(S).
+
 > a statement that is nothing but the call: it runs whenever the list gets past it
 
 <a id="keyed_local_step"></a>`keyed_local_step`(C, D, Meth, I) if [`keyed_local_seen`](#keyed_local_seen)(C, D, Meth, an expression_statement node S, I) and the `expression` of S is a node C.
@@ -1415,48 +1426,50 @@ In the code:
   - [`keyed_key_kind`](#keyed_key_kind)(K);
   - X [is written as](js-structure.rofl.md#ast_value) Key.
 
+<a id="keyed_get_site"></a>`keyed_get_site`(C, D, I) if all of:
+  - [`keyed_local_call`](#keyed_local_call)(C, D, Get, I);
+  - [`keyed_local`](#keyed_local)(D, P, something, something);
+  - [`keyed_store`](#keyed_store)(P, something, Get).
+
 <a id="keyed_put_site"></a>`keyed_put_site`(C, D, V, J) if all of:
   - [`keyed_local_call`](#keyed_local_call)(C, D, Put, J);
   - [`keyed_local`](#keyed_local)(D, P, something, something);
   - [`keyed_store`](#keyed_store)(P, Put, something);
   - a node V is the 1-th of the `arguments` of a node C.
 
-<a id="keyed_get_site"></a>`keyed_get_site`(C, D, I) if all of:
-  - [`keyed_local_call`](#keyed_local_call)(C, D, Get, I);
+<a id="keyed_put_later"></a>`keyed_put_later`(C, D, V, J) if all of:
+  - [`keyed_local_later`](#keyed_local_later)(C, D, Put, J);
   - [`keyed_local`](#keyed_local)(D, P, something, something);
-  - [`keyed_store`](#keyed_store)(P, something, Get).
+  - [`keyed_store`](#keyed_store)(P, Put, something);
+  - a node V is the 1-th of the `arguments` of a node C.
 
-<a id="keyed_ordered"></a>`keyed_ordered`(V, C) if all of:
-  - [`keyed_get_site`](#keyed_get_site)(C, D, I);
-  - [`keyed_put_site`](#keyed_put_site)(something, D, V, J);
-  - I differs from J.
+<a id="keyed_put_before"></a><a id="keyed_put_after"></a>A node is put before/after C if all of:
+ - [`keyed_get_site`](#keyed_get_site)(C, D, I);
+ - [`keyed_put_site`/`keyed_put_later`](#keyed_put_site)(something, D, it, J);
+ - J < I.
 
-<a id="keyed_hidden"></a>`keyed_hidden`(V, C) either:
+<a id="keyed_taken_out"></a>A node V is taken out before C by R either:
 
 1. if all of:
+   - V [is put before](#keyed_put_before) C;
    - [`keyed_get_site`](#keyed_get_site)(C, D, I);
    - [`keyed_put_site`](#keyed_put_site)(something, D, V, J);
-   - I < J;
-2. if all of:
-   - [`keyed_get_site`](#keyed_get_site)(C, D, I);
-   - [`keyed_put_site`](#keyed_put_site)(something, D, V, J);
-   - J < I;
-   - [`keyed_local_step`](#keyed_local_step)(something, D, "clear", K);
+   - [`keyed_local_step`](#keyed_local_step)(R, D, "clear", K);
    - J < K;
    - K < I;
-3. if all of:
+2. if all of:
+   - V [is put before](#keyed_put_before) C;
    - [`keyed_get_site`](#keyed_get_site)(C, D, I);
    - [`keyed_put_site`](#keyed_put_site)(P, D, V, J);
-   - J < I;
    - [`keyed_local_step`](#keyed_local_step)(R, D, "delete", K);
    - J < K;
    - K < I;
    - [`keyed_local_key`](#keyed_local_key)(P, Key);
    - [`keyed_local_key`](#keyed_local_key)(R, Key);
-4. if all of:
+3. if all of:
+   - V [is put before](#keyed_put_before) C;
    - [`keyed_get_site`](#keyed_get_site)(C, D, I);
    - [`keyed_put_site`](#keyed_put_site)(P, D, V, J);
-   - J < I;
    - [`keyed_put_site`](#keyed_put_site)(R, D, something, K);
    - J < K;
    - K < I;
@@ -1466,21 +1479,26 @@ In the code:
 
 In the flow:
 
-<a id="keyed_read"></a>`keyed_read`(C, V) if all of:
+<a id="keyed_read_ordered"></a>C reads back the value put before it V if all of:
   - [`keyed_get`](#keyed_get)(C, X, K);
   - [`keyed_put`](#keyed_put)(X, K, V);
-  - unless [`keyed_hidden`](#keyed_hidden)(V, C).
+  - V [is put before](#keyed_put_before) C;
+  - unless V [is taken out before](#keyed_taken_out) C by some call.
 
-In the audit:
+<a id="keyed_read_unordered"></a>C may read back the value put in an order not known V if all of:
+  - [`keyed_get`](#keyed_get)(C, X, K);
+  - [`keyed_put`](#keyed_put)(X, K, V);
+  - V neither [is put before](#keyed_put_before) C nor [is put after](#keyed_put_after) C.
 
-<a id="keyed_order_unknown"></a>`keyed_order_unknown`(C, V) if [`keyed_read`](#keyed_read)(C, V), unless [`keyed_ordered`](#keyed_ordered)(V, C).
+A node C points to a node N either:
 
-In the flow:
+1. if a node V [points to](js-concat.rofl.md#may_be_node) N and C [reads back](#keyed_read_ordered) the value put before it V;
+2. if a node V [points to](js-concat.rofl.md#may_be_node) N and C [may read back](#keyed_read_unordered) the value put in an order not known V.
 
-A node
+A node C may be the literal L either:
 
-- points to a node N if [`keyed_read`](#keyed_read)(it, V) and a node V [points to](js-concat.rofl.md#may_be_node) N.
-- may be the literal L if [`keyed_read`](#keyed_read)(it, V) and a node V [may be the literal](js-concat.rofl.md#may_be_lit) L.
+1. if a node V [may be the literal](js-concat.rofl.md#may_be_lit) L and C [reads back](#keyed_read_ordered) the value put before it V;
+2. if a node V [may be the literal](js-concat.rofl.md#may_be_lit) L and C [may read back](#keyed_read_unordered) the value put in an order not known V.
 
 Declared as facts:
 

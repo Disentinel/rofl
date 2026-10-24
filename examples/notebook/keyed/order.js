@@ -29,3 +29,13 @@ function tally(words) {
   seen.set('x', 8);
 }
 tally(['x', 'x']);
+
+function batch(items) {
+  const byId = new Map();
+  use('batch.before', byId.get('a'));
+  items.forEach(() => byId.set('a', 5));
+  use('batch.after', byId.get('a'));
+  Promise.resolve().then(() => byId.set('p', 6));
+  use('batch.then', byId.get('p'));
+}
+batch(['x']);

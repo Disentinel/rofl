@@ -33,14 +33,29 @@ never seen("order.one", 2)
 never seen("order.gone", 2)
 never seen("order.cleared", 3)
 never seen("tally.first", 7)
+never seen("batch.before", 5)
 ```
 
-> Where the order is not known, each read and each put it may see.
+> Where the order is not known, each read and each put it may see: a put in a
+> callback written before the read may have run (`forEach`) or not (`then`).
 
 ```datalog
 unordered(Tag, V) :- call_site[code](C, _), callee_of[code](C, U), ast_name[code](U, "use"),
                      arg_at[flow](C, 0, T), ast_value[code](T, Tag),
-                     arg_at[flow](C, 1, G), keyed_order_unknown[audit](G, P), may_be_lit[flow](P, V).
+                     arg_at[flow](C, 1, G), keyed_read_unordered[flow](G, P), may_be_lit[flow](P, V).
 
 ? unordered(Tag, V)
+```
+
+> A proof says which. `why` names the read's step: a value put before it, or
+> one put in an order not known. What the read does not see is a fact of its
+> own, with its proof: the put that comes after it, and the put a later call
+> took out.
+
+```datalog
+why seen("order.two", 2)
+why seen("batch.then", 6)
+
+? keyed_put_after[code](V, C)
+? keyed_taken_out[code](V, C, R)
 ```
