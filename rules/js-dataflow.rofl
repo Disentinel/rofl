@@ -730,8 +730,8 @@ sx_mwrite[surface](O, Key, V) :- merge_call[flow](C), arg_at[flow](C, 0, T), may
 -- is the site that made it: `new Map()` (`keyed_obj`), and an express app
 -- (rules/js-express.rofl). A key is matched by its value, however it got there
 -- (`const K = 'port'; m.get(K)`); a key with no known value matches nothing, and
--- the call is named in `keyed_key_unknown[audit]`: we do not know which. Flow-insensitive, as the rest of this layer: a
--- get sees every put, before or after it. `m.keys()`, `m.values()` and
+-- the call is named in `keyed_key_unknown[audit]`: we do not know which. A get
+-- sees every put but those the order below rules out. `m.keys()`, `m.values()` and
 -- `m.entries()` are not read.
 edb(keyed_store).
 keyed_store(map, "set", "get").
@@ -753,7 +753,55 @@ keyed_key_at[flow](C, A)    :- keyed_on[flow](C, _, P, Get), keyed_store(P, _, G
 keyed_key_known[flow](C)    :- keyed_key_at[flow](C, A), may_be_lit[flow](A, _).
 keyed_key_unknown[audit](C) :- keyed_key_at[flow](C, _), not keyed_key_known[flow](C).
 
-keyed_read[flow](C, V) :- keyed_get[flow](C, X, K), keyed_put[flow](X, K, V).
+-- WHAT IS IN IT AT THE READ. Order is known in one shape: a `const` binds a new
+-- collection, and the get and the put are on that name in the same statement
+-- list as the declaration, outside any function written inside it. Each run of
+-- the list makes its own collection, so a put in a later statement is not yet
+-- in it, and a put of the same literal key, a delete of it, or a clear, in a
+-- statement of its own between them, takes it out. Every other pair keeps the
+-- put, and `keyed_order_unknown[audit]` names it: a put in a function, another
+-- file, or a loop around the declaration may have run before the get.
+keyed_local[code](D, P, B, F) :- es_global_construct[code](X, Name, _), lib_global_prototype(Name, P),
+                                 keyed_store(P, _, _), ast_child[code](D, init, 0, X),
+                                 ast_child[code](V, declarations, _, D), ast_attr[code](V, kind, "const"),
+                                 ast_child[code](B, F, _, V), stmt_seq_field(F).
+keyed_local_seen[code](C, D, Meth, S, I) :- keyed_local[code](D, _, B, F), sees_binder[code](O, D),
+                                            ast_child[code](N, object, 0, O), ast_attr[code](N, computed, false),
+                                            ast_child[code](N, property, 0, Pn), ast_name[code](Pn, Meth),
+                                            ast_child[code](C, callee, 0, N), ast_node[code](C, call_expression, _),
+                                            ast_within[code](S, C), ast_child[code](B, F, I, S).
+keyed_fn_between[code](S, C) :- keyed_local_seen[code](C, _, _, S, _), ast_within[code](G, C),
+                                fn_node[code](G), ast_within[code](S, G).
+keyed_fn_between[code](S, C) :- keyed_local_seen[code](C, _, _, S, _), fn_node[code](S).
+keyed_local_call[code](C, D, Meth, I) :- keyed_local_seen[code](C, D, Meth, S, I), not keyed_fn_between[code](S, C).
+
+-- a statement that is nothing but the call: it runs whenever the list gets past it
+keyed_local_step[code](C, D, Meth, I) :- keyed_local_seen[code](C, D, Meth, S, I), ast_node[code](S, expression_statement, _),
+                                         ast_child[code](S, expression, 0, C).
+edb(keyed_key_kind).
+keyed_key_kind(string_literal).
+keyed_key_kind(numeric_literal).
+keyed_local_key[code](C, Key) :- keyed_local_call[code](C, _, _, _), ast_child[code](C, arguments, 0, A),
+                                 ast_node[code](A, K, _), keyed_key_kind(K), ast_value[code](A, Key).
+
+keyed_put_site[code](C, D, V, J) :- keyed_local_call[code](C, D, Put, J), keyed_local[code](D, P, _, _),
+                                    keyed_store(P, Put, _), ast_child[code](C, arguments, 1, V).
+keyed_get_site[code](C, D, I)    :- keyed_local_call[code](C, D, Get, I), keyed_local[code](D, P, _, _),
+                                    keyed_store(P, _, Get).
+
+keyed_ordered[code](V, C) :- keyed_get_site[code](C, D, I), keyed_put_site[code](_, D, V, J), I != J.
+keyed_hidden[code](V, C)  :- keyed_get_site[code](C, D, I), keyed_put_site[code](_, D, V, J), I < J.
+keyed_hidden[code](V, C)  :- keyed_get_site[code](C, D, I), keyed_put_site[code](_, D, V, J), J < I,
+                             keyed_local_step[code](_, D, "clear", K), J < K, K < I.
+keyed_hidden[code](V, C)  :- keyed_get_site[code](C, D, I), keyed_put_site[code](P, D, V, J), J < I,
+                             keyed_local_step[code](R, D, "delete", K), J < K, K < I,
+                             keyed_local_key[code](P, Key), keyed_local_key[code](R, Key).
+keyed_hidden[code](V, C)  :- keyed_get_site[code](C, D, I), keyed_put_site[code](P, D, V, J), J < I,
+                             keyed_put_site[code](R, D, _, K), J < K, K < I, keyed_local_step[code](R, D, _, K),
+                             keyed_local_key[code](P, Key), keyed_local_key[code](R, Key).
+
+keyed_read[flow](C, V) :- keyed_get[flow](C, X, K), keyed_put[flow](X, K, V), not keyed_hidden[code](V, C).
+keyed_order_unknown[audit](C, V) :- keyed_read[flow](C, V), not keyed_ordered[code](V, C).
 may_be_node[flow](C, N) :- keyed_read[flow](C, V), may_be_node[flow](V, N).
 may_be_lit[flow](C, L)  :- keyed_read[flow](C, V), may_be_lit[flow](V, L).
 

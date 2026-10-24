@@ -183,6 +183,19 @@ const RUNS: Record<string, () => Promise<Out>> = {
     const missing = [...observed].filter((o) => !model.has(o));
     return { code: 0, out: `V8 observed ${observed.size} values; missing from the model: ${JSON.stringify(missing)}`, stdout: '' };
   },
+  orderV8: async (): Promise<Out> => {
+    const ran = await cli([path.join(NB, 'order.rofl.md'), '--json', '--all']);
+    const model = new Set<string>(), unordered = new Set<string>();
+    for (const c of JSON.parse(ran.stdout ?? '{}').cells ?? []) for (const l of c.lines) for (const a of l.answers) {
+      const m = /^(seen|unordered)\("([\w.]+)", (.+)\)$/.exec(a.literal);
+      if (m) (m[1] === 'seen' ? model : unordered).add(`${m[2]}:${m[3]}`);
+    }
+    const observed = new Set<string>();
+    vm.runInNewContext(readFileSync(path.join(NB, 'keyed/order.js'), 'utf8'), { __seen: (tag: string, v: unknown) => { if (v !== undefined) observed.add(`${tag}:${String(v)}`); }, process: { argv: [] } });
+    const missing = [...observed].filter((o) => !model.has(o));
+    const extra = [...model].filter((o) => !observed.has(o) && !unordered.has(o));
+    return { code: 0, out: `V8 observed ${observed.size} values; missing from the model: ${JSON.stringify(missing)}; in the model where the order is known and V8 never saw it: ${JSON.stringify(extra)}`, stdout: '' };
+  },
   climb: () => cli([runaway], { ROFL_NB_LIMIT: '3' }),
   heavy: () => cli([runaway], { ROFL_NB_LIMIT: '100', ROFL_NB_MEMORY: '0.3' }),
   nmWorld: () => cli([misspelt]),
@@ -201,7 +214,7 @@ const RUNS: Record<string, () => Promise<Out>> = {
     return { code: differ.length, out: differ.length ? `not the same on the two engines: ${differ.join(', ')}` : 'the same on both engines', stdout: '' };
   },
 };
-let engines!: Out, review!: Out, small!: Out, self!: Out, reviewJson!: Out, fails!: Out, notRead!: Out, rewrite!: Out, extended!: Out, collided!: Out, recurse!: Out, red!: Out, blind!: Out, unpop!: Out, early!: Out, nat!: Out, trOk!: Out, trBad!: Out, trGone!: Out, unparsedOut!: Out, fr!: Out, badRead!: Out, chained!: Out, lone!: Out, trSlow!: Out, spat!: Out, ex!: Out, wo!: Out, hol!: Out, xdir!: Out, xdirFails!: Out, cjs!: Out, cjsBlind!: Out, external!: Out, decorated!: Out, scoped!: Out, scopedV8!: Out, assign!: Out, guard!: Out, destructure!: Out, destructureV8!: Out, climb!: Out, heavy!: Out, nmWorld!: Out, out!: Out, three!: Out, part!: Out, nothing!: Out, sides!: Out, sidesAll!: Out, sidesJson!: Out;
+let engines!: Out, review!: Out, small!: Out, self!: Out, reviewJson!: Out, fails!: Out, notRead!: Out, rewrite!: Out, extended!: Out, collided!: Out, recurse!: Out, red!: Out, blind!: Out, unpop!: Out, early!: Out, nat!: Out, trOk!: Out, trBad!: Out, trGone!: Out, unparsedOut!: Out, fr!: Out, badRead!: Out, chained!: Out, lone!: Out, trSlow!: Out, spat!: Out, ex!: Out, wo!: Out, hol!: Out, xdir!: Out, xdirFails!: Out, cjs!: Out, cjsBlind!: Out, external!: Out, decorated!: Out, scoped!: Out, scopedV8!: Out, assign!: Out, guard!: Out, destructure!: Out, destructureV8!: Out, orderV8!: Out, climb!: Out, heavy!: Out, nmWorld!: Out, out!: Out, three!: Out, part!: Out, nothing!: Out, sides!: Out, sidesAll!: Out, sidesJson!: Out;
 type Test = { name: string; needs: string[]; ok: () => boolean; o?: () => Out };
 const TESTS: Test[] = [];
 /** A check, by the runs it reads; it is judged once they are done. */
@@ -248,6 +261,7 @@ test('scoped: an assignment reaches the readers of its own binding and what no b
 test('scoped: every value V8 observes at a read is in the model\'s may-set; the one miss is the concatenation `t += "b"`', ['scopedV8'], () => has(scopedV8, 'missing from the model: ["sum:\\"ab\\""]'), () => scopedV8);
 test('destructure: a name bound from an object pattern, in a declarator or a parameter, with a default or off a required module, and a conversion, carry their values', ['destructure'], () => is(destructure, 0) && has(destructure, 'never seen("object.port", 3030)  ->  holds') && has(destructure, 'never seen("default.port", 8082)  ->  holds') && has(destructure, 'never seen("require.port", 5)  ->  holds') && has(destructure, '? seen(Tag, V)  ->  18 answers'), () => destructure);
 test('destructure: every value V8 observes at a read is in the model\'s may-set', ['destructureV8'], () => has(destructureV8, 'missing from the model: []'), () => destructureV8);
+test('order: a Map read holds what V8 holds where the order is known, and every other value is named as unordered', ['orderV8'], () => has(orderV8, 'missing from the model: []; in the model where the order is known and V8 never saw it: []'), () => orderV8);
 test('assign: Object.assign, by the library member the callee is, writes its sources onto its first argument and returns it, across files; a method of the program called assign does neither', ['assign'], () => is(assign, 0) && has(assign, 'seen("E.port", 4000)') && has(assign, 'seen("lib.port", 4000)') && has(assign, 'seen("merged.host", "localhost")') && has(assign, 'called("start")') && has(assign, 'called("late")') && has(assign, 'never seen("bystander.leak", 1)  ->  holds'), () => assign);
 test('guard: a call under `!module.parent` or `require.main === module`, or in a function only they mention, hands its callee no argument; the required arm and an exported function keep theirs', ['guard'], () => is(guard, 0) && has(guard, '? seen(Tag, V)  ->  3 answers') && has(guard, 'seen("listen.port", 7777)') && has(guard, 'seen("listen.port", 4444)') && has(guard, '? dead_fn[code](F)  ->  2 answers') && has(guard, 'never seen("listen.port", 9999)  ->  holds') && has(guard, 'never seen("listen.port", 3333)  ->  holds'), () => guard);
 test('I3 a relative require that resolves to no file makes a holding never blind, exit 3, and the head names it', ['cjsBlind'], () => is(cjsBlind, 3) && has(cjsBlind, 'note: 1 relative import or require was not resolved') && /cjs\/cart\.js:\d+ "\.\/missing"/.test(cjsBlind.out) && has(cjsBlind, 'never unreached(N)  ->  holds as far as it sees · 1 relative import or require was not resolved'), () => cjsBlind);
@@ -354,7 +368,7 @@ if (shard) {
 }
 if (only) chosen = chosen.filter((t) => new RegExp(only).test(t.name));
 const got: Record<string, Out> = Object.fromEntries(await Promise.all([...new Set(chosen.flatMap((t) => t.needs))].map(async (r) => [r, await RUNS[r]()])));
-({ engines, review, small, self, reviewJson, fails, notRead, rewrite, extended, collided, recurse, red, blind, unpop, early, nat, trOk, trBad, trGone, unparsedOut, fr, badRead, chained, lone, trSlow, spat, ex, wo, hol, xdir, xdirFails, cjs, cjsBlind, external, decorated, scoped, scopedV8, assign, guard, destructure, destructureV8, climb, heavy, nmWorld, out, three, part, nothing, sides, sidesAll, sidesJson } = got);
+({ engines, review, small, self, reviewJson, fails, notRead, rewrite, extended, collided, recurse, red, blind, unpop, early, nat, trOk, trBad, trGone, unparsedOut, fr, badRead, chained, lone, trSlow, spat, ex, wo, hol, xdir, xdirFails, cjs, cjsBlind, external, decorated, scoped, scopedV8, assign, guard, destructure, destructureV8, orderV8, climb, heavy, nmWorld, out, three, part, nothing, sides, sidesAll, sidesJson } = got);
 for (const t of chosen) {
   let ok = false, o: Out | undefined;
   try { ok = t.ok(); o = t.o?.(); } catch (e) { o = { code: -1, out: `the check threw, a run it reads not named among its needs? ${(e as Error).stack}` }; }
