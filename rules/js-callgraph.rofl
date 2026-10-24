@@ -855,7 +855,26 @@ member_type[flow](T, Key, T2) :- member_type_at[flow](T, Key, A), names_type[flo
 member_type[flow](T, Key, T2) :- type_base[flow](T, B), member_type[flow](B, Key, T2).
 member_lib[flow](T, Key, P)   :- member_type_at[flow](T, Key, A), names_lib[flow](A, P).
 member_lib[flow](T, Key, P)   :- type_base[flow](T, B), member_lib[flow](B, Key, P).
--- the four, mirrored for a type another file names
+-- a field declared by its initialiser (`private inner = new Maker()`)
+member_type[flow](T, Key, T2) :- field_init[flow](T, Key, V), declared[flow](V, T2).
+member_lib[flow](T, Key, P)   :- field_init[flow](T, Key, V), declared_lib[flow](V, P).
+field_init[flow](T, Key, V)   :- class_like[flow](T), ast_child[code](T, body, 0, B), ast_child[code](B, body, _, S),
+                                 ast_node[code](S, class_property, _), ast_attr[code](S, static, false),
+                                 not ast_child[code](S, type_annotation, 0, _),
+                                 ast_child[code](S, key, 0, K), ast_name[code](K, Key), ast_child[code](S, value, 0, V).
+-- what a method is declared to return: an interface's method signature or a class's method
+method_ret_at[flow](T, Key, A) :- ast_node[code](T, tsinterface_declaration, _), ast_child[code](T, body, 0, B),
+                                  ast_child[code](B, body, _, S), ast_node[code](S, tsmethod_signature, _),
+                                  ast_child[code](S, key, 0, K), ast_name[code](K, Key),
+                                  ast_child[code](S, return_type, 0, A).
+method_ret_at[flow](T, Key, A) :- class_method_of[flow](T, M), ast_attr[code](M, static, false),
+                                  ast_child[code](M, key, 0, K), ast_name[code](K, Key),
+                                  ast_child[code](M, return_type, 0, A).
+method_type[flow](T, Key, T2) :- method_ret_at[flow](T, Key, A), names_type[flow](A, T2).
+method_type[flow](T, Key, T2) :- type_base[flow](T, B), method_type[flow](B, Key, T2).
+method_lib[flow](T, Key, P)   :- method_ret_at[flow](T, Key, A), names_lib[flow](A, P).
+method_lib[flow](T, Key, P)   :- type_base[flow](T, B), method_lib[flow](B, Key, P).
+-- the six, mirrored for a type another file names
 sx_type_member[surface](T, Key)        :- sx_export_type[surface](_, _, T), type_member[flow](T, Key).
 type_member[flow](T, Key)              :- sx_type_member[surface](T, Key).
 sx_type_open[surface](T)               :- sx_export_type[surface](_, _, T), type_open[flow](T).
@@ -864,6 +883,10 @@ sx_member_type[surface](T, Key, T2)    :- sx_export_type[surface](_, _, T), memb
 member_type[flow](T, Key, T2)          :- sx_member_type[surface](T, Key, T2).
 sx_member_lib[surface](T, Key, P)      :- sx_export_type[surface](_, _, T), member_lib[flow](T, Key, P).
 member_lib[flow](T, Key, P)            :- sx_member_lib[surface](T, Key, P).
+sx_method_type[surface](T, Key, T2)    :- sx_export_type[surface](_, _, T), method_type[flow](T, Key, T2).
+method_type[flow](T, Key, T2)          :- sx_method_type[surface](T, Key, T2).
+sx_method_lib[surface](T, Key, P)      :- sx_export_type[surface](_, _, T), method_lib[flow](T, Key, P).
+method_lib[flow](T, Key, P)            :- sx_method_lib[surface](T, Key, P).
 
 -- the receivers: an annotated parameter, binder or field, `this` in an instance method, and a
 -- member read off a declared receiver
@@ -884,6 +907,26 @@ declared[flow](N, T2)  :- member_node_v[flow](N), ast_child[code](N, object, 0, 
                           selects[flow](N, Key), member_type[flow](T, Key, T2).
 declared_lib[flow](N, L) :- member_node_v[flow](N), ast_child[code](N, object, 0, O), declared[flow](O, T),
                           selects[flow](N, Key), member_lib[flow](T, Key, L).
+
+-- what TypeScript infers from declarations alone: `new C()` is a C, a call is what its
+-- method or function is declared to return, and a binder with no annotation is what its
+-- initialiser is declared to be
+declared[flow](E, T)     :- new_of[code](E, Name, File), type_decl[code](T, Name, File),
+                            ast_node[code](T, class_declaration, _).
+declared[flow](E, T)     :- new_of[code](E, Name, File), imports_name[code](Name, Orig, D, File),
+                            module_target[code](D, Target), sx_export_type[surface](Target, Orig, T).
+new_of[code](E, Name, File) :- ast_node[code](E, new_expression, File), ast_child[code](E, callee, 0, N),
+                               ast_node[code](N, identifier, _), ast_name[code](N, Name).
+declared[flow](C, T2)    :- declared_call[flow](C, T, Key), method_type[flow](T, Key, T2).
+declared_lib[flow](C, P) :- declared_call[flow](C, T, Key), method_lib[flow](T, Key, P).
+fn_ret_at[code](C, A)    :- ast_node[code](C, call_expression, _), ast_child[code](C, callee, 0, N),
+                            ast_node[code](N, identifier, _), sees_decl[code](N, F), ast_child[code](F, return_type, 0, A).
+declared[flow](C, T)     :- fn_ret_at[code](C, A), names_type[flow](A, T).
+declared_lib[flow](C, P) :- fn_ret_at[code](C, A), names_lib[flow](A, P).
+inferred_init[code](D, X) :- ast_node[code](D, variable_declarator, _), ast_child[code](D, id, 0, I),
+                             not ast_child[code](I, type_annotation, 0, _), ast_child[code](D, init, 0, X).
+declared[flow](E, T)     :- inferred_init[code](D, X), declared[flow](X, T), sees_binder[code](E, D).
+declared_lib[flow](E, P) :- inferred_init[code](D, X), declared_lib[flow](X, P), sees_binder[code](E, D).
 
 -- a browser global by the interface it is declared as (`document: Document`), and a
 -- member of a browser type by the interface the member is declared as

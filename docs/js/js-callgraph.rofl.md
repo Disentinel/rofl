@@ -53,7 +53,7 @@ Reads:
   - <a id="ast_attr"></a>The attribute of a node is a value (`ast_attr`)
   - <a id="ast_child"></a>A node is a child of a node (`ast_child`)
 
-Kinds without a noun: tsimport_equals_declaration, tsindex_signature, tsinterface_declaration, tsinterface_heritage, tsparameter_property, tsproperty_signature, tstype_annotation, tstype_reference, tsunion_type.
+Kinds without a noun: tsimport_equals_declaration, tsindex_signature, tsinterface_declaration, tsinterface_heritage, tsmethod_signature, tsparameter_property, tsproperty_signature, tstype_annotation, tstype_reference, tsunion_type.
 
 ## Words
 
@@ -1633,7 +1633,48 @@ In the flow:
 1. if [`member_type_at`](#member_type_at)(T, Key, X) and [`names_lib`](#names_lib)(X, P);
 2. if [`type_base`](#type_base)(T, B) and [`member_lib`](#member_lib)(B, Key, P).
 
-> the four, mirrored for a type another file names
+> a field declared by its initialiser (`private inner = new Maker()`)
+
+`member_type`(T, Key, T2) if [`field_init`](#field_init)(T, Key, V) and [`declared`](#declared)(V, T2).
+
+`member_lib`(T, Key, P) if [`field_init`](#field_init)(T, Key, V) and [`declared_lib`](#declared_lib)(V, P).
+
+<a id="field_init"></a>`field_init`(T, Key, V) if all of:
+  - a node T [is a class](js-dataflow.rofl.md#class_like);
+  - the `body` of T is a node B;
+  - a [class property](#noun-class_property) S [is among the](#ast_child) `body` of B;
+  - [the attribute](#ast_attr) `static` of S is `false`;
+  - the `key` of S [is named](js-structure.rofl.md#ast_name) Key;
+  - the `value` of S is a node V;
+  - unless the `type_annotation` of S is some node.
+
+> what a method is declared to return: an interface's method signature or a class's method
+
+<a id="method_ret_at"></a>`method_ret_at`(T, Key, X) either:
+
+1. if all of:
+   - T is a tsinterface_declaration node;
+   - the `body` of T is a node B;
+   - a tsmethod_signature node S [is among the](#ast_child) `body` of B;
+   - the `key` of S [is named](js-structure.rofl.md#ast_name) Key;
+   - the `return_type` of S is a node X;
+2. if all of:
+   - T [has the method](js-dataflow.rofl.md#class_method_of) M;
+   - [the attribute](#ast_attr) `static` of M is `false`;
+   - the `key` of M [is named](js-structure.rofl.md#ast_name) Key;
+   - the `return_type` of M is a node X.
+
+<a id="method_type"></a>`method_type`(T, Key, T2) either:
+
+1. if [`method_ret_at`](#method_ret_at)(T, Key, X) and [`names_type`](#names_type)(X, T2);
+2. if [`type_base`](#type_base)(T, B) and [`method_type`](#method_type)(B, Key, T2).
+
+<a id="method_lib"></a>`method_lib`(T, Key, P) either:
+
+1. if [`method_ret_at`](#method_ret_at)(T, Key, X) and [`names_lib`](#names_lib)(X, P);
+2. if [`type_base`](#type_base)(T, B) and [`method_lib`](#method_lib)(B, Key, P).
+
+> the six, mirrored for a type another file names
 
 In the surface:
 
@@ -1666,6 +1707,22 @@ In the surface:
 In the flow:
 
 `member_lib`(T, Key, P) if [`sx_member_lib`](#sx_member_lib)(T, Key, P).
+
+In the surface:
+
+<a id="sx_method_type"></a>`sx_method_type`(T, Key, T2) if [`sx_export_type`](#sx_export_type)(something, something, T) and [`method_type`](#method_type)(T, Key, T2).
+
+In the flow:
+
+`method_type`(T, Key, T2) if [`sx_method_type`](#sx_method_type)(T, Key, T2).
+
+In the surface:
+
+<a id="sx_method_lib"></a>`sx_method_lib`(T, Key, P) if [`sx_export_type`](#sx_export_type)(something, something, T) and [`method_lib`](#method_lib)(T, Key, P).
+
+In the flow:
+
+`method_lib`(T, Key, P) if [`sx_method_lib`](#sx_method_lib)(T, Key, P).
 
 > the receivers: an annotated parameter, binder or field, `this` in an instance method, and a
 > member read off a declared receiver
@@ -1725,6 +1782,67 @@ In the flow:
   - [`declared`](#declared)(O, T);
   - N [selects](js-dataflow.rofl.md#selects) Key;
   - [`member_lib`](#member_lib)(T, Key, L).
+
+> what TypeScript infers from declarations alone: `new C()` is a C, a call is what its
+> method or function is declared to return, and a binder with no annotation is what its
+> initialiser is declared to be
+
+`declared`(E, T) either:
+
+1. if all of:
+   - [`new_of`](#new_of)(E, Name, File);
+   - [`type_decl`](#type_decl)(T, Name, File);
+   - T is a [class declaration](#noun-class_declaration);
+2. if all of:
+   - [`new_of`](#new_of)(E, Name, File);
+   - Name [imports](js-dataflow.rofl.md#imports_name) Orig at a site D in File;
+   - D [means the file](js-modules.rofl.md#module_target) Target;
+   - [`sx_export_type`](#sx_export_type)(Target, Orig, T).
+
+In the code:
+
+<a id="new_of"></a>`new_of`(a [new](#noun-new) E, Name, File) if all of:
+  - E is in file File;
+  - the `callee` of E is an [identifier](#noun-identifier) N;
+  - N [is named](js-structure.rofl.md#ast_name) Name.
+
+In the flow:
+
+`declared`(C, T2) if [`declared_call`](#declared_call)(C, T, Key) and [`method_type`](#method_type)(T, Key, T2).
+
+`declared_lib`(C, P) if [`declared_call`](#declared_call)(C, T, Key) and [`method_lib`](#method_lib)(T, Key, P).
+
+In the code:
+
+<a id="fn_ret_at"></a>`fn_ret_at`(a [call expression](#noun-call_expression) C, X) if all of:
+  - the `callee` of C is an [identifier](#noun-identifier) N;
+  - N [sees the declaration](js-dataflow.rofl.md#sees_decl) F;
+  - the `return_type` of F is a node X.
+
+In the flow:
+
+`declared`(C, T) if [`fn_ret_at`](#fn_ret_at)(C, X) and [`names_type`](#names_type)(X, T).
+
+`declared_lib`(C, P) if [`fn_ret_at`](#fn_ret_at)(C, X) and [`names_lib`](#names_lib)(X, P).
+
+In the code:
+
+<a id="inferred_init"></a>`inferred_init`(a [declarator](#noun-declarator) D, X) if all of:
+  - the `id` of D is a node I;
+  - the `init` of D is a node X;
+  - unless the `type_annotation` of I is some node.
+
+In the flow:
+
+`declared`(E, T) if all of:
+  - [`inferred_init`](#inferred_init)(D, X);
+  - [`declared`](#declared)(X, T);
+  - a node E [sees](js-dataflow.rofl.md#sees_binder) D.
+
+`declared_lib`(E, P) if all of:
+  - [`inferred_init`](#inferred_init)(D, X);
+  - [`declared_lib`](#declared_lib)(X, P);
+  - a node E [sees](js-dataflow.rofl.md#sees_binder) D.
 
 > a browser global by the interface it is declared as (`document: Document`), and a
 > member of a browser type by the interface the member is declared as

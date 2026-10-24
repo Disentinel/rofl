@@ -46,4 +46,28 @@ function dom(el: HTMLElement, input: HTMLInputElement | null) {
   console.log(el);
   console.logg(el);
 }
-export { Svc, use, more, dom };
+class Maker {
+  build(): IFoo { return null as any; }
+}
+function make(): IFoo { return null as any; }
+function infer(m: Maker) {
+  const a = new Maker();
+  a.build();
+  a.buildd();
+  const f = a.build();
+  f.run();
+  f.runn();
+  m.build().stop();
+  m.build().stopp();
+  const g = make();
+  g.run();
+  g.runn();
+}
+class Holder {
+  private inner = new Maker();
+  use() {
+    this.inner.build();
+    this.inner.buildd();
+  }
+}
+export { Svc, use, more, dom, infer, Holder };
