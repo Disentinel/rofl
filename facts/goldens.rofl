@@ -622,7 +622,7 @@ golden_state("surface_model", "45bc9175fbd3a13c", 198528).
 golden_state("unify_occurs", "1aff7f634daeef20", 925).
 golden_state("unstratifiable", "d95e615aa5fe3eb8", 661).
 golden_state("vscode_side_effects", "829bb0001005e64f", 139749).
-golden_state("vscode_surface_split", "ab5f3caaca71759d", 162559).
+golden_state("vscode_surface_split", "a302f8d5a0c1419b", 162555).
 golden_state("want_checks", "cbe9b66662d5a1bf", 782).
 golden_state("wfs_unknown_negated", "f00a8aa40edf1152", 725).
 golden_state("why_base", "e763005a8ba2722b", 858).
@@ -34023,7 +34023,7 @@ golden_rel("vscode_side_effects", "written_member[code]", 1).
 golden_rel("vscode_surface_split", "@cell", 98).
 golden_rel("vscode_surface_split", "@mem", 152).
 golden_rel("vscode_surface_split", "@other", 65).
-golden_rel("vscode_surface_split", "@wit", 47665).
+golden_rel("vscode_surface_split", "@wit", 47662).
 golden_rel("vscode_surface_split", "abrupt_at[code]", 15).
 golden_rel("vscode_surface_split", "abrupt_kind[main]", 4).
 golden_rel("vscode_surface_split", "accessor_kind[main]", 2).
@@ -34065,7 +34065,7 @@ golden_rel("vscode_surface_split", "annotating_kind[main]", 3).
 golden_rel("vscode_surface_split", "arg_at[flow]", 81).
 golden_rel("vscode_surface_split", "array_elem[flow]", 4).
 golden_rel("vscode_surface_split", "arrived_by[code]", 1924).
-golden_rel("vscode_surface_split", "asserted_by[$kernel]", 19223).
+golden_rel("vscode_surface_split", "asserted_by[$kernel]", 19224).
 golden_rel("vscode_surface_split", "assign_value_op[main]", 4).
 golden_rel("vscode_surface_split", "ast_attr[code]", 624).
 golden_rel("vscode_surface_split", "ast_child[code]", 861).
@@ -34205,7 +34205,7 @@ golden_rel("vscode_surface_split", "default_internal[code]", 1).
 golden_rel("vscode_surface_split", "deferred_attr[main]", 2).
 golden_rel("vscode_surface_split", "deferred_body[code]", 1).
 golden_rel("vscode_surface_split", "depends[code]", 13).
-golden_rel("vscode_surface_split", "derived_by[$kernel]", 48422).
+golden_rel("vscode_surface_split", "derived_by[$kernel]", 48419).
 golden_rel("vscode_surface_split", "destr_prop[code]", 1).
 golden_rel("vscode_surface_split", "destructures[code]", 1).
 golden_rel("vscode_surface_split", "edb[main]", 230).
@@ -34827,15 +34827,11 @@ golden_rel("vscode_surface_split", "vlib_member[flow]", 2).
 golden_rel("vscode_surface_split", "vlib_ns[flow]", 1).
 golden_rel("vscode_surface_split", "vlib_op[flow]", 6).
 golden_rel("vscode_surface_split", "vocabulary_gap[audit]", 9).
-golden_rel("vscode_surface_split", "vsp_count_missing[main]", 1).
-golden_rel("vscode_surface_split", "vsp_count_wrong[main]", 1).
-golden_rel("vscode_surface_split", "vsp_extra[main]", 2).
-golden_rel("vscode_surface_split", "vsp_extra_site[main]", 1).
-golden_rel("vscode_surface_split", "vsp_want[main]", 49).
+golden_rel("vscode_surface_split", "vsp_want[main]", 51).
 golden_rel("vscode_surface_split", "vsp_want_caught[main]", 1).
 golden_rel("vscode_surface_split", "vsp_want_count[main]", 5).
 golden_rel("vscode_surface_split", "vsp_want_not_run[main]", 1).
-golden_rel("vscode_surface_split", "vsp_want_site[main]", 37).
+golden_rel("vscode_surface_split", "vsp_want_site[main]", 38).
 golden_rel("vscode_surface_split", "waived[audit]", 281).
 golden_rel("vscode_surface_split", "walk[code]", 32).
 golden_rel("vscode_surface_split", "well_known_symbol[main]", 13).
