@@ -91,6 +91,18 @@ fn a_recursion_through_an_adapter_that_never_ends_stops_at_the_budget() {
 }
 
 #[test]
+fn a_capability_sends_no_more_wants_than_its_book_allows() {
+    let d = dir("capped");
+    let mut s = Session::fresh(1_000_000);
+    s.load(&format!("{}max_wants(next_of, 20).\n", world(&d, "n0")), None).expect("load");
+    let e = s.evaluate().expect("evaluate");
+    assert_eq!(runs(&d).len(), 20, "one want a round, up to the limit");
+    assert!(e.partial && s.eval.store.partial_eval, "a want held over the limit leaves the world partial");
+    let a = s.ask("want_held($want(next_of, n20), Why)").unwrap();
+    assert!(a.rows.len() == 1 && a.rows[0][0].contains("max_wants(next_of, N)"), "{:?}", a.rows);
+}
+
+#[test]
 fn a_killed_adapter_is_failed_and_a_lost_answer_unknown() {
     let d = dir("outcomes");
     let mut s = evaluated(&world(&d, "boom"));

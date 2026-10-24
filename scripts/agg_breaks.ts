@@ -65,6 +65,13 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "max_wants_ignored",
+  "what": "a capability's max_wants never held a want, so an answer that always asks one more is sent without end",
+  "expect": {
+   "adapter_capped": "one want a round, up to the limit"
+  }
+ },
+ {
   "id": "rounds_budget_each",
   "what": "each round of adapter wants given the whole budget again, so a recursion through an adapter that never ends is never cut",
   "expect": {
@@ -9262,6 +9269,7 @@ const TESTS: Record<string, string> = {
   openapi_keys: 'openapi a_key_comes_from_the_environment_and_a_missing_one_holds_the_want',
   openapi_token: 'openapi client_credentials_get_a_token_once_and_again_when_it_is_refused',
   adapter_endless: 'adapter a_recursion_through_an_adapter_that_never_ends_stops_at_the_budget',
+  adapter_capped: 'adapter a_capability_sends_no_more_wants_than_its_book_allows',
   does_once: 'dispatch a_does_want_runs_once_across_a_dispatch_the_world_anew_and_a_replay',
   does_guard: 'dispatch a_running_world_cannot_change_what_grants_permission',
   mcp_does: 'mcp a_does_tool_is_not_sent_by_evaluation',
