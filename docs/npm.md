@@ -100,7 +100,11 @@ command goes on with no credentials and stops at
   (npm 12 needs Node 22.22.2 or later);
 - **the registry refuses the exchange** (POST
   `/-/npm/v1/oidc/token/exchange/package/<name>`, 4xx): no trusted publisher
-  for that package matches the token's claims. npm's documentation says all its
+  for that package matches the token's claims. The registry says so as
+  `404 OIDC token exchange error - package not found`, of a package that is
+  there; it was the answer for all six on 2026-10-24, with the token saying
+  repository `Disentinel/rofl`, workflow `.github/workflows/ci.yml`,
+  environment `marketplace-publish`. npm's documentation says all its
   fields are case-sensitive and must be exact: the organization or user
   (`Disentinel`, as GitHub spells it in the token, not `disentinel`), the
   repository (`rofl`), the workflow file (`ci.yml`), the environment
