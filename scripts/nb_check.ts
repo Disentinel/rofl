@@ -2,6 +2,7 @@
 // turn it red. The invariants it stands for are named in examples/notebook/self.rofl.md; each check below names its own.
 import { chmodSync, existsSync, readdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
 import * as os from 'node:os';
+import { stripTypeScriptTypes } from 'node:module';
 import * as path from 'node:path';
 import * as vm from 'node:vm';
 import { Kernel, type NbLine } from '../notebook/kernel.ts';
@@ -191,7 +192,9 @@ const RUNS: Record<string, () => Promise<Out>> = {
       if (m) (m[1] === 'seen' ? model : unordered).add(`${m[2]}:${m[3]}`);
     }
     const observed = new Set<string>();
-    vm.runInNewContext(readFileSync(path.join(NB, 'keyed/order.js'), 'utf8'), { __seen: (tag: string, v: unknown) => { if (v !== undefined) observed.add(`${tag}:${String(v)}`); }, process: { argv: [] } });
+    const __seen = (tag: string, v: unknown) => { if (v !== undefined) observed.add(`${tag}:${String(v)}`); };
+    vm.runInNewContext(readFileSync(path.join(NB, 'keyed/order.js'), 'utf8'), { __seen, process: { argv: [] } });
+    vm.runInNewContext(stripTypeScriptTypes(readFileSync(path.join(NB, 'keyed/order_ts.ts'), 'utf8')), { __seen });
     const missing = [...observed].filter((o) => !model.has(o));
     const extra = [...model].filter((o) => !observed.has(o) && !unordered.has(o));
     return { code: 0, out: `V8 observed ${observed.size} values; missing from the model: ${JSON.stringify(missing)}; in the model where the order is known and V8 never saw it: ${JSON.stringify(extra)}`, stdout: '' };
