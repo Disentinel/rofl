@@ -29,7 +29,7 @@ what runs.
 | | |
 |---|---|
 | [AGENTS.md](AGENTS.md) | The snippet for a project's `CLAUDE.md`, `rofl-nb --json`, the exit codes |
-| [ADAPTERS.md](ADAPTERS.md) | Writing an adapter: an MCP server or an OpenAPI service as a book of facts |
+| [ADAPTERS.md](ADAPTERS.md) | Writing an adapter: how a world asks the outside, a database, a program, an MCP server or an HTTP API, and gets facts back |
 
 ## Further in
 
