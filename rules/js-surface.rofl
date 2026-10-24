@@ -70,6 +70,7 @@ sx_inst[surface](I, C)       :- sx_esc[surface](I), inst_of[flow](I, C).
 sx_ctor[surface](C, M)       :- sx_esc[surface](C), class_ctor[code](C, M).
 sx_ctor_of[surface](C, M)    :- sx_esc[surface](C), ctor_of[flow](C, M).
 sx_class_eff[surface](C, L, H) :- sx_esc[surface](C), class_construct_eff[flow](C, L, H).
+sx_class[surface](C)         :- sx_esc[surface](C), class_like[flow](C).
 sx_always[surface](F)        :- sx_esc[surface](F), always_throws[code](F).
 sx_may_throw[surface](F)     :- sx_esc[surface](F), may_throw[code](F).
 sx_thrown[surface](F, V)     :- sx_esc[surface](F), thrown_by[flow](F, V).
@@ -111,6 +112,7 @@ inst_of[flow](I, C)           :- sx_inst[surface](I, C).
 class_ctor[code](C, M)        :- sx_ctor[surface](C, M).
 ctor_of[flow](C, M)           :- sx_ctor_of[surface](C, M).
 class_construct_eff[flow](C, L, H) :- sx_class_eff[surface](C, L, H).
+class_like[flow](C)           :- sx_class[surface](C).
 always_throws[code](F)        :- sx_always[surface](F).
 may_throw[code](F)            :- sx_may_throw[surface](F).
 thrown_by[flow](F, V)         :- sx_thrown[surface](F, V).

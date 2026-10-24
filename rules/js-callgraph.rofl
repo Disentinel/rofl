@@ -532,6 +532,7 @@ whole_expr[flow](E) :- sees_decl[code](E, F), whole_decl[flow](F),
                        not many_binders[flow](E), not assign_reaches_unscoped[flow](E, _).
 whole_decl[flow](F)   :- ast_node[code](F, function_declaration, _).
 whole_decl[flow](F)   :- ast_node[code](F, class_declaration, _).
+whole_decl[flow](F)   :- ts_namespace[code](F).
 many_binders[flow](E)   :- sees_binder[code](E, A), sees_binder[code](E, B), A != B.
 many_binders[flow](E)   :- sees_decl[code](E, A), sees_decl[code](E, B), A != B.
 many_binders[flow](E)   :- sees_binder[code](E, _), sees_decl[code](E, _).
@@ -542,6 +543,7 @@ receivable[flow](O) :- ast_node[code](O, object_expression, _).
 receivable[flow](O) :- ast_node[code](O, array_expression, _).
 receivable[flow](I) :- inst_of[flow](I, _).
 receivable[flow](X) :- es_instance[flow](X, Name, _), lib_global_prototype(Name, _).
+receivable[flow](NS) :- ns_export[code](NS, _).
 surveyed[flow](O)   :- receivable[flow](O).
 surveyed[flow](CD)  :- class_like[flow](CD).
 -- the three, mirrored for a node that left its file
@@ -588,6 +590,10 @@ holds_in_place(while_statement, test).
 holds_in_place(template_literal, expressions).
 holds_in_place(export_named_declaration, declaration).
 holds_in_place(export_specifier, local).
+holds_in_place(import_specifier, local).
+holds_in_place(import_default_specifier, local).
+holds_in_place(tsmodule_declaration, id).
+holds_in_place(tsmodule_block, body).
 holds_in_place(object_property, value).
 
 -- asked only of a place that may hold a surveyed object of its own file
@@ -649,7 +655,7 @@ member_call[flow](C, R, Key) :- ast_node[code](C, call_expression, _), ast_child
                                 ast_node[code](N, member_expression, _), ast_attr[code](N, computed, false),
                                 selects[flow](N, Key), ast_child[code](N, object, 0, R).
 call_on[flow](C, O, Key) :- member_call[flow](C, R, Key), may_be_node[flow](R, O).
-call_finds[flow](C) :- call_on[flow](C, O, Key), member_value[flow](O, Key, _).
+call_finds[flow](C) :- call_on[flow](C, O, Key), member_value[flow](O, Key, _), not class_like[flow](O).
 call_finds[flow](C) :- call_on[flow](C, O, Key), sx_mkey[surface](O, Key).
 call_finds[flow](C) :- call_on[flow](C, O, Key), receivable[flow](O), lib_member(object, Key, _).
 call_finds[flow](C) :- call_on[flow](C, O, Key), kind_proto[flow](O, P), lib_member(P, Key, _).
@@ -658,8 +664,78 @@ call_finds[flow](C) :- call_on[flow](C, O, Key), es_instance[flow](O, Name, _), 
 call_open[flow](C)    :- member_call[flow](C, R, _), not whole_expr[flow](R), not whole_global[flow](R).
 call_open[flow](C)    :- member_call[flow](C, R, _), whole_expr[flow](R), not may_be_node[flow](R, _).
 call_open[flow](C)    :- member_call[flow](C, R, _), may_be_lit[flow](R, _).
-call_open[flow](C)    :- call_on[flow](C, O, _), not receivable[flow](O).
+call_open[flow](C)    :- call_on[flow](C, O, _), not surveyed[flow](O), not sx_module[surface](_, O).
 call_open[flow](C)    :- call_on[flow](C, O, _), sx_open[surface](O).
+
+-- A class object answers its static half, inherited statics included, and what a
+-- function has. It is open where it is `declare`d (no body to read) or a function
+-- whose `this` the model does not follow may write onto it.
+call_finds[flow](C) :- call_on[flow](C, O, Key), class_like[flow](O), class_member_static[flow](O, Key, _).
+call_finds[flow](C) :- call_on[flow](C, O, Key), class_like[flow](O), lib_member(function, Key, _).
+call_finds[flow](C) :- call_on[flow](C, O, Key), class_like[flow](O), lib_member(object, Key, _).
+static_open[flow](CD) :- class_like[flow](CD), ast_attr[code](CD, declare, true).
+static_open[flow](CD) :- class_like[flow](CD), member_value[flow](CD, _, V), may_be_node[flow](V, F),
+                         this_unfollowed[flow](F).
+sx_static_open[surface](CD) :- sx_esc[surface](CD), static_open[flow](CD).
+static_open[flow](CD)       :- sx_static_open[surface](CD).
+call_open[flow](C)    :- call_on[flow](C, O, _), static_open[flow](O).
+
+-- A TypeScript namespace has every name its body exports, a value or not
+-- (`export let x;`, `export declare function f()`).
+ns_key[code](NS, Name) :- ns_export[code](NS, E), ast_child[code](E, declaration, 0, D),
+                          ast_child[code](D, id, 0, I), ast_name[code](I, Name).
+ns_key[code](NS, Name) :- ns_export[code](NS, E), ast_child[code](E, declaration, 0, V),
+                          ast_child[code](V, declarations, _, D), ast_child[code](D, id, 0, I), ast_name[code](I, Name).
+ns_key[code](NS, Name) :- ts_namespace[code](NS), ast_child[code](NS, body, 0, B), ast_child[code](B, body, _, S),
+                          ast_node[code](S, tsimport_equals_declaration, _), ast_attr[code](S, is_export, true),
+                          ast_child[code](S, id, 0, I), ast_name[code](I, Name).
+sx_ns_key[surface](NS, Name) :- ns_key[code](NS, Name).
+sx_open[surface](NS)  :- ns_export[code](NS, E), ast_child[code](E, declaration, 0, V),
+                         ast_child[code](V, declarations, _, D), ast_child[code](D, id, 0, I), not ast_name[code](I, _).
+call_finds[flow](C) :- call_on[flow](C, O, Key), sx_ns_key[surface](O, Key).
+
+-- An ES module's namespace object (`import * as m`) is frozen and has no prototype:
+-- exactly the names the module exports. It is open where a name comes from where
+-- the model cannot see: `export *` of a module it does not resolve or of an open
+-- one, a pattern exported, `export =`, CommonJS.
+whole_expr[flow](E) :- imports_ns[code](Local, D, File), module_target[code](D, _), top_read[code](E, Local, File).
+export_key[code](File, Name) :- module_export[code](E, File), ast_child[code](E, declaration, 0, D),
+                                ast_child[code](D, id, 0, I), ast_name[code](I, Name).
+export_key[code](File, Name) :- module_export[code](E, File), ast_child[code](E, declaration, 0, V),
+                                ast_child[code](V, declarations, _, D), ast_child[code](D, id, 0, I),
+                                ast_name[code](I, Name).
+export_key[code](File, Name) :- module_export[code](E, File), ast_child[code](E, specifiers, _, Sp),
+                                ast_child[code](Sp, exported, 0, X), key_name[code](X, Name).
+export_key[code](File, "default") :- ast_node[code](_, export_default_declaration, File).
+export_key[code](File, Name) :- ast_node[code](E, export_all_declaration, File), module_target[code](E, T),
+                                sx_export_key[surface](T, Name), Name != "default".
+sx_export_key[surface](File, Name) :- export_key[code](File, Name).
+ns_open_file[code](File) :- ast_node[code](E, export_all_declaration, File), not module_target[code](E, _).
+ns_open_file[code](File) :- ast_node[code](E, export_all_declaration, File), module_target[code](E, T),
+                            sx_ns_open[surface](T).
+ns_open_file[code](File) :- module_export[code](E, File), ast_child[code](E, declaration, 0, V),
+                            ast_child[code](V, declarations, _, D), ast_child[code](D, id, 0, I), not ast_name[code](I, _).
+ns_open_file[code](File) :- ast_node[code](_, tsexport_assignment, File).
+ns_open_file[code](File) :- free_global[code](_, "exports", File).
+ns_open_file[code](File) :- free_global[code](_, "module", File).
+sx_ns_open[surface](File) :- ns_open_file[code](File).
+sx_mod_key[surface](P, Key) :- module_object[flow](P, File), export_key[code](File, Key).
+sx_mod_open[surface](P)     :- module_object[flow](P, File), ns_open_file[code](File).
+call_finds[flow](C) :- call_on[flow](C, P, Key), sx_mod_key[surface](P, Key).
+call_open[flow](C)  :- call_on[flow](C, P, _), sx_mod_open[surface](P).
+
+-- An imported name is whole where its module exports a declaration under it that
+-- is declared once and never assigned there.
+whole_expr[flow](E) :- imports_name[code](Local, Name, D, File), module_target[code](D, T),
+                       top_read[code](E, Local, File), sx_whole_export[surface](T, Name).
+decl_twice[code](File, Name) :- named_decl[code](A, Name, File), named_decl[code](B, Name, File), A != B,
+                                decl_at_top[code](A), decl_at_top[code](B),
+                                not ast_node[code](A, tsdeclare_function, _), not ast_node[code](B, tsdeclare_function, _).
+sx_whole_export[surface](File, Name) :- module_export[code](E, File), ast_child[code](E, declaration, 0, D),
+                                        whole_decl[flow](D), own_name[code](D, Name, File, around),
+                                        not decl_twice[code](File, Name), not assigned[code](_, _, Name, _, File).
+sx_whole_export[surface](File, Ext) :- reexport_offers[code](File, Ext, T, Int), sx_whole_export[surface](T, Int).
+sx_whole_export[surface](File, Ext) :- export_local[code](L, Ext, File), whole_expr[flow](L).
 
 -- An ES global (`Math`, `JSON`, `Object`) has no node: its members are its statics, what
 -- every function or object inherits, and what the corpus writes onto it by name. It is

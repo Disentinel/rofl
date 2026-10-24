@@ -43,7 +43,7 @@ Reads:
   - <a id="ast_attr"></a>The attribute of a node is a value (`ast_attr`)
   - <a id="ast_child"></a>A node is a child of a node (`ast_child`)
 
-Kinds without a noun: tsenum_body, tsparameter_property.
+Kinds without a noun: tsenum_body, tsmodule_declaration, tsparameter_property.
 
 ## Words
 
@@ -1720,6 +1720,17 @@ A node T points to a node I either:
    - [the attribute](#ast_attr) `static` of P is `true`;
    - P [hosts](#this_host) T.
 
+Declared as facts:
+
+- <a id="private_member_kind"></a>`private_member_kind` — rows in Words
+
+> a static member is inherited by the subclass's constructor, a field as a method is
+
+The static member Key of a class CD is a node V if all of:
+  - [the super](#super_of) of CD is a class SD;
+  - [the static member](#class_member_static) Key of SD is V;
+  - unless CD [owns the key](#own_key) Key.
+
 <a id="static_block_of"></a>A class has the static block SB if all of:
   - it [is object like](#obj_like);
   - the `body` of it is a node B;
@@ -1727,10 +1738,6 @@ A node T points to a node I either:
   - SB is a [static block](#noun-static_block).
 
 A node points to a node CD if CD [has the static block](#static_block_of) SB and SB [hosts](#this_host) it.
-
-Declared as facts:
-
-- <a id="private_member_kind"></a>`private_member_kind` — rows in Words
 
 ## 11. THE MODULE BOUNDARY, AS VALUE FACTS: an imported name may be what the
 
@@ -1749,10 +1756,22 @@ In the code:
 > one row per file, from `program`; `ast_node(_, _, File)` would enumerate
 > the corpus to learn three strings
 
-<a id="exports_name"></a>A [function](js-callgraph.rofl.md#fn_node) is exported as Name from File if all of:
-  - a [named export](#noun-named_export) E is in file File;
-  - the `declaration` of E is it;
-  - the `id` of it [is named](js-structure.rofl.md#ast_name) Name.
+> an export of the module itself, not one inside a TypeScript namespace
+
+<a id="module_export"></a>`module_export`(a [named export](#noun-named_export) E, File) if a [program](#noun-program) P is in file File and E [is among the](#ast_child) `body` of P.
+
+<a id="exports_name"></a>F is exported as Name from File either:
+
+1. if all of:
+   - [`module_export`](#module_export)(E, File);
+   - the `declaration` of a node E is F;
+   - F is a [function](js-callgraph.rofl.md#fn_node);
+   - the `id` of F [is named](js-structure.rofl.md#ast_name) Name;
+2. if all of:
+   - [`module_export`](#module_export)(E, File);
+   - the `declaration` of a node E is F;
+   - [`ts_namespace`](#ts_namespace)(F);
+   - F [carries its own name](#own_name) Name and File and `around`.
 
 > `export * from` re-exports every NAME (not the default), recursively. The
 > kind guard is not redundant with `module_site`, which holds of imports too.
@@ -1813,8 +1832,8 @@ A node points to a node F if all of:
 In the code:
 
 <a id="export_var"></a>`export_var`(Init, Name, File) if all of:
-  - a [named export](#noun-named_export) E is in file File;
-  - the `declaration` of E is a node V;
+  - [`module_export`](#module_export)(E, File);
+  - the `declaration` of a node E is a node V;
   - a node D [is among the](#ast_child) `declarations` of V;
   - D [binds](#binder) Name to a node Init in File.
 
@@ -2221,6 +2240,42 @@ A node
   - P [is called back with](#callback_param) in F from some module;
   - P [is named](js-structure.rofl.md#ast_name) Name;
   - F [uses](#param_use) Name at it.
+
+> A TypeScript namespace is an object made at run time (not a `declare`d one):
+> reached by its name, holding what its body exports.
+
+In the code:
+
+<a id="ts_namespace"></a>`ts_namespace`(a tsmodule_declaration node NS) unless [the attribute](#ast_attr) `declare` of NS is `true`.
+
+In the flow:
+
+A node points to a node NS if it [sees the declaration](#sees_decl) NS and [`ts_namespace`](#ts_namespace)(NS).
+
+In the code:
+
+<a id="ns_export"></a>`ns_export`(NS, a [named export](#noun-named_export) E) if all of:
+  - [`ts_namespace`](#ts_namespace)(NS);
+  - the `body` of a node NS is a node B;
+  - E [is among the](#ast_child) `body` of B.
+
+In the flow:
+
+The member Name of a node NS holds a node D if all of:
+  - [`ns_export`](#ns_export)(NS, E);
+  - the `declaration` of a node E is D;
+  - D [carries its own name](#own_name) Name and some file and `around` but is not a tsdeclare_function node.
+
+The member Name of a node NS holds a node Init if all of:
+  - [`ns_export`](#ns_export)(NS, E);
+  - the `declaration` of a node E is a node V;
+  - a node D [is among the](#ast_child) `declarations` of V;
+  - D [binds](#binder) Name to Init in some file.
+
+The member Name of a node NS holds a node In if all of:
+  - [`ts_namespace`](#ts_namespace)(NS);
+  - the `body` of NS is In;
+  - In [carries its own name](#own_name) Name and some file and `around`.
 
 ## 12. Construction
 

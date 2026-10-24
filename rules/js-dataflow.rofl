@@ -997,6 +997,10 @@ may_be_node[flow](T, I)       :- class_field_this[flow](CD, P), not ast_attr[cod
 may_be_node[flow](T, CD)      :- class_field_this[flow](CD, P), ast_attr[code](P, static, true),
                                  this_host[flow](P, T).
 
+-- a static member is inherited by the subclass's constructor, a field as a method is
+class_member_static[flow](CD, Key, V) :- super_of[flow](CD, SD), class_member_static[flow](SD, Key, V),
+                                         not own_key[flow](CD, Key).
+
 static_block_of[flow](CD, SB) :- obj_like[flow](CD), ast_child[code](CD, body, 0, B),
                                  ast_child[code](B, body, _, SB),
                                  ast_node[code](SB, static_block, _).
@@ -1019,10 +1023,16 @@ corpus_file[code](File) :- ast_node[code](_, program, File).
 
 
 
-exports_name[code](F, Name, File) :- ast_node[code](E, export_named_declaration, File),
+-- an export of the module itself, not one inside a TypeScript namespace
+module_export[code](E, File) :- ast_node[code](P, program, File), ast_child[code](P, body, _, E),
+                                ast_node[code](E, export_named_declaration, _).
+
+exports_name[code](F, Name, File) :- module_export[code](E, File),
                                      ast_child[code](E, declaration, 0, F),
                                      fn_node[code](F),
                                      ast_child[code](F, id, 0, I), ast_name[code](I, Name).
+exports_name[code](D, Name, File) :- module_export[code](E, File), ast_child[code](E, declaration, 0, D),
+                                     ts_namespace[code](D), own_name[code](D, Name, File, around).
 
 -- `export * from` re-exports every NAME (not the default), recursively. The
 -- kind guard is not redundant with `module_site`, which holds of imports too.
@@ -1078,7 +1088,7 @@ may_be_node[flow](E, F) :- imports_name[code](Local, Name, D, File),
 -- `export const X = init`: the name offers what the initialiser may be, a node through `exports_name` and a
 -- literal through `exports_value`, which also carries `export { x }` and the re-exports, so a constant written
 -- in one file reaches a use in another (vscode's channel names and ports, w_next_version_cutoff).
-export_var[code](Init, Name, File) :- ast_node[code](E, export_named_declaration, File),
+export_var[code](Init, Name, File) :- module_export[code](E, File),
                                       ast_child[code](E, declaration, 0, V), ast_child[code](V, declarations, _, D),
                                       binder[code](D, Name, Init, File).
 exports_name[code](F, Name, File) :- export_var[code](Init, Name, File), may_be_node[flow](Init, F).
@@ -1326,6 +1336,19 @@ callback_param[flow](P, F, Spec) :- sx_cb[surface](F, Spec), ast_child[code](F, 
 external_value[flow](P, Spec) :- callback_param[flow](P, _, Spec).
 may_be_node[flow](U, P)       :- callback_param[flow](P, F, _), ast_name[code](P, Name),
                                  param_use[flow](F, Name, U).
+
+-- A TypeScript namespace is an object made at run time (not a `declare`d one):
+-- reached by its name, holding what its body exports.
+ts_namespace[code](NS) :- ast_node[code](NS, tsmodule_declaration, _), not ast_attr[code](NS, declare, true).
+may_be_node[flow](E, NS) :- sees_decl[code](E, NS), ts_namespace[code](NS).
+ns_export[code](NS, E) :- ts_namespace[code](NS), ast_child[code](NS, body, 0, B), ast_child[code](B, body, _, E),
+                          ast_node[code](E, export_named_declaration, _).
+member_value[flow](NS, Name, D)    :- ns_export[code](NS, E), ast_child[code](E, declaration, 0, D),
+                                      own_name[code](D, Name, _, around), not ast_node[code](D, tsdeclare_function, _).
+member_value[flow](NS, Name, Init) :- ns_export[code](NS, E), ast_child[code](E, declaration, 0, V),
+                                      ast_child[code](V, declarations, _, D), binder[code](D, Name, Init, _).
+member_value[flow](NS, Name, In)   :- ts_namespace[code](NS), ast_child[code](NS, body, 0, In),
+                                      own_name[code](In, Name, _, around).
 
 -- =========================================================================
 -- 12. CONSTRUCTION

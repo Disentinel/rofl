@@ -285,6 +285,7 @@ unit_concludes("rules/js-dataflow.rofl", class_field_this).
 unit_concludes("rules/js-dataflow.rofl", static_block_of).
 unit_concludes("rules/js-dataflow.rofl", imports_name).
 unit_concludes("rules/js-dataflow.rofl", corpus_file).
+unit_concludes("rules/js-dataflow.rofl", module_export).
 unit_concludes("rules/js-dataflow.rofl", exports_name).
 unit_concludes("rules/js-dataflow.rofl", reexport_decl).
 unit_concludes("rules/js-dataflow.rofl", export_list_erased).
@@ -320,6 +321,8 @@ unit_concludes("rules/js-dataflow.rofl", coroutine_of).
 unit_concludes("rules/js-dataflow.rofl", sx_coroutine).
 unit_concludes("rules/js-dataflow.rofl", coroutine_yield).
 unit_concludes("rules/js-dataflow.rofl", callback_param).
+unit_concludes("rules/js-dataflow.rofl", ts_namespace).
+unit_concludes("rules/js-dataflow.rofl", ns_export).
 unit_concludes("rules/js-dataflow.rofl", super_of).
 unit_concludes("rules/js-dataflow.rofl", own_ctor).
 unit_concludes("rules/js-dataflow.rofl", has_own_ctor).
@@ -522,6 +525,18 @@ unit_concludes("rules/js-callgraph.rofl", member_call).
 unit_concludes("rules/js-callgraph.rofl", call_on).
 unit_concludes("rules/js-callgraph.rofl", call_finds).
 unit_concludes("rules/js-callgraph.rofl", call_open).
+unit_concludes("rules/js-callgraph.rofl", static_open).
+unit_concludes("rules/js-callgraph.rofl", sx_static_open).
+unit_concludes("rules/js-callgraph.rofl", ns_key).
+unit_concludes("rules/js-callgraph.rofl", sx_ns_key).
+unit_concludes("rules/js-callgraph.rofl", export_key).
+unit_concludes("rules/js-callgraph.rofl", sx_export_key).
+unit_concludes("rules/js-callgraph.rofl", ns_open_file).
+unit_concludes("rules/js-callgraph.rofl", sx_ns_open).
+unit_concludes("rules/js-callgraph.rofl", sx_mod_key).
+unit_concludes("rules/js-callgraph.rofl", sx_mod_open).
+unit_concludes("rules/js-callgraph.rofl", decl_twice).
+unit_concludes("rules/js-callgraph.rofl", sx_whole_export).
 unit_concludes("rules/js-callgraph.rofl", host_extends_global).
 unit_concludes("rules/js-callgraph.rofl", whole_global).
 unit_concludes("rules/js-callgraph.rofl", sx_global_key).
@@ -1151,6 +1166,7 @@ unit_concludes("rules/js-surface.rofl", sx_inst).
 unit_concludes("rules/js-surface.rofl", sx_ctor).
 unit_concludes("rules/js-surface.rofl", sx_ctor_of).
 unit_concludes("rules/js-surface.rofl", sx_class_eff).
+unit_concludes("rules/js-surface.rofl", sx_class).
 unit_concludes("rules/js-surface.rofl", sx_always).
 unit_concludes("rules/js-surface.rofl", sx_may_throw).
 unit_concludes("rules/js-surface.rofl", sx_thrown).
@@ -1186,6 +1202,7 @@ unit_concludes("rules/js-surface.rofl", inst_of).
 unit_concludes("rules/js-surface.rofl", class_ctor).
 unit_concludes("rules/js-surface.rofl", ctor_of).
 unit_concludes("rules/js-surface.rofl", class_construct_eff).
+unit_concludes("rules/js-surface.rofl", class_like).
 unit_concludes("rules/js-surface.rofl", always_throws).
 unit_concludes("rules/js-surface.rofl", may_throw).
 unit_concludes("rules/js-surface.rofl", thrown_by).
