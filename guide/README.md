@@ -4,7 +4,8 @@ ROFL keeps a model of your code and answers questions about it with proof.
 These pages are the documentation for people: what it answers, how to ask,
 how to write your own rules. Every command output in them is printed by the
 tool itself when the guide is built, never typed in, so what you read is
-what runs.
+what runs. They are published at
+[disentinel.github.io/rofl/guide](https://disentinel.github.io/rofl/guide/) on every merge.
 
 ## Start here
 
