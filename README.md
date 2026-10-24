@@ -1,5 +1,8 @@
-> **Using the notebook?** Start with [guide/QUICKSTART.md](guide/QUICKSTART.md):
-> install, the tutorial, a notebook of your own and one over your code.
+> **New here?** [guide/WHAT.md](guide/WHAT.md) says what ROFL answers, on one
+> small example: an answer with its proof, where a "no" stops, and what the
+> model could not see. **Using the notebook?** Start with
+> [guide/QUICKSTART.md](guide/QUICKSTART.md): install, the tutorial, a notebook
+> of your own and one over your code.
 > The rest of this page is the language and the repository.
 >
 > **Nothing to install:** [disentinel.github.io/rofl](https://disentinel.github.io/rofl/) runs a notebook in the
