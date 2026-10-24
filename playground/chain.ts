@@ -89,6 +89,8 @@ const ROLE: [string, (a: string[], label: (t?: string) => string) => string][] =
   ['class_named', () => 'the class'],
   ['decorated_by', () => 'decorated'],
   ['value_transparent', () => 'passed through'],
+  ['keyed_read_ordered', () => 'got, put before it'],
+  ['keyed_read_unordered', () => 'got, put in an order not known'],
   ['resolves', (a, label) => `the call of ${label(a[1])}`],
 ];
 
