@@ -5,7 +5,8 @@
 // to guide/pictures; else the view's mermaid, which GitHub draws; else its Markdown table; else its text.
 // `-- --check` fails if a block or a picture differs from its render; `npm run dist` runs it.
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { GRAPHS, zoom, type View } from '../notebook/draw.ts';
@@ -48,6 +49,17 @@ async function draw(where: string, file: string): Promise<string> {
   return out.join('\n\n');
 }
 
+// `rofl` as the npm package gives it: the engine binary of this tree, and `rofl scan` the scanner (npm/rofl.ts); on PATH, so a
+// world's `scanner(js, "rofl scan .")` finds it too
+let shimDir = '';
+function shim(): string {
+  if (shimDir) return shimDir;
+  shimDir = mkdtempSync(path.join(tmpdir(), 'rofl-guide-'));
+  const engine = path.join(ROOT, 'rust/target', process.env.ROFL_PROFILE ?? 'release', 'rofl');
+  writeFileSync(path.join(shimDir, 'rofl'), `#!/bin/sh\nif [ "$1" = scan ]; then shift; exec ${JSON.stringify(process.execPath)} --experimental-strip-types ${JSON.stringify(path.join(ROOT, 'scanners/cli.ts'))} "$@"; fi\nexec ${JSON.stringify(engine)} "$@"\n`, { mode: 0o755 });
+  return shimDir;
+}
+
 function render(kind: string, where: string, cmd?: string): string {
   if (kind === 'file') {
     // as npm run dist ships it
@@ -56,9 +68,12 @@ function render(kind: string, where: string, cmd?: string): string {
     return `${fence}${where.endsWith('.md') ? 'markdown' : where.endsWith('.js') ? 'js' : ''}\n${text}\n${fence}`;
   }
   const [line, head] = cmd!.split(' | head -');
-  const args = line.split(' ').slice(1);
-  const r = spawnSync(process.execPath, ['--experimental-strip-types', CLI, ...args],
-    { cwd: path.join(ROOT, where), encoding: 'utf8', timeout: 120_000, env: { ...process.env, ROFL_NB_DAEMON: '0', ROFL_NB_LIMIT: '120' } });
+  // the line as a shell reads it, near enough: words split on spaces, a word's surrounding quotes taken off
+  const [tool, ...args] = line.split(' ').map((a) => a.replace(/^'(.*)'$/, '$1').replace(/^"(.*)"$/, '$1'));
+  const r = tool === 'rofl'
+    ? spawnSync('rofl', args, { cwd: path.join(ROOT, where), encoding: 'utf8', timeout: 120_000, env: { ...process.env, PATH: `${shim()}${path.delimiter}${process.env.PATH}` } })
+    : spawnSync(process.execPath, ['--experimental-strip-types', CLI, ...args],
+      { cwd: path.join(ROOT, where), encoding: 'utf8', timeout: 120_000, env: { ...process.env, ROFL_NB_DAEMON: '0', ROFL_NB_LIMIT: '120' } });
   if (r.error || r.status === null) throw new Error(`${where}: ${line}: ${r.error?.message ?? 'killed'}`);
   let out = r.stdout.replace(/npm run nb -- /g, 'rofl-nb ').trimEnd().split('\n');
   if (head) out = out.slice(0, Number(head));
