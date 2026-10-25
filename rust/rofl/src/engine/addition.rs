@@ -500,6 +500,13 @@ impl Eval {
         Some(s)
     }
 
+    /// The bindings `facts` give a negated premise, each once: facts that differ only where the premise reads nothing
+    /// give the rule one start.
+    fn neg_seeds(&self, n: &NegAt, facts: Vec<FactId>) -> Vec<Subst> {
+        let mut seen: HashSet<Vec<(Sym, u64)>> = HashSet::new();
+        facts.into_iter().filter_map(|g| self.bind_neg(n, g)).filter(|s| seen.insert(s.iter().map(|(v, t)| (*v, t.bits())).collect())).collect()
+    }
+
     /// THE ROUNDS OF A LEVEL, over the news of every level below and then over what each round made, semi-naively. A
     /// rule whose news reaches a premise its plans cannot start from (solved in written order, such a premise is
     /// reached after the join of all those before it, for each news row) leaves the rounds: it fires whole once they
@@ -759,7 +766,7 @@ impl Eval {
                     blockers.sort_unstable();
                     let pre = self.neg_vars(n);
                     let order = self.bound_order(r, &keep, &pre);
-                    let starts: Vec<Subst> = blockers.into_iter().filter_map(|g| self.bind_neg(n, g)).collect();
+                    let starts = self.neg_seeds(n, blockers);
                     for sol in self.solve_bound(r, &keep, order.as_deref(), starts)? {
                         let mut prems = sol.prems.clone();
                         for j in &dropped {
@@ -924,7 +931,7 @@ impl Eval {
                         freed.sort_unstable();
                         let (pre, all) = (self.neg_vars(n), (0..r.plan.len()).collect::<Vec<usize>>());
                         let order = self.bound_order(r, &all, &pre);
-                        let seeds: Vec<Subst> = freed.into_iter().filter_map(|g| self.bind_neg(n, g)).collect();
+                        let seeds = self.neg_seeds(n, freed);
                         for sol in self.solve_bound(r, &all, order.as_deref(), seeds)? {
                             self.conclude(r, sol, &mut out)?;
                         }
