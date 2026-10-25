@@ -310,9 +310,7 @@ unit_concludes("rules/js-dataflow.rofl", keyed_shared).
 unit_concludes("rules/js-dataflow.rofl", keyed_get_call).
 unit_concludes("rules/js-dataflow.rofl", keyed_again).
 unit_concludes("rules/js-dataflow.rofl", keyed_between).
-unit_concludes("rules/js-dataflow.rofl", keyed_reenters).
-unit_concludes("rules/js-dataflow.rofl", keyed_outside_need).
-unit_concludes("rules/js-dataflow.rofl", keyed_outside).
+unit_concludes("rules/js-dataflow.rofl", keyed_runs_m).
 unit_concludes("rules/js-dataflow.rofl", keyed_hand_need).
 unit_concludes("rules/js-dataflow.rofl", keyed_handed).
 unit_concludes("rules/js-dataflow.rofl", keyed_open_to).
@@ -547,6 +545,7 @@ unit_concludes("rules/js-callgraph.rofl", resolved_site).
 unit_concludes("rules/js-callgraph.rofl", resolved_call).
 unit_concludes("rules/js-callgraph.rofl", unresolved_call).
 unit_concludes("rules/js-callgraph.rofl", unresolved_shape).
+unit_concludes("rules/js-callgraph.rofl", runs_outside).
 unit_concludes("rules/js-callgraph.rofl", stdlib_member).
 unit_concludes("rules/js-callgraph.rofl", frontier_at).
 unit_concludes("rules/js-callgraph.rofl", frontier_named).
@@ -1173,6 +1172,7 @@ unit_concludes("rules/js-surface.rofl", sx_effect_of).
 unit_concludes("rules/js-surface.rofl", sx_eff_calls).
 unit_concludes("rules/js-surface.rofl", sx_eff_reaches).
 unit_concludes("rules/js-surface.rofl", sx_exn_carrier).
+unit_concludes("rules/js-surface.rofl", sx_outside).
 unit_concludes("rules/js-surface.rofl", may_be_node).
 unit_concludes("rules/js-surface.rofl", may_be_lit).
 unit_concludes("rules/js-surface.rofl", member_value).
@@ -1208,6 +1208,7 @@ unit_concludes("rules/js-surface.rofl", effect_of).
 unit_concludes("rules/js-surface.rofl", eff_calls).
 unit_concludes("rules/js-surface.rofl", eff_reaches).
 unit_concludes("rules/js-surface.rofl", amb_exn_carrier).
+unit_concludes("rules/js-surface.rofl", runs_outside).
 unit_concludes("rules/js-surface.rofl", sx_export_node).
 unit_concludes("rules/js-surface.rofl", sx_export_val).
 unit_concludes("rules/js-surface.rofl", sx_export_lit).

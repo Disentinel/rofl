@@ -631,6 +631,14 @@ A node
 
 In the audit:
 
+> a function that may run code outside the model: it makes a call nothing resolves
+
+In the code:
+
+<a id="runs_outside"></a>`runs_outside`(F) if a node C [is unresolved](#unresolved_call) with some shape and F [is the nearest function of](#nearest_fn) C.
+
+In the audit:
+
 <a id="stdlib_member"></a>C calls the stdlib member Key of a prototype P if all of:
   - C [is unresolved](#unresolved_call) with some shape;
   - [the callee](#callee_of) of C is a node N;

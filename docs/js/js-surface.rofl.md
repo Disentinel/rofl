@@ -33,7 +33,7 @@ default: surface
 Reads:
 
 - from js-ambient, in the flow: [amb_exn_carrier](js-ambient.rofl.md#amb_exn_carrier)
-- from js-callgraph, in the code: [class_ctor](js-callgraph.rofl.md#class_ctor), [fn_name](js-callgraph.rofl.md#fn_name), [fn_node](js-callgraph.rofl.md#fn_node), [resolves](js-callgraph.rofl.md#resolves)
+- from js-callgraph, in the code: [class_ctor](js-callgraph.rofl.md#class_ctor), [fn_name](js-callgraph.rofl.md#fn_name), [fn_node](js-callgraph.rofl.md#fn_node), [resolves](js-callgraph.rofl.md#resolves), [runs_outside](js-callgraph.rofl.md#runs_outside)
 - from js-concat, in the flow: [may_be_lit](js-concat.rofl.md#may_be_lit), [may_be_node](js-concat.rofl.md#may_be_node)
 - from js-controlflow, in the code: [always_throws](js-controlflow.rofl.md#always_throws), [async_body](js-controlflow.rofl.md#async_body), [guarded](js-controlflow.rofl.md#guarded), [in_fn](js-controlflow.rofl.md#in_fn), [may_throw](js-controlflow.rofl.md#may_throw), [reachable](js-controlflow.rofl.md#reachable), [sync_body](js-controlflow.rofl.md#sync_body)
 - from js-controlflow, in the flow: [accessor_as](js-controlflow.rofl.md#accessor_as), [accessor_of](js-controlflow.rofl.md#accessor_of), [thrown_by](js-controlflow.rofl.md#thrown_by)
@@ -195,6 +195,8 @@ Phrases this file defines in one step, each by the sentence it stands for:
 
 <a id="sx_exn_carrier"></a>`sx_exn_carrier`(F) if [`sx_esc`](#sx_esc)(F) and F [carries an exception](js-ambient.rofl.md#amb_exn_carrier).
 
+<a id="sx_outside"></a>`sx_outside`(F) if [`sx_esc`](#sx_esc)(F) and [`runs_outside`](js-callgraph.rofl.md#runs_outside)(F).
+
 In the flow:
 
 `array_elem`(X, I, E) if [`sx_elem`](#sx_elem)(X, I, E).
@@ -234,6 +236,10 @@ In the flow:
 In the code:
 
 In the flow:
+
+In the code:
+
+`runs_outside`(F) if [`sx_outside`](#sx_outside)(F).
 
 > ---------------------------------------------------------------- exports, by the module's path
 

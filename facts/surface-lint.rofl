@@ -53,6 +53,14 @@ xl_ok(class_member_static, ast_attr, "a member's own attribute: a value written 
 -- The key is matched, not read: `nearest_fn(F, C)` is the enclosing function of the volume's own site C, and the
 -- rule only asks whether another file's callee G reaches back to it (`eff_reaches(G, F)`, mirrored for G).
 xl_ok(eff_here, nearest_fn, "the site's own enclosing function, matched against the mirrored eff_reaches of the callee").
+-- A Map field's order (rules/js-dataflow.rofl 7c) asks the same of its own method M: does a call between a delete and a
+-- read reach M back (`eff_reaches(G, M)`, mirrored for G), and was M's instance or a function that runs it handed to code
+-- outside the model. M, its instance and those functions are the volume's own nodes, matched; where another file hands
+-- one on, it left the file, and `sx_esc` says so in the arm beside.
+xl_ok(keyed_noisy, keyed_again, "the read's own method, matched against the mirrored eff_reaches of the callee").
+xl_ok(keyed_runs_m, keyed_again, "the read's own method, matched against the mirrored eff_reaches of its callers in the volume").
+xl_ok(keyed_open_to, keyed_runs_m, "the method's own runners, matched; one handed to another file is sx_esc").
+xl_ok(keyed_handed, keyed_hand_need, "the volume's own instance or function, matched; one another file hands on is sx_esc").
 
 -- A generator's own volume: `next_send(G, V)` reaches G's file through the mirror of `sx_next`, and these read G's
 -- own yields and delegations there; a volume holding another file's G reads no row and owes none.

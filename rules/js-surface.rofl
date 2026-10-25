@@ -79,6 +79,7 @@ sx_effect_of[surface](F, N)  :- sx_esc[surface](F), effect_of[flow](F, N).
 sx_eff_calls[surface](F, G)  :- sx_esc[surface](F), eff_calls[code](F, G).
 sx_eff_reaches[surface](F, G) :- sx_esc[surface](F), eff_reaches[code](F, G).
 sx_exn_carrier[surface](F)   :- sx_esc[surface](F), amb_exn_carrier[flow](F).
+sx_outside[surface](F)       :- sx_esc[surface](F), runs_outside[code](F).
 
 may_be_node[flow](N, M)       :- sx_node[surface](N, M).
 may_be_lit[flow](N, V)        :- sx_lit[surface](N, V).
@@ -120,6 +121,7 @@ effect_of[flow](F, N)         :- sx_effect_of[surface](F, N).
 eff_calls[code](F, G)         :- sx_eff_calls[surface](F, G).
 eff_reaches[code](F, G)       :- sx_eff_reaches[surface](F, G).
 amb_exn_carrier[flow](F)      :- sx_exn_carrier[surface](F).
+runs_outside[code](F)         :- sx_outside[surface](F).
 
 -- ---------------------------------------------------------------- exports, by the module's path
 sx_export_node[surface](File, Name, F) :- exports_name[code](F, Name, File).

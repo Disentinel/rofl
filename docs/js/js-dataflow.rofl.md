@@ -25,19 +25,20 @@ Reads:
 
 - from facts/js-globals.rofl, in the main:
   - <a id="lib_global_prototype"></a>A name Name has the prototype P (`lib_global_prototype`)
-- from js-callgraph: [call_site](js-callgraph.rofl.md#call_site), [callee_of](js-callgraph.rofl.md#callee_of), [calls](js-callgraph.rofl.md#calls), [decorates](js-callgraph.rofl.md#decorates), [fn_node](js-callgraph.rofl.md#fn_node), [nearest_fn](js-callgraph.rofl.md#nearest_fn), [resolved_site](js-callgraph.rofl.md#resolved_site), [resolves](js-callgraph.rofl.md#resolves), [site](js-callgraph.rofl.md#site)
+- from js-callgraph: [call_site](js-callgraph.rofl.md#call_site), [callee_of](js-callgraph.rofl.md#callee_of), [decorates](js-callgraph.rofl.md#decorates), [fn_node](js-callgraph.rofl.md#fn_node), [resolved_site](js-callgraph.rofl.md#resolved_site), [resolves](js-callgraph.rofl.md#resolves), [runs_outside](js-callgraph.rofl.md#runs_outside), [site](js-callgraph.rofl.md#site)
 - from js-concat, in the flow: [may_be_lit](js-concat.rofl.md#may_be_lit), [may_be_node](js-concat.rofl.md#may_be_node)
 - from js-concat, in the surface: [sx_mwrite](js-concat.rofl.md#sx_mwrite)
 - from js-controlflow: [async_body](js-controlflow.rofl.md#async_body), [entry_point](js-controlflow.rofl.md#entry_point)
 - from js-controlflow, in the flow: [caught_value](js-controlflow.rofl.md#caught_value)
 - from js-controlflow, in the main: [stmt_seq_field](js-controlflow.rofl.md#stmt_seq_field)
+- from js-effects: [eff_reaches](js-effects.rofl.md#eff_reaches)
 - from js-globals: [es_global_construct](js-globals.rofl.md#es_global_construct), [es_static](js-globals.rofl.md#es_static), [es_static_call](js-globals.rofl.md#es_static_call)
 - from js-globals, in the flow: [es_instance](js-globals.rofl.md#es_instance)
 - from js-model: [ast_line](js-model.rofl.md#ast_line), [ast_node](js-model.rofl.md#ast_node)
 - from js-modules: [builtin_canonical](js-modules.rofl.md#builtin_canonical), [import_site](js-modules.rofl.md#import_site), [module_target](js-modules.rofl.md#module_target), [reexport_offers](js-modules.rofl.md#reexport_offers), [require_site](js-modules.rofl.md#require_site), [site_file](js-modules.rofl.md#site_file), [site_shape](js-modules.rofl.md#site_shape), [site_source](js-modules.rofl.md#site_source), [str_char0](js-modules.rofl.md#str_char0), [str_seg](js-modules.rofl.md#str_seg)
 - from js-structure: [ast_in](js-structure.rofl.md#ast_in), [ast_name](js-structure.rofl.md#ast_name), [ast_value](js-structure.rofl.md#ast_value)
 - from js-surface, in the flow: [fn_value](js-surface.rofl.md#fn_value), [ret_node_any](js-surface.rofl.md#ret_node_any)
-- from js-surface, in the surface: [sx_arg_lit](js-surface.rofl.md#sx_arg_lit), [sx_arg_node](js-surface.rofl.md#sx_arg_node), [sx_cb](js-surface.rofl.md#sx_cb), [sx_cjs](js-surface.rofl.md#sx_cjs), [sx_default](js-surface.rofl.md#sx_default), [sx_export_lit](js-surface.rofl.md#sx_export_lit), [sx_export_node](js-surface.rofl.md#sx_export_node), [sx_export_val](js-surface.rofl.md#sx_export_val), [sx_gen_ret](js-surface.rofl.md#sx_gen_ret), [sx_gen_rlit](js-surface.rofl.md#sx_gen_rlit), [sx_module](js-surface.rofl.md#sx_module), [sx_ret_lit](js-surface.rofl.md#sx_ret_lit), [sx_ret_node](js-surface.rofl.md#sx_ret_node), [sx_ret_param](js-surface.rofl.md#sx_ret_param)
+- from js-surface, in the surface: [sx_arg_lit](js-surface.rofl.md#sx_arg_lit), [sx_arg_node](js-surface.rofl.md#sx_arg_node), [sx_cb](js-surface.rofl.md#sx_cb), [sx_cjs](js-surface.rofl.md#sx_cjs), [sx_default](js-surface.rofl.md#sx_default), [sx_esc](js-surface.rofl.md#sx_esc), [sx_export_lit](js-surface.rofl.md#sx_export_lit), [sx_export_node](js-surface.rofl.md#sx_export_node), [sx_export_val](js-surface.rofl.md#sx_export_val), [sx_gen_ret](js-surface.rofl.md#sx_gen_ret), [sx_gen_rlit](js-surface.rofl.md#sx_gen_rlit), [sx_module](js-surface.rofl.md#sx_module), [sx_ret_lit](js-surface.rofl.md#sx_ret_lit), [sx_ret_node](js-surface.rofl.md#sx_ret_node), [sx_ret_param](js-surface.rofl.md#sx_ret_param)
 - from outside these files:
   - <a id="ast_within"></a>A node is within a node (`ast_within`)
 - from the scanner:
@@ -1587,7 +1588,8 @@ In the code:
 <a id="keyed_arg"></a>`keyed_arg`(U, Q, Pos, X) if all of:
   - [`keyed_param`](#keyed_param)(U, G, Pos);
   - [`keyed_called`](#keyed_called)(G, Q);
-  - Q [passes](#arg_at) a node X at Pos.
+  - a node X is the Pos-th of the `arguments` of a node Q;
+  - unless X is a [spread](#noun-spread).
 
 `keyed_src`(U, Y) either:
 
@@ -1939,9 +1941,9 @@ In the code:
 > TAKEN OUT between the put and the read. On a field outside the constructor
 > the method may run again between them and put the value back (`keyed_noisy`):
 > a call there runs what it resolves to and all that calls; code outside the
-> model (a call nothing resolves, or one that reaches such a call) reaches the
-> method only through what it was handed: the instance, a function that runs
-> the method, an entry of the module. An `await` or a `yield` lets anything run.
+> model (a call nothing resolves, or one that reaches such a call,
+> `runs_outside`) reaches the method only through what it was handed or what
+> left the file: the instance, a function that runs the method, an entry. An `await` or a `yield` lets anything run.
 
 <a id="keyed_remover"></a>`keyed_remover`(R, C, K, Meth) either:
 
@@ -2013,56 +2015,42 @@ Declared as facts:
    - a node Q [is within](#ast_within) a node C;
    - unless [`keyed_get_call`](#keyed_get_call)(C).
 
-<a id="keyed_reenters"></a>`keyed_reenters`(M, N) either:
+<a id="keyed_runs_m"></a>`keyed_runs_m`(M, N) either:
 
 1. if [`keyed_again`](#keyed_again)(something, something, M) and N is M;
-2. if [`keyed_reenters`](#keyed_reenters)(G, N) and M [calls](js-callgraph.rofl.md#calls) G.
+2. if [`keyed_again`](#keyed_again)(something, something, N) and M [reaches by calling](js-effects.rofl.md#eff_reaches) N.
 
-<a id="keyed_outside_need"></a>`keyed_outside_need`(G) if [`keyed_between`](#keyed_between)(something, something, Q) and Q [resolves to](js-callgraph.rofl.md#resolves) G.
-
-`keyed_outside_need`(G2) if [`keyed_outside_need`](#keyed_outside_need)(G) and G [calls](js-callgraph.rofl.md#calls) G2.
-
-<a id="keyed_outside"></a>`keyed_outside`(G) either:
-
-1. if all of:
-   - [`keyed_outside_need`](#keyed_outside_need)(G);
-   - G [is the nearest function of](js-callgraph.rofl.md#nearest_fn) a node Q;
-   - unless Q [is resolved](js-callgraph.rofl.md#resolved_site);
-2. if all of:
-   - [`keyed_outside_need`](#keyed_outside_need)(G);
-   - G [calls](js-callgraph.rofl.md#calls) G2;
-   - [`keyed_outside`](#keyed_outside)(G2).
-
-<a id="keyed_hand_need"></a>`keyed_hand_need`(G) if [`keyed_reenters`](#keyed_reenters)(G, something).
+<a id="keyed_hand_need"></a>`keyed_hand_need`(G) if [`keyed_runs_m`](#keyed_runs_m)(G, something).
 
 `keyed_hand_need`(I) if all of:
-  - [`keyed_reenters`](#keyed_reenters)(G, something);
+  - [`keyed_runs_m`](#keyed_runs_m)(G, something);
   - a class CD [has the method](#class_method_of) G;
   - a node I [stands for an instance of](#inst_of) CD.
 
 <a id="keyed_handed"></a>`keyed_handed`(V) either:
 
-1. if all of:
-   - [`keyed_hand_need`](#keyed_hand_need)(V);
-   - a node X [points to](js-concat.rofl.md#may_be_node) a node V;
-   - a node Q [passes](#arg_at) X at some index;
-   - unless Q [is resolved](js-callgraph.rofl.md#resolved_site);
+1. if [`keyed_hand_need`](#keyed_hand_need)(V) and [`sx_esc`](js-surface.rofl.md#sx_esc)(V);
 2. if all of:
    - [`keyed_hand_need`](#keyed_hand_need)(V);
-   - a node O [points to](js-concat.rofl.md#may_be_node) a node V;
+   - a node X [points to](js-concat.rofl.md#may_be_node) V;
+   - a node Q [passes](#arg_at) X at some index;
+   - unless Q [is resolved](js-callgraph.rofl.md#resolved_site);
+3. if all of:
+   - [`keyed_hand_need`](#keyed_hand_need)(V);
+   - a node O [points to](js-concat.rofl.md#may_be_node) V;
    - the `object` of a node N is O;
    - [the callee](js-callgraph.rofl.md#callee_of) of a node Q is N;
    - unless Q [is resolved](js-callgraph.rofl.md#resolved_site).
 
 <a id="keyed_open_to"></a>`keyed_open_to`(M) either:
 
-1. if [`keyed_reenters`](#keyed_reenters)(G, M) and [`keyed_handed`](#keyed_handed)(G);
+1. if [`keyed_runs_m`](#keyed_runs_m)(G, M) and [`keyed_handed`](#keyed_handed)(G);
 2. if all of:
-   - [`keyed_reenters`](#keyed_reenters)(G, M);
+   - [`keyed_runs_m`](#keyed_runs_m)(G, M);
    - G [is an entry point](js-controlflow.rofl.md#entry_point);
    - unless some class [has the method](#class_method_of) G;
 3. if all of:
-   - [`keyed_reenters`](#keyed_reenters)(G, M);
+   - [`keyed_runs_m`](#keyed_runs_m)(G, M);
    - a class CD [has the method](#class_method_of) G;
    - a node I [stands for an instance of](#inst_of) CD;
    - [`keyed_handed`](#keyed_handed)(I);
@@ -2073,19 +2061,30 @@ Declared as facts:
 1. if all of:
    - [`keyed_between`](#keyed_between)(C, K, Q);
    - [`keyed_again`](#keyed_again)(C, K, M);
-   - Q [resolves to](js-callgraph.rofl.md#resolves) G;
-   - [`keyed_reenters`](#keyed_reenters)(G, M);
-2. if [`keyed_between`](#keyed_between)(C, K, an [await](#noun-await) Q);
-3. if all of:
+   - Q [resolves to](js-callgraph.rofl.md#resolves) M;
+2. if all of:
+   - [`keyed_between`](#keyed_between)(C, K, Q);
+   - [`keyed_again`](#keyed_again)(C, K, M);
+   - Q [resolves to](js-callgraph.rofl.md#resolves) a node G;
+   - G [reaches by calling](js-effects.rofl.md#eff_reaches) a node M;
+3. if [`keyed_between`](#keyed_between)(C, K, an [await](#noun-await) Q);
+4. if all of:
    - [`keyed_between`](#keyed_between)(C, K, Q);
    - a node Q [is a site](js-callgraph.rofl.md#site);
    - [`keyed_again`](#keyed_again)(C, K, M);
    - [`keyed_open_to`](#keyed_open_to)(M);
    - unless Q [is resolved](js-callgraph.rofl.md#resolved_site);
-4. if all of:
+5. if all of:
    - [`keyed_between`](#keyed_between)(C, K, Q);
    - Q [resolves to](js-callgraph.rofl.md#resolves) G;
-   - [`keyed_outside`](#keyed_outside)(G);
+   - [`runs_outside`](js-callgraph.rofl.md#runs_outside)(G);
+   - [`keyed_again`](#keyed_again)(C, K, M);
+   - [`keyed_open_to`](#keyed_open_to)(M);
+6. if all of:
+   - [`keyed_between`](#keyed_between)(C, K, Q);
+   - Q [resolves to](js-callgraph.rofl.md#resolves) a node G;
+   - G [reaches by calling](js-effects.rofl.md#eff_reaches) a node F;
+   - [`runs_outside`](js-callgraph.rofl.md#runs_outside)(F);
    - [`keyed_again`](#keyed_again)(C, K, M);
    - [`keyed_open_to`](#keyed_open_to)(M).
 

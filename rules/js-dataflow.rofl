@@ -876,7 +876,8 @@ keyed_src[code](E, S) :- keyed_want[code](E), ast_node[code](E, identifier, _), 
                          assign_binder[code](A, D), assigned[code](A, _, _, S, _).
 keyed_src[code](U, S) :- keyed_param[code](U, G, _), param_use[flow](G, Name, U), assign_param[flow](A, G),
                          assigned[code](A, _, Name, S, _).
-keyed_arg[code](U, Q, Pos, A) :- keyed_param[code](U, G, Pos), keyed_called[code](G, Q), arg_at[flow](Q, Pos, A).
+keyed_arg[code](U, Q, Pos, A) :- keyed_param[code](U, G, Pos), keyed_called[code](G, Q), ast_child[code](Q, arguments, Pos, A),
+                                  not ast_node[code](A, spread_element, _).
 keyed_src[code](U, A) :- keyed_arg[code](U, _, _, A).
 keyed_src[code](E, X) :- keyed_want[code](E), ast_node[code](E, binary_expression, _), ast_attr[code](E, operator, "+"),
                          ast_child[code](E, left, 0, X).
@@ -1012,9 +1013,9 @@ keyed_put_before[code](V, C) :- keyed_born_read[code](C, H, I), keyed_put_of[cod
 -- TAKEN OUT between the put and the read. On a field outside the constructor
 -- the method may run again between them and put the value back (`keyed_noisy`):
 -- a call there runs what it resolves to and all that calls; code outside the
--- model (a call nothing resolves, or one that reaches such a call) reaches the
--- method only through what it was handed: the instance, a function that runs
--- the method, an entry of the module. An `await` or a `yield` lets anything run.
+-- model (a call nothing resolves, or one that reaches such a call,
+-- `runs_outside`) reaches the method only through what it was handed or what
+-- left the file: the instance, a function that runs the method, an entry. An `await` or a `yield` lets anything run.
 keyed_remover[code](R, C, K, Meth) :- keyed_read_site[code](C, H, B, F, I), keyed_step[code](R, H, Meth, B, F, K),
                                       K < I, keyed_holder[code](H, P), keyed_remove(P, Meth).
 keyed_remover[code](R, C, K, Meth) :- keyed_read_site[code](C, H, B, F, I), keyed_step[code](R, H, Meth, B, F, K),
@@ -1036,28 +1037,28 @@ keyed_between[code](C, K, Q) :- keyed_again[code](C, K, M), keyed_read_site[code
 keyed_between[code](C, K, Q) :- keyed_again[code](C, K, _), keyed_read_site[code](C, _, B, F, I), ast_child[code](B, F, L, Q),
                                 K < L, L < I.
 keyed_between[code](C, K, Q) :- keyed_again[code](C, K, _), not keyed_get_call[code](C), ast_within[code](C, Q).
-keyed_reenters[code](M, M) :- keyed_again[code](_, _, M).
-keyed_reenters[code](F, M) :- keyed_reenters[code](G, M), calls[code](F, G).
-keyed_outside_need[code](G)  :- keyed_between[code](_, _, Q), resolves[code](Q, G).
-keyed_outside_need[code](G2) :- keyed_outside_need[code](G), calls[code](G, G2).
-keyed_outside[code](G) :- keyed_outside_need[code](G), nearest_fn[code](G, Q), not resolved_site[code](Q).
-keyed_outside[code](G) :- keyed_outside_need[code](G), calls[code](G, G2), keyed_outside[code](G2).
-keyed_hand_need[code](G) :- keyed_reenters[code](G, _).
-keyed_hand_need[code](I) :- keyed_reenters[code](G, _), class_method_of[flow](CD, G), inst_of[flow](I, CD).
+keyed_runs_m[code](M, M) :- keyed_again[code](_, _, M).
+keyed_runs_m[code](G, M) :- keyed_again[code](_, _, M), eff_reaches[code](G, M).
+keyed_hand_need[code](G) :- keyed_runs_m[code](G, _).
+keyed_hand_need[code](I) :- keyed_runs_m[code](G, _), class_method_of[flow](CD, G), inst_of[flow](I, CD).
+keyed_handed[code](V) :- keyed_hand_need[code](V), sx_esc[surface](V).
 keyed_handed[code](V) :- keyed_hand_need[code](V), may_be_node[flow](A, V), arg_at[flow](Q, _, A), not resolved_site[code](Q).
 keyed_handed[code](V) :- keyed_hand_need[code](V), may_be_node[flow](O, V), ast_child[code](N, object, 0, O),
                          callee_of[code](Q, N), not resolved_site[code](Q).
-keyed_open_to[code](M) :- keyed_reenters[code](G, M), keyed_handed[code](G).
-keyed_open_to[code](M) :- keyed_reenters[code](G, M), entry_point[code](G), not class_method_of[flow](_, G).
-keyed_open_to[code](M) :- keyed_reenters[code](G, M), class_method_of[flow](CD, G), not ast_attr[code](G, accessibility, "private"),
+keyed_open_to[code](M) :- keyed_runs_m[code](G, M), keyed_handed[code](G).
+keyed_open_to[code](M) :- keyed_runs_m[code](G, M), entry_point[code](G), not class_method_of[flow](_, G).
+keyed_open_to[code](M) :- keyed_runs_m[code](G, M), class_method_of[flow](CD, G), not ast_attr[code](G, accessibility, "private"),
                           inst_of[flow](I, CD), keyed_handed[code](I).
+keyed_noisy[code](C, K) :- keyed_between[code](C, K, Q), keyed_again[code](C, K, M), resolves[code](Q, M).
 keyed_noisy[code](C, K) :- keyed_between[code](C, K, Q), keyed_again[code](C, K, M), resolves[code](Q, G),
-                           keyed_reenters[code](G, M).
+                           eff_reaches[code](G, M).
 keyed_noisy[code](C, K) :- keyed_between[code](C, K, Q), ast_node[code](Q, await_expression, _).
 keyed_noisy[code](C, K) :- keyed_between[code](C, K, Q), ast_node[code](Q, yield_expression, _).
 keyed_noisy[code](C, K) :- keyed_between[code](C, K, Q), site[code](Q), not resolved_site[code](Q),
                            keyed_again[code](C, K, M), keyed_open_to[code](M).
-keyed_noisy[code](C, K) :- keyed_between[code](C, K, Q), resolves[code](Q, G), keyed_outside[code](G),
+keyed_noisy[code](C, K) :- keyed_between[code](C, K, Q), resolves[code](Q, G), runs_outside[code](G),
+                           keyed_again[code](C, K, M), keyed_open_to[code](M).
+keyed_noisy[code](C, K) :- keyed_between[code](C, K, Q), resolves[code](Q, G), eff_reaches[code](G, F), runs_outside[code](F),
                            keyed_again[code](C, K, M), keyed_open_to[code](M).
 keyed_out[code](V, C, P, R, K, Meth) :- keyed_put_before[code](V, C), keyed_read_site[code](C, H, B, F, I),
                                         keyed_put_site[code](P, H, V, B, F, J), keyed_remover[code](R, C, K, Meth), J < K.
