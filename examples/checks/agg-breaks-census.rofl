@@ -13,6 +13,14 @@ brk_expects("prov_state_unsettled", "prov_lazy_reader").
 brk_expects("prov_state_unsettled", "prov_lazy_retract").
 brk("journal_closed_late"). brk_kind("journal_closed_late", switch).
 brk_expects("journal_closed_late", "journal_replay").
+brk("roflenox_unsigned"). brk_kind("roflenox_unsigned", switch).
+brk_expects("roflenox_unsigned", "roflenox_stranger").
+brk("served_other_session"). brk_kind("served_other_session", switch).
+brk_expects("served_other_session", "served_world").
+brk("login_verifier_dropped"). brk_kind("login_verifier_dropped", switch).
+brk_expects("login_verifier_dropped", "login_flow").
+brk("event_time_raw"). brk_kind("event_time_raw", switch).
+brk_expects("event_time_raw", "event_time").
 brk("max_wants_ignored"). brk_kind("max_wants_ignored", switch).
 brk_expects("max_wants_ignored", "adapter_capped").
 brk("rounds_budget_each"). brk_kind("rounds_budget_each", switch).
@@ -2135,6 +2143,8 @@ brk("add_staged_cells_kept"). brk_kind("add_staged_cells_kept", switch).
 brk_expects("add_staged_cells_kept", "addition_staged_agg").
 brk("add_closure_lowered_unnoted"). brk_kind("add_closure_lowered_unnoted", switch).
 brk_expects("add_closure_lowered_unnoted", "addition_closure_row").
+brk("add_lower_unfollowed"). brk_kind("add_lower_unfollowed", switch).
+brk_expects("add_lower_unfollowed", "addition_lower_member").
 brk("add_hol_shared_kept"). brk_kind("add_hol_shared_kept", switch).
 brk_expects("add_hol_shared_kept", "addition_holistic").
 brk("add_ledger_reader_kept"). brk_kind("add_ledger_reader_kept", switch).
@@ -2308,6 +2318,7 @@ switch_site("add_join_contribs_kept", "rust/rofl/src/engine/addition.rs").
 switch_site("add_join_refused", "rust/rofl/src/engine/addition.rs").
 switch_site("add_ledger_reader_kept", "rust/rofl/src/engine/addition.rs").
 switch_site("add_lost_unseeded", "rust/rofl/src/engine/addition.rs").
+switch_site("add_lower_unfollowed", "rust/rofl/src/engine/addition.rs").
 switch_site("add_negation_reset", "rust/rofl/src/engine/addition.rs").
 switch_site("add_promoted_unnoted", "rust/rofl/src/store.rs").
 switch_site("add_reset_after", "rust/rofl/src/engine/addition.rs").
@@ -2489,6 +2500,7 @@ switch_site("ds_wide_unlisted", "rust/rofl/src/engine.rs").
 switch_site("ds_wild_keys", "rust/rofl/src/engine/datastrat.rs").
 switch_site("empty_none", "rust/rofl/src/engine.rs").
 switch_site("empty_text", "rust/rofl/src/engine.rs").
+switch_site("event_time_raw", "rust/rofl/src/adapter.rs").
 switch_site("facts_agg_unwritten", "rust/rofl/src/bin/rofl/render.rs").
 switch_site("facts_decl_as_fact", "rust/rofl/src/bin/rofl/render.rs").
 switch_site("facts_dom_unwritten", "rust/rofl/src/bin/rofl/render.rs").
@@ -2620,6 +2632,7 @@ switch_site("lattice_whynot_no_path", "rust/rofl/src/engine.rs").
 switch_site("lattice_whynot_plain", "rust/rofl/src/engine.rs").
 switch_site("lattice_whynot_tuple_plain", "rust/rofl/src/engine.rs").
 switch_site("lattice_withdrawn_unspread", "rust/rofl/src/engine.rs").
+switch_site("login_verifier_dropped", "rust/rofl/src/login.rs").
 switch_site("max", "rust/rofl/src/cell.rs").
 switch_site("max_tie_last", "rust/rofl/src/cell.rs").
 switch_site("max_wants_ignored", "rust/rofl/src/adapter.rs").
@@ -2768,6 +2781,7 @@ switch_site("retract_thr_outer_plain", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_thr_unclosed", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_tree_refused", "rust/rofl/src/engine/addition.rs").
 switch_site("retract_unrederived", "rust/rofl/src/engine/addition.rs").
+switch_site("roflenox_unsigned", "rust/rofl/src/roflenox.rs").
 switch_site("roots_of_cycle_off", "rust/rofl/src/engine.rs").
 switch_site("rounds_budget_each", "rust/rofl/src/session.rs").
 switch_site("scan_inherited_answers_fresh", "rust/rofl/src/session.rs").
@@ -2776,6 +2790,7 @@ switch_site("scc_member_reads_free", "rust/rofl/src/engine.rs").
 switch_site("scc_off", "rust/rofl/src/engine.rs").
 switch_site("scc_unit_gone", "rust/rofl/src/engine.rs").
 switch_site("scc_window_late", "rust/rofl/src/engine.rs").
+switch_site("served_other_session", "rust/rofl/src/adapter.rs").
 switch_site("set_literal_as_written", "rust/rofl/src/cell.rs").
 switch_site("set_pattern_admitted", "rust/rofl/src/engine.rs").
 switch_site("set_pattern_admitted", "rust/rofl/src/program.rs").

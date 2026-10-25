@@ -14,17 +14,46 @@ use std::sync::atomic::{AtomicIsize, Ordering};
 struct Counting;
 pub(crate) static LIVE: AtomicIsize = AtomicIsize::new(0);
 
+/// What this thread allocated and freed since it last told `LIVE`: one counter written by every thread at every
+/// allocation is a cache line the threads of a round fight over, so each tells it only past `SLACK` bytes.
+const SLACK: isize = 1 << 16;
+thread_local! {
+    static OWN: std::cell::Cell<isize> = const { std::cell::Cell::new(0) };
+}
+
+fn count(n: isize) {
+    let told = OWN.try_with(|c| {
+        let v = c.get() + n;
+        if v.abs() < SLACK {
+            c.set(v);
+            0
+        } else {
+            c.set(0);
+            v
+        }
+    });
+    match told {
+        Ok(0) => {}
+        Ok(v) => {
+            LIVE.fetch_add(v, Ordering::Relaxed);
+        }
+        Err(_) => {
+            LIVE.fetch_add(n, Ordering::Relaxed);
+        }
+    }
+}
+
 unsafe impl GlobalAlloc for Counting {
     unsafe fn alloc(&self, l: Layout) -> *mut u8 {
-        LIVE.fetch_add(l.size() as isize, Ordering::Relaxed);
+        count(l.size() as isize);
         System.alloc(l)
     }
     unsafe fn dealloc(&self, p: *mut u8, l: Layout) {
-        LIVE.fetch_sub(l.size() as isize, Ordering::Relaxed);
+        count(-(l.size() as isize));
         System.dealloc(p, l)
     }
     unsafe fn realloc(&self, p: *mut u8, l: Layout, n: usize) -> *mut u8 {
-        LIVE.fetch_add(n as isize - l.size() as isize, Ordering::Relaxed);
+        count(n as isize - l.size() as isize);
         System.realloc(p, l, n)
     }
 }

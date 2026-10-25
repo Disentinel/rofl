@@ -29,6 +29,8 @@
 //! 2) and the protocol makes it the obvious one: `open` takes a seed, `fork`
 //! takes a session id.
 //!
+//! `rofl serve FILE...` opens session 1 on the world of the files, evaluated, before the first request.
+//!
 //!   {"op":"open","seedPath":"x.seed.json"}   -> {"ok":true,"session":1,...}; `keptPath` opens a kept image,
 //!     `volumePath` maps a volume
 //!     `open` and `fresh` also take the walls a snapshot does not carry:
@@ -600,8 +602,27 @@ impl Server {
     }
 }
 
-pub fn main() {
+/// `rofl serve FILE...` serves a world: the files loaded and evaluated as session 1 before the first request, which
+/// another world's `rofl` adapter asks (src/adapter.rs `Served`).
+pub fn main(files: Vec<String>) {
     let mut srv = Server { sessions: HashMap::new(), next: 1, keys: HashMap::new() };
+    if !files.is_empty() {
+        let mut text = String::new();
+        for f in &files {
+            text.push_str(&std::fs::read_to_string(f).unwrap_or_else(|e| { eprintln!("{f}: {e}"); std::process::exit(crate::load::FILE_REFUSED) }));
+            text.push('\n');
+        }
+        let mut s = Session::fresh(DEFAULT_BUDGET);
+        if let Err(d) = s.load(&text, None) {
+            eprintln!("{}", d.join("\n"));
+            std::process::exit(crate::load::FILE_REFUSED);
+        }
+        if let Err(e) = s.evaluate() {
+            eprintln!("{}", rofl::describe(&e));
+            std::process::exit(crate::load::WORLD_REFUSED);
+        }
+        srv.keep(s);
+    }
     let stdin = std::io::stdin();
     let mut out = std::io::stdout().lock();
     for line in stdin.lock().lines() {

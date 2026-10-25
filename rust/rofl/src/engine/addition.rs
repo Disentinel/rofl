@@ -700,6 +700,7 @@ impl Eval {
     #[allow(clippy::too_many_arguments)]
     fn fine_levels(&mut self, added: &[FactId], removed: &[FactId], mono: &[Rc<ERule>], negs: &[(Rc<ERule>, Vec<NegAt>)], fresh: &[Rc<ERule>], recompute: &[Rc<ERule>], keyable: &HashSet<Sym>, grown: &HashSet<Sym>, dirty: &HashSet<Sym>, skip: &HashSet<Sym>, d: &mut AddDelta) -> Result<(), Halt> {
         self.add_kept.clear();
+        self.heights_kept.clear();
         let mut levels: std::collections::BTreeSet<i64> = mono.iter().chain(fresh).chain(recompute).chain(negs.iter().map(|(r, _)| r)).map(|r| self.rule_level(r)).collect();
         levels.extend(grown.iter().filter(|r| !dirty.contains(r)).map(|r| self.rel_level(*r)));
         let mut by_head: HashMap<Sym, Vec<Rc<ERule>>> = HashMap::new();
@@ -1019,12 +1020,13 @@ impl Eval {
 
     /// THE CORRELATIONS AN AGGREGATE RULE IS ASKED AGAIN AT: the keys of its cells that what changed falls in, each as the
     /// binding the rule is solved from. None, and the rule is sealed again whole, where a change names no key (a premise
-    /// it matches leaves a variable of the key free), the key is not the head's, or a fact below may stand lower than it
-    /// did (a cell lists its members' heights).
+    /// it matches leaves a variable of the key free) or the key is not the head's. A fact below that may stand lower than
+    /// it did names the keys of the members resting on it (a cell lists its members' heights).
     fn agg_keys(&mut self, r: &ERule, lv: i64, news: &Front, changed: &HashSet<FactId>) -> Option<Vec<Subst>> {
-        if !self.ds_elems.is_empty() || self.add_refired.iter().any(|f| !changed.contains(f) && self.rel_level(self.store.rec(*f).rel) < lv) {
+        if !self.ds_elems.is_empty() {
             return None;
         }
+        let lower: Vec<FactId> = self.add_refired.iter().copied().filter(|f| !changed.contains(f) && self.rel_level(self.store.rec(*f).rel) < lv).collect();
         let mut key: Option<Vec<Sym>> = None;
         let mut lits: Vec<&Lit> = Vec::new();
         for b in &r.plan {
@@ -1061,6 +1063,9 @@ impl Eval {
         }
         let mut facts: Vec<FactId> = news.by_rel.iter().filter(|(rel, _)| rels.contains(rel)).flat_map(|(_, ids)| ids.iter().copied()).collect();
         facts.extend(changed.iter().copied().filter(|f| rels.contains(&self.store.rec(*f).rel)));
+        if !lower.is_empty() && brk!("add_lower_unfollowed" => false; true) {
+            facts.extend(self.resting_on(r, lower).into_iter().filter(|f| rels.contains(&self.store.rec(*f).rel)));
+        }
         facts.sort_unstable();
         facts.dedup();
         let mut keys: Vec<Vec<Term>> = Vec::new();
@@ -1084,6 +1089,22 @@ impl Eval {
             }
         }
         Some(keys.into_iter().map(|k| key.iter().zip(k).fold(Subst::new(), |s, (v, t)| unify(&self.h, Term::var(*v), t, &s).expect("a free variable binds"))).collect())
+    }
+
+    /// The facts below `r` that rest on `from`, through each other: where one of `from` stands lower, only these may.
+    fn resting_on(&mut self, r: &ERule, from: Vec<FactId>) -> HashSet<FactId> {
+        if !self.store.has_citers() {
+            self.store.index_citers();
+        }
+        let below = self.rels_below(self.rules.iter().filter(|x| x.id == r.id));
+        let mut seen: HashSet<FactId> = HashSet::new();
+        let mut todo = from;
+        while let Some(f) = todo.pop() {
+            if seen.insert(f) {
+                todo.extend(self.store.citers_one(f).into_iter().filter(|c| self.store.alive(*c) && below.contains(&self.store.rec(*c).rel)));
+            }
+        }
+        seen
     }
 
     /// `agg_keys`'s rule at its keys: what it concluded there withdrawn, the cells of those correlations unsealed, and the
@@ -1149,7 +1170,9 @@ impl Eval {
         }
         self.kill_cells(&cells);
         d.stacked_cells += cells.len();
-        self.height_memo.clear();
+        // the heights of what lies below the level reached stand: those found before are read again
+        let lv = self.rule_level(r);
+        self.height_memo = std::mem::take(&mut self.heights_kept);
         self.store.arrivals = Some(Vec::new());
         let saved = std::mem::replace(&mut self.active, vec![r.clone()]);
         let t = std::time::Instant::now();
@@ -1162,6 +1185,9 @@ impl Eval {
             self.propagate(front)
         })();
         *self.ns_by_rule.entry(r.id).or_insert(0) += t.elapsed().as_nanos() as u64;
+        let mut kept = std::mem::take(&mut self.height_memo);
+        kept.retain(|f, _| self.rel_level(self.store.rec(*f).rel) < lv);
+        self.heights_kept = kept;
         self.active = saved;
         let came = self.store.arrivals.take().unwrap_or_default();
         res?;

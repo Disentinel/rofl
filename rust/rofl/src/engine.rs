@@ -1183,6 +1183,10 @@ pub struct Eval {
     /// Set while a rule fires on news read inside its thresholds.
     thr_focus: Option<Rc<HashMap<(Sym, u32), ThrFocus>>>,
     height_memo: HashMap<FactId, u32>,
+    /// Heights an addition found of facts below the level it had reached, which nothing later in it moves.
+    heights_kept: HashMap<FactId, u32>,
+    /// The news of the premise the written path is matching, by the set they are and the relation (`par::NewsIx`).
+    news_ix: Option<(usize, Sym, Rc<par::NewsIx>)>,
     /// The round each relation closes in, for a cell's seals; 0 for input.
     round_of: HashMap<Sym, u32>,
     /// Every relation a rule concludes within the tick: one of these with no
@@ -1642,6 +1646,8 @@ impl Eval {
             thr_fresh: HashSet::new(),
             thr_focus: None,
             height_memo: HashMap::new(),
+            heights_kept: HashMap::new(),
+            news_ix: None,
             round_of: HashMap::new(),
             derived_rels: HashSet::new(),
             fault: None,
@@ -5540,50 +5546,61 @@ impl Eval {
                     }
                     None => &acc[..],
                 };
-                for a in left {
-                    self.room(self.rows + next.len() as i64, rule_id)?;
-                    match b {
-                        BodyElem::Pos(l) => {
-                            let only = match front_at {
-                                Some((p, keys)) if p == i => Some(keys),
-                                _ => None,
-                            };
-                            let (faults, unknowns) = (self.fault_count, self.demand_trail.len());
-                            let found = self.match_premise(l, &a.s, depth, only)?;
-                            self.demand_below(depth, l, &a.s, faults, unknowns);
-                            for (s2, r) in found {
-                                let mut prems = a.prems.clone();
-                                prems.push(r);
-                                next.push(Sol { s: s2, prems });
-                            }
-                        }
-                        BodyElem::Neg(l) => {
-                            self.solve_neg(l, a, i, depth, rule_id, &mut next)?;
-                        }
-                        BodyElem::Bi { op, l, r } => {
-                            let faults = self.fault_count;
-                            let s2s = self.eval_builtins(*op, *l, *r, &a.s, rule_id)?;
-                            let failed = s2s.is_empty();
-                            for s2 in s2s {
-                                let mut prems = a.prems.clone();
-                                prems.push(PremRef::Bi(0));
-                                next.push(Sol { s: s2, prems });
-                            }
-                            if failed && self.fault_count > faults && self.firing {
-                                if !self.lattices.is_empty() {
-                                    self.lattice_fault(rule_id, &a.s, &a.prems)?;
+                let outer_ix = match (b, front_at) {
+                    (BodyElem::Pos(l), Some((p, keys))) if p == i && !left.is_empty() => {
+                        self.news_ix.replace((keys as *const _ as usize, l.rel, Rc::new(par::NewsIx::default())))
+                    }
+                    _ => self.news_ix.take(),
+                };
+                let matched = (|| -> Result<(), Halt> {
+                    for a in left {
+                        self.room(self.rows + next.len() as i64, rule_id)?;
+                        match b {
+                            BodyElem::Pos(l) => {
+                                let only = match front_at {
+                                    Some((p, keys)) if p == i => Some(keys),
+                                    _ => None,
+                                };
+                                let (faults, unknowns) = (self.fault_count, self.demand_trail.len());
+                                let found = self.match_premise(l, &a.s, depth, only)?;
+                                self.demand_below(depth, l, &a.s, faults, unknowns);
+                                for (s2, r) in found {
+                                    let mut prems = a.prems.clone();
+                                    prems.push(r);
+                                    next.push(Sol { s: s2, prems });
                                 }
-                                if depth == 0 {
-                                    brk!("plain_rule_hole_unspread" => (); self.plain_fault(rule_id, &a.s, b));
-                                }
-                                self.demand_fault(depth, &a.s);
                             }
-                        }
-                        BodyElem::Agg(ag) => {
-                            self.solve_agg(ag, a, i, depth, rule_id, &mut next)?;
+                            BodyElem::Neg(l) => {
+                                self.solve_neg(l, a, i, depth, rule_id, &mut next)?;
+                            }
+                            BodyElem::Bi { op, l, r } => {
+                                let faults = self.fault_count;
+                                let s2s = self.eval_builtins(*op, *l, *r, &a.s, rule_id)?;
+                                let failed = s2s.is_empty();
+                                for s2 in s2s {
+                                    let mut prems = a.prems.clone();
+                                    prems.push(PremRef::Bi(0));
+                                    next.push(Sol { s: s2, prems });
+                                }
+                                if failed && self.fault_count > faults && self.firing {
+                                    if !self.lattices.is_empty() {
+                                        self.lattice_fault(rule_id, &a.s, &a.prems)?;
+                                    }
+                                    if depth == 0 {
+                                        brk!("plain_rule_hole_unspread" => (); self.plain_fault(rule_id, &a.s, b));
+                                    }
+                                    self.demand_fault(depth, &a.s);
+                                }
+                            }
+                            BodyElem::Agg(ag) => {
+                                self.solve_agg(ag, a, i, depth, rule_id, &mut next)?;
+                            }
                         }
                     }
-                }
+                    Ok(())
+                })();
+                self.news_ix = outer_ix;
+                matched?;
                 if let Some(m) = mark {
                     self.note_cost(m, acc.len(), next.len());
                 }
@@ -11700,16 +11717,21 @@ impl Eval {
                 let narrow = self.index_probe(l, s, persp, keys.len().saturating_sub(1));
                 match narrow {
                     Some(n) => n.into_iter().filter(|f| keys.contains(f)).collect(),
-                    _ => keys
-                        .iter()
-                        .copied()
-                        .filter(|f| {
-                            self.store.alive(*f) && {
-                                let r = self.store.rec(*f);
+                    _ => {
+                        let (pos, vals) = par::bound_args(&self.h, l, s);
+                        let ix = self.news_ix.as_ref().filter(|(at, rel, _)| *at == keys as *const _ as usize && *rel == l.rel && !pos.is_empty()).map(|(_, _, ix)| ix.clone());
+                        let store = &self.store;
+                        let kept = |f: &FactId| {
+                            store.alive(*f) && {
+                                let r = store.rec(*f);
                                 r.rel == l.rel && (persp.is_none() || Some(r.persp) == persp)
                             }
-                        })
-                        .collect(),
+                        };
+                        match ix.as_ref().and_then(|ix| ix.rows(store, keys.iter().copied(), l.args.len(), &pos, &vals)) {
+                            Some(rows) => rows.iter().copied().filter(kept).collect(),
+                            None => keys.iter().copied().filter(kept).collect(),
+                        }
+                    }
                 }
             }
             None if (self.asking || self.refinding) && !self.firing && !self.store.unordered => self.question_cands(l, s, persp),

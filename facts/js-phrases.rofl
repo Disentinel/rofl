@@ -138,6 +138,11 @@ sig(ident, "reads(identifier N, name Name)").
 sig(ident_in, "reads(identifier E, name Name, in file File)").
 sig(may_be_lit, "may_be_the_literal(node E, text V)").
 sig(may_be_node, "points_to(node E, node N)").
+sig(keyed_read_ordered, "reads_back(call C, the value put before it node V)").
+sig(keyed_read_unordered, "may_read_back(call C, the value put in an order not known node V)").
+sig(keyed_put_before, "is_put_before(node V, call C)").
+sig(keyed_put_after, "is_put_after(node V, call C)").
+sig(keyed_taken_out, "is_taken_out_before(node V, call C, by call R)").
 sig(interpolated, "is_interpolated(template T)").
 sig(binder, "binds(declarator D, name Name, to node Init, in file File)").
 sig(binder_at_top, "is_at_the_top(declarator D)").

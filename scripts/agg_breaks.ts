@@ -65,6 +65,34 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "roflenox_unsigned",
+  "what": "every signature of a book on Roflenox taken as good, so a batch a stranger signed is read as the identity's",
+  "expect": {
+   "roflenox_stranger": "a stranger's batch read"
+  }
+ },
+ {
+  "id": "served_other_session",
+  "what": "a rofl adapter whose address is a command asks another session than the world it serves, so a served world answers nothing",
+  "expect": {
+   "served_world": "the pages of a served world"
+  }
+ },
+ {
+  "id": "login_verifier_dropped",
+  "what": "a sign-in sends no PKCE code verifier, so the authorization server refuses the code and no one is signed in",
+  "expect": {
+   "login_flow": "the sign-in"
+  }
+ },
+ {
+  "id": "event_time_raw",
+  "what": "an answer's event_time column left as the source wrote it, so times from two zones are neither one text nor ordered",
+  "expect": {
+   "event_time": "the times in UTC"
+  }
+ },
+ {
   "id": "max_wants_ignored",
   "what": "a capability's max_wants never held a want, so an answer that always asks one more is sent without end",
   "expect": {
@@ -8544,6 +8572,13 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "add_lower_unfollowed",
+  "what": "a fact that stood is given a lower firing and the members resting on it are not followed: their cells keep their old heights",
+  "expect": {
+   "addition_lower_member": "the addition to"
+  }
+ },
+ {
   "id": "add_hol_shared_kept",
   "what": "a holistic group shared across its percent or subject is asked again by key and keeps its old group",
   "expect": {
@@ -9221,6 +9256,7 @@ const TESTS: Record<string, string> = {
   addition_threshold: 'addition a_threshold_sealed_again_takes',
   addition_closure_row: 'addition a_closure_row_given_a_shorter_path',
   addition_holistic: 'addition a_holistic_aggregate_is_sealed_again',
+  addition_lower_member: 'addition a_member_standing_lower_seals_again_only_its_group',
   addition_derived_by: 'addition a_rule_reading_derived_by',
   addition_fault: 'addition a_fault_the_addition_does_not_reach',
   addition_dominance: 'addition a_dominance_the_change_reaches',
@@ -9270,6 +9306,10 @@ const TESTS: Record<string, string> = {
   openapi_token: 'openapi client_credentials_get_a_token_once_and_again_when_it_is_refused',
   adapter_endless: 'adapter a_recursion_through_an_adapter_that_never_ends_stops_at_the_budget',
   adapter_capped: 'adapter a_capability_sends_no_more_wants_than_its_book_allows',
+  roflenox_stranger: 'roflenox a_batch_signed_by_a_stranger_is_refused',
+  served_world: 'served a_world_another_process_serves_answers_its_wants',
+  login_flow: 'login a_person_signs_in_once_and_the_token_is_renewed_when_refused',
+  event_time: 'event_time an_event_time_is_one_instant_whatever_zone_it_came_in',
   does_once: 'dispatch a_does_want_runs_once_across_a_dispatch_the_world_anew_and_a_replay',
   does_guard: 'dispatch a_running_world_cannot_change_what_grants_permission',
   mcp_does: 'mcp a_does_tool_is_not_sent_by_evaluation',

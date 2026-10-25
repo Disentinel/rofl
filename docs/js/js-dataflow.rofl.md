@@ -30,7 +30,8 @@ Reads:
 - from js-concat, in the surface: [sx_mwrite](js-concat.rofl.md#sx_mwrite)
 - from js-controlflow, in the code: [async_body](js-controlflow.rofl.md#async_body)
 - from js-controlflow: [caught_value](js-controlflow.rofl.md#caught_value)
-- from js-globals, in the code: [es_static](js-globals.rofl.md#es_static), [es_static_call](js-globals.rofl.md#es_static_call)
+- from js-controlflow, in the main: [stmt_seq_field](js-controlflow.rofl.md#stmt_seq_field)
+- from js-globals, in the code: [es_global_construct](js-globals.rofl.md#es_global_construct), [es_static](js-globals.rofl.md#es_static), [es_static_call](js-globals.rofl.md#es_static_call)
 - from js-globals: [es_instance](js-globals.rofl.md#es_instance)
 - from js-model, in the code: [ast_line](js-model.rofl.md#ast_line), [ast_node](js-model.rofl.md#ast_node)
 - from js-modules, in the code: [builtin_canonical](js-modules.rofl.md#builtin_canonical), [import_site](js-modules.rofl.md#import_site), [module_target](js-modules.rofl.md#module_target), [reexport_offers](js-modules.rofl.md#reexport_offers), [require_site](js-modules.rofl.md#require_site), [site_file](js-modules.rofl.md#site_file), [site_shape](js-modules.rofl.md#site_shape), [site_source](js-modules.rofl.md#site_source), [str_char0](js-modules.rofl.md#str_char0), [str_seg](js-modules.rofl.md#str_seg)
@@ -43,7 +44,7 @@ Reads:
   - <a id="ast_attr"></a>The attribute of a node is a value (`ast_attr`)
   - <a id="ast_child"></a>A node is a child of a node (`ast_child`)
 
-Kinds without a noun: tsenum_body, tsmodule_declaration, tsparameter_property.
+Kinds without a noun: expression_statement, tsenum_body, tsmodule_declaration, tsparameter_property.
 
 ## Words
 
@@ -1294,8 +1295,8 @@ Declared as facts:
 > is the site that made it: `new Map()` (`keyed_obj`), and an express app
 > (rules/js-express.rofl). A key is matched by its value, however it got there
 > (`const K = 'port'; m.get(K)`); a key with no known value matches nothing, and
-> the call is named in `keyed_key_unknown[audit]`: we do not know which. Flow-insensitive, as the rest of this layer: a
-> get sees every put, before or after it. `m.keys()`, `m.values()` and
+> the call is named in `keyed_key_unknown[audit]`: we do not know which. A get
+> sees every put but those the order below rules out. `m.keys()`, `m.values()` and
 > `m.entries()` are not read.
 
 `keyed_store` lists:
@@ -1356,18 +1357,152 @@ In the audit:
 
 <a id="keyed_key_unknown"></a>`keyed_key_unknown`(C) if [`keyed_key_at`](#keyed_key_at)(C, something), unless [`keyed_key_known`](#keyed_key_known)(C).
 
-In the flow:
-
-<a id="keyed_read"></a>`keyed_read`(C, V) if [`keyed_get`](#keyed_get)(C, X, K) and [`keyed_put`](#keyed_put)(X, K, V).
-
-A node
-
-- points to a node N if [`keyed_read`](#keyed_read)(it, V) and a node V [points to](js-concat.rofl.md#may_be_node) N.
-- may be the literal L if [`keyed_read`](#keyed_read)(it, V) and a node V [may be the literal](js-concat.rofl.md#may_be_lit) L.
-
 Declared as facts:
 
 - <a id="keyed_store"></a>`keyed_store` — rows in this file
+
+> WHAT IS IN IT AT THE READ. A `const` that binds a new collection makes one
+> per run of its statement list, so a get on that name in the list, outside any
+> function written there, has an order with each put on it:
+>   - a put in a later statement has not run yet, also inside a function
+>     written in that statement: the function does not exist before it. A
+>     function DECLARATION is hoisted to the top of the list and gets no order.
+>   - a put in an earlier statement outside any function has run, unless a put
+>     of the same literal key, a delete of it or a clear, in a statement of its
+>     own between them, took it out.
+> Every other put may have run before the get or not (a function called at
+> some time, an await, another file, a loop around the declaration): it is
+> kept, as `keyed_read_unordered`, and a proof says so.
+
+In the code:
+
+<a id="keyed_local"></a>`keyed_local`(D, P, B, F) if all of:
+  - a node X [constructs the global](js-globals.rofl.md#es_global_construct) Name of some release;
+  - Name [has the prototype](#lib_global_prototype) P;
+  - [`keyed_store`](#keyed_store)(P, something, something);
+  - the `init` of a node D is X;
+  - D [is among the](#ast_child) `declarations` of a node V;
+  - [the attribute](#ast_attr) `kind` of V is "const";
+  - V [is among the](#ast_child) F of a node B;
+  - F [is a statement sequence field](js-controlflow.rofl.md#stmt_seq_field).
+
+<a id="keyed_local_seen"></a>`keyed_local_seen`(a [call expression](#noun-call_expression) C, D, Meth, S, I) if all of:
+  - [`keyed_local`](#keyed_local)(D, something, B, F);
+  - a node O [sees](#sees_binder) D;
+  - the `object` of a node N is O;
+  - [the attribute](#ast_attr) `computed` of N is `false`;
+  - the `property` of N [is named](js-structure.rofl.md#ast_name) Meth;
+  - the `callee` of C is N;
+  - C [is within](#ast_within) a node S;
+  - S is the I-th of the F of a node B.
+
+<a id="keyed_fn_between"></a>`keyed_fn_between`(S, C) either:
+
+1. if all of:
+   - [`keyed_local_seen`](#keyed_local_seen)(C, something, something, S, something);
+   - a node C [is within](#ast_within) a [function](js-callgraph.rofl.md#fn_node) G;
+   - G [is within](#ast_within) a node S;
+2. if [`keyed_local_seen`](#keyed_local_seen)(C, something, something, S, something) and S is a [function](js-callgraph.rofl.md#fn_node).
+
+<a id="keyed_local_call"></a>`keyed_local_call`(C, D, Meth, I) if [`keyed_local_seen`](#keyed_local_seen)(C, D, Meth, S, I), unless [`keyed_fn_between`](#keyed_fn_between)(S, C).
+
+<a id="keyed_hoisted"></a>`keyed_hoisted`(S) either:
+
+1. if [`keyed_local_seen`](#keyed_local_seen)(something, something, something, S, something) and S is a [function](js-callgraph.rofl.md#fn_node);
+2. if [`keyed_local_seen`](#keyed_local_seen)(something, something, something, S, something) and the `declaration` of S is a [function](js-callgraph.rofl.md#fn_node) G.
+
+<a id="keyed_local_later"></a>`keyed_local_later`(C, D, Meth, I) if [`keyed_local_seen`](#keyed_local_seen)(C, D, Meth, S, I), unless [`keyed_hoisted`](#keyed_hoisted)(S).
+
+> a statement that is nothing but the call: it runs whenever the list gets past it
+
+<a id="keyed_local_step"></a>`keyed_local_step`(C, D, Meth, I) if [`keyed_local_seen`](#keyed_local_seen)(C, D, Meth, an expression_statement node S, I) and the `expression` of S is a node C.
+
+`keyed_key_kind` includes `string_literal`, `numeric_literal`.
+
+<a id="keyed_local_key"></a>`keyed_local_key`(C, Key) if all of:
+  - [`keyed_local_call`](#keyed_local_call)(C, something, something, something);
+  - the `arguments` of a node C is a node X;
+  - X [is of kind](js-model.rofl.md#ast_node) K;
+  - [`keyed_key_kind`](#keyed_key_kind)(K);
+  - X [is written as](js-structure.rofl.md#ast_value) Key.
+
+<a id="keyed_get_site"></a>`keyed_get_site`(C, D, I) if all of:
+  - [`keyed_local_call`](#keyed_local_call)(C, D, Get, I);
+  - [`keyed_local`](#keyed_local)(D, P, something, something);
+  - [`keyed_store`](#keyed_store)(P, something, Get).
+
+<a id="keyed_put_site"></a>`keyed_put_site`(C, D, V, J) if all of:
+  - [`keyed_local_call`](#keyed_local_call)(C, D, Put, J);
+  - [`keyed_local`](#keyed_local)(D, P, something, something);
+  - [`keyed_store`](#keyed_store)(P, Put, something);
+  - a node V is the 1-th of the `arguments` of a node C.
+
+<a id="keyed_put_later"></a>`keyed_put_later`(C, D, V, J) if all of:
+  - [`keyed_local_later`](#keyed_local_later)(C, D, Put, J);
+  - [`keyed_local`](#keyed_local)(D, P, something, something);
+  - [`keyed_store`](#keyed_store)(P, Put, something);
+  - a node V is the 1-th of the `arguments` of a node C.
+
+<a id="keyed_put_before"></a><a id="keyed_put_after"></a>A node is put before/after C if all of:
+ - [`keyed_get_site`](#keyed_get_site)(C, D, I);
+ - [`keyed_put_site`/`keyed_put_later`](#keyed_put_site)(something, D, it, J);
+ - J < I.
+
+<a id="keyed_taken_out"></a>A node V is taken out before C by R either:
+
+1. if all of:
+   - V [is put before](#keyed_put_before) C;
+   - [`keyed_get_site`](#keyed_get_site)(C, D, I);
+   - [`keyed_put_site`](#keyed_put_site)(something, D, V, J);
+   - [`keyed_local_step`](#keyed_local_step)(R, D, "clear", K);
+   - J < K;
+   - K < I;
+2. if all of:
+   - V [is put before](#keyed_put_before) C;
+   - [`keyed_get_site`](#keyed_get_site)(C, D, I);
+   - [`keyed_put_site`](#keyed_put_site)(P, D, V, J);
+   - [`keyed_local_step`](#keyed_local_step)(R, D, "delete", K);
+   - J < K;
+   - K < I;
+   - [`keyed_local_key`](#keyed_local_key)(P, Key);
+   - [`keyed_local_key`](#keyed_local_key)(R, Key);
+3. if all of:
+   - V [is put before](#keyed_put_before) C;
+   - [`keyed_get_site`](#keyed_get_site)(C, D, I);
+   - [`keyed_put_site`](#keyed_put_site)(P, D, V, J);
+   - [`keyed_put_site`](#keyed_put_site)(R, D, something, K);
+   - J < K;
+   - K < I;
+   - [`keyed_local_step`](#keyed_local_step)(R, D, something, K);
+   - [`keyed_local_key`](#keyed_local_key)(P, Key);
+   - [`keyed_local_key`](#keyed_local_key)(R, Key).
+
+In the flow:
+
+<a id="keyed_read_ordered"></a>C reads back the value put before it V if all of:
+  - [`keyed_get`](#keyed_get)(C, X, K);
+  - [`keyed_put`](#keyed_put)(X, K, V);
+  - V [is put before](#keyed_put_before) C;
+  - unless V [is taken out before](#keyed_taken_out) C by some call.
+
+<a id="keyed_read_unordered"></a>C may read back the value put in an order not known V if all of:
+  - [`keyed_get`](#keyed_get)(C, X, K);
+  - [`keyed_put`](#keyed_put)(X, K, V);
+  - V neither [is put before](#keyed_put_before) C nor [is put after](#keyed_put_after) C.
+
+A node C points to a node N either:
+
+1. if a node V [points to](js-concat.rofl.md#may_be_node) N and C [reads back](#keyed_read_ordered) the value put before it V;
+2. if a node V [points to](js-concat.rofl.md#may_be_node) N and C [may read back](#keyed_read_unordered) the value put in an order not known V.
+
+A node C may be the literal L either:
+
+1. if a node V [may be the literal](js-concat.rofl.md#may_be_lit) L and C [reads back](#keyed_read_ordered) the value put before it V;
+2. if a node V [may be the literal](js-concat.rofl.md#may_be_lit) L and C [may read back](#keyed_read_unordered) the value put in an order not known V.
+
+Declared as facts:
+
+- <a id="keyed_key_kind"></a>`keyed_key_kind` — rows in this file
 
 > the walk: position 0 of the head's pattern is a key, position 1 a value
 
