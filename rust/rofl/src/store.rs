@@ -2247,8 +2247,12 @@ impl Store {
         }
         match &run.by_pat {
             None if run.canon.len() < MIN_INDEXED => Some(None),
-            Some(bp) if !bp.contains_key(&mask) && bp.len() >= MAX_PATTERNS => Some(None),
             Some(bp) if run.staged.is_empty() && bp.contains_key(&mask) => Some(hits(&self.facts, &run.loose, &bp[&mask], vals, limit)),
+            Some(bp) if bp.len() >= MAX_PATTERNS && !bp.contains_key(&mask) => match narrower(bp, mask) {
+                Some(m) if run.staged.is_empty() => Some(hits(&self.facts, &run.loose, &bp[&m], &sub_vals(&bp[&m], pos, vals), limit)),
+                Some(_) => None,
+                None => Some(None),
+            },
             _ => None,
         }
     }
@@ -2340,8 +2344,8 @@ impl Store {
         let run = self.run(rel, p).unwrap();
         match &run.by_pat {
             None if run.canon.len() < MIN_INDEXED => return None,
-            Some(bp) if !bp.contains_key(&mask) && bp.len() >= MAX_PATTERNS => return None,
             Some(bp) if run.staged.is_empty() && bp.contains_key(&mask) => return hits(&self.facts, &run.loose, &bp[&mask], vals, limit),
+            Some(bp) if bp.len() >= MAX_PATTERNS && !bp.contains_key(&mask) && narrower(bp, mask).is_none() => return None,
             _ => {}
         }
         let run = self.run_mut(rel, p);
@@ -2352,7 +2356,11 @@ impl Store {
         let facts = &self.facts;
         let run = run_in(&mut self.idx, rel, p);
         let canon = &run.canon;
-        let by_val = Rc::make_mut(run.by_pat.as_mut().unwrap()).entry(mask).or_insert_with(|| {
+        let bp = Rc::make_mut(run.by_pat.as_mut().unwrap());
+        if let Some(m) = narrower(bp, mask).filter(|_| bp.len() >= MAX_PATTERNS && !bp.contains_key(&mask)) {
+            return hits(facts, &run.loose, &bp[&m], &sub_vals(&bp[&m], pos, vals), limit);
+        }
+        let by_val = bp.entry(mask).or_insert_with(|| {
             self.argm_cloned += canon.len() as u64;
             PatIndex::build(h, facts, pos, canon)
         });
@@ -4727,6 +4735,16 @@ fn firing_hash(id: FactId, rule: Sym, prems: &[PremRef]) -> u64 {
 
 fn run_in(idx: &mut Runs, rel: Sym, persp: Sym) -> &mut KeyRun {
     &mut idx.get_mut(&rel).unwrap().iter_mut().find(|(q, _)| *q == persp).unwrap().1
+}
+
+/// The widest index of a pattern narrower than `mask`: it serves `mask` with a superset.
+fn narrower(bp: &ArgIndex, mask: u32) -> Option<u32> {
+    bp.keys().copied().filter(|m| m & mask == *m).max_by_key(|m| (m.count_ones(), *m))
+}
+
+/// The values of `pos` that the index `by_val` reads, in its order.
+fn sub_vals(by_val: &PatIndex, pos: &[usize], vals: &[Term]) -> Vec<Term> {
+    by_val.pos.iter().map(|q| vals[pos.iter().position(|x| x == q).unwrap()]).collect()
 }
 
 fn hits(facts: &Facts, loose: &[FactId], by_val: &PatIndex, vals: &[Term], limit: usize) -> Option<Vec<FactId>> {
