@@ -210,10 +210,19 @@ That second time is an ordinary column of the answer. The book says which one:
     answers(ticket_closed, closed, 3).            -- closed(W, Ticket, At)
     event_time(ticket_closed, 3).                 -- column 3 of closed is when it happened
 
-The column holds an ISO 8601 text, the type `time`. Rules compare it like any
-other value. Do not wrap facts in a separate `at(Fact, Time)`. This is a
-convention of the book (the owner's choice, 2026-10-24). The engine does not
-read `event_time` yet.
+The column holds an ISO 8601 time: a date, or a date and time with its zone
+(`Z` or `+03:00`). The engine makes it one instant whatever zone the source
+wrote it in. The column arrives as text in UTC, `"2026-10-24T11:00:00.000Z"`,
+and beside it comes `instant(Text, Ms)`, its milliseconds since 1970, which
+rules order with `<`:
+
+    first(A, B) :- closed[tracker](_, A, X), closed[tracker](_, B, Y),
+                   instant(X, MX), instant(Y, MY), MX < MY.
+
+A value that is no instant, such as `"yesterday"` or a time of day without its
+zone, fails its want and says why. Do not wrap facts in a separate
+`at(Fact, Time)`. This is a convention of the book (the owner's choice,
+2026-10-24).
 
 ## Recursion
 

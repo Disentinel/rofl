@@ -98,6 +98,7 @@ check[checks]("rust/rofl/tests/dispatch.rs", "a_does_want_runs_once_across_a_dis
 check[checks]("rust/rofl/tests/dispatch.rs", "a_want_sent_with_no_outcome_recorded_is_unknown", test).
 check[checks]("rust/rofl/tests/dispatch.rs", "a_running_world_cannot_change_what_grants_permission", test).
 check[checks]("rust/rofl/tests/dispatch.rs", "the_mcp_scenario_moves_the_approved_issue_once", test).
+check[checks]("rust/rofl/tests/event_time.rs", "an_event_time_is_one_instant_whatever_zone_it_came_in", test).
 check[checks]("rust/rofl/tests/explain.rs", "why_walks_the_derivation_to_its_axioms", test).
 check[checks]("rust/rofl/tests/explain.rs", "a_negated_premise_renders_as_finite_failure_with_its_demonstration", test).
 check[checks]("rust/rofl/tests/explain.rs", "a_builtin_premise_keeps_its_own_spelling", test).
@@ -953,6 +954,7 @@ test_file[checks]("rust/rofl/tests/demand_query.rs").
 test_file[checks]("rust/rofl/tests/demand_scale.rs").
 test_file[checks]("rust/rofl/tests/disk.rs").
 test_file[checks]("rust/rofl/tests/dispatch.rs").
+test_file[checks]("rust/rofl/tests/event_time.rs").
 test_file[checks]("rust/rofl/tests/explain.rs").
 test_file[checks]("rust/rofl/tests/incremental.rs").
 test_file[checks]("rust/rofl/tests/join_scale.rs").

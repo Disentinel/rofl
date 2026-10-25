@@ -19,6 +19,8 @@ brk("served_other_session"). brk_kind("served_other_session", switch).
 brk_expects("served_other_session", "served_world").
 brk("login_verifier_dropped"). brk_kind("login_verifier_dropped", switch).
 brk_expects("login_verifier_dropped", "login_flow").
+brk("event_time_raw"). brk_kind("event_time_raw", switch).
+brk_expects("event_time_raw", "event_time").
 brk("max_wants_ignored"). brk_kind("max_wants_ignored", switch).
 brk_expects("max_wants_ignored", "adapter_capped").
 brk("rounds_budget_each"). brk_kind("rounds_budget_each", switch).
@@ -2498,6 +2500,7 @@ switch_site("ds_wide_unlisted", "rust/rofl/src/engine.rs").
 switch_site("ds_wild_keys", "rust/rofl/src/engine/datastrat.rs").
 switch_site("empty_none", "rust/rofl/src/engine.rs").
 switch_site("empty_text", "rust/rofl/src/engine.rs").
+switch_site("event_time_raw", "rust/rofl/src/adapter.rs").
 switch_site("facts_agg_unwritten", "rust/rofl/src/bin/rofl/render.rs").
 switch_site("facts_decl_as_fact", "rust/rofl/src/bin/rofl/render.rs").
 switch_site("facts_dom_unwritten", "rust/rofl/src/bin/rofl/render.rs").

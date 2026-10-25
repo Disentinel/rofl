@@ -55,6 +55,8 @@ struct Batch {
     idem: Vec<Option<String>>,
     wants: Vec<(String, Term)>,
     answers: HashSet<(String, usize)>,
+    /// The column of an answer that holds when the thing happened (`event_time(Cap, Column)`), counting the key as 1.
+    event: Option<usize>,
 }
 
 impl Session {
@@ -143,6 +145,7 @@ impl Session {
                 answers.entry(name(self, a[0])).or_default().insert((name(self, a[1]), n as usize));
             }
         }
+        let events: HashMap<String, usize> = rows(self, "event_time", 2).into_iter().filter_map(|e| Some((name(self, e[0]), e[1].as_int().filter(|c| *c > 1)? as usize))).collect();
         let mut args: HashMap<Term, Vec<(i64, Term)>> = HashMap::new();
         for a in rows(self, "want_arg", 3) {
             if let Some(i) = a[1].as_int() {
@@ -262,7 +265,7 @@ impl Session {
             let auth = creds.get(&cap).and_then(|c| c.clone().ok()).unwrap_or_default();
             let op = op.map(|o| crate::openapi::Op { auth: auth.clone(), ..o });
             Batch {
-                answers: answers.get(&cap).cloned().unwrap_or_default(), template: templates.get(&cap).cloned(), tool: tools.get(&cap).cloned(), op, auth,
+                answers: answers.get(&cap).cloned().unwrap_or_default(), event: events.get(&cap).copied(), template: templates.get(&cap).cloned(), tool: tools.get(&cap).cloned(), op, auth,
                 fields: f.into_iter().map(|x| x.1).collect(), cap, adapter, kind, cmd, input, params, named, idem, wants,
             }
         }).collect();
@@ -429,7 +432,22 @@ impl Session {
                 }
                 (Some(k), true) if b.answers.contains(&(rel.clone(), n)) => {
                     done.insert(k);
-                    let lit = rofl_parse::lit_src(&self.eval.h, &c.head);
+                    let mut head = c.head.clone();
+                    if let Some(col) = b.event.filter(|col| *col <= n && crate::brk!("event_time_raw" => false; true)) {
+                        let at = head.args[col - 1];
+                        let instant = match at.kind() { TermK::Str(x) => utc(self.eval.h.name(x)), _ => None };
+                        match instant {
+                            Some((t, ms)) => {
+                                head.args[col - 1] = self.eval.h.string(&t);
+                                said.push_str(&format!("instant({}, {ms}).\n", quote(&t)));
+                            }
+                            None => {
+                                said.push_str(&format!("failed({}, {}).\n", self.src(k), quote(&format!("{} answered {} in column {col} of {rel}, which its book says is when it happened: not a time (ISO 8601 with a zone, or a date)", b.adapter, self.src(at)))));
+                                continue;
+                            }
+                        }
+                    }
+                    let lit = rofl_parse::lit_src(&self.eval.h, &head);
                     facts.push_str(&format!("{rel}[{}]{}.\n", b.adapter, &lit[rel.len()..]));
                     said.push_str(&format!("answered({}).\n", self.src(k)));
                 }
@@ -741,4 +759,61 @@ impl Served {
             .map(|r| r.as_array().into_iter().flatten().map(|c| c.as_str().unwrap_or_default().to_string()).collect()).collect();
         Ok((rows, a["partial"].as_bool().unwrap_or(false)))
     }
+}
+
+/// An ISO 8601 time as one instant: its text in UTC, `YYYY-MM-DDTHH:MM:SS.sssZ`, the same for every source, and its
+/// milliseconds since 1970, which rules order with `<`. A date is its midnight in UTC; a time of day needs its zone
+/// (`Z` or `+HH:MM`), since without one it is no instant.
+fn utc(s: &str) -> Option<(String, i64)> {
+    let num = |t: &str| -> Option<i64> { (!t.is_empty() && t.bytes().all(|b| b.is_ascii_digit())).then(|| t.parse().ok()).flatten() };
+    let (date, rest) = (s.get(..10)?, &s[10.min(s.len())..]);
+    let (y, m, d) = (num(date.get(0..4)?)?, num(date.get(5..7)?)?, num(date.get(8..10)?)?);
+    if date.as_bytes()[4] != b'-' || date.as_bytes()[7] != b'-' || !(1..=12).contains(&m) || !(1..=31).contains(&d) {
+        return None;
+    }
+    let (mut secs, mut ms) = (0i64, 0i64);
+    if !rest.is_empty() {
+        let rest = rest.strip_prefix(['T', 't', ' '])?;
+        let z = rest.find(['Z', 'z', '+', '-'])?;
+        let (clock, zone) = rest.split_at(z);
+        let (hms, frac) = clock.split_once('.').unwrap_or((clock, ""));
+        let p: Vec<&str> = hms.split(':').collect();
+        let (h, mi, sec) = match p[..] {
+            [h, mi] => (num(h)?, num(mi)?, 0),
+            [h, mi, sec] => (num(h)?, num(mi)?, num(sec)?),
+            _ => return None,
+        };
+        if h > 23 || mi > 59 || sec > 60 || (!frac.is_empty() && num(frac).is_none()) {
+            return None;
+        }
+        ms = format!("{frac:0<3}")[..3].parse().ok()?;
+        let off = match zone {
+            "Z" | "z" => 0,
+            _ => {
+                let (sign, hhmm) = zone.split_at(1);
+                let hhmm = hhmm.replace(':', "");
+                let (oh, om) = (num(hhmm.get(0..2)?)?, num(hhmm.get(2..4)?)?);
+                if hhmm.len() != 4 { return None; }
+                (oh * 60 + om) * if sign == "-" { -1 } else { 1 }
+            }
+        };
+        secs = h * 3600 + mi * 60 + sec - off * 60;
+    }
+    // days from 1970-01-01 (Howard Hinnant's civil calendar), and back
+    let (yy, mm) = if m <= 2 { (y - 1, m + 9) } else { (y, m - 3) };
+    let era = yy.div_euclid(400);
+    let yoe = yy - era * 400;
+    let days = era * 146097 + yoe * 365 + yoe / 4 - yoe / 100 + (153 * mm + 2) / 5 + d - 1 - 719468;
+    let t = days * 86400 + secs;
+    let (days, sod) = (t.div_euclid(86400), t.rem_euclid(86400));
+    let z = days + 719468;
+    let era = z.div_euclid(146097);
+    let doe = z - era * 146097;
+    let yoe = (doe - doe / 1460 + doe / 36524 - doe / 146096) / 365;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let d = doy - (153 * mp + 2) / 5 + 1;
+    let m = if mp < 10 { mp + 3 } else { mp - 9 };
+    let y = yoe + era * 400 + i64::from(m <= 2);
+    Some((format!("{y:04}-{m:02}-{d:02}T{:02}:{:02}:{:02}.{ms:03}Z", sod / 3600, sod % 3600 / 60, sod % 60), t * 1000 + ms))
 }
