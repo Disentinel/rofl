@@ -146,7 +146,8 @@ Decided by the owner; each is a finding, read it before arguing with it.
   wrong (docs/demand-cones.md).
 - **A corpus lives as volumes** (owner, 2026-10-25). A file is scanned into a
   volume of its own, cooled to disk, and a thin `[surface]` of what escapes it
-  stays beside it. No verb does this yet: before a run over more files than one
+  stays beside it. It is to be the engine's default behaviour, not a command
+  of its own (owner, 2026-10-25); it is not the default yet: before a run over more files than one
   heap holds, read docs/cli.md, *A corpus larger than one heap*, for the parts
   that exist and how to run them, and say which one the run uses.
 

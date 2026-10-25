@@ -373,8 +373,9 @@ the file (`rules/js-surface.rofl`). The design is in
 docs/volumes-and-residency.md (why a corpus can stay cold),
 docs/surface-split.md (what crosses files, the book, the driver) and
 docs/staged-evaluation.md (stages, kept volumes, resume, the planner).
-**No verb does it yet**: there is no `rofl` command that scans into a volume
-per file, cools it and keeps its surface. What exists are its parts and the
+**It is not the engine's default yet.** The owner wants it to be what
+`rofl scan` and the question verbs do by themselves, not a command of its own;
+today none of them scans into a volume per file, cools it and keeps its surface. What exists are its parts and the
 harnesses that drive them, each over `rofl serve`:
 
 | what | how to run it | measured | status |
