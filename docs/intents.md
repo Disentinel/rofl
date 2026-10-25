@@ -434,13 +434,26 @@ a new directory `intents` under `examples` (phase 7).
    `event_time(Cap, Column)` in the book (guide/ADAPTERS.md); the engine does
    not read it yet.
 4. An adapter's book signed (Roflenox) from the start, or plain until a second
-   owner appears?
+   owner appears? DECIDED by the owner, 2026-10-24: a book on Roflenox is
+   signed. BUILT 2026-10-25: `roflenox://HOST/IDENTITY/BOOK` where a file would
+   go, each clause a `rofl:book` fact, every batch checked by the engine
+   (src/roflenox.rs, guide/ADAPTERS.md); a book in a file stays plain.
 5. Recursion through an adapter: allowed and measured (the owner, 2026-10-23:
    try it and see where it spoils things and where it opens new ways of
    programming), with the per-want call count in the cost report. TRIED
    2026-10-24 (f_a_recursion_through_an_adapter_never_met_the_budget): cycles
    end, a doubling tree meets the space wall, and an endless chain now meets
    the budget the rounds share; question 2 gave the cap.
+
+### A world served by another process, as built (2026-10-25)
+
+The `rofl` kind's address is the other world's files, evaluated in this process,
+or a command that serves it: `rofl serve FILE...` (session 1 is the files,
+evaluated) here, `ssh HOST rofl serve FILE...` on another machine. The command is
+started once a process and asked `{"op":"ask","session":1}` each round, so a
+served world that changed answers as it stands. An address whose words all end
+in `.rofl` or `.rofl.md` is files. Proof: rust/rofl/tests/served.rs (planted
+served_other_session red).
 
 ### Phase 1, as built (2026-10-23)
 

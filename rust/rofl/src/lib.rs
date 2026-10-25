@@ -57,6 +57,7 @@ pub mod adapter;
 pub mod mcp;
 pub mod net;
 pub mod openapi;
+pub mod roflenox;
 pub mod shrug;
 pub mod store;
 pub mod structure;
