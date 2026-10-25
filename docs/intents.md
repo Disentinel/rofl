@@ -431,8 +431,11 @@ a new directory `intents` under `examples` (phase 7).
    held and the world partial (guide/ADAPTERS.md).
 3. Valid time: a convention for answer facts (`at(Fact, Time)`), or a column
    each capability declares? DECIDED by the owner, 2026-10-24: a column,
-   `event_time(Cap, Column)` in the book (guide/ADAPTERS.md); the engine does
-   not read it yet.
+   `event_time(Cap, Column)` in the book (guide/ADAPTERS.md). BUILT 2026-10-25:
+   the engine makes the column one instant, its text in UTC, and adds
+   `instant(Text, Ms)` for rules to order it (the engine does not order
+   strings); a value that is no instant fails its want (rust/rofl/tests/
+   event_time.rs, planted event_time_raw).
 4. An adapter's book signed (Roflenox) from the start, or plain until a second
    owner appears? DECIDED by the owner, 2026-10-24: a book on Roflenox is
    signed. BUILT 2026-10-25: `roflenox://HOST/IDENTITY/BOOK` where a file would
