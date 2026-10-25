@@ -150,11 +150,23 @@ for (const w of batch.wants) {
 Ключ никогда не бывает фактом. Книга называет, где его найти, и движок
 читает его из окружения при отправке:
 
-    http_auth(Adapter, Scheme, How, Name, Env).   -- How: bearer, basic, header, query, client_credentials
+    http_auth(Adapter, Scheme, How, Name, Env).   -- How: bearer, basic, header, query, client_credentials, login
     http_needs(Cap, Scheme).                      -- каким возможностям он нужен
 
 Для `client_credentials` `Name` — это URL токена, а `Env` содержит
-`id:secret`; адаптер сам получает и обновляет токен. Отсутствующая
+`id:secret`; адаптер сам получает и обновляет токен. Для `login` `Name` — это
+сервер авторизации (его issuer), а `Env` — `""`: человек один раз входит
+через браузер,
+
+    rofl adapter login https://auth.example.com
+
+и адаптер шлёт токен этого человека, обновляя его через refresh token, когда
+он истёк или сервис его отверг. Команда читает метаданные сервера,
+регистрирует себя клиентом, если сервер это позволяет (иначе id клиента
+указывают после issuer), печатает адрес для входа и открывает его в браузере,
+а ответ принимает на локальном порту (OAuth 2.1 с PKCE). Токены хранятся в
+`~/.config/rofl/logins.json`, читать их может только владелец. Пока никто не
+вошёл, запрос задерживается и называет команду, которую нужно запустить. Отсутствующая
 переменная задерживает запрос: `want_held(W, "... the environment has no ENV ...")`.
 В командной строке ключ задаётся как `HOW[:NAME]=ENV`:
 `rofl adapter mcp URL bearer=TRACKER_TOKEN`.

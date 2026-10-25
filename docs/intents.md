@@ -814,5 +814,12 @@ want of a sql adapter in it is `want_held(W, "this build has no sql adapter
   (bearer, basic, header, query, client_credentials), read from the
   environment; an mcp book gets an `http_auth` row for each. Planted
   `token_kept_refused` is red.
-- **Open.** The authorization code flow with a person at a browser (PKCE,
-  dynamic client registration): a token a person got goes in as `bearer=ENV`.
+- **Built 2026-10-25.** The authorization code flow with a person at a browser
+  (PKCE, RFC 7636; dynamic client registration, RFC 7591; a loopback redirect,
+  RFC 8252): `rofl adapter login ISSUER [CLIENT_ID]` signs a person in and keeps
+  the tokens in `~/.config/rofl/logins.json` (mode 0600); a book's
+  `http_auth(A, S, login, "ISSUER", "")` sends that token, renewed by the
+  refresh token when it expires or is refused; until someone signs in the want
+  is held naming the command. `login:ISSUER` is the key form for `rofl adapter
+  mcp|openapi`, and an MCP 401 now names it. Proof: rust/rofl/tests/login.rs
+  against a node authorization server (planted login_verifier_dropped red).

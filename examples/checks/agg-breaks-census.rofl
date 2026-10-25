@@ -17,6 +17,8 @@ brk("roflenox_unsigned"). brk_kind("roflenox_unsigned", switch).
 brk_expects("roflenox_unsigned", "roflenox_stranger").
 brk("served_other_session"). brk_kind("served_other_session", switch).
 brk_expects("served_other_session", "served_world").
+brk("login_verifier_dropped"). brk_kind("login_verifier_dropped", switch).
+brk_expects("login_verifier_dropped", "login_flow").
 brk("max_wants_ignored"). brk_kind("max_wants_ignored", switch).
 brk_expects("max_wants_ignored", "adapter_capped").
 brk("rounds_budget_each"). brk_kind("rounds_budget_each", switch).
@@ -2624,6 +2626,7 @@ switch_site("lattice_whynot_no_path", "rust/rofl/src/engine.rs").
 switch_site("lattice_whynot_plain", "rust/rofl/src/engine.rs").
 switch_site("lattice_whynot_tuple_plain", "rust/rofl/src/engine.rs").
 switch_site("lattice_withdrawn_unspread", "rust/rofl/src/engine.rs").
+switch_site("login_verifier_dropped", "rust/rofl/src/login.rs").
 switch_site("max", "rust/rofl/src/cell.rs").
 switch_site("max_tie_last", "rust/rofl/src/cell.rs").
 switch_site("max_wants_ignored", "rust/rofl/src/adapter.rs").

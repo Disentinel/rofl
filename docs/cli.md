@@ -25,7 +25,8 @@ rofl render --out DIR            world.rofl.md           # back into rules: DIR/
 rofl nb [--cell N] [--all]       notebook.rofl.md        # run a notebook, printed as `npm run nb` prints it
 rofl adapter mcp COMMAND... | URL [KEY...]               # the adapter book of an MCP server, over stdio or HTTP (docs/intents.md, phase 5)
 rofl adapter openapi SPEC [KEY...]                       # the adapter book of an OpenAPI document, JSON or YAML, a file or URL (scenario 6)
-                                                         # a KEY is HOW[:NAME]=ENV: bearer, basic, header:NAME, query:NAME, client_credentials:TOKEN_URL
+                                                         # a KEY is HOW[:NAME]=ENV: bearer, basic, header:NAME, query:NAME, client_credentials:TOKEN_URL; or login:ISSUER
+rofl adapter login ISSUER [CLIENT_ID]                    # a person signs in at a browser (OAuth 2.1, PKCE); a book's login key sends that token
 ```
 
 A question verb is `rofl load` with that one question, so every flag of

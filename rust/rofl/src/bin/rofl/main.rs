@@ -11,7 +11,8 @@
 //!   rofl nb FILE.rofl.md [--cell N] [--all]     a notebook run, printed as `npm run nb` prints it
 //!   rofl adapter mcp COMMAND... | URL [KEY...]  the adapter book of the MCP server COMMAND runs, or the one at a URL (docs/intents.md)
 //!   rofl adapter openapi SPEC [KEY...]          the adapter book of an OpenAPI document, a JSON or YAML file or URL;
-//!                                               a KEY is HOW[:NAME]=ENV, read from the environment
+//!                                               a KEY is HOW[:NAME]=ENV, read from the environment, or login:ISSUER
+//!   rofl adapter login ISSUER [CLIENT_ID]       a person signs in at a browser; a book's `login` key then sends that token
 //!
 //! A question verb is `rofl load` with that one question; `--json` prints each answer as `rofl serve` does.
 //! `--kept F [--anew]` keeps the world evaluated at F, and later runs answer from F until it is stale (kept.rs).
@@ -26,7 +27,7 @@ mod render;
 mod seed;
 mod serve;
 
-const USAGE: &str = "usage: rofl load|ask|why|whynot|excise ... FILE... | rofl serve [FILE...] | rofl render ... | rofl nb FILE.rofl.md | rofl adapter mcp COMMAND...|URL [KEY...] | rofl adapter openapi SPEC [KEY...]";
+const USAGE: &str = "usage: rofl load|ask|why|whynot|excise ... FILE... | rofl serve [FILE...] | rofl render ... | rofl nb FILE.rofl.md | rofl adapter mcp COMMAND...|URL [KEY...] | rofl adapter openapi SPEC [KEY...] | rofl adapter login ISSUER [CLIENT_ID]";
 
 /// `@LIST` replaced by the files it names.
 fn listed(args: Vec<String>) -> Vec<String> {
@@ -84,6 +85,14 @@ fn run(args: Vec<String>) {
         "serve" => serve::main(args),
         "render" => render::main(args),
         "nb" => nb::main(args),
+        #[cfg(feature = "net")]
+        "adapter" if (2..=3).contains(&args.len()) && args[0] == "login" => match rofl::login::login(&args[1], args.get(2).map(String::as_str)) {
+            Ok(said) => eprintln!("{said}"),
+            Err(e) => {
+                eprintln!("rofl adapter login: {e}");
+                std::process::exit(load::FILE_REFUSED);
+            }
+        },
         "adapter" if args.len() > 1 && matches!(args[0].as_str(), "mcp" | "openapi") => {
             let url = args[1].starts_with("http://") || args[1].starts_with("https://");
             let (target, keys) = if args[0] == "openapi" || url { (args[1].clone(), &args[2..]) } else { (args[1..].join(" "), &args[args.len()..]) };
