@@ -36,11 +36,22 @@ walk(root, '', files, dirs);
 const parsed = one === undefined ? files : [one];
 const prev = process.env.ROFL_SCAN_PREVIOUS;
 const previous = prev && fs.existsSync(prev) ? previousByPrefix(fs.readFileSync(prev, 'utf8')) : undefined;
-const { facts, host, parseErrors } = codeFacts(Object.fromEntries(parsed.map((f) => [f, fs.readFileSync(path.join(root, f), 'utf8')])), files.filter((f) => f !== one), previous);
 // what was read, for the engine's storeroom of scans (docs/cli.md): the parsed files and every directory listed
-const reads = [...parsed, ...dirs].map((f) => `-- reads: ${path.resolve(root, f)}`);
-const text = [...reads, ...facts, ...host].join('\n') + '\n';
-if (out) fs.writeFileSync(out, text); else process.stdout.write(text);
+const fd = out ? fs.openSync(out, 'w') : 1;
+let buf: string[] = [], size = 0, count = 0;
+const flush = () => {
+  if (!buf.length) return;
+  const b = Buffer.from(buf.join('\n') + '\n');
+  for (let at = 0; at < b.length;) {
+    try { at += fs.writeSync(fd, b, at); } catch (e) { if ((e as NodeJS.ErrnoException).code !== 'EAGAIN') throw e; }
+  }
+  buf = []; size = 0;
+};
+const emit = (line: string) => { buf.push(line); size += line.length; if (size > 1 << 22) flush(); };
+[...parsed, ...dirs].forEach((f) => emit(`-- reads: ${path.resolve(root, f)}`));
+const { parseErrors } = codeFacts(Object.defineProperties({}, Object.fromEntries(parsed.map((f) => [f, { enumerable: true, get: () => fs.readFileSync(path.join(root, f), 'utf8') }]))), files.filter((f) => f !== one), previous, (fact) => { count++; emit(fact); });
+flush();
+if (out) fs.closeSync(fd);
 for (const [f, e] of Object.entries(parseErrors)) console.error(`${f}: ${e}`);
-console.error(`${parsed.length} files, ${facts.length + host.length} facts${out ? ` -> ${out}` : ''}`);
+console.error(`${parsed.length} files, ${count} facts${out ? ` -> ${out}` : ''}`);
 if (Object.keys(parseErrors).length) process.exit(2);

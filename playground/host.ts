@@ -90,26 +90,31 @@ function labelNodes(facts: string[], nodes: Record<string, Node>): void {
   for (const id of Object.keys(nodes)) { const l = lab(id); nodes[id].label = l.length > 40 ? l.slice(0, 39) + '…' : l; }
 }
 
-/** The facts of the code: the scanner's of each file, and the host's of the paths and of every string a file holds. */
-export function codeFacts(files: Record<string, string>, data: string[] = [], previous?: Map<string, string[]>): { facts: string[]; nodes: Record<string, Node>; parseErrors: Record<string, string>; host: string[] } {
+/** The facts of the code: the scanner's of each file, and the host's of the paths and of every string a file holds. With
+ * `emit`, every fact goes to it as it is made and neither the facts nor the nodes are kept, and a
+ * text behind a getter is read when its file is scanned: a repository larger than the heap. */
+export function codeFacts(files: Record<string, string>, data: string[] = [], previous?: Map<string, string[]>, emit?: (fact: string) => void): { facts: string[]; nodes: Record<string, Node>; parseErrors: Record<string, string>; host: string[] } {
   const nodes: Record<string, Node> = {};
   const parseErrors: Record<string, string> = {};
   const facts: string[] = [], strings = new Set<string>();
-  for (const [path, src] of Object.entries(files)) {
-    const scanned = scan(src, { file: path }).facts;
+  for (const path of Object.keys(files)) {
+    const scanned = scan(files[path], { file: path }).facts;
     for (const fact of previous ? inherit(scanned, previous.get(idPrefix(path)) ?? []) : scanned) {
+      const e = /^ast_parse_error\[code\]\("[^"]*", "(.*)"\)\.$/.exec(fact);
+      if (e) parseErrors[path] = e[1];
+      const v = /^ast_attr\[code\]\(\w+, value, (".*")\)\.$/.exec(fact);
+      if (v) strings.add(unquote(v[1]));
+      if (emit) { emit(fact); continue; }
       facts.push(fact);
       const m = /^ast_node\[code\]\((\w+), (\w+), "([^"]*)"\)/.exec(fact);
       if (m) nodes[m[1]] = { kind: m[2], file: m[3], line: 0, label: '' };
       const l = /^ast_line\[code\]\((\w+), (\d+)\)/.exec(fact);
       if (l) nodes[l[1]].line = Number(l[2]);
-      const e = /^ast_parse_error\[code\]\("[^"]*", "(.*)"\)\.$/.exec(fact);
-      if (e) parseErrors[path] = e[1];
-      const v = /^ast_attr\[code\]\(\w+, value, (".*")\)\.$/.exec(fact);
-      if (v) strings.add(unquote(v[1]));
     }
   }
-  return { facts, nodes, parseErrors, host: hostFacts([...Object.keys(files), ...data], strings) };
+  const host = hostFacts([...Object.keys(files), ...data], strings);
+  if (emit) { host.forEach(emit); host.length = 0; }
+  return { facts, nodes, parseErrors, host };
 }
 
 /** What the host tells the module graph and a scanner cannot: the files and directories there are, and each string cut the way a specifier is read. */
@@ -124,7 +129,8 @@ function hostFacts(paths: string[], strings: Set<string>): string[] {
   }
   for (const p of paths) out.push(`fs_file[code](${q(p)}).`, `fs_dir_of[code](${q(p)}, ${q(dirOf(p))}).`, `fs_file_in[code](${q(dirOf(p))}, ${q(p.slice(p.lastIndexOf('/') + 1))}, ${q(p)}).`);
   for (const s of strings) {
-    if (!s || s.includes('\n')) continue;
+    // a specifier is one line and short; every segment repeats the string, so a long one costs its length times its slashes
+    if (!s || s.includes('\n') || s.length > 4096) continue;
     const segs = s.split('/');
     out.push(`str_segs[code](${q(s)}, ${segs.length}).`, `str_char0[code](${q(s)}, ${q(String.fromCodePoint(s.codePointAt(0)!))}).`);
     segs.forEach((g, k) => out.push(`str_seg[code](${q(s)}, ${k}, ${q(g)}).`));
