@@ -92,7 +92,10 @@ impl Eval {
                 why(&|r| !r.lattice_outer.is_empty()),
                 why(&|r| self.closure_of.contains_key(&r.id))
             );
-            self.activate_phase(rules, ph)
+            let t = std::time::Instant::now();
+            let r = self.activate_phase(rules, ph);
+            eprintln!("bsp: level of {} rules whole: {} ms", rules.len(), t.elapsed().as_millis());
+            r
         };
         let n = self.store.len_ids() as usize;
         let k = par.workers as u64;
@@ -176,36 +179,124 @@ impl Eval {
                 })
             };
             let tw = te.elapsed();
+            let cow = (crate::store::COPIED_RUN.swap(0, std::sync::atomic::Ordering::Relaxed), crate::store::COPIED_PAT.swap(0, std::sync::atomic::Ordering::Relaxed));
             let mut made = vec![Vec::new(); k];
             let mut took = Vec::new();
             let mut steps = 0;
-            for (w, d) in done.into_iter().enumerate() {
+            let mut es: Vec<Eval> = Vec::with_capacity(k);
+            for d in done {
                 let (e, dt) = d?;
                 took.push((dt.as_millis(), e.store.len_ids() - ids, e.steps - self.steps));
                 steps += e.steps - self.steps;
-                for id in ids..e.store.len_ids() {
-                    if !e.store.alive(id) {
-                        continue;
+                es.push(e);
+            }
+            let old = move |t: &Term| match t.kind() {
+                TermK::Atom(s) | TermK::Str(s) => s < syms,
+                TermK::Func(i) => i < funcs,
+                _ => true,
+            };
+            let mut slow = 0usize;
+            let mut owned = |par: &mut Par, w: usize, nid: FactId| {
+                while par.owner.len() < nid as usize {
+                    par.owner.push(0);
+                }
+                par.owner.push(w as u8);
+            };
+            if std::env::var_os("ROFL_PAR_COPY").is_none() && es.iter().all(|e| e.store.layer_clean(&self.store)) {
+                // what each worker lays: its live facts of terms the world knows that no worker before it made; a fact of
+                // a term made here is put by the master, its terms made again
+                let stores: Vec<&Store> = es.iter().map(|e| &e.store).collect();
+                let picks: Vec<(Vec<bool>, Vec<FactId>)> = std::thread::scope(|sc| {
+                    let stores = &stores;
+                    let hs: Vec<_> = (0..k)
+                        .map(|w| {
+                            sc.spawn(move || {
+                                let st = stores[w];
+                                let mut fresh = Vec::new();
+                                let keep = (ids..st.len_ids())
+                                    .map(|id| {
+                                        if !st.alive(id) {
+                                            return false;
+                                        }
+                                        let (rec, args) = (st.rec(id), st.args(id));
+                                        if !args.iter().all(old) {
+                                            fresh.push(id);
+                                            return false;
+                                        }
+                                        !stores[..w].iter().any(|v| v.find_own(rec.rel, rec.persp, args).is_some_and(|x| v.alive(x)))
+                                    })
+                                    .collect();
+                                (keep, fresh)
+                            })
+                        })
+                        .collect();
+                    hs.into_iter().map(|h| h.join().expect("a worker panicked")).collect()
+                });
+                let mut fresh: Vec<(usize, Sym, Sym, u8, Vec<Term>)> = Vec::new();
+                for (w, (_, ids)) in picks.iter().enumerate() {
+                    for &id in ids {
+                        let (e, rec) = (&es[w], es[w].store.rec(id));
+                        let args = e.store.args(id).iter().map(|a| copy_term(*a, &e.h, &mut self.h, syms, funcs)).collect();
+                        fresh.push((w, rec.rel, rec.persp, rec.flags() & !F_BASE, args));
                     }
-                    let rec = e.store.rec(id);
-                    let src = e.store.args(id);
-                    let old = |t: &Term| match t.kind() {
-                        TermK::Atom(s) | TermK::Str(s) => s < syms,
-                        TermK::Func(i) => i < funcs,
-                        _ => true,
-                    };
-                    let (nid, new) = if src.iter().all(old) {
-                        self.store.put(&self.h, rec.rel, rec.persp, src, rec.flags() & !F_BASE)
-                    } else {
-                        let args: Vec<Term> = src.iter().map(|a| copy_term(*a, &e.h, &mut self.h, syms, funcs)).collect();
-                        self.store.put(&self.h, rec.rel, rec.persp, &args, rec.flags() & !F_BASE)
-                    };
+                }
+                slow = fresh.len();
+                let (mut first, mut toff) = (self.store.len_ids(), self.store.tuple_count() as crate::store::TupId);
+                let mut at = Vec::with_capacity(k);
+                for (w, (keep, _)) in picks.iter().enumerate() {
+                    at.push((first, toff));
+                    first += keep.iter().filter(|x| **x).count() as FactId;
+                    toff += es[w].store.top_tuples() as crate::store::TupId;
+                }
+                let layers: Vec<crate::store::Layer> = std::thread::scope(|sc| {
+                    let hs: Vec<_> = es
+                        .iter_mut()
+                        .zip(&picks)
+                        .zip(&at)
+                        .map(|((e, (keep, _)), &(first, toff))| {
+                            sc.spawn(move || {
+                                let (st, h) = (&mut e.store, &e.h);
+                                st.layer(h, ids, keep, first, toff)
+                            })
+                        })
+                        .collect();
+                    hs.into_iter().map(|h| h.join().expect("a worker panicked")).collect()
+                });
+                drop(es);
+                for (w, l) in layers.into_iter().enumerate() {
+                    let (first, n) = (l.first, l.len() as FactId);
+                    self.store.lay(l);
+                    for nid in first..first + n {
+                        owned(par, w, nid);
+                    }
+                    made[w].extend(first..first + n);
+                }
+                for (w, rel, persp, flags, args) in fresh {
+                    let (nid, new) = self.store.put(&self.h, rel, persp, &args, flags);
                     if new {
-                        while par.owner.len() < nid as usize {
-                            par.owner.push(0);
-                        }
-                        par.owner.push(w as u8);
+                        owned(par, w, nid);
                         made[w].push(nid);
+                    }
+                }
+            } else {
+                for (w, e) in es.iter().enumerate() {
+                    for id in ids..e.store.len_ids() {
+                        if !e.store.alive(id) {
+                            continue;
+                        }
+                        let rec = e.store.rec(id);
+                        let src = e.store.args(id);
+                        let (nid, new) = if src.iter().all(old) {
+                            self.store.put(&self.h, rec.rel, rec.persp, src, rec.flags() & !F_BASE)
+                        } else {
+                            slow += 1;
+                            let args: Vec<Term> = src.iter().map(|a| copy_term(*a, &e.h, &mut self.h, syms, funcs)).collect();
+                            self.store.put(&self.h, rec.rel, rec.persp, &args, rec.flags() & !F_BASE)
+                        };
+                        if new {
+                            owned(par, w, nid);
+                            made[w].push(nid);
+                        }
                     }
                 }
             }
@@ -218,11 +309,15 @@ impl Eval {
             }
             let n: usize = made.iter().map(|m| m.len()).sum();
             eprintln!("bsp: {}", format!(
-                "epoch {epoch}: {n} new, freeze {} ms, fork {} ms, workers {:?} ms, merge {} ms",
+                "epoch {epoch}: {n} new, freeze {} ms, fork {} ms, workers {:?} ms, merge {} ms, {slow} with new terms, heap {} syms {} funcs new, copied in forks: {} run ids, {} index entries",
                 tf.as_millis(),
                 (tk - tf).as_millis(),
                 took,
-                (te.elapsed() - tw).as_millis()
+                (te.elapsed() - tw).as_millis(),
+                self.h.syms.len() as Sym - syms,
+                self.h.funcs_len() - funcs,
+                cow.0,
+                cow.1
             ));
             epoch += 1;
             // one worker's layer holds no join of two layers

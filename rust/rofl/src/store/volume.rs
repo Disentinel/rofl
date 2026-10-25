@@ -107,6 +107,7 @@ fn prem_tags_ok(words: &[u32]) -> bool {
 
 impl Store {
     pub fn write_volume(&mut self, w: &mut VolW) {
+        self.unstack();
         self.sweep();
         self.idx.freeze();
         for x in [self.unordered as u64, self.tick as u64, self.dirty as u64, self.partial_eval as u64, self.version, self.wits_live as u64, self.n_live as u64] {
@@ -272,7 +273,7 @@ impl Store {
         s.facts.recs = Col { mark: n, base: Rc::new(recs), own: Vec::new(), ..Col::default() };
         s.facts.bflags = Rc::new(r.arena()?);
         let tups = TupSeg { ends: r.arena()?, sks: r.arena()?, args: r.arena()?, cons: r.arena()? };
-        s.facts.tups = Tuples { t0: tups.len() as TupId, base: Rc::new(tups), top: TupSeg::default() };
+        s.facts.tups = Tuples { t0: tups.len() as TupId, base: Rc::new(tups), extra: Vec::new(), top: TupSeg::default() };
         if s.facts.bflags.len() != n {
             return Err("a volume's flags do not match its facts".into());
         }

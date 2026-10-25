@@ -3450,6 +3450,9 @@ impl Eval {
             self.poison_readers(&rs)?;
             self.run_data_levels(lv, &ds)?;
         }
+        if self.bsp.is_some() {
+            self.store.unstack();
+        }
         self.close_plain_rules(i64::MAX)?;
         self.plain_flush(i64::MAX)?;
         // what a lattice's close writes can reach a threshold, and the

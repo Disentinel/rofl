@@ -519,6 +519,16 @@ const MAX_PATTERNS: usize = 8;
 
 pub type TupId = u32;
 
+pub static COPIED_RUN: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+pub static COPIED_PAT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
+fn pat_cow(bp: &mut Rc<ArgIndex>) -> &mut ArgIndex {
+    if Rc::strong_count(bp) > 1 {
+        COPIED_PAT.fetch_add(bp.values().map(|ix| ix.entries()).sum::<usize>() as u64, std::sync::atomic::Ordering::Relaxed);
+    }
+    Rc::make_mut(bp)
+}
+
 const TUP_EMPTY: u32 = u32::MAX;
 
 fn tup_hash(args: &[Term]) -> u64 {
@@ -660,6 +670,8 @@ impl TupSeg {
 pub struct Tuples {
     t0: TupId,
     base: Rc<TupSeg>,
+    /// Segments laid over the base whole (`Store::lay`), by their first id: read, never searched by a new tuple.
+    extra: Vec<(TupId, Rc<TupSeg>)>,
     top: TupSeg,
 }
 
@@ -669,8 +681,11 @@ impl Tuples {
         let j = t.wrapping_sub(self.t0);
         if (j as usize) < self.top.len() {
             (&self.top, j)
-        } else {
+        } else if self.extra.is_empty() || t < self.extra[0].0 {
             (&self.base, t)
+        } else {
+            let (at, seg) = &self.extra[self.extra.partition_point(|(at, _)| *at <= t) - 1];
+            (seg, t - at)
         }
     }
     #[inline(always)]
@@ -707,6 +722,11 @@ impl Tuples {
         if self.top.len() == 0 {
             return;
         }
+        if !self.extra.is_empty() {
+            let top = std::mem::take(&mut self.top);
+            self.lay(top);
+            return;
+        }
         if self.t0 == 0 {
             self.base = Rc::new(std::mem::take(&mut self.top));
         } else {
@@ -721,7 +741,42 @@ impl Tuples {
     }
     fn bytes(&self) -> (usize, usize, usize, usize) {
         let (b, t) = (self.base.bytes(), self.top.bytes());
-        (b.0 + t.0, b.1 + t.1, b.2 + t.2, b.3 + t.3)
+        let mut sum = (b.0 + t.0, b.1 + t.1, b.2 + t.2, b.3 + t.3);
+        for (_, x) in &self.extra {
+            let x = x.bytes();
+            sum = (sum.0 + x.0, sum.1 + x.1, sum.2 + x.2, sum.3 + x.3);
+        }
+        sum
+    }
+    /// `seg` laid over everything, its tuples numbered from the first id after them: the number of its first.
+    fn lay(&mut self, seg: TupSeg) -> TupId {
+        assert_eq!(self.top.len(), 0, "a segment is laid over a frozen pool");
+        let at = self.t0;
+        self.t0 += seg.len() as TupId;
+        if seg.len() > 0 {
+            self.extra.push((at, Rc::new(seg)));
+        }
+        at
+    }
+    /// The laid segments made one base with the base, every tuple keeping its number.
+    fn flatten(&mut self) {
+        if self.extra.is_empty() {
+            return;
+        }
+        let mut all = TupSeg::default();
+        let top = std::mem::take(&mut self.top);
+        let segs: Vec<&TupSeg> = std::iter::once(&*self.base).chain(self.extra.iter().map(|(_, x)| &**x)).chain(std::iter::once(&top)).collect();
+        let (ends, sks, args) = (all.ends.to_mut(), all.sks.to_mut(), all.args.to_mut());
+        for seg in segs {
+            let at = args.len() as u32;
+            ends.extend(seg.ends.iter().map(|e| e + at));
+            sks.extend_from_slice(&seg.sks);
+            args.extend_from_slice(&seg.args);
+        }
+        all.grow();
+        self.extra.clear();
+        self.t0 = all.len() as TupId;
+        self.base = Rc::new(all);
     }
 }
 
@@ -1157,6 +1212,8 @@ pub struct Store {
     /// Layered: `keys_base` holds the ids below the records' mark and is
     /// shared, `keys` the ids this layer added. A key is in one of the two.
     keys_base: Rc<Arena<u32>>,
+    /// Tables of the ids of layers laid over the base (`lay`), between it and `keys`.
+    keys_extra: Vec<(usize, Rc<Vec<u32>>)>,
     keys: Vec<u32>,
     keys_n: usize,
     idx: Runs,
@@ -1195,6 +1252,25 @@ pub struct Store {
     pub vciters: Option<Rc<FxMap<u64, Vec<(FactId, Sym)>>>>,
     /// Where the volume this store was read from holds `vciters`: written again as a splice of it.
     pub(crate) vciters_from: Option<crate::arena::Span>,
+}
+
+/// A worker's facts as the world it forked from will number them (`Store::layer`, `Store::lay`).
+pub struct Layer {
+    pub first: FactId,
+    toff: TupId,
+    recs: Vec<FactRec>,
+    keys: Vec<u32>,
+    tups: TupSeg,
+    groups: Vec<((Sym, Sym), (Vec<FactId>, Vec<FactId>))>,
+}
+
+impl Layer {
+    pub fn len(&self) -> usize {
+        self.recs.len()
+    }
+    pub fn tuples(&self) -> usize {
+        self.tups.len()
+    }
 }
 
 /// The citer index: the facts citing each premise as one column by premise id (`offs`, `ids`), which a volume maps,
@@ -1263,6 +1339,7 @@ impl Runs {
     fn copy_up(&mut self, rel: &Sym) {
         if !self.base.is_empty() && !self.own.contains_key(rel) {
             if let Some(v) = self.base.get(rel) {
+                COPIED_RUN.fetch_add(v.iter().map(|(_, k)| k.canon.len() + k.arrived.len()).sum::<usize>() as u64, std::sync::atomic::Ordering::Relaxed);
                 self.own.insert(*rel, v.clone());
             }
         }
@@ -1562,6 +1639,9 @@ impl Store {
         let t1 = t.elapsed();
         if mark == 0 {
             self.keys_base = Rc::new(std::mem::take(&mut self.keys).into());
+        } else if !self.keys.is_empty() && !self.keys_extra.is_empty() {
+            self.keys_extra.push((mark, Rc::new(std::mem::take(&mut self.keys))));
+            self.keys_settle();
         } else if !self.keys.is_empty() {
             // a base no fork reads takes the layer's keys in place while it has room
             let n = self.facts.len();
@@ -1594,6 +1674,130 @@ impl Store {
         self.fired.freeze();
         if std::env::var_os("ROFL_PAR").is_some() && t.elapsed().as_millis() > 50 {
             eprintln!("bsp:   freeze: facts {} ms, keys {} ms, idx {} ms, rest {} ms", t1.as_millis(), (t2 - t1).as_millis(), (t3 - t2).as_millis(), (t.elapsed() - t3).as_millis());
+        }
+    }
+
+    /// The fact of this key this layer made, live or dead; the base is not asked.
+    pub fn find_own(&self, rel: Sym, persp: Sym, args: &[Term]) -> Option<FactId> {
+        self.probe(&self.keys, hash_key(rel, persp, args), rel, persp, args)
+    }
+
+    /// Whether this fork wrote nothing below its mark but facts and tuples, so its layer can be laid over the world
+    /// it forked from as it is (`lay`).
+    pub fn layer_clean(&self, base: &Store) -> bool {
+        self.facts.recs.low.is_empty()
+            && Rc::ptr_eq(&self.facts.bflags, &base.facts.bflags)
+            && self.wit_head.low.is_empty()
+            && self.wits.own.is_empty()
+            && self.prem_arena.own.is_empty()
+            && self.revived.len() == base.revived.len()
+            && self.deaths == base.deaths
+            && Rc::ptr_eq(&self.cells, &base.cells)
+            && self.unswept.is_empty()
+            && self.fired.own.is_empty()
+            && self.keys_extra.len() == base.keys_extra.len()
+    }
+
+    /// This fork's facts from `cut` that `keep` keeps, numbered from `first` in the world it forked from, with its
+    /// tuples, which that world numbers from `toff`: the layer `lay` puts over it. The tuples leave this store.
+    pub fn layer(&mut self, h: &Heap, cut: FactId, keep: &[bool], first: FactId, toff: TupId) -> Layer {
+        let t0 = self.facts.tups.t0;
+        let n = keep.iter().filter(|k| **k).count();
+        let mut recs = Vec::with_capacity(n);
+        let want = ((n + 1) * 4).next_power_of_two().max(64);
+        let mut keys = vec![EMPTY; want];
+        let mut groups: FxMap<(Sym, Sym), (Vec<FactId>, Vec<FactId>)> = FxMap::default();
+        for (k, id) in (cut..self.facts.len() as FactId).enumerate() {
+            if !keep[k] {
+                continue;
+            }
+            let at = first + recs.len() as FactId;
+            let r = self.facts.rec(id);
+            let tup = if r.tup() >= t0 { r.tup() - t0 + toff } else { r.tup() };
+            recs.push(FactRec::new(r.rel, r.persp, tup, r.flags() & !F_BASE));
+            let args = self.args(id);
+            let mut i = (hash_key(r.rel, r.persp, args) as usize) & (want - 1);
+            while keys[i] != EMPTY {
+                i = (i + 1) & (want - 1);
+            }
+            keys[i] = at;
+            let g = groups.entry((r.rel, r.persp)).or_default();
+            g.0.push(at);
+            if !args.iter().all(|a| h.is_ground(*a)) {
+                g.1.push(at);
+            }
+        }
+        let mut groups: Vec<_> = groups.into_iter().collect();
+        groups.sort_unstable_by_key(|(k, _)| *k);
+        Layer { first, toff, recs, keys, tups: std::mem::take(&mut self.facts.tups.top), groups }
+    }
+
+    /// A worker's layer laid over this frozen store as the next ids, nothing it holds copied but its records.
+    pub fn lay(&mut self, l: Layer) {
+        assert!(self.facts.recs.own.is_empty() && self.keys.is_empty(), "a layer is laid over a frozen store");
+        assert_eq!(l.first as usize, self.facts.len());
+        assert_eq!(self.facts.tups.lay(l.tups), l.toff, "a layer's tuples are numbered where it is laid");
+        let n = l.recs.len();
+        Rc::make_mut(&mut self.facts.bflags).to_mut().extend(l.recs.iter().map(|r| r.flags()));
+        self.facts.recs.base_mut().extend_from_slice(&l.recs);
+        self.facts.recs.mark += n;
+        self.wit_head.base_mut().extend(std::iter::repeat_n(EMPTY, n));
+        self.wit_head.mark += n;
+        if n > 0 {
+            self.keys_extra.push((l.first as usize, Rc::new(l.keys)));
+            self.keys_settle();
+        }
+        let groups = match Rc::get_mut(&mut self.idx.base) {
+            Some(g) if self.idx.own.is_empty() => g,
+            _ => &mut self.idx.own,
+        };
+        for ((rel, persp), (ids, loose)) in l.groups {
+            let v = groups.entry(rel).or_default();
+            let i = match v.iter().position(|(p, _)| *p == persp) {
+                Some(i) => i,
+                None => {
+                    v.push((persp, KeyRun::default()));
+                    v.len() - 1
+                }
+            };
+            let run = &mut v[i].1;
+            if run.by_pat.is_some() {
+                let ground: FxSet<FactId> = loose.iter().copied().collect();
+                run.staged.extend(ids.iter().copied().filter(|id| !ground.contains(id)));
+            }
+            run.arrived.to_mut().extend_from_slice(&ids);
+            run.loose.extend(loose);
+            if let Some(a) = self.arrivals.as_mut() {
+                a.extend_from_slice(&ids);
+            }
+        }
+        self.n_live += n;
+        if n > 0 {
+            self.bump();
+        }
+    }
+
+    /// The laid tables kept few: the newest two become one while the newer holds half as many ids as the older, so
+    /// an id is put in a table again a few times at most.
+    fn keys_settle(&mut self) {
+        let end = self.facts.len();
+        while self.keys_extra.len() >= 2 {
+            let n = self.keys_extra.len();
+            let (a, b) = (self.keys_extra[n - 2].0, self.keys_extra[n - 1].0);
+            if (end - b) * 2 < b - a && n <= 16 {
+                break;
+            }
+            self.keys_extra.truncate(n - 2);
+            self.keys_extra.push((a, Rc::new(self.key_table_of(a, end))));
+        }
+    }
+
+    /// The laid layers made one base: the tuples one pool and the keys one table.
+    pub fn unstack(&mut self) {
+        self.facts.tups.flatten();
+        if !self.keys_extra.is_empty() {
+            self.keys_base = Rc::new(self.key_table_of(0, self.facts.recs.mark).into());
+            self.keys_extra.clear();
         }
     }
 
@@ -1643,6 +1847,10 @@ impl Store {
     }
     /// Distinct argument tuples. Beside `fact_count` this is the SHARING the
     /// pool actually found, which is the number that decides whether it paid.
+    /// The tuples this layer interned.
+    pub fn top_tuples(&self) -> usize {
+        self.facts.tups.top.len()
+    }
     pub fn tuple_count(&self) -> usize {
         self.facts.tups.len()
     }
@@ -1708,6 +1916,11 @@ impl Store {
                 return Some(id);
             }
         }
+        for (_, t) in &self.keys_extra {
+            if let Some(id) = self.probe(t, h, rel, persp, args) {
+                return Some(id);
+            }
+        }
         self.probe(&self.keys, h, rel, persp, args)
     }
 
@@ -1758,10 +1971,14 @@ impl Store {
     }
 
     fn key_table(&self, from: usize) -> Vec<u32> {
-        let want = ((self.facts.len() - from + 1) * 4).next_power_of_two().max(64);
+        self.key_table_of(from, self.facts.len())
+    }
+
+    fn key_table_of(&self, from: usize, to: usize) -> Vec<u32> {
+        let want = ((to - from + 1) * 4).next_power_of_two().max(64);
         let mut keys = vec![EMPTY; want];
         let mask = want - 1;
-        for id in from as FactId..self.facts.len() as FactId {
+        for id in from as FactId..to as FactId {
             let r = self.facts.recs[id as usize];
             let mut i = (hash_key(r.rel, r.persp, self.args(id)) as usize) & mask;
             while keys[i] != EMPTY {
@@ -1851,7 +2068,7 @@ impl Store {
             let facts = &self.facts;
             let run = run_in(&mut self.idx, rel, persp);
             let mut sig = Vec::new();
-            for ix in Rc::make_mut(run.by_pat.as_mut().unwrap()).values_mut() {
+            for ix in pat_cow(run.by_pat.as_mut().unwrap()).values_mut() {
                 let pos = ix.pos.clone();
                 if pat_sig(h, &pos, facts.args(id), &mut sig) && !ix.holds(facts, &sig, id) {
                     ix.put(facts, &sig, id);
@@ -2314,7 +2531,7 @@ impl Store {
         let facts = &self.facts;
         let run = run_in(&mut self.idx, rel, p);
         let canon = &run.canon;
-        let by_val = Rc::make_mut(run.by_pat.as_mut().unwrap()).entry(mask).or_insert_with(|| {
+        let by_val = pat_cow(run.by_pat.as_mut().unwrap()).entry(mask).or_insert_with(|| {
             self.argm_cloned += canon.len() as u64;
             PatIndex::build(h, facts, pos, canon)
         });
@@ -2375,7 +2592,7 @@ impl Store {
         self.fold_staged(h, rel, p);
         let facts = &self.facts;
         let run = run_in(&mut self.idx, rel, p);
-        let bp = Rc::make_mut(run.by_pat.as_mut().unwrap());
+        let bp = pat_cow(run.by_pat.as_mut().unwrap());
         if !bp.contains_key(&at) {
             let rows: Vec<FactId> = run.canon.iter().chain(run.arrived.iter()).copied().collect();
             bp.insert(at, PatIndex::build(h, facts, pos, &rows));
@@ -2399,7 +2616,7 @@ impl Store {
             return;
         }
         let mut sig = Vec::new();
-        for by_val in Rc::make_mut(by_pat).values_mut() {
+        for by_val in pat_cow(by_pat).values_mut() {
             let pos = by_val.pos.clone();
             for &k in &run.staged {
                 if facts.alive(k) && pat_sig(h, &pos, facts.args(k), &mut sig) {
