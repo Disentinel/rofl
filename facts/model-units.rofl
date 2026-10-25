@@ -252,6 +252,8 @@ unit_concludes("rules/js-dataflow.rofl", keyed_ref).
 unit_concludes("rules/js-dataflow.rofl", keyed_ctor).
 unit_concludes("rules/js-dataflow.rofl", keyed_this_member).
 unit_concludes("rules/js-dataflow.rofl", keyed_field).
+unit_concludes("rules/js-dataflow.rofl", keyed_field_closed).
+unit_concludes("rules/js-dataflow.rofl", keyed_field_set).
 unit_concludes("rules/js-dataflow.rofl", keyed_field_reset).
 unit_concludes("rules/js-dataflow.rofl", keyed_field_ok).
 unit_concludes("rules/js-dataflow.rofl", keyed_method).
@@ -276,6 +278,8 @@ unit_concludes("rules/js-dataflow.rofl", keyed_put_later).
 unit_concludes("rules/js-dataflow.rofl", keyed_hop).
 unit_concludes("rules/js-dataflow.rofl", keyed_hop_fn).
 unit_concludes("rules/js-dataflow.rofl", keyed_named_fn).
+unit_concludes("rules/js-dataflow.rofl", keyed_private_name).
+unit_concludes("rules/js-dataflow.rofl", keyed_private_reached).
 unit_concludes("rules/js-dataflow.rofl", keyed_has_name).
 unit_concludes("rules/js-dataflow.rofl", keyed_called).
 unit_concludes("rules/js-dataflow.rofl", keyed_by_this).

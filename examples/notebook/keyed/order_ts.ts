@@ -10,3 +10,8 @@ class Store {
   private fill(): void { this.items.set('t', 18); }
 }
 new Store();
+
+const other = { loose: 0 };
+other.loose = 1;
+const store = new Store();
+void store['fill'];

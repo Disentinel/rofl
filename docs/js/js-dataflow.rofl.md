@@ -102,6 +102,7 @@ What this file calls a node, and what each word stands for:
 | <a id="noun-sequence"></a>a sequence | a node of kind `sequence_expression` |
 | <a id="noun-spread"></a>a spread | a node of kind `spread_element` |
 | <a id="noun-static_block"></a>a static block | a node of kind `static_block` |
+| <a id="noun-string_literal"></a>a string literal | a node of kind `string_literal` |
 | <a id="noun-super"></a>a super | a node of kind `super` |
 | <a id="noun-template"></a>a template | a node of kind `template_literal` |
 | <a id="noun-this"></a>a this | a node of kind `this_expression` |
@@ -1365,8 +1366,8 @@ Declared as facts:
 
 > WHAT IS IN IT AT THE READ. A collection has a HOLDER whose reads and writes
 > can be put in order: a `const` that binds a new one (one collection per run
-> of the declaration's statement list), or a field of a class written once in
-> the file, `this.m = new Map()` in the constructor or `m = new Map()` as a
+> of the declaration's statement list), or a field of a class written once,
+> `this.m = new Map()` in the constructor or `m = new Map()` as a
 > field (one per instance; in a method `this.m` is the instance's for the whole
 > run). A read, a get, a `forEach` or a for-of over it, in a statement of an
 > ORDERED LIST (the declaration's list; for a field, the body of any method of
@@ -1440,16 +1441,34 @@ In the code:
    - K [is named](js-structure.rofl.md#ast_name) Fld;
    - Y [is among the](#ast_child) `body` of CB.
 
-> written again anywhere in the file, on any object: no holder
+> written again on any object: no holder. In any file, unless TypeScript keeps
+> the field to its class (`private`, `readonly`): then in its own file only.
 
-<a id="keyed_field_reset"></a>`keyed_field_reset`(H) if all of:
+<a id="keyed_field_closed"></a>`keyed_field_closed`(H) either:
+
+1. if all of:
+   - [`keyed_field`](#keyed_field)(H, something, CB, Fld);
+   - a [class property](#noun-class_property) Q [is among the](#ast_child) `body` of a node CB;
+   - the `key` of Q [is named](js-structure.rofl.md#ast_name) Fld;
+   - [the attribute](#ast_attr) `accessibility` of Q is "private";
+2. if all of:
+   - [`keyed_field`](#keyed_field)(H, something, CB, Fld);
+   - a [class property](#noun-class_property) Q [is among the](#ast_child) `body` of a node CB;
+   - the `key` of Q [is named](js-structure.rofl.md#ast_name) Fld;
+   - [the attribute](#ast_attr) `readonly` of Q is `true`.
+
+<a id="keyed_field_set"></a>`keyed_field_set`(H, an [assignment](#noun-assignment) X, File) if all of:
   - [`keyed_field`](#keyed_field)(H, something, something, Fld);
-  - a node H [is in file](js-model.rofl.md#ast_node) File;
   - a node Pn [is named](js-structure.rofl.md#ast_name) Fld;
   - the `property` of a node L is Pn;
-  - the `left` of an [assignment](#noun-assignment) X is L;
+  - the `left` of X is L;
   - X is in file File;
   - X differs from H.
+
+<a id="keyed_field_reset"></a>`keyed_field_reset`(H) either:
+
+1. if [`keyed_field_set`](#keyed_field_set)(H, something, something), unless [`keyed_field_closed`](#keyed_field_closed)(H);
+2. if [`keyed_field_set`](#keyed_field_set)(H, something, File) and H [is in file](js-model.rofl.md#ast_node) File.
 
 <a id="keyed_field_ok"></a>`keyed_field_ok`(H, CB, Fld) if [`keyed_field`](#keyed_field)(H, something, CB, Fld), unless [`keyed_field_reset`](#keyed_field_reset)(H).
 
@@ -1659,6 +1678,36 @@ Declared as facts:
    - the `property` of E is Pn;
    - E [is within](#ast_within) CB;
    - E is a [member expression](#noun-member_expression).
+
+> tsc lets two ways past `private`: `x['f']` and a cast to any. The model
+> keeps to `private` and says where a member of that name is reached so: by
+> a string anywhere, by a name outside the class in its file
+
+<a id="keyed_private_name"></a>`keyed_private_name`(G, CB, Name) if all of:
+  - [`keyed_hop_fn`](#keyed_hop_fn)(G, something);
+  - [the attribute](#ast_attr) `accessibility` of a node G is "private";
+  - the `key` of G [is named](js-structure.rofl.md#ast_name) Name;
+  - G [is among the](#ast_child) `body` of a node CB.
+
+In the audit:
+
+<a id="keyed_private_reached"></a>A node N reaches the private G either:
+
+1. if all of:
+   - [`keyed_private_name`](#keyed_private_name)(G, CB, Name);
+   - a [string literal](#noun-string_literal) Lit [is written as](js-structure.rofl.md#ast_value) Name;
+   - the `property` of N is Lit;
+   - [the attribute](#ast_attr) `computed` of N is `true`;
+2. if all of:
+   - [`keyed_private_name`](#keyed_private_name)(G, CB, Name);
+   - a node Pn [is named](js-structure.rofl.md#ast_name) Name;
+   - the `property` of N is Pn;
+   - N is a [member expression](#noun-member_expression);
+   - N is in file File;
+   - G [is in file](js-model.rofl.md#ast_node) File;
+   - unless N [is within](#ast_within) a node CB.
+
+In the code:
 
 <a id="keyed_has_name"></a>`keyed_has_name`(G) if [`keyed_named_fn`](#keyed_named_fn)(G, something).
 

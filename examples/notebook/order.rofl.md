@@ -25,7 +25,10 @@ code:
 > `if` may not have run, so the value stays. A put in a callback (`add`,
 > `forEach`, `then`), in a public method, or a Map declared outside the loop
 > that reads and writes it (`tally`), leaves the order unknown, and the model
-> keeps the put and says so. A for-of and a `forEach` see what a get would.
+> keeps the put and says so; so does a field some file writes again
+> (`other.loose = 1` in keyed/order_ts.ts), unless TypeScript keeps it to its
+> class (`private`, `readonly`). tsc lets `store['fill']` past `private`:
+> the model keeps to `private` and names each such reach. A for-of and a `forEach` see what a get would.
 > `use(tag, v)` marks each read; `npm run test:nb` runs the file under V8 and
 > checks the model against what it observes. Run it with
 > `npm run nb -- examples/notebook/order.rofl.md`.
@@ -77,5 +80,6 @@ why seen("order.two", 2)
 why seen("batch.then", 6)
 
 ? keyed_put_after[code](V, C)
+? keyed_private_reached[audit](N, G)
 ? keyed_taken_out[code](V, C, R)
 ```

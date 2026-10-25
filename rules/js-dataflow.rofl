@@ -755,8 +755,8 @@ keyed_key_unknown[audit](C) :- keyed_key_at[flow](C, _), not keyed_key_known[flo
 
 -- WHAT IS IN IT AT THE READ. A collection has a HOLDER whose reads and writes
 -- can be put in order: a `const` that binds a new one (one collection per run
--- of the declaration's statement list), or a field of a class written once in
--- the file, `this.m = new Map()` in the constructor or `m = new Map()` as a
+-- of the declaration's statement list), or a field of a class written once,
+-- `this.m = new Map()` in the constructor or `m = new Map()` as a
 -- field (one per instance; in a method `this.m` is the instance's for the whole
 -- run). A read, a get, a `forEach` or a for-of over it, in a statement of an
 -- ORDERED LIST (the declaration's list; for a field, the body of any method of
@@ -801,11 +801,19 @@ keyed_field[code](Q, P, CB, Fld) :- keyed_new[code](X, P), ast_child[code](Q, va
                                     ast_attr[code](Q, computed, false),
                                     ast_child[code](Q, key, 0, K), ast_node[code](K, identifier, _),
                                     ast_name[code](K, Fld), ast_child[code](CB, body, _, Q).
--- written again anywhere in the file, on any object: no holder
-keyed_field_reset[code](H) :- keyed_field[code](H, _, _, Fld), ast_node[code](H, _, File),
-                              ast_name[code](Pn, Fld), ast_child[code](L, property, 0, Pn),
-                              ast_child[code](A, left, 0, L), ast_node[code](A, assignment_expression, File),
-                              A != H.
+-- written again on any object: no holder. In any file, unless TypeScript keeps
+-- the field to its class (`private`, `readonly`): then in its own file only.
+keyed_field_closed[code](H) :- keyed_field[code](H, _, CB, Fld), ast_child[code](CB, body, _, Q),
+                               ast_node[code](Q, class_property, _), ast_child[code](Q, key, 0, K),
+                               ast_name[code](K, Fld), ast_attr[code](Q, accessibility, "private").
+keyed_field_closed[code](H) :- keyed_field[code](H, _, CB, Fld), ast_child[code](CB, body, _, Q),
+                               ast_node[code](Q, class_property, _), ast_child[code](Q, key, 0, K),
+                               ast_name[code](K, Fld), ast_attr[code](Q, readonly, true).
+keyed_field_set[code](H, A, File) :- keyed_field[code](H, _, _, Fld), ast_name[code](Pn, Fld),
+                                     ast_child[code](L, property, 0, Pn), ast_child[code](A, left, 0, L),
+                                     ast_node[code](A, assignment_expression, File), A != H.
+keyed_field_reset[code](H) :- keyed_field_set[code](H, _, _), not keyed_field_closed[code](H).
+keyed_field_reset[code](H) :- keyed_field_set[code](H, _, File), ast_node[code](H, _, File).
 keyed_field_ok[code](H, CB, Fld) :- keyed_field[code](H, _, CB, Fld), not keyed_field_reset[code](H).
 keyed_holder[code](H, P)  :- keyed_field[code](H, P, _, _), keyed_field_ok[code](H, _, _).
 keyed_born[code](H, Body, body) :- keyed_field_ok[code](H, CB, _), keyed_ctor[code](CB, Body).
@@ -901,6 +909,17 @@ keyed_named_fn[code](G, N) :- keyed_hop_fn[code](G, _), ast_attr[code](G, access
                               ast_child[code](G, key, 0, K), ast_name[code](K, Name), ast_child[code](CB, body, _, G),
                               ast_name[code](Pn, Name), ast_child[code](N, property, 0, Pn), ast_within[code](CB, N),
                               ast_node[code](N, member_expression, _).
+-- tsc lets two ways past `private`: `x['f']` and a cast to any. The model
+-- keeps to `private` and says where a member of that name is reached so: by
+-- a string anywhere, by a name outside the class in its file
+keyed_private_name[code](G, CB, Name) :- keyed_hop_fn[code](G, _), ast_attr[code](G, accessibility, "private"),
+                                        ast_child[code](G, key, 0, K), ast_name[code](K, Name), ast_child[code](CB, body, _, G).
+keyed_private_reached[audit](N, G) :- keyed_private_name[code](G, CB, Name), ast_value[code](Lit, Name),
+                                      ast_node[code](Lit, string_literal, _), ast_child[code](N, property, 0, Lit),
+                                      ast_attr[code](N, computed, true).
+keyed_private_reached[audit](N, G) :- keyed_private_name[code](G, CB, Name), ast_name[code](Pn, Name),
+                                      ast_child[code](N, property, 0, Pn), ast_node[code](N, member_expression, File),
+                                      ast_node[code](G, _, File), not ast_within[code](CB, N).
 keyed_has_name[code](G) :- keyed_named_fn[code](G, _).
 keyed_called[code](G, Q) :- keyed_named_fn[code](G, E), ast_child[code](Q, callee, 0, E), ast_node[code](Q, call_expression, _).
 keyed_by_this[code](E)   :- keyed_named_fn[code](G, E), ast_node[code](G, class_private_method, _),

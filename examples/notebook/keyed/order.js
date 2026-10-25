@@ -117,3 +117,12 @@ class Cache {
   }
 }
 new Cache();
+
+class Loose {
+  constructor() {
+    this.loose = new Map();
+    use('loose.before', this.loose.get('l'));
+    this.loose.set('l', 19);
+  }
+}
+new Loose();
