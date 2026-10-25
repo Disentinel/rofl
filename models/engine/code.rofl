@@ -1,0 +1,87 @@
+-- models/engine/code.rofl — WHICH FUNCTION OF THE ENGINE CALLS WHICH. The facts are rust/tools/rs_scan
+-- (`[rs]`: a call as written, with the ids it could name); the choice of the callee is here.
+--
+-- An edge says how it was found, because the three ways are not equally sure:
+--   path      a call by path (`store::open(..)`, `kept::main(..)`, `helper(..)`) to a function that exists
+--   typed     `Self::f`, `self.f()`, `Store::f`, `self.store.f()`: a method of a known type
+--   by_name   `x.f()` with a receiver of unknown type, taken only when one method of the crate is called f
+-- A trait's method called through a value of unknown type, a closure, a function passed in a field: no edge.
+
+edb(rs_call_to).
+edb(rs_call_ty).
+edb(rs_recv).
+edb(rs_recv_of).
+edb(rs_let).
+edb(rs_let_call).
+edb(rs_let_path).
+edb(rs_let_chain).
+edb(rs_call_any).
+
+rs_known(G) :- rs_fn[rs](G, _, _, _, _, _).
+
+calls(F, G, path)    :- rs_call_to[rs](F, G, _), rs_known(G).
+calls(F, G, typed)   :- rs_call_ty[rs](F, T, N, _), rs_method[rs](G, T, N).
+calls(F, G, typed)   :- recv_callee(F, _, G).
+
+-- THE TYPE OF A RECEIVER, as far as the source says it: `self`, a parameter, a `let` with a type, a struct built,
+-- what a called method returns, and the fields walked from any of them. A generic, a closure's argument, a value
+-- out of a collection: no type, and the call falls to `by_name`.
+var_type(F, "self", T) :- rs_method[rs](F, T, _).
+var_type(F, V, T)      :- rs_param[rs](F, _, V, T).
+var_type(F, V, T)      :- rs_let[rs](F, V, T).
+var_type(F, V, T)      :- rs_let_path[rs](F, V, Ty, N), rs_method[rs](G, Ty, N), returns_type(G, T).
+var_type(F, V, T)      :- rs_let_call[rs](F, V, Id), recv_callee(F, Id, G), returns_type(G, T).
+var_type(F, V, T)      :- rs_let_chain[rs](F, V, R, P), chain_type(F, R, P, T).
+
+returns_type(G, T) :- rs_returns[rs](G, T), T != "Self".
+returns_type(G, T) :- rs_returns[rs](G, "Self"), rs_method[rs](G, T, _).
+
+needs_chain(F, R, P) :- rs_recv[rs](F, _, _, R, P).
+needs_chain(F, R, P) :- rs_let_chain[rs](F, _, R, P).
+seg_type(F, R, P, 0, T)  :- needs_chain(F, R, P), P != "", var_type(F, R, T).
+seg_type(F, R, P, I1, T) :- seg_type(F, R, P, I, T0), K is str_segs(P, "."), I < K, Fd is str_seg(P, ".", I),
+                            rs_field[rs](T0, Fd, T), I1 is I + 1.
+chain_type(F, R, "", T) :- needs_chain(F, R, ""), var_type(F, R, T).
+chain_type(F, R, P, T)  :- seg_type(F, R, P, K, T), P != "", K is str_segs(P, ".").
+
+recv_callee(F, Id, G) :- rs_recv[rs](F, Id, N, R, P), chain_type(F, R, P, T), rs_method[rs](G, T, N).
+recv_callee(F, Id, G) :- rs_recv_of[rs](F, Id, N, In), recv_callee(F, In, H), returns_type(H, T), rs_method[rs](G, T, N).
+typed_at(F, Id) :- recv_callee(F, Id, _).
+
+-- a bare name reaches through `use P::*`, and through the globs P has itself (`use super::*` over `use crate::term::*`)
+glob_sees(M, P) :- rs_use[rs](M, P, "*").
+glob_sees(M, Q) :- glob_sees(M, P), rs_use[rs](P, Q, "*").
+bare_call(F, N, M, L) :- rs_call[rs](F, "path", N, "", L), fn_mod(F, M).
+calls(F, G, path)    :- bare_call(F, N, M, _), glob_sees(M, P), rs_fn[rs](G, N, P, _, _, _).
+calls(F, G, path)    :- bare_call(F, N, M, _), glob_sees(M, P), rs_use[rs](P, G, N), rs_known(G).
+
+method_named_twice(N) :- rs_method[rs](A, _, N), rs_method[rs](B, _, N), A != B.
+calls(F, G, by_name) :- rs_call_any[rs](F, N, _), rs_method[rs](G, _, N), not method_named_twice(N).
+
+edge(F, G) :- calls(F, G, _).
+
+-- the function a module holds, and the module a function is in
+fn_mod(F, M)  :- rs_fn[rs](F, _, M, _, _, _).
+fn_file(F, P) :- rs_fn[rs](F, _, _, P, _, _).
+fn_size(F, L) :- rs_fn[rs](F, _, _, _, _, L).
+
+-- an entry point of the binary: a verb `run` matches on, and what the arm that matched it calls
+verb(V) :- rs_case[rs]("bin::rofl::run", V, _, _).
+verb_calls(V, G) :- rs_case[rs]("bin::rofl::run", V, A, B), calls_at("bin::rofl::run", G, L), L >= A, L <= B.
+calls_at(F, G, L) :- rs_call_to[rs](F, G, L), rs_known(G).
+
+-- WHERE THE CALL GRAPH IS DARK: a call by path whose name some function of the crate has, which no edge took
+crate_fn_name(N) :- rs_fn[rs](_, N, _, _, _, _).
+resolved_at(F, L) :- rs_call_to[rs](F, G, L), rs_known(G).
+resolved_at(F, L) :- rs_call_ty[rs](F, T, N, L), rs_method[rs](_, T, N).
+resolved_at(F, L) :- bare_call(F, N, M, L), glob_sees(M, P), rs_fn[rs](_, N, P, _, _, _).
+resolved_at(F, L) :- bare_call(F, N, M, L), glob_sees(M, P), rs_use[rs](P, G, N), rs_known(G).
+unresolved_call(F, N, Q, L) :- rs_call[rs](F, "path", N, Q, L), crate_fn_name(N), not resolved_at(F, L).
+
+-- WHAT A VERB REACHES: every function a verb's arm calls, and on, by the sure calls (models/engine/parts.rofl `sure`)
+reaches(V, G) :- verb_calls(V, G).
+reaches(V, H) :- reaches(V, G), sure(G, H).
+typed_line(F, L) :- recv_callee(F, Id, _), L is Id / 10000.
+crate_method_name(N) :- rs_method[rs](_, _, N).
+-- a method call the crate could answer (some type of it has the name) on a receiver whose type the source does not say
+untyped_call(F, N, L) :- rs_call_any[rs](F, N, L), crate_method_name(N), not typed_line(F, L).

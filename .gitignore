@@ -31,6 +31,7 @@ rust/target/
 
 # bench crates under rust/ carry their own target dirs
 rust/*/target/
+rust/tools/*/target/
 rust/storebench/traces/
 rust/target/volumes/
 facts/rule-shape.rofl

@@ -53,6 +53,7 @@
     "build:dense": "node --experimental-strip-types scripts/build_kernel_dense.ts",
     "build:skill": "node --experimental-strip-types scripts/build_skill.ts",
     "cleanliness": "node --experimental-strip-types scanners/cleanliness_report.ts",
+    "engine": "cargo build --release -q --manifest-path rust/tools/rs_scan/Cargo.toml && mkdir -p .cache/engine && rust/tools/rs_scan/target/release/rs_scan rust/rofl rofl rust/rofl/ > .cache/engine/rs.rofl && echo .cache/engine/rs.rofl",
     "depends": "node --experimental-strip-types scanners/depends.ts",
     "docs": "node --experimental-strip-types scripts/render_docs.ts",
     "evalcost": "node --experimental-strip-types scanners/eval_cost.ts",
