@@ -1544,8 +1544,12 @@ impl Store {
     /// It copies only in a store that is itself a layer and has written:
     /// its base and its own part become one new base.
     pub fn freeze(&mut self, h: &Heap) {
+        let t = std::time::Instant::now();
         for (rel, persp) in self.idx.arriving() {
             self.absorb(h, rel, persp);
+        }
+        if std::env::var_os("ROFL_PAR").is_some() && t.elapsed().as_millis() > 50 {
+            eprintln!("bsp:   freeze: absorb {} ms", t.elapsed().as_millis());
         }
         self.freeze_as_is();
     }
@@ -1553,7 +1557,9 @@ impl Store {
     /// Everything under the mark, the runs with arrivals not yet merged included.
     fn freeze_as_is(&mut self) {
         let mark = self.facts.recs.mark;
+        let t = std::time::Instant::now();
         self.facts.freeze();
+        let t1 = t.elapsed();
         if mark == 0 {
             self.keys_base = Rc::new(std::mem::take(&mut self.keys).into());
         } else if !self.keys.is_empty() {
@@ -1579,11 +1585,16 @@ impl Store {
             self.keys = Vec::new();
         }
         self.keys_n = 0;
+        let t2 = t.elapsed();
         self.idx.freeze();
+        let t3 = t.elapsed();
         self.wit_head.freeze();
         self.wits.freeze();
         self.prem_arena.freeze();
         self.fired.freeze();
+        if std::env::var_os("ROFL_PAR").is_some() && t.elapsed().as_millis() > 50 {
+            eprintln!("bsp:   freeze: facts {} ms, keys {} ms, idx {} ms, rest {} ms", t1.as_millis(), (t2 - t1).as_millis(), (t3 - t2).as_millis(), (t.elapsed() - t3).as_millis());
+        }
     }
 
     #[inline(always)]

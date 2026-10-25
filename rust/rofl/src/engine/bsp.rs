@@ -133,8 +133,9 @@ impl Eval {
                 e.par.threads = 1;
                 if first {
                     let mut acc = [std::time::Duration::ZERO; 4];
+                    let mut shares = FxMap::default();
                     for c in &comps {
-                        e.fire_share(c, w, owner, ids, &mut acc)?;
+                        e.fire_share(c, w, owner, ids, &mut shares, &mut acc)?;
                     }
                     if w == 0 {
                         e.bsp_top.sort_by(|a, b| b.0.cmp(&a.0));
@@ -187,8 +188,18 @@ impl Eval {
                         continue;
                     }
                     let rec = e.store.rec(id);
-                    let args: Vec<Term> = e.store.args(id).iter().map(|a| copy_term(*a, &e.h, &mut self.h, syms, funcs)).collect();
-                    let (nid, new) = self.store.put(&self.h, rec.rel, rec.persp, &args, rec.flags() & !F_BASE);
+                    let src = e.store.args(id);
+                    let old = |t: &Term| match t.kind() {
+                        TermK::Atom(s) | TermK::Str(s) => s < syms,
+                        TermK::Func(i) => i < funcs,
+                        _ => true,
+                    };
+                    let (nid, new) = if src.iter().all(old) {
+                        self.store.put(&self.h, rec.rel, rec.persp, src, rec.flags() & !F_BASE)
+                    } else {
+                        let args: Vec<Term> = src.iter().map(|a| copy_term(*a, &e.h, &mut self.h, syms, funcs)).collect();
+                        self.store.put(&self.h, rec.rel, rec.persp, &args, rec.flags() & !F_BASE)
+                    };
                     if new {
                         while par.owner.len() < nid as usize {
                             par.owner.push(0);
@@ -226,7 +237,7 @@ impl Eval {
 
     /// `rules` fired on worker `w`'s share: each rule on the rows of its first premise that `w` owns, and what that
     /// makes run to quiet here.
-    fn fire_share(&mut self, rules: &[Rc<ERule>], w: usize, owner: &[u8], ids: FactId, acc: &mut [std::time::Duration; 4]) -> Result<(), Halt> {
+    fn fire_share(&mut self, rules: &[Rc<ERule>], w: usize, owner: &[u8], ids: FactId, shares: &mut FxMap<Sym, (FxSet<FactId>, Rc<FxSet<FactId>>)>, acc: &mut [std::time::Duration; 4]) -> Result<(), Halt> {
         // what this worker made before, whole: the share cuts only the facts every worker holds
         let reads: FxSet<Sym> = rules.iter().flat_map(|r| r.pos_rels.iter().copied()).collect();
         let mut made: FxMap<Sym, FxSet<FactId>> = FxMap::default();
@@ -243,7 +254,6 @@ impl Eval {
         let t = std::time::Instant::now();
         let mut tshare = std::time::Duration::ZERO;
         // a relation's rows from before the fork: this worker's, and the others'
-        let mut shares: FxMap<Sym, (FxSet<FactId>, Rc<FxSet<FactId>>)> = FxMap::default();
         let mut cuts: Vec<Option<(usize, Sym)>> = Vec::with_capacity(rules.len());
         for r in rules {
             // the share is taken at the premise of most rows, and the plan starts from it as from news: each worker reads
@@ -252,7 +262,18 @@ impl Eval {
                 BodyElem::Pos(l) => Some((i, l.rel, self.store.rel_count(l.rel))),
                 _ => None,
             }).collect();
-            let at = pos.iter().max_by_key(|x| x.2).map(|x| (x.0, x.1));
+            // or at the first premise of many rows of the rule's own plan, which every worker then reads up to it
+            let whole = if std::env::var_os("ROFL_PAR_CUT").is_some() { self.delta_pick(r, None, 1) } else { None };
+            let in_plan = whole.as_ref().and_then(|p| {
+                p.body.iter().enumerate().find_map(|(k, b)| match b {
+                    BodyElem::Pos(l) if self.store.rel_count(l.rel) >= 4096 => Some((k, p.perm[k], l.rel)),
+                    _ => None,
+                })
+            });
+            let at = match in_plan {
+                Some((_, i, rel)) => Some((i, rel)),
+                None => pos.iter().max_by_key(|x| x.2).map(|x| (x.0, x.1)),
+            };
             cuts.push(at);
             let f = match at {
                 Some((i, rel)) => {
@@ -277,9 +298,12 @@ impl Eval {
                     }
                     let tr = std::time::Instant::now();
                     // the plan starts from the share, as from news
-                    let f = match self.delta_pick(r, Some(i), mine.len()) {
-                        Some(p) => self.fire_planned(r, &p, Some(&mine)),
-                        None => self.fire_rule(r, Some((i, &mine))),
+                    let f = match (&whole, in_plan) {
+                        (Some(p), Some((k, _, _))) => self.fire_planned_at(r, p, Some((k, &mine))),
+                        _ => match self.delta_pick(r, Some(i), mine.len()) {
+                            Some(p) => self.fire_planned(r, &p, Some(&mine)),
+                            None => self.fire_rule(r, Some((i, &mine))),
+                        },
                     };
                     if std::env::var_os("ROFL_PAR_TOP").is_some() {
                         self.bsp_top.push((tr.elapsed().as_micros(), format!("{} share {} of {}", r.canon, mine.len(), self.store.rel_count(rel))));
