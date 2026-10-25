@@ -692,6 +692,9 @@ pub struct Eval {
     /// facts admitted from other workers, and what was copied from them alone
     pub(crate) foreign: FxSet<FactId>,
     pub(crate) bsp: Option<bsp::Par>,
+    pub(crate) bsp_top: Vec<(u128, String)>,
+    /// a second premise of a firing kept to these facts (BSP: other workers' news), by plan position
+    pub(crate) also_at: Option<(usize, Rc<FxSet<FactId>>)>,
     round_resume: Option<(Front, usize, usize, Front, Option<InFlight>)>,
     pub h: Heap,
     pub v: Vocab,
@@ -1581,6 +1584,8 @@ impl Eval {
             admitted: FxSet::default(),
             foreign: FxSet::default(),
             bsp: None,
+            bsp_top: Vec::new(),
+            also_at: None,
             round_resume: None,
             lat_unknown: HashMap::new(),
             lat_withdrawn: Vec::new(),
@@ -5594,6 +5599,10 @@ impl Eval {
                 let b = &body[i];
                 let mut next: Vec<Sol> = Vec::new();
                 let mark = self.cost_mark(rule_id, b);
+                let also = match &self.also_at {
+                    Some((p, keys)) if *p == i && depth == 0 => Some(keys.clone()),
+                    _ => None,
+                };
                 let left = match self.par_level(b, i, &acc, depth, front_at, rule_id) {
                     Some(made) => {
                         next = made?;
@@ -5607,7 +5616,7 @@ impl Eval {
                         BodyElem::Pos(l) => {
                             let only = match front_at {
                                 Some((p, keys)) if p == i => Some(keys),
-                                _ => None,
+                                _ => also.as_deref(),
                             };
                             let (faults, unknowns) = (self.fault_count, self.demand_trail.len());
                             let found = self.match_premise(l, &a.s, depth, only)?;

@@ -59,10 +59,25 @@ impl Eval {
     /// `rules`, a level's, activated over K workers; a level that does not fit is activated here, whole.
     pub(super) fn activate_par(&mut self, rules: &[Rc<ERule>], ph: usize) -> Result<(), Halt> {
         let Some(mut par) = self.bsp.take() else { return self.activate_phase(rules, ph) };
-        let r = if par.workers == 1 {
-            let t = std::time::Instant::now();
-            let r = self.activate_phase(rules, ph);
-            eprintln!("bsp: level of {} rules alone: {} ms", rules.len(), t.elapsed().as_millis());
+        let r = if par.workers == 1 && std::env::var_os("ROFL_PAR_ONE").is_none() {
+            if std::env::var_os("ROFL_PAR_FREEZE").is_some() {
+                self.h.freeze();
+                self.store.freeze(&self.h);
+            }
+            let (t, s0, n0) = (std::time::Instant::now(), self.steps, self.store.len_ids());
+            let r = if std::env::var_os("ROFL_PAR_FORK").is_some() {
+                self.h.freeze();
+                self.store.freeze(&self.h);
+                let mut e = self.fork();
+                e.bsp = None;
+                let r = e.activate_phase(rules, ph);
+                eprintln!("bsp: forked level of {} rules: {} ms, {} facts", rules.len(), t.elapsed().as_millis(), e.store.len_ids() - n0);
+                drop(e);
+                self.activate_phase(rules, ph)
+            } else {
+                self.activate_phase(rules, ph)
+            };
+            eprintln!("bsp: level of {} rules alone: {} ms, {} steps, {} facts", rules.len(), t.elapsed().as_millis(), self.steps - s0, self.store.len_ids() - n0);
             r
         } else if self.par_fits(rules) && !rules.is_empty() { self.bsp_level(&mut par, rules) } else {
             let why = |f: &dyn Fn(&ERule) -> bool| rules.iter().filter(|r| f(r)).count();
@@ -93,14 +108,13 @@ impl Eval {
         let t0 = std::time::Instant::now();
         let mut sorted: Vec<Rc<ERule>> = rules.to_vec();
         sorted.sort_by(|a, b| cmp_js(&a.canon, &b.canon));
-        self.active.extend(sorted.iter().cloned());
-        self.active.sort_by(|a, b| cmp_js(&a.canon, &b.canon));
         let (aggs, rest): (Vec<Rc<ERule>>, Vec<Rc<ERule>>) = sorted.into_iter().partition(|r| r.has_agg);
         for r in &aggs {
             self.fire_rule(r, None)?;
         }
         let comps = if rest.len() > 1 && self.by_component() { components(&rest) } else { vec![rest] };
         let k = par.workers;
+        let all: Vec<Rc<ERule>> = comps.concat();
         let mut epoch = 0;
         let mut news: Vec<Vec<FactId>> = Vec::new();
         loop {
@@ -118,14 +132,36 @@ impl Eval {
                 e.bsp = None;
                 e.par.threads = 1;
                 if first {
+                    let mut acc = [std::time::Duration::ZERO; 4];
                     for c in &comps {
-                        e.fire_share(c, w, owner)?;
+                        e.fire_share(c, w, owner, ids, &mut acc)?;
                     }
-                } else {
+                    if w == 0 {
+                        e.bsp_top.sort_by(|a, b| b.0.cmp(&a.0));
+                        for (us, what) in e.bsp_top.iter().take(12) {
+                            eprintln!("bsp:     {} ms {}", us / 1000, what.chars().take(300).collect::<String>());
+                        }
+                    }
+                    eprintln!("bsp:   worker {w}: {} components, shares {} ms, first {} ms, quiet {} ms, of first on its own made {} ms", comps.len(), acc[0].as_millis(), acc[1].as_millis(), acc[2].as_millis(), acc[3].as_millis());
+                } else if std::env::var_os("ROFL_PAR_PROP").is_some() {
                     let mut front = Front::default();
                     for &id in &news[w] {
                         front.note(e.store.rec(id).rel, id);
                     }
+                    e.propagate(front)?;
+                } else {
+                    let by_rel = |ws: &mut dyn Iterator<Item = &Vec<FactId>>| {
+                        let mut m: FxMap<Sym, FxSet<FactId>> = FxMap::default();
+                        for ids in ws {
+                            for &id in ids {
+                                m.entry(e.store.rec(id).rel).or_default().insert(id);
+                            }
+                        }
+                        m
+                    };
+                    let mine = by_rel(&mut news[w..=w].iter());
+                    let others = by_rel(&mut news.iter().enumerate().filter(|(v, _)| *v != w).map(|(_, n)| n));
+                    let front = e.fire_cross(&all, &mine, &others)?;
                     e.propagate(front)?;
                 }
                 Ok((e, t.elapsed()))
@@ -144,7 +180,7 @@ impl Eval {
             let mut steps = 0;
             for (w, d) in done.into_iter().enumerate() {
                 let (e, dt) = d?;
-                took.push((dt.as_millis(), e.store.len_ids() - ids));
+                took.push((dt.as_millis(), e.store.len_ids() - ids, e.steps - self.steps));
                 steps += e.steps - self.steps;
                 for id in ids..e.store.len_ids() {
                     if !e.store.alive(id) {
@@ -163,6 +199,12 @@ impl Eval {
                 }
             }
             self.steps += steps;
+            if epoch == 0 {
+                for c in &comps {
+                    self.active.extend(c.iter().cloned());
+                }
+                self.active.sort_by(|a, b| cmp_js(&a.canon, &b.canon));
+            }
             let n: usize = made.iter().map(|m| m.len()).sum();
             eprintln!("bsp: {}", format!(
                 "epoch {epoch}: {n} new, freeze {} ms, fork {} ms, workers {:?} ms, merge {} ms",
@@ -172,7 +214,8 @@ impl Eval {
                 (te.elapsed() - tw).as_millis()
             ));
             epoch += 1;
-            if n == 0 {
+            // one worker's layer holds no join of two layers
+            if n == 0 || k == 1 {
                 break;
             }
             news = made;
@@ -183,33 +226,65 @@ impl Eval {
 
     /// `rules` fired on worker `w`'s share: each rule on the rows of its first premise that `w` owns, and what that
     /// makes run to quiet here.
-    fn fire_share(&mut self, rules: &[Rc<ERule>], w: usize, owner: &[u8]) -> Result<(), Halt> {
+    fn fire_share(&mut self, rules: &[Rc<ERule>], w: usize, owner: &[u8], ids: FactId, acc: &mut [std::time::Duration; 4]) -> Result<(), Halt> {
+        // what this worker made before, whole: the share cuts only the facts every worker holds
+        let reads: FxSet<Sym> = rules.iter().flat_map(|r| r.pos_rels.iter().copied()).collect();
+        let mut made: FxMap<Sym, FxSet<FactId>> = FxMap::default();
+        for id in ids..self.store.len_ids() {
+            let rel = self.store.rec(id).rel;
+            if reads.contains(&rel) && self.store.alive(id) {
+                made.entry(rel).or_default().insert(id);
+            }
+        }
+        // a component is active from its firing on, as `activate_batch` makes it
+        self.active.extend(rules.iter().cloned());
+        self.active.sort_by(|a, b| cmp_js(&a.canon, &b.canon));
         let mut front = Front::default();
-        let mut shares: FxMap<Sym, FxSet<FactId>> = FxMap::default();
+        let t = std::time::Instant::now();
+        let mut tshare = std::time::Duration::ZERO;
+        // a relation's rows from before the fork: this worker's, and the others'
+        let mut shares: FxMap<Sym, (FxSet<FactId>, Rc<FxSet<FactId>>)> = FxMap::default();
+        let mut cuts: Vec<Option<(usize, Sym)>> = Vec::with_capacity(rules.len());
         for r in rules {
-            let first = r.plan.iter().position(|b| matches!(b, BodyElem::Pos(_)));
-            let f = match first {
-                Some(i) => {
-                    let BodyElem::Pos(l) = &r.plan[i] else { unreachable!() };
-                    if !shares.contains_key(&l.rel) {
-                        let mut mine: FxSet<FactId> = FxSet::default();
-                        self.store.each_row(l.rel, |_, id| {
-                            if owner.get(id as usize).is_none_or(|&o| o as usize == w) {
+            // the share is taken at the premise of most rows, and the plan starts from it as from news: each worker reads
+            // only its part of the largest table
+            let pos: Vec<(usize, Sym, usize)> = r.plan.iter().enumerate().filter_map(|(i, b)| match b {
+                BodyElem::Pos(l) => Some((i, l.rel, self.store.rel_count(l.rel))),
+                _ => None,
+            }).collect();
+            let at = pos.iter().max_by_key(|x| x.2).map(|x| (x.0, x.1));
+            cuts.push(at);
+            let f = match at {
+                Some((i, rel)) => {
+                    let ts = std::time::Instant::now();
+                    if !shares.contains_key(&rel) {
+                        let (mut mine, mut theirs) = (FxSet::default(), FxSet::default());
+                        self.store.each_row(rel, |_, id| {
+                            if id >= ids {
+                            } else if owner.get(id as usize).is_none_or(|&o| o as usize == w) {
                                 mine.insert(id);
+                            } else {
+                                theirs.insert(id);
                             }
                         });
-                        shares.insert(l.rel, mine);
+                        shares.insert(rel, (mine, Rc::new(theirs)));
                     }
-                    let mine = std::mem::take(shares.get_mut(&l.rel).unwrap());
+                    let mine = std::mem::take(&mut shares.get_mut(&rel).unwrap().0);
+                    tshare += ts.elapsed();
                     if mine.is_empty() {
-                        shares.insert(l.rel, mine);
+                        shares.get_mut(&rel).unwrap().0 = mine;
                         continue;
                     }
+                    let tr = std::time::Instant::now();
+                    // the plan starts from the share, as from news
                     let f = match self.delta_pick(r, Some(i), mine.len()) {
                         Some(p) => self.fire_planned(r, &p, Some(&mine)),
                         None => self.fire_rule(r, Some((i, &mine))),
                     };
-                    shares.insert(l.rel, mine);
+                    if std::env::var_os("ROFL_PAR_TOP").is_some() {
+                        self.bsp_top.push((tr.elapsed().as_micros(), format!("{} share {} of {}", r.canon, mine.len(), self.store.rel_count(rel))));
+                    }
+                    shares.get_mut(&rel).unwrap().0 = mine;
                     f?
                 }
                 None if w == 0 => self.fire_rule(r, None)?,
@@ -217,6 +292,77 @@ impl Eval {
             };
             merge_front(&mut front, f);
         }
-        self.propagate(front)
+        // what this worker made before, against the rest: at the cut premise whole, elsewhere with the cut premise
+        // on the others' rows (its own rows there were read by the share)
+        let tm = std::time::Instant::now();
+        for (r, cut) in rules.iter().zip(&cuts) {
+            let Some((ci, crel)) = *cut else { continue };
+            for (j, b) in r.plan.iter().enumerate() {
+                let BodyElem::Pos(l) = b else { continue };
+                let Some(keys) = made.get(&l.rel) else { continue };
+                let theirs = if j == ci { None } else {
+                    match shares.get(&crel) {
+                        Some((_, t)) if t.is_empty() => continue,
+                        Some((_, t)) => Some(t.clone()),
+                        None => None,
+                    }
+                };
+                let f = match self.delta_pick(r, Some(j), keys.len()) {
+                    Some(p) => {
+                        self.also_at = theirs.map(|t| (p.perm.iter().position(|&x| x == ci).expect("a plan holds every premise"), t));
+                        self.fire_planned(r, &p, Some(keys))
+                    }
+                    None => {
+                        self.also_at = theirs.map(|t| (ci, t));
+                        self.fire_rule(r, Some((j, keys)))
+                    }
+                };
+                self.also_at = None;
+                merge_front(&mut front, f?);
+            }
+        }
+        acc[3] += tm.elapsed();
+        let tf = t.elapsed();
+        self.propagate(front)?;
+        acc[0] += tshare;
+        acc[1] += tf - tshare;
+        acc[2] += t.elapsed() - tf;
+        Ok(())
+    }
+
+    /// The firings of `rules` that read this worker's news at one premise and another worker's at another: every
+    /// other firing on the news was made where all its premises were, in the epoch before.
+    fn fire_cross(&mut self, rules: &[Rc<ERule>], mine: &FxMap<Sym, FxSet<FactId>>, others: &FxMap<Sym, FxSet<FactId>>) -> Result<Front, Halt> {
+        let mut front = Front::default();
+        let others: FxMap<Sym, Rc<FxSet<FactId>>> = others.iter().map(|(r, s)| (*r, Rc::new(s.clone()))).collect();
+        for r in rules {
+            let pos: Vec<(usize, Sym)> = r.plan.iter().enumerate().filter_map(|(i, b)| match b {
+                BodyElem::Pos(l) => Some((i, l.rel)),
+                _ => None,
+            }).collect();
+            for &(j, rj) in &pos {
+                let Some(keys) = mine.get(&rj) else { continue };
+                for &(m, rm) in &pos {
+                    let Some(theirs) = others.get(&rm) else { continue };
+                    if m == j {
+                        continue;
+                    }
+                    let f = match self.delta_pick(r, Some(j), keys.len()) {
+                        Some(p) => {
+                            let k = p.perm.iter().position(|&x| x == m).expect("a plan holds every premise");
+                            self.also_at = Some((k, theirs.clone()));
+                            self.fire_planned_at(r, &p, Some((0, keys)))
+                        }
+                        None => {
+                            self.also_at = Some((m, theirs.clone()));
+                            self.fire_rule(r, Some((j, keys)))
+                        }
+                    };
+                    self.also_at = None;
+                    merge_front(&mut front, f?);
+                }
+            }
+        }
+        Ok(front)
     }
 }

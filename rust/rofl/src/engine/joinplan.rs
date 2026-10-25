@@ -55,9 +55,9 @@
 use super::*;
 
 pub(super) struct DeltaPlan {
-    body: Rc<[BodyElem]>,
+    pub(super) body: Rc<[BodyElem]>,
     /// `perm[k]` is the position in `ERule::plan` of `body[k]`.
-    perm: Vec<usize>,
+    pub(super) perm: Vec<usize>,
     /// Estimated cost of the whole firing per news row.
     unit: f64,
     /// The written-order firing: rows touched by the premises before `i`, the
@@ -485,16 +485,25 @@ impl Eval {
     /// A plan that outgrows the space (the estimate undercounts a skewed key)
     /// is solved again in written order.
     pub(super) fn fire_planned(&mut self, r: &Rc<ERule>, p: &DeltaPlan, keys: Option<&FxSet<FactId>>) -> Result<Front, Halt> {
+        self.fire_planned_at(r, p, keys.map(|k| (0, k)))
+    }
+
+    /// `fire_planned` with the premise at `at` of the plan's body kept to `keys`.
+    pub(super) fn fire_planned_at(&mut self, r: &Rc<ERule>, p: &DeltaPlan, at: Option<(usize, &FxSet<FactId>)>) -> Result<Front, Halt> {
+        let keys = at.map(|(_, k)| k);
         let written = |e: &mut Eval, peak: i64| {
             e.peak_rows = peak;
-            e.fire_rule_from(r, Subst::new(), keys.map(|k| (p.perm[0], k)))
+            if let Some((k, keys)) = e.also_at.take() {
+                e.also_at = Some((p.perm[k], keys));
+            }
+            e.fire_rule_from(r, Subst::new(), at.map(|(j, k)| (p.perm[j], k)))
         };
         let (peak, undecided) = (self.peak_rows, self.lat_undecided.len());
         let outer = self.cur_rule.replace(r.id);
         let was_firing = std::mem::replace(&mut self.firing, true);
         self.plan_trial = true;
         let before = self.steps;
-        let sols = self.solve_body(&p.body, Subst::new(), 0, keys.map(|k| (0, k)), Some(r.id));
+        let sols = self.solve_body(&p.body, Subst::new(), 0, at, Some(r.id));
         self.plan_trial = false;
         self.firing = was_firing;
         self.cur_rule = outer;

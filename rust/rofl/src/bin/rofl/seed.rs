@@ -14,17 +14,34 @@ use std::sync::atomic::{AtomicIsize, Ordering};
 struct Counting;
 pub(crate) static LIVE: AtomicIsize = AtomicIsize::new(0);
 
+thread_local! {
+    /// what this thread allocated since it last added to `LIVE`: threads that allocate at once share no counter
+    static OWED: std::cell::Cell<isize> = const { std::cell::Cell::new(0) };
+}
+
+fn count(d: isize) {
+    let _ = OWED.try_with(|o| {
+        let n = o.get() + d;
+        if n.unsigned_abs() >= 1 << 16 {
+            LIVE.fetch_add(n, Ordering::Relaxed);
+            o.set(0);
+        } else {
+            o.set(n);
+        }
+    });
+}
+
 unsafe impl GlobalAlloc for Counting {
     unsafe fn alloc(&self, l: Layout) -> *mut u8 {
-        LIVE.fetch_add(l.size() as isize, Ordering::Relaxed);
+        count(l.size() as isize);
         System.alloc(l)
     }
     unsafe fn dealloc(&self, p: *mut u8, l: Layout) {
-        LIVE.fetch_sub(l.size() as isize, Ordering::Relaxed);
+        count(-(l.size() as isize));
         System.dealloc(p, l)
     }
     unsafe fn realloc(&self, p: *mut u8, l: Layout, n: usize) -> *mut u8 {
-        LIVE.fetch_add(n as isize - l.size() as isize, Ordering::Relaxed);
+        count(n as isize - l.size() as isize);
         System.realloc(p, l, n)
     }
 }

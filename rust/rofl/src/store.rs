@@ -1552,12 +1552,30 @@ impl Store {
 
     /// Everything under the mark, the runs with arrivals not yet merged included.
     fn freeze_as_is(&mut self) {
-        let layered = self.facts.recs.mark > 0;
+        let mark = self.facts.recs.mark;
         self.facts.freeze();
-        if !layered {
+        if mark == 0 {
             self.keys_base = Rc::new(std::mem::take(&mut self.keys).into());
         } else if !self.keys.is_empty() {
-            self.keys_base = Rc::new(self.key_table(0).into());
+            // a base no fork reads takes the layer's keys in place while it has room
+            let n = self.facts.len();
+            let fits = Rc::get_mut(&mut self.keys_base).is_some_and(|b| !b.is_mapped() && n * 2 < b.len());
+            if fits {
+                let mut base = std::mem::take(&mut self.keys_base);
+                let keys = Rc::get_mut(&mut base).unwrap().to_mut();
+                let mask = keys.len() - 1;
+                for id in mark as FactId..n as FactId {
+                    let r = self.facts.recs[id as usize];
+                    let mut i = (hash_key(r.rel, r.persp, self.args(id)) as usize) & mask;
+                    while keys[i] != EMPTY {
+                        i = (i + 1) & mask;
+                    }
+                    keys[i] = id;
+                }
+                self.keys_base = base;
+            } else {
+                self.keys_base = Rc::new(self.key_table(0).into());
+            }
             self.keys = Vec::new();
         }
         self.keys_n = 0;
