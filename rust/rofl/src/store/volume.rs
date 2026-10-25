@@ -71,6 +71,15 @@ impl Tuples {
     /// grows to with all of them.
     fn write(&self, w: &mut VolW) {
         let (b, t) = (&*self.base, &self.top);
+        // over a base that holds the base's tuples, the top goes beside them whole: an edit never grows the base's table
+        if w.is_over() && b.len() > 0 && t.len() > 0 && w.in_base(&b.cons) {
+            w.u32(2);
+            for g in [b, t] {
+                g.write(w);
+            }
+            return;
+        }
+        w.u32(1);
         if b.len() == 0 || t.len() == 0 {
             let a = if b.len() == 0 { t } else { b };
             w.arena(&a.ends);
@@ -97,9 +106,30 @@ impl Tuples {
     }
 }
 
+impl TupSeg {
+    fn write(&self, w: &mut VolW) {
+        w.arena(&self.ends);
+        w.arena(&self.sks);
+        w.arena(&self.args);
+        w.arena(&self.cons);
+    }
+    fn read(r: &mut VolR) -> Result<TupSeg, String> {
+        Ok(TupSeg { ends: r.arena()?, sks: r.arena()?, args: r.arena()?, cons: r.arena()? })
+    }
+}
+
 impl Fired {
     fn write(&self, w: &mut VolW) {
         let (b, own) = (&*self.base, &self.own);
+        // over a base that holds the base's firings, the firings since go beside them: an edit never grows its table
+        if w.is_over() && w.in_base(&b.slots) {
+            w.u64(b.n as u64);
+            w.u32(b.zero as u32);
+            w.arena(&b.slots);
+            let mut since: Vec<u64> = own.iter().copied().collect();
+            since.sort_unstable();
+            return w.arena(&since);
+        }
         let fresh = own.iter().filter(|h| **h != 0).count();
         w.u64((b.n + fresh) as u64);
         w.u32((b.zero || own.contains(&0)) as u32);
@@ -110,6 +140,7 @@ impl Fired {
             all.freeze();
             w.arena(&all.base.slots);
         }
+        w.arena::<u64>(&[]);
     }
 }
 
@@ -292,8 +323,10 @@ impl Store {
         let n = recs.len();
         s.facts.recs = Col { mark: n, base: Rc::new(recs), own: Vec::new(), ..Col::default() };
         s.facts.bflags = Rc::new(r.arena()?);
-        let tups = TupSeg { ends: r.arena()?, sks: r.arena()?, args: r.arena()?, cons: r.arena()? };
-        s.facts.tups = Tuples { t0: tups.len() as TupId, base: Rc::new(tups), top: TupSeg::default() };
+        let two = r.u32()? == 2;
+        let tups = TupSeg::read(r)?;
+        let top = if two { TupSeg::read(r)? } else { TupSeg::default() };
+        s.facts.tups = Tuples { t0: tups.len() as TupId, base: Rc::new(tups), top };
         if s.facts.bflags.len() != n {
             return Err("a volume's flags do not match its facts".into());
         }
@@ -325,7 +358,8 @@ impl Store {
         if !slots.len().is_power_of_two() && !slots.is_empty() {
             return Err("a volume's firing table is not a table".into());
         }
-        s.fired = Fired { base: Rc::new(HashSlots { slots, n, zero }), own: FxSet::default() };
+        let own = r.arena::<u64>()?.iter().copied().collect();
+        s.fired = Fired { base: Rc::new(HashSlots { slots, n, zero }), own };
         let mut c = Cells::default();
         for _ in 0..r.u32()? {
             let (rule, at) = (r.u32()?, r.u32()?);
