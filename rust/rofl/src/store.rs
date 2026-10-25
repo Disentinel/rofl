@@ -377,12 +377,16 @@ impl PatIndex {
         self.under.as_ref().is_some_and(|u| u.holds(facts, vals, k))
     }
 
+    fn depth(&self) -> usize {
+        self.under.as_ref().map_or(0, |u| 1 + u.depth())
+    }
+
     fn entries(&self) -> usize {
         self.ids.len() + self.under.as_ref().map_or(0, |u| u.entries())
     }
 
     fn put(&mut self, facts: &Facts, sig: &[Term], k: FactId) {
-        if self.slots.is_mapped() {
+        if self.slots.is_mapped() || self.slots.is_shared() {
             let base = std::mem::replace(self, PatIndex::new(&self.pos));
             self.under = Some(Rc::new(base));
         }
@@ -1774,6 +1778,32 @@ impl Store {
         self.n_live += n;
         if n > 0 {
             self.bump();
+        }
+    }
+
+    /// Every run and index this frozen store holds made shared, an index over another first made one: a fork that
+    /// writes a run copies what it reads of it, and one that adds to an index lays a top over it.
+    pub fn share_runs(&mut self) {
+        let facts = &self.facts;
+        let groups = Rc::make_mut(&mut self.idx.base);
+        for v in groups.values_mut() {
+            for (_, run) in v.iter_mut() {
+                run.canon.share();
+                run.arrived.share();
+                if let Some(bp) = run.by_pat.as_mut() {
+                    if bp.values().any(|ix| !ix.slots.is_shared() && !ix.slots.is_mapped()) {
+                        for ix in Rc::make_mut(bp).values_mut() {
+                            // a top over a top over a top: the chain made one again
+                            if ix.depth() > 3 {
+                                *ix = ix.flat(facts);
+                            }
+                            ix.slots.share();
+                            ix.ids.share();
+                            ix.prev.share();
+                        }
+                    }
+                }
+            }
         }
     }
 

@@ -48,12 +48,25 @@ impl Eval {
         let heads: FxSet<Sym> = rules.iter().map(|r| r.clause.head.rel).collect();
         // a tree a closure is answered from does not change here: no rule of the level makes its edges
         let trees_still = self.vclosures.iter().all(|c| !c.active || !heads.contains(&c.edge) && !heads.contains(&c.src));
-        // a count reads only what is complete before the level: it is fired here first, whole
-        let aggs_first = rules.iter().filter(|r| r.has_agg).all(|r| r.pos_rels.iter().all(|p| !heads.contains(p)));
+        // a count counts only what is complete before the level
+        let counts_still = rules.iter().filter(|r| r.has_agg).all(|r| agg_reads(r).iter().all(|p| !heads.contains(p)));
+        // a count on a premise the level makes: its level is a long flow, which crosses the shares epoch after epoch
+        // (vscode 250: 10.7 s on 4 workers against 5.1 s whole)
+        let counts_first = std::env::var_os("ROFL_PAR_AGG").is_some() || rules.iter().filter(|r| r.has_agg).all(|r| r.pos_rels.iter().all(|p| !heads.contains(p)));
+        // a closure the kernel walks walks edges complete before the level: it is walked here first, whole
+        let closures_still = std::env::var_os("ROFL_PAR_CLOSE").is_some() || rules.iter().filter_map(|r| self.closure_of.get(&r.id)).all(|&(ci, _)| !heads.contains(&self.closures[ci].edge));
         self.lattices.is_empty()
             && trees_still
-            && aggs_first
-            && rules.iter().all(|r| !r.has_thr && !r.has_demand_prem && r.lattice_outer.is_empty() && !self.closure_of.contains_key(&r.id))
+            && counts_still
+            && counts_first
+            && closures_still
+            && rules.iter().all(|r| !r.has_thr && !r.has_demand_prem && r.lattice_outer.is_empty())
+    }
+
+    /// What a level's rules make that its others may read: what is fired here first, whole, is the rest.
+    fn first_whole(&self, rules: &[Rc<ERule>], r: &ERule) -> bool {
+        let heads: FxSet<Sym> = rules.iter().map(|r| r.clause.head.rel).collect();
+        self.closure_of.get(&r.id).is_some_and(|&(ci, _)| !heads.contains(&self.closures[ci].edge)) || r.has_agg && r.pos_rels.iter().all(|p| !heads.contains(p))
     }
 
     /// `rules`, a level's, activated over K workers; a level that does not fit is activated here, whole.
@@ -92,6 +105,21 @@ impl Eval {
                 why(&|r| !r.lattice_outer.is_empty()),
                 why(&|r| self.closure_of.contains_key(&r.id))
             );
+            if std::env::var_os("ROFL_PAR_WHY").is_some() {
+                let heads: FxSet<Sym> = rules.iter().map(|r| r.clause.head.rel).collect();
+                for c in self.vclosures.iter().filter(|c| c.active && (heads.contains(&c.edge) || heads.contains(&c.src))) {
+                    eprintln!("bsp:   tree {} over {} made here", self.h.name(c.rel), self.h.name(c.edge));
+                }
+                for r in rules.iter().filter(|r| r.has_agg && r.pos_rels.iter().any(|p| heads.contains(p))) {
+                    let h = r.clause.head.rel;
+                    let name = format!("{}[", self.h.name(h));
+                    let readers = rules.iter().filter(|q| q.canon.split(":-").nth(1).is_some_and(|b| b.contains(&name))).count();
+                    eprintln!("bsp:   count read by {readers} rules of the level: {}", r.canon.chars().take(240).collect::<String>());
+                }
+                for r in rules.iter().filter(|r| self.closure_of.contains_key(&r.id)) {
+                    eprintln!("bsp:   closure: {}", r.canon.chars().take(240).collect::<String>());
+                }
+            }
             let t = std::time::Instant::now();
             let r = self.activate_phase(rules, ph);
             eprintln!("bsp: level of {} rules whole: {} ms", rules.len(), t.elapsed().as_millis());
@@ -111,8 +139,8 @@ impl Eval {
         let t0 = std::time::Instant::now();
         let mut sorted: Vec<Rc<ERule>> = rules.to_vec();
         sorted.sort_by(|a, b| cmp_js(&a.canon, &b.canon));
-        let (aggs, rest): (Vec<Rc<ERule>>, Vec<Rc<ERule>>) = sorted.into_iter().partition(|r| r.has_agg);
-        for r in &aggs {
+        let (whole, rest): (Vec<Rc<ERule>>, Vec<Rc<ERule>>) = sorted.into_iter().partition(|r| self.first_whole(rules, r));
+        for r in &whole {
             self.fire_rule(r, None)?;
         }
         let comps = if rest.len() > 1 && self.by_component() { components(&rest) } else { vec![rest] };
@@ -124,6 +152,7 @@ impl Eval {
             let te = std::time::Instant::now();
             self.h.freeze();
             self.store.freeze(&self.h);
+            self.store.share_runs();
             let (syms, funcs, ids) = (self.h.syms.len() as Sym, self.h.funcs_len(), self.store.len_ids());
             let tf = te.elapsed();
             let owner = &par.owner;
@@ -134,6 +163,8 @@ impl Eval {
                 let t = std::time::Instant::now();
                 e.bsp = None;
                 e.par.threads = 1;
+                // a closure over edges the level makes is fired by its rules, on each worker's share
+                e.closure_of.clear();
                 if first {
                     let mut acc = [std::time::Duration::ZERO; 4];
                     let mut shares = FxMap::default();
@@ -164,9 +195,15 @@ impl Eval {
                         m
                     };
                     let mine = by_rel(&mut news[w..=w].iter());
-                    let others = by_rel(&mut news.iter().enumerate().filter(|(v, _)| *v != w).map(|(_, n)| n));
+                    // a firing on the news of several workers is the one's whose news is the last of them
+                    let others = by_rel(&mut news[..w].iter());
+                    let tc = std::time::Instant::now();
                     let front = e.fire_cross(&all, &mine, &others)?;
+                    let (tx, n) = (tc.elapsed(), front.keys.len());
                     e.propagate(front)?;
+                    if w == 0 {
+                        eprintln!("bsp:   worker 0: by rel {} ms, cross {} ms ({n} new), quiet {} ms", (tc - t).as_millis(), tx.as_millis(), (tc.elapsed() - tx).as_millis());
+                    }
                 }
                 Ok((e, t.elapsed()))
             };
@@ -262,8 +299,10 @@ impl Eval {
                         .collect();
                     hs.into_iter().map(|h| h.join().expect("a worker panicked")).collect()
                 });
+                // the plans a worker made serve the next epoch's
+                self.delta_plans = std::mem::take(&mut es[0].delta_plans);
                 drop(es);
-                for (w, l) in layers.into_iter().enumerate() {
+                    for (w, l) in layers.into_iter().enumerate() {
                     let (first, n) = (l.first, l.len() as FactId);
                     self.store.lay(l);
                     for nid in first..first + n {
@@ -302,6 +341,7 @@ impl Eval {
             }
             self.steps += steps;
             if epoch == 0 {
+                self.active.extend(whole.iter().cloned());
                 for c in &comps {
                     self.active.extend(c.iter().cloned());
                 }
@@ -454,6 +494,7 @@ impl Eval {
     fn fire_cross(&mut self, rules: &[Rc<ERule>], mine: &FxMap<Sym, FxSet<FactId>>, others: &FxMap<Sym, FxSet<FactId>>) -> Result<Front, Halt> {
         let mut front = Front::default();
         let others: FxMap<Sym, Rc<FxSet<FactId>>> = others.iter().map(|(r, s)| (*r, Rc::new(s.clone()))).collect();
+        let mine_rc: FxMap<Sym, Rc<FxSet<FactId>>> = mine.iter().map(|(r, s)| (*r, Rc::new(s.clone()))).collect();
         for r in rules {
             let pos: Vec<(usize, Sym)> = r.plan.iter().enumerate().filter_map(|(i, b)| match b {
                 BodyElem::Pos(l) => Some((i, l.rel)),
@@ -466,14 +507,20 @@ impl Eval {
                     if m == j {
                         continue;
                     }
+                    // the plan starts from the fewer of the two
+                    let (j, keys, m, theirs) = if theirs.len() < keys.len() {
+                        (m, &**theirs, j, mine_rc[&rj].clone())
+                    } else {
+                        (j, keys, m, theirs.clone())
+                    };
                     let f = match self.delta_pick(r, Some(j), keys.len()) {
                         Some(p) => {
                             let k = p.perm.iter().position(|&x| x == m).expect("a plan holds every premise");
-                            self.also_at = Some((k, theirs.clone()));
+                            self.also_at = Some((k, theirs));
                             self.fire_planned_at(r, &p, Some((0, keys)))
                         }
                         None => {
-                            self.also_at = Some((m, theirs.clone()));
+                            self.also_at = Some((m, theirs));
                             self.fire_rule(r, Some((j, keys)))
                         }
                     };
@@ -484,4 +531,9 @@ impl Eval {
         }
         Ok(front)
     }
+}
+
+/// The relations an aggregate of `r` reads.
+fn agg_reads(r: &ERule) -> Vec<Sym> {
+    r.plan.iter().filter(|b| matches!(b, BodyElem::Agg(_))).flat_map(|b| b.lits_deep().into_iter().map(|l| l.rel)).collect()
 }

@@ -24,6 +24,8 @@ pub enum Arena<T: Pod> {
     /// a mapped arena copied into the heap to be written, and where its first bytes lie in a volume file: what an
     /// overlay compares it with, to name the bytes that did not change
     Copied { v: Vec<T>, from: Span },
+    /// a frozen vector read by many forks: a clone shares it, a write copies it
+    Shared(Rc<Vec<T>>),
 }
 
 /// Bytes of a volume file: `bytes` at offset `at` of the volume named by its sum `file`.
@@ -215,6 +217,7 @@ impl<T: Pod> Clone for Arena<T> {
             Arena::Heap(v) => Arena::Heap(v.clone()),
             Arena::Mapped { map, off, len } => Arena::Mapped { map: map.clone(), off: *off, len: *len },
             Arena::Copied { v, from } => Arena::Copied { v: v.clone(), from: *from },
+            Arena::Shared(v) => Arena::Shared(v.clone()),
         }
     }
 }
@@ -234,6 +237,7 @@ impl<T: Pod> Deref for Arena<T> {
             // SAFETY: `mapped` checked that the span lies in the map and is aligned for T, and T is Pod.
             Arena::Mapped { map, off, len } => unsafe { std::slice::from_raw_parts(map.ptr.add(*off) as *const T, *len) },
             Arena::Copied { v, .. } => v,
+            Arena::Shared(v) => v,
         }
     }
 }
@@ -242,6 +246,10 @@ impl<T: Pod> Arena<T> {
     /// The vector to write to; a mapped arena is copied into the heap first.
     #[inline]
     pub fn to_mut(&mut self) -> &mut Vec<T> {
+        if let Arena::Shared(v) = self {
+            let v = Rc::try_unwrap(std::mem::take(v)).unwrap_or_else(|v| (*v).clone());
+            *self = Arena::Heap(v);
+        }
         if let Arena::Mapped { .. } = self {
             let v = self.to_vec();
             *self = match span_of(bytes_of(self)) {
@@ -251,7 +259,7 @@ impl<T: Pod> Arena<T> {
         }
         match self {
             Arena::Heap(v) | Arena::Copied { v, .. } => v,
-            Arena::Mapped { .. } => unreachable!(),
+            Arena::Mapped { .. } | Arena::Shared(_) => unreachable!(),
         }
     }
     /// Where this arena's values lie in a volume file, or were copied from.
@@ -259,7 +267,7 @@ impl<T: Pod> Arena<T> {
         match self {
             Arena::Mapped { .. } => span_of(bytes_of(self)),
             Arena::Copied { from, .. } => Some(*from),
-            Arena::Heap(_) => None,
+            Arena::Heap(_) | Arena::Shared(_) => None,
         }
     }
     /// `v`, made from the arena that lay at `from`: what an overlay compares with that span.
@@ -272,6 +280,7 @@ impl<T: Pod> Arena<T> {
     pub fn take(&mut self) -> Vec<T> {
         match std::mem::take(self) {
             Arena::Heap(v) | Arena::Copied { v, .. } => v,
+            Arena::Shared(v) => Rc::try_unwrap(v).unwrap_or_else(|v| (*v).clone()),
             m => m.to_vec(),
         }
     }
@@ -279,11 +288,22 @@ impl<T: Pod> Arena<T> {
     pub fn capacity(&self) -> usize {
         match self {
             Arena::Heap(v) | Arena::Copied { v, .. } => v.capacity(),
-            Arena::Mapped { .. } => 0,
+            Arena::Mapped { .. } | Arena::Shared(_) => 0,
         }
     }
     pub fn is_mapped(&self) -> bool {
         matches!(self, Arena::Mapped { .. })
+    }
+    /// The vector frozen to be shared by clones (`Arena::Shared`); a mapped arena is shared already.
+    pub fn share(&mut self) {
+        if let Arena::Heap(v) = self {
+            if v.len() >= 1024 {
+                *self = Arena::Shared(Rc::new(std::mem::take(v)));
+            }
+        }
+    }
+    pub fn is_shared(&self) -> bool {
+        matches!(self, Arena::Shared(_))
     }
     /// `len` values of T at byte `off` of `map`, or None when they do not lie in it aligned.
     pub fn mapped(map: &Rc<Region>, off: usize, len: usize) -> Option<Self> {
