@@ -10,6 +10,8 @@
 edb(rs_call_to).
 edb(rs_call_ty).
 edb(rs_recv).
+edb(rs_closure).
+edb(rs_param_fn).
 edb(rs_recv_of).
 edb(rs_let).
 edb(rs_let_call).
@@ -24,14 +26,15 @@ calls(F, G, typed)   :- rs_call_ty[rs](F, T, N, _), rs_method[rs](G, T, N).
 calls(F, G, typed)   :- recv_callee(F, _, G).
 
 -- THE TYPE OF A RECEIVER, as far as the source says it: `self`, a parameter, a `let` with a type, a struct built,
--- what a called method returns, and the fields walked from any of them. A generic, a closure's argument, a value
--- out of a collection: no type, and the call falls to `by_name`.
+-- what a called method returns, and the fields walked from any of them. A closure's argument is typed when the
+-- method it is passed to says what it passes. A generic, a value out of a collection: no type, and the call falls to `by_name`.
 var_type(F, "self", T) :- rs_method[rs](F, T, _).
 var_type(F, V, T)      :- rs_param[rs](F, _, V, T).
 var_type(F, V, T)      :- rs_let[rs](F, V, T).
 var_type(F, V, T)      :- rs_let_path[rs](F, V, Ty, N), rs_method[rs](G, Ty, N), returns_type(G, T).
 var_type(F, V, T)      :- rs_let_call[rs](F, V, Id), recv_callee(F, Id, G), returns_type(G, T).
 var_type(F, V, T)      :- rs_let_chain[rs](F, V, R, P), chain_type(F, R, P, T).
+var_type(F, V, T)      :- rs_closure[rs](F, V, C, I, J), recv_callee(F, C, G), rs_param_fn[rs](G, I, J, T).
 
 returns_type(G, T) :- rs_returns[rs](G, T), T != "Self".
 returns_type(G, T) :- rs_returns[rs](G, "Self"), rs_method[rs](G, T, _).

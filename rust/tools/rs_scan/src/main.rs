@@ -72,6 +72,36 @@ fn type_name(t: &syn::Type) -> String {
     }
 }
 
+fn fn_bound(bounds: &syn::punctuated::Punctuated<syn::TypeParamBound, syn::Token![+]>) -> Vec<syn::Type> {
+    for b in bounds {
+        if let syn::TypeParamBound::Trait(t) = b {
+            if let Some(seg) = t.path.segments.last() {
+                if let ("Fn" | "FnMut" | "FnOnce", syn::PathArguments::Parenthesized(p)) = (seg.ident.to_string().as_str(), &seg.arguments) {
+                    return p.inputs.iter().cloned().collect();
+                }
+            }
+        }
+    }
+    vec![]
+}
+
+fn fn_args(t: &syn::Type, g: &syn::Generics) -> Vec<syn::Type> {
+    match t {
+        syn::Type::ImplTrait(i) => fn_bound(&i.bounds),
+        syn::Type::Reference(r) => fn_args(&r.elem, g),
+        syn::Type::Path(p) if p.path.segments.len() == 1 => {
+            let name = &p.path.segments[0].ident;
+            let declared = g.type_params().filter(|tp| &tp.ident == name).map(|tp| fn_bound(&tp.bounds));
+            let wheres = g.where_clause.iter().flat_map(|w| &w.predicates).filter_map(|w| match w {
+                syn::WherePredicate::Type(pt) if matches!(&pt.bounded_ty, syn::Type::Path(b) if b.path.is_ident(name)) => Some(fn_bound(&pt.bounds)),
+                _ => None,
+            });
+            declared.chain(wheres).find(|v| !v.is_empty()).unwrap_or_default()
+        }
+        _ => vec![],
+    }
+}
+
 fn num(n: usize) -> String {
     format!("#{n}")
 }
@@ -128,6 +158,11 @@ impl Scan<'_> {
                 let pn = pn.trim_start_matches("mut ").to_string();
                 let t = self.qualify(&type_name(&pt.ty));
                 self.out.fact("rs_param", &[&id, &num(i), &pn, &t]);
+                // a function passed in: what its closure's arguments are, `impl FnOnce(&mut Session)` or `F: Fn(&Row)`
+                for (j, a) in fn_args(&pt.ty, &sig.generics).iter().enumerate() {
+                    let a = self.qualify(&type_name(a));
+                    self.out.fact("rs_param_fn", &[&id, &num(i), &num(j), &a]);
+                }
             }
         }
         if let syn::ReturnType::Type(_, t) = &sig.output {
@@ -312,6 +347,25 @@ impl<'ast> Visit<'ast> for Scan<'_> {
             _ => String::new(),
         };
         self.call("method", &m.method.to_string(), &recv, m.method.span());
+        // a closure's argument is typed by what the called method says it passes
+        if let Some(f) = self.here().cloned() {
+            for (k, a) in m.args.iter().enumerate() {
+                if let syn::Expr::Closure(c) = a {
+                    for (j, input) in c.inputs.iter().enumerate() {
+                        match input {
+                            syn::Pat::Ident(i) => self.out.fact("rs_closure", &[&f, &i.ident.to_string(), &call_id(m.method.span()), &num(k + 1), &num(j)]),
+                            syn::Pat::Type(t) => {
+                                if let syn::Pat::Ident(i) = &*t.pat {
+                                    let ty = self.qualify(&type_name(&t.ty));
+                                    self.out.fact("rs_let", &[&f, &i.ident.to_string(), &ty]);
+                                }
+                            }
+                            _ => {}
+                        }
+                    }
+                }
+            }
+        }
         // a receiver another call returns (`self.get(r)?.fork()`): its type is what that call's callee returns
         if let (Some(f), syn::Expr::MethodCall(inner)) = (self.here().cloned(), strip(&m.receiver)) {
             self.out.fact("rs_recv_of", &[&f, &call_id(m.method.span()), &m.method.to_string(), &call_id(inner.method.span())]);
