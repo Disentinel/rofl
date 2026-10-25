@@ -6,6 +6,8 @@ model: js
 code:
   - keyed/order.js
   - keyed/order_ts.ts
+  - keyed/order_lib.mjs
+  - keyed/order_use.mjs
 ---
 
 # What a Map holds when it is read
@@ -38,6 +40,10 @@ code:
 > (`other.loose = 1` in keyed/order_ts.ts), unless TypeScript keeps it to its
 > class (`private`, `readonly`). tsc lets `store['fill']` past `private`:
 > the model keeps to `private` and names each such reach. A for-of and a `forEach` see what a get would.
+> A get may find no entry and read `undefined`, unless a put of the same key ran
+> in a statement of its own before it and nothing between may have taken it out
+> (`order.one`). `undefined` is a value of the flow: a parameter a call leaves
+> out, a function that ends without a value, a `let` with no initialiser, `void`.
 > `use(tag, v)` marks each read; `npm run test:nb` runs the file under V8 and
 > checks the model against what it observes. Run it with
 > `npm run nb -- examples/notebook/order.rofl.md`.
@@ -51,6 +57,9 @@ seen(Tag, V) :- call_site[code](C, _), callee_of[code](C, U), ast_name[code](U, 
 
 never seen("order.before", 1)
 never seen("order.one", 2)
+never seen("order.one", undefined)
+never seen("order.two", undefined)
+never seen("lib.slot", 25)
 never seen("order.gone", 2)
 never seen("order.cleared", 3)
 never seen("tally.first", 7)
@@ -80,6 +89,10 @@ never seen("ts.early", 18)
 unordered(Tag, V) :- call_site[code](C, _), callee_of[code](C, U), ast_name[code](U, "use"),
                      arg_at[flow](C, 0, T), ast_value[code](T, Tag),
                      arg_at[flow](C, 1, G), keyed_read_unordered[flow](G, P), may_be_lit[flow](P, V).
+
+unordered(Tag, undefined) :- call_site[code](C, _), callee_of[code](C, U), ast_name[code](U, "use"),
+                             arg_at[flow](C, 0, T), ast_value[code](T, Tag),
+                             arg_at[flow](C, 1, G), keyed_read[flow](G, _), not keyed_present[code](G).
 
 ? unordered(Tag, V)
 ```

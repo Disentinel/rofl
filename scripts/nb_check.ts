@@ -1,5 +1,6 @@
 // npm run test:nb — the notebook's behavioural gate (what runs around the kernel is npm run test:nb:product): the example notebooks by exit code and a few answer lines, and planted defects that must
 // turn it red. The invariants it stands for are named in examples/notebook/self.rofl.md; each check below names its own.
+import { pathToFileURL } from 'node:url';
 import { chmodSync, existsSync, readdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
 import * as os from 'node:os';
 import { stripTypeScriptTypes } from 'node:module';
@@ -192,9 +193,12 @@ const RUNS: Record<string, () => Promise<Out>> = {
       if (m) (m[1] === 'seen' ? model : unordered).add(`${m[2]}:${m[3]}`);
     }
     const observed = new Set<string>();
-    const __seen = (tag: string, v: unknown) => { if (v !== undefined) observed.add(`${tag}:${String(v)}`); };
+    const __seen = (tag: string, v: unknown) => { observed.add(`${tag}:${String(v)}`); };
     vm.runInNewContext(readFileSync(path.join(NB, 'keyed/order.js'), 'utf8'), { __seen, process: { argv: [] } });
     vm.runInNewContext(stripTypeScriptTypes(readFileSync(path.join(NB, 'keyed/order_ts.ts'), 'utf8')), { __seen });
+    (globalThis as { __seen?: typeof __seen }).__seen = __seen;
+    await import(pathToFileURL(path.join(NB, 'keyed/order_use.mjs')).href);
+    delete (globalThis as { __seen?: typeof __seen }).__seen;
     await new Promise((done) => setImmediate(done));
     const missing = [...observed].filter((o) => !model.has(o));
     const extra = [...model].filter((o) => !observed.has(o) && !unordered.has(o));

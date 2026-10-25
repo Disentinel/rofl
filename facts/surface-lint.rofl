@@ -58,7 +58,13 @@ xl_ok(eff_here, nearest_fn, "the site's own enclosing function, matched against 
 -- outside the model. M, its instance and those functions are the volume's own nodes, matched; where another file hands
 -- one on, it left the file, and `sx_esc` says so in the arm beside.
 xl_ok(keyed_noisy, keyed_again, "the read's own method, matched against the mirrored eff_reaches of the callee").
-xl_ok(keyed_runs_m, keyed_again, "the read's own method, matched against the mirrored eff_reaches of its callers in the volume").
+xl_ok(keyed_runs_m, keyed_target, "the read's own method or a removal's own function, matched against the mirrored eff_reaches of its callers in the volume").
+-- A get's presence (section 7c) reads the removals of its own collection in its own file only (`keyed_drop` matches the
+-- file); where the collection left the file (`sx_esc`), a call between that reaches another file loses the entry.
+xl_ok(keyed_drop, keyed_made, "the collection's own new node, matched, and the removal in the same file").
+xl_ok(keyed_lost, keyed_made, "the collection's own new node, matched against what was handed out").
+xl_ok(keyed_leaves, ast_node, "the test that a callee is NOT of the read's file: true alike in the volume and the whole").
+xl_ok(keyed_lost, nearest_v, "the function around a removal of the same file, matched").
 xl_ok(keyed_open_to, keyed_runs_m, "the method's own runners, matched; one handed to another file is sx_esc").
 xl_ok(keyed_handed, keyed_hand_need, "the volume's own instance or function, matched; one another file hands on is sx_esc").
 -- How often the method runs, for an `await` between: its known calls and their callers in the volume. A call from another

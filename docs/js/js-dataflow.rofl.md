@@ -28,7 +28,7 @@ Reads:
 - from js-callgraph: [call_site](js-callgraph.rofl.md#call_site), [callee_of](js-callgraph.rofl.md#callee_of), [decorates](js-callgraph.rofl.md#decorates), [fn_node](js-callgraph.rofl.md#fn_node), [nearest_fn](js-callgraph.rofl.md#nearest_fn), [resolved_site](js-callgraph.rofl.md#resolved_site), [resolves](js-callgraph.rofl.md#resolves), [runs_outside](js-callgraph.rofl.md#runs_outside), [site](js-callgraph.rofl.md#site)
 - from js-concat, in the flow: [may_be_lit](js-concat.rofl.md#may_be_lit), [may_be_node](js-concat.rofl.md#may_be_node)
 - from js-concat, in the surface: [sx_mwrite](js-concat.rofl.md#sx_mwrite)
-- from js-controlflow: [async_body](js-controlflow.rofl.md#async_body), [completes_abruptly](js-controlflow.rofl.md#completes_abruptly), [entry_point](js-controlflow.rofl.md#entry_point), [in_fn](js-controlflow.rofl.md#in_fn)
+- from js-controlflow: [async_body](js-controlflow.rofl.md#async_body), [entry_point](js-controlflow.rofl.md#entry_point), [in_fn](js-controlflow.rofl.md#in_fn)
 - from js-controlflow, in the flow: [caught_value](js-controlflow.rofl.md#caught_value)
 - from js-controlflow, in the main: [stmt_seq_field](js-controlflow.rofl.md#stmt_seq_field)
 - from js-effects: [eff_reaches](js-effects.rofl.md#eff_reaches)
@@ -38,7 +38,7 @@ Reads:
 - from js-model: [ast_line](js-model.rofl.md#ast_line), [ast_node](js-model.rofl.md#ast_node)
 - from js-modules: [builtin_canonical](js-modules.rofl.md#builtin_canonical), [import_site](js-modules.rofl.md#import_site), [module_target](js-modules.rofl.md#module_target), [reexport_offers](js-modules.rofl.md#reexport_offers), [require_site](js-modules.rofl.md#require_site), [site_file](js-modules.rofl.md#site_file), [site_shape](js-modules.rofl.md#site_shape), [site_source](js-modules.rofl.md#site_source), [str_char0](js-modules.rofl.md#str_char0), [str_seg](js-modules.rofl.md#str_seg)
 - from js-structure: [ast_in](js-structure.rofl.md#ast_in), [ast_name](js-structure.rofl.md#ast_name), [ast_value](js-structure.rofl.md#ast_value)
-- from js-surface, in the flow: [fn_value](js-surface.rofl.md#fn_value), [ret_node_any](js-surface.rofl.md#ret_node_any)
+- from js-surface, in the flow: [fn_value](js-surface.rofl.md#fn_value), [ret_node_any](js-surface.rofl.md#ret_node_any), [ret_plain](js-surface.rofl.md#ret_plain)
 - from js-surface, in the surface: [sx_arg_lit](js-surface.rofl.md#sx_arg_lit), [sx_arg_node](js-surface.rofl.md#sx_arg_node), [sx_cb](js-surface.rofl.md#sx_cb), [sx_cjs](js-surface.rofl.md#sx_cjs), [sx_default](js-surface.rofl.md#sx_default), [sx_esc](js-surface.rofl.md#sx_esc), [sx_export_lit](js-surface.rofl.md#sx_export_lit), [sx_export_node](js-surface.rofl.md#sx_export_node), [sx_export_val](js-surface.rofl.md#sx_export_val), [sx_gen_ret](js-surface.rofl.md#sx_gen_ret), [sx_gen_rlit](js-surface.rofl.md#sx_gen_rlit), [sx_module](js-surface.rofl.md#sx_module), [sx_ret_lit](js-surface.rofl.md#sx_ret_lit), [sx_ret_node](js-surface.rofl.md#sx_ret_node), [sx_ret_param](js-surface.rofl.md#sx_ret_param)
 - from outside these files:
   - <a id="ast_within"></a>A node is within a node (`ast_within`)
@@ -56,12 +56,10 @@ What this file calls a node, and what each word stands for:
 |---|---|
 | <a id="noun-array_literal"></a>an array literal | a node of kind `array_expression` |
 | <a id="noun-array_pattern"></a>an array pattern | a node of kind `array_pattern` |
-| <a id="noun-arrow_function"></a>an arrow function | a node of kind `arrow_function_expression` |
 | <a id="noun-assignment"></a>an assignment | a node of kind `assignment_expression` |
 | <a id="noun-assignment_pattern"></a>an assignment pattern | a node of kind `assignment_pattern` |
 | <a id="noun-await"></a>an await | a node of kind `await_expression` |
 | <a id="noun-binary_expression"></a>a binary expression | a node of kind `binary_expression` |
-| <a id="noun-block"></a>a block | a node of kind `block_statement` |
 | <a id="noun-block_scope"></a>a block scope | a node of one of the kinds `block_statement`, `for_statement`, `for_in_statement`, `for_of_statement` (`block_scope_kind`) |
 | <a id="noun-call_expression"></a>a call expression | a node of kind `call_expression` |
 | <a id="noun-catch"></a>a catch | a node of kind `catch_clause` |
@@ -172,6 +170,35 @@ A [literal](#noun-literal) may be the literal V if it [is written as](js-structu
 Declared as facts:
 
 - <a id="literal_kind"></a>`literal_kind` — rows in Words
+
+> `undefined` is a value too, the atom `undefined` (the string "undefined" is
+> another): the global of that name, `void`, a `let` or `var` with no
+> initialiser wherever it is read, a parameter a call leaves out and a call of
+> a function that may end without a value (rules/js-surface.rofl), a get that
+> may find no entry (section 7c). Where an object lacks a property is not
+> here: the layer does not know what an object lacks.
+
+A node E may be the literal N either:
+
+1. if E [refers to the free](#free_global) "undefined" in some file and N is `undefined`;
+2. if all of:
+   - E is an [unary expression](#noun-unary_expression);
+   - [the attribute](#ast_attr) `operator` of E is "void";
+   - N is `undefined`.
+
+In the code:
+
+<a id="undef_binder"></a>`undef_binder`(D) if all of:
+  - a node D [declares without a value](#bare_binder) some name in some file;
+  - D [is among the](#ast_child) `declarations` of a node V;
+  - unless the `left` of some node is V.
+
+In the flow:
+
+A node may be the literal `undefined` if all of:
+  - [`undef_binder`](#undef_binder)(D);
+  - it [sees](#sees_binder) a node D;
+  - unless the `id` of D is it.
 
 > A template with no interpolation is a string — `cooked`, which is what it
 > evaluates to, not `raw`. No arm for an interpolated one: the kernel builds no
@@ -1345,6 +1372,8 @@ In the flow:
   - Y [may be the literal](js-concat.rofl.md#may_be_lit) K;
   - unless some node is the 1-th of the `arguments` of C.
 
+A node may be the literal `undefined` if [`keyed_on`](#keyed_on)(it, something, P, Get) and [`keyed_store`](#keyed_store)(P, something, Get).
+
 <a id="keyed_key_at"></a>`keyed_key_at`(C, X) either:
 
 1. if all of:
@@ -1545,7 +1574,10 @@ In the code:
 
 `keyed_shut_kind` includes `string_literal`, `numeric_literal`, `identifier`, `binary_expression`, `template_literal`, `call_expression`.
 
-<a id="keyed_key_arg"></a>`keyed_key_arg`(C, X) if [`keyed_seen`](#keyed_seen)(C, something, something, something, something, something, something) and the `arguments` of a node C is a node X.
+<a id="keyed_key_arg"></a>`keyed_key_arg`(C, X) either:
+
+1. if [`keyed_seen`](#keyed_seen)(C, something, something, something, something, something, something) and the `arguments` of a node C is a node X;
+2. if [`keyed_drop`](#keyed_drop)(C, something) and the `arguments` of a node C is a node X.
 
 <a id="keyed_want"></a>`keyed_want`(X) either:
 
@@ -1613,57 +1645,74 @@ Declared as facts:
 
 - <a id="keyed_shut_kind"></a>`keyed_shut_kind` — rows in this file
 
-> a call is what its function returns, where the callee names one function of
-> this file, the call graph agrees, and it does not fall off its end
-> (`completes_abruptly`) or return bare
+> a call is what the functions it calls return: open where one of them is not
+> followed (`keyed_ret_known`), has an open return (`keyed_ret_open`), returns
+> a parameter the call leaves out or hands an open argument, or is async or a
+> generator (the call is a promise or an iterator). Followed are the functions
+> that return one value; one another file calls left its file, and its own
+> volume publishes what it found.
 
-<a id="keyed_ret"></a>`keyed_ret`(C, F) either:
+<a id="keyed_rets_many"></a>`keyed_rets_many`(a [function](js-callgraph.rofl.md#fn_node) F) if all of:
+  - [`sx_ret_lit`](js-surface.rofl.md#sx_ret_lit)(F, V);
+  - [`sx_ret_lit`](js-surface.rofl.md#sx_ret_lit)(F, W);
+  - V differs from W.
+
+<a id="keyed_ret_need"></a>`keyed_ret_need`(a [function](js-callgraph.rofl.md#fn_node) F) if [`sx_ret_lit`](js-surface.rofl.md#sx_ret_lit)(F, something), unless [`keyed_rets_many`](#keyed_rets_many)(F).
+
+`keyed_want`(R) if [`keyed_ret_need`](#keyed_ret_need)(F) and [`ret_plain`](js-surface.rofl.md#ret_plain)(F, R).
+
+<a id="keyed_ret_known"></a>`keyed_ret_known`(F) if [`keyed_ret_need`](#keyed_ret_need)(F).
+
+<a id="keyed_ret_open"></a>`keyed_ret_open`(F) either:
 
 1. if all of:
-   - [`keyed_want`](#keyed_want)(C);
-   - C is a [call expression](#noun-call_expression);
-   - [the callee](js-callgraph.rofl.md#callee_of) of C [sees the declaration](#sees_decl) F;
-   - F is a [function](js-callgraph.rofl.md#fn_node);
-2. if all of:
-   - [`keyed_want`](#keyed_want)(C);
-   - C is a [call expression](#noun-call_expression);
-   - [the callee](js-callgraph.rofl.md#callee_of) of C [sees](#sees_binder) D;
-   - D [binds](#binder) some name to F in some file;
-   - F is a [function](js-callgraph.rofl.md#fn_node).
+   - [`keyed_ret_need`](#keyed_ret_need)(F);
+   - [`ret_plain`](js-surface.rofl.md#ret_plain)(F, R);
+   - [`keyed_open`](#keyed_open)(R);
+2. if [`keyed_ret_need`](#keyed_ret_need)(F) and [the attribute](#ast_attr) `async` or `generator` of F is `true`.
 
-<a id="keyed_has_ret"></a>`keyed_has_ret`(C) if [`keyed_ret`](#keyed_ret)(C, something).
+In the surface:
 
-`keyed_src`(C, R) either:
+<a id="sx_ret_known"></a>`sx_ret_known`(F) if [`sx_esc`](js-surface.rofl.md#sx_esc)(F) and [`keyed_ret_known`](#keyed_ret_known)(F).
 
-1. if [`keyed_ret`](#keyed_ret)(C, F) and F [returns](#returns) a node R;
-2. if all of:
-   - [`keyed_ret`](#keyed_ret)(C, an [arrow function](#noun-arrow_function) F);
-   - the `body` of F is a node R;
-   - unless R is a [block](#noun-block).
+<a id="sx_ret_open"></a>`sx_ret_open`(F) if [`sx_esc`](js-surface.rofl.md#sx_esc)(F) and [`keyed_ret_open`](#keyed_ret_open)(F).
+
+In the code:
+
+`keyed_ret_known`(F) if [`sx_ret_known`](#sx_ret_known)(F).
+
+`keyed_ret_open`(F) if [`sx_ret_open`](#sx_ret_open)(F).
 
 <a id="keyed_open"></a>`keyed_open`(C) either:
 
 1. if all of:
    - [`keyed_want`](#keyed_want)(C);
    - C is a [call expression](#noun-call_expression);
-   - unless [`keyed_has_ret`](#keyed_has_ret)(C);
+   - unless C [is resolved](js-callgraph.rofl.md#resolved_site);
 2. if all of:
-   - [`keyed_ret`](#keyed_ret)(C, F);
-   - C [resolves to](js-callgraph.rofl.md#resolves) G;
-   - G differs from F;
+   - [`keyed_want`](#keyed_want)(C);
+   - C is a [call expression](#noun-call_expression);
+   - C [resolves to](js-callgraph.rofl.md#resolves) F;
+   - unless [`keyed_ret_known`](#keyed_ret_known)(F);
 3. if all of:
-   - [`keyed_ret`](#keyed_ret)(C, F);
-   - the `body` of a node F is a [block](#noun-block) B;
-   - unless B [completes abruptly](js-controlflow.rofl.md#completes_abruptly);
-4. if [`keyed_ret`](#keyed_ret)(C, F) and [`keyed_bare_return`](#keyed_bare_return)(F).
+   - [`keyed_want`](#keyed_want)(C);
+   - C is a [call expression](#noun-call_expression);
+   - C [resolves to](js-callgraph.rofl.md#resolves) F;
+   - [`keyed_ret_open`](#keyed_ret_open)(F);
+4. if [`keyed_want`](#keyed_want)(C) and [the callee](js-callgraph.rofl.md#callee_of) of C [comes out of](#external_value) some module;
+5. if all of:
+   - [`keyed_want`](#keyed_want)(C);
+   - C [resolves to](js-callgraph.rofl.md#resolves) F;
+   - [`sx_ret_param`](js-surface.rofl.md#sx_ret_param)(F, I);
+   - unless some node is the I-th of the `arguments` of C.
 
-<a id="keyed_bare_return"></a>`keyed_bare_return`(F) if F [is nearest to](#nearest_v) R, unless the `argument` of a [return](#noun-return) R is some node.
-
-`keyed_open`(C) if [`keyed_ret`](#keyed_ret)(C, F) and [the attribute](#ast_attr) `async` or `generator` of a node F is `true`.
+`keyed_src`(C, X) if all of:
+  - [`keyed_want`](#keyed_want)(C);
+  - a node C [resolves to](js-callgraph.rofl.md#resolves) F;
+  - [`sx_ret_param`](js-surface.rofl.md#sx_ret_param)(F, I);
+  - a node X is the I-th of the `arguments` of C.
 
 <a id="keyed_fn_need"></a>`keyed_fn_need`(G) if [`keyed_param`](#keyed_param)(something, G, something).
-
-<a id="keyed_has_arg"></a>`keyed_has_arg`(Q, Pos) if [`keyed_arg`](#keyed_arg)(something, Q, Pos, something).
 
 `keyed_open`(E) either:
 
@@ -1681,22 +1730,18 @@ Declared as facts:
    - unless [`keyed_bound`](#keyed_bound)(E);
 4. if [`keyed_param`](#keyed_param)(E, G, something) and [`keyed_escapes`](#keyed_escapes)(G);
 5. if all of:
-   - [`keyed_param`](#keyed_param)(E, G, Pos);
-   - [`keyed_called`](#keyed_called)(G, Q);
-   - unless [`keyed_has_arg`](#keyed_has_arg)(Q, Pos);
-6. if all of:
    - [`keyed_want`](#keyed_want)(E);
    - a node E [sees](#sees_binder) D;
    - a node L [sees](#sees_binder) D;
    - the `argument` of an [update expression](#noun-update_expression) U is L;
-7. if all of:
+6. if all of:
    - [`keyed_want`](#keyed_want)(E);
    - a node E [sees](#sees_binder) D;
    - a node L [sees](#sees_binder) D;
    - the `left` of an [assignment](#noun-assignment) X is L;
    - [the attribute](#ast_attr) `operator` of X is Op;
    - unless [`assign_value_op`](#assign_value_op)(Op);
-8. if [`keyed_src`](#keyed_src)(E, S) and [`keyed_open`](#keyed_open)(S).
+7. if [`keyed_src`](#keyed_src)(E, S) and [`keyed_open`](#keyed_open)(S).
 
 > a source that reaches itself builds its value in a loop
 
@@ -2068,10 +2113,12 @@ Declared as facts:
    - a node Q [is within](#ast_within) a node C;
    - unless [`keyed_get_call`](#keyed_get_call)(C).
 
+<a id="keyed_target"></a>`keyed_target`(M) if [`keyed_again`](#keyed_again)(something, something, M).
+
 <a id="keyed_runs_m"></a>`keyed_runs_m`(M, N) either:
 
-1. if [`keyed_again`](#keyed_again)(something, something, M) and N is M;
-2. if [`keyed_again`](#keyed_again)(something, something, N) and M [reaches by calling](js-effects.rofl.md#eff_reaches) N.
+1. if [`keyed_target`](#keyed_target)(M) and N is M;
+2. if [`keyed_target`](#keyed_target)(N) and M [reaches by calling](js-effects.rofl.md#eff_reaches) N.
 
 <a id="keyed_hand_need"></a>`keyed_hand_need`(G) if [`keyed_runs_m`](#keyed_runs_m)(G, something).
 
@@ -2129,22 +2176,31 @@ Declared as facts:
    - G [reaches by calling](js-effects.rofl.md#eff_reaches) a node M.
 
 > An `await` or a `yield` hands the turn to whatever is queued; only another
-> run of the method puts its own put back, so it is noisy where the method may
-> run more than once (`keyed_many`): a known call of it from two sites, from a
-> loop, from a function that may itself run more than once, from itself, or a
-> call nobody knows (handed out, an entry, the instance handed out). Two runs
-> one after the other count as two: the model has no order between the runs
-> of a function, so it cannot tell them from two that overlap.
+> run of the method puts its own put back. At an `await` that run must have
+> started while this one waits (`keyed_overlap`): a call of the method nobody
+> waited for (`await m()`) and another call after it, or such a call run more
+> than once, or a caller whose own runs overlap, or a call nobody knows. Runs
+> one after another, each awaited, do not overlap. A generator's runs live
+> until they are exhausted, which the model does not follow, so at a `yield`
+> any second run counts (`keyed_many`).
 
-`keyed_noisy`(C, K) if all of:
-  - [`keyed_between`](#keyed_between)(C, K, an [await](#noun-await) Q);
-  - [`keyed_again`](#keyed_again)(C, K, M);
-  - [`keyed_many`](#keyed_many)(M).
+`keyed_noisy`(C, K) either:
+
+1. if all of:
+   - [`keyed_between`](#keyed_between)(C, K, an [await](#noun-await) Q);
+   - [`keyed_again`](#keyed_again)(C, K, M);
+   - [`keyed_overlap`](#keyed_overlap)(M);
+2. if all of:
+   - [`keyed_between`](#keyed_between)(C, K, a [yield](#noun-yield) Q);
+   - [`keyed_again`](#keyed_again)(C, K, M);
+   - [`keyed_many`](#keyed_many)(M).
 
 <a id="keyed_once_need"></a>`keyed_once_need`(M) either:
 
 1. if [`keyed_between`](#keyed_between)(C, K, an [await](#noun-await) Q) and [`keyed_again`](#keyed_again)(C, K, M);
-2. if [`keyed_called_at`](#keyed_called_at)(something, Q) and M [is the nearest function of](js-callgraph.rofl.md#nearest_fn) a node Q.
+2. if [`keyed_caller`](#keyed_caller)(something, something, M).
+
+<a id="keyed_caller"></a>`keyed_caller`(G, Q, F) if [`keyed_called_at`](#keyed_called_at)(G, Q) and F [is the nearest function of](js-callgraph.rofl.md#nearest_fn) a node Q.
 
 <a id="keyed_called_at"></a>`keyed_called_at`(G, Q) if [`keyed_once_need`](#keyed_once_need)(G) and Q [resolves to](js-callgraph.rofl.md#resolves) G.
 
@@ -2171,22 +2227,41 @@ Declared as facts:
    - [`keyed_called_at`](#keyed_called_at)(G, Q2);
    - Q1 differs from Q2;
 2. if [`keyed_called_at`](#keyed_called_at)(G, Q) and [`keyed_looped`](#keyed_looped)(Q);
-3. if all of:
-   - [`keyed_called_at`](#keyed_called_at)(G, Q);
-   - F [is the nearest function of](js-callgraph.rofl.md#nearest_fn) a node Q;
-   - [`keyed_many`](#keyed_many)(F);
-4. if [`keyed_once_need`](#keyed_once_need)(G) and G [reaches by calling](js-effects.rofl.md#eff_reaches) G;
-5. if [`keyed_once_need`](#keyed_once_need)(G) and [`keyed_handed`](#keyed_handed)(G);
-6. if all of:
+3. if [`keyed_caller`](#keyed_caller)(G, something, F) and [`keyed_many`](#keyed_many)(F);
+4. if [`keyed_overlap`](#keyed_overlap)(G).
+
+<a id="keyed_unknown_call"></a>`keyed_unknown_call`(G) either:
+
+1. if [`keyed_once_need`](#keyed_once_need)(G) and [`keyed_handed`](#keyed_handed)(G);
+2. if all of:
    - [`keyed_once_need`](#keyed_once_need)(G);
    - G [is an entry point](js-controlflow.rofl.md#entry_point);
    - unless some class [has the method](#class_method_of) G;
-7. if all of:
+3. if all of:
    - [`keyed_once_need`](#keyed_once_need)(G);
    - a class CD [has the method](#class_method_of) G;
    - a node I [stands for an instance of](#inst_of) CD;
    - [`keyed_handed`](#keyed_handed)(I);
    - unless [the attribute](#ast_attr) `accessibility` of G is "private".
+
+<a id="keyed_awaited"></a>`keyed_awaited`(Q) if [`keyed_called_at`](#keyed_called_at)(something, Q) and the `argument` of an [await](#noun-await) X is a node Q.
+
+<a id="keyed_left"></a>`keyed_left`(G, Q) if [`keyed_called_at`](#keyed_called_at)(G, Q), unless [`keyed_awaited`](#keyed_awaited)(Q).
+
+<a id="keyed_overlap"></a>`keyed_overlap`(G) either:
+
+1. if [`keyed_unknown_call`](#keyed_unknown_call)(G);
+2. if all of:
+   - [`keyed_left`](#keyed_left)(G, Q1);
+   - [`keyed_called_at`](#keyed_called_at)(G, Q2);
+   - Q1 differs from Q2;
+3. if [`keyed_left`](#keyed_left)(G, Q) and [`keyed_looped`](#keyed_looped)(Q);
+4. if all of:
+   - [`keyed_left`](#keyed_left)(G, Q);
+   - [`keyed_caller`](#keyed_caller)(G, Q, F);
+   - [`keyed_many`](#keyed_many)(F);
+5. if [`keyed_caller`](#keyed_caller)(G, something, F) and [`keyed_overlap`](#keyed_overlap)(F);
+6. if [`keyed_once_need`](#keyed_once_need)(G) and G [reaches by calling](js-effects.rofl.md#eff_reaches) G.
 
 `keyed_noisy`(C, K) either:
 
@@ -2230,6 +2305,187 @@ Declared as facts:
    - [`keyed_same_name`](#keyed_same_name)(P, R);
    - [`keyed_same_name`](#keyed_same_name)(P, C);
    - unless [`keyed_noisy`](#keyed_noisy)(C, K).
+
+> PRESENT AT A GET: a put of the same key for certain, in a statement of its
+> own earlier in the list, ran; nothing between them may have taken it out (a
+> delete or a clear of the collection by any name whose key may be the same,
+> `keyed_drop`): none written in the statements between, none in a function a
+> call between may run, none run by code outside the model that was handed the
+> collection or such a function, none queued behind an `await`, and on a field
+> no other run of the method (`keyed_noisy` over the same span). Elsewhere a
+> get may find no entry and read `undefined`.
+
+<a id="keyed_fill_cand"></a>`keyed_fill_cand`(C, P, J) if all of:
+  - [`keyed_read_site`](#keyed_read_site)(C, H, B, F, I);
+  - [`keyed_call`](#keyed_call)(C, H, Get, something, something, something);
+  - [`keyed_holder`](#keyed_holder)(H, Pk);
+  - [`keyed_store`](#keyed_store)(Pk, Put, Get);
+  - [`keyed_step`](#keyed_step)(P, H, Put, B, F, J);
+  - J < I.
+
+`keyed_want`(X) either:
+
+1. if [`keyed_fill_cand`](#keyed_fill_cand)(something, P, something) and [`keyed_key_arg`](#keyed_key_arg)(P, X);
+2. if [`keyed_fill_cand`](#keyed_fill_cand)(C, something, something) and [`keyed_key_arg`](#keyed_key_arg)(C, X);
+3. if [`keyed_drop`](#keyed_drop)(D, something) and [`keyed_key_arg`](#keyed_key_arg)(D, X).
+
+<a id="keyed_fill"></a>`keyed_fill`(C, J) if all of:
+  - [`keyed_fill_cand`](#keyed_fill_cand)(C, P, J);
+  - [`keyed_key`](#keyed_key)(P, K);
+  - [`keyed_key`](#keyed_key)(C, K).
+
+<a id="keyed_filled"></a>`keyed_filled`(H) if [`keyed_fill_cand`](#keyed_fill_cand)(C, something, something) and [`keyed_read_site`](#keyed_read_site)(C, H, something, something, something).
+
+<a id="keyed_made"></a>`keyed_made`(H, X) if [`keyed_filled`](#keyed_filled)(H) and the `init` or `right` or `value` of a node H is a node X.
+
+> a removal in another file is not followed: where the collection left its
+> file, a call between that reaches another file may remove anything
+
+<a id="keyed_drop"></a>`keyed_drop`(D, H) if all of:
+  - [`keyed_made`](#keyed_made)(H, X);
+  - [`keyed_on`](#keyed_on)(D, X, P, Meth);
+  - [`keyed_remove`](#keyed_remove)(P, Meth);
+  - a node H [is in file](js-model.rofl.md#ast_node) File;
+  - a node D [is in file](js-model.rofl.md#ast_node) File.
+
+<a id="keyed_pair"></a>`keyed_pair`(C, D) if all of:
+  - [`keyed_fill`](#keyed_fill)(C, something);
+  - [`keyed_read_site`](#keyed_read_site)(C, H, something, something, something);
+  - [`keyed_drop`](#keyed_drop)(D, H).
+
+<a id="keyed_differs"></a>`keyed_differs`(D, C) if all of:
+  - [`keyed_pair`](#keyed_pair)(C, D);
+  - [`keyed_key`](#keyed_key)(D, K1);
+  - [`keyed_key`](#keyed_key)(C, K2);
+  - K1 differs from K2.
+
+<a id="keyed_drop_may"></a>`keyed_drop_may`(C, J, D) if all of:
+  - [`keyed_fill`](#keyed_fill)(C, J);
+  - [`keyed_pair`](#keyed_pair)(C, D);
+  - unless [`keyed_differs`](#keyed_differs)(D, C).
+
+<a id="keyed_drop_fn"></a>`keyed_drop_fn`(G) if [`keyed_drop_may`](#keyed_drop_may)(something, something, D) and G [is nearest to](#nearest_v) a node D.
+
+`keyed_target`(G) if [`keyed_drop_fn`](#keyed_drop_fn)(G).
+
+`keyed_hand_need`(X) if [`keyed_made`](#keyed_made)(something, X).
+
+> the span's own code: the statements after the put up to the read, outside
+> any function written there
+
+<a id="keyed_pspan"></a>`keyed_pspan`(C, J, S, M) if all of:
+  - [`keyed_fill`](#keyed_fill)(C, J);
+  - [`keyed_read_site`](#keyed_read_site)(C, something, B, F, I);
+  - a node S is the L-th of the F of a node B;
+  - J < L;
+  - L <= I;
+  - M [is nearest to](#nearest_v) B.
+
+<a id="keyed_pspan_top"></a>`keyed_pspan_top`(C, J, S) if all of:
+  - [`keyed_fill`](#keyed_fill)(C, J);
+  - [`keyed_read_site`](#keyed_read_site)(C, something, B, F, I);
+  - a node S is the L-th of the F of a node B;
+  - J < L;
+  - L <= I;
+  - unless B [is inside a function](js-controlflow.rofl.md#in_fn).
+
+<a id="keyed_pbetween"></a>`keyed_pbetween`(C, J, Q) either:
+
+1. if all of:
+   - [`keyed_pspan`](#keyed_pspan)(C, J, S, M);
+   - M [is nearest to](#nearest_v) a node Q;
+   - Q [is within](#ast_within) a node S;
+   - Q differs from a node C;
+   - unless C [is within](#ast_within) Q;
+2. if all of:
+   - [`keyed_pspan_top`](#keyed_pspan_top)(C, J, S);
+   - a node Q [is within](#ast_within) a node S;
+   - Q differs from a node C;
+   - unless Q [is inside a function](js-controlflow.rofl.md#in_fn) or C [is within](#ast_within) Q.
+
+<a id="keyed_lost"></a>`keyed_lost`(C, J) either:
+
+1. if all of:
+   - [`keyed_drop_may`](#keyed_drop_may)(C, J, D);
+   - [`keyed_read_site`](#keyed_read_site)(C, something, B, F, I);
+   - a node D [is within](#ast_within) a node S;
+   - S is the L-th of the F of a node B;
+   - J < L;
+   - L <= I;
+2. if all of:
+   - [`keyed_drop_may`](#keyed_drop_may)(C, J, D);
+   - G [is nearest to](#nearest_v) a node D;
+   - [`keyed_pbetween`](#keyed_pbetween)(C, J, Q);
+   - Q [resolves to](js-callgraph.rofl.md#resolves) G;
+3. if all of:
+   - [`keyed_drop_may`](#keyed_drop_may)(C, J, D);
+   - a node G [is nearest to](#nearest_v) a node D;
+   - [`keyed_pbetween`](#keyed_pbetween)(C, J, Q);
+   - Q [resolves to](js-callgraph.rofl.md#resolves) a node F;
+   - F [reaches by calling](js-effects.rofl.md#eff_reaches) G;
+4. if all of:
+   - [`keyed_drop_may`](#keyed_drop_may)(C, J, D);
+   - G [is nearest to](#nearest_v) a node D;
+   - [`keyed_pbetween`](#keyed_pbetween)(C, J, an [await](#noun-await) Q).
+
+<a id="keyed_outside_at"></a>`keyed_outside_at`(C, J) either:
+
+1. if all of:
+   - [`keyed_pbetween`](#keyed_pbetween)(C, J, Q);
+   - a node Q [is a site](js-callgraph.rofl.md#site);
+   - unless Q [is resolved](js-callgraph.rofl.md#resolved_site);
+2. if all of:
+   - [`keyed_pbetween`](#keyed_pbetween)(C, J, Q);
+   - Q [resolves to](js-callgraph.rofl.md#resolves) G;
+   - [`runs_outside`](js-callgraph.rofl.md#runs_outside)(G);
+3. if all of:
+   - [`keyed_pbetween`](#keyed_pbetween)(C, J, Q);
+   - Q [resolves to](js-callgraph.rofl.md#resolves) a node G;
+   - G [reaches by calling](js-effects.rofl.md#eff_reaches) a node F;
+   - [`runs_outside`](js-callgraph.rofl.md#runs_outside)(F).
+
+`keyed_lost`(C, J) if all of:
+  - [`keyed_outside_at`](#keyed_outside_at)(C, J);
+  - [`keyed_read_site`](#keyed_read_site)(C, H, something, something, something);
+  - [`keyed_made`](#keyed_made)(H, X);
+  - [`keyed_handed`](#keyed_handed)(X).
+
+<a id="keyed_leaves"></a>`keyed_leaves`(C, J) either:
+
+1. if all of:
+   - [`keyed_pbetween`](#keyed_pbetween)(C, J, Q);
+   - Q [resolves to](js-callgraph.rofl.md#resolves) a node G;
+   - a node C [is in file](js-model.rofl.md#ast_node) File;
+   - unless G [is in file](js-model.rofl.md#ast_node) File;
+2. if all of:
+   - [`keyed_pbetween`](#keyed_pbetween)(C, J, Q);
+   - Q [resolves to](js-callgraph.rofl.md#resolves) a node G;
+   - G [reaches by calling](js-effects.rofl.md#eff_reaches) a node F;
+   - a node C [is in file](js-model.rofl.md#ast_node) File;
+   - unless F [is in file](js-model.rofl.md#ast_node) File.
+
+`keyed_lost`(C, J) either:
+
+1. if all of:
+   - [`keyed_leaves`](#keyed_leaves)(C, J);
+   - [`keyed_read_site`](#keyed_read_site)(C, H, something, something, something);
+   - [`keyed_made`](#keyed_made)(H, X);
+   - [`sx_esc`](js-surface.rofl.md#sx_esc)(X);
+2. if all of:
+   - [`keyed_outside_at`](#keyed_outside_at)(C, J);
+   - [`keyed_drop_may`](#keyed_drop_may)(C, J, D);
+   - G [is nearest to](#nearest_v) a node D;
+   - [`keyed_open_to`](#keyed_open_to)(G).
+
+`keyed_again`(C, J, M) if all of:
+  - [`keyed_fill`](#keyed_fill)(C, J);
+  - [`keyed_shared`](#keyed_shared)(C, H);
+  - [`keyed_read_site`](#keyed_read_site)(C, H, B, something, something);
+  - the `body` of a node M is a node B.
+
+`keyed_lost`(C, J) if [`keyed_fill`](#keyed_fill)(C, J) and [`keyed_noisy`](#keyed_noisy)(C, J).
+
+<a id="keyed_present"></a>`keyed_present`(C) if [`keyed_fill`](#keyed_fill)(C, J), unless [`keyed_lost`](#keyed_lost)(C, J).
 
 > THE FLOW READS A COLLECTION WHOLE: a get, a walk, a forEach see every put of
 > a key of the value they read. The order above judges the flow (which calls
@@ -2358,7 +2614,11 @@ A node U may be the literal L either:
 
 1. if a node E [may be the literal](js-concat.rofl.md#may_be_lit) L, unless [`keyed_viewed`](#keyed_viewed)(E);
 2. if [`keyed_holds`](#keyed_holds)(E, V) and a node V [may be the literal](js-concat.rofl.md#may_be_lit) L;
-3. if [`keyed_holds_key`](#keyed_holds_key)(E, L).
+3. if [`keyed_holds_key`](#keyed_holds_key)(E, L);
+4. if all of:
+   - [`keyed_read`](#keyed_read)(E, something);
+   - L is `undefined`;
+   - unless [`keyed_present`](#keyed_present)(E).
 
 ## 8. Reading a property off a value
 

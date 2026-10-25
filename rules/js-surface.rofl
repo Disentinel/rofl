@@ -137,6 +137,15 @@ sx_effect_module[surface](File, N)     :- effect_of_module[flow](File, N).
 sx_arg_lit[surface](F, I, V)  :- resolves[code](C, F), arg_at[flow](C, I, A), may_be_lit[flow](A, V).
 sx_arg_node[surface](F, I, N) :- resolves[code](C, F), arg_at[flow](C, I, A), may_be_node[flow](A, N).
 sx_called[surface](F)         :- resolves[code](_, F).
+-- how many arguments a call hands over, where it is known (no spread): a parameter past them is `undefined`
+arg_spread[code](C)    :- ast_child[code](C, arguments, _, A), ast_node[code](A, spread_element, _).
+arg_given[code](C)     :- ast_child[code](C, arguments, _, _).
+arg_count[code](C, 0)  :- call_like_v(K), ast_node[code](C, K, _), not arg_given[code](C).
+arg_count[code](C, N)  :- ast_child[code](C, arguments, I, _), N is I + 1, not ast_child[code](C, arguments, N, _),
+                          not arg_spread[code](C).
+sx_arg_short[surface](F, N) :- resolves[code](C, F), arg_count[code](C, N).
+may_be_lit[flow](U, undefined) :- sx_arg_short[surface](F, N), param_of[flow](F, I, Name), I >= N,
+                                  param_use[flow](F, Name, U).
 sx_reached[surface](F)        :- resolves[code](C, F), not guarded[code](C).
 sx_reach[surface](F)          :- resolves[code](C, F), not guarded[code](C), not in_fn[code](C).
 sx_reach[surface](F)          :- reachable[code](G), nearest_v[flow](G, C), resolves[code](C, F), not guarded[code](C).
@@ -169,6 +178,13 @@ sx_ret_lit[surface](F, V)   :- ret_plain[flow](F, E), may_be_lit[flow](E, V).
 sx_ret_pnode[surface](F, N) :- ret_param[flow](F, _, E), may_be_node[flow](E, N).
 sx_ret_plit[surface](F, V)  :- ret_param[flow](F, _, E), may_be_lit[flow](E, V).
 sx_ret_param[surface](F, I) :- ret_param[flow](F, I, _).
+-- a function that may end without a value: its body may complete normally (`completes_abruptly` names those that
+-- cannot), or a `return` has no argument. Its call is `undefined` there; a constructor's `new` is the instance.
+falls_off[code](F) :- fn_node[code](F), ast_child[code](F, body, 0, B), ast_node[code](B, block_statement, _),
+                      not completes_abruptly[code](B).
+falls_off[code](F) :- ast_node[code](R, return_statement, _), not ast_child[code](R, argument, 0, _), nearest_v[flow](F, R).
+sx_ret_undef[surface](F) :- falls_off[code](F), not ast_attr[code](F, generator, true), not ast_attr[code](F, kind, "constructor").
+may_be_lit[flow](C, undefined) :- call_site[code](C, _), resolves[code](C, F), sx_ret_undef[surface](F).
 sx_gen_ret[surface](F, N)   :- returns[flow](F, E), ast_attr[code](F, generator, true), may_be_node[flow](E, N).
 sx_gen_rlit[surface](F, V)  :- returns[flow](F, E), ast_attr[code](F, generator, true), may_be_lit[flow](E, V).
 

@@ -33,9 +33,9 @@ default: surface
 Reads:
 
 - from js-ambient, in the flow: [amb_exn_carrier](js-ambient.rofl.md#amb_exn_carrier)
-- from js-callgraph, in the code: [class_ctor](js-callgraph.rofl.md#class_ctor), [fn_name](js-callgraph.rofl.md#fn_name), [fn_node](js-callgraph.rofl.md#fn_node), [resolves](js-callgraph.rofl.md#resolves), [runs_outside](js-callgraph.rofl.md#runs_outside)
+- from js-callgraph, in the code: [call_site](js-callgraph.rofl.md#call_site), [class_ctor](js-callgraph.rofl.md#class_ctor), [fn_name](js-callgraph.rofl.md#fn_name), [fn_node](js-callgraph.rofl.md#fn_node), [resolves](js-callgraph.rofl.md#resolves), [runs_outside](js-callgraph.rofl.md#runs_outside)
 - from js-concat, in the flow: [may_be_lit](js-concat.rofl.md#may_be_lit), [may_be_node](js-concat.rofl.md#may_be_node)
-- from js-controlflow, in the code: [always_throws](js-controlflow.rofl.md#always_throws), [async_body](js-controlflow.rofl.md#async_body), [guarded](js-controlflow.rofl.md#guarded), [in_fn](js-controlflow.rofl.md#in_fn), [may_throw](js-controlflow.rofl.md#may_throw), [reachable](js-controlflow.rofl.md#reachable), [sync_body](js-controlflow.rofl.md#sync_body)
+- from js-controlflow, in the code: [always_throws](js-controlflow.rofl.md#always_throws), [async_body](js-controlflow.rofl.md#async_body), [completes_abruptly](js-controlflow.rofl.md#completes_abruptly), [guarded](js-controlflow.rofl.md#guarded), [in_fn](js-controlflow.rofl.md#in_fn), [may_throw](js-controlflow.rofl.md#may_throw), [reachable](js-controlflow.rofl.md#reachable), [sync_body](js-controlflow.rofl.md#sync_body)
 - from js-controlflow, in the flow: [accessor_as](js-controlflow.rofl.md#accessor_as), [accessor_of](js-controlflow.rofl.md#accessor_of), [thrown_by](js-controlflow.rofl.md#thrown_by)
 - from js-dataflow, in the code: [assigned](js-dataflow.rofl.md#assigned), [corpus_file](js-dataflow.rofl.md#corpus_file), [exports_default](js-dataflow.rofl.md#exports_default), [exports_name](js-dataflow.rofl.md#exports_name), [exports_value](js-dataflow.rofl.md#exports_value), [param_rest](js-dataflow.rofl.md#param_rest), [sees_binder](js-dataflow.rofl.md#sees_binder)
 - from js-dataflow, in the flow: [arg_at](js-dataflow.rofl.md#arg_at), [array_elem](js-dataflow.rofl.md#array_elem), [assign_param](js-dataflow.rofl.md#assign_param), [cjs_exports](js-dataflow.rofl.md#cjs_exports), [class_member_proto](js-dataflow.rofl.md#class_member_proto), [class_member_static](js-dataflow.rofl.md#class_member_static), [ctor_of](js-dataflow.rofl.md#ctor_of), [external_value](js-dataflow.rofl.md#external_value), [field_at](js-dataflow.rofl.md#field_at), [gen_fn](js-dataflow.rofl.md#gen_fn), [gen_of](js-dataflow.rofl.md#gen_of), [inst_of](js-dataflow.rofl.md#inst_of), [keyed_put](js-dataflow.rofl.md#keyed_put), [kind_proto](js-dataflow.rofl.md#kind_proto), [member_plain](js-dataflow.rofl.md#member_plain), [member_value](js-dataflow.rofl.md#member_value), [module_object](js-dataflow.rofl.md#module_object), [nearest_v](js-dataflow.rofl.md#nearest_v), [next_send](js-dataflow.rofl.md#next_send), [param_of](js-dataflow.rofl.md#param_of), [param_use](js-dataflow.rofl.md#param_use), [returns](js-dataflow.rofl.md#returns), [yields](js-dataflow.rofl.md#yields)
@@ -56,14 +56,16 @@ What this file calls a node, and what each word stands for:
 
 | word | stands for |
 |---|---|
+| <a id="noun-block"></a>a block | a node of kind `block_statement` |
 | <a id="noun-identifier"></a>an identifier | a node of kind `identifier` |
 | <a id="noun-invocation"></a>an invocation | a node of a kind in [`call_like_v`](js-dataflow.rofl.md#call_like_v) |
+| <a id="noun-return"></a>a return | a node of kind `return_statement` |
+| <a id="noun-spread"></a>a spread | a node of kind `spread_element` |
 | a function | a node [`fn_node`](js-callgraph.rofl.md#fn_node) holds of |
 
 Phrases this file defines in one step, each by the sentence it stands for:
 
 - A node points to a node M if [`sx_node`](#sx_node)(it, M).
-- A node may be the literal V if [`sx_lit`](#sx_lit)(it, V).
 - The member K of a node O holds a node V if [`sx_member`](#sx_member)(O, K, V).
 - The plain member K of a node O is a node V if [`sx_mplain`](#sx_mplain)(O, K, V).
 - The static member K of a class O is a node V if [`sx_mstatic`](#sx_mstatic)(O, K, V).
@@ -199,6 +201,8 @@ Phrases this file defines in one step, each by the sentence it stands for:
 
 In the flow:
 
+A node may be the literal V if [`sx_lit`](#sx_lit)(it, V).
+
 `array_elem`(X, I, E) if [`sx_elem`](#sx_elem)(X, I, E).
 
 `kind_proto`(N, P) if [`sx_proto`](#sx_proto)(N, P).
@@ -275,6 +279,37 @@ In the surface:
 
 <a id="sx_called"></a>`sx_called`(F) if some call [resolves to](js-callgraph.rofl.md#resolves) F.
 
+> how many arguments a call hands over, where it is known (no spread): a parameter past them is `undefined`
+
+In the code:
+
+<a id="arg_spread"></a>`arg_spread`(C) if a [spread](#noun-spread) X [is among the](#ast_child) `arguments` of a node C.
+
+<a id="arg_given"></a>`arg_given`(C) if some node [is among the](#ast_child) `arguments` of a node C.
+
+<a id="arg_count"></a>`arg_count`(C, E) either:
+
+1. if C is an [invocation](#noun-invocation) and E is 0, unless [`arg_given`](#arg_given)(C);
+2. if all of:
+   - some node is the I-th of the `arguments` of C;
+   - E is I + 1;
+   - unless some node is the E-th of the `arguments` of C;
+   - unless [`arg_spread`](#arg_spread)(C).
+
+In the surface:
+
+<a id="sx_arg_short"></a>`sx_arg_short`(F, N) if C [resolves to](js-callgraph.rofl.md#resolves) F and [`arg_count`](#arg_count)(C, N).
+
+In the flow:
+
+A node may be the literal `undefined` if all of:
+  - [`sx_arg_short`](#sx_arg_short)(F, N);
+  - F [takes](js-dataflow.rofl.md#param_of) Name at an index I;
+  - I >= N;
+  - F [uses](js-dataflow.rofl.md#param_use) Name at it.
+
+In the surface:
+
 <a id="sx_reached"></a>`sx_reached`(F) if a node C [resolves to](js-callgraph.rofl.md#resolves) F, unless C [is guarded](js-controlflow.rofl.md#guarded).
 
 <a id="sx_reach"></a>`sx_reach`(F) either:
@@ -343,6 +378,35 @@ In the surface:
 <a id="sx_ret_plit"></a>`sx_ret_plit`(F, V) if [`ret_param`](#ret_param)(F, something, E) and a node E [may be the literal](js-concat.rofl.md#may_be_lit) V.
 
 <a id="sx_ret_param"></a>`sx_ret_param`(F, I) if [`ret_param`](#ret_param)(F, I, something).
+
+> a function that may end without a value: its body may complete normally (`completes_abruptly` names those that
+> cannot), or a `return` has no argument. Its call is `undefined` there; a constructor's `new` is the instance.
+
+In the code:
+
+<a id="falls_off"></a>`falls_off`(F) either:
+
+1. if all of:
+   - F is a [function](js-callgraph.rofl.md#fn_node);
+   - the `body` of F is a [block](#noun-block) B;
+   - unless B [completes abruptly](js-controlflow.rofl.md#completes_abruptly);
+2. if F [is nearest to](js-dataflow.rofl.md#nearest_v) R, unless the `argument` of a [return](#noun-return) R is some node.
+
+In the surface:
+
+<a id="sx_ret_undef"></a>`sx_ret_undef`(F) if all of:
+  - [`falls_off`](#falls_off)(F);
+  - unless [the attribute](#ast_attr) `generator` of a node F is `true`;
+  - unless [the attribute](#ast_attr) `kind` of F is "constructor".
+
+In the flow:
+
+A node may be the literal `undefined` if all of:
+  - it [is a call site](js-callgraph.rofl.md#call_site) in some file;
+  - it [resolves to](js-callgraph.rofl.md#resolves) F;
+  - [`sx_ret_undef`](#sx_ret_undef)(F).
+
+In the surface:
 
 <a id="sx_gen_ret"></a>`sx_gen_ret`(F, N) if all of:
   - a node F [returns](js-dataflow.rofl.md#returns) a node E;

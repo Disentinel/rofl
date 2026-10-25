@@ -37,6 +37,17 @@ literal_kind(big_int_literal).
 
 may_be_lit[flow](E, V) :- literal_kind(K), ast_node[code](E, K, _), ast_value[code](E, V).
 
+-- `undefined` is a value too, the atom `undefined` (the string "undefined" is
+-- another): the global of that name, `void`, a `let` or `var` with no
+-- initialiser wherever it is read, a parameter a call leaves out and a call of
+-- a function that may end without a value (rules/js-surface.rofl), a get that
+-- may find no entry (section 7c). Where an object lacks a property is not
+-- here: the layer does not know what an object lacks.
+may_be_lit[flow](E, undefined) :- free_global[code](E, "undefined", _).
+may_be_lit[flow](E, undefined) :- ast_node[code](E, unary_expression, _), ast_attr[code](E, operator, "void").
+undef_binder[code](D) :- bare_binder[code](D, _, _), ast_child[code](V, declarations, _, D), not ast_child[code](_, left, 0, V).
+may_be_lit[flow](E, undefined) :- undef_binder[code](D), sees_binder[code](E, D), not ast_child[code](D, id, 0, E).
+
 -- A template with no interpolation is a string — `cooked`, which is what it
 -- evaluates to, not `raw`. No arm for an interpolated one: the kernel builds no
 -- strings and a partial answer is wrong where silence is right (w_concat_value).
@@ -747,6 +758,7 @@ sx_kput[surface](X, K, V) :- keyed_on[flow](C, X, P, Put), keyed_store(P, Put, _
 keyed_put[flow](X, K, V) :- sx_kput[surface](X, K, V).
 keyed_get[flow](C, X, K) :- keyed_on[flow](C, X, P, Get), keyed_store(P, _, Get), arg_at[flow](C, 0, A),
                             may_be_lit[flow](A, K), not ast_child[code](C, arguments, 1, _).
+may_be_lit[flow](C, undefined) :- keyed_on[flow](C, _, P, Get), keyed_store(P, _, Get).
 
 keyed_key_at[flow](C, A)    :- keyed_on[flow](C, _, P, Put), keyed_store(P, Put, _), arg_at[flow](C, 0, A).
 keyed_key_at[flow](C, A)    :- keyed_on[flow](C, _, P, Get), keyed_store(P, _, Get), arg_at[flow](C, 0, A).
@@ -865,6 +877,7 @@ keyed_shut_kind(binary_expression).
 keyed_shut_kind(template_literal).
 keyed_shut_kind(call_expression).
 keyed_key_arg[code](C, A)  :- keyed_seen[code](C, _, _, _, _, _, _), ast_child[code](C, arguments, 0, A).
+keyed_key_arg[code](D, A)  :- keyed_drop[code](D, _), ast_child[code](D, arguments, 0, A).
 keyed_want[code](A) :- keyed_remover[code](R, _, _, _), keyed_key_arg[code](R, A).
 keyed_want[code](A) :- keyed_remover[code](_, C, K, _), keyed_read_site[code](C, H, B, F, _),
                        keyed_put_site[code](P, H, _, B, F, J), J < K, keyed_key_arg[code](P, A).
@@ -887,32 +900,38 @@ keyed_src[code](E, X) :- keyed_want[code](E), ast_node[code](E, binary_expressio
 keyed_src[code](E, X) :- keyed_want[code](E), ast_node[code](E, binary_expression, _), ast_attr[code](E, operator, "+"),
                          ast_child[code](E, right, 0, X).
 keyed_src[code](E, X) :- keyed_want[code](E), ast_node[code](E, template_literal, _), ast_child[code](E, expressions, _, X).
--- a call is what its function returns, where the callee names one function of
--- this file, the call graph agrees, and it does not fall off its end
--- (`completes_abruptly`) or return bare
-keyed_ret[code](C, F) :- keyed_want[code](C), ast_node[code](C, call_expression, _), callee_of[code](C, N),
-                         sees_decl[code](N, F), fn_node[code](F).
-keyed_ret[code](C, F) :- keyed_want[code](C), ast_node[code](C, call_expression, _), callee_of[code](C, N),
-                         sees_binder[code](N, D), binder[code](D, _, F, _), fn_node[code](F).
-keyed_has_ret[code](C) :- keyed_ret[code](C, _).
-keyed_src[code](C, R) :- keyed_ret[code](C, F), returns[flow](F, R).
-keyed_src[code](C, B) :- keyed_ret[code](C, F), ast_node[code](F, arrow_function_expression, _), ast_child[code](F, body, 0, B),
-                         not ast_node[code](B, block_statement, _).
-keyed_open[code](C) :- keyed_want[code](C), ast_node[code](C, call_expression, _), not keyed_has_ret[code](C).
-keyed_open[code](C) :- keyed_ret[code](C, F), resolves[code](C, G), G != F.
-keyed_open[code](C) :- keyed_ret[code](C, F), ast_child[code](F, body, 0, B), ast_node[code](B, block_statement, _),
-                       not completes_abruptly[code](B).
-keyed_open[code](C) :- keyed_ret[code](C, F), keyed_bare_return[code](F).
-keyed_bare_return[code](F) :- ast_node[code](R, return_statement, _), not ast_child[code](R, argument, 0, _), nearest_v[flow](F, R).
-keyed_open[code](C) :- keyed_ret[code](C, F), ast_attr[code](F, async, true).
-keyed_open[code](C) :- keyed_ret[code](C, F), ast_attr[code](F, generator, true).
+-- a call is what the functions it calls return: open where one of them is not
+-- followed (`keyed_ret_known`), has an open return (`keyed_ret_open`), returns
+-- a parameter the call leaves out or hands an open argument, or is async or a
+-- generator (the call is a promise or an iterator). Followed are the functions
+-- that return one value; one another file calls left its file, and its own
+-- volume publishes what it found.
+keyed_rets_many[code](F) :- fn_node[code](F), sx_ret_lit[surface](F, V), sx_ret_lit[surface](F, W), V != W.
+keyed_ret_need[code](F)  :- fn_node[code](F), sx_ret_lit[surface](F, _), not keyed_rets_many[code](F).
+keyed_want[code](R) :- keyed_ret_need[code](F), ret_plain[flow](F, R).
+keyed_ret_known[code](F) :- keyed_ret_need[code](F).
+keyed_ret_open[code](F)  :- keyed_ret_need[code](F), ret_plain[flow](F, R), keyed_open[code](R).
+keyed_ret_open[code](F)  :- keyed_ret_need[code](F), ast_attr[code](F, async, true).
+keyed_ret_open[code](F)  :- keyed_ret_need[code](F), ast_attr[code](F, generator, true).
+sx_ret_known[surface](F) :- sx_esc[surface](F), keyed_ret_known[code](F).
+sx_ret_open[surface](F)  :- sx_esc[surface](F), keyed_ret_open[code](F).
+keyed_ret_known[code](F) :- sx_ret_known[surface](F).
+keyed_ret_open[code](F)  :- sx_ret_open[surface](F).
+keyed_open[code](C) :- keyed_want[code](C), ast_node[code](C, call_expression, _), not resolved_site[code](C).
+keyed_open[code](C) :- keyed_want[code](C), ast_node[code](C, call_expression, _), resolves[code](C, F),
+                       not keyed_ret_known[code](F).
+keyed_open[code](C) :- keyed_want[code](C), ast_node[code](C, call_expression, _), resolves[code](C, F),
+                       keyed_ret_open[code](F).
+keyed_open[code](C) :- keyed_want[code](C), callee_of[code](C, N), external_value[flow](N, _).
+keyed_open[code](C) :- keyed_want[code](C), resolves[code](C, F), sx_ret_param[surface](F, I),
+                       not ast_child[code](C, arguments, I, _).
+keyed_src[code](C, A) :- keyed_want[code](C), resolves[code](C, F), sx_ret_param[surface](F, I),
+                         ast_child[code](C, arguments, I, A).
 keyed_fn_need[code](G) :- keyed_param[code](_, G, _).
-keyed_has_arg[code](Q, Pos) :- keyed_arg[code](_, Q, Pos, _).
 keyed_open[code](E) :- keyed_want[code](E), ast_node[code](E, K, _), not keyed_shut_kind(K).
 keyed_open[code](E) :- keyed_want[code](E), ast_node[code](E, binary_expression, _), not ast_attr[code](E, operator, "+").
 keyed_open[code](E) :- keyed_want[code](E), ast_node[code](E, identifier, _), not keyed_bound[code](E).
 keyed_open[code](U) :- keyed_param[code](U, G, _), keyed_escapes[code](G).
-keyed_open[code](U) :- keyed_param[code](U, G, Pos), keyed_called[code](G, Q), not keyed_has_arg[code](Q, Pos).
 keyed_open[code](E) :- keyed_want[code](E), sees_binder[code](E, D), sees_binder[code](L, D),
                        ast_child[code](U, argument, 0, L), ast_node[code](U, update_expression, _).
 keyed_open[code](E) :- keyed_want[code](E), sees_binder[code](E, D), sees_binder[code](L, D), ast_child[code](A, left, 0, L),
@@ -1059,8 +1078,9 @@ keyed_between[code](C, K, Q) :- keyed_again[code](C, K, M), keyed_read_site[code
 keyed_between[code](C, K, Q) :- keyed_again[code](C, K, _), keyed_read_site[code](C, _, B, F, I), ast_child[code](B, F, L, Q),
                                 K < L, L < I.
 keyed_between[code](C, K, Q) :- keyed_again[code](C, K, _), not keyed_get_call[code](C), ast_within[code](C, Q).
-keyed_runs_m[code](M, M) :- keyed_again[code](_, _, M).
-keyed_runs_m[code](G, M) :- keyed_again[code](_, _, M), eff_reaches[code](G, M).
+keyed_target[code](M) :- keyed_again[code](_, _, M).
+keyed_runs_m[code](M, M) :- keyed_target[code](M).
+keyed_runs_m[code](G, M) :- keyed_target[code](M), eff_reaches[code](G, M).
 keyed_hand_need[code](G) :- keyed_runs_m[code](G, _).
 keyed_hand_need[code](G) :- keyed_once_need[code](G).
 keyed_hand_need[code](I) :- keyed_once_need[code](G), class_method_of[flow](CD, G), inst_of[flow](I, CD).
@@ -1127,6 +1147,73 @@ keyed_taken_out[code](V, C, R) :- keyed_out[code](V, C, P, R, K, _), keyed_key[c
 keyed_taken_out[code](V, C, R) :- keyed_out[code](V, C, P, R, K, _), keyed_same_name[code](P, R), keyed_same_name[code](P, C),
                                   not keyed_noisy[code](C, K).
 
+-- PRESENT AT A GET: a put of the same key for certain, in a statement of its
+-- own earlier in the list, ran; nothing between them may have taken it out (a
+-- delete or a clear of the collection by any name whose key may be the same,
+-- `keyed_drop`): none written in the statements between, none in a function a
+-- call between may run, none run by code outside the model that was handed the
+-- collection or such a function, none queued behind an `await`, and on a field
+-- no other run of the method (`keyed_noisy` over the same span). Elsewhere a
+-- get may find no entry and read `undefined`.
+keyed_fill_cand[code](C, P, J) :- keyed_read_site[code](C, H, B, F, I), keyed_call[code](C, H, Get, _, _, _),
+                                  keyed_holder[code](H, Pk), keyed_store(Pk, Put, Get),
+                                  keyed_step[code](P, H, Put, B, F, J), J < I.
+keyed_want[code](A) :- keyed_fill_cand[code](_, P, _), keyed_key_arg[code](P, A).
+keyed_want[code](A) :- keyed_fill_cand[code](C, _, _), keyed_key_arg[code](C, A).
+keyed_want[code](A) :- keyed_drop[code](D, _), keyed_key_arg[code](D, A).
+keyed_fill[code](C, J) :- keyed_fill_cand[code](C, P, J), keyed_key[code](P, K), keyed_key[code](C, K).
+keyed_filled[code](H)  :- keyed_fill_cand[code](C, _, _), keyed_read_site[code](C, H, _, _, _).
+keyed_made[code](H, X) :- keyed_filled[code](H), ast_child[code](H, init, 0, X).
+keyed_made[code](H, X) :- keyed_filled[code](H), ast_child[code](H, right, 0, X).
+keyed_made[code](H, X) :- keyed_filled[code](H), ast_child[code](H, value, 0, X).
+-- a removal in another file is not followed: where the collection left its
+-- file, a call between that reaches another file may remove anything
+keyed_drop[code](D, H) :- keyed_made[code](H, X), keyed_on[flow](D, X, P, Meth), keyed_remove(P, Meth),
+                          ast_node[code](H, _, File), ast_node[code](D, _, File).
+keyed_pair[code](C, D) :- keyed_fill[code](C, _), keyed_read_site[code](C, H, _, _, _), keyed_drop[code](D, H).
+keyed_differs[code](D, C) :- keyed_pair[code](C, D), keyed_key[code](D, K1), keyed_key[code](C, K2), K1 != K2.
+keyed_drop_may[code](C, J, D) :- keyed_fill[code](C, J), keyed_pair[code](C, D), not keyed_differs[code](D, C).
+keyed_drop_fn[code](G) :- keyed_drop_may[code](_, _, D), nearest_v[flow](G, D).
+keyed_target[code](G)  :- keyed_drop_fn[code](G).
+keyed_hand_need[code](X) :- keyed_made[code](_, X).
+-- the span's own code: the statements after the put up to the read, outside
+-- any function written there
+keyed_pspan[code](C, J, S, M) :- keyed_fill[code](C, J), keyed_read_site[code](C, _, B, F, I), ast_child[code](B, F, L, S),
+                                 J < L, L <= I, nearest_v[flow](M, B).
+keyed_pspan_top[code](C, J, S) :- keyed_fill[code](C, J), keyed_read_site[code](C, _, B, F, I), ast_child[code](B, F, L, S),
+                                  J < L, L <= I, not in_fn[code](B).
+keyed_pbetween[code](C, J, Q) :- keyed_pspan[code](C, J, S, M), nearest_v[flow](M, Q), ast_within[code](S, Q),
+                                 Q != C, not ast_within[code](Q, C).
+keyed_pbetween[code](C, J, Q) :- keyed_pspan_top[code](C, J, S), ast_within[code](S, Q), not in_fn[code](Q),
+                                 Q != C, not ast_within[code](Q, C).
+keyed_lost[code](C, J) :- keyed_drop_may[code](C, J, D), keyed_read_site[code](C, _, B, F, I), ast_within[code](S, D),
+                          ast_child[code](B, F, L, S), J < L, L <= I.
+keyed_lost[code](C, J) :- keyed_drop_may[code](C, J, D), nearest_v[flow](G, D), keyed_pbetween[code](C, J, Q),
+                          resolves[code](Q, G).
+keyed_lost[code](C, J) :- keyed_drop_may[code](C, J, D), nearest_v[flow](G, D), keyed_pbetween[code](C, J, Q),
+                          resolves[code](Q, F), eff_reaches[code](F, G).
+keyed_lost[code](C, J) :- keyed_drop_may[code](C, J, D), nearest_v[flow](G, D), keyed_pbetween[code](C, J, Q),
+                          ast_node[code](Q, await_expression, _).
+keyed_lost[code](C, J) :- keyed_drop_may[code](C, J, D), nearest_v[flow](G, D), keyed_pbetween[code](C, J, Q),
+                          ast_node[code](Q, yield_expression, _).
+keyed_outside_at[code](C, J) :- keyed_pbetween[code](C, J, Q), site[code](Q), not resolved_site[code](Q).
+keyed_outside_at[code](C, J) :- keyed_pbetween[code](C, J, Q), resolves[code](Q, G), runs_outside[code](G).
+keyed_outside_at[code](C, J) :- keyed_pbetween[code](C, J, Q), resolves[code](Q, G), eff_reaches[code](G, F), runs_outside[code](F).
+keyed_lost[code](C, J) :- keyed_outside_at[code](C, J), keyed_read_site[code](C, H, _, _, _), keyed_made[code](H, X),
+                          keyed_handed[code](X).
+keyed_leaves[code](C, J) :- keyed_pbetween[code](C, J, Q), resolves[code](Q, G), ast_node[code](C, _, File),
+                            not ast_node[code](G, _, File).
+keyed_leaves[code](C, J) :- keyed_pbetween[code](C, J, Q), resolves[code](Q, G), eff_reaches[code](G, F),
+                            ast_node[code](C, _, File), not ast_node[code](F, _, File).
+keyed_lost[code](C, J) :- keyed_leaves[code](C, J), keyed_read_site[code](C, H, _, _, _), keyed_made[code](H, X),
+                          sx_esc[surface](X).
+keyed_lost[code](C, J) :- keyed_outside_at[code](C, J), keyed_drop_may[code](C, J, D), nearest_v[flow](G, D),
+                          keyed_open_to[code](G).
+keyed_again[code](C, J, M) :- keyed_fill[code](C, J), keyed_shared[code](C, H), keyed_read_site[code](C, H, B, _, _),
+                              ast_child[code](M, body, 0, B).
+keyed_lost[code](C, J) :- keyed_fill[code](C, J), keyed_noisy[code](C, J).
+keyed_present[code](C) :- keyed_fill[code](C, J), not keyed_lost[code](C, J).
+
 -- THE FLOW READS A COLLECTION WHOLE: a get, a walk, a forEach see every put of
 -- a key of the value they read. The order above judges the flow (which calls
 -- reach what, which keys are one), so what it rules out cannot feed the flow
@@ -1177,6 +1264,7 @@ read_holds_node[flow](E, N) :- keyed_holds[flow](E, V), may_be_node[flow](V, N).
 read_holds_lit[flow](E, L)  :- may_be_lit[flow](E, L), not keyed_viewed[flow](E).
 read_holds_lit[flow](E, L)  :- keyed_holds[flow](E, V), may_be_lit[flow](V, L).
 read_holds_lit[flow](E, K)  :- keyed_holds_key[flow](E, K).
+read_holds_lit[flow](C, undefined) :- keyed_read[flow](C, _), not keyed_present[code](C).
 
 -- =========================================================================
 -- 8. READING A PROPERTY OFF A VALUE

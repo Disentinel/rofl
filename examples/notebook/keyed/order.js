@@ -191,3 +191,11 @@ class Loose {
   }
 }
 new Loose();
+
+function opt(a, b) { use('undef.param', b); }
+opt(1);
+function nothing() { }
+use('undef.ret', nothing());
+let unset;
+use('undef.let', unset);
+use('undef.void', void 0);
