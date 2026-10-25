@@ -21,6 +21,16 @@ use std::io::Write;
 use std::path::Path;
 
 use crate::rofl_parse;
+
+#[cfg(feature = "net")]
+fn signed_in(issuer: &str) -> bool {
+    crate::login::signed_in(issuer)
+}
+
+#[cfg(not(feature = "net"))]
+fn signed_in(_: &str) -> bool {
+    false
+}
 use crate::session::Session;
 use crate::term::{Term, TermK};
 
@@ -177,6 +187,8 @@ impl Session {
                     None => Vec::new(),
                 };
                 let got = wanted.into_iter().map(|(scheme, how, n, env)| match std::env::var(&env).ok().filter(|v| !v.is_empty() && crate::brk!("http_key_ignored" => false; true)) {
+                    _ if how == "login" && signed_in(&n) => Ok((how, n, String::new())),
+                    _ if how == "login" => Err(format!("declared, not connected: no one has signed in to {n} here (the key of {scheme} for {adapter}): a person runs `rofl adapter login {n}`")),
                     Some(v) => Ok((how, n, v)),
                     None => Err(format!("declared, not connected: the environment has no {env} (the key of {scheme} for {adapter})")),
                 }).collect();
