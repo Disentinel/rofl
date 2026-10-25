@@ -62,6 +62,10 @@ function keys(name) {
   m.set(name, 2);
   m.delete(name);
   use('keys.param', m.get(name));
+  let id = 'r';
+  m.set(id, 3);
+  m.delete('r');
+  use('keys.let', m.get(id));
 }
 keys('n');
 
@@ -100,6 +104,12 @@ class Registry {
     this.noisy(true);
     use('field.noisy', this.byName.get('w'));
   }
+  quiet() {
+    this.byName.set('q', 20);
+    this.byName.delete('q');
+    use('field.note', 0);
+    use('field.quiet', this.byName.get('q'));
+  }
   later() { this.byName.set('z', 16); }
   peek() { use('field.method', this.byName.get('a')); use('field.public', this.byName.get('z')); }
 }
@@ -108,6 +118,20 @@ reg.drop('x');
 reg.later();
 reg.peek();
 reg.noisy(false);
+reg.quiet();
+
+const hooks = [];
+class Open {
+  constructor() { this.m = new Map(); hooks.push(this); }
+  refill() { this.m.set('o', 21); }
+  run() {
+    this.m.set('o', 21);
+    this.m.delete('o');
+    hooks.forEach((h) => h.refill());
+    use('open.after', this.m.get('o'));
+  }
+}
+new Open().run();
 
 class Cache {
   items = new Map();

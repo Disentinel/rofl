@@ -19,9 +19,13 @@ code:
 > `private` method in keyed/order_ts.ts). In any list that
 > reads it, a method's body too, a put of the same key, a delete of it or a
 > clear, in a statement of its own between them, takes an earlier put out; the
-> same key is one literal, one `const` or one parameter nothing assigns. On a
-> field, outside the constructor, a call between them may run the method again
-> and put the value back (`noisy`), so nothing is taken out. A delete under an
+> same key is one literal for certain (one value, built of literals alone: `id`
+> is `'r'`, and `name` in `keys` is `'n'`, its one call says so), one `const` or
+> one parameter nothing assigns. On a field,
+> outside the constructor, a call between them that may run the method again
+> puts the value back (`noisy`): `this.noisy(true)` calls it, and `Open` hands
+> its instance to code the model does not resolve, so `hooks.forEach` may. A
+> call that reaches neither, `use('field.note', 0)`, takes nothing back. A delete under an
 > `if` may not have run, so the value stays. A put in a callback (`add`,
 > `forEach`, `then`), in a public method, or a Map declared outside the loop
 > that reads and writes it (`tally`), leaves the order unknown, and the model
@@ -36,7 +40,7 @@ code:
 ```datalog
 seen(Tag, V) :- call_site[code](C, _), callee_of[code](C, U), ast_name[code](U, "use"),
                 arg_at[flow](C, 0, T), ast_value[code](T, Tag),
-                arg_at[flow](C, 1, A), may_be_lit[flow](A, V).
+                arg_at[flow](C, 1, A), read_holds_lit[flow](A, V).
 
 ? seen(Tag, V)
 
@@ -49,12 +53,14 @@ never seen("batch.before", 5)
 never seen("calls.before", 9)
 never seen("keys.const", 1)
 never seen("keys.param", 2)
+never seen("keys.let", 3)
 never seen("walk.of", 2)
 never seen("walk.of", 3)
 never seen("walk.each", 2)
 never seen("field.early", 12)
 never seen("field.dropped", 13)
 never seen("field.named", 14)
+never seen("field.quiet", 20)
 never seen("prop.ctor", 17)
 never seen("ts.early", 18)
 ```
