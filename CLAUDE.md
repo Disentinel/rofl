@@ -144,9 +144,28 @@ Decided by the owner; each is a finding, read it before arguing with it.
   `derived_by` when something asks. A world that asks `asks(R)` runs only the
   rules R needs, and a question outside the cone is refused, not answered
   wrong (docs/demand-cones.md).
+- **A corpus lives as volumes** (owner, 2026-10-25). A file is scanned into a
+  volume of its own, cooled to disk, and a thin `[surface]` of what escapes it
+  stays beside it. It is to be the engine's default behaviour, not a command
+  of its own (owner, 2026-10-25); it is not the default yet: before a run over more files than one
+  heap holds, read docs/cli.md, *A corpus larger than one heap*, for the parts
+  that exist and how to run them, and say which one the run uses.
 
 What changed for an agent, and the known gaps, are in docs/releases/1.5.md
 (and 1.4.md, 1.3.md, 1.2.md, 1.1.md before it).
+
+## Where an agent finds a feature
+
+docs/cli.md is the agent's manual of the engine: every verb, the kept worlds,
+the exit codes, the `rofl serve` protocol, the paths for a corpus larger than
+one heap and what `hot:` on stderr means. guide/ is the book for a person using
+`rofl-nb` (guide/AGENTS.md for an agent in another project). docs/ holds the
+design decisions; README.md, *What is in the tree*, maps the rest.
+
+**A feature is done when an agent reading only this file and docs/cli.md finds
+it**: its command, or one line saying it has none yet and which harness drives
+it. A capability that lives only in a script's header, a design note or a
+finding is not findable, and the next agent builds around it.
 
 ## Testing has a hard limit
 
