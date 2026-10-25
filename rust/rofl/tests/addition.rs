@@ -615,6 +615,16 @@ fn an_aggregate_over_what_did_not_change_fires_on_what_grew() {
     }
 }
 
+/// A fact that stood and is given a lower firing lowers what rests on it: an aggregate is sealed again at the groups of
+/// the members that rest on it, not whole (a cell lists its members' heights).
+#[test]
+fn a_member_standing_lower_seals_again_only_its_group() {
+    let groups: String = (2..=20).map(|k| format!("grp(g{k}). in(g{k}, x{k}). s(x{k}).\n")).collect();
+    let program = format!("edb(e). edb(s). edb(in). edb(grp).\ne(a, b). e(b, c). e(c, d). s(a). grp(g1). in(g1, d).\n{groups}reach(X) :- s(X).\nreach(Y) :- reach(X), e(X, Y).\nmember(G, X) :- in(G, X), reach(X).\ncnt(G, N) :- grp(G), N is count(X : member(G, X)).\n");
+    let d = one_addition(&program, Op::Assert("s(c).".into()));
+    assert!(d.stacked_cells > 0 && d.stacked_cells <= 2, "{d:?}");
+}
+
 /// Programs of joins, recursion and negation only: every negation the fine path keeps, its withdrawals and what they
 /// take with them through recursion derived again.
 fn program_neg(r: &mut Rng) -> Vec<String> {
