@@ -357,3 +357,63 @@ to about 0.15 GB. The peak, 2.9 GB, is not lowered: it is the round that adds
 14 files at once. Adding them one a round lowers it to 1.4 GB, the largest file
 alone, but each small file added to that world costs about 15 s
 (`f_a_walk_goes_cold_between_rounds`).
+
+## A corpus larger than one heap
+
+**Every verb above holds one world on one heap.** `rofl scan` writes one file
+of facts, and `rofl ask`, `rofl load` and `rofl serve FILE...` load it whole
+and evaluate it whole; only the finished world is kept as a volume. At the
+reference scale (CLAUDE.md, *The goal*) that is the 23 GB the owner measured.
+A run over more files than fit one heap does not go this way without saying so.
+
+**The design the owner agreed** (2026-10-25): a file is scanned into a volume of
+its own, the volume is cooled to disk and stays there until a question needs
+it, and beside it lives the file's `[surface]`, a thin volume of what escapes
+the file (`rules/js-surface.rofl`). The design is in
+docs/volumes-and-residency.md (why a corpus can stay cold),
+docs/surface-split.md (what crosses files, the book, the driver) and
+docs/staged-evaluation.md (stages, kept volumes, resume, the planner).
+**No verb does it yet**: there is no `rofl` command that scans into a volume
+per file, cools it and keeps its surface. What exists are its parts and the
+harnesses that drive them, each over `rofl serve`:
+
+| what | how to run it | measured | status |
+|---|---|---|---|
+| a volume per file, cooled, the surface resident (the driver) | `runtime/split.ts`; `node --experimental-strip-types scripts/vscode_curve.ts DIR N split [--hot K]` over a corpus of `scripts/vscode_corpus.ts`; `npm run test:split` is its gate | 500 vscode files: the whole world's answers exactly, 2.0 GB against 2.5 GB, but 6 335 s against 40 s: each volume reads ~10% of the surface and is evaluated again whole 7.6 times (surface-split.md §7) | correct, not an economy; what it needs next is in §7 |
+| the ingest loop: parse a batch, evaluate, cool volumes under pressure | `node --experimental-strip-types runtime/ingest.ts ROOT SUB N [--batch K] [--pressure F]` (boot and `rules/ingest.rofl`, no JS model) | eslint, 1 426 files: 29.9 s, 1 290 volumes cooled to 200 MB, the world never above 1.94 M facts (docs/scaling-a-corpus.md) | the AST only; the JS model is not evaluated |
+| stages that fit a memory limit, each a process over the last volume | `node --experimental-strip-types scripts/stage_plan.ts FACTS LIMIT_MB [--files N] [--run] [--check]` | 100 vscode files in 4 stages equal the whole; a ring of files importing one another is one stage (vscode 223 files) | built (staged-evaluation.md, item 4) |
+| an evaluation in pieces of a fixed time, each a process resuming the last volume | `node --experimental-strip-types scripts/vscode_pieces.ts FACTS N MS [--state FILE]` | the same state as one run | built (item 3) |
+| a question added above an evaluated lower stage | `node --experimental-strip-types scripts/stage_by_asks.ts FACTS N LOWER,... [kept\|volume]` | 0.38 s against 5.2 s whole at 20 files | built |
+| files added to an evaluated world one by one | `node --experimental-strip-types scripts/ingest_by_delta.ts FACTS N` | byte for byte the whole world; ~3x a file's share at 20 files | built |
+| a level evaluated at a time, other workers' facts admitted between (for workers) | `rofl serve`: `evaluate` with `wall`, `admit`, `evaluate_on` (below), tests/level_wall.rs | 4 workers over vscode 250: the union is the whole world, the slowest worker 12.5 s against 22.8 s | built; the master and shared volumes are the thread *first evaluation in 5 minutes* |
+
+A scan already lies per file: a world that asks for its own input
+(`scan_request`, above) keeps each file's scan under `~/.cache/rofl/scans`,
+stamped by its bytes. `rofl scan DIR --out F` does not; it writes one file.
+
+Before a run of more than a few hundred files: say which of these it uses, and
+if it uses none, that its world is one heap and how large that heap will be:
+the JS model over vscode is linear in the base facts, 0.92 GB at 250 files
+without a question, so ~12 GB over the 4 308 files of subset S
+(w_reference_scale_in_five_minutes in facts/findings.rofl).
+
+## `rofl serve`, the protocol
+
+`rofl serve` reads one JSON request a line and answers one a line. The list of
+operations and their fields is the header of
+`rust/rofl/src/bin/rofl/serve.rs`; `runtime/port.ts` is the TypeScript client
+every harness above uses. Besides the question verbs: `open` (a seed, a kept
+image or a volume), `fresh`, `fork`, `load` and `assert` (by delta), `retract`,
+`evaluate` and `resume`, `keep` (an image or, with `volume`, a volume),
+`cool`, `cool_many` and `reheat` (a volume by its key prefix, to disk and
+back), `view` (what a volume's world wrote above its base), `evaluate` with
+`wall`, `evaluate_on` and `admit` (a level at a time), `rows`, `fact`,
+`firings`, `cell`, `books`, `holding` (the store read piece by piece),
+`inbox` and `dispatch` (adapters, docs/intents.md), `tick`, `state`, `facts`,
+`close`. Any request may carry `"limit":{"ms":n,"bytes":n}`.
+
+**`hot:` on stderr** is the engine naming a rule that reads far more rows than
+it concludes, while it runs (`engine/cost.rs`): the rule, the premise it is
+reading and the binding. It is a diagnostic for the rule's author, not an
+error; docs/optimising-a-world.md is what to do about it. `evaluate` returns
+the same as `hot`.

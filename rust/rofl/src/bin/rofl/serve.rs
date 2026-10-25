@@ -68,6 +68,24 @@
 //!                                                        world opens evaluated (`open` with `keptPath`); with
 //!                                                        "volume":true, as a volume (`open` with `volumePath`)
 //!   {"op":"close","session":2}
+//!   {"op":"fresh","budget":n}                  -> {"session":n}: an empty world, no seed; `load` fills it
+//!   {"op":"facts","session":2}                 -> {"facts":n,"tick":t}
+//!
+//! A LEVEL AT A TIME, for workers that meet between levels (tests/level_wall.rs):
+//!   {"op":"evaluate","session":2,"wall":L}     -> evaluated up to level L; "next" is the level it stopped before
+//!   {"op":"admit","session":2,"rofl":"..."}    -> {"admitted":n}: facts of the wall's level into the stopped
+//!                                                        world, fired on by every rule active so far
+//!   {"op":"evaluate_on","session":2,"wall":L}  -> goes on from where the last wall stopped it
+//!
+//! VOLUMES, a key prefix to disk and back (runtime/ingest.ts, runtime/split.ts):
+//!   {"op":"cool","session":2,"prefix":"na","path":"v.vol"} -> {"facts","bytes","path","books"}: the facts whose
+//!                                                        key starts with the prefix written and dropped; with
+//!                                                        "books":[...] (and "keep":[...]) only those books go,
+//!                                                        a `[surface]` beside them stays
+//!   {"op":"cool_many","session":2,"volumes":[{"prefix","path"},...]} -> {"volumes":[...]}: many in one pass
+//!   {"op":"reheat","session":2,"path":"v.vol"} -> {"admitted":n,"evaluated":b}: a cooled volume back, by delta
+//!   {"op":"view","session":2,"prefix":"na","books":[...],"rels":[...]} -> {"facts","names"}: what a volume's world
+//!                                                        wrote above its base, and the names it subscribes by
 //!   any op on a session may carry "limit":{"ms":n,"bytes":n}: past n milliseconds, or n live bytes in this
 //!   process, its evaluation stops as at the step budget, and the answer says "stopped":"clock"|"heap"
 //!

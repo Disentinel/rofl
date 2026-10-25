@@ -66,3 +66,11 @@ notebook's own sentences onto `rofl:visual/graph.rofl.md` and end the cell
 with `draw graph`. The words, the layouts and the steps are in
 [docs/schemas.md](../docs/schemas.md); every kind of picture is in
 [DRAWING.md](DRAWING.md).
+
+## Beyond a notebook
+
+A question about code from the command line, with no notebook, is
+`rofl ask`, `rofl why` and `rofl whynot` ([ASKING.md](ASKING.md)). Every verb,
+the worlds it keeps, its exit codes and the `rofl serve` protocol are in
+[docs/cli.md](../docs/cli.md). A world is evaluated on one heap: before
+pointing it at thousands of files, read *A corpus larger than one heap* there.
