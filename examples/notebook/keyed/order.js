@@ -66,7 +66,11 @@ function keys(name) {
   m.set(id, 3);
   m.delete('r');
   use('keys.let', m.get(id));
+  m.set(pick(), 4);
+  m.delete('s');
+  use('keys.called', m.get('s'));
 }
+function pick() { return 's'; }
 keys('n');
 
 function walks() {
@@ -132,6 +136,27 @@ class Open {
   }
 }
 new Open().run();
+
+class Later {
+  constructor() { this.pending = new Map(); }
+  async run() {
+    this.pending.set('a', 22);
+    this.pending.delete('a');
+    await null;
+    use('await.once', this.pending.get('a'));
+  }
+  async twice(slow) {
+    this.pending.set('t', 23);
+    if (slow) await null;
+    this.pending.delete('t');
+    await null;
+    use('await.twice', this.pending.get('t'));
+  }
+}
+const lazy = new Later();
+lazy.run();
+lazy.twice(false);
+lazy.twice(true);
 
 class Cache {
   items = new Map();

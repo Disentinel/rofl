@@ -271,9 +271,12 @@ unit_concludes("rules/js-dataflow.rofl", keyed_param).
 unit_concludes("rules/js-dataflow.rofl", keyed_bound).
 unit_concludes("rules/js-dataflow.rofl", keyed_src).
 unit_concludes("rules/js-dataflow.rofl", keyed_arg).
+unit_concludes("rules/js-dataflow.rofl", keyed_ret).
+unit_concludes("rules/js-dataflow.rofl", keyed_has_ret).
+unit_concludes("rules/js-dataflow.rofl", keyed_open).
+unit_concludes("rules/js-dataflow.rofl", keyed_bare_return).
 unit_concludes("rules/js-dataflow.rofl", keyed_fn_need).
 unit_concludes("rules/js-dataflow.rofl", keyed_has_arg).
-unit_concludes("rules/js-dataflow.rofl", keyed_open).
 unit_concludes("rules/js-dataflow.rofl", keyed_upstream).
 unit_concludes("rules/js-dataflow.rofl", keyed_lits).
 unit_concludes("rules/js-dataflow.rofl", keyed_key).
@@ -315,6 +318,10 @@ unit_concludes("rules/js-dataflow.rofl", keyed_hand_need).
 unit_concludes("rules/js-dataflow.rofl", keyed_handed).
 unit_concludes("rules/js-dataflow.rofl", keyed_open_to).
 unit_concludes("rules/js-dataflow.rofl", keyed_noisy).
+unit_concludes("rules/js-dataflow.rofl", keyed_once_need).
+unit_concludes("rules/js-dataflow.rofl", keyed_called_at).
+unit_concludes("rules/js-dataflow.rofl", keyed_looped).
+unit_concludes("rules/js-dataflow.rofl", keyed_many).
 unit_concludes("rules/js-dataflow.rofl", keyed_out).
 unit_concludes("rules/js-dataflow.rofl", keyed_taken_out).
 unit_concludes("rules/js-dataflow.rofl", keyed_read).

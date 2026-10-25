@@ -854,13 +854,16 @@ keyed_step[code](C, H, Meth, B, F, I) :- keyed_seen[code](C, H, Meth, S, B, F, I
 -- the flow gives it that one value and nothing outside the flow reaches it:
 -- back through its sources (a binding's initialiser and assignments, a
 -- parameter's arguments where every call of its function is known, the parts
--- of `+` and of a template) every leaf is a literal (`keyed_open` otherwise).
+-- of `+` and of a template, what a call's functions in this file return) every
+-- leaf is a literal (`keyed_open` otherwise). A function of another file is
+-- open: its returns are not published as closed (no `may_be_open` surface).
 edb(keyed_shut_kind).
 keyed_shut_kind(string_literal).
 keyed_shut_kind(numeric_literal).
 keyed_shut_kind(identifier).
 keyed_shut_kind(binary_expression).
 keyed_shut_kind(template_literal).
+keyed_shut_kind(call_expression).
 keyed_key_arg[code](C, A)  :- keyed_seen[code](C, _, _, _, _, _, _), ast_child[code](C, arguments, 0, A).
 keyed_want[code](A) :- keyed_remover[code](R, _, _, _), keyed_key_arg[code](R, A).
 keyed_want[code](A) :- keyed_remover[code](_, C, K, _), keyed_read_site[code](C, H, B, F, _),
@@ -884,6 +887,25 @@ keyed_src[code](E, X) :- keyed_want[code](E), ast_node[code](E, binary_expressio
 keyed_src[code](E, X) :- keyed_want[code](E), ast_node[code](E, binary_expression, _), ast_attr[code](E, operator, "+"),
                          ast_child[code](E, right, 0, X).
 keyed_src[code](E, X) :- keyed_want[code](E), ast_node[code](E, template_literal, _), ast_child[code](E, expressions, _, X).
+-- a call is what its function returns, where the callee names one function of
+-- this file, the call graph agrees, and it does not fall off its end
+-- (`completes_abruptly`) or return bare
+keyed_ret[code](C, F) :- keyed_want[code](C), ast_node[code](C, call_expression, _), callee_of[code](C, N),
+                         sees_decl[code](N, F), fn_node[code](F).
+keyed_ret[code](C, F) :- keyed_want[code](C), ast_node[code](C, call_expression, _), callee_of[code](C, N),
+                         sees_binder[code](N, D), binder[code](D, _, F, _), fn_node[code](F).
+keyed_has_ret[code](C) :- keyed_ret[code](C, _).
+keyed_src[code](C, R) :- keyed_ret[code](C, F), returns[flow](F, R).
+keyed_src[code](C, B) :- keyed_ret[code](C, F), ast_node[code](F, arrow_function_expression, _), ast_child[code](F, body, 0, B),
+                         not ast_node[code](B, block_statement, _).
+keyed_open[code](C) :- keyed_want[code](C), ast_node[code](C, call_expression, _), not keyed_has_ret[code](C).
+keyed_open[code](C) :- keyed_ret[code](C, F), resolves[code](C, G), G != F.
+keyed_open[code](C) :- keyed_ret[code](C, F), ast_child[code](F, body, 0, B), ast_node[code](B, block_statement, _),
+                       not completes_abruptly[code](B).
+keyed_open[code](C) :- keyed_ret[code](C, F), keyed_bare_return[code](F).
+keyed_bare_return[code](F) :- ast_node[code](R, return_statement, _), not ast_child[code](R, argument, 0, _), nearest_v[flow](F, R).
+keyed_open[code](C) :- keyed_ret[code](C, F), ast_attr[code](F, async, true).
+keyed_open[code](C) :- keyed_ret[code](C, F), ast_attr[code](F, generator, true).
 keyed_fn_need[code](G) :- keyed_param[code](_, G, _).
 keyed_has_arg[code](Q, Pos) :- keyed_arg[code](_, Q, Pos, _).
 keyed_open[code](E) :- keyed_want[code](E), ast_node[code](E, K, _), not keyed_shut_kind(K).
@@ -1015,7 +1037,7 @@ keyed_put_before[code](V, C) :- keyed_born_read[code](C, H, I), keyed_put_of[cod
 -- a call there runs what it resolves to and all that calls; code outside the
 -- model (a call nothing resolves, or one that reaches such a call,
 -- `runs_outside`) reaches the method only through what it was handed or what
--- left the file: the instance, a function that runs the method, an entry. An `await` or a `yield` lets anything run.
+-- left the file: the instance, a function that runs the method, an entry.
 keyed_remover[code](R, C, K, Meth) :- keyed_read_site[code](C, H, B, F, I), keyed_step[code](R, H, Meth, B, F, K),
                                       K < I, keyed_holder[code](H, P), keyed_remove(P, Meth).
 keyed_remover[code](R, C, K, Meth) :- keyed_read_site[code](C, H, B, F, I), keyed_step[code](R, H, Meth, B, F, K),
@@ -1040,6 +1062,8 @@ keyed_between[code](C, K, Q) :- keyed_again[code](C, K, _), not keyed_get_call[c
 keyed_runs_m[code](M, M) :- keyed_again[code](_, _, M).
 keyed_runs_m[code](G, M) :- keyed_again[code](_, _, M), eff_reaches[code](G, M).
 keyed_hand_need[code](G) :- keyed_runs_m[code](G, _).
+keyed_hand_need[code](G) :- keyed_once_need[code](G).
+keyed_hand_need[code](I) :- keyed_once_need[code](G), class_method_of[flow](CD, G), inst_of[flow](I, CD).
 keyed_hand_need[code](I) :- keyed_runs_m[code](G, _), class_method_of[flow](CD, G), inst_of[flow](I, CD).
 keyed_handed[code](V) :- keyed_hand_need[code](V), sx_esc[surface](V).
 keyed_handed[code](V) :- keyed_hand_need[code](V), may_be_node[flow](A, V), arg_at[flow](Q, _, A), not resolved_site[code](Q).
@@ -1052,8 +1076,33 @@ keyed_open_to[code](M) :- keyed_runs_m[code](G, M), class_method_of[flow](CD, G)
 keyed_noisy[code](C, K) :- keyed_between[code](C, K, Q), keyed_again[code](C, K, M), resolves[code](Q, M).
 keyed_noisy[code](C, K) :- keyed_between[code](C, K, Q), keyed_again[code](C, K, M), resolves[code](Q, G),
                            eff_reaches[code](G, M).
-keyed_noisy[code](C, K) :- keyed_between[code](C, K, Q), ast_node[code](Q, await_expression, _).
-keyed_noisy[code](C, K) :- keyed_between[code](C, K, Q), ast_node[code](Q, yield_expression, _).
+-- An `await` or a `yield` hands the turn to whatever is queued; only another
+-- run of the method puts its own put back, so it is noisy where the method may
+-- run more than once (`keyed_many`): a known call of it from two sites, from a
+-- loop, from a function that may itself run more than once, from itself, or a
+-- call nobody knows (handed out, an entry, the instance handed out). Two runs
+-- one after the other count as two: the model has no order between the runs
+-- of a function, so it cannot tell them from two that overlap.
+keyed_noisy[code](C, K) :- keyed_between[code](C, K, Q), ast_node[code](Q, await_expression, _),
+                           keyed_again[code](C, K, M), keyed_many[code](M).
+keyed_noisy[code](C, K) :- keyed_between[code](C, K, Q), ast_node[code](Q, yield_expression, _),
+                           keyed_again[code](C, K, M), keyed_many[code](M).
+keyed_once_need[code](M) :- keyed_between[code](C, K, Q), ast_node[code](Q, await_expression, _), keyed_again[code](C, K, M).
+keyed_once_need[code](M) :- keyed_between[code](C, K, Q), ast_node[code](Q, yield_expression, _), keyed_again[code](C, K, M).
+keyed_once_need[code](F) :- keyed_called_at[code](_, Q), nearest_fn[code](F, Q).
+keyed_called_at[code](G, Q) :- keyed_once_need[code](G), resolves[code](Q, G).
+keyed_looped[code](Q) :- keyed_called_at[code](_, Q), ast_within[code](Lp, Q), ast_node[code](Lp, K, _),
+                         eff_loop_kind(K), nearest_fn[code](F, Q), ast_within[code](F, Lp).
+keyed_looped[code](Q) :- keyed_called_at[code](_, Q), not in_fn[code](Q), ast_within[code](Lp, Q),
+                         ast_node[code](Lp, K, _), eff_loop_kind(K).
+keyed_many[code](G) :- keyed_called_at[code](G, Q1), keyed_called_at[code](G, Q2), Q1 != Q2.
+keyed_many[code](G) :- keyed_called_at[code](G, Q), keyed_looped[code](Q).
+keyed_many[code](G) :- keyed_called_at[code](G, Q), nearest_fn[code](F, Q), keyed_many[code](F).
+keyed_many[code](G) :- keyed_once_need[code](G), eff_reaches[code](G, G).
+keyed_many[code](G) :- keyed_once_need[code](G), keyed_handed[code](G).
+keyed_many[code](G) :- keyed_once_need[code](G), entry_point[code](G), not class_method_of[flow](_, G).
+keyed_many[code](G) :- keyed_once_need[code](G), class_method_of[flow](CD, G), not ast_attr[code](G, accessibility, "private"),
+                       inst_of[flow](I, CD), keyed_handed[code](I).
 keyed_noisy[code](C, K) :- keyed_between[code](C, K, Q), site[code](Q), not resolved_site[code](Q),
                            keyed_again[code](C, K, M), keyed_open_to[code](M).
 keyed_noisy[code](C, K) :- keyed_between[code](C, K, Q), resolves[code](Q, G), runs_outside[code](G),

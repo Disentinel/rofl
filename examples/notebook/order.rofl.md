@@ -20,12 +20,16 @@ code:
 > reads it, a method's body too, a put of the same key, a delete of it or a
 > clear, in a statement of its own between them, takes an earlier put out; the
 > same key is one literal for certain (one value, built of literals alone: `id`
-> is `'r'`, and `name` in `keys` is `'n'`, its one call says so), one `const` or
+> is `'r'`, `pick()` is `'s'`, and `name` in `keys` is `'n'`, its one call
+> says so), one `const` or
 > one parameter nothing assigns. On a field,
 > outside the constructor, a call between them that may run the method again
 > puts the value back (`noisy`): `this.noisy(true)` calls it, and `Open` hands
 > its instance to code the model does not resolve, so `hooks.forEach` may. A
-> call that reaches neither, `use('field.note', 0)`, takes nothing back. A delete under an
+> call that reaches neither, `use('field.note', 0)`, takes nothing back. An
+> `await` puts back only through another run of the method: `Later.run` has one
+> call and runs once, `twice` has two, and the second puts 23 back before the
+> first reads it. A delete under an
 > `if` may not have run, so the value stays. A put in a callback (`add`,
 > `forEach`, `then`), in a public method, or a Map declared outside the loop
 > that reads and writes it (`tally`), leaves the order unknown, and the model
@@ -54,6 +58,7 @@ never seen("calls.before", 9)
 never seen("keys.const", 1)
 never seen("keys.param", 2)
 never seen("keys.let", 3)
+never seen("keys.called", 4)
 never seen("walk.of", 2)
 never seen("walk.of", 3)
 never seen("walk.each", 2)
@@ -61,6 +66,7 @@ never seen("field.early", 12)
 never seen("field.dropped", 13)
 never seen("field.named", 14)
 never seen("field.quiet", 20)
+never seen("await.once", 22)
 never seen("prop.ctor", 17)
 never seen("ts.early", 18)
 ```
