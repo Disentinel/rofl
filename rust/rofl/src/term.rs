@@ -519,14 +519,17 @@ impl Heap {
     }
     /// The heap a volume holds, mapped; its names are checked to be text, cut where one ends.
     pub fn read_volume(r: &mut VolR) -> Result<Heap, String> {
-        let names = Names { buf: r.arena()?, ends: r.arena()?, slots: r.arena()? };
-        let text = std::str::from_utf8(&names.buf).map_err(|_| "a volume holds a name that is not text")?;
+        // what the base holds unchanged its sum vouches for: the names after it are checked
+        let ((buf, sure), (ends, sure_ends)) = (r.arena_vouched::<u8>()?, r.arena_vouched::<u32>()?);
+        let names = Names { buf, ends, slots: r.arena()? };
+        std::str::from_utf8(&names.buf[sure..]).map_err(|_| "a volume holds a name that is not text")?;
         let mut at = 0;
-        for &e in names.ends.iter() {
-            if (e as usize) < at || !text.is_char_boundary(e as usize) {
+        for &e in &names.ends[(sure_ends / 4).saturating_sub(1)..] {
+            let e = e as usize;
+            if e < at || e > names.buf.len() || (e > sure && e < names.buf.len() && (names.buf[e] as i8) < -0x40) {
                 return Err("a volume holds a name cut inside a character".into());
             }
-            at = e as usize;
+            at = e;
         }
         let funcs = Funcs { funcs: r.arena()?, args: r.arena()?, cons: r.arena()?, cons_n: r.u64()? as usize };
         let n0 = names.len() as Sym;

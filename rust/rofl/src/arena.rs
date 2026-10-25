@@ -635,6 +635,8 @@ pub struct VolR {
     i: usize,
     end: usize,
     base: Option<Rc<Base>>,
+    /// how many leading bytes of the arena read last are the base's own, unchanged
+    vouched: usize,
 }
 
 /// The base volume an overlay refers to, mapped, and its file, which a stitched span maps again.
@@ -660,7 +662,7 @@ pub fn file_id(b: &[u8]) -> Option<u64> {
 impl VolR {
     pub fn new(map: Rc<Region>, from: usize) -> VolR {
         let end = map.len().saturating_sub(8);
-        VolR { map, i: from, end, base: None }
+        VolR { map, i: from, end, base: None, vouched: 0 }
     }
     /// An overlay's reader: its references read from `base`.
     pub fn with_base(mut self, base: Rc<Base>) -> VolR {
@@ -700,18 +702,20 @@ impl VolR {
     pub fn arena<T: Pod>(&mut self) -> Result<Arena<T>, String> {
         self.arena_checked(|_| true)
     }
+    /// An arena and how many of its leading bytes are its base's, unchanged: what the base's sum vouches for.
+    pub fn arena_vouched<T: Pod>(&mut self) -> Result<(Arena<T>, usize), String> {
+        let a = self.arena()?;
+        Ok((a, self.vouched))
+    }
     /// An arena of T, after `ok` approved its words: for a T not every bit pattern of which is a value.
     pub fn arena_checked<T: Pod>(&mut self, ok: impl Fn(&[u32]) -> bool) -> Result<Arena<T>, String> {
+        self.vouched = 0;
         let len = self.u64()?;
+        // of a reference only the values the overlay writes are checked: the span of the base is the base's bytes,
+        // which its sum vouches for as it does for an argument index's entries
         if len & REF != 0 {
-            let a = if len & SPLICE != 0 { self.spliced::<T>((len & !(REF | SPLICE)) as usize)? } else { self.reference::<T>((len & !REF) as usize)? };
-            let b = bytes_of(&a);
-            // SAFETY: checked aligned for u32, and u32 is Pod.
-            let words = (b.as_ptr() as usize % 4 == 0).then(|| unsafe { std::slice::from_raw_parts(b.as_ptr() as *const u32, b.len() / 4) });
-            if std::mem::size_of::<T>() % 4 == 0 && !words.is_some_and(ok) {
-                return Err("a volume holds a value of no kind".into());
-            }
-            return Ok(a);
+            let ok = |b: &[u8]| std::mem::size_of::<T>() % 4 != 0 || words_of(b).is_some_and(&ok);
+            return if len & SPLICE != 0 { self.spliced::<T>((len & !(REF | SPLICE)) as usize, ok) } else { self.reference::<T>((len & !REF) as usize, ok) };
         }
         self.inline_arena(len as usize, ok)
     }
@@ -740,10 +744,13 @@ impl VolR {
         self.inline_arena(len as usize, |_| true)
     }
     /// An arena of `len` values the overlay names in its base: a span of the base, values over it, bytes after it.
-    fn reference<T: Pod>(&mut self, len: usize) -> Result<Arena<T>, String> {
+    fn reference<T: Pod>(&mut self, len: usize, ok: impl Fn(&[u8]) -> bool) -> Result<Arena<T>, String> {
         let bad = || "a volume's reference does not lie in its base".to_string();
         let (at, bytes) = (self.u64()? as usize, self.u64()? as usize);
         let (offs, vals, tail): (Arena<u64>, Arena<u8>, Arena<u8>) = (self.inline_of()?, self.inline_of()?, self.inline_of()?);
+        if !ok(&vals) || !ok(&tail) {
+            return Err("a volume holds a value of no kind".into());
+        }
         let base = self.base.clone().ok_or("a volume refers to a base it was not opened with")?;
         let sz = std::mem::size_of::<T>();
         let total = len.checked_mul(sz).ok_or_else(bad)?;
@@ -752,6 +759,7 @@ impl VolR {
         if !fits || !patched {
             return Err(bad());
         }
+        self.vouched = if offs.is_empty() { bytes } else { 0 };
         if offs.is_empty() && tail.is_empty() {
             return Arena::mapped(&base.region, at, len).ok_or_else(bad);
         }
@@ -777,10 +785,13 @@ impl VolR {
     }
     /// An arena of `len` values the overlay writes as spans of the base and values between them, copied into the heap
     /// as a copy of that span of the base, which the next overlay compares with it again.
-    fn spliced<T: Pod>(&mut self, len: usize) -> Result<Arena<T>, String> {
+    fn spliced<T: Pod>(&mut self, len: usize, ok: impl Fn(&[u8]) -> bool) -> Result<Arena<T>, String> {
         let bad = || "a volume's splice does not lie in its base".to_string();
         let (at, bytes) = (self.u64()? as usize, self.u64()? as usize);
         let (segs, lits): (Arena<u64>, Arena<u8>) = (self.inline_of()?, self.inline_of()?);
+        if !ok(&lits) {
+            return Err("a volume holds a value of no kind".into());
+        }
         let base = self.base.clone().ok_or("a volume refers to a base it was not opened with")?;
         let sz = std::mem::size_of::<T>();
         if !at.checked_add(bytes).is_some_and(|e| e <= base.region.len()) || bytes % sz != 0 || segs.len() % 2 != 0 || (base.region.ptr as usize + at) % std::mem::align_of::<T>() != 0 {
@@ -808,6 +819,12 @@ impl VolR {
         }
         Ok(Arena::Copied { v, from: Span { file: base.id, at, bytes } })
     }
+}
+
+/// `b` as the words it holds, where it lies aligned for them.
+fn words_of(b: &[u8]) -> Option<&[u32]> {
+    // SAFETY: checked aligned for u32, and u32 is Pod.
+    (b.as_ptr() as usize % 4 == 0).then(|| unsafe { std::slice::from_raw_parts(b.as_ptr() as *const u32, b.len() / 4) })
 }
 
 /// A span of the base mapped privately, the overlay's values written over it and its tail after it, in one mapping:

@@ -404,13 +404,9 @@ impl Eval {
                 }
             }
         }
-        let mut m: FxMap<u64, Vec<(FactId, Sym)>> = FxMap::default();
-        for (id, k) in cited {
-            if let Some((_, _, _, d)) = self.vrow_entry(k) {
-                m.entry(d.bits()).or_default().push((id, k));
-            }
-        }
-        self.store.vciters = Some(Rc::new(m));
+        let mut rows: Vec<[u32; 4]> = cited.into_iter().filter_map(|(id, k)| self.vrow_entry(k).map(|(_, _, _, d)| [d.bits() as u32, (d.bits() >> 32) as u32, id, k])).collect();
+        rows.sort_unstable();
+        self.store.vciters = Some(Rc::new(crate::store::VCiters { rows: rows.concat().into(), ..Default::default() }));
     }
 
     /// THE EDGES OF A TREE A RETRACTION TAKES OUT (`retract_set`), before they go: each tree an edge of `facts` is in
@@ -456,7 +452,7 @@ impl Eval {
                 let forest = Rc::make_mut(&mut slot.1);
                 let dropped = forest.rebuild_trees(&es, &[]);
                 for d in dropped {
-                    let cites: Vec<(FactId, Sym)> = self.store.vciters.as_ref().and_then(|m| m.get(&d.bits())).cloned().unwrap_or_default();
+                    let cites: Vec<(FactId, Sym)> = self.store.vciters.as_ref().map(|m| m.of(d.bits())).unwrap_or_default();
                     for (y, k) in cites {
                         if !self.store.alive(y) || !self.store.cites(y, PremRef::VRow(k)) {
                             continue;
