@@ -58,7 +58,7 @@ A world that waits says so in its own rule:
 | `sql` | a SQLite file | `query(Cap, "SELECT ... ?1")` for each capability |
 | `mcp` | a command (stdio) or a URL | `mcp_tool`, `mcp_arg`, `mcp_field`; generated |
 | `openapi` | the API's base URL | `http_op`, `http_in`, `http_field`; generated |
-| `rofl` | another world's files | the relation a capability answers from |
+| `rofl` | another world's files, or a command that serves it | the relation a capability answers from |
 | `render` | `"workbench"` | `component(Cap, Kind)`: heading, text, card, button, field |
 
 `rofl adapter mcp CMD|URL` and `rofl adapter openapi SPEC` print a book from
@@ -117,6 +117,28 @@ want's arguments in order, and each row of the result is one answer fact.
     arg(children_of, 1, tenant, text).
     answers(children_of, child, 2).
     query(children_of, "SELECT id FROM tenants WHERE parent = ?1").
+
+### rofl
+
+The adapter is another ROFL world. Its address is that world's files, which the
+engine evaluates once in its own process:
+
+    adapter(team, rofl, "team.rofl").
+
+Or the address is a command that serves the world, so it lives in another
+process or on another machine:
+
+    adapter(team, rofl, "rofl serve team.rofl").
+    adapter(team, rofl, "ssh bob.example rofl serve team.rofl").
+
+`rofl serve FILE...` evaluates the files as its session 1 before it reads the
+first request. The engine starts the command once and asks that session each
+round, so a served world that changed answers as it stands now. An address
+whose words all end in `.rofl` or `.rofl.md` is files; any other is a command.
+
+A capability answers in one relation of the other world. A want's arguments
+are its first columns. Each row comes back as an answer in the adapter's book,
+and the why of an answer stops there.
 
 ## Keys
 
