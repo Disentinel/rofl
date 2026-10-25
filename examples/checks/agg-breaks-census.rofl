@@ -2135,6 +2135,8 @@ brk("add_staged_cells_kept"). brk_kind("add_staged_cells_kept", switch).
 brk_expects("add_staged_cells_kept", "addition_staged_agg").
 brk("add_closure_lowered_unnoted"). brk_kind("add_closure_lowered_unnoted", switch).
 brk_expects("add_closure_lowered_unnoted", "addition_closure_row").
+brk("add_lower_unfollowed"). brk_kind("add_lower_unfollowed", switch).
+brk_expects("add_lower_unfollowed", "addition_lower_member").
 brk("add_hol_shared_kept"). brk_kind("add_hol_shared_kept", switch).
 brk_expects("add_hol_shared_kept", "addition_holistic").
 brk("add_ledger_reader_kept"). brk_kind("add_ledger_reader_kept", switch).
@@ -2308,6 +2310,7 @@ switch_site("add_join_contribs_kept", "rust/rofl/src/engine/addition.rs").
 switch_site("add_join_refused", "rust/rofl/src/engine/addition.rs").
 switch_site("add_ledger_reader_kept", "rust/rofl/src/engine/addition.rs").
 switch_site("add_lost_unseeded", "rust/rofl/src/engine/addition.rs").
+switch_site("add_lower_unfollowed", "rust/rofl/src/engine/addition.rs").
 switch_site("add_negation_reset", "rust/rofl/src/engine/addition.rs").
 switch_site("add_promoted_unnoted", "rust/rofl/src/store.rs").
 switch_site("add_reset_after", "rust/rofl/src/engine/addition.rs").

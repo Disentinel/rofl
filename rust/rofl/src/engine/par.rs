@@ -42,12 +42,49 @@ struct Frozen<'a> {
     news: Option<(&'a FxSet<FactId>, Vec<FactId>)>,
     /// a premise `@init` after the first tick matches nothing, read nowhere
     off: bool,
+    nix: NewsIx,
 }
 
 // SAFETY: the store and the heap share their bases through `Rc`, which is why neither is `Sync`. The threads only
 // dereference them: nothing on the read path below clones or drops an `Rc`, so no reference count is touched, and
 // nothing writes the store or the heap until every thread has returned (`std::thread::scope`).
 unsafe impl Sync for Frozen<'_> {}
+
+/// The news at one premise by the values a partial solution binds, built the first time a partial solution finds no
+/// index narrower than the news: each partial solution then reads its own rows of the news, not all of them.
+#[derive(Default)]
+pub(super) struct NewsIx(std::sync::OnceLock<(Vec<usize>, FxMap<Box<[Term]>, Vec<FactId>>)>);
+
+impl NewsIx {
+    /// The rows of `news` whose arguments at `pos` are `vals`, in the order of `news`; None where the index was built
+    /// for other positions.
+    pub(super) fn rows(&self, store: &Store, news: impl Iterator<Item = FactId>, arity: usize, pos: &[usize], vals: &[Term]) -> Option<&[FactId]> {
+        let (at, by) = self.0.get_or_init(|| {
+            let mut by: FxMap<Box<[Term]>, Vec<FactId>> = FxMap::default();
+            for f in news {
+                let a = store.args(f);
+                if a.len() == arity {
+                    by.entry(pos.iter().map(|&j| a[j]).collect()).or_default().push(f);
+                }
+            }
+            (pos.to_vec(), by)
+        });
+        (at == pos).then(|| by.get(vals).map_or(&[][..], |v| &v[..]))
+    }
+}
+
+/// The arguments of `l` that `s` binds to ground terms, and those terms.
+pub(super) fn bound_args(h: &Heap, l: &Lit, s: &Subst) -> (Vec<usize>, Vec<Term>) {
+    let (mut pos, mut vals) = (Vec::new(), Vec::new());
+    for (i, &a) in l.args.iter().enumerate() {
+        let t = walk(h, a, s);
+        if h.is_ground(t) {
+            pos.push(i);
+            vals.push(t);
+        }
+    }
+    (pos, vals)
+}
 
 /// The candidates of one partial solution: rows, kept by `keep`.
 struct Cands<'a> {
@@ -174,14 +211,7 @@ impl<'a> Frozen<'a> {
         if !self.store.indexed(l.rel, persp) {
             return Some((None, false));
         }
-        let (mut pos, mut vals) = (Vec::new(), Vec::new());
-        for (i, &a) in l.args.iter().enumerate() {
-            let t = walk(self.h, a, s);
-            if self.h.is_ground(t) {
-                pos.push(i);
-                vals.push(t);
-            }
-        }
+        let (pos, vals) = bound_args(self.h, l, s);
         if pos.is_empty() {
             return Some((None, false));
         }
@@ -212,7 +242,11 @@ impl<'a> Frozen<'a> {
         match (&self.news, narrow) {
             (Some((keys, _)), Some(n)) => c.owned = n.into_iter().filter(|f| keys.contains(f)).collect(),
             (Some((_, news)), _) => {
-                c.segs = vec![&news[..]];
+                let (pos, vals) = bound_args(self.h, self.l, &a.s);
+                match (!pos.is_empty()).then(|| self.nix.rows(self.store, news.iter().copied(), self.l.args.len(), &pos, &vals)).flatten() {
+                    Some(rows) => c.owned = rows.to_vec(),
+                    None => c.segs = vec![&news[..]],
+                }
                 c.keep = Keep::News;
             }
             (None, Some(n)) => c.owned = n,
@@ -382,7 +416,7 @@ impl Eval {
         if !off {
             self.par_prepare(l, acc, news.as_ref().map_or(usize::MAX, |(keys, _)| keys.len().saturating_sub(1)));
         }
-        let fr = Frozen { store: &self.store, h: &self.h, l, neg, news, off };
+        let fr = Frozen { store: &self.store, h: &self.h, l, neg, news, off, nix: NewsIx::default() };
         let threads = self.par.threads;
 
         // the candidates of each partial solution, found over runs of them
@@ -535,7 +569,7 @@ impl Eval {
                     Some((p, keys)) if p == i + k && !neg => Some((keys, keys.iter().copied().collect())),
                     _ => None,
                 };
-                Frozen { store: &self.store, h: &self.h, l, neg, news, off: frs_off(l, tick) }
+                Frozen { store: &self.store, h: &self.h, l, neg, news, off: frs_off(l, tick), nix: NewsIx::default() }
             })
             .collect();
         let sort = !self.store.unordered;

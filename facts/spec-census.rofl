@@ -23,6 +23,7 @@ check[checks]("rust/rofl/tests/addition.rs", "an_edge_and_a_reader_added_to_a_de
 check[checks]("rust/rofl/tests/addition.rs", "an_added_rule_that_moves_a_round_seals_the_cells_over_it_again", test).
 check[checks]("rust/rofl/tests/addition.rs", "a_base_fact_beside_a_reset_rule_keeps_only_the_firings_that_hold", test).
 check[checks]("rust/rofl/tests/addition.rs", "an_aggregate_over_what_did_not_change_fires_on_what_grew", test).
+check[checks]("rust/rofl/tests/addition.rs", "a_member_standing_lower_seals_again_only_its_group", test).
 check[checks]("rust/rofl/tests/addition.rs", "random_sealed_programs_take_additions_as_a_fresh_evaluation_does", test).
 check[checks]("rust/rofl/tests/addition.rs", "random_negation_programs_keep_what_a_negation_still_allows", test).
 check[checks]("rust/rofl/tests/addition.rs", "a_holistic_aggregate_is_sealed_again_at_the_groups_the_change_reaches", test).

@@ -8544,6 +8544,13 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "add_lower_unfollowed",
+  "what": "a fact that stood is given a lower firing and the members resting on it are not followed: their cells keep their old heights",
+  "expect": {
+   "addition_lower_member": "the addition to"
+  }
+ },
+ {
   "id": "add_hol_shared_kept",
   "what": "a holistic group shared across its percent or subject is asked again by key and keeps its old group",
   "expect": {
@@ -9221,6 +9228,7 @@ const TESTS: Record<string, string> = {
   addition_threshold: 'addition a_threshold_sealed_again_takes',
   addition_closure_row: 'addition a_closure_row_given_a_shorter_path',
   addition_holistic: 'addition a_holistic_aggregate_is_sealed_again',
+  addition_lower_member: 'addition a_member_standing_lower_seals_again_only_its_group',
   addition_derived_by: 'addition a_rule_reading_derived_by',
   addition_fault: 'addition a_fault_the_addition_does_not_reach',
   addition_dominance: 'addition a_dominance_the_change_reaches',
