@@ -6,7 +6,7 @@
 //!   rofl why [--all] L [flags] FILE...          what proves L
 //!   rofl whynot L [flags] FILE...               what stops L
 //!   rofl excise F [flags] FILE...               what taking the base fact F out changes
-//!   rofl serve                                  one JSON request per line in, one answer out
+//!   rofl serve [FILE...]                        one JSON request per line in, one answer out; the files are session 1
 //!   rofl render [--out DIR] FILE...             the sentence form of the files
 //!   rofl nb FILE.rofl.md [--cell N] [--all]     a notebook run, printed as `npm run nb` prints it
 //!   rofl adapter mcp COMMAND... | URL [KEY...]  the adapter book of the MCP server COMMAND runs, or the one at a URL (docs/intents.md)
@@ -26,7 +26,7 @@ mod render;
 mod seed;
 mod serve;
 
-const USAGE: &str = "usage: rofl load|ask|why|whynot|excise ... FILE... | rofl serve | rofl render ... | rofl nb FILE.rofl.md | rofl adapter mcp COMMAND...|URL [KEY...] | rofl adapter openapi SPEC [KEY...]";
+const USAGE: &str = "usage: rofl load|ask|why|whynot|excise ... FILE... | rofl serve [FILE...] | rofl render ... | rofl nb FILE.rofl.md | rofl adapter mcp COMMAND...|URL [KEY...] | rofl adapter openapi SPEC [KEY...]";
 
 /// `@LIST` replaced by the files it names.
 fn listed(args: Vec<String>) -> Vec<String> {
@@ -81,7 +81,7 @@ fn run(args: Vec<String>) {
             args.insert(0, flag);
             load::verb(args)
         }
-        "serve" => serve::main(),
+        "serve" => serve::main(args),
         "render" => render::main(args),
         "nb" => nb::main(args),
         "adapter" if args.len() > 1 && matches!(args[0].as_str(), "mcp" | "openapi") => {

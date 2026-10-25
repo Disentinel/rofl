@@ -431,24 +431,21 @@ impl Session {
         format!("{facts}{}\n{lost}", said.join("\n"))
     }
 
-    /// A `rofl` batch (scenario 5): the adapter is another world, its files the address, evaluated once a process
-    /// while they are unchanged. A want of a capability answering in `Rel/N` asks that world `Rel` with the want's
-    /// arguments as its first columns, and each row comes back as `Rel(K, Columns...)` in the adapter's book: the why
-    /// of an answer stops at that boundary.
+    /// A `rofl` batch (scenario 5): the adapter is another world. Its address is that world's files, evaluated once a
+    /// process while they are unchanged, or a command that serves it, `rofl serve FILE...` here or `ssh HOST rofl serve
+    /// FILE...` on another machine, started once a process and asked its session 1 each round: a served world that
+    /// changed answers as it now stands. A want of a capability answering in `Rel/N` asks that world `Rel` with the
+    /// want's arguments as its first columns, and each row comes back as `Rel(K, Columns...)` in the adapter's book:
+    /// the why of an answer stops at that boundary.
     fn run_rofl(&mut self, b: &Batch) -> Result<String, String> {
         thread_local! {
             static WORLDS: std::cell::RefCell<HashMap<String, Session>> = Default::default();
+            static SERVED: std::cell::RefCell<HashMap<String, Served>> = Default::default();
         }
         let mut rels = b.answers.iter();
         let (Some((rel, arity)), None) = (rels.next(), rels.next()) else {
             return Err(format!("a rofl capability answers in one relation; '{}' declares {}", b.cap, b.answers.len()));
         };
-        let mut text = String::new();
-        for f in b.cmd.split_whitespace() {
-            text.push_str(&std::fs::read_to_string(f).map_err(|e| format!("{f}: {e}"))?);
-            text.push('\n');
-        }
-        let stamp = format!("{}\n{:016x}", b.cmd, text.bytes().fold(0xcbf29ce484222325u64, |h, c| (h ^ c as u64).wrapping_mul(0x100000001b3)));
         let mut queries = Vec::new();
         for (key, k) in &b.wants {
             let given: Vec<String> = match k.kind() {
@@ -461,6 +458,45 @@ impl Session {
             let free: Vec<String> = (given.len() + 1..*arity).map(|i| format!("V{i}")).collect();
             queries.push((key.clone(), given.clone(), format!("{rel}({})", given.iter().chain(&free).cloned().collect::<Vec<_>>().join(", "))));
         }
+        let mut out = String::new();
+        let mut put = |key: &str, given: &[String], q: &str, rows: Vec<Vec<String>>, partial: bool| {
+            if partial {
+                out.push_str(&format!("failed({key}, {}).\n", quote(&format!("the world of {} answers {q} only in part", b.adapter))));
+                return;
+            }
+            for row in &rows {
+                out.push_str(&format!("{rel}({key}, {}).\n", given.iter().chain(row).cloned().collect::<Vec<_>>().join(", ")));
+            }
+            if rows.is_empty() {
+                out.push_str(&format!("answered({key}).\n"));
+            }
+        };
+        if !b.cmd.split_whitespace().all(|f| f.ends_with(".rofl") || f.ends_with(".rofl.md")) {
+            SERVED.with(|w| -> Result<(), String> {
+                let mut w = w.borrow_mut();
+                if !w.contains_key(&b.cmd) {
+                    w.insert(b.cmd.clone(), Served::start(&b.cmd)?);
+                }
+                let s = w.get_mut(&b.cmd).expect("just kept");
+                for (key, given, q) in &queries {
+                    match s.ask(q) {
+                        Ok((rows, partial)) => put(key, given, q, rows, partial),
+                        Err(e) => {
+                            w.remove(&b.cmd);
+                            return Err(format!("the world {} serves: {e}", b.adapter));
+                        }
+                    }
+                }
+                Ok(())
+            })?;
+            return Ok(out);
+        }
+        let mut text = String::new();
+        for f in b.cmd.split_whitespace() {
+            text.push_str(&std::fs::read_to_string(f).map_err(|e| format!("{f}: {e}"))?);
+            text.push('\n');
+        }
+        let stamp = format!("{}\n{:016x}", b.cmd, text.bytes().fold(0xcbf29ce484222325u64, |h, c| (h ^ c as u64).wrapping_mul(0x100000001b3)));
         WORLDS.with(|w| {
             let mut w = w.borrow_mut();
             if !w.contains_key(&stamp) {
@@ -470,22 +506,13 @@ impl Session {
                 w.insert(stamp.clone(), s);
             }
             let s = w.get_mut(&stamp).expect("just kept");
-            let mut out = String::new();
             for (key, given, q) in &queries {
                 let a = s.ask(q)?;
-                if a.partial {
-                    out.push_str(&format!("failed({key}, {}).\n", quote(&format!("the world of {} answers {q} only in part", b.adapter))));
-                    continue;
-                }
-                for row in &a.rows {
-                    out.push_str(&format!("{rel}({key}, {}).\n", given.iter().chain(row).cloned().collect::<Vec<_>>().join(", ")));
-                }
-                if a.rows.is_empty() {
-                    out.push_str(&format!("answered({key}).\n"));
-                }
+                put(key, given, q, a.rows, a.partial);
             }
-            Ok(out)
-        })
+            Ok::<(), String>(())
+        })?;
+        Ok(out)
     }
 
     fn src(&self, t: Term) -> String {
@@ -666,4 +693,40 @@ fn typed(v: serde_json::Value, ty: &str) -> serde_json::Value {
 
 fn quote(s: &str) -> String {
     format!("\"{}\"", s.replace('\\', "\\\\").replace('"', "\\\""))
+}
+
+/// A world another process serves (`rofl serve FILE...`), spoken to in its protocol: one JSON line out, one in.
+struct Served {
+    _child: std::process::Child,
+    to: std::process::ChildStdin,
+    from: std::io::BufReader<std::process::ChildStdout>,
+}
+
+impl Served {
+    fn start(cmd: &str) -> Result<Served, String> {
+        let mut argv = cmd.split_whitespace();
+        let prog = argv.next().ok_or("an empty command")?;
+        let mut child = std::process::Command::new(prog).args(argv).stdin(std::process::Stdio::piped()).stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::null()).spawn().map_err(|e| format!("{prog}: {e}"))?;
+        let to = child.stdin.take().expect("piped");
+        let from = std::io::BufReader::new(child.stdout.take().expect("piped"));
+        Ok(Served { _child: child, to, from })
+    }
+
+    /// The rows of `q` in the served world's session 1, and whether they are partial.
+    fn ask(&mut self, q: &str) -> Result<(Vec<Vec<String>>, bool), String> {
+        use std::io::BufRead;
+        writeln!(self.to, "{}", serde_json::json!({"op": "ask", "session": crate::brk!("served_other_session" => 2; 1), "query": q})).map_err(|e| e.to_string())?;
+        let mut line = String::new();
+        if self.from.read_line(&mut line).map_err(|e| e.to_string())? == 0 {
+            return Err("it ended without an answer".into());
+        }
+        let a: serde_json::Value = serde_json::from_str(&line).map_err(|e| format!("not an answer of rofl serve: {e}"))?;
+        if a["ok"] != serde_json::Value::Bool(true) {
+            return Err(a["error"].as_str().unwrap_or("refused").to_string());
+        }
+        let rows = a["rows"].as_array().into_iter().flatten()
+            .map(|r| r.as_array().into_iter().flatten().map(|c| c.as_str().unwrap_or_default().to_string()).collect()).collect();
+        Ok((rows, a["partial"].as_bool().unwrap_or(false)))
+    }
 }

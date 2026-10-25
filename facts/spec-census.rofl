@@ -253,6 +253,8 @@ check[checks]("rust/rofl/tests/scan.rs", "what_a_scan_brings_in_asks_for_the_nex
 check[checks]("rust/rofl/tests/scan.rs", "a_request_no_scanner_answers_is_a_fact_and_not_a_halt", test).
 check[checks]("rust/rofl/tests/scan.rs", "a_scanners_rules_are_loaded_like_its_facts", test).
 check[checks]("rust/rofl/tests/scan.rs", "a_scan_that_names_what_it_read_is_kept_until_that_changes", test).
+check[checks]("rust/rofl/tests/served.rs", "a_world_another_process_serves_answers_its_wants", test).
+check[checks]("rust/rofl/tests/served.rs", "a_served_world_that_cannot_start_fails_its_wants", test).
 check[checks]("rust/rofl/tests/session.rs", "evaluate_matches_the_corpus", test).
 check[checks]("rust/rofl/tests/session.rs", "a_fork_is_the_same_world_and_then_its_own", test).
 check[checks]("rust/rofl/tests/session.rs", "ask_agrees_with_the_stores_own_census", test).
@@ -968,6 +970,7 @@ test_file[checks]("rust/rofl/tests/retract_set.rs").
 test_file[checks]("rust/rofl/tests/ring1_agg.rs").
 test_file[checks]("rust/rofl/tests/roflenox.rs").
 test_file[checks]("rust/rofl/tests/scan.rs").
+test_file[checks]("rust/rofl/tests/served.rs").
 test_file[checks]("rust/rofl/tests/session.rs").
 test_file[checks]("rust/rofl/tests/sql.rs").
 test_file[checks]("rust/rofl/tests/structure.rs").

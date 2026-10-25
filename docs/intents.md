@@ -445,6 +445,16 @@ a new directory `intents` under `examples` (phase 7).
    end, a doubling tree meets the space wall, and an endless chain now meets
    the budget the rounds share; question 2 gave the cap.
 
+### A world served by another process, as built (2026-10-25)
+
+The `rofl` kind's address is the other world's files, evaluated in this process,
+or a command that serves it: `rofl serve FILE...` (session 1 is the files,
+evaluated) here, `ssh HOST rofl serve FILE...` on another machine. The command is
+started once a process and asked `{"op":"ask","session":1}` each round, so a
+served world that changed answers as it stands. An address whose words all end
+in `.rofl` or `.rofl.md` is files. Proof: rust/rofl/tests/served.rs (planted
+served_other_session red).
+
 ### Phase 1, as built (2026-10-23)
 
 `rust/rofl/src/program.rs` (`lower_want`), `rust/rofl/src/engine/want.rs`,

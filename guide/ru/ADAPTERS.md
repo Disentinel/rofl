@@ -60,7 +60,7 @@ MCP-сервер, HTTP API, другой мир ROFL, экран. Мир пиш�
 | `sql` | файл SQLite | `query(Cap, "SELECT ... ?1")` для каждой возможности |
 | `mcp` | команда (stdio) или URL | `mcp_tool`, `mcp_arg`, `mcp_field`; генерируются |
 | `openapi` | базовый URL API | `http_op`, `http_in`, `http_field`; генерируются |
-| `rofl` | файлы другого мира | отношение, из которого отвечает возможность |
+| `rofl` | файлы другого мира или команда, которая его обслуживает | отношение, из которого отвечает возможность |
 | `render` | `"workbench"` | `component(Cap, Kind)`: heading, text, card, button, field |
 
 `rofl adapter mcp CMD|URL` и `rofl adapter openapi SPEC` печатают книгу по
@@ -121,6 +121,29 @@ for (const w of batch.wants) {
     arg(children_of, 1, tenant, text).
     answers(children_of, child, 2).
     query(children_of, "SELECT id FROM tenants WHERE parent = ?1").
+
+### rofl
+
+Адаптер — это другой мир ROFL. Его адрес — файлы этого мира, которые движок
+вычисляет один раз в своём процессе:
+
+    adapter(team, rofl, "team.rofl").
+
+Или адрес — это команда, которая обслуживает мир, и тогда он живёт в другом
+процессе или на другой машине:
+
+    adapter(team, rofl, "rofl serve team.rofl").
+    adapter(team, rofl, "ssh bob.example rofl serve team.rofl").
+
+`rofl serve FILE...` вычисляет файлы как свою сессию 1, прежде чем прочитать
+первый запрос. Движок запускает команду один раз и спрашивает эту сессию на
+каждом раунде, так что изменившийся мир отвечает таким, какой он сейчас. Адрес,
+все слова которого кончаются на `.rofl` или `.rofl.md`, — это файлы; любой
+другой — команда.
+
+Возможность отвечает одним отношением другого мира. Аргументы запроса — его
+первые столбцы. Каждая строка возвращается ответом в книге адаптера, и why
+ответа останавливается на этой границе.
 
 ## Ключи
 
