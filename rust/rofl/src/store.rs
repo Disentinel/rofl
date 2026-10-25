@@ -489,6 +489,30 @@ impl PatIndex {
         true
     }
 
+    /// The index at the bottom of this one: the one a volume mapped, if any.
+    fn bottom(&self) -> &PatIndex {
+        self.under.as_deref().map_or(self, |u| u.bottom())
+    }
+
+    /// The entries above the bottom as one top, in the order they were put: what an overlay holds over the bottom.
+    fn above_bottom(&self, facts: &Facts) -> PatIndex {
+        fn ids_above(ix: &PatIndex, out: &mut Vec<FactId>) {
+            if let Some(u) = &ix.under {
+                ids_above(u, out);
+                out.extend(ix.ids.iter());
+            }
+        }
+        let mut ids = Vec::new();
+        ids_above(self, &mut ids);
+        let (mut top, mut sig) = (PatIndex::new(&self.pos), Vec::new());
+        for k in ids {
+            sig.clear();
+            sig.extend(self.pos.iter().map(|&p| facts.args(k)[p]));
+            top.put(facts, &sig, k);
+        }
+        top
+    }
+
     /// One index of the base's entries and the top's, in the order they were put: what a volume holds.
     fn flat(&self, facts: &Facts) -> PatIndex {
         let Some(u) = &self.under else {
@@ -1192,9 +1216,48 @@ pub struct Store {
     /// The facts with a firing that cites a row of a closure answered from its tree, by the row's descendant: what a
     /// retraction that takes an edge out of the tree looks at (`Eval::retract_set`). Kept beside `citers` by every
     /// firing put since; dropped (to be built again) when a firing cites a row whose ends this store does not know.
-    pub vciters: Option<Rc<FxMap<u64, Vec<(FactId, Sym)>>>>,
-    /// Where the volume this store was read from holds `vciters`: written again as a splice of it.
-    pub(crate) vciters_from: Option<crate::arena::Span>,
+    pub vciters: Option<Rc<VCiters>>,
+}
+
+/// `Store::vciters`: rows `[descendant low, high, fact, row]` in order, as a volume maps them, and the citers put
+/// since by descendant, so neither opening nor keeping a world walks the rows.
+#[derive(Clone, Default)]
+pub struct VCiters {
+    pub rows: Arena<u32>,
+    pub(crate) more: FxMap<u64, Vec<(FactId, Sym)>>,
+}
+
+impl VCiters {
+    pub fn of(&self, d: u64) -> Vec<(FactId, Sym)> {
+        let (r, at) = (&self.rows, (d as u32, (d >> 32) as u32));
+        let (mut i, mut hi) = (0, r.len() / 4);
+        while i < hi {
+            let m = (i + hi) / 2;
+            if (r[4 * m], r[4 * m + 1]) < at {
+                i = m + 1;
+            } else {
+                hi = m;
+            }
+        }
+        let mut out = Vec::new();
+        while 4 * i < r.len() && (r[4 * i], r[4 * i + 1]) == at {
+            out.push((r[4 * i + 2], r[4 * i + 3]));
+            i += 1;
+        }
+        out.extend(self.more.get(&d).into_iter().flatten());
+        out
+    }
+
+    pub fn put(&mut self, d: u64, id: FactId, k: Sym) {
+        self.more.entry(d).or_default().push((id, k));
+    }
+
+    /// The rows put since, in order.
+    pub(crate) fn more_rows(&self) -> Vec<u32> {
+        let mut rows: Vec<[u32; 4]> = self.more.iter().flat_map(|(d, v)| v.iter().map(move |(f, k)| [*d as u32, (*d >> 32) as u32, *f, *k])).collect();
+        rows.sort_unstable();
+        rows.concat()
+    }
 }
 
 /// The citer index: the facts citing each premise as one column by premise id (`offs`, `ids`), which a volume maps,
@@ -1870,8 +1933,12 @@ impl Store {
         // each a long set sharing a long prefix with its neighbours, and
         // every merge searched through them. Nothing reads a dead id from a
         // run (every reader skips it) and `sweep` would drop it anyway, so
-        // it is dropped here, where the run is being rewritten regardless.
-        canon.retain(|&i| me.alive(i));
+        // it is dropped here, where the run is being rewritten regardless,
+        // when the run holds one: walking a run that holds none read every
+        // record of a relation an edit touched.
+        if self.unswept.contains(&(rel, persp)) {
+            canon.retain(|&i| me.alive(i));
+        }
         fresh.retain(|&i| me.alive(i));
         if !unordered && v[i].1.by_tup {
             canon.sort_by(|x, y| cmp_args(h, *x, *y));
@@ -2769,7 +2836,7 @@ impl Store {
             for p in &w.prems {
                 let PremRef::VRow(k) = p else { continue };
                 match self.vrow_of.get(k) {
-                    Some((_, _, _, d)) => Rc::make_mut(self.vciters.as_mut().unwrap()).entry(d.bits()).or_default().push((id, *k)),
+                    Some((_, _, _, d)) => Rc::make_mut(self.vciters.as_mut().unwrap()).put(d.bits(), id, *k),
                     None => {
                         self.vciters = None;
                         break;

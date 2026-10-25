@@ -5382,9 +5382,9 @@ impl Eval {
                 self.lat_cur.insert(ck, id);
             }
         }
-        // a fact that stood before an addition, given a firing that may lower it
+        // a fact that stood before an addition, given a firing that may lower it: found lower or not, as a closure's
+        // row is, since its old height is a walk of all it rests on
         let stood = self.adding && !is_new && id < self.add_mark && !self.store.rec(id).base() && self.add_heights.contains(&head.rel);
-        let was = if stood && self.store.heights(&[id], &mut self.height_memo).is_ok() { self.height_memo.get(&id).copied() } else { None };
         let tick = self.store.tick;
         let new_firing = if self.no_witness && self.lattices.is_empty() {
             is_new
@@ -5399,7 +5399,7 @@ impl Eval {
             )
         };
         if new_firing {
-            if stood && was.is_none_or(|h| self.member_height(&sol.prems).map_or(true, |n| n < h)) {
+            if stood {
                 self.add_refired.push(id);
             }
             if self.ds_check {

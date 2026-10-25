@@ -4,6 +4,7 @@
 //! table as the base with the layer's slots put in it: keeping copies no mapped column into the heap.
 use super::*;
 use crate::arena::{placed, VolR, VolW};
+use std::borrow::Cow;
 
 fn terms(w: &mut VolW, ts: &[Term]) {
     w.arena(ts);
@@ -14,19 +15,25 @@ fn write_patterns(w: &mut VolW, facts: &Facts, by_pat: Option<&ArgIndex>) {
     let Some(by_pat) = by_pat else {
         return w.u32(u32::MAX);
     };
-    // over a base, a large index the base does not hold is not written: built since, it is built again where asked
-    let keep = |ix: &PatIndex| !w.is_over() || ix.entries() < 1 << 14 || w.in_base(&ix.under.as_deref().unwrap_or(ix).ids);
-    let mut masks: Vec<&u32> = by_pat.iter().filter(|(_, ix)| keep(ix)).map(|(m, _)| m).collect();
+    let mut masks: Vec<&u32> = by_pat.keys().collect();
     masks.sort_unstable();
     w.u32(masks.len() as u32);
     for m in masks {
-        let x = &by_pat[m].flat(facts);
+        let ix = &by_pat[m];
+        // over a base, an index the base holds stays there and the entries since are a top over it
+        let parts = match ix.bottom() {
+            b if ix.under.is_some() && w.in_base(&b.ids) => vec![Cow::Borrowed(b), Cow::Owned(ix.above_bottom(facts))],
+            _ => vec![Cow::Owned(ix.flat(facts))],
+        };
         w.u32(*m);
-        w.arena(&x.pos.iter().map(|&p| p as u32).collect::<Vec<u32>>());
-        w.u64(x.values as u64);
-        w.arena(&x.slots);
-        w.arena(&x.ids);
-        w.arena(&x.prev);
+        w.arena(&ix.pos.iter().map(|&p| p as u32).collect::<Vec<u32>>());
+        w.u32(parts.len() as u32);
+        for x in parts {
+            w.u64(x.values as u64);
+            w.arena(&x.slots);
+            w.arena(&x.ids);
+            w.arena(&x.prev);
+        }
     }
 }
 
@@ -39,13 +46,18 @@ fn read_patterns(r: &mut VolR) -> Result<Option<Rc<ArgIndex>>, String> {
     for _ in 0..n {
         let mask = r.u32()?;
         let pos: Box<[usize]> = r.arena::<u32>()?.iter().map(|&p| p as usize).collect();
-        let values = r.u64()? as usize;
-        let (slots, ids, prev): (Arena<u32>, Arena<FactId>, Arena<u32>) = (r.arena()?, r.arena()?, r.arena()?);
-        // its entries are not walked: the sum the volume ends in held, so one out of range is the writer's defect
-        if !slots.len().is_power_of_two() || ids.len() != prev.len() {
-            return Err("a volume's argument index is not an index".into());
+        let parts = r.u32()?;
+        let mut ix = None;
+        for _ in 0..parts {
+            let values = r.u64()? as usize;
+            let (slots, ids, prev): (Arena<u32>, Arena<FactId>, Arena<u32>) = (r.arena()?, r.arena()?, r.arena()?);
+            // its entries are not walked: the sum the volume ends in held, so one out of range is the writer's defect
+            if !slots.len().is_power_of_two() || ids.len() != prev.len() {
+                return Err("a volume's argument index is not an index".into());
+            }
+            ix = Some(PatIndex { pos: pos.clone(), slots, ids, prev, values, under: ix.map(Rc::new) });
         }
-        by_pat.insert(mask, PatIndex { pos, slots, ids, prev, values, under: None });
+        by_pat.insert(mask, ix.ok_or("a volume's argument index is not an index")?);
     }
     Ok(Some(Rc::new(by_pat)))
 }
@@ -146,6 +158,7 @@ impl Store {
             w.u32(v.len() as u32);
             for (p, k) in v {
                 w.u32(*p);
+                w.u32(k.by_tup as u32);
                 w.arena(&k.canon);
                 w.arena(&k.arrived);
                 w.arena(&k.loose);
@@ -214,11 +227,19 @@ impl Store {
         }
         match &self.vciters {
             None => w.u32(0),
+            // over a base the rows stay as the base holds them, and those put since come after them
+            Some(m) if w.is_over() => {
+                w.u32(1);
+                w.arena(&m.rows);
+                w.arena(&m.more_rows());
+            }
             Some(m) => {
                 w.u32(1);
-                let mut rows: Vec<[u32; 4]> = m.iter().flat_map(|(d, v)| v.iter().map(move |(f, k)| [*d as u32, (*d >> 32) as u32, *f, *k])).collect();
+                let mut rows: Vec<[u32; 4]> = m.rows.chunks_exact(4).map(|x| [x[0], x[1], x[2], x[3]]).collect();
+                rows.extend(m.more_rows().chunks_exact(4).map(|x| [x[0], x[1], x[2], x[3]]));
                 rows.sort_unstable();
-                w.arena(&Arena::derived(rows.concat(), self.vciters_from));
+                w.arena(&rows.concat());
+                w.arena::<u32>(&[]);
             }
         }
         match self.vrow_of.grown() {
@@ -282,12 +303,12 @@ impl Store {
             let rel = r.u32()?;
             let mut v = Vec::new();
             for _ in 0..r.u32()? {
-                let p = r.u32()?;
+                let (p, by_tup) = (r.u32()?, r.u32()? == 1);
                 let (canon, arrived) = (r.arena()?, r.arena()?);
                 let loose = r.arena::<FactId>()?.to_vec();
                 let staged = r.arena::<FactId>()?.to_vec();
                 let by_pat = read_patterns(r)?;
-                v.push((p, KeyRun { canon, arrived, loose, staged, by_pat, by_tup: true }));
+                v.push((p, KeyRun { canon, arrived, loose, staged, by_pat, by_tup }));
             }
             groups.insert(rel, v);
         }
@@ -355,16 +376,16 @@ impl Store {
             s.citers = Some(Rc::new(Citers { offs, ids, more }));
         }
         if r.u32()? == 1 {
-            let words: Arena<u32> = r.arena()?;
-            if words.len() % 4 != 0 || words.chunks_exact(4).any(|x| x[2] as usize >= s.facts.len()) {
+            // the rows are not walked: the sum the volume ends in held, as an argument index's (`read_patterns`)
+            let (rows, more): (Arena<u32>, Arena<u32>) = (r.arena()?, r.arena()?);
+            if rows.len() % 4 != 0 || more.len() % 4 != 0 || more.chunks_exact(4).any(|x| x[2] as usize >= s.facts.len()) {
                 return Err("a volume's index of the rows of a tree is not an index".into());
             }
-            let mut m: FxMap<u64, Vec<(FactId, Sym)>> = FxMap::default();
-            for x in words.chunks_exact(4) {
-                m.entry(x[0] as u64 | (x[1] as u64) << 32).or_default().push((x[2], x[3]));
+            let mut m = crate::store::VCiters { rows, ..Default::default() };
+            for x in more.chunks_exact(4) {
+                m.put(x[0] as u64 | (x[1] as u64) << 32, x[2], x[3]);
             }
             s.vciters = Some(Rc::new(m));
-            s.vciters_from = words.origin();
         }
         let vrows: Arena<u64> = r.arena()?;
         if vrows.len() % 5 != 0 {

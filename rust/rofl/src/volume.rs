@@ -12,9 +12,9 @@ use crate::term::{Heap, Sym, Term};
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-const MAGIC: &[u8; 16] = b"ROFL-VOLUME-5\n\0\0";
+const MAGIC: &[u8; 16] = b"ROFL-VOLUME-6\n\0\0";
 /// An overlay: a volume that names its base and writes only what the world holds that the base does not.
-const OVER: &[u8; 16] = b"ROFL-OVERLAY-1\n\0";
+const OVER: &[u8; 16] = b"ROFL-OVERLAY-2\n\0";
 
 /// The whole volume a world was opened from, or that an overlay it was opened from names: what a world kept again
 /// after an edit is written over.
