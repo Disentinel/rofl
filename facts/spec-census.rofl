@@ -243,6 +243,12 @@ check[checks]("rust/rofl/tests/retract_set.rs", "a_tree_edited_in_sequence_is_th
 check[checks]("rust/rofl/tests/retract_set.rs", "a_js_files_facts_taken_out_are_the_fresh_world", test).
 check[checks]("rust/rofl/tests/ring1_agg.rs", "ring1_reads_every_aggregate_and_lattice_declaration_the_parser_reads_and_as_the_same_tree", test).
 check[checks]("rust/rofl/tests/ring1_agg.rs", "what_the_parser_refuses_ring1_does_not_cover", test).
+check[checks]("rust/rofl/tests/roflenox.rs", "a_book_is_the_clauses_its_last_assertions_keep", test).
+check[checks]("rust/rofl/tests/roflenox.rs", "a_reader_asks_only_after_the_head_it_checked", test).
+check[checks]("rust/rofl/tests/roflenox.rs", "a_withheld_batch_is_counted_and_said", test).
+check[checks]("rust/rofl/tests/roflenox.rs", "a_book_changed_after_it_was_signed_is_refused", test).
+check[checks]("rust/rofl/tests/roflenox.rs", "a_batch_signed_by_a_stranger_is_refused", test).
+check[checks]("rust/rofl/tests/roflenox.rs", "another_identity_under_the_same_name_is_refused", test).
 check[checks]("rust/rofl/tests/scan.rs", "what_a_scan_brings_in_asks_for_the_next", test).
 check[checks]("rust/rofl/tests/scan.rs", "a_request_no_scanner_answers_is_a_fact_and_not_a_halt", test).
 check[checks]("rust/rofl/tests/scan.rs", "a_scanners_rules_are_loaded_like_its_facts", test).
@@ -960,6 +966,7 @@ test_file[checks]("rust/rofl/tests/resume.rs").
 test_file[checks]("rust/rofl/tests/retract_refuse.rs").
 test_file[checks]("rust/rofl/tests/retract_set.rs").
 test_file[checks]("rust/rofl/tests/ring1_agg.rs").
+test_file[checks]("rust/rofl/tests/roflenox.rs").
 test_file[checks]("rust/rofl/tests/scan.rs").
 test_file[checks]("rust/rofl/tests/session.rs").
 test_file[checks]("rust/rofl/tests/sql.rs").

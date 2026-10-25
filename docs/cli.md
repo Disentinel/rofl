@@ -68,6 +68,10 @@ package calls it by a path inside itself), else the one above the binary. So
 `@rules/js.files` works from any directory, and a `.rofl.md`'s vocabulary is
 found the same way.
 
+**`roflenox://HOST/IDENTITY/BOOK`** stands for the book BOOK as IDENTITY signed
+it on that Roflenox node, every batch of the chain checked (guide/ADAPTERS.md,
+*A book on Roflenox*). A book that fails a check is refused, exit 2.
+
 ## A world kept on disk
 
 **A question verb keeps its world by itself.** `rofl ask`, `why`, `whynot`

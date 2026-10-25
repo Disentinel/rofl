@@ -65,6 +65,13 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "roflenox_unsigned",
+  "what": "every signature of a book on Roflenox taken as good, so a batch a stranger signed is read as the identity's",
+  "expect": {
+   "roflenox_stranger": "a stranger's batch read"
+  }
+ },
+ {
   "id": "max_wants_ignored",
   "what": "a capability's max_wants never held a want, so an answer that always asks one more is sent without end",
   "expect": {
@@ -9270,6 +9277,7 @@ const TESTS: Record<string, string> = {
   openapi_token: 'openapi client_credentials_get_a_token_once_and_again_when_it_is_refused',
   adapter_endless: 'adapter a_recursion_through_an_adapter_that_never_ends_stops_at_the_budget',
   adapter_capped: 'adapter a_capability_sends_no_more_wants_than_its_book_allows',
+  roflenox_stranger: 'roflenox a_batch_signed_by_a_stranger_is_refused',
   does_once: 'dispatch a_does_want_runs_once_across_a_dispatch_the_world_anew_and_a_replay',
   does_guard: 'dispatch a_running_world_cannot_change_what_grants_permission',
   mcp_does: 'mcp a_does_tool_is_not_sent_by_evaluation',

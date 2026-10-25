@@ -434,7 +434,10 @@ a new directory `intents` under `examples` (phase 7).
    `event_time(Cap, Column)` in the book (guide/ADAPTERS.md); the engine does
    not read it yet.
 4. An adapter's book signed (Roflenox) from the start, or plain until a second
-   owner appears?
+   owner appears? DECIDED by the owner, 2026-10-24: a book on Roflenox is
+   signed. BUILT 2026-10-25: `roflenox://HOST/IDENTITY/BOOK` where a file would
+   go, each clause a `rofl:book` fact, every batch checked by the engine
+   (src/roflenox.rs, guide/ADAPTERS.md); a book in a file stays plain.
 5. Recursion through an adapter: allowed and measured (the owner, 2026-10-23:
    try it and see where it spoils things and where it opens new ways of
    programming), with the per-want call count in the cost report. TRIED
