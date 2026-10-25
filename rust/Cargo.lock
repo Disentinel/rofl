@@ -771,6 +771,7 @@ dependencies = [
  "memmap2",
  "regex",
  "reqwest",
+ "ring",
  "rusqlite",
  "serde",
  "serde_json",

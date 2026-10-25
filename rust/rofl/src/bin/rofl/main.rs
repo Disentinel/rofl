@@ -17,6 +17,7 @@
 //! `--kept F [--anew]` keeps the world evaluated at F, and later runs answer from F until it is stale (kept.rs).
 //! `@LIST` stands for the files LIST names, one a line, each from LIST's directory (`@rules/js.files`, the JS model);
 //! a LIST that is no file from the current directory is read from the tree the command came with (md::installed_tree).
+//! `roflenox://HOST/IDENTITY/BOOK` stands for the book BOOK as IDENTITY signed it on that node, checked (src/roflenox.rs).
 mod delta;
 mod kept;
 mod load;
@@ -30,6 +31,13 @@ const USAGE: &str = "usage: rofl load|ask|why|whynot|excise ... FILE... | rofl s
 /// `@LIST` replaced by the files it names.
 fn listed(args: Vec<String>) -> Vec<String> {
     args.into_iter().flat_map(|a| match a.strip_prefix('@') {
+        None if a.starts_with("roflenox://") => match rofl::roflenox::fetch(&a) {
+            Ok((file, note)) => {
+                note.into_iter().for_each(|n| eprintln!("{n}"));
+                vec![file.to_string_lossy().into_owned()]
+            }
+            Err(e) => { eprintln!("{e}"); std::process::exit(load::FILE_REFUSED) }
+        },
         None => vec![a],
         Some(list) => {
             // a list that is no file from here is the installed tree's: `@rules/js.files` from any directory
