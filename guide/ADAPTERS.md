@@ -145,11 +145,22 @@ and the why of an answer stops there.
 A key is never a fact. The book names where to find it, and the engine reads
 it from the environment when it sends:
 
-    http_auth(Adapter, Scheme, How, Name, Env).   -- How: bearer, basic, header, query, client_credentials
+    http_auth(Adapter, Scheme, How, Name, Env).   -- How: bearer, basic, header, query, client_credentials, login
     http_needs(Cap, Scheme).                      -- which capabilities need it
 
 For `client_credentials`, `Name` is the token URL and `Env` holds `id:secret`;
-the adapter gets and renews the token itself. A missing variable holds the want:
+the adapter gets and renews the token itself. For `login`, `Name` is the authorization
+server (its issuer) and `Env` is `""`: a person signs in once, at a browser,
+
+    rofl adapter login https://auth.example.com
+
+and the adapter sends that person's token, renewed by its refresh token when it
+expires or the service refuses it. The command reads the server's metadata,
+registers itself as a client when the server allows it (else give the client
+id after the issuer), prints the address to sign in at and opens it in a
+browser, and takes the answer on a local port (OAuth 2.1 with PKCE). The tokens
+are kept in `~/.config/rofl/logins.json`, readable only by you. Until someone
+signs in, the want is held and says which command to run. A missing variable holds the want:
 `want_held(W, "... the environment has no ENV ...")`. On the command line, a key
 is `HOW[:NAME]=ENV`: `rofl adapter mcp URL bearer=TRACKER_TOKEN`.
 
