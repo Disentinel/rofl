@@ -788,13 +788,42 @@ impl Session {
     }
 
     pub fn admit(&mut self, src: &str) -> Result<usize, String> {
+        let t = std::time::Instant::now();
         self.eval.store.arrivals = Some(Vec::new());
         let r = crate::program::load_program(&mut self.eval, src, None);
         let ids = self.eval.store.arrivals.take().unwrap_or_default();
         if !r.ok {
             return Err(r.diagnostics.join("\n"));
         }
+        let (t1, n0) = (t.elapsed(), self.eval.store.len_ids());
+        let ns0 = self.eval.ns_by_rule.clone();
         self.eval.admit(&ids).map_err(|e| crate::describe(&e))?;
+        if let Some(p) = std::env::var_os("ROFL_ADMIT_LOG") {
+            use std::io::Write;
+            let mut f = std::fs::OpenOptions::new().append(true).create(true).open(p).unwrap();
+            if ids.len() > 100000 {
+                let mut c: std::collections::HashMap<String, usize> = Default::default();
+                for id in n0..self.eval.store.len_ids() {
+                    let r = self.eval.store.rec(id);
+                    *c.entry(format!("{}[{}]", self.eval.h.name(r.rel), self.eval.h.name(r.persp))).or_default() += 1;
+                }
+                let mut v: Vec<_> = c.into_iter().collect();
+                v.sort_by(|a, b| b.1.cmp(&a.1));
+                for (k, n) in v.iter().take(12) {
+                    let _ = writeln!(f, "  {n} {k}");
+                }
+                let mut by: Vec<(Sym, u64)> = self.eval.ns_by_rule.iter().map(|(k, v)| (*k, v - ns0.get(k).copied().unwrap_or(0))).filter(|x| x.1 > 0).collect();
+                by.sort_by(|a, b| b.1.cmp(&a.1));
+                let tot: u64 = by.iter().map(|x| x.1).sum();
+                let _ = writeln!(f, "  rules total {} ms over {} rules", tot / 1_000_000, by.len());
+                for (rid, ns) in by.iter().take(25) {
+                    let r = self.eval.rules.iter().find(|r| r.id == *rid);
+                    let txt = r.map(|r| r.canon.clone()).unwrap_or_default();
+                    let _ = writeln!(f, "  {} ms {}", ns / 1_000_000, txt.chars().take(220).collect::<String>());
+                }
+            }
+            let _ = writeln!(f,"admit {} facts: load {:?}, propagate {:?}, derived {}", ids.len(), t1, t.elapsed() - t1, self.eval.store.len_ids() - n0);
+        }
         self.eval.store.dirty = false;
         Ok(ids.len())
     }

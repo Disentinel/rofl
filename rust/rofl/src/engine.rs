@@ -7,7 +7,7 @@
 //! — the kernel's own `safety.rofl` sub-evaluation runs under it.
 
 use std::collections::{BTreeSet, HashMap, HashSet};
-use std::rc::Rc;
+use std::sync::Arc as Rc;
 
 use crate::cell::{key_atoms, rank_cmp, KeyAtom, Algebra, iv_bounds, mk_iv, narrow_iv, INT_MAX, INT_MIN, quorum, set_contains, set_elems, widen_iv, AggOp, Class, IvFault, IvFn, KeyCache, Sorted, Step, TagAlg, TagFault, Val, NINF, PINF};
 use crate::dense::dense_clauses;
@@ -33,6 +33,7 @@ mod par;
 mod latkept;
 mod want;
 pub(crate) mod keys;
+pub(crate) mod bsp;
 pub use latkept::Tok;
 pub use cost::{Hot, PremCost};
 use resume::{Cut, CutAt, InFlight, Tail};
@@ -690,6 +691,7 @@ pub struct Eval {
     admitted: FxSet<FactId>,
     /// facts admitted from other workers, and what was copied from them alone
     pub(crate) foreign: FxSet<FactId>,
+    pub(crate) bsp: Option<bsp::Par>,
     round_resume: Option<(Front, usize, usize, Front, Option<InFlight>)>,
     pub h: Heap,
     pub v: Vocab,
@@ -1085,7 +1087,7 @@ pub struct Eval {
     strict_neg: bool,
     /// What the wall that fell measured: the count, what it counted, and the
     /// limit it passed (a `budget` shrug's `spent(Kind, Spent, Limit)`).
-    wall_spent: std::cell::Cell<Option<(&'static str, i64, i64)>>,
+    wall_spent: WallSpent,
     /// Rules that read `shrug` fire above everything else, after the rows
     /// were written once (`shrug_snap`); a row the rest of the evaluation adds
     /// or withdraws that one of them could read is refused at the end.
@@ -1578,6 +1580,7 @@ impl Eval {
             published_to: 0,
             admitted: FxSet::default(),
             foreign: FxSet::default(),
+            bsp: None,
             round_resume: None,
             lat_unknown: HashMap::new(),
             lat_withdrawn: Vec::new(),
@@ -1612,7 +1615,7 @@ impl Eval {
             wfs_skip_cone: false,
             wfs_fixed: Vec::new(),
             strict_neg: false,
-            wall_spent: std::cell::Cell::new(None),
+            wall_spent: WallSpent(std::cell::Cell::new(None)),
             shrug_readers: HashSet::new(),
             shrug_snap: None,
             cycle_groups: Vec::new(),
@@ -3403,6 +3406,11 @@ impl Eval {
 
     /// The levels from phase `ph0` on, each closing what is below it; true when the level wall stopped them.
     fn run_levels(&mut self, levels: Vec<(i64, Vec<Rc<ERule>>)>, ph0: usize, from: Option<usize>) -> Result<bool, Halt> {
+        if self.bsp.is_none() {
+            if let Some(k) = std::env::var("ROFL_PAR").ok().and_then(|v| v.parse::<usize>().ok()).filter(|&k| k >= 1) {
+                self.bsp = Some(bsp::Par::new(k, self.store.len_ids()));
+            }
+        }
         for (n, (lv, rs)) in levels.iter().cloned().enumerate() {
             let ph = n + ph0;
             if self.level_wall.is_some_and(|w| lv > w) {
@@ -3433,7 +3441,7 @@ impl Eval {
                 self.run_data_levels(lv, &ds)?;
                 continue;
             }
-            self.activate_phase(&rs, ph)?;
+            self.activate_par(&rs, ph)?;
             self.poison_readers(&rs)?;
             self.run_data_levels(lv, &ds)?;
         }
@@ -3556,7 +3564,7 @@ impl Eval {
     /// program that read `unknown` in a world a hole reached
     /// (f_unknown_is_read_as_complete_beside_a_hole).
     fn shrug_reset(&mut self) {
-        self.wall_spent.set(None);
+        self.wall_spent.0.set(None);
         // the rows describe one evaluation: none is read before it writes them
         let old = self.store.rel_all(&self.h, self.v.shrug);
         self.store.remove_many(&old);
@@ -3953,7 +3961,7 @@ impl Eval {
                     self.h.mkf(f, &[k, Term::int(n), Term::int(labeled::LABEL_REGIONS)])
                 }
                 "budget" => {
-                    let (kind, spent, limit) = self.wall_spent.get().unwrap_or(if cname == "space_exhausted" {
+                    let (kind, spent, limit) = self.wall_spent.0.get().unwrap_or(if cname == "space_exhausted" {
                         ("rows", self.space + 1, self.space)
                     } else if cname == "disk_exhausted" {
                         ("bytes", self.disk.saturating_add(1), self.disk)
@@ -5491,14 +5499,14 @@ impl Eval {
     fn bump_steps(&mut self) -> Result<(), Halt> {
         self.steps += 1;
         if self.steps > self.budget || self.steps & 0x3ff == 0 && self.budget != i64::MAX && self.halted() {
-            self.wall_spent.set(Some(("steps", self.steps, self.budget.min(self.steps))));
+            self.wall_spent.0.set(Some(("steps", self.steps, self.budget.min(self.steps))));
             return Err(Halt::Budget("budget_exhausted", None));
         }
         if self.disk != i64::MAX && self.budget != i64::MAX && brk!("disk_wall_ignored" => false; true) {
             let b = self.disk_bytes();
             if b > self.disk {
                 self.disk_hit = true;
-                self.wall_spent.set(Some(("bytes", b, self.disk)));
+                self.wall_spent.0.set(Some(("bytes", b, self.disk)));
                 return Err(Halt::Budget("budget_exhausted", None));
             }
         }
@@ -5525,7 +5533,7 @@ impl Eval {
             if brk!("delta_first_overrun_holes" => false; self.plan_trial) {
                 return Err(Halt::Overrun);
             }
-            self.wall_spent.set(Some(("rows", now, self.space)));
+            self.wall_spent.0.set(Some(("rows", now, self.space)));
             if let Some(rid) = rule_id {
                 self.arith_hole(rid, self.v.space_reason);
             }
@@ -5540,7 +5548,7 @@ impl Eval {
             self.peak_rows = self.rows;
         }
         if enforce && self.rows > self.space {
-            self.wall_spent.set(Some(("rows", self.rows, self.space)));
+            self.wall_spent.0.set(Some(("rows", self.rows, self.space)));
             self.arith_hole(rule.unwrap(), self.v.space_reason);
             return Err(Halt::Budget("space_exhausted", rule));
         }
@@ -8698,11 +8706,11 @@ impl Eval {
     /// is a step: `unknown_cands`).
     fn carry_check(&self, width: usize) -> Result<(), Halt> {
         if brk!("carry_unwalled" => false; self.carry_steps > self.carry_wall.0) {
-            self.wall_spent.set(Some(("steps", self.carry_steps, self.carry_wall.0)));
+            self.wall_spent.0.set(Some(("steps", self.carry_steps, self.carry_wall.0)));
             return Err(Halt::Budget("budget_exhausted", None));
         }
         if brk!("carry_unwalled" => false; self.carry_rows + width as i64 > self.carry_wall.1) {
-            self.wall_spent.set(Some(("rows", self.carry_rows + width as i64, self.carry_wall.1)));
+            self.wall_spent.0.set(Some(("rows", self.carry_rows + width as i64, self.carry_wall.1)));
             return Err(Halt::Budget("space_exhausted", None));
         }
         Ok(())
@@ -12172,7 +12180,7 @@ impl Eval {
     ) -> Result<Vec<(Subst, PremRef)>, Halt> {
         self.bump_steps()?;
         if depth > MAX_DEPTH {
-            self.wall_spent.set(Some(("depth", depth as i64, MAX_DEPTH as i64)));
+            self.wall_spent.0.set(Some(("depth", depth as i64, MAX_DEPTH as i64)));
             return Err(Halt::Budget("budget_exhausted", None));
         }
         let rn = self.rename_clause(&r.clause);
@@ -12913,7 +12921,7 @@ impl Eval {
                 .first()
                 .and_then(|(_, k, _)| generous_wits.get(k))
                 .map(|w| w.rule);
-            self.wall_spent.set(Some(("rows", self.rows + gap.len() as i64, self.space)));
+            self.wall_spent.0.set(Some(("rows", self.rows + gap.len() as i64, self.space)));
             if let Some(b) = blame {
                 self.arith_hole(b, self.v.space_reason);
             }
@@ -13051,7 +13059,7 @@ impl Eval {
             }
             i += 1;
             if done + i >= MAX_ALTERNATIONS {
-                self.wall_spent.set(Some(("alternations", (done + i) as i64, MAX_ALTERNATIONS as i64)));
+                self.wall_spent.0.set(Some(("alternations", (done + i) as i64, MAX_ALTERNATIONS as i64)));
                 return Err(Halt::Budget("budget_exhausted", None));
             }
         }
@@ -14798,11 +14806,11 @@ impl Eval {
         if brk!("question_spends_world" => true; false) {
             return f(self);
         }
-        let saved = (std::mem::replace(&mut self.steps, 0), std::mem::replace(&mut self.rows, 0), self.peak_rows, self.wall_spent.get());
+        let saved = (std::mem::replace(&mut self.steps, 0), std::mem::replace(&mut self.rows, 0), self.peak_rows, self.wall_spent.0.get());
         let t = f(self);
         (self.steps, self.rows) = (saved.0, saved.1);
         self.peak_rows = brk!("question_peak_kept" => self.peak_rows; saved.2);
-        self.wall_spent.set(saved.3);
+        self.wall_spent.0.set(saved.3);
         t
     }
 
@@ -17083,4 +17091,16 @@ fn reaches_in(deps: &HashMap<Sym, HashSet<Sym>>, from: Sym, to: Sym) -> bool {
         }
     }
     false
+}
+
+/// Which wall an evaluation ran into, set where the wall is met and read where it is written down.
+#[derive(Clone, Default)]
+struct WallSpent(std::cell::Cell<Option<(&'static str, i64, i64)>>);
+// SAFETY: an Eval is used by one thread at a time; one shared read-only (a kept safety world) never sets it.
+unsafe impl Sync for WallSpent {}
+
+#[allow(dead_code)]
+fn eval_is_send() {
+    fn s<T: Send>() {}
+    s::<Eval>();
 }

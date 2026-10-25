@@ -188,7 +188,7 @@ fn header(path: &str) -> Result<Header, String> {
 }
 
 /// The base an overlay's header names, once it is found where it was, as it was.
-fn base_of(path: &str, r: &mut VolR) -> Result<(Kept, std::rc::Rc<Base>), String> {
+fn base_of(path: &str, r: &mut VolR) -> Result<(Kept, std::sync::Arc<Base>), String> {
     let k = Kept { path: r.text()?, size: r.u64()?, id: r.u64()? };
     let gone = || format!("{path}: the volume it was kept over, {}, is gone or changed", k.path);
     let b = map_base(&k.path).map_err(|_| gone())?;

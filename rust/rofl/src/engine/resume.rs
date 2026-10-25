@@ -198,7 +198,7 @@ impl Eval {
         }
         let shrugs = self.store.rel_all(&self.h, self.v.shrug);
         self.store.remove_many(&shrugs);
-        self.wall_spent.set(None);
+        self.wall_spent.0.set(None);
         self.store.vlisted = false;
         self.budget = self.steps + more;
         self.disk_held = 0;

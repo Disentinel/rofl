@@ -6,7 +6,7 @@
 //! names this build and every arena lies inside it, aligned (`volume.rs`); then a slice of a `Pod` type over it is
 //! a slice of values like any other.
 use std::ops::Deref;
-use std::rc::Rc;
+use std::sync::Arc as Rc;
 
 /// A type every bit pattern of which is a value, with no padding and no pointer: what may be read from a file.
 ///
@@ -41,6 +41,9 @@ pub struct Region {
     len: usize,
     hold: Hold,
 }
+// SAFETY: a region is read-only memory, mapped or written once before it is shared, never written while read.
+unsafe impl Send for Region {}
+unsafe impl Sync for Region {}
 
 enum Hold {
     Map(#[allow(dead_code)] memmap2::Mmap),

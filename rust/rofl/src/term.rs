@@ -18,7 +18,7 @@
 //! args array for a functor.
 
 use crate::arena::{Arena, VolR, VolW};
-use std::rc::Rc;
+use std::sync::Arc as Rc;
 
 pub type Sym = u32;
 
@@ -578,6 +578,10 @@ impl Heap {
             self.top = Funcs::default();
         }
         self.f0 = self.base.funcs.len() as u32;
+    }
+    /// How many functors there are: the next one made takes this index.
+    pub fn funcs_len(&self) -> u32 {
+        self.f0 + self.top.funcs.len() as u32
     }
     pub fn mkf_named(&mut self, name: &str, args: &[Term]) -> Term {
         let n = self.syms.intern(name);

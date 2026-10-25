@@ -12,7 +12,7 @@
 //! Words: the top two bits are the kind, the rest the fact; `ESC` entries carry their kind in the low bits and
 //! their values in the words after.
 
-use std::rc::Rc;
+use std::sync::Arc as Rc;
 
 use crate::arena::{Arena, VolR, VolW};
 use crate::store::FactId;
