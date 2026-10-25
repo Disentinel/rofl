@@ -64,8 +64,10 @@ xl_ok(keyed_handed, keyed_hand_need, "the volume's own instance or function, mat
 -- How often the method runs, for an `await` between: its known calls and their callers in the volume. A call from another
 -- file means the function or its instance left the file (`sx_esc`, read by keyed_handed), and that alone makes it many.
 xl_ok(keyed_called_at, keyed_once_need, "the volume's own function, matched against its calls; a caller in another file means sx_esc").
-xl_ok(keyed_many, keyed_once_need, "the volume's own function, matched; a caller in another file means sx_esc").
-xl_ok(keyed_many, nearest_fn, "the enclosing function of the volume's own call of the function, matched; a caller in another file means sx_esc").
+xl_ok(keyed_unknown_call, keyed_once_need, "the volume's own function, matched; a caller in another file means sx_esc").
+xl_ok(keyed_overlap, keyed_once_need, "the volume's own function, matched; a caller in another file means sx_esc").
+xl_ok(keyed_many, keyed_caller, "the enclosing function of the volume's own call of the function, matched; a caller in another file means sx_esc").
+xl_ok(keyed_overlap, keyed_caller, "the enclosing function of the volume's own call of the function, matched; a caller in another file means sx_esc").
 
 -- A generator's own volume: `next_send(G, V)` reaches G's file through the mirror of `sx_next`, and these read G's
 -- own yields and delegations there; a volume holding another file's G reads no row and owes none.

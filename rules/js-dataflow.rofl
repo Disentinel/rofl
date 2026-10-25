@@ -1077,19 +1077,21 @@ keyed_noisy[code](C, K) :- keyed_between[code](C, K, Q), keyed_again[code](C, K,
 keyed_noisy[code](C, K) :- keyed_between[code](C, K, Q), keyed_again[code](C, K, M), resolves[code](Q, G),
                            eff_reaches[code](G, M).
 -- An `await` or a `yield` hands the turn to whatever is queued; only another
--- run of the method puts its own put back, so it is noisy where the method may
--- run more than once (`keyed_many`): a known call of it from two sites, from a
--- loop, from a function that may itself run more than once, from itself, or a
--- call nobody knows (handed out, an entry, the instance handed out). Two runs
--- one after the other count as two: the model has no order between the runs
--- of a function, so it cannot tell them from two that overlap.
+-- run of the method puts its own put back. At an `await` that run must have
+-- started while this one waits (`keyed_overlap`): a call of the method nobody
+-- waited for (`await m()`) and another call after it, or such a call run more
+-- than once, or a caller whose own runs overlap, or a call nobody knows. Runs
+-- one after another, each awaited, do not overlap. A generator's runs live
+-- until they are exhausted, which the model does not follow, so at a `yield`
+-- any second run counts (`keyed_many`).
 keyed_noisy[code](C, K) :- keyed_between[code](C, K, Q), ast_node[code](Q, await_expression, _),
-                           keyed_again[code](C, K, M), keyed_many[code](M).
+                           keyed_again[code](C, K, M), keyed_overlap[code](M).
 keyed_noisy[code](C, K) :- keyed_between[code](C, K, Q), ast_node[code](Q, yield_expression, _),
                            keyed_again[code](C, K, M), keyed_many[code](M).
 keyed_once_need[code](M) :- keyed_between[code](C, K, Q), ast_node[code](Q, await_expression, _), keyed_again[code](C, K, M).
 keyed_once_need[code](M) :- keyed_between[code](C, K, Q), ast_node[code](Q, yield_expression, _), keyed_again[code](C, K, M).
-keyed_once_need[code](F) :- keyed_called_at[code](_, Q), nearest_fn[code](F, Q).
+keyed_once_need[code](F) :- keyed_caller[code](_, _, F).
+keyed_caller[code](G, Q, F) :- keyed_called_at[code](G, Q), nearest_fn[code](F, Q).
 keyed_called_at[code](G, Q) :- keyed_once_need[code](G), resolves[code](Q, G).
 keyed_looped[code](Q) :- keyed_called_at[code](_, Q), ast_within[code](Lp, Q), ast_node[code](Lp, K, _),
                          eff_loop_kind(K), nearest_fn[code](F, Q), ast_within[code](F, Lp).
@@ -1097,12 +1099,20 @@ keyed_looped[code](Q) :- keyed_called_at[code](_, Q), not in_fn[code](Q), ast_wi
                          ast_node[code](Lp, K, _), eff_loop_kind(K).
 keyed_many[code](G) :- keyed_called_at[code](G, Q1), keyed_called_at[code](G, Q2), Q1 != Q2.
 keyed_many[code](G) :- keyed_called_at[code](G, Q), keyed_looped[code](Q).
-keyed_many[code](G) :- keyed_called_at[code](G, Q), nearest_fn[code](F, Q), keyed_many[code](F).
-keyed_many[code](G) :- keyed_once_need[code](G), eff_reaches[code](G, G).
-keyed_many[code](G) :- keyed_once_need[code](G), keyed_handed[code](G).
-keyed_many[code](G) :- keyed_once_need[code](G), entry_point[code](G), not class_method_of[flow](_, G).
-keyed_many[code](G) :- keyed_once_need[code](G), class_method_of[flow](CD, G), not ast_attr[code](G, accessibility, "private"),
-                       inst_of[flow](I, CD), keyed_handed[code](I).
+keyed_many[code](G) :- keyed_caller[code](G, _, F), keyed_many[code](F).
+keyed_many[code](G) :- keyed_overlap[code](G).
+keyed_unknown_call[code](G) :- keyed_once_need[code](G), keyed_handed[code](G).
+keyed_unknown_call[code](G) :- keyed_once_need[code](G), entry_point[code](G), not class_method_of[flow](_, G).
+keyed_unknown_call[code](G) :- keyed_once_need[code](G), class_method_of[flow](CD, G),
+                               not ast_attr[code](G, accessibility, "private"), inst_of[flow](I, CD), keyed_handed[code](I).
+keyed_awaited[code](Q) :- keyed_called_at[code](_, Q), ast_child[code](A, argument, 0, Q), ast_node[code](A, await_expression, _).
+keyed_left[code](G, Q) :- keyed_called_at[code](G, Q), not keyed_awaited[code](Q).
+keyed_overlap[code](G) :- keyed_unknown_call[code](G).
+keyed_overlap[code](G) :- keyed_left[code](G, Q1), keyed_called_at[code](G, Q2), Q1 != Q2.
+keyed_overlap[code](G) :- keyed_left[code](G, Q), keyed_looped[code](Q).
+keyed_overlap[code](G) :- keyed_left[code](G, Q), keyed_caller[code](G, Q, F), keyed_many[code](F).
+keyed_overlap[code](G) :- keyed_caller[code](G, _, F), keyed_overlap[code](F).
+keyed_overlap[code](G) :- keyed_once_need[code](G), eff_reaches[code](G, G).
 keyed_noisy[code](C, K) :- keyed_between[code](C, K, Q), site[code](Q), not resolved_site[code](Q),
                            keyed_again[code](C, K, M), keyed_open_to[code](M).
 keyed_noisy[code](C, K) :- keyed_between[code](C, K, Q), resolves[code](Q, G), runs_outside[code](G),

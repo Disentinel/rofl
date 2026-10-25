@@ -28,8 +28,9 @@ code:
 > its instance to code the model does not resolve, so `hooks.forEach` may. A
 > call that reaches neither, `use('field.note', 0)`, takes nothing back. An
 > `await` puts back only through another run of the method: `Later.run` has one
-> call and runs once, `twice` has two, and the second puts 23 back before the
-> first reads it. A delete under an
+> call and runs once, `twice` has two nobody waits for, and the second puts 23
+> back before the first reads it; `drain` waits for each `step`, so they do not
+> overlap. A delete under an
 > `if` may not have run, so the value stays. A put in a callback (`add`,
 > `forEach`, `then`), in a public method, or a Map declared outside the loop
 > that reads and writes it (`tally`), leaves the order unknown, and the model
@@ -67,6 +68,7 @@ never seen("field.dropped", 13)
 never seen("field.named", 14)
 never seen("field.quiet", 20)
 never seen("await.once", 22)
+never seen("await.seq", 24)
 never seen("prop.ctor", 17)
 never seen("ts.early", 18)
 ```

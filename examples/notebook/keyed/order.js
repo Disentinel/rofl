@@ -158,6 +158,22 @@ lazy.run();
 lazy.twice(false);
 lazy.twice(true);
 
+class Queue {
+  constructor() { this.jobs = new Map(); }
+  async step() {
+    this.jobs.set('j', 24);
+    this.jobs.delete('j');
+    await null;
+    use('await.seq', this.jobs.get('j'));
+  }
+}
+async function drain() {
+  const queue = new Queue();
+  await queue.step();
+  await queue.step();
+}
+drain();
+
 class Cache {
   items = new Map();
   constructor() {
