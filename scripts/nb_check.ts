@@ -1,9 +1,11 @@
 // npm run test:nb — the notebook's behavioural gate (what runs around the kernel is npm run test:nb:product): the example notebooks by exit code and a few answer lines, and planted defects that must
 // turn it red. The invariants it stands for are named in examples/notebook/self.rofl.md; each check below names its own.
-import { chmodSync, existsSync, readdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import * as vm from 'node:vm';
+import { execFileSync } from 'node:child_process';
+import ts from 'typescript';
 import { Kernel, type NbLine } from '../notebook/kernel.ts';
 import { runFile } from '../notebook/cli.ts';
 import { engineOf } from '../playground/rust.ts';
@@ -183,6 +185,56 @@ const RUNS: Record<string, () => Promise<Out>> = {
     const missing = [...observed].filter((o) => !model.has(o));
     return { code: 0, out: `V8 observed ${observed.size} values; missing from the model: ${JSON.stringify(missing)}`, stdout: '' };
   },
+  missing: () => cli([path.join(NB, 'missing.rofl.md')]),
+  missingV8: async (): Promise<Out> => {
+    const ran = await cli([path.join(NB, 'missing.rofl.md'), '--json', '--all']);
+    const said: Record<string, Set<string>> = { missing: new Set(), unknown: new Set(), found: new Set() };
+    for (const c of JSON.parse(ran.stdout ?? '{}').cells ?? []) for (const l of c.lines) for (const a of l.answers) {
+      const m = /^(missing|unknown|found)\("([\w.]+)"\)$/.exec(a.literal);
+      if (m) said[m[1]].add(m[2]);
+    }
+    const thrown = new Set<string>();
+    vm.runInNewContext(readFileSync(path.join(NB, 'missing/calls.js'), 'utf8'), { __thrown: (tag: string, e: Error) => { if (e.constructor.name === 'TypeError') thrown.add(tag); }, require: () => ({}) });
+    const wrong = [...said.missing].filter((t) => !thrown.has(t)).concat([...said.found].filter((t) => thrown.has(t)));
+    return { code: 0, out: `V8 threw at ${thrown.size} calls; the model said ${said.missing.size} missing, ${said.unknown.size} unknown, ${said.found.size} found; wrong: ${JSON.stringify(wrong)}`, stdout: '' };
+  },
+  imports: () => cli([path.join(NB, 'imports.rofl.md')]),
+  importsNode: async (): Promise<Out> => {
+    const ran = await cli([path.join(NB, 'imports.rofl.md'), '--json', '--all']);
+    const said: Record<string, Set<string>> = { missing: new Set(), unknown: new Set(), found: new Set() };
+    for (const c of JSON.parse(ran.stdout ?? '{}').cells ?? []) for (const l of c.lines) for (const a of l.answers) {
+      const m = /^(missing|unknown|found)\("([\w.]+)"\)$/.exec(a.literal);
+      if (m) said[m[1]].add(m[2]);
+    }
+    const src = path.join(NB, 'imports'), out = path.join(tmp, 'imports');
+    mkdirSync(out, { recursive: true });
+    for (const f of readdirSync(src).filter((f) => f.endsWith('.ts'))) {
+      const js = ts.transpileModule(readFileSync(path.join(src, f), 'utf8'), { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } }).outputText;
+      writeFileSync(path.join(out, f.replace(/\.ts$/, '.mjs')), js.replace(/from '(\.\/\w+)'/g, "from '$1.mjs'"));
+    }
+    const run = `const t = []; globalThis.probe = (tag, f) => { try { f(); } catch (e) { if (e instanceof TypeError) t.push(tag); } };
+await import(${JSON.stringify('file://' + path.join(out, 'use.mjs'))}); console.log(JSON.stringify(t));`;
+    const thrown = new Set<string>(JSON.parse(execFileSync(process.execPath, ['--input-type=module', '-e', run], { encoding: 'utf8' })));
+    const wrong = [...said.missing].filter((t) => !thrown.has(t)).concat([...said.found].filter((t) => thrown.has(t)));
+    return { code: 0, out: `Node threw at ${thrown.size} calls; the model said ${said.missing.size} missing, ${said.unknown.size} unknown, ${said.found.size} found; wrong: ${JSON.stringify(wrong)}`, stdout: '' };
+  },
+  declared: () => cli([path.join(NB, 'declared.rofl.md')]),
+  declaredTsc: async (): Promise<Out> => {
+    const ran = await cli([path.join(NB, 'declared.rofl.md'), '--json', '--all']);
+    const said = new Set<string>();
+    for (const c of JSON.parse(ran.stdout ?? '{}').cells ?? []) for (const l of c.lines) for (const a of l.answers) {
+      const m = /^missing_by_type\((\d+), "(\w+)"\)$/.exec(a.literal);
+      if (m) said.add(`${m[1]}:${m[2]}`);
+    }
+    const file = path.join(NB, 'declared/calls.ts');
+    const program = ts.createProgram([file], { noEmit: true, strict: true, target: ts.ScriptTarget.ES2022 });
+    const errors = new Set(ts.getPreEmitDiagnostics(program).filter((d) => (d.code === 2339 || d.code === 2551) && d.file?.fileName === file).map((d) => {
+      const at = d.file!.getLineAndCharacterOfPosition(d.start!);
+      return `${at.line + 1}:${d.file!.text.slice(d.start!, d.start! + d.length!)}`;
+    }));
+    const wrong = [...said].filter((k) => !errors.has(k)).concat([...errors].filter((k) => !said.has(k)));
+    return { code: 0, out: `TypeScript names ${errors.size} members that do not exist; the model said ${said.size} missing by type; differ: ${JSON.stringify(wrong)}`, stdout: '' };
+  },
   orderV8: async (): Promise<Out> => {
     const ran = await cli([path.join(NB, 'order.rofl.md'), '--json', '--all']);
     const model = new Set<string>(), unordered = new Set<string>();
@@ -214,7 +266,7 @@ const RUNS: Record<string, () => Promise<Out>> = {
     return { code: differ.length, out: differ.length ? `not the same on the two engines: ${differ.join(', ')}` : 'the same on both engines', stdout: '' };
   },
 };
-let engines!: Out, review!: Out, small!: Out, self!: Out, reviewJson!: Out, fails!: Out, notRead!: Out, rewrite!: Out, extended!: Out, collided!: Out, recurse!: Out, red!: Out, blind!: Out, unpop!: Out, early!: Out, nat!: Out, trOk!: Out, trBad!: Out, trGone!: Out, unparsedOut!: Out, fr!: Out, badRead!: Out, chained!: Out, lone!: Out, trSlow!: Out, spat!: Out, ex!: Out, wo!: Out, hol!: Out, xdir!: Out, xdirFails!: Out, cjs!: Out, cjsBlind!: Out, external!: Out, decorated!: Out, scoped!: Out, scopedV8!: Out, assign!: Out, guard!: Out, destructure!: Out, destructureV8!: Out, orderV8!: Out, climb!: Out, heavy!: Out, nmWorld!: Out, out!: Out, three!: Out, part!: Out, nothing!: Out, sides!: Out, sidesAll!: Out, sidesJson!: Out;
+let engines!: Out, review!: Out, small!: Out, self!: Out, reviewJson!: Out, fails!: Out, notRead!: Out, rewrite!: Out, extended!: Out, collided!: Out, recurse!: Out, red!: Out, blind!: Out, unpop!: Out, early!: Out, nat!: Out, trOk!: Out, trBad!: Out, trGone!: Out, unparsedOut!: Out, fr!: Out, badRead!: Out, chained!: Out, lone!: Out, trSlow!: Out, spat!: Out, ex!: Out, wo!: Out, hol!: Out, xdir!: Out, xdirFails!: Out, cjs!: Out, cjsBlind!: Out, external!: Out, decorated!: Out, scoped!: Out, scopedV8!: Out, assign!: Out, guard!: Out, destructure!: Out, destructureV8!: Out, orderV8!: Out, missing!: Out, missingV8!: Out, imports!: Out, importsNode!: Out, declared!: Out, declaredTsc!: Out, climb!: Out, heavy!: Out, nmWorld!: Out, out!: Out, three!: Out, part!: Out, nothing!: Out, sides!: Out, sidesAll!: Out, sidesJson!: Out;
 type Test = { name: string; needs: string[]; ok: () => boolean; o?: () => Out };
 const TESTS: Test[] = [];
 /** A check, by the runs it reads; it is judged once they are done. */
@@ -261,6 +313,12 @@ test('scoped: an assignment reaches the readers of its own binding and what no b
 test('scoped: every value V8 observes at a read is in the model\'s may-set; the one miss is the concatenation `t += "b"`', ['scopedV8'], () => has(scopedV8, 'missing from the model: ["sum:\\"ab\\""]'), () => scopedV8);
 test('destructure: a name bound from an object pattern, in a declarator or a parameter, with a default or off a required module, and a conversion, carry their values', ['destructure'], () => is(destructure, 0) && has(destructure, 'never seen("object.port", 3030)  ->  holds') && has(destructure, 'never seen("default.port", 8082)  ->  holds') && has(destructure, 'never seen("require.port", 5)  ->  holds') && has(destructure, '? seen(Tag, V)  ->  18 answers'), () => destructure);
 test('destructure: every value V8 observes at a read is in the model\'s may-set', ['destructureV8'], () => has(destructureV8, 'missing from the model: []'), () => destructureV8);
+test('missing: a call of a member a receiver seen whole has not got is said missing, and never over a package or a parameter', ['missing'], () => is(missing, 0) && has(missing, '? missing(T)  ->  9 answers') && has(missing, 'never missing("path.nosuch")  ->  holds'), () => missing);
+test('imports: an imported class, a namespace and a module object are seen whole, and what re-exports a package is not', ['imports'], () => is(imports, 0) && has(imports, '? missing(T)  ->  8 answers') && has(imports, 'never missing("O.join")  ->  holds'), () => imports);
+test('imports: Node throws a TypeError at every call said missing and at no call said found', ['importsNode'], () => has(importsNode, 'wrong: []') && has(importsNode, 'said 8 missing'), () => importsNode);
+test('declared: a member a declared type has not got is said missing by type, and not where the code narrows it', ['declared'], () => is(declared, 0) && has(declared, '? missing_by_type(L, K)  ->  21 answers') && has(declared, 'never missing_by_type(25, "extra")  ->  holds'), () => declared);
+test('declared: TypeScript\'s "does not exist" errors are exactly the calls said missing by type', ['declaredTsc'], () => has(declaredTsc, 'differ: []') && has(declaredTsc, 'said 21 missing'), () => declaredTsc);
+test('missing: V8 throws a TypeError at every call said missing and at no call said found', ['missingV8'], () => has(missingV8, 'wrong: []') && has(missingV8, 'said 9 missing'), () => missingV8);
 test('order: a Map read holds what V8 holds where the order is known, and every other value is named as unordered', ['orderV8'], () => has(orderV8, 'missing from the model: []; in the model where the order is known and V8 never saw it: []'), () => orderV8);
 test('assign: Object.assign, by the library member the callee is, writes its sources onto its first argument and returns it, across files; a method of the program called assign does neither', ['assign'], () => is(assign, 0) && has(assign, 'seen("E.port", 4000)') && has(assign, 'seen("lib.port", 4000)') && has(assign, 'seen("merged.host", "localhost")') && has(assign, 'called("start")') && has(assign, 'called("late")') && has(assign, 'never seen("bystander.leak", 1)  ->  holds'), () => assign);
 test('guard: a call under `!module.parent` or `require.main === module`, or in a function only they mention, hands its callee no argument; the required arm and an exported function keep theirs', ['guard'], () => is(guard, 0) && has(guard, '? seen(Tag, V)  ->  3 answers') && has(guard, 'seen("listen.port", 7777)') && has(guard, 'seen("listen.port", 4444)') && has(guard, '? dead_fn[code](F)  ->  2 answers') && has(guard, 'never seen("listen.port", 9999)  ->  holds') && has(guard, 'never seen("listen.port", 3333)  ->  holds'), () => guard);
@@ -368,7 +426,7 @@ if (shard) {
 }
 if (only) chosen = chosen.filter((t) => new RegExp(only).test(t.name));
 const got: Record<string, Out> = Object.fromEntries(await Promise.all([...new Set(chosen.flatMap((t) => t.needs))].map(async (r) => [r, await RUNS[r]()])));
-({ engines, review, small, self, reviewJson, fails, notRead, rewrite, extended, collided, recurse, red, blind, unpop, early, nat, trOk, trBad, trGone, unparsedOut, fr, badRead, chained, lone, trSlow, spat, ex, wo, hol, xdir, xdirFails, cjs, cjsBlind, external, decorated, scoped, scopedV8, assign, guard, destructure, destructureV8, orderV8, climb, heavy, nmWorld, out, three, part, nothing, sides, sidesAll, sidesJson } = got);
+({ engines, review, small, self, reviewJson, fails, notRead, rewrite, extended, collided, recurse, red, blind, unpop, early, nat, trOk, trBad, trGone, unparsedOut, fr, badRead, chained, lone, trSlow, spat, ex, wo, hol, xdir, xdirFails, cjs, cjsBlind, external, decorated, scoped, scopedV8, assign, guard, destructure, destructureV8, orderV8, missing, missingV8, imports, importsNode, declared, declaredTsc, climb, heavy, nmWorld, out, three, part, nothing, sides, sidesAll, sidesJson } = got);
 for (const t of chosen) {
   let ok = false, o: Out | undefined;
   try { ok = t.ok(); o = t.o?.(); } catch (e) { o = { code: -1, out: `the check threw, a run it reads not named among its needs? ${(e as Error).stack}` }; }

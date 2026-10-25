@@ -17,6 +17,7 @@ default: code
 Reads:
 
 - from js-callgraph: [await_arg](js-callgraph.rofl.md#await_arg), [call_site](js-callgraph.rofl.md#call_site), [fn_node](js-callgraph.rofl.md#fn_node), [for_of_iterates](js-callgraph.rofl.md#for_of_iterates), [nearest_fn](js-callgraph.rofl.md#nearest_fn), [resolves](js-callgraph.rofl.md#resolves), [top_call](js-callgraph.rofl.md#top_call)
+- from js-callgraph, in the flow: [field_init](js-callgraph.rofl.md#field_init)
 - from js-concat, in the flow: [may_be_lit](js-concat.rofl.md#may_be_lit), [may_be_node](js-concat.rofl.md#may_be_node)
 - from js-dataflow: [export_local](js-dataflow.rofl.md#export_local), [pattern_takes](js-dataflow.rofl.md#pattern_takes), [private_binds](js-dataflow.rofl.md#private_binds), [rest_in_pattern](js-dataflow.rofl.md#rest_in_pattern)
 - from js-dataflow, in the flow: [catch_of](js-dataflow.rofl.md#catch_of), [catch_param](js-dataflow.rofl.md#catch_param), [decl_value](js-dataflow.rofl.md#decl_value), [member_node_v](js-dataflow.rofl.md#member_node_v), [member_value](js-dataflow.rofl.md#member_value), [nearest_v](js-dataflow.rofl.md#nearest_v), [plain_assign](js-dataflow.rofl.md#plain_assign), [selects](js-dataflow.rofl.md#selects)
@@ -126,14 +127,15 @@ Declared as facts:
 > class is never constructed; a static one runs with the definition. Derived
 > from `transfer_mechanism(K, per_construction)`, not a second list.
 
+`field_init`(P, V), in the code if all of:
+  - a kind K [transfers by](#transfer_mechanism) `per_construction`;
+  - a node P [is of kind](js-model.rofl.md#ast_node) K;
+  - [the attribute](#ast_attr) `static` of P is `false`;
+  - the `value` of P is a node V.
+
 A node
 
-- <a id="field_init"></a>has the field initialiser V if all of:
-  - a kind K [transfers by](#transfer_mechanism) `per_construction`;
-  - it [is of kind](js-model.rofl.md#ast_node) K;
-  - [the attribute](#ast_attr) `static` of it is `false`;
-  - the `value` of it is V.
-- is conditional on a node P if P [has the field initialiser](#field_init) it.
+- is conditional on a node P if [`field_init`](js-callgraph.rofl.md#field_init)(P, it) in the code.
 - <a id="guarded"></a>is guarded if it [is conditional on](#guard_arm) some node.
 - is guarded if a node X [is conditional on](#guard_arm) some node and it [is within](#ast_within) X.
 
