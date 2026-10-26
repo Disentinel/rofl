@@ -42,7 +42,9 @@ code:
 > the model keeps to `private` and names each such reach. A for-of and a `forEach` see what a get would.
 > A get may find no entry and read `undefined`, unless a put of the same key ran
 > in a statement of its own before it and nothing between may have taken it out
-> (`order.one`). `undefined` is a value of the flow: a parameter a call leaves
+> (`order.one`), also through a call of a function that puts it whenever it
+> runs (`fill()`, `this.#fill()`), and on a field from the constructor unless
+> some method may remove that key (`drop(name)` may remove any). `undefined` is a value of the flow: a parameter a call leaves
 > out, a function that ends without a value, a `let` with no initialiser, `void`.
 > `use(tag, v)` marks each read; `npm run test:nb` runs the file under V8 and
 > checks the model against what it observes. Run it with
@@ -60,6 +62,10 @@ never seen("order.one", 2)
 never seen("order.one", undefined)
 never seen("order.two", undefined)
 never seen("lib.slot", 25)
+never seen("arrow.key", 27)
+never seen("calls.after", undefined)
+never seen("field.ctor", undefined)
+never seen("ctor.mode", undefined)
 never seen("order.gone", 2)
 never seen("order.cleared", 3)
 never seen("tally.first", 7)

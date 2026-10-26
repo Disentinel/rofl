@@ -199,3 +199,15 @@ use('undef.ret', nothing());
 let unset;
 use('undef.let', unset);
 use('undef.void', void 0);
+
+const tag = () => 'w';
+const arrows = new Map();
+arrows.set(tag(), 27);
+arrows.delete('w');
+use('arrow.key', arrows.get('w'));
+
+class Config {
+  constructor() { this.opts = new Map(); this.opts.set('mode', 28); }
+  mode() { use('ctor.mode', this.opts.get('mode')); }
+}
+new Config().mode();
