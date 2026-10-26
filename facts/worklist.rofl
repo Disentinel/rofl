@@ -3808,7 +3808,8 @@ work_needs(w_cmp_cone_rules_added, w_cmp_demand_cones).
 
 work(w_cmp_asks_from_cells,
   "THE NOTEBOOK KERNEL ASKS WHAT ITS LINES ASK: the relations of every never, unsure, ? and why line (6-17 relations per notebook) as asks facts of the world the kernel evaluates, so a notebook evaluates a third to two thirds of its model (measured: a quarter to a third off the time, 11-21% off the memory on Rust). Not built: the kernel runs on TypeScript (playground/host.ts) and moves to Rust with the async Kernel.run, a change of its own (f_rust_is_the_engine_ts_is_the_reference); `hole` and `unresolved_relative` are the host's, asked after the run, and are not cone relations. ACCEPTANCE: test:nb verdicts unchanged with asks on, the run's evaluation time before and after.").
-work_state(w_cmp_asks_from_cells, open).
+work_state(w_cmp_asks_from_cells, done).
+work_spawned(w_cmp_asks_from_cells, f_a_notebook_asks_the_cone_of_its_lines).
 work_needs(w_cmp_asks_from_cells, w_cmp_demand_cones).
 
 work(w_cmp_model_aggregates,

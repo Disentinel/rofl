@@ -16,7 +16,8 @@ import { readBook, homeOf, booksOf, OWN, type Ask, type Cell, type Kind } from '
 import { plural, theVariable, type Question } from '../scripts/read_md.ts';
 import { ARITH_OPS, varsOf, canonTerm, mka, litsOf, termsOf, type Clause, type Lit, type Term } from '../src/unify.ts';
 import type { FactRec, Store } from '../src/store.ts';
-import { holding, remote, typescript, type Engine, type Stop } from './engine.ts';
+import { asksOf, holding, remote, typescript, type Engine, type Stop } from './engine.ts';
+import { SCREEN_RELS } from '../notebook/screen.ts';
 export type { Stop };
 
 const BUDGET = 4_000_000_000, SPACE = 40_000_000;
@@ -166,6 +167,11 @@ const ground = (lit: string, b: Record<string, string>): string => lit.replace(/
 
 
 const relOf = (key: string) => key.slice(0, key.search(/[[(]/));
+/** What the host reads of a run's world after its lines: the imports that name no file, and a screen's relations. */
+const AFTER = ['unresolved_relative', ...SCREEN_RELS];
+/** The holes the rules a world ran left, read from its store: a question about `hole` in a world asked a cone is refused, since it would speak
+ *  of every rule's. */
+const holesOf = (w: Rofl): { H: string; R: string }[] => w.store.relPersp('hole', '$kernel').flatMap((f) => f.args.length === 2 ? [{ H: canonTerm(f.args[0]), R: canonTerm(f.args[1]) }] : []);
 /** The relations the renderer reads by name: the pictures' words and `unknown`, which tags what the model could not see. A notebook writes them. */
 const DRAWN = new Set([...VIEW_RELS, 'unknown']);
 /** What a notebook is told when it reads a relation that is not its own and no sentence it reads says. */
@@ -253,6 +259,7 @@ export class Host {
   private modelRels = new Set<string>();
   private scanned: Scanned | null = null;
   private base: Rofl | null = null;
+  private baseAsks: Set<string> | undefined;   // what the kept base was asked; undefined: every rule
   rows = 50;   // answers kept per line
 
   /** `engine`: what evaluates the model over the code (playground/engine.ts); the cells and everything read after are the TypeScript engine's. */
@@ -380,6 +387,11 @@ export class Host {
       && ![...heads].some((r) => this.modelRels.has(r) || sc.rels.has(r))
       && !over.some((r) => this.kernelRels.has(r))
       && asks.every((as, i) => refused.has(i) || as.every((a) => a.kind !== 'excise' && !this.kernelRels.has(relOf(a.lit))));
+    // what the run reads of the model: the relations its lines ask, the cells' own or those they read of it, and what is read after; the world then
+    // evaluates only their cone (docs/demand-cones.md). An excise or a picture reads the whole world.
+    const live = asks.flatMap((as, i) => refused.has(i) ? [] : as);
+    const cone = live.some((a) => a.kind === 'excise' || a.kind === 'draw') ? undefined
+      : new Set([...live.flatMap((a) => [a.lit, a.q?.blank ? owned(a.q.blank.lit) : '']).map(relOf), ...(layered ? over : heads), ...AFTER].filter((r) => /^[a-z_]\w*$/.test(r)));
     let unresolved: string[] = [], partial = false, model: RunOut['model'];
     let evaluatedWorld: Rofl | undefined;
     // a wall of the clock or the heap says itself; the engine's own, the step budget or the space, is the hole its evaluation left
@@ -387,14 +399,14 @@ export class Host {
       if (!partial) return undefined;
       if (stop?.cause) return stop.cause;
       let holes: string[] = [];
-      try { holes = (evaluatedWorld ?? base)?.query('hole[$kernel](H, R)').rows.map((r) => r.bindings.R) ?? []; } catch { /* the world could not say */ }
+      try { holes = (evaluatedWorld ?? base) ? holesOf((evaluatedWorld ?? base)!).map((r) => r.R) : []; } catch { /* the world could not say */ }
       return holes.includes('space_exhausted') ? `the space wall of ${SPACE.toLocaleString('en')} rows was reached, the usual mark of a rule that climbs without end; a notebook has no setting that raises it`
         : holes.includes('budget_exhausted') ? `the step budget of ${BUDGET.toLocaleString('en')} was spent, the usual mark of a rule that climbs without end; a notebook has no setting that raises it` : undefined;
     };
     const done = (error?: string): RunOut => ({ parseErrors, facts: facts.length, ms: Math.round(performance.now() - t), phases, learned, cells: outs, nodes, unresolved, error, partial, cut: cutBy(), model });
     let base: Rofl | null = null;
     if (layered) {
-      try { model = this.base ? 'kept' : 'evaluated'; base = this.evaluated(files, sc, stop); partial = base.store.partialEval; } catch (e) { return done((e as Error).message); }
+      try { model = this.base ? 'kept' : 'evaluated'; base = this.evaluated(sc, cone, stop); partial = base.store.partialEval; } catch (e) { return done((e as Error).message); }
     }
     lap('model');
     // not layered: the engine evaluates the code and the cells together
@@ -402,7 +414,7 @@ export class Host {
     let f: Rofl;
     if (!base) {
       try {
-        const r = this.engine.withCells(this.core, this.model, Object.keys(files).length ? sc.text : '', texts, { budget: BUDGET, space: SPACE, stop });
+        const r = this.engine.withCells(this.core, this.model, [Object.keys(files).length ? sc.text : '', cone ? asksOf(cone) : ''].join('\n'), texts, { budget: BUDGET, space: SPACE, stop });
         r.errors.forEach((e, i) => outs[i].errors.push(...e));
         f = r.world; partial ||= f.store.partialEval;
       } catch (e) { return done((e as Error).message); }
@@ -461,11 +473,11 @@ export class Host {
     const seen = { failing: [] as string[][], blind: [] as string[][], unknown: [] as string[][] };   // the rows of the nevers, the unsures and unknown, as their terms
     // a cell's rule that met an expression it could not evaluate concluded nothing there, and the kernel said so only in its hole relation
     const holed = new Map<string, string>();
-    for (const r of f.query('hole[$kernel](H, R)').rows) {
-      const at = rules.get(/\$rule\((\w+)\)/.exec(r.bindings.H)?.[1] ?? '');
+    for (const r of holesOf(f)) {
+      const at = rules.get(/\$rule\((\w+)\)/.exec(r.H)?.[1] ?? '');
       if (!at || holed.has(at.rel)) continue;
-      holed.set(at.rel, r.bindings.R);
-      outs[at.cell].notes.push(`the rule for ${plain(at.rel).replace(/_/g, ' ')} met an expression it could not evaluate (${r.bindings.R}) and concluded nothing there${r.bindings.R === 'arith_type_error' ? `: arithmetic is on integers, with ${[...ARITH_OPS].join(' ')}, and the only string functions are ${[...STR_ARITY.keys()].join(', ')}` : ''}`);
+      holed.set(at.rel, r.R);
+      outs[at.cell].notes.push(`the rule for ${plain(at.rel).replace(/_/g, ' ')} met an expression it could not evaluate (${r.R}) and concluded nothing there${r.R === 'arith_type_error' ? `: arithmetic is on integers, with ${[...ARITH_OPS].join(' ')}, and the only string functions are ${[...STR_ARITY.keys()].join(', ')}` : ''}`);
     }
     const holedUnder = (rel: string) => under(rel, (r) => holed.has(r) ? `it rests on ${plain(r).replace(/_/g, ' ')}, whose rule could not evaluate an expression (${holed.get(r)})` : undefined, true);
     // a never over a cell's relation with exceptions (unless, differs from), every rule of which has a condition that finds no row on its own
@@ -710,10 +722,16 @@ export class Host {
     return this.scanned = { key, facts, nodes, parseErrors, text: all.join('\n'), rels: new Set(all.map(relOf)) };
   }
 
-  /** The model evaluated over the code, once per text of the files. */
-  private evaluated(files: Record<string, string>, sc: Scanned, stop?: Stop): Rofl {
-    if (this.base) return this.base;
-    const b = this.engine.evaluated(this.core!, this.model, sc.text, { budget: BUDGET, space: SPACE, stop });
+  /** The model evaluated over the code, asked `cone` (undefined: every rule), once per text of the files: a kept world asked less answers as it is,
+   *  one asked more grows its cone over what it holds. */
+  private evaluated(sc: Scanned, cone: Set<string> | undefined, stop?: Stop): Rofl {
+    const walls = { budget: BUDGET, space: SPACE, stop }, kept = this.base, had = this.baseAsks;
+    this.base = null;
+    let b: Rofl;
+    if (kept && (!had || cone && [...cone].every((r) => had.has(r)))) b = kept;
+    else if (kept && cone) b = this.engine.asked(kept, [...cone].filter((r) => !had!.has(r)), walls);
+    else b = this.engine.evaluated(this.core!, this.model, cone ? `${sc.text}\n${asksOf(cone)}` : sc.text, walls);
+    if (b !== kept) this.baseAsks = cone && had && kept ? new Set([...had, ...cone]) : cone;
     return b.store.partialEval ? b : this.base = b;   // a world cut short is not kept for the next run
   }
 

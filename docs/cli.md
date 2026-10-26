@@ -59,6 +59,7 @@ is a document and is refused (exit 2).
 (0 ok, 1 a never fails, 2 not everything was read, 3 blind or cut), with `--cell N` and `--all`. `draw`, a
 notebook over code (`code:`, `model: js`) and `--json` are not native yet: it says so on stderr and exits 2.
 `npm run nbcheck` holds it to the TypeScript kernel byte for byte over every notebook in its slice.
+`npm run nb` evaluates only the cone of what a notebook's lines ask (docs/demand-cones.md); it has no setting.
 
 **`@LIST`** stands for the files LIST names, one a line, each read from LIST's
 directory. `@rules/js.files` is the JS model, the files the notebook host
