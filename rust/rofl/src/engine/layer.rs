@@ -7,14 +7,14 @@
 //! shrug, and every relation it reads is kept, or a base relation no fact came into or left since and no rule
 //! concludes, or what the kernel read off the program as it was loaded. A relation a hole or a shrug of the whole
 //! evaluation names, or whose rule one names, is evaluated again: a fault is the firing's, and only a firing writes
-//! it. A well-founded world, and one whose rules read `derived_by`, keep nothing.
+//! it. A relation answered on demand is kept only while no rule evaluated again reads it: one could ask it more. A
+//! well-founded world, a world cut by a wall, and one whose rules read `derived_by` keep nothing.
 
 use super::*;
 
 #[derive(Clone, Default)]
 pub struct Whole {
     tick: u32,
-    mark: u32,
     rules: HashMap<Sym, Vec<String>>,
     special: HashSet<Sym>,
     faulted: HashSet<Sym>,
@@ -91,10 +91,13 @@ impl Eval {
 
     /// The world is evaluated whole: what a later full pass may keep is read against it.
     pub(super) fn note_whole(&mut self) {
-        self.store.base_gone.clear();
+        self.store.base_moved.clear();
+        if self.store.partial_eval {
+            self.whole = None;
+            return;
+        }
         self.whole = Some(Rc::new(Whole {
             tick: self.store.tick,
-            mark: self.store.len_ids(),
             rules: self.rules_by_head(),
             special: self.special_rels(),
             faulted: self.faulted_rels(),
@@ -116,13 +119,7 @@ impl Eval {
         {
             return (FxSet::default(), again(&FxSet::default()));
         }
-        let mut changed: HashSet<Sym> = self.store.base_gone.iter().copied().collect();
-        for id in w.mark..self.store.len_ids() {
-            let r = self.store.rec(id);
-            if r.base() {
-                changed.insert(r.rel);
-            }
-        }
+        let changed = &self.store.base_moved;
         let now = self.rules_by_head();
         let special = self.special_rels();
         let by_head: HashMap<Sym, Vec<&Rc<ERule>>> = self.rules.iter().fold(HashMap::new(), |mut m, r| {
@@ -161,6 +158,7 @@ impl Eval {
             })
             .map(|(rel, _)| *rel)
             .collect();
+        let demand: HashSet<Sym> = self.demand_rels.iter().map(|(r, _)| *r).chain(self.answer.demand_rels.iter().copied()).collect();
         loop {
             let n = kept.len();
             let stays = |rel: &Sym, kept: &FxSet<Sym>| {
@@ -171,7 +169,15 @@ impl Eval {
                     })
                 })
             };
-            let drop: Vec<Sym> = kept.iter().filter(|r| !stays(r, &kept)).copied().collect();
+            // what is answered on demand holds what was asked of it: a rule evaluated again may ask it more
+            let asked_anew: HashSet<Sym> = self
+                .rules
+                .iter()
+                .filter(|r| !kept.contains(&r.clause.head.rel))
+                .flat_map(|r| r.clause.body.iter().flat_map(|b| b.lits_deep()).map(|l| l.rel).collect::<Vec<_>>())
+                .filter(|rel| demand.contains(rel))
+                .collect();
+            let drop: Vec<Sym> = kept.iter().filter(|r| !stays(r, &kept) || asked_anew.contains(r)).copied().collect();
             for r in drop {
                 kept.remove(&r);
             }

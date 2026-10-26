@@ -1208,8 +1208,8 @@ pub struct Store {
     cells: Rc<Cells>,
     /// Runs holding a record `retire` marked dead and did not yet drop.
     unswept: Vec<(Sym, Sym)>,
-    /// The relations a base fact of was taken out since the last whole evaluation noted it (`Eval::note_whole`).
-    pub base_gone: FxSet<Sym>,
+    /// The relations a base fact came into or left since the last whole evaluation noted it (`Eval::note_whole`).
+    pub base_moved: FxSet<Sym>,
     /// The relations a full pass keeps (`Eval::finished_layer`): `clear_derived` leaves their facts and firings.
     pub kept_layer: FxSet<Sym>,
     /// The kernel's rows about what the full pass keeps (a `derived_by` row of a kept fact, a kept aggregate's cell).
@@ -1846,6 +1846,7 @@ impl Store {
                 // derived fact's tick scope is the derivation's
                 let old = self.facts.rec(id).flags();
                 if flags & F_BASE != 0 && old & F_BASE == 0 {
+                    self.base_moved.insert(rel);
                     self.facts.set_flags(id, brk!("promoted_tick_scope_kept" => old | F_BASE; (old & !F_TICK) | flags));
                     // its height is a base fact's now, and what rests on it may lie lower: an addition to note
                     if let Some(a) = self.arrivals.as_mut().filter(|_| brk!("add_promoted_unnoted" => false; true)) {
@@ -1876,6 +1877,9 @@ impl Store {
             }
         };
         self.n_live += 1;
+        if flags & F_BASE != 0 {
+            self.base_moved.insert(rel);
+        }
         if let Some(a) = self.arrivals.as_mut() {
             a.push(id);
         }
@@ -2487,7 +2491,7 @@ impl Store {
             return;
         }
         if r.base() {
-            self.base_gone.insert(r.rel);
+            self.base_moved.insert(r.rel);
         }
         self.facts.add_flags(id, F_DEAD);
         self.n_live -= 1;
@@ -2515,7 +2519,7 @@ impl Store {
             return;
         }
         if r.base() {
-            self.base_gone.insert(r.rel);
+            self.base_moved.insert(r.rel);
         }
         self.facts.add_flags(id, F_DEAD);
         self.n_live -= 1;
