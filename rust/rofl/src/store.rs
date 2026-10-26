@@ -1208,6 +1208,14 @@ pub struct Store {
     cells: Rc<Cells>,
     /// Runs holding a record `retire` marked dead and did not yet drop.
     unswept: Vec<(Sym, Sym)>,
+    /// The relations a base fact came into or left since the last whole evaluation noted it (`Eval::note_whole`).
+    pub base_moved: FxSet<Sym>,
+    /// The relations a full pass keeps (`Eval::finished_layer`): `clear_derived` leaves their facts and firings.
+    pub kept_layer: FxSet<Sym>,
+    /// The kernel's rows about what the full pass keeps (a `derived_by` row of a kept fact, a kept aggregate's cell).
+    pub kept_rows: FxSet<FactId>,
+    /// The rules concluding what the full pass keeps: their aggregates' cells stay, cited or not.
+    pub kept_rules: FxSet<Sym>,
     /// Premise -> the facts with a firing that cites it, kept while a program
     /// with a lattice evaluates (`track_citers`), so a withdrawal visits the
     /// firings it touches and not the store. An entry can outlive its firing;
@@ -1838,6 +1846,7 @@ impl Store {
                 // derived fact's tick scope is the derivation's
                 let old = self.facts.rec(id).flags();
                 if flags & F_BASE != 0 && old & F_BASE == 0 {
+                    self.base_moved.insert(rel);
                     self.facts.set_flags(id, brk!("promoted_tick_scope_kept" => old | F_BASE; (old & !F_TICK) | flags));
                     // its height is a base fact's now, and what rests on it may lie lower: an addition to note
                     if let Some(a) = self.arrivals.as_mut().filter(|_| brk!("add_promoted_unnoted" => false; true)) {
@@ -1868,6 +1877,9 @@ impl Store {
             }
         };
         self.n_live += 1;
+        if flags & F_BASE != 0 {
+            self.base_moved.insert(rel);
+        }
         if let Some(a) = self.arrivals.as_mut() {
             a.push(id);
         }
@@ -2478,6 +2490,9 @@ impl Store {
         if r.dead() {
             return;
         }
+        if r.base() {
+            self.base_moved.insert(r.rel);
+        }
         self.facts.add_flags(id, F_DEAD);
         self.n_live -= 1;
         *self.deaths.entry(r.rel).or_default() += 1;
@@ -2502,6 +2517,9 @@ impl Store {
         let r = self.facts.rec(id);
         if r.dead() {
             return;
+        }
+        if r.base() {
+            self.base_moved.insert(r.rel);
         }
         self.facts.add_flags(id, F_DEAD);
         self.n_live -= 1;
@@ -2606,7 +2624,7 @@ impl Store {
         let drop: Vec<FactId> = (0..self.facts.len() as FactId)
             .filter(|&i| {
                 let r = &self.facts.rec(i);
-                !r.dead() && !r.base() && !r.frozen()
+                !r.dead() && !r.base() && !r.frozen() && !self.kept_layer.contains(&r.rel) && !self.kept_rows.contains(&i)
             })
             .collect();
         self.remove_many(&drop);
@@ -2628,6 +2646,9 @@ impl Store {
         }
         let tick = self.tick;
         for id in 0..self.wit_head.len() {
+            if !self.kept_layer.is_empty() && (self.kept_layer.contains(&self.facts.rec(id as FactId).rel) || self.kept_rows.contains(&(id as FactId))) {
+                continue;
+            }
             let mut prev = EMPTY;
             let mut c = self.wit_head[id];
             while c != EMPTY {
@@ -4007,6 +4028,10 @@ impl Store {
             }
         }
         for (i, r) in self.cells.recs.iter().enumerate() {
+            let CellOwner::Body { rule, .. } = r.owner;
+            if self.kept_rules.contains(&rule) {
+                live[i] = true;
+            }
             if r.dead {
                 live[i] = false;
             }
