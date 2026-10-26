@@ -6,10 +6,6 @@ use super::*;
 use crate::arena::{placed, VolR, VolW};
 use std::borrow::Cow;
 
-fn terms(w: &mut VolW, ts: &[Term]) {
-    w.arena(ts);
-}
-
 /// A run's argument indexes, so a world opened from a volume probes them where they lie instead of building them again.
 fn write_patterns(w: &mut VolW, facts: &Facts, by_pat: Option<&ArgIndex>) {
     let Some(by_pat) = by_pat else {
@@ -118,6 +114,91 @@ impl TupSeg {
     }
 }
 
+/// Words a cell's record holds: its owner (2), operation, key (2), value (3), height, tick, description, whether
+/// it is dead, members (2), seals (2), algebra.
+const CELL_WORDS: usize = 17;
+/// Words a member's record holds: its projection (2), value (2), height, premises (2), other derivations (2).
+const MEMBER_WORDS: usize = 9;
+
+impl Cells {
+    /// As arenas of words, terms and premises, the names of operations and algebras before them: what a volume over
+    /// another writes as what changed in them.
+    fn write(&self, w: &mut VolW) {
+        let mut names: Vec<String> = Vec::new();
+        let mut ix = |n: String| names.iter().position(|x| *x == n).unwrap_or_else(|| { names.push(n); names.len() - 1 }) as u32;
+        let (mut recs, mut keys) = (Vec::with_capacity(self.recs.len() * CELL_WORDS), Vec::new());
+        for r in &self.recs {
+            let CellOwner::Body { rule, at } = r.owner;
+            let (kind, bits) = match r.value {
+                CellValue::Value(t) => (0, t.bits()),
+                CellValue::Empty => (1, 0),
+                CellValue::Hole(x) => (2, x as u64),
+            };
+            let (op, alg) = (ix(r.op.name().to_string()), ix(r.alg.text()));
+            recs.extend([rule, at, op, keys.len() as u32, r.key.len() as u32, kind, bits as u32, (bits >> 32) as u32, r.height, r.tick, r.desc, r.dead as u32, r.members.0, r.members.1, r.seals.0, r.seals.1, alg]);
+            keys.extend_from_slice(&r.key);
+        }
+        let (mut mems, mut projs) = (Vec::with_capacity(self.members.len() * MEMBER_WORDS), Vec::new());
+        for m in &self.members {
+            let bits = m.value.bits();
+            mems.extend([projs.len() as u32, m.proj.len() as u32, bits as u32, (bits >> 32) as u32, m.height, m.prems.0, m.prems.1, m.others.0, m.others.1]);
+            projs.extend_from_slice(&m.proj);
+        }
+        w.u32(names.len() as u32);
+        for n in &names {
+            w.text(n);
+        }
+        let was = |k: usize| self.was[k].clone();
+        w.arena(&Arena::derived(recs, was(0)));
+        w.arena(&Arena::derived(keys, was(1)));
+        w.arena(&Arena::derived(mems, was(2)));
+        w.arena(&Arena::derived(projs, was(3)));
+        w.arena(&Arena::derived(self.prems.clone(), was(4)));
+        w.arena(&Arena::derived(self.alts.iter().flat_map(|&(a, b)| [a, b]).collect(), was(5)));
+        w.arena(&Arena::derived(self.seals.iter().flat_map(|s| [s.rel, s.round]).collect(), was(6)));
+    }
+
+    fn read(r: &mut VolR) -> Result<Cells, String> {
+        let bad = || "a volume's cells are not cells".to_string();
+        let names: Vec<String> = (0..r.u32()?).map(|_| r.text()).collect::<Result<_, _>>()?;
+        let (recs, keys, mems, projs) = (r.arena::<u32>()?, r.arena::<Term>()?, r.arena::<u32>()?, r.arena::<Term>()?);
+        let prems = r.arena_checked::<PremRef>(prem_tags_ok)?;
+        let (alts, seals) = (r.arena::<u32>()?, r.arena::<u32>()?);
+        if recs.len() % CELL_WORDS != 0 || mems.len() % MEMBER_WORDS != 0 || alts.len() % 2 != 0 || seals.len() % 2 != 0 {
+            return Err(bad());
+        }
+        let name = |i: u32| names.get(i as usize).ok_or_else(bad);
+        let span = |ts: &Arena<Term>, at: u32, n: u32| ts.get(at as usize..at as usize + n as usize).map(|x| x.to_vec().into_boxed_slice()).ok_or_else(bad);
+        let mut c = Cells { was: [recs.origin(), keys.origin(), mems.origin(), projs.origin(), prems.origin(), alts.origin(), seals.origin()], ..Cells::default() };
+        for x in recs.chunks_exact(CELL_WORDS) {
+            let bits = x[6] as u64 | (x[7] as u64) << 32;
+            let value = match x[5] {
+                0 => CellValue::Value(Term::from_bits(bits)),
+                1 => CellValue::Empty,
+                _ => CellValue::Hole(bits as u32),
+            };
+            let op = AggOp::from_name(name(x[2])?).ok_or("a volume's cell has no such aggregate")?;
+            c.recs.push(CellRec { owner: CellOwner::Body { rule: x[0], at: x[1] }, op, key: span(&keys, x[3], x[4])?, value, height: x[8], tick: x[9], desc: x[10], dead: x[11] == 1, members: (x[12], x[13]), seals: (x[14], x[15]), alg: Algebra::from_text(name(x[16])?) });
+        }
+        for x in mems.chunks_exact(MEMBER_WORDS) {
+            c.members.push(Member { proj: span(&projs, x[0], x[1])?, value: Term::from_bits(x[2] as u64 | (x[3] as u64) << 32), height: x[4], prems: (x[5], x[6]), others: (x[7], x[8]) });
+        }
+        c.prems = prems.to_vec();
+        c.alts = alts.chunks_exact(2).map(|x| (x[0], x[1])).collect();
+        c.seals = seals.chunks_exact(2).map(|x| Seal { rel: x[0], round: x[1] }).collect();
+        for (id, rec) in c.recs.iter().enumerate() {
+            c.by_key.insert((rec.owner, rec.key.clone(), rec.tick), id as CellId);
+        }
+        for (id, rec) in c.recs.iter().enumerate() {
+            let k = (rec.owner, rec.key.clone(), rec.tick);
+            if rec.dead && c.by_key.get(&k) == Some(&(id as CellId)) {
+                c.by_key.remove(&k);
+            }
+        }
+        Ok(c)
+    }
+}
+
 impl Fired {
     fn write(&self, w: &mut VolW) {
         let (b, own) = (&*self.base, &self.own);
@@ -128,7 +209,7 @@ impl Fired {
             w.arena(&b.slots);
             let mut since: Vec<u64> = own.iter().copied().collect();
             since.sort_unstable();
-            return w.arena(&since);
+            return w.arena(&Arena::derived(since, self.own_was.clone()));
         }
         let fresh = own.iter().filter(|h| **h != 0).count();
         w.u64((b.n + fresh) as u64);
@@ -201,43 +282,7 @@ impl Store {
         col(w, &self.wits);
         col(w, &self.prem_arena);
         self.fired.write(w);
-        let c = &self.cells;
-        w.u32(c.recs.len() as u32);
-        for r in &c.recs {
-            let CellOwner::Body { rule, at } = r.owner;
-            w.u32(rule);
-            w.u32(at);
-            w.text(r.op.name());
-            terms(w, &r.key);
-            match r.value {
-                CellValue::Value(t) => {
-                    w.u32(0);
-                    w.u64(t.bits());
-                }
-                CellValue::Empty => w.u32(1),
-                CellValue::Hole(x) => {
-                    w.u32(2);
-                    w.u32(x)
-                }
-            }
-            for x in [r.height, r.tick, r.desc, r.dead as u32, r.members.0, r.members.1, r.seals.0, r.seals.1] {
-                w.u32(x);
-            }
-            w.text(&r.alg.text());
-        }
-        w.u32(c.members.len() as u32);
-        for m in &c.members {
-            terms(w, &m.proj);
-            w.u64(m.value.bits());
-            for x in [m.height, m.prems.0, m.prems.1, m.others.0, m.others.1] {
-                w.u32(x);
-            }
-        }
-        w.arena(&c.prems);
-        let alts: Vec<u32> = c.alts.iter().flat_map(|&(a, b)| [a, b]).collect();
-        w.arena(&alts);
-        let seals: Vec<u32> = c.seals.iter().flat_map(|s| [s.rel, s.round]).collect();
-        w.arena(&seals);
+        self.cells.write(w);
         match &self.citers {
             None => w.u32(0),
             // over a base the column stays as the base holds it, and the citers since come after it
@@ -247,7 +292,7 @@ impl Store {
                 w.arena(&ix.ids);
                 let mut more: Vec<(&FactId, &Vec<FactId>)> = ix.more.iter().collect();
                 more.sort_unstable_by_key(|m| *m.0);
-                w.arena(&more.iter().flat_map(|(g, v)| v.iter().flat_map(move |id| [**g, *id])).collect::<Vec<u32>>());
+                w.arena(&Arena::derived(more.iter().flat_map(|(g, v)| v.iter().flat_map(move |id| [**g, *id])).collect::<Vec<u32>>(), ix.more_was.clone()));
             }
             Some(ix) => {
                 let ix = ix.flat(self.facts.len());
@@ -262,7 +307,7 @@ impl Store {
             Some(m) if w.is_over() => {
                 w.u32(1);
                 w.arena(&m.rows);
-                w.arena(&m.more_rows());
+                w.arena(&Arena::derived(m.more_rows(), m.more_was.clone()));
             }
             Some(m) => {
                 w.u32(1);
@@ -358,56 +403,27 @@ impl Store {
         if !slots.len().is_power_of_two() && !slots.is_empty() {
             return Err("a volume's firing table is not a table".into());
         }
-        let own = r.arena::<u64>()?.iter().copied().collect();
-        s.fired = Fired { base: Rc::new(HashSlots { slots, n, zero }), own };
-        let mut c = Cells::default();
-        for _ in 0..r.u32()? {
-            let (rule, at) = (r.u32()?, r.u32()?);
-            let op = AggOp::from_name(&r.text()?).ok_or("a volume's cell has no such aggregate")?;
-            let key: Box<[Term]> = r.arena::<Term>()?.to_vec().into();
-            let value = match r.u32()? {
-                0 => CellValue::Value(Term::from_bits(r.u64()?)),
-                1 => CellValue::Empty,
-                _ => CellValue::Hole(r.u32()?),
-            };
-            let [height, tick, desc, dead, m0, m1, s0, s1] = [(); 8].map(|_| r.u32());
-            let alg = Algebra::from_text(&r.text()?);
-            c.recs.push(CellRec { owner: CellOwner::Body { rule, at }, op, key, value, height: height?, tick: tick?, desc: desc?, alg, dead: dead? == 1, members: (m0?, m1?), seals: (s0?, s1?) });
-        }
-        for _ in 0..r.u32()? {
-            let proj: Box<[Term]> = r.arena::<Term>()?.to_vec().into();
-            let value = Term::from_bits(r.u64()?);
-            let [height, p0, p1, o0, o1] = [(); 5].map(|_| r.u32());
-            c.members.push(Member { proj, value, height: height?, prems: (p0?, p1?), others: (o0?, o1?) });
-        }
-        c.prems = r.arena_checked::<PremRef>(prem_tags_ok)?.to_vec();
-        c.alts = r.arena::<u32>()?.chunks_exact(2).map(|x| (x[0], x[1])).collect();
-        c.seals = r.arena::<u32>()?.chunks_exact(2).map(|x| Seal { rel: x[0], round: x[1] }).collect();
-        for (id, rec) in c.recs.iter().enumerate() {
-            c.by_key.insert((rec.owner, rec.key.clone(), rec.tick), id as CellId);
-        }
-        for (id, rec) in c.recs.iter().enumerate() {
-            let k = (rec.owner, rec.key.clone(), rec.tick);
-            if rec.dead && c.by_key.get(&k) == Some(&(id as CellId)) {
-                c.by_key.remove(&k);
-            }
-        }
+        let own = r.arena::<u64>()?;
+        s.fired = Fired { base: Rc::new(HashSlots { slots, n, zero }), own: own.iter().copied().collect(), own_was: own.origin() };
+        let c = Cells::read(r)?;
         s.cells = Rc::new(c);
         let layered = r.u32()?;
         if layered != 0 {
             let (offs, ids): (Arena<u32>, Arena<FactId>) = (r.arena()?, r.arena()?);
             let n = s.facts.len();
-            let mut more: HashMap<FactId, Vec<FactId>> = HashMap::new();
+            let (mut more, mut more_was): (HashMap<FactId, Vec<FactId>>, _) = (HashMap::new(), None);
             if layered == 2 {
-                for p in r.arena::<u32>()?.chunks_exact(2) {
+                let pairs = r.arena::<u32>()?;
+                for p in pairs.chunks_exact(2) {
                     more.entry(p[0]).or_default().push(p[1]);
                 }
+                more_was = pairs.origin();
             }
             let to = offs.len().saturating_sub(1);
             if offs.is_empty() || to > n || offs[to] as usize != ids.len() || (layered == 1 && to != n) {
                 return Err("a volume's citer index is not an index".into());
             }
-            s.citers = Some(Rc::new(Citers { offs, ids, more }));
+            s.citers = Some(Rc::new(Citers { offs, ids, more, more_was }));
         }
         if r.u32()? == 1 {
             // the rows are not walked: the sum the volume ends in held, as an argument index's (`read_patterns`)
@@ -415,7 +431,7 @@ impl Store {
             if rows.len() % 4 != 0 || more.len() % 4 != 0 || more.chunks_exact(4).any(|x| x[2] as usize >= s.facts.len()) {
                 return Err("a volume's index of the rows of a tree is not an index".into());
             }
-            let mut m = crate::store::VCiters { rows, ..Default::default() };
+            let mut m = crate::store::VCiters { rows, more_was: more.origin(), ..Default::default() };
             for x in more.chunks_exact(4) {
                 m.put(x[0] as u64 | (x[1] as u64) << 32, x[2], x[3]);
             }

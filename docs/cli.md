@@ -193,21 +193,30 @@ The run says so in one line on stderr:
 the kept world took 1 file by delta: db.rofl (35 facts out, 409 overdeleted or derived again; opened and taken in 201 ms, kept again in 12 ms, 9367080 bytes written)
 ```
 
-**The world kept again is an overlay** (f_a_kept_world_is_written_whole_by_each_edit).
-The whole volume the world was opened from stays on disk as its base, beside
-the slot under its sum (`<slot>.<sum>.vol`), and the slot gets an overlay: a
-file that names the base and writes only what the world holds that the base
-does not. An arena the edit did not change is a reference into the base; one
-it wrote a few values into is the reference and those values; one it appended
-to is the reference and what came after (a copy of a mapped arena is compared
-with the base to find them). Opening an overlay maps the base as before and
-maps each changed span privately, the overlay's values written into its pages,
-so the pages nothing changed are the file's. Each edit writes its overlay over
-the same base, every change since the base in it; once it would pass a quarter
-of the base, the world is written whole again and that is the new base (the
-line ends `bytes written over the world it was kept from` while it is an
-overlay). A base pushed out of the cache takes its overlays with it; an overlay
-whose base is gone or changed is refused and computed anew.
+**The world kept again is an overlay over the one before it**
+(f_a_kept_world_is_written_whole_by_each_edit,
+f_an_overlay_held_every_edit_since_its_base). The volume the world was opened
+from stays on disk beside the slot under its sum (`<slot>.<sum>.vol`), and the
+slot gets an overlay: a file that names the volumes it is kept over, the whole
+one first and the overlays after it in order, and writes only what changed
+since the last of them. An arena the edit did not change is named where it was
+made: a span of one of those volumes and the changes the overlays after it
+wrote over it. One it changed is that and one change more: the values put over
+it and what came after, or, where values went out of the middle, the spans it
+keeps and the values between (a copy of a mapped arena is compared with what it
+was made of to find them). The cells of the aggregates, the citations and the
+firings since the whole volume, and the top of an argument index over the
+whole volume's are written the same way. Opening an overlay maps those volumes
+and makes each changed arena once, its unchanged pages mapped privately from
+the file. So an edit writes about what it changed, not what changed since the
+whole volume: at vscode 250 a 402-fact file is 1.1 MB where the one overlay
+over the base held 46 MB after eight edits; kept again in 0.09-0.27 s where
+it rose to 0.63 s. After 64 overlays, or once they
+together would pass a quarter of the whole volume, the world is written whole
+again and that is the new base (the line ends `bytes written over the world it
+was kept from` while it is an overlay). A volume pushed out of the cache takes
+the overlays kept over it; an overlay one of whose volumes is gone or changed
+is refused and computed anew.
 
 It evaluates whole instead, the reason after `not by delta:` in the stale line,
 when the rules changed (a file that changed holds a rule, or a file gone held

@@ -226,35 +226,40 @@ pub fn said_size(bytes: u64) -> String {
 /// The world of `s` kept at `kept` as a question verb keeps it: written no further than the cap and than the disk
 /// can give above its floor, so a world too large stops the writer at that size and is not kept; then the older
 /// kept worlds go, least recently used first, until all fit the cap. Why it was not kept, otherwise.
-/// A world kept by delta is written as an overlay over the whole volume it was opened from while the overlay is at
-/// most this part of it; past it the world is written whole again, and the overlay's dead weight with it.
+/// A world kept by delta is written as an overlay over the volumes it was opened from, while they are no more than this
+/// many overlays and these together are at most `1/OVER_PART` of the whole volume under them; past either it is
+/// written whole again, and their dead weight with it.
 const OVER_PART: u64 = 4;
+const OVER_MOST: usize = 64;
 
-/// `keep_capped`; with `over`, as an overlay over the whole volume the world was opened from, while it is there and
-/// the overlay stays small beside it. Whether it was written as one.
+/// `keep_capped`; with `over`, as an overlay over the volumes the world was opened from, while they are there and
+/// the overlays stay few and small beside the whole one. Whether it was written as one.
 pub fn keep_capped_over(s: &mut rofl::session::Session, kept: &str, note: &str, over: bool) -> Result<(u64, bool), String> {
-    let mut base = s.kept.clone().filter(|b| over && Path::new(&b.path).exists());
-    // the world's own slot holds its base: the base goes beside it under its sum, and the overlay takes the slot
-    if let Some(b) = base.as_mut().filter(|b| b.path == kept) {
+    let mut chain = s.kept.files.clone();
+    let laid: u64 = chain.iter().skip(1).map(|k| k.size).sum();
+    let room = chain.first().map_or(0, |w| (w.size / OVER_PART).saturating_sub(laid));
+    let layer = over && room > 0 && chain.len() <= OVER_MOST && chain.iter().all(|k| Path::new(&k.path).exists());
+    // the world's own slot holds the last of them: it goes beside it under its sum, and the overlay takes the slot
+    if let Some(b) = chain.last_mut().filter(|b| layer && b.path == kept) {
         let aside = format!("{}.{:016x}.vol", kept.trim_end_matches(".vol"), b.id);
         match std::fs::rename(kept, &aside) {
             Ok(()) => {
                 rofl::volume::moved(kept, &aside, seen().as_deref());
                 b.path = aside;
+                s.kept.files = chain.clone();
             }
-            Err(_) => base = None,
+            Err(_) => chain.clear(),
         }
     }
-    if let Some(b) = &base {
-        s.kept = Some(b.clone());
-        match keep_bounded(s, kept, note, Some(b), Some(b.size / OVER_PART)) {
+    if layer && !chain.is_empty() {
+        match keep_bounded(s, kept, note, &chain, Some(room)) {
             Err(e) if e == rofl::arena::TOO_LARGE => {}
             r => return r.map(|n| (n, true)),
         }
     }
-    let n = keep_bounded(s, kept, note, None, None)?;
-    // a base no overlay is kept over any more is the world it was kept from, which this one replaces
-    if let Some(b) = base.filter(|b| b.path != kept) {
+    let n = keep_bounded(s, kept, note, &[], None)?;
+    // what no overlay is kept over any more is the world this one replaces
+    for b in chain.iter().rev().filter(|b| b.path != kept) {
         let p = Path::new(&b.path);
         if p.parent().is_some_and(|d| overlays_of(d, p).is_empty()) {
             let _ = std::fs::remove_file(p);
@@ -264,17 +269,17 @@ pub fn keep_capped_over(s: &mut rofl::session::Session, kept: &str, note: &str, 
 }
 
 pub fn keep_capped(s: &mut rofl::session::Session, kept: &str, note: &str) -> Result<u64, String> {
-    keep_bounded(s, kept, note, None, None)
+    keep_bounded(s, kept, note, &[], None)
 }
 
 /// The volumes beside `p` kept as overlays over it.
 fn overlays_of(dir: &Path, p: &Path) -> Vec<PathBuf> {
     let Ok(rd) = std::fs::read_dir(dir) else { return Vec::new() };
-    rd.flatten().map(|e| e.path()).filter(|q| q.extension().is_some_and(|x| x == "vol") && rofl::volume::base_named(&q.to_string_lossy()).is_some_and(|b| Path::new(&b) == p)).collect()
+    rd.flatten().map(|e| e.path()).filter(|q| q.extension().is_some_and(|x| x == "vol") && rofl::volume::chain_named(&q.to_string_lossy()).iter().any(|b| Path::new(b) == p)).collect()
 }
 
-/// `keep_capped` over `base`; with `part`, an overlay larger than it is not kept (`arena::TOO_LARGE`, said as is).
-fn keep_bounded(s: &mut rofl::session::Session, kept: &str, note: &str, base: Option<&rofl::volume::Kept>, part: Option<u64>) -> Result<u64, String> {
+/// `keep_capped` over `chain`; with `part`, an overlay larger than it is not kept (`arena::TOO_LARGE`, said as is).
+fn keep_bounded(s: &mut rofl::session::Session, kept: &str, note: &str, chain: &[rofl::volume::Kept], part: Option<u64>) -> Result<u64, String> {
     let dir = Path::new(kept).parent().ok_or("no directory")?;
     std::fs::create_dir_all(dir).map_err(|e| format!("{}: {e}", dir.display()))?;
     // what writers killed before this one left goes before this one writes: it may be killed too
@@ -297,7 +302,7 @@ fn keep_bounded(s: &mut rofl::session::Session, kept: &str, note: &str, base: Op
         (b, p) => b.or(p.map(|p| p as usize)),
     };
     let new = rofl::brk!("kept_shared_temp" => format!("{kept}.new"); format!("{kept}.{}.new", std::process::id()));
-    let bytes = match s.keep_volume_as(&new, note, bound, base) {
+    let bytes = match s.keep_volume_as(&new, note, bound, chain) {
         Ok(n) => n as u64,
         Err(e) if part.is_some() && e.to_string() == rofl::arena::TOO_LARGE => return Err(rofl::arena::TOO_LARGE.into()),
         Err(e) if e.to_string() == rofl::arena::TOO_LARGE || (bound.is_none() && !ignored) => {
@@ -318,7 +323,7 @@ fn keep_bounded(s: &mut rofl::session::Session, kept: &str, note: &str, base: Op
     let (mut older, mut others): (Vec<(std::time::SystemTime, u64, PathBuf)>, u64) = (Vec::new(), 0);
     for e in std::fs::read_dir(dir).map_err(|e| e.to_string())?.flatten() {
         let (p, Ok(m)) = (e.path(), e.metadata()) else { continue };
-        if base.is_some_and(|b| p == Path::new(&b.path)) {
+        if chain.iter().any(|b| p == Path::new(&b.path)) {
             others += m.len();
             continue;
         }

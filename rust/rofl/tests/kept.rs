@@ -599,7 +599,7 @@ fn mixed_files_at_random(brk: Option<&str>) -> Result<(), String> {
         ensure(got.out == want.out && got.code == want.code, || format!("step {step}: by delta {} lines, fresh {} lines; {:?}", got.out.lines().count(), want.out.lines().count(), got.err))?;
         Ok(got.err)
     };
-    let (mut gone_rules, mut dead) = (0, 0);
+    let (mut gone_rules, mut dead, mut longest) = (0, 0, 0);
     for step in 0..40 {
         let i = below(4) as usize;
         held[i] = match (&held[i], below(4)) {
@@ -609,6 +609,7 @@ fn mixed_files_at_random(brk: Option<&str>) -> Result<(), String> {
         let err = ask(&held, step)?;
         gone_rules += err.contains("is gone and held rules") as usize;
         dead += err.contains("are of facts gone") as usize;
+        longest = longest.max(chained(&d.0.join("cache"))?);
     }
     // and once for certain, whichever kept world the random steps left beside
     held[0] = Some(format!("edge(a, d).\n{}", RULE[3]));
@@ -621,7 +622,23 @@ fn mixed_files_at_random(brk: Option<&str>) -> Result<(), String> {
         dead += ask(&held, 42 + round)?.contains("are of facts gone") as usize;
     }
     ensure(gone_rules > 0 || brk.is_some(), || "no step took a file with rules away".into())?;
+    ensure(longest > 2 || brk.is_some(), || format!("no edit was kept over an overlay (the longest chain {longest})"))?;
     ensure(dead > 0 || brk.is_some(), || "no world was evaluated whole for the records of facts gone".into())
+}
+
+/// The most volumes an overlay under `cache` is kept over, once every volume set aside there is found named by an
+/// overlay and every volume an overlay names is there.
+fn chained(cache: &Path) -> Result<usize, String> {
+    let vols: Vec<String> = implicit(cache).into_iter().map(|(p, _)| p.to_string_lossy().into_owned()).collect();
+    let chains: Vec<Vec<String>> = vols.iter().map(|v| rofl::volume::chain_named(v)).collect();
+    for c in chains.iter().flatten() {
+        ensure(vols.contains(c), || format!("an overlay is kept over {c}, which is gone"))?;
+    }
+    let aside = |v: &str| Path::new(v).file_name().is_some_and(|n| n.to_string_lossy().split('.').count() == 3);
+    for v in vols.iter().filter(|v| aside(v)) {
+        ensure(chains.iter().flatten().any(|c| c == v), || format!("{v} is set aside and no overlay is kept over it"))?;
+    }
+    Ok(chains.iter().map(Vec::len).max().unwrap_or(0))
 }
 
 /// Writers killed while they write leave their half-written worlds; the next run that keeps a world removes them,
