@@ -96,6 +96,15 @@ xl_ok(keyed_g_drops, nearest_v, "the function around a removal of the collection
 xl_ok(keyed_lost_ctor, keyed_runs_m, "the constructor's own call, matched against the mirrored eff_reaches of its callee").
 xl_ok(keyed_lost_ctor, ast_child, "the read's own method, bound by its body").
 xl_ok(keyed_lost_ctor, keyed_made, "the collection's own new node, matched against what was handed out").
+xl_ok(keyed_heal_at, keyed_key, "a put of a function of the read's file").
+xl_ok(keyed_heal_at, keyed_read_site, "the collection a function of the read's file fills, matched against the read").
+xl_ok(keyed_heal_broken, keyed_heal_fn, "the read's own function, matched").
+xl_ok(keyed_heal_broken, keyed_runs_m, "the span's own call, matched against the mirrored eff_reaches of its callee").
+-- What an object literal lacks is read only where the literal and the read share a file (`member_unset` matches the
+-- file): the negation over another file's keys would close a cycle with the flow that carries the object.
+xl_ok(member_unset, ast_node, "the test that the literal IS of the read's file: true alike in the volume and the whole").
+xl_ok(member_unset, obj_open_own, "a literal of the read's own file (the ast_node file match)").
+xl_ok(member_unset, obj_own_key, "a literal of the read's own file (the ast_node file match)").
 
 -- A generator's own volume: `next_send(G, V)` reaches G's file through the mirror of `sx_next`, and these read G's
 -- own yields and delegations there; a volume holding another file's G reads no row and owes none.

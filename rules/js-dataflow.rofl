@@ -1214,7 +1214,7 @@ keyed_before_put[code](C, J, Q) :- keyed_fill_ctor[code](C, J), keyed_read_site[
                                    ast_child[code](Ct, body, 0, Body), ast_child[code](Body, body, L, S), L < J,
                                    nearest_v[flow](Ct, Q), ast_within[code](S, Q).
 keyed_lost_ctor[code](C, J) :- keyed_fill_ctor[code](C, J), keyed_pair[code](C, D), not keyed_differs[code](D, C),
-                               not keyed_drop_early[code](C, J, D).
+                               not keyed_drop_early[code](C, J, D), not keyed_healed[code](C, D).
 keyed_drop_early[code](C, J, D) :- keyed_before_put[code](C, J, D).
 keyed_target[code](M) :- keyed_fill_ctor[code](C, _), keyed_read_site[code](C, _, B, _, _), ast_child[code](M, body, 0, B).
 keyed_lost_ctor[code](C, J) :- keyed_before_put[code](C, J, Q), keyed_read_site[code](C, _, B, _, _), ast_child[code](M, body, 0, B),
@@ -1234,8 +1234,30 @@ keyed_drop[code](D, H) :- keyed_made[code](H, X), keyed_on[flow](D, X, P, Meth),
                           ast_node[code](H, _, File), ast_node[code](D, _, File).
 keyed_pair[code](C, D) :- keyed_fill[code](C, _), keyed_read_site[code](C, H, _, _, _), keyed_drop[code](D, H).
 keyed_differs[code](D, C) :- keyed_pair[code](C, D), keyed_key[code](D, K1), keyed_key[code](C, K2), K1 != K2.
-keyed_drop_may[code](C, J, D) :- keyed_fill[code](C, J), keyed_pair[code](C, D), not keyed_differs[code](D, C).
-keyed_drop_fn[code](G) :- keyed_drop_may[code](_, _, D), nearest_v[flow](G, D).
+keyed_drop_may[code](C, J, D) :- keyed_fill[code](C, J), keyed_pair[code](C, D), not keyed_differs[code](D, C),
+                                 not keyed_healed[code](C, D).
+keyed_drop_fn[code](G) :- keyed_pair[code](C, D), not keyed_differs[code](D, C), nearest_v[flow](G, D).
+-- a removal its own function undoes: a later statement of that function puts
+-- the read's key back for certain, and nothing from the removal's statement to
+-- that put may run the read (the read itself, a call that reaches its
+-- function, code outside the model handed it, an await or a yield). Whenever
+-- the function returns, the entry is there.
+keyed_heal_at[code](C, D, G, L, K) :- keyed_pair[code](C, D), nearest_v[flow](G, D), ast_child[code](G, body, 0, Gb),
+                                      ast_child[code](Gb, body, L, S), ast_within[code](S, D), keyed_read_site[code](C, H, _, _, _),
+                                      keyed_sure_at[code](G, H, P, K), L < K, not keyed_early[code](G, K),
+                                      keyed_key[code](P, Kk), keyed_key[code](C, Kk).
+keyed_heal_fn[code](C, F) :- keyed_heal_at[code](C, _, _, _, _), nearest_v[flow](F, C).
+keyed_target[code](F) :- keyed_heal_fn[code](_, F).
+keyed_heal_span[code](C, D, Q) :- keyed_heal_at[code](C, D, G, L, K), nearest_v[flow](G, Q), ast_child[code](G, body, 0, Gb),
+                                  ast_child[code](Gb, body, J, S), L <= J, J <= K, ast_within[code](S, Q).
+keyed_heal_broken[code](C, D) :- keyed_heal_span[code](C, D, C).
+keyed_heal_broken[code](C, D) :- keyed_heal_span[code](C, D, Q), resolves[code](Q, G), keyed_heal_fn[code](C, F),
+                                 keyed_runs_m[code](G, F).
+keyed_heal_broken[code](C, D) :- keyed_heal_span[code](C, D, Q), runs_unknown[code](Q), keyed_heal_fn[code](C, F),
+                                 keyed_open_to[code](F).
+keyed_heal_broken[code](C, D) :- keyed_heal_span[code](C, D, Q), ast_node[code](Q, await_expression, _).
+keyed_heal_broken[code](C, D) :- keyed_heal_span[code](C, D, Q), ast_node[code](Q, yield_expression, _).
+keyed_healed[code](C, D) :- keyed_heal_at[code](C, D, _, _, _), not keyed_heal_broken[code](C, D).
 keyed_target[code](G)  :- keyed_drop_fn[code](G).
 keyed_hand_need[code](X) :- keyed_made[code](_, X).
 -- the span's own code: the statements after the put up to the read, outside
@@ -1400,35 +1422,31 @@ computed_key[code](N, P)    :- ast_attr[code](N, computed, true), member_node_v[
 selects[flow](N, Key)       :- may_be_lit[flow](P, Key), computed_key[code](N, P).
 selects[flow](N, Key)       :- symbol_ref[code](P, Key), computed_key[code](N, P).
 
--- WHAT AN OBJECT LACKS, where the code alone shows every key it can have: an
--- object literal a `const` binds, with no spread and no computed key, every
--- reference to which is the object of a plain read `o.k` (not written through,
--- not a method call, not passed, returned or spread). A key it lacks, and
--- `Object.prototype` lacks, reads `undefined`. An object reached any other way
--- is not followed: what it lacks would rest on the flow that finds what
--- reaches it, which is what this computes. A class field with no initialiser
--- is `undefined` until something writes it.
-obj_const[code](O, D) :- binder[code](D, _, O, _), ast_node[code](O, object_expression, _),
-                         ast_child[code](V, declarations, _, D), ast_attr[code](V, kind, "const").
-obj_open_own[code](O) :- obj_const[code](O, _), ast_child[code](O, properties, _, S), ast_node[code](S, spread_element, _).
-obj_open_own[code](O) :- obj_const[code](O, _), ast_child[code](O, properties, _, P), ast_attr[code](P, computed, true).
-obj_shut[code](O, D) :- obj_const[code](O, D), not obj_open_own[code](O).
-obj_own_key[code](O, Key) :- obj_shut[code](O, _), ast_child[code](O, properties, _, P), ast_child[code](P, key, 0, K),
-                             key_name[code](K, Key).
-obj_use[code](E, D) :- obj_shut[code](_, D), sees_binder[code](E, D), not ast_child[code](D, id, 0, E).
-obj_plain_read[code](N, E) :- obj_use[code](E, _), ast_child[code](N, object, 0, E), ast_node[code](N, member_expression, _),
-                              not ast_child[code](_, left, 0, N), not ast_child[code](_, callee, 0, N),
-                              not ast_child[code](_, argument, 0, N).
-obj_ref_else[code](D) :- obj_use[code](E, D), not obj_plain_read[code](_, E).
-obj_lacks[code](N, Key) :- obj_shut[code](O, D), not obj_ref_else[code](D), obj_use[code](E, D),
-                           obj_plain_read[code](N, E), ast_attr[code](N, computed, false), ast_child[code](N, property, 0, P),
-                           ast_name[code](P, Key), not obj_own_key[code](O, Key), not lib_member(object, Key, _),
-                           Key != "__proto__".
-may_be_lit[flow](N, undefined) :- obj_lacks[code](N, _).
-may_be_lit[flow](N, undefined) :- ast_node[code](Q, class_property, _), not ast_child[code](Q, value, 0, _),
-                                  ast_attr[code](Q, static, false), ast_child[code](Q, key, 0, K), key_name[code](K, Key),
-                                  ast_child[code](B, body, _, Q), ast_child[code](CD, body, 0, B), inst_of[flow](I, CD),
-                                  member_at[flow](N, _, I, Key).
+-- WHAT AN OBJECT LACKS: an object literal with no spread and no computed key
+-- shows every key it is made with. Read at a key it was not made with and
+-- `Object.prototype` lacks, through whatever reaches it (a `const`, an alias, a
+-- parameter, a return), it may be `undefined`. A literal of another file is
+-- not followed: its keys reach this file only through the flow, and a negation
+-- over them would close a cycle with the flow that carries the object here.
+-- A class field with no initialiser is published with its class, so an
+-- instance of a class of any file reads it `undefined`. A write of the key onto
+-- the object (`member_value`) may run before the read or after it: writes onto
+-- an object are not ordered, so such a read is `member_unset_written`.
+obj_open_own[code](O) :- hidden_call_pos[code](S, accessor_call), ast_child[code](O, properties, _, S).
+obj_open_own[code](O) :- ast_node[code](O, object_expression, _), ast_child[code](O, properties, _, P),
+                         ast_attr[code](P, computed, true).
+obj_own_key[code](O, Key) :- ast_node[code](O, object_expression, _), ast_child[code](O, properties, _, P),
+                             ast_child[code](P, key, 0, K), key_name[code](K, Key).
+member_unset[flow](N, O, Key) :- member_at[flow](N, _, O, Key), ast_node[code](N, _, F), ast_node[code](O, object_expression, F),
+                                 not ast_child[code](_, left, 0, N), not obj_open_own[code](O), not obj_own_key[code](O, Key),
+                                 not lib_member(object, Key, _), Key != "__proto__".
+class_unset_field[flow](CD, Key) :- ast_node[code](Q, class_property, _), not ast_child[code](Q, value, 0, _),
+                                    ast_attr[code](Q, static, false), ast_child[code](Q, key, 0, K), key_name[code](K, Key),
+                                    ast_child[code](B, body, _, Q), ast_child[code](CD, body, 0, B).
+member_unset[flow](N, I, Key) :- class_unset_field[flow](CD, Key), inst_of[flow](I, CD), member_at[flow](N, _, I, Key),
+                                 not ast_child[code](_, left, 0, N).
+may_be_lit[flow](N, undefined) :- member_unset[flow](N, _, _).
+member_unset_written[flow](N) :- member_unset[flow](N, O, Key), member_value[flow](O, Key, _).
 
 -- The receiver decides which half of a class it sees: `Vat.poured()` and
 -- `new Vat().tapped()` are both TypeErrors and both resolved until the `static`
@@ -1602,6 +1620,10 @@ corpus_file[code](File) :- ast_node[code](_, program, File).
 exports_name[code](F, Name, File) :- ast_node[code](E, export_named_declaration, File),
                                      ast_child[code](E, declaration, 0, F),
                                      fn_node[code](F),
+                                     ast_child[code](F, id, 0, I), ast_name[code](I, Name).
+exports_name[code](F, Name, File) :- ast_node[code](E, export_named_declaration, File),
+                                     ast_child[code](E, declaration, 0, F),
+                                     ast_node[code](F, class_declaration, _),
                                      ast_child[code](F, id, 0, I), ast_name[code](I, Name).
 
 -- `export * from` re-exports every NAME (not the default), recursively. The

@@ -38,7 +38,7 @@ Reads:
 - from js-controlflow, in the code: [always_throws](js-controlflow.rofl.md#always_throws), [async_body](js-controlflow.rofl.md#async_body), [completes_abruptly](js-controlflow.rofl.md#completes_abruptly), [guarded](js-controlflow.rofl.md#guarded), [in_fn](js-controlflow.rofl.md#in_fn), [may_throw](js-controlflow.rofl.md#may_throw), [reachable](js-controlflow.rofl.md#reachable), [sync_body](js-controlflow.rofl.md#sync_body)
 - from js-controlflow, in the flow: [accessor_as](js-controlflow.rofl.md#accessor_as), [accessor_of](js-controlflow.rofl.md#accessor_of), [thrown_by](js-controlflow.rofl.md#thrown_by)
 - from js-dataflow, in the code: [assigned](js-dataflow.rofl.md#assigned), [corpus_file](js-dataflow.rofl.md#corpus_file), [exports_default](js-dataflow.rofl.md#exports_default), [exports_name](js-dataflow.rofl.md#exports_name), [exports_value](js-dataflow.rofl.md#exports_value), [param_rest](js-dataflow.rofl.md#param_rest), [sees_binder](js-dataflow.rofl.md#sees_binder)
-- from js-dataflow, in the flow: [arg_at](js-dataflow.rofl.md#arg_at), [array_elem](js-dataflow.rofl.md#array_elem), [assign_param](js-dataflow.rofl.md#assign_param), [cjs_exports](js-dataflow.rofl.md#cjs_exports), [class_member_proto](js-dataflow.rofl.md#class_member_proto), [class_member_static](js-dataflow.rofl.md#class_member_static), [ctor_of](js-dataflow.rofl.md#ctor_of), [external_value](js-dataflow.rofl.md#external_value), [field_at](js-dataflow.rofl.md#field_at), [gen_fn](js-dataflow.rofl.md#gen_fn), [gen_of](js-dataflow.rofl.md#gen_of), [inst_of](js-dataflow.rofl.md#inst_of), [keyed_put](js-dataflow.rofl.md#keyed_put), [kind_proto](js-dataflow.rofl.md#kind_proto), [member_plain](js-dataflow.rofl.md#member_plain), [member_value](js-dataflow.rofl.md#member_value), [module_object](js-dataflow.rofl.md#module_object), [nearest_v](js-dataflow.rofl.md#nearest_v), [next_send](js-dataflow.rofl.md#next_send), [param_of](js-dataflow.rofl.md#param_of), [param_use](js-dataflow.rofl.md#param_use), [returns](js-dataflow.rofl.md#returns), [yields](js-dataflow.rofl.md#yields)
+- from js-dataflow, in the flow: [arg_at](js-dataflow.rofl.md#arg_at), [array_elem](js-dataflow.rofl.md#array_elem), [assign_param](js-dataflow.rofl.md#assign_param), [cjs_exports](js-dataflow.rofl.md#cjs_exports), [class_member_proto](js-dataflow.rofl.md#class_member_proto), [class_member_static](js-dataflow.rofl.md#class_member_static), [class_unset_field](js-dataflow.rofl.md#class_unset_field), [ctor_of](js-dataflow.rofl.md#ctor_of), [external_value](js-dataflow.rofl.md#external_value), [field_at](js-dataflow.rofl.md#field_at), [gen_fn](js-dataflow.rofl.md#gen_fn), [gen_of](js-dataflow.rofl.md#gen_of), [inst_of](js-dataflow.rofl.md#inst_of), [keyed_put](js-dataflow.rofl.md#keyed_put), [kind_proto](js-dataflow.rofl.md#kind_proto), [member_plain](js-dataflow.rofl.md#member_plain), [member_value](js-dataflow.rofl.md#member_value), [module_object](js-dataflow.rofl.md#module_object), [nearest_v](js-dataflow.rofl.md#nearest_v), [next_send](js-dataflow.rofl.md#next_send), [param_of](js-dataflow.rofl.md#param_of), [param_use](js-dataflow.rofl.md#param_use), [returns](js-dataflow.rofl.md#returns), [yields](js-dataflow.rofl.md#yields)
 - from js-dataflow, in the main: [call_like_v](js-dataflow.rofl.md#call_like_v)
 - from js-effects, in the code: [eff_calls](js-effects.rofl.md#eff_calls), [eff_reaches](js-effects.rofl.md#eff_reaches)
 - from js-effects, in the flow: [class_construct_eff](js-effects.rofl.md#class_construct_eff), [eff_latent](js-effects.rofl.md#eff_latent), [eff_module](js-effects.rofl.md#eff_module), [effect_of](js-effects.rofl.md#effect_of), [effect_of_module](js-effects.rofl.md#effect_of_module)
@@ -143,6 +143,8 @@ Phrases this file defines in one step, each by the sentence it stands for:
 
 <a id="sx_field"></a>`sx_field`(C, K, V, S) if [`sx_esc`](#sx_esc)(C) and a class C [has a field own or inherited](js-dataflow.rofl.md#field_at) K holding a node V a static S.
 
+<a id="sx_unset_field"></a>`sx_unset_field`(C, K) if [`sx_esc`](#sx_esc)(C) and [`class_unset_field`](js-dataflow.rofl.md#class_unset_field)(C, K).
+
 <a id="sx_elem"></a>`sx_elem`(X, I, E) if [`sx_esc`](#sx_esc)(X) and [`array_elem`](js-dataflow.rofl.md#array_elem)(X, I, E).
 
 <a id="sx_name"></a>`sx_name`(E, Name) if [`sx_elem`](#sx_elem)(something, something, E) and a node E [is named](js-structure.rofl.md#ast_name) Name.
@@ -202,6 +204,8 @@ Phrases this file defines in one step, each by the sentence it stands for:
 In the flow:
 
 A node may be the literal V if [`sx_lit`](#sx_lit)(it, V).
+
+`class_unset_field`(C, K) if [`sx_unset_field`](#sx_unset_field)(C, K).
 
 `array_elem`(X, I, E) if [`sx_elem`](#sx_elem)(X, I, E).
 

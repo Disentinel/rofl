@@ -360,6 +360,11 @@ unit_concludes("rules/js-dataflow.rofl", keyed_drop).
 unit_concludes("rules/js-dataflow.rofl", keyed_differs).
 unit_concludes("rules/js-dataflow.rofl", keyed_drop_may).
 unit_concludes("rules/js-dataflow.rofl", keyed_drop_fn).
+unit_concludes("rules/js-dataflow.rofl", keyed_heal_at).
+unit_concludes("rules/js-dataflow.rofl", keyed_heal_fn).
+unit_concludes("rules/js-dataflow.rofl", keyed_heal_span).
+unit_concludes("rules/js-dataflow.rofl", keyed_heal_broken).
+unit_concludes("rules/js-dataflow.rofl", keyed_healed).
 unit_concludes("rules/js-dataflow.rofl", keyed_pspan).
 unit_concludes("rules/js-dataflow.rofl", keyed_pspan_top).
 unit_concludes("rules/js-dataflow.rofl", keyed_pbetween).
@@ -386,14 +391,11 @@ unit_concludes("rules/js-dataflow.rofl", member_kind_v).
 unit_concludes("rules/js-dataflow.rofl", member_node_v).
 unit_concludes("rules/js-dataflow.rofl", selects).
 unit_concludes("rules/js-dataflow.rofl", computed_key).
-unit_concludes("rules/js-dataflow.rofl", obj_const).
 unit_concludes("rules/js-dataflow.rofl", obj_open_own).
-unit_concludes("rules/js-dataflow.rofl", obj_shut).
 unit_concludes("rules/js-dataflow.rofl", obj_own_key).
-unit_concludes("rules/js-dataflow.rofl", obj_use).
-unit_concludes("rules/js-dataflow.rofl", obj_plain_read).
-unit_concludes("rules/js-dataflow.rofl", obj_ref_else).
-unit_concludes("rules/js-dataflow.rofl", obj_lacks).
+unit_concludes("rules/js-dataflow.rofl", member_unset).
+unit_concludes("rules/js-dataflow.rofl", class_unset_field).
+unit_concludes("rules/js-dataflow.rofl", member_unset_written).
 unit_concludes("rules/js-dataflow.rofl", class_member_static).
 unit_concludes("rules/js-dataflow.rofl", class_member_proto).
 unit_concludes("rules/js-dataflow.rofl", member_obj).
@@ -1202,6 +1204,7 @@ unit_concludes("rules/js-surface.rofl", sx_mproto).
 unit_concludes("rules/js-surface.rofl", sx_accessor).
 unit_concludes("rules/js-surface.rofl", sx_accessor_as).
 unit_concludes("rules/js-surface.rofl", sx_field).
+unit_concludes("rules/js-surface.rofl", sx_unset_field).
 unit_concludes("rules/js-surface.rofl", sx_elem).
 unit_concludes("rules/js-surface.rofl", sx_name).
 unit_concludes("rules/js-surface.rofl", sx_proto).
@@ -1239,6 +1242,7 @@ unit_concludes("rules/js-surface.rofl", class_member_proto).
 unit_concludes("rules/js-surface.rofl", accessor_of).
 unit_concludes("rules/js-surface.rofl", accessor_as).
 unit_concludes("rules/js-surface.rofl", field_at).
+unit_concludes("rules/js-surface.rofl", class_unset_field).
 unit_concludes("rules/js-surface.rofl", array_elem).
 unit_concludes("rules/js-surface.rofl", kind_proto).
 unit_concludes("rules/js-surface.rofl", external_value).

@@ -46,8 +46,13 @@ code:
 > runs (`fill()`, `this.#fill()`), and on a field from the constructor unless
 > some method may remove that key (`drop(name)` may remove any). `undefined` is a value of the flow: a parameter a call leaves
 > out, a function that ends without a value, a `let` with no initialiser, `void`.
-> So is a key a `const` object literal never wrote, read from that `const`
-> alone (`shape.b`), and a class field declared without a value (`Slot`).
+> So may be a key an object literal is not made with, whatever reaches it (a
+> `const`, an alias, a parameter: `shape.b`, `lackAlias.y`, `pickY`), and a
+> class field declared without a value (`Slot`). Writes onto an object are not
+> ordered: where one writes the key (`lateObj.y = 29`), a read may see it or
+> `undefined`, and both are named unordered. A removal that its own function
+> undoes before it returns (`reset` deletes and puts back) takes nothing out,
+> unless something between may run the read (`tear` calls `read` in between).
 > `use(tag, v)` marks each read; `npm run test:nb` runs the file under V8 and
 > checks the model against what it observes. Run it with
 > `npm run nb -- examples/notebook/order.rofl.md`.
@@ -69,6 +74,7 @@ never seen("calls.after", undefined)
 never seen("field.ctor", undefined)
 never seen("ctor.mode", undefined)
 never seen("lack.has", undefined)
+never seen("heal.reset", undefined)
 never seen("order.gone", 2)
 never seen("order.cleared", 3)
 never seen("tally.first", 7)
@@ -92,7 +98,8 @@ never seen("ts.early", 18)
 ```
 
 > Where the order is not known, each read and each put it may see: a put in a
-> callback written before the read may have run (`forEach`) or not (`then`).
+> callback written before the read may have run (`forEach`) or not (`then`); a
+> write onto an object, before or after the read.
 
 ```datalog
 unordered(Tag, V) :- call_site[code](C, _), callee_of[code](C, U), ast_name[code](U, "use"),
@@ -102,6 +109,10 @@ unordered(Tag, V) :- call_site[code](C, _), callee_of[code](C, U), ast_name[code
 unordered(Tag, undefined) :- call_site[code](C, _), callee_of[code](C, U), ast_name[code](U, "use"),
                              arg_at[flow](C, 0, T), ast_value[code](T, Tag),
                              arg_at[flow](C, 1, G), keyed_read[flow](G, _), not keyed_present[code](G).
+
+unordered(Tag, V) :- call_site[code](C, _), callee_of[code](C, U), ast_name[code](U, "use"),
+                     arg_at[flow](C, 0, T), ast_value[code](T, Tag),
+                     arg_at[flow](C, 1, G), member_unset_written[flow](G), read_holds_lit[flow](G, V).
 
 ? unordered(Tag, V)
 ```

@@ -220,3 +220,28 @@ class Slot {
   read() { use('lack.field', this.value); }
 }
 new Slot().read();
+
+function pickY(o) { return o.y; }
+use('lack.param', pickY({ x: 1 }));
+const lackOrig = { x: 1 };
+const lackAlias = lackOrig;
+use('lack.alias', lackAlias.y);
+const lateObj = { x: 1 };
+use('lack.before', lateObj.y);
+lateObj.y = 29;
+use('lack.after', lateObj.y);
+
+class Reset {
+  constructor() { this.slots = new Map(); this.slots.set('a', 30); }
+  reset() { this.slots.delete('a'); this.slots.set('a', 31); }
+  read() { use('heal.reset', this.slots.get('a')); }
+}
+const resetting = new Reset();
+resetting.reset();
+resetting.read();
+class Torn {
+  constructor() { this.torn = new Map(); this.torn.set('a', 32); }
+  tear() { this.torn.delete('a'); this.read(); this.torn.set('a', 33); }
+  read() { use('heal.torn', this.torn.get('a')); }
+}
+new Torn().tear();

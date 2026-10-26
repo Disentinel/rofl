@@ -28,7 +28,7 @@ Reads:
 - from js-callgraph: [call_site](js-callgraph.rofl.md#call_site), [callee_of](js-callgraph.rofl.md#callee_of), [decorates](js-callgraph.rofl.md#decorates), [fn_node](js-callgraph.rofl.md#fn_node), [nearest_fn](js-callgraph.rofl.md#nearest_fn), [resolved_site](js-callgraph.rofl.md#resolved_site), [resolves](js-callgraph.rofl.md#resolves), [runs_outside](js-callgraph.rofl.md#runs_outside), [site](js-callgraph.rofl.md#site)
 - from js-concat, in the flow: [may_be_lit](js-concat.rofl.md#may_be_lit), [may_be_node](js-concat.rofl.md#may_be_node)
 - from js-concat, in the surface: [sx_mwrite](js-concat.rofl.md#sx_mwrite)
-- from js-controlflow: [async_body](js-controlflow.rofl.md#async_body), [entry_point](js-controlflow.rofl.md#entry_point), [in_fn](js-controlflow.rofl.md#in_fn)
+- from js-controlflow: [async_body](js-controlflow.rofl.md#async_body), [entry_point](js-controlflow.rofl.md#entry_point), [hidden_call_pos](js-controlflow.rofl.md#hidden_call_pos), [in_fn](js-controlflow.rofl.md#in_fn)
 - from js-controlflow, in the flow: [caught_value](js-controlflow.rofl.md#caught_value)
 - from js-controlflow, in the main: [stmt_seq_field](js-controlflow.rofl.md#stmt_seq_field)
 - from js-effects: [eff_reaches](js-effects.rofl.md#eff_reaches)
@@ -2501,7 +2501,8 @@ Declared as facts:
   - [`keyed_fill_ctor`](#keyed_fill_ctor)(C, J);
   - [`keyed_pair`](#keyed_pair)(C, D);
   - unless [`keyed_differs`](#keyed_differs)(D, C);
-  - unless [`keyed_drop_early`](#keyed_drop_early)(C, J, D).
+  - unless [`keyed_drop_early`](#keyed_drop_early)(C, J, D);
+  - unless [`keyed_healed`](#keyed_healed)(C, D).
 
 <a id="keyed_drop_early"></a>`keyed_drop_early`(C, J, D) if [`keyed_before_put`](#keyed_before_put)(C, J, D).
 
@@ -2560,9 +2561,62 @@ Declared as facts:
 <a id="keyed_drop_may"></a>`keyed_drop_may`(C, J, D) if all of:
   - [`keyed_fill`](#keyed_fill)(C, J);
   - [`keyed_pair`](#keyed_pair)(C, D);
+  - unless [`keyed_differs`](#keyed_differs)(D, C);
+  - unless [`keyed_healed`](#keyed_healed)(C, D).
+
+<a id="keyed_drop_fn"></a>`keyed_drop_fn`(G) if all of:
+  - [`keyed_pair`](#keyed_pair)(C, D);
+  - G [is nearest to](#nearest_v) a node D;
   - unless [`keyed_differs`](#keyed_differs)(D, C).
 
-<a id="keyed_drop_fn"></a>`keyed_drop_fn`(G) if [`keyed_drop_may`](#keyed_drop_may)(something, something, D) and G [is nearest to](#nearest_v) a node D.
+> a removal its own function undoes: a later statement of that function puts
+> the read's key back for certain, and nothing from the removal's statement to
+> that put may run the read (the read itself, a call that reaches its
+> function, code outside the model handed it, an await or a yield). Whenever
+> the function returns, the entry is there.
+
+<a id="keyed_heal_at"></a>`keyed_heal_at`(C, D, G, L, K) if all of:
+  - [`keyed_pair`](#keyed_pair)(C, D);
+  - a node G [is nearest to](#nearest_v) a node D;
+  - the `body` of G is a node Gb;
+  - a node S is the L-th of the `body` of Gb;
+  - D [is within](#ast_within) S;
+  - [`keyed_read_site`](#keyed_read_site)(C, H, something, something, something);
+  - [`keyed_sure_at`](#keyed_sure_at)(G, H, P, K);
+  - L < K;
+  - [`keyed_key`](#keyed_key)(P, Kk);
+  - [`keyed_key`](#keyed_key)(C, Kk);
+  - unless [`keyed_early`](#keyed_early)(G, K).
+
+<a id="keyed_heal_fn"></a>`keyed_heal_fn`(C, F) if [`keyed_heal_at`](#keyed_heal_at)(C, something, something, something, something) and F [is nearest to](#nearest_v) a node C.
+
+`keyed_target`(F) if [`keyed_heal_fn`](#keyed_heal_fn)(something, F).
+
+<a id="keyed_heal_span"></a>`keyed_heal_span`(C, D, Q) if all of:
+  - [`keyed_heal_at`](#keyed_heal_at)(C, D, G, L, K);
+  - a node G [is nearest to](#nearest_v) a node Q;
+  - the `body` of G is a node Gb;
+  - a node S is the J-th of the `body` of Gb;
+  - L <= J;
+  - J <= K;
+  - Q [is within](#ast_within) S.
+
+<a id="keyed_heal_broken"></a>`keyed_heal_broken`(C, D) either:
+
+1. if [`keyed_heal_span`](#keyed_heal_span)(C, D, C);
+2. if all of:
+   - [`keyed_heal_span`](#keyed_heal_span)(C, D, Q);
+   - Q [resolves to](js-callgraph.rofl.md#resolves) G;
+   - [`keyed_heal_fn`](#keyed_heal_fn)(C, F);
+   - [`keyed_runs_m`](#keyed_runs_m)(G, F);
+3. if all of:
+   - [`keyed_heal_span`](#keyed_heal_span)(C, D, Q);
+   - [`runs_unknown`](#runs_unknown)(Q);
+   - [`keyed_heal_fn`](#keyed_heal_fn)(C, F);
+   - [`keyed_open_to`](#keyed_open_to)(F);
+4. if [`keyed_heal_span`](#keyed_heal_span)(C, D, an [await](#noun-await) Q).
+
+<a id="keyed_healed"></a>`keyed_healed`(C, D) if [`keyed_heal_at`](#keyed_heal_at)(C, D, something, something, something), unless [`keyed_heal_broken`](#keyed_heal_broken)(C, D).
 
 `keyed_target`(G) if [`keyed_drop_fn`](#keyed_drop_fn)(G).
 
@@ -2917,76 +2971,57 @@ Declared as facts:
 
 - A kind K is a member kind — rows in this file
 
-> WHAT AN OBJECT LACKS, where the code alone shows every key it can have: an
-> object literal a `const` binds, with no spread and no computed key, every
-> reference to which is the object of a plain read `o.k` (not written through,
-> not a method call, not passed, returned or spread). A key it lacks, and
-> `Object.prototype` lacks, reads `undefined`. An object reached any other way
-> is not followed: what it lacks would rest on the flow that finds what
-> reaches it, which is what this computes. A class field with no initialiser
-> is `undefined` until something writes it.
+> WHAT AN OBJECT LACKS: an object literal with no spread and no computed key
+> shows every key it is made with. Read at a key it was not made with and
+> `Object.prototype` lacks, through whatever reaches it (a `const`, an alias, a
+> parameter, a return), it may be `undefined`. A literal of another file is
+> not followed: its keys reach this file only through the flow, and a negation
+> over them would close a cycle with the flow that carries the object here.
+> A class field with no initialiser is published with its class, so an
+> instance of a class of any file reads it `undefined`. A write of the key onto
+> the object (`member_value`) may run before the read or after it: writes onto
+> an object are not ordered, so such a read is `member_unset_written`.
 
 In the code:
 
-<a id="obj_const"></a>`obj_const`(an [object literal](#noun-object_literal) O, D) if all of:
-  - a node D [binds](#binder) some name to O in some file;
-  - D [is among the](#ast_child) `declarations` of a node V;
-  - [the attribute](#ast_attr) `kind` of V is "const".
-
 <a id="obj_open_own"></a>`obj_open_own`(O) either:
 
-1. if [`obj_const`](#obj_const)(O, something) and a [spread](#noun-spread) S [is among the](#ast_child) `properties` of a node O;
+1. if a node S [hides a call by](js-controlflow.rofl.md#hidden_call_pos) `accessor_call` and S [is among the](#ast_child) `properties` of a node O;
 2. if all of:
-   - [`obj_const`](#obj_const)(O, something);
-   - a node P [is among the](#ast_child) `properties` of a node O;
+   - O is an [object literal](#noun-object_literal);
+   - a node P [is among the](#ast_child) `properties` of O;
    - [the attribute](#ast_attr) `computed` of P is `true`.
 
-<a id="obj_shut"></a>`obj_shut`(O, D) if [`obj_const`](#obj_const)(O, D), unless [`obj_open_own`](#obj_open_own)(O).
-
-<a id="obj_own_key"></a>`obj_own_key`(O, Key) if all of:
-  - [`obj_shut`](#obj_shut)(O, something);
-  - a node P [is among the](#ast_child) `properties` of a node O;
-  - the `key` of P [spells](#key_name) Key.
-
-<a id="obj_use"></a>`obj_use`(E, D) if all of:
-  - [`obj_shut`](#obj_shut)(something, D);
-  - a node E [sees](#sees_binder) a node D;
-  - unless the `id` of D is E.
-
-<a id="obj_plain_read"></a>`obj_plain_read`(a [member expression](#noun-member_expression) N, E) if all of:
-  - [`obj_use`](#obj_use)(E, something);
-  - the `object` of N is a node E;
-  - unless the `left` of some node is N;
-  - unless the `callee` of some node is N;
-  - unless the `argument` of some node is N.
-
-<a id="obj_ref_else"></a>`obj_ref_else`(D) if [`obj_use`](#obj_use)(E, D), unless [`obj_plain_read`](#obj_plain_read)(something, E).
-
-<a id="obj_lacks"></a>`obj_lacks`(N, Key) if all of:
-  - [`obj_shut`](#obj_shut)(O, D);
-  - [`obj_use`](#obj_use)(E, D);
-  - [`obj_plain_read`](#obj_plain_read)(N, E);
-  - [the attribute](#ast_attr) `computed` of a node N is `false`;
-  - the `property` of N [is named](js-structure.rofl.md#ast_name) Key;
-  - Key differs from "__proto__";
-  - unless [`obj_ref_else`](#obj_ref_else)(D);
-  - unless [`obj_own_key`](#obj_own_key)(O, Key);
-  - unless `object` [has the member](#lib_member) Key since some release.
+<a id="obj_own_key"></a>`obj_own_key`(an [object literal](#noun-object_literal) O, Key) if a node P [is among the](#ast_child) `properties` of O and the `key` of P [spells](#key_name) Key.
 
 In the flow:
 
-A node N may be the literal E either:
+<a id="member_unset"></a>`member_unset`(N, an [object literal](#noun-object_literal) O, Key) if all of:
+  - [`member_at`](#member_at)(N, something, O, Key);
+  - a node N [is in file](js-model.rofl.md#ast_node) F;
+  - O is in file F;
+  - Key differs from "__proto__";
+  - unless the `left` of some node is N;
+  - unless [`obj_open_own`](#obj_open_own)(O);
+  - unless [`obj_own_key`](#obj_own_key)(O, Key);
+  - unless `object` [has the member](#lib_member) Key since some release.
 
-1. if [`obj_lacks`](#obj_lacks)(N, something) and E is `undefined`;
-2. if all of:
-   - [the attribute](#ast_attr) `static` of Q is `false`;
-   - the `key` of Q [spells](#key_name) Key;
-   - Q [is among the](#ast_child) `body` of a node B;
-   - the `body` of a node CD is B;
-   - a node I [stands for an instance of](#inst_of) CD;
-   - [`member_at`](#member_at)(N, something, I, Key);
-   - E is `undefined`;
-   - unless the `value` of a [class property](#noun-class_property) Q is some node.
+<a id="class_unset_field"></a>`class_unset_field`(CD, Key) if all of:
+  - [the attribute](#ast_attr) `static` of Q is `false`;
+  - the `key` of Q [spells](#key_name) Key;
+  - Q [is among the](#ast_child) `body` of a node B;
+  - the `body` of a node CD is B;
+  - unless the `value` of a [class property](#noun-class_property) Q is some node.
+
+`member_unset`(N, I, Key) if all of:
+  - [`class_unset_field`](#class_unset_field)(CD, Key);
+  - a node I [stands for an instance of](#inst_of) a class CD;
+  - [`member_at`](#member_at)(N, something, I, Key);
+  - unless the `left` of some node is a node N.
+
+A node may be the literal `undefined` if [`member_unset`](#member_unset)(it, something, something).
+
+<a id="member_unset_written"></a>`member_unset_written`(N) if [`member_unset`](#member_unset)(N, O, Key) and [the member](#member_value) Key of a node O holds some node.
 
 > The receiver decides which half of a class it sees: `Vat.poured()` and
 > `new Vat().tapped()` are both TypeErrors and both resolved until the `static`
@@ -3201,10 +3236,18 @@ In the code:
 > one row per file, from `program`; `ast_node(_, _, File)` would enumerate
 > the corpus to learn three strings
 
-<a id="exports_name"></a>A [function](js-callgraph.rofl.md#fn_node) is exported as Name from File if all of:
-  - a [named export](#noun-named_export) E is in file File;
-  - the `declaration` of E is it;
-  - the `id` of it [is named](js-structure.rofl.md#ast_name) Name.
+<a id="exports_name"></a>F is exported as Name from File either:
+
+1. if all of:
+   - a [named export](#noun-named_export) E is in file File;
+   - the `declaration` of E is F;
+   - F is a [function](js-callgraph.rofl.md#fn_node);
+   - the `id` of F [is named](js-structure.rofl.md#ast_name) Name;
+2. if all of:
+   - a [named export](#noun-named_export) E is in file File;
+   - the `declaration` of E is F;
+   - F is a [class declaration](#noun-class_declaration);
+   - the `id` of F [is named](js-structure.rofl.md#ast_name) Name.
 
 > `export * from` re-exports every NAME (not the default), recursively. The
 > kind guard is not redundant with `module_site`, which holds of imports too.

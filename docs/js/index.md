@@ -9,7 +9,7 @@
 | [js-callgraph](js-callgraph.rofl.md) | 223 | 94 | 83 | 2 | 35 | 255 | 23 | 4 | 6 | 0 |
 | [js-concat](js-concat.rofl.md) | 209 | 71 | 2 | 58 | 16 | 337 | 24 | 7 | 2 | 0 |
 | [js-controlflow](js-controlflow.rofl.md) | 254 | 98 | 78 | 4 | 44 | 248 | 17 | 6 | 3 | 0 |
-| [js-dataflow](js-dataflow.rofl.md) | 864 | 352 | 144 | 183 | 228 | 1455 | 110 | 11 | 4 | 0 |
+| [js-dataflow](js-dataflow.rofl.md) | 872 | 354 | 144 | 185 | 231 | 1474 | 111 | 11 | 4 | 0 |
 | [js-effects](js-effects.rofl.md) | 205 | 124 | 114 | 2 | 16 | 304 | 16 | 2 | 7 | 0 |
 | [js-env-api](js-env-api.rofl.md) | 5 | 5 | 5 | 0 | 0 | 8 | 0 | 0 | 3 | 0 |
 | [js-env](js-env.rofl.md) | 45 | 34 | 33 | 0 | 0 | 50 | 5 | 1 | 18 | 0 |
@@ -23,10 +23,10 @@
 | [js-resolve](js-resolve.rofl.md) | 58 | 36 | 35 | 0 | 0 | 79 | 8 | 0 | 0 | 0 |
 | [js-service](js-service.rofl.md) | 20 | 15 | 1 | 13 | 0 | 17 | 2 | 1 | 7 | 0 |
 | [js-structure](js-structure.rofl.md) | 11 | 4 | 4 | 0 | 4 | 6 | 2 | 0 | 2 | 0 |
-| [js-surface](js-surface.rofl.md) | 144 | 111 | 32 | 78 | 12 | 214 | 9 | 1 | 2 | 0 |
+| [js-surface](js-surface.rofl.md) | 146 | 113 | 32 | 80 | 12 | 217 | 9 | 1 | 2 | 0 |
 | [js-vocabulary](js-vocabulary.rofl.md) | 12 | 10 | 10 | 0 | 0 | 17 | 2 | 0 | 2 | 0 |
 
-382 heads without a phrase across these files.
+385 heads without a phrase across these files.
 
 ## Proposed renames
 
