@@ -318,7 +318,7 @@ fn run(json: bool, args: Vec<String>, mut pre: Option<(bool, crate::kept::Record
                 let t1 = std::time::Instant::now();
                 match crate::kept::keep_capped_over(&mut s, p, &note, true) {
                     Ok((n, over)) => {
-                        gone &= !over || s.kept.as_ref().is_none_or(|b| b.path != *q);
+                        gone &= !over || s.kept.files.iter().all(|b| b.path != *q);
                         eprintln!("{said}, kept again in {} ms, {n} bytes written{})", t1.elapsed().as_millis(), if over { " over the world it was kept from" } else { "" });
                     }
                     Err(e) => eprintln!("{said}); the world is not kept: {e}"),

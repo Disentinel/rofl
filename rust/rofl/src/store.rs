@@ -274,6 +274,8 @@ pub struct Cells {
     seals: Vec<Seal>,
     /// `(owner, key, tick)`: a cell is sealed once per evaluation of a tick.
     by_key: HashMap<(CellOwner, Box<[Term]>, u32), CellId>,
+    /// where the arenas a volume holds them as were read from (`volume::Cells::write`)
+    was: [Option<crate::arena::Span>; 7],
 }
 
 impl Cells {
@@ -494,8 +496,13 @@ impl PatIndex {
         self.under.as_deref().map_or(self, |u| u.bottom())
     }
 
-    /// The entries above the bottom as one top, in the order they were put: what an overlay holds over the bottom.
+    /// The entries above the bottom as one top, in the order they were put: what an overlay holds over the bottom,
+    /// made from the top a volume held over it, when one did.
     fn above_bottom(&self, facts: &Facts) -> PatIndex {
+        fn was(ix: &PatIndex) -> Option<&PatIndex> {
+            let u = ix.under.as_deref()?;
+            if u.under.is_none() { Some(ix) } else { was(u) }
+        }
         fn ids_above(ix: &PatIndex, out: &mut Vec<FactId>) {
             if let Some(u) = &ix.under {
                 ids_above(u, out);
@@ -509,6 +516,11 @@ impl PatIndex {
             sig.clear();
             sig.extend(self.pos.iter().map(|&p| facts.args(k)[p]));
             top.put(facts, &sig, k);
+        }
+        if let Some(w) = was(self) {
+            top.slots = Arena::derived(top.slots.take(), w.slots.origin());
+            top.ids = Arena::derived(top.ids.take(), w.ids.origin());
+            top.prev = Arena::derived(top.prev.take(), w.prev.origin());
         }
         top
     }
@@ -1233,6 +1245,8 @@ pub struct Store {
 pub struct VCiters {
     pub rows: Arena<u32>,
     pub(crate) more: FxMap<u64, Vec<(FactId, Sym)>>,
+    /// where the rows put since were read from: what a volume writes them as a change of
+    pub(crate) more_was: Option<crate::arena::Span>,
 }
 
 impl VCiters {
@@ -1275,6 +1289,7 @@ pub(crate) struct Citers {
     pub(crate) offs: Arena<u32>,
     pub(crate) ids: Arena<FactId>,
     more: HashMap<FactId, Vec<FactId>>,
+    more_was: Option<crate::arena::Span>,
 }
 
 impl Citers {
@@ -1297,7 +1312,7 @@ impl Citers {
             ids[at[g as usize] as usize] = id;
             at[g as usize] += 1;
         });
-        Citers { offs: offs.into(), ids: ids.into(), more: HashMap::new() }
+        Citers { offs: offs.into(), ids: ids.into(), more: HashMap::new(), more_was: None }
     }
 
     /// One column of what the map and the column hold, for a volume.
@@ -1386,6 +1401,8 @@ struct DupWindow {
 struct Fired {
     base: Rc<HashSlots>,
     own: FxSet<u64>,
+    /// where the firings since the base were read from
+    own_was: Option<crate::arena::Span>,
 }
 
 impl Fired {
