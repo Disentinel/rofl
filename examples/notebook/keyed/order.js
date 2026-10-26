@@ -211,3 +211,12 @@ class Config {
   mode() { use('ctor.mode', this.opts.get('mode')); }
 }
 new Config().mode();
+
+const shape = { a: 1 };
+use('lack.key', shape.b);
+use('lack.has', shape.a);
+class Slot {
+  value;
+  read() { use('lack.field', this.value); }
+}
+new Slot().read();

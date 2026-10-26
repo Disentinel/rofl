@@ -1175,17 +1175,20 @@ keyed_fill[code](C, J) :- keyed_fill_cand[code](C, P, J), keyed_key[code](P, K),
 -- the function runs removes from the collection. A method is called on `this`.
 keyed_body_stmt[code](G, K, X) :- keyed_hop_fn[code](G, _), ast_child[code](G, body, 0, Gb), ast_child[code](Gb, body, K, S),
                                   ast_node[code](S, expression_statement, _), ast_child[code](S, expression, 0, X).
-keyed_early[code](G, K) :- keyed_body_stmt[code](G, K, _), ast_child[code](G, body, 0, Gb), ast_child[code](Gb, body, L, S),
-                           L < K, ast_within[code](S, R), ast_node[code](R, return_statement, _), nearest_v[flow](G, R).
+keyed_early[code](G, K) :- keyed_body_stmt[code](G, K, _), nearest_v[flow](G, R), ast_node[code](R, return_statement, _),
+                           ast_child[code](G, body, 0, Gb), ast_child[code](Gb, body, L, S), L < K, ast_within[code](S, R).
 keyed_early[code](G, K) :- keyed_body_stmt[code](G, K, _), ast_child[code](G, body, 0, Gb), ast_child[code](Gb, body, L, R),
                            L < K, ast_node[code](R, return_statement, _).
 keyed_two_targets[code](Q) :- resolves[code](Q, A), resolves[code](Q, B), A != B.
+-- a call of a function of another file reaches the collection only where it left
+-- its file, and there `keyed_lost` holds whatever the call does
+keyed_local_call[code](Q, G) :- resolves[code](Q, G), not keyed_two_targets[code](Q), ast_node[code](Q, _, F), ast_node[code](G, _, F).
 keyed_this_call[code](Q) :- callee_of[code](Q, N), ast_child[code](N, object, 0, T), ast_node[code](T, this_expression, _).
-keyed_one_target[code](Q, G) :- resolves[code](Q, G), not keyed_two_targets[code](Q), not class_method_of[flow](_, G),
+keyed_one_target[code](Q, G) :- keyed_local_call[code](Q, G), not class_method_of[flow](_, G),
                                 not ast_attr[code](G, async, true), not ast_attr[code](G, generator, true).
-keyed_one_target[code](Q, G) :- resolves[code](Q, G), not keyed_two_targets[code](Q), class_method_of[flow](_, G),
+keyed_one_target[code](Q, G) :- keyed_local_call[code](Q, G), class_method_of[flow](_, G),
                                 keyed_this_call[code](Q), not ast_attr[code](G, async, true), not ast_attr[code](G, generator, true).
-keyed_one_target[code](Q, G) :- resolves[code](Q, G), not keyed_two_targets[code](Q), ast_node[code](G, class_private_method, _),
+keyed_one_target[code](Q, G) :- keyed_local_call[code](Q, G), ast_node[code](G, class_private_method, _),
                                 keyed_this_call[code](Q), not ast_attr[code](G, async, true), not ast_attr[code](G, generator, true).
 keyed_sure_at[code](G, H, P, K) :- keyed_body_stmt[code](G, K, P), keyed_put_of[code](P, H, _).
 keyed_sure_at[code](G, H, P, K) :- keyed_body_stmt[code](G, K, Q), keyed_one_target[code](Q, G2), keyed_sure[code](G2, H, P).
@@ -1396,6 +1399,36 @@ selects[flow](N, Key)       :- member_node_v[flow](N), ast_attr[code](N, compute
 computed_key[code](N, P)    :- ast_attr[code](N, computed, true), member_node_v[flow](N), ast_child[code](N, property, 0, P).
 selects[flow](N, Key)       :- may_be_lit[flow](P, Key), computed_key[code](N, P).
 selects[flow](N, Key)       :- symbol_ref[code](P, Key), computed_key[code](N, P).
+
+-- WHAT AN OBJECT LACKS, where the code alone shows every key it can have: an
+-- object literal a `const` binds, with no spread and no computed key, every
+-- reference to which is the object of a plain read `o.k` (not written through,
+-- not a method call, not passed, returned or spread). A key it lacks, and
+-- `Object.prototype` lacks, reads `undefined`. An object reached any other way
+-- is not followed: what it lacks would rest on the flow that finds what
+-- reaches it, which is what this computes. A class field with no initialiser
+-- is `undefined` until something writes it.
+obj_const[code](O, D) :- binder[code](D, _, O, _), ast_node[code](O, object_expression, _),
+                         ast_child[code](V, declarations, _, D), ast_attr[code](V, kind, "const").
+obj_open_own[code](O) :- obj_const[code](O, _), ast_child[code](O, properties, _, S), ast_node[code](S, spread_element, _).
+obj_open_own[code](O) :- obj_const[code](O, _), ast_child[code](O, properties, _, P), ast_attr[code](P, computed, true).
+obj_shut[code](O, D) :- obj_const[code](O, D), not obj_open_own[code](O).
+obj_own_key[code](O, Key) :- obj_shut[code](O, _), ast_child[code](O, properties, _, P), ast_child[code](P, key, 0, K),
+                             key_name[code](K, Key).
+obj_use[code](E, D) :- obj_shut[code](_, D), sees_binder[code](E, D), not ast_child[code](D, id, 0, E).
+obj_plain_read[code](N, E) :- obj_use[code](E, _), ast_child[code](N, object, 0, E), ast_node[code](N, member_expression, _),
+                              not ast_child[code](_, left, 0, N), not ast_child[code](_, callee, 0, N),
+                              not ast_child[code](_, argument, 0, N).
+obj_ref_else[code](D) :- obj_use[code](E, D), not obj_plain_read[code](_, E).
+obj_lacks[code](N, Key) :- obj_shut[code](O, D), not obj_ref_else[code](D), obj_use[code](E, D),
+                           obj_plain_read[code](N, E), ast_attr[code](N, computed, false), ast_child[code](N, property, 0, P),
+                           ast_name[code](P, Key), not obj_own_key[code](O, Key), not lib_member(object, Key, _),
+                           Key != "__proto__".
+may_be_lit[flow](N, undefined) :- obj_lacks[code](N, _).
+may_be_lit[flow](N, undefined) :- ast_node[code](Q, class_property, _), not ast_child[code](Q, value, 0, _),
+                                  ast_attr[code](Q, static, false), ast_child[code](Q, key, 0, K), key_name[code](K, Key),
+                                  ast_child[code](B, body, _, Q), ast_child[code](CD, body, 0, B), inst_of[flow](I, CD),
+                                  member_at[flow](N, _, I, Key).
 
 -- The receiver decides which half of a class it sees: `Vat.poured()` and
 -- `new Vat().tapped()` are both TypeErrors and both resolved until the `static`

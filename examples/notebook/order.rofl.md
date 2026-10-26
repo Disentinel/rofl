@@ -46,6 +46,8 @@ code:
 > runs (`fill()`, `this.#fill()`), and on a field from the constructor unless
 > some method may remove that key (`drop(name)` may remove any). `undefined` is a value of the flow: a parameter a call leaves
 > out, a function that ends without a value, a `let` with no initialiser, `void`.
+> So is a key a `const` object literal never wrote, read from that `const`
+> alone (`shape.b`), and a class field declared without a value (`Slot`).
 > `use(tag, v)` marks each read; `npm run test:nb` runs the file under V8 and
 > checks the model against what it observes. Run it with
 > `npm run nb -- examples/notebook/order.rofl.md`.
@@ -66,6 +68,7 @@ never seen("arrow.key", 27)
 never seen("calls.after", undefined)
 never seen("field.ctor", undefined)
 never seen("ctor.mode", undefined)
+never seen("lack.has", undefined)
 never seen("order.gone", 2)
 never seen("order.cleared", 3)
 never seen("tally.first", 7)

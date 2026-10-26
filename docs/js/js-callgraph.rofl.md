@@ -25,7 +25,7 @@ Reads:
 - from facts/js-host.rofl, in the main:
   - <a id="host_calls_back"></a>An origin Origin calls back its argument Key and an argument Arg and a when When (`host_calls_back`)
 - from js-concat, in the flow: [may_be_node](js-concat.rofl.md#may_be_node)
-- from js-dataflow: [key_name](js-dataflow.rofl.md#key_name)
+- from js-dataflow: [key_name](js-dataflow.rofl.md#key_name), [keyed_quiet](js-dataflow.rofl.md#keyed_quiet)
 - from js-dataflow, in the flow: [arg_at](js-dataflow.rofl.md#arg_at), [class_method_of](js-dataflow.rofl.md#class_method_of), [ctor_of](js-dataflow.rofl.md#ctor_of), [inst_of](js-dataflow.rofl.md#inst_of), [member_value](js-dataflow.rofl.md#member_value), [nearest_v](js-dataflow.rofl.md#nearest_v), [prototype_of](js-dataflow.rofl.md#prototype_of), [selects](js-dataflow.rofl.md#selects)
 - from js-dataflow, in the main: [builtin_prototype](js-dataflow.rofl.md#builtin_prototype), [class_field_kind](js-dataflow.rofl.md#class_field_kind), [lib_member](js-dataflow.rofl.md#lib_member)
 - from js-host: [host_site](js-host.rofl.md#host_site)
@@ -631,11 +631,15 @@ A node
 
 In the audit:
 
-> a function that may run code outside the model: it makes a call nothing resolves
+> a function that may run code outside the model: it makes a call nothing resolves (a quiet
+> collection method is not one, rules/js-dataflow.rofl 7c)
 
 In the code:
 
-<a id="runs_outside"></a>`runs_outside`(F) if a node C [is unresolved](#unresolved_call) with some shape and F [is the nearest function of](#nearest_fn) C.
+<a id="runs_outside"></a>`runs_outside`(F) if all of:
+  - a node C [is unresolved](#unresolved_call) with some shape;
+  - F [is the nearest function of](#nearest_fn) C;
+  - unless [`keyed_quiet`](js-dataflow.rofl.md#keyed_quiet)(C).
 
 In the audit:
 

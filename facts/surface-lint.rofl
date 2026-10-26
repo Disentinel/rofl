@@ -74,6 +74,28 @@ xl_ok(keyed_unknown_call, keyed_once_need, "the volume's own function, matched; 
 xl_ok(keyed_overlap, keyed_once_need, "the volume's own function, matched; a caller in another file means sx_esc").
 xl_ok(keyed_many, keyed_caller, "the enclosing function of the volume's own call of the function, matched; a caller in another file means sx_esc").
 xl_ok(keyed_overlap, keyed_caller, "the enclosing function of the volume's own call of the function, matched; a caller in another file means sx_esc").
+-- Presence through a call that puts for certain (`keyed_sure`) follows only a callee of the call's own file
+-- (`keyed_local_call` matches the file): a function of another file reaches the collection only where it left its file,
+-- and there `keyed_lost` holds. The callee, the collection it fills and the put are then the volume's own nodes.
+xl_ok(keyed_local_call, ast_node, "the test that a callee IS of the call's file: true alike in the volume and the whole").
+xl_ok(keyed_one_target, ast_attr, "a callee of the call's own file (keyed_local_call)").
+xl_ok(keyed_one_target, ast_node, "a callee of the call's own file (keyed_local_call)").
+xl_ok(keyed_one_target, class_method_of, "a callee of the call's own file (keyed_local_call)").
+xl_ok(keyed_sure_at, keyed_sure, "a callee of the call's own file (keyed_one_target)").
+xl_ok(keyed_fill_call, keyed_sure, "a callee of the call's own file (keyed_one_target)").
+xl_ok(keyed_ctor_put, keyed_sure, "a callee of the call's own file (keyed_one_target)").
+xl_ok(keyed_sure, keyed_g_drops, "the collection a function of its own file fills (keyed_hop_fn)").
+xl_ok(keyed_fill_call, keyed_call, "the collection a function of the read's file fills, matched against the read").
+xl_ok(keyed_fill_call, keyed_read_site, "the collection a function of the read's file fills, matched against the read").
+xl_ok(keyed_ctor_put, keyed_call, "the collection a function of the read's file fills, matched against the read").
+xl_ok(keyed_ctor_put, keyed_born, "the collection a function of the read's file fills, matched against the read").
+xl_ok(keyed_ctor_put, keyed_shared, "the collection a function of the read's file fills, matched against the read").
+xl_ok(keyed_fill, keyed_key, "a put of a function of the read's file").
+xl_ok(keyed_fill_ctor, keyed_key, "a put of a function of the read's file").
+xl_ok(keyed_g_drops, nearest_v, "the function around a removal of the collection's own file, matched against the mirrored eff_reaches").
+xl_ok(keyed_lost_ctor, keyed_runs_m, "the constructor's own call, matched against the mirrored eff_reaches of its callee").
+xl_ok(keyed_lost_ctor, ast_child, "the read's own method, bound by its body").
+xl_ok(keyed_lost_ctor, keyed_made, "the collection's own new node, matched against what was handed out").
 
 -- A generator's own volume: `next_send(G, V)` reaches G's file through the mirror of `sx_next`, and these read G's
 -- own yields and delegations there; a volume holding another file's G reads no row and owes none.
