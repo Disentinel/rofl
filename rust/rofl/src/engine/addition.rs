@@ -270,6 +270,7 @@ impl Eval {
         if self.store.dirty {
             return;
         }
+        self.note_whole();
         self.round_of.clear();
         if self.rerank().is_err() || !self.restore_lattices(lattices) {
             self.store.dirty = true;
@@ -281,10 +282,18 @@ impl Eval {
     /// A sealed world solves a firing again for `why` and finds each aggregate's cells by correlation, as the
     /// evaluation listed them (`agg_memo`): the cells the store holds, by the correlation their key carries.
     pub(super) fn restore_cells(&mut self) {
+        self.restore_cells_of(None);
+    }
+
+    /// The same for the cells of `rules` alone: a full pass that kept them did not fire them (engine/layer.rs).
+    pub(super) fn restore_cells_of(&mut self, rules: Option<&FxSet<Sym>>) {
         let mut by: HashMap<(Sym, u32, Box<[Term]>), Vec<(String, CellId)>> = HashMap::new();
         for c in self.store.live_cells() {
             let r = self.store.cell(c);
             let CellOwner::Body { rule, at } = r.owner;
+            if rules.is_some_and(|rs| !rs.contains(&rule)) {
+                continue;
+            }
             let Some(plan) = self.agg_plans.get(&(rule, at)).filter(|p| p.op != AggOp::AtLeast) else { continue };
             let corr: Box<[Term]> = plan.corr.iter().map(|i| r.key[*i]).collect();
             let mut k = String::new();

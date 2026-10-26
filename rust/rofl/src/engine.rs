@@ -32,6 +32,7 @@ mod cost;
 mod par;
 mod latkept;
 mod want;
+mod layer;
 pub use latkept::Tok;
 pub use cost::{Hot, PremCost};
 use resume::{Cut, CutAt, InFlight, Tail};
@@ -1082,6 +1083,10 @@ pub struct Eval {
     /// were written once (`shrug_snap`); a row the rest of the evaluation adds
     /// or withdraws that one of them could read is refused at the end.
     shrug_readers: HashSet<Sym>,
+    /// What the last whole evaluation held, for the next full pass to keep (`engine/layer.rs`).
+    whole: Option<Rc<layer::Whole>>,
+    /// The relations the last full pass evaluated again although the world held them whole before it.
+    pub again: Vec<Sym>,
     shrug_snap: Option<HashSet<[Term; 3]>>,
     /// The cells of each improving cycle a cut holed, in the order they
     /// were holed: a `divergence` shrug's meta.
@@ -1603,6 +1608,8 @@ impl Eval {
             strict_neg: false,
             wall_spent: std::cell::Cell::new(None),
             shrug_readers: HashSet::new(),
+            whole: None,
+            again: Vec::new(),
             shrug_snap: None,
             cycle_groups: Vec::new(),
             cycle_of: HashMap::new(),
@@ -2968,6 +2975,25 @@ impl Eval {
     /// descending pass that narrows them (`narrow_descend`) and the
     /// evaluation again with what it found.
     pub fn run(&mut self) -> Result<Outcome, Halt> {
+        let (kept, again) = self.finished_layer();
+        self.whole = None;
+        self.again = again;
+        self.store.kept_layer = kept;
+        let out = self.run_whole();
+        if !self.store.kept_rules.is_empty() {
+            let rules = std::mem::take(&mut self.store.kept_rules);
+            self.restore_cells_of(Some(&rules));
+        }
+        self.store.kept_layer.clear();
+        self.store.kept_rows.clear();
+        self.store.kept_rules.clear();
+        if out.as_ref().is_ok_and(|o| !o.partial) && self.level_rest.is_none() {
+            self.note_whole();
+        }
+        out
+    }
+
+    fn run_whole(&mut self) -> Result<Outcome, Halt> {
         self.check_wants()?;
         brk!("stale_holes_kept" => (); self.store.drop_eval_holes());
         self.narrow_out.clear();
@@ -3119,7 +3145,7 @@ impl Eval {
     fn run_pass_from(&mut self) -> Result<Outcome, Halt> {
         self.cutting = Some(Box::default());
         let from = self.resume_at.as_ref().and_then(|c| c.phase);
-        let safe_rules: Vec<Rc<ERule>> = self.rules.iter().filter(|r| r.safe).cloned().collect();
+        let safe_rules: Vec<Rc<ERule>> = self.rules.iter().filter(|r| r.safe && !self.store.kept_layer.contains(&r.clause.head.rel)).cloned().collect();
         let readers = self.shrug_readers.clone();
         // a rule into a subsumptive relation whose dominance reads a relation
         // fires once that relation is closed, at its level
@@ -4371,7 +4397,12 @@ impl Eval {
     }
 
     fn clear_derived(&mut self) {
-        self.pending_prov.clear();
+        self.store.kept_rows = self.kept_rows();
+        let kept = &self.store.kept_layer;
+        let notes: Vec<(FactId, Sym, u32)> = self.pending_prov.take().into_iter().filter(|n| !kept.is_empty() && self.store.alive(n.0) && kept.contains(&self.store.rec(n.0).rel)).collect();
+        for n in notes {
+            self.pending_prov.push(n);
+        }
         let (h, v) = (&self.h, &self.v);
         self.store.clear_derived(Some(&|r: &FactRec, a: &[Term]| provenance_row(h, v, r, a)));
     }

@@ -18,7 +18,8 @@
 // The same worlds are also SPLIT IN STAGES (docs/staged-evaluation.md, item 1): the relations the world's rules
 // conclude, by the layers of what they read, the lower half asked first (`asks`), evaluated, kept as a
 // volume and opened again, the upper half's asks added to the opened world; against the world asking both at once.
-// A world whose rules make fewer than two layers does not split.
+// A world whose rules make fewer than two layers does not split. An upper stage evaluated again keeps the lower stage
+// it was opened with (engine/layer.rs): a lower relation it evaluates again is a red.
 //
 // Rust release (rust/target/$ROFL_PROFILE/rofl serve and rofl load); the
 // sessions run in one rofl serve, the worlds one at a time.
@@ -123,9 +124,12 @@ async function staged(name: string, files: string[]): Promise<'split' | 'single'
     const r = await s.add(asks(upper));
     if (r.full === null || r.full === undefined) stageDeltas++;
     else stageFulls.push(`${name}: ${r.full}`);
-    await s.evaluate();
+    const again = ((await s.evaluate()).again ?? []).filter((x) => lower.includes(x));
+    if (again.length) bad.push(`${name} (stages): the lower stage evaluated again: ${again.join(', ')}`);
     const got = held(await s.stateText());
     if (got === want) return 'split';
+    fs.writeFileSync(path.join(tmp, `${name}.staged`), got);
+    fs.writeFileSync(path.join(tmp, `${name}.whole`), want);
     const [a, b] = [got.split('\n'), want.split('\n')];
     const i = a.findIndex((l, j) => l !== b[j]);
     return `line ${i + 1}\n  staged: ${a[i]}\n  whole:  ${b[i]}`;

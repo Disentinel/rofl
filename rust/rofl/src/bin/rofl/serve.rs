@@ -40,7 +40,9 @@
 //!                                                        world by delta (Session::assert_delta), else evaluated again
 //!   {"op":"load","session":2,"path":"pack.rofl"}      -> {"admitted":n,"full":null|"why"}: the same for facts and rules
 //!   {"op":"evaluate","session":2}                  -> waits for the world's adapters; with "wait":false it answers at
-//!                                                        once, "flying":k wants in flight, their answers loaded later
+//!                                                        once, "flying":k wants in flight, their answers loaded later;
+//!                                                        "again": what the world held whole and this pass derived again
+//!                                                        (what nothing touched is kept, engine/layer.rs)
 //!   {"op":"resume","session":2,"steps":n}            -> as evaluate, and "resumed": went on from where the budget
 //!                                                        stopped the last evaluation, or evaluated again
 //!   {"op":"ask","session":2,"query":"p(X)"}
@@ -483,6 +485,7 @@ impl Server {
                 Ok(json!({
                     "partial": o.partial, "staged": o.staged, "steps": o.steps,
                     "peakRows": o.peak_rows, "space": o.space, "flying": flying, "next": s.eval.next_level(),
+                    "again": s.eval.again.iter().map(|r| s.eval.h.name(*r)).collect::<Vec<_>>(),
                     "hot": s.eval.too_hot().iter().map(|h| h.sentence()).collect::<Vec<_>>(),
                 }))
             }
