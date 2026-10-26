@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { MessageChannel, receiveMessageOnPort, Worker } from 'node:worker_threads';
 import { Rofl } from '../src/api.ts';
 import { engine as installedEngine } from '../npm/platform.ts';
-import { typescript, type Engine, type EngineName, type Holding, type Stop, type Walls } from './engine.ts';
+import { asksOf, typescript, type Engine, type EngineName, type Holding, type Stop, type Walls } from './engine.ts';
 import type { CellRec, FactRec, PremRef, Store, Witness } from '../src/store.ts';
 import { termFromJson } from '../src/unify.ts';
 
@@ -71,6 +71,14 @@ export class RustEngine implements Engine {
     const errors = lits.flatMap((query) => { try { this.limited({ op: 'retract', session, query }, walls.stop); return []; } catch (e) { return [(e as Error).message.replace(/^the Rust engine refused retract: /, '')]; } });
     const { partial } = this.limited({ op: 'evaluate', session }, walls.stop);
     return { world: this.world(session, walls, partial), errors };
+  }
+
+  asked(world: Rofl, rels: string[], walls: Walls): Rofl {
+    const session = this.sessions.get(world);
+    if (session === undefined) return typescript.asked(world, rels, walls);
+    this.limited({ op: 'assert', session, rofl: asksOf(rels) }, walls.stop);
+    const { partial } = this.limited({ op: 'evaluate', session }, walls.stop);
+    return this.world(session, walls, partial);
   }
 
   /** A request under what the run has left of its clock and heap; a stop by either is said to the run. */
