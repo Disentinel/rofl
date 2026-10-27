@@ -563,6 +563,40 @@ fn an_edge_and_a_reader_added_to_a_declared_tree_keep_the_closure_answered_from_
     }
 }
 
+/// A tree declared into an evaluated world whose readers already read its closure, empty until then: the closure is
+/// engaged over the edges that stand and each reader fires again whole, and the world is the one evaluated with the
+/// declaration (where no witness is kept, a rule added at all is refused by the negations of the program's reflection). A reader under a negation or an aggregate concluded what the rows withdraw: the
+/// world is evaluated again.
+#[test]
+fn a_tree_declared_into_an_evaluated_world_is_answered_from_its_forest_by_delta() {
+    {
+        let head = format!("edb(t_pick). edb(t_cand). edb(t_link).\nt_link(n4, n5). t_in(P, C) :- t_link(P, C).\nt_in(n1, n2). t_in(n2, n4). t_in(n1, n3). t_pick(n1). t_pick(n2). t_cand(n1, n4). t_cand(n3, n4). t_cand(n2, n5).\nt_bf(A, D) :- t_pick(A), t_within(A, D).\nt_two(A, D) :- t_cand(A, D), t_within(A, X), t_in(X, D).\n");
+        let mut s = Session::fresh(BUDGET);
+        s.load(&boot(), None).unwrap();
+        s.load(&head, None).unwrap();
+        s.evaluate().unwrap();
+        let decl = "tree t_in(P, C) closure t_within.";
+        let a = s.load_delta(decl, None).unwrap().1;
+        assert!(matches!(a, Addition::Delta(_)), "{a:?}");
+        assert!(s.eval.vclosure_info().iter().all(|(_, on)| *on), "{:?}", s.eval.vclosure_info());
+        assert_eq!(state(&mut s), state(&mut replay(&[Op::Load(head.clone()), Op::Load(decl.into())]).unwrap()));
+        for neg in ["t_neg(A, D) :- t_cand(A, D), not t_within(A, D).", "t_cnt(A, N) :- t_pick(A), N is count(D : t_within(A, D))."] {
+            let mut s = Session::fresh(BUDGET);
+            s.load(&boot(), None).unwrap();
+            s.load(&format!("{head}{neg}\n"), None).unwrap();
+            s.evaluate().unwrap();
+            assert!(matches!(s.load_delta(decl, None).unwrap().1, Addition::Full(_)), "{neg}");
+        }
+        // edges that stood before the declaration and break it refuse the world
+        let mut s = Session::fresh(BUDGET);
+        s.load(&boot(), None).unwrap();
+        s.load(&format!("{head}t_in(n3, n4).\n"), None).unwrap();
+        s.evaluate().unwrap();
+        let a = s.load_delta(decl, None).unwrap().1;
+        assert!(matches!(&a, Addition::Full(w) if w.contains("promise is broken")), "{a:?}");
+    }
+}
+
 /// One addition to a world, a delta and the fresh world's state.
 fn one_addition(program: &str, op: Op) -> AddDelta {
     let mut s = Session::fresh(BUDGET);
