@@ -14,7 +14,7 @@ use std::collections::{HashMap, HashSet};
 
 /// A declared function: the relation, and the positions of its key and of the
 /// values the key determines, from 0.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Function {
     pub rel: Sym,
     pub key: Vec<usize>,

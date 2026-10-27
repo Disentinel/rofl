@@ -85,7 +85,8 @@ pub struct PrepMark {
     demand: Vec<Sym>,
     late: Vec<Sym>,
     shrugs: Vec<Sym>,
-    decl: (bool, bool, bool, usize, usize, usize),
+    decl: (bool, bool, bool, usize, usize),
+    functions: Vec<crate::structure::Function>,
     cone: Option<Vec<Sym>>,
     carried: Vec<Sym>,
 }
@@ -206,7 +207,8 @@ impl Eval {
             demand: sorted(self.demand_rels.iter().map(|(r, _)| *r).collect()),
             late: sorted(self.answer.late.clone()),
             shrugs: sorted(self.shrug_readers.iter().copied().collect()),
-            decl: (self.well_founded, self.no_provenance, self.no_witness, self.functions.len(), self.trees.len(), self.vclosures.len()),
+            decl: (self.well_founded, self.no_provenance, self.no_witness, self.trees.len(), self.vclosures.len()),
+            functions: self.functions.clone(),
             cone: self.cone.as_ref().map(|c| sorted(c.iter().copied().collect())),
             carried: sorted(self.carried.values().copied().collect()),
         }
@@ -214,10 +216,15 @@ impl Eval {
 
     /// WHAT A NEW PROGRAM MOVES BEYOND THE RULES IT ADDS: the rules to fire whole (those added, and those now
     /// answered on demand or no longer), the relations whose facts a call made (answered on demand before or now),
-    /// and every reason the addition is not worked out as a delta (an old rule changed or gone is one).
-    pub fn prep_moves(&self, was: &PrepMark) -> (Vec<Sym>, Vec<Sym>, Vec<&'static str>) {
+    /// and every reason the addition is not worked out as a delta (an old rule changed or gone is one). A function
+    /// declared derives nothing: its promise is judged over its whole relation after the delta (`check_promises_added`).
+    pub fn prep_moves(&mut self, was: &PrepMark) -> (Vec<Sym>, Vec<Sym>, Vec<&'static str>) {
         let now = self.prep_mark();
         let mut out = Vec::new();
+        if was.functions.iter().any(|f| !now.functions.contains(f)) {
+            out.push("a function declaration left the world");
+        }
+        self.unjudged.extend(now.functions.iter().filter(|f| !was.functions.contains(f)).cloned());
         if was.rules.iter().any(|(id, (canon, _))| now.rules.get(id).map(|x| &x.0) != Some(canon)) {
             out.push("a rule of the world changed or left it");
         }

@@ -760,6 +760,8 @@ pub struct Eval {
     /// every evaluation, and for the planner the key positions of each relation.
     functions: Vec<crate::structure::Function>,
     function_keys: HashMap<Sym, Vec<usize>>,
+    /// The functions declared by an addition: their promise is judged over every row, not only the new ones.
+    unjudged: Vec<crate::structure::Function>,
     /// The declared trees (`tree p(P, C) closure c.`): a forest each, checked after every evaluation.
     trees: Vec<crate::structure::Tree>,
     /// The closures of declared trees answered from their trees, not stored (engine/vclosure.rs): by relation, the
@@ -1456,6 +1458,7 @@ impl Eval {
             delta_stats: HashMap::new(),
             functions: Vec::new(),
             function_keys: HashMap::new(),
+            unjudged: Vec::new(),
             trees: Vec::new(),
             vclosures: Vec::new(),
             vany: false,
@@ -3469,6 +3472,7 @@ impl Eval {
     /// dirty, never answered.
     pub fn check_promises(&mut self) -> Result<(), Halt> {
         self.promise_broken = None;
+        self.unjudged.clear();
         if (self.functions.is_empty() && self.trees.is_empty()) || brk!("function_tick_unchecked" => self.store.tick > 0; false) {
             return Ok(());
         }
@@ -3487,6 +3491,12 @@ impl Eval {
     /// with another, a child given a second parent or an edge that closes a cycle), the whole check where one may be
     /// broken or it does not know them, which names the break.
     pub fn check_promises_added(&mut self) -> Result<(), Halt> {
+        let new = std::mem::take(&mut self.unjudged);
+        if let Err(m) = crate::structure::check_functions(&self.h, &self.store, &new) {
+            self.add_fresh = None;
+            self.promise_broken = Some(m.clone());
+            return Err(Halt::Strat(m, String::new()));
+        }
         match self.add_fresh.take() {
             Some(ids) if !cfg!(feature = "breaks") && self.promises_hold_at(&ids) => {
                 self.promise_broken = None;
