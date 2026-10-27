@@ -151,19 +151,36 @@ impl Eval {
             return true;
         }
         let blocked = |c: &VClosure| c.built == Some(usize::MAX);
-        let same = kept.0.len() == self.vclosures.len() && kept.0.iter().zip(&self.vclosures).all(|(a, b)| a.rel == b.rel && a.edge == b.edge && a.prov_read == b.prov_read && blocked(a) == blocked(b));
+        let n = kept.0.len();
+        // a closure declared after the others, over a relation that holds no row yet, is engaged as an evaluation engages it
+        let same = n <= self.vclosures.len()
+            && kept.0.iter().zip(&self.vclosures).all(|(a, b)| a.rel == b.rel && a.edge == b.edge && a.prov_read == b.prov_read && blocked(a) == blocked(b))
+            && self.vclosures[n..].iter().map(|c| c.rel).collect::<Vec<_>>().into_iter().all(|r| self.store.rel_all(&self.h, r).iter().all(|f| !self.store.alive(*f)));
         if !same || brk!("add_trees_dropped" => true; false) {
             return false;
         }
+        let fresh: Vec<VClosure> = self.vclosures.drain(n..).collect();
         self.vclosures = kept.0;
+        self.vclosures.extend(fresh);
         for (ci, v) in kept.1.into_iter().enumerate() {
             self.store.virtuals[ci].forests = v.forests;
         }
         self.store.vrow_of = kept.2;
-        self.vany = kept.3;
         self.store.vlisted = kept.4;
         self.store.vwit = kept.5;
         self.vreader_seen = kept.6;
+        if n < self.vclosures.len() {
+            let witnessed = !self.no_witness;
+            let mode = self.lattices.is_empty() && self.assume.is_none() && !self.well_founded && !self.naive && self.tags.count_rel.is_empty() && std::env::var_os("ROFL_NO_VCLOSURE").is_none();
+            for ci in n..self.vclosures.len() {
+                self.vclosures[ci].active = mode && !self.vclosure_blocked.contains(&ci) && !(witnessed && self.vclosures[ci].prov_read);
+            }
+            if !kept.3 {
+                self.store.vwit = witnessed;
+            }
+            self.store.vlisted = false;
+        }
+        self.vany = self.vclosures.iter().any(|c| c.active);
         true
     }
 

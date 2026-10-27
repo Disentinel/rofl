@@ -22,7 +22,7 @@ pub struct Function {
 }
 
 /// A declared tree: its edge relation, and the closure it stands for, if any.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Tree {
     pub rel: Sym,
     pub closure: Option<Sym>,

@@ -760,8 +760,9 @@ pub struct Eval {
     /// every evaluation, and for the planner the key positions of each relation.
     functions: Vec<crate::structure::Function>,
     function_keys: HashMap<Sym, Vec<usize>>,
-    /// The functions declared by an addition: their promise is judged over every row, not only the new ones.
+    /// The functions and trees declared by an addition: their promise is judged over every row, not only the new ones.
     unjudged: Vec<crate::structure::Function>,
+    unjudged_trees: Vec<crate::structure::Tree>,
     /// The declared trees (`tree p(P, C) closure c.`): a forest each, checked after every evaluation.
     trees: Vec<crate::structure::Tree>,
     /// The closures of declared trees answered from their trees, not stored (engine/vclosure.rs): by relation, the
@@ -1459,6 +1460,7 @@ impl Eval {
             functions: Vec::new(),
             function_keys: HashMap::new(),
             unjudged: Vec::new(),
+            unjudged_trees: Vec::new(),
             trees: Vec::new(),
             vclosures: Vec::new(),
             vany: false,
@@ -3473,6 +3475,7 @@ impl Eval {
     pub fn check_promises(&mut self) -> Result<(), Halt> {
         self.promise_broken = None;
         self.unjudged.clear();
+        self.unjudged_trees.clear();
         if (self.functions.is_empty() && self.trees.is_empty()) || brk!("function_tick_unchecked" => self.store.tick > 0; false) {
             return Ok(());
         }
@@ -3491,8 +3494,8 @@ impl Eval {
     /// with another, a child given a second parent or an edge that closes a cycle), the whole check where one may be
     /// broken or it does not know them, which names the break.
     pub fn check_promises_added(&mut self) -> Result<(), Halt> {
-        let new = std::mem::take(&mut self.unjudged);
-        if let Err(m) = crate::structure::check_functions(&self.h, &self.store, &new) {
+        let (new, trees) = (std::mem::take(&mut self.unjudged), std::mem::take(&mut self.unjudged_trees));
+        if let Err(m) = crate::structure::check_functions(&self.h, &self.store, &new).and_then(|_| crate::structure::check_trees(&self.h, &self.store, &trees)) {
             self.add_fresh = None;
             self.promise_broken = Some(m.clone());
             return Err(Halt::Strat(m, String::new()));

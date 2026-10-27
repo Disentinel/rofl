@@ -20,6 +20,7 @@ check[checks]("rust/rofl/tests/addition.rs", "random_large_programs_take_additio
 check[checks]("rust/rofl/tests/addition.rs", "a_lattice_world_is_a_fresh_evaluation_after_every_addition", test).
 check[checks]("rust/rofl/tests/addition.rs", "a_declared_tree_is_a_fresh_evaluation_after_every_addition", test).
 check[checks]("rust/rofl/tests/addition.rs", "an_edge_and_a_reader_added_to_a_declared_tree_keep_the_closure_answered_from_the_forest", test).
+check[checks]("rust/rofl/tests/addition.rs", "a_tree_declared_into_an_evaluated_world_is_answered_from_its_forest_by_delta", test).
 check[checks]("rust/rofl/tests/addition.rs", "an_added_rule_that_moves_a_round_seals_the_cells_over_it_again", test).
 check[checks]("rust/rofl/tests/addition.rs", "a_base_fact_beside_a_reset_rule_keeps_only_the_firings_that_hold", test).
 check[checks]("rust/rofl/tests/addition.rs", "an_aggregate_over_what_did_not_change_fires_on_what_grew", test).

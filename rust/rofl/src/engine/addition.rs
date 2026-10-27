@@ -85,8 +85,10 @@ pub struct PrepMark {
     demand: Vec<Sym>,
     late: Vec<Sym>,
     shrugs: Vec<Sym>,
-    decl: (bool, bool, bool, usize, usize),
+    decl: (bool, bool, bool),
     functions: Vec<crate::structure::Function>,
+    trees: Vec<crate::structure::Tree>,
+    closures: Vec<Sym>,
     cone: Option<Vec<Sym>>,
     carried: Vec<Sym>,
 }
@@ -207,8 +209,10 @@ impl Eval {
             demand: sorted(self.demand_rels.iter().map(|(r, _)| *r).collect()),
             late: sorted(self.answer.late.clone()),
             shrugs: sorted(self.shrug_readers.iter().copied().collect()),
-            decl: (self.well_founded, self.no_provenance, self.no_witness, self.trees.len(), self.vclosures.len()),
+            decl: (self.well_founded, self.no_provenance, self.no_witness),
             functions: self.functions.clone(),
+            trees: self.trees.clone(),
+            closures: self.vclosures.iter().map(|c| c.rel).collect(),
             cone: self.cone.as_ref().map(|c| sorted(c.iter().copied().collect())),
             carried: sorted(self.carried.values().copied().collect()),
         }
@@ -216,15 +220,17 @@ impl Eval {
 
     /// WHAT A NEW PROGRAM MOVES BEYOND THE RULES IT ADDS: the rules to fire whole (those added, and those now
     /// answered on demand or no longer), the relations whose facts a call made (answered on demand before or now),
-    /// and every reason the addition is not worked out as a delta (an old rule changed or gone is one). A function
-    /// declared derives nothing: its promise is judged over its whole relation after the delta (`check_promises_added`).
+    /// and every reason the addition is not worked out as a delta (an old rule changed or gone is one). A function or
+    /// a tree declared derives nothing itself: its promise is judged over its whole relation after the delta
+    /// (`check_promises_added`), and a tree's closure is engaged over its edges (`reprepare_keeping_trees`).
     pub fn prep_moves(&mut self, was: &PrepMark) -> (Vec<Sym>, Vec<Sym>, Vec<&'static str>) {
         let now = self.prep_mark();
         let mut out = Vec::new();
-        if was.functions.iter().any(|f| !now.functions.contains(f)) {
-            out.push("a function declaration left the world");
+        if was.functions.iter().any(|f| !now.functions.contains(f)) || was.trees.iter().any(|t| !now.trees.contains(t)) {
+            out.push("a function or tree declaration left the world");
         }
         self.unjudged.extend(now.functions.iter().filter(|f| !was.functions.contains(f)).cloned());
+        self.unjudged_trees.extend(now.trees.iter().filter(|t| !was.trees.contains(t)).cloned());
         if was.rules.iter().any(|(id, (canon, _))| now.rules.get(id).map(|x| &x.0) != Some(canon)) {
             out.push("a rule of the world changed or left it");
         }
@@ -241,9 +247,15 @@ impl Eval {
             out.push("the world started running a cone of asks");
         }
         let demand_moved: HashSet<Sym> = was.demand.iter().chain(&now.demand).copied().filter(|r| was.demand.contains(r) != now.demand.contains(r)).collect();
+        // a rule reading a closure declared since read none of its rows: it fires whole, as an added rule does, where
+        // what it concluded without them stands (it reads them positively, outside an aggregate)
+        let declared: HashSet<Sym> = now.closures.iter().copied().filter(|c| !was.closures.contains(c)).collect();
+        if self.rules.iter().any(|r| was.rules.contains_key(&r.id) && reads(r, &declared).1) {
+            out.push("a rule read a closure declared since under a negation or an aggregate");
+        }
         let fresh = |r: &ERule| match was.rules.get(&r.id) {
             None => true,
-            Some((_, safe)) => *safe != r.safe,
+            Some((_, safe)) => *safe != r.safe || reads(r, &declared).0,
         };
         let mut added: Vec<Sym> = self.rules.iter().filter(|r| fresh(r)).map(|r| r.id).collect();
         added.sort_by(|a, b| cmp_js(self.h.name(*a), self.h.name(*b)));
@@ -404,7 +416,12 @@ impl Eval {
             self.closures_engage();
         }
         let moved = if new_rules.is_empty() { HashSet::new() } else { self.rerank()? };
-        self.add_worked_out(added, &[], &fresh, &grown, &moved, called).map_err(String::from)
+        let d = self.add_worked_out(added, &[], &fresh, &grown, &moved, called)?;
+        // a closure declared by the addition lists its rows from now on
+        if self.vany && !self.store.vlisted {
+            self.vpublish();
+        }
+        Ok(d)
     }
 
     /// The indexes a retraction reads (`retract_set`): what cites each fact, and each row of a tree. Built once, kept
