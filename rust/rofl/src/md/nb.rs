@@ -1,7 +1,7 @@
 //! A notebook run natively: the port of notebook/kernel.ts and playground/host.ts for a notebook over no code, which prints as
 //! `npm run nb -- FILE` does (`print`). What a notebook asks is `? L`, `never L`, `unsure L`, `why L`, `whynot L`, `excise F`, `extends R`,
 //! and a line in English; `draw` and a notebook over code (`model: js`, `code:`) are not native yet and are refused, said so.
-use super::reader::{plural, Question, R};
+use super::reader::{plural, Question};
 use super::rx::{self, g};
 use super::vocab::Vocabulary;
 use super::{assemble, cells_of, home_of, prose_split, read_book, split, Kind, PartC, OWN};

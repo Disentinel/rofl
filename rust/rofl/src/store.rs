@@ -3134,6 +3134,7 @@ impl Store {
         brk!("witness_by_signature" => Some(self.view(self.least_signature(h, head))); Some(self.view(self.ranked_firings(h, id, memo)[0].1)))
     }
 
+    #[cfg_attr(not(feature = "breaks"), allow(dead_code))]
     fn least_signature(&self, h: &Heap, head: u32) -> u32 {
         let mut best = head;
         let mut bs = String::new();

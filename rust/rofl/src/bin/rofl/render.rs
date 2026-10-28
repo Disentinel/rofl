@@ -257,7 +257,7 @@ struct R<'a> {
     var_a: Sym,
 }
 
-struct Ctx { nouns: HashMap<Sym, String>, intro: HashSet<Sym>, absorbed: HashSet<usize>, residual: HashMap<usize, Term>, kind_conds: HashMap<usize, String>, head_book: Book, file: usize, nouns_used: BTreeSet<String>, display: HashMap<Sym, String>, or_at: Option<(usize, usize, Vec<Term>)>, cur_k: usize, deferred: Vec<Sym>, subject: Option<Sym>, no_label: bool, rel_pairs: HashMap<usize, (usize, Sym)>, consumed: HashSet<usize>, last_subj: Option<String>, typed: HashSet<Sym>, glued: bool, positional: bool }
+struct Ctx { nouns: HashMap<Sym, String>, intro: HashSet<Sym>, absorbed: HashSet<usize>, residual: HashMap<usize, Term>, kind_conds: HashMap<usize, String>, file: usize, nouns_used: BTreeSet<String>, display: HashMap<Sym, String>, or_at: Option<(usize, usize, Vec<Term>)>, cur_k: usize, deferred: Vec<Sym>, subject: Option<Sym>, no_label: bool, rel_pairs: HashMap<usize, (usize, Sym)>, consumed: HashSet<usize>, last_subj: Option<String>, typed: HashSet<Sym>, glued: bool, positional: bool }
 
 /// Alternatives of one head that differ in a single constant fold into one, the
 /// constants joined by `or`.
@@ -350,9 +350,6 @@ impl<'a> R<'a> {
         n.to_string()
     }
     fn a_noun(&self, n: &str) -> String { format!("{} {}", article(n), self.noun_link(n)) }
-    fn sym_named(&self, name: &str) -> Option<Sym> {
-        self.rows_from.keys().chain(self.rows_in.keys()).chain(self.defs.keys()).chain(self.phrases.keys()).chain(self.sig_forms.keys()).find(|s| self.h.name(**s) == name).copied()
-    }
     /// Where a table's rows come from: the vocabulary's word for it, else the fact pack that holds them; None when no rows anywhere.
     fn rows_source(&self, rel: Sym) -> Option<String> {
         self.rows_from.get(&rel).cloned().or_else(|| self.rows_in.get(&rel).cloned())
@@ -1217,7 +1214,7 @@ impl<'a> R<'a> {
                 if let Some(free) = ["X", "Y", "Z", "W", "U", "Q"].iter().find(|c| !used.contains(**c)) { display.insert(a, free.to_string()); }
             }
         }
-        Ctx { nouns, intro: HashSet::new(), absorbed, residual, kind_conds, head_book: c.head.book, file, nouns_used: BTreeSet::new(), display, or_at: None, cur_k: usize::MAX, deferred: Vec::new(), subject: None, no_label: false, rel_pairs: HashMap::new(), consumed: HashSet::new(), last_subj: None, typed, glued: false, positional: false }
+        Ctx { nouns, intro: HashSet::new(), absorbed, residual, kind_conds, file, nouns_used: BTreeSet::new(), display, or_at: None, cur_k: usize::MAX, deferred: Vec::new(), subject: None, no_label: false, rel_pairs: HashMap::new(), consumed: HashSet::new(), last_subj: None, typed, glued: false, positional: false }
     }
 
     /// A rule whose body is one positive literal and kind guards defines a phrase by another
@@ -1449,7 +1446,7 @@ impl<'a> R<'a> {
         let name = self.h.name(rel).to_string();
         stats.heads.insert(name.clone());
         let arity = group[0].head.args.len();
-        let mut ctx = Ctx { nouns: HashMap::new(), intro: HashSet::new(), absorbed: HashSet::new(), residual: HashMap::new(), kind_conds: HashMap::new(), head_book: group[0].head.book, file, nouns_used: BTreeSet::new(), display: HashMap::new(), or_at: None, cur_k: usize::MAX, deferred: Vec::new(), subject: None, no_label: false, rel_pairs: HashMap::new(), consumed: HashSet::new(), last_subj: None, typed: HashSet::new(), glued: false, positional: false };
+        let mut ctx = Ctx { nouns: HashMap::new(), intro: HashSet::new(), absorbed: HashSet::new(), residual: HashMap::new(), kind_conds: HashMap::new(), file, nouns_used: BTreeSet::new(), display: HashMap::new(), or_at: None, cur_k: usize::MAX, deferred: Vec::new(), subject: None, no_label: false, rel_pairs: HashMap::new(), consumed: HashSet::new(), last_subj: None, typed: HashSet::new(), glued: false, positional: false };
         let noun = self.kind_nouns.get(&rel).map(|n| format!(", {},", self.a_noun(n))).unwrap_or_default();
         if arity <= 1 {
             let items_: Vec<String> = group.iter().map(|c| c.head.args.first().map_or(String::new(), |a| self.term(*a, None, &mut ctx))).collect();

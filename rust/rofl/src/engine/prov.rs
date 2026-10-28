@@ -102,9 +102,6 @@ impl Notes {
         *self = Notes::default();
         all
     }
-    pub(crate) fn clear(&mut self) {
-        *self = Notes::default();
-    }
     fn write(&self, w: &mut crate::arena::VolW) {
         w.arena_parts(&self.kept, &[&self.own.iter().flat_map(|&(f, r, t)| [f, r, t]).collect::<Vec<u32>>()]);
     }

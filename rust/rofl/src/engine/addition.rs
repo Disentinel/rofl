@@ -446,12 +446,7 @@ impl Eval {
         self.add_worked_out(&[], facts, &HashSet::new(), &grown, &HashSet::new(), &[]).map_err(String::from)
     }
 
-    /// `plan` solved as rule `r` solves its body, from `s0`.
-    pub(super) fn solve_as(&mut self, r: &ERule, plan: &[BodyElem], s0: Subst) -> Result<Vec<Sol>, Halt> {
-        self.solve_seeds_as(r, plan, vec![s0])
-    }
-
-    /// `solve_as` from each of `seeds`, the solutions in the order of the seeds.
+    /// `plan` solved as rule `r` solves its body, from each of `seeds`, the solutions in the order of the seeds.
     pub(super) fn solve_seeds_as(&mut self, r: &ERule, plan: &[BodyElem], seeds: Vec<Subst>) -> Result<Vec<Sol>, Halt> {
         let outer = self.cur_rule.replace(r.id);
         let was = std::mem::replace(&mut self.firing, true);

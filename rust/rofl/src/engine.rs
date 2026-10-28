@@ -88,8 +88,6 @@ struct DemandCall {
     began: usize,
     seen: usize,
     linear: bool,
-    /// The members of `demand.scc` kept since it was made start here.
-    scc_from: usize,
     /// The lowest call below it whose answers it read: none, its own place.
     low: usize,
     /// Every record of an unknown, and the store, as they stood when it was
@@ -3876,6 +3874,7 @@ impl Eval {
         r
     }
 
+    #[cfg_attr(not(feature = "breaks"), allow(unused_variables))]
     fn end_pass(&mut self, outcome: Result<(), Halt>, strat_rules: &[Rc<ERule>]) -> Result<Outcome, Halt> {
         let mut partial = false;
         self.ds.elems.clear();
@@ -12246,7 +12245,7 @@ impl Eval {
         let Some(key) = call else { return u };
         let linear = self.demand.linear.contains(&l.rel) && brk!("demand_naive_passes" => false; true);
         let marks = self.unknown_marks();
-        let mut c = DemandCall { key, neg: self.demand.neg_level, linear, low: p, marks, scc_from, seen: usize::MAX, ..Default::default() };
+        let mut c = DemandCall { key, neg: self.demand.neg_level, linear, low: p, marks, seen: usize::MAX, ..Default::default() };
         let stored = if only.is_some() { self.store_answers(l, s, None) } else { out.to_vec() };
         for (_, r) in stored.iter() {
             if let PremRef::Fact(f) = r {

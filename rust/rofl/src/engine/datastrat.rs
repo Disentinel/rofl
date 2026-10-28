@@ -198,6 +198,7 @@ impl Eval {
     }
 
     /// Whether the correlation `k` leaves every group of its element open.
+    #[cfg_attr(not(feature = "breaks"), allow(dead_code))]
     fn ds_whole(&mut self, k: &AggKey) -> bool {
         let any = Term::atom(self.h.intern(ds_any_name()));
         let groups = self.agg_plans.get(&(k.0, k.1)).map_or(0, |p| p.group.len());
