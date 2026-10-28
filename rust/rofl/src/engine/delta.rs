@@ -619,7 +619,7 @@ impl Eval {
             && (self.store.citers_of(&HashSet::from([f])).into_iter().any(|x| {
                 let rel = self.store.rec(x).rel;
                 self.lattices.contains_key(&rel) || self.join_of.contains_key(&rel)
-            }) || self.sub_prems.values().any(|fs| fs.iter().any(|ps| ps.contains(&PremRef::Fact(f)))));
+            }) || self.lat.sub_prems.values().any(|fs| fs.iter().any(|ps| ps.contains(&PremRef::Fact(f)))));
         if lattice_hit {
             if !cells.is_empty() || !citing.is_empty() {
                 return Err("a fact a cell and a lattice both rest on");
@@ -908,7 +908,7 @@ impl Eval {
             // the key of a value no fact holds (it was dominated when it was given) whose
             // firing rested on a fact of the cone
             let mut keys: Vec<LatKey> = Vec::new();
-            for ((ck, _), firings) in &self.sub_prems {
+            for ((ck, _), firings) in &self.lat.sub_prems {
                 if firings.iter().any(|ps| ps.iter().any(|p| matches!(p, PremRef::Fact(g) if frontier.contains(g)))) && !keys.contains(ck) {
                     keys.push(ck.clone());
                 }
@@ -997,28 +997,28 @@ impl Eval {
         // what the evaluation kept of the values a cone key was given goes with its facts; the other
         // keys of the relation are not judged again at the close
         for ck in &cone_keys {
-            self.sub_cur.remove(ck);
-            self.sub_seen.remove(ck);
-            self.sub_memo.remove(ck);
-            self.sub_parties.remove(ck);
+            self.lat.sub_cur.remove(ck);
+            self.lat.sub_seen.remove(ck);
+            self.lat.sub_memo.remove(ck);
+            self.lat.sub_parties.remove(ck);
         }
-        self.sub_seen_set.retain(|(ck, _), _| !cone_keys.contains(ck));
-        self.sub_beaten.retain(|(ck, _), _| !cone_keys.contains(ck));
-        self.sub_prems.retain(|(ck, _), _| !cone_keys.contains(ck));
-        self.sub_by.retain(|(ck, _), _| !cone_keys.contains(ck));
-        self.sub_by_of.retain(|f, _| !inside.contains(f));
-        let rest: Vec<LatKey> = self.sub_seen.keys().filter(|k| rels.contains(&k.0)).cloned().collect();
-        let stashed: Vec<(LatKey, Vec<Box<[Term]>>)> = rest.into_iter().filter_map(|k| self.sub_seen.remove(&k).map(|v| (k, v))).collect();
+        self.lat.sub_seen_set.retain(|(ck, _), _| !cone_keys.contains(ck));
+        self.lat.sub_beaten.retain(|(ck, _), _| !cone_keys.contains(ck));
+        self.lat.sub_prems.retain(|(ck, _), _| !cone_keys.contains(ck));
+        self.lat.sub_by.retain(|(ck, _), _| !cone_keys.contains(ck));
+        self.lat.sub_by_of.retain(|f, _| !inside.contains(f));
+        let rest: Vec<LatKey> = self.lat.sub_seen.keys().filter(|k| rels.contains(&k.0)).cloned().collect();
+        let stashed: Vec<(LatKey, Vec<Box<[Term]>>)> = rest.into_iter().filter_map(|k| self.lat.sub_seen.remove(&k).map(|v| (k, v))).collect();
         let outer = (self.steps, self.rows);
         self.steps = 0;
         let holes0 = self.store.rel_count(self.v.hole);
         let active = std::mem::take(&mut self.active);
-        let was = self.lat_closed.clone();
+        let was = self.lat.closed.clone();
         for r in &rels {
-            self.lat_closed.remove(r);
+            self.lat.closed.remove(r);
         }
         let store = &self.store;
-        self.lat_cur.retain(|_, id| store.alive(*id));
+        self.lat.cur.retain(|_, id| store.alive(*id));
         self.height_memo.clear();
         let r = (|| -> Result<(), Halt> {
             self.activate(&rules)?;
@@ -1028,22 +1028,22 @@ impl Eval {
             if !reset.is_empty() {
                 self.support_ix = None;
             }
-            if brk!("retract_lattice_hole_kept" => false; self.store.rel_count(self.v.hole) > holes0 || !self.lat_pending.is_empty()) {
+            if brk!("retract_lattice_hole_kept" => false; self.store.rel_count(self.v.hole) > holes0 || !self.lat.pending.is_empty()) {
                 return Err(Halt::Bug("a lattice delta made a hole".into()));
             }
-            if self.lat_superseded.iter().any(|g| rels.contains(&self.store.rec(*g).rel)) {
+            if self.lat.superseded.iter().any(|g| rels.contains(&self.store.rec(*g).rel)) {
                 return Err(Halt::Bug("a lattice delta kept a history".into()));
             }
             Ok(())
         })();
-        self.sub_seen.extend(stashed);
+        self.lat.sub_seen.extend(stashed);
         self.active = active;
         self.cur_front = Front::default();
         (self.steps, self.rows) = outer;
         match r {
             Ok(()) => Ok(d),
             Err(_) => {
-                self.lat_closed = was;
+                self.lat.closed = was;
                 self.store.dirty = true;
                 Err("the lattice delta kept a history, wrote a hole or met a wall; the world is evaluated again")
             }
