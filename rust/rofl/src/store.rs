@@ -2514,14 +2514,9 @@ impl Store {
         self.n_live -= 1;
         *self.deaths.entry(r.rel).or_default() += 1;
         self.bump();
-        if self.wit_head[id as usize] != EMPTY {
-            let mut c = self.wit_head[id as usize];
-            while c != EMPTY {
-                self.wits_live -= 1;
-                c = self.wits[c as usize].next;
-            }
-            self.wit_head[id as usize] = EMPTY;
-        }
+        let k = self.chain(id).count();
+        self.wits_live -= k;
+        self.wit_head[id as usize] = EMPTY;
         if !self.unswept.contains(&(r.rel, r.persp)) {
             self.unswept.push((r.rel, r.persp));
         }
@@ -2555,11 +2550,8 @@ impl Store {
     /// Drop every firing of a record, live or dead.
     pub fn drop_firings(&mut self, id: FactId) {
         self.chains_cut();
-        let mut c = self.wit_head[id as usize];
-        while c != EMPTY {
-            self.wits_live -= 1;
-            c = self.wits[c as usize].next;
-        }
+        let k = self.chain(id).count();
+        self.wits_live -= k;
         self.wit_head[id as usize] = EMPTY;
     }
 
@@ -2666,22 +2658,7 @@ impl Store {
             if !self.kept_layer.is_empty() && (self.kept_layer.contains(&self.facts.rec(id as FactId).rel) || self.kept_rows.contains(&(id as FactId))) {
                 continue;
             }
-            let mut prev = EMPTY;
-            let mut c = self.wit_head[id];
-            while c != EMPTY {
-                let n = self.wits[c as usize];
-                if n.tick == tick && !standing.contains(&(id as FactId, n.rule)) {
-                    if prev == EMPTY {
-                        self.wit_head[id] = n.next;
-                    } else {
-                        self.wits[prev as usize].next = n.next;
-                    }
-                    self.wits_live -= 1;
-                } else {
-                    prev = c;
-                }
-                c = n.next;
-            }
+            self.unlink_where(id as FactId, |_, n| n.tick == tick && !standing.contains(&(id as FactId, n.rule)));
         }
         self.compact_wits();
         self.gc_cells();
@@ -2762,13 +2739,7 @@ impl Store {
             if head == EMPTY {
                 continue;
             }
-            let mut n = 0usize;
-            let mut c = head;
-            while c != EMPTY {
-                n += 1;
-                c = self.wits[c as usize].next;
-            }
-            held.push((id, head, n));
+            held.push((id, head, self.chain(id).count()));
         }
         self.remove_many(&to_drop);
         // A separate batch, and disjoint from the one above: nothing on the
@@ -2847,12 +2818,12 @@ impl Store {
     pub fn support(&mut self, id: FactId, w: Witness) -> bool {
         let h = firing_hash(id, w.rule, &w.prems);
         let head = self.wit_head[id as usize];
-        let mut c = if self.fired.insert(h) {
+        let c = if self.fired.insert(h) {
             EMPTY
         } else if let Some(d) = &self.dup_window {
             if let Some(&(f, at)) = d.nodes.get(&h) {
                 let n = self.wits[at as usize];
-                if f == id && n.rule == w.rule && self.prem_arena[n.prems_at as usize..(n.prems_at + n.prems_len) as usize] == w.prems[..] {
+                if f == id && n.rule == w.rule && self.prems_of(&n) == &w.prems[..] {
                     return false;
                 }
             }
@@ -2860,16 +2831,8 @@ impl Store {
         } else {
             head
         };
-        while c != EMPTY {
-            let n = self.wits[c as usize];
-            if n.rule == w.rule
-                && n.prems_len as usize == w.prems.len()
-                && self.prem_arena[n.prems_at as usize..(n.prems_at + n.prems_len) as usize]
-                    == w.prems[..]
-            {
-                return false;
-            }
-            c = n.next;
+        if self.nodes_from(c).any(|n| n.rule == w.rule && n.prems_len as usize == w.prems.len() && self.prems_of(&n) == &w.prems[..]) {
+            return false;
         }
         if let Some(ix) = self.citers.as_mut().map(Rc::make_mut).filter(|_| brk!("citers_unkept" => false; true)) {
             for p in &w.prems {
@@ -2973,37 +2936,17 @@ impl Store {
         };
         let mut out = Vec::new();
         for id in ids {
-            let id = id as usize;
-            let mut prev = EMPTY;
-            let mut c = self.wit_head[id];
-            let mut lost: Vec<Sym> = Vec::new();
-            let mut cited = FactId::MAX;
-            while c != EMPTY {
-                let n = self.wits[c as usize];
-                let first = self.prem_arena[n.prems_at as usize..(n.prems_at + n.prems_len) as usize]
-                    .iter()
-                    .filter_map(|p| match p {
-                        PremRef::Fact(f) if gone.contains(f) => Some(*f),
-                        _ => None,
-                    })
-                    .min();
-                if let Some(g) = first {
-                    cited = cited.min(g);
-                    if prev == EMPTY {
-                        self.wit_head[id] = n.next;
-                    } else {
-                        self.wits[prev as usize].next = n.next;
-                    }
-                    self.wits_live -= 1;
-                    lost.push(n.rule);
-                } else {
-                    prev = c;
-                }
-                c = n.next;
+            let removed = self.unlink_where(id, |s, n| {
+                s.prems_of(n).iter().any(|p| matches!(p, PremRef::Fact(f) if gone.contains(f)))
+            });
+            if removed.is_empty() {
+                continue;
             }
-            if !lost.is_empty() {
-                out.push((id as FactId, lost, self.wit_head[id] != EMPTY, cited));
-            }
+            let cited = removed.iter().flat_map(|n| self.prems_of(n)).filter_map(|p| match p {
+                PremRef::Fact(f) if gone.contains(f) => Some(*f),
+                _ => None,
+            }).min().unwrap_or(FactId::MAX);
+            out.push((id, removed.iter().map(|n| n.rule).collect(), self.wit_head[id as usize] != EMPTY, cited));
         }
         out
     }
@@ -3020,15 +2963,7 @@ impl Store {
 
     /// Does a firing of `id` cite `p`? Walked in place: a fact with a long chain is asked once for each premise gone.
     pub fn cites(&self, id: FactId, p: PremRef) -> bool {
-        let mut c = self.wit_head[id as usize];
-        while c != EMPTY {
-            let n = self.wits[c as usize];
-            if self.prem_arena[n.prems_at as usize..(n.prems_at + n.prems_len) as usize].contains(&p) {
-                return true;
-            }
-            c = n.next;
-        }
-        false
+        self.chain(id).any(|n| self.prems_of(&n).contains(&p))
     }
 
     /// The facts with a firing that cites one of `of`, from the citer index.
@@ -3042,128 +2977,53 @@ impl Store {
 
     /// Does some firing of `id` cite none of `stale`?
     pub fn fired_without(&self, id: FactId, stale: &HashSet<FactId>) -> bool {
-        let mut c = self.wit_head[id as usize];
-        while c != EMPTY {
-            let n = self.wits[c as usize];
-            if !self.prem_arena[n.prems_at as usize..(n.prems_at + n.prems_len) as usize]
-                .iter()
-                .any(|p| matches!(p, PremRef::Fact(f) if stale.contains(f)))
-            {
-                return true;
-            }
-            c = n.next;
-        }
-        false
+        self.chain(id).any(|n| !self.prems_of(&n).iter().any(|p| matches!(p, PremRef::Fact(f) if stale.contains(f))))
     }
 
     /// Drop the firings of `id` that cite one of `stale`; their rules.
     pub fn drop_firings_of_citing(&mut self, id: FactId, stale: &HashSet<FactId>) -> Vec<Sym> {
         self.chains_cut();
-        let id = id as usize;
-        let mut prev = EMPTY;
-        let mut c = self.wit_head[id];
-        let mut lost = Vec::new();
-        while c != EMPTY {
-            let n = self.wits[c as usize];
-            if self.prem_arena[n.prems_at as usize..(n.prems_at + n.prems_len) as usize]
-                .iter()
-                .any(|p| matches!(p, PremRef::Fact(f) if stale.contains(f)))
-            {
-                if prev == EMPTY {
-                    self.wit_head[id] = n.next;
-                } else {
-                    self.wits[prev as usize].next = n.next;
-                }
-                self.wits_live -= 1;
-                lost.push(n.rule);
-            } else {
-                prev = c;
-            }
-            c = n.next;
-        }
-        lost
+        self.unlink_where(id, |s, n| s.prems_of(n).iter().any(|p| matches!(p, PremRef::Fact(f) if stale.contains(f))))
+            .into_iter()
+            .map(|n| n.rule)
+            .collect()
     }
 
     /// The premises of the oldest firing of a record still held: the one it
     /// was first concluded by, unless that one was removed.
     pub fn first_firing(&self, id: FactId) -> Option<Vec<PremRef>> {
-        let mut c = self.wit_head[id as usize];
-        let mut last = EMPTY;
-        while c != EMPTY {
-            last = c;
-            c = self.wits[c as usize].next;
-        }
-        (last != EMPTY).then(|| {
-            let n = self.wits[last as usize];
-            self.prem_arena[n.prems_at as usize..(n.prems_at + n.prems_len) as usize].to_vec()
-        })
+        self.chain(id).last().map(|n| self.prems_of(&n).to_vec())
     }
 
     /// Every firing of `id`: its tick and its premises.
     pub fn firings(&self, id: FactId) -> Vec<(Sym, u32, Vec<PremRef>)> {
-        let mut out = Vec::new();
-        let mut c = self.wit_head[id as usize];
-        while c != EMPTY {
-            let n = self.wits[c as usize];
-            out.push((n.rule, n.tick, self.prem_arena[n.prems_at as usize..(n.prems_at + n.prems_len) as usize].to_vec()));
-            c = n.next;
-        }
-        out
+        self.chain(id).map(|n| (n.rule, n.tick, self.prems_of(&n).to_vec())).collect()
     }
 
     /// Remove one firing, named by its rule and premises. True if it was there.
     pub fn remove_firing(&mut self, id: FactId, rule: Sym, prems: &[PremRef]) -> bool {
         self.chains_cut();
-        let mut prev = EMPTY;
-        let mut c = self.wit_head[id as usize];
-        while c != EMPTY {
-            let n = self.wits[c as usize];
-            if n.rule == rule && self.prem_arena[n.prems_at as usize..(n.prems_at + n.prems_len) as usize] == *prems {
-                if prev == EMPTY {
-                    self.wit_head[id as usize] = n.next;
-                } else {
-                    self.wits[prev as usize].next = n.next;
-                }
-                self.wits_live -= 1;
-                return true;
-            }
-            prev = c;
-            c = n.next;
-        }
-        false
+        let mut hit = false;
+        let removed = self.unlink_where(id, |s, n| {
+            let m = !hit && n.rule == rule && s.prems_of(n) == prems;
+            hit |= m;
+            m
+        });
+        !removed.is_empty()
     }
 
     /// The rule of every firing of `id`, one per firing.
     pub fn firing_rules(&self, id: FactId) -> Vec<Sym> {
-        let mut out = Vec::new();
-        let mut c = self.wit_head[id as usize];
-        while c != EMPTY {
-            out.push(self.wits[c as usize].rule);
-            c = self.wits[c as usize].next;
-        }
-        out
+        self.chain(id).map(|n| n.rule).collect()
     }
 
     /// Does any firing of `id` come from `rule`?
     pub fn fired_by(&self, id: FactId, rule: Sym) -> bool {
-        let mut c = self.wit_head[id as usize];
-        while c != EMPTY {
-            if self.wits[c as usize].rule == rule {
-                return true;
-            }
-            c = self.wits[c as usize].next;
-        }
-        false
+        self.chain(id).any(|n| n.rule == rule)
     }
 
     pub fn support_count(&self, id: FactId) -> usize {
-        let mut c = self.wit_head[id as usize];
-        let mut n = 0;
-        while c != EMPTY {
-            n += 1;
-            c = self.wits[c as usize].next;
-        }
-        n
+        self.chain(id).count()
     }
 
     /// The records the store still holds that are NOT live: removed, or
@@ -3200,13 +3060,61 @@ impl Store {
             .collect()
     }
 
-    fn view(&self, c: u32) -> WitView<'_> {
-        let n = self.wits[c as usize];
-        WitView {
-            rule: n.rule,
-            tick: n.tick,
-            prems: &self.prem_arena[n.prems_at as usize..(n.prems_at + n.prems_len) as usize],
+    #[inline]
+    fn prems_of(&self, n: &WitNode) -> &[PremRef] {
+        &self.prem_arena[n.prems_at as usize..(n.prems_at + n.prems_len) as usize]
+    }
+
+    #[inline]
+    fn nodes_from(&self, c: u32) -> impl Iterator<Item = WitNode> + '_ {
+        let mut c = c;
+        std::iter::from_fn(move || {
+            (c != EMPTY).then(|| {
+                let n = self.wits[c as usize];
+                c = n.next;
+                n
+            })
+        })
+    }
+
+    /// The firings of `id`, head first.
+    #[inline]
+    fn chain(&self, id: FactId) -> impl Iterator<Item = WitNode> + '_ {
+        self.nodes_from(self.wit_head[id as usize])
+    }
+
+    /// Unlink the firings of `id` that `dies` names, in place; returns them in list order.
+    #[inline]
+    fn unlink_where(&mut self, id: FactId, mut dies: impl FnMut(&Self, &WitNode) -> bool) -> Vec<WitNode> {
+        let mut out = Vec::new();
+        let mut prev = EMPTY;
+        let mut c = self.wit_head[id as usize];
+        while c != EMPTY {
+            let n = self.wits[c as usize];
+            if dies(&*self, &n) {
+                if prev == EMPTY {
+                    self.wit_head[id as usize] = n.next;
+                } else {
+                    self.wits[prev as usize].next = n.next;
+                }
+                self.wits_live -= 1;
+                out.push(n);
+            } else {
+                prev = c;
+            }
+            c = n.next;
         }
+        out
+    }
+
+    #[inline]
+    fn view_of(&self, n: &WitNode) -> WitView<'_> {
+        WitView { rule: n.rule, tick: n.tick, prems: self.prems_of(n) }
+    }
+
+    #[inline]
+    fn view(&self, c: u32) -> WitView<'_> {
+        self.view_of(&self.wits[c as usize])
     }
 
     /// `witnessOf` (src/store.ts): the firing of LEAST DERIVATION HEIGHT, ties
@@ -3317,25 +3225,17 @@ impl Store {
     /// would pick back is a property of the store and not of the world.
     /// The witnesses of `id`, in the order its chain holds them.
     pub fn witnesses(&self, id: FactId) -> Vec<WitView<'_>> {
-        let mut out = Vec::new();
-        let mut c = self.wit_head.get(id as usize).copied().unwrap_or(EMPTY);
-        while c != EMPTY {
-            out.push(self.view(c));
-            c = self.wits[c as usize].next;
-        }
-        out
+        self.nodes_from(self.wit_head.get(id as usize).copied().unwrap_or(EMPTY)).map(|n| self.view_of(&n)).collect()
     }
 
     pub fn supports_of(&self, h: &Heap, id: FactId) -> Vec<(String, Sym, u32, Vec<PremRef>)> {
         let mut out = Vec::new();
         let Some(&head) = self.wit_head.get(id as usize) else { return out };
-        let mut c = head;
-        while c != EMPTY {
-            let v = self.view(c);
+        for n in self.nodes_from(head) {
+            let v = self.view_of(&n);
             let mut sig = String::new();
             self.write_sig(h, &v, &mut sig);
             out.push((sig, v.rule, v.tick, v.prems.to_vec()));
-            c = self.wits[c as usize].next;
         }
         out
     }
@@ -3727,12 +3627,10 @@ impl Store {
                 out.push_str(" frozen");
             }
             sigs.clear();
-            let mut c = self.wit_head[*id as usize];
-            while c != EMPTY {
+            for n in self.chain(*id) {
                 let mut s = String::new();
-                self.write_sig(h, &self.view(c), &mut s);
+                self.write_sig(h, &self.view_of(&n), &mut s);
                 sigs.push(s);
-                c = self.wits[c as usize].next;
             }
             sigs.sort_by(|a, b| cmp_js(a, b));
             for s in &sigs {
@@ -4033,15 +3931,12 @@ impl Store {
         }
         let mut live = vec![false; self.cells.recs.len()];
         for h in self.wit_head.iter() {
-            let mut c = *h;
-            while c != EMPTY {
-                let n = self.wits[c as usize];
-                for p in &self.prem_arena[n.prems_at as usize..(n.prems_at + n.prems_len) as usize] {
+            for n in self.nodes_from(*h) {
+                for p in self.prems_of(&n) {
                     if let PremRef::Cell(x) = p {
                         live[*x as usize] = true;
                     }
                 }
-                c = n.next;
             }
         }
         for (i, r) in self.cells.recs.iter().enumerate() {
@@ -4141,12 +4036,9 @@ impl Store {
                 continue;
             }
             order.push(f);
-            let mut c = self.wit_head[f as usize];
-            while c != EMPTY {
-                let n = self.wits[c as usize];
-                let ps = &self.prem_arena[n.prems_at as usize..(n.prems_at + n.prems_len) as usize];
+            for n in self.chain(f) {
+                let ps = self.prems_of(&n);
                 if skip(f, n.rule, ps) {
-                    c = n.next;
                     continue;
                 }
                 for p in ps {
@@ -4156,7 +4048,6 @@ impl Store {
                         }
                     }
                 }
-                c = n.next;
             }
         }
         if order.is_empty() {
@@ -4166,10 +4057,8 @@ impl Store {
         let mut vh: HashMap<Sym, u32> = HashMap::new();
         if !self.vrow_of.is_empty() {
             for &f in &order {
-                let mut c = self.wit_head[f as usize];
-                while c != EMPTY {
-                    let n = self.wits[c as usize];
-                    for p in &self.prem_arena[n.prems_at as usize..(n.prems_at + n.prems_len) as usize] {
+                for n in self.chain(f) {
+                    for p in self.prems_of(&n) {
                         if let PremRef::VRow(k) = p {
                             if !vh.contains_key(k) {
                                 let x = self.vrow_height(*k, memo);
@@ -4177,7 +4066,6 @@ impl Store {
                             }
                         }
                     }
-                    c = n.next;
                 }
             }
         }
@@ -4193,21 +4081,18 @@ impl Store {
         let mut heap: BinaryHeap<Reverse<(u32, FactId)>> = BinaryHeap::new();
         for &f in &order {
             let rec = &self.facts.rec(f);
-            let mut c = self.wit_head[f as usize];
-            if rec.base() || c == EMPTY {
+            if rec.base() || self.wit_head[f as usize] == EMPTY {
                 heap.push(Reverse((0, f)));
                 continue;
             }
-            while c != EMPTY {
-                let n = self.wits[c as usize];
-                if skip(f, n.rule, &self.prem_arena[n.prems_at as usize..(n.prems_at + n.prems_len) as usize]) {
-                    c = n.next;
+            for n in self.chain(f) {
+                if skip(f, n.rule, self.prems_of(&n)) {
                     continue;
                 }
                 let mut open = 0usize;
                 let mut best = 0u32;
                 let idx = firings.len();
-                for p in &self.prem_arena[n.prems_at as usize..(n.prems_at + n.prems_len) as usize] {
+                for p in self.prems_of(&n) {
                     match p {
                         PremRef::Fact(g) => match memo.get(g) {
                             Some(hg) => best = brk!("height_min" => best.min(*hg); best.max(*hg)),
@@ -4225,7 +4110,6 @@ impl Store {
                 if open == 0 {
                     heap.push(Reverse((best + 1, f)));
                 }
-                c = n.next;
             }
         }
         while let Some(Reverse((hgt, f))) = heap.pop() {
@@ -4290,9 +4174,8 @@ impl Store {
                 continue;
             }
             order.push(f);
-            let mut c = self.wit_head[f as usize];
-            while c != EMPTY {
-                for p in self.firing_prems(c) {
+            for n in self.chain(f) {
+                for p in self.prems_of(&n) {
                     match p {
                         PremRef::Fact(g) if !memo.contains_key(g) && !seen.contains(g) => stack.push(*g),
                         PremRef::Cell(x) if forbidden.contains(x) && !at.contains_key(x) => {
@@ -4301,17 +4184,14 @@ impl Store {
                         _ => {}
                     }
                 }
-                c = self.wits[c as usize].next;
             }
         }
         let mut vh: HashMap<Sym, u32> = HashMap::new();
         if !self.vrow_of.is_empty() {
             let mut ks: Vec<Sym> = members.iter().flatten().flatten().flatten().filter_map(|p| if let PremRef::VRow(k) = p { Some(*k) } else { None }).collect();
             for &f in &order {
-                let mut c = self.wit_head[f as usize];
-                while c != EMPTY {
-                    ks.extend(self.firing_prems(c).iter().filter_map(|p| if let PremRef::VRow(k) = p { Some(*k) } else { None }));
-                    c = self.wits[c as usize].next;
+                for n in self.chain(f) {
+                    ks.extend(self.prems_of(&n).iter().filter_map(|p| if let PremRef::VRow(k) = p { Some(*k) } else { None }));
                 }
             }
             for k in ks {
@@ -4365,14 +4245,12 @@ impl Store {
             }
         };
         for &f in &order {
-            let mut c = self.wit_head[f as usize];
-            if self.facts.rec(f).base() || c == EMPTY {
+            if self.facts.rec(f).base() || self.wit_head[f as usize] == EMPTY {
                 heap.push(Reverse((0, Node::Fact(f))));
                 continue;
             }
-            while c != EMPTY {
-                add(Node::Fact(f), self.firing_prems(c), &mut firings, &mut users, &mut heap);
-                c = self.wits[c as usize].next;
+            for n in self.chain(f) {
+                add(Node::Fact(f), self.prems_of(&n), &mut firings, &mut users, &mut heap);
             }
         }
         for (i, ms) in members.iter().enumerate() {
@@ -4446,31 +4324,22 @@ impl Store {
     /// The fact premises of every firing of `id`.
     pub fn fact_premises(&self, id: FactId) -> Vec<FactId> {
         let mut out = Vec::new();
-        let mut c = self.wit_head[id as usize];
-        while c != EMPTY {
-            let n = self.wits[c as usize];
-            for p in &self.prem_arena[n.prems_at as usize..(n.prems_at + n.prems_len) as usize] {
+        for n in self.chain(id) {
+            for p in self.prems_of(&n) {
                 if let PremRef::Fact(g) = p {
                     out.push(*g);
                 }
             }
-            c = n.next;
         }
         out
-    }
-
-    fn firing_prems(&self, c: u32) -> &[PremRef] {
-        let n = self.wits[c as usize];
-        &self.prem_arena[n.prems_at as usize..(n.prems_at + n.prems_len) as usize]
     }
 
     /// The premises of one firing of `g` that has `g`'s height: one step of
     /// a least derivation. None when `g` has no height.
     fn least_firing(&self, g: FactId, height: &HashMap<FactId, u32>) -> Option<&[PremRef]> {
         let hg = *height.get(&g)?;
-        let mut c = self.wit_head[g as usize];
-        while c != EMPTY {
-            let ps = self.firing_prems(c);
+        for n in self.chain(g) {
+            let ps = self.prems_of(&n);
             let mut h = 0u32;
             let mut known = true;
             for p in ps {
@@ -4486,7 +4355,6 @@ impl Store {
             if known && h + 1 == hg {
                 return Some(ps);
             }
-            c = self.wits[c as usize].next;
         }
         None
     }
@@ -4504,11 +4372,10 @@ impl Store {
         let n = nodes.len() + 1;
         let mut preds: Vec<Vec<usize>> = vec![Vec::new(); n];
         for (i, &x) in nodes.iter().enumerate() {
-            let mut c = self.wit_head[x as usize];
-            while c != EMPTY {
+            for w in self.chain(x) {
                 let mut inside: Option<usize> = None;
                 let mut usable = true;
-                for p in self.firing_prems(c) {
+                for p in self.prems_of(&w) {
                     let PremRef::Fact(g) = p else { continue };
                     if !height.contains_key(g) {
                         usable = false;
@@ -4524,7 +4391,6 @@ impl Store {
                 if usable {
                     preds[i + 1].push(inside.unwrap_or(0));
                 }
-                c = self.wits[c as usize].next;
             }
         }
         let mut succ: Vec<Vec<usize>> = vec![Vec::new(); n];
@@ -4663,10 +4529,8 @@ impl Store {
         let mut users: Vec<Vec<usize>> = vec![Vec::new(); region.len()];
         let mut queue: Vec<usize> = Vec::new();
         for (i, &g) in region.iter().enumerate() {
-            let mut c = self.wit_head[g as usize];
-            while c != EMPTY {
-                let ps = self.firing_prems(c);
-                c = self.wits[c as usize].next;
+            for n in self.chain(g) {
+                let ps = self.prems_of(&n);
                 let mut need: Vec<usize> = Vec::new();
                 let mut dead = false;
                 for p in ps {
