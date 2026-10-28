@@ -148,7 +148,7 @@ impl Server {
     }
 
     fn keep(&mut self, mut s: Session) -> u64 {
-        s.eval.on_hot = Some(|t| eprintln!("hot: {t}"));
+        s.eval.cost.on_hot = Some(|t| eprintln!("hot: {t}"));
         s.post = Some(Default::default());
         let id = self.next;
         self.next += 1;

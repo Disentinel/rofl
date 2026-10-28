@@ -34,7 +34,7 @@ mod latkept;
 mod want;
 mod layer;
 pub use latkept::Tok;
-pub use cost::{Hot, PremCost};
+pub use cost::{CostState, Hot, PremCost};
 use resume::{Cut, CutAt, InFlight, Tail};
 pub use addition::{AddDelta, PrepMark};
 pub use delta::Delta;
@@ -718,17 +718,7 @@ pub struct Eval {
     pub fires_by_rule: HashMap<Sym, u64>,
     pub sols_by_rule: HashMap<Sym, u64>,
     pub new_by_rule: HashMap<Sym, u64>,
-    /// What each premise of each rule cost (`cost.rs`), by rule and premise.
-    pub prem_cost: FxMap<(Sym, u64), PremCost>,
-    read_rows: u64,
-    widest: cost::Widest,
-    wide_floor: usize,
-    /// Rows read under each rule, and the count at which it is next said to be hot.
-    pub read_by_rule: FxMap<Sym, (u64, u64)>,
-    hot_read: u64,
-    /// Told each hot rule as it is found, as the sentence `hot_said` keeps.
-    pub on_hot: Option<fn(&str)>,
-    pub hot_said: Vec<String>,
+    pub cost: CostState,
     /// Each scan this world loaded (`Session::scan_requests`). What a kept world is stale by besides its files, and
     /// what a delta takes again when one of them moves (docs/cli.md).
     pub scans: Vec<ScanRec>,
@@ -842,24 +832,7 @@ pub struct Eval {
     /// `$next(Rel, Persp, Tick, Args)` of that tick (`carried_unknowns`), and
     /// that tick's evaluation carries it on as a hole of its own would be.
     staged_unknown: HashMap<Unknown, bool>,
-    /// `why`'s past premises, the frozen `derived_by` rows by (fact, tick):
-    /// built once per explanation.
-    past_rows: Option<HashMap<(Term, i64), Vec<Sym>>>,
-    /// The `unknown` rows a plain `why` walks, while it walks (`UnkCtx`).
-    why_unk: Option<UnkCtx>,
-    /// What this `why` has written out in full, a fact or a cell (`true`): a second
-    /// reach is a reference, `[above]`.
-    why_done: HashSet<(bool, u32)>,
-    /// Derivation heights, for the firing `why` shows of each fact; put back
-    /// at every question, the store being free to change between two.
-    why_heights: HashMap<FactId, u32>,
-    /// The cells this `why` has met under each header text (`desc = value`), in
-    /// order: a second cell under one header is told apart by `(cell 2)`.
-    why_heads: HashMap<String, Vec<u32>>,
-    /// Cell members `cited_past` walked at the last boundary: each cell once.
-    pub past_walks: u64,
-    /// `derived_by` rows `why` read for past premises since its last call.
-    pub why_scans: u64,
+    pub why: WhyState,
     agg_plans: HashMap<(Sym, u32), Rc<AggPlan>>,
     /// DATA-LEVEL STRATIFICATION (`datastrat.rs`): the components of the
     /// evaluation, the aggregate elements `(rule, at)` they hold, the
@@ -1263,6 +1236,29 @@ pub struct Eval {
     pub kernel_claimed: bool,
 }
 
+/// The state of one `why` explanation, put back at each question (`why_rendered`).
+#[derive(Clone, Default)]
+pub struct WhyState {
+    /// `why`'s past premises, the frozen `derived_by` rows by (fact, tick):
+    /// built once per explanation.
+    past_rows: Option<HashMap<(Term, i64), Vec<Sym>>>,
+    /// The `unknown` rows a plain `why` walks, while it walks (`UnkCtx`).
+    unk: Option<UnkCtx>,
+    /// What this `why` has written out in full, a fact or a cell (`true`): a second
+    /// reach is a reference, `[above]`.
+    done: HashSet<(bool, u32)>,
+    /// Derivation heights, for the firing `why` shows of each fact; put back
+    /// at every question, the store being free to change between two.
+    heights: HashMap<FactId, u32>,
+    /// The cells this `why` has met under each header text (`desc = value`), in
+    /// order: a second cell under one header is told apart by `(cell 2)`.
+    heads: HashMap<String, Vec<u32>>,
+    /// Cell members `cited_past` walked at the last boundary: each cell once.
+    pub past_walks: u64,
+    /// `derived_by` rows `why` read for past premises since its last call.
+    pub scans: u64,
+}
+
 pub struct Outcome {
     pub partial: bool,
     pub staged: usize,
@@ -1436,14 +1432,7 @@ impl Eval {
             fires_by_rule: HashMap::new(),
             sols_by_rule: HashMap::new(),
             new_by_rule: HashMap::new(),
-            prem_cost: FxMap::default(),
-            read_rows: 0,
-            widest: cost::Widest::default(),
-            wide_floor: 0,
-            read_by_rule: FxMap::default(),
-            hot_read: cost::HOT_READ,
-            on_hot: None,
-            hot_said: Vec::new(),
+            cost: CostState::default(),
             scans: Vec::new(),
             delta_by_rule: HashMap::new(),
             delta_ns: 0,
@@ -1508,13 +1497,7 @@ impl Eval {
             staged_alts: HashMap::new(),
             staged_watch: None,
             staged_unknown: HashMap::new(),
-            past_rows: None,
-            why_unk: None,
-            why_done: HashSet::new(),
-            why_heights: HashMap::new(),
-            why_heads: HashMap::new(),
-            past_walks: 0,
-            why_scans: 0,
+            why: WhyState::default(),
             agg_plans: HashMap::new(),
             ds_comps: Vec::new(),
             ds_elems: HashSet::new(),
@@ -4477,7 +4460,7 @@ impl Eval {
         let mut vread: HashSet<(Sym, u32)> = HashSet::new();
         let vrows = !brk!("cited_past_vrow_skipped" => true; false);
         let mut walked: HashSet<CellId> = HashSet::new();
-        self.past_walks = 0;
+        self.why.past_walks = 0;
         for (rel, rule, t, prems) in firings {
             let staged = self.staged_firing(rel, rule, t, &prems);
             for p in prems {
@@ -4485,7 +4468,7 @@ impl Eval {
                     PremRef::Cell(c) if walked.insert(c) => {
                         let tick = self.store.cell(c).tick;
                         for m in self.store.cell_members(c) {
-                            self.past_walks += 1;
+                            self.why.past_walks += 1;
                             for q in self.store.member_derivs(m).take(brk!("cited_past_canonical_only" => 1; usize::MAX)).flatten() {
                                 match q {
                                     PremRef::Fact(f) => {
@@ -14900,18 +14883,18 @@ impl Eval {
 
     fn why_rendered(&mut self, lit: &Lit, start: WhyTask, o: &WhyOpts, key: String) -> Result<String, String> {
         let o = WhyOpts { members: o.members, query: key };
-        self.past_rows = None;
-        self.why_scans = 0;
-        self.why_done.clear();
+        self.why.past_rows = None;
+        self.why.scans = 0;
+        self.why.done.clear();
         self.vrow_done.clear();
-        self.why_heights.clear();
-        self.why_heads.clear();
-        self.why_unk = if self.plain { self.unknown_ctx() } else { None };
+        self.why.heights.clear();
+        self.why.heads.clear();
+        self.why.unk = if self.plain { self.unknown_ctx() } else { None };
         let out = self.render_tree(start, &o);
-        self.past_rows = None;
+        self.why.past_rows = None;
         // A `why` on an undefined atom answers with the tree AND the set the
         // tree walked: the circular dependency that left it undefined, named.
-        if let Some(u) = self.why_unk.take().filter(|u| lit.rel == self.v.unknown && !u.hit.is_empty()) {
+        if let Some(u) = self.why.unk.take().filter(|u| lit.rel == self.v.unknown && !u.hit.is_empty()) {
             let mut hit: Vec<String> = u.hit.into_iter().collect();
             hit.sort_by(|a, b| cmp_js(a, b));
             return Ok(format!("{out}\nunfounded set: {}", hit.join(", ")));
@@ -14983,7 +14966,7 @@ impl Eval {
     /// staged from an earlier tick reads that tick's fact, which is no circle.
     fn why_witness(&mut self, id: FactId) -> Option<(Sym, u32, Vec<PremRef>)> {
         let w = if !self.no_witness || !self.lattices.is_empty() {
-            self.store.witness_of(&self.h, id, &mut self.why_heights).map(|w| (w.rule, w.tick, w.prems.to_vec()))?
+            self.store.witness_of(&self.h, id, &mut self.why.heights).map(|w| (w.rule, w.tick, w.prems.to_vec()))?
         } else {
             self.why_firings(id).into_iter().next()?
         };
@@ -15032,7 +15015,7 @@ impl Eval {
             || brk!("count_why_plain" => false; self.tags.count_rel.contains_key(&r.rel));
         let w = if special { None } else { self.why_witness(id) };
         let leaf = !special && w.is_none();
-        if !leaf && !brk!("why_dag_off" => true; self.why_done.insert((false, id))) {
+        if !leaf && !brk!("why_dag_off" => true; self.why.done.insert((false, id))) {
             next.push(WhyTask::Line(format!("{pad}{key} [above]")));
             return;
         }
@@ -15071,9 +15054,9 @@ impl Eval {
             }
             Some((rule, tick, prems)) => {
                 next.push(WhyTask::Line(format!("{pad}{key}  <= {} @tick {tick}", self.h.name(rule))));
-                if self.why_unk.is_some() && self.store.rec(id).rel == self.v.unknown {
+                if self.why.unk.is_some() && self.store.rec(id).rel == self.v.unknown {
                     if let Some(k) = self.unknown_atom_key(id) {
-                        self.why_unk.as_mut().unwrap().hit.insert(k);
+                        self.why.unk.as_mut().unwrap().hit.insert(k);
                     }
                 }
                 self.push_firing(id, rule, tick, prems, indent + 1, o, next);
@@ -15126,7 +15109,7 @@ impl Eval {
     /// of a rule with its head bound to the fact.
     fn why_firings(&mut self, id: FactId) -> Vec<(Sym, u32, Vec<PremRef>)> {
         if !self.no_witness || !self.lattices.is_empty() {
-            return self.store.firings_ranked(&self.h, id, &mut self.why_heights);
+            return self.store.firings_ranked(&self.h, id, &mut self.why.heights);
         }
         let mut fs = self.store.firings(id);
         for w in self.firings_again(id) {
@@ -15134,7 +15117,7 @@ impl Eval {
                 fs.push(w);
             }
         }
-        self.store.rank_firings(&self.h, fs, &mut self.why_heights)
+        self.store.rank_firings(&self.h, fs, &mut self.why.heights)
     }
 
     fn firings_again(&mut self, id: FactId) -> Vec<(Sym, u32, Vec<PremRef>)> {
@@ -15462,18 +15445,18 @@ impl Eval {
         let mut key = String::new();
         write_fact_key(&self.h, rel, persp, &args, &mut key);
         let ft = fact_term(&mut self.h, &self.v, rel, persp, &args);
-        if self.past_rows.is_none() {
+        if self.why.past_rows.is_none() {
             let mut by: HashMap<(Term, i64), Vec<Sym>> = HashMap::new();
             for d in self.store.rel_all(&self.h, self.v.derived_by) {
-                self.why_scans += 1;
+                self.why.scans += 1;
                 let a = self.store.args(d);
                 if let (Some(rule), Some(t)) = (a[1].as_atom(), a[2].as_int()) {
                     by.entry((a[0], t)).or_default().push(rule);
                 }
             }
-            self.past_rows = Some(by);
+            self.why.past_rows = Some(by);
         }
-        let mut rules: Vec<String> = self.past_rows.as_ref().and_then(|by| by.get(&(ft, t as i64))).map_or(Vec::new(), |rs| {
+        let mut rules: Vec<String> = self.why.past_rows.as_ref().and_then(|by| by.get(&(ft, t as i64))).map_or(Vec::new(), |rs| {
             rs.iter().map(|x| self.h.name(*x).to_string()).collect()
         });
         rules.sort_by(|a, b| cmp_js(a, b));
@@ -15493,7 +15476,7 @@ impl Eval {
                 let key = self.h.name(k).to_string();
                 // `not p` over an undefined p did not fail, it never settled:
                 // p's own row is the explanation.
-                if let Some(&u) = self.why_unk.as_ref().and_then(|c| c.index.get(&key)) {
+                if let Some(&u) = self.why.unk.as_ref().and_then(|c| c.index.get(&key)) {
                     next.line(format!("{}not {key} [undefined]", "  ".repeat(indent)));
                     next.push(WhyTask::Fact(u, indent + 1));
                     return;
@@ -15521,7 +15504,7 @@ impl Eval {
                 let r = self.store.cell(c).clone();
                 let head = self.h.name(r.desc).to_string();
                 let id = self.why_cell_id(&head, c);
-                if !brk!("why_dag_cell_off" => true; self.why_done.insert((true, c))) {
+                if !brk!("why_dag_cell_off" => true; self.why.done.insert((true, c))) {
                     return next.line(format!("{}{head} [above]{id}", "  ".repeat(indent)));
                 }
                 let members = self.store.cell_members(c).to_vec();
@@ -15548,7 +15531,7 @@ impl Eval {
                 let value = self.store.cell_value_text(&self.h, c);
                 let head = format!("{} = {value}", self.h.name(r.desc));
                 let id = self.why_cell_id(&head, c);
-                if !brk!("why_dag_cell_off" => true; self.why_done.insert((true, c))) {
+                if !brk!("why_dag_cell_off" => true; self.why.done.insert((true, c))) {
                     return next.line(format!("{}{head} [above]{id}", "  ".repeat(indent)));
                 }
                 let seals: Vec<String> =
@@ -15591,7 +15574,7 @@ impl Eval {
     /// tick it was sealed in nor the rule): the first met under a header is
     /// unmarked, a later one ends its lines `(cell N)`, and a reference to it too.
     fn why_cell_id(&mut self, head: &str, c: CellId) -> String {
-        let ids = self.why_heads.entry(head.to_string()).or_default();
+        let ids = self.why.heads.entry(head.to_string()).or_default();
         let at = ids.iter().position(|x| *x == c).unwrap_or_else(|| {
             ids.push(c);
             ids.len() - 1
