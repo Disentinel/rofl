@@ -549,10 +549,9 @@ impl Session {
                 return Ok(Retraction::Full("asks names the rules the world runs".into()));
             }
             let doomed = self.doomed(id);
-            let marks: Vec<Sym> = doomed.iter().map(|&f| self.eval.store.rec(f).rel).filter(|r| [self.eval.v.edb, self.eval.v.authority].contains(r)).collect();
-            let read = self.eval.rules.iter().any(|r| r.clause.body.iter().any(|b| b.lits_deep().iter().any(|l| marks.contains(&l.rel))));
-            let delta = if read { Err("the retraction takes an edb or authority row a rule reads".to_string()) } else { self.eval.retract_delta(&doomed) };
-            match delta {
+            let read = self.read_marks(&doomed);
+            // the rest go without a delta, and the world is evaluated again
+            match self.retract_doomed(id, &doomed, read) {
                 Ok(d) => {
                     if let Err(e) = self.eval.check_promises() {
                         self.eval.store.dirty = true;
@@ -561,11 +560,6 @@ impl Session {
                     last = Retraction::Delta(d);
                 }
                 Err(why) => {
-                    // the rest go without a delta, and the world is evaluated again
-                    if self.eval.store.alive(id) {
-                        self.eval.store.remove_many(&doomed);
-                    }
-                    self.eval.store.dirty = true;
                     if !matches!(last, Retraction::Full(_)) {
                         last = Retraction::Full(why);
                     }
@@ -573,6 +567,24 @@ impl Session {
             }
         }
         Ok(last)
+    }
+
+    /// Whether a rule reads an edb or authority row among `doomed`: such a row cannot go by a delta.
+    fn read_marks(&self, doomed: &[FactId]) -> bool {
+        let marks: Vec<Sym> = doomed.iter().map(|&f| self.eval.store.rec(f).rel).filter(|r| [self.eval.v.edb, self.eval.v.authority].contains(r)).collect();
+        self.eval.rules.iter().any(|r| r.clause.body.iter().any(|b| b.lits_deep().iter().any(|l| marks.contains(&l.rel))))
+    }
+
+    /// The delta that takes `doomed` out, or why there is none: then `doomed` goes and the world is left dirty.
+    fn retract_doomed(&mut self, id: FactId, doomed: &[FactId], read: bool) -> Result<crate::engine::Delta, String> {
+        let delta = if read { Err("the retraction takes an edb or authority row a rule reads".to_string()) } else { self.eval.retract_delta(doomed) };
+        if delta.is_err() {
+            if self.eval.store.alive(id) {
+                self.eval.store.remove_many(doomed);
+            }
+            self.eval.store.dirty = true;
+        }
+        delta
     }
 
     fn evaluated_again(&mut self, requests: &[Term], why: &str) {
@@ -885,17 +897,31 @@ impl Session {
         // still take it. `reheat` is what checks — see the note there for the
         // hole that leaves open, which is deliberate and named rather than
         // pretended away.
-        let mut text = self.header(prefix);
-        for id in &write {
-            let r = self.eval.store.rec(*id);
-            let args = self.eval.store.args(*id).to_vec();
-            write_fact_key(&self.eval.h, r.rel, r.persp, &args, &mut text);
-            text.push_str(".\n");
+        let head = self.header(prefix);
+        self.cool_facts(head, &write, &drop, out, Vec::new())
+    }
+
+    /// The text of `write` under `head`, written to `out`; then `drop` leaves the store and the world is dirty.
+    fn cool_facts(&mut self, head: String, write: &[FactId], drop: &[FactId], out: &str, books: Vec<(String, usize)>) -> Result<Cooled, String> {
+        let mut text = head;
+        for &id in write {
+            self.push_fact(id, &mut text);
         }
-        std::fs::write(out, &text).map_err(|e| format!("{out}: {e}"))?;
-        self.eval.store.remove_many(&drop);
+        write_cool_file(out, &text)?;
+        self.drop_cooled(drop);
+        Ok(Cooled { facts: write.len(), bytes: text.len(), path: out.to_string(), books })
+    }
+
+    /// One base fact of a volume, as a line of its text.
+    fn push_fact(&self, id: FactId, text: &mut String) {
+        let r = self.eval.store.rec(id);
+        write_fact_key(&self.eval.h, r.rel, r.persp, self.eval.store.args(id), text);
+        text.push_str(".\n");
+    }
+
+    fn drop_cooled(&mut self, drop: &[FactId]) {
+        self.eval.store.remove_many(drop);
         self.eval.store.dirty = true;
-        Ok(Cooled { facts: write.len(), bytes: text.len(), path: out.to_string(), books: Vec::new() })
     }
 
     /// COOL A VOLUME BY BOOK (docs/surface-split.md, the driver): `cool`, of the facts of `books` only. The volume's
@@ -915,8 +941,8 @@ impl Session {
         let mut kept: std::collections::HashSet<Sym> = keep.iter().map(|b| self.eval.h.intern(b)).collect();
         kept.insert(self.eval.h.intern("surface"));
         self.eval.settle_provenance();
-        let mut text = self.header(prefix);
-        let (mut n, mut drop, mut by_book) = (0, Vec::new(), std::collections::BTreeMap::<String, usize>::new());
+        let head = self.header(prefix);
+        let (mut write, mut drop, mut by_book) = (Vec::new(), Vec::new(), std::collections::BTreeMap::<String, usize>::new());
         for id in self.eval.store.all_facts() {
             let args = self.eval.store.args(id).to_vec();
             if !args.iter().any(|a| self.mentions(*a, prefix)) {
@@ -933,17 +959,12 @@ impl Session {
                 continue;
             }
             if r.base() && !kernel {
-                write_fact_key(&self.eval.h, r.rel, r.persp, &args, &mut text);
-                text.push_str(".\n");
-                n += 1;
+                write.push(id);
                 *by_book.entry(self.eval.h.name(r.persp).to_string()).or_default() += 1;
             }
             drop.push(id);
         }
-        std::fs::write(out, &text).map_err(|e| format!("{out}: {e}"))?;
-        self.eval.store.remove_many(&drop);
-        self.eval.store.dirty = true;
-        Ok(Cooled { facts: n, bytes: text.len(), path: out.to_string(), books: by_book.into_iter().collect() })
+        self.cool_facts(head, &write, &drop, out, by_book.into_iter().collect())
     }
 
     /// The book of the fact a kernel row reifies, `$fact(Rel, Book, Args)`.
@@ -1037,17 +1058,8 @@ impl Session {
                 ids.push(id);
             }
         }
-        let mut text = self.header("$trail");
-        for id in &ids {
-            let r = self.eval.store.rec(*id);
-            let args = self.eval.store.args(*id).to_vec();
-            write_fact_key(&self.eval.h, r.rel, r.persp, &args, &mut text);
-            text.push_str(".\n");
-        }
-        std::fs::write(out, &text).map_err(|e| format!("{out}: {e}"))?;
-        self.eval.store.remove_many(&ids);
-        self.eval.store.dirty = true;
-        Ok(Cooled { facts: ids.len(), bytes: text.len(), path: out.to_string(), books: Vec::new() })
+        let head = self.header("$trail");
+        self.cool_facts(head, &ids, &ids, out, Vec::new())
     }
 
     /// REHEAT THE TRAIL, PAST THE DOOR, and the signature is what earns that.
@@ -1207,19 +1219,17 @@ impl Session {
             let Some(k) = self.volume_of(&args, &by_len) else { continue };
             let r = self.eval.store.rec(id);
             if r.base() && !is_kernel_ledger(&self.eval.h, r.persp) {
-                write_fact_key(&self.eval.h, r.rel, r.persp, &args, &mut texts[k]);
-                texts[k].push_str(".\n");
+                self.push_fact(id, &mut texts[k]);
                 counts[k] += 1;
             }
             drop.push(id);
         }
         let mut out = Vec::with_capacity(vols.len());
         for (i, (_, path)) in vols.iter().enumerate() {
-            std::fs::write(path, &texts[i]).map_err(|e| format!("{path}: {e}"))?;
+            write_cool_file(path, &texts[i])?;
             out.push(Cooled { facts: counts[i], bytes: texts[i].len(), path: path.clone(), books: Vec::new() });
         }
-        self.eval.store.remove_many(&drop);
-        self.eval.store.dirty = true;
+        self.drop_cooled(&drop);
         Ok(out)
     }
 
@@ -1692,10 +1702,8 @@ impl Session {
         }
         self.settle()?;
         let doomed = self.doomed(id);
-        let marks: Vec<Sym> = doomed.iter().map(|&f| self.eval.store.rec(f).rel).filter(|r| [self.eval.v.edb, self.eval.v.authority].contains(r)).collect();
-        let read = brk!("retract_edb_unread" => false; true) && self.eval.rules.iter().any(|r| r.clause.body.iter().any(|b| b.lits_deep().iter().any(|l| marks.contains(&l.rel))));
-        let delta = if read { Err("the retraction takes an edb or authority row a rule reads".to_string()) } else { self.eval.retract_delta(&doomed) };
-        match delta {
+        let read = brk!("retract_edb_unread" => false; true) && self.read_marks(&doomed);
+        match self.retract_doomed(id, &doomed, read) {
             Ok(d) => {
                 if let Err(e) = self.eval.check_promises() {
                     brk!("function_retract_clean" => (); self.eval.store.dirty = true);
@@ -1704,10 +1712,6 @@ impl Session {
                 Ok(Retraction::Delta(d))
             }
             Err(why) => {
-                if self.eval.store.alive(id) {
-                    self.eval.store.remove_many(&doomed);
-                }
-                self.eval.store.dirty = true;
                 self.evaluated_again(&request, &why);
                 Ok(Retraction::Full(why))
             }
@@ -1877,9 +1881,7 @@ impl Session {
     fn doomed(&mut self, id: FactId) -> Vec<FactId> {
         let mut out = vec![id];
         let ft = self.fact_term(id);
-        let v = &self.eval.v;
-        let (ab, edb, authority, main, kernel_who, anon_who, writes_to, reads_from) =
-            (v.asserted_by, v.edb, v.authority, v.main, v.kernel_who, v.anon_who, v.writes_to, v.reads_from);
+        let (ab, edb, main, writes_to) = (self.eval.v.asserted_by, self.eval.v.edb, self.eval.v.main, self.eval.v.writes_to);
         let declared: Vec<(FactId, Term)> = self.eval.store.rel_all(&self.eval.h, ab).into_iter().map(|f| (f, self.eval.store.args(f)[0])).collect();
         out.extend(declared.iter().filter(|(_, t)| *t == ft).map(|(f, _)| *f));
         let withheld = crate::program::sealed_rels(&mut self.eval);
@@ -1893,20 +1895,35 @@ impl Session {
             marks.extend(self.eval.store.get(edb, main, &[Term::atom(rel)]));
         }
         if persp != main && !self.eval.h.name(persp).starts_with('$') && !withheld.contains(&writes_to) && !self.eval.store.book_holds_base(&self.eval.h, persp, id) {
-            let named = [writes_to, reads_from].into_iter().any(|r| self.eval.store.rel_all(&self.eval.h, r).into_iter().any(|f| self.eval.store.args(f)[1] == Term::atom(persp)));
-            if !named {
-                for w in [kernel_who, anon_who] {
-                    marks.extend(self.eval.store.get(authority, main, &[Term::atom(persp), Term::atom(w)]));
-                }
+            marks.extend(self.unnamed_book_marks(persp));
+        }
+        self.push_marks(&mut out, marks, &declared, &HashSet::new());
+        out
+    }
+
+    /// The `authority` rows of an unnamed book (no rule or `writes_to`/`reads_from` row names it) for the kernel and
+    /// the anonymous writer: what a load wrote for the book's facts.
+    fn unnamed_book_marks(&mut self, persp: Sym) -> Vec<FactId> {
+        let (authority, main, kernel_who, anon_who, writes_to, reads_from) =
+            (self.eval.v.authority, self.eval.v.main, self.eval.v.kernel_who, self.eval.v.anon_who, self.eval.v.writes_to, self.eval.v.reads_from);
+        let named = [writes_to, reads_from].into_iter().any(|r| self.eval.store.rel_all(&self.eval.h, r).into_iter().any(|f| self.eval.store.args(f)[1] == Term::atom(persp)));
+        let mut marks = Vec::new();
+        if !named {
+            for w in [kernel_who, anon_who] {
+                marks.extend(self.eval.store.get(authority, main, &[Term::atom(persp), Term::atom(w)]));
             }
         }
+        marks
+    }
+
+    /// Pushes each of `marks` the store holds alive, and that `declared` holds no row for, onto `out`, unless `noted`.
+    fn push_marks(&mut self, out: &mut Vec<FactId>, marks: Vec<FactId>, declared: &[(FactId, Term)], noted: &HashSet<FactId>) {
         for m in marks {
             let mt = self.fact_term(m);
-            if self.eval.store.alive(m) && !declared.iter().any(|(_, t)| *t == mt) {
+            if self.eval.store.alive(m) && !declared.iter().any(|(_, t)| *t == mt) && !noted.contains(&m) {
                 out.push(m);
             }
         }
-        out
     }
 
     /// `doomed` of a set of base facts taken out together, the facts themselves left out: the `asserted_by` rows
@@ -1915,9 +1932,7 @@ impl Session {
     /// asked once, and each answer stops at the first fact outside the set: no relation is listed.
     fn doomed_of_set(&mut self, facts: &[FactId]) -> Vec<FactId> {
         let set: HashSet<FactId> = facts.iter().copied().collect();
-        let v = &self.eval.v;
-        let (ab, edb, authority, main, kernel_who, anon_who, writes_to, reads_from) =
-            (v.asserted_by, v.edb, v.authority, v.main, v.kernel_who, v.anon_who, v.writes_to, v.reads_from);
+        let (ab, edb, main, writes_to) = (self.eval.v.asserted_by, self.eval.v.edb, self.eval.v.main, self.eval.v.writes_to);
         let mut out: Vec<FactId> = Vec::new();
         // the rows already written: the pending ones are written of live facts only (`settle_assertions`)
         let mut declared: Vec<(FactId, Term)> = Vec::new();
@@ -1945,22 +1960,12 @@ impl Session {
         let books: std::collections::BTreeSet<Sym> = facts.iter().map(|&f| self.eval.store.rec(f).persp).collect();
         for persp in books {
             if persp != main && !self.eval.h.name(persp).starts_with('$') && !withheld.contains(&writes_to) && !self.eval.store.book_base_outside(persp, &set) {
-                let named = [writes_to, reads_from].into_iter().any(|r| self.eval.store.rel_all(&self.eval.h, r).into_iter().any(|f| self.eval.store.args(f)[1] == Term::atom(persp)));
-                if !named {
-                    for w in [kernel_who, anon_who] {
-                        marks.extend(self.eval.store.get(authority, main, &[Term::atom(persp), Term::atom(w)]));
-                    }
-                }
+                marks.extend(self.unnamed_book_marks(persp));
             }
         }
         // a mark the program also declared itself (its assertion written, or noted to be) stays
         let noted: HashSet<FactId> = if marks.is_empty() { HashSet::new() } else { self.eval.pending_assert.iter().map(|n| n.0).collect() };
-        for m in marks {
-            let mt = self.fact_term(m);
-            if self.eval.store.alive(m) && !declared.iter().any(|(_, t)| *t == mt) && !noted.contains(&m) {
-                out.push(m);
-            }
-        }
+        self.push_marks(&mut out, marks, &declared, &noted);
         out
     }
 
@@ -2259,6 +2264,11 @@ impl Session {
 /// the engine and a scanner, and may keep what it can of it (scanners/js_ast.ts keeps the ids of the nodes it
 /// matches); what it prints then is kept marked `-- inherited` and answers only another `rescan`, so a world
 /// evaluated from its files is the same whatever ran before it.
+/// A cooled volume's text, written to `path`; the error names the path.
+fn write_cool_file(path: &str, text: &str) -> Result<(), String> {
+    std::fs::write(path, text).map_err(|e| format!("{path}: {e}"))
+}
+
 fn scan_kept(cmd: &str, path: &str) -> Option<std::path::PathBuf> {
     let home = std::env::var_os("XDG_CACHE_HOME").map(std::path::PathBuf::from)
         .or_else(|| std::env::var_os("HOME").map(|h| std::path::Path::new(&h).join(".cache")))?;
