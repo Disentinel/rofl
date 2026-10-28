@@ -125,6 +125,16 @@ fn prose_asks(md: &str) -> Vec<usize> {
     out
 }
 
+/// The lines [from, to) of `md` the reader reads as sentences, whatever the words, and each line of the prose that asks (read_md.ts `sentenceSpans`).
+pub fn sentence_spans(md: &str) -> Vec<(usize, usize)> {
+    let asks = prose_asks(md);
+    let blanked = md.split('\n').enumerate().map(|(k, l)| if asks.contains(&k) { "" } else { l }).collect::<Vec<_>>().join("\n");
+    let mut out = reader::read_md(&blanked, "", &HashMap::new()).spans;
+    out.extend(asks.iter().map(|&k| (k, k + 1)));
+    out.sort_by_key(|s| s.0);
+    out
+}
+
 /// The questions of the prose that are not asked: a sentence of a plain paragraph or a list item that asks with a question word and ends in
 /// `?`, not a line of its own (`prose_asks`). Each with the line, from 0, it starts on (read_md.ts `proseLooks`).
 fn prose_looks(md: &str) -> Vec<(usize, String)> {

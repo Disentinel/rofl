@@ -421,7 +421,9 @@ back), `view` (what a volume's world wrote above its base), `evaluate` with
 `wall`, `evaluate_on` and `admit` (a level at a time), `rows`, `fact`,
 `firings`, `cell`, `books`, `holding` (the store read piece by piece),
 `inbox` and `dispatch` (adapters, docs/intents.md), `tick`, `state`, `facts`,
-`close`. Any request may carry `"limit":{"ms":n,"bytes":n}`.
+`close`, and `spans` (no session: `{"op":"spans","text":MD}` answers `{"spans":[[a,b],...]}`,
+the lines [a,b) of a `.rofl.md` the reader reads as sentences, and each prose
+line that asks; the VS Code extension cuts its bare cells by it). Any request may carry `"limit":{"ms":n,"bytes":n}`.
 
 **`hot:` on stderr** is the engine naming a rule that reads far more rows than
 it concludes, while it runs (`engine/cost.rs`): the rule, the premise it is

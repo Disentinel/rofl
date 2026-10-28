@@ -1,8 +1,15 @@
 // A `.rofl.md` as notebook cells and back, byte for byte: the file is the truth, and no output is ever written into it.
 // Prose between fences is a markdown cell, the front matter and every ```rofl, ```datalog and ```natural block a code cell;
 // the blank lines around a cell and the fence lines themselves ride in its metadata. Cut the way notebook/front.ts cellsOf cuts.
-// A block of the prose the reader reads as sentences (scripts/read_md.ts sentenceSpans) is a rofl cell with no fence, `bare`: it runs as the prose it is.
-import { sentenceSpans } from '../scripts/read_md.ts';
+// A block of the prose the reader reads as sentences (sentenceSpans) is a rofl cell with no fence, `bare`: it runs as the prose it is.
+import { serve, rustBin } from '../playground/rust.ts';
+import * as ts from '../scripts/read_md.ts';
+
+/** The lines the reader reads as sentences: the Rust engine's, where its binary is, else the TypeScript reader's (scripts/read_md.ts). */
+export const sentenceSpans = (md: string): [number, number][] => {
+  const bin = rustBin();
+  return bin ? serve(bin)({ op: 'spans', text: md }).spans : ts.sentenceSpans(md);
+};
 
 export const KINDS = ['rofl', 'datalog', 'natural'];
 export const MARKUP = 1, CODE = 2;
