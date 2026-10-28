@@ -257,7 +257,7 @@ fn run(json: bool, args: Vec<String>, mut pre: Option<(bool, crate::kept::Record
     }
     let read = |f: &String| std::fs::read_to_string(f).unwrap_or_else(|e| fail(json, USAGE, &format!("{f}: {e}")));
     let walls = |s: &mut rofl::session::Session| {
-        s.eval.on_hot = Some(|t| eprintln!("hot: {t}"));
+        s.eval.cost.on_hot = Some(|t| eprintln!("hot: {t}"));
         if strata { s.eval.mode = rofl::engine::Mode::Strata; }
         if let Some(n) = space { s.eval.space = n; }
         s.eval.retain_ticks = retain;

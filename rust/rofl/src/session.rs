@@ -2091,7 +2091,7 @@ impl Session {
         let _ = std::fs::remove_file(&path);
         let mut s = opened?;
         let e = &self.eval;
-        (s.eval.space, s.eval.mode, s.eval.retain_ticks, s.eval.on_hot) = (e.space, e.mode, e.retain_ticks, e.on_hot);
+        (s.eval.space, s.eval.mode, s.eval.retain_ticks, s.eval.cost.on_hot) = (e.space, e.mode, e.retain_ticks, e.cost.on_hot);
         s.eval.scans = std::mem::take(&mut self.eval.scans);
         (s.dangling, s.asks) = (self.dangling, self.asks);
         *self = s;

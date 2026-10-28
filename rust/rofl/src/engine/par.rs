@@ -608,9 +608,9 @@ impl Eval {
         }
         // a wall the written path would meet, or a rule it would name as hot, is the written path's to meet
         let mut rows = self.rows;
-        let (mut read, hot) = match self.cur_rule.and_then(|r| self.read_by_rule.get(&r)) {
+        let (mut read, hot) = match self.cur_rule.and_then(|r| self.cost.read_by_rule.get(&r)) {
             Some(&(n, next)) => (n, next),
-            None => (0, self.hot_read),
+            None => (0, self.cost.hot_read),
         };
         for (k, t) in levels.iter().enumerate() {
             read += t.read as u64;
@@ -630,15 +630,15 @@ impl Eval {
                 self.peak_rows = now;
             }
             if !neg && !frs_off(l, tick) {
-                self.read_rows += t.read as u64;
+                self.cost.read_rows += t.read as u64;
                 if let Some(rid) = self.cur_rule {
-                    let first = self.hot_read;
-                    self.read_by_rule.entry(rid).or_insert((0, first)).0 += t.read as u64;
+                    let first = self.cost.hot_read;
+                    self.cost.read_by_rule.entry(rid).or_insert((0, first)).0 += t.read as u64;
                 }
-                if t.wide > self.wide_floor && t.wide > self.widest.n {
+                if t.wide > self.cost.wide_floor && t.wide > self.cost.widest.n {
                     let s = t.at.as_ref().unwrap();
                     let at = l.args.iter().map(|a| resolve(&mut self.h, *a, s)).collect();
-                    self.widest = super::cost::Widest { n: t.wide, at };
+                    self.cost.widest = super::cost::Widest { n: t.wide, at };
                 }
             }
             if let Some(m) = mark {

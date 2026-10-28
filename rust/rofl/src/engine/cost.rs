@@ -29,6 +29,31 @@ pub struct Widest {
     pub at: Vec<Term>,
 }
 
+/// What each rule's premises cost while it is evaluated, held by `Eval`.
+#[derive(Clone)]
+pub struct CostState {
+    /// What each premise of each rule cost (`cost.rs`), by rule and premise.
+    pub prem_cost: FxMap<(Sym, u64), PremCost>,
+    pub(super) read_rows: u64,
+    pub(super) widest: Widest,
+    pub(super) wide_floor: usize,
+    /// Rows read under each rule, and the count at which it is next said to be hot.
+    pub read_by_rule: FxMap<Sym, (u64, u64)>,
+    pub(super) hot_read: u64,
+    /// Told each hot rule as it is found, as the sentence `hot_said` keeps.
+    pub on_hot: Option<fn(&str)>,
+    pub hot_said: Vec<String>,
+}
+
+impl Default for CostState {
+    fn default() -> Self {
+        CostState {
+            prem_cost: FxMap::default(), read_rows: 0, widest: Widest::default(), wide_floor: 0,
+            read_by_rule: FxMap::default(), hot_read: HOT_READ, on_hot: None, hot_said: Vec::new(),
+        }
+    }
+}
+
 pub struct Mark {
     key: (Sym, u64),
     read0: u64,
@@ -90,45 +115,45 @@ impl Eval {
     /// A rule crossing `HOT_READ`, and each tenfold after, while it is a quarter of the reading, is said at once
     /// (`on_hot`): a rule that blows up may never end for its report to be read.
     pub(super) fn note_read(&mut self, l: &Lit, s: &Subst, n: usize) {
-        self.read_rows += n as u64;
+        self.cost.read_rows += n as u64;
         if let Some(rid) = self.cur_rule {
-            let first = self.hot_read;
-            let e = self.read_by_rule.entry(rid).or_insert((0, first));
+            let first = self.cost.hot_read;
+            let e = self.cost.read_by_rule.entry(rid).or_insert((0, first));
             e.0 += n as u64;
             if e.0 >= e.1 {
                 e.1 = e.1.saturating_mul(10);
                 let read = e.0;
-                if read * HOT_SHARE >= self.read_rows {
+                if read * HOT_SHARE >= self.cost.read_rows {
                     self.say_hot(rid, l, s);
                 }
             }
         }
-        if n > self.wide_floor && n > self.widest.n {
+        if n > self.cost.wide_floor && n > self.cost.widest.n {
             let at = l.args.iter().map(|a| resolve(&mut self.h, *a, s)).collect();
-            self.widest = Widest { n, at };
+            self.cost.widest = Widest { n, at };
         }
     }
 
     /// Premise `b` of rule `rid` about to be solved: what its cost is measured from.
     pub(super) fn cost_mark(&mut self, rid: Option<Sym>, b: &BodyElem) -> Option<Mark> {
         let key = (rid?, prem_key(b)?);
-        let floor = self.prem_cost.get(&key).map_or(0, |c| c.widest.n);
+        let floor = self.cost.prem_cost.get(&key).map_or(0, |c| c.widest.n);
         Some(Mark {
             key,
-            read0: self.read_rows,
-            outer: std::mem::take(&mut self.widest),
-            outer_floor: std::mem::replace(&mut self.wide_floor, floor),
+            read0: self.cost.read_rows,
+            outer: std::mem::take(&mut self.cost.widest),
+            outer_floor: std::mem::replace(&mut self.cost.wide_floor, floor),
         })
     }
 
     /// The premise of `m` solved from `rows_in` rows into `rows_out`.
     pub(super) fn note_cost(&mut self, m: Mark, rows_in: usize, rows_out: usize) {
-        let wide = std::mem::take(&mut self.widest);
-        self.widest = if wide.n > m.outer.n { wide.clone() } else { m.outer };
-        self.wide_floor = m.outer_floor;
-        let c = self.prem_cost.entry(m.key).or_default();
+        let wide = std::mem::take(&mut self.cost.widest);
+        self.cost.widest = if wide.n > m.outer.n { wide.clone() } else { m.outer };
+        self.cost.wide_floor = m.outer_floor;
+        let c = self.cost.prem_cost.entry(m.key).or_default();
         c.rows_in += rows_in as u64;
-        c.read += self.read_rows - m.read0;
+        c.read += self.cost.read_rows - m.read0;
         c.rows_out += rows_out as u64;
         if wide.n > c.widest.n {
             c.widest = wide;
@@ -147,17 +172,17 @@ impl Eval {
         let mut said = format!(
             "rule {}{head} has read {} rows for {} new facts, a quarter or more of all read; it is reading premise {}{lit}",
             self.h.name(rid),
-            self.read_by_rule[&rid].0,
+            self.cost.read_by_rule[&rid].0,
             self.new_by_rule.get(&rid).copied().unwrap_or(0),
             k.map_or(String::new(), |k| format!("{}, ", k + 1)),
         );
         if !bound.is_empty() {
             said += &format!(" at {bound}");
         }
-        if let Some(f) = self.on_hot {
+        if let Some(f) = self.cost.on_hot {
             f(&said);
         }
-        self.hot_said.push(said);
+        self.cost.hot_said.push(said);
     }
 
     fn bound_text(&self, l: &Lit, at: &[Term]) -> String {
@@ -178,19 +203,19 @@ impl Eval {
 
     /// The `n` rules that read the most rows, each at its costliest premise.
     pub fn hot_rules(&self, n: usize) -> Vec<Hot> {
-        let mut by: Vec<(Sym, u64)> = self.read_by_rule.iter().map(|(r, (n, _))| (*r, *n)).filter(|(_, n)| *n > 0).collect();
+        let mut by: Vec<(Sym, u64)> = self.cost.read_by_rule.iter().map(|(r, (n, _))| (*r, *n)).filter(|(_, n)| *n > 0).collect();
         by.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| self.h.name(a.0).cmp(self.h.name(b.0))));
         by.into_iter().take(n).filter_map(|(rid, _)| self.hot_rule(rid)).collect()
     }
 
     /// What rule `rid` read, at its costliest premise.
     pub fn hot_rule(&self, rid: Sym) -> Option<Hot> {
-        let read = self.read_by_rule.get(&rid)?.0;
+        let read = self.cost.read_by_rule.get(&rid)?.0;
         {
             let r = self.rules.iter().find(|r| r.id == rid)?;
             let mut best: Option<(usize, &PremCost)> = None;
             for (i, b) in r.clause.body.iter().enumerate() {
-                let Some(c) = prem_key(b).and_then(|k| self.prem_cost.get(&(rid, k))) else { continue };
+                let Some(c) = prem_key(b).and_then(|k| self.cost.prem_cost.get(&(rid, k))) else { continue };
                 if best.is_none_or(|(_, x): (usize, &PremCost)| c.read > x.read) {
                     best = Some((i, c));
                 }
@@ -218,7 +243,7 @@ impl Eval {
 
     /// The rules that read so much of all that is read that the author should hear of them.
     pub fn too_hot(&self) -> Vec<Hot> {
-        self.hot_rules(4).into_iter().filter(|h| h.read >= self.hot_read && h.read * HOT_SHARE >= self.read_rows).collect()
+        self.hot_rules(4).into_iter().filter(|h| h.read >= self.cost.hot_read && h.read * HOT_SHARE >= self.cost.read_rows).collect()
     }
 }
 
@@ -239,12 +264,12 @@ mod tests {
         }
         src += "inside(b1, u1).\nsees(U, B) :- use(U, N), bind(B, N), inside(B, U).\nother(U) :- use(U, _).\n";
         let mut s = Session::fresh(100_000_000);
-        s.eval.hot_read = 10_000;
-        s.eval.on_hot = Some(|t| eprintln!("hot: {t}"));
+        s.eval.cost.hot_read = 10_000;
+        s.eval.cost.on_hot = Some(|t| eprintln!("hot: {t}"));
         s.load(&src, None).unwrap();
         s.evaluate().unwrap();
         assert!(s.holds("sees(u1, b1)").unwrap());
-        let said = s.eval.hot_said.join("\n");
+        let said = s.eval.cost.hot_said.join("\n");
         let top: Vec<String> = s.eval.hot_rules(3).iter().map(|h| h.sentence()).collect();
         assert!(said.contains("(sees)") && said.contains("= e"), "said: {said}\ntop: {top:#?}");
         let top = &s.eval.hot_rules(1)[0];
