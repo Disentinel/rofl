@@ -30,7 +30,7 @@ impl Eval {
             let why = match defs.as_slice() {
                 [r] => match self.alias_view(&r.clause) {
                     Some(v) if self.lattices.contains_key(&v.src) || self.lattices.contains_key(&rel) => "it reads a lattice",
-                    Some(_) if !self.no_witness => "a world that keeps witnesses stores its rows",
+                    Some(_) if !self.prov.no_witness => "a world that keeps witnesses stores its rows",
                     Some(_) if self.well_founded => "the world is well-founded",
                     Some(v) => {
                         views.push((v, r.id));

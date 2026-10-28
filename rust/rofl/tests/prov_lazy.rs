@@ -16,7 +16,7 @@ fn src(name: &str) -> String {
 fn world(name: &str, eager: bool) -> Session {
     let mut s = Session::fresh(200_000_000);
     if eager {
-        s.eval.eager_prov = true;
+        s.eval.prov.eager_prov = true;
         s.eval.reprepare();
     }
     s.load(&src(name), None).unwrap();
@@ -34,7 +34,7 @@ fn a_world_nothing_reads_derived_by_of_is_lazy_and_its_state_is_the_eager_one() 
     let (mut lazy, mut eager) = (world("prov-lazy.rofl", false), world("prov-lazy.rofl", true));
     lazy.evaluate().unwrap();
     eager.evaluate().unwrap();
-    assert!(lazy.eval.lazy_prov && !eager.eval.lazy_prov);
+    assert!(lazy.eval.prov.lazy && !eager.eval.prov.lazy);
     assert!(lazy.eval.unsettled_provenance() > 0, "no firing was left unwritten");
     assert!(derived_by_rows(&mut lazy).len() < derived_by_rows(&mut eager).len(), "no row was saved");
     assert_eq!(lazy.eval.canonical_state(), eager.eval.canonical_state());
@@ -92,7 +92,7 @@ fn a_reader_of_one_relation_gets_its_rows_as_they_fire_and_the_rest_wait() {
     let (mut lazy, mut eager) = (world("prov-lazy-reader.rofl", false), world("prov-lazy-reader.rofl", true));
     lazy.evaluate().unwrap();
     eager.evaluate().unwrap();
-    assert!(lazy.eval.lazy_prov, "a reader of one relation turned the world eager");
+    assert!(lazy.eval.prov.lazy, "a reader of one relation turned the world eager");
     let rows = derived_by_rows(&mut lazy);
     assert!(rows.iter().any(|r| r.contains("pr_a")), "the read relation's rows were not written");
     assert!(!rows.iter().any(|r| r.contains("pr_b")), "an unread relation's rows were written");
@@ -107,7 +107,7 @@ fn a_reader_whose_fact_is_a_variable_keeps_every_row_as_it_fires() {
     let mut s = Session::fresh(200_000_000);
     s.load("edb(q).\nq(1).\nr(X) :- q(X).\nfired(R) :- derived_by[$kernel](_, R, _).\n", None).unwrap();
     s.evaluate().unwrap();
-    assert!(!s.eval.lazy_prov);
+    assert!(!s.eval.prov.lazy);
     assert_eq!(s.eval.unsettled_provenance(), 0);
 }
 
@@ -116,7 +116,7 @@ fn a_sealed_world_notes_nothing() {
     let mut s = Session::fresh(200_000_000);
     s.load("sealed(provenance).\nedb(q).\nq(1).\nr(X) :- q(X).\n", None).unwrap();
     s.evaluate().unwrap();
-    assert!(!s.eval.lazy_prov);
+    assert!(!s.eval.prov.lazy);
     assert_eq!(s.eval.unsettled_provenance(), 0);
     assert!(derived_by_rows(&mut s).is_empty());
 }

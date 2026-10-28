@@ -301,16 +301,16 @@ pub fn main(argv: Vec<String>) {
         for (rel, on) in l.eval.vclosure_info() {
             eprintln!("vclosure\t{rel}\t{}", if on { "tree" } else { "rows" });
         }
-        for r in &l.eval.vclosure_reason {
+        for r in &l.eval.vc.vclosure_reason {
             eprintln!("vclosure_off\t{r}");
         }
-        eprintln!("vclosure_builds\t{}", l.eval.vbuilds);
-        eprintln!("vclosure_rows_read\t{}", l.eval.vrows_read);
+        eprintln!("vclosure_builds\t{}", l.eval.vc.builds);
+        eprintln!("vclosure_rows_read\t{}", l.eval.vc.rows_read);
         eprintln!("virtual_rows\t{}", l.eval.store.virtual_rows());
         eprintln!("closure_rows\t{}", l.eval.closure_rows);
         eprintln!("closure_runs\t{}", l.eval.closure_runs);
         eprintln!("rounds\t{}", l.eval.rounds.len());
-        eprintln!("joinplan_stats_ms\t{:.1}", l.eval.delta_ns as f64 / 1e6);
+        eprintln!("joinplan_stats_ms\t{:.1}", l.eval.add.delta_ns as f64 / 1e6);
         eprintln!("rules_ms\t{:.1}", sum as f64 / 1e6);
         eprintln!("longest_rule_per_round_ms\t{:.1}", mx as f64 / 1e6);
         eprintln!("parallel_bound_2_ms\t{:.1}", bound(2));

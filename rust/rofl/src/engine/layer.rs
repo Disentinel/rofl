@@ -38,7 +38,7 @@ impl Eval {
         let mut s: HashSet<Sym> = self.lattices.keys().copied().collect();
         s.extend(self.subs.keys().copied());
         s.extend(self.tags.by_rel.keys().copied());
-        s.extend(self.ds_comps.iter().flat_map(|c| c.rels.iter().copied()));
+        s.extend(self.ds.comps.iter().flat_map(|c| c.rels.iter().copied()));
         s
     }
 
@@ -148,7 +148,7 @@ impl Eval {
                     && !kernel(**rel)
                     && now.get(rel) == Some(rs)
                     && by_head[rel].iter().all(|r| {
-                        (r.safe || self.demand_rels.iter().any(|(d, _)| d == *rel))
+                        (r.safe || self.demand.rels.iter().any(|(d, _)| d == *rel))
                             && !r.has_thr
                             && r.lattice_outer.is_empty()
                             && r.lat_close.is_none()
@@ -158,7 +158,7 @@ impl Eval {
             })
             .map(|(rel, _)| *rel)
             .collect();
-        let demand: HashSet<Sym> = self.demand_rels.iter().map(|(r, _)| *r).chain(self.answer.demand_rels.iter().copied()).collect();
+        let demand: HashSet<Sym> = self.demand.rels.iter().map(|(r, _)| *r).chain(self.answer.demand_rels.iter().copied()).collect();
         loop {
             let n = kept.len();
             let stays = |rel: &Sym, kept: &FxSet<Sym>| {

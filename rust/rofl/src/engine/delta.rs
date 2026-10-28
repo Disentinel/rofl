@@ -207,7 +207,7 @@ impl Eval {
         if self.store.tick != 0 {
             out.push("a later tick");
         }
-        if self.no_witness {
+        if self.prov.no_witness {
             out.push("the world keeps no witness, so nothing says which facts lose their last support");
         }
         // a rule's fault, and the shrugs, stand where nothing the fact reaches is read by the rule or by a reader of either
@@ -220,7 +220,7 @@ impl Eval {
             out.push("not a base fact");
         }
         let rel = rec.rel;
-        if self.demand_rels.iter().any(|(r, _)| *r == rel) {
+        if self.demand.rels.iter().any(|(r, _)| *r == rel) {
             out.push("read on demand");
         }
         let ledgers = [
@@ -391,7 +391,7 @@ impl Eval {
             if !rels.contains(&head) || taken.contains(&r.id) || own.contains(&head) {
                 continue;
             }
-            if (r.clause.head.temporal == Temporal::Next && staging) || (!r.safe && self.demand_rels.iter().any(|(x, _)| *x == head)) {
+            if (r.clause.head.temporal == Temporal::Next && staging) || (!r.safe && self.demand.rels.iter().any(|(x, _)| *x == head)) {
                 continue;
             }
             if r.clause.head.temporal == Temporal::Next || self.shrug_readers.contains(&r.id) || self.answer.late.contains(&r.id) || !r.safe {
@@ -437,8 +437,8 @@ impl Eval {
             reset.contains(&rule)
         }).collect();
         let n = self.kill_cells(&cells);
-        self.thr_open.retain(|(c, _)| !self.store.cell_dead(*c));
-        self.thr_acc.retain(|(r, _, _), _| !reset.contains(r));
+        self.thr.open.retain(|(c, _)| !self.store.cell_dead(*c));
+        self.thr.acc.retain(|(r, _, _), _| !reset.contains(r));
         self.agg_memo.retain(|(r, _, _), _| !reset.contains(r));
         self.reach_memo.retain(|(r, _, _), _| !reset.contains(r));
         self.agg_opened.retain(|(r, _, _)| !reset.contains(r));
@@ -460,9 +460,9 @@ impl Eval {
         // a component stratified by its data is run as the evaluation runs it: its correlations held, then
         // released a layer at a time
         for c in comps {
-            self.ds_elems.extend(c.elems.iter().copied());
-            self.ds_released.retain(|k| !c.elems.contains(&(k.0, k.1)));
-            self.ds_done.retain(|e| !c.elems.contains(e));
+            self.ds.elems.extend(c.elems.iter().copied());
+            self.ds.released.retain(|k| !c.elems.contains(&(k.0, k.1)));
+            self.ds.done.retain(|e| !c.elems.contains(e));
         }
         let active = std::mem::take(&mut self.active);
         let r = (|| -> Result<(), Halt> {
@@ -476,15 +476,15 @@ impl Eval {
                 self.run_data_comps(comps, lv, &ds)?;
             }
             brk!("refire_lattice_unclosed" => (); self.close_lattices_below(i64::MAX)?);
-            while !rules.is_empty() && !self.thr_open.is_empty() {
+            while !rules.is_empty() && !self.thr.open.is_empty() {
                 brk!("retract_thr_unclosed" => break; self.close_thresholds_below(i64::MAX, true)?);
                 self.close_lattices_below(i64::MAX)?;
             }
             Ok(())
         })();
         self.active = active;
-        self.ds_elems.clear();
-        self.ds_done.clear();
+        self.ds.elems.clear();
+        self.ds.done.clear();
         r
     }
 
@@ -646,12 +646,12 @@ impl Eval {
         // A RULE ANSWERED ON DEMAND that reads what changed, or a rule that calls one: what its calls made is
         // the calls' own (a fact is made for every call whether or not the rest of the rule holds), so every
         // fact made at a call goes, and every rule that reads a relation answered on demand fires again
-        let demanded: Vec<Sym> = self.demand_rels.iter().map(|(r, _)| *r).collect();
+        let demanded: Vec<Sym> = self.demand.rels.iter().map(|(r, _)| *r).collect();
         let mut called = false;
         let rd = loop {
             let rd = self.consumer_rules(&from, &HashSet::new(), self.store.rec(f).rel)?;
             let hit: Vec<Rc<DsComp>> = self
-                .ds_comps
+                .ds.comps
                 .iter()
                 .filter(|c| !comps.iter().any(|x| Rc::ptr_eq(x, c)) && rd.rules.iter().chain(cell_rules.iter()).any(|r| c.rels.contains(&r.clause.head.rel)))
                 .cloned()
@@ -829,7 +829,7 @@ impl Eval {
         let many = self.staged_watch.take().unwrap_or(false);
         self.active = active;
         r?;
-        while !self.thr_open.is_empty() {
+        while !self.thr.open.is_empty() {
             self.close_thresholds_below(i64::MAX, true)?;
         }
         if self.store.cell_count() != cells0 {
@@ -855,10 +855,10 @@ impl Eval {
     /// recursion (it fires once its input closes, in a stratum of its own), a
     /// join, a widening, and a hole or a fault made on the way.
     fn retract_lattice(&mut self, doomed: &[FactId]) -> Result<Delta, &'static str> {
-        if !self.ds_comps.is_empty() {
+        if !self.ds.comps.is_empty() {
             return Err("a lattice in a world with an aggregate component stratified by its data");
         }
-        if !self.demand_rels.is_empty() {
+        if !self.demand.rels.is_empty() {
             return Err("a lattice in a world with a rule answered on demand");
         }
         let f = doomed[0];
@@ -1155,8 +1155,8 @@ impl Eval {
             Some(TermK::Int(k)) => k.max(0) as usize,
             _ => return Err(Halt::Bug("a threshold cell key does not end in its N".into())),
         };
-        self.thr_cells.remove(&(rule, at, key.to_vec().into_boxed_slice()));
-        self.thr_acc.retain(|(r, _, _), _| *r != rule);
+        self.thr.cells.remove(&(rule, at, key.to_vec().into_boxed_slice()));
+        self.thr.acc.retain(|(r, _, _), _| *r != rule);
         let (groups, _) = self.thr_groups(rule, agg, plan, s, 0, true, None)?;
         let members = groups.into_iter().next().map(|g| g.1).unwrap_or_default();
         if members.len() < need {
@@ -1317,8 +1317,8 @@ impl Eval {
             }
             if self.store.cell(c).op == AggOp::AtLeast && brk!("retract_thr_cells_kept" => false; true) {
                 let rec = self.store.cell(c);
-                self.thr_cells.remove(&(rule, at, rec.key.clone()));
-                self.thr_fresh.remove(&c);
+                self.thr.cells.remove(&(rule, at, rec.key.clone()));
+                self.thr.fresh.remove(&c);
             }
             self.store.kill_cell(c);
         }

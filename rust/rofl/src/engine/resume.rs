@@ -163,7 +163,7 @@ impl Eval {
             && !self.well_founded
             && !self.naive
             && self.shrug_readers.is_empty()
-            && self.ds_comps.is_empty()
+            && self.ds.comps.is_empty()
             && self.narrowing.is_none()
             && self.rules.iter().all(|r| !r.has_thr)
     }

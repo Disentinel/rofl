@@ -110,7 +110,7 @@ impl Eval {
             brk!("ds_barred_ignored" => false; self.lattices.contains_key(&rel)
                 || self.subs.contains_key(&rel)
                 || self.carried.contains_key(&rel)
-                || self.demand_rels.iter().any(|(d, _)| *d == rel)
+                || self.demand.rels.iter().any(|(d, _)| *d == rel)
                 || self.tags.count_rel.iter().any(|(p, c)| *p == rel || *c == rel)
                 || self.rules.iter().any(|r| r.clause.head.rel == rel && (r.has_thr || r.lat_close.is_some() || !r.lattice_outer.is_empty())))
         };
@@ -143,8 +143,8 @@ impl Eval {
                 .filter(|(rid, _)| self.rule_of(*rid).is_some_and(|r| rels.contains(&r.clause.head.rel)))
                 .copied()
                 .collect();
-            self.ds_elems.extend(elems.iter().copied());
-            self.ds_comps.push(Rc::new(DsComp { rels, round, elems }));
+            self.ds.elems.extend(elems.iter().copied());
+            self.ds.comps.push(Rc::new(DsComp { rels, round, elems }));
         }
         Some(again)
     }
@@ -152,11 +152,11 @@ impl Eval {
     /// Whether the correlation `mk` of a data-stratified element may be read
     /// now: it has been released.
     pub(super) fn ds_gate(&self, mk: &AggKey) -> Result<bool, Halt> {
-        if self.ds_firing.is_some_and(|(r, at)| mk.0 == r && mk.1 < at) && self.ds_layer.contains(mk) && brk!("ds_layer_refires" => false; true) {
+        if self.ds.firing.is_some_and(|(r, at)| mk.0 == r && mk.1 < at) && self.ds.layer.contains(mk) && brk!("ds_layer_refires" => false; true) {
             return Ok(false);
         }
-        if brk!("ds_seal_early" => false; !self.ds_released.contains(mk)) {
-            if self.ds_done.contains(&(mk.0, mk.1)) {
+        if brk!("ds_seal_early" => false; !self.ds.released.contains(mk)) {
+            if self.ds.done.contains(&(mk.0, mk.1)) {
                 return Err(Halt::Bug(format!(
                     "a correlation of {} was met that the data walk never reached",
                     self.h.name(mk.0)
@@ -169,13 +169,13 @@ impl Eval {
 
     /// Whether `r` owns an element a data-level stratification took.
     pub(super) fn ds_owner(&self, r: &ERule) -> bool {
-        !self.ds_elems.is_empty() && r.clause.body.iter().any(|b| matches!(b, BodyElem::Agg(a) if self.ds_elems.contains(&(r.id, a.at))))
+        !self.ds.elems.is_empty() && r.clause.body.iter().any(|b| matches!(b, BodyElem::Agg(a) if self.ds.elems.contains(&(r.id, a.at))))
     }
 
     /// The components ranked at `lv`, each run: the rules `rs` own their
     /// elements.
     pub(super) fn run_data_levels(&mut self, lv: i64, rs: &[Rc<ERule>]) -> Result<(), Halt> {
-        let comps = self.ds_comps.clone();
+        let comps = self.ds.comps.clone();
         self.run_data_comps(&comps, lv, rs)
     }
 
@@ -196,26 +196,26 @@ impl Eval {
         for layer in layers {
             self.ds_carry(comp)?;
             let owners: Vec<Rc<ERule>> = rs.iter().filter(|r| layer.iter().any(|k| k.0 == r.id)).cloned().collect();
-            self.ds_released.extend(layer.iter().cloned());
-            self.ds_layer = layer.iter().cloned().collect();
+            self.ds.released.extend(layer.iter().cloned());
+            self.ds.layer = layer.iter().cloned().collect();
             if brk!("ds_layer_fires_whole" => true; false) {
-                self.ds_charge = true;
+                self.ds.charge = true;
                 let fired = self.fire_all(owners.clone());
-                self.ds_charge = false;
+                self.ds.charge = false;
                 fired?;
             } else {
                 self.fire_keys(&layer)?;
             }
-            self.ds_layer.clear();
+            self.ds.layer.clear();
             self.poison_readers(&owners)?;
         }
         self.ds_carry(comp)?;
         // from here to the end of the evaluation every correlation the rules meet was released: the walk
         // reached them all, or it is a defect
-        self.ds_done.extend(comp.elems.iter().copied());
-        self.ds_check = true;
+        self.ds.done.extend(comp.elems.iter().copied());
+        self.ds.check = true;
         let fired = self.fire_all(rs.to_vec());
-        self.ds_check = false;
+        self.ds.check = false;
         fired?;
         self.ds_verify(comp)
     }
@@ -263,10 +263,10 @@ impl Eval {
         self.cur_front = Front::default();
         let batch: Rc<[Rc<ERule>]> = Rc::from(owners.clone());
         let outer = (std::mem::replace(&mut self.batch, batch), self.batch_at);
-        self.ds_charge = true;
+        self.ds.charge = true;
         let fired = self.fire_owners(&owners, keys);
-        self.ds_charge = false;
-        self.ds_firing = None;
+        self.ds.charge = false;
+        self.ds.firing = None;
         fired?;
         (self.batch, self.batch_at) = outer;
         let front = std::mem::take(&mut self.cur_front);
@@ -285,9 +285,9 @@ impl Eval {
         for (i, r) in owners.iter().enumerate() {
             self.batch_at = i;
             // an element fired with its earlier ones held is read by the earlier one's firing only when no element is grouped
-            let whole = self.ds_elems.iter().filter(|e| e.0 == r.id).all(|e| self.agg_plans.get(e).is_some_and(|p| p.group.is_empty()));
+            let whole = self.ds.elems.iter().filter(|e| e.0 == r.id).all(|e| self.agg_plans.get(e).is_some_and(|p| p.group.is_empty()));
             for k in keys.iter().filter(|k| k.0 == r.id) {
-                self.ds_firing = brk!("ds_hold_grouped" => Some((k.0, k.1)); whole.then_some((k.0, k.1)));
+                self.ds.firing = brk!("ds_hold_grouped" => Some((k.0, k.1)); whole.then_some((k.0, k.1)));
                 let a = r.plan.iter().find_map(|b| match b {
                     BodyElem::Agg(a) if a.at == k.1 => Some(a.clone()),
                     _ => None,
@@ -307,7 +307,7 @@ impl Eval {
     /// defect of the walk (an edge it did not see), never a quiet wrong value: each correlation is solved again,
     /// ephemeral, over the store as it stands, and must give the value the cell holds (a hole stands).
     fn ds_verify(&mut self, comp: &DsComp) -> Result<(), Halt> {
-        let mut keys: Vec<AggKey> = self.ds_released.iter().filter(|k| comp.elems.contains(&(k.0, k.1))).cloned().collect();
+        let mut keys: Vec<AggKey> = self.ds.released.iter().filter(|k| comp.elems.contains(&(k.0, k.1))).cloned().collect();
         keys.sort_by(|a, b| cmp_js(self.h.name(a.0), self.h.name(b.0)).then(a.1.cmp(&b.1)).then(cmp_js(&tuple_text(&self.h, &a.2), &tuple_text(&self.h, &b.2))));
         let saved = (self.steps, self.rows, self.peak_rows, self.fault, self.fault_count, self.last_fault, self.last_fault_rule);
         let mut bad: Option<String> = None;
@@ -603,7 +603,7 @@ impl Eval {
                 self.ds_walk(comp, rid, rest, s, out)
             }
             // a relation read on demand is unfolded at the call, which the walk must not do: it binds nothing
-            BodyElem::Pos(l) if self.demand_rels.iter().any(|(d, _)| *d == l.rel) => self.ds_walk(comp, rid, rest, s, out),
+            BodyElem::Pos(l) if self.demand.rels.iter().any(|(d, _)| *d == l.rel) => self.ds_walk(comp, rid, rest, s, out),
             BodyElem::Pos(l) => {
                 for (s2, _) in self.match_premise(l, &s, 0, None)? {
                     self.ds_walk(comp, rid, rest.clone(), s2, out)?;
@@ -635,7 +635,7 @@ impl Eval {
                 self.ds_walk(comp, rid, rest, s, out)
             }
             BodyElem::Agg(a) => {
-                if self.ds_elems.contains(&(rid, a.at)) {
+                if self.ds.elems.contains(&(rid, a.at)) {
                     let plan = self.agg_plans.get(&(rid, a.at)).cloned().ok_or_else(|| Halt::Bug("an aggregate with no plan".into()))?;
                     let mut corr: Vec<Term> = Vec::with_capacity(plan.corr.len());
                     for i in &plan.corr {
