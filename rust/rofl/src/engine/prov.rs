@@ -20,38 +20,6 @@ impl Eval {
         brk!("prov_reader_deferred" => self.prov.lazy; self.prov.lazy && !self.prov.prov_eager.contains(&rel))
     }
 
-    /// The relations the `derived_by` premises of `rules` name, `$fact(Rel, ..)`
-    /// with `Rel` written; `None` where a premise names none (its fact a variable),
-    /// where a dominance reads provenance, or where the policy says a rule reads it
-    /// and none is found: every relation is then written as it fires.
-    pub(super) fn provenance_readers(&self, rules: &[DRule]) -> Option<HashSet<Sym>> {
-        let mut out = HashSet::new();
-        for r in rules {
-            for l in r.clause.body.iter().flat_map(|b| b.lits_deep()) {
-                if l.rel != self.v.derived_by {
-                    continue;
-                }
-                let TermK::Func(i) = l.args.first()?.kind() else { return brk!("prov_variable_reader_lazy" => Some(HashSet::new()); None) };
-                if self.h.fname(i) != self.v.s_fact {
-                    return None;
-                }
-                out.insert(self.h.fargs(i).first()?.as_atom()?);
-            }
-        }
-        (!out.is_empty() && self.lat.subs.is_empty()).then_some(out)
-    }
-
-    /// Note a firing whose `derived_by` row is written when asked for.
-    pub(super) fn defer_derived_by(&mut self, id: FactId, rule: Sym) {
-        if self.prov.no_provenance {
-            return;
-        }
-        let n = (id, rule, self.store.tick);
-        if self.prov.pending.last() != Some(n) {
-            self.prov.pending.push(n);
-        }
-    }
-
     /// Write every row noted and not written, `derived_by` and `asserted_by`. Idempotent; the world is then as the
     /// eager one is, and stays lazy for what fires and is asserted after.
     pub fn settle_provenance(&mut self) {
@@ -104,10 +72,6 @@ impl Eval {
         self.store.canonical_state(&self.h)
     }
 
-    /// Firings whose row is not written yet (notes, before the dedup).
-    pub fn unsettled_provenance(&self) -> usize {
-        self.prov.pending.len()
-    }
 }
 
 /// Rows noted and not written: those a volume held, read where they lie, and those noted since.
@@ -138,9 +102,6 @@ impl Notes {
         *self = Notes::default();
         all
     }
-    pub(crate) fn clear(&mut self) {
-        *self = Notes::default();
-    }
     fn write(&self, w: &mut crate::arena::VolW) {
         w.arena_parts(&self.kept, &[&self.own.iter().flat_map(|&(f, r, t)| [f, r, t]).collect::<Vec<u32>>()]);
     }
@@ -167,5 +128,46 @@ impl Eval {
         self.pending_assert = Notes::read(r)?;
         self.store.journal = crate::journal::Journal::read(r)?;
         Ok(())
+    }
+}
+
+impl LatticeState {
+    /// The relations the `derived_by` premises of `rules` name, `$fact(Rel, ..)`
+    /// with `Rel` written; `None` where a premise names none (its fact a variable),
+    /// where a dominance reads provenance, or where the policy says a rule reads it
+    /// and none is found: every relation is then written as it fires.
+    pub(super) fn provenance_readers(&self, h: &Heap, v: &Vocab, rules: &[DRule]) -> Option<HashSet<Sym>> {
+        let mut out = HashSet::new();
+        for r in rules {
+            for l in r.clause.body.iter().flat_map(|b| b.lits_deep()) {
+                if l.rel != v.derived_by {
+                    continue;
+                }
+                let TermK::Func(i) = l.args.first()?.kind() else { return brk!("prov_variable_reader_lazy" => Some(HashSet::new()); None) };
+                if h.fname(i) != v.s_fact {
+                    return None;
+                }
+                out.insert(h.fargs(i).first()?.as_atom()?);
+            }
+        }
+        (!out.is_empty() && self.subs.is_empty()).then_some(out)
+    }
+}
+
+impl ProvState {
+    /// Note a firing whose `derived_by` row is written when asked for.
+    pub(super) fn defer_derived_by(&mut self, store: &Store, id: FactId, rule: Sym) {
+        if self.no_provenance {
+            return;
+        }
+        let n = (id, rule, store.tick);
+        if self.pending.last() != Some(n) {
+            self.pending.push(n);
+        }
+    }
+
+    /// Firings whose row is not written yet (notes, before the dedup).
+    pub fn unsettled_provenance(&self) -> usize {
+        self.pending.len()
     }
 }

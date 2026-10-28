@@ -531,7 +531,7 @@ fn same_answers(delta: &mut Session, fresh: &mut Session, was: &[String], now: &
     // asking a relation answered on demand makes a fact for the call: a world that is asked is not the world
     // that took the edits, so the questions go to copies
     let (mut d2, mut f2);
-    let (delta, fresh) = if delta.eval.answers_on_demand() {
+    let (delta, fresh) = if delta.eval.demand.answers_on_demand() {
         d2 = delta.fork();
         f2 = fresh.fork();
         (&mut d2, &mut f2)

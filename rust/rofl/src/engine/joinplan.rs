@@ -94,16 +94,9 @@ fn stale(now: usize, then: usize) -> bool {
 }
 
 impl Eval {
-    /// The plan for news at plan position `at` (None: a firing over the whole
-    /// store, no news) when it is cheaper than the written order for `n` news
-    /// rows; None keeps the written order.
-    fn plan_key(&self, r: &Rc<ERule>, at: Option<usize>) -> (Sym, usize) {
-        (r.id, at.unwrap_or(usize::MAX >> 1) | if self.add.adding { 1 << 62 } else { 0 })
-    }
-
     /// A plan can start from the news at `at`: when `delta_pick` still found none, the written order is the cheaper.
     pub(super) fn plannable(&self, r: &Rc<ERule>, at: usize) -> bool {
-        matches!(self.add.delta_plans.get(&self.plan_key(r, Some(at))), Some(Slot::Plan(_)))
+        matches!(self.add.delta_plans.get(&self.add.plan_key(r, Some(at))), Some(Slot::Plan(_)))
     }
 
     pub(super) fn delta_pick(&mut self, r: &Rc<ERule>, at: Option<usize>, n: usize) -> Option<Rc<DeltaPlan>> {
@@ -112,8 +105,8 @@ impl Eval {
         {
             return None;
         }
-        let key = self.plan_key(r, at);
-        self.vrefresh();
+        let key = self.add.plan_key(r, at);
+        self.vc.vrefresh(&mut self.store);
         let fresh = match self.add.delta_plans.get(&key) {
             Some(Slot::No) => return None,
             Some(Slot::Plan(p)) => p.watch.iter().all(|&(rel, persp, then)| !stale(self.len_est(rel, persp), then)),
@@ -142,8 +135,8 @@ impl Eval {
 
     /// Rows a premise's relation holds, for the planner: a closure answered from its tree holds its pairs.
     fn len_est(&self, rel: Sym, persp: Option<Sym>) -> usize {
-        match self.vclosure_for(rel) {
-            Some(ci) => self.vlen(ci),
+        match self.vc.vclosure_for(rel) {
+            Some(ci) => self.vc.vlen(ci),
             None => self.store.rel_len_est(rel, persp),
         }
     }
@@ -199,8 +192,8 @@ impl Eval {
         }
         // A CLOSURE ANSWERED FROM ITS TREE has no rows to count: its matches for a bound end are read off the tree's shape,
         // and with neither end bound it costs every row, which no plan starts from.
-        if let Some(ci) = self.vclosure_for(l.rel) {
-            let (rows, fan) = self.vstat(ci, &cpos, &vpos);
+        if let Some(ci) = self.vc.vclosure_for(l.rel) {
+            let (rows, fan) = self.vc.vstat(&mut self.store, ci, &cpos, &vpos);
             return Stat { rows, fan };
         }
         // A DECLARED FUNCTION (`function p(K, to V).`, a promise checked after every evaluation) answers at
@@ -234,33 +227,6 @@ impl Eval {
         };
         let fan = if vpos.is_empty() { rows as f64 } else { rows as f64 / distinct.max(1) as f64 };
         Stat { rows: rows as f64, fan: if rows == 0 { 0.0 } else { fan.max(1.0) } }
-    }
-
-    /// The counts `delta_stat` took, kept with a volume: an edit to a world opened from disk plans from them instead
-    /// of counting each relation it reaches again, whole.
-    pub(crate) fn write_stats(&self, w: &mut crate::arena::VolW) {
-        let mut ks: Vec<&Vec<u64>> = self.add.delta_stats.keys().collect();
-        ks.sort_unstable();
-        let mut flat: Vec<u64> = Vec::new();
-        for k in ks {
-            let (then, rows, d) = self.add.delta_stats[k];
-            flat.push(k.len() as u64);
-            flat.extend(k);
-            flat.extend([then as u64, rows as u64, d as u64]);
-        }
-        w.arena(&flat);
-    }
-
-    pub(crate) fn read_stats(&mut self, r: &mut crate::arena::VolR) -> Result<(), String> {
-        let flat = r.arena::<u64>()?;
-        let mut i = 0;
-        while i < flat.len() {
-            let n = flat[i] as usize;
-            let k = flat.get(i + 1..i + 1 + n + 3).ok_or("a volume's planner counts are cut short")?;
-            self.add.delta_stats.insert(k[..n].to_vec(), (k[n] as usize, k[n + 1] as usize, k[n + 2] as usize));
-            i += 1 + n + 3;
-        }
-        Ok(())
     }
 
     fn delta_build(&mut self, r: &Rc<ERule>, at: Option<usize>) -> Option<DeltaPlan> {
@@ -520,5 +486,41 @@ impl Eval {
             })
             .collect();
         self.conclude_all(r, sols, Front::default(), false)
+    }
+}
+
+impl AddState {
+    /// The plan for news at plan position `at` (None: a firing over the whole
+    /// store, no news) when it is cheaper than the written order for `n` news
+    /// rows; None keeps the written order.
+    fn plan_key(&self, r: &Rc<ERule>, at: Option<usize>) -> (Sym, usize) {
+        (r.id, at.unwrap_or(usize::MAX >> 1) | if self.adding { 1 << 62 } else { 0 })
+    }
+
+    /// The counts `delta_stat` took, kept with a volume: an edit to a world opened from disk plans from them instead
+    /// of counting each relation it reaches again, whole.
+    pub(crate) fn write_stats(&self, w: &mut crate::arena::VolW) {
+        let mut ks: Vec<&Vec<u64>> = self.delta_stats.keys().collect();
+        ks.sort_unstable();
+        let mut flat: Vec<u64> = Vec::new();
+        for k in ks {
+            let (then, rows, d) = self.delta_stats[k];
+            flat.push(k.len() as u64);
+            flat.extend(k);
+            flat.extend([then as u64, rows as u64, d as u64]);
+        }
+        w.arena(&flat);
+    }
+
+    pub(crate) fn read_stats(&mut self, r: &mut crate::arena::VolR) -> Result<(), String> {
+        let flat = r.arena::<u64>()?;
+        let mut i = 0;
+        while i < flat.len() {
+            let n = flat[i] as usize;
+            let k = flat.get(i + 1..i + 1 + n + 3).ok_or("a volume's planner counts are cut short")?;
+            self.delta_stats.insert(k[..n].to_vec(), (k[n] as usize, k[n + 1] as usize, k[n + 2] as usize));
+            i += 1 + n + 3;
+        }
+        Ok(())
     }
 }

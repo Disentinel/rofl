@@ -117,12 +117,12 @@ impl Eval {
         match tail {
             Some(Tail::Staged(rule)) => {
                 if let Err(e) = self.charge_row(Some(rule), true) {
-                    return Err(self.cut_rest(sols, out, None, e));
+                    return Err(self.wall.cut_rest(sols, out, None, e));
                 }
             }
             Some(Tail::Fact { rule, rel, persp, args, id, is_new }) => {
                 if let Err(e) = self.charge_row(Some(rule), true) {
-                    return Err(self.cut_rest(sols, out, None, e));
+                    return Err(self.wall.cut_rest(sols, out, None, e));
                 }
                 self.write_derived_by(rule, rel, persp, &args, id, &mut out);
                 if is_new {
@@ -146,15 +146,6 @@ impl Eval {
             }
         }
         f
-    }
-
-    fn cut_rest(&mut self, sols: Vec<Sol>, out: Front, tail: Option<Tail>, e: Halt) -> Halt {
-        if let Some(c) = self.wall.cutting.as_mut() {
-            if c.fl.is_none() {
-                c.fl = Some(InFlight::Rest { sols, out, tail });
-            }
-        }
-        e
     }
 
     /// A program whose every wall in the plain path can be resumed from.
@@ -361,10 +352,21 @@ impl Eval {
         self.active.sort_by(|a, b| cmp_js(&a.canon, &b.canon));
         self.derived_rels = self.rules.iter().filter(|r| r.clause.head.temporal != Temporal::Next).map(|r| r.clause.head.rel).collect();
         self.vclosure_engage();
-        self.closures_engage();
+        self.clo.closures_engage(&self.store);
         // the cells sealed before the cut are found again by correlation, as the evaluation that sealed them did
         self.restore_cells();
         self.wall.cut = Some(Box::new(c));
         Ok(())
+    }
+}
+
+impl WallState {
+    fn cut_rest(&mut self, sols: Vec<Sol>, out: Front, tail: Option<Tail>, e: Halt) -> Halt {
+        if let Some(c) = self.cutting.as_mut() {
+            if c.fl.is_none() {
+                c.fl = Some(InFlight::Rest { sols, out, tail });
+            }
+        }
+        e
     }
 }

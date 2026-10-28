@@ -106,12 +106,12 @@ fn write_world(mut w: VolW, e: &mut Eval) -> std::io::Result<usize> {
             w.arena(&m[&k]);
         }
     }
-    write_toks(&mut w, &e.lattices_kept());
+    write_toks(&mut w, &e.lat.lattices_kept(&e.store));
     write_toks(&mut w, &e.unknowns_kept());
     e.write_notes(&mut w);
     e.write_cut(&mut w);
-    e.write_stats(&mut w);
-    e.write_forests(&mut w);
+    e.add.write_stats(&mut w);
+    e.vc.write_forests(&e.store, &mut w);
     w.finish()
 }
 

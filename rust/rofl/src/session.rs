@@ -179,7 +179,7 @@ impl Session {
     /// This world as a kept image, which `open_kept` reads back.
     pub fn keep(&mut self) -> Vec<u8> {
         self.eval.settle_provenance();
-        crate::image::keep(&self.eval.h, &self.eval.store, &self.eval.staged_kept(), self.eval.safety(), &self.eval.lattices_kept(), &self.eval.unknowns_kept())
+        crate::image::keep(&self.eval.h, &self.eval.store, &self.eval.staged_kept(), self.eval.safety(), &self.eval.lat.lattices_kept(&self.eval.store), &self.eval.unknowns_kept())
     }
 
     /// This world kept as a volume at `path`, which `open_volume` maps back. It freezes the world, as a fork does.
@@ -237,9 +237,9 @@ impl Session {
         }
         eval.read_notes(&mut o.cut)?;
         eval.read_cut(&mut o.cut)?;
-        eval.read_stats(&mut o.cut)?;
-        eval.read_forests(&mut o.cut)?;
-        eval.vpublish();
+        eval.add.read_stats(&mut o.cut)?;
+        eval.vc.read_forests(&mut eval.store, &mut o.cut)?;
+        eval.vc.vpublish(&mut eval.store);
         if !o.cut.at_end() {
             return Err(format!("{path}: a volume has bytes after its end"));
         }
@@ -553,7 +553,7 @@ impl Session {
             // the rest go without a delta, and the world is evaluated again
             match self.retract_doomed(id, &doomed, read) {
                 Ok(d) => {
-                    if let Err(e) = self.eval.check_promises() {
+                    if let Err(e) = self.eval.ds.check_promises(&self.eval.h, &self.eval.store) {
                         self.eval.store.dirty = true;
                         return Err(crate::describe(&e));
                     }
@@ -817,7 +817,7 @@ impl Session {
                 self.eval.store.note_eval(self.eval.budget, self.eval.steps, true);
                 // a wall judges the promises like any other exit, and a world
                 // that breaks one stays dirty
-                self.eval.check_promises()?;
+                self.eval.ds.check_promises(&self.eval.h, &self.eval.store)?;
                 // as the reference's run does after either wall: the hole is
                 // the answer, and asking again must not pay for the run again
                 self.eval.store.dirty = false;
@@ -1381,7 +1381,7 @@ impl Session {
         // A RELATION UNFOLDED AT A CALL is answered as the reference's `query` answers it: its rules
         // unfolded under the question, which leaves the world as it was (`Eval::answer_on_demand`)
         let mut partial = self.eval.store.partial_eval;
-        let (rows, keys, scanned, probed) = if self.eval.answers_open(rel) && brk!("ask_store_only" => false; true) {
+        let (rows, keys, scanned, probed) = if self.eval.demand.answers_open(rel) && brk!("ask_store_only" => false; true) {
             let el = self.one_lit(query)?;
             // A WALL MET ANSWERING is a hole named for the question, and the answer is partial
             let (sols, unnamed) = match self.eval.answer_on_demand(&el) {
@@ -1705,7 +1705,7 @@ impl Session {
         let read = brk!("retract_edb_unread" => false; true) && self.read_marks(&doomed);
         match self.retract_doomed(id, &doomed, read) {
             Ok(d) => {
-                if let Err(e) = self.eval.check_promises() {
+                if let Err(e) = self.eval.ds.check_promises(&self.eval.h, &self.eval.store) {
                     brk!("function_retract_clean" => (); self.eval.store.dirty = true);
                     return Err(crate::describe(&e));
                 }

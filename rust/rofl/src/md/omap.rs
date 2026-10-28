@@ -8,7 +8,6 @@ impl<V> Default for OMap<V> { fn default() -> Self { OMap { idx: HashMap::new(),
 
 impl<V> OMap<V> {
     pub fn get(&self, k: &str) -> Option<&V> { self.idx.get(k).map(|&i| &self.items[i].1) }
-    pub fn get_mut(&mut self, k: &str) -> Option<&mut V> { self.idx.get(k).map(|&i| &mut self.items[i].1) }
     pub fn has(&self, k: &str) -> bool { self.idx.contains_key(k) }
     pub fn set(&mut self, k: &str, v: V) {
         match self.idx.get(k) {

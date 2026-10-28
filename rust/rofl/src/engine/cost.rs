@@ -145,32 +145,6 @@ impl Eval {
         }
     }
 
-    /// Premise `b` of rule `rid` about to be solved: what its cost is measured from.
-    pub(super) fn cost_mark(&mut self, rid: Option<Sym>, b: &BodyElem) -> Option<Mark> {
-        let key = (rid?, prem_key(b)?);
-        let floor = self.cost.prem_cost.get(&key).map_or(0, |c| c.widest.n);
-        Some(Mark {
-            key,
-            read0: self.cost.read_rows,
-            outer: std::mem::take(&mut self.cost.widest),
-            outer_floor: std::mem::replace(&mut self.cost.wide_floor, floor),
-        })
-    }
-
-    /// The premise of `m` solved from `rows_in` rows into `rows_out`.
-    pub(super) fn note_cost(&mut self, m: Mark, rows_in: usize, rows_out: usize) {
-        let wide = std::mem::take(&mut self.cost.widest);
-        self.cost.widest = if wide.n > m.outer.n { wide.clone() } else { m.outer };
-        self.cost.wide_floor = m.outer_floor;
-        let c = self.cost.prem_cost.entry(m.key).or_default();
-        c.rows_in += rows_in as u64;
-        c.read += self.cost.read_rows - m.read0;
-        c.rows_out += rows_out as u64;
-        if wide.n > c.widest.n {
-            c.widest = wide;
-        }
-    }
-
     #[cold]
     fn say_hot(&mut self, rid: Sym, l: &Lit, s: &Subst) {
         let at: Vec<Term> = l.args.iter().map(|a| resolve(&mut self.h, *a, s)).collect();
@@ -288,5 +262,33 @@ mod tests {
         assert!(top.cost.widest.n >= 300, "{}", top.sentence());
         assert!(top.sentence().contains("?N = e"), "{}", top.sentence());
         assert_eq!(s.eval.too_hot().len(), 1);
+    }
+}
+
+impl CostState {
+    /// Premise `b` of rule `rid` about to be solved: what its cost is measured from.
+    pub(super) fn cost_mark(&mut self, rid: Option<Sym>, b: &BodyElem) -> Option<Mark> {
+        let key = (rid?, prem_key(b)?);
+        let floor = self.prem_cost.get(&key).map_or(0, |c| c.widest.n);
+        Some(Mark {
+            key,
+            read0: self.read_rows,
+            outer: std::mem::take(&mut self.widest),
+            outer_floor: std::mem::replace(&mut self.wide_floor, floor),
+        })
+    }
+
+    /// The premise of `m` solved from `rows_in` rows into `rows_out`.
+    pub(super) fn note_cost(&mut self, m: Mark, rows_in: usize, rows_out: usize) {
+        let wide = std::mem::take(&mut self.widest);
+        self.widest = if wide.n > m.outer.n { wide.clone() } else { m.outer };
+        self.wide_floor = m.outer_floor;
+        let c = self.prem_cost.entry(m.key).or_default();
+        c.rows_in += rows_in as u64;
+        c.read += self.read_rows - m.read0;
+        c.rows_out += rows_out as u64;
+        if wide.n > c.widest.n {
+            c.widest = wide;
+        }
     }
 }
