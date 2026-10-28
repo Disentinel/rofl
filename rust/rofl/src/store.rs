@@ -4026,19 +4026,19 @@ impl Store {
         self.heights_where_head(roots, memo, &|_, _, ps| skip(ps))
     }
 
-    /// `heights_where`, `skip` told whose firing it is and by which rule.
-    pub fn heights_where_head(&self, roots: &[FactId], memo: &mut HashMap<FactId, u32>, skip: &dyn Fn(FactId, Sym, &[PremRef]) -> bool) -> Result<(), FactId> {
+    /// The facts below `stack` that `memo` does not answer, in discovery
+    /// order; `visit` is told each firing and may skip it, or fail the walk.
+    fn region_below(&self, mut stack: Vec<FactId>, memo: &HashMap<FactId, u32>, visit: impl Fn(FactId, Sym, &[PremRef]) -> Result<bool, FactId>) -> Result<Vec<FactId>, FactId> {
         let mut seen: HashSet<FactId> = HashSet::new();
         let mut order: Vec<FactId> = Vec::new();
-        let mut stack: Vec<FactId> = roots.iter().copied().filter(|f| !memo.contains_key(f)).collect();
         while let Some(f) = stack.pop() {
-            if !seen.insert(f) {
+            if memo.contains_key(&f) || !seen.insert(f) {
                 continue;
             }
             order.push(f);
             for n in self.chain(f) {
                 let ps = self.prems_of(&n);
-                if skip(f, n.rule, ps) {
+                if visit(f, n.rule, ps)? {
                     continue;
                 }
                 for p in ps {
@@ -4050,25 +4050,44 @@ impl Store {
                 }
             }
         }
+        Ok(order)
+    }
+
+    /// The heights of the rows read by `first` and by the firings of `order`.
+    fn vrow_heights<'a>(&self, first: impl Iterator<Item = &'a [PremRef]>, order: &[FactId], memo: &mut HashMap<FactId, u32>) -> HashMap<Sym, u32> {
+        let mut vh: HashMap<Sym, u32> = HashMap::new();
+        if self.vrow_of.is_empty() {
+            return vh;
+        }
+        let read = |ps: &[PremRef], vh: &mut HashMap<Sym, u32>, memo: &mut HashMap<FactId, u32>| {
+            for p in ps {
+                if let PremRef::VRow(k) = p {
+                    if !vh.contains_key(k) {
+                        let x = self.vrow_height(*k, memo);
+                        vh.insert(*k, x);
+                    }
+                }
+            }
+        };
+        for ps in first {
+            read(ps, &mut vh, memo);
+        }
+        for &f in order {
+            for n in self.chain(f) {
+                read(self.prems_of(&n), &mut vh, memo);
+            }
+        }
+        vh
+    }
+
+    /// `heights_where`, `skip` told whose firing it is and by which rule.
+    pub fn heights_where_head(&self, roots: &[FactId], memo: &mut HashMap<FactId, u32>, skip: &dyn Fn(FactId, Sym, &[PremRef]) -> bool) -> Result<(), FactId> {
+        let order = self.region_below(roots.to_vec(), memo, |f, rule, ps| Ok(skip(f, rule, ps)))?;
         if order.is_empty() {
             return Ok(());
         }
         // a row answered from a tree rests on edges alone, never on what reads it: a number, as a cell's
-        let mut vh: HashMap<Sym, u32> = HashMap::new();
-        if !self.vrow_of.is_empty() {
-            for &f in &order {
-                for n in self.chain(f) {
-                    for p in self.prems_of(&n) {
-                        if let PremRef::VRow(k) = p {
-                            if !vh.contains_key(k) {
-                                let x = self.vrow_height(*k, memo);
-                                vh.insert(*k, x);
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        let vh = self.vrow_heights(std::iter::empty(), &order, memo);
         // One entry per firing: its head, how many premises are still open,
         // and the highest finished premise so far.
         struct Firing {
@@ -4167,40 +4186,17 @@ impl Store {
         for ps in members.iter().flatten().flatten() {
             stack.extend(ps.iter().filter_map(|p| if let PremRef::Fact(f) = p { Some(*f) } else { None }));
         }
-        let mut seen: HashSet<FactId> = HashSet::new();
-        let mut order: Vec<FactId> = Vec::new();
-        while let Some(f) = stack.pop() {
-            if memo.contains_key(&f) || !seen.insert(f) {
-                continue;
-            }
-            order.push(f);
-            for n in self.chain(f) {
-                for p in self.prems_of(&n) {
-                    match p {
-                        PremRef::Fact(g) if !memo.contains_key(g) && !seen.contains(g) => stack.push(*g),
-                        PremRef::Cell(x) if forbidden.contains(x) && !at.contains_key(x) => {
-                            return Err(f);
-                        }
-                        _ => {}
+        let order = self.region_below(stack, memo, |f, _, ps| {
+            for p in ps {
+                if let PremRef::Cell(x) = p {
+                    if forbidden.contains(x) && !at.contains_key(x) {
+                        return Err(f);
                     }
                 }
             }
-        }
-        let mut vh: HashMap<Sym, u32> = HashMap::new();
-        if !self.vrow_of.is_empty() {
-            let mut ks: Vec<Sym> = members.iter().flatten().flatten().flatten().filter_map(|p| if let PremRef::VRow(k) = p { Some(*k) } else { None }).collect();
-            for &f in &order {
-                for n in self.chain(f) {
-                    ks.extend(self.prems_of(&n).iter().filter_map(|p| if let PremRef::VRow(k) = p { Some(*k) } else { None }));
-                }
-            }
-            for k in ks {
-                if !vh.contains_key(&k) {
-                    let x = self.vrow_height(k, memo);
-                    vh.insert(k, x);
-                }
-            }
-        }
+            Ok(false)
+        })?;
+        let vh = self.vrow_heights(members.iter().flatten().flatten().map(Vec::as_slice), &order, memo);
         struct Firing {
             head: Node,
             open: usize,
