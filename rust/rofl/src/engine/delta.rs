@@ -427,6 +427,35 @@ impl Eval {
         Ok(brk!("retract_stacked_facts_kept" => Vec::new(); out))
     }
 
+    /// The counters a delta run starts from (given back by `end_window`) and the holes there are before it.
+    pub(super) fn begin_window(&mut self) -> ((i64, i64), usize) {
+        let outer = (self.steps, self.rows);
+        self.steps = 0;
+        (outer, self.store.rel_count(self.v.hole))
+    }
+
+    pub(super) fn end_window(&mut self, outer: (i64, i64)) {
+        self.cur_front = Front::default();
+        (self.steps, self.rows) = outer;
+    }
+
+    pub(super) fn lattice_hole(&self, holes0: usize) -> bool {
+        self.store.rel_count(self.v.hole) > holes0 || !self.lat.pending.is_empty()
+    }
+
+    pub(super) fn take_out(&mut self, facts: &[FactId]) {
+        self.withdraw_firings(facts, |_, _| true);
+        self.store.remove_many(facts);
+    }
+
+    /// What the evaluation kept of the witnesses of the subsumptive keys that `gone` names.
+    pub(super) fn forget_sub_witnesses(&mut self, gone: impl Fn(&LatKey) -> bool) {
+        self.lat.sub_seen_set.retain(|(k, _), _| !gone(k));
+        self.lat.sub_beaten.retain(|(k, _), _| !gone(k));
+        self.lat.sub_prems.retain(|(k, _), _| !gone(k));
+        self.lat.sub_by.retain(|(k, _), _| !gone(k));
+    }
+
     /// The cells of the rules read again whole, gone with their reflection.
     pub(super) fn reset_cells(&mut self, reset: &HashSet<Sym>) -> usize {
         if brk!("retract_stacked_cells_kept" => true; false) {
@@ -739,8 +768,7 @@ impl Eval {
         }
         let mut d = Delta { cells: cells.len(), consumers: consumers.len(), stacked_rules: reset.len(), components: comps.len(), demanded: made, ..Delta::default() };
         brk!("retract_consumers_kept" => (); {
-            self.withdraw_firings(&consumers, |_, _| true);
-            self.store.remove_many(&consumers);
+            self.take_out(&consumers);
             self.store.sweep();
         });
         d.stacked_cells = if reset.is_empty() { 0 } else { self.reset_cells(&reset) };
@@ -756,9 +784,7 @@ impl Eval {
                 ix.remove(g);
             }
         }
-        let outer = (self.steps, self.rows);
-        self.steps = 0;
-        let holes0 = self.store.rel_count(self.v.hole);
+        let (outer, holes0) = self.begin_window();
         let gone: Vec<FactId> = std::iter::once(f).chain(withdrawn.iter().copied()).collect();
         let mut ambiguous = false;
         let r = (|| -> Result<(), Halt> {
@@ -776,8 +802,7 @@ impl Eval {
             }
             Ok(())
         })();
-        self.cur_front = Front::default();
-        (self.steps, self.rows) = outer;
+        self.end_window(outer);
         match r {
             Ok(()) if ambiguous => {
                 self.store.dirty = true;
@@ -986,12 +1011,8 @@ impl Eval {
         if let Some(ix) = self.support_ix.as_mut() {
             ix.remove(&f);
         }
-        self.withdraw_firings(&cone, |_, _| true);
-        self.store.remove_many(&cone);
-        brk!("retract_consumers_kept" => (); {
-            self.withdraw_firings(&consumers, |_, _| true);
-            self.store.remove_many(&consumers);
-        });
+        self.take_out(&cone);
+        brk!("retract_consumers_kept" => (); self.take_out(&consumers));
         self.store.sweep();
         d.stacked_cells = if reset.is_empty() { 0 } else { self.reset_cells(&reset) };
         // what the evaluation kept of the values a cone key was given goes with its facts; the other
@@ -1002,16 +1023,11 @@ impl Eval {
             self.lat.sub_memo.remove(ck);
             self.lat.sub_parties.remove(ck);
         }
-        self.lat.sub_seen_set.retain(|(ck, _), _| !cone_keys.contains(ck));
-        self.lat.sub_beaten.retain(|(ck, _), _| !cone_keys.contains(ck));
-        self.lat.sub_prems.retain(|(ck, _), _| !cone_keys.contains(ck));
-        self.lat.sub_by.retain(|(ck, _), _| !cone_keys.contains(ck));
+        self.forget_sub_witnesses(|ck| cone_keys.contains(ck));
         self.lat.sub_by_of.retain(|f, _| !inside.contains(f));
         let rest: Vec<LatKey> = self.lat.sub_seen.keys().filter(|k| rels.contains(&k.0)).cloned().collect();
         let stashed: Vec<(LatKey, Vec<Box<[Term]>>)> = rest.into_iter().filter_map(|k| self.lat.sub_seen.remove(&k).map(|v| (k, v))).collect();
-        let outer = (self.steps, self.rows);
-        self.steps = 0;
-        let holes0 = self.store.rel_count(self.v.hole);
+        let (outer, holes0) = self.begin_window();
         let active = std::mem::take(&mut self.active);
         let was = self.lat.closed.clone();
         for r in &rels {
@@ -1028,7 +1044,7 @@ impl Eval {
             if !reset.is_empty() {
                 self.support_ix = None;
             }
-            if brk!("retract_lattice_hole_kept" => false; self.store.rel_count(self.v.hole) > holes0 || !self.lat.pending.is_empty()) {
+            if brk!("retract_lattice_hole_kept" => false; self.lattice_hole(holes0)) {
                 return Err(Halt::Bug("a lattice delta made a hole".into()));
             }
             if self.lat.superseded.iter().any(|g| rels.contains(&self.store.rec(*g).rel)) {
@@ -1038,8 +1054,7 @@ impl Eval {
         })();
         self.lat.sub_seen.extend(stashed);
         self.active = active;
-        self.cur_front = Front::default();
-        (self.steps, self.rows) = outer;
+        self.end_window(outer);
         match r {
             Ok(()) => Ok(d),
             Err(_) => {
