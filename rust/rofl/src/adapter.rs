@@ -59,6 +59,189 @@ struct Batch {
     event: Option<usize>,
 }
 
+/// The rows of the adapter book a send reads: what each capability is and where its wants go, and how they are sent.
+struct AdapterBook {
+    caps: HashMap<String, (String, String)>,
+    adapters: HashMap<String, (String, String)>,
+    arg_names: HashMap<(String, i64), (String, String)>,
+    tools: HashMap<String, String>,
+    wire: HashMap<(String, i64), String>,
+    places: HashMap<String, Vec<(i64, String, String)>>,
+    keys_of: HashMap<String, Vec<(String, String, String, String)>>,
+    needs: HashMap<String, Vec<String>>,
+    ops: HashMap<String, (String, String)>,
+    fields: HashMap<String, Vec<(i64, String)>>,
+    answers: HashMap<String, HashSet<(String, usize)>>,
+    events: HashMap<String, usize>,
+    args: HashMap<Term, Vec<(i64, Term)>>,
+    limits: HashMap<String, i64>,
+    templates: HashMap<String, String>,
+}
+
+impl AdapterBook {
+    fn read(s: &mut Session) -> AdapterBook {
+        let caps = rows(s, "capability", 3).into_iter().map(|c| (name(s, c[0]), (name(s, c[1]), name(s, c[2])))).collect();
+        let adapters = rows(s, "adapter", 3).into_iter().map(|a| (name(s, a[0]), (name(s, a[1]), name(s, a[2])))).collect();
+        let mut arg_names = HashMap::new();
+        for a in rows(s, "arg", 4) {
+            if let Some(p) = a[1].as_int() {
+                arg_names.insert((name(s, a[0]), p), (name(s, a[2]), name(s, a[3])));
+            }
+        }
+        let tools = rows(s, "mcp_tool", 2).into_iter().map(|t| (name(s, t[0]), name(s, t[1]))).collect();
+        let mut wire = HashMap::new();
+        for a in rows(s, "mcp_arg", 3) {
+            if let Some(p) = a[1].as_int() {
+                wire.insert((name(s, a[0]), p), name(s, a[2]));
+            }
+        }
+        let mut places: HashMap<String, Vec<(i64, String, String)>> = HashMap::new();
+        for a in rows(s, "http_in", 4) {
+            if let Some(p) = a[1].as_int() {
+                wire.insert((name(s, a[0]), p), name(s, a[3]));
+                places.entry(name(s, a[0])).or_default().push((p, name(s, a[2]), name(s, a[3])));
+            }
+        }
+        let mut keys_of: HashMap<String, Vec<(String, String, String, String)>> = HashMap::new();
+        for a in rows(s, "http_auth", 5) {
+            keys_of.entry(name(s, a[0])).or_default().push((name(s, a[1]), name(s, a[2]), name(s, a[3]), name(s, a[4])));
+        }
+        let mut needs: HashMap<String, Vec<String>> = HashMap::new();
+        for n in rows(s, "http_needs", 2) {
+            needs.entry(name(s, n[0])).or_default().push(name(s, n[1]));
+        }
+        let ops = rows(s, "http_op", 3).into_iter().map(|o| (name(s, o[0]), (name(s, o[1]), name(s, o[2])))).collect();
+        let mut fields: HashMap<String, Vec<(i64, String)>> = HashMap::new();
+        for f in rows(s, "mcp_field", 3).into_iter().chain(rows(s, "http_field", 3)) {
+            if let Some(p) = f[1].as_int() {
+                fields.entry(name(s, f[0])).or_default().push((p, name(s, f[2])));
+            }
+        }
+        let mut answers: HashMap<String, HashSet<(String, usize)>> = HashMap::new();
+        for a in rows(s, "answers", 3) {
+            if let Some(n) = a[2].as_int() {
+                answers.entry(name(s, a[0])).or_default().insert((name(s, a[1]), n as usize));
+            }
+        }
+        let events = rows(s, "event_time", 2).into_iter().filter_map(|e| Some((name(s, e[0]), e[1].as_int().filter(|c| *c > 1)? as usize))).collect();
+        let mut args: HashMap<Term, Vec<(i64, Term)>> = HashMap::new();
+        for a in rows(s, "want_arg", 3) {
+            if let Some(i) = a[1].as_int() {
+                args.entry(a[0]).or_default().push((i, a[2]));
+            }
+        }
+        let limits = rows(s, "max_wants", 2).into_iter().filter_map(|m| Some((name(s, m[0]), m[1].as_int()?))).collect();
+        let templates = rows(s, "query", 2).into_iter().map(|q| (name(s, q[0]), name(s, q[1]))).collect();
+        AdapterBook { caps, adapters, arg_names, tools, wire, places, keys_of, needs, ops, fields, answers, events, args, limits, templates }
+    }
+}
+
+/// The credentials a capability's calls carry: (how, name, value) of each declared key it needs.
+type Creds = Vec<(String, String, String)>;
+
+/// What a send picks: the outcomes its journal holds and the reasons held, the wants of each capability, the ids the
+/// journal writes them by, and the credentials of each capability that needs some.
+#[derive(Default)]
+struct Picked {
+    held: String,
+    by_cap: BTreeMap<String, Vec<Term>>,
+    idems: HashMap<Term, String>,
+    creds: HashMap<String, Result<Creds, String>>,
+}
+
+/// The rows of relation `rel` at arity `n` in the main book, as their argument lists.
+fn rows(s: &mut Session, rel: &str, n: usize) -> Vec<Vec<Term>> {
+    let main = s.eval.v.main;
+    let r = s.eval.h.intern(rel);
+    s.eval.store.rel_persp(&s.eval.h, r, main).into_iter().map(|f| s.eval.store.args(f).to_vec()).filter(|a| a.len() == n).collect()
+}
+
+fn name(s: &Session, t: Term) -> String {
+    match t.kind() {
+        TermK::Atom(x) | TermK::Str(x) => s.eval.h.name(x).to_string(),
+        _ => s.eval.h.canon(t),
+    }
+}
+
+/// Whether the journal settles a want: its outcome is held, or it was sent with none recorded, which makes it
+/// `outcome_unknown`. Either way the want is not sent again.
+fn journal_settles(j: &mut Journal, idem: &str, text: &str, trust: bool, held: &mut String) -> Result<bool, String> {
+    if let Some(out) = j.done.get(idem).filter(|_| trust) {
+        held.push_str(out);
+        return Ok(true);
+    }
+    if trust && j.sent.contains(idem) {
+        let out = format!("outcome_unknown({text}).\n");
+        j.write(serde_json::json!({"done": idem, "out": out}))?;
+        held.push_str(&out);
+        return Ok(true);
+    }
+    Ok(false)
+}
+
+fn want_held(held: &mut String, text: &str, why: &str) {
+    held.push_str(&format!("want_held({text}, {}).\n", quote(why)));
+}
+
+/// The credentials a capability's calls carry, read from the environment or from a sign-in, never from the world.
+fn credentials(book: &AdapterBook, adapter: &str, cap: &str, kind: Option<&str>) -> Result<Creds, String> {
+    let declared = book.keys_of.get(adapter).cloned().unwrap_or_default();
+    let wanted: Vec<_> = match book.needs.get(cap) {
+        Some(n) => declared.into_iter().filter(|d| n.contains(&d.0)).collect(),
+        None if kind == Some("mcp") => declared,
+        None => Vec::new(),
+    };
+    wanted
+        .into_iter()
+        .map(|(scheme, how, n, env)| match std::env::var(&env).ok().filter(|v| !v.is_empty() && crate::brk!("http_key_ignored" => false; true)) {
+            _ if how == "login" && signed_in(&n) => Ok((how, n, String::new())),
+            _ if how == "login" => Err(format!("declared, not connected: no one has signed in to {n} here (the key of {scheme} for {adapter}): a person runs `rofl adapter login {n}`")),
+            Some(v) => Ok((how, n, v)),
+            None => Err(format!("declared, not connected: the environment has no {env} (the key of {scheme} for {adapter})")),
+        })
+        .collect()
+}
+
+/// The program a batch runs on a thread; `None` for the kinds the answer runs itself (`rofl`, `sql`).
+fn runner(b: &Batch) -> Option<Box<dyn FnOnce() -> Result<String, String> + Send>> {
+    let (cmd, input) = (b.cmd.clone(), b.input.clone());
+    match b.kind.as_str() {
+        "exec" => Some(Box::new(move || crate::session::run_program(&cmd, None, Some(&input), false))),
+        "mcp" => {
+            let tool = b.tool.clone().unwrap_or_else(|| b.cap.clone());
+            let text = b.answers.contains(&("mcp_text".to_string(), 2));
+            let rel = b.answers.iter().map(|a| a.0.clone()).find(|r| r != "mcp_text").unwrap_or_else(|| "mcp_text".into());
+            let fields = b.fields.clone();
+            let wants: Vec<(String, serde_json::Value, Option<String>)> = b.wants.iter().zip(&b.named).zip(&b.idem).map(|((w, a), i)| (w.0.clone(), a.clone(), i.clone())).collect();
+            let auth = b.auth.clone();
+            Some(Box::new(move || crate::mcp::call(&cmd, &auth, &tool, &rel, &fields, text, &wants)))
+        }
+        "openapi" => {
+            let op = b.op.clone();
+            let rel = b.answers.iter().map(|a| a.0.clone()).find(|r| r != "http_body").unwrap_or_else(|| "http_body".into());
+            let fields = b.fields.clone();
+            let wants: Vec<(String, serde_json::Value, Option<String>)> = b.wants.iter().zip(&b.named).zip(&b.idem).map(|((w, a), i)| (w.0.clone(), a.clone(), i.clone())).collect();
+            let cap = b.cap.clone();
+            Some(Box::new(move || match op {
+                Some(op) => crate::openapi::call(&cmd, &op, &rel, &fields, &wants),
+                None => Err(format!("'{cap}' has no `http_op({cap}, Method, Path)`")),
+            }))
+        }
+        _ => None,
+    }
+}
+
+/// Records each want's outcome of a batch in the journal: the lines of the answer that name it.
+fn record_outcomes(j: &mut Journal, b: &Batch, out: &str) -> Result<(), String> {
+    for ((k, _), idem) in b.wants.iter().zip(&b.idem) {
+        if let Some(i) = idem {
+            let mine: String = out.lines().filter(|l| l.contains(&format!("({k},")) || l.contains(&format!("({k})"))).map(|l| format!("{l}\n")).collect();
+            j.write(serde_json::json!({"done": i, "out": mine}))?;
+        }
+    }
+    Ok(())
+}
+
 impl Session {
     /// The `reads` wants not yet sent, sent: a batch per capability, all at once, the answers loaded by delta. How many
     /// rows it loaded: none means the world wants nothing more.
@@ -76,11 +259,6 @@ impl Session {
     }
 
     fn send(&mut self, journal: Option<&Path>) -> Result<usize, String> {
-        let main = self.eval.v.main;
-        let rows = |s: &mut Self, rel: &str, n: usize| -> Vec<Vec<Term>> {
-            let r = s.eval.h.intern(rel);
-            s.eval.store.rel_persp(&s.eval.h, r, main).into_iter().map(|f| s.eval.store.args(f).to_vec()).filter(|a| a.len() == n).collect()
-        };
         let wants = rows(self, "want_of", 2);
         if wants.is_empty() {
             return Ok(0);
@@ -92,226 +270,21 @@ impl Session {
         }
         let permitted: HashSet<Term> = rows(self, "permit", 1).into_iter().map(|a| a[0]).collect();
         let mut book = journal.map(Journal::open).transpose()?;
-        let trust = crate::brk!("does_journal_ignored" => false; true);
-        let mut idems: HashMap<Term, String> = HashMap::new();
-        let name = |s: &Self, t: Term| -> String {
-            match t.kind() {
-                TermK::Atom(x) | TermK::Str(x) => s.eval.h.name(x).to_string(),
-                _ => s.eval.h.canon(t),
-            }
-        };
-        let caps: HashMap<String, (String, String)> = rows(self, "capability", 3).into_iter().map(|c| (name(self, c[0]), (name(self, c[1]), name(self, c[2])))).collect();
-        let adapters: HashMap<String, (String, String)> = rows(self, "adapter", 3).into_iter().map(|a| (name(self, a[0]), (name(self, a[1]), name(self, a[2])))).collect();
-        let mut arg_names: HashMap<(String, i64), (String, String)> = HashMap::new();
-        for a in rows(self, "arg", 4) {
-            if let Some(p) = a[1].as_int() {
-                arg_names.insert((name(self, a[0]), p), (name(self, a[2]), name(self, a[3])));
-            }
-        }
-        let tools: HashMap<String, String> = rows(self, "mcp_tool", 2).into_iter().map(|t| (name(self, t[0]), name(self, t[1]))).collect();
-        let mut wire: HashMap<(String, i64), String> = HashMap::new();
-        for a in rows(self, "mcp_arg", 3) {
-            if let Some(p) = a[1].as_int() {
-                wire.insert((name(self, a[0]), p), name(self, a[2]));
-            }
-        }
-        let mut places: HashMap<String, Vec<(i64, String, String)>> = HashMap::new();
-        for a in rows(self, "http_in", 4) {
-            if let Some(p) = a[1].as_int() {
-                wire.insert((name(self, a[0]), p), name(self, a[3]));
-                places.entry(name(self, a[0])).or_default().push((p, name(self, a[2]), name(self, a[3])));
-            }
-        }
-        let mut keys_of: HashMap<String, Vec<(String, String, String, String)>> = HashMap::new();
-        for a in rows(self, "http_auth", 5) {
-            keys_of.entry(name(self, a[0])).or_default().push((name(self, a[1]), name(self, a[2]), name(self, a[3]), name(self, a[4])));
-        }
-        let mut needs: HashMap<String, Vec<String>> = HashMap::new();
-        for n in rows(self, "http_needs", 2) {
-            needs.entry(name(self, n[0])).or_default().push(name(self, n[1]));
-        }
-        // the credentials a capability's calls carry, read from the environment, never from the world
-        let mut creds: HashMap<String, Result<Vec<(String, String, String)>, String>> = HashMap::new();
-        let ops: HashMap<String, (String, String)> = rows(self, "http_op", 3).into_iter().map(|o| (name(self, o[0]), (name(self, o[1]), name(self, o[2])))).collect();
-        let mut fields: HashMap<String, Vec<(i64, String)>> = HashMap::new();
-        for f in rows(self, "mcp_field", 3).into_iter().chain(rows(self, "http_field", 3)) {
-            if let Some(p) = f[1].as_int() {
-                fields.entry(name(self, f[0])).or_default().push((p, name(self, f[2])));
-            }
-        }
-        let mut answers: HashMap<String, HashSet<(String, usize)>> = HashMap::new();
-        for a in rows(self, "answers", 3) {
-            if let Some(n) = a[2].as_int() {
-                answers.entry(name(self, a[0])).or_default().insert((name(self, a[1]), n as usize));
-            }
-        }
-        let events: HashMap<String, usize> = rows(self, "event_time", 2).into_iter().filter_map(|e| Some((name(self, e[0]), e[1].as_int().filter(|c| *c > 1)? as usize))).collect();
-        let mut args: HashMap<Term, Vec<(i64, Term)>> = HashMap::new();
-        for a in rows(self, "want_arg", 3) {
-            if let Some(i) = a[1].as_int() {
-                args.entry(a[0]).or_default().push((i, a[2]));
-            }
-        }
-        let limits: HashMap<String, i64> = rows(self, "max_wants", 2).into_iter().filter_map(|m| Some((name(self, m[0]), m[1].as_int()?))).collect();
-        let templates: HashMap<String, String> = rows(self, "query", 2).into_iter().map(|q| (name(self, q[0]), name(self, q[1]))).collect();
-        let mut held = String::new();
-        let mut by_cap: BTreeMap<String, Vec<Term>> = BTreeMap::new();
-        for w in wants {
-            let (key, cap) = (w[0], name(self, w[1]));
-            let Some((adapter, class)) = caps.get(&cap) else { continue };
-            let wanted = match journal {
-                None => class == "reads" || crate::brk!("mcp_does_sent" => class == "does"; false),
-                Some(_) => class == "does" && (permitted.contains(&key) || crate::brk!("does_unpermitted_sent" => true; false)),
-            };
-            if settled.contains(&key) || !wanted {
-                continue;
-            }
-            let text = self.src(key);
-            if let Some(j) = book.as_mut() {
-                let idem = idem_key(&text, &self.book_version(adapter, &cap));
-                if let Some(out) = j.done.get(&idem).filter(|_| trust) {
-                    held.push_str(out);
-                    continue;
-                }
-                if trust && j.sent.contains(&idem) {
-                    let out = format!("outcome_unknown({text}).\n");
-                    j.write(serde_json::json!({"done": idem, "out": out}))?;
-                    held.push_str(&out);
-                    continue;
-                }
-                idems.insert(key, idem);
-            }
-            let kind = adapters.get(adapter).map(|a| a.0.as_str());
-            if matches!(kind, Some("openapi" | "mcp")) && !creds.contains_key(&cap) {
-                let declared = keys_of.get(adapter).cloned().unwrap_or_default();
-                let wanted: Vec<_> = match needs.get(&cap) {
-                    Some(n) => declared.into_iter().filter(|d| n.contains(&d.0)).collect(),
-                    None if kind == Some("mcp") => declared,
-                    None => Vec::new(),
-                };
-                let got = wanted.into_iter().map(|(scheme, how, n, env)| match std::env::var(&env).ok().filter(|v| !v.is_empty() && crate::brk!("http_key_ignored" => false; true)) {
-                    _ if how == "login" && signed_in(&n) => Ok((how, n, String::new())),
-                    _ if how == "login" => Err(format!("declared, not connected: no one has signed in to {n} here (the key of {scheme} for {adapter}): a person runs `rofl adapter login {n}`")),
-                    Some(v) => Ok((how, n, v)),
-                    None => Err(format!("declared, not connected: the environment has no {env} (the key of {scheme} for {adapter})")),
-                }).collect();
-                creds.insert(cap.clone(), got);
-            }
-            match kind {
-                Some("openapi" | "mcp") if creds[&cap].is_err() => {
-                    let why = creds[&cap].clone().unwrap_err();
-                    held.push_str(&format!("want_held({text}, {}).\n", quote(&why)));
-                }
-                Some("sql") if !cfg!(feature = "sql") => {
-                    held.push_str(&format!("want_held({text}, \"this build has no sql adapter (cargo feature `sql`)\").\n"));
-                }
-                Some("openapi") if !cfg!(feature = "net") => {
-                    held.push_str(&format!("want_held({text}, \"this build has no http (cargo feature `net`)\").\n"));
-                }
-                Some("exec" | "sql" | "mcp" | "rofl" | "openapi") => {
-                    let limit = limits.get(&cap).copied().unwrap_or(MAX_WANTS);
-                    let sent = self.sent.0.entry(cap.clone()).or_default();
-                    if *sent >= limit && crate::brk!("max_wants_ignored" => false; true) {
-                        held.push_str(&format!("want_held({text}, {}).\n", quote(&format!("over the limit of {limit} wants of {cap} an evaluation: raise it in the adapter's book, max_wants({cap}, N)"))));
-                        self.sent.1 = true;
-                        continue;
-                    }
-                    *sent += 1;
-                    if let (Some(j), Some(idem)) = (book.as_mut(), idems.get(&key)) {
-                        j.write(serde_json::json!({"sent": idem, "want": text}))?;
-                    }
-                    by_cap.entry(cap).or_default().push(key)
-                }
-                kind => {
-                    let why = kind.map_or(format!("no adapter '{adapter}' is declared (`adapter({adapter}, Kind, Address)`)"), |k| format!("an adapter of kind {k} is not built yet"));
-                    held.push_str(&format!("want_held({}, {}).\n", self.src(key), quote(&why)));
-                }
-            }
-        }
+        let adapters = AdapterBook::read(self);
+        let mut picked = self.pick(&adapters, &mut book, &settled, &permitted, wants)?;
+        let by_cap = std::mem::take(&mut picked.by_cap);
         let by_cap: Vec<(String, Vec<Term>)> = if crate::brk!("adapter_one_call_per_want" => true; false) {
             by_cap.into_iter().flat_map(|(c, ks)| ks.into_iter().map(move |k| (c.clone(), vec![k]))).collect()
         } else {
             by_cap.into_iter().collect()
         };
-        let batches: Vec<Batch> = by_cap.into_iter().map(|(cap, mut keys)| {
-            keys.sort_by_key(|k| self.src(*k));
-            let adapter = caps[&cap].0.clone();
-            let (kind, cmd) = adapters[&adapter].clone();
-            let wants: Vec<(String, Term)> = keys.iter().map(|k| (self.src(*k), *k)).collect();
-            let (mut params, mut named) = (Vec::new(), Vec::new());
-            let idem: Vec<Option<String>> = keys.iter().map(|k| idems.get(k).cloned()).collect();
-            let json_wants: Vec<serde_json::Value> = wants.iter().zip(&idem).map(|((text, k), idem)| {
-                let mut a = args.get(k).cloned().unwrap_or_default();
-                a.sort_by_key(|x| x.0);
-                params.push(a.iter().map(|(_, v)| self.json(*v)).collect());
-                let arg = |i: i64| arg_names.get(&(cap.clone(), i)).cloned().unwrap_or_else(|| (i.to_string(), String::new()));
-                let on_wire = |i: i64| wire.get(&(cap.clone(), i)).cloned().unwrap_or_else(|| arg(i).0);
-                named.push(a.iter().map(|(i, v)| (on_wire(*i), typed(self.json(*v), &arg(*i).1))).collect());
-                let by_name: serde_json::Map<String, serde_json::Value> = a.iter().map(|(i, v)| (arg(*i).0, self.json(*v))).collect();
-                match idem {
-                    Some(i) => serde_json::json!({"key": text, "args": by_name, "idempotency_key": i}),
-                    None => serde_json::json!({"key": text, "args": by_name}),
-                }
-            }).collect();
-            let version = self.book_version(&adapter, &cap);
-            let input = serde_json::json!({"capability": cap, "book_version": version, "wants": json_wants}).to_string();
-            let mut f = fields.get(&cap).cloned().unwrap_or_default();
-            f.sort();
-            let op = ops.get(&cap).map(|(method, path)| {
-                let mut p = places.get(&cap).cloned().unwrap_or_default();
-                p.sort();
-                crate::openapi::Op { method: method.clone(), path: path.clone(), places: p.into_iter().map(|(_, at, n)| (at, n)).collect(), auth: Vec::new() }
-            });
-            let auth = creds.get(&cap).and_then(|c| c.clone().ok()).unwrap_or_default();
-            let op = op.map(|o| crate::openapi::Op { auth: auth.clone(), ..o });
-            Batch {
-                answers: answers.get(&cap).cloned().unwrap_or_default(), event: events.get(&cap).copied(), template: templates.get(&cap).cloned(), tool: tools.get(&cap).cloned(), op, auth,
-                fields: f.into_iter().map(|x| x.1).collect(), cap, adapter, kind, cmd, input, params, named, idem, wants,
-            }
-        }).collect();
-        if batches.is_empty() && held.is_empty() {
+        let batches: Vec<Batch> = by_cap.into_iter().map(|(cap, keys)| self.batch(&adapters, &picked, cap, keys)).collect();
+        if batches.is_empty() && picked.held.is_empty() {
             return Ok(0);
         }
         let posted = self.post.is_some() && journal.is_none();
-        let runs: Vec<_> = batches.iter().map(|b| {
-            let (cmd, input) = (b.cmd.clone(), b.input.clone());
-            let ran: Option<Box<dyn FnOnce() -> Result<String, String> + Send>> = match b.kind.as_str() {
-                "exec" => Some(Box::new(move || crate::session::run_program(&cmd, None, Some(&input), false))),
-                "mcp" => {
-                    let tool = b.tool.clone().unwrap_or_else(|| b.cap.clone());
-                    let text = b.answers.contains(&("mcp_text".to_string(), 2));
-                    let rel = b.answers.iter().map(|a| a.0.clone()).find(|r| r != "mcp_text").unwrap_or_else(|| "mcp_text".into());
-                    let fields = b.fields.clone();
-                    let wants: Vec<(String, serde_json::Value, Option<String>)> = b.wants.iter().zip(&b.named).zip(&b.idem).map(|((w, a), i)| (w.0.clone(), a.clone(), i.clone())).collect();
-                    let auth = b.auth.clone();
-                    Some(Box::new(move || crate::mcp::call(&cmd, &auth, &tool, &rel, &fields, text, &wants)))
-                }
-                "openapi" => {
-                    let op = b.op.clone();
-                    let rel = b.answers.iter().map(|a| a.0.clone()).find(|r| r != "http_body").unwrap_or_else(|| "http_body".into());
-                    let fields = b.fields.clone();
-                    let wants: Vec<(String, serde_json::Value, Option<String>)> = b.wants.iter().zip(&b.named).zip(&b.idem).map(|((w, a), i)| (w.0.clone(), a.clone(), i.clone())).collect();
-                    let cap = b.cap.clone();
-                    Some(Box::new(move || match op {
-                        Some(op) => crate::openapi::call(&cmd, &op, &rel, &fields, &wants),
-                        None => Err(format!("'{cap}' has no `http_op({cap}, Method, Path)`")),
-                    }))
-                }
-                _ => None,
-            };
-            ran.map(|f| match self.post.as_mut().filter(|_| posted) {
-                Some(p) => {
-                    let (id, tx) = (p.next, p.tx.clone());
-                    p.next += 1;
-                    std::thread::spawn(move || {
-                        let _ = tx.send((id, f()));
-                    });
-                    Err(id)
-                }
-                None => Ok(std::thread::spawn(f)),
-            })
-        }).collect();
-        let mut src = held;
+        let runs: Vec<_> = batches.iter().map(|b| self.launch(b, posted)).collect();
+        let mut src = picked.held;
         for (b, run) in batches.into_iter().zip(runs) {
             let ran = match run {
                 Some(Ok(t)) => t.join().unwrap_or_else(|_| Err("the adapter's thread failed".into())),
@@ -324,21 +297,151 @@ impl Session {
                 None if b.kind == "rofl" => self.run_rofl(&b),
                 None => run_sql(&b),
             };
-            let b = &b;
-            let out = self.answer(b, ran);
+            let out = self.answer(&b, ran);
             if let Some(j) = book.as_mut() {
-                for ((k, _), idem) in b.wants.iter().zip(&b.idem) {
-                    let mine: String = out.lines().filter(|l| l.contains(&format!("({k},")) || l.contains(&format!("({k})"))).map(|l| format!("{l}\n")).collect();
-                    if let Some(i) = idem {
-                        j.write(serde_json::json!({"done": i, "out": mine}))?;
-                    }
-                }
+                record_outcomes(j, &b, &out)?;
             }
             src.push_str(&out);
         }
         let n = src.lines().count();
         self.load_delta(&src, None).map_err(|d| format!("an adapter's answer was refused: {}", d.join("; ")))?;
         Ok(n)
+    }
+
+    /// Picks the wants a send sends: each `reads` want not yet settled (and, through a journal, each permitted `does`
+    /// want), with the outcomes the journal already holds and the reasons a want cannot be sent held as rows.
+    fn pick(&mut self, book: &AdapterBook, journal: &mut Option<Journal>, settled: &HashSet<Term>, permitted: &HashSet<Term>, wants: Vec<Vec<Term>>) -> Result<Picked, String> {
+        let trust = crate::brk!("does_journal_ignored" => false; true);
+        let mut picked = Picked::default();
+        for w in wants {
+            let (key, cap) = (w[0], name(self, w[1]));
+            let Some((adapter, class)) = book.caps.get(&cap) else { continue };
+            let wanted = if journal.is_none() {
+                class == "reads" || crate::brk!("mcp_does_sent" => class == "does"; false)
+            } else {
+                class == "does" && (permitted.contains(&key) || crate::brk!("does_unpermitted_sent" => true; false))
+            };
+            if settled.contains(&key) || !wanted {
+                continue;
+            }
+            let text = self.src(key);
+            if let Some(j) = journal.as_mut() {
+                let idem = idem_key(&text, &self.book_version(adapter, &cap));
+                if journal_settles(j, &idem, &text, trust, &mut picked.held)? {
+                    continue;
+                }
+                picked.idems.insert(key, idem);
+            }
+            let kind = book.adapters.get(adapter).map(|a| a.0.as_str());
+            if matches!(kind, Some("openapi" | "mcp")) && !picked.creds.contains_key(&cap) {
+                let got = credentials(book, adapter, &cap, kind);
+                picked.creds.insert(cap.clone(), got);
+            }
+            match kind {
+                Some("openapi" | "mcp") if picked.creds[&cap].is_err() => {
+                    let why = picked.creds[&cap].clone().unwrap_err();
+                    want_held(&mut picked.held, &text, &why);
+                }
+                Some("sql") if !cfg!(feature = "sql") => want_held(&mut picked.held, &text, "this build has no sql adapter (cargo feature `sql`)"),
+                Some("openapi") if !cfg!(feature = "net") => want_held(&mut picked.held, &text, "this build has no http (cargo feature `net`)"),
+                Some("exec" | "sql" | "mcp" | "rofl" | "openapi") => {
+                    let limit = book.limits.get(&cap).copied().unwrap_or(MAX_WANTS);
+                    let sent = self.sent.0.entry(cap.clone()).or_default();
+                    if *sent >= limit && crate::brk!("max_wants_ignored" => false; true) {
+                        want_held(&mut picked.held, &text, &format!("over the limit of {limit} wants of {cap} an evaluation: raise it in the adapter's book, max_wants({cap}, N)"));
+                        self.sent.1 = true;
+                        continue;
+                    }
+                    *sent += 1;
+                    if let (Some(j), Some(idem)) = (journal.as_mut(), picked.idems.get(&key)) {
+                        j.write(serde_json::json!({"sent": idem, "want": text}))?;
+                    }
+                    picked.by_cap.entry(cap).or_default().push(key)
+                }
+                kind => {
+                    let why = kind.map_or(format!("no adapter '{adapter}' is declared (`adapter({adapter}, Kind, Address)`)"), |k| format!("an adapter of kind {k} is not built yet"));
+                    want_held(&mut picked.held, &text, &why);
+                }
+            }
+        }
+        Ok(picked)
+    }
+
+    /// The batch of one capability: its wants by their text, the program's input that carries them, and what it answers.
+    fn batch(&mut self, book: &AdapterBook, picked: &Picked, cap: String, mut keys: Vec<Term>) -> Batch {
+        keys.sort_by_key(|k| self.src(*k));
+        let adapter = book.caps[&cap].0.clone();
+        let (kind, cmd) = book.adapters[&adapter].clone();
+        let wants: Vec<(String, Term)> = keys.iter().map(|k| (self.src(*k), *k)).collect();
+        let idem: Vec<Option<String>> = keys.iter().map(|k| picked.idems.get(k).cloned()).collect();
+        let (mut params, mut named, mut json_wants) = (Vec::new(), Vec::new(), Vec::new());
+        for ((text, k), idem) in wants.iter().zip(&idem) {
+            let (p, n, j) = self.want_json(book, &cap, *k, text, idem.as_ref());
+            params.push(p);
+            named.push(n);
+            json_wants.push(j);
+        }
+        let version = self.book_version(&adapter, &cap);
+        let input = serde_json::json!({"capability": cap, "book_version": version, "wants": json_wants}).to_string();
+        let mut f = book.fields.get(&cap).cloned().unwrap_or_default();
+        f.sort();
+        let auth = picked.creds.get(&cap).and_then(|c| c.clone().ok()).unwrap_or_default();
+        let op = book.ops.get(&cap).map(|(method, path)| {
+            let mut p = book.places.get(&cap).cloned().unwrap_or_default();
+            p.sort();
+            crate::openapi::Op { method: method.clone(), path: path.clone(), places: p.into_iter().map(|(_, at, n)| (at, n)).collect(), auth: auth.clone() }
+        });
+        Batch {
+            answers: book.answers.get(&cap).cloned().unwrap_or_default(),
+            event: book.events.get(&cap).copied(),
+            template: book.templates.get(&cap).cloned(),
+            tool: book.tools.get(&cap).cloned(),
+            op,
+            fields: f.into_iter().map(|x| x.1).collect(),
+            auth,
+            cap,
+            adapter,
+            kind,
+            cmd,
+            input,
+            params,
+            named,
+            idem,
+            wants,
+        }
+    }
+
+    /// One want as its program reads it: its parameters in order, its named arguments as they go on the wire, and the
+    /// want itself.
+    fn want_json(&self, book: &AdapterBook, cap: &str, key: Term, text: &str, idem: Option<&String>) -> (Vec<serde_json::Value>, serde_json::Value, serde_json::Value) {
+        let mut a = book.args.get(&key).cloned().unwrap_or_default();
+        a.sort_by_key(|x| x.0);
+        let params = a.iter().map(|(_, v)| self.json(*v)).collect();
+        let arg = |i: i64| book.arg_names.get(&(cap.to_string(), i)).cloned().unwrap_or_else(|| (i.to_string(), String::new()));
+        let on_wire = |i: i64| book.wire.get(&(cap.to_string(), i)).cloned().unwrap_or_else(|| arg(i).0);
+        let named = a.iter().map(|(i, v)| (on_wire(*i), typed(self.json(*v), &arg(*i).1))).collect();
+        let by_name: serde_json::Map<String, serde_json::Value> = a.iter().map(|(i, v)| (arg(*i).0, self.json(*v))).collect();
+        let want = match idem {
+            Some(i) => serde_json::json!({"key": text, "args": by_name, "idempotency_key": i}),
+            None => serde_json::json!({"key": text, "args": by_name}),
+        };
+        (params, named, want)
+    }
+
+    /// Starts a batch's program: on a thread, or, for a post, on one that sends its answer to the post's channel.
+    fn launch(&mut self, b: &Batch, posted: bool) -> Option<Result<std::thread::JoinHandle<Result<String, String>>, u64>> {
+        let run = runner(b)?;
+        Some(match self.post.as_mut().filter(|_| posted) {
+            Some(p) => {
+                let (id, tx) = (p.next, p.tx.clone());
+                p.next += 1;
+                std::thread::spawn(move || {
+                    let _ = tx.send((id, run()));
+                });
+                Err(id)
+            }
+            None => Ok(std::thread::spawn(run)),
+        })
     }
 
     /// What has come back to the post since: each answer loaded by delta, as an evaluation would have loaded it, and
