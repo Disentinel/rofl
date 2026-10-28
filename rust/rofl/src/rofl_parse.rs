@@ -792,6 +792,53 @@ impl<'a> Parser<'a> {
         Ok(out)
     }
 
+    /// `kw rel(`: the relation a declaration names, and the words its errors begin with.
+    fn decl_open(&mut self, kw: &str) -> P<(Sym, String)> {
+        let (rel, book) = self.relbook()?;
+        let what = format!("{kw} {}", self.h.name(rel));
+        if book != Book::Bare {
+            return Err(format!("{what}: a declaration names the relation, not a book"));
+        }
+        if !self.eat_punct("lpar") {
+            return Err(format!("{what}: expected '('"));
+        }
+        Ok((rel, what))
+    }
+    /// A declaration's word, when no argument follows it: no comma, `(` or `)` after it.
+    fn at_decl_word(&self, words: &[&str]) -> bool {
+        words.iter().any(|w| self.is_word(0, w)) && !self.is_punct(1, "comma") && !self.is_punct(1, "rpar") && !self.is_punct(1, "lpar")
+    }
+    /// `[ term ',' ]* word`: the values before a declaration's operation word, and the word.
+    fn decl_op(&mut self, what: &str, words: &[&str], hint: &str) -> P<(Vec<Term>, Sym)> {
+        let mut args = Vec::new();
+        loop {
+            if self.at_decl_word(words) {
+                let s = self.bump().ok_or("declaration: end of input")?;
+                return Ok((args, self.sym(&s)));
+            }
+            args.push(self.term()?);
+            if !self.eat_punct("comma") {
+                return Err(format!("{what}: {hint}"));
+            }
+        }
+    }
+    fn decl_rpar(&mut self, what: &str) -> P<()> {
+        if !self.eat_punct("rpar") {
+            return Err(format!("{what}: `(` is not closed"));
+        }
+        Ok(())
+    }
+    fn decl_dot(&mut self, what: &str) -> P<()> {
+        if !self.eat_punct("dot") {
+            return Err(format!("{what}: the declaration has no closing dot"));
+        }
+        Ok(())
+    }
+    /// The head of a declaration, with no body and no shape yet: the caller sets the shape it declares.
+    fn decl_clause(rel: Sym, args: Vec<Term>) -> Clause {
+        Clause { head: Lit { rel, book: Book::Bare, args, tense: Tense::Now }, body: Vec::new(), lattice: None, widen: None, tag: false, dom: None, ord: None, structure: None, want: false }
+    }
+
     /// `latdecl := 'lattice' ident '(' [ term ',' ]* aggop term ')' [ 'widen' int ] '.'`
     ///
     /// `clause_at(I, D, $lattice(Op, $lit(R, $bare, A, $now)), $nil) :-
@@ -800,31 +847,10 @@ impl<'a> Parser<'a> {
     /// A word, not a keyword: it declares only when a second name follows it.
     fn lattice_decl(&mut self) -> P<Clause> {
         self.at += 1;
-        let (rel, book) = self.relbook()?;
-        if book != Book::Bare {
-            return Err(format!("lattice {}: a declaration names the relation, not a book", self.h.name(rel)));
-        }
-        if !self.eat_punct("lpar") {
-            return Err(format!("lattice {}: expected '('", self.h.name(rel)));
-        }
-        let mut args = Vec::new();
-        let op = loop {
-            if brk!("lattice_join_unread" => AGG_OPS; LATTICE_OPS).iter().any(|w| self.is_word(0, w)) && !self.is_punct(1, "comma") && !self.is_punct(1, "rpar") && !self.is_punct(1, "lpar") {
-                let s = self.bump().ok_or("lattice: end of input")?;
-                break self.sym(&s);
-            }
-            args.push(self.term()?);
-            if !self.eat_punct("comma") {
-                return Err(format!(
-                    "lattice {}: the last argument is the value, written with its operation: min D, max D, or B, and B, union S, hull I, bitor B",
-                    self.h.name(rel)
-                ));
-            }
-        };
+        let (rel, what) = self.decl_open("lattice")?;
+        let (mut args, op) = self.decl_op(&what, brk!("lattice_join_unread" => AGG_OPS; LATTICE_OPS), "the last argument is the value, written with its operation: min D, max D, or B, and B, union S, hull I, bitor B")?;
         brk!("lattice_value_dropped" => { self.term()?; }; args.push(self.term()?));
-        if !self.eat_punct("rpar") {
-            return Err(format!("lattice {}: `(` is not closed", self.h.name(rel)));
-        }
+        self.decl_rpar(&what)?;
         // `widen N`: a word, then an integer literal of at least zero
         let mut widen = None;
         if brk!("widen_unread" => false; self.is_word(0, "widen")) {
@@ -835,14 +861,12 @@ impl<'a> Parser<'a> {
                     self.at += 1;
                     int_literal(&self.text(&s), false)?
                 }
-                _ => return Err(format!("lattice {}: `widen` is followed by the number of improvements a cell makes before it is widened, an integer of at least 0", self.h.name(rel))),
+                _ => return Err(format!("{what}: `widen` is followed by the number of improvements a cell makes before it is widened, an integer of at least 0")),
             };
             widen = Some(n);
         }
-        if !self.eat_punct("dot") {
-            return Err(format!("lattice {}: the declaration has no closing dot", self.h.name(rel)));
-        }
-        Ok(Clause { head: Lit { rel, book, args, tense: Tense::Now }, body: Vec::new(), lattice: Some(op), widen, tag: false, dom: None, ord: None, structure: None, want: false })
+        self.decl_dot(&what)?;
+        Ok(Clause { lattice: Some(op), widen, ..Self::decl_clause(rel, args) })
     }
 
     /// `tagdecl := 'tag' ident '(' [ term ',' ]* tagalg term ')' '.'`
@@ -854,35 +878,12 @@ impl<'a> Parser<'a> {
     /// name follows it, so `tag(x, hot).` is still a fact.
     fn tag_decl(&mut self) -> P<Clause> {
         self.at += 1;
-        let (rel, book) = self.relbook()?;
-        if book != Book::Bare {
-            return Err(format!("tag {}: a declaration names the relation, not a book", self.h.name(rel)));
-        }
-        if !self.eat_punct("lpar") {
-            return Err(format!("tag {}: expected '('", self.h.name(rel)));
-        }
-        let mut args = Vec::new();
-        let alg = loop {
-            if TAG_ALGS.iter().any(|w| self.is_word(0, w)) && !self.is_punct(1, "comma") && !self.is_punct(1, "rpar") && !self.is_punct(1, "lpar") {
-                let s = self.bump().ok_or("tag: end of input")?;
-                break self.sym(&s);
-            }
-            args.push(self.term()?);
-            if !self.eat_punct("comma") {
-                return Err(format!(
-                    "tag {}: the last argument is the tag, written with its semiring: tropical T, viterbi P, trust T, counting N",
-                    self.h.name(rel)
-                ));
-            }
-        };
+        let (rel, what) = self.decl_open("tag")?;
+        let (mut args, alg) = self.decl_op(&what, TAG_ALGS, "the last argument is the tag, written with its semiring: tropical T, viterbi P, trust T, counting N")?;
         args.push(self.term()?);
-        if !self.eat_punct("rpar") {
-            return Err(format!("tag {}: `(` is not closed", self.h.name(rel)));
-        }
-        if !self.eat_punct("dot") {
-            return Err(format!("tag {}: the declaration has no closing dot", self.h.name(rel)));
-        }
-        Ok(Clause { head: Lit { rel, book, args, tense: Tense::Now }, body: Vec::new(), lattice: Some(alg), widen: None, tag: true, dom: None, ord: None, structure: None, want: false })
+        self.decl_rpar(&what)?;
+        self.decl_dot(&what)?;
+        Ok(Clause { lattice: Some(alg), tag: true, ..Self::decl_clause(rel, args) })
     }
 
     /// `orderdecl := ('pareto' | 'lex') ident '(' [ term ',' ]* dir term [ ',' dir term ]* ')' '.'`
@@ -893,18 +894,12 @@ impl<'a> Parser<'a> {
     /// Words, not keywords, as `lattice` is: one declares only when a second
     /// name follows it, so `lex(x).` is still a fact.
     fn order_decl(&mut self) -> P<Clause> {
-        let kind = { let s = self.bump().ok_or("order: end of input")?; self.sym(&s) };
-        let (rel, book) = self.relbook()?;
-        let what = format!("{} {}", self.h.name(kind), self.h.name(rel));
-        if book != Book::Bare {
-            return Err(format!("{what}: a declaration names the relation, not a book"));
-        }
-        if !self.eat_punct("lpar") {
-            return Err(format!("{what}: expected '('"));
-        }
-        let is_dir = |p: &Self| ["min", "max"].iter().any(|w| p.is_word(0, w)) && !p.is_punct(1, "comma") && !p.is_punct(1, "rpar") && !p.is_punct(1, "lpar");
+        let s = self.bump().ok_or("order: end of input")?;
+        let kw = self.text(&s);
+        let kind = self.sym(&s);
+        let (rel, what) = self.decl_open(&kw)?;
         let mut args = Vec::new();
-        while !is_dir(self) {
+        while !self.at_decl_word(&["min", "max"]) {
             args.push(self.term()?);
             if !self.eat_punct("comma") {
                 return Err(format!("{what}: the last arguments are the values the order compares, each written with its direction: min C, max T"));
@@ -912,7 +907,7 @@ impl<'a> Parser<'a> {
         }
         let mut dirs = Vec::new();
         loop {
-            if !is_dir(self) {
+            if !self.at_decl_word(&["min", "max"]) {
                 return Err(format!("{what}: every value after the key is written with its direction, min or max, then its variable"));
             }
             let s = self.bump().ok_or("order: end of input")?;
@@ -922,13 +917,9 @@ impl<'a> Parser<'a> {
                 break;
             }
         }
-        if !self.eat_punct("rpar") {
-            return Err(format!("{what}: `(` is not closed"));
-        }
-        if !self.eat_punct("dot") {
-            return Err(format!("{what}: the declaration has no closing dot"));
-        }
-        Ok(Clause { head: Lit { rel, book, args, tense: Tense::Now }, body: Vec::new(), lattice: Some(kind), widen: None, tag: false, dom: None, ord: Some(dirs), structure: None, want: false })
+        self.decl_rpar(&what)?;
+        self.decl_dot(&what)?;
+        Ok(Clause { lattice: Some(kind), ord: Some(dirs), ..Self::decl_clause(rel, args) })
     }
 
     /// `structdecl := 'function' ident '(' [ role ] term [ ',' [ role ] term ]* ')' '.'`
@@ -940,27 +931,19 @@ impl<'a> Parser<'a> {
     /// name follows it, so `function(x).` is still a fact. An argument without
     /// a role is part of the key.
     fn structure_decl(&mut self, words: &'static [&'static str]) -> P<Clause> {
-        let kind = { let s = self.bump().ok_or("structure: end of input")?; self.sym(&s) };
-        let (rel, book) = self.relbook()?;
-        let what = format!("{} {}", self.h.name(kind), self.h.name(rel));
-        if book != Book::Bare {
-            return Err(format!("{what}: a declaration names the relation, not a book"));
-        }
-        if !self.eat_punct("lpar") {
-            return Err(format!("{what}: expected '('"));
-        }
-        let is_role = |p: &Self| words.iter().any(|w| p.is_word(0, w)) && !p.is_punct(1, "comma") && !p.is_punct(1, "rpar") && !p.is_punct(1, "lpar");
+        let s = self.bump().ok_or("structure: end of input")?;
+        let kw = self.text(&s);
+        let kind = self.sym(&s);
+        let (rel, what) = self.decl_open(&kw)?;
         let (mut args, mut roles) = (Vec::new(), Vec::new());
         loop {
-            roles.push(if is_role(self) { let s = self.bump().ok_or("structure: end of input")?; Some(self.sym(&s)) } else { None });
+            roles.push(if self.at_decl_word(words) { let s = self.bump().ok_or("structure: end of input")?; Some(self.sym(&s)) } else { None });
             args.push(self.term()?);
             if !self.eat_punct("comma") {
                 break;
             }
         }
-        if !self.eat_punct("rpar") {
-            return Err(format!("{what}: `(` is not closed"));
-        }
+        self.decl_rpar(&what)?;
         let mut closure = None;
         if self.is_word(0, "closure") {
             self.bump();
@@ -982,10 +965,8 @@ impl<'a> Parser<'a> {
             }
             source = Some(l);
         }
-        if !self.eat_punct("dot") {
-            return Err(format!("{what}: the declaration has no closing dot"));
-        }
-        Ok(Clause { head: Lit { rel, book, args, tense: Tense::Now }, body: Vec::new(), lattice: None, widen: None, tag: false, dom: None, ord: None, structure: Some(Structure { kind, roles, closure, source }), want: false })
+        self.decl_dot(&what)?;
+        Ok(Clause { structure: Some(Structure { kind, roles, closure, source }), ..Self::decl_clause(rel, args) })
     }
 
     /// `domrule := lit '<=' lit ':-' body '.'` (docs/aggregates.md,
