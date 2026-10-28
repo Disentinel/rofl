@@ -339,18 +339,18 @@ impl Eval {
             for id in self.store.rel_all(&self.h, rel) {
                 if self.store.alive(id) && self.store.arity(id) == n {
                     let key: Box<[Term]> = self.store.args(id)[..n - 1].into();
-                    self.lat_cur.insert((rel, self.store.rec(id).persp, key), id);
+                    self.lat.cur.insert((rel, self.store.rec(id).persp, key), id);
                 }
             }
-            self.lat_closed.insert(rel);
+            self.lat.closed.insert(rel);
         }
         let ids = if self.lattices.is_empty() { Vec::new() } else { self.store.firing_keys() };
         for id in ids.into_iter().filter(|id| !self.store.alive(*id)) {
             let r = self.store.rec(id);
             if let Some(&(n, _)) = self.lattices.get(&r.rel).filter(|(n, _)| self.store.arity(id) == *n) {
-                self.lat_superseded.insert(id);
+                self.lat.superseded.insert(id);
                 let key: Box<[Term]> = self.store.args(id)[..n - 1].into();
-                self.lat_history.entry((r.rel, r.persp, key)).or_default().push(id);
+                self.lat.history.entry((r.rel, r.persp, key)).or_default().push(id);
             }
         }
         true
@@ -1268,7 +1268,7 @@ impl Eval {
                 }
             }
         }
-        if from.is_empty() && self.shrug_readers.is_empty() && !self.reads_unknown {
+        if from.is_empty() && self.shrug_readers.is_empty() && !self.unk.reads_unknown {
             return from;
         }
         from.extend([self.v.shrug, self.v.unknown, self.v.hole]);
@@ -1497,15 +1497,15 @@ impl Eval {
             }
         }
         forced.sort_unstable();
-        let mut ghosts: Vec<FactId> = self.lat_superseded.iter().copied().filter(|g| joins.contains(&self.store.rec(*g).rel)).collect();
+        let mut ghosts: Vec<FactId> = self.lat.superseded.iter().copied().filter(|g| joins.contains(&self.store.rec(*g).rel)).collect();
         ghosts.sort_unstable();
         for g in ghosts {
-            self.lat_superseded.remove(&g);
+            self.lat.superseded.remove(&g);
             self.store.drop_firings(g);
         }
-        self.lat_history.retain(|k, _| !joins.contains(&k.0));
-        self.join_contribs.retain(|k, _| !joins.contains(&k.0));
-        for rel in joins.iter().filter_map(|l| self.join_rels.get(l).copied()).collect::<Vec<_>>() {
+        self.lat.history.retain(|k, _| !joins.contains(&k.0));
+        self.lat.join_contribs.retain(|k, _| !joins.contains(&k.0));
+        for rel in joins.iter().filter_map(|l| self.lat.join_rels.get(l).copied()).collect::<Vec<_>>() {
             for id in self.store.rel_all(&self.h, rel) {
                 if brk!("add_join_contribs_kept" => false; self.store.alive(id)) {
                     self.retire_fact(id);
@@ -1553,23 +1553,23 @@ impl Eval {
             self.support_ix = None;
         }
         for l in &lats {
-            self.lat_closed.remove(l);
+            self.lat.closed.remove(l);
         }
         // what the evaluation kept of the values a subsumptive key was given goes with its facts
         if lats.iter().any(|l| self.subs.contains_key(l)) {
-            self.sub_cur.retain(|k, _| !lats.contains(&k.0));
-            self.sub_seen.retain(|k, _| !lats.contains(&k.0));
-            self.sub_memo.retain(|k, _| !lats.contains(&k.0));
-            self.sub_parties.retain(|k, _| !lats.contains(&k.0));
-            self.sub_seen_set.retain(|(k, _), _| !lats.contains(&k.0));
-            self.sub_beaten.retain(|(k, _), _| !lats.contains(&k.0));
-            self.sub_prems.retain(|(k, _), _| !lats.contains(&k.0));
-            self.sub_by.retain(|(k, _), _| !lats.contains(&k.0));
+            self.lat.sub_cur.retain(|k, _| !lats.contains(&k.0));
+            self.lat.sub_seen.retain(|k, _| !lats.contains(&k.0));
+            self.lat.sub_memo.retain(|k, _| !lats.contains(&k.0));
+            self.lat.sub_parties.retain(|k, _| !lats.contains(&k.0));
+            self.lat.sub_seen_set.retain(|(k, _), _| !lats.contains(&k.0));
+            self.lat.sub_beaten.retain(|(k, _), _| !lats.contains(&k.0));
+            self.lat.sub_prems.retain(|(k, _), _| !lats.contains(&k.0));
+            self.lat.sub_by.retain(|(k, _), _| !lats.contains(&k.0));
             let store = &self.store;
-            self.sub_by_of.retain(|f, _| store.alive(*f));
+            self.lat.sub_by_of.retain(|f, _| store.alive(*f));
         }
         let store = &self.store;
-        self.lat_cur.retain(|_, id| store.alive(*id));
+        self.lat.cur.retain(|_, id| store.alive(*id));
         let outer = (self.steps, self.rows);
         self.steps = 0;
         let holes0 = self.store.rel_count(self.v.hole);
@@ -1590,10 +1590,10 @@ impl Eval {
             }
             let mut rd = Delta::default();
             ambiguous = self.restage(&staged, &mut rd)?;
-            if self.store.rel_count(self.v.hole) > holes0 || !self.lat_pending.is_empty() {
+            if self.store.rel_count(self.v.hole) > holes0 || !self.lat.pending.is_empty() {
                 return Err(Halt::Bug("an addition wrote a hole".into()));
             }
-            if self.lat_superseded.iter().any(|g| lats.contains(&self.store.rec(*g).rel) && !joins.contains(&self.store.rec(*g).rel)) {
+            if self.lat.superseded.iter().any(|g| lats.contains(&self.store.rec(*g).rel) && !joins.contains(&self.store.rec(*g).rel)) {
                 return Err(Halt::Bug("a lattice delta kept a history".into()));
             }
             Ok(())

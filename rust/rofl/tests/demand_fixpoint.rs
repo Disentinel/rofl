@@ -155,7 +155,7 @@ fn a_strongly_connected_ring_iterates_together() {
     let names = s.eval.h.syms.bytes();
     let (ev, secs) = run(&mut s);
     let grown = s.eval.h.syms.bytes() - names;
-    let unfolded = s.eval.demand_unfolded;
+    let unfolded = s.eval.demand.unfolded;
     eprintln!("ring of {n}: {} steps, {grown} bytes of names, {unfolded} calls unfolded, {secs:.2} s", ev.steps);
     assert!(!ev.partial, "the evaluation was cut");
     assert_eq!(s.ask("t_r(Y, W)").unwrap().rows.len(), 2 * n);
