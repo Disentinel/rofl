@@ -459,6 +459,8 @@ pub struct R {
     fresh_n: usize,
     bad_term: Option<String>,
     pub dropped: Vec<String>,
+    /// the lines [from, to) of each run of blocks read as sentences
+    pub spans: Vec<(usize, usize)>,
     /// the relations of the rules left out, which a rule of the text concludes and no loaded one does
     pub left_out: Vec<String>,
     promised: Vec<(String, String)>,
@@ -535,7 +537,7 @@ impl R {
         let set_rels = rx::each(r"(?m)^kind_set\((\w+)\)", vocab).iter().map(|m| g(m, 1).to_string()).collect();
         let mut r = R {
             kind_noun, guard_of, noun_guards: OMap::default(), nouns, templates, fun_templates, collisions, set_rels, used_here: HashSet::new(),
-            noun_atoms: OMap::default(), noun_sets: OMap::default(), subject_var: None, fresh_n: 0, bad_term: None, dropped: vec![], left_out: vec![], promised: vec![],
+            noun_atoms: OMap::default(), noun_sets: OMap::default(), subject_var: None, fresh_n: 0, bad_term: None, dropped: vec![], spans: vec![], left_out: vec![], promised: vec![],
             plurals: HashMap::new(), plurals_of: usize::MAX, ambiguous: vec![], known: HashMap::new(), unparsed: vec![], fresh_names: HashSet::new(), agg_why: None,
             rules: vec![], parsed_facts: vec![], declared: vec![], imported: HashSet::new(), bad_alternatives: vec![], head_book: HashMap::new(),
             home_book: HashMap::new(), home_books: home_books.clone(), default_book: "main".into(), cur_book: "main".into(), block_set: false,
@@ -1534,7 +1536,11 @@ impl R {
         }
         self.md_lines = md.split('\n').map(str::to_string).collect();
         let mut i = 0;
+        let (mut from, mut taken) = (0, false);
+        let last = blocks.len().saturating_sub(1);
         while i < blocks.len() {
+            if taken { self.spans.push((blocks[from].at.unwrap(), blocks[(i - 1).min(last)].end.unwrap())); }
+            from = i; taken = false;
             let b = blocks[i].clone();
             let next = blocks.get(i + 1).cloned();
             let nty = next.as_ref().map(|n| n.ty);
@@ -1549,6 +1555,7 @@ impl R {
                 if nty.is_some_and(|t| t != Ty::P && t != Ty::H) { i += 1; }
                 continue;
             }
+            taken = true;
             if let Some(m) = rx::exec(r"^In the (\w+):$", &text) { self.cur_book = g(&m, 1).into(); self.block_set = true; continue; }
             if self.declaration(&text) || self.dominance(&text) { continue; }
             if text == "Reads:" && nty == Some(Ty::Ul) {
@@ -1656,8 +1663,9 @@ impl R {
                 i += 1;
                 continue;
             }
-            if text.ends_with('.') { self.rule_text(&text, None); }
+            if text.ends_with('.') { self.rule_text(&text, None); } else { taken = false; }
         }
+        if taken { self.spans.push((blocks[from].at.unwrap(), blocks[(i - 1).min(last)].end.unwrap())); }
         self.output();
     }
 

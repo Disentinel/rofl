@@ -28,7 +28,7 @@ export function engineOf(name: EngineName = 'rust'): Engine {
 
 /** `rofl serve` in a child process, spoken to synchronously: a request waits on a thread that holds the child. One child for every engine of a process. */
 let engine: ((req: Record<string, unknown>) => Record<string, any>) | undefined;
-function serve(bin: string) {
+export function serve(bin: string) {
   if (engine) return engine;
   const { port1, port2 } = new MessageChannel(), flag = new Int32Array(new SharedArrayBuffer(4));
   new Worker(new URL('./rust-worker.ts', import.meta.url), { workerData: { port: port2, flag, bin }, transferList: [port2] }).unref();

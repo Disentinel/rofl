@@ -72,6 +72,9 @@
 //!   {"op":"close","session":2}
 //!   {"op":"fresh","budget":n}                  -> {"session":n}: an empty world, no seed; `load` fills it
 //!   {"op":"facts","session":2}                 -> {"facts":n,"tick":t}
+//!   {"op":"spans","text":"..."}                -> {"spans":[[a,b],...]}: no session; the lines [a,b), from 0, of a
+//!                                                        `.rofl.md` the reader reads as sentences, and each line of
+//!                                                        its prose that asks (md `sentence_spans`)
 //!
 //! A LEVEL AT A TIME, for workers that meet between levels (tests/level_wall.rs):
 //!   {"op":"evaluate","session":2,"wall":L}     -> evaluated up to level L; "next" is the level it stopped before
@@ -257,6 +260,10 @@ impl Server {
                 let facts = s.eval.store.fact_count();
                 let id = self.keep(s);
                 Ok(json!({ "session": id, "facts": facts, "dangling": 0 }))
+            }
+            "spans" => {
+                let text = r.get("text").and_then(|v| v.as_str()).ok_or("spans needs `text`")?;
+                Ok(json!({ "spans": rofl::md::sentence_spans(text) }))
             }
             "load" => self.op_load(r),
             "cool" => self.op_cool(r),
