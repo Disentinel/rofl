@@ -98,12 +98,12 @@ impl Eval {
     /// store, no news) when it is cheaper than the written order for `n` news
     /// rows; None keeps the written order.
     fn plan_key(&self, r: &Rc<ERule>, at: Option<usize>) -> (Sym, usize) {
-        (r.id, at.unwrap_or(usize::MAX >> 1) | if self.adding { 1 << 62 } else { 0 })
+        (r.id, at.unwrap_or(usize::MAX >> 1) | if self.add.adding { 1 << 62 } else { 0 })
     }
 
     /// A plan can start from the news at `at`: when `delta_pick` still found none, the written order is the cheaper.
     pub(super) fn plannable(&self, r: &Rc<ERule>, at: usize) -> bool {
-        matches!(self.delta_plans.get(&self.plan_key(r, Some(at))), Some(Slot::Plan(_)))
+        matches!(self.add.delta_plans.get(&self.plan_key(r, Some(at))), Some(Slot::Plan(_)))
     }
 
     pub(super) fn delta_pick(&mut self, r: &Rc<ERule>, at: Option<usize>, n: usize) -> Option<Rc<DeltaPlan>> {
@@ -114,7 +114,7 @@ impl Eval {
         }
         let key = self.plan_key(r, at);
         self.vrefresh();
-        let fresh = match self.delta_plans.get(&key) {
+        let fresh = match self.add.delta_plans.get(&key) {
             Some(Slot::No) => return None,
             Some(Slot::Plan(p)) => p.watch.iter().all(|&(rel, persp, then)| !stale(self.len_est(rel, persp), then)),
             None => false,
@@ -124,9 +124,9 @@ impl Eval {
                 Some(p) => Slot::Plan(Rc::new(p)),
                 None => Slot::No,
             };
-            self.delta_plans.insert(key, slot);
+            self.add.delta_plans.insert(key, slot);
         }
-        let Some(Slot::Plan(p)) = self.delta_plans.get(&key) else { return None };
+        let Some(Slot::Plan(p)) = self.add.delta_plans.get(&key) else { return None };
         let n = n as f64;
         let written = if at.is_none() {
             p.pre
@@ -159,8 +159,8 @@ impl Eval {
             && r.plan.len() >= 2
             && r.plan.iter().all(|b| match b {
                 BodyElem::Pos(_) => true,
-                BodyElem::Neg(l) => !self.demand_rels.iter().any(|(d, _)| *d == l.rel),
-                BodyElem::Bi { .. } => self.adding,
+                BodyElem::Neg(l) => !self.demand.rels.iter().any(|(d, _)| *d == l.rel),
+                BodyElem::Bi { .. } => self.add.adding,
                 BodyElem::Agg(_) => false,
             })
     }
@@ -207,9 +207,9 @@ impl Eval {
         // most one row for a bound key: a premise whose key is bound, by a constant or a variable, is one
         // match per binding and needs no pass over its rows to say so. Per book, so only a premise that
         // names its book.
-        if let (Some(fk), Some(_)) = (self.function_keys.get(&l.rel), persp) {
+        if let (Some(fk), Some(_)) = (self.ds.function_keys.get(&l.rel), persp) {
             if !vpos.is_empty() && fk.iter().all(|k| cpos.contains(k) || vpos.contains(k)) {
-                self.promise_stats += 1;
+                self.ds.promise_stats += 1;
                 let size = self.store.rel_len_est(l.rel, persp);
                 return Stat { rows: size as f64, fan: if size == 0 { 0.0 } else { 1.0 } };
             }
@@ -222,13 +222,13 @@ impl Eval {
         key.push(u64::MAX);
         key.extend(vpos.iter().map(|&p| p as u64));
         let size = self.len_est(l.rel, persp);
-        let (rows, distinct) = match self.delta_stats.get(&key) {
+        let (rows, distinct) = match self.add.delta_stats.get(&key) {
             Some(&(then, rows, d)) if !stale(size, then) => (rows, d),
             _ => {
                 let t = std::time::Instant::now();
                 let (rows, d) = self.store.probe_stats(&self.h, l.rel, persp, &cpos, &cvals, &vpos);
-                self.delta_ns += t.elapsed().as_nanos() as u64;
-                self.delta_stats.insert(key, (size, rows, d));
+                self.add.delta_ns += t.elapsed().as_nanos() as u64;
+                self.add.delta_stats.insert(key, (size, rows, d));
                 (rows, d)
             }
         };
@@ -239,11 +239,11 @@ impl Eval {
     /// The counts `delta_stat` took, kept with a volume: an edit to a world opened from disk plans from them instead
     /// of counting each relation it reaches again, whole.
     pub(crate) fn write_stats(&self, w: &mut crate::arena::VolW) {
-        let mut ks: Vec<&Vec<u64>> = self.delta_stats.keys().collect();
+        let mut ks: Vec<&Vec<u64>> = self.add.delta_stats.keys().collect();
         ks.sort_unstable();
         let mut flat: Vec<u64> = Vec::new();
         for k in ks {
-            let (then, rows, d) = self.delta_stats[k];
+            let (then, rows, d) = self.add.delta_stats[k];
             flat.push(k.len() as u64);
             flat.extend(k);
             flat.extend([then as u64, rows as u64, d as u64]);
@@ -257,7 +257,7 @@ impl Eval {
         while i < flat.len() {
             let n = flat[i] as usize;
             let k = flat.get(i + 1..i + 1 + n + 3).ok_or("a volume's planner counts are cut short")?;
-            self.delta_stats.insert(k[..n].to_vec(), (k[n] as usize, k[n + 1] as usize, k[n + 2] as usize));
+            self.add.delta_stats.insert(k[..n].to_vec(), (k[n] as usize, k[n + 1] as usize, k[n + 2] as usize));
             i += 1 + n + 3;
         }
         Ok(())

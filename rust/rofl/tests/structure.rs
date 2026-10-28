@@ -51,8 +51,8 @@ fn a_declaration_changes_no_fact_and_the_planner_reads_its_promise() {
     let (a, b) = (plain.eval.store.canonical_state(&plain.eval.h), declared.eval.store.canonical_state(&declared.eval.h));
     assert_ne!(a, b, "the declaration is two kernel rows");
     assert_eq!(without_declaration(&a), without_declaration(&b), "a declaration changed a fact");
-    assert_eq!(plain.eval.promise_stats, 0, "no promise was declared");
-    assert!(declared.eval.promise_stats > 0, "the planner counted rows where the key was promised");
+    assert_eq!(plain.eval.ds.promise_stats, 0, "no promise was declared");
+    assert!(declared.eval.ds.promise_stats > 0, "the planner counted rows where the key was promised");
 }
 
 #[test]

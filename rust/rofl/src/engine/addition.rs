@@ -206,13 +206,13 @@ impl Eval {
                 v.sort_unstable();
                 v
             },
-            demand: sorted(self.demand_rels.iter().map(|(r, _)| *r).collect()),
+            demand: sorted(self.demand.rels.iter().map(|(r, _)| *r).collect()),
             late: sorted(self.answer.late.clone()),
             shrugs: sorted(self.shrug_readers.iter().copied().collect()),
-            decl: (self.well_founded, self.no_provenance, self.no_witness),
-            functions: self.functions.clone(),
-            trees: self.trees.clone(),
-            closures: self.vclosures.iter().map(|c| c.rel).collect(),
+            decl: (self.well_founded, self.prov.no_provenance, self.prov.no_witness),
+            functions: self.ds.functions.clone(),
+            trees: self.ds.trees.clone(),
+            closures: self.vc.vclosures.iter().map(|c| c.rel).collect(),
             cone: self.cone.as_ref().map(|c| sorted(c.iter().copied().collect())),
             carried: sorted(self.carried.values().copied().collect()),
         }
@@ -229,8 +229,8 @@ impl Eval {
         if was.functions.iter().any(|f| !now.functions.contains(f)) || was.trees.iter().any(|t| !now.trees.contains(t)) {
             out.push("a function or tree declaration left the world");
         }
-        self.unjudged.extend(now.functions.iter().filter(|f| !was.functions.contains(f)).cloned());
-        self.unjudged_trees.extend(now.trees.iter().filter(|t| !was.trees.contains(t)).cloned());
+        self.ds.unjudged.extend(now.functions.iter().filter(|f| !was.functions.contains(f)).cloned());
+        self.ds.unjudged_trees.extend(now.trees.iter().filter(|t| !was.trees.contains(t)).cloned());
         if was.rules.iter().any(|(id, (canon, _))| now.rules.get(id).map(|x| &x.0) != Some(canon)) {
             out.push("a rule of the world changed or left it");
         }
@@ -374,7 +374,7 @@ impl Eval {
         if brk!("add_seal_hole_refused" => self.store.rel_count(self.v.hole); self.holes_beyond_faults()) > 0 {
             out.push("the world holds a hole or reads a shrug");
         }
-        if !self.demand_rels.is_empty() && !self.lattices.is_empty() {
+        if !self.demand.rels.is_empty() && !self.lattices.is_empty() {
             out.push("a world with a lattice holds a relation answered on demand");
         }
         let ledgers = [
@@ -390,7 +390,7 @@ impl Eval {
         if self.rules.iter().any(|r| reads(r, &ledger).0) {
             out.push("a rule reads the ledger of cells, provenance or assertions");
         }
-        if !self.ds_comps.is_empty() {
+        if !self.ds.comps.is_empty() {
             out.push("a component is stratified by its data");
         }
         out
@@ -418,7 +418,7 @@ impl Eval {
         let moved = if new_rules.is_empty() { HashSet::new() } else { self.rerank()? };
         let d = self.add_worked_out(added, &[], &fresh, &grown, &moved, called)?;
         // a closure declared by the addition lists its rows from now on
-        if self.vany && !self.store.vlisted {
+        if self.vc.any && !self.store.vlisted {
             self.vpublish();
         }
         Ok(d)
@@ -430,7 +430,7 @@ impl Eval {
         if !self.store.has_citers() {
             self.store.index_citers();
         }
-        if self.vany && self.store.vciters.is_none() {
+        if self.vc.any && self.store.vciters.is_none() {
             self.vindex_citers();
         }
     }
@@ -454,10 +454,10 @@ impl Eval {
         if brk!("retract_tree_refused" => from.iter().any(|r| self.vedges_reached(*r)); false) {
             why.push("the fact reaches the edges of a closure answered from its tree, which a retraction builds again");
         }
-        if from.iter().any(|r| self.demand_rels.iter().any(|(d, _)| d == r)) {
+        if from.iter().any(|r| self.demand.rels.iter().any(|(d, _)| d == r)) {
             why.push("read on demand");
         }
-        if self.no_witness {
+        if self.prov.no_witness {
             why.push("the world keeps no witness, so nothing says which facts lose their last support");
         }
         if !why.is_empty() {
@@ -470,7 +470,7 @@ impl Eval {
         if !self.store.has_citers() {
             self.store.index_citers();
         }
-        if self.vany && self.store.vciters.is_none() {
+        if self.vc.any && self.store.vciters.is_none() {
             self.vindex_citers();
         }
         self.store.remove_many(&all);
@@ -553,8 +553,8 @@ impl Eval {
                 while !front.keys.is_empty() {
                     self.live_front = front.by_rel.keys().copied().collect();
                     self.cur_front = Front::default();
-                    self.thr_round += 1;
-                    self.thr_fresh.clear();
+                    self.thr.round += 1;
+                    self.thr.fresh.clear();
                     for r in rules {
                         if whole.iter().any(|w| w.id == r.id) {
                             continue;
@@ -638,7 +638,7 @@ impl Eval {
                     let dead: HashSet<FactId> = firings.iter().flat_map(|(_, _, ps)| ps.iter()).filter(|p| gone(p)).filter_map(|p| if let PremRef::Fact(g) = p { Some(*g) } else { None }).collect();
                     self.withdraw_unswept(&[x], |_, ps| ps.iter().any(|p| matches!(p, PremRef::Fact(g) if dead.contains(g))));
                     d.kept += 1;
-                    self.add_kept.entry(x).or_default().extend(dead);
+                    self.add.kept.entry(x).or_default().extend(dead);
                     judged.insert(x);
                     continue;
                 }
@@ -739,7 +739,7 @@ impl Eval {
     /// news of every level below, and what this level made, fires the rules of the level semi-naively.
     #[allow(clippy::too_many_arguments)]
     fn fine_levels(&mut self, added: &[FactId], removed: &[FactId], mono: &[Rc<ERule>], negs: &[(Rc<ERule>, Vec<NegAt>)], fresh: &[Rc<ERule>], recompute: &[Rc<ERule>], keyable: &HashSet<Sym>, grown: &HashSet<Sym>, dirty: &HashSet<Sym>, skip: &HashSet<Sym>, d: &mut AddDelta) -> Result<(), Halt> {
-        self.add_kept.clear();
+        self.add.kept.clear();
         self.heights_kept.clear();
         let mut levels: std::collections::BTreeSet<i64> = mono.iter().chain(fresh).chain(recompute).chain(negs.iter().map(|(r, _)| r)).map(|r| self.rule_level(r)).collect();
         levels.extend(grown.iter().filter(|r| !dirty.contains(r)).map(|r| self.rel_level(*r)));
@@ -756,9 +756,9 @@ impl Eval {
             news.note(self.store.rec(*f).rel, *f);
         }
         // a base fact put over a derived one stands lower now, and so may what rests on it
-        self.add_heights = self.rels_below(self.rules.iter().filter(|r| keyable.contains(&r.id)));
-        self.add_refired = added.iter().copied().filter(|f| self.store.support_count(*f) > 0).collect();
-        self.add_mark = self.store.len_ids();
+        self.add.heights = self.rels_below(self.rules.iter().filter(|r| keyable.contains(&r.id)));
+        self.add.refired = added.iter().copied().filter(|f| self.store.support_count(*f) > 0).collect();
+        self.add.mark = self.store.len_ids();
         // the facts withdrawn and made again at a level, which a cell above may list
         let mut touched: HashSet<FactId> = HashSet::new();
         let mut over: HashSet<FactId> = HashSet::new();
@@ -767,7 +767,7 @@ impl Eval {
         // A RETRACTION is the base facts `removed` gone (the caller took them out): each is overdeleted, and what rests
         // on it through each other, and at its level derived again where a rule still makes it
         if !removed.is_empty() {
-            let mut seeds: Vec<FactId> = std::mem::take(&mut self.retract_seeds);
+            let mut seeds: Vec<FactId> = std::mem::take(&mut self.add.retract_seeds);
             for &f in removed {
                 over.insert(f);
                 if brk!("retract_set_unpropagated" => false; true) {
@@ -944,7 +944,7 @@ impl Eval {
                 let kept_here: Vec<FactId> = {
                     let store = &self.store;
                     let mut v: Vec<FactId> = self
-                        .add_kept
+                        .add.kept
                         .iter()
                         .filter(|(x, lost)| store.alive(**x) && self.rel_level(store.rec(**x).rel) == lv && lost.iter().any(|g| store.alive(*g)))
                         .map(|(x, _)| *x)
@@ -1009,7 +1009,7 @@ impl Eval {
             }
             // an edge of a tree gone for good leaves the tree: its tree is built again, and what cited a row of it that
             // no longer holds goes, at the levels above
-            if !removed.is_empty() && self.vany {
+            if !removed.is_empty() && self.vc.any {
                 edges_gone.sort_unstable();
                 let (seeds, touched) = self.vretract_edges(&edges_gone);
                 self.vretract_done(&touched);
@@ -1017,11 +1017,11 @@ impl Eval {
             }
         }
         // (a threshold closed after the levels makes facts the news does not hold)
-        self.add_fresh = self.thr_open.is_empty().then(|| news.keys.iter().copied().collect());
-        while !self.thr_open.is_empty() {
-            let open = self.thr_open.len();
+        self.add.fresh = self.thr.open.is_empty().then(|| news.keys.iter().copied().collect());
+        while !self.thr.open.is_empty() {
+            let open = self.thr.open.len();
             self.close_thresholds_below(i64::MAX, true)?;
-            if self.thr_open.len() >= open {
+            if self.thr.open.len() >= open {
                 break;
             }
         }
@@ -1063,10 +1063,10 @@ impl Eval {
     /// it matches leaves a variable of the key free) or the key is not the head's. A fact below that may stand lower than
     /// it did names the keys of the members resting on it (a cell lists its members' heights).
     fn agg_keys(&mut self, r: &ERule, lv: i64, news: &Front, changed: &HashSet<FactId>) -> Option<Vec<Subst>> {
-        if !self.ds_elems.is_empty() {
+        if !self.ds.elems.is_empty() {
             return None;
         }
-        let lower: Vec<FactId> = self.add_refired.iter().copied().filter(|f| !changed.contains(f) && self.rel_level(self.store.rec(*f).rel) < lv).collect();
+        let lower: Vec<FactId> = self.add.refired.iter().copied().filter(|f| !changed.contains(f) && self.rel_level(self.store.rec(*f).rel) < lv).collect();
         let mut key: Option<Vec<Sym>> = None;
         let mut lits: Vec<&Lit> = Vec::new();
         for b in &r.plan {
@@ -1098,7 +1098,7 @@ impl Eval {
         }
         let key = key?;
         let rels: HashSet<Sym> = lits.iter().map(|l| l.rel).collect();
-        if lits.iter().any(|l| l.temporal != Temporal::Now || self.lattices.contains_key(&l.rel)) || key.iter().any(|v| !r.clause.head.args.contains(&Term::var(*v))) || self.vclosures.iter().any(|c| rels.contains(&c.rel)) {
+        if lits.iter().any(|l| l.temporal != Temporal::Now || self.lattices.contains_key(&l.rel)) || key.iter().any(|v| !r.clause.head.args.contains(&Term::var(*v))) || self.vc.vclosures.iter().any(|c| rels.contains(&c.rel)) {
             return None;
         }
         let mut facts: Vec<FactId> = news.by_rel.iter().filter(|(rel, _)| rels.contains(rel)).flat_map(|(_, ids)| ids.iter().copied()).collect();
@@ -1295,7 +1295,7 @@ impl Eval {
         let stratified = |r: &ERule| r.has_neg || r.has_agg || r.has_thr || !r.lattice_outer.is_empty() || r.demand_strict;
         // A RELATION ANSWERED ON DEMAND makes a fact for every call, which no firing cites: every such fact goes and
         // every rule that reads one fires again, so the calls are made again over what stands (as a retraction does)
-        let demanded: HashSet<Sym> = self.demand_rels.iter().map(|(r, _)| *r).collect();
+        let demanded: HashSet<Sym> = self.demand.rels.iter().map(|(r, _)| *r).collect();
         // a relation answered on demand before and not now (or the reverse) holds what calls made: it goes too
         // (one the change reaches neither through its own rules nor through a rule that calls it holds the same calls,
         // answered the same, and stays)
@@ -1480,7 +1480,7 @@ impl Eval {
             return Err("a dominance rule reads what changed");
         }
         // a world that keeps no witness has no firing to name what a fact rests on: only the monotone part is kept
-        if self.no_witness && (!reset.is_empty() || !negs.is_empty() || !call_rels.is_empty()) {
+        if self.prov.no_witness && (!reset.is_empty() || !negs.is_empty() || !call_rels.is_empty()) {
             return Err("the world keeps no witness, and what a negation or an aggregate withdraws is found through the firings");
         }
         // every fact of a reset rule's head goes, and what rests on it
@@ -1575,8 +1575,8 @@ impl Eval {
         let holes0 = self.store.rel_count(self.v.hole);
         let active = std::mem::take(&mut self.active);
         let mut ambiguous = false;
-        self.adding = true;
-        self.add_fresh = None;
+        self.add.adding = true;
+        self.add.fresh = None;
         let r = (|| -> Result<(), Halt> {
             // the part kept, level by level: the news through the rules that read it, the added plain rules whole, and
             // under a negation the firings a new fact blocks withdrawn, what rested on them derived again
@@ -1586,7 +1586,7 @@ impl Eval {
             // the rest, as a full evaluation fires it
             self.refire(&again, &[])?;
             if !again.is_empty() || !staged.is_empty() {
-                self.add_fresh = None;
+                self.add.fresh = None;
             }
             let mut rd = Delta::default();
             ambiguous = self.restage(&staged, &mut rd)?;
@@ -1599,7 +1599,7 @@ impl Eval {
             Ok(())
         })();
         self.store.close_dup_window();
-        self.adding = false;
+        self.add.adding = false;
         self.active = active;
         self.cur_front = Front::default();
         self.added_steps += self.steps;

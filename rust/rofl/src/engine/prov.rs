@@ -17,7 +17,7 @@ use super::*;
 impl Eval {
     /// Is a firing of `rel` noted and not written? Not where a rule reads its rows.
     pub(super) fn defers(&self, rel: Sym) -> bool {
-        brk!("prov_reader_deferred" => self.lazy_prov; self.lazy_prov && !self.prov_eager.contains(&rel))
+        brk!("prov_reader_deferred" => self.prov.lazy; self.prov.lazy && !self.prov.prov_eager.contains(&rel))
     }
 
     /// The relations the `derived_by` premises of `rules` name, `$fact(Rel, ..)`
@@ -43,12 +43,12 @@ impl Eval {
 
     /// Note a firing whose `derived_by` row is written when asked for.
     pub(super) fn defer_derived_by(&mut self, id: FactId, rule: Sym) {
-        if self.no_provenance {
+        if self.prov.no_provenance {
             return;
         }
         let n = (id, rule, self.store.tick);
-        if self.pending_prov.last() != Some(n) {
-            self.pending_prov.push(n);
+        if self.prov.pending.last() != Some(n) {
+            self.prov.pending.push(n);
         }
     }
 
@@ -78,10 +78,10 @@ impl Eval {
     /// Write the `derived_by` rows of the firings noted since the last call.
     pub fn settle_derived(&mut self) {
         self.vsettle();
-        if self.pending_prov.is_empty() {
+        if self.prov.pending.is_empty() {
             return;
         }
-        let mut notes = self.pending_prov.take();
+        let mut notes = self.prov.pending.take();
         notes.sort_unstable();
         notes.dedup();
         for (id, rule, tick) in notes {
@@ -106,7 +106,7 @@ impl Eval {
 
     /// Firings whose row is not written yet (notes, before the dedup).
     pub fn unsettled_provenance(&self) -> usize {
-        self.pending_prov.len()
+        self.prov.pending.len()
     }
 }
 
@@ -157,13 +157,13 @@ impl Eval {
     /// The rows noted and not written, as a volume keeps them: the opened world writes them when asked, as this one
     /// would, and keeping writes none.
     pub(crate) fn write_notes(&self, w: &mut crate::arena::VolW) {
-        self.pending_prov.write(w);
+        self.prov.pending.write(w);
         self.pending_assert.write(w);
         self.store.journal.write(w);
     }
 
     pub(crate) fn read_notes(&mut self, r: &mut crate::arena::VolR) -> Result<(), String> {
-        self.pending_prov = Notes::read(r)?;
+        self.prov.pending = Notes::read(r)?;
         self.pending_assert = Notes::read(r)?;
         self.store.journal = crate::journal::Journal::read(r)?;
         Ok(())

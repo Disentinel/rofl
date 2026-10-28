@@ -1316,7 +1316,7 @@ impl Session {
     pub fn ask(&mut self, query: &str) -> Result<Answer, String> {
         let t0 = std::time::Instant::now();
         self.asks += 1;
-        if let Some(m) = &self.eval.promise_broken {
+        if let Some(m) = &self.eval.ds.promise_broken {
             return Err(m.clone());
         }
         let src = format!("{}.", query.trim().trim_end_matches('.'));

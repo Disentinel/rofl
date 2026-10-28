@@ -725,64 +725,15 @@ pub struct Eval {
     /// Delta-first join plans (`joinplan.rs`), per rule and news position, and
     /// the premise statistics their estimates read.
     plan_trial: bool,
-    /// An addition is solving: a builtin may be planned after the premises written before it (it holds no hole,
-    /// or the world is evaluated again).
-    adding: bool,
-    /// The facts an addition made new (`add_fresh` in the fine path), where it knows them: a promise is checked on them.
-    add_fresh: Option<Vec<FactId>>,
-    /// The facts an addition gave a firing while they stood: their heights, and those above them, may be lower now.
-    add_refired: Vec<FactId>,
-    /// The relations under an aggregate an addition may ask again by key, through every rule into them: only where one
-    /// of their facts stands lower may a cell's heights move, so only theirs are noted in `add_refired`.
-    add_heights: HashSet<Sym>,
-    /// The first id an addition's facts take: a fact below it stood before.
-    add_mark: FactId,
-    /// What a retraction overdeletes besides the citers of its facts: the facts that cited a row of a tree it took out (`vretract_edges`).
-    retract_seeds: Vec<FactId>,
-    /// Facts the overdeletion kept for a firing that stands (`overdelete`): each takes again, at its level, every firing it has.
-    add_kept: HashMap<FactId, HashSet<FactId>>,
-    pub delta_ns: u64,
-    delta_plans: HashMap<(Sym, usize), joinplan::Slot>,
-    delta_stats: HashMap<Vec<u64>, (usize, usize, usize)>,
-    /// The declared functions (`function p(K, to V).`): promises checked after
-    /// every evaluation, and for the planner the key positions of each relation.
-    functions: Vec<crate::structure::Function>,
-    function_keys: HashMap<Sym, Vec<usize>>,
-    /// The functions and trees declared by an addition: their promise is judged over every row, not only the new ones.
-    unjudged: Vec<crate::structure::Function>,
-    unjudged_trees: Vec<crate::structure::Tree>,
-    /// The declared trees (`tree p(P, C) closure c.`): a forest each, checked after every evaluation.
-    trees: Vec<crate::structure::Tree>,
-    /// The closures of declared trees answered from their trees, not stored (engine/vclosure.rs): by relation, the
-    /// lowered rules they stand for, the rules that read them, and the edge rows each reader last fired over.
-    vclosures: Vec<vclosure::VClosure>,
-    /// Some closure is answered from its tree in this evaluation: the one test the hot paths make.
-    vany: bool,
-    vclosure_of: HashMap<Sym, usize>,
-    vskip: HashMap<Sym, usize>,
-    vreaders: HashMap<Sym, Vec<usize>>,
-    vreader_seen: HashMap<(Sym, usize), usize>,
-    vclosure_blocked: HashSet<usize>,
-    /// The rows of a closure answered from its tree that a premise cited, by the key the premise carries.
-    vprov_ids: Vec<FactId>,
-    vprov_stamp: Option<(u32, u64)>,
-    vrow_done: HashSet<Sym>,
-    /// Why a declared closure is not answered from its tree, as the program stands.
-    pub vclosure_reason: Vec<String>,
+    pub add: AddState,
+    pub ds: DsState,
+    pub vc: VClosureState,
     /// The rules the aliases read from their sources lower to (engine/alias.rs), not fired: before they are planned,
     /// and planned; each rewritten reader's body as written; why an alias is rows; the dropped columns named so far.
     alias_drules: Vec<DRule>,
     alias_rules: Vec<Rc<ERule>>,
     alias_orig: HashMap<Sym, Clause>,
     pub alias_reason: Vec<String>,
-    /// Forests built, and rows read from them, by this engine.
-    pub vbuilds: u64,
-    pub vrows_read: u64,
-    /// The refusal of the last judgement of the promises, while the world breaks one: nothing is answered until an
-    /// evaluation passes (`Session::ask`; `ensure` re-evaluates a dirty world).
-    pub promise_broken: Option<String>,
-    /// Premises the planner estimated from a promise instead of counting rows.
-    pub promise_stats: u64,
     pub rounds: Vec<(u64, u64)>,
     /// How a premise's matching is split over threads (engine/par.rs), the premises matched by that path, and those
     /// it gave back to the written one.
@@ -808,7 +759,6 @@ pub struct Eval {
     rule_at: HashMap<Sym, usize>,
     pub well_founded: bool,
     hole_id: Term,
-    demand_rels: Vec<(Sym, Vec<Rc<ERule>>)>,
     active: Vec<Rc<ERule>>,
     staged: HashMap<FKey, StagedFact>,
     /// The other firings that staged a fact, kept while a lattice could
@@ -833,22 +783,6 @@ pub struct Eval {
     pub demand: DemandState,
     unk: UnknownState,
     agg_plans: HashMap<(Sym, u32), Rc<AggPlan>>,
-    /// DATA-LEVEL STRATIFICATION (`datastrat.rs`): the components of the
-    /// evaluation, the aggregate elements `(rule, at)` they hold, the
-    /// correlations released so far, and the elements whose component has run
-    /// to its end, where a correlation never released is a defect.
-    ds_comps: Vec<Rc<datastrat::DsComp>>,
-    ds_elems: HashSet<(Sym, u32)>,
-    ds_released: HashSet<datastrat::AggKey>,
-    ds_done: HashSet<(Sym, u32)>,
-    /// A firing a layer of a data-stratified component makes again, that concludes nothing new, is a step (`fire_keys`).
-    ds_charge: bool,
-    /// The final firing of a data-stratified component concludes nothing the layers did not (`run_data_level`).
-    ds_check: bool,
-    /// The correlations a layer released, and the element `fire_keys` is firing: an instance two of them release
-    /// is fired by the first alone (`ds_gate`).
-    ds_layer: HashSet<datastrat::AggKey>,
-    ds_firing: Option<(Sym, u32)>,
     /// The lattice relations, from `lattice_decl`: arity and operation; an
     /// idempotent tag's too, as the order lattice it is.
     lattices: HashMap<Sym, (usize, AggOp)>,
@@ -993,42 +927,10 @@ pub struct Eval {
     /// lattice cell the rule concludes into.
     firing: bool,
     fault_count: u64,
-    /// The heads of calls answered on demand that an unknown below left
-    /// undecided, in the order met: each call up holes its head under those
-    /// of the relation it called, as for a fault (`demand_fault`).
-    demand_trail: Vec<Unknown>,
-    /// A question is being answered (why, whynot): below a call, what a hole
-    /// left unknown is read as unknown, as in a firing, and noted in `asked`.
-    pub asking: bool,
-    /// Firings of a fact are being found again (`firings_again`): a premise reads the store as a question does.
-    refinding: bool,
     /// A whynot by file under way: the files, and what each has met (`whynot_files`).
     wn_vols: Option<VolWalk>,
     /// A whynot's premises with more matches than it follows, and how many.
     wn_unwalked: HashMap<String, usize>,
-    /// What a question's unfolding read that a hole left unknown.
-    asked: Vec<Unknown>,
-    /// The relations answered on demand whose every answer is ground and
-    /// whose every rule fires bottom-up: a call to one reads the store
-    /// (`demand_closed_rels`).
-    demand_closed: HashSet<Sym>,
-    /// The relations answered on demand that may call themselves through
-    /// others not closed: their calls being unfolded are kept as variant keys.
-    demand_cyclic: HashSet<Sym>,
-    /// The `demand_cyclic` relations whose cycle no rule reads twice, or under a
-    /// negation or an aggregate (`demand_linear_rels`).
-    demand_linear: HashSet<Sym>,
-    /// The `demand_cyclic` relations whose calls are tabled once complete: no
-    /// rule they unfold reads a kernel relation or book (`demand_tabled_rels`).
-    demand_tabled: HashSet<Sym>,
-    /// The complete calls, by variant key, and the store they stand for.
-    demand_done: HashMap<String, DoneTable>,
-    /// The rows the tables hold (`DemandCall::rows`).
-    demand_done_rows: i64,
-    /// The facts a question's unfolding made, taken out when it is answered.
-    asked_made: Vec<FactId>,
-    /// The rules being unfolded at each depth, beside `demand_heads`.
-    demand_rule_ids: Vec<Sym>,
     last_fault: Option<Sym>,
     agg_memo: HashMap<(Sym, u32, Box<[Term]>), Rc<[CellId]>>,
     /// The back-index of the retraction path: fact -> the cells a member of
@@ -1037,20 +939,7 @@ pub struct Eval {
     /// A holistic group read under many percents or subjects, sealed once:
     /// by the correlation less the percent or subject (`hol_share_key`).
     hol_shared: HashMap<(Sym, u32, Box<[Term]>), HolShared>,
-    /// A threshold's cells this evaluation, by `(rule, at, key)`: made when
-    /// the threshold is reached, and never asked again — it stays reached.
-    thr_cells: HashMap<(Sym, u32, Box<[Term]>), CellId>,
-    /// Reached and not yet closed, with N: their members are provisional
-    /// until what they read is closed (`close_thresholds_below`).
-    thr_open: Vec<(CellId, usize)>,
-    /// Groups short of N, by `(rule, at, shared values)` (`ThrAcc`).
-    thr_acc: HashMap<(Sym, u32, Box<[Term]>), ThrAcc>,
-    /// The propagation round, and the cells reached in it: a firing on the
-    /// round's news concludes from these and from no older cell.
-    thr_round: u64,
-    thr_fresh: HashSet<CellId>,
-    /// Set while a rule fires on news read inside its thresholds.
-    thr_focus: Option<Rc<HashMap<(Sym, u32), ThrFocus>>>,
+    thr: ThrState,
     height_memo: HashMap<FactId, u32>,
     /// Heights an addition found of facts below the level it had reached, which nothing later in it moves.
     heights_kept: HashMap<FactId, u32>,
@@ -1085,8 +974,6 @@ pub struct Eval {
     batch: Rc<[Rc<ERule>]>,
     batch_at: usize,
     live_front: Vec<Sym>,
-    /// The heads of the calls answered on demand being solved, innermost last.
-    demand_heads: Vec<Lit>,
     assume: Option<Rc<Assumption>>,
     bootstrap: bool,
     answer: RuleAnswer,
@@ -1098,22 +985,11 @@ pub struct Eval {
     /// The evaluated safety.rofl world of the last judgement and the rows it was judged over (its heap is this
     /// world's): a program that only adds rows is judged by adding them to it.
     safety_kept: Option<Rc<(Vec<Vec<Term>>, Eval)>>,
-    pub no_provenance: bool,
-    /// A provenanced world no rule reads `derived_by` of writes its rows when
-    /// something asks (prov.rs): firings noted, and whether to note them.
-    pending_prov: prov::Notes,
+    pub prov: ProvState,
     /// The base facts whose `asserted_by` row is not written yet: the fact, who, the tick (prov.rs).
     pub(crate) pending_assert: prov::Notes,
     /// A rule of the program reads `asserted_by`: a load writes its rows as it asserts.
     pub(crate) reads_assertions: bool,
-    pub lazy_prov: bool,
-    /// The relations a rule reads `derived_by` of, whose rows are written as they fire.
-    prov_eager: HashSet<Sym>,
-    /// Write every row as the firing happens, as the reference does (a measurement's baseline).
-    pub eager_prov: bool,
-    /// `sealed(provenance)`: no witnesses either, where nothing withdraws. A
-    /// firing on a fact already there is then no news, and a step is a new fact.
-    pub no_witness: bool,
     /// `Rofl.retainTicks` (src/api.ts:165): how many COMPLETED ticks of frozen
     /// provenance to keep, or none set — which keeps everything and is what
     /// the corpus runs under.
@@ -1122,6 +998,125 @@ pub struct Eval {
     /// made into THIS store. Once set the door is shut for the life of the
     /// store, and a second claim is refused rather than ignored.
     pub kernel_claimed: bool,
+}
+
+/// The closures answered from their trees (engine/vclosure.rs) and the rules that read them. Held by `Eval`.
+#[derive(Clone)]
+pub struct VClosureState {
+    /// The closures of declared trees answered from their trees, not stored (engine/vclosure.rs): by relation, the
+    /// lowered rules they stand for, the rules that read them, and the edge rows each reader last fired over.
+    vclosures: Vec<vclosure::VClosure>,
+    /// Some closure is answered from its tree in this evaluation: the one test the hot paths make.
+    any: bool,
+    vclosure_of: HashMap<Sym, usize>,
+    skip: HashMap<Sym, usize>,
+    readers: HashMap<Sym, Vec<usize>>,
+    reader_seen: HashMap<(Sym, usize), usize>,
+    vclosure_blocked: HashSet<usize>,
+    /// The rows of a closure answered from its tree that a premise cited, by the key the premise carries.
+    prov_ids: Vec<FactId>,
+    prov_stamp: Option<(u32, u64)>,
+    row_done: HashSet<Sym>,
+    /// Why a declared closure is not answered from its tree, as the program stands.
+    pub vclosure_reason: Vec<String>,
+    /// Forests built, and rows read from them, by this engine.
+    pub builds: u64,
+    pub rows_read: u64,
+}
+
+/// The declared functions and trees, their promises, and the data-stratified components. Held by `Eval`.
+#[derive(Clone)]
+pub struct DsState {
+    /// The declared functions (`function p(K, to V).`): promises checked after
+    /// every evaluation, and for the planner the key positions of each relation.
+    functions: Vec<crate::structure::Function>,
+    function_keys: HashMap<Sym, Vec<usize>>,
+    /// The functions and trees declared by an addition: their promise is judged over every row, not only the new ones.
+    unjudged: Vec<crate::structure::Function>,
+    unjudged_trees: Vec<crate::structure::Tree>,
+    /// The declared trees (`tree p(P, C) closure c.`): a forest each, checked after every evaluation.
+    trees: Vec<crate::structure::Tree>,
+    /// The refusal of the last judgement of the promises, while the world breaks one: nothing is answered until an
+    /// evaluation passes (`Session::ask`; `ensure` re-evaluates a dirty world).
+    pub promise_broken: Option<String>,
+    /// Premises the planner estimated from a promise instead of counting rows.
+    pub promise_stats: u64,
+    /// DATA-LEVEL STRATIFICATION (`datastrat.rs`): the components of the
+    /// evaluation, the aggregate elements `(rule, at)` they hold, the
+    /// correlations released so far, and the elements whose component has run
+    /// to its end, where a correlation never released is a defect.
+    comps: Vec<Rc<datastrat::DsComp>>,
+    elems: HashSet<(Sym, u32)>,
+    released: HashSet<datastrat::AggKey>,
+    done: HashSet<(Sym, u32)>,
+    /// A firing a layer of a data-stratified component makes again, that concludes nothing new, is a step (`fire_keys`).
+    charge: bool,
+    /// The final firing of a data-stratified component concludes nothing the layers did not (`run_data_level`).
+    check: bool,
+    /// The correlations a layer released, and the element `fire_keys` is firing: an instance two of them release
+    /// is fired by the first alone (`ds_gate`).
+    layer: HashSet<datastrat::AggKey>,
+    firing: Option<(Sym, u32)>,
+}
+
+/// The state of an addition or a retraction: what it made new, what it keeps, and its delta join plans. Held by `Eval`.
+#[derive(Clone)]
+pub struct AddState {
+    /// An addition is solving: a builtin may be planned after the premises written before it (it holds no hole,
+    /// or the world is evaluated again).
+    adding: bool,
+    /// The facts an addition made new (`fresh` in the fine path), where it knows them: a promise is checked on them.
+    fresh: Option<Vec<FactId>>,
+    /// The facts an addition gave a firing while they stood: their heights, and those above them, may be lower now.
+    refired: Vec<FactId>,
+    /// The relations under an aggregate an addition may ask again by key, through every rule into them: only where one
+    /// of their facts stands lower may a cell's heights move, so only theirs are noted in `refired`.
+    heights: HashSet<Sym>,
+    /// The first id an addition's facts take: a fact below it stood before.
+    mark: FactId,
+    /// What a retraction overdeletes besides the citers of its facts: the facts that cited a row of a tree it took out (`vretract_edges`).
+    retract_seeds: Vec<FactId>,
+    /// Facts the overdeletion kept for a firing that stands (`overdelete`): each takes again, at its level, every firing it has.
+    kept: HashMap<FactId, HashSet<FactId>>,
+    pub delta_ns: u64,
+    delta_plans: HashMap<(Sym, usize), joinplan::Slot>,
+    delta_stats: HashMap<Vec<u64>, (usize, usize, usize)>,
+}
+
+/// The threshold cells of one evaluation: reached, still open, and the round their news came in. Held by `Eval`.
+#[derive(Clone)]
+struct ThrState {
+    /// A threshold's cells this evaluation, by `(rule, at, key)`: made when
+    /// the threshold is reached, and never asked again — it stays reached.
+    cells: HashMap<(Sym, u32, Box<[Term]>), CellId>,
+    /// Reached and not yet closed, with N: their members are provisional
+    /// until what they read is closed (`close_thresholds_below`).
+    open: Vec<(CellId, usize)>,
+    /// Groups short of N, by `(rule, at, shared values)` (`ThrAcc`).
+    acc: HashMap<(Sym, u32, Box<[Term]>), ThrAcc>,
+    /// The propagation round, and the cells reached in it: a firing on the
+    /// round's news concludes from these and from no older cell.
+    round: u64,
+    fresh: HashSet<CellId>,
+    /// Set while a rule fires on news read inside its thresholds.
+    focus: Option<Rc<HashMap<(Sym, u32), ThrFocus>>>,
+}
+
+/// How provenance is written (eager, lazy or none) and the notes not yet written. Held by `Eval`.
+#[derive(Clone)]
+pub struct ProvState {
+    pub no_provenance: bool,
+    /// A provenanced world no rule reads `derived_by` of writes its rows when
+    /// something asks (prov.rs): firings noted, and whether to note them.
+    pending: prov::Notes,
+    pub lazy: bool,
+    /// The relations a rule reads `derived_by` of, whose rows are written as they fire.
+    prov_eager: HashSet<Sym>,
+    /// Write every row as the firing happens, as the reference does (a measurement's baseline).
+    pub eager_prov: bool,
+    /// `sealed(provenance)`: no witnesses either, where nothing withdraws. A
+    /// firing on a fact already there is then no news, and a step is a new fact.
+    pub no_witness: bool,
 }
 
 /// The lattice state of one evaluation: the cells and their current facts, subsumption, joins, and what settled or was retired. Held by `Eval`.
@@ -1224,6 +1219,41 @@ pub struct DemandState {
     /// How many negations are being decided: a call met again under one more
     /// than when it was first made cannot read answers that may still grow.
     neg_level: usize,
+    rels: Vec<(Sym, Vec<Rc<ERule>>)>,
+    /// The heads of calls answered on demand that an unknown below left
+    /// undecided, in the order met: each call up holes its head under those
+    /// of the relation it called, as for a fault (`demand_fault`).
+    trail: Vec<Unknown>,
+    /// A question is being answered (why, whynot): below a call, what a hole
+    /// left unknown is read as unknown, as in a firing, and noted in `asked`.
+    pub asking: bool,
+    /// Firings of a fact are being found again (`firings_again`): a premise reads the store as a question does.
+    refinding: bool,
+    /// What a question's unfolding read that a hole left unknown.
+    asked: Vec<Unknown>,
+    /// The relations answered on demand whose every answer is ground and
+    /// whose every rule fires bottom-up: a call to one reads the store
+    /// (`demand_closed_rels`).
+    closed: HashSet<Sym>,
+    /// The relations answered on demand that may call themselves through
+    /// others not closed: their calls being unfolded are kept as variant keys.
+    cyclic: HashSet<Sym>,
+    /// The `cyclic` relations whose cycle no rule reads twice, or under a
+    /// negation or an aggregate (`demand_linear_rels`).
+    linear: HashSet<Sym>,
+    /// The `cyclic` relations whose calls are tabled once complete: no
+    /// rule they unfold reads a kernel relation or book (`demand_tabled_rels`).
+    tabled: HashSet<Sym>,
+    /// The complete calls, by variant key, and the store they stand for.
+    done: HashMap<String, DoneTable>,
+    /// The rows the tables hold (`DemandCall::rows`).
+    done_rows: i64,
+    /// The facts a question's unfolding made, taken out when it is answered.
+    asked_made: Vec<FactId>,
+    /// The rules being unfolded at each depth, beside `heads`.
+    rule_ids: Vec<Sym>,
+    /// The heads of the calls answered on demand being solved, innermost last.
+    heads: Vec<Lit>,
 }
 
 /// The unknown state of one evaluation: the unknown cells, what reads them, and the shrug model. Held by `Eval`.
@@ -1452,41 +1482,55 @@ impl Eval {
             cost: CostState::default(),
             scans: Vec::new(),
             delta_by_rule: HashMap::new(),
-            delta_ns: 0,
+            add: AddState {
+                adding: false,
+                fresh: None,
+                refired: Vec::new(),
+                heights: HashSet::new(),
+                mark: 0,
+                retract_seeds: Vec::new(),
+                kept: HashMap::new(),
+                delta_ns: 0,
+                delta_plans: HashMap::new(),
+                delta_stats: HashMap::new(),
+            },
             plan_trial: false,
-            adding: false,
-            add_fresh: None,
-            add_refired: Vec::new(),
-            add_heights: HashSet::new(),
-            add_mark: 0,
-            retract_seeds: Vec::new(),
-            add_kept: HashMap::new(),
-            delta_plans: HashMap::new(),
-            delta_stats: HashMap::new(),
-            functions: Vec::new(),
-            function_keys: HashMap::new(),
-            unjudged: Vec::new(),
-            unjudged_trees: Vec::new(),
-            trees: Vec::new(),
-            vclosures: Vec::new(),
-            vany: false,
-            vclosure_of: HashMap::new(),
-            vskip: HashMap::new(),
-            vreaders: HashMap::new(),
-            vreader_seen: HashMap::new(),
-            vclosure_blocked: HashSet::new(),
-            vprov_ids: Vec::new(),
-            vprov_stamp: None,
-            vrow_done: HashSet::new(),
-            vclosure_reason: Vec::new(),
+            ds: DsState {
+                comps: Vec::new(),
+                elems: HashSet::new(),
+                released: HashSet::new(),
+                done: HashSet::new(),
+                charge: false,
+                check: false,
+                layer: HashSet::new(),
+                firing: None,
+                functions: Vec::new(),
+                function_keys: HashMap::new(),
+                unjudged: Vec::new(),
+                unjudged_trees: Vec::new(),
+                trees: Vec::new(),
+                promise_broken: None,
+                promise_stats: 0,
+            },
+            vc: VClosureState {
+                vclosures: Vec::new(),
+                any: false,
+                vclosure_of: HashMap::new(),
+                skip: HashMap::new(),
+                readers: HashMap::new(),
+                reader_seen: HashMap::new(),
+                vclosure_blocked: HashSet::new(),
+                prov_ids: Vec::new(),
+                prov_stamp: None,
+                row_done: HashSet::new(),
+                vclosure_reason: Vec::new(),
+                builds: 0,
+                rows_read: 0,
+            },
             alias_drules: Vec::new(),
             alias_rules: Vec::new(),
             alias_orig: HashMap::new(),
             alias_reason: Vec::new(),
-            vbuilds: 0,
-            vrows_read: 0,
-            promise_broken: None,
-            promise_stats: 0,
             rounds: Vec::new(),
             par: par::Split::default(),
             par_levels: 0,
@@ -1505,7 +1549,6 @@ impl Eval {
             rule_at: HashMap::new(),
             well_founded: false,
             hole_id,
-            demand_rels: Vec::new(),
             active: Vec::new(),
             staged: HashMap::new(),
             staged_alts: HashMap::new(),
@@ -1553,6 +1596,20 @@ impl Eval {
                 demand_old: 0,
                 unfolded: 0,
                 neg_level: 0,
+                trail: Vec::new(),
+                asking: false,
+                refinding: false,
+                asked: Vec::new(),
+                closed: HashSet::new(),
+                cyclic: HashSet::new(),
+                linear: HashSet::new(),
+                tabled: HashSet::new(),
+                done: HashMap::new(),
+                done_rows: 0,
+                asked_made: Vec::new(),
+                rule_ids: Vec::new(),
+                rels: Vec::new(),
+                heads: Vec::new(),
             },
             unk: UnknownState {
                 unknown_value,
@@ -1567,14 +1624,6 @@ impl Eval {
                 shrug_snap: None,
             },
             agg_plans: HashMap::new(),
-            ds_comps: Vec::new(),
-            ds_elems: HashSet::new(),
-            ds_released: HashSet::new(),
-            ds_done: HashSet::new(),
-            ds_charge: false,
-            ds_check: false,
-            ds_layer: HashSet::new(),
-            ds_firing: None,
             lattices: HashMap::new(),
             lattice_rows: Vec::new(),
             decl_refused: Vec::new(),
@@ -1640,30 +1689,20 @@ impl Eval {
             carry_broken: false,
             firing: false,
             fault_count: 0,
-            demand_trail: Vec::new(),
-            demand_cyclic: HashSet::new(),
-            demand_linear: HashSet::new(),
-            demand_tabled: HashSet::new(),
-            demand_done: HashMap::new(),
-            demand_done_rows: 0,
-            asked_made: Vec::new(),
-            demand_rule_ids: Vec::new(),
-            asking: false,
-            refinding: false,
             wn_vols: None,
             wn_unwalked: HashMap::new(),
-            asked: Vec::new(),
-            demand_closed: HashSet::new(),
             last_fault: None,
             agg_memo: HashMap::new(),
             support_ix: None,
             hol_shared: HashMap::new(),
-            thr_cells: HashMap::new(),
-            thr_open: Vec::new(),
-            thr_acc: HashMap::new(),
-            thr_round: 0,
-            thr_fresh: HashSet::new(),
-            thr_focus: None,
+            thr: ThrState {
+                cells: HashMap::new(),
+                open: Vec::new(),
+                acc: HashMap::new(),
+                round: 0,
+                fresh: HashSet::new(),
+                focus: None,
+            },
             height_memo: HashMap::new(),
             heights_kept: HashMap::new(),
             news_ix: None,
@@ -1677,21 +1716,22 @@ impl Eval {
             batch: Rc::from(Vec::new()),
             batch_at: 0,
             live_front: Vec::new(),
-            demand_heads: Vec::new(),
             assume: None,
             bootstrap,
             answer: RuleAnswer::default(),
             known_answer: known,
             safety_memo: None,
             safety_kept: None,
-            no_provenance: false,
-            pending_prov: prov::Notes::default(),
+            prov: ProvState {
+                no_provenance: false,
+                pending: prov::Notes::default(),
+                lazy: false,
+                prov_eager: HashSet::new(),
+                eager_prov: false,
+                no_witness: false,
+            },
             pending_assert: prov::Notes::default(),
             reads_assertions: false,
-            lazy_prov: false,
-            prov_eager: HashSet::new(),
-            eager_prov: false,
-            no_witness: false,
             retain_ticks: None,
             kernel_claimed: false,
         };
@@ -1900,7 +1940,7 @@ impl Eval {
             return Vec::new();
         }
         let v = &self.v;
-        let mut out: Vec<Sym> = self.functions.iter().map(|f| f.rel).chain(self.trees.iter().map(|t| t.rel)).collect();
+        let mut out: Vec<Sym> = self.ds.functions.iter().map(|f| f.rel).chain(self.ds.trees.iter().map(|t| t.rel)).collect();
         let demand = &self.answer.demand_rels;
         for r in kept {
             let head = r.clause.head.rel;
@@ -1951,15 +1991,15 @@ impl Eval {
 
     fn prepare(&mut self) {
         self.well_founded = well_founded_declared(&mut self.h, &self.v, &mut self.store);
-        self.no_provenance = sealed_bodies(&mut self.h, &self.v, &mut self.store)
+        self.prov.no_provenance = sealed_bodies(&mut self.h, &self.v, &mut self.store)
             .contains(&self.v.sealed_provenance);
-        self.no_witness = self.no_provenance;
+        self.prov.no_witness = self.prov.no_provenance;
         let (rules, diags) = decode_rules(&mut self.h, &self.v, &mut self.store);
         self.plain = !self.agg_forced && !store_has_aggregates(&self.h, &self.v, &mut self.store);
         self.decl_refused.clear();
-        self.functions = crate::structure::functions(&self.h, &self.v, &mut self.store);
-        self.function_keys = self.functions.iter().map(|f| (f.rel, f.key.clone())).collect();
-        self.trees = crate::structure::trees(&self.h, &self.v, &mut self.store);
+        self.ds.functions = crate::structure::functions(&self.h, &self.v, &mut self.store);
+        self.ds.function_keys = self.ds.functions.iter().map(|f| (f.rel, f.key.clone())).collect();
+        self.ds.trees = crate::structure::trees(&self.h, &self.v, &mut self.store);
         let decls = lattice_decls(&mut self.h, &self.v, &mut self.store, &mut self.decl_refused);
         self.tags = crate::tag::Tags::read(&mut self.h, &self.v, &mut self.store, &decls);
         let low = crate::tag::lower(&mut self.h, &self.v, &self.tags, rules);
@@ -2051,22 +2091,22 @@ impl Eval {
                     })
                 })
         };
-        self.store.unordered = self.lattices.is_empty() && (self.no_witness || !staged_twice);
+        self.store.unordered = self.lattices.is_empty() && (self.prov.no_witness || !staged_twice);
         self.diags.extend(diags);
         self.answer = self.safety_answer(&rules);
-        self.prov_eager = HashSet::new();
-        self.lazy_prov = !self.no_provenance && !self.eager_prov;
-        if self.lazy_prov && self.answer.reads_provenance {
+        self.prov.prov_eager = HashSet::new();
+        self.prov.lazy = !self.prov.no_provenance && !self.prov.eager_prov;
+        if self.prov.lazy && self.answer.reads_provenance {
             match self.provenance_readers(&rules) {
-                Some(rels) => self.prov_eager = rels,
-                None => self.lazy_prov = false,
+                Some(rels) => self.prov.prov_eager = rels,
+                None => self.prov.lazy = false,
             }
         }
         // the rows noted of firings so far are written where the program now reads them
-        if !self.lazy_prov || !self.prov_eager.is_empty() {
+        if !self.prov.lazy || !self.prov.prov_eager.is_empty() {
             self.settle_derived();
         }
-        if self.no_provenance && self.answer.reads_provenance {
+        if self.prov.no_provenance && self.answer.reads_provenance {
             self.diags.push(format!(
                 "provenance is sealed; rules reading '{}' will match nothing",
                 self.h.name(self.v.derived_by)
@@ -2175,15 +2215,15 @@ impl Eval {
         if self.reads_assertions {
             self.settle_assertions();
         }
-        self.demand_rels = demand.iter().map(|(rel, is)| (*rel, is.iter().map(|&i| self.rules[i].clone()).collect())).collect();
-        self.demand_closed = self.demand_closed_rels();
-        self.demand_rels.clear();
+        self.demand.rels = demand.iter().map(|(rel, is)| (*rel, is.iter().map(|&i| self.rules[i].clone()).collect())).collect();
+        self.demand.closed = self.demand_closed_rels();
+        self.demand.rels.clear();
         // a closed relation is read from the store: its readers fire on its news like any relation's
         if brk!("demand_closed_refires" => false; true) {
             for r in self.rules.iter_mut() {
                 let r = Rc::get_mut(r).expect("a rule shared before the demand grouping");
-                r.has_demand_prem = r.pos_rels.iter().any(|x| demand_names.contains(x) && !self.demand_closed.contains(x));
-                brk!("demand_closed_news_unread" => r.trigger_rels.retain(|x| !self.demand_closed.contains(x)); ());
+                r.has_demand_prem = r.pos_rels.iter().any(|x| demand_names.contains(x) && !self.demand.closed.contains(x));
+                brk!("demand_closed_news_unread" => r.trigger_rels.retain(|x| !self.demand.closed.contains(x)); ());
             }
         }
         let refused: HashSet<Sym> = self.lattices.keys().copied().chain(demand.iter().map(|(r, _)| *r)).collect();
@@ -2192,23 +2232,23 @@ impl Eval {
         self.rule_at = self.rules.iter().enumerate().map(|(i, r)| (r.id, i)).collect();
         self.widen_rec = self.widen_back_edges();
         self.widen_th = self.widen_thresholds();
-        self.demand_rels = demand
+        self.demand.rels = demand
             .into_iter()
             .map(|(rel, is)| (rel, is.into_iter().map(|i| self.rules[i].clone()).collect()))
             .collect();
         self.vclosure_setup();
-        self.demand_cyclic = self.demand_cyclic_rels();
-        self.demand_linear = self.demand_linear_rels();
-        self.demand_tabled = self.demand_tabled_rels();
+        self.demand.cyclic = self.demand_cyclic_rels();
+        self.demand.linear = self.demand_linear_rels();
+        self.demand.tabled = self.demand_tabled_rels();
         self.drop_done();
     }
 
     /// The demand relations not closed that reach themselves through calls to
     /// demand relations not closed (a closed one is read from the store).
     fn demand_cyclic_rels(&self) -> HashSet<Sym> {
-        let unfolded = |rel: &Sym| self.demand_rels.iter().any(|(r, _)| r == rel) && !self.demand_closed.contains(rel);
+        let unfolded = |rel: &Sym| self.demand.rels.iter().any(|(r, _)| r == rel) && !self.demand.closed.contains(rel);
         let calls: HashMap<Sym, Vec<Sym>> = self
-            .demand_rels
+            .demand.rels
             .iter()
             .filter(|(rel, _)| unfolded(rel))
             .map(|(rel, rs)| (*rel, rs.iter().flat_map(|r| r.clause.body.iter().flat_map(|b| b.lits_deep()).map(|l| l.rel)).filter(unfolded).collect()))
@@ -2237,10 +2277,10 @@ impl Eval {
     /// older answers was found then. Any other call reads every answer so far.
     fn demand_linear_rels(&self) -> HashSet<Sym> {
         let calls: HashMap<Sym, HashSet<Sym>> = self
-            .demand_rels
+            .demand.rels
             .iter()
-            .filter(|(rel, _)| self.demand_cyclic.contains(rel))
-            .map(|(rel, rs)| (*rel, rs.iter().flat_map(|r| r.clause.body.iter().flat_map(|b| b.lits_deep()).map(|l| l.rel)).filter(|r| self.demand_cyclic.contains(r)).collect()))
+            .filter(|(rel, _)| self.demand.cyclic.contains(rel))
+            .map(|(rel, rs)| (*rel, rs.iter().flat_map(|r| r.clause.body.iter().flat_map(|b| b.lits_deep()).map(|l| l.rel)).filter(|r| self.demand.cyclic.contains(r)).collect()))
             .collect();
         let reach = |from: Sym| -> HashSet<Sym> {
             let mut seen: HashSet<Sym> = HashSet::new();
@@ -2255,7 +2295,7 @@ impl Eval {
         let reaches: HashMap<Sym, HashSet<Sym>> = calls.keys().map(|r| (*r, reach(*r))).collect();
         let same = |a: Sym, b: Sym| reaches.get(&a).is_some_and(|x| x.contains(&b)) && reaches.get(&b).is_some_and(|x| x.contains(&a));
         let mut twice: Vec<Sym> = Vec::new();
-        for (rel, rs) in self.demand_rels.iter().filter(|(rel, _)| calls.contains_key(rel)) {
+        for (rel, rs) in self.demand.rels.iter().filter(|(rel, _)| calls.contains_key(rel)) {
             for r in rs {
                 let mut n = 0;
                 for b in &r.clause.body {
@@ -2275,14 +2315,14 @@ impl Eval {
     /// change moves. A kernel relation or book moves while a call unfolds (a
     /// hole, a provenance row), so a call that reads one is unfolded each time.
     fn demand_tabled_rels(&self) -> HashSet<Sym> {
-        let unfolded = |rel: &Sym| self.demand_rels.iter().any(|(r, _)| r == rel) && !self.demand_closed.contains(rel);
+        let unfolded = |rel: &Sym| self.demand.rels.iter().any(|(r, _)| r == rel) && !self.demand.closed.contains(rel);
         let mut out = HashSet::new();
-        for start in &self.demand_cyclic {
+        for start in &self.demand.cyclic {
             let mut seen: HashSet<Sym> = HashSet::from([*start]);
             let mut todo = vec![*start];
             let mut ok = true;
             while let Some(r) = todo.pop() {
-                for rule in self.demand_rels.iter().filter(|(x, _)| *x == r).flat_map(|(_, rs)| rs.iter()) {
+                for rule in self.demand.rels.iter().filter(|(x, _)| *x == r).flat_map(|(_, rs)| rs.iter()) {
                     for l in rule.clause.body.iter().flat_map(|b| b.lits_deep()) {
                         if self.v.is_reserved(l.rel) || l.persp.as_atom().is_some_and(|p| is_kernel_ledger(&self.h, p)) {
                             ok = false;
@@ -2312,14 +2352,14 @@ impl Eval {
     /// position.
     fn demand_closed_rels(&mut self) -> HashSet<Sym> {
         let mut ground: HashMap<Sym, Vec<bool>> = HashMap::new();
-        for (rel, rs) in &self.demand_rels {
+        for (rel, rs) in &self.demand.rels {
             let n = rs[0].clause.head.args.len();
             let ok = rs.iter().all(|r| r.clause.head.args.len() == n);
             ground.insert(*rel, vec![ok; n + 1]);
         }
         loop {
             let mut changed = false;
-            for (rel, rs) in &self.demand_rels {
+            for (rel, rs) in &self.demand.rels {
                 for r in rs {
                     if !ground[rel].iter().any(|g| *g) {
                         break;
@@ -2374,7 +2414,7 @@ impl Eval {
                 break;
             }
         }
-        let safe: HashSet<Sym> = self.demand_rels.iter().filter(|(_, rs)| rs.iter().all(|r| r.safe)).map(|(rel, _)| *rel).collect();
+        let safe: HashSet<Sym> = self.demand.rels.iter().filter(|(_, rs)| rs.iter().all(|r| r.safe)).map(|(rel, _)| *rel).collect();
         ground.into_iter().filter(|(rel, g)| safe.contains(rel) && g.iter().all(|x| *x)).map(|(rel, _)| rel).collect()
     }
 
@@ -3054,8 +3094,8 @@ impl Eval {
         self.peak_rows = 0;
         self.disk_hit = false;
         self.disk_held = 0;
-        self.demand_done.clear();
-        self.demand_done_rows = 0;
+        self.demand.done.clear();
+        self.demand.done_rows = 0;
         self.carry_wall = (self.budget, self.space);
         (self.carry_steps, self.carry_rows, self.carry_broken) = (0, 0, false);
         self.cut = None;
@@ -3144,10 +3184,10 @@ impl Eval {
         self.plain_undecided.clear();
         self.agg_opened.clear();
         self.plain_closed.clear();
-        self.ds_comps.clear();
-        self.ds_elems.clear();
-        self.ds_released.clear();
-        self.ds_done.clear();
+        self.ds.comps.clear();
+        self.ds.elems.clear();
+        self.ds.released.clear();
+        self.ds.done.clear();
         self.lat.improvements = 0;
         self.seed_narrowing()?;
         self.run_pass_from()
@@ -3368,8 +3408,8 @@ impl Eval {
 
     fn end_pass(&mut self, outcome: Result<(), Halt>, strat_rules: &[Rc<ERule>]) -> Result<Outcome, Halt> {
         let mut partial = false;
-        self.ds_elems.clear();
-        self.ds_done.clear();
+        self.ds.elems.clear();
+        self.ds.done.clear();
         match outcome {
             Ok(()) => {}
             Err(Halt::Budget(reason, _)) => {
@@ -3469,7 +3509,7 @@ impl Eval {
         loop {
             self.close_thresholds_below(i64::MAX, true)?;
             self.close_lattices_below(i64::MAX)?;
-            if self.thr_open.is_empty() {
+            if self.thr.open.is_empty() {
                 break;
             }
         }
@@ -3480,19 +3520,19 @@ impl Eval {
     /// what the evaluation left: a refusal names the place and leaves the world
     /// dirty, never answered.
     pub fn check_promises(&mut self) -> Result<(), Halt> {
-        self.promise_broken = None;
-        self.unjudged.clear();
-        self.unjudged_trees.clear();
-        if (self.functions.is_empty() && self.trees.is_empty()) || brk!("function_tick_unchecked" => self.store.tick > 0; false) {
+        self.ds.promise_broken = None;
+        self.ds.unjudged.clear();
+        self.ds.unjudged_trees.clear();
+        if (self.ds.functions.is_empty() && self.ds.trees.is_empty()) || brk!("function_tick_unchecked" => self.store.tick > 0; false) {
             return Ok(());
         }
-        crate::structure::check_functions(&self.h, &self.store, &self.functions).and_then(|_| {
+        crate::structure::check_functions(&self.h, &self.store, &self.ds.functions).and_then(|_| {
             if brk!("tree_check_off" => true; false) || brk!("tree_tick_unchecked" => self.store.tick > 0; false) {
                 return Ok(());
             }
-            crate::structure::check_trees(&self.h, &self.store, &self.trees)
+            crate::structure::check_trees(&self.h, &self.store, &self.ds.trees)
         }).map_err(|m| {
-            self.promise_broken = Some(m.clone());
+            self.ds.promise_broken = Some(m.clone());
             Halt::Strat(m, String::new())
         })
     }
@@ -3501,15 +3541,15 @@ impl Eval {
     /// with another, a child given a second parent or an edge that closes a cycle), the whole check where one may be
     /// broken or it does not know them, which names the break.
     pub fn check_promises_added(&mut self) -> Result<(), Halt> {
-        let (new, trees) = (std::mem::take(&mut self.unjudged), std::mem::take(&mut self.unjudged_trees));
+        let (new, trees) = (std::mem::take(&mut self.ds.unjudged), std::mem::take(&mut self.ds.unjudged_trees));
         if let Err(m) = crate::structure::check_functions(&self.h, &self.store, &new).and_then(|_| crate::structure::check_trees(&self.h, &self.store, &trees)) {
-            self.add_fresh = None;
-            self.promise_broken = Some(m.clone());
+            self.add.fresh = None;
+            self.ds.promise_broken = Some(m.clone());
             return Err(Halt::Strat(m, String::new()));
         }
-        match self.add_fresh.take() {
+        match self.add.fresh.take() {
             Some(ids) if !cfg!(feature = "breaks") && self.promises_hold_at(&ids) => {
-                self.promise_broken = None;
+                self.ds.promise_broken = None;
                 Ok(())
             }
             _ => self.check_promises(),
@@ -3517,7 +3557,7 @@ impl Eval {
     }
 
     fn promises_hold_at(&mut self, ids: &[FactId]) -> bool {
-        let functions = self.functions.clone();
+        let functions = self.ds.functions.clone();
         for f in &functions {
             let n = f.key.len() + f.to.len();
             for &id in ids {
@@ -3533,7 +3573,7 @@ impl Eval {
                 }
             }
         }
-        let trees: Vec<Sym> = self.trees.iter().map(|t| t.rel).collect();
+        let trees: Vec<Sym> = self.ds.trees.iter().map(|t| t.rel).collect();
         for rel in trees {
             let mut rooted: FxSet<(Sym, u64)> = FxSet::default();
             for &id in ids {
@@ -3613,7 +3653,7 @@ impl Eval {
         if brk!("shrug_demand_unread" => false; true) {
             loop {
                 let more: Vec<Sym> = self
-                    .demand_rels
+                    .demand.rels
                     .iter()
                     .filter(|(rel, rs)| !via.contains(rel) && rs.iter().any(|r| r.clause.body.iter().flat_map(|b| b.lits_deep()).any(|l| via.contains(&l.rel))))
                     .map(|(rel, _)| *rel)
@@ -4352,7 +4392,7 @@ impl Eval {
 
     /// Whether a relation of the program is answered on demand, a fact made for each call.
     pub fn answers_on_demand(&self) -> bool {
-        !self.demand_rels.is_empty()
+        !self.demand.rels.is_empty()
     }
 
     /// The staged facts, each with the rule and the premises of the firing that staged it, one a line.
@@ -4419,9 +4459,9 @@ impl Eval {
     fn clear_derived(&mut self) {
         self.store.kept_rows = self.kept_rows();
         let kept = &self.store.kept_layer;
-        let notes: Vec<(FactId, Sym, u32)> = self.pending_prov.take().into_iter().filter(|n| !kept.is_empty() && self.store.alive(n.0) && kept.contains(&self.store.rec(n.0).rel)).collect();
+        let notes: Vec<(FactId, Sym, u32)> = self.prov.pending.take().into_iter().filter(|n| !kept.is_empty() && self.store.alive(n.0) && kept.contains(&self.store.rec(n.0).rel)).collect();
         for n in notes {
-            self.pending_prov.push(n);
+            self.prov.pending.push(n);
         }
         let (h, v) = (&self.h, &self.v);
         self.store.clear_derived(Some(&|r: &FactRec, a: &[Term]| provenance_row(h, v, r, a)));
@@ -4524,7 +4564,7 @@ impl Eval {
         }
         for (k, t) in vread {
             if let Some((ci, book, a, d)) = self.vrow_entry(k) {
-                let rel = self.vclosures[ci].rel;
+                let rel = self.vc.vclosures[ci].rel;
                 out.insert((fact_term(&mut self.h, &self.v, rel, book, &[a, d]), t as i64));
             }
         }
@@ -4862,7 +4902,7 @@ impl Eval {
     /// and a monotone rule at the level of its conclusion, so a rule that is not recursive fires once over what it
     /// reads, complete, instead of on every round of a recursion below it.
     fn by_component(&self) -> bool {
-        self.lattices.is_empty() && (self.no_witness || self.store.unordered && self.demand_rels.is_empty())
+        self.lattices.is_empty() && (self.prov.no_witness || self.store.unordered && self.demand.rels.is_empty())
     }
 
     fn activate(&mut self, rules: &[Rc<ERule>]) -> Result<(), Halt> {
@@ -4985,8 +5025,8 @@ impl Eval {
                 }
                 None => {
                     self.cur_front = Front::default();
-                    self.thr_round += 1;
-                    self.thr_fresh.clear();
+                    self.thr.round += 1;
+                    self.thr.fresh.clear();
                     (0, None)
                 }
             };
@@ -5032,14 +5072,14 @@ impl Eval {
                     merge_front(&mut self.cur_front, f);
                     return Ok(());
                 }
-                if self.vany {
-                    if self.vskip.get(&r.id).is_some_and(|&ci| self.vclosures[ci].active) {
+                if self.vc.any {
+                    if self.vc.skip.get(&r.id).is_some_and(|&ci| self.vc.vclosures[ci].active) {
                         return Ok(());
                     }
                     // a closure answered from its tree has no news of its own: news of its edges fires a reader whole
                     if at0 == 0 && (fl.is_some() || !brk!("vclosure_reader_stale" => true; false) && self.vreader_due(r, cur)) {
                         // (an addition fires it on the rows the new edges make)
-                        let f = if fl.is_none() && self.adding && !r.has_agg && !r.has_thr && r.lattice_outer.is_empty() && !r.demand_strict {
+                        let f = if fl.is_none() && self.add.adding && !r.has_agg && !r.has_thr && r.lattice_outer.is_empty() && !r.demand_strict {
                             let f = self.vfire_news(r, cur)?;
                             self.vreader_fired(r);
                             f
@@ -5087,9 +5127,9 @@ impl Eval {
                 // thresholds solve only the groups the news reaches.
                 if brk!("thr_no_refire" => false; r.thr_rels.iter().any(|rel| cur.by_rel.contains_key(rel))) {
                     let focus = self.thr_focus_of(r, &cur)?;
-                    self.thr_focus = Some(Rc::new(focus));
+                    self.thr.focus = Some(Rc::new(focus));
                     let f = self.fire_rule(r, None);
-                    self.thr_focus = None;
+                    self.thr.focus = None;
                     merge_front(&mut self.cur_front, f?);
                 }
             }
@@ -5103,8 +5143,8 @@ impl Eval {
         front_at: Option<(usize, &FxSet<FactId>)>,
     ) -> Result<Front, Halt> {
         // the rules a declared closure lowers to are not fired where the closure is answered from its tree
-        if self.vany {
-            if self.vskip.get(&r.id).is_some_and(|&ci| self.vclosures[ci].active) {
+        if self.vc.any {
+            if self.vc.skip.get(&r.id).is_some_and(|&ci| self.vc.vclosures[ci].active) {
                 return Ok(Front::default());
             }
             if front_at.is_none() {
@@ -5219,7 +5259,7 @@ impl Eval {
             }
             (start, adj)
         }
-        let keep = !self.no_witness;
+        let keep = !self.prov.no_witness;
         let (start, adj) = csr(n, &edges, false);
         let (pstart, pred) = if keep { csr(n, &edges, true) } else { (Vec::new(), Vec::new()) };
         let span = |st: &[u32], v: u32| st[v as usize] as usize..st[v as usize + 1] as usize;
@@ -5279,11 +5319,11 @@ impl Eval {
                     }
                 }
                 // (a row that stood before an addition, given a firing, may stand lower now)
-                let stood = self.adding && id < self.add_mark && !self.store.rec(id).base() && self.add_heights.contains(&c.rel);
+                let stood = self.add.adding && id < self.add.mark && !self.store.rec(id).base() && self.add.heights.contains(&c.rel);
                 for (rule, prems) in firings {
                     if self.store.support(id, Witness { rule, tick, prems }) {
                         if stood && brk!("add_closure_lowered_unnoted" => false; true) {
-                            self.add_refired.push(id);
+                            self.add.refired.push(id);
                         }
                         self.bump_steps()?;
                         self.charge_row(Some(rule), true)?;
@@ -5317,7 +5357,7 @@ impl Eval {
             Vec::new()
         };
         if !persp_t.is_atom() || !args.iter().all(|a| self.h.is_ground(*a)) {
-            if !self.demand_rels.iter().any(|(x, _)| *x == head.rel) {
+            if !self.demand.rels.iter().any(|(x, _)| *x == head.rel) {
                 let msg = format!(
                     "rule {}: non-ground or open conclusion skipped ({})",
                     self.h.name(r.id),
@@ -5435,9 +5475,9 @@ impl Eval {
         }
         // a fact that stood before an addition, given a firing that may lower it: found lower or not, as a closure's
         // row is, since its old height is a walk of all it rests on
-        let stood = self.adding && !is_new && id < self.add_mark && !self.store.rec(id).base() && self.add_heights.contains(&head.rel);
+        let stood = self.add.adding && !is_new && id < self.add.mark && !self.store.rec(id).base() && self.add.heights.contains(&head.rel);
         let tick = self.store.tick;
-        let new_firing = if self.no_witness && self.lattices.is_empty() {
+        let new_firing = if self.prov.no_witness && self.lattices.is_empty() {
             is_new
         } else {
             self.store.support(
@@ -5451,9 +5491,9 @@ impl Eval {
         };
         if new_firing {
             if stood {
-                self.add_refired.push(id);
+                self.add.refired.push(id);
             }
-            if self.ds_check {
+            if self.ds.check {
                 return Err(Halt::Bug(format!(
                     "the layers of a component stratified by its data missed an instance of rule {}: it concludes {} again, new",
                     self.h.name(r.id),
@@ -5466,7 +5506,7 @@ impl Eval {
             }
             self.charge_row(Some(r.id), true)?;
             self.write_derived_by(r.id, head.rel, persp, &args, id, out);
-        } else if self.ds_charge {
+        } else if self.ds.charge {
             self.bump_steps()?;
         }
         if is_new {
@@ -5478,7 +5518,7 @@ impl Eval {
     fn write_derived_by(&mut self, rule: Sym, rel: Sym, persp: Sym, args: &[Term], id: FactId, out: &mut Front) {
         if self.defers(rel) {
             self.defer_derived_by(id, rule);
-        } else if !self.no_provenance {
+        } else if !self.prov.no_provenance {
             let ft = fact_term(&mut self.h, &self.v, rel, persp, args);
             let db_args = [ft, Term::atom(rule), Term::int(self.store.tick as i64)];
             if self.store.add(&self.h, self.v.derived_by, self.v.kernel_persp, &db_args, 0) {
@@ -5612,7 +5652,7 @@ impl Eval {
                                     Some((p, keys)) if p == i => Some(keys),
                                     _ => None,
                                 };
-                                let (faults, unknowns) = (self.fault_count, self.demand_trail.len());
+                                let (faults, unknowns) = (self.fault_count, self.demand.trail.len());
                                 let found = self.match_premise(l, &a.s, depth, only)?;
                                 self.demand_below(depth, l, &a.s, faults, unknowns);
                                 for (s2, r) in found {
@@ -5688,20 +5728,20 @@ impl Eval {
     /// demand holds through the calls below it stays small.
     #[inline(never)]
     fn solve_neg(&mut self, l: &Lit, a: &Sol, i: usize, depth: usize, rule_id: Option<Sym>, next: &mut Vec<Sol>) -> Result<(), Halt> {
-        let (faults, unknowns, asked) = (self.fault_count, self.demand_trail.len(), self.asked.len());
+        let (faults, unknowns, asked) = (self.fault_count, self.demand.trail.len(), self.demand.asked.len());
         self.demand.neg_level += 1;
         let holds = self.neg_holds(l, &a.s, depth);
         self.demand.neg_level -= 1;
         let holds = holds?;
-        let below = self.fault_count > faults || self.demand_trail.len() > unknowns;
+        let below = self.fault_count > faults || self.demand.trail.len() > unknowns;
         // a match found decides the negation whatever the unknowns beside it
         if !holds && brk!("demand_neg_failed_unknown" => false; true) {
-            self.demand_trail.truncate(unknowns);
+            self.demand.trail.truncate(unknowns);
             self.fault_count = faults;
-            self.asked.truncate(asked);
+            self.demand.asked.truncate(asked);
             return Ok(());
         }
-        if below && depth > 0 && (self.firing || brk!("asked_unholed" => false; self.asking)) {
+        if below && depth > 0 && (self.firing || brk!("asked_unholed" => false; self.demand.asking)) {
             // below a call: the solution is not known, nor the head it would give
             self.demand_below(depth, l, &a.s, faults, unknowns);
             return Ok(());
@@ -5713,8 +5753,8 @@ impl Eval {
         // decide leaves the call's head under it unknown, as a fault would;
         // outside a firing too (a body solved again at the flush), where no
         // head is marked but the answer is no answer, and is not stored
-        let unfired = !self.firing && !self.asking && brk!("unfired_neg_decides" => false; true);
-        if holds && depth > 0 && (self.firing || brk!("asked_unholed" => false; self.asking) || unfired) && !self.demand_heads.is_empty() && !self.lat_spread.is_empty() {
+        let unfired = !self.firing && !self.demand.asking && brk!("unfired_neg_decides" => false; true);
+        if holds && depth > 0 && (self.firing || brk!("asked_unholed" => false; self.demand.asking) || unfired) && !self.demand.heads.is_empty() && !self.lat_spread.is_empty() {
             if let Some(u) = brk!("demand_neg_unholed" => None; self.read_unknown(l, &a.s, true)) {
                 self.demand_unknown_read(depth, &a.s, u);
                 return Ok(());
@@ -5776,7 +5816,7 @@ impl Eval {
             let mk = (rid, ag.at, corr.into_boxed_slice());
             // a correlation of a component stratified by data is read
             // once the layer before it has sealed (`datastrat.rs`)
-            if !self.ds_elems.is_empty() && self.ds_elems.contains(&(rid, ag.at)) && !self.ds_gate(&mk)? {
+            if !self.ds.elems.is_empty() && self.ds.elems.contains(&(rid, ag.at)) && !self.ds_gate(&mk)? {
                 return Ok(());
             }
             let reads = self.undecided_read(depth, rule_id, |_| ()).is_some();
@@ -5925,7 +5965,7 @@ impl Eval {
         }
         // A GROUP IS A CORRELATION OF ITS OWN in a component stratified by its data: a group variable `s` binds
         // is part of the key, one it does not is `ds_any` (datastrat.rs, `ds_bind`)
-        if !plan.group.is_empty() && self.ds_elems.contains(&(rid, a.at)) {
+        if !plan.group.is_empty() && self.ds.elems.contains(&(rid, a.at)) {
             let any = Term::atom(self.h.intern(ds_any_name()));
             for i in &plan.group {
                 let t = resolve(&mut self.h, Term::var(a.shared[*i]), s);
@@ -5990,7 +6030,7 @@ impl Eval {
     fn thr_premise(&mut self, rid: Sym, a: &Agg, s: &Subst, depth: usize) -> Result<Vec<(Subst, PremRef)>, Halt> {
         let (plan, corr) = self.agg_corr(rid, a, s)?;
         let Ok((need, n)) = self.thr_need(rid, a, s, &corr, true) else { return Ok(Vec::new()) };
-        let focus = self.thr_focus.clone();
+        let focus = self.thr.focus.clone();
         let touched = match focus.as_ref().and_then(|f| f.get(&(rid, a.at))) {
             Some(f) if !f.wild => match f.by_corr.get(&corr) {
                 None => return Ok(Vec::new()),
@@ -6012,15 +6052,15 @@ impl Eval {
             let shared = self.thr_shared(a, &plan, &corr, &gkey);
             let Some(sg) = self.bind_group(a, &plan, s, &shared) else { continue };
             let key = thr_cell_key(shared.clone(), n);
-            if let Some(c) = self.thr_cells.get(&(rid, a.at, key.clone().into_boxed_slice())).copied() {
-                if self.thr_fresh.contains(&c) {
+            if let Some(c) = self.thr.cells.get(&(rid, a.at, key.clone().into_boxed_slice())).copied() {
+                if self.thr.fresh.contains(&c) {
                     out.push((sg, PremRef::Cell(c)));
                 }
                 continue;
             }
             let ak = (rid, a.at, shared.into_boxed_slice());
-            let round = self.thr_round;
-            let grown: Vec<Vec<(Vec<Term>, Vec<ThrMember>)>> = match self.thr_acc.get(&ak) {
+            let round = self.thr.round;
+            let grown: Vec<Vec<(Vec<Term>, Vec<ThrMember>)>> = match self.thr.acc.get(&ak) {
                 Some(acc) if brk!("thr_acc_frozen" => true; acc.round == round) => Vec::new(),
                 Some(_) => {
                     let mut gr = Vec::with_capacity(f.news.len());
@@ -6031,11 +6071,11 @@ impl Eval {
                 }
                 None => {
                     let full = self.thr_groups(rid, a, &plan, &sg, depth, true, None)?.0;
-                    self.thr_acc.insert(ak.clone(), ThrAcc { round, members: HashMap::new() });
+                    self.thr.acc.insert(ak.clone(), ThrAcc { round, members: HashMap::new() });
                     vec![full]
                 }
             };
-            let acc = self.thr_acc.get_mut(&ak).ok_or_else(|| Halt::Bug("a threshold group lost its members".into()))?;
+            let acc = self.thr.acc.get_mut(&ak).ok_or_else(|| Halt::Bug("a threshold group lost its members".into()))?;
             acc.round = round;
             for m in grown.into_iter().flatten().flat_map(|g| g.1) {
                 acc.members.entry(m.proj.clone()).or_insert(m);
@@ -6066,7 +6106,7 @@ impl Eval {
     ) -> Result<Vec<(Subst, PremRef)>, Halt> {
         if plan.group.is_empty() {
             let key = thr_cell_key(self.thr_shared(a, plan, corr, &[]), n);
-            if let Some(c) = self.thr_cells.get(&(rid, a.at, key.into_boxed_slice())) {
+            if let Some(c) = self.thr.cells.get(&(rid, a.at, key.into_boxed_slice())) {
                 return Ok(vec![(s.clone(), PremRef::Cell(*c))]);
             }
         }
@@ -6077,7 +6117,7 @@ impl Eval {
         let mut out = Vec::new();
         for (gkey, members) in groups {
             let key = thr_cell_key(self.thr_shared(a, plan, corr, &gkey), n);
-            let c = match self.thr_cells.get(&(rid, a.at, key.clone().into_boxed_slice())) {
+            let c = match self.thr.cells.get(&(rid, a.at, key.clone().into_boxed_slice())) {
                 Some(c) => *c,
                 None if members.len() < need => continue,
                 None => self.thr_reach(rid, a, plan, s, key.clone(), need, members)?,
@@ -6133,9 +6173,9 @@ impl Eval {
             members: provisional,
             seals: Vec::new(),
         });
-        self.thr_cells.insert((rid, a.at, key.into_boxed_slice()), c);
-        self.thr_open.push((c, need));
-        self.thr_fresh.insert(c);
+        self.thr.cells.insert((rid, a.at, key.into_boxed_slice()), c);
+        self.thr.open.push((c, need));
+        self.thr.fresh.insert(c);
         Ok(c)
     }
 
@@ -6499,7 +6539,7 @@ impl Eval {
     /// rest on a conclusion another quorum supports; the Quorum is the first
     /// N by height, then projection (`cell::quorum`); then it is reflected.
     fn close_thresholds_below(&mut self, lv: i64, then_propagate: bool) -> Result<(), Halt> {
-        if self.thr_open.is_empty() {
+        if self.thr.open.is_empty() {
             return Ok(());
         }
         let closed = |e: &Eval, rel: Sym| match e.round_of.get(&rel) {
@@ -6510,7 +6550,7 @@ impl Eval {
         let mut rest: Vec<(CellId, usize)> = Vec::new();
         // Kept open until each is resealed: a wall that falls in between
         // leaves them to the cut, which closes them.
-        for (c, need) in self.thr_open.clone() {
+        for (c, need) in self.thr.open.clone() {
             let CellOwner::Body { rule, at } = self.store.cell(c).owner;
             let plan = self.agg_plans.get(&(rule, at)).cloned().ok_or_else(|| Halt::Bug("a quorum with no plan".into()))?;
             let head = self.rule_of(rule).map(|r| r.clause.head.rel);
@@ -6573,7 +6613,7 @@ impl Eval {
             brk!("thr_no_close" => { let _ = (members, height); }; self.store.reseal_cell(*c, members, height));
             self.reflect_cell(*c)?;
         }
-        self.thr_open = rest;
+        self.thr.open = rest;
         if then_propagate {
             let front = std::mem::take(&mut self.cur_front);
             if !front.keys.is_empty() {
@@ -6649,7 +6689,7 @@ impl Eval {
         groups.extend(fresh.into_iter().map(|g| (g, Vec::new())));
         // a group a narrower correlation of the element sealed already is its cell, listed here and not sealed again (`ds_bind`)
         let mut reuse: Vec<CellId> = Vec::new();
-        if keep && !plan.group.is_empty() && self.ds_elems.contains(&(rid, a.at)) && brk!("ds_group_resealed" => false; true) {
+        if keep && !plan.group.is_empty() && self.ds.elems.contains(&(rid, a.at)) && brk!("ds_group_resealed" => false; true) {
             let owner = CellOwner::Body { rule: rid, at: a.at };
             let mut key: Vec<Term> = vec![Term::int(0); a.shared.len()];
             for (n, i) in plan.corr.iter().enumerate() {
@@ -7434,7 +7474,7 @@ impl Eval {
 
     /// The `derived_by` row of a firing of `id` by `rule` at this tick.
     fn note_derived_by(&mut self, id: FactId, rule: Sym, out: &mut Front) {
-        if self.no_provenance {
+        if self.prov.no_provenance {
             return;
         }
         if self.defers(self.store.rec(id).rel) {
@@ -8010,7 +8050,7 @@ impl Eval {
     /// A value a better one replaced: no answer and no `derived_by` row, its
     /// firings kept as the cell's history (`lat.superseded`).
     fn supersede(&mut self, old: FactId, ck: &LatKey) {
-        if !self.no_provenance {
+        if !self.prov.no_provenance {
             let mut rules: Vec<Sym> = self.store.firing_rules(old);
             rules.sort();
             rules.dedup();
@@ -8025,7 +8065,7 @@ impl Eval {
 
     /// Retire a derived fact and the `derived_by` rows its firings wrote.
     fn retire_fact(&mut self, id: FactId) {
-        if !self.no_provenance {
+        if !self.prov.no_provenance {
             let mut rules: Vec<Sym> = self.store.firing_rules(id);
             rules.sort();
             rules.dedup();
@@ -8037,7 +8077,7 @@ impl Eval {
     }
 
     fn retire_derived_by(&mut self, id: FactId, rule: Sym) {
-        if self.no_provenance {
+        if self.prov.no_provenance {
             return;
         }
         let rec = self.store.rec(id);
@@ -9017,9 +9057,9 @@ impl Eval {
         // readers from there (a negation in it reads holes at each call)
         if only.is_none() && brk!("demand_poison_skipped" => false; true) {
             let open: Vec<Rc<ERule>> = self
-                .demand_rels
+                .demand.rels
                 .iter()
-                .filter(|(rel, _)| !self.demand_closed.contains(rel))
+                .filter(|(rel, _)| !self.demand.closed.contains(rel))
                 .flat_map(|(_, rs)| rs.iter().filter(|r| r.plan.iter().any(|b| matches!(b, BodyElem::Pos(l) if l.rel == rel))).cloned())
                 .collect();
             for r in open {
@@ -9082,7 +9122,7 @@ impl Eval {
                     // a late `unknown(A)` a strict reader could read is `meta_late`
                     BodyElem::Neg(_) | BodyElem::Agg(_) if rel == self.v.unknown => None,
                     // its correlations seal in the order of the data, after the carry of each layer
-                    BodyElem::Agg(a) if self.ds_elems.contains(&(r.id, a.at)) => None,
+                    BodyElem::Agg(a) if self.ds.elems.contains(&(r.id, a.at)) => None,
                     b @ (BodyElem::Neg(_) | BodyElem::Agg(_)) if only.is_none() && b.lits_deep().iter().any(|l| l.rel == rel) => {
                         return Err(Halt::Bug(format!(
                             "rule {} fired before {} was closed: a negation or an aggregate read it while a hole could still reach it",
@@ -9373,7 +9413,7 @@ impl Eval {
     /// completion, so it is no possible. Undecided where an argument is not
     /// known, and asked only of a relation not answered on demand.
     fn neg_decided(&mut self, l: &Lit, ps: &Subst, free: &[Sym]) -> Result<bool, Halt> {
-        if self.demand_rels.iter().any(|(r, _)| *r == l.rel) {
+        if self.demand.rels.iter().any(|(r, _)| *r == l.rel) {
             return Ok(false);
         }
         let s: Subst = ps.iter().filter(|(k, _)| !free.contains(k)).copied().collect();
@@ -9842,7 +9882,7 @@ impl Eval {
         if depth == 0 || !self.firing || brk!("demand_fault_unspread" => true; false) {
             return;
         }
-        let Some(head) = self.demand_heads.last().cloned() else { return };
+        let Some(head) = self.demand.heads.last().cloned() else { return };
         let u = self.lit_unknown(&head, s);
         self.fault_edge(&u);
         self.plain_pending.push((u, true));
@@ -9858,7 +9898,7 @@ impl Eval {
             self.demand_fault(depth, s);
             return;
         }
-        if self.demand_trail.len() == unknowns {
+        if self.demand.trail.len() == unknowns {
             return;
         }
         let mut bound = false;
@@ -9869,7 +9909,7 @@ impl Eval {
             bound = true;
         }
         if !bound {
-            let from = self.demand_trail[unknowns..].to_vec();
+            let from = self.demand.trail[unknowns..].to_vec();
             self.demand_unknown_at(depth, s, from);
         }
     }
@@ -9877,7 +9917,7 @@ impl Eval {
     /// The heads of calls to `rel` left unknown past `unknowns` on the trail,
     /// each once; every one past it when none is of `rel`.
     fn demand_called(&self, rel: Sym, unknowns: usize) -> Vec<Unknown> {
-        let past = brk!("demand_trail_last" => &self.demand_trail[self.demand_trail.len() - 1..]; &self.demand_trail[unknowns..]);
+        let past = brk!("demand_trail_last" => &self.demand.trail[self.demand.trail.len() - 1..]; &self.demand.trail[unknowns..]);
         let mut out: Vec<Unknown> = Vec::new();
         for u in past.iter().filter(|u| u.rel() == rel) {
             if !out.contains(u) {
@@ -9918,27 +9958,27 @@ impl Eval {
     /// unfolded: its answers past those found are unknown (a hole on the rule
     /// it was met in, `demand_cycle`), and the call above rests on them.
     fn demand_cycle(&mut self, l: &Lit, s: &Subst) {
-        if !(self.firing || self.asking) {
+        if !(self.firing || self.demand.asking) {
             return;
         }
-        let Some(&rid) = self.demand_rule_ids.last() else { return };
+        let Some(&rid) = self.demand.rule_ids.last() else { return };
         let u = self.lit_unknown(l, s);
         if self.firing {
             self.arith_hole(rid, self.v.demand_cycle);
             let marker = self.rule_marker(rid);
             self.unk_edges.push((Node::Unk(u.clone()), Node::Hole(marker)));
             self.plain_pending.push((u.clone(), true));
-        } else if !self.asked.contains(&u) {
-            self.asked.push(u.clone());
+        } else if !self.demand.asked.contains(&u) {
+            self.demand.asked.push(u.clone());
         }
-        self.demand_trail.push(u);
+        self.demand.trail.push(u);
     }
 
     /// `u`, a hole left unknown, read below a call: in a firing the call's
     /// head is unknown; answering a question, `u` is noted.
     fn demand_unknown_read(&mut self, depth: usize, s: &Subst, u: Unknown) {
-        if !self.firing && !self.asked.contains(&u) {
-            self.asked.push(u.clone());
+        if !self.firing && !self.demand.asked.contains(&u) {
+            self.demand.asked.push(u.clone());
         }
         self.demand_unknown_at(depth, s, vec![u]);
     }
@@ -9946,10 +9986,10 @@ impl Eval {
     /// AN UNKNOWN BELOW A CALL ANSWERED ON DEMAND, in a firing: the call's head
     /// under `s` is unknown, reached from `from`, and so is each call up.
     fn demand_unknown_at(&mut self, depth: usize, s: &Subst, from: Vec<Unknown>) {
-        if depth == 0 || !(self.firing || self.asking) {
+        if depth == 0 || !(self.firing || self.demand.asking) {
             return;
         }
-        let Some(head) = self.demand_heads.last().cloned() else { return };
+        let Some(head) = self.demand.heads.last().cloned() else { return };
         let u = self.lit_unknown(&head, s);
         if self.firing {
             for f in from {
@@ -9957,7 +9997,7 @@ impl Eval {
             }
             self.plain_pending.push((u.clone(), true));
         }
-        self.demand_trail.push(u);
+        self.demand.trail.push(u);
     }
 
     /// The cells the body aggregate at element `i` holed under `s`, each with
@@ -10633,7 +10673,7 @@ impl Eval {
                     }
                 }
             }
-            if self.answer.reads_lattice_members && !self.no_provenance {
+            if self.answer.reads_lattice_members && !self.prov.no_provenance {
                 let rec = self.store.rec(f);
                 let args = self.store.args(f).to_vec();
                 let ft = fact_term(&mut self.h, &self.v, rec.rel, rec.persp, &args);
@@ -10657,7 +10697,7 @@ impl Eval {
         }
         // THE ANTICHAIN'S OTHER HALF: every value the cell was given and does
         // not hold, with the member of the front that dominates it
-        if self.subs.contains_key(&p) && self.answer.reads_dominated && !self.no_provenance {
+        if self.subs.contains_key(&p) && self.answer.reads_dominated && !self.prov.no_provenance {
             let mut rows: Vec<(String, [Term; 3])> = Vec::new();
             let by: Vec<(SubVal, (FactId, Sym))> = self.lat.sub_by.iter().filter(|((ck, _), (f, _))| ck.0 == p && self.store.alive(*f)).map(|(k, v)| (k.clone(), *v)).collect();
             for ((ck, d), (f, rule)) in by {
@@ -11333,7 +11373,7 @@ impl Eval {
 
     /// A hole row of this evaluation; true if it was new.
     fn eval_hole(&mut self, args: &[Term]) -> bool {
-        if self.asking && !self.firing && brk!("question_writes_holes" => false; true) {
+        if self.demand.asking && !self.firing && brk!("question_writes_holes" => false; true) {
             return false;
         }
         let (id, new) = self.store.put(&self.h, self.v.hole, self.v.kernel_persp, args, F_BASE | F_FROZEN);
@@ -11351,7 +11391,7 @@ impl Eval {
     /// `reads_provenance` does for `derived_by`. Tick-scoped: they describe
     /// this tick's cells, so a key never reads two values.
     fn reflect_cell(&mut self, c: CellId) -> Result<(), Halt> {
-        if self.no_provenance {
+        if self.prov.no_provenance {
             return Ok(());
         }
         let r = self.store.cell(c).clone();
@@ -11412,7 +11452,7 @@ impl Eval {
             PremRef::Cell(c) => self.store.cell_key_term(&mut self.h, c),
             PremRef::VRow(k) => match self.vrow_entry(k) {
                 Some((ci, book, a, d)) => {
-                    let rel = self.vclosures[ci].rel;
+                    let rel = self.vc.vclosures[ci].rel;
                     fact_term(&mut self.h, &self.v, rel, book, &[a, d])
                 }
                 None => Term::str(k),
@@ -11498,7 +11538,7 @@ impl Eval {
     /// (each tried in turn, the first found read), and the answers of it this
     /// call can match: those with its values there, and those open there.
     fn done_answers(&mut self, l: &Lit, s: &Subst) -> Option<Vec<(Vec<Term>, PremRef)>> {
-        if self.demand_done.is_empty() {
+        if self.demand.done.is_empty() {
             return None;
         }
         if self.demand.done_at != (self.store.version, self.store.tick) && brk!("demand_done_stale" => false; true) {
@@ -11516,7 +11556,7 @@ impl Eval {
                 gen[*i] = self.h.var(&format!("$g{k}"));
             }
             let key = self.anon_key(l.rel, p, &gen);
-            let Some(t) = self.demand_done.get_mut(&key) else { continue };
+            let Some(t) = self.demand.done.get_mut(&key) else { continue };
             if at.is_empty() {
                 return Some(t.answers.clone());
             }
@@ -11575,9 +11615,9 @@ impl Eval {
 
     /// The tables dropped, and the rows they held given back.
     fn drop_done(&mut self) {
-        let held = std::mem::take(&mut self.demand_done_rows);
+        let held = std::mem::take(&mut self.demand.done_rows);
         self.give_rows(brk!("demand_table_rows_kept" => 0; held));
-        self.demand_done.clear();
+        self.demand.done.clear();
     }
 
     /// A complete call's answers kept by its key, its rows held by the table.
@@ -11586,9 +11626,9 @@ impl Eval {
             self.drop_done();
             self.demand.done_at = (self.store.version, self.store.tick);
         }
-        self.demand_done_rows += rows;
-        if let Some(old) = self.demand_done.insert(key, DoneTable { answers, by: HashMap::new(), rows }) {
-            self.demand_done_rows -= old.rows;
+        self.demand.done_rows += rows;
+        if let Some(old) = self.demand.done.insert(key, DoneTable { answers, by: HashMap::new(), rows }) {
+            self.demand.done_rows -= old.rows;
             self.give_rows(old.rows);
         }
     }
@@ -11716,7 +11756,7 @@ impl Eval {
     /// Every record an unknown leaves (a fault, the trail, an unknown asked, the
     /// heads and edges and cells left undecided), then the store's version and tick.
     fn unknown_marks(&self) -> Vec<u64> {
-        let n = [self.demand_trail.len(), self.asked.len(), self.plain_pending.len(), self.unk_edges.len(), self.plain_undecided.len(), self.lat_undecided.len(), self.lat_plain.len()];
+        let n = [self.demand.trail.len(), self.demand.asked.len(), self.plain_pending.len(), self.unk_edges.len(), self.plain_undecided.len(), self.lat_undecided.len(), self.lat_plain.len()];
         let mut m = vec![self.fault_count as u64];
         m.extend(n.iter().map(|x| *x as u64));
         m.extend([self.store.version, self.store.tick as u64]);
@@ -11785,7 +11825,7 @@ impl Eval {
                     }
                 }
             }
-            None if (self.asking || self.refinding) && !self.firing && !self.store.unordered => self.question_cands(l, s, persp),
+            None if (self.demand.asking || self.demand.refinding) && !self.firing && !self.store.unordered => self.question_cands(l, s, persp),
             None => match self.index_probe(l, s, persp, usize::MAX) {
                 Some(c) => c,
                 None => match persp {
@@ -11839,20 +11879,20 @@ impl Eval {
             return Ok(out);
         }
         let drs: Option<Vec<Rc<ERule>>> = self
-            .demand_rels
+            .demand.rels
             .iter()
             .find(|(r, _)| *r == l.rel)
             .map(|(_, rs)| rs.clone());
         // A CLOSED RELATION'S ANSWERS ARE ALL IN THE STORE at its fixpoint (its
         // rules fire bottom-up and its news refires every reader): read, not unfolded
-        let closed = self.demand_closed.contains(&l.rel);
+        let closed = self.demand.closed.contains(&l.rel);
         let drs = drs.filter(|_| !closed || brk!("demand_recursion_unfolds" => true, "demand_closed_unfolds" => true; false));
         // A CALL MET AGAIN INSIDE ITS OWN UNFOLDING would unfold without end. It
         // reads the answers found so far, and the first call unfolds again until
         // they stop growing: the least fixpoint of a positive recursion. Met under
         // a negation opened inside the cycle, answers that may still grow decide
         // nothing: they are unknown past those found, and so is the call above.
-        let keyed = if closed { brk!("demand_closed_unfolds" => true; false) } else { self.demand_cyclic.contains(&l.rel) };
+        let keyed = if closed { brk!("demand_closed_unfolds" => true; false) } else { self.demand.cyclic.contains(&l.rel) };
         let call = drs.as_ref().filter(|_| keyed).map(|_| self.anon_lit_key(l, s));
         let met = call.as_ref().and_then(|k| self.demand.calls.iter().position(|c| c.key == *k));
         let again = met.filter(|_| !closed && brk!("demand_cycle_unfolds" => false; true));
@@ -11864,7 +11904,7 @@ impl Eval {
         let member = if met.is_none() && !closed { call.as_deref().and_then(|k| self.scc_member(k)) } else { None };
         // A CALL A COMPLETE ONE COVERS reads its answers: they were all found over this store, in a firing
         // (a question notes the unknowns it reads, which a firing leaves to the holes it writes)
-        let tabled = call.is_some() && met.is_none() && member.is_none() && only.is_none() && self.firing && !self.asking && self.assume.is_none() && self.demand_tabled.contains(&l.rel) && brk!("demand_done_off" => false; true);
+        let tabled = call.is_some() && met.is_none() && member.is_none() && only.is_none() && self.firing && !self.demand.asking && self.assume.is_none() && self.demand.tabled.contains(&l.rel) && brk!("demand_done_off" => false; true);
         let served = if tabled { self.done_answers(l, s) } else { None };
         let out = if reread || member.is_some() || served.is_some() { Vec::new() } else { self.store_answers(l, s, only) };
         let mut open: Vec<(Subst, PremRef, String)> = Vec::new();
@@ -11993,7 +12033,7 @@ impl Eval {
         let scc_from = self.demand.scc.len();
         let mut u = Unfolding { pushed: call.is_some(), p, scc_from, lr: None, pass: 0, scc: false, full: false, old: false, marks: Vec::new() };
         let Some(key) = call else { return u };
-        let linear = self.demand_linear.contains(&l.rel) && brk!("demand_naive_passes" => false; true);
+        let linear = self.demand.linear.contains(&l.rel) && brk!("demand_naive_passes" => false; true);
         let marks = self.unknown_marks();
         let mut c = DemandCall { key, neg: self.demand.neg_level, linear, low: p, marks, scc_from, seen: usize::MAX, ..Default::default() };
         let stored = if only.is_some() { self.store_answers(l, s, None) } else { out.to_vec() };
@@ -12169,7 +12209,7 @@ impl Eval {
             let units: Vec<SccMember> = self.demand.scc.drain(scc_from..).flatten().collect();
             for m in units {
                 self.demand.scc_at.remove(&m.call.key);
-                if self.demand_tabled.contains(&m.lit.rel) {
+                if self.demand.tabled.contains(&m.lit.rel) {
                     self.table_call(m.call.key, m.call.answers, m.call.rows);
                 } else {
                     self.give_rows(m.call.rows);
@@ -12207,11 +12247,11 @@ impl Eval {
         let Some(s3) = unify_all(&self.h, &head.args, &call.args, &s2) else {
             return Ok(Vec::new());
         };
-        self.demand_heads.push(head.clone());
-        self.demand_rule_ids.push(r.id);
+        self.demand.heads.push(head.clone());
+        self.demand.rule_ids.push(r.id);
         let sols = self.solve_body(&rn.body, s3, depth + 1, None, Some(r.id));
-        self.demand_rule_ids.pop();
-        self.demand_heads.pop();
+        self.demand.rule_ids.pop();
+        self.demand.heads.pop();
         let sols = sols?;
         let mut out = Vec::new();
         for sol in sols {
@@ -12225,14 +12265,14 @@ impl Eval {
                 let p = persp.as_atom().unwrap();
                 // A QUESTION LEAVES THE WORLD AS IT FOUND IT: what it finds is held for
                 // the question (a why renders it) and taken out after (`forget_asked`)
-                if self.asking && !self.firing && brk!("asked_answers_kept" => false; true) {
+                if self.demand.asking && !self.firing && brk!("asked_answers_kept" => false; true) {
                     let version = self.store.version;
                     let (id, is_new) = self.store.put(&self.h, call.rel, p, &args, F_TICK);
                     self.store.version = version;
                     if is_new {
                         let tick = self.store.tick;
                         self.store.support(id, Witness { rule: r.id, tick, prems: sol.prems.clone() });
-                        self.asked_made.push(id);
+                        self.demand.asked_made.push(id);
                     }
                     out.push((sol.s, PremRef::Fact(id)));
                     continue;
@@ -12254,7 +12294,7 @@ impl Eval {
                     self.charge_row(Some(r.id), true)?;
                     if self.defers(call.rel) {
                         self.defer_derived_by(id, r.id);
-                    } else if !self.no_provenance {
+                    } else if !self.prov.no_provenance {
                         let ft = fact_term(&mut self.h, &self.v, call.rel, p, &args);
                         let rid = Term::atom(r.id);
                         let db_args = [ft, rid, Term::int(tick as i64)];
@@ -12296,7 +12336,7 @@ impl Eval {
             // An existence question. When the relation is not demand-backed,
             // `matchPremise` has no side effect and no order that matters, so
             // the answer is the same and nothing is built to throw away.
-            if !self.demand_rels.iter().any(|(r, _)| *r == l.rel) {
+            if !self.demand.rels.iter().any(|(r, _)| *r == l.rel) {
                 return self.match_exists(l, s);
             }
             return Ok(self.match_premise(l, s, depth, None)?.is_empty());
@@ -12665,7 +12705,7 @@ impl Eval {
 
     fn arith_hole(&mut self, rule_id: Sym, reason: Sym) {
         // A QUESTION LEAVES THE WORLD AS IT FOUND IT: a wall or a fault it meets is its own, named by its hole
-        if self.asking && !self.firing && brk!("question_writes_holes" => false; true) {
+        if self.demand.asking && !self.firing && brk!("question_writes_holes" => false; true) {
             return;
         }
         let marker = self.rule_marker(rule_id);
@@ -12713,10 +12753,10 @@ impl Eval {
         self.cell_decided.clear();
         self.regions_capped.clear();
         self.hol_shared.clear();
-        self.thr_cells.clear();
-        self.thr_open.clear();
-        self.thr_acc.clear();
-        self.thr_fresh.clear();
+        self.thr.cells.clear();
+        self.thr.open.clear();
+        self.thr.acc.clear();
+        self.thr.fresh.clear();
         self.height_memo.clear();
     }
 
@@ -12726,8 +12766,8 @@ impl Eval {
         self.refix_unknowns();
         self.forget_cells();
         self.rows = 0;
-        self.demand_done.clear();
-        self.demand_done_rows = 0;
+        self.demand.done.clear();
+        self.demand.done_rows = 0;
         self.active.clear();
         self.staged.clear();
         self.staged_alts.clear();
@@ -12832,9 +12872,9 @@ impl Eval {
                 String::new(),
             ));
         }
-        if !self.demand_rels.is_empty() {
+        if !self.demand.rels.is_empty() {
             let names: Vec<&str> = self
-                .demand_rels
+                .demand.rels
                 .iter()
                 .map(|(r, _)| self.h.name(*r))
                 .collect();
@@ -14741,13 +14781,13 @@ impl Eval {
 
     /// The facts a question made, out of the store.
     fn forget_asked(&mut self) {
-        let ids = std::mem::take(&mut self.asked_made);
+        let ids = std::mem::take(&mut self.demand.asked_made);
         self.store.remove_many(&ids);
     }
 
     /// Whether `rel` is answered on demand and unfolded at a call: its answers are not all in the store.
     pub fn answers_open(&self, rel: Sym) -> bool {
-        self.demand_rels.iter().any(|(r, _)| *r == rel) && !self.demand_closed.contains(&rel)
+        self.demand.rels.iter().any(|(r, _)| *r == rel) && !self.demand.closed.contains(&rel)
     }
 
     /// A QUESTION TO A RELATION UNFOLDED AT A CALL (`Session::ask`, the reference's `query`): its
@@ -14755,14 +14795,14 @@ impl Eval {
     /// is left as it was found.
     pub fn answer_on_demand(&mut self, lit: &Lit) -> Result<(Vec<Subst>, bool), Halt> {
         let saved = std::mem::replace(&mut self.rename_counter, 0);
-        let asking = std::mem::replace(&mut self.asking, true);
-        self.asked.clear();
-        self.demand_trail.clear();
+        let asking = std::mem::replace(&mut self.demand.asking, true);
+        self.demand.asked.clear();
+        self.demand.trail.clear();
         let got = self.questioned(|e| e.match_premise(lit, &Subst::default(), 0, None));
-        self.asking = asking;
+        self.demand.asking = asking;
         self.rename_counter = saved;
-        let asked = std::mem::take(&mut self.asked);
-        let trail = std::mem::take(&mut self.demand_trail);
+        let asked = std::mem::take(&mut self.demand.asked);
+        let trail = std::mem::take(&mut self.demand.trail);
         self.forget_asked();
         let sols: Vec<Subst> = got?.into_iter().map(|(s, _)| s).collect();
         let partial = brk!("asked_partial_unnamed" => !asked.is_empty() && self.shrugs_of(lit).is_empty(); self.unknown_answers_unnamed(lit, &asked, &trail));
@@ -14879,12 +14919,12 @@ impl Eval {
         if !self.answers_open(lit.rel) || brk!("why_unasked" => true; false) {
             return Ok(None);
         }
-        let asking = std::mem::replace(&mut self.asking, true);
-        self.asked.clear();
+        let asking = std::mem::replace(&mut self.demand.asking, true);
+        self.demand.asked.clear();
         let got = self.match_premise(lit, &Subst::default(), 0, None);
-        self.asking = asking;
-        let asked = std::mem::take(&mut self.asked);
-        self.demand_trail.clear();
+        self.demand.asking = asking;
+        let asked = std::mem::take(&mut self.demand.asked);
+        self.demand.trail.clear();
         if let Err(h) = got {
             self.forget_asked();
             return Err(Err(match h {
@@ -14910,7 +14950,7 @@ impl Eval {
         self.why.past_rows = None;
         self.why.scans = 0;
         self.why.done.clear();
-        self.vrow_done.clear();
+        self.vc.row_done.clear();
         self.why.heights.clear();
         self.why.heads.clear();
         self.why.unk = if self.plain { self.unknown_ctx() } else { None };
@@ -14989,7 +15029,7 @@ impl Eval {
     /// shortest proof of the claim is the assertion, not that circle. A firing
     /// staged from an earlier tick reads that tick's fact, which is no circle.
     fn why_witness(&mut self, id: FactId) -> Option<(Sym, u32, Vec<PremRef>)> {
-        let w = if !self.no_witness || !self.lattices.is_empty() {
+        let w = if !self.prov.no_witness || !self.lattices.is_empty() {
             self.store.witness_of(&self.h, id, &mut self.why.heights).map(|w| (w.rule, w.tick, w.prems.to_vec()))?
         } else {
             self.why_firings(id).into_iter().next()?
@@ -15132,7 +15172,7 @@ impl Eval {
     /// every derivation that holds at the fixpoint was fired, and is a solution
     /// of a rule with its head bound to the fact.
     fn why_firings(&mut self, id: FactId) -> Vec<(Sym, u32, Vec<PremRef>)> {
-        if !self.no_witness || !self.lattices.is_empty() {
+        if !self.prov.no_witness || !self.lattices.is_empty() {
             return self.store.firings_ranked(&self.h, id, &mut self.why.heights);
         }
         let mut fs = self.store.firings(id);
@@ -15158,7 +15198,7 @@ impl Eval {
             .collect();
         let saved = (self.steps, self.rows, self.peak_rows, self.budget, self.space);
         (self.budget, self.space) = (i64::MAX, i64::MAX);
-        self.refinding = true;
+        self.demand.refinding = true;
         let tick = self.store.tick;
         let mut out = Vec::new();
         for r in rules {
@@ -15202,7 +15242,7 @@ impl Eval {
             }
         }
         (self.steps, self.rows, self.peak_rows, self.budget, self.space) = saved;
-        self.refinding = false;
+        self.demand.refinding = false;
         out
     }
 
@@ -15447,7 +15487,7 @@ impl Eval {
     fn render_past(&mut self, pr: PremRef, t: u32, indent: usize, o: &WhyOpts, next: &mut Vec<WhyTask>) {
         // a row of a closure answered from its tree, read at T: named by its frozen `derived_by` rows as a stored row is
         let vrow = match pr {
-            PremRef::VRow(k) if !brk!("vclosure_past_row_present" => true; false) => self.vrow_entry(k).map(|(ci, b, a, d)| (self.vclosures[ci].rel, b, vec![a, d])),
+            PremRef::VRow(k) if !brk!("vclosure_past_row_present" => true; false) => self.vrow_entry(k).map(|(ci, b, a, d)| (self.vc.vclosures[ci].rel, b, vec![a, d])),
             _ => None,
         };
         let row = match pr {
@@ -15850,11 +15890,11 @@ impl Eval {
     /// caller's own words. Renaming counts from zero, as there.
     pub fn whynot_text(&mut self, lit: &Lit, b: &WhynotBounds, shown: Option<&str>) -> Result<(bool, String), Halt> {
         let saved = std::mem::replace(&mut self.rename_counter, 0);
-        let asking = std::mem::replace(&mut self.asking, true);
+        let asking = std::mem::replace(&mut self.demand.asking, true);
         let r = self.questioned(|e| e.whynot_at(lit, b, shown));
-        self.asking = asking;
-        self.asked.clear();
-        self.demand_trail.clear();
+        self.demand.asking = asking;
+        self.demand.asked.clear();
+        self.demand.trail.clear();
         self.forget_asked();
         self.rename_counter = saved;
         r
@@ -15869,7 +15909,7 @@ impl Eval {
             done: HashMap::new(),
         };
         let s = Subst::default();
-        self.asked.clear();
+        self.demand.asked.clear();
         if !self.match_premise(lit, &s, 0, None)?.is_empty() {
             let mut k = String::new();
             resolved_lit_key(&mut self.h, lit.rel, lit.persp, &lit.args, &s, &mut k);
@@ -15882,7 +15922,7 @@ impl Eval {
         let mut k = String::new();
         resolved_lit_key(&mut self.h, lit.rel, lit.persp, &lit.args, &s, &mut k);
         let mut lines = vec![format!("whynot {k}:")];
-        let asked = std::mem::take(&mut self.asked);
+        let asked = std::mem::take(&mut self.demand.asked);
         // the plain explainer knows no lattice, counting or unknown tuple
         if self.plain {
             ctx.path.insert(self.cycle_key(lit));
@@ -16529,12 +16569,12 @@ impl Eval {
     /// the plain one.
     pub fn whynot_files(&mut self, lit: &Lit, b: &WhynotBounds, vols: &[(String, String)]) -> Result<Vec<WhynotFile>, Halt> {
         let saved = std::mem::replace(&mut self.rename_counter, 0);
-        let asking = std::mem::replace(&mut self.asking, true);
+        let asking = std::mem::replace(&mut self.demand.asking, true);
         let r = self.questioned(|e| e.whynot_files_at(lit, b, vols));
         self.wn_vols = None;
-        self.asking = asking;
-        self.asked.clear();
-        self.demand_trail.clear();
+        self.demand.asking = asking;
+        self.demand.asked.clear();
+        self.demand.trail.clear();
         self.forget_asked();
         self.rename_counter = saved;
         r
@@ -16747,9 +16787,9 @@ impl Eval {
         }
         match &body[k] {
             BodyElem::Pos(l) => {
-                let unknowns = self.demand_trail.len();
+                let unknowns = self.demand.trail.len();
                 let mm = self.match_premise(l, s, 0, None)?;
-                if mm.is_empty() && self.demand_trail.len() > unknowns {
+                if mm.is_empty() && self.demand.trail.len() > unknowns {
                     let mut key = String::new();
                     resolved_lit_key(&mut self.h, l.rel, l.persp, &l.args, s, &mut key);
                     out.entry(format!("{key} -- not known: it reads what a hole left unknown")).or_insert(None);
@@ -16772,9 +16812,9 @@ impl Eval {
                 }
             }
             BodyElem::Neg(l) => {
-                let unknowns = self.demand_trail.len();
+                let unknowns = self.demand.trail.len();
                 let mm = self.match_premise(l, s, 0, None)?;
-                if mm.is_empty() && (self.demand_trail.len() > unknowns || !self.lat_spread.is_empty() && self.read_unknown(l, s, true).is_some()) {
+                if mm.is_empty() && (self.demand.trail.len() > unknowns || !self.lat_spread.is_empty() && self.read_unknown(l, s, true).is_some()) {
                     let mut key = String::new();
                     resolved_lit_key(&mut self.h, l.rel, l.persp, &l.args, s, &mut key);
                     out.entry(format!("not {key} -- not known: it reads what a hole left unknown")).or_insert(None);

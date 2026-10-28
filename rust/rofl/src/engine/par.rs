@@ -514,12 +514,12 @@ impl Eval {
         let plain = |t: &Term| !matches!(t.kind(), TermK::Func(_));
         if depth != 0
             || !self.firing
-            || self.asking
+            || self.demand.asking
             || rule_id.is_none()
             || !self.lattices.is_empty()
             || !self.lat_spread.is_empty()
             || self.assume.is_some()
-            || self.demand_rels.iter().any(|(r, _)| *r == l.rel)
+            || self.demand.rels.iter().any(|(r, _)| *r == l.rel)
             || self.vclosure_for(l.rel).is_some()
             || neg && self.carry_check(0).is_err()
             || !plain(&l.persp)
