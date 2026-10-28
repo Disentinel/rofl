@@ -1533,8 +1533,7 @@ impl Eval {
             ..AddDelta::default()
         };
         if !consumers.is_empty() {
-            self.withdraw_firings(&consumers, |_, _| true);
-            self.store.remove_many(&consumers);
+            self.take_out(&consumers);
             self.store.sweep();
         }
         d.stacked_cells = if reset_after.is_empty() { 0 } else { self.reset_cells(&reset_after) };
@@ -1561,18 +1560,13 @@ impl Eval {
             self.lat.sub_seen.retain(|k, _| !lats.contains(&k.0));
             self.lat.sub_memo.retain(|k, _| !lats.contains(&k.0));
             self.lat.sub_parties.retain(|k, _| !lats.contains(&k.0));
-            self.lat.sub_seen_set.retain(|(k, _), _| !lats.contains(&k.0));
-            self.lat.sub_beaten.retain(|(k, _), _| !lats.contains(&k.0));
-            self.lat.sub_prems.retain(|(k, _), _| !lats.contains(&k.0));
-            self.lat.sub_by.retain(|(k, _), _| !lats.contains(&k.0));
+            self.forget_sub_witnesses(|k| lats.contains(&k.0));
             let store = &self.store;
             self.lat.sub_by_of.retain(|f, _| store.alive(*f));
         }
         let store = &self.store;
         self.lat.cur.retain(|_, id| store.alive(*id));
-        let outer = (self.steps, self.rows);
-        self.steps = 0;
-        let holes0 = self.store.rel_count(self.v.hole);
+        let (outer, holes0) = self.begin_window();
         let active = std::mem::take(&mut self.active);
         let mut ambiguous = false;
         self.add.adding = true;
@@ -1590,7 +1584,7 @@ impl Eval {
             }
             let mut rd = Delta::default();
             ambiguous = self.restage(&staged, &mut rd)?;
-            if self.store.rel_count(self.v.hole) > holes0 || !self.lat.pending.is_empty() {
+            if self.lattice_hole(holes0) {
                 return Err(Halt::Bug("an addition wrote a hole".into()));
             }
             if self.lat.superseded.iter().any(|g| lats.contains(&self.store.rec(*g).rel) && !joins.contains(&self.store.rec(*g).rel)) {
@@ -1601,9 +1595,8 @@ impl Eval {
         self.store.close_dup_window();
         self.add.adding = false;
         self.active = active;
-        self.cur_front = Front::default();
         self.added_steps += self.steps;
-        (self.steps, self.rows) = outer;
+        self.end_window(outer);
         match r {
             Ok(()) if ambiguous => {
                 self.store.dirty = true;
