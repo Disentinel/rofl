@@ -194,6 +194,60 @@ fn sorted(mut v: Vec<Sym>) -> Vec<Sym> {
     v
 }
 
+/// How an addition fires again what it changes, as the planner sorts the rules: the lattices and calls it reaches, the
+/// rules by how they fire, and what is derived again after the rest.
+#[derive(Default)]
+struct Plan {
+    lats: HashSet<Sym>,
+    joins: HashSet<Sym>,
+    call_rels: HashSet<Sym>,
+    reset: HashSet<Sym>,
+    keyable: HashSet<Sym>,
+    mono: Vec<Rc<ERule>>,
+    negs: Vec<(Rc<ERule>, Vec<NegAt>)>,
+    new_plain: Vec<Rc<ERule>>,
+    recompute: Vec<Rc<ERule>>,
+    reset_after: HashSet<Sym>,
+    again: Vec<Rc<ERule>>,
+    skip: HashSet<Sym>,
+    dirty: HashSet<Sym>,
+    staged: Vec<Rc<ERule>>,
+    unstage: HashSet<Sym>,
+}
+
+/// What the fine path carries from level to level: the news, the facts withdrawn and not yet derived again, the facts
+/// gone by relation, the level of each rule, and the rules by head.
+struct Fine {
+    news: Front,
+    touched: HashSet<FactId>,
+    over: HashSet<FactId>,
+    over_base: HashSet<FactId>,
+    gone: HashMap<Sym, Vec<FactId>>,
+    lvl: HashMap<Sym, i64>,
+    by_head: HashMap<Sym, Vec<Rc<ERule>>>,
+    retracting: bool,
+}
+
+/// One level as the fine path settles it: its rules in order, and what it derives whole before its rounds.
+struct LevelRun {
+    rules: Vec<Rc<ERule>>,
+    held: HashSet<FactId>,
+    heads: HashSet<Sym>,
+    into: Vec<Rc<ERule>>,
+    here: Vec<Rc<ERule>>,
+}
+
+/// Whether the rule `id` fires at level `lv`.
+fn fired_at(st: &Fine, lv: i64, id: Sym) -> bool {
+    st.lvl[&id] == lv
+}
+
+/// A rule whose firing waits for its whole input: it negates, aggregates, reads a threshold, or reads a lattice from
+/// outside its recursion.
+fn stratified(r: &ERule) -> bool {
+    r.has_neg || r.has_agg || r.has_thr || !r.lattice_outer.is_empty() || r.demand_strict
+}
+
 impl Eval {
     /// What preparation decided, beside the rules, that an added rule could move.
     pub fn prep_mark(&self) -> PrepMark {
@@ -701,18 +755,29 @@ impl Eval {
     /// gone at this level is derived again from what holds (its rules solved with the fact bound to their head); a
     /// fact gone for good below makes a negation over it hold (the rule solved with it bound to the premise); and the
     /// news of every level below, and what this level made, fires the rules of the level semi-naively.
-    #[allow(clippy::too_many_arguments)]
-    fn fine_levels(&mut self, added: &[FactId], removed: &[FactId], mono: &[Rc<ERule>], negs: &[(Rc<ERule>, Vec<NegAt>)], fresh: &[Rc<ERule>], recompute: &[Rc<ERule>], keyable: &HashSet<Sym>, grown: &HashSet<Sym>, dirty: &HashSet<Sym>, skip: &HashSet<Sym>, d: &mut AddDelta) -> Result<(), Halt> {
+    fn fine_levels(&mut self, added: &[FactId], removed: &[FactId], plan: &Plan, grown: &HashSet<Sym>, d: &mut AddDelta) -> Result<(), Halt> {
         self.add.kept.clear();
         self.heights_kept.clear();
-        let mut levels: std::collections::BTreeSet<i64> = mono.iter().chain(fresh).chain(recompute).chain(negs.iter().map(|(r, _)| r)).map(|r| self.rule_level(r)).collect();
-        levels.extend(grown.iter().filter(|r| !dirty.contains(r)).map(|r| self.rel_level(*r)));
+        let mut levels: std::collections::BTreeSet<i64> = plan.mono.iter().chain(&plan.new_plain).chain(&plan.recompute).chain(plan.negs.iter().map(|(r, _)| r)).map(|r| self.rule_level(r)).collect();
+        levels.extend(grown.iter().filter(|r| !plan.dirty.contains(r)).map(|r| self.rel_level(*r)));
+        let mut st = self.fine_start(added, plan, removed);
+        self.retract_removed(removed, &mut st, d);
+        st.lvl = plan.mono.iter().chain(&plan.new_plain).chain(&plan.recompute).chain(plan.negs.iter().map(|(r, _)| r)).map(|r| (r.id, self.rule_level(r))).collect();
+        for lv in levels {
+            self.fine_level(lv, plan, &mut st, d)?;
+        }
+        self.settle_thresholds(&st.news)
+    }
+
+    /// The state a fine addition starts from: the news of the added facts, the rules by head that fire here (those of
+    /// `skip` aside), and the heights and the citer index it reads.
+    fn fine_start(&mut self, added: &[FactId], plan: &Plan, removed: &[FactId]) -> Fine {
         let mut by_head: HashMap<Sym, Vec<Rc<ERule>>> = HashMap::new();
-        for r in self.rules.iter().filter(|r| r.clause.head.temporal != Temporal::Next && r.safe && !skip.contains(&r.id)) {
+        for r in self.rules.iter().filter(|r| r.clause.head.temporal != Temporal::Next && r.safe && !plan.skip.contains(&r.id)) {
             by_head.entry(r.clause.head.rel).or_default().push(r.clone());
         }
         // the citer index, made once and kept by every firing added since
-        if (!(negs.is_empty() && recompute.is_empty()) || !removed.is_empty()) && !self.store.has_citers() {
+        if (!(plan.negs.is_empty() && plan.recompute.is_empty()) || !removed.is_empty()) && !self.store.has_citers() {
             self.store.index_citers();
         }
         let mut news = Front::default();
@@ -720,266 +785,344 @@ impl Eval {
             news.note(self.store.rec(*f).rel, *f);
         }
         // a base fact put over a derived one stands lower now, and so may what rests on it
-        self.add.heights = self.rels_below(self.rules.iter().filter(|r| keyable.contains(&r.id)));
+        self.add.heights = self.rels_below(self.rules.iter().filter(|r| plan.keyable.contains(&r.id)));
         self.add.refired = added.iter().copied().filter(|f| self.store.support_count(*f) > 0).collect();
         self.add.mark = self.store.len_ids();
-        // the facts withdrawn and made again at a level, which a cell above may list
-        let mut touched: HashSet<FactId> = HashSet::new();
-        let mut over: HashSet<FactId> = HashSet::new();
-        let mut over_base: HashSet<FactId> = HashSet::new();
-        let mut gone: HashMap<Sym, Vec<FactId>> = HashMap::new();
-        // A RETRACTION is the base facts `removed` gone (the caller took them out): each is overdeleted, and what rests
-        // on it through each other, and at its level derived again where a rule still makes it
-        if !removed.is_empty() {
-            let mut seeds: Vec<FactId> = std::mem::take(&mut self.add.retract_seeds);
-            for &f in removed {
-                over.insert(f);
-                if brk!("retract_set_unpropagated" => false; true) {
-                    seeds.extend(self.store.citers_one(f).into_iter().filter(|y| self.store.alive(*y) && self.store.cites(*y, PremRef::Fact(f))));
-                }
-            }
-            if brk!("retract_rederive_all" => true; false) {
-                seeds.extend(self.store.live_ids().into_iter().filter(|f| !self.store.rec(*f).base()));
-            }
-            self.overdelete(seeds, &mut over, &mut over_base, d);
+        Fine {
+            news,
+            touched: HashSet::new(),
+            over: HashSet::new(),
+            over_base: HashSet::new(),
+            gone: HashMap::new(),
+            lvl: HashMap::new(),
+            by_head,
+            retracting: !removed.is_empty(),
         }
-        let derived_by = self.v.derived_by;
-        let lvl: HashMap<Sym, i64> = mono.iter().chain(fresh).chain(recompute).chain(negs.iter().map(|(r, _)| r)).map(|r| (r.id, self.rule_level(r))).collect();
-        for lv in levels {
-            let at_ = |r: &Rc<ERule>| lvl[&r.id] == lv;
-            // (a threshold is monotone: what its level makes after it was sealed again is news to it)
-            let mut rules: Vec<Rc<ERule>> = mono.iter().chain(fresh).chain(recompute).chain(negs.iter().map(|(r, _)| r)).filter(|r| at_(r)).cloned().collect();
-            rules.sort_by(|a, b| cmp_js(&a.canon, &b.canon));
-            // the firings a new fact blocks
-            let mut seeds: Vec<FactId> = Vec::new();
-            for (r, ns) in negs.iter().filter(|(r, _)| at_(r)) {
-                let dropped: Vec<usize> = ns.iter().filter(|n| news.by_rel.contains_key(&n.lit.rel)).map(|n| n.at).collect();
-                if dropped.is_empty() {
-                    continue;
-                }
-                let keep: Vec<usize> = (0..r.plan.len()).filter(|i| !dropped.contains(i)).collect();
-                for n in ns.iter().filter(|n| dropped.contains(&n.at)) {
-                    let mut blockers: Vec<FactId> = news.by_rel[&n.lit.rel].iter().copied().collect();
-                    blockers.sort_unstable();
-                    let pre = self.neg_vars(n);
-                    let order = self.bound_order(r, &keep, &pre);
-                    let starts = self.neg_seeds(n, blockers);
-                    for sol in self.solve_bound(r, &keep, order.as_deref(), starts)? {
-                        let mut prems = sol.prems.clone();
-                        for j in &dropped {
-                            let BodyElem::Neg(l) = &r.plan[*j] else { unreachable!() };
-                            let k = self.anon_lit_key(l, &sol.s);
-                            prems.insert(*j, PremRef::Neg(self.h.intern(&k)));
-                        }
-                        let head = &r.clause.head;
-                        let persp = walk(&self.h, head.persp, &sol.s);
-                        let args: Vec<Term> = head.args.iter().map(|a| resolve(&mut self.h, *a, &sol.s)).collect();
-                        let Some(id) = persp.as_atom().and_then(|p| self.store.get(head.rel, p, &args)) else { continue };
-                        if self.store.firings(id).iter().any(|(x, _, ps)| *x == r.id && *ps == prems) {
-                            self.withdraw_firings(&[id], |x, ps| x == r.id && ps == prems.as_slice());
-                            seeds.push(id);
-                        }
+    }
+
+    /// A RETRACTION is the base facts `removed` gone (the caller took them out): each is overdeleted, and what rests on it
+    /// through each other, and at its level derived again where a rule still makes it.
+    fn retract_removed(&mut self, removed: &[FactId], st: &mut Fine, d: &mut AddDelta) {
+        if removed.is_empty() {
+            return;
+        }
+        let mut seeds: Vec<FactId> = std::mem::take(&mut self.add.retract_seeds);
+        for &f in removed {
+            st.over.insert(f);
+            if brk!("retract_set_unpropagated" => false; true) {
+                seeds.extend(self.store.citers_one(f).into_iter().filter(|y| self.store.alive(*y) && self.store.cites(*y, PremRef::Fact(f))));
+            }
+        }
+        if brk!("retract_rederive_all" => true; false) {
+            seeds.extend(self.store.live_ids().into_iter().filter(|f| !self.store.rec(*f).base()));
+        }
+        self.overdelete(seeds, &mut st.over, &mut st.over_base, d);
+    }
+
+    /// One level, in the order the fine path settles it: the firings a new fact blocks, the rules derived whole, the
+    /// rounds of what is fired, and then what was gone at the level is derived again.
+    fn fine_level(&mut self, lv: i64, plan: &Plan, st: &mut Fine, d: &mut AddDelta) -> Result<(), Halt> {
+        let rules = self.level_rules(lv, plan, st);
+        self.block_firings(lv, plan, st, d)?;
+        let level = self.level_whole(lv, plan, st, rules, d)?;
+        self.fire_whole(&level, st, d)?;
+        // (what this level withdrew is withdrawn: a fact derived again begins its chain anew, a level concludes only into its own relations)
+        self.store.arrivals = Some(Vec::new());
+        self.store.close_dup_window();
+        self.store.open_dup_window();
+        let r = self.rederive_gone(lv, plan, &level, st).and_then(|out| self.conclude_level(lv, plan, &level, st, out));
+        let arrived = self.store.arrivals.take().unwrap_or_default();
+        r?;
+        self.settle_arrived(&arrived, &level, st, d);
+        self.settle_gone(lv, st, d);
+        Ok(())
+    }
+
+    /// The rules that fire at a level, sorted as the evaluation sorts them.
+    fn level_rules(&self, lv: i64, plan: &Plan, st: &Fine) -> Vec<Rc<ERule>> {
+        let mut rules: Vec<Rc<ERule>> = plan.mono.iter().chain(&plan.new_plain).chain(&plan.recompute).chain(plan.negs.iter().map(|(r, _)| r)).filter(|r| fired_at(st, lv, r.id)).cloned().collect();
+        rules.sort_by(|a, b| cmp_js(&a.canon, &b.canon));
+        rules
+    }
+
+    /// The firings a new fact blocks at a level: a negation that a fact of the news now satisfies loses the firings it
+    /// held, and what rested on them goes whole, to be derived again.
+    fn block_firings(&mut self, lv: i64, plan: &Plan, st: &mut Fine, d: &mut AddDelta) -> Result<(), Halt> {
+        let mut seeds: Vec<FactId> = Vec::new();
+        for (r, ns) in plan.negs.iter().filter(|(r, _)| fired_at(st, lv, r.id)) {
+            let dropped: Vec<usize> = ns.iter().filter(|n| st.news.by_rel.contains_key(&n.lit.rel)).map(|n| n.at).collect();
+            if dropped.is_empty() {
+                continue;
+            }
+            let keep: Vec<usize> = (0..r.plan.len()).filter(|i| !dropped.contains(i)).collect();
+            for n in ns.iter().filter(|n| dropped.contains(&n.at)) {
+                let mut blockers: Vec<FactId> = st.news.by_rel[&n.lit.rel].iter().copied().collect();
+                blockers.sort_unstable();
+                let pre = self.neg_vars(n);
+                let order = self.bound_order(r, &keep, &pre);
+                let starts = self.neg_seeds(n, blockers);
+                for sol in self.solve_bound(r, &keep, order.as_deref(), starts)? {
+                    let mut prems = sol.prems.clone();
+                    for j in &dropped {
+                        let BodyElem::Neg(l) = &r.plan[*j] else { unreachable!() };
+                        let k = self.anon_lit_key(l, &sol.s);
+                        prems.insert(*j, PremRef::Neg(self.h.intern(&k)));
+                    }
+                    let head = &r.clause.head;
+                    let persp = walk(&self.h, head.persp, &sol.s);
+                    let args: Vec<Term> = head.args.iter().map(|a| resolve(&mut self.h, *a, &sol.s)).collect();
+                    let Some(id) = persp.as_atom().and_then(|p| self.store.get(head.rel, p, &args)) else { continue };
+                    if self.store.firings(id).iter().any(|(x, _, ps)| *x == r.id && *ps == prems) {
+                        self.withdraw_firings(&[id], |x, ps| x == r.id && ps == prems.as_slice());
+                        seeds.push(id);
                     }
                 }
             }
-            // what lost a firing goes whole (it may have gone with that firing already), and what rests on it, through
-            // each other
-            self.overdelete(seeds, &mut over, &mut over_base, d);
-            // A RELATION A RESET RULE CONCLUDES IS DERIVED AGAIN WHOLE at its level (its cells sealed again): its facts go,
-            // and every rule into it fires again over what holds; a fact that does not come back at once is taken as
-            // lost, and what rests on it goes too (a fact of the relation that comes back keeps its record, and so what
-            // cites it)
-            // (an aggregate rule alone withdraws its own firings and fires again: what other rules conclude into its head stands)
-            let (own, wide): (Vec<Rc<ERule>>, Vec<Rc<ERule>>) = recompute.iter().filter(|r| at_(r)).cloned().partition(|r| r.has_agg && !r.has_thr && r.lattice_outer.is_empty() && !r.demand_strict);
-            let heads: HashSet<Sym> = wide.iter().map(|r| r.clause.head.rel).collect();
-            // and only at the correlations what changed falls in, where it names them, once every rule reset here that
-            // concludes what it reads was asked again by key before it
-            let concluded: Vec<Sym> = own.iter().chain(&wide).map(|r| r.clause.head.rel).collect();
-            let mut by_key: HashSet<Sym> = HashSet::new();
-            let mut own_whole: Vec<Rc<ERule>> = Vec::new();
-            let mut pending: Vec<Rc<ERule>> = own.into_iter().filter(|r| {
-                let alone = keyable.contains(&r.id) && !heads.contains(&r.clause.head.rel) && concluded.iter().filter(|h| **h == r.clause.head.rel).count() == 1;
+        }
+        // what lost a firing goes whole (it may have gone with that firing already), and what rests on it, through each other
+        self.overdelete(seeds, &mut st.over, &mut st.over_base, d);
+        Ok(())
+    }
+
+    /// The rules of a level that are derived whole. A reset aggregate that the change can ask by key is asked so, where
+    /// what changed falls in; the rest is withdrawn whole with the relations it concludes, and fired again.
+    fn level_whole(&mut self, lv: i64, plan: &Plan, st: &mut Fine, rules: Vec<Rc<ERule>>, d: &mut AddDelta) -> Result<LevelRun, Halt> {
+        // A RELATION A RESET RULE CONCLUDES IS DERIVED AGAIN WHOLE at its level (its cells sealed again): its facts go,
+        // and every rule into it fires again over what holds; a fact that does not come back at once is taken as
+        // lost, and what rests on it goes too (a fact of the relation that comes back keeps its record, and so what
+        // cites it). An aggregate rule alone withdraws its own firings and fires again: what other rules conclude into
+        // its head stands.
+        let (own, wide): (Vec<Rc<ERule>>, Vec<Rc<ERule>>) = plan.recompute.iter().filter(|r| fired_at(st, lv, r.id)).cloned().partition(|r| r.has_agg && !r.has_thr && r.lattice_outer.is_empty() && !r.demand_strict);
+        let heads: HashSet<Sym> = wide.iter().map(|r| r.clause.head.rel).collect();
+        let own = self.settle_keyed(lv, plan, st, own, &wide, &heads, d)?;
+        let here: Vec<Rc<ERule>> = own.iter().chain(&wide).cloned().collect();
+        let (held, into) = self.withdraw_whole(&own, &heads, st);
+        Ok(LevelRun { rules, held, heads, into, here })
+    }
+
+    /// The reset aggregates of a level are asked again by key where their rule can be (`agg_keys`), and only at the
+    /// correlations what changed falls in, once every rule reset here that concludes what it reads was asked before it.
+    /// The rest are returned, to be derived whole.
+    fn settle_keyed(&mut self, lv: i64, plan: &Plan, st: &mut Fine, own: Vec<Rc<ERule>>, wide: &[Rc<ERule>], heads: &HashSet<Sym>, d: &mut AddDelta) -> Result<Vec<Rc<ERule>>, Halt> {
+        let concluded: Vec<Sym> = own.iter().chain(wide).map(|r| r.clause.head.rel).collect();
+        let mut by_key: HashSet<Sym> = HashSet::new();
+        let mut own_whole: Vec<Rc<ERule>> = Vec::new();
+        let mut pending: Vec<Rc<ERule>> = own
+            .into_iter()
+            .filter(|r| {
+                let alone = plan.keyable.contains(&r.id) && !heads.contains(&r.clause.head.rel) && concluded.iter().filter(|h| **h == r.clause.head.rel).count() == 1;
                 if !alone {
                     own_whole.push(r.clone());
                 }
                 alone
-            }).collect();
-            loop {
-                let below: HashSet<Sym> = concluded.iter().copied().filter(|h| !by_key.contains(h)).collect();
-                let Some(i) = pending.iter().position(|r| !reads(r, &below.iter().copied().filter(|h| *h != r.clause.head.rel).collect()).0) else { break };
-                let r = pending.remove(i);
-                let changed: HashSet<FactId> = over.iter().chain(&over_base).chain(&touched).copied().collect();
-                match self.agg_keys(&r, lv, &news, &changed) {
-                    Some(seeds) => {
-                        self.refire_keyed(&r, seeds, &mut news, &mut over, &mut over_base, &mut touched, d)?;
-                        by_key.insert(r.clause.head.rel);
-                    }
-                    None => own_whole.push(r),
+            })
+            .collect();
+        loop {
+            let below: HashSet<Sym> = concluded.iter().copied().filter(|h| !by_key.contains(h)).collect();
+            let Some(i) = pending.iter().position(|r| !reads(r, &below.iter().copied().filter(|h| *h != r.clause.head.rel).collect()).0) else { break };
+            let r = pending.remove(i);
+            let changed: HashSet<FactId> = st.over.iter().chain(&st.over_base).chain(&st.touched).copied().collect();
+            match self.agg_keys(&r, lv, &st.news, &changed) {
+                Some(seeds) => {
+                    self.refire_keyed(&r, seeds, &mut st.news, &mut st.over, &mut st.over_base, &mut st.touched, d)?;
+                    by_key.insert(r.clause.head.rel);
                 }
+                None => own_whole.push(r),
             }
-            own_whole.extend(pending);
-            let own = own_whole;
-            let here: Vec<Rc<ERule>> = own.iter().chain(&wide).cloned().collect();
-            let mut held: HashSet<FactId> = HashSet::new();
-            let mut into: Vec<Rc<ERule>> = own.clone();
-            for r in &own {
-                for id in self.store.rel_all(&self.h, r.clause.head.rel) {
-                    if self.store.fired_by(id, r.id) {
-                        held.insert(id);
-                        self.withdraw_firings(&[id], |x, _| x == r.id);
-                        if self.store.alive(id) && !self.store.rec(id).base() && self.store.support_count(id) == 0 {
-                            self.store.remove_many(&[id]);
-                        }
-                    }
-                }
-            }
-            for h in &heads {
-                for id in self.store.rel_all(&self.h, *h) {
+        }
+        own_whole.extend(pending);
+        Ok(own_whole)
+    }
+
+    /// What a level derives whole is withdrawn first: the firings of its own aggregates, then every fact of its heads
+    /// (`held`), and the rules into those heads, which fire again (`into`).
+    fn withdraw_whole(&mut self, own: &[Rc<ERule>], heads: &HashSet<Sym>, st: &Fine) -> (HashSet<FactId>, Vec<Rc<ERule>>) {
+        let mut held: HashSet<FactId> = HashSet::new();
+        let mut into: Vec<Rc<ERule>> = own.to_vec();
+        for r in own {
+            for id in self.store.rel_all(&self.h, r.clause.head.rel) {
+                if self.store.fired_by(id, r.id) {
                     held.insert(id);
-                    self.withdraw_firings(&[id], |_, _| true);
-                    if self.store.alive(id) && !self.store.rec(id).base() {
+                    self.withdraw_firings(&[id], |x, _| x == r.id);
+                    if self.store.alive(id) && !self.store.rec(id).base() && self.store.support_count(id) == 0 {
                         self.store.remove_many(&[id]);
                     }
                 }
-                into.extend(by_head.get(h).into_iter().flatten().cloned());
-            }
-            if !here.is_empty() {
-                self.height_memo.clear();
-                let ids: HashSet<Sym> = here.iter().map(|r| r.id).collect();
-                d.stacked_cells += self.reset_cells(&ids);
-                self.store.arrivals = Some(Vec::new());
-                // fired whole over what holds; a threshold reached stays open, and closes with the level (after its
-                // rounds), on every member the level makes, as an evaluation closes it
-                let r = if brk!("add_threshold_closed_early" => true; false) {
-                    self.refire(&into, &[])
-                } else {
-                    let saved = std::mem::take(&mut self.active);
-                    let (strat, plain): (Vec<Rc<ERule>>, Vec<Rc<ERule>>) = into.iter().cloned().partition(|r| r.has_neg || r.has_agg || !r.lattice_outer.is_empty() || r.demand_strict);
-                    let r = self.activate(&plain).and_then(|_| self.activate(&strat));
-                    self.active = saved;
-                    r
-                };
-                let came = self.store.arrivals.take().unwrap_or_default();
-                r?;
-                for id in came {
-                    if !held.contains(&id) && self.store.alive(id) && self.store.rec(id).rel != derived_by {
-                        news.note(self.store.rec(id).rel, id);
-                    }
-                }
-                let lost: Vec<FactId> = held.iter().copied().filter(|id| !self.store.alive(*id)).collect();
-                self.overdelete(lost, &mut over, &mut over_base, d);
-                touched.extend(held.iter().copied());
-            }
-            self.store.arrivals = Some(Vec::new());
-            // (what this level withdrew is withdrawn: a fact derived again begins its chain anew, a level concludes
-            // only into its own relations)
-            self.store.close_dup_window();
-            self.store.open_dup_window();
-            let r = (|| -> Result<(), Halt> {
-                // each fact gone at this level, derived again from what holds
-                let mut again: Vec<FactId> = over.iter().chain(over_base.iter()).copied().filter(|x| {
-                    let rec = self.store.rec(*x);
-                    self.rel_level(rec.rel) == lv && !dirty.contains(&rec.rel) && !heads.contains(&rec.rel) && (rec.base() || !self.store.alive(*x))
-                }).collect();
-                again.sort_unstable();
-                let mut out = Front::default();
-                let mut orders: HashMap<Sym, Option<Vec<usize>>> = HashMap::new();
-                // until nothing more comes back: a fact of a recursion may rest on one derived again after it
-                let mut pending = if brk!("retract_unrederived" => !removed.is_empty(); false) { Vec::new() } else { again.clone() };
-                loop {
-                    let mut still: Vec<FactId> = Vec::new();
-                    let mut came = false;
-                    for x in pending {
-                        let was = self.store.alive(x) && !self.store.rec(x).base();
-                        self.rederive_one(x, &by_head, &mut orders, &mut out)?;
-                        if !self.store.alive(x) {
-                            still.push(x);
-                        } else if !was && !self.store.rec(x).base() {
-                            came = true;
-                        }
-                    }
-                    pending = still;
-                    if !came || pending.is_empty() || brk!("rederive_once" => true; false) {
-                        break;
-                    }
-                }
-                // and each that stands takes every firing it has, now that all that came back stands
-                // (and each kept for a firing that stood, where a premise of a firing it lost came back)
-                let kept_here: Vec<FactId> = {
-                    let store = &self.store;
-                    let mut v: Vec<FactId> = self
-                        .add.kept
-                        .iter()
-                        .filter(|(x, lost)| store.alive(**x) && self.rel_level(store.rec(**x).rel) == lv && lost.iter().any(|g| store.alive(*g)))
-                        .map(|(x, _)| *x)
-                        .collect();
-                    v.sort_unstable();
-                    v
-                };
-                if (again.len() > 1 || !kept_here.is_empty()) && !brk!("retract_unrederived" => !removed.is_empty(); false) {
-                    for x in again.iter().copied().filter(|x| self.store.alive(*x)).chain(kept_here).collect::<Vec<_>>() {
-                        self.rederive_one(x, &by_head, &mut orders, &mut out)?;
-                    }
-                }
-                // a fact gone for good below makes a negation over it hold
-                for (r, ns) in negs.iter().filter(|(r, _)| at_(r)) {
-                    for n in ns {
-                        let mut freed: Vec<FactId> = gone.get(&n.lit.rel).cloned().unwrap_or_default();
-                        freed.sort_unstable();
-                        let (pre, all) = (self.neg_vars(n), (0..r.plan.len()).collect::<Vec<usize>>());
-                        let order = self.bound_order(r, &all, &pre);
-                        let seeds = self.neg_seeds(n, freed);
-                        for sol in self.solve_bound(r, &all, order.as_deref(), seeds)? {
-                            self.conclude(r, sol, &mut out)?;
-                        }
-                    }
-                }
-                self.active = rules.clone();
-                for r in fresh.iter().filter(|r| at_(r)) {
-                    let f = self.fire_rule(r, None)?;
-                    merge_front(&mut out, f);
-                }
-                let mut front = news.clone();
-                for id in self.store.arrivals.as_ref().map(|a| a.clone()).unwrap_or_default() {
-                    if self.store.alive(id) {
-                        front.note(self.store.rec(id).rel, id);
-                    }
-                }
-                merge_front(&mut front, out);
-                self.level_rounds(&rules, front)?;
-                // a threshold reached at this level closes once what it reads is closed, as an evaluation closes it
-                self.close_thresholds_below(lv.saturating_add(1), true)
-            })();
-            let arrived = self.store.arrivals.take().unwrap_or_default();
-            r?;
-            for id in arrived {
-                let rel = self.store.rec(id).rel;
-                if !self.store.alive(id) || rel == derived_by {
-                    continue;
-                }
-                if over.contains(&id) || held.contains(&id) {
-                    d.rederived += over.contains(&id) as usize;
-                } else {
-                    news.note(rel, id);
-                }
-            }
-            let mut edges_gone: Vec<FactId> = Vec::new();
-            for x in &over {
-                let rel = self.store.rec(*x).rel;
-                if self.rel_level(rel) == lv && !self.store.alive(*x) {
-                    gone.entry(rel).or_default().push(*x);
-                    edges_gone.push(*x);
-                }
-            }
-            // an edge of a tree gone for good leaves the tree: its tree is built again, and what cited a row of it that
-            // no longer holds goes, at the levels above
-            if !removed.is_empty() && self.vc.any {
-                edges_gone.sort_unstable();
-                let (seeds, touched) = self.vretract_edges(&edges_gone);
-                self.vc.vretract_done(&self.store, &touched);
-                self.overdelete(seeds, &mut over, &mut over_base, d);
             }
         }
+        for h in heads {
+            for id in self.store.rel_all(&self.h, *h) {
+                held.insert(id);
+                self.withdraw_firings(&[id], |_, _| true);
+                if self.store.alive(id) && !self.store.rec(id).base() {
+                    self.store.remove_many(&[id]);
+                }
+            }
+            into.extend(st.by_head.get(h).into_iter().flatten().cloned());
+        }
+        (held, into)
+    }
+
+    /// The rules derived whole fire over what holds, and what they conclude joins the news. A threshold reached stays
+    /// open, and closes with the level (after its rounds), on every member the level makes, as an evaluation closes it.
+    fn fire_whole(&mut self, level: &LevelRun, st: &mut Fine, d: &mut AddDelta) -> Result<(), Halt> {
+        if level.here.is_empty() {
+            return Ok(());
+        }
+        self.height_memo.clear();
+        let ids: HashSet<Sym> = level.here.iter().map(|r| r.id).collect();
+        d.stacked_cells += self.reset_cells(&ids);
+        self.store.arrivals = Some(Vec::new());
+        let r = if brk!("add_threshold_closed_early" => true; false) {
+            self.refire(&level.into, &[])
+        } else {
+            let saved = std::mem::take(&mut self.active);
+            let (strat, plain): (Vec<Rc<ERule>>, Vec<Rc<ERule>>) = level.into.iter().cloned().partition(|r| r.has_neg || r.has_agg || !r.lattice_outer.is_empty() || r.demand_strict);
+            let r = self.activate(&plain).and_then(|_| self.activate(&strat));
+            self.active = saved;
+            r
+        };
+        let came = self.store.arrivals.take().unwrap_or_default();
+        r?;
+        let derived_by = self.v.derived_by;
+        for id in came {
+            if !level.held.contains(&id) && self.store.alive(id) && self.store.rec(id).rel != derived_by {
+                st.news.note(self.store.rec(id).rel, id);
+            }
+        }
+        let lost: Vec<FactId> = level.held.iter().copied().filter(|id| !self.store.alive(*id)).collect();
+        self.overdelete(lost, &mut st.over, &mut st.over_base, d);
+        st.touched.extend(level.held.iter().copied());
+        Ok(())
+    }
+
+    /// The facts gone at a level are derived again from what holds, until nothing more comes back; each that stands
+    /// takes every firing it has, once all that came back stands. Returns what was concluded.
+    fn rederive_gone(&mut self, lv: i64, plan: &Plan, level: &LevelRun, st: &mut Fine) -> Result<Front, Halt> {
+        let mut again: Vec<FactId> = st
+            .over
+            .iter()
+            .chain(st.over_base.iter())
+            .copied()
+            .filter(|x| {
+                let rec = self.store.rec(*x);
+                self.rel_level(rec.rel) == lv && !plan.dirty.contains(&rec.rel) && !level.heads.contains(&rec.rel) && (rec.base() || !self.store.alive(*x))
+            })
+            .collect();
+        again.sort_unstable();
+        let mut out = Front::default();
+        let mut orders: HashMap<Sym, Option<Vec<usize>>> = HashMap::new();
+        // until nothing more comes back: a fact of a recursion may rest on one derived again after it
+        let mut pending = if brk!("retract_unrederived" => st.retracting; false) { Vec::new() } else { again.clone() };
+        loop {
+            let mut still: Vec<FactId> = Vec::new();
+            let mut came = false;
+            for x in pending {
+                let was = self.store.alive(x) && !self.store.rec(x).base();
+                self.rederive_one(x, &st.by_head, &mut orders, &mut out)?;
+                if !self.store.alive(x) {
+                    still.push(x);
+                } else if !was && !self.store.rec(x).base() {
+                    came = true;
+                }
+            }
+            pending = still;
+            if !came || pending.is_empty() || brk!("rederive_once" => true; false) {
+                break;
+            }
+        }
+        // and each that stands takes every firing it has, now that all that came back stands
+        // (and each kept for a firing that stood, where a premise of a firing it lost came back)
+        let kept_here: Vec<FactId> = {
+            let store = &self.store;
+            let mut v: Vec<FactId> = self
+                .add
+                .kept
+                .iter()
+                .filter(|(x, lost)| store.alive(**x) && self.rel_level(store.rec(**x).rel) == lv && lost.iter().any(|g| store.alive(*g)))
+                .map(|(x, _)| *x)
+                .collect();
+            v.sort_unstable();
+            v
+        };
+        if (again.len() > 1 || !kept_here.is_empty()) && !brk!("retract_unrederived" => st.retracting; false) {
+            for x in again.iter().copied().filter(|x| self.store.alive(*x)).chain(kept_here).collect::<Vec<_>>() {
+                self.rederive_one(x, &st.by_head, &mut orders, &mut out)?;
+            }
+        }
+        Ok(out)
+    }
+
+    /// The rest of a level's rounds: a fact gone for good makes its negations hold, the added rules fire whole, and the
+    /// news of the level fires the rules at it semi-naively; then the thresholds below close.
+    fn conclude_level(&mut self, lv: i64, plan: &Plan, level: &LevelRun, st: &mut Fine, mut out: Front) -> Result<(), Halt> {
+        // a fact gone for good below makes a negation over it hold
+        for (r, ns) in plan.negs.iter().filter(|(r, _)| fired_at(st, lv, r.id)) {
+            for n in ns {
+                let mut freed: Vec<FactId> = st.gone.get(&n.lit.rel).cloned().unwrap_or_default();
+                freed.sort_unstable();
+                let (pre, all) = (self.neg_vars(n), (0..r.plan.len()).collect::<Vec<usize>>());
+                let order = self.bound_order(r, &all, &pre);
+                let seeds = self.neg_seeds(n, freed);
+                for sol in self.solve_bound(r, &all, order.as_deref(), seeds)? {
+                    self.conclude(r, sol, &mut out)?;
+                }
+            }
+        }
+        self.active = level.rules.clone();
+        for r in plan.new_plain.iter().filter(|r| fired_at(st, lv, r.id)) {
+            let f = self.fire_rule(r, None)?;
+            merge_front(&mut out, f);
+        }
+        let mut front = st.news.clone();
+        for id in self.store.arrivals.as_ref().map(|a| a.clone()).unwrap_or_default() {
+            if self.store.alive(id) {
+                front.note(self.store.rec(id).rel, id);
+            }
+        }
+        merge_front(&mut front, out);
+        self.level_rounds(&level.rules, front)?;
+        // a threshold reached at this level closes once what it reads is closed, as an evaluation closes it
+        self.close_thresholds_below(lv.saturating_add(1), true)
+    }
+
+    /// The facts that arrived in a level's rounds join the news, unless they stand as this level derived them; a fact
+    /// derived again counts as rederived.
+    fn settle_arrived(&mut self, arrived: &[FactId], level: &LevelRun, st: &mut Fine, d: &mut AddDelta) {
+        for &id in arrived {
+            let rel = self.store.rec(id).rel;
+            if !self.store.alive(id) || rel == self.v.derived_by {
+                continue;
+            }
+            if st.over.contains(&id) || level.held.contains(&id) {
+                d.rederived += st.over.contains(&id) as usize;
+            } else {
+                st.news.note(rel, id);
+            }
+        }
+    }
+
+    /// The facts a level let go are recorded by relation for the levels above. An edge of a tree gone for good leaves the
+    /// tree: its tree is built again, and what cited a row of it that no longer holds goes, at the levels above.
+    fn settle_gone(&mut self, lv: i64, st: &mut Fine, d: &mut AddDelta) {
+        let mut edges_gone: Vec<FactId> = Vec::new();
+        for x in &st.over {
+            let rel = self.store.rec(*x).rel;
+            if self.rel_level(rel) == lv && !self.store.alive(*x) {
+                st.gone.entry(rel).or_default().push(*x);
+                edges_gone.push(*x);
+            }
+        }
+        if st.retracting && self.vc.any {
+            edges_gone.sort_unstable();
+            let (seeds, touched) = self.vretract_edges(&edges_gone);
+            self.vc.vretract_done(&self.store, &touched);
+            self.overdelete(seeds, &mut st.over, &mut st.over_base, d);
+        }
+    }
+
+    /// The thresholds left open after the levels close, and the news that closing makes is what the window carries on.
+    fn settle_thresholds(&mut self, news: &Front) -> Result<(), Halt> {
         // (a threshold closed after the levels makes facts the news does not hold)
         self.add.fresh = self.thr.open.is_empty().then(|| news.keys.iter().copied().collect());
         while !self.thr.open.is_empty() {
@@ -1255,24 +1398,65 @@ impl Eval {
         }
     }
 
+    /// An addition's own work: the lattices and calls it reaches, every rule sorted by how it fires again, what it
+    /// refuses, what goes, and the window the fine path runs in.
     fn add_worked_out(&mut self, added: &[FactId], removed: &[FactId], fresh: &HashSet<Sym>, grown: &HashSet<Sym>, moved: &HashSet<Sym>, called: &[Sym]) -> Result<AddDelta, &'static str> {
-        let stratified = |r: &ERule| r.has_neg || r.has_agg || r.has_thr || !r.lattice_outer.is_empty() || r.demand_strict;
-        // A RELATION ANSWERED ON DEMAND makes a fact for every call, which no firing cites: every such fact goes and
-        // every rule that reads one fires again, so the calls are made again over what stands (as a retraction does)
-        let demanded: HashSet<Sym> = self.demand.rels.iter().map(|(r, _)| *r).collect();
-        // a relation answered on demand before and not now (or the reverse) holds what calls made: it goes too
-        // (one the change reaches neither through its own rules nor through a rule that calls it holds the same calls,
-        // answered the same, and stays)
-        let call_rels: HashSet<Sym> = called
-            .iter()
-            .copied()
-            .chain(demanded.iter().copied().filter(|d| {
-                let one = HashSet::from([*d]);
-                brk!("add_demand_unreached_dropped" => false; grown.contains(d) || fresh.iter().any(|f| self.rule_of(*f).is_some_and(|r| reads(&r, &one).0)) || self.rules.iter().any(|r| reads(r, &one).0 && reads(r, grown).0))
-            }))
-            .collect();
-        // AN ORDER LATTICE THE CHANGE REACHES is derived again whole, as the retraction path derives its cone again:
-        // an improved value withdraws what read the old one, and the history of a schedule is no delta's
+        let call_rels = self.call_relations(called, fresh, grown);
+        let (lats, joins) = self.lattices_reached(grown)?;
+        let mut plan = Plan { lats, joins, call_rels, ..Plan::default() };
+        self.sort_rules(&mut plan, grown, moved, fresh)?;
+        let ledger_heads = self.ledger_readers(&mut plan.reset);
+        plan.dirty = self.dirty_set(&plan, &ledger_heads);
+        self.reset_negated_dirty(&mut plan);
+        self.split_again(&mut plan);
+        let changed: HashSet<Sym> = grown.union(&plan.dirty).copied().chain(plan.recompute.iter().map(|r| r.clause.head.rel)).collect();
+        self.stage_changed(&mut plan, fresh, &changed);
+        self.refuse_changed(&plan, &changed)?;
+        // (what is forced goes is read before the joins and the based facts are retired)
+        let forced = self.forced_facts(&plan);
+        self.retire_joins(&plan);
+        self.withdraw_based(&plan);
+        let consumers = if forced.is_empty() { Vec::new() } else { self.consumer_facts(&[], &forced, &plan.dirty, &HashSet::new(), &plan.reset_after)? };
+        let mut d = AddDelta {
+            facts: added.len(),
+            rules: fresh.len(),
+            monotone: plan.mono.len(),
+            negated: plan.negs.len(),
+            stacked_rules: plan.reset.len(),
+            withdrawn: consumers.len(),
+            refired: plan.again.len(),
+            restaged: plan.staged.len(),
+            ..AddDelta::default()
+        };
+        self.take_out_and_reset(&plan, &consumers, &mut d);
+        self.lat.forget_reached(&plan.lats, &self.store);
+        let (outer, holes0) = self.begin_window();
+        let active = std::mem::take(&mut self.active);
+        self.add.adding = true;
+        self.add.fresh = None;
+        let r = self.fine_window(added, removed, &plan, grown, holes0, &mut d);
+        self.store.close_dup_window();
+        self.add.adding = false;
+        self.active = active;
+        self.added_steps += self.steps;
+        self.end_window(outer);
+        match r {
+            Ok(true) => {
+                self.store.dirty = true;
+                Err("a staged fact has more than one firing, and the evaluation kept the first, by its schedule")
+            }
+            Ok(false) => Ok(d),
+            Err(_) => {
+                self.store.dirty = true;
+                Err("the addition would write a hole, keep a lattice's history or meet a wall, and the world is evaluated again")
+            }
+        }
+    }
+
+    /// The order lattices the change reaches, and the joins among them. A lattice the change reaches is derived again
+    /// whole, as the retraction path derives its cone again: an improved value withdraws what read the old one, and the
+    /// history of a schedule is no delta's. What cannot be derived so refuses.
+    fn lattices_reached(&self, grown: &HashSet<Sym>) -> Result<(HashSet<Sym>, HashSet<Sym>), &'static str> {
         let lats: HashSet<Sym> = grown.iter().copied().filter(|r| self.lat.lattices.contains_key(r)).collect();
         for l in &lats {
             let op = self.lat.lattices[l].1;
@@ -1288,15 +1472,29 @@ impl Eval {
         if !lats.is_empty() && self.store.firing_keys().into_iter().any(|g| !self.store.alive(g) && lats.contains(&self.store.rec(g).rel) && !joins.contains(&self.store.rec(g).rel)) {
             return Err("a lattice keeps the history of a superseded value");
         }
-        // THE RESET: a rule that may withdraw what it concluded
-        let mut reset: HashSet<Sym> = HashSet::new();
-        // (a rule reset for what grew under its aggregate alone, which may be asked again by key)
-        let mut keyable: HashSet<Sym> = HashSet::new();
-        let mut mono: Vec<Rc<ERule>> = Vec::new();
-        let mut negs: Vec<(Rc<ERule>, Vec<NegAt>)> = Vec::new();
-        let mut new_plain: Vec<Rc<ERule>> = Vec::new();
-        let mut staged: Vec<Rc<ERule>> = Vec::new();
-        let mut ledger_heads: HashSet<Sym> = HashSet::new();
+        Ok((lats, joins))
+    }
+
+    /// The relations answered on demand that the addition makes or unmakes calls of. A call made before and not now (or
+    /// the reverse) holds what calls made, so it goes whole with what rests on it.
+    fn call_relations(&self, called: &[Sym], fresh: &HashSet<Sym>, grown: &HashSet<Sym>) -> HashSet<Sym> {
+        let demanded: HashSet<Sym> = self.demand.rels.iter().map(|(r, _)| *r).collect();
+        // (one the change reaches neither through its own rules nor through a rule that calls it holds the same calls,
+        // answered the same, and stays)
+        called
+            .iter()
+            .copied()
+            .chain(demanded.iter().copied().filter(|d| {
+                let one = HashSet::from([*d]);
+                brk!("add_demand_unreached_dropped" => false; grown.contains(d) || fresh.iter().any(|f| self.rule_of(*f).is_some_and(|r| reads(&r, &one).0)) || self.rules.iter().any(|r| reads(r, &one).0 && reads(r, grown).0))
+            }))
+            .collect()
+    }
+
+    /// Every rule the addition meets, sorted by how it fires again: reset (its cells sealed again, or its conclusions
+    /// withdrawn and derived again), fired over what stands (`mono`), kept under a negation that loses the firings a new
+    /// fact blocks (`negs`), or an added rule that concludes nothing yet (`new_plain`).
+    fn sort_rules(&self, plan: &mut Plan, grown: &HashSet<Sym>, moved: &HashSet<Sym>, fresh: &HashSet<Sym>) -> Result<(), &'static str> {
         for r in &self.rules {
             let (any, inner) = reads(r, grown);
             if r.clause.head.temporal == Temporal::Next || !r.safe {
@@ -1304,51 +1502,66 @@ impl Eval {
             }
             // a cell seals the rounds of what it reads: one over a relation whose round moved is sealed again
             if (r.has_agg || r.has_thr) && reads(r, moved).1 {
-                reset.insert(r.id);
+                plan.reset.insert(r.id);
                 continue;
             }
-            if lats.contains(&r.clause.head.rel) {
+            if plan.lats.contains(&r.clause.head.rel) {
                 if stratified(r) || self.answer.late.contains(&r.id) {
                     return Err("a rule into the lattice negates, aggregates, reads a lattice from outside its recursion or is late");
                 }
-                reset.insert(r.id);
+                plan.reset.insert(r.id);
                 continue;
             }
             if fresh.contains(&r.id) {
                 // an added rule concludes nothing yet: one that negates fires whole at its level, after what it reads
                 let whole = !r.has_agg && !r.has_thr && r.lattice_outer.is_empty() && !r.demand_strict;
                 if stratified(r) && !brk!("add_fresh_negation_reset" => false; whole) {
-                    reset.insert(r.id);
+                    plan.reset.insert(r.id);
                 } else {
-                    new_plain.push(r.clone());
+                    plan.new_plain.push(r.clone());
                 }
             } else if any {
                 let fine = || !r.has_agg && !r.has_thr && r.lattice_outer.is_empty() && !r.demand_strict && brk!("add_negation_reset" => false; true);
                 // (an aggregate over what did not change is a value of the firing; a holistic one's group is shared across firings)
                 let held = r.clause.body.iter().all(|b| !matches!(b, BodyElem::Agg(a) if a.op.class() == Class::Holistic));
                 if !inner && !r.has_thr && (!r.has_agg || held) {
-                    mono.push(r.clone());
+                    plan.mono.push(r.clone());
                 } else if let Some(ns) = negs_of(&self.h, r, grown).filter(|_| inner && fine()) {
-                    negs.push((r.clone(), ns));
+                    plan.negs.push((r.clone(), ns));
                 } else {
-                    reset.insert(r.id);
-                    keyable.insert(r.id);
+                    plan.reset.insert(r.id);
+                    plan.keyable.insert(r.id);
                 }
             }
         }
-        // WHAT IS DERIVED AGAIN AFTER THE REST, and what rests on it, through each other: a lattice the change reaches,
-        // what calls made, a closure walked whole (a reset rule elsewhere is derived again at its level)
-        // A RULE THAT READS `derived_by` reads a row of every firing, which any change makes or withdraws: it is
-        // derived again after the rest, as a lattice is
+        Ok(())
+    }
+
+    /// A rule that reads `derived_by` reads a row of every firing, which any change makes or withdraws: it is reset, and
+    /// its head is derived again after the rest, as a lattice is. Returns those heads.
+    fn ledger_readers(&self, reset: &mut HashSet<Sym>) -> HashSet<Sym> {
         let ledger = HashSet::from([self.v.derived_by]);
+        let mut heads: HashSet<Sym> = HashSet::new();
         for r in self.rules.iter().filter(|r| r.clause.head.temporal != Temporal::Next && r.safe && reads(r, &ledger).0 && brk!("add_ledger_reader_kept" => false; true)) {
             reset.insert(r.id);
-            ledger_heads.insert(r.clause.head.rel);
+            heads.insert(r.clause.head.rel);
         }
-        let mut dirty: HashSet<Sym> = self.rules.iter().filter(|r| reset.contains(&r.id) && (lats.contains(&r.clause.head.rel) || ledger_heads.contains(&r.clause.head.rel) || brk!("add_reset_after" => true; false))).map(|r| r.clause.head.rel).collect();
-        dirty.extend(joins.iter().copied());
+        heads
+    }
+
+    /// What is derived again after the rest: the reset rules whose heads are a lattice the change reaches, a join, or a
+    /// ledger reader; the calls made or unmade; and, to a fixed point, what reads any of those, and each closure a reset
+    /// rule of it is in.
+    fn dirty_set(&self, plan: &Plan, ledger_heads: &HashSet<Sym>) -> HashSet<Sym> {
+        let mut dirty: HashSet<Sym> = self
+            .rules
+            .iter()
+            .filter(|r| plan.reset.contains(&r.id) && (plan.lats.contains(&r.clause.head.rel) || ledger_heads.contains(&r.clause.head.rel) || brk!("add_reset_after" => true; false)))
+            .map(|r| r.clause.head.rel)
+            .collect();
+        dirty.extend(plan.joins.iter().copied());
         if brk!("add_demand_kept" => false; true) {
-            dirty.extend(call_rels.iter().copied());
+            dirty.extend(plan.call_rels.iter().copied());
         }
         // a closure is walked whole from its base rule and its step fires nothing: a closure the change reaches is
         // walked again, after what it reads, and so is what reads it
@@ -1366,7 +1579,7 @@ impl Eval {
             }
             let n = dirty.len();
             for c in &self.clo.closures {
-                if reset.contains(&c.base) || reset.contains(&c.step) {
+                if plan.reset.contains(&c.base) || plan.reset.contains(&c.step) {
                     dirty.insert(c.rel);
                 }
             }
@@ -1374,62 +1587,83 @@ impl Eval {
                 break;
             }
         }
-        // a rule that reads what is derived again after the rest under a negation or an aggregate may withdraw too:
-        // reset with it
+        dirty
+    }
+
+    /// A rule that reads what is derived again after the rest under a negation or an aggregate may withdraw too: reset
+    /// with it.
+    fn reset_negated_dirty(&self, plan: &mut Plan) {
         for r in &self.rules {
             if r.clause.head.temporal == Temporal::Next || !r.safe {
                 continue;
             }
-            let (any, inner) = reads(r, &dirty);
+            let (any, inner) = reads(r, &plan.dirty);
             if brk!("add_dirty_negation_kept" => false; inner || (any && (r.has_agg || r.has_thr))) {
-                reset.insert(r.id);
+                plan.reset.insert(r.id);
             }
         }
-        let recompute: Vec<Rc<ERule>> = self.rules.iter().filter(|r| reset.contains(&r.id) && !dirty.contains(&r.clause.head.rel)).cloned().collect();
-        let reset_after: HashSet<Sym> = reset.iter().copied().filter(|id| !recompute.iter().any(|r| r.id == *id)).collect();
-        let again: Vec<Rc<ERule>> = self
+    }
+
+    /// The rules fired again whole are those reset and not dirty (`recompute`), and those reset or concluding into what is
+    /// dirty (`again`). The fine path keeps the rest, and skips `again`.
+    fn split_again(&self, plan: &mut Plan) {
+        plan.recompute = self.rules.iter().filter(|r| plan.reset.contains(&r.id) && !plan.dirty.contains(&r.clause.head.rel)).cloned().collect();
+        plan.reset_after = plan.reset.iter().copied().filter(|id| !plan.recompute.iter().any(|r| r.id == *id)).collect();
+        plan.again = self
             .rules
             .iter()
-            .filter(|r| r.clause.head.temporal != Temporal::Next && r.safe && (reset_after.contains(&r.id) || dirty.contains(&r.clause.head.rel)))
+            .filter(|r| r.clause.head.temporal != Temporal::Next && r.safe && (plan.reset_after.contains(&r.id) || plan.dirty.contains(&r.clause.head.rel)))
             .cloned()
             .collect();
-        mono.retain(|r| !dirty.contains(&r.clause.head.rel));
-        new_plain.retain(|r| !dirty.contains(&r.clause.head.rel));
-        negs.retain(|(r, _)| !dirty.contains(&r.clause.head.rel));
-        // a closure is walked whole from its base rule and its step fires nothing: where either is added the two fire
-        // whole together (news reaches both through the edges, and a base fact of the relation stops the walk)
-        for c in self.clo.closures.iter().filter(|c| !dirty.contains(&c.rel)) {
+        plan.skip = plan.again.iter().map(|r| r.id).collect();
+        let dirty = &plan.dirty;
+        plan.mono.retain(|r| !dirty.contains(&r.clause.head.rel));
+        plan.new_plain.retain(|r| !dirty.contains(&r.clause.head.rel));
+        plan.negs.retain(|(r, _)| !dirty.contains(&r.clause.head.rel));
+        self.pair_closures(plan);
+    }
+
+    /// A closure is walked whole from its base rule and its step fires nothing: where either is added, the two fire
+    /// whole together (news reaches both through the edges, and a base fact of the relation stops the walk).
+    fn pair_closures(&self, plan: &mut Plan) {
+        for c in self.clo.closures.iter().filter(|c| !plan.dirty.contains(&c.rel)) {
             let pair: Vec<Rc<ERule>> = [c.base, c.step].iter().filter_map(|id| self.rule_of(*id)).collect();
             let has = |v: &[Rc<ERule>], id: Sym| v.iter().any(|r| r.id == id);
-            if brk!("add_closure_unpaired" => false; has(&new_plain, c.base) || has(&new_plain, c.step)) {
-                mono.retain(|r| r.id != c.base && r.id != c.step);
-                new_plain.retain(|r| r.id != c.base && r.id != c.step);
-                new_plain.extend(pair.iter().cloned());
+            if brk!("add_closure_unpaired" => false; has(&plan.new_plain, c.base) || has(&plan.new_plain, c.step)) {
+                plan.mono.retain(|r| r.id != c.base && r.id != c.step);
+                plan.new_plain.retain(|r| r.id != c.base && r.id != c.step);
+                plan.new_plain.extend(pair.iter().cloned());
             }
         }
-        let mut changed: HashSet<Sym> = grown.union(&dirty).copied().collect();
-        changed.extend(recompute.iter().map(|r| r.clause.head.rel));
-        // a rule staged from what changed stages again; one that negates or aggregates it first loses what it staged
-        let mut unstage: HashSet<Sym> = HashSet::new();
+    }
+
+    /// A rule staged `@next` from what changed stages again; one that negates or aggregates it first loses what it staged.
+    fn stage_changed(&self, plan: &mut Plan, fresh: &HashSet<Sym>, changed: &HashSet<Sym>) {
         for r in &self.rules {
             if r.clause.head.temporal != Temporal::Next {
                 continue;
             }
-            let (any, inner) = reads(r, &changed);
+            let (any, inner) = reads(r, changed);
             if fresh.contains(&r.id) || any {
                 if fresh.contains(&r.id) || inner || r.has_agg || r.has_thr {
-                    unstage.insert(r.id);
+                    plan.unstage.insert(r.id);
                 }
-                staged.push(r.clone());
+                plan.staged.push(r.clone());
             }
         }
-        if !staged.is_empty() && !self.lat.lattices.is_empty() {
+    }
+
+    /// The refusals of what the addition would meet, each before anything is written: a lattice, a tag or a ledger
+    /// concluded from what changed, a reader of the shrugs or a late rule reached, a hole, a dominance rule, and a world
+    /// that keeps no witness beyond the monotone part.
+    fn refuse_changed(&mut self, plan: &Plan, changed: &HashSet<Sym>) -> Result<(), &'static str> {
+        if !plan.staged.is_empty() && !self.lat.lattices.is_empty() {
             return Err("a rule staged from what changed in a world with a lattice");
         }
-        for r in mono.iter().chain(&new_plain).chain(&again).chain(&recompute).chain(negs.iter().map(|(r, _)| r)) {
+        for r in plan.mono.iter().chain(&plan.new_plain).chain(&plan.again).chain(&plan.recompute).chain(plan.negs.iter().map(|(r, _)| r)) {
             let head = r.clause.head.rel;
             // (a counting tag's derivations are facts of their own, one per firing, summed by the tag's rule as any sum)
-            if (self.lat.lattices.contains_key(&head) && !lats.contains(&head)) || brk!("add_tag_count_refused" => self.tags.count_of.contains_key(&head); false) || self.v.is_reserved(head) {
+            if (self.lat.lattices.contains_key(&head) && !plan.lats.contains(&head)) || brk!("add_tag_count_refused" => self.tags.count_of.contains_key(&head); false) || self.v.is_reserved(head) {
                 return Err("a lattice, a tag or a ledger is concluded from what changed");
             }
             // late is an order only the stock evaluator reads its strata between
@@ -1444,14 +1678,19 @@ impl Eval {
             return Err("a dominance rule reads what changed");
         }
         // a world that keeps no witness has no firing to name what a fact rests on: only the monotone part is kept
-        if self.prov.no_witness && (!reset.is_empty() || !negs.is_empty() || !call_rels.is_empty()) {
+        if self.prov.no_witness && (!plan.reset.is_empty() || !plan.negs.is_empty() || !plan.call_rels.is_empty()) {
             return Err("the world keeps no witness, and what a negation or an aggregate withdraws is found through the firings");
         }
-        // every fact of a reset rule's head goes, and what rests on it
+        Ok(())
+    }
+
+    /// Every fact of a reset rule's head goes, and what rests on it, with the calls made: they are read before anything is
+    /// retired.
+    fn forced_facts(&mut self, plan: &Plan) -> Vec<FactId> {
         let mut forced: Vec<FactId> = Vec::new();
-        let mut gone: HashSet<Sym> = self.rules.iter().filter(|r| reset_after.contains(&r.id)).map(|r| r.clause.head.rel).collect();
+        let mut gone: HashSet<Sym> = self.rules.iter().filter(|r| plan.reset_after.contains(&r.id)).map(|r| r.clause.head.rel).collect();
         if brk!("add_demand_kept" => false; true) {
-            gone.extend(call_rels.iter().copied());
+            gone.extend(plan.call_rels.iter().copied());
         }
         for rel in gone {
             for id in self.store.rel_all(&self.h, rel) {
@@ -1461,121 +1700,105 @@ impl Eval {
             }
         }
         forced.sort_unstable();
-        let mut ghosts: Vec<FactId> = self.lat.superseded.iter().copied().filter(|g| joins.contains(&self.store.rec(*g).rel)).collect();
+        forced
+    }
+
+    /// The joins are retired whole: their superseded values go, their history and contributions with them, and the facts
+    /// they hold are retired.
+    fn retire_joins(&mut self, plan: &Plan) {
+        let mut ghosts: Vec<FactId> = self.lat.superseded.iter().copied().filter(|g| plan.joins.contains(&self.store.rec(*g).rel)).collect();
         ghosts.sort_unstable();
         for g in ghosts {
             self.lat.superseded.remove(&g);
             self.store.drop_firings(g);
         }
-        self.lat.history.retain(|k, _| !joins.contains(&k.0));
-        self.lat.join_contribs.retain(|k, _| !joins.contains(&k.0));
-        for rel in joins.iter().filter_map(|l| self.lat.join_rels.get(l).copied()).collect::<Vec<_>>() {
+        self.lat.history.retain(|k, _| !plan.joins.contains(&k.0));
+        self.lat.join_contribs.retain(|k, _| !plan.joins.contains(&k.0));
+        for rel in plan.joins.iter().filter_map(|l| self.lat.join_rels.get(l).copied()).collect::<Vec<_>>() {
             for id in self.store.rel_all(&self.h, rel) {
                 if brk!("add_join_contribs_kept" => false; self.store.alive(id)) {
                     self.prov.retire_fact(&mut self.h, &mut self.store, &self.v, id);
                 }
             }
         }
-        // a base fact of a relation that changed stays, and its firings are made again by the rules fired again
+    }
+
+    /// A base fact of a relation that changed stays, and its firings are made again by the rules fired again.
+    fn withdraw_based(&mut self, plan: &Plan) {
         let mut based: Vec<FactId> = Vec::new();
-        for rel in &dirty {
+        for rel in &plan.dirty {
             based.extend(self.store.rel_all(&self.h, *rel).into_iter().filter(|id| self.store.rec(*id).base() && self.store.support_count(*id) > 0));
         }
         if brk!("add_base_firings_kept" => false; !based.is_empty()) {
             self.withdraw_firings(&based, |_, _| true);
         }
-        let consumers = if forced.is_empty() { Vec::new() } else { self.consumer_facts(&[], &forced, &dirty, &HashSet::new(), &reset_after)? };
-        let mut d = AddDelta {
-            facts: added.len(),
-            rules: fresh.len(),
-            monotone: mono.len(),
-            negated: negs.len(),
-            stacked_rules: reset.len(),
-            withdrawn: consumers.len(),
-            refired: again.len(),
-            restaged: staged.len(),
-            ..AddDelta::default()
-        };
+    }
+
+    /// The facts to take out are taken, the reset cells sealed again, and the staged rules that lose what they staged
+    /// forget it; the caches a changed world reads are dropped.
+    fn take_out_and_reset(&mut self, plan: &Plan, consumers: &[FactId], d: &mut AddDelta) {
         if !consumers.is_empty() {
-            self.take_out(&consumers);
+            self.take_out(consumers);
             self.store.sweep();
         }
-        d.stacked_cells = if reset_after.is_empty() { 0 } else { self.reset_cells(&reset_after) };
-        if !reset.is_empty() || !consumers.is_empty() || !negs.is_empty() {
+        d.stacked_cells = if plan.reset_after.is_empty() { 0 } else { self.reset_cells(&plan.reset_after) };
+        if !plan.reset.is_empty() || !consumers.is_empty() || !plan.negs.is_empty() {
             self.support_ix = None;
         }
         self.height_memo.clear();
-        if !call_rels.is_empty() {
+        if !plan.call_rels.is_empty() {
             self.drop_done();
         }
-        self.staged.retain(|_, f| !unstage.contains(&f.rule));
+        self.staged.retain(|_, f| !plan.unstage.contains(&f.rule));
         // a staged rule that aggregates what changed stages again over cells sealed again
-        let staged_cells: HashSet<Sym> = staged.iter().filter(|r| unstage.contains(&r.id) && (r.has_agg || r.has_thr)).map(|r| r.id).collect();
+        let staged_cells: HashSet<Sym> = plan.staged.iter().filter(|r| plan.unstage.contains(&r.id) && (r.has_agg || r.has_thr)).map(|r| r.id).collect();
         if brk!("add_staged_cells_kept" => false; !staged_cells.is_empty()) {
             d.stacked_cells += self.reset_cells(&staged_cells);
             self.support_ix = None;
         }
-        for l in &lats {
-            self.lat.closed.remove(l);
+    }
+
+    /// The window the addition runs in: the part kept, level by level (`fine_levels`), the rules fired again whole, and
+    /// the staged rules restaged. Returns whether a staged fact has more than one firing.
+    fn fine_window(&mut self, added: &[FactId], removed: &[FactId], plan: &Plan, grown: &HashSet<Sym>, holes0: usize, d: &mut AddDelta) -> Result<bool, Halt> {
+        self.fine_levels(added, removed, plan, grown, d)?;
+        self.active.clear();
+        // the rest, as a full evaluation fires it
+        self.refire(&plan.again, &[])?;
+        if !plan.again.is_empty() || !plan.staged.is_empty() {
+            self.add.fresh = None;
         }
-        // what the evaluation kept of the values a subsumptive key was given goes with its facts
-        if lats.iter().any(|l| self.lat.subs.contains_key(l)) {
-            self.lat.sub_cur.retain(|k, _| !lats.contains(&k.0));
-            self.lat.sub_seen.retain(|k, _| !lats.contains(&k.0));
-            self.lat.sub_memo.retain(|k, _| !lats.contains(&k.0));
-            self.lat.sub_parties.retain(|k, _| !lats.contains(&k.0));
-            self.lat.forget_sub_witnesses(|k| lats.contains(&k.0));
-            let store = &self.store;
-            self.lat.sub_by_of.retain(|f, _| store.alive(*f));
+        let mut rd = Delta::default();
+        let ambiguous = self.restage(&plan.staged, &mut rd)?;
+        if self.lat.lattice_hole(&self.store, &self.v, holes0) {
+            return Err(Halt::Bug("an addition wrote a hole".into()));
         }
-        let store = &self.store;
-        self.lat.cur.retain(|_, id| store.alive(*id));
-        let (outer, holes0) = self.begin_window();
-        let active = std::mem::take(&mut self.active);
-        let mut ambiguous = false;
-        self.add.adding = true;
-        self.add.fresh = None;
-        let r = (|| -> Result<(), Halt> {
-            // the part kept, level by level: the news through the rules that read it, the added plain rules whole, and
-            // under a negation the firings a new fact blocks withdrawn, what rested on them derived again
-            let skip: HashSet<Sym> = again.iter().map(|r| r.id).collect();
-            self.fine_levels(added, removed, &mono, &negs, &new_plain, &recompute, &keyable, grown, &dirty, &skip, &mut d)?;
-            self.active.clear();
-            // the rest, as a full evaluation fires it
-            self.refire(&again, &[])?;
-            if !again.is_empty() || !staged.is_empty() {
-                self.add.fresh = None;
-            }
-            let mut rd = Delta::default();
-            ambiguous = self.restage(&staged, &mut rd)?;
-            if self.lat.lattice_hole(&self.store, &self.v, holes0) {
-                return Err(Halt::Bug("an addition wrote a hole".into()));
-            }
-            if self.lat.superseded.iter().any(|g| lats.contains(&self.store.rec(*g).rel) && !joins.contains(&self.store.rec(*g).rel)) {
-                return Err(Halt::Bug("a lattice delta kept a history".into()));
-            }
-            Ok(())
-        })();
-        self.store.close_dup_window();
-        self.add.adding = false;
-        self.active = active;
-        self.added_steps += self.steps;
-        self.end_window(outer);
-        match r {
-            Ok(()) if ambiguous => {
-                self.store.dirty = true;
-                Err("a staged fact has more than one firing, and the evaluation kept the first, by its schedule")
-            }
-            Ok(()) => Ok(d),
-            Err(_) => {
-                self.store.dirty = true;
-                Err("the addition would write a hole, keep a lattice's history or meet a wall, and the world is evaluated again")
-            }
+        if self.lat.superseded.iter().any(|g| plan.lats.contains(&self.store.rec(*g).rel) && !plan.joins.contains(&self.store.rec(*g).rel)) {
+            return Err(Halt::Bug("a lattice delta kept a history".into()));
         }
+        Ok(ambiguous)
     }
 }
 
+
 impl LatticeState {
+    /// The order lattices an addition reaches stand open again, and what their subsumptive keys kept goes with the facts
+    /// that went.
+    fn forget_reached(&mut self, lats: &HashSet<Sym>, store: &Store) {
+        for l in lats {
+            self.closed.remove(l);
+        }
+        if lats.iter().any(|l| self.subs.contains_key(l)) {
+            self.sub_cur.retain(|k, _| !lats.contains(&k.0));
+            self.sub_seen.retain(|k, _| !lats.contains(&k.0));
+            self.sub_memo.retain(|k, _| !lats.contains(&k.0));
+            self.sub_parties.retain(|k, _| !lats.contains(&k.0));
+            self.forget_sub_witnesses(|k| lats.contains(&k.0));
+            self.sub_by_of.retain(|f, _| store.alive(*f));
+        }
+        self.cur.retain(|_, id| store.alive(*id));
+    }
+
     /// The cells of the order lattices stand in the store at their values, closed, and the values they replaced stand as ghosts, as the evaluation left them. A
     /// lattice of dominance or a join keeps more than that, and is restored from what was kept with it (`latkept.rs`).
     fn restore_lattices(&mut self, h: &Heap, store: &mut Store, kept: Vec<super::Tok>) -> bool {
