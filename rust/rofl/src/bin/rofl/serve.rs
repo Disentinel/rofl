@@ -245,11 +245,27 @@ impl Server {
             }
         }
         match op {
+            "rows" | "holding" | "books" | "fact" | "firings" | "cell" | "open" => self.op_read(op, r),
+            "fresh" | "spans" | "load" | "cool" | "cool_many" | "reheat" | "view" | "fork" | "keep" => self.op_world(op, r),
+            _ => self.op_change(op, r),
+        }
+    }
+
+    /// The reads of a world: its rows, its facts by key, its books, what it holds, and the state of an open session.
+    fn op_read(&mut self, op: &str, r: &Value) -> Result<Value, String> {
+        match op {
             "rows" => self.op_rows(r),
             "holding" => self.op_holding(r),
             "books" => self.op_books(r),
             "fact" | "firings" | "cell" => self.op_key(op, r),
             "open" => self.op_open(r),
+            _ => Err(format!("unknown op: {op}")),
+        }
+    }
+
+    /// Worlds made, loaded, cooled, forked and kept: the operations that change which world a session is.
+    fn op_world(&mut self, op: &str, r: &Value) -> Result<Value, String> {
+        match op {
             // An empty world with the kernel's bootstrap tables and nothing
             // else — `new Rofl()`. With `load` beside it, a caller never needs
             // a seed, and therefore never needs the TypeScript kernel.
@@ -291,6 +307,25 @@ impl Server {
                 let id = self.keep(f);
                 Ok(json!({ "session": id, "facts": facts }))
             }
+            // Written to a path unless the caller insists. See the module note:
+            // the whole state is exactly the thing a pipe should not carry.
+            "keep" => {
+                let p = r.get("path").and_then(|v| v.as_str()).ok_or("keep needs `path`")?.to_string();
+                if r.get("volume").and_then(|v| v.as_bool()) == Some(true) {
+                    let bytes = self.get(r)?.keep_volume(&p).map_err(|e| format!("{p}: {e}"))?;
+                    return Ok(json!({ "path": p, "bytes": bytes }));
+                }
+                let image = self.get(r)?.keep();
+                std::fs::write(&p, &image).map_err(|e| format!("{p}: {e}"))?;
+                Ok(json!({ "path": p, "bytes": image.len() }))
+            }
+            _ => Err(format!("unknown op: {op}")),
+        }
+    }
+
+    /// The operations that assert, evaluate, retract, ask or close: the rest of the session's protocol.
+    fn op_change(&mut self, op: &str, r: &Value) -> Result<Value, String> {
+        match op {
             "assert" => {
                 let text = r.get("rofl").and_then(|v| v.as_str()).ok_or("assert needs `rofl`")?.to_string();
                 self.get(r)?.guard_permit(&text)?;
@@ -349,18 +384,6 @@ impl Server {
                 let (removed, added) = self.get(r)?.excise(&q)?;
                 Ok(json!({ "removed": removed, "added": added }))
             }
-            // Written to a path unless the caller insists. See the module note:
-            // the whole state is exactly the thing a pipe should not carry.
-            "keep" => {
-                let p = r.get("path").and_then(|v| v.as_str()).ok_or("keep needs `path`")?.to_string();
-                if r.get("volume").and_then(|v| v.as_bool()) == Some(true) {
-                    let bytes = self.get(r)?.keep_volume(&p).map_err(|e| format!("{p}: {e}"))?;
-                    return Ok(json!({ "path": p, "bytes": bytes }));
-                }
-                let image = self.get(r)?.keep();
-                std::fs::write(&p, &image).map_err(|e| format!("{p}: {e}"))?;
-                Ok(json!({ "path": p, "bytes": image.len() }))
-            }
             "state" => self.op_state(r),
             "facts" => {
                 let s = self.get(r)?;
@@ -374,9 +397,10 @@ impl Server {
                     None => Err(format!("no such session: {id}")),
                 }
             }
-            other => Err(format!("unknown op: {other}")),
+            _ => Err(format!("unknown op: {op}")),
         }
     }
+
 
     fn op_rows(&mut self, r: &Value) -> Result<Value, String> {
         let rel = r.get("rel").and_then(|v| v.as_str()).ok_or("rows needs `rel`")?;

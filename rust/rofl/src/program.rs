@@ -887,6 +887,20 @@ fn check_dominance(h: &mut Heap, v: &Vocab, c: &rofl_parse::Clause, who: Option<
     let rel = c.head.rel;
     let what = format!("dominance {}", h.name(rel));
     let hi = c.dom.as_ref().expect("a dominance rule");
+    check_dominance_shape(h, v, c, hi, &what)?;
+    let lo = to_lit(h, v, &c.head)?;
+    let hi_lit = to_lit(h, v, hi)?;
+    let (k, seen) = dominance_key(h, &lo, &hi_lit, &what)?;
+    let body = to_body(h, v, &c.body)?;
+    let probe = Clause { head: lo.clone(), body: body.clone() };
+    check_dominance_body(h, v, &probe, who, &what)?;
+    check_dominance_bound(h, &body, &seen, &what)?;
+    Ok((lo, hi_lit, body, k))
+}
+
+/// The two facts of a dominance rule: a relation of its own, two facts of one arity, written in the bare book, now.
+fn check_dominance_shape(h: &Heap, v: &Vocab, c: &rofl_parse::Clause, hi: &rofl_parse::Lit, what: &str) -> Result<(), String> {
+    let rel = c.head.rel;
     if v.is_reserved(rel) || h.name(rel).starts_with('$') || v.arity_of(rel).is_some() {
         return Err(format!("{what}: '{}' is a kernel relation, and its facts are the kernel's to keep", h.name(rel)));
     }
@@ -902,8 +916,11 @@ fn check_dominance(h: &mut Heap, v: &Vocab, c: &rofl_parse::Clause, who: Option<
     if c.head.tense != Tense::Now || hi.tense != Tense::Now {
         return Err(format!("{what}: a dominance rule compares facts that hold now; it takes no tense"));
     }
-    let lo = to_lit(h, v, &c.head)?;
-    let hi = to_lit(h, v, hi)?;
+    Ok(())
+}
+
+/// The key the two facts share (the prefix both are written with), and the variables the facts name, the key's first.
+fn dominance_key(h: &Heap, lo: &Lit, hi: &Lit, what: &str) -> Result<(usize, Vec<Sym>), String> {
     let n = lo.args.len();
     let var = |t: &Term| match t.kind() { TermK::Var(x) => Some(x), _ => None };
     if !lo.args.iter().chain(&hi.args).all(|t| var(t).is_some()) {
@@ -913,8 +930,7 @@ fn check_dominance(h: &mut Heap, v: &Vocab, c: &rofl_parse::Clause, who: Option<
     if k == n {
         return Err(format!("{what}: the two facts are one: a dominance rule compares two values at one key, so the facts differ after the key"));
     }
-    let key: Vec<Sym> = lo.args[..k].iter().filter_map(var).collect();
-    let mut seen: Vec<Sym> = key.clone();
+    let mut seen: Vec<Sym> = lo.args[..k].iter().filter_map(var).collect();
     for t in lo.args[k..].iter().chain(&hi.args[k..]) {
         let x = var(t).unwrap();
         if seen.contains(&x) {
@@ -926,9 +942,13 @@ fn check_dominance(h: &mut Heap, v: &Vocab, c: &rofl_parse::Clause, who: Option<
         }
         seen.push(x);
     }
-    let body = to_body(h, v, &c.body)?;
-    let probe = Clause { head: lo.clone(), body: body.clone() };
-    if let Some(d) = check_kernel_book(h, &probe).or_else(|| check_who(h, who, &probe)).or_else(|| check_arity(h, v, &probe)) {
+    Ok((k, seen))
+}
+
+/// The body of a dominance rule: a kernel book, who it is by, its arity, no aggregate, facts now, not its own relation.
+fn check_dominance_body(h: &Heap, v: &Vocab, probe: &Clause, who: Option<&str>, what: &str) -> Result<(), String> {
+    let (rel, body) = (probe.head.rel, &probe.body);
+    if let Some(d) = check_kernel_book(h, probe).or_else(|| check_who(h, who, probe)).or_else(|| check_arity(h, v, probe)) {
         return Err(d);
     }
     if body.iter().any(|b| matches!(b, BodyElem::Agg(_))) {
@@ -943,20 +963,23 @@ fn check_dominance(h: &mut Heap, v: &Vocab, c: &rofl_parse::Clause, who: Option<
             h.name(rel)
         ));
     }
-    if let Some(d) = check_set_patterns(h, v, &probe) {
-        return Err(d);
+    match check_set_patterns(h, v, probe) {
+        Some(d) => Err(d),
+        None => Ok(()),
     }
-    // RANGE-RESTRICTED over the two facts, in the order the engine solves
-    // the body (`plan_order`, as it plans it): a positive literal binds its
-    // variables, `is` and `in` bind their left from a bound right, `=` one
-    // side from the other, and every other element reads only what is bound
-    let (order, stuck, _, _) = plan_order(h, &[], &body, &seen, &[]);
+}
+
+/// RANGE-RESTRICTED over the two facts, in the order the engine solves the body (`plan_order`, as it plans it): a
+/// positive literal binds its variables, `is` and `in` bind their left from a bound right, `=` one side from the other,
+/// and every other element reads only what is bound.
+fn check_dominance_bound(h: &mut Heap, body: &[BodyElem], seen: &[Sym], what: &str) -> Result<(), String> {
+    let (order, stuck, _, _) = plan_order(h, &[], body, seen, &[]);
     let vars = |t: Term| {
         let mut v = Vec::new();
         h.vars_of(t, &mut v);
         v
     };
-    let mut bound = seen.clone();
+    let mut bound = seen.to_vec();
     let mut free: Option<Vec<Sym>> = None;
     for i in order {
         if free.is_some() {
@@ -1012,7 +1035,7 @@ fn check_dominance(h: &mut Heap, v: &Vocab, c: &rofl_parse::Clause, who: Option<
             if names.is_empty() { "a variable".to_string() } else { names.join(", ") }
         ));
     }
-    Ok((lo, hi, body, k))
+    Ok(())
 }
 
 fn is_sealed_body(v: &Vocab, b: Sym) -> bool {
