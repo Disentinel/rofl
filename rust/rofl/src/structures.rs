@@ -520,6 +520,73 @@ fn shared_nodes(r: &Rel) -> bool {
     shared > 0 && shared * 4 >= r.dc[0].min(r.dc[1])
 }
 
+/// A binary relation that is no forest in either direction: the two-parent or cycle line it is a near miss of, if any.
+fn tree_miss(h: &Heap, t: &Rel, a: &Shape, b: &Shape) -> Option<String> {
+    let score = |s: &Shape| match s {
+        Shape::TwoParents(n, _) => (*n, 0),
+        Shape::Cycle(n, _) => (*n, 1),
+        Shape::Forest(_) => (0, 0),
+    };
+    let (s, pc) = if score(a).0 <= score(b).0 { (a, 0) } else { (b, 1) };
+    let decl = format!("tree {}({}).", t.name, if pc == 0 { "P, C" } else { "C, P" });
+    match s {
+        Shape::TwoParents(n, ex) if *n <= tol(t.rows.len()) => {
+            let (c, p1, p2) = ex[0];
+            let mut line = format!("{decl} {} child{} with two parents: {} has parents {} and {}", n, if *n == 1 { "" } else { "ren" }, h.canon(c), h.canon(p1), h.canon(p2));
+            if *n > 1 {
+                line.push_str(&format!(" (+{} more)", n - 1));
+            }
+            Some(line)
+        }
+        Shape::Cycle(n, nodes) if *n <= 3 => {
+            let ns: Vec<String> = nodes.iter().map(|x| h.canon(*x)).collect();
+            Some(format!("{decl} {} cycle{}, the first through {}", n, if *n == 1 { "" } else { "s" }, clip(ns.join(", "))))
+        }
+        _ => None,
+    }
+}
+
+/// A relation that is exactly the strict closure of the forest `f`, with the column that holds the ancestor.
+fn closure_match(rels: &[Rel], by_len: &BTreeMap<usize, Vec<usize>>, f: &Forest, ti: usize, closed: &BTreeSet<usize>) -> Option<(usize, usize)> {
+    for &ci in by_len.get(&f.closure).into_iter().flatten() {
+        if ci == ti || closed.contains(&ci) {
+            continue;
+        }
+        for (ac, dc) in [(0, 1), (1, 0)] {
+            if rels[ci].rows.iter().all(|r| f.above(r[ac], r[dc])) {
+                return Some((ci, ac));
+            }
+        }
+    }
+    None
+}
+
+/// A closure with no edge relation whose reduction is a forest: the closure's proposal, and the relations that proposal takes.
+fn closure_like_trees(rels: &[Rel], closed: &BTreeSet<usize>, fds: &[TreeFd], out: &mut Vec<Proposal>) -> BTreeSet<usize> {
+    let mut closure_like: BTreeSet<usize> = BTreeSet::new();
+    for (ci, c) in rels.iter().enumerate() {
+        if c.arity != 2 || closed.contains(&ci) || fds.iter().any(|f| f.rel == ci) || !shared_nodes(c) {
+            continue;
+        }
+        for (ac, dc) in [(0, 1), (1, 0)] {
+            if let Some(edges) = reduction(&c.rows, ac, dc) {
+                closure_like.insert(ci);
+                out.push(Proposal {
+                    kind: "tree",
+                    decl: format!("tree _(P, C) closure {}.", c.name),
+                    notes: vec![
+                        format!("{}: {} is a transitive closure of a forest of {} edges that no relation holds", c.label(), rows_word(c.rows.len()), edges),
+                        format!("saves {} less the {} edges to state ({} derivations)", rows_word(c.rows.len().saturating_sub(edges)), edges, c.firings),
+                    ],
+                    saved: Some((ci, c.rows.len().saturating_sub(edges), c.firings)),
+                });
+                break;
+            }
+        }
+    }
+    closure_like
+}
+
 fn trees(rels: &[Rel], h: &Heap, declared: &BTreeMap<String, Option<String>>, found: &mut Vec<Proposal>, out: &mut Vec<Proposal>, near: &mut Vec<String>) -> Vec<TreeFd> {
     let mut fds = Vec::new();
     let mut by_len: BTreeMap<usize, Vec<usize>> = BTreeMap::new();
@@ -541,29 +608,9 @@ fn trees(rels: &[Rel], h: &Heap, declared: &BTreeMap<String, Option<String>>, fo
             _ => None,
         };
         let Some((pc, cc, first)) = pick else {
-            let score = |s: &Shape| match s {
-                Shape::TwoParents(n, _) => (*n, 0),
-                Shape::Cycle(n, _) => (*n, 1),
-                Shape::Forest(_) => (0, 0),
-            };
-            let (s, pc, cc) = if score(&a).0 <= score(&b).0 { (&a, 0, 1) } else { (&b, 1, 0) };
-            let decl = format!("tree {}({}).", t.name, if pc == 0 { "P, C" } else { "C, P" });
-            match s {
-                Shape::TwoParents(n, ex) if *n <= tol(t.rows.len()) => {
-                    let (c, p1, p2) = ex[0];
-                    let mut line = format!("{decl} {} child{} with two parents: {} has parents {} and {}", n, if *n == 1 { "" } else { "ren" }, h.canon(c), h.canon(p1), h.canon(p2));
-                    if *n > 1 {
-                        line.push_str(&format!(" (+{} more)", n - 1));
-                    }
-                    pending.push((ti, line));
-                }
-                Shape::Cycle(n, nodes) if *n <= 3 => {
-                    let ns: Vec<String> = nodes.iter().map(|x| h.canon(*x)).collect();
-                    pending.push((ti, format!("{decl} {} cycle{}, the first through {}", n, if *n == 1 { "" } else { "s" }, clip(ns.join(", ")))));
-                }
-                _ => {}
+            if let Some(line) = tree_miss(h, t, &a, &b) {
+                pending.push((ti, line));
             }
-            let _ = cc;
             continue;
         };
         let both = matches!((&a, &b), (Shape::Forest(_), Shape::Forest(_)));
@@ -589,22 +636,7 @@ fn trees(rels: &[Rel], h: &Heap, declared: &BTreeMap<String, Option<String>>, fo
             continue;
         }
         // a relation that is exactly the strict closure of this forest
-        let mut found: Option<(usize, usize)> = None;
-        for &ci in by_len.get(&f.closure).into_iter().flatten() {
-            if ci == ti || closed.contains(&ci) {
-                continue;
-            }
-            for (ac, dc) in [(0, 1), (1, 0)] {
-                if rels[ci].rows.iter().all(|r| f.above(r[ac], r[dc])) {
-                    found = Some((ci, ac));
-                    break;
-                }
-            }
-            if found.is_some() {
-                break;
-            }
-        }
-        match found {
+        match closure_match(rels, &by_len, &f, ti, &closed) {
             Some((ci, ac)) => {
                 closed.insert(ci);
                 let c = &rels[ci];
@@ -622,28 +654,7 @@ fn trees(rels: &[Rel], h: &Heap, declared: &BTreeMap<String, Option<String>>, fo
             }
         }
     }
-    // a closed relation whose reduction is a forest: a closure with no edge relation (one with an edge relation was matched above)
-    let mut closure_like: BTreeSet<usize> = BTreeSet::new();
-    for (ci, c) in rels.iter().enumerate() {
-        if c.arity != 2 || closed.contains(&ci) || fds.iter().any(|f| f.rel == ci) || !shared_nodes(c) {
-            continue;
-        }
-        for (ac, dc) in [(0, 1), (1, 0)] {
-            if let Some(edges) = reduction(&c.rows, ac, dc) {
-                closure_like.insert(ci);
-                out.push(Proposal {
-                    kind: "tree",
-                    decl: format!("tree _(P, C) closure {}.", c.name),
-                    notes: vec![
-                        format!("{}: {} is a transitive closure of a forest of {} edges that no relation holds", c.label(), rows_word(c.rows.len()), edges),
-                        format!("saves {} less the {} edges to state ({} derivations)", rows_word(c.rows.len().saturating_sub(edges)), edges, c.firings),
-                    ],
-                    saved: Some((ci, c.rows.len().saturating_sub(edges), c.firings)),
-                });
-                break;
-            }
-        }
-    }
+    let closure_like = closure_like_trees(rels, &closed, &fds, out);
     // a closure is no near miss of a tree
     near.extend(pending.into_iter().filter(|(i, _)| !closed.contains(i) && !closure_like.contains(i)).map(|(_, m)| m));
     fds
@@ -724,94 +735,129 @@ fn invert(s: &[usize]) -> Vec<usize> {
 }
 
 #[allow(clippy::too_many_arguments)]
-fn aliases(rels: &[Rel], store: &Store, h: &Heap, closures: &BTreeSet<usize>, declared: &BTreeSet<String>, found: &mut Vec<Proposal>, out: &mut Vec<Proposal>, near: &mut Vec<String>) -> BTreeSet<usize> {
-    let mut misses: Vec<(usize, String)> = Vec::new();
-    // a declared alias is the declaration's: reported, and neither side of a proposal
+fn alias_ok(r: &Rel, declared: &BTreeSet<String>) -> bool {
+    r.arity >= 1 && r.arity <= MAX_ALIAS && !declared.contains(&r.name)
+}
+
+fn declared_aliases(rels: &[Rel], declared: &BTreeSet<String>, found: &mut Vec<Proposal>) {
     let mut seen = BTreeSet::new();
     for r in rels.iter().filter(|r| declared.contains(&r.name)) {
         if seen.insert(&r.name) {
             found.push(Proposal { kind: "alias", decl: format!("alias {}.", r.name), notes: vec![format!("{}: {}", r.label(), rows_word(r.rows.len()))], saved: None });
         }
     }
-    let alias_ok = |r: &Rel| r.arity >= 1 && r.arity <= MAX_ALIAS && !declared.contains(&r.name);
-    // same arity: one verdict per unordered pair, either way round; sigma takes i's columns to j's
+}
+
+/// Two relations of one arity: equal (with the column order that takes b onto a), near (with the rows each lacks), or apart.
+enum Pair<'a> {
+    Equal(Vec<usize>),
+    Near(Vec<usize>, Vec<&'a [Term]>, Vec<&'a [Term]>),
+    Apart,
+}
+
+fn pair_verdict<'a>(store: &Store, a: &Rel<'a>, b: &Rel<'a>, t: usize) -> Pair<'a> {
+    let ok = |c: usize, k: usize| a.dc[c].abs_diff(b.dc[k]) <= t;
+    let mut best: Option<(usize, Vec<usize>, Vec<&[Term]>, Vec<&[Term]>)> = None;
+    for s in perms(a.arity, a.arity, &ok) {
+        let a_to_b = |row: &[Term], buf: &mut Vec<Term>| {
+            buf.resize(row.len(), row[0]);
+            for (c, &k) in s.iter().enumerate() {
+                buf[k] = row[c];
+            }
+        };
+        let b_to_a = |row: &[Term], buf: &mut Vec<Term>| buf.extend(s.iter().map(|&k| row[k]));
+        let a_lacked = missing(store, a, b, &a_to_b, t);
+        if a_lacked.len() > t {
+            continue;
+        }
+        let b_lacked = missing(store, b, a, &b_to_a, t);
+        let (na, nb) = (a_lacked.len(), b_lacked.len());
+        let exact = brk!("structures_alias_subset_accepted" => na == 0 || nb == 0; na == 0 && nb == 0);
+        if exact {
+            return Pair::Equal(s.clone());
+        }
+        if na + nb <= t && best.as_ref().map_or(true, |x| na + nb < x.0) {
+            best = Some((na + nb, s.clone(), a_lacked, b_lacked));
+        }
+    }
+    match best {
+        Some((_, s, a_lacked, b_lacked)) => Pair::Near(s, a_lacked, b_lacked),
+        None => Pair::Apart,
+    }
+}
+
+/// The miss a near pair is: the copy's name, the rows each side lacks of the other, and the index of the relation it is a copy of.
+fn miss_of(h: &Heap, (i, j): (usize, usize), (a, b): (&Rel, &Rel), s: Vec<usize>, (a_lacked, b_lacked): (Vec<&[Term]>, Vec<&[Term]>)) -> (usize, String) {
+    // the copy is the relation with fewer rows, else the later name
+    let a_copy = (a.rows.len(), &a.name) < (b.rows.len(), &b.name);
+    let a_txt: Vec<String> = a_lacked.iter().map(|r| a.row_text(h, r)).collect();
+    let b_txt: Vec<String> = b_lacked.iter().map(|r| b.row_text(h, r)).collect();
+    let (cp, src, sigma, lacks, extra) = if a_copy { (a, b, s, b_txt, a_txt) } else { (b, a, invert(&s), a_txt, b_txt) };
+    let src_idx = if a_copy { j } else { i };
+    let what = match (lacks.len(), extra.len()) {
+        (m, 0) => format!("{} lacks {} of {}", cp.label(), rows_word(m), src.label()),
+        (0, e) => format!("{} has {} {} lacks", cp.label(), rows_word(e), src.label()),
+        (m, e) => format!("{} lacks {} of {} and has {} it lacks", cp.label(), m, src.label(), e),
+    };
+    let mut ex: Vec<String> = lacks.into_iter().chain(extra).collect();
+    ex.sort();
+    let more = if ex.len() > 2 { format!(" (+{} more)", ex.len() - 2) } else { String::new() };
+    ex.truncate(2);
+    (src_idx, format!("alias {}: {}: {}{}", alias_text(cp, src, &sigma), what, clip(ex.join("; ")), more))
+}
+
+/// Every pair of relations of one arity that are equal (`equal`, keyed by the pair) or near (their misses pushed to `misses`).
+fn equal_relations(rels: &[Rel], store: &Store, h: &Heap, declared: &BTreeSet<String>, misses: &mut Vec<(usize, String)>) -> BTreeMap<(usize, usize), Vec<usize>> {
     let mut equal: BTreeMap<(usize, usize), Vec<usize>> = BTreeMap::new();
     for i in 0..rels.len() {
         for j in i + 1..rels.len() {
             let (a, b) = (&rels[i], &rels[j]);
-            if !alias_ok(a) || a.arity != b.arity {
+            if !alias_ok(a, declared) || a.arity != b.arity {
                 continue;
             }
             let t = tol(a.rows.len().max(b.rows.len()));
             if a.rows.len().abs_diff(b.rows.len()) > t {
                 continue;
             }
-            let ok = |c: usize, k: usize| a.dc[c].abs_diff(b.dc[k]) <= t;
-            let mut best: Option<(usize, Vec<usize>, Vec<&[Term]>, Vec<&[Term]>)> = None;
-            for s in perms(a.arity, a.arity, &ok) {
-                let a_to_b = |row: &[Term], buf: &mut Vec<Term>| {
-                    buf.resize(row.len(), row[0]);
-                    for (c, &k) in s.iter().enumerate() {
-                        buf[k] = row[c];
-                    }
-                };
-                let b_to_a = |row: &[Term], buf: &mut Vec<Term>| buf.extend(s.iter().map(|&k| row[k]));
-                let a_lacked = missing(store, a, b, &a_to_b, t);
-                if a_lacked.len() > t {
-                    continue;
+            match pair_verdict(store, a, b, t) {
+                Pair::Equal(s) => {
+                    equal.insert((i, j), s);
                 }
-                let b_lacked = missing(store, b, a, &b_to_a, t);
-                let (na, nb) = (a_lacked.len(), b_lacked.len());
-                let exact = brk!("structures_alias_subset_accepted" => na == 0 || nb == 0; na == 0 && nb == 0);
-                if exact {
-                    equal.insert((i, j), s.clone());
-                    best = None;
-                    break;
-                }
-                if na + nb <= t && best.as_ref().map_or(true, |x| na + nb < x.0) {
-                    best = Some((na + nb, s.clone(), a_lacked, b_lacked));
-                }
-            }
-            if let Some((_, s, a_lacked, b_lacked)) = best {
-                // the copy is the relation with fewer rows, else the later name
-                let a_copy = (a.rows.len(), &a.name) < (b.rows.len(), &b.name);
-                let a_txt: Vec<String> = a_lacked.iter().map(|r| a.row_text(h, r)).collect();
-                let b_txt: Vec<String> = b_lacked.iter().map(|r| b.row_text(h, r)).collect();
-                let (cp, src, sigma, lacks, extra) = if a_copy { (a, b, s, b_txt, a_txt) } else { (b, a, invert(&s), a_txt, b_txt) };
-                let src_idx = if a_copy { j } else { i };
-                let what = match (lacks.len(), extra.len()) {
-                    (m, 0) => format!("{} lacks {} of {}", cp.label(), rows_word(m), src.label()),
-                    (0, e) => format!("{} has {} {} lacks", cp.label(), rows_word(e), src.label()),
-                    (m, e) => format!("{} lacks {} of {} and has {} it lacks", cp.label(), m, src.label(), e),
-                };
-                let mut ex: Vec<String> = lacks.into_iter().chain(extra).collect();
-                ex.sort();
-                let more = if ex.len() > 2 { format!(" (+{} more)", ex.len() - 2) } else { String::new() };
-                ex.truncate(2);
-                misses.push((src_idx, format!("alias {}: {}: {}{}", alias_text(cp, src, &sigma), what, clip(ex.join("; ")), more)));
+                Pair::Near(s, a_lacked, b_lacked) => misses.push(miss_of(h, (i, j), (a, b), s, (a_lacked, b_lacked))),
+                Pair::Apart => {}
             }
         }
     }
-    // classes of equal relations: a representative (a closure, then the one asserted, then the first name), the rest aliases of it
-    let mut class: Vec<usize> = (0..rels.len()).collect();
-    fn find(c: &mut Vec<usize>, x: usize) -> usize {
-        if c[x] != x {
-            let r = find(c, c[x]);
-            c[x] = r;
-        }
-        c[x]
+    equal
+}
+
+fn class_root(c: &mut Vec<usize>, x: usize) -> usize {
+    if c[x] != x {
+        let r = class_root(c, c[x]);
+        c[x] = r;
     }
+    c[x]
+}
+
+/// Relations grouped by equality: each group is one class, keyed by its root.
+fn class_members(n: usize, equal: &BTreeMap<(usize, usize), Vec<usize>>) -> BTreeMap<usize, Vec<usize>> {
+    let mut class: Vec<usize> = (0..n).collect();
     for &(i, j) in equal.keys() {
-        let (ri, rj) = (find(&mut class, i), find(&mut class, j));
+        let (ri, rj) = (class_root(&mut class, i), class_root(&mut class, j));
         class[ri.max(rj)] = ri.min(rj);
     }
     let mut members: BTreeMap<usize, Vec<usize>> = BTreeMap::new();
-    for i in 0..rels.len() {
-        let root = find(&mut class, i);
+    for i in 0..n {
+        let root = class_root(&mut class, i);
         members.entry(root).or_default().push(i);
     }
+    members
+}
+
+/// Each class of equal relations has a representative (a closure, then the one asserted, then the first name); the rest are aliases of it.
+fn class_aliases(rels: &[Rel], closures: &BTreeSet<usize>, equal: &BTreeMap<(usize, usize), Vec<usize>>, out: &mut Vec<Proposal>) -> BTreeSet<usize> {
     let mut aliased: BTreeSet<usize> = BTreeSet::new();
-    for ms in members.values().filter(|m| m.len() > 1) {
+    for ms in class_members(rels.len(), equal).values().filter(|m| m.len() > 1) {
         let rep = *ms.iter().min_by_key(|&&i| (!closures.contains(&i), std::cmp::Reverse(rels[i].base), rels[i].name.clone())).unwrap();
         for &b in ms.iter().filter(|&&b| b != rep) {
             aliased.insert(b);
@@ -820,39 +866,52 @@ fn aliases(rels: &[Rel], store: &Store, h: &Heap, closures: &BTreeSet<usize>, de
             emit_alias(&rels[b], &rels[rep], b, &sigma, ms.len() > 2, out);
         }
     }
-    // a projection: B is the distinct columns of a larger A; the smallest such A for each B not already an alias
-    for (bi, b) in rels.iter().enumerate() {
-        if !alias_ok(b) || aliased.contains(&bi) || closures.contains(&bi) {
+    aliased
+}
+
+/// The smallest larger relation of which `b` is the distinct columns, with the column order, if every row of `b` is one of its rows.
+fn projection_source(rels: &[Rel], store: &Store, b: &Rel, aliased: &BTreeSet<usize>, declared: &BTreeSet<String>) -> Option<(usize, Vec<usize>)> {
+    let mut best: Option<(usize, Vec<usize>)> = None;
+    for (ai, a) in rels.iter().enumerate() {
+        if !alias_ok(a, declared) || a.arity <= b.arity || a.rows.len() < b.rows.len() {
             continue;
         }
-        let mut best: Option<(usize, Vec<usize>)> = None;
-        for (ai, a) in rels.iter().enumerate() {
-            if !alias_ok(a) || a.arity <= b.arity || a.rows.len() < b.rows.len() {
+        if aliased.contains(&ai) || best.as_ref().map_or(false, |(x, _)| (rels[*x].arity, rels[*x].rows.len(), &rels[*x].name) <= (a.arity, a.rows.len(), &a.name)) {
+            continue;
+        }
+        let ok = |c: usize, k: usize| b.dc[c] == a.dc[k];
+        for s in perms(b.arity, a.arity, &ok) {
+            let a_to_b = |row: &[Term], buf: &mut Vec<Term>| buf.extend(s.iter().map(|&k| row[k]));
+            if !missing(store, a, b, &a_to_b, 0).is_empty() {
                 continue;
             }
-            if aliased.contains(&ai) || best.as_ref().map_or(false, |(x, _)| (rels[*x].arity, rels[*x].rows.len(), &rels[*x].name) <= (a.arity, a.rows.len(), &a.name)) {
-                continue;
+            let mut hit: FxSet<FactId> = FxSet::default();
+            let mut buf = Vec::new();
+            for row in &a.rows {
+                buf.clear();
+                a_to_b(row, &mut buf);
+                hit.extend(store.get(b.rel, b.persp, &buf));
             }
-            let ok = |c: usize, k: usize| b.dc[c] == a.dc[k];
-            for s in perms(b.arity, a.arity, &ok) {
-                let a_to_b = |row: &[Term], buf: &mut Vec<Term>| buf.extend(s.iter().map(|&k| row[k]));
-                if !missing(store, a, b, &a_to_b, 0).is_empty() {
-                    continue;
-                }
-                let mut hit: FxSet<FactId> = FxSet::default();
-                let mut buf = Vec::new();
-                for row in &a.rows {
-                    buf.clear();
-                    a_to_b(row, &mut buf);
-                    hit.extend(store.get(b.rel, b.persp, &buf));
-                }
-                if hit.len() == b.rows.len() {
-                    best = Some((ai, s));
-                    break;
-                }
+            if hit.len() == b.rows.len() {
+                best = Some((ai, s));
+                break;
             }
         }
-        if let Some((ai, s)) = best {
+    }
+    best
+}
+
+fn aliases(rels: &[Rel], store: &Store, h: &Heap, closures: &BTreeSet<usize>, declared: &BTreeSet<String>, found: &mut Vec<Proposal>, out: &mut Vec<Proposal>, near: &mut Vec<String>) -> BTreeSet<usize> {
+    declared_aliases(rels, declared, found);
+    let mut misses: Vec<(usize, String)> = Vec::new();
+    let equal = equal_relations(rels, store, h, declared, &mut misses);
+    let aliased = class_aliases(rels, closures, &equal, out);
+    // a projection: B is the distinct columns of a larger A; the smallest such A for each B not already an alias
+    for (bi, b) in rels.iter().enumerate() {
+        if !alias_ok(b, declared) || aliased.contains(&bi) || closures.contains(&bi) {
+            continue;
+        }
+        if let Some((ai, s)) = projection_source(rels, store, b, &aliased, declared) {
             emit_alias(b, &rels[ai], bi, &s, false, out);
         }
     }
