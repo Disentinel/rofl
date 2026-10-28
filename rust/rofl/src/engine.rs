@@ -1468,6 +1468,34 @@ enum Sealed {
     Open(Sym),
 }
 
+struct AggCtx<'a> {
+    rid: Sym,
+    a: &'a Agg,
+    s: &'a Subst,
+    plan: &'a AggPlan,
+    corr: &'a [Term],
+    reach: &'a [Possible],
+    index: &'a PossIndex,
+    cands: &'a [Cand],
+    values: &'a [Term],
+    withdrawn: Sym,
+}
+
+struct GroupOrder {
+    hs: Vec<u32>,
+    order: Vec<usize>,
+    rdesc: Vec<bool>,
+    katoms: Vec<Result<Vec<KeyAtom>, Sym>>,
+}
+
+#[derive(Default)]
+struct Unsettled {
+    reached: HashMap<usize, Vec<Unknown>>,
+    decided: HashMap<usize, String>,
+    conds: HashMap<usize, Term>,
+    capped: HashMap<usize, i64>,
+}
+
 impl Eval {
     pub fn new(h: Heap, store: Store, budget: i64, mode: Mode, bootstrap: bool) -> Eval {
         Eval::with_answer(h, store, budget, mode, bootstrap, None)
@@ -2563,143 +2591,14 @@ impl Eval {
         }
         let mut h = std::mem::take(&mut self.h);
         let mut pol = policy_store(&mut h, &self.v, crate::kernel::safety());
-        for rel in [
-            self.v.premise_lit,
-            self.v.conclusion_lit,
-            self.v.has_premise,
-            self.v.concludes,
-            self.v.conclusion_tense,
-            self.v.premise_pos,
-            self.v.premise_neg,
-            self.v.premise_agg,
-            self.v.reserved,
-            self.v.lattice_decl,
-            brk!("widen_row_unread" => self.v.lattice_decl; self.v.lattice_widen),
-            brk!("dominance_row_unread" => self.v.lattice_decl; self.v.dominance),
-            brk!("order_row_unread" => self.v.lattice_decl; self.v.order_comp),
-        ] {
-            for f in self.store.rel_all(&h, rel) {
-                let persp = self.store.rec(f).persp;
-                let args = self.store.args(f).to_vec();
-                // a rule `tag::lower` rewrote is judged as it runs, below
-                if args.first().and_then(|a| a.as_atom()).is_some_and(|r| self.tag_changed.contains(&r)) && rel != self.v.lattice_decl {
-                    continue;
-                }
-                pol.add(&h, rel, persp, &args, F_BASE);
-            }
-        }
-        // WHAT RUNS FOR A TAG, judged: each rewritten clause's reflection
-        // under its own id, and an idempotent tag's order lattice
-        let seeded = [
-            self.v.premise_lit, self.v.conclusion_lit, self.v.has_premise, self.v.concludes,
-            self.v.conclusion_tense, self.v.premise_pos, self.v.premise_neg, self.v.premise_agg,
-        ];
-        for r in rules.iter().filter(|r| brk!("tag_judged_as_written" => false; self.tag_changed.contains(&r.id))) {
-            let (enc, facts) = encode_rule(&mut h, &self.v, &r.clause);
-            let enc = h.intern(&enc);
-            for f in facts.into_iter().filter(|f| seeded.contains(&f.rel)) {
-                let mut args = f.args;
-                if args[0].as_atom() == Some(enc) {
-                    args[0] = Term::atom(r.id);
-                }
-                pol.add(&h, f.rel, self.v.kernel_persp, &args, F_BASE);
-            }
-        }
+        self.seed_base_judgements(&mut h, &mut pol, rules);
         for (rel, n, op) in self.tags.as_lattices(&self.v) {
             pol.add(&h, self.v.lattice_decl, self.v.kernel_persp, &[Term::atom(rel), Term::int(n as i64), Term::atom(op)], F_BASE);
         }
-        let s_head = h.atom("head");
-        let s_pos = h.atom("pos");
-        let s_left = h.atom("left");
-        let s_right = h.atom("right");
-        let s_agg = Term::atom(self.v.slot_agg);
-        let s_agg_res = Term::atom(self.v.slot_agg_res);
-        let main = self.v.main;
-        for r in rules {
-            let rid = Term::atom(r.id);
-            let islot = |h: &mut Heap, pol: &mut Store, rid: Term, k: i64, name: Term, ts: &[Term]| {
-                let mut vs: Vec<Sym> = Vec::new();
-                for t in ts {
-                    h.vars_of(*t, &mut vs);
-                }
-                let mut i = 0i64;
-                for var in &vs {
-                    i += 1;
-                    let vname = h.name(*var).to_string();
-                    let vs_t = h.string(&vname);
-                    pol.add(
-                        h,
-                        self.v.premise_var,
-                        main,
-                        &[rid, Term::int(k), name, Term::int(i), vs_t],
-                        F_BASE,
-                    );
-                }
-                pol.add(
-                    h,
-                    self.v.slot_arity,
-                    main,
-                    &[rid, Term::int(k), name, Term::int(i)],
-                    F_BASE,
-                );
-            };
-            let slot = |h: &mut Heap, pol: &mut Store, k: i64, name: Term, ts: &[Term]| islot(h, pol, rid, k, name, ts);
-            let mut head_ts = r.clause.head.args.clone();
-            head_ts.push(r.clause.head.persp);
-            slot(&mut h, &mut pol, 0, s_head, &head_ts);
-            for (i, b) in r.clause.body.iter().enumerate() {
-                let k = i as i64 + 1;
-                match b {
-                    BodyElem::Pos(l) => {
-                        let mut ts = l.args.clone();
-                        ts.push(l.persp);
-                        slot(&mut h, &mut pol, k, s_pos, &ts);
-                    }
-                    BodyElem::Bi { l, r: rr, .. } => {
-                        slot(&mut h, &mut pol, k, s_left, &[*l]);
-                        slot(&mut h, &mut pol, k, s_right, &[*rr]);
-                    }
-                    BodyElem::Neg(_) => {}
-                    // AN AGGREGATE BINDS ITS SHARED VARIABLES AND ITS RESULT,
-                    // and its inner body is judged as a rule of its own,
-                    // `$inner(R, K)`, whose head is what the fold reads.
-                    BodyElem::Agg(a) => {
-                        let shared: Vec<Term> = a.shared.iter().map(|v| Term::var(*v)).collect();
-                        slot(&mut h, &mut pol, k, s_agg, &shared);
-                        // a threshold reads N and binds nothing of it
-                        let res: &[Term] = if a.op == AggOp::AtLeast { &[] } else { std::slice::from_ref(&a.result) };
-                        slot(&mut h, &mut pol, k, s_agg_res, res);
-                        let inner = h.mkf(self.v.s_inner, &[rid, Term::int(k)]);
-                        pol.add(&h, self.v.agg_inner, main, &[rid, Term::int(k), inner], F_BASE);
-                        let mut head: Vec<Term> = a.vals.clone();
-                        head.extend(a.keys.iter().copied());
-                        head.extend(shared.iter().copied());
-                        islot(&mut h, &mut pol, inner, 0, s_head, &head);
-                        for (j, x) in a.body.iter().enumerate() {
-                            let kj = Term::int(j as i64 + 1);
-                            let kp = self.v.kernel_persp;
-                            pol.add(&h, self.v.has_premise, kp, &[inner, kj], F_BASE);
-                            let rx = reify_body_elem(&mut h, &self.v, x);
-                            pol.add(&h, self.v.premise_lit, kp, &[inner, kj, rx], F_BASE);
-                            match x {
-                                BodyElem::Pos(l) => {
-                                    let mut ts = l.args.clone();
-                                    ts.push(l.persp);
-                                    islot(&mut h, &mut pol, inner, j as i64 + 1, s_pos, &ts);
-                                }
-                                BodyElem::Bi { l, r: rr, .. } => {
-                                    islot(&mut h, &mut pol, inner, j as i64 + 1, s_left, &[*l]);
-                                    islot(&mut h, &mut pol, inner, j as i64 + 1, s_right, &[*rr]);
-                                }
-                                BodyElem::Neg(_) | BodyElem::Agg(_) => {}
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        self.seed_rule_slots(&mut h, &mut pol, rules);
         // A LATTICE'S EXTRA INPUTS, seeded only for a program that declares one.
         let lattices = self.lat.lattice_rows.clone();
+        let main = self.v.main;
         // A SUBSUMPTIVE RELATION'S LITERALS carry their arity, as a lattice's
         // do: safety.rofl refuses a rule that writes or reads one at another
         let subs: Vec<(Sym, usize)> = self.lat.subs.iter().map(|(r, x)| (*r, x.arity)).collect();
@@ -2722,118 +2621,7 @@ impl Eval {
                 }
             }
         }
-        // A DECLARED ORDER'S RELATIONS and how many values each compares
-        let mut ords: Vec<(Sym, usize)> = Vec::new();
-        for f in self.store.rel_all(&h, self.v.order_comp) {
-            if let Some(p) = self.store.args(f)[0].as_atom() {
-                match ords.iter_mut().find(|(q, _)| *q == p) {
-                    Some(o) => o.1 += 1,
-                    None => ords.push((p, 1)),
-                }
-            }
-        }
-        if !lattices.is_empty() || !ords.is_empty() {
-            let (s_neg, s_hkey, s_hval, s_lkey, s_lval) = (
-                Term::atom(self.v.slot_neg),
-                Term::atom(self.v.slot_hkey),
-                Term::atom(self.v.slot_hval),
-                Term::atom(self.v.slot_lkey),
-                Term::atom(self.v.slot_lval),
-            );
-            let lit_arity = h.atom("lit_arity");
-            let lit_arity = lit_arity.as_atom().unwrap();
-            let is_lat = |rel: Sym| lattices.iter().any(|(p, _, _)| *p == rel);
-            let ord_of = |rel: Sym| ords.iter().find(|(p, _)| *p == rel).map(|(_, m)| *m);
-            let s_oval = h.atom("oval");
-            let s_bad = h.atom("order_bad_read");
-            let s_bad = s_bad.as_atom().unwrap();
-            for r in rules {
-                let rid = Term::atom(r.id);
-                let head = &r.clause.head;
-                if let Some(m) = ord_of(head.rel).filter(|_| !brk!("order_head_unseeded" => true; false)) {
-                    let n = head.args.len();
-                    let (key, comps) = head.args.split_at(n.saturating_sub(m));
-                    let mut ks: Vec<Term> = key.to_vec();
-                    ks.extend(comps.iter().filter(|t| !t.is_var()).copied());
-                    ks.push(head.persp);
-                    self.seed_slot(&mut h, &mut pol, rid, 0, s_hkey, &ks);
-                    for (i, t) in comps.iter().enumerate() {
-                        if let TermK::Var(x) = t.kind() {
-                            let name = h.name(x).to_string();
-                            let name = h.string(&name);
-                            pol.add(&h, self.v.premise_var, main, &[rid, Term::int(0), s_oval, Term::int(i as i64 + 1), name], F_BASE);
-                        }
-                    }
-                }
-                if is_lat(head.rel) {
-                    let n = head.args.len();
-                    let mut key: Vec<Term> = head.args[..n.saturating_sub(1)].to_vec();
-                    key.push(head.persp);
-                    self.seed_slot(&mut h, &mut pol, rid, 0, s_hkey, &key);
-                    let val: Vec<Term> = head.args.last().filter(|t| t.is_var()).copied().into_iter().collect();
-                    self.seed_slot(&mut h, &mut pol, rid, 0, s_hval, &val);
-                    pol.add(&h, lit_arity, main, &[rid, Term::int(0), Term::atom(head.rel), Term::int(n as i64)], F_BASE);
-                }
-                for (i, b) in r.clause.body.iter().enumerate() {
-                    let k = i as i64 + 1;
-                    match b {
-                        BodyElem::Neg(l) => {
-                            let mut ts = l.args.clone();
-                            ts.push(l.persp);
-                            self.seed_slot(&mut h, &mut pol, rid, k, s_neg, &ts);
-                            if is_lat(l.rel) {
-                                pol.add(&h, lit_arity, main, &[rid, Term::int(k), Term::atom(l.rel), Term::int(l.args.len() as i64)], F_BASE);
-                            }
-                        }
-                        BodyElem::Pos(l) if ord_of(l.rel).is_some() => {
-                            let m = ord_of(l.rel).unwrap();
-                            let n = l.args.len();
-                            let (key, comps) = l.args.split_at(n.saturating_sub(m));
-                            let mut ks: Vec<Term> = key.to_vec();
-                            ks.push(l.persp);
-                            self.seed_slot(&mut h, &mut pol, rid, k, s_lkey, &ks);
-                            let mut seen: Vec<Sym> = Vec::new();
-                            for t in key {
-                                h.vars_of(*t, &mut seen);
-                            }
-                            let mut bad = false;
-                            for (i, t) in comps.iter().enumerate() {
-                                match t.kind() {
-                                    TermK::Var(x) if !seen.contains(&x) => {
-                                        seen.push(x);
-                                        let name = h.name(x).to_string();
-                                        let name = h.string(&name);
-                                        pol.add(&h, self.v.premise_var, main, &[rid, Term::int(k), s_oval, Term::int(i as i64 + 1), name], F_BASE);
-                                    }
-                                    _ => bad = true,
-                                }
-                            }
-                            if bad {
-                                pol.add(&h, s_bad, main, &[rid, Term::int(k)], F_BASE);
-                            }
-                        }
-                        BodyElem::Pos(l) if is_lat(l.rel) => {
-                            let n = l.args.len();
-                            let mut key: Vec<Term> = l.args[..n.saturating_sub(1)].to_vec();
-                            key.push(l.persp);
-                            self.seed_slot(&mut h, &mut pol, rid, k, s_lkey, &key);
-                            let val: Vec<Term> = l.args.last().copied().into_iter().collect();
-                            self.seed_slot(&mut h, &mut pol, rid, k, s_lval, &val);
-                            pol.add(&h, lit_arity, main, &[rid, Term::int(k), Term::atom(l.rel), Term::int(n as i64)], F_BASE);
-                        }
-                        BodyElem::Bi { op, l, r: rr } if *op == self.v.op_is => {
-                            if let Some((opname, a, b2)) = arith_shape(&h, *rr) {
-                                let res = reify_term(&mut h, &self.v, *l);
-                                let (a, b2) = (reify_term(&mut h, &self.v, a), reify_term(&mut h, &self.v, b2));
-                                let opt = h.string(&opname);
-                                pol.add(&h, self.v.premise_arith, main, &[rid, Term::int(k), res, opt, a, b2], F_BASE);
-                            }
-                        }
-                        _ => {}
-                    }
-                }
-            }
-        }
+        self.seed_orders_and_lattices(&mut h, &mut pol, rules, &lattices);
         let mut judged: Vec<Vec<Term>> = pol
             .all_facts()
             .into_iter()
@@ -2876,6 +2664,270 @@ impl Eval {
         if let Some(e) = &err {
             self.diags.push(e.clone());
         }
+        let answer = self.read_answer(&mut h, pol, rules, &lattices);
+        self.h = h;
+        if err.is_none() {
+            self.safety_kept = Some(Rc::new((judged.clone(), sub)));
+        }
+        self.safety_memo = Some((judged, answer.clone(), err));
+        answer
+    }
+
+    fn seed_base_judgements(&mut self, h: &mut Heap, pol: &mut Store, rules: &[DRule]) {
+        for rel in [
+            self.v.premise_lit,
+            self.v.conclusion_lit,
+            self.v.has_premise,
+            self.v.concludes,
+            self.v.conclusion_tense,
+            self.v.premise_pos,
+            self.v.premise_neg,
+            self.v.premise_agg,
+            self.v.reserved,
+            self.v.lattice_decl,
+            brk!("widen_row_unread" => self.v.lattice_decl; self.v.lattice_widen),
+            brk!("dominance_row_unread" => self.v.lattice_decl; self.v.dominance),
+            brk!("order_row_unread" => self.v.lattice_decl; self.v.order_comp),
+        ] {
+            for f in self.store.rel_all(&h, rel) {
+                let persp = self.store.rec(f).persp;
+                let args = self.store.args(f).to_vec();
+                // a rule `tag::lower` rewrote is judged as it runs, below
+                if args.first().and_then(|a| a.as_atom()).is_some_and(|r| self.tag_changed.contains(&r)) && rel != self.v.lattice_decl {
+                    continue;
+                }
+                pol.add(&h, rel, persp, &args, F_BASE);
+            }
+        }
+        // WHAT RUNS FOR A TAG, judged: each rewritten clause's reflection
+        // under its own id, and an idempotent tag's order lattice
+        let seeded = [
+            self.v.premise_lit, self.v.conclusion_lit, self.v.has_premise, self.v.concludes,
+            self.v.conclusion_tense, self.v.premise_pos, self.v.premise_neg, self.v.premise_agg,
+        ];
+        for r in rules.iter().filter(|r| brk!("tag_judged_as_written" => false; self.tag_changed.contains(&r.id))) {
+            let (enc, facts) = encode_rule(h, &self.v, &r.clause);
+            let enc = h.intern(&enc);
+            for f in facts.into_iter().filter(|f| seeded.contains(&f.rel)) {
+                let mut args = f.args;
+                if args[0].as_atom() == Some(enc) {
+                    args[0] = Term::atom(r.id);
+                }
+                pol.add(&h, f.rel, self.v.kernel_persp, &args, F_BASE);
+            }
+        }
+    }
+
+    fn seed_rule_slots(&self, h: &mut Heap, pol: &mut Store, rules: &[DRule]) {
+        let s_head = h.atom("head");
+        let s_pos = h.atom("pos");
+        let s_left = h.atom("left");
+        let s_right = h.atom("right");
+        let s_agg = Term::atom(self.v.slot_agg);
+        let s_agg_res = Term::atom(self.v.slot_agg_res);
+        let main = self.v.main;
+        for r in rules {
+            let rid = Term::atom(r.id);
+            let islot = |h: &mut Heap, pol: &mut Store, rid: Term, k: i64, name: Term, ts: &[Term]| {
+                let mut vs: Vec<Sym> = Vec::new();
+                for t in ts {
+                    h.vars_of(*t, &mut vs);
+                }
+                let mut i = 0i64;
+                for var in &vs {
+                    i += 1;
+                    let vname = h.name(*var).to_string();
+                    let vs_t = h.string(&vname);
+                    pol.add(
+                        h,
+                        self.v.premise_var,
+                        main,
+                        &[rid, Term::int(k), name, Term::int(i), vs_t],
+                        F_BASE,
+                    );
+                }
+                pol.add(
+                    h,
+                    self.v.slot_arity,
+                    main,
+                    &[rid, Term::int(k), name, Term::int(i)],
+                    F_BASE,
+                );
+            };
+            let slot = |h: &mut Heap, pol: &mut Store, k: i64, name: Term, ts: &[Term]| islot(h, pol, rid, k, name, ts);
+            let mut head_ts = r.clause.head.args.clone();
+            head_ts.push(r.clause.head.persp);
+            slot(h, pol, 0, s_head, &head_ts);
+            for (i, b) in r.clause.body.iter().enumerate() {
+                let k = i as i64 + 1;
+                match b {
+                    BodyElem::Pos(l) => {
+                        let mut ts = l.args.clone();
+                        ts.push(l.persp);
+                        slot(h, pol, k, s_pos, &ts);
+                    }
+                    BodyElem::Bi { l, r: rr, .. } => {
+                        slot(h, pol, k, s_left, &[*l]);
+                        slot(h, pol, k, s_right, &[*rr]);
+                    }
+                    BodyElem::Neg(_) => {}
+                    // AN AGGREGATE BINDS ITS SHARED VARIABLES AND ITS RESULT,
+                    // and its inner body is judged as a rule of its own,
+                    // `$inner(R, K)`, whose head is what the fold reads.
+                    BodyElem::Agg(a) => {
+                        let shared: Vec<Term> = a.shared.iter().map(|v| Term::var(*v)).collect();
+                        slot(h, pol, k, s_agg, &shared);
+                        // a threshold reads N and binds nothing of it
+                        let res: &[Term] = if a.op == AggOp::AtLeast { &[] } else { std::slice::from_ref(&a.result) };
+                        slot(h, pol, k, s_agg_res, res);
+                        let inner = h.mkf(self.v.s_inner, &[rid, Term::int(k)]);
+                        pol.add(&h, self.v.agg_inner, main, &[rid, Term::int(k), inner], F_BASE);
+                        let mut head: Vec<Term> = a.vals.clone();
+                        head.extend(a.keys.iter().copied());
+                        head.extend(shared.iter().copied());
+                        islot(h, pol, inner, 0, s_head, &head);
+                        for (j, x) in a.body.iter().enumerate() {
+                            let kj = Term::int(j as i64 + 1);
+                            let kp = self.v.kernel_persp;
+                            pol.add(&h, self.v.has_premise, kp, &[inner, kj], F_BASE);
+                            let rx = reify_body_elem(h, &self.v, x);
+                            pol.add(&h, self.v.premise_lit, kp, &[inner, kj, rx], F_BASE);
+                            match x {
+                                BodyElem::Pos(l) => {
+                                    let mut ts = l.args.clone();
+                                    ts.push(l.persp);
+                                    islot(h, pol, inner, j as i64 + 1, s_pos, &ts);
+                                }
+                                BodyElem::Bi { l, r: rr, .. } => {
+                                    islot(h, pol, inner, j as i64 + 1, s_left, &[*l]);
+                                    islot(h, pol, inner, j as i64 + 1, s_right, &[*rr]);
+                                }
+                                BodyElem::Neg(_) | BodyElem::Agg(_) => {}
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    fn seed_orders_and_lattices(&mut self, h: &mut Heap, pol: &mut Store, rules: &[DRule], lattices: &[(Sym, usize, Sym)]) {
+        let main = self.v.main;
+        // A DECLARED ORDER'S RELATIONS and how many values each compares
+        let mut ords: Vec<(Sym, usize)> = Vec::new();
+        for f in self.store.rel_all(&h, self.v.order_comp) {
+            if let Some(p) = self.store.args(f)[0].as_atom() {
+                match ords.iter_mut().find(|(q, _)| *q == p) {
+                    Some(o) => o.1 += 1,
+                    None => ords.push((p, 1)),
+                }
+            }
+        }
+        if !lattices.is_empty() || !ords.is_empty() {
+            let (s_neg, s_hkey, s_hval, s_lkey, s_lval) = (
+                Term::atom(self.v.slot_neg),
+                Term::atom(self.v.slot_hkey),
+                Term::atom(self.v.slot_hval),
+                Term::atom(self.v.slot_lkey),
+                Term::atom(self.v.slot_lval),
+            );
+            let lit_arity = h.atom("lit_arity");
+            let lit_arity = lit_arity.as_atom().unwrap();
+            let is_lat = |rel: Sym| lattices.iter().any(|(p, _, _)| *p == rel);
+            let ord_of = |rel: Sym| ords.iter().find(|(p, _)| *p == rel).map(|(_, m)| *m);
+            let s_oval = h.atom("oval");
+            let s_bad = h.atom("order_bad_read");
+            let s_bad = s_bad.as_atom().unwrap();
+            for r in rules {
+                let rid = Term::atom(r.id);
+                let head = &r.clause.head;
+                if let Some(m) = ord_of(head.rel).filter(|_| !brk!("order_head_unseeded" => true; false)) {
+                    let n = head.args.len();
+                    let (key, comps) = head.args.split_at(n.saturating_sub(m));
+                    let mut ks: Vec<Term> = key.to_vec();
+                    ks.extend(comps.iter().filter(|t| !t.is_var()).copied());
+                    ks.push(head.persp);
+                    self.seed_slot(h, pol, rid, 0, s_hkey, &ks);
+                    for (i, t) in comps.iter().enumerate() {
+                        if let TermK::Var(x) = t.kind() {
+                            let name = h.name(x).to_string();
+                            let name = h.string(&name);
+                            pol.add(&h, self.v.premise_var, main, &[rid, Term::int(0), s_oval, Term::int(i as i64 + 1), name], F_BASE);
+                        }
+                    }
+                }
+                if is_lat(head.rel) {
+                    let n = head.args.len();
+                    let mut key: Vec<Term> = head.args[..n.saturating_sub(1)].to_vec();
+                    key.push(head.persp);
+                    self.seed_slot(h, pol, rid, 0, s_hkey, &key);
+                    let val: Vec<Term> = head.args.last().filter(|t| t.is_var()).copied().into_iter().collect();
+                    self.seed_slot(h, pol, rid, 0, s_hval, &val);
+                    pol.add(&h, lit_arity, main, &[rid, Term::int(0), Term::atom(head.rel), Term::int(n as i64)], F_BASE);
+                }
+                for (i, b) in r.clause.body.iter().enumerate() {
+                    let k = i as i64 + 1;
+                    match b {
+                        BodyElem::Neg(l) => {
+                            let mut ts = l.args.clone();
+                            ts.push(l.persp);
+                            self.seed_slot(h, pol, rid, k, s_neg, &ts);
+                            if is_lat(l.rel) {
+                                pol.add(&h, lit_arity, main, &[rid, Term::int(k), Term::atom(l.rel), Term::int(l.args.len() as i64)], F_BASE);
+                            }
+                        }
+                        BodyElem::Pos(l) if ord_of(l.rel).is_some() => {
+                            let m = ord_of(l.rel).unwrap();
+                            let n = l.args.len();
+                            let (key, comps) = l.args.split_at(n.saturating_sub(m));
+                            let mut ks: Vec<Term> = key.to_vec();
+                            ks.push(l.persp);
+                            self.seed_slot(h, pol, rid, k, s_lkey, &ks);
+                            let mut seen: Vec<Sym> = Vec::new();
+                            for t in key {
+                                h.vars_of(*t, &mut seen);
+                            }
+                            let mut bad = false;
+                            for (i, t) in comps.iter().enumerate() {
+                                match t.kind() {
+                                    TermK::Var(x) if !seen.contains(&x) => {
+                                        seen.push(x);
+                                        let name = h.name(x).to_string();
+                                        let name = h.string(&name);
+                                        pol.add(&h, self.v.premise_var, main, &[rid, Term::int(k), s_oval, Term::int(i as i64 + 1), name], F_BASE);
+                                    }
+                                    _ => bad = true,
+                                }
+                            }
+                            if bad {
+                                pol.add(&h, s_bad, main, &[rid, Term::int(k)], F_BASE);
+                            }
+                        }
+                        BodyElem::Pos(l) if is_lat(l.rel) => {
+                            let n = l.args.len();
+                            let mut key: Vec<Term> = l.args[..n.saturating_sub(1)].to_vec();
+                            key.push(l.persp);
+                            self.seed_slot(h, pol, rid, k, s_lkey, &key);
+                            let val: Vec<Term> = l.args.last().copied().into_iter().collect();
+                            self.seed_slot(h, pol, rid, k, s_lval, &val);
+                            pol.add(&h, lit_arity, main, &[rid, Term::int(k), Term::atom(l.rel), Term::int(n as i64)], F_BASE);
+                        }
+                        BodyElem::Bi { op, l, r: rr } if *op == self.v.op_is => {
+                            if let Some((opname, a, b2)) = arith_shape(&h, *rr) {
+                                let res = reify_term(h, &self.v, *l);
+                                let (a, b2) = (reify_term(h, &self.v, a), reify_term(h, &self.v, b2));
+                                let opt = h.string(&opname);
+                                pol.add(&h, self.v.premise_arith, main, &[rid, Term::int(k), res, opt, a, b2], F_BASE);
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+            }
+        }
+    }
+
+    fn read_answer(&self, h: &mut Heap, pol: &mut Store, rules: &[DRule], lattices: &[(Sym, usize, Sym)]) -> RuleAnswer {
         let atoms = |h: &mut Heap, pol: &mut Store, rel: Sym| -> Vec<Sym> {
             let mut out = Vec::new();
             for f in pol.rel_all(h, rel) {
@@ -2897,24 +2949,7 @@ impl Eval {
                 }
             }
         }
-        let mut agg_refused: Vec<(Sym, Sym)> = Vec::new();
-        for f in pol.rel_all(&h, self.v.agg_refused) {
-            let args = pol.args(f);
-            if let (Some(r), Some(why)) = (args[0].as_atom(), args[1].as_atom()) {
-                agg_refused.push((r, why));
-            }
-        }
-        agg_refused.extend(set_spelling_refusals(&mut h, &self.v, rules, &lattices));
-        agg_refused.extend(self.tag_refused.iter().copied());
-        agg_refused.sort_by(|a, b| cmp_js(h.name(a.0), h.name(b.0)).then(cmp_js(h.name(a.1), h.name(b.1))));
-        let mut lattice_refused: Vec<(Sym, Sym)> = Vec::new();
-        for f in pol.rel_all(&h, self.v.lattice_refused) {
-            let args = pol.args(f);
-            if let (Some(p), Some(why)) = (args[0].as_atom(), args[1].as_atom()) {
-                lattice_refused.push((p, why));
-            }
-        }
-        lattice_refused.sort_by(|a, b| cmp_js(h.name(a.0), h.name(b.0)).then(cmp_js(h.name(a.1), h.name(b.1))));
+        let (agg_refused, lattice_refused) = self.read_refusals(h, pol, rules, lattices);
         let mut lattice_outer: HashMap<Sym, Vec<Sym>> = HashMap::new();
         for f in pol.rel_all(&h, self.v.lattice_outer) {
             let args = pol.args(f);
@@ -2932,11 +2967,11 @@ impl Eval {
                 empty_zero.insert((r, k as u32));
             }
         }
-        let answer = RuleAnswer {
-            unsafe_rules: atoms(&mut h, pol, self.v.unsafe_rule),
-            demand_rels: atoms(&mut h, pol, self.v.demand_rel),
+        RuleAnswer {
+            unsafe_rules: atoms(h, pol, self.v.unsafe_rule),
+            demand_rels: atoms(h, pol, self.v.demand_rel),
             trigger,
-            late: atoms(&mut h, pol, self.v.late_rule),
+            late: atoms(h, pol, self.v.late_rule),
             reads_provenance: pol.rel_count(self.v.provenance_reader) > 0,
             agg_refused,
             empty_zero,
@@ -2945,13 +2980,29 @@ impl Eval {
             lattice_outer,
             reads_lattice_members: pol.rel_count(self.v.lattice_member_reader) > 0,
             reads_dominated: pol.rel_count(self.v.dominated_reader) > 0,
-        };
-        self.h = h;
-        if err.is_none() {
-            self.safety_kept = Some(Rc::new((judged.clone(), sub)));
         }
-        self.safety_memo = Some((judged, answer.clone(), err));
-        answer
+    }
+
+    fn read_refusals(&self, h: &mut Heap, pol: &mut Store, rules: &[DRule], lattices: &[(Sym, usize, Sym)]) -> (Vec<(Sym, Sym)>, Vec<(Sym, Sym)>) {
+        let mut agg_refused: Vec<(Sym, Sym)> = Vec::new();
+        for f in pol.rel_all(&h, self.v.agg_refused) {
+            let args = pol.args(f);
+            if let (Some(r), Some(why)) = (args[0].as_atom(), args[1].as_atom()) {
+                agg_refused.push((r, why));
+            }
+        }
+        agg_refused.extend(set_spelling_refusals(h, &self.v, rules, &lattices));
+        agg_refused.extend(self.tag_refused.iter().copied());
+        agg_refused.sort_by(|a, b| cmp_js(h.name(a.0), h.name(b.0)).then(cmp_js(h.name(a.1), h.name(b.1))));
+        let mut lattice_refused: Vec<(Sym, Sym)> = Vec::new();
+        for f in pol.rel_all(&h, self.v.lattice_refused) {
+            let args = pol.args(f);
+            if let (Some(p), Some(why)) = (args[0].as_atom(), args[1].as_atom()) {
+                lattice_refused.push((p, why));
+            }
+        }
+        lattice_refused.sort_by(|a, b| cmp_js(h.name(a.0), h.name(b.0)).then(cmp_js(h.name(a.1), h.name(b.1))));
+        (agg_refused, lattice_refused)
     }
 
     /// The kept safety.rofl world brought to `judged` by adding the rows it lacks, where it lacks only rows and the
@@ -6640,7 +6691,6 @@ impl Eval {
         }
         Ok(())
     }
-
     /// Solve the inner body, bucket the solutions into groups and members,
     /// fold each group, and seal a cell per group.
     #[allow(clippy::too_many_arguments)]
@@ -6679,10 +6729,68 @@ impl Eval {
             }
             return Ok(self.open_correlation(rid, a, corr, keep, reason));
         }
-        // GROUPS, THEN MEMBERS. A count or sum member is a distinct projection
-        // tuple; a min, max, or, and member is a distinct derivation. Within
-        // one identity the representative is the least signature, so which
-        // solution arrived first is unobservable.
+        let (cands, groups, values, reuse) = self.cell_groups(rid, a, plan, corr, keep, &reach, found);
+        let withdrawn = self.h.intern("support_withdrawn");
+        let mut holes = Unsettled::default();
+        let index = PossIndex::of(&reach);
+        if plan.empty_zero && !plan.group.is_empty() {
+            return Err(Halt::Bug("safety.rofl says empty-zero for a grouping aggregate".into()));
+        }
+        let dedup = brk!("solutions" => false, "min_by_value" => true; plan.op.dedup_by_projection());
+        let mut sealed: Vec<(Vec<Term>, NewCell)> = Vec::new();
+        let mut sorts: Vec<(Box<[Term]>, Result<Sorted, Sym>)> = Vec::new();
+        let cx = AggCtx { rid, a, s, plan, corr, reach: &reach, index: &index, cands: &cands, values: &values, withdrawn };
+        for (gkey, idxs) in groups {
+            let (reps, alts) = self.group_reps(dedup, cx.cands, idxs);
+            let ord = self.group_order(&cx, dedup, &reps)?;
+            let (mut value, mut kept, sorted) = self.fold_group(&cx, &ord, &reps);
+            if let Some(sorted) = sorted {
+                sorts.push((gkey.clone().into_boxed_slice(), sorted));
+            }
+            value = self.settle_reach(&cx, &gkey, &reps, &ord.order, sealed.len(), value, &mut kept, &mut holes);
+            let (members, height) = Self::group_members(&cx, &reps, &ord.hs, &alts, kept, &value);
+            sealed.push(self.new_cell(&cx, &gkey, value, members, height)?);
+        }
+        if !keep {
+            return Ok(Sealed::Ephemeral(sealed.into_iter().map(|(k, c)| (k, c.value, c.members.len())).collect()));
+        }
+        let carried = (self.wfs.carry_src.take(), std::mem::take(&mut self.wfs.carry_more));
+        let mut ids = self.seal_new_cells(sealed, holes)?;
+        // a possible whose group is not known could make a group of any key
+        // it leaves open: a hole on the correlation, beside its sealed groups
+        let mut open: Vec<Unknown> = Vec::new();
+        for p in reach.iter().filter(|p| !p.exact() && brk!("label_open_correlation" => true; !p.labeled_open())) {
+            if !open.contains(&p.u) {
+                open.push(p.u.clone());
+            }
+        }
+        if let Some(u) = open.first() {
+            self.wfs.carry_src = Some(Node::Unk(u.clone()));
+            self.wfs.carry_more = open[1..].iter().cloned().map(Node::Unk).collect();
+            self.open_correlation(rid, a, corr, true, withdrawn);
+        }
+        (self.wfs.carry_src, self.wfs.carry_more) = carried;
+        if let Some(k) = share {
+            let gs: Vec<(Box<[Term]>, CellId, Result<Sorted, Sym>)> =
+                sorts.into_iter().zip(ids.iter()).map(|((g, x), c)| (g, *c, x)).collect();
+            self.hol_shared.insert(k, HolShared::Groups(gs.into()));
+        }
+        if brk!("ds_wide_unlisted" => false; true) {
+            ids.extend(reuse);
+        }
+        self.keyed_cells(ids)
+    }
+
+    fn cell_groups(
+        &self,
+        rid: Sym,
+        a: &Agg,
+        plan: &AggPlan,
+        corr: &[Term],
+        keep: bool,
+        reach: &[Possible],
+        found: Vec<(Vec<Term>, Vec<Cand>)>,
+    ) -> (Vec<Cand>, Vec<(Vec<Term>, Vec<usize>)>, Vec<Term>, Vec<CellId>) {
         let mut cands: Vec<Cand> = Vec::new();
         let mut groups: Vec<(Vec<Term>, Vec<usize>)> = Vec::with_capacity(found.len());
         for (g, cs) in found {
@@ -6725,264 +6833,292 @@ impl Eval {
                 }
             });
         }
-        let withdrawn = self.h.intern("support_withdrawn");
-        let mut reached: HashMap<usize, Vec<Unknown>> = HashMap::new();
-        let (mut decided, mut conds, mut capped): (HashMap<usize, String>, HashMap<usize, Term>, HashMap<usize, i64>) = Default::default();
-        let index = PossIndex::of(&reach);
-        if plan.empty_zero && !plan.group.is_empty() {
-            return Err(Halt::Bug("safety.rofl says empty-zero for a grouping aggregate".into()));
-        }
-        let dedup = brk!("solutions" => false, "min_by_value" => true; plan.op.dedup_by_projection());
-        let mut sealed: Vec<(Vec<Term>, NewCell)> = Vec::new();
-        let mut sorts: Vec<(Box<[Term]>, Result<Sorted, Sym>)> = Vec::new();
-        for (gkey, idxs) in groups {
-            // one representative per identity: the least signature wins
-            let least = |j: usize, i: usize| brk!("first_rep" => true; cmp_js(&cands[j].sig, &cands[i].sig) != std::cmp::Ordering::Greater);
-            // the other derivations of a representative's identity, by signature
-            let mut alts: HashMap<usize, Vec<usize>> = HashMap::new();
-            let reps: Vec<usize> = if dedup {
-                let mut by_proj: HashMap<Vec<Term>, usize> = HashMap::new();
-                let mut all: HashMap<Vec<Term>, Vec<usize>> = HashMap::new();
-                for i in idxs {
-                    let id = brk!("sum_by_value" => cands[i].proj[..1].to_vec(); cands[i].proj.clone());
-                    all.entry(id.clone()).or_default().push(i);
-                    match by_proj.get(&id) {
-                        Some(&j) if least(j, i) => {}
-                        _ => {
-                            by_proj.insert(id, i);
-                        }
+        (cands, groups, values, reuse)
+    }
+
+    fn group_reps(&self, dedup: bool, cands: &[Cand], idxs: Vec<usize>) -> (Vec<usize>, HashMap<usize, Vec<usize>>) {
+        // one representative per identity: the least signature wins
+        let least = |j: usize, i: usize| brk!("first_rep" => true; cmp_js(&cands[j].sig, &cands[i].sig) != std::cmp::Ordering::Greater);
+        // the other derivations of a representative's identity, by signature
+        let mut alts: HashMap<usize, Vec<usize>> = HashMap::new();
+        let reps: Vec<usize> = if dedup {
+            let mut by_proj: HashMap<Vec<Term>, usize> = HashMap::new();
+            let mut all: HashMap<Vec<Term>, Vec<usize>> = HashMap::new();
+            for i in idxs {
+                let id = brk!("sum_by_value" => cands[i].proj[..1].to_vec(); cands[i].proj.clone());
+                all.entry(id.clone()).or_default().push(i);
+                match by_proj.get(&id) {
+                    Some(&j) if least(j, i) => {}
+                    _ => {
+                        by_proj.insert(id, i);
                     }
                 }
-                for (id, rep) in &by_proj {
-                    let mut rest: Vec<usize> = all[id].iter().copied().filter(|i| cands[*i].sig != cands[*rep].sig).collect();
-                    rest.sort_by(|x, y| cmp_js(&cands[*x].sig, &cands[*y].sig));
-                    rest.dedup_by(|x, y| cands[*x].sig == cands[*y].sig);
-                    alts.insert(*rep, rest);
-                }
-                by_proj.into_values().collect()
-            } else {
-                let mut by_sig: HashMap<&str, usize> = HashMap::new();
-                for i in idxs {
-                    by_sig.entry(cands[i].sig.as_str()).or_insert(i);
-                }
-                by_sig.into_values().collect()
-            };
-            // HEIGHTS, then the canonical order: height, then the projection
-            // (a Group) or the signature (a Best).
-            let mut hs: Vec<u32> = Vec::with_capacity(reps.len());
-            for i in &reps {
-                hs.push(self.member_height(&cands[*i].prems)?);
             }
-            let keys: Vec<String> = reps
-                .iter()
-                .map(|i| if dedup { tuple_text(&self.h, &cands[*i].proj) } else { cands[*i].sig.clone() })
-                .collect();
-            let mut order: Vec<usize> = (0..reps.len()).collect();
-            brk!("order_proj" => order.sort_by(|x, y| cmp_js(&keys[*x], &keys[*y]));
-                 order.sort_by(|x, y| hs[*x].cmp(&hs[*y]).then_with(|| cmp_js(&keys[*x], &keys[*y]))));
-            // A RANK OVER A TUPLE lists its members in the tuple's own order
-            let rdesc = a.rank_desc(&self.h);
-            let katoms: Vec<Result<Vec<KeyAtom>, Sym>> = if a.rank_tuple() {
-                reps.iter().map(|i| key_atoms(&self.h, &self.v, &cands[*i].proj)).collect()
-            } else {
-                Vec::new()
-            };
-            if a.rank_tuple() && brk!("rank_members_unordered" => false; katoms.iter().all(|k| k.is_ok())) {
-                order.sort_by(|x, y| {
-                    let (kx, ky) = (katoms[*x].as_ref().unwrap(), katoms[*y].as_ref().unwrap());
-                    rank_cmp(&rdesc, kx, ky).then_with(|| hs[*x].cmp(&hs[*y])).then_with(|| cmp_js(&keys[*x], &keys[*y]))
-                });
+            for (id, rep) in &by_proj {
+                let mut rest: Vec<usize> = all[id].iter().copied().filter(|i| cands[*i].sig != cands[*rep].sig).collect();
+                rest.sort_by(|x, y| cmp_js(&cands[*x].sig, &cands[*y].sig));
+                rest.dedup_by(|x, y| cands[*x].sig == cands[*y].sig);
+                alts.insert(*rep, rest);
             }
-            // THE FOLD, checked. A wrong type or an overflow poisons the group:
-            // a hole, and no value.
-            let mut acc = None;
-            let mut kept: Vec<usize> = Vec::new();
-            let mut poison: Option<Sym> = None;
-            // A HOLISTIC GROUP IS RECOMPUTED WHOLE: every member is kept, and
-            // the value is a function of their sorted values (`AggOp::holistic`),
-            // with quantile's percent or rank's subject read under `s`.
-            let holistic = plan.op.class() == Class::Holistic;
-            if holistic && a.rank_tuple() {
-                let subject: Vec<Term> = a.vals.iter().map(|t| resolve(&mut self.h, *t, s)).collect();
-                let subject = key_atoms(&self.h, &self.v, &subject);
-                let sorted = katoms.iter().cloned().collect::<Result<Vec<_>, Sym>>().map(|ks| Sorted::of_keys(rdesc.clone(), ks));
-                let value = match (&sorted, &subject) {
-                    (Err(r), _) | (Ok(_), Err(r)) => Err(*r),
-                    (Ok(g), Ok(sj)) => Ok(g.rank_of(sj)),
-                };
-                match value {
-                    Ok(x) => acc = x,
-                    Err(r) => poison = Some(r),
+            by_proj.into_values().collect()
+        } else {
+            let mut by_sig: HashMap<&str, usize> = HashMap::new();
+            for i in idxs {
+                by_sig.entry(cands[i].sig.as_str()).or_insert(i);
+            }
+            by_sig.into_values().collect()
+        };
+        (reps, alts)
+    }
+
+    fn group_order(&mut self, cx: &AggCtx, dedup: bool, reps: &[usize]) -> Result<GroupOrder, Halt> {
+        let AggCtx { a, cands, .. } = *cx;
+        // HEIGHTS, then the canonical order: height, then the projection
+        // (a Group) or the signature (a Best).
+        let mut hs: Vec<u32> = Vec::with_capacity(reps.len());
+        for i in reps {
+            hs.push(self.member_height(&cands[*i].prems)?);
+        }
+        let keys: Vec<String> = reps
+            .iter()
+            .map(|i| if dedup { tuple_text(&self.h, &cands[*i].proj) } else { cands[*i].sig.clone() })
+            .collect();
+        let mut order: Vec<usize> = (0..reps.len()).collect();
+        brk!("order_proj" => order.sort_by(|x, y| cmp_js(&keys[*x], &keys[*y]));
+             order.sort_by(|x, y| hs[*x].cmp(&hs[*y]).then_with(|| cmp_js(&keys[*x], &keys[*y]))));
+        // A RANK OVER A TUPLE lists its members in the tuple's own order
+        let rdesc = a.rank_desc(&self.h);
+        let katoms: Vec<Result<Vec<KeyAtom>, Sym>> = if a.rank_tuple() {
+            reps.iter().map(|i| key_atoms(&self.h, &self.v, &cands[*i].proj)).collect()
+        } else {
+            Vec::new()
+        };
+        if a.rank_tuple() && brk!("rank_members_unordered" => false; katoms.iter().all(|k| k.is_ok())) {
+            order.sort_by(|x, y| {
+                let (kx, ky) = (katoms[*x].as_ref().unwrap(), katoms[*y].as_ref().unwrap());
+                rank_cmp(&rdesc, kx, ky).then_with(|| hs[*x].cmp(&hs[*y])).then_with(|| cmp_js(&keys[*x], &keys[*y]))
+            });
+        }
+        Ok(GroupOrder { hs, order, rdesc, katoms })
+    }
+
+    fn fold_group(&mut self, cx: &AggCtx, ord: &GroupOrder, reps: &[usize]) -> (CellValue, Vec<usize>, Option<Result<Sorted, Sym>>) {
+        let AggCtx { a, s, plan, values, .. } = *cx;
+        let GroupOrder { order, rdesc, katoms, .. } = ord;
+        let mut sorted_out = None;
+        // THE FOLD, checked. A wrong type or an overflow poisons the group:
+        // a hole, and no value.
+        let mut acc = None;
+        let mut kept: Vec<usize> = Vec::new();
+        let mut poison: Option<Sym> = None;
+        // A HOLISTIC GROUP IS RECOMPUTED WHOLE: every member is kept, and
+        // the value is a function of their sorted values (`AggOp::holistic`),
+        // with quantile's percent or rank's subject read under `s`.
+        let holistic = plan.op.class() == Class::Holistic;
+        if holistic && a.rank_tuple() {
+            let subject: Vec<Term> = a.vals.iter().map(|t| resolve(&mut self.h, *t, s)).collect();
+            let subject = key_atoms(&self.h, &self.v, &subject);
+            let sorted = katoms.iter().cloned().collect::<Result<Vec<_>, Sym>>().map(|ks| Sorted::of_keys(rdesc.clone(), ks));
+            let value = match (&sorted, &subject) {
+                (Err(r), _) | (Ok(_), Err(r)) => Err(*r),
+                (Ok(g), Ok(sj)) => Ok(g.rank_of(sj)),
+            };
+            match value {
+                Ok(x) => acc = x,
+                Err(r) => poison = Some(r),
+            }
+            sorted_out = Some(sorted);
+            kept = order.clone();
+        } else if holistic {
+            let param = if plan.op.params() == 0 {
+                Ok(None)
+            } else {
+                match resolve(&mut self.h, a.vals[0], s).kind() {
+                    TermK::Int(n) => Ok(Some(Val::Int(n as i128))),
+                    _ => Err(self.v.agg_type_reason),
                 }
-                sorts.push((gkey.clone().into_boxed_slice(), sorted));
-                kept = order.clone();
-            } else if holistic {
-                let param = if plan.op.params() == 0 {
-                    Ok(None)
+            };
+            let xs: Result<Vec<Val>, Sym> = order.iter().map(|o| plan.op.lift(&self.v, values[reps[*o]])).collect();
+            let sorted = xs.and_then(|xs| Sorted::of(&self.v, &xs));
+            let value = match (&sorted, &param) {
+                (Err(r), _) | (Ok(_), Err(r)) => Err(*r),
+                (Ok(g), Ok(p)) => plan.op.holistic_sorted(&self.v, *p, g),
+            };
+            match value {
+                Ok(x) => acc = x,
+                Err(r) => poison = Some(r),
+            }
+            sorted_out = Some(sorted);
+            kept = brk!("hol_best_only" => order.iter().copied().filter(|o| acc.is_some_and(|x| plan.op.lift(&self.v, values[reps[*o]]) == Ok(x))).collect(); order.clone());
+        }
+        for o in order.iter().filter(|_| !holistic) {
+            let x = match plan.op.lift(&self.v, values[reps[*o]]) {
+                Ok(x) => x,
+                Err(r) => {
+                    poison = Some(r);
+                    break;
+                }
+            };
+            match plan.op.insert(&self.v, acc, x) {
+                Err(r) => {
+                    poison = Some(r);
+                    break;
+                }
+                Ok(Step::Improved(n)) => {
+                    acc = Some(n);
+                    brk!("best_all" => ();
+                    if plan.op.class() == Class::IdempotentOrder {
+                        kept.clear();
+                    });
+                    kept.push(*o);
+                }
+                Ok(Step::Tied) | Ok(Step::Unchanged) if plan.op.class() == Class::Invertible => kept.push(*o),
+                Ok(Step::Tied) => kept.push(*o),
+                Ok(Step::Unchanged) => brk!("best_all" => kept.push(*o); {}),
+            }
+        }
+        if poison.is_none() {
+            match plan.op.finish(&self.v, acc) {
+                Ok(x) => acc = x,
+                Err(r) => poison = Some(r),
+            }
+        }
+        let value = match (poison, acc) {
+            (Some(r), _) => CellValue::Hole(r),
+            (None, Some(x)) => CellValue::Value(plan.op.lower(&mut self.h, &self.v, x)),
+            (None, None) if brk!("empty_none" => plan.empty_zero && false; plan.empty_zero) => {
+                CellValue::Value(plan.op.lower(&mut self.h, &self.v, plan.op.identity().unwrap()))
+            }
+            (None, None) => CellValue::Empty,
+        };
+        if poison.is_some() {
+            kept = order.clone();
+        }
+        (value, kept, sorted_out)
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn settle_reach(
+        &mut self,
+        cx: &AggCtx,
+        gkey: &[Term],
+        reps: &[usize],
+        order: &[usize],
+        at: usize,
+        value: CellValue,
+        kept: &mut Vec<usize>,
+        holes: &mut Unsettled,
+    ) -> CellValue {
+        let AggCtx { a, s, plan, reach, index, cands, values, withdrawn, .. } = *cx;
+        let mut value = value;
+        if !reach.is_empty() {
+            let projs: Vec<&[Term]> = reps.iter().map(|i| cands[*i].proj.as_slice()).collect();
+            let vals: Vec<Term> = reps.iter().map(|i| values[*i]).collect();
+            let param = self.agg_param(a, s);
+            let rk = self.rank_key(a, s);
+            let mine = index.at(&reach, &gkey);
+            let us = self.reach_of(plan.op, param, rk.as_ref(), &projs, &vals, value, &mine);
+            if !us.is_empty() {
+                // where every unknown it rests on is a label and exists for certain, the group is decided by
+                // what each value the labels could be gives it ("Labeled unknowns")
+                let regions = if rk.is_none() && matches!(value, CellValue::Value(_) | CellValue::Empty) && brk!("label_regions_off" => false; true) {
+                    self.region_decide(plan.op, param, a, &gkey, &projs, &vals, &mine)
                 } else {
-                    match resolve(&mut self.h, a.vals[0], s).kind() {
-                        TermK::Int(n) => Ok(Some(Val::Int(n as i128))),
-                        _ => Err(self.v.agg_type_reason),
-                    }
+                    labeled::Regions::No
                 };
-                let xs: Result<Vec<Val>, Sym> = order.iter().map(|o| plan.op.lift(&self.v, values[reps[*o]])).collect();
-                let sorted = xs.and_then(|xs| Sorted::of(&self.v, &xs));
-                let value = match (&sorted, &param) {
-                    (Err(r), _) | (Ok(_), Err(r)) => Err(*r),
-                    (Ok(g), Ok(p)) => plan.op.holistic_sorted(&self.v, *p, g),
-                };
-                match value {
-                    Ok(x) => acc = x,
-                    Err(r) => poison = Some(r),
-                }
-                sorts.push((gkey.clone().into_boxed_slice(), sorted));
-                kept = brk!("hol_best_only" => order.iter().copied().filter(|o| acc.is_some_and(|x| plan.op.lift(&self.v, values[reps[*o]]) == Ok(x))).collect(); order.clone());
-            }
-            for o in order.iter().filter(|_| !holistic) {
-                let x = match plan.op.lift(&self.v, values[reps[*o]]) {
-                    Ok(x) => x,
-                    Err(r) => {
-                        poison = Some(r);
-                        break;
+                match regions {
+                    labeled::Regions::Decided(x, by) => {
+                        value = CellValue::Value(x);
+                        holes.decided.insert(at, by);
                     }
-                };
-                match plan.op.insert(&self.v, acc, x) {
-                    Err(r) => {
-                        poison = Some(r);
-                        break;
+                    labeled::Regions::Cond(c) => {
+                        value = CellValue::Hole(withdrawn);
+                        *kept = order.to_vec();
+                        holes.conds.insert(at, c);
+                        holes.reached.insert(at, us);
                     }
-                    Ok(Step::Improved(n)) => {
-                        acc = Some(n);
-                        brk!("best_all" => ();
-                        if plan.op.class() == Class::IdempotentOrder {
-                            kept.clear();
-                        });
-                        kept.push(*o);
+                    labeled::Regions::Capped(n) => {
+                        value = CellValue::Hole(self.h.intern("regions_capped"));
+                        *kept = order.to_vec();
+                        holes.capped.insert(at, n);
                     }
-                    Ok(Step::Tied) | Ok(Step::Unchanged) if plan.op.class() == Class::Invertible => kept.push(*o),
-                    Ok(Step::Tied) => kept.push(*o),
-                    Ok(Step::Unchanged) => brk!("best_all" => kept.push(*o); {}),
+                    labeled::Regions::No => {
+                        value = CellValue::Hole(withdrawn);
+                        *kept = order.to_vec();
+                        holes.reached.insert(at, us);
+                    }
                 }
             }
-            if poison.is_none() {
-                match plan.op.finish(&self.v, acc) {
-                    Ok(x) => acc = x,
-                    Err(r) => poison = Some(r),
+        }
+        value
+    }
+
+    fn group_members(cx: &AggCtx, reps: &[usize], hs: &[u32], alts: &HashMap<usize, Vec<usize>>, kept: Vec<usize>, value: &CellValue) -> (Vec<NewMember>, u32) {
+        let AggCtx { cands, values, .. } = *cx;
+        let mut members: Vec<NewMember> = Vec::with_capacity(kept.len());
+        brk!("phantom" => if kept.is_empty() && matches!(value, CellValue::Value(_)) {
+            members.push(NewMember { proj: vec![Term::int(0)].into_boxed_slice(), value: Term::int(0), height: 0, prems: Vec::new(), others: Vec::new() });
+        }; { let _ = value; });
+        let mut height = 0u32;
+        let kept: Vec<usize> = brk!("trunc5" => kept.into_iter().take(5).collect(),
+                                    "one_member" => kept.into_iter().take(1).collect(); kept);
+        for o in kept {
+            let c = &cands[reps[o]];
+            height = height.max(hs[o]);
+            members.push(NewMember {
+                proj: c.proj.clone().into_boxed_slice(),
+                value: values[reps[o]],
+                height: hs[o],
+                prems: c.prems.clone(),
+                others: brk!("keep_first_derivation" => Vec::new();
+                    alts.get(&reps[o]).map(|v| v.iter().map(|i| cands[*i].prems.clone()).collect()).unwrap_or_default()),
+            });
+        }
+        (members, height)
+    }
+
+    fn new_cell(&mut self, cx: &AggCtx, gkey: &[Term], value: CellValue, members: Vec<NewMember>, height: u32) -> Result<(Vec<Term>, NewCell), Halt> {
+        let AggCtx { rid, a, s, plan, corr, .. } = *cx;
+        // the key: every shared variable's value, in `shared` order
+        let mut key: Vec<Term> = vec![Term::int(0); a.shared.len()];
+        for (n, i) in plan.corr.iter().enumerate() {
+            key[*i] = corr[n];
+        }
+        for (n, i) in plan.group.iter().enumerate() {
+            key[*i] = gkey[n];
+        }
+        let mut seals: Vec<Seal> = Vec::with_capacity(plan.rels.len());
+        for r in &plan.rels {
+            let round = match self.round_of.get(r) {
+                Some(n) => *n,
+                None if brk!("strata_untabled" => self.derived_rels.contains(r) && false; self.derived_rels.contains(r)) => {
+                    return Err(Halt::Bug(format!("{} is derived and has no round to be sealed at", self.h.name(*r))))
                 }
-            }
-            let value = match (poison, acc) {
-                (Some(r), _) => CellValue::Hole(r),
-                (None, Some(x)) => CellValue::Value(plan.op.lower(&mut self.h, &self.v, x)),
-                (None, None) if brk!("empty_none" => plan.empty_zero && false; plan.empty_zero) => {
-                    CellValue::Value(plan.op.lower(&mut self.h, &self.v, plan.op.identity().unwrap()))
-                }
-                (None, None) => CellValue::Empty,
+                None => 0,
             };
-            if poison.is_some() {
-                kept = order.clone();
-            }
-            // DECIDED UNDER EVERY COMPLETION, or a hole on this group alone
-            let mut value = value;
-            if !reach.is_empty() {
-                let projs: Vec<&[Term]> = reps.iter().map(|i| cands[*i].proj.as_slice()).collect();
-                let vals: Vec<Term> = reps.iter().map(|i| values[*i]).collect();
-                let param = self.agg_param(a, s);
-                let rk = self.rank_key(a, s);
-                let mine = index.at(&reach, &gkey);
-                let us = self.reach_of(plan.op, param, rk.as_ref(), &projs, &vals, value, &mine);
-                if !us.is_empty() {
-                    // where every unknown it rests on is a label and exists for certain, the group is decided by
-                    // what each value the labels could be gives it ("Labeled unknowns")
-                    let regions = if rk.is_none() && matches!(value, CellValue::Value(_) | CellValue::Empty) && brk!("label_regions_off" => false; true) {
-                        self.region_decide(plan.op, param, a, &gkey, &projs, &vals, &mine)
-                    } else {
-                        labeled::Regions::No
-                    };
-                    match regions {
-                        labeled::Regions::Decided(x, by) => {
-                            value = CellValue::Value(x);
-                            decided.insert(sealed.len(), by);
-                        }
-                        labeled::Regions::Cond(c) => {
-                            value = CellValue::Hole(withdrawn);
-                            kept = order.clone();
-                            conds.insert(sealed.len(), c);
-                            reached.insert(sealed.len(), us);
-                        }
-                        labeled::Regions::Capped(n) => {
-                            value = CellValue::Hole(self.h.intern("regions_capped"));
-                            kept = order.clone();
-                            capped.insert(sealed.len(), n);
-                        }
-                        labeled::Regions::No => {
-                            value = CellValue::Hole(withdrawn);
-                            kept = order.clone();
-                            reached.insert(sealed.len(), us);
-                        }
-                    }
-                }
-            }
-            let mut members: Vec<NewMember> = Vec::with_capacity(kept.len());
-            brk!("phantom" => if kept.is_empty() && matches!(value, CellValue::Value(_)) {
-                members.push(NewMember { proj: vec![Term::int(0)].into_boxed_slice(), value: Term::int(0), height: 0, prems: Vec::new(), others: Vec::new() });
-            }; ());
-            let mut height = 0u32;
-            let kept: Vec<usize> = brk!("trunc5" => kept.into_iter().take(5).collect(),
-                                        "one_member" => kept.into_iter().take(1).collect(); kept);
-            for o in kept {
-                let c = &cands[reps[o]];
-                height = height.max(hs[o]);
-                members.push(NewMember {
-                    proj: c.proj.clone().into_boxed_slice(),
-                    value: values[reps[o]],
-                    height: hs[o],
-                    prems: c.prems.clone(),
-                    others: brk!("keep_first_derivation" => Vec::new();
-                        alts.get(&reps[o]).map(|v| v.iter().map(|i| cands[*i].prems.clone()).collect()).unwrap_or_default()),
-                });
-            }
-            // the key: every shared variable's value, in `shared` order
-            let mut key: Vec<Term> = vec![Term::int(0); a.shared.len()];
-            for (n, i) in plan.corr.iter().enumerate() {
-                key[*i] = corr[n];
-            }
-            for (n, i) in plan.group.iter().enumerate() {
-                key[*i] = gkey[n];
-            }
-            let mut seals: Vec<Seal> = Vec::with_capacity(plan.rels.len());
-            for r in &plan.rels {
-                let round = match self.round_of.get(r) {
-                    Some(n) => *n,
-                    None if brk!("strata_untabled" => self.derived_rels.contains(r) && false; self.derived_rels.contains(r)) => {
-                        return Err(Halt::Bug(format!("{} is derived and has no round to be sealed at", self.h.name(*r))))
-                    }
-                    None => 0,
-                };
-                seals.push(Seal { rel: *r, round });
-            }
-            let desc = self.agg_desc(a, s);
-            sealed.push((
-                key.clone(),
-                NewCell {
-                    owner: CellOwner::Body { rule: rid, at: a.at },
-                    op: plan.op,
-                    key: key.into_boxed_slice(),
-                    value,
-                    height,
-                    tick: self.store.tick,
-                    desc,
-                    members,
-                    seals,
-                },
-            ));
+            seals.push(Seal { rel: *r, round });
         }
-        if !keep {
-            return Ok(Sealed::Ephemeral(sealed.into_iter().map(|(k, c)| (k, c.value, c.members.len())).collect()));
-        }
+        let desc = self.agg_desc(a, s);
+        Ok((
+            key.clone(),
+            NewCell {
+                owner: CellOwner::Body { rule: rid, at: a.at },
+                op: plan.op,
+                key: key.into_boxed_slice(),
+                value,
+                height,
+                tick: self.store.tick,
+                desc,
+                members,
+                seals,
+            },
+        ))
+    }
+
+    fn seal_new_cells(&mut self, sealed: Vec<(Vec<Term>, NewCell)>, mut holes: Unsettled) -> Result<Vec<CellId>, Halt> {
         let mut ids = Vec::with_capacity(sealed.len());
-        let carried = (self.wfs.carry_src.take(), std::mem::take(&mut self.wfs.carry_more));
         for (n, (_, c)) in sealed.into_iter().enumerate() {
-            let us = reached.remove(&n);
+            let us = holes.reached.remove(&n);
             if let Some(us) = &us {
                 self.wfs.carry_src = Some(Node::Unk(us[0].clone()));
                 self.wfs.carry_more = us[1..].iter().cloned().map(Node::Unk).collect();
@@ -7000,7 +7136,7 @@ impl Eval {
             if let CellValue::Hole(r) = value {
                 let marker = self.store.cell_key_term(&mut self.h, id);
                 self.cell_hole(marker, r);
-                if let Some(k) = capped.get(&n) {
+                if let Some(k) = holes.capped.get(&n) {
                     self.cells.regions_capped.insert(marker, *k);
                 }
             }
@@ -7009,38 +7145,16 @@ impl Eval {
             self.reflect_cell(id)?;
             if let Some(us) = us {
                 self.cells.cell_reach.insert(id, us.into());
-            } else if let Some(by) = decided.remove(&n) {
+            } else if let Some(by) = holes.decided.remove(&n) {
                 self.cells.cell_reach.insert(id, Rc::from(Vec::<Unknown>::new()));
                 self.cells.cell_decided.insert(id, by);
             }
-            if let Some(c) = conds.get(&n) {
+            if let Some(c) = holes.conds.get(&n) {
                 self.cells.cell_cond.insert(id, *c);
             }
             ids.push(id);
         }
-        // a possible whose group is not known could make a group of any key
-        // it leaves open: a hole on the correlation, beside its sealed groups
-        let mut open: Vec<Unknown> = Vec::new();
-        for p in reach.iter().filter(|p| !p.exact() && brk!("label_open_correlation" => true; !p.labeled_open())) {
-            if !open.contains(&p.u) {
-                open.push(p.u.clone());
-            }
-        }
-        if let Some(u) = open.first() {
-            self.wfs.carry_src = Some(Node::Unk(u.clone()));
-            self.wfs.carry_more = open[1..].iter().cloned().map(Node::Unk).collect();
-            self.open_correlation(rid, a, corr, true, withdrawn);
-        }
-        (self.wfs.carry_src, self.wfs.carry_more) = carried;
-        if let Some(k) = share {
-            let gs: Vec<(Box<[Term]>, CellId, Result<Sorted, Sym>)> =
-                sorts.into_iter().zip(ids.iter()).map(|((g, x), c)| (g, *c, x)).collect();
-            self.hol_shared.insert(k, HolShared::Groups(gs.into()));
-        }
-        if brk!("ds_wide_unlisted" => false; true) {
-            ids.extend(reuse);
-        }
-        self.keyed_cells(ids)
+        Ok(ids)
     }
 
     /// THE PERCENT OR SUBJECT OF A HOLISTIC AGGREGATE IS NO MEMBER: when it
