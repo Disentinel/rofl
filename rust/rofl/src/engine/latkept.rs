@@ -94,12 +94,12 @@ impl<I: Iterator<Item = Tok>> In<I> {
 
 impl Eval {
     fn lattice_keeps(&self) -> bool {
-        !self.subs.is_empty() || self.lattices.values().any(|(_, op)| op.is_join())
+        !self.lat.subs.is_empty() || self.lat.lattices.values().any(|(_, op)| op.is_join())
     }
 
     /// The stream to keep, empty for a world that needs none or that cannot be kept so.
     pub fn lattices_kept(&self) -> Vec<Tok> {
-        let unkept = !self.lat.widened_x.is_empty() || !self.lat_unknown.is_empty() || !self.lat.pending.is_empty() || self.store.dirty || self.store.partial_eval;
+        let unkept = !self.lat.widened_x.is_empty() || !self.lat.unknown.is_empty() || !self.lat.pending.is_empty() || self.store.dirty || self.store.partial_eval;
         if !self.lattice_keeps() || unkept {
             return Vec::new();
         }
@@ -144,8 +144,8 @@ impl Eval {
             o.key(ck);
             o.terms(ts);
         }
-        o.n(self.conflict_marks.len());
-        for (t, ts) in &self.conflict_marks {
+        o.n(self.lat.conflict_marks.len());
+        for (t, ts) in &self.lat.conflict_marks {
             o.0.push(Tok::T(*t));
             o.terms(ts);
         }
@@ -183,7 +183,7 @@ impl Eval {
             self.lat.sub_by_of.entry(*f).or_default().push(d.clone());
         }
         self.lat.sub_parties = i.many(|i| Ok((i.key()?, i.terms()?.into_vec())))?.into_iter().collect();
-        self.conflict_marks = i.many(|i| Ok((i.term()?, i.terms()?.into_vec())))?.into_iter().collect();
+        self.lat.conflict_marks = i.many(|i| Ok((i.term()?, i.terms()?.into_vec())))?.into_iter().collect();
         self.lat.sub_gone = i.facts()?.into_iter().collect();
         self.lat.superseded = i.facts()?.into_iter().collect();
         self.lat.stale = i.facts()?.into_iter().collect();
@@ -208,7 +208,7 @@ impl Eval {
             o.n(list.len());
             for u in list {
                 o.unknown(u);
-                match self.lat_unknown.get(u) {
+                match self.lat.unknown.get(u) {
                     Some(Some((v, rule))) => {
                         o.n(1);
                         o.unknown(v);
@@ -218,7 +218,7 @@ impl Eval {
                 }
             }
         }
-        for set in [&self.lat_spread, &self.lat_plain] {
+        for set in [&self.lat.spread, &self.lat.plain] {
             o.n(set.len());
             set.iter().for_each(|u| o.unknown(u));
         }
@@ -228,7 +228,7 @@ impl Eval {
     /// The unknowns `unknowns_kept` wrote, noted again as the evaluation noted them.
     pub fn unknowns_from(&mut self, toks: Vec<Tok>) -> Result<(), String> {
         let mut i = In(toks.into_iter());
-        let (reads, carried) = (std::mem::replace(&mut self.unk.reads_unknown, false), self.carry_rows);
+        let (reads, carried) = (std::mem::replace(&mut self.unk.reads_unknown, false), self.wfs.carry_rows);
         for _ in 0..i.n()? {
             for _ in 0..i.n()? {
                 let u = i.unknown()?;
@@ -236,9 +236,9 @@ impl Eval {
                 self.note_unknown(u, via);
             }
         }
-        (self.unk.reads_unknown, self.carry_rows) = (reads, carried);
-        self.lat_spread = i.many(|i| i.unknown())?.into_iter().collect();
-        self.lat_plain = i.many(|i| i.unknown())?.into_iter().collect();
+        (self.unk.reads_unknown, self.wfs.carry_rows) = (reads, carried);
+        self.lat.spread = i.many(|i| i.unknown())?.into_iter().collect();
+        self.lat.plain = i.many(|i| i.unknown())?.into_iter().collect();
         if i.0.next().is_some() {
             return Err("kept unknowns have items after their end".into());
         }

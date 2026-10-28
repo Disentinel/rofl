@@ -43,6 +43,15 @@ pub struct CostState {
     /// Told each hot rule as it is found, as the sentence `hot_said` keeps.
     pub on_hot: Option<fn(&str)>,
     pub hot_said: Vec<String>,
+    pub argm_by_rule: HashMap<Sym, u64>,
+    /// Nanoseconds in each rule's firings, and per round the sum and the longest rule: the bound on firing rules in parallel.
+    pub ns_by_rule: HashMap<Sym, u64>,
+    /// Per rule: firings, solutions concluded, and rows that were new.
+    pub fires_by_rule: HashMap<Sym, u64>,
+    pub sols_by_rule: HashMap<Sym, u64>,
+    pub new_by_rule: HashMap<Sym, u64>,
+    /// Firings solved delta-first.
+    pub delta_by_rule: HashMap<Sym, u64>,
 }
 
 impl Default for CostState {
@@ -50,6 +59,8 @@ impl Default for CostState {
         CostState {
             prem_cost: FxMap::default(), read_rows: 0, widest: Widest::default(), wide_floor: 0,
             read_by_rule: FxMap::default(), hot_read: HOT_READ, on_hot: None, hot_said: Vec::new(),
+            argm_by_rule: HashMap::new(), ns_by_rule: HashMap::new(), fires_by_rule: HashMap::new(),
+            sols_by_rule: HashMap::new(), new_by_rule: HashMap::new(), delta_by_rule: HashMap::new(),
         }
     }
 }
@@ -173,7 +184,7 @@ impl Eval {
             "rule {}{head} has read {} rows for {} new facts, a quarter or more of all read; it is reading premise {}{lit}",
             self.h.name(rid),
             self.cost.read_by_rule[&rid].0,
-            self.new_by_rule.get(&rid).copied().unwrap_or(0),
+            self.cost.new_by_rule.get(&rid).copied().unwrap_or(0),
             k.map_or(String::new(), |k| format!("{}, ", k + 1)),
         );
         if !bound.is_empty() {
@@ -232,7 +243,7 @@ impl Eval {
                 rule: self.h.name(rid).to_string(),
                 head: self.h.name(r.clause.head.rel).to_string(),
                 read,
-                new: self.new_by_rule.get(&rid).copied().unwrap_or(0),
+                new: self.cost.new_by_rule.get(&rid).copied().unwrap_or(0),
                 at,
                 prem,
                 cost: cost.clone(),

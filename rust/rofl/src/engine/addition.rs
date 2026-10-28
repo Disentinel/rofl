@@ -199,10 +199,10 @@ impl Eval {
     pub fn prep_mark(&self) -> PrepMark {
         PrepMark {
             rules: self.rules.iter().map(|r| (r.id, (r.canon.clone(), r.safe))).collect(),
-            lattices: sorted(self.lattices.keys().copied().collect()),
+            lattices: sorted(self.lat.lattices.keys().copied().collect()),
             // (a dominance rule added to a relation already subsumptive is a declaration changed too)
             subs: {
-                let mut v: Vec<(Sym, Vec<Sym>)> = self.subs.iter().map(|(r, x)| (*r, sorted(x.doms.iter().filter(|_| brk!("add_dominance_rule_unmarked" => false; true)).map(|(d, _)| d.id).collect()))).collect();
+                let mut v: Vec<(Sym, Vec<Sym>)> = self.lat.subs.iter().map(|(r, x)| (*r, sorted(x.doms.iter().filter(|_| brk!("add_dominance_rule_unmarked" => false; true)).map(|(d, _)| d.id).collect()))).collect();
                 v.sort_unstable();
                 v
             },
@@ -269,8 +269,8 @@ impl Eval {
         if self.mode != Mode::Rounds {
             return Err("the world is ranked by strata, not rounds");
         }
-        let lats: Vec<Sym> = self.lattices.keys().copied().collect();
-        let dom_edges: Vec<(Sym, Sym)> = self.subs.iter().flat_map(|(p, x)| x.reads.iter().map(move |b| (*p, *b))).collect();
+        let lats: Vec<Sym> = self.lat.lattices.keys().copied().collect();
+        let dom_edges: Vec<(Sym, Sym)> = self.lat.subs.iter().flat_map(|(p, x)| x.reads.iter().map(move |b| (*p, *b))).collect();
         let peel = peel_rounds(&self.rules, &self.v, &lats, &dom_edges, &HashSet::new());
         if peel.stalled {
             return Err("the program is ranked only by its data, or not at all");
@@ -321,20 +321,20 @@ impl Eval {
         }
         for (mk, mut cs) in by {
             cs.sort_by(|x, y| cmp_js(&x.0, &y.0));
-            self.agg_memo.insert(mk, cs.into_iter().map(|(_, c)| c).collect::<Vec<_>>().into());
+            self.cells.agg_memo.insert(mk, cs.into_iter().map(|(_, c)| c).collect::<Vec<_>>().into());
         }
     }
 
     /// The cells of the order lattices stand in the store at their values, closed, and the values they replaced stand as ghosts, as the evaluation left them. A
     /// lattice of dominance or a join keeps more than that, and is restored from what was kept with it (`latkept.rs`).
     fn restore_lattices(&mut self, kept: Vec<super::Tok>) -> bool {
-        if !self.lattices.is_empty() {
+        if !self.lat.lattices.is_empty() {
             self.store.index_citers();
         }
-        if !self.subs.is_empty() || self.lattices.values().any(|(_, op)| op.is_join()) {
+        if !self.lat.subs.is_empty() || self.lat.lattices.values().any(|(_, op)| op.is_join()) {
             return self.lattices_from(kept).unwrap_or(false);
         }
-        let lats: Vec<(Sym, usize)> = self.lattices.iter().map(|(r, (n, _))| (*r, *n)).collect();
+        let lats: Vec<(Sym, usize)> = self.lat.lattices.iter().map(|(r, (n, _))| (*r, *n)).collect();
         for (rel, n) in lats {
             for id in self.store.rel_all(&self.h, rel) {
                 if self.store.alive(id) && self.store.arity(id) == n {
@@ -344,10 +344,10 @@ impl Eval {
             }
             self.lat.closed.insert(rel);
         }
-        let ids = if self.lattices.is_empty() { Vec::new() } else { self.store.firing_keys() };
+        let ids = if self.lat.lattices.is_empty() { Vec::new() } else { self.store.firing_keys() };
         for id in ids.into_iter().filter(|id| !self.store.alive(*id)) {
             let r = self.store.rec(id);
-            if let Some(&(n, _)) = self.lattices.get(&r.rel).filter(|(n, _)| self.store.arity(id) == *n) {
+            if let Some(&(n, _)) = self.lat.lattices.get(&r.rel).filter(|(n, _)| self.store.arity(id) == *n) {
                 self.lat.superseded.insert(id);
                 let key: Box<[Term]> = self.store.args(id)[..n - 1].into();
                 self.lat.history.entry((r.rel, r.persp, key)).or_default().push(id);
@@ -374,7 +374,7 @@ impl Eval {
         if brk!("add_seal_hole_refused" => self.store.rel_count(self.v.hole); self.holes_beyond_faults()) > 0 {
             out.push("the world holds a hole or reads a shrug");
         }
-        if !self.demand.rels.is_empty() && !self.lattices.is_empty() {
+        if !self.demand.rels.is_empty() && !self.lat.lattices.is_empty() {
             out.push("a world with a lattice holds a relation answered on demand");
         }
         let ledgers = [
@@ -412,7 +412,7 @@ impl Eval {
             return Err(crate::describe(&h));
         }
         // a base fact of a closure walked whole: the two rules fire as written from now on, over the rows it walked
-        if added.iter().any(|f| self.closures.iter().any(|c| c.rel == self.store.rec(*f).rel)) {
+        if added.iter().any(|f| self.clo.closures.iter().any(|c| c.rel == self.store.rec(*f).rel)) {
             self.closures_engage();
         }
         let moved = if new_rules.is_empty() { HashSet::new() } else { self.rerank()? };
@@ -569,7 +569,7 @@ impl Eval {
                         }
                         let t = std::time::Instant::now();
                         self.fire_in_round(r, &front)?;
-                        *self.ns_by_rule.entry(r.id).or_insert(0) += t.elapsed().as_nanos() as u64;
+                        *self.cost.ns_by_rule.entry(r.id).or_insert(0) += t.elapsed().as_nanos() as u64;
                     }
                     front = std::mem::take(&mut self.cur_front);
                 }
@@ -579,7 +579,7 @@ impl Eval {
                 for r in std::mem::take(&mut whole) {
                     let t = std::time::Instant::now();
                     let f = self.fire_rule(&r, None)?;
-                    *self.ns_by_rule.entry(r.id).or_insert(0) += t.elapsed().as_nanos() as u64;
+                    *self.cost.ns_by_rule.entry(r.id).or_insert(0) += t.elapsed().as_nanos() as u64;
                     merge_front(&mut front, f);
                 }
                 if front.keys.is_empty() {
@@ -1098,7 +1098,7 @@ impl Eval {
         }
         let key = key?;
         let rels: HashSet<Sym> = lits.iter().map(|l| l.rel).collect();
-        if lits.iter().any(|l| l.temporal != Temporal::Now || self.lattices.contains_key(&l.rel)) || key.iter().any(|v| !r.clause.head.args.contains(&Term::var(*v))) || self.vc.vclosures.iter().any(|c| rels.contains(&c.rel)) {
+        if lits.iter().any(|l| l.temporal != Temporal::Now || self.lat.lattices.contains_key(&l.rel)) || key.iter().any(|v| !r.clause.head.args.contains(&Term::var(*v))) || self.vc.vclosures.iter().any(|c| rels.contains(&c.rel)) {
             return None;
         }
         let mut facts: Vec<FactId> = news.by_rel.iter().filter(|(rel, _)| rels.contains(rel)).flat_map(|(_, ids)| ids.iter().copied()).collect();
@@ -1184,24 +1184,24 @@ impl Eval {
                 let corr: Box<[Term]> = plan.corr.iter().map(|i| resolve(&mut self.h, Term::var(a.shared[*i]), s)).collect();
                 if corr.iter().all(|t| self.h.is_ground(*t)) {
                     let mk = (r.id, a.at, corr);
-                    if let Some(cs) = self.agg_memo.remove(&mk) {
+                    if let Some(cs) = self.cells.agg_memo.remove(&mk) {
                         cells.extend(cs.iter().copied());
                     }
-                    self.reach_memo.remove(&mk);
-                    self.agg_opened.remove(&mk);
+                    self.cells.reach_memo.remove(&mk);
+                    self.cells.agg_opened.remove(&mk);
                     continue;
                 }
                 // a shared holistic group: every percent or subject of it, and the group
                 let h = &self.h;
                 let fits = |k: &(Sym, u32, Box<[Term]>)| k.0 == r.id && k.1 == a.at && k.2.len() == corr.len() && k.2.iter().zip(corr.iter()).all(|(x, p)| !h.is_ground(*p) || x == p);
-                let mine: Vec<(Sym, u32, Box<[Term]>)> = self.agg_memo.keys().filter(|k| fits(k)).cloned().collect();
+                let mine: Vec<(Sym, u32, Box<[Term]>)> = self.cells.agg_memo.keys().filter(|k| fits(k)).cloned().collect();
                 for mk in mine {
-                    if let Some(cs) = self.agg_memo.remove(&mk) {
+                    if let Some(cs) = self.cells.agg_memo.remove(&mk) {
                         cells.extend(cs.iter().copied());
                     }
                 }
-                self.reach_memo.retain(|k, _| !fits(k));
-                self.agg_opened.retain(|k| !fits(k));
+                self.cells.reach_memo.retain(|k, _| !fits(k));
+                self.cells.agg_opened.retain(|k| !fits(k));
                 let base: Box<[Term]> = corr.iter().copied().filter(|t| h.is_ground(*t)).collect();
                 if brk!("add_hol_shared_kept" => false; true) {
                     self.hol_shared.remove(&(r.id, a.at, base));
@@ -1224,7 +1224,7 @@ impl Eval {
             }
             self.propagate(front)
         })();
-        *self.ns_by_rule.entry(r.id).or_insert(0) += t.elapsed().as_nanos() as u64;
+        *self.cost.ns_by_rule.entry(r.id).or_insert(0) += t.elapsed().as_nanos() as u64;
         let mut kept = std::mem::take(&mut self.height_memo);
         kept.retain(|f, _| self.rel_level(self.store.rec(*f).rel) < lv);
         self.heights_kept = kept;
@@ -1309,18 +1309,18 @@ impl Eval {
             .collect();
         // AN ORDER LATTICE THE CHANGE REACHES is derived again whole, as the retraction path derives its cone again:
         // an improved value withdraws what read the old one, and the history of a schedule is no delta's
-        let lats: HashSet<Sym> = grown.iter().copied().filter(|r| self.lattices.contains_key(r)).collect();
+        let lats: HashSet<Sym> = grown.iter().copied().filter(|r| self.lat.lattices.contains_key(r)).collect();
         for l in &lats {
-            let op = self.lattices[l].1;
+            let op = self.lat.lattices[l].1;
             // (a dominance is derived again whole by key as an order is, where its rules compare by the values alone)
-            let dom = op == AggOp::Dominance && brk!("add_dominance_refused" => true; self.subs.get(l).is_none_or(|x| !x.reads.is_empty()));
+            let dom = op == AggOp::Dominance && brk!("add_dominance_refused" => true; self.lat.subs.get(l).is_none_or(|x| !x.reads.is_empty()));
             let join = brk!("add_join_refused" => false; op.class() == Class::IdempotentJoin);
-            if !(matches!(op.class(), Class::IdempotentOrder | Class::PartialOrder) || join) || dom || self.tags.count_of.contains_key(l) || self.widen.contains_key(l) {
+            if !(matches!(op.class(), Class::IdempotentOrder | Class::PartialOrder) || join) || dom || self.tags.count_of.contains_key(l) || self.lat.widen.contains_key(l) {
                 return Err("a join, a widening, a counting tag or a dominance is reached by what changed");
             }
         }
         // a join's history is what its retraction reads, and a join derived again whole writes its own
-        let joins: HashSet<Sym> = lats.iter().copied().filter(|l| self.lattices[l].1.class() == Class::IdempotentJoin).collect();
+        let joins: HashSet<Sym> = lats.iter().copied().filter(|l| self.lat.lattices[l].1.class() == Class::IdempotentJoin).collect();
         if !lats.is_empty() && self.store.firing_keys().into_iter().any(|g| !self.store.alive(g) && lats.contains(&self.store.rec(g).rel) && !joins.contains(&self.store.rec(g).rel)) {
             return Err("a lattice keeps the history of a superseded value");
         }
@@ -1401,7 +1401,7 @@ impl Eval {
                 }
             }
             let n = dirty.len();
-            for c in &self.closures {
+            for c in &self.clo.closures {
                 if reset.contains(&c.base) || reset.contains(&c.step) {
                     dirty.insert(c.rel);
                 }
@@ -1434,7 +1434,7 @@ impl Eval {
         negs.retain(|(r, _)| !dirty.contains(&r.clause.head.rel));
         // a closure is walked whole from its base rule and its step fires nothing: where either is added the two fire
         // whole together (news reaches both through the edges, and a base fact of the relation stops the walk)
-        for c in self.closures.iter().filter(|c| !dirty.contains(&c.rel)) {
+        for c in self.clo.closures.iter().filter(|c| !dirty.contains(&c.rel)) {
             let pair: Vec<Rc<ERule>> = [c.base, c.step].iter().filter_map(|id| self.rule_of(*id)).collect();
             let has = |v: &[Rc<ERule>], id: Sym| v.iter().any(|r| r.id == id);
             if brk!("add_closure_unpaired" => false; has(&new_plain, c.base) || has(&new_plain, c.step)) {
@@ -1459,13 +1459,13 @@ impl Eval {
                 staged.push(r.clone());
             }
         }
-        if !staged.is_empty() && !self.lattices.is_empty() {
+        if !staged.is_empty() && !self.lat.lattices.is_empty() {
             return Err("a rule staged from what changed in a world with a lattice");
         }
         for r in mono.iter().chain(&new_plain).chain(&again).chain(&recompute).chain(negs.iter().map(|(r, _)| r)) {
             let head = r.clause.head.rel;
             // (a counting tag's derivations are facts of their own, one per firing, summed by the tag's rule as any sum)
-            if (self.lattices.contains_key(&head) && !lats.contains(&head)) || brk!("add_tag_count_refused" => self.tags.count_of.contains_key(&head); false) || self.v.is_reserved(head) {
+            if (self.lat.lattices.contains_key(&head) && !lats.contains(&head)) || brk!("add_tag_count_refused" => self.tags.count_of.contains_key(&head); false) || self.v.is_reserved(head) {
                 return Err("a lattice, a tag or a ledger is concluded from what changed");
             }
             // late is an order only the stock evaluator reads its strata between
@@ -1476,7 +1476,7 @@ impl Eval {
         if self.hole_cone().iter().any(|r| changed.contains(r)) {
             return Err("a rule that faulted, or what reads it or the shrugs, is reached by what changed");
         }
-        if self.subs.values().any(|x| x.reads.iter().any(|b| changed.contains(b))) {
+        if self.lat.subs.values().any(|x| x.reads.iter().any(|b| changed.contains(b))) {
             return Err("a dominance rule reads what changed");
         }
         // a world that keeps no witness has no firing to name what a fact rests on: only the monotone part is kept
@@ -1556,7 +1556,7 @@ impl Eval {
             self.lat.closed.remove(l);
         }
         // what the evaluation kept of the values a subsumptive key was given goes with its facts
-        if lats.iter().any(|l| self.subs.contains_key(l)) {
+        if lats.iter().any(|l| self.lat.subs.contains_key(l)) {
             self.lat.sub_cur.retain(|k, _| !lats.contains(&k.0));
             self.lat.sub_seen.retain(|k, _| !lats.contains(&k.0));
             self.lat.sub_memo.retain(|k, _| !lats.contains(&k.0));

@@ -34,7 +34,7 @@ fn a_world_kept_as_a_volume_opens_as_itself() {
             bad.push(format!("{name}: opens as another, {}", first_diff(&want, &got)));
             continue;
         }
-        let rels: Vec<String> = s.eval.store.lat_regs.iter().map(|r| r.rel).chain(s.eval.subs.keys().copied()).map(|r| s.eval.h.name(r).to_string()).collect();
+        let rels: Vec<String> = s.eval.store.lat_regs.iter().map(|r| r.rel).chain(s.eval.lat.subs.keys().copied()).map(|r| s.eval.h.name(r).to_string()).collect();
         for rel in rels {
             for k in s.fact_keys(Some(&rel)).into_iter().take(40) {
                 let (a, b) = (s.why_all(&k), o.why_all(&k));

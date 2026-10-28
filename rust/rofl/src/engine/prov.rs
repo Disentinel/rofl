@@ -38,7 +38,7 @@ impl Eval {
                 out.insert(self.h.fargs(i).first()?.as_atom()?);
             }
         }
-        (!out.is_empty() && self.subs.is_empty()).then_some(out)
+        (!out.is_empty() && self.lat.subs.is_empty()).then_some(out)
     }
 
     /// Note a firing whose `derived_by` row is written when asked for.

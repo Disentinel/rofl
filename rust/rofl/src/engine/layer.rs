@@ -35,8 +35,8 @@ impl Eval {
 
     /// The relations the kernel answers or orders some other way than by firing their rules once over what they read.
     fn special_rels(&self) -> HashSet<Sym> {
-        let mut s: HashSet<Sym> = self.lattices.keys().copied().collect();
-        s.extend(self.subs.keys().copied());
+        let mut s: HashSet<Sym> = self.lat.lattices.keys().copied().collect();
+        s.extend(self.lat.subs.keys().copied());
         s.extend(self.tags.by_rel.keys().copied());
         s.extend(self.ds.comps.iter().flat_map(|c| c.rels.iter().copied()));
         s
@@ -115,7 +115,7 @@ impl Eval {
         if w.tick != self.store.tick
             || self.well_founded
             || self.answer.reads_provenance
-            || self.level_wall.is_some()
+            || self.wall.level_wall.is_some()
         {
             return (FxSet::default(), again(&FxSet::default()));
         }
