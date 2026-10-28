@@ -150,6 +150,64 @@ pub struct Answer {
     pub partial: bool,
 }
 
+/// A question as `ask` reads it: the literal's relation, book and arguments, and the bindings its answer is read by.
+struct Question<'a> {
+    query: &'a str,
+    rel: Sym,
+    persp: Sym,
+    persp_opt: Option<Sym>,
+    args: Vec<Term>,
+    b: Bindings,
+}
+
+/// The bound positions and the variables of a question, the variables in order of first appearance. A variable seen
+/// twice is not a second column, it is a constraint: `same` records the positions it must equal.
+struct Bindings {
+    vars: Vec<String>,
+    pos: Vec<usize>,
+    vals: Vec<Term>,
+    col: Vec<usize>,
+    same: Vec<(usize, usize)>,
+}
+
+impl Bindings {
+    fn of(h: &Heap, args: &[Term]) -> Bindings {
+        let mut b = Bindings { vars: Vec::new(), pos: Vec::new(), vals: Vec::new(), col: Vec::new(), same: Vec::new() };
+        for (i, a) in args.iter().enumerate() {
+            match a.kind() {
+                TermK::Var(s) => {
+                    let n = h.name(s).to_string();
+                    match b.vars.iter().position(|v| *v == n) {
+                        Some(j) => b.same.push((b.col[j], i)),
+                        None => {
+                            b.vars.push(n);
+                            b.col.push(i);
+                        }
+                    }
+                }
+                _ => {
+                    b.pos.push(i);
+                    b.vals.push(*a);
+                }
+            }
+        }
+        b
+    }
+
+    /// Whether a row is an answer: of the question's arity, with its bound values, and its repeated variables equal.
+    fn fits(&self, fa: &[Term], arity: usize) -> bool {
+        fa.len() == arity && self.pos.iter().zip(&self.vals).all(|(&i, v)| fa[i] == *v) && self.same.iter().all(|&(a, b)| fa[a] == fa[b])
+    }
+}
+
+/// The rows an answer found, their keys, and the candidates read to find them.
+struct Found {
+    rows: Vec<Vec<String>>,
+    keys: Vec<String>,
+    scanned: usize,
+    probed: bool,
+}
+
 impl Session {
     /// Build a core from a snapshot. Expensive — 383 ms for the 20 630-fact
     /// packs — and meant to happen once per process. Fork it after that.
@@ -1328,17 +1386,7 @@ impl Session {
         let (rel, persp, args) = self.lit_terms(lit)?;
         // ASKING A SEALED BODY REFUSES, as src/api.ts `query` does: a hole named for the question, and a partial answer
         if crate::program::sealed_rels(&mut self.eval).contains(&rel) && brk!("ask_sealed_answers" => false; true) {
-            let q = self.eval.h.intern("$q");
-            let id = self.eval.h.mkf(q, &[Term::int(self.asks)]);
-            let reason = Term::atom(self.eval.h.intern("reflection_sealed"));
-            self.eval.store.put(&self.eval.h, self.eval.v.hole, self.eval.v.kernel_persp, &[id, reason], F_BASE | crate::store::F_FROZEN);
-            let vars = args.iter().filter_map(|a| match a.kind() { TermK::Var(v) => Some(v), _ => None }).map(|v| self.eval.h.name(v).to_string()).fold(Vec::new(), |mut vs: Vec<String>, n| {
-                if !vs.contains(&n) {
-                    vs.push(n);
-                }
-                vs
-            });
-            return Ok(Answer { vars, rows: Vec::new(), keys: Vec::new(), scanned: 0, probed: false, micros: t0.elapsed().as_micros(), shrugs: Vec::new(), partial: true });
+            return Ok(self.sealed_answer(&args, t0));
         }
         if let Some(m) = self.eval.outside_cone(rel) {
             return Err(m);
@@ -1350,155 +1398,150 @@ impl Session {
             Book::Bare => None,
             _ => Some(persp),
         };
+        let b = Bindings::of(&self.eval.h, &args);
+        let question = Question { query, rel, persp, persp_opt, args, b };
 
-        // The bound positions, and the variables in order of first appearance.
-        // A variable seen twice is not a second column, it is a constraint —
-        // recorded here as the position it must equal.
-        let mut pos: Vec<usize> = Vec::new();
-        let mut vals: Vec<Term> = Vec::new();
-        let mut vars: Vec<String> = Vec::new();
-        let mut col: Vec<usize> = Vec::new(); // for each var, the position read
-        let mut same: Vec<(usize, usize)> = Vec::new();
-        for (i, a) in args.iter().enumerate() {
-            match a.kind() {
-                TermK::Var(s) => {
-                    let n = self.eval.h.name(s).to_string();
-                    match vars.iter().position(|v| *v == n) {
-                        Some(j) => same.push((col[j], i)),
-                        None => {
-                            vars.push(n);
-                            col.push(i);
-                        }
-                    }
-                }
-                _ => {
-                    pos.push(i);
-                    vals.push(*a);
-                }
-            }
-        }
-
-        // A RELATION UNFOLDED AT A CALL is answered as the reference's `query` answers it: its rules
-        // unfolded under the question, which leaves the world as it was (`Eval::answer_on_demand`)
         let mut partial = self.eval.store.partial_eval;
-        let (rows, keys, scanned, probed) = if self.eval.demand.answers_open(rel) && brk!("ask_store_only" => false; true) {
-            let el = self.one_lit(query)?;
-            // A WALL MET ANSWERING is a hole named for the question, and the answer is partial
-            let (sols, unnamed) = match self.eval.answer_on_demand(&el) {
-                Ok(got) => got,
-                Err(Halt::Budget(wall, _)) if brk!("ask_wall_errors" => false; true) => {
-                    let q = self.eval.h.intern("$q");
-                    let id = self.eval.h.mkf(q, &[Term::int(self.asks)]);
-                    // the hole says which wall fell: steps or rows
-                    let reason = Term::atom(brk!("ask_wall_unnamed" => self.eval.v.budget_reason; self.eval.h.intern(wall)));
-                    self.eval.store.put(&self.eval.h, self.eval.v.hole, self.eval.v.kernel_persp, &[id, reason], crate::store::F_BASE | crate::store::F_FROZEN);
-                    (Vec::new(), true)
-                }
-                Err(h) => return Err(describe(&h)),
-            };
+        let found = if self.eval.demand.answers_open(rel) && brk!("ask_store_only" => false; true) {
+            let (found, unnamed) = self.answer_demanded(&question)?;
             partial |= unnamed;
-            let mut named: Vec<usize> = (0..vars.len()).collect();
-            named.sort_by(|a, b| crate::term::cmp_js(&vars[*a], &vars[*b]));
-            let mut got: Vec<(String, Vec<String>, String)> = Vec::new();
-            let mut texts: std::collections::HashSet<String> = std::collections::HashSet::new();
-            for sol in &sols {
-                let row: Vec<String> = vars
-                    .iter()
-                    .map(|v| {
-                        let vt = self.eval.h.var(v);
-                        let t = crate::term::resolve(&mut self.eval.h, vt, sol);
-                        let mut o = String::new();
-                        self.eval.h.canon_term(t, &mut o);
-                        o
-                    })
-                    .collect();
-                let text = if vars.is_empty() { "true".to_string() } else { named.iter().map(|&i| format!("{} = {}", vars[i], row[i])).collect::<Vec<_>>().join(", ") };
-                let seen = brk!("ask_dedup_scan" => got.iter().any(|g| g.0 == text); !texts.insert(text.clone()));
-                if seen {
-                    continue;
-                }
-                let fa: Vec<Term> = args.iter().map(|a| crate::term::resolve(&mut self.eval.h, *a, sol)).collect();
-                let mut k = String::new();
-                write_fact_key(&self.eval.h, rel, persp, &fa, &mut k);
-                got.push((text, row, k));
-            }
-            got.sort_by(|a, b| crate::term::cmp_js(&a.0, &b.0));
-            let n = got.len();
-            let (rows, keys): (Vec<Vec<String>>, Vec<String>) = got.into_iter().map(|(_, r, k)| (r, k)).unzip();
-            (rows, keys, n, false)
+            found
         } else {
-            // A RELATION ANSWERED FROM A STRUCTURE (the closure of a declared tree) has no rows to find: its rows are read off the tree
-            let virt: Option<Vec<(Sym, Vec<Term>)>> = match self.eval.alias_query(rel, persp_opt, &args) {
-                Some(rows) => Some(rows),
-                None => self.eval.vclosure_query(rel, persp_opt, &args).map(|v| v.into_iter().map(|(b, a, d)| (b, vec![a, d])).collect()),
-            };
-            let cand = if virt.is_some() {
-                Some(Vec::new())
-            } else {
-                self.eval.store.arg_matches(&self.eval.h, rel, persp_opt, args.len(), &pos, &vals)
-            };
-            let probed = cand.is_some();
-            let ids = match cand {
-                Some(v) => v,
-                None => match persp_opt {
-                    Some(p) => self.eval.store.rel_persp(&self.eval.h, rel, p),
-                    None => self.eval.store.rel_all(&self.eval.h, rel),
-                },
-            };
-            let scanned = ids.len() + virt.as_ref().map_or(0, |v| v.len());
-
-            // `arg_matches` promises a SUPERSET in no order (src/store.ts:477), so
-            // every candidate is re-checked here. Skipping this is how a query
-            // engine reports rows its index merely suggested.
-            let mut rows = Vec::new();
-            let mut keys = Vec::new();
-            for id in ids {
-                if !self.eval.store.alive(id) {
-                    continue;
-                }
-                let fa = self.eval.store.args(id);
-                if fa.len() != args.len() {
-                    continue;
-                }
-                if pos.iter().zip(&vals).any(|(&i, v)| fa[i] != *v) {
-                    continue;
-                }
-                if same.iter().any(|&(a, b)| fa[a] != fa[b]) {
-                    continue;
-                }
-                let mut row = Vec::with_capacity(col.len());
-                for &i in &col {
-                    let mut s = String::new();
-                    self.eval.h.canon_term(fa[i], &mut s);
-                    row.push(s);
-                }
-                let r = self.eval.store.rec(id);
-                let mut k = String::new();
-                write_fact_key(&self.eval.h, r.rel, r.persp, fa, &mut k);
-                rows.push(row);
-                keys.push(k);
-            }
-            for (book, fa) in virt.unwrap_or_default() {
-                if fa.len() != args.len() || pos.iter().zip(&vals).any(|(&i, v)| fa[i] != *v) || same.iter().any(|&(x, y)| fa[x] != fa[y]) {
-                    continue;
-                }
-                let row: Vec<String> = col
-                    .iter()
-                    .map(|&i| {
-                        let mut s = String::new();
-                        self.eval.h.canon_term(fa[i], &mut s);
-                        s
-                    })
-                    .collect();
-                let mut k = String::new();
-                write_fact_key(&self.eval.h, rel, book, &fa, &mut k);
-                rows.push(row);
-                keys.push(k);
-            }
-            (rows, keys, scanned, probed)
+            self.scan_stored(&question)
         };
+        let shrugs = self.shrugs_for(&question)?;
+        Ok(Answer { vars: question.b.vars, rows: found.rows, keys: found.keys, scanned: found.scanned, probed: found.probed, micros: t0.elapsed().as_micros(), shrugs, partial })
+    }
 
-        let lit = self.one_lit(query)?;
+    /// A question over a sealed body: a hole named for it, and a partial answer with no rows.
+    fn sealed_answer(&mut self, args: &[Term], t0: std::time::Instant) -> Answer {
+        let q = self.eval.h.intern("$q");
+        let id = self.eval.h.mkf(q, &[Term::int(self.asks)]);
+        let reason = Term::atom(self.eval.h.intern("reflection_sealed"));
+        self.eval.store.put(&self.eval.h, self.eval.v.hole, self.eval.v.kernel_persp, &[id, reason], F_BASE | crate::store::F_FROZEN);
+        Answer { vars: Bindings::of(&self.eval.h, args).vars, rows: Vec::new(), keys: Vec::new(), scanned: 0, probed: false, micros: t0.elapsed().as_micros(), shrugs: Vec::new(), partial: true }
+    }
+
+    /// A relation unfolded at a call is answered as the reference's `query` answers it: its rules unfolded under the
+    /// question, which leaves the world as it was (`Eval::answer_on_demand`). The flag says whether a wall was met.
+    fn answer_demanded(&mut self, question: &Question) -> Result<(Found, bool), String> {
+        let el = self.one_lit(question.query)?;
+        // A WALL MET ANSWERING is a hole named for the question, and the answer is partial
+        let (sols, unnamed) = match self.eval.answer_on_demand(&el) {
+            Ok(got) => got,
+            Err(Halt::Budget(wall, _)) if brk!("ask_wall_errors" => false; true) => {
+                let q = self.eval.h.intern("$q");
+                let id = self.eval.h.mkf(q, &[Term::int(self.asks)]);
+                // the hole says which wall fell: steps or rows
+                let reason = Term::atom(brk!("ask_wall_unnamed" => self.eval.v.budget_reason; self.eval.h.intern(wall)));
+                self.eval.store.put(&self.eval.h, self.eval.v.hole, self.eval.v.kernel_persp, &[id, reason], crate::store::F_BASE | crate::store::F_FROZEN);
+                (Vec::new(), true)
+            }
+            Err(h) => return Err(describe(&h)),
+        };
+        let vars = &question.b.vars;
+        let mut named: Vec<usize> = (0..vars.len()).collect();
+        named.sort_by(|a, b| crate::term::cmp_js(&vars[*a], &vars[*b]));
+        let mut got: Vec<(String, Vec<String>, String)> = Vec::new();
+        let mut texts: std::collections::HashSet<String> = std::collections::HashSet::new();
+        for sol in &sols {
+            let row: Vec<String> = vars
+                .iter()
+                .map(|v| {
+                    let vt = self.eval.h.var(v);
+                    let t = crate::term::resolve(&mut self.eval.h, vt, sol);
+                    let mut o = String::new();
+                    self.eval.h.canon_term(t, &mut o);
+                    o
+                })
+                .collect();
+            let text = if vars.is_empty() { "true".to_string() } else { named.iter().map(|&i| format!("{} = {}", vars[i], row[i])).collect::<Vec<_>>().join(", ") };
+            let seen = brk!("ask_dedup_scan" => got.iter().any(|g| g.0 == text); !texts.insert(text.clone()));
+            if seen {
+                continue;
+            }
+            let fa: Vec<Term> = question.args.iter().map(|a| crate::term::resolve(&mut self.eval.h, *a, sol)).collect();
+            let mut k = String::new();
+            write_fact_key(&self.eval.h, question.rel, question.persp, &fa, &mut k);
+            got.push((text, row, k));
+        }
+        got.sort_by(|a, b| crate::term::cmp_js(&a.0, &b.0));
+        let n = got.len();
+        let (rows, keys): (Vec<Vec<String>>, Vec<String>) = got.into_iter().map(|(_, r, k)| (r, k)).unzip();
+        Ok((Found { rows, keys, scanned: n, probed: false }, unnamed))
+    }
+
+    /// A question answered from the stored rows, and from the rows a declared structure reads off.
+    fn scan_stored(&mut self, question: &Question) -> Found {
+        let (rel, persp_opt, arity) = (question.rel, question.persp_opt, question.args.len());
+        let virt = self.structure_rows(question);
+        let cand = if virt.is_some() { Some(Vec::new()) } else { self.eval.store.arg_matches(&self.eval.h, rel, persp_opt, arity, &question.b.pos, &question.b.vals) };
+        let probed = cand.is_some();
+        let ids = match cand {
+            Some(v) => v,
+            None => match persp_opt {
+                Some(p) => self.eval.store.rel_persp(&self.eval.h, rel, p),
+                None => self.eval.store.rel_all(&self.eval.h, rel),
+            },
+        };
+        let scanned = ids.len() + virt.as_ref().map_or(0, |v| v.len());
+
+        // `arg_matches` promises a SUPERSET in no order (src/store.ts:477), so
+        // every candidate is re-checked here. Skipping this is how a query
+        // engine reports rows its index merely suggested.
+        let mut found = Found { rows: Vec::new(), keys: Vec::new(), scanned, probed };
+        for id in ids {
+            if !self.eval.store.alive(id) {
+                continue;
+            }
+            let fa = self.eval.store.args(id);
+            if !question.b.fits(fa, arity) {
+                continue;
+            }
+            let row = self.row_of(fa, &question.b.col);
+            let r = self.eval.store.rec(id);
+            let mut k = String::new();
+            write_fact_key(&self.eval.h, r.rel, r.persp, fa, &mut k);
+            found.rows.push(row);
+            found.keys.push(k);
+        }
+        for (book, fa) in virt.unwrap_or_default() {
+            if !question.b.fits(&fa, arity) {
+                continue;
+            }
+            let row = self.row_of(&fa, &question.b.col);
+            let mut k = String::new();
+            write_fact_key(&self.eval.h, rel, book, &fa, &mut k);
+            found.rows.push(row);
+            found.keys.push(k);
+        }
+        found
+    }
+
+    /// A relation answered from a structure has no rows to find: its rows are read off the alias, or the closure of a
+    /// declared tree.
+    fn structure_rows(&mut self, question: &Question) -> Option<Vec<(Sym, Vec<Term>)>> {
+        match self.eval.alias_query(question.rel, question.persp_opt, &question.args) {
+            Some(rows) => Some(rows),
+            None => self.eval.vclosure_query(question.rel, question.persp_opt, &question.args).map(|v| v.into_iter().map(|(b, a, d)| (b, vec![a, d])).collect()),
+        }
+    }
+
+    fn row_of(&self, fa: &[Term], col: &[usize]) -> Vec<String> {
+        col.iter()
+            .map(|&i| {
+                let mut s = String::new();
+                self.eval.h.canon_term(fa[i], &mut s);
+                s
+            })
+            .collect()
+    }
+
+    /// The shrugs of a question: one per reading and reason where the answer does not hold, and a line for a wall that
+    /// cut the world.
+    fn shrugs_for(&mut self, question: &Question) -> Result<Vec<(Vec<String>, String)>, String> {
+        let vars = &question.b.vars;
+        let lit = self.one_lit(question.query)?;
         let mut shrugs: Vec<(Vec<String>, String)> = Vec::new();
         let mut order: Vec<String> = Vec::new();
         for (f, s) in self.eval.shrugs_of(&lit) {
@@ -1550,7 +1593,7 @@ impl Session {
                 }
             }
         }
-        Ok(Answer { vars, rows, keys, scanned, probed, micros: t0.elapsed().as_micros(), shrugs, partial })
+        Ok(shrugs)
     }
 
     /// Whether nothing could ever put a row at this question (src/api.ts `query`'s `unpopulatable`): the relation is declared, concluded

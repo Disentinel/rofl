@@ -3270,6 +3270,13 @@ impl Store {
         }
     }
 
+    /// The premises spelled and sorted: order never depends on the planner's choice.
+    fn sorted_prems(&self, h: &Heap, ps: &[PremRef]) -> Vec<String> {
+        let mut t: Vec<String> = ps.iter().map(|p| self.prem_text(h, *p)).collect();
+        t.sort_by(|a, b| cmp_js(a, b));
+        t
+    }
+
     /// A premise as `canonical_state` spells it in a witness line.
     pub fn prem_text(&self, h: &Heap, p: PremRef) -> String {
         match p {
@@ -3443,13 +3450,7 @@ impl Store {
             let r = &self.facts.rec(*id);
             out.push('\n');
             out.push_str(k);
-            out.push(' ');
-            out.push_str(if r.tick_scope() { "tick" } else { "timeless" });
-            out.push(' ');
-            out.push_str(if r.base() { "base" } else { "drv" });
-            if r.frozen() {
-                out.push_str(" frozen");
-            }
+            push_scope(r, &mut out);
             out.push_str(" support=");
             out.push_str(&self.support_count(*id).to_string());
         }
@@ -3508,8 +3509,7 @@ impl Store {
             // engines that agree on the premise SET look like two languages.
             // Measured: `drip` differed on exactly this, two witnesses of
             // 9439 lines, every fact line identical.
-            let mut prems: Vec<String> = w.prems.iter().map(|p| self.prem_text(h, *p)).collect();
-            prems.sort_by(|a, b| cmp_js(a, b));
+            let prems = self.sorted_prems(h, &w.prems);
             out.push_str(&prems.join("; "));
             out.push(']');
         }
@@ -3540,13 +3540,11 @@ impl Store {
                 out.push_str(&format!("\nmem {key} #{} id={} ", i + 1, self.member_id(h, c, m)));
                 out.push_str(&tuple_text(h, &m.proj));
                 out.push_str(&format!(" h={} [", m.height));
-                let mut prems: Vec<String> = self.member_prems(m).iter().map(|p| self.prem_text(h, *p)).collect();
-                prems.sort_by(|a, b| cmp_js(a, b));
+                let prems = self.sorted_prems(h, self.member_prems(m));
                 out.push_str(&prems.join("; "));
                 out.push(']');
                 for o in self.member_derivs(m).skip(1) {
-                    let mut ps: Vec<String> = o.iter().map(|p| self.prem_text(h, *p)).collect();
-                    ps.sort_by(|a, b| cmp_js(a, b));
+                    let ps = self.sorted_prems(h, &o);
                     out.push_str(&format!(" alt [{}]", ps.join("; ")));
                 }
             }
@@ -3620,13 +3618,7 @@ impl Store {
             let r = &self.facts.rec(*id);
             out.push_str("\nf ");
             out.push_str(k);
-            out.push(' ');
-            out.push_str(if r.tick_scope() { "tick" } else { "timeless" });
-            out.push(' ');
-            out.push_str(if r.base() { "base" } else { "drv" });
-            if r.frozen() {
-                out.push_str(" frozen");
-            }
+            push_scope(r, &mut out);
             sigs.clear();
             for n in self.chain(*id) {
                 let mut s = String::new();
@@ -3650,8 +3642,7 @@ impl Store {
             }
             for (i, m) in self.cell_members(c).iter().enumerate().filter(|_| like.is_none()) {
                 out.push_str(&format!("\n  m {} {} h={}", i + 1, tuple_text(h, &m.proj), m.height));
-                let mut prems: Vec<String> = self.member_prems(m).iter().map(|p| self.prem_text(h, *p)).collect();
-                prems.sort_by(|a, b| cmp_js(a, b));
+                let prems = self.sorted_prems(h, self.member_prems(m));
                 for p in prems {
                     out.push_str(" | ");
                     out.push_str(&p);
@@ -3775,8 +3766,7 @@ impl Store {
         if self.cells.recs[c as usize].op.dedup_by_projection() {
             return tuple_text(h, &m.proj);
         }
-        let mut prems: Vec<String> = self.member_prems(m).iter().map(|p| self.prem_text(h, *p)).collect();
-        prems.sort_by(|a, b| cmp_js(a, b));
+        let prems = self.sorted_prems(h, self.member_prems(m));
         prems.join("; ")
     }
 
@@ -3801,8 +3791,7 @@ impl Store {
     /// sorted (FNV-1a over `rule@tick|prem; prem`; src/store.ts `firingId`).
     /// A firing a superseded value keeps has one too.
     pub fn firing_id(&self, h: &Heap, rule: Sym, tick: u32, prems: &[PremRef]) -> String {
-        let mut ps: Vec<String> = prems.iter().map(|p| self.prem_text(h, *p)).collect();
-        ps.sort_by(|a, b| cmp_js(a, b));
+        let ps = self.sorted_prems(h, &prems);
         let text = brk!("firing_id_tickless" => format!("{}|{}", h.name(rule), ps.join("; ")); format!("{}@{}|{}", h.name(rule), tick, ps.join("; ")));
         fnv64(&text)
     }
@@ -3828,8 +3817,7 @@ impl Store {
             let state = if brk!("fir_superseded_live" => true; self.alive(id)) { "live" } else { "superseded" };
             for (rule, tick, prems) in self.firings(id) {
                 let fid = self.firing_id(h, rule, tick, &prems);
-                let mut ps: Vec<String> = prems.iter().map(|p| self.prem_text(h, *p)).collect();
-                ps.sort_by(|a, b| cmp_js(a, b));
+                let ps = self.sorted_prems(h, &prems);
                 rows.push((key.clone(), fid.clone(), format!("\nfir {key} id={fid} {}@{tick} [{}] {state}", h.name(rule), ps.join("; "))));
             }
         }
@@ -4615,6 +4603,16 @@ impl Store {
             ("idx", idx),
             ("wit", wit),
         ]
+    }
+}
+
+fn push_scope(r: &FactRec, out: &mut String) {
+    out.push(' ');
+    out.push_str(if r.tick_scope() { "tick" } else { "timeless" });
+    out.push(' ');
+    out.push_str(if r.base() { "base" } else { "drv" });
+    if r.frozen() {
+        out.push_str(" frozen");
     }
 }
 

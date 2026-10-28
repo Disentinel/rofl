@@ -500,6 +500,54 @@ pub struct R {
 }
 
 /// The reading of a text: its rules, its sentences, its report, and the reader for its questions.
+fn paragraph_blocks(md: &str) -> Vec<Block> {
+    let mut blocks: Vec<Block> = Vec::new();
+    for b in parse_md(md) {
+        if matches!(b.ty, Ty::Front | Ty::Q | Ty::Code) { continue; }
+        if b.ty == Ty::P && b.lines.is_some() {
+            let lines = b.lines.clone().unwrap();
+            let at = b.at.unwrap_or(0);
+            let mut ps: Vec<Vec<usize>> = Vec::new();
+            for (i, l) in lines.iter().enumerate() {
+                if i == 0 || (lines[i - 1].ends_with('.') && rx::test("^[A-Z`]", l)) { ps.push(vec![]); }
+                ps.last_mut().unwrap().push(i);
+            }
+            for p in ps {
+                blocks.push(Block { ty: Ty::P, text: p.iter().map(|&i| lines[i].as_str()).collect::<Vec<_>>().join(" "), at: Some(at + p[0]), end: Some(at + p[p.len() - 1] + 1), ..Default::default() });
+            }
+        } else { blocks.push(b); }
+    }
+    blocks
+}
+
+fn head_of(t: &str) -> String {
+    let t = rx::sub(" if all of:$", &rx::sub(" either:$", t, false, ""), false, "");
+    let first = rx::split(" if | unless |, unless ", &t).into_iter().next().unwrap_or_default();
+    rx::sub("[.;:]$", &first, false, "").trim().to_string()
+}
+
+fn word_shape(t: &str) -> String {
+    rx::sub(r"(?:\b(?:an?) [a-z][\w-]*(?: [a-z][\w-]*){0,2} )?\b[A-Z][A-Za-z0-9]*\b", &lower1(t), true, "_")
+}
+
+fn declared_listing(blocks: &[Block], lines: &[&str]) -> (HashMap<String, i64>, Vec<String>) {
+    let mut at: HashMap<String, i64> = HashMap::new();
+    let mut items: Vec<String> = Vec::new();
+    for (i, b) in blocks.iter().enumerate() {
+        if !(b.ty == Ty::P && b.text.trim() == "Declared as facts:" && blocks.get(i + 1).is_some_and(|n| n.ty == Ty::Ul)) { continue; }
+        let next = &blocks[i + 1];
+        for it in &next.items {
+            let t = rx::sub(r"\.$", it.text.trim().split(" — ").next().unwrap_or(""), false, "");
+            if !at.contains_key(&t) {
+                let from = next.at.unwrap_or(0);
+                at.insert(t.clone(), lines.iter().enumerate().position(|(k, l)| k >= from && l.contains(t.as_str())).map(|x| x as i64).unwrap_or(-1));
+            }
+            items.push(t);
+        }
+    }
+    (at, items)
+}
+
 pub fn read_md(raw: &str, vocab: &str, home_books: &HashMap<String, String>) -> R {
     let mut r = R::new(vocab, home_books);
     r.run(raw);
@@ -1212,8 +1260,7 @@ impl R {
             if let Some((_, t)) = &tm_ { head.tense = Some(if t == "initially" { "init" } else { "next" }.into()); }
             let book = if self.block_set { self.cur_book.clone() } else { self.home_books.get(&head.rel).cloned().unwrap_or_else(|| self.cur_book.clone()) };
             let mut rule = Rule { head, body: vec![], guards: vec![], book };
-            let mut whole = true;
-            for c in conds { whole = self.condition(c, &mut intros, &mut rule) && whole; }
+            let whole = self.conditions(conds, &mut intros, &mut rule);
             for it in &intros { if !self.known.contains_key(&it.v) { self.known.insert(it.v.clone(), it.noun.clone()); } }
             if pass == 0 { self.ambiguous.truncate(saved_amb); self.unparsed.truncate(saved_un); continue; }
             if let Some(b) = &self.bad_term { self.dropped.push(format!("{head_text}: a term the sentence form cannot carry, {b}")); if !self.left_out.contains(&rule.head.rel) { self.left_out.push(rule.head.rel.clone()); } continue; }
@@ -1361,6 +1408,13 @@ impl R {
         false
     }
 
+    /// Every condition read into the rule; `true` when each one was read.
+    fn conditions(&mut self, conds: &[String], intros: &mut Vec<Intro>, rule: &mut Rule) -> bool {
+        let mut whole = true;
+        for c in conds { whole = self.condition(c, intros, rule) && whole; }
+        whole
+    }
+
     fn dominance(&mut self, text: &str) -> bool {
         let Some(m) = rx::exec(r"^A fact that (.+?) is dominated by one that (.+?) if (.+)\.$", text) else { return false };
         self.known = HashMap::new();
@@ -1372,8 +1426,8 @@ impl R {
         let hi = match self.positional(g(&m, 2), &mut intros) { Some(l) => Some(l), None => self.match_lit(g(&m, 2), &mut intros, false) };
         let (Some(lo), Some(hi)) = (lo, hi) else { self.unparsed.push(format!("DOMINANCE {text}")); return true };
         let mut rule = Rule { head: lo, body: vec![], guards: vec![], book: self.cur_book.clone() };
-        let mut whole = true;
-        for c in self.split_conds(g(&m, 3)) { whole = self.condition(&c, &mut intros, &mut rule) && whole; }
+        let conds = self.split_conds(g(&m, 3));
+        let whole = self.conditions(&conds, &mut intros, &mut rule);
         for it in &intros { if !value(&it.noun) && gpos(&rule.guards, &it.v).is_none() { rule.guards.push((it.v.clone(), Guard { noun: it.noun.clone(), nouns: None, file: None })); } }
         let cs = if whole && self.bad_term.is_none() { self.expand(&rule) } else { vec![] };
         if cs.len() != 1 { self.dropped.push(format!("{text}: a dominance rule reads as one rule or not at all")); return true; }
@@ -1392,281 +1446,279 @@ impl R {
 
     fn run(&mut self, raw: &str) {
         let md = clean(raw);
-        let mut blocks: Vec<Block> = Vec::new();
-        for b in parse_md(&md) {
-            if matches!(b.ty, Ty::Front | Ty::Q | Ty::Code) { continue; }
-            if b.ty == Ty::P && b.lines.is_some() {
-                let lines = b.lines.clone().unwrap();
-                let at = b.at.unwrap_or(0);
-                let mut ps: Vec<Vec<usize>> = Vec::new();
-                for (i, l) in lines.iter().enumerate() {
-                    if i == 0 || (lines[i - 1].ends_with('.') && rx::test("^[A-Z`]", l)) { ps.push(vec![]); }
-                    ps.last_mut().unwrap().push(i);
-                }
-                for p in ps {
-                    blocks.push(Block { ty: Ty::P, text: p.iter().map(|&i| lines[i].as_str()).collect::<Vec<_>>().join(" "), at: Some(at + p[0]), end: Some(at + p[p.len() - 1] + 1), ..Default::default() });
-                }
-            } else { blocks.push(b); }
-        }
+        let blocks = paragraph_blocks(&md);
         if let Some(fm) = rx::exec(r"^---\n([\s\S]*?)\n---", raw) { if let Some(d) = rx::exec(r"(?m)^default: (\w+)$", g(&fm, 1)) { self.default_book = g(&d, 1).into(); } }
         self.cur_book = self.default_book.clone();
         self.home_book = self.home_books.clone();
         self.home_book.entry("shrug".into()).or_insert_with(|| "$kernel".into());
-        {
-            let mut sec = String::new();
-            for b in &blocks {
-                if b.ty == Ty::H { sec = b.text.clone(); continue; }
-                if sec == "Signatures" && b.ty == Ty::Ul {
-                    for it in &b.items {
-                        let Some(m) = rx::exec(r"^(.+?\))(?: \((\w+)\))?(?:, in the (\w+))?$", it.text.trim()) else { continue };
-                        let m1 = g(&m, 1);
-                        let rel = if has(&m, 2) { g(&m, 2).to_string() } else { m1[..m1.find('(').unwrap()].trim().to_string() };
-                        if !self.templates.iter().any(|t| t.rel == rel && t.src == m1) { let t = say::parse_sig(&rel, m1, self.nouns.keys()); self.templates.push(t); }
-                        let book = if has(&m, 3) { g(&m, 3).to_string() } else { self.default_book.clone() };
-                        self.head_book.insert(rel.clone(), book.clone());
-                        self.home_book.insert(rel, book);
-                    }
-                }
-                if sec == "Words" && b.ty == Ty::Table {
-                    for r in &b.rows {
-                        let c0 = r.first().map(String::as_str).unwrap_or("");
-                        let c1 = r.get(1).map(String::as_str).unwrap_or("");
-                        let noun = rx::sub("^[Aa]n? ", &rx::sub(r#"^<a id="[^"]+"><\/a>"#, c0, false, ""), false, "").trim().to_string();
-                        let mut matched = false;
-                        for part in rx::split(", or ", c1) {
-                            if let Some(set) = rx::exec(r"^a node of (?:kind|one of the kinds) (.+) \(`(\w+)`\)$", &part) {
-                                let rel = g(&set, 2).to_string();
-                                self.set_rels.insert(rel.clone());
-                                if !self.kind_noun.has(&rel) { self.kind_noun.set(&rel, noun.clone()); self.nouns.add(&noun); }
-                                for k in rx::split(r",\s*", g(&set, 1)) { self.parsed_facts.push(lit(&rel, vec![A(k.replace('`', ""))])); }
-                                self.home_book.insert(rel, "main".into());
-                                matched = true;
-                                continue;
-                            }
-                            if let Some(from) = rx::exec(r"^a node of a kind in \[?`(\w+)`", &part) {
-                                let rel = g(&from, 1);
-                                self.set_rels.insert(rel.into());
-                                if !self.kind_noun.has(rel) { self.kind_noun.set(rel, noun.clone()); self.nouns.add(&noun); }
-                                matched = true;
-                                continue;
-                            }
-                            if let Some(kinds) = rx::exec(r"^a node of (?:kind|one of the kinds) (.+)$", &part) {
-                                for k in rx::split(r",\s*", g(&kinds, 1)) { let k = k.replace('`', ""); if !self.kind_noun.has(&k) { self.kind_noun.set(&k, noun.clone()); self.nouns.add(&noun); } }
-                                matched = true;
-                            }
-                        }
-                        if matched { continue; }
-                        if let Some(gd) = rx::exec(r"`(\w+)`.* holds of$", c1) { self.noun_guards.set(&noun, g(&gd, 1).to_string()); }
-                    }
-                }
-            }
-        }
+        self.signatures_and_words(&blocks);
         let gs: Vec<(String, Vec<String>)> = self.guard_of.iter().map(|(k, v)| (k.clone(), v.clone())).collect();
         for (n, rels) in gs {
             if !self.noun_guards.has(&n) { let r = rels.iter().find(|r| self.used_here.contains(*r)).unwrap_or(&rels[0]).clone(); self.noun_guards.set(&n, r); }
         }
-        {
-            let head_of = |t: &str| -> String {
-                let t = rx::sub(" if all of:$", &rx::sub(" either:$", t, false, ""), false, "");
-                let first = rx::split(" if | unless |, unless ", &t).into_iter().next().unwrap_or_default();
-                rx::sub("[.;:]$", &first, false, "").trim().to_string()
-            };
-            let (mut subject, mut fenced) = (String::new(), false);
-            for (k, raw_line) in raw.split('\n').enumerate() {
-                let line = raw_line.trim();
-                if raw_line.starts_with("```") { fenced = !fenced; continue; }
-                if fenced || line.is_empty() || line.starts_with('>') || line.starts_with('#') || line.starts_with('|') || rx::test(r"^\d+\. ", line) { continue; }
-                let Some(a) = rx::exec(r#"^(- )?<a id="([\w-]+)"><\/a>(.*)$"#, line) else {
-                    if !line.starts_with("- ") && !rx::test("[.:]$", line) { subject = clean(line); } else if !line.starts_with("- ") { subject = String::new(); }
-                    continue;
-                };
-                let text = clean(g(&a, 3)).trim().to_string();
-                let head = if has(&a, 1) && !subject.is_empty() && rx::test("^[a-z]", &text) { format!("{subject} {text}") } else { text };
-                let id = g(&a, 2);
-                if id.contains('-') && rx::test(r"\b[A-Z]", &rx::sub("^(?:An?|The) ", &head, false, "")) {
-                    self.unparsed.push(format!("HEAD the anchor \"{id}\" names no relation, a name is one word: \"{}\" ({})", id.replace('-', "_"), head_of(&head)));
-                    continue;
-                }
-                self.learn(id, &head_of(&head), k as i64);
-            }
-        }
-        {
-            let lines: Vec<&str> = md.split('\n').collect();
-            let mut at: HashMap<String, i64> = HashMap::new();
-            let mut items: Vec<String> = Vec::new();
-            for (i, b) in blocks.iter().enumerate() {
-                if !(b.ty == Ty::P && b.text.trim() == "Declared as facts:" && blocks.get(i + 1).is_some_and(|n| n.ty == Ty::Ul)) { continue; }
-                let next = &blocks[i + 1];
-                for it in &next.items {
-                    let t = rx::sub(r"\.$", it.text.trim().split(" — ").next().unwrap_or(""), false, "");
-                    if !at.contains_key(&t) {
-                        let from = next.at.unwrap_or(0);
-                        at.insert(t.clone(), lines.iter().enumerate().position(|(k, l)| k >= from && l.contains(t.as_str())).map(|x| x as i64).unwrap_or(-1));
-                    }
-                    items.push(t);
-                }
-            }
-            let items: Vec<String> = items.into_iter().filter(|t| !rx::test(r"^`\w+`$", t) && rx::test(r"\s[A-Z][A-Za-z0-9]*\b", t)).collect();
-            for t in &items { let src = lower1(t); if !self.said_at.contains_key(&src) { self.said_at.insert(src, at[t]); } }
-            let mut decls = Vec::new();
-            for t in &items { if self.match_lit(t, &mut Vec::new(), false).is_none() { decls.push(t.clone()); } }
-            for t in &decls {
-                let name = slug(t);
-                let twin = decls.iter().find(|x| *x != t && slug(x) == name);
-                let held = self.templates.iter().find(|x| x.rel == name);
-                if name.is_empty() { continue; }
-                if let Some(tw) = twin { self.refused_name.insert(t.clone(), format!("its name from its words, {name}, is also the name of \"{tw}\": give one of them an anchor, <a id=\"...\"></a>, to name it")); }
-                else if let Some(h) = held { self.refused_name.insert(t.clone(), format!("its name from its words, {name}, is the relation of \"{}\": give it an anchor of its own, <a id=\"...\"></a>", h.src)); }
-            }
-            for t in &decls { if !self.refused_name.contains_key(t) && !slug(t).is_empty() { self.learn(&slug(t), t, at[t]); } }
-            let words = |t: &str| rx::sub(r"(?:\b(?:an?) [a-z][\w-]*(?: [a-z][\w-]*){0,2} )?\b[A-Z][A-Za-z0-9]*\b", &lower1(t), true, "_");
-            for t in &items {
-                for o in &items {
-                    if o != t && words(o) == words(t) {
-                        let u = format!("DECLARED {t} — it says the words of \"{o}\", their nouns aside, and a row leaves the nouns out, so a row of either would be read as a row of the one: say one of them in other words");
-                        if !self.unparsed.contains(&u) { self.unparsed.push(u); }
-                    }
-                }
-            }
-            let la = &self.learned_at;
-            self.learned.sort_by_key(|t| la[&t.id]);
-            let n = self.templates.len() - self.learned.len();
-            self.templates.truncate(n);
-            self.templates.extend(self.learned.iter().cloned());
-        }
+        self.anchors(raw);
+        self.declared_names(&md, &blocks);
         self.md_lines = md.split('\n').map(str::to_string).collect();
+        self.statements(&blocks);
+        self.output();
+    }
+
+    fn signatures_and_words(&mut self, blocks: &[Block]) {
+        let mut sec = String::new();
+        for b in blocks {
+            if b.ty == Ty::H { sec = b.text.clone(); continue; }
+            if sec == "Signatures" && b.ty == Ty::Ul { self.signatures(&b.items); }
+            if sec == "Words" && b.ty == Ty::Table { for r in &b.rows { self.word(r); } }
+        }
+    }
+
+    fn signatures(&mut self, items: &[Item]) {
+        for it in items {
+            let Some(m) = rx::exec(r"^(.+?\))(?: \((\w+)\))?(?:, in the (\w+))?$", it.text.trim()) else { continue };
+            let m1 = g(&m, 1);
+            let rel = if has(&m, 2) { g(&m, 2).to_string() } else { m1[..m1.find('(').unwrap()].trim().to_string() };
+            if !self.templates.iter().any(|t| t.rel == rel && t.src == m1) { let t = say::parse_sig(&rel, m1, self.nouns.keys()); self.templates.push(t); }
+            let book = if has(&m, 3) { g(&m, 3).to_string() } else { self.default_book.clone() };
+            self.head_book.insert(rel.clone(), book.clone());
+            self.home_book.insert(rel, book);
+        }
+    }
+
+    fn word(&mut self, r: &[String]) {
+        let c0 = r.first().map(String::as_str).unwrap_or("");
+        let c1 = r.get(1).map(String::as_str).unwrap_or("");
+        let noun = rx::sub("^[Aa]n? ", &rx::sub(r#"^<a id="[^"]+"><\/a>"#, c0, false, ""), false, "").trim().to_string();
+        let mut matched = false;
+        for part in rx::split(", or ", c1) {
+            if let Some(set) = rx::exec(r"^a node of (?:kind|one of the kinds) (.+) \(`(\w+)`\)$", &part) {
+                let rel = g(&set, 2).to_string();
+                self.set_rels.insert(rel.clone());
+                if !self.kind_noun.has(&rel) { self.kind_noun.set(&rel, noun.clone()); self.nouns.add(&noun); }
+                for k in rx::split(r",\s*", g(&set, 1)) { self.parsed_facts.push(lit(&rel, vec![A(k.replace('`', ""))])); }
+                self.home_book.insert(rel, "main".into());
+                matched = true;
+                continue;
+            }
+            if let Some(from) = rx::exec(r"^a node of a kind in \[?`(\w+)`", &part) {
+                let rel = g(&from, 1);
+                self.set_rels.insert(rel.into());
+                if !self.kind_noun.has(rel) { self.kind_noun.set(rel, noun.clone()); self.nouns.add(&noun); }
+                matched = true;
+                continue;
+            }
+            if let Some(kinds) = rx::exec(r"^a node of (?:kind|one of the kinds) (.+)$", &part) {
+                for k in rx::split(r",\s*", g(&kinds, 1)) { let k = k.replace('`', ""); if !self.kind_noun.has(&k) { self.kind_noun.set(&k, noun.clone()); self.nouns.add(&noun); } }
+                matched = true;
+            }
+        }
+        if matched { return; }
+        if let Some(gd) = rx::exec(r"`(\w+)`.* holds of$", c1) { self.noun_guards.set(&noun, g(&gd, 1).to_string()); }
+    }
+
+    fn anchors(&mut self, raw: &str) {
+        let (mut subject, mut fenced) = (String::new(), false);
+        for (k, raw_line) in raw.split('\n').enumerate() {
+            let line = raw_line.trim();
+            if raw_line.starts_with("```") { fenced = !fenced; continue; }
+            if fenced || line.is_empty() || line.starts_with('>') || line.starts_with('#') || line.starts_with('|') || rx::test(r"^\d+\. ", line) { continue; }
+            let Some(a) = rx::exec(r#"^(- )?<a id="([\w-]+)"><\/a>(.*)$"#, line) else {
+                if !line.starts_with("- ") && !rx::test("[.:]$", line) { subject = clean(line); } else if !line.starts_with("- ") { subject = String::new(); }
+                continue;
+            };
+            let text = clean(g(&a, 3)).trim().to_string();
+            let head = if has(&a, 1) && !subject.is_empty() && rx::test("^[a-z]", &text) { format!("{subject} {text}") } else { text };
+            let id = g(&a, 2);
+            if id.contains('-') && rx::test(r"\b[A-Z]", &rx::sub("^(?:An?|The) ", &head, false, "")) {
+                self.unparsed.push(format!("HEAD the anchor \"{id}\" names no relation, a name is one word: \"{}\" ({})", id.replace('-', "_"), head_of(&head)));
+                continue;
+            }
+            self.learn(id, &head_of(&head), k as i64);
+        }
+    }
+
+    fn declared_names(&mut self, md: &str, blocks: &[Block]) {
+        let lines: Vec<&str> = md.split('\n').collect();
+        let (at, listed) = declared_listing(blocks, &lines);
+        let items: Vec<String> = listed.into_iter().filter(|t| !rx::test(r"^`\w+`$", t) && rx::test(r"\s[A-Z][A-Za-z0-9]*\b", t)).collect();
+        for t in &items { let src = lower1(t); if !self.said_at.contains_key(&src) { self.said_at.insert(src, at[t]); } }
+        let mut decls = Vec::new();
+        for t in &items { if self.match_lit(t, &mut Vec::new(), false).is_none() { decls.push(t.clone()); } }
+        self.refuse_twins(&decls);
+        for t in &decls { if !self.refused_name.contains_key(t) && !slug(t).is_empty() { self.learn(&slug(t), t, at[t]); } }
+        self.same_words(&items);
+        self.reorder_learned();
+    }
+
+    fn refuse_twins(&mut self, decls: &[String]) {
+        for t in decls {
+            let name = slug(t);
+            let twin = decls.iter().find(|x| *x != t && slug(x) == name);
+            let held = self.templates.iter().find(|x| x.rel == name);
+            if name.is_empty() { continue; }
+            if let Some(tw) = twin { self.refused_name.insert(t.clone(), format!("its name from its words, {name}, is also the name of \"{tw}\": give one of them an anchor, <a id=\"...\"></a>, to name it")); }
+            else if let Some(h) = held { self.refused_name.insert(t.clone(), format!("its name from its words, {name}, is the relation of \"{}\": give it an anchor of its own, <a id=\"...\"></a>", h.src)); }
+        }
+    }
+
+    fn same_words(&mut self, items: &[String]) {
+        for t in items {
+            for o in items {
+                if o != t && word_shape(o) == word_shape(t) {
+                    let u = format!("DECLARED {t} — it says the words of \"{o}\", their nouns aside, and a row leaves the nouns out, so a row of either would be read as a row of the one: say one of them in other words");
+                    if !self.unparsed.contains(&u) { self.unparsed.push(u); }
+                }
+            }
+        }
+    }
+
+    fn reorder_learned(&mut self) {
+        let la = &self.learned_at;
+        self.learned.sort_by_key(|t| la[&t.id]);
+        let n = self.templates.len() - self.learned.len();
+        self.templates.truncate(n);
+        self.templates.extend(self.learned.iter().cloned());
+    }
+
+    fn statements(&mut self, blocks: &[Block]) {
         let mut i = 0;
         let (mut from, mut taken) = (0, false);
         let last = blocks.len().saturating_sub(1);
         while i < blocks.len() {
             if taken { self.spans.push((blocks[from].at.unwrap(), blocks[(i - 1).min(last)].end.unwrap())); }
-            from = i; taken = false;
-            let b = blocks[i].clone();
-            let next = blocks.get(i + 1).cloned();
-            let nty = next.as_ref().map(|n| n.ty);
-            let items: Vec<Item> = next.as_ref().map(|n| n.items.clone()).unwrap_or_default();
+            from = i;
+            let next = blocks.get(i + 1);
             i += 1;
-            if b.ty == Ty::H { continue; }
-            if b.ty == Ty::Ul || b.ty == Ty::Ol { for it in &b.items { self.unparsed.push(format!("LIST {}", it.text.trim())); } continue; }
-            if b.ty == Ty::Table { self.unparsed.push(format!("TABLE {}", b.head.join(" | "))); continue; }
-            if b.ty != Ty::P { continue; }
-            let text = b.text.trim().to_string();
-            if text.starts_with("Kinds without a noun:") || text.starts_with("What this file calls a node") || text.contains("trailing comments") {
-                if nty.is_some_and(|t| t != Ty::P && t != Ty::H) { i += 1; }
-                continue;
-            }
-            taken = true;
-            if let Some(m) = rx::exec(r"^In the (\w+):$", &text) { self.cur_book = g(&m, 1).into(); self.block_set = true; continue; }
-            if self.declaration(&text) || self.dominance(&text) { continue; }
-            if text == "Reads:" && nty == Some(Ty::Ul) {
-                for it in &items {
-                    let Some(im) = rx::exec(r"^from (.+?)(?:, in the (\w+))?:\s*(.*)$", it.text.trim()) else { continue };
-                    let mut names: Vec<String> = if g(&im, 3).is_empty() { vec![] } else {
-                        rx::split(r",\s*", g(&im, 3)).iter().map(|r| rx::replace(r"\[([^\]]*)\]\([^)]*\)", r, true, |c| c[1].to_string()).replace('`', "").trim().to_string()).filter(|x| !x.is_empty()).collect()
-                    };
-                    for sub in &it.sub { if let Some(m) = rx::exec(r#"<a id="(\w+)"><\/a>|`(\w+)`\)?$"#, sub.trim()) { names.push(if has(&m, 1) { g(&m, 1) } else { g(&m, 2) }.to_string()); } }
-                    for name in names { self.imported.insert(name.clone()); if has(&im, 2) { self.home_book.insert(name, g(&im, 2).into()); } }
-                }
-                i += 1;
-                continue;
-            }
-            if text == "Declared as facts:" && nty == Some(Ty::Ul) {
-                let next = next.clone().unwrap();
-                for it in &items {
-                    let t = rx::sub(r"\.$", it.text.trim().split(" — ").next().unwrap_or(""), false, "");
-                    let nm = rx::exec(r"^`(\w+)`$", &t);
-                    let rel = match &nm { Some(nm) => Some(g(nm, 1).to_string()), None => self.match_lit(&t, &mut Vec::new(), false).map(|l| l.rel) };
-                    let again = if nm.is_some() { None } else { self.declared_at(&t, &next) };
-                    if let Some(a) = again { self.unparsed.push(format!("AGAIN {a} {t}")); }
-                    else if let Some(rel) = rel { self.declared.push(rel.clone()); self.home_book.insert(rel, "main".into()); }
-                    else { let why = self.refused_name.get(&t).map(|r| format!(" — {r}")).unwrap_or_default(); self.unparsed.push(format!("DECLARED {t}{why}")); }
-                }
-                i += 1;
-                continue;
-            }
-            let lead = rx::exec(r"^(Initially|In the next tick), ", &text);
-            let tense = lead.as_ref().map(|l| if g(l, 1) == "Initially" { "init".to_string() } else { "next".to_string() });
-            let fact = match &lead { Some(l) => text[g(l, 0).len()..].to_string(), None => text.clone() };
-            if let Some(m) = rx::exec(r"^`(\$?\w+)`(?:, (?:a|an) [\w -]+,)? includes (.*)\.$", &fact) {
-                self.home_book.insert(g(&m, 1).into(), "main".into());
-                for a in rx::split(r",\s*", g(&m, 2)) { let t = self.term(&a, &mut Vec::new()); self.parsed_facts.push(Lit { tense: tense.clone(), ..lit(g(&m, 1), vec![t]) }); }
-                continue;
-            }
-            if let Some(m) = rx::exec(r"^`(\w+)`(?:, (?:a|an) [\w -]+,)? lists:$", &fact) {
-                if nty == Some(Ty::Table) {
-                    self.home_book.insert(g(&m, 1).into(), "main".into());
-                    for r in &next.as_ref().unwrap().rows { let args = r.iter().map(|c| self.term(c, &mut Vec::new())).collect(); self.parsed_facts.push(Lit { tense: tense.clone(), ..lit(g(&m, 1), args) }); }
-                    i += 1;
-                    continue;
-                }
-            }
-            if text.ends_with(" either:") && nty == Some(Ty::Ol) {
-                if twin(&text) || items.iter().any(|it| twin(&it.text) || it.sub.iter().any(|s| twin(s))) {
-                    let texts: Vec<&str> = std::iter::once(text.as_str()).chain(items.iter().flat_map(|it| std::iter::once(it.text.as_str()).chain(it.sub.iter().map(String::as_str)))).collect();
-                    self.both_sides(&texts, |r, side| {
-                        let head = halves(&rx::sub(" either:$", &text, false, ""), side);
-                        for it in &items {
-                            let t = halves(&rx::sub("[;.]$", &it.text, false, ""), side);
-                            if t == "if all of:" { let subs: Vec<String> = it.sub.iter().map(|x| halves(x, side)).collect(); r.sentence(&head, &subs); }
-                            else if t == "always" { r.sentence(&head, &[]); }
-                            else { r.rule_text(&format!("{head} {t}."), None); }
-                        }
-                    });
-                    i += 1;
-                    continue;
-                }
-                let head = rx::sub(" either:$", &text, false, "");
-                for it in &items {
-                    let t = rx::sub("[;.]$", &it.text, false, "");
-                    if !rx::test("^(if |unless |always$)", &t) { self.bad_alternatives.push(format!("{head} … {t}")); }
-                    if t == "if all of:" { self.sentence(&head, &it.sub); }
-                    else if t == "always" { self.sentence(&head, &[]); }
-                    else { self.rule_text(&format!("{head} {t}."), None); }
-                }
-                i += 1;
-                continue;
-            }
-            if text.ends_with(" if all of:") && nty == Some(Ty::Ul) {
-                let xs: Vec<String> = items.iter().map(|x| x.text.clone()).collect();
-                self.rule_text(&text, Some(&xs));
-                i += 1;
-                continue;
-            }
-            if text.starts_with("Phrases this file defines") && nty == Some(Ty::Ul) {
-                for it in &items { self.rule_text(&it.text, if it.sub.is_empty() { None } else { Some(&it.sub) }); }
-                i += 1;
-                continue;
-            }
-            if text.ends_with(':') && nty == Some(Ty::Ul) {
-                let next = next.clone().unwrap();
-                for it in &items {
-                    let t = rx::sub(r"\.$", it.text.trim(), false, "");
-                    self.bad_term = None;
-                    let l = self.match_lit(&t, &mut Vec::new(), false);
-                    let again = if l.as_ref().is_some_and(|l| l.args.iter().all(|a| matches!(a, V(_)))) { self.declared_at(&t, &next) } else { None };
-                    match l {
-                        Some(l) if self.bad_term.is_none() && l.args.iter().all(|a| !matches!(a, V(_))) => {
-                            if !self.home_book.contains_key(&l.rel) { self.home_book.insert(l.rel.clone(), "main".into()); }
-                            self.parsed_facts.push(l);
-                        }
-                        _ => self.unparsed.push(match again { Some(a) => format!("AGAIN {a} {t}"), None => format!("FACT {t}") }),
-                    }
-                }
-                i += 1;
-                continue;
-            }
-            if !rx::test("[.:]$", &text) && nty == Some(Ty::Ul) {
-                for it in &items {
-                    let t = format!("{text} {}", it.text);
-                    if it.text.ends_with(" if all of:") { self.rule_text(&t, Some(&it.sub)); } else { self.rule_text(&t, None); }
-                }
-                i += 1;
-                continue;
-            }
-            if text.ends_with('.') { self.rule_text(&text, None); } else { taken = false; }
+            let (is_taken, skip) = self.block(&blocks[i - 1], next);
+            taken = is_taken;
+            i += skip;
         }
         if taken { self.spans.push((blocks[from].at.unwrap(), blocks[(i - 1).min(last)].end.unwrap())); }
-        self.output();
+    }
+
+    /// Reads one block; `true` when it is a statement (its span is kept), and the blocks it took after it.
+    fn block(&mut self, b: &Block, next: Option<&Block>) -> (bool, usize) {
+        if b.ty == Ty::H { return (false, 0); }
+        if b.ty == Ty::Ul || b.ty == Ty::Ol { for it in &b.items { self.unparsed.push(format!("LIST {}", it.text.trim())); } return (false, 0); }
+        if b.ty == Ty::Table { self.unparsed.push(format!("TABLE {}", b.head.join(" | "))); return (false, 0); }
+        if b.ty != Ty::P { return (false, 0); }
+        let text = b.text.trim().to_string();
+        if text.starts_with("Kinds without a noun:") || text.starts_with("What this file calls a node") || text.contains("trailing comments") {
+            return (false, usize::from(next.is_some_and(|n| n.ty != Ty::P && n.ty != Ty::H)));
+        }
+        match self.statement(&text, next) { Some(skip) => (true, skip), None => (false, 0) }
+    }
+
+    /// The statement `text` says, read by its form; `Some` with the blocks it took after it, `None` when it is not a statement.
+    fn statement(&mut self, text: &str, next: Option<&Block>) -> Option<usize> {
+        let nty = next.map(|n| n.ty);
+        if let Some(m) = rx::exec(r"^In the (\w+):$", text) { self.cur_book = g(&m, 1).into(); self.block_set = true; return Some(0); }
+        if self.declaration(text) || self.dominance(text) { return Some(0); }
+        if text == "Reads:" && nty == Some(Ty::Ul) { self.reads_list(&next.unwrap().items); return Some(1); }
+        if text == "Declared as facts:" && nty == Some(Ty::Ul) { self.declared_facts(next.unwrap()); return Some(1); }
+        if let Some(skip) = self.fact_statement(text, next) { return Some(skip); }
+        if text.ends_with(" either:") && nty == Some(Ty::Ol) { self.either(text, next.unwrap()); return Some(1); }
+        if text.ends_with(" if all of:") && nty == Some(Ty::Ul) {
+            let xs: Vec<String> = next.unwrap().items.iter().map(|x| x.text.clone()).collect();
+            self.rule_text(text, Some(&xs));
+            return Some(1);
+        }
+        if text.starts_with("Phrases this file defines") && nty == Some(Ty::Ul) {
+            for it in &next.unwrap().items { self.rule_text(&it.text, if it.sub.is_empty() { None } else { Some(&it.sub) }); }
+            return Some(1);
+        }
+        if text.ends_with(':') && nty == Some(Ty::Ul) { self.colon_facts(next.unwrap()); return Some(1); }
+        if !rx::test("[.:]$", text) && nty == Some(Ty::Ul) {
+            for it in &next.unwrap().items {
+                let t = format!("{text} {}", it.text);
+                if it.text.ends_with(" if all of:") { self.rule_text(&t, Some(&it.sub)); } else { self.rule_text(&t, None); }
+            }
+            return Some(1);
+        }
+        if text.ends_with('.') { self.rule_text(text, None); return Some(0); }
+        None
+    }
+
+    fn fact_statement(&mut self, text: &str, next: Option<&Block>) -> Option<usize> {
+        let lead = rx::exec(r"^(Initially|In the next tick), ", text);
+        let tense = lead.as_ref().map(|l| if g(l, 1) == "Initially" { "init".to_string() } else { "next".to_string() });
+        let fact = match &lead { Some(l) => text[g(l, 0).len()..].to_string(), None => text.to_string() };
+        if let Some(m) = rx::exec(r"^`(\$?\w+)`(?:, (?:a|an) [\w -]+,)? includes (.*)\.$", &fact) {
+            self.home_book.insert(g(&m, 1).into(), "main".into());
+            for a in rx::split(r",\s*", g(&m, 2)) { let t = self.term(&a, &mut Vec::new()); self.parsed_facts.push(Lit { tense: tense.clone(), ..lit(g(&m, 1), vec![t]) }); }
+            return Some(0);
+        }
+        if let Some(m) = rx::exec(r"^`(\w+)`(?:, (?:a|an) [\w -]+,)? lists:$", &fact) {
+            if let Some(n) = next.filter(|n| n.ty == Ty::Table) {
+                self.home_book.insert(g(&m, 1).into(), "main".into());
+                for r in &n.rows { let args = r.iter().map(|c| self.term(c, &mut Vec::new())).collect(); self.parsed_facts.push(Lit { tense: tense.clone(), ..lit(g(&m, 1), args) }); }
+                return Some(1);
+            }
+        }
+        None
+    }
+
+    fn reads_list(&mut self, items: &[Item]) {
+        for it in items {
+            let Some(im) = rx::exec(r"^from (.+?)(?:, in the (\w+))?:\s*(.*)$", it.text.trim()) else { continue };
+            let mut names: Vec<String> = if g(&im, 3).is_empty() { vec![] } else {
+                rx::split(r",\s*", g(&im, 3)).iter().map(|r| rx::replace(r"\[([^\]]*)\]\([^)]*\)", r, true, |c| c[1].to_string()).replace('`', "").trim().to_string()).filter(|x| !x.is_empty()).collect()
+            };
+            for sub in &it.sub { if let Some(m) = rx::exec(r#"<a id="(\w+)"><\/a>|`(\w+)`\)?$"#, sub.trim()) { names.push(if has(&m, 1) { g(&m, 1) } else { g(&m, 2) }.to_string()); } }
+            for name in names { self.imported.insert(name.clone()); if has(&im, 2) { self.home_book.insert(name, g(&im, 2).into()); } }
+        }
+    }
+
+    fn declared_facts(&mut self, next: &Block) {
+        for it in &next.items {
+            let t = rx::sub(r"\.$", it.text.trim().split(" — ").next().unwrap_or(""), false, "");
+            let nm = rx::exec(r"^`(\w+)`$", &t);
+            let rel = match &nm { Some(nm) => Some(g(nm, 1).to_string()), None => self.match_lit(&t, &mut Vec::new(), false).map(|l| l.rel) };
+            let again = if nm.is_some() { None } else { self.declared_at(&t, next) };
+            if let Some(a) = again { self.unparsed.push(format!("AGAIN {a} {t}")); }
+            else if let Some(rel) = rel { self.declared.push(rel.clone()); self.home_book.insert(rel, "main".into()); }
+            else { let why = self.refused_name.get(&t).map(|r| format!(" — {r}")).unwrap_or_default(); self.unparsed.push(format!("DECLARED {t}{why}")); }
+        }
+    }
+
+    fn either(&mut self, text: &str, block: &Block) {
+        let items = &block.items;
+        if twin(text) || items.iter().any(|it| twin(&it.text) || it.sub.iter().any(|s| twin(s))) {
+            let texts: Vec<&str> = std::iter::once(text).chain(items.iter().flat_map(|it| std::iter::once(it.text.as_str()).chain(it.sub.iter().map(String::as_str)))).collect();
+            self.both_sides(&texts, |r, side| {
+                let head = halves(&rx::sub(" either:$", text, false, ""), side);
+                for it in items {
+                    let t = halves(&rx::sub("[;.]$", &it.text, false, ""), side);
+                    if t == "if all of:" { let subs: Vec<String> = it.sub.iter().map(|x| halves(x, side)).collect(); r.sentence(&head, &subs); }
+                    else if t == "always" { r.sentence(&head, &[]); }
+                    else { r.rule_text(&format!("{head} {t}."), None); }
+                }
+            });
+            return;
+        }
+        let head = rx::sub(" either:$", text, false, "");
+        for it in items {
+            let t = rx::sub("[;.]$", &it.text, false, "");
+            if !rx::test("^(if |unless |always$)", &t) { self.bad_alternatives.push(format!("{head} … {t}")); }
+            if t == "if all of:" { self.sentence(&head, &it.sub); }
+            else if t == "always" { self.sentence(&head, &[]); }
+            else { self.rule_text(&format!("{head} {t}."), None); }
+        }
+    }
+
+    fn colon_facts(&mut self, next: &Block) {
+        for it in &next.items {
+            let t = rx::sub(r"\.$", it.text.trim(), false, "");
+            self.bad_term = None;
+            let l = self.match_lit(&t, &mut Vec::new(), false);
+            let again = if l.as_ref().is_some_and(|l| l.args.iter().all(|a| matches!(a, V(_)))) { self.declared_at(&t, next) } else { None };
+            match l {
+                Some(l) if self.bad_term.is_none() && l.args.iter().all(|a| !matches!(a, V(_))) => {
+                    if !self.home_book.contains_key(&l.rel) { self.home_book.insert(l.rel.clone(), "main".into()); }
+                    self.parsed_facts.push(l);
+                }
+                _ => self.unparsed.push(match again { Some(a) => format!("AGAIN {a} {t}"), None => format!("FACT {t}") }),
+            }
+        }
     }
 
     fn expand(&mut self, rule: &Rule) -> Vec<Clause> {

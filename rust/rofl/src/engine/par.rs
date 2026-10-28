@@ -326,6 +326,13 @@ struct Level {
     probes: u64,
 }
 
+fn front_news<'a>(front_at: Option<(usize, &'a FxSet<FactId>)>, at: usize, neg: bool) -> Option<(&'a FxSet<FactId>, Vec<FactId>)> {
+    match front_at {
+        Some((p, keys)) if p == at && !neg => Some((keys, keys.iter().copied().collect())),
+        _ => None,
+    }
+}
+
 fn frs_off(l: &Lit, tick: u32) -> bool {
     l.temporal == Temporal::Init && tick != 0
 }
@@ -409,10 +416,7 @@ impl Eval {
     pub(super) fn par_level(&mut self, b: &BodyElem, i: usize, acc: &[Sol], depth: usize, front_at: Option<(usize, &FxSet<FactId>)>, rule_id: Option<Sym>) -> Option<Result<Vec<Sol>, Halt>> {
         let (l, neg) = self.frozen_lit(b, depth, rule_id)?;
         let off = l.temporal == Temporal::Init && self.store.tick != 0;
-        let news: Option<(&FxSet<FactId>, Vec<FactId>)> = match front_at {
-            Some((p, keys)) if p == i && !neg => Some((keys, keys.iter().copied().collect())),
-            _ => None,
-        };
+        let news = front_news(front_at, i, neg);
         if !off {
             self.par_prepare(l, acc, news.as_ref().map_or(usize::MAX, |(keys, _)| keys.len().saturating_sub(1)));
         }
@@ -565,10 +569,7 @@ impl Eval {
             .iter()
             .enumerate()
             .map(|(k, &(l, neg))| {
-                let news = match front_at {
-                    Some((p, keys)) if p == i + k && !neg => Some((keys, keys.iter().copied().collect())),
-                    _ => None,
-                };
+                let news = front_news(front_at, i + k, neg);
                 Frozen { store: &self.store, h: &self.h, l, neg, news, off: frs_off(l, tick), nix: NewsIx::default() }
             })
             .collect();
