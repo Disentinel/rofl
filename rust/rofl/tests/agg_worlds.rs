@@ -294,7 +294,7 @@ fn check_world(w: &World) -> Vec<String> {
         if state(&kept) != first {
             bad.push(format!("{}: kept and opened, it is another world", w.name));
         }
-        let rels: Vec<String> = s.eval.store.lat_regs.iter().map(|r| r.rel).chain(s.eval.subs.keys().copied()).map(|r| s.eval.h.name(r).to_string()).collect();
+        let rels: Vec<String> = s.eval.store.lat_regs.iter().map(|r| r.rel).chain(s.eval.lat.subs.keys().copied()).map(|r| s.eval.h.name(r).to_string()).collect();
         for rel in rels {
             for k in s.fact_keys(Some(&rel)).into_iter().take(40) {
                 if s.why_all(&k) != kept.why_all(&k) {

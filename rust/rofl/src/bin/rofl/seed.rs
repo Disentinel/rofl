@@ -266,7 +266,7 @@ pub fn main(argv: Vec<String>) {
         // corpus grows" has an answer. Sorted, top twenty; the tail is long
         // and flat and printing it would bury the head.
         let mut by: Vec<(rofl::term::Sym, u64)> =
-            l.eval.argm_by_rule.iter().map(|(k, v)| (*k, *v)).collect();
+            l.eval.cost.argm_by_rule.iter().map(|(k, v)| (*k, *v)).collect();
         by.sort_by(|a, b| b.1.cmp(&a.1));
         for (rid, n) in by.iter().take(20) {
             // The head relation beside the id, because a rule id is a hash and
@@ -283,7 +283,7 @@ pub fn main(argv: Vec<String>) {
         }
         // THE SAME TABLE IN TIME, and what firing the rules of a round side by
         // side could save: every round waits for its longest rule.
-        let mut by: Vec<(rofl::term::Sym, u64)> = l.eval.ns_by_rule.iter().map(|(k, v)| (*k, *v)).collect();
+        let mut by: Vec<(rofl::term::Sym, u64)> = l.eval.cost.ns_by_rule.iter().map(|(k, v)| (*k, *v)).collect();
         by.sort_by(|a, b| b.1.cmp(&a.1));
         for (rid, ns) in by.iter().take(20) {
             let head = l.eval.rules.iter().find(|r| r.id == *rid).map(|r| l.eval.h.name(r.clause.head.rel).to_string()).unwrap_or_else(|| "?".to_string());
@@ -295,7 +295,7 @@ pub fn main(argv: Vec<String>) {
         }
         let (sum, mx): (u64, u64) = l.eval.rounds.iter().fold((0, 0), |(s, m), (a, b)| (s + a, m + b));
         let bound = |k: u64| l.eval.rounds.iter().map(|(s, m)| (*m).max(s / k)).sum::<u64>() as f64 / 1e6;
-        for c in &l.eval.closures {
+        for c in &l.eval.clo.closures {
             eprintln!("closure\t{}\t{}\t{}", l.eval.h.name(c.rel), l.eval.h.name(c.edge), if c.edge_fwd { "fwd" } else { "rev" });
         }
         for (rel, on) in l.eval.vclosure_info() {
@@ -307,8 +307,8 @@ pub fn main(argv: Vec<String>) {
         eprintln!("vclosure_builds\t{}", l.eval.vc.builds);
         eprintln!("vclosure_rows_read\t{}", l.eval.vc.rows_read);
         eprintln!("virtual_rows\t{}", l.eval.store.virtual_rows());
-        eprintln!("closure_rows\t{}", l.eval.closure_rows);
-        eprintln!("closure_runs\t{}", l.eval.closure_runs);
+        eprintln!("closure_rows\t{}", l.eval.clo.closure_rows);
+        eprintln!("closure_runs\t{}", l.eval.clo.closure_runs);
         eprintln!("rounds\t{}", l.eval.rounds.len());
         eprintln!("joinplan_stats_ms\t{:.1}", l.eval.add.delta_ns as f64 / 1e6);
         eprintln!("rules_ms\t{:.1}", sum as f64 / 1e6);

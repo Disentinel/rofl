@@ -266,7 +266,7 @@ impl Eval {
             })
             .ok_or("an aggregate inside an aggregate")?;
         let plan = self.agg_plans.get(&(rule, at)).cloned().ok_or("the aggregate has no plan")?;
-        if er.clause.head.temporal == Temporal::Next && !self.lattices.is_empty() {
+        if er.clause.head.temporal == Temporal::Next && !self.lat.lattices.is_empty() {
             return Err("a conclusion @next in a world with a lattice");
         }
         // an aggregate that reads what another of its rule binds (a result, a
@@ -319,7 +319,7 @@ impl Eval {
         let mut taken: HashSet<Sym> = HashSet::new();
         let mut reset: HashSet<Sym> = HashSet::new();
         let mut staged: Vec<Rc<ERule>> = Vec::new();
-        let staging = self.lattices.is_empty();
+        let staging = self.lat.lattices.is_empty();
         loop {
             let mut grew = false;
             for r in &self.rules {
@@ -328,7 +328,7 @@ impl Eval {
                 }
                 let (mut reads, mut inner) = (false, false);
                 // a counting tag's derivation reads the retracted fact outside an aggregate, directly (it is what the sum counts), and so does a rule into a lattice (its firing is the contribution): the path's own
-                let counts = self.tags.count_of.contains_key(&r.clause.head.rel) || self.lattices.contains_key(&r.clause.head.rel);
+                let counts = self.tags.count_of.contains_key(&r.clause.head.rel) || self.lat.lattices.contains_key(&r.clause.head.rel);
                 for b in &r.clause.body {
                     walk(b, false, &mut |l, neg, deep| {
                         if seen.contains(&l.rel) {
@@ -366,7 +366,7 @@ impl Eval {
                     taken.insert(r.id);
                     continue;
                 }
-                if self.lattices.contains_key(&head) || self.tags.count_of.contains_key(&head) || self.v.is_reserved(head) {
+                if self.lat.lattices.contains_key(&head) || self.tags.count_of.contains_key(&head) || self.v.is_reserved(head) {
                     return Err("a lattice, a tag or a ledger is concluded from what rests on the fact");
                 }
                 // a threshold whose outer premise changed holds cells a plain reader would keep
@@ -399,7 +399,7 @@ impl Eval {
             }
             rules.push(r.clone());
         }
-        if self.subs.values().any(|x| x.reads.iter().any(|b| seen.contains(b))) {
+        if self.lat.subs.values().any(|x| x.reads.iter().any(|b| seen.contains(b))) {
             return Err("a dominance rule reads what rests on the fact");
         }
         Ok(Readers { rels, rules, reset, staged })
@@ -439,9 +439,9 @@ impl Eval {
         let n = self.kill_cells(&cells);
         self.thr.open.retain(|(c, _)| !self.store.cell_dead(*c));
         self.thr.acc.retain(|(r, _, _), _| !reset.contains(r));
-        self.agg_memo.retain(|(r, _, _), _| !reset.contains(r));
-        self.reach_memo.retain(|(r, _, _), _| !reset.contains(r));
-        self.agg_opened.retain(|(r, _, _)| !reset.contains(r));
+        self.cells.agg_memo.retain(|(r, _, _), _| !reset.contains(r));
+        self.cells.reach_memo.retain(|(r, _, _), _| !reset.contains(r));
+        self.cells.agg_opened.retain(|(r, _, _)| !reset.contains(r));
         self.hol_shared.retain(|(r, _, _), _| !reset.contains(r));
         self.height_memo.clear();
         n
@@ -532,7 +532,7 @@ impl Eval {
                         continue;
                     }
                     let rec = self.store.rec(*x);
-                    if !rec.base() && (self.tags.count_rel.values().any(|r| *r == rec.rel) || self.lattices.contains_key(&rec.rel)) && !rels.contains(&rec.rel) {
+                    if !rec.base() && (self.tags.count_rel.values().any(|r| *r == rec.rel) || self.lat.lattices.contains_key(&rec.rel)) && !rels.contains(&rec.rel) {
                         continue;
                     }
                     if rec.base() || !rels.contains(&rec.rel) {
@@ -615,10 +615,10 @@ impl Eval {
         cells.sort_unstable();
         cells.dedup();
         // a lattice fact (a join's contribution, a value no fact holds) that rests on the fact
-        let lattice_hit = !self.lattices.is_empty()
+        let lattice_hit = !self.lat.lattices.is_empty()
             && (self.store.citers_of(&HashSet::from([f])).into_iter().any(|x| {
                 let rel = self.store.rec(x).rel;
-                self.lattices.contains_key(&rel) || self.join_of.contains_key(&rel)
+                self.lat.lattices.contains_key(&rel) || self.lat.join_of.contains_key(&rel)
             }) || self.lat.sub_prems.values().any(|fs| fs.iter().any(|ps| ps.contains(&PremRef::Fact(f)))));
         if lattice_hit {
             if !cells.is_empty() || !citing.is_empty() {
@@ -663,7 +663,7 @@ impl Eval {
                 break rd;
             }
             if call {
-                if !self.lattices.is_empty() {
+                if !self.lat.lattices.is_empty() {
                     return Err("a world with a lattice holds a relation answered on demand");
                 }
                 called = true;
@@ -883,10 +883,10 @@ impl Eval {
                     continue;
                 }
                 let rel = self.store.rec(x).rel;
-                if self.join_of.contains_key(&rel) {
+                if self.lat.join_of.contains_key(&rel) {
                     return Err(JOIN);
                 }
-                match self.lattices.get(&rel) {
+                match self.lat.lattices.get(&rel) {
                     Some((_, op)) if matches!(op.class(), Class::IdempotentOrder | Class::PartialOrder) => {}
                     Some(_) => return Err(JOIN),
                     // a fact of a plain rule: taken out below, with what rests on it
@@ -915,7 +915,7 @@ impl Eval {
             }
             for x in &added {
                 let rec = self.store.rec(*x);
-                if let Some(sub) = self.subs.get(&rec.rel) {
+                if let Some(sub) = self.lat.subs.get(&rec.rel) {
                     let ck: LatKey = (rec.rel, rec.persp, self.store.args(*x)[..sub.keylen].into());
                     if !keys.contains(&ck) {
                         keys.push(ck);
@@ -960,11 +960,11 @@ impl Eval {
             self.consumer_facts(&seeds, &forced, &crels, &stop, &reset)?
         };
         let direct: Vec<FactId> = self.store.citers_of(&HashSet::from([f]));
-        if direct.iter().any(|x| self.store.alive(*x) && !inside.contains(x) && !consumers.contains(x) && !self.lattices.contains_key(&self.store.rec(*x).rel)) {
+        if direct.iter().any(|x| self.store.alive(*x) && !inside.contains(x) && !consumers.contains(x) && !self.lat.lattices.contains_key(&self.store.rec(*x).rel)) {
             return Err("a fact outside the lattice rests on a lattice fact");
         }
         let rel_f = self.store.rec(f).rel;
-        if self.subs.values().any(|x| x.reads.contains(&rel_f)) {
+        if self.lat.subs.values().any(|x| x.reads.contains(&rel_f)) {
             return Err("a dominance rule reads the fact");
         }
         let late = self.answer.late.clone();
@@ -973,7 +973,7 @@ impl Eval {
             if !rels.contains(&r.clause.head.rel) {
                 continue;
             }
-            if self.subs.get(&r.clause.head.rel).is_some_and(|x| !x.reads.is_empty()) {
+            if self.lat.subs.get(&r.clause.head.rel).is_some_and(|x| !x.reads.is_empty()) {
                 return Err("a subsumptive relation is compared by what rules derive, closed before its values are");
             }
             if r.has_neg || r.has_agg || r.has_thr || !r.lattice_outer.is_empty() || r.clause.head.temporal == Temporal::Next || late.contains(&r.id) || self.shrug_readers.contains(&r.id) || !r.safe {
@@ -1109,7 +1109,7 @@ impl Eval {
         }
         // the correlation's cells, in the order a seal lists them
         let mk = (rule, at, corr.clone().into_boxed_slice());
-        let mut cs: Vec<CellId> = self.agg_memo.get(&mk).map(|v| v.to_vec()).unwrap_or_default();
+        let mut cs: Vec<CellId> = self.cells.agg_memo.get(&mk).map(|v| v.to_vec()).unwrap_or_default();
         cs.retain(|x| *x != old);
         cs.extend(new.iter().copied());
         let mut keyed: Vec<(String, CellId)> = cs
@@ -1122,7 +1122,7 @@ impl Eval {
             .collect();
         keyed.sort_by(|x, y| cmp_js(&x.0, &y.0));
         brk!("retract_memo_stale" => { let _ = (&mk, &keyed); }; if !threshold {
-            self.agg_memo.insert(mk, keyed.into_iter().map(|(_, c)| c).collect::<Vec<_>>().into());
+            self.cells.agg_memo.insert(mk, keyed.into_iter().map(|(_, c)| c).collect::<Vec<_>>().into());
         });
         // what read the cell reads it again, for this key alone
         if !new.is_empty() && er.clause.head.temporal != Temporal::Next && brk!("retract_no_refire" => false; true) {

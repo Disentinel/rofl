@@ -63,7 +63,7 @@ impl Eval {
     /// cells) would spend them twice, and one larger than the steps given
     /// would never end. That refused step is given back.
     pub(super) fn solved(&mut self, r: &Rc<ERule>, sols: Result<Vec<Sol>, Halt>, before: i64) -> Result<Vec<Sol>, Halt> {
-        if let (Err(Halt::Budget("budget_exhausted", _)), Some(c)) = (&sols, self.cutting.as_mut()) {
+        if let (Err(Halt::Budget("budget_exhausted", _)), Some(c)) = (&sols, self.wall.cutting.as_mut()) {
             if c.fl.is_none() && !r.has_agg && self.steps == before + 1 {
                 c.fl = Some(InFlight::Refire);
                 self.steps = before;
@@ -90,14 +90,14 @@ impl Eval {
                 self.disk_held -= held(&sol);
             }
             if stale
-                && !self.lattices.is_empty()
+                && !self.lat.lattices.is_empty()
                 && brk!("lattice_stale_solution" => false; sol.prems.iter().any(|p| matches!(p, PremRef::Fact(f) if !self.store.alive(*f))))
             {
                 continue;
             }
             if let Err(e) = self.conclude(r, sol, &mut out) {
-                let tail = self.cut_tail.take();
-                if let (Halt::Budget("budget_exhausted", _), Some(c)) = (&e, self.cutting.as_mut()) {
+                let tail = self.wall.cut_tail.take();
+                if let (Halt::Budget("budget_exhausted", _), Some(c)) = (&e, self.wall.cutting.as_mut()) {
                     if c.fl.is_none() {
                         c.fl = Some(InFlight::Rest { sols: it.collect(), out, tail });
                     }
@@ -141,7 +141,7 @@ impl Eval {
             None => fire(self),
         };
         if f.is_err() {
-            if let Some(c) = self.cutting.as_mut() {
+            if let Some(c) = self.wall.cutting.as_mut() {
                 c.pos.get_or_insert(at);
             }
         }
@@ -149,7 +149,7 @@ impl Eval {
     }
 
     fn cut_rest(&mut self, sols: Vec<Sol>, out: Front, tail: Option<Tail>, e: Halt) -> Halt {
-        if let Some(c) = self.cutting.as_mut() {
+        if let Some(c) = self.wall.cutting.as_mut() {
             if c.fl.is_none() {
                 c.fl = Some(InFlight::Rest { sols, out, tail });
             }
@@ -159,26 +159,26 @@ impl Eval {
 
     /// A program whose every wall in the plain path can be resumed from.
     pub(super) fn resumable(&self) -> bool {
-        self.lattices.is_empty()
+        self.lat.lattices.is_empty()
             && !self.well_founded
             && !self.naive
             && self.shrug_readers.is_empty()
             && self.ds.comps.is_empty()
-            && self.narrowing.is_none()
+            && self.lat.narrowing.is_none()
             && self.rules.iter().all(|r| !r.has_thr)
     }
 
     /// The cut gathered as the wall unwound, kept if it is whole.
     pub(super) fn keep_cut(&mut self) {
-        let c = self.cutting.take();
-        self.cut = c.filter(|c| self.resumable() && c.phase.is_some() && c.fl.is_some() && c.at.is_some());
+        let c = self.wall.cutting.take();
+        self.wall.cut = c.filter(|c| self.resumable() && c.phase.is_some() && c.fl.is_some() && c.at.is_some());
     }
 
     /// Run on from where a step wall stopped the last evaluation, with `more`
     /// steps; a world with no cut to go on from is evaluated again whole
     /// under the steps spent and `more`. True when it went on.
     pub fn resume(&mut self, more: i64) -> Result<(Outcome, bool), Halt> {
-        let cut = self.cut.take().filter(|_| brk!("disk_resume_from_scratch" => !self.disk_cut(); true)).filter(|c| {
+        let cut = self.wall.cut.take().filter(|_| brk!("disk_resume_from_scratch" => !self.disk_cut(); true)).filter(|c| {
             !self.store.dirty && self.store.partial_eval && c.facts == self.store.len_ids() as usize && c.tick == self.store.tick
         });
         let Some(cut) = cut else {
@@ -198,13 +198,13 @@ impl Eval {
         }
         let shrugs = self.store.rel_all(&self.h, self.v.shrug);
         self.store.remove_many(&shrugs);
-        self.wall_spent.set(None);
+        self.wall.spent.set(None);
         self.store.vlisted = false;
         self.budget = self.steps + more;
         self.disk_held = 0;
-        self.resume_at = Some(cut);
+        self.wall.resume_at = Some(cut);
         let out = self.run_pass_from();
-        self.resume_at = None;
+        self.wall.resume_at = None;
         Ok((out?, true))
     }
 }
@@ -251,7 +251,7 @@ impl Eval {
     /// The cut a step wall left, and what the evaluation it stopped had counted, as a volume keeps them: so a
     /// process can go on from where another stopped (`crate::volume`).
     pub(crate) fn write_cut(&self, w: &mut VolW) {
-        let Some(c) = self.cut.as_ref().filter(|_| self.resumable()) else {
+        let Some(c) = self.wall.cut.as_ref().filter(|_| self.resumable()) else {
             w.u32(0);
             return;
         };
@@ -305,7 +305,7 @@ impl Eval {
                 }
             }
         }
-        for x in [self.steps, self.rows, self.peak_rows, self.carry_wall.0, self.carry_wall.1, self.carry_steps, self.carry_rows] {
+        for x in [self.steps, self.rows, self.peak_rows, self.wfs.carry_wall.0, self.wfs.carry_wall.1, self.wfs.carry_steps, self.wfs.carry_rows] {
             w.u64(x as u64);
         }
         w.arena(&self.active.iter().map(|r| r.id).collect::<Vec<Sym>>());
@@ -354,8 +354,8 @@ impl Eval {
         };
         let [steps, rows, peak, wall_steps, wall_space, carry_steps, carry_rows] = [(); 7].map(|_| r.u64().map(|x| x as i64));
         (self.steps, self.rows, self.peak_rows) = (steps?, rows?, peak?);
-        self.carry_wall = (wall_steps?, wall_space?);
-        (self.carry_steps, self.carry_rows) = (carry_steps?, carry_rows?);
+        self.wfs.carry_wall = (wall_steps?, wall_space?);
+        (self.wfs.carry_steps, self.wfs.carry_rows) = (carry_steps?, carry_rows?);
         let active: HashSet<Sym> = r.arena::<Sym>()?.iter().copied().collect();
         self.active = self.rules.iter().filter(|r| active.contains(&r.id)).cloned().collect();
         self.active.sort_by(|a, b| cmp_js(&a.canon, &b.canon));
@@ -364,7 +364,7 @@ impl Eval {
         self.closures_engage();
         // the cells sealed before the cut are found again by correlation, as the evaluation that sealed them did
         self.restore_cells();
-        self.cut = Some(Box::new(c));
+        self.wall.cut = Some(Box::new(c));
         Ok(())
     }
 }

@@ -783,13 +783,13 @@ impl Session {
     /// The world evaluated to the level `wall` and stopped before the next (`None`: whole); `evaluate_on` goes on, and
     /// `admit` takes facts of the level it stopped after.
     pub fn evaluate_to(&mut self, wall: Option<i64>) -> Result<Evaluated, Halt> {
-        self.eval.level_wall = wall;
+        self.eval.wall.level_wall = wall;
         let r = self.eval.run();
         self.evaluated(r)
     }
 
     pub fn evaluate_on(&mut self, wall: Option<i64>) -> Result<Evaluated, Halt> {
-        self.eval.level_wall = wall;
+        self.eval.wall.level_wall = wall;
         let r = self.eval.run_on();
         self.evaluated(r)
     }
@@ -2015,12 +2015,12 @@ impl Session {
         // a plain program is evaluated again by the aggregate evaluator, whose
         // planner and explanations the reference answers these with
         if self.eval.plain {
-            self.eval.agg_forced = true;
+            self.eval.cells.agg_forced = true;
             self.eval.reprepare();
             self.eval.store.dirty = true;
             let r = self.eval.ensure();
             let r = r.map_err(|h| describe(&h)).and_then(|_| self.answer_explain_requests());
-            self.eval.agg_forced = false;
+            self.eval.cells.agg_forced = false;
             self.eval.reprepare();
             self.eval.store.dirty = true;
             return r;

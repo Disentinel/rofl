@@ -108,7 +108,7 @@ impl Eval {
 
     pub(super) fn delta_pick(&mut self, r: &Rc<ERule>, at: Option<usize>, n: usize) -> Option<Rc<DeltaPlan>> {
         if brk!("delta_first_off" => true; false)
-            || brk!("delta_first_spread" => false; !self.lat_spread.is_empty())
+            || brk!("delta_first_spread" => false; !self.lat.spread.is_empty())
         {
             return None;
         }
@@ -150,11 +150,11 @@ impl Eval {
 
     fn delta_eligible(&self, r: &Rc<ERule>) -> bool {
         !self.naive
-            && self.lattices.is_empty()
+            && self.lat.lattices.is_empty()
             && !r.has_agg
             && !r.has_thr
             && !r.has_demand_prem
-            && !self.closure_of.contains_key(&r.id)
+            && !self.clo.closure_of.contains_key(&r.id)
             && (r.clause.head.temporal != Temporal::Next || self.store.unordered)
             && r.plan.len() >= 2
             && r.plan.iter().all(|b| match b {
@@ -489,7 +489,7 @@ impl Eval {
             e.peak_rows = peak;
             e.fire_rule_from(r, Subst::new(), keys.map(|k| (p.perm[0], k)))
         };
-        let (peak, undecided) = (self.peak_rows, self.lat_undecided.len());
+        let (peak, undecided) = (self.peak_rows, self.lat.undecided.len());
         let outer = self.cur_rule.replace(r.id);
         let was_firing = std::mem::replace(&mut self.firing, true);
         self.plan_trial = true;
@@ -499,15 +499,15 @@ impl Eval {
         self.firing = was_firing;
         self.cur_rule = outer;
         // a negation records the position it was undecided at; none is while no unknown spreads
-        debug_assert_eq!(self.lat_undecided.len(), undecided);
+        debug_assert_eq!(self.lat.undecided.len(), undecided);
         let sols = match sols {
             Err(Halt::Overrun) => return written(self, peak),
             s => self.solved(r, s, before)?,
         };
         let n = sols.len() as i64;
-        *self.fires_by_rule.entry(r.id).or_insert(0) += 1;
-        *self.delta_by_rule.entry(r.id).or_insert(0) += 1;
-        *self.sols_by_rule.entry(r.id).or_insert(0) += n as u64;
+        *self.cost.fires_by_rule.entry(r.id).or_insert(0) += 1;
+        *self.cost.delta_by_rule.entry(r.id).or_insert(0) += 1;
+        *self.cost.sols_by_rule.entry(r.id).or_insert(0) += n as u64;
         let sols = sols
             .into_iter()
             .map(|mut sol| {

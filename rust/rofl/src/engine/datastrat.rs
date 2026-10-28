@@ -107,8 +107,8 @@ impl Eval {
     /// when there is no such component or the program stalls anyway.
     pub(super) fn take_data_components(&mut self, stalled: &Peel, lats: &[Sym], dom_edges: &[(Sym, Sym)]) -> Option<Peel> {
         let barred = |rel: Sym| {
-            brk!("ds_barred_ignored" => false; self.lattices.contains_key(&rel)
-                || self.subs.contains_key(&rel)
+            brk!("ds_barred_ignored" => false; self.lat.lattices.contains_key(&rel)
+                || self.lat.subs.contains_key(&rel)
                 || self.carried.contains_key(&rel)
                 || self.demand.rels.iter().any(|(d, _)| *d == rel)
                 || self.tags.count_rel.iter().any(|(p, c)| *p == rel || *c == rel)
@@ -312,7 +312,7 @@ impl Eval {
         let saved = (self.steps, self.rows, self.peak_rows, self.fault, self.fault_count, self.last_fault, self.last_fault_rule);
         let mut bad: Option<String> = None;
         for k in keys {
-            let Some(cells) = self.agg_memo.get(&k).cloned() else { continue };
+            let Some(cells) = self.cells.agg_memo.get(&k).cloned() else { continue };
             let r = self.rule_of(k.0).ok_or_else(|| Halt::Bug("a correlation of no rule".into()))?;
             let a = r.plan.iter().find_map(|b| match b {
                 BodyElem::Agg(a) if a.at == k.1 => Some(a.clone()),
@@ -342,7 +342,7 @@ impl Eval {
     /// What a hole in the component left unknown, carried before the next layer
     /// reads it: the component is closed as far as the carry is concerned.
     fn ds_carry(&mut self, comp: &DsComp) -> Result<(), Halt> {
-        if brk!("ds_hole_uncarried" => true; self.plain_pending.is_empty() && self.plain_undecided.is_empty() && self.lat_undecided.is_empty() && brk!("ds_spread_uncarried" => true; self.lat_spread.is_empty())) {
+        if brk!("ds_hole_uncarried" => true; self.lat.plain_pending.is_empty() && self.lat.plain_undecided.is_empty() && self.lat.undecided.is_empty() && brk!("ds_spread_uncarried" => true; self.lat.spread.is_empty())) {
             return Ok(());
         }
         self.close_plain_rules(comp.round + 1)?;

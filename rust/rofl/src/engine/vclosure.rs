@@ -171,7 +171,7 @@ impl Eval {
         self.vc.reader_seen = kept.6;
         if n < self.vc.vclosures.len() {
             let witnessed = !self.prov.no_witness;
-            let mode = self.lattices.is_empty() && self.assume.is_none() && !self.well_founded && !self.naive && self.tags.count_rel.is_empty() && std::env::var_os("ROFL_NO_VCLOSURE").is_none();
+            let mode = self.lat.lattices.is_empty() && self.assume.is_none() && !self.well_founded && !self.naive && self.tags.count_rel.is_empty() && std::env::var_os("ROFL_NO_VCLOSURE").is_none();
             for ci in n..self.vc.vclosures.len() {
                 self.vc.vclosures[ci].active = mode && !self.vc.vclosure_blocked.contains(&ci) && !(witnessed && self.vc.vclosures[ci].prov_read);
             }
@@ -206,7 +206,7 @@ impl Eval {
     /// nothing the closure's edges are concluded from, and where witnesses are kept no rule that reads the closure's
     /// `derived_by` rows), with the forests forgotten.
     pub(super) fn vclosure_engage(&mut self) {
-        let mode = self.lattices.is_empty() && self.assume.is_none() && !self.well_founded && !self.naive && self.tags.count_rel.is_empty() && std::env::var_os("ROFL_NO_VCLOSURE").is_none();
+        let mode = self.lat.lattices.is_empty() && self.assume.is_none() && !self.well_founded && !self.naive && self.tags.count_rel.is_empty() && std::env::var_os("ROFL_NO_VCLOSURE").is_none();
         let witnessed = !self.prov.no_witness && !brk!("vclosure_prov_read_ignored" => true; false);
         for ci in 0..self.vc.vclosures.len() {
             let on = mode && !self.vc.vclosure_blocked.contains(&ci) && !(witnessed && self.vc.vclosures[ci].prov_read);

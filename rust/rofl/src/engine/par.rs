@@ -499,7 +499,7 @@ impl Eval {
             }
         }
         if let Some(rid) = self.cur_rule {
-            *self.argm_by_rule.entry(rid).or_insert(0) += probes;
+            *self.cost.argm_by_rule.entry(rid).or_insert(0) += probes;
         }
         Some(Ok(next))
     }
@@ -516,8 +516,8 @@ impl Eval {
             || !self.firing
             || self.demand.asking
             || rule_id.is_none()
-            || !self.lattices.is_empty()
-            || !self.lat_spread.is_empty()
+            || !self.lat.lattices.is_empty()
+            || !self.lat.spread.is_empty()
             || self.assume.is_some()
             || self.demand.rels.iter().any(|(r, _)| *r == l.rel)
             || self.vclosure_for(l.rel).is_some()
@@ -645,7 +645,7 @@ impl Eval {
                 self.note_cost(m, t.ins, t.outs);
             }
             if let Some(rid) = self.cur_rule {
-                *self.argm_by_rule.entry(rid).or_insert(0) += t.probes;
+                *self.cost.argm_by_rule.entry(rid).or_insert(0) += t.probes;
             }
             self.par_levels += 1;
             let g = t.outs as i64 - if i + k == 0 { 0 } else { t.ins as i64 };
