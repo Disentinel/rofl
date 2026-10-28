@@ -40,6 +40,18 @@ pub struct Span { pub start: usize, pub end: usize, pub tok: Tok }
 
 fn is_wordch(k: Kind) -> bool { matches!(k, Kind::Lower | Kind::Upper | Kind::Digit) }
 
+/// The source as the automaton leaves it: characters, their kinds and their states.
+struct Src {
+    n: usize,
+    kind: Vec<Kind>,
+    st: Vec<State>,
+}
+
+impl Src {
+    fn code(&self, i: usize) -> bool { i < self.n && self.st[i] == State::Code }
+    fn kind_at(&self, i: usize) -> Option<Kind> { if i < self.n { Some(self.kind[i]) } else { None } }
+}
+
 /// Every token of the source, left to right.
 ///
 /// One pass. The automaton runs first — `st/2` in the rules — because almost
@@ -47,111 +59,24 @@ fn is_wordch(k: Kind) -> bool { matches!(k, Kind::Lower | Kind::Upper | Kind::Di
 /// a comment makes no token at all.
 pub fn tokens(src: &str) -> Vec<Span> {
     let ch: Vec<char> = src.chars().collect();
-    let n = ch.len();
-    let kind: Vec<Kind> = ch.iter().map(|c| kind_of(*c)).collect();
-    let st = states(src);
-    let code = |i: usize| -> bool { i < n && st[i] == State::Code };
-    let k = |i: usize| -> Option<Kind> { if i < n { Some(kind[i]) } else { None } };
-
+    let s = Src { n: ch.len(), kind: ch.iter().map(|c| kind_of(*c)).collect(), st: states(src) };
     let mut out: Vec<Span> = Vec::new();
     let mut i = 0usize;
-    while i < n {
-        if !code(i) { i += 1; continue; }
-        match kind[i] {
-            // strtok(I, J) :- str_open(I), str_close(J), I < J,
-            //                 not close_between(I, J).
-            // The exclusion picks the FIRST close, and a close is a quote the
-            // automaton sees while it is INSIDE the string.
-            Kind::Quote => {
-                let mut j = i + 1;
-                while j < n && !(st[j] == State::Str && kind[j] == Kind::Quote) { j += 1; }
-                // An unterminated quote closes nothing, so it is no `strtok`:
-                // it is stray, and everything after it is in no token either.
-                if j < n { out.push(Span { start: i, end: j, tok: Tok::Str }); i = j + 1; }
-                else { out.push(Span { start: i, end: i, tok: Tok::Stray }); i += 1; }
-                continue;
-            }
-            // punct(I, lpar) :- kind(I, lpar), code_at(I).   ... and six more.
-            Kind::Lpar | Kind::Rpar | Kind::Lbrack | Kind::Rbrack
-            | Kind::Comma | Kind::Dot | Kind::At => {
-                let name = match kind[i] {
-                    Kind::Lpar => "lpar", Kind::Rpar => "rpar",
-                    Kind::Lbrack => "lbrack", Kind::Rbrack => "rbrack",
-                    Kind::Comma => "comma", Kind::Dot => "dot", _ => "at",
-                };
-                out.push(Span { start: i, end: i, tok: Tok::Punct(name) });
-                i += 1;
-                continue;
-            }
-            // neck(I, J) :- kind(I, colon), code_at(I), J is I + 1, kind(J, dash).
-            Kind::Colon if k(i + 1) == Some(Kind::Dash) => {
-                out.push(Span { start: i, end: i + 1, tok: Tok::Neck });
-                i += 2;
-                continue;
-            }
-            // punct(I, colon) :- kind(I, colon), code_at(I), J is I + 1,
-            //                    not kind(J, dash).
-            // punct(I, semi)  :- kind(I, semi), code_at(I).
-            // An aggregate's two separators; the neck took its colon above.
-            Kind::Colon | Kind::Semi => {
-                let name = if kind[i] == Kind::Colon { "colon" } else { "semi" };
-                out.push(Span { start: i, end: i, tok: Tok::Punct(name) });
-                i += 1;
-                continue;
-            }
-            // op2(I, J, ne) :- kind(I, bang), J is I + 1, kind(J, eq), code_at(I).
-            // ... le for lt, ge for gt.
-            Kind::Bang | Kind::Lt | Kind::Gt if k(i + 1) == Some(Kind::Eq) => {
-                let name = match kind[i] { Kind::Bang => "ne", Kind::Lt => "le", _ => "ge" };
-                out.push(Span { start: i, end: i + 1, tok: Tok::Op(name) });
-                i += 2;
-                continue;
-            }
-            // optok(I, I, eq) :- kind(I, eq), code_at(I),
-            //                    not consumed(I), not starts_op2(I).
-            // `consumed` is the second half of an op2 and this arm is only
-            // reached when that op2 was not taken above, so the exclusion is
-            // structural here rather than a test.
-            Kind::Eq | Kind::Lt | Kind::Gt => {
-                let name = match kind[i] { Kind::Eq => "eq", Kind::Lt => "lt", _ => "gt" };
-                out.push(Span { start: i, end: i, tok: Tok::Op(name) });
-                i += 1;
-                continue;
-            }
-            // arithtok(I, I, plus) :- kind(I, plus), code_at(I).  ... star, slash.
-            Kind::Plus | Kind::Star | Kind::Slash => {
-                let name = match kind[i] { Kind::Plus => "plus", Kind::Star => "star", _ => "slash" };
-                out.push(Span { start: i, end: i, tok: Tok::Arith(name) });
-                i += 1;
-                continue;
-            }
-            // arithtok(I, I, minus) :- kind(I, dash), code_at(I),
-            //                          not opens_cmt(I), I1 is I - 1,
-            //                          not kind(I1, colon).
-            // BOTH EXCLUSIONS ARE LOAD-BEARING and the rules say why: the
-            // automaton is still in `code` at the FIRST dash of a comment, so
-            // without `not opens_cmt` every comment began with a spurious
-            // minus; and `:-` is the neck, which the colon before the dash is
-            // what tells apart.
-            Kind::Dash => {
-                let opens_cmt = k(i + 1) == Some(Kind::Dash);
-                let after_colon = i > 0 && kind[i - 1] == Kind::Colon;
-                if !opens_cmt && !after_colon {
-                    out.push(Span { start: i, end: i, tok: Tok::Arith("minus") });
-                }
-                i += 1;
-                continue;
-            }
-            _ => {}
+    while i < s.n {
+        if !s.code(i) { i += 1; continue; }
+        if let Some((span, next)) = symbol(&s, i) {
+            out.extend(span);
+            i = next;
+            continue;
         }
         // word_start(I) :- wordch(I), not prevword(I), not dollar_before(I).
         // word_start(I) :- kind(I, dollar), code_at(I).
         // word(I, J)    :- wext(I, J), J2 is J + 1, not wordch(J2).
         // A `$` starts a word and the character after it does not start another,
         // which is what `dollar_before` excludes.
-        if kind[i] == Kind::Dollar || is_wordch(kind[i]) {
+        if s.kind[i] == Kind::Dollar || is_wordch(s.kind[i]) {
             let mut j = i;
-            while j + 1 < n && code(j + 1) && is_wordch(kind[j + 1]) { j += 1; }
+            while j + 1 < s.n && s.code(j + 1) && is_wordch(s.kind[j + 1]) { j += 1; }
             out.push(Span { start: i, end: j, tok: Tok::Word });
             i = j + 1;
             continue;
@@ -163,10 +88,80 @@ pub fn tokens(src: &str) -> Vec<Span> {
         // (f_the_rust_lexer_skips_characters_it_has_no_token_for). The two
         // white kinds are all that may pass unremarked; a comment's first
         // dash never reaches here, its arm above consumed it.
-        if !matches!(kind[i], Kind::Space | Kind::Nl) {
+        if !matches!(s.kind[i], Kind::Space | Kind::Nl) {
             out.push(Span { start: i, end: i, tok: Tok::Stray });
         }
         i += 1;
     }
     out
+}
+
+/// The token that starts at `i` when it is a quote, a bracket, a separator, an operator, an arithmetic sign or a dash:
+/// its span (none for a dash that is no token) and the index after it. None for every other character.
+fn symbol(s: &Src, i: usize) -> Option<(Option<Span>, usize)> {
+    let one = |tok| Some((Some(Span { start: i, end: i, tok }), i + 1));
+    match s.kind[i] {
+        // strtok(I, J) :- str_open(I), str_close(J), I < J,
+        //                 not close_between(I, J).
+        // The exclusion picks the FIRST close, and a close is a quote the
+        // automaton sees while it is INSIDE the string.
+        Kind::Quote => { let (span, next) = quoted(s, i); Some((Some(span), next)) }
+        // punct(I, lpar) :- kind(I, lpar), code_at(I).   ... and six more.
+        Kind::Lpar => one(Tok::Punct("lpar")),
+        Kind::Rpar => one(Tok::Punct("rpar")),
+        Kind::Lbrack => one(Tok::Punct("lbrack")),
+        Kind::Rbrack => one(Tok::Punct("rbrack")),
+        Kind::Comma => one(Tok::Punct("comma")),
+        Kind::Dot => one(Tok::Punct("dot")),
+        Kind::At => one(Tok::Punct("at")),
+        // neck(I, J) :- kind(I, colon), code_at(I), J is I + 1, kind(J, dash).
+        Kind::Colon if s.kind_at(i + 1) == Some(Kind::Dash) => Some((Some(Span { start: i, end: i + 1, tok: Tok::Neck }), i + 2)),
+        // punct(I, colon) :- kind(I, colon), code_at(I), J is I + 1,
+        //                    not kind(J, dash).
+        // punct(I, semi)  :- kind(I, semi), code_at(I).
+        // An aggregate's two separators; the neck took its colon above.
+        Kind::Colon => one(Tok::Punct("colon")),
+        Kind::Semi => one(Tok::Punct("semi")),
+        // op2(I, J, ne) :- kind(I, bang), J is I + 1, kind(J, eq), code_at(I).
+        // ... le for lt, ge for gt.
+        Kind::Bang | Kind::Lt | Kind::Gt if s.kind_at(i + 1) == Some(Kind::Eq) => {
+            let name = match s.kind[i] { Kind::Bang => "ne", Kind::Lt => "le", _ => "ge" };
+            Some((Some(Span { start: i, end: i + 1, tok: Tok::Op(name) }), i + 2))
+        }
+        // optok(I, I, eq) :- kind(I, eq), code_at(I),
+        //                    not consumed(I), not starts_op2(I).
+        // `consumed` is the second half of an op2 and this arm is only
+        // reached when that op2 was not taken above, so the exclusion is
+        // structural here rather than a test.
+        Kind::Eq => one(Tok::Op("eq")),
+        Kind::Lt => one(Tok::Op("lt")),
+        Kind::Gt => one(Tok::Op("gt")),
+        // arithtok(I, I, plus) :- kind(I, plus), code_at(I).  ... star, slash.
+        Kind::Plus => one(Tok::Arith("plus")),
+        Kind::Star => one(Tok::Arith("star")),
+        Kind::Slash => one(Tok::Arith("slash")),
+        Kind::Dash => Some(dash(s, i)),
+        _ => None,
+    }
+}
+
+/// The quote at `i` closes at the next quote the automaton reads inside the string. An unterminated quote closes
+/// nothing, so it is stray, and everything after it is in no token either.
+fn quoted(s: &Src, i: usize) -> (Span, usize) {
+    let mut j = i + 1;
+    while j < s.n && !(s.st[j] == State::Str && s.kind[j] == Kind::Quote) { j += 1; }
+    if j < s.n { (Span { start: i, end: j, tok: Tok::Str }, j + 1) }
+    else { (Span { start: i, end: i, tok: Tok::Stray }, i + 1) }
+}
+
+/// A dash is a minus, unless it opens a comment or is the second half of a neck.
+/// BOTH EXCLUSIONS ARE LOAD-BEARING and the rules say why: the automaton is still in `code` at the FIRST dash of a
+/// comment, so without `not opens_cmt` every comment began with a spurious minus; and `:-` is the neck, which the
+/// colon before the dash is what tells apart.
+/// arithtok(I, I, minus) :- kind(I, dash), code_at(I), not opens_cmt(I), I1 is I - 1, not kind(I1, colon).
+fn dash(s: &Src, i: usize) -> (Option<Span>, usize) {
+    let opens_cmt = s.kind_at(i + 1) == Some(Kind::Dash);
+    let after_colon = i > 0 && s.kind[i - 1] == Kind::Colon;
+    let span = (!opens_cmt && !after_colon).then_some(Span { start: i, end: i, tok: Tok::Arith("minus") });
+    (span, i + 1)
 }
