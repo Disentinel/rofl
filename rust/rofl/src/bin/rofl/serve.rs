@@ -568,7 +568,7 @@ impl Server {
         let flying = s.post.as_ref().map_or(0, |p| p.flying());
         Ok(json!({
             "partial": o.partial, "staged": o.staged, "steps": o.steps,
-            "peakRows": o.peak_rows, "space": o.space, "flying": flying, "next": s.eval.next_level(),
+            "peakRows": o.peak_rows, "space": o.space, "flying": flying, "next": s.eval.wall.next_level(),
             "again": s.eval.again.iter().map(|r| s.eval.h.name(*r)).collect::<Vec<_>>(),
             "hot": s.eval.too_hot().iter().map(|h| h.sentence()).collect::<Vec<_>>(),
         }))

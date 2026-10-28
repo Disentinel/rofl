@@ -520,7 +520,7 @@ impl Eval {
             || !self.lat.spread.is_empty()
             || self.assume.is_some()
             || self.demand.rels.iter().any(|(r, _)| *r == l.rel)
-            || self.vclosure_for(l.rel).is_some()
+            || self.vc.vclosure_for(l.rel).is_some()
             || neg && self.carry_check(0).is_err()
             || !plain(&l.persp)
             || !l.args.iter().all(plain)
@@ -624,7 +624,7 @@ impl Eval {
         let mut grew = 0;
         for (k, t) in levels.iter().enumerate() {
             let (l, neg) = lits[k];
-            let mark = self.cost_mark(rule_id, &body[i + k]);
+            let mark = self.cost.cost_mark(rule_id, &body[i + k]);
             let now = self.rows + (t.outs - t.last) as i64;
             if now > self.peak_rows {
                 self.peak_rows = now;
@@ -642,7 +642,7 @@ impl Eval {
                 }
             }
             if let Some(m) = mark {
-                self.note_cost(m, t.ins, t.outs);
+                self.cost.note_cost(m, t.ins, t.outs);
             }
             if let Some(rid) = self.cur_rule {
                 *self.cost.argm_by_rule.entry(rid).or_insert(0) += t.probes;

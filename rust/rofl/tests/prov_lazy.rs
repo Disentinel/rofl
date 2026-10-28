@@ -35,10 +35,10 @@ fn a_world_nothing_reads_derived_by_of_is_lazy_and_its_state_is_the_eager_one() 
     lazy.evaluate().unwrap();
     eager.evaluate().unwrap();
     assert!(lazy.eval.prov.lazy && !eager.eval.prov.lazy);
-    assert!(lazy.eval.unsettled_provenance() > 0, "no firing was left unwritten");
+    assert!(lazy.eval.prov.unsettled_provenance() > 0, "no firing was left unwritten");
     assert!(derived_by_rows(&mut lazy).len() < derived_by_rows(&mut eager).len(), "no row was saved");
     assert_eq!(lazy.eval.canonical_state(), eager.eval.canonical_state());
-    assert_eq!(lazy.eval.unsettled_provenance(), 0);
+    assert_eq!(lazy.eval.prov.unsettled_provenance(), 0);
 }
 
 #[test]
@@ -48,7 +48,7 @@ fn why_and_excise_do_not_need_the_rows_and_answer_alike() {
         assert_eq!(lazy.why(q), eager.why(q), "{q}");
         assert_eq!(lazy.why_all(q), eager.why_all(q), "{q} all");
     }
-    assert!(lazy.eval.unsettled_provenance() > 0, "why settled the world");
+    assert!(lazy.eval.prov.unsettled_provenance() > 0, "why settled the world");
     for f in ["pl_edge(x, d)", "pl_mark(d)", "pl_edge(a, b)"] {
         assert_eq!(lazy.excise(f), eager.excise(f), "{f}");
     }
@@ -60,7 +60,7 @@ fn a_query_for_derived_by_writes_the_rows_and_a_retraction_after_it_still_agrees
     let (mut lazy, mut eager) = (world("prov-lazy.rofl", false), world("prov-lazy.rofl", true));
     let q = "derived_by[$kernel](F, R, T)";
     assert_eq!(lazy.ask(q).unwrap().rows, eager.ask(q).unwrap().rows);
-    assert_eq!(lazy.eval.unsettled_provenance(), 0);
+    assert_eq!(lazy.eval.prov.unsettled_provenance(), 0);
     for f in ["pl_edge(x, d)", "pl_mark(d)"] {
         lazy.retract(f).unwrap();
         eager.retract(f).unwrap();
@@ -108,7 +108,7 @@ fn a_reader_whose_fact_is_a_variable_keeps_every_row_as_it_fires() {
     s.load("edb(q).\nq(1).\nr(X) :- q(X).\nfired(R) :- derived_by[$kernel](_, R, _).\n", None).unwrap();
     s.evaluate().unwrap();
     assert!(!s.eval.prov.lazy);
-    assert_eq!(s.eval.unsettled_provenance(), 0);
+    assert_eq!(s.eval.prov.unsettled_provenance(), 0);
 }
 
 #[test]
@@ -117,7 +117,7 @@ fn a_sealed_world_notes_nothing() {
     s.load("sealed(provenance).\nedb(q).\nq(1).\nr(X) :- q(X).\n", None).unwrap();
     s.evaluate().unwrap();
     assert!(!s.eval.prov.lazy);
-    assert_eq!(s.eval.unsettled_provenance(), 0);
+    assert_eq!(s.eval.prov.unsettled_provenance(), 0);
     assert!(derived_by_rows(&mut s).is_empty());
 }
 
@@ -132,11 +132,11 @@ fn why_of_a_derived_by_row_and_a_fork_see_the_rows() {
     let row = derived_by_rows(&mut eager).into_iter().next().expect("a derived_by row");
     let mut fresh = world("prov-lazy.rofl", false);
     fresh.evaluate().unwrap();
-    assert!(fresh.eval.unsettled_provenance() > 0);
+    assert!(fresh.eval.prov.unsettled_provenance() > 0);
     assert_eq!(fresh.why(&row), eager.why(&row), "why {row}");
     let b = rofl::engine::WhynotBounds::default();
     assert_eq!(fresh.whynot(&row, &b), eager.whynot(&row, &b), "whynot {row}");
     let forked = lazy.fork();
-    assert_eq!(forked.eval.unsettled_provenance(), 0, "the fork froze unwritten rows");
+    assert_eq!(forked.eval.prov.unsettled_provenance(), 0, "the fork froze unwritten rows");
     assert_eq!(lazy.eval.canonical_state(), eager.eval.canonical_state());
 }

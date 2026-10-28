@@ -123,7 +123,7 @@ fn a_closure_answered_from_its_tree_concludes_what_its_rules_conclude() {
         let (text, edges) = forest(seed * 7919 + 1, n);
         let rules = evaluated(&program(false, true, &text, &edges));
         let tree = evaluated(&program(true, true, &text, &edges));
-        assert!(tree.eval.vclosure_info().iter().all(|(_, on)| *on), "seed {seed}: the closure was not answered from its tree: {:?}", tree.eval.vc.vclosure_reason);
+        assert!(tree.eval.vc.vclosure_info(&tree.eval.h).iter().all(|(_, on)| *on), "seed {seed}: the closure was not answered from its tree: {:?}", tree.eval.vc.vclosure_reason);
         assert!(tree.eval.store.virtual_rows() > 0, "seed {seed}: a closure with no rows proves nothing");
         assert_eq!(rows(&rules), rows(&tree), "seed {seed}, {n} nodes: a reader of the closure concluded another set");
     }
@@ -143,7 +143,7 @@ fn a_closure_that_keeps_witnesses_is_answered_from_its_tree_and_says_what_its_ru
         let (text, edges) = forest(seed * 104729 + 3, 20 + seed * 5);
         let mut rules = evaluated(&program(false, false, &text, &edges));
         let mut tree = evaluated(&program(true, false, &text, &edges));
-        assert!(tree.eval.vclosure_info().iter().all(|(_, on)| *on), "seed {seed}: a witness is kept and the closure is not answered from its tree");
+        assert!(tree.eval.vc.vclosure_info(&tree.eval.h).iter().all(|(_, on)| *on), "seed {seed}: a witness is kept and the closure is not answered from its tree");
         assert!(tree.eval.store.virtual_rows() > 0);
         assert_eq!(said(&mut rules), said(&mut tree), "seed {seed}: the closure from the tree says another thing than its rules");
     }
@@ -203,7 +203,7 @@ t_back(A) :- t_within(A, c).
 t_in(r, top) :- t_back(_), t_root(r).
 t_root(r).";
     let s = evaluated(src);
-    assert!(s.eval.vclosure_info().iter().all(|(_, on)| !*on));
+    assert!(s.eval.vc.vclosure_info(&s.eval.h).iter().all(|(_, on)| !*on));
     assert!(!s.eval.vc.vclosure_reason.is_empty());
 }
 
@@ -220,7 +220,7 @@ fn a_retraction_where_no_witness_is_kept_evaluates_again() {
         s
     };
     let mut s = build(&edges);
-    assert!(s.eval.vclosure_info().iter().all(|(_, on)| *on), "{:?}", s.eval.vc.vclosure_reason);
+    assert!(s.eval.vc.vclosure_info(&s.eval.h).iter().all(|(_, on)| *on), "{:?}", s.eval.vc.vclosure_reason);
     let r = s.retract_delta(gone.trim_end_matches('.')).unwrap();
     assert!(matches!(r, rofl::session::Retraction::Full(_)), "a delta was worked out for a closure answered from its tree");
     if s.eval.store.dirty {
@@ -236,7 +236,7 @@ fn a_snapshot_opened_and_not_evaluated_answers_the_closure_from_its_tree() {
     for seed in 0..6u64 {
         let (text, edges) = forest(seed, 24);
         let mut s = evaluated(&program(true, true, &text, &edges));
-        assert!(s.eval.vclosure_info().iter().all(|(_, on)| *on), "{:?}", s.eval.vc.vclosure_reason);
+        assert!(s.eval.vc.vclosure_info(&s.eval.h).iter().all(|(_, on)| *on), "{:?}", s.eval.vc.vclosure_reason);
         let mut open = Session::open(&s.save(), BUDGET).unwrap();
         for q in ["t_within[code](A, D)", "t_within[other](A, D)", "t_cnt(A, N)", "t_ff(A, D)"] {
             let (mut a, mut b) = (s.ask(q).unwrap().rows, open.ask(q).unwrap().rows);

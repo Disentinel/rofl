@@ -157,7 +157,7 @@ fn derived(state: &str) -> Vec<String> {
 fn same_answers(delta: &mut Session, fresh: &mut Session, was: &[String], now: &[String]) -> Result<usize, String> {
     // asking a relation answered on demand makes a fact for the call: the questions go to copies
     let (mut d2, mut f2);
-    let (delta, fresh) = if delta.eval.answers_on_demand() {
+    let (delta, fresh) = if delta.eval.demand.answers_on_demand() {
         d2 = delta.fork();
         f2 = fresh.fork();
         (&mut d2, &mut f2)
@@ -552,12 +552,12 @@ fn an_edge_and_a_reader_added_to_a_declared_tree_keep_the_closure_answered_from_
     s.load(&boot(), None).unwrap();
     s.load(head, None).unwrap();
     s.evaluate().unwrap();
-    assert!(s.eval.vclosure_info().iter().all(|(_, on)| *on), "{:?}", s.eval.vclosure_info());
+    assert!(s.eval.vc.vclosure_info(&s.eval.h).iter().all(|(_, on)| *on), "{:?}", s.eval.vc.vclosure_info(&s.eval.h));
     let mut ops = vec![Op::Load(head.into())];
     for (op, text) in [("assert", "t_in(n4, n5)."), ("load", "t_cnt(A, N) :- t_pick(A), N is count(D : t_within(A, D))."), ("assert", "t_in(n0, n1). t_pick(n0).")] {
         let a = if op == "assert" { s.assert_delta(text).unwrap().1 } else { s.load_delta(text, None).unwrap().1 };
         assert!(matches!(a, Addition::Delta(_)), "{text}: {a:?}");
-        assert!(s.eval.vclosure_info().iter().all(|(_, on)| *on), "{text}: {:?}", s.eval.vclosure_info());
+        assert!(s.eval.vc.vclosure_info(&s.eval.h).iter().all(|(_, on)| *on), "{text}: {:?}", s.eval.vc.vclosure_info(&s.eval.h));
         ops.push(if op == "assert" { Op::Assert(text.into()) } else { Op::Load(text.into()) });
         assert_eq!(state(&mut s), state(&mut replay(&ops).unwrap()), "{text}");
     }
@@ -578,7 +578,7 @@ fn a_tree_declared_into_an_evaluated_world_is_answered_from_its_forest_by_delta(
         let decl = "tree t_in(P, C) closure t_within.";
         let a = s.load_delta(decl, None).unwrap().1;
         assert!(matches!(a, Addition::Delta(_)), "{a:?}");
-        assert!(s.eval.vclosure_info().iter().all(|(_, on)| *on), "{:?}", s.eval.vclosure_info());
+        assert!(s.eval.vc.vclosure_info(&s.eval.h).iter().all(|(_, on)| *on), "{:?}", s.eval.vc.vclosure_info(&s.eval.h));
         assert_eq!(state(&mut s), state(&mut replay(&[Op::Load(head.clone()), Op::Load(decl.into())]).unwrap()));
         for neg in ["t_neg(A, D) :- t_cand(A, D), not t_within(A, D).", "t_cnt(A, N) :- t_pick(A), N is count(D : t_within(A, D))."] {
             let mut s = Session::fresh(BUDGET);

@@ -149,29 +149,6 @@ impl Eval {
         Some(again)
     }
 
-    /// Whether the correlation `mk` of a data-stratified element may be read
-    /// now: it has been released.
-    pub(super) fn ds_gate(&self, mk: &AggKey) -> Result<bool, Halt> {
-        if self.ds.firing.is_some_and(|(r, at)| mk.0 == r && mk.1 < at) && self.ds.layer.contains(mk) && brk!("ds_layer_refires" => false; true) {
-            return Ok(false);
-        }
-        if brk!("ds_seal_early" => false; !self.ds.released.contains(mk)) {
-            if self.ds.done.contains(&(mk.0, mk.1)) {
-                return Err(Halt::Bug(format!(
-                    "a correlation of {} was met that the data walk never reached",
-                    self.h.name(mk.0)
-                )));
-            }
-            return Ok(false);
-        }
-        Ok(true)
-    }
-
-    /// Whether `r` owns an element a data-level stratification took.
-    pub(super) fn ds_owner(&self, r: &ERule) -> bool {
-        !self.ds.elems.is_empty() && r.clause.body.iter().any(|b| matches!(b, BodyElem::Agg(a) if self.ds.elems.contains(&(r.id, a.at))))
-    }
-
     /// The components ranked at `lv`, each run: the rules `rs` own their
     /// elements.
     pub(super) fn run_data_levels(&mut self, lv: i64, rs: &[Rc<ERule>]) -> Result<(), Halt> {
@@ -698,5 +675,30 @@ impl Eval {
         let (lt, rt) = (resolve(&mut self.h, l, s), resolve(&mut self.h, r, s));
         let (gl, gr) = (self.h.is_ground(lt), self.h.is_ground(rt));
         if op == self.v.op_is || (op == self.v.op_in && brk!("ds_in_undecided" => false; true)) { gr } else if op == self.v.op_eq { true } else { gl && gr }
+    }
+}
+
+impl DsState {
+    /// Whether the correlation `mk` of a data-stratified element may be read
+    /// now: it has been released.
+    pub(super) fn ds_gate(&self, h: &Heap, mk: &AggKey) -> Result<bool, Halt> {
+        if self.firing.is_some_and(|(r, at)| mk.0 == r && mk.1 < at) && self.layer.contains(mk) && brk!("ds_layer_refires" => false; true) {
+            return Ok(false);
+        }
+        if brk!("ds_seal_early" => false; !self.released.contains(mk)) {
+            if self.done.contains(&(mk.0, mk.1)) {
+                return Err(Halt::Bug(format!(
+                    "a correlation of {} was met that the data walk never reached",
+                    h.name(mk.0)
+                )));
+            }
+            return Ok(false);
+        }
+        Ok(true)
+    }
+
+    /// Whether `r` owns an element a data-level stratification took.
+    pub(super) fn ds_owner(&self, r: &ERule) -> bool {
+        !self.elems.is_empty() && r.clause.body.iter().any(|b| matches!(b, BodyElem::Agg(a) if self.elems.contains(&(r.id, a.at))))
     }
 }

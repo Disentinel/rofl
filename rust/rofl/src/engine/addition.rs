@@ -291,7 +291,7 @@ impl Eval {
         }
         self.note_whole();
         self.round_of.clear();
-        if self.rerank().is_err() || !self.restore_lattices(lattices) {
+        if self.rerank().is_err() || !self.lat.restore_lattices(&self.h, &mut self.store, lattices) {
             self.store.dirty = true;
         } else {
             self.restore_cells();
@@ -323,37 +323,6 @@ impl Eval {
             cs.sort_by(|x, y| cmp_js(&x.0, &y.0));
             self.cells.agg_memo.insert(mk, cs.into_iter().map(|(_, c)| c).collect::<Vec<_>>().into());
         }
-    }
-
-    /// The cells of the order lattices stand in the store at their values, closed, and the values they replaced stand as ghosts, as the evaluation left them. A
-    /// lattice of dominance or a join keeps more than that, and is restored from what was kept with it (`latkept.rs`).
-    fn restore_lattices(&mut self, kept: Vec<super::Tok>) -> bool {
-        if !self.lat.lattices.is_empty() {
-            self.store.index_citers();
-        }
-        if !self.lat.subs.is_empty() || self.lat.lattices.values().any(|(_, op)| op.is_join()) {
-            return self.lattices_from(kept).unwrap_or(false);
-        }
-        let lats: Vec<(Sym, usize)> = self.lat.lattices.iter().map(|(r, (n, _))| (*r, *n)).collect();
-        for (rel, n) in lats {
-            for id in self.store.rel_all(&self.h, rel) {
-                if self.store.alive(id) && self.store.arity(id) == n {
-                    let key: Box<[Term]> = self.store.args(id)[..n - 1].into();
-                    self.lat.cur.insert((rel, self.store.rec(id).persp, key), id);
-                }
-            }
-            self.lat.closed.insert(rel);
-        }
-        let ids = if self.lat.lattices.is_empty() { Vec::new() } else { self.store.firing_keys() };
-        for id in ids.into_iter().filter(|id| !self.store.alive(*id)) {
-            let r = self.store.rec(id);
-            if let Some(&(n, _)) = self.lat.lattices.get(&r.rel).filter(|(n, _)| self.store.arity(id) == *n) {
-                self.lat.superseded.insert(id);
-                let key: Box<[Term]> = self.store.args(id)[..n - 1].into();
-                self.lat.history.entry((r.rel, r.persp, key)).or_default().push(id);
-            }
-        }
-        true
     }
 
     /// WHY AN ADDITION IS NOT WORKED OUT for this world: every reason that holds, in a fixed order (empty where it is).
@@ -413,13 +382,13 @@ impl Eval {
         }
         // a base fact of a closure walked whole: the two rules fire as written from now on, over the rows it walked
         if added.iter().any(|f| self.clo.closures.iter().any(|c| c.rel == self.store.rec(*f).rel)) {
-            self.closures_engage();
+            self.clo.closures_engage(&self.store);
         }
         let moved = if new_rules.is_empty() { HashSet::new() } else { self.rerank()? };
         let d = self.add_worked_out(added, &[], &fresh, &grown, &moved, called)?;
         // a closure declared by the addition lists its rows from now on
         if self.vc.any && !self.store.vlisted {
-            self.vpublish();
+            self.vc.vpublish(&mut self.store);
         }
         Ok(d)
     }
@@ -1012,7 +981,7 @@ impl Eval {
             if !removed.is_empty() && self.vc.any {
                 edges_gone.sort_unstable();
                 let (seeds, touched) = self.vretract_edges(&edges_gone);
-                self.vretract_done(&touched);
+                self.vc.vretract_done(&self.store, &touched);
                 self.overdelete(seeds, &mut over, &mut over_base, d);
             }
         }
@@ -1508,7 +1477,7 @@ impl Eval {
         for rel in joins.iter().filter_map(|l| self.lat.join_rels.get(l).copied()).collect::<Vec<_>>() {
             for id in self.store.rel_all(&self.h, rel) {
                 if brk!("add_join_contribs_kept" => false; self.store.alive(id)) {
-                    self.retire_fact(id);
+                    self.prov.retire_fact(&mut self.h, &mut self.store, &self.v, id);
                 }
             }
         }
@@ -1560,7 +1529,7 @@ impl Eval {
             self.lat.sub_seen.retain(|k, _| !lats.contains(&k.0));
             self.lat.sub_memo.retain(|k, _| !lats.contains(&k.0));
             self.lat.sub_parties.retain(|k, _| !lats.contains(&k.0));
-            self.forget_sub_witnesses(|k| lats.contains(&k.0));
+            self.lat.forget_sub_witnesses(|k| lats.contains(&k.0));
             let store = &self.store;
             self.lat.sub_by_of.retain(|f, _| store.alive(*f));
         }
@@ -1584,7 +1553,7 @@ impl Eval {
             }
             let mut rd = Delta::default();
             ambiguous = self.restage(&staged, &mut rd)?;
-            if self.lattice_hole(holes0) {
+            if self.lat.lattice_hole(&self.store, &self.v, holes0) {
                 return Err(Halt::Bug("an addition wrote a hole".into()));
             }
             if self.lat.superseded.iter().any(|g| lats.contains(&self.store.rec(*g).rel) && !joins.contains(&self.store.rec(*g).rel)) {
@@ -1608,5 +1577,38 @@ impl Eval {
                 Err("the addition would write a hole, keep a lattice's history or meet a wall, and the world is evaluated again")
             }
         }
+    }
+}
+
+impl LatticeState {
+    /// The cells of the order lattices stand in the store at their values, closed, and the values they replaced stand as ghosts, as the evaluation left them. A
+    /// lattice of dominance or a join keeps more than that, and is restored from what was kept with it (`latkept.rs`).
+    fn restore_lattices(&mut self, h: &Heap, store: &mut Store, kept: Vec<super::Tok>) -> bool {
+        if !self.lattices.is_empty() {
+            store.index_citers();
+        }
+        if !self.subs.is_empty() || self.lattices.values().any(|(_, op)| op.is_join()) {
+            return self.lattices_from(kept).unwrap_or(false);
+        }
+        let lats: Vec<(Sym, usize)> = self.lattices.iter().map(|(r, (n, _))| (*r, *n)).collect();
+        for (rel, n) in lats {
+            for id in store.rel_all(h, rel) {
+                if store.alive(id) && store.arity(id) == n {
+                    let key: Box<[Term]> = store.args(id)[..n - 1].into();
+                    self.cur.insert((rel, store.rec(id).persp, key), id);
+                }
+            }
+            self.closed.insert(rel);
+        }
+        let ids = if self.lattices.is_empty() { Vec::new() } else { store.firing_keys() };
+        for id in ids.into_iter().filter(|id| !store.alive(*id)) {
+            let r = store.rec(id);
+            if let Some(&(n, _)) = self.lattices.get(&r.rel).filter(|(n, _)| store.arity(id) == *n) {
+                self.superseded.insert(id);
+                let key: Box<[Term]> = store.args(id)[..n - 1].into();
+                self.history.entry((r.rel, r.persp, key)).or_default().push(id);
+            }
+        }
+        true
     }
 }

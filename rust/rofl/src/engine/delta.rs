@@ -439,21 +439,9 @@ impl Eval {
         (self.steps, self.rows) = outer;
     }
 
-    pub(super) fn lattice_hole(&self, holes0: usize) -> bool {
-        self.store.rel_count(self.v.hole) > holes0 || !self.lat.pending.is_empty()
-    }
-
     pub(super) fn take_out(&mut self, facts: &[FactId]) {
         self.withdraw_firings(facts, |_, _| true);
         self.store.remove_many(facts);
-    }
-
-    /// What the evaluation kept of the witnesses of the subsumptive keys that `gone` names.
-    pub(super) fn forget_sub_witnesses(&mut self, gone: impl Fn(&LatKey) -> bool) {
-        self.lat.sub_seen_set.retain(|(k, _), _| !gone(k));
-        self.lat.sub_beaten.retain(|(k, _), _| !gone(k));
-        self.lat.sub_prems.retain(|(k, _), _| !gone(k));
-        self.lat.sub_by.retain(|(k, _), _| !gone(k));
     }
 
     /// The cells of the rules read again whole, gone with their reflection.
@@ -500,7 +488,7 @@ impl Eval {
                 brk!("retract_thr_unclosed" => (); self.close_thresholds_below(lv, true)?);
                 // an order lattice fired again closes at its level, as an evaluation closes it
                 brk!("refire_lattice_unclosed" => (); self.close_lattices_below(lv)?);
-                let (ds, rs): (Vec<Rc<ERule>>, Vec<Rc<ERule>>) = rs.into_iter().partition(|r| self.ds_owner(r));
+                let (ds, rs): (Vec<Rc<ERule>>, Vec<Rc<ERule>>) = rs.into_iter().partition(|r| self.ds.ds_owner(r));
                 self.activate(&rs)?;
                 self.run_data_comps(comps, lv, &ds)?;
             }
@@ -1023,7 +1011,7 @@ impl Eval {
             self.lat.sub_memo.remove(ck);
             self.lat.sub_parties.remove(ck);
         }
-        self.forget_sub_witnesses(|ck| cone_keys.contains(ck));
+        self.lat.forget_sub_witnesses(|ck| cone_keys.contains(ck));
         self.lat.sub_by_of.retain(|f, _| !inside.contains(f));
         let rest: Vec<LatKey> = self.lat.sub_seen.keys().filter(|k| rels.contains(&k.0)).cloned().collect();
         let stashed: Vec<(LatKey, Vec<Box<[Term]>>)> = rest.into_iter().filter_map(|k| self.lat.sub_seen.remove(&k).map(|v| (k, v))).collect();
@@ -1044,7 +1032,7 @@ impl Eval {
             if !reset.is_empty() {
                 self.support_ix = None;
             }
-            if brk!("retract_lattice_hole_kept" => false; self.lattice_hole(holes0)) {
+            if brk!("retract_lattice_hole_kept" => false; self.lat.lattice_hole(&self.store, &self.v, holes0)) {
                 return Err(Halt::Bug("a lattice delta made a hole".into()));
             }
             if self.lat.superseded.iter().any(|g| rels.contains(&self.store.rec(*g).rel)) {
@@ -1360,5 +1348,19 @@ impl Eval {
             }
         }
         self.store.remove_many(&gone);
+    }
+}
+
+impl LatticeState {
+    pub(super) fn lattice_hole(&self, store: &Store, v: &Vocab, holes0: usize) -> bool {
+        store.rel_count(v.hole) > holes0 || !self.pending.is_empty()
+    }
+
+    /// What the evaluation kept of the witnesses of the subsumptive keys that `gone` names.
+    pub(super) fn forget_sub_witnesses(&mut self, gone: impl Fn(&LatKey) -> bool) {
+        self.sub_seen_set.retain(|(k, _), _| !gone(k));
+        self.sub_beaten.retain(|(k, _), _| !gone(k));
+        self.sub_prems.retain(|(k, _), _| !gone(k));
+        self.sub_by.retain(|(k, _), _| !gone(k));
     }
 }

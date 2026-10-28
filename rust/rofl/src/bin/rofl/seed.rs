@@ -298,7 +298,7 @@ pub fn main(argv: Vec<String>) {
         for c in &l.eval.clo.closures {
             eprintln!("closure\t{}\t{}\t{}", l.eval.h.name(c.rel), l.eval.h.name(c.edge), if c.edge_fwd { "fwd" } else { "rev" });
         }
-        for (rel, on) in l.eval.vclosure_info() {
+        for (rel, on) in l.eval.vc.vclosure_info(&l.eval.h) {
             eprintln!("vclosure\t{rel}\t{}", if on { "tree" } else { "rows" });
         }
         for r in &l.eval.vc.vclosure_reason {
