@@ -3454,6 +3454,18 @@ impl Store {
             out.push_str(" support=");
             out.push_str(&self.support_count(*id).to_string());
         }
+        self.write_witnesses(h, &mut out);
+        self.write_cells(h, &mut out);
+        self.write_lattice(h, &mut out);
+        for l in &self.tick_log {
+            out.push('\n');
+            out.push_str(l);
+        }
+        out
+    }
+
+    /// The witness lines of `canonical_state`: one per fact with a firing and per row answered from a structure.
+    fn write_witnesses(&self, h: &Heap, out: &mut String) {
         enum Wk {
             Fact(FactId),
             Row(usize, Sym, Term, Term),
@@ -3513,6 +3525,10 @@ impl Store {
             out.push_str(&prems.join("; "));
             out.push(']');
         }
+    }
+
+    /// The cells of `canonical_state`, after the witnesses and only when there are any, with their members.
+    fn write_cells(&self, h: &Heap, out: &mut String) {
         // THE CELLS, after the witnesses and only when there are any, so a
         // state without an aggregate is byte for byte what it was.
         for (c, like) in self.cells_in_order(h) {
@@ -3533,7 +3549,7 @@ impl Store {
             out.push_str(&format!(" alg={} use={}", alg.text(), alg.strategy().name()));
             if let Some(x) = like {
                 out.push_str(&format!("\nmem {key} = "));
-                self.write_cell_key(h, x, &mut out);
+                self.write_cell_key(h, x, out);
                 continue;
             }
             for (i, m) in self.cell_members(c).iter().enumerate() {
@@ -3549,12 +3565,6 @@ impl Store {
                 }
             }
         }
-        self.write_lattice(h, &mut out);
-        for l in &self.tick_log {
-            out.push('\n');
-            out.push_str(l);
-        }
-        out
     }
 
     /// `derivations` (scripts/derivations.ts): THE CONTRACT, as consequences
@@ -4161,14 +4171,6 @@ impl Store {
         forbidden: &HashSet<CellId>,
         memo: &mut HashMap<FactId, u32>,
     ) -> Result<Vec<Vec<Option<(u32, usize)>>>, FactId> {
-        // a member is reached by the least of its derivations, the first of
-        // them (least signature) among those at that height
-        #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-        enum Node {
-            Fact(FactId),
-            Member(usize, usize, usize),
-            Cell(usize),
-        }
         let at: HashMap<CellId, usize> = open.iter().enumerate().map(|(i, (c, _))| (*c, i)).collect();
         // every fact below the members, through firings and open cells
         let mut stack: Vec<FactId> = Vec::new();
@@ -4186,91 +4188,30 @@ impl Store {
             Ok(false)
         })?;
         let vh = self.vrow_heights(members.iter().flatten().flatten().map(Vec::as_slice), &order, memo);
-        struct Firing {
-            head: Node,
-            open: usize,
-            best: u32,
-        }
-        let mut firings: Vec<Firing> = Vec::new();
-        let mut users: HashMap<Node, Vec<usize>> = HashMap::new();
-        let mut heap: BinaryHeap<Reverse<(u32, Node)>> = BinaryHeap::new();
-        let add = |head: Node, ps: &[PremRef], firings: &mut Vec<Firing>, users: &mut HashMap<Node, Vec<usize>>, heap: &mut BinaryHeap<Reverse<(u32, Node)>>| {
-            let idx = firings.len();
-            let (mut open_n, mut best) = (0usize, 0u32);
-            for p in ps {
-                let dep = match p {
-                    PremRef::Fact(g) => match memo.get(g) {
-                        Some(hg) => {
-                            best = best.max(*hg);
-                            None
-                        }
-                        None => Some(Node::Fact(*g)),
-                    },
-                    PremRef::Cell(x) => match at.get(x) {
-                        Some(i) => Some(Node::Cell(*i)),
-                        None => {
-                            best = best.max(self.cells.recs[*x as usize].height);
-                            None
-                        }
-                    },
-                    PremRef::VRow(k) => {
-                        best = best.max(vh.get(k).copied().unwrap_or(0));
-                        None
-                    }
-                    PremRef::Neg(_) | PremRef::Bi(_) => None,
-                };
-                if let Some(d) = dep {
-                    open_n += 1;
-                    users.entry(d).or_default().push(idx);
-                }
-            }
-            firings.push(Firing { head, open: open_n, best });
-            if open_n == 0 {
-                heap.push(Reverse((best + 1, head)));
-            }
-        };
-        for &f in &order {
-            if self.facts.rec(f).base() || self.wit_head[f as usize] == EMPTY {
-                heap.push(Reverse((0, Node::Fact(f))));
-                continue;
-            }
-            for n in self.chain(f) {
-                add(Node::Fact(f), self.prems_of(&n), &mut firings, &mut users, &mut heap);
-            }
-        }
-        for (i, ms) in members.iter().enumerate() {
-            for (j, ds) in ms.iter().enumerate() {
-                for (k, ps) in ds.iter().enumerate() {
-                    add(Node::Member(i, j, k), ps, &mut firings, &mut users, &mut heap);
-                }
-            }
-            if open[i].1 == 0 {
-                heap.push(Reverse((0, Node::Cell(i))));
-            }
-        }
+        let QGraph { mut firings, mut users, mut heap } = self.quorum_graph(open, members, &order, &at, memo, &vh);
         let mut member_h: Vec<Vec<Option<(u32, usize)>>> = members.iter().map(|ms| vec![None; ms.len()]).collect();
         let mut cell_h: Vec<Option<u32>> = vec![None; open.len()];
         let mut reached: Vec<usize> = vec![0; open.len()];
         while let Some(Reverse((hgt, node))) = heap.pop() {
             match node {
-                Node::Fact(f) => {
+                QNode::Fact(f) => {
                     if memo.contains_key(&f) {
                         continue;
                     }
                     memo.insert(f, hgt);
                 }
-                Node::Member(i, j, k) => {
+                QNode::Member(i, j, k) => {
                     if member_h[i][j].is_some() {
                         continue;
                     }
                     member_h[i][j] = Some((hgt, k));
                     reached[i] += 1;
                     if reached[i] == brk!("thr_first_height" => 1; open[i].1) {
-                        heap.push(Reverse((hgt, Node::Cell(i))));
+                        heap.push(Reverse((hgt, QNode::Cell(i))));
                     }
                     continue;
                 }
-                Node::Cell(i) => {
+                QNode::Cell(i) => {
                     if cell_h[i].is_some() {
                         continue;
                     }
@@ -4289,6 +4230,67 @@ impl Store {
             }
         }
         Ok(member_h)
+    }
+
+    /// The graph `quorum_heights` runs Dijkstra over: a firing for every derivation of a fact below the members and of
+    /// every member, the firings waiting on each node, and the nodes already reached.
+    fn quorum_graph(&self, open: &[(CellId, usize)], members: &[Vec<Vec<Vec<PremRef>>>], order: &[FactId], at: &HashMap<CellId, usize>, memo: &HashMap<FactId, u32>, vh: &HashMap<u32, u32>) -> QGraph {
+        let (mut firings, mut users, mut heap) = (Vec::new(), HashMap::new(), BinaryHeap::new());
+        let add = |head: QNode, ps: &[PremRef], firings: &mut Vec<QFiring>, users: &mut HashMap<QNode, Vec<usize>>, heap: &mut BinaryHeap<Reverse<(u32, QNode)>>| {
+            let idx = firings.len();
+            let (mut open_n, mut best) = (0usize, 0u32);
+            for p in ps {
+                let dep = match p {
+                    PremRef::Fact(g) => match memo.get(g) {
+                        Some(hg) => {
+                            best = best.max(*hg);
+                            None
+                        }
+                        None => Some(QNode::Fact(*g)),
+                    },
+                    PremRef::Cell(x) => match at.get(x) {
+                        Some(i) => Some(QNode::Cell(*i)),
+                        None => {
+                            best = best.max(self.cells.recs[*x as usize].height);
+                            None
+                        }
+                    },
+                    PremRef::VRow(k) => {
+                        best = best.max(vh.get(k).copied().unwrap_or(0));
+                        None
+                    }
+                    PremRef::Neg(_) | PremRef::Bi(_) => None,
+                };
+                if let Some(d) = dep {
+                    open_n += 1;
+                    users.entry(d).or_default().push(idx);
+                }
+            }
+            firings.push(QFiring { head, open: open_n, best });
+            if open_n == 0 {
+                heap.push(Reverse((best + 1, head)));
+            }
+        };
+        for &f in order {
+            if self.facts.rec(f).base() || self.wit_head[f as usize] == EMPTY {
+                heap.push(Reverse((0, QNode::Fact(f))));
+                continue;
+            }
+            for n in self.chain(f) {
+                add(QNode::Fact(f), self.prems_of(&n), &mut firings, &mut users, &mut heap);
+            }
+        }
+        for (i, ms) in members.iter().enumerate() {
+            for (j, ds) in ms.iter().enumerate() {
+                for (k, ps) in ds.iter().enumerate() {
+                    add(QNode::Member(i, j, k), ps, &mut firings, &mut users, &mut heap);
+                }
+            }
+            if open[i].1 == 0 {
+                heap.push(Reverse((0, QNode::Cell(i))));
+            }
+        }
+        QGraph { firings, users, heap }
     }
 
     /// Replace an open quorum's members and height with the closed ones: the
@@ -4604,6 +4606,26 @@ impl Store {
             ("wit", wit),
         ]
     }
+}
+
+/// A node of the quorum height graph: a fact, derivation `k` of member `j` of open cell `i`, or open cell `i`.
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+enum QNode {
+    Fact(FactId),
+    Member(usize, usize, usize),
+    Cell(usize),
+}
+
+struct QFiring {
+    head: QNode,
+    open: usize,
+    best: u32,
+}
+
+struct QGraph {
+    firings: Vec<QFiring>,
+    users: HashMap<QNode, Vec<usize>>,
+    heap: BinaryHeap<Reverse<(u32, QNode)>>,
 }
 
 fn push_scope(r: &FactRec, out: &mut String) {
