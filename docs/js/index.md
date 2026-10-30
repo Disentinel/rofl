@@ -3,13 +3,13 @@
 | file | clauses | heads | phrased | positional | absorbed guards | links | either | tables | not defined here | refused |
 |---|---|---|---|---|---|---|---|---|---|---|
 | [phrases](phrases.rofl.md) | 10 | 1 | 0 | 0 | 0 | 0 | 0 | 1 | 0 | 0 |
-| [js-phrases](js-phrases.rofl.md) | 1057 | 3 | 0 | 0 | 0 | 0 | 0 | 31 | 0 | 0 |
+| [js-phrases](js-phrases.rofl.md) | 1058 | 3 | 0 | 0 | 0 | 0 | 0 | 31 | 0 | 0 |
 | [js-ambient](js-ambient.rofl.md) | 70 | 41 | 38 | 0 | 1 | 91 | 5 | 1 | 11 | 0 |
 | [js-attrs](js-attrs.rofl.md) | 51 | 39 | 37 | 2 | 0 | 105 | 4 | 0 | 6 | 0 |
-| [js-callgraph](js-callgraph.rofl.md) | 521 | 187 | 84 | 87 | 95 | 690 | 66 | 7 | 12 | 0 |
+| [js-callgraph](js-callgraph.rofl.md) | 522 | 188 | 84 | 88 | 95 | 693 | 66 | 7 | 12 | 0 |
 | [js-concat](js-concat.rofl.md) | 209 | 71 | 2 | 58 | 16 | 337 | 24 | 7 | 2 | 0 |
 | [js-controlflow](js-controlflow.rofl.md) | 254 | 98 | 78 | 4 | 44 | 248 | 17 | 6 | 3 | 0 |
-| [js-dataflow](js-dataflow.rofl.md) | 606 | 234 | 143 | 67 | 176 | 873 | 56 | 10 | 4 | 0 |
+| [js-dataflow](js-dataflow.rofl.md) | 911 | 377 | 144 | 208 | 243 | 1562 | 116 | 11 | 4 | 0 |
 | [js-effects](js-effects.rofl.md) | 209 | 128 | 114 | 6 | 16 | 316 | 16 | 2 | 7 | 0 |
 | [js-env-api](js-env-api.rofl.md) | 5 | 5 | 5 | 0 | 0 | 8 | 0 | 0 | 3 | 0 |
 | [js-env](js-env.rofl.md) | 45 | 34 | 33 | 0 | 0 | 50 | 5 | 1 | 18 | 0 |
@@ -23,10 +23,10 @@
 | [js-resolve](js-resolve.rofl.md) | 58 | 36 | 35 | 0 | 0 | 79 | 8 | 0 | 0 | 0 |
 | [js-service](js-service.rofl.md) | 20 | 15 | 1 | 13 | 0 | 17 | 2 | 1 | 7 | 0 |
 | [js-structure](js-structure.rofl.md) | 11 | 4 | 4 | 0 | 4 | 6 | 2 | 0 | 2 | 0 |
-| [js-surface](js-surface.rofl.md) | 134 | 105 | 33 | 71 | 6 | 201 | 7 | 1 | 2 | 0 |
+| [js-surface](js-surface.rofl.md) | 152 | 119 | 33 | 85 | 12 | 226 | 9 | 1 | 2 | 0 |
 | [js-vocabulary](js-vocabulary.rofl.md) | 12 | 10 | 10 | 0 | 0 | 17 | 2 | 0 | 2 | 0 |
 
-349 heads without a phrase across these files.
+501 heads without a phrase across these files.
 
 ## Proposed renames
 
@@ -570,6 +570,7 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `iter_elem` | `has_an_element` |
 | `join_ambiguous` | `has_two_joins` |
 | `join_missing` | `has_no_join_with` |
+| `keyed_private_reached` | `reaches_the_private` |
 | `keyed_put_after` | `is_put_after` |
 | `keyed_put_before` | `is_put_before` |
 | `keyed_read_ordered` | `reads_back` |

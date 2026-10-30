@@ -63,6 +63,7 @@ Declared as facts:
 | `keyed_put_before` | "is_put_before(node V, call C)" |
 | `keyed_put_after` | "is_put_after(node V, call C)" |
 | `keyed_taken_out` | "is_taken_out_before(node V, call C, by call R)" |
+| `keyed_private_reached` | "reaches_the_private(node N, method G)" |
 | `interpolated` | "is_interpolated(template T)" |
 | `binder` | "binds(declarator D, name Name, to node Init, in file File)" |
 | `binder_at_top` | "is_at_the_top(declarator D)" |

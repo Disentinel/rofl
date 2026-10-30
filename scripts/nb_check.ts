@@ -1,7 +1,9 @@
 // npm run test:nb — the notebook's behavioural gate (what runs around the kernel is npm run test:nb:product): the example notebooks by exit code and a few answer lines, and planted defects that must
 // turn it red. The invariants it stands for are named in examples/notebook/self.rofl.md; each check below names its own.
+import { pathToFileURL } from 'node:url';
 import { chmodSync, existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
 import * as os from 'node:os';
+import { stripTypeScriptTypes } from 'node:module';
 import * as path from 'node:path';
 import * as vm from 'node:vm';
 import { execFileSync } from 'node:child_process';
@@ -240,10 +242,16 @@ await import(${JSON.stringify('file://' + path.join(out, 'use.mjs'))}); console.
     const model = new Set<string>(), unordered = new Set<string>();
     for (const c of JSON.parse(ran.stdout ?? '{}').cells ?? []) for (const l of c.lines) for (const a of l.answers) {
       const m = /^(seen|unordered)\("([\w.]+)", (.+)\)$/.exec(a.literal);
-      if (m) (m[1] === 'seen' ? model : unordered).add(`${m[2]}:${m[3]}`);
+      if (m) (m[1] === 'seen' ? model : unordered).add(`${m[2]}:${m[3].startsWith('"') ? JSON.parse(m[3]) : m[3]}`);
     }
     const observed = new Set<string>();
-    vm.runInNewContext(readFileSync(path.join(NB, 'keyed/order.js'), 'utf8'), { __seen: (tag: string, v: unknown) => { if (v !== undefined) observed.add(`${tag}:${String(v)}`); }, process: { argv: [] } });
+    const __seen = (tag: string, v: unknown) => { observed.add(`${tag}:${String(v)}`); };
+    vm.runInNewContext(readFileSync(path.join(NB, 'keyed/order.js'), 'utf8'), { __seen, process: { argv: [] } });
+    vm.runInNewContext(stripTypeScriptTypes(readFileSync(path.join(NB, 'keyed/order_ts.ts'), 'utf8')), { __seen });
+    (globalThis as { __seen?: typeof __seen }).__seen = __seen;
+    await import(pathToFileURL(path.join(NB, 'keyed/order_use.mjs')).href);
+    delete (globalThis as { __seen?: typeof __seen }).__seen;
+    await new Promise((done) => setImmediate(done));
     const missing = [...observed].filter((o) => !model.has(o));
     const extra = [...model].filter((o) => !observed.has(o) && !unordered.has(o));
     return { code: 0, out: `V8 observed ${observed.size} values; missing from the model: ${JSON.stringify(missing)}; in the model where the order is known and V8 never saw it: ${JSON.stringify(extra)}`, stdout: '' };
