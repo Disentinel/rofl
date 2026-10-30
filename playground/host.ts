@@ -182,7 +182,7 @@ const plain = (s: string) => s.replace(/\bnb__/g, '');
 const WRITTEN = new Set([...[...RESERVED].filter((r) => !KERNEL_BOOK.has(r)), ...BOOK_ROWS, 'phrase', 'sig', 'fun_phrase']);
 const NODE = /\bn[0-9a-f]{16}_[0-9a-z]+\b/g;
 type Concerns = { rules: Record<string, string>; rels: Record<string, string> };
-type Scanned = { key: string; facts: string[]; nodes: Record<string, Node>; parseErrors: Record<string, string>; text: string; rels: Set<string> };
+type Scanned = { key: string; facts: string[]; nodes: Record<string, Node>; parseErrors: Record<string, string>; lines: string[]; rels: Set<string> };
 
 /** Every relation the clauses conclude or read. */
 function relsOf(program: Clause[], into = new Set<string>()): Set<string> {
@@ -414,7 +414,7 @@ export class Host {
     let f: Rofl;
     if (!base) {
       try {
-        const r = this.engine.withCells(this.core, this.model, [Object.keys(files).length ? sc.text : '', cone ? asksOf(cone) : ''].join('\n'), texts, { budget: BUDGET, space: SPACE, stop });
+        const r = this.engine.withCells(this.core, this.model, [...Object.keys(files).length ? sc.lines : [], ...cone ? [asksOf(cone)] : []], texts, { budget: BUDGET, space: SPACE, stop });
         r.errors.forEach((e, i) => outs[i].errors.push(...e));
         f = r.world; partial ||= f.store.partialEval;
       } catch (e) { return done((e as Error).message); }
@@ -719,7 +719,7 @@ export class Host {
     labelNodes(facts, nodes);
     const all = [...facts, ...host];
     this.base = null;
-    return this.scanned = { key, facts, nodes, parseErrors, text: all.join('\n'), rels: new Set(all.map(relOf)) };
+    return this.scanned = { key, facts, nodes, parseErrors, lines: all, rels: new Set(all.map(relOf)) };
   }
 
   /** The model evaluated over the code, asked `cone` (undefined: every rule), once per text of the files: a kept world asked less answers as it is,
@@ -730,7 +730,7 @@ export class Host {
     let b: Rofl;
     if (kept && (!had || cone && [...cone].every((r) => had.has(r)))) b = kept;
     else if (kept && cone) b = this.engine.asked(kept, [...cone].filter((r) => !had!.has(r)), walls);
-    else b = this.engine.evaluated(this.core!, this.model, cone ? `${sc.text}\n${asksOf(cone)}` : sc.text, walls);
+    else b = this.engine.evaluated(this.core!, this.model, cone ? [...sc.lines, asksOf(cone)] : sc.lines, walls);
     if (b !== kept) this.baseAsks = cone && had && kept ? new Set([...had, ...cone]) : cone;
     return b.store.partialEval ? b : this.base = b;   // a world cut short is not kept for the next run
   }
