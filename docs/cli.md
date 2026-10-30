@@ -60,6 +60,15 @@ is a document and is refused (exit 2).
 notebook over code (`code:`, `model: js`) and `--json` are not native yet: it says so on stderr and exits 2.
 `npm run nbcheck` holds it to the TypeScript kernel byte for byte over every notebook in its slice.
 `npm run nb` evaluates only the cone of what a notebook's lines ask (docs/demand-cones.md); it has no setting.
+`rofl ask`, `rofl why` and `rofl whynot` do the same: the world asks the relations
+their question names (`asks(R)`), so only the rules those reach run; asked later
+about a relation outside what its kept world asked, that world grows its cone by
+delta. `rofl excise`, `--state`, `--ticks`, `--retract` and `--explain` keep every
+rule, and so does `rofl load`, whose answers whycheck holds to the reference. At
+700 vscode files with the JS model: 49 s and 2.1 GB against 104 s and 3.4 GB.
+A world is kept only when the memory the process may still use holds about three
+times its volume (indexing it for a delta and writing it); otherwise it is
+answered and not kept, said on stderr.
 
 **`@LIST`** stands for the files LIST names, one a line, each read from LIST's
 directory. `@rules/js.files` is the JS model, the files the notebook host
