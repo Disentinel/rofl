@@ -453,16 +453,18 @@ fn build_world(o: &Opts, world: &[String], s: &mut Session, slot: &Option<String
 /// its lines': none for a run that needs every rule (an excise, the state, ticks, retractions, explanations).
 fn question_rels(o: &Opts) -> Option<Vec<String>> {
     if !o.implicit || o.qs.is_empty() || o.state || o.ticks != 0 || !o.retracts.is_empty() || o.explain { return None; }
-    let mut rels = Vec::new();
+    // and what the session reads after each evaluation: the scans and the adapters' wants it is asked for
+    let mut rels: Vec<String> = ["scan_request", "want_of", "permit"].map(String::from).to_vec();
     for q in &o.qs {
         match q {
             Q::Ask(l) | Q::Why(l) | Q::WhyAll(l) | Q::Whynot(l) => rels.extend(heads_of(l)),
             Q::Excise(_) => return None,
         }
     }
+    if rels.len() == 3 { return None; }
     rels.sort();
     rels.dedup();
-    (!rels.is_empty()).then_some(rels)
+    Some(rels)
 }
 
 /// The relation names of a question's literals: each name outside parentheses that a `(` or `[` follows.
