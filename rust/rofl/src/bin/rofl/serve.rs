@@ -228,6 +228,9 @@ impl Server {
             return self.limited(r, limit);
         }
         let op = r.get("op").and_then(|v| v.as_str()).ok_or("`op` is required")?;
+        if op != "close" && rofl::engine::MEMORY_FULL.load(std::sync::atomic::Ordering::Relaxed) {
+            return Err(format!("{op} refused: the process is at the memory it may use; close a session or give it more memory"));
+        }
         // what came back to the post since the last request is loaded before this one is answered
         if op != "close" && op != "inbox" {
             if let Ok(s) = self.get(r) {
@@ -728,6 +731,9 @@ pub fn main(files: Vec<String>) {
         let mut v = match res {
             Ok(mut v) => {
                 v.as_object_mut().unwrap().insert("ok".into(), json!(true));
+                if rofl::engine::MEMORY_STOPPED.swap(false, std::sync::atomic::Ordering::Relaxed) {
+                    v["stopped"] = json!("heap");
+                }
                 v
             }
             Err(e) => json!({ "ok": false, "error": e }),

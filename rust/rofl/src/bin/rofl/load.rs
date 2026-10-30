@@ -552,6 +552,8 @@ fn keep_loaded(o: &Opts, world: &[String], s: &mut Session, loaded: &[(String, S
         let note = crate::kept::record(world, files_now, &units, read, &scan_units(s), None).unwrap_or_else(|e| fail(o.json, FILE_REFUSED, &format!("{k} is not kept: {e}")));
         let n = s.keep_volume_noted(k, &note).unwrap_or_else(|e| fail(o.json, USAGE, &format!("{k}: {e}")));
         eprintln!("kept {k}: {n} bytes");
+    } else if s.eval.memory_cut() {
+        eprintln!("the world reached the memory this process may use and stopped there: its answers are partial, and it is not kept");
     } else if let Some(p) = slot {
         // keeping is a convenience of the question: a world that cannot be kept is answered all the same
         let units = units_of(s, loaded);

@@ -22,6 +22,7 @@
 mod delta;
 mod kept;
 mod load;
+mod memory;
 mod nb;
 mod render;
 mod seed;
@@ -115,6 +116,7 @@ fn run(args: Vec<String>) {
 
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
+    memory::watch();
     // a panic is the engine's own fault, never a refusal
     if std::panic::catch_unwind(|| run(args)).is_err() {
         std::process::exit(load::DEFECT);
