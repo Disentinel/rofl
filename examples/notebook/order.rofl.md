@@ -48,9 +48,16 @@ code:
 > out, a function that ends without a value, a `let` with no initialiser, `void`.
 > So may be a key an object literal is not made with, whatever reaches it (a
 > `const`, an alias, a parameter: `shape.b`, `lackAlias.y`, `pickY`), and a
-> class field declared without a value (`Slot`). Writes onto an object are not
-> ordered: where one writes the key (`lateObj.y = 29`), a read may see it or
-> `undefined`, and both are named unordered. A removal that its own function
+> class field declared without a value (`Slot`). A write makes the key present
+> where it ran before the read and no `delete` of it may run on that object: the
+> constructor's own statement `this.path = '/p'` for any read outside it
+> (`Conf`), unless the constructor runs the read before it (`Shown` calls
+> `show()`, `Kid`'s `super()` runs `Base`, which calls the override `hello()`) or
+> hands the instance to code outside the model first (`Lent`); and a statement
+> of the list that binds a `const` object, before the read in the same function
+> (`cfg`; not `readCfg2`, which may run anywhere, nor after `delete cfg3.mode`).
+> Which value a write leaves is not ordered: the read may see any write of the
+> key, and those are named unordered. A removal that its own function
 > undoes before it returns (`reset` deletes and puts back) takes nothing out,
 > unless something between may run the read (`tear` calls `read` in between).
 > `use(tag, v)` marks each read; `npm run test:nb` runs the file under V8 and
@@ -75,6 +82,9 @@ never seen("field.ctor", undefined)
 never seen("ctor.mode", undefined)
 never seen("lack.has", undefined)
 never seen("heal.reset", undefined)
+never seen("lack.after", undefined)
+never seen("fset.set", undefined)
+never seen("oset.const", undefined)
 never seen("order.gone", 2)
 never seen("order.cleared", 3)
 never seen("tally.first", 7)
@@ -112,7 +122,11 @@ unordered(Tag, undefined) :- call_site[code](C, _), callee_of[code](C, U), ast_n
 
 unordered(Tag, V) :- call_site[code](C, _), callee_of[code](C, U), ast_name[code](U, "use"),
                      arg_at[flow](C, 0, T), ast_value[code](T, Tag),
-                     arg_at[flow](C, 1, G), member_unset_written[flow](G), read_holds_lit[flow](G, V).
+                     arg_at[flow](C, 1, G), member_unset_written[flow](G), read_holds_lit[flow](G, V), V != undefined.
+
+unordered(Tag, undefined) :- call_site[code](C, _), callee_of[code](C, U), ast_name[code](U, "use"),
+                             arg_at[flow](C, 0, T), ast_value[code](T, Tag),
+                             arg_at[flow](C, 1, G), member_may_lack[flow](G).
 
 ? unordered(Tag, V)
 ```

@@ -245,3 +245,41 @@ class Torn {
   read() { use('heal.torn', this.torn.get('a')); }
 }
 new Torn().tear();
+
+class Conf {
+  path;
+  constructor() { this.path = '/p'; }
+  get() { use('fset.set', this.path); }
+}
+new Conf().get();
+class Shown {
+  label;
+  constructor() { this.show(); this.label = 'n'; }
+  show() { use('fset.early', this.label); }
+}
+new Shown().show();
+class Base { constructor() { this.hello(); } hello() { } }
+class Kid extends Base {
+  greet;
+  constructor() { super(); this.greet = 'hi'; }
+  hello() { use('fset.super', this.greet); }
+}
+new Kid().hello();
+const kept = [];
+class Lent {
+  val;
+  constructor() { kept.push(this); kept.forEach((o) => o.peek()); this.val = 1; }
+  peek() { use('fset.lent', this.val); }
+}
+new Lent().peek();
+const cfg = {};
+cfg.mode = 'm';
+use('oset.const', cfg.mode);
+const cfg2 = {};
+function readCfg2() { use('oset.fn', cfg2.mode); }
+readCfg2();
+cfg2.mode = 'z';
+const cfg3 = {};
+cfg3.mode = 'q';
+delete cfg3.mode;
+use('oset.deleted', cfg3.mode);

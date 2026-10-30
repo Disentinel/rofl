@@ -525,147 +525,56 @@ impl Vocab {
     pub fn new(h: &mut Heap) -> Vocab {
         let mut i = |s: &str| h.intern(s);
         Vocab {
-            derived_by: i("derived_by"),
-            rule: i("rule"),
-            has_premise: i("has_premise"),
-            premise_pos: i("premise_pos"),
-            premise_neg: i("premise_neg"),
-            concludes: i("concludes"),
-            has_conclusion: i("has_conclusion"),
-            reads_from: i("reads_from"),
-            writes_to: i("writes_to"),
-            mode: i("mode"),
-            reserved: i("reserved"),
-            authority: i("authority"),
-            asserted_by: i("asserted_by"),
-            hole: i("hole"),
-            edb: i("edb"),
-            bridge_decl: i("bridge_decl"),
-            uses_builtin: i("uses_builtin"),
-            premise_lit: i("premise_lit"),
-            conclusion_lit: i("conclusion_lit"),
-            conclusion_tense: i("conclusion_tense"),
-            stratum: i("stratum"),
-            unstratified: i("unstratified"),
-            semantics: i("semantics"),
-            unknown: i("unknown"),
-            sealed: i("sealed"),
-            asks: i("asks"),
-            unsafe_rule: i("unsafe_rule"),
-            premise_var: i("premise_var"),
-            slot_arity: i("slot_arity"),
-            late_rule: i("late_rule"),
-            demand_rel: i("demand_rel"),
-            trigger_of: i("trigger_of"),
-            neg_relation: i("neg_relation"),
-            provenance_reader: i("provenance_reader"),
-            premise_agg: i("premise_agg"),
-            agg_cell: i("agg_cell"),
-            agg_member: i("agg_member"),
-            agg_member_prem: i("agg_member_prem"),
-            agg_sealed: i("agg_sealed"),
-            agg_inner: i("agg_inner"),
-            agg_refused: i("agg_refused"),
-            empty_zero: i("empty_zero"),
-            member_reader: i("member_reader"),
-            lattice_decl: i("lattice_decl"),
-            lattice_widen: i("lattice_widen"),
-            lattice_member: i("lattice_member"),
-            lattice_member_prem: i("lattice_member_prem"),
-            lattice_refused: i("lattice_refused"),
-            lattice_outer: i("lattice_outer"),
-            lattice_member_reader: i("lattice_member_reader"),
-            tag_decl: i("tag_decl"),
-            order_comp: i("order_comp"),
-            structure_decl: i("structure_decl"),
-            structure_role: i("structure_role"),
-            structure_closure: i("structure_closure"),
-            dominance: i("dominance"),
-            dominance_lit: i("dominance_lit"),
-            dominated_by: i("dominated_by"),
-            evaluated_again: i("evaluated_again"),
-            dominated_reader: i("dominated_reader"),
-            premise_arith: i("premise_arith"),
-            s_lattice: i("$lattice"),
-            slot_neg: i("neg"),
-            slot_hkey: i("hkey"),
-            slot_hval: i("hval"),
-            slot_lkey: i("lkey"),
-            slot_lval: i("lval"),
-            explain_request: i("explain_request"),
-            explained: i("explained"),
-            shrug: i("shrug"),
-            explain_persp: i("$explain"),
-            main: i("main"),
-            kernel_persp: i("$kernel"),
-            kernel_who: i("$kernel"),
-            anon_who: i("user"),
-            any_persp: i("$any"),
-            want: i("want_key"),
-            want_of: i("want_of"),
+            derived_by: i("derived_by"), rule: i("rule"), has_premise: i("has_premise"),
+            premise_pos: i("premise_pos"), premise_neg: i("premise_neg"), concludes: i("concludes"),
+            has_conclusion: i("has_conclusion"), reads_from: i("reads_from"), writes_to: i("writes_to"),
+            mode: i("mode"), reserved: i("reserved"), authority: i("authority"),
+            asserted_by: i("asserted_by"), hole: i("hole"), edb: i("edb"),
+            bridge_decl: i("bridge_decl"), uses_builtin: i("uses_builtin"), premise_lit: i("premise_lit"),
+            conclusion_lit: i("conclusion_lit"), conclusion_tense: i("conclusion_tense"), stratum: i("stratum"),
+            unstratified: i("unstratified"), semantics: i("semantics"), unknown: i("unknown"),
+            sealed: i("sealed"), asks: i("asks"), unsafe_rule: i("unsafe_rule"),
+            premise_var: i("premise_var"), slot_arity: i("slot_arity"), late_rule: i("late_rule"),
+            demand_rel: i("demand_rel"), trigger_of: i("trigger_of"), neg_relation: i("neg_relation"),
+            provenance_reader: i("provenance_reader"), premise_agg: i("premise_agg"), agg_cell: i("agg_cell"),
+            agg_member: i("agg_member"), agg_member_prem: i("agg_member_prem"), agg_sealed: i("agg_sealed"),
+            agg_inner: i("agg_inner"), agg_refused: i("agg_refused"), empty_zero: i("empty_zero"),
+            member_reader: i("member_reader"), lattice_decl: i("lattice_decl"), lattice_widen: i("lattice_widen"),
+            lattice_member: i("lattice_member"), lattice_member_prem: i("lattice_member_prem"), lattice_refused: i("lattice_refused"),
+            lattice_outer: i("lattice_outer"), lattice_member_reader: i("lattice_member_reader"), tag_decl: i("tag_decl"),
+            order_comp: i("order_comp"), structure_decl: i("structure_decl"), structure_role: i("structure_role"),
+            structure_closure: i("structure_closure"), dominance: i("dominance"), dominance_lit: i("dominance_lit"),
+            dominated_by: i("dominated_by"), evaluated_again: i("evaluated_again"), dominated_reader: i("dominated_reader"),
+            premise_arith: i("premise_arith"), s_lattice: i("$lattice"), slot_neg: i("neg"),
+            slot_hkey: i("hkey"), slot_hval: i("hval"), slot_lkey: i("lkey"),
+            slot_lval: i("lval"), explain_request: i("explain_request"), explained: i("explained"),
+            shrug: i("shrug"), explain_persp: i("$explain"), main: i("main"),
+            kernel_persp: i("$kernel"), kernel_who: i("$kernel"), anon_who: i("user"),
+            any_persp: i("$any"), want: i("want_key"), want_of: i("want_of"),
             want_arg: i("want_arg"),
             reserved_set: RESERVED_NAMES.iter().map(|s| i(s)).collect(),
             kernel_book: KERNEL_BOOK_NAMES.iter().map(|s| i(s)).collect(),
             arity: ARITY_TABLE.iter().map(|(s, n)| (i(s), *n)).collect(),
-            op_eq: i("="),
-            op_ne: i("!="),
-            op_lt: i("<"),
-            op_le: i("<="),
-            op_gt: i(">"),
-            op_ge: i(">="),
-            op_is: i("is"),
-            op_in: i("in"),
-            op_subset: i("subset"),
-            f_set: i("set"),
-            f_iv: i("iv"),
-            a_inf: i("inf"),
-            a_ninf: i("ninf"),
-            a_now: i("now"),
-            a_next: i("next"),
-            a_init: i("init"),
-            well_founded: i("well_founded"),
-            sealed_provenance: i("provenance"),
-            sealed_rules: i("rules"),
-            sealed_assertions: i("assertions"),
-            s_fact: i("$fact"),
-            s_lit: i("$lit"),
-            s_not: i("$not"),
-            s_builtin: i("$builtin"),
-            s_var: i("$var"),
-            s_cons: i("$cons"),
-            s_nil: i("$nil"),
-            s_rule_hole: i("$rule"),
-            budget_reason: i("budget_exhausted"),
-            space_reason: i("space_exhausted"),
-            disk_reason: i("disk_exhausted"),
-            demand_cycle: i("demand_cycle"),
-            arith_type_reason: i("arith_type_error"),
-            arith_zero_reason: i("arith_zero_divisor"),
-            str_type_reason: i("str_type_error"),
-            str_index_reason: i("str_index_error"),
-            str_sep_reason: i("str_empty_separator"),
-            atom_name_reason: i("atom_unwritable"),
-            arith_overflow_reason: i("arith_overflow"),
-            agg_overflow_reason: i("agg_overflow"),
-            agg_type_reason: i("agg_type_error"),
-            agg_open_reason: i("agg_open_member"),
-            set_type_reason: i("set_type_error"),
-            unbounded_reason: i("unbounded_members"),
-            widened_reason: i("widening_forced"),
-            tag_carrier_reason: i("tag_off_carrier"),
-            s_agg: i("$agg"),
-            s_cell: i("$cell"),
-            s_unk: i("$unk"),
-            s_by: i("$by"),
-            s_lbl: i("$lbl"),
-            s_unsure: i("$unsure"),
-            s_inner: i("$inner"),
-            s_bi: i("$bi"),
-            s_neg: i("$neg"),
-            a_true: i("true"),
-            a_false: i("false"),
-            slot_agg: i("agg"),
-            slot_agg_res: i("agg_res"),
+            op_eq: i("="), op_ne: i("!="), op_lt: i("<"),
+            op_le: i("<="), op_gt: i(">"), op_ge: i(">="),
+            op_is: i("is"), op_in: i("in"), op_subset: i("subset"),
+            f_set: i("set"), f_iv: i("iv"), a_inf: i("inf"),
+            a_ninf: i("ninf"), a_now: i("now"), a_next: i("next"),
+            a_init: i("init"), well_founded: i("well_founded"), sealed_provenance: i("provenance"),
+            sealed_rules: i("rules"), sealed_assertions: i("assertions"), s_fact: i("$fact"),
+            s_lit: i("$lit"), s_not: i("$not"), s_builtin: i("$builtin"),
+            s_var: i("$var"), s_cons: i("$cons"), s_nil: i("$nil"),
+            s_rule_hole: i("$rule"), budget_reason: i("budget_exhausted"), space_reason: i("space_exhausted"),
+            disk_reason: i("disk_exhausted"), demand_cycle: i("demand_cycle"), arith_type_reason: i("arith_type_error"),
+            arith_zero_reason: i("arith_zero_divisor"), str_type_reason: i("str_type_error"), str_index_reason: i("str_index_error"),
+            str_sep_reason: i("str_empty_separator"), atom_name_reason: i("atom_unwritable"), arith_overflow_reason: i("arith_overflow"),
+            agg_overflow_reason: i("agg_overflow"), agg_type_reason: i("agg_type_error"), agg_open_reason: i("agg_open_member"),
+            set_type_reason: i("set_type_error"), unbounded_reason: i("unbounded_members"), widened_reason: i("widening_forced"),
+            tag_carrier_reason: i("tag_off_carrier"), s_agg: i("$agg"), s_cell: i("$cell"),
+            s_unk: i("$unk"), s_by: i("$by"), s_lbl: i("$lbl"),
+            s_unsure: i("$unsure"), s_inner: i("$inner"), s_bi: i("$bi"),
+            s_neg: i("$neg"), a_true: i("true"), a_false: i("false"),
+            slot_agg: i("agg"), slot_agg_res: i("agg_res"),
             agg_ops: [
                 (AggOp::Count, i("count")),
                 (AggOp::Sum, i("sum")),
@@ -1061,6 +970,53 @@ fn builtin_rows(h: &mut Heap, v: &Vocab, rid: Term, b: &BodyElem, facts: &mut Ve
     }
 }
 
+/// Premise rows of a body, shared by rules and dominance rules; `kind` adds the rest.
+fn encode_premises(
+    h: &mut Heap,
+    v: &Vocab,
+    rid: Term,
+    head: &Lit,
+    body: &[BodyElem],
+    facts: &mut Vec<EncFact>,
+    kind: impl Fn(&Vocab, Term, &BodyElem, &mut Vec<EncFact>),
+) {
+    let head_p = persp_audit(h, v, head.persp);
+    facts.push(EncFact {
+        rel: v.writes_to,
+        args: vec![rid, head_p],
+    });
+    let mut read_persps: Vec<(String, Term)> = Vec::new();
+    for (i, b) in body.iter().enumerate() {
+        let k = Term::int(i as i64 + 1);
+        facts.push(EncFact {
+            rel: v.has_premise,
+            args: vec![rid, k],
+        });
+        let rb = reify_body_elem(h, v, b);
+        facts.push(EncFact {
+            rel: v.premise_lit,
+            args: vec![rid, k, rb],
+        });
+        kind(v, rid, b, facts);
+        for l in b.lits_deep() {
+            let pa = persp_audit(h, v, l.persp);
+            let key = h.canon(pa);
+            if !read_persps.iter().any(|(k, _)| *k == key) {
+                read_persps.push((key, pa));
+            }
+        }
+        builtin_rows(h, v, rid, b, facts);
+    }
+    read_persps.sort_by(|a, b| cmp_js(&a.0, &b.0));
+    for (_, pa) in read_persps {
+        facts.push(EncFact {
+            rel: v.reads_from,
+            args: vec![rid, pa],
+        });
+    }
+}
+
+
 /// `encodeRule` (src/reflect.ts). All rows land in the kernel's book here,
 /// because every relation it writes is in `KERNEL_BOOK`.
 pub fn encode_rule(h: &mut Heap, v: &Vocab, c0: &Clause) -> (String, Vec<EncFact>) {
@@ -1091,84 +1047,51 @@ pub fn encode_rule(h: &mut Heap, v: &Vocab, c0: &Clause) -> (String, Vec<EncFact
         rel: v.conclusion_tense,
         args: vec![rid, tense],
     });
-    let head_p = persp_audit(h, v, c.head.persp);
-    facts.push(EncFact {
-        rel: v.writes_to,
-        args: vec![rid, head_p],
+    encode_premises(h, v, rid, &c.head, &c.body, &mut facts, |v, rid, b, facts| match b {
+        BodyElem::Pos(l) => facts.push(EncFact {
+            rel: v.premise_pos,
+            args: vec![rid, Term::atom(l.rel)],
+        }),
+        BodyElem::Neg(l) => facts.push(EncFact {
+            rel: v.premise_neg,
+            args: vec![rid, Term::atom(l.rel)],
+        }),
+        // A THRESHOLD IS MONOTONE, so it reads its inner body as the rule
+        // would read it inlined: a positive premise is `premise_pos` (a
+        // trigger, a positive edge, recursion allowed), a negation
+        // `premise_neg`.
+        BodyElem::Agg(a) if a.op == AggOp::AtLeast => {
+            let mut seen: Vec<(bool, Sym)> = Vec::new();
+            for x in &a.body {
+                let (neg, l) = match x {
+                    BodyElem::Pos(l) => (false, l),
+                    BodyElem::Neg(l) => (true, l),
+                    _ => continue,
+                };
+                if !seen.contains(&(neg, l.rel)) {
+                    seen.push((neg, l.rel));
+                    let rel = if neg { v.premise_neg } else { brk!("thr_reflect_agg" => v.premise_agg; v.premise_pos) };
+                    facts.push(EncFact { rel, args: vec![rid, Term::atom(l.rel)] });
+                }
+            }
+        }
+        // AN AGGREGATE READS ITS INNER RELATIONS AS A NEGATION DOES: closed,
+        // from below. `premise_agg` and no `premise_pos` for any of them, so
+        // none becomes a trigger or a positive dependency edge.
+        BodyElem::Agg(_) => {
+            let mut seen: Vec<Sym> = Vec::new();
+            let lits: Vec<&Lit> = brk!("refl_neg" => match b { BodyElem::Agg(a) => a.body.iter().filter_map(|x| if let BodyElem::Pos(l) = x { Some(l) } else { None }).collect(), _ => Vec::new() };
+                                       b.lits_deep());
+            for l in lits {
+                if !seen.contains(&l.rel) {
+                    seen.push(l.rel);
+                    facts.push(EncFact { rel: v.premise_agg, args: vec![rid, Term::atom(l.rel)] });
+                    brk!("inner_pos" => facts.push(EncFact { rel: v.premise_pos, args: vec![rid, Term::atom(l.rel)] }); ());
+                }
+            }
+        }
+        BodyElem::Bi { .. } => {}
     });
-    let mut read_persps: Vec<(String, Term)> = Vec::new();
-    for (i, b) in c.body.iter().enumerate() {
-        let k = Term::int(i as i64 + 1);
-        facts.push(EncFact {
-            rel: v.has_premise,
-            args: vec![rid, k],
-        });
-        let rb = reify_body_elem(h, v, b);
-        facts.push(EncFact {
-            rel: v.premise_lit,
-            args: vec![rid, k, rb],
-        });
-        match b {
-            BodyElem::Pos(l) => facts.push(EncFact {
-                rel: v.premise_pos,
-                args: vec![rid, Term::atom(l.rel)],
-            }),
-            BodyElem::Neg(l) => facts.push(EncFact {
-                rel: v.premise_neg,
-                args: vec![rid, Term::atom(l.rel)],
-            }),
-            // A THRESHOLD IS MONOTONE, so it reads its inner body as the rule
-            // would read it inlined: a positive premise is `premise_pos` (a
-            // trigger, a positive edge, recursion allowed), a negation
-            // `premise_neg`.
-            BodyElem::Agg(a) if a.op == AggOp::AtLeast => {
-                let mut seen: Vec<(bool, Sym)> = Vec::new();
-                for x in &a.body {
-                    let (neg, l) = match x {
-                        BodyElem::Pos(l) => (false, l),
-                        BodyElem::Neg(l) => (true, l),
-                        _ => continue,
-                    };
-                    if !seen.contains(&(neg, l.rel)) {
-                        seen.push((neg, l.rel));
-                        let rel = if neg { v.premise_neg } else { brk!("thr_reflect_agg" => v.premise_agg; v.premise_pos) };
-                        facts.push(EncFact { rel, args: vec![rid, Term::atom(l.rel)] });
-                    }
-                }
-            }
-            // AN AGGREGATE READS ITS INNER RELATIONS AS A NEGATION DOES: closed,
-            // from below. `premise_agg` and no `premise_pos` for any of them, so
-            // none becomes a trigger or a positive dependency edge.
-            BodyElem::Agg(_) => {
-                let mut seen: Vec<Sym> = Vec::new();
-                let lits: Vec<&Lit> = brk!("refl_neg" => match b { BodyElem::Agg(a) => a.body.iter().filter_map(|x| if let BodyElem::Pos(l) = x { Some(l) } else { None }).collect(), _ => Vec::new() };
-                                           b.lits_deep());
-                for l in lits {
-                    if !seen.contains(&l.rel) {
-                        seen.push(l.rel);
-                        facts.push(EncFact { rel: v.premise_agg, args: vec![rid, Term::atom(l.rel)] });
-                        brk!("inner_pos" => facts.push(EncFact { rel: v.premise_pos, args: vec![rid, Term::atom(l.rel)] }); ());
-                    }
-                }
-            }
-            BodyElem::Bi { .. } => {}
-        }
-        for l in b.lits_deep() {
-            let pa = persp_audit(h, v, l.persp);
-            let key = h.canon(pa);
-            if !read_persps.iter().any(|(k, _)| *k == key) {
-                read_persps.push((key, pa));
-            }
-        }
-        builtin_rows(h, v, rid, b, &mut facts);
-    }
-    read_persps.sort_by(|a, b| cmp_js(&a.0, &b.0));
-    for (_, pa) in read_persps {
-        facts.push(EncFact {
-            rel: v.reads_from,
-            args: vec![rid, pa],
-        });
-    }
     (id, facts)
 }
 
@@ -1218,32 +1141,11 @@ pub fn encode_dominance(h: &mut Heap, v: &Vocab, lo0: &Lit, hi0: &Lit, body0: &[
         facts.push(EncFact { rel: v.conclusion_lit, args: vec![rid, Term::int(1), hl] });
         facts.push(EncFact { rel: v.concludes, args: vec![rid, Term::atom(lo.rel)] });
     }; ());
-    let head_p = persp_audit(h, v, lo.persp);
-    facts.push(EncFact { rel: v.writes_to, args: vec![rid, head_p] });
-    let mut read_persps: Vec<(String, Term)> = Vec::new();
-    for (i, b) in body.iter().enumerate() {
-        let k = Term::int(i as i64 + 1);
-        facts.push(EncFact { rel: v.has_premise, args: vec![rid, k] });
-        let rb = reify_body_elem(h, v, b);
-        facts.push(EncFact { rel: v.premise_lit, args: vec![rid, k, rb] });
-        match b {
-            BodyElem::Pos(l) => facts.push(EncFact { rel: v.premise_pos, args: vec![rid, Term::atom(l.rel)] }),
-            BodyElem::Neg(l) => facts.push(EncFact { rel: v.premise_neg, args: vec![rid, Term::atom(l.rel)] }),
-            BodyElem::Agg(_) | BodyElem::Bi { .. } => {}
-        }
-        for l in b.lits_deep() {
-            let pa = persp_audit(h, v, l.persp);
-            let key = h.canon(pa);
-            if !read_persps.iter().any(|(k, _)| *k == key) {
-                read_persps.push((key, pa));
-            }
-        }
-        builtin_rows(h, v, rid, b, &mut facts);
-    }
-    read_persps.sort_by(|a, b| cmp_js(&a.0, &b.0));
-    for (_, pa) in read_persps {
-        facts.push(EncFact { rel: v.reads_from, args: vec![rid, pa] });
-    }
+    encode_premises(h, v, rid, &lo, &body, &mut facts, |v, rid, b, facts| match b {
+        BodyElem::Pos(l) => facts.push(EncFact { rel: v.premise_pos, args: vec![rid, Term::atom(l.rel)] }),
+        BodyElem::Neg(l) => facts.push(EncFact { rel: v.premise_neg, args: vec![rid, Term::atom(l.rel)] }),
+        BodyElem::Agg(_) | BodyElem::Bi { .. } => {}
+    });
     (id, facts)
 }
 
@@ -1309,19 +1211,13 @@ pub fn decode_dominances(h: &mut Heap, v: &Vocab, store: &mut Store, refused: &m
             refused.push(format!("dominance({}): its two facts are not of {} at arity {n}", row(), h.name(rel)));
             continue;
         }
-        let mut ps = prems.get(&id).cloned().unwrap_or_default();
-        ps.sort_by_key(|(k, _)| *k);
-        let mut body = Vec::new();
-        for (_, t) in ps {
-            match unreify_body_elem(h, v, t) {
-                Ok(b) => body.push(b),
-                Err(e) => {
-                    refused.push(format!("dominance({}): undecodable reflection ({e})", row()));
-                    body.clear();
-                    break;
-                }
+        let body = match decode_body(h, v, prems.get(&id).cloned().unwrap_or_default()) {
+            Ok(body) => body,
+            Err(e) => {
+                refused.push(format!("dominance({}): undecodable reflection ({e})", row()));
+                Vec::new()
             }
-        }
+        };
         if body.is_empty() {
             refused.push(format!("dominance({}): a dominance rule has a body, the condition under which one fact dominates the other", row()));
             continue;
@@ -1341,6 +1237,16 @@ pub struct DRule {
     pub id: Sym,
     pub clause: Clause,
     pub canon: String,
+}
+
+/// The body a rule's premise rows decode to, in premise order.
+fn decode_body(h: &mut Heap, v: &Vocab, mut ps: Vec<(i64, Term)>) -> Result<Vec<BodyElem>, String> {
+    ps.sort_by_key(|(k, _)| *k);
+    let mut body = Vec::with_capacity(ps.len());
+    for (_, t) in ps {
+        body.push(unreify_body_elem(h, v, t)?);
+    }
+    Ok(body)
 }
 
 /// `decodeRules` (src/reflect.ts:810) — the evaluator's ONLY rule source.
@@ -1399,30 +1305,21 @@ pub fn decode_rules(h: &mut Heap, v: &Vocab, store: &mut Store) -> (Vec<DRule>, 
                 continue;
             }
         };
-        let mut ps: Vec<(i64, Term)> = prems
+        let ps: Vec<(i64, Term)> = prems
             .iter()
             .find(|(x, _)| *x == id)
             .map(|(_, v)| v.clone())
             .unwrap_or_default();
-        ps.sort_by_key(|(k, _)| *k);
-        let mut body = Vec::with_capacity(ps.len());
-        let mut bad = None;
-        for (_, t) in ps {
-            match unreify_body_elem(h, v, t) {
-                Ok(b) => body.push(b),
-                Err(e) => {
-                    bad = Some(e);
-                    break;
-                }
+        let body = match decode_body(h, v, ps) {
+            Ok(body) => body,
+            Err(e) => {
+                diagnostics.push(format!(
+                    "rule {}: undecodable reflection ({e}); skipped",
+                    h.name(id)
+                ));
+                continue;
             }
-        }
-        if let Some(e) = bad {
-            diagnostics.push(format!(
-                "rule {}: undecodable reflection ({e}); skipped",
-                h.name(id)
-            ));
-            continue;
-        }
+        };
         let mut clause = Clause { head, body };
         annotate_aggs(h, &mut clause);
         let canon = canon_clause(h, &clause);

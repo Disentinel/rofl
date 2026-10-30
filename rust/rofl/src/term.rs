@@ -86,6 +86,17 @@ impl Interner {
     /// grows to with all of them.
     fn write(&self, w: &mut VolW) {
         let (b, t) = (&*self.base, &self.top);
+        // over a base that holds the base's names, the top goes beside them whole: an edit never grows the base's table
+        if w.is_over() && !b.is_empty() && !t.is_empty() && w.in_base(&b.slots) {
+            w.u32(2);
+            for n in [b, t] {
+                w.arena(&n.buf);
+                w.arena(&n.ends);
+                w.arena(&n.slots);
+            }
+            return;
+        }
+        w.u32(1);
         if b.is_empty() || t.is_empty() {
             let n = if b.is_empty() { t } else { b };
             w.arena(&n.buf);
@@ -489,6 +500,17 @@ impl Heap {
     pub fn write_volume(&self, w: &mut VolW) {
         self.syms.write(w);
         let (b, t) = (&*self.base, &self.top);
+        if w.is_over() && !b.funcs.is_empty() && !t.funcs.is_empty() && w.in_base(&b.cons) {
+            w.u32(2);
+            for f in [b, t] {
+                w.arena(&f.funcs);
+                w.arena(&f.args);
+                w.arena(&f.cons);
+                w.u64(f.cons_n as u64);
+            }
+            return;
+        }
+        w.u32(1);
         if b.funcs.is_empty() || t.funcs.is_empty() {
             let f = if b.funcs.is_empty() { t } else { b };
             w.arena(&f.funcs);
@@ -519,19 +541,38 @@ impl Heap {
     }
     /// The heap a volume holds, mapped; its names are checked to be text, cut where one ends.
     pub fn read_volume(r: &mut VolR) -> Result<Heap, String> {
-        let names = Names { buf: r.arena()?, ends: r.arena()?, slots: r.arena()? };
-        let text = std::str::from_utf8(&names.buf).map_err(|_| "a volume holds a name that is not text")?;
-        let mut at = 0;
-        for &e in names.ends.iter() {
-            if (e as usize) < at || !text.is_char_boundary(e as usize) {
-                return Err("a volume holds a name cut inside a character".into());
-            }
-            at = e as usize;
-        }
-        let funcs = Funcs { funcs: r.arena()?, args: r.arena()?, cons: r.arena()?, cons_n: r.u64()? as usize };
+        let two = |r: &mut VolR| r.u32().map(|n| n == 2);
+        let (names, top) = (two(r)?, Names::read(r)?);
+        let (names, top) = if names { (top, Names::read(r)?) } else { (top, Names::default()) };
+        let (funcs, base) = (two(r)?, Funcs::read(r)?);
+        let (funcs, ftop) = if funcs { (base, Funcs::read(r)?) } else { (base, Funcs::default()) };
         let n0 = names.len() as Sym;
         let f0 = funcs.funcs.len() as u32;
-        Ok(Heap { syms: Interner { n0, base: Rc::new(names), top: Names::default() }, f0, base: Rc::new(funcs), top: Funcs::default() })
+        Ok(Heap { syms: Interner { n0, base: Rc::new(names), top }, f0, base: Rc::new(funcs), top: ftop })
+    }
+}
+
+impl Names {
+    /// One layer of names; what a base holds unchanged its sum vouches for, the names after it are checked.
+    fn read(r: &mut VolR) -> Result<Names, String> {
+        let ((buf, sure), (ends, sure_ends)) = (r.arena_vouched::<u8>()?, r.arena_vouched::<u32>()?);
+        let names = Names { buf, ends, slots: r.arena()? };
+        std::str::from_utf8(&names.buf[sure..]).map_err(|_| "a volume holds a name that is not text")?;
+        let mut at = 0;
+        for &e in &names.ends[(sure_ends / 4).saturating_sub(1)..] {
+            let e = e as usize;
+            if e < at || e > names.buf.len() || (e > sure && e < names.buf.len() && (names.buf[e] as i8) < -0x40) {
+                return Err("a volume holds a name cut inside a character".into());
+            }
+            at = e;
+        }
+        Ok(names)
+    }
+}
+
+impl Funcs {
+    fn read(r: &mut VolR) -> Result<Funcs, String> {
+        Ok(Funcs { funcs: r.arena()?, args: r.arena()?, cons: r.arena()?, cons_n: r.u64()? as usize })
     }
 }
 

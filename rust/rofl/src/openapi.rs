@@ -189,7 +189,7 @@ pub(crate) fn call(base: &str, op: &Op, rel: &str, fields: &[String], wants: &[(
         let base_url = format!("{}{path}", base.trim_end_matches('/'));
         let sent = (!body.is_empty()).then(|| Value::Object(body));
         let hide = |e: String| op.auth.iter().fold(e, |e, (_, _, v)| e.replace(&crate::net::escape(v), "***").replace(v.as_str(), "***"));
-        let fresh = op.auth.iter().any(|a| a.0 == "client_credentials");
+        let fresh = op.auth.iter().any(|a| crate::net::renewable(&a.0));
         // a refused token is fetched again once: it may have been revoked before it expired
         let mut tries = if fresh { 2 } else { 1 };
         let r = loop {

@@ -14,7 +14,7 @@ use std::collections::{HashMap, HashSet};
 
 /// A declared function: the relation, and the positions of its key and of the
 /// values the key determines, from 0.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Function {
     pub rel: Sym,
     pub key: Vec<usize>,
@@ -22,7 +22,7 @@ pub struct Function {
 }
 
 /// A declared tree: its edge relation, and the closure it stands for, if any.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Tree {
     pub rel: Sym,
     pub closure: Option<Sym>,

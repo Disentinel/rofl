@@ -34,7 +34,7 @@ impl Server {
     /// credentials the server refuses is fetched again, once.
     fn start(cmd: &str, creds: &[(String, String, String)]) -> Result<Self, String> {
         match Self::open(cmd, creds) {
-            Err(e) if e.contains("HTTP 401") && creds.iter().any(|c| c.0 == "client_credentials") => {
+            Err(e) if e.contains("HTTP 401") && creds.iter().any(|c| crate::net::renewable(&c.0)) => {
                 crate::net::forget_tokens();
                 Self::open(cmd, creds)
             }

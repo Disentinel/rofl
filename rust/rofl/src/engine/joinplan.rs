@@ -94,27 +94,20 @@ fn stale(now: usize, then: usize) -> bool {
 }
 
 impl Eval {
-    /// The plan for news at plan position `at` (None: a firing over the whole
-    /// store, no news) when it is cheaper than the written order for `n` news
-    /// rows; None keeps the written order.
-    fn plan_key(&self, r: &Rc<ERule>, at: Option<usize>) -> (Sym, usize) {
-        (r.id, at.unwrap_or(usize::MAX >> 1) | if self.adding { 1 << 62 } else { 0 })
-    }
-
     /// A plan can start from the news at `at`: when `delta_pick` still found none, the written order is the cheaper.
     pub(super) fn plannable(&self, r: &Rc<ERule>, at: usize) -> bool {
-        matches!(self.delta_plans.get(&self.plan_key(r, Some(at))), Some(Slot::Plan(_)))
+        matches!(self.add.delta_plans.get(&self.add.plan_key(r, Some(at))), Some(Slot::Plan(_)))
     }
 
     pub(super) fn delta_pick(&mut self, r: &Rc<ERule>, at: Option<usize>, n: usize) -> Option<Rc<DeltaPlan>> {
         if brk!("delta_first_off" => true; false)
-            || brk!("delta_first_spread" => false; !self.lat_spread.is_empty())
+            || brk!("delta_first_spread" => false; !self.lat.spread.is_empty())
         {
             return None;
         }
-        let key = self.plan_key(r, at);
-        self.vrefresh();
-        let fresh = match self.delta_plans.get(&key) {
+        let key = self.add.plan_key(r, at);
+        self.vc.vrefresh(&mut self.store);
+        let fresh = match self.add.delta_plans.get(&key) {
             Some(Slot::No) => return None,
             Some(Slot::Plan(p)) => p.watch.iter().all(|&(rel, persp, then)| !stale(self.len_est(rel, persp), then)),
             None => false,
@@ -124,9 +117,9 @@ impl Eval {
                 Some(p) => Slot::Plan(Rc::new(p)),
                 None => Slot::No,
             };
-            self.delta_plans.insert(key, slot);
+            self.add.delta_plans.insert(key, slot);
         }
-        let Some(Slot::Plan(p)) = self.delta_plans.get(&key) else { return None };
+        let Some(Slot::Plan(p)) = self.add.delta_plans.get(&key) else { return None };
         let n = n as f64;
         let written = if at.is_none() {
             p.pre
@@ -142,25 +135,25 @@ impl Eval {
 
     /// Rows a premise's relation holds, for the planner: a closure answered from its tree holds its pairs.
     fn len_est(&self, rel: Sym, persp: Option<Sym>) -> usize {
-        match self.vclosure_for(rel) {
-            Some(ci) => self.vlen(ci),
+        match self.vc.vclosure_for(rel) {
+            Some(ci) => self.vc.vlen(ci),
             None => self.store.rel_len_est(rel, persp),
         }
     }
 
     fn delta_eligible(&self, r: &Rc<ERule>) -> bool {
         !self.naive
-            && self.lattices.is_empty()
+            && self.lat.lattices.is_empty()
             && !r.has_agg
             && !r.has_thr
             && !r.has_demand_prem
-            && !self.closure_of.contains_key(&r.id)
+            && !self.clo.closure_of.contains_key(&r.id)
             && (r.clause.head.temporal != Temporal::Next || self.store.unordered)
             && r.plan.len() >= 2
             && r.plan.iter().all(|b| match b {
                 BodyElem::Pos(_) => true,
-                BodyElem::Neg(l) => !self.demand_rels.iter().any(|(d, _)| *d == l.rel),
-                BodyElem::Bi { .. } => self.adding,
+                BodyElem::Neg(l) => !self.demand.rels.iter().any(|(d, _)| *d == l.rel),
+                BodyElem::Bi { .. } => self.add.adding,
                 BodyElem::Agg(_) => false,
             })
     }
@@ -199,17 +192,17 @@ impl Eval {
         }
         // A CLOSURE ANSWERED FROM ITS TREE has no rows to count: its matches for a bound end are read off the tree's shape,
         // and with neither end bound it costs every row, which no plan starts from.
-        if let Some(ci) = self.vclosure_for(l.rel) {
-            let (rows, fan) = self.vstat(ci, &cpos, &vpos);
+        if let Some(ci) = self.vc.vclosure_for(l.rel) {
+            let (rows, fan) = self.vc.vstat(&mut self.store, ci, &cpos, &vpos);
             return Stat { rows, fan };
         }
         // A DECLARED FUNCTION (`function p(K, to V).`, a promise checked after every evaluation) answers at
         // most one row for a bound key: a premise whose key is bound, by a constant or a variable, is one
         // match per binding and needs no pass over its rows to say so. Per book, so only a premise that
         // names its book.
-        if let (Some(fk), Some(_)) = (self.function_keys.get(&l.rel), persp) {
+        if let (Some(fk), Some(_)) = (self.ds.function_keys.get(&l.rel), persp) {
             if !vpos.is_empty() && fk.iter().all(|k| cpos.contains(k) || vpos.contains(k)) {
-                self.promise_stats += 1;
+                self.ds.promise_stats += 1;
                 let size = self.store.rel_len_est(l.rel, persp);
                 return Stat { rows: size as f64, fan: if size == 0 { 0.0 } else { 1.0 } };
             }
@@ -222,45 +215,18 @@ impl Eval {
         key.push(u64::MAX);
         key.extend(vpos.iter().map(|&p| p as u64));
         let size = self.len_est(l.rel, persp);
-        let (rows, distinct) = match self.delta_stats.get(&key) {
+        let (rows, distinct) = match self.add.delta_stats.get(&key) {
             Some(&(then, rows, d)) if !stale(size, then) => (rows, d),
             _ => {
                 let t = std::time::Instant::now();
                 let (rows, d) = self.store.probe_stats(&self.h, l.rel, persp, &cpos, &cvals, &vpos);
-                self.delta_ns += t.elapsed().as_nanos() as u64;
-                self.delta_stats.insert(key, (size, rows, d));
+                self.add.delta_ns += t.elapsed().as_nanos() as u64;
+                self.add.delta_stats.insert(key, (size, rows, d));
                 (rows, d)
             }
         };
         let fan = if vpos.is_empty() { rows as f64 } else { rows as f64 / distinct.max(1) as f64 };
         Stat { rows: rows as f64, fan: if rows == 0 { 0.0 } else { fan.max(1.0) } }
-    }
-
-    /// The counts `delta_stat` took, kept with a volume: an edit to a world opened from disk plans from them instead
-    /// of counting each relation it reaches again, whole.
-    pub(crate) fn write_stats(&self, w: &mut crate::arena::VolW) {
-        let mut ks: Vec<&Vec<u64>> = self.delta_stats.keys().collect();
-        ks.sort_unstable();
-        let mut flat: Vec<u64> = Vec::new();
-        for k in ks {
-            let (then, rows, d) = self.delta_stats[k];
-            flat.push(k.len() as u64);
-            flat.extend(k);
-            flat.extend([then as u64, rows as u64, d as u64]);
-        }
-        w.arena(&flat);
-    }
-
-    pub(crate) fn read_stats(&mut self, r: &mut crate::arena::VolR) -> Result<(), String> {
-        let flat = r.arena::<u64>()?;
-        let mut i = 0;
-        while i < flat.len() {
-            let n = flat[i] as usize;
-            let k = flat.get(i + 1..i + 1 + n + 3).ok_or("a volume's planner counts are cut short")?;
-            self.delta_stats.insert(k[..n].to_vec(), (k[n] as usize, k[n + 1] as usize, k[n + 2] as usize));
-            i += 1 + n + 3;
-        }
-        Ok(())
     }
 
     fn delta_build(&mut self, r: &Rc<ERule>, at: Option<usize>) -> Option<DeltaPlan> {
@@ -489,7 +455,7 @@ impl Eval {
             e.peak_rows = peak;
             e.fire_rule_from(r, Subst::new(), keys.map(|k| (p.perm[0], k)))
         };
-        let (peak, undecided) = (self.peak_rows, self.lat_undecided.len());
+        let (peak, undecided) = (self.peak_rows, self.lat.undecided.len());
         let outer = self.cur_rule.replace(r.id);
         let was_firing = std::mem::replace(&mut self.firing, true);
         self.plan_trial = true;
@@ -499,15 +465,15 @@ impl Eval {
         self.firing = was_firing;
         self.cur_rule = outer;
         // a negation records the position it was undecided at; none is while no unknown spreads
-        debug_assert_eq!(self.lat_undecided.len(), undecided);
+        debug_assert_eq!(self.lat.undecided.len(), undecided);
         let sols = match sols {
             Err(Halt::Overrun) => return written(self, peak),
             s => self.solved(r, s, before)?,
         };
         let n = sols.len() as i64;
-        *self.fires_by_rule.entry(r.id).or_insert(0) += 1;
-        *self.delta_by_rule.entry(r.id).or_insert(0) += 1;
-        *self.sols_by_rule.entry(r.id).or_insert(0) += n as u64;
+        *self.cost.fires_by_rule.entry(r.id).or_insert(0) += 1;
+        *self.cost.delta_by_rule.entry(r.id).or_insert(0) += 1;
+        *self.cost.sols_by_rule.entry(r.id).or_insert(0) += n as u64;
         let sols = sols
             .into_iter()
             .map(|mut sol| {
@@ -520,5 +486,41 @@ impl Eval {
             })
             .collect();
         self.conclude_all(r, sols, Front::default(), false)
+    }
+}
+
+impl AddState {
+    /// The plan for news at plan position `at` (None: a firing over the whole
+    /// store, no news) when it is cheaper than the written order for `n` news
+    /// rows; None keeps the written order.
+    fn plan_key(&self, r: &Rc<ERule>, at: Option<usize>) -> (Sym, usize) {
+        (r.id, at.unwrap_or(usize::MAX >> 1) | if self.adding { 1 << 62 } else { 0 })
+    }
+
+    /// The counts `delta_stat` took, kept with a volume: an edit to a world opened from disk plans from them instead
+    /// of counting each relation it reaches again, whole.
+    pub(crate) fn write_stats(&self, w: &mut crate::arena::VolW) {
+        let mut ks: Vec<&Vec<u64>> = self.delta_stats.keys().collect();
+        ks.sort_unstable();
+        let mut flat: Vec<u64> = Vec::new();
+        for k in ks {
+            let (then, rows, d) = self.delta_stats[k];
+            flat.push(k.len() as u64);
+            flat.extend(k);
+            flat.extend([then as u64, rows as u64, d as u64]);
+        }
+        w.arena(&flat);
+    }
+
+    pub(crate) fn read_stats(&mut self, r: &mut crate::arena::VolR) -> Result<(), String> {
+        let flat = r.arena::<u64>()?;
+        let mut i = 0;
+        while i < flat.len() {
+            let n = flat[i] as usize;
+            let k = flat.get(i + 1..i + 1 + n + 3).ok_or("a volume's planner counts are cut short")?;
+            self.delta_stats.insert(k[..n].to_vec(), (k[n] as usize, k[n + 1] as usize, k[n + 2] as usize));
+            i += 1 + n + 3;
+        }
+        Ok(())
     }
 }

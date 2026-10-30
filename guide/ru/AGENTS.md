@@ -66,3 +66,12 @@ ROFL_NB_UNTRACKED_COMMAND=<sh>  prints the files your version control tracks, fo
 `rofl:visual/graph.rofl.md`, и закончите ячейку строкой `draw graph`. Слова,
 раскладки и шаги описаны в [docs/schemas.md](../../docs/schemas.md); каждый
 вид картинки — в [DRAWING.md](DRAWING.md).
+
+## За пределами блокнота
+
+Вопрос о коде из командной строки, без блокнота, задают `rofl ask`,
+`rofl why` и `rofl whynot` ([ASKING.md](ASKING.md)). Все команды, миры,
+которые они хранят, коды выхода и протокол `rofl serve` описаны в
+[docs/cli.md](../../docs/cli.md). Мир вычисляется в одной куче: прежде чем
+направить его на тысячи файлов, прочтите там раздел *A corpus larger than
+one heap*.

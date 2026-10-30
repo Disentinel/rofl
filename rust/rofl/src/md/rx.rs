@@ -1,5 +1,5 @@
 //! JavaScript regular expressions, as the TypeScript reader writes them, on the `regex` crate: `\w`, `\d` and `\b` are
-//! ASCII as in JavaScript, a `[` inside a class is a literal. Compiled once per pattern for the whole process.
+//! ASCII as in JavaScript, `.` takes no line terminator but under `(?s)`, a `[` inside a class is a literal. Compiled once per pattern for the whole process.
 use regex::{Captures, Regex};
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -8,7 +8,7 @@ thread_local! { static CACHE: RefCell<HashMap<String, &'static Regex>> = RefCell
 
 fn translate(js: &str) -> String {
     let mut out = String::with_capacity(js.len() + 16);
-    let mut class = false;
+    let (mut class, dotall) = (false, js.starts_with("(?s)"));
     let mut cs = js.chars().peekable();
     while let Some(c) = cs.next() {
         match c {
@@ -33,6 +33,7 @@ fn translate(js: &str) -> String {
                 if cs.peek() == Some(&'^') { out.push('^'); cs.next(); }
             }
             ']' if class => { class = false; out.push(']'); }
+            '.' if !class && !dotall => out.push_str("[^\\n\\r\\u{2028}\\u{2029}]"),
             '&' | '~' if class => { out.push('\\'); out.push(c); }
             _ => out.push(c),
         }

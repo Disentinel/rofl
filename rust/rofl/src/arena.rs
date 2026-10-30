@@ -21,17 +21,19 @@ unsafe impl Pod for u64 {}
 pub enum Arena<T: Pod> {
     Heap(Vec<T>),
     Mapped { map: Rc<Region>, off: usize, len: usize },
-    /// a mapped arena copied into the heap to be written, and where its first bytes lie in a volume file: what an
-    /// overlay compares it with, to name the bytes that did not change
+    /// a mapped arena copied into the heap to be written, and what it was made from in volume files: what an overlay
+    /// compares it with, to name the bytes that did not change
     Copied { v: Vec<T>, from: Span },
 }
 
-/// Bytes of a volume file: `bytes` at offset `at` of the volume named by its sum `file`.
-#[derive(Clone, Copy)]
+/// Where an arena's values came from in volume files: `bytes` at offset `at` of the volume named by its sum `file`,
+/// then the deltas over them, each at an offset of a volume, applied in order.
+#[derive(Clone)]
 pub struct Span {
     file: u64,
     at: usize,
     bytes: usize,
+    deltas: Rc<[(u64, usize)]>,
 }
 
 /// Memory an arena lies in that is not the heap's: a volume mapped, or one span of a base volume mapped privately
@@ -80,55 +82,131 @@ impl Drop for Region {
     }
 }
 
-/// Where bytes in memory came from in a volume file: what lets an overlay name them instead of writing them.
+/// Where bytes in memory came from: a whole volume mapped (`file`, its sum), or values made from volumes (`made`).
 #[derive(Clone)]
 struct Origin {
-    /// the address range, the first byte at file offset `at` of the volume `file` (its sum)
     start: usize,
     end: usize,
     file: u64,
-    at: usize,
-    /// a stitched span: the bytes from the file, the rest written after them; and the offsets (from `start`) of the
-    /// values an overlay wrote over them
-    from_file: Option<usize>,
-    patched: Rc<[u64]>,
+    made: Option<Span>,
 }
 
 thread_local! {
     static ORIGINS: std::cell::RefCell<Vec<Origin>> = const { std::cell::RefCell::new(Vec::new()) };
 }
 
-/// A reference to bytes of the base volume, as an overlay writes it: the span, the offsets of the values written
-/// over it, and what follows it.
-struct Ref {
-    at: usize,
-    bytes: usize,
-    patched: Rc<[u64]>,
-    tail: usize,
-}
-
-/// Where the bytes `b`, mapped, lie in a volume file: for a stitched span, the part from the file.
+/// Where the bytes `b`, mapped, came from: a span of a volume, or all the values a stitched span holds.
 fn span_of(b: &[u8]) -> Option<Span> {
     let p = b.as_ptr() as usize;
     ORIGINS.with(|o| {
         let o = o.borrow();
         let x = o.iter().find(|x| x.start <= p && p < x.end)?;
-        match x.from_file {
-            None => Some(Span { file: x.file, at: x.at + (p - x.start), bytes: b.len() }),
-            Some(n) => (p == x.start).then_some(Span { file: x.file, at: x.at, bytes: n.min(b.len()) }),
+        match &x.made {
+            None => (p + b.len() <= x.end).then(|| Span { file: x.file, at: p - x.start, bytes: b.len(), deltas: Rc::from([]) }),
+            Some(s) => (p == x.start && p + b.len() == x.end).then(|| s.clone()),
         }
     })
 }
 
-/// The bytes of `s`, while the volume it names is mapped.
-fn span_bytes(s: &Span) -> Option<&'static [u8]> {
+/// The bytes of the volume whose sum is `file`, while it is mapped.
+fn whole(file: u64) -> Option<&'static [u8]> {
     ORIGINS.with(|o| {
         let o = o.borrow();
-        let x = o.iter().find(|x| x.file == s.file && x.from_file.is_none() && s.at + s.bytes <= x.end - x.start)?;
+        let x = o.iter().find(|x| x.file == file && x.made.is_none())?;
         // SAFETY: a whole volume's mapping, live while it is registered; read while the writer runs, which holds the
         // world that maps it.
-        Some(unsafe { std::slice::from_raw_parts((x.start + s.at) as *const u8, s.bytes) })
+        Some(unsafe { std::slice::from_raw_parts(x.start as *const u8, x.end - x.start) })
     })
+}
+
+/// What a volume writes over values another volume holds: values put over some of them and values after them, or
+/// the values made again from spans of them and values between.
+enum Delta<'a> {
+    Put { offs: &'a [u8], vals: &'a [u8], tail: &'a [u8] },
+    Splice { segs: &'a [u8], lits: &'a [u8] },
+}
+
+fn word(v: &[u8], i: &mut usize, end: usize) -> Option<u64> {
+    let to = i.checked_add(8).filter(|&t| t <= end)?;
+    let w = u64::from_ne_bytes(v[*i..to].try_into().ok()?);
+    *i = to;
+    Some(w)
+}
+
+/// An inline arena of values of `sz` bytes at `i`, as `VolW::inline` writes it.
+fn part<'a>(v: &'a [u8], i: &mut usize, end: usize, sz: usize) -> Option<&'a [u8]> {
+    let n = word(v, i, end)? as usize;
+    let from = i.next_multiple_of(8);
+    let to = n.checked_mul(sz)?.checked_add(from).filter(|&t| t <= end)?;
+    *i = to;
+    Some(&v[from..to])
+}
+
+/// The delta at offset `at` of the volume `v`, and where it ends.
+fn delta_at(v: &[u8], at: usize) -> Option<(Delta<'_>, usize)> {
+    let (mut i, end) = (at, v.len().checked_sub(8)?);
+    let d = match word(v, &mut i, end)? {
+        0 => Delta::Put { offs: part(v, &mut i, end, 8)?, vals: part(v, &mut i, end, 1)?, tail: part(v, &mut i, end, 1)? },
+        1 => Delta::Splice { segs: part(v, &mut i, end, 8)?, lits: part(v, &mut i, end, 1)? },
+        _ => return None,
+    };
+    Some((d, i))
+}
+
+fn u64_at(b: &[u8], k: usize) -> u64 {
+    u64::from_ne_bytes(b[8 * k..8 * k + 8].try_into().unwrap())
+}
+
+impl Delta<'_> {
+    /// The values it writes, which a reader checks are values.
+    fn written(&self) -> [&[u8]; 2] {
+        match self {
+            Delta::Put { vals, tail, .. } => [vals, tail],
+            Delta::Splice { lits, .. } => [lits, &[]],
+        }
+    }
+    /// It applied to the values `v`, each of `sz` bytes; None where it does not fit them.
+    fn apply(&self, v: &mut Vec<u8>, sz: usize) -> Option<()> {
+        match self {
+            Delta::Put { offs, vals, tail } => {
+                if vals.len() != offs.len() / 8 * sz || tail.len() % sz != 0 {
+                    return None;
+                }
+                for k in 0..offs.len() / 8 {
+                    let o = u64_at(offs, k) as usize;
+                    v.get_mut(o..o.checked_add(sz)?).filter(|_| o % sz == 0)?.copy_from_slice(&vals[k * sz..(k + 1) * sz]);
+                }
+                v.extend_from_slice(tail);
+            }
+            Delta::Splice { segs, lits } => {
+                let (mut out, mut l) = (Vec::with_capacity(v.len()), 0usize);
+                for k in 0..segs.len() / 16 {
+                    let (start, n) = (u64_at(segs, 2 * k), (u64_at(segs, 2 * k + 1) as usize).checked_mul(sz)?);
+                    if start & LIT != 0 {
+                        out.extend_from_slice(lits.get(l..l.checked_add(n)?)?);
+                        l += n;
+                    } else {
+                        let from = (start as usize).checked_mul(sz)?;
+                        out.extend_from_slice(v.get(from..from.checked_add(n)?)?);
+                    }
+                }
+                if l != lits.len() || segs.len() % 16 != 0 {
+                    return None;
+                }
+                *v = out;
+            }
+        }
+        Some(())
+    }
+}
+
+/// The values `s` names, of `sz` bytes each, while the volumes it names are mapped.
+fn compose(s: &Span, sz: usize) -> Option<Vec<u8>> {
+    let mut v = whole(s.file)?.get(s.at..s.at.checked_add(s.bytes)?)?.to_vec();
+    for &(f, at) in s.deltas.iter() {
+        delta_at(whole(f)?, at)?.0.apply(&mut v, sz)?;
+    }
+    Some(v)
 }
 
 /// What a volume is written from: values, and, when they were copied from a mapped volume, where.
@@ -163,7 +241,7 @@ impl<T: Pod> Src<T> for Arena<T> {
     }
     fn copied(&self) -> Option<Span> {
         match self {
-            Arena::Copied { from, .. } => Some(*from),
+            Arena::Copied { from, .. } => Some(from.clone()),
             _ => None,
         }
     }
@@ -187,19 +265,6 @@ impl<T: Pod, A: Src<T> + ?Sized> Src<T> for &A {
     }
 }
 
-/// The bytes `b` as a reference into the volume `file`, when they lie in memory mapped from it.
-fn origin_of(file: u64, b: &[u8]) -> Option<Ref> {
-    let p = b.as_ptr() as usize;
-    ORIGINS.with(|o| {
-        let o = o.borrow();
-        let x = o.iter().find(|x| x.file == file && x.start <= p && p < x.end)?;
-        match x.from_file {
-            None => (p + b.len() <= x.end).then(|| Ref { at: x.at + (p - x.start), bytes: b.len(), patched: Rc::from([]), tail: 0 }),
-            Some(n) => (p == x.start && b.len() >= n).then(|| Ref { at: x.at, bytes: n, patched: x.patched.clone(), tail: b.len() - n }),
-        }
-    })
-}
-
 impl<T: Pod> Default for Arena<T> {
     fn default() -> Self {
         Arena::Heap(Vec::new())
@@ -211,7 +276,7 @@ impl<T: Pod> Clone for Arena<T> {
         match self {
             Arena::Heap(v) => Arena::Heap(v.clone()),
             Arena::Mapped { map, off, len } => Arena::Mapped { map: map.clone(), off: *off, len: *len },
-            Arena::Copied { v, from } => Arena::Copied { v: v.clone(), from: *from },
+            Arena::Copied { v, from } => Arena::Copied { v: v.clone(), from: from.clone() },
         }
     }
 }
@@ -255,7 +320,7 @@ impl<T: Pod> Arena<T> {
     pub fn origin(&self) -> Option<Span> {
         match self {
             Arena::Mapped { .. } => span_of(bytes_of(self)),
-            Arena::Copied { from, .. } => Some(*from),
+            Arena::Copied { from, .. } => Some(from.clone()),
             Arena::Heap(_) => None,
         }
     }
@@ -398,20 +463,20 @@ pub struct VolW {
     sum: Sum,
     /// the most bytes the file may reach: past it nothing more is written and the volume fails as `TooLarge`
     bound: Option<usize>,
-    /// an overlay's base (its sum): an arena that lies in memory mapped from it is written as a reference to it
-    base: Option<u64>,
+    /// an overlay's volumes (their sums), the whole one first: an arena made from them is written as what it was made
+    /// from and what changed since
+    chain: Vec<u64>,
 }
 
-/// The high bit of an arena's length: what follows is a reference into the base volume (`VolW::over`).
+/// The high bit of an arena's length: what follows is what it was made from in the volumes the overlay is kept over,
+/// and what changed since (`VolW::layered`).
 const REF: u64 = 1 << 63;
-/// The next bit: what follows is a splice of the base, spans of it and values between them (`VolW::splice`).
-const SPLICE: u64 = 1 << 62;
-/// A splice's span that is values written in it, not a span of the base.
+/// A splice's span that is values written in it, not a span of what it splices.
 const LIT: u64 = 1 << 63;
 /// An arena smaller than this is written whole, never as a reference.
 const REF_MIN: usize = 256;
-/// A reference read back with values over it or after it, smaller than this, is copied into the heap; larger, it
-/// is stitched: the span mapped privately from the base and the overlay's bytes written into that mapping.
+/// Values made from a span and puts over it, smaller than this, are copied into the heap; larger, they are stitched:
+/// the span mapped privately from its volume and what was put written into that mapping.
 const STITCH_MIN: usize = 1 << 16;
 
 /// What a bounded volume fails with when it would pass its bound.
@@ -423,11 +488,12 @@ impl VolW {
     }
     /// A volume that never grows past `bound` bytes on disk: written up to it, then failed.
     pub fn bounded(path: &str, bound: Option<usize>) -> std::io::Result<VolW> {
-        Ok(VolW { out: std::io::BufWriter::with_capacity(1 << 20, std::fs::File::create(path)?), at: 0, err: None, sum: Sum::default(), bound, base: None })
+        Ok(VolW { out: std::io::BufWriter::with_capacity(1 << 20, std::fs::File::create(path)?), at: 0, err: None, sum: Sum::default(), bound, chain: Vec::new() })
     }
-    /// A volume that names, instead of writing, every arena of the base volume `base` (its sum) still mapped from it.
-    pub fn over(path: &str, bound: Option<usize>, base: u64) -> std::io::Result<VolW> {
-        Ok(VolW { base: Some(base), ..Self::bounded(path, bound)? })
+    /// A volume that names, instead of writing, every arena made from the volumes `chain` (their sums) and what
+    /// changed in it since.
+    pub fn over(path: &str, bound: Option<usize>, chain: Vec<u64>) -> std::io::Result<VolW> {
+        Ok(VolW { chain, ..Self::bounded(path, bound)? })
     }
     pub fn bytes(&mut self, b: &[u8]) {
         use std::io::Write;
@@ -454,23 +520,19 @@ impl VolW {
     }
     /// One arena of `first` and the parts after it, as their concatenation is written.
     pub fn arena_parts<T: Pod>(&mut self, first: &(impl Src<T> + ?Sized), rest: &[&[T]]) {
-        if let Some(r) = self.ref_of(first) {
-            return self.reference(r, first.vals(), rest, &[]);
+        if !self.layered(first, rest, &[]) {
+            let mut parts = vec![first.vals()];
+            parts.extend_from_slice(rest);
+            self.inline(&parts);
         }
-        if self.splice(first, rest) {
-            return;
-        }
-        let mut parts = vec![first.vals()];
-        parts.extend_from_slice(rest);
-        self.inline(&parts);
     }
-    /// Whether `a` lies in the base, or is a copy of what lies there that a reference writes.
+    /// Whether `a` was made from the volumes this one is kept over.
     pub fn in_base<T: Pod>(&self, a: &(impl Src<T> + ?Sized)) -> bool {
-        self.ref_of(a).is_some()
+        self.made_of(a).is_some()
     }
     /// Whether this volume is an overlay over a base.
     pub fn is_over(&self) -> bool {
-        self.base.is_some()
+        !self.chain.is_empty()
     }
     fn inline<T: Pod>(&mut self, parts: &[&[T]]) {
         self.u64(parts.iter().map(|p| p.len()).sum::<usize>() as u64);
@@ -479,130 +541,107 @@ impl VolW {
             self.bytes(bytes_of(p));
         }
     }
-    fn ref_of<T: Pod>(&self, a: &(impl Src<T> + ?Sized)) -> Option<Ref> {
-        let (b, f) = (bytes_of(a.vals()), self.base?);
-        if b.len() < REF_MIN {
+    fn file_ix(&self, f: u64) -> Option<u64> {
+        self.chain.iter().position(|&x| x == f).map(|i| i as u64)
+    }
+    /// What `a` was made from in the volumes this one is kept over, and whether it was copied since.
+    fn made_of<T: Pod>(&self, a: &(impl Src<T> + ?Sized)) -> Option<(Span, bool)> {
+        let b = bytes_of(a.vals());
+        if self.chain.is_empty() || b.len() < REF_MIN {
             return None;
         }
-        let Some(from) = a.copied() else { return origin_of(f, b) };
-        // a copy: the values that differ from the file's are written over it, while they are few
-        let file = span_bytes(&from).filter(|_| from.file == f && from.bytes <= b.len())?;
-        let sz = std::mem::size_of::<T>();
-        let mut patched = Vec::new();
-        for (k, (x, y)) in b[..from.bytes].chunks(sz * 64).zip(file.chunks(sz * 64)).enumerate() {
-            if x != y {
-                patched.extend(x.chunks(sz).zip(y.chunks(sz)).enumerate().filter(|(_, (p, q))| p != q).map(|(i, _)| ((k * 64 + i) * sz) as u64));
-                if patched.len() * sz * 8 > from.bytes {
-                    return None;
+        let (s, copied) = match a.copied() {
+            Some(s) => (s, true),
+            None => (span_of(b)?, false),
+        };
+        (self.file_ix(s.file).is_some() && s.deltas.iter().all(|d| self.file_ix(d.0).is_some())).then_some((s, copied))
+    }
+    /// `first` and `rest` after it, with `put` over them, as what `first` was made from and the delta from what that
+    /// holds: what is put and what follows, where `first` lies as it was made or changed in few values, else a splice
+    /// of it; false, writing nothing, where `first` was not made from these volumes or the delta is not small.
+    fn layered<T: Pod>(&mut self, first: &(impl Src<T> + ?Sized), rest: &[&[T]], put: &[(usize, T)]) -> bool {
+        let Some((s, copied)) = self.made_of(first) else { return false };
+        let (sz, fb) = (std::mem::size_of::<T>(), bytes_of(first.vals()));
+        let old = if copied {
+            match compose(&s, sz) {
+                Some(o) => Some(o),
+                None => return false,
+            }
+        } else {
+            None
+        };
+        let was = old.as_ref().map_or(fb.len(), |o| o.len());
+        // the values that differ from what it was made of are written over it, while they are few
+        let mut over: std::collections::BTreeMap<u64, &[u8]> = Default::default();
+        let mut few = fb.len() >= was;
+        if let (Some(o), true) = (&old, few) {
+            for (k, (x, y)) in fb[..was].chunks(sz * 64).zip(o.chunks(sz * 64)).enumerate() {
+                if x != y {
+                    over.extend(x.chunks(sz).zip(y.chunks(sz)).enumerate().filter(|(_, (p, q))| p != q).map(|(i, (p, _))| (((k * 64 + i) * sz) as u64, p)));
+                    if over.len() * sz * 8 > was {
+                        few = false;
+                        break;
+                    }
                 }
             }
         }
-        Some(Ref { at: from.at, bytes: from.bytes, patched: patched.into(), tail: b.len() - from.bytes })
-    }
-    /// A copy of the base's `first` with values taken out of it and put in it, the order of the rest kept (a run swept
-    /// or merged), then `rest`, as the spans of the base it keeps and the values between them; false, writing nothing,
-    /// when it is not one or they are not few.
-    fn splice<T: Pod>(&mut self, first: &(impl Src<T> + ?Sized), rest: &[&[T]]) -> bool {
-        let (Some(f), Some(from)) = (self.base, first.copied()) else { return false };
-        let Some(file) = span_bytes(&from).filter(|_| from.file == f) else { return false };
-        let (v, sz) = (bytes_of(first.vals()), std::mem::size_of::<T>());
-        if v.len() < REF_MIN || from.bytes % sz != 0 {
-            return false;
-        }
-        let (bn, n) = (file.len() / sz, v.len() / sz);
-        let (b, x) = (|i: usize| &file[i * sz..(i + 1) * sz], |j: usize| &v[j * sz..(j + 1) * sz]);
-        // what an edit changes lies between a prefix and a suffix both keep, found a block at a time
-        let (k, blk) = (bn.min(n), 512 * sz);
-        let mut head = 0;
-        while head + 512 <= k && file[head * sz..head * sz + blk] == v[head * sz..head * sz + blk] {
-            head += 512;
-        }
-        while head < k && b(head) == x(head) {
-            head += 1;
-        }
-        let mut tail = 0;
-        while head + tail + 512 <= k && file[(bn - tail) * sz - blk..(bn - tail) * sz] == v[(n - tail) * sz - blk..(n - tail) * sz] {
-            tail += 512;
-        }
-        while head + tail < k && b(bn - 1 - tail) == x(n - 1 - tail) {
-            tail += 1;
-        }
-        // a value's key: the value itself up to eight bytes; two values of one key only make the splice longer
-        let key = |e: &[u8]| e.chunks(8).fold(0u64, |h, c| h.rotate_left(5) ^ c.iter().rev().fold(0u64, |k, &y| k << 8 | y as u64));
-        let mut wanted = crate::store::FxSet::default();
-        wanted.reserve(n - head - tail);
-        wanted.extend((head..n - tail).map(|j| key(x(j))));
-        let (mut segs, mut lits): (Vec<u64>, Vec<u8>) = (Vec::new(), Vec::new());
-        if head > 0 {
-            segs.extend([0, head as u64]);
-        }
-        let (mut i, mut j) = (head, head);
-        let push = |segs: &mut Vec<u64>, start: u64, lit: bool| match segs.len() {
-            l if l >= 2 && (segs[l - 2] & LIT != 0) == lit && (lit || segs[l - 2] + segs[l - 1] == start) => segs[l - 1] += 1,
-            _ => segs.extend([start | if lit { LIT } else { 0 }, 1]),
+        let n = (fb.len() + rest.iter().map(|p| std::mem::size_of_val(*p)).sum::<usize>()) / sz;
+        let head = |w: &mut Self| {
+            w.u64(n as u64 | REF);
+            w.u64(w.file_ix(s.file).unwrap());
+            w.u64(s.at as u64);
+            w.u64(s.bytes as u64);
+            w.u64(s.deltas.len() as u64);
+            for &(f, at) in s.deltas.iter() {
+                w.u64(w.file_ix(f).unwrap());
+                w.u64(at as u64);
+            }
         };
-        while j < n - tail {
-            if i < bn - tail && b(i) == x(j) {
-                push(&mut segs, i as u64, false);
-                (i, j) = (i + 1, j + 1);
-            } else if i < bn - tail && !wanted.contains(&key(b(i))) {
-                i += 1;
-            } else {
-                push(&mut segs, 0, true);
-                lits.extend_from_slice(x(j));
-                j += 1;
+        if few {
+            let mut tail: Vec<u8> = fb[was..].to_vec();
+            for p in rest {
+                tail.extend_from_slice(bytes_of(p));
             }
-            if lits.len() * 4 > v.len() || segs.len() * 32 > v.len() {
-                return false;
+            for (i, v) in put {
+                let (o, v) = (i * sz, bytes_of(std::slice::from_ref(v)));
+                if o < was {
+                    over.insert(o as u64, v);
+                } else {
+                    tail[o - was..o - was + sz].copy_from_slice(v);
+                }
             }
+            head(self);
+            if over.is_empty() && tail.is_empty() {
+                self.u64(0);
+                return true;
+            }
+            self.u64(1);
+            self.u64(0);
+            self.inline(&[&over.keys().copied().collect::<Vec<u64>>()[..]]);
+            self.inline(&[&over.values().flat_map(|v| v.iter().copied()).collect::<Vec<u8>>()[..]]);
+            self.inline(&[&tail[..]]);
+            return true;
         }
-        if tail > 0 {
-            segs.extend([(bn - tail) as u64, tail as u64]);
+        let mut new: Vec<u8> = fb.to_vec();
+        for p in rest {
+            new.extend_from_slice(bytes_of(p));
         }
-        for p in rest.iter().filter(|p| !p.is_empty()) {
-            segs.extend([LIT, p.len() as u64]);
-            lits.extend_from_slice(bytes_of(p));
+        for (i, v) in put {
+            new[i * sz..(i + 1) * sz].copy_from_slice(bytes_of(std::slice::from_ref(v)));
         }
-        let len = n + rest.iter().map(|p| p.len()).sum::<usize>();
-        self.u64(len as u64 | REF | SPLICE);
-        self.u64(from.at as u64);
-        self.u64(from.bytes as u64);
+        let Some((segs, lits)) = splice(old.as_deref().unwrap_or(fb), &new, sz) else { return false };
+        head(self);
+        self.u64(1);
+        self.u64(1);
         self.inline(&[&segs[..]]);
         self.inline(&[&lits[..]]);
         true
     }
-    /// `first`, which lies in the base as `r` says, with `put` over it and `rest` after it, as a reference: the span
-    /// of the base, the values written over it (those an earlier overlay wrote, as they now are, and `put`), and the
-    /// bytes after it.
-    fn reference<T: Pod>(&mut self, r: Ref, first: &[T], rest: &[&[T]], put: &[(usize, T)]) {
-        let sz = std::mem::size_of::<T>();
-        let fb = bytes_of(first);
-        let mut over: std::collections::BTreeMap<u64, &[u8]> = r.patched.iter().map(|&o| (o, &fb[o as usize..o as usize + sz])).collect();
-        let mut tail: Vec<u8> = fb[r.bytes..].to_vec();
-        for p in rest {
-            tail.extend_from_slice(bytes_of(p));
-        }
-        for (i, v) in put {
-            let (o, v) = (i * sz, bytes_of(std::slice::from_ref(v)));
-            if o < r.bytes {
-                over.insert(o as u64, v);
-            } else {
-                tail[o - r.bytes..o - r.bytes + sz].copy_from_slice(v);
-            }
-        }
-        let n = (r.bytes + tail.len()) / sz;
-        self.u64(n as u64 | REF);
-        self.u64(r.at as u64);
-        self.u64(r.bytes as u64);
-        self.inline(&[&over.keys().copied().collect::<Vec<u64>>()[..]]);
-        self.inline(&[&over.values().flat_map(|v| v.iter().copied()).collect::<Vec<u8>>()[..]]);
-        self.inline(&[&tail[..]]);
-    }
     /// `base` with the values of `put` (ascending) written over it, then `tail`: a table or a column as the values
     /// put in it leave it.
     pub fn arena_placed<T: Pod>(&mut self, base: &(impl Src<T> + ?Sized), put: &[(usize, T)], tail: &[T]) {
-        if let Some(r) = self.ref_of(base) {
-            return self.reference(r, base.vals(), &[tail], put);
+        if self.layered(base, &[tail], put) {
+            return;
         }
         let base = base.vals();
         self.u64((base.len() + tail.len()) as u64);
@@ -628,16 +667,78 @@ impl VolW {
     }
 }
 
+/// `new` as spans of `old` and values between them, values of `sz` bytes, the order of what both hold kept (a run
+/// swept or merged); None when they are not few.
+fn splice(old: &[u8], new: &[u8], sz: usize) -> Option<(Vec<u64>, Vec<u8>)> {
+    if new.len() < REF_MIN || old.len() % sz != 0 || new.len() % sz != 0 {
+        return None;
+    }
+    let (bn, n) = (old.len() / sz, new.len() / sz);
+    let (b, x) = (|i: usize| &old[i * sz..(i + 1) * sz], |j: usize| &new[j * sz..(j + 1) * sz]);
+    // what an edit changes lies between a prefix and a suffix both keep, found a block at a time
+    let (k, blk) = (bn.min(n), 512 * sz);
+    let mut head = 0;
+    while head + 512 <= k && old[head * sz..head * sz + blk] == new[head * sz..head * sz + blk] {
+        head += 512;
+    }
+    while head < k && b(head) == x(head) {
+        head += 1;
+    }
+    let mut tail = 0;
+    while head + tail + 512 <= k && old[(bn - tail) * sz - blk..(bn - tail) * sz] == new[(n - tail) * sz - blk..(n - tail) * sz] {
+        tail += 512;
+    }
+    while head + tail < k && b(bn - 1 - tail) == x(n - 1 - tail) {
+        tail += 1;
+    }
+    // a value's key: the value itself up to eight bytes; two values of one key only make the splice longer
+    let key = |e: &[u8]| e.chunks(8).fold(0u64, |h, c| h.rotate_left(5) ^ c.iter().rev().fold(0u64, |k, &y| k << 8 | y as u64));
+    let mut wanted = crate::store::FxSet::default();
+    wanted.reserve(n - head - tail);
+    wanted.extend((head..n - tail).map(|j| key(x(j))));
+    let (mut segs, mut lits): (Vec<u64>, Vec<u8>) = (Vec::new(), Vec::new());
+    if head > 0 {
+        segs.extend([0, head as u64]);
+    }
+    let (mut i, mut j) = (head, head);
+    let push = |segs: &mut Vec<u64>, start: u64, lit: bool| match segs.len() {
+        l if l >= 2 && (segs[l - 2] & LIT != 0) == lit && (lit || segs[l - 2] + segs[l - 1] == start) => segs[l - 1] += 1,
+        _ => segs.extend([start | if lit { LIT } else { 0 }, 1]),
+    };
+    while j < n - tail {
+        if i < bn - tail && b(i) == x(j) {
+            push(&mut segs, i as u64, false);
+            (i, j) = (i + 1, j + 1);
+        } else if i < bn - tail && !wanted.contains(&key(b(i))) {
+            i += 1;
+        } else {
+            push(&mut segs, 0, true);
+            lits.extend_from_slice(x(j));
+            j += 1;
+        }
+        if lits.len() * 4 > new.len() || segs.len() * 32 > new.len() {
+            return None;
+        }
+    }
+    if tail > 0 {
+        segs.extend([(bn - tail) as u64, tail as u64]);
+    }
+    Some((segs, lits))
+}
+
 /// A volume as it is read, in the order it was written, up to the sum that ends it. Every read is checked against
 /// that end.
 pub struct VolR {
     map: Rc<Region>,
     i: usize,
     end: usize,
-    base: Option<Rc<Base>>,
+    /// the volumes an overlay is kept over, the whole one first
+    chain: Vec<Rc<Base>>,
+    /// how many leading bytes of the arena read last are its volume's own, unchanged
+    vouched: usize,
 }
 
-/// The base volume an overlay refers to, mapped, and its file, which a stitched span maps again.
+/// A volume an overlay is kept over, mapped, and its file, which a stitched span maps again.
 pub struct Base {
     pub region: Rc<Region>,
     #[allow(dead_code)]
@@ -645,7 +746,7 @@ pub struct Base {
     pub id: u64,
 }
 
-/// The base volume at `path`, mapped: what an overlay over it is read with.
+/// The volume at `path`, mapped: what an overlay over it is read with.
 pub fn map_base(path: &str) -> std::io::Result<Rc<Base>> {
     let region = map_file(path)?;
     let id = file_id(&region).ok_or_else(|| std::io::Error::other("not a volume"))?;
@@ -660,12 +761,16 @@ pub fn file_id(b: &[u8]) -> Option<u64> {
 impl VolR {
     pub fn new(map: Rc<Region>, from: usize) -> VolR {
         let end = map.len().saturating_sub(8);
-        VolR { map, i: from, end, base: None }
+        VolR { map, i: from, end, chain: Vec::new(), vouched: 0 }
     }
-    /// An overlay's reader: its references read from `base`.
-    pub fn with_base(mut self, base: Rc<Base>) -> VolR {
-        self.base = Some(base);
+    /// An overlay's reader: what it names read from `chain`.
+    pub fn with_chain(mut self, chain: Vec<Rc<Base>>) -> VolR {
+        self.chain = chain;
         self
+    }
+    /// The volume read, mapped.
+    pub fn region(&self) -> Rc<Region> {
+        self.map.clone()
     }
     /// The sum that ends the volume: what names it.
     pub fn id(&self) -> u64 {
@@ -700,18 +805,20 @@ impl VolR {
     pub fn arena<T: Pod>(&mut self) -> Result<Arena<T>, String> {
         self.arena_checked(|_| true)
     }
+    /// An arena and how many of its leading bytes are its volume's, unchanged: what that volume's sum vouches for.
+    pub fn arena_vouched<T: Pod>(&mut self) -> Result<(Arena<T>, usize), String> {
+        let a = self.arena()?;
+        Ok((a, self.vouched))
+    }
     /// An arena of T, after `ok` approved its words: for a T not every bit pattern of which is a value.
     pub fn arena_checked<T: Pod>(&mut self, ok: impl Fn(&[u32]) -> bool) -> Result<Arena<T>, String> {
+        self.vouched = 0;
         let len = self.u64()?;
+        // of an arena made from other volumes only the values the deltas write are checked: the span is its volume's
+        // bytes, which its sum vouches for as it does for an argument index's entries
         if len & REF != 0 {
-            let a = if len & SPLICE != 0 { self.spliced::<T>((len & !(REF | SPLICE)) as usize)? } else { self.reference::<T>((len & !REF) as usize)? };
-            let b = bytes_of(&a);
-            // SAFETY: checked aligned for u32, and u32 is Pod.
-            let words = (b.as_ptr() as usize % 4 == 0).then(|| unsafe { std::slice::from_raw_parts(b.as_ptr() as *const u32, b.len() / 4) });
-            if std::mem::size_of::<T>() % 4 == 0 && !words.is_some_and(ok) {
-                return Err("a volume holds a value of no kind".into());
-            }
-            return Ok(a);
+            let ok = |b: &[u8]| std::mem::size_of::<T>() % 4 != 0 || words_of(b).is_some_and(&ok);
+            return self.layered::<T>((len & !REF) as usize, ok);
         }
         self.inline_arena(len as usize, ok)
     }
@@ -729,99 +836,87 @@ impl VolR {
         self.i += std::mem::size_of_val::<[T]>(&a);
         Ok(a)
     }
-}
-
-impl VolR {
-    fn inline_of<T: Pod>(&mut self) -> Result<Arena<T>, String> {
-        let len = self.u64()?;
-        if len & REF != 0 {
-            return Err("a volume's reference holds a reference".into());
-        }
-        self.inline_arena(len as usize, |_| true)
-    }
-    /// An arena of `len` values the overlay names in its base: a span of the base, values over it, bytes after it.
-    fn reference<T: Pod>(&mut self, len: usize) -> Result<Arena<T>, String> {
-        let bad = || "a volume's reference does not lie in its base".to_string();
-        let (at, bytes) = (self.u64()? as usize, self.u64()? as usize);
-        let (offs, vals, tail): (Arena<u64>, Arena<u8>, Arena<u8>) = (self.inline_of()?, self.inline_of()?, self.inline_of()?);
-        let base = self.base.clone().ok_or("a volume refers to a base it was not opened with")?;
+    /// An arena of `len` values made from the volumes the overlay is kept over: a span of one, and the deltas over it
+    /// those after it wrote and this one writes, applied in order.
+    fn layered<T: Pod>(&mut self, len: usize, ok: impl Fn(&[u8]) -> bool) -> Result<Arena<T>, String> {
+        let bad = || "a volume's reference does not lie in the volumes it was kept over".to_string();
         let sz = std::mem::size_of::<T>();
+        let k = self.u64()? as usize;
+        let base = self.chain.get(k).cloned().ok_or_else(bad)?;
+        let (at, bytes) = (self.u64()? as usize, self.u64()? as usize);
+        let n = self.u64()? as usize;
+        if n > self.chain.len() {
+            return Err(bad());
+        }
+        let mut from: Vec<(Rc<Region>, u64, usize)> = Vec::with_capacity(n + 1);
+        for _ in 0..n {
+            let (k, at) = (self.u64()? as usize, self.u64()? as usize);
+            let f = self.chain.get(k).ok_or_else(bad)?;
+            from.push((f.region.clone(), f.id, at));
+        }
+        if self.u64()? == 1 {
+            let (_, end) = delta_at(&self.map[..self.end + 8], self.i).ok_or_else(bad)?;
+            from.push((self.map.clone(), self.id(), self.i));
+            self.i = end;
+        }
+        let deltas: Vec<Delta> = from.iter().map(|(r, _, at)| delta_at(r, *at).map(|d| d.0)).collect::<Option<_>>().ok_or_else(bad)?;
+        if deltas.iter().any(|d| d.written().iter().any(|w| !w.is_empty() && !ok(w))) {
+            return Err("a volume holds a value of no kind".into());
+        }
         let total = len.checked_mul(sz).ok_or_else(bad)?;
-        let fits = at.checked_add(bytes).is_some_and(|e| e <= base.region.len()) && bytes + tail.len() == total && bytes % sz == 0;
-        let patched = vals.len() == offs.len() * sz && offs.windows(2).all(|w| w[0] < w[1]) && offs.iter().all(|&o| o as usize % sz == 0 && o as usize + sz <= bytes);
-        if !fits || !patched {
+        let fits = at.checked_add(bytes).is_some_and(|e| e <= base.region.len()) && bytes % sz == 0;
+        if !fits || (base.region.ptr as usize + at) % std::mem::align_of::<T>() != 0 {
             return Err(bad());
         }
-        if offs.is_empty() && tail.is_empty() {
-            return Arena::mapped(&base.region, at, len).ok_or_else(bad);
+        let puts = deltas.iter().all(|d| matches!(d, Delta::Put { .. }));
+        self.vouched = if deltas.iter().all(|d| matches!(d, Delta::Put { offs, .. } if offs.is_empty())) { bytes } else { 0 };
+        if deltas.is_empty() {
+            return if bytes == total { Arena::mapped(&base.region, at, len).ok_or_else(bad) } else { Err(bad()) };
         }
-        if (at + (base.region.ptr as usize)) % std::mem::align_of::<T>() != 0 {
-            return Err(bad());
-        }
+        let made = Span { file: base.id, at, bytes, deltas: from.iter().map(|(_, f, at)| (*f, *at)).collect() };
         #[cfg(unix)]
-        if total >= STITCH_MIN && bytes > 0 {
-            return stitch(&base, at, bytes, &offs, &vals, &tail, len);
+        if puts && total >= STITCH_MIN && bytes > 0 {
+            return stitch(&base, at, bytes, &deltas, len, made);
         }
-        let mut v: Vec<T> = Vec::with_capacity(len);
-        // SAFETY: T is Pod, so any bytes are values; `bytes` from the base and the tail fill exactly `len` of them.
-        unsafe {
-            let p = v.as_mut_ptr() as *mut u8;
-            std::ptr::copy_nonoverlapping(base.region.ptr.add(at), p, bytes);
-            std::ptr::copy_nonoverlapping(tail.as_ptr(), p.add(bytes), tail.len());
-            for (k, &o) in offs.iter().enumerate() {
-                std::ptr::copy_nonoverlapping(vals.as_ptr().add(k * sz), p.add(o as usize), sz);
-            }
-            v.set_len(len);
+        let mut v = base.region[at..at + bytes].to_vec();
+        for d in &deltas {
+            d.apply(&mut v, sz).ok_or_else(bad)?;
         }
-        Ok(Arena::Copied { v, from: Span { file: base.id, at, bytes } })
-    }
-    /// An arena of `len` values the overlay writes as spans of the base and values between them, copied into the heap
-    /// as a copy of that span of the base, which the next overlay compares with it again.
-    fn spliced<T: Pod>(&mut self, len: usize) -> Result<Arena<T>, String> {
-        let bad = || "a volume's splice does not lie in its base".to_string();
-        let (at, bytes) = (self.u64()? as usize, self.u64()? as usize);
-        let (segs, lits): (Arena<u64>, Arena<u8>) = (self.inline_of()?, self.inline_of()?);
-        let base = self.base.clone().ok_or("a volume refers to a base it was not opened with")?;
-        let sz = std::mem::size_of::<T>();
-        if !at.checked_add(bytes).is_some_and(|e| e <= base.region.len()) || bytes % sz != 0 || segs.len() % 2 != 0 || (base.region.ptr as usize + at) % std::mem::align_of::<T>() != 0 {
+        if v.len() != total {
             return Err(bad());
         }
-        let (src, mut out, mut l) = (&base.region[at..at + bytes], Vec::<u8>::with_capacity(len * sz), 0);
-        for s in segs.chunks_exact(2) {
-            let n = (s[1] as usize).checked_mul(sz).ok_or_else(bad)?;
-            if s[0] & LIT != 0 {
-                out.extend_from_slice(lits.get(l..l + n).ok_or_else(bad)?);
-                l += n;
-            } else {
-                let from = (s[0] as usize).checked_mul(sz).ok_or_else(bad)?;
-                out.extend_from_slice(src.get(from..from + n).ok_or_else(bad)?);
-            }
-        }
-        if out.len() != len * sz || l != lits.len() {
-            return Err(bad());
-        }
-        let mut v: Vec<T> = Vec::with_capacity(len);
-        // SAFETY: T is Pod, and `out` holds exactly `len` of them.
+        let mut out: Vec<T> = Vec::with_capacity(len);
+        // SAFETY: T is Pod, and `v` holds exactly `len` of them.
         unsafe {
-            std::ptr::copy_nonoverlapping(out.as_ptr(), v.as_mut_ptr() as *mut u8, out.len());
-            v.set_len(len);
+            std::ptr::copy_nonoverlapping(v.as_ptr(), out.as_mut_ptr() as *mut u8, total);
+            out.set_len(len);
         }
-        Ok(Arena::Copied { v, from: Span { file: base.id, at, bytes } })
+        Ok(Arena::Copied { v: out, from: made })
     }
 }
 
-/// A span of the base mapped privately, the overlay's values written over it and its tail after it, in one mapping:
-/// the pages of the base no value lands on stay the file's, shared with every other reader.
+/// `b` as the words it holds, where it lies aligned for them.
+fn words_of(b: &[u8]) -> Option<&[u32]> {
+    // SAFETY: checked aligned for u32, and u32 is Pod.
+    (b.as_ptr() as usize % 4 == 0).then(|| unsafe { std::slice::from_raw_parts(b.as_ptr() as *const u32, b.len() / 4) })
+}
+
+/// A span of a volume mapped privately and the values the deltas put over it and after it written into that mapping,
+/// in one mapping: the pages of the volume no value lands on stay the file's, shared with every other reader.
 #[cfg(unix)]
-fn stitch<T: Pod>(base: &Base, at: usize, bytes: usize, offs: &[u64], vals: &[u8], tail: &[u8], len: usize) -> Result<Arena<T>, String> {
+fn stitch<T: Pod>(base: &Base, at: usize, bytes: usize, deltas: &[Delta], len: usize, made: Span) -> Result<Arena<T>, String> {
     use std::os::fd::AsRawFd;
     // SAFETY: sysconf has no preconditions.
     let page = unsafe { libc::sysconf(libc::_SC_PAGESIZE) } as usize;
-    let (lead, sz) = (at % page, std::mem::size_of::<T>());
-    let (from_file, whole) = ((lead + bytes).next_multiple_of(page), (lead + bytes + tail.len()).next_multiple_of(page));
+    let (lead, sz, total) = (at % page, std::mem::size_of::<T>(), len * std::mem::size_of::<T>());
+    if bytes > total {
+        return Err("a volume's reference does not lie in the volumes it was kept over".into());
+    }
+    let (from_file, whole) = ((lead + bytes).next_multiple_of(page), (lead + total).next_multiple_of(page));
     let fail = |what: &str| format!("a volume's reference could not be mapped ({what}: {})", std::io::Error::last_os_error());
     // SAFETY: a fresh private anonymous mapping, then the file's pages mapped over its start (MAP_FIXED within the
-    // mapping just made); every write below lies inside `whole` bytes of it; then it is made read-only.
+    // mapping just made); every write below is checked to lie inside `total` bytes after `lead`; then it is made
+    // read-only.
     unsafe {
         let p = libc::mmap(std::ptr::null_mut(), whole, libc::PROT_READ | libc::PROT_WRITE, libc::MAP_PRIVATE | libc::MAP_ANON, -1, 0);
         if p == libc::MAP_FAILED {
@@ -833,15 +928,30 @@ fn stitch<T: Pod>(base: &Base, at: usize, bytes: usize, offs: &[u64], vals: &[u8
             return Err(fail("map"));
         }
         let s = (p as *mut u8).add(lead);
-        std::ptr::copy_nonoverlapping(tail.as_ptr(), s.add(bytes), tail.len());
-        for (k, &o) in offs.iter().enumerate() {
-            std::ptr::copy_nonoverlapping(vals.as_ptr().add(k * sz), s.add(o as usize), sz);
+        let mut cur = bytes;
+        for d in deltas {
+            let Delta::Put { offs, vals, tail } = d else { unreachable!() };
+            if vals.len() != offs.len() / 8 * sz || tail.len() % sz != 0 || cur + tail.len() > total {
+                return Err("a volume's reference does not lie in the volumes it was kept over".into());
+            }
+            for k in 0..offs.len() / 8 {
+                let o = u64_at(offs, k) as usize;
+                if o % sz != 0 || o.checked_add(sz).is_none_or(|e| e > cur) {
+                    return Err("a volume's reference does not lie in the volumes it was kept over".into());
+                }
+                std::ptr::copy_nonoverlapping(vals.as_ptr().add(k * sz), s.add(o), sz);
+            }
+            std::ptr::copy_nonoverlapping(tail.as_ptr(), s.add(cur), tail.len());
+            cur += tail.len();
+        }
+        if cur != total {
+            return Err("a volume's reference does not lie in the volumes it was kept over".into());
         }
         if libc::mprotect(p, whole, libc::PROT_READ) != 0 {
             return Err(fail("protect"));
         }
         let start = s as usize;
-        ORIGINS.with(|o| o.borrow_mut().push(Origin { start, end: start + bytes + tail.len(), file: base.id, at, from_file: Some(bytes), patched: offs.into() }));
+        ORIGINS.with(|o| o.borrow_mut().push(Origin { start, end: start + total, file: 0, made: Some(made) }));
         Arena::mapped(&region, lead, len).ok_or_else(|| "a volume's reference could not be mapped".into())
     }
 }
@@ -855,7 +965,7 @@ pub fn map_file(path: &str) -> std::io::Result<Rc<Region>> {
     let r = Rc::new(Region { ptr: m.as_ptr(), len: m.len(), hold: Hold::Map(m) });
     if let Some(file) = file_id(&r) {
         let start = r.ptr as usize;
-        ORIGINS.with(|o| o.borrow_mut().push(Origin { start, end: start + r.len, file, at: 0, from_file: None, patched: Rc::from([]) }));
+        ORIGINS.with(|o| o.borrow_mut().push(Origin { start, end: start + r.len, file, made: None }));
     }
     Ok(r)
 }

@@ -25,8 +25,8 @@
 --                                    part is writer.ts's template; LOGS + '/all.log' in writer.ts over the imported template.
 --                                    Each answers with its node and its text (rules/js-concat.rofl), and mini/node/paths.ts
 --                                    with the texts and nodes of examples/checks/vscode-side-effects-check.rofl
---   an imported class                lib.ts Registry.open: `new Registry()` in app.ts is an instance of the exported class,
---                                    so `r.open('/srv/data')` reaches mkdirSync, at the sink and at the call
+--   an imported class                app.ts `new Registry()` of lib.ts's `export class`: Registry.open's mkdirSync and the
+--                                    call `r.open('/srv/data')` both answer '/srv/data'
 --   no value                         main.ts remove(this.storage.dir)
 vsp_want(n1684850c959c2a12_pnagriprau6, fs_mutation, "/etc/x").
 vsp_want(n1684850c959c2a12_qt2v84mu6l4, fs_mutation, "/var/log/app").
@@ -79,8 +79,6 @@ vsp_want(ndc27e34f71d5ff1f_4f5s4cmtii7,fs_mutation,cat(cat("/srv/app","/logs"),"
 vsp_want(ndc27e34f71d5ff1f_4f5s4cmtii7,fs_mutation,ndc27e34f71d5ff1f_r9o14br7jm3).
 vsp_want(n2cab440d5303505d_2haae04gjl, fs_mutation, "/srv/data").
 vsp_want(n34281c6d11fa17ac_djpc3k7smi4, fs_mutation, "/srv/data").
-vsp_want_site(n2cab440d5303505d_2haae04gjl, fs_mutation).
-vsp_want_site(n34281c6d11fa17ac_djpc3k7smi4, fs_mutation).
 vsp_want_site(n6ce3b3e159e9764b_m3uuf5k2cj1, fs_mutation).
 vsp_want_site(S, F) :- vsp_want(S, F, _).
 vsp_want_count(fs_mutation, 30, 29).

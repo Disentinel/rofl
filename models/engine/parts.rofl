@@ -1,0 +1,176 @@
+-- models/engine/parts.rofl — THE ENGINE AS A PERSON NAMES IT: its parts and the words of the glossary, each tied to
+-- the code that is it (models/engine/code.rofl reads the code). The ties are hand-written and checked: a tie to a
+-- function, type or module the scan no longer finds is `dangling_tie[audit]`, so a rename turns this file red
+-- instead of silently wrong.
+
+-- ===================================================================== THE PARTS
+-- part(P, Name, What): a part of the engine, and in one line what it is for
+part(cli,         "командная строка", "глаголы rofl load|ask|why|whynot|excise|render|nb, разбор флагов").
+part(kept,        "хранимые миры",    "мир на диске между вопросами, правка файла дельтой").
+part(serve,       "serve",            "долгий процесс: JSON-запросы, много миров-сессий").
+part(session,     "сессия",           "мир как объект: load, assert, evaluate, fork, cool, reheat").
+part(parser,      "парсер",           "текст ROFL в правила и факты").
+part(notebook,    "блокнот",          "Markdown .rofl.md, предложения вместо Datalog").
+part(reflection,  "рефлексия",        "правила как факты, программы ядра boot и safety").
+part(evaluator,   "вычислитель",      "полунаивная неподвижная точка, слои, соединения, стены").
+part(incremental, "дельты",           "добавить или убрать факты в посчитанном мире").
+part(provenance,  "свидетели",        "почему: доказательства фактов").
+part(aggregates,  "агрегаты",         "ячейки, решётки, полукольца").
+part(structures,  "структуры",        "function, tree closure, alias: хранить компактнее").
+part(store,       "хранилище",        "факты по книгам, термы, арены памяти").
+part(persistence, "форматы на диске", "образ, том, снимок, журнал").
+part(adapters,    "адаптеры",         "внешние сервисы: exec, MCP, OpenAPI, вход, Roflenox").
+part(ring1,       "ring1",            "сгенерированный токенизатор").
+part(harness,     "стенд",            "вшитые поломки для проверок, корпус сверки").
+
+module_in("bin::rofl", cli).
+module_in("bin::rofl::load", cli).
+module_in("bin::rofl::render", cli).
+module_in("bin::rofl::nb", cli).
+module_in("bin::rofl::seed", cli).
+module_in("bin::rofl::kept", kept).
+module_in("bin::rofl::kept::win", kept).
+module_in("bin::rofl::delta", kept).
+module_in("bin::rofl::serve", serve).
+module_in("rofl::session", session).
+module_in("rofl", session).
+module_in("rofl::rofl_lex", parser).
+module_in("rofl::rofl_parse", parser).
+module_in("rofl::program", parser).
+module_in("rofl::dense", parser).
+module_in("rofl::md", notebook).
+module_in("rofl::md::blocks", notebook).
+module_in("rofl::md::nb", notebook).
+module_in("rofl::md::omap", notebook).
+module_in("rofl::md::reader", notebook).
+module_in("rofl::md::rx", notebook).
+module_in("rofl::md::say", notebook).
+module_in("rofl::md::vocab", notebook).
+module_in("rofl::reflect", reflection).
+module_in("rofl::kernel", reflection).
+module_in("rofl::kernel::text", reflection).
+module_in("rofl::kernel_text", reflection).
+module_in("rofl::shrug", reflection).
+module_in("rofl::engine", evaluator).
+module_in("rofl::engine::joinplan", evaluator).
+module_in("rofl::engine::par", evaluator).
+module_in("rofl::engine::cost", evaluator).
+module_in("rofl::engine::datastrat", evaluator).
+module_in("rofl::engine::labeled", evaluator).
+module_in("rofl::engine::want", evaluator).
+module_in("rofl::engine::resume", evaluator).
+module_in("rofl::engine::addition", incremental).
+module_in("rofl::engine::delta", incremental).
+module_in("rofl::engine::prov", provenance).
+module_in("rofl::cell", aggregates).
+module_in("rofl::tag", aggregates).
+module_in("rofl::engine::latkept", aggregates).
+module_in("rofl::structure", structures).
+module_in("rofl::structures", structures).
+module_in("rofl::forest", structures).
+module_in("rofl::engine::vclosure", structures).
+module_in("rofl::engine::alias", structures).
+module_in("rofl::store", store).
+module_in("rofl::term", store).
+module_in("rofl::arena", store).
+module_in("rofl::image", persistence).
+module_in("rofl::volume", persistence).
+module_in("rofl::store::volume", persistence).
+module_in("rofl::seed", persistence).
+module_in("rofl::journal", persistence).
+module_in("rofl::adapter", adapters).
+module_in("rofl::net", adapters).
+module_in("rofl::mcp", adapters).
+module_in("rofl::openapi", adapters).
+module_in("rofl::login", adapters).
+module_in("rofl::roflenox", adapters).
+module_in("rofl::ring1_lexer", ring1).
+module_in("rofl::ring1_preds", ring1).
+module_in("rofl::ring1_tables", ring1).
+module_in("rofl::ring1_tok", ring1).
+module_in("rofl::breaks", harness).
+module_in("rofl::corpus", harness).
+
+fn_part(F, P) :- fn_mod(F, M), module_in(M, P).
+
+-- a module the scan found and no part holds: the map has a hole
+unplaced_module[audit](M) :- rs_mod[rs](M, _), not placed(M).
+placed(M) :- module_in(M, _).
+
+-- WHO CALLS WHOM, part to part: the calls between functions, counted. Only calls the code names surely (by path or
+-- by a known type): a call found by its name alone could be any of the crate's methods so named.
+sure(F, G) :- calls(F, G, path).
+sure(F, G) :- calls(F, G, typed).
+part_calls(A, B, N) :- part(A, _, _), part(B, _, _), A != B, N is count(F, G : sure(F, G), fn_part(F, A), fn_part(G, B)), N > 0.
+part_size(P, L) :- part(P, _, _), L is sum(S ; F : fn_part(F, P), fn_size(F, S)).
+
+-- ===================================================================== THE GLOSSARY
+-- term(T, Word, What), and tie(T, Kind, Id): where the term lives in the code (Kind: type, fn, module)
+term(world,        "мир",                 "хранилище фактов + правила, досчитанные до неподвижной точки").
+term(evaluate,     "оценка",              "прогон правил до неподвижной точки").
+term(fork,         "форк",                "мир как слой над замороженной базой, факты не копируются").
+term(freeze,       "заморозка",           "база, которую делят форки и не пишет никто").
+term(addition,     "добавление дельтой",  "новые факты в посчитанный мир, пересчёт только затронутого").
+term(retraction,   "удаление дельтой",    "факт уходит из посчитанного мира, уходит то, что на нём стояло").
+term(kept_world,   "хранимый мир",        "посчитанный мир на диске, ответ без пересчёта").
+term(image,        "образ",               "хранимый мир одним двоичным файлом").
+term(volume_kept,  "том ①",               "хранимый мир как отображаемые в память арены").
+term(volume_corpus,"том ②",               "факты одного файла корпуса").
+term(cool,         "охлаждение",          "факты тома ② на диск по книгам, кроме surface").
+term(reheat,       "разогрев",            "охлаждённый том обратно в мир").
+term(witness,      "свидетель",           "какое правило из каких посылок вывело факт").
+term(seal,         "запечатывание",       "sealed(provenance): свидетелей не хранить").
+term(cell,         "ячейка",              "одно значение агрегата на ключ").
+term(tag,          "полукольцо",          "вес на факте: ⊗ вдоль доказательства, ⊕ между доказательствами").
+term(stratum,      "страта",              "слой отношений, досчитанный раньше, чем его читают через not").
+term(wall,         "стена",               "бюджет шагов, память, диск: где оценка останавливается и говорит об этом").
+term(hole,         "дыра",                "hole(что, почему): недосчитанное, названное").
+term(shrug,        "пожатие плечами",     "третий ответ: не знаю, по такой-то причине").
+term(journal,      "журнал",              "что миру сказали и когда").
+term(book,         "книга",               "раздел хранилища [x]: кто это утверждает").
+term(reflection,   "рефлексия",           "правила лежат в хранилище как факты").
+term(tree,         "дерево",              "объявленное дерево: предки без хранения строк").
+
+tie(world, type, "rofl::session::Session").
+tie(world, type, "rofl::engine::Eval").
+tie(evaluate, fn, "rofl::session::Session::evaluate").
+tie(fork, fn, "rofl::session::Session::fork").
+tie(fork, fn, "rofl::engine::Eval::fork").
+tie(freeze, fn, "rofl::store::Store::freeze").
+tie(addition, module, "rofl::engine::addition").
+tie(addition, fn, "rofl::session::Session::assert_delta").
+tie(retraction, module, "rofl::engine::delta").
+tie(retraction, fn, "rofl::session::Session::retract").
+tie(kept_world, module, "bin::rofl::kept").
+tie(image, module, "rofl::image").
+tie(volume_kept, module, "rofl::volume").
+tie(volume_kept, module, "rofl::store::volume").
+tie(volume_kept, module, "rofl::arena").
+tie(cool, fn, "rofl::session::Session::cool_books").
+tie(reheat, fn, "rofl::session::Session::reheat").
+tie(witness, type, "rofl::store::Witness").
+tie(witness, module, "rofl::engine::prov").
+tie(seal, type, "rofl::store::Seal").
+tie(cell, module, "rofl::cell").
+tie(tag, module, "rofl::tag").
+tie(stratum, module, "rofl::engine::datastrat").
+tie(wall, module, "rofl::engine::resume").
+tie(shrug, module, "rofl::shrug").
+tie(journal, module, "rofl::journal").
+tie(journal, type, "rofl::journal::Journal").
+tie(reflection, module, "rofl::reflect").
+tie(tree, module, "rofl::forest").
+tie(tree, module, "rofl::engine::vclosure").
+
+ties_to(T, type, X)   :- tie(T, type, X), rs_type[rs](X, _, _, _).
+ties_to(T, fn, X)     :- tie(T, fn, X), rs_fn[rs](X, _, _, _, _, _).
+ties_to(T, module, X) :- tie(T, module, X), rs_mod[rs](X, _).
+dangling_tie[audit](T, K, X) :- tie(T, K, X), not ties_to(T, K, X).
+
+-- the functions a term is: tied to directly, or the functions of a tied module or the methods of a tied type
+term_fn(T, F) :- tie(T, fn, F), rs_known(F).
+term_fn(T, F) :- tie(T, module, M), fn_mod(F, M).
+term_fn(T, F) :- tie(T, type, X), rs_method[rs](F, X, _).
+
+-- which words of the glossary a verb of the binary reaches, and through how many of their functions
+verb_term(V, T, N) :- verb(V), term(T, _, _), N is count(F : reaches(V, F), term_fn(T, F)), N > 0.

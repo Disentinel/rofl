@@ -17,12 +17,18 @@ serde_yaml = "0.9"
 rusqlite = { version = "0.32", features = ["bundled"], optional = true }
 # the http adapters (src/net.rs: openapi, mcp over http); blocking, on the adapter's own thread, so the engine never sees tokio
 reqwest = { version = "0.12", default-features = false, features = ["blocking", "rustls-tls"], optional = true }
+# a book on Roflenox checked: Ed25519 and SHA-256 (src/roflenox.rs); already in the tree under rustls
+ring = { version = "0.17", optional = true }
+
+# signed batches in tests/roflenox.rs
+[dev-dependencies]
+ring = "0.17"
 
 # planted faults for scripts/agg_breaks.ts (src/breaks.rs); never in a normal build
 [features]
 default = ["sql", "net"]
 sql = ["dep:rusqlite"]
-net = ["dep:reqwest"]
+net = ["dep:reqwest", "dep:ring"]
 breaks = []
 
 [lib]

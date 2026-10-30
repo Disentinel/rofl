@@ -247,7 +247,62 @@ export function nodeModuleMembers(root: string, specs: string[]): Member[] {
     });
 }
 
+/** THE BROWSER'S TYPES, for what a program DECLARES a value to be (`el: HTMLElement`,
+ *  `document`): every interface of lib.dom.d.ts with its own members, what it
+ *  extends, the interface a property is declared as, whether a string index
+ *  signature leaves it open, and the interface each global is declared as. Own
+ *  members and the `extends` edges, not the flattened set: 8 717 rows against 60 802,
+ *  and the rules walk `extends` only from a type a program names. */
+export interface HostType { name: string; members: string[]; extends: string[]; props: [string, string][]; open: boolean }
+export interface DomSurface { types: HostType[]; globalTypes: [string, string][] }
+
+function refName(t: ts.TypeNode | undefined): string | null {
+  if (!t) return null;
+  if (ts.isUnionTypeNode(t)) {
+    const parts = t.types.filter((u) => !(u.kind === ts.SyntaxKind.UndefinedKeyword ||
+      (ts.isLiteralTypeNode(u) && u.literal.kind === ts.SyntaxKind.NullKeyword)));
+    return parts.length === 1 ? refName(parts[0]) : null;
+  }
+  return ts.isTypeReferenceNode(t) && ts.isIdentifier(t.typeName) ? t.typeName.text : null;
+}
+
+export function domTypes(root: string): DomSurface {
+  return withEntry(root, 'domtypes', 'export {};\n',
+    { lib: ['lib.esnext.d.ts', 'lib.dom.d.ts', 'lib.dom.iterable.d.ts'], types: [] }, (prog) => {
+      const byName = new Map<string, HostType>();
+      const globalTypes: [string, string][] = [];
+      for (const sf of prog.getSourceFiles()) {
+        if (!/lib\.dom(\.iterable)?\.d\.ts$/.test(sf.fileName)) continue;
+        for (const st of sf.statements) {
+          if (ts.isInterfaceDeclaration(st)) {
+            const t = byName.get(st.name.text) ?? { name: st.name.text, members: [], extends: [], props: [], open: false };
+            byName.set(t.name, t);
+            for (const m of st.members) {
+              if (ts.isIndexSignatureDeclaration(m)) { if (m.parameters[0]?.type?.kind === ts.SyntaxKind.StringKeyword) t.open = true; continue; }
+              if (!m.name || !(ts.isIdentifier(m.name) || ts.isStringLiteral(m.name))) continue;
+              t.members.push(m.name.text);
+              const r = ts.isPropertySignature(m) || ts.isGetAccessorDeclaration(m) ? refName(m.type) : null;
+              if (r) t.props.push([m.name.text, r]);
+            }
+            for (const h of st.heritageClauses ?? []) for (const e of h.types) if (ts.isIdentifier(e.expression)) t.extends.push(e.expression.text);
+          } else if (ts.isVariableStatement(st)) {
+            for (const d of st.declarationList.declarations) {
+              const r = ts.isIdentifier(d.name) ? refName(d.type) : null;
+              if (r) globalTypes.push([(d.name as ts.Identifier).text, r]);
+            }
+          }
+        }
+      }
+      const known = (n: string) => byName.has(n);
+      const types = [...byName.values()].map((t) => ({ ...t, members: [...new Set(t.members)].sort(), extends: [...new Set(t.extends)].filter(known).sort(),
+        props: [...new Map(t.props.filter(([, r]) => known(r))).entries()].sort(), open: t.open || t.extends.some((e) => !known(e)) }))
+        .sort((a, b) => (a.name < b.name ? -1 : 1));
+      return { types, globalTypes: globalTypes.filter(([, r]) => known(r)).sort((a, b) => (a[0] < b[0] ? -1 : 1)) };
+    });
+}
+
 export interface Surface {
+  dom: DomSurface;
   globals: Global[];
   members: Member[];
   specs: string[];
@@ -262,6 +317,7 @@ export function scanHosts(root: string): Surface {
   return {
     globals: [...nodeGlobals(root, base), ...browserGlobals(root, base)],
     members: nodeModuleMembers(root, specs),
+    dom: domTypes(root),
     specs,
     tsVersion: ts.version,
     typesVersion: JSON.parse(fs.readFileSync(path.join(typesDir, 'package.json'), 'utf8')).version,
@@ -343,6 +399,22 @@ edb(host_member_since).
   for (const m of s.members) if (m.deprecatedSince) rows.push(`host_member_deprecated_since(${m.host}, ${q(m.spec)}, ${q(m.key)}, ${vrow(m.deprecatedSince)}).`);
   rows.push('');
   for (const m of s.members) if (m.replacedBy) rows.push(`host_member_replaced_by(${m.host}, ${q(m.spec)}, ${q(m.key)}, ${q(m.replacedBy)}).`);
+  rows.push('',
+    '-- THE BROWSER\'S TYPES, for what a program declares a value to be: an interface\'s own',
+    '-- members, what it extends, the interface a property is declared as, an interface a',
+    '-- string index signature (or a base this file has not got) leaves open, and the',
+    '-- interface a global is declared as. rules/js-callgraph.rofl section 9 walks `extends`',
+    '-- from a type a program names.',
+    'edb(host_type_member).', 'edb(host_type_extends).', 'edb(host_type_prop).', 'edb(host_type_open).', 'edb(host_global_type).', '');
+  for (const t of s.dom.types) for (const k of t.members) rows.push(`host_type_member(browser, ${q(t.name)}, ${q(k)}).`);
+  rows.push('');
+  for (const t of s.dom.types) for (const b of t.extends) rows.push(`host_type_extends(browser, ${q(t.name)}, ${q(b)}).`);
+  rows.push('');
+  for (const t of s.dom.types) for (const [k, r] of t.props) rows.push(`host_type_prop(browser, ${q(t.name)}, ${q(k)}, ${q(r)}).`);
+  rows.push('');
+  for (const t of s.dom.types) if (t.open) rows.push(`host_type_open(browser, ${q(t.name)}).`);
+  rows.push('');
+  for (const [g, r] of s.dom.globalTypes) rows.push(`host_global_type(browser, ${q(g)}, ${q(r)}).`);
   return head + rows.join('\n') + '\n';
 }
 

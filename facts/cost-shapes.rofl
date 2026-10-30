@@ -54,6 +54,8 @@ shape_ok(dec_up, scoped_descent, "small_set: a site inside a decorator, 0 ms; th
 shape_ok(name_outer, not_closer, "small_set: name_cand holds 1.01 rows an identifier over 20 vscode files (5229 for 5182), the pairs are the one or two scopes of one identifier, 47 rows").
 shape_ok(tdz_deferred, scoped_descent, "small_set: the descendant set is tdz_cand (a read above its declaration), nearest_v asked once per candidate, 1 ms").
 shape_ok(keyed_heal_fn, scoped_descent, "small_set: the descendant set is keyed_heal_at (a read whose removal its own function undoes), 0 rows at vscode 250").
+shape_ok(member_ctor_this, scoped_descent, "small_set: the descendants are a constructor's statements up to a field's write, nearest_v asked of each `this` there; 300 rows at vscode 250").
+shape_ok(member_set_sure, scoped_descent, "small_set: the descendants are reads of a key an object is not made with, nearest_v asked of the read and the write; 2168 rows at vscode 250").
 
 shape_ok(calls, twin_bodies, "alias_of_a_derived: eff_edge_closed reads the same edge in the flow book; calls has the arms eff_edge_closed lacks, 12 ms sealed / 38 default (all arms)").
 shape_ok(eff_edge_closed, twin_bodies, "alias_of_a_derived: the flow book's copy of calls (the arm that reads nearest_fn), 5 ms sealed / 13 default").

@@ -29,6 +29,8 @@
 //! 2) and the protocol makes it the obvious one: `open` takes a seed, `fork`
 //! takes a session id.
 //!
+//! `rofl serve FILE...` opens session 1 on the world of the files, evaluated, before the first request.
+//!
 //!   {"op":"open","seedPath":"x.seed.json"}   -> {"ok":true,"session":1,...}; `keptPath` opens a kept image,
 //!     `volumePath` maps a volume
 //!     `open` and `fresh` also take the walls a snapshot does not carry:
@@ -38,7 +40,9 @@
 //!                                                        world by delta (Session::assert_delta), else evaluated again
 //!   {"op":"load","session":2,"path":"pack.rofl"}      -> {"admitted":n,"full":null|"why"}: the same for facts and rules
 //!   {"op":"evaluate","session":2}                  -> waits for the world's adapters; with "wait":false it answers at
-//!                                                        once, "flying":k wants in flight, their answers loaded later
+//!                                                        once, "flying":k wants in flight, their answers loaded later;
+//!                                                        "again": what the world held whole and this pass derived again
+//!                                                        (what nothing touched is kept, engine/layer.rs)
 //!   {"op":"resume","session":2,"steps":n}            -> as evaluate, and "resumed": went on from where the budget
 //!                                                        stopped the last evaluation, or evaluated again
 //!   {"op":"ask","session":2,"query":"p(X)"}
@@ -66,6 +70,27 @@
 //!                                                        world opens evaluated (`open` with `keptPath`); with
 //!                                                        "volume":true, as a volume (`open` with `volumePath`)
 //!   {"op":"close","session":2}
+//!   {"op":"fresh","budget":n}                  -> {"session":n}: an empty world, no seed; `load` fills it
+//!   {"op":"facts","session":2}                 -> {"facts":n,"tick":t}
+//!   {"op":"spans","text":"..."}                -> {"spans":[[a,b],...]}: no session; the lines [a,b), from 0, of a
+//!                                                        `.rofl.md` the reader reads as sentences, and each line of
+//!                                                        its prose that asks (md `sentence_spans`)
+//!
+//! A LEVEL AT A TIME, for workers that meet between levels (tests/level_wall.rs):
+//!   {"op":"evaluate","session":2,"wall":L}     -> evaluated up to level L; "next" is the level it stopped before
+//!   {"op":"admit","session":2,"rofl":"..."}    -> {"admitted":n}: facts of the wall's level into the stopped
+//!                                                        world, fired on by every rule active so far
+//!   {"op":"evaluate_on","session":2,"wall":L}  -> goes on from where the last wall stopped it
+//!
+//! VOLUMES, a key prefix to disk and back (runtime/ingest.ts, runtime/split.ts):
+//!   {"op":"cool","session":2,"prefix":"na","path":"v.vol"} -> {"facts","bytes","path","books"}: the facts whose
+//!                                                        key starts with the prefix written and dropped; with
+//!                                                        "books":[...] (and "keep":[...]) only those books go,
+//!                                                        a `[surface]` beside them stays
+//!   {"op":"cool_many","session":2,"volumes":[{"prefix","path"},...]} -> {"volumes":[...]}: many in one pass
+//!   {"op":"reheat","session":2,"path":"v.vol"} -> {"admitted":n,"evaluated":b}: a cooled volume back, by delta
+//!   {"op":"view","session":2,"prefix":"na","books":[...],"rels":[...]} -> {"facts","names"}: what a volume's world
+//!                                                        wrote above its base, and the names it subscribes by
 //!   any op on a session may carry "limit":{"ms":n,"bytes":n}: past n milliseconds, or n live bytes in this
 //!   process, its evaluation stops as at the step budget, and the answer says "stopped":"clock"|"heap"
 //!
@@ -126,7 +151,7 @@ impl Server {
     }
 
     fn keep(&mut self, mut s: Session) -> u64 {
-        s.eval.on_hot = Some(|t| eprintln!("hot: {t}"));
+        s.eval.cost.on_hot = Some(|t| eprintln!("hot: {t}"));
         s.post = Some(Default::default());
         let id = self.next;
         self.next += 1;
@@ -220,120 +245,27 @@ impl Server {
             }
         }
         match op {
-            "rows" => {
-                let rel = r.get("rel").and_then(|v| v.as_str()).ok_or("rows needs `rel`")?;
-                let at: Vec<(usize, String)> = match r.get("at").and_then(|v| v.as_object()) {
-                    Some(m) => m.iter().map(|(k, v)| Ok((k.parse::<usize>().map_err(|_| "`at` is keyed by position")?, v.as_str().ok_or("`at` spells each argument")?.to_string()))).collect::<Result<_, String>>()?,
-                    None => Vec::new(),
-                };
-                let persp = r.get("persp").and_then(|v| v.as_str()).map(|p| p.to_string());
-                let s = self.get(r)?;
-                let e = &mut s.eval;
-                let rel = e.h.intern(rel);
-                let ids = match &persp {
-                    Some(p) => {
-                        let p = e.h.intern(p);
-                        e.store.rel_persp(&e.h, rel, p)
-                    }
-                    None => e.store.rel_all(&e.h, rel),
-                };
-                let book = persp.as_deref().map(|p| e.h.intern(p));
-                let mut facts: Vec<Value> = ids
-                    .into_iter()
-                    .filter(|id| at.iter().all(|(k, v)| e.store.args(*id).get(*k).is_some_and(|a| e.h.canon(*a) == *v)))
-                    .map(|id| rofl::seed::fact_json(&e.h, &e.store, id))
-                    .collect();
-                for (rel, b, args) in e.store.virtual_facts(&e.h, Some(rel)) {
-                    if book.is_none_or(|x| x == b) && at.iter().all(|(k, v)| args.get(*k).is_some_and(|t| e.h.canon(*t) == *v)) {
-                        facts.push(rofl::seed::virtual_json(&e.h, rel, b, &args));
-                    }
-                }
-                Ok(json!({ "facts": facts }))
-            }
-            "holding" => {
-                let limit = r.get("limit").and_then(|v| v.as_u64()).map_or(usize::MAX, |n| n as usize);
-                let (atom, text) = match (r.get("atom").and_then(|v| v.as_str()), r.get("string").and_then(|v| v.as_str())) {
-                    (Some(a), _) => (true, a.to_string()),
-                    (None, Some(t)) => (false, t.to_string()),
-                    _ => return Err("holding needs `atom` or `string`".into()),
-                };
-                let s = self.get(r)?;
-                let e = &mut s.eval;
-                let sym = e.h.intern(&text);
-                fn holds(h: &rofl::term::Heap, t: rofl::term::Term, atom: bool, sym: u32) -> bool {
-                    match t.kind() {
-                        rofl::term::TermK::Atom(x) => atom && x == sym,
-                        rofl::term::TermK::Str(x) => !atom && x == sym,
-                        rofl::term::TermK::Func(i) => h.fargs(i).iter().any(|a| holds(h, *a, atom, sym)),
-                        _ => false,
-                    }
-                }
-                let facts: Vec<Value> = e
-                    .store
-                    .live_ids()
-                    .into_iter()
-                    .filter(|id| e.store.args(*id).iter().any(|a| holds(&e.h, *a, atom, sym)))
-                    .take(limit)
-                    .map(|id| rofl::seed::fact_json(&e.h, &e.store, id))
-                    .collect();
-                Ok(json!({ "facts": facts }))
-            }
-            "books" => {
-                let rel = r.get("rel").and_then(|v| v.as_str()).ok_or("books needs `rel`")?;
-                let s = self.get(r)?;
-                let e = &mut s.eval;
-                let rel = e.h.intern(rel);
-                let mut books: Vec<String> = Vec::new();
-                let virt: Vec<u32> = e.store.virtual_facts(&e.h, Some(rel)).into_iter().map(|x| x.1).collect();
-                for b in e.store.rel_all(&e.h, rel).into_iter().map(|id| e.store.rec(id).persp).chain(virt) {
-                    let b = e.h.name(b).to_string();
-                    if !books.contains(&b) {
-                        books.push(b);
-                    }
-                }
-                Ok(json!({ "books": books }))
-            }
-            "fact" | "firings" | "cell" => {
-                let key = r.get("key").and_then(|v| v.as_str()).ok_or("needs `key`")?.to_string();
-                let id = r.get("session").and_then(|v| v.as_u64()).ok_or("`session` is required")?;
-                let s = self.sessions.get_mut(&id).ok_or_else(|| format!("no such session: {id}"))?;
-                let e = &mut s.eval;
-                let (facts, cells, rows) = self.keys.entry(id).or_insert_with(|| {
-                    let facts = e.store.live_ids().into_iter().map(|f| (e.store.key(&e.h, f), f)).collect();
-                    let cells = e.store.cells_in_order(&e.h).into_iter().map(|(c, _)| { let mut k = String::new(); e.store.write_cell_key(&e.h, c, &mut k); (k, c) }).collect();
-                    let rows = e.store.virtual_facts(&e.h, None).into_iter().map(|r| { let mut k = String::new(); rofl::store::write_fact_key(&e.h, r.0, r.1, &r.2, &mut k); (k, r) }).collect();
-                    (facts, cells, rows)
-                });
-                let row = rows.get(&key).cloned();
-                Ok(match op {
-                    "fact" => json!({ "fact": facts.get(&key).map(|f| rofl::seed::fact_json(&e.h, &e.store, *f)).or_else(|| row.map(|(r, b, args)| rofl::seed::virtual_json(&e.h, r, b, &args))) }),
-                    "firings" => json!({ "firings": match (facts.get(&key), row) {
-                        (Some(f), _) => rofl::seed::firings_json(&e.h, &e.store, *f),
-                        (None, Some((r, b, args))) if args.len() == 2 => e.store.virtual_firing(&e.h, r, b, args[0], args[1]).map(|(rule, tick, prems)| {
-                            vec![json!({ "ruleId": e.h.name(rule), "tick": tick, "prems": prems.iter().map(|k| json!({ "t": "fact", "key": k })).collect::<Vec<_>>() })]
-                        }).unwrap_or_default(),
-                        _ => Vec::new(),
-                    } }),
-                    _ => json!({ "cell": cells.get(&key).map(|c| rofl::seed::cell_json(&e.h, &e.store, *c, None)) }),
-                })
-            }
-            // A seed arrives by path: a 5.7M-fact snapshot has no business going
-            // through a pipe and a JSON string escape when both ends can read a file.
-            "open" => {
-                let budget = r.get("budget").and_then(|v| v.as_i64()).unwrap_or(DEFAULT_BUDGET);
-                let path = |k: &str| r.get(k).and_then(|v| v.as_str());
-                let mut s = match (path("keptPath"), path("volumePath"), path("seedPath")) {
-                    (Some(p), _, _) => Session::open_kept(&std::fs::read(p).map_err(|e| format!("{p}: {e}"))?, budget)?,
-                    (None, Some(p), _) => Session::open_volume(p, budget)?,
-                    (None, None, Some(p)) => Session::open(&std::fs::read_to_string(p).map_err(|e| format!("{p}: {e}"))?, budget)?,
-                    _ => return Err("open needs `keptPath`, `volumePath` or `seedPath`".into()),
-                };
-                Self::walls(r, &mut s)?;
-                let facts = s.eval.store.fact_count();
-                let dangling = s.dangling;
-                let id = self.keep(s);
-                Ok(json!({ "session": id, "facts": facts, "dangling": dangling }))
-            }
+            "rows" | "holding" | "books" | "fact" | "firings" | "cell" | "open" => self.op_read(op, r),
+            "fresh" | "spans" | "load" | "cool" | "cool_many" | "reheat" | "view" | "fork" | "keep" => self.op_world(op, r),
+            _ => self.op_change(op, r),
+        }
+    }
+
+    /// The reads of a world: its rows, its facts by key, its books, what it holds, and the state of an open session.
+    fn op_read(&mut self, op: &str, r: &Value) -> Result<Value, String> {
+        match op {
+            "rows" => self.op_rows(r),
+            "holding" => self.op_holding(r),
+            "books" => self.op_books(r),
+            "fact" | "firings" | "cell" => self.op_key(op, r),
+            "open" => self.op_open(r),
+            _ => Err(format!("unknown op: {op}")),
+        }
+    }
+
+    /// Worlds made, loaded, cooled, forked and kept: the operations that change which world a session is.
+    fn op_world(&mut self, op: &str, r: &Value) -> Result<Value, String> {
+        match op {
             // An empty world with the kernel's bootstrap tables and nothing
             // else — `new Rofl()`. With `load` beside it, a caller never needs
             // a seed, and therefore never needs the TypeScript kernel.
@@ -345,56 +277,13 @@ impl Server {
                 let id = self.keep(s);
                 Ok(json!({ "session": id, "facts": facts, "dangling": 0 }))
             }
-            // A refusal returns EVERY diagnostic and leaves the store as it
-            // was. It is an `ok:false` answer rather than a transport error,
-            // because a rejected program is a normal outcome of loading one.
-            "load" => {
-                let text = match (r.get("path").and_then(|v| v.as_str()), r.get("rofl").and_then(|v| v.as_str())) {
-                    (Some(p), _) => std::fs::read_to_string(p).map_err(|e| format!("{p}: {e}"))?,
-                    (None, Some(t)) => t.to_string(),
-                    (None, None) => return Err("load needs `path` or `rofl`".into()),
-                };
-                let who = r.get("who").and_then(|v| v.as_str()).map(|s| s.to_string());
-                self.get(r)?.guard_permit(&text)?;
-                match self.get(r)?.load_delta(&text, who.as_deref()) {
-                    Ok((n, a)) => Ok(json!({ "admitted": n, "full": full(a) })),
-                    Err(d) => Err(d.join("\n")),
-                }
+            "spans" => {
+                let text = r.get("text").and_then(|v| v.as_str()).ok_or("spans needs `text`")?;
+                Ok(json!({ "spans": rofl::md::sentence_spans(text) }))
             }
-            // Cool a volume to disk. The prefix is the volume; see
-            // `Session::cool`. The caller records `cooled` and the `hole`,
-            // because those are statements about a corpus and the engine knows
-            // only a prefix.
-            "cool" => {
-                let prefix = r.get("prefix").and_then(|v| v.as_str()).ok_or("cool needs `prefix`")?.to_string();
-                let out = r.get("path").and_then(|v| v.as_str()).ok_or("cool needs `path`")?.to_string();
-                // by book: only the facts of `books` go, a `[surface]` kept beside them stays
-                let c = match strings(r, "books")? {
-                    Some(bs) => {
-                        let keep = strings(r, "keep")?.unwrap_or_default();
-                        self.get(r)?.cool_books(&prefix, &bs, &keep, &out)?
-                    }
-                    None => self.get(r)?.cool(&prefix, &out)?,
-                };
-                let books: serde_json::Map<String, Value> = c.books.iter().map(|(b, n)| (b.clone(), json!(n))).collect();
-                Ok(json!({ "facts": c.facts, "bytes": c.bytes, "path": c.path, "books": books }))
-            }
-            // Many volumes in ONE pass over the world. Cooling them one at a
-            // time is a walk per volume over a world that is still shrinking.
-            "cool_many" => {
-                let vs = r.get("volumes").and_then(|v| v.as_array()).ok_or("cool_many needs `volumes`")?;
-                let mut pairs = Vec::with_capacity(vs.len());
-                for v in vs {
-                    let p = v.get("prefix").and_then(|x| x.as_str()).ok_or("a volume needs `prefix`")?;
-                    let o = v.get("path").and_then(|x| x.as_str()).ok_or("a volume needs `path`")?;
-                    pairs.push((p.to_string(), o.to_string()));
-                }
-                let cs = self.get(r)?.cool_many(&pairs)?;
-                let rows: Vec<Value> = cs.iter()
-                    .map(|c| json!({ "facts": c.facts, "bytes": c.bytes, "path": c.path }))
-                    .collect();
-                Ok(json!({ "volumes": rows }))
-            }
+            "load" => self.op_load(r),
+            "cool" => self.op_cool(r),
+            "cool_many" => self.op_cool_many(r),
             // A cooled volume back, refused if this engine did not write it; into an evaluated world by delta.
             "reheat" => {
                 let p = r.get("path").and_then(|v| v.as_str()).ok_or("reheat needs `path`")?.to_string();
@@ -418,6 +307,25 @@ impl Server {
                 let id = self.keep(f);
                 Ok(json!({ "session": id, "facts": facts }))
             }
+            // Written to a path unless the caller insists. See the module note:
+            // the whole state is exactly the thing a pipe should not carry.
+            "keep" => {
+                let p = r.get("path").and_then(|v| v.as_str()).ok_or("keep needs `path`")?.to_string();
+                if r.get("volume").and_then(|v| v.as_bool()) == Some(true) {
+                    let bytes = self.get(r)?.keep_volume(&p).map_err(|e| format!("{p}: {e}"))?;
+                    return Ok(json!({ "path": p, "bytes": bytes }));
+                }
+                let image = self.get(r)?.keep();
+                std::fs::write(&p, &image).map_err(|e| format!("{p}: {e}"))?;
+                Ok(json!({ "path": p, "bytes": image.len() }))
+            }
+            _ => Err(format!("unknown op: {op}")),
+        }
+    }
+
+    /// The operations that assert, evaluate, retract, ask or close: the rest of the session's protocol.
+    fn op_change(&mut self, op: &str, r: &Value) -> Result<Value, String> {
+        match op {
             "assert" => {
                 let text = r.get("rofl").and_then(|v| v.as_str()).ok_or("assert needs `rofl`")?.to_string();
                 self.get(r)?.guard_permit(&text)?;
@@ -437,35 +345,7 @@ impl Server {
                 let n = self.get(r)?.dispatch(std::path::Path::new(&dir))?;
                 Ok(json!({ "loaded": n }))
             }
-            // A wall is a FACT, not an error (measurement 4): `partial` comes
-            // back true with a `hole` in the store naming the unfinished part,
-            // and `ok` stays true. Only a defect or a stratification refusal
-            // is an error here.
-            // `"wait":false` answers as soon as the world is evaluated, its wants in flight; else the answers are
-            // waited for, as a one-shot verb waits, until none is in flight or the request's limit stops it
-            "evaluate" | "evaluate_on" => {
-                let wait = r.get("wait").and_then(|v| v.as_bool()).unwrap_or(true);
-                let wall = r.get("wall").and_then(|v| v.as_i64());
-                let on = r.get("op").and_then(|v| v.as_str()) == Some("evaluate_on");
-                let walled = r.get("wall").is_some();
-                let s = self.get(r)?;
-                let o = match (on, walled) {
-                    (true, _) => s.evaluate_on(wall),
-                    (false, true) => s.evaluate_to(wall),
-                    (false, false) => s.evaluate(),
-                }
-                .map_err(|e| rofl::describe(&e))?;
-                let halted = |s: &Session| s.eval.halt.as_ref().is_some_and(|h| h.load(std::sync::atomic::Ordering::Relaxed));
-                while wait && s.post.as_ref().is_some_and(|p| p.flying() > 0) && !halted(s) {
-                    s.collect(Some(std::time::Duration::from_millis(50)))?;
-                }
-                let flying = s.post.as_ref().map_or(0, |p| p.flying());
-                Ok(json!({
-                    "partial": o.partial, "staged": o.staged, "steps": o.steps,
-                    "peakRows": o.peak_rows, "space": o.space, "flying": flying, "next": s.eval.next_level(),
-                    "hot": s.eval.too_hot().iter().map(|h| h.sentence()).collect::<Vec<_>>(),
-                }))
-            }
+            "evaluate" | "evaluate_on" => self.op_evaluate(r),
             "admit" => {
                 let text = r.get("rofl").and_then(|v| v.as_str()).ok_or("admit needs `rofl`")?.to_string();
                 let n = self.get(r)?.admit(&text)?;
@@ -496,93 +376,15 @@ impl Server {
                 let t = s.tick().map_err(|e| rofl::describe(&e))?;
                 Ok(json!({ "advanced": t.advanced, "quiescent": t.quiescent, "partial": t.partial }))
             }
-            "ask" => {
-                let q = r.get("query").and_then(|v| v.as_str()).ok_or("ask needs `query`")?.to_string();
-                let a = self.get(r)?.ask(&q)?;
-                let keys = if r.get("keys").and_then(|v| v.as_bool()).unwrap_or(false) {
-                    json!(a.keys)
-                } else {
-                    Value::Null
-                };
-                Ok(json!({
-                    "vars": a.vars, "rows": a.rows, "keys": keys,
-                    "scanned": a.scanned, "probed": a.probed, "micros": a.micros, "partial": a.partial,
-                    "shrugs": a.shrugs.iter().map(|(row, line)| json!({ "row": row, "line": line })).collect::<Vec<_>>(),
-                }))
-            }
-            // The explanation verbs, answering in the reference's own text
-            // (rust/rofl/tests/explain.rs, scripts/whycheck.ts). A `why` of a
-            // fact that does not hold is an error carrying that text, as the
-            // reference's `ok: false` is; a `whynot` of one that holds is not.
-            "why" => {
-                let q = r.get("query").and_then(|v| v.as_str()).ok_or("why needs `query`")?.to_string();
-                // absent or null is a plain `why`; anything but a boolean is
-                // refused, as a whynot bound that is not an integer is
-                let all = match r.get("all") {
-                    None | Some(Value::Null) => false,
-                    Some(Value::Bool(b)) => *b,
-                    Some(v) => return Err(format!("why `all` takes true or false, not {v}")),
-                };
-                let s = self.get(r)?;
-                Ok(json!({ "text": if all { s.why_all(&q)? } else { s.why(&q)? } }))
-            }
-            "whynot" => {
-                let q = r.get("query").and_then(|v| v.as_str()).ok_or("whynot needs `query`")?.to_string();
-                // A bound below 1 counts as 1, as the reference's `Math.max`
-                // makes it; one that is not an integer is refused rather than
-                // replaced by the default. JSON has one number type, as JS
-                // does: a whole number written `3.0` or `1e3` IS the integer
-                // the reference reads, and one past i64 is as large a bound
-                // as can be asked, so it saturates.
-                let bound = |k: &str| -> Result<Option<i64>, String> {
-                    match r.get(k) {
-                        None | Some(Value::Null) => Ok(None),
-                        Some(v) => v
-                            .as_i64()
-                            .or_else(|| v.as_u64().map(|_| i64::MAX))
-                            .or_else(|| v.as_f64().filter(|f| f.is_finite() && f.fract() == 0.0).map(|f| f as i64))
-                            .map(Some)
-                            .ok_or_else(|| format!("whynot `{k}` takes an integer, not {v}")),
-                    }
-                };
-                let b = WhynotBounds::clamped(bound("depth")?, bound("nodes")?);
-                if let Some(v) = r.get("files") {
-                    let vols: Vec<(String, String)> = serde_json::from_value(v.clone()).map_err(|_| "whynot `files` takes [[prefix, file], ...]".to_string())?;
-                    let rows = self.get(r)?.whynot_files(&q, &b, &vols)?;
-                    return Ok(json!({ "files": rows.iter().map(|f| json!({ "file": f.file, "found": f.found, "stops": f.stops, "text": f.text })).collect::<Vec<_>>() }));
-                }
-                let (holds, text) = self.get(r)?.whynot(&q, &b)?;
-                Ok(json!({ "holds": holds, "text": text }))
-            }
+            "ask" => self.op_ask(r),
+            "why" => self.op_why(r),
+            "whynot" => self.op_whynot(r),
             "excise" => {
                 let q = r.get("query").and_then(|v| v.as_str()).ok_or("excise needs `query`")?.to_string();
                 let (removed, added) = self.get(r)?.excise(&q)?;
                 Ok(json!({ "removed": removed, "added": added }))
             }
-            // Written to a path unless the caller insists. See the module note:
-            // the whole state is exactly the thing a pipe should not carry.
-            "keep" => {
-                let p = r.get("path").and_then(|v| v.as_str()).ok_or("keep needs `path`")?.to_string();
-                if r.get("volume").and_then(|v| v.as_bool()) == Some(true) {
-                    let bytes = self.get(r)?.keep_volume(&p).map_err(|e| format!("{p}: {e}"))?;
-                    return Ok(json!({ "path": p, "bytes": bytes }));
-                }
-                let image = self.get(r)?.keep();
-                std::fs::write(&p, &image).map_err(|e| format!("{p}: {e}"))?;
-                Ok(json!({ "path": p, "bytes": image.len() }))
-            }
-            "state" => {
-                let path = r.get("path").and_then(|v| v.as_str()).map(|s| s.to_string());
-                let s = self.get(r)?;
-                let cs = s.eval.canonical_state();
-                match path {
-                    Some(p) => {
-                        std::fs::write(&p, &cs).map_err(|e| format!("{p}: {e}"))?;
-                        Ok(json!({ "path": p, "bytes": cs.len() }))
-                    }
-                    None => Ok(json!({ "bytes": cs.len(), "state": cs })),
-                }
-            }
+            "state" => self.op_state(r),
             "facts" => {
                 let s = self.get(r)?;
                 s.eval.settle_provenance();
@@ -595,13 +397,310 @@ impl Server {
                     None => Err(format!("no such session: {id}")),
                 }
             }
-            other => Err(format!("unknown op: {other}")),
+            _ => Err(format!("unknown op: {op}")),
+        }
+    }
+
+
+    fn op_rows(&mut self, r: &Value) -> Result<Value, String> {
+        let rel = r.get("rel").and_then(|v| v.as_str()).ok_or("rows needs `rel`")?;
+        let at: Vec<(usize, String)> = match r.get("at").and_then(|v| v.as_object()) {
+            Some(m) => m.iter().map(|(k, v)| Ok((k.parse::<usize>().map_err(|_| "`at` is keyed by position")?, v.as_str().ok_or("`at` spells each argument")?.to_string()))).collect::<Result<_, String>>()?,
+            None => Vec::new(),
+        };
+        let persp = r.get("persp").and_then(|v| v.as_str()).map(|p| p.to_string());
+        let s = self.get(r)?;
+        let e = &mut s.eval;
+        let rel = e.h.intern(rel);
+        let ids = match &persp {
+            Some(p) => {
+                let p = e.h.intern(p);
+                e.store.rel_persp(&e.h, rel, p)
+            }
+            None => e.store.rel_all(&e.h, rel),
+        };
+        let book = persp.as_deref().map(|p| e.h.intern(p));
+        let mut facts: Vec<Value> = ids
+            .into_iter()
+            .filter(|id| at.iter().all(|(k, v)| e.store.args(*id).get(*k).is_some_and(|a| e.h.canon(*a) == *v)))
+            .map(|id| rofl::seed::fact_json(&e.h, &e.store, id))
+            .collect();
+        for (rel, b, args) in e.store.virtual_facts(&e.h, Some(rel)) {
+            if book.is_none_or(|x| x == b) && at.iter().all(|(k, v)| args.get(*k).is_some_and(|t| e.h.canon(*t) == *v)) {
+                facts.push(rofl::seed::virtual_json(&e.h, rel, b, &args));
+            }
+        }
+        Ok(json!({ "facts": facts }))
+    }
+
+    fn op_holding(&mut self, r: &Value) -> Result<Value, String> {
+        let limit = r.get("limit").and_then(|v| v.as_u64()).map_or(usize::MAX, |n| n as usize);
+        let (atom, text) = match (r.get("atom").and_then(|v| v.as_str()), r.get("string").and_then(|v| v.as_str())) {
+            (Some(a), _) => (true, a.to_string()),
+            (None, Some(t)) => (false, t.to_string()),
+            _ => return Err("holding needs `atom` or `string`".into()),
+        };
+        let s = self.get(r)?;
+        let e = &mut s.eval;
+        let sym = e.h.intern(&text);
+        fn holds(h: &rofl::term::Heap, t: rofl::term::Term, atom: bool, sym: u32) -> bool {
+            match t.kind() {
+                rofl::term::TermK::Atom(x) => atom && x == sym,
+                rofl::term::TermK::Str(x) => !atom && x == sym,
+                rofl::term::TermK::Func(i) => h.fargs(i).iter().any(|a| holds(h, *a, atom, sym)),
+                _ => false,
+            }
+        }
+        let facts: Vec<Value> = e
+            .store
+            .live_ids()
+            .into_iter()
+            .filter(|id| e.store.args(*id).iter().any(|a| holds(&e.h, *a, atom, sym)))
+            .take(limit)
+            .map(|id| rofl::seed::fact_json(&e.h, &e.store, id))
+            .collect();
+        Ok(json!({ "facts": facts }))
+    }
+
+    fn op_books(&mut self, r: &Value) -> Result<Value, String> {
+        let rel = r.get("rel").and_then(|v| v.as_str()).ok_or("books needs `rel`")?;
+        let s = self.get(r)?;
+        let e = &mut s.eval;
+        let rel = e.h.intern(rel);
+        let mut books: Vec<String> = Vec::new();
+        let virt: Vec<u32> = e.store.virtual_facts(&e.h, Some(rel)).into_iter().map(|x| x.1).collect();
+        for b in e.store.rel_all(&e.h, rel).into_iter().map(|id| e.store.rec(id).persp).chain(virt) {
+            let b = e.h.name(b).to_string();
+            if !books.contains(&b) {
+                books.push(b);
+            }
+        }
+        Ok(json!({ "books": books }))
+    }
+
+    fn op_key(&mut self, op: &str, r: &Value) -> Result<Value, String> {
+        let key = r.get("key").and_then(|v| v.as_str()).ok_or("needs `key`")?.to_string();
+        let id = r.get("session").and_then(|v| v.as_u64()).ok_or("`session` is required")?;
+        let s = self.sessions.get_mut(&id).ok_or_else(|| format!("no such session: {id}"))?;
+        let e = &mut s.eval;
+        let (facts, cells, rows) = self.keys.entry(id).or_insert_with(|| {
+            let facts = e.store.live_ids().into_iter().map(|f| (e.store.key(&e.h, f), f)).collect();
+            let cells = e.store.cells_in_order(&e.h).into_iter().map(|(c, _)| { let mut k = String::new(); e.store.write_cell_key(&e.h, c, &mut k); (k, c) }).collect();
+            let rows = e.store.virtual_facts(&e.h, None).into_iter().map(|r| { let mut k = String::new(); rofl::store::write_fact_key(&e.h, r.0, r.1, &r.2, &mut k); (k, r) }).collect();
+            (facts, cells, rows)
+        });
+        let row = rows.get(&key).cloned();
+        Ok(match op {
+            "fact" => json!({ "fact": facts.get(&key).map(|f| rofl::seed::fact_json(&e.h, &e.store, *f)).or_else(|| row.map(|(r, b, args)| rofl::seed::virtual_json(&e.h, r, b, &args))) }),
+            "firings" => json!({ "firings": match (facts.get(&key), row) {
+                (Some(f), _) => rofl::seed::firings_json(&e.h, &e.store, *f),
+                (None, Some((r, b, args))) if args.len() == 2 => e.store.virtual_firing(&e.h, r, b, args[0], args[1]).map(|(rule, tick, prems)| {
+                    vec![json!({ "ruleId": e.h.name(rule), "tick": tick, "prems": prems.iter().map(|k| json!({ "t": "fact", "key": k })).collect::<Vec<_>>() })]
+                }).unwrap_or_default(),
+                _ => Vec::new(),
+            } }),
+            _ => json!({ "cell": cells.get(&key).map(|c| rofl::seed::cell_json(&e.h, &e.store, *c, None)) }),
+        })
+    }
+
+    // A seed arrives by path: a 5.7M-fact snapshot has no business going
+    // through a pipe and a JSON string escape when both ends can read a file.
+    fn op_open(&mut self, r: &Value) -> Result<Value, String> {
+        let budget = r.get("budget").and_then(|v| v.as_i64()).unwrap_or(DEFAULT_BUDGET);
+        let path = |k: &str| r.get(k).and_then(|v| v.as_str());
+        let mut s = match (path("keptPath"), path("volumePath"), path("seedPath")) {
+            (Some(p), _, _) => Session::open_kept(&std::fs::read(p).map_err(|e| format!("{p}: {e}"))?, budget)?,
+            (None, Some(p), _) => Session::open_volume(p, budget)?,
+            (None, None, Some(p)) => Session::open(&std::fs::read_to_string(p).map_err(|e| format!("{p}: {e}"))?, budget)?,
+            _ => return Err("open needs `keptPath`, `volumePath` or `seedPath`".into()),
+        };
+        Self::walls(r, &mut s)?;
+        let facts = s.eval.store.fact_count();
+        let dangling = s.dangling;
+        let id = self.keep(s);
+        Ok(json!({ "session": id, "facts": facts, "dangling": dangling }))
+    }
+
+    // A refusal returns EVERY diagnostic and leaves the store as it
+    // was. It is an `ok:false` answer rather than a transport error,
+    // because a rejected program is a normal outcome of loading one.
+    fn op_load(&mut self, r: &Value) -> Result<Value, String> {
+        let text = match (r.get("path").and_then(|v| v.as_str()), r.get("rofl").and_then(|v| v.as_str())) {
+            (Some(p), _) => std::fs::read_to_string(p).map_err(|e| format!("{p}: {e}"))?,
+            (None, Some(t)) => t.to_string(),
+            (None, None) => return Err("load needs `path` or `rofl`".into()),
+        };
+        let who = r.get("who").and_then(|v| v.as_str()).map(|s| s.to_string());
+        self.get(r)?.guard_permit(&text)?;
+        match self.get(r)?.load_delta(&text, who.as_deref()) {
+            Ok((n, a)) => Ok(json!({ "admitted": n, "full": full(a) })),
+            Err(d) => Err(d.join("\n")),
+        }
+    }
+
+    // Cool a volume to disk. The prefix is the volume; see
+    // `Session::cool`. The caller records `cooled` and the `hole`,
+    // because those are statements about a corpus and the engine knows
+    // only a prefix.
+    fn op_cool(&mut self, r: &Value) -> Result<Value, String> {
+        let prefix = r.get("prefix").and_then(|v| v.as_str()).ok_or("cool needs `prefix`")?.to_string();
+        let out = r.get("path").and_then(|v| v.as_str()).ok_or("cool needs `path`")?.to_string();
+        // by book: only the facts of `books` go, a `[surface]` kept beside them stays
+        let c = match strings(r, "books")? {
+            Some(bs) => {
+                let keep = strings(r, "keep")?.unwrap_or_default();
+                self.get(r)?.cool_books(&prefix, &bs, &keep, &out)?
+            }
+            None => self.get(r)?.cool(&prefix, &out)?,
+        };
+        let books: serde_json::Map<String, Value> = c.books.iter().map(|(b, n)| (b.clone(), json!(n))).collect();
+        Ok(json!({ "facts": c.facts, "bytes": c.bytes, "path": c.path, "books": books }))
+    }
+
+    // Many volumes in ONE pass over the world. Cooling them one at a
+    // time is a walk per volume over a world that is still shrinking.
+    fn op_cool_many(&mut self, r: &Value) -> Result<Value, String> {
+        let vs = r.get("volumes").and_then(|v| v.as_array()).ok_or("cool_many needs `volumes`")?;
+        let mut pairs = Vec::with_capacity(vs.len());
+        for v in vs {
+            let p = v.get("prefix").and_then(|x| x.as_str()).ok_or("a volume needs `prefix`")?;
+            let o = v.get("path").and_then(|x| x.as_str()).ok_or("a volume needs `path`")?;
+            pairs.push((p.to_string(), o.to_string()));
+        }
+        let cs = self.get(r)?.cool_many(&pairs)?;
+        let rows: Vec<Value> = cs.iter()
+            .map(|c| json!({ "facts": c.facts, "bytes": c.bytes, "path": c.path }))
+            .collect();
+        Ok(json!({ "volumes": rows }))
+    }
+
+    // A wall is a FACT, not an error (measurement 4): `partial` comes
+    // back true with a `hole` in the store naming the unfinished part,
+    // and `ok` stays true. Only a defect or a stratification refusal
+    // is an error here.
+    // `"wait":false` answers as soon as the world is evaluated, its wants in flight; else the answers are
+    // waited for, as a one-shot verb waits, until none is in flight or the request's limit stops it
+    fn op_evaluate(&mut self, r: &Value) -> Result<Value, String> {
+        let wait = r.get("wait").and_then(|v| v.as_bool()).unwrap_or(true);
+        let wall = r.get("wall").and_then(|v| v.as_i64());
+        let on = r.get("op").and_then(|v| v.as_str()) == Some("evaluate_on");
+        let walled = r.get("wall").is_some();
+        let s = self.get(r)?;
+        let o = match (on, walled) {
+            (true, _) => s.evaluate_on(wall),
+            (false, true) => s.evaluate_to(wall),
+            (false, false) => s.evaluate(),
+        }
+        .map_err(|e| rofl::describe(&e))?;
+        let halted = |s: &Session| s.eval.halt.as_ref().is_some_and(|h| h.load(std::sync::atomic::Ordering::Relaxed));
+        while wait && s.post.as_ref().is_some_and(|p| p.flying() > 0) && !halted(s) {
+            s.collect(Some(std::time::Duration::from_millis(50)))?;
+        }
+        let flying = s.post.as_ref().map_or(0, |p| p.flying());
+        Ok(json!({
+            "partial": o.partial, "staged": o.staged, "steps": o.steps,
+            "peakRows": o.peak_rows, "space": o.space, "flying": flying, "next": s.eval.wall.next_level(),
+            "again": s.eval.again.iter().map(|r| s.eval.h.name(*r)).collect::<Vec<_>>(),
+            "hot": s.eval.too_hot().iter().map(|h| h.sentence()).collect::<Vec<_>>(),
+        }))
+    }
+
+    fn op_ask(&mut self, r: &Value) -> Result<Value, String> {
+        let q = r.get("query").and_then(|v| v.as_str()).ok_or("ask needs `query`")?.to_string();
+        let a = self.get(r)?.ask(&q)?;
+        let keys = if r.get("keys").and_then(|v| v.as_bool()).unwrap_or(false) {
+            json!(a.keys)
+        } else {
+            Value::Null
+        };
+        Ok(json!({
+            "vars": a.vars, "rows": a.rows, "keys": keys,
+            "scanned": a.scanned, "probed": a.probed, "micros": a.micros, "partial": a.partial,
+            "shrugs": a.shrugs.iter().map(|(row, line)| json!({ "row": row, "line": line })).collect::<Vec<_>>(),
+        }))
+    }
+
+    // The explanation verbs, answering in the reference's own text
+    // (rust/rofl/tests/explain.rs, scripts/whycheck.ts). A `why` of a
+    // fact that does not hold is an error carrying that text, as the
+    // reference's `ok: false` is; a `whynot` of one that holds is not.
+    fn op_why(&mut self, r: &Value) -> Result<Value, String> {
+        let q = r.get("query").and_then(|v| v.as_str()).ok_or("why needs `query`")?.to_string();
+        // absent or null is a plain `why`; anything but a boolean is
+        // refused, as a whynot bound that is not an integer is
+        let all = match r.get("all") {
+            None | Some(Value::Null) => false,
+            Some(Value::Bool(b)) => *b,
+            Some(v) => return Err(format!("why `all` takes true or false, not {v}")),
+        };
+        let s = self.get(r)?;
+        Ok(json!({ "text": if all { s.why_all(&q)? } else { s.why(&q)? } }))
+    }
+
+    fn op_whynot(&mut self, r: &Value) -> Result<Value, String> {
+        let q = r.get("query").and_then(|v| v.as_str()).ok_or("whynot needs `query`")?.to_string();
+        // A bound below 1 counts as 1, as the reference's `Math.max`
+        // makes it; one that is not an integer is refused rather than
+        // replaced by the default. JSON has one number type, as JS
+        // does: a whole number written `3.0` or `1e3` IS the integer
+        // the reference reads, and one past i64 is as large a bound
+        // as can be asked, so it saturates.
+        let bound = |k: &str| -> Result<Option<i64>, String> {
+            match r.get(k) {
+                None | Some(Value::Null) => Ok(None),
+                Some(v) => v
+                    .as_i64()
+                    .or_else(|| v.as_u64().map(|_| i64::MAX))
+                    .or_else(|| v.as_f64().filter(|f| f.is_finite() && f.fract() == 0.0).map(|f| f as i64))
+                    .map(Some)
+                    .ok_or_else(|| format!("whynot `{k}` takes an integer, not {v}")),
+            }
+        };
+        let b = WhynotBounds::clamped(bound("depth")?, bound("nodes")?);
+        if let Some(v) = r.get("files") {
+            let vols: Vec<(String, String)> = serde_json::from_value(v.clone()).map_err(|_| "whynot `files` takes [[prefix, file], ...]".to_string())?;
+            let rows = self.get(r)?.whynot_files(&q, &b, &vols)?;
+            return Ok(json!({ "files": rows.iter().map(|f| json!({ "file": f.file, "found": f.found, "stops": f.stops, "text": f.text })).collect::<Vec<_>>() }));
+        }
+        let (holds, text) = self.get(r)?.whynot(&q, &b)?;
+        Ok(json!({ "holds": holds, "text": text }))
+    }
+
+    fn op_state(&mut self, r: &Value) -> Result<Value, String> {
+        let path = r.get("path").and_then(|v| v.as_str()).map(|s| s.to_string());
+        let s = self.get(r)?;
+        let cs = s.eval.canonical_state();
+        match path {
+            Some(p) => {
+                std::fs::write(&p, &cs).map_err(|e| format!("{p}: {e}"))?;
+                Ok(json!({ "path": p, "bytes": cs.len() }))
+            }
+            None => Ok(json!({ "bytes": cs.len(), "state": cs })),
         }
     }
 }
 
-pub fn main() {
+/// `rofl serve FILE...` serves a world: the files loaded and evaluated as session 1 before the first request, which
+/// another world's `rofl` adapter asks (src/adapter.rs `Served`).
+pub fn main(files: Vec<String>) {
     let mut srv = Server { sessions: HashMap::new(), next: 1, keys: HashMap::new() };
+    if !files.is_empty() {
+        let mut text = String::new();
+        for f in &files {
+            text.push_str(&std::fs::read_to_string(f).unwrap_or_else(|e| { eprintln!("{f}: {e}"); std::process::exit(crate::load::FILE_REFUSED) }));
+            text.push('\n');
+        }
+        let mut s = Session::fresh(DEFAULT_BUDGET);
+        if let Err(d) = s.load(&text, None) {
+            eprintln!("{}", d.join("\n"));
+            std::process::exit(crate::load::FILE_REFUSED);
+        }
+        if let Err(e) = s.evaluate() {
+            eprintln!("{}", rofl::describe(&e));
+            std::process::exit(crate::load::WORLD_REFUSED);
+        }
+        srv.keep(s);
+    }
     let stdin = std::io::stdin();
     let mut out = std::io::stdout().lock();
     for line in stdin.lock().lines() {

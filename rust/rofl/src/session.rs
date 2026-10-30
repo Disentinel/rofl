@@ -57,8 +57,8 @@ pub struct Session {
     /// The questions asked so far: a hole a question writes is `$q(N)`, the
     /// reference's `qn` (src/api.ts `query`).
     pub asks: i64,
-    /// the whole volume this world was opened from, or that the overlay it was opened from names
-    pub kept: Option<crate::volume::Kept>,
+    /// the volumes this world was opened from, the whole one first and the one it was opened from last
+    pub kept: crate::volume::Chain,
     /// where wants go when the caller does not wait for them (`rofl serve`, src/adapter.rs `Post`); none, and an
     /// evaluation waits for every answer
     pub post: Option<crate::adapter::Post>,
@@ -150,13 +150,71 @@ pub struct Answer {
     pub partial: bool,
 }
 
+/// A question as `ask` reads it: the literal's relation, book and arguments, and the bindings its answer is read by.
+struct Question<'a> {
+    query: &'a str,
+    rel: Sym,
+    persp: Sym,
+    persp_opt: Option<Sym>,
+    args: Vec<Term>,
+    b: Bindings,
+}
+
+/// The bound positions and the variables of a question, the variables in order of first appearance. A variable seen
+/// twice is not a second column, it is a constraint: `same` records the positions it must equal.
+struct Bindings {
+    vars: Vec<String>,
+    pos: Vec<usize>,
+    vals: Vec<Term>,
+    col: Vec<usize>,
+    same: Vec<(usize, usize)>,
+}
+
+impl Bindings {
+    fn of(h: &Heap, args: &[Term]) -> Bindings {
+        let mut b = Bindings { vars: Vec::new(), pos: Vec::new(), vals: Vec::new(), col: Vec::new(), same: Vec::new() };
+        for (i, a) in args.iter().enumerate() {
+            match a.kind() {
+                TermK::Var(s) => {
+                    let n = h.name(s).to_string();
+                    match b.vars.iter().position(|v| *v == n) {
+                        Some(j) => b.same.push((b.col[j], i)),
+                        None => {
+                            b.vars.push(n);
+                            b.col.push(i);
+                        }
+                    }
+                }
+                _ => {
+                    b.pos.push(i);
+                    b.vals.push(*a);
+                }
+            }
+        }
+        b
+    }
+
+    /// Whether a row is an answer: of the question's arity, with its bound values, and its repeated variables equal.
+    fn fits(&self, fa: &[Term], arity: usize) -> bool {
+        fa.len() == arity && self.pos.iter().zip(&self.vals).all(|(&i, v)| fa[i] == *v) && self.same.iter().all(|&(a, b)| fa[a] == fa[b])
+    }
+}
+
+/// The rows an answer found, their keys, and the candidates read to find them.
+struct Found {
+    rows: Vec<Vec<String>>,
+    keys: Vec<String>,
+    scanned: usize,
+    probed: bool,
+}
+
 impl Session {
     /// Build a core from a snapshot. Expensive — 383 ms for the 20 630-fact
     /// packs — and meant to happen once per process. Fork it after that.
     pub fn open(seed_json: &str, budget: i64) -> Result<Session, String> {
         let mut l = crate::load(seed_json, budget)?;
         l.eval.store.journal.seeded();
-        Ok(Session { eval: l.eval, dangling: l.dangling, asks: 0, kept: None, post: None, sent: Default::default() })
+        Ok(Session { eval: l.eval, dangling: l.dangling, asks: 0, kept: Default::default(), post: None, sent: Default::default() })
     }
 
     /// A world from a kept image (`crate::image`): an evaluated world opens evaluated.
@@ -173,13 +231,13 @@ impl Session {
         if !eval.store.dirty && crate::brk!("volume_unknowns_dropped" => false; true) {
             eval.unknowns_from(o.unknowns)?;
         }
-        Ok(Session { eval, dangling: o.dangling, asks: 0, kept: None, post: None, sent: Default::default() })
+        Ok(Session { eval, dangling: o.dangling, asks: 0, kept: Default::default(), post: None, sent: Default::default() })
     }
 
     /// This world as a kept image, which `open_kept` reads back.
     pub fn keep(&mut self) -> Vec<u8> {
         self.eval.settle_provenance();
-        crate::image::keep(&self.eval.h, &self.eval.store, &self.eval.staged_kept(), self.eval.safety(), &self.eval.lattices_kept(), &self.eval.unknowns_kept())
+        crate::image::keep(&self.eval.h, &self.eval.store, &self.eval.staged_kept(), self.eval.safety(), &self.eval.lat.lattices_kept(&self.eval.store), &self.eval.unknowns_kept())
     }
 
     /// This world kept as a volume at `path`, which `open_volume` maps back. It freezes the world, as a fork does.
@@ -196,16 +254,16 @@ impl Session {
     /// `arena::TOO_LARGE`. Written under a name of this process's beside `path` and renamed over it, so two
     /// processes keeping the same world never write into one file.
     pub fn keep_volume_bounded(&mut self, path: &str, note: &str, bound: Option<usize>) -> std::io::Result<usize> {
-        self.keep_volume_as(path, note, bound, None)
+        self.keep_volume_as(path, note, bound, &[])
     }
 
-    /// `keep_volume_bounded`, as an overlay over `base` when it is given: the volume this world was opened from
-    /// (`kept`), still where it was. What the world still reads from it is named, not written.
-    pub fn keep_volume_as(&mut self, path: &str, note: &str, bound: Option<usize>, base: Option<&crate::volume::Kept>) -> std::io::Result<usize> {
+    /// `keep_volume_bounded`, as an overlay over `chain` when it is given: the volumes this world was opened from
+    /// (`kept`), still where they were. What the world made from them is named with what changed since, not written.
+    pub fn keep_volume_as(&mut self, path: &str, note: &str, bound: Option<usize>, chain: &[crate::volume::Kept]) -> std::io::Result<usize> {
         let tmp = format!("{path}.{}.part", std::process::id());
-        let kept = match base {
-            Some(b) => crate::volume::keep_over(&tmp, &mut self.eval, note, bound, b),
-            None => crate::volume::keep(&tmp, &mut self.eval, note, bound),
+        let kept = match chain {
+            [] => crate::volume::keep(&tmp, &mut self.eval, note, bound),
+            c => crate::volume::keep_over(&tmp, &mut self.eval, note, bound, c),
         };
         match kept {
             Ok(n) => std::fs::rename(&tmp, path).map(|_| n).inspect_err(|_| { let _ = std::fs::remove_file(&tmp); }),
@@ -237,13 +295,13 @@ impl Session {
         }
         eval.read_notes(&mut o.cut)?;
         eval.read_cut(&mut o.cut)?;
-        eval.read_stats(&mut o.cut)?;
-        eval.read_forests(&mut o.cut)?;
-        eval.vpublish();
+        eval.add.read_stats(&mut o.cut)?;
+        eval.vc.read_forests(&mut eval.store, &mut o.cut)?;
+        eval.vc.vpublish(&mut eval.store);
         if !o.cut.at_end() {
             return Err(format!("{path}: a volume has bytes after its end"));
         }
-        Ok(Session { eval, dangling: 0, asks: 0, kept: Some(o.base), post: None, sent: Default::default() })
+        Ok(Session { eval, dangling: 0, asks: 0, kept: o.chain, post: None, sent: Default::default() })
     }
 
     /// AN EMPTY WORLD with the kernel's bootstrap tables and nothing else —
@@ -255,7 +313,7 @@ impl Session {
         let v = Vocab::new(&mut h);
         let mut store = Store::new();
         bootstrap_kernel(&mut h, &v, &mut store);
-        Session { eval: Eval::new(h, store, budget, Mode::Rounds, false), dangling: 0, asks: 0, kept: None, post: None, sent: Default::default() }
+        Session { eval: Eval::new(h, store, budget, Mode::Rounds, false), dangling: 0, asks: 0, kept: Default::default(), post: None, sent: Default::default() }
     }
 
     /// A world of one's own, as a LAYER over this one. The first fork freezes
@@ -267,7 +325,7 @@ impl Session {
         self.eval.settle_provenance();
         self.eval.h.freeze();
         self.eval.store.freeze(&self.eval.h);
-        Session { eval: self.eval.fork(), dangling: self.dangling, asks: self.asks, kept: None, post: None, sent: Default::default() }
+        Session { eval: self.eval.fork(), dangling: self.dangling, asks: self.asks, kept: Default::default(), post: None, sent: Default::default() }
     }
 
     /// Add base facts, written as ROFL. What they add is not visible to a
@@ -549,23 +607,17 @@ impl Session {
                 return Ok(Retraction::Full("asks names the rules the world runs".into()));
             }
             let doomed = self.doomed(id);
-            let marks: Vec<Sym> = doomed.iter().map(|&f| self.eval.store.rec(f).rel).filter(|r| [self.eval.v.edb, self.eval.v.authority].contains(r)).collect();
-            let read = self.eval.rules.iter().any(|r| r.clause.body.iter().any(|b| b.lits_deep().iter().any(|l| marks.contains(&l.rel))));
-            let delta = if read { Err("the retraction takes an edb or authority row a rule reads".to_string()) } else { self.eval.retract_delta(&doomed) };
-            match delta {
+            let read = self.read_marks(&doomed);
+            // the rest go without a delta, and the world is evaluated again
+            match self.retract_doomed(id, &doomed, read) {
                 Ok(d) => {
-                    if let Err(e) = self.eval.check_promises() {
+                    if let Err(e) = self.eval.ds.check_promises(&self.eval.h, &self.eval.store) {
                         self.eval.store.dirty = true;
                         return Err(crate::describe(&e));
                     }
                     last = Retraction::Delta(d);
                 }
                 Err(why) => {
-                    // the rest go without a delta, and the world is evaluated again
-                    if self.eval.store.alive(id) {
-                        self.eval.store.remove_many(&doomed);
-                    }
-                    self.eval.store.dirty = true;
                     if !matches!(last, Retraction::Full(_)) {
                         last = Retraction::Full(why);
                     }
@@ -573,6 +625,24 @@ impl Session {
             }
         }
         Ok(last)
+    }
+
+    /// Whether a rule reads an edb or authority row among `doomed`: such a row cannot go by a delta.
+    fn read_marks(&self, doomed: &[FactId]) -> bool {
+        let marks: Vec<Sym> = doomed.iter().map(|&f| self.eval.store.rec(f).rel).filter(|r| [self.eval.v.edb, self.eval.v.authority].contains(r)).collect();
+        self.eval.rules.iter().any(|r| r.clause.body.iter().any(|b| b.lits_deep().iter().any(|l| marks.contains(&l.rel))))
+    }
+
+    /// The delta that takes `doomed` out, or why there is none: then `doomed` goes and the world is left dirty.
+    fn retract_doomed(&mut self, id: FactId, doomed: &[FactId], read: bool) -> Result<crate::engine::Delta, String> {
+        let delta = if read { Err("the retraction takes an edb or authority row a rule reads".to_string()) } else { self.eval.retract_delta(doomed) };
+        if delta.is_err() {
+            if self.eval.store.alive(id) {
+                self.eval.store.remove_many(doomed);
+            }
+            self.eval.store.dirty = true;
+        }
+        delta
     }
 
     fn evaluated_again(&mut self, requests: &[Term], why: &str) {
@@ -771,13 +841,13 @@ impl Session {
     /// The world evaluated to the level `wall` and stopped before the next (`None`: whole); `evaluate_on` goes on, and
     /// `admit` takes facts of the level it stopped after.
     pub fn evaluate_to(&mut self, wall: Option<i64>) -> Result<Evaluated, Halt> {
-        self.eval.level_wall = wall;
+        self.eval.wall.level_wall = wall;
         let r = self.eval.run();
         self.evaluated(r)
     }
 
     pub fn evaluate_on(&mut self, wall: Option<i64>) -> Result<Evaluated, Halt> {
-        self.eval.level_wall = wall;
+        self.eval.wall.level_wall = wall;
         let r = self.eval.run_on();
         self.evaluated(r)
     }
@@ -805,7 +875,7 @@ impl Session {
                 self.eval.store.note_eval(self.eval.budget, self.eval.steps, true);
                 // a wall judges the promises like any other exit, and a world
                 // that breaks one stays dirty
-                self.eval.check_promises()?;
+                self.eval.ds.check_promises(&self.eval.h, &self.eval.store)?;
                 // as the reference's run does after either wall: the hole is
                 // the answer, and asking again must not pay for the run again
                 self.eval.store.dirty = false;
@@ -885,17 +955,31 @@ impl Session {
         // still take it. `reheat` is what checks — see the note there for the
         // hole that leaves open, which is deliberate and named rather than
         // pretended away.
-        let mut text = self.header(prefix);
-        for id in &write {
-            let r = self.eval.store.rec(*id);
-            let args = self.eval.store.args(*id).to_vec();
-            write_fact_key(&self.eval.h, r.rel, r.persp, &args, &mut text);
-            text.push_str(".\n");
+        let head = self.header(prefix);
+        self.cool_facts(head, &write, &drop, out, Vec::new())
+    }
+
+    /// The text of `write` under `head`, written to `out`; then `drop` leaves the store and the world is dirty.
+    fn cool_facts(&mut self, head: String, write: &[FactId], drop: &[FactId], out: &str, books: Vec<(String, usize)>) -> Result<Cooled, String> {
+        let mut text = head;
+        for &id in write {
+            self.push_fact(id, &mut text);
         }
-        std::fs::write(out, &text).map_err(|e| format!("{out}: {e}"))?;
-        self.eval.store.remove_many(&drop);
+        write_cool_file(out, &text)?;
+        self.drop_cooled(drop);
+        Ok(Cooled { facts: write.len(), bytes: text.len(), path: out.to_string(), books })
+    }
+
+    /// One base fact of a volume, as a line of its text.
+    fn push_fact(&self, id: FactId, text: &mut String) {
+        let r = self.eval.store.rec(id);
+        write_fact_key(&self.eval.h, r.rel, r.persp, self.eval.store.args(id), text);
+        text.push_str(".\n");
+    }
+
+    fn drop_cooled(&mut self, drop: &[FactId]) {
+        self.eval.store.remove_many(drop);
         self.eval.store.dirty = true;
-        Ok(Cooled { facts: write.len(), bytes: text.len(), path: out.to_string(), books: Vec::new() })
     }
 
     /// COOL A VOLUME BY BOOK (docs/surface-split.md, the driver): `cool`, of the facts of `books` only. The volume's
@@ -915,8 +999,8 @@ impl Session {
         let mut kept: std::collections::HashSet<Sym> = keep.iter().map(|b| self.eval.h.intern(b)).collect();
         kept.insert(self.eval.h.intern("surface"));
         self.eval.settle_provenance();
-        let mut text = self.header(prefix);
-        let (mut n, mut drop, mut by_book) = (0, Vec::new(), std::collections::BTreeMap::<String, usize>::new());
+        let head = self.header(prefix);
+        let (mut write, mut drop, mut by_book) = (Vec::new(), Vec::new(), std::collections::BTreeMap::<String, usize>::new());
         for id in self.eval.store.all_facts() {
             let args = self.eval.store.args(id).to_vec();
             if !args.iter().any(|a| self.mentions(*a, prefix)) {
@@ -933,17 +1017,12 @@ impl Session {
                 continue;
             }
             if r.base() && !kernel {
-                write_fact_key(&self.eval.h, r.rel, r.persp, &args, &mut text);
-                text.push_str(".\n");
-                n += 1;
+                write.push(id);
                 *by_book.entry(self.eval.h.name(r.persp).to_string()).or_default() += 1;
             }
             drop.push(id);
         }
-        std::fs::write(out, &text).map_err(|e| format!("{out}: {e}"))?;
-        self.eval.store.remove_many(&drop);
-        self.eval.store.dirty = true;
-        Ok(Cooled { facts: n, bytes: text.len(), path: out.to_string(), books: by_book.into_iter().collect() })
+        self.cool_facts(head, &write, &drop, out, by_book.into_iter().collect())
     }
 
     /// The book of the fact a kernel row reifies, `$fact(Rel, Book, Args)`.
@@ -1037,17 +1116,8 @@ impl Session {
                 ids.push(id);
             }
         }
-        let mut text = self.header("$trail");
-        for id in &ids {
-            let r = self.eval.store.rec(*id);
-            let args = self.eval.store.args(*id).to_vec();
-            write_fact_key(&self.eval.h, r.rel, r.persp, &args, &mut text);
-            text.push_str(".\n");
-        }
-        std::fs::write(out, &text).map_err(|e| format!("{out}: {e}"))?;
-        self.eval.store.remove_many(&ids);
-        self.eval.store.dirty = true;
-        Ok(Cooled { facts: ids.len(), bytes: text.len(), path: out.to_string(), books: Vec::new() })
+        let head = self.header("$trail");
+        self.cool_facts(head, &ids, &ids, out, Vec::new())
     }
 
     /// REHEAT THE TRAIL, PAST THE DOOR, and the signature is what earns that.
@@ -1207,19 +1277,17 @@ impl Session {
             let Some(k) = self.volume_of(&args, &by_len) else { continue };
             let r = self.eval.store.rec(id);
             if r.base() && !is_kernel_ledger(&self.eval.h, r.persp) {
-                write_fact_key(&self.eval.h, r.rel, r.persp, &args, &mut texts[k]);
-                texts[k].push_str(".\n");
+                self.push_fact(id, &mut texts[k]);
                 counts[k] += 1;
             }
             drop.push(id);
         }
         let mut out = Vec::with_capacity(vols.len());
         for (i, (_, path)) in vols.iter().enumerate() {
-            std::fs::write(path, &texts[i]).map_err(|e| format!("{path}: {e}"))?;
+            write_cool_file(path, &texts[i])?;
             out.push(Cooled { facts: counts[i], bytes: texts[i].len(), path: path.clone(), books: Vec::new() });
         }
-        self.eval.store.remove_many(&drop);
-        self.eval.store.dirty = true;
+        self.drop_cooled(&drop);
         Ok(out)
     }
 
@@ -1306,7 +1374,7 @@ impl Session {
     pub fn ask(&mut self, query: &str) -> Result<Answer, String> {
         let t0 = std::time::Instant::now();
         self.asks += 1;
-        if let Some(m) = &self.eval.promise_broken {
+        if let Some(m) = &self.eval.ds.promise_broken {
             return Err(m.clone());
         }
         let src = format!("{}.", query.trim().trim_end_matches('.'));
@@ -1318,17 +1386,7 @@ impl Session {
         let (rel, persp, args) = self.lit_terms(lit)?;
         // ASKING A SEALED BODY REFUSES, as src/api.ts `query` does: a hole named for the question, and a partial answer
         if crate::program::sealed_rels(&mut self.eval).contains(&rel) && brk!("ask_sealed_answers" => false; true) {
-            let q = self.eval.h.intern("$q");
-            let id = self.eval.h.mkf(q, &[Term::int(self.asks)]);
-            let reason = Term::atom(self.eval.h.intern("reflection_sealed"));
-            self.eval.store.put(&self.eval.h, self.eval.v.hole, self.eval.v.kernel_persp, &[id, reason], F_BASE | crate::store::F_FROZEN);
-            let vars = args.iter().filter_map(|a| match a.kind() { TermK::Var(v) => Some(v), _ => None }).map(|v| self.eval.h.name(v).to_string()).fold(Vec::new(), |mut vs: Vec<String>, n| {
-                if !vs.contains(&n) {
-                    vs.push(n);
-                }
-                vs
-            });
-            return Ok(Answer { vars, rows: Vec::new(), keys: Vec::new(), scanned: 0, probed: false, micros: t0.elapsed().as_micros(), shrugs: Vec::new(), partial: true });
+            return Ok(self.sealed_answer(&args, t0));
         }
         if let Some(m) = self.eval.outside_cone(rel) {
             return Err(m);
@@ -1340,155 +1398,150 @@ impl Session {
             Book::Bare => None,
             _ => Some(persp),
         };
+        let b = Bindings::of(&self.eval.h, &args);
+        let question = Question { query, rel, persp, persp_opt, args, b };
 
-        // The bound positions, and the variables in order of first appearance.
-        // A variable seen twice is not a second column, it is a constraint —
-        // recorded here as the position it must equal.
-        let mut pos: Vec<usize> = Vec::new();
-        let mut vals: Vec<Term> = Vec::new();
-        let mut vars: Vec<String> = Vec::new();
-        let mut col: Vec<usize> = Vec::new(); // for each var, the position read
-        let mut same: Vec<(usize, usize)> = Vec::new();
-        for (i, a) in args.iter().enumerate() {
-            match a.kind() {
-                TermK::Var(s) => {
-                    let n = self.eval.h.name(s).to_string();
-                    match vars.iter().position(|v| *v == n) {
-                        Some(j) => same.push((col[j], i)),
-                        None => {
-                            vars.push(n);
-                            col.push(i);
-                        }
-                    }
-                }
-                _ => {
-                    pos.push(i);
-                    vals.push(*a);
-                }
-            }
-        }
-
-        // A RELATION UNFOLDED AT A CALL is answered as the reference's `query` answers it: its rules
-        // unfolded under the question, which leaves the world as it was (`Eval::answer_on_demand`)
         let mut partial = self.eval.store.partial_eval;
-        let (rows, keys, scanned, probed) = if self.eval.answers_open(rel) && brk!("ask_store_only" => false; true) {
-            let el = self.one_lit(query)?;
-            // A WALL MET ANSWERING is a hole named for the question, and the answer is partial
-            let (sols, unnamed) = match self.eval.answer_on_demand(&el) {
-                Ok(got) => got,
-                Err(Halt::Budget(wall, _)) if brk!("ask_wall_errors" => false; true) => {
-                    let q = self.eval.h.intern("$q");
-                    let id = self.eval.h.mkf(q, &[Term::int(self.asks)]);
-                    // the hole says which wall fell: steps or rows
-                    let reason = Term::atom(brk!("ask_wall_unnamed" => self.eval.v.budget_reason; self.eval.h.intern(wall)));
-                    self.eval.store.put(&self.eval.h, self.eval.v.hole, self.eval.v.kernel_persp, &[id, reason], crate::store::F_BASE | crate::store::F_FROZEN);
-                    (Vec::new(), true)
-                }
-                Err(h) => return Err(describe(&h)),
-            };
+        let found = if self.eval.demand.answers_open(rel) && brk!("ask_store_only" => false; true) {
+            let (found, unnamed) = self.answer_demanded(&question)?;
             partial |= unnamed;
-            let mut named: Vec<usize> = (0..vars.len()).collect();
-            named.sort_by(|a, b| crate::term::cmp_js(&vars[*a], &vars[*b]));
-            let mut got: Vec<(String, Vec<String>, String)> = Vec::new();
-            let mut texts: std::collections::HashSet<String> = std::collections::HashSet::new();
-            for sol in &sols {
-                let row: Vec<String> = vars
-                    .iter()
-                    .map(|v| {
-                        let vt = self.eval.h.var(v);
-                        let t = crate::term::resolve(&mut self.eval.h, vt, sol);
-                        let mut o = String::new();
-                        self.eval.h.canon_term(t, &mut o);
-                        o
-                    })
-                    .collect();
-                let text = if vars.is_empty() { "true".to_string() } else { named.iter().map(|&i| format!("{} = {}", vars[i], row[i])).collect::<Vec<_>>().join(", ") };
-                let seen = brk!("ask_dedup_scan" => got.iter().any(|g| g.0 == text); !texts.insert(text.clone()));
-                if seen {
-                    continue;
-                }
-                let fa: Vec<Term> = args.iter().map(|a| crate::term::resolve(&mut self.eval.h, *a, sol)).collect();
-                let mut k = String::new();
-                write_fact_key(&self.eval.h, rel, persp, &fa, &mut k);
-                got.push((text, row, k));
-            }
-            got.sort_by(|a, b| crate::term::cmp_js(&a.0, &b.0));
-            let n = got.len();
-            let (rows, keys): (Vec<Vec<String>>, Vec<String>) = got.into_iter().map(|(_, r, k)| (r, k)).unzip();
-            (rows, keys, n, false)
+            found
         } else {
-            // A RELATION ANSWERED FROM A STRUCTURE (the closure of a declared tree) has no rows to find: its rows are read off the tree
-            let virt: Option<Vec<(Sym, Vec<Term>)>> = match self.eval.alias_query(rel, persp_opt, &args) {
-                Some(rows) => Some(rows),
-                None => self.eval.vclosure_query(rel, persp_opt, &args).map(|v| v.into_iter().map(|(b, a, d)| (b, vec![a, d])).collect()),
-            };
-            let cand = if virt.is_some() {
-                Some(Vec::new())
-            } else {
-                self.eval.store.arg_matches(&self.eval.h, rel, persp_opt, args.len(), &pos, &vals)
-            };
-            let probed = cand.is_some();
-            let ids = match cand {
-                Some(v) => v,
-                None => match persp_opt {
-                    Some(p) => self.eval.store.rel_persp(&self.eval.h, rel, p),
-                    None => self.eval.store.rel_all(&self.eval.h, rel),
-                },
-            };
-            let scanned = ids.len() + virt.as_ref().map_or(0, |v| v.len());
-
-            // `arg_matches` promises a SUPERSET in no order (src/store.ts:477), so
-            // every candidate is re-checked here. Skipping this is how a query
-            // engine reports rows its index merely suggested.
-            let mut rows = Vec::new();
-            let mut keys = Vec::new();
-            for id in ids {
-                if !self.eval.store.alive(id) {
-                    continue;
-                }
-                let fa = self.eval.store.args(id);
-                if fa.len() != args.len() {
-                    continue;
-                }
-                if pos.iter().zip(&vals).any(|(&i, v)| fa[i] != *v) {
-                    continue;
-                }
-                if same.iter().any(|&(a, b)| fa[a] != fa[b]) {
-                    continue;
-                }
-                let mut row = Vec::with_capacity(col.len());
-                for &i in &col {
-                    let mut s = String::new();
-                    self.eval.h.canon_term(fa[i], &mut s);
-                    row.push(s);
-                }
-                let r = self.eval.store.rec(id);
-                let mut k = String::new();
-                write_fact_key(&self.eval.h, r.rel, r.persp, fa, &mut k);
-                rows.push(row);
-                keys.push(k);
-            }
-            for (book, fa) in virt.unwrap_or_default() {
-                if fa.len() != args.len() || pos.iter().zip(&vals).any(|(&i, v)| fa[i] != *v) || same.iter().any(|&(x, y)| fa[x] != fa[y]) {
-                    continue;
-                }
-                let row: Vec<String> = col
-                    .iter()
-                    .map(|&i| {
-                        let mut s = String::new();
-                        self.eval.h.canon_term(fa[i], &mut s);
-                        s
-                    })
-                    .collect();
-                let mut k = String::new();
-                write_fact_key(&self.eval.h, rel, book, &fa, &mut k);
-                rows.push(row);
-                keys.push(k);
-            }
-            (rows, keys, scanned, probed)
+            self.scan_stored(&question)
         };
+        let shrugs = self.shrugs_for(&question)?;
+        Ok(Answer { vars: question.b.vars, rows: found.rows, keys: found.keys, scanned: found.scanned, probed: found.probed, micros: t0.elapsed().as_micros(), shrugs, partial })
+    }
 
-        let lit = self.one_lit(query)?;
+    /// A question over a sealed body: a hole named for it, and a partial answer with no rows.
+    fn sealed_answer(&mut self, args: &[Term], t0: std::time::Instant) -> Answer {
+        let q = self.eval.h.intern("$q");
+        let id = self.eval.h.mkf(q, &[Term::int(self.asks)]);
+        let reason = Term::atom(self.eval.h.intern("reflection_sealed"));
+        self.eval.store.put(&self.eval.h, self.eval.v.hole, self.eval.v.kernel_persp, &[id, reason], F_BASE | crate::store::F_FROZEN);
+        Answer { vars: Bindings::of(&self.eval.h, args).vars, rows: Vec::new(), keys: Vec::new(), scanned: 0, probed: false, micros: t0.elapsed().as_micros(), shrugs: Vec::new(), partial: true }
+    }
+
+    /// A relation unfolded at a call is answered as the reference's `query` answers it: its rules unfolded under the
+    /// question, which leaves the world as it was (`Eval::answer_on_demand`). The flag says whether a wall was met.
+    fn answer_demanded(&mut self, question: &Question) -> Result<(Found, bool), String> {
+        let el = self.one_lit(question.query)?;
+        // A WALL MET ANSWERING is a hole named for the question, and the answer is partial
+        let (sols, unnamed) = match self.eval.answer_on_demand(&el) {
+            Ok(got) => got,
+            Err(Halt::Budget(wall, _)) if brk!("ask_wall_errors" => false; true) => {
+                let q = self.eval.h.intern("$q");
+                let id = self.eval.h.mkf(q, &[Term::int(self.asks)]);
+                // the hole says which wall fell: steps or rows
+                let reason = Term::atom(brk!("ask_wall_unnamed" => self.eval.v.budget_reason; self.eval.h.intern(wall)));
+                self.eval.store.put(&self.eval.h, self.eval.v.hole, self.eval.v.kernel_persp, &[id, reason], crate::store::F_BASE | crate::store::F_FROZEN);
+                (Vec::new(), true)
+            }
+            Err(h) => return Err(describe(&h)),
+        };
+        let vars = &question.b.vars;
+        let mut named: Vec<usize> = (0..vars.len()).collect();
+        named.sort_by(|a, b| crate::term::cmp_js(&vars[*a], &vars[*b]));
+        let mut got: Vec<(String, Vec<String>, String)> = Vec::new();
+        let mut texts: std::collections::HashSet<String> = std::collections::HashSet::new();
+        for sol in &sols {
+            let row: Vec<String> = vars
+                .iter()
+                .map(|v| {
+                    let vt = self.eval.h.var(v);
+                    let t = crate::term::resolve(&mut self.eval.h, vt, sol);
+                    let mut o = String::new();
+                    self.eval.h.canon_term(t, &mut o);
+                    o
+                })
+                .collect();
+            let text = if vars.is_empty() { "true".to_string() } else { named.iter().map(|&i| format!("{} = {}", vars[i], row[i])).collect::<Vec<_>>().join(", ") };
+            let seen = brk!("ask_dedup_scan" => got.iter().any(|g| g.0 == text); !texts.insert(text.clone()));
+            if seen {
+                continue;
+            }
+            let fa: Vec<Term> = question.args.iter().map(|a| crate::term::resolve(&mut self.eval.h, *a, sol)).collect();
+            let mut k = String::new();
+            write_fact_key(&self.eval.h, question.rel, question.persp, &fa, &mut k);
+            got.push((text, row, k));
+        }
+        got.sort_by(|a, b| crate::term::cmp_js(&a.0, &b.0));
+        let n = got.len();
+        let (rows, keys): (Vec<Vec<String>>, Vec<String>) = got.into_iter().map(|(_, r, k)| (r, k)).unzip();
+        Ok((Found { rows, keys, scanned: n, probed: false }, unnamed))
+    }
+
+    /// A question answered from the stored rows, and from the rows a declared structure reads off.
+    fn scan_stored(&mut self, question: &Question) -> Found {
+        let (rel, persp_opt, arity) = (question.rel, question.persp_opt, question.args.len());
+        let virt = self.structure_rows(question);
+        let cand = if virt.is_some() { Some(Vec::new()) } else { self.eval.store.arg_matches(&self.eval.h, rel, persp_opt, arity, &question.b.pos, &question.b.vals) };
+        let probed = cand.is_some();
+        let ids = match cand {
+            Some(v) => v,
+            None => match persp_opt {
+                Some(p) => self.eval.store.rel_persp(&self.eval.h, rel, p),
+                None => self.eval.store.rel_all(&self.eval.h, rel),
+            },
+        };
+        let scanned = ids.len() + virt.as_ref().map_or(0, |v| v.len());
+
+        // `arg_matches` promises a SUPERSET in no order (src/store.ts:477), so
+        // every candidate is re-checked here. Skipping this is how a query
+        // engine reports rows its index merely suggested.
+        let mut found = Found { rows: Vec::new(), keys: Vec::new(), scanned, probed };
+        for id in ids {
+            if !self.eval.store.alive(id) {
+                continue;
+            }
+            let fa = self.eval.store.args(id);
+            if !question.b.fits(fa, arity) {
+                continue;
+            }
+            let row = self.row_of(fa, &question.b.col);
+            let r = self.eval.store.rec(id);
+            let mut k = String::new();
+            write_fact_key(&self.eval.h, r.rel, r.persp, fa, &mut k);
+            found.rows.push(row);
+            found.keys.push(k);
+        }
+        for (book, fa) in virt.unwrap_or_default() {
+            if !question.b.fits(&fa, arity) {
+                continue;
+            }
+            let row = self.row_of(&fa, &question.b.col);
+            let mut k = String::new();
+            write_fact_key(&self.eval.h, rel, book, &fa, &mut k);
+            found.rows.push(row);
+            found.keys.push(k);
+        }
+        found
+    }
+
+    /// A relation answered from a structure has no rows to find: its rows are read off the alias, or the closure of a
+    /// declared tree.
+    fn structure_rows(&mut self, question: &Question) -> Option<Vec<(Sym, Vec<Term>)>> {
+        match self.eval.alias_query(question.rel, question.persp_opt, &question.args) {
+            Some(rows) => Some(rows),
+            None => self.eval.vclosure_query(question.rel, question.persp_opt, &question.args).map(|v| v.into_iter().map(|(b, a, d)| (b, vec![a, d])).collect()),
+        }
+    }
+
+    fn row_of(&self, fa: &[Term], col: &[usize]) -> Vec<String> {
+        col.iter()
+            .map(|&i| {
+                let mut s = String::new();
+                self.eval.h.canon_term(fa[i], &mut s);
+                s
+            })
+            .collect()
+    }
+
+    /// The shrugs of a question: one per reading and reason where the answer does not hold, and a line for a wall that
+    /// cut the world.
+    fn shrugs_for(&mut self, question: &Question) -> Result<Vec<(Vec<String>, String)>, String> {
+        let vars = &question.b.vars;
+        let lit = self.one_lit(question.query)?;
         let mut shrugs: Vec<(Vec<String>, String)> = Vec::new();
         let mut order: Vec<String> = Vec::new();
         for (f, s) in self.eval.shrugs_of(&lit) {
@@ -1540,7 +1593,7 @@ impl Session {
                 }
             }
         }
-        Ok(Answer { vars, rows, keys, scanned, probed, micros: t0.elapsed().as_micros(), shrugs, partial })
+        Ok(shrugs)
     }
 
     /// Whether nothing could ever put a row at this question (src/api.ts `query`'s `unpopulatable`): the relation is declared, concluded
@@ -1692,22 +1745,16 @@ impl Session {
         }
         self.settle()?;
         let doomed = self.doomed(id);
-        let marks: Vec<Sym> = doomed.iter().map(|&f| self.eval.store.rec(f).rel).filter(|r| [self.eval.v.edb, self.eval.v.authority].contains(r)).collect();
-        let read = brk!("retract_edb_unread" => false; true) && self.eval.rules.iter().any(|r| r.clause.body.iter().any(|b| b.lits_deep().iter().any(|l| marks.contains(&l.rel))));
-        let delta = if read { Err("the retraction takes an edb or authority row a rule reads".to_string()) } else { self.eval.retract_delta(&doomed) };
-        match delta {
+        let read = brk!("retract_edb_unread" => false; true) && self.read_marks(&doomed);
+        match self.retract_doomed(id, &doomed, read) {
             Ok(d) => {
-                if let Err(e) = self.eval.check_promises() {
+                if let Err(e) = self.eval.ds.check_promises(&self.eval.h, &self.eval.store) {
                     brk!("function_retract_clean" => (); self.eval.store.dirty = true);
                     return Err(crate::describe(&e));
                 }
                 Ok(Retraction::Delta(d))
             }
             Err(why) => {
-                if self.eval.store.alive(id) {
-                    self.eval.store.remove_many(&doomed);
-                }
-                self.eval.store.dirty = true;
                 self.evaluated_again(&request, &why);
                 Ok(Retraction::Full(why))
             }
@@ -1877,9 +1924,7 @@ impl Session {
     fn doomed(&mut self, id: FactId) -> Vec<FactId> {
         let mut out = vec![id];
         let ft = self.fact_term(id);
-        let v = &self.eval.v;
-        let (ab, edb, authority, main, kernel_who, anon_who, writes_to, reads_from) =
-            (v.asserted_by, v.edb, v.authority, v.main, v.kernel_who, v.anon_who, v.writes_to, v.reads_from);
+        let (ab, edb, main, writes_to) = (self.eval.v.asserted_by, self.eval.v.edb, self.eval.v.main, self.eval.v.writes_to);
         let declared: Vec<(FactId, Term)> = self.eval.store.rel_all(&self.eval.h, ab).into_iter().map(|f| (f, self.eval.store.args(f)[0])).collect();
         out.extend(declared.iter().filter(|(_, t)| *t == ft).map(|(f, _)| *f));
         let withheld = crate::program::sealed_rels(&mut self.eval);
@@ -1893,20 +1938,35 @@ impl Session {
             marks.extend(self.eval.store.get(edb, main, &[Term::atom(rel)]));
         }
         if persp != main && !self.eval.h.name(persp).starts_with('$') && !withheld.contains(&writes_to) && !self.eval.store.book_holds_base(&self.eval.h, persp, id) {
-            let named = [writes_to, reads_from].into_iter().any(|r| self.eval.store.rel_all(&self.eval.h, r).into_iter().any(|f| self.eval.store.args(f)[1] == Term::atom(persp)));
-            if !named {
-                for w in [kernel_who, anon_who] {
-                    marks.extend(self.eval.store.get(authority, main, &[Term::atom(persp), Term::atom(w)]));
-                }
+            marks.extend(self.unnamed_book_marks(persp));
+        }
+        self.push_marks(&mut out, marks, &declared, &HashSet::new());
+        out
+    }
+
+    /// The `authority` rows of an unnamed book (no rule or `writes_to`/`reads_from` row names it) for the kernel and
+    /// the anonymous writer: what a load wrote for the book's facts.
+    fn unnamed_book_marks(&mut self, persp: Sym) -> Vec<FactId> {
+        let (authority, main, kernel_who, anon_who, writes_to, reads_from) =
+            (self.eval.v.authority, self.eval.v.main, self.eval.v.kernel_who, self.eval.v.anon_who, self.eval.v.writes_to, self.eval.v.reads_from);
+        let named = [writes_to, reads_from].into_iter().any(|r| self.eval.store.rel_all(&self.eval.h, r).into_iter().any(|f| self.eval.store.args(f)[1] == Term::atom(persp)));
+        let mut marks = Vec::new();
+        if !named {
+            for w in [kernel_who, anon_who] {
+                marks.extend(self.eval.store.get(authority, main, &[Term::atom(persp), Term::atom(w)]));
             }
         }
+        marks
+    }
+
+    /// Pushes each of `marks` the store holds alive, and that `declared` holds no row for, onto `out`, unless `noted`.
+    fn push_marks(&mut self, out: &mut Vec<FactId>, marks: Vec<FactId>, declared: &[(FactId, Term)], noted: &HashSet<FactId>) {
         for m in marks {
             let mt = self.fact_term(m);
-            if self.eval.store.alive(m) && !declared.iter().any(|(_, t)| *t == mt) {
+            if self.eval.store.alive(m) && !declared.iter().any(|(_, t)| *t == mt) && !noted.contains(&m) {
                 out.push(m);
             }
         }
-        out
     }
 
     /// `doomed` of a set of base facts taken out together, the facts themselves left out: the `asserted_by` rows
@@ -1915,9 +1975,7 @@ impl Session {
     /// asked once, and each answer stops at the first fact outside the set: no relation is listed.
     fn doomed_of_set(&mut self, facts: &[FactId]) -> Vec<FactId> {
         let set: HashSet<FactId> = facts.iter().copied().collect();
-        let v = &self.eval.v;
-        let (ab, edb, authority, main, kernel_who, anon_who, writes_to, reads_from) =
-            (v.asserted_by, v.edb, v.authority, v.main, v.kernel_who, v.anon_who, v.writes_to, v.reads_from);
+        let (ab, edb, main, writes_to) = (self.eval.v.asserted_by, self.eval.v.edb, self.eval.v.main, self.eval.v.writes_to);
         let mut out: Vec<FactId> = Vec::new();
         // the rows already written: the pending ones are written of live facts only (`settle_assertions`)
         let mut declared: Vec<(FactId, Term)> = Vec::new();
@@ -1945,22 +2003,12 @@ impl Session {
         let books: std::collections::BTreeSet<Sym> = facts.iter().map(|&f| self.eval.store.rec(f).persp).collect();
         for persp in books {
             if persp != main && !self.eval.h.name(persp).starts_with('$') && !withheld.contains(&writes_to) && !self.eval.store.book_base_outside(persp, &set) {
-                let named = [writes_to, reads_from].into_iter().any(|r| self.eval.store.rel_all(&self.eval.h, r).into_iter().any(|f| self.eval.store.args(f)[1] == Term::atom(persp)));
-                if !named {
-                    for w in [kernel_who, anon_who] {
-                        marks.extend(self.eval.store.get(authority, main, &[Term::atom(persp), Term::atom(w)]));
-                    }
-                }
+                marks.extend(self.unnamed_book_marks(persp));
             }
         }
         // a mark the program also declared itself (its assertion written, or noted to be) stays
         let noted: HashSet<FactId> = if marks.is_empty() { HashSet::new() } else { self.eval.pending_assert.iter().map(|n| n.0).collect() };
-        for m in marks {
-            let mt = self.fact_term(m);
-            if self.eval.store.alive(m) && !declared.iter().any(|(_, t)| *t == mt) && !noted.contains(&m) {
-                out.push(m);
-            }
-        }
+        self.push_marks(&mut out, marks, &declared, &noted);
         out
     }
 
@@ -2010,12 +2058,12 @@ impl Session {
         // a plain program is evaluated again by the aggregate evaluator, whose
         // planner and explanations the reference answers these with
         if self.eval.plain {
-            self.eval.agg_forced = true;
+            self.eval.cells.agg_forced = true;
             self.eval.reprepare();
             self.eval.store.dirty = true;
             let r = self.eval.ensure();
             let r = r.map_err(|h| describe(&h)).and_then(|_| self.answer_explain_requests());
-            self.eval.agg_forced = false;
+            self.eval.cells.agg_forced = false;
             self.eval.reprepare();
             self.eval.store.dirty = true;
             return r;
@@ -2086,7 +2134,7 @@ impl Session {
         let _ = std::fs::remove_file(&path);
         let mut s = opened?;
         let e = &self.eval;
-        (s.eval.space, s.eval.mode, s.eval.retain_ticks, s.eval.on_hot) = (e.space, e.mode, e.retain_ticks, e.on_hot);
+        (s.eval.space, s.eval.mode, s.eval.retain_ticks, s.eval.cost.on_hot) = (e.space, e.mode, e.retain_ticks, e.cost.on_hot);
         s.eval.scans = std::mem::take(&mut self.eval.scans);
         (s.dangling, s.asks) = (self.dangling, self.asks);
         *self = s;
@@ -2259,6 +2307,11 @@ impl Session {
 /// the engine and a scanner, and may keep what it can of it (scanners/js_ast.ts keeps the ids of the nodes it
 /// matches); what it prints then is kept marked `-- inherited` and answers only another `rescan`, so a world
 /// evaluated from its files is the same whatever ran before it.
+/// A cooled volume's text, written to `path`; the error names the path.
+fn write_cool_file(path: &str, text: &str) -> Result<(), String> {
+    std::fs::write(path, text).map_err(|e| format!("{path}: {e}"))
+}
+
 fn scan_kept(cmd: &str, path: &str) -> Option<std::path::PathBuf> {
     let home = std::env::var_os("XDG_CACHE_HOME").map(std::path::PathBuf::from)
         .or_else(|| std::env::var_os("HOME").map(|h| std::path::Path::new(&h).join(".cache")))?;

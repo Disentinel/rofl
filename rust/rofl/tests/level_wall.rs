@@ -82,7 +82,7 @@ fn world(sealed: bool, program: &str, facts: &str) -> Session {
 fn walk(s: &mut Session, mut admit: impl FnMut(&mut Session, Option<i64>)) -> usize {
     let mut walls = 0;
     s.evaluate_to(Some(-1)).unwrap();
-    while let Some(next) = s.eval.next_level() {
+    while let Some(next) = s.eval.wall.next_level() {
         admit(s, Some(next));
         walls += 1;
         s.evaluate_on(Some(next)).unwrap();

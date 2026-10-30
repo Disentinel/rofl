@@ -1345,7 +1345,10 @@ keyed_viewed[flow](E) :- keyed_walk_at[flow](E, _, _).
 keyed_viewed[flow](U) :- keyed_each_at[flow](U, _, _, _).
 read_holds_node[flow](E, N) :- may_be_node[flow](E, N), not keyed_viewed[flow](E).
 read_holds_node[flow](E, N) :- keyed_holds[flow](E, V), may_be_node[flow](V, N).
-read_holds_lit[flow](E, L)  :- may_be_lit[flow](E, L), not keyed_viewed[flow](E).
+read_holds_lit[flow](E, L)  :- may_be_lit[flow](E, L), not keyed_viewed[flow](E), not member_viewed[flow](E).
+read_holds_lit[flow](N, L)  :- member_viewed[flow](N), may_be_lit[flow](N, L), L != undefined.
+read_holds_lit[flow](N, undefined) :- member_may_lack[flow](N).
+read_holds_lit[flow](N, undefined) :- member_unset[flow](N, O, Key), member_value[flow](O, Key, V), may_be_lit[flow](V, undefined).
 read_holds_lit[flow](E, L)  :- keyed_holds[flow](E, V), may_be_lit[flow](V, L).
 read_holds_lit[flow](E, K)  :- keyed_holds_key[flow](E, K).
 read_holds_lit[flow](C, undefined) :- keyed_read[flow](C, _), not keyed_present[code](C).
@@ -1440,13 +1443,82 @@ obj_own_key[code](O, Key) :- ast_node[code](O, object_expression, _), ast_child[
 member_unset[flow](N, O, Key) :- member_at[flow](N, _, O, Key), ast_node[code](N, _, F), ast_node[code](O, object_expression, F),
                                  not ast_child[code](_, left, 0, N), not obj_open_own[code](O), not obj_own_key[code](O, Key),
                                  not lib_member(object, Key, _), Key != "__proto__".
-class_unset_field[flow](CD, Key) :- ast_node[code](Q, class_property, _), not ast_child[code](Q, value, 0, _),
-                                    ast_attr[code](Q, static, false), ast_child[code](Q, key, 0, K), key_name[code](K, Key),
-                                    ast_child[code](B, body, _, Q), ast_child[code](CD, body, 0, B).
+field_unset_decl[code](CB, Key) :- ast_node[code](Q, class_property, _), not ast_child[code](Q, value, 0, _),
+                                   ast_attr[code](Q, static, false), ast_child[code](Q, key, 0, K), key_name[code](K, Key),
+                                   ast_child[code](CB, body, _, Q).
+class_unset_field[flow](CD, Key) :- field_unset_decl[code](CB, Key), ast_child[code](CD, body, 0, CB).
 member_unset[flow](N, I, Key) :- class_unset_field[flow](CD, Key), inst_of[flow](I, CD), member_at[flow](N, _, I, Key),
                                  not ast_child[code](_, left, 0, N).
 may_be_lit[flow](N, undefined) :- member_unset[flow](N, _, _).
 member_unset_written[flow](N) :- member_unset[flow](N, O, Key), member_value[flow](O, Key, _).
+
+-- WHEN A WRITE ONTO AN OBJECT HAS RUN (a view, like a Map's order): a key the
+-- object is not made with is there for certain where a write of it ran before
+-- the read and no `delete` of it may run on that object anywhere.
+--   On a field, the constructor writes `this.k = v` in a statement of its own
+--   body with no `return` before it; every instance ran it, so a read is after
+--   it unless the read is constructor code before it, or the constructor runs
+--   the read's function before it (a call that reaches it, `super()` among
+--   them), or hands the instance or a function made there to code outside the
+--   model before it (`member_ctor_open`).
+--   On a `const` object literal, `o.k = v` is a statement of the list that
+--   binds it, before the read's statement, and the read is in the same function
+--   (a nested function may run anywhere, a declaration even before it).
+member_assign[code](S, T, Key, A) :- ast_node[code](S, expression_statement, _), ast_child[code](S, expression, 0, A),
+                                    ast_node[code](A, assignment_expression, _), ast_attr[code](A, operator, "="),
+                                    ast_child[code](A, left, 0, L), ast_attr[code](L, computed, false),
+                                    ast_child[code](L, object, 0, T), ast_child[code](L, property, 0, P), ast_name[code](P, Key).
+member_dropped[flow](O, Key) :- ast_node[code](U, unary_expression, _), ast_attr[code](U, operator, "delete"),
+                                ast_child[code](U, argument, 0, N), member_at[flow](N, _, O, Key).
+member_ctor_set[code](Body, Key, J) :- field_unset_decl[code](CB, Key), keyed_ctor[code](CB, Body), ast_child[code](Body, body, J, S),
+                                      member_assign[code](S, T, Key, _), ast_node[code](T, this_expression, _).
+member_ctor_early[code](Body, J) :- member_ctor_set[code](Body, _, J), ast_child[code](Ct, body, 0, Body), nearest_v[flow](Ct, R),
+                                   ast_node[code](R, return_statement, _), ast_child[code](Body, body, L, S), L < J, ast_within[code](S, R).
+member_ctor_before[code](Body, J, X) :- member_ctor_set[code](Body, _, J), ast_child[code](Body, body, L, S), L <= J,
+                                        ast_within[code](S, X).
+member_ctor_this[code](Body, J) :- member_ctor_before[code](Body, J, T), ast_node[code](T, this_expression, _),
+                                   not ast_child[code](_, object, 0, T).
+member_ctor_this[code](Body, J) :- member_ctor_before[code](Body, J, T), ast_node[code](T, this_expression, _),
+                                   nearest_v[flow](G, T), not ast_child[code](G, body, 0, Body).
+member_ctor_this[code](Body, J) :- member_ctor_before[code](Body, J, S), ast_node[code](S, super, _).
+member_ctor_open[code](Body, J) :- member_ctor_this[code](Body, J), member_ctor_before[code](Body, J, Q), runs_unknown[code](Q).
+-- what the class publishes: the field is set at J for certain, and which
+-- functions run before J. `this.m()` in a parent's constructor is not
+-- dispatched to the child's override by the call graph, so a `super()` before
+-- the write runs every override of the class.
+member_field_sure[flow](CD, Key, J) :- member_ctor_set[code](Body, Key, J), not member_ctor_early[code](Body, J),
+                                       not member_ctor_open[code](Body, J), keyed_ctor[code](CB, Body), ast_child[code](CD, body, 0, CB).
+member_field_runs[flow](CD, Key, J, G) :- member_field_sure[flow](CD, Key, J), ast_child[code](CD, body, 0, CB), keyed_ctor[code](CB, Body),
+                                          member_ctor_before[code](Body, J, Q), resolves[code](Q, G).
+member_field_runs[flow](CD, Key, J, M) :- member_field_sure[flow](CD, Key, J), ast_child[code](CD, body, 0, CB), keyed_ctor[code](CB, Body),
+                                          member_ctor_before[code](Body, J, S), ast_node[code](S, super, _),
+                                          ast_child[code](CB, body, _, M), ast_node[code](M, class_method, _),
+                                          ast_child[code](M, key, 0, K), key_name[code](K, Nm), super_of[flow](CD, SD),
+                                          class_member_proto[flow](SD, Nm, _).
+member_ctor_inside[flow](CD, Key, J, N) :- member_field_sure[flow](CD, Key, J), ast_child[code](CD, body, 0, CB), keyed_ctor[code](CB, Body),
+                                           member_ctor_before[code](Body, J, N).
+-- the reader: after the write unless it is constructor code before it, or a
+-- function that runs before it reaches the read's function
+member_ctor_read[flow](N, I, Key, CD, J) :- member_unset[flow](N, I, Key), inst_of[flow](I, CD), member_field_sure[flow](CD, Key, J).
+member_read_fn[flow](N, F) :- member_ctor_read[flow](N, _, _, _, _), nearest_v[flow](F, N).
+keyed_target[code](F) :- member_read_fn[flow](_, F).
+member_ctor_late[flow](N, CD, J) :- member_ctor_read[flow](N, _, Key, CD, J), member_ctor_inside[flow](CD, Key, J, N).
+member_ctor_late[flow](N, CD, J) :- member_ctor_read[flow](N, _, Key, CD, J), member_field_runs[flow](CD, Key, J, G),
+                                    member_read_fn[flow](N, F), keyed_runs_m[code](G, F).
+member_set_sure[flow](N, I, Key) :- member_ctor_read[flow](N, I, Key, CD, J), not member_ctor_late[flow](N, CD, J),
+                                    not member_dropped[flow](I, Key).
+member_const_set[code](O, Key, B, F, J) :- binder[code](D, _, O, _), ast_node[code](O, object_expression, _),
+                                          ast_child[code](V, declarations, _, D), ast_attr[code](V, kind, "const"),
+                                          ast_child[code](B, F, L, V), ast_child[code](B, F, J, S), L < J,
+                                          member_assign[code](S, T, Key, _), sees_binder[code](T, D).
+member_const_read[flow](N, O, Key, W) :- member_unset[flow](N, O, Key), member_const_set[code](O, Key, B, F, J),
+                                         ast_child[code](B, F, I, S), J < I, ast_within[code](S, N), ast_child[code](B, F, J, W).
+member_set_sure[flow](N, O, Key) :- member_const_read[flow](N, O, Key, W), nearest_v[flow](G, W), nearest_v[flow](G, N),
+                                    not member_dropped[flow](O, Key).
+member_set_sure[flow](N, O, Key) :- member_const_read[flow](N, O, Key, W), not in_fn[code](W), not in_fn[code](N),
+                                    not member_dropped[flow](O, Key).
+member_viewed[flow](N) :- member_unset[flow](N, _, _).
+member_may_lack[flow](N) :- member_unset[flow](N, O, Key), not member_set_sure[flow](N, O, Key).
 
 -- The receiver decides which half of a class it sees: `Vat.poured()` and
 -- `new Vat().tapped()` are both TypeErrors and both resolved until the `static`
@@ -1595,6 +1667,10 @@ may_be_node[flow](T, I)       :- class_field_this[flow](CD, P), not ast_attr[cod
 may_be_node[flow](T, CD)      :- class_field_this[flow](CD, P), ast_attr[code](P, static, true),
                                  this_host[flow](P, T).
 
+-- a static member is inherited by the subclass's constructor, a field as a method is
+class_member_static[flow](CD, Key, V) :- super_of[flow](CD, SD), class_member_static[flow](SD, Key, V),
+                                         not own_key[flow](CD, Key).
+
 static_block_of[flow](CD, SB) :- obj_like[flow](CD), ast_child[code](CD, body, 0, B),
                                  ast_child[code](B, body, _, SB),
                                  ast_node[code](SB, static_block, _).
@@ -1617,14 +1693,18 @@ corpus_file[code](File) :- ast_node[code](_, program, File).
 
 
 
-exports_name[code](F, Name, File) :- ast_node[code](E, export_named_declaration, File),
+-- an export of the module itself, not one inside a TypeScript namespace
+module_export[code](E, File) :- ast_node[code](P, program, File), ast_child[code](P, body, _, E),
+                                ast_node[code](E, export_named_declaration, _).
+
+exports_name[code](F, Name, File) :- module_export[code](E, File),
                                      ast_child[code](E, declaration, 0, F),
                                      fn_node[code](F),
                                      ast_child[code](F, id, 0, I), ast_name[code](I, Name).
-exports_name[code](F, Name, File) :- ast_node[code](E, export_named_declaration, File),
-                                     ast_child[code](E, declaration, 0, F),
-                                     ast_node[code](F, class_declaration, _),
-                                     ast_child[code](F, id, 0, I), ast_name[code](I, Name).
+exports_name[code](D, Name, File) :- module_export[code](E, File), ast_child[code](E, declaration, 0, D),
+                                     class_or_namespace[code](D), own_name[code](D, Name, File, around).
+class_or_namespace[code](D) :- ast_node[code](D, class_declaration, _).
+class_or_namespace[code](D) :- ts_namespace[code](D).
 
 -- `export * from` re-exports every NAME (not the default), recursively. The
 -- kind guard is not redundant with `module_site`, which holds of imports too.
@@ -1680,7 +1760,7 @@ may_be_node[flow](E, F) :- imports_name[code](Local, Name, D, File),
 -- `export const X = init`: the name offers what the initialiser may be, a node through `exports_name` and a
 -- literal through `exports_value`, which also carries `export { x }` and the re-exports, so a constant written
 -- in one file reaches a use in another (vscode's channel names and ports, w_next_version_cutoff).
-export_var[code](Init, Name, File) :- ast_node[code](E, export_named_declaration, File),
+export_var[code](Init, Name, File) :- module_export[code](E, File),
                                       ast_child[code](E, declaration, 0, V), ast_child[code](V, declarations, _, D),
                                       binder[code](D, Name, Init, File).
 exports_name[code](F, Name, File) :- export_var[code](Init, Name, File), may_be_node[flow](Init, F).
@@ -1928,6 +2008,19 @@ callback_param[flow](P, F, Spec) :- sx_cb[surface](F, Spec), ast_child[code](F, 
 external_value[flow](P, Spec) :- callback_param[flow](P, _, Spec).
 may_be_node[flow](U, P)       :- callback_param[flow](P, F, _), ast_name[code](P, Name),
                                  param_use[flow](F, Name, U).
+
+-- A TypeScript namespace is an object made at run time (not a `declare`d one):
+-- reached by its name, holding what its body exports.
+ts_namespace[code](NS) :- ast_node[code](NS, tsmodule_declaration, _), not ast_attr[code](NS, declare, true).
+may_be_node[flow](E, NS) :- sees_decl[code](E, NS), ts_namespace[code](NS).
+ns_export[code](NS, E) :- ts_namespace[code](NS), ast_child[code](NS, body, 0, B), ast_child[code](B, body, _, E),
+                          ast_node[code](E, export_named_declaration, _).
+member_value[flow](NS, Name, D)    :- ns_export[code](NS, E), ast_child[code](E, declaration, 0, D),
+                                      own_name[code](D, Name, _, around), not ast_node[code](D, tsdeclare_function, _).
+member_value[flow](NS, Name, Init) :- ns_export[code](NS, E), ast_child[code](E, declaration, 0, V),
+                                      ast_child[code](V, declarations, _, D), binder[code](D, Name, Init, _).
+member_value[flow](NS, Name, In)   :- ts_namespace[code](NS), ast_child[code](NS, body, 0, In),
+                                      own_name[code](In, Name, _, around).
 
 -- =========================================================================
 -- 12. CONSTRUCTION

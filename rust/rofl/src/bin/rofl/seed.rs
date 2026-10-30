@@ -14,17 +14,46 @@ use std::sync::atomic::{AtomicIsize, Ordering};
 struct Counting;
 pub(crate) static LIVE: AtomicIsize = AtomicIsize::new(0);
 
+/// What this thread allocated and freed since it last told `LIVE`: one counter written by every thread at every
+/// allocation is a cache line the threads of a round fight over, so each tells it only past `SLACK` bytes.
+const SLACK: isize = 1 << 16;
+thread_local! {
+    static OWN: std::cell::Cell<isize> = const { std::cell::Cell::new(0) };
+}
+
+fn count(n: isize) {
+    let told = OWN.try_with(|c| {
+        let v = c.get() + n;
+        if v.abs() < SLACK {
+            c.set(v);
+            0
+        } else {
+            c.set(0);
+            v
+        }
+    });
+    match told {
+        Ok(0) => {}
+        Ok(v) => {
+            LIVE.fetch_add(v, Ordering::Relaxed);
+        }
+        Err(_) => {
+            LIVE.fetch_add(n, Ordering::Relaxed);
+        }
+    }
+}
+
 unsafe impl GlobalAlloc for Counting {
     unsafe fn alloc(&self, l: Layout) -> *mut u8 {
-        LIVE.fetch_add(l.size() as isize, Ordering::Relaxed);
+        count(l.size() as isize);
         System.alloc(l)
     }
     unsafe fn dealloc(&self, p: *mut u8, l: Layout) {
-        LIVE.fetch_sub(l.size() as isize, Ordering::Relaxed);
+        count(-(l.size() as isize));
         System.dealloc(p, l)
     }
     unsafe fn realloc(&self, p: *mut u8, l: Layout, n: usize) -> *mut u8 {
-        LIVE.fetch_add(n as isize - l.size() as isize, Ordering::Relaxed);
+        count(n as isize - l.size() as isize);
         System.realloc(p, l, n)
     }
 }
@@ -146,13 +175,7 @@ pub fn main(argv: Vec<String>) {
             std::process::exit(64);
         }
     };
-    let mut src = String::new();
-    match path {
-        Some(p) => src = std::fs::read_to_string(&p).unwrap_or_else(|e| panic!("{p}: {e}")),
-        None => {
-            std::io::stdin().read_to_string(&mut src).unwrap();
-        }
-    }
+    let src = read_seed(path);
     let t0 = std::time::Instant::now();
     let mut l = match rofl::load(&src, budget) {
         Ok(l) => l,
@@ -170,26 +193,8 @@ pub fn main(argv: Vec<String>) {
         eprintln!("warning: {} dangling witness reference(s)", l.dangling);
     }
     let t1 = std::time::Instant::now();
-    // `--ticks N` IS N CALLS TO `tickAdvance` AND THE TICK ENTERED EVALUATED,
-    // which is what the corpus generator does (scripts/port_corpus.ts): each
-    // call runs the standing tick to fixpoint through `ensure` and then
-    // advances if the tick is not quiescent, and the last tick is read once it
-    // has run (`ensure`: a quiescent one already has, and is not re-dated). A
-    // quiescent or partial call is a no-op that still counts, exactly as the
-    // generator's replay counts it.
-    let out = if ticks == 0 {
-        l.eval.run().map(|_| ())
-    } else {
-        (0..ticks).try_for_each(|_| l.eval.tick_advance().map(|_| ())).and_then(|_| l.eval.ensure().map(|_| ()))
-    };
+    evaluate(&mut l.eval, ticks);
     let t_eval = t1.elapsed();
-    match out {
-        Ok(()) => {}
-        Err(e) => {
-            eprintln!("evaluation refused: {}", rofl::describe(&e));
-            std::process::exit(3);
-        }
-    }
     drop(src);
     let live = LIVE.load(Ordering::Relaxed);
     let cs = if derivations {
@@ -200,94 +205,134 @@ pub fn main(argv: Vec<String>) {
     };
     print!("{cs}");
     if want_bytes {
-        let n = l.eval.store.fact_count();
-        let mut total = l.eval.h.bytes();
-        eprintln!("facts\t{n}");
-        eprintln!("syms\t{}", l.eval.h.sym_count());
-        eprintln!("funcs\t{}", l.eval.h.func_count());
-        eprintln!("tuples\t{}", l.eval.store.tuple_count());
-        for (k, b) in l.eval.h.parts() {
-            eprintln!("{k}\t{b}");
-        }
-        for (k, b) in l.eval.store.bytes() {
-            eprintln!("{k}\t{b}");
-            total += b;
-        }
-        eprintln!("total\t{total}");
-        eprintln!("counted_total\t{total}");
-        eprintln!("live_bytes\t{live}");
-        eprintln!("bytes_per_fact\t{:.1}", live as f64 / n as f64);
-        eprintln!("counted_per_fact\t{:.1}", total as f64 / n as f64);
-        eprintln!("load_ms\t{:.2}", t_load.as_secs_f64() * 1000.0);
-        eprintln!("eval_ms\t{:.2}", t_eval.as_secs_f64() * 1000.0);
-        eprintln!("steps\t{}", l.eval.steps);
-        eprintln!("peak_rows\t{}", l.eval.peak_rows);
-        // `absorb` is invisible to both counters above, which is why these
-        // three are here: it sorts and merges rather than firing a rule.
-        eprintln!("absorb_calls\t{}", l.eval.store.absorb_calls);
-        eprintln!("absorb_fresh\t{}", l.eval.store.absorb_fresh);
-        eprintln!("absorb_canon\t{}", l.eval.store.absorb_canon);
-        eprintln!("absorb_ms\t{:.2}", l.eval.store.absorb_ns as f64 / 1e6);
-        eprintln!("relp_calls\t{}", l.eval.store.relp_calls);
-        eprintln!("relp_cloned\t{}", l.eval.store.relp_cloned);
-        eprintln!("relp_dead\t{}", l.eval.store.relp_dead);
-        eprintln!("argm_calls\t{}", l.eval.store.argm_calls);
-        eprintln!("argm_cloned\t{}", l.eval.store.argm_cloned);
-        // PER RULE, so the question "which body asks for more probes as the
-        // corpus grows" has an answer. Sorted, top twenty; the tail is long
-        // and flat and printing it would bury the head.
-        let mut by: Vec<(rofl::term::Sym, u64)> =
-            l.eval.argm_by_rule.iter().map(|(k, v)| (*k, *v)).collect();
-        by.sort_by(|a, b| b.1.cmp(&a.1));
-        for (rid, n) in by.iter().take(20) {
-            // The head relation beside the id, because a rule id is a hash and
-            // the question this table answers is about a BODY someone has to
-            // find and read.
-            let head = l
-                .eval
-                .rules
-                .iter()
-                .find(|r| r.id == *rid)
-                .map(|r| l.eval.h.name(r.clause.head.rel).to_string())
-                .unwrap_or_else(|| "?".to_string());
-            eprintln!("argm_rule\t{}\t{}\t{}", l.eval.h.name(*rid), head, n);
-        }
-        // THE SAME TABLE IN TIME, and what firing the rules of a round side by
-        // side could save: every round waits for its longest rule.
-        let mut by: Vec<(rofl::term::Sym, u64)> = l.eval.ns_by_rule.iter().map(|(k, v)| (*k, *v)).collect();
-        by.sort_by(|a, b| b.1.cmp(&a.1));
-        for (rid, ns) in by.iter().take(20) {
-            let head = l.eval.rules.iter().find(|r| r.id == *rid).map(|r| l.eval.h.name(r.clause.head.rel).to_string()).unwrap_or_else(|| "?".to_string());
-            eprintln!("rule_ms\t{}\t{}\t{:.1}", l.eval.h.name(*rid), head, *ns as f64 / 1e6);
-        }
-        // WHERE THE ROWS ARE READ, deterministic: the rules that read most, each at its costliest premise
-        for h in l.eval.hot_rules(10) {
-            eprintln!("hot\t{}", h.sentence());
-        }
-        let (sum, mx): (u64, u64) = l.eval.rounds.iter().fold((0, 0), |(s, m), (a, b)| (s + a, m + b));
-        let bound = |k: u64| l.eval.rounds.iter().map(|(s, m)| (*m).max(s / k)).sum::<u64>() as f64 / 1e6;
-        for c in &l.eval.closures {
-            eprintln!("closure\t{}\t{}\t{}", l.eval.h.name(c.rel), l.eval.h.name(c.edge), if c.edge_fwd { "fwd" } else { "rev" });
-        }
-        for (rel, on) in l.eval.vclosure_info() {
-            eprintln!("vclosure\t{rel}\t{}", if on { "tree" } else { "rows" });
-        }
-        for r in &l.eval.vclosure_reason {
-            eprintln!("vclosure_off\t{r}");
-        }
-        eprintln!("vclosure_builds\t{}", l.eval.vbuilds);
-        eprintln!("vclosure_rows_read\t{}", l.eval.vrows_read);
-        eprintln!("virtual_rows\t{}", l.eval.store.virtual_rows());
-        eprintln!("closure_rows\t{}", l.eval.closure_rows);
-        eprintln!("closure_runs\t{}", l.eval.closure_runs);
-        eprintln!("rounds\t{}", l.eval.rounds.len());
-        eprintln!("joinplan_stats_ms\t{:.1}", l.eval.delta_ns as f64 / 1e6);
-        eprintln!("rules_ms\t{:.1}", sum as f64 / 1e6);
-        eprintln!("longest_rule_per_round_ms\t{:.1}", mx as f64 / 1e6);
-        eprintln!("parallel_bound_2_ms\t{:.1}", bound(2));
-        eprintln!("parallel_bound_4_ms\t{:.1}", bound(4));
-        eprintln!("parallel_bound_inf_ms\t{:.1}", mx as f64 / 1e6);
+        report_bytes(&l, live, t_load, t_eval);
     }
+}
+
+fn read_seed(path: Option<String>) -> String {
+    let mut src = String::new();
+    match path {
+        Some(p) => src = std::fs::read_to_string(&p).unwrap_or_else(|e| panic!("{p}: {e}")),
+        None => {
+            std::io::stdin().read_to_string(&mut src).unwrap();
+        }
+    }
+    src
+}
+
+/// `--ticks N` IS N CALLS TO `tickAdvance` AND THE TICK ENTERED EVALUATED,
+/// which is what the corpus generator does (scripts/port_corpus.ts): each
+/// call runs the standing tick to fixpoint through `ensure` and then
+/// advances if the tick is not quiescent, and the last tick is read once it
+/// has run (`ensure`: a quiescent one already has, and is not re-dated). A
+/// quiescent or partial call is a no-op that still counts, exactly as the
+/// generator's replay counts it. A refusal ends the run.
+fn evaluate(eval: &mut rofl::engine::Eval, ticks: u32) {
+    let out = if ticks == 0 {
+        eval.run().map(|_| ())
+    } else {
+        (0..ticks).try_for_each(|_| eval.tick_advance().map(|_| ())).and_then(|_| eval.ensure().map(|_| ()))
+    };
+    if let Err(e) = out {
+        eprintln!("evaluation refused: {}", rofl::describe(&e));
+        std::process::exit(3);
+    }
+}
+
+fn report_bytes(l: &rofl::Loaded, live: isize, t_load: std::time::Duration, t_eval: std::time::Duration) {
+    let n = l.eval.store.fact_count();
+    let mut total = l.eval.h.bytes();
+    eprintln!("facts\t{n}");
+    eprintln!("syms\t{}", l.eval.h.sym_count());
+    eprintln!("funcs\t{}", l.eval.h.func_count());
+    eprintln!("tuples\t{}", l.eval.store.tuple_count());
+    for (k, b) in l.eval.h.parts() {
+        eprintln!("{k}\t{b}");
+    }
+    for (k, b) in l.eval.store.bytes() {
+        eprintln!("{k}\t{b}");
+        total += b;
+    }
+    eprintln!("total\t{total}");
+    eprintln!("counted_total\t{total}");
+    eprintln!("live_bytes\t{live}");
+    eprintln!("bytes_per_fact\t{:.1}", live as f64 / n as f64);
+    eprintln!("counted_per_fact\t{:.1}", total as f64 / n as f64);
+    eprintln!("load_ms\t{:.2}", t_load.as_secs_f64() * 1000.0);
+    eprintln!("eval_ms\t{:.2}", t_eval.as_secs_f64() * 1000.0);
+    eprintln!("steps\t{}", l.eval.steps);
+    eprintln!("peak_rows\t{}", l.eval.peak_rows);
+    // `absorb` is invisible to both counters above, which is why these
+    // three are here: it sorts and merges rather than firing a rule.
+    eprintln!("absorb_calls\t{}", l.eval.store.absorb_calls);
+    eprintln!("absorb_fresh\t{}", l.eval.store.absorb_fresh);
+    eprintln!("absorb_canon\t{}", l.eval.store.absorb_canon);
+    eprintln!("absorb_ms\t{:.2}", l.eval.store.absorb_ns as f64 / 1e6);
+    eprintln!("relp_calls\t{}", l.eval.store.relp_calls);
+    eprintln!("relp_cloned\t{}", l.eval.store.relp_cloned);
+    eprintln!("relp_dead\t{}", l.eval.store.relp_dead);
+    eprintln!("argm_calls\t{}", l.eval.store.argm_calls);
+    eprintln!("argm_cloned\t{}", l.eval.store.argm_cloned);
+    rule_tables(l);
+    round_lines(l);
+}
+
+/// THE COSTLIEST RULES, in probes and in time, the top twenty of each, each with its head relation beside its id, and
+/// the rules that read most, each at its costliest premise.
+fn rule_tables(l: &rofl::Loaded) {
+    // PER RULE, so the question "which body asks for more probes as the
+    // corpus grows" has an answer. Sorted, top twenty; the tail is long
+    // and flat and printing it would bury the head.
+    let mut by: Vec<(rofl::term::Sym, u64)> = l.eval.cost.argm_by_rule.iter().map(|(k, v)| (*k, *v)).collect();
+    by.sort_by(|a, b| b.1.cmp(&a.1));
+    for (rid, n) in by.iter().take(20) {
+        // The head relation beside the id, because a rule id is a hash and
+        // the question this table answers is about a BODY someone has to
+        // find and read.
+        eprintln!("argm_rule\t{}\t{}\t{}", l.eval.h.name(*rid), rule_head(l, *rid), n);
+    }
+    // THE SAME TABLE IN TIME, and what firing the rules of a round side by
+    // side could save: every round waits for its longest rule.
+    let mut by: Vec<(rofl::term::Sym, u64)> = l.eval.cost.ns_by_rule.iter().map(|(k, v)| (*k, *v)).collect();
+    by.sort_by(|a, b| b.1.cmp(&a.1));
+    for (rid, ns) in by.iter().take(20) {
+        eprintln!("rule_ms\t{}\t{}\t{:.1}", l.eval.h.name(*rid), rule_head(l, *rid), *ns as f64 / 1e6);
+    }
+    // WHERE THE ROWS ARE READ, deterministic: the rules that read most, each at its costliest premise
+    for h in l.eval.hot_rules(10) {
+        eprintln!("hot\t{}", h.sentence());
+    }
+}
+
+fn rule_head(l: &rofl::Loaded, rid: rofl::term::Sym) -> String {
+    l.eval.rules.iter().find(|r| r.id == rid).map(|r| l.eval.h.name(r.clause.head.rel).to_string()).unwrap_or_else(|| "?".to_string())
+}
+
+/// The rounds, the closures and the virtual rows: what a parallel round would save, and how the closures were read.
+fn round_lines(l: &rofl::Loaded) {
+    let (sum, mx): (u64, u64) = l.eval.rounds.iter().fold((0, 0), |(s, m), (a, b)| (s + a, m + b));
+    let bound = |k: u64| l.eval.rounds.iter().map(|(s, m)| (*m).max(s / k)).sum::<u64>() as f64 / 1e6;
+    for c in &l.eval.clo.closures {
+        eprintln!("closure\t{}\t{}\t{}", l.eval.h.name(c.rel), l.eval.h.name(c.edge), if c.edge_fwd { "fwd" } else { "rev" });
+    }
+    for (rel, on) in l.eval.vc.vclosure_info(&l.eval.h) {
+        eprintln!("vclosure\t{rel}\t{}", if on { "tree" } else { "rows" });
+    }
+    for r in &l.eval.vc.vclosure_reason {
+        eprintln!("vclosure_off\t{r}");
+    }
+    eprintln!("vclosure_builds\t{}", l.eval.vc.builds);
+    eprintln!("vclosure_rows_read\t{}", l.eval.vc.rows_read);
+    eprintln!("virtual_rows\t{}", l.eval.store.virtual_rows());
+    eprintln!("closure_rows\t{}", l.eval.clo.closure_rows);
+    eprintln!("closure_runs\t{}", l.eval.clo.closure_runs);
+    eprintln!("rounds\t{}", l.eval.rounds.len());
+    eprintln!("joinplan_stats_ms\t{:.1}", l.eval.add.delta_ns as f64 / 1e6);
+    eprintln!("rules_ms\t{:.1}", sum as f64 / 1e6);
+    eprintln!("longest_rule_per_round_ms\t{:.1}", mx as f64 / 1e6);
+    eprintln!("parallel_bound_2_ms\t{:.1}", bound(2));
+    eprintln!("parallel_bound_4_ms\t{:.1}", bound(4));
+    eprintln!("parallel_bound_inf_ms\t{:.1}", mx as f64 / 1e6);
 }
 
 #[cfg(test)]

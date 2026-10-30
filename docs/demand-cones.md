@@ -20,6 +20,11 @@ Three levels of demand, told apart by what the answer to a question must hold:
 | column | a relation without the columns nobody reads | not built; measured below |
 | fact (pattern) | the instances a question reaches, by sideways information passing | not built; its bound is measured below |
 
+A notebook asks by itself (`playground/host.ts`, `f_a_notebook_asks_the_cone_of_its_lines`): the
+world of the model over the code is asked the relations of every `?`, `never`, `unsure`, `why` and
+`whynot` line, those the cells read of the model, and what the host reads after the run; a line that
+excises or draws keeps every rule. A kept model world asked more grows its cone over its store.
+
 ## When the cone is the whole world
 
 A cone answers like the whole world only if no rule in it can see a relation it does not name.

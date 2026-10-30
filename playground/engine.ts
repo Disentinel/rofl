@@ -17,7 +17,12 @@ export interface Engine {
   withCells(core: Rofl, model: string, code: string, texts: string[], walls: Walls): { world: Rofl; errors: string[][] };
   /** A world this engine evaluated, with the base facts `lits` taken out and evaluated again, in a world of its own; a fact it cannot take out is said in `errors`. */
   excised(world: Rofl, lits: string[], walls: Walls): { world: Rofl; errors: string[] };
+  /** A world this engine evaluated, asked `rels` besides what it asks: the rules the larger cone adds run over its store (docs/demand-cones.md). */
+  asked(world: Rofl, rels: string[], walls: Walls): Rofl;
 }
+
+/** The facts that ask a world for `rels`: it then evaluates only the rules they reach (docs/demand-cones.md). */
+export const asksOf = (rels: Iterable<string>): string => [...rels].map((r) => `asks(${r}).`).join('\n');
 
 export const typescript: Engine = {
   name: 'typescript',
@@ -43,6 +48,12 @@ export const typescript: Engine = {
     const g = world.fork(), errors = lits.flatMap((l) => { const r = g.retract(l); return r.ok ? [] : [r.diagnostics[0]]; });
     g.evaluate(budget);
     return { world: g, errors };
+  },
+  asked(world, rels, { budget }) {
+    const g = world.fork();
+    g.assert(asksOf(rels));
+    g.evaluate(budget);
+    return g;
   },
 };
 

@@ -42,12 +42,49 @@ struct Frozen<'a> {
     news: Option<(&'a FxSet<FactId>, Vec<FactId>)>,
     /// a premise `@init` after the first tick matches nothing, read nowhere
     off: bool,
+    nix: NewsIx,
 }
 
 // SAFETY: the store and the heap share their bases through `Rc`, which is why neither is `Sync`. The threads only
 // dereference them: nothing on the read path below clones or drops an `Rc`, so no reference count is touched, and
 // nothing writes the store or the heap until every thread has returned (`std::thread::scope`).
 unsafe impl Sync for Frozen<'_> {}
+
+/// The news at one premise by the values a partial solution binds, built the first time a partial solution finds no
+/// index narrower than the news: each partial solution then reads its own rows of the news, not all of them.
+#[derive(Default)]
+pub(super) struct NewsIx(std::sync::OnceLock<(Vec<usize>, FxMap<Box<[Term]>, Vec<FactId>>)>);
+
+impl NewsIx {
+    /// The rows of `news` whose arguments at `pos` are `vals`, in the order of `news`; None where the index was built
+    /// for other positions.
+    pub(super) fn rows(&self, store: &Store, news: impl Iterator<Item = FactId>, arity: usize, pos: &[usize], vals: &[Term]) -> Option<&[FactId]> {
+        let (at, by) = self.0.get_or_init(|| {
+            let mut by: FxMap<Box<[Term]>, Vec<FactId>> = FxMap::default();
+            for f in news {
+                let a = store.args(f);
+                if a.len() == arity {
+                    by.entry(pos.iter().map(|&j| a[j]).collect()).or_default().push(f);
+                }
+            }
+            (pos.to_vec(), by)
+        });
+        (at == pos).then(|| by.get(vals).map_or(&[][..], |v| &v[..]))
+    }
+}
+
+/// The arguments of `l` that `s` binds to ground terms, and those terms.
+pub(super) fn bound_args(h: &Heap, l: &Lit, s: &Subst) -> (Vec<usize>, Vec<Term>) {
+    let (mut pos, mut vals) = (Vec::new(), Vec::new());
+    for (i, &a) in l.args.iter().enumerate() {
+        let t = walk(h, a, s);
+        if h.is_ground(t) {
+            pos.push(i);
+            vals.push(t);
+        }
+    }
+    (pos, vals)
+}
 
 /// The candidates of one partial solution: rows, kept by `keep`.
 struct Cands<'a> {
@@ -174,14 +211,7 @@ impl<'a> Frozen<'a> {
         if !self.store.indexed(l.rel, persp) {
             return Some((None, false));
         }
-        let (mut pos, mut vals) = (Vec::new(), Vec::new());
-        for (i, &a) in l.args.iter().enumerate() {
-            let t = walk(self.h, a, s);
-            if self.h.is_ground(t) {
-                pos.push(i);
-                vals.push(t);
-            }
-        }
+        let (pos, vals) = bound_args(self.h, l, s);
         if pos.is_empty() {
             return Some((None, false));
         }
@@ -212,7 +242,11 @@ impl<'a> Frozen<'a> {
         match (&self.news, narrow) {
             (Some((keys, _)), Some(n)) => c.owned = n.into_iter().filter(|f| keys.contains(f)).collect(),
             (Some((_, news)), _) => {
-                c.segs = vec![&news[..]];
+                let (pos, vals) = bound_args(self.h, self.l, &a.s);
+                match (!pos.is_empty()).then(|| self.nix.rows(self.store, news.iter().copied(), self.l.args.len(), &pos, &vals)).flatten() {
+                    Some(rows) => c.owned = rows.to_vec(),
+                    None => c.segs = vec![&news[..]],
+                }
                 c.keep = Keep::News;
             }
             (None, Some(n)) => c.owned = n,
@@ -290,6 +324,13 @@ struct Level {
     wide: usize,
     at: Option<Subst>,
     probes: u64,
+}
+
+fn front_news<'a>(front_at: Option<(usize, &'a FxSet<FactId>)>, at: usize, neg: bool) -> Option<(&'a FxSet<FactId>, Vec<FactId>)> {
+    match front_at {
+        Some((p, keys)) if p == at && !neg => Some((keys, keys.iter().copied().collect())),
+        _ => None,
+    }
 }
 
 fn frs_off(l: &Lit, tick: u32) -> bool {
@@ -375,14 +416,11 @@ impl Eval {
     pub(super) fn par_level(&mut self, b: &BodyElem, i: usize, acc: &[Sol], depth: usize, front_at: Option<(usize, &FxSet<FactId>)>, rule_id: Option<Sym>) -> Option<Result<Vec<Sol>, Halt>> {
         let (l, neg) = self.frozen_lit(b, depth, rule_id)?;
         let off = l.temporal == Temporal::Init && self.store.tick != 0;
-        let news: Option<(&FxSet<FactId>, Vec<FactId>)> = match front_at {
-            Some((p, keys)) if p == i && !neg => Some((keys, keys.iter().copied().collect())),
-            _ => None,
-        };
+        let news = front_news(front_at, i, neg);
         if !off {
             self.par_prepare(l, acc, news.as_ref().map_or(usize::MAX, |(keys, _)| keys.len().saturating_sub(1)));
         }
-        let fr = Frozen { store: &self.store, h: &self.h, l, neg, news, off };
+        let fr = Frozen { store: &self.store, h: &self.h, l, neg, news, off, nix: NewsIx::default() };
         let threads = self.par.threads;
 
         // the candidates of each partial solution, found over runs of them
@@ -465,7 +503,7 @@ impl Eval {
             }
         }
         if let Some(rid) = self.cur_rule {
-            *self.argm_by_rule.entry(rid).or_insert(0) += probes;
+            *self.cost.argm_by_rule.entry(rid).or_insert(0) += probes;
         }
         Some(Ok(next))
     }
@@ -480,13 +518,13 @@ impl Eval {
         let plain = |t: &Term| !matches!(t.kind(), TermK::Func(_));
         if depth != 0
             || !self.firing
-            || self.asking
+            || self.demand.asking
             || rule_id.is_none()
-            || !self.lattices.is_empty()
-            || !self.lat_spread.is_empty()
+            || !self.lat.lattices.is_empty()
+            || !self.lat.spread.is_empty()
             || self.assume.is_some()
-            || self.demand_rels.iter().any(|(r, _)| *r == l.rel)
-            || self.vclosure_for(l.rel).is_some()
+            || self.demand.rels.iter().any(|(r, _)| *r == l.rel)
+            || self.vc.vclosure_for(l.rel).is_some()
             || neg && self.carry_check(0).is_err()
             || !plain(&l.persp)
             || !l.args.iter().all(plain)
@@ -531,11 +569,8 @@ impl Eval {
             .iter()
             .enumerate()
             .map(|(k, &(l, neg))| {
-                let news = match front_at {
-                    Some((p, keys)) if p == i + k && !neg => Some((keys, keys.iter().copied().collect())),
-                    _ => None,
-                };
-                Frozen { store: &self.store, h: &self.h, l, neg, news, off: frs_off(l, tick) }
+                let news = front_news(front_at, i + k, neg);
+                Frozen { store: &self.store, h: &self.h, l, neg, news, off: frs_off(l, tick), nix: NewsIx::default() }
             })
             .collect();
         let sort = !self.store.unordered;
@@ -574,9 +609,9 @@ impl Eval {
         }
         // a wall the written path would meet, or a rule it would name as hot, is the written path's to meet
         let mut rows = self.rows;
-        let (mut read, hot) = match self.cur_rule.and_then(|r| self.read_by_rule.get(&r)) {
+        let (mut read, hot) = match self.cur_rule.and_then(|r| self.cost.read_by_rule.get(&r)) {
             Some(&(n, next)) => (n, next),
-            None => (0, self.hot_read),
+            None => (0, self.cost.hot_read),
         };
         for (k, t) in levels.iter().enumerate() {
             read += t.read as u64;
@@ -590,28 +625,28 @@ impl Eval {
         let mut grew = 0;
         for (k, t) in levels.iter().enumerate() {
             let (l, neg) = lits[k];
-            let mark = self.cost_mark(rule_id, &body[i + k]);
+            let mark = self.cost.cost_mark(rule_id, &body[i + k]);
             let now = self.rows + (t.outs - t.last) as i64;
             if now > self.peak_rows {
                 self.peak_rows = now;
             }
             if !neg && !frs_off(l, tick) {
-                self.read_rows += t.read as u64;
+                self.cost.read_rows += t.read as u64;
                 if let Some(rid) = self.cur_rule {
-                    let first = self.hot_read;
-                    self.read_by_rule.entry(rid).or_insert((0, first)).0 += t.read as u64;
+                    let first = self.cost.hot_read;
+                    self.cost.read_by_rule.entry(rid).or_insert((0, first)).0 += t.read as u64;
                 }
-                if t.wide > self.wide_floor && t.wide > self.widest.n {
+                if t.wide > self.cost.wide_floor && t.wide > self.cost.widest.n {
                     let s = t.at.as_ref().unwrap();
                     let at = l.args.iter().map(|a| resolve(&mut self.h, *a, s)).collect();
-                    self.widest = super::cost::Widest { n: t.wide, at };
+                    self.cost.widest = super::cost::Widest { n: t.wide, at };
                 }
             }
             if let Some(m) = mark {
-                self.note_cost(m, t.ins, t.outs);
+                self.cost.note_cost(m, t.ins, t.outs);
             }
             if let Some(rid) = self.cur_rule {
-                *self.argm_by_rule.entry(rid).or_insert(0) += t.probes;
+                *self.cost.argm_by_rule.entry(rid).or_insert(0) += t.probes;
             }
             self.par_levels += 1;
             let g = t.outs as i64 - if i + k == 0 { 0 } else { t.ins as i64 };

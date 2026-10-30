@@ -46,7 +46,7 @@ Reads:
   - <a id="ast_attr"></a>The attribute of a node is a value (`ast_attr`)
   - <a id="ast_child"></a>A node is a child of a node (`ast_child`)
 
-Kinds without a noun: expression_statement, tsenum_body, tsparameter_property.
+Kinds without a noun: expression_statement, tsenum_body, tsmodule_declaration, tsparameter_property.
 
 ## Words
 
@@ -2861,10 +2861,23 @@ A node U may be the literal L either:
 
 <a id="read_holds_lit"></a>`read_holds_lit`(E, L) either:
 
-1. if a node E [may be the literal](js-concat.rofl.md#may_be_lit) L, unless [`keyed_viewed`](#keyed_viewed)(E);
-2. if [`keyed_holds`](#keyed_holds)(E, V) and a node V [may be the literal](js-concat.rofl.md#may_be_lit) L;
-3. if [`keyed_holds_key`](#keyed_holds_key)(E, L);
+1. if all of:
+   - a node E [may be the literal](js-concat.rofl.md#may_be_lit) L;
+   - unless [`keyed_viewed`](#keyed_viewed)(E);
+   - unless [`member_viewed`](#member_viewed)(E);
+2. if all of:
+   - [`member_viewed`](#member_viewed)(E);
+   - a node E [may be the literal](js-concat.rofl.md#may_be_lit) L;
+   - L differs from `undefined`;
+3. if [`member_may_lack`](#member_may_lack)(E) and L is `undefined`;
 4. if all of:
+   - [`member_unset`](#member_unset)(E, O, Key);
+   - [the member](#member_value) Key of a node O holds a node V;
+   - V [may be the literal](js-concat.rofl.md#may_be_lit) `undefined`;
+   - L is `undefined`;
+5. if [`keyed_holds`](#keyed_holds)(E, V) and a node V [may be the literal](js-concat.rofl.md#may_be_lit) L;
+6. if [`keyed_holds_key`](#keyed_holds_key)(E, L);
+7. if all of:
    - [`keyed_read`](#keyed_read)(E, something);
    - L is `undefined`;
    - unless [`keyed_present`](#keyed_present)(E).
@@ -3006,12 +3019,17 @@ In the flow:
   - unless [`obj_own_key`](#obj_own_key)(O, Key);
   - unless `object` [has the member](#lib_member) Key since some release.
 
-<a id="class_unset_field"></a>`class_unset_field`(CD, Key) if all of:
+In the code:
+
+<a id="field_unset_decl"></a>`field_unset_decl`(CB, Key) if all of:
   - [the attribute](#ast_attr) `static` of Q is `false`;
   - the `key` of Q [spells](#key_name) Key;
-  - Q [is among the](#ast_child) `body` of a node B;
-  - the `body` of a node CD is B;
+  - Q [is among the](#ast_child) `body` of a node CB;
   - unless the `value` of a [class property](#noun-class_property) Q is some node.
+
+In the flow:
+
+<a id="class_unset_field"></a>`class_unset_field`(CD, Key) if [`field_unset_decl`](#field_unset_decl)(CB, Key) and the `body` of a node CD is a node CB.
 
 `member_unset`(N, I, Key) if all of:
   - [`class_unset_field`](#class_unset_field)(CD, Key);
@@ -3022,6 +3040,180 @@ In the flow:
 A node may be the literal `undefined` if [`member_unset`](#member_unset)(it, something, something).
 
 <a id="member_unset_written"></a>`member_unset_written`(N) if [`member_unset`](#member_unset)(N, O, Key) and [the member](#member_value) Key of a node O holds some node.
+
+> WHEN A WRITE ONTO AN OBJECT HAS RUN (a view, like a Map's order): a key the
+> object is not made with is there for certain where a write of it ran before
+> the read and no `delete` of it may run on that object anywhere.
+>   On a field, the constructor writes `this.k = v` in a statement of its own
+>   body with no `return` before it; every instance ran it, so a read is after
+>   it unless the read is constructor code before it, or the constructor runs
+>   the read's function before it (a call that reaches it, `super()` among
+>   them), or hands the instance or a function made there to code outside the
+>   model before it (`member_ctor_open`).
+>   On a `const` object literal, `o.k = v` is a statement of the list that
+>   binds it, before the read's statement, and the read is in the same function
+>   (a nested function may run anywhere, a declaration even before it).
+
+In the code:
+
+<a id="member_assign"></a>`member_assign`(an expression_statement node S, T, Key, an [assignment](#noun-assignment) X) if all of:
+  - the `expression` of S is X;
+  - [the attribute](#ast_attr) `operator` of X is "=";
+  - the `left` of X is a node L;
+  - [the attribute](#ast_attr) `computed` of L is `false`;
+  - the `object` of L is a node T;
+  - the `property` of L [is named](js-structure.rofl.md#ast_name) Key.
+
+In the flow:
+
+<a id="member_dropped"></a>`member_dropped`(O, Key) if all of:
+  - [the attribute](#ast_attr) `operator` of an [unary expression](#noun-unary_expression) U is "delete";
+  - the `argument` of U is a node N;
+  - [`member_at`](#member_at)(N, something, O, Key).
+
+In the code:
+
+<a id="member_ctor_set"></a>`member_ctor_set`(Body, Key, J) if all of:
+  - [`field_unset_decl`](#field_unset_decl)(CB, Key);
+  - [`keyed_ctor`](#keyed_ctor)(CB, Body);
+  - a node S is the J-th of the `body` of a node Body;
+  - [`member_assign`](#member_assign)(S, a [this](#noun-this) T, Key, something).
+
+<a id="member_ctor_early"></a>`member_ctor_early`(Body, J) if all of:
+  - [`member_ctor_set`](#member_ctor_set)(Body, something, J);
+  - the `body` of a node Ct is a node Body;
+  - Ct [is nearest to](#nearest_v) a [return](#noun-return) R;
+  - a node S is the L-th of the `body` of Body;
+  - L < J;
+  - R [is within](#ast_within) S.
+
+<a id="member_ctor_before"></a>`member_ctor_before`(Body, J, X) if all of:
+  - [`member_ctor_set`](#member_ctor_set)(Body, something, J);
+  - a node S is the L-th of the `body` of a node Body;
+  - L <= J;
+  - a node X [is within](#ast_within) S.
+
+<a id="member_ctor_this"></a>`member_ctor_this`(Body, J) either:
+
+1. if [`member_ctor_before`](#member_ctor_before)(Body, J, a [this](#noun-this) T), unless the `object` of some node is T;
+2. if all of:
+   - [`member_ctor_before`](#member_ctor_before)(Body, J, a [this](#noun-this) T);
+   - a node G [is nearest to](#nearest_v) T;
+   - unless the `body` of G is Body;
+3. if [`member_ctor_before`](#member_ctor_before)(Body, J, a [super](#noun-super) S).
+
+<a id="member_ctor_open"></a>`member_ctor_open`(Body, J) if all of:
+  - [`member_ctor_this`](#member_ctor_this)(Body, J);
+  - [`member_ctor_before`](#member_ctor_before)(Body, J, Q);
+  - [`runs_unknown`](#runs_unknown)(Q).
+
+> what the class publishes: the field is set at J for certain, and which
+> functions run before J. `this.m()` in a parent's constructor is not
+> dispatched to the child's override by the call graph, so a `super()` before
+> the write runs every override of the class.
+
+In the flow:
+
+<a id="member_field_sure"></a>`member_field_sure`(CD, Key, J) if all of:
+  - [`member_ctor_set`](#member_ctor_set)(Body, Key, J);
+  - [`keyed_ctor`](#keyed_ctor)(CB, Body);
+  - the `body` of a node CD is a node CB;
+  - unless [`member_ctor_early`](#member_ctor_early)(Body, J);
+  - unless [`member_ctor_open`](#member_ctor_open)(Body, J).
+
+<a id="member_field_runs"></a>`member_field_runs`(CD, Key, J, G) either:
+
+1. if all of:
+   - [`member_field_sure`](#member_field_sure)(CD, Key, J);
+   - the `body` of a node CD is a node CB;
+   - [`keyed_ctor`](#keyed_ctor)(CB, Body);
+   - [`member_ctor_before`](#member_ctor_before)(Body, J, Q);
+   - Q [resolves to](js-callgraph.rofl.md#resolves) G;
+2. if all of:
+   - [`member_field_sure`](#member_field_sure)(CD, Key, J);
+   - the `body` of a node CD is a node CB;
+   - [`keyed_ctor`](#keyed_ctor)(CB, Body);
+   - [`member_ctor_before`](#member_ctor_before)(Body, J, a [super](#noun-super) S);
+   - G [is among the](#ast_child) `body` of CB;
+   - G is a [method](#noun-method);
+   - the `key` of G [spells](#key_name) Nm;
+   - [the super](#super_of) of CD is a class SD;
+   - [the instance member](#class_member_proto) Nm of SD is some node.
+
+<a id="member_ctor_inside"></a>`member_ctor_inside`(CD, Key, J, N) if all of:
+  - [`member_field_sure`](#member_field_sure)(CD, Key, J);
+  - the `body` of a node CD is a node CB;
+  - [`keyed_ctor`](#keyed_ctor)(CB, Body);
+  - [`member_ctor_before`](#member_ctor_before)(Body, J, N).
+
+> the reader: after the write unless it is constructor code before it, or a
+> function that runs before it reaches the read's function
+
+<a id="member_ctor_read"></a>`member_ctor_read`(N, I, Key, CD, J) if all of:
+  - [`member_unset`](#member_unset)(N, I, Key);
+  - a node I [stands for an instance of](#inst_of) a class CD;
+  - [`member_field_sure`](#member_field_sure)(CD, Key, J).
+
+<a id="member_read_fn"></a>`member_read_fn`(N, F) if [`member_ctor_read`](#member_ctor_read)(N, something, something, something, something) and F [is nearest to](#nearest_v) a node N.
+
+In the code:
+
+`keyed_target`(F) if [`member_read_fn`](#member_read_fn)(something, F).
+
+In the flow:
+
+<a id="member_ctor_late"></a>`member_ctor_late`(N, CD, J) either:
+
+1. if [`member_ctor_read`](#member_ctor_read)(N, something, Key, CD, J) and [`member_ctor_inside`](#member_ctor_inside)(CD, Key, J, N);
+2. if all of:
+   - [`member_ctor_read`](#member_ctor_read)(N, something, Key, CD, J);
+   - [`member_field_runs`](#member_field_runs)(CD, Key, J, G);
+   - [`member_read_fn`](#member_read_fn)(N, F);
+   - [`keyed_runs_m`](#keyed_runs_m)(G, F).
+
+<a id="member_set_sure"></a>`member_set_sure`(N, I, Key) if all of:
+  - [`member_ctor_read`](#member_ctor_read)(N, I, Key, CD, J);
+  - unless [`member_ctor_late`](#member_ctor_late)(N, CD, J);
+  - unless [`member_dropped`](#member_dropped)(I, Key).
+
+In the code:
+
+<a id="member_const_set"></a>`member_const_set`(an [object literal](#noun-object_literal) O, Key, B, F, J) if all of:
+  - a node D [binds](#binder) some name to O in some file;
+  - D [is among the](#ast_child) `declarations` of a node V;
+  - [the attribute](#ast_attr) `kind` of V is "const";
+  - V is the L-th of the F of a node B;
+  - a node S is the J-th of the F of B;
+  - L < J;
+  - [`member_assign`](#member_assign)(S, T, Key, something);
+  - a node T [sees](#sees_binder) D.
+
+In the flow:
+
+<a id="member_const_read"></a>`member_const_read`(N, O, Key, W) if all of:
+  - [`member_unset`](#member_unset)(N, O, Key);
+  - [`member_const_set`](#member_const_set)(O, Key, B, F, J);
+  - a node S is the I-th of the F of a node B;
+  - an index J < I;
+  - a node N [is within](#ast_within) S;
+  - a node W is the J-th of the F of B.
+
+`member_set_sure`(N, O, Key) either:
+
+1. if all of:
+   - [`member_const_read`](#member_const_read)(N, O, Key, W);
+   - G [is nearest to](#nearest_v) a node W;
+   - G [is nearest to](#nearest_v) a node N;
+   - unless [`member_dropped`](#member_dropped)(O, Key);
+2. if all of:
+   - [`member_const_read`](#member_const_read)(N, O, Key, W);
+   - unless a node W [is inside a function](js-controlflow.rofl.md#in_fn);
+   - unless a node N [is inside a function](js-controlflow.rofl.md#in_fn);
+   - unless [`member_dropped`](#member_dropped)(O, Key).
+
+<a id="member_viewed"></a>`member_viewed`(N) if [`member_unset`](#member_unset)(N, something, something).
+
+<a id="member_may_lack"></a>`member_may_lack`(N) if [`member_unset`](#member_unset)(N, O, Key), unless [`member_set_sure`](#member_set_sure)(N, O, Key).
 
 > The receiver decides which half of a class it sees: `Vat.poured()` and
 > `new Vat().tapped()` are both TypeErrors and both resolved until the `static`
@@ -3207,6 +3399,17 @@ A node T points to a node I either:
    - [the attribute](#ast_attr) `static` of P is `true`;
    - P [hosts](#this_host) T.
 
+Declared as facts:
+
+- <a id="private_member_kind"></a>`private_member_kind` — rows in Words
+
+> a static member is inherited by the subclass's constructor, a field as a method is
+
+The static member Key of a class CD is a node V if all of:
+  - [the super](#super_of) of CD is a class SD;
+  - [the static member](#class_member_static) Key of SD is V;
+  - unless CD [owns the key](#own_key) Key.
+
 <a id="static_block_of"></a>A class has the static block SB if all of:
   - it [is object like](#obj_like);
   - the `body` of it is a node B;
@@ -3214,10 +3417,6 @@ A node T points to a node I either:
   - SB is a [static block](#noun-static_block).
 
 A node points to a node CD if CD [has the static block](#static_block_of) SB and SB [hosts](#this_host) it.
-
-Declared as facts:
-
-- <a id="private_member_kind"></a>`private_member_kind` — rows in Words
 
 ## 11. THE MODULE BOUNDARY, AS VALUE FACTS: an imported name may be what the
 
@@ -3236,18 +3435,27 @@ In the code:
 > one row per file, from `program`; `ast_node(_, _, File)` would enumerate
 > the corpus to learn three strings
 
+> an export of the module itself, not one inside a TypeScript namespace
+
+<a id="module_export"></a>`module_export`(a [named export](#noun-named_export) E, File) if a [program](#noun-program) P is in file File and E [is among the](#ast_child) `body` of P.
+
 <a id="exports_name"></a>F is exported as Name from File either:
 
 1. if all of:
-   - a [named export](#noun-named_export) E is in file File;
-   - the `declaration` of E is F;
+   - [`module_export`](#module_export)(E, File);
+   - the `declaration` of a node E is F;
    - F is a [function](js-callgraph.rofl.md#fn_node);
    - the `id` of F [is named](js-structure.rofl.md#ast_name) Name;
 2. if all of:
-   - a [named export](#noun-named_export) E is in file File;
-   - the `declaration` of E is F;
-   - F is a [class declaration](#noun-class_declaration);
-   - the `id` of F [is named](js-structure.rofl.md#ast_name) Name.
+   - [`module_export`](#module_export)(E, File);
+   - the `declaration` of a node E is F;
+   - [`class_or_namespace`](#class_or_namespace)(F);
+   - F [carries its own name](#own_name) Name and File and `around`.
+
+<a id="class_or_namespace"></a>`class_or_namespace`(D) either:
+
+1. if D is a [class declaration](#noun-class_declaration);
+2. if [`ts_namespace`](#ts_namespace)(D).
 
 > `export * from` re-exports every NAME (not the default), recursively. The
 > kind guard is not redundant with `module_site`, which holds of imports too.
@@ -3308,8 +3516,8 @@ A node points to a node F if all of:
 In the code:
 
 <a id="export_var"></a>`export_var`(Init, Name, File) if all of:
-  - a [named export](#noun-named_export) E is in file File;
-  - the `declaration` of E is a node V;
+  - [`module_export`](#module_export)(E, File);
+  - the `declaration` of a node E is a node V;
   - a node D [is among the](#ast_child) `declarations` of V;
   - D [binds](#binder) Name to a node Init in File.
 
@@ -3716,6 +3924,42 @@ A node
   - P [is called back with](#callback_param) in F from some module;
   - P [is named](js-structure.rofl.md#ast_name) Name;
   - F [uses](#param_use) Name at it.
+
+> A TypeScript namespace is an object made at run time (not a `declare`d one):
+> reached by its name, holding what its body exports.
+
+In the code:
+
+<a id="ts_namespace"></a>`ts_namespace`(a tsmodule_declaration node NS) unless [the attribute](#ast_attr) `declare` of NS is `true`.
+
+In the flow:
+
+A node points to a node NS if it [sees the declaration](#sees_decl) NS and [`ts_namespace`](#ts_namespace)(NS).
+
+In the code:
+
+<a id="ns_export"></a>`ns_export`(NS, a [named export](#noun-named_export) E) if all of:
+  - [`ts_namespace`](#ts_namespace)(NS);
+  - the `body` of a node NS is a node B;
+  - E [is among the](#ast_child) `body` of B.
+
+In the flow:
+
+The member Name of a node NS holds a node D if all of:
+  - [`ns_export`](#ns_export)(NS, E);
+  - the `declaration` of a node E is D;
+  - D [carries its own name](#own_name) Name and some file and `around` but is not a tsdeclare_function node.
+
+The member Name of a node NS holds a node Init if all of:
+  - [`ns_export`](#ns_export)(NS, E);
+  - the `declaration` of a node E is a node V;
+  - a node D [is among the](#ast_child) `declarations` of V;
+  - D [binds](#binder) Name to Init in some file.
+
+The member Name of a node NS holds a node In if all of:
+  - [`ts_namespace`](#ts_namespace)(NS);
+  - the `body` of NS is In;
+  - In [carries its own name](#own_name) Name and some file and `around`.
 
 ## 12. Construction
 

@@ -4,7 +4,7 @@
 use super::reader::{plural, Question, R};
 use super::rx::{self, g};
 use super::vocab::Vocabulary;
-use super::{assemble, cells_of, home_of, prose_split, read_book, split, Kind, PartC, OWN};
+use super::{assemble, cells_of, home_of, prose_split, read_book, split, Assembled, Kind, PartC, OWN};
 use crate::engine::WhynotBounds;
 use crate::rofl_parse::{self, Book, Elem};
 use crate::session::Session;
@@ -410,6 +410,32 @@ fn atoms_in_keys(keys: &[String]) -> HashSet<String> {
     out
 }
 
+struct Kernel { said: HashSet<String>, written: HashSet<String>, foreign: HashSet<String>, world_rels: HashSet<String>, model_rels: HashSet<String> }
+
+struct Reading {
+    book: super::Book,
+    names: HashSet<String>,
+    vocab: Vocabulary,
+    everywhere: HashSet<String>,
+    first_def: HashMap<String, usize>,
+    texts: Vec<String>,
+    refused: HashSet<usize>,
+    outs: Vec<Out>,
+    asks: Vec<Vec<A>>,
+}
+
+struct CellRead { text: String, refused: bool, out: Out }
+
+struct Cx<'a> {
+    a: &'a Assembled,
+    vocab: &'a Vocabulary,
+    names: &'a HashSet<String>,
+    model_and_cells: &'a str,
+    rows_kept: usize,
+    rests_on: &'a dyn Fn(&str) -> Option<String>,
+    foreign: &'a HashSet<String>,
+}
+
 pub fn run(file: &Path, all_rows: bool) -> Result<NbResult, String> {
     let a = assemble(file)?;
     if a.front.js || !a.front.code.is_empty() { return Err("a notebook over code (`model: js`, `code:`) is not native yet; npm run nb reads it".into()); }
@@ -417,46 +443,74 @@ pub fn run(file: &Path, all_rows: bool) -> Result<NbResult, String> {
     let runs: Vec<&super::Cell> = cells.iter().filter(|c| c.kind != Kind::Natural).collect();
     let mut parts: Vec<PartC> = runs.iter().map(|c| match c.kind { Kind::Prose => prose_split(&c.text), Kind::Datalog => split(&c.text, false), _ => split(&c.text, true) }).collect();
     if parts.iter().any(|p| p.asks.iter().any(|x| x.kind == "draw")) { return Err("`draw` is not native yet; npm run nb draws".into()); }
+    let mut core = match load_model(&a) { Ok(core) => core, Err(refused) => return Ok(refused) };
+    let k = kernel_names(&a);
+    let mut rd = read_cells(&a, &runs, &mut parts, &k);
+    let deps = cell_deps(&rd.texts);
+    let all = rd.texts.iter().filter(|x| !x.trim().is_empty()).cloned().collect::<Vec<_>>().join("\n");
+    let mut f = load_world(&mut core, &rd.texts, &all, &mut rd.outs);
+    let mut partial = match evaluate_world(&mut f) {
+        Ok(partial) => partial,
+        Err(e) => {
+            let cells = result_cells(&cells, &runs, rd.outs, &a, &mut None, &rd.book.learned, false);
+            return Ok(NbResult { status: "unread", cut: None, cells, errors: vec![e] });
+        }
+    };
+    let unread: Vec<Option<String>> = rd.outs.iter().map(|o| (!o.errors.is_empty()).then(|| "part of this cell was not read (its errors above)".to_string())).collect();
+    let rests = |rel: &str| undefined_base(rel, &deps, &a, &k.model_rels);
+    let model_and_cells = format!("{}\n{all}", a.model);
+    let cx = Cx { a: &a, vocab: &rd.vocab, names: &rd.names, model_and_cells: &model_and_cells, rows_kept: if all_rows { usize::MAX } else { 50 }, rests_on: &rests, foreign: &k.foreign };
+    let mut atoms: Option<HashSet<String>> = None;
+    for (i, list) in rd.asks.iter().enumerate() {
+        if rd.refused.contains(&i) { continue; }
+        for x in list { answer(&mut f, &mut atoms, &cx, x, &unread[i], &mut rd.outs[i]); }
+    }
+    partial |= excise_lines(&mut f, &rd.asks, &rd.refused, &rd.vocab, &unread, &mut rd.outs);
+    let cut = if partial { cut_reason(&mut f) } else { None };
+    let mut vocab_cache: Option<Vec<String>> = None;
+    let cells_out = result_cells(&cells, &runs, rd.outs, &a, &mut vocab_cache, &rd.book.learned, partial);
+    let status = status_of(partial, &a, &cells_out);
+    Ok(NbResult { status, cut: if status == "cut" { cut } else { None }, cells: cells_out, errors: a.errors.clone() })
+}
 
-    // the model, loaded once; every run forks it
+fn load_model(a: &Assembled) -> Result<Session, NbResult> {
     let mut core = Session::fresh(BUDGET);
     core.eval.space = SPACE;
-    if let Err(d) = core.load(&a.model, None) {
-        let errors = a.errors.iter().cloned().chain(d.iter().take(5).map(|d| rx::replace(r"^line (\d+)", d, false, |c| a.source(c[1].parse().unwrap_or(0))))).collect();
-        return Ok(NbResult { status: "unread", cut: None, cells: vec![], errors });
+    match core.load(&a.model, None) {
+        Ok(_) => Ok(core),
+        Err(d) => {
+            let errors = a.errors.iter().cloned().chain(d.iter().take(5).map(|d| rx::replace(r"^line (\d+)", d, false, |c| a.source(c[1].parse().unwrap_or(0))))).collect();
+            Err(NbResult { status: "unread", cut: None, cells: vec![], errors })
+        }
     }
+}
+
+fn kernel_names(a: &Assembled) -> Kernel {
     let said: HashSet<String> = rx::each(r"(?m)^phrase\((\w+),", &a.phrases).iter().map(|m| g(m, 1).to_string()).collect();
     let written: HashSet<String> = RESERVED.iter().filter(|r| !KERNEL_BOOK.contains(r)).chain(["phrase", "sig", "fun_phrase"].iter()).map(|s| s.to_string()).collect();
     let boot = a.parts[0].1.clone();
     let mut boot_rels = Vec::new();
     if let Ok(p) = program(&boot) { p.rels(&mut boot_rels); }
-    let mut model_rels: Vec<String> = Vec::new();
-    let world_rels: HashSet<String> = match program(&a.model) { Ok(p) => { p.rels(&mut model_rels); model_rels.iter().cloned().collect() } Err(_) => HashSet::new() };
+    let mut world = Vec::new();
+    let world_rels: HashSet<String> = match program(&a.model) { Ok(p) => { p.rels(&mut world); world.iter().cloned().collect() } Err(_) => HashSet::new() };
     let foreign: HashSet<String> = boot_rels.iter().cloned().chain(RESERVED.iter().map(|s| s.to_string())).filter(|r| !said.contains(r) && !written.contains(r)).collect();
     let mut shell = Session::fresh(BUDGET);
     shell.eval.space = SPACE;
     let _ = shell.load(&boot, None);
     let _ = shell.evaluate();
     let kernel_rels: HashSet<String> = boot_rels.iter().cloned().chain(shell.fact_keys(None).iter().map(|k| rel_of_key(k))).collect();
-    let model_rels: HashSet<String> = model_rels.into_iter().chain(kernel_rels.iter().cloned()).collect();
+    let model_rels: HashSet<String> = world.into_iter().chain(kernel_rels).collect();
+    Kernel { said, written, foreign, world_rels, model_rels }
+}
 
+fn read_cells(a: &Assembled, runs: &[&super::Cell], parts: &mut [PartC], k: &Kernel) -> Reading {
     let read_home: HashMap<String, String> = {
         let mut h = home_of(&runs.iter().filter(|c| c.kind == Kind::Rofl).map(|c| c.text.clone()).collect::<Vec<_>>().join("\n"));
         h.extend(a.home.clone());
         h
     };
-    let mut book = read_book(&mut parts, &a.phrases, &read_home, true);
-    let drawn = |r: &str| DRAWN.contains(&r);
-    let mut own: HashSet<String> = book.learned.iter().filter_map(|l| rx::exec(r"^phrase\((\w+),", l).map(|m| g(&m, 1).to_string())).filter(|r| !drawn(r) && (foreign.contains(r) || !world_rels.contains(r))).collect();
-    for p in parts.iter().filter(|p| !p.form_md) {
-        if let Ok(pr) = program(&p.clauses) {
-            for cl in &pr.clauses {
-                let rel = pr.h.name(cl.head.rel).to_string();
-                if cl.head.book == Book::Bare && !said.contains(&rel) && !written.contains(&rel) && !drawn(&rel) && (foreign.contains(&rel) || !world_rels.contains(&rel)) { own.insert(rel); }
-            }
-        }
-    }
-    let names: HashSet<String> = own.iter().map(|r| r.strip_prefix(OWN).unwrap_or(r).to_string()).collect();
+    let book = read_book(parts, &a.phrases, &read_home, true);
+    let names: HashSet<String> = own_relations(parts, &book, k).iter().map(|r| r.strip_prefix(OWN).unwrap_or(r).to_string()).collect();
     let own_of = |t: &str| owned(t, &names);
     let mut vocab = Vocabulary::new();
     vocab.blanks = true;
@@ -466,76 +520,131 @@ pub fn run(file: &Path, all_rows: bool) -> Result<NbResult, String> {
     for p in parts.iter().filter(|p| p.form_md == false) { for m in rx::each(r"(?m)^([a-z_]\w*)(?:\[\w+\])?\(", &p.clauses) { everywhere.insert(g(&m, 1).to_string()); } }
     let mut first_def: HashMap<String, usize> = HashMap::new();
     for (i, r) in book.read.iter().enumerate() { for rel in r.iter().flat_map(|r| r.defined.iter()) { first_def.entry(rel.clone()).or_insert(i); } }
-
-    let mut texts: Vec<String> = vec![String::new(); parts.len()];
-    let mut refused: HashSet<usize> = HashSet::new();
-    let mut outs: Vec<Out> = Vec::new();
+    let mut rd = Reading { book, names, vocab, everywhere, first_def, texts: vec![String::new(); parts.len()], refused: HashSet::new(), outs: Vec::new(), asks: Vec::new() };
     for (i, p) in parts.iter().enumerate() {
-        let (mut errors, mut notes) = (Vec::<String>::new(), Vec::<String>::new());
-        let r = book.read[i].as_ref();
-        let text = own_of(&r.map(|r| r.rofl.clone()).unwrap_or_else(|| p.clauses.clone()));
-        if let Some(r) = r {
-            let unparsed = uniq(&r.unparsed);
-            let items: Vec<&str> = unparsed.iter().filter_map(|u| u.strip_prefix("LIST ")).collect();
-            if !items.is_empty() {
-                errors.push(format!("not read: {} no line above introduces ({}): a list of facts goes under a plain line of its own ending in a colon, like \"The cars:\"",
-                    if items.len() == 1 { "a list item".to_string() } else { format!("{} list items", items.len()) }, items.iter().map(|x| format!("- {x}")).collect::<Vec<_>>().join(" ")));
+        let c = rd.cell(a, k, i, p);
+        rd.texts[i] = c.text;
+        if c.refused { rd.refused.insert(i); }
+        rd.outs.push(c.out);
+    }
+    rd.asks = rd.asks_of(parts);
+    rd
+}
+
+fn own_relations(parts: &[PartC], book: &super::Book, k: &Kernel) -> HashSet<String> {
+    let drawn = |r: &str| DRAWN.contains(&r);
+    let mut own: HashSet<String> = book.learned.iter().filter_map(|l| rx::exec(r"^phrase\((\w+),", l).map(|m| g(&m, 1).to_string())).filter(|r| !drawn(r) && (k.foreign.contains(r) || !k.world_rels.contains(r))).collect();
+    for p in parts.iter().filter(|p| !p.form_md) {
+        if let Ok(pr) = program(&p.clauses) {
+            for cl in &pr.clauses {
+                let rel = pr.h.name(cl.head.rel).to_string();
+                if cl.head.book == Book::Bare && !k.said.contains(&rel) && !k.written.contains(&rel) && !drawn(&rel) && (k.foreign.contains(&rel) || !k.world_rels.contains(&rel)) { own.insert(rel); }
             }
-            for u in unparsed.iter().filter(|u| !u.starts_with("LIST ")) { errors.push(unread_said(u, &vocab)); }
-            for d in &r.dropped { errors.push(format!("left out: {d}")); }
-            let nowhere: Vec<&String> = r.nowhere.iter().filter(|x| !everywhere.contains(*x)).collect();
-            if !nowhere.is_empty() { errors.push(format!("used but defined nowhere: {}", nowhere.iter().map(|x| x.as_str()).collect::<Vec<_>>().join(", "))); }
-            for x in &uniq(&r.ambiguous) { notes.push(format!("read one way of several: {x}")); }
-            notes.extend(book.close[i].iter().cloned());
-            for (_, x) in &p.looks { notes.push(format!("{x}: this reads as a question but is not asked here: put it in a cell")); }
-            if !p.prose { for rel in &r.nowhere { if first_def.get(rel).is_some_and(|j| *j > i) { notes.push(format!("uses \"{}\", which a cell further down defines", rel.replace('_', " "))); } } }
         }
-        texts[i] = text.clone();
-        let mut out = Out { errors, notes, lines: Vec::new() };
+    }
+    own
+}
+
+impl Reading {
+    fn cell(&self, a: &Assembled, k: &Kernel, i: usize, p: &PartC) -> CellRead {
+        let r = self.book.read[i].as_ref();
+        let text = owned(&r.map(|r| r.rofl.clone()).unwrap_or_else(|| p.clauses.clone()), &self.names);
+        let mut out = Out { errors: Vec::new(), notes: Vec::new(), lines: Vec::new() };
+        if let Some(r) = r { self.reader_notes(i, r, p, &mut out); }
         match program(&text) {
             Ok(pr) => {
-                let foreign_lit = pr.clauses.iter().flat_map(|cl| cl.body.iter().flat_map(|b| b.lits())).find(|l| foreign.contains(pr.h.name(l.rel)) && l.book == Book::Bare);
-                if let Some(l) = foreign_lit {
-                    out.errors.push(format!("{}: this cell is left out", not_ours(pr.h.name(l.rel), &a.home)));
-                    texts[i] = String::new();
-                    refused.insert(i);
-                    outs.push(out);
-                    continue;
-                }
-                for cl in &pr.clauses {
-                    if cl.body.is_empty() { continue; }
-                    let rel = pr.h.name(cl.head.rel).to_string();
-                    if !a.home.contains_key(&rel) { continue; }
-                    let free = pr.loose(cl);
-                    let lit = format!("{rel}({})", cl.head.args.iter().map(|t| pr.term(*t)).collect::<Vec<_>>().join(", "));
-                    let said_lit = vocab.say(&lit).unwrap_or_else(|| lit.clone());
-                    if free.is_empty() && p.asks.iter().any(|x| x.kind == "extends" && x.lit == rel) {
-                        let n = format!("extends the model's {rel}");
-                        if !out.notes.contains(&n) { out.notes.push(n); }
-                        continue;
-                    }
-                    if free.is_empty() {
-                        out.errors.push(format!("the conclusion lands in the model's own sentence \"{said_lit}\" ({rel}), so this cell would change what the model says of every program. It is left out: say it in words no sentence of the model uses, or add the line `extends {rel}` to the cell to extend the model on purpose."));
-                    } else {
-                        out.errors.push(format!("the conclusion reads as the model's own sentence \"{said_lit}\", with {} standing for words of it, so this cell would rewrite the model. It is left out: say the conclusion in words the model does not use, and ask with the same words.", free.join(", ")));
-                    }
-                    texts[i] = String::new();
-                    refused.insert(i);
-                }
+                let refused = self.refuses(a, k, &pr, p, &mut out);
+                CellRead { text: if refused { String::new() } else { text }, refused, out }
             }
             Err(e) => {
-                let n: usize = rx::exec(r"^line (\d+):", &e).and_then(|m| g(&m, 1).parse().ok()).unwrap_or(0);
-                let m = match rx::exec(r"^line (\d+): ([^\n]*)$", &e).filter(|_| r.is_some()) {
-                    Some(m) => format!("{}, in the rule the reader made of this cell: {}", g(&m, 2), text.split('\n').nth(n.wrapping_sub(1)).map(str::trim).unwrap_or("undefined")),
-                    None => e,
-                };
-                out.errors.push(m);
-                texts[i] = String::new();
+                out.errors.push(reader_error(e, &text, r.is_some()));
+                CellRead { text: String::new(), refused: false, out }
             }
         }
-        outs.push(out);
     }
 
+    fn reader_notes(&self, i: usize, r: &R, p: &PartC, out: &mut Out) {
+        let unparsed = uniq(&r.unparsed);
+        let items: Vec<&str> = unparsed.iter().filter_map(|u| u.strip_prefix("LIST ")).collect();
+        if !items.is_empty() {
+            out.errors.push(format!("not read: {} no line above introduces ({}): a list of facts goes under a plain line of its own ending in a colon, like \"The cars:\"",
+                if items.len() == 1 { "a list item".to_string() } else { format!("{} list items", items.len()) }, items.iter().map(|x| format!("- {x}")).collect::<Vec<_>>().join(" ")));
+        }
+        for u in unparsed.iter().filter(|u| !u.starts_with("LIST ")) { out.errors.push(unread_said(u, &self.vocab)); }
+        for d in &r.dropped { out.errors.push(format!("left out: {d}")); }
+        let nowhere: Vec<&String> = r.nowhere.iter().filter(|x| !self.everywhere.contains(*x)).collect();
+        if !nowhere.is_empty() { out.errors.push(format!("used but defined nowhere: {}", nowhere.iter().map(|x| x.as_str()).collect::<Vec<_>>().join(", "))); }
+        for x in &uniq(&r.ambiguous) { out.notes.push(format!("read one way of several: {x}")); }
+        out.notes.extend(self.book.close[i].iter().cloned());
+        for (_, x) in &p.looks { out.notes.push(format!("{x}: this reads as a question but is not asked here: put it in a cell")); }
+        if !p.prose { for rel in &r.nowhere { if self.first_def.get(rel).is_some_and(|j| *j > i) { out.notes.push(format!("uses \"{}\", which a cell further down defines", rel.replace('_', " "))); } } }
+    }
+
+    fn refuses(&self, a: &Assembled, k: &Kernel, pr: &Program, p: &PartC, out: &mut Out) -> bool {
+        let foreign_lit = pr.clauses.iter().flat_map(|cl| cl.body.iter().flat_map(|b| b.lits())).find(|l| k.foreign.contains(pr.h.name(l.rel)) && l.book == Book::Bare);
+        if let Some(l) = foreign_lit {
+            out.errors.push(format!("{}: this cell is left out", not_ours(pr.h.name(l.rel), &a.home)));
+            return true;
+        }
+        let mut refused = false;
+        for cl in &pr.clauses {
+            if cl.body.is_empty() { continue; }
+            let rel = pr.h.name(cl.head.rel).to_string();
+            if !a.home.contains_key(&rel) { continue; }
+            let free = pr.loose(cl);
+            let lit = format!("{rel}({})", cl.head.args.iter().map(|t| pr.term(*t)).collect::<Vec<_>>().join(", "));
+            let said_lit = self.vocab.say(&lit).unwrap_or_else(|| lit.clone());
+            if free.is_empty() && p.asks.iter().any(|x| x.kind == "extends" && x.lit == rel) {
+                let n = format!("extends the model's {rel}");
+                if !out.notes.contains(&n) { out.notes.push(n); }
+                continue;
+            }
+            if free.is_empty() {
+                out.errors.push(format!("the conclusion lands in the model's own sentence \"{said_lit}\" ({rel}), so this cell would change what the model says of every program. It is left out: say it in words no sentence of the model uses, or add the line `extends {rel}` to the cell to extend the model on purpose."));
+            } else {
+                out.errors.push(format!("the conclusion reads as the model's own sentence \"{said_lit}\", with {} standing for words of it, so this cell would rewrite the model. It is left out: say the conclusion in words the model does not use, and ask with the same words.", free.join(", ")));
+            }
+            refused = true;
+        }
+        refused
+    }
+
+    fn asks_of(&mut self, parts: &[PartC]) -> Vec<Vec<A>> {
+        let mut asks: Vec<Vec<A>> = Vec::new();
+        for (i, p) in parts.iter().enumerate() {
+            let mut list: Vec<A> = Vec::new();
+            for x in p.asks.iter().filter(|x| x.kind != "extends") { list.extend(asked(x, self.book.read[i].as_mut(), &self.names)); }
+            asks.push(list);
+        }
+        asks
+    }
+}
+
+fn asked(x: &super::Ask, r: Option<&mut R>, names: &HashSet<String>) -> Vec<A> {
+    let own_of = |t: &str| owned(t, names);
+    if !x.english {
+        let lit = match r { Some(r) if !rx::test(LITERAL, &x.lit) => r.literal(&x.lit).unwrap_or_default(), _ => x.lit.clone() };
+        return vec![A { kind: x.kind.clone(), lit: own_of(&lit), text: x.text.clone(), q: None, unread: None }];
+    }
+    let n = x.n.unwrap_or(1);
+    match r.unwrap().question(&x.text, &mut |_| n) {
+        Err(e) => vec![A { kind: x.kind.clone(), lit: String::new(), text: x.text.clone(), q: None, unread: Some(e) }],
+        Ok(q) => {
+            let mut shown = q.clone();
+            if let Some(rules) = &q.rules { shown.line = format!("{}, where {}", q.line, rules.join(" ")); }
+            let mut list = vec![A { kind: q.kind.clone(), lit: own_of(&q.lit), text: x.text.clone(), q: Some(shown.clone()), unread: None }];
+            for (line, lit) in &q.also {
+                let mut s = shown.clone();
+                s.line = line.clone();
+                s.lit = lit.clone();
+                list.push(A { kind: q.kind.clone(), lit: own_of(lit), text: x.text.clone(), q: Some(s), unread: None });
+            }
+            list
+        }
+    }
+}
+
+fn cell_deps(texts: &[String]) -> Vec<(String, Vec<String>)> {
     let mut deps: Vec<(String, Vec<String>)> = Vec::new();
     for x in texts.iter().filter(|x| !x.trim().is_empty()) {
         let Ok(pr) = program(x) else { continue };
@@ -545,193 +654,206 @@ pub fn run(file: &Path, all_rows: bool) -> Result<NbResult, String> {
             for l in cl.body.iter().flat_map(|b| b.lits()) { let n = pr.h.name(l.rel).to_string(); if !deps[d].1.contains(&n) { deps[d].1.push(n); } }
         }
     }
+    deps
+}
 
-    // what each cell asks, in the notebook's own names
-    let mut asks: Vec<Vec<A>> = Vec::new();
-    for (i, p) in parts.iter().enumerate() {
-        let mut list: Vec<A> = Vec::new();
-        for x in p.asks.iter().filter(|x| x.kind != "extends") {
-            let r = book.read[i].as_mut();
-            if !x.english {
-                let lit = match r { Some(r) if !rx::test(LITERAL, &x.lit) => r.literal(&x.lit).unwrap_or_default(), _ => x.lit.clone() };
-                list.push(A { kind: x.kind.clone(), lit: own_of(&lit), text: x.text.clone(), q: None, unread: None });
-                continue;
-            }
-            let n = x.n.unwrap_or(1);
-            match r.unwrap().question(&x.text, &mut |_| n) {
-                Err(e) => list.push(A { kind: x.kind.clone(), lit: String::new(), text: x.text.clone(), q: None, unread: Some(e) }),
-                Ok(q) => {
-                    let mut shown = q.clone();
-                    if let Some(rules) = &q.rules { shown.line = format!("{}, where {}", q.line, rules.join(" ")); }
-                    list.push(A { kind: q.kind.clone(), lit: own_of(&q.lit), text: x.text.clone(), q: Some(shown.clone()), unread: None });
-                    for (line, lit) in &q.also {
-                        let mut s = shown.clone();
-                        s.line = line.clone();
-                        s.lit = lit.clone();
-                        list.push(A { kind: q.kind.clone(), lit: own_of(lit), text: x.text.clone(), q: Some(s), unread: None });
-                    }
-                }
-            }
-        }
-        asks.push(list);
+fn reader_error(e: String, text: &str, read: bool) -> String {
+    let n: usize = rx::exec(r"^line (\d+):", &e).and_then(|m| g(&m, 1).parse().ok()).unwrap_or(0);
+    match rx::exec(r"^line (\d+): ([^\n]*)$", &e).filter(|_| read) {
+        Some(m) => format!("{}, in the rule the reader made of this cell: {}", g(&m, 2), text.split('\n').nth(n.wrapping_sub(1)).map(str::trim).unwrap_or("undefined")),
+        None => e,
     }
+}
 
-    // the world: the model and the cells together
+fn load_world(core: &mut Session, texts: &[String], all: &str, outs: &mut [Out]) -> Session {
     let mut f = core.fork();
-    let all = texts.iter().filter(|x| !x.trim().is_empty()).cloned().collect::<Vec<_>>().join("\n");
-    if !all.trim().is_empty() && f.load(&all, None).is_err() {
+    if !all.trim().is_empty() && f.load(all, None).is_err() {
         for (i, x) in texts.iter().enumerate() { if x.trim().is_empty() { continue; } if let Err(d) = f.load(x, None) { outs[i].errors.extend(d); } }
     }
-    let evaluated = f.evaluate();
-    let mut errors: Vec<String> = Vec::new();
-    let mut partial = false;
-    match &evaluated { Ok(e) => partial = e.partial || f.eval.store.partial_eval, Err(h) => errors.push(format!("the Rust engine refused evaluate: {}", crate::describe(h))) }
-    if !errors.is_empty() {
-        let cells = result_cells(&cells, &runs, outs, &a, &mut None, &book.learned, false);
-        return Ok(NbResult { status: "unread", cut: None, cells, errors });
-    }
+    f
+}
 
-    let unread: Vec<Option<String>> = outs.iter().map(|o| (!o.errors.is_empty()).then(|| "part of this cell was not read (its errors above)".to_string())).collect();
-    let mut atoms: Option<HashSet<String>> = None;
-    let rest_on = |rel: &str| -> Option<String> {
-        let mut seen: Vec<String> = Vec::new();
-        fn under(rel: &str, deps: &[(String, Vec<String>)], say: &dyn Fn(&str) -> Option<String>, this: bool, seen: &mut Vec<String>) -> Option<String> {
-            if this { if let Some(w) = say(rel) { return Some(w); } }
-            if seen.iter().any(|s| s == rel) { return None; }
-            seen.push(rel.to_string());
-            for d in deps.iter().find(|d| d.0 == rel).map(|d| d.1.clone()).unwrap_or_default() { if let Some(w) = under(&d, deps, say, true, seen) { return Some(w); } }
-            None
+fn evaluate_world(f: &mut Session) -> Result<bool, String> {
+    match f.evaluate() {
+        Ok(e) => Ok(e.partial || f.eval.store.partial_eval),
+        Err(h) => Err(format!("the Rust engine refused evaluate: {}", crate::describe(&h))),
+    }
+}
+
+fn undefined_base(rel: &str, deps: &[(String, Vec<String>)], a: &Assembled, model_rels: &HashSet<String>) -> Option<String> {
+    let mut seen: Vec<String> = Vec::new();
+    under(rel, deps, &|r| (!deps.iter().any(|d| d.0 == r) && !a.home.contains_key(r) && !model_rels.contains(r)).then(|| format!("it rests on {}, which nothing defines", spaced(r))), false, &mut seen)
+}
+
+fn under(rel: &str, deps: &[(String, Vec<String>)], say: &dyn Fn(&str) -> Option<String>, this: bool, seen: &mut Vec<String>) -> Option<String> {
+    if this { if let Some(w) = say(rel) { return Some(w); } }
+    if seen.iter().any(|s| s == rel) { return None; }
+    seen.push(rel.to_string());
+    for d in deps.iter().find(|d| d.0 == rel).map(|d| d.1.clone()).unwrap_or_default() { if let Some(w) = under(&d, deps, say, true, seen) { return Some(w); } }
+    None
+}
+
+fn answer(f: &mut Session, atoms: &mut Option<HashSet<String>>, cx: &Cx, x: &A, unread: &Option<String>, out: &mut Out) {
+    if x.lit.is_empty() { out.errors.push(unanswerable(x, cx.vocab)); return; }
+    if x.q.is_none() { out.notes.extend(blank_name_notes(f, atoms, x)); }
+    if x.kind == "excise" { return; }
+    if let Some(msg) = blank_answer(f, cx, x) { out.errors.push(msg); return; }
+    if x.kind == "why" { return why_line(f, atoms, cx, x, unread, out); }
+    if x.kind == "whynot" { return whynot_line(f, atoms, cx, x, unread, out); }
+    if conjunction(&x.lit) { out.errors.push(format!("{}: a question is one literal; write a rule that joins these and ask its head", x.text)); return; }
+    let rel = rel_of_key(&x.lit);
+    if cx.foreign.contains(&rel) && !rx::test(r"^\w+\[", &x.lit) {
+        out.lines.push(HLine { kind: x.kind.clone(), text: x.text.clone(), unasked: Some(not_ours(&rel, &cx.a.home)), ..Default::default() });
+        return;
+    }
+    rows_line(f, atoms, cx, x, unread, out);
+}
+
+fn unanswerable(x: &A, vocab: &Vocabulary) -> String {
+    let s = rx::sub(r"^\S+\s+", &x.text, false, "");
+    let w = if x.unread.is_some() { None } else { bare(&s, vocab) };
+    let why = x.unread.clone().or_else(|| w.map(|w| bare_said(&w))).or_else(|| the_variable(&s, &|t| vocab.literal(t).is_some())).unwrap_or_else(|| "no sentence reads this question".into());
+    format!("{}: {why}", x.text)
+}
+
+fn blank_name_notes(f: &mut Session, atoms: &mut Option<HashSet<String>>, x: &A) -> Vec<String> {
+    let stripped = rx::sub(r#"`[^`]*`|"[^"]*""#, &x.text, true, "");
+    let mut notes = Vec::new();
+    for m in rx::all(r"\b[A-Z][A-Za-z0-9]*[a-z][A-Za-z0-9]*\b", &stripped) {
+        if rx::test(&format!(r"\b{m}\b"), &x.lit) && named(f, atoms, &m.to_lowercase()) {
+            notes.push(format!("{}: {m} is read as a blank, which matches anything; `{}` is a name here, and a name is in backticks", x.text, m.to_lowercase()));
         }
-        under(rel, &deps, &|r| (!deps.iter().any(|d| d.0 == r) && !a.home.contains_key(r) && !model_rels.contains(r)).then(|| format!("it rests on {}, which nothing defines", spaced(r))), false, &mut seen)
+    }
+    notes
+}
+
+fn blank_answer(f: &mut Session, cx: &Cx, x: &A) -> Option<String> {
+    let b = x.q.as_ref()?.blank.as_ref()?;
+    let q = query(f, &owned(&b.lit, cx.names));
+    let vi = q.vars.iter().position(|v| *v == b.v);
+    let mut names: Vec<String> = Vec::new();
+    for r in &q.rows {
+        if let Some(n) = vi.and_then(|k| r.get(k)).filter(|n| !n.is_empty()) {
+            let n = if n.starts_with('"') && n.len() > 1 { n[1..n.len() - 1].to_string() } else { n.clone() };
+            if !names.contains(&n) { names.push(n); }
+        }
+    }
+    Some(format!("{}: {}", x.text, b.say(&names)))
+}
+
+fn english_of(x: &A) -> Option<(String, Option<String>, Option<String>)> {
+    x.q.as_ref().map(|q| (q.line.clone(), q.note.clone(), None))
+}
+
+fn why_line(f: &mut Session, atoms: &mut Option<HashSet<String>>, cx: &Cx, x: &A, unread: &Option<String>, out: &mut Out) {
+    let english = english_of(x);
+    match f.why(&x.lit) {
+        Ok(t) => {
+            let say = |k: &str| plain(&cx.vocab.say(k).unwrap_or_else(|| k.to_string()));
+            let note = nameless(f, atoms, &x.lit);
+            out.lines.push(HLine { kind: "why".into(), text: x.text.clone(), ok: true, why: Some(plain(&cx.vocab.say_all(&t))), chain: chain_of(&t, &say), unasked: unread.clone(), note, english, ..Default::default() });
+        }
+        Err(e) => {
+            let note = nameless(f, atoms, &x.lit);
+            out.lines.push(HLine { kind: "why".into(), text: x.text.clone(), ok: false, why: Some(plain(&cx.vocab.say_all(&e))), unasked: unread.clone(), note, english, ..Default::default() });
+        }
+    }
+}
+
+fn whynot_line(f: &mut Session, atoms: &mut Option<HashSet<String>>, cx: &Cx, x: &A, unread: &Option<String>, out: &mut Out) {
+    match f.whynot(&x.lit, &WhynotBounds::default()) {
+        Ok((holds, t)) => {
+            let note = nameless(f, atoms, &x.lit);
+            out.lines.push(HLine { kind: "whynot".into(), text: x.text.clone(), ok: !holds, why: Some(plain(&cx.vocab.say_all(&t))), unasked: unread.clone(), note, english: english_of(x), ..Default::default() });
+        }
+        Err(e) => out.errors.push(format!("{}: {e}", x.text)),
+    }
+}
+
+fn rows_line(f: &mut Session, atoms: &mut Option<HashSet<String>>, cx: &Cx, x: &A, unread: &Option<String>, out: &mut Out) {
+    let q = query(f, &x.lit);
+    if let Some(e) = &q.error { out.errors.push(format!("{}: {e}", x.text)); return; }
+    let rows: Vec<Row> = q.rows.iter().take(cx.rows_kept).map(|r| { let lit = ground(&x.lit, &q.bindings(r)); Row { literal: plain(&lit), sentence: plain(&cx.vocab.say(&lit).unwrap_or_else(|| lit.clone())) } }).collect();
+    let note = if q.unpopulatable { Some(format!("nothing in the model can put a row here: {}", elsewhere(&x.lit, cx.model_and_cells).unwrap_or_else(|| "check the name, the book and the number of arguments".into()))) }
+        else { (x.kind != "unsure").then(|| nameless(f, atoms, &x.lit)).flatten().or_else(|| q.partial.then(|| "the budget ran out before every answer was found".to_string())) };
+    if x.kind == "unsure" && out.lines.last().is_some_and(|l| l.kind == "never") {
+        let above = out.lines.last_mut().unwrap();
+        above.unsure = Some(HUnsure { text: x.text.clone(), rows, total: q.rows.len() });
+        if note.is_some() { above.note = note; }
+        return;
+    }
+    let counted = x.q.as_ref().and_then(|q| q.count.as_ref()).and_then(|c| q.vars.iter().position(|v| v == c)).map(|k| q.rows.iter().map(|r| r[k].clone()).collect::<HashSet<_>>().len());
+    let headline = match (&x.q, counted) {
+        (Some(qq), _) if qq.yesno => Some(if q.rows.is_empty() { "no" } else { "yes" }.to_string()),
+        (Some(qq), Some(n)) => Some(format!("{n} {}", if n == 1 || qq.noun.is_none() { qq.noun.clone().unwrap_or_default() } else { plural(qq.noun.as_ref().unwrap()) }).trim().to_string()),
+        _ => None,
     };
-    let rows_kept = if all_rows { usize::MAX } else { 50 };
-    let model_and_cells = format!("{}\n{all}", a.model);
+    let english = english_of(x).map(|(l, n, _)| (l, n, headline));
+    out.lines.push(HLine { kind: x.kind.clone(), text: x.text.clone(), total: q.rows.len(), ok: if x.kind == "never" { q.rows.is_empty() && !q.unpopulatable } else { true }, rows,
+        note: if x.kind == "unsure" { Some("an unsure line says what the never line just above it cannot see".into()) } else { note },
+        unasked: unread.clone().or_else(|| (cx.rests_on)(&rel_of_key(&x.lit))), english, ..Default::default() });
+}
 
-    for i in 0..parts.len() {
-        if refused.contains(&i) { continue; }
-        for x in &asks[i] {
-            if x.lit.is_empty() {
-                let s = rx::sub(r"^\S+\s+", &x.text, false, "");
-                let w = if x.unread.is_some() { None } else { bare(&s, &vocab) };
-                let why = x.unread.clone().or_else(|| w.map(|w| bare_said(&w))).or_else(|| the_variable(&s, &|t| vocab.literal(t).is_some())).unwrap_or_else(|| "no sentence reads this question".into());
-                outs[i].errors.push(format!("{}: {why}", x.text));
-                continue;
-            }
-            if x.q.is_none() {
-                let stripped = rx::sub(r#"`[^`]*`|"[^"]*""#, &x.text, true, "");
-                for m in rx::all(r"\b[A-Z][A-Za-z0-9]*[a-z][A-Za-z0-9]*\b", &stripped) {
-                    if rx::test(&format!(r"\b{m}\b"), &x.lit) && named(&mut f, &mut atoms, &m.to_lowercase()) {
-                        outs[i].notes.push(format!("{}: {m} is read as a blank, which matches anything; `{}` is a name here, and a name is in backticks", x.text, m.to_lowercase()));
-                    }
-                }
-            }
-            if x.kind == "excise" { continue; }
-            let english = x.q.as_ref().map(|q| (q.line.clone(), q.note.clone(), None::<String>));
-            if let Some(b) = x.q.as_ref().and_then(|q| q.blank.as_ref()) {
-                let q = query(&mut f, &own_of(&b.lit));
-                let vi = q.vars.iter().position(|v| *v == b.v);
-                let mut names: Vec<String> = Vec::new();
-                for r in &q.rows { if let Some(n) = vi.and_then(|k| r.get(k)).filter(|n| !n.is_empty()) { let n = if n.starts_with('"') && n.len() > 1 { n[1..n.len() - 1].to_string() } else { n.clone() }; if !names.contains(&n) { names.push(n); } } }
-                outs[i].errors.push(format!("{}: {}", x.text, b.say(&names)));
-                continue;
-            }
-            if x.kind == "why" {
-                match f.why(&x.lit) {
-                    Ok(t) => {
-                        let say = |k: &str| plain(&vocab.say(k).unwrap_or_else(|| k.to_string()));
-                        let note = nameless(&mut f, &mut atoms, &x.lit);
-                        outs[i].lines.push(HLine { kind: "why".into(), text: x.text.clone(), ok: true, why: Some(plain(&vocab.say_all(&t))), chain: chain_of(&t, &say), unasked: unread[i].clone(), note, english: english.clone(), ..Default::default() });
-                    }
-                    Err(e) => {
-                        let note = nameless(&mut f, &mut atoms, &x.lit);
-                        outs[i].lines.push(HLine { kind: "why".into(), text: x.text.clone(), ok: false, why: Some(plain(&vocab.say_all(&e))), unasked: unread[i].clone(), note, english: english.clone(), ..Default::default() });
-                    }
-                }
-                continue;
-            }
-            if x.kind == "whynot" {
-                match f.whynot(&x.lit, &WhynotBounds::default()) {
-                    Ok((holds, t)) => {
-                        let note = nameless(&mut f, &mut atoms, &x.lit);
-                        outs[i].lines.push(HLine { kind: "whynot".into(), text: x.text.clone(), ok: !holds, why: Some(plain(&vocab.say_all(&t))), unasked: unread[i].clone(), note, english: english.clone(), ..Default::default() });
-                    }
-                    Err(e) => outs[i].errors.push(format!("{}: {e}", x.text)),
-                }
-                continue;
-            }
-            if conjunction(&x.lit) { outs[i].errors.push(format!("{}: a question is one literal; write a rule that joins these and ask its head", x.text)); continue; }
-            let rel = rel_of_key(&x.lit);
-            if foreign.contains(&rel) && !rx::test(r"^\w+\[", &x.lit) {
-                outs[i].lines.push(HLine { kind: x.kind.clone(), text: x.text.clone(), unasked: Some(not_ours(&rel, &a.home)), ..Default::default() });
-                continue;
-            }
-            let q = query(&mut f, &x.lit);
-            if let Some(e) = &q.error { outs[i].errors.push(format!("{}: {e}", x.text)); continue; }
-            let rows: Vec<Row> = q.rows.iter().take(rows_kept).map(|r| { let lit = ground(&x.lit, &q.bindings(r)); Row { literal: plain(&lit), sentence: plain(&vocab.say(&lit).unwrap_or_else(|| lit.clone())) } }).collect();
-            let note = if q.unpopulatable { Some(format!("nothing in the model can put a row here: {}", elsewhere(&x.lit, &model_and_cells).unwrap_or_else(|| "check the name, the book and the number of arguments".into()))) }
-                else { (x.kind != "unsure").then(|| nameless(&mut f, &mut atoms, &x.lit)).flatten().or_else(|| q.partial.then(|| "the budget ran out before every answer was found".to_string())) };
-            if x.kind == "unsure" && outs[i].lines.last().is_some_and(|l| l.kind == "never") {
-                let above = outs[i].lines.last_mut().unwrap();
-                above.unsure = Some(HUnsure { text: x.text.clone(), rows, total: q.rows.len() });
-                if note.is_some() { above.note = note; }
-                continue;
-            }
-            let counted = x.q.as_ref().and_then(|q| q.count.as_ref()).and_then(|c| q.vars.iter().position(|v| v == c)).map(|k| q.rows.iter().map(|r| r[k].clone()).collect::<HashSet<_>>().len());
-            let headline = match (&x.q, counted) {
-                (Some(qq), _) if qq.yesno => Some(if q.rows.is_empty() { "no" } else { "yes" }.to_string()),
-                (Some(qq), Some(n)) => Some(format!("{n} {}", if n == 1 || qq.noun.is_none() { qq.noun.clone().unwrap_or_default() } else { plural(qq.noun.as_ref().unwrap()) }).trim().to_string()),
-                _ => None,
-            };
-            let english = english.map(|(l, n, _)| (l, n, headline));
-            outs[i].lines.push(HLine { kind: x.kind.clone(), text: x.text.clone(), total: q.rows.len(), ok: if x.kind == "never" { q.rows.is_empty() && !q.unpopulatable } else { true }, rows,
-                note: if x.kind == "unsure" { Some("an unsure line says what the never line just above it cannot see".into()) } else { note },
-                unasked: unread[i].clone().or_else(|| rest_on(&rel)), english, ..Default::default() });
-        }
-    }
-
-    // what if: a cell's `excise F` lines take those facts out of the world every line was asked over, and say which lines' answers move
-    for i in 0..parts.len() {
-        let cut: Vec<&A> = asks[i].iter().filter(|x| x.kind == "excise" && !x.lit.is_empty()).collect();
+fn excise_lines(f: &mut Session, asks: &[Vec<A>], refused: &HashSet<usize>, vocab: &Vocabulary, unread: &[Option<String>], outs: &mut [Out]) -> bool {
+    let mut partial = false;
+    for (i, list) in asks.iter().enumerate() {
+        let cut: Vec<&A> = list.iter().filter(|x| x.kind == "excise" && !x.lit.is_empty()).collect();
         if cut.is_empty() || refused.contains(&i) { continue; }
         let mut g2 = f.fork();
-        let mut bad = false;
         for x in &cut { if let Err(e) = g2.retract(&x.lit) { outs[i].errors.push(format!("{}: {e}", cut[0].text)); } }
-        match g2.evaluate() { Ok(e) => partial |= e.partial || g2.eval.store.partial_eval, Err(h) => { outs[i].errors.push(format!("{}: {}", cut[0].text, crate::describe(&h))); bad = true; } }
-        if bad { continue; }
-        let mut rows: Vec<Row> = Vec::new();
-        for j in 0..parts.len() {
-            if refused.contains(&j) { continue; }
-            for x in &asks[j] {
-                if !["answers", "never", "unsure"].contains(&x.kind.as_str()) || x.lit.is_empty() || conjunction(&x.lit) { continue; }
-                let set = |w: &mut Session| -> Vec<String> { let q = query(w, &x.lit); let mut out: Vec<String> = Vec::new(); for r in &q.rows { let l = ground(&x.lit, &q.bindings(r)); if !out.contains(&l) { out.push(l); } } out };
-                let (was, now) = (set(&mut f), set(&mut g2));
-                let gone: Vec<&String> = was.iter().filter(|l| !now.contains(l)).collect();
-                let come: Vec<&String> = now.iter().filter(|l| !was.contains(l)).collect();
-                if gone.is_empty() && come.is_empty() { continue; }
-                rows.push(Row { literal: x.lit.clone(), sentence: format!("{}: {} -> {}", x.text, was.len(), now.len()) });
-                let say = |l: &str| plain(&vocab.say(l).unwrap_or_else(|| l.to_string()));
-                for l in gone.iter().take(10) { rows.push(Row { literal: (*l).clone(), sentence: format!("  no longer: {}", say(l)) }); }
-                for l in come.iter().take(10) { rows.push(Row { literal: (*l).clone(), sentence: format!("  now also: {}", say(l)) }); }
-            }
+        match g2.evaluate() {
+            Ok(e) => partial |= e.partial || g2.eval.store.partial_eval,
+            Err(h) => { outs[i].errors.push(format!("{}: {}", cut[0].text, crate::describe(&h))); continue; }
         }
+        let rows = moved_rows(f, &mut g2, asks, refused, vocab);
         let total = rows.iter().filter(|r| !r.sentence.starts_with("  ")).count();
         outs[i].lines.push(HLine { kind: "excise".into(), text: cut.iter().map(|x| x.text.clone()).collect::<Vec<_>>().join("; "), total, ok: true,
             note: rows.is_empty().then(|| "no line of this notebook answers differently".to_string()), rows, unasked: unread[i].clone(), ..Default::default() });
     }
+    partial
+}
 
-    let cut = if partial {
-        let holes = query(&mut f, "hole[$kernel](H, R)");
-        let k = holes.vars.iter().position(|v| v == "R");
-        let has = |w: &str| k.is_some_and(|k| holes.rows.iter().any(|r| r[k] == w));
-        if has("space_exhausted") { Some("the space wall of 40,000,000 rows was reached, the usual mark of a rule that climbs without end; a notebook has no setting that raises it".to_string()) }
-        else if has("budget_exhausted") { Some("the step budget of 4,000,000,000 was spent, the usual mark of a rule that climbs without end; a notebook has no setting that raises it".to_string()) } else { None }
-    } else { None };
-    let mut vocab_cache: Option<Vec<String>> = None;
-    let cells_out = result_cells(&cells, &runs, outs, &a, &mut vocab_cache, &book.learned, partial);
-    let status = if partial { "cut" } else if !a.errors.is_empty() || cells_out.iter().any(|c| !c.errors.is_empty() || c.lines.iter().any(|l| l.verdict == "unasked")) { "unread" }
-        else if cells_out.iter().any(|c| c.lines.iter().any(|l| l.verdict == "fails")) { "fails" }
-        else if cells_out.iter().any(|c| c.lines.iter().any(|l| l.verdict == "blind")) { "blind" } else { "ok" };
-    Ok(NbResult { status, cut: if status == "cut" { cut } else { None }, cells: cells_out, errors: a.errors.clone() })
+fn moved_rows(f: &mut Session, g2: &mut Session, asks: &[Vec<A>], refused: &HashSet<usize>, vocab: &Vocabulary) -> Vec<Row> {
+    let mut rows: Vec<Row> = Vec::new();
+    for (j, list) in asks.iter().enumerate() {
+        if refused.contains(&j) { continue; }
+        for x in list {
+            if !["answers", "never", "unsure"].contains(&x.kind.as_str()) || x.lit.is_empty() || conjunction(&x.lit) { continue; }
+            let (was, now) = (answer_set(f, &x.lit), answer_set(g2, &x.lit));
+            let gone: Vec<&String> = was.iter().filter(|l| !now.contains(l)).collect();
+            let come: Vec<&String> = now.iter().filter(|l| !was.contains(l)).collect();
+            if gone.is_empty() && come.is_empty() { continue; }
+            rows.push(Row { literal: x.lit.clone(), sentence: format!("{}: {} -> {}", x.text, was.len(), now.len()) });
+            let say = |l: &str| plain(&vocab.say(l).unwrap_or_else(|| l.to_string()));
+            for l in gone.iter().take(10) { rows.push(Row { literal: (*l).clone(), sentence: format!("  no longer: {}", say(l)) }); }
+            for l in come.iter().take(10) { rows.push(Row { literal: (*l).clone(), sentence: format!("  now also: {}", say(l)) }); }
+        }
+    }
+    rows
+}
+
+fn answer_set(w: &mut Session, lit: &str) -> Vec<String> {
+    let q = query(w, lit);
+    let mut out: Vec<String> = Vec::new();
+    for r in &q.rows { let l = ground(lit, &q.bindings(r)); if !out.contains(&l) { out.push(l); } }
+    out
+}
+
+fn cut_reason(f: &mut Session) -> Option<String> {
+    let holes = query(f, "hole[$kernel](H, R)");
+    let k = holes.vars.iter().position(|v| v == "R");
+    let has = |w: &str| k.is_some_and(|k| holes.rows.iter().any(|r| r[k] == w));
+    if has("space_exhausted") { Some("the space wall of 40,000,000 rows was reached, the usual mark of a rule that climbs without end; a notebook has no setting that raises it".to_string()) }
+    else if has("budget_exhausted") { Some("the step budget of 4,000,000,000 was spent, the usual mark of a rule that climbs without end; a notebook has no setting that raises it".to_string()) }
+    else { None }
+}
+
+fn status_of(partial: bool, a: &Assembled, cells: &[NbCell]) -> &'static str {
+    if partial { "cut" }
+    else if !a.errors.is_empty() || cells.iter().any(|c| !c.errors.is_empty() || c.lines.iter().any(|l| l.verdict == "unasked")) { "unread" }
+    else if cells.iter().any(|c| c.lines.iter().any(|l| l.verdict == "fails")) { "fails" }
+    else if cells.iter().any(|c| c.lines.iter().any(|l| l.verdict == "blind")) { "blind" }
+    else { "ok" }
 }
 
 fn not_ours(rel: &str, home: &HashMap<String, String>) -> String {

@@ -38,7 +38,7 @@ Reads:
 - from js-controlflow, in the code: [always_throws](js-controlflow.rofl.md#always_throws), [async_body](js-controlflow.rofl.md#async_body), [completes_abruptly](js-controlflow.rofl.md#completes_abruptly), [guarded](js-controlflow.rofl.md#guarded), [in_fn](js-controlflow.rofl.md#in_fn), [may_throw](js-controlflow.rofl.md#may_throw), [reachable](js-controlflow.rofl.md#reachable), [sync_body](js-controlflow.rofl.md#sync_body)
 - from js-controlflow, in the flow: [accessor_as](js-controlflow.rofl.md#accessor_as), [accessor_of](js-controlflow.rofl.md#accessor_of), [thrown_by](js-controlflow.rofl.md#thrown_by)
 - from js-dataflow, in the code: [assigned](js-dataflow.rofl.md#assigned), [corpus_file](js-dataflow.rofl.md#corpus_file), [exports_default](js-dataflow.rofl.md#exports_default), [exports_name](js-dataflow.rofl.md#exports_name), [exports_value](js-dataflow.rofl.md#exports_value), [param_rest](js-dataflow.rofl.md#param_rest), [sees_binder](js-dataflow.rofl.md#sees_binder)
-- from js-dataflow, in the flow: [arg_at](js-dataflow.rofl.md#arg_at), [array_elem](js-dataflow.rofl.md#array_elem), [assign_param](js-dataflow.rofl.md#assign_param), [cjs_exports](js-dataflow.rofl.md#cjs_exports), [class_member_proto](js-dataflow.rofl.md#class_member_proto), [class_member_static](js-dataflow.rofl.md#class_member_static), [class_unset_field](js-dataflow.rofl.md#class_unset_field), [ctor_of](js-dataflow.rofl.md#ctor_of), [external_value](js-dataflow.rofl.md#external_value), [field_at](js-dataflow.rofl.md#field_at), [gen_fn](js-dataflow.rofl.md#gen_fn), [gen_of](js-dataflow.rofl.md#gen_of), [inst_of](js-dataflow.rofl.md#inst_of), [keyed_put](js-dataflow.rofl.md#keyed_put), [kind_proto](js-dataflow.rofl.md#kind_proto), [member_plain](js-dataflow.rofl.md#member_plain), [member_value](js-dataflow.rofl.md#member_value), [module_object](js-dataflow.rofl.md#module_object), [nearest_v](js-dataflow.rofl.md#nearest_v), [next_send](js-dataflow.rofl.md#next_send), [param_of](js-dataflow.rofl.md#param_of), [param_use](js-dataflow.rofl.md#param_use), [returns](js-dataflow.rofl.md#returns), [yields](js-dataflow.rofl.md#yields)
+- from js-dataflow, in the flow: [arg_at](js-dataflow.rofl.md#arg_at), [array_elem](js-dataflow.rofl.md#array_elem), [assign_param](js-dataflow.rofl.md#assign_param), [cjs_exports](js-dataflow.rofl.md#cjs_exports), [class_like](js-dataflow.rofl.md#class_like), [class_member_proto](js-dataflow.rofl.md#class_member_proto), [class_member_static](js-dataflow.rofl.md#class_member_static), [class_unset_field](js-dataflow.rofl.md#class_unset_field), [ctor_of](js-dataflow.rofl.md#ctor_of), [external_value](js-dataflow.rofl.md#external_value), [field_at](js-dataflow.rofl.md#field_at), [gen_fn](js-dataflow.rofl.md#gen_fn), [gen_of](js-dataflow.rofl.md#gen_of), [inst_of](js-dataflow.rofl.md#inst_of), [keyed_put](js-dataflow.rofl.md#keyed_put), [kind_proto](js-dataflow.rofl.md#kind_proto), [member_field_runs](js-dataflow.rofl.md#member_field_runs), [member_field_sure](js-dataflow.rofl.md#member_field_sure), [member_plain](js-dataflow.rofl.md#member_plain), [member_value](js-dataflow.rofl.md#member_value), [module_object](js-dataflow.rofl.md#module_object), [nearest_v](js-dataflow.rofl.md#nearest_v), [next_send](js-dataflow.rofl.md#next_send), [param_of](js-dataflow.rofl.md#param_of), [param_use](js-dataflow.rofl.md#param_use), [returns](js-dataflow.rofl.md#returns), [yields](js-dataflow.rofl.md#yields)
 - from js-dataflow, in the main: [call_like_v](js-dataflow.rofl.md#call_like_v)
 - from js-effects, in the code: [eff_calls](js-effects.rofl.md#eff_calls), [eff_reaches](js-effects.rofl.md#eff_reaches)
 - from js-effects, in the flow: [class_construct_eff](js-effects.rofl.md#class_construct_eff), [eff_latent](js-effects.rofl.md#eff_latent), [eff_module](js-effects.rofl.md#eff_module), [effect_of](js-effects.rofl.md#effect_of), [effect_of_module](js-effects.rofl.md#effect_of_module)
@@ -85,6 +85,7 @@ Phrases this file defines in one step, each by the sentence it stands for:
 - A class has the constructor M if [`sx_ctor`](#sx_ctor)(it, M).
 - The constructor of a class C is M if [`sx_ctor_of`](#sx_ctor_of)(C, M).
 - A class constructs with effect an effect label L at a host H if [`sx_class_eff`](#sx_class_eff)(it, L, H).
+- A node is a class if [`sx_class`](#sx_class)(it).
 - F always throws if [`sx_always`](#sx_always)(F).
 - F may throw if [`sx_may_throw`](#sx_may_throw)(F).
 - F throws out a node V if [`sx_thrown`](#sx_thrown)(F, V).
@@ -145,6 +146,10 @@ Phrases this file defines in one step, each by the sentence it stands for:
 
 <a id="sx_unset_field"></a>`sx_unset_field`(C, K) if [`sx_esc`](#sx_esc)(C) and [`class_unset_field`](js-dataflow.rofl.md#class_unset_field)(C, K).
 
+<a id="sx_field_sure"></a>`sx_field_sure`(C, K, J) if [`sx_esc`](#sx_esc)(C) and [`member_field_sure`](js-dataflow.rofl.md#member_field_sure)(C, K, J).
+
+<a id="sx_field_runs"></a>`sx_field_runs`(C, K, J, G) if [`sx_esc`](#sx_esc)(C) and [`member_field_runs`](js-dataflow.rofl.md#member_field_runs)(C, K, J, G).
+
 <a id="sx_elem"></a>`sx_elem`(X, I, E) if [`sx_esc`](#sx_esc)(X) and [`array_elem`](js-dataflow.rofl.md#array_elem)(X, I, E).
 
 <a id="sx_name"></a>`sx_name`(E, Name) if [`sx_elem`](#sx_elem)(something, something, E) and a node E [is named](js-structure.rofl.md#ast_name) Name.
@@ -181,6 +186,8 @@ Phrases this file defines in one step, each by the sentence it stands for:
 
 <a id="sx_class_eff"></a>`sx_class_eff`(C, L, H) if [`sx_esc`](#sx_esc)(C) and a class C [constructs with effect](js-effects.rofl.md#class_construct_eff) an effect label L at a host H.
 
+<a id="sx_class"></a>`sx_class`(C) if [`sx_esc`](#sx_esc)(C) and a node C [is a class](js-dataflow.rofl.md#class_like).
+
 <a id="sx_always"></a>`sx_always`(F) if [`sx_esc`](#sx_esc)(F) and F [always throws](js-controlflow.rofl.md#always_throws).
 
 <a id="sx_may_throw"></a>`sx_may_throw`(F) if [`sx_esc`](#sx_esc)(F) and F [may throw](js-controlflow.rofl.md#may_throw).
@@ -206,6 +213,10 @@ In the flow:
 A node may be the literal V if [`sx_lit`](#sx_lit)(it, V).
 
 `class_unset_field`(C, K) if [`sx_unset_field`](#sx_unset_field)(C, K).
+
+`member_field_sure`(C, K, J) if [`sx_field_sure`](#sx_field_sure)(C, K, J).
+
+`member_field_runs`(C, K, J, G) if [`sx_field_runs`](#sx_field_runs)(C, K, J, G).
 
 `array_elem`(X, I, E) if [`sx_elem`](#sx_elem)(X, I, E).
 
