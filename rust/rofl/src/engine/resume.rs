@@ -179,9 +179,9 @@ impl Eval {
         if let Some(id) = cut.hole {
             let why = self.store.args(id).get(1).and_then(|t| t.as_atom()).unwrap_or(self.v.budget_reason);
             let target = self.hole_id;
-            self.holes_met.remove(&(target, why));
-            if let Some(i) = self.holes_now.iter().rposition(|x| *x == (target, why)) {
-                self.holes_now.remove(i);
+            self.shrug.holes_met.remove(&(target, why));
+            if let Some(i) = self.shrug.holes_now.iter().rposition(|x| *x == (target, why)) {
+                self.shrug.holes_now.remove(i);
             }
             self.store.eval_holes.retain(|x| *x != id);
             self.store.remove_many(&[id]);

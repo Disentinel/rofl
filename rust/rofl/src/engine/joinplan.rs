@@ -101,7 +101,7 @@ impl Eval {
 
     pub(super) fn delta_pick(&mut self, r: &Rc<ERule>, at: Option<usize>, n: usize) -> Option<Rc<DeltaPlan>> {
         if brk!("delta_first_off" => true; false)
-            || brk!("delta_first_spread" => false; !self.lat.spread.is_empty())
+            || brk!("delta_first_spread" => false; !self.lat.carry.spread.is_empty())
         {
             return None;
         }
@@ -455,7 +455,7 @@ impl Eval {
             e.peak_rows = peak;
             e.fire_rule_from(r, Subst::new(), keys.map(|k| (p.perm[0], k)))
         };
-        let (peak, undecided) = (self.peak_rows, self.lat.undecided.len());
+        let (peak, undecided) = (self.peak_rows, self.lat.carry.undecided.len());
         let outer = self.cur_rule.replace(r.id);
         let was_firing = std::mem::replace(&mut self.firing, true);
         self.plan_trial = true;
@@ -465,7 +465,7 @@ impl Eval {
         self.firing = was_firing;
         self.cur_rule = outer;
         // a negation records the position it was undecided at; none is while no unknown spreads
-        debug_assert_eq!(self.lat.undecided.len(), undecided);
+        debug_assert_eq!(self.lat.carry.undecided.len(), undecided);
         let sols = match sols {
             Err(Halt::Overrun) => return written(self, peak),
             s => self.solved(r, s, before)?,

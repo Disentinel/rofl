@@ -28,6 +28,19 @@ pub struct Tree {
     pub closure: Option<Sym>,
 }
 
+/// The variables of a declaration's head, each written once; `roles` says what the arguments are.
+pub(crate) fn head_vars(h: &Heap, args: &[Term], what: &str, roles: &str) -> Result<Vec<Sym>, String> {
+    let mut seen: Vec<Sym> = Vec::new();
+    for a in args {
+        match a.kind() {
+            TermK::Var(x) if !seen.contains(&x) => seen.push(x),
+            TermK::Var(x) => return Err(format!("{what}: '{}' is written twice; a declaration names each argument once", h.name(x))),
+            _ => return Err(format!("{what}: a declaration's arguments are variables, {roles}")),
+        }
+    }
+    Ok(seen)
+}
+
 /// A STRUCTURE DECLARATION AT THE DOOR (`checkStructureDecl`, src/structure.ts):
 /// the refusal, or nothing. `concluded` says what already concludes a relation
 /// (a rule, or its facts).
@@ -37,14 +50,7 @@ pub fn check_decl(h: &Heap, v: &Vocab, c: &Clause, declared: &HashSet<Sym>, take
     if v.is_reserved(rel) || h.name(rel).starts_with('$') || v.arity_of(rel).is_some() {
         return Err(format!("{what}: '{}' is a kernel relation and cannot be declared {kind}", h.name(rel)));
     }
-    let mut seen: Vec<Sym> = Vec::new();
-    for a in &c.head.args {
-        match a.kind() {
-            TermK::Var(x) if !seen.contains(&x) => seen.push(x),
-            TermK::Var(x) => return Err(format!("{what}: '{}' is written twice; a declaration names each argument once", h.name(x))),
-            _ => return Err(format!("{what}: a declaration's arguments are variables, each a key or marked with its role")),
-        }
-    }
+    head_vars(h, &c.head.args, &what, "each a key or marked with its role")?;
     if kind == "function" {
         let Some(first_to) = st.roles.iter().position(|r| r.is_some()) else {
             return Err(format!("{what}: a function names the value its key determines, marked `to`: function {}(N, to V)", h.name(rel)));
@@ -190,19 +196,22 @@ pub fn lower_alias(h: &Heap, c: &Clause) -> String {
     format!("{head}) :- {rel}[{b}]({rest}.")
 }
 
-/// The relations declared an alias.
-pub fn aliased(h: &Heap, v: &Vocab, store: &mut Store) -> HashSet<Sym> {
-    let mut out = HashSet::new();
+/// The structure declarations: relation, its argument count term, and kind.
+fn decls(h: &Heap, v: &Vocab, store: &mut Store) -> Vec<(Sym, Term, Sym)> {
+    let mut out = Vec::new();
     for f in store.rel_persp(h, v.structure_decl, v.kernel_persp) {
-        if let [r, _, kind] = store.args(f) {
+        if let [r, n, kind] = store.args(f) {
             if let (Some(r), Some(kind)) = (r.as_atom(), kind.as_atom()) {
-                if h.name(kind) == "alias" {
-                    out.insert(r);
-                }
+                out.push((r, *n, kind));
             }
         }
     }
     out
+}
+
+/// The relations declared an alias.
+pub fn aliased(h: &Heap, v: &Vocab, store: &mut Store) -> HashSet<Sym> {
+    decls(h, v, store).into_iter().filter(|d| h.name(d.2) == "alias").map(|d| d.0).collect()
 }
 
 /// The closure each declared tree stands for, by the closure's name.
@@ -221,16 +230,7 @@ pub fn closures(h: &Heap, v: &Vocab, store: &mut Store) -> HashMap<Sym, Sym> {
 /// The relations the program declares a structure of, and the closures of its trees; not an alias, of which a promise
 /// (a tree, a function) may be declared too.
 pub fn declared(h: &Heap, v: &Vocab, store: &mut Store) -> HashSet<Sym> {
-    let mut out = HashSet::new();
-    for f in store.rel_persp(h, v.structure_decl, v.kernel_persp) {
-        if let [r, _, kind] = store.args(f) {
-            if let (Some(r), Some(kind)) = (r.as_atom(), kind.as_atom()) {
-                if h.name(kind) != "alias" {
-                    out.insert(r);
-                }
-            }
-        }
-    }
+    let mut out: HashSet<Sym> = decls(h, v, store).into_iter().filter(|d| h.name(d.2) != "alias").map(|d| d.0).collect();
     for f in store.rel_persp(h, v.structure_closure, v.kernel_persp) {
         if let Some(c) = store.args(f).get(1).and_then(|a| a.as_atom()) {
             out.insert(c);
@@ -250,12 +250,9 @@ pub fn functions(h: &Heap, v: &Vocab, store: &mut Store) -> Vec<Function> {
         }
     }
     let mut out = Vec::new();
-    for f in store.rel_persp(h, v.structure_decl, v.kernel_persp) {
-        if let [r, n, kind] = store.args(f) {
-            if let (Some(r), Some(n), Some(kind)) = (r.as_atom(), n.as_int(), kind.as_atom()) {
-                if h.name(kind) != "function" {
-                    continue;
-                }
+    for (r, n, kind) in decls(h, v, store) {
+        if let Some(n) = n.as_int() {
+            if h.name(kind) == "function" {
                 let m = roles.get(&r);
                 let (mut key, mut vals) = (Vec::new(), Vec::new());
                 for i in 0..n as usize {
@@ -266,6 +263,11 @@ pub fn functions(h: &Heap, v: &Vocab, store: &mut Store) -> Vec<Function> {
         }
     }
     out
+}
+
+/// What follows the first of `n` breaks: nothing, or how many more there are.
+fn more(n: usize, one: &str, many: &str) -> String {
+    match n { 1 => String::new(), 2 => format!("; 1 more {one}"), m => format!("; {} more {many}", m - 1) }
 }
 
 #[derive(Hash, PartialEq, Eq)]
@@ -287,15 +289,11 @@ pub fn check_functions(h: &Heap, store: &Store, fs: &[Function]) -> Result<(), S
     for f in fs {
         let n = f.key.len() + f.to.len();
         // an alias's rows are read from its source (engine/alias.rs), each once
-        let owned: Vec<(Sym, Vec<Term>)> = match store.alias_view(f.rel) {
-            Some(a) => store.alias_rows(h, a),
-            None => Vec::new(),
-        };
+        let owned = store.alias_view(f.rel).map(|a| store.alias_rows(h, a));
         let mut rows: Vec<(Sym, &[Term])> = Vec::new();
-        if store.alias_view(f.rel).is_some() {
-            rows.extend(owned.iter().map(|(p, a)| (*p, a.as_slice())));
-        } else {
-            store.each_row(f.rel, |persp, id| rows.push((persp, store.args(id))));
+        match &owned {
+            Some(o) => rows.extend(o.iter().map(|(p, a)| (*p, a.as_slice()))),
+            None => store.each_row(f.rel, |persp, id| rows.push((persp, store.args(id)))),
         }
         let mut first: FxMap<Key, usize> = FxMap::default();
         let mut bad: Vec<(Sym, usize)> = Vec::new();
@@ -338,7 +336,7 @@ pub fn check_functions(h: &Heap, store: &Store, fs: &[Function]) -> Result<(), S
             .collect();
         vals.sort_by(|a, b| cmp_js(a, b));
         vals.dedup();
-        let more = match keys.len() { 1 => String::new(), 2 => "; 1 more key breaks it too".to_string(), m => format!("; {} more keys break it too", m - 1) };
+        let more = more(keys.len(), "key breaks it too", "keys break it too");
         return Err(format!("program rejected: function {}: key ({k}) has two values in the book {}: ({}) and ({}){more}", h.name(f.rel), h.name(book), vals[0], vals[1]));
     }
     Ok(())
@@ -347,17 +345,7 @@ pub fn check_functions(h: &Heap, store: &Store, fs: &[Function]) -> Result<(), S
 /// The trees the program declares.
 pub fn trees(h: &Heap, v: &Vocab, store: &mut Store) -> Vec<Tree> {
     let by_tree: HashMap<Sym, Sym> = closures(h, v, store).iter().map(|(c, r)| (*r, *c)).collect();
-    let mut out = Vec::new();
-    for f in store.rel_persp(h, v.structure_decl, v.kernel_persp) {
-        if let [r, _, kind] = store.args(f) {
-            if let (Some(r), Some(kind)) = (r.as_atom(), kind.as_atom()) {
-                if h.name(kind) == "tree" {
-                    out.push(Tree { rel: r, closure: by_tree.get(&r).copied() });
-                }
-            }
-        }
-    }
-    out
+    decls(h, v, store).into_iter().filter(|d| h.name(d.2) == "tree").map(|d| Tree { rel: d.0, closure: by_tree.get(&d.0).copied() }).collect()
 }
 
 /// THE PROMISE OF EVERY DECLARED TREE, a forest (`checkTrees`, src/structure.ts): each child has one parent and no node
@@ -388,7 +376,7 @@ pub fn check_trees(h: &Heap, store: &Store, ts: &[Tree]) -> Result<(), String> {
                 let mut ps: Vec<String> = two[0].1.iter().map(|p| canon(*p)).collect();
                 ps.sort_by(|a, b| cmp_js(a, b));
                 ps.dedup();
-                let more = match two.len() { 1 => String::new(), 2 => "; 1 more child breaks it too".to_string(), m => format!("; {} more children break it too", m - 1) };
+                let more = more(two.len(), "child breaks it too", "children break it too");
                 return Err(format!("program rejected: tree {}: node ({}) has two parents in the book {}: ({}) and ({}){more}", h.name(t.rel), two[0].0, h.name(book), ps[0], ps[1]));
             }
             let up: FxMap<u64, u64> = parents.iter().map(|(c, (_, ps))| (*c, ps[0].bits())).collect();
@@ -429,7 +417,7 @@ pub fn check_trees(h: &Heap, store: &Store, ts: &[Tree]) -> Result<(), String> {
             let l = least(cy);
             let i = cy.iter().position(|x| text[x] == l).unwrap();
             let through: Vec<String> = cy[i..].iter().chain(cy[..i].iter()).map(|x| format!("({})", text[x])).collect();
-            let more = match cycles.len() { 1 => String::new(), 2 => "; 1 more cycle".to_string(), m => format!("; {} more cycles", m - 1) };
+            let more = more(cycles.len(), "cycle", "cycles");
             return Err(format!("program rejected: tree {}: node ({l}) is its own ancestor in the book {}: through {}{more}", h.name(t.rel), h.name(book), through.join(", ")));
         }
     }

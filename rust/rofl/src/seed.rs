@@ -949,8 +949,7 @@ pub fn cell_json(h: &Heap, s: &Store, c: CellId, like: Option<CellId>) -> Value 
 
 /// A row a structure answers, as `fact_json` writes a stored one: derived, of its tick.
 pub fn virtual_json(h: &Heap, rel: Sym, book: Sym, args: &[Term]) -> Value {
-    let mut key = String::new();
-    crate::store::write_fact_key(h, rel, book, args, &mut key);
+    let key = crate::session::fact_key(h, rel, book, args);
     value(|o| fact(o, h, Some(&key), rel, book, args, true, false, false))
 }
 

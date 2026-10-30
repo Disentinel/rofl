@@ -287,10 +287,10 @@ impl Eval {
     fn ds_verify(&mut self, comp: &DsComp) -> Result<(), Halt> {
         let mut keys: Vec<AggKey> = self.ds.released.iter().filter(|k| comp.elems.contains(&(k.0, k.1))).cloned().collect();
         keys.sort_by(|a, b| cmp_js(self.h.name(a.0), self.h.name(b.0)).then(a.1.cmp(&b.1)).then(cmp_js(&tuple_text(&self.h, &a.2), &tuple_text(&self.h, &b.2))));
-        let saved = (self.steps, self.rows, self.peak_rows, self.fault, self.fault_count, self.last_fault, self.last_fault_rule);
+        let saved = (self.steps, self.rows, self.peak_rows, self.fault, self.fault_count, self.last_fault, self.shrug.last_fault_rule);
         let mut bad: Option<String> = None;
         for k in keys {
-            let Some(cells) = self.cells.agg_memo.get(&k).cloned() else { continue };
+            let Some(cells) = self.memo.agg_memo.get(&k).cloned() else { continue };
             let r = self.rule_of(k.0).ok_or_else(|| Halt::Bug("a correlation of no rule".into()))?;
             let a = r.plan.iter().find_map(|b| match b {
                 BodyElem::Agg(a) if a.at == k.1 => Some(a.clone()),
@@ -313,14 +313,14 @@ impl Eval {
                 }
             }
         }
-        (self.steps, self.rows, self.peak_rows, self.fault, self.fault_count, self.last_fault, self.last_fault_rule) = saved;
+        (self.steps, self.rows, self.peak_rows, self.fault, self.fault_count, self.last_fault, self.shrug.last_fault_rule) = saved;
         bad.map_or(Ok(()), |m| Err(Halt::Bug(m)))
     }
 
     /// What a hole in the component left unknown, carried before the next layer
     /// reads it: the component is closed as far as the carry is concerned.
     fn ds_carry(&mut self, comp: &DsComp) -> Result<(), Halt> {
-        if brk!("ds_hole_uncarried" => true; self.lat.plain_pending.is_empty() && self.lat.plain_undecided.is_empty() && self.lat.undecided.is_empty() && brk!("ds_spread_uncarried" => true; self.lat.spread.is_empty())) {
+        if brk!("ds_hole_uncarried" => true; self.lat.pass.plain_pending.is_empty() && self.lat.pass.plain_undecided.is_empty() && self.lat.carry.undecided.is_empty() && brk!("ds_spread_uncarried" => true; self.lat.carry.spread.is_empty())) {
             return Ok(());
         }
         self.close_plain_rules(comp.round + 1)?;
@@ -649,9 +649,9 @@ impl Eval {
         if !self.ds_decides(op, l, r, s) {
             return Ok(brk!("ds_builtin_dead" => Vec::new(); vec![s.clone()]));
         }
-        let saved = (self.steps, self.fault, self.fault_count, self.last_fault, self.last_fault_rule);
+        let saved = (self.steps, self.fault, self.fault_count, self.last_fault, self.shrug.last_fault_rule);
         let out = self.eval_builtins(op, l, r, s, None);
-        (self.steps, self.fault, self.fault_count, self.last_fault, self.last_fault_rule) = saved;
+        (self.steps, self.fault, self.fault_count, self.last_fault, self.shrug.last_fault_rule) = saved;
         out
     }
 
@@ -665,9 +665,9 @@ impl Eval {
                 return Ok(vec![s.clone()]);
             }
         }
-        let saved = (self.steps, self.rows, self.peak_rows, self.fault, self.fault_count, self.last_fault, self.last_fault_rule);
+        let saved = (self.steps, self.rows, self.peak_rows, self.fault, self.fault_count, self.last_fault, self.shrug.last_fault_rule);
         let out = self.agg_premise(rid, a, s, 0, false);
-        (self.steps, self.rows, self.peak_rows, self.fault, self.fault_count, self.last_fault, self.last_fault_rule) = saved;
+        (self.steps, self.rows, self.peak_rows, self.fault, self.fault_count, self.last_fault, self.shrug.last_fault_rule) = saved;
         Ok(out?.into_iter().map(|(s2, _)| s2).collect())
     }
 

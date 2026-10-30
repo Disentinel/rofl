@@ -461,13 +461,13 @@ impl Eval {
             reset.contains(&rule)
         }).collect();
         let n = self.kill_cells(&cells);
-        self.thr.open.retain(|(c, _)| !self.store.cell_dead(*c));
-        self.thr.acc.retain(|(r, _, _), _| !reset.contains(r));
-        self.cells.agg_memo.retain(|(r, _, _), _| !reset.contains(r));
-        self.cells.reach_memo.retain(|(r, _, _), _| !reset.contains(r));
+        self.memo.thr_open.retain(|(c, _)| !self.store.cell_dead(*c));
+        self.memo.thr_acc.retain(|(r, _, _), _| !reset.contains(r));
+        self.memo.agg_memo.retain(|(r, _, _), _| !reset.contains(r));
+        self.memo.reach_memo.retain(|(r, _, _), _| !reset.contains(r));
         self.cells.agg_opened.retain(|(r, _, _)| !reset.contains(r));
-        self.hol_shared.retain(|(r, _, _), _| !reset.contains(r));
-        self.height_memo.clear();
+        self.memo.hol_shared.retain(|(r, _, _), _| !reset.contains(r));
+        self.memo.height_memo.clear();
         n
     }
 
@@ -500,7 +500,7 @@ impl Eval {
                 self.run_data_comps(comps, lv, &ds)?;
             }
             brk!("refire_lattice_unclosed" => (); self.close_lattices_below(i64::MAX)?);
-            while !rules.is_empty() && !self.thr.open.is_empty() {
+            while !rules.is_empty() && !self.memo.thr_open.is_empty() {
                 brk!("retract_thr_unclosed" => break; self.close_thresholds_below(i64::MAX, true)?);
                 self.close_lattices_below(i64::MAX)?;
             }
@@ -772,7 +772,7 @@ impl Eval {
             && (self.store.citers_of(&HashSet::from([f])).into_iter().any(|x| {
                 let rel = self.store.rec(x).rel;
                 self.lat.lattices.contains_key(&rel) || self.lat.join_of.contains_key(&rel)
-            }) || self.lat.sub_prems.values().any(|fs| fs.iter().any(|ps| ps.contains(&PremRef::Fact(f)))))
+            }) || self.lat.pass.sub_prems.values().any(|fs| fs.iter().any(|ps| ps.contains(&PremRef::Fact(f)))))
     }
 
     /// The readers of what `f` changed, grown until no component stratified by its data and no relation answered on
@@ -886,7 +886,7 @@ impl Eval {
         let many = self.staged_watch.take().unwrap_or(false);
         self.active = active;
         r?;
-        while !self.thr.open.is_empty() {
+        while !self.memo.thr_open.is_empty() {
             self.close_thresholds_below(i64::MAX, true)?;
         }
         if self.store.cell_count() != cells0 {
@@ -954,17 +954,17 @@ impl Eval {
         self.store.sweep();
         d.stacked_cells = if reset.is_empty() { 0 } else { self.reset_cells(&reset) };
         self.forget_cone_keys(&cone_keys, &inside);
-        let rest: Vec<LatKey> = self.lat.sub_seen.keys().filter(|k| rels.contains(&k.0)).cloned().collect();
-        let stashed: Vec<(LatKey, Vec<Box<[Term]>>)> = rest.into_iter().filter_map(|k| self.lat.sub_seen.remove(&k).map(|v| (k, v))).collect();
+        let rest: Vec<LatKey> = self.lat.pass.sub_seen.keys().filter(|k| rels.contains(&k.0)).cloned().collect();
+        let stashed: Vec<(LatKey, Vec<Box<[Term]>>)> = rest.into_iter().filter_map(|k| self.lat.pass.sub_seen.remove(&k).map(|v| (k, v))).collect();
         let (outer, holes0) = self.begin_window();
         let active = std::mem::take(&mut self.active);
-        let was = self.lat.closed.clone();
+        let was = self.lat.pass.closed.clone();
         for r in &rels {
-            self.lat.closed.remove(r);
+            self.lat.pass.closed.remove(r);
         }
         let store = &self.store;
-        self.lat.cur.retain(|_, id| store.alive(*id));
-        self.height_memo.clear();
+        self.lat.pass.cur.retain(|_, id| store.alive(*id));
+        self.memo.height_memo.clear();
         let r = (|| -> Result<(), Halt> {
             self.activate(&rules)?;
             self.close_lattices_below(i64::MAX)?;
@@ -976,18 +976,18 @@ impl Eval {
             if brk!("retract_lattice_hole_kept" => false; self.lat.lattice_hole(&self.store, &self.v, holes0)) {
                 return Err(Halt::Bug("a lattice delta made a hole".into()));
             }
-            if self.lat.superseded.iter().any(|g| rels.contains(&self.store.rec(*g).rel)) {
+            if self.lat.pass.superseded.iter().any(|g| rels.contains(&self.store.rec(*g).rel)) {
                 return Err(Halt::Bug("a lattice delta kept a history".into()));
             }
             Ok(())
         })();
-        self.lat.sub_seen.extend(stashed);
+        self.lat.pass.sub_seen.extend(stashed);
         self.active = active;
         self.end_window(outer);
         match r {
             Ok(()) => Ok(d),
             Err(_) => {
-                self.lat.closed = was;
+                self.lat.pass.closed = was;
                 self.store.dirty = true;
                 Err("the lattice delta kept a history, wrote a hole or met a wall; the world is evaluated again")
             }
@@ -1043,7 +1043,7 @@ impl Eval {
             // the key of a value no fact holds (it was dominated when it was given) whose
             // firing rested on a fact of the cone
             let mut keys: Vec<LatKey> = Vec::new();
-            for ((ck, _), firings) in &self.lat.sub_prems {
+            for ((ck, _), firings) in &self.lat.pass.sub_prems {
                 if firings.iter().any(|ps| ps.iter().any(|p| matches!(p, PremRef::Fact(g) if frontier.contains(g)))) && !keys.contains(ck) {
                     keys.push(ck.clone());
                 }
@@ -1102,13 +1102,13 @@ impl Eval {
         // what the evaluation kept of the values a cone key was given goes with its facts; the other
         // keys of the relation are not judged again at the close
         for ck in cone_keys {
-            self.lat.sub_cur.remove(ck);
-            self.lat.sub_seen.remove(ck);
-            self.lat.sub_memo.remove(ck);
-            self.lat.sub_parties.remove(ck);
+            self.lat.pass.sub_cur.remove(ck);
+            self.lat.pass.sub_seen.remove(ck);
+            self.lat.pass.sub_memo.remove(ck);
+            self.lat.pass.sub_parties.remove(ck);
         }
         self.lat.forget_sub_witnesses(|ck| cone_keys.contains(ck));
-        self.lat.sub_by_of.retain(|f, _| !inside.contains(f));
+        self.lat.pass.sub_by_of.retain(|f, _| !inside.contains(f));
     }
 
     /// One cell: its new record, the firings that cited the old one, the facts
@@ -1170,7 +1170,7 @@ impl Eval {
         }
         // the correlation's cells, in the order a seal lists them
         let mk = (rule, at, corr.clone().into_boxed_slice());
-        let mut cs: Vec<CellId> = self.cells.agg_memo.get(&mk).map(|v| v.to_vec()).unwrap_or_default();
+        let mut cs: Vec<CellId> = self.memo.agg_memo.get(&mk).map(|v| v.to_vec()).unwrap_or_default();
         cs.retain(|x| *x != old);
         cs.extend(new.iter().copied());
         let mut keyed: Vec<(String, CellId)> = cs
@@ -1183,7 +1183,7 @@ impl Eval {
             .collect();
         keyed.sort_by(|x, y| cmp_js(&x.0, &y.0));
         brk!("retract_memo_stale" => { let _ = (&mk, &keyed); }; if !threshold {
-            self.cells.agg_memo.insert(mk, keyed.into_iter().map(|(_, c)| c).collect::<Vec<_>>().into());
+            self.memo.agg_memo.insert(mk, keyed.into_iter().map(|(_, c)| c).collect::<Vec<_>>().into());
         });
         // what read the cell reads it again, for this key alone
         if !new.is_empty() && er.clause.head.temporal != Temporal::Next && brk!("retract_no_refire" => false; true) {
@@ -1216,8 +1216,8 @@ impl Eval {
             Some(TermK::Int(k)) => k.max(0) as usize,
             _ => return Err(Halt::Bug("a threshold cell key does not end in its N".into())),
         };
-        self.thr.cells.remove(&(rule, at, key.to_vec().into_boxed_slice()));
-        self.thr.acc.retain(|(r, _, _), _| *r != rule);
+        self.memo.thr_cells.remove(&(rule, at, key.to_vec().into_boxed_slice()));
+        self.memo.thr_acc.retain(|(r, _, _), _| *r != rule);
         let (groups, _) = self.thr_groups(rule, agg, plan, s, 0, true, None)?;
         let members = groups.into_iter().next().map(|g| g.1).unwrap_or_default();
         if members.len() < need {
@@ -1378,8 +1378,8 @@ impl Eval {
             }
             if self.store.cell(c).op == AggOp::AtLeast && brk!("retract_thr_cells_kept" => false; true) {
                 let rec = self.store.cell(c);
-                self.thr.cells.remove(&(rule, at, rec.key.clone()));
-                self.thr.fresh.remove(&c);
+                self.memo.thr_cells.remove(&(rule, at, rec.key.clone()));
+                self.memo.thr_fresh.remove(&c);
             }
             self.store.kill_cell(c);
         }
@@ -1411,14 +1411,14 @@ impl Eval {
 
 impl LatticeState {
     pub(super) fn lattice_hole(&self, store: &Store, v: &Vocab, holes0: usize) -> bool {
-        store.rel_count(v.hole) > holes0 || !self.pending.is_empty()
+        store.rel_count(v.hole) > holes0 || !self.pass.pending.is_empty()
     }
 
     /// What the evaluation kept of the witnesses of the subsumptive keys that `gone` names.
     pub(super) fn forget_sub_witnesses(&mut self, gone: impl Fn(&LatKey) -> bool) {
-        self.sub_seen_set.retain(|(k, _), _| !gone(k));
-        self.sub_beaten.retain(|(k, _), _| !gone(k));
-        self.sub_prems.retain(|(k, _), _| !gone(k));
-        self.sub_by.retain(|(k, _), _| !gone(k));
+        self.pass.sub_seen_set.retain(|(k, _), _| !gone(k));
+        self.pass.sub_beaten.retain(|(k, _), _| !gone(k));
+        self.pass.sub_prems.retain(|(k, _), _| !gone(k));
+        self.pass.sub_by.retain(|(k, _), _| !gone(k));
     }
 }
