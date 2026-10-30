@@ -31,3 +31,12 @@ handed(I, F, N) :- passes_function[code](C, I, F, N), call_line[code](C, L), L <
 ```datalog
 ? merged_param[audit](F, I, N)
 ```
+
+> The write `handlers[name] = handler` is summarised in terms of `on`'s own
+> parameters and stitched at each call, so `users` holds `onUser` alone and
+> `fireUsers` calls it and nothing else.
+
+```datalog
+fires(B) :- calls_named[code]("fireUsers", B).
+? fires(B)
+```

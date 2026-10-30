@@ -1276,6 +1276,7 @@ unit_concludes("rules/js-surface.rofl", sx_cb).
 unit_concludes("rules/js-surface.rofl", next_send).
 unit_concludes("rules/js-surface.rofl", param_assigned).
 unit_concludes("rules/js-surface.rofl", call_returns).
+unit_concludes("rules/js-surface.rofl", param_read).
 unit_concludes("rules/js-surface.rofl", ret_param).
 unit_concludes("rules/js-surface.rofl", ret_plain).
 unit_concludes("rules/js-surface.rofl", sx_ret_node).
@@ -1285,6 +1286,10 @@ unit_concludes("rules/js-surface.rofl", sx_ret_plit).
 unit_concludes("rules/js-surface.rofl", sx_ret_param).
 unit_concludes("rules/js-surface.rofl", sx_gen_ret).
 unit_concludes("rules/js-surface.rofl", sx_gen_rlit).
+unit_concludes("rules/js-surface.rofl", store_pkey).
+unit_concludes("rules/js-surface.rofl", store_sym).
+unit_concludes("rules/js-surface.rofl", sx_store_pkey).
+unit_concludes("rules/js-surface.rofl", sx_mwrite).
 unit_concludes("rules/js-surface.rofl", ret_node_any).
 unit_concludes("rules/js-surface.rofl", imports).
 

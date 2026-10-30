@@ -888,7 +888,7 @@ member_value[flow](CD, Key, M) :- obj_like[flow](CD), ast_child[code](CD, body, 
 -- another file's: the write is published for it (rules/js-surface.rofl) and read back.
 sx_mwrite[surface](O, Key, V) :- may_be_node[flow](Obj, O), ast_child[code](L, object, 0, Obj),
                                  selects[flow](L, Key),
-                                 ast_child[code](A, left, 0, L), plain_assign[flow](A),
+                                 ast_child[code](A, left, 0, L), plain_assign[flow](A), not store_sym[flow](A),
                                  ast_child[code](A, right, 0, V).
 member_value[flow](O, Key, V) :- sx_mwrite[surface](O, Key, V).
 

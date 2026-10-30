@@ -22,3 +22,4 @@ function onUser(u) { return u; }
 function onOrder(o) { return o; }
 db.on('users', onUser);
 db.on('orders', onOrder);
+export function fireUsers() { handlers['users'](); }
