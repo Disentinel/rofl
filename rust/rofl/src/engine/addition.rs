@@ -376,8 +376,8 @@ impl Eval {
         }
     }
 
-    /// WHY AN ADDITION IS NOT WORKED OUT for this world: every reason that holds, in a fixed order (empty where it is).
-    fn addition_refusals(&mut self) -> Vec<&'static str> {
+    /// The reasons a delta or an addition is not worked out that hold of the world alone, whatever the change.
+    pub(super) fn world_refusals(&self) -> Vec<&'static str> {
         let mut out = Vec::new();
         if self.well_founded {
             out.push("the world is evaluated well-founded");
@@ -391,6 +391,12 @@ impl Eval {
         if self.store.tick != 0 {
             out.push("a later tick");
         }
+        out
+    }
+
+    /// WHY AN ADDITION IS NOT WORKED OUT for this world: every reason that holds, in a fixed order (empty where it is).
+    fn addition_refusals(&mut self) -> Vec<&'static str> {
+        let mut out = self.world_refusals();
         if brk!("add_seal_hole_refused" => self.store.rel_count(self.v.hole); self.holes_beyond_faults()) > 0 {
             out.push("the world holds a hole or reads a shrug");
         }
@@ -509,14 +515,8 @@ impl Eval {
 
     /// The relations `rules` read, at any depth, and what every rule into one of them reads, through each other.
     fn rels_below<'a>(&self, rules: impl Iterator<Item = &'a Rc<ERule>>) -> HashSet<Sym> {
-        let mut out: HashSet<Sym> = HashSet::new();
-        let mut todo: Vec<Sym> = rules.flat_map(|r| r.clause.body.iter().flat_map(|b| b.lits_deep()).map(|l| l.rel)).collect();
-        while let Some(rel) = todo.pop() {
-            if out.insert(rel) {
-                todo.extend(self.rules.iter().filter(|r| r.clause.head.rel == rel).flat_map(|r| r.clause.body.iter().flat_map(|b| b.lits_deep()).map(|l| l.rel)));
-            }
-        }
-        out
+        let first: Vec<Sym> = rules.flat_map(|r| r.clause.body.iter().flat_map(|b| b.lits_deep()).map(|l| l.rel)).collect();
+        reachable(first, |rel| self.rules.iter().filter(move |r| r.clause.head.rel == rel).flat_map(|r| r.clause.body.iter().flat_map(|b| b.lits_deep()).map(|l| l.rel)).collect::<Vec<_>>())
     }
 
     /// The variables a fact binds in a negated premise of the fine path (`bind_neg`).
@@ -680,7 +680,7 @@ impl Eval {
 
     /// The strongly connected components of the relations, each relation's by the rules that conclude it reading
     /// another (under a negation and an aggregate too): two relations in one may rest on each other.
-    fn rel_components(&self) -> HashMap<Sym, u32> {
+    fn rel_components(&self) -> HashMap<Sym, usize> {
         let mut next: HashMap<Sym, Vec<Sym>> = HashMap::new();
         for r in self.rules.iter() {
             let reads = next.entry(r.clause.head.rel).or_default();
@@ -688,61 +688,7 @@ impl Eval {
                 reads.push(l.rel);
             }
         }
-        // Tarjan's, without recursion: (node, index of its next edge)
-        let mut index: HashMap<Sym, (u32, u32)> = HashMap::new();
-        let mut comp: HashMap<Sym, u32> = HashMap::new();
-        let (mut stack, mut on, mut n, mut c) = (Vec::new(), HashSet::new(), 0u32, 0u32);
-        let mut nodes: Vec<Sym> = next.keys().copied().collect();
-        nodes.sort_unstable();
-        for root in nodes {
-            if index.contains_key(&root) {
-                continue;
-            }
-            let mut work: Vec<(Sym, usize)> = vec![(root, 0)];
-            index.insert(root, (n, n));
-            n += 1;
-            stack.push(root);
-            on.insert(root);
-            while let Some(&mut (v, ref mut i)) = work.last_mut() {
-                let out = next.get(&v).map(|e| e.as_slice()).unwrap_or(&[]);
-                if *i < out.len() {
-                    let w = out[*i];
-                    *i += 1;
-                    match index.get(&w) {
-                        None => {
-                            index.insert(w, (n, n));
-                            n += 1;
-                            stack.push(w);
-                            on.insert(w);
-                            work.push((w, 0));
-                        }
-                        Some(&(wi, _)) if on.contains(&w) => {
-                            let e = index.get_mut(&v).unwrap();
-                            e.1 = e.1.min(wi);
-                        }
-                        _ => {}
-                    }
-                    continue;
-                }
-                work.pop();
-                let (vi, vl) = index[&v];
-                if let Some(&(u, _)) = work.last() {
-                    let e = index.get_mut(&u).unwrap();
-                    e.1 = e.1.min(vl);
-                }
-                if vl == vi {
-                    while let Some(w) = stack.pop() {
-                        on.remove(&w);
-                        comp.insert(w, c);
-                        if w == v {
-                            break;
-                        }
-                    }
-                    c += 1;
-                }
-            }
-        }
-        comp
+        rel_scc(&next).0
     }
 
     /// THE PART OF AN ADDITION THAT IS KEPT, level by level (DRed over the levels of a stratified program): at each
@@ -1381,18 +1327,7 @@ impl Eval {
 
     /// The relations that may grow: those added to, and the heads of every rule that reads one, through each other.
     pub(super) fn grow(&self, from: &HashSet<Sym>, fresh: &HashSet<Sym>) -> HashSet<Sym> {
-        let mut seen = from.clone();
-        loop {
-            let n = seen.len();
-            for r in &self.rules {
-                if r.clause.head.temporal != Temporal::Next && (fresh.contains(&r.id) || reads(r, &seen).0) {
-                    seen.insert(r.clause.head.rel);
-                }
-            }
-            if seen.len() == n {
-                return seen;
-            }
-        }
+        readers_cone(from.clone(), self.rules.iter().filter(|r| r.clause.head.temporal != Temporal::Next), |r, seen| fresh.contains(&r.id) || reads(r, seen).0)
     }
 
     /// An addition's own work: the lattices and calls it reaches, every rule sorted by how it fires again, what it
