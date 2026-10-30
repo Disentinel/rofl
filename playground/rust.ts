@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { MessageChannel, receiveMessageOnPort, Worker } from 'node:worker_threads';
 import { Rofl } from '../src/api.ts';
 import { engine as installedEngine } from '../npm/platform.ts';
-import { asksOf, typescript, type Engine, type EngineName, type Holding, type Stop, type Walls } from './engine.ts';
+import { asksOf, chunksOf, typescript, type Engine, type EngineName, type Holding, type Stop, type Walls } from './engine.ts';
 import type { CellRec, FactRec, PremRef, Store, Witness } from '../src/store.ts';
 import { termFromJson } from '../src/unify.ts';
 
@@ -54,12 +54,12 @@ export class RustEngine implements Engine {
 
   constructor(bin: string) { this.call = serve(bin); }
 
-  evaluated(_core: Rofl, model: string, code: string, walls: Walls): Rofl {
+  evaluated(_core: Rofl, model: string, code: readonly string[], walls: Walls): Rofl {
     return this.run('base', model, code, [], walls).world;
   }
 
   /** The cells' texts loaded beside the code in their own world, the kept base left alone; a text the engine refuses is said in `errors` at its place and left out. */
-  withCells(_core: Rofl, model: string, code: string, texts: string[], walls: Walls): { world: Rofl; errors: string[][] } {
+  withCells(_core: Rofl, model: string, code: readonly string[], texts: string[], walls: Walls): { world: Rofl; errors: string[][] } {
     return this.run('cells', model, code, texts, walls);
   }
 
@@ -95,7 +95,7 @@ export class RustEngine implements Engine {
     return world;
   }
 
-  private run(slot: 'base' | 'cells', model: string, code: string, texts: string[], walls: Walls): { world: Rofl; errors: string[][] } {
+  private run(slot: 'base' | 'cells', model: string, code: readonly string[], texts: string[], walls: Walls): { world: Rofl; errors: string[][] } {
     if (this.core?.model !== model) {
       if (this.core) this.call({ op: 'close', session: this.core.session });
       const s = this.call({ op: 'fresh', budget: walls.budget, space: walls.space }).session;
@@ -105,7 +105,7 @@ export class RustEngine implements Engine {
     if (this.worlds[slot]) this.call({ op: 'close', session: this.worlds[slot] });
     for (const f of this.forks.splice(0)) this.call({ op: 'close', session: f });
     const session = this.worlds[slot] = this.call({ op: 'fork', session: this.core.session }).session;
-    try { if (code) this.limited({ op: 'assert', session, rofl: code }, walls.stop); } catch (e) { throw new Error(`the code's facts were refused, so nothing was asked: ${(e as Error).message}`); }
+    try { for (const rofl of chunksOf(code)) this.limited({ op: 'assert', session, rofl }, walls.stop); } catch (e) { throw new Error(`the code's facts were refused, so nothing was asked: ${(e as Error).message}`); }
     const errors: string[][] = texts.map(() => []), all = texts.filter((x) => x.trim()).join('\n');
     const load = (rofl: string) => { try { this.limited({ op: 'load', session, rofl }, walls.stop); return undefined; } catch (e) { return (e as Error).message.replace(/^the Rust engine refused load: /, '').split('\n'); } };
     if (all.trim() && load(all)) texts.forEach((x, i) => { if (x.trim()) errors[i] = load(x) ?? []; });

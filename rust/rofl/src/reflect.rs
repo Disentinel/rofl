@@ -397,6 +397,7 @@ vocab! {
     budget_reason: "budget_exhausted";
     space_reason: "space_exhausted";
     disk_reason: "disk_exhausted";
+    memory_reason: "memory_exhausted";
     demand_cycle: "demand_cycle";
     arith_type_reason: "arith_type_error";
     arith_zero_reason: "arith_zero_divisor";

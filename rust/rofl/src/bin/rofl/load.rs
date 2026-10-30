@@ -299,12 +299,14 @@ fn run(json: bool, args: Vec<String>, mut pre: Option<(bool, crate::kept::Record
             by_delta = Some(d);
         }
     }
+    // a kept world that asked a cone answers no question that needs every rule: it is evaluated anew
+    let opened = opened.and_then(|mut k| (!(o.implicit && question_rels(&o).is_none() && !asked(&mut k).is_empty())).then_some(k));
     let from_disk = opened.is_some();
     let mut s = opened.unwrap_or_else(|| Session::fresh(o.budget));
     set_walls(&o, &mut s);
     if let (Some(cut), Some(p)) = (found.cut, &slot) { resume_disk_wall(&o, &world, &mut s, p, cut); }
     if let (Some(d), Some(p)) = (&by_delta, &slot) { keep_taken(&o, &world, &mut s, p, d); }
-    if !from_disk { build_world(&o, &world, &mut s, &slot); }
+    if !from_disk { build_world(&o, &world, &mut s, &slot); } else { grow_cone(&o, &mut s); }
     if let Some(f) = &o.save {
         std::fs::write(f, s.save()).unwrap_or_else(|e| fail(json, USAGE, &format!("{f}: {e}")));
     }
@@ -438,10 +440,74 @@ fn build_world(o: &Opts, world: &[String], s: &mut Session, slot: &Option<String
     let loaded = load_files(o, s, &sources);
     load_below(o, s, &sources);
     let disk = disk_wall(o, s, slot);
+    if let Some(rels) = question_rels(o) {
+        if let Err(e) = s.assert(&asks_text(&rels)) { fail(o.json, USAGE, &e); }
+    }
     evaluate_world(o, s);
     for d in &s.eval.diags { eprintln!("diag: {d}"); }
     let read: Vec<String> = sources.iter().map(|(f, _)| f.clone()).chain(o.below.iter().cloned()).collect();
     keep_loaded(o, world, s, &loaded, &read, slot, disk);
+}
+
+/// The relations a question verb's questions name, which its world asks (docs/demand-cones.md) as a notebook asks
+/// its lines': none for a run that needs every rule (an excise, the state, ticks, retractions, explanations).
+fn question_rels(o: &Opts) -> Option<Vec<String>> {
+    if !o.implicit || o.qs.is_empty() || o.state || o.ticks != 0 || !o.retracts.is_empty() || o.explain { return None; }
+    // and what the session reads after each evaluation: the scans and the adapters' wants it is asked for
+    let mut rels: Vec<String> = ["scan_request", "want_of", "permit"].map(String::from).to_vec();
+    for q in &o.qs {
+        match q {
+            Q::Ask(l) | Q::Why(l) | Q::WhyAll(l) | Q::Whynot(l) => rels.extend(heads_of(l)),
+            Q::Excise(_) => return None,
+        }
+    }
+    if rels.len() == 3 { return None; }
+    rels.sort();
+    rels.dedup();
+    Some(rels)
+}
+
+/// The relation names of a question's literals: each name outside parentheses that a `(` or `[` follows.
+fn heads_of(l: &str) -> Vec<String> {
+    let (b, mut out, mut depth, mut i) = (l.as_bytes(), Vec::new(), 0i32, 0);
+    while i < b.len() {
+        match b[i] {
+            b'(' | b'[' => depth += 1,
+            b')' | b']' => depth -= 1,
+            b'"' => { i += 1; while i < b.len() && b[i] != b'"' { if b[i] == b'\\' { i += 1; } i += 1; } }
+            c if depth == 0 && c.is_ascii_lowercase() && (i == 0 || !(b[i - 1].is_ascii_alphanumeric() || b[i - 1] == b'_' || b[i - 1] == b'$')) => {
+                let at = i;
+                while i + 1 < b.len() && (b[i + 1].is_ascii_alphanumeric() || b[i + 1] == b'_') { i += 1; }
+                if matches!(b.get(i + 1), Some(b'(' | b'[')) { out.push(l[at..=i].to_string()); }
+            }
+            _ => {}
+        }
+        i += 1;
+    }
+    out
+}
+
+fn asks_text(rels: &[String]) -> String {
+    rels.iter().map(|r| format!("asks({r}).\n")).collect()
+}
+
+/// The relations a world asks.
+fn asked(s: &mut Session) -> Vec<String> {
+    let e = &mut s.eval;
+    e.store.rel_all(&e.h, e.v.asks).into_iter().filter_map(|f| e.store.args(f).first().and_then(|t| t.as_atom()).map(|a| e.h.name(a).to_string())).collect()
+}
+
+/// A kept world asked for less than the question needs grows its cone over what it holds, by delta; one that asks
+/// nothing holds every rule already.
+fn grow_cone(o: &Opts, s: &mut Session) {
+    let Some(rels) = question_rels(o) else { return };
+    let had = asked(s);
+    let more: Vec<String> = rels.into_iter().filter(|r| !had.contains(r)).collect();
+    if had.is_empty() || more.is_empty() { return; }
+    if let Err(e) = s.assert_delta(&asks_text(&more)) { fail(o.json, USAGE, &e); }
+    if s.eval.store.dirty {
+        if let Err(e) = s.evaluate() { refuse(s, o.json, rofl::describe(&e)); }
+    }
 }
 
 /// The sources of the files named: a `.rofl.md` world is read into its rules, after the worlds it reads.
@@ -552,6 +618,10 @@ fn keep_loaded(o: &Opts, world: &[String], s: &mut Session, loaded: &[(String, S
         let note = crate::kept::record(world, files_now, &units, read, &scan_units(s), None).unwrap_or_else(|e| fail(o.json, FILE_REFUSED, &format!("{k} is not kept: {e}")));
         let n = s.keep_volume_noted(k, &note).unwrap_or_else(|e| fail(o.json, USAGE, &format!("{k}: {e}")));
         eprintln!("kept {k}: {n} bytes");
+    } else if s.eval.memory_cut() {
+        eprintln!("the world reached the memory this process may use and stopped there: its answers are partial, and it is not kept");
+    } else if let Some(need) = keep_needs_more(s) {
+        eprintln!("the world is not kept: keeping it takes about {} of memory more, which this process may not use", crate::kept::said_size(need));
     } else if let Some(p) = slot {
         // keeping is a convenience of the question: a world that cannot be kept is answered all the same
         let units = units_of(s, loaded);
@@ -568,6 +638,15 @@ fn keep_loaded(o: &Opts, world: &[String], s: &mut Session, loaded: &[(String, S
             (Err(e), Some(m)) => to_the_end(s, o.budget, o.json, &format!("the world reached the disk cap of its cache, {}, and was not kept where it stopped: {e}", crate::kept::said_size(m))),
         }
     }
+}
+
+/// What keeping the world would take beyond the memory the process may still use, when it would: indexing it for a
+/// delta and writing its volume took 2.5 times the volume's bytes at 700 vscode files (5.9 GB against 2.1 GB evaluated).
+fn keep_needs_more(s: &Session) -> Option<u64> {
+    use std::sync::atomic::Ordering::Relaxed;
+    let may = rofl::engine::MEMORY_LIMIT.load(Relaxed);
+    let need = s.eval.disk_bytes().saturating_mul(3);
+    (may > 0 && need > may - rofl::engine::MEMORY_USED.load(Relaxed)).then_some(need as u64)
 }
 
 /// The read-only structure report, which replaces the dump as a question does.

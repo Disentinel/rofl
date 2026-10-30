@@ -646,6 +646,14 @@ pub struct TickOutcome {
     pub partial: bool,
 }
 
+/// THE MEMORY WALL (CLAUDE.md, the goal: where memory runs out, the engine says so; it does not die). The process
+/// sets `MEMORY_FULL` while what it uses is near what it may (bin/rofl/memory.rs); an evaluation stops at its next
+/// check as at the step budget, its hole `memory_exhausted`, and `MEMORY_STOPPED` tells the caller it did.
+pub static MEMORY_FULL: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+pub static MEMORY_STOPPED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+pub static MEMORY_USED: std::sync::atomic::AtomicI64 = std::sync::atomic::AtomicI64::new(0);
+pub static MEMORY_LIMIT: std::sync::atomic::AtomicI64 = std::sync::atomic::AtomicI64::new(0);
+
 #[derive(Clone)]
 pub struct Eval {
     pub wall: WallState,
@@ -658,6 +666,8 @@ pub struct Eval {
     /// where a step wall falls and is gone on from as one is (`resume.rs`); `disk_hit` says the last wall was it.
     pub disk: i64,
     disk_hit: bool,
+    /// the last wall was the memory wall (`MEMORY_FULL`)
+    memory_hit: bool,
     /// the bytes of the solutions of the firing being concluded not yet concluded, which a cut keeps
     disk_held: i64,
     /// Set from outside while an evaluation runs (the clock or the heap of a caller's limit): the evaluation stops as at its step budget.
@@ -2155,6 +2165,7 @@ impl Eval {
             space: DEFAULT_SPACE,
             disk: i64::MAX,
             disk_hit: false,
+            memory_hit: false,
             disk_held: 0,
             cur_rule: None,
             cost: CostState::default(),
@@ -3411,6 +3422,7 @@ impl Eval {
         self.rows = 0;
         self.peak_rows = 0;
         self.disk_hit = false;
+        self.memory_hit = false;
         self.disk_held = 0;
         self.demand.done.clear();
         self.demand.done_rows = 0;
@@ -4555,6 +4567,7 @@ impl Eval {
     fn wall_hole(&mut self, reason: &str) -> Result<(), Halt> {
         let why = Term::atom(match reason {
             "budget_exhausted" if self.disk_hit => self.v.disk_reason,
+            "budget_exhausted" if self.memory_hit => self.v.memory_reason,
             "budget_exhausted" => self.v.budget_reason,
             _ => self.v.space_reason,
         });
@@ -5733,6 +5746,13 @@ impl Eval {
             self.wall.spent.set(Some(("steps", self.steps, self.budget.min(self.steps))));
             return Err(Halt::Budget("budget_exhausted", None));
         }
+        if self.steps & 0x3ff == 0 && MEMORY_FULL.load(std::sync::atomic::Ordering::Relaxed) {
+            use std::sync::atomic::Ordering::Relaxed;
+            self.memory_hit = true;
+            MEMORY_STOPPED.store(true, Relaxed);
+            self.wall.spent.set(Some(("bytes", MEMORY_USED.load(Relaxed), MEMORY_LIMIT.load(Relaxed))));
+            return Err(Halt::Budget("budget_exhausted", None));
+        }
         if self.disk != i64::MAX && self.budget != i64::MAX && brk!("disk_wall_ignored" => false; true) {
             let b = self.disk_bytes();
             if b > self.disk {
@@ -5752,7 +5772,16 @@ impl Eval {
 
     /// Whether the last evaluation stopped at the disk wall: its hole is in the store.
     pub fn disk_cut(&self) -> bool {
-        self.store.eval_holes.iter().any(|&id| self.store.alive(id) && self.store.args(id).get(1).and_then(|t| t.as_atom()) == Some(self.v.disk_reason))
+        self.cut_by(self.v.disk_reason)
+    }
+
+    /// The world stopped at the memory wall (`MEMORY_FULL`).
+    pub fn memory_cut(&self) -> bool {
+        self.cut_by(self.v.memory_reason)
+    }
+
+    fn cut_by(&self, reason: Sym) -> bool {
+        self.store.eval_holes.iter().any(|&id| self.store.alive(id) && self.store.args(id).get(1).and_then(|t| t.as_atom()) == Some(reason))
     }
 
     /// The rows held while a premise is matched, `now`, against the space: the wall a body solved meets.
