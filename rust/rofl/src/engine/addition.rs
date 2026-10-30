@@ -562,7 +562,8 @@ impl Eval {
     /// rule whose news reaches a premise its plans cannot start from (solved in written order, such a premise is
     /// reached after the join of all those before it, for each news row) leaves the rounds: it fires whole once they
     /// are done, and the rounds go on over what that made, until nothing is new.
-    fn level_rounds(&mut self, rules: &[Rc<ERule>], mut front: Front) -> Result<(), Halt> {
+    fn level_rounds(&mut self, rules: &[Rc<ERule>], mut front: Front, (fired, made): (&HashSet<Sym>, Front)) -> Result<(), Halt> {
+        let mut first = Some(made);
         let outer = std::mem::take(&mut self.live_front);
         let active = std::mem::replace(&mut self.active, rules.to_vec());
         let mut whole: Vec<Rc<ERule>> = Vec::new();
@@ -573,10 +574,15 @@ impl Eval {
                     self.cur_front = Front::default();
                     self.thr.round += 1;
                     self.memo.thr_fresh.clear();
+                    let made = first.take();
                     for r in rules {
                         if whole.iter().any(|w| w.id == r.id) {
                             continue;
                         }
+                        let front = match &made {
+                            Some(m) if fired.contains(&r.id) => m,
+                            _ => &front,
+                        };
                         let at: Vec<(usize, usize)> = r.plan.iter().enumerate().filter_map(|(i, b)| match b {
                             BodyElem::Pos(l) => front.by_rel.get(&l.rel).map(|k| (i, k.len())),
                             _ => None,
@@ -614,6 +620,10 @@ impl Eval {
     /// every fact with a firing that cites one gone, through each other; a base fact stays and loses its firings, to
     /// be given them again.
     fn overdelete(&mut self, seeds: Vec<FactId>, over: &mut HashSet<FactId>, over_base: &mut HashSet<FactId>, d: &mut AddDelta) {
+        // the citer index, made when something first goes and kept by every firing added since
+        if !seeds.is_empty() && !self.store.has_citers() {
+            self.store.index_citers();
+        }
         let lost: HashSet<FactId> = seeds.iter().copied().collect();
         let comp = self.rel_components();
         // (kept, and queued since by nothing: a copy queued before it was judged)
@@ -776,8 +786,7 @@ impl Eval {
         for r in self.rules.iter().filter(|r| r.clause.head.temporal != Temporal::Next && r.safe && !plan.skip.contains(&r.id)) {
             by_head.entry(r.clause.head.rel).or_default().push(r.clone());
         }
-        // the citer index, made once and kept by every firing added since
-        if (!(plan.negs.is_empty() && plan.recompute.is_empty()) || !removed.is_empty()) && !self.store.has_citers() {
+        if !removed.is_empty() && !self.store.has_citers() {
             self.store.index_citers();
         }
         let mut news = Front::default();
@@ -1070,9 +1079,12 @@ impl Eval {
             }
         }
         self.active = level.rules.clone();
+        // a rule fired whole has read every fact that stands: its first round reads only what the firings made
+        let mut whole: HashSet<Sym> = HashSet::new();
         for r in plan.new_plain.iter().filter(|r| fired_at(st, lv, r.id)) {
             let f = self.fire_rule(r, None)?;
             merge_front(&mut out, f);
+            whole.insert(r.id);
         }
         let mut front = st.news.clone();
         for id in self.store.arrivals.as_ref().map(|a| a.clone()).unwrap_or_default() {
@@ -1080,8 +1092,8 @@ impl Eval {
                 front.note(self.store.rec(id).rel, id);
             }
         }
-        merge_front(&mut front, out);
-        self.level_rounds(&level.rules, front)?;
+        merge_front(&mut front, out.clone());
+        self.level_rounds(&level.rules, front, (&whole, out))?;
         // a threshold reached at this level closes once what it reads is closed, as an evaluation closes it
         self.close_thresholds_below(lv.saturating_add(1), true)
     }
