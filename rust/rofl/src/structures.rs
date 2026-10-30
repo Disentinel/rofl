@@ -100,7 +100,7 @@ fn clip(s: String) -> String {
 }
 
 fn rows_word(n: usize) -> String {
-    format!("{} row{}", n, if n == 1 { "" } else { "s" })
+    format!("{} row{}", n, crate::engine::plural(n))
 }
 
 /// The relations a fresh session already holds: the kernel's own, not the world's.
@@ -524,7 +524,7 @@ fn tree_miss(h: &Heap, t: &Rel, a: &Shape, b: &Shape) -> Option<String> {
         }
         Shape::Cycle(n, nodes) if *n <= 3 => {
             let ns: Vec<String> = nodes.iter().map(|x| h.canon(*x)).collect();
-            Some(format!("{decl} {} cycle{}, the first through {}", n, if *n == 1 { "" } else { "s" }, clip(ns.join(", "))))
+            Some(format!("{decl} {} cycle{}, the first through {}", n, crate::engine::plural(*n), clip(ns.join(", "))))
         }
         _ => None,
     }
