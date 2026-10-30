@@ -3,13 +3,13 @@
 | file | clauses | heads | phrased | positional | absorbed guards | links | either | tables | not defined here | refused |
 |---|---|---|---|---|---|---|---|---|---|---|
 | [phrases](phrases.rofl.md) | 10 | 1 | 0 | 0 | 0 | 0 | 0 | 1 | 0 | 0 |
-| [js-phrases](js-phrases.rofl.md) | 1057 | 3 | 0 | 0 | 0 | 0 | 0 | 31 | 0 | 0 |
+| [js-phrases](js-phrases.rofl.md) | 1064 | 3 | 0 | 0 | 0 | 0 | 0 | 31 | 0 | 0 |
 | [js-ambient](js-ambient.rofl.md) | 70 | 41 | 38 | 0 | 1 | 91 | 5 | 1 | 11 | 0 |
 | [js-attrs](js-attrs.rofl.md) | 51 | 39 | 37 | 2 | 0 | 105 | 4 | 0 | 6 | 0 |
-| [js-callgraph](js-callgraph.rofl.md) | 521 | 187 | 84 | 87 | 95 | 690 | 66 | 7 | 12 | 0 |
+| [js-callgraph](js-callgraph.rofl.md) | 530 | 192 | 89 | 87 | 98 | 713 | 68 | 7 | 12 | 0 |
 | [js-concat](js-concat.rofl.md) | 209 | 71 | 2 | 58 | 16 | 337 | 24 | 7 | 2 | 0 |
 | [js-controlflow](js-controlflow.rofl.md) | 254 | 98 | 78 | 4 | 44 | 248 | 17 | 6 | 3 | 0 |
-| [js-dataflow](js-dataflow.rofl.md) | 606 | 234 | 143 | 67 | 176 | 873 | 56 | 10 | 4 | 0 |
+| [js-dataflow](js-dataflow.rofl.md) | 610 | 235 | 144 | 67 | 177 | 882 | 57 | 10 | 4 | 0 |
 | [js-effects](js-effects.rofl.md) | 209 | 128 | 114 | 6 | 16 | 316 | 16 | 2 | 7 | 0 |
 | [js-env-api](js-env-api.rofl.md) | 5 | 5 | 5 | 0 | 0 | 8 | 0 | 0 | 3 | 0 |
 | [js-env](js-env.rofl.md) | 45 | 34 | 33 | 0 | 0 | 50 | 5 | 1 | 18 | 0 |
@@ -417,6 +417,7 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `export_spec_type_only` | `is_a_type_only_export_specifier` |
 | `export_specifier_node` | `names_an_export` |
 | `export_value_binding` | `binds_a_value_export` |
+| `exported_decl` | `is_exported_where_declared` |
 | `exported_fn` | `is_exported` |
 | `exports_default` | `is_the_default_export_of` |
 | `exports_name` | `is_exported_as` |
@@ -465,6 +466,7 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `guarded` | `is_guarded` |
 | `guarded_at` | `has_a_guarded_call_at` |
 | `guarded_call` | `is_a_guarded_call` |
+| `handed_fn` | `is_handed_the_function` |
 | `handled` | `is_handled` |
 | `handled` | `is_handled` |
 | `has_api` | `reaches_the_api` |
@@ -621,6 +623,7 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `lost_feature` | `is_lost_between` |
 | `may_be_lit` | `may_be_the_literal` |
 | `may_be_node` | `points_to` |
+| `may_resolve` | `may_resolve_to` |
 | `may_throw_only` | `may_throw_without_a_latent_exception` |
 | `mechanism_known` | `is_a_known_mechanism` |
 | `mechanism_modelled` | `is_modelled` |
@@ -637,6 +640,7 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `member_like` | `calls_through` |
 | `member_plain` | `the_plain_member` |
 | `member_value` | `the_member` |
+| `merged_param` | `merges_its_parameter` |
 | `meta_form` | `has_the_meta_form` |
 | `meta_form_conflict` | `has_conflicting_meta_forms` |
 | `meta_form_conflict` | `has_two_forms` |
@@ -768,6 +772,7 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `rules_answer` | `the_rules_answer` |
 | `rules_has_answer` | `has_a_rules_answer` |
 | `rules_verdict` | `the_rules_verdict` |
+| `runs_as_script` | `runs_as_the_script` |
 | `runs_site` | `runs_its_target` |
 | `runtime` | `is_a_runtime` |
 | `runtime_cross_family` | `includes_across_families` |
@@ -924,6 +929,7 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `walk` | `walks` |
 | `well_known_symbol` | `names_the_well_known_symbol` |
 | `within_attr` | `contains_the_attribute` |
+| `written_arg` | `is_written_as_the_argument` |
 | `written_member` | `is_written` |
 
 ## One name, two books

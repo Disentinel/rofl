@@ -39,7 +39,7 @@ Reads:
 - from js-modules: [module_target](js-modules.rofl.md#module_target), [reexport_offers](js-modules.rofl.md#reexport_offers)
 - from js-structure: [ast_name](js-structure.rofl.md#ast_name)
 - from js-surface, in the flow: [fn_label](js-surface.rofl.md#fn_label), [fn_value](js-surface.rofl.md#fn_value), [ret_node_any](js-surface.rofl.md#ret_node_any)
-- from js-surface, in the surface: [sx_esc](js-surface.rofl.md#sx_esc), [sx_module](js-surface.rofl.md#sx_module), [sx_name](js-surface.rofl.md#sx_name)
+- from js-surface, in the surface: [sx_arg_node](js-surface.rofl.md#sx_arg_node), [sx_esc](js-surface.rofl.md#sx_esc), [sx_module](js-surface.rofl.md#sx_module), [sx_name](js-surface.rofl.md#sx_name)
 - from outside these files:
   - <a id="ast_file"></a>`ast_file`
   - <a id="ast_within"></a>A node is within a node (`ast_within`)
@@ -607,6 +607,30 @@ C passes the function F named Name at an index I if all of:
   - [`fn_value`](js-surface.rofl.md#fn_value)(F);
   - [`sx_name`](js-surface.rofl.md#sx_name)(X, Name).
 
+> a function written in place is named by its own name, `anonymous` when it has none
+
+C passes the function X named Name at an index I either:
+
+1. if all of:
+   - C [is written as the argument](#written_arg) at I X;
+   - X is a [function](#fn_node);
+   - X [answers to](#fn_name) Name;
+2. if all of:
+   - C [is written as the argument](#written_arg) at I X;
+   - X is a [function](#fn_node);
+   - Name is `anonymous`;
+   - unless X [answers to](#fn_name) some name.
+
+> a member handed over (`bus.on(x, this.onMsg)`) is named by its key
+
+C passes the function F named Key at an index I if all of:
+  - C [is written as the argument](#written_arg) at I a [member access](js-dataflow.rofl.md#member_node_v) X;
+  - X [selects](js-dataflow.rofl.md#selects) Key;
+  - X [points to](js-concat.rofl.md#may_be_node) F;
+  - [`fn_value`](js-surface.rofl.md#fn_value)(F).
+
+<a id="written_arg"></a>A node is written as the argument at an index I a node X if it [passes](js-dataflow.rofl.md#arg_at) X at I and X is the I-th of the `arguments` of it.
+
 > A function handed over and CALLED, by facts/js-host.rofl's `host_calls_back`.
 > Not a `resolves` edge: rules/js-dataflow.rofl binds a resolved call's
 > arguments to the callee's parameters and its return to the call's value, and
@@ -676,6 +700,40 @@ In the audit:
 Declared as facts:
 
 - <a id="shape_because"></a>`shape_because` — rows from facts/js-callgraph.rofl
+
+> `o[k]()` with a key nothing traces resolves to nothing, and stays in
+> `unresolved_call`. When the receiver is known, the functions it holds are what
+> the call may reach: a may-set beside `calls`, never folded into it.
+
+In the code:
+
+<a id="may_resolve"></a>C may resolve to a node F if all of:
+  - C [is unresolved](#unresolved_call) with `s_computed_dynamic_key`;
+  - [the callee](#callee_of) of C is a node N;
+  - [`member_obj`](js-dataflow.rofl.md#member_obj)(N, something, Obj);
+  - [the member](js-dataflow.rofl.md#member_value) some key of a node Obj holds a node V;
+  - V [points to](js-concat.rofl.md#may_be_node) F;
+  - [`fn_value`](js-surface.rofl.md#fn_value)(F).
+
+<a id="may_call"></a>Caller may call F either:
+
+1. if a node C [may resolve to](#may_resolve) F and Caller [is the nearest function of](#nearest_fn) C;
+2. if a node C [may resolve to](#may_resolve) F and C [runs at the top of](#top_call) Caller.
+
+> A parameter handed more than one function is one place for all of them: what
+> the function does with it (calls it, stores it, hands it on) is answered for
+> their union, not per call. Named, so an answer through it is not taken as exact.
+
+In the flow:
+
+<a id="handed_fn"></a>F is handed the function at an index I G if [`sx_arg_node`](js-surface.rofl.md#sx_arg_node)(F, I, G) and [`fn_value`](js-surface.rofl.md#fn_value)(G).
+
+In the audit:
+
+<a id="merged_param"></a>F merges its parameter at an index I handed a functions N if all of:
+  - F [is handed the function](#handed_fn) at I some function;
+  - N is the number of G such that (F [is handed the function](#handed_fn) at I G);
+  - N > 1.
 
 > An unresolved site attributed to the unit that contains it; a missing edge
 > whose caller has no row here is a SILENT under-report. A transfer site that

@@ -998,8 +998,9 @@ Declared as facts:
 > is dead by name in its file, so its own calls are dead too; a mention anywhere
 > else (`module.exports = main`, a call from a live site) makes it live.
 > Reading the file as the library is the default VIEW: a world that asks about
-> the file as the script node runs says `reads_the_file_as(script)`, and then
-> nothing is dead.
+> one file as the script node runs says `runs_as_script("path/of/it.js")`, and
+> nothing in that file is dead; `reads_the_file_as(script)` says it of every file.
+> An exported function is reached from outside, so it is never dead by name.
 
 In the main:
 
@@ -1056,24 +1057,32 @@ In the code:
    - [`entry_test`](#entry_test)(T);
    - the `test` of a node S is a node T;
    - the `consequent` of S is a node X;
+   - S [is in file](js-model.rofl.md#ast_node) File;
    - unless [`read_as_script`](#read_as_script)();
+   - unless File [runs as the script](#runs_as_script);
 2. if all of:
    - [`imported_test`](#imported_test)(T);
    - the `test` of a node S is a node T;
    - the `alternate` of S is a node X;
+   - S [is in file](js-model.rofl.md#ast_node) File;
    - unless [`read_as_script`](#read_as_script)();
+   - unless File [runs as the script](#runs_as_script);
 3. if all of:
    - [`entry_test`](#entry_test)(T);
    - the `left` of a [logical](#noun-logical) S is a node T;
    - [the attribute](#ast_attr) `operator` of S is "&&";
    - the `right` of S is a node X;
+   - S [is in file](js-model.rofl.md#ast_node) File;
    - unless [`read_as_script`](#read_as_script)();
+   - unless File [runs as the script](#runs_as_script);
 4. if all of:
    - [`imported_test`](#imported_test)(T);
    - the `left` of a [logical](#noun-logical) S is a node T;
    - [the attribute](#ast_attr) `operator` of S is "||";
    - the `right` of S is a node X;
-   - unless [`read_as_script`](#read_as_script)().
+   - S [is in file](js-model.rofl.md#ast_node) File;
+   - unless [`read_as_script`](#read_as_script)();
+   - unless File [runs as the script](#runs_as_script).
 
 <a id="dead_in"></a>`dead_in`(X, C) if [`dead_arm`](#dead_arm)(X) and a node C [is within](#ast_within) a node X.
 
@@ -1093,7 +1102,12 @@ In the code:
    - the `id` of D is a node I;
    - E differs from I.
 
-<a id="live_mention"></a>`live_mention`(F) if [`mention`](#mention)(F, E), unless [`dead_in`](#dead_in)(something, E).
+<a id="live_mention"></a>`live_mention`(F) either:
+
+1. if [`mention`](#mention)(F, E), unless [`dead_in`](#dead_in)(something, E);
+2. if F [is exported where declared](#exported_decl).
+
+<a id="exported_decl"></a>A node is exported where declared if the `declaration` of a [named export](#noun-named_export) E is it.
 
 <a id="dead_fn"></a>`dead_fn`(F) if [`mention`](#mention)(F, something), unless [`live_mention`](#live_mention)(F).
 
@@ -1102,6 +1116,7 @@ In the code:
 Declared as facts:
 
 - <a id="reads_the_file_as"></a>A view V is read as the — no rows: declared so a rule may read it
+- <a id="runs_as_script"></a>A file File runs as the script — no rows: declared so a rule may read it
 
 > Argument into parameter by INDEX. A spread destroys the correspondence for
 > everything after it, and a may-set may be silent but not wrong, so `arg_at`

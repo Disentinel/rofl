@@ -224,6 +224,7 @@ unit_concludes("rules/js-dataflow.rofl", dead_in).
 unit_concludes("rules/js-dataflow.rofl", dead_site).
 unit_concludes("rules/js-dataflow.rofl", mention).
 unit_concludes("rules/js-dataflow.rofl", live_mention).
+unit_concludes("rules/js-dataflow.rofl", exported_decl).
 unit_concludes("rules/js-dataflow.rofl", dead_fn).
 unit_concludes("rules/js-dataflow.rofl", spread_arg).
 unit_concludes("rules/js-dataflow.rofl", after_spread).
@@ -482,6 +483,7 @@ unit_concludes("rules/js-callgraph.rofl", ambiguous_call).
 unit_concludes("rules/js-callgraph.rofl", calls_named).
 unit_concludes("rules/js-callgraph.rofl", calls_in).
 unit_concludes("rules/js-callgraph.rofl", passes_function).
+unit_concludes("rules/js-callgraph.rofl", written_arg).
 unit_concludes("rules/js-callgraph.rofl", callback_site).
 unit_concludes("rules/js-callgraph.rofl", calls_back).
 unit_concludes("rules/js-callgraph.rofl", callback_key_unknown).
@@ -490,6 +492,10 @@ unit_concludes("rules/js-callgraph.rofl", resolved_call).
 unit_concludes("rules/js-callgraph.rofl", unresolved_call).
 unit_concludes("rules/js-callgraph.rofl", unresolved_shape).
 unit_concludes("rules/js-callgraph.rofl", stdlib_member).
+unit_concludes("rules/js-callgraph.rofl", may_resolve).
+unit_concludes("rules/js-callgraph.rofl", may_call).
+unit_concludes("rules/js-callgraph.rofl", handed_fn).
+unit_concludes("rules/js-callgraph.rofl", merged_param).
 unit_concludes("rules/js-callgraph.rofl", frontier_at).
 unit_concludes("rules/js-callgraph.rofl", frontier_named).
 unit_concludes("rules/js-callgraph.rofl", frontier_line).
