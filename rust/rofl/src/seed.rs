@@ -4,7 +4,7 @@
 
 use crate::cell::AggOp;
 use crate::reflect::Vocab;
-use crate::store::{CellId, FactId, 
+use crate::store::{fact_key, CellId, FactId,
     CellOwner, CellValue, EvalRecord, NewCell, NewMember, PremRef, Seal, Store, Witness, F_BASE, F_FROZEN, F_TICK,
 };
 use crate::term::{cmp_js, Heap, Sym, Term, TermK};
@@ -949,7 +949,7 @@ pub fn cell_json(h: &Heap, s: &Store, c: CellId, like: Option<CellId>) -> Value 
 
 /// A row a structure answers, as `fact_json` writes a stored one: derived, of its tick.
 pub fn virtual_json(h: &Heap, rel: Sym, book: Sym, args: &[Term]) -> Value {
-    let key = crate::session::fact_key(h, rel, book, args);
+    let key = fact_key(h, rel, book, args);
     value(|o| fact(o, h, Some(&key), rel, book, args, true, false, false))
 }
 

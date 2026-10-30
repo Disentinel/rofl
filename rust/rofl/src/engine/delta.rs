@@ -1173,17 +1173,9 @@ impl Eval {
         let mut cs: Vec<CellId> = self.memo.agg_memo.get(&mk).map(|v| v.to_vec()).unwrap_or_default();
         cs.retain(|x| *x != old);
         cs.extend(new.iter().copied());
-        let mut keyed: Vec<(String, CellId)> = cs
-            .into_iter()
-            .map(|c| {
-                let mut k = String::new();
-                self.store.write_cell_key(&self.h, c, &mut k);
-                (k, c)
-            })
-            .collect();
-        keyed.sort_by(|x, y| cmp_js(&x.0, &y.0));
-        brk!("retract_memo_stale" => { let _ = (&mk, &keyed); }; if !threshold {
-            self.memo.agg_memo.insert(mk, keyed.into_iter().map(|(_, c)| c).collect::<Vec<_>>().into());
+        let cs = self.cells_by_key(cs);
+        brk!("retract_memo_stale" => { let _ = (&mk, &cs); }; if !threshold {
+            self.memo.agg_memo.insert(mk, cs.into());
         });
         // what read the cell reads it again, for this key alone
         if !new.is_empty() && er.clause.head.temporal != Temporal::Next && brk!("retract_no_refire" => false; true) {

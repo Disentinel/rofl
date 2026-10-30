@@ -21,6 +21,8 @@
 //! the words, then the rest. A signature whose name differs from the relation
 //! is also a proposed rename, listed in index.md.
 use rofl::brk;
+use rofl::md::reader::{LATTICE_WORD, VALUE};
+use rofl::md::vocab::NOUN_WORDS;
 use rofl::rofl_parse::{parse, AggSrc, Book, Clause, Elem, Lit, Tense};
 use rofl::term::{json_string, Heap, Sym, Term, TermK};
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
@@ -86,12 +88,9 @@ fn parse_phrase(t: &str) -> Result<Phrase, String> {
 }
 
 /// The word a lattice declaration's operation reads as: `dist` keeps the least D.
-const LATTICE_WORDS: &[(&str, &str)] = &[("min", "least"), ("max", "greatest"), ("or", "disjunction"), ("and", "conjunction"), ("union", "union"), ("hull", "hull"), ("bitor", "bitwise or"), ("sum", "sum"), ("count", "count"), ("median", "median"), ("quantile", "quantile"), ("rank", "rank")];
 
 const MARKERS: &[&str] =&["at", "in", "to", "from", "by", "as", "for", "on", "through", "with", "holding", "named", "being", "of", "under", "over", "than", "is", "has", "into", "after", "before", "within", "among", "replaced", "the"];
-const VALUE_NOUN_LIST: &[&str] = &["key", "name", "file", "index", "text", "kind", "line", "attribute", "number", "score", "value", "child", "node"];
 const VALUE_NOUNS: &[&str] = &["key", "name", "file", "index", "text", "kind", "line", "attribute", "number", "score"];
-const NOUN_WORDS: &[&str] = &["this", "scope", "this-binder", "effect label"];
 const PREPS: &[&str] = &["of", "to", "by", "at", "in", "with", "from", "for", "on", "through", "as", "into", "under", "over", "than", "within", "among", "after", "before", "between", "since", "against", "off", "is", "are", "holds", "holding", "being", "named", "replaced"];
 
 /// `name(arg, arg, …)` with each arg `[marker] noun Var[:i]` → the phrase it reads as, and the name.
@@ -268,6 +267,19 @@ struct Folded { c: Clause, extra: Vec<(Sym, Term)>, or_at: Option<(usize, usize,
 /// `Whole`: a sentence of its own (a declaration, a dominance rule), never merged with its neighbour.
 enum Item { Block(String), Whole(String), Rule { key: Option<String>, subject: String, predicate: String, anchor: String } }
 
+fn squash(s: &str) -> String { s.split_whitespace().collect::<Vec<_>>().join(" ") }
+fn capital(mut s: String) -> String {
+    if let Some(c0) = s.chars().next() { if c0.is_lowercase() { s = c0.to_uppercase().collect::<String>() + &s[c0.len_utf8()..]; } }
+    s
+}
+/// How a phrase is spoken: `linked` its link texts, `or` the alternatives of a folded head, `glue` a hole before a hyphenated text,
+/// `subj` the first hole kept as the literal's subject.
+#[derive(Clone, Copy)]
+struct Voice { linked: bool, or: bool, glue: bool, subj: bool }
+const BODY: Voice = Voice { linked: true, or: true, glue: true, subj: true };
+const RELATIVE: Voice = Voice { linked: true, or: true, glue: false, subj: false };
+const HEAD: Voice = Voice { linked: false, or: false, glue: true, subj: false };
+
 fn pad(s: &mut String, raw: &str, text: &str) {
     if raw.trim().is_empty() { s.push(' '); return; }
     if !raw.starts_with('-') { s.push(' '); }
@@ -373,7 +385,7 @@ impl<'a> R<'a> {
                 Part::Fixed(..) => {}
             }
         }
-        s.split_whitespace().collect::<Vec<_>>().join(" ")
+        squash(&s)
     }
     fn decl_sentence(&self, p: &Phrase, vars: &[String]) -> String {
         let mut s = String::new();
@@ -393,9 +405,7 @@ impl<'a> R<'a> {
                 Part::Fixed(..) => {}
             }
         }
-        let mut s: String = s.split_whitespace().collect::<Vec<_>>().join(" ");
-        if let Some(c0) = s.chars().next() { if c0.is_lowercase() { s = c0.to_uppercase().collect::<String>() + &s[c0.len_utf8()..]; } }
-        s
+        capital(squash(&s))
     }
     fn phrase_for(&self, l: &Lit) -> Option<&Phrase> {
         if self.home.get(&l.rel).map_or(false, |b| *b != l.book) { return None; }
@@ -466,7 +476,7 @@ impl<'a> R<'a> {
                             Part::Fixed(..) => {}
                         }
                     }
-                    s.split_whitespace().collect::<Vec<_>>().join(" ")
+                    squash(&s)
                 } else if args.len() == 2 && !name.chars().any(|c| c.is_alphanumeric()) {
                     format!("{} {name} {}", self.term(args[0], None, ctx), self.term(args[1], None, ctx))
                 } else {
@@ -491,18 +501,29 @@ impl<'a> R<'a> {
     fn kind_phrase(&self, t: Term) -> String {
         match t.kind() { TermK::Atom(a) => { let n = self.kind_nouns.get(&a).cloned().unwrap_or_else(|| format!("{} node", self.h.name(a))); self.a_noun(&n) } _ => "something".into() }
     }
-    fn parts_text(&self, l: &Lit, p: &Phrase, from: usize, to: usize, ctx: &mut Ctx, stats: &mut Stats) -> String {
+    fn speak(&self, l: &Lit, p: &Phrase, parts: std::ops::Range<usize>, v: Voice, ctx: &mut Ctx, stats: &mut Stats) -> String {
         let mut s = String::new();
         let mut prev = String::new();
-        for part in &p.parts[from..to] {
-            match part {
-                Part::Text(t, true) => { let link = self.link(l.rel, t.trim(), ctx.file, stats); pad(&mut s, t, &link); if !t.trim().is_empty() { prev = t.clone(); } }
-                Part::Text(t, false) => { pad(&mut s, t, t); if !t.trim().is_empty() { prev = t.clone(); } }
-                Part::Hole(i, noun) => { let x = self.term_or(l.args[*i], *i, Some(noun), &prev, ctx); if !s.ends_with(' ') { s.push(' '); } s.push_str(&x); prev.clear(); }
+        for n in parts {
+            match &p.parts[n] {
+                Part::Text(t, linked) => {
+                    let link = (v.linked && *linked).then(|| self.link(l.rel, t.trim(), ctx.file, stats));
+                    pad(&mut s, t, link.as_deref().unwrap_or(t));
+                    if !t.trim().is_empty() { prev = t.clone(); }
+                }
+                Part::Hole(i, noun) => {
+                    ctx.glued = v.glue && matches!(p.parts.get(n + 1), Some(Part::Text(t, _)) if t.starts_with('-'));
+                    let x = if v.or { self.term_or(l.args[*i], *i, Some(noun), &prev, ctx) } else { self.term_after(l.args[*i], Some(noun), &prev, ctx) };
+                    ctx.glued = false;
+                    if v.subj && n == 0 && l.tense == Tense::Now { ctx.last_subj = Some(x.clone()); }
+                    if !s.ends_with(' ') { s.push(' '); }
+                    s.push_str(&x);
+                    prev.clear();
+                }
                 Part::Fixed(..) => {}
             }
         }
-        s.split_whitespace().collect::<Vec<_>>().join(" ")
+        squash(&s)
     }
     /// Two literals joined by a shared variable that appears nowhere else:
     /// `the id of D is N` and `N reads Name` read `the id of D reads Name`,
@@ -511,9 +532,9 @@ impl<'a> R<'a> {
         let p1 = self.phrase_for(l1).unwrap().clone();
         let p2 = self.phrase_for(l2).unwrap().clone();
         let last = p1.parts.iter().rposition(|p| matches!(p, Part::Hole(..))).unwrap_or(p1.parts.len() - 1);
-        let text1 = self.parts_text(l1, &p1, 0, last, ctx, stats);
+        let text1 = self.speak(l1, &p1, 0..last, RELATIVE, ctx, stats);
         let saved = ctx.cur_k; ctx.cur_k = k2;
-        let rest2 = self.parts_text(l2, &p2, 1, p2.parts.len(), ctx, stats);
+        let rest2 = self.speak(l2, &p2, 1..p2.parts.len(), RELATIVE, ctx, stats);
         ctx.cur_k = saved;
         let mut s = match ctx.nouns.get(&v).cloned().filter(|_| !ctx.typed.contains(&v)) {
             Some(n) => { ctx.intro.insert(v); ctx.nouns_used.insert(n.clone()); format!("{text1} {} that {rest2}", self.a_noun(&n)) }
@@ -563,16 +584,7 @@ impl<'a> R<'a> {
         ctx.last_subj = None;
         match l.tense { Tense::Next => s.push_str("next, "), Tense::Init => s.push_str("initially, "), Tense::Now => {} }
         if let Some(p) = self.phrase_for(l) {
-            let p = p.clone();
-            let mut prev = String::new();
-            for (n, part) in p.parts.iter().enumerate() {
-                match part {
-                    Part::Text(t, true) => { let link = self.link(l.rel, t.trim(), ctx.file, stats); pad(&mut s, t, &link); if !t.trim().is_empty() { prev = t.clone(); } }
-                    Part::Text(t, false) => { pad(&mut s, t, t); if !t.trim().is_empty() { prev = t.clone(); } }
-                    Part::Hole(i, noun) => { ctx.glued = matches!(p.parts.get(n + 1), Some(Part::Text(t, _)) if t.starts_with('-')); let x = self.term_or(l.args[*i], *i, Some(noun), &prev, ctx); ctx.glued = false; if n == 0 && l.tense == Tense::Now { ctx.last_subj = Some(x.clone()); } if !s.ends_with(' ') { s.push(' '); } s.push_str(&x); prev.clear(); }
-                    Part::Fixed(..) => {}
-                }
-            }
+            s.push_str(&self.speak(l, p, 0..p.parts.len(), BODY, ctx, stats));
         } else {
             let name = format!("`{}`", self.h.name(l.rel));
             s.push_str(&self.link(l.rel, &name, ctx.file, stats));
@@ -583,7 +595,7 @@ impl<'a> R<'a> {
             s.push_str(&args.join(", "));
             s.push(')');
         }
-        let mut s: String = s.split_whitespace().collect::<Vec<_>>().join(" ");
+        let mut s = squash(&s);
         if self.home.get(&l.rel).map_or(true, |b| *b != l.book) { let _ = write!(s, " in the {}", self.book_name(l.book)); }
         s
     }
@@ -795,7 +807,7 @@ impl<'a> R<'a> {
             let op = brk!("phrase_tag_alg_lost" => "tropical"; op);
             return format!("Each `{rel}` fact{of} carries {} {op} tag {v}.\n\n", article(op));
         }
-        let word = brk!("phrase_lattice_op_lost" => "least"; LATTICE_WORDS.iter().find(|(o, _)| *o == op).map_or(op, |(_, w)| *w));
+        let word = brk!("phrase_lattice_op_lost" => "least"; LATTICE_WORD.iter().find(|(_, o)| *o == op).map_or(op, |(w, _)| *w));
         let each = if keys.is_empty() { String::new() } else { format!(" for each {keys}") };
         let widen = match brk!("phrase_widen_off_by_one" => c.widen.map(|k| k + 1); c.widen) { Some(1) => ", widened after 1 improvement".to_string(), Some(k) => format!(", widened after {k} improvements"), None => String::new() };
         format!("`{rel}` keeps the {word} {v}{each}{widen}.\n\n")
@@ -1120,19 +1132,10 @@ impl<'a> R<'a> {
     }
 
     fn head_sentence(&self, c: &Clause, ctx: &mut Ctx, stats: &mut Stats) -> String {
-        let _ = stats;
         let l = &c.head;
         let mut s = String::new();
         if let Some(p) = self.phrase_for(l) {
-            let p = p.clone();
-            let mut prev = String::new();
-            for (n, part) in p.parts.iter().enumerate() {
-                match part {
-                    Part::Text(t, _) => { pad(&mut s, t, t); if !t.trim().is_empty() { prev = t.clone(); } }
-                    Part::Hole(i, noun) => { ctx.glued = matches!(p.parts.get(n + 1), Some(Part::Text(t, _)) if t.starts_with('-')); let x = self.term_after(l.args[*i], Some(noun), &prev, ctx); ctx.glued = false; if !s.ends_with(' ') { s.push(' '); } s.push_str(&x); prev.clear(); }
-                    Part::Fixed(..) => {}
-                }
-            }
+            s.push_str(&self.speak(l, p, 0..p.parts.len(), HEAD, ctx, stats));
         } else {
             let _ = write!(s, "`{}`(", self.h.name(l.rel));
             ctx.positional = true;
@@ -1141,8 +1144,7 @@ impl<'a> R<'a> {
             s.push_str(&args.join(", "));
             s.push(')');
         }
-        let mut s: String = s.split_whitespace().collect::<Vec<_>>().join(" ");
-        if let Some(c0) = s.chars().next() { if c0.is_lowercase() { s = c0.to_uppercase().collect::<String>() + &s[c0.len_utf8()..]; } }
+        let mut s = capital(squash(&s));
         if self.home.get(&l.rel).map_or(false, |b| *b != l.book) { let _ = write!(s, ", in the {}", self.book_name(l.book)); }
         s.push_str(when(l.tense));
         s
@@ -1152,28 +1154,12 @@ impl<'a> R<'a> {
     /// of a phrase that starts with one, so consecutive rules can share it.
     fn head_split(&self, c: &Clause, ctx: &mut Ctx, stats: &mut Stats) -> (Option<(String, String)>, String) {
         let l = &c.head;
-        let p = match self.phrase_for(l) { Some(p) => p.clone(), None => return (None, self.head_sentence(c, ctx, stats)) };
-        let starts_with_hole = matches!(p.parts.first(), Some(Part::Hole(..)));
-        if !starts_with_hole { return (None, self.head_sentence(c, ctx, stats)); }
-        let mut subject = String::new();
-        let mut rest = String::new();
+        let p = match self.phrase_for(l) { Some(p) => p, None => return (None, self.head_sentence(c, ctx, stats)) };
+        let Some(Part::Hole(i, noun)) = p.parts.first() else { return (None, self.head_sentence(c, ctx, stats)) };
+        let subject = capital(squash(&self.term_after(l.args[*i], Some(noun), "", ctx)));
         let mut key = String::new();
-        let mut prev = String::new();
-        for (n, part) in p.parts.iter().enumerate() {
-            match part {
-                Part::Hole(i, noun) if n == 0 => {
-                    let x = self.term_after(l.args[*i], Some(noun), "", ctx);
-                    if let TermK::Var(v) = l.args[*i].kind() { key = format!("{}|{}", if ctx.subject == Some(v) && ctx.no_label { String::new() } else { ctx.display.get(&v).cloned().unwrap_or_else(|| self.h.name(v).to_string()) }, ctx.nouns.get(&v).cloned().unwrap_or_default()); }
-                    subject = x;
-                }
-                Part::Text(t, _) => { pad(&mut rest, t, t); if !t.trim().is_empty() { prev = t.clone(); } }
-                Part::Hole(i, noun) => { ctx.glued = matches!(p.parts.get(n + 1), Some(Part::Text(t, _)) if t.starts_with('-')); let x = self.term_after(l.args[*i], Some(noun), &prev, ctx); ctx.glued = false; if !rest.ends_with(' ') { rest.push(' '); } rest.push_str(&x); prev.clear(); }
-                Part::Fixed(..) => {}
-            }
-        }
-        let mut subject: String = subject.split_whitespace().collect::<Vec<_>>().join(" ");
-        if let Some(c0) = subject.chars().next() { if c0.is_lowercase() { subject = c0.to_uppercase().collect::<String>() + &subject[c0.len_utf8()..]; } }
-        let mut rest: String = rest.split_whitespace().collect::<Vec<_>>().join(" ");
+        if let TermK::Var(v) = l.args[*i].kind() { key = format!("{}|{}", if ctx.subject == Some(v) && ctx.no_label { String::new() } else { ctx.display.get(&v).cloned().unwrap_or_else(|| self.h.name(v).to_string()) }, ctx.nouns.get(&v).cloned().unwrap_or_default()); }
+        let mut rest = self.speak(l, p, 1..p.parts.len(), HEAD, ctx, stats);
         if self.home.get(&l.rel).map_or(false, |b| *b != l.book) { let _ = write!(rest, ", in the {}", self.book_name(l.book)); }
         rest.push_str(when(l.tense));
         if !subject.contains(' ') { return (None, format!("{subject} {rest}")); }
@@ -1795,7 +1781,7 @@ pub fn main(mut args: Vec<String>) {
     if facts_mode { dump_facts(&h, &docs); return; }
 
     let mut d = Decls::collect(&h, &docs, &s);
-    let noun_list: Vec<String> = d.kind_nouns.values().cloned().chain(d.noun_guards.values().cloned()).chain(VALUE_NOUN_LIST.iter().chain(NOUN_WORDS.iter()).map(|s| s.to_string())).collect();
+    let noun_list: Vec<String> = d.kind_nouns.values().cloned().chain(d.noun_guards.values().cloned()).chain(VALUE.iter().chain(NOUN_WORDS.iter()).map(|s| s.to_string())).collect();
     let (renames, sig_forms) = d.add_signatures(&h, &noun_list);
     d.finish_phrases();
     let (file_guards, two_guards) = file_guards(&h, &docs, &d.noun_guards);
@@ -2087,8 +2073,7 @@ fn dump_facts(h: &Heap, docs: &[FileDoc]) {
                     for (k, e) in c.body.iter().enumerate() {
                         let k = k + 1;
                         match e {
-                            Elem::Pos(l) => { let _ = writeln!(out, "lit(r{n}, {k}, {}, pos).", h.name(l.rel)); let _ = writeln!(out, "nargs(r{n}, {k}, {}).", l.args.len()); for (i, a) in l.args.iter().enumerate() { term(&mut out, n, k, i, *a); } }
-                            Elem::Neg(l) => { let _ = writeln!(out, "lit(r{n}, {k}, {}, neg).", h.name(l.rel)); let _ = writeln!(out, "nargs(r{n}, {k}, {}).", l.args.len()); for (i, a) in l.args.iter().enumerate() { term(&mut out, n, k, i, *a); } }
+                            Elem::Pos(l) | Elem::Neg(l) => { let sign = if matches!(e, Elem::Pos(_)) { "pos" } else { "neg" }; let _ = writeln!(out, "lit(r{n}, {k}, {}, {sign}).", h.name(l.rel)); let _ = writeln!(out, "nargs(r{n}, {k}, {}).", l.args.len()); for (i, a) in l.args.iter().enumerate() { term(&mut out, n, k, i, *a); } }
                             Elem::Builtin(op, a, b) => { let _ = writeln!(out, "bi(r{n}, {k}, {:?}).", h.name(*op)); term(&mut out, n, k, 0, *a); term(&mut out, n, k, 1, *b); }
                             Elem::Agg(a) => {
                                 let _ = writeln!(out, "agg(r{n}, {k}, {}).", h.name(a.op)); term(&mut out, n, k, 0, a.res);

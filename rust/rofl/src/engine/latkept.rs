@@ -45,35 +45,23 @@ struct In<I: Iterator<Item = Tok>>(I);
 const SHORT: &str = "a kept lattice ends early or out of kind";
 
 impl<I: Iterator<Item = Tok>> In<I> {
+    fn tok<T>(&mut self, pick: impl FnOnce(Tok) -> Option<T>) -> Result<T, String> {
+        self.0.next().and_then(pick).ok_or_else(|| SHORT.into())
+    }
     fn n(&mut self) -> Result<usize, String> {
-        match self.0.next() {
-            Some(Tok::N(n)) => Ok(n as usize),
-            _ => Err(SHORT.into()),
-        }
+        self.tok(|t| if let Tok::N(n) = t { Some(n as usize) } else { None })
     }
     fn term(&mut self) -> Result<Term, String> {
-        match self.0.next() {
-            Some(Tok::T(t)) => Ok(t),
-            _ => Err(SHORT.into()),
-        }
+        self.tok(|t| if let Tok::T(t) = t { Some(t) } else { None })
     }
     fn fact(&mut self) -> Result<FactId, String> {
-        match self.0.next() {
-            Some(Tok::F(f)) => Ok(f),
-            _ => Err(SHORT.into()),
-        }
+        self.tok(|t| if let Tok::F(f) = t { Some(f) } else { None })
     }
     fn sym(&mut self) -> Result<Sym, String> {
-        match self.0.next() {
-            Some(Tok::S(s)) => Ok(s),
-            _ => Err(SHORT.into()),
-        }
+        self.tok(|t| if let Tok::S(s) = t { Some(s) } else { None })
     }
     fn prems(&mut self) -> Result<Vec<PremRef>, String> {
-        match self.0.next() {
-            Some(Tok::P(p)) => Ok(p),
-            _ => Err(SHORT.into()),
-        }
+        self.tok(|t| if let Tok::P(p) = t { Some(p) } else { None })
     }
     fn terms(&mut self) -> Result<Box<[Term]>, String> {
         (0..self.n()?).map(|_| self.term()).collect()

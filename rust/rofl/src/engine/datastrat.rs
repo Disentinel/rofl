@@ -247,15 +247,7 @@ impl Eval {
         self.ds.firing = None;
         fired?;
         (self.batch, self.batch_at) = outer;
-        let front = std::mem::take(&mut self.cur_front);
-        self.propagate(front)?;
-        self.lattice_settle(false)?;
-        let more = std::mem::take(&mut self.cur_front);
-        if !more.keys.is_empty() {
-            self.propagate(more)?;
-            self.lattice_settle(false)?;
-        }
-        Ok(())
+        self.propagate_settled()
     }
 
     /// Each owner fired over the instances that extend the key of each correlation of it in `keys`.
@@ -266,11 +258,7 @@ impl Eval {
             let whole = self.ds.elems.iter().filter(|e| e.0 == r.id).all(|e| self.agg_plans.get(e).is_some_and(|p| p.group.is_empty()));
             for k in keys.iter().filter(|k| k.0 == r.id) {
                 self.ds.firing = brk!("ds_hold_grouped" => Some((k.0, k.1)); whole.then_some((k.0, k.1)));
-                let a = r.plan.iter().find_map(|b| match b {
-                    BodyElem::Agg(a) if a.at == k.1 => Some(a.clone()),
-                    _ => None,
-                });
-                let (Some(a), Some(plan)) = (a, self.agg_plans.get(&(k.0, k.1)).cloned()) else {
+                let Some((a, plan)) = self.agg_of(r, k) else {
                     return Err(Halt::Bug("a correlation of no element".into()));
                 };
                 let Some(s0) = self.ds_bind(&a, &plan, &k.2) else { continue };
@@ -281,22 +269,30 @@ impl Eval {
         Ok(())
     }
 
+    fn agg_of(&self, r: &ERule, k: &AggKey) -> Option<(Box<Agg>, Rc<AggPlan>)> {
+        let a = r.plan.iter().find_map(|b| match b {
+            BodyElem::Agg(a) if a.at == k.1 => Some(a.clone()),
+            _ => None,
+        })?;
+        Some((a, self.agg_plans.get(&(k.0, k.1)).cloned()?))
+    }
+
+    fn cmp_agg_keys(&self, a: &AggKey, b: &AggKey) -> std::cmp::Ordering {
+        cmp_js(self.h.name(a.0), self.h.name(b.0)).then(a.1.cmp(&b.1)).then(cmp_js(&tuple_text(&self.h, &a.2), &tuple_text(&self.h, &b.2)))
+    }
+
     /// EVERY CELL SEALED IS THE CELL ITS INNER BODY GIVES NOW. A member that came after the seal, or a group, is a
     /// defect of the walk (an edge it did not see), never a quiet wrong value: each correlation is solved again,
     /// ephemeral, over the store as it stands, and must give the value the cell holds (a hole stands).
     fn ds_verify(&mut self, comp: &DsComp) -> Result<(), Halt> {
         let mut keys: Vec<AggKey> = self.ds.released.iter().filter(|k| comp.elems.contains(&(k.0, k.1))).cloned().collect();
-        keys.sort_by(|a, b| cmp_js(self.h.name(a.0), self.h.name(b.0)).then(a.1.cmp(&b.1)).then(cmp_js(&tuple_text(&self.h, &a.2), &tuple_text(&self.h, &b.2))));
+        keys.sort_by(|a, b| self.cmp_agg_keys(a, b));
         let saved = (self.steps, self.rows, self.peak_rows, self.fault, self.fault_count, self.last_fault, self.shrug.last_fault_rule);
         let mut bad: Option<String> = None;
         for k in keys {
             let Some(cells) = self.memo.agg_memo.get(&k).cloned() else { continue };
             let r = self.rule_of(k.0).ok_or_else(|| Halt::Bug("a correlation of no rule".into()))?;
-            let a = r.plan.iter().find_map(|b| match b {
-                BodyElem::Agg(a) if a.at == k.1 => Some(a.clone()),
-                _ => None,
-            });
-            let (Some(a), Some(plan)) = (a, self.agg_plans.get(&(k.0, k.1)).cloned()) else { continue };
+            let Some((a, plan)) = self.agg_of(&r, &k) else { continue };
             let Some(s) = self.ds_bind(&a, &plan, &k.2) else { continue };
             let Sealed::Ephemeral(now) = self.seal_cells(k.0, &a, &plan, &s, &k.2, 0, false)? else { continue };
             for (key, value, _) in now {
@@ -501,9 +497,7 @@ impl Eval {
             layers[d].push(k.clone());
         }
         for l in layers.iter_mut() {
-            l.sort_by(|a, b| {
-                cmp_js(self.h.name(a.0), self.h.name(b.0)).then(a.1.cmp(&b.1)).then(cmp_js(&tuple_text(&self.h, &a.2), &tuple_text(&self.h, &b.2)))
-            });
+            l.sort_by(|a, b| self.cmp_agg_keys(a, b));
         }
         Ok(layers)
     }

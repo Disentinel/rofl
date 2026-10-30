@@ -4,8 +4,7 @@ use super::rx::{self, g};
 use super::say::{parse_phrase, parse_sig, Fix, Part, T};
 use std::collections::{HashMap, HashSet};
 
-const VALUE_NOUNS: [&str; 13] = ["key", "name", "file", "index", "text", "kind", "line", "attribute", "number", "score", "value", "child", "node"];
-const NOUN_WORDS: [&str; 4] = ["this", "scope", "this-binder", "effect label"];
+pub const NOUN_WORDS: [&str; 4] = ["this", "scope", "this-binder", "effect label"];
 
 #[derive(Default)]
 pub struct Vocabulary {
@@ -19,23 +18,27 @@ pub struct Vocabulary {
     pub blanks: bool,
 }
 
+/// Every `rel(name, "text")` fact of a text, as (name, text).
+fn facts(rel: &str, text: &str) -> Vec<(String, String)> {
+    rx::each(&format!(r#"(?m)^{rel}\((\w+), "([^"]+)"\)"#), text).iter().map(|m| (g(m, 1).into(), g(m, 2).into())).collect()
+}
 fn art(n: &str) -> &'static str { if rx::test("^[aeiou]", n) { "an" } else { "a" } }
 fn cap(s: &str) -> String { let mut c = s.chars(); match c.next() { Some(f) => f.to_uppercase().collect::<String>() + c.as_str(), None => String::new() } }
 
 impl Vocabulary {
     pub fn new() -> Vocabulary {
-        Vocabulary { nouns: VALUE_NOUNS.iter().chain(NOUN_WORDS.iter()).map(|s| s.to_string()).collect(), ..Default::default() }
+        Vocabulary { nouns: super::reader::VALUE.iter().chain(NOUN_WORDS.iter()).map(|s| s.to_string()).collect(), ..Default::default() }
     }
     fn noun(&mut self, n: &str) { if !self.nouns.iter().any(|x| x == n) { self.nouns.push(n.to_string()); } }
 
     /// Every `sig`, `phrase`, `fun_phrase`, `kind_noun`, `kind_set`, `noun_guard` fact in a text.
     pub fn add_text(&mut self, text: &str) {
-        for m in rx::each(r#"(?m)^kind_noun\((\w+), "([^"]+)"\)"#, text) { self.kind_noun.insert(g(&m, 1).into(), g(&m, 2).into()); self.noun(g(&m, 2)); }
+        for (k, n) in facts("kind_noun", text) { self.noun(&n); self.kind_noun.insert(k, n); }
         for m in rx::each(r"(?m)^kind_set\((\w+)\)", text) { self.kind_set.insert(g(&m, 1).into()); }
-        for m in rx::each(r#"(?m)^noun_guard\((\w+), "([^"]+)"\)"#, text) { self.noun_guard.insert(g(&m, 1).into(), g(&m, 2).into()); self.noun(g(&m, 2)); }
-        for m in rx::each(r#"(?m)^sig\((\w+), "([^"]+)"\)"#, text) { let t = parse_sig(g(&m, 1), g(&m, 2), self.nouns.iter()); self.templates.push(t); }
-        for m in rx::each(r#"(?m)^phrase\((\w+), "([^"]+)"\)"#, text) { self.templates.push(parse_phrase(g(&m, 1), g(&m, 2))); }
-        for m in rx::each(r#"(?m)^fun_phrase\((\w+), "([^"]+)"\)"#, text) { self.funs.push(parse_phrase(g(&m, 1), g(&m, 2))); }
+        for (k, n) in facts("noun_guard", text) { self.noun(&n); self.noun_guard.insert(k, n); }
+        for (r, s) in facts("sig", text) { let t = parse_sig(&r, &s, self.nouns.iter()); self.templates.push(t); }
+        for (r, s) in facts("phrase", text) { self.templates.push(parse_phrase(&r, &s)); }
+        for (r, s) in facts("fun_phrase", text) { self.funs.push(parse_phrase(&r, &s)); }
     }
 
     /// One ground literal, `rel[book](a, b)` or `rel(a, b)`, as its sentence; None where no phrase fits.
@@ -171,7 +174,7 @@ fn closing(text: &str, open: usize) -> Option<usize> {
 }
 
 /// What may stand in a hole of a question: `a change C`, `some team`, `something`, `it`, a variable, a string, a number, an atom in backticks.
-const ASK_TERM: &str = r#"(?:[Aa]n? [a-z][\w-]*(?: [a-z][\w-]*){0,2}(?: [A-Z][A-Za-z0-9]*)?|some [a-z][\w-]*(?: [a-z][\w-]*){0,2}|something|it|[A-Z][A-Za-z0-9]*|"[^"]*"|-?\d+|`[^`]+`)"#;
+const ASK_TERM: &str = concat!("(?:", ask_term!(), ")");
 fn ask_term(w: &str) -> String {
     if w == "something" || w == "it" || w.starts_with("some ") { return "_".into(); }
     if w.starts_with('`') { return w[1..w.len() - 1].to_string(); }

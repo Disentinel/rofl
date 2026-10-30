@@ -360,7 +360,7 @@ impl Eval {
 
     /// The same for the cells of `rules` alone: a full pass that kept them did not fire them (engine/layer.rs).
     pub(super) fn restore_cells_of(&mut self, rules: Option<&FxSet<Sym>>) {
-        let mut by: HashMap<(Sym, u32, Box<[Term]>), Vec<(String, CellId)>> = HashMap::new();
+        let mut by: HashMap<(Sym, u32, Box<[Term]>), Vec<CellId>> = HashMap::new();
         for c in self.store.live_cells() {
             let r = self.store.cell(c);
             let CellOwner::Body { rule, at } = r.owner;
@@ -369,13 +369,10 @@ impl Eval {
             }
             let Some(plan) = self.agg_plans.get(&(rule, at)).filter(|p| p.op != AggOp::AtLeast) else { continue };
             let corr: Box<[Term]> = plan.corr.iter().map(|i| r.key[*i]).collect();
-            let mut k = String::new();
-            self.store.write_cell_key(&self.h, c, &mut k);
-            by.entry((rule, at, corr)).or_default().push((k, c));
+            by.entry((rule, at, corr)).or_default().push(c);
         }
-        for (mk, mut cs) in by {
-            cs.sort_by(|x, y| cmp_js(&x.0, &y.0));
-            self.memo.agg_memo.insert(mk, cs.into_iter().map(|(_, c)| c).collect::<Vec<_>>().into());
+        for (mk, cs) in by {
+            self.memo.agg_memo.insert(mk, self.cells_by_key(cs).into());
         }
     }
 

@@ -55,7 +55,7 @@
 //! plain vectors, which is what lets one be a file mapped in later.
 
 use crate::cell::{AggOp, Algebra};
-use crate::term::{cmp_js, Heap, Subst, Sym, Term, TermK};
+use crate::term::{cmp_js, freeze_layer, Heap, Subst, Sym, Term, TermK};
 use std::cmp::{Ordering, Reverse};
 use std::collections::{BTreeMap, BinaryHeap, HashMap, HashSet};
 use std::hash::{BuildHasherDefault, Hash, Hasher};
@@ -740,19 +740,12 @@ impl Tuples {
         self.top.reserve(n, n_args);
     }
     fn freeze(&mut self) {
-        if self.top.len() == 0 {
-            return;
-        }
-        if self.t0 == 0 {
-            self.base = Rc::new(std::mem::take(&mut self.top));
-        } else {
-            let b = Rc::make_mut(&mut self.base);
-            for t in 0..self.top.len() as TupId {
-                let a = self.top.args(t);
-                b.intern(a, tup_hash(a), || self.top.sks[t as usize]);
+        freeze_layer(&mut self.base, &mut self.top, TupSeg::len, |top, b| {
+            for t in 0..top.len() as TupId {
+                let a = top.args(t);
+                b.intern(a, tup_hash(a), || top.sks[t as usize]);
             }
-            self.top = TupSeg::default();
-        }
+        });
         self.t0 = self.base.len() as TupId;
     }
     fn bytes(&self) -> (usize, usize, usize, usize) {
@@ -2030,14 +2023,18 @@ impl Store {
         })
     }
 
+    fn book_rels(&self, persp: Sym) -> Vec<Sym> {
+        self.idx.own.iter().chain(self.idx.base.iter()).filter(|(_, ps)| ps.iter().any(|(p, _)| *p == persp)).map(|(r, _)| *r).collect()
+    }
+
     /// Whether the book `persp` holds a live base fact outside `but`, of any relation.
     pub fn book_base_outside(&self, persp: Sym, but: &HashSet<FactId>) -> bool {
-        let rels: Vec<Sym> = self.idx.own.iter().chain(self.idx.base.iter()).filter(|(_, ps)| ps.iter().any(|(p, _)| *p == persp)).map(|(r, _)| *r).collect();
+        let rels = self.book_rels(persp);
         rels.into_iter().any(|r| self.base_outside(r, Some(persp), but))
     }
 
     pub fn book_holds_base(&mut self, h: &Heap, persp: Sym, but: FactId) -> bool {
-        let mut rels: Vec<Sym> = self.idx.own.iter().chain(self.idx.base.iter()).filter(|(_, ps)| ps.iter().any(|(p, _)| *p == persp)).map(|(r, _)| *r).collect();
+        let mut rels = self.book_rels(persp);
         rels.sort_unstable();
         rels.dedup();
         rels.into_iter().any(|r| self.rel_persp(h, r, persp).into_iter().any(|f| f != but && self.rec(f).base()))
@@ -4723,6 +4720,12 @@ pub fn write_fact_key(h: &Heap, rel: Sym, persp: Sym, args: &[Term], out: &mut S
     out.push_str("](");
     write_arg_list(h, args, out);
     out.push(')');
+}
+
+pub fn fact_key(h: &Heap, rel: Sym, persp: Sym, args: &[Term]) -> String {
+    let mut k = String::new();
+    write_fact_key(h, rel, persp, args, &mut k);
+    k
 }
 
 pub fn write_arg_list(h: &Heap, args: &[Term], out: &mut String) {

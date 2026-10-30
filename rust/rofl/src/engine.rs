@@ -14,7 +14,7 @@ use crate::dense::dense_clauses;
 use crate::reflect::*;
 use crate::store::{
     Member,
-    resolved_lit_key, tuple_text, write_fact_key, CellId, CellOwner, CellValue, Dominators, FactId, FactRec, FxMap, FxSet, LatReg, NewCell,
+    fact_key, resolved_lit_key, tuple_text, write_arg_list, write_fact_key, CellId, CellOwner, CellValue, Dominators, FactId, FactRec, FxMap, FxSet, LatReg, NewCell,
     NewMember, PremRef, Seal, StagedHead, Store, WitView, Witness, F_BASE, F_FROZEN, F_TICK,
 };
 use crate::term::*;
@@ -99,6 +99,13 @@ struct DemandCall {
 }
 
 impl DemandCall {
+    /// The answers a read of it reads now, which it records as read.
+    fn read_answers(&mut self) -> Vec<(Vec<Term>, PremRef)> {
+        self.read = true;
+        self.seen = self.seen.min(self.answers.len());
+        self.answers[if self.linear { self.from } else { 0 }..].to_vec()
+    }
+
     /// The first answer a read in the next pass of its set reads.
     fn window(&self) -> usize {
         brk!("scc_window_late" => self.answers.len(); if self.seen == usize::MAX { self.began } else { self.seen })
@@ -3237,27 +3244,9 @@ impl Eval {
             }
             out
         };
-        let mut trigger: HashMap<Sym, Vec<Sym>> = HashMap::new();
-        for f in pol.rel_all(&h, self.v.trigger_of) {
-            let args = pol.args(f);
-            if let (Some(a), Some(b)) = (args[0].as_atom(), args[1].as_atom()) {
-                let e = trigger.entry(a).or_default();
-                if !e.contains(&b) {
-                    e.push(b);
-                }
-            }
-        }
+        let trigger = Self::grouped(self.atom_pairs(h, pol, self.v.trigger_of));
         let (agg_refused, lattice_refused) = self.read_refusals(h, pol, rules, lattices);
-        let mut lattice_outer: HashMap<Sym, Vec<Sym>> = HashMap::new();
-        for f in pol.rel_all(&h, self.v.lattice_outer) {
-            let args = pol.args(f);
-            if let (Some(r), Some(p)) = (args[0].as_atom(), args[1].as_atom()) {
-                let e = lattice_outer.entry(r).or_default();
-                if !e.contains(&p) {
-                    e.push(p);
-                }
-            }
-        }
+        let lattice_outer = Self::grouped(self.atom_pairs(h, pol, self.v.lattice_outer));
         let mut empty_zero: HashSet<(Sym, u32)> = HashSet::new();
         for f in pol.rel_all(&h, self.v.empty_zero) {
             let args = pol.args(f);
@@ -3281,24 +3270,28 @@ impl Eval {
         }
     }
 
-    fn read_refusals(&self, h: &mut Heap, pol: &mut Store, rules: &[DRule], lattices: &[(Sym, usize, Sym)]) -> (Vec<(Sym, Sym)>, Vec<(Sym, Sym)>) {
-        let mut agg_refused: Vec<(Sym, Sym)> = Vec::new();
-        for f in pol.rel_all(&h, self.v.agg_refused) {
-            let args = pol.args(f);
-            if let (Some(r), Some(why)) = (args[0].as_atom(), args[1].as_atom()) {
-                agg_refused.push((r, why));
+    /// The rows of a binary relation whose two arguments are atoms, in row order.
+    fn atom_pairs(&self, h: &Heap, pol: &mut Store, rel: Sym) -> Vec<(Sym, Sym)> {
+        pol.rel_all(h, rel).into_iter().filter_map(|f| Some((pol.args(f)[0].as_atom()?, pol.args(f)[1].as_atom()?))).collect()
+    }
+
+    fn grouped(pairs: Vec<(Sym, Sym)>) -> HashMap<Sym, Vec<Sym>> {
+        let mut out: HashMap<Sym, Vec<Sym>> = HashMap::new();
+        for (a, b) in pairs {
+            let e = out.entry(a).or_default();
+            if !e.contains(&b) {
+                e.push(b);
             }
         }
+        out
+    }
+
+    fn read_refusals(&self, h: &mut Heap, pol: &mut Store, rules: &[DRule], lattices: &[(Sym, usize, Sym)]) -> (Vec<(Sym, Sym)>, Vec<(Sym, Sym)>) {
+        let mut agg_refused = self.atom_pairs(h, pol, self.v.agg_refused);
         agg_refused.extend(set_spelling_refusals(h, &self.v, rules, &lattices));
         agg_refused.extend(self.tag_refused.iter().copied());
         agg_refused.sort_by(|a, b| cmp_js(h.name(a.0), h.name(b.0)).then(cmp_js(h.name(a.1), h.name(b.1))));
-        let mut lattice_refused: Vec<(Sym, Sym)> = Vec::new();
-        for f in pol.rel_all(&h, self.v.lattice_refused) {
-            let args = pol.args(f);
-            if let (Some(p), Some(why)) = (args[0].as_atom(), args[1].as_atom()) {
-                lattice_refused.push((p, why));
-            }
-        }
+        let mut lattice_refused = self.atom_pairs(h, pol, self.v.lattice_refused);
         lattice_refused.sort_by(|a, b| cmp_js(h.name(a.0), h.name(b.0)).then(cmp_js(h.name(a.1), h.name(b.1))));
         (agg_refused, lattice_refused)
     }
@@ -4164,8 +4157,7 @@ impl Eval {
                     }
                 }
                 if readable {
-                    let mut k = String::new();
-                    self.h.canon_term(row[0], &mut k);
+                    let k = self.h.canon(row[0]);
                     let what = if now.contains(row) { "leaves without an answer" } else { "answers after it read the shrug" };
                     return Err(Halt::Strat(
                         format!("program rejected: shrug is read of {k}, which a rule that reads shrug {what}"),
@@ -4756,8 +4748,7 @@ impl Eval {
             .staged
             .values()
             .map(|f| {
-                let mut k = String::new();
-                write_fact_key(&self.h, f.rel, f.persp, &f.args, &mut k);
+                let k = fact_key(&self.h, f.rel, f.persp, &f.args);
                 (k, f.clone())
             })
             .collect();
@@ -5294,10 +5285,14 @@ impl Eval {
         }
         self.rounds.push((sum, mx));
         (self.batch, self.batch_at) = outer;
+        self.propagate_settled()
+    }
+
+    /// The news in `cur_front` propagated and the lattices settled; what the settle wrote (a withdrawn cell's hole) is news too.
+    fn propagate_settled(&mut self) -> Result<(), Halt> {
         let front = std::mem::take(&mut self.cur_front);
         self.propagate(front)?;
         self.lattice_settle(false)?;
-        // what the settle wrote (a withdrawn cell's hole) is news too
         let more = std::mem::take(&mut self.cur_front);
         if !more.keys.is_empty() {
             self.propagate(more)?;
@@ -6166,12 +6161,7 @@ impl Eval {
                 let lt = resolve(&mut self.h, *l, s);
                 let rt = resolve(&mut self.h, *rr, s);
                 let cv = canon_vars(&mut self.h, &[lt, rt]);
-                let mut d = String::new();
-                self.h.canon_term(cv[0], &mut d);
-                d.push(' ');
-                d.push_str(self.h.name(*op));
-                d.push(' ');
-                self.h.canon_term(cv[1], &mut d);
+                let d = format!("{} {} {}", self.h.canon(cv[0]), self.h.name(*op), self.h.canon(cv[1]));
                 PremRef::Bi(self.h.intern(&d))
             }
             BodyElem::Neg(l) => {
@@ -6674,6 +6664,14 @@ impl Eval {
             }
         }
         Ok(out)
+    }
+
+    fn closed_lattice_halt(&self, rel: Sym) -> Halt {
+        let msg = format!("the lattice {} received a contribution after it closed", self.h.name(rel));
+        match self.mode {
+            Mode::Strata => Halt::Strat(format!("program rejected: {msg}: the stratum table ranks it below a relation it reads"), String::new()),
+            Mode::Rounds => Halt::Bug(msg),
+        }
     }
 
     /// The unknowns the possible members of the group `sg` that are not
@@ -7417,6 +7415,10 @@ impl Eval {
 
     /// Cells in cell-key order, so the solutions come out in one order.
     fn keyed_cells(&mut self, ids: Vec<CellId>) -> Result<Sealed, Halt> {
+        Ok(Sealed::Kept(self.cells_by_key(ids)))
+    }
+
+    fn cells_by_key(&self, ids: Vec<CellId>) -> Vec<CellId> {
         let mut keyed: Vec<(String, CellId)> = ids
             .into_iter()
             .map(|c| {
@@ -7426,7 +7428,7 @@ impl Eval {
             })
             .collect();
         keyed.sort_by(|x, y| cmp_js(&x.0, &y.0));
-        Ok(Sealed::Kept(keyed.into_iter().map(|(_, c)| c).collect()))
+        keyed.into_iter().map(|(_, c)| c).collect()
     }
 
     /// 1 + the highest fact premise's height; a negation or a builtin is 0.
@@ -7471,14 +7473,7 @@ impl Eval {
         let n = args.len();
         let ck: LatKey = (rel, persp, args[..n - 1].into());
         if self.lat.pass.closed.contains(&rel) {
-            let msg = format!("the lattice {} received a contribution after it closed", self.h.name(rel));
-            return Err(match self.mode {
-                Mode::Strata => Halt::Strat(
-                    format!("program rejected: {msg}: the stratum table ranks it below a relation it reads"),
-                    String::new(),
-                ),
-                Mode::Rounds => Halt::Bug(msg),
-            });
+            return Err(self.closed_lattice_halt(rel));
         }
         let c = match self.lat.join_canon_of(&mut self.h, &self.v, op, args[n - 1]) {
             Ok(c) => c,
@@ -8028,14 +8023,7 @@ impl Eval {
         if self.lat.pass.closed.contains(&rel) {
             // Only a table that ranks the lattice below what it reads can do
             // this; the peel cannot.
-            let msg = format!("the lattice {} received a contribution after it closed", self.h.name(rel));
-            return Err(match self.mode {
-                Mode::Strata => Halt::Strat(
-                    format!("program rejected: {msg}: the stratum table ranks it below a relation it reads"),
-                    String::new(),
-                ),
-                Mode::Rounds => Halt::Bug(msg),
-            });
+            return Err(self.closed_lattice_halt(rel));
         }
         let x = match op.lift(&self.v, args[n - 1]) {
             Ok(x) => x,
@@ -8659,11 +8647,7 @@ impl Eval {
                 let args = self.store.args(g).to_vec();
                 let k = self.lat.subs[&rec.rel].keylen;
                 let ck: LatKey = (rec.rel, rec.persp, args[..k].into());
-                let by = self.lat.pass.sub_beaten.get(&(ck.clone(), args[k..].into())).map(|v| {
-                    let mut t = String::new();
-                    write_fact_key(&self.h, rec.rel, rec.persp, &Self::sub_args(&ck, v), &mut t);
-                    t
-                });
+                let by = self.lat.pass.sub_beaten.get(&(ck.clone(), args[k..].into())).map(|v| fact_key(&self.h, rec.rel, rec.persp, &Self::sub_args(&ck, v)));
                 return Some(format!(
                     "program rejected: rule {} is not monotone in the dominance of {}: it concluded {} from {}, which {} dominates, \
                      and nothing its rules concluded from what dominates it is {} or dominates it (docs/aggregates.md, \"Subsumption, as built\")",
@@ -9304,11 +9288,7 @@ impl Eval {
         if keys.is_empty() {
             return;
         }
-        keys.sort_by_cached_key(|k| {
-            let mut t = String::new();
-            write_fact_key(&self.h, k.0, k.1, &k.2, &mut t);
-            t
-        });
+        keys.sort_by_cached_key(|k| fact_key(&self.h, k.0, k.1, &k.2));
         let withdrawn = self.h.intern("support_withdrawn");
         for k in keys {
             let alts = self.staged_alts.remove(&k).unwrap_or_default();
@@ -10564,8 +10544,7 @@ impl Eval {
                 if self.holds_labeled(*a) {
                     return self.shown(*a);
                 }
-                let mut t = String::new();
-                self.h.canon_term(*a, &mut t);
+                let t = self.h.canon(*a);
                 t.replace(unk, "_")
             })
             .collect();
@@ -10797,8 +10776,7 @@ impl Eval {
                 let rec = self.store.rec(f);
                 let fargs = self.store.args(f).to_vec();
                 let ft = self.sub_fact(rec.rel, rec.persp, &fargs);
-                let mut key = String::new();
-                self.h.canon_term(dt, &mut key);
+                let key = self.h.canon(dt);
                 rows.push((key, [dt, ft, Term::atom(rule)]));
             }
             rows.sort_by(|a, b| cmp_js(&a.0, &b.0));
@@ -10833,8 +10811,7 @@ impl Eval {
             .keys()
             .filter(|k| due.contains(&k.0) && !self.lat.pass.holed_rel.contains(&k.0))
             .map(|k| {
-                let mut t = String::new();
-                write_fact_key(&self.h, k.0, k.1, &k.2, &mut t);
+                let t = fact_key(&self.h, k.0, k.1, &k.2);
                 (t, k.clone())
             })
             .collect();
@@ -11432,7 +11409,7 @@ impl Eval {
                     if matches!(b, BodyElem::Neg(_)) {
                         out.push_str("not ");
                     }
-                    let k = self.resolved_lit_key(l, s);
+                    let k = self.lit_key(l, s);
                     out.push_str(&k);
                 }
                 BodyElem::Bi { op, l, r } => {
@@ -11551,24 +11528,6 @@ impl Eval {
         }
     }
 
-    fn resolved_lit_key(&mut self, l: &Lit, s: &Subst) -> String {
-        let mut out = String::new();
-        out.push_str(self.h.name(l.rel));
-        out.push('[');
-        let p = walk(&self.h, l.persp, s);
-        self.h.canon_term(p, &mut out);
-        out.push_str("](");
-        let args: Vec<Term> = l.args.iter().map(|a| resolve(&mut self.h, *a, s)).collect();
-        for (i, a) in args.iter().enumerate() {
-            if i > 0 {
-                out.push(',');
-            }
-            self.h.canon_term(*a, &mut out);
-        }
-        out.push(')');
-        out
-    }
-
     fn anon_lit_key(&mut self, l: &Lit, s: &Subst) -> String {
         let p = walk(&self.h, l.persp, s);
         let args: Vec<Term> = l.args.iter().map(|a| resolve(&mut self.h, *a, s)).collect();
@@ -11579,17 +11538,16 @@ impl Eval {
         let mut ts = vec![p];
         ts.extend_from_slice(args);
         let cv = canon_vars(&mut self.h, &ts);
+        self.term_key(rel, cv[0], &cv[1..])
+    }
+
+    fn term_key(&self, rel: Sym, p: Term, args: &[Term]) -> String {
         let mut out = String::new();
         out.push_str(self.h.name(rel));
         out.push('[');
-        self.h.canon_term(cv[0], &mut out);
+        self.h.canon_term(p, &mut out);
         out.push_str("](");
-        for (i, a) in cv[1..].iter().enumerate() {
-            if i > 0 {
-                out.push(',');
-            }
-            self.h.canon_term(*a, &mut out);
-        }
+        write_arg_list(&self.h, args, &mut out);
         out.push(')');
         out
     }
@@ -11859,7 +11817,7 @@ impl Eval {
             let Some(ms) = unify_all(&self.h, &l.args, &args, s) else { continue };
             let dk = match mref {
                 PremRef::Fact(f) => self.store.key(&self.h, f),
-                _ => self.resolved_lit_key(l, &ms),
+                _ => self.lit_key(l, &ms),
             };
             if seen_keys.insert(dk.clone()) {
                 open.push((ms, mref, dk));
@@ -12008,11 +11966,7 @@ impl Eval {
             if cut {
                 self.demand_cycle(l, s);
             } else {
-                let c = &mut self.demand.calls[j];
-                c.read = true;
-                c.seen = c.seen.min(c.answers.len());
-                let from = if c.linear { c.from } else { 0 };
-                let answers = c.answers[from..].to_vec();
+                let answers = self.demand.calls[j].read_answers();
                 self.read_answers(l, s, answers, &mut seen_keys, &mut open)?;
             }
         }
@@ -12022,11 +11976,7 @@ impl Eval {
             for c in self.demand.calls[low + 1..].iter_mut() {
                 c.low = c.low.min(brk!("scc_member_reads_free" => c.low; low));
             }
-            let c = &mut self.demand.scc[i].as_mut().unwrap().call;
-            c.read = true;
-            c.seen = c.seen.min(c.answers.len());
-            let from = if c.linear { c.from } else { 0 };
-            let answers = c.answers[from..].to_vec();
+            let answers = self.demand.scc[i].as_mut().unwrap().call.read_answers();
             self.read_answers(l, s, answers, &mut seen_keys, &mut open)?;
         }
         let drs = drs.filter(|_| served.is_none() && member.is_none());
@@ -12193,7 +12143,7 @@ impl Eval {
             };
             let dk = match mref {
                 PremRef::Fact(f) => self.store.key(&self.h, f),
-                _ => self.resolved_lit_key(l, &ms),
+                _ => self.lit_key(l, &ms),
             };
             let new = !u.pushed || self.keep_answer(l, &ms, mref, &dk, rid)?;
             grew |= u.pushed && new;
@@ -12396,12 +12346,25 @@ impl Eval {
                 }
                 out.push((sol.s, PremRef::Fact(id)));
             } else {
-                let k = format!("open {}", self.resolved_lit_key(call, &sol.s));
+                let k = format!("open {}", self.lit_key(call, &sol.s));
                 let sy = self.h.intern(&k);
                 out.push((sol.s, PremRef::Bi(sy)));
             }
         }
         Ok(out)
+    }
+
+    /// The rule as written (an alias is explained from its source), renamed apart, with its head unified with `lit`.
+    fn unify_written_head(&mut self, r: &ERule, lit: &Lit) -> (Clause, Option<Subst>) {
+        let written = self.alias_orig.get(&r.id).cloned();
+        let rn = self.rename_clause(written.as_ref().unwrap_or(&r.clause));
+        let mut s = self.eval_builtin(self.v.op_eq, rn.head.persp, lit.persp, &Subst::default(), None);
+        for i in 0..rn.head.args.len().min(lit.args.len()) {
+            let Some(cur) = s.take() else { break };
+            s = self.eval_builtin(self.v.op_eq, rn.head.args[i], lit.args[i], &cur, None);
+        }
+        let s0 = s.filter(|_| rn.head.args.len() == lit.args.len());
+        (rn, s0)
     }
 
     fn rename_clause(&mut self, c: &Clause) -> Clause {
@@ -12779,17 +12742,7 @@ impl Eval {
             return;
         }
         let marker = self.rule_marker(rule_id);
-        if self.hole_met(marker, reason) {
-            self.charge_hole_row();
-        }
-        let args = [marker, Term::atom(reason)];
-        if self.eval_hole(&args) {
-            let id = self
-                .store
-                .get(self.v.hole, self.v.kernel_persp, &args)
-                .unwrap();
-            self.cur_front.note(self.v.hole, id);
-        }
+        self.cell_hole(marker, reason);
     }
 
     // ----------------------------------------------- the alternating fixpoint
@@ -14935,8 +14888,7 @@ impl Eval {
 
     fn why_at(&mut self, lit: &Lit, o: &WhyOpts, shown: Option<&str>) -> Result<String, String> {
         let p = self.why_ground(lit)?;
-        let mut key = String::new();
-        write_fact_key(&self.h, lit.rel, p, &lit.args, &mut key);
+        let key = fact_key(&self.h, lit.rel, p, &lit.args);
         let found = self.store.get(lit.rel, p, &lit.args);
         let held = if found.is_none() { self.vrow_held(lit.rel, p, &lit.args) } else { None };
         let start = match (found, held) {
@@ -15049,8 +15001,7 @@ impl Eval {
             TermK::Func(i) => (self.h.fname(i), self.h.fargs(i)),
             _ => return None,
         };
-        let mut k = String::new();
-        write_fact_key(&self.h, rel, self.store.rec(f).persp, at, &mut k);
+        let k = fact_key(&self.h, rel, self.store.rec(f).persp, at);
         Some(k)
     }
 
@@ -15120,9 +15071,8 @@ impl Eval {
     }
 
     fn render_why(&mut self, id: FactId, indent: usize, seen: &mut HashSet<FactId>, o: &WhyOpts, next: &mut Vec<WhyTask>) {
-        let mut key = String::new();
         let r = self.store.rec(id);
-        write_fact_key(&self.h, r.rel, r.persp, self.store.args(id), &mut key);
+        let key = fact_key(&self.h, r.rel, r.persp, self.store.args(id));
         let pad = "  ".repeat(indent);
         if seen.contains(&id) {
             next.push(WhyTask::Line(format!("{pad}{key} [cycle]")));
@@ -15322,6 +15272,12 @@ impl Eval {
             if brk!("lattice_why_ghost_unmarked" => true; self.store.alive(id)) { "" } else { "; an earlier value, improved on since" }
         )));
         let limit = if brk!("lattice_why_one_member" => true; indent == 0) { brk!("lattice_why_one_member" => 1; o.members) } else { 1 };
+        self.member_lines(members, limit, indent, o, next);
+    }
+
+    /// The members of a best-valued fact, `limit` of them, each with its premises below it.
+    fn member_lines(&self, members: Vec<(u32, Sym, u32, Vec<PremRef>)>, limit: usize, indent: usize, o: &WhyOpts, next: &mut Vec<WhyTask>) {
+        let (pad, n) = ("  ".repeat(indent), members.len());
         for (i, (hgt, rule, tick, prems)) in members.into_iter().enumerate() {
             if i >= limit {
                 if indent == 0 {
@@ -15361,8 +15317,7 @@ impl Eval {
             let by = self.lat.pass.sub_beaten.get(&(ck.clone(), args[k..].into())).cloned();
             match by {
                 Some(v) => {
-                    let mut t = String::new();
-                    write_fact_key(&self.h, rec.rel, rec.persp, &Self::sub_args(&ck, &v), &mut t);
+                    let t = fact_key(&self.h, rec.rel, rec.persp, &Self::sub_args(&ck, &v));
                     format!("an earlier value, dominated since by {t}")
                 }
                 None => "an earlier value, dominated since".to_string(),
@@ -15370,18 +15325,7 @@ impl Eval {
         };
         next.push(WhyTask::Line(format!("{pad}{key} [subsumption: {n} member{}; {place}]", if n == 1 { "" } else { "s" })));
         let limit = if brk!("dominance_why_one_member" => true; indent == 0) { brk!("dominance_why_one_member" => 1; o.members) } else { 1 };
-        for (i, (hgt, rule, tick, prems)) in members.into_iter().enumerate() {
-            if i >= limit {
-                if indent == 0 {
-                    next.line(format!("{pad}  [{} more members: why all {}]", n - limit, o.query));
-                }
-                break;
-            }
-            next.line(format!("{pad}  #{} h={hgt} <= {} @tick {tick}", i + 1, self.h.name(rule)));
-            for pr in prems {
-                next.push(WhyTask::Prem(pr, indent + 2));
-            }
-        }
+        self.member_lines(members, limit, indent, o, next);
         if indent == 0 && live {
             let mut beat: Vec<(String, Sym)> = self
                 .lat.pass.sub_by_of
@@ -15390,8 +15334,7 @@ impl Eval {
                 .flatten()
                 .filter_map(|v| {
                     let (_, r) = self.lat.pass.sub_by.get(&(ck.clone(), v.clone())).filter(|(f, _)| *f == id)?;
-                    let mut t = String::new();
-                    write_fact_key(&self.h, ck.0, ck.1, &Self::sub_args(&ck, v), &mut t);
+                    let t = fact_key(&self.h, ck.0, ck.1, &Self::sub_args(&ck, v));
                     Some((t, *r))
                 })
                 .collect();
@@ -15499,8 +15442,7 @@ impl Eval {
             }
             let h = self.memo.height_memo.get(f).copied().unwrap_or(0);
             let v = *self.store.args(*f).last().unwrap();
-            let mut vs = String::new();
-            self.h.canon_term(v, &mut vs);
+            let vs = self.h.canon(v);
             next.line(format!("{pad}  #{} {vs} h={h}", i + 1));
             next.push(WhyTask::Prem(PremRef::Fact(*f), indent + 2));
         }
@@ -15543,8 +15485,7 @@ impl Eval {
             }
             return self.render_prem(pr, indent, o, next);
         };
-        let mut key = String::new();
-        write_fact_key(&self.h, rel, persp, &args, &mut key);
+        let key = fact_key(&self.h, rel, persp, &args);
         let ft = fact_term(&mut self.h, &self.v, rel, persp, &args);
         if self.why.past_rows.is_none() {
             let mut by: HashMap<(Term, i64), Vec<Sym>> = HashMap::new();
@@ -15813,8 +15754,7 @@ impl Eval {
                 self.h.fargs(i).iter().map(|a| self.shown(*a)).collect::<Vec<_>>().join(", ")
             ),
             _ => {
-                let mut k = String::new();
-                self.h.canon_term(t, &mut k);
+                let k = self.h.canon(t);
                 k
             }
         }
@@ -15936,16 +15876,14 @@ impl Eval {
         let s = Subst::default();
         self.demand.asked.clear();
         if !self.match_premise(lit, &s, 0, None)?.is_empty() {
-            let mut k = String::new();
-            resolved_lit_key(&mut self.h, lit.rel, lit.persp, &lit.args, &s, &mut k);
+            let k = self.lit_key(lit, &s);
             let k = match shown {
                 Some(q) if self.plain => q.to_string(),
                 _ => k,
             };
             return Ok((true, format!("{k} holds; nothing to demonstrate")));
         }
-        let mut k = String::new();
-        resolved_lit_key(&mut self.h, lit.rel, lit.persp, &lit.args, &s, &mut k);
+        let k = self.lit_key(lit, &s);
         let mut lines = vec![format!("whynot {k}:")];
         let asked = std::mem::take(&mut self.demand.asked);
         // the plain explainer knows no lattice, counting or unknown tuple
@@ -15992,38 +15930,17 @@ impl Eval {
             return self.whynot_sub(lit);
         }
         let Some(&(n, op)) = self.lat.lattices.get(&lit.rel) else { return Ok(None) };
-        let Some(persp) = walk(&self.h, lit.persp, &Subst::default()).as_atom() else { return Ok(None) };
-        if lit.args.len() != n || !lit.args.iter().all(|a| self.h.is_ground(*a)) {
-            return Ok(None);
-        }
+        let Some(persp) = self.ground_persp(lit, n) else { return Ok(None) };
         let key = &lit.args[..n - 1];
-        let mut cell = String::new();
-        write_fact_key(&self.h, lit.rel, persp, key, &mut cell);
-        let tick = Term::int(self.store.tick as i64);
-        let kl = self.h.list(key);
-        let markers = [
-            self.h.mkf(self.v.s_lattice, &[Term::atom(lit.rel), Term::atom(persp), tick, kl]),
-            self.h.mkf(self.v.s_lattice, &[Term::atom(lit.rel)]),
-        ];
-        let unknowns = [Unknown::Cell((lit.rel, persp, key.into())), Unknown::Rel(lit.rel)];
-        for (m, u) in markers.into_iter().zip(unknowns) {
-            if let Some(rs) = self.hole_reason(m)? {
-                let mut lines = vec![format!("  {cell} has no value: hole({rs}) [{}]", self.lat_label(lit.rel, op))];
-                lines.extend(brk!("widen_whynot_bare" => Vec::new(); self.widened_lines(m, "  ")));
-                brk!("lattice_whynot_no_path" => (); lines.extend(self.unknown_path(&u)?));
-                return Ok(Some(lines));
-            }
+        let cell = fact_key(&self.h, lit.rel, persp, key);
+        if let Some((m, u, rs)) = self.first_hole(lit, persp, key)? {
+            let mut lines = vec![format!("  {cell} has no value: hole({rs}) [{}]", self.lat_label(lit.rel, op))];
+            lines.extend(brk!("widen_whynot_bare" => Vec::new(); self.widened_lines(m, "  ")));
+            brk!("lattice_whynot_no_path" => (); lines.extend(self.unknown_path(&u)?));
+            return Ok(Some(lines));
         }
-        let vvar = Term::var(self.h.intern("?V"));
-        let mut probe = lit.clone();
-        probe.args[n - 1] = vvar;
-        let Some((s2, _)) = self.match_premise(&probe, &Subst::default(), 0, None)?.into_iter().next() else {
-            return Ok(None);
-        };
-        let held = resolve(&mut self.h, vvar, &s2);
-        let (mut hs, mut ws) = (String::new(), String::new());
-        self.h.canon_term(held, &mut hs);
-        self.h.canon_term(lit.args[n - 1], &mut ws);
+        let Some(held) = self.held_value(lit, n)? else { return Ok(None) };
+        let (hs, ws) = (self.h.canon(held), self.h.canon(lit.args[n - 1]));
         if op.is_join() {
             let mut lines = vec![format!("  {cell} is a lattice cell ({}) holding {hs} [lattice]", op.name())];
             let contribs = self.lattice_contributions(lit.rel, persp, key, op)?;
@@ -16090,40 +16007,26 @@ impl Eval {
     /// `None` when the cell has no front and no hole.
     fn whynot_sub(&mut self, lit: &Lit) -> Result<Option<Vec<String>>, Halt> {
         let sub = self.lat.subs[&lit.rel].clone();
-        let Some(persp) = walk(&self.h, lit.persp, &Subst::default()).as_atom() else { return Ok(None) };
-        if lit.args.len() != sub.arity || !lit.args.iter().all(|a| self.h.is_ground(*a)) {
-            return Ok(None);
-        }
+        let Some(persp) = self.ground_persp(lit, sub.arity) else { return Ok(None) };
         let k = sub.keylen;
         let key = &lit.args[..k];
-        let mut cell = String::new();
-        write_fact_key(&self.h, lit.rel, persp, key, &mut cell);
-        let tick = Term::int(self.store.tick as i64);
-        let kl = self.h.list(key);
-        let markers = [
-            self.h.mkf(self.v.s_lattice, &[Term::atom(lit.rel), Term::atom(persp), tick, kl]),
-            self.h.mkf(self.v.s_lattice, &[Term::atom(lit.rel)]),
-        ];
-        let unknowns = [Unknown::Cell((lit.rel, persp, key.into())), Unknown::Rel(lit.rel)];
-        for (m, u) in markers.into_iter().zip(unknowns) {
-            if let Some(rs) = self.hole_reason(m)? {
-                let mut lines = vec![format!("  {cell} has no value: hole({rs}) [subsumption]")];
-                if let Some(ps) = self.lat.pass.conflict_marks.get(&m).cloned() {
-                    let mut ts: Vec<String> = ps.iter().map(|t| self.shown(*t)).collect();
-                    ts.sort();
-                    lines.push(format!("  its dominance is no order over {}", ts.join(", ")));
-                }
-                brk!("lattice_whynot_no_path" => (); lines.extend(self.unknown_path(&u)?));
-                return Ok(Some(lines));
+        let cell = fact_key(&self.h, lit.rel, persp, key);
+        if let Some((m, u, rs)) = self.first_hole(lit, persp, key)? {
+            let mut lines = vec![format!("  {cell} has no value: hole({rs}) [{}]", self.lat_label(lit.rel, AggOp::Dominance))];
+            if let Some(ps) = self.lat.pass.conflict_marks.get(&m).cloned() {
+                let mut ts: Vec<String> = ps.iter().map(|t| self.shown(*t)).collect();
+                ts.sort();
+                lines.push(format!("  its dominance is no order over {}", ts.join(", ")));
             }
+            brk!("lattice_whynot_no_path" => (); lines.extend(self.unknown_path(&u)?));
+            return Ok(Some(lines));
         }
         let front = self.lat.sub_front(&self.h, &mut self.store, lit.rel, persp, key);
         if front.is_empty() {
             return Ok(None);
         }
         let fronts: Vec<String> = front.iter().map(|f| self.store.key(&self.h, *f)).collect();
-        let mut ws = String::new();
-        write_fact_key(&self.h, lit.rel, persp, &lit.args, &mut ws);
+        let ws = fact_key(&self.h, lit.rel, persp, &lit.args);
         let mut lines = vec![format!("  {cell} is a subsumption cell; its front is {}", fronts.join(", "))];
         let ck: LatKey = (lit.rel, persp, key.into());
         let given = self.lat.pass.sub_by.get(&(ck, lit.args[k..].into())).copied().filter(|(f, _)| self.store.alive(*f));
@@ -16214,22 +16117,10 @@ impl Eval {
     fn whynot_counting(&mut self, lit: &Lit) -> Result<Option<Vec<String>>, Halt> {
         let Some(&c) = self.tags.count_rel.get(&lit.rel) else { return Ok(None) };
         let n = self.tags.by_rel[&lit.rel].0;
-        let Some(persp) = walk(&self.h, lit.persp, &Subst::default()).as_atom() else { return Ok(None) };
-        if lit.args.len() != n || !lit.args.iter().all(|a| self.h.is_ground(*a)) {
-            return Ok(None);
-        }
-        let vvar = Term::var(self.h.intern("?V"));
-        let mut probe = lit.clone();
-        probe.args[n - 1] = vvar;
-        let Some((s2, _)) = self.match_premise(&probe, &Subst::default(), 0, None)?.into_iter().next() else {
-            return Ok(None);
-        };
-        let held = resolve(&mut self.h, vvar, &s2);
-        let mut cell = String::new();
-        write_fact_key(&self.h, lit.rel, persp, &lit.args[..n - 1], &mut cell);
-        let (mut hs, mut ws) = (String::new(), String::new());
-        self.h.canon_term(held, &mut hs);
-        self.h.canon_term(lit.args[n - 1], &mut ws);
+        let Some(persp) = self.ground_persp(lit, n) else { return Ok(None) };
+        let Some(held) = self.held_value(lit, n)? else { return Ok(None) };
+        let cell = fact_key(&self.h, lit.rel, persp, &lit.args[..n - 1]);
+        let (hs, ws) = (self.h.canon(held), self.h.canon(lit.args[n - 1]));
         let mut derivs: Vec<String> = Vec::new();
         for f in self.store.rel_persp(&self.h, c, persp) {
             let a = self.store.args(f).to_vec();
@@ -16237,8 +16128,7 @@ impl Eval {
                 continue;
             }
             let rule = self.store.witness_of(&self.h, f, &mut HashMap::new()).map(|w| self.h.name(w.rule).to_string()).unwrap_or_else(|| "a tick before".into());
-            let mut t = String::new();
-            self.h.canon_term(a[n], &mut t);
+            let t = self.h.canon(a[n]);
             derivs.push(format!("x{t} by {rule}"));
         }
         derivs.sort();
@@ -16309,13 +16199,43 @@ impl Eval {
     }
 
     /// The reason of the hole on `marker`, if there is one.
+    fn ground_persp(&mut self, lit: &Lit, arity: usize) -> Option<Sym> {
+        let persp = walk(&self.h, lit.persp, &Subst::default()).as_atom()?;
+        (lit.args.len() == arity && lit.args.iter().all(|a| self.h.is_ground(*a))).then_some(persp)
+    }
+
+    /// The value the cell of a ground literal of arity `n` holds, whatever the literal asks for.
+    fn held_value(&mut self, lit: &Lit, n: usize) -> Result<Option<Term>, Halt> {
+        let vvar = Term::var(self.h.intern("?V"));
+        let mut probe = lit.clone();
+        probe.args[n - 1] = vvar;
+        let Some((s2, _)) = self.match_premise(&probe, &Subst::default(), 0, None)?.into_iter().next() else { return Ok(None) };
+        Ok(Some(resolve(&mut self.h, vvar, &s2)))
+    }
+
+    /// The hole under a cell, its marker and reason: the cell's own marker first, then its relation's.
+    fn first_hole(&mut self, lit: &Lit, persp: Sym, key: &[Term]) -> Result<Option<(Term, Unknown, String)>, Halt> {
+        let tick = Term::int(self.store.tick as i64);
+        let kl = self.h.list(key);
+        let markers = [
+            self.h.mkf(self.v.s_lattice, &[Term::atom(lit.rel), Term::atom(persp), tick, kl]),
+            self.h.mkf(self.v.s_lattice, &[Term::atom(lit.rel)]),
+        ];
+        let unknowns = [Unknown::Cell((lit.rel, persp, key.into())), Unknown::Rel(lit.rel)];
+        for (m, u) in markers.into_iter().zip(unknowns) {
+            if let Some(rs) = self.hole_reason(m)? {
+                return Ok(Some((m, u, rs)));
+            }
+        }
+        Ok(None)
+    }
+
     fn hole_reason(&mut self, marker: Term) -> Result<Option<String>, Halt> {
         let rv = Term::var(self.h.intern("?R"));
         let hl = Lit { rel: self.v.hole, persp: Term::atom(self.v.kernel_persp), persp_explicit: true, args: vec![marker, rv], temporal: Temporal::Now };
         let Some((s2, _)) = self.match_premise(&hl, &Subst::default(), 0, None)?.into_iter().next() else { return Ok(None) };
         let r = resolve(&mut self.h, rv, &s2);
-        let mut rs = String::new();
-        self.h.canon_term(r, &mut rs);
+        let rs = self.h.canon(r);
         Ok(Some(rs))
     }
 
@@ -16482,18 +16402,8 @@ impl Eval {
     fn explain_rule(&mut self, lit: &Lit, r: &ERule, level: usize, next: &mut Vec<WnTask>) -> Result<(), Halt> {
         let pad = "  ".repeat(2 * level - 1);
         // a reader of an alias is explained as written: the alias is asked, and read from its source
-        let written = self.alias_orig.get(&r.id).cloned();
-        let rn = self.rename_clause(written.as_ref().unwrap_or(&r.clause));
-        let mut s = Some(Subst::default());
-        if let Some(cur) = s.take() {
-            s = self.eval_builtin(self.v.op_eq, rn.head.persp, lit.persp, &cur, None);
-        }
-        let n = rn.head.args.len().min(lit.args.len());
-        for i in 0..n {
-            let Some(cur) = s.take() else { break };
-            s = self.eval_builtin(self.v.op_eq, rn.head.args[i], lit.args[i], &cur, None);
-        }
-        let Some(s0) = s.filter(|_| rn.head.args.len() == lit.args.len()) else {
+        let (rn, s0) = self.unify_written_head(r, lit);
+        let Some(s0) = s0 else {
             next.push(WnTask::Line(format!("{pad}rule {}: head does not unify", self.h.name(r.id))));
             return Ok(());
         };
@@ -16539,15 +16449,13 @@ impl Eval {
         }
         let ck = self.cycle_key(lit);
         if ctx.path.contains(&ck) {
-            let mut k = String::new();
-            resolved_lit_key(&mut self.h, lit.rel, lit.persp, &lit.args, &Subst::default(), &mut k);
+            let k = self.lit_key(lit, &Subst::default());
             next.push(WnTask::Line(format!("{pad}{k} [cycle]")));
             return;
         }
         if self.h.is_ground(lit.persp) && lit.args.iter().all(|a| self.h.is_ground(*a)) {
             if brk!("whynot_dag_off" => false; ctx.done.get(&ck).is_some_and(|ls| ls.contains(&level))) {
-                let mut k = String::new();
-                resolved_lit_key(&mut self.h, lit.rel, lit.persp, &lit.args, &Subst::default(), &mut k);
+                let k = self.lit_key(lit, &Subst::default());
                 next.push(WnTask::Line(format!("{pad}{k} [above]")));
                 return;
             }
@@ -16621,14 +16529,8 @@ impl Eval {
         let rules: Vec<Rc<ERule>> = self.rules.iter().chain(&self.alias_rules).filter(|r| r.clause.head.rel == lit.rel).cloned().collect();
         let mut walks: Vec<(Rc<ERule>, HashMap<String, HashMap<String, Option<Lit>>>, Option<String>)> = Vec::new();
         for r in rules {
-            let written = self.alias_orig.get(&r.id).cloned();
-            let rn = self.rename_clause(written.as_ref().unwrap_or(&r.clause));
-            let mut s = self.eval_builtin(self.v.op_eq, rn.head.persp, lit.persp, &Subst::default(), None);
-            for i in 0..rn.head.args.len().min(lit.args.len()) {
-                let Some(cur) = s.take() else { break };
-                s = self.eval_builtin(self.v.op_eq, rn.head.args[i], lit.args[i], &cur, None);
-            }
-            let Some(s0) = s.filter(|_| rn.head.args.len() == lit.args.len()) else { continue };
+            let (rn, s0) = self.unify_written_head(&r, lit);
+            let Some(s0) = s0 else { continue };
             let body = self.whynot_plan(&rn, &s0);
             self.wn_vols = Some(walk.clone());
             let mut out = HashMap::new();
@@ -16639,8 +16541,7 @@ impl Eval {
             outs.insert(head.clone().unwrap_or_default(), out);
             walks.push((r, outs, w.split));
         }
-        let mut k = String::new();
-        resolved_lit_key(&mut self.h, lit.rel, lit.persp, &lit.args, &Subst::default(), &mut k);
+        let k = self.lit_key(lit, &Subst::default());
         let mut files: Vec<String> = vols.iter().map(|(_, n)| n.clone()).collect();
         files.sort_by(|a, b| cmp_js(a, b));
         files.dedup();
@@ -16721,8 +16622,7 @@ impl Eval {
                 continue;
             }
             if w.split.is_none() {
-                let mut key = String::new();
-                resolved_lit_key(&mut self.h, l.rel, l.persp, &l.args, s, &mut key);
+                let key = self.lit_key(l, s);
                 w.split = Some(key);
             }
             let mine = w.outs.entry(v.clone()).or_default();
@@ -16845,9 +16745,7 @@ impl Eval {
                             let rec = self.store.rec(f);
                             let (rel, persp) = (rec.rel, rec.persp);
                             let args = self.store.args(f).to_vec();
-                            let mut w = String::new();
-                            write_fact_key(&self.h, rel, persp, &args, &mut w);
-                            w
+                            fact_key(&self.h, rel, persp, &args)
                         }
                         _ => {
                             let w = self.lit_key(l, &s2);
@@ -16888,9 +16786,7 @@ impl Eval {
                     false => {
                         let lt = resolve(&mut self.h, *l, s);
                         let rt = resolve(&mut self.h, *r, s);
-                        let (mut a, mut b) = (String::new(), String::new());
-                        self.h.canon_term(lt, &mut a);
-                        self.h.canon_term(rt, &mut b);
+                        let (a, b) = (self.h.canon(lt), self.h.canon(rt));
                         out.entry(format!("{a} {} {b} [builtin fails]", self.h.name(*op)))
                             .or_insert(None);
                     }
@@ -16930,9 +16826,7 @@ impl Eval {
             let unranked = mine.iter().find_map(|(_, v, n)| (matches!(v, CellValue::Empty) && *n > 0).then_some(*n));
             if let Some(got) = valued {
                 let want = resolve(&mut self.h, a.result, s);
-                let (mut g, mut w) = (String::new(), String::new());
-                self.h.canon_term(got, &mut g);
-                self.h.canon_term(want, &mut w);
+                let (g, w) = (self.h.canon(got), self.h.canon(want));
                 out.entry(format!("{desc} = {g}, not {w} [aggregate]")).or_insert(None);
             } else if let Some(r) = brk!("whynot_hole_empty" => holed.filter(|_| false); holed) {
                 out.entry(format!("{desc} has no value: hole({}) [aggregate]", self.h.name(r))).or_insert(None);
@@ -17060,20 +16954,9 @@ impl Eval {
     /// equal and a loop is recognised.
     fn cycle_key(&mut self, l: &Lit) -> String {
         let mut seen: HashMap<Sym, String> = HashMap::new();
-        let mut out = String::new();
-        out.push_str(self.h.name(l.rel));
-        out.push('[');
         let p = self.renumber(l.persp, &mut seen);
-        self.h.canon_term(p, &mut out);
-        out.push_str("](");
-        for (i, a) in l.args.clone().iter().enumerate() {
-            if i > 0 {
-                out.push(',');
-            }
-            let t = self.renumber(*a, &mut seen);
-            self.h.canon_term(t, &mut out);
-        }
-        out.push(')');
+        let args: Vec<Term> = l.args.iter().map(|a| self.renumber(*a, &mut seen)).collect();
+        let mut out = self.term_key(l.rel, p, &args);
         out.push('@');
         out.push_str(match l.temporal {
             Temporal::Now => "now",
