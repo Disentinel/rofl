@@ -7,7 +7,11 @@ use super::say::{self, Fix, Part, T};
 use regex::Regex;
 use std::collections::{HashMap, HashSet};
 
-pub const TERM: &str = r#"(?:[Aa]n? [a-z][\w-]*(?: [a-z][\w-]*){0,2}(?: [A-Z][A-Za-z0-9]*)?|some [a-z][\w-]*(?: [a-z][\w-]*){0,2}|something|it|[A-Z][A-Za-z0-9]*|"[^"]*"|-?\d+|`[^`]+`|\$?[a-z_]\w*\((?:[^()]|\((?:[^()]|\([^()]*\))*\))*\))"#;
+/// The words of a noun phrase: one to three, lower case.
+macro_rules! words { () => { r"[a-z][\w-]*(?: [a-z][\w-]*){0,2}" }; }
+/// What may stand in a hole of a sentence: a noun phrase, a variable, a string, a number, an atom in backticks; `TERM` adds a call.
+macro_rules! ask_term { () => { concat!(r"[Aa]n? ", words!(), r"(?: [A-Z][A-Za-z0-9]*)?|some ", words!(), r#"|something|it|[A-Z][A-Za-z0-9]*|"[^"]*"|-?\d+|`[^`]+`"#) }; }
+pub const TERM: &str = concat!("(?:", ask_term!(), r#"|\$?[a-z_]\w*\((?:[^()]|\((?:[^()]|\([^()]*\))*\))*\)"#, ")");
 const TAKES: &str = r#"\((?:[^()"`]|"[^"]*"|`[^`]*`)*\)|TERM"#;
 /// A pattern with `TERM` and `TAKES` in it, compiled once.
 fn tm(p: &str) -> &'static Regex {
@@ -19,7 +23,7 @@ fn tm(p: &str) -> &'static Regex {
 }
 fn cap(r: &Regex, s: &str) -> Option<Vec<Option<String>>> { r.captures(s).map(|c| rx::groups(&c)) }
 
-const VALUE: [&str; 13] = ["key", "name", "file", "index", "text", "kind", "line", "attribute", "number", "score", "value", "child", "node"];
+pub const VALUE: [&str; 13] = ["key", "name", "file", "index", "text", "kind", "line", "attribute", "number", "score", "value", "child", "node"];
 fn value(n: &str) -> bool { VALUE.contains(&n) }
 const EVALUABLE: [&str; 18] = ["+", "-", "*", "/", "mod", "min", "max", "str_len", "str_char", "str_sub", "str_pre", "str_seg", "str_segs", "atom_of", "ivadd", "ivsub", "ivmul", "ivmeet"];
 const MODAL: [&str; 7] = ["can", "could", "must", "may", "will", "should", "would"];
@@ -32,7 +36,7 @@ fn be(t: &str) -> Option<Vec<String>> {
     };
     Some(v.iter().map(|s| s.to_string()).collect())
 }
-const LATTICE_WORD: [(&str, &str); 12] = [("least", "min"), ("greatest", "max"), ("disjunction", "or"), ("conjunction", "and"), ("union", "union"), ("hull", "hull"),
+pub const LATTICE_WORD: [(&str, &str); 12] = [("least", "min"), ("greatest", "max"), ("disjunction", "or"), ("conjunction", "and"), ("union", "union"), ("hull", "hull"),
     ("bitwise or", "bitor"), ("sum", "sum"), ("count", "count"), ("median", "median"), ("quantile", "quantile"), ("rank", "rank")];
 const NAME: &str = "(?:_|[A-Z][A-Za-z0-9_]*)";
 pub const TREE_DECL: &str = r"^Each child of `(\w+)` has one parent and no node is its own ancestor(?:, and `(\w+)` holds of each node and every ancestor of it)?\.$";
@@ -132,7 +136,7 @@ pub fn clean(s: &str) -> String { rx::sub(r#"<a id="[^"]+"><\/a>"#, &rx::replace
 
 /// A sentence's relation named from its words, `A call C is unawaited` -> `unawaited`.
 pub fn slug(head: &str) -> String {
-    let s = rx::sub(r"\b(?:[Aa]n?|[Tt]he) [a-z][\w-]*(?: [a-z][\w-]*){0,2} [A-Z][A-Za-z0-9]*\b", head, true, " ");
+    let s = rx::sub(concat!(r"\b(?:[Aa]n?|[Tt]he) ", words!(), r" [A-Z][A-Za-z0-9]*\b"), head, true, " ");
     let s = rx::sub(r#"`[^`]*`|"[^"]*"|\b[A-Z][A-Za-z0-9]*\b"#, &s, true, " ").to_lowercase();
     let s = rx::sub(r"\b(a|an|the|is|are)\b", &s, true, " ");
     let s = rx::sub(r"[^a-z0-9]+", &s, true, "_");
@@ -527,7 +531,7 @@ fn head_of(t: &str) -> String {
 }
 
 fn word_shape(t: &str) -> String {
-    rx::sub(r"(?:\b(?:an?) [a-z][\w-]*(?: [a-z][\w-]*){0,2} )?\b[A-Z][A-Za-z0-9]*\b", &lower1(t), true, "_")
+    rx::sub(concat!(r"(?:\b(?:an?) ", words!(), r" )?\b[A-Z][A-Za-z0-9]*\b"), &lower1(t), true, "_")
 }
 
 fn declared_listing(blocks: &[Block], lines: &[&str]) -> (HashMap<String, i64>, Vec<String>) {
@@ -700,7 +704,7 @@ impl R {
         if rx::test(" or ", &rx::sub(r#""[^"]*"|`[^`]*`"#, text, true, "")) {
             return Or(rx::split(" or ", text).iter().map(|x| self.term(x.trim(), intros)).collect());
         }
-        if let Some(m) = rx::exec(r"^[Aa]n? ([a-z][\w-]*(?: [a-z][\w-]*){0,2})(?: ([A-Z][A-Za-z0-9]*))?$", text) {
+        if let Some(m) = rx::exec(concat!(r"^[Aa]n? (", words!(), r")(?: ([A-Z][A-Za-z0-9]*))?$"), text) {
             let v = if has(&m, 2) { g(&m, 2).to_string() } else { let v = format!("It{}", self.fresh_n); self.fresh_n += 1; v };
             let n = g(&m, 1);
             intros.push(Intro { v: v.clone(), noun: if n.ends_with(" node") { format!("`{}", cut(n, 5)) } else { n.to_string() } });
@@ -752,7 +756,7 @@ impl R {
                     let Part::Hole(_, pn) = p else { continue };
                     let cap = &gs[gi];
                     gi += 1;
-                    let im = rx::exec(r"^[Aa]n? ([a-z][\w-]*(?: [a-z][\w-]*){0,2})(?: [A-Z]\w*)?$", cap);
+                    let im = rx::exec(concat!(r"^[Aa]n? (", words!(), r")(?: [A-Z]\w*)?$"), cap);
                     let noun: Option<String> = match &im {
                         Some(im) => Some(g(im, 1).to_string()),
                         None if cap == "it" => self.subject_var.as_ref().and_then(|s| self.known.get(s).cloned()),
@@ -783,7 +787,7 @@ impl R {
             let Part::Hole(_, pn) = p else { continue };
             let cap = &gs[gi];
             gi += 1;
-            let im = if rx::test(r"^[A-Z]\w*$", cap) { Some(cap.clone()) } else { rx::exec(r"^[Aa]n? [a-z][\w-]*(?: [a-z][\w-]*){0,2} ([A-Z]\w*)$", cap).map(|m| g(&m, 1).to_string()) };
+            let im = if rx::test(r"^[A-Z]\w*$", cap) { Some(cap.clone()) } else { rx::exec(concat!(r"^[Aa]n? ", words!(), r" ([A-Z]\w*)$"), cap).map(|m| g(&m, 1).to_string()) };
             if let Some(im) = im { if !self.known.contains_key(&im) { self.known.insert(im, pn.clone()); } }
         }
         if as_head && matches!(t.parts.first(), Some(Part::Hole(..))) {
@@ -806,7 +810,7 @@ impl R {
     }
 
     fn guard_head(&mut self, text: &str, intros: &mut Vec<Intro>) -> Option<Lit> {
-        let m = cap(tm(r"^(TERM) is an? ([a-z][\w-]*(?: [a-z][\w-]*){0,2})$"), text)?;
+        let m = cap(tm(concat!(r"^(TERM) is an? (", words!(), r")$")), text)?;
         let rel = self.noun_guards.get(g(&m, 2))?.clone();
         let t = self.term(g(&m, 1), intros);
         self.subject_var = var_name(&t).map(str::to_string);
@@ -890,7 +894,7 @@ impl R {
     }
 
     fn in_file(&mut self, text: &str, intros: &mut Vec<Intro>, rule: &mut Rule) -> Option<bool> {
-        let m = rx::exec(r"^((?:[Aa]n? [a-z][\w-]*(?: [a-z][\w-]*){0,2} )?[A-Z][A-Za-z0-9]*|it) is in file (.+)$", text)?;
+        let m = rx::exec(concat!(r"^((?:[Aa]n? ", words!(), r" )?[A-Z][A-Za-z0-9]*|it) is in file (.+)$"), text)?;
         let t = self.term(g(&m, 1), intros);
         let v = var_name(&t).unwrap_or("").to_string();
         let guarded = gpos(&rule.guards, &v).is_some() || intros.iter().any(|x| x.v == v && !value(&x.noun));
@@ -909,7 +913,7 @@ impl R {
 
     /// `X is a node` and `X is a kind`: the noun's guard, or its kind's relation, or its atoms.
     fn kinds_is(&mut self, text: &str, neg: bool, intros: &mut Vec<Intro>, rule: &mut Rule) -> Option<bool> {
-        let m = rx::exec(r"^((?:[Aa]n? [a-z][\w-]*(?: [a-z][\w-]*){0,2} )?[A-Z][A-Za-z0-9]*|it) is ((?:[Aa]n? [a-z][\w-]*(?: [a-z][\w-]*){0,2})(?: or [Aa]n? [a-z][\w-]*(?: [a-z][\w-]*){0,2})*)$", text)?;
+        let m = rx::exec(concat!(r"^((?:[Aa]n? ", words!(), r" )?[A-Z][A-Za-z0-9]*|it) is ((?:[Aa]n? ", words!(), r")(?: or [Aa]n? ", words!(), r")*)$"), text)?;
         let ns: Vec<String> = rx::split(" or ", g(&m, 2)).iter().map(|x| rx::sub("^[Aa]n? ", x, false, "")).map(|n| if n.ends_with(" node") { format!("`{}", cut(&n, 5)) } else { n }).collect();
         let subj = if g(&m, 1) == "it" { self.subject_var.clone().unwrap_or_else(|| "It".into()) } else { let t = self.term(g(&m, 1), intros); var_name(&t).unwrap_or("").to_string() };
         if ns.len() == 1 && self.noun_guards.has(&ns[0]) {
@@ -986,7 +990,7 @@ impl R {
 
     /// `A B that C`: the relation B between A and a fresh one, which C says of.
     fn relative(&mut self, text: &str, neg: bool, intros: &mut Vec<Intro>, rule: &mut Rule) -> Option<bool> {
-        let m = rx::exec(r"^(.*?) ([Aa]n? [a-z][\w-]*(?: [a-z][\w-]*){0,2}) that (.+)$", text)?;
+        let m = rx::exec(concat!(r"^(.*?) ([Aa]n? ", words!(), r") that (.+)$"), text)?;
         let fresh = format!("Rel{}", self.fresh_n);
         self.fresh_n += 1;
         let l1 = self.match_lit(&format!("{} {} {fresh}", g(&m, 1), g(&m, 2)), intros, false);
@@ -1020,7 +1024,7 @@ impl R {
 
     /// `the area A` where a variable is meant: why the line does not read, when it reads with `an area A`.
     fn the_variable(&mut self, s: &str) -> Option<String> {
-        let found: Vec<(usize, usize, String, String)> = rx::re(r"\bthe ([a-z][\w-]*(?: [a-z][\w-]*){0,2}) ([A-Z][A-Za-z0-9]*)\b").captures_iter(s)
+        let found: Vec<(usize, usize, String, String)> = rx::re(concat!(r"\bthe (", words!(), r") ([A-Z][A-Za-z0-9]*)\b")).captures_iter(s)
             .map(|c| { let m = c.get(0).unwrap(); (m.start(), m.end(), c[1].to_string(), c[2].to_string()) }).collect();
         for (st, en, n, v) in found {
             let a = format!("{} {n} {v}", art(&n));
@@ -1112,8 +1116,7 @@ impl R {
             .or_else(|| self.sum_or_median(p, intros, rule))
             .or_else(|| self.quantile(p, intros, rule))
             .or_else(|| self.rank(p, intros, rule))
-            .or_else(|| self.least_or_greatest(p, intros, rule))
-            .or_else(|| self.junction(p, intros, rule))
+            .or_else(|| self.least_or_junction(p, intros, rule))
             .or_else(|| self.at_least(p, intros, rule))
             .or_else(|| self.at_most_or_exactly(p, intros, rule))
     }
@@ -1170,19 +1173,12 @@ impl R {
         self.read_agg(p, rule, "rank", res, vals, keys)
     }
 
-    fn least_or_greatest(&mut self, p: &AggParts, intros: &mut Vec<Intro>, rule: &mut Rule) -> Option<bool> {
-        let m = cap(tm(r"^(TERM) is the (least|greatest) (TERM)$"), p.pre)?;
+    fn least_or_junction(&mut self, p: &AggParts, intros: &mut Vec<Intro>, rule: &mut Rule) -> Option<bool> {
+        let m = cap(tm(r"^(TERM) is the (?:(least|greatest)|(disjunction|conjunction) of) (TERM)$"), p.pre)?;
         let res = self.term(g(&m, 1), intros);
-        let v = self.term(g(&m, 3), intros);
-        let op = if g(&m, 2) == "least" { "min" } else { "max" };
-        self.read_agg(p, rule, op, res, vec![v], vec![])
-    }
-
-    fn junction(&mut self, p: &AggParts, intros: &mut Vec<Intro>, rule: &mut Rule) -> Option<bool> {
-        let m = cap(tm(r"^(TERM) is the (disjunction|conjunction) of (TERM)$"), p.pre)?;
-        let res = self.term(g(&m, 1), intros);
-        let v = self.term(g(&m, 3), intros);
-        let op = if g(&m, 2) == "disjunction" { "or" } else { "and" };
+        let v = self.term(g(&m, 4), intros);
+        let word = [g(&m, 2), g(&m, 3)].concat();
+        let op = LATTICE_WORD.iter().find(|x| x.0 == word).unwrap().1;
         self.read_agg(p, rule, op, res, vec![v], vec![])
     }
 
@@ -1375,7 +1371,7 @@ impl R {
                 None => None,
                 Some(m) => {
                     let rest = &head_text[g(&m, 0).len()..];
-                    let typed = !rx::test(r"^(?:is|are|has|have|was|were|does|do)\b", rest) && rx::test(r"^[a-z][\w-]*(?: [a-z][\w-]*){0,2} [A-Z]", rest);
+                    let typed = !rx::test(r"^(?:is|are|has|have|was|were|does|do)\b", rest) && rx::test(concat!(r"^", words!(), r" [A-Z]"), rest);
                     (!typed).then(|| g(&m, 1).to_string())
                 }
             };
@@ -1443,7 +1439,7 @@ impl R {
         let mut parts = Vec::new();
         let (mut buf, mut n, mut last) = (String::new(), 0usize, 0usize);
         let flush = |buf: &mut String, parts: &mut Vec<Part>| { let t = buf.trim(); if !t.is_empty() { parts.push(Part::Text(t.to_string())); } buf.clear(); };
-        for c in rx::re(r"(?:\b(an?) ([a-z][\w-]*(?: [a-z][\w-]*){0,2}) )?\b([A-Z][A-Za-z0-9]*)\b").captures_iter(&head) {
+        for c in rx::re(concat!(r"(?:\b(an?) (", words!(), r") )?\b([A-Z][A-Za-z0-9]*)\b")).captures_iter(&head) {
             let m = c.get(0).unwrap();
             buf.push_str(&head[last..m.start()]);
             flush(&mut buf, &mut parts);
@@ -2282,8 +2278,7 @@ impl R {
         let cands: Vec<Cand> = (0..3.min(w.len())).map(|k| Cand { s: format!("X {}", w[k + 1..].join(" ")), np: Some(w[..k + 1].join(" ")), past: false }).collect();
         let (r, np) = self.settle(raw, &cands, "never")?;
         let n = self.noun_of(&r, np.as_deref()).unwrap_or_else(|| "thing".into());
-        let rel = rx::exec(r"^(\w+)", &r.lit).map(|m| g(&m, 1).to_string()).unwrap_or_default();
-        let domain = self.templates.iter().find(|t| t.arity == 1 && t.rel != rel && matches!(&t.parts[0], Part::Hole(_, hn) if *hn == n)).cloned();
+        let domain = self.ranging_sentence(&r.lit, &n);
         let tail = rx::sub("^X ", &r.said, false, "");
         Err(match domain {
             Some(d) => format!("\"{}\" needs the {} it ranges over, and no sentence lists every {n}: say which, as in {q} {n} that {} {tail}.", q.to_lowercase(), plural(&n), rx::sub("^X ", &lettered(&d), false, "")),
@@ -2425,12 +2420,17 @@ impl R {
         Some(Ok(Question { kind: "answers".into(), line: format!("? {}", r.said), lit: r.lit, yesno: true, noun, note, ..Default::default() }))
     }
 
+    /// The one-place sentence over `n` that a question about `lit` can name its things by.
+    fn ranging_sentence(&self, lit: &str, n: &str) -> Option<T> {
+        let rel = rx::exec(r"^(\w+)", lit).map(|m| g(&m, 1).to_string()).unwrap_or_default();
+        self.templates.iter().find(|t| t.arity == 1 && t.rel != rel && matches!(&t.parts[0], Part::Hole(_, hn) if hn == n)).cloned()
+    }
+
     /// `Which products do not leave the line?`: a question with not needs the things it ranges over, which only a rule can name.
     fn not_said(&mut self, positive: &str) -> String {
         let q = match self.question(positive, &mut |_| 1) { Ok(q) if q.noun.is_some() => q, _ => return "a question with \"not\" needs the things it ranges over: write a rule that names them and ask its head".into() };
         let n = q.noun.clone().unwrap();
-        let rel = rx::exec(r"^(\w+)", &q.lit).map(|m| g(&m, 1).to_string()).unwrap_or_default();
-        let domain = self.templates.iter().find(|t| t.arity == 1 && t.rel != rel && matches!(&t.parts[0], Part::Hole(_, hn) if *hn == n)).cloned();
+        let domain = self.ranging_sentence(&q.lit, &n);
         let said = rx::sub(r"^\? ", &q.line, false, "");
         match domain {
             Some(d) => format!("a question with \"not\" needs the {} it ranges over. Name them in a rule: {} {n} X stays if {}, unless {said}. Then ask: Which {} stay?", plural(&n), cap_art(&n), lettered(&d), plural(&n)),

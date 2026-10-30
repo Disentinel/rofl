@@ -360,7 +360,7 @@ impl Eval {
 
     /// The same for the cells of `rules` alone: a full pass that kept them did not fire them (engine/layer.rs).
     pub(super) fn restore_cells_of(&mut self, rules: Option<&FxSet<Sym>>) {
-        let mut by: HashMap<(Sym, u32, Box<[Term]>), Vec<(String, CellId)>> = HashMap::new();
+        let mut by: HashMap<(Sym, u32, Box<[Term]>), Vec<CellId>> = HashMap::new();
         for c in self.store.live_cells() {
             let r = self.store.cell(c);
             let CellOwner::Body { rule, at } = r.owner;
@@ -369,18 +369,15 @@ impl Eval {
             }
             let Some(plan) = self.agg_plans.get(&(rule, at)).filter(|p| p.op != AggOp::AtLeast) else { continue };
             let corr: Box<[Term]> = plan.corr.iter().map(|i| r.key[*i]).collect();
-            let mut k = String::new();
-            self.store.write_cell_key(&self.h, c, &mut k);
-            by.entry((rule, at, corr)).or_default().push((k, c));
+            by.entry((rule, at, corr)).or_default().push(c);
         }
-        for (mk, mut cs) in by {
-            cs.sort_by(|x, y| cmp_js(&x.0, &y.0));
-            self.cells.agg_memo.insert(mk, cs.into_iter().map(|(_, c)| c).collect::<Vec<_>>().into());
+        for (mk, cs) in by {
+            self.memo.agg_memo.insert(mk, self.cells_by_key(cs).into());
         }
     }
 
-    /// WHY AN ADDITION IS NOT WORKED OUT for this world: every reason that holds, in a fixed order (empty where it is).
-    fn addition_refusals(&mut self) -> Vec<&'static str> {
+    /// The reasons a delta or an addition is not worked out that hold of the world alone, whatever the change.
+    pub(super) fn world_refusals(&self) -> Vec<&'static str> {
         let mut out = Vec::new();
         if self.well_founded {
             out.push("the world is evaluated well-founded");
@@ -394,6 +391,12 @@ impl Eval {
         if self.store.tick != 0 {
             out.push("a later tick");
         }
+        out
+    }
+
+    /// WHY AN ADDITION IS NOT WORKED OUT for this world: every reason that holds, in a fixed order (empty where it is).
+    fn addition_refusals(&mut self) -> Vec<&'static str> {
+        let mut out = self.world_refusals();
         if brk!("add_seal_hole_refused" => self.store.rel_count(self.v.hole); self.holes_beyond_faults()) > 0 {
             out.push("the world holds a hole or reads a shrug");
         }
@@ -512,14 +515,8 @@ impl Eval {
 
     /// The relations `rules` read, at any depth, and what every rule into one of them reads, through each other.
     fn rels_below<'a>(&self, rules: impl Iterator<Item = &'a Rc<ERule>>) -> HashSet<Sym> {
-        let mut out: HashSet<Sym> = HashSet::new();
-        let mut todo: Vec<Sym> = rules.flat_map(|r| r.clause.body.iter().flat_map(|b| b.lits_deep()).map(|l| l.rel)).collect();
-        while let Some(rel) = todo.pop() {
-            if out.insert(rel) {
-                todo.extend(self.rules.iter().filter(|r| r.clause.head.rel == rel).flat_map(|r| r.clause.body.iter().flat_map(|b| b.lits_deep()).map(|l| l.rel)));
-            }
-        }
-        out
+        let first: Vec<Sym> = rules.flat_map(|r| r.clause.body.iter().flat_map(|b| b.lits_deep()).map(|l| l.rel)).collect();
+        reachable(first, |rel| self.rules.iter().filter(move |r| r.clause.head.rel == rel).flat_map(|r| r.clause.body.iter().flat_map(|b| b.lits_deep()).map(|l| l.rel)).collect::<Vec<_>>())
     }
 
     /// The variables a fact binds in a negated premise of the fine path (`bind_neg`).
@@ -562,7 +559,8 @@ impl Eval {
     /// rule whose news reaches a premise its plans cannot start from (solved in written order, such a premise is
     /// reached after the join of all those before it, for each news row) leaves the rounds: it fires whole once they
     /// are done, and the rounds go on over what that made, until nothing is new.
-    fn level_rounds(&mut self, rules: &[Rc<ERule>], mut front: Front) -> Result<(), Halt> {
+    fn level_rounds(&mut self, rules: &[Rc<ERule>], mut front: Front, (fired, made): (&HashSet<Sym>, Front)) -> Result<(), Halt> {
+        let mut first = Some(made);
         let outer = std::mem::take(&mut self.live_front);
         let active = std::mem::replace(&mut self.active, rules.to_vec());
         let mut whole: Vec<Rc<ERule>> = Vec::new();
@@ -572,11 +570,16 @@ impl Eval {
                     self.live_front = front.by_rel.keys().copied().collect();
                     self.cur_front = Front::default();
                     self.thr.round += 1;
-                    self.thr.fresh.clear();
+                    self.memo.thr_fresh.clear();
+                    let made = first.take();
                     for r in rules {
                         if whole.iter().any(|w| w.id == r.id) {
                             continue;
                         }
+                        let front = match &made {
+                            Some(m) if fired.contains(&r.id) => m,
+                            _ => &front,
+                        };
                         let at: Vec<(usize, usize)> = r.plan.iter().enumerate().filter_map(|(i, b)| match b {
                             BodyElem::Pos(l) => front.by_rel.get(&l.rel).map(|k| (i, k.len())),
                             _ => None,
@@ -614,6 +617,10 @@ impl Eval {
     /// every fact with a firing that cites one gone, through each other; a base fact stays and loses its firings, to
     /// be given them again.
     fn overdelete(&mut self, seeds: Vec<FactId>, over: &mut HashSet<FactId>, over_base: &mut HashSet<FactId>, d: &mut AddDelta) {
+        // the citer index, made when something first goes and kept by every firing added since
+        if !seeds.is_empty() && !self.store.has_citers() {
+            self.store.index_citers();
+        }
         let lost: HashSet<FactId> = seeds.iter().copied().collect();
         let comp = self.rel_components();
         // (kept, and queued since by nothing: a copy queued before it was judged)
@@ -683,7 +690,7 @@ impl Eval {
 
     /// The strongly connected components of the relations, each relation's by the rules that conclude it reading
     /// another (under a negation and an aggregate too): two relations in one may rest on each other.
-    fn rel_components(&self) -> HashMap<Sym, u32> {
+    fn rel_components(&self) -> HashMap<Sym, usize> {
         let mut next: HashMap<Sym, Vec<Sym>> = HashMap::new();
         for r in self.rules.iter() {
             let reads = next.entry(r.clause.head.rel).or_default();
@@ -691,61 +698,7 @@ impl Eval {
                 reads.push(l.rel);
             }
         }
-        // Tarjan's, without recursion: (node, index of its next edge)
-        let mut index: HashMap<Sym, (u32, u32)> = HashMap::new();
-        let mut comp: HashMap<Sym, u32> = HashMap::new();
-        let (mut stack, mut on, mut n, mut c) = (Vec::new(), HashSet::new(), 0u32, 0u32);
-        let mut nodes: Vec<Sym> = next.keys().copied().collect();
-        nodes.sort_unstable();
-        for root in nodes {
-            if index.contains_key(&root) {
-                continue;
-            }
-            let mut work: Vec<(Sym, usize)> = vec![(root, 0)];
-            index.insert(root, (n, n));
-            n += 1;
-            stack.push(root);
-            on.insert(root);
-            while let Some(&mut (v, ref mut i)) = work.last_mut() {
-                let out = next.get(&v).map(|e| e.as_slice()).unwrap_or(&[]);
-                if *i < out.len() {
-                    let w = out[*i];
-                    *i += 1;
-                    match index.get(&w) {
-                        None => {
-                            index.insert(w, (n, n));
-                            n += 1;
-                            stack.push(w);
-                            on.insert(w);
-                            work.push((w, 0));
-                        }
-                        Some(&(wi, _)) if on.contains(&w) => {
-                            let e = index.get_mut(&v).unwrap();
-                            e.1 = e.1.min(wi);
-                        }
-                        _ => {}
-                    }
-                    continue;
-                }
-                work.pop();
-                let (vi, vl) = index[&v];
-                if let Some(&(u, _)) = work.last() {
-                    let e = index.get_mut(&u).unwrap();
-                    e.1 = e.1.min(vl);
-                }
-                if vl == vi {
-                    while let Some(w) = stack.pop() {
-                        on.remove(&w);
-                        comp.insert(w, c);
-                        if w == v {
-                            break;
-                        }
-                    }
-                    c += 1;
-                }
-            }
-        }
-        comp
+        rel_scc(&next).0
     }
 
     /// THE PART OF AN ADDITION THAT IS KEPT, level by level (DRed over the levels of a stratified program): at each
@@ -776,8 +729,7 @@ impl Eval {
         for r in self.rules.iter().filter(|r| r.clause.head.temporal != Temporal::Next && r.safe && !plan.skip.contains(&r.id)) {
             by_head.entry(r.clause.head.rel).or_default().push(r.clone());
         }
-        // the citer index, made once and kept by every firing added since
-        if (!(plan.negs.is_empty() && plan.recompute.is_empty()) || !removed.is_empty()) && !self.store.has_citers() {
+        if !removed.is_empty() && !self.store.has_citers() {
             self.store.index_citers();
         }
         let mut news = Front::default();
@@ -969,7 +921,7 @@ impl Eval {
         if level.here.is_empty() {
             return Ok(());
         }
-        self.height_memo.clear();
+        self.memo.height_memo.clear();
         let ids: HashSet<Sym> = level.here.iter().map(|r| r.id).collect();
         d.stacked_cells += self.reset_cells(&ids);
         self.store.arrivals = Some(Vec::new());
@@ -1070,9 +1022,12 @@ impl Eval {
             }
         }
         self.active = level.rules.clone();
+        // a rule fired whole has read every fact that stands: its first round reads only what the firings made
+        let mut whole: HashSet<Sym> = HashSet::new();
         for r in plan.new_plain.iter().filter(|r| fired_at(st, lv, r.id)) {
             let f = self.fire_rule(r, None)?;
             merge_front(&mut out, f);
+            whole.insert(r.id);
         }
         let mut front = st.news.clone();
         for id in self.store.arrivals.as_ref().map(|a| a.clone()).unwrap_or_default() {
@@ -1080,8 +1035,8 @@ impl Eval {
                 front.note(self.store.rec(id).rel, id);
             }
         }
-        merge_front(&mut front, out);
-        self.level_rounds(&level.rules, front)?;
+        merge_front(&mut front, out.clone());
+        self.level_rounds(&level.rules, front, (&whole, out))?;
         // a threshold reached at this level closes once what it reads is closed, as an evaluation closes it
         self.close_thresholds_below(lv.saturating_add(1), true)
     }
@@ -1124,11 +1079,11 @@ impl Eval {
     /// The thresholds left open after the levels close, and the news that closing makes is what the window carries on.
     fn settle_thresholds(&mut self, news: &Front) -> Result<(), Halt> {
         // (a threshold closed after the levels makes facts the news does not hold)
-        self.add.fresh = self.thr.open.is_empty().then(|| news.keys.iter().copied().collect());
-        while !self.thr.open.is_empty() {
-            let open = self.thr.open.len();
+        self.add.fresh = self.memo.thr_open.is_empty().then(|| news.keys.iter().copied().collect());
+        while !self.memo.thr_open.is_empty() {
+            let open = self.memo.thr_open.len();
             self.close_thresholds_below(i64::MAX, true)?;
-            if self.thr.open.len() >= open {
+            if self.memo.thr_open.len() >= open {
                 break;
             }
         }
@@ -1291,27 +1246,27 @@ impl Eval {
                 let corr: Box<[Term]> = plan.corr.iter().map(|i| resolve(&mut self.h, Term::var(a.shared[*i]), s)).collect();
                 if corr.iter().all(|t| self.h.is_ground(*t)) {
                     let mk = (r.id, a.at, corr);
-                    if let Some(cs) = self.cells.agg_memo.remove(&mk) {
+                    if let Some(cs) = self.memo.agg_memo.remove(&mk) {
                         cells.extend(cs.iter().copied());
                     }
-                    self.cells.reach_memo.remove(&mk);
+                    self.memo.reach_memo.remove(&mk);
                     self.cells.agg_opened.remove(&mk);
                     continue;
                 }
                 // a shared holistic group: every percent or subject of it, and the group
                 let h = &self.h;
                 let fits = |k: &(Sym, u32, Box<[Term]>)| k.0 == r.id && k.1 == a.at && k.2.len() == corr.len() && k.2.iter().zip(corr.iter()).all(|(x, p)| !h.is_ground(*p) || x == p);
-                let mine: Vec<(Sym, u32, Box<[Term]>)> = self.cells.agg_memo.keys().filter(|k| fits(k)).cloned().collect();
+                let mine: Vec<(Sym, u32, Box<[Term]>)> = self.memo.agg_memo.keys().filter(|k| fits(k)).cloned().collect();
                 for mk in mine {
-                    if let Some(cs) = self.cells.agg_memo.remove(&mk) {
+                    if let Some(cs) = self.memo.agg_memo.remove(&mk) {
                         cells.extend(cs.iter().copied());
                     }
                 }
-                self.cells.reach_memo.retain(|k, _| !fits(k));
+                self.memo.reach_memo.retain(|k, _| !fits(k));
                 self.cells.agg_opened.retain(|k| !fits(k));
                 let base: Box<[Term]> = corr.iter().copied().filter(|t| h.is_ground(*t)).collect();
                 if brk!("add_hol_shared_kept" => false; true) {
-                    self.hol_shared.remove(&(r.id, a.at, base));
+                    self.memo.hol_shared.remove(&(r.id, a.at, base));
                 }
             }
         }
@@ -1319,7 +1274,7 @@ impl Eval {
         d.stacked_cells += cells.len();
         // the heights of what lies below the level reached stand: those found before are read again
         let lv = self.rule_level(r);
-        self.height_memo = std::mem::take(&mut self.heights_kept);
+        self.memo.height_memo = std::mem::take(&mut self.heights_kept);
         self.store.arrivals = Some(Vec::new());
         let saved = std::mem::replace(&mut self.active, vec![r.clone()]);
         let t = std::time::Instant::now();
@@ -1332,7 +1287,7 @@ impl Eval {
             self.propagate(front)
         })();
         *self.cost.ns_by_rule.entry(r.id).or_insert(0) += t.elapsed().as_nanos() as u64;
-        let mut kept = std::mem::take(&mut self.height_memo);
+        let mut kept = std::mem::take(&mut self.memo.height_memo);
         kept.retain(|f, _| self.rel_level(self.store.rec(*f).rel) < lv);
         self.heights_kept = kept;
         self.active = saved;
@@ -1384,18 +1339,7 @@ impl Eval {
 
     /// The relations that may grow: those added to, and the heads of every rule that reads one, through each other.
     pub(super) fn grow(&self, from: &HashSet<Sym>, fresh: &HashSet<Sym>) -> HashSet<Sym> {
-        let mut seen = from.clone();
-        loop {
-            let n = seen.len();
-            for r in &self.rules {
-                if r.clause.head.temporal != Temporal::Next && (fresh.contains(&r.id) || reads(r, &seen).0) {
-                    seen.insert(r.clause.head.rel);
-                }
-            }
-            if seen.len() == n {
-                return seen;
-            }
-        }
+        readers_cone(from.clone(), self.rules.iter().filter(|r| r.clause.head.temporal != Temporal::Next), |r, seen| fresh.contains(&r.id) || reads(r, seen).0)
     }
 
     /// An addition's own work: the lattices and calls it reaches, every rule sorted by how it fires again, what it
@@ -1706,14 +1650,14 @@ impl Eval {
     /// The joins are retired whole: their superseded values go, their history and contributions with them, and the facts
     /// they hold are retired.
     fn retire_joins(&mut self, plan: &Plan) {
-        let mut ghosts: Vec<FactId> = self.lat.superseded.iter().copied().filter(|g| plan.joins.contains(&self.store.rec(*g).rel)).collect();
+        let mut ghosts: Vec<FactId> = self.lat.pass.superseded.iter().copied().filter(|g| plan.joins.contains(&self.store.rec(*g).rel)).collect();
         ghosts.sort_unstable();
         for g in ghosts {
-            self.lat.superseded.remove(&g);
+            self.lat.pass.superseded.remove(&g);
             self.store.drop_firings(g);
         }
-        self.lat.history.retain(|k, _| !plan.joins.contains(&k.0));
-        self.lat.join_contribs.retain(|k, _| !plan.joins.contains(&k.0));
+        self.lat.pass.history.retain(|k, _| !plan.joins.contains(&k.0));
+        self.lat.pass.join_contribs.retain(|k, _| !plan.joins.contains(&k.0));
         for rel in plan.joins.iter().filter_map(|l| self.lat.join_rels.get(l).copied()).collect::<Vec<_>>() {
             for id in self.store.rel_all(&self.h, rel) {
                 if brk!("add_join_contribs_kept" => false; self.store.alive(id)) {
@@ -1745,7 +1689,7 @@ impl Eval {
         if !plan.reset.is_empty() || !consumers.is_empty() || !plan.negs.is_empty() {
             self.support_ix = None;
         }
-        self.height_memo.clear();
+        self.memo.height_memo.clear();
         if !plan.call_rels.is_empty() {
             self.drop_done();
         }
@@ -1773,7 +1717,7 @@ impl Eval {
         if self.lat.lattice_hole(&self.store, &self.v, holes0) {
             return Err(Halt::Bug("an addition wrote a hole".into()));
         }
-        if self.lat.superseded.iter().any(|g| plan.lats.contains(&self.store.rec(*g).rel) && !plan.joins.contains(&self.store.rec(*g).rel)) {
+        if self.lat.pass.superseded.iter().any(|g| plan.lats.contains(&self.store.rec(*g).rel) && !plan.joins.contains(&self.store.rec(*g).rel)) {
             return Err(Halt::Bug("a lattice delta kept a history".into()));
         }
         Ok(ambiguous)
@@ -1786,17 +1730,17 @@ impl LatticeState {
     /// that went.
     fn forget_reached(&mut self, lats: &HashSet<Sym>, store: &Store) {
         for l in lats {
-            self.closed.remove(l);
+            self.pass.closed.remove(l);
         }
         if lats.iter().any(|l| self.subs.contains_key(l)) {
-            self.sub_cur.retain(|k, _| !lats.contains(&k.0));
-            self.sub_seen.retain(|k, _| !lats.contains(&k.0));
-            self.sub_memo.retain(|k, _| !lats.contains(&k.0));
-            self.sub_parties.retain(|k, _| !lats.contains(&k.0));
+            self.pass.sub_cur.retain(|k, _| !lats.contains(&k.0));
+            self.pass.sub_seen.retain(|k, _| !lats.contains(&k.0));
+            self.pass.sub_memo.retain(|k, _| !lats.contains(&k.0));
+            self.pass.sub_parties.retain(|k, _| !lats.contains(&k.0));
             self.forget_sub_witnesses(|k| lats.contains(&k.0));
-            self.sub_by_of.retain(|f, _| store.alive(*f));
+            self.pass.sub_by_of.retain(|f, _| store.alive(*f));
         }
-        self.cur.retain(|_, id| store.alive(*id));
+        self.pass.cur.retain(|_, id| store.alive(*id));
     }
 
     /// The cells of the order lattices stand in the store at their values, closed, and the values they replaced stand as ghosts, as the evaluation left them. A
@@ -1813,18 +1757,18 @@ impl LatticeState {
             for id in store.rel_all(h, rel) {
                 if store.alive(id) && store.arity(id) == n {
                     let key: Box<[Term]> = store.args(id)[..n - 1].into();
-                    self.cur.insert((rel, store.rec(id).persp, key), id);
+                    self.pass.cur.insert((rel, store.rec(id).persp, key), id);
                 }
             }
-            self.closed.insert(rel);
+            self.pass.closed.insert(rel);
         }
         let ids = if self.lattices.is_empty() { Vec::new() } else { store.firing_keys() };
         for id in ids.into_iter().filter(|id| !store.alive(*id)) {
             let r = store.rec(id);
             if let Some(&(n, _)) = self.lattices.get(&r.rel).filter(|(n, _)| store.arity(id) == *n) {
-                self.superseded.insert(id);
+                self.pass.superseded.insert(id);
                 let key: Box<[Term]> = store.args(id)[..n - 1].into();
-                self.history.entry((r.rel, r.persp, key)).or_default().push(id);
+                self.pass.history.entry((r.rel, r.persp, key)).or_default().push(id);
             }
         }
         true

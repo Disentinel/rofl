@@ -220,296 +220,221 @@ pub struct Clause {
     pub body: Vec<BodyElem>,
 }
 
-/// The kernel's vocabulary, interned once. `src/reflect.ts` is the single
-/// place these names appear on the JS side and this is its counterpart.
-#[derive(Clone)]
-pub struct Vocab {
-    pub derived_by: Sym,
-    pub rule: Sym,
-    pub has_premise: Sym,
-    pub premise_pos: Sym,
-    pub premise_neg: Sym,
-    pub concludes: Sym,
-    pub has_conclusion: Sym,
-    pub reads_from: Sym,
-    pub writes_to: Sym,
-    pub mode: Sym,
-    pub reserved: Sym,
-    pub authority: Sym,
-    pub asserted_by: Sym,
-    pub hole: Sym,
-    pub edb: Sym,
-    pub bridge_decl: Sym,
-    pub uses_builtin: Sym,
-    pub premise_lit: Sym,
-    pub conclusion_lit: Sym,
-    pub conclusion_tense: Sym,
+const R: u8 = 1;
+const B: u8 = 2;
 
-    pub stratum: Sym,
-    pub unstratified: Sym,
-    pub semantics: Sym,
-    pub unknown: Sym,
-    pub sealed: Sym,
-    pub asks: Sym,
-    pub unsafe_rule: Sym,
-    pub premise_var: Sym,
-    pub slot_arity: Sym,
-    pub late_rule: Sym,
-    pub demand_rel: Sym,
-    pub trigger_of: Sym,
-    pub neg_relation: Sym,
-    pub provenance_reader: Sym,
-    pub premise_agg: Sym,
-    pub agg_cell: Sym,
-    pub agg_member: Sym,
-    pub agg_member_prem: Sym,
-    pub agg_sealed: Sym,
-    pub agg_inner: Sym,
-    pub agg_refused: Sym,
-    pub empty_zero: Sym,
-    pub member_reader: Sym,
-    pub lattice_decl: Sym,
-    pub lattice_widen: Sym,
-    pub lattice_member: Sym,
-    pub lattice_member_prem: Sym,
-    pub lattice_refused: Sym,
-    pub lattice_outer: Sym,
-    pub lattice_member_reader: Sym,
-    pub tag_decl: Sym,
-    pub order_comp: Sym,
-    pub structure_decl: Sym,
-    pub structure_role: Sym,
-    pub structure_closure: Sym,
-    pub dominance: Sym,
-    pub dominance_lit: Sym,
-    pub dominated_by: Sym,
-    pub evaluated_again: Sym,
-    pub dominated_reader: Sym,
-    pub premise_arith: Sym,
-    pub s_lattice: Sym,
-    pub slot_neg: Sym,
-    pub slot_hkey: Sym,
-    pub slot_hval: Sym,
-    pub slot_lkey: Sym,
-    pub slot_lval: Sym,
-    pub explain_request: Sym,
-    pub explained: Sym,
-    pub shrug: Sym,
-    pub explain_persp: Sym,
-
-    pub main: Sym,
-    pub kernel_persp: Sym,
-    pub kernel_who: Sym,
-    pub anon_who: Sym,
-    pub any_persp: Sym,
-    /// the rows of a want (docs/intents.md 4.1), written only by a `want` head
-    pub want: Sym,
-    pub want_of: Sym,
-    pub want_arg: Sym,
-
-    pub reserved_set: Vec<Sym>,
-    pub kernel_book: Vec<Sym>,
-    /// `(name, arity)` — a row of the wrong width is not ignored by the JS
-    /// readers, it is a crash, so the width check comes first there and here.
-    pub arity: Vec<(Sym, usize)>,
-
-    pub op_eq: Sym,
-    pub op_ne: Sym,
-    pub op_lt: Sym,
-    pub op_le: Sym,
-    pub op_gt: Sym,
-    pub op_ge: Sym,
-    pub op_is: Sym,
-    pub op_in: Sym,
-    pub op_subset: Sym,
-    pub f_set: Sym,
-    pub f_iv: Sym,
-    pub a_inf: Sym,
-    pub a_ninf: Sym,
-
-    pub a_now: Sym,
-    pub a_next: Sym,
-    pub a_init: Sym,
-    pub well_founded: Sym,
-    pub sealed_provenance: Sym,
-    pub sealed_rules: Sym,
-    pub sealed_assertions: Sym,
-    pub s_fact: Sym,
-    pub s_lit: Sym,
-    pub s_not: Sym,
-    pub s_builtin: Sym,
-    pub s_var: Sym,
-    pub s_cons: Sym,
-    pub s_nil: Sym,
-    pub s_rule_hole: Sym,
-    pub budget_reason: Sym,
-    pub space_reason: Sym,
-    pub disk_reason: Sym,
-    pub memory_reason: Sym,
-    pub demand_cycle: Sym,
-    pub arith_type_reason: Sym,
-    pub arith_zero_reason: Sym,
-    // FOUR REASONS THE PORT COLLAPSED INTO ONE. `hole_reason_of` had two arms
-    // where src/reflect.ts has six, so every string-operation failure came out
-    // as `arith_type_error` — which is precisely what the reference refuses to
-    // do, and says why: the repair a reader needs is about the string
-    // operation, and an arithmetic reason sends them looking at an expression
-    // that is not there.
-    pub str_type_reason: Sym,
-    pub str_index_reason: Sym,
-    pub str_sep_reason: Sym,
-    pub atom_name_reason: Sym,
-    pub arith_overflow_reason: Sym,
-    pub agg_overflow_reason: Sym,
-    pub agg_type_reason: Sym,
-    pub agg_open_reason: Sym,
-    pub set_type_reason: Sym,
-    pub unbounded_reason: Sym,
-    pub widened_reason: Sym,
-    pub tag_carrier_reason: Sym,
-    pub s_agg: Sym,
-    pub s_cell: Sym,
-    pub s_unk: Sym,
-    pub s_by: Sym,
-    pub s_lbl: Sym,
-    pub s_unsure: Sym,
-    pub s_inner: Sym,
-    pub s_bi: Sym,
-    pub s_neg: Sym,
-    pub a_true: Sym,
-    pub a_false: Sym,
-    pub slot_agg: Sym,
-    pub slot_agg_res: Sym,
-    pub agg_ops: [(AggOp, Sym); 13],
+/// The kernel's vocabulary, interned once, one row per name: field, text, and where the name is
+/// listed (`R` reserved, `B` kernel book) and its arity. A row of the wrong width is a crash in
+/// the JS readers (`src/reflect.ts` is their counterpart), so the arity check comes first there
+/// and here. Rows are interned in this order, which fixes the Sym ids.
+macro_rules! vocab {
+    (@lists) => { 0 };
+    (@lists $e:expr) => { $e };
+    (@arity) => { usize::MAX };
+    (@arity $e:expr) => { $e };
+    ($($f:ident: $t:literal $(, $fl:expr $(, $ar:expr)?)?;)*) => {
+        #[derive(Clone)]
+        pub struct Vocab {
+            $(pub $f: Sym,)*
+            pub reserved_set: Vec<Sym>,
+            pub kernel_book: Vec<Sym>,
+            pub arity: Vec<(Sym, usize)>,
+            pub agg_ops: [(AggOp, Sym); 13],
+        }
+        const NAMES: &[(&str, u8, usize)] = &[$(($t, vocab!(@lists $($fl)?), vocab!(@arity $($($ar)?)?))),*];
+        impl Vocab {
+            pub fn new(h: &mut Heap) -> Vocab {
+                let mut i = |s: &str| h.intern(s);
+                let mut v = Vocab {
+                    $($f: i($t),)*
+                    reserved_set: Vec::new(),
+                    kernel_book: Vec::new(),
+                    arity: Vec::new(),
+                    agg_ops: AGG_OPS.map(|(op, s)| (op, i(s))),
+                };
+                for (t, lists, n) in NAMES {
+                    let s = i(t);
+                    if lists & R != 0 {
+                        v.reserved_set.push(s);
+                    }
+                    if lists & B != 0 {
+                        v.kernel_book.push(s);
+                    }
+                    if *n != usize::MAX {
+                        v.arity.push((s, *n));
+                    }
+                }
+                v
+            }
+        }
+    };
 }
 
-pub const RESERVED_NAMES: &[&str] = &[
-    "derived_by",
-    "rule",
-    "has_premise",
-    "premise_pos",
-    "premise_neg",
-    "concludes",
-    "has_conclusion",
-    "reads_from",
-    "writes_to",
-    "mode",
-    "reserved",
-    "authority",
-    "asserted_by",
-    "hole",
-    "edb",
-    "bridge_decl",
-    "uses_builtin",
-    "premise_lit",
-    "conclusion_lit",
-    "conclusion_tense",
-    "premise_agg",
-    "agg_cell",
-    "agg_member",
-    "agg_member_prem",
-    "agg_sealed",
-    "lattice_decl",
-    "lattice_widen",
-    "lattice_member",
-    "lattice_member_prem",
-    "tag_decl",
-    "order_comp",
-    "structure_decl",
-    "structure_role",
-    "structure_closure",
-    "dominance",
-    "dominance_lit",
-    "dominated_by",
+const AGG_OPS: [(AggOp, &str); 13] = [
+    (AggOp::Count, "count"),
+    (AggOp::Sum, "sum"),
+    (AggOp::Min, "min"),
+    (AggOp::Max, "max"),
+    (AggOp::Or, "or"),
+    (AggOp::And, "and"),
+    (AggOp::AtLeast, "at_least"),
+    (AggOp::Median, "median"),
+    (AggOp::Quantile, "quantile"),
+    (AggOp::Rank, "rank"),
+    (AggOp::Union, "union"),
+    (AggOp::Hull, "hull"),
+    (AggOp::BitOr, "bitor"),
 ];
 
-const KERNEL_BOOK_NAMES: &[&str] = &[
-    "rule",
-    "shrug",
-    "has_premise",
-    "has_conclusion",
-    "premise_pos",
-    "premise_neg",
-    "premise_lit",
-    "conclusion_lit",
-    "conclusion_tense",
-    "concludes",
-    "reads_from",
-    "writes_to",
-    "uses_builtin",
-    "asserted_by",
-    "bridge_decl",
-    "derived_by",
-    "hole",
-    "premise_agg",
-    "agg_cell",
-    "agg_member",
-    "agg_member_prem",
-    "agg_sealed",
-    "lattice_decl",
-    "lattice_widen",
-    "lattice_member",
-    "lattice_member_prem",
-    "tag_decl",
-    "order_comp",
-    "structure_decl",
-    "structure_role",
-    "structure_closure",
-    "dominance",
-    "dominance_lit",
-    "dominated_by",
-    "evaluated_again",
-];
+vocab! {
+    derived_by: "derived_by", R|B, 3;
+    rule: "rule", R|B, 1;
+    has_premise: "has_premise", R|B, 2;
+    premise_pos: "premise_pos", R|B, 2;
+    premise_neg: "premise_neg", R|B, 2;
+    concludes: "concludes", R|B, 2;
+    has_conclusion: "has_conclusion", R|B, 2;
+    reads_from: "reads_from", R|B, 2;
+    writes_to: "writes_to", R|B, 2;
+    mode: "mode", R, 2;
+    reserved: "reserved", R, 1;
+    authority: "authority", R, 2;
+    asserted_by: "asserted_by", R|B, 3;
+    hole: "hole", R|B, 2;
+    edb: "edb", R, 1;
+    bridge_decl: "bridge_decl", R|B, 3;
+    uses_builtin: "uses_builtin", R|B, 2;
+    premise_lit: "premise_lit", R|B, 3;
+    conclusion_lit: "conclusion_lit", R|B, 3;
+    conclusion_tense: "conclusion_tense", R|B, 2;
+    stratum: "stratum", 0, 2;
+    unstratified: "unstratified", 0, 1;
+    semantics: "semantics", 0, 1;
+    unknown: "unknown", 0, 1;
+    sealed: "sealed", 0, 1;
+    asks: "asks", 0, 1;
+    unsafe_rule: "unsafe_rule";
+    premise_var: "premise_var";
+    slot_arity: "slot_arity";
+    late_rule: "late_rule";
+    demand_rel: "demand_rel";
+    trigger_of: "trigger_of";
+    neg_relation: "neg_relation";
+    provenance_reader: "provenance_reader";
+    premise_agg: "premise_agg", R|B, 2;
+    agg_cell: "agg_cell", R|B, 3;
+    agg_member: "agg_member", R|B, 4;
+    agg_member_prem: "agg_member_prem", R|B, 3;
+    agg_sealed: "agg_sealed", R|B, 3;
+    agg_inner: "agg_inner";
+    agg_refused: "agg_refused";
+    empty_zero: "empty_zero";
+    member_reader: "member_reader";
+    lattice_decl: "lattice_decl", R|B, 3;
+    lattice_widen: "lattice_widen", R|B, 2;
+    lattice_member: "lattice_member", R|B, 4;
+    lattice_member_prem: "lattice_member_prem", R|B, 3;
+    lattice_refused: "lattice_refused";
+    lattice_outer: "lattice_outer";
+    lattice_member_reader: "lattice_member_reader";
+    tag_decl: "tag_decl", R|B, 3;
+    order_comp: "order_comp", R|B, 5;
+    structure_decl: "structure_decl", R|B, 3;
+    structure_role: "structure_role", R|B, 3;
+    structure_closure: "structure_closure", R|B, 2;
+    dominance: "dominance", R|B, 4;
+    dominance_lit: "dominance_lit", R|B, 3;
+    dominated_by: "dominated_by", R|B, 3;
+    evaluated_again: "evaluated_again", B, 2;
+    dominated_reader: "dominated_reader";
+    premise_arith: "premise_arith";
+    s_lattice: "$lattice";
+    slot_neg: "neg";
+    slot_hkey: "hkey";
+    slot_hval: "hval";
+    slot_lkey: "lkey";
+    slot_lval: "lval";
+    explain_request: "explain_request";
+    explained: "explained";
+    shrug: "shrug", B;
+    explain_persp: "$explain";
+    main: "main";
+    kernel_persp: "$kernel";
+    kernel_who: "$kernel";
+    anon_who: "user";
+    any_persp: "$any";
+    want: "want_key", 0, 1;
+    want_of: "want_of", 0, 2;
+    want_arg: "want_arg", 0, 3;
+    op_eq: "=";
+    op_ne: "!=";
+    op_lt: "<";
+    op_le: "<=";
+    op_gt: ">";
+    op_ge: ">=";
+    op_is: "is";
+    op_in: "in";
+    op_subset: "subset";
+    f_set: "set";
+    f_iv: "iv";
+    a_inf: "inf";
+    a_ninf: "ninf";
+    a_now: "now";
+    a_next: "next";
+    a_init: "init";
+    well_founded: "well_founded";
+    sealed_provenance: "provenance";
+    sealed_rules: "rules";
+    sealed_assertions: "assertions";
+    s_fact: "$fact";
+    s_lit: "$lit";
+    s_not: "$not";
+    s_builtin: "$builtin";
+    s_var: "$var";
+    s_cons: "$cons";
+    s_nil: "$nil";
+    s_rule_hole: "$rule";
+    budget_reason: "budget_exhausted";
+    space_reason: "space_exhausted";
+    disk_reason: "disk_exhausted";
+    memory_reason: "memory_exhausted";
+    demand_cycle: "demand_cycle";
+    arith_type_reason: "arith_type_error";
+    arith_zero_reason: "arith_zero_divisor";
+    str_type_reason: "str_type_error";
+    str_index_reason: "str_index_error";
+    str_sep_reason: "str_empty_separator";
+    atom_name_reason: "atom_unwritable";
+    arith_overflow_reason: "arith_overflow";
+    agg_overflow_reason: "agg_overflow";
+    agg_type_reason: "agg_type_error";
+    agg_open_reason: "agg_open_member";
+    set_type_reason: "set_type_error";
+    unbounded_reason: "unbounded_members";
+    widened_reason: "widening_forced";
+    tag_carrier_reason: "tag_off_carrier";
+    s_agg: "$agg";
+    s_cell: "$cell";
+    s_unk: "$unk";
+    s_by: "$by";
+    s_lbl: "$lbl";
+    s_unsure: "$unsure";
+    s_inner: "$inner";
+    s_bi: "$bi";
+    s_neg: "$neg";
+    a_true: "true";
+    a_false: "false";
+    slot_agg: "agg";
+    slot_agg_res: "agg_res";
+}
 
-const ARITY_TABLE: &[(&str, usize)] = &[
-    ("asserted_by", 3),
-    ("want_key", 1),
-    ("want_of", 2),
-    ("want_arg", 3),
-    ("authority", 2),
-    ("bridge_decl", 3),
-    ("concludes", 2),
-    ("conclusion_lit", 3),
-    ("conclusion_tense", 2),
-    ("derived_by", 3),
-    ("edb", 1),
-    ("has_conclusion", 2),
-    ("has_premise", 2),
-    ("hole", 2),
-    ("mode", 2),
-    ("premise_lit", 3),
-    ("premise_neg", 2),
-    ("premise_pos", 2),
-    ("reads_from", 2),
-    ("reserved", 1),
-    ("rule", 1),
-    ("uses_builtin", 2),
-    ("writes_to", 2),
-    ("semantics", 1),
-    ("stratum", 2),
-    ("unknown", 1),
-    ("unstratified", 1),
-    ("sealed", 1),
-    ("asks", 1),
-    ("premise_agg", 2),
-    ("agg_cell", 3),
-    ("agg_member", 4),
-    ("agg_member_prem", 3),
-    ("agg_sealed", 3),
-    ("lattice_decl", 3),
-    ("lattice_widen", 2),
-    ("lattice_member", 4),
-    ("lattice_member_prem", 3),
-    ("tag_decl", 3),
-    ("order_comp", 5),
-    ("structure_decl", 3),
-    ("structure_role", 3),
-    ("structure_closure", 2),
-    ("dominance", 4),
-    ("dominance_lit", 3),
-    ("dominated_by", 3),
-    ("evaluated_again", 2),
-];
+pub fn reserved_names() -> impl Iterator<Item = &'static str> {
+    NAMES.iter().filter(|(_, l, _)| l & R != 0).map(|(t, _, _)| *t)
+}
+
+pub fn kernel_book_names() -> impl Iterator<Item = &'static str> {
+    NAMES.iter().filter(|(_, l, _)| l & B != 0).map(|(t, _, _)| *t)
+}
 
 pub const BUILTIN_OPS: &[&str] = &["=", "!=", "<", "<=", ">", ">=", "is", "in", "subset"];
 pub const STR_ARITY: &[(&str, usize)] = &[
@@ -523,77 +448,6 @@ pub const STR_ARITY: &[(&str, usize)] = &[
 ];
 
 impl Vocab {
-    pub fn new(h: &mut Heap) -> Vocab {
-        let mut i = |s: &str| h.intern(s);
-        Vocab {
-            derived_by: i("derived_by"), rule: i("rule"), has_premise: i("has_premise"),
-            premise_pos: i("premise_pos"), premise_neg: i("premise_neg"), concludes: i("concludes"),
-            has_conclusion: i("has_conclusion"), reads_from: i("reads_from"), writes_to: i("writes_to"),
-            mode: i("mode"), reserved: i("reserved"), authority: i("authority"),
-            asserted_by: i("asserted_by"), hole: i("hole"), edb: i("edb"),
-            bridge_decl: i("bridge_decl"), uses_builtin: i("uses_builtin"), premise_lit: i("premise_lit"),
-            conclusion_lit: i("conclusion_lit"), conclusion_tense: i("conclusion_tense"), stratum: i("stratum"),
-            unstratified: i("unstratified"), semantics: i("semantics"), unknown: i("unknown"),
-            sealed: i("sealed"), asks: i("asks"), unsafe_rule: i("unsafe_rule"),
-            premise_var: i("premise_var"), slot_arity: i("slot_arity"), late_rule: i("late_rule"),
-            demand_rel: i("demand_rel"), trigger_of: i("trigger_of"), neg_relation: i("neg_relation"),
-            provenance_reader: i("provenance_reader"), premise_agg: i("premise_agg"), agg_cell: i("agg_cell"),
-            agg_member: i("agg_member"), agg_member_prem: i("agg_member_prem"), agg_sealed: i("agg_sealed"),
-            agg_inner: i("agg_inner"), agg_refused: i("agg_refused"), empty_zero: i("empty_zero"),
-            member_reader: i("member_reader"), lattice_decl: i("lattice_decl"), lattice_widen: i("lattice_widen"),
-            lattice_member: i("lattice_member"), lattice_member_prem: i("lattice_member_prem"), lattice_refused: i("lattice_refused"),
-            lattice_outer: i("lattice_outer"), lattice_member_reader: i("lattice_member_reader"), tag_decl: i("tag_decl"),
-            order_comp: i("order_comp"), structure_decl: i("structure_decl"), structure_role: i("structure_role"),
-            structure_closure: i("structure_closure"), dominance: i("dominance"), dominance_lit: i("dominance_lit"),
-            dominated_by: i("dominated_by"), evaluated_again: i("evaluated_again"), dominated_reader: i("dominated_reader"),
-            premise_arith: i("premise_arith"), s_lattice: i("$lattice"), slot_neg: i("neg"),
-            slot_hkey: i("hkey"), slot_hval: i("hval"), slot_lkey: i("lkey"),
-            slot_lval: i("lval"), explain_request: i("explain_request"), explained: i("explained"),
-            shrug: i("shrug"), explain_persp: i("$explain"), main: i("main"),
-            kernel_persp: i("$kernel"), kernel_who: i("$kernel"), anon_who: i("user"),
-            any_persp: i("$any"), want: i("want_key"), want_of: i("want_of"),
-            want_arg: i("want_arg"),
-            reserved_set: RESERVED_NAMES.iter().map(|s| i(s)).collect(),
-            kernel_book: KERNEL_BOOK_NAMES.iter().map(|s| i(s)).collect(),
-            arity: ARITY_TABLE.iter().map(|(s, n)| (i(s), *n)).collect(),
-            op_eq: i("="), op_ne: i("!="), op_lt: i("<"),
-            op_le: i("<="), op_gt: i(">"), op_ge: i(">="),
-            op_is: i("is"), op_in: i("in"), op_subset: i("subset"),
-            f_set: i("set"), f_iv: i("iv"), a_inf: i("inf"),
-            a_ninf: i("ninf"), a_now: i("now"), a_next: i("next"),
-            a_init: i("init"), well_founded: i("well_founded"), sealed_provenance: i("provenance"),
-            sealed_rules: i("rules"), sealed_assertions: i("assertions"), s_fact: i("$fact"),
-            s_lit: i("$lit"), s_not: i("$not"), s_builtin: i("$builtin"),
-            s_var: i("$var"), s_cons: i("$cons"), s_nil: i("$nil"),
-            s_rule_hole: i("$rule"), budget_reason: i("budget_exhausted"), space_reason: i("space_exhausted"),
-            disk_reason: i("disk_exhausted"), memory_reason: i("memory_exhausted"), demand_cycle: i("demand_cycle"), arith_type_reason: i("arith_type_error"),
-            arith_zero_reason: i("arith_zero_divisor"), str_type_reason: i("str_type_error"), str_index_reason: i("str_index_error"),
-            str_sep_reason: i("str_empty_separator"), atom_name_reason: i("atom_unwritable"), arith_overflow_reason: i("arith_overflow"),
-            agg_overflow_reason: i("agg_overflow"), agg_type_reason: i("agg_type_error"), agg_open_reason: i("agg_open_member"),
-            set_type_reason: i("set_type_error"), unbounded_reason: i("unbounded_members"), widened_reason: i("widening_forced"),
-            tag_carrier_reason: i("tag_off_carrier"), s_agg: i("$agg"), s_cell: i("$cell"),
-            s_unk: i("$unk"), s_by: i("$by"), s_lbl: i("$lbl"),
-            s_unsure: i("$unsure"), s_inner: i("$inner"), s_bi: i("$bi"),
-            s_neg: i("$neg"), a_true: i("true"), a_false: i("false"),
-            slot_agg: i("agg"), slot_agg_res: i("agg_res"),
-            agg_ops: [
-                (AggOp::Count, i("count")),
-                (AggOp::Sum, i("sum")),
-                (AggOp::Min, i("min")),
-                (AggOp::Max, i("max")),
-                (AggOp::Or, i("or")),
-                (AggOp::And, i("and")),
-                (AggOp::AtLeast, i("at_least")),
-                (AggOp::Median, i("median")),
-                (AggOp::Quantile, i("quantile")),
-                (AggOp::Rank, i("rank")),
-                (AggOp::Union, i("union")),
-                (AggOp::Hull, i("hull")),
-                (AggOp::BitOr, i("bitor")),
-            ],
-        }
-    }
-
     pub fn is_reserved(&self, rel: Sym) -> bool {
         self.reserved_set.contains(&rel)
     }
@@ -1335,7 +1189,7 @@ pub fn decode_rules(h: &mut Heap, v: &Vocab, store: &mut Store) -> (Vec<DRule>, 
 /// `bootstrapKernel` (src/reflect.ts). Idempotent — `Rofl.fromSnapshot` calls
 /// it over a restored store, which is the path this port takes.
 pub fn bootstrap_kernel(h: &mut Heap, v: &Vocab, store: &mut Store) {
-    let mut names: Vec<String> = RESERVED_NAMES.iter().map(|s| s.to_string()).collect();
+    let mut names: Vec<&str> = reserved_names().collect();
     names.sort();
     for n in &names {
         let r = h.atom(n);

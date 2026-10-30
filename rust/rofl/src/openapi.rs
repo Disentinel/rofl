@@ -14,7 +14,7 @@
 //!
 //! `call` is the `openapi` kind: one request per want, an array answering a row per element, a status that is not
 //! 2xx `failed(K, "HTTP N: ...")`. A `does` want carries its idempotency key in the `Idempotency-Key` header.
-use crate::mcp::{fact_value, ident, quote};
+use crate::mcp::{ident, quote, row_fact};
 use serde_json::Value;
 
 /// The adapter book of the document at `spec`, a URL fetched with the keys `declared` names (`crate::net::declared`).
@@ -240,8 +240,7 @@ pub(crate) fn call(base: &str, op: &Op, rel: &str, fields: &[String], wants: &[(
             }
         };
         for o in &rows {
-            let cols: Vec<String> = fields.iter().map(|f| fact_value(o.get(f).unwrap_or(&Value::Null))).collect();
-            out.push_str(&format!("{rel}({key}, {}).\n", cols.join(", ")));
+            out.push_str(&row_fact(rel, &key, fields.iter().map(|f| o.get(f))));
         }
         if rows.is_empty() {
             out.push_str(&format!("answered({key}).\n"));

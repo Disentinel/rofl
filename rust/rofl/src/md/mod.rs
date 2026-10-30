@@ -7,6 +7,7 @@
 //! (`model: js`) is the list `rules/js.files`, which `npm test` holds to notebook/front.ts `MODEL_FILES`.
 mod blocks;
 mod omap;
+#[macro_use]
 pub mod reader;
 mod rx;
 mod say;
