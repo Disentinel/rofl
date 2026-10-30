@@ -36,7 +36,7 @@ Reads:
 - from js-model, in the code: [ast_line](js-model.rofl.md#ast_line), [ast_node](js-model.rofl.md#ast_node)
 - from js-modules, in the code: [builtin_canonical](js-modules.rofl.md#builtin_canonical), [import_site](js-modules.rofl.md#import_site), [module_target](js-modules.rofl.md#module_target), [reexport_offers](js-modules.rofl.md#reexport_offers), [require_site](js-modules.rofl.md#require_site), [site_file](js-modules.rofl.md#site_file), [site_shape](js-modules.rofl.md#site_shape), [site_source](js-modules.rofl.md#site_source), [str_char0](js-modules.rofl.md#str_char0), [str_seg](js-modules.rofl.md#str_seg)
 - from js-structure, in the code: [ast_in](js-structure.rofl.md#ast_in), [ast_name](js-structure.rofl.md#ast_name), [ast_value](js-structure.rofl.md#ast_value)
-- from js-surface: [fn_value](js-surface.rofl.md#fn_value), [ret_node_any](js-surface.rofl.md#ret_node_any)
+- from js-surface: [fn_value](js-surface.rofl.md#fn_value), [ret_node_any](js-surface.rofl.md#ret_node_any), [store_sym](js-surface.rofl.md#store_sym)
 - from js-surface, in the surface: [sx_arg_lit](js-surface.rofl.md#sx_arg_lit), [sx_arg_node](js-surface.rofl.md#sx_arg_node), [sx_cb](js-surface.rofl.md#sx_cb), [sx_cjs](js-surface.rofl.md#sx_cjs), [sx_default](js-surface.rofl.md#sx_default), [sx_export_lit](js-surface.rofl.md#sx_export_lit), [sx_export_node](js-surface.rofl.md#sx_export_node), [sx_export_val](js-surface.rofl.md#sx_export_val), [sx_gen_ret](js-surface.rofl.md#sx_gen_ret), [sx_gen_rlit](js-surface.rofl.md#sx_gen_rlit), [sx_module](js-surface.rofl.md#sx_module), [sx_ret_lit](js-surface.rofl.md#sx_ret_lit), [sx_ret_node](js-surface.rofl.md#sx_ret_node), [sx_ret_param](js-surface.rofl.md#sx_ret_param)
 - from outside these files, in the code:
   - <a id="ast_within"></a>A node is within a node (`ast_within`)
@@ -998,8 +998,9 @@ Declared as facts:
 > is dead by name in its file, so its own calls are dead too; a mention anywhere
 > else (`module.exports = main`, a call from a live site) makes it live.
 > Reading the file as the library is the default VIEW: a world that asks about
-> the file as the script node runs says `reads_the_file_as(script)`, and then
-> nothing is dead.
+> one file as the script node runs says `runs_as_script("path/of/it.js")`, and
+> nothing in that file is dead; `reads_the_file_as(script)` says it of every file.
+> An exported function is reached from outside, so it is never dead by name.
 
 In the main:
 
@@ -1056,24 +1057,32 @@ In the code:
    - [`entry_test`](#entry_test)(T);
    - the `test` of a node S is a node T;
    - the `consequent` of S is a node X;
+   - S [is in file](js-model.rofl.md#ast_node) File;
    - unless [`read_as_script`](#read_as_script)();
+   - unless File [runs as the script](#runs_as_script);
 2. if all of:
    - [`imported_test`](#imported_test)(T);
    - the `test` of a node S is a node T;
    - the `alternate` of S is a node X;
+   - S [is in file](js-model.rofl.md#ast_node) File;
    - unless [`read_as_script`](#read_as_script)();
+   - unless File [runs as the script](#runs_as_script);
 3. if all of:
    - [`entry_test`](#entry_test)(T);
    - the `left` of a [logical](#noun-logical) S is a node T;
    - [the attribute](#ast_attr) `operator` of S is "&&";
    - the `right` of S is a node X;
+   - S [is in file](js-model.rofl.md#ast_node) File;
    - unless [`read_as_script`](#read_as_script)();
+   - unless File [runs as the script](#runs_as_script);
 4. if all of:
    - [`imported_test`](#imported_test)(T);
    - the `left` of a [logical](#noun-logical) S is a node T;
    - [the attribute](#ast_attr) `operator` of S is "||";
    - the `right` of S is a node X;
-   - unless [`read_as_script`](#read_as_script)().
+   - S [is in file](js-model.rofl.md#ast_node) File;
+   - unless [`read_as_script`](#read_as_script)();
+   - unless File [runs as the script](#runs_as_script).
 
 <a id="dead_in"></a>`dead_in`(X, C) if [`dead_arm`](#dead_arm)(X) and a node C [is within](#ast_within) a node X.
 
@@ -1093,7 +1102,12 @@ In the code:
    - the `id` of D is a node I;
    - E differs from I.
 
-<a id="live_mention"></a>`live_mention`(F) if [`mention`](#mention)(F, E), unless [`dead_in`](#dead_in)(something, E).
+<a id="live_mention"></a>`live_mention`(F) either:
+
+1. if [`mention`](#mention)(F, E), unless [`dead_in`](#dead_in)(something, E);
+2. if F [is exported where declared](#exported_decl).
+
+<a id="exported_decl"></a>A node is exported where declared if the `declaration` of a [named export](#noun-named_export) E is it.
 
 <a id="dead_fn"></a>`dead_fn`(F) if [`mention`](#mention)(F, something), unless [`live_mention`](#live_mention)(F).
 
@@ -1102,6 +1116,7 @@ In the code:
 Declared as facts:
 
 - <a id="reads_the_file_as"></a>A view V is read as the — no rows: declared so a rule may read it
+- <a id="runs_as_script"></a>A file File runs as the script — no rows: declared so a rule may read it
 
 > Argument into parameter by INDEX. A spread destroys the correspondence for
 > everything after it, and a may-set may be silent but not wrong, so `arg_at`
@@ -1621,7 +1636,8 @@ In the surface:
   - L [selects](#selects) Key;
   - the `left` of a node X is L;
   - X [is plain](#plain_assign);
-  - the `right` of X is a node V.
+  - the `right` of X is a node V;
+  - unless [`store_sym`](js-surface.rofl.md#store_sym)(X).
 
 In the flow:
 
