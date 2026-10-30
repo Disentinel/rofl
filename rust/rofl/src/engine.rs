@@ -1211,6 +1211,19 @@ impl ProvState {
     }
 }
 
+pub(crate) fn plural(n: usize) -> &'static str {
+    if n == 1 { "" } else { "s" }
+}
+
+/// `items` as indented lines, the first `limit` of them and a count of the rest.
+fn capped<'a>(lines: &mut Vec<String>, items: impl ExactSizeIterator<Item = &'a String>, limit: usize, what: &str) {
+    let n = items.len();
+    lines.extend(items.take(limit).map(|t| format!("    {t}")));
+    if n > limit {
+        lines.push(format!("    [{} more {what}]", n - limit));
+    }
+}
+
 /// What one pass of the evaluation of lattices and subsumption knows: gone when the next pass begins.
 #[derive(Clone, Default)]
 pub struct LatticePass {
@@ -8128,6 +8141,11 @@ impl Eval {
         self.lat.pass.history.entry(ck.clone()).or_default().push(old);
     }
 
+    fn drop_live(&mut self, f: FactId) {
+        self.prov.retire_fact(&mut self.h, &mut self.store, &self.v, f);
+        self.lat.pass.dropped.push(f);
+    }
+
     /// NO VALUE FOR THIS CELL THIS TICK: its fact is withdrawn, with the
     /// values it held before, and `hole($lattice(Rel, Persp, Tick, Key),
     /// Reason)` says why. Its lattice is closing or cut, so nothing
@@ -8137,15 +8155,13 @@ impl Eval {
         let value = self.lat.pass.cur.get(&ck).copied().filter(|f| self.store.alive(*f)).map(|f| *self.store.args(f).last().unwrap());
         if let Some(f) = self.lat.pass.cur.remove(&ck) {
             if self.store.alive(f) {
-                self.prov.retire_fact(&mut self.h, &mut self.store, &self.v, f);
-                self.lat.pass.dropped.push(f);
+                self.drop_live(f);
             }
         }
         // a subsumptive cell with no known front has none of its values
         for f in brk!("dominance_hole_keeps_front" => Vec::new(); self.lat.pass.sub_cur.remove(&ck).unwrap_or_default()) {
             if self.store.alive(f) {
-                self.prov.retire_fact(&mut self.h, &mut self.store, &self.v, f);
-                self.lat.pass.dropped.push(f);
+                self.drop_live(f);
             }
         }
         self.lat.withdraw_history(&mut self.store, &ck);
@@ -8186,8 +8202,7 @@ impl Eval {
     fn hole_lattice_rel(&mut self, rel: Sym, reason: Sym) {
         if self.lat.pass.holed_rel.insert(rel) {
             for f in self.store.rel_all(&self.h, rel) {
-                self.prov.retire_fact(&mut self.h, &mut self.store, &self.v, f);
-                self.lat.pass.dropped.push(f);
+                self.drop_live(f);
             }
             self.lat.pass.cur.retain(|k, _| k.0 != rel);
             self.lat.pass.sub_cur.retain(|k, _| k.0 != rel);
@@ -8566,8 +8581,7 @@ impl Eval {
                 return;
             }
         }
-        self.prov.retire_fact(&mut self.h, &mut self.store, &self.v, f);
-        self.lat.pass.dropped.push(f);
+        self.drop_live(f);
     }
 
     /// The `derived_by` rows of the rules that no longer fire `f`.
@@ -15041,7 +15055,7 @@ impl Eval {
                 }
             } else if !rest.is_empty() && !brk!("why_hint_missing" => true; false) {
                 let n = rest.len();
-                next.line(format!("{pad}  [{n} more derivation{}: why all {}]", if n == 1 { "" } else { "s" }, o.query));
+                next.line(format!("{pad}  [{n} more derivation{}: why all {}]", plural(n), o.query));
             }
         }
         next.push(WhyTask::Unsee(id));
@@ -15163,7 +15177,7 @@ impl Eval {
         next.push(WhyTask::Line(format!(
             "{pad}{key} [{}: {n} member{}{}]",
             self.lat_label(self.store.rec(id).rel, op),
-            if n == 1 { "" } else { "s" },
+            plural(n),
             if brk!("lattice_why_ghost_unmarked" => true; self.store.alive(id)) { "" } else { "; an earlier value, improved on since" }
         )));
         let limit = if brk!("lattice_why_one_member" => true; indent == 0) { brk!("lattice_why_one_member" => 1; o.members) } else { 1 };
@@ -15218,7 +15232,7 @@ impl Eval {
                 None => "an earlier value, dominated since".to_string(),
             }
         };
-        next.push(WhyTask::Line(format!("{pad}{key} [subsumption: {n} member{}; {place}]", if n == 1 { "" } else { "s" })));
+        next.push(WhyTask::Line(format!("{pad}{key} [subsumption: {n} member{}; {place}]", plural(n))));
         let limit = if brk!("dominance_why_one_member" => true; indent == 0) { brk!("dominance_why_one_member" => 1; o.members) } else { 1 };
         self.member_lines(members, limit, indent, o, next);
         if indent == 0 && live {
@@ -15271,7 +15285,7 @@ impl Eval {
         let n = members.len();
         next.push(WhyTask::Line(format!(
             "{pad}{key} [tag counting: the sum of {n} derivation{}] <= {} @tick {tick}",
-            if n == 1 { "" } else { "s" },
+            plural(n),
             self.h.name(rule)
         )));
         let limit = if indent == 0 { o.members } else { 1 };
@@ -15280,7 +15294,7 @@ impl Eval {
                 next.line(if indent == 0 {
                     format!("{pad}  [{} more derivations: why all {}]", n - limit, o.query)
                 } else {
-                    format!("{pad}  [{} more derivation{}]", n - limit, if n - limit == 1 { "" } else { "s" })
+                    format!("{pad}  [{} more derivation{}]", n - limit, plural(n - limit))
                 });
                 break;
             }
@@ -15312,7 +15326,7 @@ impl Eval {
         let live = brk!("join_why_ghost_unmarked" => true; self.store.alive(id));
         let n = if live { facts.len() } else { facts.iter().filter(|f| self.lat.join_of.contains_key(&self.store.rec(**f).rel)).count() };
         let what = if live {
-            format!("a cover of {n} contribution{}", if n == 1 { "" } else { "s" })
+            format!("a cover of {n} contribution{}", plural(n))
         } else if prems.len() == 2 {
             "an earlier value, improved on since: the join of the value before it and a contribution".to_string()
         } else {
@@ -15331,7 +15345,7 @@ impl Eval {
                 next.line(if indent == 0 {
                     format!("{pad}  [{} more contributions: why all {}]", facts.len() - limit, o.query)
                 } else {
-                    format!("{pad}  [{} more contribution{}]", facts.len() - limit, if facts.len() - limit == 1 { "" } else { "s" })
+                    format!("{pad}  [{} more contribution{}]", facts.len() - limit, plural(facts.len() - limit))
                 });
                 break;
             }
@@ -15449,7 +15463,7 @@ impl Eval {
                 next.line(format!(
                     "{}{head} [quorum: the first {n} member{}]{id}",
                     "  ".repeat(indent),
-                    if n == 1 { "" } else { "s" }
+                    plural(n)
                 ));
                 for (i, m) in members.iter().enumerate() {
                     if i == o.members {
@@ -15476,12 +15490,12 @@ impl Eval {
                 let members = self.store.cell_members(c).to_vec();
                 let n = members.len();
                 let what = if let Some(by) = self.memo.cell_decided.get(&c) {
-                    let known = if n == 0 { "no member known".to_string() } else { format!("{n} known member{}", if n == 1 { "" } else { "s" }) };
+                    let known = if n == 0 { "no member known".to_string() } else { format!("{n} known member{}", plural(n)) };
                     format!("{known}, the same under every value of {by}")
                 } else if n == 0 {
                     brk!("empty_text" => format!("{n} members"); "empty group".to_string())
                 } else {
-                    format!("{n} member{}", if n == 1 { "" } else { "s" })
+                    format!("{n} member{}", plural(n))
                 };
                 next.line(brk!("no_sealed_text" => format!(
                     "{}{head} [aggregate: {what}]{}{id}",
@@ -15717,7 +15731,7 @@ impl Eval {
         };
         let mut out = vec![format!(
             "{pad}[widened: after {n} improvement{} each end the join moved went to the next bound its rules write, or to its infinity; the least value lies within {}, which is an over-approximation of it]",
-            if n == 1 { "" } else { "s" },
+            plural(n as usize),
             self.shown(*val)
         )];
         let shown: Vec<&[Term; 4]> = brk!("widen_why_one_step" => steps.iter().take(1).collect(); steps.iter().collect());
@@ -15852,16 +15866,10 @@ impl Eval {
                 lines.push(format!(
                     "  {ws} would widen it, and no contribution reaches it: {} contribution{}, joined {hs}",
                     contribs.len(),
-                    if contribs.len() == 1 { "" } else { "s" }
+                    plural(contribs.len())
                 ));
             }
-            for (i, (_, text)) in contribs.iter().enumerate() {
-                if i >= 8 {
-                    lines.push(format!("    [{} more contributions]", contribs.len() - 8));
-                    break;
-                }
-                lines.push(format!("    {text}"));
-            }
+            capped(&mut lines, contribs.iter().map(|c| &c.1), 8, "contributions");
             return Ok(Some(lines));
         }
         let better = match (op.lift(&self.v, held), op.lift(&self.v, lit.args[n - 1])) {
@@ -15877,20 +15885,13 @@ impl Eval {
             lines.push(format!(
                 "  {ws} would improve it, and no contribution reaches {ws}: {} contribution{}, the best {hs}",
                 contribs.len(),
-                if contribs.len() == 1 { "" } else { "s" }
+                plural(contribs.len())
             ));
         } else {
             let keeper = self.tags.by_rel.get(&lit.rel).map_or(op.name(), |(_, a)| a.name());
             lines.push(format!("  {ws} is not its value: {keeper} keeps the best contribution, {hs}"));
         }
-        let shown = 8;
-        for (i, (_, text)) in contribs.iter().enumerate() {
-            if i >= shown {
-                lines.push(format!("    [{} more contributions]", contribs.len() - shown));
-                break;
-            }
-            lines.push(format!("    {text}"));
-        }
+        capped(&mut lines, contribs.iter().map(|c| &c.1), 8, "contributions");
         Ok(Some(lines))
     }
 
@@ -15994,15 +15995,9 @@ impl Eval {
         lines.push(format!(
             "  {ws} would join the front, and no rule gives it: {} value{} given at the key",
             contribs.len(),
-            if contribs.len() == 1 { "" } else { "s" }
+            plural(contribs.len())
         ));
-        for (i, (_, text)) in contribs.iter().enumerate() {
-            if i >= 8 {
-                lines.push(format!("    [{} more values]", contribs.len() - 8));
-                break;
-            }
-            lines.push(format!("    {text}"));
-        }
+        capped(&mut lines, contribs.iter().map(|c| &c.1), 8, "values");
         Ok(Some(lines))
     }
 
@@ -16032,16 +16027,10 @@ impl Eval {
             format!(
                 "  {ws} is not its value: counting adds every derivation, and its {} derivation{} add to {hs}",
                 derivs.len(),
-                if derivs.len() == 1 { "" } else { "s" }
+                plural(derivs.len())
             ),
         ];
-        for (i, d) in derivs.iter().enumerate() {
-            if i >= 8 {
-                lines.push(format!("    [{} more derivations]", derivs.len() - 8));
-                break;
-            }
-            lines.push(format!("    {d}"));
-        }
+        capped(&mut lines, derivs.iter(), 8, "derivations");
         Ok(Some(lines))
     }
 
