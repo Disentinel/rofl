@@ -59,6 +59,20 @@ struct Batch {
     event: Option<usize>,
 }
 
+impl Batch {
+    fn sole_answer(&self, kind: &str) -> Result<&(String, usize), String> {
+        let mut rels = self.answers.iter();
+        match (rels.next(), rels.next()) {
+            (Some(a), None) => Ok(a),
+            _ => Err(format!("a {kind} capability answers in one relation; '{}' declares {}", self.cap, self.answers.len())),
+        }
+    }
+
+    fn wants_named(&self) -> Vec<(String, serde_json::Value, Option<String>)> {
+        self.wants.iter().zip(&self.named).zip(&self.idem).map(|((w, a), i)| (w.0.clone(), a.clone(), i.clone())).collect()
+    }
+}
+
 /// The rows of the adapter book a send reads: what each capability is and where its wants go, and how they are sent.
 struct AdapterBook {
     caps: HashMap<String, (String, String)>,
@@ -212,7 +226,7 @@ fn runner(b: &Batch) -> Option<Box<dyn FnOnce() -> Result<String, String> + Send
             let text = b.answers.contains(&("mcp_text".to_string(), 2));
             let rel = b.answers.iter().map(|a| a.0.clone()).find(|r| r != "mcp_text").unwrap_or_else(|| "mcp_text".into());
             let fields = b.fields.clone();
-            let wants: Vec<(String, serde_json::Value, Option<String>)> = b.wants.iter().zip(&b.named).zip(&b.idem).map(|((w, a), i)| (w.0.clone(), a.clone(), i.clone())).collect();
+            let wants = b.wants_named();
             let auth = b.auth.clone();
             Some(Box::new(move || crate::mcp::call(&cmd, &auth, &tool, &rel, &fields, text, &wants)))
         }
@@ -220,7 +234,7 @@ fn runner(b: &Batch) -> Option<Box<dyn FnOnce() -> Result<String, String> + Send
             let op = b.op.clone();
             let rel = b.answers.iter().map(|a| a.0.clone()).find(|r| r != "http_body").unwrap_or_else(|| "http_body".into());
             let fields = b.fields.clone();
-            let wants: Vec<(String, serde_json::Value, Option<String>)> = b.wants.iter().zip(&b.named).zip(&b.idem).map(|((w, a), i)| (w.0.clone(), a.clone(), i.clone())).collect();
+            let wants = b.wants_named();
             let cap = b.cap.clone();
             Some(Box::new(move || match op {
                 Some(op) => crate::openapi::call(&cmd, &op, &rel, &fields, &wants),
@@ -575,10 +589,7 @@ impl Session {
             static WORLDS: std::cell::RefCell<HashMap<String, Session>> = Default::default();
             static SERVED: std::cell::RefCell<HashMap<String, Served>> = Default::default();
         }
-        let mut rels = b.answers.iter();
-        let (Some((rel, arity)), None) = (rels.next(), rels.next()) else {
-            return Err(format!("a rofl capability answers in one relation; '{}' declares {}", b.cap, b.answers.len()));
-        };
+        let (rel, arity) = b.sole_answer("rofl")?;
         let mut queries = Vec::new();
         for (key, k) in &b.wants {
             let given: Vec<String> = match k.kind() {
@@ -697,10 +708,7 @@ fn run_sql(b: &Batch) -> Result<String, String> {
     use std::sync::{Mutex, OnceLock};
     static KEPT: OnceLock<Mutex<HashMap<String, rusqlite::Connection>>> = OnceLock::new();
     let template = b.template.as_deref().ok_or_else(|| format!("'{}' has no `query({}, Template)`", b.cap, b.cap))?;
-    let mut rels = b.answers.iter();
-    let (Some((rel, arity)), None) = (rels.next(), rels.next()) else {
-        return Err(format!("a sql capability answers in one relation; '{}' declares {}", b.cap, b.answers.len()));
-    };
+    let (rel, arity) = b.sole_answer("sql")?;
     let mut kept = KEPT.get_or_init(Default::default).lock().map_err(|_| "the kept connections are poisoned".to_string())?;
     if !kept.contains_key(&b.cmd) {
         let c = rusqlite::Connection::open_with_flags(&b.cmd, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY).map_err(|e| format!("{}: {e}", b.cmd))?;

@@ -47,6 +47,12 @@ use crate::rofl_parse::{self, Book, Tense};
 use crate::store::{write_fact_key, FactId, Store, F_BASE, F_TICK};
 use crate::term::{Heap, Sym, Term, TermK};
 
+pub(crate) fn fact_key(h: &Heap, rel: Sym, persp: Sym, args: &[Term]) -> String {
+    let mut k = String::new();
+    write_fact_key(h, rel, persp, args, &mut k);
+    k
+}
+
 /// A world. Built once with [`Session::open`], then forked per unit of work.
 pub struct Session {
     pub eval: Eval,
@@ -743,9 +749,7 @@ impl Session {
             if !b.store.alive(id) || !fed.contains(&r.rel) || is_kernel_ledger(&b.h, r.persp) || brk!("below_drops_concluded_input" => r.base(); false) {
                 continue;
             }
-            let mut k = String::new();
-            write_fact_key(&b.h, r.rel, r.persp, b.store.args(id), &mut k);
-            keys.push(k);
+            keys.push(fact_key(&b.h, r.rel, r.persp, b.store.args(id)));
         }
         keys.sort_by(|x, y| crate::term::cmp_js(x, y));
         // what it has no answer for: an atom a shrug names, or every row of a
@@ -1075,9 +1079,7 @@ impl Session {
                 match t.kind() {
                     TermK::Atom(a) | TermK::Str(a) => {
                         if (matches!(t.kind(), TermK::Str(_)) || !self.eval.h.name(a).starts_with(prefix)) && seen.insert(t) {
-                            let mut k = String::new();
-                            self.eval.h.canon_term(t, &mut k);
-                            names.push(k);
+                            names.push(self.eval.h.canon(t));
                         }
                     }
                     TermK::Func(i) => stack.extend(self.eval.h.fargs(i).iter().copied()),
@@ -1450,9 +1452,7 @@ impl Session {
                 .map(|v| {
                     let vt = self.eval.h.var(v);
                     let t = crate::term::resolve(&mut self.eval.h, vt, sol);
-                    let mut o = String::new();
-                    self.eval.h.canon_term(t, &mut o);
-                    o
+                    self.eval.h.canon(t)
                 })
                 .collect();
             let text = if vars.is_empty() { "true".to_string() } else { named.iter().map(|&i| format!("{} = {}", vars[i], row[i])).collect::<Vec<_>>().join(", ") };
@@ -1461,9 +1461,7 @@ impl Session {
                 continue;
             }
             let fa: Vec<Term> = question.args.iter().map(|a| crate::term::resolve(&mut self.eval.h, *a, sol)).collect();
-            let mut k = String::new();
-            write_fact_key(&self.eval.h, question.rel, question.persp, &fa, &mut k);
-            got.push((text, row, k));
+            got.push((text, row, fact_key(&self.eval.h, question.rel, question.persp, &fa)));
         }
         got.sort_by(|a, b| crate::term::cmp_js(&a.0, &b.0));
         let n = got.len();
@@ -1500,20 +1498,16 @@ impl Session {
             }
             let row = self.row_of(fa, &question.b.col);
             let r = self.eval.store.rec(id);
-            let mut k = String::new();
-            write_fact_key(&self.eval.h, r.rel, r.persp, fa, &mut k);
             found.rows.push(row);
-            found.keys.push(k);
+            found.keys.push(fact_key(&self.eval.h, r.rel, r.persp, fa));
         }
         for (book, fa) in virt.unwrap_or_default() {
             if !question.b.fits(&fa, arity) {
                 continue;
             }
             let row = self.row_of(&fa, &question.b.col);
-            let mut k = String::new();
-            write_fact_key(&self.eval.h, rel, book, &fa, &mut k);
             found.rows.push(row);
-            found.keys.push(k);
+            found.keys.push(fact_key(&self.eval.h, rel, book, &fa));
         }
         found
     }
@@ -1529,11 +1523,7 @@ impl Session {
 
     fn row_of(&self, fa: &[Term], col: &[usize]) -> Vec<String> {
         col.iter()
-            .map(|&i| {
-                let mut s = String::new();
-                self.eval.h.canon_term(fa[i], &mut s);
-                s
-            })
+            .map(|&i| self.eval.h.canon(fa[i]))
             .collect()
     }
 
@@ -1697,12 +1687,7 @@ impl Session {
     }
 
     fn retract_unjournaled(&mut self, query: &str) -> Result<(), String> {
-        self.eval.settle_assertions();
-        let (id, key) = self.ground_fact(query, "retract")?;
-        let Some(id) = id else { return Err(format!("no such fact: {key}")) };
-        if !self.eval.store.rec(id).base() {
-            return Err(format!("{key} is derived; retract its supports instead"));
-        }
+        let id = self.base_fact(query)?;
         let doomed = self.doomed(id);
         let rel = self.eval.store.rec(id).rel;
         let asks = rel == self.eval.v.asks || (rel == self.eval.v.explain_request && self.eval.cone.is_some());
@@ -1728,12 +1713,7 @@ impl Session {
     }
 
     fn retract_delta_unjournaled(&mut self, query: &str) -> Result<Retraction, String> {
-        self.eval.settle_assertions();
-        let (id, key) = self.ground_fact(query, "retract")?;
-        let Some(id) = id else { return Err(format!("no such fact: {key}")) };
-        if !self.eval.store.rec(id).base() {
-            return Err(format!("{key} is derived; retract its supports instead"));
-        }
+        let id = self.base_fact(query)?;
         let rel = self.eval.store.rec(id).rel;
         let ft = self.fact_term(id);
         let request = [self.eval.h.mkf_named("retract", &[ft])];
@@ -1904,6 +1884,17 @@ impl Session {
         out
     }
 
+    /// The base fact a retraction names, the world's assertions settled first.
+    fn base_fact(&mut self, query: &str) -> Result<FactId, String> {
+        self.eval.settle_assertions();
+        let (id, key) = self.ground_fact(query, "retract")?;
+        let Some(id) = id else { return Err(format!("no such fact: {key}")) };
+        if !self.eval.store.rec(id).base() {
+            return Err(format!("{key} is derived; retract its supports instead"));
+        }
+        Ok(id)
+    }
+
     /// One ground literal, as the fact it names: the id when the store holds
     /// it, and the key either way so the caller is told WHICH fact was meant.
     /// A refusal names the verb, as the reference's does ("excise needs a
@@ -1912,9 +1903,7 @@ impl Session {
         let lit = self.one_lit(query)?;
         // the ground check is `why`'s; only the refusal names this verb
         let p = self.eval.why_ground(&lit).map_err(|_| format!("{verb} needs a ground fact"))?;
-        let mut key = String::new();
-        write_fact_key(&self.eval.h, lit.rel, p, &lit.args, &mut key);
-        Ok((self.eval.store.get(lit.rel, p, &lit.args), key))
+        Ok((self.eval.store.get(lit.rel, p, &lit.args), fact_key(&self.eval.h, lit.rel, p, &lit.args)))
     }
 
     /// The fact `id` with its `asserted_by` rows, and the kernel's rows a load wrote for it alone: `edb(R)` when no
@@ -2020,25 +2009,27 @@ impl Session {
         crate::reflect::fact_term(&mut self.eval.h, &self.eval.v, rel, persp, &args)
     }
 
-    /// `Rofl.why` (src/api.ts:841). The question is written in the SOURCE
-    /// language, as `ask` is: a caller who can write a rule can write a why.
-    pub fn why(&mut self, query: &str) -> Result<String, String> {
+    /// The literal a `why` is asked of, once it may be explained.
+    fn why_lit(&mut self, query: &str) -> Result<reflect::Lit, String> {
         let lit = self.one_lit(query)?;
         self.ground_lit(&lit)?;
         self.explaining()?;
         self.cone_holds(&lit)?;
         self.settle_if_provenance(&lit);
+        Ok(lit)
+    }
+
+    /// `Rofl.why` (src/api.ts:841). The question is written in the SOURCE
+    /// language, as `ask` is: a caller who can write a rule can write a why.
+    pub fn why(&mut self, query: &str) -> Result<String, String> {
+        let lit = self.why_lit(query)?;
         self.eval.why_text(&lit, Some(query))
     }
 
     /// `why`, with every member of every aggregate cell it passes through,
     /// where `why` prints a digest of the first `WHY_MEMBERS`.
     pub fn why_all(&mut self, query: &str) -> Result<String, String> {
-        let lit = self.one_lit(query)?;
-        self.ground_lit(&lit)?;
-        self.explaining()?;
-        self.cone_holds(&lit)?;
-        self.settle_if_provenance(&lit);
+        let lit = self.why_lit(query)?;
         self.eval.why_text_with(&lit, &WhyOpts { members: usize::MAX, query: String::new() }, Some(query))
     }
 

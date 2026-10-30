@@ -46,19 +46,6 @@ fn random() -> String {
     b64url(&b)
 }
 
-/// The authorization server's metadata (RFC 8414; else OpenID Connect discovery), the issuer's path after the
-/// well-known segment.
-fn metadata(issuer: &str) -> Result<Value, String> {
-    let (origin, path) = match issuer.find("://").and_then(|i| issuer[i + 3..].find('/').map(|j| i + 3 + j)) {
-        Some(k) => (&issuer[..k], issuer[k..].trim_end_matches('/')),
-        None => (issuer.trim_end_matches('/'), ""),
-    };
-    ["oauth-authorization-server", "openid-configuration"].iter().find_map(|w| {
-        let r = crate::net::send("GET", &format!("{origin}/.well-known/{w}{path}"), &[("accept", "application/json".into())], None).ok()?;
-        (r.status / 100 == 2).then(|| serde_json::from_str::<Value>(&r.body).ok()).flatten()
-    }).ok_or_else(|| format!("{issuer}: no authorization server metadata at {origin}/.well-known/oauth-authorization-server{path}"))
-}
-
 fn form(url: &str, pairs: &[(&str, &str)]) -> Result<Value, String> {
     let body = pairs.iter().map(|(k, v)| format!("{k}={}", crate::net::escape(v))).collect::<Vec<_>>().join("&");
     let r = crate::net::request("POST", url, &[("accept", "application/json".into())], Some(("application/x-www-form-urlencoded", body)))?;
@@ -106,7 +93,7 @@ pub fn token(issuer: &str, stale: bool) -> Result<String, String> {
 
 /// `rofl adapter login ISSUER [CLIENT_ID]`: the whole sign-in, a person at a browser; what to say when it is done.
 pub fn login(issuer: &str, client: Option<&str>) -> Result<String, String> {
-    let meta = metadata(issuer)?;
+    let meta = crate::net::auth_metadata(issuer)?;
     let field = |k: &str| meta[k].as_str().map(str::to_string).ok_or_else(|| format!("{issuer}: its metadata names no {k}"));
     let (authorize, endpoint) = (field("authorization_endpoint")?, field("token_endpoint")?);
     let listener = std::net::TcpListener::bind("127.0.0.1:0").map_err(|e| format!("a loopback port: {e}"))?;

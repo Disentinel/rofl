@@ -99,15 +99,15 @@ impl Eval {
     /// if the hole were absence.
     pub fn unknowns_kept(&self) -> Vec<Tok> {
         let mut o = Out(Vec::new());
-        let mut rels: Vec<Sym> = self.unk.lat_unknown_rel.keys().copied().collect();
+        let mut rels: Vec<Sym> = self.lat.carry.lat_unknown_rel.keys().copied().collect();
         rels.sort_unstable();
         o.n(rels.len());
         for r in rels {
-            let list = &self.unk.lat_unknown_rel[&r];
+            let list = &self.lat.carry.lat_unknown_rel[&r];
             o.n(list.len());
             for u in list {
                 o.unknown(u);
-                match self.lat.unknown.get(u) {
+                match self.lat.carry.unknown.get(u) {
                     Some(Some((v, rule))) => {
                         o.n(1);
                         o.unknown(v);
@@ -117,7 +117,7 @@ impl Eval {
                 }
             }
         }
-        for set in [&self.lat.spread, &self.lat.plain] {
+        for set in [&self.lat.carry.spread, &self.lat.carry.plain] {
             o.n(set.len());
             set.iter().for_each(|u| o.unknown(u));
         }
@@ -136,8 +136,8 @@ impl Eval {
             }
         }
         (self.unk.reads_unknown, self.wfs.carry_rows) = (reads, carried);
-        self.lat.spread = i.many(|i| i.unknown())?.into_iter().collect();
-        self.lat.plain = i.many(|i| i.unknown())?.into_iter().collect();
+        self.lat.carry.spread = i.many(|i| i.unknown())?.into_iter().collect();
+        self.lat.carry.plain = i.many(|i| i.unknown())?.into_iter().collect();
         if i.0.next().is_some() {
             return Err("kept unknowns have items after their end".into());
         }
@@ -184,61 +184,61 @@ impl LatticeState {
 
     /// The stream to keep, empty for a world that needs none or that cannot be kept so.
     pub fn lattices_kept(&self, store: &Store) -> Vec<Tok> {
-        let unkept = !self.widened_x.is_empty() || !self.unknown.is_empty() || !self.pending.is_empty() || store.dirty || store.partial_eval;
+        let unkept = !self.pass.widened_x.is_empty() || !self.carry.unknown.is_empty() || !self.pass.pending.is_empty() || store.dirty || store.partial_eval;
         if !self.lattice_keeps() || unkept {
             return Vec::new();
         }
         let mut o = Out(vec![Tok::N(1)]);
-        for m in [&self.sub_cur, &self.join_contribs, &self.history] {
+        for m in [&self.pass.sub_cur, &self.pass.join_contribs, &self.pass.history] {
             o.n(m.len());
             for (ck, fs) in m {
                 o.key(ck);
                 o.facts(fs);
             }
         }
-        o.n(self.cur.len());
-        for (ck, f) in &self.cur {
+        o.n(self.pass.cur.len());
+        for (ck, f) in &self.pass.cur {
             o.key(ck);
             o.0.push(Tok::F(*f));
         }
-        o.n(self.sub_seen.len());
-        for (ck, vs) in &self.sub_seen {
+        o.n(self.pass.sub_seen.len());
+        for (ck, vs) in &self.pass.sub_seen {
             o.key(ck);
             o.n(vs.len());
             vs.iter().for_each(|v| o.terms(v));
         }
-        o.n(self.sub_beaten.len());
-        for (sv, by) in &self.sub_beaten {
+        o.n(self.pass.sub_beaten.len());
+        for (sv, by) in &self.pass.sub_beaten {
             o.val(sv);
             o.terms(by);
         }
-        o.n(self.sub_prems.len());
-        for (sv, ps) in &self.sub_prems {
+        o.n(self.pass.sub_prems.len());
+        for (sv, ps) in &self.pass.sub_prems {
             o.val(sv);
             o.n(ps.len());
             o.0.extend(ps.iter().map(|p| Tok::P(p.clone())));
         }
-        o.n(self.sub_by.len());
-        for (sv, (f, rule)) in &self.sub_by {
+        o.n(self.pass.sub_by.len());
+        for (sv, (f, rule)) in &self.pass.sub_by {
             o.val(sv);
             o.0.push(Tok::F(*f));
             o.0.push(Tok::S(*rule));
         }
-        o.n(self.sub_parties.len());
-        for (ck, ts) in &self.sub_parties {
+        o.n(self.pass.sub_parties.len());
+        for (ck, ts) in &self.pass.sub_parties {
             o.key(ck);
             o.terms(ts);
         }
-        o.n(self.conflict_marks.len());
-        for (t, ts) in &self.conflict_marks {
+        o.n(self.pass.conflict_marks.len());
+        for (t, ts) in &self.pass.conflict_marks {
             o.0.push(Tok::T(*t));
             o.terms(ts);
         }
-        for s in [&self.sub_gone, &self.superseded, &self.stale] {
+        for s in [&self.pass.sub_gone, &self.pass.superseded, &self.pass.stale] {
             o.facts(&s.iter().copied().collect::<Vec<_>>());
         }
-        o.n(self.closed.len());
-        o.0.extend(self.closed.iter().map(|r| Tok::S(*r)));
+        o.n(self.pass.closed.len());
+        o.0.extend(self.pass.closed.iter().map(|r| Tok::S(*r)));
         o.0
     }
 
@@ -254,25 +254,25 @@ impl LatticeState {
         for _ in 0..3 {
             maps.push(i.many(|i| Ok((i.key()?, i.facts()?)))?.into_iter().collect());
         }
-        self.history = maps.pop().unwrap();
-        self.join_contribs = maps.pop().unwrap();
-        self.sub_cur = maps.pop().unwrap();
-        self.cur = i.many(|i| Ok((i.key()?, i.fact()?)))?.into_iter().collect();
-        self.sub_seen = i.many(|i| Ok((i.key()?, i.many(|i| i.terms())?)))?.into_iter().collect();
-        self.sub_seen_set = self.sub_seen.iter().flat_map(|(ck, vs)| vs.iter().enumerate().map(move |(n, v)| ((ck.clone(), v.clone()), n as u32))).collect();
-        self.sub_beaten = i.many(|i| Ok((i.val()?, i.terms()?)))?.into_iter().collect();
-        self.sub_prems = i.many(|i| Ok((i.val()?, i.many(|i| i.prems())?)))?.into_iter().collect();
-        self.sub_by = i.many(|i| Ok((i.val()?, (i.fact()?, i.sym()?))))?.into_iter().collect();
-        self.sub_by_of.clear();
-        for ((_, d), (f, _)) in &self.sub_by {
-            self.sub_by_of.entry(*f).or_default().push(d.clone());
+        self.pass.history = maps.pop().unwrap();
+        self.pass.join_contribs = maps.pop().unwrap();
+        self.pass.sub_cur = maps.pop().unwrap();
+        self.pass.cur = i.many(|i| Ok((i.key()?, i.fact()?)))?.into_iter().collect();
+        self.pass.sub_seen = i.many(|i| Ok((i.key()?, i.many(|i| i.terms())?)))?.into_iter().collect();
+        self.pass.sub_seen_set = self.pass.sub_seen.iter().flat_map(|(ck, vs)| vs.iter().enumerate().map(move |(n, v)| ((ck.clone(), v.clone()), n as u32))).collect();
+        self.pass.sub_beaten = i.many(|i| Ok((i.val()?, i.terms()?)))?.into_iter().collect();
+        self.pass.sub_prems = i.many(|i| Ok((i.val()?, i.many(|i| i.prems())?)))?.into_iter().collect();
+        self.pass.sub_by = i.many(|i| Ok((i.val()?, (i.fact()?, i.sym()?))))?.into_iter().collect();
+        self.pass.sub_by_of.clear();
+        for ((_, d), (f, _)) in &self.pass.sub_by {
+            self.pass.sub_by_of.entry(*f).or_default().push(d.clone());
         }
-        self.sub_parties = i.many(|i| Ok((i.key()?, i.terms()?.into_vec())))?.into_iter().collect();
-        self.conflict_marks = i.many(|i| Ok((i.term()?, i.terms()?.into_vec())))?.into_iter().collect();
-        self.sub_gone = i.facts()?.into_iter().collect();
-        self.superseded = i.facts()?.into_iter().collect();
-        self.stale = i.facts()?.into_iter().collect();
-        self.closed = i.many(|i| i.sym())?.into_iter().collect();
+        self.pass.sub_parties = i.many(|i| Ok((i.key()?, i.terms()?.into_vec())))?.into_iter().collect();
+        self.pass.conflict_marks = i.many(|i| Ok((i.term()?, i.terms()?.into_vec())))?.into_iter().collect();
+        self.pass.sub_gone = i.facts()?.into_iter().collect();
+        self.pass.superseded = i.facts()?.into_iter().collect();
+        self.pass.stale = i.facts()?.into_iter().collect();
+        self.pass.closed = i.many(|i| i.sym())?.into_iter().collect();
         if i.0.next().is_some() {
             return Err("a kept lattice has items after its end".into());
         }

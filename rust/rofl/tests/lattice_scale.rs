@@ -91,7 +91,7 @@ fn single_source_shortest_paths_are_dijkstras_with_one_fact_per_node() {
     for (i, d) in dist.iter().enumerate() {
         assert_eq!(got.get(&format!("n{i}")), Some(d), "sd(n{i})");
     }
-    let imp = s.eval.lat.improvements;
+    let imp = s.eval.lat.pass.improvements;
     eprintln!("sssp: {n} nodes, {} edges, {imp} improvements, {} steps, {took:?}", es.len(), ev.steps);
     assert!(imp < 8 * n as u64, "{imp} improvements for {n} keys");
 }
@@ -141,7 +141,7 @@ fn all_pairs_shortest_and_widest_paths_are_floyds() {
             assert_eq!(wgot.get(&format!("n{i},n{j}")), Some(&wd[i][j]), "wide(n{i}, n{j})");
         }
     }
-    let imp = s.eval.lat.improvements;
+    let imp = s.eval.lat.pass.improvements;
     eprintln!("apsp: {n} nodes, {} edges, {} keys, {imp} improvements, {} steps, {took:?}", es.len(), 2 * n * n, ev.steps);
     assert!(imp < 16 * (2 * n * n) as u64, "{imp} improvements for {} keys", 2 * n * n);
 }

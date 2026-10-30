@@ -460,23 +460,7 @@ fn shape(rows: &[&[Term]], pc: usize, cc: usize) -> Shape {
         return Shape::Cycle(cycles, first);
     }
     // children by counting, then one pre-order walk over the roots
-    let mut start = vec![0u32; n + 1];
-    for &p in &parent {
-        if p != NONE {
-            start[p as usize + 1] += 1;
-        }
-    }
-    for i in 0..n {
-        start[i + 1] += start[i];
-    }
-    let mut fill = start.clone();
-    let mut kids = vec![0u32; start[n] as usize];
-    for (c, &p) in parent.iter().enumerate() {
-        if p != NONE {
-            kids[fill[p as usize] as usize] = c as u32;
-            fill[p as usize] += 1;
-        }
-    }
+    let (start, kids) = crate::forest::children(&parent);
     let (mut tin, mut tout, mut depth) = (vec![0u32; n], vec![0u32; n], vec![0u32; n]);
     let (mut clock, mut roots, mut maxd, mut closure) = (0u32, 0, 0u32, 0usize);
     let mut stack: Vec<(u32, u32)> = Vec::new();

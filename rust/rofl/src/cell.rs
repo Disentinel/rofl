@@ -836,13 +836,16 @@ pub enum TagFault { Carrier, Overflow }
 impl TagAlg {
     pub const ALL: [TagAlg; 4] = [TagAlg::Tropical, TagAlg::Viterbi, TagAlg::Trust, TagAlg::Counting];
 
-    pub fn name(self) -> &'static str {
+    fn names(self) -> (&'static str, &'static str) {
         match self {
-            TagAlg::Tropical => "tropical",
-            TagAlg::Viterbi => "viterbi",
-            TagAlg::Trust => "trust",
-            TagAlg::Counting => "counting",
+            TagAlg::Tropical => ("tropical", "$tropical"),
+            TagAlg::Viterbi => ("viterbi", "$viterbi"),
+            TagAlg::Trust => ("trust", "$trust"),
+            TagAlg::Counting => ("counting", "$counting"),
         }
+    }
+    pub fn name(self) -> &'static str {
+        self.names().0
     }
     pub fn from_name(s: &str) -> Option<TagAlg> {
         TagAlg::ALL.into_iter().find(|a| a.name() == s)
@@ -850,12 +853,7 @@ impl TagAlg {
     /// The engine's function of `is` for ⊗, `$tropical(A, B)` and so on: a
     /// name no program writes, which safety.rofl reads as a monotone step.
     pub fn times_name(self) -> &'static str {
-        match self {
-            TagAlg::Tropical => "$tropical",
-            TagAlg::Viterbi => "$viterbi",
-            TagAlg::Trust => "$trust",
-            TagAlg::Counting => "$counting",
-        }
+        self.names().1
     }
     pub fn from_times_name(s: &str) -> Option<TagAlg> {
         TagAlg::ALL.into_iter().find(|a| a.times_name() == s)
@@ -1499,19 +1497,19 @@ mod laws {
                 let want = distinct.iter().position(|d| *d == s).map(|i| Val::Int(i as i128 + 1));
                 assert_eq!(got, want, "rank({s}) among {distinct:?}");
             }
-            let before: Vec<_> = [None, Some(Val::Int(25)), Some(Val::Int(90))]
-                .iter()
-                .map(|p| (AggOp::Median.holistic(&v, None, &xs), AggOp::Quantile.holistic(&v, p.or(Some(Val::Int(0))), &xs)))
-                .collect();
+            let probe = |xs: &[Val]| -> Vec<_> {
+                [None, Some(Val::Int(25)), Some(Val::Int(90))]
+                    .iter()
+                    .map(|p| (AggOp::Median.holistic(&v, None, xs), AggOp::Quantile.holistic(&v, p.or(Some(Val::Int(0))), xs)))
+                    .collect()
+            };
+            let before = probe(&xs);
             for _ in 0..4 {
                 for i in (1..xs.len()).rev() {
                     let j = (r.next() % (i as u64 + 1)) as usize;
                     xs.swap(i, j);
                 }
-                let after: Vec<_> = [None, Some(Val::Int(25)), Some(Val::Int(90))]
-                    .iter()
-                    .map(|p| (AggOp::Median.holistic(&v, None, &xs), AggOp::Quantile.holistic(&v, p.or(Some(Val::Int(0))), &xs)))
-                    .collect();
+                let after = probe(&xs);
                 assert_eq!(after, before, "the holistic value is a function of the multiset");
             }
         }

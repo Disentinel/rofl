@@ -367,6 +367,15 @@ impl<'a> Parser<'a> {
 #[derive(PartialEq)]
 enum WordKind { Ident, Var, Int, Wild }
 
+/// The control character a `\uXXXX` escape names, `at` the index of its `u`; else the four characters read.
+pub(crate) fn control_escape(b: &[char], at: usize) -> Result<char, String> {
+    let hex: String = b.get(at + 1..at + 5).map(|h| h.iter().collect()).unwrap_or_default();
+    u32::from_str_radix(&hex, 16).ok()
+        .filter(|n| hex.len() == 4 && hex.chars().all(|c| c.is_ascii_hexdigit()) && *n < 0x20)
+        .and_then(char::from_u32)
+        .ok_or(hex)
+}
+
 /// The magnitude of an integer literal, refused outside the term range
 /// [-2^60, 2^60). It was `parse::<i64>().unwrap_or(0)`, so a literal past i64
 /// read as ZERO (f_an_integer_literal_past_i64_reads_as_zero), and one past
@@ -411,10 +420,7 @@ impl<'a> Parser<'a> {
                         let e = *inner.get(k + 1).ok_or("string: a trailing backslash")?;
                         // what `canon_term` writes is read back: a control character leaves as `\b`, `\f` or `\u00XX`
                         if e == 'u' {
-                            let hex: String = inner.get(k + 2..k + 6).map(|h| h.iter().collect()).unwrap_or_default();
-                            let c = u32::from_str_radix(&hex, 16).ok().filter(|n| hex.len() == 4 && hex.chars().all(|c| c.is_ascii_hexdigit()) && *n < 0x20).and_then(char::from_u32)
-                                .ok_or_else(|| format!("string: \\u is a control character as the renderer writes it, \\u0000 to \\u001f, not \\u{hex}"))?;
-                            out.push(c);
+                            out.push(control_escape(&inner, k + 1).map_err(|hex| format!("string: \\u is a control character as the renderer writes it, \\u0000 to \\u001f, not \\u{hex}"))?);
                             k += 6;
                             continue;
                         }

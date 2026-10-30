@@ -805,16 +805,7 @@ fn check_lattice_decl(h: &Heap, v: &Vocab, c: &rofl_parse::Clause) -> Result<(Sy
     if v.is_reserved(rel) || h.name(rel).starts_with('$') || v.arity_of(rel).is_some() {
         return Err(format!("{}: '{}' is a kernel relation and cannot be {}", what(), h.name(rel), if c.tag { "tagged" } else { "a lattice" }));
     }
-    let mut seen: Vec<Sym> = Vec::new();
-    for a in &c.head.args {
-        match a.kind() {
-            TermK::Var(x) if !seen.contains(&x) => seen.push(x),
-            TermK::Var(x) => {
-                return Err(format!("{}: '{}' is written twice; a declaration names each argument once", what(), h.name(x)))
-            }
-            _ => return Err(format!("{}: a declaration's arguments are variables, the key and then the value", what())),
-        }
-    }
+    crate::structure::head_vars(h, &c.head.args, &what(), "the key and then the value")?;
     Ok((rel, c.head.args.len(), op, c.widen))
 }
 
@@ -837,14 +828,7 @@ fn lower_order(h: &Heap, v: &Vocab, c: &rofl_parse::Clause) -> Result<Vec<String
     if v.is_reserved(rel) || h.name(rel).starts_with('$') || v.arity_of(rel).is_some() {
         return Err(format!("{what}: '{}' is a kernel relation and cannot be ordered", h.name(rel)));
     }
-    let mut names: Vec<String> = Vec::new();
-    for a in &c.head.args {
-        match a.kind() {
-            TermK::Var(x) if !names.iter().any(|n| n == h.name(x)) => names.push(h.name(x).to_string()),
-            TermK::Var(x) => return Err(format!("{what}: '{}' is written twice; a declaration names each argument once", h.name(x))),
-            _ => return Err(format!("{what}: a declaration's arguments are variables, the key and then each value with its direction")),
-        }
-    }
+    let mut names: Vec<String> = crate::structure::head_vars(h, &c.head.args, &what, "the key and then each value with its direction")?.into_iter().map(|x| h.name(x).to_string()).collect();
     // a wildcard is a value no rule reads, and a name of its own in a rule
     let named = names.clone();
     for (i, x) in names.iter_mut().enumerate() {
