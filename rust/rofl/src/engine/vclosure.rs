@@ -88,18 +88,7 @@ impl Eval {
             } else if !brk!("vclosure_demand_unread" => true; false) && self.demand.rels.iter().any(|(r, _)| *r == rel || *r == edge) {
                 why = "it is answered on demand".to_string();
             } else {
-                let mut reach: HashSet<Sym> = HashSet::from([rel]);
-                loop {
-                    let n = reach.len();
-                    for r in self.rules.iter().filter(|r| !lowered.contains(&r.id) && r.clause.head.temporal != Temporal::Next) {
-                        if r.clause.body.iter().flat_map(|b| b.lits_deep()).any(|l| reach.contains(&l.rel)) {
-                            reach.insert(r.clause.head.rel);
-                        }
-                    }
-                    if reach.len() == n {
-                        break;
-                    }
-                }
+                let reach = readers_cone(HashSet::from([rel]), self.rules.iter().filter(|r| !lowered.contains(&r.id) && r.clause.head.temporal != Temporal::Next), reads_any);
                 if reach.contains(&edge) || reach.contains(&self.store.alias_view(edge).map_or(edge, |v| v.src)) {
                     why = "its edges are concluded from it".to_string();
                 }
@@ -541,21 +530,7 @@ impl Eval {
             return false;
         }
         let edges: HashSet<Sym> = self.vc.vclosures.iter().filter(|c| c.active).map(|c| c.src).collect();
-        let mut reach: HashSet<Sym> = HashSet::from([rel]);
-        let reached = loop {
-            if reach.iter().any(|r| edges.contains(r)) {
-                break true;
-            }
-            let n = reach.len();
-            for r in &self.rules {
-                if r.clause.body.iter().flat_map(|b| b.lits_deep()).any(|l| reach.contains(&l.rel)) {
-                    reach.insert(r.clause.head.rel);
-                }
-            }
-            if reach.len() == n {
-                break false;
-            }
-        };
+        let reached = readers_cone(HashSet::from([rel]), self.rules.iter(), reads_any).iter().any(|r| edges.contains(r));
         reached && !brk!("vclosure_retract_edge_delta" => true; false)
     }
 }

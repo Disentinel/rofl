@@ -331,15 +331,11 @@ impl Eval {
             Err(Fail::Halt(h)) => Err(h),
             Err(Fail::Unkeyed(rid, at)) => {
                 let (head, op, inner) = self.ds_element(rid, at, comp);
-                Err(Halt::Strat(
-                    format!(
-                        "program rejected: {op} in rule {} reads {inner}, which depends on the rule's own conclusion {head}: \
+                Err(Halt::reject(format!("{op} in rule {} reads {inner}, which depends on the rule's own conclusion {head}: \
                          an aggregate reads a closed relation, and its correlation is bound by a relation of the component, \
                          so no cell of it can be named before the data is known (docs/aggregates.md, \"Data-level stratification, as built\")",
                         self.h.name(rid)
-                    ),
-                    String::new(),
-                ))
+                    )))
             }
         }
     }

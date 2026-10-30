@@ -69,6 +69,12 @@ pub enum Halt {
     Overrun,
 }
 
+impl Halt {
+    pub(crate) fn reject(msg: String) -> Halt {
+        Halt::Strat(format!("program rejected: {msg}"), String::new())
+    }
+}
+
 /// A call answered on demand being unfolded, of a relation that may call
 /// itself: its variant key, the negations open when it was made, the answers
 /// found so far (the call's arguments under each, its variables renamed
@@ -286,43 +292,7 @@ fn components(rules: &[Rc<ERule>]) -> Vec<Vec<Rc<ERule>>> {
             }
         }
     }
-    let mut order: Vec<Sym> = heads.iter().copied().collect();
-    order.sort();
-    let (mut index, mut low, mut comp) = (HashMap::new(), HashMap::new(), HashMap::new());
-    let mut stack: Vec<Sym> = Vec::new();
-    let mut n_comp = 0usize;
-    fn strong(v: Sym, dep: &HashMap<Sym, Vec<Sym>>, index: &mut HashMap<Sym, usize>, low: &mut HashMap<Sym, usize>, stack: &mut Vec<Sym>, comp: &mut HashMap<Sym, usize>, n_comp: &mut usize) {
-        let i = index.len();
-        index.insert(v, i);
-        low.insert(v, i);
-        stack.push(v);
-        for &w in dep.get(&v).map(|d| d.as_slice()).unwrap_or(&[]) {
-            if !index.contains_key(&w) {
-                strong(w, dep, index, low, stack, comp, n_comp);
-                let lw = low[&w];
-                let lv = low.get_mut(&v).unwrap();
-                *lv = (*lv).min(lw);
-            } else if !comp.contains_key(&w) {
-                let iw = index[&w];
-                let lv = low.get_mut(&v).unwrap();
-                *lv = (*lv).min(iw);
-            }
-        }
-        if low[&v] == index[&v] {
-            while let Some(w) = stack.pop() {
-                comp.insert(w, *n_comp);
-                if w == v {
-                    break;
-                }
-            }
-            *n_comp += 1;
-        }
-    }
-    for v in order {
-        if !index.contains_key(&v) {
-            strong(v, &dep, &mut index, &mut low, &mut stack, &mut comp, &mut n_comp);
-        }
-    }
+    let (comp, n_comp) = rel_scc(&dep);
     let mut out: Vec<Vec<Rc<ERule>>> = vec![Vec::new(); n_comp];
     for r in rules {
         out[comp[&r.clause.head.rel]].push(r.clone());
@@ -1707,21 +1677,7 @@ impl DemandState {
             .filter(|(rel, _)| unfolded(rel))
             .map(|(rel, rs)| (*rel, rs.iter().flat_map(|r| r.clause.body.iter().flat_map(|b| b.lits_deep()).map(|l| l.rel)).filter(unfolded).collect()))
             .collect();
-        let mut out = HashSet::new();
-        for start in calls.keys() {
-            let mut seen: HashSet<Sym> = HashSet::new();
-            let mut todo: Vec<Sym> = calls[start].clone();
-            while let Some(r) = todo.pop() {
-                if r == *start {
-                    out.insert(*start);
-                    break;
-                }
-                if seen.insert(r) {
-                    todo.extend(calls.get(&r).into_iter().flatten().copied());
-                }
-            }
-        }
-        out
+        calls.keys().copied().filter(|start| reachable(calls[start].iter().copied(), |r| calls.get(&r).into_iter().flatten().copied()).contains(start)).collect()
     }
 
     /// THE CYCLIC DEMAND RELATIONS WHOSE RECURSION IS LINEAR: no rule of their cycle
@@ -1735,17 +1691,7 @@ impl DemandState {
             .filter(|(rel, _)| self.cyclic.contains(rel))
             .map(|(rel, rs)| (*rel, rs.iter().flat_map(|r| r.clause.body.iter().flat_map(|b| b.lits_deep()).map(|l| l.rel)).filter(|r| self.cyclic.contains(r)).collect()))
             .collect();
-        let reach = |from: Sym| -> HashSet<Sym> {
-            let mut seen: HashSet<Sym> = HashSet::new();
-            let mut todo: Vec<Sym> = calls.get(&from).into_iter().flatten().copied().collect();
-            while let Some(r) = todo.pop() {
-                if seen.insert(r) {
-                    todo.extend(calls.get(&r).into_iter().flatten().copied());
-                }
-            }
-            seen
-        };
-        let reaches: HashMap<Sym, HashSet<Sym>> = calls.keys().map(|r| (*r, reach(*r))).collect();
+        let reaches: HashMap<Sym, HashSet<Sym>> = calls.keys().map(|r| (*r, reachable(calls[r].iter().copied(), |r| calls.get(&r).into_iter().flatten().copied()))).collect();
         let same = |a: Sym, b: Sym| reaches.get(&a).is_some_and(|x| x.contains(&b)) && reaches.get(&b).is_some_and(|x| x.contains(&a));
         let mut twice: Vec<Sym> = Vec::new();
         for (rel, rs) in self.rels.iter().filter(|(rel, _)| calls.contains_key(rel)) {
@@ -3637,16 +3583,12 @@ impl Eval {
                         _ => None,
                     }))
                     .unwrap_or("an aggregate");
-                return Halt::Strat(
-                    format!(
-                        "program rejected: {op} in rule {} reads {}, which depends on the rule's own conclusion {}: \
+                return Halt::reject(format!("{op} in rule {} reads {}, which depends on the rule's own conclusion {}: \
                          an aggregate reads a closed relation; a recursive min/max is a lattice declaration (docs/aggregates.md)",
                         self.h.name(*rid),
                         self.h.name(*inner),
                         self.h.name(*head)
-                    ),
-                    String::new(),
-                );
+                    ));
             }
         }
         // A DOMINANCE THROUGH ITS OWN RELATION, named for what it is
@@ -3654,29 +3596,22 @@ impl Eval {
         subs.sort_by(|a, b| cmp_js(self.h.name(a.0), self.h.name(b.0)));
         for (p, x) in subs {
             if let Some(b) = x.reads.iter().find(|b| peel.stuck.contains(&p) && peel.stuck.contains(*b) && reaches_in(&deps, **b, p)) {
-                return Halt::Strat(
-                    format!(
-                        "program rejected: the dominance of {} reads {}, which depends on {} itself: which of two values \
+                return Halt::reject(format!("the dominance of {} reads {}, which depends on {} itself: which of two values \
                          dominates is decided from relations closed below it (docs/aggregates.md, \"Subsumption, as built\")",
                         self.h.name(p),
                         self.h.name(*b),
                         self.h.name(p)
-                    ),
-                    String::new(),
-                );
+                    ));
             }
         }
         let names: Vec<&str> = peel.stuck.iter().map(|s| self.h.name(*s)).collect();
-        Halt::Strat(
-            match stall_cycle(peel, |s| self.h.name(s)) {
-                Some(c) => format!(
-                    "program rejected: nothing on the cycle {c} can be settled first: it reads its own \
-                     conclusion under a negation (-/->) or an aggregate (-agg->)"
-                ),
-                None => format!("program rejected: round {} settled nothing while {} remained", peel.rounds + 1, names.join(", ")),
-            },
-            String::new(),
-        )
+        Halt::reject(match stall_cycle(peel, |s| self.h.name(s)) {
+            Some(c) => format!(
+                "nothing on the cycle {c} can be settled first: it reads its own \
+                 conclusion under a negation (-/->) or an aggregate (-agg->)"
+            ),
+            None => format!("round {} settled nothing while {} remained", peel.rounds + 1, names.join(", ")),
+        })
     }
 
     /// The levels of the stock evaluator's strata, ranked from the table phase A derived, after the checks that
@@ -3949,18 +3884,7 @@ impl Eval {
         // through another, unfolds that read into each rule that reads it
         let mut via: HashSet<Sym> = HashSet::from([sh]);
         if brk!("shrug_demand_unread" => false; true) {
-            loop {
-                let more: Vec<Sym> = self
-                    .demand.rels
-                    .iter()
-                    .filter(|(rel, rs)| !via.contains(rel) && rs.iter().any(|r| r.clause.body.iter().flat_map(|b| b.lits_deep()).any(|l| via.contains(&l.rel))))
-                    .map(|(rel, _)| *rel)
-                    .collect();
-                if more.is_empty() {
-                    break;
-                }
-                via.extend(more);
-            }
+            via = readers_cone(via, self.demand.rels.iter().flat_map(|(_, rs)| rs), reads_any);
         }
         self.shrug_readers = self
             .rules
@@ -3998,20 +3922,7 @@ impl Eval {
         if self.unk.reads_unknown && self.store.add(&self.h, self.v.edb, self.v.main, &[Term::atom(un)], F_BASE) {
             self.rows += 1;
         }
-        loop {
-            let more: Vec<Sym> = self
-                .rules
-                .iter()
-                .filter(|r| !cone.contains(&r.clause.head.rel))
-                .filter(|r| r.clause.body.iter().flat_map(|b| b.lits_deep()).any(|l| cone.contains(&l.rel)))
-                .map(|r| r.clause.head.rel)
-                .collect();
-            if more.is_empty() {
-                break;
-            }
-            cone.extend(more);
-        }
-        self.unknown_cone = cone;
+        self.unknown_cone = readers_cone(cone, self.rules.iter(), reads_any);
     }
 
     /// `unknown(A)` for an unknown A: the atom as a term, in its own book, a
@@ -4655,21 +4566,14 @@ impl Eval {
             } else {
                 None
             };
-            return Err(Halt::Strat(
-                format!(
-                    "program rejected: rule {}: {}",
+            return Err(Halt::reject(format!("rule {}: {}",
                     self.h.name(*rid),
                     agg_refusal_text(self.h.name(*why), rel.as_deref())
-                ),
-                String::new(),
-            ));
+                )));
         }
         for r in &self.rules {
             if (r.has_agg || r.has_thr) && self.answer.demand_rels.contains(&r.clause.head.rel) {
-                return Err(Halt::Strat(
-                    format!("program rejected: rule {}: {}", self.h.name(r.id), agg_refusal_text("demand_head", None)),
-                    String::new(),
-                ));
+                return Err(Halt::reject(format!("rule {}: {}", self.h.name(r.id), agg_refusal_text("demand_head", None))));
             }
         }
         Ok(())
@@ -5025,7 +4929,7 @@ impl Eval {
             return Ok(());
         }
         keys.sort_by(|a, b| cmp_js(a, b));
-        Err(Halt::Strat(format!("program rejected: {}", keys.join(", ")), String::new()))
+        Err(Halt::reject(keys.join(", ")))
     }
 
     /// THE STOCK EVALUATOR SEALS AN AGGREGATE ONLY WHERE ITS TABLE SAYS WHEN.
@@ -5051,18 +4955,14 @@ impl Eval {
                     };
                     if !ok {
                         let rank = |x: Option<i64>| x.map_or("no stratum row".to_string(), |n| format!("stratum {n}"));
-                        return Err(Halt::Strat(
-                            format!(
-                                "program rejected: rule {}: the stock evaluator cannot seal its aggregate: it reads {} ({}) for {} ({}); \
+                        return Err(Halt::reject(format!("rule {}: the stock evaluator cannot seal its aggregate: it reads {} ({}) for {} ({}); \
                                  an aggregate's relation must be ranked strictly below its head (load rules/strata.rofl, or run the default evaluator)",
                                 self.h.name(r.id),
                                 self.h.name(l.rel),
                                 rank(strat.get(&l.rel).copied()),
                                 self.h.name(head),
                                 rank(at)
-                            ),
-                            String::new(),
-                        ));
+                            )));
                     }
                 }
             }
@@ -5080,20 +4980,8 @@ impl Eval {
             .iter()
             .filter(|r| r.clause.head.temporal == Temporal::Next || !strat.contains_key(&r.clause.head.rel))
             .collect();
-        let mut derived: HashSet<Sym> = last.iter().filter(|r| r.clause.head.temporal != Temporal::Next).map(|r| r.clause.head.rel).collect();
-        let mut grew = true;
-        while grew {
-            grew = false;
-            for r in mono {
-                if r.clause.head.temporal == Temporal::Next || derived.contains(&r.clause.head.rel) {
-                    continue;
-                }
-                if r.clause.body.iter().flat_map(|b| b.lits_deep()).any(|l| derived.contains(&l.rel)) {
-                    derived.insert(r.clause.head.rel);
-                    grew = true;
-                }
-            }
-        }
+        let derived: HashSet<Sym> = last.iter().filter(|r| r.clause.head.temporal != Temporal::Next).map(|r| r.clause.head.rel).collect();
+        let derived = readers_cone(derived, mono.iter().filter(|r| r.clause.head.temporal != Temporal::Next), reads_any);
         fn negated(b: &BodyElem, out: &mut Vec<Sym>) {
             match b {
                 BodyElem::Neg(l) => out.push(l.rel),
@@ -5112,10 +5000,7 @@ impl Eval {
         clashes.sort_by(|a, b| cmp_js(a, b));
         match clashes.first() {
             None => Ok(()),
-            Some(c) => Err(Halt::Strat(
-                format!("program rejected: {c}, and neither is ranked by stratum/2; rank them (load rules/strata.rofl, or run the default evaluator)"),
-                String::new(),
-            )),
+            Some(c) => Err(Halt::reject(format!("{c}, and neither is ranked by stratum/2; rank them (load rules/strata.rofl, or run the default evaluator)"))),
         }
     }
 
@@ -6669,7 +6554,7 @@ impl Eval {
     fn closed_lattice_halt(&self, rel: Sym) -> Halt {
         let msg = format!("the lattice {} received a contribution after it closed", self.h.name(rel));
         match self.mode {
-            Mode::Strata => Halt::Strat(format!("program rejected: {msg}: the stratum table ranks it below a relation it reads"), String::new()),
+            Mode::Strata => Halt::reject(format!("{msg}: the stratum table ranks it below a relation it reads")),
             Mode::Rounds => Halt::Bug(msg),
         }
     }
@@ -8153,7 +8038,7 @@ impl Eval {
         if self.lat.pass.closed.contains(&rel) {
             let msg = format!("the subsumptive relation {} received a value after it closed", self.h.name(rel));
             return Err(match self.mode {
-                Mode::Strata => Halt::Strat(format!("program rejected: {msg}: the stratum table ranks it below a relation it reads"), String::new()),
+                Mode::Strata => Halt::reject(format!("{msg}: the stratum table ranks it below a relation it reads")),
                 Mode::Rounds => Halt::Bug(msg),
             });
         }
@@ -8579,14 +8464,10 @@ impl Eval {
             return Ok(());
         }
         if let Some(y) = unfounded.iter().copied().find(|f| cells.contains(&self.store.rec(*f).rel)) {
-            return Err(Halt::Strat(
-                format!(
-                    "program rejected: {} rests only on what a dominated value concluded: a consumer inside the recursion is not \
+            return Err(Halt::reject(format!("{} rests only on what a dominated value concluded: a consumer inside the recursion is not \
                      monotone in the dominance (docs/aggregates.md, \"Subsumption, as built\")",
                     self.store.key(&self.h, y)
-                ),
-                String::new(),
-            ));
+                )));
         }
         let gone: HashSet<FactId> = unfounded.iter().copied().collect();
         for x in &unfounded {
@@ -11184,7 +11065,7 @@ impl Eval {
     /// algebra for its relation, an asserted fact (the cell holds what its
     /// rules conclude), and a counting tag inside its own recursion.
     fn refuse_tags(&mut self) -> Result<(), Halt> {
-        let reject = |msg: String| Err(Halt::Strat(format!("program rejected: {msg}"), String::new()));
+        let reject = |msg: String| Err(Halt::reject(msg));
         if let Some(m) = self.tags.refused.first() {
             return reject(m.clone());
         }
@@ -11234,7 +11115,7 @@ impl Eval {
     }
 
     fn refuse_lattices(&mut self) -> Result<(), Halt> {
-        let reject = |msg: String| Err(Halt::Strat(format!("program rejected: {msg}"), String::new()));
+        let reject = |msg: String| Err(Halt::reject(msg));
         if let Some(m) = self.decl_refused.first() {
             return reject(m.clone());
         }
@@ -11339,15 +11220,11 @@ impl Eval {
         names.sort_by(|a, b| cmp_js(self.h.name(*a), self.h.name(*b)));
         for p in names {
             if !strat.contains_key(&p) {
-                return Err(Halt::Strat(
-                    format!(
-                        "program rejected: the stock evaluator cannot close the {} {}: it has no stratum row \
+                return Err(Halt::reject(format!("the stock evaluator cannot close the {} {}: it has no stratum row \
                          (load rules/strata.rofl, or run the default evaluator)",
                         self.lat.lat_word(p),
                         self.h.name(p)
-                    ),
-                    String::new(),
-                ));
+                    )));
             }
         }
         for r in strat_rules.iter().filter(|r| !r.lattice_outer.is_empty()) {
@@ -11358,17 +11235,13 @@ impl Eval {
                     _ => !self.derived_rels.contains(p),
                 };
                 if !ok {
-                    return Err(Halt::Strat(
-                        format!(
-                            "program rejected: rule {}: the stock evaluator cannot order its read of the {} {}: \
+                    return Err(Halt::reject(format!("rule {}: the stock evaluator cannot order its read of the {} {}: \
                              a rule reading it from outside its recursion must be ranked strictly above it \
                              (load rules/strata.rofl, or run the default evaluator)",
                             self.h.name(r.id),
                             self.lat.lat_word(*p),
                             self.h.name(*p)
-                        ),
-                        String::new(),
-                    ));
+                        )));
                 }
             }
         }
@@ -12860,36 +12733,24 @@ impl Eval {
         // fed to a stratified world that aggregates them (`Session::feed_below`).
         const COMPOSE: &str = "evaluate the well-founded world below and feed its true and unknown rows \
                                to a stratified world that aggregates them (rofl load --below)";
+        let cell_refusal = |what: String, reason: &str| Some(Halt::reject(format!("{what} is not evaluated under well_founded semantics: {reason}; {COMPOSE}")));
         if let Some(p) = brk!("wfs_admits_tag" => None; self.tags.by_rel.keys().min_by(|a, b| cmp_js(self.h.name(**a), self.h.name(**b)))) {
-            return Some(Halt::Strat(
-                format!(
-                    "program rejected: tag {} ({}) is not evaluated under well_founded semantics: a tag is a cell, and a cell \
-                     merged under an assumption holds a value no model may have; {COMPOSE}",
-                    self.h.name(*p),
-                    self.tags.by_rel[p].1.name()
-                ),
-                String::new(),
-            ));
+            return cell_refusal(
+                format!("tag {} ({})", self.h.name(*p), self.tags.by_rel[p].1.name()),
+                "a tag is a cell, and a cell merged under an assumption holds a value no model may have",
+            );
         }
         if let Some(p) = self.lat.subs.keys().filter(|_| brk!("wfs_admits_subsumption" => false; true)).min_by(|a, b| cmp_js(self.h.name(**a), self.h.name(**b))) {
-            return Some(Halt::Strat(
-                format!(
-                    "program rejected: subsumption {} is not evaluated under well_founded semantics: a value dominated \
-                     under an assumption is dropped for a fact no model may have; {COMPOSE}",
-                    self.h.name(*p)
-                ),
-                String::new(),
-            ));
+            return cell_refusal(
+                format!("subsumption {}", self.h.name(*p)),
+                "a value dominated under an assumption is dropped for a fact no model may have",
+            );
         }
         if let Some(p) = brk!("wfs_admits_lattice" => None; self.lat.lattices.keys().filter(|p| !self.lat.subs.contains_key(p)).min_by(|a, b| cmp_js(self.h.name(**a), self.h.name(**b)))) {
-            return Some(Halt::Strat(
-                format!(
-                    "program rejected: lattice {} is not evaluated under well_founded semantics: a cell improved \
-                     under an assumption holds a value no model may have; {COMPOSE}",
-                    self.h.name(*p)
-                ),
-                String::new(),
-            ));
+            return cell_refusal(
+                format!("lattice {}", self.h.name(*p)),
+                "a cell improved under an assumption holds a value no model may have",
+            );
         }
         let admitted = |op: AggOp| match op {
             AggOp::AtLeast => brk!("wfs_admits_threshold" => true; false),
@@ -12902,15 +12763,11 @@ impl Eval {
             })
         });
         if let Some((rid, op)) = found {
-            return Some(Halt::Strat(
-                format!(
-                    "program rejected: {} is not evaluated under well_founded semantics (rule {}): a cell sealed \
+            return Some(Halt::reject(format!("{} is not evaluated under well_founded semantics (rule {}): a cell sealed \
                      under an assumption counts facts that may not hold; {COMPOSE}",
                     op.name(),
                     self.h.name(rid)
-                ),
-                String::new(),
-            ));
+                )));
         }
         if !self.demand.rels.is_empty() {
             let names: Vec<&str> = self
@@ -12918,13 +12775,9 @@ impl Eval {
                 .iter()
                 .map(|(r, _)| self.h.name(*r))
                 .collect();
-            return Some(Halt::Strat(
-                format!(
-                    "program rejected: the alternating fixpoint cannot assume a demand-backed relation ({})",
+            return Some(Halt::reject(format!("the alternating fixpoint cannot assume a demand-backed relation ({})",
                     names.join(", ")
-                ),
-                String::new(),
-            ));
+                )));
         }
         None
     }
@@ -13313,6 +13166,48 @@ fn tarjan(succ: &[Vec<usize>]) -> Vec<usize> {
         }
     }
     comp
+}
+
+/// The strongly connected component of every relation `deps` names, numbered by `tarjan` over the relations in
+/// ascending order, and how many there are.
+fn rel_scc(deps: &HashMap<Sym, Vec<Sym>>) -> (HashMap<Sym, usize>, usize) {
+    let mut syms: Vec<Sym> = deps.iter().flat_map(|(k, v)| std::iter::once(*k).chain(v.iter().copied())).collect();
+    syms.sort_unstable();
+    syms.dedup();
+    let at: HashMap<Sym, usize> = syms.iter().enumerate().map(|(i, s)| (*s, i)).collect();
+    let succ: Vec<Vec<usize>> = syms.iter().map(|s| deps.get(s).into_iter().flatten().map(|w| at[w]).collect()).collect();
+    let comp = tarjan(&succ);
+    (syms.iter().zip(&comp).map(|(s, c)| (*s, *c)).collect(), comp.iter().max().map_or(0, |c| c + 1))
+}
+
+fn reads_any(r: &ERule, set: &HashSet<Sym>) -> bool {
+    r.clause.body.iter().flat_map(|b| b.lits_deep()).any(|l| set.contains(&l.rel))
+}
+
+/// `seed` and the head of every rule of `rules` that `fires` on the set, through each other, to a fixpoint.
+fn readers_cone<'a>(mut set: HashSet<Sym>, rules: impl Iterator<Item = &'a Rc<ERule>> + Clone, fires: impl Fn(&ERule, &HashSet<Sym>) -> bool) -> HashSet<Sym> {
+    loop {
+        let n = set.len();
+        for r in rules.clone() {
+            if fires(r, &set) {
+                set.insert(r.clause.head.rel);
+            }
+        }
+        if set.len() == n {
+            return set;
+        }
+    }
+}
+
+/// What `from` reaches by `next`, itself only where `next` leads back to it.
+fn reachable<N: IntoIterator<Item = Sym>>(from: impl IntoIterator<Item = Sym>, mut next: impl FnMut(Sym) -> N) -> HashSet<Sym> {
+    let (mut seen, mut todo): (HashSet<Sym>, Vec<Sym>) = (HashSet::new(), from.into_iter().collect());
+    while let Some(r) = todo.pop() {
+        if seen.insert(r) {
+            todo.extend(next(r));
+        }
+    }
+    seen
 }
 
 fn fact_prems(prems: &[PremRef]) -> Vec<FactId> {

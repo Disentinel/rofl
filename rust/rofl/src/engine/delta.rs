@@ -202,18 +202,7 @@ impl Eval {
         if self.vedges_reached(self.store.rec(f).rel) {
             out.push("the fact reaches the edges of a closure answered from its tree, which a retraction builds again");
         }
-        if self.well_founded {
-            out.push("the world is evaluated well-founded");
-        }
-        if self.store.dirty {
-            out.push("the world is not evaluated");
-        }
-        if self.store.partial_eval {
-            out.push("a wall cut the evaluation");
-        }
-        if self.store.tick != 0 {
-            out.push("a later tick");
-        }
+        out.extend(self.world_refusals());
         if self.prov.no_witness {
             out.push("the world keeps no witness, so nothing says which facts lose their last support");
         }
