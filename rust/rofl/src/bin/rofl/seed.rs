@@ -283,25 +283,28 @@ fn rule_tables(l: &rofl::Loaded) {
     // PER RULE, so the question "which body asks for more probes as the
     // corpus grows" has an answer. Sorted, top twenty; the tail is long
     // and flat and printing it would bury the head.
-    let mut by: Vec<(rofl::term::Sym, u64)> = l.eval.cost.argm_by_rule.iter().map(|(k, v)| (*k, *v)).collect();
-    by.sort_by(|a, b| b.1.cmp(&a.1));
-    for (rid, n) in by.iter().take(20) {
+    for (rid, n) in costliest(&l.eval.cost.argm_by_rule) {
         // The head relation beside the id, because a rule id is a hash and
         // the question this table answers is about a BODY someone has to
         // find and read.
-        eprintln!("argm_rule\t{}\t{}\t{}", l.eval.h.name(*rid), rule_head(l, *rid), n);
+        eprintln!("argm_rule\t{}\t{}\t{}", l.eval.h.name(rid), rule_head(l, rid), n);
     }
     // THE SAME TABLE IN TIME, and what firing the rules of a round side by
     // side could save: every round waits for its longest rule.
-    let mut by: Vec<(rofl::term::Sym, u64)> = l.eval.cost.ns_by_rule.iter().map(|(k, v)| (*k, *v)).collect();
-    by.sort_by(|a, b| b.1.cmp(&a.1));
-    for (rid, ns) in by.iter().take(20) {
-        eprintln!("rule_ms\t{}\t{}\t{:.1}", l.eval.h.name(*rid), rule_head(l, *rid), *ns as f64 / 1e6);
+    for (rid, ns) in costliest(&l.eval.cost.ns_by_rule) {
+        eprintln!("rule_ms\t{}\t{}\t{:.1}", l.eval.h.name(rid), rule_head(l, rid), ns as f64 / 1e6);
     }
     // WHERE THE ROWS ARE READ, deterministic: the rules that read most, each at its costliest premise
     for h in l.eval.hot_rules(10) {
         eprintln!("hot\t{}", h.sentence());
     }
+}
+
+fn costliest(by: &std::collections::HashMap<rofl::term::Sym, u64>) -> Vec<(rofl::term::Sym, u64)> {
+    let mut by: Vec<_> = by.iter().map(|(k, v)| (*k, *v)).collect();
+    by.sort_by(|a, b| b.1.cmp(&a.1));
+    by.truncate(20);
+    by
 }
 
 fn rule_head(l: &rofl::Loaded, rid: rofl::term::Sym) -> String {

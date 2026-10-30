@@ -44,14 +44,8 @@ use crate::describe;
 use crate::engine::{Eval, Halt, Mode, Outcome, TickOutcome, WhyOpts, WhynotBounds, WhynotFile, EXPLAIN_WHYNOT_BOUNDS};
 use crate::reflect::{self, bootstrap_kernel, is_kernel_ledger, Vocab};
 use crate::rofl_parse::{self, Book, Tense};
-use crate::store::{write_fact_key, FactId, Store, F_BASE, F_TICK};
+use crate::store::{fact_key, write_fact_key, FactId, Store, F_BASE, F_TICK};
 use crate::term::{Heap, Sym, Term, TermK};
-
-pub(crate) fn fact_key(h: &Heap, rel: Sym, persp: Sym, args: &[Term]) -> String {
-    let mut k = String::new();
-    write_fact_key(h, rel, persp, args, &mut k);
-    k
-}
 
 /// A world. Built once with [`Session::open`], then forked per unit of work.
 pub struct Session {

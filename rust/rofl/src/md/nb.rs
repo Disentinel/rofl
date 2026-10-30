@@ -183,7 +183,7 @@ fn elsewhere(lit: &str, program: &str) -> Option<String> {
 }
 
 fn the_variable(s: &str, reads: &dyn Fn(&str) -> bool) -> Option<String> {
-    for c in rx::re(r"\bthe ([a-z][\w-]*(?: [a-z][\w-]*){0,2}) ([A-Z][A-Za-z0-9]*)\b").captures_iter(s) {
+    for c in rx::re(concat!(r"\bthe (", words!(), r") ([A-Z][A-Za-z0-9]*)\b")).captures_iter(s) {
         let m = c.get(0).unwrap();
         let a = format!("{} {} {}", if rx::test("^[aeiou]", &c[1]) { "an" } else { "a" }, &c[1], &c[2]);
         if reads(&format!("{}{a}{}", &s[..m.start()], &s[m.end()..])) {

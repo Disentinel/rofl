@@ -121,6 +121,12 @@ fn full(a: rofl::session::Addition) -> Option<String> {
     }
 }
 
+fn str_of<'a>(r: &'a Value, k: &str, missing: &'static str) -> Result<&'a str, &'static str> {
+    r.get(k).and_then(|v| v.as_str()).ok_or(missing)
+}
+fn session_id(r: &Value) -> Result<u64, &'static str> {
+    r.get("session").and_then(|v| v.as_u64()).ok_or("`session` is required")
+}
 /// An optional array of strings.
 fn strings(r: &Value, k: &str) -> Result<Option<Vec<String>>, String> {
     match r.get(k) {
@@ -146,7 +152,7 @@ struct Server {
 
 impl Server {
     fn get(&mut self, r: &Value) -> Result<&mut Session, String> {
-        let id = r.get("session").and_then(|v| v.as_u64()).ok_or("`session` is required")?;
+        let id = session_id(r)?;
         self.sessions.get_mut(&id).ok_or_else(|| format!("no such session: {id}"))
     }
 
@@ -227,7 +233,7 @@ impl Server {
         if let Some(limit) = r.get("limit").filter(|v| !v.is_null()) {
             return self.limited(r, limit);
         }
-        let op = r.get("op").and_then(|v| v.as_str()).ok_or("`op` is required")?;
+        let op = str_of(r, "op", "`op` is required")?;
         // what came back to the post since the last request is loaded before this one is answered
         if op != "close" && op != "inbox" {
             if let Ok(s) = self.get(r) {
@@ -278,7 +284,7 @@ impl Server {
                 Ok(json!({ "session": id, "facts": facts, "dangling": 0 }))
             }
             "spans" => {
-                let text = r.get("text").and_then(|v| v.as_str()).ok_or("spans needs `text`")?;
+                let text = str_of(r, "text", "spans needs `text`")?;
                 Ok(json!({ "spans": rofl::md::sentence_spans(text) }))
             }
             "load" => self.op_load(r),
@@ -286,7 +292,7 @@ impl Server {
             "cool_many" => self.op_cool_many(r),
             // A cooled volume back, refused if this engine did not write it; into an evaluated world by delta.
             "reheat" => {
-                let p = r.get("path").and_then(|v| v.as_str()).ok_or("reheat needs `path`")?.to_string();
+                let p = str_of(r, "path", "reheat needs `path`")?.to_string();
                 let s = self.get(r)?;
                 let n = s.reheat(&p).map_err(|d| d.join("\n"))?;
                 // evaluated by delta, or left for the next evaluation (a cooled world, a program the path refuses)
@@ -295,7 +301,7 @@ impl Server {
             // What a volume's world wrote above its base: the facts of `books` and `rels`, and the names it can
             // subscribe by (`Session::layer_view`).
             "view" => {
-                let prefix = r.get("prefix").and_then(|v| v.as_str()).ok_or("view needs `prefix`")?.to_string();
+                let prefix = str_of(r, "prefix", "view needs `prefix`")?.to_string();
                 let books = strings(r, "books")?.unwrap_or_default();
                 let rels = strings(r, "rels")?.unwrap_or_default();
                 let (facts, names) = self.get(r)?.layer_view(&prefix, &books, &rels)?;
@@ -310,7 +316,7 @@ impl Server {
             // Written to a path unless the caller insists. See the module note:
             // the whole state is exactly the thing a pipe should not carry.
             "keep" => {
-                let p = r.get("path").and_then(|v| v.as_str()).ok_or("keep needs `path`")?.to_string();
+                let p = str_of(r, "path", "keep needs `path`")?.to_string();
                 if r.get("volume").and_then(|v| v.as_bool()) == Some(true) {
                     let bytes = self.get(r)?.keep_volume(&p).map_err(|e| format!("{p}: {e}"))?;
                     return Ok(json!({ "path": p, "bytes": bytes }));
@@ -327,7 +333,7 @@ impl Server {
     fn op_change(&mut self, op: &str, r: &Value) -> Result<Value, String> {
         match op {
             "assert" => {
-                let text = r.get("rofl").and_then(|v| v.as_str()).ok_or("assert needs `rofl`")?.to_string();
+                let text = str_of(r, "rofl", "assert needs `rofl`")?.to_string();
                 self.get(r)?.guard_permit(&text)?;
                 let (n, a) = self.get(r)?.assert_delta(&text)?;
                 Ok(json!({ "added": n, "full": full(a) }))
@@ -341,13 +347,13 @@ impl Server {
                 Ok(json!({ "loaded": n, "flying": flying }))
             }
             "dispatch" => {
-                let dir = r.get("journal").and_then(|v| v.as_str()).ok_or("dispatch needs `journal`, the directory of its journal")?.to_string();
+                let dir = str_of(r, "journal", "dispatch needs `journal`, the directory of its journal")?.to_string();
                 let n = self.get(r)?.dispatch(std::path::Path::new(&dir))?;
                 Ok(json!({ "loaded": n }))
             }
             "evaluate" | "evaluate_on" => self.op_evaluate(r),
             "admit" => {
-                let text = r.get("rofl").and_then(|v| v.as_str()).ok_or("admit needs `rofl`")?.to_string();
+                let text = str_of(r, "rofl", "admit needs `rofl`")?.to_string();
                 let n = self.get(r)?.admit(&text)?;
                 Ok(json!({ "admitted": n }))
             }
@@ -362,7 +368,7 @@ impl Server {
                 }))
             }
             "retract" => {
-                let q = r.get("query").and_then(|v| v.as_str()).ok_or("retract needs `query`")?.to_string();
+                let q = str_of(r, "query", "retract needs `query`")?.to_string();
                 let s = self.get(r)?;
                 let full = match s.retract_delta(&q)? {
                     rofl::session::Retraction::Delta(_) => None,
@@ -380,7 +386,7 @@ impl Server {
             "why" => self.op_why(r),
             "whynot" => self.op_whynot(r),
             "excise" => {
-                let q = r.get("query").and_then(|v| v.as_str()).ok_or("excise needs `query`")?.to_string();
+                let q = str_of(r, "query", "excise needs `query`")?.to_string();
                 let (removed, added) = self.get(r)?.excise(&q)?;
                 Ok(json!({ "removed": removed, "added": added }))
             }
@@ -391,7 +397,7 @@ impl Server {
                 Ok(json!({ "facts": s.eval.store.fact_count(), "tick": s.eval.store.tick }))
             }
             "close" => {
-                let id = r.get("session").and_then(|v| v.as_u64()).ok_or("`session` is required")?;
+                let id = session_id(r)?;
                 match self.sessions.remove(&id) {
                     Some(_) => Ok(json!({ "closed": id })),
                     None => Err(format!("no such session: {id}")),
@@ -403,7 +409,7 @@ impl Server {
 
 
     fn op_rows(&mut self, r: &Value) -> Result<Value, String> {
-        let rel = r.get("rel").and_then(|v| v.as_str()).ok_or("rows needs `rel`")?;
+        let rel = str_of(r, "rel", "rows needs `rel`")?;
         let at: Vec<(usize, String)> = match r.get("at").and_then(|v| v.as_object()) {
             Some(m) => m.iter().map(|(k, v)| Ok((k.parse::<usize>().map_err(|_| "`at` is keyed by position")?, v.as_str().ok_or("`at` spells each argument")?.to_string()))).collect::<Result<_, String>>()?,
             None => Vec::new(),
@@ -463,7 +469,7 @@ impl Server {
     }
 
     fn op_books(&mut self, r: &Value) -> Result<Value, String> {
-        let rel = r.get("rel").and_then(|v| v.as_str()).ok_or("books needs `rel`")?;
+        let rel = str_of(r, "rel", "books needs `rel`")?;
         let s = self.get(r)?;
         let e = &mut s.eval;
         let rel = e.h.intern(rel);
@@ -479,8 +485,8 @@ impl Server {
     }
 
     fn op_key(&mut self, op: &str, r: &Value) -> Result<Value, String> {
-        let key = r.get("key").and_then(|v| v.as_str()).ok_or("needs `key`")?.to_string();
-        let id = r.get("session").and_then(|v| v.as_u64()).ok_or("`session` is required")?;
+        let key = str_of(r, "key", "needs `key`")?.to_string();
+        let id = session_id(r)?;
         let s = self.sessions.get_mut(&id).ok_or_else(|| format!("no such session: {id}"))?;
         let e = &mut s.eval;
         let (facts, cells, rows) = self.keys.entry(id).or_insert_with(|| {
@@ -543,8 +549,8 @@ impl Server {
     // because those are statements about a corpus and the engine knows
     // only a prefix.
     fn op_cool(&mut self, r: &Value) -> Result<Value, String> {
-        let prefix = r.get("prefix").and_then(|v| v.as_str()).ok_or("cool needs `prefix`")?.to_string();
-        let out = r.get("path").and_then(|v| v.as_str()).ok_or("cool needs `path`")?.to_string();
+        let prefix = str_of(r, "prefix", "cool needs `prefix`")?.to_string();
+        let out = str_of(r, "path", "cool needs `path`")?.to_string();
         // by book: only the facts of `books` go, a `[surface]` kept beside them stays
         let c = match strings(r, "books")? {
             Some(bs) => {
@@ -563,8 +569,8 @@ impl Server {
         let vs = r.get("volumes").and_then(|v| v.as_array()).ok_or("cool_many needs `volumes`")?;
         let mut pairs = Vec::with_capacity(vs.len());
         for v in vs {
-            let p = v.get("prefix").and_then(|x| x.as_str()).ok_or("a volume needs `prefix`")?;
-            let o = v.get("path").and_then(|x| x.as_str()).ok_or("a volume needs `path`")?;
+            let p = str_of(v, "prefix", "a volume needs `prefix`")?;
+            let o = str_of(v, "path", "a volume needs `path`")?;
             pairs.push((p.to_string(), o.to_string()));
         }
         let cs = self.get(r)?.cool_many(&pairs)?;
@@ -606,7 +612,7 @@ impl Server {
     }
 
     fn op_ask(&mut self, r: &Value) -> Result<Value, String> {
-        let q = r.get("query").and_then(|v| v.as_str()).ok_or("ask needs `query`")?.to_string();
+        let q = str_of(r, "query", "ask needs `query`")?.to_string();
         let a = self.get(r)?.ask(&q)?;
         let keys = if r.get("keys").and_then(|v| v.as_bool()).unwrap_or(false) {
             json!(a.keys)
@@ -625,7 +631,7 @@ impl Server {
     // fact that does not hold is an error carrying that text, as the
     // reference's `ok: false` is; a `whynot` of one that holds is not.
     fn op_why(&mut self, r: &Value) -> Result<Value, String> {
-        let q = r.get("query").and_then(|v| v.as_str()).ok_or("why needs `query`")?.to_string();
+        let q = str_of(r, "query", "why needs `query`")?.to_string();
         // absent or null is a plain `why`; anything but a boolean is
         // refused, as a whynot bound that is not an integer is
         let all = match r.get("all") {
@@ -638,7 +644,7 @@ impl Server {
     }
 
     fn op_whynot(&mut self, r: &Value) -> Result<Value, String> {
-        let q = r.get("query").and_then(|v| v.as_str()).ok_or("whynot needs `query`")?.to_string();
+        let q = str_of(r, "query", "whynot needs `query`")?.to_string();
         // A bound below 1 counts as 1, as the reference's `Math.max`
         // makes it; one that is not an integer is refused rather than
         // replaced by the default. JSON has one number type, as JS

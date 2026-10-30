@@ -368,10 +368,7 @@ impl Eval {
             };
             let Some(s2) = s2 else { continue };
             if let Some(s3) = unify_all(&self.h, &l.args, &[x, y], &s2) {
-                let mut key = String::new();
-                if sorted {
-                    write_fact_key(&self.h, self.vc.vclosures[ci].rel, book, &[x, y], &mut key);
-                }
+                let key = if sorted { fact_key(&self.h, self.vc.vclosures[ci].rel, book, &[x, y]) } else { String::new() };
                 out.push((key, s3, brk!("vclosure_premise_untagged" => PremRef::Neg(0); PremRef::VRow(0))));
             }
         }
@@ -887,9 +884,7 @@ impl VClosureState {
     }
 
     fn vrow_key(&self, h: &mut Heap, store: &mut Store, ci: usize, book: Sym, a: Term, d: Term) -> Sym {
-        let mut key = String::new();
-        write_fact_key(&*h, self.vclosures[ci].rel, book, &[a, d], &mut key);
-        let k = h.intern(&key);
+        let k = h.intern(&fact_key(&*h, self.vclosures[ci].rel, book, &[a, d]));
         store.vrow_of.name(k, (ci, book, a, d));
         k
     }
