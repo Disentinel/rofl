@@ -236,7 +236,7 @@ export function emitRust(preds: Pred[]): string {
     L.push(`/// \`${p.rel}/1\`, ${p.clauses.length} clause${p.clauses.length > 1 ? 's' : ''} — a disjunction.`);
     L.push(`pub fn p_${p.rel}(c: &Ctx, i: usize) -> bool {`);
     L.push('    if i >= c.len() { return false; }');
-    L.push('    ' + p.clauses.map((x) => `(${render(x)})`).join('\n        || '));
+    L.push('    ' + (p.clauses.length === 1 ? render(p.clauses[0]!) : p.clauses.map((x) => `(${render(x)})`).join('\n        || ')));
     L.push('}');
   }
   L.push('');

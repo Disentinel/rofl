@@ -1543,7 +1543,7 @@ mod laws {
     fn a_rank_over_a_tuple_is_a_position_among_distinct_tuples() {
         let mut h = Heap::default();
         let v = Vocab::new(&mut h);
-        let mut r = Rng(0x7a9_1e5_5eed);
+        let mut r = Rng(0x007a_91e5_5eed);
         let words = ["", "B", "ab", "b", "foo"];
         let atoms: Vec<Term> = words.iter().map(|w| h.atom(w)).collect();
         let strs: Vec<Term> = words.iter().map(|w| h.string(w)).collect();
@@ -1564,7 +1564,7 @@ mod laws {
             let mut raw: Vec<[(u8, i64, usize); 2]> = (0..(r.next() % 9) as usize).map(|_| [key(&mut r), key(&mut r)]).collect();
             let atoms_of = |t: &[(u8, i64, usize); 2]| key_atoms(&h, &v, &[term(t[0]), term(t[1])]).unwrap();
             let sorted = Sorted::of_keys(desc.clone(), raw.iter().map(atoms_of).collect());
-            let text = |k: &(u8, i64, usize)| if k.0 == 1 { words[k.2] } else if k.0 == 2 { words[k.2] } else { "" };
+            let text = |k: &(u8, i64, usize)| if matches!(k.0, 1 | 2) { words[k.2] } else { "" };
             let before = |a: &[(u8, i64, usize); 2], b: &[(u8, i64, usize); 2]| {
                 for i in 0..2 {
                     let c = (a[i].0, a[i].1, text(&a[i]).encode_utf16().collect::<Vec<_>>()).cmp(&(b[i].0, b[i].1, text(&b[i]).encode_utf16().collect::<Vec<_>>()));

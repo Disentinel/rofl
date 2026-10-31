@@ -302,7 +302,7 @@ fn rule_tables(l: &rofl::Loaded) {
 
 fn costliest(by: &std::collections::HashMap<rofl::term::Sym, u64>) -> Vec<(rofl::term::Sym, u64)> {
     let mut by: Vec<_> = by.iter().map(|(k, v)| (*k, *v)).collect();
-    by.sort_by(|a, b| b.1.cmp(&a.1));
+    by.sort_by_key(|x| std::cmp::Reverse(x.1));
     by.truncate(20);
     by
 }

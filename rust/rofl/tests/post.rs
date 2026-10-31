@@ -4,7 +4,7 @@
 //! Planted: `post_resends_flying` sends again a want still in flight, and the count is red.
 use rofl::adapter::Post;
 use rofl::session::Session;
-use std::path::PathBuf;
+use std::path::Path;
 use std::time::{Duration, Instant};
 
 const SLOW: &str = r#"
@@ -21,7 +21,7 @@ setTimeout(() => {
 }, 600);
 "#;
 
-fn world(d: &PathBuf) -> String {
+fn world(d: &Path) -> String {
     format!(
         "adapter(graph, exec, \"node {} {}\").
 capability(next_of, graph, reads).

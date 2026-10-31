@@ -5,7 +5,7 @@
 //! Planted: `sql_arguments_spliced` writes the arguments into the template, and a tenant named like an injection
 //! reads the whole table; `sql_query_from_rule` lets a rule build the template.
 use rofl::session::Session;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 const ROWS: i64 = 11_100;
 
@@ -23,7 +23,7 @@ fn db(name: &str) -> PathBuf {
     p
 }
 
-fn world(p: &PathBuf, asked: &str) -> String {
+fn world(p: &Path, asked: &str) -> String {
     format!(
         "adapter(shop, sql, \"{}\").
 capability(orders_of, shop, reads).

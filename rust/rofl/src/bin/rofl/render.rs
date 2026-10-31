@@ -87,8 +87,6 @@ fn parse_phrase(t: &str) -> Result<Phrase, String> {
     Ok(Phrase { parts, fixes })
 }
 
-/// The word a lattice declaration's operation reads as: `dist` keeps the least D.
-
 const MARKERS: &[&str] =&["at", "in", "to", "from", "by", "as", "for", "on", "through", "with", "holding", "named", "being", "of", "under", "over", "than", "is", "has", "into", "after", "before", "within", "among", "replaced", "the"];
 const VALUE_NOUNS: &[&str] = &["key", "name", "file", "index", "text", "kind", "line", "attribute", "number", "score"];
 const PREPS: &[&str] = &["of", "to", "by", "at", "in", "with", "from", "for", "on", "through", "as", "into", "under", "over", "than", "within", "among", "after", "before", "between", "since", "against", "off", "is", "are", "holds", "holding", "being", "named", "replaced"];
@@ -418,7 +416,7 @@ impl<'a> R<'a> {
     fn link(&self, rel: Sym, text: &str, file: usize, stats: &mut Stats) -> String {
         let bare = text.trim();
         if bare.starts_with('-') || ["the", "a", "an", "is", "of", "in", "at"].contains(&bare) {
-            if self.defs.get(&rel).is_none() { stats.external.insert(self.h.name(rel).to_string()); }
+            if !self.defs.contains_key(&rel) { stats.external.insert(self.h.name(rel).to_string()); }
             return text.to_string();
         }
         match self.defs.get(&rel) {
@@ -1116,7 +1114,7 @@ impl<'a> R<'a> {
             for v in &all {
                 let target = map.get(v).copied().unwrap_or(*v);
                 // a variable of this clause that is not in its head, spelled like a head variable of the group, would be captured by it
-                if map.get(v).is_none() && (taken.contains(v) || gvars.contains(v)) { return None; }
+                if !map.contains_key(v) && (taken.contains(v) || gvars.contains(v)) { return None; }
                 let _ = target;
             }
             let mut renamed = self.rename(c, &map);
@@ -1233,7 +1231,7 @@ impl<'a> R<'a> {
         let rel = group[0].head.rel;
         let anchor = if self.defs.get(&rel) == Some(&file) && anchored.insert(rel) { format!("<a id=\"{}\"></a>", self.h.name(rel)) } else { String::new() };
         let name = self.h.name(rel).to_string();
-        if self.phrases.get(&rel).is_some() { stats.phrased.insert(name.clone()); } else { stats.positional.insert(name.clone()); }
+        if self.phrases.contains_key(&rel) { stats.phrased.insert(name.clone()); } else { stats.positional.insert(name.clone()); }
         stats.heads.insert(name);
         let canon = if group.len() > 1 { self.canon(group) } else { None };
         match canon {
@@ -1281,7 +1279,7 @@ impl<'a> R<'a> {
                 items.push(Item::Block(out));
             }
             None => {
-                let to_glossary = group.len() == 1 && single.contains(&rel) && self.phrases.get(&rel).is_some() && self.is_projection(&group[0]);
+                let to_glossary = group.len() == 1 && single.contains(&rel) && self.phrases.contains_key(&rel) && self.is_projection(&group[0]);
                 for (k, c) in group.iter().enumerate() {
                     stats.rules += 1;
                     let mut ctx = self.ctx(c, file, false, &taken);

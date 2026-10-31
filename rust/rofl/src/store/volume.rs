@@ -391,8 +391,8 @@ impl Store {
             groups.insert(rel, v);
         }
         s.idx = Runs { base: Rc::new(groups), own: Groups::default() };
-        let col = |a: Arena<u32>| Col { mark: a.len(), base: Rc::new(a), own: Vec::new(), ..Col::default() };
-        s.wit_head = col(r.arena()?);
+        let heads: Arena<u32> = r.arena()?;
+        s.wit_head = Col { mark: heads.len(), base: Rc::new(heads), own: Vec::new(), ..Col::default() };
         let wits: Arena<WitNode> = r.arena()?;
         s.wits = Col { mark: wits.len(), base: Rc::new(wits), own: Vec::new(), ..Col::default() };
         let prems: Arena<PremRef> = r.arena_checked(prem_tags_ok)?;

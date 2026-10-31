@@ -52,7 +52,6 @@ const POLICY_BUDGET: i64 = 20_000_000;
 /// the most descending passes narrowing makes after a widening
 const NARROW_PASSES: usize = 4;
 /// What stands in a correlation's key for a group variable nothing bound (datastrat.rs).
-
 fn ds_any_name() -> &'static str {
     brk!("ds_any_writable" => "$ds_any"; DS_ANY)
 }
@@ -3248,6 +3247,8 @@ impl Eval {
 
     /// The kept safety.rofl world brought to `judged` by adding the rows it lacks, where it lacks only rows and the
     /// addition is a delta; else the heap back, for a judgement from the start.
+    // the Ok, an Eval, is the larger variant: a boxed heap would shrink nothing
+    #[allow(clippy::result_large_err)]
     fn safety_added(kept: Rc<(Vec<Vec<Term>>, Eval)>, judged: &[Vec<Term>], h: Heap) -> Result<Eval, Heap> {
         let (was, _) = &*kept;
         // the last row is the refusals `tag::lower` made, which no row adds to
@@ -5674,7 +5675,8 @@ impl Eval {
                 // a lattice can withdraw what a firing read; another may stand
                 if self.lat.has_cells() {
                     let alts = self.staged_alts.entry(slot.key().clone()).or_default();
-                    if !alts.iter().any(|(ar, ap)| *ar == rid && *ap == prems) && !(slot.get().rule == rid && slot.get().prems == prems) {
+                    let given = alts.iter().any(|(ar, ap)| *ar == rid && *ap == prems) || (slot.get().rule == rid && slot.get().prems == prems);
+                    if !given {
                         alts.push((rid, prems.to_vec()));
                         self.bump_steps()?;
                     }
@@ -5967,7 +5969,7 @@ impl Eval {
         if holds {
             // nothing matched; but what a fault below the negation's own
             // call left out could have, or what a hole left unknown
-            if depth == 0 && self.firing && rule_id.is_some() && below && brk!("plain_neg_decides" => false; true) {
+            if let Some(rid) = rule_id.filter(|_| depth == 0 && self.firing && below && brk!("plain_neg_decides" => false; true)) {
                 let u = self.lit_unknown(l, &a.s);
                 if self.fault_count == faults {
                     for f in self.demand_called(l.rel, unknowns) {
@@ -5977,7 +5979,7 @@ impl Eval {
                     self.fault_edge(&u);
                 }
                 self.lat.carry.plain.insert(u.clone());
-                self.lat.carry.undecided.push((rule_id.unwrap(), i, a.s.clone(), Rc::from([u])));
+                self.lat.carry.undecided.push((rid, i, a.s.clone(), Rc::from([u])));
                 return Ok(());
             }
             let read = self.undecided_read(depth, rule_id, |e| brk!("lattice_neg_decides" => None; e.read_unknown(l, &a.s, brk!("plain_neg_decides" => false; true))));
@@ -11529,7 +11531,7 @@ impl Eval {
             picks.retain(|n| at.iter().all(|i| { let v = t.answers[*n].0[*i]; v == args[*i] || (!self.h.is_ground(v) && brk!("demand_done_open_dropped" => false; true)) }));
             let picks: Vec<(Vec<Term>, PremRef)> = picks.into_iter().map(|n| t.answers[n].clone()).collect();
             // AN OPEN ANSWER THIS CALL GROUNDS is the stored fact its own unfolding names, or it unfolds
-            let Some(book) = p.as_atom() else { return None };
+            let book = p.as_atom()?;
             let mut out = Vec::with_capacity(picks.len());
             for (a, r) in picks {
                 if matches!(r, PremRef::Fact(_)) || brk!("demand_done_grounds_open" => true; false) {
@@ -15100,8 +15102,8 @@ impl Eval {
             Some((rule, tick, prems)) => {
                 next.push(WhyTask::Line(format!("{pad}{key}  <= {} @tick {tick}", self.h.name(rule))));
                 if self.why.unk.is_some() && self.store.rec(id).rel == self.v.unknown {
-                    if let Some(k) = self.unknown_atom_key(id) {
-                        self.why.unk.as_mut().unwrap().hit.insert(k);
+                    if let (Some(k), Some(unk)) = (self.unknown_atom_key(id), self.why.unk.as_mut()) {
+                        unk.hit.insert(k);
                     }
                 }
                 self.push_firing(id, rule, tick, prems, indent + 1, o, next);
