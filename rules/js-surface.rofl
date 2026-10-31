@@ -155,11 +155,10 @@ sx_arg_lit[surface](F, I, V)  :- resolves[code](C, F), arg_at[flow](C, I, A), ma
 sx_arg_node[surface](F, I, N) :- resolves[code](C, F), arg_at[flow](C, I, A), may_be_node[flow](A, N).
 sx_called[surface](F)         :- resolves[code](_, F).
 -- how many arguments a call hands over, where it is known (no spread): a parameter past them is `undefined`
-arg_spread[code](C)    :- ast_child[code](C, arguments, _, A), ast_node[code](A, spread_element, _).
 arg_given[code](C)     :- ast_child[code](C, arguments, _, _).
 arg_count[code](C, 0)  :- call_like_v(K), ast_node[code](C, K, _), not arg_given[code](C).
 arg_count[code](C, N)  :- ast_child[code](C, arguments, I, _), N is I + 1, not ast_child[code](C, arguments, N, _),
-                          not arg_spread[code](C).
+                          not call_spreads[code](C).
 sx_arg_short[surface](F, N) :- resolves[code](C, F), arg_count[code](C, N).
 may_be_lit[flow](U, undefined) :- sx_arg_short[surface](F, N), param_of[flow](F, I, Name), I >= N,
                                   param_use[flow](F, Name, U).

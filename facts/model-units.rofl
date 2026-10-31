@@ -1465,7 +1465,6 @@ unit_concludes("rules/js-surface.rofl", sx_effect_module).
 unit_concludes("rules/js-surface.rofl", sx_arg_lit).
 unit_concludes("rules/js-surface.rofl", sx_arg_node).
 unit_concludes("rules/js-surface.rofl", sx_called).
-unit_concludes("rules/js-surface.rofl", arg_spread).
 unit_concludes("rules/js-surface.rofl", arg_given).
 unit_concludes("rules/js-surface.rofl", arg_count).
 unit_concludes("rules/js-surface.rofl", sx_arg_short).
