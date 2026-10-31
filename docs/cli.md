@@ -345,6 +345,16 @@ parser read on stderr and then exits 2. The facts are the ones the notebook
 host gives a `.rofl.md` with `model: js` (`npm run nb`), so a question has the
 same answer in a notebook and here.
 
+Where the JS model cannot be exact it says so in a relation, not by an empty
+answer: `unresolved_call[code](C, Shape)` and `frontier_at` name every call it
+did not resolve; `may_call[code](A, F)` holds what `o[k]()` with an untraced key
+may reach (the functions its receiver holds, never folded into `calls`);
+`merged_param[audit](F, I, N)` names a parameter handed N functions, whose
+answers are their union, not per call. Code under `require.main === module` is
+read as the library's: `runs_as_script("path.js")` reads one file as the script
+node runs, `reads_the_file_as(script)` every file. A notebook cell whose rule
+reads a relation at an arity or in a book nothing writes says so on the cell.
+
 Measured on `examples/services/src` (3 files, 1051 facts), five questions, two
 whys, a whynot and two asks: every answer the same text as the TypeScript
 engine's. The TypeScript engine took 12.4 s for the world and the five; the

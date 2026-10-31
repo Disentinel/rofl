@@ -1732,6 +1732,126 @@ ast_child[code](n4eee02055dfecceb_1ppab8u9ba4, expression, 0, n4eee02055dfecceb_
 ast_child[code](n4eee02055dfecceb_12undirbnh3, body, 2, n4eee02055dfecceb_1ppab8u9ba4).
 ast_child[code](n4eee02055dfecceb_3c3ted0nsu2, program, 0, n4eee02055dfecceb_12undirbnh3).
 ast_file[code](n4eee02055dfecceb_3c3ted0nsu2, "split/cb.ts").
+ast_node[code](n868c94af7517458b_3c3ted0nsu2, file, "split/child.ts").
+ast_line[code](n868c94af7517458b_3c3ted0nsu2, 1).
+ast_node[code](n868c94af7517458b_12undirbnh3, program, "split/child.ts").
+ast_line[code](n868c94af7517458b_12undirbnh3, 1).
+ast_attr[code](n868c94af7517458b_12undirbnh3, source_type, "module").
+ast_node[code](n868c94af7517458b_jovckrearv2, import_declaration, "split/child.ts").
+ast_line[code](n868c94af7517458b_jovckrearv2, 1).
+ast_attr[code](n868c94af7517458b_jovckrearv2, import_kind, "value").
+ast_node[code](n868c94af7517458b_4koc89f3m74, import_namespace_specifier, "split/child.ts").
+ast_line[code](n868c94af7517458b_4koc89f3m74, 1).
+ast_node[code](n868c94af7517458b_ec3h11nl6s5, identifier, "split/child.ts").
+ast_line[code](n868c94af7517458b_ec3h11nl6s5, 1).
+ast_attr[code](n868c94af7517458b_ec3h11nl6s5, name, "fs").
+ast_child[code](n868c94af7517458b_4koc89f3m74, local, 0, n868c94af7517458b_ec3h11nl6s5).
+ast_child[code](n868c94af7517458b_jovckrearv2, specifiers, 0, n868c94af7517458b_4koc89f3m74).
+ast_node[code](n868c94af7517458b_j511f515e32, string_literal, "split/child.ts").
+ast_line[code](n868c94af7517458b_j511f515e32, 1).
+ast_attr[code](n868c94af7517458b_j511f515e32, value, "fs").
+ast_child[code](n868c94af7517458b_jovckrearv2, source, 0, n868c94af7517458b_j511f515e32).
+ast_child[code](n868c94af7517458b_12undirbnh3, body, 0, n868c94af7517458b_jovckrearv2).
+ast_node[code](n868c94af7517458b_8udr9083tr6, import_declaration, "split/child.ts").
+ast_line[code](n868c94af7517458b_8udr9083tr6, 2).
+ast_attr[code](n868c94af7517458b_8udr9083tr6, import_kind, "value").
+ast_node[code](n868c94af7517458b_9h2lbol9j02, import_specifier, "split/child.ts").
+ast_line[code](n868c94af7517458b_9h2lbol9j02, 2).
+ast_node[code](n868c94af7517458b_v03nk598i5, identifier, "split/child.ts").
+ast_line[code](n868c94af7517458b_v03nk598i5, 2).
+ast_attr[code](n868c94af7517458b_v03nk598i5, name, "Job").
+ast_child[code](n868c94af7517458b_9h2lbol9j02, imported, 0, n868c94af7517458b_v03nk598i5).
+ast_attr[code](n868c94af7517458b_9h2lbol9j02, import_kind, "value").
+ast_node[code](n868c94af7517458b_md8446r9b41, identifier, "split/child.ts").
+ast_line[code](n868c94af7517458b_md8446r9b41, 2).
+ast_attr[code](n868c94af7517458b_md8446r9b41, name, "Job").
+ast_child[code](n868c94af7517458b_9h2lbol9j02, local, 0, n868c94af7517458b_md8446r9b41).
+ast_child[code](n868c94af7517458b_8udr9083tr6, specifiers, 0, n868c94af7517458b_9h2lbol9j02).
+ast_node[code](n868c94af7517458b_beob6aa0ms1, string_literal, "split/child.ts").
+ast_line[code](n868c94af7517458b_beob6aa0ms1, 2).
+ast_attr[code](n868c94af7517458b_beob6aa0ms1, value, "./parent.js").
+ast_child[code](n868c94af7517458b_8udr9083tr6, source, 0, n868c94af7517458b_beob6aa0ms1).
+ast_child[code](n868c94af7517458b_12undirbnh3, body, 1, n868c94af7517458b_8udr9083tr6).
+ast_node[code](n868c94af7517458b_hgc82urt8l3, class_declaration, "split/child.ts").
+ast_line[code](n868c94af7517458b_hgc82urt8l3, 4).
+ast_node[code](n868c94af7517458b_m4070d8q05, identifier, "split/child.ts").
+ast_line[code](n868c94af7517458b_m4070d8q05, 4).
+ast_attr[code](n868c94af7517458b_m4070d8q05, name, "CleanJob").
+ast_child[code](n868c94af7517458b_hgc82urt8l3, id, 0, n868c94af7517458b_m4070d8q05).
+ast_node[code](n868c94af7517458b_kg7j2bak4n3, identifier, "split/child.ts").
+ast_line[code](n868c94af7517458b_kg7j2bak4n3, 4).
+ast_attr[code](n868c94af7517458b_kg7j2bak4n3, name, "Job").
+ast_child[code](n868c94af7517458b_hgc82urt8l3, super_class, 0, n868c94af7517458b_kg7j2bak4n3).
+ast_node[code](n868c94af7517458b_6bobbug2h17, class_body, "split/child.ts").
+ast_line[code](n868c94af7517458b_6bobbug2h17, 4).
+ast_node[code](n868c94af7517458b_o8nl4gfv7t6, class_method, "split/child.ts").
+ast_line[code](n868c94af7517458b_o8nl4gfv7t6, 5).
+ast_attr[code](n868c94af7517458b_o8nl4gfv7t6, static, false).
+ast_node[code](n868c94af7517458b_nsqh78tjg97, identifier, "split/child.ts").
+ast_line[code](n868c94af7517458b_nsqh78tjg97, 5).
+ast_attr[code](n868c94af7517458b_nsqh78tjg97, name, "step").
+ast_child[code](n868c94af7517458b_o8nl4gfv7t6, key, 0, n868c94af7517458b_nsqh78tjg97).
+ast_attr[code](n868c94af7517458b_o8nl4gfv7t6, computed, false).
+ast_attr[code](n868c94af7517458b_o8nl4gfv7t6, kind, "method").
+ast_attr[code](n868c94af7517458b_o8nl4gfv7t6, generator, false).
+ast_attr[code](n868c94af7517458b_o8nl4gfv7t6, async, false).
+ast_node[code](n868c94af7517458b_gk1ovu00t36, tstype_annotation, "split/child.ts").
+ast_line[code](n868c94af7517458b_gk1ovu00t36, 5).
+ast_node[code](n868c94af7517458b_h7tsdbl1hm3, tsvoid_keyword, "split/child.ts").
+ast_line[code](n868c94af7517458b_h7tsdbl1hm3, 5).
+ast_child[code](n868c94af7517458b_gk1ovu00t36, type_annotation, 0, n868c94af7517458b_h7tsdbl1hm3).
+ast_child[code](n868c94af7517458b_o8nl4gfv7t6, return_type, 0, n868c94af7517458b_gk1ovu00t36).
+ast_node[code](n868c94af7517458b_un21406nf15, block_statement, "split/child.ts").
+ast_line[code](n868c94af7517458b_un21406nf15, 5).
+ast_node[code](n868c94af7517458b_rsfedugtdu1, expression_statement, "split/child.ts").
+ast_line[code](n868c94af7517458b_rsfedugtdu1, 6).
+ast_node[code](n868c94af7517458b_a2q4kgrrit, call_expression, "split/child.ts").
+ast_line[code](n868c94af7517458b_a2q4kgrrit, 6).
+ast_node[code](n868c94af7517458b_tm977nq0483, member_expression, "split/child.ts").
+ast_line[code](n868c94af7517458b_tm977nq0483, 6).
+ast_node[code](n868c94af7517458b_latf3hm7gp1, identifier, "split/child.ts").
+ast_line[code](n868c94af7517458b_latf3hm7gp1, 6).
+ast_attr[code](n868c94af7517458b_latf3hm7gp1, name, "fs").
+ast_child[code](n868c94af7517458b_tm977nq0483, object, 0, n868c94af7517458b_latf3hm7gp1).
+ast_attr[code](n868c94af7517458b_tm977nq0483, computed, false).
+ast_node[code](n868c94af7517458b_kd4sshtub43, identifier, "split/child.ts").
+ast_line[code](n868c94af7517458b_kd4sshtub43, 6).
+ast_attr[code](n868c94af7517458b_kd4sshtub43, name, "rmSync").
+ast_child[code](n868c94af7517458b_tm977nq0483, property, 0, n868c94af7517458b_kd4sshtub43).
+ast_child[code](n868c94af7517458b_a2q4kgrrit, callee, 0, n868c94af7517458b_tm977nq0483).
+ast_node[code](n868c94af7517458b_6365b47n1d5, string_literal, "split/child.ts").
+ast_line[code](n868c94af7517458b_6365b47n1d5, 6).
+ast_attr[code](n868c94af7517458b_6365b47n1d5, value, "/srv/old").
+ast_child[code](n868c94af7517458b_a2q4kgrrit, arguments, 0, n868c94af7517458b_6365b47n1d5).
+ast_child[code](n868c94af7517458b_rsfedugtdu1, expression, 0, n868c94af7517458b_a2q4kgrrit).
+ast_child[code](n868c94af7517458b_un21406nf15, body, 0, n868c94af7517458b_rsfedugtdu1).
+ast_child[code](n868c94af7517458b_o8nl4gfv7t6, body, 0, n868c94af7517458b_un21406nf15).
+ast_child[code](n868c94af7517458b_6bobbug2h17, body, 0, n868c94af7517458b_o8nl4gfv7t6).
+ast_child[code](n868c94af7517458b_hgc82urt8l3, body, 0, n868c94af7517458b_6bobbug2h17).
+ast_child[code](n868c94af7517458b_12undirbnh3, body, 2, n868c94af7517458b_hgc82urt8l3).
+ast_node[code](n868c94af7517458b_5g31tfao6q3, expression_statement, "split/child.ts").
+ast_line[code](n868c94af7517458b_5g31tfao6q3, 9).
+ast_node[code](n868c94af7517458b_onhpsh4g3s7, call_expression, "split/child.ts").
+ast_line[code](n868c94af7517458b_onhpsh4g3s7, 9).
+ast_node[code](n868c94af7517458b_he5j7dpuum5, member_expression, "split/child.ts").
+ast_line[code](n868c94af7517458b_he5j7dpuum5, 9).
+ast_node[code](n868c94af7517458b_gnvf9p2v98, new_expression, "split/child.ts").
+ast_line[code](n868c94af7517458b_gnvf9p2v98, 9).
+ast_node[code](n868c94af7517458b_ovrie6a73h6, identifier, "split/child.ts").
+ast_line[code](n868c94af7517458b_ovrie6a73h6, 9).
+ast_attr[code](n868c94af7517458b_ovrie6a73h6, name, "CleanJob").
+ast_child[code](n868c94af7517458b_gnvf9p2v98, callee, 0, n868c94af7517458b_ovrie6a73h6).
+ast_child[code](n868c94af7517458b_he5j7dpuum5, object, 0, n868c94af7517458b_gnvf9p2v98).
+ast_attr[code](n868c94af7517458b_he5j7dpuum5, computed, false).
+ast_node[code](n868c94af7517458b_8seivf6ffr3, identifier, "split/child.ts").
+ast_line[code](n868c94af7517458b_8seivf6ffr3, 9).
+ast_attr[code](n868c94af7517458b_8seivf6ffr3, name, "run").
+ast_child[code](n868c94af7517458b_he5j7dpuum5, property, 0, n868c94af7517458b_8seivf6ffr3).
+ast_child[code](n868c94af7517458b_onhpsh4g3s7, callee, 0, n868c94af7517458b_he5j7dpuum5).
+ast_child[code](n868c94af7517458b_5g31tfao6q3, expression, 0, n868c94af7517458b_onhpsh4g3s7).
+ast_child[code](n868c94af7517458b_12undirbnh3, body, 3, n868c94af7517458b_5g31tfao6q3).
+ast_child[code](n868c94af7517458b_3c3ted0nsu2, program, 0, n868c94af7517458b_12undirbnh3).
+ast_file[code](n868c94af7517458b_3c3ted0nsu2, "split/child.ts").
 ast_node[code](n1684850c959c2a12_3c3ted0nsu2, file, "split/consumer.ts").
 ast_line[code](n1684850c959c2a12_3c3ted0nsu2, 1).
 ast_node[code](n1684850c959c2a12_12undirbnh3, program, "split/consumer.ts").
@@ -2612,6 +2732,86 @@ ast_child[code](n3ea02c0aa5d7188d_g1si6b55a76, declaration, 0, n3ea02c0aa5d7188d
 ast_child[code](n3ea02c0aa5d7188d_12undirbnh3, body, 4, n3ea02c0aa5d7188d_g1si6b55a76).
 ast_child[code](n3ea02c0aa5d7188d_3c3ted0nsu2, program, 0, n3ea02c0aa5d7188d_12undirbnh3).
 ast_file[code](n3ea02c0aa5d7188d_3c3ted0nsu2, "split/locations.ts").
+ast_node[code](nc8becf8b83426b75_3c3ted0nsu2, file, "split/parent.ts").
+ast_line[code](nc8becf8b83426b75_3c3ted0nsu2, 1).
+ast_node[code](nc8becf8b83426b75_12undirbnh3, program, "split/parent.ts").
+ast_line[code](nc8becf8b83426b75_12undirbnh3, 1).
+ast_attr[code](nc8becf8b83426b75_12undirbnh3, source_type, "module").
+ast_node[code](nc8becf8b83426b75_31nomfs51d3, export_named_declaration, "split/parent.ts").
+ast_line[code](nc8becf8b83426b75_31nomfs51d3, 1).
+ast_attr[code](nc8becf8b83426b75_31nomfs51d3, export_kind, "value").
+ast_node[code](nc8becf8b83426b75_8558aaffa31, class_declaration, "split/parent.ts").
+ast_line[code](nc8becf8b83426b75_8558aaffa31, 1).
+ast_node[code](nc8becf8b83426b75_e09jvo0op35, identifier, "split/parent.ts").
+ast_line[code](nc8becf8b83426b75_e09jvo0op35, 1).
+ast_attr[code](nc8becf8b83426b75_e09jvo0op35, name, "Job").
+ast_child[code](nc8becf8b83426b75_8558aaffa31, id, 0, nc8becf8b83426b75_e09jvo0op35).
+ast_node[code](nc8becf8b83426b75_vvkvqhuib07, class_body, "split/parent.ts").
+ast_line[code](nc8becf8b83426b75_vvkvqhuib07, 1).
+ast_node[code](nc8becf8b83426b75_78bc9jnf6m6, class_method, "split/parent.ts").
+ast_line[code](nc8becf8b83426b75_78bc9jnf6m6, 2).
+ast_attr[code](nc8becf8b83426b75_78bc9jnf6m6, static, false).
+ast_node[code](nc8becf8b83426b75_hbhs9m3oit5, identifier, "split/parent.ts").
+ast_line[code](nc8becf8b83426b75_hbhs9m3oit5, 2).
+ast_attr[code](nc8becf8b83426b75_hbhs9m3oit5, name, "run").
+ast_child[code](nc8becf8b83426b75_78bc9jnf6m6, key, 0, nc8becf8b83426b75_hbhs9m3oit5).
+ast_attr[code](nc8becf8b83426b75_78bc9jnf6m6, computed, false).
+ast_attr[code](nc8becf8b83426b75_78bc9jnf6m6, kind, "method").
+ast_attr[code](nc8becf8b83426b75_78bc9jnf6m6, generator, false).
+ast_attr[code](nc8becf8b83426b75_78bc9jnf6m6, async, false).
+ast_node[code](nc8becf8b83426b75_sfjube6kr66, tstype_annotation, "split/parent.ts").
+ast_line[code](nc8becf8b83426b75_sfjube6kr66, 2).
+ast_node[code](nc8becf8b83426b75_l7p67l4r8d3, tsvoid_keyword, "split/parent.ts").
+ast_line[code](nc8becf8b83426b75_l7p67l4r8d3, 2).
+ast_child[code](nc8becf8b83426b75_sfjube6kr66, type_annotation, 0, nc8becf8b83426b75_l7p67l4r8d3).
+ast_child[code](nc8becf8b83426b75_78bc9jnf6m6, return_type, 0, nc8becf8b83426b75_sfjube6kr66).
+ast_node[code](nc8becf8b83426b75_mq0misgl5b1, block_statement, "split/parent.ts").
+ast_line[code](nc8becf8b83426b75_mq0misgl5b1, 2).
+ast_node[code](nc8becf8b83426b75_kbme0avvui3, expression_statement, "split/parent.ts").
+ast_line[code](nc8becf8b83426b75_kbme0avvui3, 3).
+ast_node[code](nc8becf8b83426b75_cr24uj0at81, call_expression, "split/parent.ts").
+ast_line[code](nc8becf8b83426b75_cr24uj0at81, 3).
+ast_node[code](nc8becf8b83426b75_gd0q109t512, member_expression, "split/parent.ts").
+ast_line[code](nc8becf8b83426b75_gd0q109t512, 3).
+ast_node[code](nc8becf8b83426b75_d3gmdqc5ki1, this_expression, "split/parent.ts").
+ast_line[code](nc8becf8b83426b75_d3gmdqc5ki1, 3).
+ast_child[code](nc8becf8b83426b75_gd0q109t512, object, 0, nc8becf8b83426b75_d3gmdqc5ki1).
+ast_attr[code](nc8becf8b83426b75_gd0q109t512, computed, false).
+ast_node[code](nc8becf8b83426b75_ado4l3u53o6, identifier, "split/parent.ts").
+ast_line[code](nc8becf8b83426b75_ado4l3u53o6, 3).
+ast_attr[code](nc8becf8b83426b75_ado4l3u53o6, name, "step").
+ast_child[code](nc8becf8b83426b75_gd0q109t512, property, 0, nc8becf8b83426b75_ado4l3u53o6).
+ast_child[code](nc8becf8b83426b75_cr24uj0at81, callee, 0, nc8becf8b83426b75_gd0q109t512).
+ast_child[code](nc8becf8b83426b75_kbme0avvui3, expression, 0, nc8becf8b83426b75_cr24uj0at81).
+ast_child[code](nc8becf8b83426b75_mq0misgl5b1, body, 0, nc8becf8b83426b75_kbme0avvui3).
+ast_child[code](nc8becf8b83426b75_78bc9jnf6m6, body, 0, nc8becf8b83426b75_mq0misgl5b1).
+ast_child[code](nc8becf8b83426b75_vvkvqhuib07, body, 0, nc8becf8b83426b75_78bc9jnf6m6).
+ast_node[code](nc8becf8b83426b75_dtercths0q3, class_method, "split/parent.ts").
+ast_line[code](nc8becf8b83426b75_dtercths0q3, 5).
+ast_attr[code](nc8becf8b83426b75_dtercths0q3, static, false).
+ast_node[code](nc8becf8b83426b75_pt15ec9hur, identifier, "split/parent.ts").
+ast_line[code](nc8becf8b83426b75_pt15ec9hur, 5).
+ast_attr[code](nc8becf8b83426b75_pt15ec9hur, name, "step").
+ast_child[code](nc8becf8b83426b75_dtercths0q3, key, 0, nc8becf8b83426b75_pt15ec9hur).
+ast_attr[code](nc8becf8b83426b75_dtercths0q3, computed, false).
+ast_attr[code](nc8becf8b83426b75_dtercths0q3, kind, "method").
+ast_attr[code](nc8becf8b83426b75_dtercths0q3, generator, false).
+ast_attr[code](nc8becf8b83426b75_dtercths0q3, async, false).
+ast_node[code](nc8becf8b83426b75_h7cvv8t3it3, tstype_annotation, "split/parent.ts").
+ast_line[code](nc8becf8b83426b75_h7cvv8t3it3, 5).
+ast_node[code](nc8becf8b83426b75_vp55e1ma5i7, tsvoid_keyword, "split/parent.ts").
+ast_line[code](nc8becf8b83426b75_vp55e1ma5i7, 5).
+ast_child[code](nc8becf8b83426b75_h7cvv8t3it3, type_annotation, 0, nc8becf8b83426b75_vp55e1ma5i7).
+ast_child[code](nc8becf8b83426b75_dtercths0q3, return_type, 0, nc8becf8b83426b75_h7cvv8t3it3).
+ast_node[code](nc8becf8b83426b75_vpqbpsha2p2, block_statement, "split/parent.ts").
+ast_line[code](nc8becf8b83426b75_vpqbpsha2p2, 5).
+ast_child[code](nc8becf8b83426b75_dtercths0q3, body, 0, nc8becf8b83426b75_vpqbpsha2p2).
+ast_child[code](nc8becf8b83426b75_vvkvqhuib07, body, 1, nc8becf8b83426b75_dtercths0q3).
+ast_child[code](nc8becf8b83426b75_8558aaffa31, body, 0, nc8becf8b83426b75_vvkvqhuib07).
+ast_child[code](nc8becf8b83426b75_31nomfs51d3, declaration, 0, nc8becf8b83426b75_8558aaffa31).
+ast_child[code](nc8becf8b83426b75_12undirbnh3, body, 0, nc8becf8b83426b75_31nomfs51d3).
+ast_child[code](nc8becf8b83426b75_3c3ted0nsu2, program, 0, nc8becf8b83426b75_12undirbnh3).
+ast_file[code](nc8becf8b83426b75_3c3ted0nsu2, "split/parent.ts").
 ast_node[code](n7260e653f095f551_3c3ted0nsu2, file, "split/reexports.ts").
 ast_line[code](n7260e653f095f551_3c3ted0nsu2, 1).
 ast_node[code](n7260e653f095f551_12undirbnh3, program, "split/reexports.ts").
@@ -3269,12 +3469,14 @@ has_file[fs]("mini/node", "pfs.ts").
 has_file[fs]("mini/node", "server.ts").
 has_file[fs]("split", "app.ts").
 has_file[fs]("split", "cb.ts").
+has_file[fs]("split", "child.ts").
 has_file[fs]("split", "consumer.ts").
 has_file[fs]("split", "each.ts").
 has_file[fs]("split", "errors.ts").
 has_file[fs]("split", "guard.ts").
 has_file[fs]("split", "lib.ts").
 has_file[fs]("split", "locations.ts").
+has_file[fs]("split", "parent.ts").
 has_file[fs]("split", "reexports.ts").
 has_file[fs]("split", "store.ts").
 has_file[fs]("split", "util.ts").
@@ -3419,6 +3621,15 @@ str_char0[code]("/tmp/a2", "/").
 str_seg[code]("/tmp/a2", 0, "").
 str_seg[code]("/tmp/a2", 1, "tmp").
 str_seg[code]("/tmp/a2", 2, "a2").
+str_segs[code]("./parent.js", 2).
+str_char0[code]("./parent.js", ".").
+str_seg[code]("./parent.js", 0, ".").
+str_seg[code]("./parent.js", 1, "parent.js").
+str_segs[code]("/srv/old", 3).
+str_char0[code]("/srv/old", "/").
+str_seg[code]("/srv/old", 0, "").
+str_seg[code]("/srv/old", 1, "srv").
+str_seg[code]("/srv/old", 2, "old").
 str_segs[code]("./reexports.js", 2).
 str_char0[code]("./reexports.js", ".").
 str_seg[code]("./reexports.js", 0, ".").

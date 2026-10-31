@@ -14734,6 +14734,15 @@ type WnLine = (String, Option<WnMark>);
 /// every chain that ends.
 const WN_FAR: usize = 1_000_000;
 
+/// The lines a whynot prints: every one under `all`, else the nearest failure.
+fn wn_shown(lines: Vec<WnLine>, all: bool) -> Vec<String> {
+    let kept = if all { None } else { Some(wn_nearest(&lines)).filter(|k| k.len() < lines.len()) };
+    match kept {
+        Some(kept) => kept.into_iter().map(|i| lines[i].0.clone()).chain(["  (every failure: --all)".to_string()]).collect(),
+        None => lines.into_iter().map(|l| l.0).collect(),
+    }
+}
+
 /// THE NEAREST FAILURE of a whynot's walk: the lines kept. A chain costs the
 /// premises it leaves unmet: at each rule those after the one it failed at,
 /// and one at its end, a premise nothing supports, a negation blocked or a
@@ -16481,11 +16490,7 @@ impl Eval {
     /// level, and each line is written once.
     fn explain_tree(&mut self, lit: &Lit, ctx: &mut WnCtx) -> Result<Vec<String>, Halt> {
         let lines = self.explain_from(vec![WnTask::Failure(lit.clone(), 1)], ctx)?;
-        let kept = if ctx.all { None } else { Some(wn_nearest(&lines)).filter(|k| k.len() < lines.len()) };
-        Ok(match kept {
-            Some(kept) => kept.into_iter().map(|i| lines[i].0.clone()).chain(["  (every failure: --all)".to_string()]).collect(),
-            None => lines.into_iter().map(|l| l.0).collect(),
-        })
+        Ok(wn_shown(lines, ctx.all))
     }
 
     fn explain_from(&mut self, mut tasks: Vec<WnTask>, ctx: &mut WnCtx) -> Result<Vec<WnLine>, Halt> {
@@ -16543,6 +16548,7 @@ impl Eval {
         let head = self.vol_of_lit(&walk, lit, &Subst::default());
         let rules: Vec<Rc<ERule>> = self.rules.iter().chain(&self.alias_rules).filter(|r| r.clause.head.rel == lit.rel).cloned().collect();
         let mut walks: Vec<(Rc<ERule>, HashMap<String, HashMap<String, Option<Lit>>>, Option<String>)> = Vec::new();
+        self.wn_left.clear();
         for r in rules {
             let (rn, s0) = self.unify_written_head(&r, lit);
             let Some(s0) = s0 else { continue };
@@ -16583,9 +16589,10 @@ impl Eval {
                 if keys.is_empty() {
                     continue;
                 }
-                tasks.push(WnTask::Line(format!("  rule {}: {}", self.h.name(r.id), r.canon), None));
+                tasks.push(WnTask::Line(format!("  rule {}: {}", self.h.name(r.id), r.canon), Some((WnKind::Rule, 1, 0))));
                 for f in &keys {
-                    tasks.push(WnTask::Line(format!("    failed premise: {f}"), None));
+                    let left = self.wn_left.get(f).copied().unwrap_or(0);
+                    tasks.push(WnTask::Line(format!("    failed premise: {f}"), Some((WnKind::Premise, 1, left))));
                     if let Some(Some(sub)) = own.get(f) {
                         tasks.push(WnTask::Deeper(sub.clone(), 2));
                     }
@@ -16598,10 +16605,11 @@ impl Eval {
                 nodes: 0,
                 path: HashSet::from([self.cycle_key(lit)]),
                 done: HashMap::new(),
-                all: true,
+                all: b.all,
             };
             let mut text = vec![format!("whynot {k} in {name}:")];
-            text.extend(self.explain_from(tasks, &mut ctx)?.into_iter().map(|l| l.0));
+            let lines = self.explain_from(tasks, &mut ctx)?;
+            text.extend(wn_shown(lines, b.all));
             rows.push(WhynotFile { found: found.get(&name).copied().unwrap_or(0), file: name, stops, text: text.join("\n") });
         }
         Ok(rows)

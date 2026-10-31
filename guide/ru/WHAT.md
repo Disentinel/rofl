@@ -163,8 +163,16 @@ checkout.rofl.md:22: cell 2 · rofl
   checkout.rofl.md:22: whynot "safeCheckout" is a risky export
     by file:
       checkout.js: none; it stops at: [function safeCheckout() at checkout.js:9] may throw, in the code
+        why not "safeCheckout" is a risky export in checkout.js:
+          by the rule: N is a risky export if F is a function, in the code, F answers to N, in the code, F is exported, in the code, F may throw, in the code
+            it stops at: [function safeCheckout() at checkout.js:9] may throw, in the code
+              by the rule: F may throw, in the code if G may throw, in the code, G runs its body at once, in the code, C resolves to G, in the code, F is the nearest function of C, in the code, not C is caught here, in the code
+                it stops at: not [checkout() at checkout.js:11] is caught here, in the code, and [checkout() at checkout.js:11] is caught here, in the code does
+          (every failure: --all)
       pay.js: none; it stops at: Some function answers to "safeCheckout", in the code -- none in this file
-    (each file's demonstration: --all)
+        why not "safeCheckout" is a risky export in pay.js:
+          by the rule: N is a risky export if F is a function, in the code, F answers to N, in the code, F is exported, in the code, F may throw, in the code
+            it stops at: Some function answers to "safeCheckout", in the code -- none in this file
 checkout.rofl.md: 1 question answered, 1 invariant fails, 2 explained — FAILS at line 28 (exit 1; see rofl-nb --help)
 ```
 <!-- END run -->

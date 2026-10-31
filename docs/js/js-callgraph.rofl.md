@@ -27,7 +27,7 @@ Reads:
 - from facts/js-host.rofl, in the main:
   - <a id="host_calls_back"></a>An origin Origin calls back its argument Key and an argument Arg and a when When (`host_calls_back`)
 - from js-concat, in the flow: [may_be_lit](js-concat.rofl.md#may_be_lit), [may_be_node](js-concat.rofl.md#may_be_node)
-- from js-dataflow: [assign_binder](js-dataflow.rofl.md#assign_binder), [assigned](js-dataflow.rofl.md#assigned), [binder](js-dataflow.rofl.md#binder), [class_or_namespace](js-dataflow.rofl.md#class_or_namespace), [decl_at_top](js-dataflow.rofl.md#decl_at_top), [export_local](js-dataflow.rofl.md#export_local), [free_global](js-dataflow.rofl.md#free_global), [imports_name](js-dataflow.rofl.md#imports_name), [imports_ns](js-dataflow.rofl.md#imports_ns), [key_name](js-dataflow.rofl.md#key_name), [module_export](js-dataflow.rofl.md#module_export), [named_decl](js-dataflow.rofl.md#named_decl), [ns_export](js-dataflow.rofl.md#ns_export), [own_name](js-dataflow.rofl.md#own_name), [sees_binder](js-dataflow.rofl.md#sees_binder), [sees_decl](js-dataflow.rofl.md#sees_decl), [top_read](js-dataflow.rofl.md#top_read), [ts_namespace](js-dataflow.rofl.md#ts_namespace)
+- from js-dataflow: [assign_binder](js-dataflow.rofl.md#assign_binder), [assigned](js-dataflow.rofl.md#assigned), [binder](js-dataflow.rofl.md#binder), [class_or_namespace](js-dataflow.rofl.md#class_or_namespace), [decl_at_top](js-dataflow.rofl.md#decl_at_top), [export_local](js-dataflow.rofl.md#export_local), [free_global](js-dataflow.rofl.md#free_global), [imports_name](js-dataflow.rofl.md#imports_name), [imports_ns](js-dataflow.rofl.md#imports_ns), [key_name](js-dataflow.rofl.md#key_name), [keyed_quiet](js-dataflow.rofl.md#keyed_quiet), [module_export](js-dataflow.rofl.md#module_export), [named_decl](js-dataflow.rofl.md#named_decl), [ns_export](js-dataflow.rofl.md#ns_export), [own_name](js-dataflow.rofl.md#own_name), [sees_binder](js-dataflow.rofl.md#sees_binder), [sees_decl](js-dataflow.rofl.md#sees_decl), [top_read](js-dataflow.rofl.md#top_read), [ts_namespace](js-dataflow.rofl.md#ts_namespace)
 - from js-dataflow, in the flow: [arg_at](js-dataflow.rofl.md#arg_at), [assign_reaches_unscoped](js-dataflow.rofl.md#assign_reaches_unscoped), [class_like](js-dataflow.rofl.md#class_like), [class_member_static](js-dataflow.rofl.md#class_member_static), [class_method_of](js-dataflow.rofl.md#class_method_of), [ctor_of](js-dataflow.rofl.md#ctor_of), [inst_of](js-dataflow.rofl.md#inst_of), [kind_proto](js-dataflow.rofl.md#kind_proto), [member_at](js-dataflow.rofl.md#member_at), [member_node_v](js-dataflow.rofl.md#member_node_v), [member_obj](js-dataflow.rofl.md#member_obj), [member_value](js-dataflow.rofl.md#member_value), [module_object](js-dataflow.rofl.md#module_object), [nearest_v](js-dataflow.rofl.md#nearest_v), [param_of](js-dataflow.rofl.md#param_of), [param_use](js-dataflow.rofl.md#param_use), [prototype_of](js-dataflow.rofl.md#prototype_of), [returns](js-dataflow.rofl.md#returns), [selects](js-dataflow.rofl.md#selects), [super_of](js-dataflow.rofl.md#super_of), [this_host](js-dataflow.rofl.md#this_host)
 - from js-dataflow, in the main: [builtin_prototype](js-dataflow.rofl.md#builtin_prototype), [class_field_kind](js-dataflow.rofl.md#class_field_kind), [lib_member](js-dataflow.rofl.md#lib_member), [value_transparent](js-dataflow.rofl.md#value_transparent)
 - from js-globals: [es_global](js-globals.rofl.md#es_global), [es_static](js-globals.rofl.md#es_static)
@@ -39,7 +39,7 @@ Reads:
 - from js-modules: [module_target](js-modules.rofl.md#module_target), [reexport_offers](js-modules.rofl.md#reexport_offers)
 - from js-structure: [ast_name](js-structure.rofl.md#ast_name)
 - from js-surface, in the flow: [fn_label](js-surface.rofl.md#fn_label), [fn_value](js-surface.rofl.md#fn_value), [ret_node_any](js-surface.rofl.md#ret_node_any)
-- from js-surface, in the surface: [sx_esc](js-surface.rofl.md#sx_esc), [sx_module](js-surface.rofl.md#sx_module), [sx_name](js-surface.rofl.md#sx_name)
+- from js-surface, in the surface: [sx_arg_node](js-surface.rofl.md#sx_arg_node), [sx_esc](js-surface.rofl.md#sx_esc), [sx_module](js-surface.rofl.md#sx_module), [sx_name](js-surface.rofl.md#sx_name)
 - from outside these files:
   - <a id="ast_file"></a>`ast_file`
   - <a id="ast_within"></a>A node is within a node (`ast_within`)
@@ -607,6 +607,30 @@ C passes the function F named Name at an index I if all of:
   - [`fn_value`](js-surface.rofl.md#fn_value)(F);
   - [`sx_name`](js-surface.rofl.md#sx_name)(X, Name).
 
+> a function written in place is named by its own name, `anonymous` when it has none
+
+C passes the function X named Name at an index I either:
+
+1. if all of:
+   - C [is written as the argument](#written_arg) at I X;
+   - X is a [function](#fn_node);
+   - X [answers to](#fn_name) Name;
+2. if all of:
+   - C [is written as the argument](#written_arg) at I X;
+   - X is a [function](#fn_node);
+   - Name is `anonymous`;
+   - unless X [answers to](#fn_name) some name.
+
+> a member handed over (`bus.on(x, this.onMsg)`) is named by its key
+
+C passes the function F named Key at an index I if all of:
+  - C [is written as the argument](#written_arg) at I a [member access](js-dataflow.rofl.md#member_node_v) X;
+  - X [selects](js-dataflow.rofl.md#selects) Key;
+  - X [points to](js-concat.rofl.md#may_be_node) F;
+  - [`fn_value`](js-surface.rofl.md#fn_value)(F).
+
+<a id="written_arg"></a>A node is written as the argument at an index I a node X if it [passes](js-dataflow.rofl.md#arg_at) X at I and X is the I-th of the `arguments` of it.
+
 > A function handed over and CALLED, by facts/js-host.rofl's `host_calls_back`.
 > Not a `resolves` edge: rules/js-dataflow.rofl binds a resolved call's
 > arguments to the callee's parameters and its return to the call's value, and
@@ -665,6 +689,18 @@ A node
 
 In the audit:
 
+> a function that may run code outside the model: it makes a call nothing resolves (a quiet
+> collection method is not one, rules/js-dataflow.rofl 7c)
+
+In the code:
+
+<a id="runs_outside"></a>`runs_outside`(F) if all of:
+  - a node C [is unresolved](#unresolved_call) with some shape;
+  - F [is the nearest function of](#nearest_fn) C;
+  - unless [`keyed_quiet`](js-dataflow.rofl.md#keyed_quiet)(C).
+
+In the audit:
+
 <a id="stdlib_member"></a>C calls the stdlib member Key of a prototype P if all of:
   - C [is unresolved](#unresolved_call) with some shape;
   - [the callee](#callee_of) of C is a node N;
@@ -676,6 +712,40 @@ In the audit:
 Declared as facts:
 
 - <a id="shape_because"></a>`shape_because` — rows from facts/js-callgraph.rofl
+
+> `o[k]()` with a key nothing traces resolves to nothing, and stays in
+> `unresolved_call`. When the receiver is known, the functions it holds are what
+> the call may reach: a may-set beside `calls`, never folded into it.
+
+In the code:
+
+<a id="may_resolve"></a>C may resolve to a node F if all of:
+  - C [is unresolved](#unresolved_call) with `s_computed_dynamic_key`;
+  - [the callee](#callee_of) of C is a node N;
+  - [`member_obj`](js-dataflow.rofl.md#member_obj)(N, something, Obj);
+  - [the member](js-dataflow.rofl.md#member_value) some key of a node Obj holds a node V;
+  - V [points to](js-concat.rofl.md#may_be_node) F;
+  - [`fn_value`](js-surface.rofl.md#fn_value)(F).
+
+<a id="may_call"></a>Caller may call F either:
+
+1. if a node C [may resolve to](#may_resolve) F and Caller [is the nearest function of](#nearest_fn) C;
+2. if a node C [may resolve to](#may_resolve) F and C [runs at the top of](#top_call) Caller.
+
+> A parameter handed more than one function is one place for all of them: what
+> the function does with it (calls it, stores it, hands it on) is answered for
+> their union, not per call. Named, so an answer through it is not taken as exact.
+
+In the flow:
+
+<a id="handed_fn"></a>F is handed the function at an index I G if [`sx_arg_node`](js-surface.rofl.md#sx_arg_node)(F, I, G) and [`fn_value`](js-surface.rofl.md#fn_value)(G).
+
+In the audit:
+
+<a id="merged_param"></a>F merges its parameter at an index I handed a functions N if all of:
+  - F [is handed the function](#handed_fn) at I some function;
+  - N is the number of G such that (F [is handed the function](#handed_fn) at I G);
+  - N > 1.
 
 > An unresolved site attributed to the unit that contains it; a missing edge
 > whose caller has no row here is a SILENT under-report. A transfer site that
@@ -2044,4 +2114,53 @@ In the audit:
 | `code` | `flow` |
 | `audit` | `flow` |
 | `code` | `surface` |
+
+## A CALL SHORT OF ITS CALLEE: `requestLog(logger)` against
+
+> `function requestLog(req, res, next) { res.on(...) }`. The parameter the call
+> does not pass is `undefined` in the body, and the body reads a member of it
+> without ever testing it (`res && ...`, `res ? ... : ...`, `if (!res)`): a
+> TypeError when that line runs. A call with a spread passes what it cannot
+> count, and a parameter with a default is never `undefined`; neither is asked.
+
+In the code:
+
+<a id="call_spreads"></a>`call_spreads`(C) if a [spread](#noun-spread) S [is among the](#ast_child) `arguments` of a node C.
+
+<a id="call_passes"></a>`call_passes`(C, I) if some node is the I-th of the `arguments` of a node C.
+
+<a id="param_defaulted"></a>`param_defaulted`(F, I) if an [assignment pattern](#noun-assignment_pattern) P is the I-th of the `params` of a node F.
+
+<a id="param_test"></a>`param_test`(B, T) either:
+
+1. if the `left` of a node B is a node T and [the attribute](#ast_attr) `operator` of B is "&&" or "||" or "??";
+2. if the `argument` of a node B is a node T and [the attribute](#ast_attr) `operator` of B is "!";
+3. if the `test` of a node B is a node T.
+
+In the flow:
+
+<a id="param_tested"></a>`param_tested`(F, Name) if F [uses](js-dataflow.rofl.md#param_use) Name at a node T and [`param_test`](#param_test)(something, T).
+
+> the callee's side, published: parameter I of F is read through, untested, at DefFile:DefLine
+
+In the surface:
+
+<a id="sx_param_deref"></a>`sx_param_deref`(F, I, Name, DefFile, DefLine) if all of:
+  - F [takes](js-dataflow.rofl.md#param_of) Name at an index I;
+  - F [uses](js-dataflow.rofl.md#param_use) Name at a node U;
+  - the `object` of a [member expression](#noun-member_expression) M is U;
+  - U [is in file](js-model.rofl.md#ast_node) DefFile;
+  - U [is at line](js-model.rofl.md#ast_line) DefLine;
+  - unless [`param_defaulted`](#param_defaulted)(F, I);
+  - unless [`param_tested`](#param_tested)(F, Name).
+
+In the flow:
+
+<a id="unpassed_deref_at"></a>`unpassed_deref_at`(File, Line, Name, DefFile, DefLine) if all of:
+  - a node C [resolves to](#resolves) F;
+  - [`sx_param_deref`](#sx_param_deref)(F, I, Name, DefFile, DefLine);
+  - C [is in file](js-model.rofl.md#ast_node) File;
+  - C [is at line](js-model.rofl.md#ast_line) Line;
+  - unless [`call_passes`](#call_passes)(C, I);
+  - unless [`call_spreads`](#call_spreads)(C).
 
