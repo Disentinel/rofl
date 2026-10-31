@@ -140,8 +140,12 @@ fn strings(r: &Value, k: &str) -> Result<Option<Vec<String>>, String> {
     }
 }
 
-/// A world's facts, cells and rows answered from a structure, by key.
-type Keys = (HashMap<String, u32>, HashMap<String, u32>, HashMap<String, (u32, u32, Vec<rofl::term::Term>)>);
+/// A world's facts and rows by key, a relation at a time as one is first read, and its cells by key.
+#[derive(Default)]
+struct Keys {
+    rels: HashMap<String, (HashMap<String, u32>, HashMap<String, (u32, u32, Vec<rofl::term::Term>)>)>,
+    cells: Option<HashMap<String, u32>>,
+}
 
 struct Server {
     sessions: HashMap<u64, Session>,
@@ -492,23 +496,27 @@ impl Server {
         let id = session_id(r)?;
         let s = self.sessions.get_mut(&id).ok_or_else(|| format!("no such session: {id}"))?;
         let e = &mut s.eval;
-        let (facts, cells, rows) = self.keys.entry(id).or_insert_with(|| {
-            let facts = e.store.live_ids().into_iter().map(|f| (e.store.key(&e.h, f), f)).collect();
-            let cells = e.store.cells_in_order(&e.h).into_iter().map(|(c, _)| { let mut k = String::new(); e.store.write_cell_key(&e.h, c, &mut k); (k, c) }).collect();
-            let rows = e.store.virtual_facts(&e.h, None).into_iter().map(|r| { let mut k = String::new(); rofl::store::write_fact_key(&e.h, r.0, r.1, &r.2, &mut k); (k, r) }).collect();
-            (facts, cells, rows)
+        let keys = self.keys.entry(id).or_default();
+        if op == "cell" {
+            let cells = keys.cells.get_or_insert_with(|| e.store.cells_in_order(&e.h).into_iter().map(|(c, _)| { let mut k = String::new(); e.store.write_cell_key(&e.h, c, &mut k); (k, c) }).collect());
+            return Ok(json!({ "cell": cells.get(&key).map(|c| rofl::seed::cell_json(&e.h, &e.store, *c, None)) }));
+        }
+        let (facts, rows) = keys.rels.entry(key[..key.find('[').unwrap_or(key.len())].to_string()).or_insert_with_key(|rel| {
+            let rel = e.h.intern(rel);
+            let facts = e.store.rel_all(&e.h, rel).into_iter().map(|f| (e.store.key(&e.h, f), f)).collect();
+            let rows = e.store.virtual_facts(&e.h, Some(rel)).into_iter().map(|r| { let mut k = String::new(); rofl::store::write_fact_key(&e.h, r.0, r.1, &r.2, &mut k); (k, r) }).collect();
+            (facts, rows)
         });
         let row = rows.get(&key).cloned();
         Ok(match op {
             "fact" => json!({ "fact": facts.get(&key).map(|f| rofl::seed::fact_json(&e.h, &e.store, *f)).or_else(|| row.map(|(r, b, args)| rofl::seed::virtual_json(&e.h, r, b, &args))) }),
-            "firings" => json!({ "firings": match (facts.get(&key), row) {
+            _ => json!({ "firings": match (facts.get(&key), row) {
                 (Some(f), _) => rofl::seed::firings_json(&e.h, &e.store, *f),
                 (None, Some((r, b, args))) if args.len() == 2 => e.store.virtual_firing(&e.h, r, b, args[0], args[1]).map(|(rule, tick, prems)| {
                     vec![json!({ "ruleId": e.h.name(rule), "tick": tick, "prems": prems.iter().map(|k| json!({ "t": "fact", "key": k })).collect::<Vec<_>>() })]
                 }).unwrap_or_default(),
                 _ => Vec::new(),
             } }),
-            _ => json!({ "cell": cells.get(&key).map(|c| rofl::seed::cell_json(&e.h, &e.store, *c, None)) }),
         })
     }
 
