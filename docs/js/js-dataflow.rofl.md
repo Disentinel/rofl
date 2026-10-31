@@ -2929,8 +2929,8 @@ A node U may be the literal L either:
 <a id="keyed_read_ordered"></a>C reads back the value put before it V if all of:
   - [`keyed_read`](#keyed_read)(C, V);
   - V [is put before](#keyed_put_before) C;
-  - unless V [is taken out before](#keyed_taken_out) C by some call;
-  - unless [`keyed_vdrop_may`](#keyed_vdrop_may)(V, C).
+  - unless [`keyed_vdrop_may`](#keyed_vdrop_may)(V, C);
+  - unless V [is taken out before](#keyed_taken_out) C by some call.
 
 <a id="keyed_read_unordered"></a>C may read back the value put in an order not known V either:
 

@@ -1365,8 +1365,8 @@ may_be_lit[flow](U, K)  :- keyed_each_at[flow](U, _, X, 1), keyed_put[flow](X, K
 
 -- WHAT A READ HOLDS AT ITS MOMENT: the flow's value, but at a read of a
 -- collection only the puts the order leaves it.
-keyed_read_ordered[flow](C, V)   :- keyed_read[flow](C, V), keyed_put_before[code](V, C), not keyed_taken_out[code](V, C, _),
-                                    not keyed_vdrop_may[code](V, C).
+keyed_read_ordered[flow](C, V)   :- keyed_read[flow](C, V), keyed_put_before[code](V, C), not keyed_vdrop_may[code](V, C),
+                                    not keyed_taken_out[code](V, C, _).
 keyed_read_unordered[flow](C, V) :- keyed_read[flow](C, V), keyed_put_before[code](V, C), not keyed_taken_out[code](V, C, _),
                                     keyed_vdrop_may[code](V, C).
 keyed_read_unordered[flow](C, V) :- keyed_read[flow](C, V), not keyed_put_before[code](V, C), not keyed_put_after[code](V, C).

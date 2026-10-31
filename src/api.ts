@@ -1026,7 +1026,7 @@ export class Rofl {
     const outside = ev.outsideCone(lit.rel);
     if (outside !== undefined) throw new Error(outside);
     try {
-      return ev.questioned(budget, () => ev.whynotFiles(lit, { maxDepth: opts.depth ?? DEFAULT_WHYNOT_DEPTH, maxNodes: opts.nodes ?? DEFAULT_WHYNOT_NODES }, vols));
+      return ev.questioned(budget, () => ev.whynotFiles(lit, { maxDepth: opts.depth ?? DEFAULT_WHYNOT_DEPTH, maxNodes: opts.nodes ?? DEFAULT_WHYNOT_NODES, all: opts.all }, vols));
     } catch (e) {
       if (e instanceof Wall) return [];
       throw e;
