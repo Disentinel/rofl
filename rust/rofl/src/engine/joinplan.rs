@@ -143,7 +143,7 @@ impl Eval {
 
     fn delta_eligible(&self, r: &Rc<ERule>) -> bool {
         !self.naive
-            && self.lat.lattices.is_empty()
+            && !self.lat.has_cells()
             && !r.has_agg
             && !r.has_thr
             && !r.has_demand_prem

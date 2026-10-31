@@ -107,11 +107,11 @@ impl Eval {
     /// when there is no such component or the program stalls anyway.
     pub(super) fn take_data_components(&mut self, stalled: &Peel, lats: &[Sym], dom_edges: &[(Sym, Sym)]) -> Option<Peel> {
         let barred = |rel: Sym| {
-            brk!("ds_barred_ignored" => false; self.lat.lattices.contains_key(&rel)
-                || self.lat.subs.contains_key(&rel)
+            brk!("ds_barred_ignored" => false; self.lat.is_cell(rel)
                 || self.carried.contains_key(&rel)
                 || self.demand.rels.iter().any(|(d, _)| *d == rel)
-                || self.tags.count_rel.iter().any(|(p, c)| *p == rel || *c == rel)
+                || self.lat.algebra(rel).count.is_some()
+                || self.lat.algebra(rel).count_of.is_some()
                 || self.rules.iter().any(|r| r.clause.head.rel == rel && (r.has_thr || r.lat_close.is_some() || !r.lattice_outer.is_empty())))
         };
         let (demote, mut comps) = data_demotable(stalled, &barred);

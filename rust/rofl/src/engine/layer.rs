@@ -35,9 +35,7 @@ impl Eval {
 
     /// The relations the kernel answers or orders some other way than by firing their rules once over what they read.
     fn special_rels(&self) -> HashSet<Sym> {
-        let mut s: HashSet<Sym> = self.lat.lattices.keys().copied().collect();
-        s.extend(self.lat.subs.keys().copied());
-        s.extend(self.tags.by_rel.keys().copied());
+        let mut s: HashSet<Sym> = self.lat.algebras.iter().filter(|(_, a)| a.cell.is_some() || a.tag.is_some()).map(|(r, _)| *r).collect();
         s.extend(self.ds.comps.iter().flat_map(|c| c.rels.iter().copied()));
         s
     }

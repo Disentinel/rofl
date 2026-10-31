@@ -520,7 +520,7 @@ impl Eval {
             || !self.firing
             || self.demand.asking
             || rule_id.is_none()
-            || !self.lat.lattices.is_empty()
+            || self.lat.has_cells()
             || !self.lat.carry.spread.is_empty()
             || self.assume.is_some()
             || self.demand.rels.iter().any(|(r, _)| *r == l.rel)
