@@ -262,7 +262,7 @@ impl Eval {
             })
             .ok_or("an aggregate inside an aggregate")?;
         let plan = self.agg_plans.get(&(rule, at)).cloned().ok_or("the aggregate has no plan")?;
-        if er.clause.head.temporal == Temporal::Next && !self.lat.lattices.is_empty() {
+        if er.clause.head.temporal == Temporal::Next && self.lat.has_cells() {
             return Err("a conclusion @next in a world with a lattice");
         }
         // an aggregate that reads what another of its rule binds (a result, a
@@ -315,7 +315,7 @@ impl Eval {
         let mut taken: HashSet<Sym> = HashSet::new();
         let mut reset: HashSet<Sym> = HashSet::new();
         let mut staged: Vec<Rc<ERule>> = Vec::new();
-        let staging = self.lat.lattices.is_empty();
+        let staging = !self.lat.has_cells();
         loop {
             let mut grew = false;
             for r in &self.rules {
@@ -324,7 +324,7 @@ impl Eval {
                 }
                 let (mut reads, mut inner) = (false, false);
                 // a counting tag's derivation reads the retracted fact outside an aggregate, directly (it is what the sum counts), and so does a rule into a lattice (its firing is the contribution): the path's own
-                let counts = self.tags.count_of.contains_key(&r.clause.head.rel) || self.lat.lattices.contains_key(&r.clause.head.rel);
+                let counts = self.lat.algebra(r.clause.head.rel).count_of.is_some() || self.lat.is_cell(r.clause.head.rel);
                 for b in &r.clause.body {
                     walk(b, false, &mut |l, neg, deep| {
                         if seen.contains(&l.rel) {
@@ -362,7 +362,7 @@ impl Eval {
                     taken.insert(r.id);
                     continue;
                 }
-                if self.lat.lattices.contains_key(&head) || self.tags.count_of.contains_key(&head) || self.v.is_reserved(head) {
+                if self.lat.is_cell(head) || self.lat.algebra(head).count_of.is_some() || self.v.is_reserved(head) {
                     return Err("a lattice, a tag or a ledger is concluded from what rests on the fact");
                 }
                 // a threshold whose outer premise changed holds cells a plain reader would keep
@@ -395,7 +395,7 @@ impl Eval {
             }
             rules.push(r.clone());
         }
-        if self.lat.subs.values().any(|x| x.reads.iter().any(|b| seen.contains(b))) {
+        if self.lat.subs().any(|(_, x)| x.reads.iter().any(|b| seen.contains(b))) {
             return Err("a dominance rule reads what rests on the fact");
         }
         Ok(Readers { rels, rules, reset, staged })
@@ -545,7 +545,7 @@ impl Eval {
                         continue;
                     }
                     let rec = self.store.rec(*x);
-                    if !rec.base() && (self.tags.count_rel.values().any(|r| *r == rec.rel) || self.lat.lattices.contains_key(&rec.rel)) && !rels.contains(&rec.rel) {
+                    if !rec.base() && (self.lat.algebra(rec.rel).count_of.is_some() || self.lat.is_cell(rec.rel)) && !rels.contains(&rec.rel) {
                         continue;
                     }
                     if rec.base() || !rels.contains(&rec.rel) {
@@ -576,7 +576,7 @@ impl Eval {
     /// that cites `f`.
     fn derivations_citing(&mut self, f: FactId) -> Vec<FactId> {
         let mut out = Vec::new();
-        let rels: Vec<Sym> = self.tags.count_rel.values().copied().collect();
+        let rels: Vec<Sym> = self.lat.counts().map(|(_, c)| c).collect();
         for rel in rels {
             for id in self.store.rel_all(&self.h, rel) {
                 if self.store.firings(id).iter().any(|(_, _, ps)| ps.contains(&PremRef::Fact(f))) {
@@ -757,10 +757,10 @@ impl Eval {
 
     /// Whether a lattice fact, a join's contribution or a value no fact holds rests on `f`.
     fn rests_on_lattice(&self, f: FactId) -> bool {
-        !self.lat.lattices.is_empty()
+        self.lat.has_cells()
             && (self.store.citers_of(&HashSet::from([f])).into_iter().any(|x| {
                 let rel = self.store.rec(x).rel;
-                self.lat.lattices.contains_key(&rel) || self.lat.join_of.contains_key(&rel)
+                self.lat.is_cell(rel) || self.lat.algebra(rel).join_of.is_some()
             }) || self.lat.pass.sub_prems.values().any(|fs| fs.iter().any(|ps| ps.contains(&PremRef::Fact(f)))))
     }
 
@@ -791,7 +791,7 @@ impl Eval {
                 break rd;
             }
             if call {
-                if !self.lat.lattices.is_empty() {
+                if self.lat.has_cells() {
                     return Err("a world with a lattice holds a relation answered on demand");
                 }
                 called = true;
@@ -928,11 +928,11 @@ impl Eval {
             self.consumer_facts(&seeds, &forced, &crels, &stop, &reset)?
         };
         let direct: Vec<FactId> = self.store.citers_of(&HashSet::from([f]));
-        if direct.iter().any(|x| self.store.alive(*x) && !inside.contains(x) && !consumers.contains(x) && !self.lat.lattices.contains_key(&self.store.rec(*x).rel)) {
+        if direct.iter().any(|x| self.store.alive(*x) && !inside.contains(x) && !consumers.contains(x) && !self.lat.is_cell(self.store.rec(*x).rel)) {
             return Err("a fact outside the lattice rests on a lattice fact");
         }
         let rel_f = self.store.rec(f).rel;
-        if self.lat.subs.values().any(|x| x.reads.contains(&rel_f)) {
+        if self.lat.subs().any(|(_, x)| x.reads.contains(&rel_f)) {
             return Err("a dominance rule reads the fact");
         }
         let rules = self.lattice_rules(&rels)?;
@@ -1007,10 +1007,10 @@ impl Eval {
                     continue;
                 }
                 let rel = self.store.rec(x).rel;
-                if self.lat.join_of.contains_key(&rel) {
+                if self.lat.algebra(rel).join_of.is_some() {
                     return Err(JOIN);
                 }
-                match self.lat.lattices.get(&rel) {
+                match self.lat.algebra(rel).cell {
                     Some((_, op)) if matches!(op.class(), Class::IdempotentOrder | Class::PartialOrder) => {}
                     Some(_) => return Err(JOIN),
                     // a fact of a plain rule: taken out below, with what rests on it
@@ -1039,7 +1039,7 @@ impl Eval {
             }
             for x in &added {
                 let rec = self.store.rec(*x);
-                if let Some(sub) = self.lat.subs.get(&rec.rel) {
+                if let Some(sub) = self.lat.algebra(rec.rel).sub.as_ref() {
                     let ck: LatKey = (rec.rel, rec.persp, self.store.args(*x)[..sub.keylen].into());
                     if !keys.contains(&ck) {
                         keys.push(ck);
@@ -1076,7 +1076,7 @@ impl Eval {
             if !rels.contains(&r.clause.head.rel) {
                 continue;
             }
-            if self.lat.subs.get(&r.clause.head.rel).is_some_and(|x| !x.reads.is_empty()) {
+            if self.lat.algebra(r.clause.head.rel).sub.as_ref().is_some_and(|x| !x.reads.is_empty()) {
                 return Err("a subsumptive relation is compared by what rules derive, closed before its values are");
             }
             if r.has_neg || r.has_agg || r.has_thr || !r.lattice_outer.is_empty() || r.clause.head.temporal == Temporal::Next || late.contains(&r.id) || self.shrug_readers.contains(&r.id) || !r.safe {

@@ -90,7 +90,7 @@ impl Eval {
                 self.disk_held -= held(&sol);
             }
             if stale
-                && !self.lat.lattices.is_empty()
+                && self.lat.has_cells()
                 && brk!("lattice_stale_solution" => false; sol.prems.iter().any(|p| matches!(p, PremRef::Fact(f) if !self.store.alive(*f))))
             {
                 continue;
@@ -150,7 +150,7 @@ impl Eval {
 
     /// A program whose every wall in the plain path can be resumed from.
     pub(super) fn resumable(&self) -> bool {
-        self.lat.lattices.is_empty()
+        !self.lat.has_cells()
             && !self.well_founded
             && !self.naive
             && self.shrug_readers.is_empty()

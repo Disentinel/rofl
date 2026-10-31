@@ -224,8 +224,8 @@ impl Eval {
 type Set = Seq<HashSet<Unknown>, Un>;
 
 impl LatticeState {
-    fn lattice_keeps(&self) -> bool {
-        !self.subs.is_empty() || self.lattices.values().any(|(_, op)| op.is_join())
+    pub(super) fn lattice_keeps(&self) -> bool {
+        self.algebras.values().any(|a| a.sub.is_some() || a.join.is_some())
     }
 
     /// The stream to keep, empty for a world that needs none or that cannot be kept so.
