@@ -6,7 +6,7 @@
 -- Babel's own words stay here: no rule of the model reads [ast_babel]. A kind of the tree that stands in no role is
 -- written down with its reason (`no_role`), and `kind_without_role[audit]` is a kind that has neither.
 
-edb(node). edb(line). edb(child). edb(attr). edb(file).
+edb(node). edb(line). edb(start). edb(child). edb(attr). edb(file).
 imports(ast_babel, main). imports(ast_babel, value). imports(ast_babel, type). imports(ast_babel, tree).
 imports(value, ast_babel). imports(type, ast_babel). imports(tree, ast_babel).
 imports(value, tree). imports(audit, ast_babel).
@@ -19,6 +19,7 @@ parent[tree](P, C)      :- child[ast_babel](P, _, _, C), node[ast_babel](P, K, _
 -- the place of every node, so the raw tree need not stay beside the roles; Babel's File node above the Program
 -- dissolves: the file is named by program and at, and stands as itself in the fs_* facts of the host
 at[tree](N, File, Line)  :- node[ast_babel](N, K, File), K != file, line[ast_babel](N, Line).
+pos[tree](N, O)          :- node[ast_babel](N, K, _), K != file, start[ast_babel](N, O).
 
 -- the exports of a module are an object, and the program is it
 namespace[value](P, P)   :- node[ast_babel](P, program, _).

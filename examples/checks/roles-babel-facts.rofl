@@ -1,22 +1,29 @@
 -- the raw tree of examples/checks/roles-babel/ in [ast_babel], written by npm run test:roles -- --fixture
 node[ast_babel](n2e8e629ae7d6efa7_3c3ted0nsu2, file, "examples/checks/roles-babel/decorated.ts").
 line[ast_babel](n2e8e629ae7d6efa7_3c3ted0nsu2, 1).
-node[ast_babel](n2e8e629ae7d6efa7_12undirbnh3, program, "examples/checks/roles-babel/decorated.ts").
-line[ast_babel](n2e8e629ae7d6efa7_12undirbnh3, 1).
-attr[ast_babel](n2e8e629ae7d6efa7_12undirbnh3, source_type, "module").
+start[ast_babel](n2e8e629ae7d6efa7_3c3ted0nsu2, 0).
+node[ast_babel](n2e8e629ae7d6efa7_root, program, "examples/checks/roles-babel/decorated.ts").
+line[ast_babel](n2e8e629ae7d6efa7_root, 1).
+start[ast_babel](n2e8e629ae7d6efa7_root, 0).
+attr[ast_babel](n2e8e629ae7d6efa7_root, source_type, "module").
 node[ast_babel](n2e8e629ae7d6efa7_tn5p55gg6s1, class_declaration, "examples/checks/roles-babel/decorated.ts").
 line[ast_babel](n2e8e629ae7d6efa7_tn5p55gg6s1, 1).
+start[ast_babel](n2e8e629ae7d6efa7_tn5p55gg6s1, 0).
 node[ast_babel](n2e8e629ae7d6efa7_602146arkj2, identifier, "examples/checks/roles-babel/decorated.ts").
 line[ast_babel](n2e8e629ae7d6efa7_602146arkj2, 1).
+start[ast_babel](n2e8e629ae7d6efa7_602146arkj2, 6).
 attr[ast_babel](n2e8e629ae7d6efa7_602146arkj2, name, "Q").
 child[ast_babel](n2e8e629ae7d6efa7_tn5p55gg6s1, id, 0, n2e8e629ae7d6efa7_602146arkj2).
 node[ast_babel](n2e8e629ae7d6efa7_47qel3mru4, class_body, "examples/checks/roles-babel/decorated.ts").
 line[ast_babel](n2e8e629ae7d6efa7_47qel3mru4, 1).
+start[ast_babel](n2e8e629ae7d6efa7_47qel3mru4, 8).
 node[ast_babel](n2e8e629ae7d6efa7_8kieh2ot827, class_method, "examples/checks/roles-babel/decorated.ts").
 line[ast_babel](n2e8e629ae7d6efa7_8kieh2ot827, 1).
+start[ast_babel](n2e8e629ae7d6efa7_8kieh2ot827, 10).
 attr[ast_babel](n2e8e629ae7d6efa7_8kieh2ot827, static, false).
 node[ast_babel](n2e8e629ae7d6efa7_0b79d39n273, identifier, "examples/checks/roles-babel/decorated.ts").
 line[ast_babel](n2e8e629ae7d6efa7_0b79d39n273, 1).
+start[ast_babel](n2e8e629ae7d6efa7_0b79d39n273, 10).
 attr[ast_babel](n2e8e629ae7d6efa7_0b79d39n273, name, "constructor").
 child[ast_babel](n2e8e629ae7d6efa7_8kieh2ot827, key, 0, n2e8e629ae7d6efa7_0b79d39n273).
 attr[ast_babel](n2e8e629ae7d6efa7_8kieh2ot827, computed, false).
@@ -25,10 +32,13 @@ attr[ast_babel](n2e8e629ae7d6efa7_8kieh2ot827, generator, false).
 attr[ast_babel](n2e8e629ae7d6efa7_8kieh2ot827, async, false).
 node[ast_babel](n2e8e629ae7d6efa7_0im1vu8jro3, tsparameter_property, "examples/checks/roles-babel/decorated.ts").
 line[ast_babel](n2e8e629ae7d6efa7_0im1vu8jro3, 1).
+start[ast_babel](n2e8e629ae7d6efa7_0im1vu8jro3, 22).
 node[ast_babel](n2e8e629ae7d6efa7_nli0b459ji4, decorator, "examples/checks/roles-babel/decorated.ts").
 line[ast_babel](n2e8e629ae7d6efa7_nli0b459ji4, 1).
+start[ast_babel](n2e8e629ae7d6efa7_nli0b459ji4, 22).
 node[ast_babel](n2e8e629ae7d6efa7_6gk1u3bvj12, identifier, "examples/checks/roles-babel/decorated.ts").
 line[ast_babel](n2e8e629ae7d6efa7_6gk1u3bvj12, 1).
+start[ast_babel](n2e8e629ae7d6efa7_6gk1u3bvj12, 23).
 attr[ast_babel](n2e8e629ae7d6efa7_6gk1u3bvj12, name, "IFoo").
 child[ast_babel](n2e8e629ae7d6efa7_nli0b459ji4, expression, 0, n2e8e629ae7d6efa7_6gk1u3bvj12).
 child[ast_babel](n2e8e629ae7d6efa7_0im1vu8jro3, decorators, 0, n2e8e629ae7d6efa7_nli0b459ji4).
@@ -36,126 +46,160 @@ attr[ast_babel](n2e8e629ae7d6efa7_0im1vu8jro3, accessibility, "private").
 attr[ast_babel](n2e8e629ae7d6efa7_0im1vu8jro3, readonly, true).
 node[ast_babel](n2e8e629ae7d6efa7_h7m2p3i3512, identifier, "examples/checks/roles-babel/decorated.ts").
 line[ast_babel](n2e8e629ae7d6efa7_h7m2p3i3512, 1).
+start[ast_babel](n2e8e629ae7d6efa7_h7m2p3i3512, 45).
 attr[ast_babel](n2e8e629ae7d6efa7_h7m2p3i3512, name, "f").
 node[ast_babel](n2e8e629ae7d6efa7_mmcvinj0vm7, tstype_annotation, "examples/checks/roles-babel/decorated.ts").
 line[ast_babel](n2e8e629ae7d6efa7_mmcvinj0vm7, 1).
+start[ast_babel](n2e8e629ae7d6efa7_mmcvinj0vm7, 46).
 node[ast_babel](n2e8e629ae7d6efa7_t5rogjum4p3, tsnumber_keyword, "examples/checks/roles-babel/decorated.ts").
 line[ast_babel](n2e8e629ae7d6efa7_t5rogjum4p3, 1).
+start[ast_babel](n2e8e629ae7d6efa7_t5rogjum4p3, 48).
 child[ast_babel](n2e8e629ae7d6efa7_mmcvinj0vm7, type_annotation, 0, n2e8e629ae7d6efa7_t5rogjum4p3).
 child[ast_babel](n2e8e629ae7d6efa7_h7m2p3i3512, type_annotation, 0, n2e8e629ae7d6efa7_mmcvinj0vm7).
 child[ast_babel](n2e8e629ae7d6efa7_0im1vu8jro3, parameter, 0, n2e8e629ae7d6efa7_h7m2p3i3512).
 child[ast_babel](n2e8e629ae7d6efa7_8kieh2ot827, params, 0, n2e8e629ae7d6efa7_0im1vu8jro3).
 node[ast_babel](n2e8e629ae7d6efa7_p2tug0c06d4, block_statement, "examples/checks/roles-babel/decorated.ts").
 line[ast_babel](n2e8e629ae7d6efa7_p2tug0c06d4, 1).
+start[ast_babel](n2e8e629ae7d6efa7_p2tug0c06d4, 56).
 child[ast_babel](n2e8e629ae7d6efa7_8kieh2ot827, body, 0, n2e8e629ae7d6efa7_p2tug0c06d4).
 child[ast_babel](n2e8e629ae7d6efa7_47qel3mru4, body, 0, n2e8e629ae7d6efa7_8kieh2ot827).
 child[ast_babel](n2e8e629ae7d6efa7_tn5p55gg6s1, body, 0, n2e8e629ae7d6efa7_47qel3mru4).
-child[ast_babel](n2e8e629ae7d6efa7_12undirbnh3, body, 0, n2e8e629ae7d6efa7_tn5p55gg6s1).
-child[ast_babel](n2e8e629ae7d6efa7_3c3ted0nsu2, program, 0, n2e8e629ae7d6efa7_12undirbnh3).
+child[ast_babel](n2e8e629ae7d6efa7_root, body, 0, n2e8e629ae7d6efa7_tn5p55gg6s1).
+child[ast_babel](n2e8e629ae7d6efa7_3c3ted0nsu2, program, 0, n2e8e629ae7d6efa7_root).
 file[ast_babel](n2e8e629ae7d6efa7_3c3ted0nsu2, "examples/checks/roles-babel/decorated.ts").
 node[ast_babel](n35aac76f74454ed6_3c3ted0nsu2, file, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_3c3ted0nsu2, 1).
-node[ast_babel](n35aac76f74454ed6_12undirbnh3, program, "examples/checks/roles-babel/statements.ts").
-line[ast_babel](n35aac76f74454ed6_12undirbnh3, 1).
-attr[ast_babel](n35aac76f74454ed6_12undirbnh3, source_type, "module").
+start[ast_babel](n35aac76f74454ed6_3c3ted0nsu2, 0).
+node[ast_babel](n35aac76f74454ed6_root, program, "examples/checks/roles-babel/statements.ts").
+line[ast_babel](n35aac76f74454ed6_root, 1).
+start[ast_babel](n35aac76f74454ed6_root, 0).
+attr[ast_babel](n35aac76f74454ed6_root, source_type, "module").
 node[ast_babel](n35aac76f74454ed6_sooiin1sve2, import_declaration, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_sooiin1sve2, 1).
+start[ast_babel](n35aac76f74454ed6_sooiin1sve2, 0).
 attr[ast_babel](n35aac76f74454ed6_sooiin1sve2, import_kind, "value").
 node[ast_babel](n35aac76f74454ed6_1vs24c9cl04, import_specifier, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_1vs24c9cl04, 1).
+start[ast_babel](n35aac76f74454ed6_1vs24c9cl04, 9).
 node[ast_babel](n35aac76f74454ed6_r1jfdvik837, identifier, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_r1jfdvik837, 1).
+start[ast_babel](n35aac76f74454ed6_r1jfdvik837, 9).
 attr[ast_babel](n35aac76f74454ed6_r1jfdvik837, name, "a").
 child[ast_babel](n35aac76f74454ed6_1vs24c9cl04, imported, 0, n35aac76f74454ed6_r1jfdvik837).
 attr[ast_babel](n35aac76f74454ed6_1vs24c9cl04, import_kind, "value").
 node[ast_babel](n35aac76f74454ed6_gn93q4lrt42, identifier, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_gn93q4lrt42, 1).
+start[ast_babel](n35aac76f74454ed6_gn93q4lrt42, 14).
 attr[ast_babel](n35aac76f74454ed6_gn93q4lrt42, name, "b").
 child[ast_babel](n35aac76f74454ed6_1vs24c9cl04, local, 0, n35aac76f74454ed6_gn93q4lrt42).
 child[ast_babel](n35aac76f74454ed6_sooiin1sve2, specifiers, 0, n35aac76f74454ed6_1vs24c9cl04).
 node[ast_babel](n35aac76f74454ed6_r27s6ejfdk, import_specifier, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_r27s6ejfdk, 1).
+start[ast_babel](n35aac76f74454ed6_r27s6ejfdk, 17).
 node[ast_babel](n35aac76f74454ed6_urtjc887si3, identifier, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_urtjc887si3, 1).
+start[ast_babel](n35aac76f74454ed6_urtjc887si3, 17).
 attr[ast_babel](n35aac76f74454ed6_urtjc887si3, name, "c").
 child[ast_babel](n35aac76f74454ed6_r27s6ejfdk, imported, 0, n35aac76f74454ed6_urtjc887si3).
 attr[ast_babel](n35aac76f74454ed6_r27s6ejfdk, import_kind, "value").
 node[ast_babel](n35aac76f74454ed6_ulgcjl3q9d3, identifier, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_ulgcjl3q9d3, 1).
+start[ast_babel](n35aac76f74454ed6_ulgcjl3q9d3, 17).
 attr[ast_babel](n35aac76f74454ed6_ulgcjl3q9d3, name, "c").
 child[ast_babel](n35aac76f74454ed6_r27s6ejfdk, local, 0, n35aac76f74454ed6_ulgcjl3q9d3).
 child[ast_babel](n35aac76f74454ed6_sooiin1sve2, specifiers, 1, n35aac76f74454ed6_r27s6ejfdk).
 node[ast_babel](n35aac76f74454ed6_moqdjcbnlr3, string_literal, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_moqdjcbnlr3, 1).
+start[ast_babel](n35aac76f74454ed6_moqdjcbnlr3, 26).
 attr[ast_babel](n35aac76f74454ed6_moqdjcbnlr3, value, "./m").
 child[ast_babel](n35aac76f74454ed6_sooiin1sve2, source, 0, n35aac76f74454ed6_moqdjcbnlr3).
-child[ast_babel](n35aac76f74454ed6_12undirbnh3, body, 0, n35aac76f74454ed6_sooiin1sve2).
+child[ast_babel](n35aac76f74454ed6_root, body, 0, n35aac76f74454ed6_sooiin1sve2).
 node[ast_babel](n35aac76f74454ed6_jdctbbj1g86, import_declaration, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_jdctbbj1g86, 2).
+start[ast_babel](n35aac76f74454ed6_jdctbbj1g86, 33).
 attr[ast_babel](n35aac76f74454ed6_jdctbbj1g86, import_kind, "value").
 node[ast_babel](n35aac76f74454ed6_8kmetqlhl62, import_default_specifier, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_8kmetqlhl62, 2).
+start[ast_babel](n35aac76f74454ed6_8kmetqlhl62, 40).
 node[ast_babel](n35aac76f74454ed6_a8u8dr5ckc3, identifier, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_a8u8dr5ckc3, 2).
+start[ast_babel](n35aac76f74454ed6_a8u8dr5ckc3, 40).
 attr[ast_babel](n35aac76f74454ed6_a8u8dr5ckc3, name, "d").
 child[ast_babel](n35aac76f74454ed6_8kmetqlhl62, local, 0, n35aac76f74454ed6_a8u8dr5ckc3).
 child[ast_babel](n35aac76f74454ed6_jdctbbj1g86, specifiers, 0, n35aac76f74454ed6_8kmetqlhl62).
 node[ast_babel](n35aac76f74454ed6_4f8asg8pj9, string_literal, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_4f8asg8pj9, 2).
+start[ast_babel](n35aac76f74454ed6_4f8asg8pj9, 47).
 attr[ast_babel](n35aac76f74454ed6_4f8asg8pj9, value, "x").
 child[ast_babel](n35aac76f74454ed6_jdctbbj1g86, source, 0, n35aac76f74454ed6_4f8asg8pj9).
-child[ast_babel](n35aac76f74454ed6_12undirbnh3, body, 1, n35aac76f74454ed6_jdctbbj1g86).
+child[ast_babel](n35aac76f74454ed6_root, body, 1, n35aac76f74454ed6_jdctbbj1g86).
 node[ast_babel](n35aac76f74454ed6_4be9r4ni0b1, import_declaration, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_4be9r4ni0b1, 3).
+start[ast_babel](n35aac76f74454ed6_4be9r4ni0b1, 52).
 attr[ast_babel](n35aac76f74454ed6_4be9r4ni0b1, import_kind, "value").
 node[ast_babel](n35aac76f74454ed6_lql91ehmec6, import_namespace_specifier, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_lql91ehmec6, 3).
+start[ast_babel](n35aac76f74454ed6_lql91ehmec6, 59).
 node[ast_babel](n35aac76f74454ed6_d4tshqv4tp3, identifier, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_d4tshqv4tp3, 3).
+start[ast_babel](n35aac76f74454ed6_d4tshqv4tp3, 64).
 attr[ast_babel](n35aac76f74454ed6_d4tshqv4tp3, name, "ns").
 child[ast_babel](n35aac76f74454ed6_lql91ehmec6, local, 0, n35aac76f74454ed6_d4tshqv4tp3).
 child[ast_babel](n35aac76f74454ed6_4be9r4ni0b1, specifiers, 0, n35aac76f74454ed6_lql91ehmec6).
 node[ast_babel](n35aac76f74454ed6_1j8dmmjof91, string_literal, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_1j8dmmjof91, 3).
+start[ast_babel](n35aac76f74454ed6_1j8dmmjof91, 72).
 attr[ast_babel](n35aac76f74454ed6_1j8dmmjof91, value, "y").
 child[ast_babel](n35aac76f74454ed6_4be9r4ni0b1, source, 0, n35aac76f74454ed6_1j8dmmjof91).
-child[ast_babel](n35aac76f74454ed6_12undirbnh3, body, 2, n35aac76f74454ed6_4be9r4ni0b1).
+child[ast_babel](n35aac76f74454ed6_root, body, 2, n35aac76f74454ed6_4be9r4ni0b1).
 node[ast_babel](n35aac76f74454ed6_qksrfalrfo2, export_named_declaration, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_qksrfalrfo2, 4).
+start[ast_babel](n35aac76f74454ed6_qksrfalrfo2, 77).
 attr[ast_babel](n35aac76f74454ed6_qksrfalrfo2, export_kind, "value").
 node[ast_babel](n35aac76f74454ed6_4rb04q3t7n3, variable_declaration, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_4rb04q3t7n3, 4).
+start[ast_babel](n35aac76f74454ed6_4rb04q3t7n3, 84).
 node[ast_babel](n35aac76f74454ed6_id0noq9mi87, variable_declarator, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_id0noq9mi87, 4).
+start[ast_babel](n35aac76f74454ed6_id0noq9mi87, 90).
 node[ast_babel](n35aac76f74454ed6_nm1f088n207, identifier, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_nm1f088n207, 4).
+start[ast_babel](n35aac76f74454ed6_nm1f088n207, 90).
 attr[ast_babel](n35aac76f74454ed6_nm1f088n207, name, "k").
 child[ast_babel](n35aac76f74454ed6_id0noq9mi87, id, 0, n35aac76f74454ed6_nm1f088n207).
 node[ast_babel](n35aac76f74454ed6_5lbdlq03rv4, numeric_literal, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_5lbdlq03rv4, 4).
+start[ast_babel](n35aac76f74454ed6_5lbdlq03rv4, 94).
 attr[ast_babel](n35aac76f74454ed6_5lbdlq03rv4, value, 1).
 child[ast_babel](n35aac76f74454ed6_id0noq9mi87, init, 0, n35aac76f74454ed6_5lbdlq03rv4).
 child[ast_babel](n35aac76f74454ed6_4rb04q3t7n3, declarations, 0, n35aac76f74454ed6_id0noq9mi87).
 node[ast_babel](n35aac76f74454ed6_nmee96a3qc4, variable_declarator, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_nmee96a3qc4, 4).
+start[ast_babel](n35aac76f74454ed6_nmee96a3qc4, 97).
 node[ast_babel](n35aac76f74454ed6_7u5idvra3d3, identifier, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_7u5idvra3d3, 4).
+start[ast_babel](n35aac76f74454ed6_7u5idvra3d3, 97).
 attr[ast_babel](n35aac76f74454ed6_7u5idvra3d3, name, "z").
 child[ast_babel](n35aac76f74454ed6_nmee96a3qc4, id, 0, n35aac76f74454ed6_7u5idvra3d3).
 node[ast_babel](n35aac76f74454ed6_66u1hm5an14, call_expression, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_66u1hm5an14, 4).
+start[ast_babel](n35aac76f74454ed6_66u1hm5an14, 101).
 node[ast_babel](n35aac76f74454ed6_13mq2sa70m1, identifier, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_13mq2sa70m1, 4).
+start[ast_babel](n35aac76f74454ed6_13mq2sa70m1, 101).
 attr[ast_babel](n35aac76f74454ed6_13mq2sa70m1, name, "f").
 child[ast_babel](n35aac76f74454ed6_66u1hm5an14, callee, 0, n35aac76f74454ed6_13mq2sa70m1).
 node[ast_babel](n35aac76f74454ed6_ifikg87md27, identifier, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_ifikg87md27, 4).
+start[ast_babel](n35aac76f74454ed6_ifikg87md27, 103).
 attr[ast_babel](n35aac76f74454ed6_ifikg87md27, name, "b").
 child[ast_babel](n35aac76f74454ed6_66u1hm5an14, arguments, 0, n35aac76f74454ed6_ifikg87md27).
 node[ast_babel](n35aac76f74454ed6_hh16m6lme13, spread_element, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_hh16m6lme13, 4).
+start[ast_babel](n35aac76f74454ed6_hh16m6lme13, 106).
 node[ast_babel](n35aac76f74454ed6_fmbsdvnkgl7, identifier, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_fmbsdvnkgl7, 4).
+start[ast_babel](n35aac76f74454ed6_fmbsdvnkgl7, 109).
 attr[ast_babel](n35aac76f74454ed6_fmbsdvnkgl7, name, "c").
 child[ast_babel](n35aac76f74454ed6_hh16m6lme13, argument, 0, n35aac76f74454ed6_fmbsdvnkgl7).
 child[ast_babel](n35aac76f74454ed6_66u1hm5an14, arguments, 1, n35aac76f74454ed6_hh16m6lme13).
@@ -163,56 +207,71 @@ child[ast_babel](n35aac76f74454ed6_nmee96a3qc4, init, 0, n35aac76f74454ed6_66u1h
 child[ast_babel](n35aac76f74454ed6_4rb04q3t7n3, declarations, 1, n35aac76f74454ed6_nmee96a3qc4).
 attr[ast_babel](n35aac76f74454ed6_4rb04q3t7n3, kind, "const").
 child[ast_babel](n35aac76f74454ed6_qksrfalrfo2, declaration, 0, n35aac76f74454ed6_4rb04q3t7n3).
-child[ast_babel](n35aac76f74454ed6_12undirbnh3, body, 3, n35aac76f74454ed6_qksrfalrfo2).
+child[ast_babel](n35aac76f74454ed6_root, body, 3, n35aac76f74454ed6_qksrfalrfo2).
 node[ast_babel](n35aac76f74454ed6_7cid56mosj3, export_default_declaration, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_7cid56mosj3, 5).
+start[ast_babel](n35aac76f74454ed6_7cid56mosj3, 113).
 attr[ast_babel](n35aac76f74454ed6_7cid56mosj3, export_kind, "value").
 node[ast_babel](n35aac76f74454ed6_9amebochc25, function_declaration, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_9amebochc25, 5).
+start[ast_babel](n35aac76f74454ed6_9amebochc25, 128).
 node[ast_babel](n35aac76f74454ed6_jatvb4cpag2, identifier, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_jatvb4cpag2, 5).
+start[ast_babel](n35aac76f74454ed6_jatvb4cpag2, 137).
 attr[ast_babel](n35aac76f74454ed6_jatvb4cpag2, name, "g").
 child[ast_babel](n35aac76f74454ed6_9amebochc25, id, 0, n35aac76f74454ed6_jatvb4cpag2).
 attr[ast_babel](n35aac76f74454ed6_9amebochc25, generator, false).
 attr[ast_babel](n35aac76f74454ed6_9amebochc25, async, false).
 node[ast_babel](n35aac76f74454ed6_esod4d1vd12, assignment_pattern, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_esod4d1vd12, 5).
+start[ast_babel](n35aac76f74454ed6_esod4d1vd12, 139).
 node[ast_babel](n35aac76f74454ed6_9rat3hqn6n7, identifier, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_9rat3hqn6n7, 5).
+start[ast_babel](n35aac76f74454ed6_9rat3hqn6n7, 139).
 attr[ast_babel](n35aac76f74454ed6_9rat3hqn6n7, name, "p").
 child[ast_babel](n35aac76f74454ed6_esod4d1vd12, left, 0, n35aac76f74454ed6_9rat3hqn6n7).
 node[ast_babel](n35aac76f74454ed6_214cl92bpb7, numeric_literal, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_214cl92bpb7, 5).
+start[ast_babel](n35aac76f74454ed6_214cl92bpb7, 143).
 attr[ast_babel](n35aac76f74454ed6_214cl92bpb7, value, 1).
 child[ast_babel](n35aac76f74454ed6_esod4d1vd12, right, 0, n35aac76f74454ed6_214cl92bpb7).
 child[ast_babel](n35aac76f74454ed6_9amebochc25, params, 0, n35aac76f74454ed6_esod4d1vd12).
 node[ast_babel](n35aac76f74454ed6_51s28t3i595, rest_element, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_51s28t3i595, 5).
+start[ast_babel](n35aac76f74454ed6_51s28t3i595, 146).
 node[ast_babel](n35aac76f74454ed6_6fjdfp5ntf3, identifier, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_6fjdfp5ntf3, 5).
+start[ast_babel](n35aac76f74454ed6_6fjdfp5ntf3, 149).
 attr[ast_babel](n35aac76f74454ed6_6fjdfp5ntf3, name, "r").
 child[ast_babel](n35aac76f74454ed6_51s28t3i595, argument, 0, n35aac76f74454ed6_6fjdfp5ntf3).
 child[ast_babel](n35aac76f74454ed6_9amebochc25, params, 1, n35aac76f74454ed6_51s28t3i595).
 node[ast_babel](n35aac76f74454ed6_uakd37hpj85, block_statement, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_uakd37hpj85, 5).
+start[ast_babel](n35aac76f74454ed6_uakd37hpj85, 152).
 node[ast_babel](n35aac76f74454ed6_qtvtcnct3n6, return_statement, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_qtvtcnct3n6, 5).
+start[ast_babel](n35aac76f74454ed6_qtvtcnct3n6, 154).
 node[ast_babel](n35aac76f74454ed6_bog3sgfrau7, binary_expression, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_bog3sgfrau7, 5).
+start[ast_babel](n35aac76f74454ed6_bog3sgfrau7, 161).
 node[ast_babel](n35aac76f74454ed6_q9fab7l1pn5, identifier, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_q9fab7l1pn5, 5).
+start[ast_babel](n35aac76f74454ed6_q9fab7l1pn5, 161).
 attr[ast_babel](n35aac76f74454ed6_q9fab7l1pn5, name, "p").
 child[ast_babel](n35aac76f74454ed6_bog3sgfrau7, left, 0, n35aac76f74454ed6_q9fab7l1pn5).
 attr[ast_babel](n35aac76f74454ed6_bog3sgfrau7, operator, "+").
 node[ast_babel](n35aac76f74454ed6_42vl2e1t775, member_expression, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_42vl2e1t775, 5).
+start[ast_babel](n35aac76f74454ed6_42vl2e1t775, 165).
 node[ast_babel](n35aac76f74454ed6_aamkekcj527, identifier, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_aamkekcj527, 5).
+start[ast_babel](n35aac76f74454ed6_aamkekcj527, 165).
 attr[ast_babel](n35aac76f74454ed6_aamkekcj527, name, "r").
 child[ast_babel](n35aac76f74454ed6_42vl2e1t775, object, 0, n35aac76f74454ed6_aamkekcj527).
 attr[ast_babel](n35aac76f74454ed6_42vl2e1t775, computed, false).
 node[ast_babel](n35aac76f74454ed6_gpoi749ptf3, identifier, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_gpoi749ptf3, 5).
+start[ast_babel](n35aac76f74454ed6_gpoi749ptf3, 167).
 attr[ast_babel](n35aac76f74454ed6_gpoi749ptf3, name, "length").
 child[ast_babel](n35aac76f74454ed6_42vl2e1t775, property, 0, n35aac76f74454ed6_gpoi749ptf3).
 child[ast_babel](n35aac76f74454ed6_bog3sgfrau7, right, 0, n35aac76f74454ed6_42vl2e1t775).
@@ -220,44 +279,56 @@ child[ast_babel](n35aac76f74454ed6_qtvtcnct3n6, argument, 0, n35aac76f74454ed6_b
 child[ast_babel](n35aac76f74454ed6_uakd37hpj85, body, 0, n35aac76f74454ed6_qtvtcnct3n6).
 child[ast_babel](n35aac76f74454ed6_9amebochc25, body, 0, n35aac76f74454ed6_uakd37hpj85).
 child[ast_babel](n35aac76f74454ed6_7cid56mosj3, declaration, 0, n35aac76f74454ed6_9amebochc25).
-child[ast_babel](n35aac76f74454ed6_12undirbnh3, body, 4, n35aac76f74454ed6_7cid56mosj3).
+child[ast_babel](n35aac76f74454ed6_root, body, 4, n35aac76f74454ed6_7cid56mosj3).
 node[ast_babel](n35aac76f74454ed6_f48qcs8oc94, export_all_declaration, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_f48qcs8oc94, 6).
+start[ast_babel](n35aac76f74454ed6_f48qcs8oc94, 177).
 attr[ast_babel](n35aac76f74454ed6_f48qcs8oc94, export_kind, "value").
 node[ast_babel](n35aac76f74454ed6_3e98mo0asv7, string_literal, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_3e98mo0asv7, 6).
+start[ast_babel](n35aac76f74454ed6_3e98mo0asv7, 191).
 attr[ast_babel](n35aac76f74454ed6_3e98mo0asv7, value, "./q").
 child[ast_babel](n35aac76f74454ed6_f48qcs8oc94, source, 0, n35aac76f74454ed6_3e98mo0asv7).
-child[ast_babel](n35aac76f74454ed6_12undirbnh3, body, 5, n35aac76f74454ed6_f48qcs8oc94).
+child[ast_babel](n35aac76f74454ed6_root, body, 5, n35aac76f74454ed6_f48qcs8oc94).
 node[ast_babel](n35aac76f74454ed6_2k6l8k9u6p1, variable_declaration, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_2k6l8k9u6p1, 7).
+start[ast_babel](n35aac76f74454ed6_2k6l8k9u6p1, 198).
 node[ast_babel](n35aac76f74454ed6_0n1f45qh7r6, variable_declarator, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_0n1f45qh7r6, 7).
+start[ast_babel](n35aac76f74454ed6_0n1f45qh7r6, 202).
 node[ast_babel](n35aac76f74454ed6_cgnfa308947, identifier, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_cgnfa308947, 7).
+start[ast_babel](n35aac76f74454ed6_cgnfa308947, 202).
 attr[ast_babel](n35aac76f74454ed6_cgnfa308947, name, "t").
 child[ast_babel](n35aac76f74454ed6_0n1f45qh7r6, id, 0, n35aac76f74454ed6_cgnfa308947).
 node[ast_babel](n35aac76f74454ed6_rkcjr47jqj3, optional_member_expression, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_rkcjr47jqj3, 7).
+start[ast_babel](n35aac76f74454ed6_rkcjr47jqj3, 206).
 node[ast_babel](n35aac76f74454ed6_dinriec9jp6, optional_call_expression, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_dinriec9jp6, 7).
+start[ast_babel](n35aac76f74454ed6_dinriec9jp6, 206).
 node[ast_babel](n35aac76f74454ed6_fc44dm5a614, optional_member_expression, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_fc44dm5a614, 7).
+start[ast_babel](n35aac76f74454ed6_fc44dm5a614, 206).
 node[ast_babel](n35aac76f74454ed6_b625mcl2dh3, member_expression, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_b625mcl2dh3, 7).
+start[ast_babel](n35aac76f74454ed6_b625mcl2dh3, 206).
 node[ast_babel](n35aac76f74454ed6_ngse0ucci65, identifier, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_ngse0ucci65, 7).
+start[ast_babel](n35aac76f74454ed6_ngse0ucci65, 206).
 attr[ast_babel](n35aac76f74454ed6_ngse0ucci65, name, "o").
 child[ast_babel](n35aac76f74454ed6_b625mcl2dh3, object, 0, n35aac76f74454ed6_ngse0ucci65).
 attr[ast_babel](n35aac76f74454ed6_b625mcl2dh3, computed, false).
 node[ast_babel](n35aac76f74454ed6_jnosm98e3g2, identifier, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_jnosm98e3g2, 7).
+start[ast_babel](n35aac76f74454ed6_jnosm98e3g2, 208).
 attr[ast_babel](n35aac76f74454ed6_jnosm98e3g2, name, "k").
 child[ast_babel](n35aac76f74454ed6_b625mcl2dh3, property, 0, n35aac76f74454ed6_jnosm98e3g2).
 child[ast_babel](n35aac76f74454ed6_fc44dm5a614, object, 0, n35aac76f74454ed6_b625mcl2dh3).
 attr[ast_babel](n35aac76f74454ed6_fc44dm5a614, computed, false).
 node[ast_babel](n35aac76f74454ed6_m4joh1m5vt7, identifier, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_m4joh1m5vt7, 7).
+start[ast_babel](n35aac76f74454ed6_m4joh1m5vt7, 211).
 attr[ast_babel](n35aac76f74454ed6_m4joh1m5vt7, name, "m").
 child[ast_babel](n35aac76f74454ed6_fc44dm5a614, property, 0, n35aac76f74454ed6_m4joh1m5vt7).
 attr[ast_babel](n35aac76f74454ed6_fc44dm5a614, optional, true).
@@ -265,60 +336,74 @@ child[ast_babel](n35aac76f74454ed6_dinriec9jp6, callee, 0, n35aac76f74454ed6_fc4
 attr[ast_babel](n35aac76f74454ed6_dinriec9jp6, optional, false).
 node[ast_babel](n35aac76f74454ed6_9dgbf5i26j7, numeric_literal, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_9dgbf5i26j7, 7).
+start[ast_babel](n35aac76f74454ed6_9dgbf5i26j7, 213).
 attr[ast_babel](n35aac76f74454ed6_9dgbf5i26j7, value, 1).
 child[ast_babel](n35aac76f74454ed6_dinriec9jp6, arguments, 0, n35aac76f74454ed6_9dgbf5i26j7).
 child[ast_babel](n35aac76f74454ed6_rkcjr47jqj3, object, 0, n35aac76f74454ed6_dinriec9jp6).
 attr[ast_babel](n35aac76f74454ed6_rkcjr47jqj3, computed, true).
 node[ast_babel](n35aac76f74454ed6_ovv4akihmb3, numeric_literal, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_ovv4akihmb3, 7).
+start[ast_babel](n35aac76f74454ed6_ovv4akihmb3, 216).
 attr[ast_babel](n35aac76f74454ed6_ovv4akihmb3, value, 2).
 child[ast_babel](n35aac76f74454ed6_rkcjr47jqj3, property, 0, n35aac76f74454ed6_ovv4akihmb3).
 attr[ast_babel](n35aac76f74454ed6_rkcjr47jqj3, optional, false).
 child[ast_babel](n35aac76f74454ed6_0n1f45qh7r6, init, 0, n35aac76f74454ed6_rkcjr47jqj3).
 child[ast_babel](n35aac76f74454ed6_2k6l8k9u6p1, declarations, 0, n35aac76f74454ed6_0n1f45qh7r6).
 attr[ast_babel](n35aac76f74454ed6_2k6l8k9u6p1, kind, "let").
-child[ast_babel](n35aac76f74454ed6_12undirbnh3, body, 6, n35aac76f74454ed6_2k6l8k9u6p1).
+child[ast_babel](n35aac76f74454ed6_root, body, 6, n35aac76f74454ed6_2k6l8k9u6p1).
 node[ast_babel](n35aac76f74454ed6_lufi1g8aot1, class_declaration, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_lufi1g8aot1, 8).
+start[ast_babel](n35aac76f74454ed6_lufi1g8aot1, 220).
 node[ast_babel](n35aac76f74454ed6_cjqn7tr80o5, identifier, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_cjqn7tr80o5, 8).
+start[ast_babel](n35aac76f74454ed6_cjqn7tr80o5, 226).
 attr[ast_babel](n35aac76f74454ed6_cjqn7tr80o5, name, "C").
 child[ast_babel](n35aac76f74454ed6_lufi1g8aot1, id, 0, n35aac76f74454ed6_cjqn7tr80o5).
 node[ast_babel](n35aac76f74454ed6_rnas2fb52a1, identifier, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_rnas2fb52a1, 8).
+start[ast_babel](n35aac76f74454ed6_rnas2fb52a1, 236).
 attr[ast_babel](n35aac76f74454ed6_rnas2fb52a1, name, "B").
 child[ast_babel](n35aac76f74454ed6_lufi1g8aot1, super_class, 0, n35aac76f74454ed6_rnas2fb52a1).
 node[ast_babel](n35aac76f74454ed6_mqc9r8u5g7, class_body, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_mqc9r8u5g7, 8).
+start[ast_babel](n35aac76f74454ed6_mqc9r8u5g7, 238).
 node[ast_babel](n35aac76f74454ed6_l4fh2ibbj83, class_private_property, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_l4fh2ibbj83, 8).
+start[ast_babel](n35aac76f74454ed6_l4fh2ibbj83, 240).
 attr[ast_babel](n35aac76f74454ed6_l4fh2ibbj83, static, false).
 node[ast_babel](n35aac76f74454ed6_juccbonsov3, private_name, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_juccbonsov3, 8).
+start[ast_babel](n35aac76f74454ed6_juccbonsov3, 240).
 node[ast_babel](n35aac76f74454ed6_9tgk9fcl4e5, identifier, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_9tgk9fcl4e5, 8).
+start[ast_babel](n35aac76f74454ed6_9tgk9fcl4e5, 241).
 attr[ast_babel](n35aac76f74454ed6_9tgk9fcl4e5, name, "x").
 child[ast_babel](n35aac76f74454ed6_juccbonsov3, id, 0, n35aac76f74454ed6_9tgk9fcl4e5).
 child[ast_babel](n35aac76f74454ed6_l4fh2ibbj83, key, 0, n35aac76f74454ed6_juccbonsov3).
 node[ast_babel](n35aac76f74454ed6_1ggiumo9261, numeric_literal, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_1ggiumo9261, 8).
+start[ast_babel](n35aac76f74454ed6_1ggiumo9261, 245).
 attr[ast_babel](n35aac76f74454ed6_1ggiumo9261, value, 1).
 child[ast_babel](n35aac76f74454ed6_l4fh2ibbj83, value, 0, n35aac76f74454ed6_1ggiumo9261).
 child[ast_babel](n35aac76f74454ed6_mqc9r8u5g7, body, 0, n35aac76f74454ed6_l4fh2ibbj83).
 node[ast_babel](n35aac76f74454ed6_rdtlralarv6, class_property, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_rdtlralarv6, 8).
+start[ast_babel](n35aac76f74454ed6_rdtlralarv6, 248).
 attr[ast_babel](n35aac76f74454ed6_rdtlralarv6, static, true).
 node[ast_babel](n35aac76f74454ed6_ad62kph5bm2, identifier, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_ad62kph5bm2, 8).
+start[ast_babel](n35aac76f74454ed6_ad62kph5bm2, 255).
 attr[ast_babel](n35aac76f74454ed6_ad62kph5bm2, name, "s").
 child[ast_babel](n35aac76f74454ed6_rdtlralarv6, key, 0, n35aac76f74454ed6_ad62kph5bm2).
 attr[ast_babel](n35aac76f74454ed6_rdtlralarv6, computed, false).
 child[ast_babel](n35aac76f74454ed6_mqc9r8u5g7, body, 1, n35aac76f74454ed6_rdtlralarv6).
 node[ast_babel](n35aac76f74454ed6_6ohufsms4h1, class_method, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_6ohufsms4h1, 8).
+start[ast_babel](n35aac76f74454ed6_6ohufsms4h1, 258).
 attr[ast_babel](n35aac76f74454ed6_6ohufsms4h1, static, false).
 node[ast_babel](n35aac76f74454ed6_f34h5b9s3j4, identifier, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_f34h5b9s3j4, 8).
+start[ast_babel](n35aac76f74454ed6_f34h5b9s3j4, 262).
 attr[ast_babel](n35aac76f74454ed6_f34h5b9s3j4, name, "v").
 child[ast_babel](n35aac76f74454ed6_6ohufsms4h1, key, 0, n35aac76f74454ed6_f34h5b9s3j4).
 attr[ast_babel](n35aac76f74454ed6_6ohufsms4h1, computed, false).
@@ -327,18 +412,24 @@ attr[ast_babel](n35aac76f74454ed6_6ohufsms4h1, generator, false).
 attr[ast_babel](n35aac76f74454ed6_6ohufsms4h1, async, false).
 node[ast_babel](n35aac76f74454ed6_e6fd3h94qp5, block_statement, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_e6fd3h94qp5, 8).
+start[ast_babel](n35aac76f74454ed6_e6fd3h94qp5, 266).
 node[ast_babel](n35aac76f74454ed6_3hr7fds065, return_statement, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_3hr7fds065, 8).
+start[ast_babel](n35aac76f74454ed6_3hr7fds065, 268).
 node[ast_babel](n35aac76f74454ed6_6foeof77bf, member_expression, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_6foeof77bf, 8).
+start[ast_babel](n35aac76f74454ed6_6foeof77bf, 275).
 node[ast_babel](n35aac76f74454ed6_vjhg7g5cgf7, this_expression, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_vjhg7g5cgf7, 8).
+start[ast_babel](n35aac76f74454ed6_vjhg7g5cgf7, 275).
 child[ast_babel](n35aac76f74454ed6_6foeof77bf, object, 0, n35aac76f74454ed6_vjhg7g5cgf7).
 attr[ast_babel](n35aac76f74454ed6_6foeof77bf, computed, false).
 node[ast_babel](n35aac76f74454ed6_l7plmtb45t, private_name, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_l7plmtb45t, 8).
+start[ast_babel](n35aac76f74454ed6_l7plmtb45t, 280).
 node[ast_babel](n35aac76f74454ed6_3a5t1ceb9s7, identifier, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_3a5t1ceb9s7, 8).
+start[ast_babel](n35aac76f74454ed6_3a5t1ceb9s7, 281).
 attr[ast_babel](n35aac76f74454ed6_3a5t1ceb9s7, name, "x").
 child[ast_babel](n35aac76f74454ed6_l7plmtb45t, id, 0, n35aac76f74454ed6_3a5t1ceb9s7).
 child[ast_babel](n35aac76f74454ed6_6foeof77bf, property, 0, n35aac76f74454ed6_l7plmtb45t).
@@ -348,9 +439,11 @@ child[ast_babel](n35aac76f74454ed6_6ohufsms4h1, body, 0, n35aac76f74454ed6_e6fd3
 child[ast_babel](n35aac76f74454ed6_mqc9r8u5g7, body, 2, n35aac76f74454ed6_6ohufsms4h1).
 node[ast_babel](n35aac76f74454ed6_o0b3u9jfhh5, class_method, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_o0b3u9jfhh5, 8).
+start[ast_babel](n35aac76f74454ed6_o0b3u9jfhh5, 286).
 attr[ast_babel](n35aac76f74454ed6_o0b3u9jfhh5, static, false).
 node[ast_babel](n35aac76f74454ed6_re5sd5khvt, identifier, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_re5sd5khvt, 8).
+start[ast_babel](n35aac76f74454ed6_re5sd5khvt, 286).
 attr[ast_babel](n35aac76f74454ed6_re5sd5khvt, name, "constructor").
 child[ast_babel](n35aac76f74454ed6_o0b3u9jfhh5, key, 0, n35aac76f74454ed6_re5sd5khvt).
 attr[ast_babel](n35aac76f74454ed6_o0b3u9jfhh5, computed, false).
@@ -359,12 +452,16 @@ attr[ast_babel](n35aac76f74454ed6_o0b3u9jfhh5, generator, false).
 attr[ast_babel](n35aac76f74454ed6_o0b3u9jfhh5, async, false).
 node[ast_babel](n35aac76f74454ed6_iebpo6nn5i7, block_statement, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_iebpo6nn5i7, 8).
+start[ast_babel](n35aac76f74454ed6_iebpo6nn5i7, 300).
 node[ast_babel](n35aac76f74454ed6_ptbcvnrpin1, expression_statement, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_ptbcvnrpin1, 8).
+start[ast_babel](n35aac76f74454ed6_ptbcvnrpin1, 302).
 node[ast_babel](n35aac76f74454ed6_lm6clc9vs36, call_expression, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_lm6clc9vs36, 8).
+start[ast_babel](n35aac76f74454ed6_lm6clc9vs36, 302).
 node[ast_babel](n35aac76f74454ed6_4d2872jdqh4, super, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_4d2872jdqh4, 8).
+start[ast_babel](n35aac76f74454ed6_4d2872jdqh4, 302).
 child[ast_babel](n35aac76f74454ed6_lm6clc9vs36, callee, 0, n35aac76f74454ed6_4d2872jdqh4).
 child[ast_babel](n35aac76f74454ed6_ptbcvnrpin1, expression, 0, n35aac76f74454ed6_lm6clc9vs36).
 child[ast_babel](n35aac76f74454ed6_iebpo6nn5i7, body, 0, n35aac76f74454ed6_ptbcvnrpin1).
@@ -372,9 +469,11 @@ child[ast_babel](n35aac76f74454ed6_o0b3u9jfhh5, body, 0, n35aac76f74454ed6_iebpo
 child[ast_babel](n35aac76f74454ed6_mqc9r8u5g7, body, 3, n35aac76f74454ed6_o0b3u9jfhh5).
 node[ast_babel](n35aac76f74454ed6_f1kc6i797q1, class_method, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_f1kc6i797q1, 8).
+start[ast_babel](n35aac76f74454ed6_f1kc6i797q1, 313).
 attr[ast_babel](n35aac76f74454ed6_f1kc6i797q1, static, false).
 node[ast_babel](n35aac76f74454ed6_i0e582o75v7, identifier, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_i0e582o75v7, 8).
+start[ast_babel](n35aac76f74454ed6_i0e582o75v7, 313).
 attr[ast_babel](n35aac76f74454ed6_i0e582o75v7, name, "m").
 child[ast_babel](n35aac76f74454ed6_f1kc6i797q1, key, 0, n35aac76f74454ed6_i0e582o75v7).
 attr[ast_babel](n35aac76f74454ed6_f1kc6i797q1, computed, false).
@@ -383,29 +482,37 @@ attr[ast_babel](n35aac76f74454ed6_f1kc6i797q1, generator, false).
 attr[ast_babel](n35aac76f74454ed6_f1kc6i797q1, async, false).
 node[ast_babel](n35aac76f74454ed6_f2mo51ake76, block_statement, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_f2mo51ake76, 8).
+start[ast_babel](n35aac76f74454ed6_f2mo51ake76, 317).
 child[ast_babel](n35aac76f74454ed6_f1kc6i797q1, body, 0, n35aac76f74454ed6_f2mo51ake76).
 child[ast_babel](n35aac76f74454ed6_mqc9r8u5g7, body, 4, n35aac76f74454ed6_f1kc6i797q1).
 child[ast_babel](n35aac76f74454ed6_lufi1g8aot1, body, 0, n35aac76f74454ed6_mqc9r8u5g7).
-child[ast_babel](n35aac76f74454ed6_12undirbnh3, body, 7, n35aac76f74454ed6_lufi1g8aot1).
+child[ast_babel](n35aac76f74454ed6_root, body, 7, n35aac76f74454ed6_lufi1g8aot1).
 node[ast_babel](n35aac76f74454ed6_3it4duuahu2, if_statement, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_3it4duuahu2, 9).
+start[ast_babel](n35aac76f74454ed6_3it4duuahu2, 322).
 node[ast_babel](n35aac76f74454ed6_lrg4m509h73, identifier, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_lrg4m509h73, 9).
+start[ast_babel](n35aac76f74454ed6_lrg4m509h73, 326).
 attr[ast_babel](n35aac76f74454ed6_lrg4m509h73, name, "t").
 child[ast_babel](n35aac76f74454ed6_3it4duuahu2, test, 0, n35aac76f74454ed6_lrg4m509h73).
 node[ast_babel](n35aac76f74454ed6_1aunmb3pjl3, block_statement, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_1aunmb3pjl3, 9).
+start[ast_babel](n35aac76f74454ed6_1aunmb3pjl3, 329).
 node[ast_babel](n35aac76f74454ed6_j4emtcehqb7, expression_statement, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_j4emtcehqb7, 9).
+start[ast_babel](n35aac76f74454ed6_j4emtcehqb7, 331).
 node[ast_babel](n35aac76f74454ed6_ag3see73qf, assignment_expression, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_ag3see73qf, 9).
+start[ast_babel](n35aac76f74454ed6_ag3see73qf, 331).
 attr[ast_babel](n35aac76f74454ed6_ag3see73qf, operator, "+=").
 node[ast_babel](n35aac76f74454ed6_lcfvrh6qim, identifier, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_lcfvrh6qim, 9).
+start[ast_babel](n35aac76f74454ed6_lcfvrh6qim, 331).
 attr[ast_babel](n35aac76f74454ed6_lcfvrh6qim, name, "t").
 child[ast_babel](n35aac76f74454ed6_ag3see73qf, left, 0, n35aac76f74454ed6_lcfvrh6qim).
 node[ast_babel](n35aac76f74454ed6_9m0eep0amd5, numeric_literal, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_9m0eep0amd5, 9).
+start[ast_babel](n35aac76f74454ed6_9m0eep0amd5, 336).
 attr[ast_babel](n35aac76f74454ed6_9m0eep0amd5, value, 1).
 child[ast_babel](n35aac76f74454ed6_ag3see73qf, right, 0, n35aac76f74454ed6_9m0eep0amd5).
 child[ast_babel](n35aac76f74454ed6_j4emtcehqb7, expression, 0, n35aac76f74454ed6_ag3see73qf).
@@ -413,34 +520,43 @@ child[ast_babel](n35aac76f74454ed6_1aunmb3pjl3, body, 0, n35aac76f74454ed6_j4emt
 child[ast_babel](n35aac76f74454ed6_3it4duuahu2, consequent, 0, n35aac76f74454ed6_1aunmb3pjl3).
 node[ast_babel](n35aac76f74454ed6_t4fgfl7v603, expression_statement, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_t4fgfl7v603, 9).
+start[ast_babel](n35aac76f74454ed6_t4fgfl7v603, 346).
 node[ast_babel](n35aac76f74454ed6_dd75hqq1e05, assignment_expression, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_dd75hqq1e05, 9).
+start[ast_babel](n35aac76f74454ed6_dd75hqq1e05, 346).
 attr[ast_babel](n35aac76f74454ed6_dd75hqq1e05, operator, "=").
 node[ast_babel](n35aac76f74454ed6_1br64jukrp3, identifier, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_1br64jukrp3, 9).
+start[ast_babel](n35aac76f74454ed6_1br64jukrp3, 346).
 attr[ast_babel](n35aac76f74454ed6_1br64jukrp3, name, "t").
 child[ast_babel](n35aac76f74454ed6_dd75hqq1e05, left, 0, n35aac76f74454ed6_1br64jukrp3).
 node[ast_babel](n35aac76f74454ed6_0ern6fdnb8, unary_expression, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_0ern6fdnb8, 9).
+start[ast_babel](n35aac76f74454ed6_0ern6fdnb8, 350).
 attr[ast_babel](n35aac76f74454ed6_0ern6fdnb8, operator, "-").
 attr[ast_babel](n35aac76f74454ed6_0ern6fdnb8, prefix, true).
 node[ast_babel](n35aac76f74454ed6_moojdv0vmj, identifier, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_moojdv0vmj, 9).
+start[ast_babel](n35aac76f74454ed6_moojdv0vmj, 351).
 attr[ast_babel](n35aac76f74454ed6_moojdv0vmj, name, "t").
 child[ast_babel](n35aac76f74454ed6_0ern6fdnb8, argument, 0, n35aac76f74454ed6_moojdv0vmj).
 child[ast_babel](n35aac76f74454ed6_dd75hqq1e05, right, 0, n35aac76f74454ed6_0ern6fdnb8).
 child[ast_babel](n35aac76f74454ed6_t4fgfl7v603, expression, 0, n35aac76f74454ed6_dd75hqq1e05).
 child[ast_babel](n35aac76f74454ed6_3it4duuahu2, alternate, 0, n35aac76f74454ed6_t4fgfl7v603).
-child[ast_babel](n35aac76f74454ed6_12undirbnh3, body, 8, n35aac76f74454ed6_3it4duuahu2).
+child[ast_babel](n35aac76f74454ed6_root, body, 8, n35aac76f74454ed6_3it4duuahu2).
 node[ast_babel](n35aac76f74454ed6_aldlt9fdkd6, for_of_statement, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_aldlt9fdkd6, 10).
+start[ast_babel](n35aac76f74454ed6_aldlt9fdkd6, 354).
 attr[ast_babel](n35aac76f74454ed6_aldlt9fdkd6, await, false).
 node[ast_babel](n35aac76f74454ed6_g1r1ofi3ns3, variable_declaration, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_g1r1ofi3ns3, 10).
+start[ast_babel](n35aac76f74454ed6_g1r1ofi3ns3, 359).
 node[ast_babel](n35aac76f74454ed6_04lgt06vq97, variable_declarator, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_04lgt06vq97, 10).
+start[ast_babel](n35aac76f74454ed6_04lgt06vq97, 365).
 node[ast_babel](n35aac76f74454ed6_bppeg3br416, identifier, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_bppeg3br416, 10).
+start[ast_babel](n35aac76f74454ed6_bppeg3br416, 365).
 attr[ast_babel](n35aac76f74454ed6_bppeg3br416, name, "e").
 child[ast_babel](n35aac76f74454ed6_04lgt06vq97, id, 0, n35aac76f74454ed6_bppeg3br416).
 child[ast_babel](n35aac76f74454ed6_g1r1ofi3ns3, declarations, 0, n35aac76f74454ed6_04lgt06vq97).
@@ -448,34 +564,45 @@ attr[ast_babel](n35aac76f74454ed6_g1r1ofi3ns3, kind, "const").
 child[ast_babel](n35aac76f74454ed6_aldlt9fdkd6, left, 0, n35aac76f74454ed6_g1r1ofi3ns3).
 node[ast_babel](n35aac76f74454ed6_611gg2b5nt7, identifier, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_611gg2b5nt7, 10).
+start[ast_babel](n35aac76f74454ed6_611gg2b5nt7, 370).
 attr[ast_babel](n35aac76f74454ed6_611gg2b5nt7, name, "es").
 child[ast_babel](n35aac76f74454ed6_aldlt9fdkd6, right, 0, n35aac76f74454ed6_611gg2b5nt7).
 node[ast_babel](n35aac76f74454ed6_8fo42snsea3, block_statement, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_8fo42snsea3, 10).
+start[ast_babel](n35aac76f74454ed6_8fo42snsea3, 374).
 node[ast_babel](n35aac76f74454ed6_c04cl5onlg5, if_statement, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_c04cl5onlg5, 10).
+start[ast_babel](n35aac76f74454ed6_c04cl5onlg5, 376).
 node[ast_babel](n35aac76f74454ed6_ei6semchsi3, identifier, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_ei6semchsi3, 10).
+start[ast_babel](n35aac76f74454ed6_ei6semchsi3, 380).
 attr[ast_babel](n35aac76f74454ed6_ei6semchsi3, name, "e").
 child[ast_babel](n35aac76f74454ed6_c04cl5onlg5, test, 0, n35aac76f74454ed6_ei6semchsi3).
 node[ast_babel](n35aac76f74454ed6_lg7ii6gcj12, break_statement, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_lg7ii6gcj12, 10).
+start[ast_babel](n35aac76f74454ed6_lg7ii6gcj12, 383).
 child[ast_babel](n35aac76f74454ed6_c04cl5onlg5, consequent, 0, n35aac76f74454ed6_lg7ii6gcj12).
 child[ast_babel](n35aac76f74454ed6_8fo42snsea3, body, 0, n35aac76f74454ed6_c04cl5onlg5).
 child[ast_babel](n35aac76f74454ed6_aldlt9fdkd6, body, 0, n35aac76f74454ed6_8fo42snsea3).
-child[ast_babel](n35aac76f74454ed6_12undirbnh3, body, 9, n35aac76f74454ed6_aldlt9fdkd6).
+child[ast_babel](n35aac76f74454ed6_root, body, 9, n35aac76f74454ed6_aldlt9fdkd6).
 node[ast_babel](n35aac76f74454ed6_j9e6idmr075, try_statement, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_j9e6idmr075, 11).
+start[ast_babel](n35aac76f74454ed6_j9e6idmr075, 392).
 node[ast_babel](n35aac76f74454ed6_b7o4g1oklr3, block_statement, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_b7o4g1oklr3, 11).
+start[ast_babel](n35aac76f74454ed6_b7o4g1oklr3, 396).
 node[ast_babel](n35aac76f74454ed6_rbv47vumva4, expression_statement, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_rbv47vumva4, 11).
+start[ast_babel](n35aac76f74454ed6_rbv47vumva4, 398).
 node[ast_babel](n35aac76f74454ed6_ji7plkgefo4, await_expression, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_ji7plkgefo4, 11).
+start[ast_babel](n35aac76f74454ed6_ji7plkgefo4, 398).
 node[ast_babel](n35aac76f74454ed6_pmlmkmhtk96, call_expression, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_pmlmkmhtk96, 11).
+start[ast_babel](n35aac76f74454ed6_pmlmkmhtk96, 404).
 node[ast_babel](n35aac76f74454ed6_6v690fdlbb7, identifier, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_6v690fdlbb7, 11).
+start[ast_babel](n35aac76f74454ed6_6v690fdlbb7, 404).
 attr[ast_babel](n35aac76f74454ed6_6v690fdlbb7, name, "h").
 child[ast_babel](n35aac76f74454ed6_pmlmkmhtk96, callee, 0, n35aac76f74454ed6_6v690fdlbb7).
 child[ast_babel](n35aac76f74454ed6_ji7plkgefo4, argument, 0, n35aac76f74454ed6_pmlmkmhtk96).
@@ -484,16 +611,21 @@ child[ast_babel](n35aac76f74454ed6_b7o4g1oklr3, body, 0, n35aac76f74454ed6_rbv47
 child[ast_babel](n35aac76f74454ed6_j9e6idmr075, block, 0, n35aac76f74454ed6_b7o4g1oklr3).
 node[ast_babel](n35aac76f74454ed6_htb8nsj0qg2, catch_clause, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_htb8nsj0qg2, 11).
+start[ast_babel](n35aac76f74454ed6_htb8nsj0qg2, 411).
 node[ast_babel](n35aac76f74454ed6_1hfsnhs80u4, identifier, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_1hfsnhs80u4, 11).
+start[ast_babel](n35aac76f74454ed6_1hfsnhs80u4, 418).
 attr[ast_babel](n35aac76f74454ed6_1hfsnhs80u4, name, "err").
 child[ast_babel](n35aac76f74454ed6_htb8nsj0qg2, param, 0, n35aac76f74454ed6_1hfsnhs80u4).
 node[ast_babel](n35aac76f74454ed6_hfj7i4bcup1, block_statement, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_hfj7i4bcup1, 11).
+start[ast_babel](n35aac76f74454ed6_hfj7i4bcup1, 423).
 node[ast_babel](n35aac76f74454ed6_naq6ahj9np6, throw_statement, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_naq6ahj9np6, 11).
+start[ast_babel](n35aac76f74454ed6_naq6ahj9np6, 425).
 node[ast_babel](n35aac76f74454ed6_su1pubm0en2, identifier, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_su1pubm0en2, 11).
+start[ast_babel](n35aac76f74454ed6_su1pubm0en2, 431).
 attr[ast_babel](n35aac76f74454ed6_su1pubm0en2, name, "err").
 child[ast_babel](n35aac76f74454ed6_naq6ahj9np6, argument, 0, n35aac76f74454ed6_su1pubm0en2).
 child[ast_babel](n35aac76f74454ed6_hfj7i4bcup1, body, 0, n35aac76f74454ed6_naq6ahj9np6).
@@ -501,28 +633,37 @@ child[ast_babel](n35aac76f74454ed6_htb8nsj0qg2, body, 0, n35aac76f74454ed6_hfj7i
 child[ast_babel](n35aac76f74454ed6_j9e6idmr075, handler, 0, n35aac76f74454ed6_htb8nsj0qg2).
 node[ast_babel](n35aac76f74454ed6_09f57dvqns3, block_statement, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_09f57dvqns3, 11).
+start[ast_babel](n35aac76f74454ed6_09f57dvqns3, 446).
 node[ast_babel](n35aac76f74454ed6_he1hlj6mbd3, expression_statement, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_he1hlj6mbd3, 11).
+start[ast_babel](n35aac76f74454ed6_he1hlj6mbd3, 448).
 node[ast_babel](n35aac76f74454ed6_j4reno0ko04, call_expression, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_j4reno0ko04, 11).
+start[ast_babel](n35aac76f74454ed6_j4reno0ko04, 448).
 node[ast_babel](n35aac76f74454ed6_n81518mrm61, identifier, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_n81518mrm61, 11).
+start[ast_babel](n35aac76f74454ed6_n81518mrm61, 448).
 attr[ast_babel](n35aac76f74454ed6_n81518mrm61, name, "done").
 child[ast_babel](n35aac76f74454ed6_j4reno0ko04, callee, 0, n35aac76f74454ed6_n81518mrm61).
 child[ast_babel](n35aac76f74454ed6_he1hlj6mbd3, expression, 0, n35aac76f74454ed6_j4reno0ko04).
 child[ast_babel](n35aac76f74454ed6_09f57dvqns3, body, 0, n35aac76f74454ed6_he1hlj6mbd3).
 child[ast_babel](n35aac76f74454ed6_j9e6idmr075, finalizer, 0, n35aac76f74454ed6_09f57dvqns3).
-child[ast_babel](n35aac76f74454ed6_12undirbnh3, body, 10, n35aac76f74454ed6_j9e6idmr075).
+child[ast_babel](n35aac76f74454ed6_root, body, 10, n35aac76f74454ed6_j9e6idmr075).
 node[ast_babel](n35aac76f74454ed6_8vb9c0tmrr2, variable_declaration, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_8vb9c0tmrr2, 12).
+start[ast_babel](n35aac76f74454ed6_8vb9c0tmrr2, 458).
 node[ast_babel](n35aac76f74454ed6_dbs91grpie2, variable_declarator, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_dbs91grpie2, 12).
+start[ast_babel](n35aac76f74454ed6_dbs91grpie2, 464).
 node[ast_babel](n35aac76f74454ed6_tt1fb3oep21, object_pattern, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_tt1fb3oep21, 12).
+start[ast_babel](n35aac76f74454ed6_tt1fb3oep21, 464).
 node[ast_babel](n35aac76f74454ed6_m5u2ooqvtg1, object_property, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_m5u2ooqvtg1, 12).
+start[ast_babel](n35aac76f74454ed6_m5u2ooqvtg1, 465).
 node[ast_babel](n35aac76f74454ed6_qjdrb8o7mg3, identifier, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_qjdrb8o7mg3, 12).
+start[ast_babel](n35aac76f74454ed6_qjdrb8o7mg3, 465).
 attr[ast_babel](n35aac76f74454ed6_qjdrb8o7mg3, name, "u").
 child[ast_babel](n35aac76f74454ed6_m5u2ooqvtg1, key, 0, n35aac76f74454ed6_qjdrb8o7mg3).
 attr[ast_babel](n35aac76f74454ed6_m5u2ooqvtg1, computed, false).
@@ -530,13 +671,16 @@ attr[ast_babel](n35aac76f74454ed6_m5u2ooqvtg1, method, false).
 attr[ast_babel](n35aac76f74454ed6_m5u2ooqvtg1, shorthand, true).
 node[ast_babel](n35aac76f74454ed6_7dcqghokj11, identifier, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_7dcqghokj11, 12).
+start[ast_babel](n35aac76f74454ed6_7dcqghokj11, 465).
 attr[ast_babel](n35aac76f74454ed6_7dcqghokj11, name, "u").
 child[ast_babel](n35aac76f74454ed6_m5u2ooqvtg1, value, 0, n35aac76f74454ed6_7dcqghokj11).
 child[ast_babel](n35aac76f74454ed6_tt1fb3oep21, properties, 0, n35aac76f74454ed6_m5u2ooqvtg1).
 node[ast_babel](n35aac76f74454ed6_n1o6kkopgg6, object_property, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_n1o6kkopgg6, 12).
+start[ast_babel](n35aac76f74454ed6_n1o6kkopgg6, 468).
 node[ast_babel](n35aac76f74454ed6_n0uh3j6r2j4, identifier, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_n0uh3j6r2j4, 12).
+start[ast_babel](n35aac76f74454ed6_n0uh3j6r2j4, 468).
 attr[ast_babel](n35aac76f74454ed6_n0uh3j6r2j4, name, "w").
 child[ast_babel](n35aac76f74454ed6_n1o6kkopgg6, key, 0, n35aac76f74454ed6_n0uh3j6r2j4).
 attr[ast_babel](n35aac76f74454ed6_n1o6kkopgg6, computed, false).
@@ -544,14 +688,18 @@ attr[ast_babel](n35aac76f74454ed6_n1o6kkopgg6, method, false).
 attr[ast_babel](n35aac76f74454ed6_n1o6kkopgg6, shorthand, false).
 node[ast_babel](n35aac76f74454ed6_adr4jme26j5, array_pattern, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_adr4jme26j5, 12).
+start[ast_babel](n35aac76f74454ed6_adr4jme26j5, 471).
 node[ast_babel](n35aac76f74454ed6_68k6jgn8r55, identifier, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_68k6jgn8r55, 12).
+start[ast_babel](n35aac76f74454ed6_68k6jgn8r55, 472).
 attr[ast_babel](n35aac76f74454ed6_68k6jgn8r55, name, "y1").
 child[ast_babel](n35aac76f74454ed6_adr4jme26j5, elements, 0, n35aac76f74454ed6_68k6jgn8r55).
 node[ast_babel](n35aac76f74454ed6_3ierjp7g6e, rest_element, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_3ierjp7g6e, 12).
+start[ast_babel](n35aac76f74454ed6_3ierjp7g6e, 476).
 node[ast_babel](n35aac76f74454ed6_njidsgh0i37, identifier, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_njidsgh0i37, 12).
+start[ast_babel](n35aac76f74454ed6_njidsgh0i37, 479).
 attr[ast_babel](n35aac76f74454ed6_njidsgh0i37, name, "ys").
 child[ast_babel](n35aac76f74454ed6_3ierjp7g6e, argument, 0, n35aac76f74454ed6_njidsgh0i37).
 child[ast_babel](n35aac76f74454ed6_adr4jme26j5, elements, 1, n35aac76f74454ed6_3ierjp7g6e).
@@ -559,65 +707,81 @@ child[ast_babel](n35aac76f74454ed6_n1o6kkopgg6, value, 0, n35aac76f74454ed6_adr4
 child[ast_babel](n35aac76f74454ed6_tt1fb3oep21, properties, 1, n35aac76f74454ed6_n1o6kkopgg6).
 node[ast_babel](n35aac76f74454ed6_tg5kdpn5s05, rest_element, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_tg5kdpn5s05, 12).
+start[ast_babel](n35aac76f74454ed6_tg5kdpn5s05, 484).
 node[ast_babel](n35aac76f74454ed6_8nvlnncolf5, identifier, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_8nvlnncolf5, 12).
+start[ast_babel](n35aac76f74454ed6_8nvlnncolf5, 487).
 attr[ast_babel](n35aac76f74454ed6_8nvlnncolf5, name, "rest").
 child[ast_babel](n35aac76f74454ed6_tg5kdpn5s05, argument, 0, n35aac76f74454ed6_8nvlnncolf5).
 child[ast_babel](n35aac76f74454ed6_tt1fb3oep21, properties, 2, n35aac76f74454ed6_tg5kdpn5s05).
 child[ast_babel](n35aac76f74454ed6_dbs91grpie2, id, 0, n35aac76f74454ed6_tt1fb3oep21).
 node[ast_babel](n35aac76f74454ed6_vcu09c3umc5, identifier, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_vcu09c3umc5, 12).
+start[ast_babel](n35aac76f74454ed6_vcu09c3umc5, 495).
 attr[ast_babel](n35aac76f74454ed6_vcu09c3umc5, name, "obj").
 child[ast_babel](n35aac76f74454ed6_dbs91grpie2, init, 0, n35aac76f74454ed6_vcu09c3umc5).
 child[ast_babel](n35aac76f74454ed6_8vb9c0tmrr2, declarations, 0, n35aac76f74454ed6_dbs91grpie2).
 attr[ast_babel](n35aac76f74454ed6_8vb9c0tmrr2, kind, "const").
-child[ast_babel](n35aac76f74454ed6_12undirbnh3, body, 11, n35aac76f74454ed6_8vb9c0tmrr2).
+child[ast_babel](n35aac76f74454ed6_root, body, 11, n35aac76f74454ed6_8vb9c0tmrr2).
 node[ast_babel](n35aac76f74454ed6_ibfe230elg, expression_statement, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_ibfe230elg, 13).
+start[ast_babel](n35aac76f74454ed6_ibfe230elg, 500).
 node[ast_babel](n35aac76f74454ed6_9ffve9psuq4, update_expression, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_9ffve9psuq4, 13).
+start[ast_babel](n35aac76f74454ed6_9ffve9psuq4, 500).
 attr[ast_babel](n35aac76f74454ed6_9ffve9psuq4, operator, "++").
 attr[ast_babel](n35aac76f74454ed6_9ffve9psuq4, prefix, false).
 node[ast_babel](n35aac76f74454ed6_su5kl6hl0i4, identifier, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_su5kl6hl0i4, 13).
+start[ast_babel](n35aac76f74454ed6_su5kl6hl0i4, 500).
 attr[ast_babel](n35aac76f74454ed6_su5kl6hl0i4, name, "x").
 child[ast_babel](n35aac76f74454ed6_9ffve9psuq4, argument, 0, n35aac76f74454ed6_su5kl6hl0i4).
 child[ast_babel](n35aac76f74454ed6_ibfe230elg, expression, 0, n35aac76f74454ed6_9ffve9psuq4).
-child[ast_babel](n35aac76f74454ed6_12undirbnh3, body, 12, n35aac76f74454ed6_ibfe230elg).
+child[ast_babel](n35aac76f74454ed6_root, body, 12, n35aac76f74454ed6_ibfe230elg).
 node[ast_babel](n35aac76f74454ed6_pni9pqp9m21, expression_statement, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_pni9pqp9m21, 13).
+start[ast_babel](n35aac76f74454ed6_pni9pqp9m21, 505).
 node[ast_babel](n35aac76f74454ed6_o76frd8s7e2, update_expression, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_o76frd8s7e2, 13).
+start[ast_babel](n35aac76f74454ed6_o76frd8s7e2, 505).
 attr[ast_babel](n35aac76f74454ed6_o76frd8s7e2, operator, "++").
 attr[ast_babel](n35aac76f74454ed6_o76frd8s7e2, prefix, true).
 node[ast_babel](n35aac76f74454ed6_01snea85rp4, identifier, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_01snea85rp4, 13).
+start[ast_babel](n35aac76f74454ed6_01snea85rp4, 507).
 attr[ast_babel](n35aac76f74454ed6_01snea85rp4, name, "x").
 child[ast_babel](n35aac76f74454ed6_o76frd8s7e2, argument, 0, n35aac76f74454ed6_01snea85rp4).
 child[ast_babel](n35aac76f74454ed6_pni9pqp9m21, expression, 0, n35aac76f74454ed6_o76frd8s7e2).
-child[ast_babel](n35aac76f74454ed6_12undirbnh3, body, 13, n35aac76f74454ed6_pni9pqp9m21).
+child[ast_babel](n35aac76f74454ed6_root, body, 13, n35aac76f74454ed6_pni9pqp9m21).
 node[ast_babel](n35aac76f74454ed6_4tv4espgds4, variable_declaration, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_4tv4espgds4, 14).
+start[ast_babel](n35aac76f74454ed6_4tv4espgds4, 510).
 node[ast_babel](n35aac76f74454ed6_vneeen1jmk3, variable_declarator, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_vneeen1jmk3, 14).
+start[ast_babel](n35aac76f74454ed6_vneeen1jmk3, 516).
 node[ast_babel](n35aac76f74454ed6_302lie004g7, identifier, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_302lie004g7, 14).
+start[ast_babel](n35aac76f74454ed6_302lie004g7, 516).
 attr[ast_babel](n35aac76f74454ed6_302lie004g7, name, "s2").
 child[ast_babel](n35aac76f74454ed6_vneeen1jmk3, id, 0, n35aac76f74454ed6_302lie004g7).
 node[ast_babel](n35aac76f74454ed6_vh1mnr4r0b5, template_literal, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_vh1mnr4r0b5, 14).
+start[ast_babel](n35aac76f74454ed6_vh1mnr4r0b5, 521).
 node[ast_babel](n35aac76f74454ed6_iia4sv5ecm, identifier, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_iia4sv5ecm, 14).
+start[ast_babel](n35aac76f74454ed6_iia4sv5ecm, 525).
 attr[ast_babel](n35aac76f74454ed6_iia4sv5ecm, name, "t").
 child[ast_babel](n35aac76f74454ed6_vh1mnr4r0b5, expressions, 0, n35aac76f74454ed6_iia4sv5ecm).
 node[ast_babel](n35aac76f74454ed6_ik2q65ejd7, template_element, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_ik2q65ejd7, 14).
+start[ast_babel](n35aac76f74454ed6_ik2q65ejd7, 522).
 attr[ast_babel](n35aac76f74454ed6_ik2q65ejd7, value_raw, "a").
 attr[ast_babel](n35aac76f74454ed6_ik2q65ejd7, value_cooked, "a").
 attr[ast_babel](n35aac76f74454ed6_ik2q65ejd7, tail, false).
 child[ast_babel](n35aac76f74454ed6_vh1mnr4r0b5, quasis, 0, n35aac76f74454ed6_ik2q65ejd7).
 node[ast_babel](n35aac76f74454ed6_0qk1hhbf5c5, template_element, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_0qk1hhbf5c5, 14).
+start[ast_babel](n35aac76f74454ed6_0qk1hhbf5c5, 527).
 attr[ast_babel](n35aac76f74454ed6_0qk1hhbf5c5, value_raw, "b").
 attr[ast_babel](n35aac76f74454ed6_0qk1hhbf5c5, value_cooked, "b").
 attr[ast_babel](n35aac76f74454ed6_0qk1hhbf5c5, tail, true).
@@ -626,20 +790,26 @@ child[ast_babel](n35aac76f74454ed6_vneeen1jmk3, init, 0, n35aac76f74454ed6_vh1mn
 child[ast_babel](n35aac76f74454ed6_4tv4espgds4, declarations, 0, n35aac76f74454ed6_vneeen1jmk3).
 node[ast_babel](n35aac76f74454ed6_nn853evegj7, variable_declarator, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_nn853evegj7, 14).
+start[ast_babel](n35aac76f74454ed6_nn853evegj7, 531).
 node[ast_babel](n35aac76f74454ed6_qet0n22e7d5, identifier, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_qet0n22e7d5, 14).
+start[ast_babel](n35aac76f74454ed6_qet0n22e7d5, 531).
 attr[ast_babel](n35aac76f74454ed6_qet0n22e7d5, name, "tg").
 child[ast_babel](n35aac76f74454ed6_nn853evegj7, id, 0, n35aac76f74454ed6_qet0n22e7d5).
 node[ast_babel](n35aac76f74454ed6_8v9npe5qji7, tagged_template_expression, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_8v9npe5qji7, 14).
+start[ast_babel](n35aac76f74454ed6_8v9npe5qji7, 536).
 node[ast_babel](n35aac76f74454ed6_ql5iot3k0n6, identifier, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_ql5iot3k0n6, 14).
+start[ast_babel](n35aac76f74454ed6_ql5iot3k0n6, 536).
 attr[ast_babel](n35aac76f74454ed6_ql5iot3k0n6, name, "tag").
 child[ast_babel](n35aac76f74454ed6_8v9npe5qji7, tag, 0, n35aac76f74454ed6_ql5iot3k0n6).
 node[ast_babel](n35aac76f74454ed6_h7fqdek0mp7, template_literal, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_h7fqdek0mp7, 14).
+start[ast_babel](n35aac76f74454ed6_h7fqdek0mp7, 539).
 node[ast_babel](n35aac76f74454ed6_qkinb31vmj4, template_element, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_qkinb31vmj4, 14).
+start[ast_babel](n35aac76f74454ed6_qkinb31vmj4, 540).
 attr[ast_babel](n35aac76f74454ed6_qkinb31vmj4, value_raw, "q").
 attr[ast_babel](n35aac76f74454ed6_qkinb31vmj4, value_cooked, "q").
 attr[ast_babel](n35aac76f74454ed6_qkinb31vmj4, tail, true).
@@ -648,25 +818,32 @@ child[ast_babel](n35aac76f74454ed6_8v9npe5qji7, quasi, 0, n35aac76f74454ed6_h7fq
 child[ast_babel](n35aac76f74454ed6_nn853evegj7, init, 0, n35aac76f74454ed6_8v9npe5qji7).
 child[ast_babel](n35aac76f74454ed6_4tv4espgds4, declarations, 1, n35aac76f74454ed6_nn853evegj7).
 attr[ast_babel](n35aac76f74454ed6_4tv4espgds4, kind, "const").
-child[ast_babel](n35aac76f74454ed6_12undirbnh3, body, 14, n35aac76f74454ed6_4tv4espgds4).
+child[ast_babel](n35aac76f74454ed6_root, body, 14, n35aac76f74454ed6_4tv4espgds4).
 node[ast_babel](n35aac76f74454ed6_kl9vfbisag1, variable_declaration, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_kl9vfbisag1, 15).
+start[ast_babel](n35aac76f74454ed6_kl9vfbisag1, 544).
 node[ast_babel](n35aac76f74454ed6_fa23mbpdug1, variable_declarator, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_fa23mbpdug1, 15).
+start[ast_babel](n35aac76f74454ed6_fa23mbpdug1, 550).
 node[ast_babel](n35aac76f74454ed6_l4o8q0uqra2, identifier, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_l4o8q0uqra2, 15).
+start[ast_babel](n35aac76f74454ed6_l4o8q0uqra2, 550).
 attr[ast_babel](n35aac76f74454ed6_l4o8q0uqra2, name, "ar").
 child[ast_babel](n35aac76f74454ed6_fa23mbpdug1, id, 0, n35aac76f74454ed6_l4o8q0uqra2).
 node[ast_babel](n35aac76f74454ed6_u3q0oag8fd1, array_expression, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_u3q0oag8fd1, 15).
+start[ast_babel](n35aac76f74454ed6_u3q0oag8fd1, 555).
 node[ast_babel](n35aac76f74454ed6_021sibb3kv3, numeric_literal, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_021sibb3kv3, 15).
+start[ast_babel](n35aac76f74454ed6_021sibb3kv3, 556).
 attr[ast_babel](n35aac76f74454ed6_021sibb3kv3, value, 1).
 child[ast_babel](n35aac76f74454ed6_u3q0oag8fd1, elements, 0, n35aac76f74454ed6_021sibb3kv3).
 node[ast_babel](n35aac76f74454ed6_9a9njps43m7, spread_element, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_9a9njps43m7, 15).
+start[ast_babel](n35aac76f74454ed6_9a9njps43m7, 561).
 node[ast_babel](n35aac76f74454ed6_1n3dqp8b5o3, identifier, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_1n3dqp8b5o3, 15).
+start[ast_babel](n35aac76f74454ed6_1n3dqp8b5o3, 564).
 attr[ast_babel](n35aac76f74454ed6_1n3dqp8b5o3, name, "ar2").
 child[ast_babel](n35aac76f74454ed6_9a9njps43m7, argument, 0, n35aac76f74454ed6_1n3dqp8b5o3).
 child[ast_babel](n35aac76f74454ed6_u3q0oag8fd1, elements, 2, n35aac76f74454ed6_9a9njps43m7).
@@ -674,52 +851,65 @@ child[ast_babel](n35aac76f74454ed6_fa23mbpdug1, init, 0, n35aac76f74454ed6_u3q0o
 child[ast_babel](n35aac76f74454ed6_kl9vfbisag1, declarations, 0, n35aac76f74454ed6_fa23mbpdug1).
 node[ast_babel](n35aac76f74454ed6_ceaigd8b5g4, variable_declarator, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_ceaigd8b5g4, 15).
+start[ast_babel](n35aac76f74454ed6_ceaigd8b5g4, 570).
 node[ast_babel](n35aac76f74454ed6_a83i10a7497, identifier, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_a83i10a7497, 15).
+start[ast_babel](n35aac76f74454ed6_a83i10a7497, 570).
 attr[ast_babel](n35aac76f74454ed6_a83i10a7497, name, "ob").
 child[ast_babel](n35aac76f74454ed6_ceaigd8b5g4, id, 0, n35aac76f74454ed6_a83i10a7497).
 node[ast_babel](n35aac76f74454ed6_d4qeksu3km5, object_expression, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_d4qeksu3km5, 15).
+start[ast_babel](n35aac76f74454ed6_d4qeksu3km5, 575).
 node[ast_babel](n35aac76f74454ed6_615dmhf5c13, object_property, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_615dmhf5c13, 15).
+start[ast_babel](n35aac76f74454ed6_615dmhf5c13, 577).
 attr[ast_babel](n35aac76f74454ed6_615dmhf5c13, method, false).
 node[ast_babel](n35aac76f74454ed6_qlt3pf5qf55, identifier, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_qlt3pf5qf55, 15).
+start[ast_babel](n35aac76f74454ed6_qlt3pf5qf55, 577).
 attr[ast_babel](n35aac76f74454ed6_qlt3pf5qf55, name, "a").
 child[ast_babel](n35aac76f74454ed6_615dmhf5c13, key, 0, n35aac76f74454ed6_qlt3pf5qf55).
 attr[ast_babel](n35aac76f74454ed6_615dmhf5c13, computed, false).
 attr[ast_babel](n35aac76f74454ed6_615dmhf5c13, shorthand, false).
 node[ast_babel](n35aac76f74454ed6_lcv1kvvuru7, numeric_literal, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_lcv1kvvuru7, 15).
+start[ast_babel](n35aac76f74454ed6_lcv1kvvuru7, 580).
 attr[ast_babel](n35aac76f74454ed6_lcv1kvvuru7, value, 1).
 child[ast_babel](n35aac76f74454ed6_615dmhf5c13, value, 0, n35aac76f74454ed6_lcv1kvvuru7).
 child[ast_babel](n35aac76f74454ed6_d4qeksu3km5, properties, 0, n35aac76f74454ed6_615dmhf5c13).
 node[ast_babel](n35aac76f74454ed6_u87bal5vgv7, object_property, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_u87bal5vgv7, 15).
+start[ast_babel](n35aac76f74454ed6_u87bal5vgv7, 583).
 attr[ast_babel](n35aac76f74454ed6_u87bal5vgv7, method, false).
 attr[ast_babel](n35aac76f74454ed6_u87bal5vgv7, computed, true).
 node[ast_babel](n35aac76f74454ed6_si727ji22i, identifier, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_si727ji22i, 15).
+start[ast_babel](n35aac76f74454ed6_si727ji22i, 584).
 attr[ast_babel](n35aac76f74454ed6_si727ji22i, name, "k").
 child[ast_babel](n35aac76f74454ed6_u87bal5vgv7, key, 0, n35aac76f74454ed6_si727ji22i).
 attr[ast_babel](n35aac76f74454ed6_u87bal5vgv7, shorthand, false).
 node[ast_babel](n35aac76f74454ed6_b5mastktbg2, numeric_literal, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_b5mastktbg2, 15).
+start[ast_babel](n35aac76f74454ed6_b5mastktbg2, 588).
 attr[ast_babel](n35aac76f74454ed6_b5mastktbg2, value, 2).
 child[ast_babel](n35aac76f74454ed6_u87bal5vgv7, value, 0, n35aac76f74454ed6_b5mastktbg2).
 child[ast_babel](n35aac76f74454ed6_d4qeksu3km5, properties, 1, n35aac76f74454ed6_u87bal5vgv7).
 node[ast_babel](n35aac76f74454ed6_9ufnl95lva6, spread_element, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_9ufnl95lva6, 15).
+start[ast_babel](n35aac76f74454ed6_9ufnl95lva6, 591).
 node[ast_babel](n35aac76f74454ed6_2ua67j9jsa, identifier, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_2ua67j9jsa, 15).
+start[ast_babel](n35aac76f74454ed6_2ua67j9jsa, 594).
 attr[ast_babel](n35aac76f74454ed6_2ua67j9jsa, name, "ob2").
 child[ast_babel](n35aac76f74454ed6_9ufnl95lva6, argument, 0, n35aac76f74454ed6_2ua67j9jsa).
 child[ast_babel](n35aac76f74454ed6_d4qeksu3km5, properties, 2, n35aac76f74454ed6_9ufnl95lva6).
 node[ast_babel](n35aac76f74454ed6_qikh003lis1, object_method, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_qikh003lis1, 15).
+start[ast_babel](n35aac76f74454ed6_qikh003lis1, 599).
 attr[ast_babel](n35aac76f74454ed6_qikh003lis1, method, true).
 node[ast_babel](n35aac76f74454ed6_r0pjnhml1c, identifier, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_r0pjnhml1c, 15).
+start[ast_babel](n35aac76f74454ed6_r0pjnhml1c, 599).
 attr[ast_babel](n35aac76f74454ed6_r0pjnhml1c, name, "m").
 child[ast_babel](n35aac76f74454ed6_qikh003lis1, key, 0, n35aac76f74454ed6_r0pjnhml1c).
 attr[ast_babel](n35aac76f74454ed6_qikh003lis1, computed, false).
@@ -728,117 +918,149 @@ attr[ast_babel](n35aac76f74454ed6_qikh003lis1, generator, false).
 attr[ast_babel](n35aac76f74454ed6_qikh003lis1, async, false).
 node[ast_babel](n35aac76f74454ed6_gua1veua6c2, block_statement, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_gua1veua6c2, 15).
+start[ast_babel](n35aac76f74454ed6_gua1veua6c2, 603).
 child[ast_babel](n35aac76f74454ed6_qikh003lis1, body, 0, n35aac76f74454ed6_gua1veua6c2).
 child[ast_babel](n35aac76f74454ed6_d4qeksu3km5, properties, 3, n35aac76f74454ed6_qikh003lis1).
 child[ast_babel](n35aac76f74454ed6_ceaigd8b5g4, init, 0, n35aac76f74454ed6_d4qeksu3km5).
 child[ast_babel](n35aac76f74454ed6_kl9vfbisag1, declarations, 1, n35aac76f74454ed6_ceaigd8b5g4).
 attr[ast_babel](n35aac76f74454ed6_kl9vfbisag1, kind, "const").
-child[ast_babel](n35aac76f74454ed6_12undirbnh3, body, 15, n35aac76f74454ed6_kl9vfbisag1).
+child[ast_babel](n35aac76f74454ed6_root, body, 15, n35aac76f74454ed6_kl9vfbisag1).
 node[ast_babel](n35aac76f74454ed6_h6a1vggkd06, variable_declaration, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_h6a1vggkd06, 16).
+start[ast_babel](n35aac76f74454ed6_h6a1vggkd06, 609).
 node[ast_babel](n35aac76f74454ed6_8hc7jvu16r3, variable_declarator, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_8hc7jvu16r3, 16).
+start[ast_babel](n35aac76f74454ed6_8hc7jvu16r3, 615).
 node[ast_babel](n35aac76f74454ed6_5ok5uo1klt2, identifier, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_5ok5uo1klt2, 16).
+start[ast_babel](n35aac76f74454ed6_5ok5uo1klt2, 615).
 attr[ast_babel](n35aac76f74454ed6_5ok5uo1klt2, name, "fn").
 child[ast_babel](n35aac76f74454ed6_8hc7jvu16r3, id, 0, n35aac76f74454ed6_5ok5uo1klt2).
 node[ast_babel](n35aac76f74454ed6_8tp6scep8f5, arrow_function_expression, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_8tp6scep8f5, 16).
+start[ast_babel](n35aac76f74454ed6_8tp6scep8f5, 620).
 attr[ast_babel](n35aac76f74454ed6_8tp6scep8f5, generator, false).
 attr[ast_babel](n35aac76f74454ed6_8tp6scep8f5, async, true).
 node[ast_babel](n35aac76f74454ed6_evt4snc0kk, identifier, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_evt4snc0kk, 16).
+start[ast_babel](n35aac76f74454ed6_evt4snc0kk, 627).
 attr[ast_babel](n35aac76f74454ed6_evt4snc0kk, name, "q").
 child[ast_babel](n35aac76f74454ed6_8tp6scep8f5, params, 0, n35aac76f74454ed6_evt4snc0kk).
 node[ast_babel](n35aac76f74454ed6_c3knf8d5al3, logical_expression, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_c3knf8d5al3, 16).
+start[ast_babel](n35aac76f74454ed6_c3knf8d5al3, 633).
 node[ast_babel](n35aac76f74454ed6_7kirjhproa7, identifier, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_7kirjhproa7, 16).
+start[ast_babel](n35aac76f74454ed6_7kirjhproa7, 633).
 attr[ast_babel](n35aac76f74454ed6_7kirjhproa7, name, "q").
 child[ast_babel](n35aac76f74454ed6_c3knf8d5al3, left, 0, n35aac76f74454ed6_7kirjhproa7).
 attr[ast_babel](n35aac76f74454ed6_c3knf8d5al3, operator, "??").
 node[ast_babel](n35aac76f74454ed6_132c9lbe0e1, numeric_literal, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_132c9lbe0e1, 16).
+start[ast_babel](n35aac76f74454ed6_132c9lbe0e1, 638).
 attr[ast_babel](n35aac76f74454ed6_132c9lbe0e1, value, 0).
 child[ast_babel](n35aac76f74454ed6_c3knf8d5al3, right, 0, n35aac76f74454ed6_132c9lbe0e1).
 child[ast_babel](n35aac76f74454ed6_8tp6scep8f5, body, 0, n35aac76f74454ed6_c3knf8d5al3).
 child[ast_babel](n35aac76f74454ed6_8hc7jvu16r3, init, 0, n35aac76f74454ed6_8tp6scep8f5).
 child[ast_babel](n35aac76f74454ed6_h6a1vggkd06, declarations, 0, n35aac76f74454ed6_8hc7jvu16r3).
 attr[ast_babel](n35aac76f74454ed6_h6a1vggkd06, kind, "const").
-child[ast_babel](n35aac76f74454ed6_12undirbnh3, body, 16, n35aac76f74454ed6_h6a1vggkd06).
+child[ast_babel](n35aac76f74454ed6_root, body, 16, n35aac76f74454ed6_h6a1vggkd06).
 node[ast_babel](n35aac76f74454ed6_f4342pb8125, while_statement, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_f4342pb8125, 17).
+start[ast_babel](n35aac76f74454ed6_f4342pb8125, 641).
 node[ast_babel](n35aac76f74454ed6_fnl6d6dbsm4, identifier, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_fnl6d6dbsm4, 17).
+start[ast_babel](n35aac76f74454ed6_fnl6d6dbsm4, 648).
 attr[ast_babel](n35aac76f74454ed6_fnl6d6dbsm4, name, "t").
 child[ast_babel](n35aac76f74454ed6_f4342pb8125, test, 0, n35aac76f74454ed6_fnl6d6dbsm4).
 node[ast_babel](n35aac76f74454ed6_5cr2fv8qnu4, expression_statement, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_5cr2fv8qnu4, 17).
+start[ast_babel](n35aac76f74454ed6_5cr2fv8qnu4, 651).
 node[ast_babel](n35aac76f74454ed6_3l371br5fh2, update_expression, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_3l371br5fh2, 17).
+start[ast_babel](n35aac76f74454ed6_3l371br5fh2, 651).
 attr[ast_babel](n35aac76f74454ed6_3l371br5fh2, operator, "--").
 attr[ast_babel](n35aac76f74454ed6_3l371br5fh2, prefix, false).
 node[ast_babel](n35aac76f74454ed6_n2fad5frlv1, identifier, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_n2fad5frlv1, 17).
+start[ast_babel](n35aac76f74454ed6_n2fad5frlv1, 651).
 attr[ast_babel](n35aac76f74454ed6_n2fad5frlv1, name, "t").
 child[ast_babel](n35aac76f74454ed6_3l371br5fh2, argument, 0, n35aac76f74454ed6_n2fad5frlv1).
 child[ast_babel](n35aac76f74454ed6_5cr2fv8qnu4, expression, 0, n35aac76f74454ed6_3l371br5fh2).
 child[ast_babel](n35aac76f74454ed6_f4342pb8125, body, 0, n35aac76f74454ed6_5cr2fv8qnu4).
-child[ast_babel](n35aac76f74454ed6_12undirbnh3, body, 17, n35aac76f74454ed6_f4342pb8125).
+child[ast_babel](n35aac76f74454ed6_root, body, 17, n35aac76f74454ed6_f4342pb8125).
 node[ast_babel](n35aac76f74454ed6_uhp7pni92l7, switch_statement, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_uhp7pni92l7, 18).
+start[ast_babel](n35aac76f74454ed6_uhp7pni92l7, 656).
 node[ast_babel](n35aac76f74454ed6_dkq6llptng7, identifier, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_dkq6llptng7, 18).
+start[ast_babel](n35aac76f74454ed6_dkq6llptng7, 664).
 attr[ast_babel](n35aac76f74454ed6_dkq6llptng7, name, "t").
 child[ast_babel](n35aac76f74454ed6_uhp7pni92l7, discriminant, 0, n35aac76f74454ed6_dkq6llptng7).
 node[ast_babel](n35aac76f74454ed6_7u8cn2njee6, switch_case, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_7u8cn2njee6, 18).
+start[ast_babel](n35aac76f74454ed6_7u8cn2njee6, 669).
 node[ast_babel](n35aac76f74454ed6_5311pm9k6g2, expression_statement, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_5311pm9k6g2, 18).
+start[ast_babel](n35aac76f74454ed6_5311pm9k6g2, 677).
 node[ast_babel](n35aac76f74454ed6_evnnc2r2tk5, call_expression, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_evnnc2r2tk5, 18).
+start[ast_babel](n35aac76f74454ed6_evnnc2r2tk5, 677).
 node[ast_babel](n35aac76f74454ed6_bngk6pldf62, identifier, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_bngk6pldf62, 18).
+start[ast_babel](n35aac76f74454ed6_bngk6pldf62, 677).
 attr[ast_babel](n35aac76f74454ed6_bngk6pldf62, name, "f").
 child[ast_babel](n35aac76f74454ed6_evnnc2r2tk5, callee, 0, n35aac76f74454ed6_bngk6pldf62).
 child[ast_babel](n35aac76f74454ed6_5311pm9k6g2, expression, 0, n35aac76f74454ed6_evnnc2r2tk5).
 child[ast_babel](n35aac76f74454ed6_7u8cn2njee6, consequent, 0, n35aac76f74454ed6_5311pm9k6g2).
 node[ast_babel](n35aac76f74454ed6_g792nbhsbc2, break_statement, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_g792nbhsbc2, 18).
+start[ast_babel](n35aac76f74454ed6_g792nbhsbc2, 682).
 child[ast_babel](n35aac76f74454ed6_7u8cn2njee6, consequent, 1, n35aac76f74454ed6_g792nbhsbc2).
 node[ast_babel](n35aac76f74454ed6_aepko27pi36, numeric_literal, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_aepko27pi36, 18).
+start[ast_babel](n35aac76f74454ed6_aepko27pi36, 674).
 attr[ast_babel](n35aac76f74454ed6_aepko27pi36, value, 1).
 child[ast_babel](n35aac76f74454ed6_7u8cn2njee6, test, 0, n35aac76f74454ed6_aepko27pi36).
 child[ast_babel](n35aac76f74454ed6_uhp7pni92l7, cases, 0, n35aac76f74454ed6_7u8cn2njee6).
 node[ast_babel](n35aac76f74454ed6_p4q2j2p0at7, switch_case, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_p4q2j2p0at7, 18).
+start[ast_babel](n35aac76f74454ed6_p4q2j2p0at7, 689).
 node[ast_babel](n35aac76f74454ed6_9o16255qvo6, expression_statement, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_9o16255qvo6, 18).
+start[ast_babel](n35aac76f74454ed6_9o16255qvo6, 698).
 node[ast_babel](n35aac76f74454ed6_2r2o52fmog2, call_expression, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_2r2o52fmog2, 18).
+start[ast_babel](n35aac76f74454ed6_2r2o52fmog2, 698).
 node[ast_babel](n35aac76f74454ed6_e052p1nd486, identifier, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_e052p1nd486, 18).
+start[ast_babel](n35aac76f74454ed6_e052p1nd486, 698).
 attr[ast_babel](n35aac76f74454ed6_e052p1nd486, name, "g").
 child[ast_babel](n35aac76f74454ed6_2r2o52fmog2, callee, 0, n35aac76f74454ed6_e052p1nd486).
 child[ast_babel](n35aac76f74454ed6_9o16255qvo6, expression, 0, n35aac76f74454ed6_2r2o52fmog2).
 child[ast_babel](n35aac76f74454ed6_p4q2j2p0at7, consequent, 0, n35aac76f74454ed6_9o16255qvo6).
 child[ast_babel](n35aac76f74454ed6_uhp7pni92l7, cases, 1, n35aac76f74454ed6_p4q2j2p0at7).
-child[ast_babel](n35aac76f74454ed6_12undirbnh3, body, 18, n35aac76f74454ed6_uhp7pni92l7).
+child[ast_babel](n35aac76f74454ed6_root, body, 18, n35aac76f74454ed6_uhp7pni92l7).
 node[ast_babel](n35aac76f74454ed6_ufom1bukhh7, labeled_statement, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_ufom1bukhh7, 19).
+start[ast_babel](n35aac76f74454ed6_ufom1bukhh7, 705).
 node[ast_babel](n35aac76f74454ed6_0lrhvia8c74, for_statement, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_0lrhvia8c74, 19).
+start[ast_babel](n35aac76f74454ed6_0lrhvia8c74, 710).
 node[ast_babel](n35aac76f74454ed6_hs57ffphci6, variable_declaration, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_hs57ffphci6, 19).
+start[ast_babel](n35aac76f74454ed6_hs57ffphci6, 715).
 node[ast_babel](n35aac76f74454ed6_6th3ev9jgh7, variable_declarator, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_6th3ev9jgh7, 19).
+start[ast_babel](n35aac76f74454ed6_6th3ev9jgh7, 719).
 node[ast_babel](n35aac76f74454ed6_j58n7l1c9f7, identifier, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_j58n7l1c9f7, 19).
+start[ast_babel](n35aac76f74454ed6_j58n7l1c9f7, 719).
 attr[ast_babel](n35aac76f74454ed6_j58n7l1c9f7, name, "i").
 child[ast_babel](n35aac76f74454ed6_6th3ev9jgh7, id, 0, n35aac76f74454ed6_j58n7l1c9f7).
 node[ast_babel](n35aac76f74454ed6_g9clqqik6a, numeric_literal, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_g9clqqik6a, 19).
+start[ast_babel](n35aac76f74454ed6_g9clqqik6a, 723).
 attr[ast_babel](n35aac76f74454ed6_g9clqqik6a, value, 0).
 child[ast_babel](n35aac76f74454ed6_6th3ev9jgh7, init, 0, n35aac76f74454ed6_g9clqqik6a).
 child[ast_babel](n35aac76f74454ed6_hs57ffphci6, declarations, 0, n35aac76f74454ed6_6th3ev9jgh7).
@@ -846,203 +1068,260 @@ attr[ast_babel](n35aac76f74454ed6_hs57ffphci6, kind, "let").
 child[ast_babel](n35aac76f74454ed6_0lrhvia8c74, init, 0, n35aac76f74454ed6_hs57ffphci6).
 node[ast_babel](n35aac76f74454ed6_1mpb81tiu96, binary_expression, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_1mpb81tiu96, 19).
+start[ast_babel](n35aac76f74454ed6_1mpb81tiu96, 726).
 node[ast_babel](n35aac76f74454ed6_arsg77tof5, identifier, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_arsg77tof5, 19).
+start[ast_babel](n35aac76f74454ed6_arsg77tof5, 726).
 attr[ast_babel](n35aac76f74454ed6_arsg77tof5, name, "i").
 child[ast_babel](n35aac76f74454ed6_1mpb81tiu96, left, 0, n35aac76f74454ed6_arsg77tof5).
 attr[ast_babel](n35aac76f74454ed6_1mpb81tiu96, operator, "<").
 node[ast_babel](n35aac76f74454ed6_a1e5bk2brh, numeric_literal, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_a1e5bk2brh, 19).
+start[ast_babel](n35aac76f74454ed6_a1e5bk2brh, 730).
 attr[ast_babel](n35aac76f74454ed6_a1e5bk2brh, value, 3).
 child[ast_babel](n35aac76f74454ed6_1mpb81tiu96, right, 0, n35aac76f74454ed6_a1e5bk2brh).
 child[ast_babel](n35aac76f74454ed6_0lrhvia8c74, test, 0, n35aac76f74454ed6_1mpb81tiu96).
 node[ast_babel](n35aac76f74454ed6_4qfbsf4dcg1, update_expression, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_4qfbsf4dcg1, 19).
+start[ast_babel](n35aac76f74454ed6_4qfbsf4dcg1, 733).
 attr[ast_babel](n35aac76f74454ed6_4qfbsf4dcg1, operator, "++").
 attr[ast_babel](n35aac76f74454ed6_4qfbsf4dcg1, prefix, false).
 node[ast_babel](n35aac76f74454ed6_c25fnlbdvd5, identifier, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_c25fnlbdvd5, 19).
+start[ast_babel](n35aac76f74454ed6_c25fnlbdvd5, 733).
 attr[ast_babel](n35aac76f74454ed6_c25fnlbdvd5, name, "i").
 child[ast_babel](n35aac76f74454ed6_4qfbsf4dcg1, argument, 0, n35aac76f74454ed6_c25fnlbdvd5).
 child[ast_babel](n35aac76f74454ed6_0lrhvia8c74, update, 0, n35aac76f74454ed6_4qfbsf4dcg1).
 node[ast_babel](n35aac76f74454ed6_v083o77fdp, continue_statement, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_v083o77fdp, 19).
+start[ast_babel](n35aac76f74454ed6_v083o77fdp, 738).
 node[ast_babel](n35aac76f74454ed6_ukeadm762f, identifier, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_ukeadm762f, 19).
+start[ast_babel](n35aac76f74454ed6_ukeadm762f, 747).
 attr[ast_babel](n35aac76f74454ed6_ukeadm762f, name, "lbl").
 child[ast_babel](n35aac76f74454ed6_v083o77fdp, label, 0, n35aac76f74454ed6_ukeadm762f).
 child[ast_babel](n35aac76f74454ed6_0lrhvia8c74, body, 0, n35aac76f74454ed6_v083o77fdp).
 child[ast_babel](n35aac76f74454ed6_ufom1bukhh7, body, 0, n35aac76f74454ed6_0lrhvia8c74).
 node[ast_babel](n35aac76f74454ed6_776toleg932, identifier, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_776toleg932, 19).
+start[ast_babel](n35aac76f74454ed6_776toleg932, 705).
 attr[ast_babel](n35aac76f74454ed6_776toleg932, name, "lbl").
 child[ast_babel](n35aac76f74454ed6_ufom1bukhh7, label, 0, n35aac76f74454ed6_776toleg932).
-child[ast_babel](n35aac76f74454ed6_12undirbnh3, body, 19, n35aac76f74454ed6_ufom1bukhh7).
+child[ast_babel](n35aac76f74454ed6_root, body, 19, n35aac76f74454ed6_ufom1bukhh7).
 node[ast_babel](n35aac76f74454ed6_kriargri7f3, expression_statement, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_kriargri7f3, 20).
+start[ast_babel](n35aac76f74454ed6_kriargri7f3, 752).
 node[ast_babel](n35aac76f74454ed6_jnq985rsab6, new_expression, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_jnq985rsab6, 20).
+start[ast_babel](n35aac76f74454ed6_jnq985rsab6, 752).
 node[ast_babel](n35aac76f74454ed6_87h96vtjde2, identifier, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_87h96vtjde2, 20).
+start[ast_babel](n35aac76f74454ed6_87h96vtjde2, 756).
 attr[ast_babel](n35aac76f74454ed6_87h96vtjde2, name, "C").
 child[ast_babel](n35aac76f74454ed6_jnq985rsab6, callee, 0, n35aac76f74454ed6_87h96vtjde2).
 node[ast_babel](n35aac76f74454ed6_c98mavqrma1, numeric_literal, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_c98mavqrma1, 20).
+start[ast_babel](n35aac76f74454ed6_c98mavqrma1, 758).
 attr[ast_babel](n35aac76f74454ed6_c98mavqrma1, value, 1).
 child[ast_babel](n35aac76f74454ed6_jnq985rsab6, arguments, 0, n35aac76f74454ed6_c98mavqrma1).
 child[ast_babel](n35aac76f74454ed6_kriargri7f3, expression, 0, n35aac76f74454ed6_jnq985rsab6).
-child[ast_babel](n35aac76f74454ed6_12undirbnh3, body, 20, n35aac76f74454ed6_kriargri7f3).
+child[ast_babel](n35aac76f74454ed6_root, body, 20, n35aac76f74454ed6_kriargri7f3).
 node[ast_babel](n35aac76f74454ed6_qaqmpqr2265, variable_declaration, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_qaqmpqr2265, 21).
+start[ast_babel](n35aac76f74454ed6_qaqmpqr2265, 762).
 node[ast_babel](n35aac76f74454ed6_ak6cnrkefa2, variable_declarator, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_ak6cnrkefa2, 21).
+start[ast_babel](n35aac76f74454ed6_ak6cnrkefa2, 768).
 node[ast_babel](n35aac76f74454ed6_05k0j4mrpb3, identifier, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_05k0j4mrpb3, 21).
+start[ast_babel](n35aac76f74454ed6_05k0j4mrpb3, 768).
 attr[ast_babel](n35aac76f74454ed6_05k0j4mrpb3, name, "n").
 child[ast_babel](n35aac76f74454ed6_ak6cnrkefa2, id, 0, n35aac76f74454ed6_05k0j4mrpb3).
 node[ast_babel](n35aac76f74454ed6_t1ormk49ld6, tsas_expression, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_t1ormk49ld6, 21).
+start[ast_babel](n35aac76f74454ed6_t1ormk49ld6, 772).
 node[ast_babel](n35aac76f74454ed6_ahpi8adv0s7, identifier, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_ahpi8adv0s7, 21).
+start[ast_babel](n35aac76f74454ed6_ahpi8adv0s7, 772).
 attr[ast_babel](n35aac76f74454ed6_ahpi8adv0s7, name, "x").
 child[ast_babel](n35aac76f74454ed6_t1ormk49ld6, expression, 0, n35aac76f74454ed6_ahpi8adv0s7).
 node[ast_babel](n35aac76f74454ed6_fme7sasuk02, tsnumber_keyword, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_fme7sasuk02, 21).
+start[ast_babel](n35aac76f74454ed6_fme7sasuk02, 777).
 child[ast_babel](n35aac76f74454ed6_t1ormk49ld6, type_annotation, 0, n35aac76f74454ed6_fme7sasuk02).
 child[ast_babel](n35aac76f74454ed6_ak6cnrkefa2, init, 0, n35aac76f74454ed6_t1ormk49ld6).
 child[ast_babel](n35aac76f74454ed6_qaqmpqr2265, declarations, 0, n35aac76f74454ed6_ak6cnrkefa2).
 attr[ast_babel](n35aac76f74454ed6_qaqmpqr2265, kind, "const").
-child[ast_babel](n35aac76f74454ed6_12undirbnh3, body, 21, n35aac76f74454ed6_qaqmpqr2265).
+child[ast_babel](n35aac76f74454ed6_root, body, 21, n35aac76f74454ed6_qaqmpqr2265).
 node[ast_babel](n35aac76f74454ed6_blp308cf5q, tsinterface_declaration, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_blp308cf5q, 22).
+start[ast_babel](n35aac76f74454ed6_blp308cf5q, 785).
 node[ast_babel](n35aac76f74454ed6_bcskd0skmf3, identifier, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_bcskd0skmf3, 22).
+start[ast_babel](n35aac76f74454ed6_bcskd0skmf3, 795).
 attr[ast_babel](n35aac76f74454ed6_bcskd0skmf3, name, "I").
 child[ast_babel](n35aac76f74454ed6_blp308cf5q, id, 0, n35aac76f74454ed6_bcskd0skmf3).
 node[ast_babel](n35aac76f74454ed6_3i21ocfple, tsinterface_body, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_3i21ocfple, 22).
+start[ast_babel](n35aac76f74454ed6_3i21ocfple, 797).
 node[ast_babel](n35aac76f74454ed6_smc5qfgjfl5, tsproperty_signature, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_smc5qfgjfl5, 22).
+start[ast_babel](n35aac76f74454ed6_smc5qfgjfl5, 799).
 node[ast_babel](n35aac76f74454ed6_ov3jcsfv2t2, identifier, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_ov3jcsfv2t2, 22).
+start[ast_babel](n35aac76f74454ed6_ov3jcsfv2t2, 799).
 attr[ast_babel](n35aac76f74454ed6_ov3jcsfv2t2, name, "a").
 child[ast_babel](n35aac76f74454ed6_smc5qfgjfl5, key, 0, n35aac76f74454ed6_ov3jcsfv2t2).
 attr[ast_babel](n35aac76f74454ed6_smc5qfgjfl5, computed, false).
 node[ast_babel](n35aac76f74454ed6_q9io64ddas2, tstype_annotation, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_q9io64ddas2, 22).
+start[ast_babel](n35aac76f74454ed6_q9io64ddas2, 800).
 node[ast_babel](n35aac76f74454ed6_hg95pvlfqc, tsstring_keyword, "examples/checks/roles-babel/statements.ts").
 line[ast_babel](n35aac76f74454ed6_hg95pvlfqc, 22).
+start[ast_babel](n35aac76f74454ed6_hg95pvlfqc, 802).
 child[ast_babel](n35aac76f74454ed6_q9io64ddas2, type_annotation, 0, n35aac76f74454ed6_hg95pvlfqc).
 child[ast_babel](n35aac76f74454ed6_smc5qfgjfl5, type_annotation, 0, n35aac76f74454ed6_q9io64ddas2).
 child[ast_babel](n35aac76f74454ed6_3i21ocfple, body, 0, n35aac76f74454ed6_smc5qfgjfl5).
 child[ast_babel](n35aac76f74454ed6_blp308cf5q, body, 0, n35aac76f74454ed6_3i21ocfple).
-child[ast_babel](n35aac76f74454ed6_12undirbnh3, body, 22, n35aac76f74454ed6_blp308cf5q).
-child[ast_babel](n35aac76f74454ed6_3c3ted0nsu2, program, 0, n35aac76f74454ed6_12undirbnh3).
+child[ast_babel](n35aac76f74454ed6_root, body, 22, n35aac76f74454ed6_blp308cf5q).
+child[ast_babel](n35aac76f74454ed6_3c3ted0nsu2, program, 0, n35aac76f74454ed6_root).
 file[ast_babel](n35aac76f74454ed6_3c3ted0nsu2, "examples/checks/roles-babel/statements.ts").
 node[ast_babel](nf512caf050b4b47f_3c3ted0nsu2, file, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_3c3ted0nsu2, 1).
-node[ast_babel](nf512caf050b4b47f_12undirbnh3, program, "examples/checks/roles-babel/types.ts").
-line[ast_babel](nf512caf050b4b47f_12undirbnh3, 1).
-attr[ast_babel](nf512caf050b4b47f_12undirbnh3, source_type, "module").
+start[ast_babel](nf512caf050b4b47f_3c3ted0nsu2, 0).
+node[ast_babel](nf512caf050b4b47f_root, program, "examples/checks/roles-babel/types.ts").
+line[ast_babel](nf512caf050b4b47f_root, 1).
+start[ast_babel](nf512caf050b4b47f_root, 0).
+attr[ast_babel](nf512caf050b4b47f_root, source_type, "module").
 node[ast_babel](nf512caf050b4b47f_j2c3abkamg6, variable_declaration, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_j2c3abkamg6, 1).
+start[ast_babel](nf512caf050b4b47f_j2c3abkamg6, 0).
 node[ast_babel](nf512caf050b4b47f_sap97as89a1, variable_declarator, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_sap97as89a1, 1).
+start[ast_babel](nf512caf050b4b47f_sap97as89a1, 4).
 node[ast_babel](nf512caf050b4b47f_fp4jun7cuq1, identifier, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_fp4jun7cuq1, 1).
+start[ast_babel](nf512caf050b4b47f_fp4jun7cuq1, 4).
 attr[ast_babel](nf512caf050b4b47f_fp4jun7cuq1, name, "k").
 child[ast_babel](nf512caf050b4b47f_sap97as89a1, id, 0, nf512caf050b4b47f_fp4jun7cuq1).
 node[ast_babel](nf512caf050b4b47f_nru9124vas, numeric_literal, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_nru9124vas, 1).
+start[ast_babel](nf512caf050b4b47f_nru9124vas, 8).
 attr[ast_babel](nf512caf050b4b47f_nru9124vas, value, 1).
 child[ast_babel](nf512caf050b4b47f_sap97as89a1, init, 0, nf512caf050b4b47f_nru9124vas).
 child[ast_babel](nf512caf050b4b47f_j2c3abkamg6, declarations, 0, nf512caf050b4b47f_sap97as89a1).
 node[ast_babel](nf512caf050b4b47f_ed4qgmcank, variable_declarator, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_ed4qgmcank, 1).
+start[ast_babel](nf512caf050b4b47f_ed4qgmcank, 11).
 node[ast_babel](nf512caf050b4b47f_1u64r48j636, identifier, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_1u64r48j636, 1).
+start[ast_babel](nf512caf050b4b47f_1u64r48j636, 11).
 attr[ast_babel](nf512caf050b4b47f_1u64r48j636, name, "z").
 child[ast_babel](nf512caf050b4b47f_ed4qgmcank, id, 0, nf512caf050b4b47f_1u64r48j636).
 node[ast_babel](nf512caf050b4b47f_h8a8rjhaih3, numeric_literal, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_h8a8rjhaih3, 1).
+start[ast_babel](nf512caf050b4b47f_h8a8rjhaih3, 15).
 attr[ast_babel](nf512caf050b4b47f_h8a8rjhaih3, value, 2).
 child[ast_babel](nf512caf050b4b47f_ed4qgmcank, init, 0, nf512caf050b4b47f_h8a8rjhaih3).
 child[ast_babel](nf512caf050b4b47f_j2c3abkamg6, declarations, 1, nf512caf050b4b47f_ed4qgmcank).
 attr[ast_babel](nf512caf050b4b47f_j2c3abkamg6, kind, "let").
-child[ast_babel](nf512caf050b4b47f_12undirbnh3, body, 0, nf512caf050b4b47f_j2c3abkamg6).
+child[ast_babel](nf512caf050b4b47f_root, body, 0, nf512caf050b4b47f_j2c3abkamg6).
 node[ast_babel](nf512caf050b4b47f_dsmujiddvj, tstype_alias_declaration, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_dsmujiddvj, 2).
+start[ast_babel](nf512caf050b4b47f_dsmujiddvj, 18).
 node[ast_babel](nf512caf050b4b47f_hu6lqep6754, identifier, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_hu6lqep6754, 2).
+start[ast_babel](nf512caf050b4b47f_hu6lqep6754, 23).
 attr[ast_babel](nf512caf050b4b47f_hu6lqep6754, name, "A").
 child[ast_babel](nf512caf050b4b47f_dsmujiddvj, id, 0, nf512caf050b4b47f_hu6lqep6754).
 node[ast_babel](nf512caf050b4b47f_q5p43lsbao7, tstype_parameter_declaration, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_q5p43lsbao7, 2).
+start[ast_babel](nf512caf050b4b47f_q5p43lsbao7, 24).
 node[ast_babel](nf512caf050b4b47f_2b38nmbe5a1, tstype_parameter, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_2b38nmbe5a1, 2).
+start[ast_babel](nf512caf050b4b47f_2b38nmbe5a1, 25).
 node[ast_babel](nf512caf050b4b47f_68kuatlbha, identifier, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_68kuatlbha, 2).
+start[ast_babel](nf512caf050b4b47f_68kuatlbha, 25).
 attr[ast_babel](nf512caf050b4b47f_68kuatlbha, name, "T").
 child[ast_babel](nf512caf050b4b47f_2b38nmbe5a1, name, 0, nf512caf050b4b47f_68kuatlbha).
 child[ast_babel](nf512caf050b4b47f_q5p43lsbao7, params, 0, nf512caf050b4b47f_2b38nmbe5a1).
 child[ast_babel](nf512caf050b4b47f_dsmujiddvj, type_parameters, 0, nf512caf050b4b47f_q5p43lsbao7).
 node[ast_babel](nf512caf050b4b47f_4tkbuiv6r57, tsunion_type, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_4tkbuiv6r57, 2).
+start[ast_babel](nf512caf050b4b47f_4tkbuiv6r57, 30).
 node[ast_babel](nf512caf050b4b47f_gfco0pncvn6, tsarray_type, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_gfco0pncvn6, 2).
+start[ast_babel](nf512caf050b4b47f_gfco0pncvn6, 30).
 node[ast_babel](nf512caf050b4b47f_o190d1invm5, tstype_reference, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_o190d1invm5, 2).
+start[ast_babel](nf512caf050b4b47f_o190d1invm5, 30).
 node[ast_babel](nf512caf050b4b47f_03ta5s63ei6, identifier, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_03ta5s63ei6, 2).
+start[ast_babel](nf512caf050b4b47f_03ta5s63ei6, 30).
 attr[ast_babel](nf512caf050b4b47f_03ta5s63ei6, name, "T").
 child[ast_babel](nf512caf050b4b47f_o190d1invm5, type_name, 0, nf512caf050b4b47f_03ta5s63ei6).
 child[ast_babel](nf512caf050b4b47f_gfco0pncvn6, element_type, 0, nf512caf050b4b47f_o190d1invm5).
 child[ast_babel](nf512caf050b4b47f_4tkbuiv6r57, types, 0, nf512caf050b4b47f_gfco0pncvn6).
 node[ast_babel](nf512caf050b4b47f_jh7npgsoj34, tsintersection_type, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_jh7npgsoj34, 2).
+start[ast_babel](nf512caf050b4b47f_jh7npgsoj34, 36).
 node[ast_babel](nf512caf050b4b47f_tb800d7tib, tsstring_keyword, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_tb800d7tib, 2).
+start[ast_babel](nf512caf050b4b47f_tb800d7tib, 36).
 child[ast_babel](nf512caf050b4b47f_jh7npgsoj34, types, 0, nf512caf050b4b47f_tb800d7tib).
 node[ast_babel](nf512caf050b4b47f_46209pitq77, tstype_reference, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_46209pitq77, 2).
+start[ast_babel](nf512caf050b4b47f_46209pitq77, 45).
 node[ast_babel](nf512caf050b4b47f_lr2tl45b7u, identifier, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_lr2tl45b7u, 2).
+start[ast_babel](nf512caf050b4b47f_lr2tl45b7u, 45).
 attr[ast_babel](nf512caf050b4b47f_lr2tl45b7u, name, "B").
 child[ast_babel](nf512caf050b4b47f_46209pitq77, type_name, 0, nf512caf050b4b47f_lr2tl45b7u).
 child[ast_babel](nf512caf050b4b47f_jh7npgsoj34, types, 1, nf512caf050b4b47f_46209pitq77).
 child[ast_babel](nf512caf050b4b47f_4tkbuiv6r57, types, 1, nf512caf050b4b47f_jh7npgsoj34).
 child[ast_babel](nf512caf050b4b47f_dsmujiddvj, type_annotation, 0, nf512caf050b4b47f_4tkbuiv6r57).
-child[ast_babel](nf512caf050b4b47f_12undirbnh3, body, 1, nf512caf050b4b47f_dsmujiddvj).
+child[ast_babel](nf512caf050b4b47f_root, body, 1, nf512caf050b4b47f_dsmujiddvj).
 node[ast_babel](nf512caf050b4b47f_5mcgctfqe51, function_declaration, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_5mcgctfqe51, 3).
+start[ast_babel](nf512caf050b4b47f_5mcgctfqe51, 48).
 node[ast_babel](nf512caf050b4b47f_m6le3ukm05, identifier, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_m6le3ukm05, 3).
+start[ast_babel](nf512caf050b4b47f_m6le3ukm05, 57).
 attr[ast_babel](nf512caf050b4b47f_m6le3ukm05, name, "id").
 child[ast_babel](nf512caf050b4b47f_5mcgctfqe51, id, 0, nf512caf050b4b47f_m6le3ukm05).
 attr[ast_babel](nf512caf050b4b47f_5mcgctfqe51, generator, false).
 attr[ast_babel](nf512caf050b4b47f_5mcgctfqe51, async, false).
 node[ast_babel](nf512caf050b4b47f_gl2boscg1f3, tstype_parameter_declaration, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_gl2boscg1f3, 3).
+start[ast_babel](nf512caf050b4b47f_gl2boscg1f3, 59).
 node[ast_babel](nf512caf050b4b47f_vj5897vbta1, tstype_parameter, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_vj5897vbta1, 3).
+start[ast_babel](nf512caf050b4b47f_vj5897vbta1, 60).
 node[ast_babel](nf512caf050b4b47f_6e5sa5kagj2, identifier, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_6e5sa5kagj2, 3).
+start[ast_babel](nf512caf050b4b47f_6e5sa5kagj2, 60).
 attr[ast_babel](nf512caf050b4b47f_6e5sa5kagj2, name, "T").
 child[ast_babel](nf512caf050b4b47f_vj5897vbta1, name, 0, nf512caf050b4b47f_6e5sa5kagj2).
 node[ast_babel](nf512caf050b4b47f_d2vevfja2j1, tsobject_keyword, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_d2vevfja2j1, 3).
+start[ast_babel](nf512caf050b4b47f_d2vevfja2j1, 70).
 child[ast_babel](nf512caf050b4b47f_vj5897vbta1, constraint, 0, nf512caf050b4b47f_d2vevfja2j1).
 child[ast_babel](nf512caf050b4b47f_gl2boscg1f3, params, 0, nf512caf050b4b47f_vj5897vbta1).
 child[ast_babel](nf512caf050b4b47f_5mcgctfqe51, type_parameters, 0, nf512caf050b4b47f_gl2boscg1f3).
 node[ast_babel](nf512caf050b4b47f_hfqljl62se2, identifier, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_hfqljl62se2, 3).
+start[ast_babel](nf512caf050b4b47f_hfqljl62se2, 78).
 attr[ast_babel](nf512caf050b4b47f_hfqljl62se2, name, "x").
 node[ast_babel](nf512caf050b4b47f_l8it0lrl2d4, tstype_annotation, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_l8it0lrl2d4, 3).
+start[ast_babel](nf512caf050b4b47f_l8it0lrl2d4, 79).
 node[ast_babel](nf512caf050b4b47f_lqvlsudg3b4, tstype_reference, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_lqvlsudg3b4, 3).
+start[ast_babel](nf512caf050b4b47f_lqvlsudg3b4, 81).
 node[ast_babel](nf512caf050b4b47f_hnhadpftna6, identifier, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_hnhadpftna6, 3).
+start[ast_babel](nf512caf050b4b47f_hnhadpftna6, 81).
 attr[ast_babel](nf512caf050b4b47f_hnhadpftna6, name, "T").
 child[ast_babel](nf512caf050b4b47f_lqvlsudg3b4, type_name, 0, nf512caf050b4b47f_hnhadpftna6).
 child[ast_babel](nf512caf050b4b47f_l8it0lrl2d4, type_annotation, 0, nf512caf050b4b47f_lqvlsudg3b4).
@@ -1050,32 +1329,42 @@ child[ast_babel](nf512caf050b4b47f_hfqljl62se2, type_annotation, 0, nf512caf050b
 child[ast_babel](nf512caf050b4b47f_5mcgctfqe51, params, 0, nf512caf050b4b47f_hfqljl62se2).
 node[ast_babel](nf512caf050b4b47f_6di5u65ula2, identifier, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_6di5u65ula2, 3).
+start[ast_babel](nf512caf050b4b47f_6di5u65ula2, 84).
 attr[ast_babel](nf512caf050b4b47f_6di5u65ula2, name, "y").
 attr[ast_babel](nf512caf050b4b47f_6di5u65ula2, optional, true).
 node[ast_babel](nf512caf050b4b47f_r77mg711jh7, tstype_annotation, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_r77mg711jh7, 3).
+start[ast_babel](nf512caf050b4b47f_r77mg711jh7, 86).
 node[ast_babel](nf512caf050b4b47f_c7fc33g38k7, tsnumber_keyword, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_c7fc33g38k7, 3).
+start[ast_babel](nf512caf050b4b47f_c7fc33g38k7, 88).
 child[ast_babel](nf512caf050b4b47f_r77mg711jh7, type_annotation, 0, nf512caf050b4b47f_c7fc33g38k7).
 child[ast_babel](nf512caf050b4b47f_6di5u65ula2, type_annotation, 0, nf512caf050b4b47f_r77mg711jh7).
 child[ast_babel](nf512caf050b4b47f_5mcgctfqe51, params, 1, nf512caf050b4b47f_6di5u65ula2).
 node[ast_babel](nf512caf050b4b47f_lig7djgtuf6, tstype_annotation, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_lig7djgtuf6, 3).
+start[ast_babel](nf512caf050b4b47f_lig7djgtuf6, 95).
 node[ast_babel](nf512caf050b4b47f_pqopj7sekv1, tstype_reference, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_pqopj7sekv1, 3).
+start[ast_babel](nf512caf050b4b47f_pqopj7sekv1, 97).
 node[ast_babel](nf512caf050b4b47f_v8v3dvkfi62, identifier, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_v8v3dvkfi62, 3).
+start[ast_babel](nf512caf050b4b47f_v8v3dvkfi62, 97).
 attr[ast_babel](nf512caf050b4b47f_v8v3dvkfi62, name, "Map").
 child[ast_babel](nf512caf050b4b47f_pqopj7sekv1, type_name, 0, nf512caf050b4b47f_v8v3dvkfi62).
 node[ast_babel](nf512caf050b4b47f_p9onahrol6, tstype_parameter_instantiation, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_p9onahrol6, 3).
+start[ast_babel](nf512caf050b4b47f_p9onahrol6, 100).
 node[ast_babel](nf512caf050b4b47f_fef6j5ukom, tsstring_keyword, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_fef6j5ukom, 3).
+start[ast_babel](nf512caf050b4b47f_fef6j5ukom, 101).
 child[ast_babel](nf512caf050b4b47f_p9onahrol6, params, 0, nf512caf050b4b47f_fef6j5ukom).
 node[ast_babel](nf512caf050b4b47f_iboe20feoa5, tstype_reference, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_iboe20feoa5, 3).
+start[ast_babel](nf512caf050b4b47f_iboe20feoa5, 109).
 node[ast_babel](nf512caf050b4b47f_dnfeqhrvvb1, identifier, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_dnfeqhrvvb1, 3).
+start[ast_babel](nf512caf050b4b47f_dnfeqhrvvb1, 109).
 attr[ast_babel](nf512caf050b4b47f_dnfeqhrvvb1, name, "T").
 child[ast_babel](nf512caf050b4b47f_iboe20feoa5, type_name, 0, nf512caf050b4b47f_dnfeqhrvvb1).
 child[ast_babel](nf512caf050b4b47f_p9onahrol6, params, 1, nf512caf050b4b47f_iboe20feoa5).
@@ -1084,141 +1373,182 @@ child[ast_babel](nf512caf050b4b47f_lig7djgtuf6, type_annotation, 0, nf512caf050b
 child[ast_babel](nf512caf050b4b47f_5mcgctfqe51, return_type, 0, nf512caf050b4b47f_lig7djgtuf6).
 node[ast_babel](nf512caf050b4b47f_c2m3dtp7v45, block_statement, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_c2m3dtp7v45, 3).
+start[ast_babel](nf512caf050b4b47f_c2m3dtp7v45, 112).
 node[ast_babel](nf512caf050b4b47f_9rkdtu47rd5, return_statement, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_9rkdtu47rd5, 3).
+start[ast_babel](nf512caf050b4b47f_9rkdtu47rd5, 114).
 node[ast_babel](nf512caf050b4b47f_sktespj2s76, tsas_expression, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_sktespj2s76, 3).
+start[ast_babel](nf512caf050b4b47f_sktespj2s76, 121).
 node[ast_babel](nf512caf050b4b47f_tsmqliab7n1, identifier, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_tsmqliab7n1, 3).
+start[ast_babel](nf512caf050b4b47f_tsmqliab7n1, 121).
 attr[ast_babel](nf512caf050b4b47f_tsmqliab7n1, name, "x").
 child[ast_babel](nf512caf050b4b47f_sktespj2s76, expression, 0, nf512caf050b4b47f_tsmqliab7n1).
 node[ast_babel](nf512caf050b4b47f_mveckh97lg6, tsany_keyword, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_mveckh97lg6, 3).
+start[ast_babel](nf512caf050b4b47f_mveckh97lg6, 126).
 child[ast_babel](nf512caf050b4b47f_sktespj2s76, type_annotation, 0, nf512caf050b4b47f_mveckh97lg6).
 child[ast_babel](nf512caf050b4b47f_9rkdtu47rd5, argument, 0, nf512caf050b4b47f_sktespj2s76).
 child[ast_babel](nf512caf050b4b47f_c2m3dtp7v45, body, 0, nf512caf050b4b47f_9rkdtu47rd5).
 child[ast_babel](nf512caf050b4b47f_5mcgctfqe51, body, 0, nf512caf050b4b47f_c2m3dtp7v45).
-child[ast_babel](nf512caf050b4b47f_12undirbnh3, body, 2, nf512caf050b4b47f_5mcgctfqe51).
+child[ast_babel](nf512caf050b4b47f_root, body, 2, nf512caf050b4b47f_5mcgctfqe51).
 node[ast_babel](nf512caf050b4b47f_duju2cuk9m3, tsdeclare_function, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_duju2cuk9m3, 4).
+start[ast_babel](nf512caf050b4b47f_duju2cuk9m3, 133).
 attr[ast_babel](nf512caf050b4b47f_duju2cuk9m3, declare, true).
 node[ast_babel](nf512caf050b4b47f_9tuaj8ri067, identifier, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_9tuaj8ri067, 4).
+start[ast_babel](nf512caf050b4b47f_9tuaj8ri067, 150).
 attr[ast_babel](nf512caf050b4b47f_9tuaj8ri067, name, "dd").
 child[ast_babel](nf512caf050b4b47f_duju2cuk9m3, id, 0, nf512caf050b4b47f_9tuaj8ri067).
 attr[ast_babel](nf512caf050b4b47f_duju2cuk9m3, generator, false).
 attr[ast_babel](nf512caf050b4b47f_duju2cuk9m3, async, false).
 node[ast_babel](nf512caf050b4b47f_r011un1hj5, identifier, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_r011un1hj5, 4).
+start[ast_babel](nf512caf050b4b47f_r011un1hj5, 153).
 attr[ast_babel](nf512caf050b4b47f_r011un1hj5, name, "a").
 node[ast_babel](nf512caf050b4b47f_8ab3gv9uj7, tstype_annotation, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_8ab3gv9uj7, 4).
+start[ast_babel](nf512caf050b4b47f_8ab3gv9uj7, 154).
 node[ast_babel](nf512caf050b4b47f_q41bo239dc, tsnumber_keyword, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_q41bo239dc, 4).
+start[ast_babel](nf512caf050b4b47f_q41bo239dc, 156).
 child[ast_babel](nf512caf050b4b47f_8ab3gv9uj7, type_annotation, 0, nf512caf050b4b47f_q41bo239dc).
 child[ast_babel](nf512caf050b4b47f_r011un1hj5, type_annotation, 0, nf512caf050b4b47f_8ab3gv9uj7).
 child[ast_babel](nf512caf050b4b47f_duju2cuk9m3, params, 0, nf512caf050b4b47f_r011un1hj5).
 node[ast_babel](nf512caf050b4b47f_61lp7dvkpq, tstype_annotation, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_61lp7dvkpq, 4).
+start[ast_babel](nf512caf050b4b47f_61lp7dvkpq, 163).
 node[ast_babel](nf512caf050b4b47f_7lurfna7e82, tsvoid_keyword, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_7lurfna7e82, 4).
+start[ast_babel](nf512caf050b4b47f_7lurfna7e82, 165).
 child[ast_babel](nf512caf050b4b47f_61lp7dvkpq, type_annotation, 0, nf512caf050b4b47f_7lurfna7e82).
 child[ast_babel](nf512caf050b4b47f_duju2cuk9m3, return_type, 0, nf512caf050b4b47f_61lp7dvkpq).
-child[ast_babel](nf512caf050b4b47f_12undirbnh3, body, 3, nf512caf050b4b47f_duju2cuk9m3).
+child[ast_babel](nf512caf050b4b47f_root, body, 3, nf512caf050b4b47f_duju2cuk9m3).
 node[ast_babel](nf512caf050b4b47f_kr6v01c2t56, tsinterface_declaration, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_kr6v01c2t56, 5).
+start[ast_babel](nf512caf050b4b47f_kr6v01c2t56, 171).
 node[ast_babel](nf512caf050b4b47f_5cm9kg49ef3, identifier, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_5cm9kg49ef3, 5).
+start[ast_babel](nf512caf050b4b47f_5cm9kg49ef3, 181).
 attr[ast_babel](nf512caf050b4b47f_5cm9kg49ef3, name, "J").
 child[ast_babel](nf512caf050b4b47f_kr6v01c2t56, id, 0, nf512caf050b4b47f_5cm9kg49ef3).
 node[ast_babel](nf512caf050b4b47f_9il2s6mbri3, tsinterface_heritage, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_9il2s6mbri3, 5).
+start[ast_babel](nf512caf050b4b47f_9il2s6mbri3, 191).
 node[ast_babel](nf512caf050b4b47f_45acgci6ag1, identifier, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_45acgci6ag1, 5).
+start[ast_babel](nf512caf050b4b47f_45acgci6ag1, 191).
 attr[ast_babel](nf512caf050b4b47f_45acgci6ag1, name, "K").
 child[ast_babel](nf512caf050b4b47f_9il2s6mbri3, expression, 0, nf512caf050b4b47f_45acgci6ag1).
 node[ast_babel](nf512caf050b4b47f_mp8eul191f6, tstype_parameter_instantiation, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_mp8eul191f6, 5).
+start[ast_babel](nf512caf050b4b47f_mp8eul191f6, 192).
 node[ast_babel](nf512caf050b4b47f_6tk2rprpdc1, tsnumber_keyword, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_6tk2rprpdc1, 5).
+start[ast_babel](nf512caf050b4b47f_6tk2rprpdc1, 193).
 child[ast_babel](nf512caf050b4b47f_mp8eul191f6, params, 0, nf512caf050b4b47f_6tk2rprpdc1).
 child[ast_babel](nf512caf050b4b47f_9il2s6mbri3, type_arguments, 0, nf512caf050b4b47f_mp8eul191f6).
 child[ast_babel](nf512caf050b4b47f_kr6v01c2t56, extends, 0, nf512caf050b4b47f_9il2s6mbri3).
 node[ast_babel](nf512caf050b4b47f_vhmffa6p694, tsinterface_body, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_vhmffa6p694, 5).
+start[ast_babel](nf512caf050b4b47f_vhmffa6p694, 201).
 node[ast_babel](nf512caf050b4b47f_0bt9raiopa4, tsmethod_signature, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_0bt9raiopa4, 5).
+start[ast_babel](nf512caf050b4b47f_0bt9raiopa4, 203).
 node[ast_babel](nf512caf050b4b47f_6amfr5jh196, identifier, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_6amfr5jh196, 5).
+start[ast_babel](nf512caf050b4b47f_6amfr5jh196, 203).
 attr[ast_babel](nf512caf050b4b47f_6amfr5jh196, name, "m").
 child[ast_babel](nf512caf050b4b47f_0bt9raiopa4, key, 0, nf512caf050b4b47f_6amfr5jh196).
 attr[ast_babel](nf512caf050b4b47f_0bt9raiopa4, computed, false).
 node[ast_babel](nf512caf050b4b47f_0qtdeoca5r1, identifier, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_0qtdeoca5r1, 5).
+start[ast_babel](nf512caf050b4b47f_0qtdeoca5r1, 205).
 attr[ast_babel](nf512caf050b4b47f_0qtdeoca5r1, name, "a").
 node[ast_babel](nf512caf050b4b47f_hvprn1151r5, tstype_annotation, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_hvprn1151r5, 5).
+start[ast_babel](nf512caf050b4b47f_hvprn1151r5, 206).
 node[ast_babel](nf512caf050b4b47f_op20q93h7o, tsstring_keyword, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_op20q93h7o, 5).
+start[ast_babel](nf512caf050b4b47f_op20q93h7o, 208).
 child[ast_babel](nf512caf050b4b47f_hvprn1151r5, type_annotation, 0, nf512caf050b4b47f_op20q93h7o).
 child[ast_babel](nf512caf050b4b47f_0qtdeoca5r1, type_annotation, 0, nf512caf050b4b47f_hvprn1151r5).
 child[ast_babel](nf512caf050b4b47f_0bt9raiopa4, params, 0, nf512caf050b4b47f_0qtdeoca5r1).
 node[ast_babel](nf512caf050b4b47f_b7kbi6bdq03, tstype_annotation, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_b7kbi6bdq03, 5).
+start[ast_babel](nf512caf050b4b47f_b7kbi6bdq03, 215).
 node[ast_babel](nf512caf050b4b47f_62tcrlb17a1, tsvoid_keyword, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_62tcrlb17a1, 5).
+start[ast_babel](nf512caf050b4b47f_62tcrlb17a1, 217).
 child[ast_babel](nf512caf050b4b47f_b7kbi6bdq03, type_annotation, 0, nf512caf050b4b47f_62tcrlb17a1).
 child[ast_babel](nf512caf050b4b47f_0bt9raiopa4, return_type, 0, nf512caf050b4b47f_b7kbi6bdq03).
 attr[ast_babel](nf512caf050b4b47f_0bt9raiopa4, kind, "method").
 child[ast_babel](nf512caf050b4b47f_vhmffa6p694, body, 0, nf512caf050b4b47f_0bt9raiopa4).
 node[ast_babel](nf512caf050b4b47f_v58eo9pm0p3, tsindex_signature, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_v58eo9pm0p3, 5).
+start[ast_babel](nf512caf050b4b47f_v58eo9pm0p3, 223).
 node[ast_babel](nf512caf050b4b47f_u8n7d5qnfi4, identifier, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_u8n7d5qnfi4, 5).
+start[ast_babel](nf512caf050b4b47f_u8n7d5qnfi4, 224).
 attr[ast_babel](nf512caf050b4b47f_u8n7d5qnfi4, name, "k").
 node[ast_babel](nf512caf050b4b47f_osbul23a6v, tstype_annotation, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_osbul23a6v, 5).
+start[ast_babel](nf512caf050b4b47f_osbul23a6v, 225).
 node[ast_babel](nf512caf050b4b47f_u8vujo9uc9, tsstring_keyword, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_u8vujo9uc9, 5).
+start[ast_babel](nf512caf050b4b47f_u8vujo9uc9, 227).
 child[ast_babel](nf512caf050b4b47f_osbul23a6v, type_annotation, 0, nf512caf050b4b47f_u8vujo9uc9).
 child[ast_babel](nf512caf050b4b47f_u8n7d5qnfi4, type_annotation, 0, nf512caf050b4b47f_osbul23a6v).
 child[ast_babel](nf512caf050b4b47f_v58eo9pm0p3, parameters, 0, nf512caf050b4b47f_u8n7d5qnfi4).
 node[ast_babel](nf512caf050b4b47f_t8150glp316, tstype_annotation, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_t8150glp316, 5).
+start[ast_babel](nf512caf050b4b47f_t8150glp316, 234).
 node[ast_babel](nf512caf050b4b47f_lf75o0hlgq6, tsany_keyword, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_lf75o0hlgq6, 5).
+start[ast_babel](nf512caf050b4b47f_lf75o0hlgq6, 236).
 child[ast_babel](nf512caf050b4b47f_t8150glp316, type_annotation, 0, nf512caf050b4b47f_lf75o0hlgq6).
 child[ast_babel](nf512caf050b4b47f_v58eo9pm0p3, type_annotation, 0, nf512caf050b4b47f_t8150glp316).
 child[ast_babel](nf512caf050b4b47f_vhmffa6p694, body, 1, nf512caf050b4b47f_v58eo9pm0p3).
 child[ast_babel](nf512caf050b4b47f_kr6v01c2t56, body, 0, nf512caf050b4b47f_vhmffa6p694).
-child[ast_babel](nf512caf050b4b47f_12undirbnh3, body, 4, nf512caf050b4b47f_kr6v01c2t56).
+child[ast_babel](nf512caf050b4b47f_root, body, 4, nf512caf050b4b47f_kr6v01c2t56).
 node[ast_babel](nf512caf050b4b47f_60fhi2tpoc7, class_declaration, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_60fhi2tpoc7, 6).
+start[ast_babel](nf512caf050b4b47f_60fhi2tpoc7, 243).
 node[ast_babel](nf512caf050b4b47f_hor1ipf9bi4, identifier, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_hor1ipf9bi4, 6).
+start[ast_babel](nf512caf050b4b47f_hor1ipf9bi4, 249).
 attr[ast_babel](nf512caf050b4b47f_hor1ipf9bi4, name, "D").
 child[ast_babel](nf512caf050b4b47f_60fhi2tpoc7, id, 0, nf512caf050b4b47f_hor1ipf9bi4).
 node[ast_babel](nf512caf050b4b47f_1fvd3bf48e7, tsclass_implements, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_1fvd3bf48e7, 6).
+start[ast_babel](nf512caf050b4b47f_1fvd3bf48e7, 262).
 node[ast_babel](nf512caf050b4b47f_8kgdsco22s, identifier, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_8kgdsco22s, 6).
+start[ast_babel](nf512caf050b4b47f_8kgdsco22s, 262).
 attr[ast_babel](nf512caf050b4b47f_8kgdsco22s, name, "J").
 child[ast_babel](nf512caf050b4b47f_1fvd3bf48e7, expression, 0, nf512caf050b4b47f_8kgdsco22s).
 child[ast_babel](nf512caf050b4b47f_60fhi2tpoc7, implements, 0, nf512caf050b4b47f_1fvd3bf48e7).
 node[ast_babel](nf512caf050b4b47f_mq7en26r9b4, tsclass_implements, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_mq7en26r9b4, 6).
+start[ast_babel](nf512caf050b4b47f_mq7en26r9b4, 265).
 node[ast_babel](nf512caf050b4b47f_t1v0m3sjq34, identifier, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_t1v0m3sjq34, 6).
+start[ast_babel](nf512caf050b4b47f_t1v0m3sjq34, 265).
 attr[ast_babel](nf512caf050b4b47f_t1v0m3sjq34, name, "L").
 child[ast_babel](nf512caf050b4b47f_mq7en26r9b4, expression, 0, nf512caf050b4b47f_t1v0m3sjq34).
 child[ast_babel](nf512caf050b4b47f_60fhi2tpoc7, implements, 1, nf512caf050b4b47f_mq7en26r9b4).
 node[ast_babel](nf512caf050b4b47f_gh4319hrb23, class_body, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_gh4319hrb23, 6).
+start[ast_babel](nf512caf050b4b47f_gh4319hrb23, 267).
 node[ast_babel](nf512caf050b4b47f_45q1urlin65, class_method, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_45q1urlin65, 6).
+start[ast_babel](nf512caf050b4b47f_45q1urlin65, 269).
 attr[ast_babel](nf512caf050b4b47f_45q1urlin65, static, false).
 node[ast_babel](nf512caf050b4b47f_660or1k0ln6, identifier, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_660or1k0ln6, 6).
+start[ast_babel](nf512caf050b4b47f_660or1k0ln6, 269).
 attr[ast_babel](nf512caf050b4b47f_660or1k0ln6, name, "constructor").
 child[ast_babel](nf512caf050b4b47f_45q1urlin65, key, 0, nf512caf050b4b47f_660or1k0ln6).
 attr[ast_babel](nf512caf050b4b47f_45q1urlin65, computed, false).
@@ -1227,91 +1557,116 @@ attr[ast_babel](nf512caf050b4b47f_45q1urlin65, generator, false).
 attr[ast_babel](nf512caf050b4b47f_45q1urlin65, async, false).
 node[ast_babel](nf512caf050b4b47f_a1cbc35ag07, tsparameter_property, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_a1cbc35ag07, 6).
+start[ast_babel](nf512caf050b4b47f_a1cbc35ag07, 281).
 attr[ast_babel](nf512caf050b4b47f_a1cbc35ag07, accessibility, "private").
 attr[ast_babel](nf512caf050b4b47f_a1cbc35ag07, readonly, true).
 node[ast_babel](nf512caf050b4b47f_aa3k3d48eg4, identifier, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_aa3k3d48eg4, 6).
+start[ast_babel](nf512caf050b4b47f_aa3k3d48eg4, 298).
 attr[ast_babel](nf512caf050b4b47f_aa3k3d48eg4, name, "q").
 node[ast_babel](nf512caf050b4b47f_j7an95rlhh1, tstype_annotation, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_j7an95rlhh1, 6).
+start[ast_babel](nf512caf050b4b47f_j7an95rlhh1, 299).
 node[ast_babel](nf512caf050b4b47f_kfrks1lvca7, tsnumber_keyword, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_kfrks1lvca7, 6).
+start[ast_babel](nf512caf050b4b47f_kfrks1lvca7, 301).
 child[ast_babel](nf512caf050b4b47f_j7an95rlhh1, type_annotation, 0, nf512caf050b4b47f_kfrks1lvca7).
 child[ast_babel](nf512caf050b4b47f_aa3k3d48eg4, type_annotation, 0, nf512caf050b4b47f_j7an95rlhh1).
 child[ast_babel](nf512caf050b4b47f_a1cbc35ag07, parameter, 0, nf512caf050b4b47f_aa3k3d48eg4).
 child[ast_babel](nf512caf050b4b47f_45q1urlin65, params, 0, nf512caf050b4b47f_a1cbc35ag07).
 node[ast_babel](nf512caf050b4b47f_248h7r0nhm6, block_statement, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_248h7r0nhm6, 6).
+start[ast_babel](nf512caf050b4b47f_248h7r0nhm6, 309).
 child[ast_babel](nf512caf050b4b47f_45q1urlin65, body, 0, nf512caf050b4b47f_248h7r0nhm6).
 child[ast_babel](nf512caf050b4b47f_gh4319hrb23, body, 0, nf512caf050b4b47f_45q1urlin65).
 node[ast_babel](nf512caf050b4b47f_g6ovc3thfq1, class_property, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_g6ovc3thfq1, 6).
+start[ast_babel](nf512caf050b4b47f_g6ovc3thfq1, 312).
 attr[ast_babel](nf512caf050b4b47f_g6ovc3thfq1, declare, true).
 attr[ast_babel](nf512caf050b4b47f_g6ovc3thfq1, static, false).
 node[ast_babel](nf512caf050b4b47f_82jb6qtog93, identifier, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_82jb6qtog93, 6).
+start[ast_babel](nf512caf050b4b47f_82jb6qtog93, 320).
 attr[ast_babel](nf512caf050b4b47f_82jb6qtog93, name, "z").
 child[ast_babel](nf512caf050b4b47f_g6ovc3thfq1, key, 0, nf512caf050b4b47f_82jb6qtog93).
 attr[ast_babel](nf512caf050b4b47f_g6ovc3thfq1, computed, false).
 node[ast_babel](nf512caf050b4b47f_9omkmu8oiv6, tstype_annotation, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_9omkmu8oiv6, 6).
+start[ast_babel](nf512caf050b4b47f_9omkmu8oiv6, 321).
 node[ast_babel](nf512caf050b4b47f_u63m1319ho1, tsnumber_keyword, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_u63m1319ho1, 6).
+start[ast_babel](nf512caf050b4b47f_u63m1319ho1, 323).
 child[ast_babel](nf512caf050b4b47f_9omkmu8oiv6, type_annotation, 0, nf512caf050b4b47f_u63m1319ho1).
 child[ast_babel](nf512caf050b4b47f_g6ovc3thfq1, type_annotation, 0, nf512caf050b4b47f_9omkmu8oiv6).
 child[ast_babel](nf512caf050b4b47f_gh4319hrb23, body, 1, nf512caf050b4b47f_g6ovc3thfq1).
 child[ast_babel](nf512caf050b4b47f_60fhi2tpoc7, body, 0, nf512caf050b4b47f_gh4319hrb23).
-child[ast_babel](nf512caf050b4b47f_12undirbnh3, body, 5, nf512caf050b4b47f_60fhi2tpoc7).
+child[ast_babel](nf512caf050b4b47f_root, body, 5, nf512caf050b4b47f_60fhi2tpoc7).
 node[ast_babel](nf512caf050b4b47f_r634v4io03, tsenum_declaration, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_r634v4io03, 7).
+start[ast_babel](nf512caf050b4b47f_r634v4io03, 333).
 node[ast_babel](nf512caf050b4b47f_p34f9s19bq7, identifier, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_p34f9s19bq7, 7).
+start[ast_babel](nf512caf050b4b47f_p34f9s19bq7, 338).
 attr[ast_babel](nf512caf050b4b47f_p34f9s19bq7, name, "E").
 child[ast_babel](nf512caf050b4b47f_r634v4io03, id, 0, nf512caf050b4b47f_p34f9s19bq7).
 node[ast_babel](nf512caf050b4b47f_kevpe4fdlv4, tsenum_body, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_kevpe4fdlv4, 7).
+start[ast_babel](nf512caf050b4b47f_kevpe4fdlv4, 340).
 node[ast_babel](nf512caf050b4b47f_k619rp72mb7, tsenum_member, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_k619rp72mb7, 7).
+start[ast_babel](nf512caf050b4b47f_k619rp72mb7, 342).
 node[ast_babel](nf512caf050b4b47f_hrvsknh5rp1, identifier, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_hrvsknh5rp1, 7).
+start[ast_babel](nf512caf050b4b47f_hrvsknh5rp1, 342).
 attr[ast_babel](nf512caf050b4b47f_hrvsknh5rp1, name, "A").
 child[ast_babel](nf512caf050b4b47f_k619rp72mb7, id, 0, nf512caf050b4b47f_hrvsknh5rp1).
 node[ast_babel](nf512caf050b4b47f_6htgged2so7, numeric_literal, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_6htgged2so7, 7).
+start[ast_babel](nf512caf050b4b47f_6htgged2so7, 346).
 attr[ast_babel](nf512caf050b4b47f_6htgged2so7, value, 1).
 child[ast_babel](nf512caf050b4b47f_k619rp72mb7, initializer, 0, nf512caf050b4b47f_6htgged2so7).
 child[ast_babel](nf512caf050b4b47f_kevpe4fdlv4, members, 0, nf512caf050b4b47f_k619rp72mb7).
 node[ast_babel](nf512caf050b4b47f_uisiqa1134, tsenum_member, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_uisiqa1134, 7).
+start[ast_babel](nf512caf050b4b47f_uisiqa1134, 349).
 node[ast_babel](nf512caf050b4b47f_56j20dvfac1, identifier, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_56j20dvfac1, 7).
+start[ast_babel](nf512caf050b4b47f_56j20dvfac1, 349).
 attr[ast_babel](nf512caf050b4b47f_56j20dvfac1, name, "B").
 child[ast_babel](nf512caf050b4b47f_uisiqa1134, id, 0, nf512caf050b4b47f_56j20dvfac1).
 child[ast_babel](nf512caf050b4b47f_kevpe4fdlv4, members, 1, nf512caf050b4b47f_uisiqa1134).
 child[ast_babel](nf512caf050b4b47f_r634v4io03, body, 0, nf512caf050b4b47f_kevpe4fdlv4).
-child[ast_babel](nf512caf050b4b47f_12undirbnh3, body, 6, nf512caf050b4b47f_r634v4io03).
+child[ast_babel](nf512caf050b4b47f_root, body, 6, nf512caf050b4b47f_r634v4io03).
 node[ast_babel](nf512caf050b4b47f_p76eu3ob7b1, tsmodule_declaration, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_p76eu3ob7b1, 8).
+start[ast_babel](nf512caf050b4b47f_p76eu3ob7b1, 353).
 attr[ast_babel](nf512caf050b4b47f_p76eu3ob7b1, kind, "namespace").
 node[ast_babel](nf512caf050b4b47f_n9ucg41r0n7, identifier, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_n9ucg41r0n7, 8).
+start[ast_babel](nf512caf050b4b47f_n9ucg41r0n7, 363).
 attr[ast_babel](nf512caf050b4b47f_n9ucg41r0n7, name, "N").
 child[ast_babel](nf512caf050b4b47f_p76eu3ob7b1, id, 0, nf512caf050b4b47f_n9ucg41r0n7).
 node[ast_babel](nf512caf050b4b47f_jsag0ctfca1, tsmodule_block, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_jsag0ctfca1, 8).
+start[ast_babel](nf512caf050b4b47f_jsag0ctfca1, 365).
 node[ast_babel](nf512caf050b4b47f_rhoev2ih0q6, export_named_declaration, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_rhoev2ih0q6, 8).
+start[ast_babel](nf512caf050b4b47f_rhoev2ih0q6, 367).
 attr[ast_babel](nf512caf050b4b47f_rhoev2ih0q6, export_kind, "value").
 node[ast_babel](nf512caf050b4b47f_ds6cuabjcd3, variable_declaration, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_ds6cuabjcd3, 8).
+start[ast_babel](nf512caf050b4b47f_ds6cuabjcd3, 374).
 node[ast_babel](nf512caf050b4b47f_089k36qq2o7, variable_declarator, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_089k36qq2o7, 8).
+start[ast_babel](nf512caf050b4b47f_089k36qq2o7, 380).
 node[ast_babel](nf512caf050b4b47f_0bingedjt32, identifier, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_0bingedjt32, 8).
+start[ast_babel](nf512caf050b4b47f_0bingedjt32, 380).
 attr[ast_babel](nf512caf050b4b47f_0bingedjt32, name, "v").
 child[ast_babel](nf512caf050b4b47f_089k36qq2o7, id, 0, nf512caf050b4b47f_0bingedjt32).
 node[ast_babel](nf512caf050b4b47f_4okr6f8r55, numeric_literal, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_4okr6f8r55, 8).
+start[ast_babel](nf512caf050b4b47f_4okr6f8r55, 384).
 attr[ast_babel](nf512caf050b4b47f_4okr6f8r55, value, 1).
 child[ast_babel](nf512caf050b4b47f_089k36qq2o7, init, 0, nf512caf050b4b47f_4okr6f8r55).
 child[ast_babel](nf512caf050b4b47f_ds6cuabjcd3, declarations, 0, nf512caf050b4b47f_089k36qq2o7).
@@ -1319,233 +1674,294 @@ attr[ast_babel](nf512caf050b4b47f_ds6cuabjcd3, kind, "const").
 child[ast_babel](nf512caf050b4b47f_rhoev2ih0q6, declaration, 0, nf512caf050b4b47f_ds6cuabjcd3).
 child[ast_babel](nf512caf050b4b47f_jsag0ctfca1, body, 0, nf512caf050b4b47f_rhoev2ih0q6).
 child[ast_babel](nf512caf050b4b47f_p76eu3ob7b1, body, 0, nf512caf050b4b47f_jsag0ctfca1).
-child[ast_babel](nf512caf050b4b47f_12undirbnh3, body, 7, nf512caf050b4b47f_p76eu3ob7b1).
+child[ast_babel](nf512caf050b4b47f_root, body, 7, nf512caf050b4b47f_p76eu3ob7b1).
 node[ast_babel](nf512caf050b4b47f_ppsia8n5p22, export_named_declaration, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_ppsia8n5p22, 9).
+start[ast_babel](nf512caf050b4b47f_ppsia8n5p22, 389).
 attr[ast_babel](nf512caf050b4b47f_ppsia8n5p22, export_kind, "value").
 node[ast_babel](nf512caf050b4b47f_3k0veee2e71, export_specifier, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_3k0veee2e71, 9).
+start[ast_babel](nf512caf050b4b47f_3k0veee2e71, 398).
 node[ast_babel](nf512caf050b4b47f_ru9nhsupo16, identifier, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_ru9nhsupo16, 9).
+start[ast_babel](nf512caf050b4b47f_ru9nhsupo16, 398).
 attr[ast_babel](nf512caf050b4b47f_ru9nhsupo16, name, "k").
 child[ast_babel](nf512caf050b4b47f_3k0veee2e71, local, 0, nf512caf050b4b47f_ru9nhsupo16).
 attr[ast_babel](nf512caf050b4b47f_3k0veee2e71, export_kind, "value").
 node[ast_babel](nf512caf050b4b47f_13khm68o274, identifier, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_13khm68o274, 9).
+start[ast_babel](nf512caf050b4b47f_13khm68o274, 403).
 attr[ast_babel](nf512caf050b4b47f_13khm68o274, name, "kk").
 child[ast_babel](nf512caf050b4b47f_3k0veee2e71, exported, 0, nf512caf050b4b47f_13khm68o274).
 child[ast_babel](nf512caf050b4b47f_ppsia8n5p22, specifiers, 0, nf512caf050b4b47f_3k0veee2e71).
 node[ast_babel](nf512caf050b4b47f_grm5u5oesv4, export_specifier, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_grm5u5oesv4, 9).
+start[ast_babel](nf512caf050b4b47f_grm5u5oesv4, 407).
 node[ast_babel](nf512caf050b4b47f_ghrudfmnmv1, identifier, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_ghrudfmnmv1, 9).
+start[ast_babel](nf512caf050b4b47f_ghrudfmnmv1, 407).
 attr[ast_babel](nf512caf050b4b47f_ghrudfmnmv1, name, "z").
 child[ast_babel](nf512caf050b4b47f_grm5u5oesv4, local, 0, nf512caf050b4b47f_ghrudfmnmv1).
 attr[ast_babel](nf512caf050b4b47f_grm5u5oesv4, export_kind, "value").
 node[ast_babel](nf512caf050b4b47f_h1drihdtdd2, identifier, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_h1drihdtdd2, 9).
+start[ast_babel](nf512caf050b4b47f_h1drihdtdd2, 407).
 attr[ast_babel](nf512caf050b4b47f_h1drihdtdd2, name, "z").
 child[ast_babel](nf512caf050b4b47f_grm5u5oesv4, exported, 0, nf512caf050b4b47f_h1drihdtdd2).
 child[ast_babel](nf512caf050b4b47f_ppsia8n5p22, specifiers, 1, nf512caf050b4b47f_grm5u5oesv4).
-child[ast_babel](nf512caf050b4b47f_12undirbnh3, body, 8, nf512caf050b4b47f_ppsia8n5p22).
+child[ast_babel](nf512caf050b4b47f_root, body, 8, nf512caf050b4b47f_ppsia8n5p22).
 node[ast_babel](nf512caf050b4b47f_53qa3eel7k5, export_named_declaration, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_53qa3eel7k5, 10).
+start[ast_babel](nf512caf050b4b47f_53qa3eel7k5, 412).
 attr[ast_babel](nf512caf050b4b47f_53qa3eel7k5, export_kind, "value").
 node[ast_babel](nf512caf050b4b47f_ve2rs4ve563, export_specifier, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_ve2rs4ve563, 10).
+start[ast_babel](nf512caf050b4b47f_ve2rs4ve563, 421).
 node[ast_babel](nf512caf050b4b47f_4t76acmoqk4, identifier, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_4t76acmoqk4, 10).
+start[ast_babel](nf512caf050b4b47f_4t76acmoqk4, 421).
 attr[ast_babel](nf512caf050b4b47f_4t76acmoqk4, name, "a").
 child[ast_babel](nf512caf050b4b47f_ve2rs4ve563, local, 0, nf512caf050b4b47f_4t76acmoqk4).
 attr[ast_babel](nf512caf050b4b47f_ve2rs4ve563, export_kind, "value").
 node[ast_babel](nf512caf050b4b47f_tfctq9hgmi7, identifier, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_tfctq9hgmi7, 10).
+start[ast_babel](nf512caf050b4b47f_tfctq9hgmi7, 426).
 attr[ast_babel](nf512caf050b4b47f_tfctq9hgmi7, name, "aa").
 child[ast_babel](nf512caf050b4b47f_ve2rs4ve563, exported, 0, nf512caf050b4b47f_tfctq9hgmi7).
 child[ast_babel](nf512caf050b4b47f_53qa3eel7k5, specifiers, 0, nf512caf050b4b47f_ve2rs4ve563).
 node[ast_babel](nf512caf050b4b47f_soa9246ppl1, string_literal, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_soa9246ppl1, 10).
+start[ast_babel](nf512caf050b4b47f_soa9246ppl1, 436).
 attr[ast_babel](nf512caf050b4b47f_soa9246ppl1, value, "./m").
 child[ast_babel](nf512caf050b4b47f_53qa3eel7k5, source, 0, nf512caf050b4b47f_soa9246ppl1).
-child[ast_babel](nf512caf050b4b47f_12undirbnh3, body, 9, nf512caf050b4b47f_53qa3eel7k5).
+child[ast_babel](nf512caf050b4b47f_root, body, 9, nf512caf050b4b47f_53qa3eel7k5).
 node[ast_babel](nf512caf050b4b47f_g8chlamcdl3, export_named_declaration, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_g8chlamcdl3, 11).
+start[ast_babel](nf512caf050b4b47f_g8chlamcdl3, 443).
 attr[ast_babel](nf512caf050b4b47f_g8chlamcdl3, export_kind, "value").
 node[ast_babel](nf512caf050b4b47f_t09fsn9ccp3, export_namespace_specifier, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_t09fsn9ccp3, 11).
+start[ast_babel](nf512caf050b4b47f_t09fsn9ccp3, 450).
 node[ast_babel](nf512caf050b4b47f_8u3m0g5fjm3, identifier, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_8u3m0g5fjm3, 11).
+start[ast_babel](nf512caf050b4b47f_8u3m0g5fjm3, 455).
 attr[ast_babel](nf512caf050b4b47f_8u3m0g5fjm3, name, "nsx").
 child[ast_babel](nf512caf050b4b47f_t09fsn9ccp3, exported, 0, nf512caf050b4b47f_8u3m0g5fjm3).
 child[ast_babel](nf512caf050b4b47f_g8chlamcdl3, specifiers, 0, nf512caf050b4b47f_t09fsn9ccp3).
 node[ast_babel](nf512caf050b4b47f_6fc33jla5a1, string_literal, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_6fc33jla5a1, 11).
+start[ast_babel](nf512caf050b4b47f_6fc33jla5a1, 464).
 attr[ast_babel](nf512caf050b4b47f_6fc33jla5a1, value, "./n").
 child[ast_babel](nf512caf050b4b47f_g8chlamcdl3, source, 0, nf512caf050b4b47f_6fc33jla5a1).
-child[ast_babel](nf512caf050b4b47f_12undirbnh3, body, 10, nf512caf050b4b47f_g8chlamcdl3).
+child[ast_babel](nf512caf050b4b47f_root, body, 10, nf512caf050b4b47f_g8chlamcdl3).
 node[ast_babel](nf512caf050b4b47f_ks4hnb68po7, import_declaration, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_ks4hnb68po7, 12).
+start[ast_babel](nf512caf050b4b47f_ks4hnb68po7, 471).
 attr[ast_babel](nf512caf050b4b47f_ks4hnb68po7, import_kind, "type").
 node[ast_babel](nf512caf050b4b47f_mn2clpaj074, import_specifier, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_mn2clpaj074, 12).
+start[ast_babel](nf512caf050b4b47f_mn2clpaj074, 485).
 node[ast_babel](nf512caf050b4b47f_46pra3uot73, identifier, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_46pra3uot73, 12).
+start[ast_babel](nf512caf050b4b47f_46pra3uot73, 485).
 attr[ast_babel](nf512caf050b4b47f_46pra3uot73, name, "T1").
 child[ast_babel](nf512caf050b4b47f_mn2clpaj074, imported, 0, nf512caf050b4b47f_46pra3uot73).
 attr[ast_babel](nf512caf050b4b47f_mn2clpaj074, import_kind, "value").
 node[ast_babel](nf512caf050b4b47f_f62uohofgd7, identifier, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_f62uohofgd7, 12).
+start[ast_babel](nf512caf050b4b47f_f62uohofgd7, 485).
 attr[ast_babel](nf512caf050b4b47f_f62uohofgd7, name, "T1").
 child[ast_babel](nf512caf050b4b47f_mn2clpaj074, local, 0, nf512caf050b4b47f_f62uohofgd7).
 child[ast_babel](nf512caf050b4b47f_ks4hnb68po7, specifiers, 0, nf512caf050b4b47f_mn2clpaj074).
 node[ast_babel](nf512caf050b4b47f_jlg2lihcoi6, string_literal, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_jlg2lihcoi6, 12).
+start[ast_babel](nf512caf050b4b47f_jlg2lihcoi6, 495).
 attr[ast_babel](nf512caf050b4b47f_jlg2lihcoi6, value, "./t").
 child[ast_babel](nf512caf050b4b47f_ks4hnb68po7, source, 0, nf512caf050b4b47f_jlg2lihcoi6).
-child[ast_babel](nf512caf050b4b47f_12undirbnh3, body, 11, nf512caf050b4b47f_ks4hnb68po7).
+child[ast_babel](nf512caf050b4b47f_root, body, 11, nf512caf050b4b47f_ks4hnb68po7).
 node[ast_babel](nf512caf050b4b47f_ftjh4bs99b5, variable_declaration, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_ftjh4bs99b5, 13).
+start[ast_babel](nf512caf050b4b47f_ftjh4bs99b5, 502).
 node[ast_babel](nf512caf050b4b47f_ibkfg5nr9e1, variable_declarator, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_ibkfg5nr9e1, 13).
+start[ast_babel](nf512caf050b4b47f_ibkfg5nr9e1, 508).
 node[ast_babel](nf512caf050b4b47f_dguq791gng7, identifier, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_dguq791gng7, 13).
+start[ast_babel](nf512caf050b4b47f_dguq791gng7, 508).
 attr[ast_babel](nf512caf050b4b47f_dguq791gng7, name, "dyn").
 child[ast_babel](nf512caf050b4b47f_ibkfg5nr9e1, id, 0, nf512caf050b4b47f_dguq791gng7).
 node[ast_babel](nf512caf050b4b47f_lm8ak34r6a6, import_expression, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_lm8ak34r6a6, 13).
+start[ast_babel](nf512caf050b4b47f_lm8ak34r6a6, 514).
 node[ast_babel](nf512caf050b4b47f_mb4dogdhmg3, string_literal, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_mb4dogdhmg3, 13).
+start[ast_babel](nf512caf050b4b47f_mb4dogdhmg3, 521).
 attr[ast_babel](nf512caf050b4b47f_mb4dogdhmg3, value, "./d").
 child[ast_babel](nf512caf050b4b47f_lm8ak34r6a6, source, 0, nf512caf050b4b47f_mb4dogdhmg3).
 child[ast_babel](nf512caf050b4b47f_ibkfg5nr9e1, init, 0, nf512caf050b4b47f_lm8ak34r6a6).
 child[ast_babel](nf512caf050b4b47f_ftjh4bs99b5, declarations, 0, nf512caf050b4b47f_ibkfg5nr9e1).
 attr[ast_babel](nf512caf050b4b47f_ftjh4bs99b5, kind, "const").
-child[ast_babel](nf512caf050b4b47f_12undirbnh3, body, 12, nf512caf050b4b47f_ftjh4bs99b5).
+child[ast_babel](nf512caf050b4b47f_root, body, 12, nf512caf050b4b47f_ftjh4bs99b5).
 node[ast_babel](nf512caf050b4b47f_4v7eslp0cd4, variable_declaration, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_4v7eslp0cd4, 14).
+start[ast_babel](nf512caf050b4b47f_4v7eslp0cd4, 529).
 node[ast_babel](nf512caf050b4b47f_jhu8bv3qiq2, variable_declarator, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_jhu8bv3qiq2, 14).
+start[ast_babel](nf512caf050b4b47f_jhu8bv3qiq2, 533).
 node[ast_babel](nf512caf050b4b47f_pp7h984e9m3, identifier, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_pp7h984e9m3, 14).
+start[ast_babel](nf512caf050b4b47f_pp7h984e9m3, 533).
 attr[ast_babel](nf512caf050b4b47f_pp7h984e9m3, name, "o2").
 child[ast_babel](nf512caf050b4b47f_jhu8bv3qiq2, id, 0, nf512caf050b4b47f_pp7h984e9m3).
 node[ast_babel](nf512caf050b4b47f_1i33ao5bts4, optional_member_expression, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_1i33ao5bts4, 14).
+start[ast_babel](nf512caf050b4b47f_1i33ao5bts4, 538).
 node[ast_babel](nf512caf050b4b47f_lvsb7dqo961, identifier, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_lvsb7dqo961, 14).
+start[ast_babel](nf512caf050b4b47f_lvsb7dqo961, 538).
 attr[ast_babel](nf512caf050b4b47f_lvsb7dqo961, name, "a").
 child[ast_babel](nf512caf050b4b47f_1i33ao5bts4, object, 0, nf512caf050b4b47f_lvsb7dqo961).
 attr[ast_babel](nf512caf050b4b47f_1i33ao5bts4, computed, false).
 node[ast_babel](nf512caf050b4b47f_3imq31rk5k, identifier, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_3imq31rk5k, 14).
+start[ast_babel](nf512caf050b4b47f_3imq31rk5k, 541).
 attr[ast_babel](nf512caf050b4b47f_3imq31rk5k, name, "b").
 child[ast_babel](nf512caf050b4b47f_1i33ao5bts4, property, 0, nf512caf050b4b47f_3imq31rk5k).
 attr[ast_babel](nf512caf050b4b47f_1i33ao5bts4, optional, true).
 child[ast_babel](nf512caf050b4b47f_jhu8bv3qiq2, init, 0, nf512caf050b4b47f_1i33ao5bts4).
 child[ast_babel](nf512caf050b4b47f_4v7eslp0cd4, declarations, 0, nf512caf050b4b47f_jhu8bv3qiq2).
 attr[ast_babel](nf512caf050b4b47f_4v7eslp0cd4, kind, "let").
-child[ast_babel](nf512caf050b4b47f_12undirbnh3, body, 13, nf512caf050b4b47f_4v7eslp0cd4).
+child[ast_babel](nf512caf050b4b47f_root, body, 13, nf512caf050b4b47f_4v7eslp0cd4).
 node[ast_babel](nf512caf050b4b47f_jvudoitvci7, labeled_statement, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_jvudoitvci7, 14).
+start[ast_babel](nf512caf050b4b47f_jvudoitvci7, 544).
 node[ast_babel](nf512caf050b4b47f_3pomi7iamd1, expression_statement, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_3pomi7iamd1, 14).
+start[ast_babel](nf512caf050b4b47f_3pomi7iamd1, 552).
 node[ast_babel](nf512caf050b4b47f_6j7edp713r5, call_expression, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_6j7edp713r5, 14).
+start[ast_babel](nf512caf050b4b47f_6j7edp713r5, 552).
 node[ast_babel](nf512caf050b4b47f_kt7sfvuj8s6, identifier, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_kt7sfvuj8s6, 14).
+start[ast_babel](nf512caf050b4b47f_kt7sfvuj8s6, 552).
 attr[ast_babel](nf512caf050b4b47f_kt7sfvuj8s6, name, "x").
 child[ast_babel](nf512caf050b4b47f_6j7edp713r5, callee, 0, nf512caf050b4b47f_kt7sfvuj8s6).
 child[ast_babel](nf512caf050b4b47f_3pomi7iamd1, expression, 0, nf512caf050b4b47f_6j7edp713r5).
 child[ast_babel](nf512caf050b4b47f_jvudoitvci7, body, 0, nf512caf050b4b47f_3pomi7iamd1).
 node[ast_babel](nf512caf050b4b47f_3gntloqig32, identifier, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_3gntloqig32, 14).
+start[ast_babel](nf512caf050b4b47f_3gntloqig32, 544).
 attr[ast_babel](nf512caf050b4b47f_3gntloqig32, name, "label2").
 child[ast_babel](nf512caf050b4b47f_jvudoitvci7, label, 0, nf512caf050b4b47f_3gntloqig32).
-child[ast_babel](nf512caf050b4b47f_12undirbnh3, body, 14, nf512caf050b4b47f_jvudoitvci7).
+child[ast_babel](nf512caf050b4b47f_root, body, 14, nf512caf050b4b47f_jvudoitvci7).
 node[ast_babel](nf512caf050b4b47f_24b6a9drah3, expression_statement, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_24b6a9drah3, 15).
+start[ast_babel](nf512caf050b4b47f_24b6a9drah3, 557).
 node[ast_babel](nf512caf050b4b47f_19luhs1flv5, unary_expression, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_19luhs1flv5, 15).
+start[ast_babel](nf512caf050b4b47f_19luhs1flv5, 557).
 attr[ast_babel](nf512caf050b4b47f_19luhs1flv5, operator, "typeof").
 attr[ast_babel](nf512caf050b4b47f_19luhs1flv5, prefix, true).
 node[ast_babel](nf512caf050b4b47f_r9bis88pjv7, identifier, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_r9bis88pjv7, 15).
+start[ast_babel](nf512caf050b4b47f_r9bis88pjv7, 564).
 attr[ast_babel](nf512caf050b4b47f_r9bis88pjv7, name, "q").
 child[ast_babel](nf512caf050b4b47f_19luhs1flv5, argument, 0, nf512caf050b4b47f_r9bis88pjv7).
 child[ast_babel](nf512caf050b4b47f_24b6a9drah3, expression, 0, nf512caf050b4b47f_19luhs1flv5).
-child[ast_babel](nf512caf050b4b47f_12undirbnh3, body, 15, nf512caf050b4b47f_24b6a9drah3).
+child[ast_babel](nf512caf050b4b47f_root, body, 15, nf512caf050b4b47f_24b6a9drah3).
 node[ast_babel](nf512caf050b4b47f_ha85qlr7l75, expression_statement, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_ha85qlr7l75, 15).
+start[ast_babel](nf512caf050b4b47f_ha85qlr7l75, 567).
 node[ast_babel](nf512caf050b4b47f_f0amrqsobk3, unary_expression, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_f0amrqsobk3, 15).
+start[ast_babel](nf512caf050b4b47f_f0amrqsobk3, 567).
 attr[ast_babel](nf512caf050b4b47f_f0amrqsobk3, operator, "delete").
 attr[ast_babel](nf512caf050b4b47f_f0amrqsobk3, prefix, true).
 node[ast_babel](nf512caf050b4b47f_j4oppnmm854, member_expression, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_j4oppnmm854, 15).
+start[ast_babel](nf512caf050b4b47f_j4oppnmm854, 574).
 node[ast_babel](nf512caf050b4b47f_rtfvv5pn1g1, identifier, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_rtfvv5pn1g1, 15).
+start[ast_babel](nf512caf050b4b47f_rtfvv5pn1g1, 574).
 attr[ast_babel](nf512caf050b4b47f_rtfvv5pn1g1, name, "o").
 child[ast_babel](nf512caf050b4b47f_j4oppnmm854, object, 0, nf512caf050b4b47f_rtfvv5pn1g1).
 attr[ast_babel](nf512caf050b4b47f_j4oppnmm854, computed, false).
 node[ast_babel](nf512caf050b4b47f_9f6cja9o6u6, identifier, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_9f6cja9o6u6, 15).
+start[ast_babel](nf512caf050b4b47f_9f6cja9o6u6, 576).
 attr[ast_babel](nf512caf050b4b47f_9f6cja9o6u6, name, "p").
 child[ast_babel](nf512caf050b4b47f_j4oppnmm854, property, 0, nf512caf050b4b47f_9f6cja9o6u6).
 child[ast_babel](nf512caf050b4b47f_f0amrqsobk3, argument, 0, nf512caf050b4b47f_j4oppnmm854).
 child[ast_babel](nf512caf050b4b47f_ha85qlr7l75, expression, 0, nf512caf050b4b47f_f0amrqsobk3).
-child[ast_babel](nf512caf050b4b47f_12undirbnh3, body, 16, nf512caf050b4b47f_ha85qlr7l75).
+child[ast_babel](nf512caf050b4b47f_root, body, 16, nf512caf050b4b47f_ha85qlr7l75).
 node[ast_babel](nf512caf050b4b47f_ht9acn7c5e2, expression_statement, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_ht9acn7c5e2, 15).
+start[ast_babel](nf512caf050b4b47f_ht9acn7c5e2, 579).
 node[ast_babel](nf512caf050b4b47f_4q22vqiekl4, unary_expression, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_4q22vqiekl4, 15).
+start[ast_babel](nf512caf050b4b47f_4q22vqiekl4, 579).
 attr[ast_babel](nf512caf050b4b47f_4q22vqiekl4, operator, "void").
 attr[ast_babel](nf512caf050b4b47f_4q22vqiekl4, prefix, true).
 node[ast_babel](nf512caf050b4b47f_5hf2iohb6l4, numeric_literal, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_5hf2iohb6l4, 15).
+start[ast_babel](nf512caf050b4b47f_5hf2iohb6l4, 584).
 attr[ast_babel](nf512caf050b4b47f_5hf2iohb6l4, value, 0).
 child[ast_babel](nf512caf050b4b47f_4q22vqiekl4, argument, 0, nf512caf050b4b47f_5hf2iohb6l4).
 child[ast_babel](nf512caf050b4b47f_ht9acn7c5e2, expression, 0, nf512caf050b4b47f_4q22vqiekl4).
-child[ast_babel](nf512caf050b4b47f_12undirbnh3, body, 17, nf512caf050b4b47f_ht9acn7c5e2).
+child[ast_babel](nf512caf050b4b47f_root, body, 17, nf512caf050b4b47f_ht9acn7c5e2).
 node[ast_babel](nf512caf050b4b47f_a4cains0kl2, expression_statement, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_a4cains0kl2, 15).
+start[ast_babel](nf512caf050b4b47f_a4cains0kl2, 587).
 node[ast_babel](nf512caf050b4b47f_c68hcdph3m2, null_literal, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_c68hcdph3m2, 15).
+start[ast_babel](nf512caf050b4b47f_c68hcdph3m2, 587).
 child[ast_babel](nf512caf050b4b47f_a4cains0kl2, expression, 0, nf512caf050b4b47f_c68hcdph3m2).
-child[ast_babel](nf512caf050b4b47f_12undirbnh3, body, 18, nf512caf050b4b47f_a4cains0kl2).
+child[ast_babel](nf512caf050b4b47f_root, body, 18, nf512caf050b4b47f_a4cains0kl2).
 node[ast_babel](nf512caf050b4b47f_l4eauf3vi51, expression_statement, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_l4eauf3vi51, 15).
+start[ast_babel](nf512caf050b4b47f_l4eauf3vi51, 593).
 node[ast_babel](nf512caf050b4b47f_csl22vqtq72, reg_exp_literal, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_csl22vqtq72, 15).
+start[ast_babel](nf512caf050b4b47f_csl22vqtq72, 593).
 attr[ast_babel](nf512caf050b4b47f_csl22vqtq72, pattern, "re").
 attr[ast_babel](nf512caf050b4b47f_csl22vqtq72, flags, "g").
 child[ast_babel](nf512caf050b4b47f_l4eauf3vi51, expression, 0, nf512caf050b4b47f_csl22vqtq72).
-child[ast_babel](nf512caf050b4b47f_12undirbnh3, body, 19, nf512caf050b4b47f_l4eauf3vi51).
+child[ast_babel](nf512caf050b4b47f_root, body, 19, nf512caf050b4b47f_l4eauf3vi51).
 node[ast_babel](nf512caf050b4b47f_togpk6akar5, expression_statement, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_togpk6akar5, 15).
+start[ast_babel](nf512caf050b4b47f_togpk6akar5, 600).
 node[ast_babel](nf512caf050b4b47f_qlbeukrp4e7, big_int_literal, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_qlbeukrp4e7, 15).
+start[ast_babel](nf512caf050b4b47f_qlbeukrp4e7, 600).
 attr[ast_babel](nf512caf050b4b47f_qlbeukrp4e7, value, "10").
 child[ast_babel](nf512caf050b4b47f_togpk6akar5, expression, 0, nf512caf050b4b47f_qlbeukrp4e7).
-child[ast_babel](nf512caf050b4b47f_12undirbnh3, body, 20, nf512caf050b4b47f_togpk6akar5).
+child[ast_babel](nf512caf050b4b47f_root, body, 20, nf512caf050b4b47f_togpk6akar5).
 node[ast_babel](nf512caf050b4b47f_pms8n6kih96, expression_statement, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_pms8n6kih96, 15).
+start[ast_babel](nf512caf050b4b47f_pms8n6kih96, 605).
 node[ast_babel](nf512caf050b4b47f_hs5ob66u7m, boolean_literal, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_hs5ob66u7m, 15).
+start[ast_babel](nf512caf050b4b47f_hs5ob66u7m, 605).
 attr[ast_babel](nf512caf050b4b47f_hs5ob66u7m, value, true).
 child[ast_babel](nf512caf050b4b47f_pms8n6kih96, expression, 0, nf512caf050b4b47f_hs5ob66u7m).
-child[ast_babel](nf512caf050b4b47f_12undirbnh3, body, 21, nf512caf050b4b47f_pms8n6kih96).
+child[ast_babel](nf512caf050b4b47f_root, body, 21, nf512caf050b4b47f_pms8n6kih96).
 node[ast_babel](nf512caf050b4b47f_9sfd8t3icv3, do_while_statement, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_9sfd8t3icv3, 16).
+start[ast_babel](nf512caf050b4b47f_9sfd8t3icv3, 611).
 node[ast_babel](nf512caf050b4b47f_ps0v690gb32, block_statement, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_ps0v690gb32, 16).
+start[ast_babel](nf512caf050b4b47f_ps0v690gb32, 614).
 node[ast_babel](nf512caf050b4b47f_hcrrh86qkm4, expression_statement, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_hcrrh86qkm4, 16).
+start[ast_babel](nf512caf050b4b47f_hcrrh86qkm4, 616).
 node[ast_babel](nf512caf050b4b47f_0318461i02, update_expression, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_0318461i02, 16).
+start[ast_babel](nf512caf050b4b47f_0318461i02, 616).
 attr[ast_babel](nf512caf050b4b47f_0318461i02, operator, "--").
 attr[ast_babel](nf512caf050b4b47f_0318461i02, prefix, false).
 node[ast_babel](nf512caf050b4b47f_2jtqpifse91, identifier, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_2jtqpifse91, 16).
+start[ast_babel](nf512caf050b4b47f_2jtqpifse91, 616).
 attr[ast_babel](nf512caf050b4b47f_2jtqpifse91, name, "i").
 child[ast_babel](nf512caf050b4b47f_0318461i02, argument, 0, nf512caf050b4b47f_2jtqpifse91).
 child[ast_babel](nf512caf050b4b47f_hcrrh86qkm4, expression, 0, nf512caf050b4b47f_0318461i02).
@@ -1553,129 +1969,163 @@ child[ast_babel](nf512caf050b4b47f_ps0v690gb32, body, 0, nf512caf050b4b47f_hcrrh
 child[ast_babel](nf512caf050b4b47f_9sfd8t3icv3, body, 0, nf512caf050b4b47f_ps0v690gb32).
 node[ast_babel](nf512caf050b4b47f_4hi743mhu44, identifier, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_4hi743mhu44, 16).
+start[ast_babel](nf512caf050b4b47f_4hi743mhu44, 630).
 attr[ast_babel](nf512caf050b4b47f_4hi743mhu44, name, "i").
 child[ast_babel](nf512caf050b4b47f_9sfd8t3icv3, test, 0, nf512caf050b4b47f_4hi743mhu44).
-child[ast_babel](nf512caf050b4b47f_12undirbnh3, body, 22, nf512caf050b4b47f_9sfd8t3icv3).
+child[ast_babel](nf512caf050b4b47f_root, body, 22, nf512caf050b4b47f_9sfd8t3icv3).
 node[ast_babel](nf512caf050b4b47f_liid2l7lfo1, for_in_statement, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_liid2l7lfo1, 17).
+start[ast_babel](nf512caf050b4b47f_liid2l7lfo1, 634).
 node[ast_babel](nf512caf050b4b47f_4a209g00195, identifier, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_4a209g00195, 17).
+start[ast_babel](nf512caf050b4b47f_4a209g00195, 639).
 attr[ast_babel](nf512caf050b4b47f_4a209g00195, name, "k").
 child[ast_babel](nf512caf050b4b47f_liid2l7lfo1, left, 0, nf512caf050b4b47f_4a209g00195).
 node[ast_babel](nf512caf050b4b47f_qarv8osb0q1, identifier, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_qarv8osb0q1, 17).
+start[ast_babel](nf512caf050b4b47f_qarv8osb0q1, 644).
 attr[ast_babel](nf512caf050b4b47f_qarv8osb0q1, name, "o").
 child[ast_babel](nf512caf050b4b47f_liid2l7lfo1, right, 0, nf512caf050b4b47f_qarv8osb0q1).
 node[ast_babel](nf512caf050b4b47f_kqflbd7fpe3, block_statement, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_kqflbd7fpe3, 17).
+start[ast_babel](nf512caf050b4b47f_kqflbd7fpe3, 647).
 child[ast_babel](nf512caf050b4b47f_liid2l7lfo1, body, 0, nf512caf050b4b47f_kqflbd7fpe3).
-child[ast_babel](nf512caf050b4b47f_12undirbnh3, body, 23, nf512caf050b4b47f_liid2l7lfo1).
+child[ast_babel](nf512caf050b4b47f_root, body, 23, nf512caf050b4b47f_liid2l7lfo1).
 node[ast_babel](nf512caf050b4b47f_3s5a6uobdb3, function_declaration, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_3s5a6uobdb3, 18).
+start[ast_babel](nf512caf050b4b47f_3s5a6uobdb3, 650).
 node[ast_babel](nf512caf050b4b47f_9hfe85n45t6, identifier, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_9hfe85n45t6, 18).
+start[ast_babel](nf512caf050b4b47f_9hfe85n45t6, 659).
 attr[ast_babel](nf512caf050b4b47f_9hfe85n45t6, name, "nf").
 child[ast_babel](nf512caf050b4b47f_3s5a6uobdb3, id, 0, nf512caf050b4b47f_9hfe85n45t6).
 attr[ast_babel](nf512caf050b4b47f_3s5a6uobdb3, generator, false).
 attr[ast_babel](nf512caf050b4b47f_3s5a6uobdb3, async, false).
 node[ast_babel](nf512caf050b4b47f_rb0h6ct5jj6, block_statement, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_rb0h6ct5jj6, 18).
+start[ast_babel](nf512caf050b4b47f_rb0h6ct5jj6, 664).
 node[ast_babel](nf512caf050b4b47f_2arshup6ns, return_statement, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_2arshup6ns, 18).
+start[ast_babel](nf512caf050b4b47f_2arshup6ns, 666).
 node[ast_babel](nf512caf050b4b47f_u6f416afbv1, meta_property, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_u6f416afbv1, 18).
+start[ast_babel](nf512caf050b4b47f_u6f416afbv1, 673).
 node[ast_babel](nf512caf050b4b47f_ivvlavp8je1, identifier, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_ivvlavp8je1, 18).
+start[ast_babel](nf512caf050b4b47f_ivvlavp8je1, 673).
 attr[ast_babel](nf512caf050b4b47f_ivvlavp8je1, name, "new").
 child[ast_babel](nf512caf050b4b47f_u6f416afbv1, meta, 0, nf512caf050b4b47f_ivvlavp8je1).
 node[ast_babel](nf512caf050b4b47f_37uugpd1ib4, identifier, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_37uugpd1ib4, 18).
+start[ast_babel](nf512caf050b4b47f_37uugpd1ib4, 677).
 attr[ast_babel](nf512caf050b4b47f_37uugpd1ib4, name, "target").
 child[ast_babel](nf512caf050b4b47f_u6f416afbv1, property, 0, nf512caf050b4b47f_37uugpd1ib4).
 child[ast_babel](nf512caf050b4b47f_2arshup6ns, argument, 0, nf512caf050b4b47f_u6f416afbv1).
 child[ast_babel](nf512caf050b4b47f_rb0h6ct5jj6, body, 0, nf512caf050b4b47f_2arshup6ns).
 child[ast_babel](nf512caf050b4b47f_3s5a6uobdb3, body, 0, nf512caf050b4b47f_rb0h6ct5jj6).
-child[ast_babel](nf512caf050b4b47f_12undirbnh3, body, 24, nf512caf050b4b47f_3s5a6uobdb3).
+child[ast_babel](nf512caf050b4b47f_root, body, 24, nf512caf050b4b47f_3s5a6uobdb3).
 node[ast_babel](nf512caf050b4b47f_jb8p4q8nrr, variable_declaration, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_jb8p4q8nrr, 18).
+start[ast_babel](nf512caf050b4b47f_jb8p4q8nrr, 687).
 node[ast_babel](nf512caf050b4b47f_p5isja89f94, variable_declarator, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_p5isja89f94, 18).
+start[ast_babel](nf512caf050b4b47f_p5isja89f94, 693).
 node[ast_babel](nf512caf050b4b47f_321f4l052e7, identifier, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_321f4l052e7, 18).
+start[ast_babel](nf512caf050b4b47f_321f4l052e7, 693).
 attr[ast_babel](nf512caf050b4b47f_321f4l052e7, name, "im").
 child[ast_babel](nf512caf050b4b47f_p5isja89f94, id, 0, nf512caf050b4b47f_321f4l052e7).
 node[ast_babel](nf512caf050b4b47f_l8p405ludp2, meta_property, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_l8p405ludp2, 18).
+start[ast_babel](nf512caf050b4b47f_l8p405ludp2, 698).
 node[ast_babel](nf512caf050b4b47f_7ldrg10b1m5, identifier, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_7ldrg10b1m5, 18).
+start[ast_babel](nf512caf050b4b47f_7ldrg10b1m5, 698).
 attr[ast_babel](nf512caf050b4b47f_7ldrg10b1m5, name, "import").
 child[ast_babel](nf512caf050b4b47f_l8p405ludp2, meta, 0, nf512caf050b4b47f_7ldrg10b1m5).
 node[ast_babel](nf512caf050b4b47f_ok8mnuhi3e, identifier, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_ok8mnuhi3e, 18).
+start[ast_babel](nf512caf050b4b47f_ok8mnuhi3e, 705).
 attr[ast_babel](nf512caf050b4b47f_ok8mnuhi3e, name, "meta").
 child[ast_babel](nf512caf050b4b47f_l8p405ludp2, property, 0, nf512caf050b4b47f_ok8mnuhi3e).
 child[ast_babel](nf512caf050b4b47f_p5isja89f94, init, 0, nf512caf050b4b47f_l8p405ludp2).
 child[ast_babel](nf512caf050b4b47f_jb8p4q8nrr, declarations, 0, nf512caf050b4b47f_p5isja89f94).
 attr[ast_babel](nf512caf050b4b47f_jb8p4q8nrr, kind, "const").
-child[ast_babel](nf512caf050b4b47f_12undirbnh3, body, 25, nf512caf050b4b47f_jb8p4q8nrr).
+child[ast_babel](nf512caf050b4b47f_root, body, 25, nf512caf050b4b47f_jb8p4q8nrr).
 node[ast_babel](nf512caf050b4b47f_je6mh4oevo1, expression_statement, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_je6mh4oevo1, 19).
+start[ast_babel](nf512caf050b4b47f_je6mh4oevo1, 711).
 node[ast_babel](nf512caf050b4b47f_rfu3kha87e7, assignment_expression, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_rfu3kha87e7, 19).
+start[ast_babel](nf512caf050b4b47f_rfu3kha87e7, 711).
 attr[ast_babel](nf512caf050b4b47f_rfu3kha87e7, operator, "||=").
 node[ast_babel](nf512caf050b4b47f_gahjv9daah, identifier, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_gahjv9daah, 19).
+start[ast_babel](nf512caf050b4b47f_gahjv9daah, 711).
 attr[ast_babel](nf512caf050b4b47f_gahjv9daah, name, "x").
 child[ast_babel](nf512caf050b4b47f_rfu3kha87e7, left, 0, nf512caf050b4b47f_gahjv9daah).
 node[ast_babel](nf512caf050b4b47f_ba3kcriokg, numeric_literal, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_ba3kcriokg, 19).
+start[ast_babel](nf512caf050b4b47f_ba3kcriokg, 717).
 attr[ast_babel](nf512caf050b4b47f_ba3kcriokg, value, 1).
 child[ast_babel](nf512caf050b4b47f_rfu3kha87e7, right, 0, nf512caf050b4b47f_ba3kcriokg).
 child[ast_babel](nf512caf050b4b47f_je6mh4oevo1, expression, 0, nf512caf050b4b47f_rfu3kha87e7).
-child[ast_babel](nf512caf050b4b47f_12undirbnh3, body, 26, nf512caf050b4b47f_je6mh4oevo1).
+child[ast_babel](nf512caf050b4b47f_root, body, 26, nf512caf050b4b47f_je6mh4oevo1).
 node[ast_babel](nf512caf050b4b47f_9ej9uuqhsu, expression_statement, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_9ej9uuqhsu, 19).
+start[ast_babel](nf512caf050b4b47f_9ej9uuqhsu, 720).
 node[ast_babel](nf512caf050b4b47f_5v87vi65146, assignment_expression, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_5v87vi65146, 19).
+start[ast_babel](nf512caf050b4b47f_5v87vi65146, 720).
 attr[ast_babel](nf512caf050b4b47f_5v87vi65146, operator, "&&=").
 node[ast_babel](nf512caf050b4b47f_srejjd39v74, identifier, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_srejjd39v74, 19).
+start[ast_babel](nf512caf050b4b47f_srejjd39v74, 720).
 attr[ast_babel](nf512caf050b4b47f_srejjd39v74, name, "y").
 child[ast_babel](nf512caf050b4b47f_5v87vi65146, left, 0, nf512caf050b4b47f_srejjd39v74).
 node[ast_babel](nf512caf050b4b47f_hjdcc5ojhs7, numeric_literal, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_hjdcc5ojhs7, 19).
+start[ast_babel](nf512caf050b4b47f_hjdcc5ojhs7, 726).
 attr[ast_babel](nf512caf050b4b47f_hjdcc5ojhs7, value, 2).
 child[ast_babel](nf512caf050b4b47f_5v87vi65146, right, 0, nf512caf050b4b47f_hjdcc5ojhs7).
 child[ast_babel](nf512caf050b4b47f_9ej9uuqhsu, expression, 0, nf512caf050b4b47f_5v87vi65146).
-child[ast_babel](nf512caf050b4b47f_12undirbnh3, body, 27, nf512caf050b4b47f_9ej9uuqhsu).
+child[ast_babel](nf512caf050b4b47f_root, body, 27, nf512caf050b4b47f_9ej9uuqhsu).
 node[ast_babel](nf512caf050b4b47f_6hmpa06vpa6, expression_statement, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_6hmpa06vpa6, 19).
+start[ast_babel](nf512caf050b4b47f_6hmpa06vpa6, 729).
 node[ast_babel](nf512caf050b4b47f_quf34mk61m1, assignment_expression, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_quf34mk61m1, 19).
+start[ast_babel](nf512caf050b4b47f_quf34mk61m1, 729).
 attr[ast_babel](nf512caf050b4b47f_quf34mk61m1, operator, "??=").
 node[ast_babel](nf512caf050b4b47f_k8pg9shaqm7, identifier, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_k8pg9shaqm7, 19).
+start[ast_babel](nf512caf050b4b47f_k8pg9shaqm7, 729).
 attr[ast_babel](nf512caf050b4b47f_k8pg9shaqm7, name, "z").
 child[ast_babel](nf512caf050b4b47f_quf34mk61m1, left, 0, nf512caf050b4b47f_k8pg9shaqm7).
 node[ast_babel](nf512caf050b4b47f_m73khnoung4, numeric_literal, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_m73khnoung4, 19).
+start[ast_babel](nf512caf050b4b47f_m73khnoung4, 735).
 attr[ast_babel](nf512caf050b4b47f_m73khnoung4, value, 3).
 child[ast_babel](nf512caf050b4b47f_quf34mk61m1, right, 0, nf512caf050b4b47f_m73khnoung4).
 child[ast_babel](nf512caf050b4b47f_6hmpa06vpa6, expression, 0, nf512caf050b4b47f_quf34mk61m1).
-child[ast_babel](nf512caf050b4b47f_12undirbnh3, body, 28, nf512caf050b4b47f_6hmpa06vpa6).
+child[ast_babel](nf512caf050b4b47f_root, body, 28, nf512caf050b4b47f_6hmpa06vpa6).
 node[ast_babel](nf512caf050b4b47f_suthuuhmd06, expression_statement, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_suthuuhmd06, 19).
+start[ast_babel](nf512caf050b4b47f_suthuuhmd06, 738).
 node[ast_babel](nf512caf050b4b47f_m069a6fspf1, sequence_expression, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_m069a6fspf1, 19).
+start[ast_babel](nf512caf050b4b47f_m069a6fspf1, 739).
 node[ast_babel](nf512caf050b4b47f_i3v89311rj5, identifier, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_i3v89311rj5, 19).
+start[ast_babel](nf512caf050b4b47f_i3v89311rj5, 739).
 attr[ast_babel](nf512caf050b4b47f_i3v89311rj5, name, "a").
 child[ast_babel](nf512caf050b4b47f_m069a6fspf1, expressions, 0, nf512caf050b4b47f_i3v89311rj5).
 node[ast_babel](nf512caf050b4b47f_o1kek9bc08, identifier, "examples/checks/roles-babel/types.ts").
 line[ast_babel](nf512caf050b4b47f_o1kek9bc08, 19).
+start[ast_babel](nf512caf050b4b47f_o1kek9bc08, 742).
 attr[ast_babel](nf512caf050b4b47f_o1kek9bc08, name, "b").
 child[ast_babel](nf512caf050b4b47f_m069a6fspf1, expressions, 1, nf512caf050b4b47f_o1kek9bc08).
 child[ast_babel](nf512caf050b4b47f_suthuuhmd06, expression, 0, nf512caf050b4b47f_m069a6fspf1).
-child[ast_babel](nf512caf050b4b47f_12undirbnh3, body, 29, nf512caf050b4b47f_suthuuhmd06).
-child[ast_babel](nf512caf050b4b47f_3c3ted0nsu2, program, 0, nf512caf050b4b47f_12undirbnh3).
+child[ast_babel](nf512caf050b4b47f_root, body, 29, nf512caf050b4b47f_suthuuhmd06).
+child[ast_babel](nf512caf050b4b47f_3c3ted0nsu2, program, 0, nf512caf050b4b47f_root).
 file[ast_babel](nf512caf050b4b47f_3c3ted0nsu2, "examples/checks/roles-babel/types.ts").

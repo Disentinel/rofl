@@ -9,7 +9,7 @@
 -- binds[type](N, Name) beside binds[value](N, Name), a generic applied is call[type], a union is binary[type]. A
 -- rule that reads [type] and writes [value] crosses between worlds, and only the two bridges may: declared(X, T)
 -- and implements(C, T), written in [value]. The tree is shared by every world and is a book of its own, [tree]:
--- program, at, parent, inside, nth, strict, precedes. The file itself is no node: it is the host's fs_* facts.
+-- program, at, pos, parent, inside, nth, strict, precedes. The file itself is no node: it is the host's fs_* facts.
 -- A role named below without a book is in [value].
 -- The design and the reasons for each word: the doc «Словарь ролей модели JS», agreed with the owner 2026-10-31.
 --
@@ -25,6 +25,7 @@ edb(role).
 -- ---- place
 role(at,        "node N stands in File on Line").
 role(program,   "P is the root of File").
+role(pos,       "N starts at the O-th UTF-16 unit of its file: an order among siblings, never part of an id").
 role(parent,    "C is a child of P in the role tree").
 role(inside,    "Inner is nested in Outer at any depth: the closure of parent").
 role(nth,       "S stands I-th, from 0, among what Seq executes: a position, not an order").
