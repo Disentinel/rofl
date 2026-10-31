@@ -2140,7 +2140,7 @@ impl R {
             let ask = if then == "never" { format!("write: never {subj} is stuck") } else { format!("ask: Which {} are stuck?", plural(&noun)) };
             return format!("an asking line holds one sentence, and this one holds two: \"{}\", \"{}\". Join them in a rule: {} {noun} {subj} is stuck if {} and {}. Then {ask}", l.said, r.said, cap_art(&noun), l.said, r.said);
         }
-        for c in ss.iter().filter(|x| x.past) {
+        if let Some(c) = ss.iter().find(|x| x.past) {
             let tail = tokens(&c.s).iter().skip(2).cloned().collect::<Vec<_>>().join(" ");
             let t = self.templates.iter().find(|x| matches!(x.parts[0], Part::Hole(..)) && text_words(x).iter().skip(1).cloned().collect::<Vec<_>>().join(" ") == tail).cloned();
             return match t {
