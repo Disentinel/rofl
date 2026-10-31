@@ -61,6 +61,23 @@ jobs:
           node --experimental-strip-types scripts/dist.ts
           node --experimental-strip-types scripts/npm_check.ts
 
+  # EVERY PLANTED FAULT TURNS ITS WORLDS RED. scripts/agg_breaks.ts: one `--features breaks` build, each fault switched
+  # on beside a no-break control. A change to brk! or to a line a fault sits on is held to it here, not on a laptop.
+  breaks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with: { workspaces: rust, key: breaks }
+      - run: npm ci
+      - name: planted faults
+        env: { ROFL_JOBS: 4 }
+        run: npm run test:agg:breaks
+
   # EVERY PLATFORM COMPILES BEFORE A MERGE. The engine job below builds each platform on main and on a tag only, so
   # a pull request that breaks one is green until it lands: bin/rofl/kept.rs called statvfs and kill, and win32 was
   # red on main for five merges and blocked the 1.4.0 release. A cargo check per target, on every push and pull
