@@ -3849,3 +3849,13 @@ check_opt("intents_rofl", one_engine, rust).
 
 check_world("intents_screen").
 check_file("intents_screen", "examples/intents/screen.rofl").
+
+-- w_l2_roles, the roles layer under the JS model: the Babel converter (models/lang/js/babel-roles.rofl) over the raw
+-- tree of examples/checks/roles-babel/ in [ast_babel], with the vocabulary's and the converter's audits; the files
+-- alone against the whole world and the vscode corpus are scripts/roles_check.ts, npm run test:roles
+check_world("roles_babel").
+check_file("roles_babel", "models/lang/js/roles.rofl").
+check_file("roles_babel", "models/lang/js/babel-roles.rofl").
+check_file("roles_babel", "models/lang/js/roles-audit.rofl").
+check_file("roles_babel", "models/lang/js/babel-audit.rofl").
+check_file("roles_babel", "examples/checks/roles-babel-facts.rofl").

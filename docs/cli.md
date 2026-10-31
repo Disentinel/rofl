@@ -351,6 +351,18 @@ engine's. The TypeScript engine took 12.4 s for the world and the five; the
 Rust release build 1.5 s for the world and the five in one `rofl load` run,
 and as much for each `rofl why` run alone, since each builds the world.
 
+### The roles layer (w_l2_roles), not yet read by the model
+
+`models/lang/js/` is the next layer under the JS model: `roles.rofl` is one
+vocabulary of roles (`ref`, `binds`, `callee`, `nth`, `executes_if`, ...) in
+two worlds, `[value]` and `[type]`, over one tree, `[tree]`; `babel-roles.rofl`
+writes them from the scanner's tree in `[ast_babel]` (`ScanSet().scan(src,
+{file, persp: 'ast_babel'})`). It has no command for an agent yet and
+`rules/js-*.rofl` do not read it; `npm run test:roles` drives it, and
+`rofl load @models/lang/js/roles.files sealed.rofl FACTS` writes the roles of
+a corpus scanned so. Pass `--budget` and `--space` at hundreds of files: the
+default budget cuts the state without saying so.
+
 ## A world that asks for its own input
 
 A world can ask for facts it does not have yet. It names a scanner for a kind

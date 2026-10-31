@@ -3512,6 +3512,16 @@ work_needs(w_rust_rofl_md, w_rust_cli).
 work(w_l2_roles,
   "A LANGUAGE-NEUTRAL ROLE LAYER UNDER THE JS MODEL (f_two_parsers_are_the_occasion_for_a_language_neutral_model). The JS model reads roles, not AST kinds; a rule that genuinely needs AST detail is named and becomes a JS-only role or the normalizer's duty. One normalizer per parser, written as rules: Babel facts to roles first. Vocabulary governance from day one: every role relation declared, an unclaimed one an alarm. Reflective sites (Proxy, eval, computed access the model cannot follow) are shrugs with reason opaque_boundary, never guessed edges. Polyglot survey before the shared roles are frozen. ACCEPTANCE LADDER: (1) the JS model over roles through the Babel normalizer gives today's answers -- goldens and the V8 oracle; (2) see w_rust_scanner_oxc; (3) a second language.").
 work_state(w_l2_roles, open).
+-- PROGRESS 2026-10-31 (f_the_babel_roles_are_per_file_and_their_cost_is_the_rows_they_write): step one built BESIDE the
+-- model, which does not read it yet: models/lang/js/roles.rofl (the vocabulary of the doc «Словарь ролей модели JS»,
+-- worlds as books [value] / [type] / [tree]) and babel-roles.rofl over the raw tree in [ast_babel]; npm run test:roles
+-- holds each file's roles alone equal to the whole world's and the audits empty. LEFT: the model's rules moved onto the
+-- roles (rung 1 of the ladder), the scanner writing [ast_babel] by default, ids from the role tree.
+
+work(w_l3_operations,
+  "THE OPERATIONS FLOOR ABOVE THE ROLES (owner, 2026-10-31: «запиши и отложи, потом напомнишь»). A role says what is written in one place; an operation says what runs there and needs other places: only_if (an assign that happens only when the place passes a test: a default, a logical assignment), overwrites (a key that already had a value), shadows (a declaration that hides an outer one), hidden_call (spread, destructuring, for-of, a getter calling code), coerces, narrows (instanceof, in, typeof, a type predicate), transfers (control into other code: call, construct, decorator, tag), suspends (await, yield); and the live binding of an ESM import against the copy of destructuring and require. Derived by the model over the roles, once for every parser; most exist today under other names (param_default, member_written, sees_binder, hidden_call_pos, eff_coerced, narrows_at, transfer_site, suspend_at). ACCEPTANCE: each operation one relation over [value] roles, its old relation answered from it, and the JS model's answers unchanged.").
+work_state(w_l3_operations, open).
+work_needs(w_l3_operations, w_l2_roles).
 
 work(w_rust_scanner_oxc,
   "THE JS SCANNER IN RUST on oxc, with its own normalizer into the L2 roles -- not a mapping onto Babel's AST. It also emits the host facts (fs_*, str_*) hostFacts writes today. ACCEPTANCE: over a real corpus the JS model gives identical answers and why text on the oxc facts and on the Babel facts; this is the first falsification of the role layer on two genuinely different fact shapes.").
