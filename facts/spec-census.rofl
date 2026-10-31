@@ -899,6 +899,7 @@ check[checks]("facts/goldens.rofl", "keyword_atom", world).
 check[checks]("facts/goldens.rofl", "net", world).
 check[checks]("facts/goldens.rofl", "not_as_a_name", world).
 check[checks]("facts/goldens.rofl", "operators", world).
+check[checks]("facts/goldens.rofl", "oxc_roles", world).
 check[checks]("facts/goldens.rofl", "premise_arity", world).
 check[checks]("facts/goldens.rofl", "prov_lazy", world).
 check[checks]("facts/goldens.rofl", "prov_lazy_lattice", world).
