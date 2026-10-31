@@ -75,6 +75,7 @@ jobs:
         with: { workspaces: rust, key: clippy }
       - run: cd rust && cargo clippy -p rofl --all-targets -- -D warnings
       - run: cd rust && cargo check -p rofl --all-targets --features breaks
+        env: { RUSTFLAGS: -D warnings }
 
   # EVERY PLANTED FAULT TURNS ITS WORLDS RED. scripts/agg_breaks.ts: one `--features breaks` build, each fault switched
   # on beside a no-break control. A change to brk! or to a line a fault sits on is held to it here, not on a laptop.
