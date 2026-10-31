@@ -18,7 +18,7 @@ Three levels of demand, told apart by what the answer to a question must hold:
 |---|---|---|
 | relation | every rule of every relation a question reaches | built, below |
 | column | a relation without the columns nobody reads | not built; measured below |
-| fact (pattern) | the instances a question reaches, by sideways information passing | not built; its bound is measured below |
+| fact (pattern) | the instances a question reaches, by sideways information passing | not built; measured below: 70-72% of the relation cone on the JS model |
 
 A notebook asks by itself (`playground/host.ts`, `f_a_notebook_asks_the_cone_of_its_lines`): the
 world of the model over the code is asked the relations of every `?`, `never`, `unsure`, `why` and
@@ -163,6 +163,31 @@ on instances matching a reached pattern, with that walk as its sideways informat
 fact-level cone; not a rule rewrite (the rewritten rules would show `magic_` premises in `why`),
 and not built. Its refusals are the list of "when the cone is the whole world" above plus negation,
 aggregates and lattices **inside** a component, where the walk degrades to the relation cone.
+
+### Measured: what pattern-level demand would reach
+
+`f_the_fact_level_cone_of_the_js_model_reaches_two_thirds_of_the_world` (2026-10-31, Rust release, a
+read-only walk over the materialised world, not merged). From the question's pattern every rule that
+can conclude a reached pattern is walked, each premise matched against the store; what a premise
+matches under the bindings so far is reached, positive matches and the facts that block under `not`.
+On self, mcp, cli_exits and util, five questions each (`calls(A, B)`, `calls(F, B)` for one function,
+`host_site(C, H, "process", "exit")`, `may_throw(F)`, `unresolved_call(C, S)`):
+
+| order | share of the world reached |
+|---|---|
+| relation cone (what exists) | 87-96% |
+| the rule's plan | 65-70% |
+| most-bound premise next, a relation asked by more patterns than it has rows asked whole | 61-70% (70-72% of the relation cone) |
+| the same unwidened (magic sets), stopped at 80 s | at least 10-40%, with 20-30 M patterns, 30-50x the world's facts |
+
+The two-answer `host_site` question reaches as much as `calls(A, B)` with 577 answers, and every
+question reaches every file: name resolution walks the parents of each node and the flow is one
+component with the calls, so demand covers the tree in three or four steps. Of what is reached, the
+scanner's AST is 43-44% and per-node tree walks 21-22%, besides the rows of the `ast_within`
+closure, which the declared tree already does not store (they are not in the shares; the aliases
+`ast_in`, `ast_name`, `ast_value` are, since the world keeps witnesses: without them 56-62%). The
+pattern-level kernel would save about a third of the relation cone on this model; the rest is
+by data, volumes by file with `[surface]`.
 
 ## Growing a cone, as built (incremental addition)
 
