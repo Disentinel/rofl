@@ -822,6 +822,8 @@ check[checks]("facts/goldens.rofl", "ast_within_readers", world).
 check[checks]("facts/goldens.rofl", "async_refused", world).
 check[checks]("facts/goldens.rofl", "budget_wall", world).
 check[checks]("facts/goldens.rofl", "closure_base_fact", world).
+check[checks]("facts/goldens.rofl", "concat_builtin", world).
+check[checks]("facts/goldens.rofl", "concat_recursion", world).
 check[checks]("facts/goldens.rofl", "concat_value", world).
 check[checks]("facts/goldens.rofl", "cost_shapes_model", world).
 check[checks]("facts/goldens.rofl", "demand_asked_hole", world).

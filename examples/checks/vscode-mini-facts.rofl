@@ -1522,14 +1522,14 @@ ast_child[code](n34efd0fd49e79fa1_g1si6b55a76, declaration, 0, n34efd0fd49e79fa1
 ast_child[code](n34efd0fd49e79fa1_12undirbnh3, body, 3, n34efd0fd49e79fa1_g1si6b55a76).
 ast_child[code](n34efd0fd49e79fa1_3c3ted0nsu2, program, 0, n34efd0fd49e79fa1_12undirbnh3).
 ast_file[code](n34efd0fd49e79fa1_3c3ted0nsu2, "mini/node/server.ts").
-has_dir[fs]("mini", "common", "mini/common").
-has_dir[fs](".", "mini", "mini").
-has_dir[fs]("mini", "node", "mini/node").
-has_file[fs]("mini/common", "channels.ts", "mini/common/channels.ts").
-has_file[fs]("mini/node", "main.ts", "mini/node/main.ts").
-has_file[fs]("mini/node", "paths.ts", "mini/node/paths.ts").
-has_file[fs]("mini/node", "pfs.ts", "mini/node/pfs.ts").
-has_file[fs]("mini/node", "server.ts", "mini/node/server.ts").
+has_dir[fs]("mini", "common").
+has_dir[fs](".", "mini").
+has_dir[fs]("mini", "node").
+has_file[fs]("mini/common", "channels.ts").
+has_file[fs]("mini/node", "main.ts").
+has_file[fs]("mini/node", "paths.ts").
+has_file[fs]("mini/node", "pfs.ts").
+has_file[fs]("mini/node", "server.ts").
 str_segs[code]("vscode:hello", 1).
 str_char0[code]("vscode:hello", "v").
 str_seg[code]("vscode:hello", 0, "vscode:hello").

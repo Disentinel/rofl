@@ -939,8 +939,10 @@ sig(kind_absent_stale, "is_excused_yet_present(kind K)").
 sig(kind_absent_undeclared, "is_excused_yet_undeclared(kind K)").
 
 -- modules: the site, its source and shape, specifiers, defaults, what flows between files
-sig(has_file, "holds_the_file(directory D, text Seg, being file T)").
-sig(has_dir, "holds_the_directory(directory D, text Seg, being directory C)").
+sig(has_file, "holds_the_file(directory D, text Name)").
+sig(has_dir, "holds_the_directory(directory D, text Name)").
+sig(file_at, "holds_the_file(directory D, text Seg, being file T)").
+sig(dir_at, "holds_the_directory(directory D, text Seg, being directory C)").
 sig(str_char0, "starts_with(text S, text C)").
 sig(str_scheme, "has_the_scheme(text S, text Scheme)").
 sig(import_site, "is_an_import_site(node I, of form N)").

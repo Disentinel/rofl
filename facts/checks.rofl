@@ -29,6 +29,7 @@ check_refuses("async_refused", "async-refused.rofl").
 check_refuses("not_as_a_name", "not-as-a-name.rofl").
 check_refuses("unstratifiable", "unstratifiable.rofl").
 check_refuses("premise_arity", "premise-arity.rofl").
+check_refuses("concat_recursion", "concat-recursion.rofl").
 -- The dense form of ring 1 is written for examples/ring1/dense.ts, not for the
 -- loader; the directory world has refused it since it was first blessed.
 check_refuses("ring1", "l1.dense.rofl").
@@ -3868,3 +3869,9 @@ check_file("roles_babel", "models/lang/js/babel-roles.rofl").
 check_file("roles_babel", "models/lang/js/roles-audit.rofl").
 check_file("roles_babel", "models/lang/js/babel-audit.rofl").
 check_file("roles_babel", "examples/checks/roles-babel-facts.rofl").
+
+-- concat(A, B), the one string constructor: below a recursion it joins, inside one it is refused (safety.rofl)
+check_world("concat_builtin").
+check_file("concat_builtin", "examples/checks/concat.rofl").
+check_world("concat_recursion").
+check_file("concat_recursion", "examples/checks/concat-recursion.rofl").

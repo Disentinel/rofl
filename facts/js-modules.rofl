@@ -176,7 +176,7 @@ unknown_because(js, import_declaration, bare, modules, out_of_scope).
 --
 -- `#sub` resolves through the IMPORTING package's own package.json `imports`
 -- map — a file the fs emitter already walks and already reports as
--- `has_file[fs](".", "package.json", "package.json")` — and never enters
+-- `has_file[fs](".", "package.json")` — and never enters
 -- node_modules at all. `bare` is a walk up through node_modules and a
 -- conditions map; this is a lookup in one file that is already on the disk the
 -- model can see. What it still lacks is that file's CONTENT: the host's two

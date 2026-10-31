@@ -264,6 +264,7 @@ dominated_reader(R) :- analysed(R), premise_neg(R, dominated_by).
 -- `premise_arith(R, K, Res, Op, A, B)` for each `Res is A Op B` whose operands
 -- are variables or integers (`Res is A` is `Op` = "is", B = A), terms reified.
 edb(premise_arith).
+edb(structure_decl).
 edb(lit_arity).
 
 lattice_rel(P) :- lattice_decl(P, _, _).
@@ -450,6 +451,26 @@ unw_reach(A, C) :- unw_reach(A, B), unw_edge(B, C).
 agg_refused(R, lattice_unwidened) :- lat_iv_step(R, K), lat_inner(R, K, P), concludes(R, H), unw_reach(P, H).
 agg_refused(R, lattice_unwidened) :- lat_iv_step(R, K), lat_inner(R, K, H), concludes(R, H), not lat_widened(H).
 
+-- AN UNBOUNDED BUILTIN, one that makes a value the program did not hold, may not run in a recursion (owner, 2026-10-31). Every other builtin answers a part
+-- of a value the program already holds, so what a program can hold stays finite; `unbounded(Op)` marks the ones
+-- that make a new one, concat(A, B) a string, hash(Seed, X) an atom. Over the finitely many values below a recursion they
+-- make finitely many; inside one they may make a new value each round without end. So a rule that calls one and reads
+-- a relation that depends on its own head is refused, unless that read walks an edge of a declared tree (`tree ...
+-- closure`, docs/data-structures.md), which is finite and has no cycle, so the walk ends. Only the heads of such rules
+-- are followed up the program, never the whole program's closure: at the size of the JS model that closure alone
+-- spent the budget of this file.
+unbounded("concat").
+unbounded("hash").
+unb_rule(R, H)  :- uses_builtin(R, Op), unbounded(Op), concludes(R, H).
+unb_read(R, P)  :- unb_rule(R, _), premise_pos(R, P).
+unb_read(R, P)  :- unb_rule(R, _), premise_agg(R, P).
+unb_up(H, X)    :- unb_rule(_, H), premise_pos(R, H), concludes(R, X), conclusion_tense(R, now).
+unb_up(H, X)    :- unb_rule(_, H), premise_agg(R, H), concludes(R, X), conclusion_tense(R, now).
+unb_up(H, Y)    :- unb_up(H, X), premise_pos(R, X), concludes(R, Y), conclusion_tense(R, now).
+unb_up(H, Y)    :- unb_up(H, X), premise_agg(R, X), concludes(R, Y), conclusion_tense(R, now).
+unb_walks_tree(R) :- unb_rule(R, _), premise_pos(R, T), structure_decl(T, _, tree).
+agg_refused(R, unbounded_in_recursion) :- unb_rule(R, H), unb_read(R, P), unb_up(H, P), not unb_walks_tree(R).
+
 lat_use(R, K, X, J, S)   :- lat_taint(R, K, X), premise_var(R, J, S, _, X).
 lat_misuse(R)            :- lat_use(R, K, X, J, S), not lat_ok(R, K, X, J, S).
 -- a constant read in the value slot is monotone only as the best there is
@@ -627,6 +648,10 @@ stratum(lat_read, 1).
 stratum(lat_right_dirty, 1).
 stratum(lat_taint, 1).
 stratum(lat_use, 1).
+stratum(unb_rule, 1).
+stratum(unb_read, 1).
+stratum(unb_up, 1).
+stratum(unb_walks_tree, 1).
 stratum(lattice_any, 1).
 stratum(lattice_member_reader, 1).
 stratum(lattice_refused, 2).
