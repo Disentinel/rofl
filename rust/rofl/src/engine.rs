@@ -2429,9 +2429,24 @@ impl Eval {
                 }
             }
             if cone.len() == n {
+                self.unjudged_outside(&cone, kept);
                 return Some(cone);
             }
         }
+    }
+
+    /// A promise no rule of the cone reads is not judged (owner, 2026-10-30): the declared functions and trees outside
+    /// the cone that rules conclude, said in the diagnostics, as those rules do not run.
+    fn unjudged_outside(&mut self, cone: &HashSet<Sym>, kept: &[ERule]) {
+        let mut out: Vec<&str> = self.ds.functions.iter().map(|f| f.rel).chain(self.ds.trees.iter().map(|t| t.rel))
+            .filter(|r| !cone.contains(r) && kept.iter().any(|k| k.clause.head.rel == *r)).map(|r| self.h.name(r)).collect();
+        if out.is_empty() {
+            return;
+        }
+        out.sort();
+        out.dedup();
+        let d = format!("asks: the promises of {} are not judged, as no rule of the cone reads them", out.join(", "));
+        self.diags.push(d);
     }
 
     /// THE RELATIONS THE KERNEL READS OF EVERY EVALUATION, whatever is asked: `unknown` behind every negation, `shrug`,
@@ -2448,8 +2463,7 @@ impl Eval {
         out
     }
 
-    /// THE RULES THAT CAN MAKE THE WHOLE WORLD REFUSE, whose heads join every cone: a declared function's or
-    /// tree's relation (its promise is judged over its rows); a rule reading `unknown` or `shrug` (refused when
+    /// THE RULES THAT CAN MAKE THE WHOLE WORLD REFUSE, whose heads join every cone: a rule reading `unknown` or `shrug` (refused when
     /// they arrive after it read them); a rule into a tag, or reading or concluding a subsumptive relation
     /// (refused when not monotone in the dominance); one concluding a relation answered on demand with an
     /// aggregate or a lattice read; under well_founded every aggregate and demand-backed rule; and every
@@ -2460,7 +2474,7 @@ impl Eval {
             return Vec::new();
         }
         let v = &self.v;
-        let mut out: Vec<Sym> = self.ds.functions.iter().map(|f| f.rel).chain(self.ds.trees.iter().map(|t| t.rel)).collect();
+        let mut out: Vec<Sym> = Vec::new();
         let demand = &self.answer.demand_rels;
         for r in kept {
             let head = r.clause.head.rel;
