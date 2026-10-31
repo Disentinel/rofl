@@ -939,7 +939,8 @@ sig(kind_absent_stale, "is_excused_yet_present(kind K)").
 sig(kind_absent_undeclared, "is_excused_yet_undeclared(kind K)").
 
 -- modules: the site, its source and shape, specifiers, defaults, what flows between files
-sig(fs_file_in, "holds_the_file(directory D, text Seg, being file T)").
+sig(has_file, "holds_the_file(directory D, text Seg, being file T)").
+sig(has_dir, "holds_the_directory(directory D, text Seg, being directory C)").
 sig(str_char0, "starts_with(text S, text C)").
 sig(str_scheme, "has_the_scheme(text S, text Scheme)").
 sig(import_site, "is_an_import_site(node I, of form N)").
@@ -1139,9 +1140,5 @@ rows_from(str_seg, "the host, which cuts the specifier").
 rows_from(str_segs, "the host, which cuts the specifier").
 rows_from(str_char0, "the host, which cuts the specifier").
 rows_from(str_scheme, "the host, which cuts the specifier").
-rows_from(fs_file, "the host, which lists the files").
-rows_from(fs_dir, "the host, which lists the files").
-rows_from(fs_parent, "the host, which lists the files").
-rows_from(fs_file_in, "the host, which lists the files").
-rows_from(fs_dir_in, "the host, which lists the files").
-rows_from(fs_dir_of, "the host, which lists the files").
+rows_from(has_file, "the host, which lists the files").
+rows_from(has_dir, "the host, which lists the files").

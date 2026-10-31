@@ -38,14 +38,14 @@ const EDITS: [string, (s: string) => string][] = [
 function world(dir: string): Set<string> {
   const facts = path.join(dir, '..', path.basename(dir) + '.facts.rofl');
   execFileSync('node', ['--experimental-strip-types', path.join(tree, 'scanners/cli.ts'), dir, '--out', facts], { stdio: ['ignore', 'ignore', 'ignore'] });
-  if (roles) fs.writeFileSync(facts, fs.readFileSync(facts, 'utf8').replace(/^(ast_\w+)\[code\]/gm, '$1[ast_babel]'));
+  if (roles) fs.writeFileSync(facts, fs.readFileSync(facts, 'utf8').replace(/^ast_(\w+)\[code\]/gm, '$1[ast_babel]'));
   const model = roles ? ['--budget', '4000000000', '--space', '40000000', '@' + path.join(tree, 'models/lang/js/roles.files')]
     : ['@' + path.join(tree, 'rules/js.files')];
   const out = execFileSync(rofl, ['load', ...model, facts], { maxBuffer: 1 << 30, encoding: 'utf8' });
   return new Set(out.split('\n').flatMap((l) => /^([a-z_]\w*(?:\[\w+\])?\(.*\)) tick /.exec(l)?.[1] ?? []));
 }
 
-const scanned = (f: string) => /^(ast|fs|str)_\w+\[(code|ast_babel)\]/.test(f);
+const scanned = (f: string) => /^((ast|str)_\w+\[code\]|\w+\[(ast_babel|fs)\])/.test(f);
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'waves-'));
 const copy = (name: string, edit?: (s: string) => string): string => {
   const d = path.join(tmp, name);

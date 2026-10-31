@@ -1,6 +1,6 @@
 ---
 world: js-modules
-books: audit, code, main
+books: audit, code, fs, main
 default: code
 ---
 
@@ -23,8 +23,8 @@ default: code
 
 > from outside the AST (facts/js-modules.rofl): str_seg(S, K, Seg) cut on "/",
 > str_segs(S, N), str_char0(S, C), str_scheme(S, Scheme) before the first
-> ":"; fs_file, fs_dir, fs_parent, fs_file_in(Dir, Name, Path),
-> fs_dir_in(Dir, Name, Child), fs_dir_of(File, Dir); node_prefix_only(Canonical);
+> ":"; the disk in its own ledger, has_file[fs](Dir, Name, Path) and
+> has_dir[fs](Parent, Name, Path); node_prefix_only(Canonical);
 > shape_verdict(Shape, Reason); unknown_because.
 
 Reads:
@@ -86,18 +86,20 @@ Phrases this file defines in one step, each by the sentence it stands for:
 - <a id="import_attr_of"></a>A node has the import attribute X if X [is among the](#ast_child) `attributes` of it.
 - <a id="module_type"></a>A node imports the module type T if it [imports with the attribute](#module_attr) "type" holding T.
 
+`imports` lists:
+
+| arg 1 | arg 2 |
+|---|---|
+| `code` | `fs` |
+
 Declared as facts:
 
 - <a id="str_seg"></a>`str_seg` — rows from the host, which cuts the specifier
 - <a id="str_segs"></a>`str_segs` — rows from the host, which cuts the specifier
 - <a id="str_char0"></a>A text S starts with a text C — rows from the host, which cuts the specifier
 - <a id="str_scheme"></a>A text S has the scheme Scheme — rows from the host, which cuts the specifier
-- <a id="fs_file"></a>`fs_file` — rows from the host, which lists the files
-- <a id="fs_dir"></a>`fs_dir` — rows from the host, which lists the files
-- <a id="fs_parent"></a>`fs_parent` — rows from the host, which lists the files
-- <a id="fs_file_in"></a>A directory D holds the file Seg being a file T — rows from the host, which lists the files
-- <a id="fs_dir_in"></a>`fs_dir_in` — rows from the host, which lists the files
-- <a id="fs_dir_of"></a>`fs_dir_of` — rows from the host, which lists the files
+- <a id="has_file"></a>A directory D holds the file Seg being a file T — rows from the host, which lists the files
+- <a id="has_dir"></a>A directory D holds the directory Seg being a directory C — rows from the host, which lists the files
 - <a id="node_prefix_only"></a>A spec Spec is loaded only under its scheme — rows from facts/js-modules.rofl
 - <a id="host_module"></a>A host H has the module Spec — rows from facts/js-host-surface.rofl
 - The shape verdict of a shape S is a verdict N — rows from facts/js-modules.rofl
@@ -216,7 +218,7 @@ A site
 - <a id="walk"></a>walks at 0 to a directory D if all of:
   - [the site shape](#site_shape) of it is `relative`;
   - it [sits in](#site_file) a file F;
-  - [`fs_dir_of`](#fs_dir_of)(F, D).
+  - D [holds the file](#has_file) some text being F.
 - walks at a step K1 to a directory D if all of:
   - it [walks](#walk) at a step K to D;
   - [the source text](#site_source) of it is S;
@@ -226,7 +228,7 @@ A site
   - it [walks](#walk) at a step K to a directory D;
   - [the source text](#site_source) of it is S;
   - [`str_seg`](#str_seg)(S, K, "..");
-  - [`fs_parent`](#fs_parent)(D, P);
+  - P [holds the directory](#has_dir) some text being D;
   - K1 is K + 1.
 
 > the empty segment of `../` stays where it is, so a directory's index answers
@@ -245,13 +247,13 @@ A site
   - Seg differs from ".";
   - Seg differs from "..";
   - Seg differs from "";
-  - [`fs_dir_in`](#fs_dir_in)(D, Seg, C);
+  - D [holds the directory](#has_dir) Seg being C;
   - K1 is K + 1.
 - <a id="resolved_import"></a>resolves to the file T if all of:
   - it [walks](#walk) at a step K to a directory D;
   - [the source text](#site_source) of it is S;
   - [`str_seg`](#str_seg)(S, K, Seg);
-  - D [holds the file](#fs_file_in) Seg being T;
+  - D [holds the file](#has_file) Seg being T;
   - N is K + 1;
   - [`str_segs`](#str_segs)(S, N).
 
@@ -316,7 +318,7 @@ A node I is resolved either:
 | "index.jsx" | 23 |
 
 <a id="last_ext"></a>The extension of Name and L is E if all of:
-  - some directory [holds the file](#fs_file_in) Name being some file;
+  - some directory [holds the file](#has_file) Name being some file;
   - N is the number of segments of Name split by ".";
   - N > 1;
   - K is N - 1;
@@ -334,7 +336,7 @@ A node I is resolved either:
 > its folder: a file's stem is its name less the last extension.
 
 <a id="file_stem"></a>A folder has the stem Stem and E and T if all of:
-  - it [holds the file](#fs_file_in) Name being T;
+  - it [holds the file](#has_file) Name being T;
   - [the extension](#last_ext) of Name and L is E;
   - Ln is the length of Name;
   - K is Ln - L - 1;
@@ -363,7 +365,7 @@ A node I is resolved either:
    - [the source text](#site_source) of I is S;
    - [`str_segs`](#str_segs)(S, N);
    - Name [is an index file](#index_file) at R;
-   - D [holds the file](#fs_file_in) Name being T.
+   - D [holds the file](#has_file) Name being T.
 
 A site
 

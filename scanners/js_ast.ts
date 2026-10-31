@@ -35,7 +35,8 @@ import { parse } from '@babel/parser';
 export interface ScanOpts {
   /** the path this source came from; part of every fact and of every id */
   file?: string;
-  /** the ledger to write into */
+  /** the ledger to write into; the old JS model reads [code] by the names ast_node, ast_child, ...; any other
+   *  ledger is named by its book, so its relations are node, child, attr, line, file, parse_error */
   persp?: string;
 }
 
@@ -322,6 +323,7 @@ const b32 = (x: number): string => {
 export function scan(src: string, opts: ScanOpts = {}): AstFacts {
   const file = opts.file ?? '<anonymous>';
   const persp = opts.persp ?? 'code';
+  const raw = persp === 'code' ? 'ast_' : '';
   const prefix = idPrefix(file);
   claim(prefix, file);
   lostSurrogates = 0;
@@ -369,7 +371,7 @@ export function scan(src: string, opts: ScanOpts = {}): AstFacts {
   } catch (e) {
     const msg = (e as Error).message.slice(0, 120);
     return {
-      facts: [`ast_parse_error[${persp}](${q(file)}, ${q(msg)}).`],
+      facts: [`${raw}parse_error[${persp}](${q(file)}, ${q(msg)}).`],
       nodes: 0, kinds: new Set<string>(), root: '', prefix,
     };
   }
@@ -387,8 +389,8 @@ export function scan(src: string, opts: ScanOpts = {}): AstFacts {
     const kind = atomise(node.type as string);
     kinds.add(kind);
     const loc = node.loc as { start?: { line?: number } } | null | undefined;
-    facts.push(`ast_node[${persp}](${me}, ${kind}, ${qFile}).`);
-    facts.push(`ast_line[${persp}](${me}, ${loc?.start?.line ?? 0}).`);
+    facts.push(`${raw}node[${persp}](${me}, ${kind}, ${qFile}).`);
+    facts.push(`${raw}line[${persp}](${me}, ${loc?.start?.line ?? 0}).`);
     let equal: Map<number, number> | undefined;
     let ch = 0;
     const child = (field: string, c: Node, listed: boolean): string => {
@@ -420,14 +422,14 @@ export function scan(src: string, opts: ScanOpts = {}): AstFacts {
           if (!isNode(v[i])) continue;
           const id = child(field, v[i] as Node, true);
           emit(v[i] as Node, id, ch);
-          facts.push(`ast_child[${persp}](${me}, ${field}, ${i}, ${id}).`);
+          facts.push(`${raw}child[${persp}](${me}, ${field}, ${i}, ${id}).`);
         }
       } else if (isNode(v)) {
         const id = child(field, v as Node, false);
         emit(v as Node, id, ch);
-        facts.push(`ast_child[${persp}](${me}, ${field}, 0, ${id}).`);
+        facts.push(`${raw}child[${persp}](${me}, ${field}, 0, ${id}).`);
       } else if (isScalar(v)) {
-        facts.push(`ast_attr[${persp}](${me}, ${field}, ${scalarTerm(v)}).`);
+        facts.push(`${raw}attr[${persp}](${me}, ${field}, ${scalarTerm(v)}).`);
       } else if (typeof v === 'object' && !Array.isArray(v)) {
         // A NESTED OBJECT WHOSE MEMBERS ARE ALL SCALARS IS FLATTENED, one key
         // per member, `<field>_<member>`. Added 2026-09-08 after measuring what
@@ -451,7 +453,7 @@ export function scan(src: string, opts: ScanOpts = {}): AstFacts {
         const flat = keys.every((ik) => isScalar(inner[ik]));
         if (flat) {
           for (const ik of keys) {
-            facts.push(`ast_attr[${persp}](${me}, ${field}_${atomise(ik)}, `
+            facts.push(`${raw}attr[${persp}](${me}, ${field}_${atomise(ik)}, `
               + `${scalarTerm(inner[ik] as string | number | boolean | bigint)}).`);
           }
         }
@@ -469,7 +471,7 @@ export function scan(src: string, opts: ScanOpts = {}): AstFacts {
     if (unique(hashes)) break;
     facts.length = 0; kinds.clear(); n = 0; lostSurrogates = 0; salt++;
   }
-  facts.push(`ast_file[${persp}](${root}, ${qFile}).`);
+  facts.push(`${raw}file[${persp}](${root}, ${qFile}).`);
   // THE LOSS IS RECORDED BESIDE THE DATA. Replacing a character silently would
   // make a question about that value answerable and wrong; this makes it
   // answerable and honest.

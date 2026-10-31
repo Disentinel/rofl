@@ -1522,31 +1522,14 @@ ast_child[code](n34efd0fd49e79fa1_g1si6b55a76, declaration, 0, n34efd0fd49e79fa1
 ast_child[code](n34efd0fd49e79fa1_12undirbnh3, body, 3, n34efd0fd49e79fa1_g1si6b55a76).
 ast_child[code](n34efd0fd49e79fa1_3c3ted0nsu2, program, 0, n34efd0fd49e79fa1_12undirbnh3).
 ast_file[code](n34efd0fd49e79fa1_3c3ted0nsu2, "mini/node/server.ts").
-fs_dir[code](".").
-fs_dir[code]("mini/common").
-fs_parent[code]("mini/common", "mini").
-fs_dir_in[code]("mini", "common", "mini/common").
-fs_dir[code]("mini").
-fs_parent[code]("mini", ".").
-fs_dir_in[code](".", "mini", "mini").
-fs_dir[code]("mini/node").
-fs_parent[code]("mini/node", "mini").
-fs_dir_in[code]("mini", "node", "mini/node").
-fs_file[code]("mini/common/channels.ts").
-fs_dir_of[code]("mini/common/channels.ts", "mini/common").
-fs_file_in[code]("mini/common", "channels.ts", "mini/common/channels.ts").
-fs_file[code]("mini/node/main.ts").
-fs_dir_of[code]("mini/node/main.ts", "mini/node").
-fs_file_in[code]("mini/node", "main.ts", "mini/node/main.ts").
-fs_file[code]("mini/node/paths.ts").
-fs_dir_of[code]("mini/node/paths.ts", "mini/node").
-fs_file_in[code]("mini/node", "paths.ts", "mini/node/paths.ts").
-fs_file[code]("mini/node/pfs.ts").
-fs_dir_of[code]("mini/node/pfs.ts", "mini/node").
-fs_file_in[code]("mini/node", "pfs.ts", "mini/node/pfs.ts").
-fs_file[code]("mini/node/server.ts").
-fs_dir_of[code]("mini/node/server.ts", "mini/node").
-fs_file_in[code]("mini/node", "server.ts", "mini/node/server.ts").
+has_dir[fs]("mini", "common", "mini/common").
+has_dir[fs](".", "mini", "mini").
+has_dir[fs]("mini", "node", "mini/node").
+has_file[fs]("mini/common", "channels.ts", "mini/common/channels.ts").
+has_file[fs]("mini/node", "main.ts", "mini/node/main.ts").
+has_file[fs]("mini/node", "paths.ts", "mini/node/paths.ts").
+has_file[fs]("mini/node", "pfs.ts", "mini/node/pfs.ts").
+has_file[fs]("mini/node", "server.ts", "mini/node/server.ts").
 str_segs[code]("vscode:hello", 1).
 str_char0[code]("vscode:hello", "v").
 str_seg[code]("vscode:hello", 0, "vscode:hello").

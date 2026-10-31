@@ -1309,25 +1309,12 @@ ast_child[code](n203d8a7f19c029f1_narja3b2ms4, declaration, 0, n203d8a7f19c029f1
 ast_child[code](n203d8a7f19c029f1_12undirbnh3, body, 12, n203d8a7f19c029f1_narja3b2ms4).
 ast_child[code](n203d8a7f19c029f1_3c3ted0nsu2, program, 0, n203d8a7f19c029f1_12undirbnh3).
 ast_file[code](n203d8a7f19c029f1_3c3ted0nsu2, "src/web/client.js").
-fs_dir[code](".").
-fs_dir[code]("src/api").
-fs_parent[code]("src/api", "src").
-fs_dir_in[code]("src", "api", "src/api").
-fs_dir[code]("src").
-fs_parent[code]("src", ".").
-fs_dir_in[code](".", "src", "src").
-fs_dir[code]("src/web").
-fs_parent[code]("src/web", "src").
-fs_dir_in[code]("src", "web", "src/web").
-fs_file[code]("src/api/server.js").
-fs_dir_of[code]("src/api/server.js", "src/api").
-fs_file_in[code]("src/api", "server.js", "src/api/server.js").
-fs_file[code]("src/api/users.js").
-fs_dir_of[code]("src/api/users.js", "src/api").
-fs_file_in[code]("src/api", "users.js", "src/api/users.js").
-fs_file[code]("src/web/client.js").
-fs_dir_of[code]("src/web/client.js", "src/web").
-fs_file_in[code]("src/web", "client.js", "src/web/client.js").
+has_dir[fs]("src", "api", "src/api").
+has_dir[fs](".", "src", "src").
+has_dir[fs]("src", "web", "src/web").
+has_file[fs]("src/api", "server.js", "src/api/server.js").
+has_file[fs]("src/api", "users.js", "src/api/users.js").
+has_file[fs]("src/web", "client.js", "src/web/client.js").
 str_segs[code]("express", 1).
 str_char0[code]("express", "e").
 str_seg[code]("express", 0, "express").
