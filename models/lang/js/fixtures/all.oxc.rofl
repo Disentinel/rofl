@@ -1,0 +1,1927 @@
+-- models/lang/js/fixtures/all.ts through oxc: npm run scan:oxc -- models/lang/js/fixtures all.ts
+ast_node[ast_oxc](n4b86f56e0826ca31_00hnij32k2175, program, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_00hnij32k2175, 1).
+ast_node[ast_oxc](n4b86f56e0826ca31_7jove1gjobt5b, import_declaration, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_7jove1gjobt5b, 1).
+ast_attr[ast_oxc](n4b86f56e0826ca31_7jove1gjobt5b, import_kind, "Value").
+ast_node[ast_oxc](n4b86f56e0826ca31_oftrh9o2ii6l2, import_default_specifier, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_oftrh9o2ii6l2, 1).
+ast_node[ast_oxc](n4b86f56e0826ca31_0upvhodt1p6p, binding_identifier, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_0upvhodt1p6p, 1).
+ast_attr[ast_oxc](n4b86f56e0826ca31_0upvhodt1p6p, name, "d").
+ast_child[ast_oxc](n4b86f56e0826ca31_oftrh9o2ii6l2, local, 0, n4b86f56e0826ca31_0upvhodt1p6p).
+ast_child[ast_oxc](n4b86f56e0826ca31_7jove1gjobt5b, specifiers, 0, n4b86f56e0826ca31_oftrh9o2ii6l2).
+ast_node[ast_oxc](n4b86f56e0826ca31_tl9as8dm698q4, import_specifier, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_tl9as8dm698q4, 1).
+ast_attr[ast_oxc](n4b86f56e0826ca31_tl9as8dm698q4, import_kind, "Value").
+ast_node[ast_oxc](n4b86f56e0826ca31_vrdmi06uet6r3, identifier_name, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_vrdmi06uet6r3, 1).
+ast_attr[ast_oxc](n4b86f56e0826ca31_vrdmi06uet6r3, name, "a").
+ast_child[ast_oxc](n4b86f56e0826ca31_tl9as8dm698q4, imported, 0, n4b86f56e0826ca31_vrdmi06uet6r3).
+ast_node[ast_oxc](n4b86f56e0826ca31_jlai69u0jcttf, binding_identifier, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_jlai69u0jcttf, 1).
+ast_attr[ast_oxc](n4b86f56e0826ca31_jlai69u0jcttf, name, "b").
+ast_child[ast_oxc](n4b86f56e0826ca31_tl9as8dm698q4, local, 0, n4b86f56e0826ca31_jlai69u0jcttf).
+ast_child[ast_oxc](n4b86f56e0826ca31_7jove1gjobt5b, specifiers, 1, n4b86f56e0826ca31_tl9as8dm698q4).
+ast_node[ast_oxc](n4b86f56e0826ca31_e8k2k2q1k4192, import_specifier, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_e8k2k2q1k4192, 1).
+ast_attr[ast_oxc](n4b86f56e0826ca31_e8k2k2q1k4192, import_kind, "Value").
+ast_node[ast_oxc](n4b86f56e0826ca31_4u0bekjejsmm5, identifier_name, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_4u0bekjejsmm5, 1).
+ast_attr[ast_oxc](n4b86f56e0826ca31_4u0bekjejsmm5, name, "c").
+ast_child[ast_oxc](n4b86f56e0826ca31_e8k2k2q1k4192, imported, 0, n4b86f56e0826ca31_4u0bekjejsmm5).
+ast_node[ast_oxc](n4b86f56e0826ca31_lv5v24gecbsc8, binding_identifier, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_lv5v24gecbsc8, 1).
+ast_attr[ast_oxc](n4b86f56e0826ca31_lv5v24gecbsc8, name, "c").
+ast_child[ast_oxc](n4b86f56e0826ca31_e8k2k2q1k4192, local, 0, n4b86f56e0826ca31_lv5v24gecbsc8).
+ast_child[ast_oxc](n4b86f56e0826ca31_7jove1gjobt5b, specifiers, 2, n4b86f56e0826ca31_e8k2k2q1k4192).
+ast_node[ast_oxc](n4b86f56e0826ca31_7gqip2r7cvfh2, string_literal, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_7gqip2r7cvfh2, 1).
+ast_attr[ast_oxc](n4b86f56e0826ca31_7gqip2r7cvfh2, value, "m").
+ast_attr[ast_oxc](n4b86f56e0826ca31_7gqip2r7cvfh2, raw, "'m'").
+ast_child[ast_oxc](n4b86f56e0826ca31_7jove1gjobt5b, source, 0, n4b86f56e0826ca31_7gqip2r7cvfh2).
+ast_child[ast_oxc](n4b86f56e0826ca31_00hnij32k2175, body, 0, n4b86f56e0826ca31_7jove1gjobt5b).
+ast_node[ast_oxc](n4b86f56e0826ca31_i6lt1cs2jqgb3, import_declaration, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_i6lt1cs2jqgb3, 2).
+ast_attr[ast_oxc](n4b86f56e0826ca31_i6lt1cs2jqgb3, import_kind, "Value").
+ast_node[ast_oxc](n4b86f56e0826ca31_5048vnqkmqbvc, import_namespace_specifier, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_5048vnqkmqbvc, 2).
+ast_node[ast_oxc](n4b86f56e0826ca31_cdppk4h7gg96e, binding_identifier, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_cdppk4h7gg96e, 2).
+ast_attr[ast_oxc](n4b86f56e0826ca31_cdppk4h7gg96e, name, "ns").
+ast_child[ast_oxc](n4b86f56e0826ca31_5048vnqkmqbvc, local, 0, n4b86f56e0826ca31_cdppk4h7gg96e).
+ast_child[ast_oxc](n4b86f56e0826ca31_i6lt1cs2jqgb3, specifiers, 0, n4b86f56e0826ca31_5048vnqkmqbvc).
+ast_node[ast_oxc](n4b86f56e0826ca31_tlsgpo9ogf3hd, string_literal, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_tlsgpo9ogf3hd, 2).
+ast_attr[ast_oxc](n4b86f56e0826ca31_tlsgpo9ogf3hd, value, "n").
+ast_attr[ast_oxc](n4b86f56e0826ca31_tlsgpo9ogf3hd, raw, "'n'").
+ast_child[ast_oxc](n4b86f56e0826ca31_i6lt1cs2jqgb3, source, 0, n4b86f56e0826ca31_tlsgpo9ogf3hd).
+ast_child[ast_oxc](n4b86f56e0826ca31_00hnij32k2175, body, 1, n4b86f56e0826ca31_i6lt1cs2jqgb3).
+ast_node[ast_oxc](n4b86f56e0826ca31_9umbvhtlofhma, import_declaration, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_9umbvhtlofhma, 3).
+ast_attr[ast_oxc](n4b86f56e0826ca31_9umbvhtlofhma, import_kind, "Value").
+ast_node[ast_oxc](n4b86f56e0826ca31_ctl8nq3ht36o4, string_literal, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_ctl8nq3ht36o4, 3).
+ast_attr[ast_oxc](n4b86f56e0826ca31_ctl8nq3ht36o4, value, "side").
+ast_attr[ast_oxc](n4b86f56e0826ca31_ctl8nq3ht36o4, raw, "'side'").
+ast_child[ast_oxc](n4b86f56e0826ca31_9umbvhtlofhma, source, 0, n4b86f56e0826ca31_ctl8nq3ht36o4).
+ast_child[ast_oxc](n4b86f56e0826ca31_00hnij32k2175, body, 2, n4b86f56e0826ca31_9umbvhtlofhma).
+ast_node[ast_oxc](n4b86f56e0826ca31_hr9ddkr3g7b3a, import_declaration, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_hr9ddkr3g7b3a, 4).
+ast_attr[ast_oxc](n4b86f56e0826ca31_hr9ddkr3g7b3a, import_kind, "Type").
+ast_node[ast_oxc](n4b86f56e0826ca31_abpn1uh43og55, import_specifier, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_abpn1uh43og55, 4).
+ast_attr[ast_oxc](n4b86f56e0826ca31_abpn1uh43og55, import_kind, "Value").
+ast_node[ast_oxc](n4b86f56e0826ca31_6f66tk2qc4shb, identifier_name, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_6f66tk2qc4shb, 4).
+ast_attr[ast_oxc](n4b86f56e0826ca31_6f66tk2qc4shb, name, "T").
+ast_child[ast_oxc](n4b86f56e0826ca31_abpn1uh43og55, imported, 0, n4b86f56e0826ca31_6f66tk2qc4shb).
+ast_node[ast_oxc](n4b86f56e0826ca31_jqb3uu0k3rj2a, binding_identifier, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_jqb3uu0k3rj2a, 4).
+ast_attr[ast_oxc](n4b86f56e0826ca31_jqb3uu0k3rj2a, name, "T").
+ast_child[ast_oxc](n4b86f56e0826ca31_abpn1uh43og55, local, 0, n4b86f56e0826ca31_jqb3uu0k3rj2a).
+ast_child[ast_oxc](n4b86f56e0826ca31_hr9ddkr3g7b3a, specifiers, 0, n4b86f56e0826ca31_abpn1uh43og55).
+ast_node[ast_oxc](n4b86f56e0826ca31_r221qb5ajcb0b, string_literal, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_r221qb5ajcb0b, 4).
+ast_attr[ast_oxc](n4b86f56e0826ca31_r221qb5ajcb0b, value, "t").
+ast_attr[ast_oxc](n4b86f56e0826ca31_r221qb5ajcb0b, raw, "'t'").
+ast_child[ast_oxc](n4b86f56e0826ca31_hr9ddkr3g7b3a, source, 0, n4b86f56e0826ca31_r221qb5ajcb0b).
+ast_child[ast_oxc](n4b86f56e0826ca31_00hnij32k2175, body, 3, n4b86f56e0826ca31_hr9ddkr3g7b3a).
+ast_node[ast_oxc](n4b86f56e0826ca31_i5l2d5p08dh0d, export_named_declaration, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_i5l2d5p08dh0d, 5).
+ast_attr[ast_oxc](n4b86f56e0826ca31_i5l2d5p08dh0d, export_kind, "Value").
+ast_node[ast_oxc](n4b86f56e0826ca31_4mv8oa70p8fad, export_specifier, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_4mv8oa70p8fad, 5).
+ast_attr[ast_oxc](n4b86f56e0826ca31_4mv8oa70p8fad, export_kind, "Value").
+ast_node[ast_oxc](n4b86f56e0826ca31_9302c1bauanv7, identifier_reference, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_9302c1bauanv7, 5).
+ast_attr[ast_oxc](n4b86f56e0826ca31_9302c1bauanv7, name, "b").
+ast_child[ast_oxc](n4b86f56e0826ca31_4mv8oa70p8fad, local, 0, n4b86f56e0826ca31_9302c1bauanv7).
+ast_node[ast_oxc](n4b86f56e0826ca31_du60vq5kasf52, identifier_name, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_du60vq5kasf52, 5).
+ast_attr[ast_oxc](n4b86f56e0826ca31_du60vq5kasf52, name, "e").
+ast_child[ast_oxc](n4b86f56e0826ca31_4mv8oa70p8fad, exported, 0, n4b86f56e0826ca31_du60vq5kasf52).
+ast_child[ast_oxc](n4b86f56e0826ca31_i5l2d5p08dh0d, specifiers, 0, n4b86f56e0826ca31_4mv8oa70p8fad).
+ast_child[ast_oxc](n4b86f56e0826ca31_00hnij32k2175, body, 4, n4b86f56e0826ca31_i5l2d5p08dh0d).
+ast_node[ast_oxc](n4b86f56e0826ca31_aimrd7md8kuc, export_declaration, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_aimrd7md8kuc, 6).
+ast_node[ast_oxc](n4b86f56e0826ca31_u9305qtqrevg4, variable_declaration, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_u9305qtqrevg4, 6).
+ast_attr[ast_oxc](n4b86f56e0826ca31_u9305qtqrevg4, kind, "Const").
+ast_attr[ast_oxc](n4b86f56e0826ca31_u9305qtqrevg4, declare, false).
+ast_node[ast_oxc](n4b86f56e0826ca31_pjej9tv7i63tc, variable_declarator, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_pjej9tv7i63tc, 6).
+ast_attr[ast_oxc](n4b86f56e0826ca31_pjej9tv7i63tc, definite, false).
+ast_node[ast_oxc](n4b86f56e0826ca31_eo70u6147mmc7, binding_identifier, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_eo70u6147mmc7, 6).
+ast_attr[ast_oxc](n4b86f56e0826ca31_eo70u6147mmc7, name, "k").
+ast_child[ast_oxc](n4b86f56e0826ca31_pjej9tv7i63tc, id, 0, n4b86f56e0826ca31_eo70u6147mmc7).
+ast_node[ast_oxc](n4b86f56e0826ca31_3rnu8agf1qs72, numeric_literal, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_3rnu8agf1qs72, 6).
+ast_attr[ast_oxc](n4b86f56e0826ca31_3rnu8agf1qs72, base, "Decimal").
+ast_attr[ast_oxc](n4b86f56e0826ca31_3rnu8agf1qs72, raw, "1").
+ast_attr[ast_oxc](n4b86f56e0826ca31_3rnu8agf1qs72, value, 1).
+ast_child[ast_oxc](n4b86f56e0826ca31_pjej9tv7i63tc, init, 0, n4b86f56e0826ca31_3rnu8agf1qs72).
+ast_child[ast_oxc](n4b86f56e0826ca31_u9305qtqrevg4, declarations, 0, n4b86f56e0826ca31_pjej9tv7i63tc).
+ast_node[ast_oxc](n4b86f56e0826ca31_nvr9gdv72bu37, variable_declarator, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_nvr9gdv72bu37, 6).
+ast_attr[ast_oxc](n4b86f56e0826ca31_nvr9gdv72bu37, definite, false).
+ast_node[ast_oxc](n4b86f56e0826ca31_e9i9anjpabre8, array_pattern, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_e9i9anjpabre8, 6).
+ast_node[ast_oxc](n4b86f56e0826ca31_kbaah8b8ljus5, binding_identifier, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_kbaah8b8ljus5, 6).
+ast_attr[ast_oxc](n4b86f56e0826ca31_kbaah8b8ljus5, name, "p1").
+ast_child[ast_oxc](n4b86f56e0826ca31_e9i9anjpabre8, elements, 0, n4b86f56e0826ca31_kbaah8b8ljus5).
+ast_node[ast_oxc](n4b86f56e0826ca31_8cu2kdr9kkj1c, binding_rest_element, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_8cu2kdr9kkj1c, 6).
+ast_node[ast_oxc](n4b86f56e0826ca31_bd1gruns5g3q4, binding_identifier, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_bd1gruns5g3q4, 6).
+ast_attr[ast_oxc](n4b86f56e0826ca31_bd1gruns5g3q4, name, "pr").
+ast_child[ast_oxc](n4b86f56e0826ca31_8cu2kdr9kkj1c, argument, 0, n4b86f56e0826ca31_bd1gruns5g3q4).
+ast_child[ast_oxc](n4b86f56e0826ca31_e9i9anjpabre8, rest, 0, n4b86f56e0826ca31_8cu2kdr9kkj1c).
+ast_child[ast_oxc](n4b86f56e0826ca31_nvr9gdv72bu37, id, 0, n4b86f56e0826ca31_e9i9anjpabre8).
+ast_node[ast_oxc](n4b86f56e0826ca31_am1b2sa6mm5n2, identifier_reference, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_am1b2sa6mm5n2, 6).
+ast_attr[ast_oxc](n4b86f56e0826ca31_am1b2sa6mm5n2, variant, "Identifier").
+ast_attr[ast_oxc](n4b86f56e0826ca31_am1b2sa6mm5n2, name, "arr").
+ast_child[ast_oxc](n4b86f56e0826ca31_nvr9gdv72bu37, init, 0, n4b86f56e0826ca31_am1b2sa6mm5n2).
+ast_child[ast_oxc](n4b86f56e0826ca31_u9305qtqrevg4, declarations, 1, n4b86f56e0826ca31_nvr9gdv72bu37).
+ast_node[ast_oxc](n4b86f56e0826ca31_idsiqcft8bib5, variable_declarator, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_idsiqcft8bib5, 6).
+ast_attr[ast_oxc](n4b86f56e0826ca31_idsiqcft8bib5, definite, false).
+ast_node[ast_oxc](n4b86f56e0826ca31_i44nh16tki7td, object_pattern, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_i44nh16tki7td, 6).
+ast_node[ast_oxc](n4b86f56e0826ca31_s5oaqos1p7efb, binding_property, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_s5oaqos1p7efb, 6).
+ast_attr[ast_oxc](n4b86f56e0826ca31_s5oaqos1p7efb, shorthand, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_s5oaqos1p7efb, computed, false).
+ast_node[ast_oxc](n4b86f56e0826ca31_ln4v6j9kegnl7, identifier_name, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_ln4v6j9kegnl7, 6).
+ast_attr[ast_oxc](n4b86f56e0826ca31_ln4v6j9kegnl7, variant, "StaticIdentifier").
+ast_attr[ast_oxc](n4b86f56e0826ca31_ln4v6j9kegnl7, name, "q").
+ast_child[ast_oxc](n4b86f56e0826ca31_s5oaqos1p7efb, key, 0, n4b86f56e0826ca31_ln4v6j9kegnl7).
+ast_node[ast_oxc](n4b86f56e0826ca31_9fp9aeqsenh6a, binding_identifier, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_9fp9aeqsenh6a, 6).
+ast_attr[ast_oxc](n4b86f56e0826ca31_9fp9aeqsenh6a, name, "q1").
+ast_child[ast_oxc](n4b86f56e0826ca31_s5oaqos1p7efb, value, 0, n4b86f56e0826ca31_9fp9aeqsenh6a).
+ast_child[ast_oxc](n4b86f56e0826ca31_i44nh16tki7td, properties, 0, n4b86f56e0826ca31_s5oaqos1p7efb).
+ast_node[ast_oxc](n4b86f56e0826ca31_6oh4rrp4ol2m1, binding_rest_element, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_6oh4rrp4ol2m1, 6).
+ast_node[ast_oxc](n4b86f56e0826ca31_fctrte37di2n, binding_identifier, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_fctrte37di2n, 6).
+ast_attr[ast_oxc](n4b86f56e0826ca31_fctrte37di2n, name, "qr").
+ast_child[ast_oxc](n4b86f56e0826ca31_6oh4rrp4ol2m1, argument, 0, n4b86f56e0826ca31_fctrte37di2n).
+ast_child[ast_oxc](n4b86f56e0826ca31_i44nh16tki7td, rest, 0, n4b86f56e0826ca31_6oh4rrp4ol2m1).
+ast_child[ast_oxc](n4b86f56e0826ca31_idsiqcft8bib5, id, 0, n4b86f56e0826ca31_i44nh16tki7td).
+ast_node[ast_oxc](n4b86f56e0826ca31_tmvvrhsvb0god, identifier_reference, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_tmvvrhsvb0god, 6).
+ast_attr[ast_oxc](n4b86f56e0826ca31_tmvvrhsvb0god, variant, "Identifier").
+ast_attr[ast_oxc](n4b86f56e0826ca31_tmvvrhsvb0god, name, "obj").
+ast_child[ast_oxc](n4b86f56e0826ca31_idsiqcft8bib5, init, 0, n4b86f56e0826ca31_tmvvrhsvb0god).
+ast_child[ast_oxc](n4b86f56e0826ca31_u9305qtqrevg4, declarations, 2, n4b86f56e0826ca31_idsiqcft8bib5).
+ast_child[ast_oxc](n4b86f56e0826ca31_aimrd7md8kuc, declaration, 0, n4b86f56e0826ca31_u9305qtqrevg4).
+ast_child[ast_oxc](n4b86f56e0826ca31_00hnij32k2175, body, 5, n4b86f56e0826ca31_aimrd7md8kuc).
+ast_node[ast_oxc](n4b86f56e0826ca31_65nuidmkg3cs1, export_default_declaration, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_65nuidmkg3cs1, 7).
+ast_node[ast_oxc](n4b86f56e0826ca31_rtj0193c6t51e, function, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_rtj0193c6t51e, 7).
+ast_attr[ast_oxc](n4b86f56e0826ca31_rtj0193c6t51e, variant, "FunctionDeclaration").
+ast_node[ast_oxc](n4b86f56e0826ca31_iqmba328867ta, binding_identifier, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_iqmba328867ta, 7).
+ast_attr[ast_oxc](n4b86f56e0826ca31_iqmba328867ta, name, "f").
+ast_child[ast_oxc](n4b86f56e0826ca31_rtj0193c6t51e, id, 0, n4b86f56e0826ca31_iqmba328867ta).
+ast_node[ast_oxc](n4b86f56e0826ca31_209kblkehimd5, formal_parameters, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_209kblkehimd5, 7).
+ast_attr[ast_oxc](n4b86f56e0826ca31_209kblkehimd5, kind, "FormalParameter").
+ast_node[ast_oxc](n4b86f56e0826ca31_mqqqeb9g97gc4, formal_parameter, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_mqqqeb9g97gc4, 7).
+ast_attr[ast_oxc](n4b86f56e0826ca31_mqqqeb9g97gc4, optional, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_mqqqeb9g97gc4, readonly, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_mqqqeb9g97gc4, override, false).
+ast_node[ast_oxc](n4b86f56e0826ca31_g3133p0knuikd, binding_identifier, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_g3133p0knuikd, 7).
+ast_attr[ast_oxc](n4b86f56e0826ca31_g3133p0knuikd, name, "x").
+ast_child[ast_oxc](n4b86f56e0826ca31_mqqqeb9g97gc4, pattern, 0, n4b86f56e0826ca31_g3133p0knuikd).
+ast_node[ast_oxc](n4b86f56e0826ca31_f5pv6v3pm2aga, tstype_annotation, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_f5pv6v3pm2aga, 7).
+ast_node[ast_oxc](n4b86f56e0826ca31_abrc1ekj9onfa, tsnumber_keyword, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_abrc1ekj9onfa, 7).
+ast_child[ast_oxc](n4b86f56e0826ca31_f5pv6v3pm2aga, type_annotation, 0, n4b86f56e0826ca31_abrc1ekj9onfa).
+ast_child[ast_oxc](n4b86f56e0826ca31_mqqqeb9g97gc4, type_annotation, 0, n4b86f56e0826ca31_f5pv6v3pm2aga).
+ast_child[ast_oxc](n4b86f56e0826ca31_209kblkehimd5, items, 0, n4b86f56e0826ca31_mqqqeb9g97gc4).
+ast_node[ast_oxc](n4b86f56e0826ca31_92t964hb2ofse, formal_parameter, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_92t964hb2ofse, 7).
+ast_attr[ast_oxc](n4b86f56e0826ca31_92t964hb2ofse, optional, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_92t964hb2ofse, readonly, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_92t964hb2ofse, override, false).
+ast_node[ast_oxc](n4b86f56e0826ca31_a3v3vncgca6d3, binding_identifier, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_a3v3vncgca6d3, 7).
+ast_attr[ast_oxc](n4b86f56e0826ca31_a3v3vncgca6d3, name, "y").
+ast_child[ast_oxc](n4b86f56e0826ca31_92t964hb2ofse, pattern, 0, n4b86f56e0826ca31_a3v3vncgca6d3).
+ast_node[ast_oxc](n4b86f56e0826ca31_1omeeqt2lj90b, numeric_literal, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_1omeeqt2lj90b, 7).
+ast_attr[ast_oxc](n4b86f56e0826ca31_1omeeqt2lj90b, base, "Decimal").
+ast_attr[ast_oxc](n4b86f56e0826ca31_1omeeqt2lj90b, raw, "2").
+ast_attr[ast_oxc](n4b86f56e0826ca31_1omeeqt2lj90b, value, 2).
+ast_child[ast_oxc](n4b86f56e0826ca31_92t964hb2ofse, initializer, 0, n4b86f56e0826ca31_1omeeqt2lj90b).
+ast_child[ast_oxc](n4b86f56e0826ca31_209kblkehimd5, items, 1, n4b86f56e0826ca31_92t964hb2ofse).
+ast_node[ast_oxc](n4b86f56e0826ca31_ptrkk0s8j6e5c, formal_parameter_rest, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_ptrkk0s8j6e5c, 7).
+ast_node[ast_oxc](n4b86f56e0826ca31_8dq7mjmmknj82, binding_rest_element, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_8dq7mjmmknj82, 7).
+ast_node[ast_oxc](n4b86f56e0826ca31_o48fvpqrgfu2a, binding_identifier, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_o48fvpqrgfu2a, 7).
+ast_attr[ast_oxc](n4b86f56e0826ca31_o48fvpqrgfu2a, name, "rest").
+ast_child[ast_oxc](n4b86f56e0826ca31_8dq7mjmmknj82, argument, 0, n4b86f56e0826ca31_o48fvpqrgfu2a).
+ast_child[ast_oxc](n4b86f56e0826ca31_ptrkk0s8j6e5c, rest, 0, n4b86f56e0826ca31_8dq7mjmmknj82).
+ast_node[ast_oxc](n4b86f56e0826ca31_n4oj11f0d7706, tstype_annotation, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_n4oj11f0d7706, 7).
+ast_node[ast_oxc](n4b86f56e0826ca31_jg2r2q9lve7k3, tsarray_type, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_jg2r2q9lve7k3, 7).
+ast_node[ast_oxc](n4b86f56e0826ca31_8ofvi7s0c750b, tsany_keyword, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_8ofvi7s0c750b, 7).
+ast_child[ast_oxc](n4b86f56e0826ca31_jg2r2q9lve7k3, element_type, 0, n4b86f56e0826ca31_8ofvi7s0c750b).
+ast_child[ast_oxc](n4b86f56e0826ca31_n4oj11f0d7706, type_annotation, 0, n4b86f56e0826ca31_jg2r2q9lve7k3).
+ast_child[ast_oxc](n4b86f56e0826ca31_ptrkk0s8j6e5c, type_annotation, 0, n4b86f56e0826ca31_n4oj11f0d7706).
+ast_child[ast_oxc](n4b86f56e0826ca31_209kblkehimd5, rest, 0, n4b86f56e0826ca31_ptrkk0s8j6e5c).
+ast_child[ast_oxc](n4b86f56e0826ca31_rtj0193c6t51e, params, 0, n4b86f56e0826ca31_209kblkehimd5).
+ast_node[ast_oxc](n4b86f56e0826ca31_hkg2svhpp9n93, tstype_annotation, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_hkg2svhpp9n93, 7).
+ast_node[ast_oxc](n4b86f56e0826ca31_mns6elrqc12a9, tsstring_keyword, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_mns6elrqc12a9, 7).
+ast_child[ast_oxc](n4b86f56e0826ca31_hkg2svhpp9n93, type_annotation, 0, n4b86f56e0826ca31_mns6elrqc12a9).
+ast_child[ast_oxc](n4b86f56e0826ca31_rtj0193c6t51e, return_type, 0, n4b86f56e0826ca31_hkg2svhpp9n93).
+ast_node[ast_oxc](n4b86f56e0826ca31_gm5j8joie87qe, function_body, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_gm5j8joie87qe, 7).
+ast_node[ast_oxc](n4b86f56e0826ca31_pkhp24llilfv2, return_statement, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_pkhp24llilfv2, 7).
+ast_node[ast_oxc](n4b86f56e0826ca31_r3c1p6d3gn2cc, template_literal, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_r3c1p6d3gn2cc, 7).
+ast_node[ast_oxc](n4b86f56e0826ca31_gc2cjjucu4lc8, template_element, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_gc2cjjucu4lc8, 7).
+ast_attr[ast_oxc](n4b86f56e0826ca31_gc2cjjucu4lc8, tail, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_gc2cjjucu4lc8, value_raw, "t").
+ast_attr[ast_oxc](n4b86f56e0826ca31_gc2cjjucu4lc8, value_cooked, "t").
+ast_child[ast_oxc](n4b86f56e0826ca31_r3c1p6d3gn2cc, quasis, 0, n4b86f56e0826ca31_gc2cjjucu4lc8).
+ast_node[ast_oxc](n4b86f56e0826ca31_ecqk32hq86ot8, template_element, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_ecqk32hq86ot8, 7).
+ast_attr[ast_oxc](n4b86f56e0826ca31_ecqk32hq86ot8, tail, true).
+ast_attr[ast_oxc](n4b86f56e0826ca31_ecqk32hq86ot8, value_raw, "u").
+ast_attr[ast_oxc](n4b86f56e0826ca31_ecqk32hq86ot8, value_cooked, "u").
+ast_child[ast_oxc](n4b86f56e0826ca31_r3c1p6d3gn2cc, quasis, 1, n4b86f56e0826ca31_ecqk32hq86ot8).
+ast_node[ast_oxc](n4b86f56e0826ca31_72cftnev2n1q3, identifier_reference, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_72cftnev2n1q3, 7).
+ast_attr[ast_oxc](n4b86f56e0826ca31_72cftnev2n1q3, variant, "Identifier").
+ast_attr[ast_oxc](n4b86f56e0826ca31_72cftnev2n1q3, name, "x").
+ast_child[ast_oxc](n4b86f56e0826ca31_r3c1p6d3gn2cc, expressions, 0, n4b86f56e0826ca31_72cftnev2n1q3).
+ast_child[ast_oxc](n4b86f56e0826ca31_pkhp24llilfv2, argument, 0, n4b86f56e0826ca31_r3c1p6d3gn2cc).
+ast_child[ast_oxc](n4b86f56e0826ca31_gm5j8joie87qe, statements, 0, n4b86f56e0826ca31_pkhp24llilfv2).
+ast_child[ast_oxc](n4b86f56e0826ca31_rtj0193c6t51e, body, 0, n4b86f56e0826ca31_gm5j8joie87qe).
+ast_attr[ast_oxc](n4b86f56e0826ca31_rtj0193c6t51e, type, "FunctionDeclaration").
+ast_attr[ast_oxc](n4b86f56e0826ca31_rtj0193c6t51e, generator, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_rtj0193c6t51e, async, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_rtj0193c6t51e, declare, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_rtj0193c6t51e, pure, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_rtj0193c6t51e, pife, false).
+ast_child[ast_oxc](n4b86f56e0826ca31_65nuidmkg3cs1, declaration, 0, n4b86f56e0826ca31_rtj0193c6t51e).
+ast_child[ast_oxc](n4b86f56e0826ca31_00hnij32k2175, body, 6, n4b86f56e0826ca31_65nuidmkg3cs1).
+ast_node[ast_oxc](n4b86f56e0826ca31_bf17thudscr49, export_all_declaration, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_bf17thudscr49, 8).
+ast_attr[ast_oxc](n4b86f56e0826ca31_bf17thudscr49, export_kind, "Value").
+ast_node[ast_oxc](n4b86f56e0826ca31_cd228u8588ee1, string_literal, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_cd228u8588ee1, 8).
+ast_attr[ast_oxc](n4b86f56e0826ca31_cd228u8588ee1, value, "all").
+ast_attr[ast_oxc](n4b86f56e0826ca31_cd228u8588ee1, raw, "'all'").
+ast_child[ast_oxc](n4b86f56e0826ca31_bf17thudscr49, source, 0, n4b86f56e0826ca31_cd228u8588ee1).
+ast_child[ast_oxc](n4b86f56e0826ca31_00hnij32k2175, body, 7, n4b86f56e0826ca31_bf17thudscr49).
+ast_node[ast_oxc](n4b86f56e0826ca31_5tflqhe4g1nqe, export_all_declaration, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_5tflqhe4g1nqe, 9).
+ast_attr[ast_oxc](n4b86f56e0826ca31_5tflqhe4g1nqe, export_kind, "Value").
+ast_node[ast_oxc](n4b86f56e0826ca31_p2pvogadglg4b, identifier_name, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_p2pvogadglg4b, 9).
+ast_attr[ast_oxc](n4b86f56e0826ca31_p2pvogadglg4b, name, "nsx").
+ast_child[ast_oxc](n4b86f56e0826ca31_5tflqhe4g1nqe, exported, 0, n4b86f56e0826ca31_p2pvogadglg4b).
+ast_node[ast_oxc](n4b86f56e0826ca31_t2aeogo73tsn1, string_literal, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_t2aeogo73tsn1, 9).
+ast_attr[ast_oxc](n4b86f56e0826ca31_t2aeogo73tsn1, value, "all2").
+ast_attr[ast_oxc](n4b86f56e0826ca31_t2aeogo73tsn1, raw, "'all2'").
+ast_child[ast_oxc](n4b86f56e0826ca31_5tflqhe4g1nqe, source, 0, n4b86f56e0826ca31_t2aeogo73tsn1).
+ast_child[ast_oxc](n4b86f56e0826ca31_00hnij32k2175, body, 8, n4b86f56e0826ca31_5tflqhe4g1nqe).
+ast_node[ast_oxc](n4b86f56e0826ca31_rv7j79hh09i89, class, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_rv7j79hh09i89, 10).
+ast_attr[ast_oxc](n4b86f56e0826ca31_rv7j79hh09i89, variant, "ClassDeclaration").
+ast_node[ast_oxc](n4b86f56e0826ca31_np7b6r6defha8, binding_identifier, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_np7b6r6defha8, 10).
+ast_attr[ast_oxc](n4b86f56e0826ca31_np7b6r6defha8, name, "C").
+ast_child[ast_oxc](n4b86f56e0826ca31_rv7j79hh09i89, id, 0, n4b86f56e0826ca31_np7b6r6defha8).
+ast_node[ast_oxc](n4b86f56e0826ca31_lk7pddro2hpv8, identifier_reference, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_lk7pddro2hpv8, 10).
+ast_attr[ast_oxc](n4b86f56e0826ca31_lk7pddro2hpv8, variant, "Identifier").
+ast_attr[ast_oxc](n4b86f56e0826ca31_lk7pddro2hpv8, name, "B").
+ast_child[ast_oxc](n4b86f56e0826ca31_rv7j79hh09i89, heritage_expression, 0, n4b86f56e0826ca31_lk7pddro2hpv8).
+ast_node[ast_oxc](n4b86f56e0826ca31_kag3ueuam98i5, tsclass_implements, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_kag3ueuam98i5, 10).
+ast_node[ast_oxc](n4b86f56e0826ca31_n2d949mu5t3a1, identifier_reference, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_n2d949mu5t3a1, 10).
+ast_attr[ast_oxc](n4b86f56e0826ca31_n2d949mu5t3a1, name, "I").
+ast_child[ast_oxc](n4b86f56e0826ca31_kag3ueuam98i5, expression, 0, n4b86f56e0826ca31_n2d949mu5t3a1).
+ast_child[ast_oxc](n4b86f56e0826ca31_rv7j79hh09i89, implements, 0, n4b86f56e0826ca31_kag3ueuam98i5).
+ast_node[ast_oxc](n4b86f56e0826ca31_rqhd5u2e5c7lf, class_body, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_rqhd5u2e5c7lf, 10).
+ast_node[ast_oxc](n4b86f56e0826ca31_91md97gbrkbh6, property_definition, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_91md97gbrkbh6, 11).
+ast_attr[ast_oxc](n4b86f56e0826ca31_91md97gbrkbh6, type, "PropertyDefinition").
+ast_attr[ast_oxc](n4b86f56e0826ca31_91md97gbrkbh6, computed, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_91md97gbrkbh6, static, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_91md97gbrkbh6, declare, false).
+ast_node[ast_oxc](n4b86f56e0826ca31_o7hs0edv757u9, private_identifier, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_o7hs0edv757u9, 11).
+ast_attr[ast_oxc](n4b86f56e0826ca31_o7hs0edv757u9, name, "p").
+ast_child[ast_oxc](n4b86f56e0826ca31_91md97gbrkbh6, key, 0, n4b86f56e0826ca31_o7hs0edv757u9).
+ast_node[ast_oxc](n4b86f56e0826ca31_e26ljk6qo0726, numeric_literal, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_e26ljk6qo0726, 11).
+ast_attr[ast_oxc](n4b86f56e0826ca31_e26ljk6qo0726, base, "Decimal").
+ast_attr[ast_oxc](n4b86f56e0826ca31_e26ljk6qo0726, raw, "1").
+ast_attr[ast_oxc](n4b86f56e0826ca31_e26ljk6qo0726, value, 1).
+ast_child[ast_oxc](n4b86f56e0826ca31_91md97gbrkbh6, value, 0, n4b86f56e0826ca31_e26ljk6qo0726).
+ast_attr[ast_oxc](n4b86f56e0826ca31_91md97gbrkbh6, override, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_91md97gbrkbh6, optional, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_91md97gbrkbh6, definite, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_91md97gbrkbh6, readonly, false).
+ast_child[ast_oxc](n4b86f56e0826ca31_rqhd5u2e5c7lf, body, 0, n4b86f56e0826ca31_91md97gbrkbh6).
+ast_node[ast_oxc](n4b86f56e0826ca31_jo73tc5u33ju9, property_definition, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_jo73tc5u33ju9, 11).
+ast_attr[ast_oxc](n4b86f56e0826ca31_jo73tc5u33ju9, type, "PropertyDefinition").
+ast_attr[ast_oxc](n4b86f56e0826ca31_jo73tc5u33ju9, computed, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_jo73tc5u33ju9, static, true).
+ast_attr[ast_oxc](n4b86f56e0826ca31_jo73tc5u33ju9, declare, false).
+ast_node[ast_oxc](n4b86f56e0826ca31_6ni2bji35srgd, identifier_name, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_6ni2bji35srgd, 11).
+ast_attr[ast_oxc](n4b86f56e0826ca31_6ni2bji35srgd, variant, "StaticIdentifier").
+ast_attr[ast_oxc](n4b86f56e0826ca31_6ni2bji35srgd, name, "s").
+ast_child[ast_oxc](n4b86f56e0826ca31_jo73tc5u33ju9, key, 0, n4b86f56e0826ca31_6ni2bji35srgd).
+ast_node[ast_oxc](n4b86f56e0826ca31_k059qkstpuqu9, numeric_literal, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_k059qkstpuqu9, 11).
+ast_attr[ast_oxc](n4b86f56e0826ca31_k059qkstpuqu9, base, "Decimal").
+ast_attr[ast_oxc](n4b86f56e0826ca31_k059qkstpuqu9, raw, "2").
+ast_attr[ast_oxc](n4b86f56e0826ca31_k059qkstpuqu9, value, 2).
+ast_child[ast_oxc](n4b86f56e0826ca31_jo73tc5u33ju9, value, 0, n4b86f56e0826ca31_k059qkstpuqu9).
+ast_attr[ast_oxc](n4b86f56e0826ca31_jo73tc5u33ju9, override, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_jo73tc5u33ju9, optional, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_jo73tc5u33ju9, definite, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_jo73tc5u33ju9, readonly, false).
+ast_child[ast_oxc](n4b86f56e0826ca31_rqhd5u2e5c7lf, body, 1, n4b86f56e0826ca31_jo73tc5u33ju9).
+ast_node[ast_oxc](n4b86f56e0826ca31_8v4cs5hpfouf4, accessor_property, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_8v4cs5hpfouf4, 11).
+ast_attr[ast_oxc](n4b86f56e0826ca31_8v4cs5hpfouf4, type, "AccessorProperty").
+ast_attr[ast_oxc](n4b86f56e0826ca31_8v4cs5hpfouf4, computed, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_8v4cs5hpfouf4, static, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_8v4cs5hpfouf4, override, false).
+ast_node[ast_oxc](n4b86f56e0826ca31_tvda7fvmhs9hf, identifier_name, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_tvda7fvmhs9hf, 11).
+ast_attr[ast_oxc](n4b86f56e0826ca31_tvda7fvmhs9hf, variant, "StaticIdentifier").
+ast_attr[ast_oxc](n4b86f56e0826ca31_tvda7fvmhs9hf, name, "acc").
+ast_child[ast_oxc](n4b86f56e0826ca31_8v4cs5hpfouf4, key, 0, n4b86f56e0826ca31_tvda7fvmhs9hf).
+ast_node[ast_oxc](n4b86f56e0826ca31_07129ueekqv22, numeric_literal, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_07129ueekqv22, 11).
+ast_attr[ast_oxc](n4b86f56e0826ca31_07129ueekqv22, base, "Decimal").
+ast_attr[ast_oxc](n4b86f56e0826ca31_07129ueekqv22, raw, "3").
+ast_attr[ast_oxc](n4b86f56e0826ca31_07129ueekqv22, value, 3).
+ast_child[ast_oxc](n4b86f56e0826ca31_8v4cs5hpfouf4, value, 0, n4b86f56e0826ca31_07129ueekqv22).
+ast_attr[ast_oxc](n4b86f56e0826ca31_8v4cs5hpfouf4, definite, false).
+ast_child[ast_oxc](n4b86f56e0826ca31_rqhd5u2e5c7lf, body, 2, n4b86f56e0826ca31_8v4cs5hpfouf4).
+ast_node[ast_oxc](n4b86f56e0826ca31_28co2p2m8qm88, method_definition, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_28co2p2m8qm88, 12).
+ast_attr[ast_oxc](n4b86f56e0826ca31_28co2p2m8qm88, type, "MethodDefinition").
+ast_attr[ast_oxc](n4b86f56e0826ca31_28co2p2m8qm88, kind, "Constructor").
+ast_attr[ast_oxc](n4b86f56e0826ca31_28co2p2m8qm88, computed, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_28co2p2m8qm88, static, false).
+ast_node[ast_oxc](n4b86f56e0826ca31_kqg2ed19fevc8, identifier_name, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_kqg2ed19fevc8, 12).
+ast_attr[ast_oxc](n4b86f56e0826ca31_kqg2ed19fevc8, variant, "StaticIdentifier").
+ast_attr[ast_oxc](n4b86f56e0826ca31_kqg2ed19fevc8, name, "constructor").
+ast_child[ast_oxc](n4b86f56e0826ca31_28co2p2m8qm88, key, 0, n4b86f56e0826ca31_kqg2ed19fevc8).
+ast_node[ast_oxc](n4b86f56e0826ca31_44p838lr2d8l4, function, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_44p838lr2d8l4, 12).
+ast_node[ast_oxc](n4b86f56e0826ca31_cf477rgt6q83, formal_parameters, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_cf477rgt6q83, 12).
+ast_attr[ast_oxc](n4b86f56e0826ca31_cf477rgt6q83, kind, "UniqueFormalParameters").
+ast_node[ast_oxc](n4b86f56e0826ca31_sa79lmf6as7i4, formal_parameter, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_sa79lmf6as7i4, 12).
+ast_attr[ast_oxc](n4b86f56e0826ca31_sa79lmf6as7i4, optional, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_sa79lmf6as7i4, accessibility, "Private").
+ast_attr[ast_oxc](n4b86f56e0826ca31_sa79lmf6as7i4, readonly, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_sa79lmf6as7i4, override, false).
+ast_node[ast_oxc](n4b86f56e0826ca31_97bnesgoudtvc, binding_identifier, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_97bnesgoudtvc, 12).
+ast_attr[ast_oxc](n4b86f56e0826ca31_97bnesgoudtvc, name, "z").
+ast_child[ast_oxc](n4b86f56e0826ca31_sa79lmf6as7i4, pattern, 0, n4b86f56e0826ca31_97bnesgoudtvc).
+ast_node[ast_oxc](n4b86f56e0826ca31_setb5ejgm5iu5, tstype_annotation, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_setb5ejgm5iu5, 12).
+ast_node[ast_oxc](n4b86f56e0826ca31_urne0bdtfmo21, tsnumber_keyword, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_urne0bdtfmo21, 12).
+ast_child[ast_oxc](n4b86f56e0826ca31_setb5ejgm5iu5, type_annotation, 0, n4b86f56e0826ca31_urne0bdtfmo21).
+ast_child[ast_oxc](n4b86f56e0826ca31_sa79lmf6as7i4, type_annotation, 0, n4b86f56e0826ca31_setb5ejgm5iu5).
+ast_child[ast_oxc](n4b86f56e0826ca31_cf477rgt6q83, items, 0, n4b86f56e0826ca31_sa79lmf6as7i4).
+ast_child[ast_oxc](n4b86f56e0826ca31_44p838lr2d8l4, params, 0, n4b86f56e0826ca31_cf477rgt6q83).
+ast_node[ast_oxc](n4b86f56e0826ca31_boe4qs2a3p6q, function_body, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_boe4qs2a3p6q, 12).
+ast_node[ast_oxc](n4b86f56e0826ca31_dfvhpee8ftara, expression_statement, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_dfvhpee8ftara, 12).
+ast_node[ast_oxc](n4b86f56e0826ca31_a72e0o3bh25re, call_expression, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_a72e0o3bh25re, 12).
+ast_attr[ast_oxc](n4b86f56e0826ca31_a72e0o3bh25re, optional, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_a72e0o3bh25re, pure, false).
+ast_node[ast_oxc](n4b86f56e0826ca31_qqi25crhrt9jf, super, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_qqi25crhrt9jf, 12).
+ast_child[ast_oxc](n4b86f56e0826ca31_a72e0o3bh25re, callee, 0, n4b86f56e0826ca31_qqi25crhrt9jf).
+ast_child[ast_oxc](n4b86f56e0826ca31_dfvhpee8ftara, expression, 0, n4b86f56e0826ca31_a72e0o3bh25re).
+ast_child[ast_oxc](n4b86f56e0826ca31_boe4qs2a3p6q, statements, 0, n4b86f56e0826ca31_dfvhpee8ftara).
+ast_child[ast_oxc](n4b86f56e0826ca31_44p838lr2d8l4, body, 0, n4b86f56e0826ca31_boe4qs2a3p6q).
+ast_attr[ast_oxc](n4b86f56e0826ca31_44p838lr2d8l4, type, "FunctionExpression").
+ast_attr[ast_oxc](n4b86f56e0826ca31_44p838lr2d8l4, generator, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_44p838lr2d8l4, async, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_44p838lr2d8l4, declare, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_44p838lr2d8l4, pure, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_44p838lr2d8l4, pife, false).
+ast_child[ast_oxc](n4b86f56e0826ca31_28co2p2m8qm88, value, 0, n4b86f56e0826ca31_44p838lr2d8l4).
+ast_attr[ast_oxc](n4b86f56e0826ca31_28co2p2m8qm88, override, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_28co2p2m8qm88, optional, false).
+ast_child[ast_oxc](n4b86f56e0826ca31_rqhd5u2e5c7lf, body, 3, n4b86f56e0826ca31_28co2p2m8qm88).
+ast_node[ast_oxc](n4b86f56e0826ca31_oigmka0iqd34e, method_definition, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_oigmka0iqd34e, 13).
+ast_attr[ast_oxc](n4b86f56e0826ca31_oigmka0iqd34e, type, "MethodDefinition").
+ast_attr[ast_oxc](n4b86f56e0826ca31_oigmka0iqd34e, kind, "Get").
+ast_attr[ast_oxc](n4b86f56e0826ca31_oigmka0iqd34e, computed, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_oigmka0iqd34e, static, false).
+ast_node[ast_oxc](n4b86f56e0826ca31_8116e2ej8ppnd, identifier_name, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_8116e2ej8ppnd, 13).
+ast_attr[ast_oxc](n4b86f56e0826ca31_8116e2ej8ppnd, variant, "StaticIdentifier").
+ast_attr[ast_oxc](n4b86f56e0826ca31_8116e2ej8ppnd, name, "g").
+ast_child[ast_oxc](n4b86f56e0826ca31_oigmka0iqd34e, key, 0, n4b86f56e0826ca31_8116e2ej8ppnd).
+ast_node[ast_oxc](n4b86f56e0826ca31_lv3bvmt7e9185, function, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_lv3bvmt7e9185, 13).
+ast_node[ast_oxc](n4b86f56e0826ca31_qonahth1uopa8, formal_parameters, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_qonahth1uopa8, 13).
+ast_attr[ast_oxc](n4b86f56e0826ca31_qonahth1uopa8, kind, "UniqueFormalParameters").
+ast_child[ast_oxc](n4b86f56e0826ca31_lv3bvmt7e9185, params, 0, n4b86f56e0826ca31_qonahth1uopa8).
+ast_node[ast_oxc](n4b86f56e0826ca31_spb5nj2r9vsl4, function_body, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_spb5nj2r9vsl4, 13).
+ast_node[ast_oxc](n4b86f56e0826ca31_p2nce8sg51ff4, return_statement, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_p2nce8sg51ff4, 13).
+ast_node[ast_oxc](n4b86f56e0826ca31_bi2houcqomv2b, private_field_expression, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_bi2houcqomv2b, 13).
+ast_attr[ast_oxc](n4b86f56e0826ca31_bi2houcqomv2b, optional, false).
+ast_node[ast_oxc](n4b86f56e0826ca31_qemgreltvnes2, this_expression, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_qemgreltvnes2, 13).
+ast_child[ast_oxc](n4b86f56e0826ca31_bi2houcqomv2b, object, 0, n4b86f56e0826ca31_qemgreltvnes2).
+ast_node[ast_oxc](n4b86f56e0826ca31_lfk82ssqot5ra, private_identifier, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_lfk82ssqot5ra, 13).
+ast_attr[ast_oxc](n4b86f56e0826ca31_lfk82ssqot5ra, name, "p").
+ast_child[ast_oxc](n4b86f56e0826ca31_bi2houcqomv2b, field, 0, n4b86f56e0826ca31_lfk82ssqot5ra).
+ast_child[ast_oxc](n4b86f56e0826ca31_p2nce8sg51ff4, argument, 0, n4b86f56e0826ca31_bi2houcqomv2b).
+ast_child[ast_oxc](n4b86f56e0826ca31_spb5nj2r9vsl4, statements, 0, n4b86f56e0826ca31_p2nce8sg51ff4).
+ast_child[ast_oxc](n4b86f56e0826ca31_lv3bvmt7e9185, body, 0, n4b86f56e0826ca31_spb5nj2r9vsl4).
+ast_attr[ast_oxc](n4b86f56e0826ca31_lv3bvmt7e9185, type, "FunctionExpression").
+ast_attr[ast_oxc](n4b86f56e0826ca31_lv3bvmt7e9185, generator, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_lv3bvmt7e9185, async, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_lv3bvmt7e9185, declare, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_lv3bvmt7e9185, pure, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_lv3bvmt7e9185, pife, false).
+ast_child[ast_oxc](n4b86f56e0826ca31_oigmka0iqd34e, value, 0, n4b86f56e0826ca31_lv3bvmt7e9185).
+ast_attr[ast_oxc](n4b86f56e0826ca31_oigmka0iqd34e, override, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_oigmka0iqd34e, optional, false).
+ast_child[ast_oxc](n4b86f56e0826ca31_rqhd5u2e5c7lf, body, 4, n4b86f56e0826ca31_oigmka0iqd34e).
+ast_node[ast_oxc](n4b86f56e0826ca31_l701073vnkk39, method_definition, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_l701073vnkk39, 13).
+ast_attr[ast_oxc](n4b86f56e0826ca31_l701073vnkk39, type, "MethodDefinition").
+ast_attr[ast_oxc](n4b86f56e0826ca31_l701073vnkk39, kind, "Set").
+ast_attr[ast_oxc](n4b86f56e0826ca31_l701073vnkk39, computed, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_l701073vnkk39, static, false).
+ast_node[ast_oxc](n4b86f56e0826ca31_04da67j8vvrm9, identifier_name, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_04da67j8vvrm9, 13).
+ast_attr[ast_oxc](n4b86f56e0826ca31_04da67j8vvrm9, variant, "StaticIdentifier").
+ast_attr[ast_oxc](n4b86f56e0826ca31_04da67j8vvrm9, name, "g").
+ast_child[ast_oxc](n4b86f56e0826ca31_l701073vnkk39, key, 0, n4b86f56e0826ca31_04da67j8vvrm9).
+ast_node[ast_oxc](n4b86f56e0826ca31_4gf4j6th03kc6, function, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_4gf4j6th03kc6, 13).
+ast_node[ast_oxc](n4b86f56e0826ca31_2865a58dtev26, formal_parameters, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_2865a58dtev26, 13).
+ast_attr[ast_oxc](n4b86f56e0826ca31_2865a58dtev26, kind, "UniqueFormalParameters").
+ast_node[ast_oxc](n4b86f56e0826ca31_lopfcdnk3vvj2, formal_parameter, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_lopfcdnk3vvj2, 13).
+ast_attr[ast_oxc](n4b86f56e0826ca31_lopfcdnk3vvj2, optional, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_lopfcdnk3vvj2, readonly, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_lopfcdnk3vvj2, override, false).
+ast_node[ast_oxc](n4b86f56e0826ca31_teb3a1lgrm7q8, binding_identifier, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_teb3a1lgrm7q8, 13).
+ast_attr[ast_oxc](n4b86f56e0826ca31_teb3a1lgrm7q8, name, "v").
+ast_child[ast_oxc](n4b86f56e0826ca31_lopfcdnk3vvj2, pattern, 0, n4b86f56e0826ca31_teb3a1lgrm7q8).
+ast_child[ast_oxc](n4b86f56e0826ca31_2865a58dtev26, items, 0, n4b86f56e0826ca31_lopfcdnk3vvj2).
+ast_child[ast_oxc](n4b86f56e0826ca31_4gf4j6th03kc6, params, 0, n4b86f56e0826ca31_2865a58dtev26).
+ast_node[ast_oxc](n4b86f56e0826ca31_5a8lppdbmgtub, function_body, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_5a8lppdbmgtub, 13).
+ast_node[ast_oxc](n4b86f56e0826ca31_32hi98a7pqai1, expression_statement, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_32hi98a7pqai1, 13).
+ast_node[ast_oxc](n4b86f56e0826ca31_80kl6gmdi7hge, assignment_expression, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_80kl6gmdi7hge, 13).
+ast_attr[ast_oxc](n4b86f56e0826ca31_80kl6gmdi7hge, operator, "Assign").
+ast_node[ast_oxc](n4b86f56e0826ca31_jbk16ootuiop3, private_field_expression, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_jbk16ootuiop3, 13).
+ast_attr[ast_oxc](n4b86f56e0826ca31_jbk16ootuiop3, optional, false).
+ast_node[ast_oxc](n4b86f56e0826ca31_7bb3jch4eapm6, this_expression, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_7bb3jch4eapm6, 13).
+ast_child[ast_oxc](n4b86f56e0826ca31_jbk16ootuiop3, object, 0, n4b86f56e0826ca31_7bb3jch4eapm6).
+ast_node[ast_oxc](n4b86f56e0826ca31_1f2nnjfr0o7j6, private_identifier, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_1f2nnjfr0o7j6, 13).
+ast_attr[ast_oxc](n4b86f56e0826ca31_1f2nnjfr0o7j6, name, "p").
+ast_child[ast_oxc](n4b86f56e0826ca31_jbk16ootuiop3, field, 0, n4b86f56e0826ca31_1f2nnjfr0o7j6).
+ast_child[ast_oxc](n4b86f56e0826ca31_80kl6gmdi7hge, left, 0, n4b86f56e0826ca31_jbk16ootuiop3).
+ast_node[ast_oxc](n4b86f56e0826ca31_5grg2tsrnr4r8, identifier_reference, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_5grg2tsrnr4r8, 13).
+ast_attr[ast_oxc](n4b86f56e0826ca31_5grg2tsrnr4r8, variant, "Identifier").
+ast_attr[ast_oxc](n4b86f56e0826ca31_5grg2tsrnr4r8, name, "v").
+ast_child[ast_oxc](n4b86f56e0826ca31_80kl6gmdi7hge, right, 0, n4b86f56e0826ca31_5grg2tsrnr4r8).
+ast_child[ast_oxc](n4b86f56e0826ca31_32hi98a7pqai1, expression, 0, n4b86f56e0826ca31_80kl6gmdi7hge).
+ast_child[ast_oxc](n4b86f56e0826ca31_5a8lppdbmgtub, statements, 0, n4b86f56e0826ca31_32hi98a7pqai1).
+ast_child[ast_oxc](n4b86f56e0826ca31_4gf4j6th03kc6, body, 0, n4b86f56e0826ca31_5a8lppdbmgtub).
+ast_attr[ast_oxc](n4b86f56e0826ca31_4gf4j6th03kc6, type, "FunctionExpression").
+ast_attr[ast_oxc](n4b86f56e0826ca31_4gf4j6th03kc6, generator, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_4gf4j6th03kc6, async, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_4gf4j6th03kc6, declare, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_4gf4j6th03kc6, pure, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_4gf4j6th03kc6, pife, false).
+ast_child[ast_oxc](n4b86f56e0826ca31_l701073vnkk39, value, 0, n4b86f56e0826ca31_4gf4j6th03kc6).
+ast_attr[ast_oxc](n4b86f56e0826ca31_l701073vnkk39, override, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_l701073vnkk39, optional, false).
+ast_child[ast_oxc](n4b86f56e0826ca31_rqhd5u2e5c7lf, body, 5, n4b86f56e0826ca31_l701073vnkk39).
+ast_node[ast_oxc](n4b86f56e0826ca31_5k7u99c3q7paa, static_block, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_5k7u99c3q7paa, 14).
+ast_node[ast_oxc](n4b86f56e0826ca31_1pqvdmvl7nca2, expression_statement, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_1pqvdmvl7nca2, 14).
+ast_node[ast_oxc](n4b86f56e0826ca31_jol7ij5r59k05, call_expression, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_jol7ij5r59k05, 14).
+ast_attr[ast_oxc](n4b86f56e0826ca31_jol7ij5r59k05, optional, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_jol7ij5r59k05, pure, false).
+ast_node[ast_oxc](n4b86f56e0826ca31_2jd6m99m0oira, identifier_reference, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_2jd6m99m0oira, 14).
+ast_attr[ast_oxc](n4b86f56e0826ca31_2jd6m99m0oira, variant, "Identifier").
+ast_attr[ast_oxc](n4b86f56e0826ca31_2jd6m99m0oira, name, "init").
+ast_child[ast_oxc](n4b86f56e0826ca31_jol7ij5r59k05, callee, 0, n4b86f56e0826ca31_2jd6m99m0oira).
+ast_child[ast_oxc](n4b86f56e0826ca31_1pqvdmvl7nca2, expression, 0, n4b86f56e0826ca31_jol7ij5r59k05).
+ast_child[ast_oxc](n4b86f56e0826ca31_5k7u99c3q7paa, body, 0, n4b86f56e0826ca31_1pqvdmvl7nca2).
+ast_child[ast_oxc](n4b86f56e0826ca31_rqhd5u2e5c7lf, body, 6, n4b86f56e0826ca31_5k7u99c3q7paa).
+ast_node[ast_oxc](n4b86f56e0826ca31_hn7tohfq4d3g2, method_definition, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_hn7tohfq4d3g2, 15).
+ast_attr[ast_oxc](n4b86f56e0826ca31_hn7tohfq4d3g2, type, "MethodDefinition").
+ast_attr[ast_oxc](n4b86f56e0826ca31_hn7tohfq4d3g2, kind, "Method").
+ast_attr[ast_oxc](n4b86f56e0826ca31_hn7tohfq4d3g2, computed, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_hn7tohfq4d3g2, static, false).
+ast_node[ast_oxc](n4b86f56e0826ca31_3nrn2ld6v46s3, decorator, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_3nrn2ld6v46s3, 15).
+ast_node[ast_oxc](n4b86f56e0826ca31_obh4bgfj7vev1, identifier_reference, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_obh4bgfj7vev1, 15).
+ast_attr[ast_oxc](n4b86f56e0826ca31_obh4bgfj7vev1, variant, "Identifier").
+ast_attr[ast_oxc](n4b86f56e0826ca31_obh4bgfj7vev1, name, "dec").
+ast_child[ast_oxc](n4b86f56e0826ca31_3nrn2ld6v46s3, expression, 0, n4b86f56e0826ca31_obh4bgfj7vev1).
+ast_child[ast_oxc](n4b86f56e0826ca31_hn7tohfq4d3g2, decorators, 0, n4b86f56e0826ca31_3nrn2ld6v46s3).
+ast_node[ast_oxc](n4b86f56e0826ca31_ftd6oem63qug8, identifier_name, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_ftd6oem63qug8, 15).
+ast_attr[ast_oxc](n4b86f56e0826ca31_ftd6oem63qug8, variant, "StaticIdentifier").
+ast_attr[ast_oxc](n4b86f56e0826ca31_ftd6oem63qug8, name, "m").
+ast_child[ast_oxc](n4b86f56e0826ca31_hn7tohfq4d3g2, key, 0, n4b86f56e0826ca31_ftd6oem63qug8).
+ast_node[ast_oxc](n4b86f56e0826ca31_dc6ufn0t9hje9, function, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_dc6ufn0t9hje9, 15).
+ast_node[ast_oxc](n4b86f56e0826ca31_hknlbnh71re08, formal_parameters, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_hknlbnh71re08, 15).
+ast_attr[ast_oxc](n4b86f56e0826ca31_hknlbnh71re08, kind, "UniqueFormalParameters").
+ast_node[ast_oxc](n4b86f56e0826ca31_q8mc701lm5up, formal_parameter_rest, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_q8mc701lm5up, 15).
+ast_node[ast_oxc](n4b86f56e0826ca31_07t682ofmout, binding_rest_element, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_07t682ofmout, 15).
+ast_node[ast_oxc](n4b86f56e0826ca31_mal1big6k6738, binding_identifier, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_mal1big6k6738, 15).
+ast_attr[ast_oxc](n4b86f56e0826ca31_mal1big6k6738, name, "a").
+ast_child[ast_oxc](n4b86f56e0826ca31_07t682ofmout, argument, 0, n4b86f56e0826ca31_mal1big6k6738).
+ast_child[ast_oxc](n4b86f56e0826ca31_q8mc701lm5up, rest, 0, n4b86f56e0826ca31_07t682ofmout).
+ast_child[ast_oxc](n4b86f56e0826ca31_hknlbnh71re08, rest, 0, n4b86f56e0826ca31_q8mc701lm5up).
+ast_child[ast_oxc](n4b86f56e0826ca31_dc6ufn0t9hje9, params, 0, n4b86f56e0826ca31_hknlbnh71re08).
+ast_node[ast_oxc](n4b86f56e0826ca31_0l7pl4gm4ak1, function_body, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_0l7pl4gm4ak1, 15).
+ast_node[ast_oxc](n4b86f56e0826ca31_okrvfo7lgk8q4, return_statement, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_okrvfo7lgk8q4, 15).
+ast_node[ast_oxc](n4b86f56e0826ca31_3i8uvu35p5d81, new_target, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_3i8uvu35p5d81, 15).
+ast_child[ast_oxc](n4b86f56e0826ca31_okrvfo7lgk8q4, argument, 0, n4b86f56e0826ca31_3i8uvu35p5d81).
+ast_child[ast_oxc](n4b86f56e0826ca31_0l7pl4gm4ak1, statements, 0, n4b86f56e0826ca31_okrvfo7lgk8q4).
+ast_child[ast_oxc](n4b86f56e0826ca31_dc6ufn0t9hje9, body, 0, n4b86f56e0826ca31_0l7pl4gm4ak1).
+ast_attr[ast_oxc](n4b86f56e0826ca31_dc6ufn0t9hje9, type, "FunctionExpression").
+ast_attr[ast_oxc](n4b86f56e0826ca31_dc6ufn0t9hje9, generator, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_dc6ufn0t9hje9, async, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_dc6ufn0t9hje9, declare, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_dc6ufn0t9hje9, pure, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_dc6ufn0t9hje9, pife, false).
+ast_child[ast_oxc](n4b86f56e0826ca31_hn7tohfq4d3g2, value, 0, n4b86f56e0826ca31_dc6ufn0t9hje9).
+ast_attr[ast_oxc](n4b86f56e0826ca31_hn7tohfq4d3g2, override, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_hn7tohfq4d3g2, optional, false).
+ast_child[ast_oxc](n4b86f56e0826ca31_rqhd5u2e5c7lf, body, 7, n4b86f56e0826ca31_hn7tohfq4d3g2).
+ast_child[ast_oxc](n4b86f56e0826ca31_rv7j79hh09i89, body, 0, n4b86f56e0826ca31_rqhd5u2e5c7lf).
+ast_attr[ast_oxc](n4b86f56e0826ca31_rv7j79hh09i89, type, "ClassDeclaration").
+ast_attr[ast_oxc](n4b86f56e0826ca31_rv7j79hh09i89, abstract, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_rv7j79hh09i89, declare, false).
+ast_child[ast_oxc](n4b86f56e0826ca31_00hnij32k2175, body, 9, n4b86f56e0826ca31_rv7j79hh09i89).
+ast_node[ast_oxc](n4b86f56e0826ca31_qq8k735lcop7d, function, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_qq8k735lcop7d, 17).
+ast_attr[ast_oxc](n4b86f56e0826ca31_qq8k735lcop7d, variant, "FunctionDeclaration").
+ast_node[ast_oxc](n4b86f56e0826ca31_nkqsepij63s0b, binding_identifier, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_nkqsepij63s0b, 17).
+ast_attr[ast_oxc](n4b86f56e0826ca31_nkqsepij63s0b, name, "gen").
+ast_child[ast_oxc](n4b86f56e0826ca31_qq8k735lcop7d, id, 0, n4b86f56e0826ca31_nkqsepij63s0b).
+ast_node[ast_oxc](n4b86f56e0826ca31_c0ao0nphij7a5, formal_parameters, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_c0ao0nphij7a5, 17).
+ast_attr[ast_oxc](n4b86f56e0826ca31_c0ao0nphij7a5, kind, "FormalParameter").
+ast_child[ast_oxc](n4b86f56e0826ca31_qq8k735lcop7d, params, 0, n4b86f56e0826ca31_c0ao0nphij7a5).
+ast_node[ast_oxc](n4b86f56e0826ca31_hv25mma1qrej, function_body, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_hv25mma1qrej, 17).
+ast_node[ast_oxc](n4b86f56e0826ca31_1gkii50iuv6g3, expression_statement, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_1gkii50iuv6g3, 17).
+ast_node[ast_oxc](n4b86f56e0826ca31_foc8sp8ndd7vc, yield_expression, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_foc8sp8ndd7vc, 17).
+ast_attr[ast_oxc](n4b86f56e0826ca31_foc8sp8ndd7vc, delegate, false).
+ast_node[ast_oxc](n4b86f56e0826ca31_5g7nu144fs4b4, numeric_literal, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_5g7nu144fs4b4, 17).
+ast_attr[ast_oxc](n4b86f56e0826ca31_5g7nu144fs4b4, base, "Decimal").
+ast_attr[ast_oxc](n4b86f56e0826ca31_5g7nu144fs4b4, raw, "1").
+ast_attr[ast_oxc](n4b86f56e0826ca31_5g7nu144fs4b4, value, 1).
+ast_child[ast_oxc](n4b86f56e0826ca31_foc8sp8ndd7vc, argument, 0, n4b86f56e0826ca31_5g7nu144fs4b4).
+ast_child[ast_oxc](n4b86f56e0826ca31_1gkii50iuv6g3, expression, 0, n4b86f56e0826ca31_foc8sp8ndd7vc).
+ast_child[ast_oxc](n4b86f56e0826ca31_hv25mma1qrej, statements, 0, n4b86f56e0826ca31_1gkii50iuv6g3).
+ast_node[ast_oxc](n4b86f56e0826ca31_opee6ucc5nooa, expression_statement, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_opee6ucc5nooa, 17).
+ast_node[ast_oxc](n4b86f56e0826ca31_3jpstd00o3pn2, yield_expression, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_3jpstd00o3pn2, 17).
+ast_attr[ast_oxc](n4b86f56e0826ca31_3jpstd00o3pn2, delegate, true).
+ast_node[ast_oxc](n4b86f56e0826ca31_3k91s2hsvkpsb, call_expression, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_3k91s2hsvkpsb, 17).
+ast_attr[ast_oxc](n4b86f56e0826ca31_3k91s2hsvkpsb, optional, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_3k91s2hsvkpsb, pure, false).
+ast_node[ast_oxc](n4b86f56e0826ca31_bg207656rlqfe, identifier_reference, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_bg207656rlqfe, 17).
+ast_attr[ast_oxc](n4b86f56e0826ca31_bg207656rlqfe, variant, "Identifier").
+ast_attr[ast_oxc](n4b86f56e0826ca31_bg207656rlqfe, name, "other").
+ast_child[ast_oxc](n4b86f56e0826ca31_3k91s2hsvkpsb, callee, 0, n4b86f56e0826ca31_bg207656rlqfe).
+ast_child[ast_oxc](n4b86f56e0826ca31_3jpstd00o3pn2, argument, 0, n4b86f56e0826ca31_3k91s2hsvkpsb).
+ast_child[ast_oxc](n4b86f56e0826ca31_opee6ucc5nooa, expression, 0, n4b86f56e0826ca31_3jpstd00o3pn2).
+ast_child[ast_oxc](n4b86f56e0826ca31_hv25mma1qrej, statements, 1, n4b86f56e0826ca31_opee6ucc5nooa).
+ast_node[ast_oxc](n4b86f56e0826ca31_15ho04m8514k4, expression_statement, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_15ho04m8514k4, 17).
+ast_node[ast_oxc](n4b86f56e0826ca31_nrli5dfmhoc5c, await_expression, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_nrli5dfmhoc5c, 17).
+ast_node[ast_oxc](n4b86f56e0826ca31_mmddmgkv5cbb, identifier_reference, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_mmddmgkv5cbb, 17).
+ast_attr[ast_oxc](n4b86f56e0826ca31_mmddmgkv5cbb, variant, "Identifier").
+ast_attr[ast_oxc](n4b86f56e0826ca31_mmddmgkv5cbb, name, "p").
+ast_child[ast_oxc](n4b86f56e0826ca31_nrli5dfmhoc5c, argument, 0, n4b86f56e0826ca31_mmddmgkv5cbb).
+ast_child[ast_oxc](n4b86f56e0826ca31_15ho04m8514k4, expression, 0, n4b86f56e0826ca31_nrli5dfmhoc5c).
+ast_child[ast_oxc](n4b86f56e0826ca31_hv25mma1qrej, statements, 2, n4b86f56e0826ca31_15ho04m8514k4).
+ast_node[ast_oxc](n4b86f56e0826ca31_9tmeglljigu44, for_of_statement, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_9tmeglljigu44, 17).
+ast_node[ast_oxc](n4b86f56e0826ca31_3ejh1q1gsp576, variable_declaration, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_3ejh1q1gsp576, 17).
+ast_attr[ast_oxc](n4b86f56e0826ca31_3ejh1q1gsp576, kind, "Const").
+ast_attr[ast_oxc](n4b86f56e0826ca31_3ejh1q1gsp576, declare, false).
+ast_node[ast_oxc](n4b86f56e0826ca31_hl4uum6voetsf, variable_declarator, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_hl4uum6voetsf, 17).
+ast_attr[ast_oxc](n4b86f56e0826ca31_hl4uum6voetsf, definite, false).
+ast_node[ast_oxc](n4b86f56e0826ca31_gok6n4757c7k9, binding_identifier, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_gok6n4757c7k9, 17).
+ast_attr[ast_oxc](n4b86f56e0826ca31_gok6n4757c7k9, name, "v").
+ast_child[ast_oxc](n4b86f56e0826ca31_hl4uum6voetsf, id, 0, n4b86f56e0826ca31_gok6n4757c7k9).
+ast_child[ast_oxc](n4b86f56e0826ca31_3ejh1q1gsp576, declarations, 0, n4b86f56e0826ca31_hl4uum6voetsf).
+ast_child[ast_oxc](n4b86f56e0826ca31_9tmeglljigu44, left, 0, n4b86f56e0826ca31_3ejh1q1gsp576).
+ast_node[ast_oxc](n4b86f56e0826ca31_aj9aemhuc4147, identifier_reference, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_aj9aemhuc4147, 17).
+ast_attr[ast_oxc](n4b86f56e0826ca31_aj9aemhuc4147, variant, "Identifier").
+ast_attr[ast_oxc](n4b86f56e0826ca31_aj9aemhuc4147, name, "it").
+ast_child[ast_oxc](n4b86f56e0826ca31_9tmeglljigu44, right, 0, n4b86f56e0826ca31_aj9aemhuc4147).
+ast_node[ast_oxc](n4b86f56e0826ca31_3j09g8uh5qb98, block_statement, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_3j09g8uh5qb98, 17).
+ast_child[ast_oxc](n4b86f56e0826ca31_9tmeglljigu44, body, 0, n4b86f56e0826ca31_3j09g8uh5qb98).
+ast_attr[ast_oxc](n4b86f56e0826ca31_9tmeglljigu44, await, true).
+ast_child[ast_oxc](n4b86f56e0826ca31_hv25mma1qrej, statements, 3, n4b86f56e0826ca31_9tmeglljigu44).
+ast_child[ast_oxc](n4b86f56e0826ca31_qq8k735lcop7d, body, 0, n4b86f56e0826ca31_hv25mma1qrej).
+ast_attr[ast_oxc](n4b86f56e0826ca31_qq8k735lcop7d, type, "FunctionDeclaration").
+ast_attr[ast_oxc](n4b86f56e0826ca31_qq8k735lcop7d, generator, true).
+ast_attr[ast_oxc](n4b86f56e0826ca31_qq8k735lcop7d, async, true).
+ast_attr[ast_oxc](n4b86f56e0826ca31_qq8k735lcop7d, declare, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_qq8k735lcop7d, pure, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_qq8k735lcop7d, pife, false).
+ast_child[ast_oxc](n4b86f56e0826ca31_00hnij32k2175, body, 10, n4b86f56e0826ca31_qq8k735lcop7d).
+ast_node[ast_oxc](n4b86f56e0826ca31_odmlrs104h6mb, variable_declaration, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_odmlrs104h6mb, 18).
+ast_attr[ast_oxc](n4b86f56e0826ca31_odmlrs104h6mb, kind, "Const").
+ast_attr[ast_oxc](n4b86f56e0826ca31_odmlrs104h6mb, declare, false).
+ast_node[ast_oxc](n4b86f56e0826ca31_dj819g9jlomm4, variable_declarator, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_dj819g9jlomm4, 18).
+ast_attr[ast_oxc](n4b86f56e0826ca31_dj819g9jlomm4, definite, false).
+ast_node[ast_oxc](n4b86f56e0826ca31_0htsou9b4rapb, binding_identifier, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_0htsou9b4rapb, 18).
+ast_attr[ast_oxc](n4b86f56e0826ca31_0htsou9b4rapb, name, "o").
+ast_child[ast_oxc](n4b86f56e0826ca31_dj819g9jlomm4, id, 0, n4b86f56e0826ca31_0htsou9b4rapb).
+ast_node[ast_oxc](n4b86f56e0826ca31_62upme3gqkr09, object_expression, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_62upme3gqkr09, 18).
+ast_node[ast_oxc](n4b86f56e0826ca31_kn3fe2cpshss4, object_property, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_kn3fe2cpshss4, 18).
+ast_attr[ast_oxc](n4b86f56e0826ca31_kn3fe2cpshss4, kind, "Init").
+ast_attr[ast_oxc](n4b86f56e0826ca31_kn3fe2cpshss4, method, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_kn3fe2cpshss4, shorthand, true).
+ast_attr[ast_oxc](n4b86f56e0826ca31_kn3fe2cpshss4, computed, false).
+ast_node[ast_oxc](n4b86f56e0826ca31_5vm9rm7n8ih3f, identifier_name, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_5vm9rm7n8ih3f, 18).
+ast_attr[ast_oxc](n4b86f56e0826ca31_5vm9rm7n8ih3f, variant, "StaticIdentifier").
+ast_attr[ast_oxc](n4b86f56e0826ca31_5vm9rm7n8ih3f, name, "a").
+ast_child[ast_oxc](n4b86f56e0826ca31_kn3fe2cpshss4, key, 0, n4b86f56e0826ca31_5vm9rm7n8ih3f).
+ast_node[ast_oxc](n4b86f56e0826ca31_l0cvfqjumr535, identifier_reference, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_l0cvfqjumr535, 18).
+ast_attr[ast_oxc](n4b86f56e0826ca31_l0cvfqjumr535, variant, "Identifier").
+ast_attr[ast_oxc](n4b86f56e0826ca31_l0cvfqjumr535, name, "a").
+ast_child[ast_oxc](n4b86f56e0826ca31_kn3fe2cpshss4, value, 0, n4b86f56e0826ca31_l0cvfqjumr535).
+ast_child[ast_oxc](n4b86f56e0826ca31_62upme3gqkr09, properties, 0, n4b86f56e0826ca31_kn3fe2cpshss4).
+ast_node[ast_oxc](n4b86f56e0826ca31_rfue1tbt2jnv5, object_property, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_rfue1tbt2jnv5, 18).
+ast_attr[ast_oxc](n4b86f56e0826ca31_rfue1tbt2jnv5, kind, "Init").
+ast_attr[ast_oxc](n4b86f56e0826ca31_rfue1tbt2jnv5, method, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_rfue1tbt2jnv5, shorthand, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_rfue1tbt2jnv5, computed, false).
+ast_node[ast_oxc](n4b86f56e0826ca31_sh9k91dmrspo2, identifier_name, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_sh9k91dmrspo2, 18).
+ast_attr[ast_oxc](n4b86f56e0826ca31_sh9k91dmrspo2, variant, "StaticIdentifier").
+ast_attr[ast_oxc](n4b86f56e0826ca31_sh9k91dmrspo2, name, "b").
+ast_child[ast_oxc](n4b86f56e0826ca31_rfue1tbt2jnv5, key, 0, n4b86f56e0826ca31_sh9k91dmrspo2).
+ast_node[ast_oxc](n4b86f56e0826ca31_0rsbf1u1prh2f, numeric_literal, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_0rsbf1u1prh2f, 18).
+ast_attr[ast_oxc](n4b86f56e0826ca31_0rsbf1u1prh2f, base, "Decimal").
+ast_attr[ast_oxc](n4b86f56e0826ca31_0rsbf1u1prh2f, raw, "1").
+ast_attr[ast_oxc](n4b86f56e0826ca31_0rsbf1u1prh2f, value, 1).
+ast_child[ast_oxc](n4b86f56e0826ca31_rfue1tbt2jnv5, value, 0, n4b86f56e0826ca31_0rsbf1u1prh2f).
+ast_child[ast_oxc](n4b86f56e0826ca31_62upme3gqkr09, properties, 1, n4b86f56e0826ca31_rfue1tbt2jnv5).
+ast_node[ast_oxc](n4b86f56e0826ca31_rj2sd75goalo1, object_property, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_rj2sd75goalo1, 18).
+ast_attr[ast_oxc](n4b86f56e0826ca31_rj2sd75goalo1, kind, "Init").
+ast_attr[ast_oxc](n4b86f56e0826ca31_rj2sd75goalo1, method, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_rj2sd75goalo1, shorthand, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_rj2sd75goalo1, computed, true).
+ast_node[ast_oxc](n4b86f56e0826ca31_mp7sj4kbjv0qe, identifier_reference, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_mp7sj4kbjv0qe, 18).
+ast_attr[ast_oxc](n4b86f56e0826ca31_mp7sj4kbjv0qe, variant, "Identifier").
+ast_attr[ast_oxc](n4b86f56e0826ca31_mp7sj4kbjv0qe, name, "k").
+ast_child[ast_oxc](n4b86f56e0826ca31_rj2sd75goalo1, key, 0, n4b86f56e0826ca31_mp7sj4kbjv0qe).
+ast_node[ast_oxc](n4b86f56e0826ca31_andhoavsua0k2, numeric_literal, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_andhoavsua0k2, 18).
+ast_attr[ast_oxc](n4b86f56e0826ca31_andhoavsua0k2, base, "Decimal").
+ast_attr[ast_oxc](n4b86f56e0826ca31_andhoavsua0k2, raw, "2").
+ast_attr[ast_oxc](n4b86f56e0826ca31_andhoavsua0k2, value, 2).
+ast_child[ast_oxc](n4b86f56e0826ca31_rj2sd75goalo1, value, 0, n4b86f56e0826ca31_andhoavsua0k2).
+ast_child[ast_oxc](n4b86f56e0826ca31_62upme3gqkr09, properties, 2, n4b86f56e0826ca31_rj2sd75goalo1).
+ast_node[ast_oxc](n4b86f56e0826ca31_j2ba8qlu78v7d, spread_element, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_j2ba8qlu78v7d, 18).
+ast_attr[ast_oxc](n4b86f56e0826ca31_j2ba8qlu78v7d, variant, "SpreadProperty").
+ast_node[ast_oxc](n4b86f56e0826ca31_2sblfaurq1hs4, identifier_reference, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_2sblfaurq1hs4, 18).
+ast_attr[ast_oxc](n4b86f56e0826ca31_2sblfaurq1hs4, variant, "Identifier").
+ast_attr[ast_oxc](n4b86f56e0826ca31_2sblfaurq1hs4, name, "s").
+ast_child[ast_oxc](n4b86f56e0826ca31_j2ba8qlu78v7d, argument, 0, n4b86f56e0826ca31_2sblfaurq1hs4).
+ast_child[ast_oxc](n4b86f56e0826ca31_62upme3gqkr09, properties, 3, n4b86f56e0826ca31_j2ba8qlu78v7d).
+ast_node[ast_oxc](n4b86f56e0826ca31_e4bimssa7a6o7, object_property, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_e4bimssa7a6o7, 18).
+ast_attr[ast_oxc](n4b86f56e0826ca31_e4bimssa7a6o7, kind, "Init").
+ast_attr[ast_oxc](n4b86f56e0826ca31_e4bimssa7a6o7, method, true).
+ast_attr[ast_oxc](n4b86f56e0826ca31_e4bimssa7a6o7, shorthand, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_e4bimssa7a6o7, computed, false).
+ast_node[ast_oxc](n4b86f56e0826ca31_28kjbq73pru42, identifier_name, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_28kjbq73pru42, 18).
+ast_attr[ast_oxc](n4b86f56e0826ca31_28kjbq73pru42, variant, "StaticIdentifier").
+ast_attr[ast_oxc](n4b86f56e0826ca31_28kjbq73pru42, name, "m").
+ast_child[ast_oxc](n4b86f56e0826ca31_e4bimssa7a6o7, key, 0, n4b86f56e0826ca31_28kjbq73pru42).
+ast_node[ast_oxc](n4b86f56e0826ca31_k2nftv0qkt29, function, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_k2nftv0qkt29, 18).
+ast_attr[ast_oxc](n4b86f56e0826ca31_k2nftv0qkt29, variant, "FunctionExpression").
+ast_node[ast_oxc](n4b86f56e0826ca31_7ktjgmrsppge5, formal_parameters, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_7ktjgmrsppge5, 18).
+ast_attr[ast_oxc](n4b86f56e0826ca31_7ktjgmrsppge5, kind, "UniqueFormalParameters").
+ast_child[ast_oxc](n4b86f56e0826ca31_k2nftv0qkt29, params, 0, n4b86f56e0826ca31_7ktjgmrsppge5).
+ast_node[ast_oxc](n4b86f56e0826ca31_bgh2i9acgr563, function_body, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_bgh2i9acgr563, 18).
+ast_child[ast_oxc](n4b86f56e0826ca31_k2nftv0qkt29, body, 0, n4b86f56e0826ca31_bgh2i9acgr563).
+ast_attr[ast_oxc](n4b86f56e0826ca31_k2nftv0qkt29, type, "FunctionExpression").
+ast_attr[ast_oxc](n4b86f56e0826ca31_k2nftv0qkt29, generator, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_k2nftv0qkt29, async, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_k2nftv0qkt29, declare, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_k2nftv0qkt29, pure, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_k2nftv0qkt29, pife, false).
+ast_child[ast_oxc](n4b86f56e0826ca31_e4bimssa7a6o7, value, 0, n4b86f56e0826ca31_k2nftv0qkt29).
+ast_child[ast_oxc](n4b86f56e0826ca31_62upme3gqkr09, properties, 4, n4b86f56e0826ca31_e4bimssa7a6o7).
+ast_node[ast_oxc](n4b86f56e0826ca31_a386viijqg945, object_property, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_a386viijqg945, 18).
+ast_attr[ast_oxc](n4b86f56e0826ca31_a386viijqg945, kind, "Get").
+ast_attr[ast_oxc](n4b86f56e0826ca31_a386viijqg945, method, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_a386viijqg945, shorthand, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_a386viijqg945, computed, false).
+ast_node[ast_oxc](n4b86f56e0826ca31_nch5l7g9r0i24, identifier_name, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_nch5l7g9r0i24, 18).
+ast_attr[ast_oxc](n4b86f56e0826ca31_nch5l7g9r0i24, variant, "StaticIdentifier").
+ast_attr[ast_oxc](n4b86f56e0826ca31_nch5l7g9r0i24, name, "x").
+ast_child[ast_oxc](n4b86f56e0826ca31_a386viijqg945, key, 0, n4b86f56e0826ca31_nch5l7g9r0i24).
+ast_node[ast_oxc](n4b86f56e0826ca31_ckrpqa2grg7v1, function, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_ckrpqa2grg7v1, 18).
+ast_attr[ast_oxc](n4b86f56e0826ca31_ckrpqa2grg7v1, variant, "FunctionExpression").
+ast_node[ast_oxc](n4b86f56e0826ca31_3mmvm6iufsao3, formal_parameters, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_3mmvm6iufsao3, 18).
+ast_attr[ast_oxc](n4b86f56e0826ca31_3mmvm6iufsao3, kind, "UniqueFormalParameters").
+ast_child[ast_oxc](n4b86f56e0826ca31_ckrpqa2grg7v1, params, 0, n4b86f56e0826ca31_3mmvm6iufsao3).
+ast_node[ast_oxc](n4b86f56e0826ca31_pp51clkdhsbh5, function_body, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_pp51clkdhsbh5, 18).
+ast_node[ast_oxc](n4b86f56e0826ca31_jn42togndjka7, return_statement, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_jn42togndjka7, 18).
+ast_node[ast_oxc](n4b86f56e0826ca31_q4q6tuejtdas1, numeric_literal, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_q4q6tuejtdas1, 18).
+ast_attr[ast_oxc](n4b86f56e0826ca31_q4q6tuejtdas1, base, "Decimal").
+ast_attr[ast_oxc](n4b86f56e0826ca31_q4q6tuejtdas1, raw, "1").
+ast_attr[ast_oxc](n4b86f56e0826ca31_q4q6tuejtdas1, value, 1).
+ast_child[ast_oxc](n4b86f56e0826ca31_jn42togndjka7, argument, 0, n4b86f56e0826ca31_q4q6tuejtdas1).
+ast_child[ast_oxc](n4b86f56e0826ca31_pp51clkdhsbh5, statements, 0, n4b86f56e0826ca31_jn42togndjka7).
+ast_child[ast_oxc](n4b86f56e0826ca31_ckrpqa2grg7v1, body, 0, n4b86f56e0826ca31_pp51clkdhsbh5).
+ast_attr[ast_oxc](n4b86f56e0826ca31_ckrpqa2grg7v1, type, "FunctionExpression").
+ast_attr[ast_oxc](n4b86f56e0826ca31_ckrpqa2grg7v1, generator, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_ckrpqa2grg7v1, async, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_ckrpqa2grg7v1, declare, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_ckrpqa2grg7v1, pure, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_ckrpqa2grg7v1, pife, false).
+ast_child[ast_oxc](n4b86f56e0826ca31_a386viijqg945, value, 0, n4b86f56e0826ca31_ckrpqa2grg7v1).
+ast_child[ast_oxc](n4b86f56e0826ca31_62upme3gqkr09, properties, 5, n4b86f56e0826ca31_a386viijqg945).
+ast_child[ast_oxc](n4b86f56e0826ca31_dj819g9jlomm4, init, 0, n4b86f56e0826ca31_62upme3gqkr09).
+ast_child[ast_oxc](n4b86f56e0826ca31_odmlrs104h6mb, declarations, 0, n4b86f56e0826ca31_dj819g9jlomm4).
+ast_child[ast_oxc](n4b86f56e0826ca31_00hnij32k2175, body, 11, n4b86f56e0826ca31_odmlrs104h6mb).
+ast_node[ast_oxc](n4b86f56e0826ca31_37ns08n5pjll4, variable_declaration, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_37ns08n5pjll4, 19).
+ast_attr[ast_oxc](n4b86f56e0826ca31_37ns08n5pjll4, kind, "Const").
+ast_attr[ast_oxc](n4b86f56e0826ca31_37ns08n5pjll4, declare, false).
+ast_node[ast_oxc](n4b86f56e0826ca31_bm93erb2kn7e3, variable_declarator, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_bm93erb2kn7e3, 19).
+ast_attr[ast_oxc](n4b86f56e0826ca31_bm93erb2kn7e3, definite, false).
+ast_node[ast_oxc](n4b86f56e0826ca31_m7k1d3a1gvre4, binding_identifier, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_m7k1d3a1gvre4, 19).
+ast_attr[ast_oxc](n4b86f56e0826ca31_m7k1d3a1gvre4, name, "arr2").
+ast_child[ast_oxc](n4b86f56e0826ca31_bm93erb2kn7e3, id, 0, n4b86f56e0826ca31_m7k1d3a1gvre4).
+ast_node[ast_oxc](n4b86f56e0826ca31_ucf7cs1789h1c, array_expression, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_ucf7cs1789h1c, 19).
+ast_node[ast_oxc](n4b86f56e0826ca31_rav58h02mfrec, numeric_literal, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_rav58h02mfrec, 19).
+ast_attr[ast_oxc](n4b86f56e0826ca31_rav58h02mfrec, base, "Decimal").
+ast_attr[ast_oxc](n4b86f56e0826ca31_rav58h02mfrec, raw, "1").
+ast_attr[ast_oxc](n4b86f56e0826ca31_rav58h02mfrec, value, 1).
+ast_child[ast_oxc](n4b86f56e0826ca31_ucf7cs1789h1c, elements, 0, n4b86f56e0826ca31_rav58h02mfrec).
+ast_node[ast_oxc](n4b86f56e0826ca31_vrc3ruqunf186, elision, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_vrc3ruqunf186, 19).
+ast_child[ast_oxc](n4b86f56e0826ca31_ucf7cs1789h1c, elements, 1, n4b86f56e0826ca31_vrc3ruqunf186).
+ast_node[ast_oxc](n4b86f56e0826ca31_0c40hjjh7op11, spread_element, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_0c40hjjh7op11, 19).
+ast_node[ast_oxc](n4b86f56e0826ca31_flm82e3e4kgff, identifier_reference, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_flm82e3e4kgff, 19).
+ast_attr[ast_oxc](n4b86f56e0826ca31_flm82e3e4kgff, variant, "Identifier").
+ast_attr[ast_oxc](n4b86f56e0826ca31_flm82e3e4kgff, name, "s").
+ast_child[ast_oxc](n4b86f56e0826ca31_0c40hjjh7op11, argument, 0, n4b86f56e0826ca31_flm82e3e4kgff).
+ast_child[ast_oxc](n4b86f56e0826ca31_ucf7cs1789h1c, elements, 2, n4b86f56e0826ca31_0c40hjjh7op11).
+ast_child[ast_oxc](n4b86f56e0826ca31_bm93erb2kn7e3, init, 0, n4b86f56e0826ca31_ucf7cs1789h1c).
+ast_child[ast_oxc](n4b86f56e0826ca31_37ns08n5pjll4, declarations, 0, n4b86f56e0826ca31_bm93erb2kn7e3).
+ast_child[ast_oxc](n4b86f56e0826ca31_00hnij32k2175, body, 12, n4b86f56e0826ca31_37ns08n5pjll4).
+ast_node[ast_oxc](n4b86f56e0826ca31_1md47u2kaujef, variable_declaration, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_1md47u2kaujef, 20).
+ast_attr[ast_oxc](n4b86f56e0826ca31_1md47u2kaujef, kind, "Let").
+ast_attr[ast_oxc](n4b86f56e0826ca31_1md47u2kaujef, declare, false).
+ast_node[ast_oxc](n4b86f56e0826ca31_honpsm0e4uqb3, variable_declarator, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_honpsm0e4uqb3, 20).
+ast_attr[ast_oxc](n4b86f56e0826ca31_honpsm0e4uqb3, definite, false).
+ast_node[ast_oxc](n4b86f56e0826ca31_h05m2cl508fu2, binding_identifier, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_h05m2cl508fu2, 20).
+ast_attr[ast_oxc](n4b86f56e0826ca31_h05m2cl508fu2, name, "u").
+ast_child[ast_oxc](n4b86f56e0826ca31_honpsm0e4uqb3, id, 0, n4b86f56e0826ca31_h05m2cl508fu2).
+ast_child[ast_oxc](n4b86f56e0826ca31_1md47u2kaujef, declarations, 0, n4b86f56e0826ca31_honpsm0e4uqb3).
+ast_child[ast_oxc](n4b86f56e0826ca31_00hnij32k2175, body, 13, n4b86f56e0826ca31_1md47u2kaujef).
+ast_node[ast_oxc](n4b86f56e0826ca31_0i2fhfcmolfg, expression_statement, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_0i2fhfcmolfg, 20).
+ast_node[ast_oxc](n4b86f56e0826ca31_f0ugjir9rhhq4, assignment_expression, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_f0ugjir9rhhq4, 20).
+ast_attr[ast_oxc](n4b86f56e0826ca31_f0ugjir9rhhq4, operator, "LogicalNullish").
+ast_node[ast_oxc](n4b86f56e0826ca31_7r48re2mgpep2, identifier_reference, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_7r48re2mgpep2, 20).
+ast_attr[ast_oxc](n4b86f56e0826ca31_7r48re2mgpep2, variant, "AssignmentTargetIdentifier").
+ast_attr[ast_oxc](n4b86f56e0826ca31_7r48re2mgpep2, name, "u").
+ast_child[ast_oxc](n4b86f56e0826ca31_f0ugjir9rhhq4, left, 0, n4b86f56e0826ca31_7r48re2mgpep2).
+ast_node[ast_oxc](n4b86f56e0826ca31_or8ji316q5766, numeric_literal, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_or8ji316q5766, 20).
+ast_attr[ast_oxc](n4b86f56e0826ca31_or8ji316q5766, base, "Decimal").
+ast_attr[ast_oxc](n4b86f56e0826ca31_or8ji316q5766, raw, "3").
+ast_attr[ast_oxc](n4b86f56e0826ca31_or8ji316q5766, value, 3).
+ast_child[ast_oxc](n4b86f56e0826ca31_f0ugjir9rhhq4, right, 0, n4b86f56e0826ca31_or8ji316q5766).
+ast_child[ast_oxc](n4b86f56e0826ca31_0i2fhfcmolfg, expression, 0, n4b86f56e0826ca31_f0ugjir9rhhq4).
+ast_child[ast_oxc](n4b86f56e0826ca31_00hnij32k2175, body, 14, n4b86f56e0826ca31_0i2fhfcmolfg).
+ast_node[ast_oxc](n4b86f56e0826ca31_33nlb6o186spa, expression_statement, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_33nlb6o186spa, 20).
+ast_node[ast_oxc](n4b86f56e0826ca31_unaf5jfv1cete, assignment_expression, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_unaf5jfv1cete, 20).
+ast_attr[ast_oxc](n4b86f56e0826ca31_unaf5jfv1cete, operator, "Addition").
+ast_node[ast_oxc](n4b86f56e0826ca31_2f5dqd53f5pt1, identifier_reference, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_2f5dqd53f5pt1, 20).
+ast_attr[ast_oxc](n4b86f56e0826ca31_2f5dqd53f5pt1, variant, "AssignmentTargetIdentifier").
+ast_attr[ast_oxc](n4b86f56e0826ca31_2f5dqd53f5pt1, name, "u").
+ast_child[ast_oxc](n4b86f56e0826ca31_unaf5jfv1cete, left, 0, n4b86f56e0826ca31_2f5dqd53f5pt1).
+ast_node[ast_oxc](n4b86f56e0826ca31_1k4f9nnsfbig6, numeric_literal, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_1k4f9nnsfbig6, 20).
+ast_attr[ast_oxc](n4b86f56e0826ca31_1k4f9nnsfbig6, base, "Decimal").
+ast_attr[ast_oxc](n4b86f56e0826ca31_1k4f9nnsfbig6, raw, "1").
+ast_attr[ast_oxc](n4b86f56e0826ca31_1k4f9nnsfbig6, value, 1).
+ast_child[ast_oxc](n4b86f56e0826ca31_unaf5jfv1cete, right, 0, n4b86f56e0826ca31_1k4f9nnsfbig6).
+ast_child[ast_oxc](n4b86f56e0826ca31_33nlb6o186spa, expression, 0, n4b86f56e0826ca31_unaf5jfv1cete).
+ast_child[ast_oxc](n4b86f56e0826ca31_00hnij32k2175, body, 15, n4b86f56e0826ca31_33nlb6o186spa).
+ast_node[ast_oxc](n4b86f56e0826ca31_vb5hdg9iaf6s2, expression_statement, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_vb5hdg9iaf6s2, 20).
+ast_node[ast_oxc](n4b86f56e0826ca31_t09a1fefhor6c, update_expression, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_t09a1fefhor6c, 20).
+ast_attr[ast_oxc](n4b86f56e0826ca31_t09a1fefhor6c, operator, "Increment").
+ast_attr[ast_oxc](n4b86f56e0826ca31_t09a1fefhor6c, prefix, false).
+ast_node[ast_oxc](n4b86f56e0826ca31_7nci9f86dnm3e, identifier_reference, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_7nci9f86dnm3e, 20).
+ast_attr[ast_oxc](n4b86f56e0826ca31_7nci9f86dnm3e, variant, "AssignmentTargetIdentifier").
+ast_attr[ast_oxc](n4b86f56e0826ca31_7nci9f86dnm3e, name, "u").
+ast_child[ast_oxc](n4b86f56e0826ca31_t09a1fefhor6c, argument, 0, n4b86f56e0826ca31_7nci9f86dnm3e).
+ast_child[ast_oxc](n4b86f56e0826ca31_vb5hdg9iaf6s2, expression, 0, n4b86f56e0826ca31_t09a1fefhor6c).
+ast_child[ast_oxc](n4b86f56e0826ca31_00hnij32k2175, body, 16, n4b86f56e0826ca31_vb5hdg9iaf6s2).
+ast_node[ast_oxc](n4b86f56e0826ca31_95l3c23ruaerf, expression_statement, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_95l3c23ruaerf, 20).
+ast_node[ast_oxc](n4b86f56e0826ca31_pf7ovl4jmack7, update_expression, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_pf7ovl4jmack7, 20).
+ast_attr[ast_oxc](n4b86f56e0826ca31_pf7ovl4jmack7, operator, "Increment").
+ast_attr[ast_oxc](n4b86f56e0826ca31_pf7ovl4jmack7, prefix, true).
+ast_node[ast_oxc](n4b86f56e0826ca31_0pkjb7d6ju185, identifier_reference, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_0pkjb7d6ju185, 20).
+ast_attr[ast_oxc](n4b86f56e0826ca31_0pkjb7d6ju185, variant, "AssignmentTargetIdentifier").
+ast_attr[ast_oxc](n4b86f56e0826ca31_0pkjb7d6ju185, name, "u").
+ast_child[ast_oxc](n4b86f56e0826ca31_pf7ovl4jmack7, argument, 0, n4b86f56e0826ca31_0pkjb7d6ju185).
+ast_child[ast_oxc](n4b86f56e0826ca31_95l3c23ruaerf, expression, 0, n4b86f56e0826ca31_pf7ovl4jmack7).
+ast_child[ast_oxc](n4b86f56e0826ca31_00hnij32k2175, body, 17, n4b86f56e0826ca31_95l3c23ruaerf).
+ast_node[ast_oxc](n4b86f56e0826ca31_i1ua3qvqvbhbb, expression_statement, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_i1ua3qvqvbhbb, 20).
+ast_node[ast_oxc](n4b86f56e0826ca31_vcm8kdcid6qgf, parenthesized_expression, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_vcm8kdcid6qgf, 20).
+ast_node[ast_oxc](n4b86f56e0826ca31_0gn61n52gom0a, sequence_expression, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_0gn61n52gom0a, 20).
+ast_node[ast_oxc](n4b86f56e0826ca31_nugelrqisafv5, identifier_reference, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_nugelrqisafv5, 20).
+ast_attr[ast_oxc](n4b86f56e0826ca31_nugelrqisafv5, variant, "Identifier").
+ast_attr[ast_oxc](n4b86f56e0826ca31_nugelrqisafv5, name, "u").
+ast_child[ast_oxc](n4b86f56e0826ca31_0gn61n52gom0a, expressions, 0, n4b86f56e0826ca31_nugelrqisafv5).
+ast_node[ast_oxc](n4b86f56e0826ca31_eg92336mgns28, identifier_reference, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_eg92336mgns28, 20).
+ast_attr[ast_oxc](n4b86f56e0826ca31_eg92336mgns28, variant, "Identifier").
+ast_attr[ast_oxc](n4b86f56e0826ca31_eg92336mgns28, name, "k").
+ast_child[ast_oxc](n4b86f56e0826ca31_0gn61n52gom0a, expressions, 1, n4b86f56e0826ca31_eg92336mgns28).
+ast_child[ast_oxc](n4b86f56e0826ca31_vcm8kdcid6qgf, expression, 0, n4b86f56e0826ca31_0gn61n52gom0a).
+ast_child[ast_oxc](n4b86f56e0826ca31_i1ua3qvqvbhbb, expression, 0, n4b86f56e0826ca31_vcm8kdcid6qgf).
+ast_child[ast_oxc](n4b86f56e0826ca31_00hnij32k2175, body, 18, n4b86f56e0826ca31_i1ua3qvqvbhbb).
+ast_node[ast_oxc](n4b86f56e0826ca31_g0fpktpg4vq94, expression_statement, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_g0fpktpg4vq94, 21).
+ast_node[ast_oxc](n4b86f56e0826ca31_vu6pka04mtrb9, chain_expression, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_vu6pka04mtrb9, 21).
+ast_node[ast_oxc](n4b86f56e0826ca31_jngr1nks09kp1, call_expression, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_jngr1nks09kp1, 21).
+ast_attr[ast_oxc](n4b86f56e0826ca31_jngr1nks09kp1, optional, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_jngr1nks09kp1, pure, false).
+ast_node[ast_oxc](n4b86f56e0826ca31_frue1kp7kocd6, static_member_expression, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_frue1kp7kocd6, 21).
+ast_attr[ast_oxc](n4b86f56e0826ca31_frue1kp7kocd6, optional, true).
+ast_node[ast_oxc](n4b86f56e0826ca31_vmeug963do0j4, static_member_expression, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_vmeug963do0j4, 21).
+ast_attr[ast_oxc](n4b86f56e0826ca31_vmeug963do0j4, optional, true).
+ast_node[ast_oxc](n4b86f56e0826ca31_ccebnbmbs2v3b, identifier_reference, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_ccebnbmbs2v3b, 21).
+ast_attr[ast_oxc](n4b86f56e0826ca31_ccebnbmbs2v3b, variant, "Identifier").
+ast_attr[ast_oxc](n4b86f56e0826ca31_ccebnbmbs2v3b, name, "o").
+ast_child[ast_oxc](n4b86f56e0826ca31_vmeug963do0j4, object, 0, n4b86f56e0826ca31_ccebnbmbs2v3b).
+ast_node[ast_oxc](n4b86f56e0826ca31_jjhsk8s1bttcb, identifier_name, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_jjhsk8s1bttcb, 21).
+ast_attr[ast_oxc](n4b86f56e0826ca31_jjhsk8s1bttcb, name, "a").
+ast_child[ast_oxc](n4b86f56e0826ca31_vmeug963do0j4, property, 0, n4b86f56e0826ca31_jjhsk8s1bttcb).
+ast_child[ast_oxc](n4b86f56e0826ca31_frue1kp7kocd6, object, 0, n4b86f56e0826ca31_vmeug963do0j4).
+ast_node[ast_oxc](n4b86f56e0826ca31_2r76m9hqpbinc, identifier_name, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_2r76m9hqpbinc, 21).
+ast_attr[ast_oxc](n4b86f56e0826ca31_2r76m9hqpbinc, name, "b").
+ast_child[ast_oxc](n4b86f56e0826ca31_frue1kp7kocd6, property, 0, n4b86f56e0826ca31_2r76m9hqpbinc).
+ast_child[ast_oxc](n4b86f56e0826ca31_jngr1nks09kp1, callee, 0, n4b86f56e0826ca31_frue1kp7kocd6).
+ast_child[ast_oxc](n4b86f56e0826ca31_vu6pka04mtrb9, expression, 0, n4b86f56e0826ca31_jngr1nks09kp1).
+ast_child[ast_oxc](n4b86f56e0826ca31_g0fpktpg4vq94, expression, 0, n4b86f56e0826ca31_vu6pka04mtrb9).
+ast_child[ast_oxc](n4b86f56e0826ca31_00hnij32k2175, body, 19, n4b86f56e0826ca31_g0fpktpg4vq94).
+ast_node[ast_oxc](n4b86f56e0826ca31_v4cgrcdg4e5j4, expression_statement, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_v4cgrcdg4e5j4, 21).
+ast_node[ast_oxc](n4b86f56e0826ca31_qfjvtthvd16ta, chain_expression, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_qfjvtthvd16ta, 21).
+ast_node[ast_oxc](n4b86f56e0826ca31_1an54v5s8l7h7, call_expression, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_1an54v5s8l7h7, 21).
+ast_attr[ast_oxc](n4b86f56e0826ca31_1an54v5s8l7h7, optional, true).
+ast_attr[ast_oxc](n4b86f56e0826ca31_1an54v5s8l7h7, pure, false).
+ast_node[ast_oxc](n4b86f56e0826ca31_1lpjsv4qk1u87, static_member_expression, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_1lpjsv4qk1u87, 21).
+ast_attr[ast_oxc](n4b86f56e0826ca31_1lpjsv4qk1u87, optional, false).
+ast_node[ast_oxc](n4b86f56e0826ca31_epbb6rfgou9a4, identifier_reference, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_epbb6rfgou9a4, 21).
+ast_attr[ast_oxc](n4b86f56e0826ca31_epbb6rfgou9a4, variant, "Identifier").
+ast_attr[ast_oxc](n4b86f56e0826ca31_epbb6rfgou9a4, name, "o").
+ast_child[ast_oxc](n4b86f56e0826ca31_1lpjsv4qk1u87, object, 0, n4b86f56e0826ca31_epbb6rfgou9a4).
+ast_node[ast_oxc](n4b86f56e0826ca31_bovunrgdu1hfa, identifier_name, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_bovunrgdu1hfa, 21).
+ast_attr[ast_oxc](n4b86f56e0826ca31_bovunrgdu1hfa, name, "a").
+ast_child[ast_oxc](n4b86f56e0826ca31_1lpjsv4qk1u87, property, 0, n4b86f56e0826ca31_bovunrgdu1hfa).
+ast_child[ast_oxc](n4b86f56e0826ca31_1an54v5s8l7h7, callee, 0, n4b86f56e0826ca31_1lpjsv4qk1u87).
+ast_node[ast_oxc](n4b86f56e0826ca31_fugh5ag8c0p9c, numeric_literal, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_fugh5ag8c0p9c, 21).
+ast_attr[ast_oxc](n4b86f56e0826ca31_fugh5ag8c0p9c, base, "Decimal").
+ast_attr[ast_oxc](n4b86f56e0826ca31_fugh5ag8c0p9c, raw, "1").
+ast_attr[ast_oxc](n4b86f56e0826ca31_fugh5ag8c0p9c, value, 1).
+ast_child[ast_oxc](n4b86f56e0826ca31_1an54v5s8l7h7, arguments, 0, n4b86f56e0826ca31_fugh5ag8c0p9c).
+ast_child[ast_oxc](n4b86f56e0826ca31_qfjvtthvd16ta, expression, 0, n4b86f56e0826ca31_1an54v5s8l7h7).
+ast_child[ast_oxc](n4b86f56e0826ca31_v4cgrcdg4e5j4, expression, 0, n4b86f56e0826ca31_qfjvtthvd16ta).
+ast_child[ast_oxc](n4b86f56e0826ca31_00hnij32k2175, body, 20, n4b86f56e0826ca31_v4cgrcdg4e5j4).
+ast_node[ast_oxc](n4b86f56e0826ca31_96askggivlp7, expression_statement, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_96askggivlp7, 22).
+ast_node[ast_oxc](n4b86f56e0826ca31_774f4ms7kspfb, assignment_expression, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_774f4ms7kspfb, 22).
+ast_attr[ast_oxc](n4b86f56e0826ca31_774f4ms7kspfb, operator, "Assign").
+ast_node[ast_oxc](n4b86f56e0826ca31_f80itgvfd62ja, identifier_reference, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_f80itgvfd62ja, 22).
+ast_attr[ast_oxc](n4b86f56e0826ca31_f80itgvfd62ja, variant, "AssignmentTargetIdentifier").
+ast_attr[ast_oxc](n4b86f56e0826ca31_f80itgvfd62ja, name, "x").
+ast_child[ast_oxc](n4b86f56e0826ca31_774f4ms7kspfb, left, 0, n4b86f56e0826ca31_f80itgvfd62ja).
+ast_node[ast_oxc](n4b86f56e0826ca31_armnbiqdbqh0d, conditional_expression, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_armnbiqdbqh0d, 22).
+ast_node[ast_oxc](n4b86f56e0826ca31_1eaptjr0rpfr5, identifier_reference, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_1eaptjr0rpfr5, 22).
+ast_attr[ast_oxc](n4b86f56e0826ca31_1eaptjr0rpfr5, variant, "Identifier").
+ast_attr[ast_oxc](n4b86f56e0826ca31_1eaptjr0rpfr5, name, "a").
+ast_child[ast_oxc](n4b86f56e0826ca31_armnbiqdbqh0d, test, 0, n4b86f56e0826ca31_1eaptjr0rpfr5).
+ast_node[ast_oxc](n4b86f56e0826ca31_e72tsq9rqa0l9, identifier_reference, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_e72tsq9rqa0l9, 22).
+ast_attr[ast_oxc](n4b86f56e0826ca31_e72tsq9rqa0l9, variant, "Identifier").
+ast_attr[ast_oxc](n4b86f56e0826ca31_e72tsq9rqa0l9, name, "b").
+ast_child[ast_oxc](n4b86f56e0826ca31_armnbiqdbqh0d, consequent, 0, n4b86f56e0826ca31_e72tsq9rqa0l9).
+ast_node[ast_oxc](n4b86f56e0826ca31_97d0sig3u40p4, identifier_reference, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_97d0sig3u40p4, 22).
+ast_attr[ast_oxc](n4b86f56e0826ca31_97d0sig3u40p4, variant, "Identifier").
+ast_attr[ast_oxc](n4b86f56e0826ca31_97d0sig3u40p4, name, "c").
+ast_child[ast_oxc](n4b86f56e0826ca31_armnbiqdbqh0d, alternate, 0, n4b86f56e0826ca31_97d0sig3u40p4).
+ast_child[ast_oxc](n4b86f56e0826ca31_774f4ms7kspfb, right, 0, n4b86f56e0826ca31_armnbiqdbqh0d).
+ast_child[ast_oxc](n4b86f56e0826ca31_96askggivlp7, expression, 0, n4b86f56e0826ca31_774f4ms7kspfb).
+ast_child[ast_oxc](n4b86f56e0826ca31_00hnij32k2175, body, 21, n4b86f56e0826ca31_96askggivlp7).
+ast_node[ast_oxc](n4b86f56e0826ca31_465rt33a16j1d, expression_statement, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_465rt33a16j1d, 22).
+ast_node[ast_oxc](n4b86f56e0826ca31_9df0j8ia08jj7, assignment_expression, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_9df0j8ia08jj7, 22).
+ast_attr[ast_oxc](n4b86f56e0826ca31_9df0j8ia08jj7, operator, "Assign").
+ast_node[ast_oxc](n4b86f56e0826ca31_b5sqptvarroue, identifier_reference, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_b5sqptvarroue, 22).
+ast_attr[ast_oxc](n4b86f56e0826ca31_b5sqptvarroue, variant, "AssignmentTargetIdentifier").
+ast_attr[ast_oxc](n4b86f56e0826ca31_b5sqptvarroue, name, "y").
+ast_child[ast_oxc](n4b86f56e0826ca31_9df0j8ia08jj7, left, 0, n4b86f56e0826ca31_b5sqptvarroue).
+ast_node[ast_oxc](n4b86f56e0826ca31_v8sa6t8f6ooa2, logical_expression, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_v8sa6t8f6ooa2, 22).
+ast_attr[ast_oxc](n4b86f56e0826ca31_v8sa6t8f6ooa2, operator, "Coalesce").
+ast_node[ast_oxc](n4b86f56e0826ca31_gsvcm643mi1af, parenthesized_expression, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_gsvcm643mi1af, 22).
+ast_node[ast_oxc](n4b86f56e0826ca31_j2d52ctb18jqb, logical_expression, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_j2d52ctb18jqb, 22).
+ast_attr[ast_oxc](n4b86f56e0826ca31_j2d52ctb18jqb, operator, "Or").
+ast_node[ast_oxc](n4b86f56e0826ca31_acfadat3dm89d, logical_expression, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_acfadat3dm89d, 22).
+ast_attr[ast_oxc](n4b86f56e0826ca31_acfadat3dm89d, operator, "And").
+ast_node[ast_oxc](n4b86f56e0826ca31_1fsbj8igqtbr1, identifier_reference, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_1fsbj8igqtbr1, 22).
+ast_attr[ast_oxc](n4b86f56e0826ca31_1fsbj8igqtbr1, variant, "Identifier").
+ast_attr[ast_oxc](n4b86f56e0826ca31_1fsbj8igqtbr1, name, "a").
+ast_child[ast_oxc](n4b86f56e0826ca31_acfadat3dm89d, left, 0, n4b86f56e0826ca31_1fsbj8igqtbr1).
+ast_node[ast_oxc](n4b86f56e0826ca31_p76q5i666vgnf, identifier_reference, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_p76q5i666vgnf, 22).
+ast_attr[ast_oxc](n4b86f56e0826ca31_p76q5i666vgnf, variant, "Identifier").
+ast_attr[ast_oxc](n4b86f56e0826ca31_p76q5i666vgnf, name, "b").
+ast_child[ast_oxc](n4b86f56e0826ca31_acfadat3dm89d, right, 0, n4b86f56e0826ca31_p76q5i666vgnf).
+ast_child[ast_oxc](n4b86f56e0826ca31_j2d52ctb18jqb, left, 0, n4b86f56e0826ca31_acfadat3dm89d).
+ast_node[ast_oxc](n4b86f56e0826ca31_u2u1u6sqe1b38, identifier_reference, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_u2u1u6sqe1b38, 22).
+ast_attr[ast_oxc](n4b86f56e0826ca31_u2u1u6sqe1b38, variant, "Identifier").
+ast_attr[ast_oxc](n4b86f56e0826ca31_u2u1u6sqe1b38, name, "c").
+ast_child[ast_oxc](n4b86f56e0826ca31_j2d52ctb18jqb, right, 0, n4b86f56e0826ca31_u2u1u6sqe1b38).
+ast_child[ast_oxc](n4b86f56e0826ca31_gsvcm643mi1af, expression, 0, n4b86f56e0826ca31_j2d52ctb18jqb).
+ast_child[ast_oxc](n4b86f56e0826ca31_v8sa6t8f6ooa2, left, 0, n4b86f56e0826ca31_gsvcm643mi1af).
+ast_node[ast_oxc](n4b86f56e0826ca31_6pne8fqdunnqe, identifier_reference, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_6pne8fqdunnqe, 22).
+ast_attr[ast_oxc](n4b86f56e0826ca31_6pne8fqdunnqe, variant, "Identifier").
+ast_attr[ast_oxc](n4b86f56e0826ca31_6pne8fqdunnqe, name, "d").
+ast_child[ast_oxc](n4b86f56e0826ca31_v8sa6t8f6ooa2, right, 0, n4b86f56e0826ca31_6pne8fqdunnqe).
+ast_child[ast_oxc](n4b86f56e0826ca31_9df0j8ia08jj7, right, 0, n4b86f56e0826ca31_v8sa6t8f6ooa2).
+ast_child[ast_oxc](n4b86f56e0826ca31_465rt33a16j1d, expression, 0, n4b86f56e0826ca31_9df0j8ia08jj7).
+ast_child[ast_oxc](n4b86f56e0826ca31_00hnij32k2175, body, 22, n4b86f56e0826ca31_465rt33a16j1d).
+ast_node[ast_oxc](n4b86f56e0826ca31_mv1ttj6n3cio5, labeled_statement, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_mv1ttj6n3cio5, 23).
+ast_node[ast_oxc](n4b86f56e0826ca31_t2r957gfgtd9e, label_identifier, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_t2r957gfgtd9e, 23).
+ast_attr[ast_oxc](n4b86f56e0826ca31_t2r957gfgtd9e, name, "label").
+ast_child[ast_oxc](n4b86f56e0826ca31_mv1ttj6n3cio5, label, 0, n4b86f56e0826ca31_t2r957gfgtd9e).
+ast_node[ast_oxc](n4b86f56e0826ca31_tvchn7kqu9gnf, for_statement, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_tvchn7kqu9gnf, 23).
+ast_node[ast_oxc](n4b86f56e0826ca31_vfbcestk9v551, variable_declaration, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_vfbcestk9v551, 23).
+ast_attr[ast_oxc](n4b86f56e0826ca31_vfbcestk9v551, kind, "Let").
+ast_attr[ast_oxc](n4b86f56e0826ca31_vfbcestk9v551, declare, false).
+ast_node[ast_oxc](n4b86f56e0826ca31_s7hf2ungcv208, variable_declarator, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_s7hf2ungcv208, 23).
+ast_attr[ast_oxc](n4b86f56e0826ca31_s7hf2ungcv208, definite, false).
+ast_node[ast_oxc](n4b86f56e0826ca31_ls4eun2a7aj01, binding_identifier, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_ls4eun2a7aj01, 23).
+ast_attr[ast_oxc](n4b86f56e0826ca31_ls4eun2a7aj01, name, "i").
+ast_child[ast_oxc](n4b86f56e0826ca31_s7hf2ungcv208, id, 0, n4b86f56e0826ca31_ls4eun2a7aj01).
+ast_node[ast_oxc](n4b86f56e0826ca31_5uncuvfcggs55, numeric_literal, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_5uncuvfcggs55, 23).
+ast_attr[ast_oxc](n4b86f56e0826ca31_5uncuvfcggs55, base, "Decimal").
+ast_attr[ast_oxc](n4b86f56e0826ca31_5uncuvfcggs55, raw, "0").
+ast_attr[ast_oxc](n4b86f56e0826ca31_5uncuvfcggs55, value, 0).
+ast_child[ast_oxc](n4b86f56e0826ca31_s7hf2ungcv208, init, 0, n4b86f56e0826ca31_5uncuvfcggs55).
+ast_child[ast_oxc](n4b86f56e0826ca31_vfbcestk9v551, declarations, 0, n4b86f56e0826ca31_s7hf2ungcv208).
+ast_child[ast_oxc](n4b86f56e0826ca31_tvchn7kqu9gnf, init, 0, n4b86f56e0826ca31_vfbcestk9v551).
+ast_node[ast_oxc](n4b86f56e0826ca31_1t1tgn2c961r6, binary_expression, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_1t1tgn2c961r6, 23).
+ast_attr[ast_oxc](n4b86f56e0826ca31_1t1tgn2c961r6, operator, "LessThan").
+ast_node[ast_oxc](n4b86f56e0826ca31_m9ojhturfoof4, identifier_reference, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_m9ojhturfoof4, 23).
+ast_attr[ast_oxc](n4b86f56e0826ca31_m9ojhturfoof4, variant, "Identifier").
+ast_attr[ast_oxc](n4b86f56e0826ca31_m9ojhturfoof4, name, "i").
+ast_child[ast_oxc](n4b86f56e0826ca31_1t1tgn2c961r6, left, 0, n4b86f56e0826ca31_m9ojhturfoof4).
+ast_node[ast_oxc](n4b86f56e0826ca31_h6o1s699eoed4, numeric_literal, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_h6o1s699eoed4, 23).
+ast_attr[ast_oxc](n4b86f56e0826ca31_h6o1s699eoed4, base, "Decimal").
+ast_attr[ast_oxc](n4b86f56e0826ca31_h6o1s699eoed4, raw, "3").
+ast_attr[ast_oxc](n4b86f56e0826ca31_h6o1s699eoed4, value, 3).
+ast_child[ast_oxc](n4b86f56e0826ca31_1t1tgn2c961r6, right, 0, n4b86f56e0826ca31_h6o1s699eoed4).
+ast_child[ast_oxc](n4b86f56e0826ca31_tvchn7kqu9gnf, test, 0, n4b86f56e0826ca31_1t1tgn2c961r6).
+ast_node[ast_oxc](n4b86f56e0826ca31_pdgk7oi47f799, update_expression, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_pdgk7oi47f799, 23).
+ast_attr[ast_oxc](n4b86f56e0826ca31_pdgk7oi47f799, operator, "Increment").
+ast_attr[ast_oxc](n4b86f56e0826ca31_pdgk7oi47f799, prefix, false).
+ast_node[ast_oxc](n4b86f56e0826ca31_h8rqmoig1j3mf, identifier_reference, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_h8rqmoig1j3mf, 23).
+ast_attr[ast_oxc](n4b86f56e0826ca31_h8rqmoig1j3mf, variant, "AssignmentTargetIdentifier").
+ast_attr[ast_oxc](n4b86f56e0826ca31_h8rqmoig1j3mf, name, "i").
+ast_child[ast_oxc](n4b86f56e0826ca31_pdgk7oi47f799, argument, 0, n4b86f56e0826ca31_h8rqmoig1j3mf).
+ast_child[ast_oxc](n4b86f56e0826ca31_tvchn7kqu9gnf, update, 0, n4b86f56e0826ca31_pdgk7oi47f799).
+ast_node[ast_oxc](n4b86f56e0826ca31_0kohrmnb5tji5, block_statement, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_0kohrmnb5tji5, 23).
+ast_node[ast_oxc](n4b86f56e0826ca31_9gmbctrrcgfs, if_statement, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_9gmbctrrcgfs, 23).
+ast_node[ast_oxc](n4b86f56e0826ca31_e8vc7l88mg3f5, identifier_reference, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_e8vc7l88mg3f5, 23).
+ast_attr[ast_oxc](n4b86f56e0826ca31_e8vc7l88mg3f5, variant, "Identifier").
+ast_attr[ast_oxc](n4b86f56e0826ca31_e8vc7l88mg3f5, name, "i").
+ast_child[ast_oxc](n4b86f56e0826ca31_9gmbctrrcgfs, test, 0, n4b86f56e0826ca31_e8vc7l88mg3f5).
+ast_node[ast_oxc](n4b86f56e0826ca31_3mone5fm6spbe, continue_statement, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_3mone5fm6spbe, 23).
+ast_node[ast_oxc](n4b86f56e0826ca31_tfse9dnbjp593, label_identifier, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_tfse9dnbjp593, 23).
+ast_attr[ast_oxc](n4b86f56e0826ca31_tfse9dnbjp593, name, "label").
+ast_child[ast_oxc](n4b86f56e0826ca31_3mone5fm6spbe, label, 0, n4b86f56e0826ca31_tfse9dnbjp593).
+ast_child[ast_oxc](n4b86f56e0826ca31_9gmbctrrcgfs, consequent, 0, n4b86f56e0826ca31_3mone5fm6spbe).
+ast_node[ast_oxc](n4b86f56e0826ca31_3jbh5mff1849f, break_statement, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_3jbh5mff1849f, 23).
+ast_child[ast_oxc](n4b86f56e0826ca31_9gmbctrrcgfs, alternate, 0, n4b86f56e0826ca31_3jbh5mff1849f).
+ast_child[ast_oxc](n4b86f56e0826ca31_0kohrmnb5tji5, body, 0, n4b86f56e0826ca31_9gmbctrrcgfs).
+ast_child[ast_oxc](n4b86f56e0826ca31_tvchn7kqu9gnf, body, 0, n4b86f56e0826ca31_0kohrmnb5tji5).
+ast_child[ast_oxc](n4b86f56e0826ca31_mv1ttj6n3cio5, body, 0, n4b86f56e0826ca31_tvchn7kqu9gnf).
+ast_child[ast_oxc](n4b86f56e0826ca31_00hnij32k2175, body, 23, n4b86f56e0826ca31_mv1ttj6n3cio5).
+ast_node[ast_oxc](n4b86f56e0826ca31_38mdtg434i4p2, for_in_statement, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_38mdtg434i4p2, 24).
+ast_node[ast_oxc](n4b86f56e0826ca31_a3po6gn7k3rs4, variable_declaration, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_a3po6gn7k3rs4, 24).
+ast_attr[ast_oxc](n4b86f56e0826ca31_a3po6gn7k3rs4, kind, "Const").
+ast_attr[ast_oxc](n4b86f56e0826ca31_a3po6gn7k3rs4, declare, false).
+ast_node[ast_oxc](n4b86f56e0826ca31_985e87qf7ksfe, variable_declarator, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_985e87qf7ksfe, 24).
+ast_attr[ast_oxc](n4b86f56e0826ca31_985e87qf7ksfe, definite, false).
+ast_node[ast_oxc](n4b86f56e0826ca31_8al64h75s92j8, binding_identifier, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_8al64h75s92j8, 24).
+ast_attr[ast_oxc](n4b86f56e0826ca31_8al64h75s92j8, name, "k").
+ast_child[ast_oxc](n4b86f56e0826ca31_985e87qf7ksfe, id, 0, n4b86f56e0826ca31_8al64h75s92j8).
+ast_child[ast_oxc](n4b86f56e0826ca31_a3po6gn7k3rs4, declarations, 0, n4b86f56e0826ca31_985e87qf7ksfe).
+ast_child[ast_oxc](n4b86f56e0826ca31_38mdtg434i4p2, left, 0, n4b86f56e0826ca31_a3po6gn7k3rs4).
+ast_node[ast_oxc](n4b86f56e0826ca31_8obrbvoglqfqb, identifier_reference, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_8obrbvoglqfqb, 24).
+ast_attr[ast_oxc](n4b86f56e0826ca31_8obrbvoglqfqb, variant, "Identifier").
+ast_attr[ast_oxc](n4b86f56e0826ca31_8obrbvoglqfqb, name, "o").
+ast_child[ast_oxc](n4b86f56e0826ca31_38mdtg434i4p2, right, 0, n4b86f56e0826ca31_8obrbvoglqfqb).
+ast_node[ast_oxc](n4b86f56e0826ca31_josijm5kng448, block_statement, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_josijm5kng448, 24).
+ast_child[ast_oxc](n4b86f56e0826ca31_38mdtg434i4p2, body, 0, n4b86f56e0826ca31_josijm5kng448).
+ast_child[ast_oxc](n4b86f56e0826ca31_00hnij32k2175, body, 24, n4b86f56e0826ca31_38mdtg434i4p2).
+ast_node[ast_oxc](n4b86f56e0826ca31_ev491k7071hj1, while_statement, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_ev491k7071hj1, 24).
+ast_node[ast_oxc](n4b86f56e0826ca31_bvejc1ksd5rf7, identifier_reference, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_bvejc1ksd5rf7, 24).
+ast_attr[ast_oxc](n4b86f56e0826ca31_bvejc1ksd5rf7, variant, "Identifier").
+ast_attr[ast_oxc](n4b86f56e0826ca31_bvejc1ksd5rf7, name, "x").
+ast_child[ast_oxc](n4b86f56e0826ca31_ev491k7071hj1, test, 0, n4b86f56e0826ca31_bvejc1ksd5rf7).
+ast_node[ast_oxc](n4b86f56e0826ca31_tfs3a9ncmrn2c, block_statement, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_tfs3a9ncmrn2c, 24).
+ast_node[ast_oxc](n4b86f56e0826ca31_4860b2ro4s9od, expression_statement, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_4860b2ro4s9od, 24).
+ast_node[ast_oxc](n4b86f56e0826ca31_k0ejnkshq9lkd, update_expression, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_k0ejnkshq9lkd, 24).
+ast_attr[ast_oxc](n4b86f56e0826ca31_k0ejnkshq9lkd, operator, "Decrement").
+ast_attr[ast_oxc](n4b86f56e0826ca31_k0ejnkshq9lkd, prefix, false).
+ast_node[ast_oxc](n4b86f56e0826ca31_aej8pj4579ia9, identifier_reference, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_aej8pj4579ia9, 24).
+ast_attr[ast_oxc](n4b86f56e0826ca31_aej8pj4579ia9, variant, "AssignmentTargetIdentifier").
+ast_attr[ast_oxc](n4b86f56e0826ca31_aej8pj4579ia9, name, "x").
+ast_child[ast_oxc](n4b86f56e0826ca31_k0ejnkshq9lkd, argument, 0, n4b86f56e0826ca31_aej8pj4579ia9).
+ast_child[ast_oxc](n4b86f56e0826ca31_4860b2ro4s9od, expression, 0, n4b86f56e0826ca31_k0ejnkshq9lkd).
+ast_child[ast_oxc](n4b86f56e0826ca31_tfs3a9ncmrn2c, body, 0, n4b86f56e0826ca31_4860b2ro4s9od).
+ast_child[ast_oxc](n4b86f56e0826ca31_ev491k7071hj1, body, 0, n4b86f56e0826ca31_tfs3a9ncmrn2c).
+ast_child[ast_oxc](n4b86f56e0826ca31_00hnij32k2175, body, 25, n4b86f56e0826ca31_ev491k7071hj1).
+ast_node[ast_oxc](n4b86f56e0826ca31_5n7ceq1eg6r94, do_while_statement, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_5n7ceq1eg6r94, 24).
+ast_node[ast_oxc](n4b86f56e0826ca31_73l2l7itap2rd, block_statement, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_73l2l7itap2rd, 24).
+ast_node[ast_oxc](n4b86f56e0826ca31_sav8c5d74cp97, expression_statement, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_sav8c5d74cp97, 24).
+ast_node[ast_oxc](n4b86f56e0826ca31_eu42v293ljjr4, update_expression, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_eu42v293ljjr4, 24).
+ast_attr[ast_oxc](n4b86f56e0826ca31_eu42v293ljjr4, operator, "Increment").
+ast_attr[ast_oxc](n4b86f56e0826ca31_eu42v293ljjr4, prefix, false).
+ast_node[ast_oxc](n4b86f56e0826ca31_c7suj09ptste5, identifier_reference, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_c7suj09ptste5, 24).
+ast_attr[ast_oxc](n4b86f56e0826ca31_c7suj09ptste5, variant, "AssignmentTargetIdentifier").
+ast_attr[ast_oxc](n4b86f56e0826ca31_c7suj09ptste5, name, "x").
+ast_child[ast_oxc](n4b86f56e0826ca31_eu42v293ljjr4, argument, 0, n4b86f56e0826ca31_c7suj09ptste5).
+ast_child[ast_oxc](n4b86f56e0826ca31_sav8c5d74cp97, expression, 0, n4b86f56e0826ca31_eu42v293ljjr4).
+ast_child[ast_oxc](n4b86f56e0826ca31_73l2l7itap2rd, body, 0, n4b86f56e0826ca31_sav8c5d74cp97).
+ast_child[ast_oxc](n4b86f56e0826ca31_5n7ceq1eg6r94, body, 0, n4b86f56e0826ca31_73l2l7itap2rd).
+ast_node[ast_oxc](n4b86f56e0826ca31_jg62dji7jesfa, binary_expression, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_jg62dji7jesfa, 24).
+ast_attr[ast_oxc](n4b86f56e0826ca31_jg62dji7jesfa, operator, "LessThan").
+ast_node[ast_oxc](n4b86f56e0826ca31_f1oc0n7um8ksa, identifier_reference, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_f1oc0n7um8ksa, 24).
+ast_attr[ast_oxc](n4b86f56e0826ca31_f1oc0n7um8ksa, variant, "Identifier").
+ast_attr[ast_oxc](n4b86f56e0826ca31_f1oc0n7um8ksa, name, "x").
+ast_child[ast_oxc](n4b86f56e0826ca31_jg62dji7jesfa, left, 0, n4b86f56e0826ca31_f1oc0n7um8ksa).
+ast_node[ast_oxc](n4b86f56e0826ca31_ao1rgs808120d, numeric_literal, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_ao1rgs808120d, 24).
+ast_attr[ast_oxc](n4b86f56e0826ca31_ao1rgs808120d, base, "Decimal").
+ast_attr[ast_oxc](n4b86f56e0826ca31_ao1rgs808120d, raw, "3").
+ast_attr[ast_oxc](n4b86f56e0826ca31_ao1rgs808120d, value, 3).
+ast_child[ast_oxc](n4b86f56e0826ca31_jg62dji7jesfa, right, 0, n4b86f56e0826ca31_ao1rgs808120d).
+ast_child[ast_oxc](n4b86f56e0826ca31_5n7ceq1eg6r94, test, 0, n4b86f56e0826ca31_jg62dji7jesfa).
+ast_child[ast_oxc](n4b86f56e0826ca31_00hnij32k2175, body, 26, n4b86f56e0826ca31_5n7ceq1eg6r94).
+ast_node[ast_oxc](n4b86f56e0826ca31_jmvla092q2d83, switch_statement, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_jmvla092q2d83, 25).
+ast_node[ast_oxc](n4b86f56e0826ca31_54lejbr777d8, identifier_reference, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_54lejbr777d8, 25).
+ast_attr[ast_oxc](n4b86f56e0826ca31_54lejbr777d8, variant, "Identifier").
+ast_attr[ast_oxc](n4b86f56e0826ca31_54lejbr777d8, name, "x").
+ast_child[ast_oxc](n4b86f56e0826ca31_jmvla092q2d83, discriminant, 0, n4b86f56e0826ca31_54lejbr777d8).
+ast_node[ast_oxc](n4b86f56e0826ca31_io5h3cta9eree, switch_case, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_io5h3cta9eree, 25).
+ast_node[ast_oxc](n4b86f56e0826ca31_0ddgb2ojh7bg, numeric_literal, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_0ddgb2ojh7bg, 25).
+ast_attr[ast_oxc](n4b86f56e0826ca31_0ddgb2ojh7bg, base, "Decimal").
+ast_attr[ast_oxc](n4b86f56e0826ca31_0ddgb2ojh7bg, raw, "1").
+ast_attr[ast_oxc](n4b86f56e0826ca31_0ddgb2ojh7bg, value, 1).
+ast_child[ast_oxc](n4b86f56e0826ca31_io5h3cta9eree, test, 0, n4b86f56e0826ca31_0ddgb2ojh7bg).
+ast_node[ast_oxc](n4b86f56e0826ca31_o744unpb2d05e, expression_statement, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_o744unpb2d05e, 25).
+ast_node[ast_oxc](n4b86f56e0826ca31_quk6fg4gb7r64, call_expression, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_quk6fg4gb7r64, 25).
+ast_attr[ast_oxc](n4b86f56e0826ca31_quk6fg4gb7r64, optional, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_quk6fg4gb7r64, pure, false).
+ast_node[ast_oxc](n4b86f56e0826ca31_r60vgeo6e468b, identifier_reference, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_r60vgeo6e468b, 25).
+ast_attr[ast_oxc](n4b86f56e0826ca31_r60vgeo6e468b, variant, "Identifier").
+ast_attr[ast_oxc](n4b86f56e0826ca31_r60vgeo6e468b, name, "f").
+ast_child[ast_oxc](n4b86f56e0826ca31_quk6fg4gb7r64, callee, 0, n4b86f56e0826ca31_r60vgeo6e468b).
+ast_child[ast_oxc](n4b86f56e0826ca31_o744unpb2d05e, expression, 0, n4b86f56e0826ca31_quk6fg4gb7r64).
+ast_child[ast_oxc](n4b86f56e0826ca31_io5h3cta9eree, consequent, 0, n4b86f56e0826ca31_o744unpb2d05e).
+ast_node[ast_oxc](n4b86f56e0826ca31_qmn2s8oghjt84, break_statement, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_qmn2s8oghjt84, 25).
+ast_child[ast_oxc](n4b86f56e0826ca31_io5h3cta9eree, consequent, 1, n4b86f56e0826ca31_qmn2s8oghjt84).
+ast_child[ast_oxc](n4b86f56e0826ca31_jmvla092q2d83, cases, 0, n4b86f56e0826ca31_io5h3cta9eree).
+ast_node[ast_oxc](n4b86f56e0826ca31_vjbau8nnlg0k7, switch_case, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_vjbau8nnlg0k7, 25).
+ast_node[ast_oxc](n4b86f56e0826ca31_siq6bmhlirphc, expression_statement, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_siq6bmhlirphc, 25).
+ast_node[ast_oxc](n4b86f56e0826ca31_j13ftpkhbilse, call_expression, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_j13ftpkhbilse, 25).
+ast_attr[ast_oxc](n4b86f56e0826ca31_j13ftpkhbilse, optional, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_j13ftpkhbilse, pure, false).
+ast_node[ast_oxc](n4b86f56e0826ca31_e1r3hugdol0k4, identifier_reference, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_e1r3hugdol0k4, 25).
+ast_attr[ast_oxc](n4b86f56e0826ca31_e1r3hugdol0k4, variant, "Identifier").
+ast_attr[ast_oxc](n4b86f56e0826ca31_e1r3hugdol0k4, name, "g").
+ast_child[ast_oxc](n4b86f56e0826ca31_j13ftpkhbilse, callee, 0, n4b86f56e0826ca31_e1r3hugdol0k4).
+ast_child[ast_oxc](n4b86f56e0826ca31_siq6bmhlirphc, expression, 0, n4b86f56e0826ca31_j13ftpkhbilse).
+ast_child[ast_oxc](n4b86f56e0826ca31_vjbau8nnlg0k7, consequent, 0, n4b86f56e0826ca31_siq6bmhlirphc).
+ast_child[ast_oxc](n4b86f56e0826ca31_jmvla092q2d83, cases, 1, n4b86f56e0826ca31_vjbau8nnlg0k7).
+ast_child[ast_oxc](n4b86f56e0826ca31_00hnij32k2175, body, 27, n4b86f56e0826ca31_jmvla092q2d83).
+ast_node[ast_oxc](n4b86f56e0826ca31_ie74enngaavjc, try_statement, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_ie74enngaavjc, 26).
+ast_node[ast_oxc](n4b86f56e0826ca31_880jn235bfhl6, block_statement, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_880jn235bfhl6, 26).
+ast_node[ast_oxc](n4b86f56e0826ca31_p9v7d4ugdpqj5, expression_statement, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_p9v7d4ugdpqj5, 26).
+ast_node[ast_oxc](n4b86f56e0826ca31_146qsgll2jdsc, call_expression, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_146qsgll2jdsc, 26).
+ast_attr[ast_oxc](n4b86f56e0826ca31_146qsgll2jdsc, optional, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_146qsgll2jdsc, pure, false).
+ast_node[ast_oxc](n4b86f56e0826ca31_m6k50e0mkv6lf, identifier_reference, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_m6k50e0mkv6lf, 26).
+ast_attr[ast_oxc](n4b86f56e0826ca31_m6k50e0mkv6lf, variant, "Identifier").
+ast_attr[ast_oxc](n4b86f56e0826ca31_m6k50e0mkv6lf, name, "h").
+ast_child[ast_oxc](n4b86f56e0826ca31_146qsgll2jdsc, callee, 0, n4b86f56e0826ca31_m6k50e0mkv6lf).
+ast_child[ast_oxc](n4b86f56e0826ca31_p9v7d4ugdpqj5, expression, 0, n4b86f56e0826ca31_146qsgll2jdsc).
+ast_child[ast_oxc](n4b86f56e0826ca31_880jn235bfhl6, body, 0, n4b86f56e0826ca31_p9v7d4ugdpqj5).
+ast_child[ast_oxc](n4b86f56e0826ca31_ie74enngaavjc, block, 0, n4b86f56e0826ca31_880jn235bfhl6).
+ast_node[ast_oxc](n4b86f56e0826ca31_cb86phpdmrjq5, catch_clause, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_cb86phpdmrjq5, 26).
+ast_node[ast_oxc](n4b86f56e0826ca31_mhh5oivuobfl8, catch_parameter, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_mhh5oivuobfl8, 26).
+ast_node[ast_oxc](n4b86f56e0826ca31_12jb426d0p2k5, binding_identifier, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_12jb426d0p2k5, 26).
+ast_attr[ast_oxc](n4b86f56e0826ca31_12jb426d0p2k5, name, "e").
+ast_child[ast_oxc](n4b86f56e0826ca31_mhh5oivuobfl8, pattern, 0, n4b86f56e0826ca31_12jb426d0p2k5).
+ast_child[ast_oxc](n4b86f56e0826ca31_cb86phpdmrjq5, param, 0, n4b86f56e0826ca31_mhh5oivuobfl8).
+ast_node[ast_oxc](n4b86f56e0826ca31_iqt0b6lkj8kq, block_statement, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_iqt0b6lkj8kq, 26).
+ast_node[ast_oxc](n4b86f56e0826ca31_mar6u9q1ce6n4, throw_statement, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_mar6u9q1ce6n4, 26).
+ast_node[ast_oxc](n4b86f56e0826ca31_2v33og59um6q9, identifier_reference, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_2v33og59um6q9, 26).
+ast_attr[ast_oxc](n4b86f56e0826ca31_2v33og59um6q9, variant, "Identifier").
+ast_attr[ast_oxc](n4b86f56e0826ca31_2v33og59um6q9, name, "e").
+ast_child[ast_oxc](n4b86f56e0826ca31_mar6u9q1ce6n4, argument, 0, n4b86f56e0826ca31_2v33og59um6q9).
+ast_child[ast_oxc](n4b86f56e0826ca31_iqt0b6lkj8kq, body, 0, n4b86f56e0826ca31_mar6u9q1ce6n4).
+ast_child[ast_oxc](n4b86f56e0826ca31_cb86phpdmrjq5, body, 0, n4b86f56e0826ca31_iqt0b6lkj8kq).
+ast_child[ast_oxc](n4b86f56e0826ca31_ie74enngaavjc, handler, 0, n4b86f56e0826ca31_cb86phpdmrjq5).
+ast_node[ast_oxc](n4b86f56e0826ca31_dsm6u7isd9144, block_statement, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_dsm6u7isd9144, 26).
+ast_node[ast_oxc](n4b86f56e0826ca31_6gr3ufh4fq805, expression_statement, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_6gr3ufh4fq805, 26).
+ast_node[ast_oxc](n4b86f56e0826ca31_9adhar83a74dc, call_expression, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_9adhar83a74dc, 26).
+ast_attr[ast_oxc](n4b86f56e0826ca31_9adhar83a74dc, optional, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_9adhar83a74dc, pure, false).
+ast_node[ast_oxc](n4b86f56e0826ca31_7acc06emhgdl9, identifier_reference, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_7acc06emhgdl9, 26).
+ast_attr[ast_oxc](n4b86f56e0826ca31_7acc06emhgdl9, variant, "Identifier").
+ast_attr[ast_oxc](n4b86f56e0826ca31_7acc06emhgdl9, name, "done").
+ast_child[ast_oxc](n4b86f56e0826ca31_9adhar83a74dc, callee, 0, n4b86f56e0826ca31_7acc06emhgdl9).
+ast_child[ast_oxc](n4b86f56e0826ca31_6gr3ufh4fq805, expression, 0, n4b86f56e0826ca31_9adhar83a74dc).
+ast_child[ast_oxc](n4b86f56e0826ca31_dsm6u7isd9144, body, 0, n4b86f56e0826ca31_6gr3ufh4fq805).
+ast_child[ast_oxc](n4b86f56e0826ca31_ie74enngaavjc, finalizer, 0, n4b86f56e0826ca31_dsm6u7isd9144).
+ast_child[ast_oxc](n4b86f56e0826ca31_00hnij32k2175, body, 28, n4b86f56e0826ca31_ie74enngaavjc).
+ast_node[ast_oxc](n4b86f56e0826ca31_frmecdrlk2rj7, variable_declaration, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_frmecdrlk2rj7, 27).
+ast_attr[ast_oxc](n4b86f56e0826ca31_frmecdrlk2rj7, kind, "Const").
+ast_attr[ast_oxc](n4b86f56e0826ca31_frmecdrlk2rj7, declare, false).
+ast_node[ast_oxc](n4b86f56e0826ca31_l1jvg2k4rqt89, variable_declarator, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_l1jvg2k4rqt89, 27).
+ast_attr[ast_oxc](n4b86f56e0826ca31_l1jvg2k4rqt89, definite, false).
+ast_node[ast_oxc](n4b86f56e0826ca31_tppog9jqc8ac1, binding_identifier, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_tppog9jqc8ac1, 27).
+ast_attr[ast_oxc](n4b86f56e0826ca31_tppog9jqc8ac1, name, "fn").
+ast_child[ast_oxc](n4b86f56e0826ca31_l1jvg2k4rqt89, id, 0, n4b86f56e0826ca31_tppog9jqc8ac1).
+ast_node[ast_oxc](n4b86f56e0826ca31_kcdv0utnfg6lc, arrow_function_expression, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_kcdv0utnfg6lc, 27).
+ast_node[ast_oxc](n4b86f56e0826ca31_hrr5fja964deb, formal_parameters, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_hrr5fja964deb, 27).
+ast_attr[ast_oxc](n4b86f56e0826ca31_hrr5fja964deb, kind, "ArrowFormalParameters").
+ast_node[ast_oxc](n4b86f56e0826ca31_c9i5od1bovfcf, formal_parameter, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_c9i5od1bovfcf, 27).
+ast_attr[ast_oxc](n4b86f56e0826ca31_c9i5od1bovfcf, optional, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_c9i5od1bovfcf, readonly, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_c9i5od1bovfcf, override, false).
+ast_node[ast_oxc](n4b86f56e0826ca31_jcfucb8tk7j71, binding_identifier, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_jcfucb8tk7j71, 27).
+ast_attr[ast_oxc](n4b86f56e0826ca31_jcfucb8tk7j71, name, "a").
+ast_child[ast_oxc](n4b86f56e0826ca31_c9i5od1bovfcf, pattern, 0, n4b86f56e0826ca31_jcfucb8tk7j71).
+ast_child[ast_oxc](n4b86f56e0826ca31_hrr5fja964deb, items, 0, n4b86f56e0826ca31_c9i5od1bovfcf).
+ast_child[ast_oxc](n4b86f56e0826ca31_kcdv0utnfg6lc, params, 0, n4b86f56e0826ca31_hrr5fja964deb).
+ast_node[ast_oxc](n4b86f56e0826ca31_gqgbql0cpfal1, await_expression, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_gqgbql0cpfal1, 27).
+ast_node[ast_oxc](n4b86f56e0826ca31_e78nf6ls9cume, identifier_reference, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_e78nf6ls9cume, 27).
+ast_attr[ast_oxc](n4b86f56e0826ca31_e78nf6ls9cume, variant, "Identifier").
+ast_attr[ast_oxc](n4b86f56e0826ca31_e78nf6ls9cume, name, "a").
+ast_child[ast_oxc](n4b86f56e0826ca31_gqgbql0cpfal1, argument, 0, n4b86f56e0826ca31_e78nf6ls9cume).
+ast_child[ast_oxc](n4b86f56e0826ca31_kcdv0utnfg6lc, body, 0, n4b86f56e0826ca31_gqgbql0cpfal1).
+ast_attr[ast_oxc](n4b86f56e0826ca31_kcdv0utnfg6lc, async, true).
+ast_attr[ast_oxc](n4b86f56e0826ca31_kcdv0utnfg6lc, pure, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_kcdv0utnfg6lc, pife, false).
+ast_child[ast_oxc](n4b86f56e0826ca31_l1jvg2k4rqt89, init, 0, n4b86f56e0826ca31_kcdv0utnfg6lc).
+ast_child[ast_oxc](n4b86f56e0826ca31_frmecdrlk2rj7, declarations, 0, n4b86f56e0826ca31_l1jvg2k4rqt89).
+ast_child[ast_oxc](n4b86f56e0826ca31_00hnij32k2175, body, 29, n4b86f56e0826ca31_frmecdrlk2rj7).
+ast_node[ast_oxc](n4b86f56e0826ca31_epbekfc8osl33, expression_statement, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_epbekfc8osl33, 28).
+ast_node[ast_oxc](n4b86f56e0826ca31_78inu5k5e5bg2, tagged_template_expression, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_78inu5k5e5bg2, 28).
+ast_node[ast_oxc](n4b86f56e0826ca31_1irq8pdqjhrk5, identifier_reference, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_1irq8pdqjhrk5, 28).
+ast_attr[ast_oxc](n4b86f56e0826ca31_1irq8pdqjhrk5, variant, "Identifier").
+ast_attr[ast_oxc](n4b86f56e0826ca31_1irq8pdqjhrk5, name, "tag").
+ast_child[ast_oxc](n4b86f56e0826ca31_78inu5k5e5bg2, tag, 0, n4b86f56e0826ca31_1irq8pdqjhrk5).
+ast_node[ast_oxc](n4b86f56e0826ca31_4a753c4ch0d1e, template_literal, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_4a753c4ch0d1e, 28).
+ast_node[ast_oxc](n4b86f56e0826ca31_mao6uctu4g0o8, template_element, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_mao6uctu4g0o8, 28).
+ast_attr[ast_oxc](n4b86f56e0826ca31_mao6uctu4g0o8, tail, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_mao6uctu4g0o8, value_raw, "a").
+ast_attr[ast_oxc](n4b86f56e0826ca31_mao6uctu4g0o8, value_cooked, "a").
+ast_child[ast_oxc](n4b86f56e0826ca31_4a753c4ch0d1e, quasis, 0, n4b86f56e0826ca31_mao6uctu4g0o8).
+ast_node[ast_oxc](n4b86f56e0826ca31_fvh28jc6h45k, template_element, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_fvh28jc6h45k, 28).
+ast_attr[ast_oxc](n4b86f56e0826ca31_fvh28jc6h45k, tail, true).
+ast_attr[ast_oxc](n4b86f56e0826ca31_fvh28jc6h45k, value_raw, "c").
+ast_attr[ast_oxc](n4b86f56e0826ca31_fvh28jc6h45k, value_cooked, "c").
+ast_child[ast_oxc](n4b86f56e0826ca31_4a753c4ch0d1e, quasis, 1, n4b86f56e0826ca31_fvh28jc6h45k).
+ast_node[ast_oxc](n4b86f56e0826ca31_c31lcikm6uhh3, identifier_reference, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_c31lcikm6uhh3, 28).
+ast_attr[ast_oxc](n4b86f56e0826ca31_c31lcikm6uhh3, variant, "Identifier").
+ast_attr[ast_oxc](n4b86f56e0826ca31_c31lcikm6uhh3, name, "b").
+ast_child[ast_oxc](n4b86f56e0826ca31_4a753c4ch0d1e, expressions, 0, n4b86f56e0826ca31_c31lcikm6uhh3).
+ast_child[ast_oxc](n4b86f56e0826ca31_78inu5k5e5bg2, quasi, 0, n4b86f56e0826ca31_4a753c4ch0d1e).
+ast_child[ast_oxc](n4b86f56e0826ca31_epbekfc8osl33, expression, 0, n4b86f56e0826ca31_78inu5k5e5bg2).
+ast_child[ast_oxc](n4b86f56e0826ca31_00hnij32k2175, body, 30, n4b86f56e0826ca31_epbekfc8osl33).
+ast_node[ast_oxc](n4b86f56e0826ca31_q07fjrealp8d5, variable_declaration, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_q07fjrealp8d5, 29).
+ast_attr[ast_oxc](n4b86f56e0826ca31_q07fjrealp8d5, kind, "Const").
+ast_attr[ast_oxc](n4b86f56e0826ca31_q07fjrealp8d5, declare, false).
+ast_node[ast_oxc](n4b86f56e0826ca31_de0mkul5dfr41, variable_declarator, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_de0mkul5dfr41, 29).
+ast_attr[ast_oxc](n4b86f56e0826ca31_de0mkul5dfr41, definite, false).
+ast_node[ast_oxc](n4b86f56e0826ca31_tvbpcadk1dkd4, binding_identifier, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_tvbpcadk1dkd4, 29).
+ast_attr[ast_oxc](n4b86f56e0826ca31_tvbpcadk1dkd4, name, "v").
+ast_child[ast_oxc](n4b86f56e0826ca31_de0mkul5dfr41, id, 0, n4b86f56e0826ca31_tvbpcadk1dkd4).
+ast_node[ast_oxc](n4b86f56e0826ca31_lk8lcdjthkqtc, tsas_expression, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_lk8lcdjthkqtc, 29).
+ast_node[ast_oxc](n4b86f56e0826ca31_2k0c28r0dj5n4, identifier_reference, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_2k0c28r0dj5n4, 29).
+ast_attr[ast_oxc](n4b86f56e0826ca31_2k0c28r0dj5n4, variant, "Identifier").
+ast_attr[ast_oxc](n4b86f56e0826ca31_2k0c28r0dj5n4, name, "x").
+ast_child[ast_oxc](n4b86f56e0826ca31_lk8lcdjthkqtc, expression, 0, n4b86f56e0826ca31_2k0c28r0dj5n4).
+ast_node[ast_oxc](n4b86f56e0826ca31_3u8n9ntnfp85b, tsany_keyword, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_3u8n9ntnfp85b, 29).
+ast_child[ast_oxc](n4b86f56e0826ca31_lk8lcdjthkqtc, type_annotation, 0, n4b86f56e0826ca31_3u8n9ntnfp85b).
+ast_child[ast_oxc](n4b86f56e0826ca31_de0mkul5dfr41, init, 0, n4b86f56e0826ca31_lk8lcdjthkqtc).
+ast_child[ast_oxc](n4b86f56e0826ca31_q07fjrealp8d5, declarations, 0, n4b86f56e0826ca31_de0mkul5dfr41).
+ast_node[ast_oxc](n4b86f56e0826ca31_cetmlcp0maiff, variable_declarator, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_cetmlcp0maiff, 29).
+ast_attr[ast_oxc](n4b86f56e0826ca31_cetmlcp0maiff, definite, false).
+ast_node[ast_oxc](n4b86f56e0826ca31_mi8ainkng1cb9, binding_identifier, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_mi8ainkng1cb9, 29).
+ast_attr[ast_oxc](n4b86f56e0826ca31_mi8ainkng1cb9, name, "w").
+ast_child[ast_oxc](n4b86f56e0826ca31_cetmlcp0maiff, id, 0, n4b86f56e0826ca31_mi8ainkng1cb9).
+ast_node[ast_oxc](n4b86f56e0826ca31_l1hsml0htgnm6, tsnon_null_expression, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_l1hsml0htgnm6, 29).
+ast_node[ast_oxc](n4b86f56e0826ca31_a7t7afrjmj67e, identifier_reference, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_a7t7afrjmj67e, 29).
+ast_attr[ast_oxc](n4b86f56e0826ca31_a7t7afrjmj67e, variant, "Identifier").
+ast_attr[ast_oxc](n4b86f56e0826ca31_a7t7afrjmj67e, name, "x").
+ast_child[ast_oxc](n4b86f56e0826ca31_l1hsml0htgnm6, expression, 0, n4b86f56e0826ca31_a7t7afrjmj67e).
+ast_child[ast_oxc](n4b86f56e0826ca31_cetmlcp0maiff, init, 0, n4b86f56e0826ca31_l1hsml0htgnm6).
+ast_child[ast_oxc](n4b86f56e0826ca31_q07fjrealp8d5, declarations, 1, n4b86f56e0826ca31_cetmlcp0maiff).
+ast_node[ast_oxc](n4b86f56e0826ca31_br8ji3vp7ifgc, variable_declarator, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_br8ji3vp7ifgc, 29).
+ast_attr[ast_oxc](n4b86f56e0826ca31_br8ji3vp7ifgc, definite, false).
+ast_node[ast_oxc](n4b86f56e0826ca31_fbg1i99rijrk1, binding_identifier, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_fbg1i99rijrk1, 29).
+ast_attr[ast_oxc](n4b86f56e0826ca31_fbg1i99rijrk1, name, "z2").
+ast_child[ast_oxc](n4b86f56e0826ca31_br8ji3vp7ifgc, id, 0, n4b86f56e0826ca31_fbg1i99rijrk1).
+ast_node[ast_oxc](n4b86f56e0826ca31_gmieo29lq5i3, tstype_assertion, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_gmieo29lq5i3, 29).
+ast_node[ast_oxc](n4b86f56e0826ca31_moipv1s21qd7f, tstype_reference, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_moipv1s21qd7f, 29).
+ast_node[ast_oxc](n4b86f56e0826ca31_75j60vc4t4n54, identifier_reference, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_75j60vc4t4n54, 29).
+ast_attr[ast_oxc](n4b86f56e0826ca31_75j60vc4t4n54, name, "T").
+ast_child[ast_oxc](n4b86f56e0826ca31_moipv1s21qd7f, type_name, 0, n4b86f56e0826ca31_75j60vc4t4n54).
+ast_child[ast_oxc](n4b86f56e0826ca31_gmieo29lq5i3, type_annotation, 0, n4b86f56e0826ca31_moipv1s21qd7f).
+ast_node[ast_oxc](n4b86f56e0826ca31_h2f7hhqf7noqa, identifier_reference, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_h2f7hhqf7noqa, 29).
+ast_attr[ast_oxc](n4b86f56e0826ca31_h2f7hhqf7noqa, variant, "Identifier").
+ast_attr[ast_oxc](n4b86f56e0826ca31_h2f7hhqf7noqa, name, "x").
+ast_child[ast_oxc](n4b86f56e0826ca31_gmieo29lq5i3, expression, 0, n4b86f56e0826ca31_h2f7hhqf7noqa).
+ast_child[ast_oxc](n4b86f56e0826ca31_br8ji3vp7ifgc, init, 0, n4b86f56e0826ca31_gmieo29lq5i3).
+ast_child[ast_oxc](n4b86f56e0826ca31_q07fjrealp8d5, declarations, 2, n4b86f56e0826ca31_br8ji3vp7ifgc).
+ast_node[ast_oxc](n4b86f56e0826ca31_f04vk7547igb5, variable_declarator, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_f04vk7547igb5, 29).
+ast_attr[ast_oxc](n4b86f56e0826ca31_f04vk7547igb5, definite, false).
+ast_node[ast_oxc](n4b86f56e0826ca31_reulj650ehmcd, binding_identifier, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_reulj650ehmcd, 29).
+ast_attr[ast_oxc](n4b86f56e0826ca31_reulj650ehmcd, name, "s2").
+ast_child[ast_oxc](n4b86f56e0826ca31_f04vk7547igb5, id, 0, n4b86f56e0826ca31_reulj650ehmcd).
+ast_node[ast_oxc](n4b86f56e0826ca31_lhq5r5i1eqbbb, tssatisfies_expression, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_lhq5r5i1eqbbb, 29).
+ast_node[ast_oxc](n4b86f56e0826ca31_j7vco0artagq2, identifier_reference, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_j7vco0artagq2, 29).
+ast_attr[ast_oxc](n4b86f56e0826ca31_j7vco0artagq2, variant, "Identifier").
+ast_attr[ast_oxc](n4b86f56e0826ca31_j7vco0artagq2, name, "x").
+ast_child[ast_oxc](n4b86f56e0826ca31_lhq5r5i1eqbbb, expression, 0, n4b86f56e0826ca31_j7vco0artagq2).
+ast_node[ast_oxc](n4b86f56e0826ca31_bko6s1o9gjjm2, tstype_reference, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_bko6s1o9gjjm2, 29).
+ast_node[ast_oxc](n4b86f56e0826ca31_bh02gdiln8mme, identifier_reference, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_bh02gdiln8mme, 29).
+ast_attr[ast_oxc](n4b86f56e0826ca31_bh02gdiln8mme, name, "T").
+ast_child[ast_oxc](n4b86f56e0826ca31_bko6s1o9gjjm2, type_name, 0, n4b86f56e0826ca31_bh02gdiln8mme).
+ast_child[ast_oxc](n4b86f56e0826ca31_lhq5r5i1eqbbb, type_annotation, 0, n4b86f56e0826ca31_bko6s1o9gjjm2).
+ast_child[ast_oxc](n4b86f56e0826ca31_f04vk7547igb5, init, 0, n4b86f56e0826ca31_lhq5r5i1eqbbb).
+ast_child[ast_oxc](n4b86f56e0826ca31_q07fjrealp8d5, declarations, 3, n4b86f56e0826ca31_f04vk7547igb5).
+ast_child[ast_oxc](n4b86f56e0826ca31_00hnij32k2175, body, 31, n4b86f56e0826ca31_q07fjrealp8d5).
+ast_node[ast_oxc](n4b86f56e0826ca31_pq4hgdjb1ss99, expression_statement, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_pq4hgdjb1ss99, 30).
+ast_node[ast_oxc](n4b86f56e0826ca31_61apabi1fhsq2, call_expression, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_61apabi1fhsq2, 30).
+ast_attr[ast_oxc](n4b86f56e0826ca31_61apabi1fhsq2, optional, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_61apabi1fhsq2, pure, false).
+ast_node[ast_oxc](n4b86f56e0826ca31_5eeotij2d8no1, static_member_expression, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_5eeotij2d8no1, 30).
+ast_attr[ast_oxc](n4b86f56e0826ca31_5eeotij2d8no1, optional, false).
+ast_node[ast_oxc](n4b86f56e0826ca31_34hr4rdjabns, import_expression, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_34hr4rdjabns, 30).
+ast_node[ast_oxc](n4b86f56e0826ca31_sfma331b4fla9, string_literal, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_sfma331b4fla9, 30).
+ast_attr[ast_oxc](n4b86f56e0826ca31_sfma331b4fla9, value, "dyn").
+ast_attr[ast_oxc](n4b86f56e0826ca31_sfma331b4fla9, raw, "'dyn'").
+ast_child[ast_oxc](n4b86f56e0826ca31_34hr4rdjabns, source, 0, n4b86f56e0826ca31_sfma331b4fla9).
+ast_child[ast_oxc](n4b86f56e0826ca31_5eeotij2d8no1, object, 0, n4b86f56e0826ca31_34hr4rdjabns).
+ast_node[ast_oxc](n4b86f56e0826ca31_bk9fk1gqb7ef9, identifier_name, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_bk9fk1gqb7ef9, 30).
+ast_attr[ast_oxc](n4b86f56e0826ca31_bk9fk1gqb7ef9, name, "then").
+ast_child[ast_oxc](n4b86f56e0826ca31_5eeotij2d8no1, property, 0, n4b86f56e0826ca31_bk9fk1gqb7ef9).
+ast_child[ast_oxc](n4b86f56e0826ca31_61apabi1fhsq2, callee, 0, n4b86f56e0826ca31_5eeotij2d8no1).
+ast_node[ast_oxc](n4b86f56e0826ca31_784qhf33d44lb, arrow_function_expression, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_784qhf33d44lb, 30).
+ast_node[ast_oxc](n4b86f56e0826ca31_l97g7fh5vho0c, formal_parameters, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_l97g7fh5vho0c, 30).
+ast_attr[ast_oxc](n4b86f56e0826ca31_l97g7fh5vho0c, kind, "ArrowFormalParameters").
+ast_node[ast_oxc](n4b86f56e0826ca31_l6o8do60egsod, formal_parameter, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_l6o8do60egsod, 30).
+ast_attr[ast_oxc](n4b86f56e0826ca31_l6o8do60egsod, optional, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_l6o8do60egsod, readonly, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_l6o8do60egsod, override, false).
+ast_node[ast_oxc](n4b86f56e0826ca31_ua3ar76k56g12, binding_identifier, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_ua3ar76k56g12, 30).
+ast_attr[ast_oxc](n4b86f56e0826ca31_ua3ar76k56g12, name, "r").
+ast_child[ast_oxc](n4b86f56e0826ca31_l6o8do60egsod, pattern, 0, n4b86f56e0826ca31_ua3ar76k56g12).
+ast_child[ast_oxc](n4b86f56e0826ca31_l97g7fh5vho0c, items, 0, n4b86f56e0826ca31_l6o8do60egsod).
+ast_child[ast_oxc](n4b86f56e0826ca31_784qhf33d44lb, params, 0, n4b86f56e0826ca31_l97g7fh5vho0c).
+ast_node[ast_oxc](n4b86f56e0826ca31_e3iata33evp5e, identifier_reference, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_e3iata33evp5e, 30).
+ast_attr[ast_oxc](n4b86f56e0826ca31_e3iata33evp5e, variant, "Identifier").
+ast_attr[ast_oxc](n4b86f56e0826ca31_e3iata33evp5e, name, "r").
+ast_child[ast_oxc](n4b86f56e0826ca31_784qhf33d44lb, body, 0, n4b86f56e0826ca31_e3iata33evp5e).
+ast_attr[ast_oxc](n4b86f56e0826ca31_784qhf33d44lb, async, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_784qhf33d44lb, pure, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_784qhf33d44lb, pife, false).
+ast_child[ast_oxc](n4b86f56e0826ca31_61apabi1fhsq2, arguments, 0, n4b86f56e0826ca31_784qhf33d44lb).
+ast_child[ast_oxc](n4b86f56e0826ca31_pq4hgdjb1ss99, expression, 0, n4b86f56e0826ca31_61apabi1fhsq2).
+ast_child[ast_oxc](n4b86f56e0826ca31_00hnij32k2175, body, 32, n4b86f56e0826ca31_pq4hgdjb1ss99).
+ast_node[ast_oxc](n4b86f56e0826ca31_icqu3jnn64v65, variable_declaration, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_icqu3jnn64v65, 31).
+ast_attr[ast_oxc](n4b86f56e0826ca31_icqu3jnn64v65, kind, "Const").
+ast_attr[ast_oxc](n4b86f56e0826ca31_icqu3jnn64v65, declare, false).
+ast_node[ast_oxc](n4b86f56e0826ca31_bh6o7he0g2fnc, variable_declarator, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_bh6o7he0g2fnc, 31).
+ast_attr[ast_oxc](n4b86f56e0826ca31_bh6o7he0g2fnc, definite, false).
+ast_node[ast_oxc](n4b86f56e0826ca31_2kmodsl1i5b15, binding_identifier, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_2kmodsl1i5b15, 31).
+ast_attr[ast_oxc](n4b86f56e0826ca31_2kmodsl1i5b15, name, "re").
+ast_child[ast_oxc](n4b86f56e0826ca31_bh6o7he0g2fnc, id, 0, n4b86f56e0826ca31_2kmodsl1i5b15).
+ast_node[ast_oxc](n4b86f56e0826ca31_csavmurtvpr72, reg_exp_literal, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_csavmurtvpr72, 31).
+ast_attr[ast_oxc](n4b86f56e0826ca31_csavmurtvpr72, regex_pattern_text, "a").
+ast_attr[ast_oxc](n4b86f56e0826ca31_csavmurtvpr72, regex_flags, "G").
+ast_attr[ast_oxc](n4b86f56e0826ca31_csavmurtvpr72, raw, "/a/g").
+ast_child[ast_oxc](n4b86f56e0826ca31_bh6o7he0g2fnc, init, 0, n4b86f56e0826ca31_csavmurtvpr72).
+ast_child[ast_oxc](n4b86f56e0826ca31_icqu3jnn64v65, declarations, 0, n4b86f56e0826ca31_bh6o7he0g2fnc).
+ast_node[ast_oxc](n4b86f56e0826ca31_mvsqjrpqb5173, variable_declarator, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_mvsqjrpqb5173, 31).
+ast_attr[ast_oxc](n4b86f56e0826ca31_mvsqjrpqb5173, definite, false).
+ast_node[ast_oxc](n4b86f56e0826ca31_l601lab753vr8, binding_identifier, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_l601lab753vr8, 31).
+ast_attr[ast_oxc](n4b86f56e0826ca31_l601lab753vr8, name, "big").
+ast_child[ast_oxc](n4b86f56e0826ca31_mvsqjrpqb5173, id, 0, n4b86f56e0826ca31_l601lab753vr8).
+ast_node[ast_oxc](n4b86f56e0826ca31_a1ah36ti9205, big_int_literal, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_a1ah36ti9205, 31).
+ast_attr[ast_oxc](n4b86f56e0826ca31_a1ah36ti9205, base, "Decimal").
+ast_attr[ast_oxc](n4b86f56e0826ca31_a1ah36ti9205, value, "10").
+ast_attr[ast_oxc](n4b86f56e0826ca31_a1ah36ti9205, raw, "10n").
+ast_child[ast_oxc](n4b86f56e0826ca31_mvsqjrpqb5173, init, 0, n4b86f56e0826ca31_a1ah36ti9205).
+ast_child[ast_oxc](n4b86f56e0826ca31_icqu3jnn64v65, declarations, 1, n4b86f56e0826ca31_mvsqjrpqb5173).
+ast_node[ast_oxc](n4b86f56e0826ca31_ka89gpbp6pcrf, variable_declarator, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_ka89gpbp6pcrf, 31).
+ast_attr[ast_oxc](n4b86f56e0826ca31_ka89gpbp6pcrf, definite, false).
+ast_node[ast_oxc](n4b86f56e0826ca31_ohls9hkq2j79c, binding_identifier, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_ohls9hkq2j79c, 31).
+ast_attr[ast_oxc](n4b86f56e0826ca31_ohls9hkq2j79c, name, "nul").
+ast_child[ast_oxc](n4b86f56e0826ca31_ka89gpbp6pcrf, id, 0, n4b86f56e0826ca31_ohls9hkq2j79c).
+ast_node[ast_oxc](n4b86f56e0826ca31_i8oj4knoga8o4, null_literal, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_i8oj4knoga8o4, 31).
+ast_child[ast_oxc](n4b86f56e0826ca31_ka89gpbp6pcrf, init, 0, n4b86f56e0826ca31_i8oj4knoga8o4).
+ast_child[ast_oxc](n4b86f56e0826ca31_icqu3jnn64v65, declarations, 2, n4b86f56e0826ca31_ka89gpbp6pcrf).
+ast_node[ast_oxc](n4b86f56e0826ca31_jkcjrlc6ee918, variable_declarator, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_jkcjrlc6ee918, 31).
+ast_attr[ast_oxc](n4b86f56e0826ca31_jkcjrlc6ee918, definite, false).
+ast_node[ast_oxc](n4b86f56e0826ca31_duhhbvl1i1ml2, binding_identifier, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_duhhbvl1i1ml2, 31).
+ast_attr[ast_oxc](n4b86f56e0826ca31_duhhbvl1i1ml2, name, "t").
+ast_child[ast_oxc](n4b86f56e0826ca31_jkcjrlc6ee918, id, 0, n4b86f56e0826ca31_duhhbvl1i1ml2).
+ast_node[ast_oxc](n4b86f56e0826ca31_cnkuf1d2rfhnd, boolean_literal, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_cnkuf1d2rfhnd, 31).
+ast_attr[ast_oxc](n4b86f56e0826ca31_cnkuf1d2rfhnd, value, true).
+ast_child[ast_oxc](n4b86f56e0826ca31_jkcjrlc6ee918, init, 0, n4b86f56e0826ca31_cnkuf1d2rfhnd).
+ast_child[ast_oxc](n4b86f56e0826ca31_icqu3jnn64v65, declarations, 3, n4b86f56e0826ca31_jkcjrlc6ee918).
+ast_node[ast_oxc](n4b86f56e0826ca31_1sselrdijp0v3, variable_declarator, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_1sselrdijp0v3, 31).
+ast_attr[ast_oxc](n4b86f56e0826ca31_1sselrdijp0v3, definite, false).
+ast_node[ast_oxc](n4b86f56e0826ca31_vc9df4q5qtg7, binding_identifier, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_vc9df4q5qtg7, 31).
+ast_attr[ast_oxc](n4b86f56e0826ca31_vc9df4q5qtg7, name, "tl").
+ast_child[ast_oxc](n4b86f56e0826ca31_1sselrdijp0v3, id, 0, n4b86f56e0826ca31_vc9df4q5qtg7).
+ast_node[ast_oxc](n4b86f56e0826ca31_jvcjk3tlmi259, template_literal, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_jvcjk3tlmi259, 31).
+ast_node[ast_oxc](n4b86f56e0826ca31_4pr3ajjdbsol3, template_element, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_4pr3ajjdbsol3, 31).
+ast_attr[ast_oxc](n4b86f56e0826ca31_4pr3ajjdbsol3, tail, true).
+ast_attr[ast_oxc](n4b86f56e0826ca31_4pr3ajjdbsol3, value_raw, "plain").
+ast_attr[ast_oxc](n4b86f56e0826ca31_4pr3ajjdbsol3, value_cooked, "plain").
+ast_child[ast_oxc](n4b86f56e0826ca31_jvcjk3tlmi259, quasis, 0, n4b86f56e0826ca31_4pr3ajjdbsol3).
+ast_child[ast_oxc](n4b86f56e0826ca31_1sselrdijp0v3, init, 0, n4b86f56e0826ca31_jvcjk3tlmi259).
+ast_child[ast_oxc](n4b86f56e0826ca31_icqu3jnn64v65, declarations, 4, n4b86f56e0826ca31_1sselrdijp0v3).
+ast_child[ast_oxc](n4b86f56e0826ca31_00hnij32k2175, body, 33, n4b86f56e0826ca31_icqu3jnn64v65).
+ast_node[ast_oxc](n4b86f56e0826ca31_8vo76aoj10pdb, tstype_alias_declaration, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_8vo76aoj10pdb, 32).
+ast_node[ast_oxc](n4b86f56e0826ca31_deb46pah4kjkf, binding_identifier, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_deb46pah4kjkf, 32).
+ast_attr[ast_oxc](n4b86f56e0826ca31_deb46pah4kjkf, name, "A").
+ast_child[ast_oxc](n4b86f56e0826ca31_8vo76aoj10pdb, id, 0, n4b86f56e0826ca31_deb46pah4kjkf).
+ast_node[ast_oxc](n4b86f56e0826ca31_8ra2ck3d36eif, tsunion_type, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_8ra2ck3d36eif, 32).
+ast_node[ast_oxc](n4b86f56e0826ca31_jffpcosc3ps0e, tsstring_keyword, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_jffpcosc3ps0e, 32).
+ast_child[ast_oxc](n4b86f56e0826ca31_8ra2ck3d36eif, types, 0, n4b86f56e0826ca31_jffpcosc3ps0e).
+ast_node[ast_oxc](n4b86f56e0826ca31_4m6rqar8lp852, tsnumber_keyword, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_4m6rqar8lp852, 32).
+ast_child[ast_oxc](n4b86f56e0826ca31_8ra2ck3d36eif, types, 1, n4b86f56e0826ca31_4m6rqar8lp852).
+ast_child[ast_oxc](n4b86f56e0826ca31_8vo76aoj10pdb, type_annotation, 0, n4b86f56e0826ca31_8ra2ck3d36eif).
+ast_attr[ast_oxc](n4b86f56e0826ca31_8vo76aoj10pdb, declare, false).
+ast_child[ast_oxc](n4b86f56e0826ca31_00hnij32k2175, body, 34, n4b86f56e0826ca31_8vo76aoj10pdb).
+ast_node[ast_oxc](n4b86f56e0826ca31_a8vm0ts5k45f9, tsinterface_declaration, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_a8vm0ts5k45f9, 32).
+ast_node[ast_oxc](n4b86f56e0826ca31_2br5r98751reb, binding_identifier, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_2br5r98751reb, 32).
+ast_attr[ast_oxc](n4b86f56e0826ca31_2br5r98751reb, name, "I").
+ast_child[ast_oxc](n4b86f56e0826ca31_a8vm0ts5k45f9, id, 0, n4b86f56e0826ca31_2br5r98751reb).
+ast_node[ast_oxc](n4b86f56e0826ca31_ciijtsv6f9jvb, tsinterface_body, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_ciijtsv6f9jvb, 32).
+ast_node[ast_oxc](n4b86f56e0826ca31_388tdklgjp6ld, tsproperty_signature, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_388tdklgjp6ld, 32).
+ast_attr[ast_oxc](n4b86f56e0826ca31_388tdklgjp6ld, computed, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_388tdklgjp6ld, optional, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_388tdklgjp6ld, readonly, false).
+ast_node[ast_oxc](n4b86f56e0826ca31_osib4f952ni33, identifier_name, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_osib4f952ni33, 32).
+ast_attr[ast_oxc](n4b86f56e0826ca31_osib4f952ni33, variant, "StaticIdentifier").
+ast_attr[ast_oxc](n4b86f56e0826ca31_osib4f952ni33, name, "a").
+ast_child[ast_oxc](n4b86f56e0826ca31_388tdklgjp6ld, key, 0, n4b86f56e0826ca31_osib4f952ni33).
+ast_node[ast_oxc](n4b86f56e0826ca31_p612an1nhhil9, tstype_annotation, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_p612an1nhhil9, 32).
+ast_node[ast_oxc](n4b86f56e0826ca31_4b749nsf7afn1, tsstring_keyword, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_4b749nsf7afn1, 32).
+ast_child[ast_oxc](n4b86f56e0826ca31_p612an1nhhil9, type_annotation, 0, n4b86f56e0826ca31_4b749nsf7afn1).
+ast_child[ast_oxc](n4b86f56e0826ca31_388tdklgjp6ld, type_annotation, 0, n4b86f56e0826ca31_p612an1nhhil9).
+ast_child[ast_oxc](n4b86f56e0826ca31_ciijtsv6f9jvb, body, 0, n4b86f56e0826ca31_388tdklgjp6ld).
+ast_node[ast_oxc](n4b86f56e0826ca31_jpif3kg7sa7v3, tsmethod_signature, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_jpif3kg7sa7v3, 32).
+ast_node[ast_oxc](n4b86f56e0826ca31_aghoh157rmjsb, identifier_name, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_aghoh157rmjsb, 32).
+ast_attr[ast_oxc](n4b86f56e0826ca31_aghoh157rmjsb, variant, "StaticIdentifier").
+ast_attr[ast_oxc](n4b86f56e0826ca31_aghoh157rmjsb, name, "m").
+ast_child[ast_oxc](n4b86f56e0826ca31_jpif3kg7sa7v3, key, 0, n4b86f56e0826ca31_aghoh157rmjsb).
+ast_node[ast_oxc](n4b86f56e0826ca31_2otkp57lve134, formal_parameters, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_2otkp57lve134, 32).
+ast_attr[ast_oxc](n4b86f56e0826ca31_2otkp57lve134, kind, "Signature").
+ast_child[ast_oxc](n4b86f56e0826ca31_jpif3kg7sa7v3, params, 0, n4b86f56e0826ca31_2otkp57lve134).
+ast_node[ast_oxc](n4b86f56e0826ca31_5mtla3m2t5e5, tstype_annotation, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_5mtla3m2t5e5, 32).
+ast_node[ast_oxc](n4b86f56e0826ca31_5c5ms50eir568, tsvoid_keyword, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_5c5ms50eir568, 32).
+ast_child[ast_oxc](n4b86f56e0826ca31_5mtla3m2t5e5, type_annotation, 0, n4b86f56e0826ca31_5c5ms50eir568).
+ast_child[ast_oxc](n4b86f56e0826ca31_jpif3kg7sa7v3, return_type, 0, n4b86f56e0826ca31_5mtla3m2t5e5).
+ast_attr[ast_oxc](n4b86f56e0826ca31_jpif3kg7sa7v3, computed, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_jpif3kg7sa7v3, optional, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_jpif3kg7sa7v3, kind, "Method").
+ast_child[ast_oxc](n4b86f56e0826ca31_ciijtsv6f9jvb, body, 1, n4b86f56e0826ca31_jpif3kg7sa7v3).
+ast_child[ast_oxc](n4b86f56e0826ca31_a8vm0ts5k45f9, body, 0, n4b86f56e0826ca31_ciijtsv6f9jvb).
+ast_attr[ast_oxc](n4b86f56e0826ca31_a8vm0ts5k45f9, declare, false).
+ast_child[ast_oxc](n4b86f56e0826ca31_00hnij32k2175, body, 35, n4b86f56e0826ca31_a8vm0ts5k45f9).
+ast_node[ast_oxc](n4b86f56e0826ca31_cv47rpt496os, tsenum_declaration, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_cv47rpt496os, 33).
+ast_attr[ast_oxc](n4b86f56e0826ca31_cv47rpt496os, const, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_cv47rpt496os, declare, false).
+ast_node[ast_oxc](n4b86f56e0826ca31_cbjsibrtnojsb, binding_identifier, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_cbjsibrtnojsb, 33).
+ast_attr[ast_oxc](n4b86f56e0826ca31_cbjsibrtnojsb, name, "E").
+ast_child[ast_oxc](n4b86f56e0826ca31_cv47rpt496os, id, 0, n4b86f56e0826ca31_cbjsibrtnojsb).
+ast_node[ast_oxc](n4b86f56e0826ca31_cnm5jbqh4mih4, tsenum_body, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_cnm5jbqh4mih4, 33).
+ast_node[ast_oxc](n4b86f56e0826ca31_vlr0kg7moo9g2, tsenum_member, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_vlr0kg7moo9g2, 33).
+ast_node[ast_oxc](n4b86f56e0826ca31_1rs4f9gs2arpc, identifier_name, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_1rs4f9gs2arpc, 33).
+ast_attr[ast_oxc](n4b86f56e0826ca31_1rs4f9gs2arpc, variant, "Identifier").
+ast_attr[ast_oxc](n4b86f56e0826ca31_1rs4f9gs2arpc, name, "A").
+ast_child[ast_oxc](n4b86f56e0826ca31_vlr0kg7moo9g2, id, 0, n4b86f56e0826ca31_1rs4f9gs2arpc).
+ast_node[ast_oxc](n4b86f56e0826ca31_lg3mpf7026gpa, numeric_literal, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_lg3mpf7026gpa, 33).
+ast_attr[ast_oxc](n4b86f56e0826ca31_lg3mpf7026gpa, base, "Decimal").
+ast_attr[ast_oxc](n4b86f56e0826ca31_lg3mpf7026gpa, raw, "1").
+ast_attr[ast_oxc](n4b86f56e0826ca31_lg3mpf7026gpa, value, 1).
+ast_child[ast_oxc](n4b86f56e0826ca31_vlr0kg7moo9g2, initializer, 0, n4b86f56e0826ca31_lg3mpf7026gpa).
+ast_child[ast_oxc](n4b86f56e0826ca31_cnm5jbqh4mih4, members, 0, n4b86f56e0826ca31_vlr0kg7moo9g2).
+ast_child[ast_oxc](n4b86f56e0826ca31_cv47rpt496os, body, 0, n4b86f56e0826ca31_cnm5jbqh4mih4).
+ast_child[ast_oxc](n4b86f56e0826ca31_00hnij32k2175, body, 36, n4b86f56e0826ca31_cv47rpt496os).
+ast_node[ast_oxc](n4b86f56e0826ca31_ulib8rdg77emb, tsnamespace_declaration, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_ulib8rdg77emb, 33).
+ast_node[ast_oxc](n4b86f56e0826ca31_mk20gfa8n7et3, binding_identifier, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_mk20gfa8n7et3, 33).
+ast_attr[ast_oxc](n4b86f56e0826ca31_mk20gfa8n7et3, name, "N").
+ast_child[ast_oxc](n4b86f56e0826ca31_ulib8rdg77emb, id, 0, n4b86f56e0826ca31_mk20gfa8n7et3).
+ast_node[ast_oxc](n4b86f56e0826ca31_96jgq4m820vbe, tsmodule_block, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_96jgq4m820vbe, 33).
+ast_node[ast_oxc](n4b86f56e0826ca31_bo0518cguded9, export_declaration, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_bo0518cguded9, 33).
+ast_node[ast_oxc](n4b86f56e0826ca31_o2s7brms1jjkc, variable_declaration, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_o2s7brms1jjkc, 33).
+ast_attr[ast_oxc](n4b86f56e0826ca31_o2s7brms1jjkc, kind, "Const").
+ast_attr[ast_oxc](n4b86f56e0826ca31_o2s7brms1jjkc, declare, false).
+ast_node[ast_oxc](n4b86f56e0826ca31_4d2jj8b1rbca8, variable_declarator, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_4d2jj8b1rbca8, 33).
+ast_attr[ast_oxc](n4b86f56e0826ca31_4d2jj8b1rbca8, definite, false).
+ast_node[ast_oxc](n4b86f56e0826ca31_rgc0to4p5ek24, binding_identifier, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_rgc0to4p5ek24, 33).
+ast_attr[ast_oxc](n4b86f56e0826ca31_rgc0to4p5ek24, name, "n").
+ast_child[ast_oxc](n4b86f56e0826ca31_4d2jj8b1rbca8, id, 0, n4b86f56e0826ca31_rgc0to4p5ek24).
+ast_node[ast_oxc](n4b86f56e0826ca31_tnhf36dmp9jk, numeric_literal, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_tnhf36dmp9jk, 33).
+ast_attr[ast_oxc](n4b86f56e0826ca31_tnhf36dmp9jk, base, "Decimal").
+ast_attr[ast_oxc](n4b86f56e0826ca31_tnhf36dmp9jk, raw, "1").
+ast_attr[ast_oxc](n4b86f56e0826ca31_tnhf36dmp9jk, value, 1).
+ast_child[ast_oxc](n4b86f56e0826ca31_4d2jj8b1rbca8, init, 0, n4b86f56e0826ca31_tnhf36dmp9jk).
+ast_child[ast_oxc](n4b86f56e0826ca31_o2s7brms1jjkc, declarations, 0, n4b86f56e0826ca31_4d2jj8b1rbca8).
+ast_child[ast_oxc](n4b86f56e0826ca31_bo0518cguded9, declaration, 0, n4b86f56e0826ca31_o2s7brms1jjkc).
+ast_child[ast_oxc](n4b86f56e0826ca31_96jgq4m820vbe, body, 0, n4b86f56e0826ca31_bo0518cguded9).
+ast_child[ast_oxc](n4b86f56e0826ca31_ulib8rdg77emb, body, 0, n4b86f56e0826ca31_96jgq4m820vbe).
+ast_attr[ast_oxc](n4b86f56e0826ca31_ulib8rdg77emb, kind, "Namespace").
+ast_attr[ast_oxc](n4b86f56e0826ca31_ulib8rdg77emb, declare, false).
+ast_child[ast_oxc](n4b86f56e0826ca31_00hnij32k2175, body, 37, n4b86f56e0826ca31_ulib8rdg77emb).
+ast_node[ast_oxc](n4b86f56e0826ca31_72l619lo48236, function, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_72l619lo48236, 34).
+ast_attr[ast_oxc](n4b86f56e0826ca31_72l619lo48236, variant, "FunctionDeclaration").
+ast_node[ast_oxc](n4b86f56e0826ca31_ssqhhr6gbj0k7, binding_identifier, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_ssqhhr6gbj0k7, 34).
+ast_attr[ast_oxc](n4b86f56e0826ca31_ssqhhr6gbj0k7, name, "amb").
+ast_child[ast_oxc](n4b86f56e0826ca31_72l619lo48236, id, 0, n4b86f56e0826ca31_ssqhhr6gbj0k7).
+ast_node[ast_oxc](n4b86f56e0826ca31_efl4fom01285, formal_parameters, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_efl4fom01285, 34).
+ast_attr[ast_oxc](n4b86f56e0826ca31_efl4fom01285, kind, "FormalParameter").
+ast_child[ast_oxc](n4b86f56e0826ca31_72l619lo48236, params, 0, n4b86f56e0826ca31_efl4fom01285).
+ast_node[ast_oxc](n4b86f56e0826ca31_3hmlm0gnqlscd, tstype_annotation, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_3hmlm0gnqlscd, 34).
+ast_node[ast_oxc](n4b86f56e0826ca31_ucgf7iiio9ite, tsvoid_keyword, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_ucgf7iiio9ite, 34).
+ast_child[ast_oxc](n4b86f56e0826ca31_3hmlm0gnqlscd, type_annotation, 0, n4b86f56e0826ca31_ucgf7iiio9ite).
+ast_child[ast_oxc](n4b86f56e0826ca31_72l619lo48236, return_type, 0, n4b86f56e0826ca31_3hmlm0gnqlscd).
+ast_attr[ast_oxc](n4b86f56e0826ca31_72l619lo48236, type, "TSDeclareFunction").
+ast_attr[ast_oxc](n4b86f56e0826ca31_72l619lo48236, generator, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_72l619lo48236, async, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_72l619lo48236, declare, true).
+ast_attr[ast_oxc](n4b86f56e0826ca31_72l619lo48236, pure, false).
+ast_attr[ast_oxc](n4b86f56e0826ca31_72l619lo48236, pife, false).
+ast_child[ast_oxc](n4b86f56e0826ca31_00hnij32k2175, body, 38, n4b86f56e0826ca31_72l619lo48236).
+ast_node[ast_oxc](n4b86f56e0826ca31_g9g1oj203cua, expression_statement, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_g9g1oj203cua, 35).
+ast_node[ast_oxc](n4b86f56e0826ca31_uvp2schjmjp0f, unary_expression, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_uvp2schjmjp0f, 35).
+ast_attr[ast_oxc](n4b86f56e0826ca31_uvp2schjmjp0f, operator, "Typeof").
+ast_node[ast_oxc](n4b86f56e0826ca31_m7mkf77bmcuu5, identifier_reference, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_m7mkf77bmcuu5, 35).
+ast_attr[ast_oxc](n4b86f56e0826ca31_m7mkf77bmcuu5, variant, "Identifier").
+ast_attr[ast_oxc](n4b86f56e0826ca31_m7mkf77bmcuu5, name, "x").
+ast_child[ast_oxc](n4b86f56e0826ca31_uvp2schjmjp0f, argument, 0, n4b86f56e0826ca31_m7mkf77bmcuu5).
+ast_child[ast_oxc](n4b86f56e0826ca31_g9g1oj203cua, expression, 0, n4b86f56e0826ca31_uvp2schjmjp0f).
+ast_child[ast_oxc](n4b86f56e0826ca31_00hnij32k2175, body, 39, n4b86f56e0826ca31_g9g1oj203cua).
+ast_node[ast_oxc](n4b86f56e0826ca31_onp754tdgii82, expression_statement, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_onp754tdgii82, 35).
+ast_node[ast_oxc](n4b86f56e0826ca31_2tcd8pikptmh, unary_expression, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_2tcd8pikptmh, 35).
+ast_attr[ast_oxc](n4b86f56e0826ca31_2tcd8pikptmh, operator, "Void").
+ast_node[ast_oxc](n4b86f56e0826ca31_a43l50nti15ha, numeric_literal, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_a43l50nti15ha, 35).
+ast_attr[ast_oxc](n4b86f56e0826ca31_a43l50nti15ha, base, "Decimal").
+ast_attr[ast_oxc](n4b86f56e0826ca31_a43l50nti15ha, raw, "0").
+ast_attr[ast_oxc](n4b86f56e0826ca31_a43l50nti15ha, value, 0).
+ast_child[ast_oxc](n4b86f56e0826ca31_2tcd8pikptmh, argument, 0, n4b86f56e0826ca31_a43l50nti15ha).
+ast_child[ast_oxc](n4b86f56e0826ca31_onp754tdgii82, expression, 0, n4b86f56e0826ca31_2tcd8pikptmh).
+ast_child[ast_oxc](n4b86f56e0826ca31_00hnij32k2175, body, 40, n4b86f56e0826ca31_onp754tdgii82).
+ast_node[ast_oxc](n4b86f56e0826ca31_fuugmaoc13ps2, expression_statement, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_fuugmaoc13ps2, 35).
+ast_node[ast_oxc](n4b86f56e0826ca31_hsk573107bhda, unary_expression, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_hsk573107bhda, 35).
+ast_attr[ast_oxc](n4b86f56e0826ca31_hsk573107bhda, operator, "Delete").
+ast_node[ast_oxc](n4b86f56e0826ca31_76h7ttloe6cm, static_member_expression, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_76h7ttloe6cm, 35).
+ast_attr[ast_oxc](n4b86f56e0826ca31_76h7ttloe6cm, optional, false).
+ast_node[ast_oxc](n4b86f56e0826ca31_9ggnaa7kd8uk3, identifier_reference, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_9ggnaa7kd8uk3, 35).
+ast_attr[ast_oxc](n4b86f56e0826ca31_9ggnaa7kd8uk3, variant, "Identifier").
+ast_attr[ast_oxc](n4b86f56e0826ca31_9ggnaa7kd8uk3, name, "o").
+ast_child[ast_oxc](n4b86f56e0826ca31_76h7ttloe6cm, object, 0, n4b86f56e0826ca31_9ggnaa7kd8uk3).
+ast_node[ast_oxc](n4b86f56e0826ca31_5euilhac9omoa, identifier_name, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_5euilhac9omoa, 35).
+ast_attr[ast_oxc](n4b86f56e0826ca31_5euilhac9omoa, name, "a").
+ast_child[ast_oxc](n4b86f56e0826ca31_76h7ttloe6cm, property, 0, n4b86f56e0826ca31_5euilhac9omoa).
+ast_child[ast_oxc](n4b86f56e0826ca31_hsk573107bhda, argument, 0, n4b86f56e0826ca31_76h7ttloe6cm).
+ast_child[ast_oxc](n4b86f56e0826ca31_fuugmaoc13ps2, expression, 0, n4b86f56e0826ca31_hsk573107bhda).
+ast_child[ast_oxc](n4b86f56e0826ca31_00hnij32k2175, body, 41, n4b86f56e0826ca31_fuugmaoc13ps2).
+ast_node[ast_oxc](n4b86f56e0826ca31_bab2fv5lj3302, expression_statement, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_bab2fv5lj3302, 35).
+ast_node[ast_oxc](n4b86f56e0826ca31_dvkceg2pq4qie, unary_expression, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_dvkceg2pq4qie, 35).
+ast_attr[ast_oxc](n4b86f56e0826ca31_dvkceg2pq4qie, operator, "LogicalNot").
+ast_node[ast_oxc](n4b86f56e0826ca31_mp0m5bdulb2c3, identifier_reference, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_mp0m5bdulb2c3, 35).
+ast_attr[ast_oxc](n4b86f56e0826ca31_mp0m5bdulb2c3, variant, "Identifier").
+ast_attr[ast_oxc](n4b86f56e0826ca31_mp0m5bdulb2c3, name, "x").
+ast_child[ast_oxc](n4b86f56e0826ca31_dvkceg2pq4qie, argument, 0, n4b86f56e0826ca31_mp0m5bdulb2c3).
+ast_child[ast_oxc](n4b86f56e0826ca31_bab2fv5lj3302, expression, 0, n4b86f56e0826ca31_dvkceg2pq4qie).
+ast_child[ast_oxc](n4b86f56e0826ca31_00hnij32k2175, body, 42, n4b86f56e0826ca31_bab2fv5lj3302).
+ast_node[ast_oxc](n4b86f56e0826ca31_ir3v6f3kq9eae, expression_statement, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_ir3v6f3kq9eae, 35).
+ast_node[ast_oxc](n4b86f56e0826ca31_7ag1s60pjrgo, unary_expression, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_7ag1s60pjrgo, 35).
+ast_attr[ast_oxc](n4b86f56e0826ca31_7ag1s60pjrgo, operator, "UnaryNegation").
+ast_node[ast_oxc](n4b86f56e0826ca31_ikf8prgtob8hf, identifier_reference, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_ikf8prgtob8hf, 35).
+ast_attr[ast_oxc](n4b86f56e0826ca31_ikf8prgtob8hf, variant, "Identifier").
+ast_attr[ast_oxc](n4b86f56e0826ca31_ikf8prgtob8hf, name, "x").
+ast_child[ast_oxc](n4b86f56e0826ca31_7ag1s60pjrgo, argument, 0, n4b86f56e0826ca31_ikf8prgtob8hf).
+ast_child[ast_oxc](n4b86f56e0826ca31_ir3v6f3kq9eae, expression, 0, n4b86f56e0826ca31_7ag1s60pjrgo).
+ast_child[ast_oxc](n4b86f56e0826ca31_00hnij32k2175, body, 43, n4b86f56e0826ca31_ir3v6f3kq9eae).
+ast_node[ast_oxc](n4b86f56e0826ca31_i02rq9hc5btp8, expression_statement, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_i02rq9hc5btp8, 35).
+ast_node[ast_oxc](n4b86f56e0826ca31_nr1io4hrve3f3, binary_expression, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_nr1io4hrve3f3, 35).
+ast_attr[ast_oxc](n4b86f56e0826ca31_nr1io4hrve3f3, operator, "In").
+ast_node[ast_oxc](n4b86f56e0826ca31_8a5lkct4gugre, string_literal, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_8a5lkct4gugre, 35).
+ast_attr[ast_oxc](n4b86f56e0826ca31_8a5lkct4gugre, value, "a").
+ast_attr[ast_oxc](n4b86f56e0826ca31_8a5lkct4gugre, raw, "'a'").
+ast_child[ast_oxc](n4b86f56e0826ca31_nr1io4hrve3f3, left, 0, n4b86f56e0826ca31_8a5lkct4gugre).
+ast_node[ast_oxc](n4b86f56e0826ca31_en5mppfeueuj7, identifier_reference, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_en5mppfeueuj7, 35).
+ast_attr[ast_oxc](n4b86f56e0826ca31_en5mppfeueuj7, variant, "Identifier").
+ast_attr[ast_oxc](n4b86f56e0826ca31_en5mppfeueuj7, name, "o").
+ast_child[ast_oxc](n4b86f56e0826ca31_nr1io4hrve3f3, right, 0, n4b86f56e0826ca31_en5mppfeueuj7).
+ast_child[ast_oxc](n4b86f56e0826ca31_i02rq9hc5btp8, expression, 0, n4b86f56e0826ca31_nr1io4hrve3f3).
+ast_child[ast_oxc](n4b86f56e0826ca31_00hnij32k2175, body, 44, n4b86f56e0826ca31_i02rq9hc5btp8).
+ast_node[ast_oxc](n4b86f56e0826ca31_83astv67p9j7, expression_statement, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_83astv67p9j7, 35).
+ast_node[ast_oxc](n4b86f56e0826ca31_ndncmositqmf, private_in_expression, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_ndncmositqmf, 35).
+ast_node[ast_oxc](n4b86f56e0826ca31_ujchqoiji1n0d, private_identifier, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_ujchqoiji1n0d, 35).
+ast_attr[ast_oxc](n4b86f56e0826ca31_ujchqoiji1n0d, name, "p").
+ast_child[ast_oxc](n4b86f56e0826ca31_ndncmositqmf, left, 0, n4b86f56e0826ca31_ujchqoiji1n0d).
+ast_node[ast_oxc](n4b86f56e0826ca31_q69p774a949t1, identifier_reference, "all.ts").
+ast_line[ast_oxc](n4b86f56e0826ca31_q69p774a949t1, 35).
+ast_attr[ast_oxc](n4b86f56e0826ca31_q69p774a949t1, variant, "Identifier").
+ast_attr[ast_oxc](n4b86f56e0826ca31_q69p774a949t1, name, "o").
+ast_child[ast_oxc](n4b86f56e0826ca31_ndncmositqmf, right, 0, n4b86f56e0826ca31_q69p774a949t1).
+ast_child[ast_oxc](n4b86f56e0826ca31_83astv67p9j7, expression, 0, n4b86f56e0826ca31_ndncmositqmf).
+ast_child[ast_oxc](n4b86f56e0826ca31_00hnij32k2175, body, 45, n4b86f56e0826ca31_83astv67p9j7).
+ast_attr[ast_oxc](n4b86f56e0826ca31_00hnij32k2175, source_type_language, "TypeScript").
+ast_attr[ast_oxc](n4b86f56e0826ca31_00hnij32k2175, source_type_module_kind, "Module").
+ast_attr[ast_oxc](n4b86f56e0826ca31_00hnij32k2175, source_type_variant, "Standard").
+ast_file[ast_oxc](n4b86f56e0826ca31_00hnij32k2175, "all.ts").

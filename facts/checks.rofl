@@ -3849,3 +3849,9 @@ check_opt("intents_rofl", one_engine, rust).
 
 check_world("intents_screen").
 check_file("intents_screen", "examples/intents/screen.rofl").
+
+-- oxc's raw tree of one file with a construct of every kind the roles read, through the converter
+-- into the roles (models/lang/js/oxc-roles.rofl); the golden is its census of roles
+check_world("oxc_roles").
+check_file("oxc_roles", "models/lang/js/oxc-roles.rofl").
+check_file("oxc_roles", "models/lang/js/fixtures/all.oxc.rofl").

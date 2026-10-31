@@ -369,9 +369,12 @@ Rust field's; an enum wrapper that names it otherwise is the attribute
 `variant` (`class` under `"ClassDeclaration"`). Ids are made as js_ast.ts makes
 them, with the same file prefix: code added above a node leaves its id. Files
 are parsed in parallel and printed in path order, the same bytes for the same
-tree. No model reads `[ast_oxc]` yet: its converter into the roles of the JS
-model comes after the roles vocabulary (w_l2_roles, w_rust_scanner_oxc), and
-the host facts (`fs_*`, `str_*`) are still `npm run scan`'s.
+tree. The JS model does not read `[ast_oxc]` yet. Its converter into the roles
+is `models/lang/js/oxc-roles.rofl` (`rofl load models/lang/js/oxc-roles.rofl
+oxc.rofl`): roles in `[tree]`, `[value]` and `[type]`, checked by the world
+`oxc_roles` over `models/lang/js/fixtures/all.ts`; what it leaves out and
+where it reads the vocabulary its own way is f_oxc_roles_meets_the_vocabulary.
+The host facts (`fs_*`, `str_*`) are still `npm run scan`'s.
 
 Measured on vscode src (11 055 files, 4 cores, release): 72 s and 99.5 M
 facts, 8.9 GB of text, most of the wall writing it; on vscode src/vs/base (499
