@@ -577,9 +577,11 @@ nearest_v[flow](F, X)  :- nearest_v[flow](F, P), not fn_node[code](P),
 -- is dead by name in its file, so its own calls are dead too; a mention anywhere
 -- else (`module.exports = main`, a call from a live site) makes it live.
 -- Reading the file as the library is the default VIEW: a world that asks about
--- the file as the script node runs says `reads_the_file_as(script)`, and then
--- nothing is dead.
+-- one file as the script node runs says `runs_as_script("path/of/it.js")`, and
+-- nothing in that file is dead; `reads_the_file_as(script)` says it of every file.
+-- An exported function is reached from outside, so it is never dead by name.
 edb(reads_the_file_as).
+edb(runs_as_script).
 read_as_script() :- reads_the_file_as(script).
 entry_test[code](T) :- ast_node[code](T, unary_expression, _), ast_attr[code](T, operator, "!"),
                        ast_child[code](T, argument, 0, M), module_member[code](M, "parent").
@@ -603,13 +605,15 @@ require_main[code](M) :- ast_node[code](M, member_expression, File), ast_attr[co
                          ast_child[code](M, object, 0, O), free_global[code](O, "require", File).
 
 dead_arm[code](A) :- entry_test[code](T), ast_child[code](S, test, 0, T), ast_child[code](S, consequent, 0, A),
-                     not read_as_script().
+                     ast_node[code](S, _, File), not read_as_script(), not runs_as_script(File).
 dead_arm[code](A) :- imported_test[code](T), ast_child[code](S, test, 0, T), ast_child[code](S, alternate, 0, A),
-                     not read_as_script().
+                     ast_node[code](S, _, File), not read_as_script(), not runs_as_script(File).
 dead_arm[code](A) :- entry_test[code](T), ast_child[code](S, left, 0, T), ast_node[code](S, logical_expression, _),
-                     ast_attr[code](S, operator, "&&"), ast_child[code](S, right, 0, A), not read_as_script().
+                     ast_attr[code](S, operator, "&&"), ast_child[code](S, right, 0, A),
+                     ast_node[code](S, _, File), not read_as_script(), not runs_as_script(File).
 dead_arm[code](A) :- imported_test[code](T), ast_child[code](S, left, 0, T), ast_node[code](S, logical_expression, _),
-                     ast_attr[code](S, operator, "||"), ast_child[code](S, right, 0, A), not read_as_script().
+                     ast_attr[code](S, operator, "||"), ast_child[code](S, right, 0, A),
+                     ast_node[code](S, _, File), not read_as_script(), not runs_as_script(File).
 
 dead_in[code](A, C) :- dead_arm[code](A), ast_within[code](A, C).
 dead_site[code](C)  :- dead_in[code](_, C), call_like_v(K), ast_node[code](C, K, _).
@@ -619,6 +623,9 @@ mention[code](F, E)     :- sees_decl[code](E, F), ast_node[code](F, function_dec
 mention[code](F, E)     :- sees_binder[code](E, D), binder[code](D, _, F, _), fn_node[code](F),
                            ast_child[code](D, id, 0, I), E != I.
 live_mention[code](F)   :- mention[code](F, E), not dead_in[code](_, E).
+live_mention[code](F)   :- exported_decl[code](F).
+exported_decl[code](F)  :- ast_node[code](E, export_named_declaration, _), ast_child[code](E, declaration, 0, F).
+exported_decl[code](F)  :- ast_node[code](E, export_default_declaration, _), ast_child[code](E, declaration, 0, F).
 dead_fn[code](F)        :- mention[code](F, _), not live_mention[code](F).
 dead_site[code](C)      :- dead_fn[code](F), ast_within[code](F, C), call_like_v(K), ast_node[code](C, K, _).
 
@@ -883,7 +890,7 @@ member_value[flow](CD, Key, M) :- obj_like[flow](CD), ast_child[code](CD, body, 
 -- another file's: the write is published for it (rules/js-surface.rofl) and read back.
 sx_mwrite[surface](O, Key, V) :- may_be_node[flow](Obj, O), ast_child[code](L, object, 0, Obj),
                                  selects[flow](L, Key),
-                                 ast_child[code](A, left, 0, L), plain_assign[flow](A),
+                                 ast_child[code](A, left, 0, L), plain_assign[flow](A), not store_sym[flow](A),
                                  ast_child[code](A, right, 0, V).
 member_value[flow](O, Key, V) :- sx_mwrite[surface](O, Key, V).
 
