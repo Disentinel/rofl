@@ -422,7 +422,10 @@ async function openGitHub(ctx: vscode.ExtensionContext, link?: string) {
   link ??= await vscode.window.showInputBox({ prompt: 'A notebook on GitHub, private ones too: its link, or owner/repo/path.rofl.md@ref', placeHolder: 'https://github.com/owner/repo/blob/main/notebook.rofl.md' });
   if (!link) return;
   try {
-    const file = await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: 'ROFL: reading the notebook from GitHub' }, () => fetchNotebook(link!, ctx.globalStorageUri.fsPath));
+    const file = await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: 'ROFL: reading the notebook from GitHub' }, () => fetchNotebook(link!, ctx.globalStorageUri.fsPath, async () => {
+      const s = await vscode.authentication.getSession('github', ['repo'], { createIfNone: true });
+      return { token: s.accessToken, login: s.account.label };
+    }));
     await vscode.window.showNotebookDocument(await vscode.workspace.openNotebookDocument(vscode.Uri.file(file)));
   } catch (e) { void vscode.window.showErrorMessage(`ROFL: ${(e as Error).message}`); }
 }

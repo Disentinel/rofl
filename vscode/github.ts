@@ -1,6 +1,5 @@
-// A notebook opened from GitHub: the editor's own GitHub sign-in reads it and every file it reads, each into a copy under the extension's storage,
+// A notebook opened from GitHub: a token of the editor's own GitHub sign-in reads it and every file it reads, each into a copy under the extension's storage,
 // and the copy opens as any notebook on disk. A link the account cannot read says why.
-import * as vscode from 'vscode';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { builtin, globRe, normal, parseFront } from '../notebook/front.ts';
@@ -37,11 +36,11 @@ async function whyNot(get: ReturnType<typeof api>, login: string, repo: string, 
 }
 
 /** The notebook, the files its `reads:` and `code:` name, and the data its code imports, copied under `store`; the copy of the notebook. */
-export async function fetchNotebook(link: string, store: string): Promise<string> {
+export async function fetchNotebook(link: string, store: string, signIn: () => Promise<{ token: string; login: string }>): Promise<string> {
   const at = ghOf(link);
   if (!at) throw new Error(`Not a GitHub link to a notebook: ${link}. Give https://github.com/owner/repo/blob/ref/path.rofl.md or owner/repo/path.rofl.md@ref.`);
-  const session = await vscode.authentication.getSession('github', ['repo'], { createIfNone: true });
-  const get = api(session.accessToken), root = join(store, 'github', ...at.repo.split('/'), at.ref);
+  const who = await signIn();
+  const get = api(who.token), root = join(store, 'github', ...at.repo.split('/'), at.ref);
   const text = async (p: string) => { const r = await get(`repos/${at.repo}/contents/${p.split('/').map(encodeURIComponent).join('/')}?ref=${encodeURIComponent(at.ref)}`, 'application/vnd.github.raw'); return r?.ok ? r.text() : undefined; };
   let tree: Promise<string[]> | undefined;
   const files = () => tree ??= get(`repos/${at.repo}/git/trees/${encodeURIComponent(at.ref)}?recursive=1`)
@@ -51,7 +50,7 @@ export async function fetchNotebook(link: string, store: string): Promise<string
     if (seen.has(p)) continue;
     seen.add(p);
     const t = await text(p);
-    if (t === undefined) { if (p === at.path) throw new Error(await whyNot(get, session.account.label, at.repo, at.ref, at.path)); continue; }
+    if (t === undefined) { if (p === at.path) throw new Error(await whyNot(get, who.login, at.repo, at.ref, at.path)); continue; }
     mkdirSync(dirname(join(root, p)), { recursive: true });
     writeFileSync(join(root, p), t);
     const dir = p.replace(/[^/]*$/, '');
