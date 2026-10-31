@@ -51,7 +51,7 @@ const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..')
 const BOOT = path.join(ROOT, 'boot.rofl');
 const LOAD = path.join(ROOT, 'rust/target', process.env.ROFL_PROFILE || 'release', 'rofl');
 
-type Op = 'why' | 'whyall' | 'whynot' | 'excise' | 'ask';
+type Op = 'why' | 'whyall' | 'whynot' | 'whynotall' | 'excise' | 'ask';
 type Q = { op: Op; query: string; depth?: number; nodes?: number };
 /** An answer: refused or not, its text, and for a whynot whether the
  *  literal holds (the protocol's `holds`; rofl load prints text alone). */
@@ -130,7 +130,7 @@ const ASKED: Record<string, Q[]> = {
   // a relation a file of the world's index concludes and the world does not load, and one no file concludes
   whynot_unloaded: ['wu_linked(a)', 'wu_orphan(a)', 'wu_reaches(a,b)'].map((q): Q => ({ op: 'whynot', query: q })),
   // walked from what the question names, open or ground, and the matches left said (w_whynot_stays_near_its_target)
-  whynot_near: ['wn_site(net)', 'wn_site(F)', 'wn_leak("secret")', 'wn_leak(T)', 'wn_nowhere(x)'].map((q): Q => ({ op: 'whynot', query: q })),
+  whynot_near: ['wn_site(net)', 'wn_site(F)', 'wn_leak("secret")', 'wn_leak(T)', 'wn_nowhere(x)'].flatMap((q): Q[] => [{ op: 'whynot', query: q }, { op: 'whynotall', query: q }]),
   // asking a sealed body refuses, a hole and a partial answer (f_an_ask_answered_a_sealed_body)
   sealed_provenance: ['derived_by(F,R,T)', 'derived_by(F,R,0)'].map((q): Q => ({ op: 'ask', query: q })),
 };
@@ -188,6 +188,7 @@ function questions(r: Rofl, budget: number | undefined, first: boolean, excise =
     // its first argument open, so that a walk by file parts at a premise
     const open = failing.replace(/^([^(]+)\([^,()"]+([,)])/, '$1(Who$2');
     if (open !== failing) qs.push({ op: 'whynot', query: open });
+    qs.push({ op: 'whynotall', query: failing });
     // a plain world's refusal echoes the question exactly as typed, padding
     // and all; whynot's holds line trims it
     qs.push({ op: 'why', query: ` ${failing}` }, { op: 'why', query: `${failing} ` }, { op: 'whyall', query: `  ${failing}` });
@@ -270,12 +271,13 @@ function expected(r: Rofl, q: Q, budget?: number): A {
       if (a.error !== undefined) return { ok: false, text: a.error };
       return { ok: true, text: askText(a.rows.map((x) => x.text), (a.shrugs ?? []).map((x) => `${x.text} :: ${x.line}`), a.partial), repl: replAsk(a) };
     }
-    if (q.op === 'whynot') {
+    if (q.op === 'whynot' || q.op === 'whynotall') {
       // the aggregate evaluator's whynot hands back the parser's refusal as its text
-      const { holds, text: t } = r.whynot(q.query, { budget, depth: q.depth, nodes: q.nodes });
+      const all = q.op === 'whynotall';
+      const { holds, text: t } = r.whynot(q.query, { budget, depth: q.depth, nodes: q.nodes, all });
       let files: string;
       try { files = byFileText(r.whynotFiles(q.query, LETTERS, { budget, depth: q.depth, nodes: q.nodes })); } catch (e) { files = `refused: ${(e as Error).message}`; }
-      return { ...dag({ ok: !/^line \d+: /.test(t), text: t, holds }, () => r.whynot(q.query, { budget, depth: q.depth, nodes: q.nodes, tree: true }).text), files };
+      return { ...dag({ ok: !/^line \d+: /.test(t), text: t, holds }, () => r.whynot(q.query, { budget, depth: q.depth, nodes: q.nodes, all, tree: true }).text), files };
     }
     const x = r.excise(q.query, { budget });
     return x.ok ? { ok: true, text: exciseText(x.removed, x.added) } : { ok: false, text: `error: ${x.error}` };
@@ -352,8 +354,8 @@ async function served(port: RoflPort, w: World, qs: Q[]): Promise<A[]> {
       if (process.env.WHYCHECK_TRACE) process.stderr.write(`whycheck:   serve ${q.op} ${q.query}\n`);
       try {
         if (q.op === 'why' || q.op === 'whyall') out.push({ ok: true, text: await s.why(q.query, q.op === 'whyall' ? { all: true } : {}) });
-        else if (q.op === 'whynot') {
-          const x = await s.whynot(q.query, { depth: q.depth, nodes: q.nodes });
+        else if (q.op === 'whynot' || q.op === 'whynotall') {
+          const x = await s.whynot(q.query, { depth: q.depth, nodes: q.nodes, all: q.op === 'whynotall' });
           let files: string;
           try { files = byFileText(await s.whynotFiles(q.query, LETTERS, { depth: q.depth, nodes: q.nodes })); } catch (e) { files = `refused: ${(e as Error).message}`; }
           out.push({ ok: true, text: x.text, holds: x.holds, files });
@@ -394,7 +396,7 @@ function cli(w: World, qs: Q[], want: A[], env: Record<string, string> = {}): { 
   const groups = new Map<string, number[]>();
   qs.forEach((q, i) => { const g = groupOf(qs, want, i); groups.set(g, [...(groups.get(g) ?? []), i]); });
   const opts = loadOpts(w);
-  const flag = (op: Op) => (op === 'whyall' ? '--why-all' : `--${op}`);
+  const flag = (op: Op) => (op === 'whyall' ? '--why-all' : op === 'whynotall' ? '--whynot-all' : `--${op}`);
   for (const [g, idx] of groups) {
     const b = boundsOf(qs[idx[0]]);
     const bounds = b ? ['--depth', b.split('/')[0], '--nodes', b.split('/')[1]] : [];

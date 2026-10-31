@@ -1,4 +1,4 @@
-// The model over the code evaluated by the Rust engine (playground/engine.ts), the default wherever its binary is. The world stays in the engine and the host
+// The model over the code, and the cells over it, evaluated by the Rust engine (playground/engine.ts), the default wherever its binary is. The world stays in the engine and the host
 // reads what it renders, a relation's rows, a fact, its firings, a cell, each when first asked: every answer, why and picture is then read by the TypeScript
 // engine's own code from the Rust engine's world, so the two engines say the same thing, and a world of millions of facts never crosses the pipe whole.
 import { accessSync, chmodSync, constants, existsSync } from 'node:fs';
@@ -81,6 +81,30 @@ export class RustEngine implements Engine {
     return this.world(session, walls, partial);
   }
 
+  over(world: Rofl, texts: string[], rels: string[], walls: Walls): { world: Rofl; errors: string[][] } | undefined {
+    const from = this.sessions.get(world);
+    if (from === undefined) return undefined;
+    const session = this.slot('cells', from);
+    if (rels.length) this.limited({ op: 'assert', session, rofl: asksOf(rels) }, walls.stop);
+    return this.cells(session, texts, walls);
+  }
+
+  /** A fresh fork of `from` in `slot`, the world the slot held and the excised ones closed. */
+  private slot(slot: 'base' | 'cells', from: number): number {
+    if (this.worlds[slot]) this.call({ op: 'close', session: this.worlds[slot] });
+    for (const f of this.forks.splice(0)) this.call({ op: 'close', session: f });
+    return this.worlds[slot] = this.call({ op: 'fork', session: from }).session;
+  }
+
+  /** The texts loaded together, each alone only when that is refused, to say which; then evaluated. */
+  private cells(session: number, texts: string[], walls: Walls): { world: Rofl; errors: string[][] } {
+    const errors: string[][] = texts.map(() => []), all = texts.filter((x) => x.trim()).join('\n');
+    const load = (rofl: string) => { try { this.limited({ op: 'load', session, rofl }, walls.stop); return undefined; } catch (e) { return (e as Error).message.replace(/^the Rust engine refused load: /, '').split('\n'); } };
+    if (all.trim() && load(all)) texts.forEach((x, i) => { if (x.trim()) errors[i] = load(x) ?? []; });
+    const { partial } = this.limited({ op: 'evaluate', session }, walls.stop);
+    return { world: this.world(session, walls, partial), errors };
+  }
+
   /** A request under what the run has left of its clock and heap; a stop by either is said to the run. */
   private limited(req: Record<string, unknown>, stop?: Stop) {
     const limit = stop?.left?.(), r = this.call(limit ? { ...req, limit } : req);
@@ -102,15 +126,9 @@ export class RustEngine implements Engine {
       this.call({ op: 'load', session: s, rofl: model });
       this.core = { model, session: s };
     }
-    if (this.worlds[slot]) this.call({ op: 'close', session: this.worlds[slot] });
-    for (const f of this.forks.splice(0)) this.call({ op: 'close', session: f });
-    const session = this.worlds[slot] = this.call({ op: 'fork', session: this.core.session }).session;
+    const session = this.slot(slot, this.core.session);
     try { for (const rofl of chunksOf(code)) this.limited({ op: 'assert', session, rofl }, walls.stop); } catch (e) { throw new Error(`the code's facts were refused, so nothing was asked: ${(e as Error).message}`); }
-    const errors: string[][] = texts.map(() => []), all = texts.filter((x) => x.trim()).join('\n');
-    const load = (rofl: string) => { try { this.limited({ op: 'load', session, rofl }, walls.stop); return undefined; } catch (e) { return (e as Error).message.replace(/^the Rust engine refused load: /, '').split('\n'); } };
-    if (all.trim() && load(all)) texts.forEach((x, i) => { if (x.trim()) errors[i] = load(x) ?? []; });
-    const { partial } = this.limited({ op: 'evaluate', session }, walls.stop);
-    return { world: this.world(session, walls, partial), errors };
+    return this.cells(session, texts, walls);
   }
 }
 

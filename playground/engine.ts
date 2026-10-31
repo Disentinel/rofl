@@ -19,6 +19,9 @@ export interface Engine {
   excised(world: Rofl, lits: string[], walls: Walls): { world: Rofl; errors: string[] };
   /** A world this engine evaluated, asked `rels` besides what it asks: the rules the larger cone adds run over its store (docs/demand-cones.md). */
   asked(world: Rofl, rels: string[], walls: Walls): Rofl;
+  /** The cells' texts loaded in a fork of a world this engine evaluated and asked `rels`, the world left as it was: an edit to a cell then costs the cells.
+   *  Undefined where the engine has no such world, and the host evaluates the cells itself. */
+  over?(world: Rofl, texts: string[], rels: string[], walls: Walls): { world: Rofl; errors: string[][] } | undefined;
 }
 
 /** The facts that ask a world for `rels`: it then evaluates only the rules they reach (docs/demand-cones.md). */

@@ -176,9 +176,11 @@ On self, mcp, cli_exits and util, five questions each (`calls(A, B)`, `calls(F, 
 The two-answer `host_site` question reaches as much as `calls(A, B)` with 577 answers, and every
 question reaches every file: name resolution walks the parents of each node and the flow is one
 component with the calls, so demand covers the tree in three or four steps. Of what is reached, the
-scanner's AST is 43-44% and per-node tree walks 21-22%, besides every row of the `ast_within`
-closure. The pattern-level kernel would save about a third of the relation cone on this model;
-the declared tree and volumes by file with `[surface]` are where the rest is.
+scanner's AST is 43-44% and per-node tree walks 21-22%, besides the rows of the `ast_within`
+closure, which the declared tree already does not store (they are not in the shares; the aliases
+`ast_in`, `ast_name`, `ast_value` are, since the world keeps witnesses: without them 56-62%). The
+pattern-level kernel would save about a third of the relation cone on this model; the rest is
+by data, volumes by file with `[surface]`.
 
 ## Growing a cone, as built (incremental addition)
 

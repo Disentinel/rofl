@@ -262,7 +262,7 @@ export class Host {
   private baseAsks: Set<string> | undefined;   // what the kept base was asked; undefined: every rule
   rows = 50;   // answers kept per line
 
-  /** `engine`: what evaluates the model over the code (playground/engine.ts); the cells and everything read after are the TypeScript engine's. */
+  /** `engine`: what evaluates the model over the code and the cells over it (playground/engine.ts); the TypeScript engine evaluates the cells only where the engine cannot. */
   readonly engine: Engine;
   constructor(engine: Engine = typescript) { this.engine = engine; }
 
@@ -411,13 +411,19 @@ export class Host {
     lap('model');
     // not layered: the engine evaluates the code and the cells together
     const all = texts.filter((x) => x.trim()).join('\n');
-    let f: Rofl;
+    let f: Rofl, forked: ReturnType<NonNullable<Engine['over']>> | undefined;
     if (!base) {
       try {
         const r = this.engine.withCells(this.core, this.model, [...Object.keys(files).length ? sc.lines : [], ...cone ? [asksOf(cone)] : []], texts, { budget: BUDGET, space: SPACE, stop });
         r.errors.forEach((e, i) => outs[i].errors.push(...e));
         f = r.world; partial ||= f.store.partialEval;
       } catch (e) { return done((e as Error).message); }
+      lap('fork'); lap('load');
+    } else if (this.engine.over && remote(base)) {
+      // the cells in a fork of the engine's own world, which keeps the model's conclusions where they were derived
+      try { forked = this.engine.over(base, texts, [...heads], { budget: BUDGET, space: SPACE, stop }); } catch (e) { return done((e as Error).message); }
+      forked!.errors.forEach((e, i) => outs[i].errors.push(...e));
+      f = forked!.world; partial ||= f.store.partialEval;
       lap('fork'); lap('load');
     } else {
       f = this.shell!.fork();
@@ -431,9 +437,11 @@ export class Host {
       try { partial ||= f.evaluate(BUDGET).partial; } catch (e) { return done((e as Error).message); }
     }
     evaluatedWorld = f;
+    // the model's rows are read in its own world, unless the cells' world holds them too
+    const lower = forked ? null : base;
     lap('evaluate');
     // a proof reads the cells' facts in their world and the model's in the kept one, so a why walks down into the model without evaluating it again
-    const w = base ? proofs(base.store, f.store, heads, this.kernelRels, new Set(over)) : f;
+    const w = base && !forked ? proofs(base.store, f.store, heads, this.kernelRels, new Set(over)) : f;
     // a whynot over more than one file is also a table of the files: a file is the key prefix of its nodes
     const vols = [...new Map(Object.entries(nodes).map(([id, n]) => [id.slice(0, id.lastIndexOf('_')), n.file]))];
     const byFile = (lit: string): FileRow[] | undefined => {
@@ -442,7 +450,7 @@ export class Host {
       try { rows = w.whynotFiles(lit, vols).filter((r) => r.found || r.stops.length); } catch { return; }
       return rows.length < 2 ? undefined : rows.map((r) => ({ file: r.file, found: r.found, stops: r.stops.map((x) => plain(vocab.sayAll(x))), why: plain(vocab.sayAll(r.text)) }));
     };
-    unresolved = (base ?? f).query('unresolved_relative[code](F, L, S)').rows.map((r) => `${unquote(r.bindings.F)}:${r.bindings.L} ${r.bindings.S}`).sort();
+    unresolved = (lower ?? f).query('unresolved_relative[code](F, L, S)').rows.map((r) => `${unquote(r.bindings.F)}:${r.bindings.L} ${r.bindings.S}`).sort();
     this.last = w;
     // a relation the cells read and nothing defines, a cell's left-out rule the usual cause: what rests on it is empty for no reason in the code
     /** A rule's positive conditions, each with the constants its equalities give its variables (`T = platfrom`, `F is "src/a.ts"`), and
@@ -494,7 +502,7 @@ export class Host {
         if (i === ordered.length) return true;
         const l = ordered[i];
         if (l.persp.k !== 'a' || l.args.some((t) => t.k === 'f')) return undefined;
-        const store = (base && !heads.has(l.rel) ? base : f).store, val = (t: Term) => t.k === 'v' ? b.get(t.name) : canonTerm(t);
+        const store = (lower && !heads.has(l.rel) ? lower : f).store, val = (t: Term) => t.k === 'v' ? b.get(t.name) : canonTerm(t);
         const pos = l.args.flatMap((t, k) => val(t) === undefined ? [] : [k]);
         const rows = (pos.length && store.indexed(l.rel, l.persp.name) ? store.argMatches(l.rel, l.persp.name, l.args.length, pos, pos.map((k) => val(l.args[k])!)) : null) ?? store.relPersp(l.rel, l.persp.name);
         let gaveUp = false;
@@ -519,7 +527,7 @@ export class Host {
       const out = new Set<string>();
       columns.set(key, out);
       let steps = VACUITY_STEPS;
-      for (const r of (base && !heads.has(l.rel) ? base : f).store.relPersp(l.rel, (l.persp as { name: string }).name)) { if (--steps < 0) break; if (r.args.length === l.args.length) out.add(canonTerm(r.args[k])); }
+      for (const r of (lower && !heads.has(l.rel) ? lower : f).store.relPersp(l.rel, (l.persp as { name: string }).name)) { if (--steps < 0) break; if (r.args.length === l.args.length) out.add(canonTerm(r.args[k])); }
       return out;
     };
     const plainOf = (c: string) => c.replace(/^["'`]|["'`]$/g, '');
@@ -618,16 +626,16 @@ export class Host {
           if (a.kind === 'excise' || a.kind === 'draw') continue;
           const english = a.q && { line: a.q.line, note: a.q.note };
           if (a.q?.blank) {
-            const b = a.q.blank, over = base && !heads.has(relOf(a.lit)) ? base : f, q = over.query(owned(b.lit));
+            const b = a.q.blank, over = lower && !heads.has(relOf(a.lit)) ? lower : f, q = over.query(owned(b.lit));
             outs[i].errors.push(`${a.text}: ${b.say([...new Set(q.rows.map((r) => r.bindings[b.v]).filter(Boolean).map((x) => x.startsWith('"') ? unquote(x) : x))])}`); continue;
           }
           try {
             if (a.kind === 'why') { const y = w.why(a.lit); outs[i].lines.push({ unasked: unread[i], kind: 'why', text: a.text, lit: a.lit, rows: [], total: 0, ok: y.ok, why: plain(vocab.sayAll(y.text)), chain: y.ok ? chainOf(y.text, nodes, (k) => plain(vocab.say(k) ?? k)) : undefined, proof: y.ok ? this.explain(a.lit) : undefined, note: nameless(a.lit, a.text), english }); continue; }
-            if (a.kind === 'whynot') { const y = w.whynot(a.lit); outs[i].lines.push({ unasked: unread[i], kind: 'whynot', text: a.text, lit: a.lit, rows: [], total: 0, ok: !y.holds, why: plain(vocab.sayAll(y.text)), files: byFile(a.lit), note: nameless(a.lit, a.text), english }); continue; }
+            if (a.kind === 'whynot') { const y = w.whynot(a.lit, { all: this.rows === Infinity }); outs[i].lines.push({ unasked: unread[i], kind: 'whynot', text: a.text, lit: a.lit, rows: [], total: 0, ok: !y.holds, why: plain(vocab.sayAll(y.text)), files: byFile(a.lit), note: nameless(a.lit, a.text), english }); continue; }
           } catch (e) { outs[i].errors.push(`${a.text}: ${(e as Error).message}`); continue; }
           if (conjunction(a.lit)) { outs[i].errors.push(`${a.text}: a question is one literal; write a rule that joins these and ask its head`); continue; }
           if (this.foreign.has(relOf(a.lit)) && !/^\w+\[/.test(a.lit)) { outs[i].lines.push({ unasked: NOT_OURS(relOf(a.lit), home), kind: a.kind, text: a.text, lit: a.lit, rows: [], total: 0, ok: false }); continue; }
-          const q = (base && !heads.has(relOf(a.lit)) ? base : f).query(a.lit);
+          const q = (lower && !heads.has(relOf(a.lit)) ? lower : f).query(a.lit);
           if (q.error) { outs[i].errors.push(`${a.text}: ${q.error}`); continue; }
           const rows = q.rows.slice(0, this.rows).map((r) => { const literal = ground(a.lit, r.bindings); return { literal: plain(literal), sentence: plain(vocab.say(literal) ?? literal) }; });
           if (a.kind === 'never' || a.kind === 'unsure') seen[a.kind === 'never' ? 'failing' : 'blind'].push(...q.rows.map((r) => Object.values(r.bindings)));
@@ -681,7 +689,7 @@ export class Host {
       for (const lit of ['unknown[epistemic](X)', 'unknown(X)']) { const q = f.query(lit); if (!q.error) seen.unknown.push(...q.rows.map((r) => [r.bindings.X])); }
     }
     const world = (r: Rofl, proofsOf: Rofl): World => ({
-      rows: (lit) => { const q = (base && r === f && !heads.has(relOf(lit)) ? base : r).query(lit); return q.error || q.unpopulatable ? null : q.rows.map((x) => x.bindings); },
+      rows: (lit) => { const q = (lower && r === f && !heads.has(relOf(lit)) ? lower : r).query(lit); return q.error || q.unpopulatable ? null : q.rows.map((x) => x.bindings); },
       from: (lit) => {
         const wit = proofsOf.store.witnessOf(keyOf(lit)); if (!wit) return null;
         const keys = wit.prems.flatMap((p) => p.t === 'fact' ? [p.key] : []);

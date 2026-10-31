@@ -4,7 +4,7 @@
 //!   rofl load --seed SEED.json [flags]          evaluate a snapshot; `--bytes` measures it
 //!   rofl ask L [flags] FILE...                  the rows of L, one per line
 //!   rofl why [--all] L [flags] FILE...          what proves L
-//!   rofl whynot L [flags] FILE...               what stops L
+//!   rofl whynot [--all] L [flags] FILE...       what stops L: the nearest failure, or every one
 //!   rofl excise F [flags] FILE...               what taking the base fact F out changes
 //!   rofl serve [FILE...]                        one JSON request per line in, one answer out; the files are session 1
 //!   rofl render [--out DIR] FILE...             the sentence form of the files
@@ -73,13 +73,13 @@ fn run(args: Vec<String>) {
             None => load::main(args),
         },
         "ask" | "why" | "whynot" | "excise" => {
-            let all = cmd == "why" && args.first().is_some_and(|a| a == "--all");
+            let all = matches!(cmd.as_str(), "why" | "whynot") && args.first().is_some_and(|a| a == "--all");
             if all { args.remove(0); }
             if args.is_empty() {
                 eprintln!("rofl {cmd} needs the question first, then the files");
                 std::process::exit(load::USAGE);
             }
-            let flag = if all { "--why-all".to_string() } else { format!("--{cmd}") };
+            let flag = if all { format!("--{cmd}-all") } else { format!("--{cmd}") };
             args.insert(0, flag);
             load::verb(args)
         }
