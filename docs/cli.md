@@ -16,7 +16,8 @@ stderr with the package to install.
 rofl ask    'reaches(a, X)'      boot.rofl world.rofl    # the rows, one per line
 rofl why    'reaches(a, c)'      boot.rofl world.rofl    # what proves it
 rofl why --all 'total(a, 7)'     boot.rofl world.rofl    # every member of every cell
-rofl whynot 'reaches(c, a)'      boot.rofl world.rofl    # what stops it; --depth N --nodes N bound the walk
+rofl whynot 'reaches(c, a)'      boot.rofl world.rofl    # what stops it: the nearest failure; --depth N --nodes N bound the walk
+rofl whynot --all 'reaches(c, a)' boot.rofl world.rofl   # every failure the walk met
 rofl excise 'calls(a, b)'        boot.rofl world.rofl    # what taking the base fact out changes: - gone, + new
 rofl load                        boot.rofl world.rofl    # the whole state
 rofl serve [FILE...]                                     # one JSON request a line, one answer a line; the files are session 1
@@ -34,6 +35,18 @@ A question verb is `rofl load` with that one question, so every flag of
 `--retract`, `--below`, `--kept`). `rofl load --ask L --why L --whynot L --excise F`
 asks several in one run, the answers in that order with an empty line after
 each.
+
+**A whynot prints the nearest failure.** The walk goes down every rule that could
+conclude the literal and every candidate it follows, as far as `--depth` and
+`--nodes` let it; it prints one chain of it: at each literal the rule, and at
+each rule the failed premise, that leave the fewest premises unmet (those after
+the one it failed at, and one at the chain's end: a premise nothing supports, a
+negation blocked, a builtin false; a chain the bounds cut is farther than any
+that ends), the first of equal ones, with the `followed 16 of N` lines of the
+rules it keeps. `  (every failure: --all)` closes it when it left something
+out. `rofl whynot --all`, `rofl load --whynot-all L` and the protocol's
+`"all": true` print the whole walk; `explain_request(whynot, L)` stores the
+whole walk, and a notebook prints it under `--all`.
 
 **The text is the reference's.** `why`, `whynot` and `excise` print what
 `src/api.ts` prints; `ask` prints what the REPL's `?` prints with the

@@ -673,7 +673,12 @@ impl Server {
                     .ok_or_else(|| format!("whynot `{k}` takes an integer, not {v}")),
             }
         };
-        let b = WhynotBounds::clamped(bound("depth")?, bound("nodes")?);
+        let all = match r.get("all") {
+            None | Some(Value::Null) => false,
+            Some(Value::Bool(b)) => *b,
+            Some(v) => return Err(format!("whynot `all` takes true or false, not {v}")),
+        };
+        let b = WhynotBounds { all, ..WhynotBounds::clamped(bound("depth")?, bound("nodes")?) };
         if let Some(v) = r.get("files") {
             let vols: Vec<(String, String)> = serde_json::from_value(v.clone()).map_err(|_| "whynot `files` takes [[prefix, file], ...]".to_string())?;
             let rows = self.get(r)?.whynot_files(&q, &b, &vols)?;

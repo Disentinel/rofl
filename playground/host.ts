@@ -631,7 +631,7 @@ export class Host {
           }
           try {
             if (a.kind === 'why') { const y = w.why(a.lit); outs[i].lines.push({ unasked: unread[i], kind: 'why', text: a.text, lit: a.lit, rows: [], total: 0, ok: y.ok, why: plain(vocab.sayAll(y.text)), chain: y.ok ? chainOf(y.text, nodes, (k) => plain(vocab.say(k) ?? k)) : undefined, proof: y.ok ? this.explain(a.lit) : undefined, note: nameless(a.lit, a.text), english }); continue; }
-            if (a.kind === 'whynot') { const y = w.whynot(a.lit); outs[i].lines.push({ unasked: unread[i], kind: 'whynot', text: a.text, lit: a.lit, rows: [], total: 0, ok: !y.holds, why: plain(vocab.sayAll(y.text)), files: byFile(a.lit), note: nameless(a.lit, a.text), english }); continue; }
+            if (a.kind === 'whynot') { const y = w.whynot(a.lit, { all: this.rows === Infinity }); outs[i].lines.push({ unasked: unread[i], kind: 'whynot', text: a.text, lit: a.lit, rows: [], total: 0, ok: !y.holds, why: plain(vocab.sayAll(y.text)), files: byFile(a.lit), note: nameless(a.lit, a.text), english }); continue; }
           } catch (e) { outs[i].errors.push(`${a.text}: ${(e as Error).message}`); continue; }
           if (conjunction(a.lit)) { outs[i].errors.push(`${a.text}: a question is one literal; write a rule that joins these and ask its head`); continue; }
           if (this.foreign.has(relOf(a.lit)) && !/^\w+\[/.test(a.lit)) { outs[i].lines.push({ unasked: NOT_OURS(relOf(a.lit), home), kind: a.kind, text: a.text, lit: a.lit, rows: [], total: 0, ok: false }); continue; }

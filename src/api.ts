@@ -60,7 +60,7 @@ export interface EvalReport { partial: boolean; peakRows: number; space: number;
  *  stop), 2 also explains each of those premises, and so on. `nodes` caps
  *  how many literals the whole tree may explain. Both are hard stops and
  *  both announce themselves in the output when they fire. */
-export interface WhynotOpts { budget?: number; depth?: number; nodes?: number; /** write the tree, not the DAG (scripts/why_dag.ts) */ tree?: boolean; }
+export interface WhynotOpts { budget?: number; depth?: number; nodes?: number; /** write the tree, not the DAG (scripts/why_dag.ts) */ tree?: boolean; /** every failure the walk met, not only the nearest */ all?: boolean; }
 
 const DEFAULT_BUDGET = 100_000;
 /** How large a relation `query` will enumerate to learn its arity. Small
@@ -1053,7 +1053,7 @@ export class Rofl {
     // program's is a refusal.
     ev.dag = !opts.tree;
     try {
-      const [holds, t] = ev.questioned(budget, () => ev.whynotText(lit, { maxDepth: opts.depth ?? DEFAULT_WHYNOT_DEPTH, maxNodes: opts.nodes ?? DEFAULT_WHYNOT_NODES },
+      const [holds, t] = ev.questioned(budget, () => ev.whynotText(lit, { maxDepth: opts.depth ?? DEFAULT_WHYNOT_DEPTH, maxNodes: opts.nodes ?? DEFAULT_WHYNOT_NODES, all: opts.all },
         typeof text === 'string' ? text.trim() : undefined));
       return { holds, text: t };
     } catch (e) {
@@ -1151,7 +1151,7 @@ export class Rofl {
         if (outside !== undefined) { text = outside; ok = false; } else try {
           if (k === 'why') text = ev.questioned(budget, () => ev.whyText(lit));
           else if (k === 'why_all') text = ev.questioned(budget, () => ev.whyText(lit, Infinity));
-          else if (k === 'whynot') text = ev.questioned(budget, () => ev.whynotText(lit, { maxDepth: 3, maxNodes: 64 }))[1];
+          else if (k === 'whynot') text = ev.questioned(budget, () => ev.whynotText(lit, { maxDepth: 3, maxNodes: 64, all: true }))[1];
           else { text = 'the kinds of explanation are why, why_all and whynot'; ok = false; }
         } catch (e) { text = k === 'whynot' ? describeHalt(e) : (e as Error).message; ok = false; }
       }

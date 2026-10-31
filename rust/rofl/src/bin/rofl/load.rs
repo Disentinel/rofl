@@ -1,7 +1,7 @@
 // `rofl load`: build a world from .rofl TEXT and print canonicalState; with
 // `--seed` (seed.rs) the world comes from a snapshot instead.
 //   rofl load [--ticks N] [--budget N] [--space N] [--strata] [--explain] [--save F] [--below F]... [--retain N] [--retract L]...
-//             [--why L]... [--why-all L]... [--whynot L]... [--excise F]... [--depth N] [--nodes N] [--state]
+//             [--why L]... [--why-all L]... [--whynot L]... [--whynot-all L]... [--excise F]... [--depth N] [--nodes N] [--state]
 //             [--propose-structures [--structures-min-rows N]] [--kept F [--anew]]
 //             boot.rofl file.rofl...
 // `--kept F` keeps the world at F once it is evaluated, and a later run answers from F without evaluating while
@@ -31,7 +31,7 @@
 use rofl::engine::WhynotBounds;
 use rofl::session::Session;
 
-enum Q { Ask(String), Why(String), WhyAll(String), Whynot(String), Excise(String) }
+enum Q { Ask(String), Why(String), WhyAll(String), Whynot(String), WhynotAll(String), Excise(String) }
 
 /// What a run ends in, one code each (docs/cli.md): the call was wrong, a file or the world or the question was
 /// refused, the answer is short of the whole, or the engine failed.
@@ -218,6 +218,7 @@ fn parse(json: bool, args: &[String], implicit: bool) -> Opts {
             "--why" => qs.push(Q::Why(value(&mut i))),
             "--why-all" => qs.push(Q::WhyAll(value(&mut i))),
             "--whynot" => qs.push(Q::Whynot(value(&mut i))),
+            "--whynot-all" => qs.push(Q::WhynotAll(value(&mut i))),
             "--excise" => qs.push(Q::Excise(value(&mut i))),
             "--depth" => depth = Some(number("--depth", value(&mut i), "an integer")),
             "--nodes" => nodes = Some(number("--nodes", value(&mut i), "an integer")),
@@ -457,7 +458,7 @@ fn question_rels(o: &Opts) -> Option<Vec<String>> {
     let mut rels: Vec<String> = ["scan_request", "want_of", "permit"].map(String::from).to_vec();
     for q in &o.qs {
         match q {
-            Q::Ask(l) | Q::Why(l) | Q::WhyAll(l) | Q::Whynot(l) => rels.extend(heads_of(l)),
+            Q::Ask(l) | Q::Why(l) | Q::WhyAll(l) | Q::Whynot(l) | Q::WhynotAll(l) => rels.extend(heads_of(l)),
             Q::Excise(_) => return None,
         }
     }
@@ -697,7 +698,7 @@ fn answer(s: &mut Session, q: &Q, bounds: &WhynotBounds, failed: &[String]) -> (
             Ok(t) => (t.clone(), serde_json::json!({ "ok": true, "text": t })),
             Err(e) => { refused = true; (e.clone(), serde_json::json!({ "ok": false, "error": e })) }
         },
-        Q::Whynot(l) => match s.whynot(l, bounds) {
+        Q::Whynot(l) | Q::WhynotAll(l) => match s.whynot(l, &WhynotBounds { all: matches!(q, Q::WhynotAll(_)), ..*bounds }) {
             Ok((h, t)) => (t.clone(), serde_json::json!({ "ok": true, "holds": h, "text": t })),
             Err(e) => { refused = true; (e.clone(), serde_json::json!({ "ok": false, "error": e })) }
         },

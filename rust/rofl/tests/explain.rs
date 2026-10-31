@@ -93,7 +93,7 @@ fn whynot_names_the_negation_that_blocked_it_and_the_fact_that_did() {
 /// goal and is cut by the cycle path rather than by the depth cap.
 #[test]
 fn whynot_recurses_and_reports_the_cycle_it_found() {
-    let (holds, text) = world().whynot("reaches(c, a)", &WhynotBounds::default()).unwrap();
+    let (holds, text) = world().whynot("reaches(c, a)", &WhynotBounds { all: true, ..WhynotBounds::default() }).unwrap();
     assert!(!holds);
     assert_eq!(
         text,
@@ -521,7 +521,7 @@ fn a_derivation_thousands_deep_is_explained_to_its_bottom() {
     let why = s.why(&format!("p({n})")).unwrap();
     assert_eq!(why.len(), 27_268_619);
     assert!(why.ends_with(&format!("{n} is +({},1) [builtin]", n - 1)), "{}", &why[why.len() - 200..]);
-    let (holds, whynot) = s.whynot(&format!("w({n})"), &WhynotBounds { max_depth: n + 10, max_nodes: 10 * n }).unwrap();
+    let (holds, whynot) = s.whynot(&format!("w({n})"), &WhynotBounds { max_depth: n + 10, max_nodes: 10 * n, all: true }).unwrap();
     assert!(!holds);
     assert_eq!((whynot.len(), whynot.lines().count()), (36_597_181, 6022));
 }
@@ -548,8 +548,24 @@ fn a_second_whynot_renames_as_the_first_did() {
                 reaches[main](c,?B#3) [cycle]";
     let mut s = world();
     for _ in 0..2 {
-        assert_eq!(s.whynot("reaches(c, a)", &WhynotBounds::default()).unwrap().1, want);
+        assert_eq!(s.whynot("reaches(c, a)", &WhynotBounds { all: true, ..WhynotBounds::default() }).unwrap().1, want);
     }
+}
+
+/// THE NEAREST FAILURE BY DEFAULT: of the two rules the one that leaves one
+/// premise unmet, `calls(c, a)`, and not the recursion that leaves two.
+#[test]
+fn whynot_prints_the_nearest_failure_and_the_whole_walk_is_all() {
+    let (holds, text) = world().whynot("reaches(c, a)", &WhynotBounds::default()).unwrap();
+    assert!(!holds);
+    assert_eq!(
+        text,
+        "whynot reaches[main](c,a):\n  \
+         rule r7a090e48: reaches[main](?A,?B)@now :- calls[main](?A,?B)@now\n    \
+           failed premise: calls[main](c,a)\n      \
+             no rule concludes 'calls' and no matching base fact exists\n  \
+         (every failure: --all)"
+    );
 }
 
 /// THE CROSS-PRODUCT HOLD (src/engine.ts planBody): `down(Y)` shares no
