@@ -76,6 +76,10 @@ Before a brief goes to a worker, the coordinator answers these in it:
 
 <!-- END commands -->
 
+The Rust code's form has a gate of its own, no npm script: from rust/, `cargo clippy -p rofl --all-targets -- -D warnings`
+exits 0, and CI runs it on every push and pull request (job `clippy`, the toolchain pinned to 1.95.0, beside a
+`cargo check --features breaks`). The lints the style overrules are in rust/rofl/Cargo.toml, `[lints.clippy]`.
+
 Knobs: **fewer is the rule** (owner, 2026-10-05). The interface has as few tools
 as possible, and what is configuration goes in as a config, a preset or a view,
 not as another flag or variable. These are the only ones to use; every other
