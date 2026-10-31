@@ -310,6 +310,18 @@ fn a_far_world_is_no_base(brk: Option<&str>) -> Result<(), String> {
     ensure(got.out == want.out && got.code == want.code && !got.err.contains("by delta"), || format!("ten files away: {} {:?}", got.code, got.err))
 }
 
+/// A run that trades the file holding most of a kept world's facts for another is evaluated whole, not by delta.
+fn a_traded_facts_file_is_no_base(brk: Option<&str>) -> Result<(), String> {
+    let d = Dir::new("traded");
+    for k in ["a", "b"] {
+        d.write(&format!("{k}.rofl"), &("edb(calls).\n".to_string() + &(0..200).map(|i| format!("calls(n{k}{i}, n{k}{}).\n", i + 1)).collect::<String>()));
+    }
+    rofl(&d, brk, &["ask", "reaches(a, X)", "boot.rofl", "rules.rofl", "a.rofl"]);
+    let args = ["ask", "reaches(a, X)", "boot.rofl", "rules.rofl", "b.rofl"];
+    let (got, want) = (rofl(&d, brk, &args), fresh(&d, brk, &args));
+    ensure(got.out == want.out && got.code == want.code && !got.err.contains("by delta"), || format!("traded: {} {:?}", got.code, got.err))
+}
+
 /// Touched without a change, or beside a file that changed and was never read, the world is not stale.
 fn touched_is_not_stale(brk: Option<&str>) -> Result<(), String> {
     let d = Dir::new("touch");
@@ -741,7 +753,7 @@ fn the_disk_cap_stops_and_a_larger_one_goes_on(brk: Option<&str>) -> Result<(), 
 
 type Case = fn(Option<&str>) -> Result<(), String>;
 
-const CASES: [(&str, Case); 27] = [
+const CASES: [(&str, Case); 28] = [
     ("answers_as_fresh", answers_as_fresh),
     ("a_rule_file_edited", a_rule_file_edited),
     ("boot_edited", boot_edited),
@@ -769,6 +781,7 @@ const CASES: [(&str, Case); 27] = [
     ("orphans_of_killed_writers_are_swept", orphans_of_killed_writers_are_swept),
     ("the_disk_cap_stops_and_a_larger_one_goes_on", the_disk_cap_stops_and_a_larger_one_goes_on),
     ("a_far_world_is_no_base", a_far_world_is_no_base),
+    ("a_traded_facts_file_is_no_base", a_traded_facts_file_is_no_base),
 ];
 
 /// What a hole left unknown is kept by an image as by a volume: a negation unfolded at a call reads it after opening.

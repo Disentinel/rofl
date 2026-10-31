@@ -54,10 +54,12 @@ What this file calls a node, and what each word stands for:
 |---|---|
 | <a id="noun-array_literal"></a>an array literal | a node of kind `array_expression` |
 | <a id="noun-array_pattern"></a>an array pattern | a node of kind `array_pattern` |
+| <a id="noun-arrow_function"></a>an arrow function | a node of kind `arrow_function_expression` |
 | <a id="noun-assignment"></a>an assignment | a node of kind `assignment_expression` |
 | <a id="noun-assignment_pattern"></a>an assignment pattern | a node of kind `assignment_pattern` |
 | <a id="noun-await"></a>an await | a node of kind `await_expression` |
 | <a id="noun-binary_expression"></a>a binary expression | a node of kind `binary_expression` |
+| <a id="noun-block"></a>a block | a node of kind `block_statement` |
 | <a id="noun-block_scope"></a>a block scope | a node of one of the kinds `block_statement`, `for_statement`, `for_in_statement`, `for_of_statement` (`block_scope_kind`) |
 | <a id="noun-call_expression"></a>a call expression | a node of kind `call_expression` |
 | <a id="noun-catch"></a>a catch | a node of kind `catch_clause` |
@@ -1194,7 +1196,13 @@ A node
 > A call may be whatever the function it resolves to returns: its return summary, and where a return is the
 > function's own parameter, THIS call's argument (`sx_ret_param`, rules/js-surface.rofl).
 
-<a id="returns"></a>F returns a node E if F [is nearest to](#nearest_v) a [return](#noun-return) R and the `argument` of R is E.
+<a id="returns"></a>F returns a node E either:
+
+1. if F [is nearest to](#nearest_v) a [return](#noun-return) R and the `argument` of R is E;
+2. if all of:
+   - F is an [arrow function](#noun-arrow_function);
+   - the `body` of F is E;
+   - unless E is a [block](#noun-block).
 
 A node
 
