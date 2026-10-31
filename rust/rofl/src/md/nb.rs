@@ -759,7 +759,7 @@ fn why_line(f: &mut Session, atoms: &mut Option<HashSet<String>>, cx: &Cx, x: &A
 }
 
 fn whynot_line(f: &mut Session, atoms: &mut Option<HashSet<String>>, cx: &Cx, x: &A, unread: &Option<String>, out: &mut Out) {
-    match f.whynot(&x.lit, &WhynotBounds::default()) {
+    match f.whynot(&x.lit, &WhynotBounds { all: cx.rows_kept == usize::MAX, ..WhynotBounds::default() }) {
         Ok((holds, t)) => {
             let note = nameless(f, atoms, &x.lit);
             out.lines.push(HLine { kind: "whynot".into(), text: x.text.clone(), ok: !holds, why: Some(plain(&cx.vocab.say_all(&t))), unasked: unread.clone(), note, english: english_of(x), ..Default::default() });

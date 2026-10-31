@@ -164,7 +164,7 @@ export class RoflSession {
   }
 
   /** `Rofl.whynot`. A literal that holds is an answer, not a rejection. */
-  async whynot(query: string, opts: { depth?: number; nodes?: number } = {}): Promise<{ holds: boolean; text: string }> {
+  async whynot(query: string, opts: { depth?: number; nodes?: number; all?: boolean } = {}): Promise<{ holds: boolean; text: string }> {
     const r = await this.port.send({ op: 'whynot', session: this.id, query, ...opts });
     return { holds: r.holds as boolean, text: r.text as string };
   }

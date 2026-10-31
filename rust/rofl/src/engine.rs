@@ -780,6 +780,8 @@ pub struct Eval {
     wn_vols: Option<VolWalk>,
     /// A whynot's premises with more matches than it follows, and how many.
     wn_unwalked: HashMap<String, usize>,
+    /// Each failure of a whynot's rule, and how many premises follow the one it failed at.
+    wn_left: HashMap<String, usize>,
     last_fault: Option<Sym>,
     /// The back-index of the retraction path: fact -> the cells a member of
     /// which cites it (`delta.rs`). None until a retraction asks.
@@ -2224,6 +2226,7 @@ impl Eval {
             fault_count: 0,
             wn_vols: None,
             wn_unwalked: HashMap::new(),
+            wn_left: HashMap::new(),
             last_fault: None,
             support_ix: None,
             thr: ThrState::default(),
@@ -14656,20 +14659,22 @@ impl Default for WhyOpts {
 pub struct WhynotBounds {
     pub max_depth: usize,
     pub max_nodes: usize,
+    /// Every failure the walk met, not only the nearest.
+    pub all: bool,
 }
 
 impl Default for WhynotBounds {
     /// src/api.ts `DEFAULT_WHYNOT_DEPTH` and `DEFAULT_WHYNOT_NODES`.
     fn default() -> Self {
-        WhynotBounds { max_depth: 6, max_nodes: 64 }
+        WhynotBounds { max_depth: 6, max_nodes: 64, all: false }
     }
 }
 
 /// The bounds an `explain_request(whynot, A)` is demonstrated under:
-/// src/api.ts `explainRequests` passes `{ maxDepth: 3, maxNodes: 64 }`, not
+/// src/api.ts `explainRequests` passes `{ maxDepth: 3, maxNodes: 64, all: true }`, not
 /// the protocol's default depth of 6, and the bridge's rows are compared with
 /// its.
-pub const EXPLAIN_WHYNOT_BOUNDS: WhynotBounds = WhynotBounds { max_depth: 3, max_nodes: 64 };
+pub const EXPLAIN_WHYNOT_BOUNDS: WhynotBounds = WhynotBounds { max_depth: 3, max_nodes: 64, all: true };
 
 impl WhynotBounds {
     /// The bounds a caller asked for, the default where one is absent and 1
@@ -14677,7 +14682,7 @@ impl WhynotBounds {
     pub fn clamped(depth: Option<i64>, nodes: Option<i64>) -> Self {
         let d = WhynotBounds::default();
         let at_least_one = |v: Option<i64>, or: usize| v.map_or(or, |n| n.max(1) as usize);
-        WhynotBounds { max_depth: at_least_one(depth, d.max_depth), max_nodes: at_least_one(nodes, d.max_nodes) }
+        WhynotBounds { max_depth: at_least_one(depth, d.max_depth), max_nodes: at_least_one(nodes, d.max_nodes), all: false }
     }
 }
 
@@ -14694,8 +14699,75 @@ enum WnTask {
     Failure(Lit, usize),
     Rule(Lit, Rc<ERule>, usize),
     Deeper(Lit, usize),
-    Line(String),
+    Line(String, Option<WnMark>),
     Unpath(String),
+}
+
+/// What a line of `whynot`'s walk is, at which level, and for a failed
+/// premise how many premises follow it (src/aggeval.ts `WnMark`).
+#[derive(Clone, Copy, PartialEq)]
+enum WnKind { Rule, NoHead, Info, Premise, NoFail, Leaf, Cut }
+type WnMark = (WnKind, usize, usize);
+type WnLine = (String, Option<WnMark>);
+
+/// A chain the walk cut short, or a rule it found no failure of: farther than
+/// every chain that ends.
+const WN_FAR: usize = 1_000_000;
+
+/// THE NEAREST FAILURE of a whynot's walk: the lines kept. A chain costs the
+/// premises it leaves unmet: at each rule those after the one it failed at,
+/// and one at its end, a premise nothing supports, a negation blocked or a
+/// builtin false. The rule and the failure of least cost are kept, the first
+/// of equal ones, with the matches that rule did not follow. The walk is
+/// written in preorder, so a line's parts come after it: they are costed from
+/// the last line up, with no frame per level (src/aggeval.ts `wnNearest`).
+fn wn_nearest(ls: &[WnLine]) -> Vec<usize> {
+    let n = ls.len();
+    let mut parent: Vec<Option<usize>> = vec![None; n];
+    let (mut premise_at, mut rule_at): (HashMap<usize, usize>, HashMap<usize, usize>) = (HashMap::new(), HashMap::new());
+    for (i, (_, m)) in ls.iter().enumerate() {
+        let Some((k, level, _)) = *m else { continue };
+        parent[i] = match k {
+            WnKind::Rule | WnKind::NoHead | WnKind::Leaf | WnKind::Cut if level > 1 => premise_at.get(&(level - 1)).copied(),
+            WnKind::Rule | WnKind::NoHead | WnKind::Leaf | WnKind::Cut => Some(n),
+            _ => rule_at.get(&level).copied(),
+        };
+        match k {
+            WnKind::Rule => { rule_at.insert(level, i); }
+            WnKind::Premise => { premise_at.insert(level, i); }
+            _ => {}
+        }
+    }
+    let mut best: Vec<Option<usize>> = vec![None; n + 1];
+    let mut cost: Vec<usize> = vec![usize::MAX; n + 1];
+    for i in (0..n).rev() {
+        let (Some((k, _, left)), Some(p)) = (ls[i].1, parent[i]) else { continue };
+        let c = match k {
+            WnKind::Info => continue,
+            WnKind::Leaf => 1,
+            WnKind::Rule => best[i].map_or(WN_FAR, |_| cost[i]),
+            WnKind::Premise => left + best[i].map_or(1, |_| cost[i]),
+            _ => WN_FAR,
+        };
+        if c <= cost[p] {
+            cost[p] = c;
+            best[p] = Some(i);
+        }
+    }
+    let mut kept = Vec::new();
+    let mut at = best[n];
+    while let Some(i) = at {
+        kept.push(i);
+        if matches!(ls[i].1, Some((WnKind::Rule, _, _))) {
+            let mut j = i + 1;
+            while matches!(ls.get(j), Some((_, Some((WnKind::Info, _, _))))) {
+                kept.push(j);
+                j += 1;
+            }
+        }
+        at = best[i];
+    }
+    kept
 }
 
 /// A by-file walk (`whynot_files`): the files by key prefix, each file's
@@ -14727,6 +14799,8 @@ struct WnCtx {
     /// the depth below a level is what the demonstration shows, so one reached
     /// again at a level it was written at is referred to, at another written again.
     done: HashMap<String, HashSet<usize>>,
+    /// Every failure the walk met, or only the nearest (`wn_nearest`).
+    all: bool,
 }
 
 impl Eval {
@@ -15582,7 +15656,7 @@ impl Eval {
     /// it is also a question.
     fn neg_demo(&mut self, key: &str) -> Option<String> {
         let lit = self.parse_lit(key).ok()?;
-        let b = WhynotBounds { max_depth: 1, max_nodes: 64 };
+        let b = WhynotBounds { max_depth: 1, max_nodes: 64, all: true };
         self.whynot_at(&lit, &b, None).ok().map(|(_, t)| t)
     }
 
@@ -15810,6 +15884,7 @@ impl Eval {
             nodes: 0,
             path: HashSet::new(),
             done: HashMap::new(),
+            all: b.all,
         };
         let s = Subst::default();
         self.demand.asked.clear();
@@ -16299,10 +16374,10 @@ impl Eval {
             .collect();
         if rules.is_empty() {
             let unloaded = self.unloaded(lit.rel);
-            next.push(WnTask::Line(format!(
-                "{pad}no rule concludes '{}' and no matching base fact exists{unloaded}",
-                self.h.name(lit.rel)
-            )));
+            next.push(WnTask::Line(
+                format!("{pad}no rule concludes '{}' and no matching base fact exists{unloaded}", self.h.name(lit.rel)),
+                Some((WnKind::Leaf, level, 0)),
+            ));
             return;
         }
         // each rule is explored when its turn comes, after the one before it
@@ -16317,26 +16392,28 @@ impl Eval {
         // a reader of an alias is explained as written: the alias is asked, and read from its source
         let (rn, s0) = self.unify_written_head(r, lit);
         let Some(s0) = s0 else {
-            next.push(WnTask::Line(format!("{pad}rule {}: head does not unify", self.h.name(r.id))));
+            next.push(WnTask::Line(format!("{pad}rule {}: head does not unify", self.h.name(r.id)), Some((WnKind::NoHead, level, 0))));
             return Ok(());
         };
         self.wn_unwalked.clear();
+        self.wn_left.clear();
         let mut failures = self.failing_premises(&rn, &s0, r.id)?;
-        next.push(WnTask::Line(format!("{pad}rule {}: {}", self.h.name(r.id), r.canon)));
+        next.push(WnTask::Line(format!("{pad}rule {}: {}", self.h.name(r.id), r.canon), Some((WnKind::Rule, level, 0))));
         let mut unwalked: Vec<(String, usize)> = self.wn_unwalked.drain().collect();
         unwalked.sort_by(|a, b| cmp_js(&a.0, &b.0));
         unwalked.truncate(12);
         for (k, n) in unwalked {
-            next.push(WnTask::Line(format!("{pad}  followed 16 of {n} matches of {k}")));
+            next.push(WnTask::Line(format!("{pad}  followed 16 of {n} matches of {k}"), Some((WnKind::Info, level, 0))));
         }
         let mut keys: Vec<String> = failures.keys().cloned().collect();
         keys.sort_by(|a, b| cmp_js(a, b));
         keys.truncate(12);
         if keys.is_empty() {
-            next.push(WnTask::Line(format!("{pad}  (no failing premise found within exploration bounds)")));
+            next.push(WnTask::Line(format!("{pad}  (no failing premise found within exploration bounds)"), Some((WnKind::NoFail, level, 0))));
         }
         for f in keys {
-            next.push(WnTask::Line(format!("{pad}  failed premise: {f}")));
+            let left = self.wn_left.get(&f).copied().unwrap_or(0);
+            next.push(WnTask::Line(format!("{pad}  failed premise: {f}"), Some((WnKind::Premise, level, left))));
             if let Some(Some(sub)) = failures.remove(&f) {
                 next.push(WnTask::Deeper(sub, level + 1));
             }
@@ -16352,24 +16429,25 @@ impl Eval {
             // depth 1 is the single-step form: nothing below the named
             // premises was promised, so nothing there is cut off.
             if ctx.max_depth > 1 {
-                next.push(WnTask::Line(format!("{pad}[depth limit {} reached]", ctx.max_depth)));
+                next.push(WnTask::Line(format!("{pad}[depth limit {} reached]", ctx.max_depth), Some((WnKind::Cut, level, 0))));
             }
             return;
         }
         if ctx.nodes >= ctx.max_nodes {
-            next.push(WnTask::Line(format!("{pad}[node limit {} reached]", ctx.max_nodes)));
+            next.push(WnTask::Line(format!("{pad}[node limit {} reached]", ctx.max_nodes), Some((WnKind::Cut, level, 0))));
             return;
         }
         let ck = self.cycle_key(lit);
         if ctx.path.contains(&ck) {
             let k = self.lit_key(lit, &Subst::default());
-            next.push(WnTask::Line(format!("{pad}{k} [cycle]")));
+            next.push(WnTask::Line(format!("{pad}{k} [cycle]"), Some((WnKind::Cut, level, 0))));
             return;
         }
-        if self.h.is_ground(lit.persp) && lit.args.iter().all(|a| self.h.is_ground(*a)) {
+        // the nearest failure is chosen over the tree: a literal met again is walked again, never referred to
+        if ctx.all && self.h.is_ground(lit.persp) && lit.args.iter().all(|a| self.h.is_ground(*a)) {
             if brk!("whynot_dag_off" => false; ctx.done.get(&ck).is_some_and(|ls| ls.contains(&level))) {
                 let k = self.lit_key(lit, &Subst::default());
-                next.push(WnTask::Line(format!("{pad}{k} [above]")));
+                next.push(WnTask::Line(format!("{pad}{k} [above]"), Some((WnKind::Cut, level, 0))));
                 return;
             }
             ctx.done.entry(ck.clone()).or_default().insert(level);
@@ -16383,10 +16461,15 @@ impl Eval {
     /// walks `why`): a failure as deep as the bounds allow takes no frame per
     /// level, and each line is written once.
     fn explain_tree(&mut self, lit: &Lit, ctx: &mut WnCtx) -> Result<Vec<String>, Halt> {
-        self.explain_from(vec![WnTask::Failure(lit.clone(), 1)], ctx)
+        let lines = self.explain_from(vec![WnTask::Failure(lit.clone(), 1)], ctx)?;
+        let kept = if ctx.all { None } else { Some(wn_nearest(&lines)).filter(|k| k.len() < lines.len()) };
+        Ok(match kept {
+            Some(kept) => kept.into_iter().map(|i| lines[i].0.clone()).chain(["  (every failure: --all)".to_string()]).collect(),
+            None => lines.into_iter().map(|l| l.0).collect(),
+        })
     }
 
-    fn explain_from(&mut self, mut tasks: Vec<WnTask>, ctx: &mut WnCtx) -> Result<Vec<String>, Halt> {
+    fn explain_from(&mut self, mut tasks: Vec<WnTask>, ctx: &mut WnCtx) -> Result<Vec<WnLine>, Halt> {
         let mut lines = Vec::new();
         tasks.reverse();
         let mut todo = tasks;
@@ -16396,7 +16479,7 @@ impl Eval {
                 WnTask::Failure(l, level) => self.explain_failure(&l, level, ctx, &mut next),
                 WnTask::Rule(l, r, level) => self.explain_rule(&l, &r, level, &mut next)?,
                 WnTask::Deeper(l, level) => self.explain_deeper(&l, level, ctx, &mut next),
-                WnTask::Line(x) => lines.push(x),
+                WnTask::Line(x, m) => lines.push((x, m)),
                 WnTask::Unpath(ck) => {
                     ctx.path.remove(&ck);
                 }
@@ -16481,9 +16564,9 @@ impl Eval {
                 if keys.is_empty() {
                     continue;
                 }
-                tasks.push(WnTask::Line(format!("  rule {}: {}", self.h.name(r.id), r.canon)));
+                tasks.push(WnTask::Line(format!("  rule {}: {}", self.h.name(r.id), r.canon), None));
                 for f in &keys {
-                    tasks.push(WnTask::Line(format!("    failed premise: {f}")));
+                    tasks.push(WnTask::Line(format!("    failed premise: {f}"), None));
                     if let Some(Some(sub)) = own.get(f) {
                         tasks.push(WnTask::Deeper(sub.clone(), 2));
                     }
@@ -16496,9 +16579,10 @@ impl Eval {
                 nodes: 0,
                 path: HashSet::from([self.cycle_key(lit)]),
                 done: HashMap::new(),
+                all: true,
             };
             let mut text = vec![format!("whynot {k} in {name}:")];
-            text.extend(self.explain_from(tasks, &mut ctx)?);
+            text.extend(self.explain_from(tasks, &mut ctx)?.into_iter().map(|l| l.0));
             rows.push(WhynotFile { found: found.get(&name).copied().unwrap_or(0), file: name, stops, text: text.join("\n") });
         }
         Ok(rows)
@@ -16623,17 +16707,18 @@ impl Eval {
         if *nodes > 2000 || k >= body.len() {
             return Ok(()); // a surviving branch is not a failure (demand)
         }
+        let left = body.len() - k - 1;
         match &body[k] {
             BodyElem::Pos(l) => {
                 let unknowns = self.demand.trail.len();
                 let mm = self.match_premise(l, s, 0, None)?;
                 if mm.is_empty() && self.demand.trail.len() > unknowns {
                     let key = self.lit_key(l, s);
-                    out.entry(format!("{key} -- not known: it reads what a hole left unknown")).or_insert(None);
+                    self.wn_put(out, format!("{key} -- not known: it reads what a hole left unknown"), None, left);
                 } else if mm.is_empty() {
                     let key = self.lit_key(l, s);
                     let inst = self.instantiate(l, s);
-                    out.entry(key).or_insert(Some(inst));
+                    self.wn_put(out, key, Some(inst), left);
                 } else if !parted && self.wn_vols.is_some() {
                     self.explore_split(body, k, s, l, mm.into_iter().map(|(s2, _)| s2).collect(), out, nodes, rule)?;
                 } else {
@@ -16651,7 +16736,7 @@ impl Eval {
                 let mm = self.match_premise(l, s, 0, None)?;
                 if mm.is_empty() && (self.demand.trail.len() > unknowns || !self.lat.carry.spread.is_empty() && self.read_unknown(l, s, true).is_some()) {
                     let key = self.lit_key(l, s);
-                    out.entry(format!("not {key} -- not known: it reads what a hole left unknown")).or_insert(None);
+                    self.wn_put(out, format!("not {key} -- not known: it reads what a hole left unknown"), None, left);
                 } else if let Some((s2, r)) = mm.into_iter().next() {
                     let wit = match r {
                         PremRef::Fact(f) => {
@@ -16666,7 +16751,7 @@ impl Eval {
                         }
                     };
                     let key = self.lit_key(l, s);
-                    out.entry(format!("not {key} -- blocked: {wit} holds")).or_insert(None);
+                    self.wn_put(out, format!("not {key} -- blocked: {wit} holds"), None, left);
                 } else {
                     self.explore_body(body, k + 1, s, out, nodes, rule, parted)?;
                 }
@@ -16681,7 +16766,7 @@ impl Eval {
                 let desc = self.h.name(desc).to_string();
                 let mm = self.agg_premise(rid, a, s, 0, false)?;
                 if mm.is_empty() {
-                    self.explore_agg_miss(rid, a, s, &desc, out)?;
+                    self.explore_agg_miss(rid, a, s, &desc, out, left)?;
                 } else {
                     for (s2, _) in mm.into_iter().take(16) {
                         self.explore_body(body, k + 1, &s2, out, nodes, rule, parted)?;
@@ -16700,8 +16785,7 @@ impl Eval {
                         let lt = resolve(&mut self.h, *l, s);
                         let rt = resolve(&mut self.h, *r, s);
                         let (a, b) = (self.h.canon(lt), self.h.canon(rt));
-                        out.entry(format!("{a} {} {b} [builtin fails]", self.h.name(*op)))
-                            .or_insert(None);
+                        self.wn_put(out, format!("{a} {} {b} [builtin fails]", self.h.name(*op)), None, left);
                     }
                 }
             }
@@ -16711,7 +16795,7 @@ impl Eval {
 
     /// Why an aggregate premise has no match: a value that is not the one asked for, a hole (the group is known and
     /// has no value), a rank whose subject is none of the group's values, or an empty group.
-    fn explore_agg_miss(&mut self, rid: Sym, a: &Agg, s: &Subst, desc: &str, out: &mut HashMap<String, Option<Lit>>) -> Result<(), Halt> {
+    fn explore_agg_miss(&mut self, rid: Sym, a: &Agg, s: &Subst, desc: &str, out: &mut HashMap<String, Option<Lit>>, left: usize) -> Result<(), Halt> {
             // WHICH WAY IT FAILED: a value that is not the one asked
             // for, a hole (the group is known and has no value), or
             // an empty group. Only the last sends the question on to
@@ -16720,7 +16804,7 @@ impl Eval {
             let cells = match self.seal_cells(rid, a, &plan, s, &corr, 0, false)? {
                 Sealed::Ephemeral(cells) => cells,
                 Sealed::Open(r) => {
-                    out.entry(format!("{desc} has no value: hole({}) [aggregate]", self.h.name(r))).or_insert(None);
+                    self.wn_put(out, format!("{desc} has no value: hole({}) [aggregate]", self.h.name(r)), None, left);
                     return Ok(());
                 }
                 Sealed::Kept(_) => return Err(Halt::Bug("whynot stored a cell".into())),
@@ -16740,9 +16824,9 @@ impl Eval {
             if let Some(got) = valued {
                 let want = resolve(&mut self.h, a.result, s);
                 let (g, w) = (self.h.canon(got), self.h.canon(want));
-                out.entry(format!("{desc} = {g}, not {w} [aggregate]")).or_insert(None);
+                self.wn_put(out, format!("{desc} = {g}, not {w} [aggregate]"), None, left);
             } else if let Some(r) = brk!("whynot_hole_empty" => holed.filter(|_| false); holed) {
-                out.entry(format!("{desc} has no value: hole({}) [aggregate]", self.h.name(r))).or_insert(None);
+                self.wn_put(out, format!("{desc} has no value: hole({}) [aggregate]", self.h.name(r)), None, left);
             } else if let Some(n) = brk!("whynot_unranked_empty" => unranked.filter(|_| false); unranked) {
                 let mut st = String::new();
                 for (i, t) in a.vals[..a.params()].iter().enumerate() {
@@ -16752,15 +16836,23 @@ impl Eval {
                     }
                     self.h.canon_term(subject, &mut st);
                 }
-                out.entry(format!("{desc} has no value: {st} is not one of its {n} distinct values [aggregate]")).or_insert(None);
+                self.wn_put(out, format!("{desc} has no value: {st} is not one of its {n} distinct values [aggregate]"), None, left);
             } else {
                 let sub = match a.body.as_slice() {
                     [BodyElem::Pos(l)] => Some(self.instantiate(l, s)),
                     _ => None,
                 };
-                out.entry(format!("{desc} has no value: empty group [aggregate]")).or_insert(sub);
+                self.wn_put(out, format!("{desc} has no value: empty group [aggregate]"), sub, left);
             }
         Ok(())
+    }
+
+    /// A failure of a whynot's rule, kept where it is the first of its key, with how many premises follow it.
+    fn wn_put(&mut self, out: &mut HashMap<String, Option<Lit>>, key: String, sub: Option<Lit>, left: usize) {
+        if let std::collections::hash_map::Entry::Vacant(v) = out.entry(key) {
+            self.wn_left.insert(v.key().clone(), left);
+            v.insert(sub);
+        }
     }
 
     fn lit_key(&mut self, l: &Lit, s: &Subst) -> String {
@@ -16785,13 +16877,14 @@ impl Eval {
         nodes: &mut usize,
         parted: bool,
     ) -> Result<(), Halt> {
+        let left = body.len() - k - 1;
         let (plan, corr) = self.agg_corr(rid, a, s)?;
         let desc = self.agg_desc(a, s);
         let desc = self.h.name(desc).to_string();
         let need = match self.thr_need(rid, a, s, &corr, false) {
             Ok((n, _)) => n,
             Err(r) => {
-                out.entry(format!("{desc} has no value: hole({}) [threshold]", self.h.name(r))).or_insert(None);
+                self.wn_put(out, format!("{desc} has no value: hole({}) [threshold]", self.h.name(r)), None, left);
                 return Ok(());
             }
         };
@@ -16848,7 +16941,7 @@ impl Eval {
             (true, [BodyElem::Pos(l)]) => Some(self.instantiate(l, &named)),
             _ => None,
         };
-        out.entry(line).or_insert(sub);
+        self.wn_put(out, line, sub, left);
         Ok(())
     }
 
