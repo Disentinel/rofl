@@ -1,11 +1,10 @@
-//! A corpus evaluated by K workers, each over its own files, in one process. The master names every term of the
-//! corpus in its heap and freezes it with the model; each worker is a fork of it that holds its own group of files.
+//! A corpus evaluated by K workers, each over its own files, in one process: each worker is a fork of the master,
+//! which holds the model, and names and holds its own group of files.
 //! The levels are walls: each worker evaluates a level, and what it made of the `[surface]` book is laid into every
 //! other worker from its memory, term by term, and fired on there, until no worker makes more; then the next level.
 
 use super::*;
 use super::bsp::copy_term;
-use crate::rofl_parse;
 
 /// The node prefix of a line: the file its facts are of; none for a line of the core, which every group holds.
 fn file_of(line: &str) -> Option<&str> {
@@ -63,11 +62,9 @@ pub fn groups(text: &str, k: usize) -> Vec<String> {
 
 /// A fact of another worker, as this one lays it: its terms the master named are the same terms here.
 struct Arrival {
-    from: usize,
     rel: Sym,
     persp: Sym,
     args: Vec<Term>,
-    fresh: bool,
 }
 
 impl Eval {
@@ -75,9 +72,6 @@ impl Eval {
     pub fn files_split(&mut self, text: &str, k: usize, show: &[Sym]) -> Result<BTreeSet<String>, Halt> {
         let t0 = std::time::Instant::now();
         let gs = groups(text, k);
-        for p in rofl_parse::pieces(text, 1 << 20) {
-            rofl_parse::parse(&mut self.h, p).map_err(|d| Halt::Strat(d, String::new()))?;
-        }
         self.h.freeze();
         self.store.freeze(&self.h);
         self.store.share_runs();
@@ -106,7 +100,7 @@ impl Eval {
             if r.ok { Ok(()) } else { Err(Halt::Strat(r.diagnostics.join("\n"), String::new())) }
         })?;
         es = e1;
-        eprintln!("files: {k} workers, named in {} ms, loaded in {tl} ms, facts {:?}", tn.as_millis(), es.iter().map(|e| e.store.len_ids()).collect::<Vec<_>>());
+        eprintln!("files: {k} workers, frozen in {} ms, loaded in {tl} ms, facts {:?}", tn.as_millis(), es.iter().map(|e| e.store.len_ids()).collect::<Vec<_>>());
         let (e1, mut work) = par(es, &|_, e| { e.level_wall = Some(-1); e.run().map(|_| ()) })?;
         es = e1;
         let (mut passed, mut swaps) = (0usize, 0u128);
@@ -135,30 +129,31 @@ impl Eval {
                         TermK::Func(i) => i < funcs,
                         _ => true,
                     };
-                    // what each worker lays, read from the others' memory in parallel; a term a worker made is named
-                    // again in the one that lays it, here
-                    let mut lays: Vec<Vec<Arrival>> = std::thread::scope(|sc| {
-                        let (es, made) = (&es, &made);
+                    // what each worker lays, read from the others' memory on its own thread: a term another worker
+                    // named is named again here, in this worker's heap, which only its thread writes
+                    struct Ptr(*mut Eval);
+                    unsafe impl Send for Ptr {}
+                    unsafe impl Sync for Ptr {}
+                    let ptrs: Vec<Ptr> = es.iter_mut().map(|e| Ptr(e as *mut Eval)).collect();
+                    let lays: Vec<Vec<Arrival>> = std::thread::scope(|sc| {
+                        let (ptrs, made) = (&ptrs, &made);
                         let hs: Vec<_> = (0..k).map(|w| sc.spawn(move || {
+                            // SAFETY: thread w writes only worker w's heap; the others' stores and heaps are only read
+                            let p = ptrs[w].0;
+                            let dst = unsafe { &mut (*p).h };
                             let mut v = Vec::new();
                             for (j, ids) in made.iter().enumerate().filter(|(j, _)| *j != w) {
+                                let src = unsafe { &*ptrs[j].0 };
                                 for &id in ids {
-                                    let rec = es[j].store.rec(id);
-                                    let args = es[j].store.args(id).to_vec();
-                                    let fresh = !args.iter().all(old);
-                                    v.push(Arrival { from: j, rel: rec.rel, persp: rec.persp, args, fresh });
+                                    let rec = src.store.rec(id);
+                                    let args = src.store.args(id).iter().map(|t| if old(t) { *t } else { copy_term(*t, &src.h, dst, syms, funcs) }).collect();
+                                    v.push(Arrival { rel: rec.rel, persp: rec.persp, args });
                                 }
                             }
                             v
                         })).collect();
                         hs.into_iter().map(|h| h.join().expect("a worker panicked")).collect()
                     });
-                    for (w, lay) in lays.iter_mut().enumerate() {
-                        for a in lay.iter_mut().filter(|a| a.fresh) {
-                            let (src, dst) = if a.from < w { let (l, r) = es.split_at_mut(w); (&l[a.from], &mut r[0]) } else { let (l, r) = es.split_at_mut(a.from); (&r[0], &mut l[w]) };
-                            a.args = a.args.iter().map(|t| copy_term(*t, &src.h, &mut dst.h, syms, funcs)).collect();
-                        }
-                    }
                     lv_pass += lays.iter().map(|l| l.len()).sum::<usize>();
                     swaps += ts.elapsed().as_millis();
                     let lays = std::sync::Mutex::new(lays.into_iter().map(Some).collect::<Vec<_>>());
