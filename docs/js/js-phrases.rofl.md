@@ -63,6 +63,7 @@ Declared as facts:
 | `keyed_put_before` | "is_put_before(node V, call C)" |
 | `keyed_put_after` | "is_put_after(node V, call C)" |
 | `keyed_taken_out` | "is_taken_out_before(node V, call C, by call R)" |
+| `keyed_private_reached` | "reaches_the_private(node N, method G)" |
 | `interpolated` | "is_interpolated(template T)" |
 | `binder` | "binds(declarator D, name Name, to node Init, in file File)" |
 | `binder_at_top` | "is_at_the_top(declarator D)" |
@@ -501,6 +502,11 @@ Declared as facts:
 | `calls_named` | "calls_by_name(name Z, name B)" |
 | `calls_in` | "names_a_call_to(name Z:1, name B:2, in file File:0)" |
 | `passes_function` | "passes_the_function(call C, function F:2, named name Name:3, at index I:1)" |
+| `written_arg` | "is_written_as_the_argument(call C, at index I, node A)" |
+| `may_resolve` | "may_resolve_to(call C, function F)" |
+| `may_call` | "may_call(function A, function F)" |
+| `handed_fn` | "is_handed_the_function(function F, at index I, function G)" |
+| `merged_param` | "merges_its_parameter(function F, at index I, handed functions N)" |
 
 `sig` lists:
 
@@ -841,6 +847,8 @@ Declared as facts:
 | `catch_names` | "declares_its_caught_name(catch H, name Name, in file File)" |
 | `sees_decl` | "sees_the_declaration(identifier E, declaration D)" |
 | `reads_the_file_as` | "is_read_as_the(view V)" |
+| `runs_as_script` | "runs_as_the_script(file File)" |
+| `exported_decl` | "is_exported_where_declared(function F)" |
 | `up_d` | "climbs_from(declaration D, node P)" |
 | `class_like` | "is_a_class(node O)" |
 | `constant_global` | "is_a_constant_global(name Name)" |

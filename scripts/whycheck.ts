@@ -276,7 +276,7 @@ function expected(r: Rofl, q: Q, budget?: number): A {
       const all = q.op === 'whynotall';
       const { holds, text: t } = r.whynot(q.query, { budget, depth: q.depth, nodes: q.nodes, all });
       let files: string;
-      try { files = byFileText(r.whynotFiles(q.query, LETTERS, { budget, depth: q.depth, nodes: q.nodes })); } catch (e) { files = `refused: ${(e as Error).message}`; }
+      try { files = byFileText(r.whynotFiles(q.query, LETTERS, { budget, depth: q.depth, nodes: q.nodes, all })); } catch (e) { files = `refused: ${(e as Error).message}`; }
       return { ...dag({ ok: !/^line \d+: /.test(t), text: t, holds }, () => r.whynot(q.query, { budget, depth: q.depth, nodes: q.nodes, all, tree: true }).text), files };
     }
     const x = r.excise(q.query, { budget });
@@ -357,7 +357,7 @@ async function served(port: RoflPort, w: World, qs: Q[]): Promise<A[]> {
         else if (q.op === 'whynot' || q.op === 'whynotall') {
           const x = await s.whynot(q.query, { depth: q.depth, nodes: q.nodes, all: q.op === 'whynotall' });
           let files: string;
-          try { files = byFileText(await s.whynotFiles(q.query, LETTERS, { depth: q.depth, nodes: q.nodes })); } catch (e) { files = `refused: ${(e as Error).message}`; }
+          try { files = byFileText(await s.whynotFiles(q.query, LETTERS, { depth: q.depth, nodes: q.nodes, all: q.op === 'whynotall' })); } catch (e) { files = `refused: ${(e as Error).message}`; }
           out.push({ ok: true, text: x.text, holds: x.holds, files });
         }
         else if (q.op === 'ask') {
