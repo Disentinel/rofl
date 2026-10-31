@@ -5,6 +5,8 @@
 -- ---- which arguments are nodes; a step of nth is placed, not yet told what it is
 roled[W](N) :- nth[W](N, _, _).
 roled[W](N) :- strict[W](N).
+roled[W](A) :- precedes[W](A, _).
+roled[W](B) :- precedes[W](_, B).
 roled[W](N) :- ref[W](N, _).
 roled[W](N) :- binds[W](N, _).
 roled[W](N) :- key[W](N, _).
