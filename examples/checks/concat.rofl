@@ -1,0 +1,14 @@
+-- examples/checks/concat.rofl — concat(A, B), the one string constructor, below a recursion.
+--
+-- A path is its directory and its name joined; the walk up the tree is the recursion, and the join is outside it,
+-- over the finitely many strings the walk reaches. examples/checks/concat-recursion.rofl is the same join inside the
+-- recursion, which safety.rofl refuses.
+
+edb(dir_name).
+dir_name(".", "src").
+dir_name("src", "lib").
+dir_name("src/lib", "deep").
+
+path(U, N, P) :- dir_name(U, N), U != ".", S is concat(U, "/"), P is concat(S, N).
+path(".", N, N) :- dir_name(".", N).
+twice(X, Y) :- dir_name(_, X), Y is concat(concat(X, "-"), X).

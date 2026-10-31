@@ -107,12 +107,12 @@ ast_child[code](n9a3339f2e3bec851_9l7lmkrrho2, declaration, 0, n9a3339f2e3bec851
 ast_child[code](n9a3339f2e3bec851_12undirbnh3, body, 1, n9a3339f2e3bec851_9l7lmkrrho2).
 ast_child[code](n9a3339f2e3bec851_3c3ted0nsu2, program, 0, n9a3339f2e3bec851_12undirbnh3).
 ast_file[code](n9a3339f2e3bec851_3c3ted0nsu2, "users.js").
-has_file[fs](".", "users.js", "users.js").
-has_file[fs](".", "db.js", "db.js").
-has_file[fs](".", "log.js", "log.js").
-has_file[fs](".", "orders.js", "orders.js").
-has_file[fs](".", "server.js", "server.js").
-has_file[fs](".", "util.js", "util.js").
+has_file[fs](".", "users.js").
+has_file[fs](".", "db.js").
+has_file[fs](".", "log.js").
+has_file[fs](".", "orders.js").
+has_file[fs](".", "server.js").
+has_file[fs](".", "util.js").
 str_segs[code]("./db.js", 2).
 str_char0[code]("./db.js", ".").
 str_seg[code]("./db.js", 0, ".").

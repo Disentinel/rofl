@@ -439,7 +439,7 @@ concluded by *the kernel's own programs* — see the section under this one.
 | `neg_relation(A)` | `safety.rofl` | the kernel | some rule negates A |
 | `provenance_reader(R)` | `safety.rofl` | the kernel | R reads `derived_by` — so provenance cannot be pruned out from under it |
 
-**Term and string destructors** (`Out is op(In, …)`, seven of them). They are
+**Term and string destructors** (`Out is op(In, …)`, seven of them, and one constructor, `concat`). They are
 not relations and they are not arithmetic: the parser has exactly one
 term-producing builtin form, so the output is the LEFT operand of `is` and the
 declared `mode` is `[out, in, …]`. **Indices are CODE POINTS, not UTF-16 code
@@ -455,6 +455,7 @@ half a character, which the store would then carry. Operands compose, so
 | `str_pre(S, Sep)` | 2 | the part before the FIRST `Sep`, and **empty when there is none** — the one thing `str_seg(S, Sep, 0)` cannot say, since that answers the whole string when the separator is absent |
 | `str_seg(S, Sep, N)` | 3 | the Nth segment. The argument list admits TERMS and not expressions, so the last segment is `N is str_segs(S, Sep), K is N - 1, T is str_seg(S, Sep, K)` |
 | `str_segs(S, Sep)` | 2 | how many segments — and it is what tells `str_pre`'s empty answer apart from an empty first segment |
+| `concat(A, B)` | 2 | A and B joined: the one operation that makes a string the program did not hold, so `safety.rofl` refuses it in a rule that reads its own recursion (`unbounded_in_recursion`): over the finitely many strings below a recursion it makes finitely many, inside one it could grow a string without end |
 | `atom_of(S)` | 1 | the atom of a string. It crosses a sort boundary and produces a TERM; a term only becomes an executable rule through the reflection rows, which `breach[audit]` and the write protection on `conclusion_lit` already watch |
 
 Three refusals, kept apart because they demand three different repairs, and

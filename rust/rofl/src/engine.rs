@@ -604,6 +604,7 @@ pub fn agg_refusal_text(reason: &str, rel: Option<&str>) -> String {
         "lattice_unwidened" => "it computes a hull's value from that hull's own value by an interval function (ivadd, ivsub, ivmul, ivmeet) \
             inside its recursion, and no relation on that cycle declares a widening, so nothing bounds how often the value can grow: \
             declare one, `lattice p(K, hull I) widen N.`".into(),
+        "unbounded_in_recursion" => "it makes an unbounded value inside its recursion: a builtin marked unbounded (concat, hash) makes a value the program did not hold, and a rule that calls one may not read a relation that depends on its own head, or the values could grow without end, unless that read walks an edge of a declared tree; call it below the recursion, or walk a tree".into(),
         "order_nonmonotone" => "it reads a relation with a declared order inside its recursion, or concludes one, and is not monotone in that order: a value of an ordered relation may flow only into a value of a head that improves the same way (directly, or through X is V + E, V - E, E - V, min(V, E), max(V, E)) and into a comparison that stays true as the value improves (V < N for min, V > N for max); under pareto each value moves on its own, and under lex only the first value, strictly (+, - or a copy), may be compared, and each later value goes only into the value at its own place of a lex head whose first value is computed from the first one read".into(),
         "lattice_nonmonotone" => "it reads a lattice relation inside its recursion and is not monotone in the value: the value may flow only into \
             a lattice head's value (directly, or through X is V + E, V - E, E - V, min(V, E), max(V, E)) in the direction that head improves, or into a comparison \
@@ -2897,16 +2898,20 @@ impl Eval {
             None => Err(h),
         };
         let (mut sub, res) = match kept {
-            Ok(sub) => (sub, Ok(())),
+            Ok(sub) => (sub, Ok(false)),
             Err(h) => {
                 let mut sub = Eval::new(h, pol, POLICY_BUDGET, Mode::Strata, true);
-                let res = sub.run().map(|_| ());
+                let res = sub.run().map(|o| o.partial);
                 (sub, res)
             }
         };
         let mut h = std::mem::take(&mut sub.h);
         let pol = &mut sub.store;
-        let err = res.err().map(|e| format!("safety.rofl did not settle: {e:?}"));
+        let err = match res {
+            Ok(false) => None,
+            Ok(true) => Some(format!("safety.rofl did not settle: its budget of {POLICY_BUDGET} steps ran out")),
+            Err(e) => Some(format!("safety.rofl did not settle: {e:?}")),
+        };
         if let Some(e) = &err {
             self.diags.push(e.clone());
         }
@@ -2929,6 +2934,8 @@ impl Eval {
             self.v.premise_pos,
             self.v.premise_neg,
             self.v.premise_agg,
+            self.v.uses_builtin,
+            self.v.structure_decl,
             self.v.reserved,
             self.v.lattice_decl,
             brk!("widen_row_unread" => self.v.lattice_decl; self.v.lattice_widen),
@@ -2949,7 +2956,7 @@ impl Eval {
         // under its own id, and an idempotent tag's order lattice
         let seeded = [
             self.v.premise_lit, self.v.conclusion_lit, self.v.has_premise, self.v.concludes,
-            self.v.conclusion_tense, self.v.premise_pos, self.v.premise_neg, self.v.premise_agg,
+            self.v.conclusion_tense, self.v.premise_pos, self.v.premise_neg, self.v.premise_agg, self.v.uses_builtin,
         ];
         for r in rules.iter().filter(|r| brk!("tag_judged_as_written" => false; self.tag_changed.contains(&r.id))) {
             let (enc, facts) = encode_rule(h, &self.v, &r.clause);
@@ -14157,6 +14164,12 @@ pub fn eval_str_op(h: &mut Heap, t: Term, s: &Subst, fail: &mut u8) -> StrOp {
     let cp: Vec<char> = st.chars().collect();
     match name.as_str() {
         "str_len" => return StrOp::Value(Term::int(cp.len() as i64)),
+        "concat" => {
+            let Some(b) = str_operand(h, args[1], s, fail) else {
+                return StrOp::Refused;
+            };
+            return StrOp::Value(h.string(&(st + &b)));
+        }
         "str_char" => {
             let Some(k) = int_operand(h, args[1], s, fail) else {
                 return StrOp::Refused;

@@ -153,12 +153,12 @@ ast_child[code](nd7c9c4e37c37bdbf_g1si6b55a76, declaration, 0, nd7c9c4e37c37bdbf
 ast_child[code](nd7c9c4e37c37bdbf_12undirbnh3, body, 2, nd7c9c4e37c37bdbf_g1si6b55a76).
 ast_child[code](nd7c9c4e37c37bdbf_3c3ted0nsu2, program, 0, nd7c9c4e37c37bdbf_12undirbnh3).
 ast_file[code](nd7c9c4e37c37bdbf_3c3ted0nsu2, "db.js").
-has_file[fs](".", "db.js", "db.js").
-has_file[fs](".", "log.js", "log.js").
-has_file[fs](".", "orders.js", "orders.js").
-has_file[fs](".", "server.js", "server.js").
-has_file[fs](".", "users.js", "users.js").
-has_file[fs](".", "util.js", "util.js").
+has_file[fs](".", "db.js").
+has_file[fs](".", "log.js").
+has_file[fs](".", "orders.js").
+has_file[fs](".", "server.js").
+has_file[fs](".", "users.js").
+has_file[fs](".", "util.js").
 str_segs[code]("http://db.internal/q?", 4).
 str_char0[code]("http://db.internal/q?", "h").
 str_seg[code]("http://db.internal/q?", 0, "http:").

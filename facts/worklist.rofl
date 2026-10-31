@@ -3518,10 +3518,10 @@ work_state(w_l2_roles, open).
 -- holds each file's roles alone equal to the whole world's and the audits empty. LEFT: the model's rules moved onto the
 -- roles (rung 1 of the ladder), the scanner writing [ast_babel] by default, ids from the role tree.
 
-work(w_l3_operations,
-  "THE OPERATIONS FLOOR ABOVE THE ROLES (owner, 2026-10-31: «запиши и отложи, потом напомнишь»). A role says what is written in one place; an operation says what runs there and needs other places: only_if (an assign that happens only when the place passes a test: a default, a logical assignment), overwrites (a key that already had a value), shadows (a declaration that hides an outer one), hidden_call (spread, destructuring, for-of, a getter calling code), coerces, narrows (instanceof, in, typeof, a type predicate), transfers (control into other code: call, construct, decorator, tag), suspends (await, yield); and the live binding of an ESM import against the copy of destructuring and require. Derived by the model over the roles, once for every parser; most exist today under other names (param_default, member_written, sees_binder, hidden_call_pos, eff_coerced, narrows_at, transfer_site, suspend_at). ACCEPTANCE: each operation one relation over [value] roles, its old relation answered from it, and the JS model's answers unchanged.").
-work_state(w_l3_operations, open).
-work_needs(w_l3_operations, w_l2_roles).
+work(w_lifecycle_world,
+  "THE [lifecycle] WORLD OVER THE ROLES (owner, 2026-10-31: there is no L3 level; lifecycle is a world of behaviour, doc «Словарь ролей модели JS» rev 92, «Миры поведения»). The [lifecycle] perspective over roles for JS; first questions are use after death and leaks (created_by without deleted_by); it needs before and resolves as bridges plus open/close pairs from js-host; the old operation words (overwrites, hidden_call, coerces, narrows, transfers, suspends, shadows, only_if) are derived, see the doc. ACCEPTANCE: use after death and a leak each answered over [lifecycle] on a JS fixture that has one and a control that has none, and every derived operation word answering what its old relation (param_default, member_written, sees_binder, hidden_call_pos, eff_coerced, narrows_at, transfer_site, suspend_at) answers today.").
+work_state(w_lifecycle_world, open).
+work_needs(w_lifecycle_world, w_l2_roles).
 
 work(w_rust_scanner_oxc,
   "THE JS SCANNER IN RUST on oxc, with its own normalizer into the L2 roles -- not a mapping onto Babel's AST. It also emits the host facts (fs_*, str_*) hostFacts writes today. ACCEPTANCE: over a real corpus the JS model gives identical answers and why text on the oxc facts and on the Babel facts; this is the first falsification of the role layer on two genuinely different fact shapes.").

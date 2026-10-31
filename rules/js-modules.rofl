@@ -15,8 +15,8 @@
 
 -- from outside the AST (facts/js-modules.rofl): str_seg(S, K, Seg) cut on "/",
 -- str_segs(S, N), str_char0(S, C), str_scheme(S, Scheme) before the first
--- ":"; the disk in its own ledger, has_file[fs](Dir, Name, Path) and
--- has_dir[fs](Parent, Name, Path); node_prefix_only(Canonical);
+-- ":"; the disk in its own ledger, has_file[fs](Dir, Name) and
+-- has_dir[fs](Parent, Name), a directory named by its path; node_prefix_only(Canonical);
 -- shape_verdict(Shape, Reason); unknown_because.
 edb(str_seg).           -- str_seg[code](S, K, Segment)   S cut on "/", 0-based
 edb(str_segs).
@@ -25,6 +25,12 @@ edb(str_scheme).        -- str_scheme[code](S, Scheme)    text before the first 
 edb(has_file).
 edb(has_dir).
 imports(code, fs).
+
+-- a file's and a directory's path: its directory's path and its name joined, the root's children by name alone
+file_at[code](".", N, N) :- has_file[fs](".", N).
+file_at[code](D, N, P)   :- has_file[fs](D, N), D != ".", S is concat(D, "/"), P is concat(S, N).
+dir_at[code](".", N, N)  :- has_dir[fs](".", N).
+dir_at[code](D, N, P)    :- has_dir[fs](D, N), D != ".", S is concat(D, "/"), P is concat(S, N).
 edb(node_prefix_only).  -- node_prefix_only(Canonical)  a builtin node loads under `node:` only
 edb(host_module).
 edb(shape_verdict).
@@ -114,13 +120,13 @@ has_shape[code](I)       :- site_shape[code](I, _).
 -- name by table, because a rule cannot prefix a string. `dangling_import` is a
 -- broken import, not a missing rule.
 walk[code](I, 0, D) :- site_shape[code](I, relative),
-                       site_file[code](I, F), has_file[fs](D, _, F).
+                       site_file[code](I, F), file_at[code](D, _, F).
 
 walk[code](I, K1, D) :- walk[code](I, K, D), site_source[code](I, S),
                         str_seg[code](S, K, "."), K1 is K + 1.
 
 walk[code](I, K1, P) :- walk[code](I, K, D), site_source[code](I, S),
-                        str_seg[code](S, K, ".."), has_dir[fs](P, _, D), K1 is K + 1.
+                        str_seg[code](S, K, ".."), dir_at[code](P, _, D), K1 is K + 1.
 
 -- the empty segment of `../` stays where it is, so a directory's index answers
 walk[code](I, K1, D) :- walk[code](I, K, D), site_source[code](I, S),
@@ -128,10 +134,10 @@ walk[code](I, K1, D) :- walk[code](I, K, D), site_source[code](I, S),
 
 walk[code](I, K1, C) :- walk[code](I, K, D), site_source[code](I, S),
                         str_seg[code](S, K, Seg), Seg != ".", Seg != "..", Seg != "",
-                        has_dir[fs](D, Seg, C), K1 is K + 1.
+                        dir_at[code](D, Seg, C), K1 is K + 1.
 
 resolved_import[code](I, T) :- walk[code](I, K, D), site_source[code](I, S),
-                               str_seg[code](S, K, Seg), has_file[fs](D, Seg, T),
+                               str_seg[code](S, K, Seg), file_at[code](D, Seg, T),
                                N is K + 1, str_segs[code](S, N).
 
 builtin_canonical[code](S, S) :- str_scheme[code](S, "node").
@@ -160,7 +166,7 @@ probe_ext("ts", 10).  probe_ext("tsx", 11).  probe_ext("js", 12).  probe_ext("js
 
 index_file("index.ts", 20).  index_file("index.tsx", 21).  index_file("index.js", 22).  index_file("index.jsx", 23).
 
-last_ext[code](Name, E, L) :- has_file[fs](_, Name, _),
+last_ext[code](Name, E, L) :- file_at[code](_, Name, _),
                               N is str_segs(Name, "."), N > 1, K is N - 1,
                               E is str_seg(Name, ".", K), L is str_len(E).
 
@@ -169,7 +175,7 @@ site_last_seg[code](I, D, Seg) :- walk[code](I, K, D), site_source[code](I, S),
 
 -- A file is found by its name, not by holding each site against every file of
 -- its folder: a file's stem is its name less the last extension.
-file_stem[code](D, Stem, E, T) :- has_file[fs](D, Name, T), last_ext[code](Name, E, L),
+file_stem[code](D, Stem, E, T) :- file_at[code](D, Name, T), last_ext[code](Name, E, L),
                                   Ln is str_len(Name), K is Ln - L - 1, Stem is str_sub(Name, 0, K).
 
 ts_candidate[code](I, T, R) :- site_last_seg[code](I, D, Seg),
@@ -180,7 +186,7 @@ ts_candidate[code](I, T, R) :- site_last_seg[code](I, D, Seg),
 ts_candidate[code](I, T, R) :- site_last_seg[code](I, D, Seg), file_stem[code](D, Seg, E, T), probe_ext(E, R).
 
 ts_candidate[code](I, T, R) :- walk[code](I, N, D), site_source[code](I, S), str_segs[code](S, N),
-                           index_file(Name, R), has_file[fs](D, Name, T).
+                           index_file(Name, R), file_at[code](D, Name, T).
 
 ts_passed_over[code](I, R) :- ts_candidate[code](I, _, R), ts_candidate[code](I, _, R2), R2 < R.
 ts_resolved[code](I, T)    :- ts_candidate[code](I, T, R), not ts_passed_over[code](I, R).

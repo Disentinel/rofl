@@ -19,8 +19,8 @@ function hostFacts(paths: string[], strings: Set<string>): string[] {
   const o: string[] = [], dirs = new Set(['.']);
   const dirOf = (p: string) => { const i = p.lastIndexOf('/'); return i < 0 ? '.' : p.slice(0, i); };
   for (const p of paths) for (let d = dirOf(p); d !== '.'; d = dirOf(d)) dirs.add(d);
-  for (const d of dirs) if (d !== '.') o.push(`has_dir[fs](${q(dirOf(d))}, ${q(d.slice(d.lastIndexOf('/') + 1))}, ${q(d)}).`);
-  for (const p of paths) o.push(`has_file[fs](${q(dirOf(p))}, ${q(p.slice(p.lastIndexOf('/') + 1))}, ${q(p)}).`);
+  for (const d of dirs) if (d !== '.') o.push(`has_dir[fs](${q(dirOf(d))}, ${q(d.slice(d.lastIndexOf('/') + 1))}).`);
+  for (const p of paths) o.push(`has_file[fs](${q(dirOf(p))}, ${q(p.slice(p.lastIndexOf('/') + 1))}).`);
   for (const s of strings) { if (!s || s.includes('\n')) continue; const segs = s.split('/'); o.push(`str_segs[code](${q(s)}, ${segs.length}).`, `str_char0[code](${q(s)}, ${q(String.fromCodePoint(s.codePointAt(0)!))}).`); segs.forEach((g, k) => o.push(`str_seg[code](${q(s)}, ${k}, ${q(g)}).`)); if (s.indexOf(':') > 0) o.push(`str_scheme[code](${q(s)}, ${q(s.slice(0, s.indexOf(':')))}).`); }
   return o;
 }

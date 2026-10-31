@@ -451,7 +451,7 @@ export const BUILTIN_OPS = ['=', '!=', '<', '<=', '>', '>=', 'is', 'in', 'subset
  *  INPUTS, and `bootstrapKernel` reads it to write the modes. */
 export const STR_ARITY: ReadonlyMap<string, number> = new Map([
   ['str_char', 2], ['str_len', 1], ['str_pre', 2], ['str_seg', 3], ['str_segs', 2],
-  ['str_sub', 3], ['atom_of', 1],
+  ['str_sub', 3], ['atom_of', 1], ['concat', 2],
 ]);
 
 /** Three refusals, kept apart because they demand three different repairs --
@@ -556,6 +556,13 @@ export function evalStrOp(t: Term, s: Subst, fail?: ArithFail): Term | null | un
   const str = strOperand(t.args[0], s, fail);
   if (str === null) return null;
   if (t.name === 'str_len') return mki([...str].length);
+  // `concat(A, B)` is the one constructor: it makes a string no program held, so safety.rofl refuses it inside a
+  // recursion (unbounded_in_recursion), where it could grow one without end
+  if (t.name === 'concat') {
+    const b = strOperand(t.args[1], s, fail);
+    if (b === null) return null;
+    return mks(str + b);
+  }
   if (t.name === 'str_char') {
     const cp = [...str];
     const i = intOperand(t.args[1], s, fail);

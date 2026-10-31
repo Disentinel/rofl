@@ -119,10 +119,10 @@ function hostFacts(paths: string[], strings: Set<string>): string[] {
   const q = (x: string) => '"' + x.replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"', out: string[] = [], dirs = new Set(['.']);
   const dirOf = (p: string) => { const i = p.lastIndexOf('/'); return i < 0 ? '.' : p.slice(0, i); };
   for (const p of paths) for (let d = dirOf(p); d !== '.'; d = dirOf(d)) dirs.add(d);
-  // the disk is a ledger of its own, [fs]: a directory has a file or a directory by its name, and the path names it
+  // the disk is a ledger of its own, [fs]: a directory, named by its path, has a file or a directory by its name
   const base = (p: string) => p.slice(p.lastIndexOf('/') + 1);
-  for (const d of dirs) if (d !== '.') out.push(`has_dir[fs](${q(dirOf(d))}, ${q(base(d))}, ${q(d)}).`);
-  for (const p of paths) out.push(`has_file[fs](${q(dirOf(p))}, ${q(base(p))}, ${q(p)}).`);
+  for (const d of dirs) if (d !== '.') out.push(`has_dir[fs](${q(dirOf(d))}, ${q(base(d))}).`);
+  for (const p of paths) out.push(`has_file[fs](${q(dirOf(p))}, ${q(base(p))}).`);
   for (const s of strings) {
     if (!s || s.includes('\n')) continue;
     const segs = s.split('/');
