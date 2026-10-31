@@ -469,6 +469,15 @@ export class Host {
       if (cl.body.length) rules.set(ruleIdOf(cl), { rel: cl.head.rel, cell: i });
       if (cl.body.length) (bodies.get(cl.head.rel) ?? bodies.set(cl.head.rel, []).get(cl.head.rel)!).push(conditions(cl));
     } } catch { /* said by the load */ } });
+    const worlds = base ? [base, f] : [f];
+    // a rule reading a relation at an arity or in a book nothing writes is empty for no reason in the code: said where the rule is
+    const warned = new Set<string>();
+    texts.forEach((x, i) => { if (x.trim()) try { for (const cl of parseProgram(x)) for (const b of cl.body) for (const l of litsOf(b)) {
+      const name = `${l.rel}${l.perspExplicit ? `[${canonTerm(l.persp)}]` : ''}`, key = `${i} ${name}/${l.args.length}`;
+      if (warned.has(key) || !worlds.every((w) => w.unpopulatable(l))) continue;
+      warned.add(key);
+      outs[i].notes.push(`the rule for ${plain(cl.head.rel).replace(/_/g, ' ')} reads ${plain(name)} with ${l.args.length} argument${l.args.length === 1 ? '' : 's'}, and nothing in the model can put a row there: ${elsewhere(`${name}(`, this.model + '\n' + all) ?? 'check the name, the book and the number of arguments'}`);
+    } } catch { /* said by the load */ } });
     /** What `say` says of the first relation `rel` rests on, or of `rel` itself when `self`. */
     const under = (rel: string, say: (r: string) => string | undefined, self: boolean, seen = new Set<string>()): string | undefined => {
       const why = self ? say(rel) : undefined; if (why) return why;
@@ -476,7 +485,8 @@ export class Host {
       seen.add(rel);
       for (const d of deps.get(rel) ?? []) { const why = under(d, say, true, seen); if (why) return why; }
     };
-    const restsOn = (rel: string) => under(rel, (r) => !deps.has(r) && !(r in home) && !this.modelRels.has(r) ? `it rests on ${plain(r).replace(/_/g, ' ')}, which nothing defines` : undefined, false);
+    const declared = new Set(worlds.flatMap((w) => w.query('edb(R)').rows.map((r) => r.bindings.R)));
+    const restsOn = (rel: string) => under(rel, (r) => !deps.has(r) && !(r in home) && !this.modelRels.has(r) && !declared.has(r) ? `it rests on ${plain(r).replace(/_/g, ' ')}, which nothing defines` : undefined, false);
     const unread = outs.map((o) => o.errors.length ? 'part of this cell was not read (its errors above)' : undefined);
     const seen = { failing: [] as string[][], blind: [] as string[][], unknown: [] as string[][] };   // the rows of the nevers, the unsures and unknown, as their terms
     // a cell's rule that met an expression it could not evaluate concluded nothing there, and the kernel said so only in its hole relation
@@ -567,7 +577,6 @@ export class Host {
     };
     // a constant no fact mentions matches nothing, and a never over it holds whatever the code does; a rule's constants are facts too, in its reflection
     let known: Set<string> | null = null;
-    const worlds = base ? [base, f] : [f];
     const atoms = (): Set<string> => { if (!known) { known = new Set(); for (const w of worlds) if (!remote(w)) for (const r of w.store.allFacts()) atomsIn(r.args, known); } return known; };
     const named = (x: string) => atoms().has(x) || worlds.some((w) => holding(w, { atom: x }, 1)?.length);
     const nameless = (lit: string, text: string): string | undefined => {

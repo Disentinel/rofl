@@ -4135,3 +4135,7 @@ work_needs(w_rename_keeps_ids, w_stable_node_ids).
 work(w_join_through_constants,
   "From f_a_join_on_a_table_of_constants_read_past_the_index: a premise bound by a variable from a small table of constant facts is looked up by both columns, not read for each row of the other bound column. ACCEPTANCE: the operand rule of that finding, as written there, reads in proportion to its answers on 100 vscode files, no hot line; planted, the old plan red.").
 work_state(w_join_through_constants, open).
+
+work(w_ledger_on_roflenox,
+  "The owner, 2026-10-31 (thread «Интенты»): keep the ledger (facts/findings.rofl, facts/worklist.rofl) as a signed book on a Roflenox node instead of only in git. What exists: a world reads `roflenox://HOST/IDENTITY/BOOK` and checks every batch (rust/rofl/src/roflenox.rs, docs/intents.md question 4); nothing writes a book there yet, and an anonymous reader needs an export fact. OPEN: who writes (a person's identity or the project's), how a ledger edit becomes a batch, whether git keeps a copy or only a pointer, how goldens over the ledger (notebook_ledger, rules_findings, rules_worklist, agg_proofs) read it. Writing to the owner's live node needs his go-ahead. ACCEPTANCE: a world loading the ledger from the node gives the same census as from the files, and a tampered batch is refused.").
+work_state(w_ledger_on_roflenox, open).
