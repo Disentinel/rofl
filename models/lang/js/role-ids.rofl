@@ -256,9 +256,18 @@ alone(N, H) :- what(N, H0), named(N, V), H is hash(H0, V).
 alone(N, H) :- what(N, H), not named(N, _).
 cut(N) :- body[value](N, _).
 cut(N) :- mark[value](N, class).
-fold(N, 0, H) :- alone(N, H).
-fold(N, R1, H) :- fold(N, R, H0), role_parent(C, N), order(C, R), part(C, X), H is hash(H0, X), R1 is R + 1.
-shape(N, H) :- kids(N, K), fold(N, K, H).
+-- the fold walks a tree of its own: each node's first child hangs under it, each later child under the one
+-- before it, so a hash is made only along a declared edge
+first_kid(N, C) :- role_parent(C, N), order(C, 0).
+next_kid(A, B)  :- role_parent(A, N), order(A, I), J is I + 1, role_parent(B, N), order(B, J).
+last_kid(N, L)  :- kids(N, K), K > 0, I is K - 1, role_parent(L, N), order(L, I).
+chain(N, C) :- first_kid(N, C).
+chain(A, B) :- next_kid(A, B).
+tree chain(P, C) closure chain_after.
+acc(C, H) :- chain(N, C), first_kid(N, C), alone(N, A), part(C, X), H is hash(A, X).
+acc(C, H) :- chain(A, C), next_kid(A, C), acc(A, H0), part(C, X), H is hash(H0, X).
+shape(N, H) :- kids(N, 0), alone(N, H).
+shape(N, H) :- last_kid(N, L), acc(L, H).
 part(C, X) :- cut(C), alone(C, X).
 part(C, X) :- not cut(C), shape(C, X).
 
