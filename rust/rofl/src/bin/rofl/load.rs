@@ -349,8 +349,14 @@ fn run(json: bool, args: Vec<String>, mut pre: Option<(bool, crate::kept::Record
             } else { sources.push((f.clone(), None)); }
         }
         let mut loaded: Vec<(String, String)> = Vec::new();
+        let split = std::env::var("ROFL_FILES").ok().and_then(|v| { let (k, f) = v.split_once(':')?; Some((k.parse::<usize>().ok()?, f.to_string())) });
+        let mut corpus = String::new();
         for (f, text) in &sources {
             let t = text.clone().unwrap_or_else(|| read(f));
+            if split.as_ref().is_some_and(|(_, c)| c == f) {
+                corpus = t;
+                continue;
+            }
             if let Err(d) = s.load(&t, None) {
                 fail(json, FILE_REFUSED, &format!("{f} refused:\n  {}", d.join("\n  ")));
             }
@@ -374,6 +380,14 @@ fn run(json: bool, args: Vec<String>, mut pre: Option<(bool, crate::kept::Record
         let disk = slot.as_ref().filter(|_| ticks == 0 && retracts.is_empty() && !explain && below.is_empty())
             .and_then(|p| crate::kept::most(p).ok()).filter(|m| wall(*m) > s.eval.disk_bytes());
         if let Some(m) = disk { s.eval.disk = wall(m); }
+        if let Some((k, _)) = &split {
+            let show: Vec<_> = qs.iter().filter_map(|q| match q { Q::Ask(l) => l.split('(').next().map(|r| s.eval.h.intern(r.trim())), _ => None }).collect();
+            match s.eval.files_split(&corpus, *k, &show) {
+                Ok(rows) => rows.iter().for_each(|r| println!("{r}")),
+                Err(e) => refuse(&mut s, json, rofl::describe(&e)),
+            }
+            return;
+        }
         if ticks == 0 || !retracts.is_empty() {
             if let Err(e) = s.evaluate() { refuse(&mut s, json, rofl::describe(&e)); }
             for f in &retracts {

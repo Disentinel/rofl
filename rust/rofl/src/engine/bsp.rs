@@ -22,7 +22,7 @@ impl Par {
 }
 
 /// A term of a worker's heap in the master's: what the worker made after the fork is made again by name.
-fn copy_term(t: Term, src: &Heap, dst: &mut Heap, syms: Sym, funcs: u32) -> Term {
+pub(super) fn copy_term(t: Term, src: &Heap, dst: &mut Heap, syms: Sym, funcs: u32) -> Term {
     match t.kind() {
         TermK::Atom(s) if s >= syms => {
             let n = dst.intern(src.name(s));

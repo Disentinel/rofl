@@ -34,6 +34,7 @@ mod latkept;
 mod want;
 pub(crate) mod keys;
 pub(crate) mod bsp;
+pub(crate) mod files;
 pub use latkept::Tok;
 pub use cost::{Hot, PremCost};
 use resume::{Cut, CutAt, InFlight, Tail};
