@@ -438,7 +438,7 @@ concluded by *the kernel's own programs* — see the section under this one.
 | `neg_relation(A)` | `safety.rofl` | the kernel | some rule negates A |
 | `provenance_reader(R)` | `safety.rofl` | the kernel | R reads `derived_by` — so provenance cannot be pruned out from under it |
 
-**Term and string destructors** (`Out is op(In, …)`, seven of them). They are
+**Term and string destructors** (`Out is op(In, …)`, eight of them). They are
 not relations and they are not arithmetic: the parser has exactly one
 term-producing builtin form, so the output is the LEFT operand of `is` and the
 declared `mode` is `[out, in, …]`. **Indices are CODE POINTS, not UTF-16 code
@@ -455,6 +455,7 @@ half a character, which the store would then carry. Operands compose, so
 | `str_seg(S, Sep, N)` | 3 | the Nth segment. The argument list admits TERMS and not expressions, so the last segment is `N is str_segs(S, Sep), K is N - 1, T is str_seg(S, Sep, K)` |
 | `str_segs(S, Sep)` | 2 | how many segments — and it is what tells `str_pre`'s empty answer apart from an empty first segment |
 | `atom_of(S)` | 1 | the atom of a string. It crosses a sort boundary and produces a TERM; a term only becomes an executable rule through the reflection rows, which `breach[audit]` and the write protection on `conclusion_lit` already watch |
+| `hash(Seed, V)` | 2 | an atom that names the pair: 13 base-32 digits of a 64-bit hash of both texts, under the prefix of Seed's atom up to its first `_` (`h` when it has none), so a file's volume key carries over. Not a destructor: it is how a rule names a node it reads out of a tree (models/lang/js/role-ids.rofl), and the universe stays finite only because the width is fixed |
 
 Three refusals, kept apart because they demand three different repairs, and
 each arrives as a `hole` rather than as silence: `str_type_error` (the program

@@ -7,15 +7,16 @@
 -- file through both parsers gives the same role facts.
 
 -- the raw tree, under short names
-alias oxc_k(N, K) is ast_node(N, K, _).
-alias oxc_c(P, F, I, C) is ast_child(P, F, I, C).
-alias oxc_a(N, K, V) is ast_attr(N, K, V).
-alias oxc_name(N, V) is ast_attr(N, name, V).
+alias oxc_k(N, K) is node(N, K, _).
+alias oxc_c(P, F, I, C) is child(P, F, I, C).
+alias oxc_a(N, K, V) is attr(N, K, V).
+alias oxc_name(N, V) is attr(N, name, V).
 
 -- TREE ---------------------------------------------------------------------------------------------
 
-at[tree](N, File, Line)  :- ast_node[ast_oxc](N, _, File), ast_line[ast_oxc](N, Line).
-program[tree](P, File)   :- ast_node[ast_oxc](P, program, File).
+at[tree](N, File, Line)  :- node[ast_oxc](N, _, File), line[ast_oxc](N, Line).
+program[tree](P, File)   :- node[ast_oxc](P, program, File).
+pos[tree](N, O)          :- start[ast_oxc](N, O).
 
 -- the edge `inside` closes over: the raw parent, so a node under a wrapper is still inside
 parent[tree](P, C) :- oxc_c[ast_oxc](P, _, _, C).

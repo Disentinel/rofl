@@ -451,7 +451,7 @@ export const BUILTIN_OPS = ['=', '!=', '<', '<=', '>', '>=', 'is', 'in', 'subset
  *  INPUTS, and `bootstrapKernel` reads it to write the modes. */
 export const STR_ARITY: ReadonlyMap<string, number> = new Map([
   ['str_char', 2], ['str_len', 1], ['str_pre', 2], ['str_seg', 3], ['str_segs', 2],
-  ['str_sub', 3], ['atom_of', 1],
+  ['str_sub', 3], ['atom_of', 1], ['hash', 2],
 ]);
 
 /** Three refusals, kept apart because they demand three different repairs --
@@ -501,6 +501,38 @@ function strOperand(t: Term, s: Subst, fail?: ArithFail): string | null {
   if (w.k === 's') return w.v;
   if (fail) fail.code = w.k === 'v' ? ARITH_UNBOUND : STR_TYPE;
   return null;
+}
+
+/** A scalar operand's text, tagged by its sort so that `a`, "a" and 1 hash apart. */
+function scalarText(t: Term, s: Subst, fail?: ArithFail): string | null {
+  const nested = evalStrOp(t, s, fail);
+  if (nested === null) return null;
+  let w = nested ?? walk(t, s);
+  if (w.k === 'f') { const v = evalArith(w, s, fail); if (v === null) return null; w = mki(v); }
+  if (w.k === 'a') return 'a' + w.name;
+  if (w.k === 's') return 's' + w.v;
+  if (w.k === 'i') return 'i' + String(w.v);
+  if (fail) fail.code = w.k === 'v' ? ARITH_UNBOUND : STR_TYPE;
+  return null;
+}
+
+/** `hash(Seed, X)`: an atom that names X under Seed, a fixed width whatever it hashes, so a recursion through it
+ *  stays finite. It keeps Seed's text up to its first `_` (a node id's volume prefix), else starts with `h`. */
+function hashOp(seed: Term, x: Term, s: Subst, fail?: ArithFail): Term | null {
+  const a = scalarText(seed, s, fail);
+  if (a === null) return null;
+  const b = scalarText(x, s, fail);
+  if (b === null) return null;
+  let h = 0xcbf29ce484222325n;
+  for (const byte of new TextEncoder().encode(a + '\u001f' + b)) h = ((h ^ BigInt(byte)) * 0x100000001b3n) & 0xffffffffffffffffn;
+  h ^= h >> 30n; h = (h * 0xbf58476d1ce4e5b9n) & 0xffffffffffffffffn;
+  h ^= h >> 27n; h = (h * 0x94d049bb133111ebn) & 0xffffffffffffffffn;
+  h ^= h >> 31n;
+  const D = '0123456789abcdefghijklmnopqrstuv';
+  let out = '';
+  for (let i = 0; i < 13; i++) { out += D[Number(h & 31n)]; h >>= 5n; }
+  const cut = a[0] === 'a' ? a.indexOf('_') : -1;
+  return mka((cut > 0 ? a.slice(1, cut + 1) : 'h') + out);
 }
 
 /** An integer operand, read as arithmetic so that a bound variable and a
@@ -553,6 +585,7 @@ export function evalStrOp(t: Term, s: Subst, fail?: ArithFail): Term | null | un
   // A destructor at the wrong width is a program error, not another
   // operation: nothing else in the language answers to these names.
   if (t.args.length !== inputs) { if (fail) fail.code = STR_TYPE; return null; }
+  if (t.name === 'hash') return hashOp(t.args[0], t.args[1], s, fail);
   const str = strOperand(t.args[0], s, fail);
   if (str === null) return null;
   if (t.name === 'str_len') return mki([...str].length);

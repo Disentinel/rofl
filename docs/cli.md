@@ -360,14 +360,16 @@ npm run scan:oxc -- path/to/src --out oxc.rofl
 `rust/tools/oxc_scan` (its own cargo workspace, so the engine's build never
 compiles oxc) reads the same files as `npm run scan` through oxc and writes
 oxc's own tree, the Rust structs of `oxc_ast` and not its ESTree output, raw
-and without judgement into the `[ast_oxc]` perspective: `ast_node(Id, Kind,
-File)`, `ast_line(Id, Line)`, `ast_child(Parent, Field, Index, Child)`,
-`ast_attr(Id, Key, Value)`, `ast_file(Root, File)`, or
-`ast_parse_error(File, Message)` alone for a file oxc reports an error in. A
+and without judgement into the `[ast_oxc]` perspective: `node(Id, Kind,
+File)`, `line(Id, Line)`, `start(Id, Offset)` (in UTF-16 units, as a JS
+parser counts), `child(Parent, Field, Index, Child)`, `attr(Id, Key, Value)`,
+`file(Root, File)`, or `parse_error(File, Message)` alone for a file oxc
+reports an error in. A program's id is its file prefix and `root`, so a second
+parser that does the same names a file's program alike. A
 kind is the struct's name (`static_member_expression`, `class`), a field the
 Rust field's; an enum wrapper that names it otherwise is the attribute
-`variant` (`class` under `"ClassDeclaration"`). Ids are made as js_ast.ts makes
-them, with the same file prefix: code added above a node leaves its id. Files
+`variant` (`class` under `"ClassDeclaration"`). Every other id is made as js_ast.ts makes
+it, with the same file prefix: code added above a node leaves its id. Files
 are parsed in parallel and printed in path order, the same bytes for the same
 tree. The JS model does not read `[ast_oxc]` yet. Its converter into the roles
 is `models/lang/js/oxc-roles.rofl` (`rofl load models/lang/js/oxc-roles.rofl

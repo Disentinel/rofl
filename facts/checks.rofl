@@ -3854,4 +3854,5 @@ check_file("intents_screen", "examples/intents/screen.rofl").
 -- into the roles (models/lang/js/oxc-roles.rofl); the golden is its census of roles
 check_world("oxc_roles").
 check_file("oxc_roles", "models/lang/js/oxc-roles.rofl").
+check_file("oxc_roles", "models/lang/js/role-ids.rofl").
 check_file("oxc_roles", "models/lang/js/fixtures/all.oxc.rofl").

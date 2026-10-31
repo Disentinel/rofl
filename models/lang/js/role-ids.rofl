@@ -1,0 +1,125 @@
+-- role-ids.rofl — an id for every node that plays a role, from the roles alone, so that two parsers
+-- that give a file the same roles give its nodes the same ids.
+--
+-- Reads only [tree], [value] and [type] (and pos[tree], where a node starts in the source); nothing
+-- of a parser. The program is named by its file's volume; every other node by its role parent's id
+-- and its step: its name when it has one, else its shape (its roles, its name and its children's
+-- shapes in source order, cut at a body), and how many earlier siblings share that step. Neither a
+-- line nor a position goes into an id, so code added above a node leaves it.
+--
+--   rid(N, Id)   the role id of node N
+
+-- what a node is, as one bit per role; the sum of a node's bits is the set of its roles
+edb(role_bit).
+role_bit(call, 1).          role_bit(construct, 2).      role_bit(tagged, 3).       role_bit(fn, 4).
+role_bit(member, 5).        role_bit(member_expr, 6).    role_bit(assign, 7).       role_bit(decl, 8).
+role_bit(binary, 9).        role_bit(unary, 10).         role_bit(logical, 11).     role_bit(literal, 12).
+role_bit(template, 13).     role_bit(object, 14).        role_bit(array, 15).       role_bit(class, 16).
+role_bit(ref, 17).          role_bit(binds, 18).         role_bit(keyed, 19).       role_bit(passes, 20).
+role_bit(this, 21).         role_bit(super, 22).         role_bit(returns, 23).     role_bit(yields, 24).
+role_bit(awaits, 25).       role_bit(throws, 26).        role_bit(module_ref, 27).  role_bit(scope, 28).
+role_bit(seq, 29).          role_bit(exit_return, 30).   role_bit(exit_break, 31).  role_bit(exit_continue, 32).
+role_bit(exit_throw, 33).   role_bit(tries, 34).         role_bit(label, 35).       role_bit(loop, 36).
+role_bit(iterates, 37).     role_bit(enumerates, 38).    role_bit(pattern, 39).     role_bit(type_ref, 40).
+role_bit(type_binds, 41).   role_bit(type_object, 42).   role_bit(type_call, 43).   role_bit(type_binary, 44).
+role_bit(program, 45).      role_bit(new_target, 46).    role_bit(import_meta, 47). role_bit(gives, 48).
+
+is_a(N, call)       :- call[value](N).
+is_a(N, construct)  :- construct[value](N).
+is_a(N, tagged)     :- tagged[value](N, _, _).
+is_a(N, fn)         :- body[value](N, _).
+is_a(N, member)     :- member[value](N, _, _).
+is_a(N, member_expr) :- member_expr[value](N, _, _).
+is_a(N, assign)     :- assign[value](N, _, _).
+is_a(N, decl)       :- decl[value](N, _).
+is_a(N, binary)     :- binary[value](N, _, _, _).
+is_a(N, unary)      :- unary[value](N, _, _).
+is_a(N, logical)    :- logical[value](N, _, _, _).
+is_a(N, literal)    :- literal[value](N, _).
+is_a(N, template)   :- template[value](N).
+is_a(N, object)     :- object[value](N).
+is_a(N, array)      :- array[value](N).
+is_a(N, class)      :- class[value](N).
+is_a(N, ref)        :- ref[value](N, _).
+is_a(N, binds)      :- binds[value](N, _).
+is_a(N, keyed)      :- key[value](N, _).
+is_a(N, keyed)      :- key_expr[value](N, _).
+is_a(N, passes)     :- passes[value](N, _).
+is_a(N, this)       :- this[value](N).
+is_a(N, super)      :- super[value](N).
+is_a(N, returns)    :- returns[value](N, _).
+is_a(N, yields)     :- yields[value](N, _).
+is_a(N, yields)     :- delegates[value](N, _).
+is_a(N, awaits)     :- awaits[value](N, _).
+is_a(N, throws)     :- throws[value](N, _).
+is_a(N, module_ref) :- module_ref[value](N, _).
+is_a(N, scope)      :- scope[tree](N).
+is_a(N, seq)        :- nth[tree](N, _, _).
+is_a(N, exit_return)   :- exits[tree](N, return).
+is_a(N, exit_break)    :- exits[tree](N, break).
+is_a(N, exit_continue) :- exits[tree](N, continue).
+is_a(N, exit_throw)    :- exits[tree](N, throw).
+is_a(N, tries)      :- tries[tree](N, _).
+is_a(N, label)      :- label[tree](N, _).
+is_a(N, loop)       :- repeats[tree](N, _).
+is_a(N, iterates)   :- iterates[value](N, _, _).
+is_a(N, enumerates) :- enumerates[value](N, _, _).
+is_a(N, pattern)    :- pattern_prop[value](N, _, _).
+is_a(N, pattern)    :- pattern_elem[value](N, _, _).
+is_a(N, type_ref)   :- ref[type](N, _).
+is_a(N, type_binds) :- binds[type](N, _).
+is_a(N, type_object) :- object[type](N).
+is_a(N, type_call)  :- call[type](N).
+is_a(N, type_binary) :- binary[type](N, _, _, _).
+is_a(N, program)    :- program[tree](N, _).
+is_a(N, new_target) :- new_target[value](N).
+is_a(N, import_meta) :- import_meta[value](N).
+is_a(N, gives)      :- gives[value](N, _).
+
+role_node(N) :- is_a(N, _).
+roles_of(N, M) :- role_node(N), M is sum(B ; B : is_a(N, R), role_bit(R, B)).
+
+-- its name, the first a node has of: what it binds, reads, keys, reaches as a member, or its literal value
+-- (a function's own this and arguments are not its name)
+binds_name(N, V) :- binds[value](N, V), V != "this", V != "arguments".
+named(N, V) :- binds_name(N, V).
+named(N, V) :- binds[type](N, V), not binds_name(N, _).
+named(N, V) :- ref[value](N, V), not binds_name(N, _).
+named(N, V) :- ref[type](N, V), not ref[value](N, _), not binds_name(N, _).
+named(N, V) :- key[value](N, V), not ref[value](N, _), not binds_name(N, _).
+named(N, V) :- member[value](N, _, V), not key[value](N, _).
+named(N, V) :- literal[value](N, V), not member[value](N, _, _), not key[value](N, _).
+
+-- the role parent: the nearest ancestor that plays a role
+up(C, A) :- parent[tree](A, C).
+role_up(C, A) :- up(C, A), role_node(A).
+role_up(C, A) :- up(C, X), not role_node(X), role_up(X, A).
+role_parent(C, P) :- role_node(C), role_up(C, P).
+
+-- the children in source order
+order(C, R) :- role_parent(C, P), pos[tree](C, O), R is count(D : role_parent(D, P), pos[tree](D, OD), OD < O).
+kids(P, K) :- role_node(P), K is count(C : role_parent(C, P)).
+
+-- a node alone (its roles and name), then its shape: the node and its children's shapes in order, a
+-- function or a class cut to the node alone, so an edit inside a body leaves the shapes around it
+alone(N, H) :- roles_of(N, M), named(N, V), H0 is hash(shape, M), H is hash(H0, V).
+alone(N, H) :- roles_of(N, M), not named(N, _), H is hash(shape, M).
+cut(N) :- body[value](N, _).
+cut(N) :- class[value](N).
+fold(N, 0, H) :- alone(N, H).
+fold(N, R1, H) :- fold(N, R, H0), role_parent(C, N), order(C, R), part(C, X), H is hash(H0, X), R1 is R + 1.
+shape(N, H) :- kids(N, K), fold(N, K, H).
+part(C, X) :- cut(C), alone(C, X).
+part(C, X) :- not cut(C), shape(C, X).
+
+-- the step: a named node by itself alone, an unnamed one by its shape; equal steps under one parent counted
+id_step(C, S) :- named(C, _), alone(C, S).
+id_step(C, S) :- not named(C, _), shape(C, S).
+nth_equal(C, K) :- role_parent(C, P), id_step(C, S), pos[tree](C, O),
+                   K is count(D : role_parent(D, P), id_step(D, S), pos[tree](D, OD), OD < O).
+
+rid(P, P) :- program[tree](P, _).
+rid(C, Id) :- role_parent(C, P), rid(P, PI), id_step(C, S), nth_equal(C, K), H is hash(PI, S), Id is hash(H, K).
+
+-- two nodes of a file under one id: the ids are not yet a name
+rid_shared[audit](Id, A, B) :- rid(A, Id), rid(B, Id), A != B.

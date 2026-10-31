@@ -14151,6 +14151,12 @@ pub fn eval_str_op(h: &mut Heap, t: Term, s: &Subst, fail: &mut u8) -> StrOp {
         *fail = STR_TYPE;
         return StrOp::Refused;
     }
+    if name == "hash" {
+        return match hash_op(h, args[0], args[1], s, fail) {
+            Some(t) => StrOp::Value(t),
+            None => StrOp::Refused,
+        };
+    }
     let Some(st) = str_operand(h, args[0], s, fail) else {
         return StrOp::Refused;
     };
@@ -14241,6 +14247,52 @@ fn str_operand(h: &mut Heap, t: Term, s: &Subst, fail: &mut u8) -> Option<String
             None
         }
     }
+}
+
+/// A scalar operand's text, tagged by its sort so that `a`, "a" and 1 hash apart (`scalarText`, src/reflect.ts).
+fn scalar_text(h: &mut Heap, t: Term, s: &Subst, fail: &mut u8) -> Option<String> {
+    let w = match eval_str_op(h, t, s, fail) {
+        StrOp::Refused => return None,
+        StrOp::Value(x) => x,
+        StrOp::NotOne => walk(h, t, s),
+    };
+    match w.kind() {
+        TermK::Atom(x) => Some(format!("a{}", h.name(x))),
+        TermK::Str(x) => Some(format!("s{}", h.name(x))),
+        TermK::Int(v) => Some(format!("i{v}")),
+        TermK::Func(_) => eval_arith(h, w, s, fail).map(|v| format!("i{v}")),
+        TermK::Var(_) => {
+            *fail = ARITH_UNBOUND;
+            None
+        }
+    }
+}
+
+/// `hash(Seed, X)`: an atom that names X under Seed, a fixed width whatever it hashes, so a recursion through it
+/// stays finite. It keeps Seed's text up to its first `_` (a node id's volume prefix), else starts with `h`.
+fn hash_op(h: &mut Heap, seed: Term, x: Term, s: &Subst, fail: &mut u8) -> Option<Term> {
+    let a = scalar_text(h, seed, s, fail)?;
+    let b = scalar_text(h, x, s, fail)?;
+    let mut v: u64 = 0xcbf2_9ce4_8422_2325;
+    for byte in a.bytes().chain(std::iter::once(0x1f)).chain(b.bytes()) {
+        v = (v ^ byte as u64).wrapping_mul(0x100_0000_01b3);
+    }
+    v ^= v >> 30;
+    v = v.wrapping_mul(0xbf58_476d_1ce4_e5b9);
+    v ^= v >> 27;
+    v = v.wrapping_mul(0x94d0_49bb_1331_11eb);
+    v ^= v >> 31;
+    const D: &[u8] = b"0123456789abcdefghijklmnopqrstuv";
+    let mut out = String::with_capacity(32);
+    match a.strip_prefix('a').and_then(|n| n.find('_').filter(|&c| c > 0).map(|c| &n[..=c])) {
+        Some(p) => out.push_str(p),
+        None => out.push('h'),
+    }
+    for _ in 0..13 {
+        out.push(D[(v & 31) as usize] as char);
+        v >>= 5;
+    }
+    Some(h.atom(&out))
 }
 
 fn int_operand(h: &mut Heap, t: Term, s: &Subst, fail: &mut u8) -> Option<i64> {

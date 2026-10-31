@@ -7,16 +7,17 @@
 // every node, so nothing is chosen by hand: a struct with a span is a node, its struct name the kind, its field names
 // the fields; an enum wrapper names the variant when it is not the struct's own name.
 //
-//   ast_node[ast_oxc](Id, Kind, File)                one per oxc node
-//   ast_line[ast_oxc](Id, Line)                      the line it starts on
-//   ast_child[ast_oxc](Parent, Field, Index, Child)  the tree; Index over the raw Vec, a None keeps its place
-//   ast_attr[ast_oxc](Id, Key, Value)                every scalar; a struct without span flattened as key_member
-//   ast_file[ast_oxc](RootId, File)                  one per parsed file
-//   ast_parse_error[ast_oxc](File, Message)          instead of all of the above when oxc reports an error
+//   node[ast_oxc](Id, Kind, File)                one per oxc node
+//   line[ast_oxc](Id, Line)                      the line it starts on
+//   start[ast_oxc](Id, Offset)                   where it starts, in UTF-16 code units as a JS parser counts
+//   child[ast_oxc](Parent, Field, Index, Child)  the tree; Index over the raw Vec, a None keeps its place
+//   attr[ast_oxc](Id, Key, Value)                every scalar; a struct without span flattened as key_member
+//   file[ast_oxc](RootId, File)                  one per parsed file
+//   parse_error[ast_oxc](File, Message)          instead of all of the above when oxc reports an error
 //
 // Ids as scanners/js_ast.ts makes them: the file's prefix and a hash of the parent's id and the child's step (its
 // name when it has one, its shallow shape in a list, its field when single), so a node keeps its id when code is
-// added above it. Semantic slots (node_id, scope_id, symbol_id, reference_id) and the source text are left out.
+// added above it; the program itself is `<prefix>root`. Semantic slots (node_id, scope_id, symbol_id, reference_id) and the source text are left out.
 use oxc_allocator::Allocator;
 use oxc_span::SourceType;
 use std::collections::{BTreeMap, HashSet};
@@ -384,6 +385,7 @@ struct Scan<'a> {
     file: String,
     prefix: &'a str,
     lines: &'a [u32],
+    utf16: &'a [u32],
     salt: u64,
     ids: Vec<u64>,
 }
@@ -396,10 +398,12 @@ impl Scan<'_> {
     fn node(&mut self, n: &Node, me: &str, hash: u64) {
         self.ids.push(hash);
         let kind = atomise(&n.kind);
-        writeln!(self.out, "ast_node[{P}]({me}, {kind}, {}).", self.file).unwrap();
-        writeln!(self.out, "ast_line[{P}]({me}, {}).", self.line(n.start)).unwrap();
+        writeln!(self.out, "node[{P}]({me}, {kind}, {}).", self.file).unwrap();
+        writeln!(self.out, "line[{P}]({me}, {}).", self.line(n.start)).unwrap();
+        let at = if self.utf16.is_empty() { n.start } else { self.utf16[n.start as usize] };
+        writeln!(self.out, "start[{P}]({me}, {at}).").unwrap();
         if let Some(v) = &n.variant {
-            writeln!(self.out, "ast_attr[{P}]({me}, variant, {}).", q(v)).unwrap();
+            writeln!(self.out, "attr[{P}]({me}, variant, {}).", q(v)).unwrap();
         }
         let mut equal: BTreeMap<u64, u64> = BTreeMap::new();
         for (f, v) in &n.fields {
@@ -423,7 +427,7 @@ impl Scan<'_> {
                 }
             }
             V::None => {}
-            v => writeln!(self.out, "ast_attr[{P}]({me}, {f}, {}).", scalar(v).unwrap()).unwrap(),
+            v => writeln!(self.out, "attr[{P}]({me}, {f}, {}).", scalar(v).unwrap()).unwrap(),
         }
     }
 
@@ -443,7 +447,7 @@ impl Scan<'_> {
         let h = mix(mix(mix(mix(mix(mix(self.salt, hash), fw), mode), disc), k), 3);
         let id = format!("{}{}", self.prefix, b32(h));
         self.node(c, &id, h);
-        writeln!(self.out, "ast_child[{P}]({me}, {f}, {i}, {id}).").unwrap();
+        writeln!(self.out, "child[{P}]({me}, {f}, {i}, {id}).").unwrap();
     }
 }
 
@@ -468,25 +472,39 @@ fn scan(src: &str, file: &str) -> Result<String, String> {
     let qf = q(file);
     if let Some(e) = r.diagnostics.errors().next() {
         let msg: String = e.to_string().chars().take(120).collect();
-        return Err(format!("ast_parse_error[{P}]({qf}, {}).\n", q(&msg)));
+        return Err(format!("parse_error[{P}]({qf}, {}).\n", q(&msg)));
     }
     let text = format!("{:?}", r.program);
     drop(r);
-    let mut root = Rd { b: text.as_bytes(), i: 0 }.value().map_err(|e| format!("ast_parse_error[{P}]({qf}, {}).\n", q(&format!("oxc_scan: {e}"))))?;
+    let mut root = Rd { b: text.as_bytes(), i: 0 }.value().map_err(|e| format!("parse_error[{P}]({qf}, {}).\n", q(&format!("oxc_scan: {e}"))))?;
     drop(text);
     shallow(&mut root);
-    let V::Node(root) = root else { return Err(format!("ast_parse_error[{P}]({qf}, \"oxc_scan: no program\").\n")) };
+    let V::Node(root) = root else { return Err(format!("parse_error[{P}]({qf}, \"oxc_scan: no program\").\n")) };
     let mut lines = vec![0u32];
     lines.extend(src.bytes().enumerate().filter(|&(_, b)| b == b'\n').map(|(i, _)| i as u32 + 1));
+    // byte offset -> UTF-16 offset, only where the file is not ASCII
+    let mut utf16 = Vec::new();
+    if !src.is_ascii() {
+        utf16 = vec![0u32; src.len() + 1];
+        let mut u = 0u32;
+        for (i, c) in src.char_indices() {
+            for j in 0..c.len_utf8() {
+                utf16[i + j] = u;
+            }
+            u += c.len_utf16() as u32;
+        }
+        utf16[src.len()] = u;
+    }
     let pre = prefix(file);
-    let mut s = Scan { out: String::new(), file: qf, prefix: &pre, lines: &lines, salt: 0, ids: Vec::new() };
+    let mut s = Scan { out: String::new(), file: qf, prefix: &pre, lines: &lines, utf16: &utf16, salt: 0, ids: Vec::new() };
     loop {
+        // the program is `<prefix>root` whatever the salt, a name a second parser can give its program too
         let rh = mix(s.salt, 7);
-        let id = format!("{pre}{}", b32(rh));
+        let id = format!("{pre}root");
         s.node(&root, &id, rh);
         let mut seen = HashSet::with_capacity(s.ids.len());
         if s.ids.iter().all(|h| seen.insert(*h)) {
-            writeln!(s.out, "ast_file[{P}]({id}, {}).", s.file).unwrap();
+            writeln!(s.out, "file[{P}]({id}, {}).", s.file).unwrap();
             return Ok(s.out);
         }
         // a collision in this file: scanned again under the next salt, every id moves with it
@@ -554,7 +572,7 @@ fn main() {
                 let Some(f) = parsed.get(i) else { break };
                 let r = match std::fs::read_to_string(root.join(f)) {
                     Ok(src) => scan(&src, f),
-                    Err(e) => Err(format!("ast_parse_error[{P}]({}, {}).\n", q(f), q(&e.to_string()))),
+                    Err(e) => Err(format!("parse_error[{P}]({}, {}).\n", q(f), q(&e.to_string()))),
                 };
                 if tx.send((i, r)).is_err() {
                     break;
@@ -596,7 +614,7 @@ mod tests {
     use super::scan;
 
     fn ids(facts: &str) -> std::collections::BTreeSet<String> {
-        facts.lines().filter_map(|l| l.strip_prefix("ast_node[ast_oxc](")).map(|l| l.split(',').next().unwrap().to_string()).collect()
+        facts.lines().filter_map(|l| l.strip_prefix("node[ast_oxc](")).map(|l| l.split(',').next().unwrap().to_string()).collect()
     }
 
     const SRC: &str = "function f(a) { return g(a, 1); }\nclass C { m() { return this.x; } }\nconst [p, , q] = f(2);\n";
@@ -616,13 +634,13 @@ mod tests {
     #[test]
     fn a_hole_keeps_its_index() {
         let f = scan(SRC, "a.js").unwrap();
-        assert!(f.lines().any(|l| l.starts_with("ast_child[ast_oxc](") && l.contains(", elements, 2, ")));
+        assert!(f.lines().any(|l| l.starts_with("child[ast_oxc](") && l.contains(", elements, 2, ")));
         assert!(!f.lines().any(|l| l.contains(", elements, 1, ")));
     }
 
     #[test]
     fn a_refusal_is_a_fact_and_nothing_else() {
         let e = scan("let = = ;", "bad.js").unwrap_err();
-        assert!(e.starts_with("ast_parse_error[ast_oxc](\"bad.js\", ") && e.lines().count() == 1);
+        assert!(e.starts_with("parse_error[ast_oxc](\"bad.js\", ") && e.lines().count() == 1);
     }
 }

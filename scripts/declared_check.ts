@@ -77,7 +77,7 @@ const SILENT: [string, string, string[]][] = [
       'not read: under "Declared as facts:": A person P owns a car C — it says the words of "A team T owns a module M"']],
   ['the limits of a datalog cell', ['p(1).\n// a comment', 'p(1).\n# a comment', 'q(74.006).', 'r(X) :- p(X), X == 1.', 's("ab").\nu(X) :- s(S), X is concat(S, "c").\n\n? u(X)'].map((c) => `\`\`\`datalog\n${c}\n\`\`\`\n`).join('\n'),
     ["line 3: '//' starts no comment: a comment starts with --", "line 8: '#' starts no comment: a comment starts with --", 'line 12: 74.006 is not a number here: numbers are integers', "line 16: '==' is no operator: equality is =",
-      'the rule for u met an expression it could not evaluate (arith_type_error) and concluded nothing there: arithmetic is on integers, with + - * / mod min max, and the only string functions are str_char, str_len, str_pre, str_seg, str_segs, str_sub, atom_of']],
+      'the rule for u met an expression it could not evaluate (arith_type_error) and concluded nothing there: arithmetic is on integers, with + - * / mod min max, and the only string functions are str_char, str_len, str_pre, str_seg, str_segs, str_sub, atom_of, hash']],
 ];
 for (const [name, text, want] of SILENT) {
   const r = said(text), missing = want.filter((w) => !r.out.includes(w));
