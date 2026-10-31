@@ -980,7 +980,8 @@ Declared as facts:
 
 | arg 1 | arg 2 |
 |---|---|
-| `fs_file_in` | "holds_the_file(directory D, text Seg, being file T)" |
+| `has_file` | "holds_the_file(directory D, text Seg, being file T)" |
+| `has_dir` | "holds_the_directory(directory D, text Seg, being directory C)" |
 | `str_char0` | "starts_with(text S, text C)" |
 | `str_scheme` | "has_the_scheme(text S, text Scheme)" |
 | `import_site` | "is_an_import_site(node I, of form N)" |

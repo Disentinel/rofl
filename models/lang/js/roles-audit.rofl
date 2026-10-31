@@ -1,0 +1,123 @@
+-- roles-audit.rofl — the vocabulary's audits: which arguments of a role are nodes (`roled`), and a relation a converter
+-- writes into a world that roles.rofl does not declare. Loaded by the checks (npm run test:roles), not by the model: a
+-- world that only answers questions does not pay for them.
+
+-- ---- which arguments are nodes; a step of nth is placed, not yet told what it is
+roled[W](N) :- nth[W](N, _, _).
+roled[W](N) :- strict[W](N).
+roled[W](N) :- ref[W](N, _).
+roled[W](N) :- binds[W](N, _).
+roled[W](N) :- key[W](N, _).
+roled[W](N) :- key_expr[W](N, _).
+roled[W](N) :- key_expr[W](_, N).
+roled[W](N) :- literal[W](N, _).
+roled[W](N) :- template_part[W](N, _, _).
+roled[W](N) :- template_part[W](_, _, N).
+roled[W](N) :- callee[W](N, _).
+roled[W](N) :- callee[W](_, N).
+roled[W](N) :- tagged[W](N, _, _).
+roled[W](N) :- tagged[W](_, N, _).
+roled[W](N) :- tagged[W](_, _, N).
+roled[W](N) :- spread_args[W](N, _, _).
+roled[W](N) :- spread_args[W](_, _, N).
+roled[W](N) :- body[W](N, _).
+roled[W](N) :- body[W](_, N).
+roled[W](N) :- param[W](N, _, _).
+roled[W](N) :- param[W](_, _, N).
+roled[W](N) :- rest_params[W](N, _, _).
+roled[W](N) :- rest_params[W](_, _, N).
+roled[W](N) :- constructs[W](N, _).
+roled[W](N) :- constructs[W](_, N).
+roled[W](N) :- getter[W](N, _).
+roled[W](N) :- getter[W](_, N).
+roled[W](N) :- setter[W](N, _).
+roled[W](N) :- setter[W](_, N).
+roled[W](N) :- returns[W](N, _).
+roled[W](N) :- returns[W](_, N).
+roled[W](N) :- yields[W](N, _).
+roled[W](N) :- yields[W](_, N).
+roled[W](N) :- delegates[W](N, _).
+roled[W](N) :- delegates[W](_, N).
+roled[W](N) :- awaits[W](N, _).
+roled[W](N) :- awaits[W](_, N).
+roled[W](N) :- member[W](N, _, _).
+roled[W](N) :- member[W](_, N, _).
+roled[W](N) :- member_expr[W](N, _, _).
+roled[W](N) :- member_expr[W](_, N, _).
+roled[W](N) :- member_expr[W](_, _, N).
+roled[W](N) :- assign[W](N, _, _).
+roled[W](N) :- assign[W](_, N, _).
+roled[W](N) :- assign[W](_, _, N).
+roled[W](N) :- decl[W](N, _).
+roled[W](N) :- target[W](N, _).
+roled[W](N) :- target[W](_, N).
+roled[W](N) :- gives[W](N, _).
+roled[W](N) :- gives[W](_, N).
+roled[W](N) :- pattern_prop[W](N, _, _).
+roled[W](N) :- pattern_prop[W](_, _, N).
+roled[W](N) :- pattern_elem[W](N, _, _).
+roled[W](N) :- pattern_elem[W](_, _, N).
+roled[W](N) :- rest_props[W](N, _).
+roled[W](N) :- rest_props[W](_, N).
+roled[W](N) :- rest_elems[W](N, _, _).
+roled[W](N) :- rest_elems[W](_, _, N).
+roled[W](N) :- has[W](N, _).
+roled[W](N) :- has[W](_, N).
+roled[W](N) :- value[W](N, _).
+roled[W](N) :- value[W](_, N).
+roled[W](N) :- extends[W](N, _).
+roled[W](N) :- extends[W](_, N).
+roled[W](N) :- static_block[W](N, _).
+roled[W](N) :- static_block[W](_, N).
+roled[W](N) :- decorated[W](N, _).
+roled[W](N) :- decorated[W](_, N).
+roled[W](N) :- spread_props[W](N, _, _).
+roled[W](N) :- spread_props[W](_, _, N).
+roled[W](N) :- spread_elems[W](N, _, _).
+roled[W](N) :- spread_elems[W](_, _, N).
+roled[W](N) :- passes[W](N, _).
+roled[W](N) :- passes[W](_, N).
+roled[W](N) :- binary[W](N, _, _, _).
+roled[W](N) :- binary[W](_, _, N, _).
+roled[W](N) :- binary[W](_, _, _, N).
+roled[W](N) :- unary[W](N, _, _).
+roled[W](N) :- unary[W](_, _, N).
+roled[W](N) :- logical[W](N, _, _, _).
+roled[W](N) :- logical[W](_, _, N, _).
+roled[W](N) :- logical[W](_, _, _, N).
+roled[W](N) :- executes_if[W](N, _, _).
+roled[W](N) :- executes_if[W](_, N, _).
+roled[W](N) :- executes_when[W](N, _, _).
+roled[W](N) :- executes_when[W](_, N, _).
+roled[W](N) :- repeats[W](N, _).
+roled[W](N) :- repeats[W](_, N).
+roled[W](N) :- iterates[W](N, _, _).
+roled[W](N) :- iterates[W](_, N, _).
+roled[W](N) :- iterates[W](_, _, N).
+roled[W](N) :- enumerates[W](N, _, _).
+roled[W](N) :- enumerates[W](_, N, _).
+roled[W](N) :- enumerates[W](_, _, N).
+roled[W](N) :- exits[W](N, _).
+roled[W](N) :- throws[W](N, _).
+roled[W](N) :- throws[W](_, N).
+roled[W](N) :- tries[W](N, _).
+roled[W](N) :- tries[W](_, N).
+roled[W](N) :- label[W](N, _).
+roled[W](N) :- namespace[W](N, _).
+roled[W](N) :- namespace[W](_, N).
+roled[W](N) :- module_ref[W](N, _).
+roled[W](N) :- declared[W](N, _).
+roled[W](N) :- declared[W](_, N).
+roled[W](N) :- implements[W](N, _).
+roled[W](N) :- implements[W](_, N).
+roled[W](N) :- bound[W](N, _).
+roled[W](N) :- bound[W](_, N).
+roled[W](N) :- mark[W](N, _).
+
+
+-- ---- the vocabulary's own audits
+role_undeclared[audit](Rel) :- writes_to[$kernel](R, B), world(B), concludes[$kernel](R, Rel),
+                               not role(Rel, _), not mark_name(Rel), Rel != roled.
+mark_undeclared[audit](M)   :- mark[value](_, M), not mark_name(M).
+mark_undeclared[audit](M)   :- mark[type](_, M), not mark_name(M).
+imports(audit, value). imports(audit, type). imports(audit, tree).

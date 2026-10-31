@@ -337,7 +337,7 @@ its own input names it as its scanner: `scanner(js, "rofl scan path/to/src")`.
 |---|---|---|---|
 | `npm run scan` | node: `scanners/cli.ts` | every `.js .ts .tsx .mjs .cjs .jsx .mts .cts` under the directory, `node_modules`, dot directories, `.d.ts` and `.min.js` left out | `code.rofl` |
 | the scanner | `scanners/js_ast.ts` (Babel) | one file's text, named by its path from the directory | `ast_node[code](Id, Kind, File), ast_line[code](Id, Line)`, `ast_child[code](Parent, Field, Index, Child)`, `ast_attr[code](Id, Key, Value)`, `ast_file[code](Root, File)`, `ast_parse_error[code](File, Message)`; the contract is the header of `scanners/js_ast.ts` |
-| the host facts | `playground/host.ts` `codeFacts` | the paths, and every string a file holds | `fs_dir`, `fs_file`, `fs_parent`, `fs_dir_of`, `fs_dir_in`, `fs_file_in` (the files and directories, `"."` the root) and `str_segs`, `str_seg`, `str_char0`, `str_scheme` (each string cut the way a module specifier is read), all `[code]` |
+| the host facts | `playground/host.ts` `codeFacts` | the paths, and every string a file holds | `has_file[fs](Dir, Name, Path)` and `has_dir[fs](Parent, Name, Path)` (the files and directories in their own ledger, `"."` the root) and `str_segs`, `str_seg`, `str_char0`, `str_scheme` (each string cut the way a module specifier is read); the strings `[code]` |
 | the model | `rofl`, Rust | `@rules/js.files` and `code.rofl` | the model's relations: `calls`, `flows`, `effect_of`, ... (`docs/js/` renders each file of it in sentences) |
 
 `npm run scan` prints the facts to stdout without `--out`, names every file no
@@ -350,6 +350,19 @@ whys, a whynot and two asks: every answer the same text as the TypeScript
 engine's. The TypeScript engine took 12.4 s for the world and the five; the
 Rust release build 1.5 s for the world and the five in one `rofl load` run,
 and as much for each `rofl why` run alone, since each builds the world.
+
+### The roles layer (w_l2_roles), not yet read by the model
+
+`models/lang/js/` is the next layer under the JS model: `roles.rofl` is one
+vocabulary of roles (`ref`, `binds`, `callee`, `nth`, `executes_if`, ...) in
+two worlds, `[value]` and `[type]`, over one tree, `[tree]`; `babel-roles.rofl`
+writes them from the scanner's tree in `[ast_babel]` (`ScanSet().scan(src,
+{file, persp: 'ast_babel'})`, where the raw relations are `node`, `child`, `attr`,
+`line` and `file`: a ledger is named by its book, not by a prefix). It has no command for an agent yet and
+`rules/js-*.rofl` do not read it; `npm run test:roles` drives it, and
+`rofl load @models/lang/js/roles.files sealed.rofl FACTS` writes the roles of
+a corpus scanned so. Pass `--budget` and `--space` at hundreds of files: the
+default budget cuts the state without saying so.
 
 ### The second parser: oxc, in Rust
 

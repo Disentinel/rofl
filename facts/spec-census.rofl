@@ -914,6 +914,7 @@ check[checks]("facts/goldens.rofl", "refused", world).
 check[checks]("facts/goldens.rofl", "retract_again", world).
 check[checks]("facts/goldens.rofl", "retract_last", world).
 check[checks]("facts/goldens.rofl", "retract_last_read", world).
+check[checks]("facts/goldens.rofl", "roles_babel", world).
 check[checks]("facts/goldens.rofl", "scan_requests", world).
 check[checks]("facts/goldens.rofl", "sealed_provenance", world).
 check[checks]("facts/goldens.rofl", "sensors_t3", world).
