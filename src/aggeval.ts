@@ -1399,6 +1399,9 @@ export class AggEval {
       }
       for (const [rel, sub] of this.subs) if (cone.has(rel)) for (const x of sub.reads) cone.add(x);
     }
+    // a promise no rule of the cone reads is not judged (owner, 2026-10-30)
+    const unjudged = [...new Set([...readFunctions(this.store).map((f) => f.rel), ...readTrees(this.store).map((t) => t.rel)])].filter((r) => !cone.has(r) && kept.some((k) => k.clause.head.rel === r)).sort(cmpStr);
+    if (unjudged.length) this.diags.push(`asks: the promises of ${unjudged.join(', ')} are not judged, as no rule of the cone reads them`);
     return cone;
   }
 
@@ -1408,12 +1411,11 @@ export class AggEval {
     return [IFACE.unknown, 'shrug', 'explain_request', ...(this.wellFounded ? [IFACE.stratum] : [])];
   }
 
-  /** THE RULES THAT CAN MAKE THE WHOLE WORLD REFUSE, whose heads join every cone (rust/rofl `Eval::refusal_heads`): a declared function's or
-   *  tree's relation; a rule reading `unknown` or `shrug`; a rule into a tag, or reading or concluding a subsumptive relation; one concluding a
+  /** THE RULES THAT CAN MAKE THE WHOLE WORLD REFUSE, whose heads join every cone (rust/rofl `Eval::refusal_heads`): a rule reading `unknown` or `shrug`; a rule into a tag, or reading or concluding a subsumptive relation; one concluding a
    *  relation answered on demand with an aggregate or a lattice read; under well_founded every aggregate and demand-backed rule; and every
    *  relation a stall of the whole program's rounds leaves unsettled. */
   private refusalHeads(kept: ERule[]): string[] {
-    const out: string[] = [...readFunctions(this.store).map((f) => f.rel), ...readTrees(this.store).map((t) => t.rel)];
+    const out: string[] = [];
     const demand = this.answer.demandRels;
     for (const r of kept) {
       const head = r.clause.head.rel;
@@ -7910,7 +7912,7 @@ export class AggEval {
   private negDemo(key: string): string | null {
     let lit: Lit;
     try { lit = this.parseLit(key); } catch { return null; }
-    try { return this.whynotAt(lit, { maxDepth: 1, maxNodes: 64 })[1]; } catch (e) { if (e instanceof Wall || e instanceof Rejected || e instanceof Bug) return null; throw e; }
+    try { return this.whynotAt(lit, { maxDepth: 1, maxNodes: 64, all: true })[1]; } catch (e) { if (e instanceof Wall || e instanceof Rejected || e instanceof Bug) return null; throw e; }
   }
 
   /** One literal, written as ROFL, lowered to what the evaluator runs. */
@@ -7995,16 +7997,17 @@ export class AggEval {
   // ----------------------------------------------------------- whynot
 
   /** `whynot`: the demonstration that a literal fails; `[holds, text]`. Renames from zero, as `whyText`. */
-  whynotText(lit: Lit, b: { maxDepth: number; maxNodes: number }, shown?: string): [boolean, string] {
+  whynotText(lit: Lit, b: { maxDepth: number; maxNodes: number; all?: boolean }, shown?: string): [boolean, string] {
     const saved = this.renameCounter, asking = this.asking;
     this.renameCounter = 0;
     this.asking = true;
     try { return this.whynotAt(lit, b, shown); } finally { this.renameCounter = saved; this.asking = asking; this.asked = []; this.demandTrail = []; this.forgetAsked(); }
   }
 
-  private whynotAt(lit: Lit, b: { maxDepth: number; maxNodes: number }, shown?: string): [boolean, string] {
-    const ctx: WnCtx = { maxDepth: Math.max(1, b.maxDepth), maxNodes: Math.max(1, b.maxNodes), nodes: 0, path: new Set(), done: new Map<string, Set<number>>() };
-    if (!this.dag) ctx.done.set = () => ctx.done;
+  private whynotAt(lit: Lit, b: { maxDepth: number; maxNodes: number; all?: boolean }, shown?: string): [boolean, string] {
+    const ctx: WnCtx = { maxDepth: Math.max(1, b.maxDepth), maxNodes: Math.max(1, b.maxNodes), nodes: 0, path: new Set(), done: new Map<string, Set<number>>(), all: b.all === true };
+    // the nearest failure is chosen over the tree: a literal met again is walked again, never referred to
+    if (!this.dag || !ctx.all) ctx.done.set = () => ctx.done;
     const s: Subst = new Map();
     const k = this.resolvedLitKey(lit, s);
     this.asked = [];
@@ -8272,7 +8275,7 @@ export class AggEval {
     ctx.nodes++;
     const pad = '  '.repeat(2 * level - 1);
     const rules = this.rules.filter((r) => r.clause.head.rel === lit.rel);
-    if (rules.length === 0) { next.push({ t: 'line', line: `${pad}no rule concludes '${lit.rel}' and no matching base fact exists${this.unloaded(lit.rel)}` }); return; }
+    if (rules.length === 0) { next.push({ t: 'line', line: `${pad}no rule concludes '${lit.rel}' and no matching base fact exists${this.unloaded(lit.rel)}`, m: ['leaf', level, 0] }); return; }
     for (const r of rules) next.push({ t: 'rule', lit, r, level });
   }
 
@@ -8283,15 +8286,16 @@ export class AggEval {
     let s: Subst | null = this.evalBuiltin('=', rn.head.persp, lit.persp, new Map(), null);
     const n = Math.min(rn.head.args.length, lit.args.length);
     for (let i = 0; s && i < n; i++) s = this.evalBuiltin('=', rn.head.args[i], lit.args[i], s, null);
-    if (s === null || rn.head.args.length !== lit.args.length) { next.push({ t: 'line', line: `${pad}rule ${r.id}: head does not unify` }); return; }
+    if (s === null || rn.head.args.length !== lit.args.length) { next.push({ t: 'line', line: `${pad}rule ${r.id}: head does not unify`, m: ['nohead', level, 0] }); return; }
     this.wnUnwalked.clear();
+    this.wnLeft.clear();
     const failures = this.failingPremises(rn, s, r.id);
-    next.push({ t: 'line', line: `${pad}rule ${r.id}: ${r.canon}` });
-    for (const [key, n] of [...this.wnUnwalked].sort((a, b) => cmpStr(a[0], b[0])).slice(0, 12)) next.push({ t: 'line', line: `${pad}  followed 16 of ${n} matches of ${key}` });
+    next.push({ t: 'line', line: `${pad}rule ${r.id}: ${r.canon}`, m: ['rule', level, 0] });
+    for (const [key, n] of [...this.wnUnwalked].sort((a, b) => cmpStr(a[0], b[0])).slice(0, 12)) next.push({ t: 'line', line: `${pad}  followed 16 of ${n} matches of ${key}`, m: ['info', level, 0] });
     const keys = [...failures.keys()].sort(cmpStr).slice(0, 12);
-    if (keys.length === 0) next.push({ t: 'line', line: `${pad}  (no failing premise found within exploration bounds)` });
+    if (keys.length === 0) next.push({ t: 'line', line: `${pad}  (no failing premise found within exploration bounds)`, m: ['nofail', level, 0] });
     for (const f of keys) {
-      next.push({ t: 'line', line: `${pad}  failed premise: ${f}` });
+      next.push({ t: 'line', line: `${pad}  failed premise: ${f}`, m: ['premise', level, this.wnLeft.get(f) ?? 0] });
       const sub = failures.get(f);
       if (sub) next.push({ t: 'deeper', lit: sub, level: level + 1 });
     }
@@ -8300,13 +8304,13 @@ export class AggEval {
   /** Everything that makes the walk terminate: the cycle path, the depth cap, the node cap, each said in the output. */
   private explainDeeper(lit: Lit, level: number, ctx: WnCtx, next: WnTask[]): void {
     const pad = '  '.repeat(2 * level - 1);
-    if (level > ctx.maxDepth) { if (ctx.maxDepth > 1) next.push({ t: 'line', line: `${pad}[depth limit ${ctx.maxDepth} reached]` }); return; }
-    if (ctx.nodes >= ctx.maxNodes) { next.push({ t: 'line', line: `${pad}[node limit ${ctx.maxNodes} reached]` }); return; }
+    if (level > ctx.maxDepth) { if (ctx.maxDepth > 1) next.push({ t: 'line', line: `${pad}[depth limit ${ctx.maxDepth} reached]`, m: ['cut', level, 0] }); return; }
+    if (ctx.nodes >= ctx.maxNodes) { next.push({ t: 'line', line: `${pad}[node limit ${ctx.maxNodes} reached]`, m: ['cut', level, 0] }); return; }
     const ck = this.cycleKey(lit);
-    if (ctx.path.has(ck)) { next.push({ t: 'line', line: `${pad}${this.resolvedLitKey(lit, new Map())} [cycle]` }); return; }
+    if (ctx.path.has(ck)) { next.push({ t: 'line', line: `${pad}${this.resolvedLitKey(lit, new Map())} [cycle]`, m: ['cut', level, 0] }); return; }
     if (isGround(lit.persp) && lit.args.every(isGround)) {
       let at = ctx.done.get(ck);
-      if (at !== undefined && at.has(level)) { next.push({ t: 'line', line: `${pad}${this.resolvedLitKey(lit, new Map())} [above]` }); return; }
+      if (at !== undefined && at.has(level)) { next.push({ t: 'line', line: `${pad}${this.resolvedLitKey(lit, new Map())} [above]`, m: ['cut', level, 0] }); return; }
       if (at === undefined) { at = new Set(); ctx.done.set(ck, at); }
       at.add(level);
     }
@@ -8316,15 +8320,20 @@ export class AggEval {
 
   /** THE DEMONSTRATION, WALKED WITH A STACK OF ITS OWN (as `renderTree` walks `why`): a failure as deep as the bounds
    *  allow takes no frame per level, and each line is written once. */
-  private explainTree(lit: Lit, ctx: WnCtx): string[] { return this.explainFrom([{ t: 'failure', lit, level: 1 }], ctx); }
+  private explainTree(lit: Lit, ctx: WnCtx): string[] {
+    const lines = this.explainFrom([{ t: 'failure', lit, level: 1 }], ctx);
+    if (ctx.all) return lines.map(([l]) => l);
+    const kept = wnNearest(lines);
+    return kept.length < lines.length ? [...kept.map((i) => lines[i][0]), '  (every failure: --all)'] : lines.map(([l]) => l);
+  }
 
-  private explainFrom(tasks: WnTask[], ctx: WnCtx): string[] {
-    const lines: string[] = [], todo: WnTask[] = tasks.reverse(), next: WnTask[] = [];
+  private explainFrom(tasks: WnTask[], ctx: WnCtx): [string, WnMark | undefined][] {
+    const lines: [string, WnMark | undefined][] = [], todo: WnTask[] = tasks.reverse(), next: WnTask[] = [];
     for (let t = todo.pop(); t !== undefined; t = todo.pop()) {
       if (t.t === 'failure') this.explainFailure(t.lit, t.level, ctx, next);
       else if (t.t === 'rule') this.explainRule(t.lit, t.r, t.level, next);
       else if (t.t === 'deeper') this.explainDeeper(t.lit, t.level, ctx, next);
-      else if (t.t === 'line') lines.push(t.line);
+      else if (t.t === 'line') lines.push([t.line, t.m]);
       else ctx.path.delete(t.ck);
       for (let i = next.length - 1; i >= 0; i--) todo.push(next[i]);
       next.length = 0;
@@ -8380,8 +8389,8 @@ export class AggEval {
         }
         stops.push(...keys);
       }
-      const ctx: WnCtx = { maxDepth: Math.max(1, b.maxDepth), maxNodes: Math.max(1, b.maxNodes), nodes: 0, path: new Set([this.cycleKey(lit)]), done: new Map() };
-      return { file: name, found: found.get(name) ?? 0, stops, text: [`whynot ${k} in ${name}:`, ...this.explainFrom(tasks, ctx)].join('\n') };
+      const ctx: WnCtx = { maxDepth: Math.max(1, b.maxDepth), maxNodes: Math.max(1, b.maxNodes), nodes: 0, path: new Set([this.cycleKey(lit)]), done: new Map(), all: true };
+      return { file: name, found: found.get(name) ?? 0, stops, text: [`whynot ${k} in ${name}:`, ...this.explainFrom(tasks, ctx).map(([l]) => l)].join('\n') };
     });
   }
 
@@ -8399,6 +8408,8 @@ export class AggEval {
 
   /** A whynot's premises with more matches than it follows, and how many. */
   private wnUnwalked = new Map<string, number>();
+  /** Each failure of a whynot's rule, and how many premises follow the one it failed at. */
+  private wnLeft = new Map<string, number>();
 
   /** THE ORDER A WHYNOT WALKS A BODY IN starts from what the question binds: a premise sharing nothing bound waits until one
    *  does, so a constant of the question narrows the walk instead of a premise ranging over the whole corpus. Asked with
@@ -8422,7 +8433,7 @@ export class AggEval {
     if (vw) { out = vw.out(at); nodes = vw.nodes(at); }
     nodes.n++;
     if (nodes.n > 2000 || k >= body.length) return;
-    const put = (key: string, v: Lit | null) => { if (!out.has(key)) out.set(key, v); };
+    const put = (key: string, v: Lit | null) => { if (!out.has(key)) { out.set(key, v); this.wnLeft.set(key, body.length - k - 1); } };
     const b = body[k];
     if (b.t === 'pos') {
       const unknowns = this.demandTrail.length;
@@ -8474,7 +8485,7 @@ export class AggEval {
 
   /** WHYNOT OF A THRESHOLD. */
   private exploreThreshold(body: BodyElem[], k: number, s: Subst, a: AggElem, rid: string, out: Map<string, Lit | null>, nodes: { n: number }, vw?: VolWalk, at?: string): void {
-    const put = (key: string, v: Lit | null) => { if (!out.has(key)) out.set(key, v); };
+    const put = (key: string, v: Lit | null) => { if (!out.has(key)) { out.set(key, v); this.wnLeft.set(key, body.length - k - 1); } };
     const [plan, corr] = this.aggCorr(rid, a, s);
     const desc = this.aggDesc(a, s);
     const nr = resolve(a.res, s);
@@ -8527,6 +8538,8 @@ interface WnCtx {
   maxDepth: number; maxNodes: number; nodes: number; path: Set<string>;
   /** The ground literals demonstrated, with the levels each was written at: the depth below a level is what the demonstration shows, so one reached again at a level it was written at is referred to, at another it is written again. */
   done: Map<string, Set<number>>;
+  /** Every failure the walk met, or only the nearest (`wnNearest`). */
+  all: boolean;
 }
 /** A by-file walk (`whynotFiles`): the file of a candidate, and each file's failures and steps; `split`, the premise it first parted at. */
 interface VolWalk { of: (l: Lit, s: Subst) => string | undefined; out: (at?: string) => Map<string, Lit | null>; nodes: (at?: string) => { n: number }; split?: string }
@@ -8534,7 +8547,41 @@ interface VolWalk { of: (l: Lit, s: Subst) => string | undefined; out: (at?: str
 export type WhynotFile = { file: string; found: number; stops: string[]; text: string };
 /** One step of `whynot`'s walk (`explainTree`). */
 type WnTask = { t: 'failure'; lit: Lit; level: number } | { t: 'rule'; lit: Lit; r: ERule; level: number }
-  | { t: 'deeper'; lit: Lit; level: number } | { t: 'line'; line: string } | { t: 'unpath'; ck: string };
+  | { t: 'deeper'; lit: Lit; level: number } | { t: 'line'; line: string; m?: WnMark } | { t: 'unpath'; ck: string };
+/** What a line of `whynot`'s walk is, at which level, and for a failed premise how many premises follow it. */
+type WnMark = [k: 'rule' | 'nohead' | 'info' | 'premise' | 'nofail' | 'leaf' | 'cut', level: number, left: number];
+/** A chain the walk cut short, or a rule it found no failure of: farther than every chain that ends. */
+const WN_FAR = 1_000_000;
+
+/** THE NEAREST FAILURE of a whynot's walk: the lines kept. A chain costs the premises it leaves unmet: at each rule those after
+ *  the one it failed at, and one at its end, a premise nothing supports, a negation blocked or a builtin false. The rule and the
+ *  failure of least cost are kept, the first of equal ones, with the matches that rule did not follow. The walk is written in
+ *  preorder, so a line's parts come after it: they are costed from the last line up, with no frame per level. */
+function wnNearest(ls: [string, WnMark | undefined][]): number[] {
+  const n = ls.length, parent: number[] = new Array(n).fill(-2), premiseAt: number[] = [], ruleAt: number[] = [];
+  for (let i = 0; i < n; i++) {
+    const m = ls[i][1];
+    if (m === undefined) continue;
+    const [k, level] = m;
+    if (k === 'rule' || k === 'nohead' || k === 'leaf' || k === 'cut') parent[i] = level > 1 ? premiseAt[level - 1] ?? -2 : n;
+    else parent[i] = ruleAt[level] ?? -2;
+    if (k === 'rule') ruleAt[level] = i;
+    if (k === 'premise') premiseAt[level] = i;
+  }
+  const best: number[] = new Array(n + 1).fill(-1), cost: number[] = new Array(n + 1).fill(Infinity);
+  for (let i = n - 1; i >= 0; i--) {
+    const m = ls[i][1];
+    if (m === undefined || parent[i] === -2 || m[0] === 'info') continue;
+    const c = m[0] === 'leaf' ? 1 : m[0] === 'rule' ? (best[i] < 0 ? WN_FAR : cost[i]) : m[0] === 'premise' ? m[2] + (best[i] < 0 ? 1 : cost[i]) : WN_FAR;
+    if (c <= cost[parent[i]]) { cost[parent[i]] = c; best[parent[i]] = i; }
+  }
+  const kept: number[] = [];
+  for (let at = best[n]; at >= 0; at = best[at]) {
+    kept.push(at);
+    if (ls[at][1]![0] === 'rule') for (let j = at + 1; ls[j]?.[1]?.[0] === 'info'; j++) kept.push(j);
+  }
+  return kept;
+}
 type CellRecNew = Omit<CellRec, 'key'>;
 type CellMemberNew = CellMember;
 

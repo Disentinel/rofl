@@ -150,7 +150,7 @@ impl LatticeState {
                 out.insert(h.fargs(i).first()?.as_atom()?);
             }
         }
-        (!out.is_empty() && self.subs.is_empty()).then_some(out)
+        (!out.is_empty() && self.subs().next().is_none()).then_some(out)
     }
 }
 

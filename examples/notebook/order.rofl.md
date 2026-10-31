@@ -137,11 +137,12 @@ unordered(Tag, undefined) :- call_site[code](C, _), callee_of[code](C, U), ast_n
 > A proof says which. `why` names the read's step: a value put before it, or
 > one put in an order not known. What the read does not see is a fact of its
 > own, with its proof: the put that comes after it, and the put a later call
-> took out.
+> took out. `whynot` says what stops the read nearest: the delete.
 
 ```datalog
 why seen("order.two", 2)
 why seen("batch.then", 6)
+whynot seen("order.gone", 2)
 
 ? keyed_put_after[code](V, C)
 ? keyed_private_reached[audit](N, G)

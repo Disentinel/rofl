@@ -14,7 +14,7 @@ use crate::dense::dense_clauses;
 use crate::reflect::*;
 use crate::store::{
     Member,
-    resolved_lit_key, tuple_text, write_fact_key, CellId, CellOwner, CellValue, Dominators, FactId, FactRec, FxMap, FxSet, LatReg, NewCell,
+    fact_key, resolved_lit_key, tuple_text, write_arg_list, write_fact_key, CellId, CellOwner, CellValue, Dominators, FactId, FactRec, FxMap, FxSet, LatReg, NewCell,
     NewMember, PremRef, Seal, StagedHead, Store, WitView, Witness, F_BASE, F_FROZEN, F_TICK,
 };
 use crate::term::*;
@@ -33,6 +33,8 @@ mod par;
 mod latkept;
 mod want;
 mod layer;
+mod algebra;
+pub use algebra::RelAlgebra;
 pub use latkept::Tok;
 pub use cost::{CostState, Hot, PremCost};
 use resume::{Cut, CutAt, InFlight, Tail};
@@ -69,6 +71,12 @@ pub enum Halt {
     Overrun,
 }
 
+impl Halt {
+    pub(crate) fn reject(msg: String) -> Halt {
+        Halt::Strat(format!("program rejected: {msg}"), String::new())
+    }
+}
+
 /// A call answered on demand being unfolded, of a relation that may call
 /// itself: its variant key, the negations open when it was made, the answers
 /// found so far (the call's arguments under each, its variables renamed
@@ -99,6 +107,13 @@ struct DemandCall {
 }
 
 impl DemandCall {
+    /// The answers a read of it reads now, which it records as read.
+    fn read_answers(&mut self) -> Vec<(Vec<Term>, PremRef)> {
+        self.read = true;
+        self.seen = self.seen.min(self.answers.len());
+        self.answers[if self.linear { self.from } else { 0 }..].to_vec()
+    }
+
     /// The first answer a read in the next pass of its set reads.
     fn window(&self) -> usize {
         brk!("scc_window_late" => self.answers.len(); if self.seen == usize::MAX { self.began } else { self.seen })
@@ -279,43 +294,7 @@ fn components(rules: &[Rc<ERule>]) -> Vec<Vec<Rc<ERule>>> {
             }
         }
     }
-    let mut order: Vec<Sym> = heads.iter().copied().collect();
-    order.sort();
-    let (mut index, mut low, mut comp) = (HashMap::new(), HashMap::new(), HashMap::new());
-    let mut stack: Vec<Sym> = Vec::new();
-    let mut n_comp = 0usize;
-    fn strong(v: Sym, dep: &HashMap<Sym, Vec<Sym>>, index: &mut HashMap<Sym, usize>, low: &mut HashMap<Sym, usize>, stack: &mut Vec<Sym>, comp: &mut HashMap<Sym, usize>, n_comp: &mut usize) {
-        let i = index.len();
-        index.insert(v, i);
-        low.insert(v, i);
-        stack.push(v);
-        for &w in dep.get(&v).map(|d| d.as_slice()).unwrap_or(&[]) {
-            if !index.contains_key(&w) {
-                strong(w, dep, index, low, stack, comp, n_comp);
-                let lw = low[&w];
-                let lv = low.get_mut(&v).unwrap();
-                *lv = (*lv).min(lw);
-            } else if !comp.contains_key(&w) {
-                let iw = index[&w];
-                let lv = low.get_mut(&v).unwrap();
-                *lv = (*lv).min(iw);
-            }
-        }
-        if low[&v] == index[&v] {
-            while let Some(w) = stack.pop() {
-                comp.insert(w, *n_comp);
-                if w == v {
-                    break;
-                }
-            }
-            *n_comp += 1;
-        }
-    }
-    for v in order {
-        if !index.contains_key(&v) {
-            strong(v, &dep, &mut index, &mut low, &mut stack, &mut comp, &mut n_comp);
-        }
-    }
+    let (comp, n_comp) = rel_scc(&dep);
     let mut out: Vec<Vec<Rc<ERule>>> = vec![Vec::new(); n_comp];
     for r in rules {
         out[comp[&r.clause.head.rel]].push(r.clone());
@@ -669,6 +648,14 @@ pub struct TickOutcome {
     pub partial: bool,
 }
 
+/// THE MEMORY WALL (CLAUDE.md, the goal: where memory runs out, the engine says so; it does not die). The process
+/// sets `MEMORY_FULL` while what it uses is near what it may (bin/rofl/memory.rs); an evaluation stops at its next
+/// check as at the step budget, its hole `memory_exhausted`, and `MEMORY_STOPPED` tells the caller it did.
+pub static MEMORY_FULL: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+pub static MEMORY_STOPPED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+pub static MEMORY_USED: std::sync::atomic::AtomicI64 = std::sync::atomic::AtomicI64::new(0);
+pub static MEMORY_LIMIT: std::sync::atomic::AtomicI64 = std::sync::atomic::AtomicI64::new(0);
+
 #[derive(Clone)]
 pub struct Eval {
     pub wall: WallState,
@@ -681,6 +668,8 @@ pub struct Eval {
     /// where a step wall falls and is gone on from as one is (`resume.rs`); `disk_hit` says the last wall was it.
     pub disk: i64,
     disk_hit: bool,
+    /// the last wall was the memory wall (`MEMORY_FULL`)
+    memory_hit: bool,
     /// the bytes of the solutions of the firing being concluded not yet concluded, which a cut keeps
     disk_held: i64,
     /// Set from outside while an evaluation runs (the clock or the heap of a caller's limit): the evaluation stops as at its step budget.
@@ -778,14 +767,7 @@ pub struct Eval {
     pub pruned: HashSet<Sym>,
     pub cells: CellState,
     unknown_cone: HashSet<Sym>,
-    /// Each unknown and each inherited hole target with a parent it was
-    /// reached from; `carry_src` the parent the carry is working from, for a
-    /// hole it writes; `holes_now` the hole rows this evaluation met.
-    unk_edges: Vec<(Node, Node)>,
     wfs: WfsState,
-    holes_now: Vec<(Term, Sym)>,
-    holes_met: HashSet<(Term, Sym)>,
-    last_fault_rule: Option<Sym>,
     /// Rules that read `shrug` fire above everything else, after the rows
     /// were written once (`shrug_snap`); a row the rest of the evaluation adds
     /// or withdraws that one of them could read is refused at the end.
@@ -800,15 +782,15 @@ pub struct Eval {
     wn_vols: Option<VolWalk>,
     /// A whynot's premises with more matches than it follows, and how many.
     wn_unwalked: HashMap<String, usize>,
+    /// Each failure of a whynot's rule, and how many premises follow the one it failed at.
+    wn_left: HashMap<String, usize>,
     last_fault: Option<Sym>,
     /// The back-index of the retraction path: fact -> the cells a member of
     /// which cites it (`delta.rs`). None until a retraction asks.
     support_ix: Option<HashMap<FactId, Vec<CellId>>>,
-    /// A holistic group read under many percents or subjects, sealed once:
-    /// by the correlation less the percent or subject (`hol_share_key`).
-    hol_shared: HashMap<(Sym, u32, Box<[Term]>), HolShared>,
     thr: ThrState,
-    height_memo: HashMap<FactId, u32>,
+    memo: DerivedMemo,
+    shrug: ShrugRun,
     /// Heights an addition found of facts below the level it had reached, which nothing later in it moves.
     heights_kept: HashMap<FactId, u32>,
     /// The news of the premise the written path is matching, by the set they are and the relation (`par::NewsIx`).
@@ -862,12 +844,12 @@ pub struct Eval {
     /// made into THIS store. Once set the door is shut for the life of the
     /// store, and a second claim is refused rather than ignored.
     pub kernel_claimed: bool,
+
 }
 
 /// The well-founded negation and the carry of unknowns across strata: what an alternation left undefined, and what a carry works from. Held by `Eval`.
 #[derive(Clone, Default)]
 pub struct WfsState {
-    carry_src: Option<Node>,
     carry_more: Vec<Node>,
     /// Under well-founded semantics: whether this alternation leaves out the
     /// rules that read `unknown`, and the undefined atoms of the level below,
@@ -877,10 +859,6 @@ pub struct WfsState {
     /// Inside a threshold's inner body: a negation that could read what a
     /// hole left out does not admit a member (`thr_verdicts`).
     strict_neg: bool,
-    /// The cells of each improving cycle a cut holed, in the order they
-    /// were holed: a `divergence` shrug's meta.
-    cycle_groups: Vec<Vec<Term>>,
-    cycle_of: HashMap<Term, usize>,
     /// THE CARRY OF UNKNOWNS IS WORK LIKE ANY OTHER, charged against the walls
     /// the evaluation started with (`carry_wall`) even where the closes lift
     /// them: a solution the carry extends is a step, an unknown it stores a
@@ -896,6 +874,7 @@ pub struct WfsState {
     carry_steps: i64,
     carry_rows: i64,
     carry_broken: bool,
+
 }
 
 impl WfsState {
@@ -909,13 +888,9 @@ impl WfsState {
     }
 }
 
-/// The aggregate cells and what their reach left undecided: the correlations opened, the sealing memos. Held by `Eval`.
+/// What an evaluation knows of the cells it sealed and the heights it found: gone with the derived layer (`forget_cells`). Held by `Eval`.
 #[derive(Clone, Default)]
-pub struct CellState {
-    agg_opened: HashSet<(Sym, u32, Box<[Term]>)>,
-    /// The solutions the aggregate being sealed might have over unknowns
-    /// (`agg_possibles`), handed to `seal_cells`.
-    agg_reach: Vec<Possible>,
+struct DerivedMemo {
     /// WHAT AN AGGREGATE LEFT UNDECIDED, per correlation, as its sealing
     /// decided it (`ReachMemo`): read at every firing, never decided again.
     /// `cell_reach` the unknowns each cell sealed a hole under rests on.
@@ -928,10 +903,54 @@ pub struct CellState {
     /// A group whose regions passed the cap: how many there were, by its hole.
     regions_capped: HashMap<Term, i64>,
     agg_memo: HashMap<(Sym, u32, Box<[Term]>), Rc<[CellId]>>,
+    /// A threshold's cells this evaluation, by `(rule, at, key)`: made when
+    /// the threshold is reached, and never asked again — it stays reached.
+    thr_cells: HashMap<(Sym, u32, Box<[Term]>), CellId>,
+    /// Reached and not yet closed, with N: their members are provisional
+    /// until what they read is closed (`close_thresholds_below`).
+    thr_open: Vec<(CellId, usize)>,
+    /// Groups short of N, by `(rule, at, shared values)` (`ThrAcc`).
+    thr_acc: HashMap<(Sym, u32, Box<[Term]>), ThrAcc>,
+    thr_fresh: HashSet<CellId>,
+    /// A holistic group read under many percents or subjects, sealed once:
+    /// by the correlation less the percent or subject (`hol_share_key`).
+    hol_shared: HashMap<(Sym, u32, Box<[Term]>), HolShared>,
+    height_memo: HashMap<FactId, u32>,
+}
+
+/// What the shrug model has noted in one evaluation: set empty when the evaluation begins (`shrug_reset`). Held by `Eval`.
+#[derive(Clone, Default)]
+struct ShrugRun {
+    unknown_strict: Vec<Lit>,
+    meta_queue: Vec<(Unknown, Unknown)>,
+    meta_late: Option<String>,
+    shrug_snap: Option<HashSet<[Term; 3]>>,
+    carry_src: Option<Node>,
+    /// The cells of each improving cycle a cut holed, in the order they
+    /// were holed: a `divergence` shrug's meta.
+    cycle_groups: Vec<Vec<Term>>,
+    cycle_of: HashMap<Term, usize>,
+    /// Each unknown and each inherited hole target with a parent it was
+    /// reached from; `carry_src` the parent the carry is working from, for a
+    /// hole it writes; `holes_now` the hole rows this evaluation met.
+    unk_edges: Vec<(Node, Node)>,
+    holes_now: Vec<(Term, Sym)>,
+    holes_met: HashSet<(Term, Sym)>,
+    last_fault_rule: Option<Sym>,
+}
+
+/// The aggregate cells and what their reach left undecided: the correlations opened, the sealing memos. Held by `Eval`.
+#[derive(Clone, Default)]
+pub struct CellState {
+    agg_opened: HashSet<(Sym, u32, Box<[Term]>)>,
+    /// The solutions the aggregate being sealed might have over unknowns
+    /// (`agg_possibles`), handed to `seal_cells`.
+    agg_reach: Vec<Possible>,
     /// Holds `plain` false whatever the program: the reference answers
     /// explain requests with its aggregate evaluator in every world
     /// (src/api.ts `explainRequests`), so `Session::explain_requests` does too.
     pub agg_forced: bool,
+
 }
 
 /// The transitive closures the kernel answers as one walk over their base: the rows and runs they stand for. Held by `Eval`.
@@ -1152,20 +1171,12 @@ pub struct AddState {
 /// The threshold cells of one evaluation: reached, still open, and the round their news came in. Held by `Eval`.
 #[derive(Clone, Default)]
 struct ThrState {
-    /// A threshold's cells this evaluation, by `(rule, at, key)`: made when
-    /// the threshold is reached, and never asked again — it stays reached.
-    cells: HashMap<(Sym, u32, Box<[Term]>), CellId>,
-    /// Reached and not yet closed, with N: their members are provisional
-    /// until what they read is closed (`close_thresholds_below`).
-    open: Vec<(CellId, usize)>,
-    /// Groups short of N, by `(rule, at, shared values)` (`ThrAcc`).
-    acc: HashMap<(Sym, u32, Box<[Term]>), ThrAcc>,
     /// The propagation round, and the cells reached in it: a firing on the
     /// round's news concludes from these and from no older cell.
     round: u64,
-    fresh: HashSet<CellId>,
     /// Set while a rule fires on news read inside its thresholds.
     focus: Option<Rc<HashMap<(Sym, u32), ThrFocus>>>,
+
 }
 
 /// How provenance is written (eager, lazy or none) and the notes not yet written. Held by `Eval`.
@@ -1214,9 +1225,22 @@ impl ProvState {
     }
 }
 
-/// The lattice state of one evaluation: the cells and their current facts, subsumption, joins, and what settled or was retired. Held by `Eval`.
+pub(crate) fn plural(n: usize) -> &'static str {
+    if n == 1 { "" } else { "s" }
+}
+
+/// `items` as indented lines, the first `limit` of them and a count of the rest.
+fn capped<'a>(lines: &mut Vec<String>, items: impl ExactSizeIterator<Item = &'a String>, limit: usize, what: &str) {
+    let n = items.len();
+    lines.extend(items.take(limit).map(|t| format!("    {t}")));
+    if n > limit {
+        lines.push(format!("    [{} more {what}]", n - limit));
+    }
+}
+
+/// What one pass of the evaluation of lattices and subsumption knows: gone when the next pass begins.
 #[derive(Clone, Default)]
-pub struct LatticeState {
+pub struct LatticePass {
     /// How many times a lattice cell improved this evaluation: each retired
     /// a fact. What `tests/lattice_scale.rs` holds against the number of keys.
     pub improvements: u64,
@@ -1248,11 +1272,6 @@ pub struct LatticeState {
     /// A conflicted cell's parties, by cell until it is holed and then by its
     /// hole's marker: the meta of its `conflict` shrug.
     sub_parties: HashMap<LatKey, Vec<Term>>,
-    /// A JOIN LATTICE'S CONTRIBUTIONS are facts of a relation of their own,
-    /// `L@join` (a name no program can write): each conclusion into L is one,
-    /// and L's fact at a key is concluded from them by the engine's rule of
-    /// the same name. Lattice to contribution relation, and back.
-    join_rels: HashMap<Sym, Sym>,
     /// The contribution facts of each join cell.
     join_contribs: HashMap<LatKey, Vec<FactId>>,
     /// Each set element's canonical text, the key the join orders by.
@@ -1287,40 +1306,18 @@ pub struct LatticeState {
     /// Each widened cell with the value its widening closed on, before any
     /// narrowing.
     widened_x: HashMap<LatKey, Term>,
-    /// What narrowing found for the widened cells of this evaluation: the
-    /// value they closed on, the value narrowed to, and each step
-    /// `(before, the join of what the rules contribute from it, after)`.
-    narrow_out: HashMap<LatKey, (Term, Term, Vec<[Term; 3]>)>,
-    /// The lattice relations, from `lattice_decl`: arity and operation; an
-    /// idempotent tag's too, as the order lattice it is.
-    lattices: HashMap<Sym, (usize, AggOp)>,
-    /// `lattice_decl` rows and the idempotent tags', safety.rofl's input.
-    lattice_rows: Vec<(Sym, usize, Sym)>,
-    /// THE SUBSUMPTIVE RELATIONS, and each cell's antichain: its standing
-    /// facts, in the order they were admitted.
-    pub subs: HashMap<Sym, Rc<Sub>>,
-    /// Every relation a dominance rule names, subsumptive or refused.
-    dom_rels: HashSet<Sym>,
     conflict_marks: HashMap<Term, Vec<Term>>,
-    join_of: HashMap<Sym, Sym>,
-    /// A DECLARED WIDENING (docs/aggregates.md, "Widening, as built"): the
-    /// relations declared `widen N`, with N; how many times each cell of one
-    /// improved this evaluation; and each widening a cell took, `(the value
-    /// before, the contribution, their join, the value widened to)`, in order.
-    widen: HashMap<Sym, u64>,
-    /// The rules whose improvements of a widened cell count toward its
-    /// widening: those concluding into a widened relation from a relation of
-    /// its own recursion (`widen_back_edges`).
-    widen_rec: HashSet<Sym>,
-    /// the thresholds of each widened relation: the integers its recursion is written with, ascending
-    widen_th: HashMap<Sym, Vec<i64>>,
     steps: HashMap<LatKey, u64>,
     /// The hole of each widened cell, with the value it closed on (the
     /// enclosure a `widened` shrug's meta names) and its widenings.
     widened_marks: HashMap<Term, (Term, Vec<[Term; 4]>, Vec<[Term; 3]>)>,
-    /// A DESCENDING PASS in progress (`narrow_descend`): the widened cells
-    /// held at the values given, and what the rules contribute from them.
-    narrowing: Option<Narrowing>,
+    plain_pending: Vec<(Unknown, bool)>,
+    plain_undecided: Vec<(Sym, usize, Subst, Term)>,
+}
+
+/// What the holes of an evaluation left unknown and what reads it: a fresh one for each pass and each alternation.
+#[derive(Clone, Default)]
+struct UnknownCarry {
     /// What the holes of this evaluation left unknown, each with what it was
     /// reached from and by which rule (none for a hole's own cell): whynot's
     /// path from a withdrawn cell to the fault behind it.
@@ -1349,8 +1346,44 @@ pub struct LatticeState {
     /// `agg_opened` the correlations holed for an error.
     plain: HashSet<Unknown>,
     plain_closed: HashSet<Sym>,
-    plain_pending: Vec<(Unknown, bool)>,
-    plain_undecided: Vec<(Sym, usize, Subst, Term)>,
+    lat_unknown_rel: HashMap<Sym, Vec<Unknown>>,
+    /// Unknown cells by relation, key position and the value there.
+    lat_unknown_at: HashMap<(Sym, usize, Term), Vec<Unknown>>,
+    /// Every unknown by relation, argument position and the value there, as
+    /// its place in `lat_unknown_rel`; a position whose value is not known is
+    /// under `unknown_value`, and a whole relation (`Unknown::Rel`) in
+    /// `unknown_any`. What a literal can read is looked up, not scanned.
+    unknown_at: HashMap<(Sym, usize, Term), Vec<u32>>,
+    unknown_any: HashMap<Sym, Vec<u32>>,
+}
+
+/// The lattice state of one evaluation: the cells and their current facts, subsumption, joins, and what settled or was retired. Held by `Eval`.
+#[derive(Clone, Default)]
+pub struct LatticeState {
+    pub pass: LatticePass,
+    carry: UnknownCarry,
+    /// The algebra of each relation that has one (`algebra.rs`), a set's, and whether any keeps cells.
+    algebras: HashMap<Sym, RelAlgebra>,
+    plain: RelAlgebra,
+    cells: bool,
+    /// What narrowing found for the widened cells of this evaluation: the
+    /// value they closed on, the value narrowed to, and each step
+    /// `(before, the join of what the rules contribute from it, after)`.
+    narrow_out: HashMap<LatKey, (Term, Term, Vec<[Term; 3]>)>,
+    /// `lattice_decl` rows and the idempotent tags', safety.rofl's input.
+    lattice_rows: Vec<(Sym, usize, Sym)>,
+    /// Every relation a dominance rule names, subsumptive or refused.
+    dom_rels: HashSet<Sym>,
+    /// The rules whose improvements of a widened cell count toward its
+    /// widening: those concluding into a widened relation from a relation of
+    /// its own recursion (`widen_back_edges`).
+    widen_rec: HashSet<Sym>,
+    /// the thresholds of each widened relation: the integers its recursion is written with, ascending
+    widen_th: HashMap<Sym, Vec<i64>>,
+    /// A DESCENDING PASS in progress (`narrow_descend`): the widened cells
+    /// held at the values given, and what the rules contribute from them.
+    narrowing: Option<Narrowing>,
+
 }
 
 impl LatticeState {
@@ -1362,7 +1395,7 @@ impl LatticeState {
     /// engine's, so it is not reflected and safety.rofl does not judge it
     /// (it reads a relation no rule concludes, into the lattice's value, as is).
     fn carry_rule(&self, h: &mut Heap, l: Sym) -> ERule {
-        let n = self.lattices[&l].0;
+        let n = self.algebra(l).cell.unwrap().0;
         let name = format!("{}@next", h.name(l));
         let (c, id) = (h.intern(&name), h.intern(&name));
         let book = Term::var(h.intern("B"));
@@ -1398,13 +1431,13 @@ impl LatticeState {
     /// is decided when its lattice closes, once its recursion has settled on
     /// the widened values.
     fn widened(&mut self, hp: &mut Heap, vo: &Vocab, ck: &LatKey, rid: Sym, old: Term, c: Term, joined: Term) -> Result<Term, Halt> {
-        let Some(&n) = self.widen.get(&ck.0) else { return Ok(joined) };
+        let Some(n) = self.algebra(ck.0).widen else { return Ok(joined) };
         // a contribution from outside the cell's recursion is one of finitely
         // many: it is joined, and counts toward nothing
         if !self.widen_rec.contains(&rid) && brk!("widen_counts_base" => false; true) {
             return Ok(joined);
         }
-        let steps = self.steps.entry(ck.clone()).or_default();
+        let steps = self.pass.steps.entry(ck.clone()).or_default();
         let due = brk!("widen_late" => *steps > n; *steps >= n);
         *steps += 1;
         if brk!("widen_never" => true; !due) {
@@ -1418,10 +1451,10 @@ impl LatticeState {
         if wt == joined {
             return Ok(joined);
         }
-        let first = !self.widened.contains_key(ck);
-        self.widened.entry(ck.clone()).or_default().push([old, c, joined, wt]);
+        let first = !self.pass.widened.contains_key(ck);
+        self.pass.widened.entry(ck.clone()).or_default().push([old, c, joined, wt]);
         if first && brk!("widen_unmarked" => false; true) {
-            self.pending.push(LatFault { close: ck.0, what: Some(Unknown::Cell(ck.clone())), rule: None, reason: vo.widened_reason, facts: Vec::new() });
+            self.pass.pending.push(LatFault { close: ck.0, what: Some(Unknown::Cell(ck.clone())), rule: None, reason: vo.widened_reason, facts: Vec::new() });
         }
         Ok(wt)
     }
@@ -1434,7 +1467,7 @@ impl LatticeState {
         }
         let rel = store.rec(x).rel;
         let rules: Vec<Sym> = store.firings(x).into_iter().map(|(r, _, _)| r).collect();
-        self.pending.iter().any(|f| {
+        self.pass.pending.iter().any(|f| {
             f.rule.is_some_and(|r| rules.contains(&r))
                 && f.what.as_ref().is_some_and(|u| u.rel() == rel)
                 && f.facts.iter().all(|g| store.alive(*g))
@@ -1444,7 +1477,7 @@ impl LatticeState {
     /// Is a fault of `rule` pending on the cell `ck` (or on every cell of its
     /// relation), from a firing every fact of which still stands?
     fn fault_stands(&self, store: &Store, rule: Sym, ck: &LatKey) -> bool {
-        self.pending.iter().any(|x| {
+        self.pass.pending.iter().any(|x| {
             x.rule == Some(rule)
                 && match &x.what {
                     Some(Unknown::Cell(c)) => c == ck,
@@ -1457,17 +1490,7 @@ impl LatticeState {
 
     /// The contributions of a join cell that still stand.
     fn join_contributions(&self, store: &Store, ck: &LatKey) -> Vec<FactId> {
-        self.join_contribs.get(ck).map_or(Vec::new(), |v| v.iter().copied().filter(|f| store.alive(*f)).collect())
-    }
-
-    /// The length of the key of a cell of `rel` at `arity`: a lattice's head
-    /// prefix less its value, a subsumptive relation's declared key.
-    fn cell_keylen(&self, rel: Sym, arity: usize) -> Option<usize> {
-        match self.lattices.get(&rel) {
-            Some(&(n, AggOp::Dominance)) if n == arity => Some(self.subs[&rel].keylen),
-            Some(&(n, _)) if n == arity => Some(n - 1),
-            _ => None,
-        }
+        self.pass.join_contribs.get(ck).map_or(Vec::new(), |v| v.iter().copied().filter(|f| store.alive(*f)).collect())
     }
 
     /// A CONFLICT: the cell's dominance is no strict partial order over the
@@ -1480,15 +1503,15 @@ impl LatticeState {
             return;
         }
         let reason = h.intern(cause);
-        let known = self.sub_parties.contains_key(ck);
-        let ps = self.sub_parties.entry(ck.clone()).or_default();
+        let known = self.pass.sub_parties.contains_key(ck);
+        let ps = self.pass.sub_parties.entry(ck.clone()).or_default();
         for p in parties {
             if !ps.contains(&p) {
                 ps.push(p);
             }
         }
         if !known {
-            self.pending.push(LatFault { close: ck.0, what: Some(Unknown::Cell(ck.clone())), rule: None, reason, facts: Vec::new() });
+            self.pass.pending.push(LatFault { close: ck.0, what: Some(Unknown::Cell(ck.clone())), rule: None, reason, facts: Vec::new() });
         }
     }
 
@@ -1496,60 +1519,40 @@ impl LatticeState {
     /// is new.
     fn sub_given(&mut self, ck: &LatKey, vals: &[Term]) -> (u32, bool) {
         let sv: SubVal = (ck.clone(), vals.into());
-        if let Some(i) = self.sub_seen_set.get(&sv) {
+        if let Some(i) = self.pass.sub_seen_set.get(&sv) {
             return (*i, false);
         }
-        let seen = self.sub_seen.entry(ck.clone()).or_default();
+        let seen = self.pass.sub_seen.entry(ck.clone()).or_default();
         let i = seen.len() as u32;
         seen.push(sv.1.clone());
-        self.sub_seen_set.insert(sv, i);
+        self.pass.sub_seen_set.insert(sv, i);
         (i, true)
     }
 
     /// A cell with no value has no history either: a bound it once met says
     /// nothing about a value that is not known.
     fn withdraw_history(&mut self, store: &mut Store, ck: &LatKey) {
-        for f in self.history.remove(ck).unwrap_or_default() {
-            if self.superseded.remove(&f) {
+        for f in self.pass.history.remove(ck).unwrap_or_default() {
+            if self.pass.superseded.remove(&f) {
                 store.drop_firings(f);
-                self.dropped.push(f);
+                self.pass.dropped.push(f);
             }
         }
     }
 
-    /// Is `rel` at `arity` a lattice relation? (A relation of another arity
-    /// with the same name is not.)
     /// Does the store hold dominance rules for `rel`?
     fn dominance_rel(&self, rel: Sym) -> bool {
         self.dom_rels.contains(&rel)
-    }
-
-    /// "lattice", or "subsumptive relation" for one of those.
-    fn lat_word(&self, rel: Sym) -> &'static str {
-        if self.subs.contains_key(&rel) { "subsumptive relation" } else { "lattice" }
-    }
-
-    fn is_lattice_lit(&self, rel: Sym, arity: usize) -> bool {
-        self.lattices.get(&rel).is_some_and(|&(n, _)| n == arity)
-    }
-
-    /// Is a key of `n` terms a whole cell key of `rel`?
-    fn is_cell_key(&self, rel: Sym, n: usize) -> bool {
-        match self.lattices.get(&rel) {
-            Some(&(_, AggOp::Dominance)) => self.subs[&rel].keylen == n,
-            Some(&(a, _)) => a == n + 1,
-            None => false,
-        }
     }
 
     /// A fact as the unknown it is once withdrawn: its lattice cell, or its tuple.
     fn unknown_of(&self, store: &Store, f: FactId) -> Unknown {
         let rec = store.rec(f);
         let args = store.args(f);
-        if let Some(&l) = self.join_of.get(&rec.rel) {
+        if let Some(l) = self.algebra(rec.rel).join_of {
             return Unknown::Cell((l, rec.persp, args[..args.len() - 1].into()));
         }
-        if let Some(k) = self.cell_keylen(rec.rel, args.len()) {
+        if let Some(k) = self.algebra(rec.rel).keylen(args.len()) {
             Unknown::Cell((rec.rel, rec.persp, args[..k].into()))
         } else {
             Unknown::Tuple(rec.rel, rec.persp, args.into())
@@ -1560,13 +1563,13 @@ impl LatticeState {
     /// `join_canon` made, so each is sorted and rebuilt once, not at every use.
     fn join_canon_of(&mut self, h: &mut Heap, v: &Vocab, op: AggOp, t: Term) -> Result<Term, Sym> {
         if op != AggOp::Union {
-            return op.join_canon(&mut *h, v, &mut self.join_keys, t);
+            return op.join_canon(&mut *h, v, &mut self.pass.join_keys, t);
         }
-        if self.join_canonical.contains(&t) {
+        if self.pass.join_canonical.contains(&t) {
             return Ok(t);
         }
-        let c = op.join_canon(&mut *h, v, &mut self.join_keys, t)?;
-        self.join_canonical.insert(c);
+        let c = op.join_canon(&mut *h, v, &mut self.pass.join_keys, t)?;
+        self.pass.join_canonical.insert(c);
         Ok(c)
     }
 
@@ -1574,7 +1577,7 @@ impl LatticeState {
     /// order, read from the store (so a world reopened says it too).
     fn sub_front(&self, h: &Heap, store: &mut Store, rel: Sym, persp: Sym, key: &[Term]) -> Vec<FactId> {
         let pos: Vec<usize> = (0..key.len()).collect();
-        let arity = self.subs[&rel].arity;
+        let arity = self.sub(rel).arity;
         let cands = match store.arg_matches(h, rel, Some(persp), arity, &pos, key) {
             Some(v) => v,
             None => store.rel_persp(h, rel, persp),
@@ -1588,6 +1591,17 @@ impl LatticeState {
         fs.dedup_by_key(|x| x.1);
         fs.into_iter().map(|(_, f)| f).collect()
     }
+}
+
+/// HOW A RELATION ANSWERED ON DEMAND IS UNFOLDED AT A CALL, read in `prepare` from its rules (`DemandState::of`):
+/// each flag is what `demand_<flag>_rels` finds of it. Cyclic is never closed; linear and tabled are cyclic.
+#[derive(Clone, Copy, Default)]
+pub struct OnDemand {
+    at: usize,
+    pub closed: bool,
+    pub cyclic: bool,
+    pub linear: bool,
+    pub tabled: bool,
 }
 
 /// The demand state of one evaluation: the calls a question unfolds, their strongly connected sets, and the negations under way. Held by `Eval`.
@@ -1623,19 +1637,8 @@ pub struct DemandState {
     refinding: bool,
     /// What a question's unfolding read that a hole left unknown.
     asked: Vec<Unknown>,
-    /// The relations answered on demand whose every answer is ground and
-    /// whose every rule fires bottom-up: a call to one reads the store
-    /// (`demand_closed_rels`).
-    closed: HashSet<Sym>,
-    /// The relations answered on demand that may call themselves through
-    /// others not closed: their calls being unfolded are kept as variant keys.
-    cyclic: HashSet<Sym>,
-    /// The `cyclic` relations whose cycle no rule reads twice, or under a
-    /// negation or an aggregate (`demand_linear_rels`).
-    linear: HashSet<Sym>,
-    /// The `cyclic` relations whose calls are tabled once complete: no
-    /// rule they unfold reads a kernel relation or book (`demand_tabled_rels`).
-    tabled: HashSet<Sym>,
+    /// Each relation of `rels`, and how it is unfolded at a call.
+    by_rel: HashMap<Sym, OnDemand>,
     /// The complete calls, by variant key, and the store they stand for.
     done: HashMap<String, DoneTable>,
     /// The rows the tables hold (`DemandCall::rows`).
@@ -1649,30 +1652,41 @@ pub struct DemandState {
 }
 
 impl DemandState {
+    /// How `rel` is answered on demand; all false for a relation that is not.
+    pub fn of(&self, rel: Sym) -> OnDemand {
+        self.by_rel.get(&rel).copied().unwrap_or_default()
+    }
+
+    /// Whether `rel` is answered on demand.
+    pub fn on(&self, rel: Sym) -> bool {
+        self.by_rel.contains_key(&rel)
+    }
+
+    fn rules(&self, rel: Sym) -> Option<&[Rc<ERule>]> {
+        self.by_rel.get(&rel).map(|d| &self.rels[d.at].1[..])
+    }
+
+    /// THE RELATIONS ANSWERED ON DEMAND, in their order, and how each is unfolded at a call: `closed` as `prepare`
+    /// found it, the rest from their rules.
+    fn read_rels(&mut self, rels: Vec<(Sym, Vec<Rc<ERule>>)>, closed: &HashSet<Sym>, h: &Heap, v: &Vocab) {
+        self.by_rel = rels.iter().enumerate().map(|(at, (r, _))| (*r, OnDemand { at, closed: closed.contains(r), ..OnDemand::default() })).collect();
+        self.rels = rels;
+        let cyclic = self.demand_cyclic_rels();
+        self.by_rel.iter_mut().for_each(|(r, d)| d.cyclic = cyclic.contains(r));
+        let (linear, tabled) = (self.demand_linear_rels(), self.demand_tabled_rels(h, v));
+        self.by_rel.iter_mut().for_each(|(r, d)| (d.linear, d.tabled) = (linear.contains(r), tabled.contains(r)));
+    }
+
     /// The demand relations not closed that reach themselves through calls to
     /// demand relations not closed (a closed one is read from the store).
     fn demand_cyclic_rels(&self) -> HashSet<Sym> {
-        let unfolded = |rel: &Sym| self.rels.iter().any(|(r, _)| r == rel) && !self.closed.contains(rel);
+        let unfolded = |rel: &Sym| self.answers_open(*rel);
         let calls: HashMap<Sym, Vec<Sym>> = self.rels
             .iter()
             .filter(|(rel, _)| unfolded(rel))
             .map(|(rel, rs)| (*rel, rs.iter().flat_map(|r| r.clause.body.iter().flat_map(|b| b.lits_deep()).map(|l| l.rel)).filter(unfolded).collect()))
             .collect();
-        let mut out = HashSet::new();
-        for start in calls.keys() {
-            let mut seen: HashSet<Sym> = HashSet::new();
-            let mut todo: Vec<Sym> = calls[start].clone();
-            while let Some(r) = todo.pop() {
-                if r == *start {
-                    out.insert(*start);
-                    break;
-                }
-                if seen.insert(r) {
-                    todo.extend(calls.get(&r).into_iter().flatten().copied());
-                }
-            }
-        }
-        out
+        calls.keys().copied().filter(|start| reachable(calls[start].iter().copied(), |r| calls.get(&r).into_iter().flatten().copied()).contains(start)).collect()
     }
 
     /// THE CYCLIC DEMAND RELATIONS WHOSE RECURSION IS LINEAR: no rule of their cycle
@@ -1683,20 +1697,10 @@ impl DemandState {
     fn demand_linear_rels(&self) -> HashSet<Sym> {
         let calls: HashMap<Sym, HashSet<Sym>> = self.rels
             .iter()
-            .filter(|(rel, _)| self.cyclic.contains(rel))
-            .map(|(rel, rs)| (*rel, rs.iter().flat_map(|r| r.clause.body.iter().flat_map(|b| b.lits_deep()).map(|l| l.rel)).filter(|r| self.cyclic.contains(r)).collect()))
+            .filter(|(rel, _)| self.of(*rel).cyclic)
+            .map(|(rel, rs)| (*rel, rs.iter().flat_map(|r| r.clause.body.iter().flat_map(|b| b.lits_deep()).map(|l| l.rel)).filter(|r| self.of(*r).cyclic).collect()))
             .collect();
-        let reach = |from: Sym| -> HashSet<Sym> {
-            let mut seen: HashSet<Sym> = HashSet::new();
-            let mut todo: Vec<Sym> = calls.get(&from).into_iter().flatten().copied().collect();
-            while let Some(r) = todo.pop() {
-                if seen.insert(r) {
-                    todo.extend(calls.get(&r).into_iter().flatten().copied());
-                }
-            }
-            seen
-        };
-        let reaches: HashMap<Sym, HashSet<Sym>> = calls.keys().map(|r| (*r, reach(*r))).collect();
+        let reaches: HashMap<Sym, HashSet<Sym>> = calls.keys().map(|r| (*r, reachable(calls[r].iter().copied(), |r| calls.get(&r).into_iter().flatten().copied()))).collect();
         let same = |a: Sym, b: Sym| reaches.get(&a).is_some_and(|x| x.contains(&b)) && reaches.get(&b).is_some_and(|x| x.contains(&a));
         let mut twice: Vec<Sym> = Vec::new();
         for (rel, rs) in self.rels.iter().filter(|(rel, _)| calls.contains_key(rel)) {
@@ -1719,19 +1723,18 @@ impl DemandState {
     /// change moves. A kernel relation or book moves while a call unfolds (a
     /// hole, a provenance row), so a call that reads one is unfolded each time.
     fn demand_tabled_rels(&self, h: &Heap, v: &Vocab) -> HashSet<Sym> {
-        let unfolded = |rel: &Sym| self.rels.iter().any(|(r, _)| r == rel) && !self.closed.contains(rel);
         let mut out = HashSet::new();
-        for start in &self.cyclic {
+        for start in self.rels.iter().map(|(r, _)| r).filter(|r| self.of(**r).cyclic) {
             let mut seen: HashSet<Sym> = HashSet::from([*start]);
             let mut todo = vec![*start];
             let mut ok = true;
             while let Some(r) = todo.pop() {
-                for rule in self.rels.iter().filter(|(x, _)| *x == r).flat_map(|(_, rs)| rs.iter()) {
+                for rule in self.rules(r).into_iter().flatten() {
                     for l in rule.clause.body.iter().flat_map(|b| b.lits_deep()) {
                         if v.is_reserved(l.rel) || l.persp.as_atom().is_some_and(|p| is_kernel_ledger(h, p)) {
                             ok = false;
                         }
-                        if unfolded(&l.rel) && seen.insert(l.rel) {
+                        if self.answers_open(l.rel) && seen.insert(l.rel) {
                             todo.push(l.rel);
                         }
                     }
@@ -1842,7 +1845,7 @@ impl DemandState {
 
     /// Whether `rel` is answered on demand and unfolded at a call: its answers are not all in the store.
     pub fn answers_open(&self, rel: Sym) -> bool {
-        self.rels.iter().any(|(r, _)| *r == rel) && !self.closed.contains(&rel)
+        self.by_rel.get(&rel).is_some_and(|d| !d.closed)
     }
 }
 
@@ -1852,15 +1855,6 @@ pub struct UnknownState {
     /// What a variable stands for when it reads an unknown cell's value
     /// (`poison`): never a value any rule can write.
     unknown_value: Term,
-    lat_unknown_rel: HashMap<Sym, Vec<Unknown>>,
-    /// Unknown cells by relation, key position and the value there.
-    lat_unknown_at: HashMap<(Sym, usize, Term), Vec<Unknown>>,
-    /// Every unknown by relation, argument position and the value there, as
-    /// its place in `lat_unknown_rel`; a position whose value is not known is
-    /// under `unknown_value`, and a whole relation (`Unknown::Rel`) in
-    /// `unknown_any`. What a literal can read is looked up, not scanned.
-    unknown_at: HashMap<(Sym, usize, Term), Vec<u32>>,
-    unknown_any: HashMap<Sym, Vec<u32>>,
     /// THE SHRUG MODEL. `reads_unknown`: some rule reads `unknown`, anywhere;
     /// `unknown_cone` the relations that read it, transitively, and
     /// `unknown_strict` its literals read under `not` or inside an aggregate.
@@ -1868,25 +1862,14 @@ pub struct UnknownState {
     /// (`meta_queue`, carried with A); `meta_late` names one that arrived after
     /// a strict reader of it could have fired.
     reads_unknown: bool,
-    unknown_strict: Vec<Lit>,
-    meta_queue: Vec<(Unknown, Unknown)>,
-    meta_late: Option<String>,
-    shrug_snap: Option<HashSet<[Term; 3]>>,
+
 }
 
 impl UnknownState {
     fn new(unknown_value: Term) -> UnknownState {
         UnknownState {
             unknown_value,
-            lat_unknown_rel: HashMap::new(),
-            lat_unknown_at: HashMap::new(),
-            unknown_at: HashMap::new(),
-            unknown_any: HashMap::new(),
             reads_unknown: false,
-            unknown_strict: Vec::new(),
-            meta_queue: Vec::new(),
-            meta_late: None,
-            shrug_snap: None,
         }
     }
 
@@ -2167,6 +2150,7 @@ impl Eval {
             space: DEFAULT_SPACE,
             disk: i64::MAX,
             disk_hit: false,
+            memory_hit: false,
             disk_held: 0,
             cur_rule: None,
             cost: CostState::default(),
@@ -2218,22 +2202,19 @@ impl Eval {
             wall: WallState::default(),
             cells: CellState::default(),
             unknown_cone: HashSet::new(),
-            unk_edges: Vec::new(),
             wfs: WfsState { carry_wall: (budget, DEFAULT_SPACE), ..Default::default() },
-            holes_now: Vec::new(),
-            holes_met: HashSet::new(),
-            last_fault_rule: None,
             shrug_readers: HashSet::new(),
             whole: None,
             firing: false,
             fault_count: 0,
             wn_vols: None,
             wn_unwalked: HashMap::new(),
+            wn_left: HashMap::new(),
             last_fault: None,
             support_ix: None,
-            hol_shared: HashMap::new(),
             thr: ThrState::default(),
-            height_memo: HashMap::new(),
+            memo: DerivedMemo::default(),
+            shrug: ShrugRun::default(),
             heights_kept: HashMap::new(),
             news_ix: None,
             round_of: HashMap::new(),
@@ -2298,29 +2279,28 @@ impl Eval {
     /// derivations of a counting tag (`p@count`).
     fn register_lattices(&mut self, rules: &[DRule]) {
         let mut regs: Vec<LatReg> = Vec::new();
-        for (rel, (_, op)) in &self.lat.lattices {
-            let (opname, mut alg) = match self.tags.by_rel.get(rel) {
-                Some((_, a)) => (format!("tag:{}", a.name()), Algebra::tag(a.idempotent())),
+        for (&rel, a) in &self.lat.algebras {
+            if let (Some(c), Some((_, t))) = (a.count, a.tag) {
+                regs.push(LatReg { rel: c, op: format!("tag:{}", t.name()), alg: Algebra::tag(false) });
+            }
+            let Some((_, op)) = a.cell else { continue };
+            let (opname, mut alg) = match a.tag {
+                Some((_, t)) => (format!("tag:{}", t.name()), Algebra::tag(t.idempotent())),
                 None => (op.name().to_string(), op.algebra()),
             };
-            if op.is_join() && brk!("widening_flag_off" => false; self.lat.widen.contains_key(rel)) {
+            if op.is_join() && brk!("widening_flag_off" => false; a.widen.is_some()) {
                 alg = Algebra(alg.0 | Algebra::WIDENING);
             }
-            if let Some(c) = self.lat.join_rels.get(rel) {
-                regs.push(LatReg { rel: *c, op: opname.clone(), alg });
+            if let Some(c) = a.join {
+                regs.push(LatReg { rel: c, op: opname.clone(), alg });
             }
-            regs.push(LatReg { rel: *rel, op: opname, alg });
-        }
-        for (rel, c) in &self.tags.count_rel {
-            if let Some((_, a)) = self.tags.by_rel.get(rel) {
-                regs.push(LatReg { rel: *c, op: format!("tag:{}", a.name()), alg: Algebra::tag(false) });
-            }
+            regs.push(LatReg { rel, op: opname, alg });
         }
         regs.sort_by_key(|r| r.rel);
         self.store.lat_regs = regs;
         self.store.tag_rules = rules
             .iter()
-            .filter(|r| self.tags.count_rel.contains_key(&r.clause.head.rel))
+            .filter(|r| self.lat.algebra(r.clause.head.rel).count.is_some())
             .map(|r| r.id)
             .collect();
     }
@@ -2425,15 +2405,30 @@ impl Eval {
                     }
                 }
             }
-            for (rel, sub) in &self.lat.subs {
-                if brk!("asks_dominance_reads" => false; cone.contains(rel)) {
+            for (rel, sub) in self.lat.subs() {
+                if brk!("asks_dominance_reads" => false; cone.contains(&rel)) {
                     cone.extend(sub.reads.iter().copied());
                 }
             }
             if cone.len() == n {
+                self.unjudged_outside(&cone, kept);
                 return Some(cone);
             }
         }
+    }
+
+    /// A promise no rule of the cone reads is not judged (owner, 2026-10-30): the declared functions and trees outside
+    /// the cone that rules conclude, said in the diagnostics, as those rules do not run.
+    fn unjudged_outside(&mut self, cone: &HashSet<Sym>, kept: &[ERule]) {
+        let mut out: Vec<&str> = self.ds.functions.iter().map(|f| f.rel).chain(self.ds.trees.iter().map(|t| t.rel))
+            .filter(|r| !cone.contains(r) && kept.iter().any(|k| k.clause.head.rel == *r)).map(|r| self.h.name(r)).collect();
+        if out.is_empty() {
+            return;
+        }
+        out.sort();
+        out.dedup();
+        let d = format!("asks: the promises of {} are not judged, as no rule of the cone reads them", out.join(", "));
+        self.diags.push(d);
     }
 
     /// THE RELATIONS THE KERNEL READS OF EVERY EVALUATION, whatever is asked: `unknown` behind every negation, `shrug`,
@@ -2450,8 +2445,7 @@ impl Eval {
         out
     }
 
-    /// THE RULES THAT CAN MAKE THE WHOLE WORLD REFUSE, whose heads join every cone: a declared function's or
-    /// tree's relation (its promise is judged over its rows); a rule reading `unknown` or `shrug` (refused when
+    /// THE RULES THAT CAN MAKE THE WHOLE WORLD REFUSE, whose heads join every cone: a rule reading `unknown` or `shrug` (refused when
     /// they arrive after it read them); a rule into a tag, or reading or concluding a subsumptive relation
     /// (refused when not monotone in the dominance); one concluding a relation answered on demand with an
     /// aggregate or a lattice read; under well_founded every aggregate and demand-backed rule; and every
@@ -2462,24 +2456,24 @@ impl Eval {
             return Vec::new();
         }
         let v = &self.v;
-        let mut out: Vec<Sym> = self.ds.functions.iter().map(|f| f.rel).chain(self.ds.trees.iter().map(|t| t.rel)).collect();
+        let mut out: Vec<Sym> = Vec::new();
         let demand = &self.answer.demand_rels;
         for r in kept {
             let head = r.clause.head.rel;
             let lits: Vec<&Lit> = r.clause.body.iter().flat_map(|b| b.lits_deep()).collect();
             let has_agg = r.clause.body.iter().any(|b| matches!(b, BodyElem::Agg(_)));
-            let refusable = lits.iter().any(|l| l.rel == v.unknown || l.rel == v.shrug || self.lat.subs.contains_key(&l.rel))
-                || self.lat.subs.contains_key(&head)
-                || self.tags.by_rel.contains_key(&head)
-                || (demand.contains(&head) && (has_agg || lits.iter().any(|l| self.lat.lattices.contains_key(&l.rel))))
+            let refusable = lits.iter().any(|l| l.rel == v.unknown || l.rel == v.shrug || self.lat.algebra(l.rel).sub.is_some())
+                || self.lat.algebra(head).sub.is_some()
+                || self.lat.algebra(head).tag.is_some()
+                || (demand.contains(&head) && (has_agg || lits.iter().any(|l| self.lat.is_cell(l.rel))))
                 || (self.well_founded && (has_agg || demand.contains(&head)));
             if refusable {
                 out.push(head);
             }
         }
         if self.mode == Mode::Rounds {
-            let lats: Vec<Sym> = self.lat.lattices.keys().copied().collect();
-            let dom_edges: Vec<(Sym, Sym)> = self.lat.subs.iter().flat_map(|(p, x)| x.reads.iter().map(move |b| (*p, *b))).collect();
+            let lats: Vec<Sym> = self.lat.cell_rels().collect();
+            let dom_edges: Vec<(Sym, Sym)> = self.lat.subs().flat_map(|(p, x)| x.reads.iter().map(move |b| (p, *b))).collect();
             let peel = peel_rounds(kept, v, &lats, &dom_edges, &HashSet::new());
             if peel.stalled {
                 let heads: HashSet<Sym> = kept.iter().map(|r| r.clause.head.rel).collect();
@@ -2530,18 +2524,11 @@ impl Eval {
         self.tag_refused = low.refused;
         self.lat.lattice_rows = decls;
         self.lat.lattice_rows.extend(self.tags.as_lattices(&self.v));
-        self.lat.lattices = self
-            .lat.lattice_rows
-            .iter()
-            .filter_map(|&(r, n, op)| self.v.op_of(op).map(|o| (r, (n, o))))
-            .collect();
+        self.lat.read_algebras(&self.v, &self.tags);
         let rules = self.alias_lower(rules);
         self.register_dominances();
-        self.lat.widen = lattice_widens(&mut self.h, &self.v, &mut self.store)
-            .into_iter()
-            .filter(|(r, _)| self.lat.lattices.get(r).is_some_and(|(_, op)| *op == AggOp::Hull))
-            .collect();
-        self.name_join_rels();
+        let widens = lattice_widens(&mut self.h, &self.v, &mut self.store);
+        self.lat.read_widens_and_joins(&mut self.h, widens);
         self.register_lattices(&rules);
         // where nothing withdraws and no fact can be staged by two firings (the first is the schedule's), the order
         // candidates come in is unobservable: the set of facts is the contract, and with witnesses kept the set of
@@ -2549,7 +2536,7 @@ impl Eval {
         // are then in the engine's own order, and under the seal rules are activated by component; a closure is
         // walked either way
         let staged_twice = staged_twice(&self.h, &rules);
-        self.store.unordered = self.lat.lattices.is_empty() && (self.prov.no_witness || !staged_twice);
+        self.store.unordered = !self.lat.has_cells() && (self.prov.no_witness || !staged_twice);
         self.diags.extend(diags);
         self.answer = self.safety_answer(&rules);
         self.settle_provenance_mode(&rules);
@@ -2599,30 +2586,25 @@ impl Eval {
             self.settle_assertions();
         }
         self.demand.rels = demand.iter().map(|(rel, is)| (*rel, is.iter().map(|&i| self.rules[i].clone()).collect())).collect();
-        self.demand.closed = self.demand.demand_closed_rels(&self.h, &mut self.v);
+        let closed = self.demand.demand_closed_rels(&self.h, &mut self.v);
         self.demand.rels.clear();
         // a closed relation is read from the store: its readers fire on its news like any relation's
         if brk!("demand_closed_refires" => false; true) {
             for r in self.rules.iter_mut() {
                 let r = Rc::get_mut(r).expect("a rule shared before the demand grouping");
-                r.has_demand_prem = r.pos_rels.iter().any(|x| demand_names.contains(x) && !self.demand.closed.contains(x));
-                brk!("demand_closed_news_unread" => r.trigger_rels.retain(|x| !self.demand.closed.contains(x)); ());
+                r.has_demand_prem = r.pos_rels.iter().any(|x| demand_names.contains(x) && !closed.contains(x));
+                brk!("demand_closed_news_unread" => r.trigger_rels.retain(|x| !closed.contains(x)); ());
             }
         }
-        let refused: HashSet<Sym> = self.lat.lattices.keys().copied().chain(demand.iter().map(|(r, _)| *r)).collect();
+        let refused: HashSet<Sym> = self.lat.cell_rels().chain(demand.iter().map(|(r, _)| *r)).collect();
         self.clo.closures = find_closures(&self.rules, &refused);
         self.clo.closures_engage(&self.store);
         self.rule_at = self.rules.iter().enumerate().map(|(i, r)| (r.id, i)).collect();
         self.lat.widen_rec = self.widen_back_edges();
         self.lat.widen_th = self.widen_thresholds();
-        self.demand.rels = demand
-            .into_iter()
-            .map(|(rel, is)| (rel, is.into_iter().map(|i| self.rules[i].clone()).collect()))
-            .collect();
+        let rels = demand.into_iter().map(|(rel, is)| (rel, is.into_iter().map(|i| self.rules[i].clone()).collect())).collect();
+        self.demand.read_rels(rels, &closed, &self.h, &self.v);
         self.vclosure_setup();
-        self.demand.cyclic = self.demand.demand_cyclic_rels();
-        self.demand.linear = self.demand.demand_linear_rels();
-        self.demand.tabled = self.demand.demand_tabled_rels(&self.h, &self.v);
         self.drop_done();
     }
 
@@ -2631,7 +2613,6 @@ impl Eval {
     fn register_dominances(&mut self) {
         // the kernel's own sub-evaluation judges the rows; it evaluates none
         let doms = if self.bootstrap { Vec::new() } else { decode_dominances(&mut self.h, &self.v, &mut self.store, &mut self.decl_refused) };
-        self.lat.subs.clear();
         self.lat.dom_rels = doms.iter().map(|d| d.rel).collect();
         let mut by_rel: Vec<(Sym, Vec<DomRule>)> = Vec::new();
         for d in doms {
@@ -2642,7 +2623,7 @@ impl Eval {
         }
         for (rel, ds) in by_rel {
             let (arity, keylen) = (ds[0].arity, ds[0].keylen);
-            if ds.iter().any(|d| d.arity != arity || d.keylen != keylen) || self.lat.lattices.contains_key(&rel) || self.tags.by_rel.contains_key(&rel) {
+            if ds.iter().any(|d| d.arity != arity || d.keylen != keylen) || self.lat.is_cell(rel) || self.lat.algebra(rel).tag.is_some() {
                 continue;
             }
             let mut reads: Vec<Sym> = Vec::new();
@@ -2661,8 +2642,8 @@ impl Eval {
                 }
                 planned.push((d, plan));
             }
-            self.lat.lattices.insert(rel, (arity, AggOp::Dominance));
-            self.lat.subs.insert(rel, Rc::new(Sub { arity, keylen, doms: planned, reads }));
+            self.lat.set_cell(rel, arity, AggOp::Dominance);
+            self.lat.algebra_mut(rel).sub = Some(Rc::new(Sub { arity, keylen, doms: planned, reads }));
         }
     }
 
@@ -2693,7 +2674,7 @@ impl Eval {
         self.carried.clear();
         let mut carried: Vec<Sym> = kept
             .iter()
-            .filter(|r| r.clause.head.temporal == Temporal::Next && self.lat.is_lattice_lit(r.clause.head.rel, r.clause.head.args.len()))
+            .filter(|r| r.clause.head.temporal == Temporal::Next && self.lat.algebra(r.clause.head.rel).is_cell_lit(r.clause.head.args.len()))
             .map(|r| r.clause.head.rel)
             .collect();
         carried.sort_by(|a, b| cmp_js(self.h.name(*a), self.h.name(*b)));
@@ -2764,20 +2745,6 @@ impl Eval {
         kept
     }
 
-    /// The relation each join lattice's contributions are written into.
-    fn name_join_rels(&mut self) {
-        self.lat.join_rels.clear();
-        self.lat.join_of.clear();
-        let mut joins: Vec<Sym> = self.lat.lattices.iter().filter(|(_, (_, op))| op.is_join()).map(|(r, _)| *r).collect();
-        joins.sort_unstable();
-        for l in joins {
-            let name = format!("{}@join", self.h.name(l));
-            let c = self.h.intern(&name);
-            self.lat.join_rels.insert(l, c);
-            self.lat.join_of.insert(c, l);
-        }
-    }
-
     fn classify(&mut self, r: DRule) -> ERule {
         let (plan, stuck, _, _) = plan_body(&self.h, &r.clause);
         let plan = if self.plain { plan_body_plain(&self.h, &r.clause) } else { plan };
@@ -2812,9 +2779,9 @@ impl Eval {
         }
         let lattice_outer = self.answer.lattice_outer.get(&r.id).cloned().unwrap_or_default();
         let head = &r.clause.head;
-        let lat_close = match self.lat.lattices.get(&head.rel) {
-            Some(&(n, _)) if head.temporal != Temporal::Next && head.args.len() == n => Some(head.rel),
-            _ => pos_rels.iter().copied().find(|p| self.lat.lattices.contains_key(p) && !lattice_outer.contains(p)),
+        let lat_close = match self.lat.algebra(head.rel).cell {
+            Some((n, _)) if head.temporal != Temporal::Next && head.args.len() == n => Some(head.rel),
+            _ => pos_rels.iter().copied().find(|p| self.lat.is_cell(*p) && !lattice_outer.contains(p)),
         };
         let plan = if brk!("lattice_literal_order" => false; lat_close.is_some()) { sink_builtins(&self.h, &self.v, plan) } else { plan };
         ERule {
@@ -2881,11 +2848,10 @@ impl Eval {
         let main = self.v.main;
         // A SUBSUMPTIVE RELATION'S LITERALS carry their arity, as a lattice's
         // do: safety.rofl refuses a rule that writes or reads one at another
-        let subs: Vec<(Sym, usize)> = self.lat.subs.iter().map(|(r, x)| (*r, x.arity)).collect();
-        if !subs.is_empty() {
+        if self.lat.subs().next().is_some() {
             let lit_arity = h.atom("lit_arity");
             let lit_arity = lit_arity.as_atom().unwrap();
-            let is_sub = |rel: Sym| subs.iter().any(|(p, _)| *p == rel);
+            let is_sub = |rel: Sym| self.lat.algebra(rel).sub.is_some();
             for r in rules {
                 let rid = Term::atom(r.id);
                 let head = &r.clause.head;
@@ -3219,27 +3185,9 @@ impl Eval {
             }
             out
         };
-        let mut trigger: HashMap<Sym, Vec<Sym>> = HashMap::new();
-        for f in pol.rel_all(&h, self.v.trigger_of) {
-            let args = pol.args(f);
-            if let (Some(a), Some(b)) = (args[0].as_atom(), args[1].as_atom()) {
-                let e = trigger.entry(a).or_default();
-                if !e.contains(&b) {
-                    e.push(b);
-                }
-            }
-        }
+        let trigger = Self::grouped(self.atom_pairs(h, pol, self.v.trigger_of));
         let (agg_refused, lattice_refused) = self.read_refusals(h, pol, rules, lattices);
-        let mut lattice_outer: HashMap<Sym, Vec<Sym>> = HashMap::new();
-        for f in pol.rel_all(&h, self.v.lattice_outer) {
-            let args = pol.args(f);
-            if let (Some(r), Some(p)) = (args[0].as_atom(), args[1].as_atom()) {
-                let e = lattice_outer.entry(r).or_default();
-                if !e.contains(&p) {
-                    e.push(p);
-                }
-            }
-        }
+        let lattice_outer = Self::grouped(self.atom_pairs(h, pol, self.v.lattice_outer));
         let mut empty_zero: HashSet<(Sym, u32)> = HashSet::new();
         for f in pol.rel_all(&h, self.v.empty_zero) {
             let args = pol.args(f);
@@ -3263,24 +3211,28 @@ impl Eval {
         }
     }
 
-    fn read_refusals(&self, h: &mut Heap, pol: &mut Store, rules: &[DRule], lattices: &[(Sym, usize, Sym)]) -> (Vec<(Sym, Sym)>, Vec<(Sym, Sym)>) {
-        let mut agg_refused: Vec<(Sym, Sym)> = Vec::new();
-        for f in pol.rel_all(&h, self.v.agg_refused) {
-            let args = pol.args(f);
-            if let (Some(r), Some(why)) = (args[0].as_atom(), args[1].as_atom()) {
-                agg_refused.push((r, why));
+    /// The rows of a binary relation whose two arguments are atoms, in row order.
+    fn atom_pairs(&self, h: &Heap, pol: &mut Store, rel: Sym) -> Vec<(Sym, Sym)> {
+        pol.rel_all(h, rel).into_iter().filter_map(|f| Some((pol.args(f)[0].as_atom()?, pol.args(f)[1].as_atom()?))).collect()
+    }
+
+    fn grouped(pairs: Vec<(Sym, Sym)>) -> HashMap<Sym, Vec<Sym>> {
+        let mut out: HashMap<Sym, Vec<Sym>> = HashMap::new();
+        for (a, b) in pairs {
+            let e = out.entry(a).or_default();
+            if !e.contains(&b) {
+                e.push(b);
             }
         }
+        out
+    }
+
+    fn read_refusals(&self, h: &mut Heap, pol: &mut Store, rules: &[DRule], lattices: &[(Sym, usize, Sym)]) -> (Vec<(Sym, Sym)>, Vec<(Sym, Sym)>) {
+        let mut agg_refused = self.atom_pairs(h, pol, self.v.agg_refused);
         agg_refused.extend(set_spelling_refusals(h, &self.v, rules, &lattices));
         agg_refused.extend(self.tag_refused.iter().copied());
         agg_refused.sort_by(|a, b| cmp_js(h.name(a.0), h.name(b.0)).then(cmp_js(h.name(a.1), h.name(b.1))));
-        let mut lattice_refused: Vec<(Sym, Sym)> = Vec::new();
-        for f in pol.rel_all(&h, self.v.lattice_refused) {
-            let args = pol.args(f);
-            if let (Some(p), Some(why)) = (args[0].as_atom(), args[1].as_atom()) {
-                lattice_refused.push((p, why));
-            }
-        }
+        let mut lattice_refused = self.atom_pairs(h, pol, self.v.lattice_refused);
         lattice_refused.sort_by(|a, b| cmp_js(h.name(a.0), h.name(b.0)).then(cmp_js(h.name(a.1), h.name(b.1))));
         (agg_refused, lattice_refused)
     }
@@ -3398,7 +3350,7 @@ impl Eval {
         brk!("stale_holes_kept" => (); self.store.drop_eval_holes());
         self.lat.narrow_out.clear();
         let out = self.run_pass()?;
-        if out.partial || self.well_founded || self.lat.widened_x.is_empty() {
+        if out.partial || self.well_founded || self.lat.pass.widened_x.is_empty() {
             return Ok(out);
         }
         // THE WIDENED RESULT IS AN ANSWER, narrowing only a tighter one: a descent that fails
@@ -3420,7 +3372,7 @@ impl Eval {
             return Err(Halt::Budget("budget_exhausted", None));
         }
         for (ck, (x, _, _)) in &self.lat.narrow_out {
-            if self.lat.widened_x.get(ck) != Some(x) || brk!("descent_closes_other" => true; false) {
+            if self.lat.pass.widened_x.get(ck) != Some(x) || brk!("descent_closes_other" => true; false) {
                 return Err(Halt::Bug(format!("the widened cell {} closed on another value when evaluated again", self.h.name(ck.0))));
             }
         }
@@ -3441,6 +3393,7 @@ impl Eval {
         self.rows = 0;
         self.peak_rows = 0;
         self.disk_hit = false;
+        self.memory_hit = false;
         self.disk_held = 0;
         self.demand.done.clear();
         self.demand.done_rows = 0;
@@ -3490,53 +3443,15 @@ impl Eval {
             }
             self.cur_front = Front::default();
         }
-        self.lat.cur.clear();
-        self.lat.sub_cur.clear();
-        self.lat.sub_seen.clear();
-        self.lat.sub_seen_set.clear();
-        self.lat.sub_beaten.clear();
-        self.lat.sub_prems.clear();
-        self.lat.sub_memo.clear();
-        self.lat.sub_gone.clear();
-        self.lat.sub_by.clear();
-        self.lat.sub_by_of.clear();
-        self.lat.sub_parties.clear();
-        self.lat.conflict_marks.clear();
-        self.lat.join_contribs.clear();
-        self.lat.join_keys.clear();
-        self.lat.join_canonical.clear();
-        self.lat.join_checked.clear();
-        self.lat.holed_rel.clear();
-        self.lat.superseded.clear();
-        self.lat.history.clear();
-        self.lat.stale.clear();
-        self.store.track_citers(!self.lat.lattices.is_empty());
-        self.lat.improved.clear();
-        self.lat.dropped.clear();
-        self.lat.closed.clear();
-        self.lat.pending.clear();
-        brk!("widen_steps_carried" => (); self.lat.steps.clear());
-        self.lat.widened.clear();
-        self.lat.widened_marks.clear();
-        self.lat.widened_x.clear();
-        self.lat.unknown.clear();
-        self.lat.withdrawn.clear();
-        self.lat.spread.clear();
-        self.unk.lat_unknown_rel.clear();
-        self.unk.lat_unknown_at.clear();
-        self.unk.unknown_at.clear();
-        self.unk.unknown_any.clear();
-        self.lat.undecided.clear();
-        self.lat.plain.clear();
-        self.lat.plain_pending = self.carried_unknowns(self.store.tick);
-        self.lat.plain_undecided.clear();
+        self.store.track_citers(self.lat.has_cells());
+        let steps = brk!("widen_steps_carried" => std::mem::take(&mut self.lat.pass.steps); HashMap::new());
+        self.lat.pass = LatticePass { steps, plain_pending: self.carried_unknowns(self.store.tick), ..Default::default() };
+        self.lat.carry = UnknownCarry::default();
         self.cells.agg_opened.clear();
-        self.lat.plain_closed.clear();
         self.ds.comps.clear();
         self.ds.elems.clear();
         self.ds.released.clear();
         self.ds.done.clear();
-        self.lat.improvements = 0;
         self.seed_narrowing()?;
         self.run_pass_from()
     }
@@ -3549,7 +3464,7 @@ impl Eval {
         let readers = self.shrug_readers.clone();
         // a rule into a subsumptive relation whose dominance reads a relation
         // fires once that relation is closed, at its level
-        let compared: HashSet<Sym> = self.lat.subs.iter().filter(|(_, x)| !x.reads.is_empty()).map(|(p, _)| *p).collect();
+        let compared: HashSet<Sym> = self.lat.subs().filter(|(_, x)| !x.reads.is_empty()).map(|(p, _)| p).collect();
         let stratified = |r: &Rc<ERule>| {
             readers.contains(&r.id) || brk!("dominance_rules_early" => false; compared.contains(&r.clause.head.rel) && r.clause.head.temporal != Temporal::Next) || brk!("mono" => r.has_neg || !r.lattice_outer.is_empty(),
                  "lattice_outer_mono" => r.has_neg || r.has_agg;
@@ -3616,8 +3531,8 @@ impl Eval {
     /// The rounds of the program peeled: the monotone rules a round above the first that are lifted to their level,
     /// and the levels of the rules that wait for their body to close. A stall is the program's rejection.
     fn peel_levels(&mut self, mono: &[Rc<ERule>], strat_rules: &[Rc<ERule>]) -> Result<(HashSet<Sym>, Vec<(i64, Vec<Rc<ERule>>)>), Halt> {
-        let lats: Vec<Sym> = self.lat.lattices.keys().copied().collect();
-        let dom_edges: Vec<(Sym, Sym)> = self.lat.subs.iter().flat_map(|(p, x)| x.reads.iter().map(move |b| (*p, *b))).collect();
+        let lats: Vec<Sym> = self.lat.cell_rels().collect();
+        let dom_edges: Vec<(Sym, Sym)> = self.lat.subs().flat_map(|(p, x)| x.reads.iter().map(move |b| (p, *b))).collect();
         let mut peel = peel_rounds(&self.rules, &self.v, &lats, &dom_edges, &HashSet::new());
         if peel.stalled {
             // A COMPONENT WHOSE ONLY STRICT EDGES ARE AGGREGATES' may be
@@ -3664,46 +3579,35 @@ impl Eval {
                         _ => None,
                     }))
                     .unwrap_or("an aggregate");
-                return Halt::Strat(
-                    format!(
-                        "program rejected: {op} in rule {} reads {}, which depends on the rule's own conclusion {}: \
+                return Halt::reject(format!("{op} in rule {} reads {}, which depends on the rule's own conclusion {}: \
                          an aggregate reads a closed relation; a recursive min/max is a lattice declaration (docs/aggregates.md)",
                         self.h.name(*rid),
                         self.h.name(*inner),
                         self.h.name(*head)
-                    ),
-                    String::new(),
-                );
+                    ));
             }
         }
         // A DOMINANCE THROUGH ITS OWN RELATION, named for what it is
-        let mut subs: Vec<(Sym, Rc<Sub>)> = self.lat.subs.iter().map(|(p, x)| (*p, x.clone())).collect();
+        let mut subs: Vec<(Sym, Rc<Sub>)> = self.lat.subs().map(|(p, x)| (p, x.clone())).collect();
         subs.sort_by(|a, b| cmp_js(self.h.name(a.0), self.h.name(b.0)));
         for (p, x) in subs {
             if let Some(b) = x.reads.iter().find(|b| peel.stuck.contains(&p) && peel.stuck.contains(*b) && reaches_in(&deps, **b, p)) {
-                return Halt::Strat(
-                    format!(
-                        "program rejected: the dominance of {} reads {}, which depends on {} itself: which of two values \
+                return Halt::reject(format!("the dominance of {} reads {}, which depends on {} itself: which of two values \
                          dominates is decided from relations closed below it (docs/aggregates.md, \"Subsumption, as built\")",
                         self.h.name(p),
                         self.h.name(*b),
                         self.h.name(p)
-                    ),
-                    String::new(),
-                );
+                    ));
             }
         }
         let names: Vec<&str> = peel.stuck.iter().map(|s| self.h.name(*s)).collect();
-        Halt::Strat(
-            match stall_cycle(peel, |s| self.h.name(s)) {
-                Some(c) => format!(
-                    "program rejected: nothing on the cycle {c} can be settled first: it reads its own \
-                     conclusion under a negation (-/->) or an aggregate (-agg->)"
-                ),
-                None => format!("program rejected: round {} settled nothing while {} remained", peel.rounds + 1, names.join(", ")),
-            },
-            String::new(),
-        )
+        Halt::reject(match stall_cycle(peel, |s| self.h.name(s)) {
+            Some(c) => format!(
+                "nothing on the cycle {c} can be settled first: it reads its own \
+                 conclusion under a negation (-/->) or an aggregate (-agg->)"
+            ),
+            None => format!("round {} settled nothing while {} remained", peel.rounds + 1, names.join(", ")),
+        })
     }
 
     /// The levels of the stock evaluator's strata, ranked from the table phase A derived, after the checks that
@@ -3744,7 +3648,7 @@ impl Eval {
     /// Facts `ids` admitted into a world stopped at a level wall: news to every rule active so far. Facts of the wall's
     /// own level only, which no rule run yet negates or counts.
     pub fn admit(&mut self, ids: &[FactId]) -> Result<(), Halt> {
-        if self.wall.level_rest.is_none() || !self.lat.lattices.is_empty() {
+        if self.wall.level_rest.is_none() || self.lat.has_cells() {
             return Err(Halt::Strat("admit takes a world stopped at a level wall, with no lattice".into(), String::new()));
         }
         let mut front = Front::default();
@@ -3842,7 +3746,7 @@ impl Eval {
             // the rules that own an element a stratification by data took run
             // last at their level, a layer at a time (`datastrat.rs`)
             let (ds, rs): (Vec<Rc<ERule>>, Vec<Rc<ERule>>) = rs.into_iter().partition(|r| self.ds.ds_owner(r));
-            if brk!("shrug_snapshot_off" => false; self.unk.shrug_snap.is_none() && rs.iter().any(|r| self.shrug_readers.contains(&r.id))) {
+            if brk!("shrug_snapshot_off" => false; self.shrug.shrug_snap.is_none() && rs.iter().any(|r| self.shrug_readers.contains(&r.id))) {
                 // what reads shrug fires after the rest of its level (a
                 // rule concluding `@next` shares the last one) and the rows
                 let (late, early): (Vec<Rc<ERule>>, Vec<Rc<ERule>>) = rs.iter().cloned().partition(|r| self.shrug_readers.contains(&r.id));
@@ -3865,7 +3769,7 @@ impl Eval {
         loop {
             self.close_thresholds_below(i64::MAX, true)?;
             self.close_lattices_below(i64::MAX)?;
-            if self.thr.open.is_empty() {
+            if self.memo.thr_open.is_empty() {
                 break;
             }
         }
@@ -3968,36 +3872,15 @@ impl Eval {
         // the rows describe one evaluation: none is read before it writes them
         let old = self.store.rel_all(&self.h, self.v.shrug);
         self.store.remove_many(&old);
-        self.unk.meta_queue.clear();
-        self.unk.meta_late = None;
-        self.unk_edges.clear();
-        self.wfs.carry_src = None;
-        self.holes_now.clear();
-        self.holes_met.clear();
-        self.last_fault_rule = None;
-        self.unk.unknown_strict.clear();
+        self.shrug = ShrugRun::default();
         self.wfs.written.clear();
         let un = self.v.unknown;
         let sh = self.v.shrug;
-        self.unk.shrug_snap = None;
-        self.wfs.cycle_groups.clear();
-        self.wfs.cycle_of.clear();
         // a relation answered on demand whose rules read shrug, directly or
         // through another, unfolds that read into each rule that reads it
         let mut via: HashSet<Sym> = HashSet::from([sh]);
         if brk!("shrug_demand_unread" => false; true) {
-            loop {
-                let more: Vec<Sym> = self
-                    .demand.rels
-                    .iter()
-                    .filter(|(rel, rs)| !via.contains(rel) && rs.iter().any(|r| r.clause.body.iter().flat_map(|b| b.lits_deep()).any(|l| via.contains(&l.rel))))
-                    .map(|(rel, _)| *rel)
-                    .collect();
-                if more.is_empty() {
-                    break;
-                }
-                via.extend(more);
-            }
+            via = readers_cone(via, self.demand.rels.iter().flat_map(|(_, rs)| rs), reads_any);
         }
         self.shrug_readers = self
             .rules
@@ -4020,7 +3903,7 @@ impl Eval {
                     if l.rel == un {
                         cone.insert(r.clause.head.rel);
                         if strict {
-                            self.unk.unknown_strict.push(l.clone());
+                            self.shrug.unknown_strict.push(l.clone());
                         }
                     }
                 }
@@ -4035,20 +3918,7 @@ impl Eval {
         if self.unk.reads_unknown && self.store.add(&self.h, self.v.edb, self.v.main, &[Term::atom(un)], F_BASE) {
             self.rows += 1;
         }
-        loop {
-            let more: Vec<Sym> = self
-                .rules
-                .iter()
-                .filter(|r| !cone.contains(&r.clause.head.rel))
-                .filter(|r| r.clause.body.iter().flat_map(|b| b.lits_deep()).any(|l| cone.contains(&l.rel)))
-                .map(|r| r.clause.head.rel)
-                .collect();
-            if more.is_empty() {
-                break;
-            }
-            cone.extend(more);
-        }
-        self.unknown_cone = cone;
+        self.unknown_cone = readers_cone(cone, self.rules.iter(), reads_any);
     }
 
     /// `unknown(A)` for an unknown A: the atom as a term, in its own book, a
@@ -4061,7 +3931,7 @@ impl Eval {
                 Unknown::Tuple(self.v.unknown, *p, vec![at].into())
             }
             Unknown::Cell((rel, p, key)) => {
-                let n = self.lat.lattices.get(rel).map_or(key.len() + 1, |x| x.0);
+                let n = self.lat.algebra(*rel).cell.map_or(key.len() + 1, |x| x.0);
                 let mut a = key.to_vec();
                 a.resize(n.max(key.len() + 1), self.unk.unknown_value);
                 let at = atom_term(&mut self.h, *rel, &a);
@@ -4076,17 +3946,17 @@ impl Eval {
     /// reader of `unknown` could read, of a relation that reads `unknown`
     /// itself, arrived after that reader fired: `meta_late`.
     fn take_metas(&mut self, level: &mut Vec<Unknown>) {
-        for (m, from) in std::mem::take(&mut self.unk.meta_queue) {
-            if self.unk.meta_late.is_none() && self.unknown_cone.contains(&from.rel()) {
-                let strict = self.unk.unknown_strict.clone();
+        for (m, from) in std::mem::take(&mut self.shrug.meta_queue) {
+            if self.shrug.meta_late.is_none() && self.unknown_cone.contains(&from.rel()) {
+                let strict = self.shrug.unknown_strict.clone();
                 if strict.iter().any(|l| self.unknown_binds(l, &m, &Subst::new()).is_some()) {
-                    self.unk.meta_late = Some(self.unknown_text(&from));
+                    self.shrug.meta_late = Some(self.unknown_text(&from));
                 }
             }
-            self.unk_edges.push((Node::Unk(m.clone()), Node::Unk(from)));
+            self.shrug.unk_edges.push((Node::Unk(m.clone()), Node::Unk(from)));
             if self.note_unknown(m.clone(), None) && !self.unknown_holds(&m) {
-                self.lat.plain.insert(m.clone());
-                if self.lat.spread.insert(m.clone()) {
+                self.lat.carry.plain.insert(m.clone());
+                if self.lat.carry.spread.insert(m.clone()) {
                     level.push(m);
                 }
             }
@@ -4099,9 +3969,9 @@ impl Eval {
 
     /// `u` is left out by the fault a builtin just met, in the rule it met it in.
     fn fault_edge(&mut self, u: &Unknown) {
-        if let Some(r) = self.last_fault_rule {
+        if let Some(r) = self.shrug.last_fault_rule {
             let marker = self.rule_marker(r);
-            self.unk_edges.push((Node::Unk(u.clone()), Node::Hole(marker)));
+            self.shrug.unk_edges.push((Node::Unk(u.clone()), Node::Hole(marker)));
         }
     }
 
@@ -4118,14 +3988,14 @@ impl Eval {
     }
 
     fn hole_met(&mut self, target: Term, cause: Sym) -> bool {
-        let fresh = self.holes_met.insert((target, cause));
-        self.holes_now.push((target, cause));
+        let fresh = self.shrug.holes_met.insert((target, cause));
+        self.shrug.holes_now.push((target, cause));
         if self.h.name(cause) == "support_withdrawn" {
-            if let Some(src) = self.wfs.carry_src.clone() {
-                self.unk_edges.push((Node::Hole(target), src));
+            if let Some(src) = self.shrug.carry_src.clone() {
+                self.shrug.unk_edges.push((Node::Hole(target), src));
             }
             for src in self.wfs.carry_more.clone() {
-                self.unk_edges.push((Node::Hole(target), src));
+                self.shrug.unk_edges.push((Node::Hole(target), src));
             }
         }
         fresh
@@ -4141,7 +4011,7 @@ impl Eval {
     /// and what moved since the readers fired is the wall's, which its hole
     /// already says; no reader is refused over it.
     fn write_shrugs(&mut self, cut: bool) -> Result<(), Halt> {
-        if let Some(what) = self.unk.meta_late.take().filter(|_| brk!("shrug_meta_late_unrefused" => false; true)) {
+        if let Some(what) = self.shrug.meta_late.take().filter(|_| brk!("shrug_meta_late_unrefused" => false; true)) {
             return Err(Halt::Strat(
                 format!("program rejected: unknown is read under not or in an aggregate of {what}, which itself reads unknown"),
                 "a shrug of a relation that reads unknown arrives after its readers fired; read it positively, or from a world above"
@@ -4149,7 +4019,7 @@ impl Eval {
             ));
         }
         let rows = self.shrug_rows()?;
-        let snap = self.unk.shrug_snap.take().filter(|_| !cut || brk!("shrug_late_cut_refused" => true; false));
+        let snap = self.shrug.shrug_snap.take().filter(|_| !cut || brk!("shrug_late_cut_refused" => true; false));
         if let Some(snap) = snap {
             let readers: Vec<Rc<ERule>> = self.rules.iter().filter(|r| self.shrug_readers.contains(&r.id)).cloned().collect();
             // a row added since the readers fired, and one withdrawn since
@@ -4194,8 +4064,7 @@ impl Eval {
                     }
                 }
                 if readable {
-                    let mut k = String::new();
-                    self.h.canon_term(row[0], &mut k);
+                    let k = self.h.canon(row[0]);
                     let what = if now.contains(row) { "leaves without an answer" } else { "answers after it read the shrug" };
                     return Err(Halt::Strat(
                         format!("program rejected: shrug is read of {k}, which a rule that reads shrug {what}"),
@@ -4212,7 +4081,7 @@ impl Eval {
     /// The rows as they stand, written for the rules that read them.
     fn shrug_snapshot(&mut self) -> Result<(), Halt> {
         let rows = self.shrug_rows()?;
-        self.unk.shrug_snap = Some(rows.iter().copied().collect());
+        self.shrug.shrug_snap = Some(rows.iter().copied().collect());
         self.put_shrugs(rows);
         Ok(())
     }
@@ -4237,7 +4106,7 @@ impl Eval {
     /// to the paradox's target. The carry's walls were paid for the carry;
     /// this reads it once more and is not charged to them.
     fn paradox_edges(&mut self) -> Result<(), Halt> {
-        if self.lat.unknown.is_empty() || brk!("shrug_paradox_root_off" => true; false) {
+        if self.lat.carry.unknown.is_empty() || brk!("shrug_paradox_root_off" => true; false) {
             return Ok(());
         }
         let mut target_of: HashMap<Unknown, Term> = HashMap::new();
@@ -4265,7 +4134,7 @@ impl Eval {
             return Ok(());
         }
         let mut carried: Vec<(String, Unknown)> = self
-            .lat.unknown
+            .lat.carry.unknown
             .keys()
             .filter(|u| matches!(u, Unknown::Tuple(..)) && u.rel() != self.v.unknown && !self.unknown_holds(u))
             .map(|u| (self.unknown_text(u), u.clone()))
@@ -4284,7 +4153,7 @@ impl Eval {
                             let (BodyElem::Pos(l) | BodyElem::Neg(l)) = b else { continue };
                             let lu = self.lit_unknown(l, &sol);
                             if let Some(t) = target_of.get(&lu) {
-                                self.unk_edges.push((Node::Unk(u.clone()), Node::Hole(*t)));
+                                self.shrug.unk_edges.push((Node::Unk(u.clone()), Node::Hole(*t)));
                             }
                         }
                     }
@@ -4309,15 +4178,15 @@ impl Eval {
 
     /// The shrug rows of what this evaluation met so far.
     fn shrug_rows(&mut self) -> Result<Vec<[Term; 3]>, Halt> {
-        let edges0 = self.unk_edges.len();
+        let edges0 = self.shrug.unk_edges.len();
         let r = self.paradox_edges();
         let rs = self.root_sets();
-        self.unk_edges.truncate(edges0);
+        self.shrug.unk_edges.truncate(edges0);
         r?;
         let mut rows: Vec<[Term; 3]> = Vec::new();
         let inherited = self.h.atom("inherited");
         let mut seen_holes: HashSet<(Term, Sym)> = HashSet::new();
-        let mut holes: Vec<(Term, Sym)> = self.holes_now.iter().copied().filter(|x| seen_holes.insert(*x)).collect();
+        let mut holes: Vec<(Term, Sym)> = self.shrug.holes_now.iter().copied().filter(|x| seen_holes.insert(*x)).collect();
         // what lives elsewhere is a shrug for as long as its hole stands: a
         // volume cooled to disk is no evaluation's, and every one's
         for f in self.store.rel_persp(&self.h, self.v.hole, self.v.kernel_persp) {
@@ -4337,7 +4206,7 @@ impl Eval {
             rows.push([target, r, meta]);
         }
         let mut unks: Vec<(String, Unknown)> = self
-            .lat.unknown
+            .lat.carry.unknown
             .keys()
             .filter(|u| !self.unknown_holds(u))
             .map(|u| (self.unknown_text(u), u.clone()))
@@ -4385,7 +4254,7 @@ impl Eval {
             }
             "cut" => self.h.atom(&cname),
             "budget" if cname == "regions_capped" => {
-                let n = self.cells.regions_capped.get(&target).copied().unwrap_or(0);
+                let n = self.memo.regions_capped.get(&target).copied().unwrap_or(0);
                 let (f, k) = (self.h.intern("spent"), self.h.atom("regions"));
                 self.h.mkf(f, &[k, Term::int(n), Term::int(labeled::LABEL_REGIONS)])
             }
@@ -4402,8 +4271,8 @@ impl Eval {
             }
             "divergence" => {
                 // the cells of its own improving cycle
-                let same: Vec<Term> = match self.wfs.cycle_of.get(&target) {
-                    Some(&g) => self.wfs.cycle_groups[g].clone(),
+                let same: Vec<Term> = match self.shrug.cycle_of.get(&target) {
+                    Some(&g) => self.shrug.cycle_groups[g].clone(),
                     None => vec![target],
                 };
                 let l = self.h.list(&same);
@@ -4412,8 +4281,8 @@ impl Eval {
             }
             "widened" => {
                 // the value the cell closed on: its least value lies within it
-                let val = match self.lat.widened_marks.get(&target) {
-                    Some((v, _, _)) => brk!("widen_meta_first" => self.lat.widened_marks[&target].1.first().map_or(*v, |w| w[3]); *v),
+                let val = match self.lat.pass.widened_marks.get(&target) {
+                    Some((v, _, _)) => brk!("widen_meta_first" => self.lat.pass.widened_marks[&target].1.first().map_or(*v, |w| w[3]); *v),
                     None => return Err(Halt::Bug(format!("the widened hole {} kept no value", self.shown(target)))),
                 };
                 let f = self.h.intern("within");
@@ -4421,7 +4290,7 @@ impl Eval {
             }
             "conflict" => {
                 // the values whose dominance is no order, in canonical order
-                let Some(mut ps) = self.lat.conflict_marks.get(&target).cloned() else {
+                let Some(mut ps) = self.lat.pass.conflict_marks.get(&target).cloned() else {
                     return Err(Halt::Bug(format!("the conflict hole {} kept no parties", self.shown(target))));
                 };
                 ps.sort_by_key(|t| self.shown(*t));
@@ -4512,7 +4381,7 @@ impl Eval {
                 nodes.len() - 1
             })
         };
-        for (c, p) in &self.unk_edges {
+        for (c, p) in &self.shrug.unk_edges {
             let (ci, pi) = (id(c, &mut nodes, &mut parents), id(p, &mut nodes, &mut parents));
             parents[ci].push(pi);
         }
@@ -4520,7 +4389,7 @@ impl Eval {
         // parent's roots are known before its children's
         let comp = tarjan(&parents);
         let ncomp = comp.iter().copied().max().map_or(0, |c| c + 1);
-        let begun: HashSet<Term> = self.holes_now.iter().filter(|(_, c)| self.h.name(*c) != "support_withdrawn").map(|(t, _)| *t).collect();
+        let begun: HashSet<Term> = self.shrug.holes_now.iter().filter(|(_, c)| self.h.name(*c) != "support_withdrawn").map(|(t, _)| *t).collect();
         let mut members: Vec<Vec<usize>> = vec![Vec::new(); ncomp];
         for (v, c) in comp.iter().enumerate() {
             members[*c].push(v);
@@ -4574,7 +4443,7 @@ impl Eval {
             Unknown::Tuple(rel, p, args) => (*rel, *p, args.to_vec()),
             Unknown::Cell((rel, p, key)) => {
                 // every value after the key is the one not known
-                let n = self.lat.lattices.get(rel).map_or(key.len() + 1, |x| x.0);
+                let n = self.lat.algebra(*rel).cell.map_or(key.len() + 1, |x| x.0);
                 let mut a = key.to_vec();
                 a.resize(n.max(key.len() + 1), self.unk.unknown_value);
                 (*rel, *p, a)
@@ -4669,6 +4538,7 @@ impl Eval {
     fn wall_hole(&mut self, reason: &str) -> Result<(), Halt> {
         let why = Term::atom(match reason {
             "budget_exhausted" if self.disk_hit => self.v.disk_reason,
+            "budget_exhausted" if self.memory_hit => self.v.memory_reason,
             "budget_exhausted" => self.v.budget_reason,
             _ => self.v.space_reason,
         });
@@ -4693,21 +4563,14 @@ impl Eval {
             } else {
                 None
             };
-            return Err(Halt::Strat(
-                format!(
-                    "program rejected: rule {}: {}",
+            return Err(Halt::reject(format!("rule {}: {}",
                     self.h.name(*rid),
                     agg_refusal_text(self.h.name(*why), rel.as_deref())
-                ),
-                String::new(),
-            ));
+                )));
         }
         for r in &self.rules {
             if (r.has_agg || r.has_thr) && self.answer.demand_rels.contains(&r.clause.head.rel) {
-                return Err(Halt::Strat(
-                    format!("program rejected: rule {}: {}", self.h.name(r.id), agg_refusal_text("demand_head", None)),
-                    String::new(),
-                ));
+                return Err(Halt::reject(format!("rule {}: {}", self.h.name(r.id), agg_refusal_text("demand_head", None))));
             }
         }
         Ok(())
@@ -4786,8 +4649,7 @@ impl Eval {
             .staged
             .values()
             .map(|f| {
-                let mut k = String::new();
-                write_fact_key(&self.h, f.rel, f.persp, &f.args, &mut k);
+                let k = fact_key(&self.h, f.rel, f.persp, &f.args);
                 (k, f.clone())
             })
             .collect();
@@ -5064,7 +4926,7 @@ impl Eval {
             return Ok(());
         }
         keys.sort_by(|a, b| cmp_js(a, b));
-        Err(Halt::Strat(format!("program rejected: {}", keys.join(", ")), String::new()))
+        Err(Halt::reject(keys.join(", ")))
     }
 
     /// THE STOCK EVALUATOR SEALS AN AGGREGATE ONLY WHERE ITS TABLE SAYS WHEN.
@@ -5090,18 +4952,14 @@ impl Eval {
                     };
                     if !ok {
                         let rank = |x: Option<i64>| x.map_or("no stratum row".to_string(), |n| format!("stratum {n}"));
-                        return Err(Halt::Strat(
-                            format!(
-                                "program rejected: rule {}: the stock evaluator cannot seal its aggregate: it reads {} ({}) for {} ({}); \
+                        return Err(Halt::reject(format!("rule {}: the stock evaluator cannot seal its aggregate: it reads {} ({}) for {} ({}); \
                                  an aggregate's relation must be ranked strictly below its head (load rules/strata.rofl, or run the default evaluator)",
                                 self.h.name(r.id),
                                 self.h.name(l.rel),
                                 rank(strat.get(&l.rel).copied()),
                                 self.h.name(head),
                                 rank(at)
-                            ),
-                            String::new(),
-                        ));
+                            )));
                     }
                 }
             }
@@ -5119,20 +4977,8 @@ impl Eval {
             .iter()
             .filter(|r| r.clause.head.temporal == Temporal::Next || !strat.contains_key(&r.clause.head.rel))
             .collect();
-        let mut derived: HashSet<Sym> = last.iter().filter(|r| r.clause.head.temporal != Temporal::Next).map(|r| r.clause.head.rel).collect();
-        let mut grew = true;
-        while grew {
-            grew = false;
-            for r in mono {
-                if r.clause.head.temporal == Temporal::Next || derived.contains(&r.clause.head.rel) {
-                    continue;
-                }
-                if r.clause.body.iter().flat_map(|b| b.lits_deep()).any(|l| derived.contains(&l.rel)) {
-                    derived.insert(r.clause.head.rel);
-                    grew = true;
-                }
-            }
-        }
+        let derived: HashSet<Sym> = last.iter().filter(|r| r.clause.head.temporal != Temporal::Next).map(|r| r.clause.head.rel).collect();
+        let derived = readers_cone(derived, mono.iter().filter(|r| r.clause.head.temporal != Temporal::Next), reads_any);
         fn negated(b: &BodyElem, out: &mut Vec<Sym>) {
             match b {
                 BodyElem::Neg(l) => out.push(l.rel),
@@ -5151,10 +4997,7 @@ impl Eval {
         clashes.sort_by(|a, b| cmp_js(a, b));
         match clashes.first() {
             None => Ok(()),
-            Some(c) => Err(Halt::Strat(
-                format!("program rejected: {c}, and neither is ranked by stratum/2; rank them (load rules/strata.rofl, or run the default evaluator)"),
-                String::new(),
-            )),
+            Some(c) => Err(Halt::reject(format!("{c}, and neither is ranked by stratum/2; rank them (load rules/strata.rofl, or run the default evaluator)"))),
         }
     }
 
@@ -5194,15 +5037,15 @@ impl Eval {
     /// relation `p@count` those rules conclude, which no table names, goes
     /// between: every rank doubled, and `p@count` one below its tag's.
     fn rank_counting(&self, strat: &mut HashMap<Sym, i64>) {
-        if self.tags.count_rel.is_empty() || brk!("count_unranked" => true; false) {
+        if self.lat.counts().next().is_none() || brk!("count_unranked" => true; false) {
             return;
         }
         for n in strat.values_mut() {
             *n *= 2;
         }
-        for (p, c) in &self.tags.count_rel {
-            if let Some(n) = strat.get(p).copied() {
-                strat.insert(*c, n - 1);
+        for (p, c) in self.lat.counts() {
+            if let Some(n) = strat.get(&p).copied() {
+                strat.insert(c, n - 1);
             }
         }
     }
@@ -5241,7 +5084,7 @@ impl Eval {
     /// and a monotone rule at the level of its conclusion, so a rule that is not recursive fires once over what it
     /// reads, complete, instead of on every round of a recursion below it.
     fn by_component(&self) -> bool {
-        self.lat.lattices.is_empty() && (self.prov.no_witness || self.store.unordered && self.demand.rels.is_empty())
+        !self.lat.has_cells() && (self.prov.no_witness || self.store.unordered && self.demand.rels.is_empty())
     }
 
     fn activate(&mut self, rules: &[Rc<ERule>]) -> Result<(), Halt> {
@@ -5324,10 +5167,14 @@ impl Eval {
         }
         self.rounds.push((sum, mx));
         (self.batch, self.batch_at) = outer;
+        self.propagate_settled()
+    }
+
+    /// The news in `cur_front` propagated and the lattices settled; what the settle wrote (a withdrawn cell's hole) is news too.
+    fn propagate_settled(&mut self) -> Result<(), Halt> {
         let front = std::mem::take(&mut self.cur_front);
         self.propagate(front)?;
         self.lattice_settle(false)?;
-        // what the settle wrote (a withdrawn cell's hole) is news too
         let more = std::mem::take(&mut self.cur_front);
         if !more.keys.is_empty() {
             self.propagate(more)?;
@@ -5345,7 +5192,7 @@ impl Eval {
         loop {
             // A lattice fact improved on since it entered the front is not
             // news any more; its successor is.
-            if !self.lat.lattices.is_empty() {
+            if self.lat.has_cells() {
                 front.keys.retain(|f| self.store.alive(*f));
                 for ids in front.by_rel.values_mut() {
                     ids.retain(|f| self.store.alive(*f));
@@ -5365,7 +5212,7 @@ impl Eval {
                 None => {
                     self.cur_front = Front::default();
                     self.thr.round += 1;
-                    self.thr.fresh.clear();
+                    self.memo.thr_fresh.clear();
                     (0, None)
                 }
             };
@@ -5490,7 +5337,7 @@ impl Eval {
                 self.vc.vreader_fired(&self.store, r);
             }
         }
-        if self.lat.lattices.is_empty() {
+        if !self.lat.has_cells() {
             if let Some(&(ci, is_base)) = self.clo.closure_of.get(&r.id) {
                 return if is_base { self.fire_closure(ci) } else { Ok(Front::default()) };
             }
@@ -5681,7 +5528,7 @@ impl Eval {
             Vec::new()
         };
         if !persp_t.is_atom() || !args.iter().all(|a| self.h.is_ground(*a)) {
-            if !self.demand.rels.iter().any(|(x, _)| *x == head.rel) {
+            if !self.demand.on(head.rel) {
                 let msg = format!(
                     "rule {}: non-ground or open conclusion skipped ({})",
                     self.h.name(r.id),
@@ -5705,14 +5552,14 @@ impl Eval {
         if head.temporal == Temporal::Next {
             return self.stage(r.id, head.rel, persp, args, &sol.prems);
         }
-        if let Some((n, op)) = self.lat.lattices.get(&head.rel).copied().filter(|(n, op)| op.is_join() && args.len() == *n) {
+        if let Some((n, op)) = self.lat.algebra(head.rel).cell.filter(|(n, op)| op.is_join() && args.len() == *n) {
             let _ = n;
             return self.conclude_join(r.id, head.rel, persp, args, op, sol.prems, out);
         }
-        let cell = match self.lat.lattices.get(&head.rel).copied() {
+        let cell = match self.lat.algebra(head.rel).cell {
             Some((n, AggOp::Dominance)) if args.len() == n => match {
-                let k = self.lat.subs[&head.rel].keylen;
-                let given = self.lat.sub_prems.entry(((head.rel, persp, args[..k].into()), args[k..].into())).or_default();
+                let k = self.lat.sub(head.rel).keylen;
+                let given = self.lat.pass.sub_prems.entry(((head.rel, persp, args[..k].into()), args[k..].into())).or_default();
                 if !given.contains(&sol.prems) {
                     given.push(sol.prems.clone());
                 }
@@ -5732,20 +5579,20 @@ impl Eval {
             *self.cost.new_by_rule.entry(r.id).or_insert(0) += 1;
         }
         if let Some(ck) = cell {
-            if self.lat.subs.contains_key(&head.rel) {
-                let front = self.lat.sub_cur.entry(ck).or_default();
+            if self.lat.algebra(head.rel).sub.is_some() {
+                let front = self.lat.pass.sub_cur.entry(ck).or_default();
                 if !front.contains(&id) {
                     front.push(id);
                 }
             } else {
-                self.lat.cur.insert(ck, id);
+                self.lat.pass.cur.insert(ck, id);
             }
         }
         // a fact that stood before an addition, given a firing that may lower it: found lower or not, as a closure's
         // row is, since its old height is a walk of all it rests on
         let stood = self.add.adding && !is_new && id < self.add.mark && !self.store.rec(id).base() && self.add.heights.contains(&head.rel);
         let tick = self.store.tick;
-        let new_firing = if self.prov.no_witness && self.lat.lattices.is_empty() {
+        let new_firing = if self.prov.no_witness && !self.lat.has_cells() {
             is_new
         } else {
             self.store.support(
@@ -5816,7 +5663,7 @@ impl Eval {
                     *many |= brk!("restage_first_wins" => false; slot.get().rule != rid || slot.get().prems != prems);
                 }
                 // a lattice can withdraw what a firing read; another may stand
-                if !self.lat.lattices.is_empty() {
+                if self.lat.has_cells() {
                     let alts = self.staged_alts.entry(slot.key().clone()).or_default();
                     if !alts.iter().any(|(ar, ap)| *ar == rid && *ap == prems) && !(slot.get().rule == rid && slot.get().prems == prems) {
                         alts.push((rid, prems.to_vec()));
@@ -5870,6 +5717,13 @@ impl Eval {
             self.wall.spent.set(Some(("steps", self.steps, self.budget.min(self.steps))));
             return Err(Halt::Budget("budget_exhausted", None));
         }
+        if self.steps & 0x3ff == 0 && MEMORY_FULL.load(std::sync::atomic::Ordering::Relaxed) {
+            use std::sync::atomic::Ordering::Relaxed;
+            self.memory_hit = true;
+            MEMORY_STOPPED.store(true, Relaxed);
+            self.wall.spent.set(Some(("bytes", MEMORY_USED.load(Relaxed), MEMORY_LIMIT.load(Relaxed))));
+            return Err(Halt::Budget("budget_exhausted", None));
+        }
         if self.disk != i64::MAX && self.budget != i64::MAX && brk!("disk_wall_ignored" => false; true) {
             let b = self.disk_bytes();
             if b > self.disk {
@@ -5889,7 +5743,16 @@ impl Eval {
 
     /// Whether the last evaluation stopped at the disk wall: its hole is in the store.
     pub fn disk_cut(&self) -> bool {
-        self.store.eval_holes.iter().any(|&id| self.store.alive(id) && self.store.args(id).get(1).and_then(|t| t.as_atom()) == Some(self.v.disk_reason))
+        self.cut_by(self.v.disk_reason)
+    }
+
+    /// The world stopped at the memory wall (`MEMORY_FULL`).
+    pub fn memory_cut(&self) -> bool {
+        self.cut_by(self.v.memory_reason)
+    }
+
+    fn cut_by(&self, reason: Sym) -> bool {
+        self.store.eval_holes.iter().any(|&id| self.store.alive(id) && self.store.args(id).get(1).and_then(|t| t.as_atom()) == Some(reason))
     }
 
     /// The rows held while a premise is matched, `now`, against the space: the wall a body solved meets.
@@ -6006,7 +5869,7 @@ impl Eval {
                                     next.push(Sol { s: s2, prems });
                                 }
                                 if failed && self.fault_count > faults && self.firing {
-                                    if !self.lat.lattices.is_empty() {
+                                    if self.lat.has_cells() {
                                         self.lattice_fault(rule_id, &a.s, &a.prems)?;
                                     }
                                     if depth == 0 {
@@ -6078,7 +5941,7 @@ impl Eval {
             self.demand_below(depth, l, &a.s, faults, unknowns);
             return Ok(());
         }
-        if holds && self.wfs.strict_neg && !self.lat.spread.is_empty() && self.read_unknown(l, &a.s, true).is_some() {
+        if holds && self.wfs.strict_neg && !self.lat.carry.spread.is_empty() && self.read_unknown(l, &a.s, true).is_some() {
             return Ok(());
         }
         // UNFOLDED AT A CALL, a negation what a hole left unknown could
@@ -6086,7 +5949,7 @@ impl Eval {
         // outside a firing too (a body solved again at the flush), where no
         // head is marked but the answer is no answer, and is not stored
         let unfired = !self.firing && !self.demand.asking && brk!("unfired_neg_decides" => false; true);
-        if holds && depth > 0 && (self.firing || brk!("asked_unholed" => false; self.demand.asking) || unfired) && !self.demand.heads.is_empty() && !self.lat.spread.is_empty() {
+        if holds && depth > 0 && (self.firing || brk!("asked_unholed" => false; self.demand.asking) || unfired) && !self.demand.heads.is_empty() && !self.lat.carry.spread.is_empty() {
             if let Some(u) = brk!("demand_neg_unholed" => None; self.read_unknown(l, &a.s, true)) {
                 self.demand_unknown_read(depth, &a.s, u);
                 return Ok(());
@@ -6099,19 +5962,19 @@ impl Eval {
                 let u = self.lit_unknown(l, &a.s);
                 if self.fault_count == faults {
                     for f in self.demand_called(l.rel, unknowns) {
-                        self.unk_edges.push((Node::Unk(u.clone()), Node::Unk(f)));
+                        self.shrug.unk_edges.push((Node::Unk(u.clone()), Node::Unk(f)));
                     }
                 } else {
                     self.fault_edge(&u);
                 }
-                self.lat.plain.insert(u.clone());
-                self.lat.undecided.push((rule_id.unwrap(), i, a.s.clone(), Rc::from([u])));
+                self.lat.carry.plain.insert(u.clone());
+                self.lat.carry.undecided.push((rule_id.unwrap(), i, a.s.clone(), Rc::from([u])));
                 return Ok(());
             }
             let read = self.undecided_read(depth, rule_id, |e| brk!("lattice_neg_decides" => None; e.read_unknown(l, &a.s, brk!("plain_neg_decides" => false; true))));
             self.carry_check(0)?;
             if let Some(Some(u)) = read {
-                self.lat.undecided.push((rule_id.unwrap(), i, a.s.clone(), Rc::from([u])));
+                self.lat.carry.undecided.push((rule_id.unwrap(), i, a.s.clone(), Rc::from([u])));
                 return Ok(());
             }
             let mut prems = a.prems.clone();
@@ -6129,9 +5992,9 @@ impl Eval {
     fn solve_agg(&mut self, ag: &Agg, a: &Sol, i: usize, depth: usize, rule_id: Option<Sym>, next: &mut Vec<Sol>) -> Result<(), Halt> {
         let rid = rule_id.ok_or_else(|| Halt::Bug("an aggregate solved outside a rule".into()))?;
         let sols = if ag.op == AggOp::AtLeast {
-            if depth == 0 && self.firing && !self.lat.spread.is_empty() && brk!("shrug_thr_neg_decides" => false; true) {
+            if depth == 0 && self.firing && !self.lat.carry.spread.is_empty() && brk!("shrug_thr_neg_decides" => false; true) {
                 for (sg, u) in self.thr_uncertain(rid, ag, &a.s)? {
-                    self.lat.undecided.push((rid, i, sg, Rc::from([u])));
+                    self.lat.carry.undecided.push((rid, i, sg, Rc::from([u])));
                 }
                 self.wfs.strict_neg = true;
                 let r = self.thr_premise(rid, ag, &a.s, depth);
@@ -6152,12 +6015,12 @@ impl Eval {
                 return Ok(());
             }
             let reads = self.undecided_read(depth, rule_id, |_| ()).is_some();
-            let memo = if reads { brk!("agg_reach_unmemo" => None; self.cells.reach_memo.get(&mk).cloned()) } else { None };
+            let memo = if reads { brk!("agg_reach_unmemo" => None; self.memo.reach_memo.get(&mk).cloned()) } else { None };
             let ps: Vec<Possible> = match &memo {
                 None if reads => brk!("lattice_agg_decides" => Vec::new(); self.agg_possibles(rid, ag, &a.s)?),
                 _ => Vec::new(),
             };
-            let sealing = !self.cells.agg_memo.contains_key(&mk);
+            let sealing = !self.memo.agg_memo.contains_key(&mk);
             if sealing {
                 self.cells.agg_reach = memo.as_ref().map_or_else(|| ps.clone(), |m| m.ps.to_vec());
             }
@@ -6169,7 +6032,7 @@ impl Eval {
                     Some(m) => brk!("agg_reach_first_only" => None; Some(m)),
                     None => {
                         let m = Rc::new(self.reach_memo_of(rid, ag, &a.s, &mk, ps, sealing)?);
-                        self.cells.reach_memo.insert(mk, m.clone());
+                        self.memo.reach_memo.insert(mk, m.clone());
                         Some(m)
                     }
                 };
@@ -6196,12 +6059,7 @@ impl Eval {
                 let lt = resolve(&mut self.h, *l, s);
                 let rt = resolve(&mut self.h, *rr, s);
                 let cv = canon_vars(&mut self.h, &[lt, rt]);
-                let mut d = String::new();
-                self.h.canon_term(cv[0], &mut d);
-                d.push(' ');
-                d.push_str(self.h.name(*op));
-                d.push(' ');
-                self.h.canon_term(cv[1], &mut d);
+                let d = format!("{} {} {}", self.h.canon(cv[0]), self.h.name(*op), self.h.canon(cv[1]));
                 PremRef::Bi(self.h.intern(&d))
             }
             BodyElem::Neg(l) => {
@@ -6248,11 +6106,11 @@ impl Eval {
     ) -> Result<Vec<(Subst, PremRef)>, Halt> {
         let (plan, corr) = self.agg_corr(rid, a, s)?;
         let mk = (rid, a.at, corr.clone().into_boxed_slice());
-        let cells: Vec<CellId> = match self.cells.agg_memo.get(&mk) {
+        let cells: Vec<CellId> = match self.memo.agg_memo.get(&mk) {
             Some(cs) if brk!("memo" => keep && false; keep) => cs.to_vec(),
             _ => match self.seal_cells(rid, a, &plan, s, &corr, depth, keep)? {
                 Sealed::Kept(cs) => {
-                    self.cells.agg_memo.insert(mk, cs.clone().into());
+                    self.memo.agg_memo.insert(mk, cs.clone().into());
                     cs
                 }
                 Sealed::Ephemeral(cells) => {
@@ -6384,15 +6242,15 @@ impl Eval {
             let shared = self.thr_shared(a, &plan, &corr, &gkey);
             let Some(sg) = self.bind_group(a, &plan, s, &shared) else { continue };
             let key = thr_cell_key(shared.clone(), n);
-            if let Some(c) = self.thr.cells.get(&(rid, a.at, key.clone().into_boxed_slice())).copied() {
-                if self.thr.fresh.contains(&c) {
+            if let Some(c) = self.memo.thr_cells.get(&(rid, a.at, key.clone().into_boxed_slice())).copied() {
+                if self.memo.thr_fresh.contains(&c) {
                     out.push((sg, PremRef::Cell(c)));
                 }
                 continue;
             }
             let ak = (rid, a.at, shared.into_boxed_slice());
             let round = self.thr.round;
-            let grown: Vec<Vec<(Vec<Term>, Vec<ThrMember>)>> = match self.thr.acc.get(&ak) {
+            let grown: Vec<Vec<(Vec<Term>, Vec<ThrMember>)>> = match self.memo.thr_acc.get(&ak) {
                 Some(acc) if brk!("thr_acc_frozen" => true; acc.round == round) => Vec::new(),
                 Some(_) => {
                     let mut gr = Vec::with_capacity(f.news.len());
@@ -6403,11 +6261,11 @@ impl Eval {
                 }
                 None => {
                     let full = self.thr_groups(rid, a, &plan, &sg, depth, true, None)?.0;
-                    self.thr.acc.insert(ak.clone(), ThrAcc { round, members: HashMap::new() });
+                    self.memo.thr_acc.insert(ak.clone(), ThrAcc { round, members: HashMap::new() });
                     vec![full]
                 }
             };
-            let acc = self.thr.acc.get_mut(&ak).ok_or_else(|| Halt::Bug("a threshold group lost its members".into()))?;
+            let acc = self.memo.thr_acc.get_mut(&ak).ok_or_else(|| Halt::Bug("a threshold group lost its members".into()))?;
             acc.round = round;
             for m in grown.into_iter().flatten().flat_map(|g| g.1) {
                 acc.members.entry(m.proj.clone()).or_insert(m);
@@ -6438,7 +6296,7 @@ impl Eval {
     ) -> Result<Vec<(Subst, PremRef)>, Halt> {
         if plan.group.is_empty() {
             let key = thr_cell_key(self.thr_shared(a, plan, corr, &[]), n);
-            if let Some(c) = self.thr.cells.get(&(rid, a.at, key.into_boxed_slice())) {
+            if let Some(c) = self.memo.thr_cells.get(&(rid, a.at, key.into_boxed_slice())) {
                 return Ok(vec![(s.clone(), PremRef::Cell(*c))]);
             }
         }
@@ -6449,7 +6307,7 @@ impl Eval {
         let mut out = Vec::new();
         for (gkey, members) in groups {
             let key = thr_cell_key(self.thr_shared(a, plan, corr, &gkey), n);
-            let c = match self.thr.cells.get(&(rid, a.at, key.clone().into_boxed_slice())) {
+            let c = match self.memo.thr_cells.get(&(rid, a.at, key.clone().into_boxed_slice())) {
                 Some(c) => *c,
                 None if members.len() < need => continue,
                 None => self.thr_reach(rid, a, plan, s, key.clone(), need, members)?,
@@ -6505,9 +6363,9 @@ impl Eval {
             members: provisional,
             seals: Vec::new(),
         });
-        self.thr.cells.insert((rid, a.at, key.into_boxed_slice()), c);
-        self.thr.open.push((c, need));
-        self.thr.fresh.insert(c);
+        self.memo.thr_cells.insert((rid, a.at, key.into_boxed_slice()), c);
+        self.memo.thr_open.push((c, need));
+        self.memo.thr_fresh.insert(c);
         Ok(c)
     }
 
@@ -6587,7 +6445,7 @@ impl Eval {
             _ => return Ok(Vec::new()),
         };
         let inner: Vec<BodyElem> = plan.inner_order.iter().map(|i| a.body[*i].clone()).collect();
-        let outer: Vec<Sym> = self.lat.lattices.keys().copied().collect();
+        let outer: Vec<Sym> = self.lat.cell_rels().collect();
         // the threshold sees of `s` its shared variables only: an inner
         // variable an unknown bound is a member, not a group
         let mut base = Subst::new();
@@ -6674,7 +6532,7 @@ impl Eval {
     /// short, each with every unknown the negations of its members that are
     /// not certain read: any of them could decide it.
     fn thr_uncertain(&mut self, rid: Sym, a: &Agg, s: &Subst) -> Result<Vec<(Subst, Unknown)>, Halt> {
-        if !a.body.iter().any(|b| matches!(b, BodyElem::Neg(l) if self.unk.lat_unknown_rel.contains_key(&l.rel))) {
+        if !a.body.iter().any(|b| matches!(b, BodyElem::Neg(l) if self.lat.carry.lat_unknown_rel.contains_key(&l.rel))) {
             return Ok(Vec::new());
         }
         let mut out = Vec::new();
@@ -6706,13 +6564,21 @@ impl Eval {
         Ok(out)
     }
 
+    fn closed_lattice_halt(&self, rel: Sym) -> Halt {
+        let msg = format!("the lattice {} received a contribution after it closed", self.h.name(rel));
+        match self.mode {
+            Mode::Strata => Halt::reject(format!("{msg}: the stratum table ranks it below a relation it reads")),
+            Mode::Rounds => Halt::Bug(msg),
+        }
+    }
+
     /// The unknowns the possible members of the group `sg` that are not
     /// `known` read, in the order found: through its negations only
     /// (`negs_only`), or through its positive literals too.
     fn thr_member_unknowns(&mut self, rid: Sym, a: &Agg, sg: &Subst, known: &HashSet<Vec<Term>>, negs_only: bool) -> Result<Vec<Unknown>, Halt> {
         let Some(plan) = self.agg_plans.get(&(rid, a.at)).cloned() else { return Ok(Vec::new()) };
         let inner: Vec<BodyElem> = plan.inner_order.iter().map(|i| a.body[*i].clone()).collect();
-        let outer: Vec<Sym> = self.lat.lattices.keys().copied().collect();
+        let outer: Vec<Sym> = self.lat.cell_rels().collect();
         let mut out: Vec<Unknown> = Vec::new();
         for ps in self.poison_solve_plan(&inner, &outer, usize::MAX, sg.clone())? {
             let proj: Vec<Term> = a.vals.iter().map(|t| resolve(&mut self.h, *t, &ps)).collect();
@@ -6726,7 +6592,7 @@ impl Eval {
                     _ => continue,
                 };
                 for u in self.unknown_cands(l, &ps) {
-                    let spread = self.lat.spread.contains(&u) || (!neg && self.lat.unknown.contains_key(&u) && !matches!(u, Unknown::Tuple(..)));
+                    let spread = self.lat.carry.spread.contains(&u) || (!neg && self.lat.carry.unknown.contains_key(&u) && !matches!(u, Unknown::Tuple(..)));
                     if spread && !out.contains(&u) && self.unknown_binds(l, &u, &ps).is_some() {
                         out.push(u);
                     }
@@ -6871,7 +6737,7 @@ impl Eval {
     /// rest on a conclusion another quorum supports; the Quorum is the first
     /// N by height, then projection (`cell::quorum`); then it is reflected.
     fn close_thresholds_below(&mut self, lv: i64, then_propagate: bool) -> Result<(), Halt> {
-        if self.thr.open.is_empty() {
+        if self.memo.thr_open.is_empty() {
             return Ok(());
         }
         let closed = |e: &Eval, rel: Sym| match e.round_of.get(&rel) {
@@ -6882,7 +6748,7 @@ impl Eval {
         let mut rest: Vec<(CellId, usize)> = Vec::new();
         // Kept open until each is resealed: a wall that falls in between
         // leaves them to the cut, which closes them.
-        for (c, need) in self.thr.open.clone() {
+        for (c, need) in self.memo.thr_open.clone() {
             let CellOwner::Body { rule, at } = self.store.cell(c).owner;
             let plan = self.agg_plans.get(&(rule, at)).cloned().ok_or_else(|| Halt::Bug("a quorum with no plan".into()))?;
             let head = self.rule_of(rule).map(|r| r.clause.head.rel);
@@ -6915,8 +6781,8 @@ impl Eval {
         let forbidden: HashSet<CellId> = rest.iter().map(|x| x.0).collect();
         let prems: Vec<Vec<Vec<Vec<PremRef>>>> =
             all.iter().map(|ms| ms.iter().map(|m| m.derivs.iter().map(|d| d.1.clone()).collect()).collect()).collect();
-        self.height_memo.clear();
-        let hs = match self.store.quorum_heights(&due, &prems, &forbidden, &mut self.height_memo) {
+        self.memo.height_memo.clear();
+        let hs = match self.store.quorum_heights(&due, &prems, &forbidden, &mut self.memo.height_memo) {
             Ok(hs) => hs,
             Err(f) => {
                 return Err(Halt::Bug(format!("{} rests on a quorum that is not closing with it", self.store.key(&self.h, f))))
@@ -6945,7 +6811,7 @@ impl Eval {
             brk!("thr_no_close" => { let _ = (members, height); }; self.store.reseal_cell(*c, members, height));
             self.reflect_cell(*c)?;
         }
-        self.thr.open = rest;
+        self.memo.thr_open = rest;
         if then_propagate {
             let front = std::mem::take(&mut self.cur_front);
             if !front.keys.is_empty() {
@@ -6975,7 +6841,7 @@ impl Eval {
         // under them is its own, never shared (`reach_of`)
         let reach = if keep { std::mem::take(&mut self.cells.agg_reach) } else { Vec::new() };
         let share = if keep && reach.is_empty() { self.hol_share_key(rid, a, plan, corr) } else { None };
-        match share.as_ref().and_then(|k| self.hol_shared.get(k)).cloned() {
+        match share.as_ref().and_then(|k| self.memo.hol_shared.get(k)).cloned() {
             Some(HolShared::Open(reason)) => {
                 self.cells.agg_opened.insert((rid, a.at, corr.to_vec().into_boxed_slice()));
                 return Ok(self.open_correlation(rid, a, corr, keep, reason));
@@ -6989,7 +6855,7 @@ impl Eval {
                 self.cells.agg_opened.insert((rid, a.at, corr.to_vec().into_boxed_slice()));
             }
             if let Some(k) = share {
-                self.hol_shared.insert(k, HolShared::Open(reason));
+                self.memo.hol_shared.insert(k, HolShared::Open(reason));
             }
             return Ok(self.open_correlation(rid, a, corr, keep, reason));
         }
@@ -7018,7 +6884,7 @@ impl Eval {
         if !keep {
             return Ok(Sealed::Ephemeral(sealed.into_iter().map(|(k, c)| (k, c.value, c.members.len())).collect()));
         }
-        let carried = (self.wfs.carry_src.take(), std::mem::take(&mut self.wfs.carry_more));
+        let carried = (self.shrug.carry_src.take(), std::mem::take(&mut self.wfs.carry_more));
         let mut ids = self.seal_new_cells(sealed, holes)?;
         // a possible whose group is not known could make a group of any key
         // it leaves open: a hole on the correlation, beside its sealed groups
@@ -7029,15 +6895,15 @@ impl Eval {
             }
         }
         if let Some(u) = open.first() {
-            self.wfs.carry_src = Some(Node::Unk(u.clone()));
+            self.shrug.carry_src = Some(Node::Unk(u.clone()));
             self.wfs.carry_more = open[1..].iter().cloned().map(Node::Unk).collect();
             self.open_correlation(rid, a, corr, true, withdrawn);
         }
-        (self.wfs.carry_src, self.wfs.carry_more) = carried;
+        (self.shrug.carry_src, self.wfs.carry_more) = carried;
         if let Some(k) = share {
             let gs: Vec<(Box<[Term]>, CellId, Result<Sorted, Sym>)> =
                 sorts.into_iter().zip(ids.iter()).map(|((g, x), c)| (g, *c, x)).collect();
-            self.hol_shared.insert(k, HolShared::Groups(gs.into()));
+            self.memo.hol_shared.insert(k, HolShared::Groups(gs.into()));
         }
         if brk!("ds_wide_unlisted" => false; true) {
             ids.extend(reuse);
@@ -7329,7 +7195,7 @@ impl Eval {
         for (n, (_, c)) in sealed.into_iter().enumerate() {
             let us = holes.reached.remove(&n);
             if let Some(us) = &us {
-                self.wfs.carry_src = Some(Node::Unk(us[0].clone()));
+                self.shrug.carry_src = Some(Node::Unk(us[0].clone()));
                 self.wfs.carry_more = us[1..].iter().cloned().map(Node::Unk).collect();
             }
             // A CELL IS SEALED ONCE: what it reads is closed, so a second seal
@@ -7346,20 +7212,20 @@ impl Eval {
                 let marker = self.store.cell_key_term(&mut self.h, id);
                 self.cell_hole(marker, r);
                 if let Some(k) = holes.capped.get(&n) {
-                    self.cells.regions_capped.insert(marker, *k);
+                    self.memo.regions_capped.insert(marker, *k);
                 }
             }
-            self.wfs.carry_src = None;
+            self.shrug.carry_src = None;
             self.wfs.carry_more.clear();
             self.reflect_cell(id)?;
             if let Some(us) = us {
-                self.cells.cell_reach.insert(id, us.into());
+                self.memo.cell_reach.insert(id, us.into());
             } else if let Some(by) = holes.decided.remove(&n) {
-                self.cells.cell_reach.insert(id, Rc::from(Vec::<Unknown>::new()));
-                self.cells.cell_decided.insert(id, by);
+                self.memo.cell_reach.insert(id, Rc::from(Vec::<Unknown>::new()));
+                self.memo.cell_decided.insert(id, by);
             }
             if let Some(c) = holes.conds.get(&n) {
-                self.cells.cell_cond.insert(id, *c);
+                self.memo.cell_cond.insert(id, *c);
             }
             ids.push(id);
         }
@@ -7447,6 +7313,10 @@ impl Eval {
 
     /// Cells in cell-key order, so the solutions come out in one order.
     fn keyed_cells(&mut self, ids: Vec<CellId>) -> Result<Sealed, Halt> {
+        Ok(Sealed::Kept(self.cells_by_key(ids)))
+    }
+
+    fn cells_by_key(&self, ids: Vec<CellId>) -> Vec<CellId> {
         let mut keyed: Vec<(String, CellId)> = ids
             .into_iter()
             .map(|c| {
@@ -7456,21 +7326,21 @@ impl Eval {
             })
             .collect();
         keyed.sort_by(|x, y| cmp_js(&x.0, &y.0));
-        Ok(Sealed::Kept(keyed.into_iter().map(|(_, c)| c).collect()))
+        keyed.into_iter().map(|(_, c)| c).collect()
     }
 
     /// 1 + the highest fact premise's height; a negation or a builtin is 0.
     fn member_height(&mut self, prems: &[PremRef]) -> Result<u32, Halt> {
         let roots: Vec<FactId> = prems.iter().filter_map(|p| if let PremRef::Fact(f) = p { Some(*f) } else { None }).collect();
-        if let Err(f) = self.store.heights(&roots, &mut self.height_memo) {
+        if let Err(f) = self.store.heights(&roots, &mut self.memo.height_memo) {
             return Err(Halt::Bug(format!("{} has no well-founded height", self.store.key(&self.h, f))));
         }
         let mut hgt = 0u32;
         for p in prems {
             match p {
-                PremRef::Fact(f) => hgt = hgt.max(self.height_memo[f]),
+                PremRef::Fact(f) => hgt = hgt.max(self.memo.height_memo[f]),
                 PremRef::Cell(c) => hgt = hgt.max(self.store.cell(*c).height),
-                PremRef::VRow(k) => hgt = hgt.max(self.store.vrow_height(*k, &mut self.height_memo)),
+                PremRef::VRow(k) => hgt = hgt.max(self.store.vrow_height(*k, &mut self.memo.height_memo)),
                 PremRef::Neg(_) | PremRef::Bi(_) => {}
             }
         }
@@ -7500,21 +7370,14 @@ impl Eval {
     fn conclude_join(&mut self, rid: Sym, rel: Sym, persp: Sym, mut args: Vec<Term>, op: AggOp, prems: Vec<PremRef>, out: &mut Front) -> Result<(), Halt> {
         let n = args.len();
         let ck: LatKey = (rel, persp, args[..n - 1].into());
-        if self.lat.closed.contains(&rel) {
-            let msg = format!("the lattice {} received a contribution after it closed", self.h.name(rel));
-            return Err(match self.mode {
-                Mode::Strata => Halt::Strat(
-                    format!("program rejected: {msg}: the stratum table ranks it below a relation it reads"),
-                    String::new(),
-                ),
-                Mode::Rounds => Halt::Bug(msg),
-            });
+        if self.lat.pass.closed.contains(&rel) {
+            return Err(self.closed_lattice_halt(rel));
         }
         let c = match self.lat.join_canon_of(&mut self.h, &self.v, op, args[n - 1]) {
             Ok(c) => c,
             Err(reason) => {
                 let facts = fact_prems(&prems);
-                self.lat.pending.push(LatFault { close: rel, what: Some(Unknown::Cell(ck)), rule: None, reason, facts });
+                self.lat.pass.pending.push(LatFault { close: rel, what: Some(Unknown::Cell(ck)), rule: None, reason, facts });
                 return Ok(());
             }
         };
@@ -7523,20 +7386,20 @@ impl Eval {
             let held = self.lat.narrowing.as_ref().and_then(|nr| nr.fresh.get(&ck)).copied();
             let f = match held {
                 None => c,
-                Some(f) => op.join(&mut self.h, &self.v, &mut self.lat.join_keys, f, c).map_err(|_| off_carrier(op))?,
+                Some(f) => op.join(&mut self.h, &self.v, &mut self.lat.pass.join_keys, f, c).map_err(|_| off_carrier(op))?,
             };
             if let Some(nr) = self.lat.narrowing.as_mut() {
                 nr.fresh.insert(ck, brk!("narrow_fresh_first" => held.unwrap_or(f); f));
             }
             return Ok(());
         }
-        let crel = self.lat.join_rels[&rel];
+        let crel = self.lat.algebra(rel).join.unwrap();
         let (cid, fresh) = self.store.put(&self.h, crel, persp, &args, F_TICK);
         self.record_firing(cid, rid, rid, prems, out)?;
         if !fresh {
             return Ok(());
         }
-        self.lat.join_contribs.entry(ck.clone()).or_default().push(cid);
+        self.lat.pass.join_contribs.entry(ck.clone()).or_default().push(cid);
         self.join_fold(ck, cid, c, op, rid, out)
     }
 
@@ -7545,31 +7408,31 @@ impl Eval {
     /// with the join, concluded from the value it replaced and the
     /// contribution (or from the contribution alone, when it is the join).
     fn join_fold(&mut self, ck: LatKey, cid: FactId, c: Term, op: AggOp, rid: Sym, out: &mut Front) -> Result<(), Halt> {
-        let crel = self.lat.join_rels[&ck.0];
+        let crel = self.lat.algebra(ck.0).join.unwrap();
         let (rel, persp) = (ck.0, ck.1);
-        let (new, prems) = match self.lat.cur.get(&ck).copied().filter(|f| self.store.alive(*f)) {
+        let (new, prems) = match self.lat.pass.cur.get(&ck).copied().filter(|f| self.store.alive(*f)) {
             None => (c, vec![PremRef::Fact(cid)]),
             Some(old) => {
                 let v = *self.store.args(old).last().unwrap();
                 if brk!("join_leq_reversed" => self.join_leq(op, v, c)? && v != c; self.join_leq(op, c, v)?) {
                     return Ok(());
                 }
-                let joined = op.join(&mut self.h, &self.v, &mut self.lat.join_keys, v, c).map_err(|_| off_carrier(op))?;
+                let joined = op.join(&mut self.h, &self.v, &mut self.lat.pass.join_keys, v, c).map_err(|_| off_carrier(op))?;
                 if op == AggOp::Union {
-                    self.lat.join_canonical.insert(joined);
+                    self.lat.pass.join_canonical.insert(joined);
                 }
                 let new = self.lat.widened(&mut self.h, &self.v, &ck, rid, v, c, joined)?;
                 let prems = if new == c { vec![PremRef::Fact(cid)] } else { vec![PremRef::Fact(old), PremRef::Fact(cid)] };
                 brk!("join_no_retire" => (); self.supersede(old, &ck));
-                self.lat.improved.push(old);
-                self.lat.improvements += 1;
+                self.lat.pass.improved.push(old);
+                self.lat.pass.improvements += 1;
                 (new, prems)
             }
         };
         let mut args: Vec<Term> = ck.2.to_vec();
         args.push(new);
         let (id, is_new) = self.store.put(&self.h, rel, persp, &args, F_TICK);
-        self.lat.cur.insert(ck, id);
+        self.lat.pass.cur.insert(ck, id);
         self.record_firing(id, crel, rid, prems, out)?;
         if is_new {
             out.note(rel, id);
@@ -7591,7 +7454,7 @@ impl Eval {
         let mut out = HashSet::new();
         for r in &self.rules {
             let h = r.clause.head.rel;
-            if r.clause.head.temporal == Temporal::Next || !self.lat.widen.contains_key(&h) {
+            if r.clause.head.temporal == Temporal::Next || self.lat.algebra(h).widen.is_none() {
                 continue;
             }
             if r.clause.body.iter().any(|b| b.lits_deep().iter().any(|l| reaches(l.rel, h))) {
@@ -7624,7 +7487,7 @@ impl Eval {
     fn widen_thresholds(&self) -> HashMap<Sym, Vec<i64>> {
         let deps = self.rel_deps();
         let mut out = HashMap::new();
-        for &h in self.lat.widen.keys() {
+        for h in self.lat.algebras.iter().filter(|(_, a)| a.widen.is_some()).map(|(r, _)| *r) {
             let mut ints = BTreeSet::new();
             for r in &self.rules {
                 let g = r.clause.head.rel;
@@ -7660,10 +7523,10 @@ impl Eval {
         }
         brk!("narrow_off" => return Ok(()), "descent_wall" => return Err(Halt::Budget("budget_exhausted", None)), "descent_fatal" => return Err(Halt::Bug("descent".into())); ());
         let mut cells: Vec<Cell> = Vec::new();
-        for (ck, &x) in &self.lat.widened_x {
+        for (ck, &x) in &self.lat.pass.widened_x {
             let Some(cur) = iv_bounds(&self.h, &self.v, x) else { continue };
             let mut raised = (false, false);
-            for [_, _, joined, wide] in self.lat.widened.get(ck).into_iter().flatten() {
+            for [_, _, joined, wide] in self.lat.pass.widened.get(ck).into_iter().flatten() {
                 if let (Some(j), Some(w)) = (iv_bounds(&self.h, &self.v, *joined), iv_bounds(&self.h, &self.v, *wide)) {
                     raised = (raised.0 || w.0 != j.0, raised.1 || w.1 != j.1);
                 }
@@ -7717,8 +7580,8 @@ impl Eval {
             let mut args: Vec<Term> = ck.2.to_vec();
             args.push(*x);
             let (id, _) = self.store.put(&self.h, ck.0, ck.1, &args, F_TICK);
-            self.lat.cur.insert(ck.clone(), id);
-            let crel = self.lat.join_rels[&ck.0];
+            self.lat.pass.cur.insert(ck.clone(), id);
+            let crel = self.lat.algebra(ck.0).join.unwrap();
             self.record_firing(id, crel, crel, Vec::new(), &mut front)?;
         }
         self.lat.narrowing = Some(nr);
@@ -7738,7 +7601,7 @@ impl Eval {
         if !nr.left.is_empty() {
             return Ok(());
         }
-        let met: Vec<Sym> = self.lat.pending.iter().filter(|x| x.reason != self.v.widened_reason).map(|x| x.close).collect();
+        let met: Vec<Sym> = self.lat.pass.pending.iter().filter(|x| x.reason != self.v.widened_reason).map(|x| x.close).collect();
         if !met.is_empty() {
             let frozen: HashSet<Sym> = nr.frozen.keys().map(|k| k.0).collect();
             let nr_cells: Vec<Sym> = frozen.iter().copied().collect();
@@ -7797,13 +7660,13 @@ impl Eval {
     /// at least as much at the same key from values that stand? Once found
     /// so, a contribution is not asked again.
     fn join_refired(&mut self, l: Sym, x: FactId) -> Result<bool, Halt> {
-        if self.lat.join_checked.contains(&x) {
+        if self.lat.pass.join_checked.contains(&x) {
             return Ok(true);
         }
         let rec = self.store.rec(x);
         let args = self.store.args(x).to_vec();
         let n = args.len();
-        let (op, cx) = (self.lat.lattices[&l].1, args[n - 1]);
+        let (op, cx) = (self.lat.algebra(l).cell.unwrap().1, args[n - 1]);
         let ck: LatKey = (l, rec.persp, args[..n - 1].into());
         let mut rules: Vec<Sym> = self.store.firings(x).into_iter().map(|(r, _, _)| r).collect();
         rules.sort_unstable();
@@ -7825,7 +7688,7 @@ impl Eval {
             let cy = *self.store.args(y).last().unwrap();
             for (ry, _, ps) in self.store.firings(y) {
                 let Some(k) = open.iter().position(|r| *r == ry) else { continue };
-                if !ps.iter().any(|p| matches!(p, PremRef::Fact(f) if self.lat.superseded.contains(f)))
+                if !ps.iter().any(|p| matches!(p, PremRef::Fact(f) if self.lat.pass.superseded.contains(f)))
                     && self.join_leq(op, cx, cy)?
                 {
                     open.swap_remove(k);
@@ -7834,7 +7697,7 @@ impl Eval {
         }
         let ok = open.is_empty();
         if ok {
-            self.lat.join_checked.insert(x);
+            self.lat.pass.join_checked.insert(x);
             return Ok(true);
         }
         // A rule whose firing on the value that replaced x's faulted (an
@@ -7892,7 +7755,7 @@ impl Eval {
     /// that rests on the cell). Those heights then rank every fact of the new
     /// graph strictly, so no derivation of a cell reads the cell.
     fn join_covers(&mut self, due: &[Sym]) -> Result<(), Halt> {
-        let mut joins: Vec<Sym> = due.iter().copied().filter(|p| self.lat.join_rels.contains_key(p)).collect();
+        let mut joins: Vec<Sym> = due.iter().copied().filter(|p| self.lat.algebra(*p).join.is_some()).collect();
         if joins.is_empty() {
             return Ok(());
         }
@@ -7906,7 +7769,7 @@ impl Eval {
         }
         cells.sort_by(|a, b| self.store.cmp_key(&self.h, a.1, b.1));
         let mut roots: Vec<FactId> = cells.iter().map(|c| c.1).collect();
-        for (ck, cs) in &self.lat.join_contribs {
+        for (ck, cs) in &self.lat.pass.join_contribs {
             if joins.contains(&ck.0) {
                 roots.extend(cs.iter().copied().filter(|f| self.store.alive(*f)));
             }
@@ -7915,7 +7778,8 @@ impl Eval {
         let _ = self.store.heights(&roots, &mut memo);
         let mut plan: Vec<(FactId, Sym, Vec<FactId>)> = Vec::new();
         for (p, f) in cells {
-            let (op, crel) = (self.lat.lattices[&p].1, self.lat.join_rels[&p]);
+            let a = self.lat.algebra(p);
+            let (op, crel) = (a.cell.unwrap().1, a.join.unwrap());
             let rec = self.store.rec(f);
             let args = self.store.args(f).to_vec();
             let n = args.len();
@@ -7993,7 +7857,7 @@ impl Eval {
             let mut front = Front::default();
             self.note_derived_by(f, crel, &mut front);
             merge_front(&mut self.cur_front, front);
-            self.height_memo.remove(&f);
+            self.memo.height_memo.remove(&f);
         }
         Ok(())
     }
@@ -8002,22 +7866,22 @@ impl Eval {
     /// dropped: a contribution of a closing join lattice, and a value it
     /// replaced, that nothing kept rests on.
     fn join_gc(&mut self, due: &[Sym]) {
-        let joins: Vec<Sym> = due.iter().copied().filter(|p| self.lat.join_rels.contains_key(p)).collect();
+        let joins: Vec<Sym> = due.iter().copied().filter(|p| self.lat.algebra(*p).join.is_some()).collect();
         if joins.is_empty() {
             return;
         }
-        let crels: HashSet<Sym> = joins.iter().map(|p| self.lat.join_rels[p]).collect();
+        let crels: HashSet<Sym> = joins.iter().map(|p| self.lat.algebra(*p).join.unwrap()).collect();
         let mut nodes: HashSet<FactId> = HashSet::new();
-        for (ck, cs) in &self.lat.join_contribs {
+        for (ck, cs) in &self.lat.pass.join_contribs {
             if joins.contains(&ck.0) {
                 nodes.extend(cs.iter().copied().filter(|f| self.store.alive(*f)));
             }
         }
-        nodes.extend(self.lat.superseded.iter().copied().filter(|f| joins.contains(&self.store.rec(*f).rel)));
+        nodes.extend(self.lat.pass.superseded.iter().copied().filter(|f| joins.contains(&self.store.rec(*f).rel)));
         let mut marked: HashSet<FactId> = HashSet::new();
         let mut stack: Vec<FactId> = Vec::new();
         for x in self.store.citers_of(&nodes) {
-            let kept = (self.store.alive(x) && !crels.contains(&self.store.rec(x).rel)) || (self.lat.superseded.contains(&x) && !nodes.contains(&x));
+            let kept = (self.store.alive(x) && !crels.contains(&self.store.rec(x).rel)) || (self.lat.pass.superseded.contains(&x) && !nodes.contains(&x));
             if kept {
                 stack.extend(self.store.fact_premises(x).into_iter().filter(|g| nodes.contains(g)));
             }
@@ -8030,19 +7894,19 @@ impl Eval {
         let mut drop: Vec<FactId> = nodes.difference(&marked).copied().collect();
         drop.sort_unstable();
         for g in drop {
-            if self.lat.superseded.remove(&g) {
+            if self.lat.pass.superseded.remove(&g) {
                 self.store.drop_firings(g);
             } else {
                 self.prov.retire_fact(&mut self.h, &mut self.store, &self.v, g);
             }
         }
-        let live = &self.lat.superseded;
-        self.lat.history.retain(|_, v| {
+        let live = &self.lat.pass.superseded;
+        self.lat.pass.history.retain(|_, v| {
             v.retain(|f| live.contains(f));
             !v.is_empty()
         });
         let store = &self.store;
-        self.lat.join_contribs.retain(|_, v| {
+        self.lat.pass.join_contribs.retain(|_, v| {
             v.retain(|f| store.alive(*f));
             !v.is_empty()
         });
@@ -8055,27 +7919,20 @@ impl Eval {
     fn lattice_admit(&mut self, rel: Sym, persp: Sym, args: &[Term], op: AggOp, prems: &[PremRef]) -> Result<Option<LatKey>, Halt> {
         let n = args.len();
         let ck: LatKey = (rel, persp, args[..n - 1].into());
-        if self.lat.closed.contains(&rel) {
+        if self.lat.pass.closed.contains(&rel) {
             // Only a table that ranks the lattice below what it reads can do
             // this; the peel cannot.
-            let msg = format!("the lattice {} received a contribution after it closed", self.h.name(rel));
-            return Err(match self.mode {
-                Mode::Strata => Halt::Strat(
-                    format!("program rejected: {msg}: the stratum table ranks it below a relation it reads"),
-                    String::new(),
-                ),
-                Mode::Rounds => Halt::Bug(msg),
-            });
+            return Err(self.closed_lattice_halt(rel));
         }
         let x = match op.lift(&self.v, args[n - 1]) {
             Ok(x) => x,
             Err(reason) => {
                 let facts = fact_prems(prems);
-                self.lat.pending.push(LatFault { close: rel, what: Some(Unknown::Cell(ck)), rule: None, reason, facts });
+                self.lat.pass.pending.push(LatFault { close: rel, what: Some(Unknown::Cell(ck)), rule: None, reason, facts });
                 return Ok(None);
             }
         };
-        let Some(old) = self.lat.cur.get(&ck).copied().filter(|f| self.store.alive(*f)) else {
+        let Some(old) = self.lat.pass.cur.get(&ck).copied().filter(|f| self.store.alive(*f)) else {
             return Ok(Some(ck));
         };
         let ov = op
@@ -8087,8 +7944,8 @@ impl Eval {
             Ok(Step::Improved(_)) => {
                 brk!("lattice_max_stuck" => if op == AggOp::Max { return Ok(None) }; ());
                 brk!("lattice_no_retire" => (); self.supersede(old, &ck));
-                self.lat.improved.push(old);
-                self.lat.improvements += 1;
+                self.lat.pass.improved.push(old);
+                self.lat.pass.improvements += 1;
                 Ok(Some(ck))
             }
             Err(_) => Err(Halt::Bug("a lattice value in its carrier did not compare".into())),
@@ -8108,7 +7965,7 @@ impl Eval {
     /// `dominated`, charged against the budget (an evaluation) or not (a
     /// question asked of a world already evaluated).
     fn dominated_as(&mut self, rel: Sym, lo: &[Term], hi: &[Term], charge: bool) -> Result<DomV, Halt> {
-        let sub = self.lat.subs[&rel].clone();
+        let sub = self.lat.sub(rel).clone();
         let mut undecided: Option<DomV> = None;
         for (d, plan) in &sub.doms {
             if charge {
@@ -8120,7 +7977,7 @@ impl Eval {
                 s = unify(&self.h, *t, *x, &cur);
             }
             let Some(s) = s else { continue };
-            if brk!("dominance_unknown_decides" => false; !self.lat.spread.is_empty() || !self.lat.plain.is_empty()) {
+            if brk!("dominance_unknown_decides" => false; !self.lat.carry.spread.is_empty() || !self.lat.carry.plain.is_empty()) {
                 for b in plan {
                     let (neg, lits) = (matches!(b, BodyElem::Neg(_)), b.lits_deep());
                     for l in lits {
@@ -8133,11 +7990,11 @@ impl Eval {
                     }
                 }
             }
-            let saved = (self.fault, self.fault_count, self.last_fault, self.last_fault_rule, self.firing);
+            let saved = (self.fault, self.fault_count, self.last_fault, self.shrug.last_fault_rule, self.firing);
             self.firing = false;
             let sols = self.solve_body(plan, s, 0, None, None);
             let (faulted, reason) = (self.fault_count > saved.1, self.last_fault);
-            (self.fault, self.fault_count, self.last_fault, self.last_fault_rule, self.firing) = saved;
+            (self.fault, self.fault_count, self.last_fault, self.shrug.last_fault_rule, self.firing) = saved;
             if !sols?.is_empty() {
                 return Ok(DomV::Yes(d.id));
             }
@@ -8166,13 +8023,13 @@ impl Eval {
     fn sub_undecided(&mut self, ck: &LatKey, v: DomV) {
         match v {
             DomV::Fault(reason, rule) => {
-                self.lat.pending.push(LatFault { close: ck.0, what: Some(Unknown::Cell(ck.clone())), rule: Some(rule), reason, facts: Vec::new() });
+                self.lat.pass.pending.push(LatFault { close: ck.0, what: Some(Unknown::Cell(ck.clone())), rule: Some(rule), reason, facts: Vec::new() });
             }
             DomV::Unknown(u, rule) => {
                 let withdrawn = self.h.intern("support_withdrawn");
-                self.unk_edges.push((Node::Unk(Unknown::Cell(ck.clone())), Node::Unk(u.clone())));
-                self.lat.unknown.entry(Unknown::Cell(ck.clone())).or_insert(Some((u, rule)));
-                self.lat.pending.push(LatFault { close: ck.0, what: Some(Unknown::Cell(ck.clone())), rule: None, reason: withdrawn, facts: Vec::new() });
+                self.shrug.unk_edges.push((Node::Unk(Unknown::Cell(ck.clone())), Node::Unk(u.clone())));
+                self.lat.carry.unknown.entry(Unknown::Cell(ck.clone())).or_insert(Some((u, rule)));
+                self.lat.pass.pending.push(LatFault { close: ck.0, what: Some(Unknown::Cell(ck.clone())), rule: None, reason: withdrawn, facts: Vec::new() });
             }
             DomV::No | DomV::Yes(_) => {}
         }
@@ -8190,12 +8047,12 @@ impl Eval {
     /// unknown) is read as no dominance here; the close judges the front
     /// against every value given, and holes the cell then (`sub_check`).
     fn sub_admit(&mut self, rel: Sym, persp: Sym, args: &[Term], rid: Sym) -> Result<Option<LatKey>, Halt> {
-        let k = self.lat.subs[&rel].keylen;
+        let k = self.lat.sub(rel).keylen;
         let ck: LatKey = (rel, persp, args[..k].into());
-        if self.lat.closed.contains(&rel) {
+        if self.lat.pass.closed.contains(&rel) {
             let msg = format!("the subsumptive relation {} received a value after it closed", self.h.name(rel));
             return Err(match self.mode {
-                Mode::Strata => Halt::Strat(format!("program rejected: {msg}: the stratum table ranks it below a relation it reads"), String::new()),
+                Mode::Strata => Halt::reject(format!("{msg}: the stratum table ranks it below a relation it reads")),
                 Mode::Rounds => Halt::Bug(msg),
             });
         }
@@ -8209,7 +8066,7 @@ impl Eval {
             if self.store.alive(id) {
                 return Ok(Some(ck));
             }
-            if self.lat.superseded.contains(&id) {
+            if self.lat.pass.superseded.contains(&id) {
                 return Ok(None);
             }
         }
@@ -8221,31 +8078,31 @@ impl Eval {
             }
             v => brk!("dominance_self_fault_ignored" => (); self.sub_undecided(&ck, v)),
         }
-        let standing: Vec<FactId> = self.lat.sub_cur.get(&ck).map(|v| v.iter().copied().filter(|f| self.store.alive(*f)).collect()).unwrap_or_default();
+        let standing: Vec<FactId> = self.lat.pass.sub_cur.get(&ck).map(|v| v.iter().copied().filter(|f| self.store.alive(*f)).collect()).unwrap_or_default();
         let standing: Vec<(FactId, u32, Vec<Term>)> = standing
             .into_iter()
             .map(|s| {
                 let sargs = self.store.args(s).to_vec();
-                (s, self.lat.sub_seen_set[&(ck.clone(), sargs[k..].into())], sargs)
+                (s, self.lat.pass.sub_seen_set[&(ck.clone(), sargs[k..].into())], sargs)
             })
             .collect();
         for (_, si, sargs) in &standing {
             let (si, sargs) = (*si, sargs.clone());
             if brk!("dominance_keep_dominated" => false; matches!(self.sub_dom(&ck, (me, args), (si, &sargs))?, DomV::Yes(_))) {
-                self.lat.sub_beaten.entry((ck.clone(), vals.clone())).or_insert_with(|| sargs[k..].into());
+                self.lat.pass.sub_beaten.entry((ck.clone(), vals.clone())).or_insert_with(|| sargs[k..].into());
                 return Ok(None);
             }
         }
         for (s, si, sargs) in standing {
             if matches!(self.sub_dom(&ck, (si, &sargs), (me, args))?, DomV::Yes(_)) {
-                self.lat.sub_beaten.entry((ck.clone(), sargs[k..].into())).or_insert_with(|| vals.clone());
+                self.lat.pass.sub_beaten.entry((ck.clone(), sargs[k..].into())).or_insert_with(|| vals.clone());
                 brk!("dominance_no_retire" => (); self.supersede(s, &ck));
-                self.lat.improved.push(s);
-                self.lat.improvements += 1;
+                self.lat.pass.improved.push(s);
+                self.lat.pass.improvements += 1;
             }
         }
         let store = &self.store;
-        if let Some(front) = self.lat.sub_cur.get_mut(&ck) {
+        if let Some(front) = self.lat.pass.sub_cur.get_mut(&ck) {
             front.retain(|f| store.alive(*f));
         }
         Ok(Some(ck))
@@ -8254,23 +8111,23 @@ impl Eval {
     /// `dominated` over two values of one cell, each with its place in
     /// `sub_seen`: asked once an evaluation, the answer kept for the close.
     fn sub_dom(&mut self, ck: &LatKey, lo: (u32, &[Term]), hi: (u32, &[Term])) -> Result<DomV, Halt> {
-        if let Some(v) = self.lat.sub_memo.get(ck).and_then(|m| m.get(&(lo.0, hi.0))) {
+        if let Some(v) = self.lat.pass.sub_memo.get(ck).and_then(|m| m.get(&(lo.0, hi.0))) {
             return Ok(v.clone());
         }
         let v = self.dominated(ck.0, lo.1, hi.1)?;
-        match self.lat.sub_memo.get_mut(ck) {
+        match self.lat.pass.sub_memo.get_mut(ck) {
             Some(m) => {
                 m.insert((lo.0, hi.0), v.clone());
             }
             None => {
-                self.lat.sub_memo.insert(ck.clone(), HashMap::from([((lo.0, hi.0), v.clone())]));
+                self.lat.pass.sub_memo.insert(ck.clone(), HashMap::from([((lo.0, hi.0), v.clone())]));
             }
         }
         Ok(v)
     }
 
     /// A value a better one replaced: no answer and no `derived_by` row, its
-    /// firings kept as the cell's history (`lat.superseded`).
+    /// firings kept as the cell's history (`lat.pass.superseded`).
     fn supersede(&mut self, old: FactId, ck: &LatKey) {
         if !self.prov.no_provenance {
             let mut rules: Vec<Sym> = self.store.firing_rules(old);
@@ -8281,8 +8138,13 @@ impl Eval {
             }
         }
         self.store.retire_keeping_firings(old);
-        self.lat.superseded.insert(old);
-        self.lat.history.entry(ck.clone()).or_default().push(old);
+        self.lat.pass.superseded.insert(old);
+        self.lat.pass.history.entry(ck.clone()).or_default().push(old);
+    }
+
+    fn drop_live(&mut self, f: FactId) {
+        self.prov.retire_fact(&mut self.h, &mut self.store, &self.v, f);
+        self.lat.pass.dropped.push(f);
     }
 
     /// NO VALUE FOR THIS CELL THIS TICK: its fact is withdrawn, with the
@@ -8291,18 +8153,16 @@ impl Eval {
     /// contributes to it again.
     fn hole_lattice_cell(&mut self, ck: LatKey, reason: Sym) -> Term {
         let (rel, persp, key) = ck.clone();
-        let value = self.lat.cur.get(&ck).copied().filter(|f| self.store.alive(*f)).map(|f| *self.store.args(f).last().unwrap());
-        if let Some(f) = self.lat.cur.remove(&ck) {
+        let value = self.lat.pass.cur.get(&ck).copied().filter(|f| self.store.alive(*f)).map(|f| *self.store.args(f).last().unwrap());
+        if let Some(f) = self.lat.pass.cur.remove(&ck) {
             if self.store.alive(f) {
-                self.prov.retire_fact(&mut self.h, &mut self.store, &self.v, f);
-                self.lat.dropped.push(f);
+                self.drop_live(f);
             }
         }
         // a subsumptive cell with no known front has none of its values
-        for f in brk!("dominance_hole_keeps_front" => Vec::new(); self.lat.sub_cur.remove(&ck).unwrap_or_default()) {
+        for f in brk!("dominance_hole_keeps_front" => Vec::new(); self.lat.pass.sub_cur.remove(&ck).unwrap_or_default()) {
             if self.store.alive(f) {
-                self.prov.retire_fact(&mut self.h, &mut self.store, &self.v, f);
-                self.lat.dropped.push(f);
+                self.drop_live(f);
             }
         }
         self.lat.withdraw_history(&mut self.store, &ck);
@@ -8312,17 +8172,17 @@ impl Eval {
         let marker = self.h.mkf(self.v.s_lattice, &[Term::atom(rel), Term::atom(persp), tick, kl]);
         if reason == self.v.widened_reason {
             if let Some(val) = value {
-                let steps = self.lat.widened.get(&ck).cloned().unwrap_or_default();
-                self.lat.widened_x.insert(ck.clone(), val);
+                let steps = self.lat.pass.widened.get(&ck).cloned().unwrap_or_default();
+                self.lat.pass.widened_x.insert(ck.clone(), val);
                 let (shown, narrowed) = match self.lat.narrow_out.get(&ck) {
                     Some((_, to, ns)) => (brk!("narrow_meta_stale" => val; *to), ns.clone()),
                     None => (val, Vec::new()),
                 };
-                self.lat.widened_marks.insert(marker, (shown, steps, narrowed));
+                self.lat.pass.widened_marks.insert(marker, (shown, steps, narrowed));
             }
         }
-        if let Some(ps) = self.lat.sub_parties.remove(&ck) {
-            self.lat.conflict_marks.insert(marker, ps);
+        if let Some(ps) = self.lat.pass.sub_parties.remove(&ck) {
+            self.lat.pass.conflict_marks.insert(marker, ps);
         }
         self.cell_hole(marker, reason);
         self.lattice_hole_edges(Node::Unk(Unknown::Cell(ck)), marker, reason);
@@ -8331,7 +8191,7 @@ impl Eval {
 
     /// A join cell with no value has no Cover: its contributions go with it.
     fn withdraw_contributions(&mut self, ck: &LatKey) {
-        for c in self.lat.join_contribs.remove(ck).unwrap_or_default() {
+        for c in self.lat.pass.join_contribs.remove(ck).unwrap_or_default() {
             if brk!("join_hole_keeps_contributions" => false; self.store.alive(c)) {
                 self.prov.retire_fact(&mut self.h, &mut self.store, &self.v, c);
             }
@@ -8341,18 +8201,17 @@ impl Eval {
     /// Every cell of a relation at once, when the key a failure belongs to
     /// is not known: `hole($lattice(Rel), Reason)`.
     fn hole_lattice_rel(&mut self, rel: Sym, reason: Sym) {
-        if self.lat.holed_rel.insert(rel) {
+        if self.lat.pass.holed_rel.insert(rel) {
             for f in self.store.rel_all(&self.h, rel) {
-                self.prov.retire_fact(&mut self.h, &mut self.store, &self.v, f);
-                self.lat.dropped.push(f);
+                self.drop_live(f);
             }
-            self.lat.cur.retain(|k, _| k.0 != rel);
-            self.lat.sub_cur.retain(|k, _| k.0 != rel);
-            let cells: Vec<LatKey> = self.lat.history.keys().filter(|k| k.0 == rel).cloned().collect();
+            self.lat.pass.cur.retain(|k, _| k.0 != rel);
+            self.lat.pass.sub_cur.retain(|k, _| k.0 != rel);
+            let cells: Vec<LatKey> = self.lat.pass.history.keys().filter(|k| k.0 == rel).cloned().collect();
             for ck in cells {
                 self.lat.withdraw_history(&mut self.store, &ck);
             }
-            let cells: Vec<LatKey> = self.lat.join_contribs.keys().filter(|k| k.0 == rel).cloned().collect();
+            let cells: Vec<LatKey> = self.lat.pass.join_contribs.keys().filter(|k| k.0 == rel).cloned().collect();
             for ck in cells {
                 self.withdraw_contributions(&ck);
             }
@@ -8366,9 +8225,9 @@ impl Eval {
     /// fault is the unknown's root, and a withdrawal rests on whatever
     /// reached the cell.
     fn lattice_hole_edges(&mut self, u: Node, marker: Term, reason: Sym) {
-        self.unk_edges.push((u.clone(), Node::Hole(marker)));
+        self.shrug.unk_edges.push((u.clone(), Node::Hole(marker)));
         if self.h.name(reason) == "support_withdrawn" {
-            self.unk_edges.push((Node::Hole(marker), u));
+            self.shrug.unk_edges.push((Node::Hole(marker), u));
         }
     }
 
@@ -8384,7 +8243,7 @@ impl Eval {
         let Some(close) = r.lat_close else { return Ok(()) };
         let reason = self.last_fault.unwrap_or(self.v.arith_type_reason);
         let what = self.conclusion_unknown(&r, s);
-        self.lat.pending.push(LatFault { close, what, rule: Some(rid), reason, facts: fact_prems(prems) });
+        self.lat.pass.pending.push(LatFault { close, what, rule: Some(rid), reason, facts: fact_prems(prems) });
         Ok(())
     }
 
@@ -8393,7 +8252,7 @@ impl Eval {
     /// relation. None for a conclusion `@next` or into a closed lattice.
     fn conclusion_unknown(&mut self, r: &ERule, s: &Subst) -> Option<Unknown> {
         let head = &r.clause.head;
-        if head.temporal == Temporal::Next || self.lat.is_lattice_lit(head.rel, head.args.len()) && self.lat.closed.contains(&head.rel) {
+        if head.temporal == Temporal::Next || self.lat.algebra(head.rel).is_cell_lit(head.args.len()) && self.lat.pass.closed.contains(&head.rel) {
             return None;
         }
         self.head_unknown(r, s)
@@ -8413,7 +8272,7 @@ impl Eval {
     fn head_unknown(&mut self, r: &ERule, s: &Subst) -> Option<Unknown> {
         let head = &r.clause.head;
         let persp = walk(&self.h, head.persp, s).as_atom();
-        let kl = self.lat.cell_keylen(head.rel, head.args.len());
+        let kl = self.lat.algebra(head.rel).keylen(head.args.len());
         let lattice = kl.is_some();
         let n = kl.unwrap_or(head.args.len());
         let key: Vec<Term> = head.args[..n].iter().map(|a| resolve(&mut self.h, *a, s)).collect();
@@ -8446,11 +8305,11 @@ impl Eval {
     /// firing, or with none that is well-founded, is withdrawn in turn; a
     /// lattice cell so withdrawn is a hole, `support_withdrawn`.
     fn lattice_settle(&mut self, cut: bool) -> Result<(), Halt> {
-        if self.lat.improved.is_empty() && self.lat.dropped.is_empty() {
+        if self.lat.pass.improved.is_empty() && self.lat.pass.dropped.is_empty() {
             self.store.sweep();
             return Ok(());
         }
-        let improved: HashSet<FactId> = std::mem::take(&mut self.lat.improved).into_iter().collect();
+        let improved: HashSet<FactId> = std::mem::take(&mut self.lat.pass.improved).into_iter().collect();
         if !cut && brk!("dominance_consequences_kept" => false; true) {
             self.sub_withdraw(&improved)?;
         }
@@ -8461,14 +8320,14 @@ impl Eval {
             let xrel = self.store.rec(x).rel;
             // a join cell's fact cites the value it replaced: its history,
             // which its Cover replaces at the close
-            if self.lat.join_rels.contains_key(&xrel) {
+            if self.lat.algebra(xrel).join.is_some() {
                 continue;
             }
             // A CONTRIBUTION READ FROM A VALUE SINCE WIDENED is history: the
             // rule, monotone in it, fired again on the value that replaced
             // it and contributed at least as much at the same key.
-            if let Some(&l) = self.lat.join_of.get(&xrel) {
-                if !cut && !self.store.fired_without(x, &self.lat.superseded) && !self.join_refired(l, x)? {
+            if let Some(l) = self.lat.algebra(xrel).join_of {
+                if !cut && !self.store.fired_without(x, &self.lat.pass.superseded) && !self.join_refired(l, x)? {
                     if let Some(msg) = self.sub_nonmonotone(x) {
                         return Err(Halt::Strat(msg, String::new()));
                     }
@@ -8477,13 +8336,13 @@ impl Eval {
                         self.store.key(&self.h, x)
                     )));
                 }
-                self.lat.stale.insert(x);
+                self.lat.pass.stale.insert(x);
                 continue;
             }
             // unless the rule's firing on the value that replaced it faulted,
             // from facts that stand: what it would conclude there is unknown,
             // and the close carries that unknown to x's relation (`poison`)
-            if !cut && !self.store.fired_without(x, &self.lat.superseded) && !self.lat.faulted_refire(&self.store, x) {
+            if !cut && !self.store.fired_without(x, &self.lat.pass.superseded) && !self.lat.faulted_refire(&self.store, x) {
                 if let Some(msg) = self.sub_nonmonotone(x) {
                     return Err(Halt::Strat(msg, String::new()));
                 }
@@ -8492,10 +8351,10 @@ impl Eval {
                     self.store.key(&self.h, x)
                 )));
             }
-            self.lat.stale.insert(x);
+            self.lat.pass.stale.insert(x);
         }
         let withdrawn = self.h.intern("support_withdrawn");
-        let mut dropped: HashSet<FactId> = std::mem::take(&mut self.lat.dropped).into_iter().collect();
+        let mut dropped: HashSet<FactId> = std::mem::take(&mut self.lat.pass.dropped).into_iter().collect();
         while !dropped.is_empty() {
             let mut left: Vec<FactId> = Vec::new();
             let mut gone: Vec<FactId> = Vec::new();
@@ -8511,7 +8370,7 @@ impl Eval {
             }
             let roots: Vec<FactId> = left
                 .into_iter()
-                .filter(|f| (self.store.alive(*f) || self.lat.superseded.contains(f)) && !self.store.rec(*f).base())
+                .filter(|f| (self.store.alive(*f) || self.lat.pass.superseded.contains(f)) && !self.store.rec(*f).base())
                 .collect();
             if !roots.is_empty() {
                 let mut memo: HashMap<FactId, u32> = HashMap::new();
@@ -8526,16 +8385,16 @@ impl Eval {
                     let via = (cited != FactId::MAX && !rules.is_empty()).then(|| (cited, rules[0]));
                     src = via.map(|(g, _)| Node::Unk(self.lat.unknown_of(&self.store, g)));
                     rules.extend(self.store.firing_rules(f));
-                    self.lat.withdrawn.push((f, rules, via));
+                    self.lat.carry.withdrawn.push((f, rules, via));
                 }
                 // the hole a withdrawn cell becomes rests on what it cited, not
                 // on whatever the carry last worked from
-                let src = brk!("withdrawn_cell_stale_src" => self.wfs.carry_src.clone(); src);
-                let saved = (std::mem::replace(&mut self.wfs.carry_src, src), std::mem::take(&mut self.wfs.carry_more));
+                let src = brk!("withdrawn_cell_stale_src" => self.shrug.carry_src.clone(); src);
+                let saved = (std::mem::replace(&mut self.shrug.carry_src, src), std::mem::take(&mut self.wfs.carry_more));
                 self.withdraw(f, withdrawn);
-                (self.wfs.carry_src, self.wfs.carry_more) = saved;
+                (self.shrug.carry_src, self.wfs.carry_more) = saved;
             }
-            dropped = std::mem::take(&mut self.lat.dropped).into_iter().collect();
+            dropped = std::mem::take(&mut self.lat.pass.dropped).into_iter().collect();
         }
         self.store.sweep();
         Ok(())
@@ -8553,7 +8412,7 @@ impl Eval {
     /// not monotone in the dominance: refused, as `sub_nonmonotone` refuses
     /// one that read the dominated value itself.
     fn sub_withdraw(&mut self, improved: &HashSet<FactId>) -> Result<(), Halt> {
-        let dominated: HashSet<FactId> = improved.iter().copied().filter(|f| self.lat.subs.contains_key(&self.store.rec(*f).rel)).collect();
+        let dominated: HashSet<FactId> = improved.iter().copied().filter(|f| self.lat.algebra(self.store.rec(*f).rel).sub.is_some()).collect();
         if dominated.is_empty() {
             return Ok(());
         }
@@ -8584,8 +8443,8 @@ impl Eval {
         // concluded it again with a value that dominates each dominated one
         // in its place: a consumer monotone in the dominance, so that value
         // is its history too, as a cell's own is
-        let stale: HashSet<FactId> = self.lat.superseded.iter().copied().filter(|f| self.lat.subs.contains_key(&self.store.rec(*f).rel)).collect();
-        let cells: HashSet<Sym> = self.lat.lattices.keys().chain(self.lat.join_of.keys()).copied().collect();
+        let stale: HashSet<FactId> = self.lat.pass.superseded.iter().copied().filter(|f| self.lat.algebra(self.store.rec(*f).rel).sub.is_some()).collect();
+        let cells: HashSet<Sym> = self.lat.algebras.iter().filter(|(_, a)| a.cell.is_some() || a.join_of.is_some()).map(|(r, _)| *r).collect();
         let mut ups: HashMap<FactId, HashSet<FactId>> = HashMap::new();
         for &y in &region {
             for (_, _, ps) in self.store.firings(y) {
@@ -8621,20 +8480,16 @@ impl Eval {
             return Ok(());
         }
         if let Some(y) = unfounded.iter().copied().find(|f| cells.contains(&self.store.rec(*f).rel)) {
-            return Err(Halt::Strat(
-                format!(
-                    "program rejected: {} rests only on what a dominated value concluded: a consumer inside the recursion is not \
+            return Err(Halt::reject(format!("{} rests only on what a dominated value concluded: a consumer inside the recursion is not \
                      monotone in the dominance (docs/aggregates.md, \"Subsumption, as built\")",
                     self.store.key(&self.h, y)
-                ),
-                String::new(),
-            ));
+                )));
         }
         let gone: HashSet<FactId> = unfounded.iter().copied().collect();
         for x in &unfounded {
             self.prov.retire_fact(&mut self.h, &mut self.store, &self.v, *x);
         }
-        self.lat.sub_gone.extend(gone.iter().copied());
+        self.lat.pass.sub_gone.extend(gone.iter().copied());
         for y in self.store.citers_of(&gone) {
             if gone.contains(&y) || self.store.rec(y).base() {
                 continue;
@@ -8652,12 +8507,12 @@ impl Eval {
     fn sub_dominators(&self, g: FactId) -> HashSet<FactId> {
         let rec = self.store.rec(g);
         let args = self.store.args(g);
-        let k = self.lat.subs[&rec.rel].keylen;
+        let k = self.lat.sub(rec.rel).keylen;
         let ck: LatKey = (rec.rel, rec.persp, args[..k].into());
         let mut v: Box<[Term]> = args[k..].into();
         let mut seen: HashSet<Box<[Term]>> = HashSet::from([v.clone()]);
         let mut out = HashSet::new();
-        while let Some(w) = self.lat.sub_beaten.get(&(ck.clone(), v)) {
+        while let Some(w) = self.lat.pass.sub_beaten.get(&(ck.clone(), v)) {
             if !seen.insert(w.clone()) {
                 break;
             }
@@ -8683,17 +8538,13 @@ impl Eval {
             for p in prems {
                 let PremRef::Fact(g) = p else { continue };
                 let rec = self.store.rec(g);
-                if !self.lat.superseded.contains(&g) || !self.lat.subs.contains_key(&rec.rel) {
+                if !self.lat.pass.superseded.contains(&g) || self.lat.algebra(rec.rel).sub.is_none() {
                     continue;
                 }
                 let args = self.store.args(g).to_vec();
-                let k = self.lat.subs[&rec.rel].keylen;
+                let k = self.lat.sub(rec.rel).keylen;
                 let ck: LatKey = (rec.rel, rec.persp, args[..k].into());
-                let by = self.lat.sub_beaten.get(&(ck.clone(), args[k..].into())).map(|v| {
-                    let mut t = String::new();
-                    write_fact_key(&self.h, rec.rel, rec.persp, &Self::sub_args(&ck, v), &mut t);
-                    t
-                });
+                let by = self.lat.pass.sub_beaten.get(&(ck.clone(), args[k..].into())).map(|v| fact_key(&self.h, rec.rel, rec.persp, &Self::sub_args(&ck, v)));
                 return Some(format!(
                     "program rejected: rule {} is not monotone in the dominance of {}: it concluded {} from {}, which {} dominates, \
                      and nothing its rules concluded from what dominates it is {} or dominates it (docs/aggregates.md, \"Subsumption, as built\")",
@@ -8712,9 +8563,9 @@ impl Eval {
     /// Withdraw a fact whose support is gone: a live one is retired (a
     /// lattice cell's is a hole), a superseded value leaves the history.
     fn withdraw(&mut self, f: FactId, reason: Sym) {
-        if self.lat.superseded.remove(&f) {
+        if self.lat.pass.superseded.remove(&f) {
             self.store.drop_firings(f);
-            self.lat.dropped.push(f);
+            self.lat.pass.dropped.push(f);
             return;
         }
         if !self.store.alive(f) || self.store.rec(f).base() {
@@ -8722,17 +8573,16 @@ impl Eval {
         }
         let rec = self.store.rec(f);
         let args = self.store.args(f).to_vec();
-        if let Some(k) = self.lat.cell_keylen(rec.rel, args.len()) {
+        if let Some(k) = self.lat.algebra(rec.rel).keylen(args.len()) {
             let ck: LatKey = (rec.rel, rec.persp, args[..k].into());
             // a member of an antichain withdrawn: what it dominated may be the
             // front, so the whole cell is not known
-            if self.lat.cur.get(&ck) == Some(&f) || self.lat.sub_cur.get(&ck).is_some_and(|v| v.contains(&f)) {
+            if self.lat.pass.cur.get(&ck) == Some(&f) || self.lat.pass.sub_cur.get(&ck).is_some_and(|v| v.contains(&f)) {
                 self.hole_lattice_cell(ck, reason);
                 return;
             }
         }
-        self.prov.retire_fact(&mut self.h, &mut self.store, &self.v, f);
-        self.lat.dropped.push(f);
+        self.drop_live(f);
     }
 
     /// The `derived_by` rows of the rules that no longer fire `f`.
@@ -8754,14 +8604,12 @@ impl Eval {
     /// pruned of self-support and, when a rule reads them, its members
     /// written as facts and propagated.
     fn close_lattices_below(&mut self, lv: i64) -> Result<(), Halt> {
-        if self.lat.lattices.is_empty() {
+        if !self.lat.has_cells() {
             return Ok(());
         }
         let mut due: Vec<Sym> = self
-            .lat.lattices
-            .keys()
-            .copied()
-            .filter(|p| !self.lat.closed.contains(p))
+            .lat.cell_rels()
+            .filter(|p| !self.lat.pass.closed.contains(p))
             .filter(|p| match self.round_of.get(p) {
                 Some(r) => (*r as i64) < lv,
                 None => lv == i64::MAX,
@@ -8779,7 +8627,7 @@ impl Eval {
         self.join_gc(&due);
         let mut front = Front::default();
         for p in due {
-            self.lat.closed.insert(p);
+            self.lat.pass.closed.insert(p);
             self.close_lattice(p, &mut front)?;
         }
         merge_front(&mut front, std::mem::take(&mut self.cur_front));
@@ -8804,9 +8652,9 @@ impl Eval {
 
     /// `apply_lattice_holes`, at a wall (`cut`) or at a close.
     fn apply_lattice_holes_at(&mut self, rels: &[Sym], cut: bool) -> Result<(), Halt> {
-        let pending = std::mem::take(&mut self.lat.pending);
+        let pending = std::mem::take(&mut self.lat.pass.pending);
         let (mine, rest): (Vec<_>, Vec<_>) = pending.into_iter().partition(|x| rels.contains(&x.close));
-        self.lat.pending = rest;
+        self.lat.pass.pending = rest;
         let seeds = brk!("lattice_holes_in_order" => {
             let mut seeds = Vec::new();
             for x in mine {
@@ -8845,7 +8693,7 @@ impl Eval {
                 Some(Unknown::Cell(ck)) => {
                     self.hole_lattice_cell(ck.clone(), x.reason);
                 }
-                Some(Unknown::Rel(p)) if self.lat.lattices.contains_key(p) => self.hole_lattice_rel(*p, x.reason),
+                Some(Unknown::Rel(p)) if self.lat.is_cell(*p) => self.hole_lattice_rel(*p, x.reason),
                 _ => {}
             }
             if let Some(r) = x.rule {
@@ -8864,7 +8712,7 @@ impl Eval {
     /// `support_withdrawn`, a cell of a lattice that closes later waits for
     /// its close as a fault, and a tuple of another relation that does not
     /// hold otherwise is absent, with its rule holed. So is what a negation
-    /// or a body aggregate could not decide (`lat.undecided`). The
+    /// or a body aggregate could not decide (`lat.carry.undecided`). The
     /// withdrawals are carried to what rested on them (`lattice_settle`) and
     /// what that withdraws is unknown in turn, until nothing moves. It is a
     /// closure over sets, so the order anything arrived in decides nothing.
@@ -8878,7 +8726,7 @@ impl Eval {
     /// carried, as a rule inside the recursion is at the close; and what
     /// their negations and aggregates could not decide is carried on.
     fn poison_readers(&mut self, readers: &[Rc<ERule>]) -> Result<(), Halt> {
-        if self.lat.undecided.is_empty() && (readers.is_empty() || self.lat.spread.is_empty()) {
+        if self.lat.carry.undecided.is_empty() && (readers.is_empty() || self.lat.carry.spread.is_empty()) {
             return Ok(());
         }
         let readers = brk!("lattice_outer_unpoisoned" => &[]; readers);
@@ -8897,7 +8745,7 @@ impl Eval {
                 self.propagate(more)?;
                 self.lattice_settle(false)?;
             }
-            if self.lat.undecided.is_empty() {
+            if self.lat.carry.undecided.is_empty() {
                 return Ok(());
             }
             self.poison_with(Vec::new(), &[], &[], false)?;
@@ -8958,15 +8806,15 @@ impl Eval {
     }
 
     fn note_unknown(&mut self, u: Unknown, via: Option<(Unknown, Sym)>) -> bool {
-        if self.lat.unknown.contains_key(&u) {
+        if self.lat.carry.unknown.contains_key(&u) {
             return false;
         }
         if self.unk.reads_unknown && u.rel() != self.v.unknown && brk!("shrug_meta_off" => false; true) {
             let m = self.meta_of(&u);
-            self.unk.meta_queue.push((m, u.clone()));
+            self.shrug.meta_queue.push((m, u.clone()));
         }
         self.wfs.carry_rows += 1;
-        let list = self.unk.lat_unknown_rel.entry(u.rel()).or_default();
+        let list = self.lat.carry.lat_unknown_rel.entry(u.rel()).or_default();
         let seq = list.len() as u32;
         list.push(u.clone());
         let wild = self.unk.unknown_value;
@@ -8974,23 +8822,23 @@ impl Eval {
             Unknown::Tuple(rel, _, args) => {
                 for (i, a) in args.iter().enumerate() {
                     let k = if self.unk.holds_unknown(&self.h, &self.v, *a) { wild } else { *a };
-                    self.unk.unknown_at.entry((*rel, i, k)).or_default().push(seq);
+                    self.lat.carry.unknown_at.entry((*rel, i, k)).or_default().push(seq);
                 }
             }
             Unknown::Cell((rel, _, key)) => {
                 for (i, k) in key.iter().enumerate() {
-                    self.unk.unknown_at.entry((*rel, i, *k)).or_default().push(seq);
+                    self.lat.carry.unknown_at.entry((*rel, i, *k)).or_default().push(seq);
                 }
-                self.unk.unknown_at.entry((*rel, key.len(), wild)).or_default().push(seq);
+                self.lat.carry.unknown_at.entry((*rel, key.len(), wild)).or_default().push(seq);
             }
-            Unknown::Rel(rel) => self.unk.unknown_any.entry(*rel).or_default().push(seq),
+            Unknown::Rel(rel) => self.lat.carry.unknown_any.entry(*rel).or_default().push(seq),
         }
         if let Unknown::Cell((rel, _, key)) = &u {
             for (i, k) in key.iter().enumerate() {
-                self.unk.lat_unknown_at.entry((*rel, i, *k)).or_default().push(u.clone());
+                self.lat.carry.lat_unknown_at.entry((*rel, i, *k)).or_default().push(u.clone());
             }
         }
-        self.lat.unknown.insert(u, via);
+        self.lat.carry.unknown.insert(u, via);
         true
     }
 
@@ -8999,7 +8847,7 @@ impl Eval {
         let mut level: Vec<Unknown> = Vec::new();
         for u in seeds {
             self.note_unknown(u.clone(), None);
-            if self.lat.spread.insert(u.clone()) {
+            if self.lat.carry.spread.insert(u.clone()) {
                 level.push(u);
             }
         }
@@ -9007,23 +8855,23 @@ impl Eval {
         let mut reached: Vec<(Unknown, Unknown, Sym)> = Vec::new();
         if !readers.is_empty() {
             let mut old: Vec<(String, Unknown)> =
-                self.lat.spread.iter().filter(|u| !level.contains(u)).map(|u| (self.unknown_text(u), u.clone())).collect();
+                self.lat.carry.spread.iter().filter(|u| !level.contains(u)).map(|u| (self.unknown_text(u), u.clone())).collect();
             old.sort_by(|a, b| cmp_js(&a.0, &b.0));
             for (_, u) in old {
-                self.wfs.carry_src = Some(Node::Unk(u.clone()));
+                self.shrug.carry_src = Some(Node::Unk(u.clone()));
                 for (v, rule, from) in self.reached_from(&u, Some(readers))? {
                     reached.push((v, from, rule));
                 }
             }
         }
-        for (rid, i, s, us) in std::mem::take(&mut self.lat.undecided) {
+        for (rid, i, s, us) in std::mem::take(&mut self.lat.carry.undecided) {
             let Some(r) = self.rule_of(rid) else { continue };
             // the rest of the body once, for every unknown that leaves it undecided
-            self.wfs.carry_src = Some(Node::Unk(us[0].clone()));
+            self.shrug.carry_src = Some(Node::Unk(us[0].clone()));
             let sols = self.poison_solve(&r, i, s)?;
             for u in us.iter() {
-                self.wfs.carry_src = Some(Node::Unk(u.clone()));
-                let plain = self.lat.plain.contains(u);
+                self.shrug.carry_src = Some(Node::Unk(u.clone()));
+                let plain = self.lat.carry.plain.contains(u);
                 // A NEGATION A PLAIN HOLE LEFT UNDECIDED holes its rule wherever
                 // what it would conclude does not hold another way: it is where
                 // what the hole left out would have decided an answer.
@@ -9039,7 +8887,7 @@ impl Eval {
             }
         }
         for (v, u, rule) in reached {
-            self.wfs.carry_src = Some(Node::Unk(u.clone()));
+            self.shrug.carry_src = Some(Node::Unk(u.clone()));
             if self.carry(&v, &u, rule, withdrawn, closing) {
                 level.push(v);
             }
@@ -9050,33 +8898,33 @@ impl Eval {
                 let mut keyed: Vec<(String, Unknown)> = level.drain(..).map(|u| (self.unknown_text(&u), u)).collect();
                 keyed.sort_by(|a, b| cmp_js(&a.0, &b.0));
                 for (_, u) in keyed {
-                    self.wfs.carry_src = Some(Node::Unk(u.clone()));
+                    self.shrug.carry_src = Some(Node::Unk(u.clone()));
                     for (v, rule, from) in self.reached_from(&u, None)? {
-                        self.wfs.carry_src = Some(Node::Unk(from.clone()));
+                        self.shrug.carry_src = Some(Node::Unk(from.clone()));
                         if self.carry(&v, &from, rule, withdrawn, closing) {
                             level.push(v);
                         }
                     }
-                    self.wfs.carry_src = Some(Node::Unk(u.clone()));
+                    self.shrug.carry_src = Some(Node::Unk(u.clone()));
                 }
                 self.take_metas(&mut level);
             }
             self.lattice_settle(cut)?;
-            let mut gone = std::mem::take(&mut self.lat.withdrawn);
+            let mut gone = std::mem::take(&mut self.lat.carry.withdrawn);
             brk!("lattice_withdrawn_unspread" => gone.clear(); ());
             gone.sort_unstable_by_key(|g| g.0);
             for (f, rules, cited) in gone {
                 let u = self.lat.unknown_of(&self.store, f);
                 let via = cited.map(|(g, r)| (self.lat.unknown_of(&self.store, g), r));
                 if let Some((g, _)) = &via {
-                    self.unk_edges.push((Node::Unk(u.clone()), Node::Unk(g.clone())));
-                    self.wfs.carry_src = Some(Node::Unk(g.clone()));
+                    self.shrug.unk_edges.push((Node::Unk(u.clone()), Node::Unk(g.clone())));
+                    self.shrug.carry_src = Some(Node::Unk(g.clone()));
                 } else {
-                    self.wfs.carry_src = None;
+                    self.shrug.carry_src = None;
                 }
                 self.note_unknown(u.clone(), via);
                 if matches!(u, Unknown::Tuple(..)) {
-                    let rule = match self.lat.unknown.get(&u) {
+                    let rule = match self.lat.carry.unknown.get(&u) {
                         Some(Some((_, r))) => Some(*r),
                         _ => rules.first().copied(),
                     };
@@ -9084,14 +8932,14 @@ impl Eval {
                         self.arith_hole(r, withdrawn);
                     }
                 }
-                let deplained = self.lat.plain.remove(&u);
-                if self.lat.spread.insert(u.clone()) || deplained {
+                let deplained = self.lat.carry.plain.remove(&u);
+                if self.lat.carry.spread.insert(u.clone()) || deplained {
                     level.push(u);
                 }
             }
             self.take_metas(&mut level);
             if level.is_empty() {
-                self.wfs.carry_src = None;
+                self.shrug.carry_src = None;
                 return Ok(());
             }
         }
@@ -9140,11 +8988,11 @@ impl Eval {
         let fresh: Vec<Rc<ERule>> = self
             .rules
             .iter()
-            .filter(|r| r.safe && !self.lat.plain_closed.contains(&r.id) && (lv == i64::MAX || self.rule_level(r) < lv))
+            .filter(|r| r.safe && !self.lat.carry.plain_closed.contains(&r.id) && (lv == i64::MAX || self.rule_level(r) < lv))
             .cloned()
             .collect();
         for r in &fresh {
-            self.lat.plain_closed.insert(r.id);
+            self.lat.carry.plain_closed.insert(r.id);
         }
         if brk!("plain_reader_unclosed" => true; false) {
             return Ok(());
@@ -9164,9 +9012,9 @@ impl Eval {
                 self.hole_lattice_rel(*p, reason);
                 true
             }
-            Unknown::Cell(_) | Unknown::Rel(_) if self.lat.lattices.contains_key(&u.rel()) => {
+            Unknown::Cell(_) | Unknown::Rel(_) if self.lat.is_cell(u.rel()) => {
                 // a lattice still evaluating: its close applies it, and carries it on
-                self.lat.pending.push(LatFault { close: u.rel(), what: Some(u.clone()), rule: None, reason, facts: Vec::new() });
+                self.lat.pass.pending.push(LatFault { close: u.rel(), what: Some(u.clone()), rule: None, reason, facts: Vec::new() });
                 false
             }
             Unknown::Tuple(..) if brk!("lattice_tuple_unspread" => true; self.unknown_holds(u)) => false,
@@ -9183,16 +9031,16 @@ impl Eval {
     /// quorum reached without `u` stands). A negation or a body aggregate is
     /// not: it fires once what it reads is closed, and what a hole leaves
     /// unknown is known by then, so its firing does not decide it
-    /// (`lat.undecided`). An active one reading `u` is a stratum this
+    /// (`lat.carry.undecided`). An active one reading `u` is a stratum this
     /// evaluation got wrong.
     fn reached_from(&mut self, u: &Unknown, only: Option<&[Rc<ERule>]>) -> Result<Vec<(Unknown, Sym, Unknown)>, Halt> {
         self.carry_check(0)?;
         let rel = u.rel();
-        let plain = self.lat.plain.contains(u);
+        let plain = self.lat.carry.plain.contains(u);
         let rules: Vec<Rc<ERule>> = only.map(|rs| rs.to_vec()).unwrap_or_else(|| self.active.clone());
         let mut out = Vec::new();
         for r in rules {
-            if plain && only.is_none() && !self.lat.plain_closed.contains(&r.id) {
+            if plain && only.is_none() && !self.lat.carry.plain_closed.contains(&r.id) {
                 continue;
             }
             self.reached_through(&r, u, only.is_none(), &mut out)?;
@@ -9201,10 +9049,8 @@ impl Eval {
         // head through a positive premise as through a bottom-up rule's, and its
         // readers from there (a negation in it reads holes at each call)
         if only.is_none() && brk!("demand_poison_skipped" => false; true) {
-            let open: Vec<Rc<ERule>> = self
-                .demand.rels
-                .iter()
-                .filter(|(rel, _)| !self.demand.closed.contains(rel))
+            let open: Vec<Rc<ERule>> = self.demand.rels.iter()
+                .filter(|(rel, _)| self.demand.answers_open(*rel))
                 .flat_map(|(_, rs)| rs.iter().filter(|r| r.plan.iter().any(|b| matches!(b, BodyElem::Pos(l) if l.rel == rel))).cloned())
                 .collect();
             for r in open {
@@ -9226,7 +9072,7 @@ impl Eval {
     /// `reached_from` over one rule `r`; `all`, the walk of every active rule.
     fn reached_through(&mut self, r: &Rc<ERule>, u: &Unknown, all: bool, out: &mut Vec<(Unknown, Sym, Unknown)>) -> Result<(), Halt> {
         let rel = u.rel();
-        let plain = self.lat.plain.contains(u);
+        let plain = self.lat.carry.plain.contains(u);
         let only: Option<()> = (!all).then_some(());
         {
             for i in 0..r.plan.len() {
@@ -9263,7 +9109,7 @@ impl Eval {
                         }
                         continue;
                     }
-                    BodyElem::Neg(_) if self.lat.plain.contains(u) => None,
+                    BodyElem::Neg(_) if self.lat.carry.plain.contains(u) => None,
                     // a late `unknown(A)` a strict reader could read is `meta_late`
                     BodyElem::Neg(_) | BodyElem::Agg(_) if rel == self.v.unknown => None,
                     // its correlations seal in the order of the data, after the carry of each layer
@@ -9325,7 +9171,7 @@ impl Eval {
     /// alone concluded), or it is an unknown of T+1 as it would be had the
     /// hole reached it before it was staged (`stage_unknown`).
     fn settle_staged(&mut self) {
-        if self.lat.lattices.is_empty() || brk!("staged_keeps_withdrawn" => true; false) {
+        if !self.lat.has_cells() || brk!("staged_keeps_withdrawn" => true; false) {
             return;
         }
         let store = &self.store;
@@ -9334,11 +9180,7 @@ impl Eval {
         if keys.is_empty() {
             return;
         }
-        keys.sort_by_cached_key(|k| {
-            let mut t = String::new();
-            write_fact_key(&self.h, k.0, k.1, &k.2, &mut t);
-            t
-        });
+        keys.sort_by_cached_key(|k| fact_key(&self.h, k.0, k.1, &k.2));
         let withdrawn = self.h.intern("support_withdrawn");
         for k in keys {
             let alts = self.staged_alts.remove(&k).unwrap_or_default();
@@ -9346,8 +9188,8 @@ impl Eval {
             let dead = |ps: &[PremRef]| ps.iter().any(|p| matches!(p, PremRef::Fact(f) if !store.alive(*f)));
             let known_false = |ps: &[PremRef]| {
                 ps.iter().any(|p| {
-                    matches!(p, PremRef::Fact(f) if self.lat.sub_gone.contains(f)
-                        || self.lat.superseded.contains(f) && self.lat.subs.contains_key(&store.rec(*f).rel))
+                    matches!(p, PremRef::Fact(f) if self.lat.pass.sub_gone.contains(f)
+                        || self.lat.pass.superseded.contains(f) && self.lat.algebra(store.rec(*f).rel).sub.is_some())
                 })
             };
             let f = &self.staged[&k];
@@ -9361,7 +9203,7 @@ impl Eval {
             if unknown {
                 self.arith_hole(f.rule, withdrawn);
                 let l = self.carried.get(&f.rel).copied().unwrap_or(f.rel);
-                let u = match self.lat.cell_keylen(l, f.args.len()) {
+                let u = match self.lat.algebra(l).keylen(f.args.len()) {
                     Some(n) => Unknown::Cell((l, f.persp, f.args[..n].into())),
                     None => Unknown::Tuple(f.rel, f.persp, f.args.into()),
                 };
@@ -9419,14 +9261,14 @@ impl Eval {
             } else {
                 let Some(p) = p.as_atom() else { continue };
                 let args = self.h.unlist(args);
-                if self.lat.is_cell_key(rel, args.len()) {
+                if self.lat.algebra(rel).is_cell_key(args.len()) {
                     Unknown::Cell((rel, p, args.into()))
                 } else {
                     Unknown::Tuple(rel, p, args.into())
                 }
             };
-            self.unk_edges.push((Node::Unk(u.clone()), Node::Hole(a[0])));
-            self.holes_now.push((a[0], reason.as_atom().unwrap_or(self.v.hole)));
+            self.shrug.unk_edges.push((Node::Unk(u.clone()), Node::Hole(a[0])));
+            self.shrug.holes_now.push((a[0], reason.as_atom().unwrap_or(self.v.hole)));
             out.push((u, reason == plain));
         }
         out
@@ -9435,17 +9277,17 @@ impl Eval {
     /// Something unknown a literal could read under `s`, of those carried;
     /// `plain`, what a plain hole left too.
     fn read_unknown(&mut self, l: &Lit, s: &Subst, plain: bool) -> Option<Unknown> {
-        let cands = brk!("neg_unknown_unbound" => self.unk.lat_unknown_rel.get(&l.rel).cloned().unwrap_or_default(); self.unknown_cands(l, s));
+        let cands = brk!("neg_unknown_unbound" => self.lat.carry.lat_unknown_rel.get(&l.rel).cloned().unwrap_or_default(); self.unknown_cands(l, s));
         cands
             .into_iter()
-            .find(|u| self.lat.spread.contains(u) && (plain || !self.lat.plain.contains(u)) && brk!("neg_unknown_unbound" => true; self.unknown_binds(l, u, s).is_some()))
+            .find(|u| self.lat.carry.spread.contains(u) && (plain || !self.lat.carry.plain.contains(u)) && brk!("neg_unknown_unbound" => true; self.unknown_binds(l, u, s).is_some()))
     }
 
     /// The unknowns `l` could read under `s`, in the order they were noted:
     /// those at its most selective bound argument, or every one of its
     /// relation when none is bound.
     fn unknown_cands(&mut self, l: &Lit, s: &Subst) -> Vec<Unknown> {
-        if !self.unk.lat_unknown_rel.contains_key(&l.rel) {
+        if !self.lat.carry.lat_unknown_rel.contains_key(&l.rel) {
             return Vec::new();
         }
         let wild = self.unk.unknown_value;
@@ -9455,20 +9297,20 @@ impl Eval {
             if !self.h.is_ground(t) || self.unk.holds_unknown(&self.h, &self.v, t) {
                 continue;
             }
-            let n = [t, wild].iter().map(|k| self.unk.unknown_at.get(&(l.rel, i, *k)).map_or(0, |v| v.len())).sum::<usize>();
+            let n = [t, wild].iter().map(|k| self.lat.carry.unknown_at.get(&(l.rel, i, *k)).map_or(0, |v| v.len())).sum::<usize>();
             if best.is_none_or(|b| n < b.2) {
                 best = Some((i, t, n));
             }
         }
-        let all = &self.unk.lat_unknown_rel[&l.rel];
+        let all = &self.lat.carry.lat_unknown_rel[&l.rel];
         let Some((i, k, _)) = brk!("unknown_scan" => None; best) else {
             self.wfs.carry_steps += all.len() as i64;
             return all.clone();
         };
         let mut seqs: Vec<u32> = [k, wild]
             .iter()
-            .filter_map(|k| self.unk.unknown_at.get(&(l.rel, i, *k)))
-            .chain(self.unk.unknown_any.get(&l.rel))
+            .filter_map(|k| self.lat.carry.unknown_at.get(&(l.rel, i, *k)))
+            .chain(self.lat.carry.unknown_any.get(&l.rel))
             .flatten()
             .copied()
             .collect();
@@ -9481,7 +9323,7 @@ impl Eval {
     /// `f`, where a firing's element may read something unknown: in a rule
     /// firing, at the top of its body, once some hole has reached anything.
     fn undecided_read<T>(&mut self, depth: usize, rule_id: Option<Sym>, f: impl FnOnce(&mut Eval) -> T) -> Option<T> {
-        (depth == 0 && self.firing && rule_id.is_some() && !self.lat.spread.is_empty()).then(|| f(self))
+        (depth == 0 && self.firing && rule_id.is_some() && !self.lat.carry.spread.is_empty()).then(|| f(self))
     }
 
     /// EVERY SOLUTION THE AGGREGATE'S INNER BODY MIGHT HAVE over something
@@ -9493,7 +9335,7 @@ impl Eval {
     fn agg_possibles(&mut self, rid: Sym, a: &Agg, s: &Subst) -> Result<Vec<Possible>, Halt> {
         let Some(plan) = self.agg_plans.get(&(rid, a.at)).cloned() else { return Ok(Vec::new()) };
         let inner: Vec<BodyElem> = plan.inner_order.iter().map(|i| a.body[*i].clone()).collect();
-        let outer: Vec<Sym> = self.lat.lattices.keys().copied().collect();
+        let outer: Vec<Sym> = self.lat.cell_rels().collect();
         let mut out: Vec<Possible> = Vec::new();
         let mut seen: HashSet<Possible> = HashSet::new();
         for (k, b) in inner.iter().enumerate() {
@@ -9519,7 +9361,7 @@ impl Eval {
                 free = here.into_iter().filter(|v| !elsewhere.contains(v)).collect();
             }
             for u in self.unknown_cands(l, s) {
-                if !self.lat.spread.contains(&u) {
+                if !self.lat.carry.spread.contains(&u) {
                     continue;
                 }
                 let Some(s0) = self.unknown_binds(l, &u, s) else { continue };
@@ -9558,7 +9400,7 @@ impl Eval {
     /// completion, so it is no possible. Undecided where an argument is not
     /// known, and asked only of a relation not answered on demand.
     fn neg_decided(&mut self, l: &Lit, ps: &Subst, free: &[Sym]) -> Result<bool, Halt> {
-        if self.demand.rels.iter().any(|(r, _)| *r == l.rel) {
+        if self.demand.on(l.rel) {
             return Ok(false);
         }
         let s: Subst = ps.iter().filter(|(k, _)| !free.contains(k)).copied().collect();
@@ -9819,7 +9661,7 @@ impl Eval {
     /// it.
     fn reach_memo_of(&mut self, rid: Sym, a: &Agg, s: &Subst, mk: &(Sym, u32, Box<[Term]>), ps: Vec<Possible>, sealed_now: bool) -> Result<ReachMemo, Halt> {
         let (plan, _) = self.agg_corr(rid, a, s)?;
-        let cells: Vec<CellId> = self.cells.agg_memo.get(mk).map(|cs| cs.to_vec()).unwrap_or_default();
+        let cells: Vec<CellId> = self.memo.agg_memo.get(mk).map(|cs| cs.to_vec()).unwrap_or_default();
         let index = PossIndex::of(&ps);
         let mut named = vec![false; ps.len()];
         let mut groups: Vec<(Box<[Term]>, Rc<[Unknown]>, Option<Term>)> = Vec::new();
@@ -9832,7 +9674,7 @@ impl Eval {
             for n in index.exact.get(&g).into_iter().flatten() {
                 named[*n] = true;
             }
-            let us: Rc<[Unknown]> = match self.cells.cell_reach.get(&c) {
+            let us: Rc<[Unknown]> = match self.memo.cell_reach.get(&c) {
                 Some(us) if brk!("agg_reach_redecide" => false; true) => us.clone(),
                 _ if sealed_now && brk!("agg_reach_redecide" => false; true) => continue,
                 _ => {
@@ -9845,13 +9687,13 @@ impl Eval {
                 }
             };
             if !us.is_empty() {
-                groups.push((key, us, self.cells.cell_cond.get(&c).copied()));
+                groups.push((key, us, self.memo.cell_cond.get(&c).copied()));
             }
         }
         // the groups sealed under this correlation, which a group an unknown
         // makes is none of
         let sealed: Vec<Vec<Term>> = self
-            .cells.agg_memo
+            .memo.agg_memo
             .get(mk)
             .map(|cs| cs.to_vec())
             .unwrap_or_default()
@@ -9907,7 +9749,7 @@ impl Eval {
         for (key, us, cond) in &m.groups {
             if let Some(s2) = self.bind_group(a, &plan, s, key) {
                 let s2 = self.bind_result(a, s2, *cond);
-                self.lat.undecided.push((rid, i, s2, us.clone()));
+                self.lat.carry.undecided.push((rid, i, s2, us.clone()));
             }
         }
         for (pat, labs, us, value) in &m.unnamed {
@@ -9919,7 +9761,7 @@ impl Eval {
             }
             if let Some(s2) = s2 {
                 let s2 = self.bind_result(a, s2, *value);
-                self.lat.undecided.push((rid, i, s2, us.clone()));
+                self.lat.carry.undecided.push((rid, i, s2, us.clone()));
             }
         }
     }
@@ -9987,7 +9829,7 @@ impl Eval {
     }
 
     /// A builtin failed for an error in a rule no lattice decides: the rule's
-    /// conclusion under the failed solution is unknown (`lat.plain`).
+    /// conclusion under the failed solution is unknown (`lat.carry.plain`).
     fn plain_fault(&mut self, rule_id: Option<Sym>, s: &Subst, at: &BodyElem) {
         let Some(r) = rule_id.and_then(|rid| self.rule_of(rid)) else { return };
         if r.lat_close.is_some() {
@@ -10000,8 +9842,8 @@ impl Eval {
         if let Some(u) = self.conclusion_unknown(&r, s) {
             self.narrow_feeder_fault(r.clause.head.rel);
             let marker = self.rule_marker(r.id);
-            self.unk_edges.push((Node::Unk(u.clone()), Node::Hole(marker)));
-            self.lat.plain_pending.push((u, true));
+            self.shrug.unk_edges.push((Node::Unk(u.clone()), Node::Hole(marker)));
+            self.lat.pass.plain_pending.push((u, true));
         }
     }
 
@@ -10030,7 +9872,7 @@ impl Eval {
         let Some(head) = self.demand.heads.last().cloned() else { return };
         let u = self.lit_unknown(&head, s);
         self.fault_edge(&u);
-        self.lat.plain_pending.push((u, true));
+        self.lat.pass.plain_pending.push((u, true));
     }
 
     /// A fault (`faults`) or an unknown (`unknowns`) met below a premise
@@ -10111,8 +9953,8 @@ impl Eval {
         if self.firing {
             self.arith_hole(rid, self.v.demand_cycle);
             let marker = self.rule_marker(rid);
-            self.unk_edges.push((Node::Unk(u.clone()), Node::Hole(marker)));
-            self.lat.plain_pending.push((u.clone(), true));
+            self.shrug.unk_edges.push((Node::Unk(u.clone()), Node::Hole(marker)));
+            self.lat.pass.plain_pending.push((u.clone(), true));
         } else if !self.demand.asked.contains(&u) {
             self.demand.asked.push(u.clone());
         }
@@ -10138,9 +9980,9 @@ impl Eval {
         let u = self.lit_unknown(&head, s);
         if self.firing {
             for f in from {
-                self.unk_edges.push((Node::Unk(u.clone()), Node::Unk(f)));
+                self.shrug.unk_edges.push((Node::Unk(u.clone()), Node::Unk(f)));
             }
-            self.lat.plain_pending.push((u.clone(), true));
+            self.lat.pass.plain_pending.push((u.clone(), true));
         }
         self.demand.trail.push(u);
     }
@@ -10153,10 +9995,10 @@ impl Eval {
         if self.cells.agg_opened.contains(&mk) {
             let key = self.h.list(&mk.2);
             let marker = self.h.mkf(self.v.s_cell, &[Term::atom(rid), Term::int(a.at as i64), Term::int(self.store.tick as i64), key]);
-            self.lat.plain_undecided.push((rid, i, s.clone(), marker));
+            self.lat.pass.plain_undecided.push((rid, i, s.clone(), marker));
             return Ok(());
         }
-        let cells: Vec<CellId> = self.cells.agg_memo.get(&mk).map(|cs| cs.to_vec()).unwrap_or_default();
+        let cells: Vec<CellId> = self.memo.agg_memo.get(&mk).map(|cs| cs.to_vec()).unwrap_or_default();
         let withdrawn = self.h.intern("support_withdrawn");
         for c in cells {
             let r = self.store.cell(c);
@@ -10167,7 +10009,7 @@ impl Eval {
             let key = r.key.clone();
             if let Some(s2) = self.bind_group(a, &plan, s, &key) {
                 let marker = self.store.cell_key_term(&mut self.h, c);
-                self.lat.plain_undecided.push((rid, i, s2, marker));
+                self.lat.pass.plain_undecided.push((rid, i, s2, marker));
             }
         }
         Ok(())
@@ -10177,7 +10019,7 @@ impl Eval {
     /// fire: every conclusion of a relation closed below `lv` (one still
     /// growing might yet hold). A conclusion that holds another way is known.
     fn plain_flush(&mut self, lv: i64) -> Result<(), Halt> {
-        if self.lat.plain_pending.is_empty() && self.lat.plain_undecided.is_empty() {
+        if self.lat.pass.plain_pending.is_empty() && self.lat.pass.plain_undecided.is_empty() {
             return Ok(());
         }
         self.carrying(|e| e.plain_flush_at(lv))
@@ -10187,41 +10029,41 @@ impl Eval {
         let closed = |e: &Eval, rel: Sym| brk!("plain_flush_early" => true; lv == i64::MAX || e.rel_level(rel) < lv);
         let mut seeds: Vec<(Unknown, bool)> = Vec::new();
         let mut keep: Vec<(Sym, usize, Subst, Term)> = Vec::new();
-        for (rid, i, s, marker) in std::mem::take(&mut self.lat.plain_undecided) {
+        for (rid, i, s, marker) in std::mem::take(&mut self.lat.pass.plain_undecided) {
             let Some(r) = self.rule_of(rid) else { continue };
             if !closed(self, r.clause.head.rel) {
                 keep.push((rid, i, s, marker));
                 continue;
             }
-            self.wfs.carry_src = Some(Node::Hole(marker));
+            self.shrug.carry_src = Some(Node::Hole(marker));
             for s2 in self.poison_solve(&r, i, s)? {
                 if let Some(v) = self.reached_conclusion(&r, &s2, true) {
-                    self.unk_edges.push((Node::Unk(v.clone()), Node::Hole(marker)));
+                    self.shrug.unk_edges.push((Node::Unk(v.clone()), Node::Hole(marker)));
                     seeds.push((v, true));
                 }
             }
-            self.wfs.carry_src = None;
+            self.shrug.carry_src = None;
         }
-        self.lat.plain_undecided = keep;
+        self.lat.pass.plain_undecided = keep;
         let (now, later): (Vec<(Unknown, bool)>, Vec<(Unknown, bool)>) =
-            std::mem::take(&mut self.lat.plain_pending).into_iter().partition(|(u, _)| closed(self, u.rel()));
-        self.lat.plain_pending = later;
+            std::mem::take(&mut self.lat.pass.plain_pending).into_iter().partition(|(u, _)| closed(self, u.rel()));
+        self.lat.pass.plain_pending = later;
         seeds.extend(now);
         let mut fresh: Vec<Unknown> = Vec::new();
         for (u, plain) in seeds {
-            if self.lat.unknown.contains_key(&u) {
+            if self.lat.carry.unknown.contains_key(&u) {
                 continue;
             }
             match &u {
                 Unknown::Tuple(..) if brk!("plain_alive_unknown" => false; self.unknown_holds(&u)) => continue,
-                Unknown::Cell(_) | Unknown::Rel(_) if self.lat.lattices.contains_key(&u.rel()) => {
+                Unknown::Cell(_) | Unknown::Rel(_) if self.lat.is_cell(u.rel()) => {
                     self.note_unknown(u.clone(), None);
                     let withdrawn = self.h.intern("support_withdrawn");
-                    self.lat.pending.push(LatFault { close: u.rel(), what: Some(u), rule: None, reason: withdrawn, facts: Vec::new() });
+                    self.lat.pass.pending.push(LatFault { close: u.rel(), what: Some(u), rule: None, reason: withdrawn, facts: Vec::new() });
                 }
                 _ => {
                     if plain {
-                        self.lat.plain.insert(u.clone());
+                        self.lat.carry.plain.insert(u.clone());
                     }
                     fresh.push(u);
                 }
@@ -10239,23 +10081,23 @@ impl Eval {
     /// tuple so reached is absent with no hole on its rule. A plain one then
     /// reached from what is not plain is marked as that is, and carried again.
     fn carry(&mut self, v: &Unknown, from: &Unknown, rule: Sym, reason: Sym, closing: &[Sym]) -> bool {
-        brk!("shrug_edges_off" => (); self.unk_edges.push((Node::Unk(v.clone()), Node::Unk(from.clone()))));
-        let plain = brk!("plain_positive_holed" => false; self.lat.plain.contains(from));
+        brk!("shrug_edges_off" => (); self.shrug.unk_edges.push((Node::Unk(v.clone()), Node::Unk(from.clone()))));
+        let plain = brk!("plain_positive_holed" => false; self.lat.carry.plain.contains(from));
         if !self.note_unknown(v.clone(), Some((from.clone(), rule))) {
-            if !plain && self.lat.plain.remove(v) {
-                self.lat.unknown.insert(v.clone(), Some((from.clone(), rule)));
+            if !plain && self.lat.carry.plain.remove(v) {
+                self.lat.carry.unknown.insert(v.clone(), Some((from.clone(), rule)));
                 return self.mark_unknown(v, rule, reason, closing);
             }
             return false;
         }
-        if plain && matches!(v, Unknown::Tuple(..) | Unknown::Rel(_)) && !self.lat.lattices.contains_key(&v.rel()) {
+        if plain && matches!(v, Unknown::Tuple(..) | Unknown::Rel(_)) && !self.lat.is_cell(v.rel()) {
             if self.unknown_holds(v) {
                 return false;
             }
-            self.lat.plain.insert(v.clone());
-            return self.lat.spread.insert(v.clone());
+            self.lat.carry.plain.insert(v.clone());
+            return self.lat.carry.spread.insert(v.clone());
         }
-        self.mark_unknown(v, rule, reason, closing) && self.lat.spread.insert(v.clone())
+        self.mark_unknown(v, rule, reason, closing) && self.lat.carry.spread.insert(v.clone())
     }
 
     /// A literal read over an unknown: its key bound to the unknown's, every
@@ -10264,7 +10106,7 @@ impl Eval {
         match u {
             Unknown::Cell((rel, p, key)) => {
                 let n = key.len();
-                if self.lat.cell_keylen(*rel, l.args.len()) != Some(n) {
+                if self.lat.algebra(*rel).keylen(l.args.len()) != Some(n) {
                     return None;
                 }
                 let mut s = unify(&self.h, l.persp, Term::atom(*p), s)?;
@@ -10283,8 +10125,8 @@ impl Eval {
                 }
                 Some(s)
             }
-            Unknown::Rel(r) if self.lat.is_lattice_lit(*r, l.args.len()) => {
-                let k = self.lat.cell_keylen(*r, l.args.len()).unwrap();
+            Unknown::Rel(r) if self.lat.algebra(*r).is_cell_lit(l.args.len()) => {
+                let k = self.lat.algebra(*r).keylen(l.args.len()).unwrap();
                 self.unk.bind_unknown(&mut self.h, &l.args[k..], s.clone())
             }
             Unknown::Rel(_) => Some(s.clone()),
@@ -10423,7 +10265,7 @@ impl Eval {
 
     /// The lattice cell a literal names under `s`, when its key is bound.
     fn lit_cell(&mut self, l: &Lit, s: &Subst) -> Option<LatKey> {
-        let k = self.lat.cell_keylen(l.rel, l.args.len())?;
+        let k = self.lat.algebra(l.rel).keylen(l.args.len())?;
         let p = walk(&self.h, l.persp, s).as_atom()?;
         let key: Vec<Term> = l.args[..k].iter().map(|a| resolve(&mut self.h, *a, s)).collect();
         key.iter().all(|k| self.h.is_ground(*k)).then(|| (l.rel, p, key.into()))
@@ -10454,8 +10296,8 @@ impl Eval {
                 self.carry_charge(next.len())?;
                 match b {
                     BodyElem::Pos(l) => {
-                        let lattice = self.lat.is_lattice_lit(l.rel, l.args.len()) && !outer.contains(&l.rel);
-                        let whole = self.lat.unknown.contains_key(&Unknown::Rel(l.rel));
+                        let lattice = self.lat.algebra(l.rel).is_cell_lit(l.args.len()) && !outer.contains(&l.rel);
+                        let whole = self.lat.carry.unknown.contains_key(&Unknown::Rel(l.rel));
                         // an argument that holds the unknown matches anything, and what it matches is that value only
                         // in some completions: a join on an unknown is not sure
                         let mut lw = l.clone();
@@ -10475,7 +10317,7 @@ impl Eval {
                                     continue;
                                 }
                                 if let Some(ck) = self.lit_cell(l, &s2) {
-                                    if self.lat.unknown.contains_key(&Unknown::Cell(ck)) {
+                                    if self.lat.carry.unknown.contains_key(&Unknown::Cell(ck)) {
                                         continue;
                                     }
                                 }
@@ -10483,7 +10325,7 @@ impl Eval {
                             next.push(if joined { self.unsure(s2) } else { s2 });
                         }
                         let bound = if lattice {
-                            let n = self.lat.cell_keylen(l.rel, l.args.len()).unwrap();
+                            let n = self.lat.algebra(l.rel).keylen(l.args.len()).unwrap();
                             (0..n).find_map(|i| {
                                 let t = resolve(&mut self.h, l.args[i], s);
                                 self.h.is_ground(t).then_some((i, t))
@@ -10494,18 +10336,18 @@ impl Eval {
                         let cands: Vec<Unknown> = match (lattice, self.lit_cell_opt(l, s), bound) {
                             (true, Some(ck), _) => [Unknown::Cell(ck), Unknown::Rel(l.rel)]
                                 .into_iter()
-                                .filter(|u| self.lat.unknown.contains_key(u))
+                                .filter(|u| self.lat.carry.unknown.contains_key(u))
                                 .collect(),
                             (true, None, Some((i, k))) => {
-                                let mut c = self.unk.lat_unknown_at.get(&(l.rel, i, k)).cloned().unwrap_or_default();
-                                c.extend(Some(Unknown::Rel(l.rel)).filter(|u| self.lat.unknown.contains_key(u)));
+                                let mut c = self.lat.carry.lat_unknown_at.get(&(l.rel, i, k)).cloned().unwrap_or_default();
+                                c.extend(Some(Unknown::Rel(l.rel)).filter(|u| self.lat.carry.unknown.contains_key(u)));
                                 c
                             }
                             _ => self.unknown_cands(l, s),
                         };
                         for u in cands {
                             // a tuple or a cell that holds for certain matched above
-                            if !lattice && !self.lat.spread.contains(&u) {
+                            if !lattice && !self.lat.carry.spread.contains(&u) {
                                 continue;
                             }
                             if lattice && matches!(u, Unknown::Tuple(..)) {
@@ -10576,7 +10418,7 @@ impl Eval {
     }
 
     fn lit_cell_opt(&mut self, l: &Lit, s: &Subst) -> Option<LatKey> {
-        if self.lat.is_lattice_lit(l.rel, l.args.len()) {
+        if self.lat.algebra(l.rel).is_cell_lit(l.args.len()) {
             self.lit_cell(l, s)
         } else {
             None
@@ -10594,8 +10436,7 @@ impl Eval {
                 if self.holds_labeled(*a) {
                     return self.shown(*a);
                 }
-                let mut t = String::new();
-                self.h.canon_term(*a, &mut t);
+                let t = self.h.canon(*a);
                 t.replace(unk, "_")
             })
             .collect();
@@ -10615,7 +10456,7 @@ impl Eval {
                 write_fact_key(&self.h, *rel, *p, args, &mut k);
                 k = k.replace(self.h.name(self.unk.unknown_value.as_atom().unwrap()), "_");
             }
-            Unknown::Rel(rel) => k = format!("every {} of {}", if self.lat.lattices.contains_key(rel) { "cell" } else { "tuple" }, self.h.name(*rel)),
+            Unknown::Rel(rel) => k = format!("every {} of {}", if self.lat.is_cell(*rel) { "cell" } else { "tuple" }, self.h.name(*rel)),
         }
         k
     }
@@ -10629,9 +10470,9 @@ impl Eval {
     /// the fact is well-founded through its history. The rest of the
     /// history of the closing relations is dropped.
     fn settle_stale(&mut self, due: &[Sym]) {
-        let mut cand: Vec<FactId> = self.lat.stale.drain().filter(|f| self.store.alive(*f)).collect();
+        let mut cand: Vec<FactId> = self.lat.pass.stale.drain().filter(|f| self.store.alive(*f)).collect();
         cand.sort_unstable();
-        let sup = std::mem::take(&mut self.lat.superseded);
+        let sup = std::mem::take(&mut self.lat.pass.superseded);
         let mut memo: HashMap<FactId, u32> = HashMap::new();
         let _ = self.store.heights_where(&cand, &mut memo, &|ps: &[PremRef]| {
             ps.iter().any(|p| matches!(p, PremRef::Fact(g) if sup.contains(g)))
@@ -10658,17 +10499,17 @@ impl Eval {
         // lattice closing after this one too: drained here, it read nothing when its own lattice closed, and the
         // history its why walks was dropped (f_a_dominated_value_lost_its_history_when_another_lattice_closed_first)
         if brk!("stale_kept_drained" => false; true) {
-            self.lat.stale.extend(keep.iter().copied());
+            self.lat.pass.stale.extend(keep.iter().copied());
         }
         for f in sup {
             if reach.contains(&f) || !due.contains(&self.store.rec(f).rel) {
-                self.lat.superseded.insert(f);
+                self.lat.pass.superseded.insert(f);
             } else {
                 self.store.drop_firings(f);
             }
         }
-        let live = &self.lat.superseded;
-        self.lat.history.retain(|_, v| {
+        let live = &self.lat.pass.superseded;
+        self.lat.pass.history.retain(|_, v| {
             v.retain(|f| live.contains(f));
             !v.is_empty()
         });
@@ -10680,7 +10521,7 @@ impl Eval {
         let mut h = 0u32;
         for p in prems {
             match p {
-                PremRef::Fact(f) => h = h.max(self.height_memo.get(f).copied().unwrap_or(0)),
+                PremRef::Fact(f) => h = h.max(self.memo.height_memo.get(f).copied().unwrap_or(0)),
                 PremRef::Cell(c) => h = h.max(self.store.cell(*c).height),
                 PremRef::Neg(_) | PremRef::Bi(_) | PremRef::VRow(_) => {}
             }
@@ -10691,7 +10532,7 @@ impl Eval {
     /// A lattice fact's members, canonical: every firing, ordered by height,
     /// then rule id, then premise signature. `(height, rule, tick, prems)`.
     fn best_members(&mut self, f: FactId) -> Result<Vec<(u32, Sym, u32, Vec<PremRef>)>, Halt> {
-        if let Err(g) = self.store.heights(&[f], &mut self.height_memo) {
+        if let Err(g) = self.store.heights(&[f], &mut self.memo.height_memo) {
             return Err(Halt::Bug(format!("{} has no well-founded height", self.store.key(&self.h, g))));
         }
         let mut ms: Vec<(u32, String, String, Sym, u32, Vec<PremRef>)> = self
@@ -10735,32 +10576,32 @@ impl Eval {
         let mut seen: HashSet<FactId> = HashSet::new();
         let mut stack: Vec<FactId> = facts.to_vec();
         while let Some(g) = stack.pop() {
-            if !self.height_memo.contains_key(&g) || !scc.contains(&self.store.rec(g).rel) || !seen.insert(g) {
+            if !self.memo.height_memo.contains_key(&g) || !scc.contains(&self.store.rec(g).rel) || !seen.insert(g) {
                 continue;
             }
             nodes.push(g);
             stack.extend(self.store.fact_premises(g));
         }
         nodes.sort_unstable();
-        self.store.dominators(&nodes, &self.height_memo)
+        self.store.dominators(&nodes, &self.memo.height_memo)
     }
 
     fn close_lattice(&mut self, p: Sym, front: &mut Front) -> Result<(), Halt> {
         let facts = self.store.rel_all(&self.h, p);
-        if let Err(g) = self.store.heights(&facts, &mut self.height_memo) {
+        if let Err(g) = self.store.heights(&facts, &mut self.memo.height_memo) {
             return Err(Halt::Bug(format!("{} has no well-founded height", self.store.key(&self.h, g))));
         }
         let mut keyed: Vec<(String, FactId)> = facts.iter().map(|f| (self.store.key(&self.h, *f), *f)).collect();
         keyed.sort_by(|a, b| cmp_js(&a.0, &b.0));
         let doms = self.recursion_dominators(p, &facts);
         for (_, f) in keyed {
-            let hf = self.height_memo[&f];
+            let hf = self.memo.height_memo[&f];
             let members = self.best_members(f)?;
             // WELL-FOUNDED: a firing that cites the fact itself, or a premise
             // every derivation of which uses the fact, is self-support and no
             // member. Only a premise higher than the fact can be one.
             if brk!("lattice_self_support" => members.len() > 1 && false; members.len() > 1) {
-                let hm = |q: &FactId| self.height_memo.get(q).copied().unwrap_or(u32::MAX);
+                let hm = |q: &FactId| self.memo.height_memo.get(q).copied().unwrap_or(u32::MAX);
                 let mut high: Vec<FactId> = members
                     .iter()
                     .flat_map(|m| m.3.iter())
@@ -10772,9 +10613,9 @@ impl Eval {
                 high.sort_unstable();
                 high.dedup();
                 let founded: HashSet<FactId> = match &doms {
-                    Some(d) => brk!("lattice_existence_ignored" => high.iter().copied().filter(|q| !d.covers(*q) && self.height_memo.contains_key(q)).collect();
-                        high.iter().copied().filter(|q| if d.covers(*q) { d.founded_without(f, *q) } else { self.height_memo.contains_key(q) }).collect()),
-                    None => self.store.founded_without(f, &high, &self.height_memo),
+                    Some(d) => brk!("lattice_existence_ignored" => high.iter().copied().filter(|q| !d.covers(*q) && self.memo.height_memo.contains_key(q)).collect();
+                        high.iter().copied().filter(|q| if d.covers(*q) { d.founded_without(f, *q) } else { self.memo.height_memo.contains_key(q) }).collect()),
+                    None => self.store.founded_without(f, &high, &self.memo.height_memo),
                 };
                 let selfish: Vec<bool> = members
                     .iter()
@@ -10818,17 +10659,16 @@ impl Eval {
         }
         // THE ANTICHAIN'S OTHER HALF: every value the cell was given and does
         // not hold, with the member of the front that dominates it
-        if self.lat.subs.contains_key(&p) && self.answer.reads_dominated && !self.prov.no_provenance {
+        if self.lat.algebra(p).sub.is_some() && self.answer.reads_dominated && !self.prov.no_provenance {
             let mut rows: Vec<(String, [Term; 3])> = Vec::new();
-            let by: Vec<(SubVal, (FactId, Sym))> = self.lat.sub_by.iter().filter(|((ck, _), (f, _))| ck.0 == p && self.store.alive(*f)).map(|(k, v)| (k.clone(), *v)).collect();
+            let by: Vec<(SubVal, (FactId, Sym))> = self.lat.pass.sub_by.iter().filter(|((ck, _), (f, _))| ck.0 == p && self.store.alive(*f)).map(|(k, v)| (k.clone(), *v)).collect();
             for ((ck, d), (f, rule)) in by {
                 let args = Self::sub_args(&ck, &d);
                 let dt = self.sub_fact(p, ck.1, &args);
                 let rec = self.store.rec(f);
                 let fargs = self.store.args(f).to_vec();
                 let ft = self.sub_fact(rec.rel, rec.persp, &fargs);
-                let mut key = String::new();
-                self.h.canon_term(dt, &mut key);
+                let key = self.h.canon(dt);
                 rows.push((key, [dt, ft, Term::atom(rule)]));
             }
             rows.sort_by(|a, b| cmp_js(&a.0, &b.0));
@@ -10855,28 +10695,27 @@ impl Eval {
     /// dominated keeps the first member, in canonical order, that dominates
     /// it, and the rule that says so (`sub_by`).
     fn sub_check(&mut self, due: &[Sym]) -> Result<(), Halt> {
-        if self.lat.subs.is_empty() || brk!("dominance_unchecked" => true; false) {
+        if self.lat.subs().next().is_none() || brk!("dominance_unchecked" => true; false) {
             return Ok(());
         }
         let mut cells: Vec<(String, LatKey)> = self
-            .lat.sub_seen
+            .lat.pass.sub_seen
             .keys()
-            .filter(|k| due.contains(&k.0) && !self.lat.holed_rel.contains(&k.0))
+            .filter(|k| due.contains(&k.0) && !self.lat.pass.holed_rel.contains(&k.0))
             .map(|k| {
-                let mut t = String::new();
-                write_fact_key(&self.h, k.0, k.1, &k.2, &mut t);
+                let t = fact_key(&self.h, k.0, k.1, &k.2);
                 (t, k.clone())
             })
             .collect();
         cells.sort_by(|a, b| cmp_js(&a.0, &b.0));
         'cells: for (_, ck) in cells {
-            if self.lat.sub_parties.contains_key(&ck) {
+            if self.lat.pass.sub_parties.contains_key(&ck) {
                 continue;
             }
             let rel = ck.0;
             let k = ck.2.len();
             let mut front: Vec<(String, FactId)> = self
-                .lat.sub_cur
+                .lat.pass.sub_cur
                 .get(&ck)
                 .cloned()
                 .unwrap_or_default()
@@ -10889,10 +10728,10 @@ impl Eval {
                 .into_iter()
                 .map(|(_, f)| {
                     let a = self.store.args(f).to_vec();
-                    (f, self.lat.sub_seen_set[&(ck.clone(), a[k..].into())], a)
+                    (f, self.lat.pass.sub_seen_set[&(ck.clone(), a[k..].into())], a)
                 })
                 .collect();
-            let seen = self.lat.sub_seen.get(&ck).cloned().unwrap_or_default();
+            let seen = self.lat.pass.sub_seen.get(&ck).cloned().unwrap_or_default();
             // every conflict of the cell, so its parties are those of the
             // values given and not of the order they came in
             let mut parties: Vec<Term> = Vec::new();
@@ -10965,8 +10804,8 @@ impl Eval {
                 continue;
             }
             for (d, f, r) in by {
-                self.lat.sub_by_of.entry(f).or_default().push(d.clone());
-                self.lat.sub_by.insert((ck.clone(), d), (f, r));
+                self.lat.pass.sub_by_of.entry(f).or_default().push(d.clone());
+                self.lat.pass.sub_by.insert((ck.clone(), d), (f, r));
             }
         }
         Ok(())
@@ -10983,7 +10822,7 @@ impl Eval {
     /// The cut's own carry is charged afresh against the same walls. When it
     /// too runs out, every lattice not closed is holed whole, with no value.
     fn lattice_cut(&mut self, reason: Sym) -> Result<(), Halt> {
-        if self.lat.lattices.is_empty() {
+        if !self.lat.has_cells() {
             return Ok(());
         }
         brk!("cut_carry_unrenewed" => (); (self.wfs.carry_steps, self.wfs.carry_rows) = (0, 0));
@@ -10993,7 +10832,7 @@ impl Eval {
         });
         match cut {
             Err(Halt::Budget(..)) if brk!("cut_fallback_off" => false; true) => self.with_walls_lifted(|e| {
-                let mut open: Vec<Sym> = e.lat.lattices.keys().copied().filter(|p| !e.lat.closed.contains(p)).collect();
+                let mut open: Vec<Sym> = e.lat.cell_rels().filter(|p| !e.lat.pass.closed.contains(p)).collect();
                 open.sort_by(|a, b| cmp_js(e.h.name(*a), e.h.name(*b)));
                 for p in open {
                     e.hole_lattice_rel(p, reason);
@@ -11010,7 +10849,7 @@ impl Eval {
     /// some rule or some front; what depends on neither is final.
     ///
     /// What a plain hole left unknown and no carry has reached yet
-    /// (`plain_pending`, `plain_undecided`, `lat.undecided`) may reach a
+    /// (`plain_pending`, `plain_undecided`, `lat.carry.undecided`) may reach a
     /// lattice still: what reads it is not settled. After a carry the wall
     /// broke into, nothing is.
     fn close_settled(&mut self) -> Result<(), Halt> {
@@ -11023,8 +10862,8 @@ impl Eval {
             unsettled.insert(r.clause.head.rel);
         }
         if brk!("plain_unknown_settles" => false; true) {
-            unsettled.extend(self.lat.plain_pending.iter().map(|(u, _)| u.rel()));
-            let undecided: Vec<Sym> = self.lat.plain_undecided.iter().map(|x| x.0).chain(self.lat.undecided.iter().map(|x| x.0)).collect();
+            unsettled.extend(self.lat.pass.plain_pending.iter().map(|(u, _)| u.rel()));
+            let undecided: Vec<Sym> = self.lat.pass.plain_undecided.iter().map(|x| x.0).chain(self.lat.carry.undecided.iter().map(|x| x.0)).collect();
             for r in self.rules.iter().filter(|r| undecided.contains(&r.id)) {
                 unsettled.insert(r.clause.head.rel);
             }
@@ -11044,7 +10883,7 @@ impl Eval {
             }
         }
         let mut settled: Vec<Sym> = Vec::new();
-        for p in self.lat.lattices.keys().copied().filter(|p| !self.lat.closed.contains(p)) {
+        for p in self.lat.cell_rels().filter(|p| !self.lat.pass.closed.contains(p)) {
             let (mut seen, mut todo) = (HashSet::from([p]), vec![p]);
             let mut ok = true;
             while let Some(q) = todo.pop() {
@@ -11073,16 +10912,16 @@ impl Eval {
         self.join_gc(&settled);
         let mut front = Front::default();
         for p in settled {
-            self.lat.closed.insert(p);
+            self.lat.pass.closed.insert(p);
             self.close_lattice(p, &mut front)?;
         }
         Ok(())
     }
 
     fn lattice_cut_open(&mut self, reason: Sym) -> Result<(), Halt> {
-        let mut open: Vec<Sym> = self.lat.lattices.keys().copied().filter(|p| !self.lat.closed.contains(p)).collect();
+        let mut open: Vec<Sym> = self.lat.cell_rels().filter(|p| !self.lat.pass.closed.contains(p)).collect();
         open.sort_by(|a, b| cmp_js(self.h.name(*a), self.h.name(*b)));
-        let pending = std::mem::take(&mut self.lat.pending);
+        let pending = std::mem::take(&mut self.lat.pass.pending);
         // A cell widened before the wall encloses its least value only once
         // its recursion has settled on the widened values, which a wall
         // stopped first: it has no value to give, and the wall is its reason
@@ -11109,11 +10948,11 @@ impl Eval {
             let marker = self.hole_lattice_cell(ck.clone(), improving);
             let g = brk!("shrug_cycle_merged" => 0; c);
             let gi = *groups.entry(g).or_insert_with(|| {
-                self.wfs.cycle_groups.push(Vec::new());
-                self.wfs.cycle_groups.len() - 1
+                self.shrug.cycle_groups.push(Vec::new());
+                self.shrug.cycle_groups.len() - 1
             });
-            self.wfs.cycle_groups[gi].push(marker);
-            self.wfs.cycle_of.insert(marker, gi);
+            self.shrug.cycle_groups[gi].push(marker);
+            self.shrug.cycle_of.insert(marker, gi);
             seeds.push(Unknown::Cell(ck));
         }
         self.poison(seeds, &open, true)?;
@@ -11142,7 +10981,7 @@ impl Eval {
         for p in open {
             roots.extend(self.store.rel_all(&self.h, *p));
         }
-        roots.extend(self.lat.superseded.iter().copied().filter(|f| open.contains(&self.store.rec(*f).rel)));
+        roots.extend(self.lat.pass.superseded.iter().copied().filter(|f| open.contains(&self.store.rec(*f).rel)));
         roots.sort_unstable();
         let mut ids: HashMap<Unknown, usize> = HashMap::new();
         let mut names: Vec<Unknown> = Vec::new();
@@ -11179,13 +11018,13 @@ impl Eval {
         let mut out: Vec<(String, LatKey, usize)> = Vec::new();
         for (i, n) in names.iter().enumerate() {
             let Unknown::Cell(ck) = n else { continue };
-            if !open.contains(&ck.0) || !self.lat.history.contains_key(ck) {
+            if !open.contains(&ck.0) || !self.lat.pass.history.contains_key(ck) {
                 continue;
             }
             // a join value comes from its own earlier value by construction:
             // each step is a contribution, and a step's size is bounded by
             // what exists to contribute, so none of it is a divergence
-            if brk!("join_cycle_named" => false; self.lat.join_rels.contains_key(&ck.0)) {
+            if brk!("join_cycle_named" => false; self.lat.algebra(ck.0).join.is_some()) {
                 continue;
             }
             if (size[&comp[i]] > 1 || succ[i].contains(&i))
@@ -11211,9 +11050,9 @@ impl Eval {
     /// held before it, so it is an earlier one).
     fn reached_from_own(&self, ck: &LatKey) -> bool {
         let own = Unknown::Cell(ck.clone());
-        let mut stack: Vec<FactId> = self.lat.history.get(ck).cloned().unwrap_or_default();
-        stack.extend(self.lat.cur.get(ck).copied());
-        stack.extend(self.lat.sub_cur.get(ck).cloned().unwrap_or_default());
+        let mut stack: Vec<FactId> = self.lat.pass.history.get(ck).cloned().unwrap_or_default();
+        stack.extend(self.lat.pass.cur.get(ck).copied());
+        stack.extend(self.lat.pass.sub_cur.get(ck).cloned().unwrap_or_default());
         let mut seen: HashSet<FactId> = HashSet::new();
         while let Some(f) = stack.pop() {
             if !seen.insert(f) || self.store.rec(f).base() {
@@ -11237,14 +11076,14 @@ impl Eval {
     /// algebra for its relation, an asserted fact (the cell holds what its
     /// rules conclude), and a counting tag inside its own recursion.
     fn refuse_tags(&mut self) -> Result<(), Halt> {
-        let reject = |msg: String| Err(Halt::Strat(format!("program rejected: {msg}"), String::new()));
+        let reject = |msg: String| Err(Halt::reject(msg));
         if let Some(m) = self.tags.refused.first() {
             return reject(m.clone());
         }
-        let mut names: Vec<Sym> = self.tags.by_rel.keys().copied().collect();
+        let mut names: Vec<Sym> = self.lat.tags().map(|(p, _)| p).collect();
         names.sort_by(|a, b| cmp_js(self.h.name(*a), self.h.name(*b)));
         for p in &names {
-            let alg = self.tags.by_rel[p].1;
+            let alg = self.lat.algebra(*p).tag.unwrap().1;
             for f in self.store.rel_all(&self.h, *p) {
                 let r = self.store.rec(f);
                 if brk!("tag_asserted" => false; r.base() || r.frozen()) {
@@ -11259,8 +11098,8 @@ impl Eval {
             }
         }
         for p in &names {
-            let Some(c) = self.tags.count_rel.get(p) else { continue };
-            if brk!("count_demand_admitted" => false; self.answer.demand_rels.contains(c) || self.answer.demand_rels.contains(p)) {
+            let Some(c) = self.lat.algebra(*p).count else { continue };
+            if brk!("count_demand_admitted" => false; self.answer.demand_rels.contains(&c) || self.answer.demand_rels.contains(p)) {
                 return reject(format!(
                     "tag {} (counting): a rule concluding it is not range-restricted, so its derivations would be unfolded at a call site",
                     self.h.name(*p)
@@ -11275,7 +11114,7 @@ impl Eval {
                     && r.clause.body.iter().flat_map(|b| b.lits_deep()).any(|l| reaches_in(&deps, l.rel, p))
             })
         };
-        let counting = names.iter().copied().find(|p| !self.tags.by_rel[p].1.idempotent() && in_recursion(*p));
+        let counting = names.iter().copied().find(|p| !self.lat.algebra(*p).tag.unwrap().1.idempotent() && in_recursion(*p));
         if let Some(p) = brk!("counting_recursion_admitted" => None; counting) {
             return reject(format!(
                 "tag {} (counting) is inside its own recursion: counting's ⊕ is not idempotent, so a count of derivations \
@@ -11287,7 +11126,7 @@ impl Eval {
     }
 
     fn refuse_lattices(&mut self) -> Result<(), Halt> {
-        let reject = |msg: String| Err(Halt::Strat(format!("program rejected: {msg}"), String::new()));
+        let reject = |msg: String| Err(Halt::reject(msg));
         if let Some(m) = self.decl_refused.first() {
             return reject(m.clone());
         }
@@ -11304,7 +11143,7 @@ impl Eval {
             };
             return reject(format!("subsumption {}: {text}", self.h.name(*p)));
         }
-        let mut counted: Vec<Sym> = self.tags.by_rel.keys().copied().filter(|p| self.lat.dominance_rel(*p) && !self.lat.subs.contains_key(p)).collect();
+        let mut counted: Vec<Sym> = self.lat.tags().map(|(p, _)| p).filter(|p| self.lat.dominance_rel(*p) && self.lat.algebra(*p).sub.is_none()).collect();
         counted.sort_by(|a, b| cmp_js(self.h.name(*a), self.h.name(*b)));
         if let Some(p) = counted.first() {
             return reject(format!("subsumption {}: it has dominance rules and is a tag too; a relation has one algebra", self.h.name(*p)));
@@ -11320,16 +11159,16 @@ impl Eval {
             };
             return reject(format!("lattice {}: {text}", self.h.name(*p)));
         }
-        if self.lat.lattices.is_empty() {
+        if !self.lat.has_cells() {
             return Ok(());
         }
-        let mut names: Vec<Sym> = self.lat.lattices.keys().copied().collect();
+        let mut names: Vec<Sym> = self.lat.cell_rels().collect();
         names.sort_by(|a, b| cmp_js(self.h.name(*a), self.h.name(*b)));
         for p in &names {
             for f in self.store.rel_all(&self.h, *p) {
                 let r = self.store.rec(f);
                 if brk!("lattice_asserted" => false; r.base() || r.frozen()) {
-                    return reject(if self.lat.subs.contains_key(p) {
+                    return reject(if self.lat.algebra(*p).sub.is_some() {
                         format!(
                             "{} is asserted, but {} is subsumptive: its cells hold the values its rules conclude that none dominates; \
                              assert the input into another relation and conclude it",
@@ -11342,7 +11181,7 @@ impl Eval {
                              assert the input into another relation and conclude it",
                             self.store.key(&self.h, f),
                             self.h.name(*p),
-                            self.lat.lattices[p].1.name()
+                            self.lat.algebra(*p).cell.unwrap().1.name()
                         )
                     });
                 }
@@ -11350,7 +11189,7 @@ impl Eval {
             if self.answer.demand_rels.contains(p) {
                 return reject(format!(
                     "{} {}: a rule concluding it is not range-restricted, so its cells would be unfolded at a call site",
-                    self.lat.lat_word(*p),
+                    self.lat.algebra(*p).word(),
                     self.h.name(*p)
                 ));
             }
@@ -11360,24 +11199,24 @@ impl Eval {
         // is kept.
         if let Some(r) = self.rules.iter().find(|r| {
             self.answer.demand_rels.contains(&r.clause.head.rel)
-                && r.clause.body.iter().flat_map(|b| b.lits_deep()).any(|l| self.lat.lattices.contains_key(&l.rel))
+                && r.clause.body.iter().flat_map(|b| b.lits_deep()).any(|l| self.lat.is_cell(l.rel))
         }) {
-            let lat = r.clause.body.iter().flat_map(|b| b.lits_deep()).find(|l| self.lat.lattices.contains_key(&l.rel)).unwrap().rel;
+            let lat = r.clause.body.iter().flat_map(|b| b.lits_deep()).find(|l| self.lat.is_cell(l.rel)).unwrap().rel;
             return reject(format!(
                 "rule {} reads the {} {} and concludes {}, which is answered on demand (a rule concluding it is not \
                  range-restricted): it would be unfolded while the {} is still improving",
                 self.h.name(r.id),
-                self.lat.lat_word(lat),
+                self.lat.algebra(lat).word(),
                 self.h.name(lat),
                 self.h.name(r.clause.head.rel),
-                self.lat.lat_word(lat)
+                self.lat.algebra(lat).word()
             ));
         }
         if self.answer.reads_provenance {
             return reject(format!(
                 "a rule reads {} beside the {} {}: a cell that improves withdraws its old firings, so provenance read during the evaluation would change under the reader",
                 self.h.name(self.v.derived_by),
-                self.lat.lat_word(names[0]),
+                self.lat.algebra(names[0]).word(),
                 self.h.name(names[0])
             ));
         }
@@ -11388,19 +11227,15 @@ impl Eval {
     /// relation must be ranked, and a rule reading it from outside its
     /// recursion ranked strictly above it.
     fn check_lattice_strata(&self, strat: &HashMap<Sym, i64>, strat_rules: &[Rc<ERule>]) -> Result<(), Halt> {
-        let mut names: Vec<Sym> = self.lat.lattices.keys().copied().filter(|p| self.derived_rels.contains(p)).collect();
+        let mut names: Vec<Sym> = self.lat.cell_rels().filter(|p| self.derived_rels.contains(p)).collect();
         names.sort_by(|a, b| cmp_js(self.h.name(*a), self.h.name(*b)));
         for p in names {
             if !strat.contains_key(&p) {
-                return Err(Halt::Strat(
-                    format!(
-                        "program rejected: the stock evaluator cannot close the {} {}: it has no stratum row \
+                return Err(Halt::reject(format!("the stock evaluator cannot close the {} {}: it has no stratum row \
                          (load rules/strata.rofl, or run the default evaluator)",
-                        self.lat.lat_word(p),
+                        self.lat.algebra(p).word(),
                         self.h.name(p)
-                    ),
-                    String::new(),
-                ));
+                    )));
             }
         }
         for r in strat_rules.iter().filter(|r| !r.lattice_outer.is_empty()) {
@@ -11411,17 +11246,13 @@ impl Eval {
                     _ => !self.derived_rels.contains(p),
                 };
                 if !ok {
-                    return Err(Halt::Strat(
-                        format!(
-                            "program rejected: rule {}: the stock evaluator cannot order its read of the {} {}: \
+                    return Err(Halt::reject(format!("rule {}: the stock evaluator cannot order its read of the {} {}: \
                              a rule reading it from outside its recursion must be ranked strictly above it \
                              (load rules/strata.rofl, or run the default evaluator)",
                             self.h.name(r.id),
-                            self.lat.lat_word(*p),
+                            self.lat.algebra(*p).word(),
                             self.h.name(*p)
-                        ),
-                        String::new(),
-                    ));
+                        )));
                 }
             }
         }
@@ -11462,7 +11293,7 @@ impl Eval {
                     if matches!(b, BodyElem::Neg(_)) {
                         out.push_str("not ");
                     }
-                    let k = self.resolved_lit_key(l, s);
+                    let k = self.lit_key(l, s);
                     out.push_str(&k);
                 }
                 BodyElem::Bi { op, l, r } => {
@@ -11581,24 +11412,6 @@ impl Eval {
         }
     }
 
-    fn resolved_lit_key(&mut self, l: &Lit, s: &Subst) -> String {
-        let mut out = String::new();
-        out.push_str(self.h.name(l.rel));
-        out.push('[');
-        let p = walk(&self.h, l.persp, s);
-        self.h.canon_term(p, &mut out);
-        out.push_str("](");
-        let args: Vec<Term> = l.args.iter().map(|a| resolve(&mut self.h, *a, s)).collect();
-        for (i, a) in args.iter().enumerate() {
-            if i > 0 {
-                out.push(',');
-            }
-            self.h.canon_term(*a, &mut out);
-        }
-        out.push(')');
-        out
-    }
-
     fn anon_lit_key(&mut self, l: &Lit, s: &Subst) -> String {
         let p = walk(&self.h, l.persp, s);
         let args: Vec<Term> = l.args.iter().map(|a| resolve(&mut self.h, *a, s)).collect();
@@ -11609,17 +11422,16 @@ impl Eval {
         let mut ts = vec![p];
         ts.extend_from_slice(args);
         let cv = canon_vars(&mut self.h, &ts);
+        self.term_key(rel, cv[0], &cv[1..])
+    }
+
+    fn term_key(&self, rel: Sym, p: Term, args: &[Term]) -> String {
         let mut out = String::new();
         out.push_str(self.h.name(rel));
         out.push('[');
-        self.h.canon_term(cv[0], &mut out);
+        self.h.canon_term(p, &mut out);
         out.push_str("](");
-        for (i, a) in cv[1..].iter().enumerate() {
-            if i > 0 {
-                out.push(',');
-            }
-            self.h.canon_term(*a, &mut out);
-        }
+        write_arg_list(&self.h, args, &mut out);
         out.push(')');
         out
     }
@@ -11870,7 +11682,7 @@ impl Eval {
     /// Every record an unknown leaves (a fault, the trail, an unknown asked, the
     /// heads and edges and cells left undecided), then the store's version and tick.
     fn unknown_marks(&self) -> Vec<u64> {
-        let n = [self.demand.trail.len(), self.demand.asked.len(), self.lat.plain_pending.len(), self.unk_edges.len(), self.lat.plain_undecided.len(), self.lat.undecided.len(), self.lat.plain.len()];
+        let n = [self.demand.trail.len(), self.demand.asked.len(), self.lat.pass.plain_pending.len(), self.shrug.unk_edges.len(), self.lat.pass.plain_undecided.len(), self.lat.carry.undecided.len(), self.lat.carry.plain.len()];
         let mut m = vec![self.fault_count as u64];
         m.extend(n.iter().map(|x| *x as u64));
         m.extend([self.store.version, self.store.tick as u64]);
@@ -11889,7 +11701,7 @@ impl Eval {
             let Some(ms) = unify_all(&self.h, &l.args, &args, s) else { continue };
             let dk = match mref {
                 PremRef::Fact(f) => self.store.key(&self.h, f),
-                _ => self.resolved_lit_key(l, &ms),
+                _ => self.lit_key(l, &ms),
             };
             if seen_keys.insert(dk.clone()) {
                 open.push((ms, mref, dk));
@@ -11992,21 +11804,17 @@ impl Eval {
             self.note_read(l, s, out.len());
             return Ok(out);
         }
-        let drs: Option<Vec<Rc<ERule>>> = self
-            .demand.rels
-            .iter()
-            .find(|(r, _)| *r == l.rel)
-            .map(|(_, rs)| rs.clone());
+        let drs: Option<Vec<Rc<ERule>>> = self.demand.rules(l.rel).map(<[_]>::to_vec);
         // A CLOSED RELATION'S ANSWERS ARE ALL IN THE STORE at its fixpoint (its
         // rules fire bottom-up and its news refires every reader): read, not unfolded
-        let closed = self.demand.closed.contains(&l.rel);
+        let closed = self.demand.of(l.rel).closed;
         let drs = drs.filter(|_| !closed || brk!("demand_recursion_unfolds" => true, "demand_closed_unfolds" => true; false));
         // A CALL MET AGAIN INSIDE ITS OWN UNFOLDING would unfold without end. It
         // reads the answers found so far, and the first call unfolds again until
         // they stop growing: the least fixpoint of a positive recursion. Met under
         // a negation opened inside the cycle, answers that may still grow decide
         // nothing: they are unknown past those found, and so is the call above.
-        let keyed = if closed { brk!("demand_closed_unfolds" => true; false) } else { self.demand.cyclic.contains(&l.rel) };
+        let keyed = if closed { brk!("demand_closed_unfolds" => true; false) } else { self.demand.of(l.rel).cyclic };
         let call = drs.as_ref().filter(|_| keyed).map(|_| self.anon_lit_key(l, s));
         let met = call.as_ref().and_then(|k| self.demand.calls.iter().position(|c| c.key == *k));
         let again = met.filter(|_| !closed && brk!("demand_cycle_unfolds" => false; true));
@@ -12018,7 +11826,7 @@ impl Eval {
         let member = if met.is_none() && !closed { call.as_deref().and_then(|k| self.scc_member(k)) } else { None };
         // A CALL A COMPLETE ONE COVERS reads its answers: they were all found over this store, in a firing
         // (a question notes the unknowns it reads, which a firing leaves to the holes it writes)
-        let tabled = call.is_some() && met.is_none() && member.is_none() && only.is_none() && self.firing && !self.demand.asking && self.assume.is_none() && self.demand.tabled.contains(&l.rel) && brk!("demand_done_off" => false; true);
+        let tabled = call.is_some() && met.is_none() && member.is_none() && only.is_none() && self.firing && !self.demand.asking && self.assume.is_none() && self.demand.of(l.rel).tabled && brk!("demand_done_off" => false; true);
         let served = if tabled { self.done_answers(l, s) } else { None };
         let out = if reread || member.is_some() || served.is_some() { Vec::new() } else { self.store_answers(l, s, only) };
         let mut open: Vec<(Subst, PremRef, String)> = Vec::new();
@@ -12038,11 +11846,7 @@ impl Eval {
             if cut {
                 self.demand_cycle(l, s);
             } else {
-                let c = &mut self.demand.calls[j];
-                c.read = true;
-                c.seen = c.seen.min(c.answers.len());
-                let from = if c.linear { c.from } else { 0 };
-                let answers = c.answers[from..].to_vec();
+                let answers = self.demand.calls[j].read_answers();
                 self.read_answers(l, s, answers, &mut seen_keys, &mut open)?;
             }
         }
@@ -12052,11 +11856,7 @@ impl Eval {
             for c in self.demand.calls[low + 1..].iter_mut() {
                 c.low = c.low.min(brk!("scc_member_reads_free" => c.low; low));
             }
-            let c = &mut self.demand.scc[i].as_mut().unwrap().call;
-            c.read = true;
-            c.seen = c.seen.min(c.answers.len());
-            let from = if c.linear { c.from } else { 0 };
-            let answers = c.answers[from..].to_vec();
+            let answers = self.demand.scc[i].as_mut().unwrap().call.read_answers();
             self.read_answers(l, s, answers, &mut seen_keys, &mut open)?;
         }
         let drs = drs.filter(|_| served.is_none() && member.is_none());
@@ -12147,7 +11947,7 @@ impl Eval {
         let scc_from = self.demand.scc.len();
         let mut u = Unfolding { pushed: call.is_some(), p, scc_from, lr: None, pass: 0, scc: false, full: false, old: false, marks: Vec::new() };
         let Some(key) = call else { return u };
-        let linear = self.demand.linear.contains(&l.rel) && brk!("demand_naive_passes" => false; true);
+        let linear = self.demand.of(l.rel).linear && brk!("demand_naive_passes" => false; true);
         let marks = self.unknown_marks();
         let mut c = DemandCall { key, neg: self.demand.neg_level, linear, low: p, marks, seen: usize::MAX, ..Default::default() };
         let stored = if only.is_some() { self.store_answers(l, s, None) } else { out.to_vec() };
@@ -12223,7 +12023,7 @@ impl Eval {
             };
             let dk = match mref {
                 PremRef::Fact(f) => self.store.key(&self.h, f),
-                _ => self.resolved_lit_key(l, &ms),
+                _ => self.lit_key(l, &ms),
             };
             let new = !u.pushed || self.keep_answer(l, &ms, mref, &dk, rid)?;
             grew |= u.pushed && new;
@@ -12323,7 +12123,7 @@ impl Eval {
             let units: Vec<SccMember> = self.demand.scc.drain(scc_from..).flatten().collect();
             for m in units {
                 self.demand.scc_at.remove(&m.call.key);
-                if self.demand.tabled.contains(&m.lit.rel) {
+                if self.demand.of(m.lit.rel).tabled {
                     self.table_call(m.call.key, m.call.answers, m.call.rows);
                 } else {
                     self.give_rows(m.call.rows);
@@ -12426,12 +12226,25 @@ impl Eval {
                 }
                 out.push((sol.s, PremRef::Fact(id)));
             } else {
-                let k = format!("open {}", self.resolved_lit_key(call, &sol.s));
+                let k = format!("open {}", self.lit_key(call, &sol.s));
                 let sy = self.h.intern(&k);
                 out.push((sol.s, PremRef::Bi(sy)));
             }
         }
         Ok(out)
+    }
+
+    /// The rule as written (an alias is explained from its source), renamed apart, with its head unified with `lit`.
+    fn unify_written_head(&mut self, r: &ERule, lit: &Lit) -> (Clause, Option<Subst>) {
+        let written = self.alias_orig.get(&r.id).cloned();
+        let rn = self.rename_clause(written.as_ref().unwrap_or(&r.clause));
+        let mut s = self.eval_builtin(self.v.op_eq, rn.head.persp, lit.persp, &Subst::default(), None);
+        for i in 0..rn.head.args.len().min(lit.args.len()) {
+            let Some(cur) = s.take() else { break };
+            s = self.eval_builtin(self.v.op_eq, rn.head.args[i], lit.args[i], &cur, None);
+        }
+        let s0 = s.filter(|_| rn.head.args.len() == lit.args.len());
+        (rn, s0)
     }
 
     fn rename_clause(&mut self, c: &Clause) -> Clause {
@@ -12450,7 +12263,7 @@ impl Eval {
             // An existence question. When the relation is not demand-backed,
             // `matchPremise` has no side effect and no order that matters, so
             // the answer is the same and nothing is built to throw away.
-            if !self.demand.rels.iter().any(|(r, _)| *r == l.rel) {
+            if !self.demand.on(l.rel) {
                 return self.match_exists(l, s);
             }
             return Ok(self.match_premise(l, s, depth, None)?.is_empty());
@@ -12753,7 +12566,7 @@ impl Eval {
         Some(match op {
             AggOp::Union => {
                 let xs = set_elems(&self.h, &self.v, sv)?;
-                brk!("in_first_only" => xs.first() == Some(&e); set_contains(&self.h, &mut self.lat.join_keys, xs, e))
+                brk!("in_first_only" => xs.first() == Some(&e); set_contains(&self.h, &mut self.lat.pass.join_keys, xs, e))
             }
             AggOp::Hull => {
                 let (lo, hi) = iv_bounds(&self.h, &self.v, sv)?;
@@ -12792,7 +12605,7 @@ impl Eval {
         self.fault.get_or_insert(reason);
         self.fault_count += 1;
         self.last_fault = Some(reason);
-        self.last_fault_rule = rule_id;
+        self.shrug.last_fault_rule = rule_id;
         if let Some(rid) = rule_id {
             // a rule a lattice decides writes its hole when the lattice
             // closes, if the failed derivation still stands (`lattice_fault`)
@@ -12809,17 +12622,7 @@ impl Eval {
             return;
         }
         let marker = self.rule_marker(rule_id);
-        if self.hole_met(marker, reason) {
-            self.charge_hole_row();
-        }
-        let args = [marker, Term::atom(reason)];
-        if self.eval_hole(&args) {
-            let id = self
-                .store
-                .get(self.v.hole, self.v.kernel_persp, &args)
-                .unwrap();
-            self.cur_front.note(self.v.hole, id);
-        }
+        self.cell_hole(marker, reason);
     }
 
     // ----------------------------------------------- the alternating fixpoint
@@ -12846,18 +12649,7 @@ impl Eval {
     /// What an evaluation knows of the cells it sealed: gone with the
     /// derived layer, which `clear_derived` drops with the cells it frees.
     fn forget_cells(&mut self) {
-        self.cells.agg_memo.clear();
-        self.cells.reach_memo.clear();
-        self.cells.cell_reach.clear();
-        self.cells.cell_cond.clear();
-        self.cells.cell_decided.clear();
-        self.cells.regions_capped.clear();
-        self.hol_shared.clear();
-        self.thr.cells.clear();
-        self.thr.open.clear();
-        self.thr.acc.clear();
-        self.thr.fresh.clear();
-        self.height_memo.clear();
+        self.memo = DerivedMemo::default();
     }
 
     fn wfs_round(&mut self, assume: Rc<Assumption>) -> Result<(), Halt> {
@@ -12883,32 +12675,23 @@ impl Eval {
     /// in any round after (docs/aggregates.md, "Shrugs, as built").
     fn wfs_unknowns(&mut self, assume: Rc<Assumption>) -> Result<(), Halt> {
         let seeds: Vec<Unknown> =
-            std::mem::take(&mut self.lat.plain_pending).into_iter().map(|(u, _)| u).filter(|u| !self.unknown_holds(u)).collect();
-        if seeds.is_empty() && self.lat.undecided.is_empty() {
+            std::mem::take(&mut self.lat.pass.plain_pending).into_iter().map(|(u, _)| u).filter(|u| !self.unknown_holds(u)).collect();
+        if seeds.is_empty() && self.lat.carry.undecided.is_empty() {
             return Ok(());
         }
         for u in &seeds {
-            self.lat.plain.insert(u.clone());
+            self.lat.carry.plain.insert(u.clone());
         }
         let before = self.assume.replace(assume);
         let r = self.poison_with(seeds, &[], &[], false);
         self.assume = before;
-        self.lat.undecided.clear();
+        self.lat.carry.undecided.clear();
         r
     }
 
     /// A fresh carry for an alternation: nothing noted, every rule closed.
     fn wfs_carry_reset(&mut self) {
-        self.lat.unknown.clear();
-        self.unk.lat_unknown_rel.clear();
-        self.unk.lat_unknown_at.clear();
-        self.unk.unknown_at.clear();
-        self.unk.unknown_any.clear();
-        self.lat.spread.clear();
-        self.lat.undecided.clear();
-        self.lat.plain.clear();
-        self.lat.withdrawn.clear();
-        self.lat.plain_closed = self.rules.iter().filter(|r| r.safe).map(|r| r.id).collect();
+        self.lat.carry = UnknownCarry { plain_closed: self.rules.iter().filter(|r| r.safe).map(|r| r.id).collect(), ..Default::default() };
     }
 
     fn run_well_founded(&mut self) -> Result<(), Halt> {
@@ -12957,36 +12740,24 @@ impl Eval {
         // fed to a stratified world that aggregates them (`Session::feed_below`).
         const COMPOSE: &str = "evaluate the well-founded world below and feed its true and unknown rows \
                                to a stratified world that aggregates them (rofl load --below)";
-        if let Some(p) = brk!("wfs_admits_tag" => None; self.tags.by_rel.keys().min_by(|a, b| cmp_js(self.h.name(**a), self.h.name(**b)))) {
-            return Some(Halt::Strat(
-                format!(
-                    "program rejected: tag {} ({}) is not evaluated under well_founded semantics: a tag is a cell, and a cell \
-                     merged under an assumption holds a value no model may have; {COMPOSE}",
-                    self.h.name(*p),
-                    self.tags.by_rel[p].1.name()
-                ),
-                String::new(),
-            ));
+        let cell_refusal = |what: String, reason: &str| Some(Halt::reject(format!("{what} is not evaluated under well_founded semantics: {reason}; {COMPOSE}")));
+        if let Some((p, (_, alg))) = brk!("wfs_admits_tag" => None; self.lat.tags().min_by(|a, b| cmp_js(self.h.name(a.0), self.h.name(b.0)))) {
+            return cell_refusal(
+                format!("tag {} ({})", self.h.name(p), alg.name()),
+                "a tag is a cell, and a cell merged under an assumption holds a value no model may have",
+            );
         }
-        if let Some(p) = self.lat.subs.keys().filter(|_| brk!("wfs_admits_subsumption" => false; true)).min_by(|a, b| cmp_js(self.h.name(**a), self.h.name(**b))) {
-            return Some(Halt::Strat(
-                format!(
-                    "program rejected: subsumption {} is not evaluated under well_founded semantics: a value dominated \
-                     under an assumption is dropped for a fact no model may have; {COMPOSE}",
-                    self.h.name(*p)
-                ),
-                String::new(),
-            ));
+        if let Some(p) = self.lat.subs().map(|(p, _)| p).filter(|_| brk!("wfs_admits_subsumption" => false; true)).min_by(|a, b| cmp_js(self.h.name(*a), self.h.name(*b))) {
+            return cell_refusal(
+                format!("subsumption {}", self.h.name(p)),
+                "a value dominated under an assumption is dropped for a fact no model may have",
+            );
         }
-        if let Some(p) = brk!("wfs_admits_lattice" => None; self.lat.lattices.keys().filter(|p| !self.lat.subs.contains_key(p)).min_by(|a, b| cmp_js(self.h.name(**a), self.h.name(**b)))) {
-            return Some(Halt::Strat(
-                format!(
-                    "program rejected: lattice {} is not evaluated under well_founded semantics: a cell improved \
-                     under an assumption holds a value no model may have; {COMPOSE}",
-                    self.h.name(*p)
-                ),
-                String::new(),
-            ));
+        if let Some(p) = brk!("wfs_admits_lattice" => None; self.lat.cell_rels().filter(|p| self.lat.algebra(*p).sub.is_none()).min_by(|a, b| cmp_js(self.h.name(*a), self.h.name(*b)))) {
+            return cell_refusal(
+                format!("lattice {}", self.h.name(p)),
+                "a cell improved under an assumption holds a value no model may have",
+            );
         }
         let admitted = |op: AggOp| match op {
             AggOp::AtLeast => brk!("wfs_admits_threshold" => true; false),
@@ -12999,29 +12770,15 @@ impl Eval {
             })
         });
         if let Some((rid, op)) = found {
-            return Some(Halt::Strat(
-                format!(
-                    "program rejected: {} is not evaluated under well_founded semantics (rule {}): a cell sealed \
+            return Some(Halt::reject(format!("{} is not evaluated under well_founded semantics (rule {}): a cell sealed \
                      under an assumption counts facts that may not hold; {COMPOSE}",
                     op.name(),
                     self.h.name(rid)
-                ),
-                String::new(),
-            ));
+                )));
         }
         if !self.demand.rels.is_empty() {
-            let names: Vec<&str> = self
-                .demand.rels
-                .iter()
-                .map(|(r, _)| self.h.name(*r))
-                .collect();
-            return Some(Halt::Strat(
-                format!(
-                    "program rejected: the alternating fixpoint cannot assume a demand-backed relation ({})",
-                    names.join(", ")
-                ),
-                String::new(),
-            ));
+            let names: Vec<&str> = self.demand.rels.iter().map(|(r, _)| self.h.name(*r)).collect();
+            return Some(Halt::reject(format!("the alternating fixpoint cannot assume a demand-backed relation ({})", names.join(", "))));
         }
         None
     }
@@ -13168,7 +12925,7 @@ impl Eval {
     fn alternate(&mut self, from: Option<Rc<Assumption>>) -> Result<(Rc<Assumption>, HashMap<FKey, Witness>, Rc<Assumption>), Halt> {
         let carried = self.carried_unknowns(self.store.tick);
         let holes0: HashSet<FactId> = self.store.rel_persp(&self.h, self.v.hole, self.v.kernel_persp).into_iter().collect();
-        let (edges0, now0) = (self.unk_edges.len(), self.holes_now.len());
+        let (edges0, now0) = (self.shrug.unk_edges.len(), self.shrug.holes_now.len());
         let mut start: Option<Rc<Assumption>> = from;
         let mut restarted = false;
         let mut total = 0usize;
@@ -13176,15 +12933,15 @@ impl Eval {
             let (generous, wits, mean, n) = self.alternate_from(start.clone(), &carried, total)?;
             total += n;
             let moved = !restarted || start.as_ref().is_none_or(|s| !same_recs(s, &mean));
-            if self.lat.unknown.is_empty() || !moved || brk!("shrug_wfs_history_kept" => true; false) {
+            if self.lat.carry.unknown.is_empty() || !moved || brk!("shrug_wfs_history_kept" => true; false) {
                 self.diags.push(format!("well-founded fixpoint settled after {total} alternation(s)"));
                 return Ok((generous, wits, mean));
             }
             let met: Vec<FactId> = self.store.rel_persp(&self.h, self.v.hole, self.v.kernel_persp).into_iter().filter(|f| !holes0.contains(f)).collect();
             self.store.remove_many(&met);
-            self.unk_edges.truncate(edges0);
-            self.holes_now.truncate(now0);
-            self.holes_met = self.holes_now.iter().copied().collect();
+            self.shrug.unk_edges.truncate(edges0);
+            self.shrug.holes_now.truncate(now0);
+            self.shrug.holes_met = self.shrug.holes_now.iter().copied().collect();
             start = Some(mean);
             restarted = true;
         }
@@ -13210,11 +12967,11 @@ impl Eval {
         let cumulative = brk!("shrug_wfs_carry_reset" => false; true);
         let mut i = 0usize;
         loop {
-            self.lat.plain_pending = carried.to_vec();
+            self.lat.pass.plain_pending = carried.to_vec();
             if !cumulative {
                 self.wfs_carry_reset();
             }
-            let noted = self.lat.unknown.len();
+            let noted = self.lat.carry.unknown.len();
             self.wfs_round(mean.clone())?;
             let generous = Rc::new(self.assumption_of());
             let generous_wits = self.all_witnesses();
@@ -13222,7 +12979,7 @@ impl Eval {
             self.wfs_round(generous.clone())?;
             brk!("wfs_unknowns_decide" => (); self.wfs_unknowns(generous.clone())?);
             let next = Rc::new(self.assumption_of());
-            let settled = same_recs(&next, &mean) && (!cumulative || self.lat.unknown.len() == noted);
+            let settled = same_recs(&next, &mean) && (!cumulative || self.lat.carry.unknown.len() == noted);
             mean = next;
             if settled {
                 return Ok((generous, generous_wits, mean, i + 1));
@@ -13410,6 +13167,48 @@ fn tarjan(succ: &[Vec<usize>]) -> Vec<usize> {
         }
     }
     comp
+}
+
+/// The strongly connected component of every relation `deps` names, numbered by `tarjan` over the relations in
+/// ascending order, and how many there are.
+fn rel_scc(deps: &HashMap<Sym, Vec<Sym>>) -> (HashMap<Sym, usize>, usize) {
+    let mut syms: Vec<Sym> = deps.iter().flat_map(|(k, v)| std::iter::once(*k).chain(v.iter().copied())).collect();
+    syms.sort_unstable();
+    syms.dedup();
+    let at: HashMap<Sym, usize> = syms.iter().enumerate().map(|(i, s)| (*s, i)).collect();
+    let succ: Vec<Vec<usize>> = syms.iter().map(|s| deps.get(s).into_iter().flatten().map(|w| at[w]).collect()).collect();
+    let comp = tarjan(&succ);
+    (syms.iter().zip(&comp).map(|(s, c)| (*s, *c)).collect(), comp.iter().max().map_or(0, |c| c + 1))
+}
+
+fn reads_any(r: &ERule, set: &HashSet<Sym>) -> bool {
+    r.clause.body.iter().flat_map(|b| b.lits_deep()).any(|l| set.contains(&l.rel))
+}
+
+/// `seed` and the head of every rule of `rules` that `fires` on the set, through each other, to a fixpoint.
+fn readers_cone<'a>(mut set: HashSet<Sym>, rules: impl Iterator<Item = &'a Rc<ERule>> + Clone, fires: impl Fn(&ERule, &HashSet<Sym>) -> bool) -> HashSet<Sym> {
+    loop {
+        let n = set.len();
+        for r in rules.clone() {
+            if fires(r, &set) {
+                set.insert(r.clause.head.rel);
+            }
+        }
+        if set.len() == n {
+            return set;
+        }
+    }
+}
+
+/// What `from` reaches by `next`, itself only where `next` leads back to it.
+fn reachable<N: IntoIterator<Item = Sym>>(from: impl IntoIterator<Item = Sym>, mut next: impl FnMut(Sym) -> N) -> HashSet<Sym> {
+    let (mut seen, mut todo): (HashSet<Sym>, Vec<Sym>) = (HashSet::new(), from.into_iter().collect());
+    while let Some(r) = todo.pop() {
+        if seen.insert(r) {
+            todo.extend(next(r));
+        }
+    }
+    seen
 }
 
 fn fact_prems(prems: &[PremRef]) -> Vec<FactId> {
@@ -14815,20 +14614,22 @@ impl Default for WhyOpts {
 pub struct WhynotBounds {
     pub max_depth: usize,
     pub max_nodes: usize,
+    /// Every failure the walk met, not only the nearest.
+    pub all: bool,
 }
 
 impl Default for WhynotBounds {
     /// src/api.ts `DEFAULT_WHYNOT_DEPTH` and `DEFAULT_WHYNOT_NODES`.
     fn default() -> Self {
-        WhynotBounds { max_depth: 6, max_nodes: 64 }
+        WhynotBounds { max_depth: 6, max_nodes: 64, all: false }
     }
 }
 
 /// The bounds an `explain_request(whynot, A)` is demonstrated under:
-/// src/api.ts `explainRequests` passes `{ maxDepth: 3, maxNodes: 64 }`, not
+/// src/api.ts `explainRequests` passes `{ maxDepth: 3, maxNodes: 64, all: true }`, not
 /// the protocol's default depth of 6, and the bridge's rows are compared with
 /// its.
-pub const EXPLAIN_WHYNOT_BOUNDS: WhynotBounds = WhynotBounds { max_depth: 3, max_nodes: 64 };
+pub const EXPLAIN_WHYNOT_BOUNDS: WhynotBounds = WhynotBounds { max_depth: 3, max_nodes: 64, all: true };
 
 impl WhynotBounds {
     /// The bounds a caller asked for, the default where one is absent and 1
@@ -14836,7 +14637,7 @@ impl WhynotBounds {
     pub fn clamped(depth: Option<i64>, nodes: Option<i64>) -> Self {
         let d = WhynotBounds::default();
         let at_least_one = |v: Option<i64>, or: usize| v.map_or(or, |n| n.max(1) as usize);
-        WhynotBounds { max_depth: at_least_one(depth, d.max_depth), max_nodes: at_least_one(nodes, d.max_nodes) }
+        WhynotBounds { max_depth: at_least_one(depth, d.max_depth), max_nodes: at_least_one(nodes, d.max_nodes), all: false }
     }
 }
 
@@ -14853,8 +14654,75 @@ enum WnTask {
     Failure(Lit, usize),
     Rule(Lit, Rc<ERule>, usize),
     Deeper(Lit, usize),
-    Line(String),
+    Line(String, Option<WnMark>),
     Unpath(String),
+}
+
+/// What a line of `whynot`'s walk is, at which level, and for a failed
+/// premise how many premises follow it (src/aggeval.ts `WnMark`).
+#[derive(Clone, Copy, PartialEq)]
+enum WnKind { Rule, NoHead, Info, Premise, NoFail, Leaf, Cut }
+type WnMark = (WnKind, usize, usize);
+type WnLine = (String, Option<WnMark>);
+
+/// A chain the walk cut short, or a rule it found no failure of: farther than
+/// every chain that ends.
+const WN_FAR: usize = 1_000_000;
+
+/// THE NEAREST FAILURE of a whynot's walk: the lines kept. A chain costs the
+/// premises it leaves unmet: at each rule those after the one it failed at,
+/// and one at its end, a premise nothing supports, a negation blocked or a
+/// builtin false. The rule and the failure of least cost are kept, the first
+/// of equal ones, with the matches that rule did not follow. The walk is
+/// written in preorder, so a line's parts come after it: they are costed from
+/// the last line up, with no frame per level (src/aggeval.ts `wnNearest`).
+fn wn_nearest(ls: &[WnLine]) -> Vec<usize> {
+    let n = ls.len();
+    let mut parent: Vec<Option<usize>> = vec![None; n];
+    let (mut premise_at, mut rule_at): (HashMap<usize, usize>, HashMap<usize, usize>) = (HashMap::new(), HashMap::new());
+    for (i, (_, m)) in ls.iter().enumerate() {
+        let Some((k, level, _)) = *m else { continue };
+        parent[i] = match k {
+            WnKind::Rule | WnKind::NoHead | WnKind::Leaf | WnKind::Cut if level > 1 => premise_at.get(&(level - 1)).copied(),
+            WnKind::Rule | WnKind::NoHead | WnKind::Leaf | WnKind::Cut => Some(n),
+            _ => rule_at.get(&level).copied(),
+        };
+        match k {
+            WnKind::Rule => { rule_at.insert(level, i); }
+            WnKind::Premise => { premise_at.insert(level, i); }
+            _ => {}
+        }
+    }
+    let mut best: Vec<Option<usize>> = vec![None; n + 1];
+    let mut cost: Vec<usize> = vec![usize::MAX; n + 1];
+    for i in (0..n).rev() {
+        let (Some((k, _, left)), Some(p)) = (ls[i].1, parent[i]) else { continue };
+        let c = match k {
+            WnKind::Info => continue,
+            WnKind::Leaf => 1,
+            WnKind::Rule => best[i].map_or(WN_FAR, |_| cost[i]),
+            WnKind::Premise => left + best[i].map_or(1, |_| cost[i]),
+            _ => WN_FAR,
+        };
+        if c <= cost[p] {
+            cost[p] = c;
+            best[p] = Some(i);
+        }
+    }
+    let mut kept = Vec::new();
+    let mut at = best[n];
+    while let Some(i) = at {
+        kept.push(i);
+        if matches!(ls[i].1, Some((WnKind::Rule, _, _))) {
+            let mut j = i + 1;
+            while matches!(ls.get(j), Some((_, Some((WnKind::Info, _, _))))) {
+                kept.push(j);
+                j += 1;
+            }
+        }
+        at = best[i];
+    }
+    kept
 }
 
 /// A by-file walk (`whynot_files`): the files by key prefix, each file's
@@ -14886,6 +14754,8 @@ struct WnCtx {
     /// the depth below a level is what the demonstration shows, so one reached
     /// again at a level it was written at is referred to, at another written again.
     done: HashMap<String, HashSet<usize>>,
+    /// Every failure the walk met, or only the nearest (`wn_nearest`).
+    all: bool,
 }
 
 impl Eval {
@@ -14985,8 +14855,7 @@ impl Eval {
 
     fn why_at(&mut self, lit: &Lit, o: &WhyOpts, shown: Option<&str>) -> Result<String, String> {
         let p = self.why_ground(lit)?;
-        let mut key = String::new();
-        write_fact_key(&self.h, lit.rel, p, &lit.args, &mut key);
+        let key = fact_key(&self.h, lit.rel, p, &lit.args);
         let found = self.store.get(lit.rel, p, &lit.args);
         let held = if found.is_none() { self.vrow_held(lit.rel, p, &lit.args) } else { None };
         let start = match (found, held) {
@@ -15099,8 +14968,7 @@ impl Eval {
             TermK::Func(i) => (self.h.fname(i), self.h.fargs(i)),
             _ => return None,
         };
-        let mut k = String::new();
-        write_fact_key(&self.h, rel, self.store.rec(f).persp, at, &mut k);
+        let k = fact_key(&self.h, rel, self.store.rec(f).persp, at);
         Some(k)
     }
 
@@ -15135,7 +15003,7 @@ impl Eval {
     /// shortest proof of the claim is the assertion, not that circle. A firing
     /// staged from an earlier tick reads that tick's fact, which is no circle.
     fn why_witness(&mut self, id: FactId) -> Option<(Sym, u32, Vec<PremRef>)> {
-        let w = if !self.prov.no_witness || !self.lat.lattices.is_empty() {
+        let w = if !self.prov.no_witness || self.lat.has_cells() {
             self.store.witness_of(&self.h, id, &mut self.why.heights).map(|w| (w.rule, w.tick, w.prems.to_vec()))?
         } else {
             self.why_firings(id).into_iter().next()?
@@ -15170,9 +15038,8 @@ impl Eval {
     }
 
     fn render_why(&mut self, id: FactId, indent: usize, seen: &mut HashSet<FactId>, o: &WhyOpts, next: &mut Vec<WhyTask>) {
-        let mut key = String::new();
         let r = self.store.rec(id);
-        write_fact_key(&self.h, r.rel, r.persp, self.store.args(id), &mut key);
+        let key = fact_key(&self.h, r.rel, r.persp, self.store.args(id));
         let pad = "  ".repeat(indent);
         if seen.contains(&id) {
             next.push(WhyTask::Line(format!("{pad}{key} [cycle]")));
@@ -15180,9 +15047,8 @@ impl Eval {
         }
         // A FACT WRITTEN OUT ONCE IS REFERRED TO AFTER: the proof is a DAG, and
         // what a leaf says is as short as a reference
-        let special = self.lat.subs.contains_key(&r.rel)
-            || self.lat.lattices.contains_key(&r.rel)
-            || brk!("count_why_plain" => false; self.tags.count_rel.contains_key(&r.rel));
+        let special = self.lat.is_cell(r.rel)
+            || brk!("count_why_plain" => false; self.lat.algebra(r.rel).count.is_some());
         let w = if special { None } else { self.why_witness(id) };
         let leaf = !special && w.is_none();
         if !leaf && !brk!("why_dag_off" => true; self.why.done.insert((false, id))) {
@@ -15191,17 +15057,17 @@ impl Eval {
         }
         seen.insert(id);
         // what it rests on is rendered before it leaves the path
-        if self.lat.subs.contains_key(&r.rel) {
+        if self.lat.algebra(r.rel).sub.is_some() {
             self.render_sub(id, &key, indent, o, next);
             next.push(WhyTask::Unsee(id));
             return;
         }
-        if let Some(&(_, op)) = self.lat.lattices.get(&r.rel) {
+        if let Some((_, op)) = self.lat.algebra(r.rel).cell {
             self.render_lattice(id, &key, op, indent, o, next);
             next.push(WhyTask::Unsee(id));
             return;
         }
-        if brk!("count_why_plain" => false; self.tags.count_rel.contains_key(&r.rel)) {
+        if brk!("count_why_plain" => false; self.lat.algebra(r.rel).count.is_some()) {
             self.render_counting(id, &key, indent, o, next);
             next.push(WhyTask::Unsee(id));
             return;
@@ -15246,7 +15112,7 @@ impl Eval {
                 }
             } else if !rest.is_empty() && !brk!("why_hint_missing" => true; false) {
                 let n = rest.len();
-                next.line(format!("{pad}  [{n} more derivation{}: why all {}]", if n == 1 { "" } else { "s" }, o.query));
+                next.line(format!("{pad}  [{n} more derivation{}: why all {}]", plural(n), o.query));
             }
         }
         next.push(WhyTask::Unsee(id));
@@ -15278,7 +15144,7 @@ impl Eval {
     /// every derivation that holds at the fixpoint was fired, and is a solution
     /// of a rule with its head bound to the fact.
     fn why_firings(&mut self, id: FactId) -> Vec<(Sym, u32, Vec<PremRef>)> {
-        if !self.prov.no_witness || !self.lat.lattices.is_empty() {
+        if !self.prov.no_witness || self.lat.has_cells() {
             return self.store.firings_ranked(&self.h, id, &mut self.why.heights);
         }
         let mut fs = self.store.firings(id);
@@ -15368,10 +15234,16 @@ impl Eval {
         next.push(WhyTask::Line(format!(
             "{pad}{key} [{}: {n} member{}{}]",
             self.lat_label(self.store.rec(id).rel, op),
-            if n == 1 { "" } else { "s" },
+            plural(n),
             if brk!("lattice_why_ghost_unmarked" => true; self.store.alive(id)) { "" } else { "; an earlier value, improved on since" }
         )));
         let limit = if brk!("lattice_why_one_member" => true; indent == 0) { brk!("lattice_why_one_member" => 1; o.members) } else { 1 };
+        self.member_lines(members, limit, indent, o, next);
+    }
+
+    /// The members of a best-valued fact, `limit` of them, each with its premises below it.
+    fn member_lines(&self, members: Vec<(u32, Sym, u32, Vec<PremRef>)>, limit: usize, indent: usize, o: &WhyOpts, next: &mut Vec<WhyTask>) {
+        let (pad, n) = ("  ".repeat(indent), members.len());
         for (i, (hgt, rule, tick, prems)) in members.into_iter().enumerate() {
             if i >= limit {
                 if indent == 0 {
@@ -15395,7 +15267,7 @@ impl Eval {
         let pad = "  ".repeat(indent);
         let rec = self.store.rec(id);
         let args = self.store.args(id).to_vec();
-        let k = self.lat.subs[&rec.rel].keylen;
+        let k = self.lat.sub(rec.rel).keylen;
         let ck: LatKey = (rec.rel, rec.persp, args[..k].into());
         let members = match self.best_members(id) {
             Ok(m) => m,
@@ -15408,40 +15280,27 @@ impl Eval {
             let at = front.iter().position(|f| *f == id).map_or(0, |i| i + 1);
             format!("{at} of {} in the front of its cell", front.len())
         } else {
-            let by = self.lat.sub_beaten.get(&(ck.clone(), args[k..].into())).cloned();
+            let by = self.lat.pass.sub_beaten.get(&(ck.clone(), args[k..].into())).cloned();
             match by {
                 Some(v) => {
-                    let mut t = String::new();
-                    write_fact_key(&self.h, rec.rel, rec.persp, &Self::sub_args(&ck, &v), &mut t);
+                    let t = fact_key(&self.h, rec.rel, rec.persp, &Self::sub_args(&ck, &v));
                     format!("an earlier value, dominated since by {t}")
                 }
                 None => "an earlier value, dominated since".to_string(),
             }
         };
-        next.push(WhyTask::Line(format!("{pad}{key} [subsumption: {n} member{}; {place}]", if n == 1 { "" } else { "s" })));
+        next.push(WhyTask::Line(format!("{pad}{key} [subsumption: {n} member{}; {place}]", plural(n))));
         let limit = if brk!("dominance_why_one_member" => true; indent == 0) { brk!("dominance_why_one_member" => 1; o.members) } else { 1 };
-        for (i, (hgt, rule, tick, prems)) in members.into_iter().enumerate() {
-            if i >= limit {
-                if indent == 0 {
-                    next.line(format!("{pad}  [{} more members: why all {}]", n - limit, o.query));
-                }
-                break;
-            }
-            next.line(format!("{pad}  #{} h={hgt} <= {} @tick {tick}", i + 1, self.h.name(rule)));
-            for pr in prems {
-                next.push(WhyTask::Prem(pr, indent + 2));
-            }
-        }
+        self.member_lines(members, limit, indent, o, next);
         if indent == 0 && live {
             let mut beat: Vec<(String, Sym)> = self
-                .lat.sub_by_of
+                .lat.pass.sub_by_of
                 .get(&id)
                 .into_iter()
                 .flatten()
                 .filter_map(|v| {
-                    let (_, r) = self.lat.sub_by.get(&(ck.clone(), v.clone())).filter(|(f, _)| *f == id)?;
-                    let mut t = String::new();
-                    write_fact_key(&self.h, ck.0, ck.1, &Self::sub_args(&ck, v), &mut t);
+                    let (_, r) = self.lat.pass.sub_by.get(&(ck.clone(), v.clone())).filter(|(f, _)| *f == id)?;
+                    let t = fact_key(&self.h, ck.0, ck.1, &Self::sub_args(&ck, v));
                     Some((t, *r))
                 })
                 .collect();
@@ -15462,7 +15321,7 @@ impl Eval {
         if op == AggOp::Dominance {
             return "subsumption".to_string();
         }
-        match brk!("tag_label_lattice" => None; self.tags.by_rel.get(&rel)) {
+        match brk!("tag_label_lattice" => None; self.lat.algebra(rel).tag) {
             Some((_, a)) => format!("tag {}", a.name()),
             None => format!("lattice {}", op.name()),
         }
@@ -15483,7 +15342,7 @@ impl Eval {
         let n = members.len();
         next.push(WhyTask::Line(format!(
             "{pad}{key} [tag counting: the sum of {n} derivation{}] <= {} @tick {tick}",
-            if n == 1 { "" } else { "s" },
+            plural(n),
             self.h.name(rule)
         )));
         let limit = if indent == 0 { o.members } else { 1 };
@@ -15492,7 +15351,7 @@ impl Eval {
                 next.line(if indent == 0 {
                     format!("{pad}  [{} more derivations: why all {}]", n - limit, o.query)
                 } else {
-                    format!("{pad}  [{} more derivation{}]", n - limit, if n - limit == 1 { "" } else { "s" })
+                    format!("{pad}  [{} more derivation{}]", n - limit, plural(n - limit))
                 });
                 break;
             }
@@ -15520,11 +15379,11 @@ impl Eval {
             return next.push(WhyTask::Line(format!("{pad}{key} [past tick]")));
         };
         let facts = fact_prems(&prems);
-        let _ = self.store.heights(&facts, &mut self.height_memo);
+        let _ = self.store.heights(&facts, &mut self.memo.height_memo);
         let live = brk!("join_why_ghost_unmarked" => true; self.store.alive(id));
-        let n = if live { facts.len() } else { facts.iter().filter(|f| self.lat.join_of.contains_key(&self.store.rec(**f).rel)).count() };
+        let n = if live { facts.len() } else { facts.iter().filter(|f| self.lat.algebra(self.store.rec(**f).rel).join_of.is_some()).count() };
         let what = if live {
-            format!("a cover of {n} contribution{}", if n == 1 { "" } else { "s" })
+            format!("a cover of {n} contribution{}", plural(n))
         } else if prems.len() == 2 {
             "an earlier value, improved on since: the join of the value before it and a contribution".to_string()
         } else {
@@ -15543,14 +15402,13 @@ impl Eval {
                 next.line(if indent == 0 {
                     format!("{pad}  [{} more contributions: why all {}]", facts.len() - limit, o.query)
                 } else {
-                    format!("{pad}  [{} more contribution{}]", facts.len() - limit, if facts.len() - limit == 1 { "" } else { "s" })
+                    format!("{pad}  [{} more contribution{}]", facts.len() - limit, plural(facts.len() - limit))
                 });
                 break;
             }
-            let h = self.height_memo.get(f).copied().unwrap_or(0);
+            let h = self.memo.height_memo.get(f).copied().unwrap_or(0);
             let v = *self.store.args(*f).last().unwrap();
-            let mut vs = String::new();
-            self.h.canon_term(v, &mut vs);
+            let vs = self.h.canon(v);
             next.line(format!("{pad}  #{} {vs} h={h}", i + 1));
             next.push(WhyTask::Prem(PremRef::Fact(*f), indent + 2));
         }
@@ -15593,8 +15451,7 @@ impl Eval {
             }
             return self.render_prem(pr, indent, o, next);
         };
-        let mut key = String::new();
-        write_fact_key(&self.h, rel, persp, &args, &mut key);
+        let key = fact_key(&self.h, rel, persp, &args);
         let ft = fact_term(&mut self.h, &self.v, rel, persp, &args);
         if self.why.past_rows.is_none() {
             let mut by: HashMap<(Term, i64), Vec<Sym>> = HashMap::new();
@@ -15663,7 +15520,7 @@ impl Eval {
                 next.line(format!(
                     "{}{head} [quorum: the first {n} member{}]{id}",
                     "  ".repeat(indent),
-                    if n == 1 { "" } else { "s" }
+                    plural(n)
                 ));
                 for (i, m) in members.iter().enumerate() {
                     if i == o.members {
@@ -15689,13 +15546,13 @@ impl Eval {
                     self.store.cell_seals(c).iter().map(|x| format!("{}@{}", self.h.name(x.rel), x.round)).collect();
                 let members = self.store.cell_members(c).to_vec();
                 let n = members.len();
-                let what = if let Some(by) = self.cells.cell_decided.get(&c) {
-                    let known = if n == 0 { "no member known".to_string() } else { format!("{n} known member{}", if n == 1 { "" } else { "s" }) };
+                let what = if let Some(by) = self.memo.cell_decided.get(&c) {
+                    let known = if n == 0 { "no member known".to_string() } else { format!("{n} known member{}", plural(n)) };
                     format!("{known}, the same under every value of {by}")
                 } else if n == 0 {
                     brk!("empty_text" => format!("{n} members"); "empty group".to_string())
                 } else {
-                    format!("{n} member{}", if n == 1 { "" } else { "s" })
+                    format!("{n} member{}", plural(n))
                 };
                 next.line(brk!("no_sealed_text" => format!(
                     "{}{head} [aggregate: {what}]{}{id}",
@@ -15753,7 +15610,7 @@ impl Eval {
     /// it is also a question.
     fn neg_demo(&mut self, key: &str) -> Option<String> {
         let lit = self.parse_lit(key).ok()?;
-        let b = WhynotBounds { max_depth: 1, max_nodes: 64 };
+        let b = WhynotBounds { max_depth: 1, max_nodes: 64, all: true };
         self.whynot_at(&lit, &b, None).ok().map(|(_, t)| t)
     }
 
@@ -15863,8 +15720,7 @@ impl Eval {
                 self.h.fargs(i).iter().map(|a| self.shown(*a)).collect::<Vec<_>>().join(", ")
             ),
             _ => {
-                let mut k = String::new();
-                self.h.canon_term(t, &mut k);
+                let k = self.h.canon(t);
                 k
             }
         }
@@ -15925,14 +15781,14 @@ impl Eval {
     /// was widened to, and the value it closed on, an enclosure of the least
     /// value and nothing more. Empty for any other target.
     fn widened_lines(&self, marker: Term, pad: &str) -> Vec<String> {
-        let Some((val, steps, narrowed)) = self.lat.widened_marks.get(&marker) else { return Vec::new() };
+        let Some((val, steps, narrowed)) = self.lat.pass.widened_marks.get(&marker) else { return Vec::new() };
         let n = match marker.kind() {
-            TermK::Func(i) => self.h.fargs(i)[0].as_atom().and_then(|r| self.lat.widen.get(&r).copied()).unwrap_or(0),
+            TermK::Func(i) => self.h.fargs(i)[0].as_atom().and_then(|r| self.lat.algebra(r).widen).unwrap_or(0),
             _ => 0,
         };
         let mut out = vec![format!(
             "{pad}[widened: after {n} improvement{} each end the join moved went to the next bound its rules write, or to its infinity; the least value lies within {}, which is an over-approximation of it]",
-            if n == 1 { "" } else { "s" },
+            plural(n as usize),
             self.shown(*val)
         )];
         let shown: Vec<&[Term; 4]> = brk!("widen_why_one_step" => steps.iter().take(1).collect(); steps.iter().collect());
@@ -15982,20 +15838,19 @@ impl Eval {
             nodes: 0,
             path: HashSet::new(),
             done: HashMap::new(),
+            all: b.all,
         };
         let s = Subst::default();
         self.demand.asked.clear();
         if !self.match_premise(lit, &s, 0, None)?.is_empty() {
-            let mut k = String::new();
-            resolved_lit_key(&mut self.h, lit.rel, lit.persp, &lit.args, &s, &mut k);
+            let k = self.lit_key(lit, &s);
             let k = match shown {
                 Some(q) if self.plain => q.to_string(),
                 _ => k,
             };
             return Ok((true, format!("{k} holds; nothing to demonstrate")));
         }
-        let mut k = String::new();
-        resolved_lit_key(&mut self.h, lit.rel, lit.persp, &lit.args, &s, &mut k);
+        let k = self.lit_key(lit, &s);
         let mut lines = vec![format!("whynot {k}:")];
         let asked = std::mem::take(&mut self.demand.asked);
         // the plain explainer knows no lattice, counting or unknown tuple
@@ -16038,46 +15893,25 @@ impl Eval {
     /// is nothing better. `None` when the cell has no value and no hole, so
     /// the ordinary exploration says why nothing contributes.
     fn whynot_lattice(&mut self, lit: &Lit) -> Result<Option<Vec<String>>, Halt> {
-        if self.lat.subs.contains_key(&lit.rel) {
+        if self.lat.algebra(lit.rel).sub.is_some() {
             return self.whynot_sub(lit);
         }
-        let Some(&(n, op)) = self.lat.lattices.get(&lit.rel) else { return Ok(None) };
-        let Some(persp) = walk(&self.h, lit.persp, &Subst::default()).as_atom() else { return Ok(None) };
-        if lit.args.len() != n || !lit.args.iter().all(|a| self.h.is_ground(*a)) {
-            return Ok(None);
-        }
+        let Some((n, op)) = self.lat.algebra(lit.rel).cell else { return Ok(None) };
+        let Some(persp) = self.ground_persp(lit, n) else { return Ok(None) };
         let key = &lit.args[..n - 1];
-        let mut cell = String::new();
-        write_fact_key(&self.h, lit.rel, persp, key, &mut cell);
-        let tick = Term::int(self.store.tick as i64);
-        let kl = self.h.list(key);
-        let markers = [
-            self.h.mkf(self.v.s_lattice, &[Term::atom(lit.rel), Term::atom(persp), tick, kl]),
-            self.h.mkf(self.v.s_lattice, &[Term::atom(lit.rel)]),
-        ];
-        let unknowns = [Unknown::Cell((lit.rel, persp, key.into())), Unknown::Rel(lit.rel)];
-        for (m, u) in markers.into_iter().zip(unknowns) {
-            if let Some(rs) = self.hole_reason(m)? {
-                let mut lines = vec![format!("  {cell} has no value: hole({rs}) [{}]", self.lat_label(lit.rel, op))];
-                lines.extend(brk!("widen_whynot_bare" => Vec::new(); self.widened_lines(m, "  ")));
-                brk!("lattice_whynot_no_path" => (); lines.extend(self.unknown_path(&u)?));
-                return Ok(Some(lines));
-            }
+        let cell = fact_key(&self.h, lit.rel, persp, key);
+        if let Some((m, u, rs)) = self.first_hole(lit, persp, key)? {
+            let mut lines = vec![format!("  {cell} has no value: hole({rs}) [{}]", self.lat_label(lit.rel, op))];
+            lines.extend(brk!("widen_whynot_bare" => Vec::new(); self.widened_lines(m, "  ")));
+            brk!("lattice_whynot_no_path" => (); lines.extend(self.unknown_path(&u)?));
+            return Ok(Some(lines));
         }
-        let vvar = Term::var(self.h.intern("?V"));
-        let mut probe = lit.clone();
-        probe.args[n - 1] = vvar;
-        let Some((s2, _)) = self.match_premise(&probe, &Subst::default(), 0, None)?.into_iter().next() else {
-            return Ok(None);
-        };
-        let held = resolve(&mut self.h, vvar, &s2);
-        let (mut hs, mut ws) = (String::new(), String::new());
-        self.h.canon_term(held, &mut hs);
-        self.h.canon_term(lit.args[n - 1], &mut ws);
+        let Some(held) = self.held_value(lit, n)? else { return Ok(None) };
+        let (hs, ws) = (self.h.canon(held), self.h.canon(lit.args[n - 1]));
         if op.is_join() {
             let mut lines = vec![format!("  {cell} is a lattice cell ({}) holding {hs} [lattice]", op.name())];
             let contribs = self.lattice_contributions(lit.rel, persp, key, op)?;
-            let below = match op.join_canon(&mut self.h, &self.v, &mut self.lat.join_keys, lit.args[n - 1]) {
+            let below = match op.join_canon(&mut self.h, &self.v, &mut self.lat.pass.join_keys, lit.args[n - 1]) {
                 Ok(w) => self.join_leq(op, w, held)?,
                 Err(_) => {
                     lines.push(format!("  {ws} is no value of {}: {}", op.name(), self.h.name(self.v.agg_type_reason)));
@@ -16090,23 +15924,17 @@ impl Eval {
                 lines.push(format!(
                     "  {ws} would widen it, and no contribution reaches it: {} contribution{}, joined {hs}",
                     contribs.len(),
-                    if contribs.len() == 1 { "" } else { "s" }
+                    plural(contribs.len())
                 ));
             }
-            for (i, (_, text)) in contribs.iter().enumerate() {
-                if i >= 8 {
-                    lines.push(format!("    [{} more contributions]", contribs.len() - 8));
-                    break;
-                }
-                lines.push(format!("    {text}"));
-            }
+            capped(&mut lines, contribs.iter().map(|c| &c.1), 8, "contributions");
             return Ok(Some(lines));
         }
         let better = match (op.lift(&self.v, held), op.lift(&self.v, lit.args[n - 1])) {
             (Ok(a), Ok(b)) => matches!(op.insert(&self.v, Some(a), b), Ok(Step::Improved(_))),
             _ => false,
         };
-        let mut lines = vec![match self.tags.by_rel.get(&lit.rel) {
+        let mut lines = vec![match self.lat.algebra(lit.rel).tag {
             Some((_, a)) => format!("  {cell} is a tag cell ({}) holding {hs} [tag]", a.name()),
             None => format!("  {cell} is a lattice cell ({}) holding {hs} [lattice]", op.name()),
         }];
@@ -16115,20 +15943,13 @@ impl Eval {
             lines.push(format!(
                 "  {ws} would improve it, and no contribution reaches {ws}: {} contribution{}, the best {hs}",
                 contribs.len(),
-                if contribs.len() == 1 { "" } else { "s" }
+                plural(contribs.len())
             ));
         } else {
-            let keeper = self.tags.by_rel.get(&lit.rel).map_or(op.name(), |(_, a)| a.name());
+            let keeper = self.lat.algebra(lit.rel).tag.map_or(op.name(), |(_, a)| a.name());
             lines.push(format!("  {ws} is not its value: {keeper} keeps the best contribution, {hs}"));
         }
-        let shown = 8;
-        for (i, (_, text)) in contribs.iter().enumerate() {
-            if i >= shown {
-                lines.push(format!("    [{} more contributions]", contribs.len() - shown));
-                break;
-            }
-            lines.push(format!("    {text}"));
-        }
+        capped(&mut lines, contribs.iter().map(|c| &c.1), 8, "contributions");
         Ok(Some(lines))
     }
 
@@ -16139,44 +15960,30 @@ impl Eval {
     /// the front would dominate it, and lists what the rules give at the key.
     /// `None` when the cell has no front and no hole.
     fn whynot_sub(&mut self, lit: &Lit) -> Result<Option<Vec<String>>, Halt> {
-        let sub = self.lat.subs[&lit.rel].clone();
-        let Some(persp) = walk(&self.h, lit.persp, &Subst::default()).as_atom() else { return Ok(None) };
-        if lit.args.len() != sub.arity || !lit.args.iter().all(|a| self.h.is_ground(*a)) {
-            return Ok(None);
-        }
+        let sub = self.lat.sub(lit.rel).clone();
+        let Some(persp) = self.ground_persp(lit, sub.arity) else { return Ok(None) };
         let k = sub.keylen;
         let key = &lit.args[..k];
-        let mut cell = String::new();
-        write_fact_key(&self.h, lit.rel, persp, key, &mut cell);
-        let tick = Term::int(self.store.tick as i64);
-        let kl = self.h.list(key);
-        let markers = [
-            self.h.mkf(self.v.s_lattice, &[Term::atom(lit.rel), Term::atom(persp), tick, kl]),
-            self.h.mkf(self.v.s_lattice, &[Term::atom(lit.rel)]),
-        ];
-        let unknowns = [Unknown::Cell((lit.rel, persp, key.into())), Unknown::Rel(lit.rel)];
-        for (m, u) in markers.into_iter().zip(unknowns) {
-            if let Some(rs) = self.hole_reason(m)? {
-                let mut lines = vec![format!("  {cell} has no value: hole({rs}) [subsumption]")];
-                if let Some(ps) = self.lat.conflict_marks.get(&m).cloned() {
-                    let mut ts: Vec<String> = ps.iter().map(|t| self.shown(*t)).collect();
-                    ts.sort();
-                    lines.push(format!("  its dominance is no order over {}", ts.join(", ")));
-                }
-                brk!("lattice_whynot_no_path" => (); lines.extend(self.unknown_path(&u)?));
-                return Ok(Some(lines));
+        let cell = fact_key(&self.h, lit.rel, persp, key);
+        if let Some((m, u, rs)) = self.first_hole(lit, persp, key)? {
+            let mut lines = vec![format!("  {cell} has no value: hole({rs}) [{}]", self.lat_label(lit.rel, AggOp::Dominance))];
+            if let Some(ps) = self.lat.pass.conflict_marks.get(&m).cloned() {
+                let mut ts: Vec<String> = ps.iter().map(|t| self.shown(*t)).collect();
+                ts.sort();
+                lines.push(format!("  its dominance is no order over {}", ts.join(", ")));
             }
+            brk!("lattice_whynot_no_path" => (); lines.extend(self.unknown_path(&u)?));
+            return Ok(Some(lines));
         }
         let front = self.lat.sub_front(&self.h, &mut self.store, lit.rel, persp, key);
         if front.is_empty() {
             return Ok(None);
         }
         let fronts: Vec<String> = front.iter().map(|f| self.store.key(&self.h, *f)).collect();
-        let mut ws = String::new();
-        write_fact_key(&self.h, lit.rel, persp, &lit.args, &mut ws);
+        let ws = fact_key(&self.h, lit.rel, persp, &lit.args);
         let mut lines = vec![format!("  {cell} is a subsumption cell; its front is {}", fronts.join(", "))];
         let ck: LatKey = (lit.rel, persp, key.into());
-        let given = self.lat.sub_by.get(&(ck, lit.args[k..].into())).copied().filter(|(f, _)| self.store.alive(*f));
+        let given = self.lat.pass.sub_by.get(&(ck, lit.args[k..].into())).copied().filter(|(f, _)| self.store.alive(*f));
         if let Some((by, rule)) = brk!("dominance_whynot_plain" => None; given) {
             let canon = sub.doms.iter().find(|(d, _)| d.id == rule).map(|(d, _)| d.canon.clone()).unwrap_or_default();
             lines.push(format!("  {ws} was given, and is dominated by {}: {} ({canon})", self.store.key(&self.h, by), self.h.name(rule)));
@@ -16246,15 +16053,9 @@ impl Eval {
         lines.push(format!(
             "  {ws} would join the front, and no rule gives it: {} value{} given at the key",
             contribs.len(),
-            if contribs.len() == 1 { "" } else { "s" }
+            plural(contribs.len())
         ));
-        for (i, (_, text)) in contribs.iter().enumerate() {
-            if i >= 8 {
-                lines.push(format!("    [{} more values]", contribs.len() - 8));
-                break;
-            }
-            lines.push(format!("    {text}"));
-        }
+        capped(&mut lines, contribs.iter().map(|c| &c.1), 8, "values");
         Ok(Some(lines))
     }
 
@@ -16262,24 +16063,12 @@ impl Eval {
     /// count it holds, and every derivation it adds. `None` when the key has
     /// no fact, so the ordinary exploration says why nothing derives it.
     fn whynot_counting(&mut self, lit: &Lit) -> Result<Option<Vec<String>>, Halt> {
-        let Some(&c) = self.tags.count_rel.get(&lit.rel) else { return Ok(None) };
-        let n = self.tags.by_rel[&lit.rel].0;
-        let Some(persp) = walk(&self.h, lit.persp, &Subst::default()).as_atom() else { return Ok(None) };
-        if lit.args.len() != n || !lit.args.iter().all(|a| self.h.is_ground(*a)) {
-            return Ok(None);
-        }
-        let vvar = Term::var(self.h.intern("?V"));
-        let mut probe = lit.clone();
-        probe.args[n - 1] = vvar;
-        let Some((s2, _)) = self.match_premise(&probe, &Subst::default(), 0, None)?.into_iter().next() else {
-            return Ok(None);
-        };
-        let held = resolve(&mut self.h, vvar, &s2);
-        let mut cell = String::new();
-        write_fact_key(&self.h, lit.rel, persp, &lit.args[..n - 1], &mut cell);
-        let (mut hs, mut ws) = (String::new(), String::new());
-        self.h.canon_term(held, &mut hs);
-        self.h.canon_term(lit.args[n - 1], &mut ws);
+        let Some(c) = self.lat.algebra(lit.rel).count else { return Ok(None) };
+        let n = self.lat.algebra(lit.rel).tag.unwrap().0;
+        let Some(persp) = self.ground_persp(lit, n) else { return Ok(None) };
+        let Some(held) = self.held_value(lit, n)? else { return Ok(None) };
+        let cell = fact_key(&self.h, lit.rel, persp, &lit.args[..n - 1]);
+        let (hs, ws) = (self.h.canon(held), self.h.canon(lit.args[n - 1]));
         let mut derivs: Vec<String> = Vec::new();
         for f in self.store.rel_persp(&self.h, c, persp) {
             let a = self.store.args(f).to_vec();
@@ -16287,8 +16076,7 @@ impl Eval {
                 continue;
             }
             let rule = self.store.witness_of(&self.h, f, &mut HashMap::new()).map(|w| self.h.name(w.rule).to_string()).unwrap_or_else(|| "a tick before".into());
-            let mut t = String::new();
-            self.h.canon_term(a[n], &mut t);
+            let t = self.h.canon(a[n]);
             derivs.push(format!("x{t} by {rule}"));
         }
         derivs.sort();
@@ -16297,16 +16085,10 @@ impl Eval {
             format!(
                 "  {ws} is not its value: counting adds every derivation, and its {} derivation{} add to {hs}",
                 derivs.len(),
-                if derivs.len() == 1 { "" } else { "s" }
+                plural(derivs.len())
             ),
         ];
-        for (i, d) in derivs.iter().enumerate() {
-            if i >= 8 {
-                lines.push(format!("    [{} more derivations]", derivs.len() - 8));
-                break;
-            }
-            lines.push(format!("    {d}"));
-        }
+        capped(&mut lines, derivs.iter(), 8, "derivations");
         Ok(Some(lines))
     }
 
@@ -16346,11 +16128,11 @@ impl Eval {
     /// path back to the fault. `None` when nothing unknown matches it, or
     /// when a plain hole's own conclusion does: its hole says why.
     fn whynot_unknown(&mut self, lit: &Lit) -> Option<Vec<String>> {
-        if self.lat.is_lattice_lit(lit.rel, lit.args.len()) {
+        if self.lat.algebra(lit.rel).is_cell_lit(lit.args.len()) {
             return None;
         }
         let u = self.read_unknown(lit, &Subst::default(), true)?;
-        if self.lat.plain.contains(&u) && matches!(self.lat.unknown.get(&u), Some(None)) {
+        if self.lat.carry.plain.contains(&u) && matches!(self.lat.carry.unknown.get(&u), Some(None)) {
             return None;
         }
         let mut lines = vec![format!("  {} is not known to hold", self.unknown_shown(&u))];
@@ -16359,13 +16141,43 @@ impl Eval {
     }
 
     /// The reason of the hole on `marker`, if there is one.
+    fn ground_persp(&mut self, lit: &Lit, arity: usize) -> Option<Sym> {
+        let persp = walk(&self.h, lit.persp, &Subst::default()).as_atom()?;
+        (lit.args.len() == arity && lit.args.iter().all(|a| self.h.is_ground(*a))).then_some(persp)
+    }
+
+    /// The value the cell of a ground literal of arity `n` holds, whatever the literal asks for.
+    fn held_value(&mut self, lit: &Lit, n: usize) -> Result<Option<Term>, Halt> {
+        let vvar = Term::var(self.h.intern("?V"));
+        let mut probe = lit.clone();
+        probe.args[n - 1] = vvar;
+        let Some((s2, _)) = self.match_premise(&probe, &Subst::default(), 0, None)?.into_iter().next() else { return Ok(None) };
+        Ok(Some(resolve(&mut self.h, vvar, &s2)))
+    }
+
+    /// The hole under a cell, its marker and reason: the cell's own marker first, then its relation's.
+    fn first_hole(&mut self, lit: &Lit, persp: Sym, key: &[Term]) -> Result<Option<(Term, Unknown, String)>, Halt> {
+        let tick = Term::int(self.store.tick as i64);
+        let kl = self.h.list(key);
+        let markers = [
+            self.h.mkf(self.v.s_lattice, &[Term::atom(lit.rel), Term::atom(persp), tick, kl]),
+            self.h.mkf(self.v.s_lattice, &[Term::atom(lit.rel)]),
+        ];
+        let unknowns = [Unknown::Cell((lit.rel, persp, key.into())), Unknown::Rel(lit.rel)];
+        for (m, u) in markers.into_iter().zip(unknowns) {
+            if let Some(rs) = self.hole_reason(m)? {
+                return Ok(Some((m, u, rs)));
+            }
+        }
+        Ok(None)
+    }
+
     fn hole_reason(&mut self, marker: Term) -> Result<Option<String>, Halt> {
         let rv = Term::var(self.h.intern("?R"));
         let hl = Lit { rel: self.v.hole, persp: Term::atom(self.v.kernel_persp), persp_explicit: true, args: vec![marker, rv], temporal: Temporal::Now };
         let Some((s2, _)) = self.match_premise(&hl, &Subst::default(), 0, None)?.into_iter().next() else { return Ok(None) };
         let r = resolve(&mut self.h, rv, &s2);
-        let mut rs = String::new();
-        self.h.canon_term(r, &mut rs);
+        let rs = self.h.canon(r);
         Ok(Some(rs))
     }
 
@@ -16375,7 +16187,7 @@ impl Eval {
         let mut lines = Vec::new();
         let mut cur = u.clone();
         let mut seen: HashSet<Unknown> = HashSet::new();
-        while let Some(Some((from, rule))) = self.lat.unknown.get(&cur).cloned() {
+        while let Some(Some((from, rule))) = self.lat.carry.unknown.get(&cur).cloned() {
             if !seen.insert(cur.clone()) {
                 break;
             }
@@ -16415,7 +16227,7 @@ impl Eval {
             .cloned()
             .collect();
         let mut out: Vec<(Option<crate::cell::Val>, String, Term, String)> = Vec::new();
-        let arity = self.lat.lattices.get(&rel).map_or(key.len() + 1, |x| x.0);
+        let arity = self.lat.algebra(rel).cell.map_or(key.len() + 1, |x| x.0);
         for r in rules {
             let rn = self.rename_clause(&r.clause);
             if rn.head.args.len() != arity {
@@ -16516,10 +16328,10 @@ impl Eval {
             .collect();
         if rules.is_empty() {
             let unloaded = self.unloaded(lit.rel);
-            next.push(WnTask::Line(format!(
-                "{pad}no rule concludes '{}' and no matching base fact exists{unloaded}",
-                self.h.name(lit.rel)
-            )));
+            next.push(WnTask::Line(
+                format!("{pad}no rule concludes '{}' and no matching base fact exists{unloaded}", self.h.name(lit.rel)),
+                Some((WnKind::Leaf, level, 0)),
+            ));
             return;
         }
         // each rule is explored when its turn comes, after the one before it
@@ -16532,38 +16344,30 @@ impl Eval {
     fn explain_rule(&mut self, lit: &Lit, r: &ERule, level: usize, next: &mut Vec<WnTask>) -> Result<(), Halt> {
         let pad = "  ".repeat(2 * level - 1);
         // a reader of an alias is explained as written: the alias is asked, and read from its source
-        let written = self.alias_orig.get(&r.id).cloned();
-        let rn = self.rename_clause(written.as_ref().unwrap_or(&r.clause));
-        let mut s = Some(Subst::default());
-        if let Some(cur) = s.take() {
-            s = self.eval_builtin(self.v.op_eq, rn.head.persp, lit.persp, &cur, None);
-        }
-        let n = rn.head.args.len().min(lit.args.len());
-        for i in 0..n {
-            let Some(cur) = s.take() else { break };
-            s = self.eval_builtin(self.v.op_eq, rn.head.args[i], lit.args[i], &cur, None);
-        }
-        let Some(s0) = s.filter(|_| rn.head.args.len() == lit.args.len()) else {
-            next.push(WnTask::Line(format!("{pad}rule {}: head does not unify", self.h.name(r.id))));
+        let (rn, s0) = self.unify_written_head(r, lit);
+        let Some(s0) = s0 else {
+            next.push(WnTask::Line(format!("{pad}rule {}: head does not unify", self.h.name(r.id)), Some((WnKind::NoHead, level, 0))));
             return Ok(());
         };
         self.wn_unwalked.clear();
+        self.wn_left.clear();
         let mut failures = self.failing_premises(&rn, &s0, r.id)?;
-        next.push(WnTask::Line(format!("{pad}rule {}: {}", self.h.name(r.id), r.canon)));
+        next.push(WnTask::Line(format!("{pad}rule {}: {}", self.h.name(r.id), r.canon), Some((WnKind::Rule, level, 0))));
         let mut unwalked: Vec<(String, usize)> = self.wn_unwalked.drain().collect();
         unwalked.sort_by(|a, b| cmp_js(&a.0, &b.0));
         unwalked.truncate(12);
         for (k, n) in unwalked {
-            next.push(WnTask::Line(format!("{pad}  followed 16 of {n} matches of {k}")));
+            next.push(WnTask::Line(format!("{pad}  followed 16 of {n} matches of {k}"), Some((WnKind::Info, level, 0))));
         }
         let mut keys: Vec<String> = failures.keys().cloned().collect();
         keys.sort_by(|a, b| cmp_js(a, b));
         keys.truncate(12);
         if keys.is_empty() {
-            next.push(WnTask::Line(format!("{pad}  (no failing premise found within exploration bounds)")));
+            next.push(WnTask::Line(format!("{pad}  (no failing premise found within exploration bounds)"), Some((WnKind::NoFail, level, 0))));
         }
         for f in keys {
-            next.push(WnTask::Line(format!("{pad}  failed premise: {f}")));
+            let left = self.wn_left.get(&f).copied().unwrap_or(0);
+            next.push(WnTask::Line(format!("{pad}  failed premise: {f}"), Some((WnKind::Premise, level, left))));
             if let Some(Some(sub)) = failures.remove(&f) {
                 next.push(WnTask::Deeper(sub, level + 1));
             }
@@ -16579,26 +16383,25 @@ impl Eval {
             // depth 1 is the single-step form: nothing below the named
             // premises was promised, so nothing there is cut off.
             if ctx.max_depth > 1 {
-                next.push(WnTask::Line(format!("{pad}[depth limit {} reached]", ctx.max_depth)));
+                next.push(WnTask::Line(format!("{pad}[depth limit {} reached]", ctx.max_depth), Some((WnKind::Cut, level, 0))));
             }
             return;
         }
         if ctx.nodes >= ctx.max_nodes {
-            next.push(WnTask::Line(format!("{pad}[node limit {} reached]", ctx.max_nodes)));
+            next.push(WnTask::Line(format!("{pad}[node limit {} reached]", ctx.max_nodes), Some((WnKind::Cut, level, 0))));
             return;
         }
         let ck = self.cycle_key(lit);
         if ctx.path.contains(&ck) {
-            let mut k = String::new();
-            resolved_lit_key(&mut self.h, lit.rel, lit.persp, &lit.args, &Subst::default(), &mut k);
-            next.push(WnTask::Line(format!("{pad}{k} [cycle]")));
+            let k = self.lit_key(lit, &Subst::default());
+            next.push(WnTask::Line(format!("{pad}{k} [cycle]"), Some((WnKind::Cut, level, 0))));
             return;
         }
-        if self.h.is_ground(lit.persp) && lit.args.iter().all(|a| self.h.is_ground(*a)) {
+        // the nearest failure is chosen over the tree: a literal met again is walked again, never referred to
+        if ctx.all && self.h.is_ground(lit.persp) && lit.args.iter().all(|a| self.h.is_ground(*a)) {
             if brk!("whynot_dag_off" => false; ctx.done.get(&ck).is_some_and(|ls| ls.contains(&level))) {
-                let mut k = String::new();
-                resolved_lit_key(&mut self.h, lit.rel, lit.persp, &lit.args, &Subst::default(), &mut k);
-                next.push(WnTask::Line(format!("{pad}{k} [above]")));
+                let k = self.lit_key(lit, &Subst::default());
+                next.push(WnTask::Line(format!("{pad}{k} [above]"), Some((WnKind::Cut, level, 0))));
                 return;
             }
             ctx.done.entry(ck.clone()).or_default().insert(level);
@@ -16612,10 +16415,15 @@ impl Eval {
     /// walks `why`): a failure as deep as the bounds allow takes no frame per
     /// level, and each line is written once.
     fn explain_tree(&mut self, lit: &Lit, ctx: &mut WnCtx) -> Result<Vec<String>, Halt> {
-        self.explain_from(vec![WnTask::Failure(lit.clone(), 1)], ctx)
+        let lines = self.explain_from(vec![WnTask::Failure(lit.clone(), 1)], ctx)?;
+        let kept = if ctx.all { None } else { Some(wn_nearest(&lines)).filter(|k| k.len() < lines.len()) };
+        Ok(match kept {
+            Some(kept) => kept.into_iter().map(|i| lines[i].0.clone()).chain(["  (every failure: --all)".to_string()]).collect(),
+            None => lines.into_iter().map(|l| l.0).collect(),
+        })
     }
 
-    fn explain_from(&mut self, mut tasks: Vec<WnTask>, ctx: &mut WnCtx) -> Result<Vec<String>, Halt> {
+    fn explain_from(&mut self, mut tasks: Vec<WnTask>, ctx: &mut WnCtx) -> Result<Vec<WnLine>, Halt> {
         let mut lines = Vec::new();
         tasks.reverse();
         let mut todo = tasks;
@@ -16625,7 +16433,7 @@ impl Eval {
                 WnTask::Failure(l, level) => self.explain_failure(&l, level, ctx, &mut next),
                 WnTask::Rule(l, r, level) => self.explain_rule(&l, &r, level, &mut next)?,
                 WnTask::Deeper(l, level) => self.explain_deeper(&l, level, ctx, &mut next),
-                WnTask::Line(x) => lines.push(x),
+                WnTask::Line(x, m) => lines.push((x, m)),
                 WnTask::Unpath(ck) => {
                     ctx.path.remove(&ck);
                 }
@@ -16671,14 +16479,8 @@ impl Eval {
         let rules: Vec<Rc<ERule>> = self.rules.iter().chain(&self.alias_rules).filter(|r| r.clause.head.rel == lit.rel).cloned().collect();
         let mut walks: Vec<(Rc<ERule>, HashMap<String, HashMap<String, Option<Lit>>>, Option<String>)> = Vec::new();
         for r in rules {
-            let written = self.alias_orig.get(&r.id).cloned();
-            let rn = self.rename_clause(written.as_ref().unwrap_or(&r.clause));
-            let mut s = self.eval_builtin(self.v.op_eq, rn.head.persp, lit.persp, &Subst::default(), None);
-            for i in 0..rn.head.args.len().min(lit.args.len()) {
-                let Some(cur) = s.take() else { break };
-                s = self.eval_builtin(self.v.op_eq, rn.head.args[i], lit.args[i], &cur, None);
-            }
-            let Some(s0) = s.filter(|_| rn.head.args.len() == lit.args.len()) else { continue };
+            let (rn, s0) = self.unify_written_head(&r, lit);
+            let Some(s0) = s0 else { continue };
             let body = self.whynot_plan(&rn, &s0);
             self.wn_vols = Some(walk.clone());
             let mut out = HashMap::new();
@@ -16689,8 +16491,7 @@ impl Eval {
             outs.insert(head.clone().unwrap_or_default(), out);
             walks.push((r, outs, w.split));
         }
-        let mut k = String::new();
-        resolved_lit_key(&mut self.h, lit.rel, lit.persp, &lit.args, &Subst::default(), &mut k);
+        let k = self.lit_key(lit, &Subst::default());
         let mut files: Vec<String> = vols.iter().map(|(_, n)| n.clone()).collect();
         files.sort_by(|a, b| cmp_js(a, b));
         files.dedup();
@@ -16717,9 +16518,9 @@ impl Eval {
                 if keys.is_empty() {
                     continue;
                 }
-                tasks.push(WnTask::Line(format!("  rule {}: {}", self.h.name(r.id), r.canon)));
+                tasks.push(WnTask::Line(format!("  rule {}: {}", self.h.name(r.id), r.canon), None));
                 for f in &keys {
-                    tasks.push(WnTask::Line(format!("    failed premise: {f}")));
+                    tasks.push(WnTask::Line(format!("    failed premise: {f}"), None));
                     if let Some(Some(sub)) = own.get(f) {
                         tasks.push(WnTask::Deeper(sub.clone(), 2));
                     }
@@ -16732,9 +16533,10 @@ impl Eval {
                 nodes: 0,
                 path: HashSet::from([self.cycle_key(lit)]),
                 done: HashMap::new(),
+                all: true,
             };
             let mut text = vec![format!("whynot {k} in {name}:")];
-            text.extend(self.explain_from(tasks, &mut ctx)?);
+            text.extend(self.explain_from(tasks, &mut ctx)?.into_iter().map(|l| l.0));
             rows.push(WhynotFile { found: found.get(&name).copied().unwrap_or(0), file: name, stops, text: text.join("\n") });
         }
         Ok(rows)
@@ -16771,8 +16573,7 @@ impl Eval {
                 continue;
             }
             if w.split.is_none() {
-                let mut key = String::new();
-                resolved_lit_key(&mut self.h, l.rel, l.persp, &l.args, s, &mut key);
+                let key = self.lit_key(l, s);
                 w.split = Some(key);
             }
             let mine = w.outs.entry(v.clone()).or_default();
@@ -16860,17 +16661,18 @@ impl Eval {
         if *nodes > 2000 || k >= body.len() {
             return Ok(()); // a surviving branch is not a failure (demand)
         }
+        let left = body.len() - k - 1;
         match &body[k] {
             BodyElem::Pos(l) => {
                 let unknowns = self.demand.trail.len();
                 let mm = self.match_premise(l, s, 0, None)?;
                 if mm.is_empty() && self.demand.trail.len() > unknowns {
                     let key = self.lit_key(l, s);
-                    out.entry(format!("{key} -- not known: it reads what a hole left unknown")).or_insert(None);
+                    self.wn_put(out, format!("{key} -- not known: it reads what a hole left unknown"), None, left);
                 } else if mm.is_empty() {
                     let key = self.lit_key(l, s);
                     let inst = self.instantiate(l, s);
-                    out.entry(key).or_insert(Some(inst));
+                    self.wn_put(out, key, Some(inst), left);
                 } else if !parted && self.wn_vols.is_some() {
                     self.explore_split(body, k, s, l, mm.into_iter().map(|(s2, _)| s2).collect(), out, nodes, rule)?;
                 } else {
@@ -16886,18 +16688,16 @@ impl Eval {
             BodyElem::Neg(l) => {
                 let unknowns = self.demand.trail.len();
                 let mm = self.match_premise(l, s, 0, None)?;
-                if mm.is_empty() && (self.demand.trail.len() > unknowns || !self.lat.spread.is_empty() && self.read_unknown(l, s, true).is_some()) {
+                if mm.is_empty() && (self.demand.trail.len() > unknowns || !self.lat.carry.spread.is_empty() && self.read_unknown(l, s, true).is_some()) {
                     let key = self.lit_key(l, s);
-                    out.entry(format!("not {key} -- not known: it reads what a hole left unknown")).or_insert(None);
+                    self.wn_put(out, format!("not {key} -- not known: it reads what a hole left unknown"), None, left);
                 } else if let Some((s2, r)) = mm.into_iter().next() {
                     let wit = match r {
                         PremRef::Fact(f) => {
                             let rec = self.store.rec(f);
                             let (rel, persp) = (rec.rel, rec.persp);
                             let args = self.store.args(f).to_vec();
-                            let mut w = String::new();
-                            write_fact_key(&self.h, rel, persp, &args, &mut w);
-                            w
+                            fact_key(&self.h, rel, persp, &args)
                         }
                         _ => {
                             let w = self.lit_key(l, &s2);
@@ -16905,7 +16705,7 @@ impl Eval {
                         }
                     };
                     let key = self.lit_key(l, s);
-                    out.entry(format!("not {key} -- blocked: {wit} holds")).or_insert(None);
+                    self.wn_put(out, format!("not {key} -- blocked: {wit} holds"), None, left);
                 } else {
                     self.explore_body(body, k + 1, s, out, nodes, rule, parted)?;
                 }
@@ -16920,7 +16720,7 @@ impl Eval {
                 let desc = self.h.name(desc).to_string();
                 let mm = self.agg_premise(rid, a, s, 0, false)?;
                 if mm.is_empty() {
-                    self.explore_agg_miss(rid, a, s, &desc, out)?;
+                    self.explore_agg_miss(rid, a, s, &desc, out, left)?;
                 } else {
                     for (s2, _) in mm.into_iter().take(16) {
                         self.explore_body(body, k + 1, &s2, out, nodes, rule, parted)?;
@@ -16938,11 +16738,8 @@ impl Eval {
                     false => {
                         let lt = resolve(&mut self.h, *l, s);
                         let rt = resolve(&mut self.h, *r, s);
-                        let (mut a, mut b) = (String::new(), String::new());
-                        self.h.canon_term(lt, &mut a);
-                        self.h.canon_term(rt, &mut b);
-                        out.entry(format!("{a} {} {b} [builtin fails]", self.h.name(*op)))
-                            .or_insert(None);
+                        let (a, b) = (self.h.canon(lt), self.h.canon(rt));
+                        self.wn_put(out, format!("{a} {} {b} [builtin fails]", self.h.name(*op)), None, left);
                     }
                 }
             }
@@ -16952,7 +16749,7 @@ impl Eval {
 
     /// Why an aggregate premise has no match: a value that is not the one asked for, a hole (the group is known and
     /// has no value), a rank whose subject is none of the group's values, or an empty group.
-    fn explore_agg_miss(&mut self, rid: Sym, a: &Agg, s: &Subst, desc: &str, out: &mut HashMap<String, Option<Lit>>) -> Result<(), Halt> {
+    fn explore_agg_miss(&mut self, rid: Sym, a: &Agg, s: &Subst, desc: &str, out: &mut HashMap<String, Option<Lit>>, left: usize) -> Result<(), Halt> {
             // WHICH WAY IT FAILED: a value that is not the one asked
             // for, a hole (the group is known and has no value), or
             // an empty group. Only the last sends the question on to
@@ -16961,7 +16758,7 @@ impl Eval {
             let cells = match self.seal_cells(rid, a, &plan, s, &corr, 0, false)? {
                 Sealed::Ephemeral(cells) => cells,
                 Sealed::Open(r) => {
-                    out.entry(format!("{desc} has no value: hole({}) [aggregate]", self.h.name(r))).or_insert(None);
+                    self.wn_put(out, format!("{desc} has no value: hole({}) [aggregate]", self.h.name(r)), None, left);
                     return Ok(());
                 }
                 Sealed::Kept(_) => return Err(Halt::Bug("whynot stored a cell".into())),
@@ -16980,12 +16777,10 @@ impl Eval {
             let unranked = mine.iter().find_map(|(_, v, n)| (matches!(v, CellValue::Empty) && *n > 0).then_some(*n));
             if let Some(got) = valued {
                 let want = resolve(&mut self.h, a.result, s);
-                let (mut g, mut w) = (String::new(), String::new());
-                self.h.canon_term(got, &mut g);
-                self.h.canon_term(want, &mut w);
-                out.entry(format!("{desc} = {g}, not {w} [aggregate]")).or_insert(None);
+                let (g, w) = (self.h.canon(got), self.h.canon(want));
+                self.wn_put(out, format!("{desc} = {g}, not {w} [aggregate]"), None, left);
             } else if let Some(r) = brk!("whynot_hole_empty" => holed.filter(|_| false); holed) {
-                out.entry(format!("{desc} has no value: hole({}) [aggregate]", self.h.name(r))).or_insert(None);
+                self.wn_put(out, format!("{desc} has no value: hole({}) [aggregate]", self.h.name(r)), None, left);
             } else if let Some(n) = brk!("whynot_unranked_empty" => unranked.filter(|_| false); unranked) {
                 let mut st = String::new();
                 for (i, t) in a.vals[..a.params()].iter().enumerate() {
@@ -16995,15 +16790,23 @@ impl Eval {
                     }
                     self.h.canon_term(subject, &mut st);
                 }
-                out.entry(format!("{desc} has no value: {st} is not one of its {n} distinct values [aggregate]")).or_insert(None);
+                self.wn_put(out, format!("{desc} has no value: {st} is not one of its {n} distinct values [aggregate]"), None, left);
             } else {
                 let sub = match a.body.as_slice() {
                     [BodyElem::Pos(l)] => Some(self.instantiate(l, s)),
                     _ => None,
                 };
-                out.entry(format!("{desc} has no value: empty group [aggregate]")).or_insert(sub);
+                self.wn_put(out, format!("{desc} has no value: empty group [aggregate]"), sub, left);
             }
         Ok(())
+    }
+
+    /// A failure of a whynot's rule, kept where it is the first of its key, with how many premises follow it.
+    fn wn_put(&mut self, out: &mut HashMap<String, Option<Lit>>, key: String, sub: Option<Lit>, left: usize) {
+        if let std::collections::hash_map::Entry::Vacant(v) = out.entry(key) {
+            self.wn_left.insert(v.key().clone(), left);
+            v.insert(sub);
+        }
     }
 
     fn lit_key(&mut self, l: &Lit, s: &Subst) -> String {
@@ -17028,13 +16831,14 @@ impl Eval {
         nodes: &mut usize,
         parted: bool,
     ) -> Result<(), Halt> {
+        let left = body.len() - k - 1;
         let (plan, corr) = self.agg_corr(rid, a, s)?;
         let desc = self.agg_desc(a, s);
         let desc = self.h.name(desc).to_string();
         let need = match self.thr_need(rid, a, s, &corr, false) {
             Ok((n, _)) => n,
             Err(r) => {
-                out.entry(format!("{desc} has no value: hole({}) [threshold]", self.h.name(r))).or_insert(None);
+                self.wn_put(out, format!("{desc} has no value: hole({}) [threshold]", self.h.name(r)), None, left);
                 return Ok(());
             }
         };
@@ -17091,7 +16895,7 @@ impl Eval {
             (true, [BodyElem::Pos(l)]) => Some(self.instantiate(l, &named)),
             _ => None,
         };
-        out.entry(line).or_insert(sub);
+        self.wn_put(out, line, sub, left);
         Ok(())
     }
 
@@ -17110,20 +16914,9 @@ impl Eval {
     /// equal and a loop is recognised.
     fn cycle_key(&mut self, l: &Lit) -> String {
         let mut seen: HashMap<Sym, String> = HashMap::new();
-        let mut out = String::new();
-        out.push_str(self.h.name(l.rel));
-        out.push('[');
         let p = self.renumber(l.persp, &mut seen);
-        self.h.canon_term(p, &mut out);
-        out.push_str("](");
-        for (i, a) in l.args.clone().iter().enumerate() {
-            if i > 0 {
-                out.push(',');
-            }
-            let t = self.renumber(*a, &mut seen);
-            self.h.canon_term(t, &mut out);
-        }
-        out.push(')');
+        let args: Vec<Term> = l.args.iter().map(|a| self.renumber(*a, &mut seen)).collect();
+        let mut out = self.term_key(l.rel, p, &args);
         out.push('@');
         out.push_str(match l.temporal {
             Temporal::Now => "now",

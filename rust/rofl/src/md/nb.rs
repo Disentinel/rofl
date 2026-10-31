@@ -7,6 +7,7 @@ use super::vocab::Vocabulary;
 use super::{assemble, cells_of, home_of, prose_split, read_book, split, Assembled, Kind, PartC, OWN};
 use crate::engine::WhynotBounds;
 use crate::rofl_parse::{self, Book, Elem};
+use crate::reflect::{kernel_book_names, reserved_names};
 use crate::session::Session;
 use crate::term::{Heap, Term, TermK};
 use std::collections::{HashMap, HashSet};
@@ -20,9 +21,6 @@ pub const SHOWN: usize = 12;
 const DRAWN: [&str; 39] = ["node", "link", "inside", "tagged", "link_tagged", "labelled", "level", "placed", "frame", "collapsed", "icon", "icon_drawing", "tag_colour", "note", "points_at",
     "contract", "laid_out", "sits", "subtitled", "heat", "lane", "during", "happens", "message", "in_state", "lane_group", "value", "draws", "shows", "named", "born", "partner", "child",
     "at", "box", "corner", "axis", "projection", "unknown"];
-/// The kernel's relations a program may name (src/reflect.ts `RESERVED`), and the ones among them it conclude's own book holds (`KERNEL_BOOK`).
-const RESERVED: [&str; 37] = ["derived_by", "rule", "has_premise", "premise_pos", "premise_neg", "concludes", "has_conclusion", "reads_from", "writes_to", "mode", "reserved", "authority", "asserted_by", "hole", "edb", "bridge_decl", "uses_builtin", "premise_lit", "conclusion_lit", "conclusion_tense", "premise_agg", "agg_cell", "agg_member", "agg_member_prem", "agg_sealed", "lattice_decl", "lattice_widen", "lattice_member", "lattice_member_prem", "tag_decl", "order_comp", "structure_decl", "structure_role", "structure_closure", "dominance", "dominance_lit", "dominated_by"];
-const KERNEL_BOOK: [&str; 35] = ["shrug", "rule", "has_premise", "has_conclusion", "premise_pos", "premise_neg", "premise_lit", "conclusion_lit", "conclusion_tense", "concludes", "reads_from", "writes_to", "uses_builtin", "asserted_by", "bridge_decl", "derived_by", "hole", "premise_agg", "agg_cell", "agg_member", "agg_member_prem", "agg_sealed", "lattice_decl", "lattice_widen", "lattice_member", "lattice_member_prem", "tag_decl", "order_comp", "structure_decl", "structure_role", "structure_closure", "dominance", "dominance_lit", "dominated_by", "evaluated_again"];
 
 #[derive(Clone, Debug, Default)]
 pub struct Row { pub sentence: String, pub literal: String }
@@ -185,7 +183,7 @@ fn elsewhere(lit: &str, program: &str) -> Option<String> {
 }
 
 fn the_variable(s: &str, reads: &dyn Fn(&str) -> bool) -> Option<String> {
-    for c in rx::re(r"\bthe ([a-z][\w-]*(?: [a-z][\w-]*){0,2}) ([A-Z][A-Za-z0-9]*)\b").captures_iter(s) {
+    for c in rx::re(concat!(r"\bthe (", words!(), r") ([A-Z][A-Za-z0-9]*)\b")).captures_iter(s) {
         let m = c.get(0).unwrap();
         let a = format!("{} {} {}", if rx::test("^[aeiou]", &c[1]) { "an" } else { "a" }, &c[1], &c[2]);
         if reads(&format!("{}{a}{}", &s[..m.start()], &s[m.end()..])) {
@@ -487,13 +485,13 @@ fn load_model(a: &Assembled) -> Result<Session, NbResult> {
 
 fn kernel_names(a: &Assembled) -> Kernel {
     let said: HashSet<String> = rx::each(r"(?m)^phrase\((\w+),", &a.phrases).iter().map(|m| g(m, 1).to_string()).collect();
-    let written: HashSet<String> = RESERVED.iter().filter(|r| !KERNEL_BOOK.contains(r)).chain(["phrase", "sig", "fun_phrase"].iter()).map(|s| s.to_string()).collect();
+    let written: HashSet<String> = reserved_names().filter(|r| !kernel_book_names().any(|k| k == *r)).chain(["phrase", "sig", "fun_phrase"]).map(|s| s.to_string()).collect();
     let boot = a.parts[0].1.clone();
     let mut boot_rels = Vec::new();
     if let Ok(p) = program(&boot) { p.rels(&mut boot_rels); }
     let mut world = Vec::new();
     let world_rels: HashSet<String> = match program(&a.model) { Ok(p) => { p.rels(&mut world); world.iter().cloned().collect() } Err(_) => HashSet::new() };
-    let foreign: HashSet<String> = boot_rels.iter().cloned().chain(RESERVED.iter().map(|s| s.to_string())).filter(|r| !said.contains(r) && !written.contains(r)).collect();
+    let foreign: HashSet<String> = boot_rels.iter().cloned().chain(reserved_names().map(|s| s.to_string())).filter(|r| !said.contains(r) && !written.contains(r)).collect();
     let mut shell = Session::fresh(BUDGET);
     shell.eval.space = SPACE;
     let _ = shell.load(&boot, None);
@@ -761,7 +759,7 @@ fn why_line(f: &mut Session, atoms: &mut Option<HashSet<String>>, cx: &Cx, x: &A
 }
 
 fn whynot_line(f: &mut Session, atoms: &mut Option<HashSet<String>>, cx: &Cx, x: &A, unread: &Option<String>, out: &mut Out) {
-    match f.whynot(&x.lit, &WhynotBounds::default()) {
+    match f.whynot(&x.lit, &WhynotBounds { all: cx.rows_kept == usize::MAX, ..WhynotBounds::default() }) {
         Ok((holds, t)) => {
             let note = nameless(f, atoms, &x.lit);
             out.lines.push(HLine { kind: "whynot".into(), text: x.text.clone(), ok: !holds, why: Some(plain(&cx.vocab.say_all(&t))), unasked: unread.clone(), note, english: english_of(x), ..Default::default() });
@@ -857,7 +855,7 @@ fn status_of(partial: bool, a: &Assembled, cells: &[NbCell]) -> &'static str {
 }
 
 fn not_ours(rel: &str, home: &HashMap<String, String>) -> String {
-    format!("{rel} is the kernel's, not this notebook's: write {rel}[{}](...) to read its rows, or say it in the notebook's own sentence", if KERNEL_BOOK.contains(&rel) { "$kernel".to_string() } else { home.get(rel).cloned().unwrap_or_else(|| "main".into()) })
+    format!("{rel} is the kernel's, not this notebook's: write {rel}[{}](...) to read its rows, or say it in the notebook's own sentence", if kernel_book_names().any(|k| k == rel) { "$kernel".to_string() } else { home.get(rel).cloned().unwrap_or_else(|| "main".into()) })
 }
 
 /// notebook/kernel.ts `run`: what each cell said, as lines a person reads.

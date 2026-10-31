@@ -53,7 +53,8 @@
       { "command": "rofl-notebook.revert", "title": "Revert to the natural cell", "category": "ROFL", "icon": "$(discard)" },
       { "command": "rofl-notebook.restart", "title": "Restart kernel", "category": "ROFL", "icon": "$(debug-restart)" },
       { "command": "rofl-notebook.reading", "title": "Reading view", "category": "ROFL", "icon": "$(book)" },
-      { "command": "rofl-notebook.chooseModel", "title": "Choose model", "category": "ROFL" }
+      { "command": "rofl-notebook.chooseModel", "title": "Choose model", "category": "ROFL" },
+      { "command": "rofl-notebook.openGitHub", "title": "Open notebook from GitHub…", "category": "ROFL" }
     ],
     "configuration": {
       "title": "ROFL",

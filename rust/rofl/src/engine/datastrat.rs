@@ -107,11 +107,11 @@ impl Eval {
     /// when there is no such component or the program stalls anyway.
     pub(super) fn take_data_components(&mut self, stalled: &Peel, lats: &[Sym], dom_edges: &[(Sym, Sym)]) -> Option<Peel> {
         let barred = |rel: Sym| {
-            brk!("ds_barred_ignored" => false; self.lat.lattices.contains_key(&rel)
-                || self.lat.subs.contains_key(&rel)
+            brk!("ds_barred_ignored" => false; self.lat.is_cell(rel)
                 || self.carried.contains_key(&rel)
-                || self.demand.rels.iter().any(|(d, _)| *d == rel)
-                || self.tags.count_rel.iter().any(|(p, c)| *p == rel || *c == rel)
+                || self.demand.on(rel)
+                || self.lat.algebra(rel).count.is_some()
+                || self.lat.algebra(rel).count_of.is_some()
                 || self.rules.iter().any(|r| r.clause.head.rel == rel && (r.has_thr || r.lat_close.is_some() || !r.lattice_outer.is_empty())))
         };
         let (demote, mut comps) = data_demotable(stalled, &barred);
@@ -247,15 +247,7 @@ impl Eval {
         self.ds.firing = None;
         fired?;
         (self.batch, self.batch_at) = outer;
-        let front = std::mem::take(&mut self.cur_front);
-        self.propagate(front)?;
-        self.lattice_settle(false)?;
-        let more = std::mem::take(&mut self.cur_front);
-        if !more.keys.is_empty() {
-            self.propagate(more)?;
-            self.lattice_settle(false)?;
-        }
-        Ok(())
+        self.propagate_settled()
     }
 
     /// Each owner fired over the instances that extend the key of each correlation of it in `keys`.
@@ -266,11 +258,7 @@ impl Eval {
             let whole = self.ds.elems.iter().filter(|e| e.0 == r.id).all(|e| self.agg_plans.get(e).is_some_and(|p| p.group.is_empty()));
             for k in keys.iter().filter(|k| k.0 == r.id) {
                 self.ds.firing = brk!("ds_hold_grouped" => Some((k.0, k.1)); whole.then_some((k.0, k.1)));
-                let a = r.plan.iter().find_map(|b| match b {
-                    BodyElem::Agg(a) if a.at == k.1 => Some(a.clone()),
-                    _ => None,
-                });
-                let (Some(a), Some(plan)) = (a, self.agg_plans.get(&(k.0, k.1)).cloned()) else {
+                let Some((a, plan)) = self.agg_of(r, k) else {
                     return Err(Halt::Bug("a correlation of no element".into()));
                 };
                 let Some(s0) = self.ds_bind(&a, &plan, &k.2) else { continue };
@@ -281,22 +269,30 @@ impl Eval {
         Ok(())
     }
 
+    fn agg_of(&self, r: &ERule, k: &AggKey) -> Option<(Box<Agg>, Rc<AggPlan>)> {
+        let a = r.plan.iter().find_map(|b| match b {
+            BodyElem::Agg(a) if a.at == k.1 => Some(a.clone()),
+            _ => None,
+        })?;
+        Some((a, self.agg_plans.get(&(k.0, k.1)).cloned()?))
+    }
+
+    fn cmp_agg_keys(&self, a: &AggKey, b: &AggKey) -> std::cmp::Ordering {
+        cmp_js(self.h.name(a.0), self.h.name(b.0)).then(a.1.cmp(&b.1)).then(cmp_js(&tuple_text(&self.h, &a.2), &tuple_text(&self.h, &b.2)))
+    }
+
     /// EVERY CELL SEALED IS THE CELL ITS INNER BODY GIVES NOW. A member that came after the seal, or a group, is a
     /// defect of the walk (an edge it did not see), never a quiet wrong value: each correlation is solved again,
     /// ephemeral, over the store as it stands, and must give the value the cell holds (a hole stands).
     fn ds_verify(&mut self, comp: &DsComp) -> Result<(), Halt> {
         let mut keys: Vec<AggKey> = self.ds.released.iter().filter(|k| comp.elems.contains(&(k.0, k.1))).cloned().collect();
-        keys.sort_by(|a, b| cmp_js(self.h.name(a.0), self.h.name(b.0)).then(a.1.cmp(&b.1)).then(cmp_js(&tuple_text(&self.h, &a.2), &tuple_text(&self.h, &b.2))));
-        let saved = (self.steps, self.rows, self.peak_rows, self.fault, self.fault_count, self.last_fault, self.last_fault_rule);
+        keys.sort_by(|a, b| self.cmp_agg_keys(a, b));
+        let saved = (self.steps, self.rows, self.peak_rows, self.fault, self.fault_count, self.last_fault, self.shrug.last_fault_rule);
         let mut bad: Option<String> = None;
         for k in keys {
-            let Some(cells) = self.cells.agg_memo.get(&k).cloned() else { continue };
+            let Some(cells) = self.memo.agg_memo.get(&k).cloned() else { continue };
             let r = self.rule_of(k.0).ok_or_else(|| Halt::Bug("a correlation of no rule".into()))?;
-            let a = r.plan.iter().find_map(|b| match b {
-                BodyElem::Agg(a) if a.at == k.1 => Some(a.clone()),
-                _ => None,
-            });
-            let (Some(a), Some(plan)) = (a, self.agg_plans.get(&(k.0, k.1)).cloned()) else { continue };
+            let Some((a, plan)) = self.agg_of(&r, &k) else { continue };
             let Some(s) = self.ds_bind(&a, &plan, &k.2) else { continue };
             let Sealed::Ephemeral(now) = self.seal_cells(k.0, &a, &plan, &s, &k.2, 0, false)? else { continue };
             for (key, value, _) in now {
@@ -313,14 +309,14 @@ impl Eval {
                 }
             }
         }
-        (self.steps, self.rows, self.peak_rows, self.fault, self.fault_count, self.last_fault, self.last_fault_rule) = saved;
+        (self.steps, self.rows, self.peak_rows, self.fault, self.fault_count, self.last_fault, self.shrug.last_fault_rule) = saved;
         bad.map_or(Ok(()), |m| Err(Halt::Bug(m)))
     }
 
     /// What a hole in the component left unknown, carried before the next layer
     /// reads it: the component is closed as far as the carry is concerned.
     fn ds_carry(&mut self, comp: &DsComp) -> Result<(), Halt> {
-        if brk!("ds_hole_uncarried" => true; self.lat.plain_pending.is_empty() && self.lat.plain_undecided.is_empty() && self.lat.undecided.is_empty() && brk!("ds_spread_uncarried" => true; self.lat.spread.is_empty())) {
+        if brk!("ds_hole_uncarried" => true; self.lat.pass.plain_pending.is_empty() && self.lat.pass.plain_undecided.is_empty() && self.lat.carry.undecided.is_empty() && brk!("ds_spread_uncarried" => true; self.lat.carry.spread.is_empty())) {
             return Ok(());
         }
         self.close_plain_rules(comp.round + 1)?;
@@ -335,15 +331,11 @@ impl Eval {
             Err(Fail::Halt(h)) => Err(h),
             Err(Fail::Unkeyed(rid, at)) => {
                 let (head, op, inner) = self.ds_element(rid, at, comp);
-                Err(Halt::Strat(
-                    format!(
-                        "program rejected: {op} in rule {} reads {inner}, which depends on the rule's own conclusion {head}: \
+                Err(Halt::reject(format!("{op} in rule {} reads {inner}, which depends on the rule's own conclusion {head}: \
                          an aggregate reads a closed relation, and its correlation is bound by a relation of the component, \
                          so no cell of it can be named before the data is known (docs/aggregates.md, \"Data-level stratification, as built\")",
                         self.h.name(rid)
-                    ),
-                    String::new(),
-                ))
+                    )))
             }
         }
     }
@@ -501,9 +493,7 @@ impl Eval {
             layers[d].push(k.clone());
         }
         for l in layers.iter_mut() {
-            l.sort_by(|a, b| {
-                cmp_js(self.h.name(a.0), self.h.name(b.0)).then(a.1.cmp(&b.1)).then(cmp_js(&tuple_text(&self.h, &a.2), &tuple_text(&self.h, &b.2)))
-            });
+            l.sort_by(|a, b| self.cmp_agg_keys(a, b));
         }
         Ok(layers)
     }
@@ -581,7 +571,7 @@ impl Eval {
                 self.ds_walk(comp, rid, rest, s, out)
             }
             // a relation read on demand is unfolded at the call, which the walk must not do: it binds nothing
-            BodyElem::Pos(l) if self.demand.rels.iter().any(|(d, _)| *d == l.rel) => self.ds_walk(comp, rid, rest, s, out),
+            BodyElem::Pos(l) if self.demand.on(l.rel) => self.ds_walk(comp, rid, rest, s, out),
             BodyElem::Pos(l) => {
                 for (s2, _) in self.match_premise(l, &s, 0, None)? {
                     self.ds_walk(comp, rid, rest.clone(), s2, out)?;
@@ -649,9 +639,9 @@ impl Eval {
         if !self.ds_decides(op, l, r, s) {
             return Ok(brk!("ds_builtin_dead" => Vec::new(); vec![s.clone()]));
         }
-        let saved = (self.steps, self.fault, self.fault_count, self.last_fault, self.last_fault_rule);
+        let saved = (self.steps, self.fault, self.fault_count, self.last_fault, self.shrug.last_fault_rule);
         let out = self.eval_builtins(op, l, r, s, None);
-        (self.steps, self.fault, self.fault_count, self.last_fault, self.last_fault_rule) = saved;
+        (self.steps, self.fault, self.fault_count, self.last_fault, self.shrug.last_fault_rule) = saved;
         out
     }
 
@@ -665,9 +655,9 @@ impl Eval {
                 return Ok(vec![s.clone()]);
             }
         }
-        let saved = (self.steps, self.rows, self.peak_rows, self.fault, self.fault_count, self.last_fault, self.last_fault_rule);
+        let saved = (self.steps, self.rows, self.peak_rows, self.fault, self.fault_count, self.last_fault, self.shrug.last_fault_rule);
         let out = self.agg_premise(rid, a, s, 0, false);
-        (self.steps, self.rows, self.peak_rows, self.fault, self.fault_count, self.last_fault, self.last_fault_rule) = saved;
+        (self.steps, self.rows, self.peak_rows, self.fault, self.fault_count, self.last_fault, self.shrug.last_fault_rule) = saved;
         Ok(out?.into_iter().map(|(s2, _)| s2).collect())
     }
 

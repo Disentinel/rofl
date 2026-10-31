@@ -72,7 +72,7 @@ fn serve_answers_in_the_sessions_own_text() {
     assert_eq!(a[4], json!({ "ok": false, "id": null, "error": s.why("reaches(c, a)").unwrap_err() }));
     let (h, t) = s.whynot("reaches(c, a)", &WhynotBounds::default()).unwrap();
     assert_eq!(a[5], json!({ "ok": true, "id": null, "holds": h, "text": t }));
-    let (_, t1) = s.whynot("reaches(c, a)", &WhynotBounds { max_depth: 1, max_nodes: 64 }).unwrap();
+    let (_, t1) = s.whynot("reaches(c, a)", &WhynotBounds { max_depth: 1, max_nodes: 64, all: false }).unwrap();
     assert_eq!(a[6]["text"], json!(t1));
     assert_ne!(t1, t, "depth reached the engine");
     assert_eq!(a[7]["holds"], json!(true));
@@ -170,7 +170,7 @@ fn serve_clamps_whynot_bounds_and_refuses_a_bound_that_is_not_an_integer() {
         json!({ "op": "why", "session": 1, "query": "reaches(a, c)", "all": 1 }),
         json!({ "op": "why", "session": 1, "query": "reaches(a, c)", "all": null }),
     ]);
-    let (_, one) = s.whynot("reaches(c, a)", &WhynotBounds { max_depth: 1, max_nodes: 1 }).unwrap();
+    let (_, one) = s.whynot("reaches(c, a)", &WhynotBounds { max_depth: 1, max_nodes: 1, all: false }).unwrap();
     assert_eq!(a[2]["text"], json!(one), "{a:?}");
     assert_eq!(a[3]["text"], json!(one));
     assert_eq!(a[4], json!({ "ok": false, "id": null, "error": "whynot `depth` takes an integer, not \"3\"" }));
@@ -178,7 +178,7 @@ fn serve_clamps_whynot_bounds_and_refuses_a_bound_that_is_not_an_integer() {
     assert_eq!(a[6], json!({ "ok": false, "id": null, "error": "whynot `nodes` takes an integer, not true" }));
     assert_eq!(a[7]["text"], json!(s.why_all("reaches(a, c)").unwrap()));
     assert_eq!(a[8]["text"], json!(one));
-    let (_, big) = s.whynot("reaches(c, a)", &WhynotBounds { max_depth: 1000, max_nodes: i64::MAX as usize }).unwrap();
+    let (_, big) = s.whynot("reaches(c, a)", &WhynotBounds { max_depth: 1000, max_nodes: i64::MAX as usize, all: false }).unwrap();
     assert_eq!(a[9]["text"], json!(big), "{a:?}");
     assert_eq!(a[10], json!({ "ok": false, "id": null, "error": "why `all` takes true or false, not \"yes\"" }));
     assert_eq!(a[11], json!({ "ok": false, "id": null, "error": "why `all` takes true or false, not 1" }));
@@ -190,7 +190,7 @@ fn serve_clamps_whynot_bounds_and_refuses_a_bound_that_is_not_an_integer() {
 #[test]
 fn load_bounds_every_whynot_and_refuses_a_bound_that_is_not_an_integer() {
     let mut s = world();
-    let (_, one) = s.whynot("reaches(c, a)", &WhynotBounds { max_depth: 1, max_nodes: 2 }).unwrap();
+    let (_, one) = s.whynot("reaches(c, a)", &WhynotBounds { max_depth: 1, max_nodes: 2, all: false }).unwrap();
     let (out, code) = load(&["--depth", "-4", "--nodes", "2", "--whynot", "reaches(c, a)", "--why-all", "calls(a, b)"]);
     assert_eq!((out, code), (format!("{one}\n\ncalls[main](a,b) [axiom]\n\n"), 0));
     let (out, code) = load(&["--depth", "2.5", "--whynot", "reaches(c, a)"]);
@@ -218,6 +218,8 @@ fn the_question_verbs_answer_as_load_does() {
     assert_eq!(run("why", &["reaches(a, c)"]), load(&["--why", "reaches(a, c)"]));
     assert_eq!(run("why", &["--all", "reaches(a, c)"]), load(&["--why-all", "reaches(a, c)"]));
     assert_eq!(run("whynot", &["reaches(c, a)", "--depth", "1"]), load(&["--depth", "1", "--whynot", "reaches(c, a)"]));
+    assert_eq!(run("whynot", &["--all", "reaches(c, a)"]), load(&["--whynot-all", "reaches(c, a)"]));
+    assert_ne!(run("whynot", &["--all", "reaches(c, a)"]), run("whynot", &["reaches(c, a)"]));
     assert_eq!(run("excise", &["down(c)"]), ("- down[main](c)\n+ live[main](c)\n\n".into(), 0));
     assert_eq!(run("why", &["reaches(c, a)"]).1, 4);
     assert_eq!(run("ask", &["reaches(a, X)"]), ("X = b\nX = c\n\n".into(), 0));

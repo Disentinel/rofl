@@ -162,25 +162,32 @@ pub(crate) fn auth_rows(adapter: &str, declared: &[(String, String, String)]) ->
     declared.iter().map(|(how, name, env)| format!("http_auth({adapter}, {how}, {how}, {}, {}).\n", crate::mcp::quote(name), crate::mcp::quote(env))).collect()
 }
 
+fn json_get(url: &str) -> Option<serde_json::Value> {
+    send("GET", url, &[("accept", "application/json".into())], None).ok().filter(|r| r.status / 100 == 2).and_then(|r| serde_json::from_str(&r.body).ok())
+}
+
+/// The authorization server's metadata (RFC 8414; else OpenID Connect discovery), the issuer's path after the
+/// well-known segment.
+pub(crate) fn auth_metadata(issuer: &str) -> Result<serde_json::Value, String> {
+    let (origin, path) = match issuer.find("://").and_then(|i| issuer[i + 3..].find('/').map(|j| i + 3 + j)) {
+        Some(k) => (&issuer[..k], issuer[k..].trim_end_matches('/')),
+        None => (issuer.trim_end_matches('/'), ""),
+    };
+    ["oauth-authorization-server", "openid-configuration"].iter()
+        .find_map(|w| json_get(&format!("{origin}/.well-known/{w}{path}")))
+        .ok_or_else(|| format!("{issuer}: no authorization server metadata at {origin}/.well-known/oauth-authorization-server{path}"))
+}
+
 /// What a 401 asks for, said so a person can give it: with an MCP server's `resource_metadata` (RFC 9728), its
 /// authorization server's token endpoint (RFC 8414) and the line of the book that would use it.
 pub(crate) fn wanted(r: &Reply) -> String {
     let said = r.challenge.clone().unwrap_or_default();
     let meta = said.split("resource_metadata=").nth(1).map(|m| m.trim_start_matches('"').split(['"', ',']).next().unwrap_or("").to_string());
-    let get = |url: &str| -> Option<serde_json::Value> {
-        send("GET", url, &[("accept", "application/json".into())], None).ok().filter(|r| r.status / 100 == 2).and_then(|r| serde_json::from_str(&r.body).ok())
-    };
-    let issuer = meta.as_deref().and_then(get).and_then(|m| m.pointer("/authorization_servers/0").and_then(|a| a.as_str()).map(str::to_string));
+    let issuer = meta.as_deref().and_then(json_get).and_then(|m| m.pointer("/authorization_servers/0").and_then(|a| a.as_str()).map(str::to_string));
     let Some(issuer) = issuer else {
         return format!("the server wants a key (WWW-Authenticate: {said}); name it in the book, http_auth(Adapter, Scheme, bearer|basic|header|query|client_credentials, Name, Env)");
     };
-    let (origin, path) = match issuer.find("://").and_then(|i| issuer[i + 3..].find('/').map(|j| i + 3 + j)) {
-        Some(k) => (&issuer[..k], issuer[k..].trim_end_matches('/')),
-        None => (issuer.trim_end_matches('/'), ""),
-    };
-    let token = ["oauth-authorization-server", "openid-configuration"].iter()
-        .find_map(|w| get(&format!("{origin}/.well-known/{w}{path}")))
-        .and_then(|m| m.get("token_endpoint").and_then(|t| t.as_str()).map(str::to_string));
+    let token = auth_metadata(&issuer).ok().and_then(|m| m.get("token_endpoint").and_then(|t| t.as_str()).map(str::to_string));
     match token {
         Some(t) => format!("the server wants a token from {issuer} (WWW-Authenticate: {said}); a person signs in with `rofl adapter login {issuer}`, and the book says http_auth(Adapter, oauth, login, \"{issuer}\", \"\"), or `login:{issuer}` to `rofl adapter`; a client of it gets one at {t}: http_auth(Adapter, oauth, client_credentials, \"{t}\", Env) with Env holding id:secret, or `client_credentials:{t}=ENV` to `rofl adapter`"),
         None => format!("the server wants a token from {issuer} (WWW-Authenticate: {said}), whose token endpoint could not be read"),

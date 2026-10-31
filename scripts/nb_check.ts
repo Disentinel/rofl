@@ -127,6 +127,7 @@ const RUNS: Record<string, () => Promise<Out>> = {
   blind: () => cli([blindFile, '--json']),
   review: () => cli([REVIEW], { ROFL_NB_CLAUDE: spy }),
   small: () => cli([path.join(NB, 'small.rofl.md')]),
+  orderNb: () => cli([path.join(NB, 'order.rofl.md')]),
   reviewJson: () => cli([REVIEW, '--json']),
   fails: () => cli([failing]),
   notRead: () => cli([unread]),
@@ -274,7 +275,7 @@ await import(${JSON.stringify('file://' + path.join(out, 'use.mjs'))}); console.
     return { code: differ.length, out: differ.length ? `not the same on the two engines: ${differ.join(', ')}` : 'the same on both engines', stdout: '' };
   },
 };
-let engines!: Out, review!: Out, small!: Out, self!: Out, reviewJson!: Out, fails!: Out, notRead!: Out, rewrite!: Out, extended!: Out, collided!: Out, recurse!: Out, red!: Out, blind!: Out, unpop!: Out, early!: Out, nat!: Out, trOk!: Out, trBad!: Out, trGone!: Out, unparsedOut!: Out, fr!: Out, badRead!: Out, chained!: Out, lone!: Out, trSlow!: Out, spat!: Out, ex!: Out, wo!: Out, hol!: Out, xdir!: Out, xdirFails!: Out, cjs!: Out, cjsBlind!: Out, external!: Out, decorated!: Out, scoped!: Out, scopedV8!: Out, assign!: Out, guard!: Out, destructure!: Out, destructureV8!: Out, orderV8!: Out, missing!: Out, missingV8!: Out, imports!: Out, importsNode!: Out, declared!: Out, declaredTsc!: Out, climb!: Out, heavy!: Out, nmWorld!: Out, out!: Out, three!: Out, part!: Out, nothing!: Out, sides!: Out, sidesAll!: Out, sidesJson!: Out;
+let engines!: Out, review!: Out, small!: Out, orderNb!: Out, self!: Out, reviewJson!: Out, fails!: Out, notRead!: Out, rewrite!: Out, extended!: Out, collided!: Out, recurse!: Out, red!: Out, blind!: Out, unpop!: Out, early!: Out, nat!: Out, trOk!: Out, trBad!: Out, trGone!: Out, unparsedOut!: Out, fr!: Out, badRead!: Out, chained!: Out, lone!: Out, trSlow!: Out, spat!: Out, ex!: Out, wo!: Out, hol!: Out, xdir!: Out, xdirFails!: Out, cjs!: Out, cjsBlind!: Out, external!: Out, decorated!: Out, scoped!: Out, scopedV8!: Out, assign!: Out, guard!: Out, destructure!: Out, destructureV8!: Out, orderV8!: Out, missing!: Out, missingV8!: Out, imports!: Out, importsNode!: Out, declared!: Out, declaredTsc!: Out, climb!: Out, heavy!: Out, nmWorld!: Out, out!: Out, three!: Out, part!: Out, nothing!: Out, sides!: Out, sidesAll!: Out, sidesJson!: Out;
 type Test = { name: string; needs: string[]; ok: () => boolean; o?: () => Out };
 const TESTS: Test[] = [];
 /** A check, by the runs it reads; it is judged once they are done. */
@@ -327,6 +328,10 @@ test('imports: Node throws a TypeError at every call said missing and at no call
 test('declared: a member a declared type has not got is said missing by type, and not where the code narrows it', ['declared'], () => is(declared, 0) && has(declared, '? missing_by_type(L, K)  ->  21 answers') && has(declared, 'never missing_by_type(25, "extra")  ->  holds'), () => declared);
 test('declared: TypeScript\'s "does not exist" errors are exactly the calls said missing by type', ['declaredTsc'], () => has(declaredTsc, 'differ: []') && has(declaredTsc, 'said 21 missing'), () => declaredTsc);
 test('missing: V8 throws a TypeError at every call said missing and at no call said found', ['missingV8'], () => has(missingV8, 'wrong: []') && has(missingV8, 'said 9 missing'), () => missingV8);
+test('order: a whynot prints its nearest failure, the delete that takes the put out, within ten lines, and the whole walk is --all', ['orderNb'], () => {
+  const at = (orderNb.stdout ?? '').split('\n'), i = at.findIndex((l) => l.includes('whynot seen("order.gone", 2)'));
+  return is(orderNb, 0) && i >= 0 && at.slice(i, i + 10).some((l) => l.includes('by [m.delete() at keyed/order.js:9], in the code does')) && at.slice(i, i + 10).some((l) => l.trim() === '(every failure: --all)');
+}, () => orderNb);
 test('order: a Map read holds what V8 holds where the order is known, and every other value is named as unordered', ['orderV8'], () => has(orderV8, 'missing from the model: []; in the model where the order is known and V8 never saw it: []'), () => orderV8);
 test('assign: Object.assign, by the library member the callee is, writes its sources onto its first argument and returns it, across files; a method of the program called assign does neither', ['assign'], () => is(assign, 0) && has(assign, 'seen("E.port", 4000)') && has(assign, 'seen("lib.port", 4000)') && has(assign, 'seen("merged.host", "localhost")') && has(assign, 'called("start")') && has(assign, 'called("late")') && has(assign, 'never seen("bystander.leak", 1)  ->  holds'), () => assign);
 test('guard: a call under `!module.parent` or `require.main === module`, or in a function only they mention, hands its callee no argument; the required arm and an exported function keep theirs', ['guard'], () => is(guard, 0) && has(guard, '? seen(Tag, V)  ->  3 answers') && has(guard, 'seen("listen.port", 7777)') && has(guard, 'seen("listen.port", 4444)') && has(guard, '? dead_fn[code](F)  ->  2 answers') && has(guard, 'never seen("listen.port", 9999)  ->  holds') && has(guard, 'never seen("listen.port", 3333)  ->  holds'), () => guard);
@@ -434,7 +439,7 @@ if (shard) {
 }
 if (only) chosen = chosen.filter((t) => new RegExp(only).test(t.name));
 const got: Record<string, Out> = Object.fromEntries(await Promise.all([...new Set(chosen.flatMap((t) => t.needs))].map(async (r) => [r, await RUNS[r]()])));
-({ engines, review, small, self, reviewJson, fails, notRead, rewrite, extended, collided, recurse, red, blind, unpop, early, nat, trOk, trBad, trGone, unparsedOut, fr, badRead, chained, lone, trSlow, spat, ex, wo, hol, xdir, xdirFails, cjs, cjsBlind, external, decorated, scoped, scopedV8, assign, guard, destructure, destructureV8, orderV8, missing, missingV8, imports, importsNode, declared, declaredTsc, climb, heavy, nmWorld, out, three, part, nothing, sides, sidesAll, sidesJson } = got);
+({ engines, review, small, self, reviewJson, fails, notRead, rewrite, extended, collided, recurse, red, blind, unpop, early, nat, trOk, trBad, trGone, unparsedOut, fr, badRead, chained, lone, trSlow, spat, ex, wo, hol, xdir, xdirFails, cjs, cjsBlind, external, decorated, scoped, scopedV8, assign, guard, destructure, destructureV8, orderV8, orderNb, missing, missingV8, imports, importsNode, declared, declaredTsc, climb, heavy, nmWorld, out, three, part, nothing, sides, sidesAll, sidesJson } = got);
 for (const t of chosen) {
   let ok = false, o: Out | undefined;
   try { ok = t.ok(); o = t.o?.(); } catch (e) { o = { code: -1, out: `the check threw, a run it reads not named among its needs? ${(e as Error).stack}` }; }

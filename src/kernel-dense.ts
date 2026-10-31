@@ -407,6 +407,7 @@ shrug_reason(cut, s("a recursion answered on demand was cut where its answers co
 shrug_cause(budget_exhausted, budget, s("the step budget ran out")).
 shrug_cause(space_exhausted, budget, s("the row budget ran out")).
 shrug_cause(disk_exhausted, budget, s("the kept world reached the disk cap of its cache (ROFL_CACHE_GB)")).
+shrug_cause(memory_exhausted, budget, s("the evaluation reached the memory the process may use, and stopped there instead of being killed")).
 shrug_cause(arith_overflow, fault, s("arithmetic left the integer range of plus or minus 2^60")).
 shrug_cause(arith_type_error, fault, s("arithmetic on a value that is not a number")).
 shrug_cause(arith_zero_divisor, fault, s("a division by zero")).

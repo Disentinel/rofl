@@ -87,7 +87,7 @@ why none is removed here. Clients in the tree: `runtime/port.ts` (used by
 | `space`, `retainTicks`, `mode` (`open`, `fresh`) | the walls a snapshot does not carry | `scripts/whycheck.ts`, `rust/rofl/tests/agg_worlds.rs` | KEEP | |
 | `op: fresh`, `load` (`path`, `rofl`), `evaluate`, `retract`, `why`, `whynot`, `excise`, `close` | the core verbs; `load` into an evaluated session is an addition by delta (facts and rules) and answers `full`, as `retract` does | `scripts/whycheck.ts`, `runtime/ingest.ts`, `scripts/addcheck.ts`, `scripts/vscode_curve.ts`, `rust/rofl/tests/why_bins.rs` | KEEP | |
 | `load` with `who` | the author of the loaded text | `runtime/port.ts` passes it; no caller sets it | KEEP (the permission model of `docs/books-and-permission.md`) | |
-| `why` with `all`, `whynot` with `depth`, `nodes` | the verbs' options | `scripts/whycheck.ts`, `rust/rofl/tests/why_bins.rs` | KEEP | |
+| `why` with `all`, `whynot` with `depth`, `nodes`, `all` | the verbs' options | `scripts/whycheck.ts`, `rust/rofl/tests/why_bins.rs` | KEEP | |
 | `op: ask` | rows of a query | `runtime/ingest.ts` | KEEP | |
 | `ask` with `keys` | the matched facts in `canonicalState`'s key form | `runtime/split.ts`, `scripts/vscode_curve.ts` (since the audit) | KEEP: the decision to remove it predates its callers | |
 | `op: assert`, `tick` | assert text; advance a tick. On an evaluated session `assert` is an addition by delta and answers `full` (null, or why it evaluated again) | `scripts/surface_split.ts` (`assert`), `scripts/whycheck.ts` (`tick`) | KEEP (the core of the protocol; `docs/port-surface.md`) | |

@@ -388,7 +388,7 @@ fn a_verb_keeps_its_world_by_itself(brk: Option<&str>) -> Result<(), String> {
 fn walls_name_another_world(brk: Option<&str>) -> Result<(), String> {
     let d = Dir::new("implicit-walls");
     let q = |b: &str| ["ask", "reaches(a, X)", "--budget", b, "boot.rofl", "rules.rofl"].map(String::from);
-    let cut = ["10", "50", "200", "1000"].into_iter().find(|b| fresh(&d, brk, &q(b).iter().map(String::as_str).collect::<Vec<_>>()).code == 5)
+    let cut = ["1", "3", "10", "50", "200", "1000"].into_iter().find(|b| fresh(&d, brk, &q(b).iter().map(String::as_str).collect::<Vec<_>>()).code == 5)
         .ok_or("no budget cuts this world, so the test could not tell walls apart")?;
     rofl(&d, brk, &["ask", "reaches(a, X)", "boot.rofl", "rules.rofl"]);
     let args = q(cut);

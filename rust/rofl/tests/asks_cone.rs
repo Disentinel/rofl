@@ -396,7 +396,8 @@ fn literal(row: &str) -> Option<String> {
 }
 
 /// THE SWEEP, EVERY DERIVED RELATION ASKED (up to ASKS_SWEEP_N per world, 12 by default), walled worlds included under their
-/// walls: a world refused without asks is refused with any ask, and with the same words; a world answered without asks is
+/// walls: a world refused without asks is refused with any ask, and with the same words, unless the ask's cone leaves out a
+/// promise and says so (f_a_promise_outside_the_cone_is_not_judged); a world answered without asks is
 /// answered with each, the rows of every relation in the cone equal, and, where neither run met its wall, `why` and `whynot`
 /// of its first rows equal and no hole the whole world lacks; a question about a relation outside the cone is refused, never
 /// answered. ASKS_SHARD=i/n runs every n-th world from the i-th.
@@ -433,6 +434,7 @@ fn every_derived_relation_asked_answers_as_the_whole_world_or_refuses() {
                     asks += 1;
                     refusals += 1;
                     match run_walled(&format!("{src}\nasks({h}).\n"), wall) {
+                        Ok(a) if a.s.eval.diags.iter().any(|d| d.starts_with("asks: the promises of")) => {}
                         Ok(_) => failures.push(format!("{w}: refused without asks ({e}), answered with asks({h})")),
                         Err(a) if a != e => failures.push(format!("{w}: refused without asks ({e}), with asks({h}) for another reason ({a})")),
                         Err(_) => {}
