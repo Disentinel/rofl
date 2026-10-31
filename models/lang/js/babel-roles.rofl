@@ -153,6 +153,18 @@ nth[tree](Seq, I, S) :- b_slot[ast_babel](Seq, I, S), node[ast_babel](S, K, _), 
 nth[tree](Seq, I, X) :- b_slot[ast_babel](Seq, I, S), b_through[ast_babel](S, X).
 -- every sequence of the value world executes in the order of its positions
 strict[tree](Seq) :- b_slot[ast_babel](Seq, _, _).
+-- beside a spread the order is more than the positions: the spread runs an iterator or getters between them, so
+-- what is spread and its neighbour are said in order (A and B the spread's argument, or the plain element)
+edb(spread_seq).
+spread_seq(call_expression, arguments).  spread_seq(optional_call_expression, arguments).
+spread_seq(new_expression, arguments).   spread_seq(array_expression, elements).
+spread_seq(object_expression, properties).
+b_spread_pos[ast_babel](S, I, X, plain)  :- spread_seq(K, F), node[ast_babel](S, K, _), child[ast_babel](S, F, I, X),
+                                            node[ast_babel](X, KX, _), KX != spread_element.
+b_spread_pos[ast_babel](S, I, X, spread) :- spread_seq(K, F), node[ast_babel](S, K, _), child[ast_babel](S, F, I, E),
+                                            node[ast_babel](E, spread_element, _), child[ast_babel](E, argument, 0, X).
+precedes[tree](A, B) :- b_spread_pos[ast_babel](S, I, A, spread), J is I + 1, b_spread_pos[ast_babel](S, J, B, _).
+precedes[tree](A, B) :- b_spread_pos[ast_babel](S, I, A, plain), J is I + 1, b_spread_pos[ast_babel](S, J, B, spread).
 
 -- =====================================================================================================================
 -- CONTROL
@@ -655,17 +667,21 @@ b_reexport[ast_babel](E, S)  :- node[ast_babel](E, export_named_declaration, _),
                                 node[ast_babel](S, export_specifier, _), child[ast_babel](E, source, 0, _).
 
 -- export { a as b }
-has[value](Ns, S)  :- b_ns[ast_babel](E, Ns), node[ast_babel](E, export_named_declaration, _),
-                      child[ast_babel](E, specifiers, _, S).
-key[value](S, N)   :- b_export_name[ast_babel](S, N).
+-- the member is the specifier, and for `* as ns` its name, the one node every parser has there
+b_spec_member[ast_babel](S, S) :- node[ast_babel](S, export_specifier, _).
+b_spec_member[ast_babel](S, M) :- node[ast_babel](S, export_namespace_specifier, _), child[ast_babel](S, exported, 0, M).
+has[value](Ns, M)  :- b_ns[ast_babel](E, Ns), node[ast_babel](E, export_named_declaration, _),
+                      child[ast_babel](E, specifiers, _, S), b_spec_member[ast_babel](S, M).
+key[value](M, N)   :- b_export_name[ast_babel](S, N), b_spec_member[ast_babel](S, M).
 value[value](S, L) :- b_local_export[ast_babel](S), child[ast_babel](S, local, 0, L).
 -- export { a as b } from 'm': the member is destructured from m
 pattern_prop[value](E, Name, S) :- b_reexport[ast_babel](E, S), child[ast_babel](S, local, 0, L),
                                    attr[ast_babel](L, name, Name).
 assign[value](E, E, Src)        :- b_reexport[ast_babel](E, _), child[ast_babel](E, source, 0, Src).
 -- export * as ns from 'm'
-value[value](S, Src) :- node[ast_babel](E, export_named_declaration, _), child[ast_babel](E, specifiers, _, S),
-                        node[ast_babel](S, export_namespace_specifier, _), child[ast_babel](E, source, 0, Src).
+value[value](M, Src) :- node[ast_babel](E, export_named_declaration, _), child[ast_babel](E, specifiers, _, S),
+                        node[ast_babel](S, export_namespace_specifier, _), child[ast_babel](S, exported, 0, M),
+                        child[ast_babel](E, source, 0, Src).
 -- export const a = 1, export function f, export class C: the binding is the member, its value itself
 b_export_binding[ast_babel](Ns, X) :- b_ns[ast_babel](E, Ns), node[ast_babel](E, export_named_declaration, _),
                                       child[ast_babel](E, declaration, 0, V), child[ast_babel](V, declarations, _, D),
@@ -783,6 +799,7 @@ no_role(expression_statement, "stepped through: the expression is the step").
 no_role(labeled_statement, "stepped through: the label is on the statement").
 no_role(spread_element, "stepped through: the spread is a role of the parent").
 no_role(rest_element, "dissolved: rest_params, rest_props or rest_elems of its parent").
+no_role(export_namespace_specifier, "dissolved: its exported name is the member").
 no_role(export_all_declaration, "dissolved: spread_props of the namespace from its source").
 no_role(class_body, "dissolved: its members are has of the class").
 no_role(tsinterface_body, "dissolved: its members are has of the interface").
