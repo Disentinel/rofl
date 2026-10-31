@@ -351,6 +351,32 @@ engine's. The TypeScript engine took 12.4 s for the world and the five; the
 Rust release build 1.5 s for the world and the five in one `rofl load` run,
 and as much for each `rofl why` run alone, since each builds the world.
 
+### The second parser: oxc, in Rust
+
+```sh
+npm run scan:oxc -- path/to/src --out oxc.rofl
+```
+
+`rust/tools/oxc_scan` (its own cargo workspace, so the engine's build never
+compiles oxc) reads the same files as `npm run scan` through oxc and writes
+oxc's own tree, the Rust structs of `oxc_ast` and not its ESTree output, raw
+and without judgement into the `[ast_oxc]` perspective: `ast_node(Id, Kind,
+File)`, `ast_line(Id, Line)`, `ast_child(Parent, Field, Index, Child)`,
+`ast_attr(Id, Key, Value)`, `ast_file(Root, File)`, or
+`ast_parse_error(File, Message)` alone for a file oxc reports an error in. A
+kind is the struct's name (`static_member_expression`, `class`), a field the
+Rust field's; an enum wrapper that names it otherwise is the attribute
+`variant` (`class` under `"ClassDeclaration"`). Ids are made as js_ast.ts makes
+them, with the same file prefix: code added above a node leaves its id. Files
+are parsed in parallel and printed in path order, the same bytes for the same
+tree. No model reads `[ast_oxc]` yet: its converter into the roles of the JS
+model comes after the roles vocabulary (w_l2_roles, w_rust_scanner_oxc), and
+the host facts (`fs_*`, `str_*`) are still `npm run scan`'s.
+
+Measured on vscode src (11 055 files, 4 cores, release): 72 s and 99.5 M
+facts, 8.9 GB of text, most of the wall writing it; on vscode src/vs/base (499
+files) 1.1 s against 18.7 s for `npm run scan`, 304 MB against 241 MB.
+
 ## A world that asks for its own input
 
 A world can ask for facts it does not have yet. It names a scanner for a kind

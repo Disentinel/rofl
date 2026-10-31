@@ -96,6 +96,7 @@
     "rofllint": "node --experimental-strip-types scanners/rofl_lint.ts && node --experimental-strip-types scanners/rofl_lint_report.ts",
     "ruleshape": "node --experimental-strip-types scanners/rule_shape.ts && node --experimental-strip-types scanners/rule_shape_report.ts",
     "scan": "node --experimental-strip-types scanners/cli.ts",
+    "scan:oxc": "sh scripts/oxc_scan.sh",
     "speccheck": "node --experimental-strip-types scanners/spec.ts",
     "storetrace": "node --experimental-strip-types scanners/store_trace.ts && node --experimental-strip-types scanners/store_trace.ts --noreuse",
     "test": "node --experimental-strip-types scripts/goldens.ts",

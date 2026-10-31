@@ -144,3 +144,6 @@ command_note("test:npm", "the npm packages `npm run dist` packed (@grafema/rofl 
 
 command_shown("engine", 25).
 command_note("engine", "`[-- REF]`   the Rust engine's own code as facts (rust/tools/rs_scan), for the model of the engine in models/engine/: its parts, glossary and call paths (`npm run nb -- models/engine/parts.rofl.md`); with REF (a commit or A..B) the tree as REF left it and the lines it changed, and `npm run nb -- models/engine/blast.rofl.md` says what the change touches: functions, callers, verbs, parts, words").
+
+command_shown("scan:oxc", 26).
+command_note("scan:oxc", "-- <dir> [FILE] [--out F]   the same files through oxc in Rust (rust/tools/oxc_scan): oxc's own tree, raw, in [ast_oxc] (ast_node, ast_line, ast_child, ast_attr, ast_file, ast_parse_error); no model reads it yet (docs/cli.md)").
