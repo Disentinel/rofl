@@ -50,10 +50,17 @@ to the cone of the relation it orders. Two kinds of rule run in every cone, with
 - one concluding what the kernel reads of every evaluation (`kernel_heads`): `unknown`, read behind
   every negation, `shrug`, `explain_request`, and under well_founded `stratum`;
 - one that can make the whole world refuse (`refusal_heads`), so a cone never answers a refused
-  world: a declared function's or tree's relation, a reader of `unknown` or `shrug`, a rule into a
-  tag or reading or concluding a subsumptive relation, a demand-backed head with an aggregate or a
-  lattice read, under well_founded every aggregate and demand-backed rule, and every relation a
-  stall of the whole program's rounds leaves unsettled.
+  world: a reader of `unknown` or `shrug`, a rule into a tag or reading or concluding a subsumptive
+  relation, a demand-backed head with an aggregate or a lattice read, under well_founded every
+  aggregate and demand-backed rule, and every relation a stall of the whole program's rounds leaves
+  unsettled.
+
+A declared `function` or `tree` is not among them (owner, 2026-10-31,
+f_a_promise_outside_the_cone_is_not_judged): its promise is judged only when a rule of the cone
+reads it. One the cone leaves out is not judged, and the diagnostics say so beside the answer:
+`asks: the promises of R, ... are not judged, as no rule of the cone reads them`. At vscode 700 files
+this takes a question that does not read the core of names and calls from 50 s and 2.1 GB to 17 s
+and 0.9 GB; a question about calls reads them all and costs the same.
 
 A question about a relation the cone left out, or about one the kernel writes of every rule, is
 refused in both engines with the same words (ask, why, why all, whynot, an explain request), and so
@@ -85,7 +92,7 @@ interleaved runs, load 5-8 on a shared machine.
 
 These numbers were taken before the review of 2026-10-05: an ask for `hole` now keeps every rule, so
 the cones below are those of the notebooks' questions without it, and a cone now also holds the
-rules of every declared function and tree (`binder`, `ast_in`, ...) and of what the kernel reads;
+rules of what the kernel reads;
 the corpora were not measured again (unverified how much the cones grew).
 
 | corpus | mode | rules run | facts held | eval s | RSS MB |

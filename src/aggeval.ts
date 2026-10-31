@@ -1399,6 +1399,9 @@ export class AggEval {
       }
       for (const [rel, sub] of this.subs) if (cone.has(rel)) for (const x of sub.reads) cone.add(x);
     }
+    // a promise no rule of the cone reads is not judged (owner, 2026-10-30)
+    const unjudged = [...new Set([...readFunctions(this.store).map((f) => f.rel), ...readTrees(this.store).map((t) => t.rel)])].filter((r) => !cone.has(r) && kept.some((k) => k.clause.head.rel === r)).sort(cmpStr);
+    if (unjudged.length) this.diags.push(`asks: the promises of ${unjudged.join(', ')} are not judged, as no rule of the cone reads them`);
     return cone;
   }
 
@@ -1408,12 +1411,11 @@ export class AggEval {
     return [IFACE.unknown, 'shrug', 'explain_request', ...(this.wellFounded ? [IFACE.stratum] : [])];
   }
 
-  /** THE RULES THAT CAN MAKE THE WHOLE WORLD REFUSE, whose heads join every cone (rust/rofl `Eval::refusal_heads`): a declared function's or
-   *  tree's relation; a rule reading `unknown` or `shrug`; a rule into a tag, or reading or concluding a subsumptive relation; one concluding a
+  /** THE RULES THAT CAN MAKE THE WHOLE WORLD REFUSE, whose heads join every cone (rust/rofl `Eval::refusal_heads`): a rule reading `unknown` or `shrug`; a rule into a tag, or reading or concluding a subsumptive relation; one concluding a
    *  relation answered on demand with an aggregate or a lattice read; under well_founded every aggregate and demand-backed rule; and every
    *  relation a stall of the whole program's rounds leaves unsettled. */
   private refusalHeads(kept: ERule[]): string[] {
-    const out: string[] = [...readFunctions(this.store).map((f) => f.rel), ...readTrees(this.store).map((t) => t.rel)];
+    const out: string[] = [];
     const demand = this.answer.demandRels;
     for (const r of kept) {
       const head = r.clause.head.rel;
