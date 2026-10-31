@@ -159,9 +159,10 @@ param_assigned[flow](F, Name) :- assign_param[flow](A, F), assigned[code](A, _, 
 -- A generator's call is a generator object (rules/js-dataflow.rofl, `gen_of`): its `return` is what `yield*` gets, not
 -- what the call is.
 call_returns[flow](F, E) :- returns[flow](F, E), not ast_attr[code](F, generator, true).
-ret_param[flow](F, I, E) :- call_returns[flow](F, E), param_use[flow](F, Name, E), param_of[flow](F, I, Name),
-                            ast_child[code](F, params, I, P), ast_node[code](P, identifier, _),
-                            not param_assigned[flow](F, Name), not sees_binder[code](E, _).
+param_read[flow](F, I, E) :- param_use[flow](F, Name, E), param_of[flow](F, I, Name),
+                             ast_child[code](F, params, I, P), ast_node[code](P, identifier, _),
+                             not param_assigned[flow](F, Name), not sees_binder[code](E, _).
+ret_param[flow](F, I, E) :- call_returns[flow](F, E), param_read[flow](F, I, E).
 ret_plain[flow](F, E) :- call_returns[flow](F, E), not ret_param[flow](F, _, E).
 
 sx_ret_node[surface](F, N)  :- ret_plain[flow](F, E), may_be_node[flow](E, N).
@@ -171,6 +172,17 @@ sx_ret_plit[surface](F, V)  :- ret_param[flow](F, _, E), may_be_lit[flow](E, V).
 sx_ret_param[surface](F, I) :- ret_param[flow](F, I, _).
 sx_gen_ret[surface](F, N)   :- returns[flow](F, E), ast_attr[code](F, generator, true), may_be_node[flow](E, N).
 sx_gen_rlit[surface](F, V)  :- returns[flow](F, E), ast_attr[code](F, generator, true), may_be_lit[flow](E, V).
+
+-- ---------------------------------------------------------------- what a call writes
+-- `o[k] = v` with k and v the function's own parameters (`on(name, handler)`): at a call, THAT call's value under
+-- THAT call's key, not every value under every key.
+store_pkey[flow](F, J, I, A) :- plain_assign[flow](A), ast_child[code](A, left, 0, L), computed_key[code](L, Q),
+                                param_read[flow](F, J, Q), ast_child[code](A, right, 0, V), param_read[flow](F, I, V).
+store_sym[flow](A) :- store_pkey[flow](_, _, _, A).
+sx_store_pkey[surface](F, J, I, O) :- store_pkey[flow](F, J, I, A), ast_child[code](A, left, 0, L),
+                                      ast_child[code](L, object, 0, Obj), may_be_node[flow](Obj, O).
+sx_mwrite[surface](O, K, A) :- sx_store_pkey[surface](F, J, I, O), resolves[code](C, F),
+                               arg_at[flow](C, J, B), may_be_lit[flow](B, K), arg_at[flow](C, I, A).
 
 -- every value the function's returns may be, whoever called it: the iterator protocol and `yield*` read this
 ret_node_any[flow](F, N) :- sx_ret_node[surface](F, N).

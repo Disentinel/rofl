@@ -355,6 +355,13 @@ passes_function[code](C, I, F, Name) :- arg_at[flow](C, I, A), may_be_node[flow]
 -- an element of another file's array spread into the call is named by its own file
 passes_function[code](C, I, F, Name) :- arg_at[flow](C, I, A), may_be_node[flow](A, F), fn_value[flow](F),
                                         sx_name[surface](A, Name).
+-- a function written in place is named by its own name, `anonymous` when it has none
+passes_function[code](C, I, A, Name)      :- written_arg[code](C, I, A), fn_node[code](A), fn_name[code](A, Name).
+passes_function[code](C, I, A, anonymous) :- written_arg[code](C, I, A), fn_node[code](A), not fn_name[code](A, _).
+-- a member handed over (`bus.on(x, this.onMsg)`) is named by its key
+passes_function[code](C, I, F, Key)       :- written_arg[code](C, I, A), member_node_v[flow](A), selects[flow](A, Key),
+                                             may_be_node[flow](A, F), fn_value[flow](F).
+written_arg[code](C, I, A) :- arg_at[flow](C, I, A), ast_child[code](C, arguments, I, A).
 
 -- A function handed over and CALLED, by facts/js-host.rofl's `host_calls_back`.
 -- Not a `resolves` edge: rules/js-dataflow.rofl binds a resolved call's
@@ -392,6 +399,21 @@ stdlib_member[audit](C, P, Key) :- unresolved_call[code](C, _), callee_of[code](
                                    selects[flow](N, Key).
 
 edb(shape_because).
+
+-- `o[k]()` with a key nothing traces resolves to nothing, and stays in
+-- `unresolved_call`. When the receiver is known, the functions it holds are what
+-- the call may reach: a may-set beside `calls`, never folded into it.
+may_resolve[code](C, F) :- unresolved_call[code](C, s_computed_dynamic_key), callee_of[code](C, N),
+                           member_obj[flow](N, _, Obj), member_value[flow](Obj, _, V),
+                           may_be_node[flow](V, F), fn_value[flow](F).
+may_call[code](Caller, F) :- may_resolve[code](C, F), nearest_fn[code](Caller, C).
+may_call[code](R, F)      :- may_resolve[code](C, F), top_call[code](C, R).
+
+-- A parameter handed more than one function is one place for all of them: what
+-- the function does with it (calls it, stores it, hands it on) is answered for
+-- their union, not per call. Named, so an answer through it is not taken as exact.
+handed_fn[flow](F, I, G)     :- sx_arg_node[surface](F, I, G), fn_value[flow](G).
+merged_param[audit](F, I, N) :- handed_fn[flow](F, I, _), N is count(G : handed_fn[flow](F, I, G)), N > 1.
 
 -- An unresolved site attributed to the unit that contains it; a missing edge
 -- whose caller has no row here is a SILENT under-report. A transfer site that
