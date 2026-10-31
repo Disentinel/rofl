@@ -78,13 +78,11 @@ seq_field(program, body, 0).                 seq_field(block_statement, body, 0)
 seq_field(static_block, body, 0).            seq_field(tsmodule_block, body, 0).
 seq_field(switch_case, consequent, 0).       seq_field(sequence_expression, expressions, 0).
 seq_field(array_expression, elements, 0).    seq_field(object_expression, properties, 0).
-seq_field(call_expression, arguments, 1).    seq_field(optional_call_expression, arguments, 1).
-seq_field(new_expression, arguments, 1).     seq_field(variable_declaration, declarations, 0).
+seq_field(call_expression, arguments, 0).    seq_field(optional_call_expression, arguments, 0).
+seq_field(new_expression, arguments, 0).     seq_field(variable_declaration, declarations, 0).
 seq_field(template_literal, expressions, 0).
 
 edb(step_field).
-step_field(call_expression, callee, 0).      step_field(optional_call_expression, callee, 0).
-step_field(new_expression, callee, 0).
 step_field(member_expression, object, 0).    step_field(optional_member_expression, object, 0).
 step_field(binary_expression, left, 0).      step_field(binary_expression, right, 1).
 step_field(logical_expression, left, 0).
@@ -99,7 +97,6 @@ step_field(for_statement, init, 0).          step_field(for_statement, test, 1).
 step_field(for_in_statement, right, 0).      step_field(for_of_statement, right, 0).
 step_field(switch_statement, discriminant, 0).
 step_field(variable_declarator, init, 0).    step_field(variable_declarator, id, 1).
-step_field(tagged_template_expression, tag, 0). step_field(tagged_template_expression, quasi, 1).
 step_field(class_declaration, super_class, 0). step_field(class_expression, super_class, 0).
 step_field(export_default_declaration, declaration, 0).
 step_field(export_named_declaration, declaration, 0).
@@ -223,8 +220,12 @@ label[value](J, Name)  :- exit_kind(K, _), ast_node[ast_babel](J, K, _), ast_chi
 -- its function
 b_up[ast_babel](A, A)  :- ast_node[ast_babel](A, await_expression, _).
 b_up[ast_babel](A, S)  :- b_up[ast_babel](A, X), nth[tree](S, _, X).
+-- the callee is no step of its call; it is evaluated before the arguments, and so before the call
+b_up[ast_babel](A, C)  :- b_up[ast_babel](A, X), callee[value](C, X).
+b_up[ast_babel](A, C)  :- b_up[ast_babel](A, X), tagged[value](C, X, _).
 b_up[ast_babel](A, S)  :- b_up[ast_babel](A, X), executes_if[value](X, _, _), parent[tree](S, X).
 executes_when[value](Next, A, microtask) :- b_up[ast_babel](A, S), nth[tree](Seq, I, S), nth[tree](Seq, J, Next), J > I.
+executes_when[value](Arg, A, microtask)  :- b_up[ast_babel](A, N), callee[value](C, N), nth[tree](C, _, Arg).
 
 -- =====================================================================================================================
 -- FUNCTIONS
@@ -716,7 +717,7 @@ implements[value](C, T) :- mark[value](C, class), ast_child[ast_babel](C, implem
 -- type A = T: the name gets its type as a binding gets its value
 assign[type](A, A, T) :- ast_node[ast_babel](A, tstype_alias_declaration, _), ast_child[ast_babel](A, type_annotation, 0, T).
 
--- a type named, and a generic applied: Array<T> is a call in the type world, its callee step 0 and its arguments after
+-- a type named, and a generic applied: Array<T> is a call in the type world, the callee named by callee and the arguments its steps
 edb(type_app).
 type_app(tstype_reference, type_name). type_app(tsinterface_heritage, expression). type_app(tsclass_implements, expression).
 b_app_args[ast_babel](T, I, A) :- type_app(K, _), ast_node[ast_babel](T, K, _), ast_child[ast_babel](T, type_arguments, 0, D),
@@ -725,11 +726,10 @@ passes[type](T, N)  :- type_app(K, F), ast_node[ast_babel](T, K, _), ast_child[a
                        not ast_child[ast_babel](T, type_arguments, 0, _).
 mark[type](T, call) :- b_app_args[ast_babel](T, _, _).
 callee[type](T, N)  :- b_app_args[ast_babel](T, _, _), type_app(K, F), ast_node[ast_babel](T, K, _), ast_child[ast_babel](T, F, 0, N).
-nth[tree](T, 0, N)  :- callee[type](T, N).
-nth[tree](T, J, A)  :- b_app_args[ast_babel](T, I, A), J is I + 1.
+nth[tree](T, I, A)  :- b_app_args[ast_babel](T, I, A).
 -- T[] is Array<T>
 mark[type](T, call) :- ast_node[ast_babel](T, tsarray_type, _).
-nth[tree](T, 1, E)  :- ast_node[ast_babel](T, tsarray_type, _), ast_child[ast_babel](T, element_type, 0, E).
+nth[tree](T, 0, E)  :- ast_node[ast_babel](T, tsarray_type, _), ast_child[ast_babel](T, element_type, 0, E).
 
 -- <T extends U = D>: a parameter of the type world, its bound and its default
 param[type](X, I, P) :- ast_child[ast_babel](X, type_parameters, 0, D),
