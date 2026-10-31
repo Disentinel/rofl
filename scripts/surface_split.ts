@@ -5,7 +5,7 @@
 //   node --experimental-strip-types scripts/surface_split.ts --driver [--hot N] [--order ...]
 //                                                            [--break early|narrow|nophase] [--verbose]
 //
-// The corpus is examples/vscode/mini and examples/vscode/split, 14 files, as examples/checks/vscode-split-facts.rofl
+// The corpus is examples/vscode/mini and examples/vscode/split, 19 files, as examples/checks/vscode-split-facts.rofl
 // holds them. A file is a volume: its facts are the ones that name its node prefix; a fact that names none (the
 // host's paths and strings) is core. The WHOLE world is the model + the question + every fact. Then each file is
 // evaluated ALONE, as a cooled split would: a fork of core + that file's facts + the [surface] facts the OTHER

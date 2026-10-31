@@ -447,7 +447,7 @@ export class Host {
     const byFile = (lit: string): FileRow[] | undefined => {
       if (new Set(vols.map(([, f]) => f)).size < 2) return;
       let rows: WhynotFile[];
-      try { rows = w.whynotFiles(lit, vols).filter((r) => r.found || r.stops.length); } catch { return; }
+      try { rows = w.whynotFiles(lit, vols, { all: this.rows === Infinity }).filter((r) => r.found || r.stops.length); } catch { return; }
       return rows.length < 2 ? undefined : rows.map((r) => ({ file: r.file, found: r.found, stops: r.stops.map((x) => plain(vocab.sayAll(x))), why: plain(vocab.sayAll(r.text)) }));
     };
     unresolved = (lower ?? f).query('unresolved_relative[code](F, L, S)').rows.map((r) => `${unquote(r.bindings.F)}:${r.bindings.L} ${r.bindings.S}`).sort();

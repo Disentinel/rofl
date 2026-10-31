@@ -1,7 +1,9 @@
 // npm run test:nb — the notebook's behavioural gate (what runs around the kernel is npm run test:nb:product): the example notebooks by exit code and a few answer lines, and planted defects that must
 // turn it red. The invariants it stands for are named in examples/notebook/self.rofl.md; each check below names its own.
+import { pathToFileURL } from 'node:url';
 import { chmodSync, existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
 import * as os from 'node:os';
+import { stripTypeScriptTypes } from 'node:module';
 import * as path from 'node:path';
 import * as vm from 'node:vm';
 import { execFileSync } from 'node:child_process';
@@ -251,10 +253,16 @@ await import(${JSON.stringify('file://' + path.join(out, 'use.mjs'))}); console.
     const model = new Set<string>(), unordered = new Set<string>();
     for (const c of JSON.parse(ran.stdout ?? '{}').cells ?? []) for (const l of c.lines) for (const a of l.answers) {
       const m = /^(seen|unordered)\("([\w.]+)", (.+)\)$/.exec(a.literal);
-      if (m) (m[1] === 'seen' ? model : unordered).add(`${m[2]}:${m[3]}`);
+      if (m) (m[1] === 'seen' ? model : unordered).add(`${m[2]}:${m[3].startsWith('"') ? JSON.parse(m[3]) : m[3]}`);
     }
     const observed = new Set<string>();
-    vm.runInNewContext(readFileSync(path.join(NB, 'keyed/order.js'), 'utf8'), { __seen: (tag: string, v: unknown) => { if (v !== undefined) observed.add(`${tag}:${String(v)}`); }, process: { argv: [] } });
+    const __seen = (tag: string, v: unknown) => { observed.add(`${tag}:${String(v)}`); };
+    vm.runInNewContext(readFileSync(path.join(NB, 'keyed/order.js'), 'utf8'), { __seen, process: { argv: [] } });
+    vm.runInNewContext(stripTypeScriptTypes(readFileSync(path.join(NB, 'keyed/order_ts.ts'), 'utf8')), { __seen });
+    (globalThis as { __seen?: typeof __seen }).__seen = __seen;
+    await import(pathToFileURL(path.join(NB, 'keyed/order_use.mjs')).href);
+    delete (globalThis as { __seen?: typeof __seen }).__seen;
+    await new Promise((done) => setImmediate(done));
     const missing = [...observed].filter((o) => !model.has(o));
     const extra = [...model].filter((o) => !observed.has(o) && !unordered.has(o));
     return { code: 0, out: `V8 observed ${observed.size} values; missing from the model: ${JSON.stringify(missing)}; in the model where the order is known and V8 never saw it: ${JSON.stringify(extra)}`, stdout: '' };
@@ -330,9 +338,9 @@ test('imports: Node throws a TypeError at every call said missing and at no call
 test('declared: a member a declared type has not got is said missing by type, and not where the code narrows it', ['declared'], () => is(declared, 0) && has(declared, '? missing_by_type(L, K)  ->  21 answers') && has(declared, 'never missing_by_type(25, "extra")  ->  holds'), () => declared);
 test('declared: TypeScript\'s "does not exist" errors are exactly the calls said missing by type', ['declaredTsc'], () => has(declaredTsc, 'differ: []') && has(declaredTsc, 'said 21 missing'), () => declaredTsc);
 test('missing: V8 throws a TypeError at every call said missing and at no call said found', ['missingV8'], () => has(missingV8, 'wrong: []') && has(missingV8, 'said 9 missing'), () => missingV8);
-test('order: a whynot prints its nearest failure, the delete that takes the put out, within ten lines, and the whole walk is --all', ['orderNb'], () => {
+test('order: a whynot by file prints each file\'s nearest failure, the delete that takes the put out, within fourteen lines, and the whole walk is --all', ['orderNb'], () => {
   const at = (orderNb.stdout ?? '').split('\n'), i = at.findIndex((l) => l.includes('whynot seen("order.gone", 2)'));
-  return is(orderNb, 0) && i >= 0 && at.slice(i, i + 10).some((l) => l.includes('by [m.delete() at keyed/order.js:9], in the code does')) && at.slice(i, i + 10).some((l) => l.trim() === '(every failure: --all)');
+  return is(orderNb, 0) && i >= 0 && at.slice(i, i + 14).some((l) => l.includes('by [m.delete() at keyed/order.js:9], in the code does')) && at.slice(i, i + 14).some((l) => l.trim() === '(every failure: --all)');
 }, () => orderNb);
 test('order: a Map read holds what V8 holds where the order is known, and every other value is named as unordered', ['orderV8'], () => has(orderV8, 'missing from the model: []; in the model where the order is known and V8 never saw it: []'), () => orderV8);
 test('assign: Object.assign, by the library member the callee is, writes its sources onto its first argument and returns it, across files; a method of the program called assign does neither', ['assign'], () => is(assign, 0) && has(assign, 'seen("E.port", 4000)') && has(assign, 'seen("lib.port", 4000)') && has(assign, 'seen("merged.host", "localhost")') && has(assign, 'called("start")') && has(assign, 'called("late")') && has(assign, 'never seen("bystander.leak", 1)  ->  holds'), () => assign);

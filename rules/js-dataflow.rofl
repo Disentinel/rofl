@@ -37,6 +37,17 @@ literal_kind(big_int_literal).
 
 may_be_lit[flow](E, V) :- literal_kind(K), ast_node[code](E, K, _), ast_value[code](E, V).
 
+-- `undefined` is a value too, the atom `undefined` (the string "undefined" is
+-- another): the global of that name, `void`, a `let` or `var` with no
+-- initialiser wherever it is read, a parameter a call leaves out and a call of
+-- a function that may end without a value (rules/js-surface.rofl), a get that
+-- may find no entry (section 7c). Where an object lacks a property is not
+-- here: the layer does not know what an object lacks.
+may_be_lit[flow](E, undefined) :- free_global[code](E, "undefined", _).
+may_be_lit[flow](E, undefined) :- ast_node[code](E, unary_expression, _), ast_attr[code](E, operator, "void").
+undef_binder[code](D) :- bare_binder[code](D, _, _), ast_child[code](V, declarations, _, D), not ast_child[code](_, left, 0, V).
+may_be_lit[flow](E, undefined) :- undef_binder[code](D), sees_binder[code](E, D), not ast_child[code](D, id, 0, E).
+
 -- A template with no interpolation is a string — `cooked`, which is what it
 -- evaluates to, not `raw`. No arm for an interpolated one: the kernel builds no
 -- strings and a partial answer is wrong where silence is right (w_concat_value).
@@ -733,13 +744,13 @@ sx_mwrite[surface](O, Key, V) :- merge_call[flow](C), arg_at[flow](C, 0, T), may
 -- 7c. KEYED COLLECTIONS. A collection keeps a value under a key: `m.set(k, v)`
 -- puts v under k on the collection m may be, `m.get(k)` is what was put under k
 -- there, and for-of over it (`for (const [k, v] of m)`) and its `forEach((v, k)
--- => ...)` see every key and value. Which collections and which methods is a
+-- => ...)` see every key and value a get would. Which collections and which methods is a
 -- table keyed by the RECEIVER's type, `keyed_store(Type, Put, Get)`, never by the
 -- method's name: `other.set(k, v)` on a plain object moves nothing. The collection
 -- is the site that made it: `new Map()` (`keyed_obj`), and an express app
 -- (rules/js-express.rofl). A key is matched by its value, however it got there
 -- (`const K = 'port'; m.get(K)`); a key with no known value matches nothing, and
--- the call is named in `keyed_key_unknown[audit]`: we do not know which. A get
+-- the call is named in `keyed_key_unknown[audit]`: we do not know which. A read
 -- sees every put but those the order below rules out. `m.keys()`, `m.values()` and
 -- `m.entries()` are not read.
 edb(keyed_store).
@@ -756,100 +767,637 @@ sx_kput[surface](X, K, V) :- keyed_on[flow](C, X, P, Put), keyed_store(P, Put, _
 keyed_put[flow](X, K, V) :- sx_kput[surface](X, K, V).
 keyed_get[flow](C, X, K) :- keyed_on[flow](C, X, P, Get), keyed_store(P, _, Get), arg_at[flow](C, 0, A),
                             may_be_lit[flow](A, K), not ast_child[code](C, arguments, 1, _).
+may_be_lit[flow](C, undefined) :- keyed_on[flow](C, _, P, Get), keyed_store(P, _, Get).
+-- code outside the model runs at a site nothing resolves, unless it is a
+-- method of a collection that calls nothing back (all but `forEach`)
+keyed_quiet[code](Q) :- keyed_on[flow](Q, _, _, Meth), Meth != "forEach".
+runs_unknown[code](Q) :- site[code](Q), not resolved_site[code](Q), not keyed_quiet[code](Q).
 
 keyed_key_at[flow](C, A)    :- keyed_on[flow](C, _, P, Put), keyed_store(P, Put, _), arg_at[flow](C, 0, A).
 keyed_key_at[flow](C, A)    :- keyed_on[flow](C, _, P, Get), keyed_store(P, _, Get), arg_at[flow](C, 0, A).
 keyed_key_known[flow](C)    :- keyed_key_at[flow](C, A), may_be_lit[flow](A, _).
 keyed_key_unknown[audit](C) :- keyed_key_at[flow](C, _), not keyed_key_known[flow](C).
 
--- WHAT IS IN IT AT THE READ. A `const` that binds a new collection makes one
--- per run of its statement list, so a get on that name in the list, outside any
--- function written there, has an order with each put on it:
---   - a put in a later statement has not run yet, also inside a function
---     written in that statement: the function does not exist before it. A
---     function DECLARATION is hoisted to the top of the list and gets no order.
---   - a put in an earlier statement outside any function has run, unless a put
---     of the same literal key, a delete of it or a clear, in a statement of its
---     own between them, took it out.
--- Every other put may have run before the get or not (a function called at
--- some time, an await, another file, a loop around the declaration): it is
+-- WHAT IS IN IT AT THE READ. A collection has a HOLDER whose reads and writes
+-- can be put in order: a `const` that binds a new one (one collection per run
+-- of the declaration's statement list), or a field of a class written once,
+-- `this.m = new Map()` in the constructor or `m = new Map()` as a
+-- field (one per instance; in a method `this.m` is the instance's for the whole
+-- run). A read, a get, a `forEach` or a for-of over it, in a statement of an
+-- ORDERED LIST (the declaration's list; for a field, the body of any method of
+-- the class), outside any function written there, has an order with each put:
+--   - in the list that MAKES the collection (the declaration's, the
+--     constructor's body), a put that runs only in later statements has not
+--     run yet: one written in a later statement, also inside a function written
+--     there (it does not exist before it), and one in a function that only
+--     later statements call, by its name or as `this.#f()` or a TypeScript
+--     `private` method, however deep the calls go. A hoisted function
+--     declaration is ordered by its calls only.
+--   - a put in an earlier statement of the same list has run, unless a put of
+--     the same key, a delete of it or a clear, in a statement of its own between
+--     them, took it out. The same key is one literal for certain (the flow
+--     gives one value and nothing outside it reaches the key), one `const`, or
+--     one parameter nothing assigns. On a field, outside the constructor, a
+--     call between them that may run the method again puts the value back.
+-- Every other put may have run before the read or not (a public method, a
+-- callback, an await, another file, a loop around the declaration): it is
 -- kept, as `keyed_read_unordered`, and a proof says so.
-keyed_local[code](D, P, B, F) :- es_global_construct[code](X, Name, _), lib_global_prototype(Name, P),
-                                 keyed_store(P, _, _), ast_child[code](D, init, 0, X),
+keyed_new[code](X, P) :- es_global_construct[code](X, Name, _), lib_global_prototype(Name, P),
+                         keyed_store(P, _, _).
+
+keyed_const[code](D, P, B, F) :- keyed_new[code](X, P), ast_child[code](D, init, 0, X),
                                  ast_child[code](V, declarations, _, D), ast_attr[code](V, kind, "const"),
                                  ast_child[code](B, F, _, V), stmt_seq_field(F).
-keyed_local_seen[code](C, D, Meth, S, I) :- keyed_local[code](D, _, B, F), sees_binder[code](O, D),
-                                            ast_child[code](N, object, 0, O), ast_attr[code](N, computed, false),
-                                            ast_child[code](N, property, 0, Pn), ast_name[code](Pn, Meth),
-                                            ast_child[code](C, callee, 0, N), ast_node[code](C, call_expression, _),
-                                            ast_within[code](S, C), ast_child[code](B, F, I, S).
-keyed_fn_between[code](S, C) :- keyed_local_seen[code](C, _, _, S, _), ast_within[code](G, C),
-                                fn_node[code](G), ast_within[code](S, G).
-keyed_fn_between[code](S, C) :- keyed_local_seen[code](C, _, _, S, _), fn_node[code](S).
-keyed_local_call[code](C, D, Meth, I) :- keyed_local_seen[code](C, D, Meth, S, I), not keyed_fn_between[code](S, C).
+keyed_holder[code](D, P)  :- keyed_const[code](D, P, _, _).
+keyed_born[code](D, B, F) :- keyed_const[code](D, _, B, F).
+keyed_ref[code](O, D)     :- keyed_const[code](D, _, _, _), sees_binder[code](O, D).
 
-keyed_hoisted[code](S) :- keyed_local_seen[code](_, _, _, S, _), fn_node[code](S).
-keyed_hoisted[code](S) :- keyed_local_seen[code](_, _, _, S, _), ast_child[code](S, declaration, 0, G), fn_node[code](G).
-keyed_local_later[code](C, D, Meth, I) :- keyed_local_seen[code](C, D, Meth, S, I), not keyed_hoisted[code](S).
+keyed_ctor[code](CB, Body) :- ast_node[code](M, class_method, _), ast_attr[code](M, kind, "constructor"),
+                              ast_child[code](CB, body, _, M), ast_child[code](M, body, 0, Body).
+keyed_this_member[code](L, T, Fld) :- ast_child[code](L, object, 0, T), ast_node[code](T, this_expression, _),
+                                      ast_attr[code](L, computed, false), ast_child[code](L, property, 0, Pn),
+                                      ast_name[code](Pn, Fld).
+keyed_field[code](A, P, CB, Fld) :- keyed_new[code](X, P), ast_child[code](A, right, 0, X),
+                                    ast_node[code](A, assignment_expression, _), ast_child[code](A, left, 0, L),
+                                    keyed_this_member[code](L, _, Fld), ast_child[code](S, expression, 0, A),
+                                    ast_child[code](Body, body, _, S), keyed_ctor[code](CB, Body).
+keyed_field[code](Q, P, CB, Fld) :- keyed_new[code](X, P), ast_child[code](Q, value, 0, X),
+                                    ast_node[code](Q, class_property, _), ast_attr[code](Q, static, false),
+                                    ast_attr[code](Q, computed, false),
+                                    ast_child[code](Q, key, 0, K), ast_node[code](K, identifier, _),
+                                    ast_name[code](K, Fld), ast_child[code](CB, body, _, Q).
+-- written again on any object: no holder. In any file, unless TypeScript keeps
+-- the field to its class (`private`, `readonly`): then in its own file only.
+keyed_field_closed[code](H) :- keyed_field[code](H, _, CB, Fld), ast_child[code](CB, body, _, Q),
+                               ast_node[code](Q, class_property, _), ast_child[code](Q, key, 0, K),
+                               ast_name[code](K, Fld), ast_attr[code](Q, accessibility, "private").
+keyed_field_closed[code](H) :- keyed_field[code](H, _, CB, Fld), ast_child[code](CB, body, _, Q),
+                               ast_node[code](Q, class_property, _), ast_child[code](Q, key, 0, K),
+                               ast_name[code](K, Fld), ast_attr[code](Q, readonly, true).
+keyed_field_set[code](H, A, File) :- keyed_field[code](H, _, _, Fld), ast_name[code](Pn, Fld),
+                                     ast_child[code](L, property, 0, Pn), ast_child[code](A, left, 0, L),
+                                     ast_node[code](A, assignment_expression, File), A != H.
+keyed_field_reset[code](H) :- keyed_field_set[code](H, _, _), not keyed_field_closed[code](H).
+keyed_field_reset[code](H) :- keyed_field_set[code](H, _, File), ast_node[code](H, _, File).
+keyed_field_ok[code](H, CB, Fld) :- keyed_field[code](H, _, CB, Fld), not keyed_field_reset[code](H).
+keyed_holder[code](H, P)  :- keyed_field[code](H, P, _, _), keyed_field_ok[code](H, _, _).
+keyed_born[code](H, Body, body) :- keyed_field_ok[code](H, CB, _), keyed_ctor[code](CB, Body).
+
+keyed_method[code](H, M) :- keyed_field_ok[code](H, CB, _), ast_child[code](CB, body, _, M),
+                            ast_node[code](M, class_method, _), ast_attr[code](M, static, false).
+keyed_method[code](H, M) :- keyed_field_ok[code](H, CB, _), ast_child[code](CB, body, _, M),
+                            ast_node[code](M, class_private_method, _), ast_attr[code](M, static, false).
+keyed_list[code](H, B, F)       :- keyed_born[code](H, B, F).
+keyed_list[code](H, Body, body) :- keyed_method[code](H, M), ast_child[code](M, body, 0, Body).
+-- `this` in a method is the instance only where no nearer function binds it
+keyed_ref[code](L, H) :- keyed_method[code](H, M), this_host[flow](M, T), keyed_this_member[code](L, T, Fld),
+                         keyed_field_ok[code](H, _, Fld).
+
+-- every call on a holder in a statement of an ordered list
+keyed_seen[code](C, H, Meth, S, B, F, I) :- keyed_ref[code](O, H), ast_child[code](N, object, 0, O),
+                                            ast_attr[code](N, computed, false), ast_child[code](N, property, 0, Pn),
+                                            ast_name[code](Pn, Meth), ast_child[code](C, callee, 0, N),
+                                            ast_node[code](C, call_expression, _), ast_within[code](S, C),
+                                            ast_child[code](B, F, I, S), keyed_list[code](H, B, F).
+keyed_fn_between[code](S, C) :- keyed_seen[code](C, _, _, S, _, _, _), ast_within[code](G, C),
+                                fn_node[code](G), ast_within[code](S, G).
+keyed_fn_between[code](S, C) :- keyed_seen[code](C, _, _, S, _, _, _), fn_node[code](S).
+keyed_call[code](C, H, Meth, B, F, I) :- keyed_seen[code](C, H, Meth, S, B, F, I), not keyed_fn_between[code](S, C).
+
+keyed_hoisted[code](S) :- keyed_seen[code](_, _, _, S, _, _, _), fn_node[code](S).
+keyed_hoisted[code](S) :- keyed_seen[code](_, _, _, S, _, _, _), ast_child[code](S, declaration, 0, G), fn_node[code](G).
+keyed_later[code](C, H, Meth, B, F, I) :- keyed_seen[code](C, H, Meth, S, B, F, I), keyed_born[code](H, B, F),
+                                          not keyed_hoisted[code](S).
 
 -- a statement that is nothing but the call: it runs whenever the list gets past it
-keyed_local_step[code](C, D, Meth, I) :- keyed_local_seen[code](C, D, Meth, S, I), ast_node[code](S, expression_statement, _),
+keyed_step[code](C, H, Meth, B, F, I) :- keyed_seen[code](C, H, Meth, S, B, F, I), ast_node[code](S, expression_statement, _),
                                          ast_child[code](S, expression, 0, C).
-edb(keyed_key_kind).
-keyed_key_kind(string_literal).
-keyed_key_kind(numeric_literal).
-keyed_local_key[code](C, Key) :- keyed_local_call[code](C, _, _, _), ast_child[code](C, arguments, 0, A),
-                                 ast_node[code](A, K, _), keyed_key_kind(K), ast_value[code](A, Key).
 
-keyed_get_site[code](C, D, I)    :- keyed_local_call[code](C, D, Get, I), keyed_local[code](D, P, _, _),
-                                    keyed_store(P, _, Get).
-keyed_put_site[code](C, D, V, J) :- keyed_local_call[code](C, D, Put, J), keyed_local[code](D, P, _, _),
-                                    keyed_store(P, Put, _), ast_child[code](C, arguments, 1, V).
-keyed_put_later[code](C, D, V, J) :- keyed_local_later[code](C, D, Put, J), keyed_local[code](D, P, _, _),
-                                     keyed_store(P, Put, _), ast_child[code](C, arguments, 1, V).
+-- THE SAME KEY: two calls name one key when each key is one literal for
+-- certain, or both read one binding that holds one value for a run (one
+-- `const`, one parameter nothing assigns). A key is a literal for certain when
+-- the flow gives it that one value and nothing outside the flow reaches it:
+-- back through its sources (a binding's initialiser and assignments, a
+-- parameter's arguments where every call of its function is known, the parts
+-- of `+` and of a template, what a call's functions in this file return) every
+-- leaf is a literal (`keyed_open` otherwise). A function of another file is
+-- open: its returns are not published as closed (no `may_be_open` surface).
+edb(keyed_shut_kind).
+keyed_shut_kind(string_literal).
+keyed_shut_kind(numeric_literal).
+keyed_shut_kind(identifier).
+keyed_shut_kind(binary_expression).
+keyed_shut_kind(template_literal).
+keyed_shut_kind(call_expression).
+keyed_key_arg[code](C, A)  :- keyed_seen[code](C, _, _, _, _, _, _), ast_child[code](C, arguments, 0, A).
+keyed_key_arg[code](D, A)  :- keyed_drop[code](D, _), ast_child[code](D, arguments, 0, A).
+keyed_want[code](A) :- keyed_remover[code](R, _, _, _), keyed_key_arg[code](R, A).
+keyed_want[code](A) :- keyed_remover[code](_, C, K, _), keyed_read_site[code](C, H, B, F, _),
+                       keyed_put_site[code](P, H, _, B, F, J), J < K, keyed_key_arg[code](P, A).
+keyed_want[code](S) :- keyed_want[code](E), keyed_src[code](E, S).
+keyed_param[code](U, G, Pos) :- keyed_want[code](U), ast_node[code](U, identifier, _), param_use[flow](G, Name, U),
+                                param_of[flow](G, Pos, Name).
+keyed_bound[code](E) :- keyed_want[code](E), sees_binder[code](E, D), binder[code](D, _, _, _).
+keyed_bound[code](U) :- keyed_param[code](U, _, _).
+keyed_src[code](E, I) :- keyed_want[code](E), ast_node[code](E, identifier, _), sees_binder[code](E, D),
+                         binder[code](D, _, I, _).
+keyed_src[code](E, S) :- keyed_want[code](E), ast_node[code](E, identifier, _), sees_binder[code](E, D),
+                         assign_binder[code](A, D), assigned[code](A, _, _, S, _).
+keyed_src[code](U, S) :- keyed_param[code](U, G, _), param_use[flow](G, Name, U), assign_param[flow](A, G),
+                         assigned[code](A, _, Name, S, _).
+keyed_arg[code](U, Q, Pos, A) :- keyed_param[code](U, G, Pos), keyed_called[code](G, Q), ast_child[code](Q, arguments, Pos, A),
+                                  not ast_node[code](A, spread_element, _).
+keyed_src[code](U, A) :- keyed_arg[code](U, _, _, A).
+keyed_src[code](E, X) :- keyed_want[code](E), ast_node[code](E, binary_expression, _), ast_attr[code](E, operator, "+"),
+                         ast_child[code](E, left, 0, X).
+keyed_src[code](E, X) :- keyed_want[code](E), ast_node[code](E, binary_expression, _), ast_attr[code](E, operator, "+"),
+                         ast_child[code](E, right, 0, X).
+keyed_src[code](E, X) :- keyed_want[code](E), ast_node[code](E, template_literal, _), ast_child[code](E, expressions, _, X).
+-- a call is what the functions it calls return: open where one of them is not
+-- followed (`keyed_ret_known`), has an open return (`keyed_ret_open`), returns
+-- a parameter the call leaves out or hands an open argument, or is async or a
+-- generator (the call is a promise or an iterator). Followed are the functions
+-- that return one value; one another file calls left its file, and its own
+-- volume publishes what it found.
+keyed_rets_many[code](F) :- fn_node[code](F), sx_ret_lit[surface](F, V), sx_ret_lit[surface](F, W), V != W.
+keyed_ret_need[code](F)  :- fn_node[code](F), sx_ret_lit[surface](F, _), not keyed_rets_many[code](F).
+keyed_want[code](R) :- keyed_ret_need[code](F), ret_plain[flow](F, R).
+keyed_ret_known[code](F) :- keyed_ret_need[code](F).
+keyed_ret_open[code](F)  :- keyed_ret_need[code](F), ret_plain[flow](F, R), keyed_open[code](R).
+keyed_ret_open[code](F)  :- keyed_ret_need[code](F), ast_attr[code](F, async, true).
+keyed_ret_open[code](F)  :- keyed_ret_need[code](F), ast_attr[code](F, generator, true).
+sx_ret_known[surface](F) :- sx_esc[surface](F), keyed_ret_known[code](F).
+sx_ret_open[surface](F)  :- sx_esc[surface](F), keyed_ret_open[code](F).
+keyed_ret_known[code](F) :- sx_ret_known[surface](F).
+keyed_ret_open[code](F)  :- sx_ret_open[surface](F).
+keyed_open[code](C) :- keyed_want[code](C), ast_node[code](C, call_expression, _), not resolved_site[code](C).
+keyed_open[code](C) :- keyed_want[code](C), ast_node[code](C, call_expression, _), resolves[code](C, F),
+                       not keyed_ret_known[code](F).
+keyed_open[code](C) :- keyed_want[code](C), ast_node[code](C, call_expression, _), resolves[code](C, F),
+                       keyed_ret_open[code](F).
+keyed_open[code](C) :- keyed_want[code](C), callee_of[code](C, N), external_value[flow](N, _).
+keyed_open[code](C) :- keyed_want[code](C), resolves[code](C, F), sx_ret_param[surface](F, I),
+                       not ast_child[code](C, arguments, I, _).
+keyed_src[code](C, A) :- keyed_want[code](C), resolves[code](C, F), sx_ret_param[surface](F, I),
+                         ast_child[code](C, arguments, I, A).
+keyed_fn_need[code](G) :- keyed_param[code](_, G, _).
+keyed_open[code](E) :- keyed_want[code](E), ast_node[code](E, K, _), not keyed_shut_kind(K).
+keyed_open[code](E) :- keyed_want[code](E), ast_node[code](E, binary_expression, _), not ast_attr[code](E, operator, "+").
+keyed_open[code](E) :- keyed_want[code](E), ast_node[code](E, identifier, _), not keyed_bound[code](E).
+keyed_open[code](U) :- keyed_param[code](U, G, _), keyed_escapes[code](G).
+keyed_open[code](E) :- keyed_want[code](E), sees_binder[code](E, D), sees_binder[code](L, D),
+                       ast_child[code](U, argument, 0, L), ast_node[code](U, update_expression, _).
+keyed_open[code](E) :- keyed_want[code](E), sees_binder[code](E, D), sees_binder[code](L, D), ast_child[code](A, left, 0, L),
+                       ast_node[code](A, assignment_expression, _), ast_attr[code](A, operator, Op), not assign_value_op(Op).
+keyed_open[code](E) :- keyed_src[code](E, S), keyed_open[code](S).
+-- a source that reaches itself builds its value in a loop
+keyed_upstream[code](E, S) :- keyed_src[code](E, S).
+keyed_upstream[code](E, T) :- keyed_upstream[code](E, S), keyed_src[code](S, T).
+keyed_open[code](E) :- keyed_upstream[code](E, E).
+keyed_lits[code](A) :- keyed_want[code](A), may_be_lit[flow](A, L), may_be_lit[flow](A, M), L != M.
+keyed_key[code](C, Key) :- keyed_key_arg[code](C, A), keyed_want[code](A), may_be_lit[flow](A, Key),
+                           not keyed_lits[code](A), not keyed_open[code](A).
+keyed_const_name[code](C, Dk) :- keyed_key_arg[code](C, A), ast_node[code](A, identifier, _), sees_binder[code](A, Dk),
+                                 ast_child[code](V, declarations, _, Dk), ast_attr[code](V, kind, "const").
+keyed_param_name[code](C, G, Name) :- keyed_key_arg[code](C, A), ast_node[code](A, identifier, _), ast_name[code](A, Name),
+                                      name_scope[code](A, Name, _, G), ast_child[code](G, params, _, Pa),
+                                      ast_node[code](Pa, identifier, _), ast_name[code](Pa, Name).
+keyed_param_set[code](G, Name) :- keyed_param_name[code](_, G, Name), assigned[code](_, L, Name, _, _),
+                                  name_scope[code](L, Name, _, G).
+keyed_param_set[code](G, Name) :- keyed_param_name[code](_, G, Name), ast_name[code](L, Name),
+                                  name_scope[code](L, Name, _, G), ast_child[code](U, argument, 0, L),
+                                  ast_node[code](U, update_expression, _).
+keyed_same_name[code](P, R) :- keyed_const_name[code](P, Dk), keyed_const_name[code](R, Dk).
+keyed_same_name[code](P, R) :- keyed_param_name[code](P, G, Name), keyed_param_name[code](R, G, Name),
+                               not keyed_param_set[code](G, Name).
 
-keyed_put_before[code](V, C) :- keyed_get_site[code](C, D, I), keyed_put_site[code](_, D, V, J), J < I.
-keyed_put_after[code](V, C)  :- keyed_get_site[code](C, D, I), keyed_put_later[code](_, D, V, J), I < J.
-keyed_taken_out[code](V, C, R) :- keyed_put_before[code](V, C), keyed_get_site[code](C, D, I),
-                                  keyed_put_site[code](_, D, V, J), keyed_local_step[code](R, D, "clear", K),
-                                  J < K, K < I.
-keyed_taken_out[code](V, C, R) :- keyed_put_before[code](V, C), keyed_get_site[code](C, D, I),
-                                  keyed_put_site[code](P, D, V, J), keyed_local_step[code](R, D, "delete", K),
-                                  J < K, K < I, keyed_local_key[code](P, Key), keyed_local_key[code](R, Key).
-keyed_taken_out[code](V, C, R) :- keyed_put_before[code](V, C), keyed_get_site[code](C, D, I),
-                                  keyed_put_site[code](P, D, V, J), keyed_put_site[code](R, D, _, K),
-                                  J < K, K < I, keyed_local_step[code](R, D, _, K),
-                                  keyed_local_key[code](P, Key), keyed_local_key[code](R, Key).
+-- the reads and the puts
+keyed_read_site[code](C, H, B, F, I) :- keyed_call[code](C, H, Get, B, F, I), keyed_holder[code](H, P),
+                                        keyed_store(P, _, Get).
+keyed_read_site[code](C, H, B, F, I) :- keyed_call[code](C, H, "forEach", B, F, I).
+keyed_read_site[code](S, H, B, F, I) :- keyed_ref[code](R, H), ast_child[code](S, right, 0, R),
+                                        ast_node[code](S, for_of_statement, _), ast_child[code](B, F, I, S),
+                                        keyed_list[code](H, B, F).
+keyed_put_of[code](C, H, V)  :- keyed_seen[code](C, H, Put, _, _, _, _), keyed_holder[code](H, P),
+                                keyed_store(P, Put, _), ast_child[code](C, arguments, 1, V).
+keyed_put_site[code](C, H, V, B, F, J)  :- keyed_call[code](C, H, _, B, F, J), keyed_put_of[code](C, H, V).
+keyed_put_later[code](C, H, V, B, F, J) :- keyed_later[code](C, H, _, B, F, J), keyed_put_of[code](C, H, V).
 
-keyed_read_ordered[flow](C, V)   :- keyed_get[flow](C, X, K), keyed_put[flow](X, K, V), keyed_put_before[code](V, C),
+-- WHERE A PUT RUNS, in the list that makes the collection: in the statement
+-- it sits in, or, inside a function only ever called, wherever those calls run
+keyed_hop[code](X, H) :- keyed_put_of[code](X, H, _).
+keyed_hop[code](Q, H) :- keyed_hop_fn[code](G, H), keyed_called[code](G, Q).
+-- a function the collection's own list or class holds; the function around
+-- the list is no hop, its callers make a new collection
+keyed_hop_fn[code](G, H) :- keyed_hop[code](X, H), nearest_v[flow](G, X), keyed_born[code](H, B, F),
+                            ast_child[code](B, F, _, S), ast_within[code](S, G).
+keyed_hop_fn[code](G, H) :- keyed_hop[code](X, H), nearest_v[flow](G, X), keyed_born[code](H, B, F),
+                            ast_child[code](B, F, _, G).
+keyed_hop_fn[code](G, H) :- keyed_hop[code](X, H), nearest_v[flow](G, X), keyed_method[code](H, M),
+                            not ast_attr[code](M, kind, "constructor"), ast_within[code](M, G).
+keyed_hop_fn[code](M, H) :- keyed_hop[code](X, H), nearest_v[flow](M, X), keyed_method[code](H, M),
+                            not ast_attr[code](M, kind, "constructor").
+keyed_fn_need[code](G) :- keyed_hop_fn[code](G, _).
+keyed_named_fn[code](G, E) :- keyed_fn_need[code](G), ast_node[code](G, function_declaration, _),
+                              not ast_child[code](_, declaration, 0, G), sees_decl[code](E, G),
+                              not ast_child[code](G, id, 0, E).
+keyed_named_fn[code](G, E) :- keyed_fn_need[code](G), ast_child[code](D, init, 0, G),
+                              ast_child[code](V, declarations, _, D), ast_attr[code](V, kind, "const"),
+                              not ast_child[code](_, declaration, 0, V), sees_binder[code](E, D),
+                              not ast_child[code](D, id, 0, E).
+keyed_named_fn[code](G, N) :- keyed_fn_need[code](G), private_binds[code](N, G),
+                              ast_node[code](G, class_private_method, _).
+keyed_named_fn[code](G, N) :- keyed_fn_need[code](G), ast_attr[code](G, accessibility, "private"),
+                              ast_child[code](G, key, 0, K), ast_name[code](K, Name), ast_child[code](CB, body, _, G),
+                              ast_name[code](Pn, Name), ast_child[code](N, property, 0, Pn), ast_within[code](CB, N),
+                              ast_node[code](N, member_expression, _).
+-- tsc lets two ways past `private`: `x['f']` and a cast to any. The model
+-- keeps to `private` and says where a member of that name is reached so: by
+-- a string anywhere, by a name outside the class in its file
+keyed_private_name[code](G, CB, Name) :- keyed_hop_fn[code](G, _), ast_attr[code](G, accessibility, "private"),
+                                        ast_child[code](G, key, 0, K), ast_name[code](K, Name), ast_child[code](CB, body, _, G).
+keyed_private_reached[audit](N, G) :- keyed_private_name[code](G, CB, Name), ast_value[code](Lit, Name),
+                                      ast_node[code](Lit, string_literal, _), ast_child[code](N, property, 0, Lit),
+                                      ast_attr[code](N, computed, true).
+keyed_private_reached[audit](N, G) :- keyed_private_name[code](G, CB, Name), ast_name[code](Pn, Name),
+                                      ast_child[code](N, property, 0, Pn), ast_node[code](N, member_expression, File),
+                                      ast_node[code](G, _, File), not ast_within[code](CB, N).
+keyed_has_name[code](G) :- keyed_named_fn[code](G, _).
+keyed_called[code](G, Q) :- keyed_named_fn[code](G, E), ast_child[code](Q, callee, 0, E), ast_node[code](Q, call_expression, _).
+keyed_by_this[code](E)   :- keyed_named_fn[code](G, E), ast_node[code](G, class_private_method, _),
+                            ast_child[code](E, object, 0, T), ast_node[code](T, this_expression, _).
+keyed_by_this[code](E)   :- keyed_named_fn[code](G, E), ast_node[code](G, class_method, _),
+                            ast_child[code](E, object, 0, T), ast_node[code](T, this_expression, _).
+keyed_by_this[code](E)   :- keyed_named_fn[code](_, E), ast_node[code](E, identifier, _).
+keyed_escapes[code](G) :- keyed_fn_need[code](G), not keyed_has_name[code](G).
+keyed_escapes[code](G) :- keyed_named_fn[code](G, E), not keyed_callee[code](E).
+keyed_escapes[code](G) :- keyed_named_fn[code](G, E), not keyed_by_this[code](E).
+keyed_callee[code](E)  :- keyed_called[code](_, Q), ast_child[code](Q, callee, 0, E).
+
+keyed_in_fn[code](X, S) :- keyed_hop[code](X, H), keyed_born[code](H, B, F), ast_within[code](S, X),
+                           ast_child[code](B, F, _, S), nearest_v[flow](G, X), ast_within[code](S, G).
+keyed_in_fn[code](X, S) :- keyed_hop[code](X, H), keyed_born[code](H, B, F), ast_within[code](S, X),
+                           ast_child[code](B, F, _, S), nearest_v[flow](S, X).
+keyed_direct[code](X, H, J) :- keyed_hop[code](X, H), keyed_born[code](H, B, F), ast_within[code](S, X),
+                               ast_child[code](B, F, J, S), not keyed_in_fn[code](X, S).
+keyed_is_direct[code](X, H) :- keyed_direct[code](X, H, _).
+keyed_runs[code](X, H, J)   :- keyed_direct[code](X, H, J).
+keyed_runs[code](X, H, J)   :- keyed_hop[code](X, H), not keyed_is_direct[code](X, H), nearest_v[flow](G, X),
+                               not keyed_escapes[code](G), keyed_called[code](G, Q), keyed_runs[code](Q, H, J).
+keyed_elsewhere[code](X, H) :- keyed_hop[code](X, H), not keyed_is_direct[code](X, H), nearest_v[flow](G, X),
+                               keyed_escapes[code](G).
+keyed_elsewhere[code](X, H) :- keyed_hop[code](X, H), not keyed_is_direct[code](X, H), nearest_v[flow](G, X),
+                               keyed_called[code](G, Q), keyed_elsewhere[code](Q, H).
+keyed_elsewhere[code](X, H) :- keyed_hop[code](X, H), not keyed_is_direct[code](X, H), nearest_v[flow](G, X),
+                               not keyed_hop_fn[code](G, H).
+keyed_elsewhere[code](X, H) :- keyed_hop[code](X, H), not keyed_is_direct[code](X, H), not nearest_v[flow](_, X).
+
+-- AFTER: in the list that makes it, every run of the put is later
+keyed_born_read[code](C, H, I) :- keyed_read_site[code](C, H, B, F, I), keyed_born[code](H, B, F).
+keyed_runs_by[code](P, C)      :- keyed_born_read[code](C, H, I), keyed_put_of[code](P, H, _), keyed_runs[code](P, H, J), J <= I.
+keyed_put_after[code](V, C) :- keyed_born_read[code](C, H, I), keyed_put_later[code](_, H, V, B, F, J),
+                               keyed_born[code](H, B, F), I < J.
+keyed_put_after[code](V, C) :- keyed_born_read[code](C, H, I), keyed_put_of[code](P, H, V), keyed_runs[code](P, H, J),
+                               I < J, not keyed_runs_by[code](P, C), not keyed_elsewhere[code](P, H).
+
+-- BEFORE: in an earlier statement of the same list, or called from one
+keyed_put_before[code](V, C) :- keyed_read_site[code](C, H, B, F, I), keyed_put_site[code](_, H, V, B, F, J), J < I.
+keyed_put_before[code](V, C) :- keyed_born_read[code](C, H, I), keyed_put_of[code](P, H, V), keyed_runs[code](P, H, J), J < I.
+
+-- TAKEN OUT between the put and the read. On a field outside the constructor
+-- the method may run again between them and put the value back (`keyed_noisy`):
+-- a call there runs what it resolves to and all that calls; code outside the
+-- model (a call nothing resolves, or one that reaches such a call,
+-- `runs_outside`) reaches the method only through what it was handed or what
+-- left the file: the instance, a function that runs the method, an entry.
+keyed_remover[code](R, C, K, Meth) :- keyed_read_site[code](C, H, B, F, I), keyed_step[code](R, H, Meth, B, F, K),
+                                      K < I, keyed_holder[code](H, P), keyed_remove(P, Meth).
+keyed_remover[code](R, C, K, Meth) :- keyed_read_site[code](C, H, B, F, I), keyed_step[code](R, H, Meth, B, F, K),
+                                      K < I, keyed_holder[code](H, P), keyed_store(P, Meth, _).
+edb(keyed_remove).
+keyed_remove(map, "delete").
+keyed_remove(map, "clear").
+keyed_remove(weakmap, "delete").
+keyed_shared[code](C, H) :- keyed_read_site[code](C, H, B, F, _), keyed_field_ok[code](H, _, _), not keyed_born[code](H, B, F).
+keyed_get_call[code](C) :- keyed_shared[code](C, H), keyed_call[code](C, H, Get, _, _, _), keyed_holder[code](H, P),
+                           keyed_store(P, _, Get).
+keyed_again[code](C, K, M) :- keyed_shared[code](C, H), keyed_remover[code](_, C, K, _), keyed_read_site[code](C, H, B, _, _),
+                              ast_child[code](M, body, 0, B).
+-- what runs between: the method's own code in the statements between, and in
+-- the read's statement up to the read; a walk runs its body between entries
+keyed_between[code](C, K, Q) :- keyed_again[code](C, K, M), keyed_read_site[code](C, _, B, F, I), nearest_v[flow](M, Q),
+                                ast_within[code](S, Q), ast_child[code](B, F, L, S), K < L, L <= I, Q != C,
+                                not ast_within[code](Q, C).
+keyed_between[code](C, K, Q) :- keyed_again[code](C, K, _), keyed_read_site[code](C, _, B, F, I), ast_child[code](B, F, L, Q),
+                                K < L, L < I.
+keyed_between[code](C, K, Q) :- keyed_again[code](C, K, _), not keyed_get_call[code](C), ast_within[code](C, Q).
+keyed_target[code](M) :- keyed_again[code](_, _, M).
+keyed_runs_m[code](M, M) :- keyed_target[code](M).
+-- what a call may run, asked backwards from the functions in question along
+-- the call graph (`eff_reaches` is reach inside its cycles only); another
+-- file's function brings its answer with it (`sx_keyed_runs`, `sx_runs_out`)
+keyed_runs_m[code](F, M) :- eff_calls[code](F, G), keyed_runs_m[code](G, M).
+keyed_runs_out[code](F) :- runs_outside[code](F).
+keyed_runs_out[code](F) :- eff_calls[code](F, G), keyed_runs_out[code](G).
+keyed_crosses[code](F) :- eff_calls[code](F, G), ast_node[code](F, _, File), not ast_node[code](G, _, File).
+keyed_crosses[code](F) :- eff_calls[code](F, G), keyed_crosses[code](G).
+keyed_hand_need[code](G) :- keyed_runs_m[code](G, _).
+keyed_hand_need[code](G) :- keyed_once_need[code](G).
+keyed_hand_need[code](I) :- keyed_once_need[code](G), class_method_of[flow](CD, G), inst_of[flow](I, CD).
+keyed_hand_need[code](I) :- keyed_runs_m[code](G, _), class_method_of[flow](CD, G), inst_of[flow](I, CD).
+keyed_handed[code](V) :- keyed_hand_need[code](V), sx_esc[surface](V).
+keyed_handed[code](V) :- keyed_hand_need[code](V), may_be_node[flow](A, V), arg_at[flow](Q, _, A), runs_unknown[code](Q).
+keyed_handed[code](V) :- keyed_hand_need[code](V), may_be_node[flow](O, V), ast_child[code](N, object, 0, O),
+                         callee_of[code](Q, N), runs_unknown[code](Q).
+keyed_open_to[code](M) :- keyed_runs_m[code](G, M), keyed_handed[code](G).
+keyed_open_to[code](M) :- keyed_runs_m[code](G, M), entry_point[code](G), not class_method_of[flow](_, G).
+keyed_open_to[code](M) :- keyed_runs_m[code](G, M), class_method_of[flow](CD, G), not ast_attr[code](G, accessibility, "private"),
+                          inst_of[flow](I, CD), keyed_handed[code](I).
+keyed_noisy[code](C, K) :- keyed_between[code](C, K, Q), keyed_again[code](C, K, M), resolves[code](Q, M).
+keyed_noisy[code](C, K) :- keyed_between[code](C, K, Q), keyed_again[code](C, K, M), resolves[code](Q, G),
+                           keyed_runs_m[code](G, M).
+-- An `await` or a `yield` hands the turn to whatever is queued; only another
+-- run of the method puts its own put back. At an `await` that run must have
+-- started while this one waits (`keyed_overlap`): a call of the method nobody
+-- waited for (`await m()`) and another call after it, or such a call run more
+-- than once, or a caller whose own runs overlap, or a call nobody knows. Runs
+-- one after another, each awaited, do not overlap. A generator's runs live
+-- until they are exhausted, which the model does not follow, so at a `yield`
+-- any second run counts (`keyed_many`).
+keyed_noisy[code](C, K) :- keyed_between[code](C, K, Q), ast_node[code](Q, await_expression, _),
+                           keyed_again[code](C, K, M), keyed_overlap[code](M).
+keyed_noisy[code](C, K) :- keyed_between[code](C, K, Q), ast_node[code](Q, yield_expression, _),
+                           keyed_again[code](C, K, M), keyed_many[code](M).
+keyed_once_need[code](M) :- keyed_between[code](C, K, Q), ast_node[code](Q, await_expression, _), keyed_again[code](C, K, M).
+keyed_once_need[code](M) :- keyed_between[code](C, K, Q), ast_node[code](Q, yield_expression, _), keyed_again[code](C, K, M).
+keyed_once_need[code](F) :- keyed_caller[code](_, _, F).
+keyed_caller[code](G, Q, F) :- keyed_called_at[code](G, Q), nearest_fn[code](F, Q).
+keyed_called_at[code](G, Q) :- keyed_once_need[code](G), resolves[code](Q, G).
+keyed_looped[code](Q) :- keyed_called_at[code](_, Q), ast_within[code](Lp, Q), ast_node[code](Lp, K, _),
+                         eff_loop_kind(K), nearest_fn[code](F, Q), ast_within[code](F, Lp).
+keyed_looped[code](Q) :- keyed_called_at[code](_, Q), not in_fn[code](Q), ast_within[code](Lp, Q),
+                         ast_node[code](Lp, K, _), eff_loop_kind(K).
+keyed_many[code](G) :- keyed_called_at[code](G, Q1), keyed_called_at[code](G, Q2), Q1 != Q2.
+keyed_many[code](G) :- keyed_called_at[code](G, Q), keyed_looped[code](Q).
+keyed_many[code](G) :- keyed_caller[code](G, _, F), keyed_many[code](F).
+keyed_many[code](G) :- keyed_overlap[code](G).
+keyed_unknown_call[code](G) :- keyed_once_need[code](G), keyed_handed[code](G).
+keyed_unknown_call[code](G) :- keyed_once_need[code](G), entry_point[code](G), not class_method_of[flow](_, G).
+keyed_unknown_call[code](G) :- keyed_once_need[code](G), class_method_of[flow](CD, G),
+                               not ast_attr[code](G, accessibility, "private"), inst_of[flow](I, CD), keyed_handed[code](I).
+keyed_awaited[code](Q) :- keyed_called_at[code](_, Q), ast_child[code](A, argument, 0, Q), ast_node[code](A, await_expression, _).
+keyed_left[code](G, Q) :- keyed_called_at[code](G, Q), not keyed_awaited[code](Q).
+keyed_overlap[code](G) :- keyed_unknown_call[code](G).
+keyed_overlap[code](G) :- keyed_left[code](G, Q1), keyed_called_at[code](G, Q2), Q1 != Q2.
+keyed_overlap[code](G) :- keyed_left[code](G, Q), keyed_looped[code](Q).
+keyed_overlap[code](G) :- keyed_left[code](G, Q), keyed_caller[code](G, Q, F), keyed_many[code](F).
+keyed_overlap[code](G) :- keyed_caller[code](G, _, F), keyed_overlap[code](F).
+keyed_overlap[code](G) :- keyed_once_need[code](G), eff_reaches[code](G, G).
+keyed_noisy[code](C, K) :- keyed_between[code](C, K, Q), runs_unknown[code](Q),
+                           keyed_again[code](C, K, M), keyed_open_to[code](M).
+keyed_noisy[code](C, K) :- keyed_between[code](C, K, Q), resolves[code](Q, G), keyed_runs_out[code](G),
+                           keyed_again[code](C, K, M), keyed_open_to[code](M).
+keyed_out[code](V, C, P, R, K, Meth) :- keyed_put_before[code](V, C), keyed_read_site[code](C, H, B, F, I),
+                                        keyed_put_site[code](P, H, V, B, F, J), keyed_remover[code](R, C, K, Meth), J < K.
+keyed_taken_out[code](V, C, R) :- keyed_out[code](V, C, _, R, K, "clear"), not keyed_noisy[code](C, K).
+keyed_taken_out[code](V, C, R) :- keyed_out[code](V, C, P, R, K, _), keyed_key[code](P, Key), keyed_key[code](R, Key),
+                                  not keyed_noisy[code](C, K).
+keyed_taken_out[code](V, C, R) :- keyed_out[code](V, C, P, R, K, _), keyed_same_name[code](P, R), keyed_same_name[code](P, C),
+                                  not keyed_noisy[code](C, K).
+
+-- TAKEN OUT BY A CALL between the put and the read: a statement that is a call
+-- of one function that removes the key (or clears) whenever it runs takes the
+-- put out; a call that may run a removal of a key that may be the same, or an
+-- await or a yield where one exists, leaves the put in an order not known.
+keyed_dsure_at[code](G, H, D, K) :- keyed_body_stmt[code](G, K, D), keyed_drop[code](D, H).
+keyed_dsure_at[code](G, H, D, K) :- keyed_body_stmt[code](G, K, Q), keyed_one_target[code](Q, G2), keyed_dsure[code](G2, H, D).
+keyed_dsure[code](G, H, D) :- keyed_dsure_at[code](G, H, D, K), not keyed_early[code](G, K).
+keyed_vspan[code](V, C, P, S, M) :- keyed_read_site[code](C, H, B, F, I), keyed_put_site[code](P, H, V, B, F, J), J < I,
+                                    ast_child[code](B, F, L, S), J < L, L < I, nearest_v[flow](M, B).
+keyed_vspan[code](V, C, P, S, top) :- keyed_read_site[code](C, H, B, F, I), keyed_put_site[code](P, H, V, B, F, J), J < I,
+                                      ast_child[code](B, F, L, S), J < L, L < I, not in_fn[code](B).
+keyed_vbetween[code](V, C, P, Q) :- keyed_vspan[code](V, C, P, S, M), nearest_v[flow](M, Q), ast_within[code](S, Q).
+keyed_vbetween[code](V, C, P, Q) :- keyed_vspan[code](V, C, P, S, top), ast_within[code](S, Q), not in_fn[code](Q).
+keyed_vdiffers[code](D, P) :- keyed_vdrop_cand[code](D, P), keyed_key[code](D, K1), keyed_key[code](P, K2), K1 != K2.
+keyed_vdrop_cand[code](D, P) :- keyed_vbetween[code](_, C, P, _), keyed_read_site[code](C, H, _, _, _), keyed_drop[code](D, H).
+keyed_vdrop_at[code](V, C, Q, D) :- keyed_vbetween[code](V, C, P, Q), keyed_vdrop_cand[code](D, P), not keyed_vdiffers[code](D, P).
+keyed_vdrop_may[code](V, C) :- keyed_vdrop_at[code](V, C, Q, D), resolves[code](Q, G), nearest_v[flow](G2, D), keyed_drop_runs[code](G, G2),
+                               not keyed_vsure_out[code](V, C, Q).
+keyed_vdrop_may[code](V, C) :- keyed_vdrop_at[code](V, C, Q, _), ast_node[code](Q, await_expression, _).
+keyed_vdrop_may[code](V, C) :- keyed_vdrop_at[code](V, C, Q, _), ast_node[code](Q, yield_expression, _).
+keyed_vsure_out[code](V, C, Q) :- keyed_vbetween[code](V, C, P, Q), ast_child[code](S, expression, 0, Q), ast_node[code](S, expression_statement, _),
+                                  keyed_read_site[code](C, H, B, F, _), ast_child[code](B, F, _, S), keyed_one_target[code](Q, G),
+                                  keyed_dsure[code](G, H, D), keyed_dsure_key[code](D, P).
+keyed_dsure_key[code](D, P) :- keyed_on[flow](D, _, _, "clear"), keyed_vdrop_cand[code](D, P).
+keyed_dsure_key[code](D, P) :- keyed_vdrop_cand[code](D, P), keyed_key[code](D, K), keyed_key[code](P, K).
+keyed_taken_out[code](V, C, Q) :- keyed_vsure_out[code](V, C, Q), not keyed_noisy_at[code](C, Q).
+keyed_noisy_at[code](C, Q) :- keyed_vsure_out[code](_, C, Q), keyed_read_site[code](C, H, B, F, _), ast_child[code](B, F, L, S),
+                              ast_within[code](S, Q), keyed_noisy[code](C, L).
+
+-- PRESENT AT A GET: a put of the same key for certain, in a statement of its
+-- own earlier in the list, ran; nothing between them may have taken it out (a
+-- delete or a clear of the collection by any name whose key may be the same,
+-- `keyed_drop`): none written in the statements between, none in a function a
+-- call between may run, none run by code outside the model that was handed the
+-- collection or such a function, none queued behind an `await`, and on a field
+-- no other run of the method (`keyed_noisy` over the same span). Elsewhere a
+-- get may find no entry and read `undefined`.
+keyed_fill_cand[code](C, P, J) :- keyed_read_site[code](C, H, B, F, I), keyed_call[code](C, H, Get, _, _, _),
+                                  keyed_holder[code](H, Pk), keyed_store(Pk, Put, Get),
+                                  keyed_step[code](P, H, Put, B, F, J), J < I.
+keyed_want[code](A) :- keyed_drop[code](D, _), keyed_key_arg[code](D, A).
+keyed_want[code](A) :- keyed_put_of[code](P, _, _), keyed_key_arg[code](P, A).
+keyed_want[code](A) :- keyed_read_site[code](C, _, _, _, _), keyed_key_arg[code](C, A).
+keyed_fill[code](C, J) :- keyed_fill_cand[code](C, P, J), keyed_key[code](P, K), keyed_key[code](C, K).
+-- or a statement that is nothing but a call of one function that puts it for
+-- certain whenever it runs (`keyed_sure`): the put, or such a call, is a
+-- statement of its body with no `return` in a statement before it, and nothing
+-- the function runs removes from the collection. A method is called on `this`.
+keyed_stmt_need[code](G) :- keyed_fn_need[code](G).
+keyed_stmt_need[code](G) :- keyed_drop_runs[code](G, _).
+keyed_body_stmt[code](G, K, X) :- keyed_stmt_need[code](G), ast_child[code](G, body, 0, Gb), ast_child[code](Gb, body, K, S),
+                                  ast_node[code](S, expression_statement, _), ast_child[code](S, expression, 0, X).
+keyed_early[code](G, K) :- keyed_body_stmt[code](G, K, _), nearest_v[flow](G, R), ast_node[code](R, return_statement, _),
+                           ast_child[code](G, body, 0, Gb), ast_child[code](Gb, body, L, S), L < K, ast_within[code](S, R).
+keyed_early[code](G, K) :- keyed_body_stmt[code](G, K, _), ast_child[code](G, body, 0, Gb), ast_child[code](Gb, body, L, R),
+                           L < K, ast_node[code](R, return_statement, _).
+keyed_two_targets[code](Q) :- resolves[code](Q, A), resolves[code](Q, B), A != B.
+-- a call of a function of another file reaches the collection only where it left
+-- its file, and there `keyed_lost` holds whatever the call does
+keyed_local_call[code](Q, G) :- resolves[code](Q, G), not keyed_two_targets[code](Q), ast_node[code](Q, _, F), ast_node[code](G, _, F).
+keyed_this_call[code](Q) :- callee_of[code](Q, N), ast_child[code](N, object, 0, T), ast_node[code](T, this_expression, _).
+keyed_one_target[code](Q, G) :- keyed_local_call[code](Q, G), not class_method_of[flow](_, G),
+                                not ast_attr[code](G, async, true), not ast_attr[code](G, generator, true).
+keyed_one_target[code](Q, G) :- keyed_local_call[code](Q, G), class_method_of[flow](_, G),
+                                keyed_this_call[code](Q), not ast_attr[code](G, async, true), not ast_attr[code](G, generator, true).
+keyed_one_target[code](Q, G) :- keyed_local_call[code](Q, G), ast_node[code](G, class_private_method, _),
+                                keyed_this_call[code](Q), not ast_attr[code](G, async, true), not ast_attr[code](G, generator, true).
+keyed_sure_at[code](G, H, P, K) :- keyed_body_stmt[code](G, K, P), keyed_put_of[code](P, H, _).
+keyed_sure_at[code](G, H, P, K) :- keyed_body_stmt[code](G, K, Q), keyed_one_target[code](Q, G2), keyed_sure[code](G2, H, P).
+keyed_g_drops[code](G, H) :- keyed_hop_fn[code](G, H), keyed_drop[code](D, H), nearest_v[flow](G, D).
+keyed_g_drops[code](G, H) :- keyed_hop_fn[code](G, H), keyed_drop[code](D, H), nearest_v[flow](G2, D), keyed_drop_runs[code](G, G2).
+keyed_drop_runs[code](G, G) :- keyed_drop[code](D, _), nearest_v[flow](G, D).
+keyed_drop_runs[code](F, G) :- eff_calls[code](F, H), keyed_drop_runs[code](H, G).
+keyed_sure[code](G, H, P) :- keyed_sure_at[code](G, H, P, K), not keyed_early[code](G, K), not keyed_g_drops[code](G, H).
+keyed_fill_call[code](C, P, J) :- keyed_read_site[code](C, H, B, F, I), keyed_call[code](C, H, _, _, _, _),
+                                  ast_child[code](B, F, J, S), J < I, ast_node[code](S, expression_statement, _),
+                                  ast_child[code](S, expression, 0, Q), keyed_one_target[code](Q, G), keyed_sure[code](G, H, P).
+keyed_fill[code](C, J) :- keyed_fill_call[code](C, P, J), keyed_key[code](P, K), keyed_key[code](C, K).
+-- on a field, a method reads what the constructor put for certain: every
+-- instance ran it first. Unless a removal of the key may run anywhere else
+-- (methods run in any order), the method may run in the constructor before the
+-- put, or the collection left the model.
+keyed_ctor_put[code](C, P, J) :- keyed_shared[code](C, H), keyed_call[code](C, H, Get, _, _, _), keyed_holder[code](H, Pk),
+                                 keyed_store(Pk, Put, Get), keyed_born[code](H, Body, body), keyed_step[code](P, H, Put, Body, body, J).
+keyed_ctor_put[code](C, P, J) :- keyed_shared[code](C, H), keyed_call[code](C, H, _, _, _, _), keyed_born[code](H, Body, body),
+                                 ast_child[code](Body, body, J, S), ast_node[code](S, expression_statement, _),
+                                 ast_child[code](S, expression, 0, Q), keyed_one_target[code](Q, G), keyed_sure[code](G, H, P).
+keyed_fill_ctor[code](C, J) :- keyed_ctor_put[code](C, P, J), keyed_key[code](P, K), keyed_key[code](C, K).
+keyed_pair[code](C, D) :- keyed_fill_ctor[code](C, _), keyed_read_site[code](C, H, _, _, _), keyed_drop[code](D, H).
+keyed_before_put[code](C, J, Q) :- keyed_fill_ctor[code](C, J), keyed_read_site[code](C, H, _, _, _), keyed_born[code](H, Body, body),
+                                   ast_child[code](Ct, body, 0, Body), ast_child[code](Body, body, L, S), L < J,
+                                   nearest_v[flow](Ct, Q), ast_within[code](S, Q).
+keyed_lost_ctor[code](C, J) :- keyed_fill_ctor[code](C, J), keyed_pair[code](C, D), not keyed_differs[code](D, C),
+                               not keyed_drop_early[code](C, J, D), not keyed_healed[code](C, D).
+keyed_drop_early[code](C, J, D) :- keyed_before_put[code](C, J, D).
+keyed_target[code](M) :- keyed_fill_ctor[code](C, _), keyed_read_site[code](C, _, B, _, _), ast_child[code](M, body, 0, B).
+keyed_lost_ctor[code](C, J) :- keyed_before_put[code](C, J, Q), keyed_read_site[code](C, _, B, _, _), ast_child[code](M, body, 0, B),
+                               resolves[code](Q, G), keyed_runs_m[code](G, M).
+keyed_lost_ctor[code](C, J) :- keyed_before_put[code](C, J, Q), keyed_read_site[code](C, _, B, _, _), ast_child[code](M, body, 0, B),
+                               runs_unknown[code](Q), keyed_open_to[code](M).
+keyed_lost_ctor[code](C, J) :- keyed_fill_ctor[code](C, J), keyed_read_site[code](C, H, _, _, _), keyed_made[code](H, X),
+                               keyed_handed[code](X).
+keyed_present[code](C) :- keyed_fill_ctor[code](C, J), not keyed_lost_ctor[code](C, J).
+keyed_filled[code](H)  :- keyed_holder[code](H, _).
+keyed_made[code](H, X) :- keyed_filled[code](H), ast_child[code](H, init, 0, X).
+keyed_made[code](H, X) :- keyed_filled[code](H), ast_child[code](H, right, 0, X).
+keyed_made[code](H, X) :- keyed_filled[code](H), ast_child[code](H, value, 0, X).
+-- a removal in another file is not followed: where the collection left its
+-- file, a call between that reaches another file may remove anything
+keyed_drop[code](D, H) :- keyed_made[code](H, X), keyed_on[flow](D, X, P, Meth), keyed_remove(P, Meth),
+                          ast_node[code](H, _, File), ast_node[code](D, _, File).
+keyed_pair[code](C, D) :- keyed_fill[code](C, _), keyed_read_site[code](C, H, _, _, _), keyed_drop[code](D, H).
+keyed_differs[code](D, C) :- keyed_pair[code](C, D), keyed_key[code](D, K1), keyed_key[code](C, K2), K1 != K2.
+keyed_drop_may[code](C, J, D) :- keyed_fill[code](C, J), keyed_pair[code](C, D), not keyed_differs[code](D, C),
+                                 not keyed_healed[code](C, D).
+keyed_drop_fn[code](G) :- keyed_pair[code](C, D), not keyed_differs[code](D, C), nearest_v[flow](G, D).
+-- a removal its own function undoes: a later statement of that function puts
+-- the read's key back for certain, and nothing from the removal's statement to
+-- that put may run the read (the read itself, a call that reaches its
+-- function, code outside the model handed it, an await or a yield). Whenever
+-- the function returns, the entry is there.
+keyed_heal_at[code](C, D, G, L, K) :- keyed_pair[code](C, D), nearest_v[flow](G, D), ast_child[code](G, body, 0, Gb),
+                                      ast_child[code](Gb, body, L, S), ast_within[code](S, D), keyed_read_site[code](C, H, _, _, _),
+                                      keyed_sure_at[code](G, H, P, K), L < K, not keyed_early[code](G, K),
+                                      keyed_key[code](P, Kk), keyed_key[code](C, Kk).
+keyed_heal_fn[code](C, F) :- keyed_heal_at[code](C, _, _, _, _), nearest_v[flow](F, C).
+keyed_target[code](F) :- keyed_heal_fn[code](_, F).
+keyed_heal_span[code](C, D, Q) :- keyed_heal_at[code](C, D, G, L, K), nearest_v[flow](G, Q), ast_child[code](G, body, 0, Gb),
+                                  ast_child[code](Gb, body, J, S), L <= J, J <= K, ast_within[code](S, Q).
+keyed_heal_broken[code](C, D) :- keyed_heal_span[code](C, D, C).
+keyed_heal_broken[code](C, D) :- keyed_heal_span[code](C, D, Q), resolves[code](Q, G), keyed_heal_fn[code](C, F),
+                                 keyed_runs_m[code](G, F).
+keyed_heal_broken[code](C, D) :- keyed_heal_span[code](C, D, Q), runs_unknown[code](Q), keyed_heal_fn[code](C, F),
+                                 keyed_open_to[code](F).
+keyed_heal_broken[code](C, D) :- keyed_heal_span[code](C, D, Q), ast_node[code](Q, await_expression, _).
+keyed_heal_broken[code](C, D) :- keyed_heal_span[code](C, D, Q), ast_node[code](Q, yield_expression, _).
+keyed_healed[code](C, D) :- keyed_heal_at[code](C, D, _, _, _), not keyed_heal_broken[code](C, D).
+keyed_target[code](G)  :- keyed_drop_fn[code](G).
+keyed_hand_need[code](X) :- keyed_made[code](_, X).
+-- the span's own code: the statements after the put up to the read, outside
+-- any function written there
+keyed_pspan[code](C, J, S, M) :- keyed_fill[code](C, J), keyed_read_site[code](C, _, B, F, I), ast_child[code](B, F, L, S),
+                                 J < L, L <= I, nearest_v[flow](M, B).
+keyed_pspan_top[code](C, J, S) :- keyed_fill[code](C, J), keyed_read_site[code](C, _, B, F, I), ast_child[code](B, F, L, S),
+                                  J < L, L <= I, not in_fn[code](B).
+keyed_pbetween[code](C, J, Q) :- keyed_pspan[code](C, J, S, M), nearest_v[flow](M, Q), ast_within[code](S, Q),
+                                 Q != C, not ast_within[code](Q, C).
+keyed_pbetween[code](C, J, Q) :- keyed_pspan_top[code](C, J, S), ast_within[code](S, Q), not in_fn[code](Q),
+                                 Q != C, not ast_within[code](Q, C).
+keyed_lost[code](C, J) :- keyed_drop_may[code](C, J, D), keyed_read_site[code](C, _, B, F, I), ast_within[code](S, D),
+                          ast_child[code](B, F, L, S), J < L, L <= I.
+keyed_lost[code](C, J) :- keyed_drop_may[code](C, J, D), nearest_v[flow](G, D), keyed_pbetween[code](C, J, Q),
+                          resolves[code](Q, G).
+keyed_lost[code](C, J) :- keyed_drop_may[code](C, J, D), nearest_v[flow](G, D), keyed_pbetween[code](C, J, Q),
+                          resolves[code](Q, F), keyed_drop_runs[code](F, G).
+keyed_lost[code](C, J) :- keyed_drop_may[code](C, J, D), nearest_v[flow](G, D), keyed_pbetween[code](C, J, Q),
+                          ast_node[code](Q, await_expression, _).
+keyed_lost[code](C, J) :- keyed_drop_may[code](C, J, D), nearest_v[flow](G, D), keyed_pbetween[code](C, J, Q),
+                          ast_node[code](Q, yield_expression, _).
+keyed_outside_at[code](C, J) :- keyed_pbetween[code](C, J, Q), runs_unknown[code](Q).
+keyed_outside_at[code](C, J) :- keyed_pbetween[code](C, J, Q), resolves[code](Q, G), keyed_runs_out[code](G).
+keyed_lost[code](C, J) :- keyed_outside_at[code](C, J), keyed_read_site[code](C, H, _, _, _), keyed_made[code](H, X),
+                          keyed_handed[code](X).
+keyed_leaves[code](C, J) :- keyed_pbetween[code](C, J, Q), resolves[code](Q, G), ast_node[code](C, _, File),
+                            not ast_node[code](G, _, File).
+keyed_leaves[code](C, J) :- keyed_pbetween[code](C, J, Q), resolves[code](Q, G), ast_node[code](C, _, File),
+                            ast_node[code](G, _, File), keyed_crosses[code](G).
+keyed_lost[code](C, J) :- keyed_leaves[code](C, J), keyed_read_site[code](C, H, _, _, _), keyed_made[code](H, X),
+                          sx_esc[surface](X).
+keyed_lost[code](C, J) :- keyed_outside_at[code](C, J), keyed_drop_may[code](C, J, D), nearest_v[flow](G, D),
+                          keyed_open_to[code](G).
+keyed_again[code](C, J, M) :- keyed_fill[code](C, J), keyed_shared[code](C, H), keyed_read_site[code](C, H, B, _, _),
+                              ast_child[code](M, body, 0, B).
+keyed_lost[code](C, J) :- keyed_fill[code](C, J), keyed_noisy[code](C, J).
+keyed_present[code](C) :- keyed_fill[code](C, J), not keyed_lost[code](C, J).
+
+-- THE FLOW READS A COLLECTION WHOLE: a get, a walk, a forEach see every put of
+-- a key of the value they read. The order above judges the flow (which calls
+-- reach what, which keys are one), so what it rules out cannot feed the flow
+-- back; it is a view over it, `read_holds_lit` / `read_holds_node` below.
+keyed_read[flow](C, V)  :- keyed_get[flow](C, X, K), keyed_put[flow](X, K, V).
+may_be_node[flow](C, N) :- may_be_node[flow](V, N), keyed_read[flow](C, V).
+may_be_lit[flow](C, L)  :- may_be_lit[flow](V, L), keyed_read[flow](C, V).
+
+-- the walks: position 0 of the head's pattern is a key, position 1 a value;
+-- forEach's callback takes (value, key)
+keyed_walk[flow](S, D, X) :- ast_node[code](S, for_of_statement, _), ast_child[code](S, left, 0, H),
+                             ast_child[code](H, declarations, 0, D), ast_child[code](S, right, 0, R),
+                             may_be_node[flow](R, X), keyed_obj[flow](X, _).
+keyed_walk_at[flow](E, D, Pos) :- keyed_walk[flow](_, D, _), destructures_at[code](D, Local, Pos, File),
+                                  ident_in[code](E, Local, File), sees_binder[code](E, D).
+may_be_node[flow](E, N) :- keyed_walk[flow](_, D, X), keyed_put[flow](X, _, V), may_be_node[flow](V, N),
+                           keyed_walk_at[flow](E, D, 1).
+may_be_lit[flow](E, L)  :- keyed_walk[flow](_, D, X), keyed_put[flow](X, _, V), may_be_lit[flow](V, L),
+                           keyed_walk_at[flow](E, D, 1).
+may_be_lit[flow](E, K)  :- keyed_walk[flow](_, D, X), keyed_put[flow](X, K, _), keyed_walk_at[flow](E, D, 0).
+
+sx_keach[surface](C, F, X) :- keyed_on[flow](C, X, _, "forEach"), arg_at[flow](C, 0, A), may_be_node[flow](A, F),
+                              fn_value[flow](F).
+keyed_each_at[flow](U, C, X, Pos) :- sx_keach[surface](C, F, X), param_of[flow](F, Pos, Name), param_use[flow](F, Name, U).
+may_be_node[flow](U, N) :- keyed_each_at[flow](U, _, X, 0), keyed_put[flow](X, _, V), may_be_node[flow](V, N).
+may_be_lit[flow](U, L)  :- keyed_each_at[flow](U, _, X, 0), keyed_put[flow](X, _, V), may_be_lit[flow](V, L).
+may_be_lit[flow](U, K)  :- keyed_each_at[flow](U, _, X, 1), keyed_put[flow](X, K, _).
+
+-- WHAT A READ HOLDS AT ITS MOMENT: the flow's value, but at a read of a
+-- collection only the puts the order leaves it.
+keyed_read_ordered[flow](C, V)   :- keyed_read[flow](C, V), keyed_put_before[code](V, C), not keyed_vdrop_may[code](V, C),
                                     not keyed_taken_out[code](V, C, _).
-keyed_read_unordered[flow](C, V) :- keyed_get[flow](C, X, K), keyed_put[flow](X, K, V), not keyed_put_before[code](V, C),
-                                    not keyed_put_after[code](V, C).
-may_be_node[flow](C, N) :- may_be_node[flow](V, N), keyed_read_ordered[flow](C, V).
-may_be_node[flow](C, N) :- may_be_node[flow](V, N), keyed_read_unordered[flow](C, V).
-may_be_lit[flow](C, L)  :- may_be_lit[flow](V, L), keyed_read_ordered[flow](C, V).
-may_be_lit[flow](C, L)  :- may_be_lit[flow](V, L), keyed_read_unordered[flow](C, V).
-
--- the walk: position 0 of the head's pattern is a key, position 1 a value
-keyed_walk[flow](D, X) :- ast_node[code](S, for_of_statement, _), ast_child[code](S, left, 0, H),
-                          ast_child[code](H, declarations, 0, D), ast_child[code](S, right, 0, R),
-                          may_be_node[flow](R, X), keyed_obj[flow](X, _).
-may_be_node[flow](E, N) :- keyed_walk[flow](D, X), destructures_at[code](D, Local, 1, File), keyed_put[flow](X, _, V),
-                           may_be_node[flow](V, N), ident_in[code](E, Local, File), sees_binder[code](E, D).
-may_be_lit[flow](E, L)  :- keyed_walk[flow](D, X), destructures_at[code](D, Local, 1, File), keyed_put[flow](X, _, V),
-                           may_be_lit[flow](V, L), ident_in[code](E, Local, File), sees_binder[code](E, D).
-may_be_lit[flow](E, K)  :- keyed_walk[flow](D, X), destructures_at[code](D, Local, 0, File), keyed_put[flow](X, K, _),
-                           ident_in[code](E, Local, File), sees_binder[code](E, D).
-
-sx_keach[surface](F, X) :- keyed_on[flow](C, X, _, "forEach"), arg_at[flow](C, 0, A), may_be_node[flow](A, F),
-                           fn_value[flow](F).
-keyed_each[flow](F, X)  :- sx_keach[surface](F, X).
-may_be_node[flow](U, N) :- keyed_each[flow](F, X), param_of[flow](F, 0, Name), keyed_put[flow](X, _, V),
-                           may_be_node[flow](V, N), param_use[flow](F, Name, U).
-may_be_lit[flow](U, L)  :- keyed_each[flow](F, X), param_of[flow](F, 0, Name), keyed_put[flow](X, _, V),
-                           may_be_lit[flow](V, L), param_use[flow](F, Name, U).
-may_be_lit[flow](U, K)  :- keyed_each[flow](F, X), param_of[flow](F, 1, Name), keyed_put[flow](X, K, _),
-                           param_use[flow](F, Name, U).
+keyed_read_unordered[flow](C, V) :- keyed_read[flow](C, V), keyed_put_before[code](V, C), not keyed_taken_out[code](V, C, _),
+                                    keyed_vdrop_may[code](V, C).
+keyed_read_unordered[flow](C, V) :- keyed_read[flow](C, V), not keyed_put_before[code](V, C), not keyed_put_after[code](V, C).
+keyed_holds[flow](C, V) :- keyed_read_ordered[flow](C, V).
+keyed_holds[flow](C, V) :- keyed_read_unordered[flow](C, V).
+keyed_holds[flow](E, V) :- keyed_walk_at[flow](E, D, 1), keyed_walk[flow](S, D, X), keyed_put[flow](X, _, V),
+                           not keyed_put_after[code](V, S), not keyed_taken_out[code](V, S, _).
+keyed_holds[flow](U, V) :- keyed_each_at[flow](U, C, X, 0), keyed_put[flow](X, _, V),
+                           not keyed_put_after[code](V, C), not keyed_taken_out[code](V, C, _).
+keyed_holds_key[flow](E, K) :- keyed_walk_at[flow](E, D, 0), keyed_walk[flow](S, D, X), keyed_put[flow](X, K, V),
+                               not keyed_put_after[code](V, S), not keyed_taken_out[code](V, S, _).
+keyed_holds_key[flow](U, K) :- keyed_each_at[flow](U, C, X, 1), keyed_put[flow](X, K, V),
+                               not keyed_put_after[code](V, C), not keyed_taken_out[code](V, C, _).
+keyed_viewed[flow](C) :- keyed_read[flow](C, _).
+keyed_viewed[flow](E) :- keyed_walk_at[flow](E, _, _).
+keyed_viewed[flow](U) :- keyed_each_at[flow](U, _, _, _).
+read_holds_node[flow](E, N) :- may_be_node[flow](E, N), not keyed_viewed[flow](E).
+read_holds_node[flow](E, N) :- keyed_holds[flow](E, V), may_be_node[flow](V, N).
+read_holds_lit[flow](E, L)  :- may_be_lit[flow](E, L), not keyed_viewed[flow](E), not member_viewed[flow](E).
+read_holds_lit[flow](N, L)  :- member_viewed[flow](N), may_be_lit[flow](N, L), L != undefined.
+read_holds_lit[flow](N, undefined) :- member_may_lack[flow](N).
+read_holds_lit[flow](N, undefined) :- member_unset[flow](N, O, Key), member_value[flow](O, Key, V), may_be_lit[flow](V, undefined).
+read_holds_lit[flow](E, L)  :- keyed_holds[flow](E, V), may_be_lit[flow](V, L).
+read_holds_lit[flow](E, K)  :- keyed_holds_key[flow](E, K).
+read_holds_lit[flow](C, undefined) :- keyed_read[flow](C, _), not keyed_present[code](C).
 
 -- =========================================================================
 -- 8. READING A PROPERTY OFF A VALUE
@@ -923,6 +1471,95 @@ computed_key[code](N, P)    :- ast_attr[code](N, computed, true), member_node_v[
 selects[flow](N, Key)       :- may_be_lit[flow](P, Key), computed_key[code](N, P).
 selects[flow](N, Key)       :- symbol_ref[code](P, Key), computed_key[code](N, P).
 
+-- WHAT AN OBJECT LACKS: an object literal with no spread and no computed key
+-- shows every key it is made with. Read at a key it was not made with and
+-- `Object.prototype` lacks, through whatever reaches it (a `const`, an alias, a
+-- parameter, a return), it may be `undefined`. A literal of another file is
+-- not followed: its keys reach this file only through the flow, and a negation
+-- over them would close a cycle with the flow that carries the object here.
+-- A class field with no initialiser is published with its class, so an
+-- instance of a class of any file reads it `undefined`. A write of the key onto
+-- the object (`member_value`) may run before the read or after it: writes onto
+-- an object are not ordered, so such a read is `member_unset_written`.
+obj_open_own[code](O) :- hidden_call_pos[code](S, accessor_call), ast_child[code](O, properties, _, S).
+obj_open_own[code](O) :- ast_node[code](O, object_expression, _), ast_child[code](O, properties, _, P),
+                         ast_attr[code](P, computed, true).
+obj_own_key[code](O, Key) :- ast_node[code](O, object_expression, _), ast_child[code](O, properties, _, P),
+                             ast_child[code](P, key, 0, K), key_name[code](K, Key).
+member_unset[flow](N, O, Key) :- member_at[flow](N, _, O, Key), ast_node[code](N, _, F), ast_node[code](O, object_expression, F),
+                                 not ast_child[code](_, left, 0, N), not obj_open_own[code](O), not obj_own_key[code](O, Key),
+                                 not lib_member(object, Key, _), Key != "__proto__".
+field_unset_decl[code](CB, Key) :- ast_node[code](Q, class_property, _), not ast_child[code](Q, value, 0, _),
+                                   ast_attr[code](Q, static, false), ast_child[code](Q, key, 0, K), key_name[code](K, Key),
+                                   ast_child[code](CB, body, _, Q).
+class_unset_field[flow](CD, Key) :- field_unset_decl[code](CB, Key), ast_child[code](CD, body, 0, CB).
+member_unset[flow](N, I, Key) :- class_unset_field[flow](CD, Key), inst_of[flow](I, CD), member_at[flow](N, _, I, Key),
+                                 not ast_child[code](_, left, 0, N).
+may_be_lit[flow](N, undefined) :- member_unset[flow](N, _, _).
+member_unset_written[flow](N) :- member_unset[flow](N, O, Key), member_value[flow](O, Key, _).
+
+-- WHEN A WRITE ONTO AN OBJECT HAS RUN (a view, like a Map's order): a key the
+-- object is not made with is there for certain where a write of it ran before
+-- the read and no `delete` of it may run on that object anywhere.
+--   On a field, the constructor writes `this.k = v` in a statement of its own
+--   body with no `return` before it; every instance ran it, so a read is after
+--   it unless the read is constructor code before it, or the constructor runs
+--   the read's function before it (a call that reaches it, `super()` among
+--   them), or hands the instance or a function made there to code outside the
+--   model before it (`member_ctor_open`).
+--   On a `const` object literal, `o.k = v` is a statement of the list that
+--   binds it, before the read's statement, and the read is in the same function
+--   (a nested function may run anywhere, a declaration even before it).
+member_assign[code](S, T, Key, A) :- ast_node[code](S, expression_statement, _), ast_child[code](S, expression, 0, A),
+                                    ast_node[code](A, assignment_expression, _), ast_attr[code](A, operator, "="),
+                                    ast_child[code](A, left, 0, L), ast_attr[code](L, computed, false),
+                                    ast_child[code](L, object, 0, T), ast_child[code](L, property, 0, P), ast_name[code](P, Key).
+member_dropped[flow](O, Key) :- ast_node[code](U, unary_expression, _), ast_attr[code](U, operator, "delete"),
+                                ast_child[code](U, argument, 0, N), member_at[flow](N, _, O, Key).
+member_ctor_set[code](Body, Key, J) :- field_unset_decl[code](CB, Key), keyed_ctor[code](CB, Body), ast_child[code](Body, body, J, S),
+                                      member_assign[code](S, T, Key, _), ast_node[code](T, this_expression, _).
+member_ctor_early[code](Body, J) :- member_ctor_set[code](Body, _, J), ast_child[code](Ct, body, 0, Body), nearest_v[flow](Ct, R),
+                                   ast_node[code](R, return_statement, _), ast_child[code](Body, body, L, S), L < J, ast_within[code](S, R).
+member_ctor_before[code](Body, J, X) :- member_ctor_set[code](Body, _, J), ast_child[code](Body, body, L, S), L <= J,
+                                        ast_within[code](S, X).
+member_ctor_this[code](Body, J) :- member_ctor_before[code](Body, J, T), ast_node[code](T, this_expression, _),
+                                   not ast_child[code](_, object, 0, T).
+member_ctor_this[code](Body, J) :- member_ctor_before[code](Body, J, T), ast_node[code](T, this_expression, _),
+                                   nearest_v[flow](G, T), not ast_child[code](G, body, 0, Body).
+member_ctor_this[code](Body, J) :- member_ctor_before[code](Body, J, S), ast_node[code](S, super, _).
+member_ctor_open[code](Body, J) :- member_ctor_this[code](Body, J), member_ctor_before[code](Body, J, Q), runs_unknown[code](Q).
+-- what the class publishes: the field is set at J for certain, and which
+-- functions run before J (`super()` among them, and through it the parent's
+-- `this.m()`, which reaches the class's override).
+member_field_sure[flow](CD, Key, J) :- member_ctor_set[code](Body, Key, J), not member_ctor_early[code](Body, J),
+                                       not member_ctor_open[code](Body, J), keyed_ctor[code](CB, Body), ast_child[code](CD, body, 0, CB).
+member_field_runs[flow](CD, Key, J, G) :- member_field_sure[flow](CD, Key, J), ast_child[code](CD, body, 0, CB), keyed_ctor[code](CB, Body),
+                                          member_ctor_before[code](Body, J, Q), resolves[code](Q, G).
+member_ctor_inside[flow](CD, Key, J, N) :- member_field_sure[flow](CD, Key, J), ast_child[code](CD, body, 0, CB), keyed_ctor[code](CB, Body),
+                                           member_ctor_before[code](Body, J, N).
+-- the reader: after the write unless it is constructor code before it, or a
+-- function that runs before it reaches the read's function
+member_ctor_read[flow](N, I, Key, CD, J) :- member_unset[flow](N, I, Key), inst_of[flow](I, CD), member_field_sure[flow](CD, Key, J).
+member_read_fn[flow](N, F) :- member_ctor_read[flow](N, _, _, _, _), nearest_v[flow](F, N).
+keyed_target[code](F) :- member_read_fn[flow](_, F).
+member_ctor_late[flow](N, CD, J) :- member_ctor_read[flow](N, _, Key, CD, J), member_ctor_inside[flow](CD, Key, J, N).
+member_ctor_late[flow](N, CD, J) :- member_ctor_read[flow](N, _, Key, CD, J), member_field_runs[flow](CD, Key, J, G),
+                                    member_read_fn[flow](N, F), keyed_runs_m[code](G, F).
+member_set_sure[flow](N, I, Key) :- member_ctor_read[flow](N, I, Key, CD, J), not member_ctor_late[flow](N, CD, J),
+                                    not member_dropped[flow](I, Key).
+member_const_set[code](O, Key, B, F, J) :- binder[code](D, _, O, _), ast_node[code](O, object_expression, _),
+                                          ast_child[code](V, declarations, _, D), ast_attr[code](V, kind, "const"),
+                                          ast_child[code](B, F, L, V), ast_child[code](B, F, J, S), L < J,
+                                          member_assign[code](S, T, Key, _), sees_binder[code](T, D).
+member_const_read[flow](N, O, Key, W) :- member_unset[flow](N, O, Key), member_const_set[code](O, Key, B, F, J),
+                                         ast_child[code](B, F, I, S), J < I, ast_within[code](S, N), ast_child[code](B, F, J, W).
+member_set_sure[flow](N, O, Key) :- member_const_read[flow](N, O, Key, W), nearest_v[flow](G, W), nearest_v[flow](G, N),
+                                    not member_dropped[flow](O, Key).
+member_set_sure[flow](N, O, Key) :- member_const_read[flow](N, O, Key, W), not in_fn[code](W), not in_fn[code](N),
+                                    not member_dropped[flow](O, Key).
+member_viewed[flow](N) :- member_unset[flow](N, _, _).
+member_may_lack[flow](N) :- member_unset[flow](N, O, Key), not member_set_sure[flow](N, O, Key).
+
 -- The receiver decides which half of a class it sees: `Vat.poured()` and
 -- `new Vat().tapped()` are both TypeErrors and both resolved until the `static`
 -- attribute — emitted for every method, read by nothing — was read. The class
@@ -980,6 +1617,13 @@ class_method_of[flow](CD, M) :- obj_like[flow](CD), ast_child[code](CD, body, 0,
                                 ast_node[code](M, class_method, _).
 may_be_node[flow](T, I)  :- class_method_of[flow](CD, M), ast_attr[code](M, static, false),
                             inst_of[flow](I, CD), this_host[flow](M, T).
+-- an instance of a subclass runs the parent's methods and constructor with
+-- itself as `this`, so `this.m()` there reaches the subclass's override; a
+-- subclass of another file's class tells that file (`sx_sub_inst`)
+sub_inst[flow](SD, I) :- super_of[flow](CD, SD), inst_of[flow](I, CD).
+sub_inst[flow](SD, I) :- super_of[flow](MD, SD), sub_inst[flow](MD, I).
+may_be_node[flow](T, I)  :- class_method_of[flow](SD, M), ast_attr[code](M, static, false), this_host[flow](M, T),
+                            sub_inst[flow](SD, I).
 may_be_node[flow](T, CD) :- class_method_of[flow](CD, M), ast_attr[code](M, static, true),
                             this_host[flow](M, T).
 
@@ -1067,6 +1711,8 @@ class_field_this[flow](CD, P) :- private_member[code](CD, _, P),
                                  ast_node[code](P, class_private_property, _).
 may_be_node[flow](T, I)       :- class_field_this[flow](CD, P), not ast_attr[code](P, static, true),
                                  inst_of[flow](I, CD), this_host[flow](P, T).
+may_be_node[flow](T, I)       :- class_field_this[flow](SD, P), not ast_attr[code](P, static, true), this_host[flow](P, T),
+                                 sub_inst[flow](SD, I).
 may_be_node[flow](T, CD)      :- class_field_this[flow](CD, P), ast_attr[code](P, static, true),
                                  this_host[flow](P, T).
 

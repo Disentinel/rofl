@@ -392,6 +392,9 @@ resolved_site[code](C)      :- resolves[code](C, _).
 resolved_call[code](C)      :- resolved_site[code](C), call_site[code](C, _).
 unresolved_call[code](C, S) :- shape[code](C, S), not resolved_site[code](C).
 unresolved_shape[audit](S)  :- unresolved_call[code](_, S).
+-- a function that may run code outside the model: it makes a call nothing resolves (a quiet
+-- collection method is not one, rules/js-dataflow.rofl 7c)
+runs_outside[code](F)       :- unresolved_call[code](C, _), not keyed_quiet[code](C), nearest_fn[code](F, C).
 
 stdlib_member[audit](C, P, Key) :- unresolved_call[code](C, _), callee_of[code](C, N),
                                    ast_child[code](N, object, 0, O),
