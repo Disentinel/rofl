@@ -85,7 +85,7 @@ impl Eval {
                 why = format!("{} rules conclude it, not the two the declaration lowers to", lowered.len());
             } else if closure_rels.contains(&edge) {
                 why = "its edges are another closure".to_string();
-            } else if !brk!("vclosure_demand_unread" => true; false) && self.demand.rels.iter().any(|(r, _)| *r == rel || *r == edge) {
+            } else if !brk!("vclosure_demand_unread" => true; false) && (self.demand.on(rel) || self.demand.on(edge)) {
                 why = "it is answered on demand".to_string();
             } else {
                 let reach = readers_cone(HashSet::from([rel]), self.rules.iter().filter(|r| !lowered.contains(&r.id) && r.clause.head.temporal != Temporal::Next), reads_any);

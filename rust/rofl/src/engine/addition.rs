@@ -480,7 +480,7 @@ impl Eval {
         if brk!("retract_tree_refused" => from.iter().any(|r| self.vedges_reached(*r)); false) {
             why.push("the fact reaches the edges of a closure answered from its tree, which a retraction builds again");
         }
-        if from.iter().any(|r| self.demand.rels.iter().any(|(d, _)| d == r)) {
+        if from.iter().any(|r| self.demand.on(*r)) {
             why.push("read on demand");
         }
         if self.prov.no_witness {
@@ -1423,13 +1423,12 @@ impl Eval {
     /// The relations answered on demand that the addition makes or unmakes calls of. A call made before and not now (or
     /// the reverse) holds what calls made, so it goes whole with what rests on it.
     fn call_relations(&self, called: &[Sym], fresh: &HashSet<Sym>, grown: &HashSet<Sym>) -> HashSet<Sym> {
-        let demanded: HashSet<Sym> = self.demand.rels.iter().map(|(r, _)| *r).collect();
         // (one the change reaches neither through its own rules nor through a rule that calls it holds the same calls,
         // answered the same, and stays)
         called
             .iter()
             .copied()
-            .chain(demanded.iter().copied().filter(|d| {
+            .chain(self.demand.rels.iter().map(|(d, _)| *d).filter(|d| {
                 let one = HashSet::from([*d]);
                 brk!("add_demand_unreached_dropped" => false; grown.contains(d) || fresh.iter().any(|f| self.rule_of(*f).is_some_and(|r| reads(&r, &one).0)) || self.rules.iter().any(|r| reads(r, &one).0 && reads(r, grown).0))
             }))

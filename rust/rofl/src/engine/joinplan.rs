@@ -152,7 +152,7 @@ impl Eval {
             && r.plan.len() >= 2
             && r.plan.iter().all(|b| match b {
                 BodyElem::Pos(_) => true,
-                BodyElem::Neg(l) => !self.demand.rels.iter().any(|(d, _)| *d == l.rel),
+                BodyElem::Neg(l) => !self.demand.on(l.rel),
                 BodyElem::Bi { .. } => self.add.adding,
                 BodyElem::Agg(_) => false,
             })

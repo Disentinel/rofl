@@ -146,7 +146,7 @@ impl Eval {
                     && !kernel(**rel)
                     && now.get(rel) == Some(rs)
                     && by_head[rel].iter().all(|r| {
-                        (r.safe || self.demand.rels.iter().any(|(d, _)| d == *rel))
+                        (r.safe || self.demand.on(**rel))
                             && !r.has_thr
                             && r.lattice_outer.is_empty()
                             && r.lat_close.is_none()

@@ -216,7 +216,7 @@ impl Eval {
             out.push("not a base fact");
         }
         let rel = rec.rel;
-        if self.demand.rels.iter().any(|(r, _)| *r == rel) {
+        if self.demand.on(rel) {
             out.push("read on demand");
         }
         let ledgers = [
@@ -387,7 +387,7 @@ impl Eval {
             if !rels.contains(&head) || taken.contains(&r.id) || own.contains(&head) {
                 continue;
             }
-            if (r.clause.head.temporal == Temporal::Next && staging) || (!r.safe && self.demand.rels.iter().any(|(x, _)| *x == head)) {
+            if (r.clause.head.temporal == Temporal::Next && staging) || (!r.safe && self.demand.on(head)) {
                 continue;
             }
             if r.clause.head.temporal == Temporal::Next || self.shrug_readers.contains(&r.id) || self.answer.late.contains(&r.id) || !r.safe {
