@@ -34,8 +34,8 @@ stmt_list(switch_case, consequent).
 stmt_list(tsmodule_block, body).
 nth[tree](Seq, I, X) :- stmt_list(K, F), oxc_k[ast_oxc](Seq, K), oxc_c[ast_oxc](Seq, F, I, S), step(S, X).
 
--- the named children of an expression in the order they are evaluated; a branch under
--- executes_if and a function's body are not here
+-- the named children of an expression, indexed in the order they are evaluated (strict below); a
+-- branch under executes_if and a function's body are not here
 edb(eval_order).
 eval_order(binary_expression, left, 0).          eval_order(binary_expression, right, 1).
 eval_order(private_in_expression, right, 0).
@@ -72,6 +72,25 @@ nth[tree](A, I, E) :- oxc_k[ast_oxc](A, array_expression), oxc_c[ast_oxc](A, ele
 nth[tree](O, I, M) :- oxc_k[ast_oxc](O, object_expression), oxc_c[ast_oxc](O, properties, I, M),
                       not oxc_k[ast_oxc](M, spread_element).
 nth[tree](B, I, M) :- oxc_k[ast_oxc](B, class_body), oxc_c[ast_oxc](B, body, I, M).
+
+-- nth is a position; the order of execution is said apart: strict(Seq) where it is the order of the
+-- index, precedes(A, B) where a spread sits between the positions (its hidden iterator or getters)
+strict[tree](Seq) :- stmt_list(K, _), oxc_k[ast_oxc](Seq, K).
+strict[tree](N)   :- eval_order(K, _, _), oxc_k[ast_oxc](N, K).
+strict[tree](N)   :- oxc_k[ast_oxc](N, variable_declaration).
+strict[tree](N)   :- oxc_k[ast_oxc](N, sequence_expression).
+strict[tree](N)   :- oxc_k[ast_oxc](N, for_statement).
+strict[tree](N)   :- oxc_k[ast_oxc](N, try_statement).
+strict[tree](C)   :- call_like(C).
+strict[tree](A)   :- oxc_k[ast_oxc](A, array_expression).
+strict[tree](O)   :- oxc_k[ast_oxc](O, object_expression).
+spread_seq(C, arguments) :- call_like(C).
+spread_seq(A, elements)  :- oxc_k[ast_oxc](A, array_expression).
+spread_seq(O, properties) :- oxc_k[ast_oxc](O, object_expression).
+seq_pos(S, I, X, plain)  :- spread_seq(S, F), oxc_c[ast_oxc](S, F, I, X), not oxc_k[ast_oxc](X, spread_element), not oxc_k[ast_oxc](X, elision).
+seq_pos(S, I, X, spread) :- spread_seq(S, F), oxc_c[ast_oxc](S, F, I, E), oxc_k[ast_oxc](E, spread_element), oxc_c[ast_oxc](E, argument, 0, X).
+precedes[tree](A, B) :- seq_pos(S, I, A, spread), J is I + 1, seq_pos(S, J, B, _).
+precedes[tree](A, B) :- seq_pos(S, I, A, plain), J is I + 1, seq_pos(S, J, B, spread).
 
 edb(scope_kind).
 scope_kind(program). scope_kind(block_statement). scope_kind(function_body). scope_kind(static_block).
