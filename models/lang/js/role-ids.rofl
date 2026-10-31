@@ -240,6 +240,9 @@ up(C, A) :- parent[tree](A, C).
 role_up(C, A) :- up(C, A), role_node(A).
 role_up(C, A) :- up(C, X), not role_node(X), role_up(X, A).
 role_parent(C, P) :- role_node(C), role_up(C, P).
+-- the role tree, declared so: one parent each, and an id is minted only walking down it
+role_tree(P, C) :- role_parent(C, P).
+tree role_tree(P, C) closure role_below.
 
 -- the children in source order
 order(C, R) :- role_parent(C, P), pos[tree](C, O), R is count(D : role_parent(D, P), pos[tree](D, OD), OD < O).
@@ -266,7 +269,7 @@ nth_equal(C, K) :- role_parent(C, P), id_step(C, S), pos[tree](C, O),
                    K is count(D : role_parent(D, P), id_step(D, S), pos[tree](D, OD), OD < O).
 
 rid(P, P) :- program[tree](P, _).
-rid(C, Id) :- role_parent(C, P), rid(P, PI), id_step(C, S), nth_equal(C, K), H is hash(PI, S), Id is hash(H, K).
+rid(C, Id) :- rid(P, PI), role_tree(P, C), id_step(C, S), nth_equal(C, K), H is hash(PI, S), Id is hash(H, K).
 
 -- two nodes of a file under one id: the ids are not yet a name
 rid_shared[audit](Id, A, B) :- rid(A, Id), rid(B, Id), A != B.
