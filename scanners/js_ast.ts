@@ -391,6 +391,8 @@ export function scan(src: string, opts: ScanOpts = {}): AstFacts {
     const loc = node.loc as { start?: { line?: number } } | null | undefined;
     facts.push(`${raw}node[${persp}](${me}, ${kind}, ${qFile}).`);
     facts.push(`${raw}line[${persp}](${me}, ${loc?.start?.line ?? 0}).`);
+    // where it starts, in UTF-16 units as Babel counts them; the old model reads no position
+    if (raw === '') facts.push(`start[${persp}](${me}, ${(node as { start?: number }).start ?? 0}).`);
     let equal: Map<number, number> | undefined;
     let ch = 0;
     const child = (field: string, c: Node, listed: boolean): string => {
@@ -407,7 +409,8 @@ export function scan(src: string, opts: ScanOpts = {}): AstFacts {
       }
       start(salt); feed52(hash); feed(f); feed(nm !== undefined ? 1 : listed ? 2 : 0); feed52(disc); feed(k);
       ch = done();
-      return prefix + b32(ch);
+      // in a raw ledger the program is named by its file alone, as every parser names it (models/lang/js/role-ids.rofl)
+      return raw === '' && c.type === 'Program' ? prefix + 'root' : prefix + b32(ch);
     };
 
     for (const k of Object.keys(node)) {
