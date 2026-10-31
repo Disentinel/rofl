@@ -12,6 +12,7 @@ class C extends B implements I {
   constructor(private z: number) { super(); }
   get g() { return this.#p; } set g(v) { this.#p = v; }
   static { init(); }
+  static has(o) { return #p in o; }
   @dec m(...a) { return new.target; }
 }
 async function* gen() { yield 1; yield* other(); await p; for await (const v of it) {} }
@@ -32,4 +33,4 @@ const re = /a/g, big = 10n, nul = null, t = true, tl = `plain`;
 type A = string | number; interface I { a: string; m(): void }
 enum E { A = 1 } namespace N { export const n = 1 }
 declare function amb(): void;
-typeof x; void 0; delete o.a; !x; -x; 'a' in o; #p in o;
+typeof x; void 0; delete o.a; !x; -x; 'a' in o;

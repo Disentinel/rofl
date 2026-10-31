@@ -947,6 +947,7 @@ check[checks]("scripts/goldens.ts", "npm run test", gate).
 check[checks]("scripts/goldens.ts", "npm run test:bun", gate).
 check[checks]("scripts/text_check.ts", "npm run textcheck", gate).
 check[checks](".github/workflows/ci.yml", "typecheck", ci).
+check[checks](".github/workflows/ci.yml", "roles parity", ci).
 check[checks](".github/workflows/ci.yml", "goldens (node)", ci).
 check[checks](".github/workflows/ci.yml", "npm packages", ci).
 check[checks](".github/workflows/ci.yml", "one VSIX per platform", ci).

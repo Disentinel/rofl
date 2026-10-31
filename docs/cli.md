@@ -385,10 +385,16 @@ Rust field's; an enum wrapper that names it otherwise is the attribute
 it, with the same file prefix: code added above a node leaves its id. Files
 are parsed in parallel and printed in path order, the same bytes for the same
 tree. The JS model does not read `[ast_oxc]` yet. Its converter into the roles
-is `models/lang/js/oxc-roles.rofl` (`rofl load models/lang/js/oxc-roles.rofl
-oxc.rofl`): roles in `[tree]`, `[value]` and `[type]`, checked by the world
-`oxc_roles` over `models/lang/js/fixtures/all.ts`; what it leaves out and
-where it reads the vocabulary its own way is f_oxc_roles_meets_the_vocabulary.
+of `roles.rofl` is `models/lang/js/oxc-roles.rofl` (`rofl load
+@models/lang/js/oxc.files oxc.rofl`), checked by the world `oxc_roles` over
+`models/lang/js/fixtures/all.ts`. `npm run test:parity` runs that file through
+both parsers and both converters and compares the role facts row by row; what
+still differs is f_oxc_roles_meets_the_vocabulary.
+
+A node's id from its roles alone, the same whichever parser read the file, is
+`models/lang/js/role-ids.rofl` (`rid(N, Id)`, loaded after a converter); it
+needs the builtin `hash(Seed, V)` and each parser's program named
+`<prefix>root` with `pos[tree]` in UTF-16 units (f_role_ids_name_a_node_by_its_roles).
 The host facts (`fs_*`, `str_*`) are still `npm run scan`'s.
 
 Measured on vscode src (11 055 files, 4 cores, release): 72 s and 99.5 M

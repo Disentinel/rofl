@@ -105,6 +105,7 @@
     "test:agg": "node --experimental-strip-types scripts/agg_mutants.ts",
     "test:agg:breaks": "node --experimental-strip-types scripts/agg_breaks.ts",
     "test:roles": "node --experimental-strip-types scripts/roles_check.ts",
+    "test:parity": "node --experimental-strip-types scripts/roles_parity.ts",
     "test:split": "node --experimental-strip-types scripts/surface_split.ts --engine rust && node --experimental-strip-types scripts/surface_split.ts --engine ts --order forward && node --experimental-strip-types scripts/surface_split.ts --engine ts --order reverse && node --experimental-strip-types scripts/surface_split.ts --engine rust --break naive && node --experimental-strip-types scripts/surface_split.ts --driver && node --experimental-strip-types scripts/surface_split.ts --driver --hot 4 --order reverse --whys 0 && node --experimental-strip-types scripts/surface_split.ts --driver --break early --whys 0 && node --experimental-strip-types scripts/surface_split.ts --driver --break narrow --whys 0 --order forward && node --experimental-strip-types scripts/surface_split.ts --driver --break nophase --whys 0 --order forward && node --experimental-strip-types scripts/surface_split.ts --driver --break books --whys 0 --order forward",
     "test:english": "node --experimental-strip-types scripts/english_check.ts",
     "test:cut": "node --experimental-strip-types scripts/cut_check.ts",

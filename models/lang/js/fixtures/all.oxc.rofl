@@ -699,59 +699,125 @@ child[ast_oxc](n4b86f56e0826ca31_jol7ij5r59k05, callee, 0, n4b86f56e0826ca31_2jd
 child[ast_oxc](n4b86f56e0826ca31_1pqvdmvl7nca2, expression, 0, n4b86f56e0826ca31_jol7ij5r59k05).
 child[ast_oxc](n4b86f56e0826ca31_5k7u99c3q7paa, body, 0, n4b86f56e0826ca31_1pqvdmvl7nca2).
 child[ast_oxc](n4b86f56e0826ca31_rqhd5u2e5c7lf, body, 6, n4b86f56e0826ca31_5k7u99c3q7paa).
+node[ast_oxc](n4b86f56e0826ca31_84d7bn1d9flj5, method_definition, "all.ts").
+line[ast_oxc](n4b86f56e0826ca31_84d7bn1d9flj5, 15).
+start[ast_oxc](n4b86f56e0826ca31_84d7bn1d9flj5, 523).
+attr[ast_oxc](n4b86f56e0826ca31_84d7bn1d9flj5, type, "MethodDefinition").
+attr[ast_oxc](n4b86f56e0826ca31_84d7bn1d9flj5, kind, "Method").
+attr[ast_oxc](n4b86f56e0826ca31_84d7bn1d9flj5, computed, false).
+attr[ast_oxc](n4b86f56e0826ca31_84d7bn1d9flj5, static, true).
+node[ast_oxc](n4b86f56e0826ca31_mpoj9ac3dqhk2, identifier_name, "all.ts").
+line[ast_oxc](n4b86f56e0826ca31_mpoj9ac3dqhk2, 15).
+start[ast_oxc](n4b86f56e0826ca31_mpoj9ac3dqhk2, 530).
+attr[ast_oxc](n4b86f56e0826ca31_mpoj9ac3dqhk2, variant, "StaticIdentifier").
+attr[ast_oxc](n4b86f56e0826ca31_mpoj9ac3dqhk2, name, "has").
+child[ast_oxc](n4b86f56e0826ca31_84d7bn1d9flj5, key, 0, n4b86f56e0826ca31_mpoj9ac3dqhk2).
+node[ast_oxc](n4b86f56e0826ca31_4rhkq6ge95ov6, function, "all.ts").
+line[ast_oxc](n4b86f56e0826ca31_4rhkq6ge95ov6, 15).
+start[ast_oxc](n4b86f56e0826ca31_4rhkq6ge95ov6, 533).
+node[ast_oxc](n4b86f56e0826ca31_01bggvvorg0m5, formal_parameters, "all.ts").
+line[ast_oxc](n4b86f56e0826ca31_01bggvvorg0m5, 15).
+start[ast_oxc](n4b86f56e0826ca31_01bggvvorg0m5, 533).
+attr[ast_oxc](n4b86f56e0826ca31_01bggvvorg0m5, kind, "UniqueFormalParameters").
+node[ast_oxc](n4b86f56e0826ca31_susa6c944iqi1, formal_parameter, "all.ts").
+line[ast_oxc](n4b86f56e0826ca31_susa6c944iqi1, 15).
+start[ast_oxc](n4b86f56e0826ca31_susa6c944iqi1, 534).
+attr[ast_oxc](n4b86f56e0826ca31_susa6c944iqi1, optional, false).
+attr[ast_oxc](n4b86f56e0826ca31_susa6c944iqi1, readonly, false).
+attr[ast_oxc](n4b86f56e0826ca31_susa6c944iqi1, override, false).
+node[ast_oxc](n4b86f56e0826ca31_9ljjhv0j1hiub, binding_identifier, "all.ts").
+line[ast_oxc](n4b86f56e0826ca31_9ljjhv0j1hiub, 15).
+start[ast_oxc](n4b86f56e0826ca31_9ljjhv0j1hiub, 534).
+attr[ast_oxc](n4b86f56e0826ca31_9ljjhv0j1hiub, name, "o").
+child[ast_oxc](n4b86f56e0826ca31_susa6c944iqi1, pattern, 0, n4b86f56e0826ca31_9ljjhv0j1hiub).
+child[ast_oxc](n4b86f56e0826ca31_01bggvvorg0m5, items, 0, n4b86f56e0826ca31_susa6c944iqi1).
+child[ast_oxc](n4b86f56e0826ca31_4rhkq6ge95ov6, params, 0, n4b86f56e0826ca31_01bggvvorg0m5).
+node[ast_oxc](n4b86f56e0826ca31_vk2e774idk3ub, function_body, "all.ts").
+line[ast_oxc](n4b86f56e0826ca31_vk2e774idk3ub, 15).
+start[ast_oxc](n4b86f56e0826ca31_vk2e774idk3ub, 537).
+node[ast_oxc](n4b86f56e0826ca31_2vfrq3old9s4e, return_statement, "all.ts").
+line[ast_oxc](n4b86f56e0826ca31_2vfrq3old9s4e, 15).
+start[ast_oxc](n4b86f56e0826ca31_2vfrq3old9s4e, 539).
+node[ast_oxc](n4b86f56e0826ca31_gde0pocuvickf, private_in_expression, "all.ts").
+line[ast_oxc](n4b86f56e0826ca31_gde0pocuvickf, 15).
+start[ast_oxc](n4b86f56e0826ca31_gde0pocuvickf, 546).
+node[ast_oxc](n4b86f56e0826ca31_k75rb5pt4kgu6, private_identifier, "all.ts").
+line[ast_oxc](n4b86f56e0826ca31_k75rb5pt4kgu6, 15).
+start[ast_oxc](n4b86f56e0826ca31_k75rb5pt4kgu6, 546).
+attr[ast_oxc](n4b86f56e0826ca31_k75rb5pt4kgu6, name, "p").
+child[ast_oxc](n4b86f56e0826ca31_gde0pocuvickf, left, 0, n4b86f56e0826ca31_k75rb5pt4kgu6).
+node[ast_oxc](n4b86f56e0826ca31_v4aljrri07p84, identifier_reference, "all.ts").
+line[ast_oxc](n4b86f56e0826ca31_v4aljrri07p84, 15).
+start[ast_oxc](n4b86f56e0826ca31_v4aljrri07p84, 552).
+attr[ast_oxc](n4b86f56e0826ca31_v4aljrri07p84, variant, "Identifier").
+attr[ast_oxc](n4b86f56e0826ca31_v4aljrri07p84, name, "o").
+child[ast_oxc](n4b86f56e0826ca31_gde0pocuvickf, right, 0, n4b86f56e0826ca31_v4aljrri07p84).
+child[ast_oxc](n4b86f56e0826ca31_2vfrq3old9s4e, argument, 0, n4b86f56e0826ca31_gde0pocuvickf).
+child[ast_oxc](n4b86f56e0826ca31_vk2e774idk3ub, statements, 0, n4b86f56e0826ca31_2vfrq3old9s4e).
+child[ast_oxc](n4b86f56e0826ca31_4rhkq6ge95ov6, body, 0, n4b86f56e0826ca31_vk2e774idk3ub).
+attr[ast_oxc](n4b86f56e0826ca31_4rhkq6ge95ov6, type, "FunctionExpression").
+attr[ast_oxc](n4b86f56e0826ca31_4rhkq6ge95ov6, generator, false).
+attr[ast_oxc](n4b86f56e0826ca31_4rhkq6ge95ov6, async, false).
+attr[ast_oxc](n4b86f56e0826ca31_4rhkq6ge95ov6, declare, false).
+attr[ast_oxc](n4b86f56e0826ca31_4rhkq6ge95ov6, pure, false).
+attr[ast_oxc](n4b86f56e0826ca31_4rhkq6ge95ov6, pife, false).
+child[ast_oxc](n4b86f56e0826ca31_84d7bn1d9flj5, value, 0, n4b86f56e0826ca31_4rhkq6ge95ov6).
+attr[ast_oxc](n4b86f56e0826ca31_84d7bn1d9flj5, override, false).
+attr[ast_oxc](n4b86f56e0826ca31_84d7bn1d9flj5, optional, false).
+child[ast_oxc](n4b86f56e0826ca31_rqhd5u2e5c7lf, body, 7, n4b86f56e0826ca31_84d7bn1d9flj5).
 node[ast_oxc](n4b86f56e0826ca31_hn7tohfq4d3g2, method_definition, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_hn7tohfq4d3g2, 15).
-start[ast_oxc](n4b86f56e0826ca31_hn7tohfq4d3g2, 523).
+line[ast_oxc](n4b86f56e0826ca31_hn7tohfq4d3g2, 16).
+start[ast_oxc](n4b86f56e0826ca31_hn7tohfq4d3g2, 559).
 attr[ast_oxc](n4b86f56e0826ca31_hn7tohfq4d3g2, type, "MethodDefinition").
 attr[ast_oxc](n4b86f56e0826ca31_hn7tohfq4d3g2, kind, "Method").
 attr[ast_oxc](n4b86f56e0826ca31_hn7tohfq4d3g2, computed, false).
 attr[ast_oxc](n4b86f56e0826ca31_hn7tohfq4d3g2, static, false).
 node[ast_oxc](n4b86f56e0826ca31_3nrn2ld6v46s3, decorator, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_3nrn2ld6v46s3, 15).
-start[ast_oxc](n4b86f56e0826ca31_3nrn2ld6v46s3, 523).
+line[ast_oxc](n4b86f56e0826ca31_3nrn2ld6v46s3, 16).
+start[ast_oxc](n4b86f56e0826ca31_3nrn2ld6v46s3, 559).
 node[ast_oxc](n4b86f56e0826ca31_obh4bgfj7vev1, identifier_reference, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_obh4bgfj7vev1, 15).
-start[ast_oxc](n4b86f56e0826ca31_obh4bgfj7vev1, 524).
+line[ast_oxc](n4b86f56e0826ca31_obh4bgfj7vev1, 16).
+start[ast_oxc](n4b86f56e0826ca31_obh4bgfj7vev1, 560).
 attr[ast_oxc](n4b86f56e0826ca31_obh4bgfj7vev1, variant, "Identifier").
 attr[ast_oxc](n4b86f56e0826ca31_obh4bgfj7vev1, name, "dec").
 child[ast_oxc](n4b86f56e0826ca31_3nrn2ld6v46s3, expression, 0, n4b86f56e0826ca31_obh4bgfj7vev1).
 child[ast_oxc](n4b86f56e0826ca31_hn7tohfq4d3g2, decorators, 0, n4b86f56e0826ca31_3nrn2ld6v46s3).
 node[ast_oxc](n4b86f56e0826ca31_ftd6oem63qug8, identifier_name, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_ftd6oem63qug8, 15).
-start[ast_oxc](n4b86f56e0826ca31_ftd6oem63qug8, 528).
+line[ast_oxc](n4b86f56e0826ca31_ftd6oem63qug8, 16).
+start[ast_oxc](n4b86f56e0826ca31_ftd6oem63qug8, 564).
 attr[ast_oxc](n4b86f56e0826ca31_ftd6oem63qug8, variant, "StaticIdentifier").
 attr[ast_oxc](n4b86f56e0826ca31_ftd6oem63qug8, name, "m").
 child[ast_oxc](n4b86f56e0826ca31_hn7tohfq4d3g2, key, 0, n4b86f56e0826ca31_ftd6oem63qug8).
 node[ast_oxc](n4b86f56e0826ca31_dc6ufn0t9hje9, function, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_dc6ufn0t9hje9, 15).
-start[ast_oxc](n4b86f56e0826ca31_dc6ufn0t9hje9, 529).
+line[ast_oxc](n4b86f56e0826ca31_dc6ufn0t9hje9, 16).
+start[ast_oxc](n4b86f56e0826ca31_dc6ufn0t9hje9, 565).
 node[ast_oxc](n4b86f56e0826ca31_hknlbnh71re08, formal_parameters, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_hknlbnh71re08, 15).
-start[ast_oxc](n4b86f56e0826ca31_hknlbnh71re08, 529).
+line[ast_oxc](n4b86f56e0826ca31_hknlbnh71re08, 16).
+start[ast_oxc](n4b86f56e0826ca31_hknlbnh71re08, 565).
 attr[ast_oxc](n4b86f56e0826ca31_hknlbnh71re08, kind, "UniqueFormalParameters").
 node[ast_oxc](n4b86f56e0826ca31_q8mc701lm5up, formal_parameter_rest, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_q8mc701lm5up, 15).
-start[ast_oxc](n4b86f56e0826ca31_q8mc701lm5up, 530).
+line[ast_oxc](n4b86f56e0826ca31_q8mc701lm5up, 16).
+start[ast_oxc](n4b86f56e0826ca31_q8mc701lm5up, 566).
 node[ast_oxc](n4b86f56e0826ca31_07t682ofmout, binding_rest_element, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_07t682ofmout, 15).
-start[ast_oxc](n4b86f56e0826ca31_07t682ofmout, 530).
+line[ast_oxc](n4b86f56e0826ca31_07t682ofmout, 16).
+start[ast_oxc](n4b86f56e0826ca31_07t682ofmout, 566).
 node[ast_oxc](n4b86f56e0826ca31_mal1big6k6738, binding_identifier, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_mal1big6k6738, 15).
-start[ast_oxc](n4b86f56e0826ca31_mal1big6k6738, 533).
+line[ast_oxc](n4b86f56e0826ca31_mal1big6k6738, 16).
+start[ast_oxc](n4b86f56e0826ca31_mal1big6k6738, 569).
 attr[ast_oxc](n4b86f56e0826ca31_mal1big6k6738, name, "a").
 child[ast_oxc](n4b86f56e0826ca31_07t682ofmout, argument, 0, n4b86f56e0826ca31_mal1big6k6738).
 child[ast_oxc](n4b86f56e0826ca31_q8mc701lm5up, rest, 0, n4b86f56e0826ca31_07t682ofmout).
 child[ast_oxc](n4b86f56e0826ca31_hknlbnh71re08, rest, 0, n4b86f56e0826ca31_q8mc701lm5up).
 child[ast_oxc](n4b86f56e0826ca31_dc6ufn0t9hje9, params, 0, n4b86f56e0826ca31_hknlbnh71re08).
 node[ast_oxc](n4b86f56e0826ca31_0l7pl4gm4ak1, function_body, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_0l7pl4gm4ak1, 15).
-start[ast_oxc](n4b86f56e0826ca31_0l7pl4gm4ak1, 536).
+line[ast_oxc](n4b86f56e0826ca31_0l7pl4gm4ak1, 16).
+start[ast_oxc](n4b86f56e0826ca31_0l7pl4gm4ak1, 572).
 node[ast_oxc](n4b86f56e0826ca31_okrvfo7lgk8q4, return_statement, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_okrvfo7lgk8q4, 15).
-start[ast_oxc](n4b86f56e0826ca31_okrvfo7lgk8q4, 538).
+line[ast_oxc](n4b86f56e0826ca31_okrvfo7lgk8q4, 16).
+start[ast_oxc](n4b86f56e0826ca31_okrvfo7lgk8q4, 574).
 node[ast_oxc](n4b86f56e0826ca31_3i8uvu35p5d81, new_target, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_3i8uvu35p5d81, 15).
-start[ast_oxc](n4b86f56e0826ca31_3i8uvu35p5d81, 545).
+line[ast_oxc](n4b86f56e0826ca31_3i8uvu35p5d81, 16).
+start[ast_oxc](n4b86f56e0826ca31_3i8uvu35p5d81, 581).
 child[ast_oxc](n4b86f56e0826ca31_okrvfo7lgk8q4, argument, 0, n4b86f56e0826ca31_3i8uvu35p5d81).
 child[ast_oxc](n4b86f56e0826ca31_0l7pl4gm4ak1, statements, 0, n4b86f56e0826ca31_okrvfo7lgk8q4).
 child[ast_oxc](n4b86f56e0826ca31_dc6ufn0t9hje9, body, 0, n4b86f56e0826ca31_0l7pl4gm4ak1).
@@ -764,39 +830,39 @@ attr[ast_oxc](n4b86f56e0826ca31_dc6ufn0t9hje9, pife, false).
 child[ast_oxc](n4b86f56e0826ca31_hn7tohfq4d3g2, value, 0, n4b86f56e0826ca31_dc6ufn0t9hje9).
 attr[ast_oxc](n4b86f56e0826ca31_hn7tohfq4d3g2, override, false).
 attr[ast_oxc](n4b86f56e0826ca31_hn7tohfq4d3g2, optional, false).
-child[ast_oxc](n4b86f56e0826ca31_rqhd5u2e5c7lf, body, 7, n4b86f56e0826ca31_hn7tohfq4d3g2).
+child[ast_oxc](n4b86f56e0826ca31_rqhd5u2e5c7lf, body, 8, n4b86f56e0826ca31_hn7tohfq4d3g2).
 child[ast_oxc](n4b86f56e0826ca31_rv7j79hh09i89, body, 0, n4b86f56e0826ca31_rqhd5u2e5c7lf).
 attr[ast_oxc](n4b86f56e0826ca31_rv7j79hh09i89, type, "ClassDeclaration").
 attr[ast_oxc](n4b86f56e0826ca31_rv7j79hh09i89, abstract, false).
 attr[ast_oxc](n4b86f56e0826ca31_rv7j79hh09i89, declare, false).
 child[ast_oxc](n4b86f56e0826ca31_root, body, 9, n4b86f56e0826ca31_rv7j79hh09i89).
 node[ast_oxc](n4b86f56e0826ca31_qq8k735lcop7d, function, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_qq8k735lcop7d, 17).
-start[ast_oxc](n4b86f56e0826ca31_qq8k735lcop7d, 561).
+line[ast_oxc](n4b86f56e0826ca31_qq8k735lcop7d, 18).
+start[ast_oxc](n4b86f56e0826ca31_qq8k735lcop7d, 597).
 attr[ast_oxc](n4b86f56e0826ca31_qq8k735lcop7d, variant, "FunctionDeclaration").
 node[ast_oxc](n4b86f56e0826ca31_nkqsepij63s0b, binding_identifier, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_nkqsepij63s0b, 17).
-start[ast_oxc](n4b86f56e0826ca31_nkqsepij63s0b, 577).
+line[ast_oxc](n4b86f56e0826ca31_nkqsepij63s0b, 18).
+start[ast_oxc](n4b86f56e0826ca31_nkqsepij63s0b, 613).
 attr[ast_oxc](n4b86f56e0826ca31_nkqsepij63s0b, name, "gen").
 child[ast_oxc](n4b86f56e0826ca31_qq8k735lcop7d, id, 0, n4b86f56e0826ca31_nkqsepij63s0b).
 node[ast_oxc](n4b86f56e0826ca31_c0ao0nphij7a5, formal_parameters, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_c0ao0nphij7a5, 17).
-start[ast_oxc](n4b86f56e0826ca31_c0ao0nphij7a5, 580).
+line[ast_oxc](n4b86f56e0826ca31_c0ao0nphij7a5, 18).
+start[ast_oxc](n4b86f56e0826ca31_c0ao0nphij7a5, 616).
 attr[ast_oxc](n4b86f56e0826ca31_c0ao0nphij7a5, kind, "FormalParameter").
 child[ast_oxc](n4b86f56e0826ca31_qq8k735lcop7d, params, 0, n4b86f56e0826ca31_c0ao0nphij7a5).
 node[ast_oxc](n4b86f56e0826ca31_hv25mma1qrej, function_body, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_hv25mma1qrej, 17).
-start[ast_oxc](n4b86f56e0826ca31_hv25mma1qrej, 583).
+line[ast_oxc](n4b86f56e0826ca31_hv25mma1qrej, 18).
+start[ast_oxc](n4b86f56e0826ca31_hv25mma1qrej, 619).
 node[ast_oxc](n4b86f56e0826ca31_1gkii50iuv6g3, expression_statement, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_1gkii50iuv6g3, 17).
-start[ast_oxc](n4b86f56e0826ca31_1gkii50iuv6g3, 585).
+line[ast_oxc](n4b86f56e0826ca31_1gkii50iuv6g3, 18).
+start[ast_oxc](n4b86f56e0826ca31_1gkii50iuv6g3, 621).
 node[ast_oxc](n4b86f56e0826ca31_foc8sp8ndd7vc, yield_expression, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_foc8sp8ndd7vc, 17).
-start[ast_oxc](n4b86f56e0826ca31_foc8sp8ndd7vc, 585).
+line[ast_oxc](n4b86f56e0826ca31_foc8sp8ndd7vc, 18).
+start[ast_oxc](n4b86f56e0826ca31_foc8sp8ndd7vc, 621).
 attr[ast_oxc](n4b86f56e0826ca31_foc8sp8ndd7vc, delegate, false).
 node[ast_oxc](n4b86f56e0826ca31_5g7nu144fs4b4, numeric_literal, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_5g7nu144fs4b4, 17).
-start[ast_oxc](n4b86f56e0826ca31_5g7nu144fs4b4, 591).
+line[ast_oxc](n4b86f56e0826ca31_5g7nu144fs4b4, 18).
+start[ast_oxc](n4b86f56e0826ca31_5g7nu144fs4b4, 627).
 attr[ast_oxc](n4b86f56e0826ca31_5g7nu144fs4b4, base, "Decimal").
 attr[ast_oxc](n4b86f56e0826ca31_5g7nu144fs4b4, raw, "1").
 attr[ast_oxc](n4b86f56e0826ca31_5g7nu144fs4b4, value, 1).
@@ -804,20 +870,20 @@ child[ast_oxc](n4b86f56e0826ca31_foc8sp8ndd7vc, argument, 0, n4b86f56e0826ca31_5
 child[ast_oxc](n4b86f56e0826ca31_1gkii50iuv6g3, expression, 0, n4b86f56e0826ca31_foc8sp8ndd7vc).
 child[ast_oxc](n4b86f56e0826ca31_hv25mma1qrej, statements, 0, n4b86f56e0826ca31_1gkii50iuv6g3).
 node[ast_oxc](n4b86f56e0826ca31_opee6ucc5nooa, expression_statement, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_opee6ucc5nooa, 17).
-start[ast_oxc](n4b86f56e0826ca31_opee6ucc5nooa, 594).
+line[ast_oxc](n4b86f56e0826ca31_opee6ucc5nooa, 18).
+start[ast_oxc](n4b86f56e0826ca31_opee6ucc5nooa, 630).
 node[ast_oxc](n4b86f56e0826ca31_3jpstd00o3pn2, yield_expression, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_3jpstd00o3pn2, 17).
-start[ast_oxc](n4b86f56e0826ca31_3jpstd00o3pn2, 594).
+line[ast_oxc](n4b86f56e0826ca31_3jpstd00o3pn2, 18).
+start[ast_oxc](n4b86f56e0826ca31_3jpstd00o3pn2, 630).
 attr[ast_oxc](n4b86f56e0826ca31_3jpstd00o3pn2, delegate, true).
 node[ast_oxc](n4b86f56e0826ca31_3k91s2hsvkpsb, call_expression, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_3k91s2hsvkpsb, 17).
-start[ast_oxc](n4b86f56e0826ca31_3k91s2hsvkpsb, 601).
+line[ast_oxc](n4b86f56e0826ca31_3k91s2hsvkpsb, 18).
+start[ast_oxc](n4b86f56e0826ca31_3k91s2hsvkpsb, 637).
 attr[ast_oxc](n4b86f56e0826ca31_3k91s2hsvkpsb, optional, false).
 attr[ast_oxc](n4b86f56e0826ca31_3k91s2hsvkpsb, pure, false).
 node[ast_oxc](n4b86f56e0826ca31_bg207656rlqfe, identifier_reference, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_bg207656rlqfe, 17).
-start[ast_oxc](n4b86f56e0826ca31_bg207656rlqfe, 601).
+line[ast_oxc](n4b86f56e0826ca31_bg207656rlqfe, 18).
+start[ast_oxc](n4b86f56e0826ca31_bg207656rlqfe, 637).
 attr[ast_oxc](n4b86f56e0826ca31_bg207656rlqfe, variant, "Identifier").
 attr[ast_oxc](n4b86f56e0826ca31_bg207656rlqfe, name, "other").
 child[ast_oxc](n4b86f56e0826ca31_3k91s2hsvkpsb, callee, 0, n4b86f56e0826ca31_bg207656rlqfe).
@@ -825,47 +891,47 @@ child[ast_oxc](n4b86f56e0826ca31_3jpstd00o3pn2, argument, 0, n4b86f56e0826ca31_3
 child[ast_oxc](n4b86f56e0826ca31_opee6ucc5nooa, expression, 0, n4b86f56e0826ca31_3jpstd00o3pn2).
 child[ast_oxc](n4b86f56e0826ca31_hv25mma1qrej, statements, 1, n4b86f56e0826ca31_opee6ucc5nooa).
 node[ast_oxc](n4b86f56e0826ca31_15ho04m8514k4, expression_statement, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_15ho04m8514k4, 17).
-start[ast_oxc](n4b86f56e0826ca31_15ho04m8514k4, 610).
+line[ast_oxc](n4b86f56e0826ca31_15ho04m8514k4, 18).
+start[ast_oxc](n4b86f56e0826ca31_15ho04m8514k4, 646).
 node[ast_oxc](n4b86f56e0826ca31_nrli5dfmhoc5c, await_expression, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_nrli5dfmhoc5c, 17).
-start[ast_oxc](n4b86f56e0826ca31_nrli5dfmhoc5c, 610).
+line[ast_oxc](n4b86f56e0826ca31_nrli5dfmhoc5c, 18).
+start[ast_oxc](n4b86f56e0826ca31_nrli5dfmhoc5c, 646).
 node[ast_oxc](n4b86f56e0826ca31_mmddmgkv5cbb, identifier_reference, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_mmddmgkv5cbb, 17).
-start[ast_oxc](n4b86f56e0826ca31_mmddmgkv5cbb, 616).
+line[ast_oxc](n4b86f56e0826ca31_mmddmgkv5cbb, 18).
+start[ast_oxc](n4b86f56e0826ca31_mmddmgkv5cbb, 652).
 attr[ast_oxc](n4b86f56e0826ca31_mmddmgkv5cbb, variant, "Identifier").
 attr[ast_oxc](n4b86f56e0826ca31_mmddmgkv5cbb, name, "p").
 child[ast_oxc](n4b86f56e0826ca31_nrli5dfmhoc5c, argument, 0, n4b86f56e0826ca31_mmddmgkv5cbb).
 child[ast_oxc](n4b86f56e0826ca31_15ho04m8514k4, expression, 0, n4b86f56e0826ca31_nrli5dfmhoc5c).
 child[ast_oxc](n4b86f56e0826ca31_hv25mma1qrej, statements, 2, n4b86f56e0826ca31_15ho04m8514k4).
 node[ast_oxc](n4b86f56e0826ca31_9tmeglljigu44, for_of_statement, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_9tmeglljigu44, 17).
-start[ast_oxc](n4b86f56e0826ca31_9tmeglljigu44, 619).
+line[ast_oxc](n4b86f56e0826ca31_9tmeglljigu44, 18).
+start[ast_oxc](n4b86f56e0826ca31_9tmeglljigu44, 655).
 node[ast_oxc](n4b86f56e0826ca31_3ejh1q1gsp576, variable_declaration, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_3ejh1q1gsp576, 17).
-start[ast_oxc](n4b86f56e0826ca31_3ejh1q1gsp576, 630).
+line[ast_oxc](n4b86f56e0826ca31_3ejh1q1gsp576, 18).
+start[ast_oxc](n4b86f56e0826ca31_3ejh1q1gsp576, 666).
 attr[ast_oxc](n4b86f56e0826ca31_3ejh1q1gsp576, kind, "Const").
 attr[ast_oxc](n4b86f56e0826ca31_3ejh1q1gsp576, declare, false).
 node[ast_oxc](n4b86f56e0826ca31_hl4uum6voetsf, variable_declarator, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_hl4uum6voetsf, 17).
-start[ast_oxc](n4b86f56e0826ca31_hl4uum6voetsf, 636).
+line[ast_oxc](n4b86f56e0826ca31_hl4uum6voetsf, 18).
+start[ast_oxc](n4b86f56e0826ca31_hl4uum6voetsf, 672).
 attr[ast_oxc](n4b86f56e0826ca31_hl4uum6voetsf, definite, false).
 node[ast_oxc](n4b86f56e0826ca31_gok6n4757c7k9, binding_identifier, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_gok6n4757c7k9, 17).
-start[ast_oxc](n4b86f56e0826ca31_gok6n4757c7k9, 636).
+line[ast_oxc](n4b86f56e0826ca31_gok6n4757c7k9, 18).
+start[ast_oxc](n4b86f56e0826ca31_gok6n4757c7k9, 672).
 attr[ast_oxc](n4b86f56e0826ca31_gok6n4757c7k9, name, "v").
 child[ast_oxc](n4b86f56e0826ca31_hl4uum6voetsf, id, 0, n4b86f56e0826ca31_gok6n4757c7k9).
 child[ast_oxc](n4b86f56e0826ca31_3ejh1q1gsp576, declarations, 0, n4b86f56e0826ca31_hl4uum6voetsf).
 child[ast_oxc](n4b86f56e0826ca31_9tmeglljigu44, left, 0, n4b86f56e0826ca31_3ejh1q1gsp576).
 node[ast_oxc](n4b86f56e0826ca31_aj9aemhuc4147, identifier_reference, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_aj9aemhuc4147, 17).
-start[ast_oxc](n4b86f56e0826ca31_aj9aemhuc4147, 641).
+line[ast_oxc](n4b86f56e0826ca31_aj9aemhuc4147, 18).
+start[ast_oxc](n4b86f56e0826ca31_aj9aemhuc4147, 677).
 attr[ast_oxc](n4b86f56e0826ca31_aj9aemhuc4147, variant, "Identifier").
 attr[ast_oxc](n4b86f56e0826ca31_aj9aemhuc4147, name, "it").
 child[ast_oxc](n4b86f56e0826ca31_9tmeglljigu44, right, 0, n4b86f56e0826ca31_aj9aemhuc4147).
 node[ast_oxc](n4b86f56e0826ca31_3j09g8uh5qb98, block_statement, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_3j09g8uh5qb98, 17).
-start[ast_oxc](n4b86f56e0826ca31_3j09g8uh5qb98, 645).
+line[ast_oxc](n4b86f56e0826ca31_3j09g8uh5qb98, 18).
+start[ast_oxc](n4b86f56e0826ca31_3j09g8uh5qb98, 681).
 child[ast_oxc](n4b86f56e0826ca31_9tmeglljigu44, body, 0, n4b86f56e0826ca31_3j09g8uh5qb98).
 attr[ast_oxc](n4b86f56e0826ca31_9tmeglljigu44, await, true).
 child[ast_oxc](n4b86f56e0826ca31_hv25mma1qrej, statements, 3, n4b86f56e0826ca31_9tmeglljigu44).
@@ -878,120 +944,120 @@ attr[ast_oxc](n4b86f56e0826ca31_qq8k735lcop7d, pure, false).
 attr[ast_oxc](n4b86f56e0826ca31_qq8k735lcop7d, pife, false).
 child[ast_oxc](n4b86f56e0826ca31_root, body, 10, n4b86f56e0826ca31_qq8k735lcop7d).
 node[ast_oxc](n4b86f56e0826ca31_odmlrs104h6mb, variable_declaration, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_odmlrs104h6mb, 18).
-start[ast_oxc](n4b86f56e0826ca31_odmlrs104h6mb, 650).
+line[ast_oxc](n4b86f56e0826ca31_odmlrs104h6mb, 19).
+start[ast_oxc](n4b86f56e0826ca31_odmlrs104h6mb, 686).
 attr[ast_oxc](n4b86f56e0826ca31_odmlrs104h6mb, kind, "Const").
 attr[ast_oxc](n4b86f56e0826ca31_odmlrs104h6mb, declare, false).
 node[ast_oxc](n4b86f56e0826ca31_dj819g9jlomm4, variable_declarator, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_dj819g9jlomm4, 18).
-start[ast_oxc](n4b86f56e0826ca31_dj819g9jlomm4, 656).
+line[ast_oxc](n4b86f56e0826ca31_dj819g9jlomm4, 19).
+start[ast_oxc](n4b86f56e0826ca31_dj819g9jlomm4, 692).
 attr[ast_oxc](n4b86f56e0826ca31_dj819g9jlomm4, definite, false).
 node[ast_oxc](n4b86f56e0826ca31_0htsou9b4rapb, binding_identifier, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_0htsou9b4rapb, 18).
-start[ast_oxc](n4b86f56e0826ca31_0htsou9b4rapb, 656).
+line[ast_oxc](n4b86f56e0826ca31_0htsou9b4rapb, 19).
+start[ast_oxc](n4b86f56e0826ca31_0htsou9b4rapb, 692).
 attr[ast_oxc](n4b86f56e0826ca31_0htsou9b4rapb, name, "o").
 child[ast_oxc](n4b86f56e0826ca31_dj819g9jlomm4, id, 0, n4b86f56e0826ca31_0htsou9b4rapb).
 node[ast_oxc](n4b86f56e0826ca31_62upme3gqkr09, object_expression, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_62upme3gqkr09, 18).
-start[ast_oxc](n4b86f56e0826ca31_62upme3gqkr09, 660).
+line[ast_oxc](n4b86f56e0826ca31_62upme3gqkr09, 19).
+start[ast_oxc](n4b86f56e0826ca31_62upme3gqkr09, 696).
 node[ast_oxc](n4b86f56e0826ca31_kn3fe2cpshss4, object_property, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_kn3fe2cpshss4, 18).
-start[ast_oxc](n4b86f56e0826ca31_kn3fe2cpshss4, 662).
+line[ast_oxc](n4b86f56e0826ca31_kn3fe2cpshss4, 19).
+start[ast_oxc](n4b86f56e0826ca31_kn3fe2cpshss4, 698).
 attr[ast_oxc](n4b86f56e0826ca31_kn3fe2cpshss4, kind, "Init").
 attr[ast_oxc](n4b86f56e0826ca31_kn3fe2cpshss4, method, false).
 attr[ast_oxc](n4b86f56e0826ca31_kn3fe2cpshss4, shorthand, true).
 attr[ast_oxc](n4b86f56e0826ca31_kn3fe2cpshss4, computed, false).
 node[ast_oxc](n4b86f56e0826ca31_5vm9rm7n8ih3f, identifier_name, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_5vm9rm7n8ih3f, 18).
-start[ast_oxc](n4b86f56e0826ca31_5vm9rm7n8ih3f, 662).
+line[ast_oxc](n4b86f56e0826ca31_5vm9rm7n8ih3f, 19).
+start[ast_oxc](n4b86f56e0826ca31_5vm9rm7n8ih3f, 698).
 attr[ast_oxc](n4b86f56e0826ca31_5vm9rm7n8ih3f, variant, "StaticIdentifier").
 attr[ast_oxc](n4b86f56e0826ca31_5vm9rm7n8ih3f, name, "a").
 child[ast_oxc](n4b86f56e0826ca31_kn3fe2cpshss4, key, 0, n4b86f56e0826ca31_5vm9rm7n8ih3f).
 node[ast_oxc](n4b86f56e0826ca31_l0cvfqjumr535, identifier_reference, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_l0cvfqjumr535, 18).
-start[ast_oxc](n4b86f56e0826ca31_l0cvfqjumr535, 662).
+line[ast_oxc](n4b86f56e0826ca31_l0cvfqjumr535, 19).
+start[ast_oxc](n4b86f56e0826ca31_l0cvfqjumr535, 698).
 attr[ast_oxc](n4b86f56e0826ca31_l0cvfqjumr535, variant, "Identifier").
 attr[ast_oxc](n4b86f56e0826ca31_l0cvfqjumr535, name, "a").
 child[ast_oxc](n4b86f56e0826ca31_kn3fe2cpshss4, value, 0, n4b86f56e0826ca31_l0cvfqjumr535).
 child[ast_oxc](n4b86f56e0826ca31_62upme3gqkr09, properties, 0, n4b86f56e0826ca31_kn3fe2cpshss4).
 node[ast_oxc](n4b86f56e0826ca31_rfue1tbt2jnv5, object_property, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_rfue1tbt2jnv5, 18).
-start[ast_oxc](n4b86f56e0826ca31_rfue1tbt2jnv5, 665).
+line[ast_oxc](n4b86f56e0826ca31_rfue1tbt2jnv5, 19).
+start[ast_oxc](n4b86f56e0826ca31_rfue1tbt2jnv5, 701).
 attr[ast_oxc](n4b86f56e0826ca31_rfue1tbt2jnv5, kind, "Init").
 attr[ast_oxc](n4b86f56e0826ca31_rfue1tbt2jnv5, method, false).
 attr[ast_oxc](n4b86f56e0826ca31_rfue1tbt2jnv5, shorthand, false).
 attr[ast_oxc](n4b86f56e0826ca31_rfue1tbt2jnv5, computed, false).
 node[ast_oxc](n4b86f56e0826ca31_sh9k91dmrspo2, identifier_name, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_sh9k91dmrspo2, 18).
-start[ast_oxc](n4b86f56e0826ca31_sh9k91dmrspo2, 665).
+line[ast_oxc](n4b86f56e0826ca31_sh9k91dmrspo2, 19).
+start[ast_oxc](n4b86f56e0826ca31_sh9k91dmrspo2, 701).
 attr[ast_oxc](n4b86f56e0826ca31_sh9k91dmrspo2, variant, "StaticIdentifier").
 attr[ast_oxc](n4b86f56e0826ca31_sh9k91dmrspo2, name, "b").
 child[ast_oxc](n4b86f56e0826ca31_rfue1tbt2jnv5, key, 0, n4b86f56e0826ca31_sh9k91dmrspo2).
 node[ast_oxc](n4b86f56e0826ca31_0rsbf1u1prh2f, numeric_literal, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_0rsbf1u1prh2f, 18).
-start[ast_oxc](n4b86f56e0826ca31_0rsbf1u1prh2f, 668).
+line[ast_oxc](n4b86f56e0826ca31_0rsbf1u1prh2f, 19).
+start[ast_oxc](n4b86f56e0826ca31_0rsbf1u1prh2f, 704).
 attr[ast_oxc](n4b86f56e0826ca31_0rsbf1u1prh2f, base, "Decimal").
 attr[ast_oxc](n4b86f56e0826ca31_0rsbf1u1prh2f, raw, "1").
 attr[ast_oxc](n4b86f56e0826ca31_0rsbf1u1prh2f, value, 1).
 child[ast_oxc](n4b86f56e0826ca31_rfue1tbt2jnv5, value, 0, n4b86f56e0826ca31_0rsbf1u1prh2f).
 child[ast_oxc](n4b86f56e0826ca31_62upme3gqkr09, properties, 1, n4b86f56e0826ca31_rfue1tbt2jnv5).
 node[ast_oxc](n4b86f56e0826ca31_rj2sd75goalo1, object_property, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_rj2sd75goalo1, 18).
-start[ast_oxc](n4b86f56e0826ca31_rj2sd75goalo1, 671).
+line[ast_oxc](n4b86f56e0826ca31_rj2sd75goalo1, 19).
+start[ast_oxc](n4b86f56e0826ca31_rj2sd75goalo1, 707).
 attr[ast_oxc](n4b86f56e0826ca31_rj2sd75goalo1, kind, "Init").
 attr[ast_oxc](n4b86f56e0826ca31_rj2sd75goalo1, method, false).
 attr[ast_oxc](n4b86f56e0826ca31_rj2sd75goalo1, shorthand, false).
 attr[ast_oxc](n4b86f56e0826ca31_rj2sd75goalo1, computed, true).
 node[ast_oxc](n4b86f56e0826ca31_mp7sj4kbjv0qe, identifier_reference, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_mp7sj4kbjv0qe, 18).
-start[ast_oxc](n4b86f56e0826ca31_mp7sj4kbjv0qe, 672).
+line[ast_oxc](n4b86f56e0826ca31_mp7sj4kbjv0qe, 19).
+start[ast_oxc](n4b86f56e0826ca31_mp7sj4kbjv0qe, 708).
 attr[ast_oxc](n4b86f56e0826ca31_mp7sj4kbjv0qe, variant, "Identifier").
 attr[ast_oxc](n4b86f56e0826ca31_mp7sj4kbjv0qe, name, "k").
 child[ast_oxc](n4b86f56e0826ca31_rj2sd75goalo1, key, 0, n4b86f56e0826ca31_mp7sj4kbjv0qe).
 node[ast_oxc](n4b86f56e0826ca31_andhoavsua0k2, numeric_literal, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_andhoavsua0k2, 18).
-start[ast_oxc](n4b86f56e0826ca31_andhoavsua0k2, 676).
+line[ast_oxc](n4b86f56e0826ca31_andhoavsua0k2, 19).
+start[ast_oxc](n4b86f56e0826ca31_andhoavsua0k2, 712).
 attr[ast_oxc](n4b86f56e0826ca31_andhoavsua0k2, base, "Decimal").
 attr[ast_oxc](n4b86f56e0826ca31_andhoavsua0k2, raw, "2").
 attr[ast_oxc](n4b86f56e0826ca31_andhoavsua0k2, value, 2).
 child[ast_oxc](n4b86f56e0826ca31_rj2sd75goalo1, value, 0, n4b86f56e0826ca31_andhoavsua0k2).
 child[ast_oxc](n4b86f56e0826ca31_62upme3gqkr09, properties, 2, n4b86f56e0826ca31_rj2sd75goalo1).
 node[ast_oxc](n4b86f56e0826ca31_j2ba8qlu78v7d, spread_element, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_j2ba8qlu78v7d, 18).
-start[ast_oxc](n4b86f56e0826ca31_j2ba8qlu78v7d, 679).
+line[ast_oxc](n4b86f56e0826ca31_j2ba8qlu78v7d, 19).
+start[ast_oxc](n4b86f56e0826ca31_j2ba8qlu78v7d, 715).
 attr[ast_oxc](n4b86f56e0826ca31_j2ba8qlu78v7d, variant, "SpreadProperty").
 node[ast_oxc](n4b86f56e0826ca31_2sblfaurq1hs4, identifier_reference, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_2sblfaurq1hs4, 18).
-start[ast_oxc](n4b86f56e0826ca31_2sblfaurq1hs4, 682).
+line[ast_oxc](n4b86f56e0826ca31_2sblfaurq1hs4, 19).
+start[ast_oxc](n4b86f56e0826ca31_2sblfaurq1hs4, 718).
 attr[ast_oxc](n4b86f56e0826ca31_2sblfaurq1hs4, variant, "Identifier").
 attr[ast_oxc](n4b86f56e0826ca31_2sblfaurq1hs4, name, "s").
 child[ast_oxc](n4b86f56e0826ca31_j2ba8qlu78v7d, argument, 0, n4b86f56e0826ca31_2sblfaurq1hs4).
 child[ast_oxc](n4b86f56e0826ca31_62upme3gqkr09, properties, 3, n4b86f56e0826ca31_j2ba8qlu78v7d).
 node[ast_oxc](n4b86f56e0826ca31_e4bimssa7a6o7, object_property, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_e4bimssa7a6o7, 18).
-start[ast_oxc](n4b86f56e0826ca31_e4bimssa7a6o7, 685).
+line[ast_oxc](n4b86f56e0826ca31_e4bimssa7a6o7, 19).
+start[ast_oxc](n4b86f56e0826ca31_e4bimssa7a6o7, 721).
 attr[ast_oxc](n4b86f56e0826ca31_e4bimssa7a6o7, kind, "Init").
 attr[ast_oxc](n4b86f56e0826ca31_e4bimssa7a6o7, method, true).
 attr[ast_oxc](n4b86f56e0826ca31_e4bimssa7a6o7, shorthand, false).
 attr[ast_oxc](n4b86f56e0826ca31_e4bimssa7a6o7, computed, false).
 node[ast_oxc](n4b86f56e0826ca31_28kjbq73pru42, identifier_name, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_28kjbq73pru42, 18).
-start[ast_oxc](n4b86f56e0826ca31_28kjbq73pru42, 685).
+line[ast_oxc](n4b86f56e0826ca31_28kjbq73pru42, 19).
+start[ast_oxc](n4b86f56e0826ca31_28kjbq73pru42, 721).
 attr[ast_oxc](n4b86f56e0826ca31_28kjbq73pru42, variant, "StaticIdentifier").
 attr[ast_oxc](n4b86f56e0826ca31_28kjbq73pru42, name, "m").
 child[ast_oxc](n4b86f56e0826ca31_e4bimssa7a6o7, key, 0, n4b86f56e0826ca31_28kjbq73pru42).
 node[ast_oxc](n4b86f56e0826ca31_k2nftv0qkt29, function, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_k2nftv0qkt29, 18).
-start[ast_oxc](n4b86f56e0826ca31_k2nftv0qkt29, 686).
+line[ast_oxc](n4b86f56e0826ca31_k2nftv0qkt29, 19).
+start[ast_oxc](n4b86f56e0826ca31_k2nftv0qkt29, 722).
 attr[ast_oxc](n4b86f56e0826ca31_k2nftv0qkt29, variant, "FunctionExpression").
 node[ast_oxc](n4b86f56e0826ca31_7ktjgmrsppge5, formal_parameters, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_7ktjgmrsppge5, 18).
-start[ast_oxc](n4b86f56e0826ca31_7ktjgmrsppge5, 686).
+line[ast_oxc](n4b86f56e0826ca31_7ktjgmrsppge5, 19).
+start[ast_oxc](n4b86f56e0826ca31_7ktjgmrsppge5, 722).
 attr[ast_oxc](n4b86f56e0826ca31_7ktjgmrsppge5, kind, "UniqueFormalParameters").
 child[ast_oxc](n4b86f56e0826ca31_k2nftv0qkt29, params, 0, n4b86f56e0826ca31_7ktjgmrsppge5).
 node[ast_oxc](n4b86f56e0826ca31_bgh2i9acgr563, function_body, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_bgh2i9acgr563, 18).
-start[ast_oxc](n4b86f56e0826ca31_bgh2i9acgr563, 689).
+line[ast_oxc](n4b86f56e0826ca31_bgh2i9acgr563, 19).
+start[ast_oxc](n4b86f56e0826ca31_bgh2i9acgr563, 725).
 child[ast_oxc](n4b86f56e0826ca31_k2nftv0qkt29, body, 0, n4b86f56e0826ca31_bgh2i9acgr563).
 attr[ast_oxc](n4b86f56e0826ca31_k2nftv0qkt29, type, "FunctionExpression").
 attr[ast_oxc](n4b86f56e0826ca31_k2nftv0qkt29, generator, false).
@@ -1002,36 +1068,36 @@ attr[ast_oxc](n4b86f56e0826ca31_k2nftv0qkt29, pife, false).
 child[ast_oxc](n4b86f56e0826ca31_e4bimssa7a6o7, value, 0, n4b86f56e0826ca31_k2nftv0qkt29).
 child[ast_oxc](n4b86f56e0826ca31_62upme3gqkr09, properties, 4, n4b86f56e0826ca31_e4bimssa7a6o7).
 node[ast_oxc](n4b86f56e0826ca31_a386viijqg945, object_property, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_a386viijqg945, 18).
-start[ast_oxc](n4b86f56e0826ca31_a386viijqg945, 693).
+line[ast_oxc](n4b86f56e0826ca31_a386viijqg945, 19).
+start[ast_oxc](n4b86f56e0826ca31_a386viijqg945, 729).
 attr[ast_oxc](n4b86f56e0826ca31_a386viijqg945, kind, "Get").
 attr[ast_oxc](n4b86f56e0826ca31_a386viijqg945, method, false).
 attr[ast_oxc](n4b86f56e0826ca31_a386viijqg945, shorthand, false).
 attr[ast_oxc](n4b86f56e0826ca31_a386viijqg945, computed, false).
 node[ast_oxc](n4b86f56e0826ca31_nch5l7g9r0i24, identifier_name, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_nch5l7g9r0i24, 18).
-start[ast_oxc](n4b86f56e0826ca31_nch5l7g9r0i24, 697).
+line[ast_oxc](n4b86f56e0826ca31_nch5l7g9r0i24, 19).
+start[ast_oxc](n4b86f56e0826ca31_nch5l7g9r0i24, 733).
 attr[ast_oxc](n4b86f56e0826ca31_nch5l7g9r0i24, variant, "StaticIdentifier").
 attr[ast_oxc](n4b86f56e0826ca31_nch5l7g9r0i24, name, "x").
 child[ast_oxc](n4b86f56e0826ca31_a386viijqg945, key, 0, n4b86f56e0826ca31_nch5l7g9r0i24).
 node[ast_oxc](n4b86f56e0826ca31_ckrpqa2grg7v1, function, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_ckrpqa2grg7v1, 18).
-start[ast_oxc](n4b86f56e0826ca31_ckrpqa2grg7v1, 698).
+line[ast_oxc](n4b86f56e0826ca31_ckrpqa2grg7v1, 19).
+start[ast_oxc](n4b86f56e0826ca31_ckrpqa2grg7v1, 734).
 attr[ast_oxc](n4b86f56e0826ca31_ckrpqa2grg7v1, variant, "FunctionExpression").
 node[ast_oxc](n4b86f56e0826ca31_3mmvm6iufsao3, formal_parameters, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_3mmvm6iufsao3, 18).
-start[ast_oxc](n4b86f56e0826ca31_3mmvm6iufsao3, 698).
+line[ast_oxc](n4b86f56e0826ca31_3mmvm6iufsao3, 19).
+start[ast_oxc](n4b86f56e0826ca31_3mmvm6iufsao3, 734).
 attr[ast_oxc](n4b86f56e0826ca31_3mmvm6iufsao3, kind, "UniqueFormalParameters").
 child[ast_oxc](n4b86f56e0826ca31_ckrpqa2grg7v1, params, 0, n4b86f56e0826ca31_3mmvm6iufsao3).
 node[ast_oxc](n4b86f56e0826ca31_pp51clkdhsbh5, function_body, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_pp51clkdhsbh5, 18).
-start[ast_oxc](n4b86f56e0826ca31_pp51clkdhsbh5, 701).
+line[ast_oxc](n4b86f56e0826ca31_pp51clkdhsbh5, 19).
+start[ast_oxc](n4b86f56e0826ca31_pp51clkdhsbh5, 737).
 node[ast_oxc](n4b86f56e0826ca31_jn42togndjka7, return_statement, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_jn42togndjka7, 18).
-start[ast_oxc](n4b86f56e0826ca31_jn42togndjka7, 703).
+line[ast_oxc](n4b86f56e0826ca31_jn42togndjka7, 19).
+start[ast_oxc](n4b86f56e0826ca31_jn42togndjka7, 739).
 node[ast_oxc](n4b86f56e0826ca31_q4q6tuejtdas1, numeric_literal, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_q4q6tuejtdas1, 18).
-start[ast_oxc](n4b86f56e0826ca31_q4q6tuejtdas1, 710).
+line[ast_oxc](n4b86f56e0826ca31_q4q6tuejtdas1, 19).
+start[ast_oxc](n4b86f56e0826ca31_q4q6tuejtdas1, 746).
 attr[ast_oxc](n4b86f56e0826ca31_q4q6tuejtdas1, base, "Decimal").
 attr[ast_oxc](n4b86f56e0826ca31_q4q6tuejtdas1, raw, "1").
 attr[ast_oxc](n4b86f56e0826ca31_q4q6tuejtdas1, value, 1).
@@ -1050,39 +1116,39 @@ child[ast_oxc](n4b86f56e0826ca31_dj819g9jlomm4, init, 0, n4b86f56e0826ca31_62upm
 child[ast_oxc](n4b86f56e0826ca31_odmlrs104h6mb, declarations, 0, n4b86f56e0826ca31_dj819g9jlomm4).
 child[ast_oxc](n4b86f56e0826ca31_root, body, 11, n4b86f56e0826ca31_odmlrs104h6mb).
 node[ast_oxc](n4b86f56e0826ca31_37ns08n5pjll4, variable_declaration, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_37ns08n5pjll4, 19).
-start[ast_oxc](n4b86f56e0826ca31_37ns08n5pjll4, 718).
+line[ast_oxc](n4b86f56e0826ca31_37ns08n5pjll4, 20).
+start[ast_oxc](n4b86f56e0826ca31_37ns08n5pjll4, 754).
 attr[ast_oxc](n4b86f56e0826ca31_37ns08n5pjll4, kind, "Const").
 attr[ast_oxc](n4b86f56e0826ca31_37ns08n5pjll4, declare, false).
 node[ast_oxc](n4b86f56e0826ca31_bm93erb2kn7e3, variable_declarator, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_bm93erb2kn7e3, 19).
-start[ast_oxc](n4b86f56e0826ca31_bm93erb2kn7e3, 724).
+line[ast_oxc](n4b86f56e0826ca31_bm93erb2kn7e3, 20).
+start[ast_oxc](n4b86f56e0826ca31_bm93erb2kn7e3, 760).
 attr[ast_oxc](n4b86f56e0826ca31_bm93erb2kn7e3, definite, false).
 node[ast_oxc](n4b86f56e0826ca31_m7k1d3a1gvre4, binding_identifier, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_m7k1d3a1gvre4, 19).
-start[ast_oxc](n4b86f56e0826ca31_m7k1d3a1gvre4, 724).
+line[ast_oxc](n4b86f56e0826ca31_m7k1d3a1gvre4, 20).
+start[ast_oxc](n4b86f56e0826ca31_m7k1d3a1gvre4, 760).
 attr[ast_oxc](n4b86f56e0826ca31_m7k1d3a1gvre4, name, "arr2").
 child[ast_oxc](n4b86f56e0826ca31_bm93erb2kn7e3, id, 0, n4b86f56e0826ca31_m7k1d3a1gvre4).
 node[ast_oxc](n4b86f56e0826ca31_ucf7cs1789h1c, array_expression, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_ucf7cs1789h1c, 19).
-start[ast_oxc](n4b86f56e0826ca31_ucf7cs1789h1c, 731).
+line[ast_oxc](n4b86f56e0826ca31_ucf7cs1789h1c, 20).
+start[ast_oxc](n4b86f56e0826ca31_ucf7cs1789h1c, 767).
 node[ast_oxc](n4b86f56e0826ca31_rav58h02mfrec, numeric_literal, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_rav58h02mfrec, 19).
-start[ast_oxc](n4b86f56e0826ca31_rav58h02mfrec, 732).
+line[ast_oxc](n4b86f56e0826ca31_rav58h02mfrec, 20).
+start[ast_oxc](n4b86f56e0826ca31_rav58h02mfrec, 768).
 attr[ast_oxc](n4b86f56e0826ca31_rav58h02mfrec, base, "Decimal").
 attr[ast_oxc](n4b86f56e0826ca31_rav58h02mfrec, raw, "1").
 attr[ast_oxc](n4b86f56e0826ca31_rav58h02mfrec, value, 1).
 child[ast_oxc](n4b86f56e0826ca31_ucf7cs1789h1c, elements, 0, n4b86f56e0826ca31_rav58h02mfrec).
 node[ast_oxc](n4b86f56e0826ca31_vrc3ruqunf186, elision, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_vrc3ruqunf186, 19).
-start[ast_oxc](n4b86f56e0826ca31_vrc3ruqunf186, 735).
+line[ast_oxc](n4b86f56e0826ca31_vrc3ruqunf186, 20).
+start[ast_oxc](n4b86f56e0826ca31_vrc3ruqunf186, 771).
 child[ast_oxc](n4b86f56e0826ca31_ucf7cs1789h1c, elements, 1, n4b86f56e0826ca31_vrc3ruqunf186).
 node[ast_oxc](n4b86f56e0826ca31_0c40hjjh7op11, spread_element, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_0c40hjjh7op11, 19).
-start[ast_oxc](n4b86f56e0826ca31_0c40hjjh7op11, 737).
+line[ast_oxc](n4b86f56e0826ca31_0c40hjjh7op11, 20).
+start[ast_oxc](n4b86f56e0826ca31_0c40hjjh7op11, 773).
 node[ast_oxc](n4b86f56e0826ca31_flm82e3e4kgff, identifier_reference, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_flm82e3e4kgff, 19).
-start[ast_oxc](n4b86f56e0826ca31_flm82e3e4kgff, 740).
+line[ast_oxc](n4b86f56e0826ca31_flm82e3e4kgff, 20).
+start[ast_oxc](n4b86f56e0826ca31_flm82e3e4kgff, 776).
 attr[ast_oxc](n4b86f56e0826ca31_flm82e3e4kgff, variant, "Identifier").
 attr[ast_oxc](n4b86f56e0826ca31_flm82e3e4kgff, name, "s").
 child[ast_oxc](n4b86f56e0826ca31_0c40hjjh7op11, argument, 0, n4b86f56e0826ca31_flm82e3e4kgff).
@@ -1091,37 +1157,37 @@ child[ast_oxc](n4b86f56e0826ca31_bm93erb2kn7e3, init, 0, n4b86f56e0826ca31_ucf7c
 child[ast_oxc](n4b86f56e0826ca31_37ns08n5pjll4, declarations, 0, n4b86f56e0826ca31_bm93erb2kn7e3).
 child[ast_oxc](n4b86f56e0826ca31_root, body, 12, n4b86f56e0826ca31_37ns08n5pjll4).
 node[ast_oxc](n4b86f56e0826ca31_1md47u2kaujef, variable_declaration, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_1md47u2kaujef, 20).
-start[ast_oxc](n4b86f56e0826ca31_1md47u2kaujef, 744).
+line[ast_oxc](n4b86f56e0826ca31_1md47u2kaujef, 21).
+start[ast_oxc](n4b86f56e0826ca31_1md47u2kaujef, 780).
 attr[ast_oxc](n4b86f56e0826ca31_1md47u2kaujef, kind, "Let").
 attr[ast_oxc](n4b86f56e0826ca31_1md47u2kaujef, declare, false).
 node[ast_oxc](n4b86f56e0826ca31_honpsm0e4uqb3, variable_declarator, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_honpsm0e4uqb3, 20).
-start[ast_oxc](n4b86f56e0826ca31_honpsm0e4uqb3, 748).
+line[ast_oxc](n4b86f56e0826ca31_honpsm0e4uqb3, 21).
+start[ast_oxc](n4b86f56e0826ca31_honpsm0e4uqb3, 784).
 attr[ast_oxc](n4b86f56e0826ca31_honpsm0e4uqb3, definite, false).
 node[ast_oxc](n4b86f56e0826ca31_h05m2cl508fu2, binding_identifier, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_h05m2cl508fu2, 20).
-start[ast_oxc](n4b86f56e0826ca31_h05m2cl508fu2, 748).
+line[ast_oxc](n4b86f56e0826ca31_h05m2cl508fu2, 21).
+start[ast_oxc](n4b86f56e0826ca31_h05m2cl508fu2, 784).
 attr[ast_oxc](n4b86f56e0826ca31_h05m2cl508fu2, name, "u").
 child[ast_oxc](n4b86f56e0826ca31_honpsm0e4uqb3, id, 0, n4b86f56e0826ca31_h05m2cl508fu2).
 child[ast_oxc](n4b86f56e0826ca31_1md47u2kaujef, declarations, 0, n4b86f56e0826ca31_honpsm0e4uqb3).
 child[ast_oxc](n4b86f56e0826ca31_root, body, 13, n4b86f56e0826ca31_1md47u2kaujef).
 node[ast_oxc](n4b86f56e0826ca31_0i2fhfcmolfg, expression_statement, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_0i2fhfcmolfg, 20).
-start[ast_oxc](n4b86f56e0826ca31_0i2fhfcmolfg, 751).
+line[ast_oxc](n4b86f56e0826ca31_0i2fhfcmolfg, 21).
+start[ast_oxc](n4b86f56e0826ca31_0i2fhfcmolfg, 787).
 node[ast_oxc](n4b86f56e0826ca31_f0ugjir9rhhq4, assignment_expression, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_f0ugjir9rhhq4, 20).
-start[ast_oxc](n4b86f56e0826ca31_f0ugjir9rhhq4, 751).
+line[ast_oxc](n4b86f56e0826ca31_f0ugjir9rhhq4, 21).
+start[ast_oxc](n4b86f56e0826ca31_f0ugjir9rhhq4, 787).
 attr[ast_oxc](n4b86f56e0826ca31_f0ugjir9rhhq4, operator, "LogicalNullish").
 node[ast_oxc](n4b86f56e0826ca31_7r48re2mgpep2, identifier_reference, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_7r48re2mgpep2, 20).
-start[ast_oxc](n4b86f56e0826ca31_7r48re2mgpep2, 751).
+line[ast_oxc](n4b86f56e0826ca31_7r48re2mgpep2, 21).
+start[ast_oxc](n4b86f56e0826ca31_7r48re2mgpep2, 787).
 attr[ast_oxc](n4b86f56e0826ca31_7r48re2mgpep2, variant, "AssignmentTargetIdentifier").
 attr[ast_oxc](n4b86f56e0826ca31_7r48re2mgpep2, name, "u").
 child[ast_oxc](n4b86f56e0826ca31_f0ugjir9rhhq4, left, 0, n4b86f56e0826ca31_7r48re2mgpep2).
 node[ast_oxc](n4b86f56e0826ca31_or8ji316q5766, numeric_literal, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_or8ji316q5766, 20).
-start[ast_oxc](n4b86f56e0826ca31_or8ji316q5766, 757).
+line[ast_oxc](n4b86f56e0826ca31_or8ji316q5766, 21).
+start[ast_oxc](n4b86f56e0826ca31_or8ji316q5766, 793).
 attr[ast_oxc](n4b86f56e0826ca31_or8ji316q5766, base, "Decimal").
 attr[ast_oxc](n4b86f56e0826ca31_or8ji316q5766, raw, "3").
 attr[ast_oxc](n4b86f56e0826ca31_or8ji316q5766, value, 3).
@@ -1129,21 +1195,21 @@ child[ast_oxc](n4b86f56e0826ca31_f0ugjir9rhhq4, right, 0, n4b86f56e0826ca31_or8j
 child[ast_oxc](n4b86f56e0826ca31_0i2fhfcmolfg, expression, 0, n4b86f56e0826ca31_f0ugjir9rhhq4).
 child[ast_oxc](n4b86f56e0826ca31_root, body, 14, n4b86f56e0826ca31_0i2fhfcmolfg).
 node[ast_oxc](n4b86f56e0826ca31_33nlb6o186spa, expression_statement, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_33nlb6o186spa, 20).
-start[ast_oxc](n4b86f56e0826ca31_33nlb6o186spa, 760).
+line[ast_oxc](n4b86f56e0826ca31_33nlb6o186spa, 21).
+start[ast_oxc](n4b86f56e0826ca31_33nlb6o186spa, 796).
 node[ast_oxc](n4b86f56e0826ca31_unaf5jfv1cete, assignment_expression, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_unaf5jfv1cete, 20).
-start[ast_oxc](n4b86f56e0826ca31_unaf5jfv1cete, 760).
+line[ast_oxc](n4b86f56e0826ca31_unaf5jfv1cete, 21).
+start[ast_oxc](n4b86f56e0826ca31_unaf5jfv1cete, 796).
 attr[ast_oxc](n4b86f56e0826ca31_unaf5jfv1cete, operator, "Addition").
 node[ast_oxc](n4b86f56e0826ca31_2f5dqd53f5pt1, identifier_reference, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_2f5dqd53f5pt1, 20).
-start[ast_oxc](n4b86f56e0826ca31_2f5dqd53f5pt1, 760).
+line[ast_oxc](n4b86f56e0826ca31_2f5dqd53f5pt1, 21).
+start[ast_oxc](n4b86f56e0826ca31_2f5dqd53f5pt1, 796).
 attr[ast_oxc](n4b86f56e0826ca31_2f5dqd53f5pt1, variant, "AssignmentTargetIdentifier").
 attr[ast_oxc](n4b86f56e0826ca31_2f5dqd53f5pt1, name, "u").
 child[ast_oxc](n4b86f56e0826ca31_unaf5jfv1cete, left, 0, n4b86f56e0826ca31_2f5dqd53f5pt1).
 node[ast_oxc](n4b86f56e0826ca31_1k4f9nnsfbig6, numeric_literal, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_1k4f9nnsfbig6, 20).
-start[ast_oxc](n4b86f56e0826ca31_1k4f9nnsfbig6, 765).
+line[ast_oxc](n4b86f56e0826ca31_1k4f9nnsfbig6, 21).
+start[ast_oxc](n4b86f56e0826ca31_1k4f9nnsfbig6, 801).
 attr[ast_oxc](n4b86f56e0826ca31_1k4f9nnsfbig6, base, "Decimal").
 attr[ast_oxc](n4b86f56e0826ca31_1k4f9nnsfbig6, raw, "1").
 attr[ast_oxc](n4b86f56e0826ca31_1k4f9nnsfbig6, value, 1).
@@ -1151,55 +1217,55 @@ child[ast_oxc](n4b86f56e0826ca31_unaf5jfv1cete, right, 0, n4b86f56e0826ca31_1k4f
 child[ast_oxc](n4b86f56e0826ca31_33nlb6o186spa, expression, 0, n4b86f56e0826ca31_unaf5jfv1cete).
 child[ast_oxc](n4b86f56e0826ca31_root, body, 15, n4b86f56e0826ca31_33nlb6o186spa).
 node[ast_oxc](n4b86f56e0826ca31_vb5hdg9iaf6s2, expression_statement, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_vb5hdg9iaf6s2, 20).
-start[ast_oxc](n4b86f56e0826ca31_vb5hdg9iaf6s2, 768).
+line[ast_oxc](n4b86f56e0826ca31_vb5hdg9iaf6s2, 21).
+start[ast_oxc](n4b86f56e0826ca31_vb5hdg9iaf6s2, 804).
 node[ast_oxc](n4b86f56e0826ca31_t09a1fefhor6c, update_expression, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_t09a1fefhor6c, 20).
-start[ast_oxc](n4b86f56e0826ca31_t09a1fefhor6c, 768).
+line[ast_oxc](n4b86f56e0826ca31_t09a1fefhor6c, 21).
+start[ast_oxc](n4b86f56e0826ca31_t09a1fefhor6c, 804).
 attr[ast_oxc](n4b86f56e0826ca31_t09a1fefhor6c, operator, "Increment").
 attr[ast_oxc](n4b86f56e0826ca31_t09a1fefhor6c, prefix, false).
 node[ast_oxc](n4b86f56e0826ca31_7nci9f86dnm3e, identifier_reference, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_7nci9f86dnm3e, 20).
-start[ast_oxc](n4b86f56e0826ca31_7nci9f86dnm3e, 768).
+line[ast_oxc](n4b86f56e0826ca31_7nci9f86dnm3e, 21).
+start[ast_oxc](n4b86f56e0826ca31_7nci9f86dnm3e, 804).
 attr[ast_oxc](n4b86f56e0826ca31_7nci9f86dnm3e, variant, "AssignmentTargetIdentifier").
 attr[ast_oxc](n4b86f56e0826ca31_7nci9f86dnm3e, name, "u").
 child[ast_oxc](n4b86f56e0826ca31_t09a1fefhor6c, argument, 0, n4b86f56e0826ca31_7nci9f86dnm3e).
 child[ast_oxc](n4b86f56e0826ca31_vb5hdg9iaf6s2, expression, 0, n4b86f56e0826ca31_t09a1fefhor6c).
 child[ast_oxc](n4b86f56e0826ca31_root, body, 16, n4b86f56e0826ca31_vb5hdg9iaf6s2).
 node[ast_oxc](n4b86f56e0826ca31_95l3c23ruaerf, expression_statement, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_95l3c23ruaerf, 20).
-start[ast_oxc](n4b86f56e0826ca31_95l3c23ruaerf, 773).
+line[ast_oxc](n4b86f56e0826ca31_95l3c23ruaerf, 21).
+start[ast_oxc](n4b86f56e0826ca31_95l3c23ruaerf, 809).
 node[ast_oxc](n4b86f56e0826ca31_pf7ovl4jmack7, update_expression, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_pf7ovl4jmack7, 20).
-start[ast_oxc](n4b86f56e0826ca31_pf7ovl4jmack7, 773).
+line[ast_oxc](n4b86f56e0826ca31_pf7ovl4jmack7, 21).
+start[ast_oxc](n4b86f56e0826ca31_pf7ovl4jmack7, 809).
 attr[ast_oxc](n4b86f56e0826ca31_pf7ovl4jmack7, operator, "Increment").
 attr[ast_oxc](n4b86f56e0826ca31_pf7ovl4jmack7, prefix, true).
 node[ast_oxc](n4b86f56e0826ca31_0pkjb7d6ju185, identifier_reference, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_0pkjb7d6ju185, 20).
-start[ast_oxc](n4b86f56e0826ca31_0pkjb7d6ju185, 775).
+line[ast_oxc](n4b86f56e0826ca31_0pkjb7d6ju185, 21).
+start[ast_oxc](n4b86f56e0826ca31_0pkjb7d6ju185, 811).
 attr[ast_oxc](n4b86f56e0826ca31_0pkjb7d6ju185, variant, "AssignmentTargetIdentifier").
 attr[ast_oxc](n4b86f56e0826ca31_0pkjb7d6ju185, name, "u").
 child[ast_oxc](n4b86f56e0826ca31_pf7ovl4jmack7, argument, 0, n4b86f56e0826ca31_0pkjb7d6ju185).
 child[ast_oxc](n4b86f56e0826ca31_95l3c23ruaerf, expression, 0, n4b86f56e0826ca31_pf7ovl4jmack7).
 child[ast_oxc](n4b86f56e0826ca31_root, body, 17, n4b86f56e0826ca31_95l3c23ruaerf).
 node[ast_oxc](n4b86f56e0826ca31_i1ua3qvqvbhbb, expression_statement, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_i1ua3qvqvbhbb, 20).
-start[ast_oxc](n4b86f56e0826ca31_i1ua3qvqvbhbb, 778).
+line[ast_oxc](n4b86f56e0826ca31_i1ua3qvqvbhbb, 21).
+start[ast_oxc](n4b86f56e0826ca31_i1ua3qvqvbhbb, 814).
 node[ast_oxc](n4b86f56e0826ca31_vcm8kdcid6qgf, parenthesized_expression, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_vcm8kdcid6qgf, 20).
-start[ast_oxc](n4b86f56e0826ca31_vcm8kdcid6qgf, 778).
+line[ast_oxc](n4b86f56e0826ca31_vcm8kdcid6qgf, 21).
+start[ast_oxc](n4b86f56e0826ca31_vcm8kdcid6qgf, 814).
 node[ast_oxc](n4b86f56e0826ca31_0gn61n52gom0a, sequence_expression, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_0gn61n52gom0a, 20).
-start[ast_oxc](n4b86f56e0826ca31_0gn61n52gom0a, 779).
+line[ast_oxc](n4b86f56e0826ca31_0gn61n52gom0a, 21).
+start[ast_oxc](n4b86f56e0826ca31_0gn61n52gom0a, 815).
 node[ast_oxc](n4b86f56e0826ca31_nugelrqisafv5, identifier_reference, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_nugelrqisafv5, 20).
-start[ast_oxc](n4b86f56e0826ca31_nugelrqisafv5, 779).
+line[ast_oxc](n4b86f56e0826ca31_nugelrqisafv5, 21).
+start[ast_oxc](n4b86f56e0826ca31_nugelrqisafv5, 815).
 attr[ast_oxc](n4b86f56e0826ca31_nugelrqisafv5, variant, "Identifier").
 attr[ast_oxc](n4b86f56e0826ca31_nugelrqisafv5, name, "u").
 child[ast_oxc](n4b86f56e0826ca31_0gn61n52gom0a, expressions, 0, n4b86f56e0826ca31_nugelrqisafv5).
 node[ast_oxc](n4b86f56e0826ca31_eg92336mgns28, identifier_reference, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_eg92336mgns28, 20).
-start[ast_oxc](n4b86f56e0826ca31_eg92336mgns28, 782).
+line[ast_oxc](n4b86f56e0826ca31_eg92336mgns28, 21).
+start[ast_oxc](n4b86f56e0826ca31_eg92336mgns28, 818).
 attr[ast_oxc](n4b86f56e0826ca31_eg92336mgns28, variant, "Identifier").
 attr[ast_oxc](n4b86f56e0826ca31_eg92336mgns28, name, "k").
 child[ast_oxc](n4b86f56e0826ca31_0gn61n52gom0a, expressions, 1, n4b86f56e0826ca31_eg92336mgns28).
@@ -1207,39 +1273,39 @@ child[ast_oxc](n4b86f56e0826ca31_vcm8kdcid6qgf, expression, 0, n4b86f56e0826ca31
 child[ast_oxc](n4b86f56e0826ca31_i1ua3qvqvbhbb, expression, 0, n4b86f56e0826ca31_vcm8kdcid6qgf).
 child[ast_oxc](n4b86f56e0826ca31_root, body, 18, n4b86f56e0826ca31_i1ua3qvqvbhbb).
 node[ast_oxc](n4b86f56e0826ca31_g0fpktpg4vq94, expression_statement, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_g0fpktpg4vq94, 21).
-start[ast_oxc](n4b86f56e0826ca31_g0fpktpg4vq94, 786).
+line[ast_oxc](n4b86f56e0826ca31_g0fpktpg4vq94, 22).
+start[ast_oxc](n4b86f56e0826ca31_g0fpktpg4vq94, 822).
 node[ast_oxc](n4b86f56e0826ca31_vu6pka04mtrb9, chain_expression, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_vu6pka04mtrb9, 21).
-start[ast_oxc](n4b86f56e0826ca31_vu6pka04mtrb9, 786).
+line[ast_oxc](n4b86f56e0826ca31_vu6pka04mtrb9, 22).
+start[ast_oxc](n4b86f56e0826ca31_vu6pka04mtrb9, 822).
 node[ast_oxc](n4b86f56e0826ca31_jngr1nks09kp1, call_expression, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_jngr1nks09kp1, 21).
-start[ast_oxc](n4b86f56e0826ca31_jngr1nks09kp1, 786).
+line[ast_oxc](n4b86f56e0826ca31_jngr1nks09kp1, 22).
+start[ast_oxc](n4b86f56e0826ca31_jngr1nks09kp1, 822).
 attr[ast_oxc](n4b86f56e0826ca31_jngr1nks09kp1, optional, false).
 attr[ast_oxc](n4b86f56e0826ca31_jngr1nks09kp1, pure, false).
 node[ast_oxc](n4b86f56e0826ca31_frue1kp7kocd6, static_member_expression, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_frue1kp7kocd6, 21).
-start[ast_oxc](n4b86f56e0826ca31_frue1kp7kocd6, 786).
+line[ast_oxc](n4b86f56e0826ca31_frue1kp7kocd6, 22).
+start[ast_oxc](n4b86f56e0826ca31_frue1kp7kocd6, 822).
 attr[ast_oxc](n4b86f56e0826ca31_frue1kp7kocd6, optional, true).
 node[ast_oxc](n4b86f56e0826ca31_vmeug963do0j4, static_member_expression, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_vmeug963do0j4, 21).
-start[ast_oxc](n4b86f56e0826ca31_vmeug963do0j4, 786).
+line[ast_oxc](n4b86f56e0826ca31_vmeug963do0j4, 22).
+start[ast_oxc](n4b86f56e0826ca31_vmeug963do0j4, 822).
 attr[ast_oxc](n4b86f56e0826ca31_vmeug963do0j4, optional, true).
 node[ast_oxc](n4b86f56e0826ca31_ccebnbmbs2v3b, identifier_reference, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_ccebnbmbs2v3b, 21).
-start[ast_oxc](n4b86f56e0826ca31_ccebnbmbs2v3b, 786).
+line[ast_oxc](n4b86f56e0826ca31_ccebnbmbs2v3b, 22).
+start[ast_oxc](n4b86f56e0826ca31_ccebnbmbs2v3b, 822).
 attr[ast_oxc](n4b86f56e0826ca31_ccebnbmbs2v3b, variant, "Identifier").
 attr[ast_oxc](n4b86f56e0826ca31_ccebnbmbs2v3b, name, "o").
 child[ast_oxc](n4b86f56e0826ca31_vmeug963do0j4, object, 0, n4b86f56e0826ca31_ccebnbmbs2v3b).
 node[ast_oxc](n4b86f56e0826ca31_jjhsk8s1bttcb, identifier_name, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_jjhsk8s1bttcb, 21).
-start[ast_oxc](n4b86f56e0826ca31_jjhsk8s1bttcb, 789).
+line[ast_oxc](n4b86f56e0826ca31_jjhsk8s1bttcb, 22).
+start[ast_oxc](n4b86f56e0826ca31_jjhsk8s1bttcb, 825).
 attr[ast_oxc](n4b86f56e0826ca31_jjhsk8s1bttcb, name, "a").
 child[ast_oxc](n4b86f56e0826ca31_vmeug963do0j4, property, 0, n4b86f56e0826ca31_jjhsk8s1bttcb).
 child[ast_oxc](n4b86f56e0826ca31_frue1kp7kocd6, object, 0, n4b86f56e0826ca31_vmeug963do0j4).
 node[ast_oxc](n4b86f56e0826ca31_2r76m9hqpbinc, identifier_name, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_2r76m9hqpbinc, 21).
-start[ast_oxc](n4b86f56e0826ca31_2r76m9hqpbinc, 792).
+line[ast_oxc](n4b86f56e0826ca31_2r76m9hqpbinc, 22).
+start[ast_oxc](n4b86f56e0826ca31_2r76m9hqpbinc, 828).
 attr[ast_oxc](n4b86f56e0826ca31_2r76m9hqpbinc, name, "b").
 child[ast_oxc](n4b86f56e0826ca31_frue1kp7kocd6, property, 0, n4b86f56e0826ca31_2r76m9hqpbinc).
 child[ast_oxc](n4b86f56e0826ca31_jngr1nks09kp1, callee, 0, n4b86f56e0826ca31_frue1kp7kocd6).
@@ -1247,35 +1313,35 @@ child[ast_oxc](n4b86f56e0826ca31_vu6pka04mtrb9, expression, 0, n4b86f56e0826ca31
 child[ast_oxc](n4b86f56e0826ca31_g0fpktpg4vq94, expression, 0, n4b86f56e0826ca31_vu6pka04mtrb9).
 child[ast_oxc](n4b86f56e0826ca31_root, body, 19, n4b86f56e0826ca31_g0fpktpg4vq94).
 node[ast_oxc](n4b86f56e0826ca31_v4cgrcdg4e5j4, expression_statement, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_v4cgrcdg4e5j4, 21).
-start[ast_oxc](n4b86f56e0826ca31_v4cgrcdg4e5j4, 797).
+line[ast_oxc](n4b86f56e0826ca31_v4cgrcdg4e5j4, 22).
+start[ast_oxc](n4b86f56e0826ca31_v4cgrcdg4e5j4, 833).
 node[ast_oxc](n4b86f56e0826ca31_qfjvtthvd16ta, chain_expression, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_qfjvtthvd16ta, 21).
-start[ast_oxc](n4b86f56e0826ca31_qfjvtthvd16ta, 797).
+line[ast_oxc](n4b86f56e0826ca31_qfjvtthvd16ta, 22).
+start[ast_oxc](n4b86f56e0826ca31_qfjvtthvd16ta, 833).
 node[ast_oxc](n4b86f56e0826ca31_1an54v5s8l7h7, call_expression, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_1an54v5s8l7h7, 21).
-start[ast_oxc](n4b86f56e0826ca31_1an54v5s8l7h7, 797).
+line[ast_oxc](n4b86f56e0826ca31_1an54v5s8l7h7, 22).
+start[ast_oxc](n4b86f56e0826ca31_1an54v5s8l7h7, 833).
 attr[ast_oxc](n4b86f56e0826ca31_1an54v5s8l7h7, optional, true).
 attr[ast_oxc](n4b86f56e0826ca31_1an54v5s8l7h7, pure, false).
 node[ast_oxc](n4b86f56e0826ca31_1lpjsv4qk1u87, static_member_expression, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_1lpjsv4qk1u87, 21).
-start[ast_oxc](n4b86f56e0826ca31_1lpjsv4qk1u87, 797).
+line[ast_oxc](n4b86f56e0826ca31_1lpjsv4qk1u87, 22).
+start[ast_oxc](n4b86f56e0826ca31_1lpjsv4qk1u87, 833).
 attr[ast_oxc](n4b86f56e0826ca31_1lpjsv4qk1u87, optional, false).
 node[ast_oxc](n4b86f56e0826ca31_epbb6rfgou9a4, identifier_reference, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_epbb6rfgou9a4, 21).
-start[ast_oxc](n4b86f56e0826ca31_epbb6rfgou9a4, 797).
+line[ast_oxc](n4b86f56e0826ca31_epbb6rfgou9a4, 22).
+start[ast_oxc](n4b86f56e0826ca31_epbb6rfgou9a4, 833).
 attr[ast_oxc](n4b86f56e0826ca31_epbb6rfgou9a4, variant, "Identifier").
 attr[ast_oxc](n4b86f56e0826ca31_epbb6rfgou9a4, name, "o").
 child[ast_oxc](n4b86f56e0826ca31_1lpjsv4qk1u87, object, 0, n4b86f56e0826ca31_epbb6rfgou9a4).
 node[ast_oxc](n4b86f56e0826ca31_bovunrgdu1hfa, identifier_name, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_bovunrgdu1hfa, 21).
-start[ast_oxc](n4b86f56e0826ca31_bovunrgdu1hfa, 799).
+line[ast_oxc](n4b86f56e0826ca31_bovunrgdu1hfa, 22).
+start[ast_oxc](n4b86f56e0826ca31_bovunrgdu1hfa, 835).
 attr[ast_oxc](n4b86f56e0826ca31_bovunrgdu1hfa, name, "a").
 child[ast_oxc](n4b86f56e0826ca31_1lpjsv4qk1u87, property, 0, n4b86f56e0826ca31_bovunrgdu1hfa).
 child[ast_oxc](n4b86f56e0826ca31_1an54v5s8l7h7, callee, 0, n4b86f56e0826ca31_1lpjsv4qk1u87).
 node[ast_oxc](n4b86f56e0826ca31_fugh5ag8c0p9c, numeric_literal, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_fugh5ag8c0p9c, 21).
-start[ast_oxc](n4b86f56e0826ca31_fugh5ag8c0p9c, 803).
+line[ast_oxc](n4b86f56e0826ca31_fugh5ag8c0p9c, 22).
+start[ast_oxc](n4b86f56e0826ca31_fugh5ag8c0p9c, 839).
 attr[ast_oxc](n4b86f56e0826ca31_fugh5ag8c0p9c, base, "Decimal").
 attr[ast_oxc](n4b86f56e0826ca31_fugh5ag8c0p9c, raw, "1").
 attr[ast_oxc](n4b86f56e0826ca31_fugh5ag8c0p9c, value, 1).
@@ -1284,36 +1350,36 @@ child[ast_oxc](n4b86f56e0826ca31_qfjvtthvd16ta, expression, 0, n4b86f56e0826ca31
 child[ast_oxc](n4b86f56e0826ca31_v4cgrcdg4e5j4, expression, 0, n4b86f56e0826ca31_qfjvtthvd16ta).
 child[ast_oxc](n4b86f56e0826ca31_root, body, 20, n4b86f56e0826ca31_v4cgrcdg4e5j4).
 node[ast_oxc](n4b86f56e0826ca31_96askggivlp7, expression_statement, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_96askggivlp7, 22).
-start[ast_oxc](n4b86f56e0826ca31_96askggivlp7, 807).
+line[ast_oxc](n4b86f56e0826ca31_96askggivlp7, 23).
+start[ast_oxc](n4b86f56e0826ca31_96askggivlp7, 843).
 node[ast_oxc](n4b86f56e0826ca31_774f4ms7kspfb, assignment_expression, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_774f4ms7kspfb, 22).
-start[ast_oxc](n4b86f56e0826ca31_774f4ms7kspfb, 807).
+line[ast_oxc](n4b86f56e0826ca31_774f4ms7kspfb, 23).
+start[ast_oxc](n4b86f56e0826ca31_774f4ms7kspfb, 843).
 attr[ast_oxc](n4b86f56e0826ca31_774f4ms7kspfb, operator, "Assign").
 node[ast_oxc](n4b86f56e0826ca31_f80itgvfd62ja, identifier_reference, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_f80itgvfd62ja, 22).
-start[ast_oxc](n4b86f56e0826ca31_f80itgvfd62ja, 807).
+line[ast_oxc](n4b86f56e0826ca31_f80itgvfd62ja, 23).
+start[ast_oxc](n4b86f56e0826ca31_f80itgvfd62ja, 843).
 attr[ast_oxc](n4b86f56e0826ca31_f80itgvfd62ja, variant, "AssignmentTargetIdentifier").
 attr[ast_oxc](n4b86f56e0826ca31_f80itgvfd62ja, name, "x").
 child[ast_oxc](n4b86f56e0826ca31_774f4ms7kspfb, left, 0, n4b86f56e0826ca31_f80itgvfd62ja).
 node[ast_oxc](n4b86f56e0826ca31_armnbiqdbqh0d, conditional_expression, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_armnbiqdbqh0d, 22).
-start[ast_oxc](n4b86f56e0826ca31_armnbiqdbqh0d, 811).
+line[ast_oxc](n4b86f56e0826ca31_armnbiqdbqh0d, 23).
+start[ast_oxc](n4b86f56e0826ca31_armnbiqdbqh0d, 847).
 node[ast_oxc](n4b86f56e0826ca31_1eaptjr0rpfr5, identifier_reference, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_1eaptjr0rpfr5, 22).
-start[ast_oxc](n4b86f56e0826ca31_1eaptjr0rpfr5, 811).
+line[ast_oxc](n4b86f56e0826ca31_1eaptjr0rpfr5, 23).
+start[ast_oxc](n4b86f56e0826ca31_1eaptjr0rpfr5, 847).
 attr[ast_oxc](n4b86f56e0826ca31_1eaptjr0rpfr5, variant, "Identifier").
 attr[ast_oxc](n4b86f56e0826ca31_1eaptjr0rpfr5, name, "a").
 child[ast_oxc](n4b86f56e0826ca31_armnbiqdbqh0d, test, 0, n4b86f56e0826ca31_1eaptjr0rpfr5).
 node[ast_oxc](n4b86f56e0826ca31_e72tsq9rqa0l9, identifier_reference, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_e72tsq9rqa0l9, 22).
-start[ast_oxc](n4b86f56e0826ca31_e72tsq9rqa0l9, 815).
+line[ast_oxc](n4b86f56e0826ca31_e72tsq9rqa0l9, 23).
+start[ast_oxc](n4b86f56e0826ca31_e72tsq9rqa0l9, 851).
 attr[ast_oxc](n4b86f56e0826ca31_e72tsq9rqa0l9, variant, "Identifier").
 attr[ast_oxc](n4b86f56e0826ca31_e72tsq9rqa0l9, name, "b").
 child[ast_oxc](n4b86f56e0826ca31_armnbiqdbqh0d, consequent, 0, n4b86f56e0826ca31_e72tsq9rqa0l9).
 node[ast_oxc](n4b86f56e0826ca31_97d0sig3u40p4, identifier_reference, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_97d0sig3u40p4, 22).
-start[ast_oxc](n4b86f56e0826ca31_97d0sig3u40p4, 819).
+line[ast_oxc](n4b86f56e0826ca31_97d0sig3u40p4, 23).
+start[ast_oxc](n4b86f56e0826ca31_97d0sig3u40p4, 855).
 attr[ast_oxc](n4b86f56e0826ca31_97d0sig3u40p4, variant, "Identifier").
 attr[ast_oxc](n4b86f56e0826ca31_97d0sig3u40p4, name, "c").
 child[ast_oxc](n4b86f56e0826ca31_armnbiqdbqh0d, alternate, 0, n4b86f56e0826ca31_97d0sig3u40p4).
@@ -1321,57 +1387,57 @@ child[ast_oxc](n4b86f56e0826ca31_774f4ms7kspfb, right, 0, n4b86f56e0826ca31_armn
 child[ast_oxc](n4b86f56e0826ca31_96askggivlp7, expression, 0, n4b86f56e0826ca31_774f4ms7kspfb).
 child[ast_oxc](n4b86f56e0826ca31_root, body, 21, n4b86f56e0826ca31_96askggivlp7).
 node[ast_oxc](n4b86f56e0826ca31_465rt33a16j1d, expression_statement, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_465rt33a16j1d, 22).
-start[ast_oxc](n4b86f56e0826ca31_465rt33a16j1d, 822).
+line[ast_oxc](n4b86f56e0826ca31_465rt33a16j1d, 23).
+start[ast_oxc](n4b86f56e0826ca31_465rt33a16j1d, 858).
 node[ast_oxc](n4b86f56e0826ca31_9df0j8ia08jj7, assignment_expression, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_9df0j8ia08jj7, 22).
-start[ast_oxc](n4b86f56e0826ca31_9df0j8ia08jj7, 822).
+line[ast_oxc](n4b86f56e0826ca31_9df0j8ia08jj7, 23).
+start[ast_oxc](n4b86f56e0826ca31_9df0j8ia08jj7, 858).
 attr[ast_oxc](n4b86f56e0826ca31_9df0j8ia08jj7, operator, "Assign").
 node[ast_oxc](n4b86f56e0826ca31_b5sqptvarroue, identifier_reference, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_b5sqptvarroue, 22).
-start[ast_oxc](n4b86f56e0826ca31_b5sqptvarroue, 822).
+line[ast_oxc](n4b86f56e0826ca31_b5sqptvarroue, 23).
+start[ast_oxc](n4b86f56e0826ca31_b5sqptvarroue, 858).
 attr[ast_oxc](n4b86f56e0826ca31_b5sqptvarroue, variant, "AssignmentTargetIdentifier").
 attr[ast_oxc](n4b86f56e0826ca31_b5sqptvarroue, name, "y").
 child[ast_oxc](n4b86f56e0826ca31_9df0j8ia08jj7, left, 0, n4b86f56e0826ca31_b5sqptvarroue).
 node[ast_oxc](n4b86f56e0826ca31_v8sa6t8f6ooa2, logical_expression, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_v8sa6t8f6ooa2, 22).
-start[ast_oxc](n4b86f56e0826ca31_v8sa6t8f6ooa2, 826).
+line[ast_oxc](n4b86f56e0826ca31_v8sa6t8f6ooa2, 23).
+start[ast_oxc](n4b86f56e0826ca31_v8sa6t8f6ooa2, 862).
 attr[ast_oxc](n4b86f56e0826ca31_v8sa6t8f6ooa2, operator, "Coalesce").
 node[ast_oxc](n4b86f56e0826ca31_gsvcm643mi1af, parenthesized_expression, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_gsvcm643mi1af, 22).
-start[ast_oxc](n4b86f56e0826ca31_gsvcm643mi1af, 826).
+line[ast_oxc](n4b86f56e0826ca31_gsvcm643mi1af, 23).
+start[ast_oxc](n4b86f56e0826ca31_gsvcm643mi1af, 862).
 node[ast_oxc](n4b86f56e0826ca31_j2d52ctb18jqb, logical_expression, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_j2d52ctb18jqb, 22).
-start[ast_oxc](n4b86f56e0826ca31_j2d52ctb18jqb, 827).
+line[ast_oxc](n4b86f56e0826ca31_j2d52ctb18jqb, 23).
+start[ast_oxc](n4b86f56e0826ca31_j2d52ctb18jqb, 863).
 attr[ast_oxc](n4b86f56e0826ca31_j2d52ctb18jqb, operator, "Or").
 node[ast_oxc](n4b86f56e0826ca31_acfadat3dm89d, logical_expression, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_acfadat3dm89d, 22).
-start[ast_oxc](n4b86f56e0826ca31_acfadat3dm89d, 827).
+line[ast_oxc](n4b86f56e0826ca31_acfadat3dm89d, 23).
+start[ast_oxc](n4b86f56e0826ca31_acfadat3dm89d, 863).
 attr[ast_oxc](n4b86f56e0826ca31_acfadat3dm89d, operator, "And").
 node[ast_oxc](n4b86f56e0826ca31_1fsbj8igqtbr1, identifier_reference, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_1fsbj8igqtbr1, 22).
-start[ast_oxc](n4b86f56e0826ca31_1fsbj8igqtbr1, 827).
+line[ast_oxc](n4b86f56e0826ca31_1fsbj8igqtbr1, 23).
+start[ast_oxc](n4b86f56e0826ca31_1fsbj8igqtbr1, 863).
 attr[ast_oxc](n4b86f56e0826ca31_1fsbj8igqtbr1, variant, "Identifier").
 attr[ast_oxc](n4b86f56e0826ca31_1fsbj8igqtbr1, name, "a").
 child[ast_oxc](n4b86f56e0826ca31_acfadat3dm89d, left, 0, n4b86f56e0826ca31_1fsbj8igqtbr1).
 node[ast_oxc](n4b86f56e0826ca31_p76q5i666vgnf, identifier_reference, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_p76q5i666vgnf, 22).
-start[ast_oxc](n4b86f56e0826ca31_p76q5i666vgnf, 832).
+line[ast_oxc](n4b86f56e0826ca31_p76q5i666vgnf, 23).
+start[ast_oxc](n4b86f56e0826ca31_p76q5i666vgnf, 868).
 attr[ast_oxc](n4b86f56e0826ca31_p76q5i666vgnf, variant, "Identifier").
 attr[ast_oxc](n4b86f56e0826ca31_p76q5i666vgnf, name, "b").
 child[ast_oxc](n4b86f56e0826ca31_acfadat3dm89d, right, 0, n4b86f56e0826ca31_p76q5i666vgnf).
 child[ast_oxc](n4b86f56e0826ca31_j2d52ctb18jqb, left, 0, n4b86f56e0826ca31_acfadat3dm89d).
 node[ast_oxc](n4b86f56e0826ca31_u2u1u6sqe1b38, identifier_reference, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_u2u1u6sqe1b38, 22).
-start[ast_oxc](n4b86f56e0826ca31_u2u1u6sqe1b38, 837).
+line[ast_oxc](n4b86f56e0826ca31_u2u1u6sqe1b38, 23).
+start[ast_oxc](n4b86f56e0826ca31_u2u1u6sqe1b38, 873).
 attr[ast_oxc](n4b86f56e0826ca31_u2u1u6sqe1b38, variant, "Identifier").
 attr[ast_oxc](n4b86f56e0826ca31_u2u1u6sqe1b38, name, "c").
 child[ast_oxc](n4b86f56e0826ca31_j2d52ctb18jqb, right, 0, n4b86f56e0826ca31_u2u1u6sqe1b38).
 child[ast_oxc](n4b86f56e0826ca31_gsvcm643mi1af, expression, 0, n4b86f56e0826ca31_j2d52ctb18jqb).
 child[ast_oxc](n4b86f56e0826ca31_v8sa6t8f6ooa2, left, 0, n4b86f56e0826ca31_gsvcm643mi1af).
 node[ast_oxc](n4b86f56e0826ca31_6pne8fqdunnqe, identifier_reference, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_6pne8fqdunnqe, 22).
-start[ast_oxc](n4b86f56e0826ca31_6pne8fqdunnqe, 843).
+line[ast_oxc](n4b86f56e0826ca31_6pne8fqdunnqe, 23).
+start[ast_oxc](n4b86f56e0826ca31_6pne8fqdunnqe, 879).
 attr[ast_oxc](n4b86f56e0826ca31_6pne8fqdunnqe, variant, "Identifier").
 attr[ast_oxc](n4b86f56e0826ca31_6pne8fqdunnqe, name, "d").
 child[ast_oxc](n4b86f56e0826ca31_v8sa6t8f6ooa2, right, 0, n4b86f56e0826ca31_6pne8fqdunnqe).
@@ -1379,33 +1445,33 @@ child[ast_oxc](n4b86f56e0826ca31_9df0j8ia08jj7, right, 0, n4b86f56e0826ca31_v8sa
 child[ast_oxc](n4b86f56e0826ca31_465rt33a16j1d, expression, 0, n4b86f56e0826ca31_9df0j8ia08jj7).
 child[ast_oxc](n4b86f56e0826ca31_root, body, 22, n4b86f56e0826ca31_465rt33a16j1d).
 node[ast_oxc](n4b86f56e0826ca31_mv1ttj6n3cio5, labeled_statement, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_mv1ttj6n3cio5, 23).
-start[ast_oxc](n4b86f56e0826ca31_mv1ttj6n3cio5, 846).
+line[ast_oxc](n4b86f56e0826ca31_mv1ttj6n3cio5, 24).
+start[ast_oxc](n4b86f56e0826ca31_mv1ttj6n3cio5, 882).
 node[ast_oxc](n4b86f56e0826ca31_t2r957gfgtd9e, label_identifier, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_t2r957gfgtd9e, 23).
-start[ast_oxc](n4b86f56e0826ca31_t2r957gfgtd9e, 846).
+line[ast_oxc](n4b86f56e0826ca31_t2r957gfgtd9e, 24).
+start[ast_oxc](n4b86f56e0826ca31_t2r957gfgtd9e, 882).
 attr[ast_oxc](n4b86f56e0826ca31_t2r957gfgtd9e, name, "label").
 child[ast_oxc](n4b86f56e0826ca31_mv1ttj6n3cio5, label, 0, n4b86f56e0826ca31_t2r957gfgtd9e).
 node[ast_oxc](n4b86f56e0826ca31_tvchn7kqu9gnf, for_statement, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_tvchn7kqu9gnf, 23).
-start[ast_oxc](n4b86f56e0826ca31_tvchn7kqu9gnf, 853).
+line[ast_oxc](n4b86f56e0826ca31_tvchn7kqu9gnf, 24).
+start[ast_oxc](n4b86f56e0826ca31_tvchn7kqu9gnf, 889).
 node[ast_oxc](n4b86f56e0826ca31_vfbcestk9v551, variable_declaration, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_vfbcestk9v551, 23).
-start[ast_oxc](n4b86f56e0826ca31_vfbcestk9v551, 858).
+line[ast_oxc](n4b86f56e0826ca31_vfbcestk9v551, 24).
+start[ast_oxc](n4b86f56e0826ca31_vfbcestk9v551, 894).
 attr[ast_oxc](n4b86f56e0826ca31_vfbcestk9v551, kind, "Let").
 attr[ast_oxc](n4b86f56e0826ca31_vfbcestk9v551, declare, false).
 node[ast_oxc](n4b86f56e0826ca31_s7hf2ungcv208, variable_declarator, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_s7hf2ungcv208, 23).
-start[ast_oxc](n4b86f56e0826ca31_s7hf2ungcv208, 862).
+line[ast_oxc](n4b86f56e0826ca31_s7hf2ungcv208, 24).
+start[ast_oxc](n4b86f56e0826ca31_s7hf2ungcv208, 898).
 attr[ast_oxc](n4b86f56e0826ca31_s7hf2ungcv208, definite, false).
 node[ast_oxc](n4b86f56e0826ca31_ls4eun2a7aj01, binding_identifier, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_ls4eun2a7aj01, 23).
-start[ast_oxc](n4b86f56e0826ca31_ls4eun2a7aj01, 862).
+line[ast_oxc](n4b86f56e0826ca31_ls4eun2a7aj01, 24).
+start[ast_oxc](n4b86f56e0826ca31_ls4eun2a7aj01, 898).
 attr[ast_oxc](n4b86f56e0826ca31_ls4eun2a7aj01, name, "i").
 child[ast_oxc](n4b86f56e0826ca31_s7hf2ungcv208, id, 0, n4b86f56e0826ca31_ls4eun2a7aj01).
 node[ast_oxc](n4b86f56e0826ca31_5uncuvfcggs55, numeric_literal, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_5uncuvfcggs55, 23).
-start[ast_oxc](n4b86f56e0826ca31_5uncuvfcggs55, 866).
+line[ast_oxc](n4b86f56e0826ca31_5uncuvfcggs55, 24).
+start[ast_oxc](n4b86f56e0826ca31_5uncuvfcggs55, 902).
 attr[ast_oxc](n4b86f56e0826ca31_5uncuvfcggs55, base, "Decimal").
 attr[ast_oxc](n4b86f56e0826ca31_5uncuvfcggs55, raw, "0").
 attr[ast_oxc](n4b86f56e0826ca31_5uncuvfcggs55, value, 0).
@@ -1413,117 +1479,117 @@ child[ast_oxc](n4b86f56e0826ca31_s7hf2ungcv208, init, 0, n4b86f56e0826ca31_5uncu
 child[ast_oxc](n4b86f56e0826ca31_vfbcestk9v551, declarations, 0, n4b86f56e0826ca31_s7hf2ungcv208).
 child[ast_oxc](n4b86f56e0826ca31_tvchn7kqu9gnf, init, 0, n4b86f56e0826ca31_vfbcestk9v551).
 node[ast_oxc](n4b86f56e0826ca31_1t1tgn2c961r6, binary_expression, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_1t1tgn2c961r6, 23).
-start[ast_oxc](n4b86f56e0826ca31_1t1tgn2c961r6, 869).
+line[ast_oxc](n4b86f56e0826ca31_1t1tgn2c961r6, 24).
+start[ast_oxc](n4b86f56e0826ca31_1t1tgn2c961r6, 905).
 attr[ast_oxc](n4b86f56e0826ca31_1t1tgn2c961r6, operator, "LessThan").
 node[ast_oxc](n4b86f56e0826ca31_m9ojhturfoof4, identifier_reference, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_m9ojhturfoof4, 23).
-start[ast_oxc](n4b86f56e0826ca31_m9ojhturfoof4, 869).
+line[ast_oxc](n4b86f56e0826ca31_m9ojhturfoof4, 24).
+start[ast_oxc](n4b86f56e0826ca31_m9ojhturfoof4, 905).
 attr[ast_oxc](n4b86f56e0826ca31_m9ojhturfoof4, variant, "Identifier").
 attr[ast_oxc](n4b86f56e0826ca31_m9ojhturfoof4, name, "i").
 child[ast_oxc](n4b86f56e0826ca31_1t1tgn2c961r6, left, 0, n4b86f56e0826ca31_m9ojhturfoof4).
 node[ast_oxc](n4b86f56e0826ca31_h6o1s699eoed4, numeric_literal, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_h6o1s699eoed4, 23).
-start[ast_oxc](n4b86f56e0826ca31_h6o1s699eoed4, 873).
+line[ast_oxc](n4b86f56e0826ca31_h6o1s699eoed4, 24).
+start[ast_oxc](n4b86f56e0826ca31_h6o1s699eoed4, 909).
 attr[ast_oxc](n4b86f56e0826ca31_h6o1s699eoed4, base, "Decimal").
 attr[ast_oxc](n4b86f56e0826ca31_h6o1s699eoed4, raw, "3").
 attr[ast_oxc](n4b86f56e0826ca31_h6o1s699eoed4, value, 3).
 child[ast_oxc](n4b86f56e0826ca31_1t1tgn2c961r6, right, 0, n4b86f56e0826ca31_h6o1s699eoed4).
 child[ast_oxc](n4b86f56e0826ca31_tvchn7kqu9gnf, test, 0, n4b86f56e0826ca31_1t1tgn2c961r6).
 node[ast_oxc](n4b86f56e0826ca31_pdgk7oi47f799, update_expression, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_pdgk7oi47f799, 23).
-start[ast_oxc](n4b86f56e0826ca31_pdgk7oi47f799, 876).
+line[ast_oxc](n4b86f56e0826ca31_pdgk7oi47f799, 24).
+start[ast_oxc](n4b86f56e0826ca31_pdgk7oi47f799, 912).
 attr[ast_oxc](n4b86f56e0826ca31_pdgk7oi47f799, operator, "Increment").
 attr[ast_oxc](n4b86f56e0826ca31_pdgk7oi47f799, prefix, false).
 node[ast_oxc](n4b86f56e0826ca31_h8rqmoig1j3mf, identifier_reference, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_h8rqmoig1j3mf, 23).
-start[ast_oxc](n4b86f56e0826ca31_h8rqmoig1j3mf, 876).
+line[ast_oxc](n4b86f56e0826ca31_h8rqmoig1j3mf, 24).
+start[ast_oxc](n4b86f56e0826ca31_h8rqmoig1j3mf, 912).
 attr[ast_oxc](n4b86f56e0826ca31_h8rqmoig1j3mf, variant, "AssignmentTargetIdentifier").
 attr[ast_oxc](n4b86f56e0826ca31_h8rqmoig1j3mf, name, "i").
 child[ast_oxc](n4b86f56e0826ca31_pdgk7oi47f799, argument, 0, n4b86f56e0826ca31_h8rqmoig1j3mf).
 child[ast_oxc](n4b86f56e0826ca31_tvchn7kqu9gnf, update, 0, n4b86f56e0826ca31_pdgk7oi47f799).
 node[ast_oxc](n4b86f56e0826ca31_0kohrmnb5tji5, block_statement, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_0kohrmnb5tji5, 23).
-start[ast_oxc](n4b86f56e0826ca31_0kohrmnb5tji5, 881).
+line[ast_oxc](n4b86f56e0826ca31_0kohrmnb5tji5, 24).
+start[ast_oxc](n4b86f56e0826ca31_0kohrmnb5tji5, 917).
 node[ast_oxc](n4b86f56e0826ca31_9gmbctrrcgfs, if_statement, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_9gmbctrrcgfs, 23).
-start[ast_oxc](n4b86f56e0826ca31_9gmbctrrcgfs, 883).
+line[ast_oxc](n4b86f56e0826ca31_9gmbctrrcgfs, 24).
+start[ast_oxc](n4b86f56e0826ca31_9gmbctrrcgfs, 919).
 node[ast_oxc](n4b86f56e0826ca31_e8vc7l88mg3f5, identifier_reference, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_e8vc7l88mg3f5, 23).
-start[ast_oxc](n4b86f56e0826ca31_e8vc7l88mg3f5, 887).
+line[ast_oxc](n4b86f56e0826ca31_e8vc7l88mg3f5, 24).
+start[ast_oxc](n4b86f56e0826ca31_e8vc7l88mg3f5, 923).
 attr[ast_oxc](n4b86f56e0826ca31_e8vc7l88mg3f5, variant, "Identifier").
 attr[ast_oxc](n4b86f56e0826ca31_e8vc7l88mg3f5, name, "i").
 child[ast_oxc](n4b86f56e0826ca31_9gmbctrrcgfs, test, 0, n4b86f56e0826ca31_e8vc7l88mg3f5).
 node[ast_oxc](n4b86f56e0826ca31_3mone5fm6spbe, continue_statement, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_3mone5fm6spbe, 23).
-start[ast_oxc](n4b86f56e0826ca31_3mone5fm6spbe, 890).
+line[ast_oxc](n4b86f56e0826ca31_3mone5fm6spbe, 24).
+start[ast_oxc](n4b86f56e0826ca31_3mone5fm6spbe, 926).
 node[ast_oxc](n4b86f56e0826ca31_tfse9dnbjp593, label_identifier, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_tfse9dnbjp593, 23).
-start[ast_oxc](n4b86f56e0826ca31_tfse9dnbjp593, 899).
+line[ast_oxc](n4b86f56e0826ca31_tfse9dnbjp593, 24).
+start[ast_oxc](n4b86f56e0826ca31_tfse9dnbjp593, 935).
 attr[ast_oxc](n4b86f56e0826ca31_tfse9dnbjp593, name, "label").
 child[ast_oxc](n4b86f56e0826ca31_3mone5fm6spbe, label, 0, n4b86f56e0826ca31_tfse9dnbjp593).
 child[ast_oxc](n4b86f56e0826ca31_9gmbctrrcgfs, consequent, 0, n4b86f56e0826ca31_3mone5fm6spbe).
 node[ast_oxc](n4b86f56e0826ca31_3jbh5mff1849f, break_statement, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_3jbh5mff1849f, 23).
-start[ast_oxc](n4b86f56e0826ca31_3jbh5mff1849f, 911).
+line[ast_oxc](n4b86f56e0826ca31_3jbh5mff1849f, 24).
+start[ast_oxc](n4b86f56e0826ca31_3jbh5mff1849f, 947).
 child[ast_oxc](n4b86f56e0826ca31_9gmbctrrcgfs, alternate, 0, n4b86f56e0826ca31_3jbh5mff1849f).
 child[ast_oxc](n4b86f56e0826ca31_0kohrmnb5tji5, body, 0, n4b86f56e0826ca31_9gmbctrrcgfs).
 child[ast_oxc](n4b86f56e0826ca31_tvchn7kqu9gnf, body, 0, n4b86f56e0826ca31_0kohrmnb5tji5).
 child[ast_oxc](n4b86f56e0826ca31_mv1ttj6n3cio5, body, 0, n4b86f56e0826ca31_tvchn7kqu9gnf).
 child[ast_oxc](n4b86f56e0826ca31_root, body, 23, n4b86f56e0826ca31_mv1ttj6n3cio5).
 node[ast_oxc](n4b86f56e0826ca31_38mdtg434i4p2, for_in_statement, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_38mdtg434i4p2, 24).
-start[ast_oxc](n4b86f56e0826ca31_38mdtg434i4p2, 920).
+line[ast_oxc](n4b86f56e0826ca31_38mdtg434i4p2, 25).
+start[ast_oxc](n4b86f56e0826ca31_38mdtg434i4p2, 956).
 node[ast_oxc](n4b86f56e0826ca31_a3po6gn7k3rs4, variable_declaration, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_a3po6gn7k3rs4, 24).
-start[ast_oxc](n4b86f56e0826ca31_a3po6gn7k3rs4, 925).
+line[ast_oxc](n4b86f56e0826ca31_a3po6gn7k3rs4, 25).
+start[ast_oxc](n4b86f56e0826ca31_a3po6gn7k3rs4, 961).
 attr[ast_oxc](n4b86f56e0826ca31_a3po6gn7k3rs4, kind, "Const").
 attr[ast_oxc](n4b86f56e0826ca31_a3po6gn7k3rs4, declare, false).
 node[ast_oxc](n4b86f56e0826ca31_985e87qf7ksfe, variable_declarator, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_985e87qf7ksfe, 24).
-start[ast_oxc](n4b86f56e0826ca31_985e87qf7ksfe, 931).
+line[ast_oxc](n4b86f56e0826ca31_985e87qf7ksfe, 25).
+start[ast_oxc](n4b86f56e0826ca31_985e87qf7ksfe, 967).
 attr[ast_oxc](n4b86f56e0826ca31_985e87qf7ksfe, definite, false).
 node[ast_oxc](n4b86f56e0826ca31_8al64h75s92j8, binding_identifier, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_8al64h75s92j8, 24).
-start[ast_oxc](n4b86f56e0826ca31_8al64h75s92j8, 931).
+line[ast_oxc](n4b86f56e0826ca31_8al64h75s92j8, 25).
+start[ast_oxc](n4b86f56e0826ca31_8al64h75s92j8, 967).
 attr[ast_oxc](n4b86f56e0826ca31_8al64h75s92j8, name, "k").
 child[ast_oxc](n4b86f56e0826ca31_985e87qf7ksfe, id, 0, n4b86f56e0826ca31_8al64h75s92j8).
 child[ast_oxc](n4b86f56e0826ca31_a3po6gn7k3rs4, declarations, 0, n4b86f56e0826ca31_985e87qf7ksfe).
 child[ast_oxc](n4b86f56e0826ca31_38mdtg434i4p2, left, 0, n4b86f56e0826ca31_a3po6gn7k3rs4).
 node[ast_oxc](n4b86f56e0826ca31_8obrbvoglqfqb, identifier_reference, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_8obrbvoglqfqb, 24).
-start[ast_oxc](n4b86f56e0826ca31_8obrbvoglqfqb, 936).
+line[ast_oxc](n4b86f56e0826ca31_8obrbvoglqfqb, 25).
+start[ast_oxc](n4b86f56e0826ca31_8obrbvoglqfqb, 972).
 attr[ast_oxc](n4b86f56e0826ca31_8obrbvoglqfqb, variant, "Identifier").
 attr[ast_oxc](n4b86f56e0826ca31_8obrbvoglqfqb, name, "o").
 child[ast_oxc](n4b86f56e0826ca31_38mdtg434i4p2, right, 0, n4b86f56e0826ca31_8obrbvoglqfqb).
 node[ast_oxc](n4b86f56e0826ca31_josijm5kng448, block_statement, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_josijm5kng448, 24).
-start[ast_oxc](n4b86f56e0826ca31_josijm5kng448, 939).
+line[ast_oxc](n4b86f56e0826ca31_josijm5kng448, 25).
+start[ast_oxc](n4b86f56e0826ca31_josijm5kng448, 975).
 child[ast_oxc](n4b86f56e0826ca31_38mdtg434i4p2, body, 0, n4b86f56e0826ca31_josijm5kng448).
 child[ast_oxc](n4b86f56e0826ca31_root, body, 24, n4b86f56e0826ca31_38mdtg434i4p2).
 node[ast_oxc](n4b86f56e0826ca31_ev491k7071hj1, while_statement, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_ev491k7071hj1, 24).
-start[ast_oxc](n4b86f56e0826ca31_ev491k7071hj1, 942).
+line[ast_oxc](n4b86f56e0826ca31_ev491k7071hj1, 25).
+start[ast_oxc](n4b86f56e0826ca31_ev491k7071hj1, 978).
 node[ast_oxc](n4b86f56e0826ca31_bvejc1ksd5rf7, identifier_reference, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_bvejc1ksd5rf7, 24).
-start[ast_oxc](n4b86f56e0826ca31_bvejc1ksd5rf7, 949).
+line[ast_oxc](n4b86f56e0826ca31_bvejc1ksd5rf7, 25).
+start[ast_oxc](n4b86f56e0826ca31_bvejc1ksd5rf7, 985).
 attr[ast_oxc](n4b86f56e0826ca31_bvejc1ksd5rf7, variant, "Identifier").
 attr[ast_oxc](n4b86f56e0826ca31_bvejc1ksd5rf7, name, "x").
 child[ast_oxc](n4b86f56e0826ca31_ev491k7071hj1, test, 0, n4b86f56e0826ca31_bvejc1ksd5rf7).
 node[ast_oxc](n4b86f56e0826ca31_tfs3a9ncmrn2c, block_statement, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_tfs3a9ncmrn2c, 24).
-start[ast_oxc](n4b86f56e0826ca31_tfs3a9ncmrn2c, 952).
+line[ast_oxc](n4b86f56e0826ca31_tfs3a9ncmrn2c, 25).
+start[ast_oxc](n4b86f56e0826ca31_tfs3a9ncmrn2c, 988).
 node[ast_oxc](n4b86f56e0826ca31_4860b2ro4s9od, expression_statement, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_4860b2ro4s9od, 24).
-start[ast_oxc](n4b86f56e0826ca31_4860b2ro4s9od, 954).
+line[ast_oxc](n4b86f56e0826ca31_4860b2ro4s9od, 25).
+start[ast_oxc](n4b86f56e0826ca31_4860b2ro4s9od, 990).
 node[ast_oxc](n4b86f56e0826ca31_k0ejnkshq9lkd, update_expression, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_k0ejnkshq9lkd, 24).
-start[ast_oxc](n4b86f56e0826ca31_k0ejnkshq9lkd, 954).
+line[ast_oxc](n4b86f56e0826ca31_k0ejnkshq9lkd, 25).
+start[ast_oxc](n4b86f56e0826ca31_k0ejnkshq9lkd, 990).
 attr[ast_oxc](n4b86f56e0826ca31_k0ejnkshq9lkd, operator, "Decrement").
 attr[ast_oxc](n4b86f56e0826ca31_k0ejnkshq9lkd, prefix, false).
 node[ast_oxc](n4b86f56e0826ca31_aej8pj4579ia9, identifier_reference, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_aej8pj4579ia9, 24).
-start[ast_oxc](n4b86f56e0826ca31_aej8pj4579ia9, 954).
+line[ast_oxc](n4b86f56e0826ca31_aej8pj4579ia9, 25).
+start[ast_oxc](n4b86f56e0826ca31_aej8pj4579ia9, 990).
 attr[ast_oxc](n4b86f56e0826ca31_aej8pj4579ia9, variant, "AssignmentTargetIdentifier").
 attr[ast_oxc](n4b86f56e0826ca31_aej8pj4579ia9, name, "x").
 child[ast_oxc](n4b86f56e0826ca31_k0ejnkshq9lkd, argument, 0, n4b86f56e0826ca31_aej8pj4579ia9).
@@ -1532,22 +1598,22 @@ child[ast_oxc](n4b86f56e0826ca31_tfs3a9ncmrn2c, body, 0, n4b86f56e0826ca31_4860b
 child[ast_oxc](n4b86f56e0826ca31_ev491k7071hj1, body, 0, n4b86f56e0826ca31_tfs3a9ncmrn2c).
 child[ast_oxc](n4b86f56e0826ca31_root, body, 25, n4b86f56e0826ca31_ev491k7071hj1).
 node[ast_oxc](n4b86f56e0826ca31_5n7ceq1eg6r94, do_while_statement, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_5n7ceq1eg6r94, 24).
-start[ast_oxc](n4b86f56e0826ca31_5n7ceq1eg6r94, 961).
+line[ast_oxc](n4b86f56e0826ca31_5n7ceq1eg6r94, 25).
+start[ast_oxc](n4b86f56e0826ca31_5n7ceq1eg6r94, 997).
 node[ast_oxc](n4b86f56e0826ca31_73l2l7itap2rd, block_statement, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_73l2l7itap2rd, 24).
-start[ast_oxc](n4b86f56e0826ca31_73l2l7itap2rd, 964).
+line[ast_oxc](n4b86f56e0826ca31_73l2l7itap2rd, 25).
+start[ast_oxc](n4b86f56e0826ca31_73l2l7itap2rd, 1000).
 node[ast_oxc](n4b86f56e0826ca31_sav8c5d74cp97, expression_statement, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_sav8c5d74cp97, 24).
-start[ast_oxc](n4b86f56e0826ca31_sav8c5d74cp97, 966).
+line[ast_oxc](n4b86f56e0826ca31_sav8c5d74cp97, 25).
+start[ast_oxc](n4b86f56e0826ca31_sav8c5d74cp97, 1002).
 node[ast_oxc](n4b86f56e0826ca31_eu42v293ljjr4, update_expression, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_eu42v293ljjr4, 24).
-start[ast_oxc](n4b86f56e0826ca31_eu42v293ljjr4, 966).
+line[ast_oxc](n4b86f56e0826ca31_eu42v293ljjr4, 25).
+start[ast_oxc](n4b86f56e0826ca31_eu42v293ljjr4, 1002).
 attr[ast_oxc](n4b86f56e0826ca31_eu42v293ljjr4, operator, "Increment").
 attr[ast_oxc](n4b86f56e0826ca31_eu42v293ljjr4, prefix, false).
 node[ast_oxc](n4b86f56e0826ca31_c7suj09ptste5, identifier_reference, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_c7suj09ptste5, 24).
-start[ast_oxc](n4b86f56e0826ca31_c7suj09ptste5, 966).
+line[ast_oxc](n4b86f56e0826ca31_c7suj09ptste5, 25).
+start[ast_oxc](n4b86f56e0826ca31_c7suj09ptste5, 1002).
 attr[ast_oxc](n4b86f56e0826ca31_c7suj09ptste5, variant, "AssignmentTargetIdentifier").
 attr[ast_oxc](n4b86f56e0826ca31_c7suj09ptste5, name, "x").
 child[ast_oxc](n4b86f56e0826ca31_eu42v293ljjr4, argument, 0, n4b86f56e0826ca31_c7suj09ptste5).
@@ -1555,18 +1621,18 @@ child[ast_oxc](n4b86f56e0826ca31_sav8c5d74cp97, expression, 0, n4b86f56e0826ca31
 child[ast_oxc](n4b86f56e0826ca31_73l2l7itap2rd, body, 0, n4b86f56e0826ca31_sav8c5d74cp97).
 child[ast_oxc](n4b86f56e0826ca31_5n7ceq1eg6r94, body, 0, n4b86f56e0826ca31_73l2l7itap2rd).
 node[ast_oxc](n4b86f56e0826ca31_jg62dji7jesfa, binary_expression, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_jg62dji7jesfa, 24).
-start[ast_oxc](n4b86f56e0826ca31_jg62dji7jesfa, 980).
+line[ast_oxc](n4b86f56e0826ca31_jg62dji7jesfa, 25).
+start[ast_oxc](n4b86f56e0826ca31_jg62dji7jesfa, 1016).
 attr[ast_oxc](n4b86f56e0826ca31_jg62dji7jesfa, operator, "LessThan").
 node[ast_oxc](n4b86f56e0826ca31_f1oc0n7um8ksa, identifier_reference, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_f1oc0n7um8ksa, 24).
-start[ast_oxc](n4b86f56e0826ca31_f1oc0n7um8ksa, 980).
+line[ast_oxc](n4b86f56e0826ca31_f1oc0n7um8ksa, 25).
+start[ast_oxc](n4b86f56e0826ca31_f1oc0n7um8ksa, 1016).
 attr[ast_oxc](n4b86f56e0826ca31_f1oc0n7um8ksa, variant, "Identifier").
 attr[ast_oxc](n4b86f56e0826ca31_f1oc0n7um8ksa, name, "x").
 child[ast_oxc](n4b86f56e0826ca31_jg62dji7jesfa, left, 0, n4b86f56e0826ca31_f1oc0n7um8ksa).
 node[ast_oxc](n4b86f56e0826ca31_ao1rgs808120d, numeric_literal, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_ao1rgs808120d, 24).
-start[ast_oxc](n4b86f56e0826ca31_ao1rgs808120d, 984).
+line[ast_oxc](n4b86f56e0826ca31_ao1rgs808120d, 25).
+start[ast_oxc](n4b86f56e0826ca31_ao1rgs808120d, 1020).
 attr[ast_oxc](n4b86f56e0826ca31_ao1rgs808120d, base, "Decimal").
 attr[ast_oxc](n4b86f56e0826ca31_ao1rgs808120d, raw, "3").
 attr[ast_oxc](n4b86f56e0826ca31_ao1rgs808120d, value, 3).
@@ -1574,59 +1640,59 @@ child[ast_oxc](n4b86f56e0826ca31_jg62dji7jesfa, right, 0, n4b86f56e0826ca31_ao1r
 child[ast_oxc](n4b86f56e0826ca31_5n7ceq1eg6r94, test, 0, n4b86f56e0826ca31_jg62dji7jesfa).
 child[ast_oxc](n4b86f56e0826ca31_root, body, 26, n4b86f56e0826ca31_5n7ceq1eg6r94).
 node[ast_oxc](n4b86f56e0826ca31_jmvla092q2d83, switch_statement, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_jmvla092q2d83, 25).
-start[ast_oxc](n4b86f56e0826ca31_jmvla092q2d83, 988).
+line[ast_oxc](n4b86f56e0826ca31_jmvla092q2d83, 26).
+start[ast_oxc](n4b86f56e0826ca31_jmvla092q2d83, 1024).
 node[ast_oxc](n4b86f56e0826ca31_54lejbr777d8, identifier_reference, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_54lejbr777d8, 25).
-start[ast_oxc](n4b86f56e0826ca31_54lejbr777d8, 996).
+line[ast_oxc](n4b86f56e0826ca31_54lejbr777d8, 26).
+start[ast_oxc](n4b86f56e0826ca31_54lejbr777d8, 1032).
 attr[ast_oxc](n4b86f56e0826ca31_54lejbr777d8, variant, "Identifier").
 attr[ast_oxc](n4b86f56e0826ca31_54lejbr777d8, name, "x").
 child[ast_oxc](n4b86f56e0826ca31_jmvla092q2d83, discriminant, 0, n4b86f56e0826ca31_54lejbr777d8).
 node[ast_oxc](n4b86f56e0826ca31_io5h3cta9eree, switch_case, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_io5h3cta9eree, 25).
-start[ast_oxc](n4b86f56e0826ca31_io5h3cta9eree, 1001).
+line[ast_oxc](n4b86f56e0826ca31_io5h3cta9eree, 26).
+start[ast_oxc](n4b86f56e0826ca31_io5h3cta9eree, 1037).
 node[ast_oxc](n4b86f56e0826ca31_0ddgb2ojh7bg, numeric_literal, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_0ddgb2ojh7bg, 25).
-start[ast_oxc](n4b86f56e0826ca31_0ddgb2ojh7bg, 1006).
+line[ast_oxc](n4b86f56e0826ca31_0ddgb2ojh7bg, 26).
+start[ast_oxc](n4b86f56e0826ca31_0ddgb2ojh7bg, 1042).
 attr[ast_oxc](n4b86f56e0826ca31_0ddgb2ojh7bg, base, "Decimal").
 attr[ast_oxc](n4b86f56e0826ca31_0ddgb2ojh7bg, raw, "1").
 attr[ast_oxc](n4b86f56e0826ca31_0ddgb2ojh7bg, value, 1).
 child[ast_oxc](n4b86f56e0826ca31_io5h3cta9eree, test, 0, n4b86f56e0826ca31_0ddgb2ojh7bg).
 node[ast_oxc](n4b86f56e0826ca31_o744unpb2d05e, expression_statement, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_o744unpb2d05e, 25).
-start[ast_oxc](n4b86f56e0826ca31_o744unpb2d05e, 1009).
+line[ast_oxc](n4b86f56e0826ca31_o744unpb2d05e, 26).
+start[ast_oxc](n4b86f56e0826ca31_o744unpb2d05e, 1045).
 node[ast_oxc](n4b86f56e0826ca31_quk6fg4gb7r64, call_expression, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_quk6fg4gb7r64, 25).
-start[ast_oxc](n4b86f56e0826ca31_quk6fg4gb7r64, 1009).
+line[ast_oxc](n4b86f56e0826ca31_quk6fg4gb7r64, 26).
+start[ast_oxc](n4b86f56e0826ca31_quk6fg4gb7r64, 1045).
 attr[ast_oxc](n4b86f56e0826ca31_quk6fg4gb7r64, optional, false).
 attr[ast_oxc](n4b86f56e0826ca31_quk6fg4gb7r64, pure, false).
 node[ast_oxc](n4b86f56e0826ca31_r60vgeo6e468b, identifier_reference, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_r60vgeo6e468b, 25).
-start[ast_oxc](n4b86f56e0826ca31_r60vgeo6e468b, 1009).
+line[ast_oxc](n4b86f56e0826ca31_r60vgeo6e468b, 26).
+start[ast_oxc](n4b86f56e0826ca31_r60vgeo6e468b, 1045).
 attr[ast_oxc](n4b86f56e0826ca31_r60vgeo6e468b, variant, "Identifier").
 attr[ast_oxc](n4b86f56e0826ca31_r60vgeo6e468b, name, "f").
 child[ast_oxc](n4b86f56e0826ca31_quk6fg4gb7r64, callee, 0, n4b86f56e0826ca31_r60vgeo6e468b).
 child[ast_oxc](n4b86f56e0826ca31_o744unpb2d05e, expression, 0, n4b86f56e0826ca31_quk6fg4gb7r64).
 child[ast_oxc](n4b86f56e0826ca31_io5h3cta9eree, consequent, 0, n4b86f56e0826ca31_o744unpb2d05e).
 node[ast_oxc](n4b86f56e0826ca31_qmn2s8oghjt84, break_statement, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_qmn2s8oghjt84, 25).
-start[ast_oxc](n4b86f56e0826ca31_qmn2s8oghjt84, 1014).
+line[ast_oxc](n4b86f56e0826ca31_qmn2s8oghjt84, 26).
+start[ast_oxc](n4b86f56e0826ca31_qmn2s8oghjt84, 1050).
 child[ast_oxc](n4b86f56e0826ca31_io5h3cta9eree, consequent, 1, n4b86f56e0826ca31_qmn2s8oghjt84).
 child[ast_oxc](n4b86f56e0826ca31_jmvla092q2d83, cases, 0, n4b86f56e0826ca31_io5h3cta9eree).
 node[ast_oxc](n4b86f56e0826ca31_vjbau8nnlg0k7, switch_case, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_vjbau8nnlg0k7, 25).
-start[ast_oxc](n4b86f56e0826ca31_vjbau8nnlg0k7, 1021).
+line[ast_oxc](n4b86f56e0826ca31_vjbau8nnlg0k7, 26).
+start[ast_oxc](n4b86f56e0826ca31_vjbau8nnlg0k7, 1057).
 node[ast_oxc](n4b86f56e0826ca31_siq6bmhlirphc, expression_statement, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_siq6bmhlirphc, 25).
-start[ast_oxc](n4b86f56e0826ca31_siq6bmhlirphc, 1030).
+line[ast_oxc](n4b86f56e0826ca31_siq6bmhlirphc, 26).
+start[ast_oxc](n4b86f56e0826ca31_siq6bmhlirphc, 1066).
 node[ast_oxc](n4b86f56e0826ca31_j13ftpkhbilse, call_expression, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_j13ftpkhbilse, 25).
-start[ast_oxc](n4b86f56e0826ca31_j13ftpkhbilse, 1030).
+line[ast_oxc](n4b86f56e0826ca31_j13ftpkhbilse, 26).
+start[ast_oxc](n4b86f56e0826ca31_j13ftpkhbilse, 1066).
 attr[ast_oxc](n4b86f56e0826ca31_j13ftpkhbilse, optional, false).
 attr[ast_oxc](n4b86f56e0826ca31_j13ftpkhbilse, pure, false).
 node[ast_oxc](n4b86f56e0826ca31_e1r3hugdol0k4, identifier_reference, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_e1r3hugdol0k4, 25).
-start[ast_oxc](n4b86f56e0826ca31_e1r3hugdol0k4, 1030).
+line[ast_oxc](n4b86f56e0826ca31_e1r3hugdol0k4, 26).
+start[ast_oxc](n4b86f56e0826ca31_e1r3hugdol0k4, 1066).
 attr[ast_oxc](n4b86f56e0826ca31_e1r3hugdol0k4, variant, "Identifier").
 attr[ast_oxc](n4b86f56e0826ca31_e1r3hugdol0k4, name, "g").
 child[ast_oxc](n4b86f56e0826ca31_j13ftpkhbilse, callee, 0, n4b86f56e0826ca31_e1r3hugdol0k4).
@@ -1635,22 +1701,22 @@ child[ast_oxc](n4b86f56e0826ca31_vjbau8nnlg0k7, consequent, 0, n4b86f56e0826ca31
 child[ast_oxc](n4b86f56e0826ca31_jmvla092q2d83, cases, 1, n4b86f56e0826ca31_vjbau8nnlg0k7).
 child[ast_oxc](n4b86f56e0826ca31_root, body, 27, n4b86f56e0826ca31_jmvla092q2d83).
 node[ast_oxc](n4b86f56e0826ca31_ie74enngaavjc, try_statement, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_ie74enngaavjc, 26).
-start[ast_oxc](n4b86f56e0826ca31_ie74enngaavjc, 1037).
+line[ast_oxc](n4b86f56e0826ca31_ie74enngaavjc, 27).
+start[ast_oxc](n4b86f56e0826ca31_ie74enngaavjc, 1073).
 node[ast_oxc](n4b86f56e0826ca31_880jn235bfhl6, block_statement, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_880jn235bfhl6, 26).
-start[ast_oxc](n4b86f56e0826ca31_880jn235bfhl6, 1041).
+line[ast_oxc](n4b86f56e0826ca31_880jn235bfhl6, 27).
+start[ast_oxc](n4b86f56e0826ca31_880jn235bfhl6, 1077).
 node[ast_oxc](n4b86f56e0826ca31_p9v7d4ugdpqj5, expression_statement, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_p9v7d4ugdpqj5, 26).
-start[ast_oxc](n4b86f56e0826ca31_p9v7d4ugdpqj5, 1043).
+line[ast_oxc](n4b86f56e0826ca31_p9v7d4ugdpqj5, 27).
+start[ast_oxc](n4b86f56e0826ca31_p9v7d4ugdpqj5, 1079).
 node[ast_oxc](n4b86f56e0826ca31_146qsgll2jdsc, call_expression, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_146qsgll2jdsc, 26).
-start[ast_oxc](n4b86f56e0826ca31_146qsgll2jdsc, 1043).
+line[ast_oxc](n4b86f56e0826ca31_146qsgll2jdsc, 27).
+start[ast_oxc](n4b86f56e0826ca31_146qsgll2jdsc, 1079).
 attr[ast_oxc](n4b86f56e0826ca31_146qsgll2jdsc, optional, false).
 attr[ast_oxc](n4b86f56e0826ca31_146qsgll2jdsc, pure, false).
 node[ast_oxc](n4b86f56e0826ca31_m6k50e0mkv6lf, identifier_reference, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_m6k50e0mkv6lf, 26).
-start[ast_oxc](n4b86f56e0826ca31_m6k50e0mkv6lf, 1043).
+line[ast_oxc](n4b86f56e0826ca31_m6k50e0mkv6lf, 27).
+start[ast_oxc](n4b86f56e0826ca31_m6k50e0mkv6lf, 1079).
 attr[ast_oxc](n4b86f56e0826ca31_m6k50e0mkv6lf, variant, "Identifier").
 attr[ast_oxc](n4b86f56e0826ca31_m6k50e0mkv6lf, name, "h").
 child[ast_oxc](n4b86f56e0826ca31_146qsgll2jdsc, callee, 0, n4b86f56e0826ca31_m6k50e0mkv6lf).
@@ -1658,26 +1724,26 @@ child[ast_oxc](n4b86f56e0826ca31_p9v7d4ugdpqj5, expression, 0, n4b86f56e0826ca31
 child[ast_oxc](n4b86f56e0826ca31_880jn235bfhl6, body, 0, n4b86f56e0826ca31_p9v7d4ugdpqj5).
 child[ast_oxc](n4b86f56e0826ca31_ie74enngaavjc, block, 0, n4b86f56e0826ca31_880jn235bfhl6).
 node[ast_oxc](n4b86f56e0826ca31_cb86phpdmrjq5, catch_clause, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_cb86phpdmrjq5, 26).
-start[ast_oxc](n4b86f56e0826ca31_cb86phpdmrjq5, 1050).
+line[ast_oxc](n4b86f56e0826ca31_cb86phpdmrjq5, 27).
+start[ast_oxc](n4b86f56e0826ca31_cb86phpdmrjq5, 1086).
 node[ast_oxc](n4b86f56e0826ca31_mhh5oivuobfl8, catch_parameter, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_mhh5oivuobfl8, 26).
-start[ast_oxc](n4b86f56e0826ca31_mhh5oivuobfl8, 1057).
+line[ast_oxc](n4b86f56e0826ca31_mhh5oivuobfl8, 27).
+start[ast_oxc](n4b86f56e0826ca31_mhh5oivuobfl8, 1093).
 node[ast_oxc](n4b86f56e0826ca31_12jb426d0p2k5, binding_identifier, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_12jb426d0p2k5, 26).
-start[ast_oxc](n4b86f56e0826ca31_12jb426d0p2k5, 1057).
+line[ast_oxc](n4b86f56e0826ca31_12jb426d0p2k5, 27).
+start[ast_oxc](n4b86f56e0826ca31_12jb426d0p2k5, 1093).
 attr[ast_oxc](n4b86f56e0826ca31_12jb426d0p2k5, name, "e").
 child[ast_oxc](n4b86f56e0826ca31_mhh5oivuobfl8, pattern, 0, n4b86f56e0826ca31_12jb426d0p2k5).
 child[ast_oxc](n4b86f56e0826ca31_cb86phpdmrjq5, param, 0, n4b86f56e0826ca31_mhh5oivuobfl8).
 node[ast_oxc](n4b86f56e0826ca31_iqt0b6lkj8kq, block_statement, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_iqt0b6lkj8kq, 26).
-start[ast_oxc](n4b86f56e0826ca31_iqt0b6lkj8kq, 1060).
+line[ast_oxc](n4b86f56e0826ca31_iqt0b6lkj8kq, 27).
+start[ast_oxc](n4b86f56e0826ca31_iqt0b6lkj8kq, 1096).
 node[ast_oxc](n4b86f56e0826ca31_mar6u9q1ce6n4, throw_statement, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_mar6u9q1ce6n4, 26).
-start[ast_oxc](n4b86f56e0826ca31_mar6u9q1ce6n4, 1062).
+line[ast_oxc](n4b86f56e0826ca31_mar6u9q1ce6n4, 27).
+start[ast_oxc](n4b86f56e0826ca31_mar6u9q1ce6n4, 1098).
 node[ast_oxc](n4b86f56e0826ca31_2v33og59um6q9, identifier_reference, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_2v33og59um6q9, 26).
-start[ast_oxc](n4b86f56e0826ca31_2v33og59um6q9, 1068).
+line[ast_oxc](n4b86f56e0826ca31_2v33og59um6q9, 27).
+start[ast_oxc](n4b86f56e0826ca31_2v33og59um6q9, 1104).
 attr[ast_oxc](n4b86f56e0826ca31_2v33og59um6q9, variant, "Identifier").
 attr[ast_oxc](n4b86f56e0826ca31_2v33og59um6q9, name, "e").
 child[ast_oxc](n4b86f56e0826ca31_mar6u9q1ce6n4, argument, 0, n4b86f56e0826ca31_2v33og59um6q9).
@@ -1685,19 +1751,19 @@ child[ast_oxc](n4b86f56e0826ca31_iqt0b6lkj8kq, body, 0, n4b86f56e0826ca31_mar6u9
 child[ast_oxc](n4b86f56e0826ca31_cb86phpdmrjq5, body, 0, n4b86f56e0826ca31_iqt0b6lkj8kq).
 child[ast_oxc](n4b86f56e0826ca31_ie74enngaavjc, handler, 0, n4b86f56e0826ca31_cb86phpdmrjq5).
 node[ast_oxc](n4b86f56e0826ca31_dsm6u7isd9144, block_statement, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_dsm6u7isd9144, 26).
-start[ast_oxc](n4b86f56e0826ca31_dsm6u7isd9144, 1081).
+line[ast_oxc](n4b86f56e0826ca31_dsm6u7isd9144, 27).
+start[ast_oxc](n4b86f56e0826ca31_dsm6u7isd9144, 1117).
 node[ast_oxc](n4b86f56e0826ca31_6gr3ufh4fq805, expression_statement, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_6gr3ufh4fq805, 26).
-start[ast_oxc](n4b86f56e0826ca31_6gr3ufh4fq805, 1083).
+line[ast_oxc](n4b86f56e0826ca31_6gr3ufh4fq805, 27).
+start[ast_oxc](n4b86f56e0826ca31_6gr3ufh4fq805, 1119).
 node[ast_oxc](n4b86f56e0826ca31_9adhar83a74dc, call_expression, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_9adhar83a74dc, 26).
-start[ast_oxc](n4b86f56e0826ca31_9adhar83a74dc, 1083).
+line[ast_oxc](n4b86f56e0826ca31_9adhar83a74dc, 27).
+start[ast_oxc](n4b86f56e0826ca31_9adhar83a74dc, 1119).
 attr[ast_oxc](n4b86f56e0826ca31_9adhar83a74dc, optional, false).
 attr[ast_oxc](n4b86f56e0826ca31_9adhar83a74dc, pure, false).
 node[ast_oxc](n4b86f56e0826ca31_7acc06emhgdl9, identifier_reference, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_7acc06emhgdl9, 26).
-start[ast_oxc](n4b86f56e0826ca31_7acc06emhgdl9, 1083).
+line[ast_oxc](n4b86f56e0826ca31_7acc06emhgdl9, 27).
+start[ast_oxc](n4b86f56e0826ca31_7acc06emhgdl9, 1119).
 attr[ast_oxc](n4b86f56e0826ca31_7acc06emhgdl9, variant, "Identifier").
 attr[ast_oxc](n4b86f56e0826ca31_7acc06emhgdl9, name, "done").
 child[ast_oxc](n4b86f56e0826ca31_9adhar83a74dc, callee, 0, n4b86f56e0826ca31_7acc06emhgdl9).
@@ -1706,45 +1772,45 @@ child[ast_oxc](n4b86f56e0826ca31_dsm6u7isd9144, body, 0, n4b86f56e0826ca31_6gr3u
 child[ast_oxc](n4b86f56e0826ca31_ie74enngaavjc, finalizer, 0, n4b86f56e0826ca31_dsm6u7isd9144).
 child[ast_oxc](n4b86f56e0826ca31_root, body, 28, n4b86f56e0826ca31_ie74enngaavjc).
 node[ast_oxc](n4b86f56e0826ca31_frmecdrlk2rj7, variable_declaration, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_frmecdrlk2rj7, 27).
-start[ast_oxc](n4b86f56e0826ca31_frmecdrlk2rj7, 1093).
+line[ast_oxc](n4b86f56e0826ca31_frmecdrlk2rj7, 28).
+start[ast_oxc](n4b86f56e0826ca31_frmecdrlk2rj7, 1129).
 attr[ast_oxc](n4b86f56e0826ca31_frmecdrlk2rj7, kind, "Const").
 attr[ast_oxc](n4b86f56e0826ca31_frmecdrlk2rj7, declare, false).
 node[ast_oxc](n4b86f56e0826ca31_l1jvg2k4rqt89, variable_declarator, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_l1jvg2k4rqt89, 27).
-start[ast_oxc](n4b86f56e0826ca31_l1jvg2k4rqt89, 1099).
+line[ast_oxc](n4b86f56e0826ca31_l1jvg2k4rqt89, 28).
+start[ast_oxc](n4b86f56e0826ca31_l1jvg2k4rqt89, 1135).
 attr[ast_oxc](n4b86f56e0826ca31_l1jvg2k4rqt89, definite, false).
 node[ast_oxc](n4b86f56e0826ca31_tppog9jqc8ac1, binding_identifier, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_tppog9jqc8ac1, 27).
-start[ast_oxc](n4b86f56e0826ca31_tppog9jqc8ac1, 1099).
+line[ast_oxc](n4b86f56e0826ca31_tppog9jqc8ac1, 28).
+start[ast_oxc](n4b86f56e0826ca31_tppog9jqc8ac1, 1135).
 attr[ast_oxc](n4b86f56e0826ca31_tppog9jqc8ac1, name, "fn").
 child[ast_oxc](n4b86f56e0826ca31_l1jvg2k4rqt89, id, 0, n4b86f56e0826ca31_tppog9jqc8ac1).
 node[ast_oxc](n4b86f56e0826ca31_kcdv0utnfg6lc, arrow_function_expression, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_kcdv0utnfg6lc, 27).
-start[ast_oxc](n4b86f56e0826ca31_kcdv0utnfg6lc, 1104).
+line[ast_oxc](n4b86f56e0826ca31_kcdv0utnfg6lc, 28).
+start[ast_oxc](n4b86f56e0826ca31_kcdv0utnfg6lc, 1140).
 node[ast_oxc](n4b86f56e0826ca31_hrr5fja964deb, formal_parameters, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_hrr5fja964deb, 27).
-start[ast_oxc](n4b86f56e0826ca31_hrr5fja964deb, 1110).
+line[ast_oxc](n4b86f56e0826ca31_hrr5fja964deb, 28).
+start[ast_oxc](n4b86f56e0826ca31_hrr5fja964deb, 1146).
 attr[ast_oxc](n4b86f56e0826ca31_hrr5fja964deb, kind, "ArrowFormalParameters").
 node[ast_oxc](n4b86f56e0826ca31_c9i5od1bovfcf, formal_parameter, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_c9i5od1bovfcf, 27).
-start[ast_oxc](n4b86f56e0826ca31_c9i5od1bovfcf, 1111).
+line[ast_oxc](n4b86f56e0826ca31_c9i5od1bovfcf, 28).
+start[ast_oxc](n4b86f56e0826ca31_c9i5od1bovfcf, 1147).
 attr[ast_oxc](n4b86f56e0826ca31_c9i5od1bovfcf, optional, false).
 attr[ast_oxc](n4b86f56e0826ca31_c9i5od1bovfcf, readonly, false).
 attr[ast_oxc](n4b86f56e0826ca31_c9i5od1bovfcf, override, false).
 node[ast_oxc](n4b86f56e0826ca31_jcfucb8tk7j71, binding_identifier, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_jcfucb8tk7j71, 27).
-start[ast_oxc](n4b86f56e0826ca31_jcfucb8tk7j71, 1111).
+line[ast_oxc](n4b86f56e0826ca31_jcfucb8tk7j71, 28).
+start[ast_oxc](n4b86f56e0826ca31_jcfucb8tk7j71, 1147).
 attr[ast_oxc](n4b86f56e0826ca31_jcfucb8tk7j71, name, "a").
 child[ast_oxc](n4b86f56e0826ca31_c9i5od1bovfcf, pattern, 0, n4b86f56e0826ca31_jcfucb8tk7j71).
 child[ast_oxc](n4b86f56e0826ca31_hrr5fja964deb, items, 0, n4b86f56e0826ca31_c9i5od1bovfcf).
 child[ast_oxc](n4b86f56e0826ca31_kcdv0utnfg6lc, params, 0, n4b86f56e0826ca31_hrr5fja964deb).
 node[ast_oxc](n4b86f56e0826ca31_gqgbql0cpfal1, await_expression, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_gqgbql0cpfal1, 27).
-start[ast_oxc](n4b86f56e0826ca31_gqgbql0cpfal1, 1117).
+line[ast_oxc](n4b86f56e0826ca31_gqgbql0cpfal1, 28).
+start[ast_oxc](n4b86f56e0826ca31_gqgbql0cpfal1, 1153).
 node[ast_oxc](n4b86f56e0826ca31_e78nf6ls9cume, identifier_reference, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_e78nf6ls9cume, 27).
-start[ast_oxc](n4b86f56e0826ca31_e78nf6ls9cume, 1123).
+line[ast_oxc](n4b86f56e0826ca31_e78nf6ls9cume, 28).
+start[ast_oxc](n4b86f56e0826ca31_e78nf6ls9cume, 1159).
 attr[ast_oxc](n4b86f56e0826ca31_e78nf6ls9cume, variant, "Identifier").
 attr[ast_oxc](n4b86f56e0826ca31_e78nf6ls9cume, name, "a").
 child[ast_oxc](n4b86f56e0826ca31_gqgbql0cpfal1, argument, 0, n4b86f56e0826ca31_e78nf6ls9cume).
@@ -1756,37 +1822,37 @@ child[ast_oxc](n4b86f56e0826ca31_l1jvg2k4rqt89, init, 0, n4b86f56e0826ca31_kcdv0
 child[ast_oxc](n4b86f56e0826ca31_frmecdrlk2rj7, declarations, 0, n4b86f56e0826ca31_l1jvg2k4rqt89).
 child[ast_oxc](n4b86f56e0826ca31_root, body, 29, n4b86f56e0826ca31_frmecdrlk2rj7).
 node[ast_oxc](n4b86f56e0826ca31_epbekfc8osl33, expression_statement, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_epbekfc8osl33, 28).
-start[ast_oxc](n4b86f56e0826ca31_epbekfc8osl33, 1126).
+line[ast_oxc](n4b86f56e0826ca31_epbekfc8osl33, 29).
+start[ast_oxc](n4b86f56e0826ca31_epbekfc8osl33, 1162).
 node[ast_oxc](n4b86f56e0826ca31_78inu5k5e5bg2, tagged_template_expression, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_78inu5k5e5bg2, 28).
-start[ast_oxc](n4b86f56e0826ca31_78inu5k5e5bg2, 1126).
+line[ast_oxc](n4b86f56e0826ca31_78inu5k5e5bg2, 29).
+start[ast_oxc](n4b86f56e0826ca31_78inu5k5e5bg2, 1162).
 node[ast_oxc](n4b86f56e0826ca31_1irq8pdqjhrk5, identifier_reference, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_1irq8pdqjhrk5, 28).
-start[ast_oxc](n4b86f56e0826ca31_1irq8pdqjhrk5, 1126).
+line[ast_oxc](n4b86f56e0826ca31_1irq8pdqjhrk5, 29).
+start[ast_oxc](n4b86f56e0826ca31_1irq8pdqjhrk5, 1162).
 attr[ast_oxc](n4b86f56e0826ca31_1irq8pdqjhrk5, variant, "Identifier").
 attr[ast_oxc](n4b86f56e0826ca31_1irq8pdqjhrk5, name, "tag").
 child[ast_oxc](n4b86f56e0826ca31_78inu5k5e5bg2, tag, 0, n4b86f56e0826ca31_1irq8pdqjhrk5).
 node[ast_oxc](n4b86f56e0826ca31_4a753c4ch0d1e, template_literal, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_4a753c4ch0d1e, 28).
-start[ast_oxc](n4b86f56e0826ca31_4a753c4ch0d1e, 1129).
+line[ast_oxc](n4b86f56e0826ca31_4a753c4ch0d1e, 29).
+start[ast_oxc](n4b86f56e0826ca31_4a753c4ch0d1e, 1165).
 node[ast_oxc](n4b86f56e0826ca31_mao6uctu4g0o8, template_element, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_mao6uctu4g0o8, 28).
-start[ast_oxc](n4b86f56e0826ca31_mao6uctu4g0o8, 1130).
+line[ast_oxc](n4b86f56e0826ca31_mao6uctu4g0o8, 29).
+start[ast_oxc](n4b86f56e0826ca31_mao6uctu4g0o8, 1166).
 attr[ast_oxc](n4b86f56e0826ca31_mao6uctu4g0o8, tail, false).
 attr[ast_oxc](n4b86f56e0826ca31_mao6uctu4g0o8, value_raw, "a").
 attr[ast_oxc](n4b86f56e0826ca31_mao6uctu4g0o8, value_cooked, "a").
 child[ast_oxc](n4b86f56e0826ca31_4a753c4ch0d1e, quasis, 0, n4b86f56e0826ca31_mao6uctu4g0o8).
 node[ast_oxc](n4b86f56e0826ca31_fvh28jc6h45k, template_element, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_fvh28jc6h45k, 28).
-start[ast_oxc](n4b86f56e0826ca31_fvh28jc6h45k, 1135).
+line[ast_oxc](n4b86f56e0826ca31_fvh28jc6h45k, 29).
+start[ast_oxc](n4b86f56e0826ca31_fvh28jc6h45k, 1171).
 attr[ast_oxc](n4b86f56e0826ca31_fvh28jc6h45k, tail, true).
 attr[ast_oxc](n4b86f56e0826ca31_fvh28jc6h45k, value_raw, "c").
 attr[ast_oxc](n4b86f56e0826ca31_fvh28jc6h45k, value_cooked, "c").
 child[ast_oxc](n4b86f56e0826ca31_4a753c4ch0d1e, quasis, 1, n4b86f56e0826ca31_fvh28jc6h45k).
 node[ast_oxc](n4b86f56e0826ca31_c31lcikm6uhh3, identifier_reference, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_c31lcikm6uhh3, 28).
-start[ast_oxc](n4b86f56e0826ca31_c31lcikm6uhh3, 1133).
+line[ast_oxc](n4b86f56e0826ca31_c31lcikm6uhh3, 29).
+start[ast_oxc](n4b86f56e0826ca31_c31lcikm6uhh3, 1169).
 attr[ast_oxc](n4b86f56e0826ca31_c31lcikm6uhh3, variant, "Identifier").
 attr[ast_oxc](n4b86f56e0826ca31_c31lcikm6uhh3, name, "b").
 child[ast_oxc](n4b86f56e0826ca31_4a753c4ch0d1e, expressions, 0, n4b86f56e0826ca31_c31lcikm6uhh3).
@@ -1794,107 +1860,107 @@ child[ast_oxc](n4b86f56e0826ca31_78inu5k5e5bg2, quasi, 0, n4b86f56e0826ca31_4a75
 child[ast_oxc](n4b86f56e0826ca31_epbekfc8osl33, expression, 0, n4b86f56e0826ca31_78inu5k5e5bg2).
 child[ast_oxc](n4b86f56e0826ca31_root, body, 30, n4b86f56e0826ca31_epbekfc8osl33).
 node[ast_oxc](n4b86f56e0826ca31_q07fjrealp8d5, variable_declaration, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_q07fjrealp8d5, 29).
-start[ast_oxc](n4b86f56e0826ca31_q07fjrealp8d5, 1139).
+line[ast_oxc](n4b86f56e0826ca31_q07fjrealp8d5, 30).
+start[ast_oxc](n4b86f56e0826ca31_q07fjrealp8d5, 1175).
 attr[ast_oxc](n4b86f56e0826ca31_q07fjrealp8d5, kind, "Const").
 attr[ast_oxc](n4b86f56e0826ca31_q07fjrealp8d5, declare, false).
 node[ast_oxc](n4b86f56e0826ca31_de0mkul5dfr41, variable_declarator, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_de0mkul5dfr41, 29).
-start[ast_oxc](n4b86f56e0826ca31_de0mkul5dfr41, 1145).
+line[ast_oxc](n4b86f56e0826ca31_de0mkul5dfr41, 30).
+start[ast_oxc](n4b86f56e0826ca31_de0mkul5dfr41, 1181).
 attr[ast_oxc](n4b86f56e0826ca31_de0mkul5dfr41, definite, false).
 node[ast_oxc](n4b86f56e0826ca31_tvbpcadk1dkd4, binding_identifier, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_tvbpcadk1dkd4, 29).
-start[ast_oxc](n4b86f56e0826ca31_tvbpcadk1dkd4, 1145).
+line[ast_oxc](n4b86f56e0826ca31_tvbpcadk1dkd4, 30).
+start[ast_oxc](n4b86f56e0826ca31_tvbpcadk1dkd4, 1181).
 attr[ast_oxc](n4b86f56e0826ca31_tvbpcadk1dkd4, name, "v").
 child[ast_oxc](n4b86f56e0826ca31_de0mkul5dfr41, id, 0, n4b86f56e0826ca31_tvbpcadk1dkd4).
 node[ast_oxc](n4b86f56e0826ca31_lk8lcdjthkqtc, tsas_expression, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_lk8lcdjthkqtc, 29).
-start[ast_oxc](n4b86f56e0826ca31_lk8lcdjthkqtc, 1149).
+line[ast_oxc](n4b86f56e0826ca31_lk8lcdjthkqtc, 30).
+start[ast_oxc](n4b86f56e0826ca31_lk8lcdjthkqtc, 1185).
 node[ast_oxc](n4b86f56e0826ca31_2k0c28r0dj5n4, identifier_reference, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_2k0c28r0dj5n4, 29).
-start[ast_oxc](n4b86f56e0826ca31_2k0c28r0dj5n4, 1149).
+line[ast_oxc](n4b86f56e0826ca31_2k0c28r0dj5n4, 30).
+start[ast_oxc](n4b86f56e0826ca31_2k0c28r0dj5n4, 1185).
 attr[ast_oxc](n4b86f56e0826ca31_2k0c28r0dj5n4, variant, "Identifier").
 attr[ast_oxc](n4b86f56e0826ca31_2k0c28r0dj5n4, name, "x").
 child[ast_oxc](n4b86f56e0826ca31_lk8lcdjthkqtc, expression, 0, n4b86f56e0826ca31_2k0c28r0dj5n4).
 node[ast_oxc](n4b86f56e0826ca31_3u8n9ntnfp85b, tsany_keyword, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_3u8n9ntnfp85b, 29).
-start[ast_oxc](n4b86f56e0826ca31_3u8n9ntnfp85b, 1154).
+line[ast_oxc](n4b86f56e0826ca31_3u8n9ntnfp85b, 30).
+start[ast_oxc](n4b86f56e0826ca31_3u8n9ntnfp85b, 1190).
 child[ast_oxc](n4b86f56e0826ca31_lk8lcdjthkqtc, type_annotation, 0, n4b86f56e0826ca31_3u8n9ntnfp85b).
 child[ast_oxc](n4b86f56e0826ca31_de0mkul5dfr41, init, 0, n4b86f56e0826ca31_lk8lcdjthkqtc).
 child[ast_oxc](n4b86f56e0826ca31_q07fjrealp8d5, declarations, 0, n4b86f56e0826ca31_de0mkul5dfr41).
 node[ast_oxc](n4b86f56e0826ca31_cetmlcp0maiff, variable_declarator, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_cetmlcp0maiff, 29).
-start[ast_oxc](n4b86f56e0826ca31_cetmlcp0maiff, 1159).
+line[ast_oxc](n4b86f56e0826ca31_cetmlcp0maiff, 30).
+start[ast_oxc](n4b86f56e0826ca31_cetmlcp0maiff, 1195).
 attr[ast_oxc](n4b86f56e0826ca31_cetmlcp0maiff, definite, false).
 node[ast_oxc](n4b86f56e0826ca31_mi8ainkng1cb9, binding_identifier, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_mi8ainkng1cb9, 29).
-start[ast_oxc](n4b86f56e0826ca31_mi8ainkng1cb9, 1159).
+line[ast_oxc](n4b86f56e0826ca31_mi8ainkng1cb9, 30).
+start[ast_oxc](n4b86f56e0826ca31_mi8ainkng1cb9, 1195).
 attr[ast_oxc](n4b86f56e0826ca31_mi8ainkng1cb9, name, "w").
 child[ast_oxc](n4b86f56e0826ca31_cetmlcp0maiff, id, 0, n4b86f56e0826ca31_mi8ainkng1cb9).
 node[ast_oxc](n4b86f56e0826ca31_l1hsml0htgnm6, tsnon_null_expression, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_l1hsml0htgnm6, 29).
-start[ast_oxc](n4b86f56e0826ca31_l1hsml0htgnm6, 1163).
+line[ast_oxc](n4b86f56e0826ca31_l1hsml0htgnm6, 30).
+start[ast_oxc](n4b86f56e0826ca31_l1hsml0htgnm6, 1199).
 node[ast_oxc](n4b86f56e0826ca31_a7t7afrjmj67e, identifier_reference, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_a7t7afrjmj67e, 29).
-start[ast_oxc](n4b86f56e0826ca31_a7t7afrjmj67e, 1163).
+line[ast_oxc](n4b86f56e0826ca31_a7t7afrjmj67e, 30).
+start[ast_oxc](n4b86f56e0826ca31_a7t7afrjmj67e, 1199).
 attr[ast_oxc](n4b86f56e0826ca31_a7t7afrjmj67e, variant, "Identifier").
 attr[ast_oxc](n4b86f56e0826ca31_a7t7afrjmj67e, name, "x").
 child[ast_oxc](n4b86f56e0826ca31_l1hsml0htgnm6, expression, 0, n4b86f56e0826ca31_a7t7afrjmj67e).
 child[ast_oxc](n4b86f56e0826ca31_cetmlcp0maiff, init, 0, n4b86f56e0826ca31_l1hsml0htgnm6).
 child[ast_oxc](n4b86f56e0826ca31_q07fjrealp8d5, declarations, 1, n4b86f56e0826ca31_cetmlcp0maiff).
 node[ast_oxc](n4b86f56e0826ca31_br8ji3vp7ifgc, variable_declarator, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_br8ji3vp7ifgc, 29).
-start[ast_oxc](n4b86f56e0826ca31_br8ji3vp7ifgc, 1167).
+line[ast_oxc](n4b86f56e0826ca31_br8ji3vp7ifgc, 30).
+start[ast_oxc](n4b86f56e0826ca31_br8ji3vp7ifgc, 1203).
 attr[ast_oxc](n4b86f56e0826ca31_br8ji3vp7ifgc, definite, false).
 node[ast_oxc](n4b86f56e0826ca31_fbg1i99rijrk1, binding_identifier, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_fbg1i99rijrk1, 29).
-start[ast_oxc](n4b86f56e0826ca31_fbg1i99rijrk1, 1167).
+line[ast_oxc](n4b86f56e0826ca31_fbg1i99rijrk1, 30).
+start[ast_oxc](n4b86f56e0826ca31_fbg1i99rijrk1, 1203).
 attr[ast_oxc](n4b86f56e0826ca31_fbg1i99rijrk1, name, "z2").
 child[ast_oxc](n4b86f56e0826ca31_br8ji3vp7ifgc, id, 0, n4b86f56e0826ca31_fbg1i99rijrk1).
 node[ast_oxc](n4b86f56e0826ca31_gmieo29lq5i3, tstype_assertion, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_gmieo29lq5i3, 29).
-start[ast_oxc](n4b86f56e0826ca31_gmieo29lq5i3, 1172).
+line[ast_oxc](n4b86f56e0826ca31_gmieo29lq5i3, 30).
+start[ast_oxc](n4b86f56e0826ca31_gmieo29lq5i3, 1208).
 node[ast_oxc](n4b86f56e0826ca31_moipv1s21qd7f, tstype_reference, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_moipv1s21qd7f, 29).
-start[ast_oxc](n4b86f56e0826ca31_moipv1s21qd7f, 1173).
+line[ast_oxc](n4b86f56e0826ca31_moipv1s21qd7f, 30).
+start[ast_oxc](n4b86f56e0826ca31_moipv1s21qd7f, 1209).
 node[ast_oxc](n4b86f56e0826ca31_75j60vc4t4n54, identifier_reference, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_75j60vc4t4n54, 29).
-start[ast_oxc](n4b86f56e0826ca31_75j60vc4t4n54, 1173).
+line[ast_oxc](n4b86f56e0826ca31_75j60vc4t4n54, 30).
+start[ast_oxc](n4b86f56e0826ca31_75j60vc4t4n54, 1209).
 attr[ast_oxc](n4b86f56e0826ca31_75j60vc4t4n54, name, "T").
 child[ast_oxc](n4b86f56e0826ca31_moipv1s21qd7f, type_name, 0, n4b86f56e0826ca31_75j60vc4t4n54).
 child[ast_oxc](n4b86f56e0826ca31_gmieo29lq5i3, type_annotation, 0, n4b86f56e0826ca31_moipv1s21qd7f).
 node[ast_oxc](n4b86f56e0826ca31_h2f7hhqf7noqa, identifier_reference, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_h2f7hhqf7noqa, 29).
-start[ast_oxc](n4b86f56e0826ca31_h2f7hhqf7noqa, 1175).
+line[ast_oxc](n4b86f56e0826ca31_h2f7hhqf7noqa, 30).
+start[ast_oxc](n4b86f56e0826ca31_h2f7hhqf7noqa, 1211).
 attr[ast_oxc](n4b86f56e0826ca31_h2f7hhqf7noqa, variant, "Identifier").
 attr[ast_oxc](n4b86f56e0826ca31_h2f7hhqf7noqa, name, "x").
 child[ast_oxc](n4b86f56e0826ca31_gmieo29lq5i3, expression, 0, n4b86f56e0826ca31_h2f7hhqf7noqa).
 child[ast_oxc](n4b86f56e0826ca31_br8ji3vp7ifgc, init, 0, n4b86f56e0826ca31_gmieo29lq5i3).
 child[ast_oxc](n4b86f56e0826ca31_q07fjrealp8d5, declarations, 2, n4b86f56e0826ca31_br8ji3vp7ifgc).
 node[ast_oxc](n4b86f56e0826ca31_f04vk7547igb5, variable_declarator, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_f04vk7547igb5, 29).
-start[ast_oxc](n4b86f56e0826ca31_f04vk7547igb5, 1178).
+line[ast_oxc](n4b86f56e0826ca31_f04vk7547igb5, 30).
+start[ast_oxc](n4b86f56e0826ca31_f04vk7547igb5, 1214).
 attr[ast_oxc](n4b86f56e0826ca31_f04vk7547igb5, definite, false).
 node[ast_oxc](n4b86f56e0826ca31_reulj650ehmcd, binding_identifier, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_reulj650ehmcd, 29).
-start[ast_oxc](n4b86f56e0826ca31_reulj650ehmcd, 1178).
+line[ast_oxc](n4b86f56e0826ca31_reulj650ehmcd, 30).
+start[ast_oxc](n4b86f56e0826ca31_reulj650ehmcd, 1214).
 attr[ast_oxc](n4b86f56e0826ca31_reulj650ehmcd, name, "s2").
 child[ast_oxc](n4b86f56e0826ca31_f04vk7547igb5, id, 0, n4b86f56e0826ca31_reulj650ehmcd).
 node[ast_oxc](n4b86f56e0826ca31_lhq5r5i1eqbbb, tssatisfies_expression, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_lhq5r5i1eqbbb, 29).
-start[ast_oxc](n4b86f56e0826ca31_lhq5r5i1eqbbb, 1183).
+line[ast_oxc](n4b86f56e0826ca31_lhq5r5i1eqbbb, 30).
+start[ast_oxc](n4b86f56e0826ca31_lhq5r5i1eqbbb, 1219).
 node[ast_oxc](n4b86f56e0826ca31_j7vco0artagq2, identifier_reference, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_j7vco0artagq2, 29).
-start[ast_oxc](n4b86f56e0826ca31_j7vco0artagq2, 1183).
+line[ast_oxc](n4b86f56e0826ca31_j7vco0artagq2, 30).
+start[ast_oxc](n4b86f56e0826ca31_j7vco0artagq2, 1219).
 attr[ast_oxc](n4b86f56e0826ca31_j7vco0artagq2, variant, "Identifier").
 attr[ast_oxc](n4b86f56e0826ca31_j7vco0artagq2, name, "x").
 child[ast_oxc](n4b86f56e0826ca31_lhq5r5i1eqbbb, expression, 0, n4b86f56e0826ca31_j7vco0artagq2).
 node[ast_oxc](n4b86f56e0826ca31_bko6s1o9gjjm2, tstype_reference, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_bko6s1o9gjjm2, 29).
-start[ast_oxc](n4b86f56e0826ca31_bko6s1o9gjjm2, 1195).
+line[ast_oxc](n4b86f56e0826ca31_bko6s1o9gjjm2, 30).
+start[ast_oxc](n4b86f56e0826ca31_bko6s1o9gjjm2, 1231).
 node[ast_oxc](n4b86f56e0826ca31_bh02gdiln8mme, identifier_reference, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_bh02gdiln8mme, 29).
-start[ast_oxc](n4b86f56e0826ca31_bh02gdiln8mme, 1195).
+line[ast_oxc](n4b86f56e0826ca31_bh02gdiln8mme, 30).
+start[ast_oxc](n4b86f56e0826ca31_bh02gdiln8mme, 1231).
 attr[ast_oxc](n4b86f56e0826ca31_bh02gdiln8mme, name, "T").
 child[ast_oxc](n4b86f56e0826ca31_bko6s1o9gjjm2, type_name, 0, n4b86f56e0826ca31_bh02gdiln8mme).
 child[ast_oxc](n4b86f56e0826ca31_lhq5r5i1eqbbb, type_annotation, 0, n4b86f56e0826ca31_bko6s1o9gjjm2).
@@ -1902,56 +1968,56 @@ child[ast_oxc](n4b86f56e0826ca31_f04vk7547igb5, init, 0, n4b86f56e0826ca31_lhq5r
 child[ast_oxc](n4b86f56e0826ca31_q07fjrealp8d5, declarations, 3, n4b86f56e0826ca31_f04vk7547igb5).
 child[ast_oxc](n4b86f56e0826ca31_root, body, 31, n4b86f56e0826ca31_q07fjrealp8d5).
 node[ast_oxc](n4b86f56e0826ca31_pq4hgdjb1ss99, expression_statement, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_pq4hgdjb1ss99, 30).
-start[ast_oxc](n4b86f56e0826ca31_pq4hgdjb1ss99, 1198).
+line[ast_oxc](n4b86f56e0826ca31_pq4hgdjb1ss99, 31).
+start[ast_oxc](n4b86f56e0826ca31_pq4hgdjb1ss99, 1234).
 node[ast_oxc](n4b86f56e0826ca31_61apabi1fhsq2, call_expression, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_61apabi1fhsq2, 30).
-start[ast_oxc](n4b86f56e0826ca31_61apabi1fhsq2, 1198).
+line[ast_oxc](n4b86f56e0826ca31_61apabi1fhsq2, 31).
+start[ast_oxc](n4b86f56e0826ca31_61apabi1fhsq2, 1234).
 attr[ast_oxc](n4b86f56e0826ca31_61apabi1fhsq2, optional, false).
 attr[ast_oxc](n4b86f56e0826ca31_61apabi1fhsq2, pure, false).
 node[ast_oxc](n4b86f56e0826ca31_5eeotij2d8no1, static_member_expression, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_5eeotij2d8no1, 30).
-start[ast_oxc](n4b86f56e0826ca31_5eeotij2d8no1, 1198).
+line[ast_oxc](n4b86f56e0826ca31_5eeotij2d8no1, 31).
+start[ast_oxc](n4b86f56e0826ca31_5eeotij2d8no1, 1234).
 attr[ast_oxc](n4b86f56e0826ca31_5eeotij2d8no1, optional, false).
 node[ast_oxc](n4b86f56e0826ca31_34hr4rdjabns, import_expression, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_34hr4rdjabns, 30).
-start[ast_oxc](n4b86f56e0826ca31_34hr4rdjabns, 1198).
+line[ast_oxc](n4b86f56e0826ca31_34hr4rdjabns, 31).
+start[ast_oxc](n4b86f56e0826ca31_34hr4rdjabns, 1234).
 node[ast_oxc](n4b86f56e0826ca31_sfma331b4fla9, string_literal, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_sfma331b4fla9, 30).
-start[ast_oxc](n4b86f56e0826ca31_sfma331b4fla9, 1205).
+line[ast_oxc](n4b86f56e0826ca31_sfma331b4fla9, 31).
+start[ast_oxc](n4b86f56e0826ca31_sfma331b4fla9, 1241).
 attr[ast_oxc](n4b86f56e0826ca31_sfma331b4fla9, value, "dyn").
 attr[ast_oxc](n4b86f56e0826ca31_sfma331b4fla9, raw, "'dyn'").
 child[ast_oxc](n4b86f56e0826ca31_34hr4rdjabns, source, 0, n4b86f56e0826ca31_sfma331b4fla9).
 child[ast_oxc](n4b86f56e0826ca31_5eeotij2d8no1, object, 0, n4b86f56e0826ca31_34hr4rdjabns).
 node[ast_oxc](n4b86f56e0826ca31_bk9fk1gqb7ef9, identifier_name, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_bk9fk1gqb7ef9, 30).
-start[ast_oxc](n4b86f56e0826ca31_bk9fk1gqb7ef9, 1212).
+line[ast_oxc](n4b86f56e0826ca31_bk9fk1gqb7ef9, 31).
+start[ast_oxc](n4b86f56e0826ca31_bk9fk1gqb7ef9, 1248).
 attr[ast_oxc](n4b86f56e0826ca31_bk9fk1gqb7ef9, name, "then").
 child[ast_oxc](n4b86f56e0826ca31_5eeotij2d8no1, property, 0, n4b86f56e0826ca31_bk9fk1gqb7ef9).
 child[ast_oxc](n4b86f56e0826ca31_61apabi1fhsq2, callee, 0, n4b86f56e0826ca31_5eeotij2d8no1).
 node[ast_oxc](n4b86f56e0826ca31_784qhf33d44lb, arrow_function_expression, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_784qhf33d44lb, 30).
-start[ast_oxc](n4b86f56e0826ca31_784qhf33d44lb, 1217).
+line[ast_oxc](n4b86f56e0826ca31_784qhf33d44lb, 31).
+start[ast_oxc](n4b86f56e0826ca31_784qhf33d44lb, 1253).
 node[ast_oxc](n4b86f56e0826ca31_l97g7fh5vho0c, formal_parameters, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_l97g7fh5vho0c, 30).
-start[ast_oxc](n4b86f56e0826ca31_l97g7fh5vho0c, 1217).
+line[ast_oxc](n4b86f56e0826ca31_l97g7fh5vho0c, 31).
+start[ast_oxc](n4b86f56e0826ca31_l97g7fh5vho0c, 1253).
 attr[ast_oxc](n4b86f56e0826ca31_l97g7fh5vho0c, kind, "ArrowFormalParameters").
 node[ast_oxc](n4b86f56e0826ca31_l6o8do60egsod, formal_parameter, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_l6o8do60egsod, 30).
-start[ast_oxc](n4b86f56e0826ca31_l6o8do60egsod, 1217).
+line[ast_oxc](n4b86f56e0826ca31_l6o8do60egsod, 31).
+start[ast_oxc](n4b86f56e0826ca31_l6o8do60egsod, 1253).
 attr[ast_oxc](n4b86f56e0826ca31_l6o8do60egsod, optional, false).
 attr[ast_oxc](n4b86f56e0826ca31_l6o8do60egsod, readonly, false).
 attr[ast_oxc](n4b86f56e0826ca31_l6o8do60egsod, override, false).
 node[ast_oxc](n4b86f56e0826ca31_ua3ar76k56g12, binding_identifier, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_ua3ar76k56g12, 30).
-start[ast_oxc](n4b86f56e0826ca31_ua3ar76k56g12, 1217).
+line[ast_oxc](n4b86f56e0826ca31_ua3ar76k56g12, 31).
+start[ast_oxc](n4b86f56e0826ca31_ua3ar76k56g12, 1253).
 attr[ast_oxc](n4b86f56e0826ca31_ua3ar76k56g12, name, "r").
 child[ast_oxc](n4b86f56e0826ca31_l6o8do60egsod, pattern, 0, n4b86f56e0826ca31_ua3ar76k56g12).
 child[ast_oxc](n4b86f56e0826ca31_l97g7fh5vho0c, items, 0, n4b86f56e0826ca31_l6o8do60egsod).
 child[ast_oxc](n4b86f56e0826ca31_784qhf33d44lb, params, 0, n4b86f56e0826ca31_l97g7fh5vho0c).
 node[ast_oxc](n4b86f56e0826ca31_e3iata33evp5e, identifier_reference, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_e3iata33evp5e, 30).
-start[ast_oxc](n4b86f56e0826ca31_e3iata33evp5e, 1222).
+line[ast_oxc](n4b86f56e0826ca31_e3iata33evp5e, 31).
+start[ast_oxc](n4b86f56e0826ca31_e3iata33evp5e, 1258).
 attr[ast_oxc](n4b86f56e0826ca31_e3iata33evp5e, variant, "Identifier").
 attr[ast_oxc](n4b86f56e0826ca31_e3iata33evp5e, name, "r").
 child[ast_oxc](n4b86f56e0826ca31_784qhf33d44lb, body, 0, n4b86f56e0826ca31_e3iata33evp5e).
@@ -1962,88 +2028,88 @@ child[ast_oxc](n4b86f56e0826ca31_61apabi1fhsq2, arguments, 0, n4b86f56e0826ca31_
 child[ast_oxc](n4b86f56e0826ca31_pq4hgdjb1ss99, expression, 0, n4b86f56e0826ca31_61apabi1fhsq2).
 child[ast_oxc](n4b86f56e0826ca31_root, body, 32, n4b86f56e0826ca31_pq4hgdjb1ss99).
 node[ast_oxc](n4b86f56e0826ca31_icqu3jnn64v65, variable_declaration, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_icqu3jnn64v65, 31).
-start[ast_oxc](n4b86f56e0826ca31_icqu3jnn64v65, 1226).
+line[ast_oxc](n4b86f56e0826ca31_icqu3jnn64v65, 32).
+start[ast_oxc](n4b86f56e0826ca31_icqu3jnn64v65, 1262).
 attr[ast_oxc](n4b86f56e0826ca31_icqu3jnn64v65, kind, "Const").
 attr[ast_oxc](n4b86f56e0826ca31_icqu3jnn64v65, declare, false).
 node[ast_oxc](n4b86f56e0826ca31_bh6o7he0g2fnc, variable_declarator, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_bh6o7he0g2fnc, 31).
-start[ast_oxc](n4b86f56e0826ca31_bh6o7he0g2fnc, 1232).
+line[ast_oxc](n4b86f56e0826ca31_bh6o7he0g2fnc, 32).
+start[ast_oxc](n4b86f56e0826ca31_bh6o7he0g2fnc, 1268).
 attr[ast_oxc](n4b86f56e0826ca31_bh6o7he0g2fnc, definite, false).
 node[ast_oxc](n4b86f56e0826ca31_2kmodsl1i5b15, binding_identifier, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_2kmodsl1i5b15, 31).
-start[ast_oxc](n4b86f56e0826ca31_2kmodsl1i5b15, 1232).
+line[ast_oxc](n4b86f56e0826ca31_2kmodsl1i5b15, 32).
+start[ast_oxc](n4b86f56e0826ca31_2kmodsl1i5b15, 1268).
 attr[ast_oxc](n4b86f56e0826ca31_2kmodsl1i5b15, name, "re").
 child[ast_oxc](n4b86f56e0826ca31_bh6o7he0g2fnc, id, 0, n4b86f56e0826ca31_2kmodsl1i5b15).
 node[ast_oxc](n4b86f56e0826ca31_csavmurtvpr72, reg_exp_literal, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_csavmurtvpr72, 31).
-start[ast_oxc](n4b86f56e0826ca31_csavmurtvpr72, 1237).
+line[ast_oxc](n4b86f56e0826ca31_csavmurtvpr72, 32).
+start[ast_oxc](n4b86f56e0826ca31_csavmurtvpr72, 1273).
 attr[ast_oxc](n4b86f56e0826ca31_csavmurtvpr72, regex_pattern_text, "a").
 attr[ast_oxc](n4b86f56e0826ca31_csavmurtvpr72, regex_flags, "G").
 attr[ast_oxc](n4b86f56e0826ca31_csavmurtvpr72, raw, "/a/g").
 child[ast_oxc](n4b86f56e0826ca31_bh6o7he0g2fnc, init, 0, n4b86f56e0826ca31_csavmurtvpr72).
 child[ast_oxc](n4b86f56e0826ca31_icqu3jnn64v65, declarations, 0, n4b86f56e0826ca31_bh6o7he0g2fnc).
 node[ast_oxc](n4b86f56e0826ca31_mvsqjrpqb5173, variable_declarator, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_mvsqjrpqb5173, 31).
-start[ast_oxc](n4b86f56e0826ca31_mvsqjrpqb5173, 1243).
+line[ast_oxc](n4b86f56e0826ca31_mvsqjrpqb5173, 32).
+start[ast_oxc](n4b86f56e0826ca31_mvsqjrpqb5173, 1279).
 attr[ast_oxc](n4b86f56e0826ca31_mvsqjrpqb5173, definite, false).
 node[ast_oxc](n4b86f56e0826ca31_l601lab753vr8, binding_identifier, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_l601lab753vr8, 31).
-start[ast_oxc](n4b86f56e0826ca31_l601lab753vr8, 1243).
+line[ast_oxc](n4b86f56e0826ca31_l601lab753vr8, 32).
+start[ast_oxc](n4b86f56e0826ca31_l601lab753vr8, 1279).
 attr[ast_oxc](n4b86f56e0826ca31_l601lab753vr8, name, "big").
 child[ast_oxc](n4b86f56e0826ca31_mvsqjrpqb5173, id, 0, n4b86f56e0826ca31_l601lab753vr8).
 node[ast_oxc](n4b86f56e0826ca31_a1ah36ti9205, big_int_literal, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_a1ah36ti9205, 31).
-start[ast_oxc](n4b86f56e0826ca31_a1ah36ti9205, 1249).
+line[ast_oxc](n4b86f56e0826ca31_a1ah36ti9205, 32).
+start[ast_oxc](n4b86f56e0826ca31_a1ah36ti9205, 1285).
 attr[ast_oxc](n4b86f56e0826ca31_a1ah36ti9205, base, "Decimal").
 attr[ast_oxc](n4b86f56e0826ca31_a1ah36ti9205, value, "10").
 attr[ast_oxc](n4b86f56e0826ca31_a1ah36ti9205, raw, "10n").
 child[ast_oxc](n4b86f56e0826ca31_mvsqjrpqb5173, init, 0, n4b86f56e0826ca31_a1ah36ti9205).
 child[ast_oxc](n4b86f56e0826ca31_icqu3jnn64v65, declarations, 1, n4b86f56e0826ca31_mvsqjrpqb5173).
 node[ast_oxc](n4b86f56e0826ca31_ka89gpbp6pcrf, variable_declarator, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_ka89gpbp6pcrf, 31).
-start[ast_oxc](n4b86f56e0826ca31_ka89gpbp6pcrf, 1254).
+line[ast_oxc](n4b86f56e0826ca31_ka89gpbp6pcrf, 32).
+start[ast_oxc](n4b86f56e0826ca31_ka89gpbp6pcrf, 1290).
 attr[ast_oxc](n4b86f56e0826ca31_ka89gpbp6pcrf, definite, false).
 node[ast_oxc](n4b86f56e0826ca31_ohls9hkq2j79c, binding_identifier, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_ohls9hkq2j79c, 31).
-start[ast_oxc](n4b86f56e0826ca31_ohls9hkq2j79c, 1254).
+line[ast_oxc](n4b86f56e0826ca31_ohls9hkq2j79c, 32).
+start[ast_oxc](n4b86f56e0826ca31_ohls9hkq2j79c, 1290).
 attr[ast_oxc](n4b86f56e0826ca31_ohls9hkq2j79c, name, "nul").
 child[ast_oxc](n4b86f56e0826ca31_ka89gpbp6pcrf, id, 0, n4b86f56e0826ca31_ohls9hkq2j79c).
 node[ast_oxc](n4b86f56e0826ca31_i8oj4knoga8o4, null_literal, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_i8oj4knoga8o4, 31).
-start[ast_oxc](n4b86f56e0826ca31_i8oj4knoga8o4, 1260).
+line[ast_oxc](n4b86f56e0826ca31_i8oj4knoga8o4, 32).
+start[ast_oxc](n4b86f56e0826ca31_i8oj4knoga8o4, 1296).
 child[ast_oxc](n4b86f56e0826ca31_ka89gpbp6pcrf, init, 0, n4b86f56e0826ca31_i8oj4knoga8o4).
 child[ast_oxc](n4b86f56e0826ca31_icqu3jnn64v65, declarations, 2, n4b86f56e0826ca31_ka89gpbp6pcrf).
 node[ast_oxc](n4b86f56e0826ca31_jkcjrlc6ee918, variable_declarator, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_jkcjrlc6ee918, 31).
-start[ast_oxc](n4b86f56e0826ca31_jkcjrlc6ee918, 1266).
+line[ast_oxc](n4b86f56e0826ca31_jkcjrlc6ee918, 32).
+start[ast_oxc](n4b86f56e0826ca31_jkcjrlc6ee918, 1302).
 attr[ast_oxc](n4b86f56e0826ca31_jkcjrlc6ee918, definite, false).
 node[ast_oxc](n4b86f56e0826ca31_duhhbvl1i1ml2, binding_identifier, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_duhhbvl1i1ml2, 31).
-start[ast_oxc](n4b86f56e0826ca31_duhhbvl1i1ml2, 1266).
+line[ast_oxc](n4b86f56e0826ca31_duhhbvl1i1ml2, 32).
+start[ast_oxc](n4b86f56e0826ca31_duhhbvl1i1ml2, 1302).
 attr[ast_oxc](n4b86f56e0826ca31_duhhbvl1i1ml2, name, "t").
 child[ast_oxc](n4b86f56e0826ca31_jkcjrlc6ee918, id, 0, n4b86f56e0826ca31_duhhbvl1i1ml2).
 node[ast_oxc](n4b86f56e0826ca31_cnkuf1d2rfhnd, boolean_literal, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_cnkuf1d2rfhnd, 31).
-start[ast_oxc](n4b86f56e0826ca31_cnkuf1d2rfhnd, 1270).
+line[ast_oxc](n4b86f56e0826ca31_cnkuf1d2rfhnd, 32).
+start[ast_oxc](n4b86f56e0826ca31_cnkuf1d2rfhnd, 1306).
 attr[ast_oxc](n4b86f56e0826ca31_cnkuf1d2rfhnd, value, true).
 child[ast_oxc](n4b86f56e0826ca31_jkcjrlc6ee918, init, 0, n4b86f56e0826ca31_cnkuf1d2rfhnd).
 child[ast_oxc](n4b86f56e0826ca31_icqu3jnn64v65, declarations, 3, n4b86f56e0826ca31_jkcjrlc6ee918).
 node[ast_oxc](n4b86f56e0826ca31_1sselrdijp0v3, variable_declarator, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_1sselrdijp0v3, 31).
-start[ast_oxc](n4b86f56e0826ca31_1sselrdijp0v3, 1276).
+line[ast_oxc](n4b86f56e0826ca31_1sselrdijp0v3, 32).
+start[ast_oxc](n4b86f56e0826ca31_1sselrdijp0v3, 1312).
 attr[ast_oxc](n4b86f56e0826ca31_1sselrdijp0v3, definite, false).
 node[ast_oxc](n4b86f56e0826ca31_vc9df4q5qtg7, binding_identifier, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_vc9df4q5qtg7, 31).
-start[ast_oxc](n4b86f56e0826ca31_vc9df4q5qtg7, 1276).
+line[ast_oxc](n4b86f56e0826ca31_vc9df4q5qtg7, 32).
+start[ast_oxc](n4b86f56e0826ca31_vc9df4q5qtg7, 1312).
 attr[ast_oxc](n4b86f56e0826ca31_vc9df4q5qtg7, name, "tl").
 child[ast_oxc](n4b86f56e0826ca31_1sselrdijp0v3, id, 0, n4b86f56e0826ca31_vc9df4q5qtg7).
 node[ast_oxc](n4b86f56e0826ca31_jvcjk3tlmi259, template_literal, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_jvcjk3tlmi259, 31).
-start[ast_oxc](n4b86f56e0826ca31_jvcjk3tlmi259, 1281).
+line[ast_oxc](n4b86f56e0826ca31_jvcjk3tlmi259, 32).
+start[ast_oxc](n4b86f56e0826ca31_jvcjk3tlmi259, 1317).
 node[ast_oxc](n4b86f56e0826ca31_4pr3ajjdbsol3, template_element, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_4pr3ajjdbsol3, 31).
-start[ast_oxc](n4b86f56e0826ca31_4pr3ajjdbsol3, 1282).
+line[ast_oxc](n4b86f56e0826ca31_4pr3ajjdbsol3, 32).
+start[ast_oxc](n4b86f56e0826ca31_4pr3ajjdbsol3, 1318).
 attr[ast_oxc](n4b86f56e0826ca31_4pr3ajjdbsol3, tail, true).
 attr[ast_oxc](n4b86f56e0826ca31_4pr3ajjdbsol3, value_raw, "plain").
 attr[ast_oxc](n4b86f56e0826ca31_4pr3ajjdbsol3, value_cooked, "plain").
@@ -2052,79 +2118,79 @@ child[ast_oxc](n4b86f56e0826ca31_1sselrdijp0v3, init, 0, n4b86f56e0826ca31_jvcjk
 child[ast_oxc](n4b86f56e0826ca31_icqu3jnn64v65, declarations, 4, n4b86f56e0826ca31_1sselrdijp0v3).
 child[ast_oxc](n4b86f56e0826ca31_root, body, 33, n4b86f56e0826ca31_icqu3jnn64v65).
 node[ast_oxc](n4b86f56e0826ca31_8vo76aoj10pdb, tstype_alias_declaration, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_8vo76aoj10pdb, 32).
-start[ast_oxc](n4b86f56e0826ca31_8vo76aoj10pdb, 1290).
+line[ast_oxc](n4b86f56e0826ca31_8vo76aoj10pdb, 33).
+start[ast_oxc](n4b86f56e0826ca31_8vo76aoj10pdb, 1326).
 node[ast_oxc](n4b86f56e0826ca31_deb46pah4kjkf, binding_identifier, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_deb46pah4kjkf, 32).
-start[ast_oxc](n4b86f56e0826ca31_deb46pah4kjkf, 1295).
+line[ast_oxc](n4b86f56e0826ca31_deb46pah4kjkf, 33).
+start[ast_oxc](n4b86f56e0826ca31_deb46pah4kjkf, 1331).
 attr[ast_oxc](n4b86f56e0826ca31_deb46pah4kjkf, name, "A").
 child[ast_oxc](n4b86f56e0826ca31_8vo76aoj10pdb, id, 0, n4b86f56e0826ca31_deb46pah4kjkf).
 node[ast_oxc](n4b86f56e0826ca31_8ra2ck3d36eif, tsunion_type, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_8ra2ck3d36eif, 32).
-start[ast_oxc](n4b86f56e0826ca31_8ra2ck3d36eif, 1299).
+line[ast_oxc](n4b86f56e0826ca31_8ra2ck3d36eif, 33).
+start[ast_oxc](n4b86f56e0826ca31_8ra2ck3d36eif, 1335).
 node[ast_oxc](n4b86f56e0826ca31_jffpcosc3ps0e, tsstring_keyword, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_jffpcosc3ps0e, 32).
-start[ast_oxc](n4b86f56e0826ca31_jffpcosc3ps0e, 1299).
+line[ast_oxc](n4b86f56e0826ca31_jffpcosc3ps0e, 33).
+start[ast_oxc](n4b86f56e0826ca31_jffpcosc3ps0e, 1335).
 child[ast_oxc](n4b86f56e0826ca31_8ra2ck3d36eif, types, 0, n4b86f56e0826ca31_jffpcosc3ps0e).
 node[ast_oxc](n4b86f56e0826ca31_4m6rqar8lp852, tsnumber_keyword, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_4m6rqar8lp852, 32).
-start[ast_oxc](n4b86f56e0826ca31_4m6rqar8lp852, 1308).
+line[ast_oxc](n4b86f56e0826ca31_4m6rqar8lp852, 33).
+start[ast_oxc](n4b86f56e0826ca31_4m6rqar8lp852, 1344).
 child[ast_oxc](n4b86f56e0826ca31_8ra2ck3d36eif, types, 1, n4b86f56e0826ca31_4m6rqar8lp852).
 child[ast_oxc](n4b86f56e0826ca31_8vo76aoj10pdb, type_annotation, 0, n4b86f56e0826ca31_8ra2ck3d36eif).
 attr[ast_oxc](n4b86f56e0826ca31_8vo76aoj10pdb, declare, false).
 child[ast_oxc](n4b86f56e0826ca31_root, body, 34, n4b86f56e0826ca31_8vo76aoj10pdb).
 node[ast_oxc](n4b86f56e0826ca31_a8vm0ts5k45f9, tsinterface_declaration, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_a8vm0ts5k45f9, 32).
-start[ast_oxc](n4b86f56e0826ca31_a8vm0ts5k45f9, 1316).
+line[ast_oxc](n4b86f56e0826ca31_a8vm0ts5k45f9, 33).
+start[ast_oxc](n4b86f56e0826ca31_a8vm0ts5k45f9, 1352).
 node[ast_oxc](n4b86f56e0826ca31_2br5r98751reb, binding_identifier, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_2br5r98751reb, 32).
-start[ast_oxc](n4b86f56e0826ca31_2br5r98751reb, 1326).
+line[ast_oxc](n4b86f56e0826ca31_2br5r98751reb, 33).
+start[ast_oxc](n4b86f56e0826ca31_2br5r98751reb, 1362).
 attr[ast_oxc](n4b86f56e0826ca31_2br5r98751reb, name, "I").
 child[ast_oxc](n4b86f56e0826ca31_a8vm0ts5k45f9, id, 0, n4b86f56e0826ca31_2br5r98751reb).
 node[ast_oxc](n4b86f56e0826ca31_ciijtsv6f9jvb, tsinterface_body, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_ciijtsv6f9jvb, 32).
-start[ast_oxc](n4b86f56e0826ca31_ciijtsv6f9jvb, 1328).
+line[ast_oxc](n4b86f56e0826ca31_ciijtsv6f9jvb, 33).
+start[ast_oxc](n4b86f56e0826ca31_ciijtsv6f9jvb, 1364).
 node[ast_oxc](n4b86f56e0826ca31_388tdklgjp6ld, tsproperty_signature, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_388tdklgjp6ld, 32).
-start[ast_oxc](n4b86f56e0826ca31_388tdklgjp6ld, 1330).
+line[ast_oxc](n4b86f56e0826ca31_388tdklgjp6ld, 33).
+start[ast_oxc](n4b86f56e0826ca31_388tdklgjp6ld, 1366).
 attr[ast_oxc](n4b86f56e0826ca31_388tdklgjp6ld, computed, false).
 attr[ast_oxc](n4b86f56e0826ca31_388tdklgjp6ld, optional, false).
 attr[ast_oxc](n4b86f56e0826ca31_388tdklgjp6ld, readonly, false).
 node[ast_oxc](n4b86f56e0826ca31_osib4f952ni33, identifier_name, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_osib4f952ni33, 32).
-start[ast_oxc](n4b86f56e0826ca31_osib4f952ni33, 1330).
+line[ast_oxc](n4b86f56e0826ca31_osib4f952ni33, 33).
+start[ast_oxc](n4b86f56e0826ca31_osib4f952ni33, 1366).
 attr[ast_oxc](n4b86f56e0826ca31_osib4f952ni33, variant, "StaticIdentifier").
 attr[ast_oxc](n4b86f56e0826ca31_osib4f952ni33, name, "a").
 child[ast_oxc](n4b86f56e0826ca31_388tdklgjp6ld, key, 0, n4b86f56e0826ca31_osib4f952ni33).
 node[ast_oxc](n4b86f56e0826ca31_p612an1nhhil9, tstype_annotation, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_p612an1nhhil9, 32).
-start[ast_oxc](n4b86f56e0826ca31_p612an1nhhil9, 1331).
+line[ast_oxc](n4b86f56e0826ca31_p612an1nhhil9, 33).
+start[ast_oxc](n4b86f56e0826ca31_p612an1nhhil9, 1367).
 node[ast_oxc](n4b86f56e0826ca31_4b749nsf7afn1, tsstring_keyword, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_4b749nsf7afn1, 32).
-start[ast_oxc](n4b86f56e0826ca31_4b749nsf7afn1, 1333).
+line[ast_oxc](n4b86f56e0826ca31_4b749nsf7afn1, 33).
+start[ast_oxc](n4b86f56e0826ca31_4b749nsf7afn1, 1369).
 child[ast_oxc](n4b86f56e0826ca31_p612an1nhhil9, type_annotation, 0, n4b86f56e0826ca31_4b749nsf7afn1).
 child[ast_oxc](n4b86f56e0826ca31_388tdklgjp6ld, type_annotation, 0, n4b86f56e0826ca31_p612an1nhhil9).
 child[ast_oxc](n4b86f56e0826ca31_ciijtsv6f9jvb, body, 0, n4b86f56e0826ca31_388tdklgjp6ld).
 node[ast_oxc](n4b86f56e0826ca31_jpif3kg7sa7v3, tsmethod_signature, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_jpif3kg7sa7v3, 32).
-start[ast_oxc](n4b86f56e0826ca31_jpif3kg7sa7v3, 1341).
+line[ast_oxc](n4b86f56e0826ca31_jpif3kg7sa7v3, 33).
+start[ast_oxc](n4b86f56e0826ca31_jpif3kg7sa7v3, 1377).
 node[ast_oxc](n4b86f56e0826ca31_aghoh157rmjsb, identifier_name, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_aghoh157rmjsb, 32).
-start[ast_oxc](n4b86f56e0826ca31_aghoh157rmjsb, 1341).
+line[ast_oxc](n4b86f56e0826ca31_aghoh157rmjsb, 33).
+start[ast_oxc](n4b86f56e0826ca31_aghoh157rmjsb, 1377).
 attr[ast_oxc](n4b86f56e0826ca31_aghoh157rmjsb, variant, "StaticIdentifier").
 attr[ast_oxc](n4b86f56e0826ca31_aghoh157rmjsb, name, "m").
 child[ast_oxc](n4b86f56e0826ca31_jpif3kg7sa7v3, key, 0, n4b86f56e0826ca31_aghoh157rmjsb).
 node[ast_oxc](n4b86f56e0826ca31_2otkp57lve134, formal_parameters, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_2otkp57lve134, 32).
-start[ast_oxc](n4b86f56e0826ca31_2otkp57lve134, 1342).
+line[ast_oxc](n4b86f56e0826ca31_2otkp57lve134, 33).
+start[ast_oxc](n4b86f56e0826ca31_2otkp57lve134, 1378).
 attr[ast_oxc](n4b86f56e0826ca31_2otkp57lve134, kind, "Signature").
 child[ast_oxc](n4b86f56e0826ca31_jpif3kg7sa7v3, params, 0, n4b86f56e0826ca31_2otkp57lve134).
 node[ast_oxc](n4b86f56e0826ca31_5mtla3m2t5e5, tstype_annotation, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_5mtla3m2t5e5, 32).
-start[ast_oxc](n4b86f56e0826ca31_5mtla3m2t5e5, 1344).
+line[ast_oxc](n4b86f56e0826ca31_5mtla3m2t5e5, 33).
+start[ast_oxc](n4b86f56e0826ca31_5mtla3m2t5e5, 1380).
 node[ast_oxc](n4b86f56e0826ca31_5c5ms50eir568, tsvoid_keyword, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_5c5ms50eir568, 32).
-start[ast_oxc](n4b86f56e0826ca31_5c5ms50eir568, 1346).
+line[ast_oxc](n4b86f56e0826ca31_5c5ms50eir568, 33).
+start[ast_oxc](n4b86f56e0826ca31_5c5ms50eir568, 1382).
 child[ast_oxc](n4b86f56e0826ca31_5mtla3m2t5e5, type_annotation, 0, n4b86f56e0826ca31_5c5ms50eir568).
 child[ast_oxc](n4b86f56e0826ca31_jpif3kg7sa7v3, return_type, 0, n4b86f56e0826ca31_5mtla3m2t5e5).
 attr[ast_oxc](n4b86f56e0826ca31_jpif3kg7sa7v3, computed, false).
@@ -2135,30 +2201,30 @@ child[ast_oxc](n4b86f56e0826ca31_a8vm0ts5k45f9, body, 0, n4b86f56e0826ca31_ciijt
 attr[ast_oxc](n4b86f56e0826ca31_a8vm0ts5k45f9, declare, false).
 child[ast_oxc](n4b86f56e0826ca31_root, body, 35, n4b86f56e0826ca31_a8vm0ts5k45f9).
 node[ast_oxc](n4b86f56e0826ca31_cv47rpt496os, tsenum_declaration, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_cv47rpt496os, 33).
-start[ast_oxc](n4b86f56e0826ca31_cv47rpt496os, 1353).
+line[ast_oxc](n4b86f56e0826ca31_cv47rpt496os, 34).
+start[ast_oxc](n4b86f56e0826ca31_cv47rpt496os, 1389).
 attr[ast_oxc](n4b86f56e0826ca31_cv47rpt496os, const, false).
 attr[ast_oxc](n4b86f56e0826ca31_cv47rpt496os, declare, false).
 node[ast_oxc](n4b86f56e0826ca31_cbjsibrtnojsb, binding_identifier, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_cbjsibrtnojsb, 33).
-start[ast_oxc](n4b86f56e0826ca31_cbjsibrtnojsb, 1358).
+line[ast_oxc](n4b86f56e0826ca31_cbjsibrtnojsb, 34).
+start[ast_oxc](n4b86f56e0826ca31_cbjsibrtnojsb, 1394).
 attr[ast_oxc](n4b86f56e0826ca31_cbjsibrtnojsb, name, "E").
 child[ast_oxc](n4b86f56e0826ca31_cv47rpt496os, id, 0, n4b86f56e0826ca31_cbjsibrtnojsb).
 node[ast_oxc](n4b86f56e0826ca31_cnm5jbqh4mih4, tsenum_body, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_cnm5jbqh4mih4, 33).
-start[ast_oxc](n4b86f56e0826ca31_cnm5jbqh4mih4, 1360).
+line[ast_oxc](n4b86f56e0826ca31_cnm5jbqh4mih4, 34).
+start[ast_oxc](n4b86f56e0826ca31_cnm5jbqh4mih4, 1396).
 node[ast_oxc](n4b86f56e0826ca31_vlr0kg7moo9g2, tsenum_member, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_vlr0kg7moo9g2, 33).
-start[ast_oxc](n4b86f56e0826ca31_vlr0kg7moo9g2, 1362).
+line[ast_oxc](n4b86f56e0826ca31_vlr0kg7moo9g2, 34).
+start[ast_oxc](n4b86f56e0826ca31_vlr0kg7moo9g2, 1398).
 node[ast_oxc](n4b86f56e0826ca31_1rs4f9gs2arpc, identifier_name, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_1rs4f9gs2arpc, 33).
-start[ast_oxc](n4b86f56e0826ca31_1rs4f9gs2arpc, 1362).
+line[ast_oxc](n4b86f56e0826ca31_1rs4f9gs2arpc, 34).
+start[ast_oxc](n4b86f56e0826ca31_1rs4f9gs2arpc, 1398).
 attr[ast_oxc](n4b86f56e0826ca31_1rs4f9gs2arpc, variant, "Identifier").
 attr[ast_oxc](n4b86f56e0826ca31_1rs4f9gs2arpc, name, "A").
 child[ast_oxc](n4b86f56e0826ca31_vlr0kg7moo9g2, id, 0, n4b86f56e0826ca31_1rs4f9gs2arpc).
 node[ast_oxc](n4b86f56e0826ca31_lg3mpf7026gpa, numeric_literal, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_lg3mpf7026gpa, 33).
-start[ast_oxc](n4b86f56e0826ca31_lg3mpf7026gpa, 1366).
+line[ast_oxc](n4b86f56e0826ca31_lg3mpf7026gpa, 34).
+start[ast_oxc](n4b86f56e0826ca31_lg3mpf7026gpa, 1402).
 attr[ast_oxc](n4b86f56e0826ca31_lg3mpf7026gpa, base, "Decimal").
 attr[ast_oxc](n4b86f56e0826ca31_lg3mpf7026gpa, raw, "1").
 attr[ast_oxc](n4b86f56e0826ca31_lg3mpf7026gpa, value, 1).
@@ -2167,36 +2233,36 @@ child[ast_oxc](n4b86f56e0826ca31_cnm5jbqh4mih4, members, 0, n4b86f56e0826ca31_vl
 child[ast_oxc](n4b86f56e0826ca31_cv47rpt496os, body, 0, n4b86f56e0826ca31_cnm5jbqh4mih4).
 child[ast_oxc](n4b86f56e0826ca31_root, body, 36, n4b86f56e0826ca31_cv47rpt496os).
 node[ast_oxc](n4b86f56e0826ca31_ulib8rdg77emb, tsnamespace_declaration, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_ulib8rdg77emb, 33).
-start[ast_oxc](n4b86f56e0826ca31_ulib8rdg77emb, 1370).
+line[ast_oxc](n4b86f56e0826ca31_ulib8rdg77emb, 34).
+start[ast_oxc](n4b86f56e0826ca31_ulib8rdg77emb, 1406).
 node[ast_oxc](n4b86f56e0826ca31_mk20gfa8n7et3, binding_identifier, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_mk20gfa8n7et3, 33).
-start[ast_oxc](n4b86f56e0826ca31_mk20gfa8n7et3, 1380).
+line[ast_oxc](n4b86f56e0826ca31_mk20gfa8n7et3, 34).
+start[ast_oxc](n4b86f56e0826ca31_mk20gfa8n7et3, 1416).
 attr[ast_oxc](n4b86f56e0826ca31_mk20gfa8n7et3, name, "N").
 child[ast_oxc](n4b86f56e0826ca31_ulib8rdg77emb, id, 0, n4b86f56e0826ca31_mk20gfa8n7et3).
 node[ast_oxc](n4b86f56e0826ca31_96jgq4m820vbe, tsmodule_block, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_96jgq4m820vbe, 33).
-start[ast_oxc](n4b86f56e0826ca31_96jgq4m820vbe, 1382).
+line[ast_oxc](n4b86f56e0826ca31_96jgq4m820vbe, 34).
+start[ast_oxc](n4b86f56e0826ca31_96jgq4m820vbe, 1418).
 node[ast_oxc](n4b86f56e0826ca31_bo0518cguded9, export_declaration, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_bo0518cguded9, 33).
-start[ast_oxc](n4b86f56e0826ca31_bo0518cguded9, 1384).
+line[ast_oxc](n4b86f56e0826ca31_bo0518cguded9, 34).
+start[ast_oxc](n4b86f56e0826ca31_bo0518cguded9, 1420).
 node[ast_oxc](n4b86f56e0826ca31_o2s7brms1jjkc, variable_declaration, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_o2s7brms1jjkc, 33).
-start[ast_oxc](n4b86f56e0826ca31_o2s7brms1jjkc, 1391).
+line[ast_oxc](n4b86f56e0826ca31_o2s7brms1jjkc, 34).
+start[ast_oxc](n4b86f56e0826ca31_o2s7brms1jjkc, 1427).
 attr[ast_oxc](n4b86f56e0826ca31_o2s7brms1jjkc, kind, "Const").
 attr[ast_oxc](n4b86f56e0826ca31_o2s7brms1jjkc, declare, false).
 node[ast_oxc](n4b86f56e0826ca31_4d2jj8b1rbca8, variable_declarator, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_4d2jj8b1rbca8, 33).
-start[ast_oxc](n4b86f56e0826ca31_4d2jj8b1rbca8, 1397).
+line[ast_oxc](n4b86f56e0826ca31_4d2jj8b1rbca8, 34).
+start[ast_oxc](n4b86f56e0826ca31_4d2jj8b1rbca8, 1433).
 attr[ast_oxc](n4b86f56e0826ca31_4d2jj8b1rbca8, definite, false).
 node[ast_oxc](n4b86f56e0826ca31_rgc0to4p5ek24, binding_identifier, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_rgc0to4p5ek24, 33).
-start[ast_oxc](n4b86f56e0826ca31_rgc0to4p5ek24, 1397).
+line[ast_oxc](n4b86f56e0826ca31_rgc0to4p5ek24, 34).
+start[ast_oxc](n4b86f56e0826ca31_rgc0to4p5ek24, 1433).
 attr[ast_oxc](n4b86f56e0826ca31_rgc0to4p5ek24, name, "n").
 child[ast_oxc](n4b86f56e0826ca31_4d2jj8b1rbca8, id, 0, n4b86f56e0826ca31_rgc0to4p5ek24).
 node[ast_oxc](n4b86f56e0826ca31_tnhf36dmp9jk, numeric_literal, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_tnhf36dmp9jk, 33).
-start[ast_oxc](n4b86f56e0826ca31_tnhf36dmp9jk, 1401).
+line[ast_oxc](n4b86f56e0826ca31_tnhf36dmp9jk, 34).
+start[ast_oxc](n4b86f56e0826ca31_tnhf36dmp9jk, 1437).
 attr[ast_oxc](n4b86f56e0826ca31_tnhf36dmp9jk, base, "Decimal").
 attr[ast_oxc](n4b86f56e0826ca31_tnhf36dmp9jk, raw, "1").
 attr[ast_oxc](n4b86f56e0826ca31_tnhf36dmp9jk, value, 1).
@@ -2209,25 +2275,25 @@ attr[ast_oxc](n4b86f56e0826ca31_ulib8rdg77emb, kind, "Namespace").
 attr[ast_oxc](n4b86f56e0826ca31_ulib8rdg77emb, declare, false).
 child[ast_oxc](n4b86f56e0826ca31_root, body, 37, n4b86f56e0826ca31_ulib8rdg77emb).
 node[ast_oxc](n4b86f56e0826ca31_72l619lo48236, function, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_72l619lo48236, 34).
-start[ast_oxc](n4b86f56e0826ca31_72l619lo48236, 1405).
+line[ast_oxc](n4b86f56e0826ca31_72l619lo48236, 35).
+start[ast_oxc](n4b86f56e0826ca31_72l619lo48236, 1441).
 attr[ast_oxc](n4b86f56e0826ca31_72l619lo48236, variant, "FunctionDeclaration").
 node[ast_oxc](n4b86f56e0826ca31_ssqhhr6gbj0k7, binding_identifier, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_ssqhhr6gbj0k7, 34).
-start[ast_oxc](n4b86f56e0826ca31_ssqhhr6gbj0k7, 1422).
+line[ast_oxc](n4b86f56e0826ca31_ssqhhr6gbj0k7, 35).
+start[ast_oxc](n4b86f56e0826ca31_ssqhhr6gbj0k7, 1458).
 attr[ast_oxc](n4b86f56e0826ca31_ssqhhr6gbj0k7, name, "amb").
 child[ast_oxc](n4b86f56e0826ca31_72l619lo48236, id, 0, n4b86f56e0826ca31_ssqhhr6gbj0k7).
 node[ast_oxc](n4b86f56e0826ca31_efl4fom01285, formal_parameters, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_efl4fom01285, 34).
-start[ast_oxc](n4b86f56e0826ca31_efl4fom01285, 1425).
+line[ast_oxc](n4b86f56e0826ca31_efl4fom01285, 35).
+start[ast_oxc](n4b86f56e0826ca31_efl4fom01285, 1461).
 attr[ast_oxc](n4b86f56e0826ca31_efl4fom01285, kind, "FormalParameter").
 child[ast_oxc](n4b86f56e0826ca31_72l619lo48236, params, 0, n4b86f56e0826ca31_efl4fom01285).
 node[ast_oxc](n4b86f56e0826ca31_3hmlm0gnqlscd, tstype_annotation, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_3hmlm0gnqlscd, 34).
-start[ast_oxc](n4b86f56e0826ca31_3hmlm0gnqlscd, 1427).
+line[ast_oxc](n4b86f56e0826ca31_3hmlm0gnqlscd, 35).
+start[ast_oxc](n4b86f56e0826ca31_3hmlm0gnqlscd, 1463).
 node[ast_oxc](n4b86f56e0826ca31_ucgf7iiio9ite, tsvoid_keyword, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_ucgf7iiio9ite, 34).
-start[ast_oxc](n4b86f56e0826ca31_ucgf7iiio9ite, 1429).
+line[ast_oxc](n4b86f56e0826ca31_ucgf7iiio9ite, 35).
+start[ast_oxc](n4b86f56e0826ca31_ucgf7iiio9ite, 1465).
 child[ast_oxc](n4b86f56e0826ca31_3hmlm0gnqlscd, type_annotation, 0, n4b86f56e0826ca31_ucgf7iiio9ite).
 child[ast_oxc](n4b86f56e0826ca31_72l619lo48236, return_type, 0, n4b86f56e0826ca31_3hmlm0gnqlscd).
 attr[ast_oxc](n4b86f56e0826ca31_72l619lo48236, type, "TSDeclareFunction").
@@ -2238,30 +2304,30 @@ attr[ast_oxc](n4b86f56e0826ca31_72l619lo48236, pure, false).
 attr[ast_oxc](n4b86f56e0826ca31_72l619lo48236, pife, false).
 child[ast_oxc](n4b86f56e0826ca31_root, body, 38, n4b86f56e0826ca31_72l619lo48236).
 node[ast_oxc](n4b86f56e0826ca31_g9g1oj203cua, expression_statement, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_g9g1oj203cua, 35).
-start[ast_oxc](n4b86f56e0826ca31_g9g1oj203cua, 1435).
+line[ast_oxc](n4b86f56e0826ca31_g9g1oj203cua, 36).
+start[ast_oxc](n4b86f56e0826ca31_g9g1oj203cua, 1471).
 node[ast_oxc](n4b86f56e0826ca31_uvp2schjmjp0f, unary_expression, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_uvp2schjmjp0f, 35).
-start[ast_oxc](n4b86f56e0826ca31_uvp2schjmjp0f, 1435).
+line[ast_oxc](n4b86f56e0826ca31_uvp2schjmjp0f, 36).
+start[ast_oxc](n4b86f56e0826ca31_uvp2schjmjp0f, 1471).
 attr[ast_oxc](n4b86f56e0826ca31_uvp2schjmjp0f, operator, "Typeof").
 node[ast_oxc](n4b86f56e0826ca31_m7mkf77bmcuu5, identifier_reference, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_m7mkf77bmcuu5, 35).
-start[ast_oxc](n4b86f56e0826ca31_m7mkf77bmcuu5, 1442).
+line[ast_oxc](n4b86f56e0826ca31_m7mkf77bmcuu5, 36).
+start[ast_oxc](n4b86f56e0826ca31_m7mkf77bmcuu5, 1478).
 attr[ast_oxc](n4b86f56e0826ca31_m7mkf77bmcuu5, variant, "Identifier").
 attr[ast_oxc](n4b86f56e0826ca31_m7mkf77bmcuu5, name, "x").
 child[ast_oxc](n4b86f56e0826ca31_uvp2schjmjp0f, argument, 0, n4b86f56e0826ca31_m7mkf77bmcuu5).
 child[ast_oxc](n4b86f56e0826ca31_g9g1oj203cua, expression, 0, n4b86f56e0826ca31_uvp2schjmjp0f).
 child[ast_oxc](n4b86f56e0826ca31_root, body, 39, n4b86f56e0826ca31_g9g1oj203cua).
 node[ast_oxc](n4b86f56e0826ca31_onp754tdgii82, expression_statement, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_onp754tdgii82, 35).
-start[ast_oxc](n4b86f56e0826ca31_onp754tdgii82, 1445).
+line[ast_oxc](n4b86f56e0826ca31_onp754tdgii82, 36).
+start[ast_oxc](n4b86f56e0826ca31_onp754tdgii82, 1481).
 node[ast_oxc](n4b86f56e0826ca31_2tcd8pikptmh, unary_expression, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_2tcd8pikptmh, 35).
-start[ast_oxc](n4b86f56e0826ca31_2tcd8pikptmh, 1445).
+line[ast_oxc](n4b86f56e0826ca31_2tcd8pikptmh, 36).
+start[ast_oxc](n4b86f56e0826ca31_2tcd8pikptmh, 1481).
 attr[ast_oxc](n4b86f56e0826ca31_2tcd8pikptmh, operator, "Void").
 node[ast_oxc](n4b86f56e0826ca31_a43l50nti15ha, numeric_literal, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_a43l50nti15ha, 35).
-start[ast_oxc](n4b86f56e0826ca31_a43l50nti15ha, 1450).
+line[ast_oxc](n4b86f56e0826ca31_a43l50nti15ha, 36).
+start[ast_oxc](n4b86f56e0826ca31_a43l50nti15ha, 1486).
 attr[ast_oxc](n4b86f56e0826ca31_a43l50nti15ha, base, "Decimal").
 attr[ast_oxc](n4b86f56e0826ca31_a43l50nti15ha, raw, "0").
 attr[ast_oxc](n4b86f56e0826ca31_a43l50nti15ha, value, 0).
@@ -2269,100 +2335,81 @@ child[ast_oxc](n4b86f56e0826ca31_2tcd8pikptmh, argument, 0, n4b86f56e0826ca31_a4
 child[ast_oxc](n4b86f56e0826ca31_onp754tdgii82, expression, 0, n4b86f56e0826ca31_2tcd8pikptmh).
 child[ast_oxc](n4b86f56e0826ca31_root, body, 40, n4b86f56e0826ca31_onp754tdgii82).
 node[ast_oxc](n4b86f56e0826ca31_fuugmaoc13ps2, expression_statement, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_fuugmaoc13ps2, 35).
-start[ast_oxc](n4b86f56e0826ca31_fuugmaoc13ps2, 1453).
+line[ast_oxc](n4b86f56e0826ca31_fuugmaoc13ps2, 36).
+start[ast_oxc](n4b86f56e0826ca31_fuugmaoc13ps2, 1489).
 node[ast_oxc](n4b86f56e0826ca31_hsk573107bhda, unary_expression, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_hsk573107bhda, 35).
-start[ast_oxc](n4b86f56e0826ca31_hsk573107bhda, 1453).
+line[ast_oxc](n4b86f56e0826ca31_hsk573107bhda, 36).
+start[ast_oxc](n4b86f56e0826ca31_hsk573107bhda, 1489).
 attr[ast_oxc](n4b86f56e0826ca31_hsk573107bhda, operator, "Delete").
 node[ast_oxc](n4b86f56e0826ca31_76h7ttloe6cm, static_member_expression, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_76h7ttloe6cm, 35).
-start[ast_oxc](n4b86f56e0826ca31_76h7ttloe6cm, 1460).
+line[ast_oxc](n4b86f56e0826ca31_76h7ttloe6cm, 36).
+start[ast_oxc](n4b86f56e0826ca31_76h7ttloe6cm, 1496).
 attr[ast_oxc](n4b86f56e0826ca31_76h7ttloe6cm, optional, false).
 node[ast_oxc](n4b86f56e0826ca31_9ggnaa7kd8uk3, identifier_reference, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_9ggnaa7kd8uk3, 35).
-start[ast_oxc](n4b86f56e0826ca31_9ggnaa7kd8uk3, 1460).
+line[ast_oxc](n4b86f56e0826ca31_9ggnaa7kd8uk3, 36).
+start[ast_oxc](n4b86f56e0826ca31_9ggnaa7kd8uk3, 1496).
 attr[ast_oxc](n4b86f56e0826ca31_9ggnaa7kd8uk3, variant, "Identifier").
 attr[ast_oxc](n4b86f56e0826ca31_9ggnaa7kd8uk3, name, "o").
 child[ast_oxc](n4b86f56e0826ca31_76h7ttloe6cm, object, 0, n4b86f56e0826ca31_9ggnaa7kd8uk3).
 node[ast_oxc](n4b86f56e0826ca31_5euilhac9omoa, identifier_name, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_5euilhac9omoa, 35).
-start[ast_oxc](n4b86f56e0826ca31_5euilhac9omoa, 1462).
+line[ast_oxc](n4b86f56e0826ca31_5euilhac9omoa, 36).
+start[ast_oxc](n4b86f56e0826ca31_5euilhac9omoa, 1498).
 attr[ast_oxc](n4b86f56e0826ca31_5euilhac9omoa, name, "a").
 child[ast_oxc](n4b86f56e0826ca31_76h7ttloe6cm, property, 0, n4b86f56e0826ca31_5euilhac9omoa).
 child[ast_oxc](n4b86f56e0826ca31_hsk573107bhda, argument, 0, n4b86f56e0826ca31_76h7ttloe6cm).
 child[ast_oxc](n4b86f56e0826ca31_fuugmaoc13ps2, expression, 0, n4b86f56e0826ca31_hsk573107bhda).
 child[ast_oxc](n4b86f56e0826ca31_root, body, 41, n4b86f56e0826ca31_fuugmaoc13ps2).
 node[ast_oxc](n4b86f56e0826ca31_bab2fv5lj3302, expression_statement, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_bab2fv5lj3302, 35).
-start[ast_oxc](n4b86f56e0826ca31_bab2fv5lj3302, 1465).
+line[ast_oxc](n4b86f56e0826ca31_bab2fv5lj3302, 36).
+start[ast_oxc](n4b86f56e0826ca31_bab2fv5lj3302, 1501).
 node[ast_oxc](n4b86f56e0826ca31_dvkceg2pq4qie, unary_expression, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_dvkceg2pq4qie, 35).
-start[ast_oxc](n4b86f56e0826ca31_dvkceg2pq4qie, 1465).
+line[ast_oxc](n4b86f56e0826ca31_dvkceg2pq4qie, 36).
+start[ast_oxc](n4b86f56e0826ca31_dvkceg2pq4qie, 1501).
 attr[ast_oxc](n4b86f56e0826ca31_dvkceg2pq4qie, operator, "LogicalNot").
 node[ast_oxc](n4b86f56e0826ca31_mp0m5bdulb2c3, identifier_reference, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_mp0m5bdulb2c3, 35).
-start[ast_oxc](n4b86f56e0826ca31_mp0m5bdulb2c3, 1466).
+line[ast_oxc](n4b86f56e0826ca31_mp0m5bdulb2c3, 36).
+start[ast_oxc](n4b86f56e0826ca31_mp0m5bdulb2c3, 1502).
 attr[ast_oxc](n4b86f56e0826ca31_mp0m5bdulb2c3, variant, "Identifier").
 attr[ast_oxc](n4b86f56e0826ca31_mp0m5bdulb2c3, name, "x").
 child[ast_oxc](n4b86f56e0826ca31_dvkceg2pq4qie, argument, 0, n4b86f56e0826ca31_mp0m5bdulb2c3).
 child[ast_oxc](n4b86f56e0826ca31_bab2fv5lj3302, expression, 0, n4b86f56e0826ca31_dvkceg2pq4qie).
 child[ast_oxc](n4b86f56e0826ca31_root, body, 42, n4b86f56e0826ca31_bab2fv5lj3302).
 node[ast_oxc](n4b86f56e0826ca31_ir3v6f3kq9eae, expression_statement, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_ir3v6f3kq9eae, 35).
-start[ast_oxc](n4b86f56e0826ca31_ir3v6f3kq9eae, 1469).
+line[ast_oxc](n4b86f56e0826ca31_ir3v6f3kq9eae, 36).
+start[ast_oxc](n4b86f56e0826ca31_ir3v6f3kq9eae, 1505).
 node[ast_oxc](n4b86f56e0826ca31_7ag1s60pjrgo, unary_expression, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_7ag1s60pjrgo, 35).
-start[ast_oxc](n4b86f56e0826ca31_7ag1s60pjrgo, 1469).
+line[ast_oxc](n4b86f56e0826ca31_7ag1s60pjrgo, 36).
+start[ast_oxc](n4b86f56e0826ca31_7ag1s60pjrgo, 1505).
 attr[ast_oxc](n4b86f56e0826ca31_7ag1s60pjrgo, operator, "UnaryNegation").
 node[ast_oxc](n4b86f56e0826ca31_ikf8prgtob8hf, identifier_reference, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_ikf8prgtob8hf, 35).
-start[ast_oxc](n4b86f56e0826ca31_ikf8prgtob8hf, 1470).
+line[ast_oxc](n4b86f56e0826ca31_ikf8prgtob8hf, 36).
+start[ast_oxc](n4b86f56e0826ca31_ikf8prgtob8hf, 1506).
 attr[ast_oxc](n4b86f56e0826ca31_ikf8prgtob8hf, variant, "Identifier").
 attr[ast_oxc](n4b86f56e0826ca31_ikf8prgtob8hf, name, "x").
 child[ast_oxc](n4b86f56e0826ca31_7ag1s60pjrgo, argument, 0, n4b86f56e0826ca31_ikf8prgtob8hf).
 child[ast_oxc](n4b86f56e0826ca31_ir3v6f3kq9eae, expression, 0, n4b86f56e0826ca31_7ag1s60pjrgo).
 child[ast_oxc](n4b86f56e0826ca31_root, body, 43, n4b86f56e0826ca31_ir3v6f3kq9eae).
 node[ast_oxc](n4b86f56e0826ca31_i02rq9hc5btp8, expression_statement, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_i02rq9hc5btp8, 35).
-start[ast_oxc](n4b86f56e0826ca31_i02rq9hc5btp8, 1473).
+line[ast_oxc](n4b86f56e0826ca31_i02rq9hc5btp8, 36).
+start[ast_oxc](n4b86f56e0826ca31_i02rq9hc5btp8, 1509).
 node[ast_oxc](n4b86f56e0826ca31_nr1io4hrve3f3, binary_expression, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_nr1io4hrve3f3, 35).
-start[ast_oxc](n4b86f56e0826ca31_nr1io4hrve3f3, 1473).
+line[ast_oxc](n4b86f56e0826ca31_nr1io4hrve3f3, 36).
+start[ast_oxc](n4b86f56e0826ca31_nr1io4hrve3f3, 1509).
 attr[ast_oxc](n4b86f56e0826ca31_nr1io4hrve3f3, operator, "In").
 node[ast_oxc](n4b86f56e0826ca31_8a5lkct4gugre, string_literal, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_8a5lkct4gugre, 35).
-start[ast_oxc](n4b86f56e0826ca31_8a5lkct4gugre, 1473).
+line[ast_oxc](n4b86f56e0826ca31_8a5lkct4gugre, 36).
+start[ast_oxc](n4b86f56e0826ca31_8a5lkct4gugre, 1509).
 attr[ast_oxc](n4b86f56e0826ca31_8a5lkct4gugre, value, "a").
 attr[ast_oxc](n4b86f56e0826ca31_8a5lkct4gugre, raw, "'a'").
 child[ast_oxc](n4b86f56e0826ca31_nr1io4hrve3f3, left, 0, n4b86f56e0826ca31_8a5lkct4gugre).
 node[ast_oxc](n4b86f56e0826ca31_en5mppfeueuj7, identifier_reference, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_en5mppfeueuj7, 35).
-start[ast_oxc](n4b86f56e0826ca31_en5mppfeueuj7, 1480).
+line[ast_oxc](n4b86f56e0826ca31_en5mppfeueuj7, 36).
+start[ast_oxc](n4b86f56e0826ca31_en5mppfeueuj7, 1516).
 attr[ast_oxc](n4b86f56e0826ca31_en5mppfeueuj7, variant, "Identifier").
 attr[ast_oxc](n4b86f56e0826ca31_en5mppfeueuj7, name, "o").
 child[ast_oxc](n4b86f56e0826ca31_nr1io4hrve3f3, right, 0, n4b86f56e0826ca31_en5mppfeueuj7).
 child[ast_oxc](n4b86f56e0826ca31_i02rq9hc5btp8, expression, 0, n4b86f56e0826ca31_nr1io4hrve3f3).
 child[ast_oxc](n4b86f56e0826ca31_root, body, 44, n4b86f56e0826ca31_i02rq9hc5btp8).
-node[ast_oxc](n4b86f56e0826ca31_83astv67p9j7, expression_statement, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_83astv67p9j7, 35).
-start[ast_oxc](n4b86f56e0826ca31_83astv67p9j7, 1483).
-node[ast_oxc](n4b86f56e0826ca31_ndncmositqmf, private_in_expression, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_ndncmositqmf, 35).
-start[ast_oxc](n4b86f56e0826ca31_ndncmositqmf, 1483).
-node[ast_oxc](n4b86f56e0826ca31_ujchqoiji1n0d, private_identifier, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_ujchqoiji1n0d, 35).
-start[ast_oxc](n4b86f56e0826ca31_ujchqoiji1n0d, 1483).
-attr[ast_oxc](n4b86f56e0826ca31_ujchqoiji1n0d, name, "p").
-child[ast_oxc](n4b86f56e0826ca31_ndncmositqmf, left, 0, n4b86f56e0826ca31_ujchqoiji1n0d).
-node[ast_oxc](n4b86f56e0826ca31_q69p774a949t1, identifier_reference, "all.ts").
-line[ast_oxc](n4b86f56e0826ca31_q69p774a949t1, 35).
-start[ast_oxc](n4b86f56e0826ca31_q69p774a949t1, 1489).
-attr[ast_oxc](n4b86f56e0826ca31_q69p774a949t1, variant, "Identifier").
-attr[ast_oxc](n4b86f56e0826ca31_q69p774a949t1, name, "o").
-child[ast_oxc](n4b86f56e0826ca31_ndncmositqmf, right, 0, n4b86f56e0826ca31_q69p774a949t1).
-child[ast_oxc](n4b86f56e0826ca31_83astv67p9j7, expression, 0, n4b86f56e0826ca31_ndncmositqmf).
-child[ast_oxc](n4b86f56e0826ca31_root, body, 45, n4b86f56e0826ca31_83astv67p9j7).
 attr[ast_oxc](n4b86f56e0826ca31_root, source_type_language, "TypeScript").
 attr[ast_oxc](n4b86f56e0826ca31_root, source_type_module_kind, "Module").
 attr[ast_oxc](n4b86f56e0826ca31_root, source_type_variant, "Standard").

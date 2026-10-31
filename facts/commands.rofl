@@ -147,5 +147,8 @@ command_note("engine", "`[-- REF]`   the Rust engine's own code as facts (rust/t
 command_shown("test:roles", 26).
 command_note("test:roles", "`-- [DIR...] [--cost] [--fixture]`   the roles layer of the JS model (models/lang/js: roles.rofl the vocabulary, babel-roles.rofl the converter from the scanner's tree): each file's roles alone must equal its roles in the whole world, the audits (a kind with no role and no reason, an identifier in no role, a role the vocabulary does not declare) must be empty, and the same world with a rule planted across files (`--break cross`) must be red; `--cost` adds raw facts in, roles out and peak memory; `--fixture` rewrites examples/checks/roles-babel-facts.rofl for the world roles_babel").
 
-command_shown("scan:oxc", 27).
+command_shown("test:parity", 27).
+command_note("test:parity", "`-- [FILE...]`   one file (models/lang/js/fixtures/all.ts by default) through both parsers: Babel into [ast_babel] and babel-roles.rofl, oxc into [ast_oxc] and oxc-roles.rofl, both into the roles of roles.rofl; every node named by where it starts, every role id (models/lang/js/role-ids.rofl) compared; red names each row one parser wrote and the other did not. Needs the release builds of rust/ and rust/tools/oxc_scan").
+
+command_shown("scan:oxc", 28).
 command_note("scan:oxc", "-- <dir> [FILE] [--out F]   the same files through oxc in Rust (rust/tools/oxc_scan): oxc's own tree, raw, in [ast_oxc] (node, line, start, child, attr, file, parse_error); models/lang/js/oxc-roles.rofl reads it into the roles (docs/cli.md)").

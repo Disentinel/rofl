@@ -3851,10 +3851,13 @@ check_world("intents_screen").
 check_file("intents_screen", "examples/intents/screen.rofl").
 
 -- oxc's raw tree of one file with a construct of every kind the roles read, through the converter
--- into the roles (models/lang/js/oxc-roles.rofl); the golden is its census of roles
+-- into the roles of roles.rofl (models/lang/js/oxc-roles.rofl), with their role ids and the vocabulary's audit;
+-- that Babel gives the same file the same rows is npm run test:parity
 check_world("oxc_roles").
+check_file("oxc_roles", "models/lang/js/roles.rofl").
 check_file("oxc_roles", "models/lang/js/oxc-roles.rofl").
 check_file("oxc_roles", "models/lang/js/role-ids.rofl").
+check_file("oxc_roles", "models/lang/js/roles-audit.rofl").
 check_file("oxc_roles", "models/lang/js/fixtures/all.oxc.rofl").
 -- w_l2_roles, the roles layer under the JS model: the Babel converter (models/lang/js/babel-roles.rofl) over the raw
 -- tree of examples/checks/roles-babel/ in [ast_babel], with the vocabulary's and the converter's audits; the files
