@@ -947,6 +947,7 @@ check[checks]("scripts/text_check.ts", "npm run textcheck", gate).
 check[checks](".github/workflows/ci.yml", "typecheck", ci).
 check[checks](".github/workflows/ci.yml", "goldens (node)", ci).
 check[checks](".github/workflows/ci.yml", "npm packages", ci).
+check[checks](".github/workflows/ci.yml", "planted faults", ci).
 check[checks](".github/workflows/ci.yml", "one VSIX per platform", ci).
 check[checks](".github/workflows/ci.yml", "publish", ci).
 test_file[checks]("rust/rofl/tests/adapter.rs").
