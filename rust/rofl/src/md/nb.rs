@@ -515,7 +515,7 @@ fn read_cells(a: &Assembled, runs: &[&super::Cell], parts: &mut [PartC], k: &Ker
     vocab.add_text(&own_of(&format!("{}\n{}", book.vocab, parts.iter().map(|p| if p.form_md { String::new() } else { p.clauses.clone() }).collect::<Vec<_>>().join("\n"))));
     let mut everywhere: HashSet<String> = a.home.keys().cloned().collect();
     everywhere.extend(book.read.iter().flatten().flat_map(|r| r.defined.clone()));
-    for p in parts.iter().filter(|p| p.form_md == false) { for m in rx::each(r"(?m)^([a-z_]\w*)(?:\[\w+\])?\(", &p.clauses) { everywhere.insert(g(&m, 1).to_string()); } }
+    for p in parts.iter().filter(|p| !p.form_md) { for m in rx::each(r"(?m)^([a-z_]\w*)(?:\[\w+\])?\(", &p.clauses) { everywhere.insert(g(&m, 1).to_string()); } }
     let mut first_def: HashMap<String, usize> = HashMap::new();
     for (i, r) in book.read.iter().enumerate() { for rel in r.iter().flat_map(|r| r.defined.iter()) { first_def.entry(rel.clone()).or_insert(i); } }
     let mut rd = Reading { book, names, vocab, everywhere, first_def, texts: vec![String::new(); parts.len()], refused: HashSet::new(), outs: Vec::new(), asks: Vec::new() };

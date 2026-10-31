@@ -79,7 +79,7 @@ fn parse_phrase(t: &str) -> Result<Phrase, String> {
         for (i, p) in parts.iter().enumerate() {
             if let Part::Text(s, _) = p {
                 let n = s.split_whitespace().count();
-                if best.map_or(true, |(_, m)| n > m) { best = Some((i, n)); }
+                if best.is_none_or(|(_, m)| n > m) { best = Some((i, n)); }
             }
         }
         if let Some((i, _)) = best { if let Part::Text(s, _) = &parts[i] { let s = s.clone(); parts[i] = Part::Text(s, true); } }
@@ -193,8 +193,8 @@ fn segment(h: &mut Heap, src: &str, trailing: &mut usize) -> Vec<Seg> {
             lines.remove(0);
             segs.push(Seg::Heading(sentence_case(title.trim())));
         }
-        while lines.first().map_or(false, |l| l.trim().is_empty()) { lines.remove(0); }
-        while lines.last().map_or(false, |l| l.trim().is_empty()) { lines.pop(); }
+        while lines.first().is_some_and(|l| l.trim().is_empty()) { lines.remove(0); }
+        while lines.last().is_some_and(|l| l.trim().is_empty()) { lines.pop(); }
         if !lines.is_empty() { segs.push(Seg::Quote(lines)); }
     };
     let flush_code = |code: &mut String, segs: &mut Vec<Seg>, h: &mut Heap| {
@@ -408,7 +408,7 @@ impl<'a> R<'a> {
         capital(squash(&s))
     }
     fn phrase_for(&self, l: &Lit) -> Option<&Phrase> {
-        if self.home.get(&l.rel).map_or(false, |b| *b != l.book) { return None; }
+        if self.home.get(&l.rel).is_some_and(|b| *b != l.book) { return None; }
         if !self.guard_bound(l.rel) { return None; }
         self.phrases.get(&l.rel)?.iter().find(|p| p.holes() == l.args.len() && p.applies(self.h, &l.args))
     }
@@ -448,7 +448,7 @@ impl<'a> R<'a> {
                             let prep = PREPS.contains(&last.as_str());
                             // `guards the arm X`: the name ends in the noun, so the hole is named and wears no type
                             let named_before = last == *n || last == format!("{n}s") || last == format!("{n}es") || last == "and" || (has_article && !prep);
-                            let one_letter = name.len() <= 2 && name.chars().next().map_or(false, |c| c.is_ascii_uppercase()) && name.chars().skip(1).all(|c| c.is_ascii_digit());
+                            let one_letter = name.len() <= 2 && name.chars().next().is_some_and(|c| c.is_ascii_uppercase()) && name.chars().skip(1).all(|c| c.is_ascii_digit());
                             // a value noun is worn by a one-letter variable at the start of a sentence or after a preposition; a verb already says it
                             let after_marker = last.is_empty() || ["of", "at", "in", "for", "with", "under", "by", "to", "from", "than", "on", "between", "into", "through", "since", "against"].contains(&last.as_str());
                             if VALUE_NOUNS.contains(&n.as_str()) { if one_letter && !ctx.glued && !named_before && after_marker { format!("{} {}", self.a_noun(n), name) } else { name.to_string() } }
@@ -540,7 +540,7 @@ impl<'a> R<'a> {
             Some(n) => { ctx.intro.insert(v); ctx.nouns_used.insert(n.clone()); format!("{text1} {} that {rest2}", self.a_noun(&n)) }
             None => format!("{} {rest2}", text1.trim_end().strip_suffix("is").unwrap_or(&text1).trim_end()),
         };
-        if self.home.get(&l2.rel).map_or(true, |b| *b != l2.book) { let _ = write!(s, " in the {}", self.book_name(l2.book)); }
+        if self.home.get(&l2.rel).is_none_or(|b| *b != l2.book) { let _ = write!(s, " in the {}", self.book_name(l2.book)); }
         s
     }
     fn plan_relatives(&self, c: &Clause, ctx: &mut Ctx) {
@@ -552,7 +552,7 @@ impl<'a> R<'a> {
         let lits: Vec<(usize, &Lit)> = c.body.iter().enumerate().filter_map(|(k, e)| match e { Elem::Pos(l) if !ctx.absorbed.contains(&k) => Some((k, l)), _ => None }).collect();
         for &(k1, l1) in &lits {
             let p1 = match self.phrase_for(l1) { Some(p) => p, None => continue };
-            if self.home.get(&l1.rel).map_or(true, |b| *b != l1.book) { continue; }
+            if self.home.get(&l1.rel).is_none_or(|b| *b != l1.book) { continue; }
             let last = match p1.parts.iter().rposition(|p| matches!(p, Part::Hole(..))) { Some(j) => j, None => continue };
             if p1.parts[last + 1..].iter().any(|p| !matches!(p, Part::Fixed(..)) && !matches!(p, Part::Text(t, _) if t.trim().is_empty())) { continue; }
             let (i1, ends_is) = match (&p1.parts[last], last.checked_sub(1).and_then(|j| p1.parts.get(j))) {
@@ -568,7 +568,7 @@ impl<'a> R<'a> {
                 let p2 = match self.phrase_for(l2) { Some(p) => p, None => continue };
                 let starts = match p2.parts.first() { Some(Part::Hole(i, _)) => l2.args[*i].kind() == TermK::Var(v), _ => false };
                 if !starts { continue; }
-                if ctx.or_at.as_ref().map_or(false, |(k, _, _)| *k == k1 || *k == k2) { continue; }
+                if ctx.or_at.as_ref().is_some_and(|(k, _, _)| *k == k1 || *k == k2) { continue; }
                 ctx.rel_pairs.insert(k1, (k2, v));
                 ctx.consumed.insert(k2);
                 break;
@@ -596,7 +596,7 @@ impl<'a> R<'a> {
             s.push(')');
         }
         let mut s = squash(&s);
-        if self.home.get(&l.rel).map_or(true, |b| *b != l.book) { let _ = write!(s, " in the {}", self.book_name(l.book)); }
+        if self.home.get(&l.rel).is_none_or(|b| *b != l.book) { let _ = write!(s, " in the {}", self.book_name(l.book)); }
         s
     }
     fn builtin(&self, op: Sym, a: Term, b: Term, ctx: &mut Ctx) -> String {
@@ -1145,7 +1145,7 @@ impl<'a> R<'a> {
             s.push(')');
         }
         let mut s = capital(squash(&s));
-        if self.home.get(&l.rel).map_or(false, |b| *b != l.book) { let _ = write!(s, ", in the {}", self.book_name(l.book)); }
+        if self.home.get(&l.rel).is_some_and(|b| *b != l.book) { let _ = write!(s, ", in the {}", self.book_name(l.book)); }
         s.push_str(when(l.tense));
         s
     }
@@ -1160,7 +1160,7 @@ impl<'a> R<'a> {
         let mut key = String::new();
         if let TermK::Var(v) = l.args[*i].kind() { key = format!("{}|{}", if ctx.subject == Some(v) && ctx.no_label { String::new() } else { ctx.display.get(&v).cloned().unwrap_or_else(|| self.h.name(v).to_string()) }, ctx.nouns.get(&v).cloned().unwrap_or_default()); }
         let mut rest = self.speak(l, p, 1..p.parts.len(), HEAD, ctx, stats);
-        if self.home.get(&l.rel).map_or(false, |b| *b != l.book) { let _ = write!(rest, ", in the {}", self.book_name(l.book)); }
+        if self.home.get(&l.rel).is_some_and(|b| *b != l.book) { let _ = write!(rest, ", in the {}", self.book_name(l.book)); }
         rest.push_str(when(l.tense));
         if !subject.contains(' ') { return (None, format!("{subject} {rest}")); }
         (Some((key, subject)), rest)
@@ -1332,13 +1332,13 @@ impl<'a> R<'a> {
         };
         let (ta, tb) = (tok(a), tok(b));
         if ta.len() != tb.len() || ta == tb { return None; }
-        let is_var = |t: &str| t.chars().next().map_or(false, |c| c.is_ascii_uppercase()) && t.chars().all(|c| c.is_alphanumeric()) && t.len() <= 4;
+        let is_var = |t: &str| t.chars().next().is_some_and(|c| c.is_ascii_uppercase()) && t.chars().all(|c| c.is_alphanumeric()) && t.len() <= 4;
         let word = |t: &str| !t.is_empty() && t.chars().all(|c| c.is_alphanumeric() || c == '-' || c == '_' || c == '`');
         let mut pairs = 0;
         let mut merged: Vec<String> = Vec::new();
         for (x, y) in ta.iter().zip(tb.iter()) {
             if x == y { merged.push(x.clone()); continue; }
-            let (xs, ys) = (x.trim_end_matches(|c| c == ',' || c == ';' || c == '.'), y.trim_end_matches(|c| c == ',' || c == ';' || c == '.'));
+            let (xs, ys) = (x.trim_end_matches([',', ';', '.']), y.trim_end_matches([',', ';', '.']));
             let tail = &x[xs.len()..];
             if is_var(xs) && is_var(ys) { merged.push(x.clone()); continue; }
             if xs.starts_with('[') && ys.starts_with('[') {

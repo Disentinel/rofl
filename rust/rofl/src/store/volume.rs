@@ -438,7 +438,7 @@ impl Store {
             s.vciters = Some(Rc::new(m));
         }
         let vrows: Arena<u64> = r.arena()?;
-        if vrows.len() % 5 != 0 {
+        if !vrows.len().is_multiple_of(5) {
             return Err("a volume's rows of a tree are not rows".into());
         }
         s.vrow_of.kept = vrows;

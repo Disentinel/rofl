@@ -570,7 +570,7 @@ fn an_edge_and_a_reader_added_to_a_declared_tree_keep_the_closure_answered_from_
 #[test]
 fn a_tree_declared_into_an_evaluated_world_is_answered_from_its_forest_by_delta() {
     {
-        let head = format!("edb(t_pick). edb(t_cand). edb(t_link).\nt_link(n4, n5). t_in(P, C) :- t_link(P, C).\nt_in(n1, n2). t_in(n2, n4). t_in(n1, n3). t_pick(n1). t_pick(n2). t_cand(n1, n4). t_cand(n3, n4). t_cand(n2, n5).\nt_bf(A, D) :- t_pick(A), t_within(A, D).\nt_two(A, D) :- t_cand(A, D), t_within(A, X), t_in(X, D).\n");
+        let head = "edb(t_pick). edb(t_cand). edb(t_link).\nt_link(n4, n5). t_in(P, C) :- t_link(P, C).\nt_in(n1, n2). t_in(n2, n4). t_in(n1, n3). t_pick(n1). t_pick(n2). t_cand(n1, n4). t_cand(n3, n4). t_cand(n2, n5).\nt_bf(A, D) :- t_pick(A), t_within(A, D).\nt_two(A, D) :- t_cand(A, D), t_within(A, X), t_in(X, D).\n".to_string();
         let mut s = Session::fresh(BUDGET);
         s.load(&boot(), None).unwrap();
         s.load(&head, None).unwrap();

@@ -1014,7 +1014,7 @@ mod laws {
         (0..n)
             .map(|_| match op {
                 AggOp::Count => Val::Int(1),
-                AggOp::Or | AggOp::And => Val::Bool(r.next() % 2 == 0),
+                AggOp::Or | AggOp::And => Val::Bool(r.next().is_multiple_of(2)),
                 _ => Val::Int(r.int(1_000_000) as i128),
             })
             .collect()
@@ -1220,7 +1220,7 @@ mod laws {
         let mut keys = KeyCache::new();
         let mut r = Rng(0x6a09_e667_f3bc_c908);
         let names: Vec<Term> = ["a", "b", "zed", "set"].iter().map(|n| h.atom(n)).collect();
-        let mut elem = |r: &mut Rng, h: &mut Heap| -> Term {
+        let elem = |r: &mut Rng, h: &mut Heap| -> Term {
             match r.next() % 3 {
                 0 => names[(r.next() % 4) as usize],
                 1 => Term::int(r.int(12)),
@@ -1309,9 +1309,9 @@ mod laws {
         let mut r = Rng(0x3c6e_f372_fe94_f82b);
         let leq = |a: (i64, i64), b: (i64, i64)| b.0 <= a.0 && a.1 <= b.1;
         let has = |a: (i64, i64), x: i64| a.0 <= x && x <= a.1;
-        let mut iv = |r: &mut Rng| -> (i64, i64) {
-            let lo = if r.next() % 5 == 0 { NINF } else { r.int(20) };
-            let hi = if r.next() % 5 == 0 { PINF } else { lo.max(-20).saturating_add((r.next() % 12) as i64) };
+        let iv = |r: &mut Rng| -> (i64, i64) {
+            let lo = if r.next().is_multiple_of(5) { NINF } else { r.int(20) };
+            let hi = if r.next().is_multiple_of(5) { PINF } else { lo.max(-20).saturating_add((r.next() % 12) as i64) };
             (lo, hi.max(lo))
         };
         let pick = |r: &mut Rng, a: (i64, i64)| -> i64 {
@@ -1325,8 +1325,8 @@ mod laws {
             let (a, b) = (iv(&mut r), iv(&mut r));
             let k = r.int(4);
             let wide = (
-                if r.next() % 2 == 0 || a.0 == NINF { NINF } else { a.0 - (r.next() % 3) as i64 },
-                if r.next() % 2 == 0 || a.1 == PINF { PINF } else { a.1 + (r.next() % 3) as i64 },
+                if r.next().is_multiple_of(2) || a.0 == NINF { NINF } else { a.0 - (r.next() % 3) as i64 },
+                if r.next().is_multiple_of(2) || a.1 == PINF { PINF } else { a.1 + (r.next() % 3) as i64 },
             );
             for f in [IvFn::Add, IvFn::Sub, IvFn::Mul, IvFn::Meet] {
                 let b = if f == IvFn::Mul { (k, k) } else { b };
@@ -1560,7 +1560,7 @@ mod laws {
             _ => strs[k.2],
         };
         for _ in 0..300 {
-            let desc: Vec<bool> = (0..2).map(|_| r.next() % 2 == 0).collect();
+            let desc: Vec<bool> = (0..2).map(|_| r.next().is_multiple_of(2)).collect();
             let mut raw: Vec<[(u8, i64, usize); 2]> = (0..(r.next() % 9) as usize).map(|_| [key(&mut r), key(&mut r)]).collect();
             let atoms_of = |t: &[(u8, i64, usize); 2]| key_atoms(&h, &v, &[term(t[0]), term(t[1])]).unwrap();
             let sorted = Sorted::of_keys(desc.clone(), raw.iter().map(atoms_of).collect());

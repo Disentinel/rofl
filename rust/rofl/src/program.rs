@@ -1158,7 +1158,7 @@ fn claim_kernel(e: &mut Eval, clauses: &mut Vec<rofl_parse::Clause>, who: Option
         }
     }
     let claims = |c: &rofl_parse::Clause| c.head.rel == claim && c.body.is_empty() && c.lattice.is_none() && c.dom.is_none() && c.structure.is_none();
-    if !clauses.first().is_some_and(|c| claims(c)) {
+    if !clauses.first().is_some_and(claims) {
         return Ok(false);
     }
     if e.kernel_claimed {

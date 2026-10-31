@@ -38,3 +38,10 @@ path = "src/lib.rs"
 [[bin]]
 name = "rofl"
 path = "src/bin/rofl/main.rs"
+
+# the gate is `cargo clippy -p rofl --all-targets -- -D warnings`, in CI; these are the lints the project's style overrules
+[lints.clippy]
+# a pass takes the interner, the store, the perspective and the rows as arguments of their own, so that each is borrowed apart; a struct of them borrows them all at once
+too_many_arguments = "allow"
+# a shape that recurs is named (StagedAlts, AggKey, Levels, SortedGroup); one written once reads where it stands, an alias would only move it
+type_complexity = "allow"

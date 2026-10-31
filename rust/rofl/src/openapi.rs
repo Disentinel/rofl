@@ -187,7 +187,7 @@ pub(crate) fn call(base: &str, op: &Op, rel: &str, fields: &[String], wants: &[(
             headers.push(("idempotency-key", i.clone()));
         }
         let base_url = format!("{}{path}", base.trim_end_matches('/'));
-        let sent = (!body.is_empty()).then(|| Value::Object(body));
+        let sent = (!body.is_empty()).then_some(Value::Object(body));
         let hide = |e: String| op.auth.iter().fold(e, |e, (_, _, v)| e.replace(&crate::net::escape(v), "***").replace(v.as_str(), "***"));
         let fresh = op.auth.iter().any(|a| crate::net::renewable(&a.0));
         // a refused token is fetched again once: it may have been revoked before it expired
@@ -240,7 +240,7 @@ pub(crate) fn call(base: &str, op: &Op, rel: &str, fields: &[String], wants: &[(
             }
         };
         for o in &rows {
-            out.push_str(&row_fact(rel, &key, fields.iter().map(|f| o.get(f))));
+            out.push_str(&row_fact(rel, key, fields.iter().map(|f| o.get(f))));
         }
         if rows.is_empty() {
             out.push_str(&format!("answered({key}).\n"));
