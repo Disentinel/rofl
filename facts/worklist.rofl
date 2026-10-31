@@ -3498,6 +3498,10 @@ work_state(w_rust_default_backend, open).
 -- PROGRESS 2026-10-16 (release 1.3 audit): every notebook evaluates on Rust, the clock, the heap and excise
 -- included (#23, f_a_rust_evaluation_stops_at_the_clock_and_the_heap); cells and rendering still run in
 -- playground/host.ts.
+-- PROGRESS 2026-10-31 (f_the_cells_evaluate_in_a_fork_of_the_engines_world): the cells of the layered path evaluate
+-- in a fork of the Rust engine's kept world (Engine.over); every run of a notebook now evaluates on Rust. LEFT: a warm
+-- run is not yet milliseconds (the book read in TS, and a TS evaluator over the remote store reads the model's
+-- reflection every run, about 0.6 s), and test:vscode is not run on the cloud box.
 work_needs(w_rust_default_backend, w_rust_cli).
 
 work(w_rust_rofl_md,
