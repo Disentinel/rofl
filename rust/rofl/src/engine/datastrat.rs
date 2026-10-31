@@ -109,7 +109,7 @@ impl Eval {
         let barred = |rel: Sym| {
             brk!("ds_barred_ignored" => false; self.lat.is_cell(rel)
                 || self.carried.contains_key(&rel)
-                || self.demand.rels.iter().any(|(d, _)| *d == rel)
+                || self.demand.on(rel)
                 || self.lat.algebra(rel).count.is_some()
                 || self.lat.algebra(rel).count_of.is_some()
                 || self.rules.iter().any(|r| r.clause.head.rel == rel && (r.has_thr || r.lat_close.is_some() || !r.lattice_outer.is_empty())))
@@ -571,7 +571,7 @@ impl Eval {
                 self.ds_walk(comp, rid, rest, s, out)
             }
             // a relation read on demand is unfolded at the call, which the walk must not do: it binds nothing
-            BodyElem::Pos(l) if self.demand.rels.iter().any(|(d, _)| *d == l.rel) => self.ds_walk(comp, rid, rest, s, out),
+            BodyElem::Pos(l) if self.demand.on(l.rel) => self.ds_walk(comp, rid, rest, s, out),
             BodyElem::Pos(l) => {
                 for (s2, _) in self.match_premise(l, &s, 0, None)? {
                     self.ds_walk(comp, rid, rest.clone(), s2, out)?;

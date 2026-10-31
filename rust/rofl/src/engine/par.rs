@@ -523,7 +523,7 @@ impl Eval {
             || self.lat.has_cells()
             || !self.lat.carry.spread.is_empty()
             || self.assume.is_some()
-            || self.demand.rels.iter().any(|(r, _)| *r == l.rel)
+            || self.demand.on(l.rel)
             || self.vc.vclosure_for(l.rel).is_some()
             || neg && self.carry_check(0).is_err()
             || !plain(&l.persp)

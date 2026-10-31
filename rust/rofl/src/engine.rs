@@ -1593,6 +1593,17 @@ impl LatticeState {
     }
 }
 
+/// HOW A RELATION ANSWERED ON DEMAND IS UNFOLDED AT A CALL, read in `prepare` from its rules (`DemandState::of`):
+/// each flag is what `demand_<flag>_rels` finds of it. Cyclic is never closed; linear and tabled are cyclic.
+#[derive(Clone, Copy, Default)]
+pub struct OnDemand {
+    at: usize,
+    pub closed: bool,
+    pub cyclic: bool,
+    pub linear: bool,
+    pub tabled: bool,
+}
+
 /// The demand state of one evaluation: the calls a question unfolds, their strongly connected sets, and the negations under way. Held by `Eval`.
 #[derive(Clone, Default)]
 pub struct DemandState {
@@ -1626,19 +1637,8 @@ pub struct DemandState {
     refinding: bool,
     /// What a question's unfolding read that a hole left unknown.
     asked: Vec<Unknown>,
-    /// The relations answered on demand whose every answer is ground and
-    /// whose every rule fires bottom-up: a call to one reads the store
-    /// (`demand_closed_rels`).
-    closed: HashSet<Sym>,
-    /// The relations answered on demand that may call themselves through
-    /// others not closed: their calls being unfolded are kept as variant keys.
-    cyclic: HashSet<Sym>,
-    /// The `cyclic` relations whose cycle no rule reads twice, or under a
-    /// negation or an aggregate (`demand_linear_rels`).
-    linear: HashSet<Sym>,
-    /// The `cyclic` relations whose calls are tabled once complete: no
-    /// rule they unfold reads a kernel relation or book (`demand_tabled_rels`).
-    tabled: HashSet<Sym>,
+    /// Each relation of `rels`, and how it is unfolded at a call.
+    by_rel: HashMap<Sym, OnDemand>,
     /// The complete calls, by variant key, and the store they stand for.
     done: HashMap<String, DoneTable>,
     /// The rows the tables hold (`DemandCall::rows`).
@@ -1652,10 +1652,35 @@ pub struct DemandState {
 }
 
 impl DemandState {
+    /// How `rel` is answered on demand; all false for a relation that is not.
+    pub fn of(&self, rel: Sym) -> OnDemand {
+        self.by_rel.get(&rel).copied().unwrap_or_default()
+    }
+
+    /// Whether `rel` is answered on demand.
+    pub fn on(&self, rel: Sym) -> bool {
+        self.by_rel.contains_key(&rel)
+    }
+
+    fn rules(&self, rel: Sym) -> Option<&[Rc<ERule>]> {
+        self.by_rel.get(&rel).map(|d| &self.rels[d.at].1[..])
+    }
+
+    /// THE RELATIONS ANSWERED ON DEMAND, in their order, and how each is unfolded at a call: `closed` as `prepare`
+    /// found it, the rest from their rules.
+    fn read_rels(&mut self, rels: Vec<(Sym, Vec<Rc<ERule>>)>, closed: &HashSet<Sym>, h: &Heap, v: &Vocab) {
+        self.by_rel = rels.iter().enumerate().map(|(at, (r, _))| (*r, OnDemand { at, closed: closed.contains(r), ..OnDemand::default() })).collect();
+        self.rels = rels;
+        let cyclic = self.demand_cyclic_rels();
+        self.by_rel.iter_mut().for_each(|(r, d)| d.cyclic = cyclic.contains(r));
+        let (linear, tabled) = (self.demand_linear_rels(), self.demand_tabled_rels(h, v));
+        self.by_rel.iter_mut().for_each(|(r, d)| (d.linear, d.tabled) = (linear.contains(r), tabled.contains(r)));
+    }
+
     /// The demand relations not closed that reach themselves through calls to
     /// demand relations not closed (a closed one is read from the store).
     fn demand_cyclic_rels(&self) -> HashSet<Sym> {
-        let unfolded = |rel: &Sym| self.rels.iter().any(|(r, _)| r == rel) && !self.closed.contains(rel);
+        let unfolded = |rel: &Sym| self.answers_open(*rel);
         let calls: HashMap<Sym, Vec<Sym>> = self.rels
             .iter()
             .filter(|(rel, _)| unfolded(rel))
@@ -1672,8 +1697,8 @@ impl DemandState {
     fn demand_linear_rels(&self) -> HashSet<Sym> {
         let calls: HashMap<Sym, HashSet<Sym>> = self.rels
             .iter()
-            .filter(|(rel, _)| self.cyclic.contains(rel))
-            .map(|(rel, rs)| (*rel, rs.iter().flat_map(|r| r.clause.body.iter().flat_map(|b| b.lits_deep()).map(|l| l.rel)).filter(|r| self.cyclic.contains(r)).collect()))
+            .filter(|(rel, _)| self.of(*rel).cyclic)
+            .map(|(rel, rs)| (*rel, rs.iter().flat_map(|r| r.clause.body.iter().flat_map(|b| b.lits_deep()).map(|l| l.rel)).filter(|r| self.of(*r).cyclic).collect()))
             .collect();
         let reaches: HashMap<Sym, HashSet<Sym>> = calls.keys().map(|r| (*r, reachable(calls[r].iter().copied(), |r| calls.get(&r).into_iter().flatten().copied()))).collect();
         let same = |a: Sym, b: Sym| reaches.get(&a).is_some_and(|x| x.contains(&b)) && reaches.get(&b).is_some_and(|x| x.contains(&a));
@@ -1698,19 +1723,18 @@ impl DemandState {
     /// change moves. A kernel relation or book moves while a call unfolds (a
     /// hole, a provenance row), so a call that reads one is unfolded each time.
     fn demand_tabled_rels(&self, h: &Heap, v: &Vocab) -> HashSet<Sym> {
-        let unfolded = |rel: &Sym| self.rels.iter().any(|(r, _)| r == rel) && !self.closed.contains(rel);
         let mut out = HashSet::new();
-        for start in &self.cyclic {
+        for start in self.rels.iter().map(|(r, _)| r).filter(|r| self.of(**r).cyclic) {
             let mut seen: HashSet<Sym> = HashSet::from([*start]);
             let mut todo = vec![*start];
             let mut ok = true;
             while let Some(r) = todo.pop() {
-                for rule in self.rels.iter().filter(|(x, _)| *x == r).flat_map(|(_, rs)| rs.iter()) {
+                for rule in self.rules(r).into_iter().flatten() {
                     for l in rule.clause.body.iter().flat_map(|b| b.lits_deep()) {
                         if v.is_reserved(l.rel) || l.persp.as_atom().is_some_and(|p| is_kernel_ledger(h, p)) {
                             ok = false;
                         }
-                        if unfolded(&l.rel) && seen.insert(l.rel) {
+                        if self.answers_open(l.rel) && seen.insert(l.rel) {
                             todo.push(l.rel);
                         }
                     }
@@ -1821,7 +1845,7 @@ impl DemandState {
 
     /// Whether `rel` is answered on demand and unfolded at a call: its answers are not all in the store.
     pub fn answers_open(&self, rel: Sym) -> bool {
-        self.rels.iter().any(|(r, _)| *r == rel) && !self.closed.contains(&rel)
+        self.by_rel.get(&rel).is_some_and(|d| !d.closed)
     }
 }
 
@@ -2562,14 +2586,14 @@ impl Eval {
             self.settle_assertions();
         }
         self.demand.rels = demand.iter().map(|(rel, is)| (*rel, is.iter().map(|&i| self.rules[i].clone()).collect())).collect();
-        self.demand.closed = self.demand.demand_closed_rels(&self.h, &mut self.v);
+        let closed = self.demand.demand_closed_rels(&self.h, &mut self.v);
         self.demand.rels.clear();
         // a closed relation is read from the store: its readers fire on its news like any relation's
         if brk!("demand_closed_refires" => false; true) {
             for r in self.rules.iter_mut() {
                 let r = Rc::get_mut(r).expect("a rule shared before the demand grouping");
-                r.has_demand_prem = r.pos_rels.iter().any(|x| demand_names.contains(x) && !self.demand.closed.contains(x));
-                brk!("demand_closed_news_unread" => r.trigger_rels.retain(|x| !self.demand.closed.contains(x)); ());
+                r.has_demand_prem = r.pos_rels.iter().any(|x| demand_names.contains(x) && !closed.contains(x));
+                brk!("demand_closed_news_unread" => r.trigger_rels.retain(|x| !closed.contains(x)); ());
             }
         }
         let refused: HashSet<Sym> = self.lat.cell_rels().chain(demand.iter().map(|(r, _)| *r)).collect();
@@ -2578,14 +2602,9 @@ impl Eval {
         self.rule_at = self.rules.iter().enumerate().map(|(i, r)| (r.id, i)).collect();
         self.lat.widen_rec = self.widen_back_edges();
         self.lat.widen_th = self.widen_thresholds();
-        self.demand.rels = demand
-            .into_iter()
-            .map(|(rel, is)| (rel, is.into_iter().map(|i| self.rules[i].clone()).collect()))
-            .collect();
+        let rels = demand.into_iter().map(|(rel, is)| (rel, is.into_iter().map(|i| self.rules[i].clone()).collect())).collect();
+        self.demand.read_rels(rels, &closed, &self.h, &self.v);
         self.vclosure_setup();
-        self.demand.cyclic = self.demand.demand_cyclic_rels();
-        self.demand.linear = self.demand.demand_linear_rels();
-        self.demand.tabled = self.demand.demand_tabled_rels(&self.h, &self.v);
         self.drop_done();
     }
 
@@ -5509,7 +5528,7 @@ impl Eval {
             Vec::new()
         };
         if !persp_t.is_atom() || !args.iter().all(|a| self.h.is_ground(*a)) {
-            if !self.demand.rels.iter().any(|(x, _)| *x == head.rel) {
+            if !self.demand.on(head.rel) {
                 let msg = format!(
                     "rule {}: non-ground or open conclusion skipped ({})",
                     self.h.name(r.id),
@@ -9030,10 +9049,8 @@ impl Eval {
         // head through a positive premise as through a bottom-up rule's, and its
         // readers from there (a negation in it reads holes at each call)
         if only.is_none() && brk!("demand_poison_skipped" => false; true) {
-            let open: Vec<Rc<ERule>> = self
-                .demand.rels
-                .iter()
-                .filter(|(rel, _)| !self.demand.closed.contains(rel))
+            let open: Vec<Rc<ERule>> = self.demand.rels.iter()
+                .filter(|(rel, _)| self.demand.answers_open(*rel))
                 .flat_map(|(_, rs)| rs.iter().filter(|r| r.plan.iter().any(|b| matches!(b, BodyElem::Pos(l) if l.rel == rel))).cloned())
                 .collect();
             for r in open {
@@ -9383,7 +9400,7 @@ impl Eval {
     /// completion, so it is no possible. Undecided where an argument is not
     /// known, and asked only of a relation not answered on demand.
     fn neg_decided(&mut self, l: &Lit, ps: &Subst, free: &[Sym]) -> Result<bool, Halt> {
-        if self.demand.rels.iter().any(|(r, _)| *r == l.rel) {
+        if self.demand.on(l.rel) {
             return Ok(false);
         }
         let s: Subst = ps.iter().filter(|(k, _)| !free.contains(k)).copied().collect();
@@ -11787,21 +11804,17 @@ impl Eval {
             self.note_read(l, s, out.len());
             return Ok(out);
         }
-        let drs: Option<Vec<Rc<ERule>>> = self
-            .demand.rels
-            .iter()
-            .find(|(r, _)| *r == l.rel)
-            .map(|(_, rs)| rs.clone());
+        let drs: Option<Vec<Rc<ERule>>> = self.demand.rules(l.rel).map(<[_]>::to_vec);
         // A CLOSED RELATION'S ANSWERS ARE ALL IN THE STORE at its fixpoint (its
         // rules fire bottom-up and its news refires every reader): read, not unfolded
-        let closed = self.demand.closed.contains(&l.rel);
+        let closed = self.demand.of(l.rel).closed;
         let drs = drs.filter(|_| !closed || brk!("demand_recursion_unfolds" => true, "demand_closed_unfolds" => true; false));
         // A CALL MET AGAIN INSIDE ITS OWN UNFOLDING would unfold without end. It
         // reads the answers found so far, and the first call unfolds again until
         // they stop growing: the least fixpoint of a positive recursion. Met under
         // a negation opened inside the cycle, answers that may still grow decide
         // nothing: they are unknown past those found, and so is the call above.
-        let keyed = if closed { brk!("demand_closed_unfolds" => true; false) } else { self.demand.cyclic.contains(&l.rel) };
+        let keyed = if closed { brk!("demand_closed_unfolds" => true; false) } else { self.demand.of(l.rel).cyclic };
         let call = drs.as_ref().filter(|_| keyed).map(|_| self.anon_lit_key(l, s));
         let met = call.as_ref().and_then(|k| self.demand.calls.iter().position(|c| c.key == *k));
         let again = met.filter(|_| !closed && brk!("demand_cycle_unfolds" => false; true));
@@ -11813,7 +11826,7 @@ impl Eval {
         let member = if met.is_none() && !closed { call.as_deref().and_then(|k| self.scc_member(k)) } else { None };
         // A CALL A COMPLETE ONE COVERS reads its answers: they were all found over this store, in a firing
         // (a question notes the unknowns it reads, which a firing leaves to the holes it writes)
-        let tabled = call.is_some() && met.is_none() && member.is_none() && only.is_none() && self.firing && !self.demand.asking && self.assume.is_none() && self.demand.tabled.contains(&l.rel) && brk!("demand_done_off" => false; true);
+        let tabled = call.is_some() && met.is_none() && member.is_none() && only.is_none() && self.firing && !self.demand.asking && self.assume.is_none() && self.demand.of(l.rel).tabled && brk!("demand_done_off" => false; true);
         let served = if tabled { self.done_answers(l, s) } else { None };
         let out = if reread || member.is_some() || served.is_some() { Vec::new() } else { self.store_answers(l, s, only) };
         let mut open: Vec<(Subst, PremRef, String)> = Vec::new();
@@ -11934,7 +11947,7 @@ impl Eval {
         let scc_from = self.demand.scc.len();
         let mut u = Unfolding { pushed: call.is_some(), p, scc_from, lr: None, pass: 0, scc: false, full: false, old: false, marks: Vec::new() };
         let Some(key) = call else { return u };
-        let linear = self.demand.linear.contains(&l.rel) && brk!("demand_naive_passes" => false; true);
+        let linear = self.demand.of(l.rel).linear && brk!("demand_naive_passes" => false; true);
         let marks = self.unknown_marks();
         let mut c = DemandCall { key, neg: self.demand.neg_level, linear, low: p, marks, seen: usize::MAX, ..Default::default() };
         let stored = if only.is_some() { self.store_answers(l, s, None) } else { out.to_vec() };
@@ -12110,7 +12123,7 @@ impl Eval {
             let units: Vec<SccMember> = self.demand.scc.drain(scc_from..).flatten().collect();
             for m in units {
                 self.demand.scc_at.remove(&m.call.key);
-                if self.demand.tabled.contains(&m.lit.rel) {
+                if self.demand.of(m.lit.rel).tabled {
                     self.table_call(m.call.key, m.call.answers, m.call.rows);
                 } else {
                     self.give_rows(m.call.rows);
@@ -12250,7 +12263,7 @@ impl Eval {
             // An existence question. When the relation is not demand-backed,
             // `matchPremise` has no side effect and no order that matters, so
             // the answer is the same and nothing is built to throw away.
-            if !self.demand.rels.iter().any(|(r, _)| *r == l.rel) {
+            if !self.demand.on(l.rel) {
                 return self.match_exists(l, s);
             }
             return Ok(self.match_premise(l, s, depth, None)?.is_empty());
@@ -12764,14 +12777,8 @@ impl Eval {
                 )));
         }
         if !self.demand.rels.is_empty() {
-            let names: Vec<&str> = self
-                .demand.rels
-                .iter()
-                .map(|(r, _)| self.h.name(*r))
-                .collect();
-            return Some(Halt::reject(format!("the alternating fixpoint cannot assume a demand-backed relation ({})",
-                    names.join(", ")
-                )));
+            let names: Vec<&str> = self.demand.rels.iter().map(|(r, _)| self.h.name(*r)).collect();
+            return Some(Halt::reject(format!("the alternating fixpoint cannot assume a demand-backed relation ({})", names.join(", "))));
         }
         None
     }
