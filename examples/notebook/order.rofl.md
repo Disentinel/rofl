@@ -32,7 +32,9 @@ code:
 > `await` puts back only through another run of the method: `Later.run` has one
 > call and runs once, `twice` has two nobody waits for, and the second puts 23
 > back before the first reads it; `drain` waits for each `step`, so they do not
-> overlap. A delete under an
+> overlap. A call between that removes the key whenever it runs takes the put
+> out, however deep (`topDeep()` reaches `dropDeep()`); one that only may, leaves
+> it in an order not known. A delete under an
 > `if` may not have run, so the value stays. A put in a callback (`add`,
 > `forEach`, `then`), in a public method, or a Map declared outside the loop
 > that reads and writes it (`tally`), leaves the order unknown, and the model
@@ -85,6 +87,7 @@ never seen("heal.reset", undefined)
 never seen("lack.after", undefined)
 never seen("fset.set", undefined)
 never seen("oset.const", undefined)
+never seen("deep.drop", 35)
 never seen("order.gone", 2)
 never seen("order.cleared", 3)
 never seen("tally.first", 7)

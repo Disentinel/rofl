@@ -38,6 +38,9 @@ xl_seed(sx_ctor_of, 2).
 xl_seed(sx_accessor, 3).
 xl_seed(sx_eff_reaches, 2).
 xl_seed(sx_field_runs, 4).
+xl_seed(sx_keyed_runs, 2).
+xl_seed(sx_drop_runs, 2).
+xl_seed(sx_sub_inst, 2).
 
 -- THE REGISTER, after the rewrite (rules/js-surface.rofl; the baseline of 2026-10-05 had 214 rows `awaiting_rewrite`,
 -- all gone with their joins). What stays is read at a foreign-capable column the rule only MATCHES: the row the
@@ -59,7 +62,6 @@ xl_ok(eff_here, nearest_fn, "the site's own enclosing function, matched against 
 -- outside the model. M, its instance and those functions are the volume's own nodes, matched; where another file hands
 -- one on, it left the file, and `sx_esc` says so in the arm beside.
 xl_ok(keyed_noisy, keyed_again, "the read's own method, matched against the mirrored eff_reaches of the callee").
-xl_ok(keyed_runs_m, keyed_target, "the read's own method or a removal's own function, matched against the mirrored eff_reaches of its callers in the volume").
 -- A get's presence (section 7c) reads the removals of its own collection in its own file only (`keyed_drop` matches the
 -- file); where the collection left the file (`sx_esc`), a call between that reaches another file loses the entry.
 xl_ok(keyed_drop, keyed_made, "the collection's own new node, matched, and the removal in the same file").
@@ -104,16 +106,27 @@ xl_ok(member_unset, obj_open_own, "a literal of the read's own file (the ast_nod
 xl_ok(member_unset, obj_own_key, "a literal of the read's own file (the ast_node file match)").
 -- eff_reaches is foreign-capable at both ends (the rings of js-effects): a runner of a method is matched against the
 -- method's own class and file, and one in another file means the instance or function left it (`sx_esc`).
-xl_ok(keyed_g_drops, keyed_hop_fn, "the collection's own function, matched against the mirrored eff_reaches").
-xl_ok(keyed_hand_need, class_method_of, "a runner of the volume's own method, matched against its class; one of another file is sx_esc").
-xl_ok(keyed_open_to, ast_attr, "a runner of the volume's own method, matched; one of another file is sx_esc").
-xl_ok(keyed_open_to, class_method_of, "a runner of the volume's own method, matched; one of another file is sx_esc").
-xl_ok(keyed_open_to, entry_point, "a runner of the volume's own method, matched; one of another file is sx_esc").
 -- A write onto an object (rules/js-dataflow.rofl): a field's constructor is read in the class's file and published
 -- with it (`sx_field_sure`, `sx_field_runs`); a `const` literal's writes are read where the literal and the read share
 -- a file.
 xl_ok(member_const_read, member_const_set, "a literal of the read's own file (member_unset matches the file)").
 xl_ok(member_ctor_late, member_read_fn, "the read's own function, matched against the mirrored eff_reaches of what runs before the write").
+-- What a call may run is asked backwards along the call graph (keyed_runs_m, keyed_drop_runs, keyed_runs_out), and a
+-- function of another file brings its answer with it (sx_keyed_runs, sx_drop_runs, sx_runs_out).
+xl_ok(keyed_handed, keyed_hand_need, "the volume's own instance or function, matched; one another file hands on is sx_esc").
+xl_ok(keyed_crosses, ast_node, "the test that a callee is NOT of the caller's file: true alike in the volume and the whole").
+xl_ok(keyed_crosses, keyed_crosses, "a callee of another file makes the caller cross by the arm beside, so its own answer adds nothing").
+xl_ok(keyed_leaves, keyed_crosses, "a callee of the read's own file (the ast_node file match)").
+xl_ok(keyed_dsure_at, keyed_dsure, "a callee of the call's own file (keyed_one_target)").
+xl_ok(keyed_vsure_out, keyed_dsure, "a callee of the call's own file (keyed_one_target)").
+xl_ok(keyed_vsure_out, keyed_dsure_key, "a removal of the collection's own file (keyed_drop matches the file)").
+xl_ok(keyed_vsure_out, keyed_read_site, "the collection a function of the read's file empties, matched against the read").
+xl_ok(keyed_vdrop_may, nearest_v, "the function around a removal of the collection's own file, matched").
+-- `this` in a parent's method may be a subclass's instance: the subclass's file tells the parent's (`sx_sub_inst`), each
+-- file forwarding it one `extends` up, and the parent's file reads its own methods.
+xl_ok(sub_inst, super_of, "a parent of another file forwards the instance itself, through sx_sub_inst").
+xl_ok(may_be_node, class_method_of, "the parent's own methods, in its volume: sub_inst arrives there through sx_sub_inst").
+xl_ok(may_be_node, class_field_this, "the parent's own fields, in its volume: sub_inst arrives there through sx_sub_inst").
 
 -- A generator's own volume: `next_send(G, V)` reaches G's file through the mirror of `sx_next`, and these read G's
 -- own yields and delegations there; a volume holding another file's G reads no row and owes none.

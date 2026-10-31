@@ -325,6 +325,8 @@ unit_concludes("rules/js-dataflow.rofl", keyed_again).
 unit_concludes("rules/js-dataflow.rofl", keyed_between).
 unit_concludes("rules/js-dataflow.rofl", keyed_target).
 unit_concludes("rules/js-dataflow.rofl", keyed_runs_m).
+unit_concludes("rules/js-dataflow.rofl", keyed_runs_out).
+unit_concludes("rules/js-dataflow.rofl", keyed_crosses).
 unit_concludes("rules/js-dataflow.rofl", keyed_hand_need).
 unit_concludes("rules/js-dataflow.rofl", keyed_handed).
 unit_concludes("rules/js-dataflow.rofl", keyed_open_to).
@@ -340,8 +342,20 @@ unit_concludes("rules/js-dataflow.rofl", keyed_left).
 unit_concludes("rules/js-dataflow.rofl", keyed_overlap).
 unit_concludes("rules/js-dataflow.rofl", keyed_out).
 unit_concludes("rules/js-dataflow.rofl", keyed_taken_out).
+unit_concludes("rules/js-dataflow.rofl", keyed_dsure_at).
+unit_concludes("rules/js-dataflow.rofl", keyed_dsure).
+unit_concludes("rules/js-dataflow.rofl", keyed_vspan).
+unit_concludes("rules/js-dataflow.rofl", keyed_vbetween).
+unit_concludes("rules/js-dataflow.rofl", keyed_vdiffers).
+unit_concludes("rules/js-dataflow.rofl", keyed_vdrop_cand).
+unit_concludes("rules/js-dataflow.rofl", keyed_vdrop_at).
+unit_concludes("rules/js-dataflow.rofl", keyed_vdrop_may).
+unit_concludes("rules/js-dataflow.rofl", keyed_vsure_out).
+unit_concludes("rules/js-dataflow.rofl", keyed_dsure_key).
+unit_concludes("rules/js-dataflow.rofl", keyed_noisy_at).
 unit_concludes("rules/js-dataflow.rofl", keyed_fill_cand).
 unit_concludes("rules/js-dataflow.rofl", keyed_fill).
+unit_concludes("rules/js-dataflow.rofl", keyed_stmt_need).
 unit_concludes("rules/js-dataflow.rofl", keyed_body_stmt).
 unit_concludes("rules/js-dataflow.rofl", keyed_early).
 unit_concludes("rules/js-dataflow.rofl", keyed_two_targets).
@@ -350,6 +364,7 @@ unit_concludes("rules/js-dataflow.rofl", keyed_this_call).
 unit_concludes("rules/js-dataflow.rofl", keyed_one_target).
 unit_concludes("rules/js-dataflow.rofl", keyed_sure_at).
 unit_concludes("rules/js-dataflow.rofl", keyed_g_drops).
+unit_concludes("rules/js-dataflow.rofl", keyed_drop_runs).
 unit_concludes("rules/js-dataflow.rofl", keyed_sure).
 unit_concludes("rules/js-dataflow.rofl", keyed_fill_call).
 unit_concludes("rules/js-dataflow.rofl", keyed_ctor_put).
@@ -430,6 +445,7 @@ unit_concludes("rules/js-dataflow.rofl", this_over).
 unit_concludes("rules/js-dataflow.rofl", this_nearer).
 unit_concludes("rules/js-dataflow.rofl", this_host).
 unit_concludes("rules/js-dataflow.rofl", class_method_of).
+unit_concludes("rules/js-dataflow.rofl", sub_inst).
 unit_concludes("rules/js-dataflow.rofl", class_field_kind).
 unit_concludes("rules/js-dataflow.rofl", field_of).
 unit_concludes("rules/js-dataflow.rofl", field_at).
@@ -1360,6 +1376,10 @@ unit_concludes("rules/js-surface.rofl", sx_eff_latent).
 unit_concludes("rules/js-surface.rofl", sx_effect_of).
 unit_concludes("rules/js-surface.rofl", sx_eff_calls).
 unit_concludes("rules/js-surface.rofl", sx_eff_reaches).
+unit_concludes("rules/js-surface.rofl", sx_keyed_runs).
+unit_concludes("rules/js-surface.rofl", sx_sub_inst).
+unit_concludes("rules/js-surface.rofl", sx_drop_runs).
+unit_concludes("rules/js-surface.rofl", sx_runs_out).
 unit_concludes("rules/js-surface.rofl", sx_exn_carrier).
 unit_concludes("rules/js-surface.rofl", sx_outside).
 unit_concludes("rules/js-surface.rofl", may_be_node).
@@ -1400,6 +1420,10 @@ unit_concludes("rules/js-surface.rofl", eff_latent).
 unit_concludes("rules/js-surface.rofl", effect_of).
 unit_concludes("rules/js-surface.rofl", eff_calls).
 unit_concludes("rules/js-surface.rofl", eff_reaches).
+unit_concludes("rules/js-surface.rofl", keyed_runs_m).
+unit_concludes("rules/js-surface.rofl", sub_inst).
+unit_concludes("rules/js-surface.rofl", keyed_drop_runs).
+unit_concludes("rules/js-surface.rofl", keyed_runs_out).
 unit_concludes("rules/js-surface.rofl", amb_exn_carrier).
 unit_concludes("rules/js-surface.rofl", runs_outside).
 unit_concludes("rules/js-surface.rofl", sx_export_node).

@@ -1087,7 +1087,14 @@ keyed_between[code](C, K, Q) :- keyed_again[code](C, K, _), keyed_read_site[code
 keyed_between[code](C, K, Q) :- keyed_again[code](C, K, _), not keyed_get_call[code](C), ast_within[code](C, Q).
 keyed_target[code](M) :- keyed_again[code](_, _, M).
 keyed_runs_m[code](M, M) :- keyed_target[code](M).
-keyed_runs_m[code](G, M) :- keyed_target[code](M), eff_reaches[code](G, M).
+-- what a call may run, asked backwards from the functions in question along
+-- the call graph (`eff_reaches` is reach inside its cycles only); another
+-- file's function brings its answer with it (`sx_keyed_runs`, `sx_runs_out`)
+keyed_runs_m[code](F, M) :- eff_calls[code](F, G), keyed_runs_m[code](G, M).
+keyed_runs_out[code](F) :- runs_outside[code](F).
+keyed_runs_out[code](F) :- eff_calls[code](F, G), keyed_runs_out[code](G).
+keyed_crosses[code](F) :- eff_calls[code](F, G), ast_node[code](F, _, File), not ast_node[code](G, _, File).
+keyed_crosses[code](F) :- eff_calls[code](F, G), keyed_crosses[code](G).
 keyed_hand_need[code](G) :- keyed_runs_m[code](G, _).
 keyed_hand_need[code](G) :- keyed_once_need[code](G).
 keyed_hand_need[code](I) :- keyed_once_need[code](G), class_method_of[flow](CD, G), inst_of[flow](I, CD).
@@ -1102,7 +1109,7 @@ keyed_open_to[code](M) :- keyed_runs_m[code](G, M), class_method_of[flow](CD, G)
                           inst_of[flow](I, CD), keyed_handed[code](I).
 keyed_noisy[code](C, K) :- keyed_between[code](C, K, Q), keyed_again[code](C, K, M), resolves[code](Q, M).
 keyed_noisy[code](C, K) :- keyed_between[code](C, K, Q), keyed_again[code](C, K, M), resolves[code](Q, G),
-                           eff_reaches[code](G, M).
+                           keyed_runs_m[code](G, M).
 -- An `await` or a `yield` hands the turn to whatever is queued; only another
 -- run of the method puts its own put back. At an `await` that run must have
 -- started while this one waits (`keyed_overlap`): a call of the method nobody
@@ -1142,9 +1149,7 @@ keyed_overlap[code](G) :- keyed_caller[code](G, _, F), keyed_overlap[code](F).
 keyed_overlap[code](G) :- keyed_once_need[code](G), eff_reaches[code](G, G).
 keyed_noisy[code](C, K) :- keyed_between[code](C, K, Q), runs_unknown[code](Q),
                            keyed_again[code](C, K, M), keyed_open_to[code](M).
-keyed_noisy[code](C, K) :- keyed_between[code](C, K, Q), resolves[code](Q, G), runs_outside[code](G),
-                           keyed_again[code](C, K, M), keyed_open_to[code](M).
-keyed_noisy[code](C, K) :- keyed_between[code](C, K, Q), resolves[code](Q, G), eff_reaches[code](G, F), runs_outside[code](F),
+keyed_noisy[code](C, K) :- keyed_between[code](C, K, Q), resolves[code](Q, G), keyed_runs_out[code](G),
                            keyed_again[code](C, K, M), keyed_open_to[code](M).
 keyed_out[code](V, C, P, R, K, Meth) :- keyed_put_before[code](V, C), keyed_read_site[code](C, H, B, F, I),
                                         keyed_put_site[code](P, H, V, B, F, J), keyed_remover[code](R, C, K, Meth), J < K.
@@ -1153,6 +1158,35 @@ keyed_taken_out[code](V, C, R) :- keyed_out[code](V, C, P, R, K, _), keyed_key[c
                                   not keyed_noisy[code](C, K).
 keyed_taken_out[code](V, C, R) :- keyed_out[code](V, C, P, R, K, _), keyed_same_name[code](P, R), keyed_same_name[code](P, C),
                                   not keyed_noisy[code](C, K).
+
+-- TAKEN OUT BY A CALL between the put and the read: a statement that is a call
+-- of one function that removes the key (or clears) whenever it runs takes the
+-- put out; a call that may run a removal of a key that may be the same, or an
+-- await or a yield where one exists, leaves the put in an order not known.
+keyed_dsure_at[code](G, H, D, K) :- keyed_body_stmt[code](G, K, D), keyed_drop[code](D, H).
+keyed_dsure_at[code](G, H, D, K) :- keyed_body_stmt[code](G, K, Q), keyed_one_target[code](Q, G2), keyed_dsure[code](G2, H, D).
+keyed_dsure[code](G, H, D) :- keyed_dsure_at[code](G, H, D, K), not keyed_early[code](G, K).
+keyed_vspan[code](V, C, P, S, M) :- keyed_read_site[code](C, H, B, F, I), keyed_put_site[code](P, H, V, B, F, J), J < I,
+                                    ast_child[code](B, F, L, S), J < L, L < I, nearest_v[flow](M, B).
+keyed_vspan[code](V, C, P, S, top) :- keyed_read_site[code](C, H, B, F, I), keyed_put_site[code](P, H, V, B, F, J), J < I,
+                                      ast_child[code](B, F, L, S), J < L, L < I, not in_fn[code](B).
+keyed_vbetween[code](V, C, P, Q) :- keyed_vspan[code](V, C, P, S, M), nearest_v[flow](M, Q), ast_within[code](S, Q).
+keyed_vbetween[code](V, C, P, Q) :- keyed_vspan[code](V, C, P, S, top), ast_within[code](S, Q), not in_fn[code](Q).
+keyed_vdiffers[code](D, P) :- keyed_vdrop_cand[code](D, P), keyed_key[code](D, K1), keyed_key[code](P, K2), K1 != K2.
+keyed_vdrop_cand[code](D, P) :- keyed_vbetween[code](_, C, P, _), keyed_read_site[code](C, H, _, _, _), keyed_drop[code](D, H).
+keyed_vdrop_at[code](V, C, Q, D) :- keyed_vbetween[code](V, C, P, Q), keyed_vdrop_cand[code](D, P), not keyed_vdiffers[code](D, P).
+keyed_vdrop_may[code](V, C) :- keyed_vdrop_at[code](V, C, Q, D), resolves[code](Q, G), nearest_v[flow](G2, D), keyed_drop_runs[code](G, G2),
+                               not keyed_vsure_out[code](V, C, Q).
+keyed_vdrop_may[code](V, C) :- keyed_vdrop_at[code](V, C, Q, _), ast_node[code](Q, await_expression, _).
+keyed_vdrop_may[code](V, C) :- keyed_vdrop_at[code](V, C, Q, _), ast_node[code](Q, yield_expression, _).
+keyed_vsure_out[code](V, C, Q) :- keyed_vbetween[code](V, C, P, Q), ast_child[code](S, expression, 0, Q), ast_node[code](S, expression_statement, _),
+                                  keyed_read_site[code](C, H, B, F, _), ast_child[code](B, F, _, S), keyed_one_target[code](Q, G),
+                                  keyed_dsure[code](G, H, D), keyed_dsure_key[code](D, P).
+keyed_dsure_key[code](D, P) :- keyed_on[flow](D, _, _, "clear"), keyed_vdrop_cand[code](D, P).
+keyed_dsure_key[code](D, P) :- keyed_vdrop_cand[code](D, P), keyed_key[code](D, K), keyed_key[code](P, K).
+keyed_taken_out[code](V, C, Q) :- keyed_vsure_out[code](V, C, Q), not keyed_noisy_at[code](C, Q).
+keyed_noisy_at[code](C, Q) :- keyed_vsure_out[code](_, C, Q), keyed_read_site[code](C, H, B, F, _), ast_child[code](B, F, L, S),
+                              ast_within[code](S, Q), keyed_noisy[code](C, L).
 
 -- PRESENT AT A GET: a put of the same key for certain, in a statement of its
 -- own earlier in the list, ran; nothing between them may have taken it out (a
@@ -1173,7 +1207,9 @@ keyed_fill[code](C, J) :- keyed_fill_cand[code](C, P, J), keyed_key[code](P, K),
 -- certain whenever it runs (`keyed_sure`): the put, or such a call, is a
 -- statement of its body with no `return` in a statement before it, and nothing
 -- the function runs removes from the collection. A method is called on `this`.
-keyed_body_stmt[code](G, K, X) :- keyed_hop_fn[code](G, _), ast_child[code](G, body, 0, Gb), ast_child[code](Gb, body, K, S),
+keyed_stmt_need[code](G) :- keyed_fn_need[code](G).
+keyed_stmt_need[code](G) :- keyed_drop_runs[code](G, _).
+keyed_body_stmt[code](G, K, X) :- keyed_stmt_need[code](G), ast_child[code](G, body, 0, Gb), ast_child[code](Gb, body, K, S),
                                   ast_node[code](S, expression_statement, _), ast_child[code](S, expression, 0, X).
 keyed_early[code](G, K) :- keyed_body_stmt[code](G, K, _), nearest_v[flow](G, R), ast_node[code](R, return_statement, _),
                            ast_child[code](G, body, 0, Gb), ast_child[code](Gb, body, L, S), L < K, ast_within[code](S, R).
@@ -1193,7 +1229,9 @@ keyed_one_target[code](Q, G) :- keyed_local_call[code](Q, G), ast_node[code](G, 
 keyed_sure_at[code](G, H, P, K) :- keyed_body_stmt[code](G, K, P), keyed_put_of[code](P, H, _).
 keyed_sure_at[code](G, H, P, K) :- keyed_body_stmt[code](G, K, Q), keyed_one_target[code](Q, G2), keyed_sure[code](G2, H, P).
 keyed_g_drops[code](G, H) :- keyed_hop_fn[code](G, H), keyed_drop[code](D, H), nearest_v[flow](G, D).
-keyed_g_drops[code](G, H) :- keyed_hop_fn[code](G, H), keyed_drop[code](D, H), nearest_v[flow](G2, D), eff_reaches[code](G, G2).
+keyed_g_drops[code](G, H) :- keyed_hop_fn[code](G, H), keyed_drop[code](D, H), nearest_v[flow](G2, D), keyed_drop_runs[code](G, G2).
+keyed_drop_runs[code](G, G) :- keyed_drop[code](D, _), nearest_v[flow](G, D).
+keyed_drop_runs[code](F, G) :- eff_calls[code](F, H), keyed_drop_runs[code](H, G).
 keyed_sure[code](G, H, P) :- keyed_sure_at[code](G, H, P, K), not keyed_early[code](G, K), not keyed_g_drops[code](G, H).
 keyed_fill_call[code](C, P, J) :- keyed_read_site[code](C, H, B, F, I), keyed_call[code](C, H, _, _, _, _),
                                   ast_child[code](B, F, J, S), J < I, ast_node[code](S, expression_statement, _),
@@ -1275,20 +1313,19 @@ keyed_lost[code](C, J) :- keyed_drop_may[code](C, J, D), keyed_read_site[code](C
 keyed_lost[code](C, J) :- keyed_drop_may[code](C, J, D), nearest_v[flow](G, D), keyed_pbetween[code](C, J, Q),
                           resolves[code](Q, G).
 keyed_lost[code](C, J) :- keyed_drop_may[code](C, J, D), nearest_v[flow](G, D), keyed_pbetween[code](C, J, Q),
-                          resolves[code](Q, F), eff_reaches[code](F, G).
+                          resolves[code](Q, F), keyed_drop_runs[code](F, G).
 keyed_lost[code](C, J) :- keyed_drop_may[code](C, J, D), nearest_v[flow](G, D), keyed_pbetween[code](C, J, Q),
                           ast_node[code](Q, await_expression, _).
 keyed_lost[code](C, J) :- keyed_drop_may[code](C, J, D), nearest_v[flow](G, D), keyed_pbetween[code](C, J, Q),
                           ast_node[code](Q, yield_expression, _).
 keyed_outside_at[code](C, J) :- keyed_pbetween[code](C, J, Q), runs_unknown[code](Q).
-keyed_outside_at[code](C, J) :- keyed_pbetween[code](C, J, Q), resolves[code](Q, G), runs_outside[code](G).
-keyed_outside_at[code](C, J) :- keyed_pbetween[code](C, J, Q), resolves[code](Q, G), eff_reaches[code](G, F), runs_outside[code](F).
+keyed_outside_at[code](C, J) :- keyed_pbetween[code](C, J, Q), resolves[code](Q, G), keyed_runs_out[code](G).
 keyed_lost[code](C, J) :- keyed_outside_at[code](C, J), keyed_read_site[code](C, H, _, _, _), keyed_made[code](H, X),
                           keyed_handed[code](X).
 keyed_leaves[code](C, J) :- keyed_pbetween[code](C, J, Q), resolves[code](Q, G), ast_node[code](C, _, File),
                             not ast_node[code](G, _, File).
-keyed_leaves[code](C, J) :- keyed_pbetween[code](C, J, Q), resolves[code](Q, G), eff_reaches[code](G, F),
-                            ast_node[code](C, _, File), not ast_node[code](F, _, File).
+keyed_leaves[code](C, J) :- keyed_pbetween[code](C, J, Q), resolves[code](Q, G), ast_node[code](C, _, File),
+                            ast_node[code](G, _, File), keyed_crosses[code](G).
 keyed_lost[code](C, J) :- keyed_leaves[code](C, J), keyed_read_site[code](C, H, _, _, _), keyed_made[code](H, X),
                           sx_esc[surface](X).
 keyed_lost[code](C, J) :- keyed_outside_at[code](C, J), keyed_drop_may[code](C, J, D), nearest_v[flow](G, D),
@@ -1328,7 +1365,10 @@ may_be_lit[flow](U, K)  :- keyed_each_at[flow](U, _, X, 1), keyed_put[flow](X, K
 
 -- WHAT A READ HOLDS AT ITS MOMENT: the flow's value, but at a read of a
 -- collection only the puts the order leaves it.
-keyed_read_ordered[flow](C, V)   :- keyed_read[flow](C, V), keyed_put_before[code](V, C), not keyed_taken_out[code](V, C, _).
+keyed_read_ordered[flow](C, V)   :- keyed_read[flow](C, V), keyed_put_before[code](V, C), not keyed_taken_out[code](V, C, _),
+                                    not keyed_vdrop_may[code](V, C).
+keyed_read_unordered[flow](C, V) :- keyed_read[flow](C, V), keyed_put_before[code](V, C), not keyed_taken_out[code](V, C, _),
+                                    keyed_vdrop_may[code](V, C).
 keyed_read_unordered[flow](C, V) :- keyed_read[flow](C, V), not keyed_put_before[code](V, C), not keyed_put_after[code](V, C).
 keyed_holds[flow](C, V) :- keyed_read_ordered[flow](C, V).
 keyed_holds[flow](C, V) :- keyed_read_unordered[flow](C, V).
@@ -1483,18 +1523,12 @@ member_ctor_this[code](Body, J) :- member_ctor_before[code](Body, J, T), ast_nod
 member_ctor_this[code](Body, J) :- member_ctor_before[code](Body, J, S), ast_node[code](S, super, _).
 member_ctor_open[code](Body, J) :- member_ctor_this[code](Body, J), member_ctor_before[code](Body, J, Q), runs_unknown[code](Q).
 -- what the class publishes: the field is set at J for certain, and which
--- functions run before J. `this.m()` in a parent's constructor is not
--- dispatched to the child's override by the call graph, so a `super()` before
--- the write runs every override of the class.
+-- functions run before J (`super()` among them, and through it the parent's
+-- `this.m()`, which reaches the class's override).
 member_field_sure[flow](CD, Key, J) :- member_ctor_set[code](Body, Key, J), not member_ctor_early[code](Body, J),
                                        not member_ctor_open[code](Body, J), keyed_ctor[code](CB, Body), ast_child[code](CD, body, 0, CB).
 member_field_runs[flow](CD, Key, J, G) :- member_field_sure[flow](CD, Key, J), ast_child[code](CD, body, 0, CB), keyed_ctor[code](CB, Body),
                                           member_ctor_before[code](Body, J, Q), resolves[code](Q, G).
-member_field_runs[flow](CD, Key, J, M) :- member_field_sure[flow](CD, Key, J), ast_child[code](CD, body, 0, CB), keyed_ctor[code](CB, Body),
-                                          member_ctor_before[code](Body, J, S), ast_node[code](S, super, _),
-                                          ast_child[code](CB, body, _, M), ast_node[code](M, class_method, _),
-                                          ast_child[code](M, key, 0, K), key_name[code](K, Nm), super_of[flow](CD, SD),
-                                          class_member_proto[flow](SD, Nm, _).
 member_ctor_inside[flow](CD, Key, J, N) :- member_field_sure[flow](CD, Key, J), ast_child[code](CD, body, 0, CB), keyed_ctor[code](CB, Body),
                                            member_ctor_before[code](Body, J, N).
 -- the reader: after the write unless it is constructor code before it, or a
@@ -1577,6 +1611,13 @@ class_method_of[flow](CD, M) :- obj_like[flow](CD), ast_child[code](CD, body, 0,
                                 ast_node[code](M, class_method, _).
 may_be_node[flow](T, I)  :- class_method_of[flow](CD, M), ast_attr[code](M, static, false),
                             inst_of[flow](I, CD), this_host[flow](M, T).
+-- an instance of a subclass runs the parent's methods and constructor with
+-- itself as `this`, so `this.m()` there reaches the subclass's override; a
+-- subclass of another file's class tells that file (`sx_sub_inst`)
+sub_inst[flow](SD, I) :- super_of[flow](CD, SD), inst_of[flow](I, CD).
+sub_inst[flow](SD, I) :- super_of[flow](MD, SD), sub_inst[flow](MD, I).
+may_be_node[flow](T, I)  :- class_method_of[flow](SD, M), ast_attr[code](M, static, false), this_host[flow](M, T),
+                            sub_inst[flow](SD, I).
 may_be_node[flow](T, CD) :- class_method_of[flow](CD, M), ast_attr[code](M, static, true),
                             this_host[flow](M, T).
 
@@ -1664,6 +1705,8 @@ class_field_this[flow](CD, P) :- private_member[code](CD, _, P),
                                  ast_node[code](P, class_private_property, _).
 may_be_node[flow](T, I)       :- class_field_this[flow](CD, P), not ast_attr[code](P, static, true),
                                  inst_of[flow](I, CD), this_host[flow](P, T).
+may_be_node[flow](T, I)       :- class_field_this[flow](SD, P), not ast_attr[code](P, static, true), this_host[flow](P, T),
+                                 sub_inst[flow](SD, I).
 may_be_node[flow](T, CD)      :- class_field_this[flow](CD, P), ast_attr[code](P, static, true),
                                  this_host[flow](P, T).
 

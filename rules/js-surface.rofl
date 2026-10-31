@@ -32,6 +32,7 @@ sx_esc[surface](N) :- sx_gen_ret[surface](_, N).
 sx_esc[surface](N) :- sx_next[surface](_, N).
 sx_esc[surface](F) :- sx_cb[surface](F, _).
 sx_esc[surface](A) :- sx_rest_elem[surface](_, _, A).
+sx_esc[surface](I) :- sx_sub_inst[surface](_, I).
 sx_esc[surface](I) :- sx_esc[surface](C), inst_of[flow](I, C).
 sx_esc[surface](C) :- sx_esc[surface](I), inst_of[flow](I, C).
 -- ... and what an escaping node holds
@@ -82,6 +83,10 @@ sx_eff_latent[surface](F, L, H) :- sx_esc[surface](F), eff_latent[flow](F, L, H)
 sx_effect_of[surface](F, N)  :- sx_esc[surface](F), effect_of[flow](F, N).
 sx_eff_calls[surface](F, G)  :- sx_esc[surface](F), eff_calls[code](F, G).
 sx_eff_reaches[surface](F, G) :- sx_esc[surface](F), eff_reaches[code](F, G).
+sx_keyed_runs[surface](F, M) :- sx_esc[surface](F), keyed_runs_m[code](F, M).
+sx_sub_inst[surface](C, I) :- sx_esc[surface](C), sub_inst[flow](C, I).
+sx_drop_runs[surface](F, G) :- sx_esc[surface](F), keyed_drop_runs[code](F, G).
+sx_runs_out[surface](F) :- sx_esc[surface](F), keyed_runs_out[code](F).
 sx_exn_carrier[surface](F)   :- sx_esc[surface](F), amb_exn_carrier[flow](F).
 sx_outside[surface](F)       :- sx_esc[surface](F), runs_outside[code](F).
 
@@ -128,6 +133,10 @@ eff_latent[flow](F, L, H)     :- sx_eff_latent[surface](F, L, H).
 effect_of[flow](F, N)         :- sx_effect_of[surface](F, N).
 eff_calls[code](F, G)         :- sx_eff_calls[surface](F, G).
 eff_reaches[code](F, G)       :- sx_eff_reaches[surface](F, G).
+keyed_runs_m[code](F, M)      :- sx_keyed_runs[surface](F, M).
+sub_inst[flow](C, I)          :- sx_sub_inst[surface](C, I).
+keyed_drop_runs[code](F, G)   :- sx_drop_runs[surface](F, G).
+keyed_runs_out[code](F)       :- sx_runs_out[surface](F).
 amb_exn_carrier[flow](F)      :- sx_exn_carrier[surface](F).
 runs_outside[code](F)         :- sx_outside[surface](F).
 

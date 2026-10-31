@@ -283,3 +283,23 @@ const cfg3 = {};
 cfg3.mode = 'q';
 delete cfg3.mode;
 use('oset.deleted', cfg3.mode);
+class Deep {
+  constructor() { this.slotsDeep = new Map(); }
+  run(again) {
+    this.slotsDeep.set('d', 34);
+    if (again) return;
+    this.slotsDeep.delete('d');
+    this.via();
+    use('deep.again', this.slotsDeep.get('d'));
+  }
+  via() { this.viaMore(); }
+  viaMore() { this.run(true); }
+}
+new Deep().run(false);
+const deepMap = new Map();
+function dropDeep() { deepMap.delete('e'); }
+function midDeep() { dropDeep(); }
+function topDeep() { midDeep(); }
+deepMap.set('e', 35);
+topDeep();
+use('deep.drop', deepMap.get('e'));
