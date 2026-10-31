@@ -16,7 +16,8 @@ stderr with the package to install.
 rofl ask    'reaches(a, X)'      boot.rofl world.rofl    # the rows, one per line
 rofl why    'reaches(a, c)'      boot.rofl world.rofl    # what proves it
 rofl why --all 'total(a, 7)'     boot.rofl world.rofl    # every member of every cell
-rofl whynot 'reaches(c, a)'      boot.rofl world.rofl    # what stops it; --depth N --nodes N bound the walk
+rofl whynot 'reaches(c, a)'      boot.rofl world.rofl    # what stops it: the nearest failure; --depth N --nodes N bound the walk
+rofl whynot --all 'reaches(c, a)' boot.rofl world.rofl   # every failure the walk met
 rofl excise 'calls(a, b)'        boot.rofl world.rofl    # what taking the base fact out changes: - gone, + new
 rofl load                        boot.rofl world.rofl    # the whole state
 rofl serve [FILE...]                                     # one JSON request a line, one answer a line; the files are session 1
@@ -34,6 +35,18 @@ A question verb is `rofl load` with that one question, so every flag of
 `--retract`, `--below`, `--kept`). `rofl load --ask L --why L --whynot L --excise F`
 asks several in one run, the answers in that order with an empty line after
 each.
+
+**A whynot prints the nearest failure.** The walk goes down every rule that could
+conclude the literal and every candidate it follows, as far as `--depth` and
+`--nodes` let it; it prints one chain of it: at each literal the rule, and at
+each rule the failed premise, that leave the fewest premises unmet (those after
+the one it failed at, and one at the chain's end: a premise nothing supports, a
+negation blocked, a builtin false; a chain the bounds cut is farther than any
+that ends), the first of equal ones, with the `followed 16 of N` lines of the
+rules it keeps. `  (every failure: --all)` closes it when it left something
+out. `rofl whynot --all`, `rofl load --whynot-all L` and the protocol's
+`"all": true` print the whole walk; `explain_request(whynot, L)` stores the
+whole walk, and a notebook prints it under `--all`.
 
 **The text is the reference's.** `why`, `whynot` and `excise` print what
 `src/api.ts` prints; `ask` prints what the REPL's `?` prints with the
@@ -60,6 +73,15 @@ is a document and is refused (exit 2).
 notebook over code (`code:`, `model: js`) and `--json` are not native yet: it says so on stderr and exits 2.
 `npm run nbcheck` holds it to the TypeScript kernel byte for byte over every notebook in its slice.
 `npm run nb` evaluates only the cone of what a notebook's lines ask (docs/demand-cones.md); it has no setting.
+`rofl ask`, `rofl why` and `rofl whynot` do the same: the world asks the relations
+their question names (`asks(R)`), so only the rules those reach run; asked later
+about a relation outside what its kept world asked, that world grows its cone by
+delta. `rofl excise`, `--state`, `--ticks`, `--retract` and `--explain` keep every
+rule, and so does `rofl load`, whose answers whycheck holds to the reference. At
+700 vscode files with the JS model: 49 s and 2.1 GB against 104 s and 3.4 GB.
+A world is kept only when the memory the process may still use holds about three
+times its volume (indexing it for a delta and writing it); otherwise it is
+answered and not kept, said on stderr.
 
 **`@LIST`** stands for the files LIST names, one a line, each read from LIST's
 directory. `@rules/js.files` is the JS model, the files the notebook host
@@ -121,6 +143,21 @@ killed while it wrote leaves is removed by the next run that keeps a world,
 before it starts to write, and the cap counts every file of the directory. Writing the volume costs about 5% of the evaluation it
 saves (agg_minmax_strata: 0.83 s on 16.9 s). `rofl load`, `rofl serve` and every harness never read nor
 write them: a gate computes. Nothing to turn on or off; the cap is the one knob.
+
+**A world larger than memory stops there.** Every `rofl` process watches the
+memory it may use: the least memory limit of its cgroup less a quarter, against
+the cgroup's anonymous memory (so the Node of a notebook in the same container
+counts); without a limit, what the machine has available down to a quarter of
+it; on macOS, four fifths of the machine against the engine's own heap
+(src/bin/rofl/memory.rs). Past it, an evaluation stops as at a step wall, with
+`hole($adhoc, memory_exhausted)`: a question verb answers partial (exit 5), says
+on stderr `the world reached the memory this process may use and stopped there:
+its answers are partial, and it is not kept`, and keeps nothing; `rofl serve`
+answers the request with `"stopped":"heap"`, as under a caller's `limit.bytes`,
+and refuses every later request but `close` while the memory stays spent, so a
+host is told instead of finding the engine killed. The wall is checked between
+steps: a phase that takes no steps (reading the files, one firing that solves
+more than the reserve) can still pass it. Nothing to turn on or off.
 
 `--kept F` with any verb names the kept world yourself, under the owner's
 stricter rule: computed once, asked many times, each question a new process that
@@ -278,7 +315,7 @@ by delta.
 | 2 | a file is refused: it does not parse or does not load; or the kept world (`--kept F`) is stale, damaged, or cannot be kept |
 | 3 | the world is refused when evaluated: a broken promise, a negation through a cycle |
 | 4 | a question is refused: not ground for a why, not a base fact for an excise, outside the cone |
-| 5 | answered from a world the budget or the space cut short, or a scan failed, or an ask whose rows may be short |
+| 5 | answered from a world the budget, the space or the memory cut short, or a scan failed, or an ask whose rows may be short |
 | 70 | a defect: the engine failed (a panic, or an evaluation that says `defect:`) |
 
 A refusal wins over a partial answer: a run with a refused question exits 4.

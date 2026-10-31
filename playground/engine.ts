@@ -11,31 +11,46 @@ export type Stop = (() => boolean) & { cause?: string; left?: () => Limit; said?
 export type Walls = { budget: number; space: number; stop?: Stop };
 export interface Engine {
   readonly name: EngineName;
-  /** `core`, the model `model` loaded and not evaluated, over the code's facts `code`, evaluated: a world whose store says `partialEval` when it was cut short. */
-  evaluated(core: Rofl, model: string, code: string, walls: Walls): Rofl;
+  /** `core`, the model `model` loaded and not evaluated, over the code's facts `code`, one clause a line, evaluated: a world whose store says `partialEval` when it was cut short. */
+  evaluated(core: Rofl, model: string, code: readonly string[], walls: Walls): Rofl;
   /** The same with the cells' texts loaded beside the code, in a world of its own; a text the engine refuses is said in `errors` at its place and left out. */
-  withCells(core: Rofl, model: string, code: string, texts: string[], walls: Walls): { world: Rofl; errors: string[][] };
+  withCells(core: Rofl, model: string, code: readonly string[], texts: string[], walls: Walls): { world: Rofl; errors: string[][] };
   /** A world this engine evaluated, with the base facts `lits` taken out and evaluated again, in a world of its own; a fact it cannot take out is said in `errors`. */
   excised(world: Rofl, lits: string[], walls: Walls): { world: Rofl; errors: string[] };
   /** A world this engine evaluated, asked `rels` besides what it asks: the rules the larger cone adds run over its store (docs/demand-cones.md). */
   asked(world: Rofl, rels: string[], walls: Walls): Rofl;
+  /** The cells' texts loaded in a fork of a world this engine evaluated and asked `rels`, the world left as it was: an edit to a cell then costs the cells.
+   *  Undefined where the engine has no such world, and the host evaluates the cells itself. */
+  over?(world: Rofl, texts: string[], rels: string[], walls: Walls): { world: Rofl; errors: string[][] } | undefined;
 }
 
 /** The facts that ask a world for `rels`: it then evaluates only the rules they reach (docs/demand-cones.md). */
 export const asksOf = (rels: Iterable<string>): string => [...rels].map((r) => `asks(${r}).`).join('\n');
 
+/** The code's clauses in texts of at most `bytes`: the facts of a large corpus are more than one string can hold (V8 stops near 512 MB). */
+export function* chunksOf(lines: readonly string[], bytes = 2 ** 25): Generator<string> {
+  for (let i = 0, n = 0, at = 0; i <= lines.length; i++) {
+    if (i === lines.length || n + lines[i].length > bytes && i > at) { if (i > at) yield lines.slice(at, i).join('\n'); at = i; n = 0; }
+    if (i < lines.length) n += lines[i].length + 1;
+  }
+}
+
+/** Every chunk of the code asserted into `world`; the first refusal is thrown. */
+const given = (world: Rofl, code: readonly string[]) => {
+  for (const text of chunksOf(code)) { const r = world.assert(text); if (!r.ok) throw new Error(`the code's facts were refused, so nothing was asked: ${r.diagnostics[0]}`); }
+};
+
 export const typescript: Engine = {
   name: 'typescript',
   evaluated(core, _model, code, { budget }) {
     const b = core.fork();
-    const given = b.assert(code);
-    if (!given.ok) throw new Error(`the code's facts were refused, so nothing was asked: ${given.diagnostics[0]}`);
+    given(b, code);
     b.evaluate(budget);
     return b;
   },
   withCells(core, _model, code, texts, { budget }) {
     const f = core.fork(), errors: string[][] = texts.map(() => []);
-    if (code) { const given = f.assert(code); if (!given.ok) throw new Error(`the code's facts were refused, so nothing was asked: ${given.diagnostics[0]}`); }
+    given(f, code);
     // one load evaluates the whole model again, so the cells go in together; only when that is refused does each go in alone, to say which
     const all = texts.filter((x) => x.trim()).join('\n');
     if (all.trim() && !f.load(all, { budget }).ok) {

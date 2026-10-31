@@ -27,11 +27,7 @@ fn quoted(b: &[char], i: usize, line: &mut usize) -> Result<(String, usize), Den
         if b[j] == '\\' {
             let e = b.get(j + 1).copied().unwrap_or(' ');
             if e == 'u' {
-                let hex: String = b.get(j + 2..j + 6).map(|h| h.iter().collect()).unwrap_or_default();
-                let c = u32::from_str_radix(&hex, 16).ok()
-                    .filter(|n| hex.len() == 4 && hex.chars().all(|c| c.is_ascii_hexdigit()) && *n < 0x20)
-                    .and_then(char::from_u32)
-                    .ok_or_else(|| DenseError(format!("line {line}: unknown escape")))?;
+                let c = crate::rofl_parse::control_escape(b, j + 1).map_err(|_| DenseError(format!("line {line}: unknown escape")))?;
                 s.push(c);
                 j += 6;
                 continue;

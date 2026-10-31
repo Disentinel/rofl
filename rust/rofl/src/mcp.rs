@@ -247,10 +247,7 @@ pub(crate) fn call(cmd: &str, creds: &[(String, String, String)], tool: &str, re
             .filter_map(|c| c.get("text").and_then(Value::as_str)).collect::<Vec<_>>().join("\n");
         match r.get("structuredContent").and_then(Value::as_object) {
             _ if r.get("isError").and_then(Value::as_bool) == Some(true) => out.push_str(&format!("failed({key}, {}).\n", quote(&said))),
-            Some(o) if !fields.is_empty() => {
-                let cols: Vec<String> = fields.iter().map(|f| fact_value(o.get(f).unwrap_or(&Value::Null))).collect();
-                out.push_str(&format!("{rel}({key}, {}).\n", cols.join(", ")));
-            }
+            Some(o) if !fields.is_empty() => out.push_str(&row_fact(rel, &key, fields.iter().map(|f| o.get(f)))),
             Some(_) if rel != "mcp_text" => out.push_str(&format!("answered({key}).\n")),
             _ if text => out.push_str(&format!("mcp_text({key}, {}).\n", quote(&said))),
             _ => out.push_str(&format!("failed({key}, \"no way to read the answer\").\n")),
@@ -259,7 +256,12 @@ pub(crate) fn call(cmd: &str, creds: &[(String, String, String)], tool: &str, re
     Ok(out)
 }
 
-pub(crate) fn fact_value(v: &Value) -> String {
+pub(crate) fn row_fact<'a>(rel: &str, key: &str, vals: impl Iterator<Item = Option<&'a Value>>) -> String {
+    let cols: Vec<String> = vals.map(|v| fact_value(v.unwrap_or(&Value::Null))).collect();
+    format!("{rel}({key}, {}).\n", cols.join(", "))
+}
+
+fn fact_value(v: &Value) -> String {
     match v {
         Value::Number(n) => n.as_i64().map_or_else(|| quote(&n.to_string()), |i| i.to_string()),
         Value::Bool(b) => b.to_string(),

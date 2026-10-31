@@ -90,7 +90,7 @@ impl Eval {
                 self.disk_held -= held(&sol);
             }
             if stale
-                && !self.lat.lattices.is_empty()
+                && self.lat.has_cells()
                 && brk!("lattice_stale_solution" => false; sol.prems.iter().any(|p| matches!(p, PremRef::Fact(f) if !self.store.alive(*f))))
             {
                 continue;
@@ -150,7 +150,7 @@ impl Eval {
 
     /// A program whose every wall in the plain path can be resumed from.
     pub(super) fn resumable(&self) -> bool {
-        self.lat.lattices.is_empty()
+        !self.lat.has_cells()
             && !self.well_founded
             && !self.naive
             && self.shrug_readers.is_empty()
@@ -179,9 +179,9 @@ impl Eval {
         if let Some(id) = cut.hole {
             let why = self.store.args(id).get(1).and_then(|t| t.as_atom()).unwrap_or(self.v.budget_reason);
             let target = self.hole_id;
-            self.holes_met.remove(&(target, why));
-            if let Some(i) = self.holes_now.iter().rposition(|x| *x == (target, why)) {
-                self.holes_now.remove(i);
+            self.shrug.holes_met.remove(&(target, why));
+            if let Some(i) = self.shrug.holes_now.iter().rposition(|x| *x == (target, why)) {
+                self.shrug.holes_now.remove(i);
             }
             self.store.eval_holes.retain(|x| *x != id);
             self.store.remove_many(&[id]);

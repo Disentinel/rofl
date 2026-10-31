@@ -174,10 +174,7 @@ impl Eval {
         let mut bound: Vec<String> = Vec::new();
         for (a, v) in l.args.iter().zip(at) {
             if a.is_var() && self.h.is_ground(*v) {
-                let (mut x, mut y) = (String::new(), String::new());
-                self.h.canon_term(*a, &mut x);
-                self.h.canon_term(*v, &mut y);
-                let b = format!("{x} = {y}");
+                let b = format!("{} = {}", self.h.canon(*a), self.h.canon(*v));
                 if !bound.contains(&b) {
                     bound.push(b);
                 }

@@ -202,18 +202,7 @@ impl Eval {
         if self.vedges_reached(self.store.rec(f).rel) {
             out.push("the fact reaches the edges of a closure answered from its tree, which a retraction builds again");
         }
-        if self.well_founded {
-            out.push("the world is evaluated well-founded");
-        }
-        if self.store.dirty {
-            out.push("the world is not evaluated");
-        }
-        if self.store.partial_eval {
-            out.push("a wall cut the evaluation");
-        }
-        if self.store.tick != 0 {
-            out.push("a later tick");
-        }
+        out.extend(self.world_refusals());
         if self.prov.no_witness {
             out.push("the world keeps no witness, so nothing says which facts lose their last support");
         }
@@ -227,7 +216,7 @@ impl Eval {
             out.push("not a base fact");
         }
         let rel = rec.rel;
-        if self.demand.rels.iter().any(|(r, _)| *r == rel) {
+        if self.demand.on(rel) {
             out.push("read on demand");
         }
         let ledgers = [
@@ -273,7 +262,7 @@ impl Eval {
             })
             .ok_or("an aggregate inside an aggregate")?;
         let plan = self.agg_plans.get(&(rule, at)).cloned().ok_or("the aggregate has no plan")?;
-        if er.clause.head.temporal == Temporal::Next && !self.lat.lattices.is_empty() {
+        if er.clause.head.temporal == Temporal::Next && self.lat.has_cells() {
             return Err("a conclusion @next in a world with a lattice");
         }
         // an aggregate that reads what another of its rule binds (a result, a
@@ -326,7 +315,7 @@ impl Eval {
         let mut taken: HashSet<Sym> = HashSet::new();
         let mut reset: HashSet<Sym> = HashSet::new();
         let mut staged: Vec<Rc<ERule>> = Vec::new();
-        let staging = self.lat.lattices.is_empty();
+        let staging = !self.lat.has_cells();
         loop {
             let mut grew = false;
             for r in &self.rules {
@@ -335,7 +324,7 @@ impl Eval {
                 }
                 let (mut reads, mut inner) = (false, false);
                 // a counting tag's derivation reads the retracted fact outside an aggregate, directly (it is what the sum counts), and so does a rule into a lattice (its firing is the contribution): the path's own
-                let counts = self.tags.count_of.contains_key(&r.clause.head.rel) || self.lat.lattices.contains_key(&r.clause.head.rel);
+                let counts = self.lat.algebra(r.clause.head.rel).count_of.is_some() || self.lat.is_cell(r.clause.head.rel);
                 for b in &r.clause.body {
                     walk(b, false, &mut |l, neg, deep| {
                         if seen.contains(&l.rel) {
@@ -373,7 +362,7 @@ impl Eval {
                     taken.insert(r.id);
                     continue;
                 }
-                if self.lat.lattices.contains_key(&head) || self.tags.count_of.contains_key(&head) || self.v.is_reserved(head) {
+                if self.lat.is_cell(head) || self.lat.algebra(head).count_of.is_some() || self.v.is_reserved(head) {
                     return Err("a lattice, a tag or a ledger is concluded from what rests on the fact");
                 }
                 // a threshold whose outer premise changed holds cells a plain reader would keep
@@ -398,7 +387,7 @@ impl Eval {
             if !rels.contains(&head) || taken.contains(&r.id) || own.contains(&head) {
                 continue;
             }
-            if (r.clause.head.temporal == Temporal::Next && staging) || (!r.safe && self.demand.rels.iter().any(|(x, _)| *x == head)) {
+            if (r.clause.head.temporal == Temporal::Next && staging) || (!r.safe && self.demand.on(head)) {
                 continue;
             }
             if r.clause.head.temporal == Temporal::Next || self.shrug_readers.contains(&r.id) || self.answer.late.contains(&r.id) || !r.safe {
@@ -406,7 +395,7 @@ impl Eval {
             }
             rules.push(r.clone());
         }
-        if self.lat.subs.values().any(|x| x.reads.iter().any(|b| seen.contains(b))) {
+        if self.lat.subs().any(|(_, x)| x.reads.iter().any(|b| seen.contains(b))) {
             return Err("a dominance rule reads what rests on the fact");
         }
         Ok(Readers { rels, rules, reset, staged })
@@ -461,13 +450,13 @@ impl Eval {
             reset.contains(&rule)
         }).collect();
         let n = self.kill_cells(&cells);
-        self.thr.open.retain(|(c, _)| !self.store.cell_dead(*c));
-        self.thr.acc.retain(|(r, _, _), _| !reset.contains(r));
-        self.cells.agg_memo.retain(|(r, _, _), _| !reset.contains(r));
-        self.cells.reach_memo.retain(|(r, _, _), _| !reset.contains(r));
+        self.memo.thr_open.retain(|(c, _)| !self.store.cell_dead(*c));
+        self.memo.thr_acc.retain(|(r, _, _), _| !reset.contains(r));
+        self.memo.agg_memo.retain(|(r, _, _), _| !reset.contains(r));
+        self.memo.reach_memo.retain(|(r, _, _), _| !reset.contains(r));
         self.cells.agg_opened.retain(|(r, _, _)| !reset.contains(r));
-        self.hol_shared.retain(|(r, _, _), _| !reset.contains(r));
-        self.height_memo.clear();
+        self.memo.hol_shared.retain(|(r, _, _), _| !reset.contains(r));
+        self.memo.height_memo.clear();
         n
     }
 
@@ -500,7 +489,7 @@ impl Eval {
                 self.run_data_comps(comps, lv, &ds)?;
             }
             brk!("refire_lattice_unclosed" => (); self.close_lattices_below(i64::MAX)?);
-            while !rules.is_empty() && !self.thr.open.is_empty() {
+            while !rules.is_empty() && !self.memo.thr_open.is_empty() {
                 brk!("retract_thr_unclosed" => break; self.close_thresholds_below(i64::MAX, true)?);
                 self.close_lattices_below(i64::MAX)?;
             }
@@ -556,7 +545,7 @@ impl Eval {
                         continue;
                     }
                     let rec = self.store.rec(*x);
-                    if !rec.base() && (self.tags.count_rel.values().any(|r| *r == rec.rel) || self.lat.lattices.contains_key(&rec.rel)) && !rels.contains(&rec.rel) {
+                    if !rec.base() && (self.lat.algebra(rec.rel).count_of.is_some() || self.lat.is_cell(rec.rel)) && !rels.contains(&rec.rel) {
                         continue;
                     }
                     if rec.base() || !rels.contains(&rec.rel) {
@@ -587,7 +576,7 @@ impl Eval {
     /// that cites `f`.
     fn derivations_citing(&mut self, f: FactId) -> Vec<FactId> {
         let mut out = Vec::new();
-        let rels: Vec<Sym> = self.tags.count_rel.values().copied().collect();
+        let rels: Vec<Sym> = self.lat.counts().map(|(_, c)| c).collect();
         for rel in rels {
             for id in self.store.rel_all(&self.h, rel) {
                 if self.store.firings(id).iter().any(|(_, _, ps)| ps.contains(&PremRef::Fact(f))) {
@@ -768,11 +757,11 @@ impl Eval {
 
     /// Whether a lattice fact, a join's contribution or a value no fact holds rests on `f`.
     fn rests_on_lattice(&self, f: FactId) -> bool {
-        !self.lat.lattices.is_empty()
+        self.lat.has_cells()
             && (self.store.citers_of(&HashSet::from([f])).into_iter().any(|x| {
                 let rel = self.store.rec(x).rel;
-                self.lat.lattices.contains_key(&rel) || self.lat.join_of.contains_key(&rel)
-            }) || self.lat.sub_prems.values().any(|fs| fs.iter().any(|ps| ps.contains(&PremRef::Fact(f)))))
+                self.lat.is_cell(rel) || self.lat.algebra(rel).join_of.is_some()
+            }) || self.lat.pass.sub_prems.values().any(|fs| fs.iter().any(|ps| ps.contains(&PremRef::Fact(f)))))
     }
 
     /// The readers of what `f` changed, grown until no component stratified by its data and no relation answered on
@@ -802,7 +791,7 @@ impl Eval {
                 break rd;
             }
             if call {
-                if !self.lat.lattices.is_empty() {
+                if self.lat.has_cells() {
                     return Err("a world with a lattice holds a relation answered on demand");
                 }
                 called = true;
@@ -886,7 +875,7 @@ impl Eval {
         let many = self.staged_watch.take().unwrap_or(false);
         self.active = active;
         r?;
-        while !self.thr.open.is_empty() {
+        while !self.memo.thr_open.is_empty() {
             self.close_thresholds_below(i64::MAX, true)?;
         }
         if self.store.cell_count() != cells0 {
@@ -939,11 +928,11 @@ impl Eval {
             self.consumer_facts(&seeds, &forced, &crels, &stop, &reset)?
         };
         let direct: Vec<FactId> = self.store.citers_of(&HashSet::from([f]));
-        if direct.iter().any(|x| self.store.alive(*x) && !inside.contains(x) && !consumers.contains(x) && !self.lat.lattices.contains_key(&self.store.rec(*x).rel)) {
+        if direct.iter().any(|x| self.store.alive(*x) && !inside.contains(x) && !consumers.contains(x) && !self.lat.is_cell(self.store.rec(*x).rel)) {
             return Err("a fact outside the lattice rests on a lattice fact");
         }
         let rel_f = self.store.rec(f).rel;
-        if self.lat.subs.values().any(|x| x.reads.contains(&rel_f)) {
+        if self.lat.subs().any(|(_, x)| x.reads.contains(&rel_f)) {
             return Err("a dominance rule reads the fact");
         }
         let rules = self.lattice_rules(&rels)?;
@@ -954,17 +943,17 @@ impl Eval {
         self.store.sweep();
         d.stacked_cells = if reset.is_empty() { 0 } else { self.reset_cells(&reset) };
         self.forget_cone_keys(&cone_keys, &inside);
-        let rest: Vec<LatKey> = self.lat.sub_seen.keys().filter(|k| rels.contains(&k.0)).cloned().collect();
-        let stashed: Vec<(LatKey, Vec<Box<[Term]>>)> = rest.into_iter().filter_map(|k| self.lat.sub_seen.remove(&k).map(|v| (k, v))).collect();
+        let rest: Vec<LatKey> = self.lat.pass.sub_seen.keys().filter(|k| rels.contains(&k.0)).cloned().collect();
+        let stashed: Vec<(LatKey, Vec<Box<[Term]>>)> = rest.into_iter().filter_map(|k| self.lat.pass.sub_seen.remove(&k).map(|v| (k, v))).collect();
         let (outer, holes0) = self.begin_window();
         let active = std::mem::take(&mut self.active);
-        let was = self.lat.closed.clone();
+        let was = self.lat.pass.closed.clone();
         for r in &rels {
-            self.lat.closed.remove(r);
+            self.lat.pass.closed.remove(r);
         }
         let store = &self.store;
-        self.lat.cur.retain(|_, id| store.alive(*id));
-        self.height_memo.clear();
+        self.lat.pass.cur.retain(|_, id| store.alive(*id));
+        self.memo.height_memo.clear();
         let r = (|| -> Result<(), Halt> {
             self.activate(&rules)?;
             self.close_lattices_below(i64::MAX)?;
@@ -976,18 +965,18 @@ impl Eval {
             if brk!("retract_lattice_hole_kept" => false; self.lat.lattice_hole(&self.store, &self.v, holes0)) {
                 return Err(Halt::Bug("a lattice delta made a hole".into()));
             }
-            if self.lat.superseded.iter().any(|g| rels.contains(&self.store.rec(*g).rel)) {
+            if self.lat.pass.superseded.iter().any(|g| rels.contains(&self.store.rec(*g).rel)) {
                 return Err(Halt::Bug("a lattice delta kept a history".into()));
             }
             Ok(())
         })();
-        self.lat.sub_seen.extend(stashed);
+        self.lat.pass.sub_seen.extend(stashed);
         self.active = active;
         self.end_window(outer);
         match r {
             Ok(()) => Ok(d),
             Err(_) => {
-                self.lat.closed = was;
+                self.lat.pass.closed = was;
                 self.store.dirty = true;
                 Err("the lattice delta kept a history, wrote a hole or met a wall; the world is evaluated again")
             }
@@ -1018,10 +1007,10 @@ impl Eval {
                     continue;
                 }
                 let rel = self.store.rec(x).rel;
-                if self.lat.join_of.contains_key(&rel) {
+                if self.lat.algebra(rel).join_of.is_some() {
                     return Err(JOIN);
                 }
-                match self.lat.lattices.get(&rel) {
+                match self.lat.algebra(rel).cell {
                     Some((_, op)) if matches!(op.class(), Class::IdempotentOrder | Class::PartialOrder) => {}
                     Some(_) => return Err(JOIN),
                     // a fact of a plain rule: taken out below, with what rests on it
@@ -1043,14 +1032,14 @@ impl Eval {
             // the key of a value no fact holds (it was dominated when it was given) whose
             // firing rested on a fact of the cone
             let mut keys: Vec<LatKey> = Vec::new();
-            for ((ck, _), firings) in &self.lat.sub_prems {
+            for ((ck, _), firings) in &self.lat.pass.sub_prems {
                 if firings.iter().any(|ps| ps.iter().any(|p| matches!(p, PremRef::Fact(g) if frontier.contains(g)))) && !keys.contains(ck) {
                     keys.push(ck.clone());
                 }
             }
             for x in &added {
                 let rec = self.store.rec(*x);
-                if let Some(sub) = self.lat.subs.get(&rec.rel) {
+                if let Some(sub) = self.lat.algebra(rec.rel).sub.as_ref() {
                     let ck: LatKey = (rec.rel, rec.persp, self.store.args(*x)[..sub.keylen].into());
                     if !keys.contains(&ck) {
                         keys.push(ck);
@@ -1087,7 +1076,7 @@ impl Eval {
             if !rels.contains(&r.clause.head.rel) {
                 continue;
             }
-            if self.lat.subs.get(&r.clause.head.rel).is_some_and(|x| !x.reads.is_empty()) {
+            if self.lat.algebra(r.clause.head.rel).sub.as_ref().is_some_and(|x| !x.reads.is_empty()) {
                 return Err("a subsumptive relation is compared by what rules derive, closed before its values are");
             }
             if r.has_neg || r.has_agg || r.has_thr || !r.lattice_outer.is_empty() || r.clause.head.temporal == Temporal::Next || late.contains(&r.id) || self.shrug_readers.contains(&r.id) || !r.safe {
@@ -1102,13 +1091,13 @@ impl Eval {
         // what the evaluation kept of the values a cone key was given goes with its facts; the other
         // keys of the relation are not judged again at the close
         for ck in cone_keys {
-            self.lat.sub_cur.remove(ck);
-            self.lat.sub_seen.remove(ck);
-            self.lat.sub_memo.remove(ck);
-            self.lat.sub_parties.remove(ck);
+            self.lat.pass.sub_cur.remove(ck);
+            self.lat.pass.sub_seen.remove(ck);
+            self.lat.pass.sub_memo.remove(ck);
+            self.lat.pass.sub_parties.remove(ck);
         }
         self.lat.forget_sub_witnesses(|ck| cone_keys.contains(ck));
-        self.lat.sub_by_of.retain(|f, _| !inside.contains(f));
+        self.lat.pass.sub_by_of.retain(|f, _| !inside.contains(f));
     }
 
     /// One cell: its new record, the firings that cited the old one, the facts
@@ -1170,20 +1159,12 @@ impl Eval {
         }
         // the correlation's cells, in the order a seal lists them
         let mk = (rule, at, corr.clone().into_boxed_slice());
-        let mut cs: Vec<CellId> = self.cells.agg_memo.get(&mk).map(|v| v.to_vec()).unwrap_or_default();
+        let mut cs: Vec<CellId> = self.memo.agg_memo.get(&mk).map(|v| v.to_vec()).unwrap_or_default();
         cs.retain(|x| *x != old);
         cs.extend(new.iter().copied());
-        let mut keyed: Vec<(String, CellId)> = cs
-            .into_iter()
-            .map(|c| {
-                let mut k = String::new();
-                self.store.write_cell_key(&self.h, c, &mut k);
-                (k, c)
-            })
-            .collect();
-        keyed.sort_by(|x, y| cmp_js(&x.0, &y.0));
-        brk!("retract_memo_stale" => { let _ = (&mk, &keyed); }; if !threshold {
-            self.cells.agg_memo.insert(mk, keyed.into_iter().map(|(_, c)| c).collect::<Vec<_>>().into());
+        let cs = self.cells_by_key(cs);
+        brk!("retract_memo_stale" => { let _ = (&mk, &cs); }; if !threshold {
+            self.memo.agg_memo.insert(mk, cs.into());
         });
         // what read the cell reads it again, for this key alone
         if !new.is_empty() && er.clause.head.temporal != Temporal::Next && brk!("retract_no_refire" => false; true) {
@@ -1216,8 +1197,8 @@ impl Eval {
             Some(TermK::Int(k)) => k.max(0) as usize,
             _ => return Err(Halt::Bug("a threshold cell key does not end in its N".into())),
         };
-        self.thr.cells.remove(&(rule, at, key.to_vec().into_boxed_slice()));
-        self.thr.acc.retain(|(r, _, _), _| *r != rule);
+        self.memo.thr_cells.remove(&(rule, at, key.to_vec().into_boxed_slice()));
+        self.memo.thr_acc.retain(|(r, _, _), _| *r != rule);
         let (groups, _) = self.thr_groups(rule, agg, plan, s, 0, true, None)?;
         let members = groups.into_iter().next().map(|g| g.1).unwrap_or_default();
         if members.len() < need {
@@ -1378,8 +1359,8 @@ impl Eval {
             }
             if self.store.cell(c).op == AggOp::AtLeast && brk!("retract_thr_cells_kept" => false; true) {
                 let rec = self.store.cell(c);
-                self.thr.cells.remove(&(rule, at, rec.key.clone()));
-                self.thr.fresh.remove(&c);
+                self.memo.thr_cells.remove(&(rule, at, rec.key.clone()));
+                self.memo.thr_fresh.remove(&c);
             }
             self.store.kill_cell(c);
         }
@@ -1411,14 +1392,14 @@ impl Eval {
 
 impl LatticeState {
     pub(super) fn lattice_hole(&self, store: &Store, v: &Vocab, holes0: usize) -> bool {
-        store.rel_count(v.hole) > holes0 || !self.pending.is_empty()
+        store.rel_count(v.hole) > holes0 || !self.pass.pending.is_empty()
     }
 
     /// What the evaluation kept of the witnesses of the subsumptive keys that `gone` names.
     pub(super) fn forget_sub_witnesses(&mut self, gone: impl Fn(&LatKey) -> bool) {
-        self.sub_seen_set.retain(|(k, _), _| !gone(k));
-        self.sub_beaten.retain(|(k, _), _| !gone(k));
-        self.sub_prems.retain(|(k, _), _| !gone(k));
-        self.sub_by.retain(|(k, _), _| !gone(k));
+        self.pass.sub_seen_set.retain(|(k, _), _| !gone(k));
+        self.pass.sub_beaten.retain(|(k, _), _| !gone(k));
+        self.pass.sub_prems.retain(|(k, _), _| !gone(k));
+        self.pass.sub_by.retain(|(k, _), _| !gone(k));
     }
 }

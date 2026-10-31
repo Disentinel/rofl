@@ -100,7 +100,7 @@ fn clip(s: String) -> String {
 }
 
 fn rows_word(n: usize) -> String {
-    format!("{} row{}", n, if n == 1 { "" } else { "s" })
+    format!("{} row{}", n, crate::engine::plural(n))
 }
 
 /// The relations a fresh session already holds: the kernel's own, not the world's.
@@ -460,23 +460,7 @@ fn shape(rows: &[&[Term]], pc: usize, cc: usize) -> Shape {
         return Shape::Cycle(cycles, first);
     }
     // children by counting, then one pre-order walk over the roots
-    let mut start = vec![0u32; n + 1];
-    for &p in &parent {
-        if p != NONE {
-            start[p as usize + 1] += 1;
-        }
-    }
-    for i in 0..n {
-        start[i + 1] += start[i];
-    }
-    let mut fill = start.clone();
-    let mut kids = vec![0u32; start[n] as usize];
-    for (c, &p) in parent.iter().enumerate() {
-        if p != NONE {
-            kids[fill[p as usize] as usize] = c as u32;
-            fill[p as usize] += 1;
-        }
-    }
+    let (start, kids) = crate::forest::children(&parent);
     let (mut tin, mut tout, mut depth) = (vec![0u32; n], vec![0u32; n], vec![0u32; n]);
     let (mut clock, mut roots, mut maxd, mut closure) = (0u32, 0, 0u32, 0usize);
     let mut stack: Vec<(u32, u32)> = Vec::new();
@@ -540,7 +524,7 @@ fn tree_miss(h: &Heap, t: &Rel, a: &Shape, b: &Shape) -> Option<String> {
         }
         Shape::Cycle(n, nodes) if *n <= 3 => {
             let ns: Vec<String> = nodes.iter().map(|x| h.canon(*x)).collect();
-            Some(format!("{decl} {} cycle{}, the first through {}", n, if *n == 1 { "" } else { "s" }, clip(ns.join(", "))))
+            Some(format!("{decl} {} cycle{}, the first through {}", n, crate::engine::plural(*n), clip(ns.join(", "))))
         }
         _ => None,
     }

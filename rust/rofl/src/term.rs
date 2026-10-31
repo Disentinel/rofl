@@ -22,6 +22,20 @@ use std::rc::Rc;
 
 pub type Sym = u32;
 
+/// The top layer of a table moved under its mark: all of it when nothing is below, else filed by `file` into the base's
+/// own copy, so that a clone sharing the base is left alone.
+pub(crate) fn freeze_layer<S: Default + Clone>(base: &mut Rc<S>, top: &mut S, len: fn(&S) -> usize, file: impl FnOnce(&S, &mut S)) {
+    if len(top) == 0 {
+        return;
+    }
+    if len(base) == 0 {
+        *base = Rc::new(std::mem::take(top));
+    } else {
+        file(top, Rc::make_mut(base));
+        *top = S::default();
+    }
+}
+
 /// THE NAMES OF A LAYERED WORLD. Ids below `n0` are `base`'s: the names of a
 /// world frozen when it was first forked (`Heap::freeze`), shared by every
 /// fork and never written. A name is in exactly one of the two, so ids keep
@@ -64,19 +78,12 @@ impl Interner {
     /// Everything above the mark goes under it. It copies only in a fork that
     /// has names of its own and shares its base.
     fn freeze(&mut self) {
-        if self.top.is_empty() {
-            return;
-        }
-        if self.n0 == 0 {
-            self.base = Rc::new(std::mem::take(&mut self.top));
-        } else {
-            let b = Rc::make_mut(&mut self.base);
-            for i in 0..self.top.len() as Sym {
-                let s = self.top.name(i);
+        freeze_layer(&mut self.base, &mut self.top, Names::len, |top, b| {
+            for i in 0..top.len() as Sym {
+                let s = top.name(i);
                 b.intern(s, name_hash(s.as_bytes()));
             }
-            self.top = Names::default();
-        }
+        });
         self.n0 = self.base.len() as Sym;
     }
 }
@@ -605,19 +612,12 @@ impl Heap {
     /// them; `Store::freeze` is the other half of a fork.
     pub fn freeze(&mut self) {
         self.syms.freeze();
-        if self.top.funcs.is_empty() {
-            return;
-        }
-        if self.f0 == 0 {
-            self.base = Rc::new(std::mem::take(&mut self.top));
-        } else {
-            let b = Rc::make_mut(&mut self.base);
-            for k in 0..self.top.funcs.len() as u32 {
-                let (n, a) = (self.top.funcs[k as usize].name, self.top.args_of(k));
+        freeze_layer(&mut self.base, &mut self.top, |f| f.funcs.len(), |top, b| {
+            for k in 0..top.funcs.len() as u32 {
+                let (n, a) = (top.funcs[k as usize].name, top.args_of(k));
                 b.mkf(n, a, cons_hash(n, a));
             }
-            self.top = Funcs::default();
-        }
+        });
         self.f0 = self.base.funcs.len() as u32;
     }
     pub fn mkf_named(&mut self, name: &str, args: &[Term]) -> Term {
